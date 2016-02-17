@@ -35,7 +35,7 @@ text {*
 *}
 
 
-qualify ARM
+qualify ARM (deep)
 
 section "The Operations"
 

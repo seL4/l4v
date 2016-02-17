@@ -14,13 +14,12 @@ theory InvocationLabels_H
 imports "$L4V_ARCH/ArchInvocationLabels_H"
 begin
 
-text {*
-  An enumeration of all system call labels.
-*}
-
 unqualify_types (in Arch)
   arch_invocation_label
 
+text {*
+  An enumeration of all system call labels.
+*}
 
 datatype invocation_label =
     InvalidInvocation
@@ -51,7 +50,7 @@ datatype invocation_label =
   | IRQClearIRQHandler
   | IRQSetMode
   | DomainSetSet
-  | ArchInvocationLabel arch_invocation_label
+  | ArchInvocationLabel ArchInvocationLabels_H.ARM.arch_invocation_label
 
 (* invocation_label instance proofs *)
 (*<*)

@@ -24,19 +24,19 @@ imports
 begin
 
 unqualify_consts (in Arch)
-  "arch_update_cap_data :: data \<Rightarrow> arch_cap \<Rightarrow> cap"
-  "arch_derive_cap :: arch_cap \<Rightarrow> (arch_cap,'z::state_ext) se_monad"
-  "arch_finalise_cap :: arch_cap \<Rightarrow> bool \<Rightarrow> (cap,'z::state_ext) s_monad"
-  "arch_is_physical :: arch_cap \<Rightarrow> bool"
-  "arch_same_region_as :: arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
-  "same_aobject_as :: arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
-  "arch_has_recycle_rights :: arch_cap \<Rightarrow> bool"
-  "arch_recycle_cap :: bool \<Rightarrow> arch_cap \<Rightarrow> (arch_cap,'z::state_ext) s_monad"
+  arch_update_cap_data ::"data \<Rightarrow> arch_cap \<Rightarrow> cap"
+  arch_derive_cap :: "arch_cap \<Rightarrow> (arch_cap,'z::state_ext) se_monad"
+  arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap,'z::state_ext) s_monad"
+  arch_is_physical :: "arch_cap \<Rightarrow> bool"
+  arch_same_region_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
+  same_aobject_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
+  arch_has_recycle_rights :: "arch_cap \<Rightarrow> bool"
+  arch_recycle_cap :: "bool \<Rightarrow> arch_cap \<Rightarrow> (arch_cap,'z::state_ext) s_monad"
 
-  "msg_max_length :: nat"
-  "cap_transfer_data_size :: nat"
-  "msg_max_extra_caps :: nat"
-  "msg_align_bits :: nat"
+  msg_max_length :: "nat"
+  cap_transfer_data_size :: "nat"
+  msg_max_extra_caps :: "nat"
+  msg_align_bits :: "nat"
 
 
 text {* This theory develops an abstract model of \emph{capability

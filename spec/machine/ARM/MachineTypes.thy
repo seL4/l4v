@@ -18,8 +18,7 @@ imports
   Setup_Locale
   Platform
 begin
-
-qualify ARM
+qualify ARM (deep)
 
 (* !!! Generated File !!! Skeleton in ../haskell-translator/ARMMachineTypes.thy *)
 
@@ -52,21 +51,16 @@ datatype register =
 
 type_synonym machine_word = "word32"
 
-
-
 consts
 initContext :: "(register * machine_word) list"
 
 consts
 sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 
-
-
 (*<*)
 (* register instance proofs *)
 (*<*)
 instantiation register :: enum begin
- 
 definition
   enum_register: "enum_class.enum \<equiv> 
     [ 
@@ -189,6 +183,13 @@ record
 
 consts irq_oracle :: "nat \<Rightarrow> word8"
 
+text {*
+  The machine monad is used for operations on the state defined above.
+*}
+type_synonym 'a machine_monad = "(machine_state, 'a) nondet_monad"
+
+translations
+  (type) "'c machine_monad" <= (type) "(machine_state, 'c) nondet_monad"
 
 text {*
   After kernel initialisation all IRQs are masked.
@@ -313,6 +314,7 @@ instance by (intro_classes, simp add: enum_alt_vmpage_size)
 end
 
 (*>*)
-end_qualify
 
+
+end_qualify
 end

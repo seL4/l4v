@@ -14,14 +14,17 @@ imports "./$L4V_ARCH/MachineTypes"
 begin
 
 context Arch begin
-  
+
 unqualify_types
   machine_state
   machine_state_rest
 
+
 unqualify_consts
-  "machine_state_rest :: machine_state \<Rightarrow> machine_state_rest"
-  "machine_state_rest_update :: (machine_state_rest \<Rightarrow> machine_state_rest) \<Rightarrow> machine_state \<Rightarrow> machine_state"
+  underlying_memory :: "machine_state \<Rightarrow> machine_word \<Rightarrow> word8"
+  irq_masks :: "machine_state \<Rightarrow> irq \<Rightarrow> bool"
+  machine_state_rest :: "machine_state \<Rightarrow> machine_state_rest"
+  machine_state_rest_update :: "(machine_state_rest \<Rightarrow> machine_state_rest) \<Rightarrow> machine_state \<Rightarrow> machine_state"
 
 end
 
@@ -31,7 +34,7 @@ text {*
 type_synonym 'a machine_monad = "(machine_state, 'a) nondet_monad"
 
 translations
-  (type) "'c machine_monad" <= (type) "(machine_state, 'c) nondet_monad"
+  (type) "'c machine_monad" <= (type) "machine_state \<Rightarrow> ('c \<times> machine_state) set \<times> bool"
 
 type_synonym 'a machine_rest_monad = "(machine_state_rest, 'a) nondet_monad"
 

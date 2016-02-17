@@ -15,33 +15,36 @@ begin
 context Arch begin
 
 unqualify_types
-  aa_type
+  vs_chain
+  vs_ref
 
 unqualify_consts
-  "atyp_at :: aa_type \<Rightarrow> obj_ref \<Rightarrow> ('z :: state_ext) state \<Rightarrow> bool"
-  "aobj_at :: (arch_kernel_obj \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> ('z :: state_ext) state \<Rightarrow> bool"
-  "aa_type :: arch_kernel_obj \<Rightarrow> aa_type"
-  "wellformed_acap :: arch_cap \<Rightarrow> bool"
-  "valid_arch_cap :: arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-  "valid_arch_cap_ref :: arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-  "acap_class :: arch_cap \<Rightarrow> capclass"
-  "valid_ipc_buffer_cap :: cap \<Rightarrow> obj_ref \<Rightarrow> bool"
-  "wellformed_arch_obj :: arch_kernel_obj \<Rightarrow> bool"
-  "valid_asid_map :: 'z::state_ext state \<Rightarrow> bool"
-  "not_kernel_window :: 'z::state_ext state \<Rightarrow> obj_ref set"
-  "global_refs :: 'z::state_ext state \<Rightarrow> obj_ref set"
-  "arch_obj_bits_type :: aa_type \<Rightarrow> nat"
+  vs_lookup :: "'z::state_ext state \<Rightarrow> vs_chain set"
 
-  "valid_arch_state :: 'z::state_ext state \<Rightarrow> bool"
-  "valid_irq_states :: 'z::state_ext state \<Rightarrow> bool"
-  "valid_machine_state :: 'z::state_ext state \<Rightarrow> bool"
-  "valid_arch_objs :: 'z::state_ext state \<Rightarrow> bool"
-  "valid_arch_caps :: 'z::state_ext state \<Rightarrow> bool"
-  "valid_global_objs :: 'z::state_ext state \<Rightarrow> bool"
-  "valid_kernel_mappings :: 'z::state_ext state \<Rightarrow> bool"
-  "equal_kernel_mappings :: 'z::state_ext state \<Rightarrow> bool"
-  "valid_global_pd_mappings :: 'z::state_ext state \<Rightarrow> bool"
-  "pspace_in_kernel_window :: 'z::state_ext state \<Rightarrow> bool"
+  not_kernel_window :: "'z::state_ext state \<Rightarrow> obj_ref set"
+  global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set"
+  arch_obj_bits_type :: "aa_type \<Rightarrow> nat"
+
+  wellformed_acap :: "arch_cap \<Rightarrow> bool"
+  valid_arch_cap :: "arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_arch_cap_ref :: "arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  acap_class :: "arch_cap \<Rightarrow> capclass"
+  valid_ipc_buffer_cap :: "cap \<Rightarrow> obj_ref \<Rightarrow> bool"
+  wellformed_arch_obj :: "arch_kernel_obj \<Rightarrow> bool"
+  valid_asid_map :: "'z::state_ext state \<Rightarrow> bool"
+  valid_arch_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+
+  valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
+  valid_arch_objs :: "'z::state_ext state \<Rightarrow> bool"
+  valid_arch_caps :: "'z::state_ext state \<Rightarrow> bool"
+  valid_global_objs :: "'z::state_ext state \<Rightarrow> bool"
+  valid_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool"
+  equal_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool"
+  valid_global_pd_mappings :: "'z::state_ext state \<Rightarrow> bool"
+  pspace_in_kernel_window :: "'z::state_ext state \<Rightarrow> bool"
+
+  ASIDPoolObj :: "aobject_type"
+
 
 unqualify_facts
   valid_arch_sizes
@@ -51,8 +54,23 @@ unqualify_facts
   valid_ipc_buffer_cap_null
   valid_arch_cap_atyp
   valid_arch_obj_atyp
+  arch_kobj_size_bounded
+  global_refs_lift
+  valid_arch_state_lift_atyp_at
+  aobj_at_default_arch_cap_valid
+  aobj_ref_default[simp]
+  physical_arch_cap_has_ref
+  valid_arch_objs_def
+  acap_rights_update_id[intro!, simp]
+
 
 end
+
+abbreviation
+  vs_lookup_abbr
+  ("_ \<rhd> _" [80,80] 81) where
+  "rs \<rhd> p \<equiv> \<lambda>s. (rs,p) \<in> vs_lookup s"
+
 
 -- ---------------------------------------------------------------------------
 section "Invariant Definitions for Abstract Spec"
@@ -68,10 +86,7 @@ definition
    case ko of CNode sz cs \<Rightarrow> bits = sz \<and> well_formed_cnode_n bits cs
             | _ \<Rightarrow> False"
 
-definition
-  obj_at :: "(Structures_A.kernel_object \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "obj_at P ref s \<equiv> \<exists>ko. kheap s ref = Some ko \<and> P ko"
+
 
 abbreviation
   "ep_at \<equiv> obj_at is_ep"
@@ -83,9 +98,6 @@ abbreviation
   "cap_table_at bits \<equiv> obj_at (is_cap_table bits)"
 abbreviation
   "real_cte_at cref \<equiv> cap_table_at (length (snd cref)) (fst cref)"
-
-abbreviation
-  "ko_at k \<equiv> obj_at (op = k)"
 
 
 (*
@@ -187,25 +199,10 @@ where
 abbreviation
   "typ_at T \<equiv> obj_at (\<lambda>ob. a_type ob = T)"
 
-context Arch begin
-
-lemma aobj_at_def2:
-  "aobj_at P p = obj_at (\<lambda>ob. case ob of ArchObj ao \<Rightarrow> P ao | _ \<Rightarrow> False) p" 
-  unfolding obj_at_def[abs_def] aobj_at_def[abs_def]
-  apply (rule ext)
-  apply safe
-  by (auto split: kernel_object.splits)
-
 lemma atyp_at_def2:
-  "atyp_at T p = typ_at (AArch T) p"
-  unfolding aobj_at_def2 a_type_def obj_at_def[abs_def]
-  apply (rule ext)
-  apply safe
-  by (auto split: kernel_object.splits split_if_asm)
-
-unqualify_facts aobj_at_def2 atyp_at_def2
-
-end
+  "atyp_at T = typ_at (AArch T)" 
+  unfolding obj_at_def[abs_def] a_type_def
+  by (auto split: kernel_object.splits if_splits)
 
 
 text {* cte with property at *}
@@ -213,7 +210,7 @@ text {* cte with property at *}
 
 definition
   cte_wp_at :: "(cap \<Rightarrow> bool) \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
+where                             
   "cte_wp_at P p s \<equiv> \<exists>cap. fst (get_cap p s) = {(cap,s)} \<and> P cap"
 
 abbreviation
@@ -593,20 +590,7 @@ definition
 where
  "sym_refs st \<equiv> \<forall>x. \<forall>(y, tp) \<in> st x. (x, symreftype tp) \<in> st y"
 
-definition
-  pspace_aligned :: "'z::state_ext state \<Rightarrow> bool"
-where
-  "pspace_aligned s \<equiv>
-     \<forall>x \<in> dom (kheap s). is_aligned x (obj_bits (the (kheap s x)))"
 
-text "objects don't overlap"
-definition
-  pspace_distinct :: "'z::state_ext state \<Rightarrow> bool"
-where
-  "pspace_distinct \<equiv>
-   \<lambda>s. \<forall>x y ko ko'. kheap s x = Some ko \<and> kheap s y = Some ko' \<and> x \<noteq> y \<longrightarrow>
-         {x .. x + (2 ^ obj_bits ko - 1)} \<inter>
-         {y .. y + (2 ^ obj_bits ko' - 1)} = {}"
 
 primrec
   live :: "Structures_A.kernel_object \<Rightarrow> bool"
@@ -656,6 +640,7 @@ lemma arch_caps_of_state_def2:
   apply (simp split: if_splits cap.splits)
   by (safe; simp)
 
+unqualify_consts arch_caps_of_state
 unqualify_facts arch_caps_of_state_def2
 
 end
@@ -867,7 +852,16 @@ definition
 where
   "valid_irq_handlers \<equiv> \<lambda>s. \<forall>cap \<in> ran (caps_of_state s). \<forall>irq \<in> cap_irqs cap. irq_issued irq s"
 
+definition valid_irq_masks :: "(word8 \<Rightarrow> irq_state) \<Rightarrow> (word8 \<Rightarrow> bool) \<Rightarrow> bool" where
+  "valid_irq_masks table masked \<equiv> \<forall>irq. table irq = IRQInactive \<longrightarrow> masked irq"
 
+definition valid_irq_states :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_irq_states \<equiv> \<lambda>s.
+    valid_irq_masks (interrupt_states s) (irq_masks (machine_state s))"
+
+definition
+  "valid_machine_state \<equiv>
+   \<lambda>s. \<forall>p. in_user_frame p (s::'z::state_ext state) \<or> underlying_memory (machine_state s) p = 0"
 
 definition
   valid_state :: "'z::state_ext state \<Rightarrow> bool"
@@ -1459,16 +1453,6 @@ lemma zombies_finalD:
   done
 
 
-context Arch begin
-
-lemma physical_arch_cap_has_ref: 
-  "acap_class arch_cap = PhysicalClass \<Longrightarrow> \<exists>y. aobj_ref arch_cap = Some y"
-  by (cases arch_cap; simp)
-
-unqualify_facts physical_arch_cap_has_ref
-
-end
-
 lemma physical_valid_cap_not_empty_range:
   "\<lbrakk>valid_cap cap s; cap_class cap = PhysicalClass\<rbrakk> \<Longrightarrow> cap_range cap \<noteq> {}"
   apply (case_tac cap)
@@ -1548,11 +1532,6 @@ lemma only_idleD:
 lemma only_idleI:
   "(\<And>t. st_tcb_at idle t s \<Longrightarrow> t = idle_thread s) \<Longrightarrow> only_idle s"
   by (simp add: only_idle_def)
-
-
-lemma obj_at_weakenE:
-  "\<lbrakk> obj_at P r s; \<And>ko. P ko \<Longrightarrow> P' ko \<rbrakk> \<Longrightarrow> obj_at P' r s"
-  by (clarsimp simp: obj_at_def)
 
 
 lemma valid_refs_def2:
@@ -2309,13 +2288,7 @@ lemma wf_cs_upd:
   apply (rule refl)
   done
 
-lemma obj_atE:
-  "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> kheap s p = Some ko; P ko \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
-  by (auto simp: obj_at_def)
 
-lemma ko_at_weakenE:
-  "\<lbrakk> ko_at k ptr s; P k \<rbrakk> \<Longrightarrow> obj_at P ptr s"
-  by (erule obj_at_weakenE, simp)
 
 lemma cte_wp_at_valid_objs_valid_cap:
   "\<lbrakk> cte_wp_at P p s; valid_objs s \<rbrakk> \<Longrightarrow> \<exists>cap. P cap \<and> valid_cap cap s"
@@ -2332,7 +2305,7 @@ lemma cte_wp_at_valid_objs_valid_cap:
   apply (fastforce simp: ran_def)
   done
 
-lemma is_cap_simps':
+lemma is_cap_simps:
   "is_cnode_cap cap = (\<exists>r bits g. cap = cap.CNodeCap r bits g)"
   "is_thread_cap cap = (\<exists>r. cap = cap.ThreadCap r)"
   "is_domain_cap cap = (cap = cap.DomainCap)"
@@ -2346,8 +2319,6 @@ lemma is_cap_simps':
   by (cases cap, auto simp: is_zombie_def is_arch_cap_def
                             is_reply_cap_def is_master_reply_cap_def)+
 
-lemmas is_cap_simps =
-  is_cap_simps' is_pd_cap_def is_pg_cap_def is_pt_cap_def
 
 lemma wf_unique:
   "well_formed_cnode_n bits f \<Longrightarrow>
@@ -2364,6 +2335,7 @@ lemma wf_cs_n_unique:
   \<Longrightarrow> n = n'"
   by (clarsimp simp: well_formed_cnode_n_def length_set_helper)
 
+
 lemma typ_at_range:
   "\<lbrakk> typ_at T p s; pspace_aligned s; valid_objs s \<rbrakk> \<Longrightarrow>
   typ_range p T \<noteq> {}"
@@ -2378,14 +2350,13 @@ lemma typ_at_range:
         apply (erule notE)
         apply (erule is_aligned_no_overflow)
        apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def)
-      apply (auto simp: a_type_def typ_range_def interval_empty obj_bits_type_def word_bits_def
-                        arch_kobj_size_bounded[simplified word_bits_conv] aa_type_def
-                        arch_obj_bits_type_def
+      apply (auto simp: a_type_def typ_range_def  obj_bits_type_def 
+                        aobj_bits_T
                   dest!: is_aligned_no_overflow
-               | simp split: arch_kernel_obj.splits)+
+               | simp)+
   done
 
-lemma typ_at_eq_kheap_obj':
+lemma typ_at_eq_kheap_obj:
   "typ_at ATCB p s \<longleftrightarrow> (\<exists>tcb. kheap s p = Some (TCB tcb))"
   "typ_at AEndpoint p s \<longleftrightarrow> (\<exists>ep. kheap s p = Some (Endpoint ep))"
   "typ_at ANTFN p s \<longleftrightarrow> (\<exists>ntfn. kheap s p = Some (Notification ntfn))"
@@ -2398,7 +2369,6 @@ apply (case_tac ko, simp_all add: wf_unique
                     split: split_if_asm kernel_object.splits )
 done
 
-lemmas typ_at_eq_kheap_obj = typ_at_eq_kheap_obj' atyp_at_eq_kheap_obj[simplified atyp_at_def2]
 
 lemma a_type_ACapTableE:
   "\<lbrakk>a_type ko = ACapTable n;
@@ -2428,7 +2398,6 @@ lemma a_type_ANTFNE:
 lemmas a_type_elims[elim!] =
    a_type_ACapTableE a_type_AGarbageE a_type_ATCBE
    a_type_AEndpointE a_type_ANTFNE
-   a_type_AASIDPoolE a_type_APageDirectoryE a_type_APageTableE a_type_AIntDataE
 
 lemma valid_objs_caps_contained:
   "\<lbrakk> valid_objs s; pspace_aligned s \<rbrakk> \<Longrightarrow> caps_contained s"
@@ -2523,10 +2492,8 @@ lemma cte_wp_cte_at:
   "cte_wp_at P p s \<Longrightarrow> cte_at p s"
   by (auto simp add: cte_wp_at_cases)
 
-locale pspace_update_eq = Arch!: arch_pspace_update_eq +
-  fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
-  assumes pspace: "kheap (f s) = kheap s"
-begin
+
+context pspace_update_eq begin
 
 lemma valid_space_update [iff]:
   "valid_pspace (f s) = valid_pspace s"
@@ -2581,14 +2548,6 @@ lemma valid_refs_update [iff]:
   "valid_refs R (f s) = valid_refs R s"
   by (simp add: valid_refs_def)
 
-lemma valid_asid_table_update [iff]:
-  "valid_asid_table t (f s) = valid_asid_table t s"
-  by (simp add: valid_asid_table_def)
-
-lemma valid_global_pts_update [iff]:
-  "arm_global_pts (arch_state (f s)) = arm_global_pts (arch_state s) \<Longrightarrow>
-   valid_global_pts (f s) = valid_global_pts s"
-  by (simp add: valid_global_pts_def)
 
 lemma has_reply_cap_update [iff]:
   "has_reply_cap t (f s) = has_reply_cap t s"
@@ -2602,91 +2561,23 @@ lemma valid_reply_masters_update [iff]:
   "valid_reply_masters (f s) = valid_reply_masters s"
   by (simp add: valid_reply_masters_def)
 
-lemma valid_pte_update [iff]:
-  "valid_pte pte (f s) = valid_pte pte s"
-  by (cases pte) auto
+interpretation Arch_pspace_update_eq by unfold_locales
 
-lemma valid_pde_update [iff]:
-  "valid_pde pde (f s) = valid_pde pde s"
-  by (cases pde) auto
-
-lemma valid_arch_obj_update [iff]:
-  "valid_arch_obj ao (f s) = valid_arch_obj ao s"
-  by (cases ao) auto
-
-lemma valid_ao_at_update [iff]:
-  "valid_ao_at p (f s) = valid_ao_at p s"
-  by (simp add: valid_ao_at_def)
-
-lemma equal_kernel_mappings_update [iff]:
-  "equal_kernel_mappings (f s) = equal_kernel_mappings s"
-  by (simp add: equal_kernel_mappings_def)
-
-lemma valid_pt_kernel_mappings [iff]:
-  "valid_pde_kernel_mappings pde vref uses (f s)
-      = valid_pde_kernel_mappings pde vref uses s"
-  by (cases pde, simp_all add: valid_pde_kernel_mappings_def)
-
-lemma valid_pd_kernel_mappings [iff]:
-  "valid_pd_kernel_mappings uses (f s)
-      = valid_pd_kernel_mappings uses s"
-  by (rule ext, simp add: valid_pd_kernel_mappings_def)
+lemmas in_user_frame_update[iff] = in_user_frame_update
 
 end
 
-locale arch_update_eq =
-  fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
-  assumes arch: "arch_state (f s) = arch_state s"
 
-locale arch_idle_update_eq = arch_update_eq +
-  assumes idle: "idle_thread (f s) = idle_thread s"
-  assumes irq: "interrupt_irq_node (f s) = interrupt_irq_node s"
-begin
 
-lemma global_refs_update [iff]:
-  "global_refs (f s) = global_refs s"
-  by (simp add: global_refs_def arch idle irq)
+context p_arch_update_eq begin
 
-end
 
-locale p_arch_update_eq = pspace_update_eq + arch_update_eq
-begin
+interpretation Arch_p_arch_update_eq f by unfold_locales
 
-lemma vs_lookup1_update [iff]:
-  "vs_lookup1 (f s) = vs_lookup1 s"
-  by (simp add: vs_lookup1_def)
-
-lemma vs_lookup_trans_update [iff]:
-  "vs_lookup_trans (f s) = vs_lookup_trans s"
-  by simp
-
-lemma vs_lookup_update [iff]:
-  "vs_lookup (f s) = vs_lookup s"
-  by (simp add: vs_lookup_def arch)
-
-lemma vs_lookup_pages1_update [iff]:
-  "vs_lookup_pages1 (f s) = vs_lookup_pages1 s"
-  by (simp add: vs_lookup_pages1_def)
-
-lemma vs_lookup_pages_trans_update [iff]:
-  "vs_lookup_pages_trans (f s) = vs_lookup_pages_trans s"
-  by simp
-
-lemma vs_lookup_pages_update [iff]:
-  "vs_lookup_pages (f s) = vs_lookup_pages s"
-  by (simp add: vs_lookup_pages_def arch)
 
 lemma valid_arch_objs_update [iff]:
   "valid_arch_objs (f s) = valid_arch_objs s"
   by (simp add: valid_arch_objs_def)
-
-lemma valid_vs_lookup_update [iff]:
-  "valid_vs_lookup (f s) = valid_vs_lookup s"
-  by (simp add: valid_vs_lookup_def arch)
-
-lemma valid_table_caps_update [iff]:
-  "valid_table_caps (f s) = valid_table_caps s"
-  by (simp add: valid_table_caps_def arch)
 
 lemma valid_arch_cap_update [iff]:
   "valid_arch_caps (f s) = valid_arch_caps s"
@@ -2712,8 +2603,9 @@ lemma cap_refs_in_kernel_window_update [iff]:
 end
 
 
-locale p_arch_idle_update_eq = p_arch_update_eq + arch_idle_update_eq
-begin
+context p_arch_idle_update_eq begin
+
+interpretation Arch_p_arch_idle_update_eq f by unfold_locales
 
 lemma ifunsafe_update [iff]:
   "if_unsafe_then_cap (f s) = if_unsafe_then_cap s"
@@ -2770,51 +2662,71 @@ lemma valid_irq_handlers_update [iff]:
 
 end
 
+context arch_idle_update_eq begin
+
+interpretation Arch_arch_idle_update_eq f by unfold_locales
+
+lemmas global_refs_update[iff] = global_refs_update
+
+end
+
 locale p_arch_idle_update_int_eq = p_arch_idle_update_eq + pspace_int_update_eq
 
 interpretation revokable_update:
   p_arch_idle_update_int_eq "is_original_cap_update f"
   by unfold_locales auto
+sublocale Arch \<subseteq> revokable_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
 
 interpretation machine_state_update:
   p_arch_idle_update_int_eq "machine_state_update f"
   by unfold_locales auto
+sublocale Arch \<subseteq> machine_state_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
 
 interpretation cdt_update:
   p_arch_idle_update_int_eq "cdt_update f"
   by unfold_locales auto
+sublocale Arch \<subseteq> cdt_update: Arch_p_arch_idle_update_int_eq "cdt_update f" by unfold_locales
+
 
 interpretation cur_thread_update:
   p_arch_idle_update_int_eq "cur_thread_update f"
   by unfold_locales auto
+sublocale Arch \<subseteq> cur_thread_update: Arch_p_arch_idle_update_int_eq "cur_thread_update f" by unfold_locales
 
 interpretation more_update:
   p_arch_idle_update_int_eq "trans_state f"
   by unfold_locales auto
+sublocale Arch \<subseteq> more_update: Arch_p_arch_idle_update_int_eq "trans_state f" by unfold_locales
 
 interpretation interrupt_update:
   p_arch_idle_update_eq "interrupt_states_update f"
   by unfold_locales auto
+sublocale Arch \<subseteq> interrupt_update: Arch_p_arch_idle_update_eq "interrupt_states_update f" by unfold_locales
 
 interpretation irq_node_update:
   pspace_int_update_eq "interrupt_irq_node_update f"
   by unfold_locales auto
+sublocale Arch \<subseteq> irq_node_update: Arch_pspace_update_eq "interrupt_irq_node_update f" by unfold_locales
 
 interpretation arch_update:
   pspace_int_update_eq "arch_state_update f"
   by unfold_locales auto
+sublocale Arch \<subseteq> arch_update: Arch_pspace_update_eq "arch_state_update f" by unfold_locales
 
 interpretation more_update':
   pspace_int_update_eq "trans_state f"
   by unfold_locales auto
+sublocale Arch \<subseteq> more_update': Arch_pspace_update_eq "trans_state f" by unfold_locales
 
 interpretation irq_node_update_arch:
   p_arch_update_eq "interrupt_irq_node_update f"
   by unfold_locales auto
+sublocale Arch \<subseteq> irq_node_update_arch: Arch_p_arch_update_eq "interrupt_irq_node_update f" by unfold_locales
 
 interpretation more_update_arch:
   p_arch_update_eq "trans_state f"
   by unfold_locales auto
+sublocale Arch \<subseteq> more_update_arch: Arch_p_arch_update_eq "trans_state f" by unfold_locales
 
 
 lemma obj_ref_in_untyped_range:
@@ -2851,16 +2763,14 @@ lemma valid_refs_cte_lift:
   apply (rule ctes)
   done
 
+
 lemma valid_global_refs_cte:
   assumes "\<And>P p. cte_wp_at P p s = cte_wp_at P p s'"
-  assumes "idle_thread s = idle_thread s'"
-  assumes "interrupt_irq_node s = interrupt_irq_node s'"
-  assumes "arm_globals_frame (arch_state s) = arm_globals_frame (arch_state s')"
-  assumes "arm_global_pd (arch_state s) = arm_global_pd (arch_state s')"
-  assumes "set (arm_global_pts (arch_state s)) = set (arm_global_pts (arch_state s'))"
-  assumes "ran (arm_asid_table (arch_state s)) = ran (arm_asid_table (arch_state s'))"
+  assumes "global_refs s = global_refs s'"
   shows "valid_global_refs s = valid_global_refs s'"
-  by (simp add: valid_global_refs_def assms valid_refs_def global_refs_def)
+  apply (simp add: valid_global_refs_def)
+  by (simp add: valid_global_refs_def assms valid_refs_def)
+
 
 lemma valid_global_refs_cte_lift:
   assumes ctes: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
@@ -2868,25 +2778,14 @@ lemma valid_global_refs_cte_lift:
   assumes idle: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   assumes irq: "\<And>P. \<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> f \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
   shows "\<lbrace>valid_global_refs\<rbrace> f \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
-  unfolding valid_global_refs_def valid_refs_def2 global_refs_def
-  apply (rule hoare_lift_Pf [where f="caps_of_state"])
-   apply (rule hoare_lift_Pf [where f="idle_thread"])
-    apply (rule hoare_lift_Pf [where f="interrupt_irq_node"])
-     apply (rule arch)
-    apply (rule irq)
-   apply (rule idle)
-  apply (rule ctes)
+  unfolding valid_global_refs_def valid_refs_def2
+  apply (rule hoare_lift_Pf [where f="caps_of_state", OF _ ctes])
+  apply (rule global_refs_lift[OF arch idle irq])
   done
 
-lemma valid_arch_state_lift:
-  assumes typs: "\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>_. typ_at T p\<rbrace>"
-  assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
-  shows "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  apply (simp add: valid_arch_state_def valid_asid_table_def
-                   valid_global_pts_def)
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. arch_state s"])
-   apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift )
-  done
+
+lemmas valid_arch_state_lift = valid_arch_state_lift_atyp_at[simplified atyp_at_def2]
+
 
 lemma has_reply_cap_cte_lift:
   assumes ctes: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
@@ -2944,19 +2843,16 @@ lemma obj_at_default_cap_valid:
   \<Longrightarrow> s \<turnstile> default_cap ty x us"
   unfolding valid_cap_def
   by (clarsimp elim!: obj_at_weakenE
+      intro!: aobj_at_default_arch_cap_valid
       simp: default_object_def dom_empty_cnode well_formed_cnode_n_def
             is_tcb is_ep is_ntfn is_cap_table
-            arch_default_cap_def default_arch_object_def
-            a_type_def valid_vm_rights_def
+            a_type_def 
      split: Structures_A.apiobject_type.splits
-            Arch_Structs_A.aobject_type.split_asm
             option.splits)
 
 lemma obj_ref_default [simp]:
   "obj_ref_of (default_cap ty x us) = x"
-  by (cases ty,
-      auto simp: arch_default_cap_def
-          split: Arch_Structs_A.aobject_type.split)
+  by (cases ty, auto)
 
 lemma valid_pspace_aligned2 [elim!]:
   "valid_pspace s \<Longrightarrow> pspace_aligned s"
@@ -2983,25 +2879,7 @@ lemma cap_table_at_typ_at:
   "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>cap_table_at n c\<rbrace> f \<lbrace>\<lambda>rv. cap_table_at n c\<rbrace>"
   by (simp add: cap_table_at_typ)
 
-lemma valid_pde_lift:
-  assumes x: "\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_pde pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde pde s\<rbrace>"
-  by (cases pde) (simp | wp x)+
 
-lemma valid_pte_lift:
-  assumes x: "\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_pte pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte pte s\<rbrace>"
-  by (cases pte) (simp | wp x)+
-
-lemma pde_at_typ:
-  assumes x: "\<And>p T. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
-  shows      "\<lbrace>pde_at p\<rbrace> f \<lbrace>\<lambda>rv. pde_at p\<rbrace>"
-  by (simp add: pde_at_def | wp x)+
-
-lemma pte_at_typ:
-  assumes x: "\<And>p T. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
-  shows      "\<lbrace>pte_at p\<rbrace> f \<lbrace>\<lambda>rv. pte_at p\<rbrace>"
-  by (simp add: pte_at_def | wp x)+
 
 lemmas abs_typ_at_lifts  =
   ep_at_typ_at ntfn_at_typ_at tcb_at_typ_at
@@ -3009,8 +2887,6 @@ lemmas abs_typ_at_lifts  =
   valid_tcb_state_typ valid_cte_at_typ valid_ntfn_typ
   valid_ep_typ valid_cs_typ valid_arch_obj_typ valid_untyped_typ
   valid_tcb_typ valid_obj_typ valid_cap_typ
-  valid_pde_lift valid_pte_lift
-  pde_at_typ pte_at_typ
 
 lemma valid_idle_lift:
   assumes "\<And>P t. \<lbrace>idle_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. idle_tcb_at P t\<rbrace>"
@@ -3023,66 +2899,30 @@ lemma valid_idle_lift:
   done
 
 
-lemma pspace_alignedD [intro?]:
-  "\<lbrakk> kheap s p = Some ko; pspace_aligned s \<rbrakk> \<Longrightarrow> is_aligned p (obj_bits ko)"
-  unfolding pspace_aligned_def by (drule bspec, blast, simp)
-
-lemma page_directory_pde_atI:
-  "\<lbrakk> page_directory_at p s; x < 2 ^ pageBits;
-         pspace_aligned s \<rbrakk> \<Longrightarrow> pde_at (p + (x << 2)) s"
-  apply (clarsimp simp: obj_at_def pde_at_def)
-  apply (drule (1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def
-                  split: Structures_A.kernel_object.split_asm
-                         arch_kernel_obj.splits split_if_asm)
-  apply (simp add: aligned_add_aligned is_aligned_shiftl_self
-                   word_bits_conv)
-  apply (subgoal_tac "p = (p + (x << 2) && ~~ mask pd_bits)")
-   apply simp
-  apply (rule sym, rule add_mask_lower_bits)
-   apply (simp add: pd_bits_def pageBits_def)
-  apply simp
-  apply (subst upper_bits_unset_is_l2p[unfolded word_bits_conv])
-   apply (simp add: pd_bits_def pageBits_def)
-  apply (rule shiftl_less_t2n)
-   apply (simp add: pd_bits_def pageBits_def)
-  apply (simp add: pd_bits_def pageBits_def)
-  done
-
-lemma page_table_pte_atI:
-  "\<lbrakk> page_table_at p s; x < 2^(pt_bits - 2); pspace_aligned s \<rbrakk> \<Longrightarrow> pte_at (p + (x << 2)) s"
-  apply (clarsimp simp: obj_at_def pte_at_def)
-  apply (drule (1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def
-                  split: Structures_A.kernel_object.split_asm
-                         arch_kernel_obj.splits split_if_asm)
-  apply (simp add: aligned_add_aligned is_aligned_shiftl_self
-                   word_bits_conv)
-  apply (subgoal_tac "p = (p + (x << 2) && ~~ mask pt_bits)")
-   apply simp
-  apply (rule sym, rule add_mask_lower_bits)
-   apply (simp add: pt_bits_def pageBits_def)
-  apply simp
-  apply (subst upper_bits_unset_is_l2p[unfolded word_bits_conv])
-   apply (simp add: pt_bits_def pageBits_def)
-  apply (rule shiftl_less_t2n)
-   apply (simp add: pt_bits_def pageBits_def)
-  apply (simp add: pt_bits_def pageBits_def)
-  done
-
 lemmas caps_of_state_valid_cap = cte_wp_valid_cap [OF caps_of_state_cteD]
+
+context Arch begin
+  lemma obj_ref_is_arch:
+    "\<lbrakk>aobj_ref c = Some r; valid_arch_cap c s\<rbrakk> \<Longrightarrow> aobj_at \<top> r s"
+  by (auto simp add: valid_arch_cap_def aobj_at_def 
+              split: arch_cap.splits)
+  unqualify_facts obj_ref_is_arch
+end
+
 
 lemma obj_ref_is_tcb:
   "\<lbrakk> r \<in> obj_refs cap; tcb_at r s; s \<turnstile> cap \<rbrakk> \<Longrightarrow>
   is_thread_cap cap \<or> is_zombie cap"
-  by (clarsimp simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
-               split: cap.splits arch_cap.splits)
+  by (auto simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
+           dest: obj_ref_is_arch
+           split: cap.splits)
 
 lemma obj_ref_is_cap_table:
   "\<lbrakk> r \<in> obj_refs cap; cap_table_at n r s; s \<turnstile> cap \<rbrakk> \<Longrightarrow>
   is_cnode_cap cap \<or> is_zombie cap"
-  by (clarsimp simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
-               split: cap.splits arch_cap.splits split_if_asm)
+  by (auto simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
+           dest: obj_ref_is_arch
+           split: cap.splits split_if_asm)
 
 lemma ut_revocableD:
   "\<lbrakk> cs p = Some cap; is_untyped_cap cap; ut_revocable r cs \<rbrakk> \<Longrightarrow> r p"
@@ -3142,623 +2982,6 @@ lemma swp_caps_of_state_arch_update [iff]:
   apply (simp add: cte_wp_at_cases)
   done
 
-lemma vs_lookup1_ko_at_dest:
-  "\<lbrakk> ((ref, p) \<rhd>1 (ref', p')) s; ko_at (ArchObj ao) p s; valid_arch_obj ao s \<rbrakk> \<Longrightarrow>
-  \<exists>ao'. ko_at (ArchObj ao') p' s \<and> (\<exists>tp. vs_ref_atype (hd ref') = Some tp
-                                            \<and> a_type (ArchObj ao) = AArch tp)"
-  apply (drule vs_lookup1D)
-  apply (clarsimp simp: obj_at_def vs_refs_def split_def)
-  apply (cases ao, simp_all add: graph_of_def)
-   apply clarsimp
-   apply (drule bspec, fastforce simp: ran_def)
-   apply (clarsimp simp add: a_type_def obj_at_def)
-   apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm)
-  apply (clarsimp split: split_if_asm)
-  apply (simp add: pde_ref_def a_type_def
-            split: Arch_Structs_A.pde.splits)
-  apply (erule_tac x=a in ballE)
-   apply (clarsimp simp add: obj_at_def)
-  apply simp
-  done
-
-lemma vs_lookup1_is_arch:
-  "(a \<rhd>1 b) s \<Longrightarrow> \<exists>ao'. ko_at (ArchObj ao') (snd a) s"
-  apply (clarsimp simp: vs_lookup1_def)
-  apply (case_tac ko, auto simp: vs_refs_def)
-  done
-
-lemma vs_lookup_trancl_step:
-  "\<lbrakk> r \<in> vs_lookup s; (r, r') \<in> (vs_lookup1 s)^+ \<rbrakk> \<Longrightarrow> r' \<in> vs_lookup s"
-  apply (clarsimp simp add: vs_lookup_def)
-  apply (drule (1) rtrancl_trancl_trancl)
-  apply (drule trancl_into_rtrancl)+
-  apply blast
-  done
-
-lemma vs_lookup_pages_trancl_step:
-  "\<lbrakk> r \<in> vs_lookup_pages s; (r, r') \<in> (vs_lookup_pages1 s)^+ \<rbrakk> \<Longrightarrow> r' \<in> vs_lookup_pages s"
-  apply (clarsimp simp add: vs_lookup_pages_def)
-  apply (drule (1) rtrancl_trancl_trancl)
-  apply (drule trancl_into_rtrancl)+
-  apply blast
-  done
-
-lemma vs_lookup_step:
-  "\<lbrakk> (ref \<rhd> p) s; ((ref, p) \<rhd>1 (ref', p')) s \<rbrakk> \<Longrightarrow> (ref' \<rhd> p') s"
-  unfolding vs_lookup_def
-  apply clarsimp
-  apply (drule rtrancl_trans)
-   apply (erule r_into_rtrancl)
-  apply blast
-  done
-
-lemma vs_lookup_pages_step:
-  "\<lbrakk> (ref \<unrhd> p) s; ((ref, p) \<unrhd>1 (ref', p')) s \<rbrakk> \<Longrightarrow> (ref' \<unrhd> p') s"
-  unfolding vs_lookup_pages_def
-  apply clarsimp
-  apply (drule rtrancl_trans)
-   apply (erule r_into_rtrancl)
-  apply blast
-  done
-
-lemma vs_asid_refsI:
-  "table asid = Some p \<Longrightarrow>
-  ([VSRef (ucast asid) None],p) \<in> vs_asid_refs table"
-  by (fastforce simp: vs_asid_refs_def graph_of_def)
-
-(* Non-recursive introduction rules for vs_lookup and vs_lookup_pages
-   NOTE: exhaustive if assuming valid_objs and valid_asid_table *)
-lemma vs_lookup_atI:
-  "arm_asid_table (arch_state s) a = Some p \<Longrightarrow> ([VSRef (ucast a) None] \<rhd> p) s"
-  unfolding vs_lookup_def by (drule vs_asid_refsI) fastforce
-
-lemma vs_lookup_apI:
-  "\<And>a p\<^sub>1 ap b.
-     \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
-      kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
-      ap b = Some p\<rbrakk>
-     \<Longrightarrow> ([VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] \<rhd> p) s"
-  apply (simp add: vs_lookup_def Image_def vs_asid_refs_def graph_of_def)
-  apply (intro exI conjI, assumption)
-  apply (rule rtrancl_into_rtrancl)
-   apply (rule rtrancl_refl)
-  apply (fastforce simp: vs_lookup1_def obj_at_def
-                        vs_refs_def graph_of_def image_def)
-  done
-
-lemma vs_lookup_pdI:
-  "\<And>a p\<^sub>1 ap b p\<^sub>2 pd c.
-     \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
-      kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
-      ap b = Some p\<^sub>2;
-      kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
-      c \<notin> kernel_mapping_slots;
-      pd c = Arch_Structs_A.pde.PageTablePDE p f w\<rbrakk>
-     \<Longrightarrow> ([VSRef (ucast c) (Some APageDirectory),
-           VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None]
-          \<rhd> Platform.ptrFromPAddr p) s"
-  apply (simp add: vs_lookup_def Image_def vs_asid_refs_def graph_of_def)
-  apply (intro exI conjI, assumption)
-  apply (rule rtrancl_into_rtrancl)
-   apply (rule rtrancl_into_rtrancl)
-    apply (rule rtrancl_refl)
-  apply (fastforce simp: vs_lookup1_def obj_at_def
-                        vs_refs_def graph_of_def image_def)
-  apply (simp add: vs_lookup1_def obj_at_def vs_refs_def graph_of_def image_def)
-  apply (rule_tac x=c in exI)
-  apply (simp add: pde_ref_def ptrFormPAddr_addFromPPtr)
-  done
-
-(* FIXME: move *)
-lemma bexEI: "\<lbrakk>\<exists>x\<in>S. Q x; \<And>x. \<lbrakk>x \<in> S; Q x\<rbrakk> \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> \<exists>x\<in>S. P x" by blast
-
-lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unrhd> p) s"
-    apply (clarsimp simp: vs_lookup_pages_def vs_lookup_def Image_def
-                    elim!: bexEI)
-    apply (erule rtrancl.induct, simp_all)
-    apply (rename_tac a b c)
-    apply (subgoal_tac "(b \<unrhd>1 c) s", erule (1) rtrancl_into_rtrancl)
-    apply (thin_tac "x : rtrancl r" for x r)+
-    apply (simp add: vs_lookup1_def vs_lookup_pages1_def split_def)
-    apply (erule exEI)
-    apply clarsimp
-    apply (case_tac x, simp_all add: vs_refs_def vs_refs_pages_def
-                              split: arch_kernel_obj.splits)
-    apply (clarsimp simp: split_def graph_of_def image_def  split: split_if_asm)
-    apply (intro exI conjI impI, assumption)
-     apply (simp add: pde_ref_def pde_ref_pages_def
-               split: Arch_Structs_A.pde.splits)
-    apply (rule refl)
-    done
-
-lemmas
-  vs_lookup_pages_atI = vs_lookup_atI[THEN vs_lookup_pages_vs_lookupI] and
-  vs_lookup_pages_apI = vs_lookup_apI[THEN vs_lookup_pages_vs_lookupI]
-
-lemma vs_lookup_pages_pdI:
-  "\<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
-    kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
-    ap b = Some p\<^sub>2;
-    kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
-    c \<notin> kernel_mapping_slots; pde_ref_pages (pd c) = Some p\<rbrakk>
-   \<Longrightarrow> ([VSRef (ucast c) (Some APageDirectory),
-         VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] \<unrhd> p) s"
-  apply (frule (2) vs_lookup_pages_apI)
-  apply (erule vs_lookup_pages_step)
-  by (fastforce simp: vs_lookup_pages1_def obj_at_def
-                     vs_refs_pages_def graph_of_def image_def
-              split: split_if_asm)
-
-lemma vs_lookup_pages_ptI:
-  "\<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
-    kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
-    ap b = Some p\<^sub>2;
-    kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
-    c \<notin> kernel_mapping_slots; pd c = Arch_Structs_A.PageTablePDE addr x y;
-    kheap s (Platform.ptrFromPAddr addr) = Some (ArchObj (PageTable pt));
-    pte_ref_pages (pt d) = Some p\<rbrakk>
-   \<Longrightarrow> ([VSRef (ucast d) (Some APageTable),
-         VSRef (ucast c) (Some APageDirectory),
-         VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] \<unrhd> p) s"
-  apply (frule (5) vs_lookup_pdI[THEN vs_lookup_pages_vs_lookupI])
-  apply (erule vs_lookup_pages_step)
-  by (fastforce simp: vs_lookup_pages1_def obj_at_def
-                     vs_refs_pages_def graph_of_def image_def
-              split: split_if_asm)
-
-lemma stronger_arch_objsD_lemma:
-  "\<lbrakk>valid_arch_objs s; r \<in> vs_lookup s; (r,r') \<in> (vs_lookup1 s)\<^sup>+ \<rbrakk>
-  \<Longrightarrow> \<exists>ao. ko_at (ArchObj ao) (snd r') s \<and>
-          valid_arch_obj ao s"
-  apply (erule trancl_induct)
-   apply (frule vs_lookup1_is_arch)
-   apply (cases r)
-   apply clarsimp
-   apply (frule (2) valid_arch_objsD)
-   apply (drule (1) vs_lookup_step)
-   apply (drule (2) vs_lookup1_ko_at_dest)
-   apply clarsimp
-   apply (drule (2) valid_arch_objsD)
-   apply fastforce
-  apply clarsimp
-  apply (frule (2) vs_lookup1_ko_at_dest)
-  apply (drule (1) vs_lookup_trancl_step)
-  apply (drule (1) vs_lookup_step)
-  apply clarsimp
-  apply (drule (2) valid_arch_objsD)
-  apply fastforce
-  done
-
-lemma stronger_arch_objsD:
-  "\<lbrakk> (ref \<rhd> p) s;
-     valid_arch_objs s;
-     valid_asid_table (arm_asid_table (arch_state s)) s \<rbrakk> \<Longrightarrow>
-  \<exists>ao. ko_at (ArchObj ao) p s \<and>
-       valid_arch_obj ao s"
-  apply (clarsimp simp: vs_lookup_def vs_asid_refs_def graph_of_def)
-  apply (clarsimp simp: valid_asid_table_def)
-  apply (drule bspec, fastforce simp: ran_def)
-  apply (drule rtranclD)
-  apply (erule disjE)
-   prefer 2
-   apply clarsimp
-   apply (drule stronger_arch_objsD_lemma)
-     apply (erule vs_lookup_atI)
-    apply assumption
-   apply clarsimp
-  apply clarsimp
-  apply (simp add: valid_arch_objs_def)
-  apply (erule_tac x=p in allE)
-  apply (erule impE)
-   apply (rule exI)
-   apply (erule vs_lookup_atI)
-  apply (clarsimp simp: obj_at_def)
-  done
-
-(* FIXME: move *)
-declare ranI [intro]
-
-(* An alternative definition for valid_arch_objs.
-
-   The predicates valid_asid_table and valid_arch_objs are very compact
-   but sometimes hard to use.
-   The lemma below basically unrolls vs_lookup.
-   Though less elegant, this formulation better separates the relevant cases. *)
-lemma valid_arch_objs_alt:
-  "(\<forall>p\<in>ran (arm_asid_table (arch_state s)). asid_pool_at p s) \<and>
-   valid_arch_objs s \<longleftrightarrow>
-   (\<forall>a p. arm_asid_table (arch_state s) a = Some p \<longrightarrow>
-          typ_at (AArch AASIDPool) p s) \<and>
-   (\<forall>a p\<^sub>1 ap b p.
-          arm_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
-          kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
-          ap b = Some p \<longrightarrow> page_directory_at p s) \<and>
-   (\<forall>a p\<^sub>1 ap b p\<^sub>2 pd c.
-          arm_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
-          kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
-          ap b = Some p\<^sub>2 \<longrightarrow>
-          kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd)) \<longrightarrow>
-          c \<notin> kernel_mapping_slots \<longrightarrow> valid_pde (pd c) s) \<and>
-   (\<forall>a p\<^sub>1 ap b p\<^sub>2 pd c addr f w pt.
-          arm_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
-          kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
-          ap b = Some p\<^sub>2 \<longrightarrow>
-          kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd)) \<longrightarrow>
-          c \<notin> kernel_mapping_slots \<longrightarrow>
-          pd c = Arch_Structs_A.pde.PageTablePDE addr f w \<longrightarrow>
-          kheap s (Platform.ptrFromPAddr addr) =
-            Some (ArchObj (PageTable pt)) \<longrightarrow>
-          (\<forall>d. valid_pte (pt d) s))"
-  apply (intro iffI conjI)
-       apply fastforce
-      apply (clarsimp simp: obj_at_def)
-      apply (thin_tac "Ball S P" for S P)
-      apply (frule vs_lookup_atI)
-      apply (drule valid_arch_objsD)
-        apply (simp add: obj_at_def)
-       apply assumption
-      apply (clarsimp simp: obj_at_def ranI)
-     apply (clarsimp simp: obj_at_def)
-     apply (thin_tac "Ball S P" for S P)
-     apply (frule (2) vs_lookup_apI)
-     apply (drule valid_arch_objsD)
-       apply (simp add: obj_at_def)
-      apply assumption
-     apply fastforce
-    apply (clarsimp simp: obj_at_def)
-    apply (thin_tac "Ball S P" for S P)
-    apply (frule (5) vs_lookup_pdI)
-    apply (drule valid_arch_objsD)
-      apply (simp add: obj_at_def)
-     apply assumption
-    apply fastforce
-   apply (clarsimp simp: ran_def)
-  apply (clarsimp simp: valid_arch_objs_def vs_lookup_def)
-  apply (erule converse_rtranclE)
-   apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (clarsimp simp: obj_at_def ran_def)
-  apply (erule converse_rtranclE)
-   apply (drule vs_lookup1D)
-   apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (clarsimp simp: obj_at_def)
-   apply (clarsimp simp: vs_refs_def graph_of_def image_def)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply fastforce
-  apply (erule converse_rtranclE)
-   apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (clarsimp simp: obj_at_def)
-   apply (clarsimp simp: vs_refs_def graph_of_def image_def)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (clarsimp simp: graph_of_def  split: split_if_asm)
-   apply (drule_tac x=ab in spec)
-   apply (clarsimp simp: pde_ref_def obj_at_def
-                  split: Arch_Structs_A.pde.splits)
-  apply (clarsimp dest!: vs_lookup1D)
-  apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: vs_refs_def graph_of_def image_def)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (clarsimp simp: graph_of_def  split: split_if_asm)
-  apply (drule_tac x=ab in spec)
-  apply (clarsimp simp: pde_ref_def obj_at_def
-                 split: Arch_Structs_A.pde.splits)
-  done
-
-lemma vs_lookupE:
-  "\<lbrakk> (ref \<rhd> p) s;
-    \<And>ref' p'. \<lbrakk> (ref',p') \<in> vs_asid_refs (arm_asid_table (arch_state s));
-                ((ref',p') \<rhd>* (ref,p)) s \<rbrakk> \<Longrightarrow> P \<rbrakk>
-  \<Longrightarrow> P"
-  by (auto simp: vs_lookup_def)
-
-(* Non-recursive elim rules for vs_lookup and vs_lookup_pages
-   NOTE: effectively rely on valid_objs and valid_asid_table *)
-lemma vs_lookupE_alt:
-  assumes vl: "(ref \<rhd> p) s"
-  assumes va: "valid_arch_objs s"
-  assumes vt: "(\<forall>p\<in>ran (arm_asid_table (arch_state s)). asid_pool_at p s)"
-  assumes 0: "\<And>a. arm_asid_table (arch_state s) a = Some p \<Longrightarrow>
-                   typ_at (AArch AASIDPool) p s \<Longrightarrow>
-                   R [VSRef (ucast a) None] p"
-  assumes 1: "\<And>a p\<^sub>1 ap b.
-       \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
-        kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
-        ap b = Some p; page_directory_at p s\<rbrakk>
-       \<Longrightarrow> R [VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] p"
-  assumes 2: "\<And>a p\<^sub>1 ap b p\<^sub>2 pd c.
-       \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
-        kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
-        ap b = Some p\<^sub>2;
-        kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
-        c \<notin> kernel_mapping_slots; pde_ref (pd c) = Some p; page_table_at p s\<rbrakk>
-       \<Longrightarrow> R [VSRef (ucast c) (Some APageDirectory),
-              VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] p"
-  shows "R ref p"
-proof -
-  note vao = valid_arch_objs_alt[THEN iffD1, OF conjI[OF vt va]]
-  note vat = vao[THEN conjunct1, rule_format]
-  note vap = vao[THEN conjunct2, THEN conjunct1, rule_format]
-  note vpd = vao[THEN conjunct2, THEN conjunct2, THEN conjunct1, rule_format]
-
-  from vl
-  show ?thesis
-    apply (clarsimp simp: vs_lookup_def)
-    apply (clarsimp simp: Image_def vs_asid_refs_def graph_of_def)
-    apply (frule vat)
-    apply (erule converse_rtranclE)
-     apply clarsimp
-     apply (erule (1) 0)
-    apply (clarsimp simp: vs_refs_def graph_of_def obj_at_def
-                   dest!: vs_lookup1D)
-    apply (frule (2) vap)
-    apply (erule converse_rtranclE)
-     apply clarsimp
-     apply (erule (3) 1)
-    apply (clarsimp simp: vs_refs_def graph_of_def obj_at_def
-                   dest!: vs_lookup1D  split: split_if_asm)
-    apply (frule (4) vpd)
-    apply (erule converse_rtranclE)
-     apply clarsimp
-     apply (erule (5) 2)
-     apply (simp add: valid_pde_def pde_ref_def split: Arch_Structs_A.pde.splits)
-    by (clarsimp simp: obj_at_def pde_ref_def vs_refs_def
-                split: Arch_Structs_A.pde.splits
-                dest!: vs_lookup1D)
-qed
-
-lemma vs_lookup_pagesE_alt:
-  assumes vl: "(ref \<unrhd> p) s"
-  assumes va: "valid_arch_objs s"
-  assumes vt: "(\<forall>p\<in>ran (arm_asid_table (arch_state s)). asid_pool_at p s)"
-  assumes 0: "\<And>a. arm_asid_table (arch_state s) a = Some p \<Longrightarrow>
-                   typ_at (AArch AASIDPool) p s \<Longrightarrow>
-                   R [VSRef (ucast a) None] p"
-  assumes 1: "\<And>a p\<^sub>1 ap b.
-       \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
-        kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
-        ap b = Some p; page_directory_at p s\<rbrakk>
-       \<Longrightarrow> R [VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] p"
-  assumes 2: "\<And>a p\<^sub>1 ap b p\<^sub>2 pd c.
-       \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
-        kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
-        ap b = Some p\<^sub>2;
-        kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
-        c \<notin> kernel_mapping_slots;
-        pde_ref_pages (pd c) = Some p; valid_pde (pd c) s\<rbrakk>
-       \<Longrightarrow> R [VSRef (ucast c) (Some APageDirectory),
-              VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] p"
-  assumes 3: "\<And>a p\<^sub>1 ap b p\<^sub>2 pd c addr x y pt d.
-       \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
-        kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
-        ap b = Some p\<^sub>2;
-        kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
-        c \<notin> kernel_mapping_slots; pd c = Arch_Structs_A.PageTablePDE addr x y;
-        kheap s (Platform.ptrFromPAddr addr) = Some (ArchObj (PageTable pt));
-        pte_ref_pages (pt d) = Some p; valid_pte (pt d) s\<rbrakk>
-       \<Longrightarrow> R [VSRef (ucast d) (Some APageTable),
-              VSRef (ucast c) (Some APageDirectory),
-              VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] p"
-  shows "R ref p"
-proof -
-  note vao = valid_arch_objs_alt[THEN iffD1, OF conjI[OF vt va]]
-  note vat = vao[THEN conjunct1, rule_format]
-  note vap = vao[THEN conjunct2, THEN conjunct1, rule_format]
-  note vpd = vao[THEN conjunct2, THEN conjunct2, THEN conjunct1, rule_format]
-  note vpt = vao[THEN conjunct2, THEN conjunct2, THEN conjunct2, rule_format]
-
-  from vl
-  show ?thesis
-    apply (clarsimp simp: vs_lookup_pages_def)
-    apply (clarsimp simp: Image_def vs_asid_refs_def graph_of_def)
-    apply (frule vat)
-    apply (erule converse_rtranclE)
-     apply clarsimp
-     apply (erule (1) 0)
-    apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
-                   dest!: vs_lookup_pages1D)
-    apply (frule (2) vap)
-    apply (erule converse_rtranclE)
-     apply clarsimp
-     apply (erule (3) 1)
-    apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
-                   dest!: vs_lookup_pages1D  split: split_if_asm)
-    apply (frule (4) vpd)
-    apply (erule converse_rtranclE)
-     apply clarsimp
-     apply (erule (6) 2)
-    apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
-                          pde_ref_pages_def
-                   dest!: vs_lookup_pages1D
-                   split: split_if_asm Arch_Structs_A.pde.splits)
-    apply (frule_tac d=ac in vpt, assumption+)
-    apply (erule converse_rtranclE)
-     apply clarsimp
-     apply (erule (8) 3)
-    apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
-                          pte_ref_pages_def
-                   dest!: vs_lookup_pages1D
-                   split: Arch_Structs_A.pte.splits)
-    done
-qed
-
-lemma valid_asid_tableD:
-  "\<lbrakk> T x = Some p; valid_asid_table T s \<rbrakk> \<Longrightarrow> asid_pool_at p s"
-  by (auto simp: valid_asid_table_def ran_def)
-
-declare graph_of_empty[simp]
-
-lemma pde_graph_ofI:
-  "\<lbrakk>pd x = pde; x \<notin> kernel_mapping_slots; pde_ref pde = Some v\<rbrakk>
-   \<Longrightarrow> (x, v) \<in> graph_of (\<lambda>x. if x \<in> kernel_mapping_slots then None
-                              else pde_ref (pd x))"
-  by (rule graph_ofI, simp)
-
-lemma vs_refs_pdI:
-  "\<lbrakk>pd (ucast r) = Arch_Structs_A.PageTablePDE x a b;
-    ucast r \<notin> kernel_mapping_slots; \<forall>n \<ge> 12. n < 32 \<longrightarrow> \<not> r !! n\<rbrakk>
-   \<Longrightarrow> (VSRef r (Some APageDirectory), Platform.ptrFromPAddr x)
-       \<in> vs_refs (ArchObj (PageDirectory pd))"
-  apply (simp add: vs_refs_def)
-  apply (rule image_eqI[rotated])
-   apply (rule pde_graph_ofI)
-     apply (simp add: pde_ref_def)+
-  apply (simp add: ucast_ucast_mask)
-  apply (rule word_eqI)
-  apply (simp add: word_size)
-  apply (rule ccontr, auto)
-  done
-
-lemma a_type_pdD:
-  "a_type ko = AArch APageDirectory \<Longrightarrow> \<exists>pd. ko = ArchObj (Arch_Structs_A.PageDirectory pd)"
-  by (clarsimp simp: a_type_def
-               split: Structures_A.kernel_object.splits
-                      arch_kernel_obj.splits split_if_asm)
-
-lemma empty_table_is_valid:
-  "\<lbrakk>empty_table (set (arm_global_pts (arch_state s))) (ArchObj ao);
-    valid_arch_state s\<rbrakk>
-   \<Longrightarrow> valid_arch_obj ao s"
-  by (cases ao, simp_all add: empty_table_def)
-
-lemma empty_table_pde_refD:
-  "\<lbrakk> pde_ref (pd x) = Some r; empty_table S (ArchObj (PageDirectory pd)) \<rbrakk> \<Longrightarrow>
-  r \<in> S"
-  by (simp add: empty_table_def)
-
-lemma valid_global_ptsD:
-  "\<lbrakk>r \<in> set (arm_global_pts (arch_state s)); valid_global_objs s\<rbrakk>
-   \<Longrightarrow> \<exists>pt. ko_at (ArchObj (PageTable pt)) r s \<and> (\<forall>x. aligned_pte (pt x))"
-  by (clarsimp simp: valid_global_objs_def)
-
-lemma valid_table_caps_pdD:
-  "\<lbrakk> caps_of_state s p = Some (cap.ArchObjectCap (arch_cap.PageDirectoryCap pd None));
-     valid_table_caps s \<rbrakk> \<Longrightarrow>
-    obj_at (empty_table (set (arm_global_pts (arch_state s)))) pd s"
-  apply (clarsimp simp: valid_table_caps_def simp del: split_paired_All)
-  apply (erule allE)+
-  apply (erule (1) impE)
-  apply (fastforce simp add: is_pd_cap_def cap_asid_def)
-  done
-
-lemma valid_vs_lookupD:
-  "\<lbrakk> (ref \<unrhd> p) s; valid_vs_lookup s \<rbrakk> \<Longrightarrow>
-  (\<exists>slot cap. caps_of_state s slot = Some cap \<and> p \<in> obj_refs cap \<and> vs_cap_ref cap = Some ref)"
-  by (simp add: valid_vs_lookup_def)
-
-lemma vs_lookup_induct:
-  assumes r: "(ref \<rhd> p) s"
-  assumes a: "\<And>asid p. \<lbrakk> arm_asid_table (arch_state s) asid = Some p \<rbrakk> \<Longrightarrow> P [VSRef (ucast asid) None] p s"
-  assumes s: "\<And>ref p ref' p'. \<lbrakk> (ref \<rhd> p) s; ((ref,p) \<rhd>1 (ref',p')) s; P ref p s \<rbrakk> \<Longrightarrow> P ref' p' s"
-  shows "P ref p s"
-  using r
-  apply (clarsimp simp: vs_lookup_def)
-  apply (drule rtranclD)
-  apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-  apply (frule a)
-  apply (erule disjE, simp)
-  apply clarsimp
-  apply (drule vs_lookup_atI)
-  apply (erule trancl_induct2)
-   apply (erule (2) s)
-  apply (drule (1) vs_lookup_trancl_step)
-  apply (erule (2) s)
-  done
-
-lemma vs_lookup_pages_induct:
-  assumes r: "(ref \<unrhd> p) s"
-  assumes a: "\<And>asid p. \<lbrakk> arm_asid_table (arch_state s) asid = Some p \<rbrakk> \<Longrightarrow> P [VSRef (ucast asid) None] p s"
-  assumes s: "\<And>ref p ref' p'. \<lbrakk> (ref \<unrhd> p) s; ((ref,p) \<unrhd>1 (ref',p')) s; P ref p s \<rbrakk> \<Longrightarrow> P ref' p' s"
-  shows "P ref p s"
-  using r
-  apply (clarsimp simp: vs_lookup_pages_def)
-  apply (drule rtranclD)
-  apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-  apply (frule a)
-  apply (erule disjE, simp)
-  apply clarsimp
-  apply (drule vs_lookup_pages_atI)
-  apply (erule trancl_induct2)
-   apply (erule (2) s)
-  apply (drule (1) vs_lookup_pages_trancl_step)
-  apply (erule (2) s)
-  done
-
-lemma vs_ref_order:
-  "\<lbrakk> (r \<rhd> p) s; valid_arch_objs s; valid_arch_state s \<rbrakk>
-       \<Longrightarrow> \<exists>tp. r \<noteq> [] \<and> typ_at (AArch tp) p s \<and>
-            rev (Some tp # map vs_ref_atype r)
-               \<le> [None, Some AASIDPool, Some APageDirectory, Some APageTable]"
-  apply (erule vs_lookup_induct)
-   apply (clarsimp simp: valid_arch_state_def valid_asid_table_def
-                         ranI)
-  apply (clarsimp dest!: vs_lookup1D elim!: obj_atE)
-  apply (clarsimp simp: vs_refs_def a_type_def[where ob="ArchObj ao" for ao]
-                 split: Structures_A.kernel_object.split_asm
-                        arch_kernel_obj.split_asm
-                 dest!: graph_ofD)
-   apply (drule valid_arch_objsD, simp add: obj_at_def, assumption)
-   apply (case_tac rs, simp_all)[1]
-   apply (case_tac list, simp_all add: ranI)[1]
-   apply (case_tac lista, simp_all)[1]
-   apply (frule prefix_length_le, clarsimp)
-  apply (drule valid_arch_objsD, simp add: obj_at_def, assumption)
-  apply (clarsimp simp: pde_ref_def
-                 split: Arch_Structs_A.pde.split_asm split_if_asm)
-  apply (drule_tac x=a in bspec, simp)
-  apply (case_tac rs, simp_all)[1]
-  apply (case_tac list, simp_all)[1]
-  apply (case_tac lista, simp_all)[1]
-  apply (frule prefix_length_le, clarsimp)
-  done
-
-lemma addrFromPPtr_ptrFromPAddr_id[simp]:
-  "Platform.addrFromPPtr (Platform.ptrFromPAddr x) = x"
-by (simp add: Platform.addrFromPPtr_def Platform.ptrFromPAddr_def)
-
-lemma valid_pte_lift2:
-  assumes x: "\<And>T p. \<lbrace>Q and typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. Q s \<and> valid_pte pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte pte s\<rbrace>"
-  by (cases pte) (simp | wp x)+
-
-lemma valid_pde_lift2:
-  assumes x: "\<And>T p. \<lbrace>Q and typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. Q s \<and> valid_pde pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde pde s\<rbrace>"
-  by (cases pde) (simp | wp x)+
-
-lemma valid_arch_obj_typ2:
-  assumes P: "\<And>P p T. \<lbrace>\<lambda>s. Q s \<and> P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. Q s \<and> valid_arch_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_obj ob s\<rbrace>"
-  apply (cases ob, simp_all)
-    apply (wp hoare_vcg_const_Ball_lift [OF P], simp)
-   apply (rule hoare_pre, wp hoare_vcg_all_lift valid_pte_lift2 P)
-    apply clarsimp
-    apply assumption
-   apply clarsimp
-  apply (wp hoare_vcg_ball_lift valid_pde_lift2 P)
-    apply clarsimp
-    apply assumption
-   apply clarsimp
-  apply wp
-  done
-
 lemma is_master_reply_cap_NullCap:
   "is_master_reply_cap cap.NullCap = False"
   by (simp add: is_cap_simps)
@@ -3771,18 +2994,8 @@ lemma unique_reply_capsD:
   by (simp add: unique_reply_caps_def reply_masters_mdb_def is_cap_simps
            del: split_paired_All)
 
-lemma valid_arch_objsI [intro?]:
-  "(\<And>p ao. \<lbrakk> (\<exists>\<rhd> p) s; ko_at (ArchObj ao) p s \<rbrakk> \<Longrightarrow> valid_arch_obj ao s) \<Longrightarrow> valid_arch_objs s"
-  by (simp add: valid_arch_objs_def)
-
 (* FIXME: duplicated with caps_of_state_valid_cap *)
 lemmas caps_of_state_valid =  caps_of_state_valid_cap
-
-lemma vs_lookup1_stateI2:
-  assumes 1: "(r \<rhd>1 r') s"
-  assumes ko: "\<And>ko. \<lbrakk> ko_at ko (snd r) s; vs_refs ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') (snd r) s'"
-  shows "(r \<rhd>1 r') s'" using 1 ko
-  by (fastforce simp: obj_at_def vs_lookup1_def)
 
 lemma valid_reply_mastersD:
   "\<lbrakk> cte_wp_at (op = (cap.ReplyCap t True)) p s; valid_reply_masters s \<rbrakk>
@@ -3825,63 +3038,6 @@ lemma not_pred_tcb:
   apply (auto split: Structures_A.kernel_object.splits)
   done
 
-lemma vs_lookupI:
-  "\<lbrakk> ref' \<in> vs_asid_refs (arm_asid_table (arch_state s));
-     (ref',(ref,p)) \<in> (vs_lookup1 s)^*  \<rbrakk> \<Longrightarrow>
-  (ref \<rhd> p) s"
-  by (simp add: vs_lookup_def) blast
-
-lemma vs_lookup1_trans_is_append':
-  "(a, b) \<in> (vs_lookup1 s)\<^sup>* \<Longrightarrow> \<exists>zs. fst b = zs @ fst a"
-  by (erule rtrancl_induct) (auto dest!: vs_lookup1D)
-
-lemma vs_lookup1_trans_is_append:
-  "((xs, a), (ys, b)) \<in> (vs_lookup1 s)\<^sup>* \<Longrightarrow> \<exists>zs. ys = zs @ xs"
-  by (drule vs_lookup1_trans_is_append') auto
-
-lemma vs_lookup_trans_ptr_eq':
-  "(a, b) \<in> (vs_lookup1 s)\<^sup>* \<Longrightarrow> fst a = fst b \<longrightarrow> snd b = snd a"
-  apply (erule rtrancl_induct)
-   apply simp
-  apply clarsimp
-  apply (cases a)
-  apply clarsimp
-  apply (drule vs_lookup1D)
-  apply clarsimp
-  apply (frule vs_lookup1_trans_is_append)
-  apply simp
-  done
-
-lemma vs_lookup_trans_ptr_eq:
-  "((r,p), (r,p')) \<in> (vs_lookup1 s)\<^sup>* \<Longrightarrow> p = p'"
-  by (drule vs_lookup_trans_ptr_eq') simp
-
-lemma vs_lookup_atD:
-  "([VSRef (ucast asid) None] \<rhd> p) s \<Longrightarrow> arm_asid_table (arch_state s) asid = Some p"
-  apply (simp add: vs_lookup_def)
-  apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-  apply (drule rtranclD)
-  apply (erule disjE)
-   apply (clarsimp simp: up_ucast_inj_eq)
-  apply clarsimp
-  apply (drule tranclD2)
-  apply (clarsimp simp: up_ucast_inj_eq)
-  apply (drule vs_lookup1D)
-  apply (clarsimp simp: vs_refs_def)
-  apply (clarsimp split: split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  done
-
-lemma vs_lookup_atE:
-  "([VSRef (ucast asid) None] \<rhd> p) s \<Longrightarrow> (arm_asid_table (arch_state s) asid = Some p \<Longrightarrow> P) \<Longrightarrow> P"
-  by (blast dest: vs_lookup_atD)
-
-lemma vs_lookup_2ConsD:
-  "((v # v' # vs) \<rhd> p) s \<Longrightarrow> \<exists>p'. ((v'#vs) \<rhd> p') s \<and> ((v' # vs,p') \<rhd>1 (v # v' # vs, p)) s"
-  apply (clarsimp simp: vs_lookup_def)
-  apply (erule rtranclE)
-   apply (clarsimp simp: vs_asid_refs_def)
-  apply (fastforce simp: vs_lookup1_def)
-  done
 
 lemma only_idle_arch [iff]:
   "only_idle (arch_state_update f s) = only_idle s"
@@ -3907,23 +3063,10 @@ lemma state_refs_arch_update [iff]:
   "state_refs_of (arch_state_update f s) = state_refs_of s"
   by (simp add: state_refs_of_def)
 
-lemma valid_global_refs_asid_table_udapte [iff]:
-  "valid_global_refs (s\<lparr>arch_state := arm_asid_table_update f (arch_state s)\<rparr>) =
-  valid_global_refs s"
-  by (simp add: valid_global_refs_def global_refs_def)
-
-lemma pspace_in_kernel_window_arch_update[simp]:
-  "arm_kernel_vspace (f (arch_state s)) = arm_kernel_vspace (arch_state s)
-     \<Longrightarrow> pspace_in_kernel_window (arch_state_update f s) = pspace_in_kernel_window s"
-  by (simp add: pspace_in_kernel_window_def)
-
 lemma valid_global_refs_more_update[iff]:
   "valid_global_refs (trans_state f s) = valid_global_refs s"
-  by (simp add: valid_global_refs_def global_refs_def)
+  by (simp add: valid_global_refs_def)
 
-lemma valid_irq_states_more_update[iff]:
-  "valid_irq_states (trans_state f s) = valid_irq_states s"
-  by (simp add: valid_irq_states_def)
 
 lemma valid_ioc_arch_state_update[iff]:
   "valid_ioc (arch_state_update f s) = valid_ioc s"
@@ -3932,6 +3075,7 @@ lemma valid_ioc_arch_state_update[iff]:
 lemma valid_ioc_more_update[iff]:
   "valid_ioc (trans_state f s) = valid_ioc s"
   by (simp add: valid_ioc_def)
+
 lemma valid_ioc_interrupt_states_update[iff]:
   "valid_ioc (interrupt_states_update f s) = valid_ioc s"
   by (simp add: valid_ioc_def)
@@ -3976,77 +3120,11 @@ lemma only_idle_lift:
    apply (rule assms)+
   done
 
-lemmas vs_cap_ref_simps =
-       vs_cap_ref_def [split_simps cap.split arch_cap.split vmpage_size.split]
-lemmas table_cap_ref_simps =
-       table_cap_ref_def [split_simps cap.split arch_cap.split]
-
-lemma table_cap_ref_vs_cap_ref_eq:
-  "table_cap_ref cap = Some ref \<Longrightarrow> table_cap_ref cap' = Some ref \<Longrightarrow>
-   vs_cap_ref cap = vs_cap_ref cap'"
-  by (auto simp: table_cap_ref_def vs_cap_ref_simps
-          split: cap.splits arch_cap.splits option.splits)
-
-lemma vs_cap_ref_eq_imp_table_cap_ref_eq:
-  "is_pg_cap cap = is_pg_cap cap' \<Longrightarrow> vs_cap_ref cap = vs_cap_ref cap'
-   \<Longrightarrow> table_cap_ref cap = table_cap_ref cap'"
-  by (auto simp: is_cap_simps vs_cap_ref_def table_cap_ref_simps
-          split: cap.splits arch_cap.splits vmpage_size.splits option.splits)
-
-lemma valid_arch_objs_lift:
-  assumes x: "\<And>P. \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
-  assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-      and y: "\<And>ao p. \<lbrace>\<lambda>s. \<not> ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> ko_at (ArchObj ao) p s\<rbrace>"
-  shows      "\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
-  apply (simp add: valid_arch_objs_def)
-  apply (wp hoare_vcg_all_lift hoare_convert_imp [OF x]
-            hoare_convert_imp [OF y] valid_arch_obj_typ z)
-  done
-
-lemma valid_validate_vm_rights[simp]:
-  "validate_vm_rights rs \<in> valid_vm_rights"
-and validate_vm_rights_subseteq[simp]:
-  "validate_vm_rights rs \<subseteq> rs"
-and validate_vm_rights_simps[simp]:
-  "validate_vm_rights vm_read_write = vm_read_write"
-  "validate_vm_rights vm_read_only = vm_read_only"
-  "validate_vm_rights vm_kernel_only = vm_kernel_only"
-  by (simp_all add: validate_vm_rights_def valid_vm_rights_def
-                    vm_read_write_def vm_read_only_def vm_kernel_only_def)
-
-lemma validate_vm_rights_inter: (* NOTE: unused *)
-  "validate_vm_rights (validate_vm_rights fun \<inter> msk) =
-   validate_vm_rights (fun \<inter> msk)"
-  by (simp add: validate_vm_rights_def vm_read_write_def vm_read_only_def
-              vm_kernel_only_def)
-
-lemma validate_vm_rights_def':
-  "validate_vm_rights rs =
-   (THE rs'. rs' \<subseteq> rs \<and> rs' : valid_vm_rights \<and>
-     (\<forall>rs''. rs'' \<subseteq> rs \<longrightarrow> rs'' : valid_vm_rights \<longrightarrow> rs'' \<subseteq> rs'))"
-  apply (rule the_equality[symmetric])
-   apply  (auto simp add: validate_vm_rights_def valid_vm_rights_def
-                       vm_read_write_def vm_read_only_def vm_kernel_only_def)[1]
-  apply (simp add: validate_vm_rights_def valid_vm_rights_def
-                 vm_read_write_def vm_read_only_def vm_kernel_only_def)
-  apply safe
-            apply simp+
-       apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-    apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-   apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-  apply (drule_tac x="{AllowRead}" in spec, simp)
-  done
-
-lemma validate_vm_rights_eq[simp]:
-  "rs : valid_vm_rights \<Longrightarrow> validate_vm_rights rs = rs"
-  by (auto simp add: validate_vm_rights_def valid_vm_rights_def
-                     vm_read_write_def vm_read_only_def vm_kernel_only_def)
 
 lemma cap_rights_update_id [intro!, simp]:
   "wellformed_cap c \<Longrightarrow> cap_rights_update (cap_rights c) c = c"
   unfolding cap_rights_update_def
-           acap_rights_update_def
-  by (cases c) (auto simp: wellformed_cap_simps split: arch_cap.splits)
+  by (cases c) (auto simp: wellformed_cap_simps)
 
 lemma cap_mask_UNIV [simp]:
   "wellformed_cap c \<Longrightarrow> mask_cap UNIV c = c"
@@ -4075,6 +3153,11 @@ lemma invs_valid_stateI [elim!]:
 lemma tcb_at_invs [elim!]:
   "invs s \<Longrightarrow> tcb_at (cur_thread s) s"
   by (simp add: invs_def cur_tcb_def)
+
+lemma valid_irq_states_more_update[iff]:
+  "valid_irq_states (trans_state f s) = valid_irq_states s"
+  by (simp add: valid_irq_states_def)
+
 
 lemma invs_valid_objs [elim!]:
   "invs s \<Longrightarrow> valid_objs s"
@@ -4176,13 +3259,7 @@ lemma cur_tcb_arch [iff]:
   "cur_tcb (arch_state_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
-lemma invs_pd_caps:
-  "invs s \<Longrightarrow> valid_table_caps s"
-  by (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
 
-lemma invs_valid_vs_lookup[elim!]:
-  "invs s \<Longrightarrow> valid_vs_lookup s "
-  by (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
 
 lemma invs_valid_global_objs[elim!]:
   "invs s \<Longrightarrow> valid_global_objs s "
@@ -4200,13 +3277,7 @@ lemma all_invs_but_sym_refs_check:
   by (simp add: invs_def valid_state_def valid_pspace_def
                 o_def pred_conj_def conj_comms)
 
-lemma invs_unique_table_caps[elim!]:
-  "invs s \<Longrightarrow> unique_table_caps (caps_of_state s)"
-  by (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
 
-lemma invs_unique_refs[elim!]:
-  "invs s \<Longrightarrow> unique_table_refs (caps_of_state s)"
-  by (simp add: invs_def valid_state_def valid_arch_caps_def)
 
 lemma invs_valid_asid_map[elim!]:
   "invs s \<Longrightarrow> valid_asid_map s"
@@ -4314,5 +3385,6 @@ lemma sym_refs_bound_tcb_atD:
   apply (drule (1)sym_refs_obj_atD)
   apply auto
   done
+
 
 end

@@ -4,10 +4,9 @@
 *)
 
 theory Unqualify
-imports Main
+imports Cardinality
 keywords "unqualify_facts" :: thy_decl and "unqualify_consts" :: thy_decl and "unqualify_types" :: thy_decl
 begin
-
 
 ML \<open>
 
@@ -28,6 +27,13 @@ fun make_binding b =
     val pos = Binding.pos_of b;
   in make_binding_raw (nm, pos) end
 
+fun make_notation b =
+
+  let
+    val str = Binding.name_of b
+      |> String.translate(fn #"_" => "'_" | x => Char.toString x)
+
+  in str end
 
 in
 
@@ -70,21 +76,23 @@ val _ =
 val _ =
   Outer_Syntax.command @{command_keyword unqualify_consts} "unqualify consts"
     (Parse.opt_target -- Scan.option (Args.parens Parse.name) -- 
-      Scan.repeat1 (Parse.position Parse.term) >> (fn ((target,qual),bs) =>
+      Scan.repeat1 (Parse.position (Parse.const -- Scan.option (Parse.$$$ "::" |-- Parse.typ))) >> (fn ((target,qual),bs) =>
       Toplevel.local_theory NONE target (fn lthy =>
       let
 
-        val ts = map (`(Syntax.parse_term lthy o fst)) bs;
+        fun read_const (t, T_in) =
+        let
+          val (nm, T) = dest_Const (Proof_Context.read_const {proper = true, strict = false} lthy t);
+          val _ = case map_option (Syntax.read_typ lthy) T_in of
+            SOME T' => (Syntax.check_term lthy (Const (nm, T')); ())
+           | NONE => ()
+        in (nm, T) end
 
-        fun get_const 
-            (( t as Const ("_type_constraint_", _) $
-                (Const ("_type_constraint_", _) $
-                  Const (nm, _))), (_, pos)) = ((nm, pos), t)
-           | get_const (t as (Const ("_type_constraint_", _) $
-                  Const (nm, _)), (_, pos)) = ((nm, pos), t)
-           | get_const (t, (_,pos)) = error ("Not a constant or abbreviation: " ^ Syntax.string_of_term lthy t ^ Position.here pos)
+        val ts = map (`( read_const o fst)) bs;
 
-        val ts' = map (apsnd (Syntax.check_term lthy) o apfst make_binding_raw o get_const) ts;
+        fun get_const (((nm, T) , (_, pos))) = ((nm, pos), Const (nm, T))
+
+        val ts' = map (apfst make_binding_raw o get_const) ts;
 
         val naming = Sign.naming_of (Proof_Context.theory_of lthy)
           |> the_default I (map_option Name_Space.mandatory_path qual);
@@ -93,42 +101,45 @@ val _ =
           let
             val thy' = Context.theory_map (Name_Space.map_naming (K naming)) thy;
             val export = Morphism.term (Local_Theory.standard_morphism lthy (Proof_Context.init_global thy));
+            
   
           in
             fold (fn (b, t) =>
               let
-                val b' = make_binding b;
+                val b' = b 
+                  |> make_binding;
+                val t' = export t;
+
               in
-               Sign.add_abbrev Print_Mode.input (b', export t) #> snd
+                Sign.add_abbrev Print_Mode.internal(b', t') #> snd #>
+                Sign.notation true ("", false) [(t', Delimfix (make_notation b'))]
               end) ts' thy'
           end) lthy
 
        in
        lthy'
        end)))
-
+                                                  
 
 val _ =
   Outer_Syntax.command @{command_keyword unqualify_types} "unqualify types"
     (Parse.opt_target -- Scan.option (Args.parens Parse.name) -- 
-      Scan.repeat1 (Parse.position Parse.typ) >> (fn ((target,qual),bs) =>
+      Scan.repeat1 (Parse.position Parse.type_const) >> (fn ((target,qual),bs) =>
       Toplevel.local_theory NONE target (fn lthy =>
       let
+
         
         fun err (T, pos) = 
           error ("Not a defined type or type synonym: " ^ Syntax.string_of_typ lthy T ^ Position.here pos)
 
    
-        val Ts = map (`(Syntax.parse_typ lthy o fst)) bs;
+        val Ts = map (`(Proof_Context.read_type_name {proper = true, strict = false} lthy o fst)) bs;
 
         fun get_type (T, (_, pos)) = case try dest_Type T of
-        SOME (nm, Ts) => (if can dest_funT T then err (T,pos) else ((nm, pos), (T,Ts)))
+        SOME (nm, Ts) => (if can dest_funT T then err (T,pos) else ((nm, pos), (nm,Ts)))
         | NONE => err (T,pos)
 
-        fun check_Ts (T,Ts) = (Syntax.check_typ lthy T, 
-          fold Term.add_tfree_namesT Ts [])
-
-        val Ts' = map (apsnd check_Ts o apfst make_binding_raw o get_type) Ts;
+        val Ts' = map (apfst make_binding_raw o get_type) Ts;
 
         val naming = Sign.naming_of (Proof_Context.theory_of lthy)
           |> the_default I (map_option Name_Space.mandatory_path qual);
@@ -137,11 +148,24 @@ val _ =
           let
             val thy' = Context.theory_map (Name_Space.map_naming (K naming)) thy;
           in
-            fold (fn (b, (T,frees)) =>
+            fold (fn (b, (nm,frees_raw)) =>
               let
+
+                val Ts = lthy
+                  |> Variable.invent_types (map (fn _ => Proof_Context.default_sort lthy ("'a",~1)) frees_raw)
+                  |> fst
+                  |> map TFree
+
+                val T = Type (nm, Ts)
+                val frees = map (fst o dest_TFree) Ts
                 val b' = make_binding b;
+
+                val str = make_notation b'
+                  |> fold (fn _ => fn s => "_ " ^ s) Ts
+
               in
-               Sign.add_type_abbrev lthy (b',frees, T)
+                Sign.add_type_abbrev lthy (b',frees, T) #>
+                Sign.type_notation true ("", false) [(T, Delimfix str)]
               end) Ts' thy'
           end) lthy
 
@@ -150,7 +174,6 @@ val _ =
        end)))
 
 end
-
 \<close>
 
 end

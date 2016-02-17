@@ -14,11 +14,14 @@ theory InvocationLabels_H
 imports "$L4V_ARCH/ArchInvocationLabels_H"
 begin
 
+unqualify_types (in Arch)
+  arch_invocation_label
+
 text {*
   An enumeration of all system call labels.
 *}
 
-#INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ArchLabels=ArchInvocationLabels_H ONLY InvocationLabel
+#INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ArchLabels=ArchInvocationLabels_H.ARM ONLY InvocationLabel
 #INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs instanceproofs
 
 end

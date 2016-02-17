@@ -19,8 +19,8 @@ imports Tcb_A
 begin
 
 unqualify_consts (in Arch)
-  "set_message_info :: obj_ref \<Rightarrow> message_info \<Rightarrow> (unit,'z::state_ext) s_monad"
-  "lookup_ipc_buffer :: bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
+  set_message_info :: "obj_ref \<Rightarrow> message_info \<Rightarrow> (unit,'z::state_ext) s_monad"
+  lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
 
 section {* Getting and setting the message info register. *}
 

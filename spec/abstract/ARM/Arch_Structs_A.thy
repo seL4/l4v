@@ -191,12 +191,12 @@ qualify ARM
 record arch_state =
   arm_globals_frame :: obj_ref
   arm_asid_table    :: "word8 \<rightharpoonup> obj_ref"
-  arm_hwasid_table  :: "hw_asid \<rightharpoonup> asid"
-  arm_next_asid     :: hw_asid
-  arm_asid_map      :: "asid \<rightharpoonup> (hw_asid \<times> obj_ref)"
+  arm_hwasid_table  :: "ARM.hw_asid \<rightharpoonup> ARM.asid"
+  arm_next_asid     :: ARM.hw_asid
+  arm_asid_map      :: "ARM.asid \<rightharpoonup> (ARM.hw_asid \<times> obj_ref)"
   arm_global_pd     :: obj_ref
   arm_global_pts    :: "obj_ref list"
-  arm_kernel_vspace :: arm_vspace_region_uses
+  arm_kernel_vspace :: ARM.arm_vspace_region_uses
 
 end_qualify
 

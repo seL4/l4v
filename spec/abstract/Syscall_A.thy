@@ -22,8 +22,8 @@ imports
 begin
 
 unqualify_consts (in Arch)
-  "arch_perform_invocation :: arch_invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
-  "handle_vm_fault :: obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
+  arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
+  handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
 
 
 text{*

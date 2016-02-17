@@ -19,7 +19,7 @@ imports Ipc_A
 begin
 
 unqualify_consts (in Arch)
-  "arch_invoke_irq_control :: arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
+  arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
   
   
 text {* Tests whether an IRQ identifier is in use. *}

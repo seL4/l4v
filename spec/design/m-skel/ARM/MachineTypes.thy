@@ -15,8 +15,10 @@ imports
   "../../../lib/Enumeration"
   "../../../lib/WordSetup"
   "../../../lib/wp/NonDetMonad"
+  Setup_Locale
   Platform
 begin
+qualify ARM (deep)
 
 (* !!! Generated File !!! Skeleton in ../haskell-translator/ARMMachineTypes.thy *)
 
@@ -112,4 +114,5 @@ definition
 #INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs ONLY HardwareASID VMFaultType VMPageSize pageBits pageBitsForSize
 #INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs instanceproofs ONLY HardwareASID VMFaultType VMPageSize
 
+end_qualify
 end

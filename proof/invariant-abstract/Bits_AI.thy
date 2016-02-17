@@ -9,7 +9,7 @@
  *)
 
 theory Bits_AI
-imports Invariants_AI
+imports "./$L4V_ARCH/ArchBits_AI"
 begin
 
 lemmas crunch_wps = hoare_drop_imps mapM_wp' mapM_x_wp'
@@ -106,9 +106,5 @@ lemma empty_on_failure_wp[wp]:
   apply wp
   apply assumption
   done
-
-lemma pbfs_atleast_pageBits:
-  "pageBits \<le> pageBitsForSize sz"
-  by (cases sz) (auto simp: pageBits_def)
 
 end
