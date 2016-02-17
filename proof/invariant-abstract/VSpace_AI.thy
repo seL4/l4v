@@ -4384,6 +4384,8 @@ lemma vs_lookup_pages_pdeD:
             split: Arch_Structs_A.pde.split_asm)
   done
 
+declare source_size[simp] target_size[simp]
+
 lemma vs_lookup_ap_mappingD:
   "([VSRef (asid && mask asid_low_bits) (Some AASIDPool),
      VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> pd) s
@@ -4397,10 +4399,10 @@ apply (clarsimp simp: vs_lookup_def vs_asid_refs_def
                  split: split_if_asm)
   apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (simp add: up_ucast_inj_eq graph_of_def kernel_mapping_slots_def kernel_base_def                   
-                   not_le ucast_less_ucast[symmetric, where 'a=12 and 'b=32]
+                   not_le ucast_less_ucast[symmetric, where 'a=12 and 'b=32] 
                    mask_asid_low_bits_ucast_ucast pde_ref_pages_def pte_ref_pages_def
+                   ucast_up_ucast_id is_up_def
             split: split_if_asm)
-  using [[show_types, show_consts]]
   done
 
 lemma kernel_slot_impossible_vs_lookup_pages:

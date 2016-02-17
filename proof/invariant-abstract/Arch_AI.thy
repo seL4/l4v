@@ -42,7 +42,7 @@ lemma safe_parent_strg:
 
 
 lemma asid_low_bits_pageBits:
-  "Suc (Suc (Suc asid_low_bits)) = pageBits"
+  "(Suc (Suc asid_low_bits)) = pageBits"
   by (simp add: pageBits_def asid_low_bits_def)
 
 (* 32-bit instance of Detype_AI.range_cover_full *)
@@ -137,11 +137,11 @@ lemma check_vp_inv: "\<lbrace>P\<rbrace> check_vp_alignment sz w \<lbrace>\<lamb
 
 
 lemma p2_low_bits_max:
-  "(2 ^ asid_low_bits - 1) = (max_word :: 9 word)"
+  "(2 ^ asid_low_bits - 1) = (max_word :: 10 word)"
   by (simp add: asid_low_bits_def max_word_def)
 
 lemma dom_ucast_eq:
-  "(- dom (\<lambda>a::9 word. p (ucast a::word32)) \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + y \<noteq> 0} = {}) =
+  "(- dom (\<lambda>a::10 word. p (ucast a::word32)) \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + y \<noteq> 0} = {}) =
    (- dom p \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> x + y \<noteq> 0} = {})"
   apply safe
    apply clarsimp
@@ -174,11 +174,11 @@ lemma dom_ucast_eq:
   done
 
 lemma asid_high_bits_max_word:
-  "(2 ^ asid_high_bits - 1 :: word8) = max_word"
+  "(2 ^ asid_high_bits - 1 :: 7 word) = max_word"
   by (simp add: asid_high_bits_def max_word_def) 
 
 lemma dom_ucast_eq_8:
-  "(- dom (\<lambda>a::word8. p (ucast a::word32)) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {}) =
+  "(- dom (\<lambda>a::7 (*asid_high_bits*) word. p (ucast a::word32)) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {}) =
    (- dom p \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {})"
   apply safe
    apply clarsimp
@@ -245,10 +245,10 @@ lemma ucast_le_migrate:
 
 
 lemma ucast_fst_hd_assocs:
-  "- dom (\<lambda>x. pool (ucast (x::9 word)::word32)) \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + (w::word32) \<noteq> 0} \<noteq> {}
+  "- dom (\<lambda>x. pool (ucast (x::10 word)::word32)) \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + (w::word32) \<noteq> 0} \<noteq> {}
   \<Longrightarrow> 
   fst (hd [(x, y)\<leftarrow>assocs pool . x \<le> 2 ^ asid_low_bits - 1 \<and> x + w \<noteq> 0 \<and> y = None]) =
-  ucast (fst (hd [(x, y)\<leftarrow>assocs (\<lambda>a::9 word. pool (ucast a)) . 
+  ucast (fst (hd [(x, y)\<leftarrow>assocs (\<lambda>a::10 word. pool (ucast a)) . 
                           x \<le> 2 ^ asid_low_bits - 1 \<and> 
                           ucast x + w \<noteq> 0 \<and> y = None]))"
   apply (simp add: ucast_assocs[unfolded o_def])
@@ -1504,7 +1504,7 @@ lemma arch_decode_inv_wf[wp]:
       apply (rule conjI)
        apply (subst field_simps, erule is_aligned_add_less_t2n)
          apply (simp add: asid_low_bits_def)
-         apply (rule ucast_less[where 'b=9, simplified], simp)
+         apply (rule ucast_less[where 'b=10, simplified], simp)
         apply (simp add: asid_low_bits_def asid_bits_def)
        apply (simp add: asid_bits_def)
       apply (drule vs_lookup_atI)
