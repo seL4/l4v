@@ -1477,11 +1477,12 @@ fun mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args = let
     val ret_xf = mk_xf prog_info fn_ret_vars
     val ex_xf = Abs ("s", #state_type prog_info, HOLogic.unit)
 
-    val thm = @{thm L2corres_L2_call_simpl}
-        WHERE (map (apsnd (Thm.cterm_of ctxt))
-            [("l1_f", betapply (const, Free ("rec_measure'", @{typ "nat"}))),
-             ("ex_xf", ex_xf), ("gs", #globals_getter prog_info),
-             ("ret_xf", ret_xf), ("arg_xf", arg_xf)])
+    val thm = Utils.named_cterm_instantiate ctxt
+              (map (apsnd (Thm.cterm_of ctxt))
+                   [("l1_f", betapply (const, Free ("rec_measure'", @{typ "nat"}))),
+                    ("ex_xf", ex_xf), ("gs", #globals_getter prog_info),
+                    ("ret_xf", ret_xf), ("arg_xf", arg_xf)])
+              @{thm L2corres_L2_call_simpl}
         OF [#definition fn_def]
   in thm end
 

@@ -410,8 +410,9 @@ fun mk_l1corres_call_simpl_thm fn_info ctxt fn_name = let
     val impl_thm = Proof_Context.get_thm ctxt (fn_name ^ "_impl")
     val gamma = safe_mk_meta_eq impl_thm |> Thm.concl_of |> Logic.dest_equals
         |> fst |> (fn (f $ _) => f | t => raise TERM ("gamma", [t]))
-    val thm = @{thm L1corres_call_simpl}
-        WHERE [("proc", Thm.cterm_of ctxt const), ("Gamma", Thm.cterm_of ctxt gamma)]
+    val thm = Utils.named_cterm_instantiate ctxt
+        [("proc", Thm.cterm_of ctxt const), ("Gamma", Thm.cterm_of ctxt gamma)]
+        @{thm L1corres_call_simpl}
   in thm end
 
 
