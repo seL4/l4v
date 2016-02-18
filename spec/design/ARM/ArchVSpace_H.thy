@@ -1175,7 +1175,7 @@ defs decodeARMMMUInvocation_def:
             base \<leftarrow> returnOk ( (fst $ head free) `~shiftL~` asidLowBits);
             pool \<leftarrow> returnOk ( makeObject ::asidpool);
             frame \<leftarrow> (let v30 = untyped in
-                if isUntypedCap v30 \<and> capBlockSize v30 = objBits pool
+                if isUntypedCap v30 \<and> capBlockSize v30 = objBits pool \<and> \<not> capIsDevice v30
                 then  (doE
                     ensureNoChildren parentSlot;
                     returnOk $ capPtr untyped

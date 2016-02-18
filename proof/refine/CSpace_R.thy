@@ -3470,7 +3470,7 @@ lemma maskCapRightsNull [simp]:
   by (simp add: maskCapRights_def isCap_defs)
 
 lemma maskCapRightsUntyped [simp]:
-  "maskCapRights R (UntypedCap r n f) = UntypedCap r n f"
+  "maskCapRights R (UntypedCap d r n f) = UntypedCap d r n f"
   by (simp add: maskCapRights_def isCap_defs Let_def)
 
 lemma maskCapRightsZombie [simp]:
@@ -5981,7 +5981,7 @@ lemma cte_refs_maskCapRights[simp]:
              split: arch_capability.split)
 
 lemma capASID_PageCap_None [simp]:
-  "capASID (ArchObjectCap (PageCap r R page_size None)) = None"
+  "capASID (ArchObjectCap (PageCap d r R page_size None)) = None"
   by (simp add: capASID_def)
 
 lemma getSlotCap_cap_to'[wp]:
@@ -6218,7 +6218,7 @@ lemma diminished_cte_refs':
   by (clarsimp simp: diminished'_def)
 
 lemma diminished_Untyped' :
-  "diminished' (UntypedCap r n x) cap = (cap = UntypedCap r n x)"
+  "diminished' (UntypedCap d r n x) cap = (cap = UntypedCap d r n x)"
   apply (rule iffI)
    apply (case_tac cap)
     apply (clarsimp simp:isCap_simps maskCapRights_def diminished'_def split:split_if_asm)+

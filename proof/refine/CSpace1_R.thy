@@ -917,8 +917,8 @@ lemma updateMDB_objs [wp]:
 
 lemma capFreeIndex_update_valid_cap':
   "\<lbrakk>fa \<le> fb; fb \<le> 2 ^ bits; is_aligned (of_nat fb :: word32) 4;
-    s \<turnstile>' capability.UntypedCap v bits fa\<rbrakk>
-   \<Longrightarrow> s \<turnstile>' capability.UntypedCap v bits fb"
+    s \<turnstile>' capability.UntypedCap d v bits fa\<rbrakk>
+   \<Longrightarrow> s \<turnstile>' capability.UntypedCap d v bits fb"
   apply (clarsimp simp:valid_cap'_def capAligned_def valid_untyped'_def ko_wp_at'_def)
   apply (intro conjI impI allI)
   apply (elim allE)
@@ -948,8 +948,8 @@ lemma capFreeIndex_update_valid_cap':
   done
 
 lemma maxFreeIndex_update_valid_cap'[simp]:
-  "s \<turnstile>' capability.UntypedCap v0a v1a fa \<Longrightarrow>
-   s \<turnstile>' capability.UntypedCap v0a v1a (maxFreeIndex v1a)"
+  "s \<turnstile>' capability.UntypedCap d v0a v1a fa \<Longrightarrow>
+   s \<turnstile>' capability.UntypedCap d v0a v1a (maxFreeIndex v1a)"
   apply (rule capFreeIndex_update_valid_cap'[rotated -1])
    apply assumption
   apply (clarsimp simp:valid_cap'_def capAligned_def
@@ -957,6 +957,13 @@ lemma maxFreeIndex_update_valid_cap'[simp]:
   apply (erule is_aligned_weaken[OF is_aligned_triv])
   done
 
+lemma ctes_of_valid_cap'':
+  "\<lbrakk> ctes_of s p = Some r; valid_objs' s\<rbrakk> \<Longrightarrow> s \<turnstile>' (cteCap r)"
+  apply (rule cte_wp_at_valid_objs_valid_cap'[where P="op = r", simplified])
+   apply (simp add: cte_wp_at_ctes_of)
+  apply assumption
+  done
+  
 lemma cap_insert_objs' [wp]:
   "\<lbrace>valid_objs'
     and valid_cap' cap\<rbrace>
@@ -970,7 +977,8 @@ lemma cap_insert_objs' [wp]:
     apply (rule hoare_drop_imp)+
     apply wp
   apply (rule hoare_strengthen_post[OF getCTE_sp])
-  apply (clarsimp simp:isCap_simps)
+  apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps
+                 dest!: ctes_of_valid_cap'')
   done
 
 lemma cteInsert_weak_cte_wp_at:
@@ -1488,7 +1496,7 @@ lemma null_mdb_no_trancl2:
 
 definition
   "capASID cap \<equiv> case cap of
-    ArchObjectCap (PageCap _ _ _ (Some (asid, _))) \<Rightarrow> Some asid
+    ArchObjectCap (PageCap _ _ _ _ (Some (asid, _))) \<Rightarrow> Some asid
   | ArchObjectCap (PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
   | ArchObjectCap (PageDirectoryCap _ (Some asid)) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
@@ -1506,7 +1514,7 @@ lemmas cap_asid_base'_simps [simp] =
 
 definition
   "cap_vptr' cap \<equiv> case cap of
-    ArchObjectCap (PageCap _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
+    ArchObjectCap (PageCap _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
   | ArchObjectCap (PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
   | _ \<Rightarrow> None"
 
@@ -2745,8 +2753,9 @@ lemma capRange_cap_relation:
 lemma cap_relation_untyped_ptr_obj_refs:
   "cap_relation cap cap' \<Longrightarrow> capClass cap' = PhysicalClass \<Longrightarrow> \<not> isUntypedCap cap'
         \<Longrightarrow> capUntypedPtr cap' \<in> obj_refs cap"
-  by (clarsimp simp: isCap_simps
-              split: cap_relation_split_asm arch_cap.split_asm)
+  by (clarsimp simp add: isCap_simps
+               simp del: not_ex
+                  split: cap_relation_split_asm arch_cap.split_asm)
 
 lemma obj_refs_cap_relation_untyped_ptr:
   "\<lbrakk> cap_relation cap cap'; obj_refs cap \<noteq> {} \<rbrakk> \<Longrightarrow> capUntypedPtr cap' \<in> obj_refs cap"
@@ -3168,7 +3177,7 @@ lemma isArchCap_simps[simp]:
   "isArchCap P (capability.Zombie xbc xac xg) = False"
   "isArchCap P (capability.ArchObjectCap xh) = P xh"
   "isArchCap P (capability.ReplyCap xad xi) = False"
-  "isArchCap P (capability.UntypedCap xae xj f) = False"
+  "isArchCap P (capability.UntypedCap d xae xj f) = False"
   "isArchCap P (capability.CNodeCap xfa xea xdb xcc) = False"
   "isArchCap P capability.IRQControlCap = False"
   by (simp add: isArchCap_def)+
@@ -3186,21 +3195,21 @@ where
      Some [VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | ArchObjectCap (PageCap _ _ ARMSmallPage (Some (asid, vptr))) \<Rightarrow>
+ | ArchObjectCap (PageCap _ _ _ ARMSmallPage (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef ((vptr >> 12) && mask 8) (Some APageTable),
            VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | ArchObjectCap (PageCap _ _ ARMLargePage (Some (asid, vptr))) \<Rightarrow>
+ | ArchObjectCap (PageCap _ _ _ ARMLargePage (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef ((vptr >> 12) && mask 8) (Some APageTable),
            VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | ArchObjectCap (PageCap _ _ ARMSection (Some (asid, vptr))) \<Rightarrow>
+ | ArchObjectCap (PageCap _ _ _ ARMSection (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | ArchObjectCap (PageCap _ _ ARMSuperSection (Some (asid, vptr))) \<Rightarrow>
+ | ArchObjectCap (PageCap _ _ _ ARMSuperSection (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
@@ -3649,7 +3658,7 @@ lemma set_cap_same_master:
 
 (* Just for convenience like free_index_update *)
 definition freeIndex_update where
-  "freeIndex_update c' g \<equiv> case c' of capability.UntypedCap ref sz f \<Rightarrow> capability.UntypedCap ref sz (g f) | _ \<Rightarrow> c'"
+  "freeIndex_update c' g \<equiv> case c' of capability.UntypedCap d ref sz f \<Rightarrow> capability.UntypedCap d ref sz (g f) | _ \<Rightarrow> c'"
 
 lemma freeIndex_update_not_untyped[simp]: "\<not>isUntypedCap c \<Longrightarrow> freeIndex_update c g = c"
    by (case_tac c,simp_all add:freeIndex_update_def isCap_simps)
@@ -3850,16 +3859,16 @@ lemma valid_badges_def2:
   done
 
 lemma sameRegionAs_update_untyped:
-  "RetypeDecls_H.sameRegionAs (capability.UntypedCap a b c) =
-   RetypeDecls_H.sameRegionAs (capability.UntypedCap a b c')"
+  "RetypeDecls_H.sameRegionAs (capability.UntypedCap d a b c) =
+   RetypeDecls_H.sameRegionAs (capability.UntypedCap d a b c')"
   apply (rule ext)
   apply (case_tac x)
     apply (clarsimp simp:sameRegionAs_def isCap_simps)+
   done
 
 lemma sameRegionAs_update_untyped':
-  "RetypeDecls_H.sameRegionAs cap (capability.UntypedCap a b f) =
-   RetypeDecls_H.sameRegionAs cap (capability.UntypedCap a b f')"
+  "RetypeDecls_H.sameRegionAs cap (capability.UntypedCap d a b f) =
+   RetypeDecls_H.sameRegionAs cap (capability.UntypedCap d a b f')"
   apply (case_tac cap)
     apply (clarsimp simp:sameRegionAs_def isCap_simps)+
   done
@@ -3898,7 +3907,9 @@ lemma (in mdb_insert_der) dest_no_parent_n:
     apply (erule_tac x="mdbNext src_node" in allE)
     apply (clarsimp simp: src mdb_next_unfold)
     apply (case_tac "capBadge cap'", simp_all)
-   apply (clarsimp simp:isCap_simps capMasterCap_def vsCapRef_def split:capability.splits)
+   apply (clarsimp simp add: isCap_simps capMasterCap_def vsCapRef_def
+                   simp del: not_ex
+                      split:capability.splits)
   apply (clarsimp simp:isCap_simps)
   done
 
@@ -4266,7 +4277,7 @@ lemma revokable'_fold:
   (case cap of capability.NotificationCap _ _ _ _ \<Rightarrow> capNtfnBadge cap \<noteq> capNtfnBadge srcCap
      | capability.IRQHandlerCap _ \<Rightarrow> isIRQControlCap srcCap
      | capability.EndpointCap _ _ _ _ _ \<Rightarrow> capEPBadge cap \<noteq> capEPBadge srcCap
-     | capability.UntypedCap _ _ _ \<Rightarrow> True | _ \<Rightarrow> False)"
+     | capability.UntypedCap _ _ _ _ \<Rightarrow> True | _ \<Rightarrow> False)"
   by (simp add: revokable'_def isCap_simps split: capability.splits)
 
 lemma cap_relation_untyped_free_index_update:
@@ -4412,7 +4423,7 @@ lemma set_untyped_cap_corres:
   apply clarsimp
   apply (clarsimp simp add: state_relation_def split_def)
   apply (drule (1) pspace_relationsD)
-  apply (frule_tac c = "cap.UntypedCap r bits idx"
+  apply (frule_tac c = "cap.UntypedCap dev r bits idx"
                 in set_cap_not_quite_corres_prequel)
          apply assumption+
        apply (erule cte_wp_at_weakenE, rule TrueI)
@@ -4519,26 +4530,29 @@ lemma set_untyped_cap_as_full_corres:
   apply (case_tac src_cap,simp_all)
   done
 
+(* FIXME: SELFOUR-421 move *)
+lemma isUntypedCap_simps[simp]:
+  "isUntypedCap (capability.UntypedCap uu uv uw ux) = True"
+  "isUntypedCap (capability.NullCap) = False"
+  "isUntypedCap (capability.EndpointCap v va vb vc vd) = False"
+  "isUntypedCap (capability.NotificationCap v va vb vc) = False"
+  "isUntypedCap (capability.ReplyCap v1 v2) = False"
+  "isUntypedCap (capability.CNodeCap x1 x2 x3 x4) = False"
+  "isUntypedCap (capability.ThreadCap v) = False"
+  "isUntypedCap (capability.DomainCap) = False"
+  "isUntypedCap (capability.IRQControlCap) = False"
+  "isUntypedCap (capability.IRQHandlerCap y1) = False"
+  "isUntypedCap (capability.Zombie v va1 vb1) = False"
+  "isUntypedCap (capability.ArchObjectCap z) = False"
+  by (simp_all add: isUntypedCap_def split: capability.splits)
+
 lemma cap_relation_masked_as_full:
   "\<lbrakk>cap_relation src_cap src_cap';cap_relation c c'\<rbrakk> \<Longrightarrow>
     cap_relation (masked_as_full src_cap c) (maskedAsFull src_cap' c')"
-  apply (clarsimp simp:masked_as_full_def maskedAsFull_def is_cap_simps isCap_simps split:if_splits)
-  apply (intro conjI impI)
-    apply (clarsimp simp:free_index_update_def maxFreeIndex_def max_free_index_def shiftL_nat)
-    apply fastforce
-  apply (elim impE disjE)
-    apply (clarsimp)
-    apply (case_tac src_cap,simp_all)
-      apply (case_tac c,simp_all)
-    apply (case_tac src_cap)
-      apply (case_tac c,fastforce+)
-    apply clarsimp
-      apply (case_tac c)
-       apply simp_all
-    apply clarsimp
-  apply (case_tac src_cap,simp_all)
-  apply (case_tac c,simp_all)
-done
+  apply (clarsimp simp:masked_as_full_def maskedAsFull_def 
+                 split:if_splits)
+  apply (case_tac src_cap; clarsimp)
+  by (case_tac c; clarsimp)
 
 lemma setUntypedCapAsFull_pspace_distinct[wp]:
   "\<lbrace>pspace_distinct' and cte_wp_at' (op = srcCTE) slot\<rbrace>

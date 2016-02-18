@@ -616,8 +616,8 @@ case \x of (0, vaddr:rightsMask:attr:_, (pdCap,_):_) -> (0, _, _) -> (1, rightsM
     then ->6
     else ->7
 
-case \x of UntypedCap {} | capBlockSize untyped == objBits pool -> _ ->  ---> let \v0\ = \x in
-    if isUntypedCap \v0\ \<and> capBlockSize \v0\ == objBits pool
+case \x of UntypedCap { capIsDevice = False } | capBlockSize untyped == objBits pool -> _ ->  ---> let \v0\ = \x in
+    if isUntypedCap \v0\ \<and> capBlockSize \v0\ == objBits pool \<and> \<not> capIsDevice \v0\
     then ->1
     else ->2
 

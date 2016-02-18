@@ -1147,7 +1147,7 @@ lemma createObject_valid_duplicates'[wp]:
    and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
    and K (is_aligned ptr (Types_H.getObjectSize ty us)) 
    and K (ty = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
-  RetypeDecls_H.createObject ty ptr us 
+  RetypeDecls_H.createObject ty ptr us d
   \<lbrace>\<lambda>xa s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add:createObject_def) 
@@ -1155,10 +1155,10 @@ lemma createObject_valid_duplicates'[wp]:
   apply (wpc | wp| simp add:ArchRetype_H.createObject_def)+
          apply (simp add:createPageObject_def placeNewObject_def
            placeNewObject'_def split_def 
-           | wp hoare_unless_wp[where Q = \<top>]
+           | wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>]
            |wpc|simp add: alignError_def)+
      apply (rule copyGlobalMappings_valid_duplicates')
-    apply ((wp hoare_unless_wp[where Q = \<top>]|wpc
+    apply ((wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>] |wpc
      |simp add:alignError_def placeNewObject_def 
       placeNewObject'_def split_def)+)[2]
   apply (intro conjI impI)
@@ -1265,7 +1265,7 @@ lemma createNewObjects_valid_duplicates'[wp]:
   and pspace_aligned' and pspace_distinct' and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
   and K (range_cover ptr sz (Types_H.getObjectSize ty us) (length dest) \<and> 
       ptr \<noteq> 0 \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28) ) \<rbrace>
-       createNewObjects ty src dest ptr us 
+       createNewObjects ty src dest ptr us d
   \<lbrace>\<lambda>reply s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   proof (induct rule:rev_induct )
     case Nil
@@ -1422,8 +1422,8 @@ lemma invokeUntyped_valid_duplicates[wp]:
   apply (clarsimp)
   apply (rename_tac s cref ptr tp us slots sz idx)
 proof -
- fix s cref ptr tp us slots sz idx
-    assume cte_wp_at': "cte_wp_at' (\<lambda>cte. cteCap cte = capability.UntypedCap (ptr && ~~ mask sz) sz idx) cref s"
+ fix s cref ptr tp us slots sz idx d
+    assume cte_wp_at': "cte_wp_at' (\<lambda>cte. cteCap cte = capability.UntypedCap d (ptr && ~~ mask sz) sz idx) cref s"
     assume cover     : "range_cover ptr sz (APIType_capBits tp us) (length (slots::word32 list))"
     assume  misc     : "distinct slots" "idx \<le> unat (ptr && mask sz) \<or> ptr = ptr && ~~ mask sz"
       "invs' s" "slots \<noteq> []" "sch_act_simple s" "vs_valid_duplicates' (ksPSpace s)"
@@ -1432,7 +1432,7 @@ proof -
       "tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 30"
     assume desc_range: "ptr = ptr && ~~ mask sz \<longrightarrow> descendants_range_in' {ptr..ptr + 2 ^ sz - 1} (cref) (ctes_of s)"
     
-  have pf: "invokeUntyped_proofs s cref ptr tp us slots sz idx"
+  have pf: "invokeUntyped_proofs s cref ptr tp us slots sz idx d"
     using cte_wp_at' cover misc desc_range
     by (simp add:invokeUntyped_proofs_def)
   have bound[simp]: "tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28"
@@ -1452,21 +1452,21 @@ proof -
   show 
   "\<lbrace>op = s\<rbrace>
     invokeUntyped
-    (Invocations_H.untyped_invocation.Retype cref (ptr && ~~ mask sz) ptr tp us slots) 
+    (Invocations_H.untyped_invocation.Retype cref (ptr && ~~ mask sz) ptr tp us slots d) 
     \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (clarsimp simp:invokeUntyped_def updateCap_def)
   apply (rule hoare_pre)
    apply (wp setCTE_pspace_no_overlap'[where sz = sz ]
-     deleteObjects_invs_derivatives[where idx = idx and p = cref])
-    apply (rule_tac P = "cap = capability.UntypedCap (ptr && ~~ mask sz) sz idx" 
+     deleteObjects_invs_derivatives[where idx = idx and p = cref and d=d])
+    apply (rule_tac P = "cap = capability.UntypedCap d (ptr && ~~ mask sz) sz idx" 
        in hoare_gen_asm)
     apply simp
     apply (wp getSlotCap_wp hoare_drop_imps
-      deleteObject_no_overlap deleteObjects_invs_derivatives[where idx = idx and p = cref])
+      deleteObject_no_overlap deleteObjects_invs_derivatives[where idx = idx and p = cref and d=d])
   using cte_wp_at' misc cover desc_range 
         invokeUntyped_proofs.not_0_ptr[OF pf] invokeUntyped_proofs.vc'[OF pf]
   apply (clarsimp simp:cte_wp_at_ctes_of)
-  apply (rule_tac x = "capability.UntypedCap (ptr && ~~ mask sz) sz idx" in exI)
+  apply (rule_tac x = "capability.UntypedCap d (ptr && ~~ mask sz) sz idx" in exI)
   apply (clarsimp simp: is_aligned_neg_mask_eq' conj_comms invs_valid_pspace'
              invs_pspace_aligned' invs_pspace_distinct'
              range_cover.sz[where 'a=32, folded word_bits_def]
@@ -1988,7 +1988,7 @@ lemma recycleCap_valid_duplicates'[wp]:
       apply (rename_tac arch_capability)
       apply (case_tac arch_capability)
           apply (simp add:ArchRetype_H.recycleCap_def Let_def
-            isCap_simps split del: split_if | wp hoare_drop_imps hoare_vcg_all_lift |wpc)+
+            isCap_simps split del: split_if | wp hoare_drop_imps hoare_vcg_all_lift hoare_unless_wp  |wpc | fastforce)+
          apply (rename_tac word option)
          apply (rule_tac Q = "\<lambda>r s. valid_objs' s \<and>
            pspace_aligned' s \<and>

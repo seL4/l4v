@@ -5210,11 +5210,13 @@ definition
     \<not>is_pt_cap cap \<and> \<not> is_pd_cap cap"
 
 
+(* FIXME: SELFOUR-421: add conditions for device caps? *)
 definition
   "safe_parent_for m p cap parent \<equiv> 
    same_region_as parent cap \<and> 
    ((\<exists>irq. cap = cap.IRQHandlerCap irq) \<and> parent = cap.IRQControlCap \<or> 
-    is_untyped_cap parent \<and> descendants_of p m = {})"
+    is_untyped_cap parent \<and> descendants_of p m = {} (*\<and>
+    (\<exists>frame base. cap = cap.ArchObjectCap (ASIDPoolCap frame base) \<longrightarrow> cap_is_device parent)*))"
 
 
 (* FIXME: prove same_region_as_def2 instead or change def *)

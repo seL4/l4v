@@ -998,7 +998,6 @@ lemma ut_rev_n: "ut_revocable' n"
   apply(drule n_revokable)
   apply(clarsimp simp: isCap_simps split: split_if_asm)
   apply(simp add: valid_mdb_ctes_def ut_revocable'_def)
-  apply(clarsimp simp: isUntypedCap_def)
   done
 
 lemma class_links_n: "class_links n"
@@ -1131,7 +1130,7 @@ where
   "threadCapRefs (ThreadCap r)                  = {r}"
 | "threadCapRefs (ReplyCap t m)                 = {}"
 | "threadCapRefs NullCap                        = {}"
-| "threadCapRefs (UntypedCap r n i)             = {}"
+| "threadCapRefs (UntypedCap d r n i)             = {}"
 | "threadCapRefs (EndpointCap r badge x y z)    = {}"
 | "threadCapRefs (NotificationCap r badge x y) = {}"
 | "threadCapRefs (CNodeCap r b g gsz)           = {}"
@@ -1723,7 +1722,7 @@ where
   | Zombie ptr zb n \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> True
   | ArchObjectCap acap \<Rightarrow> (case acap of
-    PageCap ref rghts sz mapdata \<Rightarrow> False
+    PageCap d ref rghts sz mapdata \<Rightarrow> False
   | ASIDControlCap \<Rightarrow> False
   | _ \<Rightarrow> True)
   | _ \<Rightarrow> False"
@@ -3758,13 +3757,13 @@ lemma arch_recycleCap_invs:
                    Let_def
               split del: split_if)
   apply (rule hoare_pre)
-   apply (wp dmo'_bind_return
+   apply (wp dmo'_bind_return hoare_unless_wp
              pageTableMapped_invs' mapM_x_storePTE_invs mapM_x_wp' 
              storePTE_typ_ats storePDE_typ_ats          
           | wpc | simp | simp add: eq_commute invalidateTLBByASID_def)+
       apply (rule hoare_post_imp
                   [where Q="\<lambda>rv s. invs' s \<and> s \<turnstile>' capability.ArchObjectCap cap"])
-       apply (wp dmo'_bind_return
+       apply (wp dmo'_bind_return 
                  pageTableMapped_invs' mapM_x_storePTE_invs mapM_x_wp' 
                  storePTE_typ_ats storePDE_typ_ats static_imp_wp
               | wpc | simp | simp add: eq_commute invalidateTLBByASID_def)+
@@ -3944,7 +3943,7 @@ lemma arch_recycle_cap_corres:
                  apply (wp | simp add: inv_def)+
       apply (auto simp: valid_cap_def valid_cap'_def inv_def mask_def)[2]
     -- "PageCap"
-    apply (rename_tac word vmrights vmpage_size option)
+    apply (rename_tac dev word vmrights vmpage_size option)
     apply (rule corres_guard_imp)
       apply (rule corres_split [where r' = dc])
          apply (rule corres_split [where R = "\<top>\<top>" and R' = "\<top>\<top>" and r' = cap_relation])
@@ -3954,16 +3953,16 @@ lemma arch_recycle_cap_corres:
            apply simp
           apply wp
         apply (rule_tac F = "is_aligned word 2" in corres_gen_asm2)
+        apply (simp add: unless_def)
+        apply (rule corres_when, simp)
         apply (rule corres_machine_op)
         apply (rule corres_guard_imp)
           apply (simp add: shiftL_nat)
           apply (rule clearMemory_corres)
          apply simp
         apply assumption
-       apply simp
-       apply (wp do_machine_op_valid_cap no_irq_clearMemory)
-     apply simp
-    apply simp
+       apply (simp add: unless_def
+            | wp hoare_when_weak_wp do_machine_op_valid_cap no_irq_clearMemory)+
     apply (clarsimp simp add: valid_cap'_def capAligned_def final_matters'_def)
     apply (erule is_aligned_weaken)
     apply (case_tac vmpage_size, simp_all)[1]

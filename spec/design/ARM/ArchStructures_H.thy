@@ -228,10 +228,10 @@ defs archObjSize_def:
                 )"
 
 defs asidHighBits_def:
-"asidHighBits \<equiv> 8"
+"asidHighBits \<equiv> 7"
 
 defs asidLowBits_def:
-"asidLowBits \<equiv> 9"
+"asidLowBits \<equiv> 10"
 
 defs asidBits_def:
 "asidBits \<equiv> asidHighBits + asidLowBits"

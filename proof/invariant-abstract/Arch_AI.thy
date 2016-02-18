@@ -21,13 +21,13 @@ definition
   \<lambda>s. cte_wp_at (\<lambda>c. c = cap.NullCap) slot s \<and> real_cte_at slot s \<and>
   ex_cte_cap_wp_to is_cnode_cap slot s \<and>  
   slot \<noteq> parent \<and>  
-  cte_wp_at (\<lambda>cap. \<exists>dev idx. cap = cap.UntypedCap dev frame pageBits idx ) parent s \<and>  
+  cte_wp_at (\<lambda>cap. \<exists>idx. cap = cap.UntypedCap False frame pageBits idx ) parent s \<and>  
   descendants_of parent (cdt s) = {} \<and>
   is_aligned base asid_low_bits \<and> base \<le> 2^asid_bits - 1 \<and>
   arm_asid_table (arch_state s) (asid_high_bits_of base) = None"
 
 lemma safe_parent_strg:
-  "cte_wp_at (\<lambda>cap. cap = cap.UntypedCap dev frame pageBits idx) p s \<and> 
+  "cte_wp_at (\<lambda>cap. cap = cap.UntypedCap False frame pageBits idx) p s \<and> 
    descendants_of p (cdt s) = {} \<and> 
    valid_objs s
   \<longrightarrow>
@@ -864,7 +864,7 @@ lemma perform_asid_control_invocation_st_tcb_at:
    apply simp
   apply (clarsimp simp:obj_bits_api_def arch_kobj_size_def cte_wp_at_caps_of_state
     default_arch_object_def empty_descendants_range_in)
-  apply (frule_tac cap = "(cap.UntypedCap dev word1 pageBits idx)"
+  apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
     in detype_invariants[rotated 3],clarsimp+)
     apply (simp add:cte_wp_at_caps_of_state 
       empty_descendants_range_in descendants_range_def2)+
@@ -954,7 +954,7 @@ lemma aci_invs':
      apply (simp add:is_aligned_neg_mask_eq)
     apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state if_option_Some)
-  apply (frule_tac cap = "(cap.UntypedCap dev word1 pageBits idx)"
+  apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
     in detype_invariants[rotated 3],clarsimp+)
     apply (simp add:cte_wp_at_caps_of_state)+
    apply (simp add:descendants_range_def2 empty_descendants_range_in)
@@ -1005,13 +1005,13 @@ lemma aci_invs':
       apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def)
       apply (thin_tac "cte_wp_at (op = cap.NullCap) p s" for p s)
       apply (subst(asm) eq_commute,
-          erule(1) untyped_children_in_mdbE[where cap="cap.UntypedCap dev p bits idx" for dev p bits idx,
+          erule(1) untyped_children_in_mdbE[where cap="cap.UntypedCap False p bits idx" for p bits idx,
                                          simplified, rotated])
         apply (simp add: is_aligned_no_overflow)
        apply simp
       apply clarsimp
-     apply clarsimp+
-    apply (rule conjI, rule cap_is_device.simps)
+     apply clarsimp
+    apply clarsimp
     apply simp
    apply (thin_tac "invs s")
    apply clarsimp
@@ -1520,7 +1520,7 @@ lemma arch_decode_inv_wf[wp]:
                          "\<lambda>rv. real_cte_at rv and 
                                ex_cte_cap_wp_to is_cnode_cap rv and 
                                (\<lambda>s. descendants_of (snd (excaps!0)) (cdt s) = {}) and
-                               cte_wp_at (\<lambda>c. \<exists>dev idx. c = (cap.UntypedCap dev frame pageBits idx)) (snd (excaps!0)) and
+                               cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
                                (\<lambda>s. arm_asid_table (arch_state s) free = None)"
                          in hoare_post_imp_R)
               apply (simp add: lookup_target_slot_def)

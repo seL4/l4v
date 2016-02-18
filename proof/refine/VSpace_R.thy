@@ -1913,7 +1913,7 @@ definition
           and K (valid_pde_slots' m) and (valid_slots_duplicated' m)
   | PageRemap asid m \<Rightarrow> valid_slots' m and K (valid_pde_slots' m) and (valid_slots_duplicated' m)
   | PageUnmap cap ptr \<Rightarrow> 
-      \<lambda>s. \<exists>r R sz m. cap = PageCap r R sz m \<and> 
+      \<lambda>s. \<exists>d r R sz m. cap = PageCap d r R sz m \<and> 
           cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr s \<and>
           s \<turnstile>' (ArchObjectCap cap)
   | PageFlush typ start end pstart pd asid \<Rightarrow> \<top>
@@ -3701,8 +3701,8 @@ lemma perform_pt_invs [wp]:
   apply clarsimp
   apply (wp arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp|wpc)+
   apply (rename_tac acap word a b)
-  apply (rule_tac Q="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>r R sz m. cteCap cte =
-                                       ArchObjectCap (PageCap r R sz m)) word" 
+  apply (rule_tac Q="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>d r R sz m. cteCap cte =
+                                       ArchObjectCap (PageCap d r R sz m)) word" 
                in hoare_strengthen_post)
    apply (wp unmapPage_cte_wp_at')
     apply (clarsimp simp: cte_wp_at_ctes_of)

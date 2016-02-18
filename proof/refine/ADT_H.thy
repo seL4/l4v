@@ -285,7 +285,7 @@ fun
   CapabilityMap :: "capability \<Rightarrow> cap"
  where
   "CapabilityMap capability.NullCap = cap.NullCap"
-| "CapabilityMap (capability.UntypedCap ref n idx) = cap.UntypedCap ref n idx"
+| "CapabilityMap (capability.UntypedCap d ref n idx) = cap.UntypedCap d ref n idx"
 | "CapabilityMap (capability.EndpointCap ref b sr rr gr) =
    cap.EndpointCap ref b {x. sr \<and> x = AllowSend \<or> rr \<and> x = AllowRecv \<or>
                              gr \<and> x = AllowGrant}"
@@ -305,8 +305,8 @@ fun
 | "CapabilityMap (capability.ArchObjectCap (arch_capability.ASIDControlCap)) =
    cap.ArchObjectCap (arch_cap.ASIDControlCap)"
 | "CapabilityMap (capability.ArchObjectCap
-                    (arch_capability.PageCap word rghts sz data)) =
-   cap.ArchObjectCap (arch_cap.PageCap word (vm_rights_of rghts) sz data)"
+                    (arch_capability.PageCap d word rghts sz data)) =
+   cap.ArchObjectCap (arch_cap.PageCap d word (vm_rights_of rghts) sz data)"
 | "CapabilityMap (capability.ArchObjectCap
                     (arch_capability.PageTableCap word data)) =
   cap.ArchObjectCap (arch_cap.PageTableCap word data)"
@@ -315,7 +315,7 @@ fun
   cap.ArchObjectCap (arch_cap.PageDirectoryCap word data)"
 
 lemma cap_relation_CapabilityMap:
-  "\<lbrakk>\<forall>w r s d. c = capability.ArchObjectCap (arch_capability.PageCap w r s d) \<longrightarrow>
+  "\<lbrakk>\<forall>dev w r s d. c = capability.ArchObjectCap (arch_capability.PageCap dev w r s d) \<longrightarrow>
               r \<noteq> VMNoAccess;
     \<forall>ref n L l. c = capability.CNodeCap ref n L l \<longrightarrow>
                 of_bl (bin_to_bl l (uint L)) = L\<rbrakk>

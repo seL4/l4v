@@ -2,3 +2,12 @@ Built from git repo at /home/xgao/verification/seL4/haskell by xgao
 
 Generated from changeset:
 007e805 fix for asmrefine
+
+Warning - uncomitted changes used:
+ M src/SEL4/Kernel/VSpace/ARM.lhs
+ M src/SEL4/Object/Structures/ARM.lhs
+?? ../include/bootinfo.h.orig
+?? ../libsel4/include/sel4/bootinfo.h.BACKUP.20008.h
+?? ../libsel4/include/sel4/bootinfo.h.BASE.20008.h
+?? ../libsel4/include/sel4/bootinfo.h.LOCAL.20008.h
+?? ../libsel4/include/sel4/bootinfo.h.REMOTE.20008.h

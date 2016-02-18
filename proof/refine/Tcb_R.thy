@@ -849,8 +849,9 @@ lemma sameObject_corres2:
   apply (rename_tac arch_capa)
   apply (clarsimp simp add: ArchRetype_H.sameObjectAs_def Let_def)
   apply (intro conjI impI)
-   apply (case_tac arch_cap; simp add: isCap_simps)
-   apply (case_tac arch_capa; simp)
+   apply (case_tac arch_cap; simp add: isCap_simps del: not_ex)
+   apply (case_tac arch_capa; clarsimp simp del: not_ex)
+   apply fastforce
   apply (case_tac arch_cap; simp add: sameRegionAs_def isCap_simps)
   apply (case_tac arch_capa; simp)
   done
