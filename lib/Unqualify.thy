@@ -4,7 +4,7 @@
 *)
 
 theory Unqualify
-imports Cardinality
+imports Main
 keywords "unqualify_facts" :: thy_decl and "unqualify_consts" :: thy_decl and "unqualify_types" :: thy_decl
 begin
 
