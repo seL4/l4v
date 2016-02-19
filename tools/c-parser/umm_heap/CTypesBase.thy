@@ -17,7 +17,7 @@
 
 theory CTypesBase
 imports
-  Vanilla32_typinfo
+  "./$L4V_ARCH/Addr_Type"
   "~~/src/HOL/Library/Prefix_Order"
   "../../../lib/SignedWords"
 begin
