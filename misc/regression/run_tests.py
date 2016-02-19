@@ -304,7 +304,7 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
 
     if output == None:
         output = ""
-    output = output.decode()
+    output = output.decode(encoding='utf8', errors='replace')
 
     status_queue.put({'name': test.name,
                       'status': test_status[0],
