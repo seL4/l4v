@@ -4061,7 +4061,7 @@ lemma arch_recycle_cap_corres:
        prefer 2
        apply (simp add: liftM_def[symmetric] o_def dc_def[symmetric]
                         mapM_x_mapM)
-       apply (simp add: kernel_base_def kernelBase_def 
+       apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def 
                         objBits_simps archObjSize_def)
        apply (rule corres_guard_imp)
          apply (rule_tac r'=dc and S="op ="

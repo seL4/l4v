@@ -60,7 +60,7 @@
 
     <!-- Ensure that all of our XML files are strictly correct. -->
     <test name="tests-xml-correct" cwd="../../" cpu-timeout="60">
-        bash -O globstar -c 'python ./misc/regression/testspec.py **/tests.xml'
+        find . -name tests.xml -print0 | xargs -0 python misc/regression/testspec.py
     </test>
 
 </testsuite>

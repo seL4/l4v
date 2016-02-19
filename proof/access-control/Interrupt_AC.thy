@@ -91,6 +91,7 @@ lemma decode_irq_control_invocation_authorised [wp]:
               | simp add: o_def del: hoare_post_taut hoare_True_E_R)+
   apply (cases args, simp_all)
   apply (cases caps, simp_all)
+    apply (simp add: ucast_mask_drop)
   apply (auto simp: is_cap_simps cap_auth_conferred_def
                  pas_refined_wellformed
                  pas_refined_all_auth_is_owns aag_cap_auth_def)

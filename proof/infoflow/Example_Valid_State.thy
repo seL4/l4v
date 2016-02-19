@@ -203,8 +203,8 @@ definition "High_pt_ptr = kernel_base + 0xC00"
 
 definition "shared_page_ptr = kernel_base + 0x6000"
 
-definition "Low_pd_ptr = kernel_base + 0x8000"
-definition "High_pd_ptr = kernel_base + 0xC000"
+definition "Low_pd_ptr = kernel_base + 0x20000"
+definition "High_pd_ptr = kernel_base + 0x24000"
 
 definition "Low_cnode_ptr = kernel_base + 0x10000"
 definition "High_cnode_ptr = kernel_base + 0x14000"
@@ -648,7 +648,7 @@ definition
 definition
   kh0 :: kheap 
 where 
-  "kh0 \<equiv> (\<lambda>x. if \<exists>irq::8 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
+  "kh0 \<equiv> (\<lambda>x. if \<exists>irq::10 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
           then Some (CNode 0 (empty_cnode 0)) else None)
          (Low_cnode_ptr  \<mapsto> Low_cnode,
           High_cnode_ptr \<mapsto> High_cnode,
@@ -666,7 +666,7 @@ where
           init_global_pd \<mapsto> ArchObj (PageDirectory global_pd))"
 
 lemma irq_node_offs_min:
-  "init_irq_node_ptr \<le> init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits)"
+  "init_irq_node_ptr \<le> init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits)"
   apply (rule_tac sz=28 in word32_plus_mono_right_split)
    apply (simp add: unat_word_ariths mask_def shiftl_t2n s0_ptr_defs cte_level_bits_def)
    apply (cut_tac x=irq and 'a=32 in ucast_less)
@@ -676,7 +676,7 @@ lemma irq_node_offs_min:
   done
 
 lemma irq_node_offs_max:
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) < init_irq_node_ptr + 0x1000"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) < init_irq_node_ptr + 0x4000"
   apply (simp add: s0_ptr_defs cte_level_bits_def shiftl_t2n)
   apply (cut_tac x=irq and 'a=32 in ucast_less)
    apply simp
@@ -684,13 +684,13 @@ lemma irq_node_offs_max:
   done
 
 definition irq_node_offs_range where
-  "irq_node_offs_range \<equiv> {x. init_irq_node_ptr \<le> x \<and> x < init_irq_node_ptr + 0x1000}
+  "irq_node_offs_range \<equiv> {x. init_irq_node_ptr \<le> x \<and> x < init_irq_node_ptr + 0x4000}
                          \<inter> {x. is_aligned x cte_level_bits}"
 
 
 
 lemma irq_node_offs_in_range:
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits)
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits)
      \<in> irq_node_offs_range"
   apply (clarsimp simp: irq_node_offs_min irq_node_offs_max irq_node_offs_range_def)
   apply (rule is_aligned_add[OF _ is_aligned_shift])
@@ -699,10 +699,10 @@ lemma irq_node_offs_in_range:
 
 lemma irq_node_offs_range_correct:
   "x \<in> irq_node_offs_range
-    \<Longrightarrow> \<exists>irq. x = init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits)"
+    \<Longrightarrow> \<exists>irq. x = init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits)"
   apply (clarsimp simp: irq_node_offs_min irq_node_offs_max irq_node_offs_range_def
                         s0_ptr_defs cte_level_bits_def)
-  apply (rule_tac x="ucast ((x - 0xF0003000) >> 4)" in exI)
+  apply (rule_tac x="ucast ((x - 0xE0008000) >> 4)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
   apply (subst aligned_shiftr_mask_shiftl)
    apply (rule aligned_sub_aligned)
@@ -710,7 +710,7 @@ lemma irq_node_offs_range_correct:
     apply (simp add: is_aligned_def)
    apply simp
   apply simp
-  apply (rule_tac n=12 in mask_eqI)
+  apply (rule_tac n=14 in mask_eqI)
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
    apply (simp add: mask_twice)
@@ -723,9 +723,9 @@ lemma irq_node_offs_range_correct:
   apply (subst add_mask_lower_bits)
     apply (simp add: is_aligned_def)
    apply clarsimp
-  apply (cut_tac x=x and y="0xF0003FFF" and n=12 in neg_mask_mono_le)
+  apply (cut_tac x=x and y="0xE000BFFF" and n=14 in neg_mask_mono_le)
    apply (force dest: word_less_sub_1)
-  apply (drule_tac n=12 in aligned_le_sharp)
+  apply (drule_tac n=14 in aligned_le_sharp)
    apply (simp add: is_aligned_def)
   apply (simp add: mask_def)
   done
@@ -745,25 +745,25 @@ lemma irq_node_offs_range_distinct[simp]:
   "idle_tcb_ptr \<notin> irq_node_offs_range"
   "init_globals_frame \<notin> irq_node_offs_range"
   "init_global_pd \<notin> irq_node_offs_range"
-  by (simp_all add: s0_ptr_defs irq_node_offs_range_def)
+  by(simp add:irq_node_offs_range_def s0_ptr_defs)+
 
 lemma irq_node_offs_distinct[simp]:
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> Low_cnode_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> High_cnode_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> Silc_cnode_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> ntfn_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> irq_cnode_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> Low_pd_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> High_pd_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> Low_pt_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> High_pt_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> Low_tcb_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> High_tcb_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> idle_tcb_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> init_globals_frame"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> init_global_pd"
-  by (rule not_inD[symmetric, OF _ irq_node_offs_in_range], simp)+
-  
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> Low_cnode_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> High_cnode_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> Silc_cnode_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> ntfn_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> irq_cnode_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> Low_pd_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> High_pd_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> Low_pt_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> High_pt_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> Low_tcb_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> High_tcb_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> idle_tcb_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> init_globals_frame"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) \<noteq> init_global_pd"
+  by (simp add:not_inD[symmetric, OF _ irq_node_offs_in_range])+
+
 lemma kh0_dom:
   "dom kh0 = {init_globals_frame, init_global_pd, idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
               High_pt_ptr, Low_pt_ptr, High_pd_ptr, Low_pd_ptr, irq_cnode_ptr, ntfn_ptr,
@@ -771,7 +771,7 @@ lemma kh0_dom:
              irq_node_offs_range"
   apply (rule equalityI)
    apply (simp add: kh0_def dom_def)
-   apply (clarsimp simp: irq_node_offs_in_range)
+   apply (clarsimp simp: irq_node_offs_in_range irq_node_offs_distinct)
   apply (clarsimp simp: dom_def)
   apply (rule conjI, clarsimp simp: kh0_def)+
   apply (force simp: kh0_def cte_level_bits_def dest: irq_node_offs_range_correct)
@@ -1281,7 +1281,7 @@ lemma pspace_distinct_s0:
      apply (simp add: shiftl_t2n uint_word_ariths)
      apply (subst mod_mult_mult1[where c="2^4" and b="2^28", simplified])
      apply simp
-    apply (frule_tac y="ucast irq << 4" in word_plus_mono_right[where x="0xF000300F"])
+    apply (frule_tac y="ucast irq << 4" in word_plus_mono_right[where x="0xE000800F"])
      apply (simp add: shiftl_t2n)
      apply (case_tac "(1::32 word) \<le> ucast irqa")
       apply (drule_tac i=1 and k="0x10" in word_mult_le_mono1)
@@ -1290,7 +1290,7 @@ lemma pspace_distinct_s0:
         apply simp
        apply (simp add: word_less_nat_alt)
       apply (simp add: mult.commute)
-      apply (drule_tac y="0x10" and x="0xF0002FFF" in word_plus_mono_right)
+      apply (drule_tac y="0x10" and x="0xE0007FFF" in word_plus_mono_right)
        apply (rule_tac sz=28 in word32_plus_mono_right_split)
         apply (simp add: unat_word_ariths mask_def)
         apply (cut_tac x=irqa and 'a=32 in ucast_less)
@@ -1301,8 +1301,8 @@ lemma pspace_distinct_s0:
      apply (simp add: lt1_neq0)
     apply (drule(1) order_trans_rules(23))
     apply clarsimp
-    apply (drule_tac a="0xF0003000 + (ucast irqa << 4)" and b="ucast irqa << 4"
-                 and c="0xF0002FFF + (ucast irqa << 4)" and d="ucast irqa << 4" in word_sub_mono)
+    apply (drule_tac a="0xE0008000 + (ucast irqa << 4)" and b="ucast irqa << 4"
+                 and c="0xE0007FFF + (ucast irqa << 4)" and d="ucast irqa << 4" in word_sub_mono)
        apply simp
       apply simp
       apply (rule_tac sz=28 in word32_plus_mono_right_split)
@@ -1327,7 +1327,7 @@ lemma pspace_distinct_s0:
      apply (simp add: shiftl_t2n uint_word_ariths)
      apply (subst mod_mult_mult1[where c="2^4" and b="2^28", simplified])
      apply simp
-    apply (frule_tac y="ucast irqa << 4" in word_plus_mono_right[where x="0xF000300F"])
+    apply (frule_tac y="ucast irqa << 4" in word_plus_mono_right[where x="0xE000800F"])
      apply (simp add: shiftl_t2n)
      apply (case_tac "(1::32 word) \<le> ucast irq")
       apply (drule_tac i=1 and k="0x10" in word_mult_le_mono1)
@@ -1336,7 +1336,7 @@ lemma pspace_distinct_s0:
         apply simp
        apply (simp add: word_less_nat_alt)
       apply (simp add: mult.commute)
-      apply (drule_tac y="0x10" and x="0xF0002FFF" in word_plus_mono_right)
+      apply (drule_tac y="0x10" and x="0xE0007FFF" in word_plus_mono_right)
        apply (rule_tac sz=28 in word32_plus_mono_right_split)
         apply (simp add: unat_word_ariths mask_def)
         apply (cut_tac x=irq and 'a=32 in ucast_less)
@@ -1347,8 +1347,8 @@ lemma pspace_distinct_s0:
      apply (simp add: lt1_neq0)
     apply (drule(1) order_trans_rules(23))
     apply clarsimp
-    apply (drule_tac a="0xF0003000 + (ucast irq << 4)" and b="ucast irq << 4"
-                 and c="0xF0002FFF + (ucast irq << 4)" and d="ucast irq << 4" in word_sub_mono)
+    apply (drule_tac a="0xE0008000 + (ucast irq << 4)" and b="ucast irq << 4"
+                 and c="0xE0007FFF + (ucast irq << 4)" and d="ucast irq << 4" in word_sub_mono)
        apply simp
       apply simp
       apply (rule_tac sz=28 in word32_plus_mono_right_split)
@@ -1527,13 +1527,13 @@ lemma valid_irq_node_s0[simp]:
    apply (rule injI)
    apply simp
    apply (rule ccontr)
-   apply (rule_tac bnd="0x100" and 'a=32 in shift_distinct_helper[rotated 3])
+   apply (rule_tac bnd="0x400" and 'a=32 in shift_distinct_helper[rotated 3])
         apply assumption
        apply (simp add: cte_level_bits_def)
       apply (simp add: cte_level_bits_def)
-     apply (rule ucast_less[where 'b=8, simplified])
+     apply (rule ucast_less[where 'b=10, simplified])
      apply simp
-    apply (rule ucast_less[where 'b=8, simplified])
+    apply (rule ucast_less[where 'b=10, simplified])
     apply simp
    apply (rule notI)
    apply (drule ucast_up_inj)
@@ -1626,11 +1626,11 @@ lemma valid_global_pd_mappings_s0[simp]:
    apply force
   apply clarsimp
   apply (subgoal_tac "xa - 0xFFFFF \<le> ucast x << 20")
-   apply (case_tac "ucast x << 20 > (0xF0000000::32 word)")
-    apply (subgoal_tac "(0xF0100000::32 word) \<le> ucast x << 20")
+   apply (case_tac "ucast x << 20 > (0xE0000000::32 word)")
+    apply (subgoal_tac "(0xE0100000::32 word) \<le> ucast x << 20")
      apply ((drule(1) order_trans_rules(23))+, force)
     apply (simp add: shiftl_t2n)
-    apply (cut_tac p="0xF0000000::32 word" and n=20 and m=20 and q="0x100000 * ucast x" in word_plus_power_2_offset_le)
+    apply (cut_tac p="0xE0000000::32 word" and n=20 and m=20 and q="0x100000 * ucast x" in word_plus_power_2_offset_le)
          apply (simp add: is_aligned_def)
         apply (simp add: is_aligned_def unat_word_ariths)
         apply (subst mod_mult_mult1[where c="2^20" and b="2^12", simplified])
@@ -1639,16 +1639,16 @@ lemma valid_global_pd_mappings_s0[simp]:
       apply simp
      apply simp
     apply simp
-   apply (case_tac "ucast x << 20 < (0xF0000000::32 word)")
-   apply (subgoal_tac "(0xF0000000::32 word) - 0x100000 \<ge> ucast x << 20")
-    apply (subgoal_tac "0xFFFFF + (ucast x << 20) \<le> 0xEFFFFFFF")
-     apply (drule_tac y="0xFFFFF + (ucast x << 20)" and z="0xEFFFFFFF::32 word" in order_trans_rules(23))
+   apply (case_tac "ucast x << 20 < (0xE0000000::32 word)")
+   apply (subgoal_tac "(0xE0000000::32 word) - 0x100000 \<ge> ucast x << 20")
+    apply (subgoal_tac "0xFFFFF + (ucast x << 20) \<le> 0xDFFFFFFF")
+     apply (drule_tac y="0xFFFFF + (ucast x << 20)" and z="0xDFFFFFFF::32 word" in order_trans_rules(23))
       apply simp      
      apply ((drule(1) order_trans_rules(23))+, force)
     apply (simp add: add.commute
-               word_plus_mono_left[where x="0xFFFFF" and z="0xEFF00000", simplified])
+               word_plus_mono_left[where x="0xFFFFF" and z="0xDFF00000", simplified])
    apply (simp add: shiftl_t2n)
-   apply (rule udvd_decr'[where K="0x100000" and q="0xF0000000" and ua=0, simplified])
+   apply (rule udvd_decr'[where K="0x100000" and q="0xE0000000" and ua=0, simplified])
        apply simp
       apply (simp add: uint_word_ariths)
       apply (subst mod_mult_mult1[where c="2^20" and b="2^12", simplified])

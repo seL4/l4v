@@ -2194,11 +2194,6 @@ lemma h_t_valid_and_cslift_and_c_guard_field_mdbNext_CL:
 done
 
 
-
-
-
-
-
 lemma valid_mdb_Prev_neq_Next_better: 
     "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte \<rbrakk> \<Longrightarrow>  mdbPrev (cteMDBNode cte) \<noteq> 0   \<longrightarrow>
      (mdbNext (cteMDBNode cte)) \<noteq> (mdbPrev (cteMDBNode cte))"
@@ -2227,20 +2222,29 @@ done
 
 definition
   irq_opt_relation_def:
-  "irq_opt_relation (airq :: word8 option) (cirq :: word32) \<equiv>
+  "irq_opt_relation (airq :: (10 word) option) (cirq :: word16) \<equiv>
        case airq of
-         Some irq \<Rightarrow> (cirq = ucast irq \<and> irq \<noteq> scast irqInvalid \<and> ucast irq \<le> (scast maxIRQ :: word32))
+         Some irq \<Rightarrow> (cirq = ucast irq \<and> irq \<noteq> scast irqInvalid \<and> ucast irq \<le> (scast maxIRQ :: word16))
        | None \<Rightarrow> cirq = scast irqInvalid"
+
+
+declare unat_ucast_up_simp[simp]
 
 
 lemma setIRQState_ccorres:
   "ccorres dc xfdc
-          (\<top> and (\<lambda>s. ucast irq \<le> (scast maxIRQ :: word32)))
+          (\<top> and (\<lambda>s. ucast irq \<le> (scast maxIRQ :: word16)))
           (UNIV \<inter> {s. irqState_' s = irqstate_to_C irqState} 
-                \<inter> {s. irq_' s = ucast irq}  )
+                \<inter> {s. irq_' s = (ucast irq :: word16)}  )
           []
          (setIRQState irqState irq)
          (Call setIRQState_'proc )"
+proof -
+  have is_up_8_16[simp]: "is_up (ucast :: word8 \<Rightarrow> word16)"
+  by (simp add: is_up_def source_size_def target_size_def word_size)
+
+
+show ?thesis
   apply (rule ccorres_gen_asm)
   apply (cinit simp del: return_bind)
    apply (rule ccorres_symb_exec_l)
@@ -2256,11 +2260,15 @@ lemma setIRQState_ccorres:
           apply (clarsimp simp: simpler_modify_def) 
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                 carch_state_relation_def cmachine_state_relation_def)
-          apply (simp add: cinterrupt_relation_def maxIRQ_def
-                           word_sless_msb_less order_le_less_trans
-                           word_0_sle_from_less[OF order_le_less_trans])
-          apply (clarsimp simp: unat_ucast_8_32 word_le_nat_alt
-                         split: split_if)
+          apply (simp add: cinterrupt_relation_def maxIRQ_def)
+          apply (clarsimp simp:  word_sless_msb_less order_le_less_trans
+                            unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b 
+                         split: split_if )
+          apply (rule word_0_sle_from_less)
+
+          apply (rule order_less_le_trans[where y = 160])
+           apply (simp add: unat_ucast_no_overflow_le)
+          apply simp
          apply ceqv
  
         apply (ctac add:  maskInterrupt_ccorres)
@@ -2277,14 +2285,13 @@ lemma setIRQState_ccorres:
   apply (simp add: from_bool_def)
   apply (cases irqState, simp_all)
   apply (simp add: Kernel_C.IRQSignal_def Kernel_C.IRQInactive_def) 
-  apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def) 
-done
-
-
+  apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)  
+  done
+qed
 
 
 lemma deletedIRQHandler_ccorres:
-  "ccorres dc xfdc (\<lambda>s. ucast irq \<le> (scast maxIRQ :: word32)) (UNIV\<inter> {s. irq_' s = ucast irq}) []
+  "ccorres dc xfdc (\<lambda>s. ucast irq \<le> (scast maxIRQ :: 16 word)) (UNIV\<inter> {s. irq_' s = ucast irq}) []
          (deletedIRQHandler irq)
          (Call deletedIRQHandler_'proc )"
   apply (cinit simp del: return_bind)
@@ -2296,18 +2303,17 @@ lemma deletedIRQHandler_opt_ccorres:
   "irq_opt_relation irq cirq \<Longrightarrow>
     ccorres dc xfdc \<top> UNIV [SKIP] 
      (case irq of None \<Rightarrow> return () | Some a \<Rightarrow> deletedIRQHandler a) 
-     (IF cirq \<noteq> scast irqInvalid THEN CALL deletedIRQHandler (cirq)  FI) "
+     (IF ucast cirq \<noteq> irqInvalid THEN CALL deletedIRQHandler (cirq)  FI) "
   apply (simp only: irq_opt_relation_def)
   apply (cases irq)
-   apply clarsimp
+   apply (clarsimp simp:irqInvalid_def)
    apply (simp add: ccorres_cond_iffs)
    apply (rule ccorres_return_Skip )
-  
-  apply (subgoal_tac " ucast cirq \<noteq> (scast irqInvalid :: word32)")
-   prefer 2
-   apply clarsimp
-   apply (clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def)
   apply clarsimp
+  apply (subgoal_tac " ucast cirq \<noteq> irqInvalid")
+   prefer 2
+   apply (clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def)
+   apply (word_bitwise,simp) (* So annoy that signed word ucast mixed with word ucast *)
   apply (simp add: ccorres_cond_iffs)
   apply (rule ccorres_guard_imp2)
    apply (ctac add: deletedIRQHandler_ccorres)
@@ -2336,6 +2342,7 @@ ML_command {*show_abbrevs true*}
 ML_command {*show_abbrevs false*}
 
 *)
+
 
 lemma emptySlot_ccorres:
   "ccorres dc xfdc 
@@ -2436,6 +2443,7 @@ lemma emptySlot_ccorres:
                   add: ccorres_updateMDB_const [unfolded const_def])
 
                   -- "the case irq "
+
                   apply (erule deletedIRQHandler_opt_ccorres [unfolded dc_def]) 
 
                 -- "Haskell pre/post for y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);"
@@ -3278,6 +3286,23 @@ lemma ucast_ucast_mask_eq:
   apply (simp add: ucast_ucast_mask)
   done
 
+lemma ucast_up_eq:
+  "\<lbrakk> ucast x = (ucast y::'b::len word); 
+    len_of TYPE('a) \<le> len_of TYPE ('b) \<rbrakk>
+  \<Longrightarrow> ucast x = (ucast y::'a::len word)"
+  apply (subst (asm) bang_eq)
+  apply (fastforce simp: nth_ucast word_size intro: word_eqI)
+  done
+
+lemma ucast_up_neq:
+  "\<lbrakk> ucast x \<noteq> (ucast y::'b::len word); 
+    len_of TYPE('b) \<le> len_of TYPE ('a) \<rbrakk>
+  \<Longrightarrow> ucast x \<noteq> (ucast y::'a::len word)"
+  apply (clarsimp)
+  apply (drule ucast_up_eq)
+    apply simp+
+  done
+
 lemma sameRegionAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>ccap_relation capa \<acute>cap_a \<and>
                      ccap_relation capb \<acute>cap_b \<and>
@@ -3322,10 +3347,13 @@ lemma sameRegionAs_spec:
            apply (simp add: cap_irq_handler_cap_lift)
            apply (simp add: cap_to_H_def)
            apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def
-                                 cl_valid_cap_def
-                          split: split_if bool.split)
-           apply (drule ucast_ucast_mask_eq, simp)
-           apply (simp add: ucast_ucast_mask)
+                                 cl_valid_cap_def mask_twice
+                          split: split_if bool.split
+                          | intro impI conjI
+                          | simp )+
+               apply (drule ucast_ucast_mask_eq, simp)
+               apply (simp add: ucast_ucast_mask)
+              apply (erule ucast_up_neq,simp)
           apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
           apply (clarsimp simp: isArchCap_tag_def2)
          -- "capa is an EndpointCap"

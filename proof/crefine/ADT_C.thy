@@ -178,7 +178,7 @@ definition
   where
   "checkActiveIRQ_C \<equiv>
    do getActiveIRQ_C;
-      irq \<leftarrow> gets ret__unsigned_long_';
+      irq \<leftarrow> gets ret__unsigned_short_';
       return (irq \<noteq> scast irqInvalid)
    od"
 
@@ -282,7 +282,7 @@ lemma cirqstate_cancel:
 definition
   "cint_state_to_H cnode cirqs \<equiv>
    InterruptState (ptr_val cnode)
-     (\<lambda>i::word8. if i \<le> scast Platform.maxIRQ then cirqstate_to_H (index cirqs (unat i))
+     (\<lambda>i::10 word. if i \<le> scast Platform.maxIRQ then cirqstate_to_H (index cirqs (unat i))
                 else irqstate.IRQInactive)"
 
 lemma cint_rel_to_H:
@@ -1545,7 +1545,7 @@ definition
 definition
   "checkActiveIRQ_C \<equiv>
    do getActiveIRQ_C;
-      irq \<leftarrow> gets ret__unsigned_long_';
+      irq \<leftarrow> gets ret__unsigned_short_';
       return (irq \<noteq> scast irqInvalid)
    od"
 

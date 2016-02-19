@@ -746,7 +746,7 @@ lemma decodeARMPageTableInvocation_ccorres:
          apply (simp add: if_to_top_of_bind del: Collect_const)
          apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
             apply vcg
-           apply (simp add: kernelBase_def hd_conv_nth length_ineq_not_Nil)
+           apply (simp add: kernelBase_def Platform.kernelBase_def hd_conv_nth length_ineq_not_Nil)
           apply (simp add: throwError_bind invocationCatch_def)
           apply (rule syscall_error_throwError_ccorres_n)
           apply (simp add: syscall_error_to_H_cases)
@@ -1195,7 +1195,8 @@ lemma lookupPTSlot_le_0x3C:
    apply simp
   apply (simp add: Platform.ptrFromPAddr_def physMappingOffset_def)
   apply (erule aligned_add_aligned)
-   apply (simp add: kernelBase_addr_def physBase_def is_aligned_def)
+   apply (simp add: kernelBase_addr_def Platform.physBase_def
+     physBase_def is_aligned_def)
   apply (simp add: word_bits_def)
   done
 
@@ -1445,7 +1446,7 @@ lemma obj_at_pte_aligned:
 lemma addrFromPPtr_mask_5:
   "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
   apply (simp add:addrFromPPtr_def physMappingOffset_def 
-    kernelBase_addr_def physBase_def)
+    kernelBase_addr_def physBase_def Platform.physBase_def)
   apply word_bitwise
   apply (simp add:mask_def)
   done
@@ -2184,7 +2185,7 @@ lemma vmsz_aligned_addrFromPPtr':
    apply (erule(1) aligned_sub_aligned)
     apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
   apply (simp add: pageBitsForSize_def physMappingOffset_def kernelBase_addr_def
-                   physBase_def is_aligned_def
+                   physBase_def Platform.physBase_def is_aligned_def
             split: vmpage_size.split)
   done
 
@@ -3079,7 +3080,7 @@ lemma decodeARMFrameInvocation_ccorres:
               apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                  apply vcg
                 apply (frule ccap_relation_PageCap_generics)
-                apply (clarsimp simp add: kernelBase_def word_le_nat_alt)
+                apply (clarsimp simp add: kernelBase_def Platform.kernelBase_def word_le_nat_alt)
                apply (simp add: throwError_bind invocationCatch_def)?
                apply (rule syscall_error_throwError_ccorres_n)
                apply (simp add: syscall_error_to_H_cases)
@@ -3489,7 +3490,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
          apply (simp add: syscall_error_to_H_cases)
         apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
            apply vcg
-          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil kernelBase_def)
+          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil kernelBase_def Platform.kernelBase_def)
          apply (simp add:injection_handler_throwError)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add: syscall_error_to_H_cases)

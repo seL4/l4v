@@ -456,7 +456,7 @@ definition
   where
   "doUserOp_H_if uop \<equiv> {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (doUserOp_if uop) s)}"
 
-definition checkActiveIRQ_if :: "(MachineTypes.register \<Rightarrow> 32 word) \<Rightarrow> (8 word option \<times> (MachineTypes.register \<Rightarrow> 32 word)) kernel" where
+definition checkActiveIRQ_if :: "(MachineTypes.register \<Rightarrow> 32 word) \<Rightarrow> (10 word option \<times> (MachineTypes.register \<Rightarrow> 32 word)) kernel" where
 "checkActiveIRQ_if tc \<equiv>
 do 
    irq \<leftarrow> doMachineOp getActiveIRQ;

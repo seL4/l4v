@@ -270,7 +270,7 @@ val unfold_assertion_data_get_set = Simplifier.make_simproc
 *}
 
 ML {*
-fun wrap_tac tac i t = let
+fun wrap_tac tac i t = if Thm.nprems_of t = 0 then no_tac t else let
     val t' = Goal.restrict i 1 t
     val r = tac 1 t'
   in case Seq.pull r of NONE => Seq.empty
@@ -344,6 +344,8 @@ fun prove_ptr_safe reason ctxt = DETERM o
     (TRY o REPEAT_ALL_NEW (eqsubst_either_wrap_tac ctxt
                 @{thms array_ptr_index_coerce}
             )
+        THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps
+            @{thms word_sle_msb_le word_sless_msb_less})
         THEN_ALL_NEW asm_simp_tac (ctxt addsimps
             @{thms ptr_safe_field[unfolded typ_uinfo_t_def]
                    ptr_safe_Array_element unat_less_helper
@@ -706,7 +708,8 @@ fun simpl_to_graph_thm funs csenv ctxt nm = let
     val _ = if Thm.nprems_of res_thm = 0 then ()
         else raise THM ("simpl_to_graph_thm: unsolved subgoals", 1, [res_thm])
     (* FIXME: make the hidden assumptions of the thm appear again *)
-  in res_thm end
+  in res_thm end handle TERM (s, ts) => raise TERM ("simpl_to_graph_thm: " ^ nm
+        ^ ": " ^ s, ts)
 
 fun test_graph_refine_proof funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => ("skipped " ^ nm, @{thm TrueI})
@@ -717,7 +720,9 @@ fun test_graph_refine_proof funs csenv ctxt nm = case
         |> Seq.hd
     val succ = case Thm.nprems_of res_thm of 0 => "success on "
         | n => string_of_int n ^ " failed goals: "
-  in (succ ^ nm, res_thm) end
+  in (succ ^ nm, res_thm) end handle TERM (s, ts) => raise TERM ("test_graph_refine_proof: " ^ nm
+        ^ ": " ^ s, ts)
+
 
 fun test_graph_refine_proof_with_def funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => "skipped " ^ nm

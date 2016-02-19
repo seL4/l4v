@@ -1022,7 +1022,7 @@ shows
                          in corres_splitEE)
             prefer 2
             apply (rule corres_whenE)
-              apply (simp add: kernel_base_def kernelBase_def shiftl_t2n)
+              apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def shiftl_t2n)
              apply (rule corres_trivial, simp)
             apply simp
            apply (rule corres_guard_imp)
@@ -1151,7 +1151,7 @@ shows
     apply (simp split: cap.split arch_cap.split option.split,
            intro conjI allI impI, simp_all)[1]
     apply (rule whenE_throwError_corres_initial, simp)
-     apply (simp add: kernel_base_def kernelBase_def)
+     apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE)
          prefer 2
@@ -1226,7 +1226,7 @@ shows
      apply (rule whenE_throwError_corres, simp)
       apply clarsimp
      apply (rule whenE_throwError_corres, simp)
-      apply (clarsimp simp: kernel_base_def kernelBase_def)
+      apply (clarsimp simp: kernel_base_def Platform.kernelBase_def kernelBase_def)
      apply (rule case_option_corresE)
       apply (rule corres_trivial)
       apply clarsimp
@@ -1485,7 +1485,7 @@ lemma sts_valid_arch_inv':
 lemma less_kernelBase_valid_pde_offset':
   "\<lbrakk> vptr < kernelBase; x = 0 \<or> is_aligned vptr 24; x \<le> 0xF \<rbrakk>
      \<Longrightarrow> valid_pde_mapping_offset' (((x * 4) + (vptr >> 20 << 2)) && mask pdBits)"
-  apply (clarsimp simp: kernelBase_def pdBits_def pageBits_def
+  apply (clarsimp simp: kernelBase_def Platform.kernelBase_def pdBits_def pageBits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def)
   apply (drule minus_one_helper3, simp)
   apply (drule le_shiftr[where u=vptr and n=20])
@@ -1663,7 +1663,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
 lemma is_aligned_ptrFromPAddr_aligned:
   "m \<le> 28 \<Longrightarrow> is_aligned (Platform.ptrFromPAddr p) m = is_aligned p m"
   apply (simp add:Platform.ptrFromPAddr_def is_aligned_mask
-    physMappingOffset_def kernelBase_addr_def physBase_def)
+    physMappingOffset_def kernelBase_addr_def Platform.physBase_def physBase_def)
   apply (subst add.commute)
   apply (subst mask_add_aligned)
    apply (erule is_aligned_weaken[rotated])

@@ -1,10 +1,5 @@
-Built from git repo at /net/nfshome/export/home/insecure/jbeeren/work/test/seL4/haskell by jbeeren
+Built from git repo at /home/xgao/verification/seL4/haskell by xgao
 
 Generated from changeset:
-3989283 msi: fix readdition of IRQSetMode
+007e805 fix for asmrefine
 
-
-Warning - uncomitted changes used:
-?? src/SEL4/API/Invocation.lhs.orig
-?? src/SEL4/Object/Interrupt.lhs.orig
-?? src/SEL4/Object/Interrupt/ARM.lhs.orig

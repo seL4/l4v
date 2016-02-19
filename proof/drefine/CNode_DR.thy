@@ -1727,7 +1727,7 @@ lemma opt_cap_pd_None:
     opt_cap_def invs_def valid_state_def object_slots_def transform_page_directory_contents_def)+
 
 lemma transform_pde_NullCap:
-  "\<lbrakk>3840 \<le> unat (xa::word32); unat xa < 4096\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>3584 \<le> unat (xa::word32); unat xa < 4096\<rbrakk> \<Longrightarrow>
             transform_pde (kernel_pde_mask ptx (ucast xa)) = cdl_cap.NullCap"
   apply (clarsimp simp:kernel_pde_mask_def kernel_base_def)
   apply (subst ucast_le_migrate[symmetric])
@@ -1740,7 +1740,7 @@ lemma transform_pde_NullCap:
   done
 
 lemma dcorres_dummy_empty_slot_pd:
-  "\<lbrakk>0xF00 \<le> unat xa ; unat xa < 0x1000\<rbrakk> \<Longrightarrow> dcorres dc \<top> (valid_idle and page_directory_at w)
+  "\<lbrakk>0xE00 \<le> unat xa ; unat xa < 0x1000\<rbrakk> \<Longrightarrow> dcorres dc \<top> (valid_idle and page_directory_at w)
   (PageTableUnmap_D.empty_slot (w, unat (xa::word32))) (return x)"
   apply (clarsimp simp:PageTableUnmap_D.empty_slot_def gets_the_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_l)
@@ -1757,7 +1757,7 @@ lemma dcorres_dummy_empty_slot_pd:
   done
 
 lemma dcorres_dummy_empty_slot_pd_mapM_x:
-  "\<forall>x\<in> set ls. 0xF00 \<le> unat x \<and> unat x < 4096
+  "\<forall>x\<in> set ls. 0xE00 \<le> unat x \<and> unat x < 4096
        \<Longrightarrow> dcorres dc \<top> (page_directory_at w and valid_idle)
            (mapM_x PageTableUnmap_D.empty_slot (map (\<lambda>x. (w, unat x)) (ls::word32 list)))
            (return x)"

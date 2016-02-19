@@ -97,26 +97,6 @@ lemma replyOnRestart_twice[simplified]:
 
 context kernel_m begin
 
-
-lemma isIRQPending_ccorres:
-  "ccorres (\<lambda>rv rv'. rv' = from_bool (rv \<noteq> None)) ret__unsigned_long_'
-      \<top> UNIV []
-      (doMachineOp getActiveIRQ) (Call isIRQPending_'proc)"
-  apply (cinit')
-   apply (rule ccorres_add_return2)
-
-   apply (ctac(no_vcg) add: getActiveIRQ_ccorres)
-    apply (rule_tac P="\<lambda>s. rv \<noteq> Some 0xFF"
-                   in ccorres_from_vcg_throws[where P'=UNIV])
-    apply (rule allI, rule conseqPre, vcg)
-    apply (clarsimp simp: return_def from_bool_def if_1_0_0
-                          irqInvalid_def
-                   split: option.split_asm)
-   apply (wp getActiveIRQ_neq_Some0xFF)
-  apply simp
-  done
-
-
 lemma ccorres_pre_getWorkUnits:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows "ccorres r xf

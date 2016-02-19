@@ -12,5 +12,6 @@
 #
 # Wrapper for clang C preprocessor on MacOS
 #
+export L4CPP="-DTARGET=ARM -DTARGET_ARM -DPLATFORM=Sabre -DPLATFORM_Sabre"
 
 llvm-gcc -Wno-invalid-pp-token -E -x c $@

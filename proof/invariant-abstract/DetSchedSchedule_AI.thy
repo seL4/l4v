@@ -2958,7 +2958,9 @@ lemma handle_event_valid_sched:
   apply (cases e, simp_all)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
-            apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_recv_valid_sched handle_reply_valid_sched | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
+            apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_recv_valid_sched'
+              handle_reply_valid_sched 
+              | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
        apply (wp handle_fault_valid_sched hvmf_active hoare_drop_imps
                  handle_recv_valid_sched' handle_reply_valid_sched | wpc |
               clarsimp simp: ct_in_state_def valid_sched_ct_not_queued valid_fault_def

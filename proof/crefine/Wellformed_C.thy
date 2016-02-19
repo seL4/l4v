@@ -385,7 +385,7 @@ where
 "cl_valid_cap c \<equiv>
    case c of
      Cap_frame_cap fc \<Rightarrow> ((capFSize_CL fc) \<noteq>  scast Kernel_C.ARMSmallPage)
-     | Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 8 = capIRQ_CL fc)
+     | Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 10 = capIRQ_CL fc)
      | x \<Rightarrow> True"
 
 definition

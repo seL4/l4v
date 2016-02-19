@@ -262,7 +262,7 @@ where
   | _ \<Rightarrow> False"
 
 datatype init_failure =
-    InitFailure
+    IFailure
 
 datatype syscall_error =
     IllegalOperation

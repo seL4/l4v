@@ -19,13 +19,6 @@ imports "../../lib/clib/Ctac"
 begin
 
 locale kernel_m = kernel +
-
-assumes configureTimer_ccorres:
-  "ccorres (op =) ret__unsigned_char_'
-           \<top> UNIV []
-           (doMachineOp configureTimer)
-           (Call configureTimer_'proc)"
-
 assumes resetTimer_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp resetTimer)
@@ -152,10 +145,22 @@ assumes getFAR_ccorres:
            (Call getFAR_'proc)"
 
 assumes getActiveIRQ_ccorres:
-  "ccorres (\<lambda>a c. case a of None \<Rightarrow> c = 255 | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> 0xFF) 
-           ret__unsigned_long_' \<top> UNIV []
-           (doMachineOp getActiveIRQ)
-           (Call getActiveIRQ_'proc)"
+"ccorres (\<lambda>(a::10 word option) c::16 word.
+     case a of None \<Rightarrow> c = (0xFFFF::16 word)
+     | Some (x::10 word) \<Rightarrow> c = ucast x \<and> c \<noteq> (0xFFFF::16 word))
+     (\<lambda>t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_short_' t\<rparr> ))
+     \<top> UNIV hs
+ (doMachineOp getActiveIRQ) (Call getActiveIRQ_'proc)"
+
+(* This is not very correct, however our current implementation of Hardware in haskell is stateless *)
+assumes isIRQPending_ccorres:
+  "ccorres (\<lambda>rv rv'. rv' = from_bool (rv \<noteq> None)) ret__unsigned_long_'
+      \<top> UNIV []
+      (doMachineOp getActiveIRQ) (Call isIRQPending_'proc)"
+
+assumes armv_contextSwitch_HWASID_ccorres:
+  "ccorres dc xfdc \<top> (UNIV \<inter> {s. cap_pd_' s = pde_Ptr pd} \<inter> {s. hw_asid_' s = hwasid}) []
+     (doMachineOp (armv_contextSwitch_HWASID pd hwasid)) (Call armv_contextSwitch_HWASID_'proc)"
 
 assumes getActiveIRQ_Normal:
   "\<Gamma> \<turnstile> \<langle>Call getActiveIRQ_'proc, Normal s\<rangle> \<Rightarrow> s' \<Longrightarrow> isNormal s'"
@@ -214,19 +219,12 @@ assumes fastpath_restore_ccorres:
                [bdg, msginfo]))
      (Call fastpath_restore_'proc)"
 
-context kernel_m begin
-
-lemma ackInterrupt_ccorres:
+assumes ackInterrupt_ccorres:
   "ccorres dc xfdc \<top> UNIV hs
            (doMachineOp (ackInterrupt irq))
            (Call ackInterrupt_'proc)"
-  apply (rule ccorres_from_vcg)
-  apply (rule allI)
-  apply (rule conseqPre)
-   apply vcg
-  apply (simp add: ackInterrupt_def)
-  apply (simp add: return_def)
-  done
+
+context kernel_m begin
 
 lemma index_xf_for_sequence:
   "\<forall>s f. index_' (index_'_update f s) = f (index_' s)

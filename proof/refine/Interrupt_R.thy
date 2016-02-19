@@ -153,6 +153,7 @@ lemma decode_irq_control_corres:
       apply (simp add: minIRQ_def ucast_nat_def)
      apply (simp add: linorder_not_less)
      apply (simp add: maxIRQ_def word_le_nat_alt toEnum_of_nat)
+
      apply (simp add: ucast_nat_def)
      apply (rule corres_split_eqr [OF _ is_irq_active_corres])
        apply (rule whenE_throwError_corres, simp, simp)
@@ -207,10 +208,14 @@ lemma decode_irq_control_valid'[wp]:
                         toEnum_of_nat word_le_nat_alt unat_of_nat)
   done
 
+lemma irq_nodes_global_refs:
+  "irq_node' s + (ucast (irq:: 10 word)) * 0x10 \<in> global_refs' s"
+  by (simp add: global_refs'_def mult.commute mult.left_commute)
+
 lemma valid_globals_ex_cte_cap_irq:
   "\<lbrakk> ex_cte_cap_wp_to' isCNodeCap ptr s; valid_global_refs' s;
          valid_objs' s \<rbrakk>
-       \<Longrightarrow> ptr \<noteq> intStateIRQNode (ksInterruptState s) + 2 ^ cte_level_bits * ucast (irq :: word8)"
+       \<Longrightarrow> ptr \<noteq> intStateIRQNode (ksInterruptState s) + 2 ^ cte_level_bits * ucast (irq :: 10 word)"
   apply (clarsimp simp: cte_wp_at_ctes_of ex_cte_cap_wp_to'_def)
   apply (drule(1) ctes_of_valid'[rotated])
   apply (drule(1) valid_global_refsD')
@@ -218,7 +223,8 @@ lemma valid_globals_ex_cte_cap_irq:
    apply (clarsimp simp: isCap_simps)
   apply (subgoal_tac "irq_node' s + 2 ^ cte_level_bits * ucast irq \<in> global_refs' s")
    apply blast
-  apply (simp add: global_refs'_def cte_level_bits_def)
+  apply (simp add: global_refs'_def cte_level_bits_def 
+    mult.commute mult.left_commute)
   done
 
 lemma invoke_irq_handler_corres:
@@ -829,9 +835,18 @@ lemma resetTimer_invs'[wp]:
    apply clarsimp+
   done
 
+lemma dmo_ackInterrupt[wp]: 
+"\<lbrace>invs'\<rbrace> doMachineOp (ackInterrupt irq) \<lbrace>\<lambda>y. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_ackInterrupt)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: ackInterrupt_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  done
 lemma hint_invs[wp]:
   "\<lbrace>invs'\<rbrace> handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: handleInterrupt_def getSlotCap_def ackInterrupt_def
+  apply (simp add: handleInterrupt_def getSlotCap_def
              cong: irqstate.case_cong)
   apply (wp dmo_maskInterrupt_True getCTE_wp' 
          | wpc | simp)+

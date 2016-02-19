@@ -18,7 +18,7 @@ definition handleInterruptEntry_C_body_if (*:: "(globals myvars, int, l4c_errort
 "handleInterruptEntry_C_body_if \<equiv> (
       (\<acute>irq :== CALL getActiveIRQ();;
        (Guard SignedArithmetic \<lbrace>True\<rbrace>
-         (IF (ucast \<acute>irq :: word32) \<noteq> (ucast ((ucast (-1 :: word8)) :: word32)) THEN
+         (IF (ucast \<acute>irq :: word32) \<noteq> (ucast ((ucast (-1 :: 16 word)) :: word32)) THEN
             CALL handleInterrupt(\<acute>irq)
           FI)));;
        \<acute>ret__unsigned_long :== scast EXCEPTION_NONE)"
@@ -129,6 +129,7 @@ definition
       {(s, b, (tc,s'))|s b tc s' r. ((r,tc),s') \<in> fst (split (kernelEntry_C_if fp e) s) \<and>
                    b = (case r of Inl x \<Rightarrow> True | Inr x \<Rightarrow> False)}"
 
+
 lemma handleInterrupt_ccorres:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
            (invs')
@@ -136,30 +137,37 @@ lemma handleInterrupt_ccorres:
            []
            (handleEvent Interrupt)
            (handleInterruptEntry_C_body_if)"
+proof -
+  have ucast_not_helper_cheating_unsigned:
+    "\<And>a. ucast (a::10 word) \<noteq> (0xFFFF :: word16) \<Longrightarrow> ucast (ucast a :: word16) \<noteq> (0xFFFF::32 word)"
+    by (word_bitwise)
+  show ?thesis
   apply (rule ccorres_guard_imp2)
    apply (simp add: handleEvent_def minus_one_norm handleInterruptEntry_C_body_if_def)
    apply (clarsimp simp: liftE_def bind_assoc)
    apply (rule ccorres_rhs_assoc)
    apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
     apply (rule ccorres_Guard_Seq)
-    apply (rule_tac P="rv \<noteq> Some 0xFF" in ccorres_gen_asm)
+    apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
     apply wpc
      apply (simp add: ccorres_cond_empty_iff)
      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
-    apply (simp add: ucast_not_helper ccorres_cond_univ_iff)
+    apply (clarsimp simp: ucast_not_helper_cheating_unsigned
+      ucast_not_helper ccorres_cond_univ_iff ucast_ucast_a is_down)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
     apply wp
    apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> Platform.maxIRQ)
-                                     \<and> rv \<noteq> Some 0xFF" in hoare_post_imp)
+                                     \<and> rv \<noteq> Some 0xFFFF" in hoare_post_imp)
     apply (clarsimp simp: Kernel_C.maxIRQ_def Platform.maxIRQ_def)
    apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
+qed
 
 lemma handleEvent_ccorres:
   notes K_def[simp del]
@@ -179,14 +187,30 @@ lemma handleEvent_ccorres:
    apply (wpc, simp_all)[1]
        apply (wpc, simp_all add: handleSyscall_C_body_if_def syscall_from_H_def liftE_def
                                  ccorres_cond_univ_iff syscall_defs ccorres_cond_empty_iff)[1]
-             -- "SysSend"
-              apply (simp add: handleSend_def)
+              -- "SysCall"
+              apply (simp add: handleCall_def)
               apply (ctac (no_vcg) add: handleInvocation_ccorres)
-            -- "SysNBSend"
+             -- "SysReplyRecv"
+             apply (simp add: bind_assoc)
+             apply (rule ccorres_rhs_assoc)+
+             apply (ctac (no_vcg) add: handleReply_ccorres)
+              apply (ctac (no_vcg) add: handleRecv_ccorres)
+               apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+               apply (rule allI, rule conseqPre, vcg)
+               apply (clarsimp simp: return_def)
+              apply wp[1]
+             apply clarsimp
+             apply wp
+             apply (rule_tac Q="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s \<and>
+                                (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))"
+                   in hoare_post_imp)
+              apply (simp add: ct_in_state'_def)
+             apply (wp handleReply_sane handleReply_ct_not_ksQ)
+             -- "SysSend"
             apply (simp add: handleSend_def)
             apply (ctac (no_vcg) add: handleInvocation_ccorres)
-           -- "SysCall"
-           apply (simp add: handleCall_def)
+           -- "SysNBSend"
+           apply (simp add: handleSend_def)
            apply (ctac (no_vcg) add: handleInvocation_ccorres)
           -- "SysRecv"
           apply (ctac (no_vcg) add: handleRecv_ccorres)
@@ -200,22 +224,6 @@ lemma handleEvent_ccorres:
           apply (rule allI, rule conseqPre, vcg)
           apply (clarsimp simp: return_def)
          apply wp
-        -- "SysReplyRecv"
-        apply (simp add: bind_assoc)
-        apply (rule ccorres_rhs_assoc)+
-        apply (ctac (no_vcg) add: handleReply_ccorres)
-         apply (ctac (no_vcg) add: handleRecv_ccorres)
-          apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
-          apply (rule allI, rule conseqPre, vcg)
-          apply (clarsimp simp: return_def)
-         apply wp[1]
-        apply clarsimp
-        apply wp
-        apply (rule_tac Q="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s \<and>
-                                (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))"
-              in hoare_post_imp)
-         apply (simp add: ct_in_state'_def)
-        apply (wp handleReply_sane handleReply_ct_not_ksQ)
        -- "SysYield"
        apply (ctac (no_vcg) add: handleYield_ccorres)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
@@ -533,8 +541,8 @@ definition
   "checkActiveIRQ_C_if tc \<equiv>
    do 
       getActiveIRQ_C;
-      irq \<leftarrow> gets ret__unsigned_long_';
-      return (if irq = 255 then None else Some (ucast irq), tc)
+      irq \<leftarrow>  gets ret__unsigned_short_';
+      return (if irq = 0xFFFF then None else Some (ucast irq), tc)
    od"
 
 definition 
@@ -549,16 +557,18 @@ lemma check_active_irq_corres_C:
   apply (simp add: getActiveIRQ_C_def)
   apply (subst bind_assoc[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'="\<lambda>a c. case a of None \<Rightarrow> c = 0xFF | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> 0xFF", OF _ ccorres_corres_u_xf])
+    apply (rule corres_split[where r'="\<lambda>a c. case a of None \<Rightarrow> c = 0xFFFF | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> 0xFFFF", OF _ ccorres_corres_u_xf])
         apply (clarsimp split: split_if option.splits)
         apply (rule ucast_ucast_id[symmetric], simp)
        apply (rule ccorres_guard_imp)
+         apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
          apply (rule getActiveIRQ_ccorres)
         apply simp+
       apply (rule no_fail_dmo')
       apply (rule getActiveIRQ_nf)
      apply (rule hoare_post_taut[where P=\<top>])+
    apply simp+
+   apply fastforce
   done
 
 

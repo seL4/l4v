@@ -795,7 +795,7 @@ lemma ptrFromPAddr_spec:
   \<lbrace>  \<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s) ) \<rbrace>"
   apply vcg
   apply (simp add: Platform.ptrFromPAddr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def)
+                   kernelBase_addr_def physBase_def Platform.physBase_def)
   done
 
 lemma addrFromPPtr_spec:
@@ -805,7 +805,7 @@ lemma addrFromPPtr_spec:
   apply vcg
   apply (simp add: addrFromPPtr_def 
                    Platform.addrFromPPtr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def)
+                   kernelBase_addr_def physBase_def Platform.physBase_def)
   done
   
 
@@ -1433,20 +1433,6 @@ lemma getHWASID_ccorres:
   apply (auto simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
-lemma armv_contextSwitch_HWASID_ccorres:
-  "ccorres dc xfdc \<top> (UNIV \<inter> {s. cap_pd_' s = pde_Ptr pd} \<inter> {s. hw_asid_' s = hwasid}) []
-     (doMachineOp (armv_contextSwitch_HWASID pd hwasid)) (Call armv_contextSwitch_HWASID_'proc)"
-  apply (cinit' lift: cap_pd_' hw_asid_')
-   apply (simp add: armv_contextSwitch_HWASID_def doMachineOp_bind setCurrentPD_empty_fail 
-                    setHardwareASID_empty_fail )
-   apply csymbr
-   apply (ctac (no_vcg) add: setCurrentPD_ccorres)
-    apply (fold dc_def)
-    apply (ctac (no_vcg) add: setHardwareASID_ccorres)
-   apply wp
-  apply clarsimp
-  done
- 
 
 lemma armv_contextSwitch_ccorres:
   "ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain' and (\<lambda>s. asid \<le> mask asid_bits))

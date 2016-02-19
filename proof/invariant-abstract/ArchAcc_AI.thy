@@ -2521,9 +2521,8 @@ lemma shiftr_eqD:
   apply (simp add: and_not_mask[symmetric] is_aligned_neg_mask_eq)
   done
 
-
 lemma kernel_base_ge_observation:
-  "(kernel_base \<le> x) = (x && ~~ mask 28 = kernel_base)"
+  "(kernel_base \<le> x) = (x && ~~ mask 29 = kernel_base)"
   apply (subst mask_in_range)
    apply (simp add: kernel_base_def is_aligned_def)
   apply (simp add: kernel_base_def)
@@ -2531,9 +2530,9 @@ lemma kernel_base_ge_observation:
 
 
 lemma kernel_base_less_observation:
-  "(x < kernel_base) = (x && ~~ mask 28 \<noteq> kernel_base)"
-  by (simp add: linorder_not_le[symmetric] kernel_base_ge_observation)
-
+  "(x < kernel_base) = (x && ~~ mask 29 \<noteq> kernel_base)"
+  apply (simp add: linorder_not_le[symmetric] kernel_base_ge_observation)
+  done
 
 lemma vptr_shifting_helper_magic:
   "(x = 0) \<or> (x < 2 ^ 4 \<and> vmsz_aligned (vptr::word32) ARMSuperSection)
@@ -2564,6 +2563,22 @@ lemma mask_out_first_mask_some:
   done
 
 
+lemma gap_between_aligned:
+  "\<lbrakk>a < (b :: ('a ::len word)); is_aligned a n; 
+  is_aligned b n;n < len_of TYPE('a) \<rbrakk> \<Longrightarrow> a + (2^ n - 1) < b"
+  apply (rule ccontr,simp add:not_less)
+  apply (drule le_shiftr[where n = n])
+  apply (simp add: aligned_shift')
+  apply (case_tac "b >> n = a >> n")
+   apply (drule arg_cong[where f = "%x. x<<n"])
+  apply (drule le_shiftr')
+   apply (clarsimp simp:is_aligned_shiftr_shiftl)
+   apply fastforce
+  apply (drule(1) le_shiftr')
+  apply simp
+  done
+  
+
 lemma less_kernel_base_mapping_slots_both:
   "\<lbrakk> vptr < kernel_base; is_aligned pd pd_bits;
           (x = 0)
@@ -2577,37 +2592,25 @@ lemma less_kernel_base_mapping_slots_both:
   apply (simp add: shiftr_shiftl_mask_pd_bits triple_shift_fun)
   apply (simp add: kernel_mapping_slots_def linorder_not_le
                    shiftr_20_less)
-  apply (rule le_neq_trans)
-   apply (rule le_shiftr)
-   apply (rule order_less_imp_le, simp add: kernel_base_less_observation)
-   apply (erule disjE)
-    apply simp
-   apply (clarsimp simp: vmsz_aligned_def del: notI)
-   apply (subst mask_out_first_mask_some,
-          subst is_aligned_add_helper, assumption)
-      apply (rule shiftl_less_t2n)
-       apply simp+
-  apply (rule notI)
+  apply (rule le_m1_iff_lt[THEN iffD1,THEN iffD1])
+   apply (simp add:kernel_base_def)
   apply (erule disjE)
-   apply (drule_tac f="\<lambda>x. x << 20" in arg_cong)
-   apply (simp add: and_not_mask[symmetric])
-   apply (drule_tac x="vptr && ~~ mask 20" in order_le_less_trans[rotated])
-    apply (rule word_and_le2)
-   apply (simp add: kernel_base_def mask_def)
-  apply (clarsimp simp add: vmsz_aligned_def)
-  apply (drule shiftr_eqD)
-    apply (rule aligned_add_aligned, (simp add: is_aligned_shiftl word_bits_conv)+)
-   apply (simp add: kernel_base_def is_aligned_def)
-  apply (clarsimp simp: kernel_base_less_observation)
-  apply (erule notE, rule trans,
-         rule_tac y="vptr + (x << 20) && ~~ mask 24" in mask_out_first_mask_some)
-    apply (subst is_aligned_add_helper, assumption)
-     apply (rule shiftl_less_t2n, simp+)
-    apply (erule is_aligned_neg_mask_eq)
+   apply (drule word_less_sub_1)
    apply simp
-  apply (simp add: mask_def kernel_base_def)
-  done
-
+   apply (drule le_shiftr[where n=20])
+   apply (clarsimp simp :kernel_base_def vmsz_aligned_def)+
+  apply (drule(1) gap_between_aligned)
+    apply (simp add:is_aligned_def)
+   apply simp
+  apply (rule order.trans[OF le_shiftr])
+   apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'[where off = "2^24-1"]])
+     apply (rule word_less_sub_1)
+     apply (rule shiftl_less_t2n)
+      apply simp+
+  apply (clarsimp dest!:word_less_sub_1)
+  apply (erule order.trans[OF le_shiftr])
+  apply simp
+done
 
 lemmas less_kernel_base_mapping_slots
     = less_kernel_base_mapping_slots_both[where x=0, simplified]

@@ -3073,7 +3073,7 @@ lemma arch_recycle_cap_invs:
    apply (simp add: mask_def kernel_mapping_slots_def kernel_base_def
       word_le_make_less not_le)
    apply (rule le_less_trans[rotated])
-    apply (frule_tac 'a = "12" in ucast_mono[where y = "0xF00::word32"])
+    apply (frule_tac 'a = "12" in ucast_mono[where y = "0xE00::word32"])
      apply (simp+)[2]
    apply (intro eq_refl  arg_cong[where f = ucast] shiftl_shiftr_id)
     apply ((simp add:word_bits_def)+)[2]

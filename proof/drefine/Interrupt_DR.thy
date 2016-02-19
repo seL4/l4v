@@ -82,6 +82,9 @@ lemma decode_irq_control_corres:
          apply (rule corres_alternate1)
          apply (rule corres_returnOk [where P=\<top> and P'=\<top>])
          apply (simp add: cdl_irq_control_invocation_relation_def)
+         apply (subst ucast_mask_drop)
+          apply simp
+         apply simp
         apply wp[1]
        apply simp
        apply wp[3]

@@ -208,7 +208,7 @@ where
   "transform_intent_issue_irq_handler args \<equiv>
    case args of
       irqW#index#depth#_ \<Rightarrow>
-         Some (IrqControlIssueIrqHandlerIntent ((ucast irqW)::word8) index depth)
+         Some (IrqControlIssueIrqHandlerIntent ((ucast irqW)::10 word) index depth)
     | _ \<Rightarrow> Nothing"
 
 definition

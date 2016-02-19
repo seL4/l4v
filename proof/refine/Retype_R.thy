@@ -2738,7 +2738,7 @@ lemma copy_global_corres:
               apply (drule(1) pde_relation_aligned_eq)
               apply fastforce
              apply (wp hoare_vcg_const_Ball_lift | simp)+
-       apply (simp add: kernel_base_def kernelBase_def list_all2_refl)
+       apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def list_all2_refl)
       apply (rule corres_trivial, clarsimp simp: state_relation_def arch_state_relation_def)
      apply wp
    apply (clarsimp simp: valid_arch_state_def)

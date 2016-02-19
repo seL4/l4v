@@ -465,7 +465,7 @@ crunch (empty_fail) empty_fail[wp]: handle_event,activate_thread
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
          flush_type.splits page_directory_invocation.splits
-   ignore: resetTimer_impl)
+   ignore: resetTimer_impl ackInterrupt_impl)
 
 lemma call_kernel_empty_fail: "empty_fail ((call_kernel a) :: (unit,det_ext) s_monad)"
   apply (simp add: call_kernel_def)

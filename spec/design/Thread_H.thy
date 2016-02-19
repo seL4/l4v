@@ -369,6 +369,9 @@ defs timerTick_def:
   od)
 od)"
 
+definition
+"initTCB\<equiv> (makeObject::tcb)\<lparr> tcbPriority:=maxBound \<rparr>"
+
 
 primrec
 transferCapsToSlots :: "(machine_word) option \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> (capability * machine_word) list \<Rightarrow> machine_word list \<Rightarrow> message_info \<Rightarrow> message_info kernel"

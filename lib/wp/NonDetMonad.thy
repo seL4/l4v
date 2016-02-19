@@ -540,6 +540,10 @@ definition
 where
   "foldM m xs a \<equiv> foldr (\<lambda>p q. q >>= m p) xs (return a) "
 
+definition 
+  foldME ::"('b \<Rightarrow> 'a \<Rightarrow> ('s,('e + 'b)) nondet_monad) \<Rightarrow> 'b \<Rightarrow> 'a list \<Rightarrow> ('s, ('e + 'b)) nondet_monad"
+where "foldME m a xs \<equiv> foldr (\<lambda>p q. q >>=E swp m p) xs (returnOk a)"
+
 text {* The sequence and map functions above for the exception monad,
 with and without lists of return value *}
 definition

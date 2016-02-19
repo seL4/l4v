@@ -1269,7 +1269,7 @@ definition
 where
   "valid_irq_handlers \<equiv> \<lambda>s. \<forall>cap \<in> ran (caps_of_state s). \<forall>irq \<in> cap_irqs cap. irq_issued irq s"
 
-definition valid_irq_masks :: "(word8 \<Rightarrow> irq_state) \<Rightarrow> (word8 \<Rightarrow> bool) \<Rightarrow> bool" where
+definition valid_irq_masks :: "(10 word \<Rightarrow> irq_state) \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarrow> bool" where
   "valid_irq_masks table masked \<equiv> \<forall>irq. table irq = IRQInactive \<longrightarrow> masked irq"
 definition valid_irq_states :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_irq_states \<equiv> \<lambda>s.
@@ -1565,7 +1565,7 @@ cap_table_at xl xk se \<and>
 valid_cap_ref (ThreadCap (xn::word32)) (sf::'z_1::state_ext state) = tcb_at xn sf \<and>
 valid_cap_ref DomainCap (sp::'z_1::state_ext state) = True \<and>
 valid_cap_ref IRQControlCap (sg::'z_1::state_ext state) = True \<and>
-valid_cap_ref (IRQHandlerCap (xo::word8)) (sh::'z_1::state_ext state) = True \<and>
+valid_cap_ref (IRQHandlerCap (xo::10 word)) (sh::'z_1::state_ext state) = True \<and>
 valid_cap_ref (Zombie (xp::word32) (xq::nat option) (xr::nat))
  (si::'z_1::state_ext state) =
 (case xq of None \<Rightarrow> tcb_at xp si | Some (b::nat) \<Rightarrow> cap_table_at b xp si) \<and>
@@ -1610,7 +1610,7 @@ lemma valid_cap_simps :
 (cap_aligned (ThreadCap xn) \<and> tcb_at xn sf) \<and>
 (sp::'z_1::state_ext state) \<turnstile> DomainCap = (cap_aligned DomainCap \<and> True) \<and>
 (sg::'z_1::state_ext state) \<turnstile> IRQControlCap = (cap_aligned IRQControlCap \<and> True) \<and>
-(sh::'z_1::state_ext state) \<turnstile> IRQHandlerCap (xo::word8) =
+(sh::'z_1::state_ext state) \<turnstile> IRQHandlerCap (xo::10 word) =
 (cap_aligned (IRQHandlerCap xo) \<and> xo \<le> maxIRQ) \<and>
 (si::'z_1::state_ext state) \<turnstile> Zombie (xp::word32) (xq::nat option) (xr::nat) =
 (cap_aligned (Zombie xp xq xr) \<and>
@@ -5055,7 +5055,8 @@ lemma get_irq_slot_real_cte:
   "\<lbrace>invs\<rbrace> get_irq_slot irq \<lbrace>real_cte_at\<rbrace>"
   apply (simp add: get_irq_slot_def)
   apply wp
-  apply (clarsimp simp: invs_def valid_state_def valid_irq_node_def)
+  apply (clarsimp simp: invs_def valid_state_def
+    valid_irq_node_def)
   done
 
 lemma all_invs_but_sym_refs_check:
