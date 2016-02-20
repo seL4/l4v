@@ -10,7 +10,7 @@
 
 (* License: BSD, terms see file ./LICENSE *)
 
-theory Vanilla32_typinfo
+theory Addr_Type
 imports "~~/src/HOL/Word/Word"
 begin
 
