@@ -28,9 +28,9 @@
 
     <!-- CRefine -->
     <sequence depends="CParser">
-        <test name="CKernel">make CKernel</test>
+        <test name="CKernel" cpu-timeout="7200">make CKernel</test>
         <test name="CSpec">make CSpec</test>
-        <test name="CBaseRefine" depends="Refine" cpu-timeout="14400">make CBaseRefine</test>
+        <test name="CBaseRefine" depends="Refine" cpu-timeout="21600">make CBaseRefine</test>
         <test name="CRefine" cpu-timeout="25200">make CRefine</test>
     </sequence>
 
@@ -44,7 +44,7 @@
     <sequence depends="AInvs">
         <test name="Access">make Access</test>
         <test name="InfoFlow" cpu-timeout="7200">make InfoFlow</test>
-        <test name="InfoFlowC" depends="CRefine" cpu-timeout="10800">make InfoFlowC</test>
+        <test name="InfoFlowC" depends="CRefine" cpu-timeout="16200">make InfoFlowC</test>
     </sequence>
 
     <!-- Access Control and capDL -->
