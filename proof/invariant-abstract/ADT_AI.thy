@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-chapter {* Abstract datatype for the abstract specification *} (* "header" changed to "chapter" *)
+chapter {* Abstract datatype for the abstract specification *}
 
 theory ADT_AI
 imports

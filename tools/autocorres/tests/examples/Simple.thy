@@ -18,7 +18,6 @@ begin
 install_C_file "simple.c"
 
 (* Abstract the input file. *)
-declare [[ML_exception_trace]]
 autocorres [ ts_force pure = max, ts_force nondet = gcd, unsigned_word_abs = gcd ] "simple.c"
 
 (* Generated theorems and proofs. *)
