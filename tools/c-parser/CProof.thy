@@ -29,7 +29,7 @@ ML_file "basics.ML"
 ML_file "MString.ML"
 
 ML_file "TargetNumbers-sig.ML"
-ML_file "Target-ARM32.ML"  (* <-- change this for other machine models *)
+ML_file "./umm_heap/$L4V_ARCH/TargetNumbers.ML"
 
 ML_file "RegionExtras.ML"
 ML_file "Absyn-CType.ML"
