@@ -97,7 +97,7 @@ datatype cap
          | IRQHandlerCap irq
          | Zombie obj_ref "nat option" nat
            -- {* @{text "cnode ptr * nat + tcb or cspace ptr"} *}
-         | ArchObjectCap arch_cap
+         | ArchObjectCap (the_arch_cap: arch_cap)
 
 text {* The CNode object is an array of capability slots. The domain of the
 function will always be the set of boolean lists of some specific length.
@@ -414,7 +414,7 @@ datatype kernel_object
          | TCB tcb
          | Endpoint endpoint
          | Notification notification
-         | ArchObj arch_kernel_obj
+         | ArchObj (the_arch_obj: arch_kernel_obj)
 
 
 text {* Checks whether a cnode's contents are well-formed. *}

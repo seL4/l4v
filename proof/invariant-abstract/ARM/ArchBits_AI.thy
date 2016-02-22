@@ -12,7 +12,7 @@ theory ArchBits_AI
 imports "../Invariants_AI"
 begin
 
-context Arch begin
+context ARM begin
 
 lemma invs_unique_table_caps[elim!]:
   "invs s \<Longrightarrow> unique_table_caps (arch_caps_of_state s)"

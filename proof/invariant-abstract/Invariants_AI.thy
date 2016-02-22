@@ -19,8 +19,6 @@ unqualify_types
   vs_ref
 
 unqualify_consts
-  vs_lookup :: "'z::state_ext state \<Rightarrow> vs_chain set"
-
   not_kernel_window :: "'z::state_ext state \<Rightarrow> obj_ref set"
   global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set"
   arch_obj_bits_type :: "aa_type \<Rightarrow> nat"
@@ -59,18 +57,16 @@ unqualify_facts
   valid_arch_state_lift_atyp_at
   aobj_at_default_arch_cap_valid
   aobj_ref_default[simp]
-  physical_arch_cap_has_ref
   valid_arch_objs_def
   acap_rights_update_id[intro!, simp]
-
+  physical_arch_cap_has_ref
 
 end
 
-abbreviation
-  vs_lookup_abbr
-  ("_ \<rhd> _" [80,80] 81) where
-  "rs \<rhd> p \<equiv> \<lambda>s. (rs,p) \<in> vs_lookup s"
+(* Checking that vs_lookup notation is installed *)
 
+term "vs_lookup :: 'z::state_ext state \<Rightarrow> vs_chain set"
+term "(a \<rhd> b) :: ('z:: state_ext state) \<Rightarrow> bool"
 
 -- ---------------------------------------------------------------------------
 section "Invariant Definitions for Abstract Spec"
@@ -2564,6 +2560,7 @@ lemma valid_reply_masters_update [iff]:
 interpretation Arch_pspace_update_eq by unfold_locales
 
 lemmas in_user_frame_update[iff] = in_user_frame_update
+lemmas equal_kernel_mappings_update[iff] = equal_kernel_mappings_update
 
 end
 
@@ -2675,58 +2672,60 @@ locale p_arch_idle_update_int_eq = p_arch_idle_update_eq + pspace_int_update_eq
 interpretation revokable_update:
   p_arch_idle_update_int_eq "is_original_cap_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> revokable_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
+sublocale Arch \<subseteq> revokable_update!: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
+
 
 interpretation machine_state_update:
   p_arch_idle_update_int_eq "machine_state_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> machine_state_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
+sublocale Arch \<subseteq> machine_state_update!: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
 
 interpretation cdt_update:
   p_arch_idle_update_int_eq "cdt_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> cdt_update: Arch_p_arch_idle_update_int_eq "cdt_update f" by unfold_locales
+sublocale Arch \<subseteq> cdt_update!: Arch_p_arch_idle_update_int_eq "cdt_update f" by unfold_locales
 
 
 interpretation cur_thread_update:
   p_arch_idle_update_int_eq "cur_thread_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> cur_thread_update: Arch_p_arch_idle_update_int_eq "cur_thread_update f" by unfold_locales
+sublocale Arch \<subseteq> cur_thread_update!: Arch_p_arch_idle_update_int_eq "cur_thread_update f" by unfold_locales
 
 interpretation more_update:
   p_arch_idle_update_int_eq "trans_state f"
   by unfold_locales auto
-sublocale Arch \<subseteq> more_update: Arch_p_arch_idle_update_int_eq "trans_state f" by unfold_locales
+sublocale Arch \<subseteq> more_update!: Arch_p_arch_idle_update_int_eq "trans_state f" by unfold_locales
+
 
 interpretation interrupt_update:
   p_arch_idle_update_eq "interrupt_states_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> interrupt_update: Arch_p_arch_idle_update_eq "interrupt_states_update f" by unfold_locales
+sublocale Arch \<subseteq> interrupt_update!: Arch_p_arch_idle_update_eq "interrupt_states_update f" by unfold_locales
 
 interpretation irq_node_update:
   pspace_int_update_eq "interrupt_irq_node_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> irq_node_update: Arch_pspace_update_eq "interrupt_irq_node_update f" by unfold_locales
+sublocale Arch \<subseteq> irq_node_update!: Arch_pspace_update_eq "interrupt_irq_node_update f" by unfold_locales
 
 interpretation arch_update:
   pspace_int_update_eq "arch_state_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> arch_update: Arch_pspace_update_eq "arch_state_update f" by unfold_locales
+sublocale Arch \<subseteq> arch_update!: Arch_pspace_update_eq "arch_state_update f" by unfold_locales
 
 interpretation more_update':
   pspace_int_update_eq "trans_state f"
   by unfold_locales auto
-sublocale Arch \<subseteq> more_update': Arch_pspace_update_eq "trans_state f" by unfold_locales
+sublocale Arch \<subseteq> more_update'!: Arch_pspace_update_eq "trans_state f" by unfold_locales
 
 interpretation irq_node_update_arch:
   p_arch_update_eq "interrupt_irq_node_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> irq_node_update_arch: Arch_p_arch_update_eq "interrupt_irq_node_update f" by unfold_locales
+sublocale Arch \<subseteq> irq_node_update_arch!: Arch_p_arch_update_eq "interrupt_irq_node_update f" by unfold_locales
 
 interpretation more_update_arch:
   p_arch_update_eq "trans_state f"
   by unfold_locales auto
-sublocale Arch \<subseteq> more_update_arch: Arch_p_arch_update_eq "trans_state f" by unfold_locales
+sublocale Arch \<subseteq> more_update_arch!: Arch_p_arch_update_eq "trans_state f" by unfold_locales
 
 
 lemma obj_ref_in_untyped_range:

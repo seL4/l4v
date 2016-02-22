@@ -267,10 +267,16 @@ definition
 where
   "vs_lookup \<equiv> \<lambda>s. vs_lookup_trans s `` vs_asid_refs (arm_asid_table (arch_state s))"
 
+unqualify_consts vs_lookup
+
+end
+
 abbreviation
-  vs_lookup_abbr :: "vs_ref list \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  vs_lookup_abbr
   ("_ \<rhd> _" [80,80] 81) where
   "rs \<rhd> p \<equiv> \<lambda>s. (rs,p) \<in> vs_lookup s"
+
+context ARM begin
 
 abbreviation
   is_reachable_abbr :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" ("\<exists>\<rhd> _" [80] 81) where
@@ -336,14 +342,21 @@ definition
 where
   "vs_lookup_pages \<equiv> \<lambda>s. vs_lookup_pages_trans s `` vs_asid_refs (arm_asid_table (arch_state s))"
 
+unqualify_consts vs_lookup_pages
+
+end
+
 abbreviation
-  vs_lookup_pages_abbr :: "vs_ref list \<Rightarrow> obj_ref \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool"
+  vs_lookup_pages_abbr
   ("_ \<unrhd> _" [80,80] 81) where
   "rs \<unrhd> p \<equiv> \<lambda>s. (rs,p) \<in> vs_lookup_pages s"
 
 abbreviation
   is_reachable_pages_abbr :: "obj_ref \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool" ("\<exists>\<unrhd> _" [80] 81) where
   "\<exists>\<unrhd> p \<equiv> \<lambda>s. \<exists>ref. (ref \<unrhd> p) s"
+
+
+context ARM begin
 
 definition
   pde_mapping_bits :: "nat"
@@ -582,9 +595,14 @@ where
    set (arm_global_pts (arch_state s))"
 
 definition
+  not_kernel_window_arch :: "arch_state \<Rightarrow> obj_ref set"
+where
+  "not_kernel_window_arch s \<equiv> {x. arm_kernel_vspace s x \<noteq> ArmVSpaceKernelWindow}"
+
+abbreviation
   not_kernel_window :: "'z::state_ext state \<Rightarrow> obj_ref set"
 where
-  "not_kernel_window s \<equiv> {x. arm_kernel_vspace (arch_state s) x \<noteq> ArmVSpaceKernelWindow}"
+  "not_kernel_window s \<equiv> not_kernel_window_arch (arch_state s)"
 
 
   (* needed for map: installing new object should add only one mapping *)
@@ -812,12 +830,14 @@ lemma aobj_at_pspaceI:
   by (simp add: aobj_at_def)
 
 
+
 lemma valid_arch_cap_atyp:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (atyp_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (atyp_at T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_arch_cap c s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_cap c s\<rbrace>"
   apply (simp add: valid_arch_cap_def)
   apply (case_tac c, simp_all)
   by (wp P)
+
 
 lemma valid_arch_obj_atyp:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (atyp_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (atyp_at T p s)\<rbrace>"
@@ -832,6 +852,7 @@ lemma valid_arch_obj_atyp:
   apply (case_tac "fun x", simp_all add: hoare_vcg_prop P)
   apply (rule P)
   done
+
 
 lemma atyp_at_eq_kheap_obj:
   "atyp_at AASIDPool p s \<longleftrightarrow>
@@ -980,16 +1001,9 @@ lemma arch_caps_of_state_update [iff]:
   "arch_caps_of_state (f s) = arch_caps_of_state s"
   by (rule ext) (auto simp: arch_caps_of_state_def)
 
-end
-
-
-context Arch_arch_update_eq begin
-
-lemma vs_lookup1_update [iff]:
-  "not_kernel_window (f s) = not_kernel_window s"
-  by (simp add: not_kernel_window_def arch)
 
 end
+
 
 context Arch_arch_idle_update_eq begin
 
@@ -1933,9 +1947,20 @@ lemma acap_rights_update_id [intro!, simp]:
   "\<lbrakk>wellformed_acap cap\<rbrakk> \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding wellformed_acap_def acap_rights_update_def
   by (auto split: arch_cap.splits)
-term unique_table_caps
+
 end
 
+(*
 
+
+locale arch_only = 
+  fixes Q :: "'z :: state_ext state \<Rightarrow> bool"
+  assumes arch_upd: "\<And>f s. Q (arch_state_update f s) = Q s" and
+          kheap_upd: "\<And>s x. \<forall>y. kheap s p = Some y \<longrightarrow> non_arch_obj x \<Longrightarrow> 
+                            non_arch_obj x \<Longrightarrow> Q(s\<lparr>kheap := kheap s(p \<mapsto> x)\<rparr>) = Q s"
+  begin
+
+
+*)
 
 end

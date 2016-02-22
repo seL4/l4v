@@ -83,10 +83,10 @@ val _ =
         fun read_const (t, T_in) =
         let
           val (nm, T) = dest_Const (Proof_Context.read_const {proper = true, strict = false} lthy t);
-          val _ = case map_option (Syntax.read_typ lthy) T_in of
-            SOME T' => (Syntax.check_term lthy (Const (nm, T')); ())
-           | NONE => ()
-        in (nm, T) end
+  
+        in case map_option (Syntax.read_typ lthy) T_in of
+            SOME T' => (nm, T')
+           | NONE => (nm, T) end
 
         val ts = map (`( read_const o fst)) bs;
 

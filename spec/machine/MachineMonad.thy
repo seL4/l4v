@@ -22,6 +22,7 @@ unqualify_types
 
 unqualify_consts
   underlying_memory :: "machine_state \<Rightarrow> machine_word \<Rightarrow> word8"
+  underlying_memory_update :: "((32 word \<Rightarrow> 8 word) \<Rightarrow> 32 word \<Rightarrow> 8 word) \<Rightarrow> machine_state \<Rightarrow> machine_state"
   irq_masks :: "machine_state \<Rightarrow> irq \<Rightarrow> bool"
   machine_state_rest :: "machine_state \<Rightarrow> machine_state_rest"
   machine_state_rest_update :: "(machine_state_rest \<Rightarrow> machine_state_rest) \<Rightarrow> machine_state \<Rightarrow> machine_state"
