@@ -14,17 +14,22 @@ theory Addr_Type
 imports "~~/src/HOL/Word/Word"
 begin
 
-type_synonym addr = "32 word"
+type_synonym addr_bitsize = "64"
+type_synonym addr = "addr_bitsize word"
 
 definition addr_card :: nat where
   "addr_card \<equiv> card (UNIV::addr set)"
+  
+definition addr_bitsize :: nat where "addr_bitsize \<equiv> 64"
+
+declare addr_bitsize_def[simp]
 
 lemma addr_card:
-  "addr_card = 2^32"
+  "addr_card = 2^addr_bitsize"
   by (simp add: addr_card_def card_word)
 
 lemma len_of_addr_card:
-  "2 ^ len_of TYPE(32) = addr_card"
+  "2 ^ len_of TYPE(addr_bitsize) = addr_card"
   by (simp add: addr_card)
 
 lemma of_nat_addr_card [simp]:

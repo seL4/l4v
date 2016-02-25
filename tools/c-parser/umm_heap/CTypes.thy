@@ -2703,9 +2703,9 @@ lemma align:
 apply(clarsimp simp: dvd_def align_of_def)
 apply(subgoal_tac "align_of (TYPE('a)) < addr_card")
  apply(subst (asm) align_of_def)
- apply(rule_tac x="2^(len_of TYPE(32) - align_td (typ_info_t TYPE('a)))" in exI)
+ apply(rule_tac x="2^(len_of TYPE(addr_bitsize) - align_td (typ_info_t TYPE('a)))" in exI)
  apply clarsimp
- apply(subgoal_tac "align_td (typ_info_t TYPE('a)) < 32")
+ apply(subgoal_tac "align_td (typ_info_t TYPE('a)) < addr_bitsize")
  apply(subst power_add [symmetric])
   apply(subst addr_card)
   apply simp
