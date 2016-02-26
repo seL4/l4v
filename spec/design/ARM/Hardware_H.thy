@@ -14,6 +14,8 @@ imports
   State_H
 begin
 
+type_synonym machine_data = "Platform.machine_data"
+
 type_synonym irq = "Platform.irq"
 
 type_synonym paddr = "Platform.paddr"
@@ -348,6 +350,11 @@ definition
 pageColourBits :: "nat"
 where
 "pageColourBits \<equiv> Platform.pageColourBits"
+
+definition
+initIRQController :: "unit machine_monad"
+where
+"initIRQController \<equiv> underlying_arch_op (10 ::nat) "
 
 definition
 clearExMonitor :: "unit machine_monad"

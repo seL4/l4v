@@ -41,6 +41,9 @@ consts
 placeNewObject' :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> nat \<Rightarrow> unit kernel"
 
 consts
+deleteRange :: "( machine_word , 'a ) DataMap.map \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> ( machine_word , 'a ) DataMap.map"
+
+consts
 deleteObjects :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
 
 consts
@@ -132,6 +135,13 @@ defs placeNewObject'_def:
         ps' \<leftarrow> return ( ps \<lparr> psMap := map' \<rparr>);
         modify (\<lambda> ks. ks \<lparr> ksPSpace := ps'\<rparr>)
 od)"
+
+defs deleteRange_def:
+"deleteRange m pstart bits \<equiv>
+        let (_,lr) = data_map_split (pstart- 1) m
+            pend = pstart + 2^bits
+            (mid,_) = data_map_split pend lr in
+        foldl' (flip data_map_delete) m (data_map_keys mid)"
 
 defs deleteObjects_def:
 "deleteObjects ptr bits\<equiv> (do
