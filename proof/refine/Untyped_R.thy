@@ -34,7 +34,7 @@ where
           \<and> (ptr = ptr_base \<longrightarrow> descendants_range_in' {ptr_base..ptr_base + 2^sz - 1} slot (ctes_of s))
           \<and> distinct (slot # slots)
           \<and> (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)
-          \<and> (ty = APIObjectType ArchTypes_H.Untyped \<longrightarrow> 4\<le> us \<and> us \<le> 30)
+          \<and> (ty = APIObjectType ArchTypes_H.Untyped \<longrightarrow> 4\<le> us \<and> us \<le> 29)
           \<and> (\<forall>slot \<in> set slots. cte_wp_at' (\<lambda>c. cteCap c = NullCap) slot s)
           \<and> (\<forall>slot \<in> set slots. ex_cte_cap_to' slot s)
           \<and> sch_act_simple s \<and> 0 < length slots
@@ -882,7 +882,7 @@ lemma decodeUntyped_wf[wp]:
    apply (simp add:empty_descendants_range_in')
    apply (clarsimp simp:image_def isCap_simps nullPointer_def word_size
                         cte_level_bits_def field_simps)
-   apply (rule conjI[rotated], clarsimp simp: Types_H.isFrameType_def) (* peel of device goal *)
+   apply (rule conjI[rotated], rule conjI[rotated], clarsimp simp: Types_H.isFrameType_def) (* peel of device goal *)
    apply (clarsimp simp: image_def isCap_simps nullPointer_def
                          word_size cte_level_bits_def field_simps)
    apply (drule_tac x = x in spec)+
@@ -3584,7 +3584,7 @@ lemma createNewCaps_valid_cap':
         valid_pspace' s \<and> n \<noteq> 0 \<and>
         range_cover ptr sz (APIType_capBits ty us) n \<and>
         (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us) \<and>
-        (ty = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4\<le> us \<and> us \<le> 30) \<and>
+        (ty = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4\<le> us \<and> us \<le> 29) \<and>
        ptr \<noteq> 0 \<rbrace>
     createNewCaps ty ptr n us d
   \<lbrace>\<lambda>r s. \<forall>cap\<in>set r. s \<turnstile>' cap\<rbrace>"
@@ -4601,7 +4601,7 @@ lemma inv_untyped_corres':
     assume  misc     : "distinct slots" "cte_map cref \<notin> cte_map ` set slots" "cref \<notin> set slots" "distinct (map cte_map slots)"
       " ao' = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> 0 < us" "idx \<le> unat (ptr && mask sz) \<or> ptr = ptr && ~~ mask sz"
       " ao' = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us"
-      " ao' = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> us \<le> 30" "invs s" "invs' s'"  "valid_list s" "valid_sched s"
+      " ao' = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> us \<le> 29" "invs s" "invs' s'"  "valid_list s" "valid_sched s"
       " APIType_map2 (Inr ao') \<noteq> ArchObject ASIDPoolObj "
       " \<forall>slot\<in>set slots. ex_cte_cap_wp_to' (\<lambda>_. True) (cte_map slot) s'"
       " \<forall>slot\<in>set slots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) (cte_map slot) s'"
@@ -5392,7 +5392,7 @@ proof -
       "invs' s" "slots \<noteq> []" "sch_act_simple s"
       "\<forall>slot\<in>set slots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s"
       "\<forall>x\<in>set slots. ex_cte_cap_wp_to' (\<lambda>_. True) x s" "ct_active' s"
-      "tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 30"
+      "tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29"
     assume desc_range: "ptr = ptr && ~~ mask sz \<longrightarrow> descendants_range_in' {ptr..ptr + 2 ^ sz - 1} (cref) (ctes_of s)"
 
     assume st_tcb:
@@ -6011,7 +6011,7 @@ lemma invokeUntyped_invs'':
     assume desc_range: "ptr = ptr && ~~ mask sz \<longrightarrow> descendants_range_in' {ptr..ptr + 2 ^ sz - 1} (cref) (ctes_of s)"
     assume misc      : "distinct slots" "cref \<notin> set slots" "ct_active' s"
       "tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> 0 < us"
-      "tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 30"
+      "tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29"
       "idx \<le> unat (ptr && mask sz) \<or> ptr = ptr && ~~ mask sz"
       "invs' s"
       "\<forall>slot\<in>set slots. ex_cte_cap_wp_to' (\<lambda>_. True) slot s"

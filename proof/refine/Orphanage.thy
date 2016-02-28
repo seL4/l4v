@@ -1285,7 +1285,7 @@ lemma invokeUntyped_no_orphans' [wp]:
     fix s sz idx d
     assume no_orph: "no_orphans s"
     assume misc : " (tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> 0 < us)"
-                  " tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 30"
+                  " tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29"
                   " sch_act_simple s " "ct_active' s"
     assume ivk_pf: "invokeUntyped_proofs s cref ptr tp us slots sz idx d"
     note blah[simp del] = 

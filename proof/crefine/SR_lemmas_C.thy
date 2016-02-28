@@ -65,7 +65,7 @@ lemma ccap_relationE:
 
 
 definition
-  "pageSize cap \<equiv> case cap of ArchObjectCap (PageCap _ _ sz _) \<Rightarrow> sz"
+  "pageSize cap \<equiv> case cap of ArchObjectCap (PageCap _ _ _ sz _) \<Rightarrow> sz"
 
 definition
   "isArchCap_tag (n :: 32 word) \<equiv> n mod 2 = 1"
@@ -252,7 +252,8 @@ lemma cap_get_tag_ReplyCap:
 lemma cap_get_tag_UntypedCap:
   assumes cr: "ccap_relation cap cap'"
   shows "(cap_get_tag cap' = scast cap_untyped_cap) = 
-  (cap = UntypedCap (capPtr_CL (cap_untyped_cap_lift cap'))
+  (cap = UntypedCap (to_bool (capIsDevice_CL (cap_untyped_cap_lift cap')))
+                    (capPtr_CL (cap_untyped_cap_lift cap'))
                     (unat (capBlockSize_CL (cap_untyped_cap_lift cap')))
                     (unat (capFreeIndex_CL (cap_untyped_cap_lift cap') << 4)))"
   using cr
@@ -1927,7 +1928,7 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   and "ccap_relation (capability.IRQControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_control_cap)"
   and "ccap_relation (capability.Zombie v14 v15 v16) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_zombie_cap)"
   and "ccap_relation (capability.ReplyCap v17 v18) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
-  and "ccap_relation (capability.UntypedCap v19 v20 v20b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_untyped_cap)"
+  and "ccap_relation (capability.UntypedCap v100 v19 v20 v20b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_untyped_cap)"
   and "ccap_relation (capability.CNodeCap v21 v22 v23 v24) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_cnode_cap)"  
   and "ccap_relation (capability.DomainCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_domain_cap)"
 
@@ -1936,8 +1937,8 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap v30 v31)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_table_cap)"   
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v32 v33)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"   
 
-  and "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v34 v35 v36 v37)) cap'; v36=ARMSmallPage\<rbrakk>  \<Longrightarrow> (cap_get_tag cap' = scast cap_small_frame_cap)"   
-  and "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v38 v39 v40 v41)) cap'; v40\<noteq>ARMSmallPage\<rbrakk>  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"   
+  and "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v101 v34 v35 v36 v37)) cap'; v36=ARMSmallPage\<rbrakk>  \<Longrightarrow> (cap_get_tag cap' = scast cap_small_frame_cap)"   
+  and "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v102 v38 v39 v40 v41)) cap'; v40\<noteq>ARMSmallPage\<rbrakk>  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"   
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v42 v43)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"   
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v44 v45)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)

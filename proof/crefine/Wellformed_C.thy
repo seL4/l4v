@@ -332,7 +332,7 @@ where
     CNodeCap (capCNodePtr_CL ccap) (unat (capCNodeRadix_CL ccap))
              (capCNodeGuard_CL ccap)
              (unat (capCNodeGuardSize_CL ccap))
- | Cap_untyped_cap uc \<Rightarrow> UntypedCap (capPtr_CL uc) (unat (capBlockSize_CL uc)) (unat (capFreeIndex_CL uc << 4))
+ | Cap_untyped_cap uc \<Rightarrow> UntypedCap (to_bool(capIsDevice_CL uc)) (capPtr_CL uc) (unat (capBlockSize_CL uc)) (unat (capFreeIndex_CL uc << 4))
  | Cap_endpoint_cap ec \<Rightarrow>
     EndpointCap (capEPPtr_CL ec) (capEPBadge_CL ec) (to_bool(capCanSend_CL ec)) (to_bool(capCanReceive_CL ec))
                 (to_bool(capCanGrant_CL ec))
@@ -345,7 +345,7 @@ where
  | Cap_irq_control_cap \<Rightarrow> IRQControlCap
  | Cap_asid_control_cap \<Rightarrow> ArchObjectCap ASIDControlCap
  | Cap_asid_pool_cap apc \<Rightarrow> ArchObjectCap (ASIDPoolCap (capASIDPool_CL apc) (capASIDBase_CL apc))
- | Cap_small_frame_cap sfc \<Rightarrow> ArchObjectCap (PageCap (cap_small_frame_cap_CL.capFBasePtr_CL sfc)
+ | Cap_small_frame_cap sfc \<Rightarrow> ArchObjectCap (PageCap (to_bool(cap_small_frame_cap_CL.capFIsDevice_CL sfc)) (cap_small_frame_cap_CL.capFBasePtr_CL sfc)
                                             (vmrights_to_H(cap_small_frame_cap_CL.capFVMRights_CL sfc)) (ARMSmallPage)
                                             (if cap_small_frame_cap_CL.capFMappedASIDHigh_CL sfc = 0
                                                 \<and> cap_small_frame_cap_CL.capFMappedASIDLow_CL sfc = 0
@@ -353,7 +353,7 @@ where
                                              Some( (((cap_small_frame_cap_CL.capFMappedASIDHigh_CL sfc)<<asidLowBits) +
                                              (cap_small_frame_cap_CL.capFMappedASIDLow_CL sfc)) ,
                                              cap_small_frame_cap_CL.capFMappedAddress_CL sfc)))
- | Cap_frame_cap fc \<Rightarrow> ArchObjectCap (PageCap (capFBasePtr_CL fc)
+ | Cap_frame_cap fc \<Rightarrow> ArchObjectCap (PageCap (to_bool(capFIsDevice_CL fc)) (capFBasePtr_CL fc)
                                             (vmrights_to_H(capFVMRights_CL fc)) (framesize_to_H(capFSize_CL fc))
                                             (if capFMappedASIDHigh_CL fc = 0
                                                \<and> capFMappedASIDLow_CL fc = 0

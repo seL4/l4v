@@ -355,7 +355,7 @@ where valid_cap'_def:
     Structures_H.NullCap \<Rightarrow> True
   | Structures_H.DomainCap \<Rightarrow> True
   | Structures_H.UntypedCap d r n f \<Rightarrow>
-      valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> 4\<le> n \<and> n \<le> 30 \<and> f \<le> 2^n \<and>  is_aligned (of_nat f :: word32) 4
+      valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> 4\<le> n \<and> n \<le> 29 \<and> f \<le> 2^n \<and>  is_aligned (of_nat f :: word32) 4
   | Structures_H.EndpointCap r badge x y z \<Rightarrow> ep_at' r s
   | Structures_H.NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>

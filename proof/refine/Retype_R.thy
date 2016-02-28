@@ -2368,7 +2368,7 @@ lemma createNewCaps_valid_cap:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n "
   assumes not_0: "n \<noteq> 0"
   assumes ct: "ty = APIObjectType ArchTypes_H.CapTableObject \<Longrightarrow> 0 < us"
-              "ty = APIObjectType ArchTypes_H.apiobject_type.Untyped \<Longrightarrow> 4 \<le> us \<and> us \<le> 30"
+              "ty = APIObjectType ArchTypes_H.apiobject_type.Untyped \<Longrightarrow> 4 \<le> us \<and> us \<le> 29"
   assumes ptr: " ptr \<noteq> 0"
   shows "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> valid_pspace' s\<rbrace>
            createNewCaps ty ptr n us dev

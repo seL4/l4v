@@ -2658,8 +2658,8 @@ apply (simp add: invs_valid_tcb_ctable_strengthen)
 done
 
 lemma handle_recv_valid_sched:
-  "\<lbrace>valid_sched and valid_objs and ct_active and sym_refs \<circ> state_refs_of
-      and ct_not_queued and scheduler_act_sane and invs\<rbrace>
+  "\<lbrace>valid_sched and invs and ct_active
+      and ct_not_queued and scheduler_act_sane\<rbrace>
    handle_recv is_blocking \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
               cong: if_cong)
@@ -2673,7 +2673,7 @@ lemma handle_recv_valid_sched:
      apply (wp hoare_drop_imps hoare_vcg_all_lift_R)
     apply (wp delete_caller_cap_not_queued | simp | strengthen invs_valid_tcb_ctable_strengthen)+
   apply (simp add: ct_in_state_def tcb_at_invs)
-  apply (auto simp: objs_valid_tcb_ctable)
+  apply (auto simp: objs_valid_tcb_ctable invs_valid_objs)
   done
 
 lemma handle_recv_valid_sched':
