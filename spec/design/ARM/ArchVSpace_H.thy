@@ -21,6 +21,7 @@ begin
 
 defs vptrFromPPtr_def:
 "vptrFromPPtr ptr \<equiv> returnOk $ ptr + 0x20000000"
+
 defs globalsBase_def:
 "globalsBase \<equiv> VPtr 0xffffc000"
 
@@ -300,14 +301,6 @@ defs createITFrameCap_def:
              capVPMappedAddress= addr \<rparr>);
     returnOk $ ArchObjectCap $ frame
 odE)"
-
-defs vptrFromPPtr_def:
-"vptrFromPPtr x0\<equiv> (case x0 of
-    ((* PPtr *) ptr) \<Rightarrow>    (doE
-    offset \<leftarrow> gets initVPtrOffset;
-    returnOk $ (VPtr ptr) + offset
-    odE)
-  )"
 
 defs createFramesOfRegion_def:
 "createFramesOfRegion rootCNCap region doMap\<equiv> (doE

@@ -288,9 +288,6 @@ defs provideUntypedCap_def:
                                   capFreeIndex= 0 \<rparr>
 odE)"
 
-definition
-"foldME \<equiv> foldM"
-
 
 consts
   newKSDomSchedule :: "(domain \<times> machine_word) list"
