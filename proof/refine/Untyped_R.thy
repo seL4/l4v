@@ -882,7 +882,7 @@ lemma decodeUntyped_wf[wp]:
    apply (simp add:empty_descendants_range_in')
    apply (clarsimp simp:image_def isCap_simps nullPointer_def word_size
                         cte_level_bits_def field_simps)
-   apply (rule conjI[rotated], rule conjI[rotated], clarsimp simp: Types_H.isFrameType_def) (* peel of device goal *)
+   apply (rule conjI[rotated], clarsimp simp: Types_H.isFrameType_def) (* peel of device goal *)
    apply (clarsimp simp: image_def isCap_simps nullPointer_def
                          word_size cte_level_bits_def field_simps)
    apply (drule_tac x = x in spec)+

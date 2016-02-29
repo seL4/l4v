@@ -470,7 +470,7 @@ where
   new_type \<leftarrow> data_to_obj_type (args!0);
 
   user_obj_size \<leftarrow> returnOk $ data_to_nat (args!1);
-  unlessE (user_obj_size < word_bits - 1)
+  unlessE (user_obj_size < word_bits - 2)
     $ throwError (RangeError 0 (of_nat word_bits - 3)); (* max size of untyped = 2^30 *)
   whenE (new_type = CapTableObject \<and> user_obj_size = 0) 
     $ throwError (InvalidArgument 1);
