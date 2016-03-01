@@ -9,7 +9,7 @@
  *)
 
 theory ArchInvariants_AI
-imports "../InvariantsPre_AI" "~/verification/l4v/lib/ShowTypes"
+imports "../InvariantsPre_AI"
 begin
 
 section "Move this up"
