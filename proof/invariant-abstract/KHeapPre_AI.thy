@@ -42,4 +42,14 @@ fun
   "non_arch_obj (ArchObj _) = False"
   | "non_arch_obj _ = True"
 
+lemma get_object_sp:
+  "\<lbrace>P\<rbrace> get_object p \<lbrace>\<lambda>r. P and ko_at r p\<rbrace>"
+  apply (simp add: get_object_def)
+  apply wp
+  apply (auto simp add: obj_at_def)
+  done
+
+
+
+
 end

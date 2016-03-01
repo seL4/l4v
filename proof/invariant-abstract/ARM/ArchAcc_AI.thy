@@ -13,9 +13,16 @@ Lemmas on arch get/set object etc
 *)
 
 theory ArchAcc_AI
-imports SubMonad_AI 
- "../../lib/Crunch"
+imports "../SubMonad_AI"
+ "../../../lib/Crunch"
 begin
+
+  
+method spec for x :: "_ :: type" = (erule allE[of _ x])
+method bspec for x :: "_ :: type" = (erule ballE[of _ _ x])
+method prove for x :: "prop" = (rule revcut_rl[of "PROP x"])
+
+context ARM begin
 
 bundle unfold_objects = 
   obj_at_def[simp]
@@ -27,19 +34,12 @@ bundle unfold_objects_asm =
   Structures_A.kernel_object.split_asm[split]
   arch_kernel_obj.split_asm[split]  
 
-  
-method spec for x :: "_ :: type" = (erule allE[of _ x])
-method bspec for x :: "_ :: type" = (erule ballE[of _ _ x])
-method prove for x :: "prop" = (rule revcut_rl[of "PROP x"])
-
-
 definition
   "valid_asid asid s \<equiv> arm_asid_map (arch_state s) asid \<noteq> None"
 
 
-
 lemma get_asid_pool_wp [wp]:
-  "\<lbrace>\<lambda>s. \<forall>pool. ko_at (ArchObj (arch_kernel_obj.ASIDPool pool)) p s \<longrightarrow> Q pool s\<rbrace>
+  "\<lbrace>\<lambda>s. \<forall>pool. ako_at (arch_kernel_obj.ASIDPool pool) p s \<longrightarrow> Q pool s\<rbrace>
   get_asid_pool p
   \<lbrace>Q\<rbrace>"
   apply (simp add: get_asid_pool_def get_object_def)
@@ -53,14 +53,14 @@ lemma set_asid_pool_typ_at:
   apply (simp add: set_asid_pool_def set_object_def get_object_def)
   apply wp
   including unfold_objects
-  by clarsimp (simp add: a_type_def)
+  by clarsimp (simp add: a_type_def aa_type_def)
 
 
 lemmas set_asid_pool_typ_ats [wp] = abs_typ_at_lifts [OF set_asid_pool_typ_at]
 
 
 lemma get_pd_wp [wp]:
-  "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) p s \<longrightarrow> Q pd s\<rbrace> get_pd p \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>pd. ako_at (PageDirectory pd) p s \<longrightarrow> Q pd s\<rbrace> get_pd p \<lbrace>Q\<rbrace>"
   apply (simp add: get_pd_def get_object_def)
   apply (wp|wpc)+
   apply (clarsimp simp: obj_at_def)
@@ -68,7 +68,7 @@ lemma get_pd_wp [wp]:
 
 
 lemma get_pde_wp:
-  "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s \<longrightarrow>
+  "\<lbrace>\<lambda>s. \<forall>pd. ako_at (PageDirectory pd) (p && ~~ mask pd_bits) s \<longrightarrow>
         Q (pd (ucast (p && mask pd_bits >> 2))) s\<rbrace>
   get_pde p
   \<lbrace>Q\<rbrace>"
@@ -81,14 +81,14 @@ lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<r
 bundle pagebits = 
   pd_bits_def[simp] pt_bits_def[simp]
   pageBits_def[simp] mask_lower_twice[simp]
-  word_bool_alg.conj_assoc[symmetric,simp] obj_at_def[simp]
-  Arch_Structs_A.pde.splits[split]
-  Arch_Structs_A.pte.splits[split]
+  word_bool_alg.conj_assoc[symmetric,simp] aobj_at_def[simp]
+  Arch_Structs_A.ARM.pde.splits[split]
+  Arch_Structs_A.ARM.pte.splits[split]
   
 lemma get_master_pde_wp:
-  "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s
+  "\<lbrace>\<lambda>s. \<forall>pd. ako_at (PageDirectory pd) (p && ~~ mask pd_bits) s
         \<longrightarrow> Q (case (pd (ucast (p && ~~ mask 6 && mask pd_bits >> 2))) of
-               Arch_Structs_A.pde.SuperSectionPDE x xa xb \<Rightarrow> pd (ucast (p && ~~ mask 6 && mask pd_bits >> 2))
+               Arch_Structs_A.ARM.pde.SuperSectionPDE x xa xb \<Rightarrow> pd (ucast (p && ~~ mask 6 && mask pd_bits >> 2))
              | _ \<Rightarrow> pd (ucast (p && mask pd_bits >> 2))) s\<rbrace>
    get_master_pde p
    \<lbrace>Q\<rbrace>"
@@ -101,7 +101,7 @@ lemma store_pde_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pde ptr pde \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def get_object_def)
   apply wp
-  apply (clarsimp simp: obj_at_def a_type_def)
+  apply (clarsimp simp: aobj_at_def obj_at_def a_type_def aa_type_def)
   done
 
 
@@ -109,7 +109,7 @@ lemmas store_pde_typ_ats [wp] = abs_typ_at_lifts [OF store_pde_typ_at]
 
 
 lemma get_pt_wp [wp]:
-  "\<lbrace>\<lambda>s. \<forall>pt. ko_at (ArchObj (PageTable pt)) p s \<longrightarrow> Q pt s\<rbrace> get_pt p \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>pt. ako_at (PageTable pt) p s \<longrightarrow> Q pt s\<rbrace> get_pt p \<lbrace>Q\<rbrace>"
   apply (simp add: get_pt_def get_object_def)
   apply (wp|wpc)+
   apply (clarsimp simp: obj_at_def)
@@ -117,7 +117,7 @@ lemma get_pt_wp [wp]:
 
 
 lemma get_pte_wp:
-  "\<lbrace>\<lambda>s. \<forall>pt. ko_at (ArchObj (PageTable pt)) (p && ~~mask pt_bits) s \<longrightarrow>
+  "\<lbrace>\<lambda>s. \<forall>pt. ako_at (PageTable pt) (p && ~~mask pt_bits) s \<longrightarrow>
         Q (pt (ucast (p && mask pt_bits >> 2))) s\<rbrace>
   get_pte p
   \<lbrace>Q\<rbrace>"
@@ -130,9 +130,9 @@ lemma get_pte_inv [wp]:
 
 
 lemma get_master_pte_wp:
-  "\<lbrace>\<lambda>s. \<forall>pt. ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits) s \<longrightarrow>
+  "\<lbrace>\<lambda>s. \<forall>pt. ako_at (PageTable pt) (p && ~~ mask pt_bits) s \<longrightarrow>
           Q (case pt (ucast (p && ~~ mask 6 && mask pt_bits >> 2)) of
-              Arch_Structs_A.pte.LargePagePTE x xa xb \<Rightarrow>
+              Arch_Structs_A.ARM.pte.LargePagePTE x xa xb \<Rightarrow>
                 pt (ucast (p && ~~ mask 6 && mask pt_bits >> 2))
               | _ \<Rightarrow> pt (ucast (p && mask pt_bits >> 2)))
            s\<rbrace>
@@ -146,7 +146,7 @@ lemma store_pte_typ_at:
     "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pte ptr pte \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   apply (simp add: store_pte_def set_pt_def set_object_def get_object_def)
   apply wp
-  apply (clarsimp simp: obj_at_def a_type_def)
+  apply (clarsimp simp: aobj_at_def obj_at_def a_type_def aa_type_def)
   done
 
 
@@ -335,7 +335,7 @@ lemma set_pd_aligned [wp]:
   apply (simp add: set_pd_def)
   apply (wp set_object_aligned get_object_wp)
   including unfold_objects_asm
-  by (clarsimp simp: a_type_def)
+  by (clarsimp simp: a_type_def aa_type_def)
 
 
 crunch aligned [wp]: store_pde pspace_aligned
@@ -352,7 +352,7 @@ lemma arch_derive_cap_valid_cap:
   apply(simp add: arch_derive_cap_def)
   apply(cases arch_cap, simp_all add: arch_derive_cap_def o_def)
       apply(rule hoare_pre, wpc?, wp,
-            clarsimp simp add: cap_aligned_def valid_cap_def split: option.splits)+
+            clarsimp simp add: cap_aligned_def valid_cap_def valid_arch_cap_def split: option.splits)+
   done
 
 
@@ -364,19 +364,19 @@ lemma arch_derive_cap_inv:
 
 definition
   "valid_mapping_entries m \<equiv> case m of
-    Inl (Arch_Structs_A.InvalidPTE, _) \<Rightarrow> \<top>
-  | Inl (Arch_Structs_A.LargePagePTE _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pte_at p s
-  | Inl (Arch_Structs_A.SmallPagePTE _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pte_at p s
-  | Inr (Arch_Structs_A.InvalidPDE, _) \<Rightarrow> \<top>
-  | Inr (Arch_Structs_A.PageTablePDE _ _ _, _) \<Rightarrow> \<bottom>
-  | Inr (Arch_Structs_A.SectionPDE _ _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pde_at p s
-  | Inr (Arch_Structs_A.SuperSectionPDE _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pde_at p s"
+    Inl (Arch_Structs_A.ARM.InvalidPTE, _) \<Rightarrow> \<top>
+  | Inl (Arch_Structs_A.ARM.LargePagePTE _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pte_at p s
+  | Inl (Arch_Structs_A.ARM.SmallPagePTE _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pte_at p s
+  | Inr (Arch_Structs_A.ARM.InvalidPDE, _) \<Rightarrow> \<top>
+  | Inr (Arch_Structs_A.ARM.PageTablePDE _ _ _, _) \<Rightarrow> \<bottom>
+  | Inr (Arch_Structs_A.ARM.SectionPDE _ _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pde_at p s
+  | Inr (Arch_Structs_A.ARM.SuperSectionPDE _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pde_at p s"
 
 definition "invalid_pte_at p \<equiv> obj_at (\<lambda>ko. \<exists>pt. ko = (ArchObj (PageTable pt))
-  \<and> pt (ucast (p && mask pt_bits) >> 2) = Arch_Structs_A.pte.InvalidPTE) (p && ~~ mask pt_bits)"
+  \<and> pt (ucast (p && mask pt_bits) >> 2) = Arch_Structs_A.ARM.pte.InvalidPTE) (p && ~~ mask pt_bits)"
 
 definition "invalid_pde_at p \<equiv> obj_at (\<lambda>ko. \<exists>pd. ko = (ArchObj (PageDirectory pd))
-  \<and> pd (ucast (p && mask pd_bits) >> 2) = Arch_Structs_A.pde.InvalidPDE) (p && ~~ mask pd_bits)"
+  \<and> pd (ucast (p && mask pd_bits) >> 2) = Arch_Structs_A.ARM.pde.InvalidPDE) (p && ~~ mask pd_bits)"
 
 definition
   "valid_slots m \<equiv> case m of
