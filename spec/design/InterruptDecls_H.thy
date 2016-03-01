@@ -23,7 +23,7 @@ consts
 performIRQControl :: "irqcontrol_invocation \<Rightarrow> unit kernel_p"
 
 consts
-decodeIRQHandlerInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> irq \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , irqhandler_invocation ) kernel_f"
+decodeIRQHandlerInvocation :: "machine_word \<Rightarrow> irq \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , irqhandler_invocation ) kernel_f"
 
 consts
 toBool :: "machine_word \<Rightarrow> bool"

@@ -348,7 +348,7 @@ proof cases
   from mv obtain q where mq: "m + q = len_of TYPE('a)" and "0 < q"
     by (auto dest: less_imp_add_positive)
 
-  have "(2\<Colon>nat) ^ m dvd unat (k << m)"
+  have "(2::nat) ^ m dvd unat (k << m)"
   proof
     have kv: "(unat k div 2 ^ q) * 2 ^ q + unat k mod 2 ^ q = unat k" 
       by (rule mod_div_equality)

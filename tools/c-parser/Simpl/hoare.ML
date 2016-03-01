@@ -1,5 +1,3 @@
-(* @TAG(OTHER_LGPL) *)
-
 (*  Title:      hoare.ML
     Author:     Norbert Schirmer, TU Muenchen
 
@@ -79,7 +77,7 @@ sig
   val hoare_rule_tac : Proof.context -> thm list -> int -> tactic
 
   datatype 'a bodykind = BodyTyp of 'a | BodyTerm of 'a
-  val proc_specs : Token.T list -> (bstring * string) list * Token.T list
+  val proc_specs : (bstring * string) list parser
   val add_params : morphism -> string -> (par_kind * string) list ->
                    Context.generic -> Context.generic
   val set_default_state_kind : state_kind -> Context.generic -> Context.generic
@@ -100,37 +98,19 @@ val use_cond_inv_modifies = Attrib.setup_config_bool @{binding hoare_use_cond_in
 
 val hoare_trace = Attrib.setup_config_bool @{binding hoare_trace} (K false);
 
-val call_prfx = "_Call_";
-val call_ass_prfx = "_CallAss_";
-val guarded_call_prfx = "_GuardedCall_";
-val guarded_call_ass_prfx = "_GuardedCallAss_";
 val body_def_sfx = "_body";
-val actualsT  = Type ("Vcg.actuals",[]);
-val callT     = dummyT (* Type ("Vcg.call",[]) *);
 
 val programN = "\<Gamma>";
-val hoareL = "hoare";
 val hoare_ctxtL = "hoare";
 val specL = "_spec";
-val implL = "_impl";
-val varL = "_vars";
 val procL = "_proc";
 
 val bodyP = "_impl";
 
-val hoareN = "hoare";
-val callN = "Language.Call";
-val whileN = "Language.com.While";
-val implsfx = "_spec";
 val modifysfx = "_modifies";
 val modexN = "Hoare.mex";
 val modeqN = "Hoare.meq";
 
-val updatesfx = "_update";
-val hoarePartialN = "HoarePartial";
-val hoareTotalN = "HoareTotal";
-val modify_callN = "HoarePartial.ModifyReturnNoAbr";
-val modretN = "return'";
 val KNF = @{const_name StateFun.K_statefun};
 
 
@@ -152,11 +132,16 @@ fun mk_Un T (A, B) = Const (@{const_name Lattices.sup}, T --> T --> T) $ A $ B;
 fun dest_Un (Const (@{const_name Lattices.sup}, _) $ t1 $ t2) = dest_Un t1 @ dest_Un t2
   | dest_Un t = [t]
 
-fun UN_const (dT as (Type (@{type_name set}, [dT']))) rT = 
-      Const (@{const_name Complete_Lattices.SUPREMUM}, dT --> (dT' --> rT) --> rT) $ Const (@{const_name Orderings.top}, dT)
-  | UN_const _ _ = raise Match;
+fun mk_UN' dT rT t = 
+  let
+    val dTs = HOLogic.mk_setT dT;
+  in
+    Const (@{const_name Complete_Lattices.SUPREMUM},
+      dTs --> (dT --> rT) --> rT) $
+      Const (@{const_name Orderings.top}, dTs) $ t
+  end;
 
-fun mk_UN (x, T, P) = UN_const (HOLogic.mk_setT T) (fastype_of P) $ absfree (x, T) P;
+fun mk_UN ((x, T), P) = mk_UN' T (fastype_of P) (absfree (x, T) P);
 
 fun dest_UN (Const (@{const_name Complete_Lattices.SUPREMUM}, _) $ Const (@{const_name Orderings.top}, _) $ Abs (x, T, t)) =
       let val (vars, body) = dest_UN t
@@ -174,191 +159,95 @@ datatype hoareMode = Partial | Total
 fun get_rule p t Partial = p
   | get_rule p t Total   = t
 
-val GuardPartial = @{thm HoarePartial.Guard};
-val GuardTotal = @{thm HoareTotal.Guard};
-val Guard = get_rule GuardPartial GuardTotal;
+val Guard = get_rule @{thm HoarePartial.Guard} @{thm HoareTotal.Guard};
 
-val GuardStripPartial = @{thm HoarePartial.GuardStrip};
-val GuardStripTotal = @{thm HoareTotal.GuardStrip};
-val GuardStrip = get_rule GuardStripPartial GuardStripTotal;
+val GuardStrip = get_rule @{thm HoarePartial.GuardStrip} @{thm HoareTotal.GuardStrip};
 
-val GuardStripUNIVPartial = UNIV_I RSN (3,GuardStripPartial);
-val GuardStripUNIVTotal   = UNIV_I RSN (3,GuardStripTotal);
-val GuardStripUNIV = get_rule GuardStripUNIVPartial GuardStripUNIVTotal;
+val GuaranteeAsGuard = get_rule @{thm HoarePartial.GuaranteeAsGuard} @{thm HoareTotal.GuaranteeAsGuard};
 
-val GuardSwapPartial = @{thm HoarePartial.GuardSwap};
-val GuardSwapTotal = @{thm HoareTotal.GuardSwap};
-val GuardSwap = get_rule GuardSwapPartial GuardSwapTotal;
+val Guarantee = get_rule @{thm HoarePartial.Guarantee} @{thm HoareTotal.Guarantee};
 
-val GuaranteeAsGuardPartial = @{thm HoarePartial.GuaranteeAsGuard};
-val GuaranteeAsGuardTotal = @{thm HoareTotal.GuaranteeAsGuard};
-val GuaranteeAsGuard = get_rule GuaranteeAsGuardPartial GuaranteeAsGuardTotal;
+val GuaranteeStrip = get_rule @{thm HoarePartial.GuaranteeStrip} @{thm HoareTotal.GuaranteeStrip};
 
-val GuaranteePartial = @{thm HoarePartial.Guarantee};
-val GuaranteeTotal = @{thm HoareTotal.Guarantee};
-val Guarantee = get_rule GuaranteePartial GuaranteeTotal;
+val GuardsNil = get_rule @{thm HoarePartial.GuardsNil} @{thm HoareTotal.GuardsNil};
 
-val GuaranteeStripPartial = @{thm HoarePartial.GuaranteeStrip};
-val GuaranteeStripTotal = @{thm HoareTotal.GuaranteeStrip};
-val GuaranteeStrip = get_rule GuaranteeStripPartial GuaranteeStripTotal;
+val GuardsCons = get_rule @{thm HoarePartial.GuardsCons} @{thm HoareTotal.GuardsCons};
 
-val GuardsNilPartial = @{thm HoarePartial.GuardsNil};
-val GuardsNilTotal = @{thm HoareTotal.GuardsNil};
-val GuardsNil = get_rule GuardsNilPartial GuardsNilTotal;
-
-val GuardsConsPartial = @{thm HoarePartial.GuardsCons};
-val GuardsConsTotal = @{thm HoareTotal.GuardsCons};
-val GuardsCons = get_rule GuardsConsPartial GuardsConsTotal;
-
-val GuardsConsGuaranteeStripPartial = @{thm HoarePartial.GuardsConsGuaranteeStrip};
-val GuardsConsGuaranteeStripTotal = @{thm HoareTotal.GuardsConsGuaranteeStrip};
 val GuardsConsGuaranteeStrip =
-      get_rule GuardsConsGuaranteeStripPartial GuardsConsGuaranteeStripTotal;
+      get_rule @{thm HoarePartial.GuardsConsGuaranteeStrip} @{thm HoareTotal.GuardsConsGuaranteeStrip};
 
-val SkipPartial = @{thm HoarePartial.Skip};
-val SkipTotal = @{thm HoareTotal.Skip};
-val Skip = get_rule SkipPartial SkipTotal;
+val Skip = get_rule @{thm HoarePartial.Skip} @{thm HoareTotal.Skip};
 
-val BasicPartial = @{thm HoarePartial.Basic};
-val BasicTotal = @{thm HoareTotal.Basic};
-val Basic = get_rule BasicPartial BasicTotal;
+val Basic = get_rule @{thm HoarePartial.Basic} @{thm HoareTotal.Basic};
 
-val BasicCondPartial = @{thm HoarePartial.BasicCond};
-val BasicCondTotal = @{thm HoareTotal.BasicCond};
-val BasicCond = get_rule BasicCondPartial BasicCondTotal;
+val BasicCond = get_rule @{thm HoarePartial.BasicCond} @{thm HoareTotal.BasicCond};
 
-val SpecPartial = @{thm HoarePartial.Spec};
-val SpecTotal = @{thm HoareTotal.Spec};
-val Spec = get_rule SpecPartial SpecTotal;
+val Spec = get_rule @{thm HoarePartial.Spec} @{thm HoareTotal.Spec};
 
-val SpecPartialIf = @{thm HoarePartial.SpecIf};
-val SpecTotalIf = @{thm HoareTotal.SpecIf};
-val SpecIf = get_rule SpecPartialIf SpecTotalIf;
+val SpecIf = get_rule @{thm HoarePartial.SpecIf} @{thm HoareTotal.SpecIf};
 
-val ThrowPartial = @{thm HoarePartial.Throw};
-val ThrowTotal = @{thm HoareTotal.Throw};
-val Throw = get_rule ThrowPartial ThrowTotal;
+val Throw = get_rule @{thm HoarePartial.Throw} @{thm HoareTotal.Throw};
 
-val RaisePartial = @{thm HoarePartial.raise};
-val RaiseTotal = @{thm HoareTotal.raise};
-val Raise = get_rule RaisePartial RaiseTotal;
+val Raise = get_rule @{thm HoarePartial.raise} @{thm HoareTotal.raise};
 
-val CatchPartial = @{thm HoarePartial.Catch};
-val CatchTotal = @{thm HoareTotal.Catch};
-val Catch = get_rule CatchPartial CatchTotal;
+val Catch = get_rule @{thm HoarePartial.Catch} @{thm HoareTotal.Catch};
 
-val CondCatchPartial = @{thm HoarePartial.condCatch};
-val CondCatchTotal = @{thm HoareTotal.condCatch};
-val CondCatch = get_rule CondCatchPartial CondCatchTotal;
+val CondCatch = get_rule @{thm HoarePartial.condCatch} @{thm HoareTotal.condCatch};
 
-val CatchSwapPartial = @{thm HoarePartial.CatchSwap};
-val CatchSwapTotal = @{thm HoareTotal.CatchSwap};
-val CatchSwap = get_rule CatchSwapPartial CatchSwapTotal;
+val CatchSwap = get_rule @{thm HoarePartial.CatchSwap} @{thm HoareTotal.CatchSwap};
 
-val CondCatchSwapPartial = @{thm HoarePartial.condCatchSwap};
-val CondCatchSwapTotal = @{thm HoareTotal.condCatchSwap};
-val CondCatchSwap = get_rule CondCatchSwapPartial CondCatchSwapTotal;
+val CondCatchSwap = get_rule @{thm HoarePartial.condCatchSwap} @{thm HoareTotal.condCatchSwap};
 
-val SeqPartial = @{thm HoarePartial.Seq};
-val SeqTotal = @{thm HoareTotal.Seq};
-val Seq = get_rule SeqPartial SeqTotal;
+val Seq = get_rule @{thm HoarePartial.Seq} @{thm HoareTotal.Seq};
 
-val SeqSwapPartial = @{thm HoarePartial.SeqSwap};
-val SeqSwapTotal = @{thm HoareTotal.SeqSwap};
-val SeqSwap = get_rule SeqSwapPartial SeqSwapTotal;
+val SeqSwap = get_rule @{thm HoarePartial.SeqSwap} @{thm HoareTotal.SeqSwap};
 
-val BSeqPartial = @{thm HoarePartial.BSeq};
-val BSeqTotal = @{thm HoareTotal.BSeq};
-val BSeq = get_rule BSeqPartial BSeqTotal;
+val BSeq = get_rule @{thm HoarePartial.BSeq} @{thm HoareTotal.BSeq};
 
-val CondPartial = @{thm HoarePartial.Cond};
-val CondTotal = @{thm HoareTotal.Cond};
-val Cond = get_rule CondPartial CondTotal;
+val Cond = get_rule @{thm HoarePartial.Cond} @{thm HoareTotal.Cond};
 
 val CondInv'Partial = @{thm HoarePartial.CondInv'};
 val CondInv'Total = @{thm HoareTotal.CondInv'};
 val CondInv' = get_rule CondInv'Partial CondInv'Total;
 
-val SwitchNilPartial = @{thm HoarePartial.switchNil};
-val SwitchNilTotal = @{thm HoareTotal.switchNil};
-val SwitchNil = get_rule SwitchNilPartial SwitchNilTotal;
+val SwitchNil = get_rule @{thm HoarePartial.switchNil} @{thm HoareTotal.switchNil};
 
-val SwitchConsPartial = @{thm HoarePartial.switchCons};
-val SwitchConsTotal = @{thm HoareTotal.switchCons};
-val SwitchCons = get_rule SwitchConsPartial SwitchConsTotal;
+val SwitchCons = get_rule @{thm HoarePartial.switchCons} @{thm HoareTotal.switchCons};
 
-val CondSwapPartial = @{thm HoarePartial.CondSwap};
-val CondSwapTotal = @{thm HoareTotal.CondSwap};
-val CondSwap = get_rule CondSwapPartial CondSwapTotal;
+val CondSwap = get_rule @{thm HoarePartial.CondSwap} @{thm HoareTotal.CondSwap};
 
-val WhilePartial = @{thm HoarePartial.While};
-val WhileTotal = @{thm HoareTotal.While};
-val While = get_rule WhilePartial WhileTotal;
+val While = get_rule @{thm HoarePartial.While} @{thm HoareTotal.While};
 
-val WhileAnnoGPartial = @{thm HoarePartial.WhileAnnoG};
-val WhileAnnoGTotal = @{thm HoareTotal.WhileAnnoG};
-val WhileAnnoG = get_rule WhileAnnoGPartial WhileAnnoGTotal;
+val WhileAnnoG = get_rule @{thm HoarePartial.WhileAnnoG} @{thm HoareTotal.WhileAnnoG};
 
-val WhileAnnoFixPartial = @{thm HoarePartial.WhileAnnoFix'};
-val WhileAnnoFixTotal = @{thm HoareTotal.WhileAnnoFix'};
-val WhileAnnoFix = get_rule WhileAnnoFixPartial WhileAnnoFixTotal;
+val WhileAnnoFix = get_rule @{thm HoarePartial.WhileAnnoFix'} @{thm HoareTotal.WhileAnnoFix'};
 
-val WhileAnnoGFixPartial = @{thm HoarePartial.WhileAnnoGFix};
-val WhileAnnoGFixTotal = @{thm HoareTotal.WhileAnnoGFix};
-val WhileAnnoGFix = get_rule WhileAnnoGFixPartial WhileAnnoGFixTotal;
+val WhileAnnoGFix = get_rule @{thm HoarePartial.WhileAnnoGFix} @{thm HoareTotal.WhileAnnoGFix};
 
-val BindPartial = @{thm HoarePartial.Bind};
-val BindTotal = @{thm HoareTotal.Bind};
-val BindR = get_rule BindPartial BindTotal;
+val BindR = get_rule @{thm HoarePartial.Bind} @{thm HoareTotal.Bind};
 
-val BlockPartial = @{thm HoarePartial.Block};
-val BlockTotal = @{thm HoareTotal.Block};
-val Block = get_rule BlockPartial BlockTotal;
+val Block = get_rule @{thm HoarePartial.Block} @{thm HoareTotal.Block};
 
-val BlockSwapPartial = @{thm HoarePartial.BlockSwap};
-val BlockSwapTotal = @{thm HoareTotal.BlockSwap};
-val BlockSwap = get_rule BlockSwapPartial BlockSwapTotal;
+val BlockSwap = get_rule @{thm HoarePartial.BlockSwap} @{thm HoareTotal.BlockSwap};
 
-val ProcPartial = @{thm HoarePartial.ProcSpec};
-val ProcTotal = @{thm HoareTotal.ProcSpec};
-val Proc = get_rule ProcPartial ProcTotal;
+val Proc = get_rule @{thm HoarePartial.ProcSpec} @{thm HoareTotal.ProcSpec};
 
-val ProcNoAbrPartial = @{thm HoarePartial.ProcSpecNoAbrupt};
-val ProcNoAbrTotal = @{thm HoareTotal.ProcSpecNoAbrupt};
-val ProcNoAbr = get_rule ProcNoAbrPartial ProcNoAbrTotal;
+val ProcNoAbr = get_rule @{thm HoarePartial.ProcSpecNoAbrupt} @{thm HoareTotal.ProcSpecNoAbrupt};
 
-val ProcBodyPartial = @{thm HoarePartial.ProcBody};
-val ProcBodyTotal = @{thm HoareTotal.ProcBody};
-val ProcBody = get_rule ProcBodyPartial ProcBodyTotal;
+val ProcBody = get_rule @{thm HoarePartial.ProcBody} @{thm HoareTotal.ProcBody};
 
-val CallBodyPartial = @{thm HoarePartial.CallBody};
-val CallBodyTotal = @{thm HoareTotal.CallBody};
-val CallBody = get_rule CallBodyPartial CallBodyTotal;
+val CallBody = get_rule @{thm HoarePartial.CallBody} @{thm HoareTotal.CallBody};
 
-val FCallPartial = @{thm HoarePartial.FCall};
-val FCallTotal = @{thm HoareTotal.FCall};
-val FCall = get_rule FCallPartial FCallTotal;
+val FCall = get_rule @{thm HoarePartial.FCall} @{thm HoareTotal.FCall};
 
-val ProcRecPartial = @{thm HoarePartial.ProcRecList};
-val ProcRecTotal = @{thm HoareTotal.ProcRecList};
-val ProcRec = get_rule ProcRecPartial ProcRecTotal;
+val ProcRecSpecs = get_rule @{thm HoarePartial.ProcRecSpecs} @{thm HoareTotal.ProcRecSpecs};
 
-val ProcRecPartialSpecs = @{thm HoarePartial.ProcRecSpecs};
-val ProcRecTotalSpecs = @{thm HoareTotal.ProcRecSpecs};
-val ProcRecSpecs = get_rule ProcRecPartialSpecs ProcRecTotalSpecs;
-
-val ProcModifyReturnSameFaultsPartial = @{thm HoarePartial.ProcModifyReturnSameFaults};
-val ProcModifyReturnSameFaultsTotal = @{thm HoareTotal.ProcModifyReturnSameFaults};
 val ProcModifyReturnSameFaults =
-      get_rule ProcModifyReturnSameFaultsPartial ProcModifyReturnSameFaultsTotal;
+      get_rule @{thm HoarePartial.ProcModifyReturnSameFaults} @{thm HoareTotal.ProcModifyReturnSameFaults};
 
-val ProcModifyReturnPartial = @{thm HoarePartial.ProcModifyReturn};
-val ProcModifyReturnTotal = @{thm HoareTotal.ProcModifyReturn};
-val ProcModifyReturn = get_rule ProcModifyReturnPartial ProcModifyReturnTotal;
+val ProcModifyReturn = get_rule @{thm HoarePartial.ProcModifyReturn} @{thm HoareTotal.ProcModifyReturn};
 
-val ProcModifyReturnNoAbrPartial = @{thm HoarePartial.ProcModifyReturnNoAbr};
-val ProcModifyReturnNoAbrTotal = @{thm HoareTotal.ProcModifyReturnNoAbr};
-val ProcModifyReturnNoAbr = get_rule ProcModifyReturnNoAbrPartial ProcModifyReturnNoAbrTotal;
+val ProcModifyReturnNoAbr = get_rule @{thm HoarePartial.ProcModifyReturnNoAbr} @{thm HoareTotal.ProcModifyReturnNoAbr};
 
 val ProcModifyReturnNoAbrSameFaultsPartial =
       @{thm HoarePartial.ProcModifyReturnNoAbrSameFaults};
@@ -367,25 +256,15 @@ val ProcModifyReturnNoAbrSameFaultsTotal =
 val ProcModifyReturnNoAbrSameFaults =
       get_rule ProcModifyReturnNoAbrSameFaultsPartial ProcModifyReturnNoAbrSameFaultsTotal;
 
-val TrivPostPartial = @{thm HoarePartial.TrivPost};
-val TrivPostTotal = @{thm HoareTotal.TrivPost};
-val TrivPost = get_rule TrivPostPartial TrivPostTotal;
+val TrivPost = get_rule @{thm HoarePartial.TrivPost} @{thm HoareTotal.TrivPost};
 
-val TrivPostNoAbrPartial = @{thm HoarePartial.TrivPostNoAbr};
-val TrivPostNoAbrTotal = @{thm HoareTotal.TrivPostNoAbr};
-val TrivPostNoAbr = get_rule TrivPostNoAbrPartial TrivPostNoAbrTotal;
+val TrivPostNoAbr = get_rule @{thm HoarePartial.TrivPostNoAbr} @{thm HoareTotal.TrivPostNoAbr};
 
-val DynProcProcParPartial = @{thm HoarePartial.DynProcProcPar};
-val DynProcProcParTotal = @{thm HoareTotal.DynProcProcPar};
-val DynProcProcPar = get_rule DynProcProcParPartial DynProcProcParTotal;
+val DynProcProcPar = get_rule @{thm HoarePartial.DynProcProcPar} @{thm HoareTotal.DynProcProcPar};
 
-val DynProcProcParNoAbrPartial = @{thm HoarePartial.DynProcProcParNoAbrupt};
-val DynProcProcParNoAbrTotal = @{thm HoareTotal.DynProcProcParNoAbrupt};
-val DynProcProcParNoAbr = get_rule DynProcProcParNoAbrPartial DynProcProcParNoAbrTotal;
+val DynProcProcParNoAbr = get_rule @{thm HoarePartial.DynProcProcParNoAbrupt} @{thm HoareTotal.DynProcProcParNoAbrupt};
 
-val ProcProcParModifyReturnPartial = @{thm HoarePartial.ProcProcParModifyReturn};
-val ProcProcParModifyReturnTotal = @{thm HoareTotal.ProcProcParModifyReturn};
-val ProcProcParModifyReturn = get_rule ProcProcParModifyReturnPartial ProcProcParModifyReturnTotal;
+val ProcProcParModifyReturn = get_rule @{thm HoarePartial.ProcProcParModifyReturn} @{thm HoareTotal.ProcProcParModifyReturn};
 
 val ProcProcParModifyReturnSameFaultsPartial =
       @{thm HoarePartial.ProcProcParModifyReturnSameFaults};
@@ -395,10 +274,8 @@ val ProcProcParModifyReturnSameFaults =
       get_rule ProcProcParModifyReturnSameFaultsPartial
                ProcProcParModifyReturnSameFaultsTotal;
 
-val ProcProcParModifyReturnNoAbrPartial = @{thm HoarePartial.ProcProcParModifyReturnNoAbr};
-val ProcProcParModifyReturnNoAbrTotal = @{thm HoareTotal.ProcProcParModifyReturnNoAbr};
 val ProcProcParModifyReturnNoAbr =
-      get_rule ProcProcParModifyReturnNoAbrPartial ProcProcParModifyReturnNoAbrTotal;
+      get_rule @{thm HoarePartial.ProcProcParModifyReturnNoAbr} @{thm HoareTotal.ProcProcParModifyReturnNoAbr};
 
 val ProcProcParModifyReturnNoAbrSameFaultsPartial =
       @{thm HoarePartial.ProcProcParModifyReturnNoAbrSameFaults};
@@ -408,138 +285,38 @@ val ProcProcParModifyReturnNoAbrSameFaults =
       get_rule ProcProcParModifyReturnNoAbrSameFaultsPartial
                ProcProcParModifyReturnNoAbrSameFaultsTotal;
 
-val DynComPartial = @{thm HoarePartial.DynComConseq};
-val DynComTotal = @{thm HoareTotal.DynComConseq};
-val DynCom = get_rule DynComPartial DynComTotal;
+val DynCom = get_rule @{thm HoarePartial.DynComConseq} @{thm HoareTotal.DynComConseq};
 
-val AugmentContextPartial = @{thm HoarePartial.augment_context'};
-val AugmentContextTotal = @{thm HoareTotal.augment_context'};
-val AugmentContext = get_rule AugmentContextPartial AugmentContextTotal;
+val AugmentContext = get_rule @{thm HoarePartial.augment_context'} @{thm HoareTotal.augment_context'};
 
-val AugmentFaultsUNIVPartial = @{thm HoarePartial.augment_FaultsUNIV};
-val AugmentFaultsUNIVTotal = @{thm HoareTotal.augment_FaultsUNIV};
-val AugmentFaultsUNIV = get_rule AugmentFaultsUNIVPartial AugmentFaultsUNIVTotal;
+val AugmentEmptyFaults = get_rule @{thm HoarePartial.augment_emptyFaults} @{thm HoareTotal.augment_emptyFaults};
 
-val AugmentEmptyFaultsPartial = @{thm HoarePartial.augment_emptyFaults};
-val AugmentEmptyFaultsTotal = @{thm HoareTotal.augment_emptyFaults};
-val AugmentEmptyFaults = get_rule AugmentEmptyFaultsPartial AugmentEmptyFaultsTotal;
+val AsmUN = get_rule @{thm HoarePartial.AsmUN} @{thm HoareTotal.AsmUN};
 
-val AsmUNPartial = @{thm HoarePartial.AsmUN};
-val AsmUNTotal = @{thm HoareTotal.AsmUN};
-val AsmUN = get_rule AsmUNPartial AsmUNTotal;
+val SpecAnno = get_rule @{thm HoarePartial.SpecAnno'} @{thm HoareTotal.SpecAnno'};
 
-val SpecAnnoPartial = @{thm HoarePartial.SpecAnno'};
-val SpecAnnoTotal = @{thm HoareTotal.SpecAnno'};
-val SpecAnno = get_rule SpecAnnoPartial SpecAnnoTotal;
+val SpecAnnoNoAbrupt = get_rule @{thm HoarePartial.SpecAnnoNoAbrupt} @{thm HoareTotal.SpecAnnoNoAbrupt};
 
-val SpecAnnoNoAbruptPartial = @{thm HoarePartial.SpecAnnoNoAbrupt};
-val SpecAnnoNoAbruptTotal = @{thm HoareTotal.SpecAnnoNoAbrupt};
-val SpecAnnoNoAbrupt = get_rule SpecAnnoNoAbruptPartial SpecAnnoNoAbruptTotal;
+val LemAnno = get_rule @{thm HoarePartial.LemAnno} @{thm HoareTotal.LemAnno};
 
-val LemAnnoPartial = @{thm HoarePartial.LemAnno};
-val LemAnnoTotal = @{thm HoareTotal.LemAnno};
-val LemAnno = get_rule LemAnnoPartial LemAnnoTotal;
+val LemAnnoNoAbrupt = get_rule @{thm HoarePartial.LemAnnoNoAbrupt} @{thm HoareTotal.LemAnnoNoAbrupt};
 
-val LemAnnoNoAbruptPartial = @{thm HoarePartial.LemAnnoNoAbrupt};
-val LemAnnoNoAbruptTotal = @{thm HoareTotal.LemAnnoNoAbrupt};
-val LemAnnoNoAbrupt = get_rule LemAnnoNoAbruptPartial LemAnnoNoAbruptTotal;
 
-val CombineStripPartial = @{thm HoarePartial.CombineStrip''};
-val CombineStripTotal = @{thm HoareTotal.CombineStrip''};
-val CombineStrip = get_rule CombineStripPartial CombineStripTotal;
 
-val TerminationPartialStrip = @{thm HoareTotalProps.TerminationPartialStrip};
+val singleton_conv_sym = @{thm Set.singleton_conv2} RS sym;
 
-val ReannotateWhile = @{thm HoarePartial.reannotateWhile};
-val ReannotateWhileNoGuard = @{thm HoarePartial.reannotateWhileNoGuard};
-
-val TotalToPartial = @{thm HoareTotal.hoaret_to_hoarep'};
-val Strip = @{thm HoarePartial.hoarep_strip};
-
-val Compl_Collect = @{thm Hoare.Compl_Collect};
-val CollectInt_iff = @{thm Hoare.CollectInt_iff};
-val Collect_False = @{thm Hoare.Collect_False};
-val triv_All_eq = @{thm Hoare.triv_All_eq};
-val triv_Ex_eq = @{thm Hoare.triv_Ex_eq};
-val mex_def = @{thm Hoare.mex_def};
-val meq_def = @{thm Hoare.meq_def};
-val wf_measure = @{thm Wellfounded.wf_measure};
-val wf_same_fst = @{thm Wfrec.wf_same_fst};
-val wf_inv_image = @{thm Wellfounded.wf_inv_image};
-val wf_lex_prod = @{thm Wellfounded.wf_lex_prod};
-val wf_measure_lex_prod = @{thm Hoare.wf_measure_lex_prod};
-val in_measure_iff = @{thm Hoare.in_measure_iff};
-val in_lex_iff = @{thm Hoare.in_lex_iff};
-val in_mlex_iff = @{thm Hoare.in_mlex_iff};
-val in_inv_image_iff = @{thm Hoare.in_inv_image_iff};
-val subset_unI1 = @{thm Hoare.subset_unI1};
-val subset_unI2 = @{thm Hoare.subset_unI2};
-val Un_empty_left = @{thm Un_empty_left};
-val Un_empty_right = @{thm Un_empty_right};
-val in_insert_hd = @{thm in_insert_hd};
-val singleton_conv2 = @{thm Set.singleton_conv2};
-val singleton_conv_sym = singleton_conv2 RS sym;
-val empty_iff = @{thm Set.empty_iff};
-val Int_empty_right = @{thm Set.Int_empty_right};
-val Int_empty_left = @{thm Set.Int_empty_left};
-val Un_iff = @{thm Set.Un_iff};
-val Int_iff = @{thm Set.Int_iff};
-val empty_subsetI = @{thm Set.empty_subsetI};
-val singleton_iff = @{thm Set.singleton_iff};
-val Un_upper1 = @{thm Set.Un_upper1};
-val Un_upper2 = @{thm Set.Un_upper2};
-
-val whileAnnoG_def = @{thm Language.whileAnnoG_def};
-val whileAnno_def = @{thm Language.whileAnno_def};
-val while_def = @{thm Language.while_def};
-val specAnno_def = @{thm Language.specAnno_def};
-val whileAnnoGFix_def = @{thm Language.whileAnnoGFix_def};
-val whileAnnoFix_def = @{thm Language.whileAnnoFix_def};
-val lem_def = @{thm Language.lem_def};
-val anno_defs = [whileAnno_def,whileAnnoG_def,specAnno_def,
-                 whileAnnoGFix_def,whileAnnoFix_def,lem_def];
-val split_paired_UN = @{thm Hoare.split_paired_UN};
-val unit_meta = @{thm Hoare.unit_meta};
-val unit_object = @{thm Hoare.unit_object};
-val unit_ex = @{thm Hoare.unit_ex};
-val unit_UN = @{thm Hoare.unit_UN};
-val subset_singleton_insert1 = @{thm Hoare.subset_singleton_insert1};
-val subset_singleton_insert2 = @{thm Hoare.subset_singleton_insert2};
-val conjE_simp = @{thm Hoare.conjE_simp};
-val assoc_simps = @{thms Hoare.assoc.simps};
-val conj_assoc = @{thm HOL.conj_assoc};
-val snd_guaranteeStripPair = @{thm Language.snd_guaranteeStripPair};
-val lookup_Some_in_dom = @{thm Hoare.lookup_Some_in_dom};
+val anno_defs = [@{thm Language.whileAnno_def},@{thm Language.whileAnnoG_def},@{thm Language.specAnno_def},
+                 @{thm Language.whileAnnoGFix_def},@{thm Language.whileAnnoFix_def},@{thm Language.lem_def}];
 val strip_simps =
   @{thm Language.strip_simp} :: @{thm Option.option.map(2)} :: @{thms Language.strip_guards_simps};
 val normalize_simps =
- [while_def, @{thm Language.bseq_def}, @{thm List.append_Nil}, @{thm List.append_Cons}] @
+ [@{thm Language.while_def}, @{thm Language.bseq_def}, @{thm List.append_Nil}, @{thm List.append_Cons}] @
   @{thms List.list.cases} @
   @{thms Language.flatten_simps} @
   @{thms Language.sequence.simps} @
   @{thms Language.normalize_simps} @
   @{thms Language.guards.simps} @
   [@{thm fst_conv}, @{thm snd_conv}];
-val merge_guards_simps = @{thms Language.merge_guards_simps};
-val mark_guards_simps = @{thms Language.mark_guards.simps};
-val guards_simps = @{thms Language.guards.simps};
-val strip_guards_simps = @{thms Language.strip_guards_simps};
-val dest_Guard_simps = @{thms Language.dest_Guard_simps};
-val is_Guard_simps = @{thms Language.is_Guard_simps};
-val com_cases_simps = @{thms Language.com.case};
-val option_sel = @{thms option.sel};
-val strip_idem = @{thm strip_idem};
-val dom_strip = @{thm dom_strip};
-val Ex_True = @{thm Ex_True};
-val Ex_False = @{thm Ex_False};
-val upd_globals_def = @{thm StateSpace.upd_globals_def};
-val all_imp_to_ex = @{thm Hoare.all_imp_to_ex};
-val all_imp_eq_triv = @{thms Hoare.all_imp_eq_triv};
-val in_Specs_simp = @{thm Hoare.in_Specs_simp};
-val in_set_Un_simp = @{thm Hoare.in_set_Un_simp};
-val split_all_conj = @{thm split_all_conj};
-val image_Un = @{thm image_Un};
-val image_Un_single_simp = @{thm image_Un_single_simp};
 val K_rec_convs = [];
 val K_fun_convs = [@{thm StateFun.K_statefun_apply}, @{thm StateFun.K_statefun_comp}];
 val K_convs = K_rec_convs @ K_fun_convs;
@@ -547,32 +324,7 @@ val K_rec_congs = [];
 val K_fun_congs = [@{thm StateFun.K_statefun_cong}];
 val K_congs = K_rec_congs @ K_fun_congs;
 
-val fun_upd_apply = @{thm Fun.fun_upd_apply};
-
 (* misc. aux. functions *)
-
-(*Abstraction of the term "body" over its occurrences of terms satisfying P,
-    which must contain no loose bound variables.
-  The resulting term is ready to become the body of an Abs.*)
-fun abstract_overP (P, body) =
-  let
-    fun abs lev tm =
-      if P tm then (Bound lev,[fastype_of tm])
-      else
-        (case tm of
-          Abs (a, T, t) => let val (t',Ts) = abs (lev + 1) t in (Abs (a, T, t'),Ts) end
-        | t $ u => let val (t',Ts) = abs lev t
-                       val (u',Us) = abs lev u
-                   in (t'$u',Ts@Us) end
-        | x => (x,[]));
-  in abs 0 body end;
-
-fun absfree_name ((a,T,body)) =
-  let val (body',Ts) = abstract_overP (fn Free (t,_) => t=a | _ => false,body)
-  in (case Ts of
-       [] => (Abs (a,T,body'))
-      | (T'::_) => Abs (a,T',body'))
-  end;
 
 (* first_subterm
  * yields result x of P for first subterm for which P is (SOME x),
@@ -616,7 +368,7 @@ fun max_subterms_dest P =
 
 fun last [] = raise Empty
   | last [x] = x
-  | last (x::xs) = last xs;
+  | last (_::xs) = last xs;
 
 fun dest_splits (Const (@{const_name case_prod},_)$Abs (n,T,t)) = (n,T)::dest_splits t
   | dest_splits (Const (@{const_name case_prod},_)$Abs (n,T,t)$_) = (n,T)::dest_splits t
@@ -626,8 +378,7 @@ fun dest_splits (Const (@{const_name case_prod},_)$Abs (n,T,t)) = (n,T)::dest_sp
 fun idx eq [] x = ~1
   | idx eq (x::rs) y =
       if eq x y then 0
-      else let val i = idx eq rs y in if i < 0 then i else i+1 end
-  | idx _ _ _ = raise TERM ("Hoare.idx",[]);
+      else let val i = idx eq rs y in if i < 0 then i else i+1 end;
 
 fun resuffix sfx1 sfx2 s =
   suffix sfx2 (unsuffix sfx1 s)
@@ -651,7 +402,7 @@ val state_hierarchy = Record.dest_recTs
 
 fun stateT_id T = case (state_hierarchy T) of [] => NONE | Ts => SOME (last Ts);
 
-fun globalsT (Type (recordT, Ts as (T::_))) = SOME T
+fun globalsT (Type (_, T :: _)) = SOME T
   | globalsT _ = NONE;
 
 fun stateT_ids T =
@@ -710,22 +461,13 @@ fun remdeco ctxt s = remdeco' (extern ctxt s);
 fun undeco ctxt (Const (c, T)) = Const (remdeco ctxt c, T)
   | undeco ctxt ((f as Const (@{syntax_const "_free"},_)) $ Free (x, T)) =
       (*f$*)Const (remdeco' x, T)
-  | undeco ctxt (Const (lookup,_)$_$((f as Const (@{syntax_const "_free"},_)) $ Free (x, T))) =
+  | undeco ctxt (Const _ $ _ $ ((Const (@{syntax_const "_free"},_)) $ Free (x, T))) =
       (*f$*)Const (remdeco' x, T)
   | undeco ctxt (Free (c, T)) = Const (remdeco' c, T)
   | undeco ctxt x = x
 
 fun varname x = x ^ deco
 
-fun procname (Const (p,_)) = p
-  | procname (Free (p,_))  = p
-  | procname t = raise TERM ("procname: procedure name expected ",[t]);
-
-
-(*
-val dest_nib = StateFun.dest_nib;
-val dest_chr = StateFun.dest_chr;
-*)
 val dest_string = map (chr o HOLogic.dest_char) o HOLogic.dest_list;
 
 fun dest_string' t =
@@ -839,12 +581,12 @@ structure Hoare_Data = Generic_Data
 
   (* FIXME exponential blowup due to append !? *)
   fun merge ({proc_info = proc_info1, active_procs = active_procs1,
-                 default_state_kind = default_state_kind1,
+                 default_state_kind = _,
                   generate_guard = (stmp1,generate_gaurd1),
                  wp_tacs = wp_tacs1, hoare_tacs = hoare_tacs1, vcg_simps = vcg_simps1},
                 {proc_info = proc_info2, active_procs = active_procs2,
                  default_state_kind = default_state_kind2,
-                 generate_guard = (stmp2,generate_guard2),
+                 generate_guard = (stmp2, _),
                  wp_tacs = wp_tacs2, hoare_tacs = hoare_tacs2, vcg_simps=vcg_simps2}) : T =
       if stmp1=stmp2 then
           make_hoare_data (Symtab.merge (K true) (proc_info1,proc_info2))
@@ -900,15 +642,6 @@ fun add_active_procs phi ps ctxt =
                    generate_guard wp_tacs hoare_tacs vcg_simps;
   in Hoare_Data.put data ctxt end;
 
-
-fun add_wp_tacs tacs ctxt =
-  let
-      val {proc_info,active_procs,default_state_kind,generate_guard,wp_tacs,hoare_tacs,
-           vcg_simps,...}
-            = Hoare_Data.get ctxt;
-      val data = make_hoare_data proc_info active_procs default_state_kind generate_guard
-                   (wp_tacs@tacs) hoare_tacs vcg_simps;
-  in Hoare_Data.put data ctxt end;
 
 fun add_hoare_tacs tacs ctxt =
   let
@@ -1046,8 +779,7 @@ fun check_procedures_definition procs thy =
 
 
 fun add_parameter_info phi cname (name,(inpars,outpars,state_kind)) ctxt =
-    let val name' = unsuffix proc_deco name;
-        fun par_deco' T = if T = "" then deco else par_deco (cname name);
+    let fun par_deco' T = if T = "" then deco else par_deco (cname name);
         val pars = map (fn (par,T) => (In,suffix (par_deco' T) par)) inpars@
                    map (fn (par,T) => (Out,suffix (par_deco' T) par)) outpars;
 
@@ -1068,7 +800,6 @@ val bodyN      = "_body";
 val implementationN = "_impl";
 val cliqueN = "_clique";
 val clique_namesN = "_clique_names";
-val callN      = "_call";
 val NoBodyN = @{const_name Vcg.NoBody};
 val statetypeN = "StateType";
 val proc_nameT = HOLogic.stringT;
@@ -1103,14 +834,14 @@ fun read_typ thy raw_T env =
     val env' = Term.add_tfreesT T env;
   in (T, env') end;
 
-fun add_variable_statespaces (cname,pars as (inpars,outpars,locvars)) thy =
+fun add_variable_statespaces (cname, (inpars, outpars, locvars)) thy =
   let
     val inpars'  = if forall (fn (_,T) => T = "") inpars then [] else inpars;
     val outpars' = if forall (fn (_,T) => T = "") outpars then [] else outpars;
     fun prep_comp (n, T) env =
       let
         val (T', env') = read_typ thy T env handle ERROR msg =>
-          cat_error msg ("The error(s) above occured in component " ^ quote n)
+          cat_error msg ("The error(s) above occurred in component " ^ quote n)
       in ((n, T'), env') end;
 
     val (in_outs,in_out_env) = fold_map prep_comp (distinct (op =) (inpars'@outpars')) [];
@@ -1177,14 +908,6 @@ fun topsort less [] = []
   in tsort xs end;
 
 
-fun drop_prefix [] ys = ys
-  | drop_prefix (x::xs) (y::ys) = if x=y then drop_prefix xs ys
-                                else raise error "drop_prefix: not a prefix!"
-  | drop_prefix xs [] = raise error "drop_prefix: prefix to long!"
-
-fun list_ex (xs, t) =
-      fold_rev (fn (x, T) => fn P => HOLogic.mk_exists (x,T,P)) xs t;
-
 fun clique_name clique =
       (foldr1 (fn (a,b) => a ^ "_" ^ b) (map (unsuffix proc_deco) clique));
 
@@ -1216,7 +939,7 @@ fun procedures_definition locname procs thy =
           |> fold (add_parameter_info  Morphism.identity (unsuffix proc_deco)) name_pars
           |> StateSpace.set_silent true
 
-        fun read_body (name,body) =
+        fun read_body (_, body) =
           Syntax.read_term (Context.proof_of ctxt) body;
 
         val bodies = map read_body name_body;
@@ -1289,7 +1012,7 @@ fun procedures_definition locname procs thy =
       let
         val name' = unsuffix proc_deco name;
         val fixes = [Element.Fixes [(Binding.name name, SOME proc_nameT, NoSyn)]];
-        (* FIXME: may use HOLogic.typeT as soon as locale type-inference works porperly *)
+        (* FIXME: may use HOLogic.typeT as soon as locale type-inference works properly *)
         val pE = mk_loc_exp [intern_locale thy (suffix parametersN cname)];
         val sN = suffix signatureN  name';
       in thy
@@ -1307,13 +1030,13 @@ fun procedures_definition locname procs thy =
         val b = Binding.name bdy_defN;
       in ((b, NoSyn), ((Thm.def_binding b, []), bdy)) end;
 
-   fun add_body_locale (name,pars) thy =
+   fun add_body_locale (name, _) thy =
       let
         val name' = unsuffix proc_deco name;
         val callees = filter_out (fn n => n = name) (get_calls name)
 
         val fixes = [Element.Fixes [(Binding.name name, SOME proc_nameT, NoSyn)]];
-            (* FIXME: may use HOLogic.typeT as soon as locale type-inference works porperly *)
+            (* FIXME: may use HOLogic.typeT as soon as locale type-inference works properly *)
         val pE = mk_loc_exp
                   (map (intern_locale thy)
                     ([lname variablesN (the (my_clique name))]@
@@ -1345,7 +1068,7 @@ fun procedures_definition locname procs thy =
          |-> add_decl_and_def
       end;
 
-   fun mk_def_eq thy read_term name =
+   fun mk_def_eq _ read_term name =
       if has_body name
       then
          let
@@ -1397,8 +1120,8 @@ fun procedures_definition locname procs thy =
           in thy
              |> add_locale_cmd implN parent []
              |> Proof_Context.theory_of
-             |> (fn thy => Expression.sublocale_global parentN
-                  (mk_loc_exp [intern_locale thy implN]) [] thy)
+             |> (fn thy => Interpretation.global_sublocale parentN
+                  (mk_loc_exp [intern_locale thy implN]) [] [] thy)
              |> Proof.global_terminal_proof
                  ((Method.Basic (fn ctxt => Method.SIMPLE_METHOD
                                  (Locale.intro_locales_tac false ctxt [])), Position.no_range), NONE)
@@ -1416,7 +1139,7 @@ fun procedures_definition locname procs thy =
                 recursive_declaration thy)
       end;
 
-   fun add_spec_locales (name,pars,specs) thy = (* FIXME: pars unused *)
+   fun add_spec_locales (name, _, specs) thy =
       let
         val name' = unsuffix proc_deco name;
         val ps = (suffix signatureN name' :: the_list locname);
@@ -1447,9 +1170,6 @@ fun procedures_definition locname procs thy =
           end;
       in thy |> fold add_locale'' specs end;
 
-      fun add_recursive_info name =
-        if is_recursive name then Context.theory_map (add_recursive Morphism.identity name) else I;
-
   in
     thy
     |> fold (add_variable_statespaces o clique_vars) cliques
@@ -1466,9 +1186,6 @@ fun procedures_definition locname procs thy =
 (** package setup **)
 
 (* outer syntax *)
-
-val valuePar = "val"
-val resultPar = "res"
 
 val var_declP  = Parse.name -- (@{keyword "::"} |-- Parse.!!! Parse.typ_group);
 val var_declP' = Parse.name >> (fn n => (n,""));
@@ -1496,11 +1213,9 @@ val loc_decl = Scan.optional (@{keyword "where"} |-- localsP --| @{keyword "in"}
 
 val proc_body = Parse.term_group (*>> BodyTerm*)
 
-val proc_type = @{keyword "::"} |-- Parse.typ_group >> BodyTyp
-
 
 fun proc_specs x = (Parse.!!! (Scan.repeat (Parse_Spec.thm_name ":" -- Parse.prop_group))
-    >> map (fn ((thm_name, thm_attribs), prop) => (Binding.name_of thm_name, prop))) x
+    >> map (fn ((thm_name, _), prop) => (Binding.name_of thm_name, prop))) x
 
 val par_loc =
   Scan.option (@{keyword "("} |-- @{keyword "imports"} |-- Parse.name --| @{keyword ")"});
@@ -1549,23 +1264,6 @@ fun split_guards gs =
   in maps norm_guard (HOLogic.dest_list gs)
   end
 
-fun guard_of_pair (Const (@{const_name Pair},_)$_$g) = g
-  | guard_of_pair (Const (@{const_name Language.guaranteeStripPair},_)$_$g) = g
-  | guard_of_pair t = t;
-
-fun mark_guards mark gs =
-  let
-    fun mrk c f g i = case mark i f of SOME f' => SOME (c$f'$g) | _ => NONE;
-    fun domark ((c as Const (@{const_name Pair},_))$f$g) i = mrk c f g i
-      | domark ((c as Const (@{const_name Language.guaranteeStripPair},_))$f$g) i = mrk c f g i
-      | domark t i = SOME t;
-    fun domarks [] i = []
-      | domarks (g::gs) i =
-          let val ts = domarks gs (i+1)
-          in case domark g i of SOME t => t::ts | _ => ts end;
-    val Type (_,[T]) = fastype_of gs;
-   in HOLogic.mk_list T (domarks (split_guards gs) 0) end;
-
 fun fold_com f t =
   let
     (* traverse does not descend into abstractions, like in DynCom, call, etc. *)
@@ -1611,56 +1309,6 @@ fun fold_com f t =
       | traverse _ t = raise TERM ("fold_com: unknown command",[t]);
    in snd (traverse 0 t) end;
 
-fun mark_proven_guards proven t =
-  let
-    fun mark_grd cnt idx =
-         if proven (cnt + idx) then (K (SOME @{term True})) else (fn f => SOME f)
-    fun mark cnt (c as Const (@{const_name Language.com.Skip},_)) [] [] = c
-      | mark cnt (c as Const (@{const_name Language.com.Basic},_)) [g] [] = list_comb (c,[g])
-      | mark cnt (c as Const (@{const_name Language.com.Spec},_)) [r] [] = list_comb (c,[r])
-      | mark cnt (c as Const (@{const_name Language.com.Seq},_)) [] [c1,c2] = list_comb (c,[c1,c2])
-      | mark cnt (c as Const (@{const_name Language.com.Cond},_)) [b] [c1,c2] = list_comb (c,[b,c1,c2])
-      | mark cnt (c as Const (@{const_name Language.com.While},_)) [b] [c1] = list_comb (c,[b,c1])
-      | mark cnt (c as Const (@{const_name Language.com.Call},_)) [p] [] = list_comb (c,[p])
-      | mark cnt (c as Const (@{const_name Language.com.DynCom},_)) [c1] [] = list_comb (c,[c1])
-      | mark cnt (c as Const (@{const_name Language.com.Guard},gT)) [flt,g] [c1] =
-           let
-             val flt_g = HOLogic.mk_prod (flt,g);
-             val flt_gT = fastype_of flt_g
-             val gs = HOLogic.mk_list flt_gT [flt_g]
-             val [_,_,cT] = binder_types gT;
-             val grds = Const (@{const_name Language.guards}, Type (@{type_name list}, [flt_gT]) --> cT --> cT)
-           in list_comb (grds,[mark_guards (mark_grd cnt) gs,c1]) end
-      | mark cnt (c as Const (@{const_name Language.com.Throw},_)) [] [] = c
-      | mark cnt (c as Const (@{const_name Language.com.Catch},_)) [] [c1,c2] = list_comb (c,[c1,c2])
-      | mark cnt (c as Const (@{const_name Language.guards},_)) [gs] [c1] =
-            list_comb (c,[mark_guards (mark_grd cnt) gs,c1])
-      | mark cnt (c as Const (@{const_name Language.block},_)) [init,return,c2] [c1] =
-           list_comb (c,[init,c1,return,c2])
-      | mark cnt (c as Const (@{const_name Language.call},_)) [init,p,return,c1] [] =
-           list_comb (c,[init,p,return,c1])
-      | mark cnt (c as Const (@{const_name Language.whileAnno},_)) [b,I,V] [c1] =
-           list_comb (c,[b,I,V,c1])
-      | mark cnt (c as Const (@{const_name Language.whileAnnoG},_)) [gs,b,I,V] [c1] =
-           list_comb (c,[mark_guards (mark_grd cnt) gs,b,I,V,c1])
-      | mark cnt c ts vs = raise TERM ("mark: unexpected term",c::ts);
-   in fold_com mark t end
-
-local
-  val ss =
-    simpset_of (put_simpset HOL_basic_ss @{context}
-      addsimps ([@{thm if_True}, @{thm if_False}, @{thm fst_conv}, @{thm snd_conv},
-                 @{thm split_conv}, @{thm Let_def},
-                 insert_iff,empty_iff,
-                 CollectInt_iff,conj_assoc,
-                 while_def] @ @{thms simp_thms} @
-                 anno_defs@mark_guards_simps@merge_guards_simps@
-                 guards_simps@strip_guards_simps@
-                 is_Guard_simps@dest_Guard_simps)
-      |> Simplifier.add_cong @{thm if_weak_cong});
-in
-fun merge_mark_strip_guards_simp_tac ctxt = simp_tac (put_simpset ss ctxt)
-end;
 (***************************  Tactics ****************************************************)
 
 
@@ -1668,19 +1316,16 @@ end;
 
 
 fun cond_rename_bvars cond name thm =
-    let
-      val thy = Thm.theory_of_thm thm;
-      val prop = Thm.prop_of thm;
-      fun ren (trm as (Abs (x, T, t))) = if cond trm then Abs (name x, T, ren t)
-                                         else Abs (x,T,ren t)
-        | ren (t $ u) = ren t $ ren u
-        | ren t = t;
-    in Thm.equal_elim (Thm.reflexive (Thm.global_cterm_of thy (ren prop))) thm end;
+  let
+    fun rename (tm as (Abs (x, T, t))) =
+          if cond tm then Abs (name x, T, rename t) else Abs (x, T, rename t)
+      | rename (t $ u) = rename t $ rename u
+      | rename a = a;
+  in Thm.renamed_prop (rename (Thm.prop_of thm)) thm end;
 
 val rename_bvars = cond_rename_bvars (K true);
 
 fun trace_tac ctxt str st = (if Config.get ctxt hoare_trace then tracing str else (); all_tac st);
-fun warning_tac str st = (warning str ;all_tac st);
 
 fun error_tac str st = (error str;no_tac st);
 
@@ -1705,7 +1350,6 @@ fun split_pair_apps ctxt thm =
              then
               let
                 val len = length args;
-                val idxs = (len - 1) downto 0;
                 val (argTs,bdyT) = strip_type vT;
                 val (z, _) = Name.variant "z" (fold Term.declare_term_frees args Name.context);
                 val frees = map (apfst (fn i => z^string_of_int i))
@@ -1738,7 +1382,7 @@ fun split_pair_apps ctxt thm =
           | _ =>  mk_subst (mk_subst subst t1) t2)
       | mk_subst subst t = subst;
 
-  val subst = map (fn (v,t) => (Thm.cterm_of ctxt v, Thm.cterm_of ctxt t)) (mk_subst [] t);
+  val subst = map (fn (v,t) => (dest_Var v, Thm.cterm_of ctxt t)) (mk_subst [] t);
 
   in full_simplify (put_simpset HOL_basic_ss ctxt addsimps [@{thm fst_conv}, @{thm snd_conv}])
        (Drule.instantiate_normalize ([],subst) thm)
@@ -1778,7 +1422,7 @@ fun mk_split_thms ctxt (vars as _::_)  =
 
     val split_UN_prop =
       let val P = Free (singleton (Name.variant_list names) "P", pT --> HOLogic.mk_setT zeta);
-          fun UN vs t = Library.foldr (fn ((v,T),t) => mk_UN (v,T,t)) (vs,t)
+          fun UN vs t = Library.foldr mk_UN (vs, t)
       in (UN [x] (P $ Free x)) === (UN vars (P $ xp))
       end;
 
@@ -1793,7 +1437,7 @@ fun mk_split_thms ctxt (vars as _::_)  =
     val split_meta   = prove_simp [@{thm split_paired_all}] split_meta_prop;
     val split_object = prove_simp [@{thm split_paired_All}] split_object_prop;
     val split_ex     = prove_simp [@{thm split_paired_Ex}] split_ex_prop;
-    val split_UN     = prove_simp [split_paired_UN] split_UN_prop;
+    val split_UN     = prove_simp [@{thm Hoare.split_paired_UN}] split_UN_prop;
   in [split_meta,split_object,split_ex,split_UN]
   end
  | mk_split_thms _ _ = raise Match;
@@ -1818,9 +1462,9 @@ fun adapt_aux_var ctxt split_app (vars as (_::_::_)) tvar_rules =
        val max_idx = fold Integer.max (map (Thm.maxidx_of o snd) tvar_rules) 0;
        val types = map (fn i => TVar (("z",i),Sign.defaultS thy))
                     (max_idx + 1 upto (max_idx + length vars));
-       fun ctyp n = Thm.ctyp_of ctxt (TVar (n,Sign.defaultS thy));
+       fun tvar n = (n, Sign.defaultS thy);
        val pT = Thm.ctyp_of ctxt (foldr1 HOLogic.mk_prodT types);
-       val rules' = map (fn (z,r) => (Drule.instantiate_normalize ([(ctyp z,pT)],[]) r)) tvar_rules;
+       val rules' = map (fn (z,r) => (Drule.instantiate_normalize ([(tvar z,pT)],[]) r)) tvar_rules;
        val splits = mk_split_thms ctxt (vars ~~ types);
        val rules'' = map (full_simplify (put_simpset HOL_basic_ss ctxt addsimps splits)) rules';
      in if split_app then (map (split_pair_apps ctxt) rules'') else rules'' end
@@ -1828,10 +1472,10 @@ fun adapt_aux_var ctxt split_app (vars as (_::_::_)) tvar_rules =
   | adapt_aux_var ctxt _ ([]) tvar_rules =
       let
         val thy = Proof_Context.theory_of ctxt;
-        fun ctyp n = Thm.ctyp_of ctxt (TVar (n,Sign.defaultS thy));
+        fun tvar n = (n, Sign.defaultS thy);
         val uT = Thm.ctyp_of ctxt HOLogic.unitT;
-        val rules' = map (fn (z,r) => (Drule.instantiate_normalize ([(ctyp z,uT)],[]) r)) tvar_rules;
-        val splits = [unit_meta,unit_object,unit_ex,unit_UN];
+        val rules' = map (fn (z,r) => (Drule.instantiate_normalize ([(tvar z,uT)],[]) r)) tvar_rules;
+        val splits = [@{thm Hoare.unit_meta},@{thm Hoare.unit_object},@{thm Hoare.unit_ex},@{thm Hoare.unit_UN}];
         val rules'' = map (full_simplify (put_simpset HOL_basic_ss ctxt addsimps splits)) rules';
       in rules'' end
 
@@ -1843,7 +1487,7 @@ fun gen_call_rec_rule ctxt specs_name n rule =
     val maxidx = Thm.maxidx_of rule;
     val vars = Term.add_vars (Thm.prop_of rule) [];
     fun get_type n = the (AList.lookup (op =) vars (n, 0));
-    val specsT as (Type (_, [Type (_, [assT, Type (_, [pT,_])])])) = get_type specs_name;
+    val (Type (_, [Type (_, [assT, Type (_, [pT,_])])])) = get_type specs_name;
     val zT = TVar (("z",maxidx+1),Sign.defaultS thy)
 
     fun mk_var i n T = Var ((n ^ string_of_int i,0),T);
@@ -1860,15 +1504,15 @@ fun gen_call_rec_rule ctxt specs_name n rule =
                  mk_var i "Q" (zT --> assT)$Bound 0,
                  mk_var i "A" (zT --> assT)$Bound 0];
          val single = HOLogic.mk_set quadT [quadruple];
-     in UN_const (HOLogic.mk_setT zT) quadT_set $ Abs("Z", zT, single) end;
+     in mk_UN' zT quadT_set (Abs ("Z", zT, single)) end;
 
      val Specs = foldr1 (mk_Un quadT_set) (map mk_spec (1 upto n));
      val rule' =
-           instantiate' [] [SOME (Thm.cterm_of ctxt Specs)] rule
-           |> full_simplify (put_simpset (simpset_of @{theory_context Main}) ctxt
-                  addsimps [conjE_simp,in_Specs_simp,in_set_Un_simp,split_all_conj,
-                            image_Un,image_Un_single_simp] )
-           |> rename_bvars (fn s => if member (op =) ["s","\<sigma>"] s then s else "Z")
+       Thm.instantiate' [] [SOME (Thm.cterm_of ctxt Specs)] rule
+       |> full_simplify (put_simpset (simpset_of @{theory_context Main}) ctxt
+              addsimps [@{thm Hoare.conjE_simp},@{thm Hoare.in_Specs_simp},@{thm Hoare.in_set_Un_simp},@{thm split_all_conj},
+                        @{thm image_Un},@{thm image_Un_single_simp}] )
+       |> rename_bvars (fn s => if member (op =) ["s","\<sigma>"] s then s else "Z")
   in rule'
   end;
 
@@ -1880,8 +1524,8 @@ fun gen_proc_rec ctxt mode n =
 (* simplifications on "Collect" sets, like {s. P s} Int {s. Q s} = {s. P s & Q s} *)
 fun merge_assertion_simp_tac ctxt thms =
      simp_tac (put_simpset HOL_basic_ss ctxt
-                   addsimps ([CollectInt_iff,conj_assoc,Compl_Collect,singleton_conv_sym,
-                   Int_empty_right,Int_empty_left,Un_empty_right,Un_empty_left]@thms)) ;
+                   addsimps ([@{thm Hoare.CollectInt_iff},@{thm HOL.conj_assoc},@{thm Hoare.Compl_Collect},singleton_conv_sym,
+                   @{thm Set.Int_empty_right},@{thm Set.Int_empty_left},@{thm Un_empty_right},@{thm Un_empty_left}]@thms)) ;
 
 (* The following probably shouldn't live here, but refactoring
    so that Hoare could depend on recursive_records does not look feasible.
@@ -1903,7 +1547,7 @@ fun add_foldcongs congs thy = FoldCongData.map (fn ss =>
         |> put_simpset ss
         |> fold Simplifier.add_cong congs
         |> simpset_of) thy
-                
+
 fun add_foldcongsimps simps thy = FoldCongData.map (fn ss =>
         Proof_Context.init_global thy
         |> put_simpset ss
@@ -1919,9 +1563,9 @@ fun in_assertion_simp_tac ctxt state_kind thms i =
      val fold_simps = get_foldcong_ss (Proof_Context.theory_of ctxt)
  in
    EVERY [simp_tac
-            (put_simpset HOL_basic_ss ctxt addsimps ([mem_Collect_eq,Un_iff,Int_iff,
-                                     empty_subsetI, empty_iff, UNIV_I,
-                                     Collect_False]@thms@K_convs@vcg_simps)
+            (put_simpset HOL_basic_ss ctxt addsimps ([mem_Collect_eq,@{thm Set.Un_iff},@{thm Set.Int_iff},
+                                     @{thm Set.empty_subsetI}, @{thm Set.empty_iff}, UNIV_I,
+                                     @{thm Hoare.Collect_False}]@thms@K_convs@vcg_simps)
                           addsimprocs (state_simprocs state_kind)
                           |> fold Simplifier.add_cong K_congs)  i
            THEN_MAYBE
@@ -1948,8 +1592,8 @@ fun assertion_string_eq_simp_tac ctxt state_kind thms i =
 
 fun before_set2pred_simp_tac ctxt =
   (simp_tac (put_simpset HOL_basic_ss ctxt addsimps [singleton_conv_sym,
-                                    CollectInt_iff,
-                                    Compl_Collect]));
+                                    @{thm Hoare.CollectInt_iff},
+                                    @{thm Hoare.Compl_Collect}]));
 
 (*****************************************************************************)
 (** set2pred transforms sets inclusion into predicates implication,         **)
@@ -1966,9 +1610,9 @@ fun before_set2pred_simp_tac ctxt =
 fun set2pred_tac ctxt i thm =
   ((before_set2pred_simp_tac ctxt i) THEN_MAYBE
           (EVERY [trace_tac ctxt "set2pred",
-                  rtac subsetI i,
-                  rtac CollectI i,
-                  dtac CollectD i,
+                  resolve_tac ctxt [subsetI] i,
+                  resolve_tac ctxt [CollectI] i,
+                  dresolve_tac ctxt [CollectD] i,
                   full_simp_tac (put_simpset HOL_basic_ss ctxt) i ])) thm
 
 
@@ -1982,20 +1626,22 @@ fun set2pred_tac ctxt i thm =
 (** (MaxSimpTac).                                                           **)
 (*****************************************************************************)
 
-fun MaxSimpTac ctxt tac i = TRY (FIRST[rtac subset_refl i, set2pred_tac ctxt i THEN_MAYBE tac i,
-                                  trace_tac ctxt "final_tac failed"
-                                  ]);
+fun MaxSimpTac ctxt tac i =
+  TRY (FIRST[resolve_tac ctxt [subset_refl] i,
+      set2pred_tac ctxt i THEN_MAYBE tac i,
+      trace_tac ctxt "final_tac failed"
+      ]);
 
 fun BasicSimpTac ctxt state_kind set2pred thms tac i =
  EVERY [(trace_tac ctxt "BasicSimpTac -- START --"),
          assertion_simp_tac ctxt state_kind thms i
-         THEN_MAYBE (if set2pred then MaxSimpTac ctxt tac i else TRY (rtac subset_refl i)),
+         THEN_MAYBE (if set2pred then MaxSimpTac ctxt tac i else TRY (resolve_tac ctxt [subset_refl] i)),
         (trace_tac ctxt "BasicSimpTac -- STOP --")];
 (*
  EVERY [(trace_tac ctxt "BasicSimpTac -- START --"),
          simp_tac
-          (HOL_basic_ss addsimps [mem_Collect_eq,CollectInt_iff,
-                                  empty_subsetI, empty_iff, UNIV_I]
+          (HOL_basic_ss addsimps [mem_Collect_eq,@{thm Hoare.CollectInt_iff},
+                                  @{thm Set.empty_subsetI}, @{thm Set.empty_iff}, UNIV_I]
                         addsimprocs [state_simproc sk]) i
          THEN_MAYBE
          simp_tac (HOL_basic_ss  addsimprocs [state_upd_simproc sk]) i
@@ -2017,11 +1663,11 @@ fun simp_state_eq_tac Record state_space =
 
 fun post_conforms_tac ctxt state_kind i =
    EVERY [REPEAT1 (resolve_tac ctxt [allI,impI] i),
-          ((fn i  => TRY (rtac conjI i))
+          ((fn i => TRY (resolve_tac ctxt [conjI] i))
            THEN_ALL_NEW
           (fn i => (REPEAT (resolve_tac ctxt [allI,impI] i))
                     THEN (full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps
-                             [mem_Collect_eq,singleton_iff,empty_iff,UNIV_I]
+                             [mem_Collect_eq,@{thm Set.singleton_iff},@{thm Set.empty_iff},UNIV_I]
                              addsimprocs (state_simprocs state_kind)) i))) i];
 
 
@@ -2038,8 +1684,6 @@ fun mk_hoare_abs Ts (P,C,Q,A,mode,G,T,F) =
   in hoareC$G$T$F$P$C$Q$A end;
 
 
-val mk_hoare = mk_hoare_abs [];
-
 val is_hoare = can dest_hoare_raw
 
 fun dest_hoare t =
@@ -2050,12 +1694,6 @@ fun dest_hoare t =
     in
       dest_hoare_raw triple
     end;
-
-
-fun mk_terminates Ts (G,c,s) =
-  let
-    val T = map (curry fastype_of1 Ts) [G,c,s] ---> HOLogic.boolT;
-  in Const (@{const_name Termination.terminates},T)$G$c$s end;
 
 
 fun get_aux_tvar rule =
@@ -2084,11 +1722,11 @@ local
 
 val conseq1_ss_base =
   simpset_of (put_simpset HOL_basic_ss @{context}
-    addsimps ([mem_Collect_eq,singleton_iff,Int_iff,
-              empty_iff,UNIV_I,
-              conj_assoc, @{thm disj_assoc}] @ all_imp_eq_triv
+    addsimps ([mem_Collect_eq,@{thm Set.singleton_iff},@{thm Set.Int_iff},
+              @{thm Set.empty_iff},UNIV_I,
+              @{thm HOL.conj_assoc}, @{thm disj_assoc}] @ @{thms Hoare.all_imp_eq_triv}
               @K_convs @ @{thms simp_thms} @ @{thms ex_simps} @ @{thms all_simps})
-    delsimps [all_imp_to_ex]
+    delsimps [@{thm Hoare.all_imp_to_ex}]
     |> fold Simplifier.add_cong K_congs)
 val conseq1_ss_record =
   simpset_of (put_simpset conseq1_ss_base @{context} addsimprocs (state_simprocs Record));
@@ -2099,8 +1737,8 @@ fun conseq1_ss Record   = conseq1_ss_record
 
 val conseq2_ss_base =
   simpset_of (put_simpset HOL_basic_ss @{context}
-    addsimps (all_imp_eq_triv @ @{thms simp_thms} @ @{thms ex_simps} @ @{thms all_simps})
-    delsimps [all_imp_to_ex]
+    addsimps (@{thms Hoare.all_imp_eq_triv} @ @{thms simp_thms} @ @{thms ex_simps} @ @{thms all_simps})
+    delsimps [@{thm Hoare.all_imp_to_ex}]
     |> Simplifier.add_cong @{thm imp_cong});
 
 val conseq2_ss_record =
@@ -2128,7 +1766,7 @@ end
 val conseq_simp_tac = raw_conseq_simp_tac;
 
 (* Generates the hoare-quadruples that can be derived out of the hoare-context T *)
-fun gen_context_thms ctxt thy mode params G T F =
+fun gen_context_thms ctxt mode params G T F =
   let
     val Type (_,[comT]) = range_type (fastype_of G);
 
@@ -2164,12 +1802,12 @@ fun gen_context_thms ctxt thy mode params G T F =
       in (HOLogic.mk_Trueprop (HOLogic.list_all (vars,bdy)), map fst params')
       end;
 
-    fun hoare_context_specs thy mode G T F =
+    fun hoare_context_specs mode G T F =
       let fun mk t = try (mkHoare mode G T F o apsnd destQuadruple o dest_UN) t;
       in map_filter mk (dest_Un T) end;
 
 
-    fun mk_prove ctxt mode (prop,params) =
+    fun mk_prove mode (prop,params) =
       let
         val vars = map fst (strip_qnt_vars @{const_name All}
                              (HOLogic.dest_Trueprop (Logic.strip_assums_concl prop)));
@@ -2177,19 +1815,18 @@ fun gen_context_thms ctxt thy mode params G T F =
       in Goal.prove ctxt params [] prop
           (fn thms =>
             EVERY[trace_tac ctxt "extracting specifications from hoare context",
-                  rtac asmUN' 1,
+                  resolve_tac ctxt [asmUN'] 1,
                   DEPTH_SOLVE_1 (resolve_tac ctxt [subset_refl,refl] 1 ORELSE
-                                  ((rtac subset_unI1 1 APPEND rtac subset_unI2 1)
-                                   ORELSE
-                                   (rtac subset_singleton_insert1 1
-                                    APPEND rtac subset_singleton_insert2 1)))
+                    ((resolve_tac ctxt [@{thm Hoare.subset_unI1}] 1 APPEND resolve_tac ctxt [@{thm Hoare.subset_unI2}] 1)
+                     ORELSE
+                     (resolve_tac ctxt [@{thm Hoare.subset_singleton_insert1}] 1
+                      APPEND resolve_tac ctxt [@{thm Hoare.subset_singleton_insert2}] 1)))
                   ORELSE error_tac ("vcg: cannot extract specifications from context")
                  ])
       end;
 
-    val specs = hoare_context_specs thy mode G T F;
-  in map (mk_prove ctxt mode) specs
-  end;
+    val specs = hoare_context_specs mode G T F;
+  in map (mk_prove mode) specs end;
 
 
 fun is_modifies_clause t =
@@ -2237,15 +1874,6 @@ fun swap_constr_destr f (t as (Const (@{const_name Fun.id},_))) = t
   | swap_constr_destr f t = raise TERM ("Hoare.swap_constr_destr",[t]);
 
 (* FIXME: unused? *)
-val constr_to_destr =
-    let
-      fun convert c =
-        let
-            val (path,base) = split_last (Long_Name.explode c);
-        in Long_Name.implode (fst (split_last path) @ ["the_" ^ base]) end;
-    in  swap_constr_destr convert end;
-
-(* FIXME: unused? *)
 val destr_to_constr =
     let
       fun convert c =
@@ -2254,11 +1882,8 @@ val destr_to_constr =
         in Long_Name.implode (path @ ["val",unprefix "the_" base]) end;
     in  swap_constr_destr convert end;
 
-local
-val strip_ss = simpset_of (put_simpset HOL_basic_ss @{context} addsimps [strip_idem]);
-in
 fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
-                 pname return has_args F =
+                 pname return has_args _ =
   let
     val thy = Proof_Context.theory_of ctxt;
     val pname' = unsuffix proc_deco pname;
@@ -2280,14 +1905,14 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
            | _ => []);
 
 
-    fun spec_tac augment_rule augment_emptyFaults mode spec i =
+    fun spec_tac augment_rule augment_emptyFaults _ spec i =
          let
            val spec' = augment_emptyFaults OF [spec]
                        handle THM _ => spec;
          in
-           EVERY [rtac augment_rule i,
-                  rtac spec' (i+1),
-                  TRY (resolve_tac ctxt [subset_refl, empty_subsetI, Un_upper1, Un_upper2] i)]
+           EVERY [resolve_tac ctxt [augment_rule] i,
+                  resolve_tac ctxt [spec'] (i+1),
+                  TRY (resolve_tac ctxt [subset_refl, @{thm Set.empty_subsetI}, @{thm Set.Un_upper1}, @{thm Set.Un_upper2}] i)]
          end;
 
     fun check_spec name P thm =
@@ -2310,18 +1935,18 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
 
     fun solve_spec augment_rule _ augment_emptyFaults mode _ (SOME spec_mode) (SOME spec) i=
         if mode=Partial andalso spec_mode=Total
-        then rtac TotalToPartial i THEN spec_tac augment_rule augment_emptyFaults mode spec i
+        then resolve_tac ctxt [@{thm HoareTotal.hoaret_to_hoarep'}] i THEN spec_tac augment_rule augment_emptyFaults mode spec i
         else if mode=spec_mode then spec_tac augment_rule augment_emptyFaults mode spec i
               else error("vcg: cannot use a partial correctness specification of "
                           ^ pname' ^ " for a total correctness proof")
       | solve_spec _ asmUN_rule _ mode Static _ _ i =(* try to infer spec out of context *)
          EVERY[trace_tac ctxt "inferring specification from hoare context1",
-               rtac asmUN_rule i,
+               resolve_tac ctxt [asmUN_rule] i,
                DEPTH_SOLVE_1 (resolve_tac ctxt [subset_refl,refl] i ORELSE
-                                ((rtac subset_unI1 i APPEND rtac subset_unI2 i)
-                                 ORELSE
-                                 (rtac subset_singleton_insert1 i
-                                  APPEND rtac subset_singleton_insert2 i)))
+                ((resolve_tac ctxt [@{thm Hoare.subset_unI1}] i APPEND resolve_tac ctxt [@{thm Hoare.subset_unI2}] i)
+                 ORELSE
+                 (resolve_tac ctxt [@{thm Hoare.subset_singleton_insert1}] i
+                  APPEND resolve_tac ctxt [@{thm Hoare.subset_singleton_insert2}] i)))
                ORELSE error_tac ("vcg: cannot infer specification of "
                                    ^ pname' ^ " from context")
                (* if tactic for DEPTH_SOLVE_1 would create new subgoals,
@@ -2364,7 +1989,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                      AsmUN mode,
                      AugmentEmptyFaults mode]);
 
-      in EVERY [rtac call_rule i,
+      in EVERY [resolve_tac ctxt [call_rule] i,
                 trace_tac ctxt "call_tac -- basic_tac -- solving spec",
                 solve_spec augment_ctxt_rule asmUN_rule augment_emptyFaults
                            mode cmode spec_mode spec spec_goal]
@@ -2409,9 +2034,11 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
            EVERY[trace_tac ctxt "call_tac -- basic_tac -- START --",
                  SUBGOAL
                    (apply_call_tac ctxt pname mode cmode spec_mode spec_goal is_abr spec) i,
-                 rtac allI (i+1), rtac allI (i+1), cont_tac (i+1),
+                 resolve_tac ctxt [allI] (i+1),
+                 resolve_tac ctxt [allI] (i+1),
+                 cont_tac (i+1),
                  trace_tac ctxt "call_tac -- basic_tac -- simplify",
-                 conseq_simp_tac ctxt state_kind [upd_globals_def] i,
+                 conseq_simp_tac ctxt state_kind [@{thm StateSpace.upd_globals_def}] i,
                  trace_tac ctxt "call_tac -- basic_tac -- STOP --"]
         end;
 
@@ -2420,7 +2047,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
 
     fun get_updates (Abs (_,_,t)) = get_updates t
       | get_updates (Const (@{const_name Hoare.mex},_) $ t) = get_updates t
-      | get_updates (Const (@{const_name Hoare.meq},T) $ s $ upd) = (T,upd)
+      | get_updates (Const (@{const_name Hoare.meq},T) $ _ $ upd) = (T,upd)
       | get_updates t = raise TERM ("gen_call_tac.get_updates",[t]);
 
 
@@ -2435,9 +2062,6 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
      fun mk_selR subst gT (upd,uT) =
        let val vT = range_type (hd (binder_types uT));
        in Const (unsuffix Record.updateN upd,gT --> (Envir.norm_type subst vT)) end;
-
-     fun revT (Type ("fun",[A,B])) = Type ("fun",[B,A])
-       | revT T = raise TYPE ("Hoare.revT",[T],[]);
 
      (* lookup:: "('v => 'a) => 'n => ('n => 'v) => 'a"
       * update:: "('v => 'a) => ('a => 'v) => 'n => ('a => 'a) => ('n => 'v) => ('n => 'v)"
@@ -2469,14 +2093,14 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
          val d' = map_types (Envir.norm_type subst) d;
        in Const (@{const_name StateFun.update},uT')$d'$c'$n end;
 
-     fun modify_updatesR subst gT glob ((u as Const (upd,uT))$_$(Const globs$Z)) =
+     fun modify_updatesR subst gT glob ((Const (upd,uT))$_$(Const _$Z)) =
              mk_rupdR subst gT (upd,uT)$
                (K_rec uT (mk_selR subst gT (upd,uT)$(glob$Bound 0)))$(glob$Bound 1)
-       | modify_updatesR subst gT glob ((u as Const (upd,uT))$_$s) =
+       | modify_updatesR subst gT glob ((Const (upd,uT))$_$s) =
              mk_rupdR subst gT (upd,uT)$
                (K_rec uT (mk_selR subst gT (upd,uT)$(glob$Bound 0)))$
                modify_updatesR subst gT glob s
-       | modify_updatesR subst gT glob ((globs$Z)) = (glob$Bound 1) (* may_not_modify *)
+       | modify_updatesR subst gT glob ((_$Z)) = (glob$Bound 1) (* may_not_modify *)
        | modify_updatesR _ _ _ t = raise TERM ("gen_call_tac.modify_updatesR",[t]);
 
      fun modify_updatesF subst _ glob
@@ -2490,7 +2114,7 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
        | modify_updatesF _ _ _ t = raise TERM ("gen_call_tac.modify_updatesF",[t]);
 
      fun modify_updates Record = modify_updatesR
-       | modify_updates StateFun = modify_updatesF
+       | modify_updates _ = modify_updatesF
 
 
      fun globalsT (Const (gupd,T)) = domain_type (hd (binder_types T))
@@ -2550,28 +2174,26 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
           val cret = Thm.cterm_of ctxt return';
           val (_,_,return'_var,_,_,_) = nth (Thm.prems_of ModRet) to_prove_prem
                                                   |> dest_hoare |> #2 |> dest_call;
-          val creturn'_var = Thm.cterm_of ctxt return'_var;
 
-          val ModRet' = cterm_instantiate [(creturn'_var,cret)] ModRet;
+          val ModRet' = infer_instantiate ctxt [(#1 (dest_Var return'_var), cret)] ModRet;
           val modifies_thm_partial = if modif_spec_mode = Total
-                                     then TotalToPartial OF [modifies_thm] else modifies_thm;
+                                     then @{thm HoareTotal.hoaret_to_hoarep'} OF [modifies_thm] else modifies_thm;
 
           fun solve_modifies_tac i =
                 (clarsimp_tac ((ctxt
                   |> put_claset (claset_of @{theory_context Set})
                   |> put_simpset (simpset_of @{theory_context Set}))
-                  addsimps ([mex_def,meq_def,upd_globals_def]@K_convs)
+                  addsimps ([@{thm Hoare.mex_def},@{thm Hoare.meq_def},@{thm StateSpace.upd_globals_def}]@K_convs)
                   addsimprocs (state_upd_simproc Record::(state_simprocs state_kind))
                   |> fold Simplifier.add_cong K_congs) i)
                 THEN_MAYBE
                 EVERY [trace_tac ctxt "modify_tac: splitting record",
                        state_split_simp_tac ctxt [] state_space i];
           val cnt = i + mxprem;
-          val abr_diff = if is_abr then 0 else 1;
 
         in
             EVERY[trace_tac ctxt "call_tac -- modifies_tac --",
-                  rtac ModRet' i,
+                  resolve_tac ctxt [ModRet'] i,
                   solve_spec (AugmentContext Partial) (AsmUN Partial)
                      (AugmentEmptyFaults Partial) Partial Static
                      (SOME Partial) (SOME modifies_thm_partial) spec_goal,
@@ -2583,9 +2205,9 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                   solve_modifies_tac (cnt - 7),
                   basic_tac spec (cnt - 8),
                   if cmode = Parameter
-                  then EVERY [rtac subset_refl (cnt - 8),
+                  then EVERY [resolve_tac ctxt [subset_refl] (cnt - 8),
                               simp_tac (put_simpset HOL_basic_ss ctxt
-                                addsimps (CollectInt_iff :: @{thms simp_thms})) 1]
+                                addsimps (@{thm Hoare.CollectInt_iff} :: @{thms simp_thms})) 1]
                   else all_tac]
         end) ()
       |> (fn SOME res => res
@@ -2629,17 +2251,18 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                                 "\". Inlining procedure!");
              if has_args then
                 EVERY [trace_tac ctxt "inline_bdy_tac args",
-                       rtac (CallBody mode) i,
-                       rtac impl (i+3),
-                       rtac allI (i+2),rtac allI (i+2),
-                         in_assertion_simp_tac ctxt state_kind [] (i+2),
-                         cont_tac (i+2),
-                       rtac allI (i+1),in_assertion_simp_tac ctxt state_kind [bdy] (i+1),
-                         cont_tac (i+1),
-                       in_assertion_simp_tac ctxt state_kind [upd_globals_def] i]
+                       resolve_tac ctxt [CallBody mode] i,
+                       resolve_tac ctxt [impl] (i+3),
+                       resolve_tac ctxt [allI] (i+2),
+                       resolve_tac ctxt [allI] (i+2),
+                       in_assertion_simp_tac ctxt state_kind [] (i+2),
+                       cont_tac (i+2),
+                       resolve_tac ctxt [allI] (i+1),in_assertion_simp_tac ctxt state_kind [bdy] (i+1),
+                       cont_tac (i+1),
+                       in_assertion_simp_tac ctxt state_kind [@{thm StateSpace.upd_globals_def}] i]
               else EVERY [trace_tac ctxt "inline_bdy_tac no args",
-                          rtac (ProcBody mode) i,
-                          rtac impl (i+2),
+                          resolve_tac ctxt [ProcBody mode] i,
+                          resolve_tac ctxt [impl] (i+2),
                           simp_tac (put_simpset HOL_basic_ss ctxt addsimps [bdy]) (i+1),
                           cont_tac (i+1)])));
 
@@ -2659,7 +2282,6 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                           "; no proper specification for procedure " ^pname');
                           Subgoal.FOCUS (specs_of_assms_tac o #prems) ctxt))))
   end;
-end;
 
 fun call_tac cont_tac mode state_kind state_space ctxt asms spec_sfx t =
   let
@@ -2668,10 +2290,10 @@ fun call_tac cont_tac mode state_kind state_space ctxt asms spec_sfx t =
            gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                          (proc_name cmode pname) return has_args F;
   in gen_tac (dest_call c) end
-  handle TERM t => (K no_tac);
+  handle TERM _ => K no_tac;
 
 fun solve_in_Faults_tac ctxt i =
-    resolve_tac ctxt [UNIV_I, in_insert_hd] i
+    resolve_tac ctxt [UNIV_I, @{thm in_insert_hd}] i
     ORELSE
     SELECT_GOAL (SOLVE (simp_tac (put_simpset (simpset_of @{theory_context Set}) ctxt) 1)) i;
 
@@ -2710,20 +2332,20 @@ end;
 
 fun wf_tac ctxt =
   simp_tac (put_simpset HOL_basic_ss ctxt
-    addsimps [wf_measure,wf_lex_prod,wf_same_fst, wf_measure_lex_prod,wf_inv_image]);
+    addsimps [@{thm Wellfounded.wf_measure},@{thm Wellfounded.wf_lex_prod},@{thm Wfrec.wf_same_fst}, @{thm Hoare.wf_measure_lex_prod},@{thm Wellfounded.wf_inv_image}]);
 
 fun in_rel_simp ctxt =
   simp_tac (put_simpset HOL_basic_ss ctxt
-    addsimps [in_measure_iff,in_lex_iff,in_mlex_iff,in_inv_image_iff, @{thm split_conv}]);
+    addsimps [@{thm Hoare.in_measure_iff},@{thm Hoare.in_lex_iff},@{thm Hoare.in_mlex_iff},@{thm Hoare.in_inv_image_iff}, @{thm split_conv}]);
 
 fun while_annotate_tac ctxt inv i st =
   let
-    val annotateWhile = Thm.lift_rule (Thm.cprem_of st i) ReannotateWhileNoGuard;
+    val annotateWhile = Thm.lift_rule (Thm.cprem_of st i) @{thm HoarePartial.reannotateWhileNoGuard};
     val lifted_inv = fold_rev Term.abs (Logic.strip_params (Logic.get_goal (Thm.prop_of st) i)) inv;
     val invVar = (#1 o strip_comb o #3 o dest_whileAnno o #2 o dest_hoare)
                   (List.last (Thm.prems_of annotateWhile));
-    val annotate = cterm_instantiate
-                           [(Thm.cterm_of ctxt invVar, Thm.cterm_of ctxt lifted_inv)] annotateWhile;
+    val annotate =
+      infer_instantiate ctxt [(#1 (dest_Var invVar), Thm.cterm_of ctxt lifted_inv)] annotateWhile;
  in  ((trace_tac ctxt ("annotating While with: " ^ Syntax.string_of_term ctxt lifted_inv ))
        THEN
        compose_tac ctxt (false,annotate,1) i) st
@@ -2735,8 +2357,7 @@ fun cond_annotate_tac ctxt inv mode (_,i) st =
     val lifted_inv = fold_rev Term.abs (Logic.strip_params (Logic.get_goal (Thm.prop_of st) i)) inv;
     val invVar = List.last (Thm.prems_of annotateCond) |> dest_hoare |> #3 |> strip_comb |> #1;
     val annotate =
-      cterm_instantiate
-        [(Thm.cterm_of ctxt invVar, Thm.cterm_of ctxt lifted_inv)] annotateCond;
+      infer_instantiate ctxt [(#1 (dest_Var invVar), Thm.cterm_of ctxt lifted_inv)] annotateCond;
   in  ((trace_tac ctxt ("annotating Cond with: "^ Syntax.string_of_term ctxt lifted_inv))
        THEN
        compose_tac ctxt (false,annotate,5) i) st
@@ -2748,7 +2369,7 @@ fun basic_while_tac ctxt state_kind cont_tac tac mode i =
          EVERY[if mode=Total then wf_tac ctxt (i+3) else all_tac,
                BasicSimpTac ctxt state_kind true [] tac (i+2),
                if mode=Total
-               then in_rel_simp ctxt (i+1) THEN (rtac allI (i+1))
+               then in_rel_simp ctxt (i+1) THEN (resolve_tac ctxt [allI] (i+1))
                else all_tac,
                cont_tac (i+1)
                ]
@@ -2795,12 +2416,11 @@ fun whileAnnoG_tac ctxt strip_guards mode t i st =
     val grds' = map_filter (leave_grd (extract_faults F)) (HOLogic.dest_list grds);
     val pars = (Logic.strip_params (Logic.get_goal (Thm.prop_of st) i));
     val J = fold_rev Term.abs pars (I_recomb (fold_rev (mk_Int (map snd (pars@I_vs))) grds' I'));
-    val cterm = Thm.cterm_of ctxt;
     val WhileG = Thm.lift_rule (Thm.cprem_of st i) Rule;
     val invVar = (fst o strip_comb o #3 o dest_whileAnno o (fn xs => nth xs 1) o snd
       o strip_comb o #2 o dest_hoare) (List.last (Thm.prems_of WhileG));
-    val WhileGInst = cterm_instantiate [(cterm invVar, cterm J)] WhileG;
-  in ((trace_tac ctxt ("WhileAnnoG, adding guards to invariant: "^ Syntax.string_of_term ctxt J))
+    val WhileGInst = infer_instantiate ctxt [(#1 (dest_Var invVar), Thm.cterm_of ctxt J)] WhileG;
+  in ((trace_tac ctxt ("WhileAnnoG, adding guards to invariant: " ^ Syntax.string_of_term ctxt J))
       THEN compose_tac ctxt (false,WhileGInst,1) i) st
   end
   handle TERM _ => no_tac st
@@ -2811,18 +2431,17 @@ fun whileAnnoG_tac ctxt strip_guards mode t i st =
 
 fun gen_Anno_tac dest rules tac cont_tac ctxt state_kind (t,i) st =
   let
-    val thy = Thm.theory_of_thm st;
     val vars = (dest o #2 o dest_hoare) (Logic.strip_assums_concl t);
     val rules' = (case (List.filter (not o null) (map dest_splits vars)) of
                     [] => rules
                   |(xs::_) => adapt_aux_var ctxt false (map fst xs) (map get_aux_tvar rules));
   in EVERY [resolve_tac ctxt rules' i,
             tac,
-            simp_tac (put_simpset HOL_basic_ss ctxt addsimps ([@{thm split_conv}, refl, triv_All_eq]@anno_defs)
-                      addsimprocs [@{simproc split_beta}]) (i+2),
+            simp_tac (put_simpset HOL_basic_ss ctxt addsimps ([@{thm split_conv}, refl, @{thm Hoare.triv_All_eq}]@anno_defs)
+                      addsimprocs [@{simproc case_prod_beta}]) (i+2),
             simp_tac (put_simpset HOL_basic_ss ctxt addsimps [@{thm split_conv}]) (i+1),
             simp_tac (put_simpset HOL_basic_ss ctxt addsimps [@{thm split_conv}]) i,
-            REPEAT (rtac allI (i+1)),
+            REPEAT (resolve_tac ctxt [allI] (i+1)),
             cont_tac (i+1),
             conseq_simp_tac ctxt state_kind [] i] st
   end
@@ -2843,7 +2462,7 @@ fun whileAnnoFix_tac ctxt state_kind cont_tac mode (t,i) =
       | dest t = raise TERM ("dest_whileAnnoFix",[t]);
 
     val rules = [WhileAnnoFix mode];
-    fun wf_tac' i = EVERY [REPEAT (rtac allI i),
+    fun wf_tac' i = EVERY [REPEAT (resolve_tac ctxt [allI] i),
                            simp_tac (put_simpset HOL_basic_ss ctxt addsimps [@{thm split_conv}]) i,
                            wf_tac ctxt i];
     val tac = if mode=Total
@@ -2875,7 +2494,7 @@ fun lemAnno_tac ctxt state_kind mode (t,i) st =
                   | xs => adapt_aux_var ctxt true (map fst xs) (map get_aux_tvar rules));
 
   in EVERY [resolve_tac ctxt rules' i,
-            rtac spec (i+1),
+            resolve_tac ctxt [spec] (i+1),
             conseq_simp_tac ctxt state_kind [] i] st
   end
   handle TERM _ => no_tac st;
@@ -2890,12 +2509,6 @@ fun mk_proc_assoc thms =
     fun proc_name thm = thm |> Thm.concl_of |> dest_hoare |> #2 |> dest_call |> name;
   in map (fn thm => (proc_name thm,thm)) thms end;
 
-
-
-val initial_wp_tacs =
-  let fun seq_tac cont ctxt mode i =
-            EVERY [rtac (Seq mode) i,trace_tac ctxt "Seq",cont false (i+1)]
-  in [("seq_tac",seq_tac)] end;
 
 fun mk_hoare_tac cont ctxt mode i (name,tac) =
      EVERY [trace_tac ctxt ("trying: " ^ name),tac cont ctxt mode i];
@@ -2919,23 +2532,22 @@ fun HoareTac annotate_inv exspecs
      val exspecthms = map (Proof_Context.get_thm ctxt) exspecs;
      val asms =
        try (fn () =>
-         mk_proc_assoc (gen_context_thms ctxt (Thm.theory_of_thm st) mode params G T F
-                @ exspecthms)) ()
+         mk_proc_assoc (gen_context_thms ctxt mode params G T F @ exspecthms)) ()
        |> the_default [];
 
      fun while_annoG_tac (t,i) =
            whileAnnoG_tac ctxt (annotate_inv orelse strip_guards) mode t i;
      fun WlpTac tac i = (* WlpTac does not end with subset_refl *)
          FIRST
-         ([EVERY [rtac (Seq mode) i,trace_tac ctxt "Seq",HoareRuleTac tac false (i+1)],
-          EVERY [rtac (Catch mode) i,trace_tac ctxt "Catch",HoareRuleTac tac false (i+1)],
-          EVERY [rtac (CondCatch mode) i,trace_tac ctxt "CondCatch",HoareRuleTac tac false (i+1)],
-          EVERY [rtac (BSeq mode) i,trace_tac ctxt "BSeq",HoareRuleTac tac false (i+1)],
-          EVERY [rtac (FCall mode) i,trace_tac ctxt "FCall"],
-          EVERY [rtac (GuardsNil mode) i,trace_tac ctxt "GuardsNil"],
-          EVERY [rtac (GuardsConsGuaranteeStrip mode) i,
+         ([EVERY [resolve_tac ctxt [Seq mode] i,trace_tac ctxt "Seq",HoareRuleTac tac false (i+1)],
+          EVERY [resolve_tac ctxt [Catch mode] i,trace_tac ctxt "Catch",HoareRuleTac tac false (i+1)],
+          EVERY [resolve_tac ctxt [CondCatch mode] i,trace_tac ctxt "CondCatch",HoareRuleTac tac false (i+1)],
+          EVERY [resolve_tac ctxt [BSeq mode] i,trace_tac ctxt "BSeq",HoareRuleTac tac false (i+1)],
+          EVERY [resolve_tac ctxt [FCall mode] i,trace_tac ctxt "FCall"],
+          EVERY [resolve_tac ctxt [GuardsNil mode] i,trace_tac ctxt "GuardsNil"],
+          EVERY [resolve_tac ctxt [GuardsConsGuaranteeStrip mode] i,
                  trace_tac ctxt "GuardsConsGuaranteeStrip"],
-          EVERY [rtac (GuardsCons mode) i,trace_tac ctxt "GuardsCons"],
+          EVERY [resolve_tac ctxt [GuardsCons mode] i,trace_tac ctxt "GuardsCons"],
           EVERY [SUBGOAL while_annoG_tac i]
           ]
          @
@@ -2953,12 +2565,12 @@ fun HoareTac annotate_inv exspecs
                                        BasicSimpTac ctxt state_kind true [] tac (i+1)
                                       ]
                                else
-                                 EVERY[rtac (Cond mode) i,trace_tac ctxt "Cond",
+                                 EVERY[resolve_tac ctxt [Cond mode] i,trace_tac ctxt "Cond",
                                        HoareRuleTac tac false (i+2),
                                        HoareRuleTac tac false (i+1)];
-             fun switch_tac i = EVERY[rtac (SwitchNil mode) i, trace_tac ctxt "SwitchNil"]
+             fun switch_tac i = EVERY[resolve_tac ctxt [SwitchNil mode] i, trace_tac ctxt "SwitchNil"]
                                 ORELSE
-                                EVERY[rtac (SwitchCons mode) i,trace_tac ctxt "SwitchCons",
+                                EVERY[resolve_tac ctxt [SwitchCons mode] i,trace_tac ctxt "SwitchCons",
                                      HoareRuleTac tac false (i+2),
                                      HoareRuleTac tac false (i+1)];
             fun while_tac' (t,i) = while_tac ctxt state_kind Inv
@@ -2966,24 +2578,27 @@ fun HoareTac annotate_inv exspecs
          in st |>
            ( (WlpTac tac i THEN HoareRuleTac tac pre_cond i)
              ORELSE
-             (FIRST([EVERY[rtac (Skip mode) i,trace_tac ctxt "Skip"],
-                    EVERY[rtac (BasicCond mode) i, trace_tac ctxt "BasicCond",
+             (FIRST([EVERY[resolve_tac ctxt [Skip mode] i,trace_tac ctxt "Skip"],
+                    EVERY[resolve_tac ctxt [BasicCond mode] i, trace_tac ctxt "BasicCond",
                           assertion_simp_tac ctxt state_kind [] i],
-                    (rtac (Basic mode) i THEN trace_tac ctxt "Basic")
+                    (resolve_tac ctxt [Basic mode] i THEN trace_tac ctxt "Basic")
                         THEN_MAYBE (assertion_simp_tac ctxt state_kind [] i),
                           (* we don't really need simplificaton here. The question is
                              if it is better to simplify the assertion after each Basic step,
                              so that intermediate assertions stay "small", or if we just
                              accumulate the raw assertions and leave the simplification to
                              the final BasicSimpTac *)
-                    EVERY[rtac (Throw mode) i,trace_tac ctxt "Throw"],
-                    (rtac (Raise mode) i THEN trace_tac ctxt "Raise")
+                    EVERY[resolve_tac ctxt [Throw mode] i, trace_tac ctxt "Throw"],
+                    (resolve_tac ctxt [Raise mode] i THEN trace_tac ctxt "Raise")
                         THEN_MAYBE (assertion_string_eq_simp_tac ctxt state_kind [] i),
                     cond_tac i,
                     switch_tac i,
-                    EVERY[rtac (Block mode) i, trace_tac ctxt "Block",
-                          rtac allI (i+2), rtac allI (i+2),HoareRuleTac tac false (i+2),
-                          rtac allI (i+1), in_assertion_simp_tac ctxt state_kind [] (i+1),
+                    EVERY[resolve_tac ctxt [Block mode] i, trace_tac ctxt "Block",
+                          resolve_tac ctxt [allI] (i+2),
+                          resolve_tac ctxt [allI] (i+2),
+                          HoareRuleTac tac false (i+2),
+                          resolve_tac ctxt [allI] (i+1),
+                          in_assertion_simp_tac ctxt state_kind [] (i+1),
                           HoareRuleTac tac false (i+1)],
                     SUBGOAL while_tac' i,
                     SUBGOAL (guard_tac ctxt (annotate_inv orelse strip_guards)
@@ -2992,13 +2607,14 @@ fun HoareTac annotate_inv exspecs
                                      (HoareRuleTac tac true) mode) i],
                     EVERY[SUBGOAL (whileAnnoFix_tac ctxt state_kind
                                      (HoareRuleTac tac true) mode) i],
-                    EVERY[rtac (SpecIf mode) i, trace_tac ctxt "SpecIf",
+                    EVERY[resolve_tac ctxt [SpecIf mode] i, trace_tac ctxt "SpecIf",
                           assertion_simp_tac ctxt state_kind [] i],
-                    (rtac (Spec mode) i THEN trace_tac ctxt "Spec")
+                    (resolve_tac ctxt [Spec mode] i THEN trace_tac ctxt "Spec")
                         THEN_MAYBE (assertion_simp_tac ctxt state_kind [@{thm split_conv}] i),
-                    EVERY[rtac (BindR mode) i, trace_tac ctxt "Bind",rtac allI (i+1),
-                          HoareRuleTac tac false (i+1)],
-                    EVERY[rtac (DynCom mode) i,trace_tac ctxt "DynCom"],
+                    EVERY[resolve_tac ctxt [BindR mode] i, trace_tac ctxt "Bind",
+                      resolve_tac ctxt [allI] (i+1),
+                      HoareRuleTac tac false (i+1)],
+                    EVERY[resolve_tac ctxt [DynCom mode] i, trace_tac ctxt "DynCom"],
                     EVERY[trace_tac ctxt "calling call_tac",SUBGOAL call i],
                     EVERY[trace_tac ctxt "LemmaAnno",SUBGOAL (lemAnno_tac ctxt state_kind mode) i]]
                     @
@@ -3008,9 +2624,9 @@ fun HoareTac annotate_inv exspecs
                                 TRY (BasicSimpTac ctxt state_kind true [] tac i),
                                              (* FIXME: Do we need TRY *)
                                 trace_tac ctxt "after BasicSimpTac"]
-                    else (rtac subset_refl i))))
+                    else (resolve_tac ctxt [subset_refl] i))))
          end;
- in ((K (EVERY [REPEAT (rtac allI 1),HoareRuleTac tac true 1]))
+ in ((K (EVERY [REPEAT (resolve_tac ctxt [allI] 1), HoareRuleTac tac true 1]))
      THEN_ALL_NEW (prems_tac ctxt)) 1 st
       (*Procedure specifications may have an locale assumption as premise. These are
         accumulated by the vcg and are be solved afterward by prems_tac
@@ -3026,63 +2642,67 @@ fun HoareStepTac strip_guards mode state_kind state_space spec_sfx ctxt tac st =
          let val (_,_,_,_,_,G,T,F) = dest_hoare (Logic.strip_assums_concl
                                                 (Logic.get_goal (Thm.prop_of st) 1));
              val params = (strip_vars (Logic.get_goal (Thm.prop_of st) 1));
-         in mk_proc_assoc (gen_context_thms ctxt (Thm.theory_of_thm st) mode params G T F)
+         in mk_proc_assoc (gen_context_thms ctxt mode params G T F)
          end) ()
        |> the_default [];
 
-     fun result_tac i = TRY (EVERY [rtac (Basic mode) i, rtac subset_refl i]);
+     fun result_tac i = TRY (EVERY [resolve_tac ctxt [Basic mode] i,
+         resolve_tac ctxt [subset_refl] i]);
      fun call (t,i) = call_tac result_tac mode state_kind state_space ctxt asms spec_sfx t i
 
      fun final_simp_tac i =
           EVERY [full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps [mem_Collect_eq]) i,
-                 REPEAT (etac conjE i),
+                 REPEAT (eresolve_tac ctxt [conjE] i),
                  TRY (hyp_subst_tac_thin true ctxt i),
                  BasicSimpTac ctxt state_kind true [] tac i]
      fun while_annoG_tac (t,i) = whileAnnoG_tac ctxt strip_guards mode t i;
 
  in st |>
-    (REPEAT (rtac allI 1)
+    (REPEAT (resolve_tac ctxt [allI] 1)
      THEN
-     FIRST [rtac subset_refl 1,
-           EVERY[rtac (Skip mode) 1,TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
-           EVERY[rtac (BasicCond mode) 1,trace_tac ctxt "BasicCond",
+     FIRST [resolve_tac ctxt [subset_refl] 1,
+           EVERY[resolve_tac ctxt [Skip mode] 1,TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
+           EVERY[resolve_tac ctxt [BasicCond mode] 1,trace_tac ctxt "BasicCond",
                  TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
-           EVERY[rtac (Basic mode) 1,TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
-           EVERY[rtac (Throw mode) 1,TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
-           EVERY[rtac (Raise mode) 1,TRY (assertion_string_eq_simp_tac ctxt state_kind [] 1)],
-           rtac (SeqSwap mode) 1
+           EVERY[resolve_tac ctxt [Basic mode] 1,TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
+           EVERY[resolve_tac ctxt [Throw mode] 1,TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
+           EVERY[resolve_tac ctxt [Raise mode] 1,TRY (assertion_string_eq_simp_tac ctxt state_kind [] 1)],
+           resolve_tac ctxt [SeqSwap mode] 1
              THEN_MAYBE HoareStepTac strip_guards mode state_kind state_space spec_sfx
                           ctxt tac,
-           EVERY[rtac (BSeq mode) 1,
+           EVERY[resolve_tac ctxt [BSeq mode] 1,
                  prefer_tac 2
                  THEN_MAYBE HoareStepTac strip_guards mode state_kind state_space spec_sfx
                               ctxt tac],
-           rtac (CondSwap mode) 1,
-           rtac (SwitchNil mode) 1,
-           rtac (SwitchCons mode) 1,
+           resolve_tac ctxt [CondSwap mode] 1,
+           resolve_tac ctxt [SwitchNil mode] 1,
+           resolve_tac ctxt [SwitchCons mode] 1,
            EVERY [SUBGOAL while_annoG_tac 1],
-           EVERY[rtac (While mode) 1,
+           EVERY[resolve_tac ctxt [While mode] 1,
                  if mode=Total then wf_tac ctxt 4 else all_tac,
                  BasicSimpTac ctxt state_kind false [] tac 3,
-                 if mode=Total then in_rel_simp ctxt 2 THEN (rtac allI 2) else all_tac,
+                 if mode=Total then in_rel_simp ctxt 2 THEN (resolve_tac ctxt [allI] 2) else all_tac,
                  BasicSimpTac ctxt state_kind false [] tac 1],
-           rtac (CatchSwap mode) 1,
-           rtac (CondCatchSwap mode) 1,
-           EVERY[rtac (BlockSwap mode) 1, rtac allI 1, rtac allI 1,
-                 rtac allI 2, BasicSimpTac ctxt state_kind false [] tac 2],
-           rtac (GuardsNil mode) 1,
-           rtac (GuardsConsGuaranteeStrip mode) 1,
-           rtac (GuardsCons mode) 1,
+           resolve_tac ctxt [CatchSwap mode] 1,
+           resolve_tac ctxt [CondCatchSwap mode] 1,
+           EVERY[resolve_tac ctxt [BlockSwap mode] 1, resolve_tac ctxt [allI] 1,
+              resolve_tac ctxt [allI] 1,
+              resolve_tac ctxt [allI] 2,
+              BasicSimpTac ctxt state_kind false [] tac 2],
+           resolve_tac ctxt [GuardsNil mode] 1,
+           resolve_tac ctxt [GuardsConsGuaranteeStrip mode] 1,
+           resolve_tac ctxt [GuardsCons mode] 1,
            SUBGOAL (guard_tac ctxt strip_guards (fn i => all_tac) mode) 1,
            EVERY[SUBGOAL (specAnno_tac ctxt state_kind (K all_tac) mode) 1],
            EVERY[SUBGOAL (whileAnnoFix_tac ctxt state_kind (K all_tac) mode) 1],
-           EVERY[rtac (SpecIf mode) 1,trace_tac ctxt "SpecIf",
+           EVERY[resolve_tac ctxt [SpecIf mode] 1,trace_tac ctxt "SpecIf",
                  TRY (BasicSimpTac ctxt state_kind false [] tac 1)],
-           EVERY[rtac (Spec mode) 1,
+           EVERY[resolve_tac ctxt [Spec mode] 1,
                  TRY (BasicSimpTac ctxt state_kind false [@{thm split_conv}] tac 1)],
-           EVERY[rtac (BindR mode) 1, rtac allI 2, prefer_tac 2],
-           EVERY[rtac (FCall mode) 1],
-           EVERY[rtac (DynCom mode) 1],
+           EVERY[resolve_tac ctxt [BindR mode] 1,
+             resolve_tac ctxt [allI] 2, prefer_tac 2],
+           EVERY[resolve_tac ctxt [FCall mode] 1],
+           EVERY[resolve_tac ctxt [DynCom mode] 1],
            EVERY[SUBGOAL call 1, BasicSimpTac ctxt state_kind false [] tac 1],
            EVERY[SUBGOAL (lemAnno_tac ctxt state_kind mode) 1,
                  BasicSimpTac ctxt state_kind false [] tac 1],
@@ -3115,12 +2735,8 @@ fun isFreeState (Free (_,T)) =
 val abs_state = Option.map snd o first_subterm isFreeState;
 
 
-
 fun sel_eq (Const (x,_)$_) y = (x=y)
   | sel_eq t y = raise TERM ("RecordSplitState.sel_eq",[t]);
-
-fun sel_name (Const (x,_)$_) = x
-  | sel_name t = raise TERM ("RecordSplitState.sel_name",[t]);
 
 val sel_idx = idx sel_eq;
 
@@ -3133,8 +2749,7 @@ fun abs_var _ (Const (x,T)$_) =
      (remdeco' (Long_Name.base_name x),range_type T)
   | abs_var _ t = raise TERM ("RecordSplitState.abs_var",[t]);
 
-fun fld_eq (x,_) y = (x=y)
-  | fld_eq x y = raise TERM ("RecordSplitState.fld_eq",[]);
+fun fld_eq (x, _) y = (x = y)
 
 fun fld_idx xs x = idx fld_eq xs x;
 
@@ -3186,7 +2801,7 @@ fun collect_vars s t =
   let
     fun loc _ vars t  = snd (bound vars t);
     fun glob _ vars t = snd (bound vars t);
-    fun app vars1 vars2 = vars2;
+    fun app _ vars2 = vars2;
     fun abs _ _ vars = vars;
     fun other vars _ = vars;
   in fold_state_prop loc glob app abs other 0 s [] t end;
@@ -3207,17 +2822,14 @@ fun split_state ctxt s T t =
     val vars' = if Config.get ctxt sort_variables then sort_vars ctxt T vars else vars;
   in (abstract_vars vars' s t,rev vars') end;
 
-fun ex_tac ctxt vs st = Record.split_simp_tac ctxt @{thms simp_thms} (K ~1) 1 st;
+fun ex_tac ctxt _ st = Record.split_simp_tac ctxt @{thms simp_thms} (K ~1) 1 st;
 
 end;
 
 structure FunSplitState : SPLIT_STATE =
 struct
 
- val globalsN = "globals";
- val full_globalsN = @{const_name StateSpace.state.globals};
- val localsN  = "locals";
-
+val full_globalsN = @{const_name StateSpace.state.globals};
 
 fun isState (Const _$Abs (s,T,t)) =
       (case (state_hierarchy T) of
@@ -3291,7 +2903,7 @@ fun fold_state_prop var app abs other inc s res
 fun collect_vars s t =
   let
     fun var _ vars t  = snd (bound vars t);
-    fun app vars1 vars2 = vars2;
+    fun app _ vars2 = vars2;
     fun abs _ _ vars = vars;
     fun other vars _ = vars;
   in fold_state_prop var app abs other 0 s [] t end;
@@ -3322,15 +2934,13 @@ fun sort_vars ctxt vars =
       | compare (t1,t2) = raise TERM ("FunSplitState.sort_vars.compare",[t1,t2]);
   in sort (rev_order o compare) vars end;
 
-fun split_state ctxt s T t =
+fun split_state ctxt s _ t =
   let
     val vars  = collect_vars s t;
     val vars' = if Config.get ctxt sort_variables then sort_vars ctxt vars else vars;
   in (abstract_vars vars' s t,rev vars') end;
 
-fun abs_var ctxt t =
-    (remdeco' (sel_name t),sel_type t)
-  | abs_var _ t = raise TERM ("FunSplitState.abs_var",[t]);
+fun abs_var _ t = (remdeco' (sel_name t), sel_type t);
 
 (* Proof for: EX x_1 ... x_n. P x_1 ... x_n
  *            ==> EX s. P (lookup destr_1 "x_1" s) ... (lookup destr_n "x_n" s)
@@ -3345,8 +2955,8 @@ local
 
 val ss =
   simpset_of
-    (@{theory_context Fun}
-    addsimps (@{thm StateFun.lookup_def} :: @{thm StateFun.id_id_cancel}
+    (put_simpset (simpset_of @{theory_context Fun}) @{context}
+      addsimps (@{thm StateFun.lookup_def} :: @{thm StateFun.id_id_cancel}
       :: @{thms list.inject} @ @{thms char.inject}
       @ @{thms list.distinct} @ @{thms simp_thms})
     addsimprocs [Record.simproc, StateFun.lazy_conj_simproc]
@@ -3356,12 +2966,10 @@ in
 
 fun ex_tac ctxt vs st =
   let
-    val thy = Proof_Context.theory_of ctxt;
     val vs' = rev vs;
     val (Const (_,exT)$_) = HOLogic.dest_Trueprop
                              (Logic.strip_imp_concl (Logic.get_goal (Thm.prop_of st) 1));
     val sT = domain_type (domain_type exT);
-    val flds = fst (Record.get_recT_fields thy sT);
 
     val s0 = Const (@{const_name HOL.undefined},sT);
 
@@ -3403,12 +3011,12 @@ fun ex_tac ctxt vs st =
       let
         val rule  = Thm.lift_rule (Thm.cprem_of st i) (Drule.incr_indexes st exI);
         val (_$x) = HOLogic.dest_Trueprop (Logic.strip_assums_concl (hd (Thm.prems_of rule)));
-        val cx = Thm.cterm_of ctxt (head_of x);
-        val inst_rule = cterm_instantiate [(cx, Thm.cterm_of ctxt inst)] rule;
+        val inst_rule =
+          infer_instantiate ctxt [(#1 (dest_Var (head_of x)), Thm.cterm_of ctxt inst)] rule;
       in (compose_tac ctxt (false,inst_rule, Thm.nprems_of exI) i st) end;
 
 
-  in EVERY [REPEAT_DETERM_N (length vs) (etac exE 1),
+  in EVERY [REPEAT_DETERM_N (length vs) (eresolve_tac ctxt [exE] 1),
             lift_inst_ex_tac 1,
             simp_tac (put_simpset ss ctxt) 1
            ] st end
@@ -3441,7 +3049,7 @@ fun generalise Record = GeneraliseRecord.GENERALISE
 fun record_vanish_tac ctxt state_kind state_space i =
   if Config.get ctxt record_vanish then
     let
-        val rem_useless_vars_simps = [Drule.triv_forall_equality,triv_All_eq,triv_Ex_eq];
+        val rem_useless_vars_simps = [Drule.triv_forall_equality,@{thm Hoare.triv_All_eq},@{thm Hoare.triv_Ex_eq}];
         val rem_useless_vars_simpset = empty_simpset ctxt addsimps rem_useless_vars_simps;
         fun no_spec (t as (Const (@{const_name All},_)$_)) =
               is_none (try dest_hoare_raw (strip_qnt_body @{const_name All} t))
@@ -3449,7 +3057,7 @@ fun record_vanish_tac ctxt state_kind state_space i =
         fun state_space_no_spec t = if state_space t <> 0 andalso no_spec t then
                                     ~1 else 0;
     in EVERY [trace_tac ctxt "record_vanish_tac -- START --",
-              REPEAT (etac conjE i),
+              REPEAT (eresolve_tac ctxt [conjE] i),
               trace_tac ctxt "record_vanish_tac -- hyp_subst_tac ctxt --",
               TRY (hyp_subst_tac_thin true ctxt i),
               full_simp_tac rem_useless_vars_simpset i,
@@ -3505,8 +3113,8 @@ fun solve_modifies_tac ctxt state_kind state_space i st =
       if state_space trm <> 0 then
         try (fn () =>
           let
-            fun seed (upd$v$st) = seed st
-              | seed (globals$t) = (1,t) (* split only state pair *)
+            fun seed (_ $ v $ st) = seed st
+              | seed (_ $ t) = (1,t) (* split only state pair *)
               | seed t = (~1,t) (* split globals completely *)
             val all_vars = strip_qnt_vars @{const_name Pure.all} t;
             val concl = HOLogic.dest_Trueprop (Logic.strip_assums_concl t);
@@ -3518,18 +3126,18 @@ fun solve_modifies_tac ctxt state_kind state_space i st =
         |> the_default 0
       else 0
       | is_split_state t = 0;
-    val simp_ctxt = put_simpset HOL_ss ctxt addsimps (Ex_True::Ex_False::Record.get_extinjects thy);
+    val simp_ctxt = put_simpset HOL_ss ctxt addsimps (@{thm Ex_True} :: @{thm Ex_False} :: Record.get_extinjects thy);
       fun try_solve Record i = (*(SOLVE*)
           (((fn k => (TRY (REPEAT_ALL_NEW (resolve_tac ctxt [conjI, impI, allI]) k)))
             THEN_ALL_NEW
           (fn k => EVERY [state_split_simp_tac ctxt [] is_split_state k,
                           simp_tac simp_ctxt k THEN_MAYBE rename_goal ctxt remdeco' k
                           ])) i) (*)*)
-        | try_solve StateFun i =
+        | try_solve _ i =
            ((fn k => (TRY (REPEAT_ALL_NEW (resolve_tac ctxt [conjI, impI, allI]) k)))
              THEN_ALL_NEW
-            (fn k => REPEAT (rtac exI k) THEN
-                     rtac ext k THEN
+            (fn k => REPEAT (resolve_tac ctxt [exI] k) THEN
+                     resolve_tac ctxt [ext] k THEN
                      simp_tac (put_simpset state_fun_update_ss ctxt) k
                      THEN_MAYBE
                      (REPEAT_ALL_NEW (resolve_tac ctxt [conjI,impI,refl]) k))) i
@@ -3538,7 +3146,7 @@ fun solve_modifies_tac ctxt state_kind state_space i st =
      clarsimp_tac ((ctxt
         |> put_claset (claset_of @{theory_context HOL})
         |> put_simpset (simpset_of @{theory_context Set}))
-        addsimps ([mex_def,meq_def]@K_convs)
+        addsimps ([@{thm Hoare.mex_def},@{thm Hoare.meq_def}]@K_convs)
         addsimprocs (state_upd_simproc Record::(state_simprocs Record))
         |> fold Simplifier.add_cong K_congs) i)
     THEN_MAYBE
@@ -3557,7 +3165,7 @@ fun proc_lookup_simp_tac ctxt i st =
                               [suffix bodyP pname,
                                suffix (body_def_sfx^"_def") pname,
                                suffix procL pname^"."^ (suffix (body_def_sfx^"_def") pname)]);
-    in simp_tac (put_simpset HOL_basic_ss ctxt addsimps thms@strip_simps@option_sel) i st end) ()
+    in simp_tac (put_simpset HOL_basic_ss ctxt addsimps thms @ strip_simps @ @{thms option.sel}) i st end) ()
   |> the_default (Seq.single st);
 
 fun proc_lookup_in_dom_simp_tac ctxt i st =
@@ -3570,7 +3178,7 @@ fun proc_lookup_in_dom_simp_tac ctxt i st =
                                  [suffix bodyP pname]);
     in
       simp_tac (put_simpset HOL_basic_ss ctxt
-        addsimps (lookup_Some_in_dom::dom_strip::thms)) i st end) ()
+        addsimps (@{thm Hoare.lookup_Some_in_dom} :: @{thm dom_strip} :: thms)) i st end) ()
   |> the_default (Seq.single st);
 
 
@@ -3579,7 +3187,7 @@ fun HoareRuleTac ctxt insts fixes st =
     val annotate_simp_tac =
       simp_tac (put_simpset HOL_basic_ss ctxt
         addsimps (anno_defs@normalize_simps)
-        addsimprocs [@{simproc split_beta}]);
+        addsimprocs [@{simproc case_prod_beta}]);
     fun is_com_eq (Const (@{const_name Trueprop},_)$(Const (@{const_name HOL.eq},T)$_$_)) =
           (case (binder_types T) of
              (Type (@{type_name Language.com},_)::_) => true
@@ -3590,7 +3198,8 @@ fun HoareRuleTac ctxt insts fixes st =
         then annotate_simp_tac i st
         else all_tac st;
   in
-    ((fn i => REPEAT (rtac allI i)) THEN' Rule_Insts.res_inst_tac ctxt insts fixes st)
+    ((fn i => REPEAT (resolve_tac ctxt [allI] i)) THEN'
+      Rule_Insts.res_inst_tac ctxt insts fixes st)
       THEN_ALL_NEW annotate_tac
   end;
 
@@ -3631,7 +3240,7 @@ fun HoareCallRuleTac state_kind state_space ctxt thms i st =
                 proc_lookup_in_dom_simp_tac ctxt i
                 ]
         else in_rel_simp ctxt i THEN
-             simp_tac (put_simpset HOL_basic_ss ctxt addsimps [Un_empty_left,Un_empty_right]) i THEN
+             simp_tac (put_simpset HOL_basic_ss ctxt addsimps [@{thm Un_empty_left},@{thm Un_empty_right}]) i THEN
              proc_lookup_simp_tac ctxt i
 
     fun basic_tac i = (((resolve_tac ctxt thms')
@@ -3640,7 +3249,7 @@ fun HoareCallRuleTac state_kind state_space ctxt thms i st =
   in  (basic_tac
         ORELSE'
        (fn k =>
-         (REPEAT (rtac allI k))
+         (REPEAT (resolve_tac ctxt [allI] k))
            THEN EVERY [resolve_tac ctxt thms' k])) i st
   end;
 
@@ -3657,12 +3266,14 @@ fun vcg_polish_tac solve_modifies ctxt state_kind state_space i =
 fun is_funtype (Type ("fun", _)) = true
   | is_funtype _ = false;
 
-fun state_kind_of thy T =
-     let val (s,sT) = nth (fst (Record.get_recT_fields thy T)) 1;
-     in if Long_Name.base_name s = "locals" andalso is_funtype sT then Function else Record end
-     handle Subscript => Record;
+fun state_kind_of ctxt T =
+  let
+    val thy = Proof_Context.theory_of ctxt;
+    val (s,sT) = nth (fst (Record.get_recT_fields thy T)) 1;
+  in if Long_Name.base_name s = "locals" andalso is_funtype sT then Function else Record end
+  handle Subscript => Record;
 
-fun find_state_space_in_triple thy t =
+fun find_state_space_in_triple ctxt t =
   try (fn () =>
     (case first_subterm is_hoare t of
        NONE => NONE
@@ -3671,12 +3282,12 @@ fun find_state_space_in_triple thy t =
            val (_,com,_,_,mode,_,_,_) = dest_hoare_raw triple;
            val T = fastype_of1 (map snd abs_vars,com)
            val Type(_,state_spaceT::_) = T;
-           val SOME Tids  = stateT_ids state_spaceT;
-        in SOME (Tids,mode,state_kind_of thy state_spaceT)
+           val SOME Tids = stateT_ids state_spaceT;
+        in SOME (Tids,mode, state_kind_of ctxt state_spaceT)
         end)) ()
   |> Option.join;
 
-fun get_state_space_in_subset_eq thy t =
+fun get_state_space_in_subset_eq ctxt t =
   (* get state type from the following kind of terms: P <= Q, s: P *)
   try (fn () =>
     let
@@ -3687,21 +3298,18 @@ fun get_state_space_in_subset_eq thy t =
       val Type (_, [_,Type (_, [Type (_, [state_spaceT]), _])]) = T; 
               (* also works for "in": x : P *)
       val SOME Tids = stateT_ids state_spaceT;
-    in (Tids,Partial,state_kind_of thy state_spaceT) end) ();
+    in (Tids,Partial, state_kind_of ctxt state_spaceT) end) ();
 
-fun get_state_space i st =
-    let val thy = Thm.theory_of_thm st;
-    in
-      (case try (Logic.concl_of_goal (Thm.prop_of st)) i of
-         SOME t => (case find_state_space_in_triple thy t of
-                      SOME sp => SOME sp
-                    | NONE => get_state_space_in_subset_eq thy t)
-       | NONE => NONE)
-    end
+fun get_state_space ctxt i st =
+  (case try (Logic.concl_of_goal (Thm.prop_of st)) i of
+     SOME t => (case find_state_space_in_triple ctxt t of
+                  SOME sp => SOME sp
+                | NONE => get_state_space_in_subset_eq ctxt t)
+   | NONE => NONE);
 
 fun mk_hoare_tac hoare_tac finish_tac annotate_inv exnames
                  strip_guards spec_sfx ctxt i st =
-    case get_state_space i st of
+    case get_state_space ctxt i st of
        SOME (Tids,mode,kind)
        => SELECT_GOAL
             (hoare_tac annotate_inv exnames strip_guards mode kind (is_state_space_var Tids)
@@ -3712,7 +3320,7 @@ fun vcg_tac spec_sfx strip_guards exnames ctxt i st =
   mk_hoare_tac HoareTac (vcg_polish_tac (spec_sfx="_modifies") ctxt)
       (spec_sfx="_modifies") exnames (strip_guards="true") spec_sfx ctxt i st;
 
-fun hoare_tac spec_sfx strip_guards exnames ctxt i st =
+fun hoare_tac spec_sfx strip_guards _ ctxt i st =
   let fun tac state_kind state_space i = if spec_sfx="_modifies"
                then solve_modifies_tac ctxt state_kind state_space i
                else all_tac;
@@ -3732,7 +3340,7 @@ fun hoare_step_tac spec_sfx strip_guards exnames ctxt i st =
      ctxt) false [] (strip_guards="true") spec_sfx ctxt i st;
 
 fun hoare_rule_tac ctxt thms i st = SUBGOAL (fn _ =>
-    (case get_state_space i st of
+    (case get_state_space ctxt i st of
        SOME (Tids,_,kind) => HoareCallRuleTac kind (is_state_space_var Tids) ctxt thms i
      | NONE => error "could not find proper state space type (structure or record) in goal")) i st;
 
@@ -3768,18 +3376,19 @@ val vcg_step = gen_simp_method hoare_step_tac;
 val trace_hoare_users = Unsynchronized.ref false
 
 fun print_subgoal_tac ctxt s i =
-    SUBGOAL (fn (prem, n) => trace_tac ctxt (s ^ (Syntax.string_of_term ctxt prem))) i
+    SUBGOAL (fn (prem, _) => trace_tac ctxt (s ^ (Syntax.string_of_term ctxt prem))) i
 
-fun mk_hoare_thm thm cont ctxt mode i =
-    EVERY [rtac thm i, if !trace_hoare_users then print_subgoal_tac ctxt "Tracing: " i
-                       else all_tac]
+fun mk_hoare_thm thm _ ctxt _ i =
+    EVERY [resolve_tac ctxt [thm] i,
+      if !trace_hoare_users then print_subgoal_tac ctxt "Tracing: " i
+      else all_tac]
 
 val vcg_hoare_add =
     Thm.declaration_attribute (fn thm => add_hoare_tacs [(Thm.derivation_name thm, mk_hoare_thm thm)])
 
 exception UNDEF
 val vcg_hoare_del =
-    Thm.declaration_attribute (fn thm => fn ctxt => raise UNDEF)
+    Thm.declaration_attribute (fn _ => fn _ => raise UNDEF)
 
 
 (* setup theory *)

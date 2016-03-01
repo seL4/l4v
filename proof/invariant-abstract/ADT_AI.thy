@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header {* Abstract datatype for the abstract specification *}
+chapter {* Abstract datatype for the abstract specification *}
 
 theory ADT_AI
 imports
@@ -83,7 +83,7 @@ text {*
   returning an optional kernel-entry event.
 
   Note that the current-thread identifiers are identical in both specs
-    (i.e. @{term "Structures_A.cur_thread \<Colon> 'z state \<Rightarrow> obj_ref"}
+    (i.e. @{term "Structures_A.cur_thread :: 'z state \<Rightarrow> obj_ref"}
           in the abstract kernel model and
           @{text "KernelStateData_H.ksCurThread \<Colon> kernel_state \<Rightarrow> machine_word"}
           in the executable specification).

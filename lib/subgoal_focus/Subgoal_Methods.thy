@@ -40,10 +40,12 @@ fun push_outer_params ctxt th =
 fun fix_schematics ctxt raw_st =
   let
     val ((schematic_types, [st']), ctxt1) = Variable.importT [raw_st] ctxt;
-    val ((_, schematic_terms), ctxt2) =
-      Variable.import_inst true [Thm.prop_of st'] ctxt1
-      |>> Thm.certify_inst (Thm.theory_of_thm st');
+    val ((_, inst), ctxt2) =
+      Variable.import_inst true [Thm.prop_of st'] ctxt1;
+
+    val schematic_terms = map (apsnd (Thm.cterm_of ctxt2)) inst;
     val schematics = (schematic_types, schematic_terms);
+
   in (Thm.instantiate schematics st', ctxt2) end
 
 val strip_params = Term.strip_all_vars;
@@ -137,7 +139,7 @@ fun distinct_subgoals ctxt raw_st =
       |> Seq.hd;
 
     val subgoals' = subgoals
-      |> inter (op aconvc) (#hyps (Thm.crep_thm st'))
+      |> inter (op aconvc) (Thm.chyps_of st')
       |> distinct (op aconvc);
   in
     Drule.implies_intr_list subgoals' st'
@@ -165,7 +167,7 @@ fun trim_prems_tac ctxt rules =
 let
   fun matches (prem,rule) =
   let
-    val ((_,prem'),ctxt') = Variable.focus prem ctxt;
+    val ((_,prem'),ctxt') = Variable.focus NONE prem ctxt;
     val rule_prop = Thm.prop_of rule;
   in Unify.matches_list (Context.Proof ctxt') [rule_prop] [prem'] end;
 
@@ -180,13 +182,6 @@ val adhoc_conjunction_tac = REPEAT_ALL_NEW
 fun unfold_subgoals_tac ctxt =
   TRY (adhoc_conjunction_tac 1)
   THEN (PRIMITIVE (Raw_Simplifier.norm_hhf ctxt));
-
-fun subgoal_cases ctxt st =
-  let
-    val ((_,[st']),ctxt') = Variable.importT [st] ctxt
-    val (case_names,_) = Rule_Cases.get st';
-    val cases = Rule_Cases.make_common ctxt' (Thm.prop_of st') case_names;
-  in CASES cases all_tac st' end;
 
 val _ =
   Theory.setup
@@ -203,10 +198,7 @@ val _ =
     Method.setup @{binding trim}
       (Attrib.thms >> (fn thms => fn ctxt =>
          SIMPLE_METHOD (HEADGOAL (trim_prems_tac ctxt thms))))
-     "trim all premises that match the given rules" #>
-    Method.setup @{binding goals}
-      (Scan.succeed (fn ctxt => METHOD_CASES (K (subgoal_cases ctxt))))
-     "make cases from all subgoals");
+     "trim all premises that match the given rules");
 
 end;
 \<close>

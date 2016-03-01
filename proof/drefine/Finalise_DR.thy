@@ -34,7 +34,7 @@ lemma trancl_image:
     apply clarsimp
     apply (erule image_eqI[rotated, OF r_into_trancl])
     apply simp
-   apply (clarsimp simp: inj_on_iff[OF inj]
+   apply (clarsimp simp: inj_on_eq_iff[OF inj]
                          RangeI[THEN eqset_imp_iff[OF trancl_range, THEN iffD1]]
                          DomainI)
    apply (erule(1) image_eqI[rotated, OF trancl_into_trancl])
@@ -76,7 +76,7 @@ proof -
      apply (rule subset_inj_on[OF inj])
      apply (auto simp: KHeap_D.is_cdt_parent_def CSpaceAcc_A.is_cdt_parent_def)[1]
     apply safe
-     apply (subst(asm) inj_on_iff[OF inj'], simp_all)
+     apply (subst(asm) inj_on_eq_iff[OF inj'], simp_all)
      apply (drule DomainI[THEN eqset_imp_iff[OF trancl_domain, THEN iffD1]])
      apply (auto simp: CSpaceAcc_A.is_cdt_parent_def)
     done
@@ -874,7 +874,7 @@ lemma page_directory_at_rev:
 done
 
 lemma mask_pd_bits_less':
-  "uint ((ptr::word32) && mask pd_bits >> (2\<Colon>nat)) < (4096\<Colon>int)"
+  "uint ((ptr::word32) && mask pd_bits >> (2::nat)) < (4096::int)"
   apply (clarsimp simp:pd_bits_def pageBits_def)
   using shiftr_less_t2n'[where m = 12 and x ="(ptr && mask 14)" and n =2 ,simplified,THEN iffD1[OF word_less_alt]]
   apply (clarsimp simp:mask_twice )
@@ -951,6 +951,15 @@ lemma below_kernel_base:
   "ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
     \<Longrightarrow> kernel_pde_mask f (of_nat (unat (y && mask pd_bits >> 2)))
     = f (of_nat (unat (y && mask pd_bits >> 2)))"
+  apply (clarsimp simp:kernel_pde_mask_def kernel_mapping_slots_def )
+  apply (simp add:ucast_nat_def[symmetric] unat_def)
+done
+
+(* we need an int version for 2016 *)
+lemma below_kernel_base_int:
+  "ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
+    \<Longrightarrow> kernel_pde_mask f (of_int (uint (y && mask pd_bits >> 2)))
+    = f (of_int (uint (y && mask pd_bits >> 2)))"
   apply (clarsimp simp:kernel_pde_mask_def kernel_mapping_slots_def )
   apply (simp add:ucast_nat_def[symmetric] unat_def)
 done
@@ -1037,14 +1046,15 @@ lemma opt_cap_section:
     = Some (cdl_cap.FrameCap pg f sz Fake None)"
   unfolding unat_def
   apply (erule disjE)
+
     apply (clarsimp simp: pd_section_relation_def opt_cap_def transform_def slots_of_def opt_object_def)
     apply (frule page_directory_at_rev)
     apply (frule(1) page_directory_not_idle)
     apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
     restrict_map_def object_slots_def)
     apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:Arch_Structs_A.pte.split_asm | rule conjI)+
-      apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def unat_def[symmetric] below_kernel_base)
-      apply (simp add:word_of_int_nat[OF uint_ge_0,simplified] ucast_def unat_def mask_pt_bits_less)+
+      apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def unat_def[symmetric] below_kernel_base_int)
+      apply (simp add:word_of_int ucast_def unat_def mask_pt_bits_less)+ 
     apply (simp add:mask_pd_bits_less)
   apply (clarsimp simp:pd_super_section_relation_def opt_cap_def transform_def slots_of_def opt_object_def)
   apply (frule page_directory_at_rev)
@@ -1052,8 +1062,8 @@ lemma opt_cap_section:
   apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
     restrict_map_def object_slots_def)
   apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:Arch_Structs_A.pte.split_asm | rule conjI)+
-  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def unat_def[symmetric] below_kernel_base)
-  apply (simp add:word_of_int_nat[OF uint_ge_0,simplified] ucast_def unat_def mask_pt_bits_less)+
+  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def unat_def[symmetric] below_kernel_base_int)
+  apply (simp add:word_of_int ucast_def unat_def mask_pt_bits_less)+
   apply (simp add:mask_pd_bits_less)
 done
 
@@ -1137,7 +1147,7 @@ lemma dcorres_set_pte_cap:
     apply (clarsimp simp:transform_objects_def not_idle_thread_def)
     apply (rule ext)
       apply (clarsimp simp:transform_page_table_contents_def transform_pte_def unat_map_def ucast_def)
-      apply (clarsimp simp:word_of_nat mask_pt_bits_less ucast_def)
+      apply (clarsimp simp:word_of_int word_of_nat mask_pt_bits_less mask_pt_bits_less' ucast_def)
         apply (subst (asm) word_of_int_inj)
         apply (clarsimp simp:mask_pt_bits_less')+
     apply (clarsimp simp:uint_nat)
@@ -1200,7 +1210,6 @@ lemma transform_page_directory_contents_upd:
       apply (clarsimp simp:kernel_pde_mask_def kernel_mapping_slots_def)
       apply (clarsimp simp:ucast_nat_def[symmetric])
       apply (drule sym)
-      apply (clarsimp simp:unat_def)
       apply (drule word_unat.Abs_eqD)
         apply (simp add:unats_def unat_def[symmetric])+
       apply (rule unat_less_helper)
@@ -1208,7 +1217,7 @@ lemma transform_page_directory_contents_upd:
       apply (rule word_div_mult,simp)
       apply (clarsimp simp:pt_bits_def pd_bits_def pageBits_def)
       apply (rule and_mask_less_size[where n = 14,simplified],simp add:word_size)
-    apply simp
+    apply (simp add:word_of_int unat_def)
     apply (clarsimp simp:ucast_def word_of_int_nat[OF uint_ge_0,simplified])
 done
 
@@ -3036,12 +3045,12 @@ proof -
          apply (cases slot_a, cases slot_b)
          apply (simp split del: split_if)
          apply (intro if_cong[OF refl],
-                simp_all add: map_lift_over_eq_Some inj_on_iff[where f=transform_cslot_ptr]
+                simp_all add: map_lift_over_eq_Some inj_on_eq_iff[where f=transform_cslot_ptr]
                               ranI domI)[1]
           apply (subst subset_inj_on, assumption, fastforce)+
           prefer 2
           apply (subst subset_inj_on, assumption, fastforce)+
-          apply (auto simp: map_lift_over_eq_Some inj_on_iff[where f=transform_cslot_ptr]
+          apply (auto simp: map_lift_over_eq_Some inj_on_eq_iff[where f=transform_cslot_ptr]
                             ranI domI
                      intro: map_lift_over_f_eq[THEN iffD2, OF _ refl]
                       elim: subset_inj_on)[2]

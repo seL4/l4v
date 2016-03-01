@@ -15,7 +15,8 @@ sig
   type expr = Absyn.expr
   type ecenv = Absyn.ecenv
   type s2s_config = {anon_vars : bool, owners : string list,
-                     allow_underscore_idents : bool}
+                     allow_underscore_idents : bool,
+                     munge_info_fname : string option}
 
   type 'a rcd_env = (string * (string * 'a) list) list
   type senv = int ctype rcd_env
@@ -96,6 +97,7 @@ sig
                   zero).  offset env flds 0 always equals 0. *)
 
   val get_globals_rcd : csenv -> senv
+  val export_mungedb : csenv -> unit
 end
 
 structure ProgramAnalysis : PROGRAM_ANALYSIS =
@@ -105,7 +107,7 @@ open Absyn NameGeneration
 
 type program = ext_decl list
 type s2s_config = {anon_vars : bool, owners : string list,
-                   allow_underscore_idents : bool}
+                   allow_underscore_idents : bool, munge_info_fname : string option}
 
 fun fname_str NONE = NameGeneration.initialisation_function
   | fname_str (SOME f) = f
@@ -120,7 +122,6 @@ fun fname_str NONE = NameGeneration.initialisation_function
 
 type 'a rcd_env = (string * (string * 'a) list) list
 type senv = int ctype rcd_env
-type Mstring = string (* munged string *)
 datatype var_info =
          VI of {name : string,
                 return_var : bool,
@@ -275,7 +276,8 @@ datatype csenv (* CalculateState environment *) =
                  read_globals : modify_var Binaryset.set Symtab.table,
                  typedefs : int ctype Symtab.table list,
                  fnspecs : fnspec list Symtab.table,
-                 owners : string list}
+                 owners : string list,
+                 munge_info_fname : string option}
 fun get_vars (CSE {vars,...}) = vars
 fun get_senv (CSE {senv,...}) = senv
 fun get_scope (CSE {scope,...}) = scope
@@ -325,7 +327,7 @@ fun is_recursivefn (CSE {recursive_functions,...}) s =
 
 fun get_modified_global_locns (CSE {modify_locs,...}) = modify_locs
 
-fun emptycse ({anon_vars,owners,allow_underscore_idents = aui,...} : s2s_config)=
+fun emptycse ({anon_vars,owners,allow_underscore_idents = aui,munge_info_fname,...} : s2s_config)=
     CSE {senv = [], anon_vars = anon_vars, allow_underscore_idents = aui,
          vars = Symtab.empty, scope = [Symtab.empty],
          fninfo = Symtab.empty, hpfninfo = Symtab.empty,
@@ -342,7 +344,7 @@ fun emptycse ({anon_vars,owners,allow_underscore_idents = aui,...} : s2s_config)
          recursive_functions = Binaryset.empty String.compare,
          modifies = Symtab.empty, modify_locs = MVar_Table.empty,
          typedefs = [], fnspecs = Symtab.empty, read_globals = Symtab.empty,
-         globinits = MSymTab.empty, owners = owners}
+         globinits = MSymTab.empty, owners = owners, munge_info_fname = munge_info_fname}
 
 fun cons h t = h::t
 
@@ -361,12 +363,12 @@ end
 local
   open FunctionalRecordUpdate
   (* see http://mlton.org/FunctionalRecordUpdate *)
-  fun cse_makeUpdate z = makeUpdate23 z
+  fun cse_makeUpdate z = makeUpdate24 z
   fun update_CSE z = let
     fun from senv aui anon_vars fninfo hpfninfo vars scope enumenv array_mentions
              heaptypes call_info addressed embedded_fncalls modifies
              defined_functions recursive_functions caller_info
-             modify_locs typedefs fnspecs read_globals globinits owners =
+             modify_locs typedefs fnspecs read_globals globinits owners munge_info_fname =
         {senv = senv, anon_vars = anon_vars, fninfo = fninfo, vars = vars,
          hpfninfo = hpfninfo,
          scope = scope, enumenv = enumenv, array_mentions = array_mentions,
@@ -375,9 +377,10 @@ local
          defined_functions = defined_functions, allow_underscore_idents = aui,
          recursive_functions = recursive_functions, caller_info = caller_info,
          modify_locs = modify_locs, typedefs = typedefs, fnspecs = fnspecs,
-         read_globals = read_globals, globinits = globinits, owners = owners}
+         read_globals = read_globals, globinits = globinits, owners = owners, 
+         munge_info_fname = munge_info_fname}
     (* fields in reverse order to above *)
-    fun from' owners globinits read_globals fnspecs typedefs modify_locs caller_info
+    fun from' munge_info_fname owners globinits read_globals fnspecs typedefs modify_locs caller_info
               recursive_functions defined_functions modifies embedded_fncalls
               addressed call_info heaptypes array_mentions enumenv scope vars
               hpfninfo fninfo anon_vars aui senv =
@@ -390,10 +393,11 @@ local
          defined_functions = defined_functions,
          recursive_functions = recursive_functions, caller_info = caller_info,
          modify_locs = modify_locs, typedefs = typedefs, fnspecs = fnspecs,
-         read_globals = read_globals, globinits = globinits, owners = owners}
+         read_globals = read_globals, globinits = globinits, owners = owners,
+         munge_info_fname = munge_info_fname}
 
     fun to f {senv, anon_vars, fninfo, vars, scope, enumenv, array_mentions, heaptypes,
-              hpfninfo,
+              hpfninfo, munge_info_fname,
               call_info, addressed, embedded_fncalls, modifies,
               defined_functions, recursive_functions, caller_info,
               modify_locs, typedefs, fnspecs, read_globals, globinits,owners,
@@ -401,7 +405,7 @@ local
         f senv aui anon_vars fninfo hpfninfo vars scope enumenv array_mentions
           heaptypes call_info addressed embedded_fncalls modifies
           defined_functions recursive_functions caller_info
-          modify_locs typedefs fnspecs read_globals globinits owners
+          modify_locs typedefs fnspecs read_globals globinits owners munge_info_fname
   in
     cse_makeUpdate (from, from', to)
   end z
@@ -2038,6 +2042,29 @@ in
     [(adglob_rcd_tyname, map (fn vi => (srcname vi, get_vi_type vi)) advis)]
 end
 
+fun export_mungedb (c as CSE cse) = 
+  case #munge_info_fname cse of 
+    NONE => ()
+  | SOME fname => 
+    let 
+      val outstrm = TextIO.openOut fname
+      fun appthis vinfo = 
+        let
+          val srcnm = srcname vinfo
+          val mnm = get_mname vinfo
+          val fopt = get_vi_fname vinfo
+        in
+          TextIO.output(outstrm, 
+              (case fopt of NONE => "" | SOME f => f) ^ "::" ^ srcnm ^ " -> " ^ 
+              MString.dest mnm ^ "\n")
+        end
+      fun foldthis (_, vinfos) () = List.app appthis vinfos
+      fun recurse tab = 
+        Symtab.fold foldthis tab ()
+    in
+      recurse (get_vars c); 
+      TextIO.closeOut outstrm
+    end
 
 end (* struct *)
 

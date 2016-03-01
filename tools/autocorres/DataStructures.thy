@@ -383,8 +383,8 @@ lemma circ_list_ign [iff]: "\<lbrakk> x \<notin> set xs; x \<noteq> head \<rbrak
   apply (clarsimp simp: circ_list_def)
   done
 
-theorems circ_list_tail_ign' [iff] = circ_list_tail_ign [unfolded fun_upd_def]
-theorems circ_list_ign' [iff] = circ_list_ign [unfolded fun_upd_def]
+lemmas circ_list_tail_ign' [iff] = circ_list_tail_ign [unfolded fun_upd_def]
+lemmas circ_list_ign' [iff] = circ_list_ign [unfolded fun_upd_def]
 
 lemma circ_list_tail_ign_ext' [intro?, iff?]:
     "\<lbrakk> \<forall>x \<in> set xs.

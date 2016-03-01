@@ -339,11 +339,11 @@ lemma cdl_irq_node_example_spec [simp]:
   by (clarsimp simp: example_spec_def)
 
 lemma range_example_irq_node_helper:
-  "range example_irq_node = (\<lambda>irq. irq + 0x100) ` range (ucast :: 8 word \<Rightarrow> 32 word)"
+  "range example_irq_node = (\<lambda>irq. irq + 0x100) ` range (ucast :: 10 word \<Rightarrow> 32 word)"
   by (auto simp: example_irq_node_def image_def)
 
 lemma range_example_irq_node:
-  "range example_irq_node =  {x. 0x100 \<le> x \<and> x < 0x200}"
+  "range example_irq_node =  {x. 0x100 \<le> x \<and> x < 0x500}"
   apply (clarsimp simp: range_example_irq_node_helper ucast_range_less)
   apply (clarsimp simp: image_def)
   apply rule
@@ -790,7 +790,7 @@ lemma ucast_0xFE:
   by (rule ucast_up_inj, simp+)
 
 lemma ucast_4:
-  "(ucast :: 8 word \<Rightarrow> 32 word) irq = 4 \<Longrightarrow> irq = 4"
+  "(ucast :: 10 word \<Rightarrow> 32 word) irq = 4 \<Longrightarrow> irq = 4"
   by (rule ucast_up_inj, simp+)
 
 lemma rangeD:
@@ -835,8 +835,7 @@ lemma well_formed_irq_table_example_spec:
   apply (clarsimp simp: well_formed_irq_table_def)
   apply (rule conjI)
    apply (clarsimp simp: example_irq_node_def)
-   apply (insert ucast_8_32_inj)
-   apply (clarsimp simp: inj_on_def)
+   apply (clarsimp simp: inj_on_def ucast_up_inj)
   apply (clarsimp simp: irq_nodes_example_spec)
   apply (rule subset_antisym)
    apply (clarsimp simp: example_spec_def)

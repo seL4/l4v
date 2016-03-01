@@ -126,8 +126,8 @@ lemma decode_irq_control_issue_irq_rv:
   apply (sep_solve)
 done
 
-schematic_lemma lookup_extra_caps_once_wp: "\<lbrace>?P\<rbrace> lookup_extra_caps root_tcb_id [endpoint_cptr] \<lbrace>Q\<rbrace>, \<lbrace>Q'\<rbrace>"
-   apply (clarsimp simp: lookup_extra_caps_def mapME_def sequenceE_def, wp, clarsimp)
+schematic_goal lookup_extra_caps_once_wp: "\<lbrace>?P\<rbrace> lookup_extra_caps root_tcb_id [endpoint_cptr] \<lbrace>Q\<rbrace>, \<lbrace>Q'\<rbrace>"
+apply (clarsimp simp: lookup_extra_caps_def mapME_def sequenceE_def, wp, clarsimp)
    apply (rule lookup_cap_and_slot_rvu)
 done
 

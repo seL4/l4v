@@ -191,12 +191,12 @@ let
      map (fn ((name, ty), new_name) => (Binding.name new_name, ty, NoSyn))
          (existing_fields ~~ new_names)
   val heap_fields =
-     map (fn a => (Binding.name (heap_name_from_type a), mk_ptrT a --> a, NoSyn)) heapTs
+     map (fn a => (Binding.name (heap_name_from_type a), Utils.mk_ptrT a --> a, NoSyn)) heapTs
   val heap_valid_fields =
-     map (fn a => (Binding.name (heap_valid_name_from_type a), mk_ptrT a --> @{typ bool}, NoSyn)) heapTs
+     map (fn a => (Binding.name (heap_valid_name_from_type a), Utils.mk_ptrT a --> @{typ bool}, NoSyn)) heapTs
 
   (* Define the record. *)
-  val thy = Record.add_record ([], Binding.name new_heap_rec_name)
+  val thy = Record.add_record {overloaded = false} ([], Binding.name new_heap_rec_name)
     NONE (copied_fields @ heap_fields @ heap_valid_fields) thy
 
   (* The record package doesn't tell us what we just defined, so we

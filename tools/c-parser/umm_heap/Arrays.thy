@@ -313,7 +313,7 @@ next
   fix R :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
   { fix a :: "('a \<times> 'b)['n::finite]" and i
     have "\<lbrakk>set_array a \<subseteq> {(x, y). R x y}; i < CARD('n)\<rbrakk> \<Longrightarrow> R (fst (a.[i])) (snd (a.[i]))"
-      by (meson Collect_splitD in_set_array_index_conv subset_iff)
+      by (meson Collect_case_prodD in_set_array_index_conv subset_iff)
   } note conv1 = this
   { fix a :: "'a['n::finite]" and b :: "'b['n]"
     let ?z = "zip_array a b"

@@ -1143,7 +1143,7 @@ lemma copy_global_mappings_corres:
           (copy_global_mappings pd) (copyGlobalMappings pd)"
   apply (simp add: copy_global_mappings_def copyGlobalMappings_def)
   apply (simp add: pd_bits_def pdBits_def objBits_simps
-                   archObjSize_def kernel_base_def kernelBase_def)
+                   archObjSize_def kernel_base_def Platform.kernelBase_def kernelBase_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [where r'="op =" and P=\<top>  and P'=\<top>])
        prefer 2

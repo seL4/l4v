@@ -240,7 +240,7 @@ proof -
     by (auto elim: subset_inj_on)
   show ?thesis
     by (auto simp add: map_lift_over_def P[THEN inv_into_f_f] domI
-                       inj_on_iff[where f=f]
+                       inj_on_eq_iff[where f=f]
            | rule ccontr[where P="v = None" for v])+
 qed
 
@@ -277,7 +277,7 @@ proof -
      apply (simp_all add: Q[THEN inv_into_f_f] domI
                 cong del: imp_cong)
     apply (auto simp add: Q[THEN inv_into_f_f] domI
-                          inj_on_iff[OF inj_f] ranI
+                          inj_on_eq_iff[OF inj_f] ranI
                 simp del: inj_on_insert)
     done
 qed
@@ -312,11 +312,11 @@ proof -
     apply (case_tac "x \<in> f ` dom ?ifeq")
      apply clarsimp
      apply (subst if_P, fastforce split: split_if_asm)+
-     apply (simp add: Q[THEN inv_into_f_f] domI ranI inj_on_iff[OF inj_f]
+     apply (simp add: Q[THEN inv_into_f_f] domI ranI inj_on_eq_iff[OF inj_f]
                split: split_if_asm)
     apply (subst if_not_P, simp, rule allI, fastforce)+
     apply (auto simp: option_map_def Q[THEN inv_into_f_f] domI ranI
-                      inj_on_iff[OF inj_f]
+                      inj_on_eq_iff[OF inj_f]
                split: split_if option.split)
     done
 qed

@@ -208,7 +208,7 @@ where
   "transform_intent_issue_irq_handler args \<equiv>
    case args of
       irqW#index#depth#_ \<Rightarrow>
-         Some (IrqControlIssueIrqHandlerIntent ((ucast irqW)::word8) index depth)
+         Some (IrqControlIssueIrqHandlerIntent ((ucast irqW)::10 word) index depth)
     | _ \<Rightarrow> Nothing"
 
 definition
@@ -250,14 +250,6 @@ definition
   to_bool :: "word32 \<Rightarrow> bool"
 where
   "to_bool w \<equiv> w \<noteq> 0"
-
-definition
-  transform_intent_irq_set_mode :: "word32 list \<Rightarrow> cdl_irq_handler_intent option"
-where
-  "transform_intent_irq_set_mode args = 
-     (case args of
-       trig#pol#_ \<Rightarrow> Some (IrqHandlerSetModeIntent (to_bool trig) (to_bool pol))
-     | _ \<Rightarrow> Nothing)"
 
 (* A dispatch function that converts the user's message label
  * and IPC buffer into an intent by dispatching on the message label.
@@ -329,7 +321,6 @@ definition
     | IRQAckIRQ \<Rightarrow> Some (IrqHandlerIntent IrqHandlerAckIntent)
     | IRQSetIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerSetEndpointIntent)
     | IRQClearIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerClearIntent)
-    | IRQSetMode \<Rightarrow> option_map IrqHandlerIntent (transform_intent_irq_set_mode args)
     | ArchInvocationLabel ARMPageTableMap \<Rightarrow>
                           map_option PageTableIntent
                                    (transform_intent_page_table_map args)
@@ -672,7 +663,7 @@ definition
 where
   "infer_tcb_pending_op ptr t \<equiv>
     case t of
-        Structures_A.BlockedOnReceive ptr diminish \<Rightarrow>
+        Structures_A.BlockedOnReceive ptr \<Rightarrow>
           PendingSyncRecvCap ptr False
 
       |Structures_A.BlockedOnReply \<Rightarrow>

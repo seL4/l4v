@@ -486,11 +486,11 @@ lemma setObject_tcb_ctes_of[wp]:
      setObject t v
    \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (rule setObject_ctes_of)
-   apply (clarsimp simp: updateObject_default_def in_monad Pair_fst_snd_eq
+   apply (clarsimp simp: updateObject_default_def in_monad prod_eq_iff
                          obj_at'_def objBits_simps in_magnitude_check
                          projectKOs)
    apply fastforce
-  apply (clarsimp simp: updateObject_default_def in_monad Pair_fst_snd_eq
+  apply (clarsimp simp: updateObject_default_def in_monad prod_eq_iff
                         obj_at'_def objBits_simps in_magnitude_check
                         projectKOs bind_def)
   done
@@ -519,7 +519,7 @@ lemma setObject_tcb_iflive':
   apply (rule setObject_iflive')
       apply (simp add: objBits_simps)+
    apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                         in_magnitude_check objBits_simps Pair_fst_snd_eq
+                         in_magnitude_check objBits_simps prod_eq_iff
                          obj_at'_def)
    apply fastforce
   apply (clarsimp simp: updateObject_default_def bind_def projectKOs)
@@ -548,7 +548,7 @@ lemma setObject_tcb_ifunsafe':
   unfolding pred_conj_def
   apply (rule setObject_ifunsafe')
     apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                          in_magnitude_check objBits_simps Pair_fst_snd_eq
+                          in_magnitude_check objBits_simps prod_eq_iff
                           obj_at'_def)
     apply fastforce
    apply (clarsimp simp: updateObject_default_def bind_def projectKOs)
@@ -583,10 +583,10 @@ lemma setObject_tcb_valid_globals' [wp]:
    apply (rule hoare_lift_Pf2 [where f="gsMaxObjectSize"])
     apply (rule setObject_ctes_of)
      apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                           in_magnitude_check objBits_simps Pair_fst_snd_eq
+                           in_magnitude_check objBits_simps prod_eq_iff
                            obj_at'_def)
      apply fastforce
-    apply (clarsimp simp: updateObject_default_def in_monad Pair_fst_snd_eq
+    apply (clarsimp simp: updateObject_default_def in_monad prod_eq_iff
                           obj_at'_def objBits_simps in_magnitude_check
                           projectKOs bind_def)
    apply (wp | wp setObject_ksPSpace_only updateObject_default_inv | simp)+
@@ -797,7 +797,7 @@ lemma threadSet_cte_wp_at'T:
   apply (rule hoare_seq_ext [where B="\<lambda>rv s. P' (cte_wp_at' P p s) \<and> obj_at' (op = rv) t s"])
    apply (rule setObject_cte_wp_at2')
     apply (clarsimp simp: updateObject_default_def projectKOs in_monad objBits_simps
-                          obj_at'_def objBits_simps in_magnitude_check Pair_fst_snd_eq)
+                          obj_at'_def objBits_simps in_magnitude_check prod_eq_iff)
     apply (case_tac tcba, clarsimp simp: bspec_split [OF spec [OF x]])
    apply (clarsimp simp: updateObject_default_def in_monad bind_def
                          projectKOs)
@@ -2751,7 +2751,7 @@ lemma prioToL1Index_bit_set:
 
 lemma prioL2Index_bit_set:
   fixes p :: priority
-  shows "((2\<Colon>32 word) ^ unat (ucast p && (mask wordRadix :: machine_word))) !! unat (p && mask wordRadix)"
+  shows "((2::32 word) ^ unat (ucast p && (mask wordRadix :: machine_word))) !! unat (p && mask wordRadix)"
   apply (simp add: nth_w2p wordRadix_def ucast_and_mask[symmetric] unat_ucast_upcast is_up)
   apply (rule unat_less_helper)
   apply (insert and_mask_less'[where w=p and n=wordRadix], simp add: wordRadix_def)

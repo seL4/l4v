@@ -1440,7 +1440,7 @@ lemma fast_finalise_not_idle_thread[wp]:
 lemma block_lift:
   "\<lbrakk>kheap b word = Some (TCB tcb_type); ekheap b word = Some etcb; transform_tcb (machine_state b) word tcb_type etcb = Tcb cdl_tcb_type\<rbrakk>
   \<Longrightarrow> is_thread_blocked_on_endpoint cdl_tcb_type ep = (case tcb_state tcb_type of
-      Structures_A.thread_state.BlockedOnReceive p _ \<Rightarrow> ep = p
+      Structures_A.thread_state.BlockedOnReceive p \<Rightarrow> ep = p
     | Structures_A.thread_state.BlockedOnSend p _ \<Rightarrow> ep = p
     | Structures_A.thread_state.BlockedOnNotification p \<Rightarrow> ep = p
     | _ \<Rightarrow> False)"
@@ -1472,8 +1472,8 @@ where "none_is_sending_ep epptr s \<equiv> (ep_waiting_set_send epptr s) = {}"
 
 definition ep_waiting_set_recv :: "obj_ref\<Rightarrow> 'z::state_ext state\<Rightarrow>obj_ref set"
 where "ep_waiting_set_recv epptr s \<equiv>
-   {tcb. \<exists>t diminish. ((kheap s tcb) = Some (TCB t))
-      \<and> ((tcb_state t) = Structures_A.thread_state.BlockedOnReceive epptr diminish)}"
+   {tcb. \<exists>t. ((kheap s tcb) = Some (TCB t))
+      \<and> ((tcb_state t) = Structures_A.thread_state.BlockedOnReceive epptr)}"
 
 definition none_is_receiving_ep:: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where "none_is_receiving_ep epptr s \<equiv> (ep_waiting_set_recv epptr s) = {}"
@@ -2161,7 +2161,7 @@ lemma reschedule_required_dcorres: "dcorres dc P P' (return ()) reschedule_requi
   apply (clarsimp simp: reschedule_required_def)
   apply (rule dcorres_symb_exec_r)
     apply (rule dcorres_symb_exec_r)
-      apply (clarsimp simp: set_scheduler_action_def switch_thread_def modify_def bind_def return_def get_def put_def corres_underlying_def)
+      apply (clarsimp simp: set_scheduler_action_def (*switch_thread_def*) modify_def bind_def return_def get_def put_def corres_underlying_def)
      apply (case_tac "\<exists>t. rv = switch_thread t")
       apply (clarsimp | wp)+
     apply (clarsimp split: Deterministic_A.scheduler_action.splits | rule tcb_sched_action_transform | wp )+

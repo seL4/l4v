@@ -18,5 +18,8 @@ defs decodeIRQControlInvocation_def:
 defs performIRQControl_def:
 "performIRQControl arg1 \<equiv> haskell_fail []"
 
+defs checkIRQ_def:
+"checkIRQ irq\<equiv> rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)"
+
 
 end

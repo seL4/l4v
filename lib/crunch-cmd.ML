@@ -212,12 +212,12 @@ fun unfold ctxt const triple nmspce =
       val const_defn = const |> Long_Name.base_name |> def_of;
       val const_def = deep_search_thms ctxt const_defn const_term nmspce
                         |> hd |> Simpdata.safe_mk_meta_eq;
-      val _ = Pretty.writeln (Pretty.block [Pretty.str ("const_def: " ^ PolyML.makestring const_defn), Display.pretty_thm ctxt const_def])
+      val _ = Pretty.writeln (Pretty.block [Pretty.str ("const_def: " ^ PolyML.makestring const_defn), Thm.pretty_thm ctxt const_def])
       val trivial_rule = Thm.trivial triple
-      val _ = Pretty.writeln (Pretty.block [Pretty.str "trivial_rule: ", Display.pretty_thm ctxt trivial_rule])
+      val _ = Pretty.writeln (Pretty.block [Pretty.str "trivial_rule: ", Thm.pretty_thm ctxt trivial_rule])
       val unfold_rule = trivial_rule
         |> Simplifier.rewrite_goals_rule ctxt [const_def];
-      val _ = Pretty.writeln (Pretty.block [Pretty.str "unfold_rule: ", Display.pretty_thm ctxt unfold_rule])
+      val _ = Pretty.writeln (Pretty.block [Pretty.str "unfold_rule: ", Thm.pretty_thm ctxt unfold_rule])
       val ms = unfold_rule
         |> Simplifier.rewrite_goals_rule ctxt unfold_get_params
         |> Thm.prems_of |> maps (monads_of ctxt);
@@ -266,7 +266,7 @@ fun induct_inst ctxt const goal nmspce =
       val n = const_term |> fastype_of |> num_args;
       val t = mk_abs (Instance.magic $ mk_apps const_term n 0) n
               |> Syntax.check_term ctxt |> Logic.varify_global |> Thm.cterm_of ctxt;
-      val P = Thm.concl_of induct_thm |> HOLogic.dest_Trueprop |> head_of |> Thm.cterm_of ctxt;
+      val P = Thm.concl_of induct_thm |> HOLogic.dest_Trueprop |> head_of |> Term.dest_Var;
       val trivial_rule = Thm.trivial goal;
       val induct_inst = Thm.instantiate ([], [(P, t)]) induct_thm
                         RS trivial_rule;
@@ -446,7 +446,7 @@ fun crunch cfg pre extra stack const' thms =
  
             in (Goal.prove_future ctxt''' [] [] goal_prop2
                   ( (*DupSkip.goal_prove_wrapper *) (fn _ => 
-                  rtac unfold_rule 1
+                  resolve_tac ctxt''' [unfold_rule] 1
                     THEN maybe_cheat_tac ctxt'''
                   THEN ALLGOALS (fn n =>
                     simp_tac ctxt''' n

@@ -67,7 +67,7 @@ record
   exclusive_state :: exclusive_monitors
   machine_state_rest :: machine_state_rest  
 
-consts irq_oracle :: "nat \<Rightarrow> word8"
+consts irq_oracle :: "nat \<Rightarrow> 10 word"
 
 text {*
   The machine monad is used for operations on the state defined above.

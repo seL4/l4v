@@ -551,7 +551,7 @@ val opers = Symtab.make [
       ("Minus", @{const_name "minus"}),
       ("Times", @{const_name "times"}),
       ("Modulus", @{const_name "div_class.mod"}),
-      ("DividedBy", @{const_name "div_class.div"}),
+      ("DividedBy", @{const_name "divide_class.divide"}),
       ("BWAnd", @{const_name "bitAND"}),
       ("BWOr", @{const_name "bitOR"}),
       ("BWXOR", @{const_name "bitXOR"}),

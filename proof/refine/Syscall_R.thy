@@ -773,7 +773,7 @@ crunch sch_act_simple[wp]: handleFaultReply sch_act_simple
 lemma transferCaps_non_null_cte_wp_at':
   assumes PUC: "\<And>cap. P cap \<Longrightarrow> \<not> isUntypedCap cap"
   shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>
-     transferCaps info caps ep rcvr rcvBuf dim
+     transferCaps info caps ep rcvr rcvBuf
    \<lbrace>\<lambda>_. cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>"
 proof -
   have CTEF: "\<And>P p s. \<lbrakk> cte_wp_at' P p s; \<And>cte. P cte \<Longrightarrow> False \<rbrakk> \<Longrightarrow> False"
@@ -801,7 +801,7 @@ lemma doNormalTransfer_non_null_cte_wp_at':
   assumes PUC: "\<And>cap. P cap \<Longrightarrow> \<not> isUntypedCap cap"
   shows
   "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>
-   doNormalTransfer st send_buffer ep b gr rt recv_buffer dim
+   doNormalTransfer st send_buffer ep b gr rt recv_buffer
    \<lbrace>\<lambda>_. cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>"
   unfolding doNormalTransfer_def
   apply (wp transferCaps_non_null_cte_wp_at' | simp add:PUC)+
@@ -823,7 +823,7 @@ lemma doIPCTransfer_non_null_cte_wp_at':
   assumes PUC: "\<And>cap. P cap \<Longrightarrow> \<not> isUntypedCap cap"
   shows
   "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>
-   doIPCTransfer sender endpoint badge grant receiver dim
+   doIPCTransfer sender endpoint badge grant receiver
    \<lbrace>\<lambda>_. cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>"
   unfolding doIPCTransfer_def
   apply (wp doNormalTransfer_non_null_cte_wp_at' hoare_drop_imp hoare_allI | wpc | clarsimp simp:PUC)+
@@ -834,7 +834,7 @@ lemma doIPCTransfer_non_null_cte_wp_at2':
   assumes PNN: "\<And>cte. P (cteCap cte) \<Longrightarrow> cteCap cte \<noteq> capability.NullCap"
    and    PUC: "\<And>cap. P cap \<Longrightarrow> \<not> isUntypedCap cap"
   shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) ptr\<rbrace>
-         doIPCTransfer sender endpoint badge grant receiver dim
+         doIPCTransfer sender endpoint badge grant receiver
          \<lbrace>\<lambda>_. cte_wp_at' (\<lambda>cte. P (cteCap cte)) ptr\<rbrace>"
   proof -
     have PimpQ: "\<And>P Q ptr s. \<lbrakk> cte_wp_at' (\<lambda>cte. P (cteCap cte)) ptr s;

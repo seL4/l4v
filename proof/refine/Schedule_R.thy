@@ -78,7 +78,7 @@ lemma findM_awesome':
 proof -
   have P: "f = do x \<leftarrow> (do x \<leftarrow> f; return (Some x) od) OR return None; if x \<noteq> None then return (the x) else f od"
     apply (rule ext)
-    apply (auto simp add: bind_def alternative_def return_def split_def Pair_fst_snd_eq)
+    apply (auto simp add: bind_def alternative_def return_def split_def prod_eq_iff)
     done
   have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) OR return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
     by (wp alternative_wp | simp)+
@@ -120,7 +120,7 @@ lemma findM_alternative_awesome:
 proof -
   have P: "f = do x \<leftarrow> (do x \<leftarrow> f; return (Some x) od) OR return None; if x \<noteq> None then return (the x) else f od"
     apply (rule ext)
-    apply (auto simp add: bind_def alternative_def return_def split_def Pair_fst_snd_eq)
+    apply (auto simp add: bind_def alternative_def return_def split_def prod_eq_iff)
     done
   have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) OR return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
     by (wp alternative_wp | simp)+
@@ -2558,7 +2558,7 @@ lemma schedule_corres:
   apply (subst thread_get_comm)
   apply (subst schact_bind_inside)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gct_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified, OF TrueI]])
+    apply (rule corres_split[OF _ gct_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified]])
       apply (rule corres_guard_imp)
         apply (rule corres_split[OF _ get_sa_corres'])
           apply (rule corres_split_sched_act,assumption)

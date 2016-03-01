@@ -519,7 +519,7 @@ proof -
     qed
 qed
 
-schematic_lemma get_master_pde_invalid_sp:
+schematic_goal get_master_pde_invalid_sp:
   "\<lbrace>P\<rbrace> get_master_pde p
   \<lbrace>\<lambda>pde s. pde = Arch_Structs_A.pde.InvalidPDE \<longrightarrow>
     (\<exists>pd. ko_at (ArchObj (arch_kernel_obj.PageDirectory pd)) (?p && ~~ mask pd_bits) s \<and>

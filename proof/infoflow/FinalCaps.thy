@@ -2679,7 +2679,7 @@ lemma transfer_caps_silc_inv:
                real_cte_at (snd x) s)) and
      K (is_subject aag receiver \<and> (\<forall>cap\<in>set caps.
            is_subject aag (fst (snd cap))))\<rbrace>
-  transfer_caps mi caps endpoint receiver receive_buffer diminish
+  transfer_caps mi caps endpoint receiver receive_buffer
   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: transfer_caps_def)
@@ -2699,7 +2699,7 @@ crunch silc_inv[wp]: copy_mrs, set_message_info "silc_inv aag st"
 lemma do_normal_transfer_silc_inv:
   "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag and 
     K (grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver)\<rbrace>
-   do_normal_transfer sender send_buffer ep badge grant receiver recv_buffer diminish
+   do_normal_transfer sender send_buffer ep badge grant receiver recv_buffer
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding do_normal_transfer_def
   apply(case_tac grant)
@@ -2725,7 +2725,7 @@ lemma valid_ep_recv_dequeue':
 lemma do_ipc_transfer_silc_inv:
   "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag and 
    K (grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver)\<rbrace>
-   do_ipc_transfer sender ep badge grant receiver diminish
+   do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding do_ipc_transfer_def
   apply (wp do_normal_transfer_silc_inv hoare_vcg_all_lift | wpc | wp_once hoare_drop_imps)+
@@ -2743,7 +2743,7 @@ lemma send_ipc_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding send_ipc_def
   apply (wp setup_caller_cap_silc_inv | wpc | simp)+
-        apply(rename_tac xs word ys recv_state diminish)
+        apply(rename_tac xs word ys recv_state)
         apply(rule_tac Q="\<lambda> r s. (can_grant \<longrightarrow> is_subject aag thread \<and> is_subject aag (hd xs)) \<and> silc_inv aag st s" in hoare_strengthen_post)
          apply simp
          apply(wp do_ipc_transfer_silc_inv | wpc | simp)+

@@ -853,7 +853,7 @@ lemma next_domain_integrity [wp]:
   next_domain
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: next_domain_def thread_set_domain_def ethread_set_def set_eobject_def Let_def | wp)+
-  apply (clarsimp simp: get_etcb_def integrity_subjects_def integrity_eobj_def lfp_def)
+  apply (clarsimp simp: get_etcb_def integrity_subjects_def lfp_def)
   done
 
 lemma next_domain_tcb_domain_map_wellformed [wp]:

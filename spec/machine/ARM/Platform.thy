@@ -12,6 +12,7 @@ chapter "Platform Definitions"
 
 theory Platform
 imports
+  "../../../lib/Defs"
   "../../../lib/Lib"
   "../../../lib/WordEnum"
   Setup_Locale
@@ -26,7 +27,7 @@ text {*
   addresses, as well as the range of IRQs on the platform.
 *}
 
-type_synonym irq = word8
+type_synonym irq = "10 word"
 type_synonym paddr = word32
 
 abbreviation (input) "toPAddr \<equiv> id"
@@ -46,11 +47,16 @@ definition
 
 definition
   kernelBase_addr :: word32 where
-  "kernelBase_addr \<equiv> 0xf0000000"
+  "kernelBase_addr \<equiv> 0xe0000000"
+
+(* Arch specific kernel base address used for haskell spec *)
+definition
+  kernelBase :: word32 where
+  "kernelBase \<equiv> 0xe0000000"
 
 definition
   physBase :: word32 where
-  "physBase \<equiv> 0x80000000"
+  "physBase \<equiv> 0x10000000"
 
 definition
   physMappingOffset :: word32 where
@@ -70,7 +76,7 @@ definition
 
 definition
   maxIRQ :: "irq" where
-  "maxIRQ \<equiv> 63"
+  "maxIRQ \<equiv> 0x9F"
 
 end
 

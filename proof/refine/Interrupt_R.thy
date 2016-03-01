@@ -23,7 +23,6 @@ where
 | "irq_handler_inv_relation (Invocations_A.ClearIRQHandler irq) x = (x = ClearIRQHandler irq)"
 | "irq_handler_inv_relation (Invocations_A.SetIRQHandler irq cap ptr) x =
        (\<exists>cap'. x = SetIRQHandler irq cap' (cte_map ptr) \<and> cap_relation cap cap')"
-| "irq_handler_inv_relation (Invocations_A.SetMode irq trig pol) x = (x = SetMode irq trig pol)"
 
 
 consts
@@ -50,7 +49,6 @@ where
            and cte_wp_at' (badge_derived' cap \<circ> cteCap) cte_ptr
            and (\<lambda>s. \<exists>ptr'. cte_wp_at' (\<lambda>cte. cteCap cte = IRQHandlerCap irq) ptr' s)
            and ex_cte_cap_wp_to' isCNodeCap cte_ptr)"
-| "irq_handler_inv_valid' (SetMode irq trig pol) = \<top>"
 
 primrec
   irq_control_inv_valid' :: "irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -70,8 +68,8 @@ lemma decode_irq_handler_corres:
   "\<lbrakk> list_all2 cap_relation (map fst caps) (map fst caps');
     list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) caps caps' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> irq_handler_inv_relation) invs invs'
-     (decode_irq_handler_invocation label args irq caps)
-     (decodeIRQHandlerInvocation label args irq caps')"
+     (decode_irq_handler_invocation label irq caps)
+     (decodeIRQHandlerInvocation label irq caps')"
   apply (simp add: decode_irq_handler_invocation_def decodeIRQHandlerInvocation_def
                  split del: split_if)
   apply (cases caps)
@@ -91,7 +89,7 @@ lemma decode_irq_handler_valid'[wp]:
         \<and> (\<forall>cap \<in> set caps. ex_cte_cap_wp_to' isCNodeCap (snd cap) s)
         \<and> (\<forall>cap \<in> set caps. cte_wp_at' (badge_derived' (fst cap) \<circ> cteCap) (snd cap) s)
         \<and> s \<turnstile>' IRQHandlerCap irq\<rbrace>
-     decodeIRQHandlerInvocation label args irq caps
+     decodeIRQHandlerInvocation label irq caps
    \<lbrace>irq_handler_inv_valid'\<rbrace>,-"
   apply (simp add: decodeIRQHandlerInvocation_def Let_def split_def
                split del: split_if)
@@ -139,6 +137,7 @@ lemma decode_irq_control_corres:
      (decode_irq_control_invocation label args slot caps)
      (decodeIRQControlInvocation label args (cte_map slot) caps')"
   apply (clarsimp simp: decode_irq_control_invocation_def decodeIRQControlInvocation_def
+                        arch_check_irq_def ArchInterrupt_H.checkIRQ_def
                         ArchInterrupt_H.decodeIRQControlInvocation_def arch_decode_irq_control_invocation_def
              split del: split_if cong: if_cong
                  split: invocation_label.split)
@@ -147,13 +146,14 @@ lemma decode_irq_control_corres:
   apply (case_tac "\<exists>n. length args = Suc (Suc (Suc n))")
    apply (clarsimp simp: list_all2_Cons1 Let_def split_def liftE_bindE
                          lookup_target_slot_def lookupTargetSlot_def
-                         whenE_rangeCheck_eq length_Suc_conv)
+                         whenE_rangeCheck_eq length_Suc_conv checkIRQ_def)
    apply (rule corres_guard_imp)
      apply (rule whenE_throwError_corres)
        apply (simp add: minIRQ_def maxIRQ_def)
       apply (simp add: minIRQ_def ucast_nat_def)
      apply (simp add: linorder_not_less)
      apply (simp add: maxIRQ_def word_le_nat_alt toEnum_of_nat)
+
      apply (simp add: ucast_nat_def)
      apply (rule corres_split_eqr [OF _ is_irq_active_corres])
        apply (rule whenE_throwError_corres, simp, simp)
@@ -195,7 +195,7 @@ lemma decode_irq_control_valid'[wp]:
         \<and> cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) slot s\<rbrace>
      decodeIRQControlInvocation label args slot caps
    \<lbrace>irq_control_inv_valid'\<rbrace>,-"
-  apply (simp add: decodeIRQControlInvocation_def Let_def split_def
+  apply (simp add: decodeIRQControlInvocation_def Let_def split_def checkIRQ_def
                    rangeCheck_def unlessE_whenE
                 split del: split_if cong: if_cong list.case_cong
                                           invocation_label.case_cong)
@@ -208,10 +208,14 @@ lemma decode_irq_control_valid'[wp]:
                         toEnum_of_nat word_le_nat_alt unat_of_nat)
   done
 
+lemma irq_nodes_global_refs:
+  "irq_node' s + (ucast (irq:: 10 word)) * 0x10 \<in> global_refs' s"
+  by (simp add: global_refs'_def mult.commute mult.left_commute)
+
 lemma valid_globals_ex_cte_cap_irq:
   "\<lbrakk> ex_cte_cap_wp_to' isCNodeCap ptr s; valid_global_refs' s;
          valid_objs' s \<rbrakk>
-       \<Longrightarrow> ptr \<noteq> intStateIRQNode (ksInterruptState s) + 2 ^ cte_level_bits * ucast (irq :: word8)"
+       \<Longrightarrow> ptr \<noteq> intStateIRQNode (ksInterruptState s) + 2 ^ cte_level_bits * ucast (irq :: 10 word)"
   apply (clarsimp simp: cte_wp_at_ctes_of ex_cte_cap_wp_to'_def)
   apply (drule(1) ctes_of_valid'[rotated])
   apply (drule(1) valid_global_refsD')
@@ -219,11 +223,9 @@ lemma valid_globals_ex_cte_cap_irq:
    apply (clarsimp simp: isCap_simps)
   apply (subgoal_tac "irq_node' s + 2 ^ cte_level_bits * ucast irq \<in> global_refs' s")
    apply blast
-  apply (simp add: global_refs'_def cte_level_bits_def)
+  apply (simp add: global_refs'_def cte_level_bits_def 
+    mult.commute mult.left_commute)
   done
-
-
-declare setInterruptMode_def[simp] MachineOps.setInterruptMode_def[simp]
 
 lemma invoke_irq_handler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
@@ -833,9 +835,18 @@ lemma resetTimer_invs'[wp]:
    apply clarsimp+
   done
 
+lemma dmo_ackInterrupt[wp]: 
+"\<lbrace>invs'\<rbrace> doMachineOp (ackInterrupt irq) \<lbrace>\<lambda>y. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_ackInterrupt)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: ackInterrupt_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  done
 lemma hint_invs[wp]:
   "\<lbrace>invs'\<rbrace> handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: handleInterrupt_def getSlotCap_def ackInterrupt_def
+  apply (simp add: handleInterrupt_def getSlotCap_def
              cong: irqstate.case_cong)
   apply (wp dmo_maskInterrupt_True getCTE_wp' 
          | wpc | simp)+

@@ -33,8 +33,10 @@ begin
 instance ..
 end
 
-defs (overloaded)
-  typ_info_array: "typ_info_t (w::('a::c_type,'b::finite) array itself) \<equiv> array_tag w"
+overloading typ_info_array \<equiv> typ_info_t begin
+definition
+  typ_info_array: "typ_info_array (w::('a::c_type,'b::finite) array itself) \<equiv> array_tag w"
+end
 
 lemma field_names_array_tag_length [rule_format]:
   "x \<in> set (field_names_list (array_tag_n n)) \<longrightarrow> length x < n"

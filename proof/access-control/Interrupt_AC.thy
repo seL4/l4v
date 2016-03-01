@@ -71,7 +71,7 @@ lemma invoke_irq_handler_respects:
      invoke_irq_handler irq_inv
    \<lbrace>\<lambda>y. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (cases irq_inv, simp_all add: authorised_irq_hdl_inv_def setInterruptMode_def)
+  apply (cases irq_inv, simp_all add: authorised_irq_hdl_inv_def)
   apply (rule hoare_pre)
   apply (wp cap_insert_integrity_autarch get_irq_slot_owns dmo_wp | simp add: maskInterrupt_def )+
   done
@@ -82,7 +82,7 @@ lemma decode_irq_control_invocation_authorised [wp]:
                          (args \<noteq> [] \<longrightarrow> (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0))) \<in> pasPolicy aag))\<rbrace>
   decode_irq_control_invocation info_label args slot caps
   \<lbrace>\<lambda>x s. authorised_irq_ctl_inv aag x\<rbrace>, -"
-  unfolding decode_irq_control_invocation_def authorised_irq_ctl_inv_def
+  unfolding decode_irq_control_invocation_def authorised_irq_ctl_inv_def arch_check_irq_def
   apply (rule hoare_gen_asmE)
   apply (rule hoare_pre)
    apply (simp add: Let_def split del: split_if cong: if_cong)
@@ -91,6 +91,7 @@ lemma decode_irq_control_invocation_authorised [wp]:
               | simp add: o_def del: hoare_post_taut hoare_True_E_R)+
   apply (cases args, simp_all)
   apply (cases caps, simp_all)
+    apply (simp add: ucast_mask_drop)
   apply (auto simp: is_cap_simps cap_auth_conferred_def
                  pas_refined_wellformed
                  pas_refined_all_auth_is_owns aag_cap_auth_def)
@@ -98,7 +99,7 @@ lemma decode_irq_control_invocation_authorised [wp]:
 
 lemma decode_irq_handler_invocation_authorised [wp]:
   "\<lbrace>K (is_subject_irq aag irq \<and> (\<forall>cap_slot \<in> set caps. pas_cap_cur_auth aag (fst cap_slot) \<and> is_subject aag (fst (snd cap_slot))))\<rbrace>
-  decode_irq_handler_invocation info_label args irq caps
+  decode_irq_handler_invocation info_label irq caps
   \<lbrace>\<lambda>x s. authorised_irq_hdl_inv aag x\<rbrace>, -"
   unfolding decode_irq_handler_invocation_def authorised_irq_hdl_inv_def
   apply (rule hoare_pre)

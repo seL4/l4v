@@ -36,7 +36,7 @@ crunch irq_state_of_state[wp]: set_extra_badge "\<lambda>s. P (irq_state_of_stat
 
 
 lemma transfer_caps_loop_irq_state[wp]:
-  "\<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace> transfer_caps_loop a b c d e f g \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace> transfer_caps_loop a b c d e f \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
   apply(wp transfer_caps_loop_pres)
   done
 
@@ -74,7 +74,7 @@ crunch irq_state_of_state[wp]: invoke_untyped "\<lambda>s. P (irq_state_of_state
 crunch irq_state_of_state[wp]: invoke_irq_control "\<lambda>s. P (irq_state_of_state s)"
 
 crunch irq_state_of_state[wp]: invoke_irq_handler "\<lambda>s. P (irq_state_of_state s)"
-  (wp: dmo_wp simp: maskInterrupt_def setInterruptMode_def)
+  (wp: dmo_wp simp: maskInterrupt_def)
 
 crunch irq_state'[wp]: cleanCacheRange_PoU "\<lambda> s. P (irq_state s)"
   (wp: crunch_wps ignore: ignore_failure)

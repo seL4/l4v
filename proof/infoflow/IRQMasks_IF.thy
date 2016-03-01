@@ -78,6 +78,9 @@ crunch irq_masks[wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
 crunch irq_masks[wp]: send_signal "\<lambda>s. P (irq_masks_of_state s)"  
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
 
+crunch irq_masks[wp]: machine_op_lift "\<lambda>s. P (irq_masks s)" 
+  (wp: crunch_wps ignore: machine_op_lift wp:dmo_wp)
+
 lemma handle_interrupt_irq_masks:
   notes no_irq[wp del]
   shows
@@ -85,7 +88,8 @@ lemma handle_interrupt_irq_masks:
    handle_interrupt irq
    \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
   apply(simp add: handle_interrupt_def)
-  apply(wp dmo_wp | simp add: ackInterrupt_def maskInterrupt_def when_def split del: split_if | wpc | simp add: get_irq_state_def |wp_once hoare_drop_imp)+
+  apply(wp dmo_wp | simp add:  ackInterrupt_def maskInterrupt_def when_def 
+    split del: split_if | wpc | simp add: get_irq_state_def |wp_once hoare_drop_imp)+
   apply(fastforce simp: domain_sep_inv_def)
   done
 
@@ -329,8 +333,7 @@ lemma invoke_cnode_irq_masks:
 fun irq_of_handler_inv where
   "irq_of_handler_inv (ACKIrq irq) = irq" |
   "irq_of_handler_inv (ClearIRQHandler irq) = irq" |
-  "irq_of_handler_inv (SetIRQHandler irq _ _) = irq" |
-  "irq_of_handler_inv (SetMode irq _ _) = irq"
+  "irq_of_handler_inv (SetIRQHandler irq _ _) = irq"
 
 crunch irq_masks[wp]: invoke_domain "\<lambda>s. P (irq_masks_of_state s)"
 

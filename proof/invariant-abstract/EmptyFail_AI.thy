@@ -136,7 +136,7 @@ lemma put_empty_fail[wp]:
 
 
 crunch_ignore (empty_fail)
-  (add: bind bindE lift liftE liftM when whenE unless unlessE return fail assert_opt
+  (add: bind bindE lift liftE liftM "when" whenE unless unlessE return fail assert_opt
         mapM mapM_x sequence_x catch handleE invalidateTLB_ASID_impl
         invalidateTLB_VAASID_impl cleanByVA_impl cleanByVA_PoU_impl invalidateByVA_impl
         invalidateByVA_I_impl invalidate_I_PoU_impl cleanInvalByVA_impl branchFlush_impl
@@ -341,7 +341,7 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]  
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 
-crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot, setInterruptMode,
+crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot,
     setHardwareASID, setCurrentPD, finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
@@ -465,7 +465,7 @@ crunch (empty_fail) empty_fail[wp]: handle_event,activate_thread
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
          flush_type.splits page_directory_invocation.splits
-   ignore: resetTimer_impl)
+   ignore: resetTimer_impl ackInterrupt_impl)
 
 lemma call_kernel_empty_fail: "empty_fail ((call_kernel a) :: (unit,det_ext) s_monad)"
   apply (simp add: call_kernel_def)

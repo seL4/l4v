@@ -10,13 +10,14 @@
 #
 # @TAG(NICTA_BSD)
 #
-#  
+#
 #  xsymbol.py
 #
 #  Author: Andrew Boyton, NICTA
 #  Based on code by Timothy Bourke, NICTA
 #
 
+from __future__ import print_function
 import os, sys
 
 # Make isasymbols importable.
@@ -32,4 +33,4 @@ else:
     f = sys.stdin
 
 data = f.read()
-print translator.encode(data).encode('utf-8'),
+print(translator.encode(data).encode('utf-8'), end='')

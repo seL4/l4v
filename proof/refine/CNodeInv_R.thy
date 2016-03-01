@@ -547,8 +547,8 @@ lemma decodeCNodeInvocation_inv[wp]:
         apply (simp_all add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                              Let_def whenE_def unlessE_def cnode_invok_case_cleanup
                   split del: split_if cong del: if_cong)[6]
-        apply fold_subgoals[6]
-        subgoal
+        apply (fold_subgoals (prefix))[6]
+        subgoal premises prems
         by (safe intro!: hoare_pre[where P=P],
                 (wp hoare_drop_imps | simp | wpcw)+)
   apply (elim disjE exE conjE,

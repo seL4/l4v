@@ -157,8 +157,8 @@ where
      = (ts' = Structures_H.IdleThreadState)"
 | "thread_state_relation (Structures_A.BlockedOnReply) ts'
      = (ts' = Structures_H.BlockedOnReply)"
-| "thread_state_relation (Structures_A.BlockedOnReceive oref dimin) ts'
-     = (ts' = Structures_H.BlockedOnReceive oref dimin)"
+| "thread_state_relation (Structures_A.BlockedOnReceive oref) ts'
+     = (ts' = Structures_H.BlockedOnReceive oref)"
 | "thread_state_relation (Structures_A.BlockedOnSend oref sp) ts'
      = (ts' = Structures_H.BlockedOnSend oref (sender_badge sp)
                    (sender_can_grant sp) (sender_is_call sp))"
@@ -472,7 +472,7 @@ lemma cap_relation_case':
             | _ \<Rightarrow> cap_relation cap cap')"
   by (simp split: cap.split arch_cap.split)
 
-schematic_lemma cap_relation_case:
+schematic_goal cap_relation_case:
   "cap_relation cap cap' = ?P"
   apply (subst cap_relation_case')
   apply (clarsimp cong: cap.case_cong arch_cap.case_cong)

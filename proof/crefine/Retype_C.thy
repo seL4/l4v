@@ -2411,7 +2411,7 @@ definition
                if (x = scast seL4_ARM_PageDirectoryObject) then ArchTypes_H.PageDirectoryObject else
                 undefined)))))))))))"
 
-theorems Kernel_C_defs =
+lemmas Kernel_C_defs =
   seL4_UntypedObject_def
   seL4_TCBObject_def
   seL4_EndpointObject_def
@@ -4118,7 +4118,7 @@ lemma copyGlobalMappings_ccorres:
    apply (rule ccorres_h_t_valid_armKSGlobalPD)
    apply csymbr
    apply (rule ccorres_Guard_Seq)+
-   apply (simp add: kernelBase_def objBits_simps archObjSize_def
+   apply (simp add: kernelBase_def Platform.kernelBase_def objBits_simps archObjSize_def
                     whileAnno_def word_sle_def word_sless_def
                     Collect_True              del: Collect_const)
    apply (rule_tac xf'="\<lambda>_. ()" in ccorres_abstract)
@@ -4136,17 +4136,17 @@ lemma copyGlobalMappings_ccorres:
                                 \<and> is_aligned rv pdBits \<and> valid_pde_mappings' s
                                 \<and> page_directory_at' pd s
                                 \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
-              and i="0xF00"
+              and i="0xE00"
                in ccorres_mapM_x_while')
         apply (clarsimp simp del: Collect_const)
         apply (rule ccorres_guard_imp2)
          apply (rule ccorres_pre_getObject_pde)
          apply (simp add: storePDE_def del: Collect_const)
          apply (rule_tac P="\<lambda>s. ko_at' rva (armKSGlobalPD (ksArchState s)
-                                              + ((0xF00 + of_nat n) << 2)) s
+                                              + ((0xE00 + of_nat n) << 2)) s
                                     \<and> page_directory_at' pd s \<and> valid_pde_mappings' s
                                     \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
-                    and P'="{s. i_' s = of_nat (3840 + n)
+                    and P'="{s. i_' s = of_nat (3584 + n)
                                     \<and> is_aligned (symbol_table ''armKSGlobalPD'') pdBits}"
                     in setObject_ccorres_helper)
            apply (rule conseqPre, vcg)
@@ -4782,8 +4782,8 @@ end
 
 definition "placeNewObject_with_memset regionBase us \<equiv> 
   (do x \<leftarrow> placeNewObject regionBase UserData us;
-      doMachineOp (mapM_x (\<lambda>p\<Colon>word32. storeWord p (0\<Colon>word32))
-               [regionBase , regionBase + (4\<Colon>word32) .e. regionBase + (2\<Colon>word32) ^ (pageBits + us) - (1\<Colon>word32)])
+      doMachineOp (mapM_x (\<lambda>p::word32. storeWord p (0::word32))
+               [regionBase , regionBase + (4::word32) .e. regionBase + (2::word32) ^ (pageBits + us) - (1::word32)])
    od)"
 
 crunch gsMaxObjectSize[wp]: placeNewObject_with_memset, createObject "\<lambda>s. P (gsMaxObjectSize s)"
@@ -7303,8 +7303,9 @@ shows  "ccorres dc xfdc
             apply (subst intvl_range_conv)
               apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
                subgoal by (simp add:is_aligned_shiftl_self)
-              apply fold_subgoals[2]
-              subgoal by (simp_all add:range_cover_sz'[where 'a=32, folded word_bits_def]
+              apply (fold_subgoals (prefix))[2]
+              subgoal premises prems using prems
+                        by (simp_all add:range_cover_sz'[where 'a=32, folded word_bits_def]
                                    word_bits_def range_cover_def)+
             apply (simp add: range_cover_not_in_neqD)
             apply (intro conjI)
@@ -7314,19 +7315,24 @@ shows  "ccorres dc xfdc
                  apply (simp add: unat_arith_simps unat_of_nat, simp split: split_if)
                  apply (intro impI, erule order_trans[rotated], simp)
                 apply (erule pspace_no_overlap'_le)
-                 apply fold_subgoals[2]
-                 subgoal by (simp add:range_cover.sz[where 'a=32, folded word_bits_def])+
+                 apply (fold_subgoals (prefix))[2]
+                 subgoal premises prems using prems
+                           by (simp add:range_cover.sz[where 'a=32, folded word_bits_def])+
                apply (rule range_cover_one)
                  apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
                   apply (simp add:is_aligned_shiftl_self)
-                 apply fold_subgoals[2]
-                 subgoal by (simp add:range_cover_sz'[where 'a=32, folded word_bits_def] range_cover.sz[where 'a=32, folded word_bits_def])+
+                 apply (fold_subgoals (prefix))[2]
+                 subgoal premises prems using prems
+                           by (simp add: range_cover_sz'[where 'a=32, folded word_bits_def]
+                                         range_cover.sz[where 'a=32, folded word_bits_def])+
                apply (simp add:  word_bits_def range_cover_def)
               apply (rule range_cover_full)
                apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
                 apply (simp add:is_aligned_shiftl_self)
-               apply fold_subgoals[2]
-               subgoal by (simp add:range_cover_sz'[where 'a=32, folded word_bits_def] range_cover.sz[where 'a=32, folded word_bits_def])+
+               apply (fold_subgoals (prefix))[2]
+               subgoal premises prems using prems
+                         by (simp add: range_cover_sz'[where 'a=32, folded word_bits_def]
+                                       range_cover.sz[where 'a=32, folded word_bits_def])+
              apply (erule disjoint_subset[rotated])
              apply (rule_tac p1 = n in subset_trans[OF _ range_cover_subset])
                 apply (simp add:field_simps shiftl_t2n)
@@ -7375,9 +7381,9 @@ shows  "ccorres dc xfdc
        apply (frule range_cover.range_cover_n_less)
        apply (subst upt_enum_offset_trivial)
          apply (rule minus_one_helper[OF word_of_nat_le])
-          apply fold_subgoals[3]
-          subgoal by (simp add:word_bits_conv minus_one_norm
-                           range_cover_not_zero[rotated])+
+          apply (fold_subgoals (prefix))[3]
+          subgoal premises prems using prems
+                    by (simp add:word_bits_conv minus_one_norm range_cover_not_zero[rotated])+
        apply (simp add: intvl_range_conv aligned_add_aligned[OF range_cover.aligned]
               is_aligned_shiftl_self range_cover_sz')
        apply (subst intvl_range_conv)
@@ -7476,8 +7482,8 @@ shows  "ccorres dc xfdc
          apply (rule_tac p1 = n in subset_trans[OF _ range_cover_subset])
             prefer 2
             apply (simp add:field_simps )
-           apply fold_subgoals[2]
-           subgoal by (simp add:field_simps )+
+           apply (fold_subgoals (prefix))[2]
+           subgoal premises prems using prems by (simp add:field_simps )+
         apply (clarsimp simp: word_shiftl_add_distrib)
         apply (clarsimp simp:blah field_simps shiftl_t2n)
         apply (drule word_eq_zeroI)
@@ -7518,8 +7524,9 @@ shows  "ccorres dc xfdc
            subgoal by (simp add: word_bits_def range_cover_def)
           apply (clarsimp simp:rf_sr_def cstate_relation_def Let_def)
           apply (erule pspace_no_overlap'_le)
-           apply fold_subgoals[2]
-           subgoal by (simp add:range_cover.sz[where 'a=32, simplified] word_bits_def)+
+           apply (fold_subgoals (prefix))[2]
+           subgoal premises prems using prems
+                     by (simp add:range_cover.sz[where 'a=32, simplified] word_bits_def)+
          apply (erule contra_subsetD[rotated])
          subgoal by (rule order_trans[rotated], rule range_cover_subset'[where n=1],
            erule range_cover_le, simp_all, (clarsimp simp: neq_Nil_conv)+)
@@ -7553,9 +7560,10 @@ shows  "ccorres dc xfdc
              nAPIObjects_def APIType_capBits_def o_def split:apiobject_type.splits)[1]
           subgoal by (simp add:unat_eq_def word_unat.Rep_inverse' word_less_nat_alt)
          subgoal by (clarsimp simp:objBits_simps,unat_arith)
-        apply fold_subgoals[3]
-        subgoal by (clarsimp simp: objBits_simps unat_eq_def word_unat.Rep_inverse'
-                                  word_less_nat_alt)+
+        apply (fold_subgoals (prefix))[3]
+        subgoal premises prems using prems
+                  by (clarsimp simp: objBits_simps unat_eq_def word_unat.Rep_inverse'
+                                     word_less_nat_alt)+
      
      by (clarsimp simp: ARMSmallPageBits_def ARMLargePageBits_def
                            ARMSectionBits_def ARMSuperSectionBits_def)+

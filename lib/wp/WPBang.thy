@@ -23,11 +23,11 @@ fun wp_bang wp_safe_rules ctxt = let
   in
     resolve_tac ctxt wp_safe_rules_conj
     THEN' Split_To_Conj.get_split_tac "P" ctxt
-      (fn Ps => fn i => etac @{thm conj_meta_forward} i
+      (fn Ps => fn i => eresolve0_tac [@{thm conj_meta_forward}] i
         THEN (REPEAT_ALL_NEW ((CHANGED o asm_full_simp_tac ctxt)
               ORELSE' Classical.safe_steps_tac ctxt)
           THEN_ALL_NEW Partial_Prove.cleanup_tac ctxt Ps) i
-        THEN (Partial_Prove.finish_tac ctxt Ps THEN' atac) i
+        THEN (Partial_Prove.finish_tac ctxt Ps THEN' (assume_tac ctxt)) i
       )
   end
 

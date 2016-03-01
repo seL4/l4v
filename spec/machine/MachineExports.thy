@@ -37,7 +37,6 @@ unqualify_consts
   syscallMessage :: "register list"
   gpRegisters :: "register list"
   frameRegisters :: "register list"
-  setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
   ackInterrupt :: "irq \<Rightarrow> unit machine_monad"
   resetTimer :: "unit machine_monad"
   maxIRQ :: "irq"

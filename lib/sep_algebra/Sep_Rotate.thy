@@ -23,7 +23,7 @@ ML {*
   end;
 
  fun rotator lens tactic ctxt i st = 
-   let val len  = case (Seq.pull ((lens THEN' (rtac @{thm iffI})) i st))
+   let val len  = case (Seq.pull ((lens THEN' (resolve0_tac [@{thm iffI}])) i st))
                   of NONE => 0 |
                      SOME (thm, _) => conj_length ctxt (Thm.cprem_of thm i)           
        val nums = range 1 len

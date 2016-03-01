@@ -14,7 +14,7 @@ begin
 
 ML {*
 
-fun str_of_term t = Pretty.str_of (Syntax.pretty_term @{context} t)
+fun str_of_term t = Pretty.string_of (Syntax.pretty_term @{context} t)
 
 structure SplitSimps = struct
 
@@ -29,9 +29,9 @@ fun was_split t = let
   in forall (is_free_eq_imp o dest_alls) (get_conjs t) end
         handle TERM _ => false;
 
-fun apply_split split t = Seq.of_list let
-    val (t', thaw) = Misc_Legacy.freeze_thaw t;
-  in (map thaw (filter (was_split o Thm.prop_of) ([t'] RL [split]))) end;
+fun apply_split ctxt split t = Seq.of_list let
+    val (t', thaw) = Misc_Legacy.freeze_thaw_robust ctxt t;
+  in (map (thaw 0) (filter (was_split o Thm.prop_of) ([t'] RL [split]))) end;
 
 fun forward_tac rules t = Seq.of_list ([t] RL rules);
 
@@ -42,22 +42,23 @@ val get_rules_once_split =
     THEN REPEAT (forward_tac [spec])
     THEN (forward_tac [refl_imp]);
 
-fun do_split split = let
+fun do_split ctxt split = let
     val split' = split RS iffD1;
-    val split_rhs = Thm.concl_of (fst (Misc_Legacy.freeze_thaw split'));
+    val split_rhs = Thm.concl_of (fst (Misc_Legacy.freeze_thaw_robust ctxt split'));
   in if was_split split_rhs
-     then apply_split split' THEN get_rules_once_split
+     then apply_split ctxt split' THEN get_rules_once_split
      else raise TERM ("malformed split rule: " ^ (str_of_term split_rhs), [split_rhs])
   end;
 
 val atomize_meta_eq = forward_tac [meta_eq_to_obj_eq];
 
-fun better_split splitthms thm = conjunct_rules
+fun better_split ctxt splitthms thm = conjunct_rules
   (Seq.list_of ((TRY atomize_meta_eq
-                 THEN (REPEAT (FIRST (map do_split splitthms)))) thm));
+                 THEN (REPEAT (FIRST (map (do_split ctxt) splitthms)))) thm));
 
 val split_att
-  = Attrib.thms >> (Thm.rule_attribute o K o better_split);
+  = Attrib.thms >> 
+    (fn thms => Thm.rule_attribute thms (fn context => better_split (Context.proof_of context) thms));
 
 
 end;

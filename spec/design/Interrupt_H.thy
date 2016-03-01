@@ -38,8 +38,8 @@ defs decodeIRQControlInvocation_def:
 "decodeIRQControlInvocation label args srcSlot extraCaps \<equiv>
     (case (invocationType label, args, extraCaps) of
           (IRQIssueIRQHandler, irqW#index#depth#_, cnode#_) \<Rightarrow>   (doE
-            rangeCheck irqW (fromEnum minIRQ) (fromEnum maxIRQ);
-            irq \<leftarrow> returnOk ( toEnum (fromIntegral irqW) ::irq);
+            ArchInterruptDecls_H.checkIRQ (irqW && mask 16);
+            irq \<leftarrow> returnOk ( toEnum (fromIntegral (irqW && mask 16)) ::irq);
             irqActive \<leftarrow> withoutFailure $ isIRQActive irq;
             whenE irqActive $ throw RevokeFirst;
             destSlot \<leftarrow> lookupTargetSlot cnode
@@ -63,7 +63,7 @@ defs performIRQControl_def:
   )"
 
 defs decodeIRQHandlerInvocation_def:
-"decodeIRQHandlerInvocation label args irq extraCaps \<equiv>
+"decodeIRQHandlerInvocation label irq extraCaps \<equiv>
     (case (invocationType label,extraCaps) of
           (IRQAckIRQ,_) \<Rightarrow>   returnOk $ AckIRQ irq
         | (IRQSetIRQHandler,(cap,slot)#_) \<Rightarrow>   (case cap of
@@ -73,10 +73,6 @@ defs decodeIRQHandlerInvocation_def:
                 )
         | (IRQSetIRQHandler,_) \<Rightarrow>   throw TruncatedMessage
         | (IRQClearIRQHandler,_) \<Rightarrow>   returnOk $ ClearIRQHandler irq
-        | (IRQSetMode,_) \<Rightarrow>   (case args of
-                  trig#pol#_ \<Rightarrow>   returnOk $ SetMode irq (toBool trig) (toBool pol)
-                | _ \<Rightarrow>   throw TruncatedMessage
-                )
         | _ \<Rightarrow>   throw IllegalOperation
         )"
 
@@ -96,8 +92,6 @@ defs invokeIRQHandler_def:
     irqSlot \<leftarrow> getIRQSlot irq;
     cteDeleteOne irqSlot
   od)
-  | (SetMode irq trig pol) \<Rightarrow>   
-    doMachineOp $ setInterruptMode irq trig pol
   )"
 
 defs deletingIRQHandler_def:

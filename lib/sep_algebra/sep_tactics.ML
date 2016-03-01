@@ -129,7 +129,7 @@ end;
 
 fun conj_length ctxt ct =
     let 
-        val ((_, ct'), _) = Variable.focus_cterm ct ctxt;
+        val ((_, ct'), _) = Variable.focus_cterm NONE ct ctxt;
         val concl = ct' |> Drule.strip_imp_concl |> Thm.term_of;
       in  concl |> HOLogic.dest_Trueprop |> SepConj.strip_sep_conj
                 |> length
@@ -145,7 +145,7 @@ in
         fun th ns = mk_sep_select_rule ctxt false ((conj_length ctxt ct),ns)
       in
         if not (all_uniq ns) then error ("Duplicate numbers in arguments")
-        else rtac (th ns) i  handle Subscript => no_tac 
+        else resolve0_tac [th ns] i  handle Subscript => no_tac 
       end;
   in
     CSUBGOAL (sep_select_tac' ctxt (map (fn m => m - 1) ns))
@@ -168,7 +168,7 @@ fun sep_select_tactic lens_tac ns ctxt =
          val sep_conj_ac_tac = Simplifier.asm_full_simp_tac
                           (put_simpset HOL_basic_ss ctxt addsimps SepConj.sep_conj_ac);
        in lens_tac THEN'
-          rtac iffI THEN'
+          resolve0_tac [iffI] THEN'
           (sep_select ns) THEN'
           assume_tac ctxt THEN'         
           (sep_conj_ac_tac)

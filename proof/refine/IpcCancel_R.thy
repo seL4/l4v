@@ -160,7 +160,7 @@ crunch tcb_at[wp]: set_endpoint "tcb_at t"
 crunch tcb_at'[wp]: setEndpoint "tcb_at' t"
 
 lemma blocked_cancel_ipc_corres:
-  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr x \<or> 
+  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr \<or> 
      st = Structures_A.BlockedOnSend epPtr p; thread_state_relation st st' \<rbrakk> \<Longrightarrow>
    corres dc (invs and st_tcb_at (op = st) t) (invs' and st_tcb_at' (op = st') t)
            (blocked_cancel_ipc st t)
@@ -803,7 +803,7 @@ proof -
      apply (wp, simp)
     done
   have Q:
-    "\<And>epptr. \<lbrace>st_tcb_at' (\<lambda>st. (\<exists>x. st = BlockedOnReceive epptr x)
+    "\<And>epptr. \<lbrace>st_tcb_at' (\<lambda>st. (st = BlockedOnReceive epptr )
                             \<or> (\<exists>a b c. st = BlockedOnSend epptr a b c)) t
                   and invs'\<rbrace>
       do ep \<leftarrow> getEndpoint epptr;
@@ -1870,8 +1870,8 @@ lemma (in delete_one_conc_pre) cancelIPC_queues[wp]:
                      elim!: pred_tcb'_weakenE)+
   apply (safe)
     apply (drule_tac t=t in valid_queues_not_runnable'_not_ksQ)
-     apply (erule pred_tcb'_weakenE, simp)
-    apply (drule_tac x=xc in spec, simp)
+     apply (erule pred_tcb'_weakenE, simp) 
+    apply (drule_tac x=xb in spec, simp)
    apply (erule pred_tcb'_weakenE, simp)
   apply (drule_tac t=t in valid_queues_not_runnable'_not_ksQ)
    apply (erule pred_tcb'_weakenE, simp)

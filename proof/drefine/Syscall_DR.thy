@@ -326,7 +326,6 @@ lemma decode_invocation_irqhandlercap_corres:
   apply (clarsimp simp: throw_opt_def get_irq_handler_intent_def split: option.splits)
   apply (rule conjI)
    apply (auto simp: decode_irq_handler_invocation_def transform_intent_def
-                     transform_intent_irq_set_mode_def 
           split del: split_if 
               split: invocation_label.splits cdl_intent.splits list.splits)[1]
   apply clarsimp
@@ -441,7 +440,7 @@ lemma transform_intent_irq_handler_None:
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply (wp)
     apply (clarsimp simp:decode_irq_handler_invocation_def|rule conjI)+
-      apply (clarsimp simp:transform_intent_def transform_intent_irq_set_mode_def split: list.splits)+
+      apply (clarsimp simp:transform_intent_def split: list.splits)+
     apply (clarsimp simp:transform_intent_def |rule conjI | wp)+
 done
 
@@ -1666,42 +1665,46 @@ lemma handle_event_corres:
       apply (case_tac syscall)
              apply (simp_all add:handle_syscall_def handle_send_def handle_call_def)
              apply (rule handle_invocation_corres[THEN corres_guard_imp] | simp)+
-          apply (rule corres_guard_imp[OF handle_recv_corres])
-           apply simp+
-          apply (simp add: ct_running_not_idle_etc)
-          apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def generates_pending_def)
-         apply (rule corres_guard_imp[OF handle_reply_corres])
-          apply simp
+            apply (rule corres_guard_imp)
+              apply (rule corres_split[OF handle_recv_corres handle_reply_corres])
+               apply (wp handle_reply_cur_thread_idle_thread)
+              apply (simp add:not_idle_thread_def)
+              apply (wp handle_reply_cur_thread_idle_thread handle_reply_valid_etcbs)
+              apply (rule hoare_post_imp[OF _ hr_ct_active_and_valid_etcbs])
+             apply (clarsimp simp:ct_in_state_def)
+            apply clarsimp+
+           apply (frule (1) ct_running_not_idle_etc)
+           apply ((clarsimp simp: handle_yield_def returnOk_def liftE_def not_idle_thread_def
+                ct_in_state_def st_tcb_at_def obj_at_def)+)[1]
+          apply (rule handle_invocation_corres[THEN corres_guard_imp] | simp)+
+         apply (rule corres_guard_imp[OF handle_recv_corres])
+          apply simp+
          apply (simp add: ct_running_not_idle_etc)
-        apply (rule corres_guard_imp)
-          apply (rule corres_split[OF handle_recv_corres handle_reply_corres])
-           apply (wp handle_reply_cur_thread_idle_thread)
-          apply (simp add:not_idle_thread_def)
-          apply (wp handle_reply_cur_thread_idle_thread handle_reply_valid_etcbs)
-          apply (rule hoare_post_imp[OF _ hr_ct_active_and_valid_etcbs])
-          apply (clarsimp simp:ct_in_state_def)
-         apply clarsimp+
-        apply (frule (1) ct_running_not_idle_etc)
-        apply (clarsimp simp:not_idle_thread_def ct_in_state_def st_tcb_at_def)
-        apply ((clarsimp simp: handle_yield_def returnOk_def liftE_def not_idle_thread_def ct_in_state_def st_tcb_at_def obj_at_def)+)[2]
-       apply (rule dcorres_symb_exec_r)
-         apply (rule dcorres_return, simp)
-        apply (wp hoare_TrueI)
-      apply (rule corres_guard_imp)
-        apply (rule handle_recv_corres, simp)
-      apply clarsimp
-      apply (frule (1) ct_running_not_idle_etc)
-      apply (clarsimp simp: not_idle_thread_def ct_in_state_def st_tcb_at_def obj_at_def)
-     apply (rule corres_symb_exec_r[OF handle_fault_corres])
-       apply wp[1]
-       apply clarsimp
-       apply (frule (1) ct_running_not_idle_etc)
-       apply (fastforce simp:st_tcb_at_def obj_at_def generates_pending_def gets_def get_def valid_fault_def split:Structures_A.thread_state.splits)+
+        apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def generates_pending_def)
+         apply (rule corres_guard_imp[OF handle_reply_corres])
+        apply simp
+       apply (simp add: ct_running_not_idle_etc)
+      apply (clarsimp simp:not_idle_thread_def ct_in_state_def st_tcb_at_def)
+      apply ((clarsimp simp: handle_yield_def returnOk_def liftE_def not_idle_thread_def
+          ct_in_state_def st_tcb_at_def obj_at_def)+)
+      apply (rule dcorres_symb_exec_r)
+        apply (rule dcorres_return, simp)
+       apply (wp hoare_TrueI)
+     apply (rule corres_guard_imp)
+       apply (rule handle_recv_corres, simp)
+     apply clarsimp
+     apply (frule (1) ct_running_not_idle_etc)
+     apply (clarsimp simp: not_idle_thread_def ct_in_state_def st_tcb_at_def obj_at_def)
     apply (rule corres_symb_exec_r[OF handle_fault_corres])
       apply wp[1]
       apply clarsimp
       apply (frule (1) ct_running_not_idle_etc)
-      apply (fastforce simp:st_tcb_at_def obj_at_def generates_pending_def valid_fault_def split:Structures_A.thread_state.splits)+
+      apply (fastforce simp:st_tcb_at_def obj_at_def generates_pending_def gets_def get_def valid_fault_def split:Structures_A.thread_state.splits)+
+   apply (rule corres_symb_exec_r[OF handle_fault_corres])
+     apply wp[1]
+     apply clarsimp
+     apply (frule (1) ct_running_not_idle_etc)
+     apply (fastforce simp:st_tcb_at_def obj_at_def generates_pending_def valid_fault_def split:Structures_A.thread_state.splits)+
    apply (simp add:handle_pending_interrupts_def)
    apply (rule corres_guard_imp)
      apply (rule corres_split [OF _ get_active_irq_corres])

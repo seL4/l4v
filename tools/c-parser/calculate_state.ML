@@ -623,7 +623,8 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
           (if null owners then []
            else [(bnm (global_var owned_by_fn_name), nat, NoSyn)])
       val thy =
-          Record.add_record ([], bnm NameGeneration.global_rcd_name) NONE
+          Record.add_record {overloaded=false}
+                           ([], bnm NameGeneration.global_rcd_name) NONE
                             gflds thy
       val fullrecname = Sign.intern_type thy NameGeneration.global_ext_type
       val thy'' = MemoryModelExtras.check_global_record_type fullrecname thy
@@ -652,7 +653,7 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
             val _ = informStr (2, "Defining "^ Int.toString(length lflds) ^
                                   " local variables: "^
                                   listvars (fn (s,_,_) => Binding.print s) lflds)
-            val thy = Record.add_record
+            val thy = Record.add_record {overloaded=false}
                       ([("'g",["HOL.type"])], bnm NameGeneration.local_rcd_name)
                       (SOME([TFree("'g", ["HOL.type"])], "StateSpace.state"))
                       lflds thy

@@ -675,8 +675,7 @@ lemma doUnbindNotification_ccorres:
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
-               apply fold_subgoals[2]
-               subgoal by (case_tac "ntfnObj rv", (simp add: option_to_ctcb_ptr_def)+)
+               apply (case_tac "ntfnObj rv", ((simp add: option_to_ctcb_ptr_def)+)[4])
              subgoal by (simp add: carch_state_relation_def)
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
@@ -723,8 +722,9 @@ lemma doUnbindNotification_ccorres':
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
-               apply fold_subgoals[2]
-               subgoal by (case_tac "ntfnObj ntfn", (simp add: option_to_ctcb_ptr_def)+)
+               apply (fold_subgoals (prefix))[2]
+               subgoal premises prems using prems
+                       by (case_tac "ntfnObj ntfn", (simp add: option_to_ctcb_ptr_def)+)
              subgoal by (simp add: carch_state_relation_def)
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
@@ -1766,7 +1766,7 @@ lemma of_int_uint_ucast:
 
 lemma getIRQSlot_ccorres_stuff:
   "\<lbrakk> (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow>
-   CTypesDefs.ptr_add (intStateIRQNode_' (globals s')) (uint (irq :: word8))
+   CTypesDefs.ptr_add (intStateIRQNode_' (globals s')) (uint (irq :: 10 word))
      = Ptr (irq_node' s + 2 ^ cte_level_bits * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
@@ -1779,12 +1779,14 @@ lemma deletingIRQHandler_ccorres:
                    (UNIV \<inter> {s. irq_opt_relation (Some irq) (irq_' s)}) []
    (deletingIRQHandler irq) (Call deletingIRQHandler_'proc)"
   apply (cinit lift: irq_' cong: call_ignore_cong)
-   apply (clarsimp simp: irq_opt_relation_def dc_def[symmetric]
-                   cong: call_ignore_cong)
+   apply (clarsimp simp: irq_opt_relation_def ptr_add_assertion_def dc_def[symmetric]
+                   cong: call_ignore_cong )
    apply (rule_tac r'="\<lambda>rv rv'. rv' = Ptr rv"
                 and xf'="slot_'" in ccorres_split_nothrow)
+       apply (simp add: sint_ucast_eq_uint is_down)
        apply (rule ccorres_move_array_assertion_irq)
        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
@@ -1806,10 +1808,10 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap ghost_assertion_data_get_def
                         ghost_assertion_data_set_def)
   apply (simp add: cap_tag_defs)
-  apply (cut_tac x=irq in unat_lt2p)
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
-                        irq_opt_relation_def maxIRQ_def
-                        unat_gt_0)
+                        irq_opt_relation_def maxIRQ_def)
+  apply (drule word_le_nat_alt[THEN iffD1])
+  apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
   done
 
 lemma Zombie_new_spec:
@@ -1833,18 +1835,47 @@ lemma mod_mask_drop:
                 word_bw_assocs)
 
 lemma irq_opt_relation_Some_ucast:
-  "\<lbrakk> x && mask 8 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: word8) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
-    \<Longrightarrow> irq_opt_relation (Some (ucast x)) x"
-  using ucast_ucast_mask[where x=x and 'a=8, symmetric]
+  "\<lbrakk> x && mask 10 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
+    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast ((ucast x):: 10 word))"
+  using ucast_ucast_mask[where x=x and 'a=10, symmetric]
   apply (simp add: irq_opt_relation_def)
   apply (rule conjI, clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def)
-  apply (simp only: unat_arith_simps unat_ucast_8_32)
+  apply (simp only: unat_arith_simps )
   apply (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
   done
 
+lemma upcast_ucast_id:
+    "len_of TYPE('a) \<le> len_of TYPE('b) \<Longrightarrow> 
+    ((ucast (a :: 'a::len word) :: 'b ::len word) = ucast b) \<Longrightarrow> (a = b)"
+  apply (rule word_eqI)
+  apply (simp add:word_size)
+  apply (drule_tac f = "%x. (x !! n)" in arg_cong)
+    apply (simp add:nth_ucast)
+  done
+
+lemma mask_eq_ucast_eq:
+  "\<lbrakk> x && mask (len_of TYPE('a)) = (x :: ('c :: len word)); 
+     len_of TYPE('a) \<le> len_of TYPE('b)\<rbrakk>
+    \<Longrightarrow> ucast (ucast x :: ('a :: len word)) = (ucast x :: ('b :: len word))"
+  apply (rule word_eqI)
+  apply (drule_tac f = "\<lambda>x. (x !! n)" in arg_cong)
+  apply (auto simp:nth_ucast word_size)
+  done
+
+lemma irq_opt_relation_Some_ucast':
+  "\<lbrakk> x && mask 10 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
+    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast x)"
+  apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
+  apply (rule irq_opt_relation_Some_ucast[rotated])
+    apply simp+
+  apply (rule word_eqI)
+  apply (drule_tac f = "%x. (x !! n)" in arg_cong)
+  apply (simp add:nth_ucast and_bang word_size)
+done
+
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
-    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 8
+    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 10
         = capIRQ_CL (cap_irq_handler_cap_lift ccap)"
   apply (simp only: cap_get_tag_isCap[symmetric])
   apply (drule ccap_relation_c_valid_cap)
@@ -1984,20 +2015,24 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def true_def
                 del: Collect_const)
-    apply (rule_tac P="capIRQ cap \<le> Platform.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="(capIRQ cap) \<le>  Platform.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    apply (ctac(no_vcg) add: deletingIRQHandler_ccorres)
-     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-     apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: return_def)
-     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-     apply (simp add: ccap_relation_NullCap_iff split: split_if)
-     apply (frule(1) ccap_relation_IRQHandler_mask)
-     apply (rule irq_opt_relation_Some_ucast)
-      apply simp
-     apply (simp add: Platform.maxIRQ_def Kernel_C.maxIRQ_def)
-    apply wp
+    apply (rule ccorres_symb_exec_r)
+      apply (rule_tac xf'=irq_' in ccorres_abstract,ceqv)
+      apply (rule_tac P="rv' = ucast (capIRQ cap)" in ccorres_gen_asm2)
+      apply (ctac(no_vcg) add: deletingIRQHandler_ccorres)
+       apply (rule ccorres_from_vcg_throws[where P=\<top> ])
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: return_def)
+       apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
+       apply (simp add: ccap_relation_NullCap_iff split: split_if)
+       apply (frule(1) ccap_relation_IRQHandler_mask)
+       apply (erule irq_opt_relation_Some_ucast)
+       apply (simp add: Platform.maxIRQ_def Kernel_C.maxIRQ_def)
+      apply wp
+     apply vcg
+    apply (rule conseqPre,vcg)
+    apply clarsimp
    apply (rule ccorres_if_lhs)
     apply simp
     apply (rule ccorres_fail)
@@ -2026,28 +2061,34 @@ lemma finaliseCap_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem
                         false_def from_bool_def)
   apply (intro impI conjI)
-         apply (clarsimp split: bool.splits)
-        apply (clarsimp split: bool.splits)
-         apply clarsimp
-        apply (clarsimp simp: valid_cap'_def isCap_simps)
-       apply (clarsimp simp: isCap_simps capRange_def
+             apply (clarsimp split: bool.splits)
+            apply (clarsimp split: bool.splits)
+           apply (clarsimp simp: valid_cap'_def isCap_simps)
+          apply (clarsimp simp: isCap_simps capRange_def
                              capAligned_def)
-      apply (clarsimp simp: isCap_simps valid_cap'_def)
-     apply (clarsimp simp: isCap_simps valid_cap'_def)
-    apply (clarsimp simp: isCap_simps split: bool.splits)
+         apply (clarsimp simp: isCap_simps valid_cap'_def)
+        apply (clarsimp simp: isCap_simps valid_cap'_def )
+
+       apply (clarsimp simp: isCap_simps split: bool.splits)
+      apply clarsimp
+      apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
+     apply (clarsimp simp: isCap_simps from_bool_def false_def)
+    apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
    apply clarsimp
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-   apply (clarsimp simp: isCap_simps from_bool_def false_def)
-   apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
+   apply (frule(1) ccap_relation_IRQHandler_mask)
+   apply (clarsimp simp: isCap_simps irqInvalid_def
+                      valid_cap'_def Platform.maxIRQ_def
+                      maxIRQ_def)
+    apply (rule irq_opt_relation_Some_ucast', simp)
+    apply (clarsimp simp: isCap_simps irqInvalid_def
+                      valid_cap'_def Platform.maxIRQ_def
+                      maxIRQ_def)
+   apply fastforce
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
   apply (frule(1) ccap_relation_IRQHandler_mask)
-  apply clarsimp
-  apply (rule irq_opt_relation_Some_ucast, simp)
-  apply (clarsimp simp: isCap_simps irqInvalid_def
-                        valid_cap'_def Platform.maxIRQ_def
-                        maxIRQ_def)
+  apply (clarsimp simp add:mask_eq_ucast_eq)
   done
-
-end
+  end
 end

@@ -9,6 +9,7 @@
 # @TAG(NICTA_BSD)
 #
 
+from __future__ import print_function
 import pexpect
 import optparse
 import re
@@ -38,9 +39,9 @@ def main():
 
     # Print header.
     header = "%s Benchmark Results" % filename
-    print
-    print header
-    print "=" * len(header)
+    print()
+    print(header)
+    print("=" * len(header))
 
     # Wait for things to happen.
     errors_detected = False
@@ -53,18 +54,18 @@ def main():
             ])
         if result == 0:
             # Benchmark result.
-            print "    " + process.match.group(1).strip("\r\n")
+            print("    " + process.match.group(1).strip("\r\n"))
         elif result == 1:
             # Category
-            print ""
+            print()
             category = process.match.group(1).strip("\r\n")
-            print category
-            print "-" * len(category)
-            print ""
+            print(category)
+            print("-" * len(category))
+            print()
         elif result == 2:
             # Error
             if not errors_detected:
-                print "*** ERROR DETECTED"
+                print("*** ERROR DETECTED")
             errors_detected = True
         else:
             # EOF
@@ -73,7 +74,7 @@ def main():
 
     # Exit
     if errors_detected:
-        print "Errors during benchmark process."
+        print("Errors during benchmark process.")
         sys.exit(1)
     sys.exit(0)
 

@@ -376,7 +376,7 @@ defs decodeInvocation_def:
   then let irq = capIRQ cap
   in  
     liftME InvokeIRQHandler $
-        decodeIRQHandlerInvocation label args irq extraCaps
+        decodeIRQHandlerInvocation label irq extraCaps
   else if isArchObjectCap cap
   then let cap = capCap cap
   in  

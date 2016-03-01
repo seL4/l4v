@@ -376,7 +376,7 @@ definition
   valid_tcb_state :: "Structures_A.thread_state \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_tcb_state ts s \<equiv> case ts of
-    Structures_A.BlockedOnReceive ref d \<Rightarrow> ep_at ref s
+    Structures_A.BlockedOnReceive ref \<Rightarrow> ep_at ref s
   | Structures_A.BlockedOnSend ref sp \<Rightarrow> ep_at ref s
   | Structures_A.BlockedOnNotification ref \<Rightarrow> ntfn_at ref s
   | _ \<Rightarrow> True"
@@ -404,7 +404,7 @@ where
                                   \<or> (halted st \<and> (c = cap.NullCap)))),
     tcb_cnode_index 3 \<mapsto> (tcb_caller, tcb_caller_update,
                           (\<lambda>_ st. case st of
-                                    Structures_A.BlockedOnReceive e d \<Rightarrow>
+                                    Structures_A.BlockedOnReceive e \<Rightarrow>
                                       (op = cap.NullCap)
                                   | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap))),
     tcb_cnode_index 4 \<mapsto> (tcb_ipcframe, tcb_ipcframe_update,
@@ -530,7 +530,7 @@ where
   | (Structures_A.Restart)               => {}
   | (Structures_A.BlockedOnReply)        => {}
   | (Structures_A.IdleThreadState)       => {}
-  | (Structures_A.BlockedOnReceive x b)  => {(x, TCBBlockedRecv)}
+  | (Structures_A.BlockedOnReceive x)  => {(x, TCBBlockedRecv)}
   | (Structures_A.BlockedOnSend x payl)  => {(x, TCBBlockedSend)}
   | (Structures_A.BlockedOnNotification x) => {(x, TCBSignal)}"
 
@@ -848,7 +848,7 @@ definition
 where
   "valid_irq_handlers \<equiv> \<lambda>s. \<forall>cap \<in> ran (caps_of_state s). \<forall>irq \<in> cap_irqs cap. irq_issued irq s"
 
-definition valid_irq_masks :: "(word8 \<Rightarrow> irq_state) \<Rightarrow> (word8 \<Rightarrow> bool) \<Rightarrow> bool" where
+definition valid_irq_masks :: "(10 word \<Rightarrow> irq_state) \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarrow> bool" where
   "valid_irq_masks table masked \<equiv> \<forall>irq. table irq = IRQInactive \<longrightarrow> masked irq"
 
 definition valid_irq_states :: "'z::state_ext state \<Rightarrow> bool" where
@@ -1122,7 +1122,7 @@ lemma tcb_cap_cases_simps[simp]:
   "tcb_cap_cases (tcb_cnode_index 3) =
    Some (tcb_caller, tcb_caller_update,
          (\<lambda>_ st. case st of
-                   Structures_A.BlockedOnReceive e d \<Rightarrow> (op = cap.NullCap)
+                   Structures_A.BlockedOnReceive e \<Rightarrow> (op = cap.NullCap)
                  | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)))"
   "tcb_cap_cases (tcb_cnode_index 4) =
    Some (tcb_ipcframe, tcb_ipcframe_update,
@@ -1137,7 +1137,7 @@ lemma ran_tcb_cap_cases:
                                        (is_master_reply_cap c \<and> obj_ref_of c = t)
                                      \<or> (halted st \<and> (c = cap.NullCap)))),
      (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e d \<Rightarrow>
+                                       Structures_A.BlockedOnReceive e \<Rightarrow>
                                          (op = cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap))),
      (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_arch_cap or (op = cap.NullCap)))}"
@@ -1188,7 +1188,7 @@ lemma tcb_st_refs_of_simps[simp]:
  "tcb_st_refs_of (Structures_A.Restart)               = {}"
  "tcb_st_refs_of (Structures_A.BlockedOnReply)        = {}"
  "tcb_st_refs_of (Structures_A.IdleThreadState)       = {}"
- "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnReceive x b)  = {(x, TCBBlockedRecv)}"
+ "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnReceive x)  = {(x, TCBBlockedRecv)}"
  "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnSend x payl)  = {(x, TCBBlockedSend)}"
  "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnNotification x) = {(x, TCBSignal)}"
   by (auto simp: tcb_st_refs_of_def)
@@ -1230,7 +1230,7 @@ lemma refs_of_simps[simp]:
 
 lemma refs_of_rev:
  "(x, TCBBlockedRecv) \<in> refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (\<exists>b.  tcb_state tcb = Structures_A.BlockedOnReceive x b))"
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = Structures_A.BlockedOnReceive x))"
  "(x, TCBBlockedSend) \<in> refs_of ko =
     (\<exists>tcb. ko = TCB tcb \<and> (\<exists>pl. tcb_state tcb = Structures_A.BlockedOnSend    x pl))"
  "(x, TCBSignal) \<in> refs_of ko =
@@ -1259,7 +1259,7 @@ lemma refs_of_rev:
 
 lemma st_tcb_at_refs_of_rev:
   "obj_at (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of ko) t s
-     = st_tcb_at (\<lambda>ts. \<exists>b.  ts = Structures_A.BlockedOnReceive x b ) t s"
+     = st_tcb_at (\<lambda>ts. ts = Structures_A.BlockedOnReceive x) t s"
   "obj_at (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts. \<exists>pl. ts = Structures_A.BlockedOnSend x pl   ) t s"
   "obj_at (\<lambda>ko. (x, TCBSignal) \<in> refs_of ko) t s
@@ -2672,60 +2672,60 @@ locale p_arch_idle_update_int_eq = p_arch_idle_update_eq + pspace_int_update_eq
 interpretation revokable_update:
   p_arch_idle_update_int_eq "is_original_cap_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> revokable_update!: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
+sublocale Arch \<subseteq> revokable_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
 
 
 interpretation machine_state_update:
   p_arch_idle_update_int_eq "machine_state_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> machine_state_update!: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
+sublocale Arch \<subseteq> machine_state_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
 
 interpretation cdt_update:
   p_arch_idle_update_int_eq "cdt_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> cdt_update!: Arch_p_arch_idle_update_int_eq "cdt_update f" by unfold_locales
+sublocale Arch \<subseteq> cdt_update: Arch_p_arch_idle_update_int_eq "cdt_update f" by unfold_locales
 
 
 interpretation cur_thread_update:
   p_arch_idle_update_int_eq "cur_thread_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> cur_thread_update!: Arch_p_arch_idle_update_int_eq "cur_thread_update f" by unfold_locales
+sublocale Arch \<subseteq> cur_thread_update: Arch_p_arch_idle_update_int_eq "cur_thread_update f" by unfold_locales
 
 interpretation more_update:
   p_arch_idle_update_int_eq "trans_state f"
   by unfold_locales auto
-sublocale Arch \<subseteq> more_update!: Arch_p_arch_idle_update_int_eq "trans_state f" by unfold_locales
+sublocale Arch \<subseteq> more_update: Arch_p_arch_idle_update_int_eq "trans_state f" by unfold_locales
 
 
 interpretation interrupt_update:
   p_arch_idle_update_eq "interrupt_states_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> interrupt_update!: Arch_p_arch_idle_update_eq "interrupt_states_update f" by unfold_locales
+sublocale Arch \<subseteq> interrupt_update: Arch_p_arch_idle_update_eq "interrupt_states_update f" by unfold_locales
 
 interpretation irq_node_update:
   pspace_int_update_eq "interrupt_irq_node_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> irq_node_update!: Arch_pspace_update_eq "interrupt_irq_node_update f" by unfold_locales
+sublocale Arch \<subseteq> irq_node_update: Arch_pspace_update_eq "interrupt_irq_node_update f" by unfold_locales
 
 interpretation arch_update:
   pspace_int_update_eq "arch_state_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> arch_update!: Arch_pspace_update_eq "arch_state_update f" by unfold_locales
+sublocale Arch \<subseteq> arch_update: Arch_pspace_update_eq "arch_state_update f" by unfold_locales
 
 interpretation more_update':
   pspace_int_update_eq "trans_state f"
   by unfold_locales auto
-sublocale Arch \<subseteq> more_update'!: Arch_pspace_update_eq "trans_state f" by unfold_locales
+sublocale Arch \<subseteq> more_update': Arch_pspace_update_eq "trans_state f" by unfold_locales
 
 interpretation irq_node_update_arch:
   p_arch_update_eq "interrupt_irq_node_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> irq_node_update_arch!: Arch_p_arch_update_eq "interrupt_irq_node_update f" by unfold_locales
+sublocale Arch \<subseteq> irq_node_update_arch: Arch_p_arch_update_eq "interrupt_irq_node_update f" by unfold_locales
 
 interpretation more_update_arch:
   p_arch_update_eq "trans_state f"
   by unfold_locales auto
-sublocale Arch \<subseteq> more_update_arch!: Arch_p_arch_update_eq "trans_state f" by unfold_locales
+sublocale Arch \<subseteq> more_update_arch: Arch_p_arch_update_eq "trans_state f" by unfold_locales
 
 
 lemma obj_ref_in_untyped_range:
@@ -3268,7 +3268,8 @@ lemma get_irq_slot_real_cte:
   "\<lbrace>invs\<rbrace> get_irq_slot irq \<lbrace>real_cte_at\<rbrace>"
   apply (simp add: get_irq_slot_def)
   apply wp
-  apply (clarsimp simp: invs_def valid_state_def valid_irq_node_def)
+  apply (clarsimp simp: invs_def valid_state_def
+    valid_irq_node_def)
   done
 
 lemma all_invs_but_sym_refs_check:
@@ -3320,7 +3321,7 @@ locale invs_locale =
   assumes sts_ex_inv[wp]: "\<And>a b. \<lbrace>ex_inv\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.ex_inv\<rbrace>"
 
   assumes setup_caller_cap_ex_inv[wp]: "\<And>send receive. \<lbrace>ex_inv and valid_mdb\<rbrace> setup_caller_cap send receive \<lbrace>\<lambda>_.ex_inv\<rbrace>"
-  assumes do_ipc_transfer_ex_inv[wp]: "\<And>a b c d e f. \<lbrace>ex_inv and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e f \<lbrace>\<lambda>_.ex_inv\<rbrace>"
+  assumes do_ipc_transfer_ex_inv[wp]: "\<And>a b c d e. \<lbrace>ex_inv and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.ex_inv\<rbrace>"
 
   assumes thread_set_ex_inv[wp]: "\<And>a b. \<lbrace>ex_inv\<rbrace> thread_set a b \<lbrace>\<lambda>_.ex_inv\<rbrace>"
 

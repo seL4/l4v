@@ -57,7 +57,6 @@ where
      irq_slot \<leftarrow> get_irq_slot irq;
      cap_delete_one irq_slot
    od)"
-| "invoke_irq_handler (SetMode irq trig pol) = (do_machine_op $ setInterruptMode irq trig pol)"
 
 text {* Handle an interrupt occurence. Timing and scheduling details are not
 included in this model, so no scheduling action needs to be taken on timer

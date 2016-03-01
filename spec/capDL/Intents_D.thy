@@ -127,12 +127,10 @@ datatype cdl_irq_handler_intent =
  |  IrqHandlerSetEndpointIntent
     (* Clear: (target) *)
  |  IrqHandlerClearIntent
-    (* SetMode: (target) trig pol *)
- |  IrqHandlerSetModeIntent bool bool 
 
 datatype cdl_irq_control_intent =
     (* IssueIrqHandler: (target), irq, (root), index, depth *)
-    IrqControlIssueIrqHandlerIntent word8 word32 word32
+    IrqControlIssueIrqHandlerIntent "10 word" word32 word32
     (* InterruptControl *)
  |  IrqControlArchIrqControlIntent
 

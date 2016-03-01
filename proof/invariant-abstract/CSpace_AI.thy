@@ -2000,7 +2000,7 @@ lemma cap_insert_mdb_cte_at:
     set_cap_cte_wp_at get_cap_wp)
   apply (clarsimp simp:free_index_update_def split:cap.splits)
   apply (wp)
-  apply (clarsimp simp:if_True conj_comms split del:if_splits cong:split_weak_cong)
+  apply (clarsimp simp:if_True conj_comms split del:if_splits cong:prod.case_cong_weak)
   apply (wps)
   apply (wp valid_case_option_post_wp get_cap_wp hoare_vcg_if_lift
     hoare_impI set_untyped_cap_as_full_cte_wp_at )

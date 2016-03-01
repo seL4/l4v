@@ -1739,13 +1739,13 @@ lemma finish_ceqv_Seq_Skip_cases:
 
 ML {*
 fun tac ctxt =
-  rtac @{thm ccorres_abstract[where xf'="\<lambda>s. ()"]} 1
+  resolve_tac ctxt [@{thm ccorres_abstract[where xf'="\<lambda>s. ()"]}] 1
   THEN (REPEAT_DETERM
     (resolve_tac ctxt @{thms While_ceqv[OF impI, OF refl] Cond_ceqv[OF impI, OF refl]
             ceqv_Seq_Skip_cases ceqv_Guard_UNIV[THEN iffD2]
             Guard_ceqv[OF impI, OF refl] ceqv_refl
             finish_ceqv_Seq_Skip_cases} 1
-        ORELSE (rtac @{thm xpresI} THEN' simp_tac (ctxt |> Splitter.del_split @{thm "split_if"})) 1
+        ORELSE (resolve_tac ctxt [@{thm xpresI}] THEN' simp_tac (ctxt |> Splitter.del_split @{thm "split_if"})) 1
     ))
   THEN simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms com.case}) 1
 *}

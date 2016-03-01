@@ -15,9 +15,6 @@ imports ArchRetypeDecls_H "../InvocationLabels_H"
 begin
 
 consts
-kernelBase :: "vptr"
-
-consts
 globalsBase :: "vptr"
 
 consts
@@ -66,7 +63,10 @@ consts
 createITFrameCap :: "machine_word \<Rightarrow> vptr \<Rightarrow> asid option \<Rightarrow> bool \<Rightarrow> capability kernel_init"
 
 consts
-createFramesOfRegion :: "capability \<Rightarrow> region \<Rightarrow> bool \<Rightarrow> vptr \<Rightarrow> unit kernel_init"
+vptrFromPPtr :: "machine_word \<Rightarrow> vptr kernel_init"
+
+consts
+createFramesOfRegion :: "capability \<Rightarrow> region \<Rightarrow> bool \<Rightarrow> unit kernel_init"
 
 consts
 mapGlobalsFrame :: "unit kernel"

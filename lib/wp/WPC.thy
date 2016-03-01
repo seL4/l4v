@@ -118,14 +118,14 @@ let
   val get_concl_pred  = (fst o strip_comb o HOLogic.dest_Trueprop o Thm.concl_of);
   val get_concl_predC = (Thm.cterm_of ctxt o get_concl_pred);
 
-  val get_pred_tvar   = (Thm.ctyp_of ctxt o domain_type o Thm.typ_of o Thm.ctyp_of_cterm);
+  val get_pred_tvar   = domain_type o Thm.typ_of o Thm.ctyp_of_cterm;
   val thm_pred        = get_concl_predC thm;
-  val thm_pred_tvar   = get_pred_tvar thm_pred;
-  val pred_tvar       = get_pred_tvar pred;
+  val thm_pred_tvar   = Term.dest_TVar (get_pred_tvar thm_pred);
+  val pred_tvar       = Thm.ctyp_of ctxt (get_pred_tvar pred);
 
   val thm2            = Thm.instantiate ([(thm_pred_tvar, pred_tvar)], []) thm;
 
-  val thm2_pred       = get_concl_predC thm2;
+  val thm2_pred       = Term.dest_Var (get_concl_pred thm2);
 in
   Thm.instantiate ([], [(thm2_pred, pred)]) thm2
 end;

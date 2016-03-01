@@ -2366,7 +2366,7 @@ proof -
         apply (clarsimp simp: valid_caps_def)
         apply (drule spec, drule spec, drule_tac x=capa in spec, drule (1) mp)
         apply (case_tac aa, simp_all)
-         apply fold_subgoals[2]
+         apply (fold_subgoals (prefix))[2]
          subgoal
          by ((clarsimp simp: valid_cap_def obj_at_def a_type_def is_ep_def
                                 is_ntfn_def is_cap_table_def is_tcb_def

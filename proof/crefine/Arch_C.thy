@@ -226,7 +226,7 @@ proof -
   have pno': "pspace_no_overlap' frame (objBitsKO ko) \<sigma>" 
     by (simp add:objBits_simps pno ko_def archObjSize_def al)
   
-  have al': "is_aligned frame (objBitsKO (ko\<Colon>kernel_object))"
+  have al': "is_aligned frame (objBitsKO (ko::kernel_object))"
     by (simp add:objBits_simps ko_def archObjSize_def al)
 
   (* s/obj/obj'/ *)
@@ -274,13 +274,13 @@ proof -
    done
 
   have cslift_ptr_retyp_helper:
-   "\<forall>x\<Colon>asid_pool_C ptr\<in>dom (cslift x). is_aligned (ptr_val x) (objBitsKO ko)
+   "\<forall>x::asid_pool_C ptr\<in>dom (cslift x). is_aligned (ptr_val x) (objBitsKO ko)
    \<Longrightarrow> clift (hrs_htd_update (ptr_retyps_gen 1 (ap_Ptr frame) False)
-           (hrs_mem_update (heap_update_list frame (replicate ((2\<Colon>nat) ^ pageBits) (0\<Colon>word8)))
+           (hrs_mem_update (heap_update_list frame (replicate ((2::nat) ^ pageBits) (0::word8)))
              (t_hrs_' (globals x)))) =
-   (\<lambda>y\<Colon>asid_pool_C ptr.
-       if y \<in> (CTypesDefs.ptr_add (ap_Ptr frame) \<circ> of_nat) ` {k\<Colon>nat. k < (2\<Colon>nat) ^ (pageBits - objBitsKO ko)}
-       then Some (from_bytes (replicate (size_of TYPE(asid_pool_C)) (0\<Colon>word8))) else cslift x y)"
+   (\<lambda>y::asid_pool_C ptr.
+       if y \<in> (CTypesDefs.ptr_add (ap_Ptr frame) \<circ> of_nat) ` {k::nat. k < (2::nat) ^ (pageBits - objBitsKO ko)}
+       then Some (from_bytes (replicate (size_of TYPE(asid_pool_C)) (0::word8))) else cslift x y)"
     using guard
     apply (subst clift_ptr_retyps_gen_memset_same, simp_all add: szo szko)
     apply (simp add: szo empty szko)
@@ -484,7 +484,7 @@ shows
        apply (wp getSlotCap_wp)
       apply clarsimp
      apply (rule_tac Q="\<lambda>_. cte_wp_at' (op = (UntypedCap frame pageBits idx) o cteCap) parent 
-                           and (\<lambda>s. descendants_range_in' {frame..frame + (2\<Colon>word32) ^ pageBits - (1\<Colon>word32)} parent (ctes_of s))
+                           and (\<lambda>s. descendants_range_in' {frame..frame + (2::word32) ^ pageBits - (1::word32)} parent (ctes_of s))
                            and pspace_no_overlap' frame pageBits
                            and invs'
                            and ct_active'"
@@ -746,7 +746,7 @@ lemma decodeARMPageTableInvocation_ccorres:
          apply (simp add: if_to_top_of_bind del: Collect_const)
          apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
             apply vcg
-           apply (simp add: kernelBase_def hd_conv_nth length_ineq_not_Nil)
+           apply (simp add: kernelBase_def Platform.kernelBase_def hd_conv_nth length_ineq_not_Nil)
           apply (simp add: throwError_bind invocationCatch_def)
           apply (rule syscall_error_throwError_ccorres_n)
           apply (simp add: syscall_error_to_H_cases)
@@ -1195,7 +1195,8 @@ lemma lookupPTSlot_le_0x3C:
    apply simp
   apply (simp add: Platform.ptrFromPAddr_def physMappingOffset_def)
   apply (erule aligned_add_aligned)
-   apply (simp add: kernelBase_addr_def physBase_def is_aligned_def)
+   apply (simp add: kernelBase_addr_def Platform.physBase_def
+     physBase_def is_aligned_def)
   apply (simp add: word_bits_def)
   done
 
@@ -1436,16 +1437,16 @@ lemma valid_pde_slots_lift2:
   done
 
 lemma obj_at_pte_aligned:
-  "obj_at' (\<lambda>a\<Colon>Hardware_H.pte. True) ptr s ==> is_aligned ptr 2"
+  "obj_at' (\<lambda>a::Hardware_H.pte. True) ptr s ==> is_aligned ptr 2"
   apply (drule obj_at_ko_at')
   apply (clarsimp dest!:ko_at_is_aligned' 
     simp:objBits_simps archObjSize_def)
   done
 
 lemma addrFromPPtr_mask_5:
-  "addrFromPPtr ptr && mask (5\<Colon>nat) = ptr && mask (5\<Colon>nat)" 
+  "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
   apply (simp add:addrFromPPtr_def physMappingOffset_def 
-    kernelBase_addr_def physBase_def)
+    kernelBase_addr_def physBase_def Platform.physBase_def)
   apply word_bitwise
   apply (simp add:mask_def)
   done
@@ -2184,7 +2185,7 @@ lemma vmsz_aligned_addrFromPPtr':
    apply (erule(1) aligned_sub_aligned)
     apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
   apply (simp add: pageBitsForSize_def physMappingOffset_def kernelBase_addr_def
-                   physBase_def is_aligned_def
+                   physBase_def Platform.physBase_def is_aligned_def
             split: vmpage_size.split)
   done
 
@@ -3079,7 +3080,7 @@ lemma decodeARMFrameInvocation_ccorres:
               apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                  apply vcg
                 apply (frule ccap_relation_PageCap_generics)
-                apply (clarsimp simp add: kernelBase_def word_le_nat_alt)
+                apply (clarsimp simp add: kernelBase_def Platform.kernelBase_def word_le_nat_alt)
                apply (simp add: throwError_bind invocationCatch_def)?
                apply (rule syscall_error_throwError_ccorres_n)
                apply (simp add: syscall_error_to_H_cases)
@@ -3489,7 +3490,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
          apply (simp add: syscall_error_to_H_cases)
         apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
            apply vcg
-          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil kernelBase_def)
+          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil kernelBase_def Platform.kernelBase_def)
          apply (simp add:injection_handler_throwError)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add: syscall_error_to_H_cases)
@@ -3963,13 +3964,12 @@ lemma Arch_decodeInvocation_ccorres:
                apply vcg
               apply (rule ccorres_rhs_assoc)+
               apply csymbr
-              apply (rule ccorres_move_const_guard)+
               apply csymbr
               apply (simp add: if_1_0_0 objBits_simps archObjSize_def
                           del: Collect_const)
               apply (elim conjE)
               apply (subgoal_tac "(capBlockSize_CL (cap_untyped_cap_lift untyped')
-                                            = scast (Kernel_C.asidLowBits + 2))
+                                            = 0xC)
                                       = (capBlockSize (fst (extraCaps ! 0)) = pageBits)
                                   ")
                prefer 2

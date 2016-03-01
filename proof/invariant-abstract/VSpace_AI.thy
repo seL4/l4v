@@ -69,16 +69,16 @@ lemma asid_low_high_bits:
   apply (simp add: word_less_sub_le upper_bits_unset_is_l2p [symmetric] bang_eq nth_ucast word_size)
   apply (clarsimp simp: asid_high_bits_of_def nth_ucast nth_shiftr)
   apply (simp add: asid_high_bits_def asid_bits_def asid_low_bits_def word_bits_def)
-  apply (case_tac "n < 10")
+  subgoal premises prems[rule_format] for n
+   apply (cases "n < 10")
+    using prems(1)
    apply fastforce
-  apply (thin_tac P for P)
-  apply (case_tac "n < 18")
-   apply (erule_tac x="n - 10" in allE)
-   apply fastforce
-  apply (thin_tac P for P)
-  apply (simp add: linorder_not_less)
-  done  
-
+   apply (cases "n < 18")
+     using prems(2)[where n="n - 10"]
+     apply fastforce
+   using prems(3-)
+   by (simp add: linorder_not_less)
+  done
 
 lemma asid_low_high_bits':
   "\<lbrakk> ucast x = (ucast y :: 10 word);
@@ -586,6 +586,8 @@ lemma invalidate_asid_entry_invs [wp]:
   done
 
 lemmas cleanCaches_PoU_irq_masks = no_irq[OF no_irq_cleanCaches_PoU]
+
+lemmas ackInterrupt_irq_masks = no_irq[OF no_irq_ackInterrupt]
 
 lemma invalidate_I_PoU_underlying_memory[wp]:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
@@ -1717,6 +1719,16 @@ lemma dmo_setCurrentPD_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setCurre
   apply(erule (1) use_valid[OF _ setCurrentPD_irq_masks])
   done
 
+lemma dmo_ackInterrupt[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ackInterrupt irq) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: ackInterrupt_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ ackInterrupt_irq_masks])
+  done
+
 lemma svr_invs [wp]:
   "\<lbrace>invs\<rbrace> set_vm_root t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: set_vm_root_def)
@@ -1784,7 +1796,7 @@ lemma arch_update_cap_valid_mdb:
    apply (clarsimp dest!:master_cap_cap_range)
   apply (rule conjI)
    apply (clarsimp simp: untyped_inc_def is_arch_update_def)
-   apply (fastforce simp: is_cap_simps)
+   subgoal by (fastforce simp: is_cap_simps)
   apply (rule conjI)
    apply (clarsimp simp: ut_revocable_def)
    apply (clarsimp simp: is_arch_update_def is_cap_simps)
@@ -1797,8 +1809,7 @@ lemma arch_update_cap_valid_mdb:
    apply (clarsimp simp: reply_caps_mdb_def is_cap_simps cap_master_cap_def
                simp del: split_paired_Ex split_paired_All)
    apply (fastforce elim!: exEI)
-  apply (clarsimp simp: is_cap_simps cap_master_cap_def reply_masters_mdb_def)
-  done
+  by (clarsimp simp: is_cap_simps cap_master_cap_def reply_masters_mdb_def)
 
 
 lemma arch_update_cap_zombies:
@@ -1826,11 +1837,10 @@ lemma arch_update_cap_zombies:
 lemma cap_master_cap_tcb_cap_valid_arch:
   "\<lbrakk> cap_master_cap c = cap_master_cap c'; is_arch_cap c \<rbrakk> \<Longrightarrow>
   tcb_cap_valid c p s = tcb_cap_valid c' p s"
-  apply (simp add: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
+  by (simp add: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
                    valid_ipc_buffer_cap_def  is_cap_simps
             split: option.splits cap.splits arch_cap.splits
                    Structures_A.thread_state.splits)
-  done
 
 
 lemma arch_update_cap_pspace:
@@ -2350,8 +2360,7 @@ lemma set_pd_invs_map:
    apply (simp del:Un_iff)
    apply (drule rev_subsetD[OF _ glob_vs_refs_subset])
    apply (simp add: glob_vs_refs_def)
-  apply blast
-  done
+  by blast
 
 lemma vs_refs_add_one':
   "p \<notin> kernel_mapping_slots \<Longrightarrow>
@@ -3373,7 +3382,7 @@ lemma pd_shifting_again:
 
 lemma pd_shifting_again2:
   "is_aligned (pd::word32) pd_bits \<Longrightarrow>
-   pd + (ucast (ae\<Colon>12 word) << 2) && mask pd_bits = (ucast ae << 2)"
+   pd + (ucast (ae::12 word) << 2) && mask pd_bits = (ucast ae << 2)"
   apply (rule conjunct1, erule is_aligned_add_helper)
   apply (rule ucast_less_shiftl_helper)
    apply (simp add: word_bits_def)
@@ -3668,7 +3677,7 @@ lemma is_final_cap_caps_of_state_2D:
   apply (drule_tac x="fst p'" in spec)
   apply (drule_tac x="snd p'" in spec)
   apply (clarsimp simp: cte_wp_at_caps_of_state Int_commute
-                        Pair_fst_snd_eq)
+                        prod_eqI)
   done
 
 (* FIXME: move *)
@@ -3685,7 +3694,7 @@ lemma empty_table_pt_capI:
 
 crunch underlying_memory[wp]: cleanCacheRange_PoC, cleanL2Range, invalidateL2Range, invalidateByVA, 
                               cleanInvalidateL2Range, cleanInvalByVA, invalidateCacheRange_I, 
-                              branchFlushRange
+                              branchFlushRange, ackInterrupt
                            "\<lambda>m'. underlying_memory m' p = um"
   (wp: cacheRangeOp_lift simp: cache_machine_op_defs machine_op_lift_def machine_rest_lift_def split_def
    ignore: ignore_failure)
@@ -4291,14 +4300,13 @@ lemma store_pte_unmap_page:
                    shiftl_less_t2n'[where m=8 and n=2, simplified]
                    shiftr_less_t2n'[where m=8 and n=2, simplified]
                    word_bits_def shiftl_shiftr_id)+
-  apply (clarsimp   split: Structures_A.kernel_object.split_asm Arch_Structs_A.arch_kernel_obj.split_asm )
-  apply (clarsimp simp: pde_ref_def pte_ref_pages_def pde_ref_pages_def 
+  by (clarsimp   split: Structures_A.kernel_object.split_asm Arch_Structs_A.arch_kernel_obj.split_asm,
+         clarsimp simp: pde_ref_def pte_ref_pages_def pde_ref_pages_def 
                         is_aligned_add_helper less_le_trans[OF ucast_less] 
                         shiftl_less_t2n'[where m=8 and n=2, simplified]  
                  dest!: graph_ofD ucast_up_inj[where 'a=10 and 'b=32, simplified] 
                         ucast_up_inj[where 'a=8 and 'b=32, simplified]
                  split: split_if_asm  Arch_Structs_A.pde.splits Arch_Structs_A.pte.splits)
-  done
 
 crunch pd_at: flush_page "\<lambda>s. P (ko_at (ArchObj (PageDirectory pd)) x s)"
   (wp: crunch_wps simp: crunch_simps)

@@ -1282,7 +1282,7 @@ end
 
 
 sublocale valid_initial_state \<subseteq> 
-          ni: complete_unwinding_system 
+          ni?: complete_unwinding_system
                            "big_step_ADT_A_if utf" (* the ADT that we prove infoflow for *)
                            s0                      (* initial state *)
                            "\<lambda>e s. part s"          (* dom function *)
@@ -1590,10 +1590,14 @@ lemma small_Step_partitionIntegrity:
     partitionIntegrity (current_aag (internal_state_if s)) (internal_state_if s)
            (internal_state_if t)"
   apply(case_tac "sys_mode_of s")
-       apply(simp_all add: part_def split: if_splits add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def | safe )+
-          apply fold_subgoals[5]
-          subgoal by (fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def intro: user_small_Step_partitionIntegrity check_active_irq_A_if_partitionIntegrity)+
-     apply (fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def not_schedule_modes_KernelEntry intro: kernel_call_A_if_partitionIntegrity)+
+       apply(simp_all add: part_def split: if_splits
+              add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def | safe )+
+          apply (fold_subgoals (prefix))[5]
+          subgoal premises prems by (fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def
+            intro: user_small_Step_partitionIntegrity check_active_irq_A_if_partitionIntegrity)+
+     apply (fastforce dest: ADT_A_if_reachable_invs_if
+       simp: invs_if_def not_schedule_modes_KernelEntry
+       intro: kernel_call_A_if_partitionIntegrity)+
    defer
    apply(clarsimp simp: kernel_exit_A_if_def)
    apply(erule use_valid, wp, simp add: partitionIntegrity_refl)
@@ -2339,8 +2343,12 @@ lemma uwr_PSched_cur_domain:
   apply(fastforce simp: uwr_def sameFor_def sameFor_scheduler_def domain_fields_equiv_def)
   done
 
-
 lemma check_active_irq_A_if_confidentiality_helper:
+  notes
+    reads_respects_irq =
+      use_ev[OF check_active_irq_if_reads_respects_f_g[
+        where st=s0_internal and st'=s0_internal and irq=timer_irq]]
+  shows
   "\<lbrakk>(s, t) \<in> uwr PSched; (s, t) \<in> uwr (part s); (s, t) \<in> uwr u;
     invs_if s;     invs_if t;     silc_inv (current_aag (internal_state_if s')) s0_internal (internal_state_if s');   
     (part s, u) \<in> policyFlows (pasPolicy initial_aag);
@@ -2356,7 +2364,10 @@ lemma check_active_irq_A_if_confidentiality_helper:
   apply(case_tac s, case_tac t, simp_all)
   apply(case_tac u, simp_all)
   apply(frule (6) uwr_reads_equiv_f_g_affects_equiv)
-  apply(frule_tac s=ya and t=yb in use_ev[OF check_active_irq_if_reads_respects_f_g[where st=s0_internal and st'=s0_internal and irq=timer_irq]])
+  apply (match premises in "s = ((_, p), _)" and "t = ((_, q), _)" and
+             H: "(_, _) \<in> fst (check_active_irq_if _ p)"
+          for p q \<Rightarrow>
+          \<open>rule revcut_rl[OF reads_respects_irq[where s=p and t=q, OF H]]\<close>)
        apply assumption
       apply(clarsimp simp: invs_if_def Invs_def)
       apply assumption
@@ -2452,6 +2463,14 @@ lemma partitionIntegrity_irq_state_update[simp]:
   done
   
 lemma do_user_op_A_if_confidentiality:
+  notes
+    read_respects_irq =
+      use_ev[OF check_active_irq_if_reads_respects_f_g[
+        where st=s0_internal and st'=s0_internal and irq=timer_irq]] and
+    read_respects_user_op =
+      use_ev[OF do_user_op_if_reads_respects_f_g[
+        where aag="current_aag (internal_state_if s)" and st="s0_internal"]]
+  shows
   "\<lbrakk>(s, t) \<in> uwr PSched; (s, t) \<in> uwr (part s); (s, t) \<in> uwr u;
     invs_if s;     invs_if t;     invs_if s';    invs_if t';
     (part s, u) \<in> policyFlows (pasPolicy initial_aag);
@@ -2467,7 +2486,9 @@ lemma do_user_op_A_if_confidentiality:
   apply(case_tac s, case_tac t, simp_all)
   apply(case_tac u, simp_all)
   apply(frule (6) uwr_reads_equiv_f_g_affects_equiv)
-  apply(frule_tac s=y and t=yb in use_ev[OF check_active_irq_if_reads_respects_f_g[where st=s0_internal and st'=s0_internal and irq=timer_irq]])
+  apply (match premises in "s = ((_,p),_)" and "t = ((_,q),_)" and
+             H: "(_,_) \<in> fst (check_active_irq_if _ p)"
+          for p q \<Rightarrow> \<open>rule revcut_rl[OF read_respects_irq[where t=q, OF H]]\<close>)
        apply assumption
       apply (clarsimp simp: invs_if_def Invs_def)
       apply assumption
@@ -2477,9 +2498,12 @@ lemma do_user_op_A_if_confidentiality:
     apply simp
    apply fastforce
   apply(simp add: do_user_op_A_if_def | elim exE conjE)+
-  apply(frule_tac s=ya and t=yc in use_ev[OF do_user_op_if_reads_respects_f_g[where aag="current_aag (internal_state_if s)" and st="s0_internal"]])
+  apply (match premises in "s_aux = (_,p)" and "t_aux = (_,q)" and
+             H: "(_,_) \<in> fst (do_user_op_if _ _ p)"
+          for p q \<Rightarrow> \<open>rule revcut_rl[OF read_respects_user_op[where t=q, OF H]]\<close>)
        apply assumption
-      apply (frule_tac s=y in use_valid[OF _ check_active_irq_if_User_det_inv])
+      apply (match premises in "s = ((_,p),_)" and H: "(_,_) \<in> fst (check_active_irq_if _ p)"
+              for p \<Rightarrow> \<open>rule revcut_rl[OF use_valid[OF H check_active_irq_if_User_det_inv]]\<close>)
        apply (clarsimp simp: invs_if_def Invs_def cur_thread_context_of_def)
       apply simp
       apply (erule use_valid)
@@ -2488,18 +2512,21 @@ lemma do_user_op_A_if_confidentiality:
       apply(clarsimp simp: invs_if_def Invs_def)
       apply (rule guarded_pas_is_subject_current_aag[rule_format])
         apply (simp add: active_from_running)+
-     apply (frule_tac s'=yc in use_valid[OF _ check_active_irq_if_User_det_inv])
+     apply (match premises in "t_aux = (_,q)" and H: "(_,q) \<in> fst (check_active_irq_if _ _)"
+              for q \<Rightarrow> \<open>rule revcut_rl[OF use_valid[OF H check_active_irq_if_User_det_inv]]\<close>)
       apply (clarsimp simp: invs_if_def Invs_def cur_thread_context_of_def)
      apply simp
      apply(erule_tac s'=yc in use_valid)
       apply(wp check_active_irq_if_wp)
      apply simp
      apply(clarsimp simp: invs_if_def Invs_def)
-     apply(subgoal_tac "current_aag y = current_aag yb")
+     apply(subgoal_tac "current_aag y = current_aag ya")
       apply simp
-      apply(frule_tac s=yb in ct_running_cur_thread_not_idle_thread[OF invs_valid_idle])
+      apply (match premises in "t = ((_,q),_)" and H: "invs q" for q \<Rightarrow>
+              \<open>rule revcut_rl[OF ct_running_cur_thread_not_idle_thread[OF invs_valid_idle[OF H]]]\<close>)
        apply assumption
-      apply(cut_tac t=yb in current_aag_def)
+      apply (match premises in "t = ((_,q),_)" for q \<Rightarrow>
+              \<open>rule revcut_rl[OF current_aag_def[where t=q]]\<close>)
       apply (rule guarded_pas_is_subject_current_aag[rule_format])
         apply (simp add: active_from_running)+
      apply(drule uwr_PSched_cur_domain, simp add: current_aag_def)
@@ -2518,7 +2545,8 @@ lemma do_user_op_A_if_confidentiality:
     apply(erule_tac s'=yc in use_valid[OF _ check_active_irq_if_wp])
     apply(clarsimp)
     apply(clarsimp simp: invs_if_def Invs_def)
-    apply(frule_tac s=yb in ct_running_cur_thread_not_idle_thread[OF invs_valid_idle])
+    apply (match premises in "t = ((_,q),_)" and H: "invs q" for q \<Rightarrow>
+            \<open>rule revcut_rl[OF ct_running_cur_thread_not_idle_thread[OF invs_valid_idle[OF H]]]\<close>)
      apply assumption
     apply (rule guarded_pas_is_subject_current_aag[rule_format])
       apply (simp add: active_from_running)+
@@ -3427,7 +3455,18 @@ lemma scheduler_step_1_confidentiality:
        apply ((clarsimp simp: blob)+)[2]
      apply (rule scheduler_affects_equiv_uwr,simp+)
      apply (clarsimp simp: blob)
-    apply (rule equiv_valid_2E[where s="internal_state_if s" and t="internal_state_if t", OF ev2_sym[where R'="\<lambda>r r'. r' = user_context_of t \<and> snd r = user_context_of s", OF _ _ _ _ preemption_interrupt_scheduler_invisible[where aag="initial_aag" and st="s0_internal" and st'="s0_internal" and uc="user_context_of t" and uc'="user_context_of s" and l="label_for_partition u"], OF scheduler_equiv_sym scheduler_affects_equiv_sym scheduler_affects_equiv_sym, simplified]],simp,simp,simp,simp,assumption,assumption)
+    apply (rule
+      equiv_valid_2E[
+        where s="internal_state_if s" and t="internal_state_if t",
+        OF ev2_sym[
+          where R'="\<lambda>r r'. r' = user_context_of t \<and> snd r = user_context_of s",
+          OF _ _ _ _
+             preemption_interrupt_scheduler_invisible[
+               where aag="initial_aag" and st="s0_internal" and st'="s0_internal" and
+                     uc="user_context_of t" and uc'="user_context_of s" and
+                     l="label_for_partition u"],
+               OF scheduler_equiv_sym scheduler_affects_equiv_sym scheduler_affects_equiv_sym, simplified]])
+         apply (fastforce+)[2]
        apply (rule uwr_scheduler_affects_equiv,assumption+)
       apply ((clarsimp simp: blob)+)[2]
     apply (rule scheduler_affects_equiv_uwr,simp+)

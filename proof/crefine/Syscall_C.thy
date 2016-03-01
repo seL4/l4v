@@ -334,7 +334,7 @@ lemma decodeInvocation_ccorres:
                           from_bool_to_bool_and_1 word_size
                           order_le_less_trans[OF word_and_le1]
                           mask_eq_iff_w2p word_size ucast_ucast_mask
-                          isCap_simps
+                          isCap_simps mask_eq_ucast_eq
                           mask_eq_iff_w2p[THEN trans[OF eq_commute]])+
   done
 
@@ -1645,6 +1645,7 @@ lemma handleInterrupt_ccorres:
     apply (rule getIRQSlot_ccorres3)
     apply (rule ccorres_getSlotCap_cte_at)
     apply (rule_tac P="cte_at' rva" in ccorres_cross_over_guard)
+    apply (rule ptr_add_assertion_irq_guard[unfolded dc_def])
     apply (rule ccorres_move_array_assertion_irq ccorres_move_c_guard_cte)+
     apply ctac
       apply csymbr
@@ -1700,25 +1701,33 @@ lemma handleInterrupt_ccorres:
     apply (ctac (no_vcg) add: resetTimer_ccorres)
      apply (ctac add: ackInterrupt_ccorres)
     apply wp
-  apply (rule conjI)
-   apply (clarsimp simp: cte_wp_at_ctes_of)
-   apply (auto simp: word_less_alt word_le_def maxIRQ_def uint_up_ucast is_up_def
+  apply (simp add: sint_ucast_eq_uint is_down uint_up_ucast is_up)
+  apply (clarsimp simp: word_sless_alt word_less_alt word_le_def maxIRQ_def uint_up_ucast is_up_def
                      source_size_def target_size_def word_size
-              intro: word_0_sle_from_less sless_positive)[1]
-  apply (simp add: if_1_0_0 Collect_const_mem)
+                     sint_ucast_eq_uint is_down is_up word_0_sle_from_less)
+  apply (rule conjI)
+   apply (clarsimp simp: cte_wp_at_ctes_of ucast_up_ucast is_up)
+  apply (intro conjI allI)
+   apply (clarsimp simp add: if_1_0_0 Collect_const_mem)
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
-                        cte_wp_at_ctes_of)
-  apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-  apply (clarsimp simp: typ_heap_simps')
-  apply (simp add: cap_get_tag_isCap)
-  apply (cut_tac x=irq in unat_lt2p)
-  apply (simp add: ucast_eq_0 is_up_def source_size_def
+                        cte_wp_at_ctes_of ucast_ucast_b is_up)
+  apply (intro conjI impI)
+        apply clarsimp
+        apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+        apply (clarsimp simp: typ_heap_simps')
+        apply (simp add: cap_get_tag_isCap)
+
+        apply (clarsimp simp: isCap_simps)
+        apply (frule cap_get_tag_isCap_unfolded_H_cap)
+        apply (frule cap_get_tag_to_H, assumption)
+        apply (clarsimp simp: to_bool_def)
+       apply (cut_tac un_ui_le[where b = 159 and a = irq,
+           simplified word_size])
+       apply (simp add: ucast_eq_0 is_up_def source_size_def
                    target_size_def word_size unat_gt_0
-      | subst array_assertion_abs_irq[rule_format, OF conjI])+
-  apply (clarsimp simp: isCap_simps)
-  apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  apply (frule cap_get_tag_to_H, assumption)
-  apply (clarsimp simp: to_bool_def)
+           | subst array_assertion_abs_irq[rule_format, OF conjI])+
+   apply (erule(1) rf_sr_cte_at_valid[OF ctes_of_cte_at])
+  apply (clarsimp simp:nat_le_iff)
   done
 
 end

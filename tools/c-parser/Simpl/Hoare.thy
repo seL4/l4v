@@ -1,5 +1,3 @@
-(* @TAG(OTHER_LGPL) *)
-
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
@@ -97,7 +95,7 @@ syntax
     ("(3_/\<turnstile>\<^sub>t (_/ (_)/ _))" [61,1000,20,1000]60)
 
 
-syntax (ascii)
+syntax (ASCII)
 
 "_hoarep_emptyFaults"::
 "[('s,'p,'f) body,('s,'p) quadruple set,

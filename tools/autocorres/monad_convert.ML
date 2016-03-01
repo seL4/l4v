@@ -111,8 +111,8 @@ fun monad_rewrite (lthy : Proof.context) (mt : Monad_Types.monad_type)
                   (term : term) : thm option =
 let
   val lthy = Utils.set_hidden_ctxt lthy
-  val rules = if forward then #lift_rules mt else #unlift_rules mt
-  val rules' = dest_ss rules |> #simps |> map #2
+  val rules = Monad_Types.monad_type_rules mt
+  val rules' = if forward then #lift_rules rules else #unlift_rules rules
   val cterm = Thm.cterm_of lthy term
   (* Just apply the simplifier and hope that it works. *)
   val thm = Simplifier.rewrite (
@@ -142,7 +142,8 @@ let
   val simps = if do_opt then PolishSimps.get ctxt else []
 
   (* Simplify using polish rules. *)
-  val simp_conv = Simplifier.rewrite (put_simpset (#polish_rules mt) ctxt addsimps simps)
+  val rules = Monad_Types.monad_type_rules mt
+  val simp_conv = Simplifier.rewrite (put_simpset HOL_ss ctxt addsimps (#polish_rules rules @ simps))
 
   (* eta-contract "case_prod clauses, so that they render as:
    * "%(a, b). P a b" instead of "case x of (a, b) => P a b". *)
@@ -211,7 +212,8 @@ fun monad_convert_tac (ctxt : Proof.context) (monad_name : string) (do_opt : boo
 
     (* Make variables schematic *)
     val translate_thm' = Goal.prove ctxt (sort_distinct string_ord m_vars) []
-                                    (term_of_thm translate_thm) (K (rtac translate_thm 1))
+                                         (term_of_thm translate_thm)
+                                         (K (resolve_tac ctxt [translate_thm] 1))
 
     val result = EqSubst.eqsubst_tac ctxt [0] [translate_thm'] n state
   in

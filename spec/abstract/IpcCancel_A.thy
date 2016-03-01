@@ -154,7 +154,7 @@ definition
   get_blocking_object :: "thread_state \<Rightarrow> (obj_ref,'z::state_ext) s_monad"
 where
  "get_blocking_object state \<equiv>
-       case state of BlockedOnReceive epptr d \<Rightarrow> return epptr
+       case state of BlockedOnReceive epptr \<Rightarrow> return epptr
                     | BlockedOnSend epptr x \<Rightarrow> return epptr
                     | _ \<Rightarrow> fail"
 
@@ -311,7 +311,7 @@ where
      case state  
        of 
           BlockedOnSend x y \<Rightarrow> blocked_cancel_ipc state tptr
-        | BlockedOnReceive x d \<Rightarrow> blocked_cancel_ipc state tptr
+        | BlockedOnReceive x \<Rightarrow> blocked_cancel_ipc state tptr
         | BlockedOnNotification event \<Rightarrow> cancel_signal tptr event
         | BlockedOnReply \<Rightarrow> reply_cancel_ipc tptr
         | _ \<Rightarrow> return ()

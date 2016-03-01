@@ -1,5 +1,3 @@
-(* @TAG(OTHER_LGPL) *)
-
 (*  Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
     License:     LGPL
@@ -124,8 +122,8 @@ syntax
   "_antiquoteCur"  :: "('a => 'b) => 'b"
   "_antiquoteOld0"  :: "('a => 'b) => 'a => 'b"       ("\<^bsup>_\<^esup>_" [1000,1000] 1000)
   "_antiquoteOld"  :: "('a => 'b) => 'a => 'b"
-  "_Assert"      :: "'a => 'a set"           ("({|_|})" [0] 1000)
-  "_AssertState" :: "idt \<Rightarrow> 'a \<Rightarrow> 'a set"    ("({|_. _|})" [1000,0] 1000)
+  "_Assert"      :: "'a => 'a set"            ("(\<lbrace>_\<rbrace>)" [0] 1000)
+  "_AssertState" :: "idt \<Rightarrow> 'a => 'a set"     ("(\<lbrace>_. _\<rbrace>)" [1000,0] 1000)
   "_Assign"      :: "'b => 'b => ('a,'p,'f) com"    ("(_ :==/ _)" [30, 30] 23)
   "_Init"        :: "ident \<Rightarrow> 'c \<Rightarrow> 'b \<Rightarrow> ('a,'p,'f) com" 
                                              ("(\<acute>_ :==\<^bsub>_\<^esub>/ _)" [30,1000, 30] 23)
@@ -228,24 +226,14 @@ syntax
   ""           :: "basic \<Rightarrow> basics"             ("_")
   "_basics"    :: "[basic, basics] \<Rightarrow> basics" ("_,/ _")
 
-(* Experimental coloring for ProofGeneral; fails to run through latex*)
-(*<*)
-syntax (ProofGeneral output)
-  "_guarantee"     :: "'s set \<Rightarrow> grd"       ("F_A" [1000] 1000)
-  "_guaranteeStrip":: "'s set \<Rightarrow> grd"       ("B_A" [1000] 1000)
-(*>*)
-
-syntax (ascii)
+syntax (ASCII)
+  "_Assert"      :: "'a => 'a set"           ("({|_|})" [0] 1000)
+  "_AssertState" :: "idt \<Rightarrow> 'a \<Rightarrow> 'a set"    ("({|_. _|})" [1000,0] 1000)
   "_While_guard"       :: "grds => 'a bexp => bdy \<Rightarrow> ('a,'p,'f) com"
         ("(0WHILE (_|-> /_) /_)"  [0,0,1000] 71)
   "_While_guard_inv":: "grds\<Rightarrow>'a bexp\<Rightarrow>'a assn\<Rightarrow>bdy \<Rightarrow> ('a,'p,'f) com"
         ("(0WHILE (_|-> /_) INV (_) /_)"  [0,0,0,1000] 71)
   "_guards" :: "grds \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com" ("(_|->_ )" [60, 21] 23)
-
-
-syntax (xsymbols)
-  "_Assert"      :: "'a => 'a set"            ("(\<lbrace>_\<rbrace>)" [0] 1000)
-  "_AssertState" :: "idt \<Rightarrow> 'a => 'a set"     ("(\<lbrace>_. _\<rbrace>)" [1000,0] 1000)
 
 syntax (output)
   "_hidden_grds"      :: "grds" ("\<dots>")
@@ -363,7 +351,7 @@ syntax
   "_faccess"  :: "'ref \<Rightarrow> ('ref \<Rightarrow> 'v) \<Rightarrow> 'v"
    ("_\<rightarrow>_" [65,1000] 100)
 
-syntax (ascii)
+syntax (ASCII)
   "_faccess"  :: "'ref \<Rightarrow> ('ref \<Rightarrow> 'v) \<Rightarrow> 'v"
    ("_->_" [65,1000] 100)
 

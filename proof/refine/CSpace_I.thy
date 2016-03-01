@@ -1383,7 +1383,7 @@ lemma irrefl_subtree [iff]:
   "m \<turnstile> x \<rightarrow> x = False"
   by (clarsimp dest!: subtree_mdb_next)
 
-end
+end (* of context mdb_order *)
 
 lemma no_loops_prev_next_0:
   fixes m :: cte_heap
@@ -1514,7 +1514,7 @@ lemma zero_next [simp]:
   "m \<turnstile> 0 \<leadsto> p' = False"
   by (clarsimp simp: mdb_next_unfold)
 
-end
+end (* of context vmdb *)
 
 lemma no_self_loop_next:
   assumes vmdb: "valid_mdb_ctes m"
@@ -1652,7 +1652,7 @@ lemma p_next:
   "(m \<turnstile> p \<leadsto> p') = (p' = mdbNext node)"
   using m_p by (auto simp: mdb_next_unfold)
 
-end
+end (* of locale mdb_ptr *)
 
 lemma no_mdb_not_source:
   "no_mdb cte \<Longrightarrow> m \<turnstile> c \<leadsto> c' \<Longrightarrow> m p = Some cte \<Longrightarrow> c = p \<longrightarrow> c' = 0"
@@ -1929,7 +1929,7 @@ lemma distinct_zombies_copyE:
 
 lemmas distinct_zombies_sameE
     = distinct_zombies_copyE [where y=x and x=x for x, simplified,
-                              OF _ _ _ _ _ TrueI]
+                              OF _ _ _ _ _]
 
 lemma capBits_Master:
   "capBits (capMasterCap cap) = capBits cap"
@@ -1959,7 +1959,7 @@ lemma distinct_zombies_copyMasterE:
 
 lemmas distinct_zombies_sameMasterE
     = distinct_zombies_copyMasterE[where x=x and y=x for x, simplified,
-                                   OF _ _ _ TrueI]
+                                   OF _ _ _]
 
 lemma isZombie_capClass: "isZombie cap \<Longrightarrow> capClass cap = PhysicalClass"
   by (clarsimp simp: isCap_simps)
@@ -2139,7 +2139,7 @@ lemma setCTE_valid_objs'[wp]:
     setCTE p cte \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   unfolding setCTE_def
   apply (rule setObject_valid_objs')
-  apply (clarsimp simp: Pair_fst_snd_eq lookupAround2_char1
+  apply (clarsimp simp: prod_eq_iff lookupAround2_char1
 			updateObject_cte in_monad typeError_def
 			valid_obj'_def valid_tcb'_def valid_cte'_def
 			tcb_cte_cases_def
@@ -2264,4 +2264,4 @@ lemma diminished_capMaster:
   "diminished' cap cap' \<Longrightarrow> capMasterCap cap' = capMasterCap cap"
   by (clarsimp simp: diminished'_def)
 
-end
+end (* of theory *)

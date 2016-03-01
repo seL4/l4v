@@ -776,7 +776,7 @@ lemma use_retype_region_proofs_ext':
    done
 
 lemmas use_retype_region_proofs_ext
-    = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q, simplified, OF _ _ _ _ TrueI] for Q
+    = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q, simplified] for Q
 
 lemma (in is_extended) pas_refined_tcb_domain_map_wellformed':
   assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag and P\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"

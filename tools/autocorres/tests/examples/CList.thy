@@ -240,7 +240,7 @@ thm revappend'_def
 
 text {* The heap operations are a bit too low level,
         so let's lift them using our heap accessors. *}
-schematic_lemma revappend'_abstract: "revappend' p q = ?new_definition"
+schematic_goal revappend'_abstract: "revappend' p q = ?new_definition"
   apply (subst revappend'_def)
   unfolding node_next_def[symmetric]
             node_next_upd_def[symmetric]

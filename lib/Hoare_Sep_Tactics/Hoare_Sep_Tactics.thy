@@ -81,7 +81,7 @@ lemma extract_all: "((\<lambda>s. \<forall>x. (P x) s) \<and>* R) s \<Longrighta
   apply (clarsimp simp: sep_conj_def, fastforce)
 done
 
-schematic_lemma strong_sep_impl_sep_wp':
+schematic_goal strong_sep_impl_sep_wp':
     "\<And>sep_lift.
      (\<And>R. \<lbrace>(\<lambda>s. (P \<and>* R) (sep_lift s) )\<rbrace> f \<lbrace>\<lambda>rv. (\<lambda>s. (Q rv \<and>* R) (sep_lift s))\<rbrace>) \<Longrightarrow>
      \<lbrace>(\<lambda>s. ( P \<and>* (?f Q R)) (sep_lift s))\<rbrace> f \<lbrace>\<lambda>rv s . R rv (sep_lift s)\<rbrace>"
@@ -271,12 +271,12 @@ local
                        handle THM _ => first_working (fs) x
   fun wp_add_attrib' f (ctxt, thm') = WeakestPre.gen_att ( WeakestPre.add_rule o (f (Context.proof_of ctxt))) (ctxt, thm')
 in
-val sep_magic_wand        = Thm.rule_attribute (attrib @{thm strong_sep_impl_sep_wp} o Context.proof_of)
-val sep_magic_wandE       = Thm.rule_attribute (attrib @{thm strong_sep_impl_sep_wpE} o Context.proof_of)
-val sep_magic_wand_side   = Thm.rule_attribute (attrib @{thm strong_sep_impl_sep_wp_side} o Context.proof_of )
-val sep_magic_wand_side'  = Thm.rule_attribute (attrib @{thm strong_sep_impl_sep_wp_side'} o Context.proof_of )
-val sep_magic_wand_sideE  = Thm.rule_attribute (attrib @{thm strong_sep_impl_sep_wp_sideE} o Context.proof_of)
-val sep_magic_wand_sideE' = Thm.rule_attribute (attrib @{thm strong_sep_impl_sep_wp_sideE'}o Context.proof_of)
+val sep_magic_wand        = Thm.rule_attribute [] (attrib @{thm strong_sep_impl_sep_wp} o Context.proof_of)
+val sep_magic_wandE       = Thm.rule_attribute [] (attrib @{thm strong_sep_impl_sep_wpE} o Context.proof_of)
+val sep_magic_wand_side   = Thm.rule_attribute [] (attrib @{thm strong_sep_impl_sep_wp_side} o Context.proof_of )
+val sep_magic_wand_side'  = Thm.rule_attribute [] (attrib @{thm strong_sep_impl_sep_wp_side'} o Context.proof_of )
+val sep_magic_wand_sideE  = Thm.rule_attribute [] (attrib @{thm strong_sep_impl_sep_wp_sideE} o Context.proof_of)
+val sep_magic_wand_sideE' = Thm.rule_attribute [] (attrib @{thm strong_sep_impl_sep_wp_sideE'}o Context.proof_of)
 
 fun sep_wandise_helper ctxt =
                   first_working [attrib @{thm strong_sep_impl_sep_wp} ctxt,
@@ -291,7 +291,7 @@ fun sep_wandise_helper ctxt =
                                  attrib @{thm strong_sep_impl_sep_wp'} ctxt,
                                  attrib @{thm strong_sep_impl_sep_wp_rv''} ctxt]
 
-val sep_wandise = Thm.rule_attribute ((fn ctxt => (
+val sep_wandise = Thm.rule_attribute [] ((fn ctxt => (
                   first_working [attrib @{thm strong_sep_impl_sep_wp} ctxt,
                                  attrib @{thm strong_sep_impl_sep_wpE} ctxt,
                                  attrib @{thm strong_sep_impl_sep_wp_side''} ctxt,
@@ -375,9 +375,9 @@ ML {*
    fun sep_wp thms ctxt  =
    let val thms' = map (sep_wandise_helper ctxt |> J) thms;
        val wp = WeakestPre.apply_once_tac false ctxt thms'  (Unsynchronized.ref [] : thm list Unsynchronized.ref)
-       val sep_impi = (REPEAT_ALL_NEW  (sep_match_trivial_tac ctxt)) THEN' atac
-       val schemsolve = sep_rule_tac (etac @{thm boxsolve}) ctxt
-       val hoare_post = (rtac (rotate_prems ~1 @{thm hoare_strengthen_post}))
+       val sep_impi = (REPEAT_ALL_NEW  (sep_match_trivial_tac ctxt)) THEN' assume_tac ctxt
+       val schemsolve = sep_rule_tac (eresolve0_tac [@{thm boxsolve}]) ctxt
+       val hoare_post = (resolve0_tac [(rotate_prems ~1 @{thm hoare_strengthen_post})])
        in K wp THEN' (TRY o sep_flatten ctxt) THEN' (TRY o (hoare_post THEN' (schemsolve ORELSE' sep_impi))) THEN'
           (TRY o (sep_match_trivial_tac ctxt |> REPEAT_ALL_NEW)) THEN'
           (TRY o sep_flatten ctxt)

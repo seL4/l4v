@@ -292,7 +292,7 @@ lemma helper21: "None \<notin> S \<Longrightarrow> Some x \<in> S = (x \<in> the
   apply (rule iffI)
    apply force
   apply (subst in_these_eq[symmetric])
-  apply (clarsimp simp:these_def)
+  apply (clarsimp simp:Option.these_def)
   apply (case_tac "\<exists>y. xa = Some y")
    by clarsimp+
 
@@ -661,7 +661,7 @@ lemma valid_only_pds_pts_frames:
                                                        | _ \<Rightarrow> False"
   apply (clarsimp simp:valid_extra_def)
   apply (erule_tac x=xa in allE)
-  by (metis case_option_If2 is_none_def)
+  by (metis case_option_If2 Option.is_none_def)
 
 lemma cnode_objs_only_cnodes:
   "\<forall>(_, i) \<in> set (cnode_objs spec). case i of Types_D.CNode _ \<Rightarrow> True | _ \<Rightarrow> False"

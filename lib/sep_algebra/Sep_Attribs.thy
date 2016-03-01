@@ -63,7 +63,7 @@ in
 *)
 
 fun sep_curry_inner ctxt = attribute_thm ( ctxt) @{thm sep_curry_atomised}
-val sep_curry = Thm.rule_attribute (fn ctxt => sep_curry_inner (Context.proof_of ctxt))
+val sep_curry = Thm.rule_attribute [] (fn ctxt => sep_curry_inner (Context.proof_of ctxt))
 
 (*
  The attribute sep_back takes a rule of the form A \<Longrightarrow> B and returns a rule (A \<and>* (B \<longrightarrow>* R)) \<Longrightarrow> R.
@@ -75,7 +75,7 @@ fun backward ctxt thm =
 
 fun backward' ctxt thm = backward (Context.proof_of ctxt) thm
 
-val sep_backward = Thm.rule_attribute (backward')
+val sep_backward = Thm.rule_attribute [] (backward')
 
 end;
 *}

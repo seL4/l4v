@@ -108,7 +108,7 @@ fun get_split_tac prefix ctxt tac = SUBGOAL (fn (t, i) =>
   let
     val concl = HOLogic.dest_Trueprop (Logic.strip_assums_concl t)
     val (thm, Ps) = split_thm prefix ctxt concl
-  in (rtac @{thm iffD2} THEN' rtac thm THEN' tac Ps) end i)
+  in (resolve0_tac [ @{thm iffD2} ] THEN' resolve0_tac [thm] THEN' tac Ps) end i)
 
 end
 *}
@@ -123,12 +123,12 @@ Split_To_Conj.split_thm "P" @{context}
 ML {*
 structure Partial_Prove = struct
 
-fun inst_frees_tac ctxt Ps ct = REPEAT_DETERM o SUBGOAL (fn (t, _) =>
+fun inst_frees_tac _ Ps ct = REPEAT_DETERM o SUBGOAL (fn (t, _) =>
   fn thm => case Term.add_frees t [] |> filter (member (op =) Ps)
   of [] => Seq.empty
   | (f :: _) => let
     val idx = Thm.maxidx_of thm + 1
-    val var = Thm.cterm_of ctxt (Var ((fst f, idx), snd f))
+    val var = ((fst f, idx), snd f)
   in thm |> Thm.generalize ([], [fst f]) idx
     |> Thm.instantiate ([], [(var, ct)])
     |> Seq.single
@@ -139,7 +139,9 @@ fun cleanup_tac ctxt Ps
       THEN' asm_full_simp_tac ctxt
 
 fun finish_tac ctxt Ps = inst_frees_tac ctxt Ps @{cterm True}
-    THEN' CONVERSION (Conv.concl_conv ~1 (Simplifier.rewrite (put_simpset HOL_ss ctxt)))
+    THEN' CONVERSION (Conv.params_conv ~1 (fn ctxt =>
+            (Conv.concl_conv ~1 (Simplifier.rewrite (put_simpset HOL_ss ctxt)))
+        ) ctxt)
 
 fun test_start_partial_prove ctxt i t = let
     val j = Thm.nprems_of t - i

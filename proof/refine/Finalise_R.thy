@@ -149,7 +149,7 @@ lemma no_0_no_0_lhs_rtrancl [simp]:
 
 
 locale mdb_empty = 
-  mdb_ptr: mdb_ptr m _ _ slot s_cap s_node
+  mdb_ptr?: mdb_ptr m _ _ slot s_cap s_node
     for m slot s_cap s_node +
 
   fixes n
@@ -2192,7 +2192,7 @@ lemma unbindNotification_invs[wp]:
   apply (wp sbn'_valid_pspace'_inv sbn_sch_act' sbn_valid_queues valid_irq_node_lift 
             irqs_masked_lift setBoundNotification_ct_not_inQ | clarsimp)+
           defer 5
-          apply fold_subgoals[8]
+          apply (fold_subgoals (prefix))[8]
           subgoal by (auto simp: pred_tcb_at' valid_pspace'_def projectKOs valid_obj'_def valid_ntfn'_def
                             ko_wp_at'_def
                      elim!: obj_atE' valid_objsE' if_live_then_nonz_capE'
@@ -2241,14 +2241,14 @@ lemma unbindMaybeNotification_invs[wp]:
   apply safe[1]
            defer 3
            defer 7
-           apply fold_subgoals[8]
-           subgoal by (auto simp: pred_tcb_at' valid_pspace'_def projectKOs valid_obj'_def valid_ntfn'_def
+           apply (fold_subgoals (prefix))[8]
+           subgoal premises prems using prems by (auto simp: pred_tcb_at' valid_pspace'_def projectKOs valid_obj'_def valid_ntfn'_def
                              ko_wp_at'_def
                       elim!: obj_atE' valid_objsE' if_live_then_nonz_capE'
                       split: option.splits ntfn.splits)
    apply (rule delta_sym_refs, assumption)
-    apply fold_subgoals[2]
-    subgoal by (fastforce simp: symreftype_inverse' ntfn_q_refs_of'_def 
+    apply (fold_subgoals (prefix))[2]
+    subgoal premises prems using prems by (fastforce simp: symreftype_inverse' ntfn_q_refs_of'_def 
                     split: ntfn.splits split_if_asm
                      dest!: ko_at_state_refs_ofD')+
   apply (rule delta_sym_refs, assumption)
@@ -4061,7 +4061,7 @@ lemma arch_recycle_cap_corres:
        prefer 2
        apply (simp add: liftM_def[symmetric] o_def dc_def[symmetric]
                         mapM_x_mapM)
-       apply (simp add: kernel_base_def kernelBase_def 
+       apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def 
                         objBits_simps archObjSize_def)
        apply (rule corres_guard_imp)
          apply (rule_tac r'=dc and S="op ="

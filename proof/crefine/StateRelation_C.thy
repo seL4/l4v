@@ -237,10 +237,9 @@ where
      = (tsType_CL (fst ts') = scast ThreadState_IdleThreadState)"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnReply) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReply)"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref dimin) ts'
+| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive \<and>
-        oref = blockingObject_CL (fst ts') \<and>
-        dimin = to_bool (blockingIPCDiminishCaps_CL (fst ts')))"
+        oref = blockingObject_CL (fst ts'))"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg isc) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnSend 
         \<and> oref = blockingObject_CL (fst ts') 
@@ -587,7 +586,7 @@ fun
 
 
 definition
-  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (word32[64]) \<Rightarrow> bool"
+  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (word32[160]) \<Rightarrow> bool"
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>

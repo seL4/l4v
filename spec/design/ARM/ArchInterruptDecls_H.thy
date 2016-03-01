@@ -18,5 +18,8 @@ decodeIRQControlInvocation :: "machine_word \<Rightarrow> machine_word list \<Ri
 consts
 performIRQControl :: "ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> unit kernel_p"
 
+consts
+checkIRQ :: "machine_word \<Rightarrow> ( syscall_error , unit ) kernel_f"
+
 
 end

@@ -644,10 +644,10 @@ lemma preemption_point_def2:
 
 
 (* moved from ADT_IF *)
-definition irq_at :: "nat \<Rightarrow> (word8 \<Rightarrow> bool) \<Rightarrow> irq option" where
+definition irq_at :: "nat \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarrow> irq option" where
   "irq_at pos masks \<equiv> 
   let i = irq_oracle pos in
-  (if i = 0xFF \<or> masks i then None else Some i)"
+  (if i = 0x3FF \<or> masks i then None else Some i)"
 
 definition is_irq_at :: "('z::state_ext) state \<Rightarrow> irq \<Rightarrow> nat \<Rightarrow> bool" where
   "is_irq_at s \<equiv> \<lambda> irq pos. irq_at pos (irq_masks (machine_state s)) = Some irq"
@@ -693,7 +693,7 @@ text {*
   There is only one interrupt turned on, namely @{term irq}, and it is
   a timer interrupt.
 *}
-definition only_timer_irq :: "word8 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+definition only_timer_irq :: "10 word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "only_timer_irq irq s \<equiv> (\<forall>x. interrupt_states s x = IRQTimer \<longrightarrow> x = irq) \<and> irq_is_recurring irq s"
 
 lemma is_irq_at_triv:
@@ -755,7 +755,7 @@ lemma only_timer_irq_pres:
   apply(erule use_valid[OF _ irq_is_recurring_triv[OF a]])
   by simp
    
-definition only_timer_irq_inv :: "word8 \<Rightarrow> 'a::state_ext state \<Rightarrow> 'a state \<Rightarrow> bool" where
+definition only_timer_irq_inv :: "10 word \<Rightarrow> 'a::state_ext state \<Rightarrow> 'a state \<Rightarrow> bool" where
   "only_timer_irq_inv irq st \<equiv> domain_sep_inv False st and only_timer_irq irq"
 
 lemma only_timer_irq_inv_pres:

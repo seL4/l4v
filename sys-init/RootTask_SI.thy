@@ -881,7 +881,7 @@ lemma si_irq_null_caps_at_simplified:
                     f = "\<lambda>cap_ref. cap_ref_irq cap_ref spec"
                 and h = "si_null_irq_cap_at (map_of (zip irqs free_cptrs)) spec", symmetric])
      apply (drule well_formed_irqhandler_bij)
-     apply (clarsimp simp: bij_betw_def cond_split_eta)
+     apply (clarsimp simp: bij_betw_def cond_case_prod_eta)
     apply simp
    apply (clarsimp simp: si_spec_irq_null_cap_at'_def cap_at_def cap_ref_irq_def)
   apply clarsimp

@@ -502,6 +502,10 @@ lemma ccorres_subgoal_tailE:
   by simp
 
 lemma label_in_CNodeInv_ranges:
+  notes invocation_eq_use_types_symm
+    = all_invocation_label_defs[THEN invocation_eq_use_type, symmetric, simplified,
+                            unfolded enum_invocation_label, simplified]
+  shows
   "(label < scast Kernel_C.CNodeRevoke \<or> scast Kernel_C.CNodeSaveCaller < label)
       = (invocation_type label \<notin> set [CNodeRevoke .e. CNodeSaveCaller])"
   "(scast Kernel_C.CNodeCopy \<le> label \<and> label \<le> scast Kernel_C.CNodeMutate)
@@ -510,7 +514,7 @@ lemma label_in_CNodeInv_ranges:
                   del: upt.simps)
   apply (simp_all add: atLeastLessThanSuc)
   apply (simp_all add: toEnum_def enum_invocation_label)
-  apply (simp_all add: invocation_eq_use_types[symmetric] invocation_label_defs)
+  apply (simp_all add: invocation_eq_use_types_symm[simplified] invocation_label_defs)
   apply (simp_all add: unat_arith_simps)
   apply arith+
   done

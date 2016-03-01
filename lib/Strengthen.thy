@@ -173,7 +173,7 @@ val arg_pars = Scan.option (Scan.first (map Args.$$$ ["I", "I'", "D", "D'", "lhs
 val setup =
       Attrib.setup @{binding "mk_strg"}
           ((Scan.lift arg_pars -- Args.context)
-              >> (fn (args, ctxt) => Thm.rule_attribute (K (mk_strg_args args ctxt))))
+              >> (fn (args, ctxt) => Thm.rule_attribute [] (K (mk_strg_args args ctxt))))
           "put rule in 'strengthen' form"
 
 end
@@ -227,7 +227,7 @@ val setup =
     "strengthening congruence rules";
 
 val do_elim = SUBGOAL (fn (t, i) => case (head_of (Logic.strip_assums_concl t)) of
-    @{term elim} => etac @{thm do_elim} i
+    @{term elim} => eresolve0_tac @{thms do_elim} i
   | _ => all_tac)
 
 infix 1 THEN_TRY_ALL_NEW;
@@ -253,7 +253,7 @@ fun do_strg ctxt congs rules
 fun strengthen ctxt thms = let
     val congs = Congs.get (Proof_Context.theory_of ctxt)
     val rules = map (Make_Strengthen_Rule.auto_mk ctxt) thms
-  in rtac @{thm use_strengthen_imp}
+  in resolve0_tac @{thms use_strengthen_imp}
     THEN' do_strg ctxt congs rules end
 
 val strengthen_args =

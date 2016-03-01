@@ -54,8 +54,8 @@ lemma if_apply_cong[fundef_cong]:
      \<Longrightarrow> (if P then f else g) x = (if P' then f' else g') x'"
   by simp
 
-lemma split_apply_cong[fundef_cong]:
-  "\<lbrakk> f (fst p) (snd p) s = f' (fst p') (snd p') s' \<rbrakk> \<Longrightarrow> split f p s = split f' p' s'"
+lemma case_prod_apply_cong[fundef_cong]:
+  "\<lbrakk> f (fst p) (snd p) s = f' (fst p') (snd p') s' \<rbrakk> \<Longrightarrow> case_prod f p s = case_prod f' p' s'"
   by (simp add: split_def)
 
 definition
@@ -77,7 +77,7 @@ definition "K \<equiv> \<lambda>x y. x"
 
 definition
   zipWith :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> 'c list" where
-  "zipWith f xs ys \<equiv> map (split f) (zip xs ys)"
+  "zipWith f xs ys \<equiv> map (case_prod f) (zip xs ys)"
 
 primrec
   delete :: "'a \<Rightarrow> 'a list \<Rightarrow> 'a list"

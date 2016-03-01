@@ -127,11 +127,17 @@ where
 
 instance state_ext :: (heap_state_type',type) heap_state_type' ..
 
-defs (overloaded)
-  hs_mem_state [simp]: "hst_mem \<equiv> hst_mem \<circ> globals"
-  hs_mem_update_state [simp]: "hst_mem_update \<equiv> globals_update \<circ> hst_mem_update"
-  hs_htd_state[simp]: "hst_htd \<equiv> hst_htd \<circ> globals"
-  hs_htd_update_state [simp]: "hst_htd_update \<equiv> globals_update \<circ> hst_htd_update"
+overloading
+  hs_mem_state \<equiv> hst_mem
+  hs_mem_update_state \<equiv> hst_mem_update
+  hs_htd_state \<equiv> hst_htd
+  hs_htd_update_state \<equiv> hst_htd_update
+begin
+  definition hs_mem_state [simp]: "hs_mem_state \<equiv> hst_mem \<circ> globals"
+  definition hs_mem_update_state [simp]: "hs_mem_update_state \<equiv> globals_update \<circ> hst_mem_update"
+  definition hs_htd_state[simp]: "hs_htd_state \<equiv> hst_htd \<circ> globals"
+  definition hs_htd_update_state [simp]: "hs_htd_update_state \<equiv> globals_update \<circ> hst_htd_update"
+end
 
 instance state_ext :: (heap_state_type,type) heap_state_type
   apply intro_classes

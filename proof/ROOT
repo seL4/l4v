@@ -32,19 +32,16 @@ chapter "Proofs"
 
 session Refine = BaseRefine +
   description {* Refinement between Haskell and Abstract spec. *}
-  options [timeout=3600]
   theories
     "refine/Refine"
     "refine/Orphanage"
 
 session BaseRefine = AInvs +
   description {* Background theory and libraries for refinement proof. *}
-  options [timeout=600]
   theories
     "refine/Include"
 
 session AInvs = ASpec +
-  options [timeout=3600]
   theories
     "invariant-abstract/AInvs"
     "invariant-abstract/EmptyFail_AI"
@@ -92,7 +89,6 @@ session DPolicy = DRefine +
  *)
 
 session Access in "access-control" = AInvs +
-  options [timeout=3600]
   theories
     "Syscall_AC"
     "ExampleSystem"

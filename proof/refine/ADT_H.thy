@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header {* Abstract datatype for the executable specification *}
+chapter {* Abstract datatype for the executable specification *}
 
 theory ADT_H
 imports
@@ -42,7 +42,7 @@ definition
   where
   "Init_H \<equiv>
    ({empty_context} \<times> snd `
-      fst (initKernel (VPtr initEntry) (map PPtr initFrames) (PPtr initOffset)
+      fst (initKernel (VPtr initEntry) (PPtr initOffset) (map PPtr initFrames)
                       (map PPtr initKernelFrames) initBootFrames
                       (newKernelState initDataStart))) \<times>
     {UserMode} \<times> {None}"
@@ -125,7 +125,7 @@ lemma
   assumes ptes:
     "\<forall>x. (\<exists>pte. ksPSpace \<sigma> x = Some (KOArch (KOPTE pte))) \<longrightarrow>
          is_aligned x pt_bits \<longrightarrow>
-         (\<forall>y\<Colon>word8. \<exists>pte'. ksPSpace \<sigma> (x + (ucast y << 2)) =
+         (\<forall>y::word8. \<exists>pte'. ksPSpace \<sigma> (x + (ucast y << 2)) =
                            Some (KOArch (KOPTE pte')))"
   and pte_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
@@ -138,7 +138,7 @@ lemma
   assumes pdes:
     "\<forall>x. (\<exists>pde. ksPSpace \<sigma> x = Some (KOArch (KOPDE pde))) \<longrightarrow>
          is_aligned x pd_bits \<longrightarrow>
-         (\<forall>y\<Colon>12 word. \<exists>pde'. ksPSpace \<sigma> (x + (ucast y << 2)) =
+         (\<forall>y::12 word. \<exists>pde'. ksPSpace \<sigma> (x + (ucast y << 2)) =
                              Some (KOArch (KOPDE pde')))"
   and pde_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
@@ -356,8 +356,8 @@ where
               Structures_A.thread_state.IdleThreadState"
 | "ThStateMap Structures_H.thread_state.BlockedOnReply =
               Structures_A.thread_state.BlockedOnReply"
-| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref dimin) =
-              Structures_A.thread_state.BlockedOnReceive oref dimin"
+| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref) =
+              Structures_A.thread_state.BlockedOnReceive oref"
 | "ThStateMap (Structures_H.thread_state.BlockedOnSend oref badge grant call) =
               Structures_A.thread_state.BlockedOnSend oref
                 \<lparr> sender_badge = badge,
@@ -537,7 +537,7 @@ shows
   apply (erule disjE)
    prefer 2
    apply (simp add: mask_def)
-  apply (subgoal_tac "obj_bits ko <= (31\<Colon>nat)", simp_all)
+  apply (subgoal_tac "obj_bits ko <= (31::nat)", simp_all)
   apply (simp add: mask_def unat_minus_one word_bits_conv)
   apply (cut_tac w=k and c="2 ^ obj_bits ko" and b="2^(32-obj_bits ko)"
               in less_le_mult_nat)
@@ -1125,7 +1125,7 @@ proof -
     apply (drule is_aligned_no_overflow'[simplified mask_2pm1[symmetric]])
     apply (cut_tac 'a=32 and xs=b in of_bl_length, simp add: word_bits_conv)
     apply (drule_tac k=16 in word_mult_less_mono1, simp+)
-    apply (subgoal_tac "(0x80\<Colon>word32) < mask 9")
+    apply (subgoal_tac "(0x80::word32) < mask 9")
      prefer 2
      apply (simp add: mask_def)
     apply (rule_tac word_random, simp+)

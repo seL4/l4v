@@ -36,27 +36,31 @@
      Sets and sequences may be arbitrarily nested, and a "testsuite" is
      just a "set".
 
-     Tags may have the attributes:
+     Tests may have the attributes:
         * cwd: current working directory (default: location of tests.xml)
         * timeout: real-time timeout, in seconds (default: none)
+        * cpu-timeout: CPU-time timeout, in seconds (default: none)
         * depends: space-separated list of tests that must run first
 
-     If a timeout is specified for a testsuite, then each test in that
-     testsuite will be allowed the full timeout period.
+     Groups of tests may also have these attributes, which are passed
+     down to individual tests:
+        * cwd: inner cwd's override outer ones
+        * timeout, cpu-timeout: applied to each test (*not* to the group as a whole)
+        * depends: adds dependencies to all tests in the group
 
      Note that if you specify tests to run at the command line, then
      dependencies will be calculated, but non-specified tests will not
      be run even if the specified tests depend on them.
 
   -->
-<testsuite timeout="3600">
+<testsuite>
 
     <!-- Build Isabelle. -->
-    <test name="isabelle" cwd="../../">isabelle/bin/isabelle build -b -v HOL-Word</test>
+    <test name="isabelle" cwd="../../" cpu-timeout="3600">isabelle/bin/isabelle build -b -v HOL-Word</test>
 
     <!-- Ensure that all of our XML files are strictly correct. -->
-    <test name="tests-xml-correct" cwd="../../">
-        bash -O globstar -c 'python ./misc/regression/testspec.py **/tests.xml'
+    <test name="tests-xml-correct" cwd="../../" cpu-timeout="60">
+        find . -name tests.xml -print0 | xargs -0 python misc/regression/testspec.py
     </test>
 
 </testsuite>

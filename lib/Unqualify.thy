@@ -59,14 +59,20 @@ val _ =
         val naming = Sign.naming_of (Proof_Context.theory_of lthy)
           |> the_default I (map_option Name_Space.mandatory_path qual);
 
+        fun check_attribs ctxt raw_srcs = let
+            val srcs = map (Attrib.check_src ctxt) raw_srcs;
+            val _ = map (Attrib.attribute ctxt) srcs;
+          in srcs end;
+
+
         val lthy' = Local_Theory.background_theory (fn thy =>
           let
             val thy' = Context.theory_map (Name_Space.map_naming (K naming)) thy;
             val global_ctxt = (Proof_Context.init_global thy);
             val morph = Local_Theory.standard_morphism lthy global_ctxt;
-            val thmss' = map (fn ((b, att),thms) => ((b, []), [(thms, Attrib.check_attribs global_ctxt att)])) thmss; 
+            val thmss' = map (fn ((b, att),thms) => ((b, []), [(thms, check_attribs global_ctxt att)])) thmss; 
           in
-            snd (Attrib.global_notes Thm.lemmaK (Attrib.transform_facts morph thmss') thy')
+            snd (Attrib.global_notes Thm.theoremK (Attrib.transform_facts morph thmss') thy')
           end) lthy
 
        in

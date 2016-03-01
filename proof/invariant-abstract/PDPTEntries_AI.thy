@@ -576,11 +576,11 @@ lemma copy_global_mappings_valid_pdpt_objs[wp]:
     apply (clarsimp split:if_splits)
      apply (simp add:kernel_base_shift_cast_le)
      apply (simp add:kernel_base_def)
-     apply (cut_tac y1 = xb and x1 = "0xF00::12 word" in ucast_le_migrate[THEN iffD1,rotated -1])
+     apply (cut_tac y1 = xb and x1 = "0xE00::12 word" in ucast_le_migrate[THEN iffD1,rotated -1])
         apply simp
        apply (simp add:word_size le_less_trans)
       apply (simp add:word_size)
-     apply (drule aligned_le_sharp[where n = 4 and a = "0xF00::12 word"])
+     apply (drule aligned_le_sharp[where n = 4 and a = "0xE00::12 word"])
       apply (simp add:kernel_base_def is_aligned_def)
      apply (erule order_trans)
      apply (erule subst)
@@ -1288,13 +1288,13 @@ lemma pde_range_sz_le:
 
 (* BUG , revisit the following lemmas , moved from ArchAcc_R.thy *)
 lemma mask_pd_bits_shift_ucast_align[simp]:
-  "is_aligned (ucast (p && mask pd_bits >> 2)\<Colon>12 word) 4 =
-   is_aligned ((p\<Colon>word32) >> 2) 4"
+  "is_aligned (ucast (p && mask pd_bits >> 2)::12 word) 4 =
+   is_aligned ((p::word32) >> 2) 4"
   by (clarsimp simp: is_aligned_mask mask_def pd_bits) word_bitwise
 
 lemma mask_pt_bits_shift_ucast_align[simp]:
-  "is_aligned (ucast (p && mask pt_bits >> 2)\<Colon>word8) 4 =
-   is_aligned ((p\<Colon>word32) >> 2) 4"
+  "is_aligned (ucast (p && mask pt_bits >> 2)::word8) 4 =
+   is_aligned ((p::word32) >> 2) 4"
   by (clarsimp simp: is_aligned_mask mask_def pt_bits_def pageBits_def)
      word_bitwise
 

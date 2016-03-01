@@ -795,7 +795,7 @@ lemma ptrFromPAddr_spec:
   \<lbrace>  \<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s) ) \<rbrace>"
   apply vcg
   apply (simp add: Platform.ptrFromPAddr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def)
+                   kernelBase_addr_def physBase_def Platform.physBase_def)
   done
 
 lemma addrFromPPtr_spec:
@@ -805,7 +805,7 @@ lemma addrFromPPtr_spec:
   apply vcg
   apply (simp add: addrFromPPtr_def 
                    Platform.addrFromPPtr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def)
+                   kernelBase_addr_def physBase_def Platform.physBase_def)
   done
   
 
@@ -1433,20 +1433,6 @@ lemma getHWASID_ccorres:
   apply (auto simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
-lemma armv_contextSwitch_HWASID_ccorres:
-  "ccorres dc xfdc \<top> (UNIV \<inter> {s. cap_pd_' s = pde_Ptr pd} \<inter> {s. hw_asid_' s = hwasid}) []
-     (doMachineOp (armv_contextSwitch_HWASID pd hwasid)) (Call armv_contextSwitch_HWASID_'proc)"
-  apply (cinit' lift: cap_pd_' hw_asid_')
-   apply (simp add: armv_contextSwitch_HWASID_def doMachineOp_bind setCurrentPD_empty_fail 
-                    setHardwareASID_empty_fail )
-   apply csymbr
-   apply (ctac (no_vcg) add: setCurrentPD_ccorres)
-    apply (fold dc_def)
-    apply (ctac (no_vcg) add: setHardwareASID_ccorres)
-   apply wp
-  apply clarsimp
-  done
- 
 
 lemma armv_contextSwitch_ccorres:
   "ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain' and (\<lambda>s. asid \<le> mask asid_bits))
@@ -1822,7 +1808,7 @@ lemma register_from_H_inj:
 
 (* FIXME: move *)
 lemmas register_from_H_eq_iff[simp]
-    = inj_on_iff [OF register_from_H_inj, simplified]
+    = inj_on_eq_iff [OF register_from_H_inj, simplified]
 
 lemma setRegister_ccorres:
   "ccorres dc xfdc \<top>
@@ -2101,7 +2087,7 @@ lemma checkMappingPPtr_pte_ccorres:
         apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>1=\<sigma> and pte1=rv in pre)
           apply clarsimp
           apply (erule CollectE, assumption)
-         apply fold_subgoals[2]
+         apply (fold_subgoals (prefix))[2]
          subgoal by (auto simp: in_monad Bex_def isSmallPagePTE_def isLargePagePTE_def
                          split: pte.split vmpage_size.split)
        apply (wp empty_fail_getObject | simp)+
@@ -2137,7 +2123,7 @@ lemma checkMappingPPtr_pde_ccorres:
         apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>1=\<sigma> and pde1=rv in pre)
           apply clarsimp
           apply (erule CollectE, assumption)
-         apply fold_subgoals[2]
+         apply (fold_subgoals (prefix))[2]
          subgoal by (auto simp: in_monad Bex_def isSectionPDE_def isSuperSectionPDE_def
                          split: pde.split vmpage_size.split)
        apply (wp empty_fail_getObject | simp)+
@@ -3063,8 +3049,9 @@ lemma makeUserPTE_spec:
     apply (clarsimp simp:gen_framesize_to_H_def pageBitsForSize_def split:if_splits)
    apply (clarsimp dest:is_aligned_neg_mask_eq)
    apply (intro conjI impI allI)
-    apply fold_subgoals[2]
-    subgoal by ((clarsimp simp add: pte_lift_def pte_pte_small_lift_def pte_tag_defs 
+    apply (fold_subgoals (prefix))[2]
+    subgoal premises prems using prems
+             by ((clarsimp simp add: pte_lift_def pte_pte_small_lift_def pte_tag_defs 
                   mask_def ap_from_vm_rights_mask addrFromPPtr_def
                   shared_bit_from_cacheable_def tex_bits_from_cacheable_def
                   iwb_from_cacheable_def dest!:mask_eq1_nochoice)+)

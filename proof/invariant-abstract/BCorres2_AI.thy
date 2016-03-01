@@ -405,8 +405,9 @@ lemma get_receive_slots_bcorres[wp]: "bcorres (get_receive_slots a b) (get_recei
 crunch (bcorres)bcorres[wp]: set_extra_badge,derive_cap truncate_state (ignore: storeWord)
 
 
-lemma transfer_caps_loop_bcorres[wp]: "bcorres (transfer_caps_loop ep diminish buffer n caps slots mi) (transfer_caps_loop ep diminish buffer n caps slots mi)"
-  apply (induct caps arbitrary: slots n mi ep diminish)
+lemma transfer_caps_loop_bcorres[wp]:
+ "bcorres (transfer_caps_loop ep buffer n caps slots mi) (transfer_caps_loop ep buffer n caps slots mi)"
+  apply (induct caps arbitrary: slots n mi ep)
    apply simp
    apply wp
   apply (case_tac a)

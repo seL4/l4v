@@ -130,6 +130,10 @@ definition
                        | FrameCap _ _ _ x _ \<Rightarrow> \<not>(x = Real)
                        | _ \<Rightarrow> False"
 
+context 
+notes [[function_internals =true]]
+begin
+
 fun
   fast_finalise :: "cdl_cap \<Rightarrow> bool \<Rightarrow> unit k_monad"
 where
@@ -154,6 +158,7 @@ where
 | "fast_finalise (FrameCap _ _ _ x _) _ = (if x = Real then fail else return())"
 | "fast_finalise _ _ = fail"
 
+end
 
 -- "These caps don't count when determining if an entity should be deleted or not"
 definition

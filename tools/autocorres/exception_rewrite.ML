@@ -288,21 +288,18 @@ fun emptyfail_simproc redex =
 val simprocs =
 let
   fun wrapper proc =
-    fn _ => fn simpset => fn x =>
+    fn ctxt => fn x =>
       proc x
-      |> Option.map (fn thm => Raw_Simplifier.mksimps simpset thm |> hd)
-
-  fun mk_simproc' (a, b, proc) =
-    Raw_Simplifier.make_simproc {name=a, lhss=b, proc=(wrapper proc), identifier=[]}
+      |> Option.map (fn thm => Raw_Simplifier.mksimps ctxt thm |> hd)
 in
-  map mk_simproc' [
+  map (Utils.mk_simproc' @{context}) [
     ("l1_condition_simproc",
-        [@{cpat "L1_catch (L1_seq (L1_condition ?c ?L ?R) ?X) ?E"}],
-        l1_condition_simproc),
-    ("nothrow_simproc", [@{cpat "no_throw \<top> ?X"}], nothrow_simproc),
-    ("noreturn_simproc", [@{cpat "no_return \<top> ?X"}], noreturn_simproc),
-    ("alwaysfail_simproc", [@{cpat "always_fail \<top> ?X"}], alwaysfail_simproc),
-    ("emptyfail_simproc", [@{cpat "empty_fail ?X"}], emptyfail_simproc)
+        ["L1_catch (L1_seq (L1_condition ?c ?L ?R) ?X) ?E"],
+        wrapper l1_condition_simproc),
+    ("nothrow_simproc", ["no_throw \<top> ?X"], wrapper nothrow_simproc),
+    ("noreturn_simproc", ["no_return \<top> ?X"], wrapper noreturn_simproc),
+    ("alwaysfail_simproc", ["always_fail \<top> ?X"], wrapper alwaysfail_simproc),
+    ("emptyfail_simproc", ["empty_fail ?X"], wrapper emptyfail_simproc)
   ]
 end
 

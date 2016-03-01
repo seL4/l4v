@@ -272,6 +272,8 @@ lemma decode_tcb_corres:
            (* TCBWriteRegisters *)
              apply(clarsimp simp: decode_write_registers_def split: list.split)
              apply(intro impI conjI allI)
+          (* IRQSetMode *)
+          apply (clarsimp simp: transform_intent_def)
                apply(auto)[1]
               apply(auto)[1]
              apply(rule dcorres_whenE_throwError_abstract')
@@ -404,9 +406,6 @@ lemma decode_tcb_corres:
        apply (case_tac rv, simp, rule dcorres_alternative_throw)
        apply (clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def)
       apply (wp gbn_wp | clarsimp)+
-
-          (* IRQSetMode *)
-          apply (clarsimp simp: transform_intent_def)
 
 
                (* ARMPageMap *)

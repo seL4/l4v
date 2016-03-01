@@ -67,12 +67,12 @@ lemma del_asm_rule:
   "\<lbrakk> PROP P; PROP Q \<rbrakk> \<Longrightarrow> PROP Q"
   by assumption
 
-ML {*
+ML \<open>
 
-val p_prop_var = Thm.cterm_of @{context} (Logic.varify_global @{term "P :: prop"});
+val p_prop_var = Term.dest_Var (Logic.varify_global @{term "P :: prop"});
 
 fun del_asm_tac asm =
-  etac (cterm_instantiate [(p_prop_var, asm)] @{thm del_asm_rule});
+  eresolve0_tac [(Thm.instantiate ([], [(p_prop_var, asm)]) @{thm del_asm_rule})];
 
 fun subgoal_asm_as_thm tac =
   Subgoal.FOCUS_PARAMS (fn focus => SUBGOAL (fn (t, _) => let
@@ -155,8 +155,12 @@ fun build_annotate asm =
             in HOLogic.mk_Trueprop (Library.foldr mk_exists (rev ps, t)) end
       | _ => raise SAME) | _ => raise SAME;
 
-val in_mresults_ctxt =
-    Proof_Context.init_global @{theory Lib}
+
+val put_Lib_simpset =  put_simpset (Simplifier.simpset_of (Proof_Context.init_global @{theory Lib})) 
+
+
+fun in_mresults_ctxt ctxt = ctxt
+    |> put_Lib_simpset
     |> (fn ctxt => ctxt addsimps [@{thm in_mresults_export}, @{thm in_mresults_bind}])
     |> Splitter.del_split @{thm split_if}
 
@@ -165,24 +169,24 @@ fun prove_qad ctxt term tac = Goal.prove ctxt [] [] term
       then ALLGOALS (Skip_Proof.cheat_tac ctxt)
       else tac));
 
-val preannotate_ss =
-  Proof_Context.init_global @{theory Lib}
+fun preannotate_ss ctxt = ctxt 
   |> put_simpset HOL_basic_ss
   |> (fn ctxt => ctxt addsimps [@{thm K_bind_def}])
   |> simpset_of
 
-val in_mresults_ss =
-  Proof_Context.init_global @{theory Lib}
+fun in_mresults_ss ctxt = ctxt
+  |> put_Lib_simpset
   |> (fn ctxt => ctxt addsimps [@{thm in_mresults_export}, @{thm in_mresults_bind}])
   |> Splitter.del_split @{thm split_if}
   |> simpset_of
 
-val in_mresults_cs = Classical.claset_of (Proof_Context.init_global @{theory Lib})
+
+val in_mresults_cs = Classical.claset_of (Proof_Context.init_global @{theory Lib});
 
 fun annotate_tac ctxt asm = let 
-    val asm' = simplify (put_simpset preannotate_ss ctxt) asm;
+    val asm' = simplify (put_simpset (preannotate_ss ctxt) ctxt) asm;
     val annotated = build_annotate (Thm.concl_of asm');
-    val ctxt' = Classical.put_claset in_mresults_cs (put_simpset in_mresults_ss ctxt)
+    val ctxt' = Classical.put_claset in_mresults_cs (put_simpset (in_mresults_ss ctxt) ctxt)
     val thm = prove_qad ctxt (Logic.mk_implies (Thm.concl_of asm', annotated))
                    (auto_tac ctxt'
                     THEN ALLGOALS (TRY o blast_tac ctxt'));
@@ -193,13 +197,13 @@ fun annotate_tac ctxt asm = let
 
 fun annotate_goal_tac ctxt
   = REPEAT_DETERM1 (subgoal_asm_as_thm (annotate_tac ctxt) ctxt 1
-       ORELSE etac exE 1);
+       ORELSE (eresolve_tac ctxt [exE] 1));
 
 val annotate_method =
   Scan.succeed (fn ctxt => Method.SIMPLE_METHOD (annotate_goal_tac ctxt))
     : (Proof.context -> Method.method) context_parser;
 
-*}
+\<close>
 
 method_setup annotate = {* annotate_method *} "tries to annotate"
 
@@ -236,7 +240,7 @@ fun get_rule_uses ctxt rule = let
                     $ Bound (length argtps - n) $ x;
         val v' = fold_rev Term.abs (map (pair "x") argtps) eq;
       in rule
-        |> Thm.instantiate ([], [(ct v, ct v')])
+        |> Thm.instantiate ([], [(Term.dest_Var v, ct v')])
         |> simplify (put_simpset HOL_ss ctxt)
       end;
   in case (strip_comb p, strip_comb q) of
@@ -267,14 +271,12 @@ fun tac_with_wp_simps_strgs ctxt rules tac =
 
 val mresults_validI = @{thm mresults_validI};
 
-val postcond_ss =
-    Proof_Context.init_global @{theory Lib}
+fun postcond_ss ctxt = ctxt
     |> put_simpset HOL_basic_ss
     |> (fn ctxt => ctxt addsimps [@{thm pred_conj_def}])
     |> simpset_of
 
-val wp_default_ss =
-    Proof_Context.init_global @{theory Lib}
+fun wp_default_ss ctxt = ctxt
     |> put_simpset HOL_ss
     |> Splitter.del_split @{thm split_if}
     |> simpset_of
@@ -282,12 +284,12 @@ val wp_default_ss =
 fun raise_tac s = all_tac THEN (fn _ => error s);
 
 fun wpx_tac ctxt rules
-  = TRY (rtac mresults_validI 1)
-    THEN (full_simp_tac (put_simpset postcond_ss ctxt) 1)
+  = TRY (resolve_tac ctxt [mresults_validI] 1)
+    THEN (full_simp_tac (put_simpset (postcond_ss ctxt) ctxt) 1)
     THEN TRY (annotate_goal_tac ctxt)
     THEN tac_with_wp_simps_strgs ctxt rules (fn (simps, strgs) =>
       REPEAT_DETERM1
-        (CHANGED (full_simp_tac (put_simpset wp_default_ss ctxt addsimps simps) 1)
+        (CHANGED (full_simp_tac (put_simpset (wp_default_ss ctxt) ctxt addsimps simps) 1)
           ORELSE Strengthen.strengthen ctxt strgs 1)
     ) 1;
 
@@ -348,13 +350,13 @@ let
   (* avoid duplicate simp rule etc warnings: *)
   val ctxt = Context_Position.set_visible false ctxt
 in
-  rtac valid_strengthen_with_mresults 1
-  THEN (safe_simp_tac (put_simpset postcond_ss ctxt) 1)
+  resolve_tac ctxt [valid_strengthen_with_mresults] 1
+  THEN (safe_simp_tac (put_simpset (postcond_ss ctxt) ctxt) 1)
   THEN Subgoal.FOCUS (fn focus => let
       val ctxt = #context focus;
       val (simps, _) = get_wp_simps_strgs ctxt rules (#prems focus);
-    in CHANGED (simp_tac (put_simpset wp_default_ss ctxt addsimps simps) 1) end) ctxt 1
-  THEN etac wpex_name_for_idE 1
+    in CHANGED (simp_tac (put_simpset (wp_default_ss ctxt) ctxt addsimps simps) 1) end) ctxt 1
+  THEN eresolve_tac ctxt [wpex_name_for_idE] 1
 end
 
 val wps_method = Attrib.thms >> curry

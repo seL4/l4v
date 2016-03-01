@@ -141,7 +141,7 @@ end
 fun mk_first_order ctxt ct =
 let
   fun expand_conv ct =
-    Utils.named_cterm_instantiate
+    Utils.named_cterm_instantiate ctxt
         [("a", Thm.dest_fun ct),("b", Thm.dest_arg ct)] @{lemma "a b == (a $ b)" by simp}
 in
   Conv.bottom_conv (K (Conv.try_conv expand_conv)) ctxt ct
@@ -430,7 +430,7 @@ let
   (* Extract the abstract term out of a L2Tcorres thm. *)
   fun dest_L2Tcorres_term_abs (_ $ _ $ t $ _ ) = t
   fun get_body_of_thm ctxt thm =
-      Thm.concl_of (Drule.gen_all (Variable.maxidx_of ctxt) thm)
+      Thm.concl_of (Variable.gen_all ctxt thm)
       |> HOLogic.dest_Trueprop
       |> dest_L2Tcorres_term_abs
 
@@ -494,7 +494,7 @@ let
           #t_hrs_setter prog_info)
     |> (fn prop => Goal.prove_future lthy [] [] prop
          (fn params =>
-             ((rtac @{thm valid_typ_heapI} 1) THEN (
+             ((resolve_tac lthy @{thms valid_typ_heapI} 1) THEN (
                  REPEAT (subgoal_solver_tac (#context params))))))
 
   (* Make thms for all types. *)
@@ -527,13 +527,13 @@ let
            SOME _ =>
              [Goal.prove_future lthy [] [] prop
                 (fn params =>
-                   (rtac @{thm valid_struct_fieldI} 1) THEN
+                   (resolve_tac lthy @{thms valid_struct_fieldI} 1) THEN
                    (* Need some extra thms from the records package for our struct type. *)
                    (EqSubst.eqsubst_tac lthy [0]
                       [hd (Proof_Context.get_thms lthy (struct_name ^ "_idupdates")) RS @{thm sym}] 1
                       THEN asm_full_simp_tac lthy 1) THEN
                    (FIRST (Proof_Context.get_thms lthy (struct_name ^ "_fold_congs")
-                           |> map (fn t => rtac (t OF @{thms refl refl}) 1))
+                           |> map (fn t => resolve_tac lthy [t OF @{thms refl refl}] 1))
                       THEN asm_full_simp_tac lthy 1) THEN
                    (REPEAT (subgoal_solver_tac (#context params))))]
            | NONE => [])
@@ -554,7 +554,7 @@ let
           #t_hrs_setter prog_info)
     |> (fn prop => Goal.prove_future lthy [] [] prop
            (fn params =>
-               (rtac @{thm valid_struct_field_legacyI} 1) THEN (
+               (resolve_tac lthy @{thms valid_struct_field_legacyI} 1) THEN (
                    REPEAT (subgoal_solver_tac (#context params)))))
 
   (* Make thms for all fields of structs in our heap. *)
@@ -607,15 +607,12 @@ let
   (* Convert to new heap format. *)
   fun convert ctxt fn_name callee_terms measure_var fn_args =
   let
-    val thy = Proof_Context.theory_of ctxt
-
     (* Fetch the function definition. *)
     val fn_def = FunctionInfo.get_function_def fn_info fn_name
     val l2_body_def =
         #definition fn_def
         (* Instantiate the arguments. *)
-        |> Utils.inst_args (map (Thm.cterm_of ctxt) (measure_var :: fn_args))
-    val l2_body = Utils.rhs_of (Thm.prop_of l2_body_def)
+        |> Utils.inst_args ctxt (map (Thm.cterm_of ctxt) (measure_var :: fn_args))
 
     (* Get L2 body definition with function arguments. *)
     val l2_term = betapplys (#const fn_def, measure_var :: fn_args)
@@ -648,7 +645,7 @@ let
     (* Standard tactics. *)
     val print_debug = fn_name = ""
     fun rtac_all r n = (APPEND_LIST (map (fn thm =>
-                          rtac thm n THEN (fn x =>
+                          resolve_tac ctxt [thm] n THEN (fn x =>
                             (if print_debug then @{trace} thm else ();
                             Seq.succeed x))) r))
 
@@ -690,8 +687,8 @@ let
     val tactics =
         if #is_simpl_wrapper fn_def
         then (* Solver for trivial simpl wrappers. *)
-             [(@{thm L2Tcorres_id}, rtac @{thm L2Tcorres_id} 1)]
-        else map (fn rule => (rule, rtac rule 1)) rules
+             [(@{thm L2Tcorres_id}, resolve_tac ctxt [@{thm L2Tcorres_id}] 1)]
+        else map (fn rule => (rule, resolve_tac ctxt [rule] 1)) rules
              @ [(@{thm fun_app_def}, fo_tac)]
 
     val replay_failure_start = 1
@@ -747,7 +744,7 @@ let
     val _ = Statistics.gather ctxt "HLsimp" fn_name
         (Thm.prop_of thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 1))
   in
-    (get_body_of_thm ctxt thm, Drule.gen_all (Variable.maxidx_of ctxt) thm,
+    (get_body_of_thm ctxt thm, Variable.gen_all ctxt thm,
      (if member (op =) trace_funcs fn_name then [("HL", AutoCorresData.RuleTrace trace)] else []) @ opt_traces)
   end
 

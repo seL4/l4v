@@ -57,7 +57,7 @@ declare psubset_singleton[simp]
 lemma gts_eq:
   "st_tcb_at' (\<lambda>st. st = state) t s
      \<Longrightarrow> (getThreadState t s = return state s)"
-  apply (simp add: Pair_fst_snd_eq return_def)
+  apply (simp add: prod_eq_iff return_def)
   apply (subst conj_commute, rule context_conjI)
    apply (rule no_failD[OF no_fail_getThreadState])
    apply (erule pred_tcb_at')
@@ -96,26 +96,6 @@ lemma replyOnRestart_twice[simplified]:
   done
 
 context kernel_m begin
-
-
-lemma isIRQPending_ccorres:
-  "ccorres (\<lambda>rv rv'. rv' = from_bool (rv \<noteq> None)) ret__unsigned_long_'
-      \<top> UNIV []
-      (doMachineOp getActiveIRQ) (Call isIRQPending_'proc)"
-  apply (cinit')
-   apply (rule ccorres_add_return2)
-
-   apply (ctac(no_vcg) add: getActiveIRQ_ccorres)
-    apply (rule_tac P="\<lambda>s. rv \<noteq> Some 0xFF"
-                   in ccorres_from_vcg_throws[where P'=UNIV])
-    apply (rule allI, rule conseqPre, vcg)
-    apply (clarsimp simp: return_def from_bool_def if_1_0_0
-                          irqInvalid_def
-                   split: option.split_asm)
-   apply (wp getActiveIRQ_neq_Some0xFF)
-  apply simp
-  done
-
 
 lemma ccorres_pre_getWorkUnits:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"

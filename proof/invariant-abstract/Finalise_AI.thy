@@ -2121,8 +2121,8 @@ lemma pd_shifting_again5:
 
 lemma pd_shifting_kernel_mapping_slots:
   "\<lbrakk>is_aligned word pd_bits;
-    (sl :: word32) \<le> (kernel_base >> (20\<Colon>nat)) - (1\<Colon>word32)\<rbrakk>
-   \<Longrightarrow> ucast ((sl << (2\<Colon>nat)) + word && mask pd_bits >> (2\<Colon>nat))
+    (sl :: word32) \<le> (kernel_base >> (20::nat)) - (1::word32)\<rbrakk>
+   \<Longrightarrow> ucast ((sl << (2::nat)) + word && mask pd_bits >> (2::nat))
       \<notin> kernel_mapping_slots"
   apply (subst pd_shifting_again5)
     apply assumption+
@@ -2534,7 +2534,7 @@ lemmas thread_set_final_cap =
     final_cap_lift [OF thread_set_caps_of_state_trivial]
 
 
-schematic_lemma no_cap_to_obj_with_diff_ref_lift:
+schematic_goal no_cap_to_obj_with_diff_ref_lift:
   "\<lbrace>\<lambda>s. ?P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. ?P (caps_of_state s)\<rbrace>
    \<Longrightarrow> \<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
           f
@@ -3073,7 +3073,7 @@ lemma arch_recycle_cap_invs:
    apply (simp add: mask_def kernel_mapping_slots_def kernel_base_def
       word_le_make_less not_le)
    apply (rule le_less_trans[rotated])
-    apply (frule_tac 'a = "12" in ucast_mono[where y = "0xF00::word32"])
+    apply (frule_tac 'a = "12" in ucast_mono[where y = "0xE00::word32"])
      apply (simp+)[2]
    apply (intro eq_refl  arg_cong[where f = ucast] shiftl_shiftr_id)
     apply ((simp add:word_bits_def)+)[2]

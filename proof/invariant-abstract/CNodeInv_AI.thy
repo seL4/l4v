@@ -1042,7 +1042,7 @@ termination rec_del
   apply (rename_tac word option nat)
   apply (case_tac nat, simp_all)
   apply (simp only: trans_state_update'[symmetric] not_recursive_cspaces_more_update)
-  apply (clarsimp simp: in_monad Pair_fst_snd_eq rec_del.psimps)
+  apply (clarsimp simp: in_monad prod_eqI rec_del.psimps)
   apply (erule use_valid [OF _ cap_swap_fd_not_recursive])
   apply (frule use_valid [OF _ get_cap_cte_wp_at], simp)
   apply (drule in_inv_by_hoareD [OF get_cap_inv])

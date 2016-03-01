@@ -134,7 +134,7 @@ lemma deleteObjects_def2:
   apply (rule bind_eqI, rule ext)
   apply (simp add: bind_assoc[symmetric])
   apply (rule bind_cong[rotated], rule refl)
-  apply (simp add: bind_assoc modify_modify gets_modify_def)
+  apply (simp add: bind_assoc modify_modify deleteRange_def gets_modify_def)
   apply (rule ext, simp add: exec_modify stateAssert_def assert_def bind_assoc exec_get
                              NOT_eq[symmetric] mask_in_range)
   apply (clarsimp simp: simpler_modify_def)
@@ -1017,7 +1017,7 @@ lemma st_tcb:
                  dest: live_notRange)
 
 lemma irq_nodes_global:
-    "\<forall>irq :: word8. irq_node' s + (ucast irq) * 16 \<in> global_refs' s"
+    "\<forall>irq :: 10 word. irq_node' s + (ucast irq) * 16 \<in> global_refs' s"
     by (simp add: global_refs'_def mult.commute mult.left_commute)
 
 lemma global_refs:
@@ -1033,7 +1033,7 @@ lemma global_refs2:
   using global_refs by blast 
 
 lemma irq_nodes_range:
-    "\<forall>irq :: word8. irq_node' s + (ucast irq) * 16 \<notin> base_bits"
+    "\<forall>irq :: 10 word. irq_node' s + (ucast irq) * 16 \<notin> base_bits"
   using irq_nodes_global global_refs
   by blast
 
@@ -1503,7 +1503,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     done
 
   from cdm show "ksCurDomain s \<le> maxDomain" .
-  from vds show "ksDomSchedule s = [] \<Longrightarrow> False" by clarsimp
 qed (clarsimp)
 
 lemma (in delete_locale) delete_ko_wp_at':
