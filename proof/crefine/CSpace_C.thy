@@ -2604,7 +2604,7 @@ lemma cap_get_tag_PageCap_small_frame:
    (cap_get_tag cap' = scast cap_small_frame_cap) =
    (cap =
     capability.ArchObjectCap
-     (PageCap (to_bool (cap_small_frame_cap_CL.capFIsDevice_CL (cap_small_frame_cap_lift cap'))) (cap_small_frame_cap_CL.capFBasePtr_CL (cap_small_frame_cap_lift cap'))
+     (PageCap (to_bool ((cap_small_frame_cap_CL.capFIsDevice_CL (cap_small_frame_cap_lift cap')))) (cap_small_frame_cap_CL.capFBasePtr_CL (cap_small_frame_cap_lift cap'))
               (vmrights_to_H (cap_small_frame_cap_CL.capFVMRights_CL (cap_small_frame_cap_lift cap')))
               vmpage_size.ARMSmallPage
    (if cap_small_frame_cap_CL.capFMappedASIDHigh_CL (cap_small_frame_cap_lift cap') = 0
@@ -2965,7 +2965,28 @@ lemma generic_frame_cap_get_capFBasePtr_spec:
    apply (clarsimp simp: cap_lift_frame_cap cap_frame_cap_lift_def)
   apply (clarsimp simp: cap_lifts [THEN sym])
   done
-
+  
+definition
+  "generic_frame_cap_get_capFIsDevice_CL \<equiv> \<lambda>cap. case cap of
+      Some (Cap_small_frame_cap c) \<Rightarrow> cap_small_frame_cap_CL.capFIsDevice_CL c
+    | Some (Cap_frame_cap c) \<Rightarrow> cap_frame_cap_CL.capFIsDevice_CL c
+    | Some _ \<Rightarrow> 0 | None \<Rightarrow> 0"
+    
+lemma generic_frame_cap_get_capFIsDevice_spec:
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. cap_get_tag \<acute>cap = scast cap_small_frame_cap \<or>
+                cap_get_tag \<acute>cap = scast cap_frame_cap\<rbrace>
+       \<acute>ret__unsigned_long :== PROC generic_frame_cap_get_capFIsDevice(\<acute>cap)
+       \<lbrace>\<acute>ret__unsigned_long = generic_frame_cap_get_capFIsDevice_CL (cap_lift \<^bsup>s\<^esup>cap)\<rbrace>"
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: generic_frame_cap_get_capFIsDevice_CL_def)
+  apply (intro conjI impI)
+    apply (clarsimp simp: cap_lift_small_frame_cap cap_small_frame_cap_lift_def)
+   apply (clarsimp simp: cap_lift_frame_cap cap_frame_cap_lift_def)
+  apply (clarsimp simp: cap_lifts [THEN sym])
+  by (clarsimp simp: generic_frame_cap_get_capFIsDevice_CL_def
+                        cap_lift_small_frame_cap cap_lift_frame_cap
+                        cap_small_frame_cap_lift_def cap_frame_cap_lift_def)
+  
 definition
  "generic_frame_cap_get_capFVMRights_CL \<equiv> \<lambda>cap. case cap of
       Some (Cap_small_frame_cap c) \<Rightarrow> cap_small_frame_cap_CL.capFVMRights_CL c
@@ -3477,7 +3498,7 @@ lemma capFSize_range:
   apply (simp add: cap_frame_cap_lift_def)
   apply (simp add: cap_lift_def cap_tag_defs word_and_le1)
   done
-
+  
 lemma Arch_sameObjectAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>ccap_relation (ArchObjectCap capa) \<acute>cap_a \<and>
                      ccap_relation (ArchObjectCap capb) \<acute>cap_b \<and>
@@ -3504,7 +3525,7 @@ lemma Arch_sameObjectAs_spec:
        apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), simp)
        apply (simp add: ccap_relation_def map_option_case)
        apply (simp add: cap_small_frame_cap_lift)
-       apply (clarsimp simp: cap_to_H_def capAligned_def from_bool_def to_bool_def
+       apply (clarsimp simp: cap_to_H_def capAligned_def to_bool_def from_bool_def 
                       split: split_if bool.split
                       dest!: is_aligned_no_overflow)
       apply (case_tac "vmpage_sizea = ARMSmallPage",
@@ -3519,7 +3540,7 @@ lemma Arch_sameObjectAs_spec:
                             Kernel_C.ARMSmallPage_def
                      split: split_if bool.split vmpage_size.split_asm
                      dest!: is_aligned_no_overflow)
-      apply (simp add: framesize_to_H_eq capFSize_range
+      apply (simp add: framesize_to_H_eq capFSize_range to_bool_def
                        cap_frame_cap_lift [symmetric])
      apply fastforce+
   done

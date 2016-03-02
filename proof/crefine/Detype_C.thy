@@ -228,11 +228,11 @@ lemma cmap_relation_h_t_valid:
   done
 
 lemma valid_untyped_capE:
-  assumes vuc: "s \<turnstile>' UntypedCap ptr bits idx"
-  and rl: "\<lbrakk>is_aligned ptr bits; valid_untyped' ptr bits idx s; ptr \<noteq> 0; bits < word_bits \<rbrakk> \<Longrightarrow> P"
+  assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
+  and rl: "\<lbrakk>is_aligned ptr bits; valid_untyped' d ptr bits idx s; ptr \<noteq> 0; bits < word_bits \<rbrakk> \<Longrightarrow> P"
   shows P
 proof (rule rl)
-  from vuc show al: "is_aligned ptr bits" and vu: "valid_untyped' ptr bits idx s" and p0: "ptr \<noteq> 0"
+  from vuc show al: "is_aligned ptr bits" and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
     unfolding valid_cap'_def capAligned_def by auto
   
   from al p0 show wb: "bits < word_bits"
@@ -241,7 +241,7 @@ qed
 (*FIX me: move *)
 
 lemma valid_untyped_pspace_no_overlap':
- assumes vuc: "s \<turnstile>' UntypedCap ptr bits idx"
+ assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
   and    idx: "idx< 2^ bits"
   and psp_al: "pspace_aligned' s" "pspace_distinct' s"
   shows  "pspace_no_overlap' (ptr + of_nat idx) bits s"
@@ -250,7 +250,7 @@ proof -
   note blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
 
-  from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' ptr bits idx s" and p0: "ptr \<noteq> 0"
+  from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
     and wb: "bits < word_bits"
     by (auto elim!: valid_untyped_capE)
   
@@ -276,7 +276,7 @@ proof -
 
 lemma cmap_relation_disjoint:
   fixes  rel :: "'a :: pspace_storable \<Rightarrow> 'b :: mem_type \<Rightarrow> bool" and x :: "'b :: mem_type ptr"
-  assumes vuc: "s \<turnstile>' UntypedCap ptr bits idx"
+  assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
   and   invs: "invs' s"
   and     cm: "cmap_relation (proj \<circ>\<^sub>m (ksPSpace s)) (cslift s') Ptr rel"
   and     ht: "s' \<Turnstile>\<^sub>c x"
@@ -286,7 +286,7 @@ lemma cmap_relation_disjoint:
   shows  "{ptr_val x..+size_of TYPE('b)} \<inter> {ptr..+2 ^ bits} = {}"
 proof -
   from vuc have al: "is_aligned ptr bits"
-    and vu: "valid_untyped' ptr bits idx s" and p0: "ptr \<noteq> 0"
+    and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
     and wb: "bits < word_bits"
     and [simp]: "(ptr && ~~ mask bits) = ptr"
     by (auto elim!: valid_untyped_capE)
@@ -347,7 +347,7 @@ qed
 lemma vut_subseteq:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-shows "\<lbrakk>s \<turnstile>' UntypedCap ptr bits idx;idx < 2 ^ bits\<rbrakk>
+shows "\<lbrakk>s \<turnstile>' UntypedCap d ptr bits idx;idx < 2 ^ bits\<rbrakk>
  \<Longrightarrow> Ptr ` {ptr + of_nat idx..ptr + 2 ^ bits - 1} \<subseteq> Ptr ` {ptr ..+ 2^bits}" (is "\<lbrakk>?a1;?a2\<rbrakk> \<Longrightarrow> ?b \<subseteq> ?c")
   apply (subgoal_tac  "?c =  Ptr ` {ptr ..ptr + 2 ^ bits - 1}")
    apply (simp add:inj_image_subset_iff)
@@ -384,7 +384,7 @@ lemma aligned_ranges_subset_or_disjointE [consumes 2, case_names disjoint subset
   done
 
 lemma valid_untyped_cap_ko_at_disjoint:
-  assumes vu: "s \<turnstile>' UntypedCap ptr bits idx"
+  assumes vu: "s \<turnstile>' UntypedCap d ptr bits idx"
   and   koat: "ko_at' ko x s"
   and     pv: "{x .. x + 2 ^ objBits ko - 1} \<inter> {ptr .. ptr + 2 ^ bits - 1} \<noteq> {}"
   shows   "{x .. x + 2 ^ objBits ko - 1} \<subseteq> {ptr .. ptr + 2 ^ bits - 1}"
@@ -480,7 +480,7 @@ qed
 
 lemma valid_untyped_cap_ctcb_member:
   fixes tcb :: tcb
-  assumes vu: "s \<turnstile>' UntypedCap ptr bits idx"
+  assumes vu: "s \<turnstile>' UntypedCap d ptr bits idx"
   and   koat: "ko_at' tcb x s"
   and     pv: "ptr_val (tcb_ptr_to_ctcb_ptr x) \<in> {ptr .. ptr + 2 ^ bits - 1}"
   shows   "x \<in> {ptr .. ptr + 2 ^ bits - 1}"
@@ -516,7 +516,7 @@ lemma ko_at_is_aligned' [intro?]:
 
 lemma cmap_relation_disjoint_tcb:
   fixes x :: "tcb_C ptr"
-  assumes vuc: "s \<turnstile>' UntypedCap ptr bits idx"
+  assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
   and    invs: "invs' s"
   and      cm: "cmap_relation (projectKO_opt \<circ>\<^sub>m (ksPSpace s)) (cslift s') tcb_ptr_to_ctcb_ptr ctcb_relation"  
   and      ht: "s' \<Turnstile>\<^sub>c x"
@@ -536,7 +536,7 @@ proof -
   let ?ran' = "{ptr..+2 ^ bits}"
   let ?oran' = "{ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb}"
 
-  from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' ptr bits idx s" and p0: "ptr \<noteq> 0"
+  from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
     and wb: "bits < word_bits"
     by (auto elim!: valid_untyped_capE)
   
@@ -654,14 +654,14 @@ lemma tcb_cte_in_range':
 
 (* clagged from above :( Were I smarter or if I cared more I could probably factor out more \<dots>*)  
 lemma cmap_relation_disjoint_cte:
-  assumes vuc: "s \<turnstile>' UntypedCap ptr bits idx"
+  assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
   and   invs: "invs' s"
   and     cm: "cmap_relation (ctes_of s) (cslift s') Ptr ccte_relation"  
   and     ht: "s' \<Turnstile>\<^sub>c (x :: cte_C ptr)"
   and     xv: "x \<notin> Ptr ` {ptr..+2 ^ bits}"
   shows  "{ptr_val x..+size_of TYPE(cte_C)} \<inter> {ptr..+2 ^ bits} = {}"
 proof -
-  from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' ptr bits idx s" and p0: "ptr \<noteq> 0"
+  from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
     and wb: "bits < word_bits" and [simp]: "(ptr && ~~ mask bits) = ptr"
     by (auto elim!: valid_untyped_capE)
 
@@ -758,14 +758,14 @@ qed
 
 lemma cmap_relation_disjoint_user_data:
   fixes x :: "user_data_C ptr"
-  assumes vuc: "s \<turnstile>' UntypedCap ptr bits idx"
+  assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
   and    invs: "invs' s"
   and      cm: "cmap_relation (heap_to_page_data (ksPSpace s) (underlying_memory (ksMachineState s))) (cslift s') Ptr cuser_data_relation"
   and      ht: "s' \<Turnstile>\<^sub>c x"
   and      xv: "x \<notin> Ptr ` {ptr..+2 ^ bits}"
   shows  "{ptr_val x..+size_of TYPE(user_data_C)} \<inter> {ptr..+2 ^ bits} = {}"
 proof -
-  from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' ptr bits idx s" and p0: "ptr \<noteq> 0"
+  from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
     and wb: "bits < word_bits" and [simp]:"ptr && ~~ mask bits = ptr"
     by (auto elim!: valid_untyped_capE)
 
@@ -820,7 +820,7 @@ proof -
 qed
 
 lemma tcb_queue_relation_live_restrict:
-  assumes vuc: "s \<turnstile>' capability.UntypedCap ptr bits idx"
+  assumes vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
   and     rel: "\<forall>t \<in> set q. tcb_at' t s"
   and    live: "\<forall>t \<in> set q. ko_wp_at' live' t s"
   and      rl: "\<forall>(p :: word32) P. ko_wp_at' P p s \<and> (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
@@ -903,7 +903,7 @@ proof
 qed
 
 lemma cendpoint_relation_restrict:
-  assumes vuc: "s \<turnstile>' capability.UntypedCap ptr bits idx"
+  assumes vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
   and    invs: "invs' s"
   and      rl: "\<forall>(p :: word32) P. ko_wp_at' P p s \<and> (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
   and    meps: "map_to_eps (ksPSpace s) p = Some ep"
@@ -957,7 +957,7 @@ proof -
 qed
 
 lemma cnotification_relation_restrict:
-  assumes vuc: "s \<turnstile>' capability.UntypedCap ptr bits idx"
+  assumes vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
   and    invs: "invs' s"
   and      rl: "\<forall>(p :: word32) P. ko_wp_at' P p s \<and> (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
   and    meps: "map_to_ntfns (ksPSpace s) p = Some ntfn"
@@ -1114,7 +1114,7 @@ lemma tcb_ptr_to_ctcb_ptr_to_Ptr:
 
 lemma valid_untyped_cap_ctcb_member':
   fixes tcb :: tcb
-  shows "\<lbrakk>s \<turnstile>' capability.UntypedCap ptr bits idx; ko_at' tcb x s;
+  shows "\<lbrakk>s \<turnstile>' capability.UntypedCap d ptr bits idx; ko_at' tcb x s;
   ptr_val (tcb_ptr_to_ctcb_ptr x) \<in> {ptr..+2 ^ bits}\<rbrakk>
   \<Longrightarrow> x \<in> {ptr..+ 2 ^ bits}"
   apply (rule valid_untyped_capE, assumption)
@@ -1123,7 +1123,7 @@ lemma valid_untyped_cap_ctcb_member':
   done
     
 lemma cpspace_tcb_relation_address_subset:
-  assumes     vuc: "s \<turnstile>' capability.UntypedCap ptr bits idx"
+  assumes     vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
   and        invs: "invs' s"
   and     ctcbrel: "cpspace_tcb_relation (ksPSpace s) (t_hrs_' (globals s'))"
   shows "cmap_relation (map_to_tcbs (ksPSpace s |` (- {ptr..+2 ^ bits - unat ctcb_offset})))
@@ -1333,12 +1333,12 @@ lemma valid_untyped':
   assumes pspace_distinct': "pspace_distinct' s" and
            pspace_aligned': "pspace_aligned' s" and
                         al: "is_aligned ptr bits"
-  shows "valid_untyped' ptr bits idx s =
+  shows "valid_untyped' d ptr bits idx s =
          (\<forall>p ko. ksPSpace s p = Some ko \<longrightarrow>
                  obj_range' p ko \<inter> {ptr..ptr + 2 ^ bits - 1} \<noteq> {} \<longrightarrow>
                  obj_range' p ko \<subseteq> {ptr..ptr + 2 ^ bits - 1} \<and>
                  obj_range' p ko \<inter>
-                   usableUntypedRange (UntypedCap ptr bits idx) = {})"
+                   usableUntypedRange (UntypedCap d ptr bits idx) = {})"
   apply (simp add: valid_untyped'_def)
   apply (simp add: ko_wp_at'_def)
   apply (rule arg_cong[where f=All])
@@ -1389,7 +1389,7 @@ lemma htd_safe_typ_region_bytes:
   done
 
 lemma untyped_cap_rf_sr_ptr_bits_domain:
-  "cte_wp_at' (\<lambda>cte. cteCap cte = capability.UntypedCap ptr bits idx) p s
+  "cte_wp_at' (\<lambda>cte. cteCap cte = capability.UntypedCap d ptr bits idx) p s
     \<Longrightarrow> invs' s \<Longrightarrow> (s, s') \<in> rf_sr
     \<Longrightarrow> {ptr..+2 ^ bits} \<subseteq> domain"
   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -1529,8 +1529,8 @@ lemma deleteObjects_ccorres':
   notes if_cong[cong]
   shows
   "ccorres dc xfdc
-     (cte_wp_at' (\<lambda>cte. cteCap cte = capability.UntypedCap ptr bits idx) p and
-      (\<lambda>s. descendants_range' (UntypedCap ptr bits idx) p (ctes_of s)) and
+     (cte_wp_at' (\<lambda>cte. cteCap cte = capability.UntypedCap d ptr bits idx) p and
+      (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s)) and
       invs' and ct_active' and sch_act_simple and
       K ( 2 \<le> bits \<and> bits < word_bits))
      UNIV hs
@@ -1569,8 +1569,8 @@ proof -
 
   fix s s'
   assume al: "is_aligned ptr bits"
-    and cte: "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap ptr bits idx) p s"
-    and desc_range: "descendants_range' (UntypedCap ptr bits idx) p (ctes_of s)"
+    and cte: "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d ptr bits idx) p s"
+    and desc_range: "descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s)"
     and invs: "invs' s" and "ct_active' s"
     and "sch_act_simple s" and wb: "bits < word_bits" and b2: "2 \<le> bits"
     and "deletionIsSafe ptr bits s"
@@ -1944,8 +1944,8 @@ lemma kernel_data_refs_domain_eq_rotate:
 
 lemma deleteObjects_ccorres[corres]:
   "ccorres dc xfdc
-     (cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap ptr bits idx) p and
-      (\<lambda>s. descendants_range' (UntypedCap ptr bits idx) p (ctes_of s)) and
+     (cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d ptr bits idx) p and
+      (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s)) and
       invs' and ct_active' and sch_act_simple and
       K ( 2 \<le> bits \<and> bits < word_bits))
      UNIV hs
@@ -1957,7 +1957,7 @@ lemma deleteObjects_ccorres[corres]:
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_Guard_Seq)
    apply (rule Corres_UL_C.ccorres_exec_cong[THEN iffD2,
-                                             OF _ deleteObjects_ccorres'[where idx=idx and p=p]])
+                                             OF _ deleteObjects_ccorres'[where idx=idx and p=p and d=d]])
    apply (simp add: exec_Basic_Guard_UNIV o_def
                     hrs_ghost_update_comm[simplified o_def])
   apply clarsimp
