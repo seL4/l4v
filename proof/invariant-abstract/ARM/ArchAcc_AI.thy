@@ -18,6 +18,8 @@ imports "../SubMonad_AI"
 begin
 
   
+(*FIXME: Move or remove *)
+
 method spec for x :: "_ :: type" = (erule allE[of _ x])
 method bspec for x :: "_ :: type" = (erule ballE[of _ _ x])
 method prove for x :: "prop" = (rule revcut_rl[of "PROP x"])
@@ -44,7 +46,7 @@ lemma get_asid_pool_wp [wp]:
   \<lbrace>Q\<rbrace>"
   apply (simp add: get_asid_pool_def get_object_def)
    apply (wp|wpc)+
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: aobj_at_def)
   done
 
 
@@ -63,7 +65,7 @@ lemma get_pd_wp [wp]:
   "\<lbrace>\<lambda>s. \<forall>pd. ako_at (PageDirectory pd) p s \<longrightarrow> Q pd s\<rbrace> get_pd p \<lbrace>Q\<rbrace>"
   apply (simp add: get_pd_def get_object_def)
   apply (wp|wpc)+
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: aobj_at_def)
   done
 
 
@@ -112,7 +114,7 @@ lemma get_pt_wp [wp]:
   "\<lbrace>\<lambda>s. \<forall>pt. ako_at (PageTable pt) p s \<longrightarrow> Q pt s\<rbrace> get_pt p \<lbrace>Q\<rbrace>"
   apply (simp add: get_pt_def get_object_def)
   apply (wp|wpc)+
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: aobj_at_def)
   done
 
 

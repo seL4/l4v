@@ -1256,7 +1256,7 @@ lemma vs_lookup_apI:
   apply (intro exI conjI, assumption)
   apply (rule rtrancl_into_rtrancl)
    apply (rule rtrancl_refl)
-  apply (fastforce simp: vs_lookup1_def obj_at_def
+  apply (fastforce simp: vs_lookup1_def aobj_at_def
                         vs_refs_def graph_of_def image_def)
   done
 
@@ -1276,9 +1276,9 @@ lemma vs_lookup_pdI:
   apply (rule rtrancl_into_rtrancl)
    apply (rule rtrancl_into_rtrancl)
     apply (rule rtrancl_refl)
-  apply (fastforce simp: vs_lookup1_def obj_at_def
+  apply (fastforce simp: vs_lookup1_def aobj_at_def
                         vs_refs_def graph_of_def image_def)
-  apply (simp add: vs_lookup1_def obj_at_def vs_refs_def graph_of_def image_def)
+  apply (simp add: vs_lookup1_def aobj_at_def vs_refs_def graph_of_def image_def)
   apply (rule_tac x=c in exI)
   apply (simp add: pde_ref_def ptrFormPAddr_addFromPPtr)
   done
@@ -1319,7 +1319,7 @@ lemma vs_lookup_pages_pdI:
          VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] \<unrhd> p) s"
   apply (frule (2) vs_lookup_pages_apI)
   apply (erule vs_lookup_pages_step)
-  by (fastforce simp: vs_lookup_pages1_def obj_at_def
+  by (fastforce simp: vs_lookup_pages1_def aobj_at_def
                      vs_refs_pages_def graph_of_def image_def
               split: split_if_asm)
 
@@ -1336,7 +1336,7 @@ lemma vs_lookup_pages_ptI:
          VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] \<unrhd> p) s"
   apply (frule (5) vs_lookup_pdI[THEN vs_lookup_pages_vs_lookupI])
   apply (erule vs_lookup_pages_step)
-  by (fastforce simp: vs_lookup_pages1_def obj_at_def
+  by (fastforce simp: vs_lookup_pages1_def aobj_at_def
                      vs_refs_pages_def graph_of_def image_def
               split: split_if_asm)
 
@@ -1429,21 +1429,21 @@ lemma valid_arch_objs_alt:
       apply (thin_tac "Ball S P" for S P)
       apply (frule vs_lookup_atI)
       apply (drule valid_arch_objsD)
-        apply (simp add: obj_at_def)
+        apply (simp add: aobj_at_def)
        apply assumption
-      apply (clarsimp simp: obj_at_def ranI)
+      apply (clarsimp simp: aobj_at_def ranI)
      apply (clarsimp simp: obj_at_def)
      apply (thin_tac "Ball S P" for S P)
      apply (frule (2) vs_lookup_apI)
      apply (drule valid_arch_objsD)
-       apply (simp add: obj_at_def)
+       apply (simp add: aobj_at_def)
       apply assumption
      apply fastforce
     apply (clarsimp simp: obj_at_def)
     apply (thin_tac "Ball S P" for S P)
     apply (frule (5) vs_lookup_pdI)
     apply (drule valid_arch_objsD)
-      apply (simp add: obj_at_def)
+      apply (simp add: aobj_at_def)
      apply assumption
     apply fastforce
    apply (clarsimp simp: ran_def)
@@ -1477,7 +1477,7 @@ lemma valid_arch_objs_alt:
    apply (drule spec, drule spec, erule impE, assumption)
    apply (clarsimp simp: graph_of_def  split: split_if_asm)
    apply (drule_tac x=ab in spec)
-   apply (clarsimp simp: pde_ref_def obj_at_def
+   apply (clarsimp simp: pde_ref_def aobj_at_def
                   split: Arch_Structs_A.ARM.pde.splits)
   apply (clarsimp dest!: vs_lookup1D)
   apply (clarsimp simp: vs_asid_refs_def graph_of_def)
@@ -1492,7 +1492,7 @@ lemma valid_arch_objs_alt:
   apply (drule spec, drule spec, erule impE, assumption)
   apply (clarsimp simp: graph_of_def  split: split_if_asm)
   apply (drule_tac x=ab in spec)
-  apply (clarsimp simp: pde_ref_def obj_at_def
+  apply (clarsimp simp: pde_ref_def aobj_at_def
                  split: Arch_Structs_A.ARM.pde.splits)
   done
 
@@ -1752,7 +1752,7 @@ lemma vs_ref_order:
    apply (case_tac list; simp add: ranI )
    apply (case_tac lista; simp)
    apply (frule prefix_length_le, clarsimp)
-  apply (drule valid_arch_objsD, simp add: obj_at_def, assumption)
+  apply (drule valid_arch_objsD, simp add: aobj_at_def, assumption)
   apply (clarsimp simp: pde_ref_def
                  split: Arch_Structs_A.ARM.pde.split_asm split_if_asm)
   apply (drule_tac x=a in bspec, simp)

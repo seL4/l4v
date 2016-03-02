@@ -74,19 +74,18 @@ where
 abbreviation
   "ko_at k \<equiv> obj_at (op = k)"
 
-abbreviation
+definition
   aobj_at :: "(arch_kernel_obj \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "aobj_at P ref s \<equiv> obj_at (\<lambda>ob. case ob of ArchObj aob \<Rightarrow> P aob | _ \<Rightarrow> False) ref s"
+  "aobj_at P ref s \<equiv> \<exists>ako. kheap s ref = Some (ArchObj ako) \<and> P ako"
 
-lemma aobj_at_def:
-  "aobj_at P ref = (\<lambda>s. \<exists>ako. kheap s ref = Some (ArchObj ako) \<and> P ako)"
+lemma aobj_at_def2:
+  "aobj_at P ref = obj_at (\<lambda>ob. case ob of ArchObj aob \<Rightarrow> P aob | _ \<Rightarrow> False) ref"
   apply (rule ext)
-  apply (clarsimp simp add: obj_at_def)
+  apply (clarsimp simp add: obj_at_def aobj_at_def)
   apply (rule iffI)
-   apply clarsimp
-   apply (case_tac ko; clarsimp)
-   apply clarsimp
+   apply (clarsimp)+
+  apply (case_tac ko; clarsimp)
   done
 
 abbreviation

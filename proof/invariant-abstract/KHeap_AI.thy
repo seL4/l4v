@@ -122,7 +122,7 @@ lemma hoare_to_pure_kheap_upd:
   apply (insert typ_eq at)
   apply clarsimp
   apply (erule_tac P=P in rsubst)
-  by (auto simp add: obj_at_def a_type_def split: kernel_object.splits if_splits)
+  by (auto simp add: aobj_at_def2 obj_at_def a_type_def split: kernel_object.splits if_splits)
 
 lemma valid_cap_same_type:
   "\<lbrakk> s \<turnstile> cap; a_type k = a_type ko; kheap s p = Some ko \<rbrakk> 
@@ -1292,10 +1292,10 @@ interpretation
             set_bound_notification_def thread_set_def set_cap_def[simplified split_def]
             as_user_def
   apply -
-  apply (all \<open>unfold_locales;(wp set_object_non_arch get_object_wp | wpc | simp)+\<close>)
-  by (fastforce simp: obj_at_def a_type_def 
-                  split: Structures_A.kernel_object.splits)+
-  
+  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp)+\<close>)
+  by (fastforce simp: aobj_at_def2 obj_at_def[abs_def] a_type_def 
+               split: Structures_A.kernel_object.splits)+
+
 
 lemma valid_irq_handlers_lift:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"

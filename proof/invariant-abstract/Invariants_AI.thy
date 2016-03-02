@@ -197,7 +197,7 @@ abbreviation
 
 lemma atyp_at_def2:
   "atyp_at T = typ_at (AArch T)" 
-  unfolding obj_at_def[abs_def] a_type_def
+  unfolding aobj_at_def2[abs_def] obj_at_def[abs_def] a_type_def
   by (auto split: kernel_object.splits if_splits)
 
 
@@ -2499,6 +2499,10 @@ lemma obj_at_update [iff]:
   "obj_at P p (f s) = obj_at P p s"
   by (fastforce intro: obj_at_pspaceI simp: pspace)
 
+lemma aobj_at_update [iff]:
+  "aobj_at P p (f s) = aobj_at P p s"
+  by (simp add: aobj_at_def2)
+
 lemma cte_wp_at_update [iff]:
   "cte_wp_at P p (f s) = cte_wp_at P p s"
   by (fastforce intro: cte_wp_at_pspaceI simp: pspace)
@@ -2845,7 +2849,7 @@ lemma obj_at_default_cap_valid:
       intro!: aobj_at_default_arch_cap_valid
       simp: default_object_def dom_empty_cnode well_formed_cnode_n_def
             is_tcb is_ep is_ntfn is_cap_table
-            a_type_def 
+            a_type_def aobj_at_def2
      split: Structures_A.apiobject_type.splits
             option.splits)
 
@@ -2912,14 +2916,14 @@ end
 lemma obj_ref_is_tcb:
   "\<lbrakk> r \<in> obj_refs cap; tcb_at r s; s \<turnstile> cap \<rbrakk> \<Longrightarrow>
   is_thread_cap cap \<or> is_zombie cap"
-  by (auto simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
+  by (auto simp: valid_cap_def is_cap_simps aobj_at_def2 obj_at_def is_obj_defs a_type_def
            dest: obj_ref_is_arch
            split: cap.splits)
 
 lemma obj_ref_is_cap_table:
   "\<lbrakk> r \<in> obj_refs cap; cap_table_at n r s; s \<turnstile> cap \<rbrakk> \<Longrightarrow>
   is_cnode_cap cap \<or> is_zombie cap"
-  by (auto simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
+  by (auto simp: valid_cap_def is_cap_simps aobj_at_def2 obj_at_def is_obj_defs a_type_def
            dest: obj_ref_is_arch
            split: cap.splits split_if_asm)
 

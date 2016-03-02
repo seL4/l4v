@@ -161,7 +161,7 @@ lemma set_object_pt_not_vs_lookup_pages:
     apply (clarsimp simp: aobj_at_def vs_refs_pages_def)
    apply clarsimp
    apply (erule rtrancl_trans[OF r_into_rtrancl, rotated])
-   apply (clarsimp simp: vs_lookup_pages1_def obj_at_def)
+   apply (clarsimp simp: vs_lookup_pages1_def aobj_at_def)
   apply clarsimp
   apply (erule notE)
   apply (subst (asm) vs_lookup_pages_def)
@@ -178,7 +178,7 @@ lemma set_object_pt_not_vs_lookup_pages:
    apply (drule(1) ImageI, erule (1) notE)
   apply clarsimp
   apply (erule rtrancl_trans[OF _ r_into_rtrancl])
-  apply (clarsimp simp: vs_lookup_pages1_def obj_at_def)
+  apply (clarsimp simp: vs_lookup_pages1_def aobj_at_def)
   done
 
 
@@ -417,7 +417,7 @@ lemma valid_machine_state_lift:
   apply (rule hoare_vcg_disj_lift[OF _ hoare_vcg_prop])
   apply (rule hoare_vcg_ex_lift)
   subgoal for \<dots> sz
-   by (rule aobj_at[where P'="\<lambda>ao. ao = DataPage sz", simplified aobj_at_def, simplified])
+   by (rule aobj_at[where P'="\<lambda>ao. ao = DataPage sz", simplified aobj_at_def[abs_def], simplified])
   done
   
 
@@ -489,7 +489,7 @@ lemma valid_global_pd_mappings_pres:
                      arch_kernel_obj.split_asm)
   apply (drule spec, drule spec, drule(1) mp)
   apply (drule mp)
-   apply (clarsimp simp: valid_global_objs_def obj_at_def empty_table_def)
+   apply (clarsimp simp: valid_global_objs_def aobj_at_def empty_table_def)
    apply (drule_tac x=x in spec)
    apply (simp add: pde_ref_def)[1]
   apply clarsimp
