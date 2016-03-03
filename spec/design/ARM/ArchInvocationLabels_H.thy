@@ -91,6 +91,7 @@ instance by (intro_classes, simp add: enum_alt_arch_invocation_label)
 end
 
 (*>*)
+
 end_qualify
 
 end
