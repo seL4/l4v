@@ -17,7 +17,7 @@
 
 theory Types_D
 imports
-  "../abstract/$L4V_ARCH/ArchVMRights_A"
+  "../abstract/VMRights_A"
   Intents_D
   "../../lib/SplitRule"
 begin
