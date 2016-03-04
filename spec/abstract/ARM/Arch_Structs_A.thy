@@ -48,6 +48,13 @@ datatype arch_cap =
  | PageTableCap obj_ref "(asid * vspace_ref) option"
  | PageDirectoryCap obj_ref "asid option"
 
+lemmas arch_cap_cases =
+  arch_cap.induct[where arch_cap=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
+
+lemmas arch_cap_cases_asm =
+arch_cap.induct[where arch_cap=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+  simplified, rule_format, rotated -1]
+
 definition
   is_page_cap :: "arch_cap \<Rightarrow> bool" where
   "is_page_cap c \<equiv> \<exists>x0 x1 x2 x3. c = PageCap x0 x1 x2 x3"
@@ -90,6 +97,13 @@ datatype arch_kernel_obj =
  | PageTable "word8 \<Rightarrow> pte"
  | PageDirectory "12 word \<Rightarrow> pde"
  | DataPage vmpage_size
+
+lemmas arch_kernel_obj_cases =
+  arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
+
+lemmas arch_kernel_obj_cases_asm =
+arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+  simplified, rule_format, rotated -1]
 
 primrec
   arch_obj_size :: "arch_cap \<Rightarrow> nat"

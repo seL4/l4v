@@ -1258,7 +1258,7 @@ by (rule valid_machine_state_lift[OF memory aobj_at])
 end
 
 locale non_arch_non_cap_op = non_arch_op f for f +
-  assumes caps[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of (caps_of_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of (caps_of_state s))\<rbrace>"
+  assumes caps[wp]: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
 begin
 
 lemma valid_arch_caps[wp]: "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"

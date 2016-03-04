@@ -428,6 +428,13 @@ datatype kernel_object
          | Notification notification
          | ArchObj (the_arch_obj: arch_kernel_obj)
 
+lemmas kernel_object_cases =
+  kernel_object.induct[where kernel_object=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
+
+lemmas kernel_object_cases_asm =
+kernel_object.induct[where kernel_object=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+  simplified, rule_format, rotated -1]
+
 
 text {* Checks whether a cnode's contents are well-formed. *}
 

@@ -71,6 +71,10 @@ definition
 where
   "obj_at P ref s \<equiv> \<exists>ko. kheap s ref = Some ko \<and> P ko"
 
+lemma obj_at_pspaceI:
+  "\<lbrakk> obj_at P ref s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> obj_at P ref s'"
+  by (simp add: obj_at_def)
+
 abbreviation
   "ko_at k \<equiv> obj_at (op = k)"
 
@@ -146,14 +150,71 @@ where
                          else None)"
 
 definition
-  arch_caps_of :: "(cslot_ptr \<Rightarrow> cap option) \<Rightarrow> (cslot_ptr \<Rightarrow> arch_cap option)" where
-  "arch_caps_of cs \<equiv> (\<lambda>p. case cs p of Some (ArchObjectCap ac) \<Rightarrow> Some ac | _ \<Rightarrow> None)"
+  "arch_cap_fun_lift P F c \<equiv> case c of ArchObjectCap ac \<Rightarrow> P ac | _ \<Rightarrow> F"
+
+lemmas arch_cap_fun_lift_simps[simp] =
+  arch_cap_fun_lift_def[split_simps cap.split]
+
+definition
+  "arch_obj_fun_lift P F c \<equiv> case c of ArchObj ac \<Rightarrow> P ac | _ \<Rightarrow> F"
+
+lemmas arch_obj_fun_lift_simps[simp] =
+  arch_obj_fun_lift_def[split_simps kernel_object.split]
 
 lemma
-  arch_caps_of_simp[simp]:
-  "(arch_caps_of cs p = Some ac) = (cs p = Some (ArchObjectCap ac))"
-  by (auto simp: arch_caps_of_def split: option.splits cap.splits)
-  
+  ko_at_ako:
+  "ako_at ako = ko_at (ArchObj ako)"
+  by (simp add: aobj_at_def[abs_def] obj_at_def[abs_def])
 
+lemma
+  obj_at_fun_lift:
+  "obj_at (arch_obj_fun_lift P False) = aobj_at P" 
+  by (auto simp add: aobj_at_def2 obj_at_def[abs_def] arch_obj_fun_lift_def)
+  
+lemma
+  arch_obj_fun_lift_in_empty[dest!]:
+  "x \<in> arch_obj_fun_lift f {} ko
+    \<Longrightarrow> \<exists>ako. ko = ArchObj ako \<and> x \<in> f ako"
+    by (cases ko; simp add: arch_obj_fun_lift_def)
+
+lemma
+  arch_obj_fun_lift_Some[dest!]:
+  "arch_obj_fun_lift f None ko = Some x
+    \<Longrightarrow> \<exists>ako. ko = ArchObj ako \<and> f ako = Some x"
+    by (cases ko; simp add: arch_obj_fun_lift_def)
+
+lemma
+  arch_obj_fun_lift_True[dest!]:
+  "arch_obj_fun_lift f False ko
+    \<Longrightarrow> \<exists>ako. ko = ArchObj ako \<and> f ako"
+    by (cases ko; simp add: arch_obj_fun_lift_def)
+
+lemma
+  arch_cap_fun_lift_in_empty[dest!]:
+  "x \<in> arch_cap_fun_lift f {} cap
+    \<Longrightarrow> \<exists>acap. cap = ArchObjectCap acap \<and> x \<in> f acap"
+    by (cases cap; simp add: arch_cap_fun_lift_def)
+
+lemma
+  arch_cap_fun_lift_Some[dest!]:
+  "arch_cap_fun_lift f None cap = Some x
+    \<Longrightarrow> \<exists>acap. cap = ArchObjectCap acap \<and> f acap = Some x"
+    by (cases cap; simp add: arch_cap_fun_lift_def)
+
+lemma
+  arch_cap_fun_lift_True[dest!]:
+  "arch_cap_fun_lift f False cap
+    \<Longrightarrow> \<exists>acap. cap = ArchObjectCap acap \<and> f acap"
+    by (cases cap; simp add: arch_cap_fun_lift_def)
+
+lemma
+  arch_obj_fun_lift_non_arch[simp]:
+  "\<forall>ako. ko \<noteq> ArchObj ako \<Longrightarrow> arch_obj_fun_lift f F ko = F"
+  by (cases ko; fastforce)
+
+lemma
+  arch_cap_fun_lift_non_arch[simp]:
+  "\<forall>ako. cap \<noteq> ArchObjectCap ako \<Longrightarrow> arch_cap_fun_lift f F cap = F"
+  by (cases cap; fastforce)
 
 end

@@ -73,16 +73,20 @@ lemma pageBitsForSize_simps[simp]:
 
 
 definition
-  "is_ap_cap cap \<equiv> case cap of cap.ArchObjectCap (arch_cap.ASIDPoolCap ap asid) \<Rightarrow> True | _ \<Rightarrow> False"
+  "is_ap_cap cap \<equiv> case cap of (arch_cap.ASIDPoolCap ap asid) \<Rightarrow> True | _ \<Rightarrow> False"
 
 
-lemmas is_ap_cap_simps [simp] = is_ap_cap_def [split_simps cap.split arch_cap.split]
+lemmas is_ap_cap_simps [simp] = is_ap_cap_def [split_simps arch_cap.split]
 
 
 definition
   "reachable_pg_cap cap \<equiv> \<lambda>s.
    is_pg_cap cap \<and>
    (\<exists>vref. vs_cap_ref cap = Some vref \<and> (vref \<unrhd> the (aobj_ref cap)) s)"
+
+lemma empty_table_caps_of:
+  "empty_table S ako \<Longrightarrow> caps_of (ArchObj ko) = {}"
+  by (cases ko, simp_all add: empty_table_def caps_of_def cap_of_def)
 
 (*FIXME arch_split: These are probably subsumed by the lifting lemmas *)
 

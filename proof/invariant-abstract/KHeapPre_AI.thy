@@ -12,6 +12,16 @@ theory KHeapPre_AI
 imports "./$L4V_ARCH/Machine_AI"
 begin
 
+context Arch begin
+
+unqualify_consts
+  empty_table
+
+unqualify_facts
+  empty_table_def
+
+end
+
 primrec
   same_caps :: "Structures_A.kernel_object \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
 where
@@ -51,5 +61,35 @@ lemma get_object_sp:
 
 
 
+locale arch_only_obj_pred =
+  fixes P :: "kernel_object \<Rightarrow> bool"
+  assumes arch_only: "(\<And>ko. \<forall>ako. ko \<noteq> ArchObj ako \<Longrightarrow> \<not> P ko)" 
+begin
+
+lemma
+  obj_at_aobj_at: 
+  "obj_at P = aobj_at (\<lambda>ao. P (ArchObj ao))"
+  apply (insert arch_only)
+  apply (rule ext)+
+  apply (clarsimp simp add: aobj_at_def2 obj_at_def)
+  apply safe
+  apply (case_tac ko; simp)
+  apply (case_tac ko; simp)
+  done
+
+lemma
+  obj_at_lift:
+  assumes obj_at: "\<lbrace>aobj_at (\<lambda>ao. P (ArchObj ao)) p\<rbrace> f \<lbrace>\<lambda>r. aobj_at (\<lambda>ao. P (ArchObj ao)) p\<rbrace>"
+  shows "\<lbrace>obj_at P p\<rbrace> f \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
+  apply (simp add: obj_at_aobj_at)
+  apply (rule obj_at)
+  done
+
+
+end
+
+interpretation arch_only_obj_pred "empty_table S" for S
+  apply unfold_locales
+  by (simp add: empty_table_def)
 
 end
