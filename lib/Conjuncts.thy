@@ -34,13 +34,17 @@ local
   fun elim_conjuncts thm = 
     case try Conjunction.elim thm of
     SOME (thm', thm'') => elim_conjuncts thm' @ elim_conjuncts thm''
-    | NONE => [thm]
+    | NONE => if Thm.prop_of thm = Thm.prop_of (Drule.dummy_thm) then [] else [thm]
   
   in
   
   val _ = Context.>> (Context.map_theory (
     (Attrib.setup @{binding "conjuncts"} 
-      (Scan.succeed (Thm.declaration_attribute Data.put))
+      (Scan.lift (Args.mode "accumulate") >> (fn acc =>
+        if acc then 
+        Thm.declaration_attribute (Data.map o (fn x => fn y => Conjunction.intr y x))
+        else
+        Thm.declaration_attribute Data.put))
       "add meta_conjuncts to \"conjuncts\" named theorem") #>
     Global_Theory.add_thms_dynamic (@{binding "conjuncts"}, elim_conjuncts o Data.get)))
 
@@ -68,12 +72,18 @@ notepad begin
   have "C" by (rule CD)
 
 
-  (* We need to do this carefully in general *)
+  
   note ABCD(1)[conjuncts]
   note AB = conjuncts
   
   note ABCD(2)[conjuncts]
   note CD = conjuncts
+
+  (* We can accumulate multi-thms, we just need to clear conjuncts first *)
+  note [[conjuncts]]
+
+  note ABCD[conjuncts (accumulate)]
+  note ABCD' = conjuncts
 
 end
 
