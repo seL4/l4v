@@ -620,27 +620,6 @@ where
  "if_live_then_nonz_cap s \<equiv>
     \<forall>ptr. obj_at live ptr s \<longrightarrow> ex_nonz_cap_to ptr s"
 
-definition
-  caps_of_state :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap option"
-where
- "caps_of_state s \<equiv> (\<lambda>p. if (\<exists>cap. fst (get_cap p s) = {(cap, s)})
-                         then Some (THE cap. fst (get_cap p s) = {(cap, s)})
-                         else None)"
-
-context Arch begin
-
-lemma arch_caps_of_state_def2:
-  "arch_caps_of_state s = (\<lambda>p. case caps_of_state s p of Some (ArchObjectCap ac) \<Rightarrow> Some ac | _ \<Rightarrow> None)"
-  apply (simp add: arch_caps_of_state_def caps_of_state_def)
-  apply (rule ext)
-  apply (simp split: if_splits cap.splits)
-  by (safe; simp)
-
-unqualify_consts arch_caps_of_state
-unqualify_facts arch_caps_of_state_def2
-
-end
-
 primrec
   cte_refs :: "cap \<Rightarrow> (irq \<Rightarrow> obj_ref) \<Rightarrow> cslot_ptr set"
 where

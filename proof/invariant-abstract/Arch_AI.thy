@@ -1298,7 +1298,7 @@ lemma create_mapping_entries_same_refs:
     (\<lambda>s. \<exists>pd_cap pd_cptr. cte_wp_at (diminished pd_cap) pd_cptr s
           \<and> pd_cap = cap.ArchObjectCap (arch_cap.PageDirectoryCap pd (Some asid))) and
     page_directory_at pd and K (vaddr < kernel_base \<and> (cap = (cap.ArchObjectCap (arch_cap.PageCap p rights' pgsz (Some (asid, vaddr))))))\<rbrace>
-   create_mapping_entries (Platform.addrFromPPtr p) vaddr pgsz rights attribs pd
+   create_mapping_entries (Platform.ARM.addrFromPPtr p) vaddr pgsz rights attribs pd
    \<lbrace>\<lambda>rv s. same_refs rv cap s\<rbrace>,-"
   apply (rule hoare_gen_asmE)
   apply (cases pgsz, simp_all add: lookup_pt_slot_def)
@@ -1408,7 +1408,7 @@ lemma create_mapping_entries_same_refs_ex:
     (\<lambda>s. \<exists>pd_cap pd_cptr asid rights'. cte_wp_at (diminished pd_cap) pd_cptr s
           \<and> pd_cap = cap.ArchObjectCap (arch_cap.PageDirectoryCap pd (Some asid))
           \<and> page_directory_at pd s \<and> vaddr < kernel_base \<and> (cap = (cap.ArchObjectCap (arch_cap.PageCap p rights' pgsz (Some (asid, vaddr))))))\<rbrace>
-   create_mapping_entries (Platform.addrFromPPtr p) vaddr pgsz rights attribs pd
+   create_mapping_entries (Platform.ARM.addrFromPPtr p) vaddr pgsz rights attribs pd
    \<lbrace>\<lambda>rv s. same_refs rv cap s\<rbrace>,-"
   apply (clarsimp simp: validE_R_def validE_def valid_def split: sum.split)
   apply (erule use_validE_R[OF _ create_mapping_entries_same_refs])

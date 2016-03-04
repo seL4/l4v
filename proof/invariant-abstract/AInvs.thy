@@ -225,7 +225,7 @@ lemma some_get_page_info_umapsD:
 lemma ptable_rights_imp_user_frame:
   assumes "valid_state s"
   shows "ptable_rights t s x \<noteq> {} \<Longrightarrow>
-         ptable_lift t s x = Some (Platform.addrFromPPtr y) \<Longrightarrow>
+         ptable_lift t s x = Some (Platform.ARM.addrFromPPtr y) \<Longrightarrow>
          in_user_frame y s"
   apply (clarsimp simp: ptable_rights_def ptable_lift_def in_user_frame_def
                  split: option.splits)
@@ -248,7 +248,7 @@ lemma ptable_rights_imp_user_frame:
   apply (frule is_aligned_add_helper[OF _ and_mask_less',
                                      THEN conjunct2, of _ _ x])
    apply (simp only: pbfs_less_wb'[simplified word_bits_def])
-  apply (clarsimp simp: Platform.ptrFromPAddr_def Platform.addrFromPPtr_def
+  apply (clarsimp simp: Platform.ptrFromPAddr_def Platform.ARM.addrFromPPtr_def
                         field_simps)
   apply (rule_tac x=sz in exI)
   apply (subst add.assoc[symmetric])

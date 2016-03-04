@@ -99,6 +99,13 @@ datatype cap
            -- {* @{text "cnode ptr * nat + tcb or cspace ptr"} *}
          | ArchObjectCap (the_arch_cap: arch_cap)
 
+lemmas cap_cases =
+  cap.induct[where cap=cap and P="\<lambda>cap'. cap' = cap \<longrightarrow> P cap'" for cap P, simplified, rule_format]
+
+lemmas cap_cases_asm =
+cap.induct[where cap=cap and P="\<lambda>cap'. cap = cap' \<longrightarrow> P cap' \<longrightarrow> R" for P R cap, 
+  simplified, rule_format, rotated -1]
+
 text {* The CNode object is an array of capability slots. The domain of the
 function will always be the set of boolean lists of some specific length.
 Empty slots contain a Null capability.

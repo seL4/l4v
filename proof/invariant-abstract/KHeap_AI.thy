@@ -1217,43 +1217,48 @@ lemma set_object_memory[wp]:
 
 
 locale non_arch_op = fixes f
-  assumes aobj_at: "\<And>P P' p. \<lbrace>\<lambda>s. P (aobj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (aobj_at P' p s)\<rbrace>" and
-          arch_state: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>" and
-          memory: "\<And>P. \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
+  assumes aobj_at[wp]: "\<And>P P' p. \<lbrace>\<lambda>s. P (aobj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (aobj_at P' p s)\<rbrace>" and
+          arch_state[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
 begin
 
 lemma valid_arch_obj[wp]:"\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-by (rule valid_arch_objs_lift_weak[OF aobj_at arch_state])
+by (rule valid_arch_objs_lift_weak, wp)
 
 lemma vs_lookup[wp]: "\<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
-by (rule vs_lookup_aobj_at_lift[OF aobj_at arch_state])
+by (rule vs_lookup_aobj_at_lift, wp)
 
 lemma vs_lookup_pages[wp]: "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
-by (rule vs_lookup_pages_aobj_at_lift[OF aobj_at arch_state])
+by (rule vs_lookup_pages_aobj_at_lift, wp)
 
 lemma valid_global_objs[wp]: "\<lbrace>valid_global_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-by (rule valid_global_objs_lift_weak[OF arch_state aobj_at])
+by (rule valid_global_objs_lift_weak, wp)
 
 lemma valid_asid_map[wp]: "\<lbrace>valid_asid_map\<rbrace> f \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-by (rule valid_asid_map_lift[OF arch_state aobj_at])
+by (rule valid_asid_map_lift, wp)
 
 lemma valid_kernel_mappings[wp]: "\<lbrace>valid_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
-by (rule valid_kernel_mappings_lift[OF arch_state aobj_at])
+by (rule valid_kernel_mappings_lift, wp)
 
 lemma equal_kernel_mappings[wp]: "\<lbrace>equal_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
-by (rule equal_kernel_mappings_lift[OF aobj_at])
+by (rule equal_kernel_mappings_lift, wp)
 
 lemma valid_global_pd_mappings[wp]: "\<lbrace>valid_global_pd_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
-by (rule valid_global_pd_mappings_lift[OF arch_state aobj_at])
+by (rule valid_global_pd_mappings_lift, wp)
+
+end
+
+
+locale non_arch_non_mem_op = non_arch_op f for f +
+ assumes memory[wp]: "\<And>P. \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
+begin
 
 lemma valid_machine_state[wp]: "\<lbrace>valid_machine_state\<rbrace> f \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
 by (rule valid_machine_state_lift[OF memory aobj_at])
 
 end
 
-
 locale non_arch_non_cap_op = non_arch_op f for f +
-  assumes caps: "\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of_state s)\<rbrace>"
+  assumes caps[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of (caps_of_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of (caps_of_state s))\<rbrace>"
 begin
 
 lemma valid_arch_caps[wp]: "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
@@ -1261,11 +1266,7 @@ lemma valid_arch_caps[wp]: "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambd
 
 end
 
-lemma arch_caps_to_caps_of_state:
-  assumes caps: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. P (arch_caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of_state s)\<rbrace>"
-  unfolding arch_caps_of_state_def2
-  by (rule caps)
+locale non_arch_non_cap_non_mem_op = non_arch_non_mem_op f + non_arch_non_cap_op f for f
 
 lemma shows
   sts_caps_of_state[wp]:
@@ -1274,28 +1275,56 @@ lemma shows
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_bound_notification t e \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
   as_user_caps_of_state[wp]:
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> as_user p f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  
   unfolding set_thread_state_def set_bound_notification_def as_user_def set_object_def
+            set_mrs_def
   apply (all \<open>(wp | wpc | simp)+ ; clarsimp, erule rsubst[where P=P], rule cte_wp_caps_of_lift\<close>)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
 
+lemma
+  store_word_offs_caps_of_state[wp]:
+   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> store_word_offs a b c \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  unfolding store_word_offs_def do_machine_op_def[abs_def]
+  by (wp modify_wp | fastforce)+
+
+lemma
+  set_mrs_caps_of_state[wp]:
+   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  unfolding set_mrs_def set_object_def[abs_def]
+  apply (wp mapM_x_inv_wp | wpc | simp add: zipWithM_x_mapM_x split del: split_if | clarsimp)+
+  apply (safe; erule rsubst[where P=P], rule cte_wp_caps_of_lift)
+  by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
 
 interpretation
-   set_endpoint: non_arch_non_cap_op "set_endpoint p ep" + 
-   set_notification: non_arch_non_cap_op "set_notification p ntfn" +
-   sts: non_arch_non_cap_op "set_thread_state p st" +
-   sbm: non_arch_non_cap_op "set_bound_notification p b" +
-   as_user: non_arch_non_cap_op "as_user p g" +
+   set_endpoint: non_arch_non_cap_non_mem_op "set_endpoint p ep" + 
+   set_notification: non_arch_non_cap_non_mem_op "set_notification p ntfn" +
+   sts: non_arch_non_cap_non_mem_op "set_thread_state p st" +
+   sbm: non_arch_non_cap_non_mem_op "set_bound_notification p b" +
+   as_user: non_arch_non_cap_non_mem_op "as_user p g" +
    thread_set: non_arch_op "thread_set f p" +
    set_cap: non_arch_op "set_cap cap p'"
-   apply (all \<open>unfold_locales; (rule arch_caps_to_caps_of_state; wp ; fail)?\<close>)
+   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_endpoint_def set_notification_def set_thread_state_def 
             set_bound_notification_def thread_set_def set_cap_def[simplified split_def]
-            as_user_def
+            as_user_def set_mrs_def
   apply -
-  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp)+\<close>)
+  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: split_if)+\<close>)
   by (fastforce simp: aobj_at_def2 obj_at_def[abs_def] a_type_def 
                split: Structures_A.kernel_object.splits)+
 
+interpretation
+  store_word_offs: non_arch_non_cap_op "store_word_offs a b c"
+  apply unfold_locales
+  unfolding store_word_offs_def do_machine_op_def[abs_def]
+  by (wp modify_wp | fastforce)+
+
+interpretation
+  set_mrs: non_arch_non_cap_op "set_mrs thread buf msgs"
+  apply unfold_locales
+  apply (all \<open>(wp ; fail)?\<close>)
+  unfolding set_mrs_def set_object_def
+  apply (all \<open>(wp mapM_x_inv_wp | wpc | simp add: zipWithM_x_mapM_x split del: split_if | clarsimp)+\<close>)
+  by (fastforce simp: aobj_at_def get_tcb_def split: kernel_object.splits option.splits)
 
 lemma valid_irq_handlers_lift:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"

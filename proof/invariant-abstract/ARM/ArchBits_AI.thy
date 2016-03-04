@@ -15,11 +15,11 @@ begin
 context ARM begin
 
 lemma invs_unique_table_caps[elim!]:
-  "invs s \<Longrightarrow> unique_table_caps (arch_caps_of_state s)"
+  "invs s \<Longrightarrow> unique_table_caps (arch_caps_of (caps_of_state s))"
   by (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
 
 lemma invs_unique_refs[elim!]:
-  "invs s \<Longrightarrow> unique_table_refs (arch_caps_of_state s)"
+  "invs s \<Longrightarrow> unique_table_refs (arch_caps_of (caps_of_state s))"
   by (simp add: invs_def valid_state_def valid_arch_caps_def)
 
 

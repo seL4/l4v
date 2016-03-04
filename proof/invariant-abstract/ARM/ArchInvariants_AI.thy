@@ -201,6 +201,18 @@ where
    | PageDirectory pd \<Rightarrow> (\<forall>pde\<in>range pd. wellformed_pde pde)
    | _ \<Rightarrow> True"
 
+lemmas
+  wellformed_pte_simps[simp] =
+  wellformed_pte_def[split_simps Arch_Structs_A.ARM.pte.split]
+
+lemmas
+  wellformed_pde_simps[simp] =
+  wellformed_pde_def[split_simps Arch_Structs_A.ARM.pde.split]
+
+lemmas
+  wellformed_arch_obj_simps[simp] =
+  wellformed_arch_obj_def[split_simps arch_kernel_obj.split]
+
 section "Virtual Memory"
 
 definition
@@ -571,19 +583,13 @@ definition
   | Arch_Structs_A.ARM.PageDirectoryCap _ (Some asid) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
-definition
-  arch_caps_of_state :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap option"
-where
- "arch_caps_of_state s \<equiv> (\<lambda>p. if (\<exists>acap. fst (get_cap p s) = {(ArchObjectCap acap, s)})
-                         then Some (THE acap. fst (get_cap p s) = {(ArchObjectCap acap, s)})
-                         else None)"
 
   (* needed for retype: if reachable, then cap, if cap then protected by untyped cap.
      strengthened for preservation in cap delete: ref in cap must unmap the right objects *)
 definition
   "valid_vs_lookup \<equiv> \<lambda>s. \<forall>p ref. (ref \<unrhd> p) s \<longrightarrow>
   ref \<noteq> [VSRef 0 (Some AASIDPool), VSRef 0 None] \<and>
-  (\<exists>p' acap. arch_caps_of_state s p' = Some acap \<and>
+  (\<exists>p' acap. arch_caps_of (caps_of_state s) p' = Some acap \<and>
             aobj_ref acap = Some p \<and> vs_cap_ref acap = Some ref)"
 
 definition
@@ -608,7 +614,7 @@ where
   (* needed for map: installing new object should add only one mapping *)
 definition
   "valid_table_caps \<equiv> \<lambda>s.
-  \<forall>r p acap. arch_caps_of_state s p = Some acap \<longrightarrow>
+  \<forall>r p acap. arch_caps_of (caps_of_state s) p = Some acap \<longrightarrow>
             (is_pd_cap acap \<or> is_pt_cap acap) \<longrightarrow>
             cap_asid acap = None \<longrightarrow>
             aobj_ref acap = Some r \<longrightarrow>
@@ -656,8 +662,8 @@ where
 
 definition
   "valid_arch_caps \<equiv> valid_vs_lookup and valid_table_caps and
-                     (\<lambda>s. unique_table_caps (arch_caps_of_state s)
-                        \<and> unique_table_refs (arch_caps_of_state s))"
+                     (\<lambda>s. unique_table_caps (arch_caps_of (caps_of_state s))
+                        \<and> unique_table_refs (arch_caps_of (caps_of_state s)))"
 
 
 text "objects live in the kernel window"
@@ -997,9 +1003,10 @@ lemma get_cap_update [iff]:
       apply (simp_all add: return_def fail_def assert_def bind_def)
   done
 
-lemma arch_caps_of_state_update [iff]:
-  "arch_caps_of_state (f s) = arch_caps_of_state s"
-  by (rule ext) (auto simp: arch_caps_of_state_def)
+(* FIXME: Clagged *)
+lemma caps_of_state_update [iff]:
+  "caps_of_state (f s) = caps_of_state s"
+  by (rule ext) (auto simp: caps_of_state_def)
 
 
 end
@@ -1682,7 +1689,7 @@ lemma valid_global_ptsD:
   by (clarsimp simp: valid_global_objs_def)
 
 lemma valid_table_caps_pdD:
-  "\<lbrakk> arch_caps_of_state s p = Some (arch_cap.PageDirectoryCap pd None);
+  "\<lbrakk> arch_caps_of (caps_of_state s) p = Some (arch_cap.PageDirectoryCap pd None);
      valid_table_caps s \<rbrakk> \<Longrightarrow>
     aobj_at (empty_table (set (arm_global_pts (arch_state s)))) pd s"
   apply (clarsimp simp: valid_table_caps_def simp del: split_paired_All)
@@ -1693,7 +1700,7 @@ lemma valid_table_caps_pdD:
 
 lemma valid_vs_lookupD:
   "\<lbrakk> (ref \<unrhd> p) s; valid_vs_lookup s \<rbrakk> \<Longrightarrow>
-  (\<exists>slot cap. arch_caps_of_state s slot = Some cap \<and> aobj_ref cap = Some p \<and> vs_cap_ref cap = Some ref)"
+  (\<exists>slot cap. arch_caps_of (caps_of_state s) slot = Some cap \<and> aobj_ref cap = Some p \<and> vs_cap_ref cap = Some ref)"
   by (simp add: valid_vs_lookup_def)
 
 lemma vs_lookup_induct:

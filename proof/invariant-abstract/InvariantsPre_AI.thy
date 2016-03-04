@@ -138,4 +138,22 @@ where
          {y .. y + (2 ^ obj_bits ko' - 1)} = {}"
 
 
+definition
+  caps_of_state :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap option"
+where
+ "caps_of_state s \<equiv> (\<lambda>p. if (\<exists>cap. fst (get_cap p s) = {(cap, s)})
+                         then Some (THE cap. fst (get_cap p s) = {(cap, s)})
+                         else None)"
+
+definition
+  arch_caps_of :: "(cslot_ptr \<Rightarrow> cap option) \<Rightarrow> (cslot_ptr \<Rightarrow> arch_cap option)" where
+  "arch_caps_of cs \<equiv> (\<lambda>p. case cs p of Some (ArchObjectCap ac) \<Rightarrow> Some ac | _ \<Rightarrow> None)"
+
+lemma
+  arch_caps_of_simp[simp]:
+  "(arch_caps_of cs p = Some ac) = (cs p = Some (ArchObjectCap ac))"
+  by (auto simp: arch_caps_of_def split: option.splits cap.splits)
+  
+
+
 end

@@ -332,7 +332,7 @@ lemma invs_A:
    apply (clarsimp simp: valid_ao_at_def obj_at_def empty_table_def pde_ref_def
                          valid_pde_mappings_def)
    apply (simp add: kernel_base_def kernel_mapping_slots_def 
-                    Platform.addrFromPPtr_def physMappingOffset_def
+                    Platform.ARM.addrFromPPtr_def physMappingOffset_def
                     kernelBase_addr_def physBase_def pageBits_def is_aligned_def)
   apply (rule conjI)
    apply (simp add: valid_kernel_mappings_def state_defs

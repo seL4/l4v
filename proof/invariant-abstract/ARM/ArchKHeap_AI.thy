@@ -270,23 +270,23 @@ lemma set_object_valid_kernel_mappings:
 
 lemma valid_vs_lookup_lift:
   assumes lookup: "\<And>P. \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
-  assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of_state s)\<rbrace>"
+  assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of (caps_of_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of (caps_of_state s))\<rbrace>"
   assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (arm_global_pts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arm_global_pts (arch_state s))\<rbrace>"
   shows "\<lbrace>valid_vs_lookup\<rbrace> f \<lbrace>\<lambda>_. valid_vs_lookup\<rbrace>"
   unfolding valid_vs_lookup_def
   apply (rule hoare_lift_Pf [where f=vs_lookup_pages])
-   apply (rule hoare_lift_Pf [where f=arch_caps_of_state])
+   apply (rule hoare_lift_Pf [where f="\<lambda>s. (arch_caps_of (caps_of_state s))"])
     apply (rule hoare_lift_Pf [where f="\<lambda>s. arm_global_pts (arch_state s)"])
      apply (wp lookup cap pts)
   done
 
 lemma valid_table_caps_lift:
-  assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of_state s)\<rbrace>"
+  assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of (caps_of_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of (caps_of_state s))\<rbrace>"
   assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (arm_global_pts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arm_global_pts (arch_state s))\<rbrace>"
   assumes obj: "\<And>S p. \<lbrace>aobj_at (empty_table S) p\<rbrace> f \<lbrace>\<lambda>rv. aobj_at (empty_table S) p\<rbrace>"
   shows "\<lbrace>valid_table_caps\<rbrace> f \<lbrace>\<lambda>_. valid_table_caps\<rbrace>"
   unfolding valid_table_caps_def
-   apply (rule hoare_lift_Pf [where f=arch_caps_of_state])
+   apply (rule hoare_lift_Pf [where f="\<lambda>s. (arch_caps_of (caps_of_state s))"])
     apply (rule hoare_lift_Pf [where f="\<lambda>s. arm_global_pts (arch_state s)"])
      apply (wp cap pts hoare_vcg_all_lift hoare_vcg_const_imp_lift obj)
   done
@@ -294,7 +294,7 @@ lemma valid_table_caps_lift:
 
 lemma valid_arch_caps_lift:
   assumes lookup: "\<And>P. \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
-  assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of_state s)\<rbrace>"
+  assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of (caps_of_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of (caps_of_state s))\<rbrace>"
   assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (arm_global_pts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arm_global_pts (arch_state s))\<rbrace>"
   assumes obj: "\<And>S p. \<lbrace>aobj_at (empty_table S) p\<rbrace> f \<lbrace>\<lambda>rv. aobj_at (empty_table S) p\<rbrace>"
   shows "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
@@ -333,7 +333,7 @@ lemma arch_lifts:
   valid_global_pd_mappings_lift: 
     "\<lbrace>valid_global_pd_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>" and
   valid_arch_caps_lift_weak: 
-    "(\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of_state s)\<rbrace>) \<Longrightarrow> 
+    "(\<And>P. \<lbrace>\<lambda>s. P (arch_caps_of (caps_of_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_caps_of (caps_of_state s))\<rbrace>) \<Longrightarrow> 
       \<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>" and
   valid_global_objs_lift_weak:
     "\<lbrace>valid_global_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>" and
@@ -392,8 +392,6 @@ lemma arch_lifts:
   apply blast
   done
   done
-
- 
 
 lemma equal_kernel_mappings_lift:
   assumes aobj_at: "\<And>P P' pd. \<lbrace>\<lambda>s. P (aobj_at P' pd s)\<rbrace> f \<lbrace>\<lambda>r s. P (aobj_at P' pd s)\<rbrace>"
@@ -515,7 +513,7 @@ lemma set_object_global_pd_mappings:
 
 
 lemma valid_table_caps_ptD:
-  "\<lbrakk> arch_caps_of_state s p = Some (arch_cap.PageTableCap p' None);
+  "\<lbrakk> arch_caps_of (caps_of_state s) p = Some (arch_cap.PageTableCap p' None);
      page_table_at p' s; valid_table_caps s \<rbrakk> \<Longrightarrow> 
     \<exists>pt. ako_at (PageTable pt) p' s \<and> valid_arch_obj (PageTable pt) s"
   apply (clarsimp simp: valid_table_caps_def simp del: split_paired_All)

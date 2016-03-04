@@ -1304,7 +1304,7 @@ lemma page_table_mapped_wp:
   apply (simp add: pd_bits_def pageBits_def)
   apply (auto simp: pde_ref_def ucast_up_ucast_id is_up_def a_type_simps
                     source_size_def target_size_def word_size
-                    Platform.addrFromPPtr_def Platform.ptrFromPAddr_def
+                    Platform.ARM.addrFromPPtr_def Platform.ptrFromPAddr_def
              split: split_if_asm
              dest!: graph_ofD)
   done

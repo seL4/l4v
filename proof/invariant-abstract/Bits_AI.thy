@@ -43,6 +43,8 @@ lemma lookup_error_injection:
   done
 
 
+ML \<open>Thm.join_proofs @{thms lookup_error_injection}\<close>
+
 lemmas cap_fault_wp[wp] = injection_wp[OF cap_fault_injection]
 
 lemmas cap_fault_wp_E[wp] = injection_wp_E[OF cap_fault_injection]
