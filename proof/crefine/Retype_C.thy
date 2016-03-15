@@ -4780,9 +4780,9 @@ lemma placeNewObject_pde:
 
 end
 
-definition "placeNewObject_with_memset regionBase us \<equiv> 
+definition "placeNewObject_with_memset regionBase us deviceMemory \<equiv> 
   (do x \<leftarrow> placeNewObject regionBase UserData us;
-      doMachineOp (mapM_x (\<lambda>p::word32. storeWord p (0::word32))
+      unless deviceMemory $ doMachineOp (mapM_x (\<lambda>p::word32. storeWord p (0::word32))
                [regionBase , regionBase + (4::word32) .e. regionBase + (2::word32) ^ (pageBits + us) - (1::word32)])
    od)"
 
@@ -4800,7 +4800,7 @@ lemma placeNewObject_user_data:
   \<and>  {regionBase..+2^(pageBits +  us)} \<inter> kernel_data_refs = {}))
   ({s. region_actually_is_bytes regionBase (2^(pageBits+us)) s})
   hs
-  (placeNewObject_with_memset regionBase us)
+  (placeNewObject_with_memset regionBase us d)
   (CALL memzero(Ptr regionBase,2 ^ (pageBits + us));;
    global_htd_update (\<lambda>s. (ptr_retyps (2^us) (Ptr regionBase :: user_data_C ptr))))"
   apply (rule ccorres_from_vcg_nofail)
@@ -4844,7 +4844,11 @@ lemma placeNewObject_user_data:
         apply (simp add:range_cover.aligned pageBits_def)
        apply (simp add:pageBits_def)
       apply (simp add:range_cover_sz'[where 'a=32, folded word_bits_def])
+apply (rule conjI)
      apply (fastforce simp add: in_monad)
+apply clarsimp
+apply (auto)[1]
+apply (fastforce simp: in_monad)
       apply (clarsimp simp: linorder_not_less unat_plus_if')
     apply (cut_tac ptr=regionBase and sz="pageBits + us" and gbits=us and arr=False
                  in createObjects_ccorres_user_data[rule_format])
@@ -4855,18 +4859,19 @@ lemma placeNewObject_user_data:
  done
 
 definition
-  createObject_hs_preconds :: "word32 \<Rightarrow> ArchTypes_H.object_type \<Rightarrow> nat \<Rightarrow> kernel_state \<Rightarrow> bool"
+  createObject_hs_preconds :: "word32 \<Rightarrow> ArchTypes_H.object_type \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
-  "createObject_hs_preconds regionBase newType userSize \<equiv>
+  "createObject_hs_preconds regionBase newType userSize d \<equiv>
      (invs' and (pspace_no_overlap' regionBase (getObjectSize newType userSize))
            and (\<lambda>s. 2 ^ (getObjectSize newType userSize) \<le> gsMaxObjectSize s)
            and K(regionBase \<noteq> 0
                    \<and> ({regionBase..+2 ^ (getObjectSize newType userSize)} \<inter> kernel_data_refs = {})
                    \<and> range_cover regionBase (getObjectSize newType userSize) (getObjectSize newType userSize) (Suc 0)
-                   \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> userSize \<le> 30)
+                   \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> userSize \<le> 29)
                    \<and> (newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> userSize < 28)
                    \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> userSize)
                    \<and> (newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < userSize)
+                   \<and> (d \<longrightarrow> newType = APIObjectType apiobject_type.Untyped \<or> ArchTypes_H.isFrameType newType)
            ))"
 
 (* these preconds actually used throughout the proof *)
@@ -4878,13 +4883,14 @@ where
 
 (* these preconds used at start of proof *)
 definition
-  createObject_c_preconds :: "word32 \<Rightarrow> ArchTypes_H.object_type \<Rightarrow> nat \<Rightarrow> (globals myvars) set"
+  createObject_c_preconds :: "word32 \<Rightarrow> ArchTypes_H.object_type \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> (globals myvars) set"
 where
-  "createObject_c_preconds regionBase newType userSize \<equiv>
+  "createObject_c_preconds regionBase newType userSize deviceMemory \<equiv>
   (createObject_c_preconds1 regionBase newType userSize
            \<inter> {s. object_type_from_H newType = t_' s}
            \<inter> {s. Ptr regionBase = regionBase_' s}
            \<inter> {s. unat (scast (userSize_' s) :: word32) = userSize}
+           \<inter> {s. to_bool (deviceMemory_' s) = deviceMemory}
      )"
 
 lemma ccorres_apiType_split:
@@ -4938,7 +4944,7 @@ lemma range_coverI:
 lemma placeNewObject_with_memset_eq:
   "(do
     x \<leftarrow> placeNewObject regionBase UserData us;
-    y \<leftarrow> doMachineOp (clearMemory regionBase (2 ^ (pageBits + us)));
+    y \<leftarrow> unless deviceMemory (doMachineOp (clearMemory regionBase (2 ^ (pageBits + us))));
     f
     od ) =
     (do
@@ -4991,10 +4997,10 @@ lemma createObjects'_page_directory_at_global:
 lemma Arch_createObject_ccorres:
   assumes t: "toAPIType newType = None"
   shows "ccorres (\<lambda>a b. ccap_relation (ArchObjectCap a) b) ret__struct_cap_C_'
-     (createObject_hs_preconds regionBase newType userSize) 
-     (createObject_c_preconds regionBase newType userSize)
+     (createObject_hs_preconds regionBase newType userSize deviceMemory) 
+     (createObject_c_preconds regionBase newType userSize deviceMemory)
      []
-     (ArchRetypeDecls_H.createObject newType regionBase userSize)
+     (ArchRetypeDecls_H.createObject newType regionBase userSize deviceMemory)
      (Call Arch_createObject_'proc)"
 proof -
   note if_cong[cong]
@@ -5017,7 +5023,7 @@ proof -
 
          -- "SmallPageObject"
          apply (subst gsUserPages_update)
-         apply (cinit' lift: t_' regionBase_' userSize_')
+         apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
           apply (simp add: object_type_from_H_def Kernel_C_defs
                         ccorres_cond_univ_iff ccorres_cond_empty_iff
                         asidInvalid_def sle_positive APIType_capBits_def

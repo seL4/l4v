@@ -41,6 +41,8 @@ definition
   "heap_to_page_data hp bhp \<equiv> \<lambda>p. let (uhp :: word32 \<Rightarrow> user_data option) = (projectKO_opt \<circ>\<^sub>m hp) in
                                       option_map (\<lambda>_. byte_to_word_heap bhp p) (uhp p)"
 
+(* FIXME SELFOUR-421: need new heap relation for devices, use user_data_device type *)
+BLOW UP
 definition
   cmap_relation :: "(word32 \<rightharpoonup> 'a) \<Rightarrow> 'b typ_heap \<Rightarrow> (word32 \<Rightarrow> 'b ptr) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> bool"
   where
