@@ -42,7 +42,7 @@ _isabelle_completer_path=$(dirname "${(%):-%x}")
 
 _isabelle() {
     local -x _isabelle_path
-    _isabelle_path="${words[1]}"
+    _isabelle_path=${~words[1]}
     if (( CURRENT == 2 )); then
         # completing isabelle subcommand
         # Isabelle's top-level command description has the format
@@ -192,7 +192,12 @@ _isabelle_parse_option() {
     local arg="$(echo "$opt" | sed -e 's/^ *-. \+\([A-Z_]\+\)\?.*$/\1/')"
     local help="$(echo "$opt" | sed -e 's/^ *-. \+\([A-Z_]\+ \+\)\?\(.*[^ ]\) *$/\2/')"
 
-    local optspec="-${name}[$help]"
+    # session dirs and runtime options can be given multiple times
+    local multiple=
+    if [[ "$help" =~ '.*(session directory|option|OPTION).*' ]]; then
+        multiple='*'
+    fi
+    local optspec="${multiple}-${name}[$help]"
 
     if [[ -n "$arg" ]]; then
         # short version for tab completing argument
@@ -230,7 +235,7 @@ _isabelle_session_name() {
     _tags isa_heaps isa_sessions
     local heap_names session_names
     heap_names=$("$_isabelle_path" env sh -c 'echo -n "$ISABELLE_PATH"' | \
-                 xargs "-d:" sh -c 'find "$@" -maxdepth 2 -type f' . 2>/dev/null | \
+                 xargs "-d:" sh -c 'find "$@" -maxdepth 2 -type f' dummy-arg 2>/dev/null | \
                  xargs -d'\n' -n1 basename | sort -u)
     session_names=$(python "${_isabelle_completer_path}/isabelle_session_names.py" "$@" | sort -u)
     _requested isa_heaps expl 'heap name' compadd -- ${=heap_names}
