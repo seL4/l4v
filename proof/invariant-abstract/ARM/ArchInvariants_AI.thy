@@ -225,10 +225,10 @@ where
        \<longrightarrow> (\<forall>w \<in> kernel_mapping_slots. pd w = pd' w)"
 
 definition
-  pde_ref :: "Arch_Structs_A.ARM.pde \<Rightarrow> obj_ref option"
+  pde_ref :: "pde \<Rightarrow> obj_ref option"
 where
   "pde_ref pde \<equiv> case pde of
-    Arch_Structs_A.ARM.PageTablePDE ptr x z \<Rightarrow> Some (Platform.ARM.ptrFromPAddr ptr)
+    PageTablePDE ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
   | _ \<Rightarrow> None"
 
 datatype vs_ref = VSRef word32 "aa_type option"
@@ -240,9 +240,9 @@ definition
 definition
   vs_refs_arch :: "arch_kernel_obj \<Rightarrow> (vs_ref \<times> obj_ref) set" where
   "vs_refs_arch \<equiv> \<lambda>ko. case ko of
-    (Arch_Structs_A.ARM.ASIDPool pool) \<Rightarrow>
+    ASIDPool pool \<Rightarrow>
       (\<lambda>(r,p). (VSRef (ucast r) (Some AASIDPool), p)) ` graph_of pool
-  | (Arch_Structs_A.ARM.PageDirectory pd) \<Rightarrow>
+  | PageDirectory pd \<Rightarrow>
       (\<lambda>(r,p). (VSRef (ucast r) (Some APageDirectory), p)) `
       graph_of (\<lambda>x. if x \<in> kernel_mapping_slots then None else pde_ref (pd x))
   | _ \<Rightarrow> {}"

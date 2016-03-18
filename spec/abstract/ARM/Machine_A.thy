@@ -29,14 +29,14 @@ text {*
   references, user pointers, word-based data, cap references, and so
   on. This theory provides an instantiation of these names to concrete 
   types for the ARM architecture. Other architectures may have slightly
-  different instantations.  
+  different instantiations.
 *}
 type_synonym obj_ref            = machine_word
 type_synonym vspace_ref         = machine_word
 type_synonym data_offset        = "12 word"
 
 type_synonym data               = machine_word
-type_synonym cap_ref            = "bool list" 
+type_synonym cap_ref            = "bool list"
 type_synonym length_type        = machine_word
 type_synonym asid_pool_index    = "10 word"
 type_synonym asid_index         = "8 word" (* FIXME: better name? *)
