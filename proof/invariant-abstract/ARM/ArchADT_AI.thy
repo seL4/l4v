@@ -115,108 +115,39 @@ lemma get_pd_of_thread_vs_lookup:
              else arm_global_pd (arch_state s)
          | _ \<Rightarrow> arm_global_pd (arch_state s))
     | _ \<Rightarrow> arm_global_pd (arch_state s))"
-  apply (clarsimp simp: get_pd_of_thread_def
-                        vs_cap_ref_def vs_cap_ref_arch_def
-                        arch_cap_fun_lift_def
-                 split: option.splits
-                        kernel_object.splits
-                        cap.splits arch_cap.splits)
-  apply (rename_tac tcb p a pd_ref)
-  apply (intro conjI impI allI; clarsimp)
+  apply (clarsimp simp: get_pd_of_thread_def split: option.splits)
+  apply (case_tac "the (kheap s tcb_ref)", simp_all, clarsimp)
+  apply (rename_tac tcb)
+  apply (case_tac "\<not> is_pd_cap (tcb_vtable tcb)")
+   apply (clarsimp simp: is_pd_cap_def split: cap.split arch_cap.split)
+  apply (clarsimp simp: is_pd_cap_def vs_cap_ref_def vs_cap_ref_arch_def)
+  apply (case_tac asid, simp_all, clarsimp)
+  apply (intro conjI impI)
 
-  (* FIXME: First 7 subgoals have the same proof script; can we extract to a method or lemma? *)
-  subgoal
    apply (erule vs_lookupE)
    apply (clarsimp simp: vs_asid_refs_def split_def image_def graph_of_def)
-   apply (erule rtranclE, simp+)
+   apply (erule rtranclE, simp)
    apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def)
-   apply (erule rtranclE)
-    apply (clarsimp simp: up_ucast_inj_eq obj_at_def)
-   apply (clarsimp dest!: vs_lookup1D)
-   by (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-               split: kernel_object.splits arch_kernel_obj.splits)
+   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
+                  split: arch_kernel_obj.split_asm)
+    apply (erule rtranclE)
+     apply (clarsimp simp: up_ucast_inj_eq obj_at_def vs_refs_def vs_refs_arch_def graph_of_def
+                           image_def
+                  split: arch_kernel_obj.split_asm)
+    apply (clarsimp dest!: vs_lookup1D)
+    apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
+                   split: arch_kernel_obj.split_asm)
+   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
+                  split: arch_kernel_obj.split_asm)
 
-  subgoal
-   apply (erule vs_lookupE)
-   apply (clarsimp simp: vs_asid_refs_def split_def image_def graph_of_def)
-   apply (erule rtranclE, simp+)
-   apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def)
-   apply (erule rtranclE)
-    apply (clarsimp simp: up_ucast_inj_eq obj_at_def)
-   apply (clarsimp dest!: vs_lookup1D)
-   by (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-               split: kernel_object.splits arch_kernel_obj.splits)
-
-  subgoal
-   apply (erule vs_lookupE)
-   apply (clarsimp simp: vs_asid_refs_def split_def image_def graph_of_def)
-   apply (erule rtranclE, simp+)
-   apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def)
-   apply (erule rtranclE)
-    apply (clarsimp simp: up_ucast_inj_eq obj_at_def)
-   apply (clarsimp dest!: vs_lookup1D)
-   by (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-               split: kernel_object.splits arch_kernel_obj.splits)
-
-  subgoal
-   apply (erule vs_lookupE)
-   apply (clarsimp simp: vs_asid_refs_def split_def image_def graph_of_def)
-   apply (erule rtranclE, simp+)
-   apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def)
-   apply (erule rtranclE)
-    apply (clarsimp simp: up_ucast_inj_eq obj_at_def)
-   apply (clarsimp dest!: vs_lookup1D)
-   by (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-               split: kernel_object.splits arch_kernel_obj.splits)
-
-  subgoal
-   apply (erule vs_lookupE)
-   apply (clarsimp simp: vs_asid_refs_def split_def image_def graph_of_def)
-   apply (erule rtranclE, simp+)
-   apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def)
-   apply (erule rtranclE)
-    apply (clarsimp simp: up_ucast_inj_eq obj_at_def)
-   apply (clarsimp dest!: vs_lookup1D)
-   by (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-               split: kernel_object.splits arch_kernel_obj.splits)
-
-  subgoal
-   apply (erule vs_lookupE)
-   apply (clarsimp simp: vs_asid_refs_def split_def image_def graph_of_def)
-   apply (erule rtranclE, simp+)
-   apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def)
-   apply (erule rtranclE)
-    apply (clarsimp simp: up_ucast_inj_eq obj_at_def)
-   apply (clarsimp dest!: vs_lookup1D)
-   by (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-               split: kernel_object.splits arch_kernel_obj.splits)
-
-  subgoal
-   apply (erule vs_lookupE)
-   apply (clarsimp simp: vs_asid_refs_def split_def image_def graph_of_def)
-   apply (erule rtranclE, simp+)
-   apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def)
-   apply (erule rtranclE)
-    apply (clarsimp simp: up_ucast_inj_eq obj_at_def)
-   apply (clarsimp dest!: vs_lookup1D)
-   by (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-               split: kernel_object.splits arch_kernel_obj.splits)
-
-  subgoal
-    apply (erule swap)
-    apply (rule vs_lookupI)
-     apply (fastforce simp: vs_asid_refs_def image_def graph_of_def)
-    apply (rule rtrancl_into_rtrancl)
-     apply (rule rtrancl_refl)
-    by (rule vs_lookup1I, (simp add: obj_at_def vs_refs_def)+)
-
+  apply (erule swap)
+  apply (clarsimp split: kernel_object.split_asm arch_kernel_obj.split_asm
+                         option.split_asm split_if_asm)
+  apply (rule vs_lookupI)
+   apply (fastforce simp: vs_asid_refs_def image_def graph_of_def)
+  apply (rule rtrancl_into_rtrancl)
+   apply (rule rtrancl_refl)
+  apply (rule vs_lookup1I, (simp add: obj_at_def vs_refs_def vs_refs_arch_def)+)
   done
 
 (* NOTE: This statement would clearly be nicer for a partial function
@@ -228,7 +159,7 @@ lemma get_pd_of_thread_eq:
           (\<exists>asid. tcb_vtable tcb =
                   cap.ArchObjectCap (Arch_Structs_A.ARM.PageDirectoryCap
                                        pd_ref (Some asid)) \<and>
-                  (the (vs_cap_ref (the_arch_cap (tcb_vtable tcb))) \<rhd> pd_ref) s))"
+                  (the (vs_cap_ref_arch (the_arch_cap (tcb_vtable tcb))) \<rhd> pd_ref) s))"
   by (auto simp: get_pd_of_thread_vs_lookup vs_cap_ref_def
           split: option.splits Structures_A.kernel_object.splits
                  cap.splits arch_cap.splits)
@@ -555,5 +486,6 @@ definition
   case_option {} (snd o snd o snd)
      (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
         (get_pd_of_thread (kheap s) (arch_state s) tcb) addr)"
+
 end
 end
