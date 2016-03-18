@@ -12,16 +12,6 @@ theory KHeapPre_AI
 imports "./$L4V_ARCH/Machine_AI"
 begin
 
-context Arch begin
-
-unqualify_consts
-  empty_table
-
-unqualify_facts
-  empty_table_def
-
-end
-
 primrec
   same_caps :: "Structures_A.kernel_object \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
 where
@@ -85,11 +75,6 @@ lemma
   apply (rule obj_at)
   done
 
-
 end
-
-interpretation arch_only_obj_pred "empty_table S" for S
-  apply unfold_locales
-  by (simp add: empty_table_def)
 
 end

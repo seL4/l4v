@@ -16,8 +16,7 @@ context ARM begin
 
 sublocale 
   empty_table: arch_only_obj_pred "empty_table S" for S
-  apply unfold_locales
-  by (simp add: empty_table_def)
+  by unfold_locales (simp add: empty_table_def)
 
 sublocale
   vs_refs: arch_only_obj_pred "\<lambda>ko. x \<in> vs_refs ko" for S
