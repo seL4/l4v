@@ -12,14 +12,15 @@ theory ArchInterruptDecls_H
 imports "../RetypeDecls_H" "../CNode_H" 
 begin
 
+qualify ARM
+
 consts
 decodeIRQControlInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> capability list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.irqcontrol_invocation ) kernel_f"
 
 consts
 performIRQControl :: "ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> unit kernel_p"
 
-consts
-checkIRQ :: "machine_word \<Rightarrow> ( syscall_error , unit ) kernel_f"
 
+end_qualify
 
 end

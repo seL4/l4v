@@ -14,6 +14,7 @@ imports
   "../Types_H"
   Hardware_H
 begin
+qualify ARM
 
 type_synonym asid = "word32"
 
@@ -245,4 +246,5 @@ where
 | "archTypeOf (KOPTE e) = PTET"
 | "archTypeOf (KOASIDPool e) = ASIDPoolT"
 
+end_qualify
 end

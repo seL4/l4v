@@ -14,6 +14,7 @@ imports
   "../Types_H"
   Hardware_H
 begin
+qualify ARM
 
 #INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs decls_only
 #INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs instanceproofs
@@ -31,4 +32,5 @@ where
 | "archTypeOf (KOPTE e) = PTET"
 | "archTypeOf (KOASIDPool e) = ASIDPoolT"
 
+end_qualify
 end

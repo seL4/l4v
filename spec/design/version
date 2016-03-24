@@ -1,5 +1,5 @@
-Built from git repo at /home/matthewb/verification/arch_split/seL4/haskell by matthewb
+Built from git repo at /Users/dmatichuk/verification-archsplit/seL4/haskell by dmatichuk
 
 Generated from changeset:
-603484f SELFOUR-114: trivial - add missing types to x86
+e35adcb remove mentions of ARM from arch-independent invocation labels
 

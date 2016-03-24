@@ -60,7 +60,7 @@ defs isBlocked_def:
         state \<leftarrow> getThreadState thread;
         return $ (case state of
               Inactive \<Rightarrow>   True
-            | BlockedOnReceive _ \<Rightarrow>   True
+            | BlockedOnReceive _ _ \<Rightarrow>   True
             | BlockedOnSend _ _ _ _ \<Rightarrow>   True
             | BlockedOnNotification _ \<Rightarrow>   True
             | BlockedOnReply \<Rightarrow>   True
@@ -369,18 +369,15 @@ defs timerTick_def:
   od)
 od)"
 
-definition
-"initTCB\<equiv> (makeObject::tcb)\<lparr> tcbPriority:=maxBound \<rparr>"
-
 
 primrec
-transferCapsToSlots :: "(machine_word) option \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> (capability * machine_word) list \<Rightarrow> machine_word list \<Rightarrow> message_info \<Rightarrow> message_info kernel"
+transferCapsToSlots :: "(machine_word) option \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> (capability * machine_word) list \<Rightarrow> machine_word list \<Rightarrow> message_info \<Rightarrow> message_info kernel"
 where
-  "transferCapsToSlots arg1 arg2 n [] arg5 mi = (
+  "transferCapsToSlots arg1 arg2 arg3 n [] arg6 mi = (
     return $ mi \<lparr> msgExtraCaps := fromIntegral n \<rparr>)"
-| "transferCapsToSlots ep rcvBuffer n (arg#caps) slots mi = (
+| "transferCapsToSlots ep diminish rcvBuffer n (arg#caps) slots mi = (
     let
-       transferAgain = transferCapsToSlots ep rcvBuffer (n + 1) caps;
+       transferAgain = transferCapsToSlots ep diminish rcvBuffer (n + 1) caps;
        miCapUnfolded = mi \<lparr> msgCapsUnwrapped := msgCapsUnwrapped mi || bit n\<rparr>;
        (cap, srcSlot) = arg
     in
@@ -395,7 +392,10 @@ where
             odE)
             else (case v5 of
             destSlot # slots' \<Rightarrow>  (doE
-                cap' \<leftarrow> unifyFailure $ deriveCap srcSlot $ cap;
+                cap' \<leftarrow> unifyFailure $ deriveCap srcSlot $ if diminish
+                        then allRights \<lparr> capAllowWrite := False \<rparr>
+                            `~maskCapRights~` cap
+                        else cap;
                 whenE (isNullCap cap') $ throw undefined;
                 withoutFailure $ cteInsert cap' srcSlot destSlot;
                 withoutFailure $ transferAgain slots' mi
@@ -407,7 +407,7 @@ where
 
 
 defs doIPCTransfer_def:
-"doIPCTransfer sender endpoint badge grant receiver\<equiv> (do
+"doIPCTransfer sender endpoint badge grant receiver diminish\<equiv> (do
         receiveBuffer \<leftarrow> lookupIPCBuffer True receiver;
         fault \<leftarrow> threadGet tcbFault sender;
         (case fault of
@@ -415,7 +415,7 @@ defs doIPCTransfer_def:
                 sendBuffer \<leftarrow> lookupIPCBuffer False sender;
                 doNormalTransfer
                     sender sendBuffer endpoint badge grant
-                    receiver receiveBuffer
+                    receiver receiveBuffer diminish
               od)
             | Some v1 \<Rightarrow>   (
                 doFaultTransfer badge sender receiver receiveBuffer
@@ -438,7 +438,7 @@ defs doReplyTransfer_def:
     fault \<leftarrow> threadGet tcbFault receiver;
     (case fault of
           None \<Rightarrow>   (do
-            doIPCTransfer sender Nothing 0 True receiver;
+            doIPCTransfer sender Nothing 0 True receiver False;
             cteDeleteOne slot;
             setThreadState Running receiver;
             attemptSwitchTo receiver
@@ -461,7 +461,7 @@ defs doReplyTransfer_def:
 od)"
 
 defs doNormalTransfer_def:
-"doNormalTransfer sender sendBuffer endpoint badge canGrant receiver receiveBuffer\<equiv> (do
+"doNormalTransfer sender sendBuffer endpoint badge canGrant receiver receiveBuffer diminish\<equiv> (do
         tag \<leftarrow> getMessageInfo sender;
         caps \<leftarrow> if canGrant
             then lookupExtraCaps sender sendBuffer tag
@@ -469,20 +469,20 @@ defs doNormalTransfer_def:
             else return [];
         msgTransferred \<leftarrow> copyMRs sender sendBuffer receiver receiveBuffer $
                                   msgLength tag;
-        tag' \<leftarrow> transferCaps tag caps endpoint receiver receiveBuffer;
+        tag' \<leftarrow> transferCaps tag caps endpoint receiver receiveBuffer diminish;
         tag'' \<leftarrow> return ( tag' \<lparr> msgLength := msgTransferred \<rparr>);
         setMessageInfo receiver tag'';
         asUser receiver $ setRegister badgeRegister badge
 od)"
 
 defs transferCaps_def:
-"transferCaps info caps endpoint receiver receiveBuffer\<equiv> (do
+"transferCaps info caps endpoint receiver receiveBuffer diminish\<equiv> (do
     destSlots \<leftarrow> getReceiveSlots receiver receiveBuffer;
     info' \<leftarrow> return ( info \<lparr> msgExtraCaps := 0, msgCapsUnwrapped := 0 \<rparr>);
     (case receiveBuffer of
           None \<Rightarrow>   return info'
         | Some rcvBuffer \<Rightarrow>   (
-            transferCapsToSlots endpoint rcvBuffer 0
+            transferCapsToSlots endpoint diminish rcvBuffer 0
                 caps destSlots info'
         )
         )

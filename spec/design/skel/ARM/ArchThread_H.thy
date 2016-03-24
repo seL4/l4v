@@ -16,8 +16,9 @@ imports
   "../TCBDecls_H"
   ArchVSpaceDecls_H
 begin
+qualify ARM
 
 #INCLUDE_HASKELL SEL4/Kernel/Thread/ARM.lhs ARMHardware=MachineOps bodies_only
 
-
+end_qualify
 end

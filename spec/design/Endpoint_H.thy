@@ -50,12 +50,13 @@ defs sendIPC_def:
                 recvState \<leftarrow> getThreadState dest;
                 haskell_assert (isReceive recvState)
                        [];
+                diminish \<leftarrow> return ( blockingIPCDiminishCaps recvState);
                 doIPCTransfer thread (Just epptr) badge canGrant
-                    dest;
+                    dest diminish;
                 setThreadState Running dest;
                 attemptSwitchTo dest;
                 fault \<leftarrow> threadGet tcbFault thread;
-                (case (call, fault, canGrant) of
+                (case (call, fault, canGrant \<and> Not diminish) of
                       (False, None, _) \<Rightarrow>   return ()
                     | (_, _, True) \<Rightarrow>   setupCallerCap thread dest
                     | _ \<Rightarrow>   setThreadState Inactive thread
@@ -78,6 +79,7 @@ defs receiveIPC_def:
   then   (do
         epptr \<leftarrow> return ( capEPPtr cap);
         ep \<leftarrow> getEndpoint epptr;
+        diminish \<leftarrow> return ( Not $ capEPCanSend cap);
         ntfnPtr \<leftarrow> getBoundNotification thread;
         ntfn \<leftarrow> maybe (return $ NTFN IdleNtfn Nothing) (getNotification) ntfnPtr;
         if (isJust ntfnPtr \<and> isActive ntfn)
@@ -86,7 +88,8 @@ defs receiveIPC_def:
               IdleEP \<Rightarrow>   (case isBlocking of
                 True \<Rightarrow>   (do
                   setThreadState (BlockedOnReceive_ \<lparr>
-                      blockingObject= epptr \<rparr>) thread;
+                      blockingObject= epptr,
+                      blockingIPCDiminishCaps= diminish \<rparr>) thread;
                   setEndpoint epptr $ RecvEP [thread]
                 od)
               | False \<Rightarrow>   doNBRecvFailedTransfer thread
@@ -94,7 +97,8 @@ defs receiveIPC_def:
             | RecvEP queue \<Rightarrow>   (case isBlocking of
                 True \<Rightarrow>   (do
                   setThreadState (BlockedOnReceive_ \<lparr>
-                      blockingObject= epptr \<rparr>) thread;
+                      blockingObject= epptr,
+                      blockingIPCDiminishCaps= diminish \<rparr>) thread;
                   setEndpoint epptr $ RecvEP $ queue @ [thread]
                 od)
               | False \<Rightarrow>   doNBRecvFailedTransfer thread
@@ -110,10 +114,10 @@ defs receiveIPC_def:
                 badge \<leftarrow> return ( blockingIPCBadge senderState);
                 canGrant \<leftarrow> return ( blockingIPCCanGrant senderState);
                 doIPCTransfer sender (Just epptr) badge canGrant
-                    thread;
+                    thread diminish;
                 call \<leftarrow> return ( blockingIPCIsCall senderState);
                 fault \<leftarrow> threadGet tcbFault sender;
-                (case (call, fault, canGrant) of
+                (case (call, fault, canGrant \<and> Not diminish) of
                       (False, None, _) \<Rightarrow>   (do
                         setThreadState Running sender;
                         switchIfRequiredTo sender
@@ -179,7 +183,7 @@ defs cancelIPC_def:
         state \<leftarrow> getThreadState tptr;
         (case state of
               BlockedOnSend _ _ _ _ \<Rightarrow>   blockedIPCCancel state
-            | BlockedOnReceive _ \<Rightarrow>   blockedIPCCancel state
+            | BlockedOnReceive _ _ \<Rightarrow>   blockedIPCCancel state
             | BlockedOnNotification _ \<Rightarrow>   cancelSignal tptr (waitingOnNotification state)
             | BlockedOnReply  \<Rightarrow>   replyIPCCancel
             | _ \<Rightarrow>   return ()

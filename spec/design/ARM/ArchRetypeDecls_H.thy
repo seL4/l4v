@@ -19,6 +19,7 @@ imports
   "../PSpaceFuns_H"
   ArchObjInsts_H
 begin
+qualify ARM
 
 datatype page_table_invocation =
     PageTableUnmap arch_capability machine_word
@@ -659,4 +660,5 @@ consts
 capUntypedSize :: "arch_capability \<Rightarrow> machine_word"
 
 
+end_qualify
 end

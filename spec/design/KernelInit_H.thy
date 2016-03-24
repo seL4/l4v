@@ -109,11 +109,14 @@ defs allocRegion_def:
                           odE)"
 
 defs initKernel_def:
-"initKernel entry initOffset initFrames kernelFrames bootFrames\<equiv> (do
+"initKernel entry initFrames initOffset kernelFrames bootFrames\<equiv> (do
         uiRegion \<leftarrow> return ( coverOf $ map (\<lambda> x. Region (ptrFromPAddr x, (ptrFromPAddr x) + bit (pageBits))) initFrames);
+        kernelRegion \<leftarrow> return ( coverOf $ map (\<lambda> x. Region (ptrFromPAddr x, (ptrFromPAddr x) + bit (pageBits))) kernelFrames);
         kePPtr \<leftarrow> return ( fst $ fromRegion $ uiRegion);
         kfEndPAddr \<leftarrow> return ( addrFromPPtr kePPtr);
         (startPPtr,endPPtr) \<leftarrow> return $ fromRegion uiRegion;
+        vptrStart \<leftarrow> return ( (VPtr (fromPAddr $ addrFromPPtr $ startPPtr )) + initOffset);
+        vptrEnd \<leftarrow> return ( (VPtr (fromPAddr $ addrFromPPtr $ endPPtr )) + initOffset);
         allMemory \<leftarrow> doMachineOp getMemoryRegions;
         initPSpace $ map (\<lambda> (s, e). (ptrFromPAddr s, ptrFromPAddr e))
                          allMemory;
@@ -121,9 +124,7 @@ defs initKernel_def:
         initKernelVM;
         initCPU;
         initPlatform;
-        runInit initOffset $ (doE
-                vptrStart \<leftarrow> vptrFromPPtr startPPtr;
-                vptrEnd \<leftarrow> vptrFromPPtr endPPtr;
+        runInit $ (doE
                 initFreemem kfEndPAddr uiRegion;
                 rootCNCap \<leftarrow> makeRootCNode;
                 initInterruptController rootCNCap biCapIRQControl;
@@ -131,7 +132,7 @@ defs initKernel_def:
                 ipcBufferCap \<leftarrow> createIPCBufferFrame rootCNCap ipcBufferVPtr;
                 biFrameVPtr \<leftarrow> returnOk ( vptrEnd + (1 `~shiftL~` pageBits));
                 createBIFrame rootCNCap biFrameVPtr 0 1;
-                createFramesOfRegion rootCNCap uiRegion True;
+                createFramesOfRegion rootCNCap uiRegion True initOffset;
                 itPDCap \<leftarrow> createITPDPTs rootCNCap vptrStart biFrameVPtr;
                 writeITPDPTs rootCNCap itPDCap;
                 itAPCap \<leftarrow> createITASIDPool rootCNCap;
@@ -158,7 +159,7 @@ defs createInitialThread_def:
       tcb' \<leftarrow> allocRegion tcbBits;
       tcbPPtr \<leftarrow> returnOk ( ptrFromPAddr tcb');
       doKernelOp $ (do
-         placeNewObject tcbPPtr initTCB 0;
+         placeNewObject tcbPPtr (makeObject::tcb) 0;
          srcSlot \<leftarrow> locateSlotCap rootCNCap biCapITCNode;
          destSlot \<leftarrow> getThreadCSpaceRoot tcbPPtr;
          cteInsert rootCNCap srcSlot destSlot;
@@ -209,7 +210,7 @@ defs createUntypedObject_def:
     freemem \<leftarrow> noInitFailure $ gets initFreeMemory;
     (flip mapME) (take maxNumFreememRegions freemem)
         (\<lambda> reg. (
-            (\<lambda> f. foldME f reg [4  .e.  (finiteBitSize (undefined::machine_word)) - 2])
+            (\<lambda> f. mapME (f reg) [4  .e.  wordBits - 2])
                 (\<lambda> reg bits. (doE
                     reg' \<leftarrow> (if Not (isAligned (regStartPAddr reg) (bits + 1))
                                 \<and> (regEndPAddr reg) - (regStartPAddr reg) \<ge> bit bits
@@ -260,7 +261,7 @@ defs provideCap_def:
 "provideCap rootCNodeCap cap\<equiv> (doE
     currSlot \<leftarrow> noInitFailure $ gets initSlotPosCur;
     maxSlot \<leftarrow> noInitFailure $ gets initSlotPosMax;
-    whenE (currSlot \<ge> maxSlot) $ throwError $ IFailure;
+    whenE (currSlot \<ge> maxSlot) $ throwError InitFailure;
     slot \<leftarrow> doKernelOp $ locateSlotCap rootCNodeCap currSlot;
     doKernelOp $ insertInitCap slot cap;
     noInitFailure $ modify (\<lambda> st. st \<lparr> initSlotPosCur := currSlot + 1 \<rparr>)

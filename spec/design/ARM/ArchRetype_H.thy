@@ -17,6 +17,7 @@ imports
   Hardware_H
   "../KI_Decls_H"
 begin
+qualify ARM
 
 defs deriveCap_def:
 "deriveCap x0 x1\<equiv> (let c = x1 in
@@ -294,4 +295,5 @@ defs capUntypedSize_def:
   )"
 
 
+end_qualify
 end

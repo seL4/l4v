@@ -12,6 +12,10 @@ theory ArchInterruptDecls_H
 imports "../RetypeDecls_H" "../CNode_H" 
 begin
 
+qualify ARM
+
 #INCLUDE_HASKELL SEL4/Object/Interrupt/ARM.lhs decls_only ArchInv=ArchRetypeDecls_H
+
+end_qualify
 
 end

@@ -20,6 +20,7 @@ imports
   ArchTypes_H
   ArchStructures_H
 begin
+qualify ARM
 
 datatype kernel_state =
     ARMKernelState machine_word "asid \<Rightarrow> ((machine_word) option)" "hardware_asid \<Rightarrow> (asid option)" hardware_asid "asid \<Rightarrow> ((hardware_asid * machine_word) option)" machine_word "machine_word list" "machine_word \<Rightarrow> arm_vspace_region_use"
@@ -396,4 +397,5 @@ where
                                    (state, frames)"
 
 
+end_qualify
 end

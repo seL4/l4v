@@ -122,7 +122,7 @@ defs decodeSetPriority_def:
         throw IllegalOperation;
     returnOk $ ThreadControl_ \<lparr>
         tcThread= capTCBPtr cap,
-        tcThreadCapSlot= 0,
+        tcThreadCapSlot= error [],
         tcNewFaultEP= Nothing,
         tcNewPriority= Just $ fromIntegral newPrio,
         tcNewCRoot= Nothing,

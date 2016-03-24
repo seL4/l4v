@@ -20,6 +20,7 @@ imports
   "../PSpaceStorable_H"
   "../ObjectInstances_H"
 begin
+qualify ARM
 
 instantiation pde :: pre_storable
 begin
@@ -153,4 +154,5 @@ instance
 
 end
 
+end_qualify
 end

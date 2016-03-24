@@ -830,7 +830,18 @@ where
 datatype irqhandler_invocation =
     AckIRQ irq
   | ClearIRQHandler irq
+  | SetMode irq bool bool
   | SetIRQHandler irq capability machine_word
+
+primrec
+  modeIRQ :: "irqhandler_invocation \<Rightarrow> irq"
+where
+  "modeIRQ (SetMode v0 v1 v2) = v0"
+
+primrec
+  modeTrigger :: "irqhandler_invocation \<Rightarrow> bool"
+where
+  "modeTrigger (SetMode v0 v1 v2) = v1"
 
 primrec
   irqHandlerIRQ :: "irqhandler_invocation \<Rightarrow> irq"
@@ -845,9 +856,24 @@ where
   "setIRQHandlerCap (SetIRQHandler v0 v1 v2) = v1"
 
 primrec
+  modePolarity :: "irqhandler_invocation \<Rightarrow> bool"
+where
+  "modePolarity (SetMode v0 v1 v2) = v2"
+
+primrec
   setIRQHandlerSlot :: "irqhandler_invocation \<Rightarrow> machine_word"
 where
   "setIRQHandlerSlot (SetIRQHandler v0 v1 v2) = v2"
+
+primrec
+  modeIRQ_update :: "(irq \<Rightarrow> irq) \<Rightarrow> irqhandler_invocation \<Rightarrow> irqhandler_invocation"
+where
+  "modeIRQ_update f (SetMode v0 v1 v2) = SetMode (f v0) v1 v2"
+
+primrec
+  modeTrigger_update :: "(bool \<Rightarrow> bool) \<Rightarrow> irqhandler_invocation \<Rightarrow> irqhandler_invocation"
+where
+  "modeTrigger_update f (SetMode v0 v1 v2) = SetMode v0 (f v1) v2"
 
 primrec
   irqHandlerIRQ_update :: "(irq \<Rightarrow> irq) \<Rightarrow> irqhandler_invocation \<Rightarrow> irqhandler_invocation"
@@ -860,6 +886,11 @@ primrec
   setIRQHandlerCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> irqhandler_invocation \<Rightarrow> irqhandler_invocation"
 where
   "setIRQHandlerCap_update f (SetIRQHandler v0 v1 v2) = SetIRQHandler v0 (f v1) v2"
+
+primrec
+  modePolarity_update :: "(bool \<Rightarrow> bool) \<Rightarrow> irqhandler_invocation \<Rightarrow> irqhandler_invocation"
+where
+  "modePolarity_update f (SetMode v0 v1 v2) = SetMode v0 v1 (f v2)"
 
 primrec
   setIRQHandlerSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> irqhandler_invocation \<Rightarrow> irqhandler_invocation"
@@ -875,6 +906,11 @@ abbreviation (input)
   ClearIRQHandler_trans :: "(irq) \<Rightarrow> irqhandler_invocation" ("ClearIRQHandler'_ \<lparr> irqHandlerIRQ= _ \<rparr>")
 where
   "ClearIRQHandler_ \<lparr> irqHandlerIRQ= v0 \<rparr> == ClearIRQHandler v0"
+
+abbreviation (input)
+  SetMode_trans :: "(irq) \<Rightarrow> (bool) \<Rightarrow> (bool) \<Rightarrow> irqhandler_invocation" ("SetMode'_ \<lparr> modeIRQ= _, modeTrigger= _, modePolarity= _ \<rparr>")
+where
+  "SetMode_ \<lparr> modeIRQ= v0, modeTrigger= v1, modePolarity= v2 \<rparr> == SetMode v0 v1 v2"
 
 abbreviation (input)
   SetIRQHandler_trans :: "(irq) \<Rightarrow> (capability) \<Rightarrow> (machine_word) \<Rightarrow> irqhandler_invocation" ("SetIRQHandler'_ \<lparr> irqHandlerIRQ= _, setIRQHandlerCap= _, setIRQHandlerSlot= _ \<rparr>")
@@ -893,6 +929,13 @@ definition
 where
  "isClearIRQHandler v \<equiv> case v of
     ClearIRQHandler v0 \<Rightarrow> True
+  | _ \<Rightarrow> False"
+
+definition
+  isSetMode :: "irqhandler_invocation \<Rightarrow> bool"
+where
+ "isSetMode v \<equiv> case v of
+    SetMode v0 v1 v2 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition

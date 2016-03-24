@@ -20,6 +20,7 @@ imports
   "../FaultMonad_H"
   "../KernelInitMonad_H"
 begin
+qualify ARM
 
 consts
 switchToThread :: "machine_word \<Rightarrow> unit kernel"
@@ -34,4 +35,5 @@ consts
 activateIdleThread :: "machine_word \<Rightarrow> unit kernel"
 
 
+end_qualify
 end

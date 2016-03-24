@@ -21,12 +21,12 @@ text {*
 *}
 
 datatype syscall =
-    SysCall
-  | SysReplyRecv
-  | SysSend
+    SysSend
   | SysNBSend
+  | SysCall
   | SysRecv
   | SysReply
+  | SysReplyRecv
   | SysYield
   | SysNBRecv
 

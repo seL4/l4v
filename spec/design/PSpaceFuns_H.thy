@@ -142,7 +142,9 @@ defs deleteObjects_def:
         doMachineOp $ freeMemory (PPtr (fromPPtr ptr)) bits;
         ps \<leftarrow> gets ksPSpace;
         inRange \<leftarrow> return ( (\<lambda> x. x && ((- mask bits) - 1) = fromPPtr ptr));
-        map' \<leftarrow> return ( deleteRange (psMap ps) (fromPPtr ptr) bits);
+        map' \<leftarrow> return ( data_map_filterWithKey
+                        (\<lambda> x _. Not (inRange x))
+                        (psMap ps));
         ps' \<leftarrow> return ( ps \<lparr> psMap := map' \<rparr>);
         modify (\<lambda> ks. ks \<lparr> ksPSpace := ps'\<rparr>);
         modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> x. if inRange x

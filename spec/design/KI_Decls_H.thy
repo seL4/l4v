@@ -35,7 +35,7 @@ consts
 allocRegion :: "nat \<Rightarrow> paddr kernel_init"
 
 consts
-initKernel :: "vptr \<Rightarrow> vptr \<Rightarrow> paddr list \<Rightarrow> paddr list \<Rightarrow> paddr list \<Rightarrow> unit kernel"
+initKernel :: "vptr \<Rightarrow> paddr list \<Rightarrow> vptr \<Rightarrow> paddr list \<Rightarrow> paddr list \<Rightarrow> unit kernel"
 
 consts
 finaliseBIFrame :: "unit kernel_init"

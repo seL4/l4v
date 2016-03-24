@@ -15,10 +15,12 @@ imports
   "../../../lib/HaskellLib_H"
   "../../machine/ARM/MachineTypes"
 begin
+context ARM begin
 
 definition
   newContext :: "register => machine_word"
 where
  "newContext \<equiv> (K 0) aLU initContext"
 
+end
 end

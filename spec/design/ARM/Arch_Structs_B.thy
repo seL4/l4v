@@ -13,8 +13,9 @@
 chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
-imports "~~/src/HOL/Main"
+imports "~~/src/HOL/Main" "../../../spec/machine/$L4V_ARCH/Setup_Locale"
 begin
+qualify ARM
 
 datatype arm_vspace_region_use =
     ArmVSpaceUserRegion
@@ -23,4 +24,5 @@ datatype arm_vspace_region_use =
   | ArmVSpaceDeviceWindow
 
 
+end_qualify
 end

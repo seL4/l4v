@@ -20,7 +20,9 @@ imports
   ArchTypes_H
   ArchStructures_H
 begin
+qualify ARM
 
 #INCLUDE_HASKELL SEL4/Model/StateData/ARM.lhs NOT ArmVSpaceRegionUse
 
+end_qualify
 end

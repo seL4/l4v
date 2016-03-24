@@ -13,10 +13,11 @@ imports
   "../../machine/ARM/MachineOps"
   State_H
 begin
+context ARM begin
 
-type_synonym irq = "Platform.irq"
+type_synonym irq = "Platform.ARM.irq"
 
-type_synonym paddr = "Platform.paddr"
+type_synonym paddr = "Platform.ARM.paddr"
 
 datatype vmrights =
     VMNoAccess
@@ -342,12 +343,17 @@ lemma armPageCacheable_armPageCacheable_update [simp]:
 definition
 fromPAddr :: "paddr \<Rightarrow> machine_word"
 where
-"fromPAddr \<equiv> Platform.fromPAddr"
+"fromPAddr \<equiv> Platform.ARM.fromPAddr"
 
 definition
 pageColourBits :: "nat"
 where
-"pageColourBits \<equiv> Platform.pageColourBits"
+"pageColourBits \<equiv> Platform.ARM.pageColourBits"
+
+definition
+setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
+where
+"setInterruptMode arg1 arg2 arg3 \<equiv> return ()"
 
 definition
 clearExMonitor :: "unit machine_monad"
@@ -364,16 +370,13 @@ ptBits :: "nat"
 where
 "ptBits \<equiv> pageBits - 2"
 
-definition
-physBase :: "paddr"
-where
-"physBase \<equiv> toPAddr Platform.physBase"
 
-definition
-kernelBase :: "vptr"
-where
-"kernelBase \<equiv> Platform.kernelBase"
+end
 
+qualify ARM (deep)
+
+declare ARM.vmrights.exhaust[cases type: ARM.vmrights]
+ Hardware_H.ARM.vmrights.simps[simp]
 
 (* vmrights instance proofs *)
 (*<*)
@@ -417,6 +420,13 @@ end
 
 (*>*)
 
+
+end_qualify
+
+declare ARM.vmrights.exhaust[cases del]
+ Hardware_H.ARM.vmrights.simps[simp del]
+
+context ARM begin
 
 definition
 wordFromPDE :: "pde \<Rightarrow> machine_word"
@@ -465,4 +475,5 @@ where
   )"
 
 
+end
 end

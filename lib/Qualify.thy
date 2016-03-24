@@ -106,7 +106,7 @@ fun get_new_types old_thy types =
 
 fun add_qualified qual nm =
   let
-    val nm' = Long_Name.explode nm |> rev |> tl |> hd;
+    val nm' = Long_Name.explode nm |> tl |> hd;
   in if qual = nm' then cons nm else I end
   handle List.Empty => I
 
@@ -125,13 +125,16 @@ fun set_global_qualify (args : qualify_args) thy =
 
   in if #deep args then
   let
+    val lthy = Named_Target.begin (str, Position.none) thy';
 
     val facts = 
       Facts.fold_static (fn (nm, _) => add_qualified str nm) (Global_Theory.facts_of thy) []
       |> map (`make_bind_local)
 
+    val const_space = #const_space (Consts.dest (Proof_Context.consts_of lthy));
+
     val consts = fold (fn (nm, _) => add_qualified str nm) (#constants (Consts.dest (Sign.consts_of thy))) []
-      |> map (`make_bind_local)                                                
+      |> map (`(make_bind const_space thy'))                                                
 
     val types = 
       Name_Space.fold_table (fn (nm, _) => add_qualified str nm) (#types (Type.rep_tsig (Sign.tsig_of thy))) []

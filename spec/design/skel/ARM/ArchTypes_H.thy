@@ -20,16 +20,24 @@ imports
   Hardware_H
   "../../../lib/Lib"
 begin
+context ARM begin
 
-#INCLUDE_HASKELL SEL4/API/Types/Universal.lhs all_bits
+#INCLUDE_HASKELL SEL4/API/Types/Universal.lhs NOT instanceproofs
+
+end
+
+qualify ARM
 
 #INCLUDE_HASKELL SEL4/API/Types/ARM.lhs 
 
+end_qualify
 
 text {* object\_type instance proofs *}
 
 instantiation object_type :: enum
 begin
+interpretation ARM .
+
 definition
   enum_object_type: "enum_class.enum \<equiv> 
     map APIObjectType (enum_class.enum :: apiobject_type list) @ 
@@ -71,4 +79,5 @@ begin
 instance by (intro_classes, simp add: enum_alt_object_type)
 end
 
+end_qualify
 end

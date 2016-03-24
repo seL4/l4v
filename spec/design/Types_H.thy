@@ -415,162 +415,152 @@ lemma bidrBasePAddr_bidrBasePAddr_update [simp]:
   by (cases v) simp
 
 datatype biframe_data =
-    BIFrameData word32 word32 word32 vptr "machine_word list" "machine_word list" "machine_word list" "machine_word list" "machine_word list" "machine_word list" "paddr list" "word8 list" word8 word32 "bidevice_region list"
+    BIFrameData word32 word32 word32 vptr "machine_word list" "machine_word list" "machine_word list" "machine_word list" "machine_word list" "paddr list" "word8 list" word8 word32 "bidevice_region list"
 
 primrec
   bifNumIOPTLevels :: "biframe_data \<Rightarrow> word32"
 where
-  "bifNumIOPTLevels (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v2"
+  "bifNumIOPTLevels (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v2"
 
 primrec
   bifNullCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifNullCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v4"
+  "bifNullCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v4"
 
 primrec
   bifIPCBufVPtr :: "biframe_data \<Rightarrow> vptr"
 where
-  "bifIPCBufVPtr (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v3"
+  "bifIPCBufVPtr (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v3"
 
 primrec
   bifUIPTCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifUIPTCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v8"
+  "bifUIPTCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v7"
 
 primrec
   bifUIFrameCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifUIFrameCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v6"
+  "bifUIFrameCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v6"
 
 primrec
   bifUntypedObjSizeBits :: "biframe_data \<Rightarrow> word8 list"
 where
-  "bifUntypedObjSizeBits (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v11"
+  "bifUntypedObjSizeBits (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v10"
 
 primrec
   bifNodeID :: "biframe_data \<Rightarrow> word32"
 where
-  "bifNodeID (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v0"
+  "bifNodeID (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v0"
 
 primrec
   bifNumDeviceRegions :: "biframe_data \<Rightarrow> word32"
 where
-  "bifNumDeviceRegions (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v13"
+  "bifNumDeviceRegions (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v12"
 
 primrec
   bifSharedFrameCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifSharedFrameCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v5"
+  "bifSharedFrameCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v5"
 
 primrec
   bifDeviceRegions :: "biframe_data \<Rightarrow> bidevice_region list"
 where
-  "bifDeviceRegions (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v14"
+  "bifDeviceRegions (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v13"
 
 primrec
   bifUntypedObjPAddrs :: "biframe_data \<Rightarrow> paddr list"
 where
-  "bifUntypedObjPAddrs (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v10"
+  "bifUntypedObjPAddrs (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v9"
 
 primrec
   bifNumNodes :: "biframe_data \<Rightarrow> word32"
 where
-  "bifNumNodes (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v1"
-
-primrec
-  bifUIPDCaps :: "biframe_data \<Rightarrow> machine_word list"
-where
-  "bifUIPDCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v7"
+  "bifNumNodes (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v1"
 
 primrec
   bifUntypedObjCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifUntypedObjCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v9"
+  "bifUntypedObjCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v8"
 
 primrec
   bifITCNodeSizeBits :: "biframe_data \<Rightarrow> word8"
 where
-  "bifITCNodeSizeBits (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v12"
+  "bifITCNodeSizeBits (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v11"
 
 primrec
   bifNumIOPTLevels_update :: "(word32 \<Rightarrow> word32) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifNumIOPTLevels_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 (f v2) v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifNumIOPTLevels_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 (f v2) v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13"
 
 primrec
   bifNullCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifNullCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 (f v4) v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifNullCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 v3 (f v4) v5 v6 v7 v8 v9 v10 v11 v12 v13"
 
 primrec
   bifIPCBufVPtr_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifIPCBufVPtr_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 (f v3) v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifIPCBufVPtr_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 (f v3) v4 v5 v6 v7 v8 v9 v10 v11 v12 v13"
 
 primrec
   bifUIPTCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUIPTCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 (f v8) v9 v10 v11 v12 v13 v14"
+  "bifUIPTCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 v3 v4 v5 v6 (f v7) v8 v9 v10 v11 v12 v13"
 
 primrec
   bifUIFrameCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUIFrameCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 (f v6) v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifUIFrameCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 v3 v4 v5 (f v6) v7 v8 v9 v10 v11 v12 v13"
 
 primrec
   bifUntypedObjSizeBits_update :: "((word8 list) \<Rightarrow> (word8 list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUntypedObjSizeBits_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 (f v11) v12 v13 v14"
+  "bifUntypedObjSizeBits_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 (f v10) v11 v12 v13"
 
 primrec
   bifNodeID_update :: "(word32 \<Rightarrow> word32) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifNodeID_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData (f v0) v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifNodeID_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData (f v0) v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13"
 
 primrec
   bifNumDeviceRegions_update :: "(word32 \<Rightarrow> word32) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifNumDeviceRegions_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 (f v13) v14"
+  "bifNumDeviceRegions_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 (f v12) v13"
 
 primrec
   bifSharedFrameCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifSharedFrameCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 (f v5) v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifSharedFrameCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 v3 v4 (f v5) v6 v7 v8 v9 v10 v11 v12 v13"
 
 primrec
   bifDeviceRegions_update :: "((bidevice_region list) \<Rightarrow> (bidevice_region list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifDeviceRegions_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 (f v14)"
+  "bifDeviceRegions_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 (f v13)"
 
 primrec
   bifUntypedObjPAddrs_update :: "((paddr list) \<Rightarrow> (paddr list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUntypedObjPAddrs_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 (f v10) v11 v12 v13 v14"
+  "bifUntypedObjPAddrs_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 (f v9) v10 v11 v12 v13"
 
 primrec
   bifNumNodes_update :: "(word32 \<Rightarrow> word32) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifNumNodes_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 (f v1) v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
-
-primrec
-  bifUIPDCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
-where
-  "bifUIPDCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 (f v7) v8 v9 v10 v11 v12 v13 v14"
+  "bifNumNodes_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 (f v1) v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13"
 
 primrec
   bifUntypedObjCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUntypedObjCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 (f v9) v10 v11 v12 v13 v14"
+  "bifUntypedObjCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 (f v8) v9 v10 v11 v12 v13"
 
 primrec
   bifITCNodeSizeBits_update :: "(word8 \<Rightarrow> word8) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifITCNodeSizeBits_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 (f v12) v13 v14"
+  "bifITCNodeSizeBits_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 (f v11) v12 v13"
 
 abbreviation (input)
-  BIFrameData_trans :: "(word32) \<Rightarrow> (word32) \<Rightarrow> (word32) \<Rightarrow> (vptr) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (paddr list) \<Rightarrow> (word8 list) \<Rightarrow> (word8) \<Rightarrow> (word32) \<Rightarrow> (bidevice_region list) \<Rightarrow> biframe_data" ("BIFrameData'_ \<lparr> bifNodeID= _, bifNumNodes= _, bifNumIOPTLevels= _, bifIPCBufVPtr= _, bifNullCaps= _, bifSharedFrameCaps= _, bifUIFrameCaps= _, bifUIPDCaps= _, bifUIPTCaps= _, bifUntypedObjCaps= _, bifUntypedObjPAddrs= _, bifUntypedObjSizeBits= _, bifITCNodeSizeBits= _, bifNumDeviceRegions= _, bifDeviceRegions= _ \<rparr>")
+  BIFrameData_trans :: "(word32) \<Rightarrow> (word32) \<Rightarrow> (word32) \<Rightarrow> (vptr) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (paddr list) \<Rightarrow> (word8 list) \<Rightarrow> (word8) \<Rightarrow> (word32) \<Rightarrow> (bidevice_region list) \<Rightarrow> biframe_data" ("BIFrameData'_ \<lparr> bifNodeID= _, bifNumNodes= _, bifNumIOPTLevels= _, bifIPCBufVPtr= _, bifNullCaps= _, bifSharedFrameCaps= _, bifUIFrameCaps= _, bifUIPTCaps= _, bifUntypedObjCaps= _, bifUntypedObjPAddrs= _, bifUntypedObjSizeBits= _, bifITCNodeSizeBits= _, bifNumDeviceRegions= _, bifDeviceRegions= _ \<rparr>")
 where
-  "BIFrameData_ \<lparr> bifNodeID= v0, bifNumNodes= v1, bifNumIOPTLevels= v2, bifIPCBufVPtr= v3, bifNullCaps= v4, bifSharedFrameCaps= v5, bifUIFrameCaps= v6, bifUIPDCaps= v7, bifUIPTCaps= v8, bifUntypedObjCaps= v9, bifUntypedObjPAddrs= v10, bifUntypedObjSizeBits= v11, bifITCNodeSizeBits= v12, bifNumDeviceRegions= v13, bifDeviceRegions= v14 \<rparr> == BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "BIFrameData_ \<lparr> bifNodeID= v0, bifNumNodes= v1, bifNumIOPTLevels= v2, bifIPCBufVPtr= v3, bifNullCaps= v4, bifSharedFrameCaps= v5, bifUIFrameCaps= v6, bifUIPTCaps= v7, bifUntypedObjCaps= v8, bifUntypedObjPAddrs= v9, bifUntypedObjSizeBits= v10, bifITCNodeSizeBits= v11, bifNumDeviceRegions= v12, bifDeviceRegions= v13 \<rparr> == BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13"
 
 lemma bifNumIOPTLevels_bifNumIOPTLevels_update [simp]:
   "bifNumIOPTLevels (bifNumIOPTLevels_update f v) = f (bifNumIOPTLevels v)"
@@ -618,10 +608,6 @@ lemma bifNumIOPTLevels_bifUntypedObjPAddrs_update [simp]:
 
 lemma bifNumIOPTLevels_bifNumNodes_update [simp]:
   "bifNumIOPTLevels (bifNumNodes_update f v) = bifNumIOPTLevels v"
-  by (cases v) simp
-
-lemma bifNumIOPTLevels_bifUIPDCaps_update [simp]:
-  "bifNumIOPTLevels (bifUIPDCaps_update f v) = bifNumIOPTLevels v"
   by (cases v) simp
 
 lemma bifNumIOPTLevels_bifUntypedObjCaps_update [simp]:
@@ -680,10 +666,6 @@ lemma bifNullCaps_bifNumNodes_update [simp]:
   "bifNullCaps (bifNumNodes_update f v) = bifNullCaps v"
   by (cases v) simp
 
-lemma bifNullCaps_bifUIPDCaps_update [simp]:
-  "bifNullCaps (bifUIPDCaps_update f v) = bifNullCaps v"
-  by (cases v) simp
-
 lemma bifNullCaps_bifUntypedObjCaps_update [simp]:
   "bifNullCaps (bifUntypedObjCaps_update f v) = bifNullCaps v"
   by (cases v) simp
@@ -738,10 +720,6 @@ lemma bifIPCBufVPtr_bifUntypedObjPAddrs_update [simp]:
 
 lemma bifIPCBufVPtr_bifNumNodes_update [simp]:
   "bifIPCBufVPtr (bifNumNodes_update f v) = bifIPCBufVPtr v"
-  by (cases v) simp
-
-lemma bifIPCBufVPtr_bifUIPDCaps_update [simp]:
-  "bifIPCBufVPtr (bifUIPDCaps_update f v) = bifIPCBufVPtr v"
   by (cases v) simp
 
 lemma bifIPCBufVPtr_bifUntypedObjCaps_update [simp]:
@@ -800,10 +778,6 @@ lemma bifUIPTCaps_bifNumNodes_update [simp]:
   "bifUIPTCaps (bifNumNodes_update f v) = bifUIPTCaps v"
   by (cases v) simp
 
-lemma bifUIPTCaps_bifUIPDCaps_update [simp]:
-  "bifUIPTCaps (bifUIPDCaps_update f v) = bifUIPTCaps v"
-  by (cases v) simp
-
 lemma bifUIPTCaps_bifUntypedObjCaps_update [simp]:
   "bifUIPTCaps (bifUntypedObjCaps_update f v) = bifUIPTCaps v"
   by (cases v) simp
@@ -858,10 +832,6 @@ lemma bifUIFrameCaps_bifUntypedObjPAddrs_update [simp]:
 
 lemma bifUIFrameCaps_bifNumNodes_update [simp]:
   "bifUIFrameCaps (bifNumNodes_update f v) = bifUIFrameCaps v"
-  by (cases v) simp
-
-lemma bifUIFrameCaps_bifUIPDCaps_update [simp]:
-  "bifUIFrameCaps (bifUIPDCaps_update f v) = bifUIFrameCaps v"
   by (cases v) simp
 
 lemma bifUIFrameCaps_bifUntypedObjCaps_update [simp]:
@@ -920,10 +890,6 @@ lemma bifUntypedObjSizeBits_bifNumNodes_update [simp]:
   "bifUntypedObjSizeBits (bifNumNodes_update f v) = bifUntypedObjSizeBits v"
   by (cases v) simp
 
-lemma bifUntypedObjSizeBits_bifUIPDCaps_update [simp]:
-  "bifUntypedObjSizeBits (bifUIPDCaps_update f v) = bifUntypedObjSizeBits v"
-  by (cases v) simp
-
 lemma bifUntypedObjSizeBits_bifUntypedObjCaps_update [simp]:
   "bifUntypedObjSizeBits (bifUntypedObjCaps_update f v) = bifUntypedObjSizeBits v"
   by (cases v) simp
@@ -978,10 +944,6 @@ lemma bifNodeID_bifUntypedObjPAddrs_update [simp]:
 
 lemma bifNodeID_bifNumNodes_update [simp]:
   "bifNodeID (bifNumNodes_update f v) = bifNodeID v"
-  by (cases v) simp
-
-lemma bifNodeID_bifUIPDCaps_update [simp]:
-  "bifNodeID (bifUIPDCaps_update f v) = bifNodeID v"
   by (cases v) simp
 
 lemma bifNodeID_bifUntypedObjCaps_update [simp]:
@@ -1040,10 +1002,6 @@ lemma bifNumDeviceRegions_bifNumNodes_update [simp]:
   "bifNumDeviceRegions (bifNumNodes_update f v) = bifNumDeviceRegions v"
   by (cases v) simp
 
-lemma bifNumDeviceRegions_bifUIPDCaps_update [simp]:
-  "bifNumDeviceRegions (bifUIPDCaps_update f v) = bifNumDeviceRegions v"
-  by (cases v) simp
-
 lemma bifNumDeviceRegions_bifUntypedObjCaps_update [simp]:
   "bifNumDeviceRegions (bifUntypedObjCaps_update f v) = bifNumDeviceRegions v"
   by (cases v) simp
@@ -1098,10 +1056,6 @@ lemma bifSharedFrameCaps_bifUntypedObjPAddrs_update [simp]:
 
 lemma bifSharedFrameCaps_bifNumNodes_update [simp]:
   "bifSharedFrameCaps (bifNumNodes_update f v) = bifSharedFrameCaps v"
-  by (cases v) simp
-
-lemma bifSharedFrameCaps_bifUIPDCaps_update [simp]:
-  "bifSharedFrameCaps (bifUIPDCaps_update f v) = bifSharedFrameCaps v"
   by (cases v) simp
 
 lemma bifSharedFrameCaps_bifUntypedObjCaps_update [simp]:
@@ -1160,10 +1114,6 @@ lemma bifDeviceRegions_bifNumNodes_update [simp]:
   "bifDeviceRegions (bifNumNodes_update f v) = bifDeviceRegions v"
   by (cases v) simp
 
-lemma bifDeviceRegions_bifUIPDCaps_update [simp]:
-  "bifDeviceRegions (bifUIPDCaps_update f v) = bifDeviceRegions v"
-  by (cases v) simp
-
 lemma bifDeviceRegions_bifUntypedObjCaps_update [simp]:
   "bifDeviceRegions (bifUntypedObjCaps_update f v) = bifDeviceRegions v"
   by (cases v) simp
@@ -1218,10 +1168,6 @@ lemma bifUntypedObjPAddrs_bifUntypedObjPAddrs_update [simp]:
 
 lemma bifUntypedObjPAddrs_bifNumNodes_update [simp]:
   "bifUntypedObjPAddrs (bifNumNodes_update f v) = bifUntypedObjPAddrs v"
-  by (cases v) simp
-
-lemma bifUntypedObjPAddrs_bifUIPDCaps_update [simp]:
-  "bifUntypedObjPAddrs (bifUIPDCaps_update f v) = bifUntypedObjPAddrs v"
   by (cases v) simp
 
 lemma bifUntypedObjPAddrs_bifUntypedObjCaps_update [simp]:
@@ -1280,76 +1226,12 @@ lemma bifNumNodes_bifNumNodes_update [simp]:
   "bifNumNodes (bifNumNodes_update f v) = f (bifNumNodes v)"
   by (cases v) simp
 
-lemma bifNumNodes_bifUIPDCaps_update [simp]:
-  "bifNumNodes (bifUIPDCaps_update f v) = bifNumNodes v"
-  by (cases v) simp
-
 lemma bifNumNodes_bifUntypedObjCaps_update [simp]:
   "bifNumNodes (bifUntypedObjCaps_update f v) = bifNumNodes v"
   by (cases v) simp
 
 lemma bifNumNodes_bifITCNodeSizeBits_update [simp]:
   "bifNumNodes (bifITCNodeSizeBits_update f v) = bifNumNodes v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifNumIOPTLevels_update [simp]:
-  "bifUIPDCaps (bifNumIOPTLevels_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifNullCaps_update [simp]:
-  "bifUIPDCaps (bifNullCaps_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifIPCBufVPtr_update [simp]:
-  "bifUIPDCaps (bifIPCBufVPtr_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifUIPTCaps_update [simp]:
-  "bifUIPDCaps (bifUIPTCaps_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifUIFrameCaps_update [simp]:
-  "bifUIPDCaps (bifUIFrameCaps_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifUntypedObjSizeBits_update [simp]:
-  "bifUIPDCaps (bifUntypedObjSizeBits_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifNodeID_update [simp]:
-  "bifUIPDCaps (bifNodeID_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifNumDeviceRegions_update [simp]:
-  "bifUIPDCaps (bifNumDeviceRegions_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifSharedFrameCaps_update [simp]:
-  "bifUIPDCaps (bifSharedFrameCaps_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifDeviceRegions_update [simp]:
-  "bifUIPDCaps (bifDeviceRegions_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifUntypedObjPAddrs_update [simp]:
-  "bifUIPDCaps (bifUntypedObjPAddrs_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifNumNodes_update [simp]:
-  "bifUIPDCaps (bifNumNodes_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifUIPDCaps_update [simp]:
-  "bifUIPDCaps (bifUIPDCaps_update f v) = f (bifUIPDCaps v)"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifUntypedObjCaps_update [simp]:
-  "bifUIPDCaps (bifUntypedObjCaps_update f v) = bifUIPDCaps v"
-  by (cases v) simp
-
-lemma bifUIPDCaps_bifITCNodeSizeBits_update [simp]:
-  "bifUIPDCaps (bifITCNodeSizeBits_update f v) = bifUIPDCaps v"
   by (cases v) simp
 
 lemma bifUntypedObjCaps_bifNumIOPTLevels_update [simp]:
@@ -1398,10 +1280,6 @@ lemma bifUntypedObjCaps_bifUntypedObjPAddrs_update [simp]:
 
 lemma bifUntypedObjCaps_bifNumNodes_update [simp]:
   "bifUntypedObjCaps (bifNumNodes_update f v) = bifUntypedObjCaps v"
-  by (cases v) simp
-
-lemma bifUntypedObjCaps_bifUIPDCaps_update [simp]:
-  "bifUntypedObjCaps (bifUIPDCaps_update f v) = bifUntypedObjCaps v"
   by (cases v) simp
 
 lemma bifUntypedObjCaps_bifUntypedObjCaps_update [simp]:
@@ -1460,10 +1338,6 @@ lemma bifITCNodeSizeBits_bifNumNodes_update [simp]:
   "bifITCNodeSizeBits (bifNumNodes_update f v) = bifITCNodeSizeBits v"
   by (cases v) simp
 
-lemma bifITCNodeSizeBits_bifUIPDCaps_update [simp]:
-  "bifITCNodeSizeBits (bifUIPDCaps_update f v) = bifITCNodeSizeBits v"
-  by (cases v) simp
-
 lemma bifITCNodeSizeBits_bifUntypedObjCaps_update [simp]:
   "bifITCNodeSizeBits (bifUntypedObjCaps_update f v) = bifITCNodeSizeBits v"
   by (cases v) simp
@@ -1473,215 +1347,161 @@ lemma bifITCNodeSizeBits_bifITCNodeSizeBits_update [simp]:
   by (cases v) simp
 
 datatype init_data =
-    InitData "region list" machine_word machine_word biframe_data vptr paddr
+    InitData "region list" machine_word machine_word biframe_data paddr
 
 primrec
   initSlotPosMax :: "init_data \<Rightarrow> machine_word"
 where
-  "initSlotPosMax (InitData v0 v1 v2 v3 v4 v5) = v2"
-
-primrec
-  initSlotPosCur :: "init_data \<Rightarrow> machine_word"
-where
-  "initSlotPosCur (InitData v0 v1 v2 v3 v4 v5) = v1"
-
-primrec
-  initFreeMemory :: "init_data \<Rightarrow> region list"
-where
-  "initFreeMemory (InitData v0 v1 v2 v3 v4 v5) = v0"
-
-primrec
-  initVPtrOffset :: "init_data \<Rightarrow> vptr"
-where
-  "initVPtrOffset (InitData v0 v1 v2 v3 v4 v5) = v4"
+  "initSlotPosMax (InitData v0 v1 v2 v3 v4) = v2"
 
 primrec
   initBootInfoFrame :: "init_data \<Rightarrow> paddr"
 where
-  "initBootInfoFrame (InitData v0 v1 v2 v3 v4 v5) = v5"
+  "initBootInfoFrame (InitData v0 v1 v2 v3 v4) = v4"
+
+primrec
+  initSlotPosCur :: "init_data \<Rightarrow> machine_word"
+where
+  "initSlotPosCur (InitData v0 v1 v2 v3 v4) = v1"
 
 primrec
   initBootInfo :: "init_data \<Rightarrow> biframe_data"
 where
-  "initBootInfo (InitData v0 v1 v2 v3 v4 v5) = v3"
+  "initBootInfo (InitData v0 v1 v2 v3 v4) = v3"
+
+primrec
+  initFreeMemory :: "init_data \<Rightarrow> region list"
+where
+  "initFreeMemory (InitData v0 v1 v2 v3 v4) = v0"
 
 primrec
   initSlotPosMax_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> init_data \<Rightarrow> init_data"
 where
-  "initSlotPosMax_update f (InitData v0 v1 v2 v3 v4 v5) = InitData v0 v1 (f v2) v3 v4 v5"
-
-primrec
-  initSlotPosCur_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> init_data \<Rightarrow> init_data"
-where
-  "initSlotPosCur_update f (InitData v0 v1 v2 v3 v4 v5) = InitData v0 (f v1) v2 v3 v4 v5"
-
-primrec
-  initFreeMemory_update :: "((region list) \<Rightarrow> (region list)) \<Rightarrow> init_data \<Rightarrow> init_data"
-where
-  "initFreeMemory_update f (InitData v0 v1 v2 v3 v4 v5) = InitData (f v0) v1 v2 v3 v4 v5"
-
-primrec
-  initVPtrOffset_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> init_data \<Rightarrow> init_data"
-where
-  "initVPtrOffset_update f (InitData v0 v1 v2 v3 v4 v5) = InitData v0 v1 v2 v3 (f v4) v5"
+  "initSlotPosMax_update f (InitData v0 v1 v2 v3 v4) = InitData v0 v1 (f v2) v3 v4"
 
 primrec
   initBootInfoFrame_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> init_data \<Rightarrow> init_data"
 where
-  "initBootInfoFrame_update f (InitData v0 v1 v2 v3 v4 v5) = InitData v0 v1 v2 v3 v4 (f v5)"
+  "initBootInfoFrame_update f (InitData v0 v1 v2 v3 v4) = InitData v0 v1 v2 v3 (f v4)"
+
+primrec
+  initSlotPosCur_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> init_data \<Rightarrow> init_data"
+where
+  "initSlotPosCur_update f (InitData v0 v1 v2 v3 v4) = InitData v0 (f v1) v2 v3 v4"
 
 primrec
   initBootInfo_update :: "(biframe_data \<Rightarrow> biframe_data) \<Rightarrow> init_data \<Rightarrow> init_data"
 where
-  "initBootInfo_update f (InitData v0 v1 v2 v3 v4 v5) = InitData v0 v1 v2 (f v3) v4 v5"
+  "initBootInfo_update f (InitData v0 v1 v2 v3 v4) = InitData v0 v1 v2 (f v3) v4"
+
+primrec
+  initFreeMemory_update :: "((region list) \<Rightarrow> (region list)) \<Rightarrow> init_data \<Rightarrow> init_data"
+where
+  "initFreeMemory_update f (InitData v0 v1 v2 v3 v4) = InitData (f v0) v1 v2 v3 v4"
 
 abbreviation (input)
-  InitData_trans :: "(region list) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (biframe_data) \<Rightarrow> (vptr) \<Rightarrow> (paddr) \<Rightarrow> init_data" ("InitData'_ \<lparr> initFreeMemory= _, initSlotPosCur= _, initSlotPosMax= _, initBootInfo= _, initVPtrOffset= _, initBootInfoFrame= _ \<rparr>")
+  InitData_trans :: "(region list) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (biframe_data) \<Rightarrow> (paddr) \<Rightarrow> init_data" ("InitData'_ \<lparr> initFreeMemory= _, initSlotPosCur= _, initSlotPosMax= _, initBootInfo= _, initBootInfoFrame= _ \<rparr>")
 where
-  "InitData_ \<lparr> initFreeMemory= v0, initSlotPosCur= v1, initSlotPosMax= v2, initBootInfo= v3, initVPtrOffset= v4, initBootInfoFrame= v5 \<rparr> == InitData v0 v1 v2 v3 v4 v5"
+  "InitData_ \<lparr> initFreeMemory= v0, initSlotPosCur= v1, initSlotPosMax= v2, initBootInfo= v3, initBootInfoFrame= v4 \<rparr> == InitData v0 v1 v2 v3 v4"
 
 lemma initSlotPosMax_initSlotPosMax_update [simp]:
   "initSlotPosMax (initSlotPosMax_update f v) = f (initSlotPosMax v)"
-  by (cases v) simp
-
-lemma initSlotPosMax_initSlotPosCur_update [simp]:
-  "initSlotPosMax (initSlotPosCur_update f v) = initSlotPosMax v"
-  by (cases v) simp
-
-lemma initSlotPosMax_initFreeMemory_update [simp]:
-  "initSlotPosMax (initFreeMemory_update f v) = initSlotPosMax v"
-  by (cases v) simp
-
-lemma initSlotPosMax_initVPtrOffset_update [simp]:
-  "initSlotPosMax (initVPtrOffset_update f v) = initSlotPosMax v"
   by (cases v) simp
 
 lemma initSlotPosMax_initBootInfoFrame_update [simp]:
   "initSlotPosMax (initBootInfoFrame_update f v) = initSlotPosMax v"
   by (cases v) simp
 
+lemma initSlotPosMax_initSlotPosCur_update [simp]:
+  "initSlotPosMax (initSlotPosCur_update f v) = initSlotPosMax v"
+  by (cases v) simp
+
 lemma initSlotPosMax_initBootInfo_update [simp]:
   "initSlotPosMax (initBootInfo_update f v) = initSlotPosMax v"
   by (cases v) simp
 
-lemma initSlotPosCur_initSlotPosMax_update [simp]:
-  "initSlotPosCur (initSlotPosMax_update f v) = initSlotPosCur v"
-  by (cases v) simp
-
-lemma initSlotPosCur_initSlotPosCur_update [simp]:
-  "initSlotPosCur (initSlotPosCur_update f v) = f (initSlotPosCur v)"
-  by (cases v) simp
-
-lemma initSlotPosCur_initFreeMemory_update [simp]:
-  "initSlotPosCur (initFreeMemory_update f v) = initSlotPosCur v"
-  by (cases v) simp
-
-lemma initSlotPosCur_initVPtrOffset_update [simp]:
-  "initSlotPosCur (initVPtrOffset_update f v) = initSlotPosCur v"
-  by (cases v) simp
-
-lemma initSlotPosCur_initBootInfoFrame_update [simp]:
-  "initSlotPosCur (initBootInfoFrame_update f v) = initSlotPosCur v"
-  by (cases v) simp
-
-lemma initSlotPosCur_initBootInfo_update [simp]:
-  "initSlotPosCur (initBootInfo_update f v) = initSlotPosCur v"
-  by (cases v) simp
-
-lemma initFreeMemory_initSlotPosMax_update [simp]:
-  "initFreeMemory (initSlotPosMax_update f v) = initFreeMemory v"
-  by (cases v) simp
-
-lemma initFreeMemory_initSlotPosCur_update [simp]:
-  "initFreeMemory (initSlotPosCur_update f v) = initFreeMemory v"
-  by (cases v) simp
-
-lemma initFreeMemory_initFreeMemory_update [simp]:
-  "initFreeMemory (initFreeMemory_update f v) = f (initFreeMemory v)"
-  by (cases v) simp
-
-lemma initFreeMemory_initVPtrOffset_update [simp]:
-  "initFreeMemory (initVPtrOffset_update f v) = initFreeMemory v"
-  by (cases v) simp
-
-lemma initFreeMemory_initBootInfoFrame_update [simp]:
-  "initFreeMemory (initBootInfoFrame_update f v) = initFreeMemory v"
-  by (cases v) simp
-
-lemma initFreeMemory_initBootInfo_update [simp]:
-  "initFreeMemory (initBootInfo_update f v) = initFreeMemory v"
-  by (cases v) simp
-
-lemma initVPtrOffset_initSlotPosMax_update [simp]:
-  "initVPtrOffset (initSlotPosMax_update f v) = initVPtrOffset v"
-  by (cases v) simp
-
-lemma initVPtrOffset_initSlotPosCur_update [simp]:
-  "initVPtrOffset (initSlotPosCur_update f v) = initVPtrOffset v"
-  by (cases v) simp
-
-lemma initVPtrOffset_initFreeMemory_update [simp]:
-  "initVPtrOffset (initFreeMemory_update f v) = initVPtrOffset v"
-  by (cases v) simp
-
-lemma initVPtrOffset_initVPtrOffset_update [simp]:
-  "initVPtrOffset (initVPtrOffset_update f v) = f (initVPtrOffset v)"
-  by (cases v) simp
-
-lemma initVPtrOffset_initBootInfoFrame_update [simp]:
-  "initVPtrOffset (initBootInfoFrame_update f v) = initVPtrOffset v"
-  by (cases v) simp
-
-lemma initVPtrOffset_initBootInfo_update [simp]:
-  "initVPtrOffset (initBootInfo_update f v) = initVPtrOffset v"
+lemma initSlotPosMax_initFreeMemory_update [simp]:
+  "initSlotPosMax (initFreeMemory_update f v) = initSlotPosMax v"
   by (cases v) simp
 
 lemma initBootInfoFrame_initSlotPosMax_update [simp]:
   "initBootInfoFrame (initSlotPosMax_update f v) = initBootInfoFrame v"
   by (cases v) simp
 
-lemma initBootInfoFrame_initSlotPosCur_update [simp]:
-  "initBootInfoFrame (initSlotPosCur_update f v) = initBootInfoFrame v"
-  by (cases v) simp
-
-lemma initBootInfoFrame_initFreeMemory_update [simp]:
-  "initBootInfoFrame (initFreeMemory_update f v) = initBootInfoFrame v"
-  by (cases v) simp
-
-lemma initBootInfoFrame_initVPtrOffset_update [simp]:
-  "initBootInfoFrame (initVPtrOffset_update f v) = initBootInfoFrame v"
-  by (cases v) simp
-
 lemma initBootInfoFrame_initBootInfoFrame_update [simp]:
   "initBootInfoFrame (initBootInfoFrame_update f v) = f (initBootInfoFrame v)"
+  by (cases v) simp
+
+lemma initBootInfoFrame_initSlotPosCur_update [simp]:
+  "initBootInfoFrame (initSlotPosCur_update f v) = initBootInfoFrame v"
   by (cases v) simp
 
 lemma initBootInfoFrame_initBootInfo_update [simp]:
   "initBootInfoFrame (initBootInfo_update f v) = initBootInfoFrame v"
   by (cases v) simp
 
+lemma initBootInfoFrame_initFreeMemory_update [simp]:
+  "initBootInfoFrame (initFreeMemory_update f v) = initBootInfoFrame v"
+  by (cases v) simp
+
+lemma initSlotPosCur_initSlotPosMax_update [simp]:
+  "initSlotPosCur (initSlotPosMax_update f v) = initSlotPosCur v"
+  by (cases v) simp
+
+lemma initSlotPosCur_initBootInfoFrame_update [simp]:
+  "initSlotPosCur (initBootInfoFrame_update f v) = initSlotPosCur v"
+  by (cases v) simp
+
+lemma initSlotPosCur_initSlotPosCur_update [simp]:
+  "initSlotPosCur (initSlotPosCur_update f v) = f (initSlotPosCur v)"
+  by (cases v) simp
+
+lemma initSlotPosCur_initBootInfo_update [simp]:
+  "initSlotPosCur (initBootInfo_update f v) = initSlotPosCur v"
+  by (cases v) simp
+
+lemma initSlotPosCur_initFreeMemory_update [simp]:
+  "initSlotPosCur (initFreeMemory_update f v) = initSlotPosCur v"
+  by (cases v) simp
+
 lemma initBootInfo_initSlotPosMax_update [simp]:
   "initBootInfo (initSlotPosMax_update f v) = initBootInfo v"
-  by (cases v) simp
-
-lemma initBootInfo_initSlotPosCur_update [simp]:
-  "initBootInfo (initSlotPosCur_update f v) = initBootInfo v"
-  by (cases v) simp
-
-lemma initBootInfo_initFreeMemory_update [simp]:
-  "initBootInfo (initFreeMemory_update f v) = initBootInfo v"
-  by (cases v) simp
-
-lemma initBootInfo_initVPtrOffset_update [simp]:
-  "initBootInfo (initVPtrOffset_update f v) = initBootInfo v"
   by (cases v) simp
 
 lemma initBootInfo_initBootInfoFrame_update [simp]:
   "initBootInfo (initBootInfoFrame_update f v) = initBootInfo v"
   by (cases v) simp
 
+lemma initBootInfo_initSlotPosCur_update [simp]:
+  "initBootInfo (initSlotPosCur_update f v) = initBootInfo v"
+  by (cases v) simp
+
 lemma initBootInfo_initBootInfo_update [simp]:
   "initBootInfo (initBootInfo_update f v) = f (initBootInfo v)"
+  by (cases v) simp
+
+lemma initBootInfo_initFreeMemory_update [simp]:
+  "initBootInfo (initFreeMemory_update f v) = initBootInfo v"
+  by (cases v) simp
+
+lemma initFreeMemory_initSlotPosMax_update [simp]:
+  "initFreeMemory (initSlotPosMax_update f v) = initFreeMemory v"
+  by (cases v) simp
+
+lemma initFreeMemory_initBootInfoFrame_update [simp]:
+  "initFreeMemory (initBootInfoFrame_update f v) = initFreeMemory v"
+  by (cases v) simp
+
+lemma initFreeMemory_initSlotPosCur_update [simp]:
+  "initFreeMemory (initSlotPosCur_update f v) = initFreeMemory v"
+  by (cases v) simp
+
+lemma initFreeMemory_initBootInfo_update [simp]:
+  "initFreeMemory (initBootInfo_update f v) = initFreeMemory v"
+  by (cases v) simp
+
+lemma initFreeMemory_initFreeMemory_update [simp]:
+  "initFreeMemory (initFreeMemory_update f v) = f (initFreeMemory v)"
   by (cases v) simp
 
 definition

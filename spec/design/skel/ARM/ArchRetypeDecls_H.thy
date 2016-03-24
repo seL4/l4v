@@ -19,8 +19,10 @@ imports
   "../PSpaceFuns_H"
   ArchObjInsts_H
 begin
+qualify ARM
 
 #INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs decls_only NOT isPageFlushLabel isPDFlushLabel
 #INCLUDE_HASKELL SEL4/Object/ObjectType/ARM.lhs Arch.Types=ArchTypes_H ArchInv=ArchRetypeDecls_H decls_only
 
+end_qualify
 end
