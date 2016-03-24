@@ -65,7 +65,7 @@ lemma VSRef_AASIDPool_in_vs_refs:
   "(VSRef (asid && mask asid_low_bits) (Some AASIDPool), r) \<in> vs_refs_arch ko =
    (\<exists>apool. ko = arch_kernel_obj.ASIDPool apool \<and>
             apool (ucast (asid && mask asid_low_bits)) = Some r)"
-  apply (simp add: vs_refs_arch_def)
+  apply simp
   apply (case_tac ko, simp_all add: image_def graph_of_def)
   apply (rename_tac arch_kernel_obj)
   apply (rule iffI)
@@ -77,32 +77,34 @@ lemma VSRef_AASIDPool_in_vs_refs:
    apply (simp_all add: asid_low_bits_def)
   done
 
+context begin
+
+declare vs_refs_arch_def[simp del]
+
 lemma get_pd_of_thread_def2:
   "get_pd_of_thread khp astate tcb_ref \<equiv>
-   case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
-     (case tcb_vtable tcb of
-        ArchObjectCap (PageDirectoryCap pd_ref (Some asid))
-          \<Rightarrow> if (\<exists>p apool.
-                   arm_asid_table astate (asid_high_bits_of asid) = Some p \<and>
-                   khp p = Some (ArchObj (arch_kernel_obj.ASIDPool apool)) \<and>
-                   apool (ucast (asid && mask asid_low_bits)) = Some pd_ref)
-               then pd_ref
-             else arm_global_pd astate
-      | _ \<Rightarrow>  arm_global_pd astate)
-   | _ \<Rightarrow>  arm_global_pd astate"
+        case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
+          (case tcb_vtable tcb of
+             ArchObjectCap (PageDirectoryCap pd_ref (Some asid))
+               \<Rightarrow> if (\<exists>p apool.
+                        arm_asid_table astate (asid_high_bits_of asid) = Some p \<and>
+                        khp p = Some (ArchObj (ASIDPool apool)) \<and>
+                        apool (ucast (asid && mask asid_low_bits)) = Some pd_ref)
+                    then pd_ref
+                    else arm_global_pd astate
+           | _ \<Rightarrow>  arm_global_pd astate)
+        | _ \<Rightarrow>  arm_global_pd astate"
   apply (rule eq_reflection)
   apply (clarsimp simp: get_pd_of_thread_def
-                 split: Structures_A.kernel_object.splits option.splits)
+                 split: kernel_object.splits option.splits)
   apply (rename_tac tcb)
   apply (case_tac "tcb_vtable tcb",
-         simp_all split: arch_cap.splits Structures_A.kernel_object.splits
+         simp_all split: cap.splits arch_cap.splits kernel_object.splits
                          arch_kernel_obj.splits option.splits)
   apply (auto simp: VSRef_AASIDPool_in_vs_refs)
   done
 
-lemma
-  the_arch_cap_simp[simp]: 
-  "the_arch_cap (ArchObjectCap x) = x"
+lemma the_arch_cap_simp[simp]: "the_arch_cap (ArchObjectCap x) = x"
   by (simp add: the_arch_cap_def)
 
 lemma get_pd_of_thread_vs_lookup:
@@ -120,7 +122,7 @@ lemma get_pd_of_thread_vs_lookup:
   apply (rename_tac tcb)
   apply (case_tac "\<not> is_pd_cap (tcb_vtable tcb)")
    apply (clarsimp simp: is_pd_cap_def split: cap.split arch_cap.split)
-  apply (clarsimp simp: is_pd_cap_def vs_cap_ref_def vs_cap_ref_arch_def)
+  apply (clarsimp simp: is_pd_cap_def vs_cap_ref_def)
   apply (case_tac asid, simp_all, clarsimp)
   apply (intro conjI impI)
 
@@ -129,16 +131,14 @@ lemma get_pd_of_thread_vs_lookup:
    apply (erule rtranclE, simp)
    apply (clarsimp dest!: vs_lookup1D)
    apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-                  split: arch_kernel_obj.split_asm)
-    apply (erule rtranclE)
-     apply (clarsimp simp: up_ucast_inj_eq obj_at_def vs_refs_def vs_refs_arch_def graph_of_def
-                           image_def
-                  split: arch_kernel_obj.split_asm)
-    apply (clarsimp dest!: vs_lookup1D)
-    apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
+                  split: kernel_object.split_asm arch_kernel_obj.split_asm)
+   apply (erule rtranclE)
+    apply (clarsimp simp: up_ucast_inj_eq obj_at_def vs_refs_def vs_refs_arch_def graph_of_def
+                          image_def
                    split: arch_kernel_obj.split_asm)
+   apply (clarsimp dest!: vs_lookup1D)
    apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-                  split: arch_kernel_obj.split_asm)
+                   split: kernel_object.split_asm arch_kernel_obj.split_asm)
 
   apply (erule swap)
   apply (clarsimp split: kernel_object.split_asm arch_kernel_obj.split_asm
@@ -149,6 +149,8 @@ lemma get_pd_of_thread_vs_lookup:
    apply (rule rtrancl_refl)
   apply (rule vs_lookup1I, (simp add: obj_at_def vs_refs_def vs_refs_arch_def)+)
   done
+
+end
 
 (* NOTE: This statement would clearly be nicer for a partial function
          but later on, we really want the function to be total. *)

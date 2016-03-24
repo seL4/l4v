@@ -67,7 +67,7 @@ locale Arch_p_arch_idle_update_int_eq = Arch_p_arch_idle_update_eq + Arch_pspace
 section "Base definitions for Invariants"
 
 definition
-  obj_at :: "(Structures_A.kernel_object \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  obj_at :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "obj_at P ref s \<equiv> \<exists>ko. kheap s ref = Some ko \<and> P ko"
 
@@ -77,26 +77,6 @@ lemma obj_at_pspaceI:
 
 abbreviation
   "ko_at k \<equiv> obj_at (op = k)"
-
-definition
-  aobj_at :: "(arch_kernel_obj \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "aobj_at P ref s \<equiv> \<exists>ako. kheap s ref = Some (ArchObj ako) \<and> P ako"
-
-lemma aobj_at_def2:
-  "aobj_at P ref = obj_at (\<lambda>ob. case ob of ArchObj aob \<Rightarrow> P aob | _ \<Rightarrow> False) ref"
-  apply (rule ext)
-  apply (clarsimp simp add: obj_at_def aobj_at_def)
-  apply (rule iffI)
-   apply (clarsimp)+
-  apply (case_tac ko; clarsimp)
-  done
-
-abbreviation
-  "ako_at k \<equiv> aobj_at (op = k)"
-
-abbreviation
-  "atyp_at T \<equiv> aobj_at (\<lambda>ob. aa_type ob = T)"
 
 lemma obj_atE:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> kheap s p = Some ko; P ko \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
@@ -110,17 +90,36 @@ lemma ko_at_weakenE:
   "\<lbrakk> ko_at k ptr s; P k \<rbrakk> \<Longrightarrow> obj_at P ptr s"
   by (erule obj_at_weakenE, simp)
 
-lemma aobj_atE:
-  "\<lbrakk> aobj_at P p s; \<And>ko. \<lbrakk> kheap s p = Some (ArchObj ko); P ko \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
-  by (auto simp: aobj_at_def)
+text {* An alternative formulation that allows abstraction over type: *}
 
-lemma aobj_at_weakenE:
-  "\<lbrakk> aobj_at P r s; \<And>ko. P ko \<Longrightarrow> P' ko \<rbrakk> \<Longrightarrow> aobj_at P' r s"
-  by (clarsimp simp: aobj_at_def)
 
-lemma ako_at_weakenE:
-  "\<lbrakk> ako_at k ptr s; P k \<rbrakk> \<Longrightarrow> aobj_at P ptr s"
-  by (erule aobj_at_weakenE, simp)
+datatype a_type =
+    ATCB
+  | AEndpoint
+  | ANTFN
+  | ACapTable nat
+  | AGarbage
+  | AArch aa_type
+
+definition
+  a_type :: "kernel_object \<Rightarrow> a_type"
+where
+ "a_type ob \<equiv> case ob of
+           CNode sz cspace           \<Rightarrow> if well_formed_cnode_n sz cspace
+                                        then ACapTable sz else AGarbage
+         | TCB tcb                   \<Rightarrow> ATCB
+         | Endpoint endpoint         \<Rightarrow> AEndpoint
+         | Notification notification \<Rightarrow> ANTFN
+         | ArchObj ao                \<Rightarrow> AArch (aa_type ao)"
+
+lemmas a_type_simps =
+  a_type_def[split_simps kernel_object.split]
+
+lemma a_type_aa_type: "(a_type (ArchObj ako) = AArch T) = (aa_type ako = T)"
+  by (simp add: a_type_def)
+
+abbreviation
+  "typ_at T \<equiv> obj_at (\<lambda>ob. a_type ob = T)"
 
 definition
   pspace_aligned :: "'z::state_ext state \<Rightarrow> bool"
@@ -160,16 +159,6 @@ definition
 
 lemmas arch_obj_fun_lift_simps[simp] =
   arch_obj_fun_lift_def[split_simps kernel_object.split]
-
-lemma
-  ko_at_ako:
-  "ako_at ako = ko_at (ArchObj ako)"
-  by (simp add: aobj_at_def[abs_def] obj_at_def[abs_def])
-
-lemma
-  obj_at_fun_lift:
-  "obj_at (arch_obj_fun_lift P False) = aobj_at P" 
-  by (auto simp add: aobj_at_def2 obj_at_def[abs_def] arch_obj_fun_lift_def)
   
 lemma
   arch_obj_fun_lift_in_empty[dest!]:

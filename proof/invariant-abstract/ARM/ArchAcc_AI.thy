@@ -1374,16 +1374,16 @@ lemma simpler_set_pt_def:
 lemma valid_set_ptI:
   "(!!s opt. \<lbrakk>P s; kheap s p = Some (ArchObj (PageTable opt))\<rbrakk>
          \<Longrightarrow> Q () (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageTable pt))\<rparr>))
-   \<Longrightarrow> valid P (set_pt p pt) Q"
+   \<Longrightarrow> \<lbrace>P\<rbrace> set_pt p pt \<lbrace>Q\<rbrace>"
   by (rule validI) (clarsimp simp: simpler_set_pt_def split: split_if_asm)
 
 lemma set_pt_table_caps [wp]:
   "\<lbrace>valid_table_caps and (\<lambda>s. valid_caps (caps_of_state s) s) and
     (\<lambda>s. ((\<exists>slot. caps_of_state s slot =
-                 Some (cap.ArchObjectCap (arch_cap.PageTableCap p None))) \<longrightarrow>
-          pt = (\<lambda>x. Arch_Structs_A.ARM.InvalidPTE)) \<or>
+                 Some (ArchObjectCap (PageTableCap p None))) \<longrightarrow>
+          pt = (\<lambda>x. InvalidPTE)) \<or>
          (\<forall>slot. \<exists>asid. caps_of_state s slot =
-             Some (cap.ArchObjectCap (arch_cap.PageTableCap p (Some asid)))))\<rbrace>
+             Some (ArchObjectCap (PageTableCap p (Some asid)))))\<rbrace>
    set_pt p pt
    \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
   unfolding valid_table_caps_def
@@ -1400,12 +1400,12 @@ lemma set_pt_table_caps [wp]:
    apply ((drule spec)+, erule impE, assumption)
    apply (rename_tac arch_cap)
    apply (case_tac arch_cap,
-          simp_all add: valid_cap_def obj_at_def aobj_at_def a_type_simps aa_type_simps)
+          simp_all add: valid_cap_def valid_arch_cap_def aobj_at_def aa_type_simps)
   apply clarsimp
-  apply (erule impE, fastforce simp: cap_asid_def  split: option.splits)
-  apply (erule disjE, simp add: empty_table_def)
+  apply (erule impE, fastforce simp: cap_asid_def cap_asid_arch_def split: option.splits)
+  apply (erule disjE, simp add: empty_table_def empty_table_arch_def)
   apply (drule_tac x=a in spec, drule_tac x=b in spec)
-  apply (clarsimp simp add: cap_asid_def  split: option.splits)
+  apply (clarsimp simp add: cap_asid_def cap_asid_arch_def split: option.splits)
   done
 
 

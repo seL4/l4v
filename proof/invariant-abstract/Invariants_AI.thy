@@ -50,11 +50,11 @@ unqualify_facts
   valid_arch_cap_def2
   idle_global[intro!]
   valid_ipc_buffer_cap_null
-  valid_arch_cap_atyp
-  valid_arch_obj_atyp
+  valid_arch_cap_typ
+  valid_arch_obj_typ
   arch_kobj_size_bounded
   global_refs_lift
-  valid_arch_state_lift_atyp_at
+  valid_arch_state_lift
   aobj_at_default_arch_cap_valid
   aobj_ref_default[simp]
   valid_arch_objs_def
@@ -120,11 +120,11 @@ record itcb =
   itcb_bound_notification     :: "obj_ref option"
 
 
-definition "tcb_to_itcb tcb \<equiv> \<lparr> itcb_state         = tcb_state tcb,
-                                itcb_fault_handler = tcb_fault_handler tcb,
-                                itcb_ipc_buffer    = tcb_ipc_buffer tcb,
-                                itcb_fault         = tcb_fault tcb,
-                                itcb_bound_notification     = tcb_bound_notification tcb \<rparr>"
+definition "tcb_to_itcb tcb \<equiv> \<lparr> itcb_state              = tcb_state tcb,
+                                itcb_fault_handler      = tcb_fault_handler tcb,
+                                itcb_ipc_buffer         = tcb_ipc_buffer tcb,
+                                itcb_fault              = tcb_fault tcb,
+                                itcb_bound_notification = tcb_bound_notification tcb \<rparr>"
 
 (* sseefried: The simplification rules below are used to help produce
  * lemmas that talk about fields of the 'tcb' data structure rather than
@@ -170,36 +170,6 @@ abbreviation "bound_tcb_at \<equiv> pred_tcb_at itcb_bound_notification"
 lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
   by (simp add: pred_tcb_at_def)
 
-text {* An alternative formulation that allows abstraction over type: *}
-
-
-datatype a_type =
-    ATCB
-  | AEndpoint
-  | ANTFN
-  | ACapTable nat
-  | AGarbage
-  | AArch aa_type
-
-definition
-  a_type :: "Structures_A.kernel_object \<Rightarrow> a_type"
-where
- "a_type ob \<equiv> case ob of
-           CNode sz cspace          \<Rightarrow> if well_formed_cnode_n sz cspace
-                                       then ACapTable sz else AGarbage
-         | TCB tcb                  \<Rightarrow> ATCB
-         | Endpoint endpoint        \<Rightarrow> AEndpoint
-         | Notification notification   \<Rightarrow> ANTFN
-         | ArchObj ao               \<Rightarrow> AArch (aa_type ao)"
-
-abbreviation
-  "typ_at T \<equiv> obj_at (\<lambda>ob. a_type ob = T)"
-
-lemma atyp_at_def2:
-  "atyp_at T = typ_at (AArch T)" 
-  unfolding aobj_at_def2[abs_def] obj_at_def[abs_def] a_type_def
-  by (auto split: kernel_object.splits if_splits)
-
 
 text {* cte with property at *}
 
@@ -220,23 +190,23 @@ subsection "Valid caps and objects"
 primrec
   untyped_range :: "cap \<Rightarrow> word32 set"
 where
-  "untyped_range (cap.UntypedCap p n f)                 = {p..p + (1 << n) - 1}"
-| "untyped_range (cap.NullCap)                          = {}"
-| "untyped_range (cap.EndpointCap r badge rights)       = {}"
-| "untyped_range (cap.NotificationCap r badge rights)  = {}"
-| "untyped_range (cap.CNodeCap r bits guard)            = {}"
-| "untyped_range (cap.ThreadCap r)                      = {}"
-| "untyped_range (cap.DomainCap)                        = {}"
-| "untyped_range (cap.ReplyCap r master)                = {}"
-| "untyped_range (cap.IRQControlCap)                    = {}"
-| "untyped_range (cap.IRQHandlerCap irq)                = {}"
-| "untyped_range (cap.Zombie r b n)                     = {}"
-| "untyped_range (cap.ArchObjectCap cap)                = {}"
+  "untyped_range (UntypedCap p n f)                 = {p..p + (1 << n) - 1}"
+| "untyped_range (NullCap)                          = {}"
+| "untyped_range (EndpointCap r badge rights)       = {}"
+| "untyped_range (NotificationCap r badge rights)   = {}"
+| "untyped_range (CNodeCap r bits guard)            = {}"
+| "untyped_range (ThreadCap r)                      = {}"
+| "untyped_range (DomainCap)                        = {}"
+| "untyped_range (ReplyCap r master)                = {}"
+| "untyped_range (IRQControlCap)                    = {}"
+| "untyped_range (IRQHandlerCap irq)                = {}"
+| "untyped_range (Zombie r b n)                     = {}"
+| "untyped_range (ArchObjectCap cap)                = {}"
 
 primrec
   usable_untyped_range :: "cap \<Rightarrow> word32 set"
 where
- "usable_untyped_range (cap.UntypedCap p n f) =
+ "usable_untyped_range (UntypedCap p n f) =
   (if f < 2^n  then {p+of_nat f .. p + 2 ^ n - 1} else {})"
 
 definition
@@ -257,20 +227,20 @@ definition
 primrec
   cap_bits :: "cap \<Rightarrow> nat"
 where
-  "cap_bits cap.NullCap = 0"
-| "cap_bits (cap.UntypedCap r b f) = b"
-| "cap_bits (cap.EndpointCap r b R) = obj_bits (Endpoint undefined)"
-| "cap_bits (cap.NotificationCap r b R) = obj_bits (Notification undefined)"
-| "cap_bits (cap.CNodeCap r b m) = cte_level_bits + b"
-| "cap_bits (cap.ThreadCap r) = obj_bits (TCB undefined)"
+  "cap_bits NullCap = 0"
+| "cap_bits (UntypedCap r b f) = b"
+| "cap_bits (EndpointCap r b R) = obj_bits (Endpoint undefined)"
+| "cap_bits (NotificationCap r b R) = obj_bits (Notification undefined)"
+| "cap_bits (CNodeCap r b m) = cte_level_bits + b"
+| "cap_bits (ThreadCap r) = obj_bits (TCB undefined)"
 | "cap_bits (DomainCap) = 0"
-| "cap_bits (cap.ReplyCap r m) = obj_bits (TCB undefined)"
-| "cap_bits (cap.Zombie r zs n) =
+| "cap_bits (ReplyCap r m) = obj_bits (TCB undefined)"
+| "cap_bits (Zombie r zs n) =
     (case zs of None \<Rightarrow> obj_bits (TCB undefined)
             | Some n \<Rightarrow> cte_level_bits + n)"
-| "cap_bits (cap.IRQControlCap) = 0"
-| "cap_bits (cap.IRQHandlerCap irq) = 0"
-| "cap_bits (cap.ArchObjectCap x) = arch_obj_size x"
+| "cap_bits (IRQControlCap) = 0"
+| "cap_bits (IRQHandlerCap irq) = 0"
+| "cap_bits (ArchObjectCap x) = arch_obj_size x"
 
 definition
   "cap_aligned c \<equiv>
@@ -293,54 +263,54 @@ definition
 where
   "wellformed_cap c \<equiv>
   case c of
-    Structures_A.UntypedCap p sz idx \<Rightarrow> sz \<ge> 4
-  | Structures_A.NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
-  | Structures_A.CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> 32
-  | Structures_A.IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
-  | Structures_A.Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5
+    UntypedCap p sz idx \<Rightarrow> sz \<ge> 4
+  | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
+  | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> 32
+  | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
+  | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5
                                           | Some b \<Rightarrow> n \<le> 2 ^ b \<and> b \<noteq> 0)
-  | Structures_A.ArchObjectCap ac \<Rightarrow> wellformed_acap ac
+  | ArchObjectCap ac \<Rightarrow> wellformed_acap ac
   | _ \<Rightarrow> True"
 
 definition
   valid_cap_ref :: "cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_cap_ref c s \<equiv> case c of
-    Structures_A.NullCap \<Rightarrow> True
-  | Structures_A.UntypedCap p b idx \<Rightarrow> valid_untyped c s \<and> idx \<le> 2^ b \<and> p \<noteq> 0
-  | Structures_A.EndpointCap r badge rights \<Rightarrow> ep_at r s
-  | Structures_A.NotificationCap r badge rights \<Rightarrow> ntfn_at r s
-  | Structures_A.CNodeCap r bits guard \<Rightarrow> cap_table_at bits r s
-  | Structures_A.ThreadCap r \<Rightarrow> tcb_at r s
-  | Structures_A.DomainCap \<Rightarrow> True
-  | Structures_A.ReplyCap r m \<Rightarrow> tcb_at r s
-  | Structures_A.IRQControlCap \<Rightarrow> True
-  | Structures_A.IRQHandlerCap irq \<Rightarrow> True
-  | Structures_A.Zombie r b n \<Rightarrow>
+    NullCap \<Rightarrow> True
+  | UntypedCap p b idx \<Rightarrow> valid_untyped c s \<and> idx \<le> 2^ b \<and> p \<noteq> 0
+  | EndpointCap r badge rights \<Rightarrow> ep_at r s
+  | NotificationCap r badge rights \<Rightarrow> ntfn_at r s
+  | CNodeCap r bits guard \<Rightarrow> cap_table_at bits r s
+  | ThreadCap r \<Rightarrow> tcb_at r s
+  | DomainCap \<Rightarrow> True
+  | ReplyCap r m \<Rightarrow> tcb_at r s
+  | IRQControlCap \<Rightarrow> True
+  | IRQHandlerCap irq \<Rightarrow> True
+  | Zombie r b n \<Rightarrow>
       (case b of None \<Rightarrow> tcb_at r s | Some b \<Rightarrow> cap_table_at b r s)
-  | Structures_A.ArchObjectCap ac \<Rightarrow> valid_arch_cap_ref ac s"
+  | ArchObjectCap ac \<Rightarrow> valid_arch_cap_ref ac s"
 
 
 definition
   valid_cap :: "cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_cap c s \<equiv> cap_aligned c \<and> (case c of
-    Structures_A.NullCap \<Rightarrow> True
-  | Structures_A.UntypedCap p b f \<Rightarrow> valid_untyped c s \<and> 4 \<le> b \<and> f \<le> 2 ^ b \<and> p \<noteq> 0
-  | Structures_A.EndpointCap r badge rights \<Rightarrow> ep_at r s
-  | Structures_A.NotificationCap r badge rights \<Rightarrow>
+    NullCap \<Rightarrow> True
+  | UntypedCap p b f \<Rightarrow> valid_untyped c s \<and> 4 \<le> b \<and> f \<le> 2 ^ b \<and> p \<noteq> 0
+  | EndpointCap r badge rights \<Rightarrow> ep_at r s
+  | NotificationCap r badge rights \<Rightarrow>
          ntfn_at r s \<and> AllowGrant \<notin> rights
-  | Structures_A.CNodeCap r bits guard \<Rightarrow>
+  | CNodeCap r bits guard \<Rightarrow>
          cap_table_at bits r s \<and> bits \<noteq> 0 \<and> length guard \<le> 32
-  | Structures_A.ThreadCap r \<Rightarrow> tcb_at r s
-  | Structures_A.DomainCap \<Rightarrow> True
-  | Structures_A.ReplyCap r m \<Rightarrow> tcb_at r s
-  | Structures_A.IRQControlCap \<Rightarrow> True
-  | Structures_A.IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
-  | Structures_A.Zombie r b n \<Rightarrow>
+  | ThreadCap r \<Rightarrow> tcb_at r s
+  | DomainCap \<Rightarrow> True
+  | ReplyCap r m \<Rightarrow> tcb_at r s
+  | IRQControlCap \<Rightarrow> True
+  | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
+  | Zombie r b n \<Rightarrow>
          (case b of None \<Rightarrow> tcb_at r s \<and> n \<le> 5
                   | Some b \<Rightarrow> cap_table_at b r s \<and> n \<le> 2 ^ b \<and> b \<noteq> 0)
-  | Structures_A.ArchObjectCap ac \<Rightarrow> valid_arch_cap ac s)"
+  | ArchObjectCap ac \<Rightarrow> valid_arch_cap ac s)"
 
 abbreviation
   valid_cap_syn :: "'z::state_ext state \<Rightarrow> cap \<Rightarrow> bool" ("_ \<turnstile> _" [60, 60] 61)
@@ -350,18 +320,18 @@ where
 primrec
   cap_class :: "cap \<Rightarrow> capclass"
 where
-  "cap_class (cap.NullCap)                          = NullClass"
-| "cap_class (cap.UntypedCap p n f)                 = PhysicalClass"
-| "cap_class (cap.EndpointCap ref badge r)          = PhysicalClass"
-| "cap_class (cap.NotificationCap ref badge r)     = PhysicalClass"
-| "cap_class (cap.CNodeCap ref n bits)              = PhysicalClass"
-| "cap_class (cap.ThreadCap ref)                    = PhysicalClass"
-| "cap_class (cap.DomainCap)                        = DomainClass"
-| "cap_class (cap.Zombie r b n)                     = PhysicalClass"
-| "cap_class (cap.IRQControlCap)                    = IRQClass"
-| "cap_class (cap.IRQHandlerCap irq)                = IRQClass"
-| "cap_class (cap.ReplyCap tcb m)                   = ReplyClass tcb"
-| "cap_class (cap.ArchObjectCap cap)                = acap_class cap"
+  "cap_class (NullCap)                          = NullClass"
+| "cap_class (UntypedCap p n f)                 = PhysicalClass"
+| "cap_class (EndpointCap ref badge r)          = PhysicalClass"
+| "cap_class (NotificationCap ref badge r)     = PhysicalClass"
+| "cap_class (CNodeCap ref n bits)              = PhysicalClass"
+| "cap_class (ThreadCap ref)                    = PhysicalClass"
+| "cap_class (DomainCap)                        = DomainClass"
+| "cap_class (Zombie r b n)                     = PhysicalClass"
+| "cap_class (IRQControlCap)                    = IRQClass"
+| "cap_class (IRQHandlerCap irq)                = IRQClass"
+| "cap_class (ReplyCap tcb m)                   = ReplyClass tcb"
+| "cap_class (ArchObjectCap cap)                = acap_class cap"
 
 definition
   valid_cs_size :: "nat \<Rightarrow> cnode_contents \<Rightarrow> bool" where
@@ -373,42 +343,42 @@ definition
   "valid_cs sz cs s \<equiv> (\<forall>cap \<in> ran cs. s \<turnstile> cap) \<and> valid_cs_size sz cs"
 
 definition
-  valid_tcb_state :: "Structures_A.thread_state \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_tcb_state :: "thread_state \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_tcb_state ts s \<equiv> case ts of
-    Structures_A.BlockedOnReceive ref \<Rightarrow> ep_at ref s
-  | Structures_A.BlockedOnSend ref sp \<Rightarrow> ep_at ref s
-  | Structures_A.BlockedOnNotification ref \<Rightarrow> ntfn_at ref s
+    BlockedOnReceive ref \<Rightarrow> ep_at ref s
+  | BlockedOnSend ref sp \<Rightarrow> ep_at ref s
+  | BlockedOnNotification ref \<Rightarrow> ntfn_at ref s
   | _ \<Rightarrow> True"
 
 abbreviation
-  "inactive st \<equiv> st = Structures_A.Inactive"
+  "inactive st \<equiv> st = Inactive"
 
 abbreviation
   "halted st \<equiv> case st of
-                     Structures_A.Inactive \<Rightarrow> True
-                   | Structures_A.IdleThreadState \<Rightarrow> True
+                     Inactive \<Rightarrow> True
+                   | IdleThreadState \<Rightarrow> True
                    | _ \<Rightarrow> False"
 
 definition
   tcb_cap_cases ::
-  "cap_ref \<rightharpoonup> ((Structures_A.tcb \<Rightarrow> cap) \<times>
-               ((cap \<Rightarrow> cap) \<Rightarrow> Structures_A.tcb \<Rightarrow> Structures_A.tcb) \<times>
-               (obj_ref \<Rightarrow> Structures_A.thread_state \<Rightarrow> cap \<Rightarrow> bool))"
+  "cap_ref \<rightharpoonup> ((tcb \<Rightarrow> cap) \<times>
+               ((cap \<Rightarrow> cap) \<Rightarrow> tcb \<Rightarrow> tcb) \<times>
+               (obj_ref \<Rightarrow> thread_state \<Rightarrow> cap \<Rightarrow> bool))"
 where
   "tcb_cap_cases \<equiv>
    [tcb_cnode_index 0 \<mapsto> (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>)),
     tcb_cnode_index 1 \<mapsto> (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>)),
     tcb_cnode_index 2 \<mapsto> (tcb_reply, tcb_reply_update,
                           (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t)
-                                  \<or> (halted st \<and> (c = cap.NullCap)))),
+                                  \<or> (halted st \<and> (c = NullCap)))),
     tcb_cnode_index 3 \<mapsto> (tcb_caller, tcb_caller_update,
                           (\<lambda>_ st. case st of
-                                    Structures_A.BlockedOnReceive e \<Rightarrow>
-                                      (op = cap.NullCap)
-                                  | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap))),
+                                    BlockedOnReceive e \<Rightarrow>
+                                      (op = NullCap)
+                                  | _ \<Rightarrow> is_reply_cap or (op = NullCap))),
     tcb_cnode_index 4 \<mapsto> (tcb_ipcframe, tcb_ipcframe_update,
-                          (\<lambda>_ _. is_arch_cap or (op = cap.NullCap)))]"
+                          (\<lambda>_ _. is_arch_cap or (op = NullCap)))]"
 
 
 
@@ -438,19 +408,19 @@ abbreviation (input)
 
 
 definition
-  valid_ntfn :: "Structures_A.notification \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_ntfn :: "notification \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_ntfn ntfn s \<equiv> (case ntfn_obj ntfn of 
-    Structures_A.IdleNtfn \<Rightarrow>  True
-  | Structures_A.WaitingNtfn ts \<Rightarrow>
+    IdleNtfn \<Rightarrow>  True
+  | WaitingNtfn ts \<Rightarrow>
       (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) 
        \<and> distinct ts
        \<and> (case ntfn_bound_tcb ntfn of Some tcb \<Rightarrow> ts = [tcb] | _ \<Rightarrow> True))
-  | Structures_A.ActiveNtfn b \<Rightarrow> True)
+  | ActiveNtfn b \<Rightarrow> True)
  \<and> valid_bound_tcb (ntfn_bound_tcb ntfn) s"
 
 definition
-  valid_tcb :: "obj_ref \<Rightarrow> Structures_A.tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_tcb :: "obj_ref \<Rightarrow> tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_tcb p t s \<equiv>
      (\<forall>(getF, setF, restr) \<in> ran tcb_cap_cases.
@@ -474,19 +444,19 @@ where
                    \<longrightarrow> valid_ipc_buffer_cap cap (tcb_ipc_buffer tcb)))"
 
 definition
-  valid_ep :: "Structures_A.endpoint \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_ep :: "endpoint \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_ep ep s \<equiv> case ep of
-    Structures_A.IdleEP \<Rightarrow> True
-  | Structures_A.SendEP ts \<Rightarrow>
+    IdleEP \<Rightarrow> True
+  | SendEP ts \<Rightarrow>
       (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts)
-  | Structures_A.RecvEP ts \<Rightarrow>
+  | RecvEP ts \<Rightarrow>
       (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts)"
 
 
 
 definition
-  valid_obj :: "obj_ref \<Rightarrow> Structures_A.kernel_object \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_obj :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_obj ptr ko s \<equiv> case ko of
     Endpoint p \<Rightarrow> valid_ep p s
@@ -523,32 +493,32 @@ where
 | "symreftype NTFNBound       = TCBBound"
 
 definition
-  tcb_st_refs_of :: "Structures_A.thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
+  tcb_st_refs_of :: "thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
 where
-  "tcb_st_refs_of z \<equiv> case z of (Structures_A.Running)               => {}
-  | (Structures_A.Inactive)              => {}
-  | (Structures_A.Restart)               => {}
-  | (Structures_A.BlockedOnReply)        => {}
-  | (Structures_A.IdleThreadState)       => {}
-  | (Structures_A.BlockedOnReceive x)  => {(x, TCBBlockedRecv)}
-  | (Structures_A.BlockedOnSend x payl)  => {(x, TCBBlockedSend)}
-  | (Structures_A.BlockedOnNotification x) => {(x, TCBSignal)}"
+  "tcb_st_refs_of z \<equiv> case z of (Running)               => {}
+  | (Inactive)              => {}
+  | (Restart)               => {}
+  | (BlockedOnReply)        => {}
+  | (IdleThreadState)       => {}
+  | (BlockedOnReceive x)  => {(x, TCBBlockedRecv)}
+  | (BlockedOnSend x payl)  => {(x, TCBBlockedSend)}
+  | (BlockedOnNotification x) => {(x, TCBSignal)}"
 
 definition
-  ep_q_refs_of   :: "Structures_A.endpoint      \<Rightarrow> (obj_ref \<times> reftype) set"
+  ep_q_refs_of   :: "endpoint      \<Rightarrow> (obj_ref \<times> reftype) set"
 where
   "ep_q_refs_of x \<equiv> case x of  
-    Structures_A.IdleEP    => {}
-  | (Structures_A.RecvEP q) => set q \<times> {EPRecv}
-  | (Structures_A.SendEP q) => set q \<times> {EPSend}"
+    IdleEP    => {}
+  | (RecvEP q) => set q \<times> {EPRecv}
+  | (SendEP q) => set q \<times> {EPSend}"
 
 definition
   ntfn_q_refs_of  :: "ntfn                   \<Rightarrow> (obj_ref \<times> reftype) set"
 where
   "ntfn_q_refs_of x \<equiv> case x of
-     Structures_A.IdleNtfn         => {}
-  | (Structures_A.WaitingNtfn q)   => set q \<times> {NTFNSignal}
-  | (Structures_A.ActiveNtfn b)  => {}"
+     IdleNtfn         => {}
+  | (WaitingNtfn q)   => set q \<times> {NTFNSignal}
+  | (ActiveNtfn b)  => {}"
 
 (* FIXME-NTFN: two new functions: ntfn_bound_refs and tcb_bound_refs, include below by union *)
 
@@ -567,7 +537,7 @@ where
    | None \<Rightarrow> {}"
 
 definition
-  refs_of :: "Structures_A.kernel_object \<Rightarrow> (obj_ref \<times> reftype) set"
+  refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set"
 where
   "refs_of x \<equiv> case x of
      CNode sz fun      => {}
@@ -589,19 +559,19 @@ where
 
 
 primrec
-  live :: "Structures_A.kernel_object \<Rightarrow> bool"
+  live :: "kernel_object \<Rightarrow> bool"
 where
   "live (CNode sz fun)      = False"
-| "live (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> (tcb_state tcb \<noteq> Structures_A.Inactive \<and>
-                               tcb_state tcb \<noteq> Structures_A.IdleThreadState))"
-| "live (Endpoint ep)       = (ep \<noteq> Structures_A.IdleEP)"
-| "live (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> (\<exists>ts. ntfn_obj ntfn = Structures_A.WaitingNtfn ts))"
+| "live (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> (tcb_state tcb \<noteq> Inactive \<and>
+                               tcb_state tcb \<noteq> IdleThreadState))"
+| "live (Endpoint ep)       = (ep \<noteq> IdleEP)"
+| "live (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> (\<exists>ts. ntfn_obj ntfn = WaitingNtfn ts))"
 | "live (ArchObj ao)        = False"
 
 fun
   zobj_refs :: "cap \<Rightarrow> obj_ref set"
 where
-  "zobj_refs (cap.Zombie r b n) = {}"
+  "zobj_refs (Zombie r b n) = {}"
 | "zobj_refs x                  = obj_refs x"
 
 definition
@@ -623,22 +593,22 @@ where
 primrec
   cte_refs :: "cap \<Rightarrow> (irq \<Rightarrow> obj_ref) \<Rightarrow> cslot_ptr set"
 where
-  "cte_refs (cap.UntypedCap p n fr) f                = {}"
-| "cte_refs (cap.NullCap) f                          = {}"
-| "cte_refs (cap.EndpointCap r badge rights) f       = {}"
-| "cte_refs (cap.NotificationCap r badge rights) f  = {}"
-| "cte_refs (cap.CNodeCap r bits guard) f            =
+  "cte_refs (UntypedCap p n fr) f                = {}"
+| "cte_refs (NullCap) f                          = {}"
+| "cte_refs (EndpointCap r badge rights) f       = {}"
+| "cte_refs (NotificationCap r badge rights) f  = {}"
+| "cte_refs (CNodeCap r bits guard) f            =
      {r} \<times> {xs. length xs = bits}"
-| "cte_refs (cap.ThreadCap r) f                      =
+| "cte_refs (ThreadCap r) f                      =
      {r} \<times> (dom tcb_cap_cases)"
-| "cte_refs (cap.DomainCap) f                        = {}"
-| "cte_refs (cap.Zombie r b n) f                     =
+| "cte_refs (DomainCap) f                        = {}"
+| "cte_refs (Zombie r b n) f                     =
      {r} \<times> {xs. length xs = (zombie_cte_bits b) \<and>
                 unat (of_bl xs :: word32) < n}"
-| "cte_refs (cap.IRQControlCap) f                    = {}"
-| "cte_refs (cap.IRQHandlerCap irq) f                = {(f irq, [])}"
-| "cte_refs (cap.ReplyCap tcb master) f              = {}"
-| "cte_refs (cap.ArchObjectCap cap) f                = {}"
+| "cte_refs (IRQControlCap) f                    = {}"
+| "cte_refs (IRQHandlerCap irq) f                = {(f irq, [])}"
+| "cte_refs (ReplyCap tcb master) f              = {}"
+| "cte_refs (ArchObjectCap cap) f                = {}"
 
 definition
   ex_cte_cap_wp_to :: "(cap \<Rightarrow> bool) \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -657,15 +627,15 @@ definition
 where
  "appropriate_cte_cap cap cte_cap \<equiv>
   case cap of
-    cap.NullCap \<Rightarrow> True
-  | cap.NotificationCap _ _ _ \<Rightarrow> True
+    NullCap \<Rightarrow> True
+  | NotificationCap _ _ _ \<Rightarrow> True
   | _ \<Rightarrow> cap_irqs cte_cap = {}"
 
 definition
   if_unsafe_then_cap :: "'z::state_ext state \<Rightarrow> bool"
 where
  "if_unsafe_then_cap s \<equiv> \<forall>cref cap. caps_of_state s cref = Some cap
-                         \<longrightarrow> cap \<noteq> cap.NullCap
+                         \<longrightarrow> cap \<noteq> NullCap
                         \<longrightarrow> ex_cte_cap_wp_to (appropriate_cte_cap cap) cref s"
 
 text {* All zombies are final. *}
@@ -686,7 +656,7 @@ where
 definition
   null_filter :: "('a \<Rightarrow> cap option) \<Rightarrow> ('a \<Rightarrow> cap option)"
 where
-  "null_filter f \<equiv> (\<lambda>x. if f x = Some cap.NullCap then None else f x)"
+  "null_filter f \<equiv> (\<lambda>x. if f x = Some NullCap then None else f x)"
 
 definition
   untyped_mdb :: "cdt \<Rightarrow> (cslot_ptr \<rightharpoonup> cap) \<Rightarrow> bool"
@@ -723,14 +693,14 @@ where
   \<forall>p p'. p \<in> descendants_of p' m \<longrightarrow> (cap_class (the (cs p)) = cap_class (the (cs p')) \<and> cap_range (the (cs p)) \<subseteq> cap_range (the (cs p')))"
 
 abbreviation
-  "awaiting_reply ts \<equiv> ts = Structures_A.BlockedOnReply"
+  "awaiting_reply ts \<equiv> ts = BlockedOnReply"
 
 definition
   "valid_ioc s \<equiv>
-   \<forall>p. is_original_cap s p \<longrightarrow> cte_wp_at (\<lambda>x. x \<noteq> cap.NullCap)  p s"
+   \<forall>p. is_original_cap s p \<longrightarrow> cte_wp_at (\<lambda>x. x \<noteq> NullCap)  p s"
 
 definition
-  "has_reply_cap t s \<equiv> \<exists>p. cte_wp_at (op = (cap.ReplyCap t False)) p s"
+  "has_reply_cap t s \<equiv> \<exists>p. cte_wp_at (op = (ReplyCap t False)) p s"
 
 definition
   "mdb_cte_at ct_at m \<equiv> \<forall>p c. m c = Some p \<longrightarrow> ct_at p \<and> ct_at c"
@@ -742,7 +712,7 @@ definition
   "ut_revocable r cs \<equiv> \<forall>p cap. cs p = Some cap \<longrightarrow> is_untyped_cap cap \<longrightarrow> r p"
 
 definition
-  "irq_revocable r cs \<equiv> \<forall>p. cs p = Some cap.IRQControlCap \<longrightarrow> r p"
+  "irq_revocable r cs \<equiv> \<forall>p. cs p = Some IRQControlCap \<longrightarrow> r p"
 
 definition
   "reply_master_revocable r cs \<equiv> \<forall>p cap. cs p = Some cap \<longrightarrow>
@@ -750,19 +720,19 @@ definition
 
 definition
   "reply_caps_mdb m cs \<equiv> \<forall>ptr t.
-     cs ptr = Some (cap.ReplyCap t False) \<longrightarrow>
-     (\<exists>ptr'. m ptr = Some ptr' \<and> cs ptr' = Some (cap.ReplyCap t True))"
+     cs ptr = Some (ReplyCap t False) \<longrightarrow>
+     (\<exists>ptr'. m ptr = Some ptr' \<and> cs ptr' = Some (ReplyCap t True))"
 
 definition
   "reply_masters_mdb m cs \<equiv> \<forall>ptr t.
-     cs ptr = Some (cap.ReplyCap t True) \<longrightarrow> m ptr = None \<and>
-     (\<forall>ptr'\<in>descendants_of ptr m. cs ptr' = Some (cap.ReplyCap t False))"
+     cs ptr = Some (ReplyCap t True) \<longrightarrow> m ptr = None \<and>
+     (\<forall>ptr'\<in>descendants_of ptr m. cs ptr' = Some (ReplyCap t False))"
 
 definition
   "reply_mdb m cs \<equiv> reply_caps_mdb m cs \<and> reply_masters_mdb m cs"
 
 definition
-  "valid_mdb \<equiv> \<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s) \<and>
+  "valid_mdb \<equiv> \<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> NullCap)) s) (cdt s) \<and>
                    untyped_mdb (cdt s) (caps_of_state s) \<and> descendants_inc (cdt s) (caps_of_state s) \<and>
                    no_mloop (cdt s) \<and> untyped_inc (cdt s) (caps_of_state s) \<and>
                    ut_revocable (is_original_cap s) (caps_of_state s) \<and>
@@ -780,7 +750,7 @@ definition
   "only_idle \<equiv> \<lambda>s. \<forall>t. st_tcb_at idle t s \<longrightarrow> t = idle_thread s"
 
 definition
-  "valid_reply_masters \<equiv> \<lambda>s. \<forall>p t. cte_wp_at (op = (cap.ReplyCap t True)) p s \<longrightarrow>
+  "valid_reply_masters \<equiv> \<lambda>s. \<forall>p t. cte_wp_at (op = (ReplyCap t True)) p s \<longrightarrow>
                                      p = (t, tcb_cnode_index 2)"
 
 definition
@@ -913,26 +883,18 @@ definition
   "typ_range p T \<equiv> {p .. p + 2^obj_bits_type T - 1}"
 
 abbreviation
-  CapTableObject :: Structures_A.apiobject_type where
-  "CapTableObject == Structures_A.CapTableObject"
+  "active st \<equiv> st = Running \<or> st = Restart"
 
 abbreviation
-  Untyped :: Structures_A.apiobject_type where
-  "Untyped == Structures_A.Untyped"
-
-abbreviation
-  "active st \<equiv> st = Structures_A.Running \<or> st = Structures_A.Restart"
-
-abbreviation
-  "simple st \<equiv> st = Structures_A.Inactive \<or>
-                 st = Structures_A.Running \<or>
-                 st = Structures_A.Restart \<or>
+  "simple st \<equiv> st = Inactive \<or>
+                 st = Running \<or>
+                 st = Restart \<or>
                  idle st \<or> awaiting_reply st"
 abbreviation
   "ct_active \<equiv> ct_in_state active"
 
 abbreviation
-  "ct_running  \<equiv> ct_in_state  (\<lambda>st. st = Structures_A.Running)"
+  "ct_running  \<equiv> ct_in_state  (\<lambda>st. st = Running)"
 
 abbreviation
   "ct_idle \<equiv> ct_in_state idle"
@@ -1010,12 +972,12 @@ lemma ko_at_tcb_at:
 lemma tcb_at_def:
   "tcb_at t s = (\<exists>tcb. get_tcb t s = Some tcb)"
   by (simp add: obj_at_def get_tcb_def is_tcb_def
-           split: option.splits Structures_A.kernel_object.splits)
+           split: option.splits kernel_object.splits)
 
 lemma pred_tcb_def2:
   "pred_tcb_at proj test addr s = (\<exists>tcb. (get_tcb addr s) = Some tcb \<and> test (proj (tcb_to_itcb tcb)))"
   by (simp add: obj_at_def pred_tcb_at_def get_tcb_def
-            split: option.splits Structures_A.kernel_object.splits)
+            split: option.splits kernel_object.splits)
 
 (* sseefried: 'st_tcb_def2' only exists to make existing proofs go through. Can use 'pred_tcb_at_def2' instead *)
 lemmas st_tcb_def2 = pred_tcb_def2[where proj=itcb_state,simplified]
@@ -1026,28 +988,25 @@ lemma obj_at_eq_helper:
   apply (simp add: obj_at_def)
   done
 
-lemmas a_type_simps =
-  a_type_def[split_simps Structures_A.kernel_object.split]
-
 lemma tcb_at_typ:
   "tcb_at = typ_at ATCB"
   apply (rule obj_at_eq_helper)
   apply (simp add: is_tcb_def a_type_def
-            split: Structures_A.kernel_object.splits)
+            split: kernel_object.splits)
   done
 
 lemma ntfn_at_typ:
   "ntfn_at = typ_at ANTFN"
   apply (rule obj_at_eq_helper)
   apply (simp add: is_ntfn_def a_type_def
-            split: Structures_A.kernel_object.splits)
+            split: kernel_object.splits)
   done
 
 lemma ep_at_typ:
   "ep_at = typ_at AEndpoint"
   apply (rule obj_at_eq_helper)
   apply (simp add: is_ep_def a_type_def
-            split: Structures_A.kernel_object.splits)
+            split: kernel_object.splits)
   done
 
 lemma length_set_helper:
@@ -1097,15 +1056,15 @@ lemma tcb_cap_cases_simps[simp]:
   "tcb_cap_cases (tcb_cnode_index 2) =
    Some (tcb_reply, tcb_reply_update,
          (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t) \<or>
-                   (halted st \<and> (c = cap.NullCap))))"
+                   (halted st \<and> (c = NullCap))))"
   "tcb_cap_cases (tcb_cnode_index 3) =
    Some (tcb_caller, tcb_caller_update,
          (\<lambda>_ st. case st of
-                   Structures_A.BlockedOnReceive e \<Rightarrow> (op = cap.NullCap)
-                 | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)))"
+                   BlockedOnReceive e \<Rightarrow> (op = NullCap)
+                 | _ \<Rightarrow> is_reply_cap or (op = NullCap)))"
   "tcb_cap_cases (tcb_cnode_index 4) =
    Some (tcb_ipcframe, tcb_ipcframe_update,
-         (\<lambda>_ _. is_arch_cap or (op = cap.NullCap)))"
+         (\<lambda>_ _. is_arch_cap or (op = NullCap)))"
   by (simp add: tcb_cap_cases_def)+
 
 lemma ran_tcb_cap_cases:
@@ -1114,14 +1073,13 @@ lemma ran_tcb_cap_cases:
      (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>)),
      (tcb_reply, tcb_reply_update, (\<lambda>t st c.
                                        (is_master_reply_cap c \<and> obj_ref_of c = t)
-                                     \<or> (halted st \<and> (c = cap.NullCap)))),
+                                     \<or> (halted st \<and> (c = NullCap)))),
      (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e \<Rightarrow>
-                                         (op = cap.NullCap)
-                                     | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap))),
-     (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_arch_cap or (op = cap.NullCap)))}"
-  by (simp add: tcb_cap_cases_def ran_map_upd
-                insert_commute)
+                                       BlockedOnReceive e \<Rightarrow>
+                                         (op = NullCap)
+                                     | _ \<Rightarrow> is_reply_cap or (op = NullCap))),
+     (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_arch_cap or (op = NullCap)))}"
+  by (simp add: tcb_cap_cases_def insert_commute)
 
 lemma tcb_cnode_map_tcb_cap_cases:
   "tcb_cnode_map tcb = (\<lambda>bl. map_option (\<lambda>x. fst x tcb) (tcb_cap_cases bl))"
@@ -1135,7 +1093,7 @@ lemma ran_tcb_cnode_map:
 
 lemma st_tcb_idle_cap_valid_Null [simp]:
   "st_tcb_at (idle or inactive) (fst sl) s \<longrightarrow>
-   tcb_cap_valid cap.NullCap sl s"
+   tcb_cap_valid NullCap sl s"
   by (fastforce simp: tcb_cap_valid_def tcb_cap_cases_def
                       pred_tcb_at_def obj_at_def
                       valid_ipc_buffer_cap_null)
@@ -1162,26 +1120,26 @@ lemma symreftype_inverse[simp]:
   by (cases t, simp+)
 
 lemma tcb_st_refs_of_simps[simp]:
- "tcb_st_refs_of (Structures_A.Running)               = {}"
- "tcb_st_refs_of (Structures_A.Inactive)              = {}"
- "tcb_st_refs_of (Structures_A.Restart)               = {}"
- "tcb_st_refs_of (Structures_A.BlockedOnReply)        = {}"
- "tcb_st_refs_of (Structures_A.IdleThreadState)       = {}"
- "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnReceive x)  = {(x, TCBBlockedRecv)}"
- "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnSend x payl)  = {(x, TCBBlockedSend)}"
- "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnNotification x) = {(x, TCBSignal)}"
+ "tcb_st_refs_of (Running)               = {}"
+ "tcb_st_refs_of (Inactive)              = {}"
+ "tcb_st_refs_of (Restart)               = {}"
+ "tcb_st_refs_of (BlockedOnReply)        = {}"
+ "tcb_st_refs_of (IdleThreadState)       = {}"
+ "\<And>x. tcb_st_refs_of (BlockedOnReceive x)  = {(x, TCBBlockedRecv)}"
+ "\<And>x. tcb_st_refs_of (BlockedOnSend x payl)  = {(x, TCBBlockedSend)}"
+ "\<And>x. tcb_st_refs_of (BlockedOnNotification x) = {(x, TCBSignal)}"
   by (auto simp: tcb_st_refs_of_def)
 
 lemma ep_q_refs_of_simps[simp]:
- "ep_q_refs_of  Structures_A.IdleEP    = {}"
- "\<And>q. ep_q_refs_of (Structures_A.RecvEP q) = set q \<times> {EPRecv}"
- "\<And>q. ep_q_refs_of (Structures_A.SendEP q) = set q \<times> {EPSend}"
+ "ep_q_refs_of  IdleEP    = {}"
+ "\<And>q. ep_q_refs_of (RecvEP q) = set q \<times> {EPRecv}"
+ "\<And>q. ep_q_refs_of (SendEP q) = set q \<times> {EPSend}"
   by (auto simp: ep_q_refs_of_def)
 
 lemma ntfn_q_refs_of_simps[simp]:
- "ntfn_q_refs_of Structures_A.IdleNtfn        = {}"
- "ntfn_q_refs_of (Structures_A.WaitingNtfn q)   = set q \<times> {NTFNSignal}"
- "ntfn_q_refs_of (Structures_A.ActiveNtfn b)  = {}"
+ "ntfn_q_refs_of IdleNtfn        = {}"
+ "ntfn_q_refs_of (WaitingNtfn q)   = set q \<times> {NTFNSignal}"
+ "ntfn_q_refs_of (ActiveNtfn b)  = {}"
   by (auto simp: ntfn_q_refs_of_def)
 
 lemma ntfn_bound_refs_simps[simp]:
@@ -1209,17 +1167,17 @@ lemma refs_of_simps[simp]:
 
 lemma refs_of_rev:
  "(x, TCBBlockedRecv) \<in> refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = Structures_A.BlockedOnReceive x))"
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = BlockedOnReceive x))"
  "(x, TCBBlockedSend) \<in> refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (\<exists>pl. tcb_state tcb = Structures_A.BlockedOnSend    x pl))"
+    (\<exists>tcb. ko = TCB tcb \<and> (\<exists>pl. tcb_state tcb = BlockedOnSend    x pl))"
  "(x, TCBSignal) \<in> refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = Structures_A.BlockedOnNotification x))"
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = BlockedOnNotification x))"
  "(x, EPRecv) \<in> refs_of ko =
-    (\<exists>ep. ko = Endpoint ep \<and> (\<exists>q. ep = Structures_A.RecvEP q \<and> x \<in> set q))"
+    (\<exists>ep. ko = Endpoint ep \<and> (\<exists>q. ep = RecvEP q \<and> x \<in> set q))"
  "(x, EPSend) \<in> refs_of ko =
-    (\<exists>ep. ko = Endpoint ep \<and> (\<exists>q. ep = Structures_A.SendEP q \<and> x \<in> set q))"
+    (\<exists>ep. ko = Endpoint ep \<and> (\<exists>q. ep = SendEP q \<and> x \<in> set q))"
  "(x, NTFNSignal) \<in> refs_of ko =
-    (\<exists>ntfn. ko = Notification ntfn \<and> (\<exists>q. ntfn_obj ntfn = Structures_A.WaitingNtfn q \<and> x \<in> set q))"
+    (\<exists>ntfn. ko = Notification ntfn \<and> (\<exists>q. ntfn_obj ntfn = WaitingNtfn q \<and> x \<in> set q))"
  "(x, TCBBound) \<in>  refs_of ko =
     (\<exists>tcb. ko = TCB tcb \<and> (tcb_bound_notification tcb = Some x))"
  "(x, NTFNBound) \<in> refs_of ko =
@@ -1230,19 +1188,19 @@ lemma refs_of_rev:
                      ntfn_q_refs_of_def
                      ntfn_bound_refs_def
                      tcb_bound_refs_def
-              split: Structures_A.kernel_object.splits
-                     Structures_A.thread_state.splits
-                     Structures_A.endpoint.splits
-                     Structures_A.ntfn.splits
+              split: kernel_object.splits
+                     thread_state.splits
+                     endpoint.splits
+                     ntfn.splits
                      option.split)
 
 lemma st_tcb_at_refs_of_rev:
   "obj_at (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of ko) t s
-     = st_tcb_at (\<lambda>ts. ts = Structures_A.BlockedOnReceive x) t s"
+     = st_tcb_at (\<lambda>ts. ts = BlockedOnReceive x) t s"
   "obj_at (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of ko) t s
-     = st_tcb_at (\<lambda>ts. \<exists>pl. ts = Structures_A.BlockedOnSend x pl   ) t s"
+     = st_tcb_at (\<lambda>ts. \<exists>pl. ts = BlockedOnSend x pl   ) t s"
   "obj_at (\<lambda>ko. (x, TCBSignal) \<in> refs_of ko) t s
-     = st_tcb_at (\<lambda>ts.      ts = Structures_A.BlockedOnNotification x) t s"
+     = st_tcb_at (\<lambda>ts.      ts = BlockedOnNotification x) t s"
   by (simp add: refs_of_rev pred_tcb_at_def)+
 
 lemma state_refs_of_elemD:
@@ -1392,7 +1350,7 @@ lemma caps_of_state_cte_wp_at:
  "caps_of_state s = (\<lambda>p. if (\<exists>cap. cte_wp_at (op = cap) p s)
                          then Some (THE cap. cte_wp_at (op = cap) p s)
                          else None)"
-  by (clarsimp simp: cte_wp_at_def caps_of_state_def intro!: ext)
+  by (rule ext) (clarsimp simp: cte_wp_at_def caps_of_state_def)
 
 lemma cte_wp_at_caps_of_state:
  "cte_wp_at P p s = (\<exists>cap. caps_of_state s p = Some cap \<and> P cap)"
@@ -1411,7 +1369,7 @@ lemma ex_cte_cap_wp_to_weakenE:
   done
 
 lemma if_unsafe_then_capD:
-  "\<lbrakk> cte_wp_at P p s; if_unsafe_then_cap s; \<And>cap. P cap \<Longrightarrow> cap \<noteq> cap.NullCap \<rbrakk>
+  "\<lbrakk> cte_wp_at P p s; if_unsafe_then_cap s; \<And>cap. P cap \<Longrightarrow> cap \<noteq> NullCap \<rbrakk>
      \<Longrightarrow> ex_cte_cap_wp_to (\<lambda>cap. \<exists>cap'. P cap' \<and> appropriate_cte_cap cap' cap) p s"
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (unfold if_unsafe_then_cap_def)
@@ -1453,13 +1411,13 @@ lemma valid_reply_capsD:
   by simp
 
 lemma reply_master_caps_of_stateD:
-  "\<And>sl. \<lbrakk> valid_reply_masters s; caps_of_state s sl = Some (cap.ReplyCap t True)\<rbrakk>
+  "\<And>sl. \<lbrakk> valid_reply_masters s; caps_of_state s sl = Some (ReplyCap t True)\<rbrakk>
    \<Longrightarrow> sl = (t, tcb_cnode_index 2)"
   by (simp add: valid_reply_masters_def cte_wp_at_caps_of_state
            del: split_paired_All)
 
 lemma has_reply_cap_cte_wpD:
-  "\<And>t sl. cte_wp_at (op = (cap.ReplyCap t False)) sl s \<Longrightarrow> has_reply_cap t s"
+  "\<And>t sl. cte_wp_at (op = (ReplyCap t False)) sl s \<Longrightarrow> has_reply_cap t s"
   by (fastforce simp: has_reply_cap_def)
 
 lemma reply_cap_doesnt_exist_strg:
@@ -1523,8 +1481,7 @@ lemma idle_no_ex_cap:
   apply (intro allI notI impI)
   apply (drule bspec, blast intro: ranI)
   apply (clarsimp simp: cap_range_def zobj_refs_to_obj_refs)
-  apply (blast intro: idle_global)
-  done
+  by blast
 
 lemma caps_of_state_cteD:
   "caps_of_state s p = Some cap \<Longrightarrow> cte_wp_at (op = cap) p s"
@@ -1551,10 +1508,6 @@ lemma untyped_children_in_mdbE:
   apply (erule z)
   done
 
-lemma obj_at_pspaceI:
-  "\<lbrakk> obj_at P ref s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> obj_at P ref s'"
-  by (simp add: obj_at_def)
-
 lemma cte_wp_at_cases:
   "cte_wp_at P t s = ((\<exists>sz fun cap. kheap s (fst t) = Some (CNode sz fun) \<and>
                                     well_formed_cnode_n sz fun \<and>
@@ -1570,7 +1523,7 @@ lemma cte_wp_at_cases:
   apply (simp add: cte_wp_at_def get_cap_def tcb_cnode_map_def bind_def
                    get_object_def assert_opt_def return_def gets_def get_def
                    assert_def fail_def dom_def
-              split: split_if_asm Structures_A.kernel_object.splits
+              split: split_if_asm kernel_object.splits
                      option.splits)
   apply (simp add: tcb_cap_cases_def)
   done
@@ -1592,13 +1545,12 @@ context Arch begin
 lemma valid_arch_cap_pspaceI:
   "\<lbrakk> valid_arch_cap acap s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_cap acap s'"
   unfolding valid_arch_cap_def
-  by (auto intro: aobj_at_pspaceI split: arch_cap.split)
+  by (auto intro: obj_at_pspaceI split: arch_cap.split)
 
 
 unqualify_facts valid_arch_cap_pspaceI valid_arch_obj_pspaceI
 
 end
- 
 
 lemma valid_cap_pspaceI:
   "\<lbrakk> s \<turnstile> cap; kheap s = kheap s' \<rbrakk> \<Longrightarrow> s' \<turnstile> cap"
@@ -1617,8 +1569,8 @@ lemma valid_obj_pspaceI:
       apply (auto simp add: valid_ntfn_def valid_cs_def valid_tcb_def valid_ep_def 
                            valid_tcb_state_def pred_tcb_at_def valid_bound_ntfn_def valid_bound_tcb_def
                  intro: obj_at_pspaceI valid_cap_pspaceI valid_arch_obj_pspaceI
-                 split: Structures_A.ntfn.splits Structures_A.endpoint.splits
-                        Structures_A.thread_state.splits option.split
+                 split: ntfn.splits endpoint.splits
+                        thread_state.splits option.split
           | auto split: kernel_object.split)+
   done
 
@@ -1721,8 +1673,6 @@ lemma valid_mdb_eqI:
    apply (force simp add: valid_mdb_def swp_def mdb_cte_at_def)
   apply (clarsimp simp add: cte_wp_caps_of_lift [OF c])
   done
-
-declare word_neq_0_conv[simp del]
 
 lemma set_object_at_obj:
   "\<lbrace> \<lambda>s. obj_at P p s \<and> (p = r \<longrightarrow> P obj) \<rbrace> set_object r obj \<lbrace> \<lambda>rv. obj_at P p \<rbrace>"
@@ -1942,7 +1892,7 @@ lemma obj_at_valid_objsE:
   by (auto simp: valid_objs_def obj_at_def dom_def)
 
 lemma valid_CNodeCapE:
-  assumes p: "s \<turnstile> cap.CNodeCap ptr cbits guard" "valid_objs s" "pspace_aligned s"
+  assumes p: "s \<turnstile> CNodeCap ptr cbits guard" "valid_objs s" "pspace_aligned s"
   assumes R: "\<And>cs. \<lbrakk> 0 < cbits; kheap s ptr = Some (CNode cbits cs);
                \<forall>cap\<in>ran cs. s \<turnstile> cap; dom cs = {x. length x = cbits};
                is_aligned ptr (4 + cbits); cbits < word_bits - cte_level_bits
@@ -2108,7 +2058,7 @@ lemma pspace_typ_at:
 lemma obj_bits_T:
   "obj_bits v = obj_bits_type (a_type v)"
   apply (cases v, simp_all add: obj_bits_type_def a_type_def)
-   apply (clarsimp simp: obj_bits.simps well_formed_cnode_n_def 
+   apply (clarsimp simp: well_formed_cnode_n_def 
                          length_set_helper length_helper cte_level_bits_def)
   apply (rule aobj_bits_T)
   done
@@ -2137,8 +2087,8 @@ lemma valid_untyped_T:
 
 lemma valid_untyped_typ:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  shows "\<lbrace>valid_untyped (cap.UntypedCap r n fr)\<rbrace> f
-         \<lbrace>\<lambda>rv. valid_untyped (cap.UntypedCap r n fr)\<rbrace>"
+  shows "\<lbrace>valid_untyped (UntypedCap r n fr)\<rbrace> f
+         \<lbrace>\<lambda>rv. valid_untyped (UntypedCap r n fr)\<rbrace>"
   unfolding valid_untyped_T
   apply (rule hoare_vcg_all_lift)
   apply (rule hoare_vcg_all_lift)
@@ -2147,15 +2097,9 @@ lemma valid_untyped_typ:
   done
 
 lemma cap_aligned_Null [simp]:
-  "cap_aligned (cap.NullCap)"
+  "cap_aligned (NullCap)"
   by (simp add: cap_aligned_def word_bits_def is_aligned_def)
 
-
-
-lemma atyp_at_typ_at: 
-  assumes P: "\<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. P (atyp_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (atyp_at T p s)\<rbrace>"
-  by (simp add: atyp_at_def2 P)
 
 lemma valid_cap_typ:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
@@ -2164,10 +2108,9 @@ lemma valid_cap_typ:
   apply (rule hoare_vcg_conj_lift)
    apply (simp add: valid_def)
   apply (case_tac c,
-         simp_all add: valid_cap_def hoare_post_taut P P[where P=id, simplified]
+         simp_all add: valid_cap_def P P[where P=id, simplified]
                        ep_at_typ tcb_at_typ ntfn_at_typ
-                       cap_table_at_typ hoare_vcg_prop
-                       hoare_pre_cont)
+                       cap_table_at_typ hoare_vcg_prop)
       apply (rule hoare_vcg_conj_lift [OF valid_untyped_typ[OF P]])
       apply (simp add: valid_def)
      apply (rule hoare_vcg_conj_lift [OF P hoare_vcg_prop])+
@@ -2177,7 +2120,7 @@ lemma valid_cap_typ:
     apply (rule hoare_vcg_prop)
    apply (rule hoare_vcg_conj_lift [OF P])
    apply (rule hoare_vcg_prop)
-  apply (wp valid_arch_cap_atyp atyp_at_typ_at P)
+  apply (wp valid_arch_cap_typ P)
   done
 
 lemma valid_tcb_state_typ:
@@ -2236,8 +2179,6 @@ lemma valid_ntfn_typ:
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop], simp add: P)
   done
 
-lemmas valid_arch_obj_typ = valid_arch_obj_atyp[OF atyp_at_typ_at]
-
 lemma valid_obj_typ:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_obj p ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj p ob s\<rbrace>"
@@ -2264,7 +2205,6 @@ lemma wf_cs_upd:
   done
 
 
-
 lemma cte_wp_at_valid_objs_valid_cap:
   "\<lbrakk> cte_wp_at P p s; valid_objs s \<rbrakk> \<Longrightarrow> \<exists>cap. P cap \<and> valid_cap cap s"
   apply (clarsimp simp: cte_wp_at_cases valid_objs_def)
@@ -2281,16 +2221,16 @@ lemma cte_wp_at_valid_objs_valid_cap:
   done
 
 lemma is_cap_simps:
-  "is_cnode_cap cap = (\<exists>r bits g. cap = cap.CNodeCap r bits g)"
-  "is_thread_cap cap = (\<exists>r. cap = cap.ThreadCap r)"
-  "is_domain_cap cap = (cap = cap.DomainCap)"
-  "is_untyped_cap cap = (\<exists>r bits f. cap = cap.UntypedCap r bits f)"
-  "is_ep_cap cap = (\<exists>r b R. cap = cap.EndpointCap r b R)"
-  "is_ntfn_cap cap = (\<exists>r b R. cap = cap.NotificationCap r b R)"
-  "is_zombie cap = (\<exists>r b n. cap = cap.Zombie r b n)"
-  "is_arch_cap cap = (\<exists>a. cap = cap.ArchObjectCap a)"
-  "is_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x False)"
-  "is_master_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x True)"
+  "is_cnode_cap cap = (\<exists>r bits g. cap = CNodeCap r bits g)"
+  "is_thread_cap cap = (\<exists>r. cap = ThreadCap r)"
+  "is_domain_cap cap = (cap = DomainCap)"
+  "is_untyped_cap cap = (\<exists>r bits f. cap = UntypedCap r bits f)"
+  "is_ep_cap cap = (\<exists>r b R. cap = EndpointCap r b R)"
+  "is_ntfn_cap cap = (\<exists>r b R. cap = NotificationCap r b R)"
+  "is_zombie cap = (\<exists>r b n. cap = Zombie r b n)"
+  "is_arch_cap cap = (\<exists>a. cap = ArchObjectCap a)"
+  "is_reply_cap cap = (\<exists>x. cap = ReplyCap x False)"
+  "is_master_reply_cap cap = (\<exists>x. cap = ReplyCap x True)"
   by (cases cap, auto simp: is_zombie_def is_arch_cap_def
                             is_reply_cap_def is_master_reply_cap_def)+
 
@@ -2399,9 +2339,8 @@ lemma valid_objs_caps_contained:
   apply fastforce
   done
 
-declare word_neq_0_conv [simp del]
 lemma P_null_filter_caps_of_cte_wp_at:
-  "\<not> P cap.NullCap \<Longrightarrow>
+  "\<not> P NullCap \<Longrightarrow>
    (null_filter (caps_of_state s) x \<noteq> None \<and> P (the (null_filter (caps_of_state s) x)))
      = (cte_wp_at P x s)"
   by (simp add: cte_wp_at_caps_of_state null_filter_def, fastforce)
@@ -2425,7 +2364,7 @@ lemma swp_cte_at_caps_of:
   done
 
 lemma valid_mdb_def2:
-  "valid_mdb = (\<lambda>s. mdb_cte_at (\<lambda>p. \<exists>c. caps_of_state s p = Some c \<and> cap.NullCap \<noteq> c) (cdt s) \<and>
+  "valid_mdb = (\<lambda>s. mdb_cte_at (\<lambda>p. \<exists>c. caps_of_state s p = Some c \<and> NullCap \<noteq> c) (cdt s) \<and>
                     untyped_mdb (cdt s) (caps_of_state s) \<and> descendants_inc (cdt s) (caps_of_state s) \<and>
                     no_mloop (cdt s) \<and> untyped_inc (cdt s) (caps_of_state s) \<and>
                     ut_revocable (is_original_cap s) (caps_of_state s) \<and>
@@ -2477,10 +2416,6 @@ lemma valid_space_update [iff]:
 lemma obj_at_update [iff]:
   "obj_at P p (f s) = obj_at P p s"
   by (fastforce intro: obj_at_pspaceI simp: pspace)
-
-lemma aobj_at_update [iff]:
-  "aobj_at P p (f s) = aobj_at P p s"
-  by (simp add: aobj_at_def2)
 
 lemma cte_wp_at_update [iff]:
   "cte_wp_at P p (f s) = cte_wp_at P p s"
@@ -2766,9 +2701,6 @@ lemma valid_global_refs_cte_lift:
   done
 
 
-lemmas valid_arch_state_lift = valid_arch_state_lift_atyp_at[simplified atyp_at_def2]
-
-
 lemma has_reply_cap_cte_lift:
   assumes ctes: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> f \<lbrace>\<lambda>_ s. P (has_reply_cap t s)\<rbrace>"
@@ -2815,8 +2747,6 @@ lemma dom_empty_cnode: "dom (empty_cnode us) = {x. length x = us}"
   unfolding empty_cnode_def
   by (simp add: dom_def)
 
-declare is_aligned_0' [simp]
-
 lemma obj_at_default_cap_valid:
   "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty us) x s;
    ty = CapTableObject \<Longrightarrow> 0 < us;
@@ -2828,8 +2758,8 @@ lemma obj_at_default_cap_valid:
       intro!: aobj_at_default_arch_cap_valid
       simp: default_object_def dom_empty_cnode well_formed_cnode_n_def
             is_tcb is_ep is_ntfn is_cap_table
-            a_type_def aobj_at_def2
-     split: Structures_A.apiobject_type.splits
+            a_type_def obj_at_def
+     split: apiobject_type.splits
             option.splits)
 
 lemma obj_ref_default [simp]:
@@ -2885,9 +2815,8 @@ lemmas caps_of_state_valid_cap = cte_wp_valid_cap [OF caps_of_state_cteD]
 
 context Arch begin
   lemma obj_ref_is_arch:
-    "\<lbrakk>aobj_ref c = Some r; valid_arch_cap c s\<rbrakk> \<Longrightarrow> aobj_at \<top> r s"
-  by (auto simp add: valid_arch_cap_def aobj_at_def 
-              split: arch_cap.splits)
+    "\<lbrakk>aobj_ref c = Some r; valid_arch_cap c s\<rbrakk> \<Longrightarrow> \<exists> ako. kheap s r = Some (ArchObj ako)"
+  by (auto simp add: valid_arch_cap_def obj_at_def split: arch_cap.splits)
   unqualify_facts obj_ref_is_arch
 end
 
@@ -2895,14 +2824,14 @@ end
 lemma obj_ref_is_tcb:
   "\<lbrakk> r \<in> obj_refs cap; tcb_at r s; s \<turnstile> cap \<rbrakk> \<Longrightarrow>
   is_thread_cap cap \<or> is_zombie cap"
-  by (auto simp: valid_cap_def is_cap_simps aobj_at_def2 obj_at_def is_obj_defs a_type_def
-           dest: obj_ref_is_arch
-           split: cap.splits)
+  by (auto simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
+          split: cap.splits
+           dest: obj_ref_is_arch)
 
 lemma obj_ref_is_cap_table:
   "\<lbrakk> r \<in> obj_refs cap; cap_table_at n r s; s \<turnstile> cap \<rbrakk> \<Longrightarrow>
   is_cnode_cap cap \<or> is_zombie cap"
-  by (auto simp: valid_cap_def is_cap_simps aobj_at_def2 obj_at_def is_obj_defs a_type_def
+  by (auto simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
            dest: obj_ref_is_arch
            split: cap.splits split_if_asm)
 
@@ -2965,12 +2894,12 @@ lemma swp_caps_of_state_arch_update [iff]:
   done
 
 lemma is_master_reply_cap_NullCap:
-  "is_master_reply_cap cap.NullCap = False"
+  "is_master_reply_cap NullCap = False"
   by (simp add: is_cap_simps)
 
 lemma unique_reply_capsD:
   "\<lbrakk> unique_reply_caps cs; reply_masters_mdb m cs;
-     cs master = Some (cap.ReplyCap t True);
+     cs master = Some (ReplyCap t True);
      sl\<in>descendants_of master m; sl'\<in>descendants_of master m \<rbrakk>
    \<Longrightarrow> sl = sl'"
   by (simp add: unique_reply_caps_def reply_masters_mdb_def is_cap_simps
@@ -2980,7 +2909,7 @@ lemma unique_reply_capsD:
 lemmas caps_of_state_valid =  caps_of_state_valid_cap
 
 lemma valid_reply_mastersD:
-  "\<lbrakk> cte_wp_at (op = (cap.ReplyCap t True)) p s; valid_reply_masters s \<rbrakk>
+  "\<lbrakk> cte_wp_at (op = (ReplyCap t True)) p s; valid_reply_masters s \<rbrakk>
    \<Longrightarrow> p = (t, tcb_cnode_index 2)"
   by (simp add: valid_reply_masters_def del: split_paired_All)
 
@@ -3017,7 +2946,7 @@ lemma cte_wp_at_eqD2:
 lemma not_pred_tcb:
   "(\<not>pred_tcb_at proj P t s) = (\<not>tcb_at t s \<or> pred_tcb_at proj (\<lambda>a. \<not>P a) t s)"
   apply (simp add: pred_tcb_at_def obj_at_def is_tcb_def)
-  apply (auto split: Structures_A.kernel_object.splits)
+  apply (auto split: kernel_object.splits)
   done
 
 
@@ -3047,7 +2976,7 @@ lemma state_refs_arch_update [iff]:
 
 lemma valid_global_refs_more_update[iff]:
   "valid_global_refs (trans_state f s) = valid_global_refs s"
-  by (simp add: valid_global_refs_def)
+  by (rule more_update.valid_global_refs_update)
 
 
 lemma valid_ioc_arch_state_update[iff]:
@@ -3070,7 +2999,7 @@ lemma valid_ioc_cur_thread_update[iff]:
 
 lemma vms_ioc_update[iff]:
   "valid_machine_state (is_original_cap_update f s::'z::state_ext state) = valid_machine_state s"
-  by (simp add: valid_machine_state_def)
+  by (simp add: valid_machine_state_def)+
 
 lemma valid_machine_state_more_update[iff]:
   "valid_machine_state (trans_state f s) = valid_machine_state s"
@@ -3125,7 +3054,7 @@ lemma empty_cnode_bits:
   by (simp add: wf_empty_bits cte_level_bits_def)
 
 lemma irq_revocableD:
-  "\<lbrakk> cs p = Some cap.IRQControlCap; irq_revocable (is_original_cap s) cs \<rbrakk> \<Longrightarrow> is_original_cap s p"
+  "\<lbrakk> cs p = Some IRQControlCap; irq_revocable (is_original_cap s) cs \<rbrakk> \<Longrightarrow> is_original_cap s p"
   by (fastforce simp add: irq_revocable_def simp del: split_paired_All)
 
 lemma invs_valid_stateI [elim!]:
@@ -3154,7 +3083,7 @@ lemma invs_mdb [elim!]:
   by (simp add: invs_def valid_state_def)
 
 lemma invs_mdb_cte [elim!]:
-  "invs s \<Longrightarrow> mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)"
+  "invs s \<Longrightarrow> mdb_cte_at (swp (cte_wp_at (op \<noteq> NullCap)) s) (cdt s)"
   by (simp add: invs_def valid_state_def valid_mdb_def)
 
 lemma invs_valid_pspace [elim!]:
@@ -3203,7 +3132,7 @@ lemma invs_zombies [elim!]:
 
 lemma objs_valid_tcb_ctable:
   "\<lbrakk>valid_objs s; get_tcb t s = Some tcb\<rbrakk> \<Longrightarrow> s \<turnstile> tcb_ctable tcb"
-  apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
+  apply (clarsimp simp: get_tcb_def split: option.splits kernel_object.splits)
   apply (erule cte_wp_valid_cap[rotated])
   apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b3="tcb_cnode_index 0"])
     apply fastforce+

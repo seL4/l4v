@@ -239,7 +239,7 @@ where
            PageTable pt             \<Rightarrow> APageTable
          | PageDirectory pd         \<Rightarrow> APageDirectory
          | DataPage sz              \<Rightarrow> AIntData sz
-         | ASIDPool f \<Rightarrow> AASIDPool)"
+         | ASIDPool f               \<Rightarrow> AASIDPool)"
 
 end
 
