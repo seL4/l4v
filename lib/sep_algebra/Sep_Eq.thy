@@ -29,6 +29,7 @@ text {*
 *}
 
 no_notation map_add (infixl "++" 100)
+declare [[syntax_ambiguity_warning = false]]
 
 section "Total implies Partial"
 
