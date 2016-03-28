@@ -51,10 +51,19 @@ method_setup sep_select = {*
 lemma sep_eq [sep_select]: "(\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> T s \<Longrightarrow> (P \<and>* R) s" by clarsimp
 lemma sep_asm_eq [sep_select_asm]: "(P \<and>* R) s \<Longrightarrow> (\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> T s" by clarsimp
 
+ML {* 
+  (* export method form of these two for use outisde this entry *)
+  
+  fun sep_select_method lens ns ctxt =
+    SIMPLE_METHOD' (sep_select_tactic lens ns ctxt) 
+
+  fun sep_select_generic_method asm thms ns ctxt =
+    sep_select_method (if asm then dresolve_tac ctxt thms else resolve_tac ctxt thms) ns ctxt
+*}
+
 method_setup sep_select_gen = {*
   Attrib.thms --| Scan.lift Args.colon -- Scan.lift (Scan.repeat Parse.int) -- Scan.lift (Args.mode "asm") >>
-    (fn ((lens, ns), asm) => fn ctxt =>
-      SIMPLE_METHOD' (sep_select_tactic (if asm then dresolve_tac ctxt lens else resolve_tac ctxt lens) ns ctxt))
+    (fn ((lens, ns), asm) => sep_select_generic_method asm lens ns)
 *}
 
 end
