@@ -30,6 +30,7 @@ class Call(object):
         self.bodies_only = False
         self.bad_type_assignment = False
         self.body = False
+        self.current_context = []
 
 
 class Def(object):
@@ -326,6 +327,19 @@ def defs_transform(d):
     return d
 
 
+def wrap_qualify(lines, deep=False):
+    """Close and then re-open a locale so instantiations can go through"""
+    if deep:
+        asdfextra = " (deep)"
+    else:
+        asdfextra = ""
+
+    if call.current_context:
+        lines.insert(0, 'end\nqualify{} {} begin'.format(asdfextra,
+            call.current_context[-1]))
+        lines.append('end_qualify\ncontext %s begin' % call.current_context[-1])
+    return lines
+
 def def_lines(d, call):
     """Produces the set of lines associated with a definition."""
     if call.all_bits:
@@ -342,7 +356,7 @@ def def_lines(d, call):
         elif d.type == 'newtype':
             L.extend(flatten_tree(d.body))
         if d.instance_proofs:
-            L.extend(flatten_tree(d.instance_proofs))
+            L.extend(wrap_qualify(flatten_tree(d.instance_proofs)))
             L.append('')
         if d.instance_extras:
             L.extend(flatten_tree(d.instance_extras))
@@ -351,7 +365,7 @@ def def_lines(d, call):
 
     if call.instanceproofs:
         if not call.bodies_only:
-            instance_proofs = flatten_tree(d.instance_proofs)
+            instance_proofs = wrap_qualify(flatten_tree(d.instance_proofs))
         else:
             instance_proofs = []
 
@@ -378,7 +392,7 @@ def def_lines(d, call):
     if type == 'definitions':
         if call.decls_only:
             if typesig:
-                return comments + ['consts'] + typesig
+                return wrap_qualify(comments + ['consts'] + typesig, deep=True)
             else:
                 return []
         elif call.bodies_only:
@@ -388,7 +402,8 @@ def def_lines(d, call):
                     print('warning body-only primrec:')
                     print(body[0])
                     return comments + ['primrec'] + body
-                return comments + ['defs %s:' % defname] + body
+                return wrap_qualify(comments + ['defs %s:' % defname] + body, 
+                        deep=True)
             else:
                 return comments + ['definition'] + body
         else:
@@ -1000,6 +1015,8 @@ def finite_instance_proofs(header, cons):
     lines = []
     lines.append('')
     lines.append('instance %s :: finite' % header)
+    if call.current_context:
+        lines.append('interpretation %s .' % call.current_context[-1])
     lines.append('  apply (intro_classes)')
     lines.append('  apply (rule_tac f="%s" in finite_surj_type)'
                  % cons)
@@ -1183,6 +1200,8 @@ def enum_instance_proofs (header, canonical, d):
         [(_, (cons, n))] = canonical 
         assert n == 1
         lines.append('instantiation %s :: enum begin' % header)
+        if call.current_context:
+            lines.append('interpretation {} .'.format(call.current_context[-1]))
         lines.append('definition')
         lines.append('  enum_%s: "enum_class.enum \<equiv> map %s enum"' \
                      % (header, cons))
@@ -1193,6 +1212,8 @@ def enum_instance_proofs (header, canonical, d):
         cons_two_args = [cons for i, (cons, n) in canonical if n > 1]
         assert cons_two_args == []
         lines.append ('instantiation %s :: enum begin' % header)
+        if call.current_context:
+            lines.append('interpretation {} .'.format(call.current_context[-1]))
         lines.append ('definition')
         lines.append ('  enum_%s: "enum_class.enum \<equiv> ' % header)
         lines.append ('    [ ')
@@ -1235,6 +1256,8 @@ def enum_instance_proofs (header, canonical, d):
     lines.append('')
     lines.append('instantiation %s :: enum_alt' % header)
     lines.append('begin')
+    if call.current_context:
+        lines.append('interpretation {} .'.format(call.current_context[-1]))
     lines.append('definition')
     lines.append('  enum_alt_%s: "enum_alt \<equiv> ' % header)
     lines.append('    alt_from_ord (enum :: %s list)"' % header)
@@ -1243,6 +1266,8 @@ def enum_instance_proofs (header, canonical, d):
     lines.append('')
     lines.append('instantiation %s :: enumeration_both' % header)
     lines.append('begin')
+    if call.current_context:
+        lines.append('interpretation {} .'.format(call.current_context[-1]))
     lines.append('instance by (intro_classes, simp add: enum_alt_%s)' \
             % header)
     lines.append('end')
