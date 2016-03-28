@@ -13,7 +13,7 @@
                 Rafal Kolanski <rafal.kolanski at nicta.com.au>
 *)
 
-header "Abstract Separation Algebra"
+chapter "Abstract Separation Algebra"
 
 theory Separation_Algebra
 imports
@@ -146,7 +146,7 @@ lemma sep_add_zero_sym [simp]: "0 + x = x"
   by (simp add: sep_add_commute)
 
 lemma sep_disj_addD2: "\<lbrakk> x ## y + z; y ## z \<rbrakk> \<Longrightarrow> x ## z"
-  by (metis sep_disj_addD1 sep_add_ac)
+  by (metis sep_add_commute sep_disj_addD1 sep_disj_commuteI)  
 
 lemma sep_disj_addD: "\<lbrakk> x ## y + z; y ## z \<rbrakk> \<Longrightarrow> x ## y \<and> x ## z"
   by (metis sep_disj_addD1 sep_disj_addD2)
@@ -156,19 +156,19 @@ lemma sep_add_disjD: "\<lbrakk> x + y ## z; x ## y \<rbrakk> \<Longrightarrow> x
 
 lemma sep_disj_addI2:
   "\<lbrakk> x ## y + z; y ## z \<rbrakk> \<Longrightarrow> x + z ## y"
-  by (metis sep_add_ac sep_disj_addI1)
+  using sep_add_commute sep_disj_addI1 sep_disj_commuteI by presburger
 
 lemma sep_add_disjI1:
   "\<lbrakk> x + y ## z; x ## y \<rbrakk> \<Longrightarrow> x + z ## y"
-  by (metis sep_add_ac sep_add_disjD sep_disj_addI2)
+  by (metis sep_add_commute sep_disj_addI1 sep_disj_commuteI sep_add_disjD)
 
 lemma sep_add_disjI2:
   "\<lbrakk> x + y ## z; x ## y \<rbrakk> \<Longrightarrow> z + y ## x"
-  by (metis sep_add_ac sep_add_disjD sep_disj_addI2)
+  by (metis sep_add_commute sep_disj_addI1 sep_disj_commuteI sep_add_disjD)
 
 lemma sep_disj_addI3:
-   "x + y ## z \<Longrightarrow> x ## y \<Longrightarrow> x ## y + z"
-   by (metis sep_add_ac sep_add_disjD sep_add_disjI2)
+  "x + y ## z \<Longrightarrow> x ## y \<Longrightarrow> x ## y + z"
+  by (metis sep_add_commute sep_disj_addI1 sep_disj_commuteI sep_add_disjD)
 
 lemma sep_disj_add:
   "\<lbrakk> y ## z; x ## y \<rbrakk> \<Longrightarrow> x ## y + z = x + y ## z"
@@ -284,11 +284,11 @@ lemma sep_conj_sep_true':
 lemma sep_conj_true [simp]:
   "(sep_true ** sep_true) = sep_true"
   unfolding sep_conj_def
-  by (auto intro!: ext intro: disjoint_subheaps_exist)
+  by (auto intro: disjoint_subheaps_exist)
 
 lemma sep_conj_false_right [simp]:
   "(P ** sep_false) = sep_false"
-  by (force elim: sep_conjE intro!: ext)
+  by (force elim: sep_conjE)
 
 lemma sep_conj_false_left [simp]:
   "(sep_false ** P) = sep_false"
@@ -323,7 +323,7 @@ lemma sep_conj_true_P [simp]:
 
 lemma sep_conj_disj:
   "((P or Q) ** R) = ((P ** R) or (Q ** R))"
-  by (auto simp: sep_conj_def intro!: ext)
+  by (rule ext, auto simp: sep_conj_def)
 
 lemma sep_conj_sep_true_left:
   "(P ** Q) h \<Longrightarrow> (sep_true ** Q) h"
@@ -343,11 +343,11 @@ lemma sep_conj_conj:
 
 lemma sep_conj_exists1:
   "((EXS x. P x) ** Q) = (EXS x. (P x ** Q))"
-  by (force intro!: ext intro: sep_conjI elim: sep_conjE)
+  by (force intro: sep_conjI elim: sep_conjE)
 
 lemma sep_conj_exists2:
   "(P ** (EXS x. Q x)) = (EXS x. P ** Q x)"
-  by (force intro!: sep_conjI ext elim!: sep_conjE)
+  by (force intro!: sep_conjI elim!: sep_conjE)
 
 lemmas sep_conj_exists = sep_conj_exists1 sep_conj_exists2
 
@@ -378,11 +378,11 @@ lemma sep_implE:
 
 lemma sep_impl_sep_true [simp]:
   "(P \<longrightarrow>* sep_true) = sep_true"
-  by (force intro!: sep_implI ext)
+  by (force intro!: sep_implI)
 
 lemma sep_impl_sep_false [simp]:
   "(sep_false \<longrightarrow>* P) = sep_true"
-  by (force intro!: sep_implI ext)
+  by (force intro!: sep_implI)
 
 lemma sep_impl_sep_true_P:
   "(sep_true \<longrightarrow>* P) h \<Longrightarrow> P h"
@@ -390,7 +390,7 @@ lemma sep_impl_sep_true_P:
 
 lemma sep_impl_sep_true_false [simp]:
   "(sep_true \<longrightarrow>* sep_false) = sep_false"
-  by (force intro!: ext dest: sep_impl_sep_true_P)
+  by (force dest: sep_impl_sep_true_P)
 
 lemma sep_conj_sep_impl:
   "\<lbrakk> P h; \<And>h. (P ** Q) h \<Longrightarrow> R h \<rbrakk> \<Longrightarrow> (Q \<longrightarrow>* R) h"
@@ -427,7 +427,7 @@ lemma pure_sep_false:
 
 lemma pure_split:
   "pure P = (P = sep_true \<or> P = sep_false)"
-  by (force simp: pure_def intro!: ext)
+  by (force simp: pure_def)
 
 lemma pure_sep_conj:
   "\<lbrakk> pure P; pure Q \<rbrakk> \<Longrightarrow> pure (P \<and>* Q)"
@@ -593,15 +593,14 @@ proof (rule intuitionisticI)
 qed
 
 lemma strongest_intuitionistic:
-  "\<not> (\<exists>Q. (\<forall>h. (Q h \<longrightarrow> (P \<and>* sep_true) h)) \<and> intuitionistic Q \<and>
-      Q \<noteq> (P \<and>* sep_true) \<and> (\<forall>h. P h \<longrightarrow> Q h))"
-  by (fastforce intro!: ext sep_substate_disj_add
-                dest!: sep_conjD intuitionisticD)
+  "\<not>(\<exists>Q. (\<forall>h. (Q h \<longrightarrow> (P \<and>* sep_true) h)) \<and> intuitionistic Q \<and> Q \<noteq> (P \<and>* sep_true) \<and> (\<forall>h. P h \<longrightarrow> Q h))"
+  by (fastforce intro!: ext sep_substate_disj_add dest!: sep_conjD intuitionisticD)
 
 lemma weakest_intuitionistic:
   "\<not> (\<exists>Q. (\<forall>h. ((sep_true \<longrightarrow>* P) h \<longrightarrow> Q h)) \<and> intuitionistic Q \<and>
       Q \<noteq> (sep_true \<longrightarrow>* P) \<and> (\<forall>h. Q h \<longrightarrow> P h))"
-  apply (clarsimp intro!: ext)
+  apply (clarsimp)
+  apply (rule ext)
   apply (rule iffI)
    apply (rule sep_implI)
    apply (drule_tac h="x" and h'="x + h'" in intuitionisticD)
@@ -614,7 +613,7 @@ lemma intuitionistic_sep_conj_sep_true_P:
 
 lemma intuitionistic_sep_conj_sep_true_simp:
   "intuitionistic P \<Longrightarrow> (P \<and>* sep_true) = P"
-  by (fast intro!: sep_conj_sep_true ext
+  by (fast intro!: sep_conj_sep_true
            elim: intuitionistic_sep_conj_sep_true_P)
 
 lemma intuitionistic_sep_impl_sep_true_P:
@@ -624,8 +623,7 @@ lemma intuitionistic_sep_impl_sep_true_P:
 
 lemma intuitionistic_sep_impl_sep_true_simp:
   "intuitionistic P \<Longrightarrow> (sep_true \<longrightarrow>* P) = P"
-  by (fast intro!: ext
-           elim: sep_impl_sep_true_P intuitionistic_sep_impl_sep_true_P)
+  by (fast elim: sep_impl_sep_true_P intuitionistic_sep_impl_sep_true_P)
 
 
 subsection {* Strictly exact assertions *}
@@ -666,7 +664,7 @@ begin
 lemma sep_disj_add_eq [simp]: "x ## y \<Longrightarrow> x + y ## z = (x ## z \<and> y ## z)"
   by (metis sep_add_disj_eq sep_disj_commute)
 
-subclass sep_algebra by default auto
+subclass sep_algebra by standard auto
 
 end
 
@@ -705,17 +703,14 @@ consts
 notation (latex output) sep_conj_lifted ("\<And>\<^sup>* _" [60] 90)
 notation (latex output) sep_map_list_conj ("\<And>\<^sup>* _" [60] 90)
 
-adhoc_overloading
-  sep_conj_lifted sep_list_conj
-adhoc_overloading
-  sep_conj_lifted sep_set_conj
+adhoc_overloading sep_conj_lifted sep_list_conj
+adhoc_overloading sep_conj_lifted sep_set_conj
 
 
 (* FIXME. Add notation for sep_map_list_conj, and consider unifying with sep_map_set_conj. *)
 
 
-text{* Now: lot's of fancy syntax. First, @{term "sep_map_set_conj (%x. g) A"} is
-written @{text"\<And>+x\<in>A. g"}. *}
+text{* Now: lots of fancy syntax. First, @{term "sep_map_set_conj (%x. g) A"} is written @{text"\<And>+x\<in>A. g"}. *}
 
 (* Clagged from Big_Operators. *)
 syntax
@@ -731,8 +726,7 @@ translations -- {* Beware of argument permutation! *}
   "SETSEPCONJ x:A. g" == "CONST sep_map_set_conj (%x. g) A"
   "\<And>* x\<in>A. g" == "CONST sep_map_set_conj (%x. g) A"
 
-text{* Instead of @{term"\<And>*x\<in>{x. P}. g"} we introduce the shorter
- @{text"\<And>+x|P. g"}. *}
+text{* Instead of @{term"\<And>*x\<in>{x. P}. g"} we introduce the shorter @{text"\<And>+x|P. g"}. *}
 
 syntax
   "_qsep_map_set_conj" :: "pttrn \<Rightarrow> bool \<Rightarrow> 'a \<Rightarrow> 'a" ("(3SETSEPCONJ _ |/ _./ _)" [0,0,10] 10)
@@ -764,17 +758,8 @@ in [(@{const_syntax sep_map_set_conj}, K setsepconj_tr')] end
 *}
 
 
-
-(* FIXME. This is not needed, but gives lemmas directly on sep_map_set_conj,
-   rather than needing to expand the definition and use rules about setprod.
- *)
-interpretation sep: comm_monoid_mult "op \<and>*" \<box>
-  by unfold_locales (simp add: sep.setprod_def)
-
 interpretation sep: folding "op \<and>*" \<box>
   by unfold_locales (simp add: comp_def sep_conj_ac)
-
-print_theorems (* FIXME, remove. We get all of these lemmas. *)
 
 lemma "\<And>* [\<box>,P] = P"
   by (simp add: sep_list_conj_def)
@@ -783,9 +768,7 @@ lemma "\<And>* {\<box>} = \<box>"
   by (simp add: sep_set_conj_def)
 
 lemma "\<And>* {P,\<box>} = P"
-  apply (cases "P = \<box>")
-  apply (auto simp: sep_set_conj_def)
-  done
+  by (cases "P = \<box>", auto simp: sep_set_conj_def)
 
 lemma "(\<And>* x\<in>{0,1::nat}. if x=0 then \<box> else P) = P"
   by auto
@@ -799,39 +782,29 @@ lemma sep_list_conj_Nil [simp]: "\<And>* [] = \<box>"
 
 (* apparently these two are rarely used and had to be removed from List.thy *)
 lemma (in semigroup) foldl_assoc:
-shows "(foldl f (f x y) zs) = (f x (foldl f y zs))"
-by (induct zs arbitrary: y) (simp_all add:assoc)
+   "foldl f (f x y) zs = f x (foldl f y zs)"
+   by (induct zs arbitrary: y) (simp_all add:assoc)
 
 lemma (in monoid) foldl_absorb1:
-shows "f x (foldl f 1 zs) = foldl f x zs"
-by (induct zs) (simp_all add:foldl_assoc)
+  "f x (foldl f z zs) = foldl f x zs"
+  by (induct zs) (simp_all add:foldl_assoc)
 
 
-lemma sep_list_conj_Cons [simp]: "\<And>* (x#xs) = (x ** \<And>* xs)"
-  by (simp add: sep_list_conj_def sep.foldl_absorb1)
+context comm_monoid
+begin
 
-lemma sep_list_conj_append [simp]: "\<And>* (xs @ ys) = (\<And>* xs ** \<And>* ys)"
-  by (simp add: sep_list_conj_def sep.foldl_absorb1)
-
-lemma sep_list_conj_map_append:
-  "\<And>* map f (xs @ ys) = (\<And>* map f xs \<and>* \<And>* map f ys)"
-  by (metis map_append sep_list_conj_append)
-
-lemma (in comm_monoid) foldl_map_filter:
-  "foldl f 1 (map P (filter t xs)) *
-     foldl f 1 (map P (filter (not t) xs))
-   = foldl f 1 (map P xs)"
+lemma foldl_map_filter:
+  "f (foldl f z (map P (filter t xs))) (foldl f z (map P (filter (not t) xs))) = foldl f z (map P xs)"
 proof (induct xs)
   case Nil thus ?case by clarsimp
 next
   case (Cons x xs)
-  hence IH: "foldl f 1 (map P xs) =
-               foldl f 1 (map P (filter t xs)) *
-               foldl f 1 (map P [x\<leftarrow>xs . \<not> t x])"
-               by (simp only: eq_commute)
+  hence IH:
+    "foldl f z (map P xs) =  f (foldl f z (map P (filter t xs))) (foldl f z (map P [x\<leftarrow>xs . \<not> t x]))"
+    by (simp only: eq_commute)
 
   have foldl_Cons':
-    "\<And>x xs. foldl f 1 (x # xs) = f x (foldl f 1 xs)"
+    "\<And>x xs. foldl f z (x # xs) = f x (foldl f z xs)"
     by (simp, subst foldl_absorb1[symmetric], rule refl)
 
   { assume "t x"
@@ -842,6 +815,31 @@ next
   }
   ultimately show ?case by blast
 qed
+
+lemma foldl_map_add:
+  "foldl f z (map (\<lambda>x. f (P x) (Q x)) xs) = f (foldl f z (map P xs)) (foldl f z (map Q xs))"
+  apply (induct xs)
+   apply clarsimp
+  apply simp
+  by (metis (full_types) commute foldl_absorb1 foldl_assoc)
+
+lemma foldl_map_remove1:
+  "x \<in> set xs \<Longrightarrow> foldl f z (map P xs) = f (P x) (foldl f z (map P (remove1 x xs)))"
+  apply (induction xs, simp)
+  apply clarsimp
+  by (metis foldl_absorb1 left_commute)
+
+end
+
+lemma sep_list_conj_Cons [simp]: "\<And>* (x#xs) = (x ** \<And>* xs)"
+  by (simp add: sep_list_conj_def sep.foldl_absorb1)
+
+lemma sep_list_conj_append [simp]: "\<And>* (xs @ ys) = (\<And>* xs ** \<And>* ys)"
+  by (simp add: sep_list_conj_def sep.foldl_absorb1)
+
+lemma sep_list_conj_map_append:
+  "\<And>* map f (xs @ ys) = (\<And>* map f xs \<and>* \<And>* map f ys)"
+  by (metis map_append sep_list_conj_append)
 
 lemma sep_list_con_map_filter:
   "(\<And>* map P (filter t xs) \<and>* \<And>* map P (filter (not t) xs))
@@ -861,13 +859,6 @@ lemma sep_map_set_conj_restrict:
     sep_map_set_conj P {x \<in> xs. \<not> t x})"
   by (subst sep.setprod.union_disjoint [symmetric], (fastforce simp: union_filter)+)
 
-lemma (in comm_monoid) foldl_map_add:
-  "foldl f 1 (map (\<lambda>x. P x * Q x) xs) =
-   (foldl f 1 (map P xs) * foldl f 1 (map Q xs))"
-  apply (induct xs)
-   apply clarsimp
-  apply simp
-  by (metis (full_types) commute foldl_absorb1 foldl_assoc)
 
 lemma sep_list_conj_map_add:
   "\<And>* map (\<lambda>x. f x \<and>* g x) xs = (\<And>* map f xs \<and>* \<And>* map g xs)"
@@ -893,12 +884,6 @@ lemma remove1_filter:
   apply clarsimp
   done
 
-lemma (in comm_monoid) foldl_map_remove1:
-  "x \<in> set xs \<Longrightarrow> foldl f 1 (map P xs) = f (P x) (foldl f 1 (map P (remove1 x xs)))"
-  apply (induction xs, simp)
-  apply clarsimp
-  by (metis foldl_absorb1 left_commute)
-
 lemma sep_list_conj_map_remove1:
   "x \<in> set xs \<Longrightarrow> \<And>* map P xs = (P x \<and>* \<And>* map P (remove1 x xs))"
   apply (simp add: sep_list_conj_def)
@@ -916,13 +901,11 @@ lemma sep_conj_map_split:
   by (metis list.map(2) map_append sep_list_conj_Cons sep_list_conj_append)
 
 
-(*
- * Separation predicates on sets. *
- *)
+section "Separation predicates on sets"
 
 lemma sep_map_set_conj_cong:
   "\<lbrakk>P = Q; xs = ys\<rbrakk> \<Longrightarrow> sep_map_set_conj P xs = sep_map_set_conj Q ys"
-  by (simp)
+  by simp
 
 lemma sep_set_conj_empty [simp]:
   "sep_set_conj {} = \<box>"
@@ -1017,15 +1000,8 @@ lemma sep_list_conj_filter_map:
   by (clarsimp simp: sep_list_conj_def foldl_use_filter_map)
 
 lemma sep_map_set_conj_restrict_predicate:
-  "finite A
-   \<Longrightarrow> (\<And>* x\<in>A. if T x then P x else \<box>) =
-       (\<And>* x\<in>(Set.filter T A). P x)"
-  apply (drule finite_distinct_list)
-  apply (clarsimp)
-  apply (subst filter_set)
-  apply (subst sep_list_conj_sep_map_set_conj [symmetric], simp)+
-  apply (rule sep_list_conj_filter_map)
-  done
+  "finite A \<Longrightarrow> (\<And>* x\<in>A. if T x then P x else \<box>) = (\<And>* x\<in>(Set.filter T A). P x)"
+  by (simp add: Set.filter_def sep.setprod.inter_filter)
 
 lemma distinct_filters:
   "\<lbrakk>distinct xs; \<And>x. (f x \<and> g x) = False\<rbrakk> \<Longrightarrow>
@@ -1049,13 +1025,11 @@ lemma sep_map_set_conj_set_disjoint:
   apply simp
   by (metis Collect_disj_eq)
 
-section {* Separation Algebra with a Cancellative Monoid (for completeness) *}
+section {* Separation Algebra with a Cancellative Monoid *}
 
 text {*
   Separation algebra with a cancellative monoid. The results of being a precise
   assertion (distributivity over separating conjunction) require this.
-  although we never actually use this property in our developments, we keep
-  it here for completeness.
   *}
 class cancellative_sep_algebra = sep_algebra +
   assumes sep_add_cancelD: "\<lbrakk> x + z = y + z ; x ## z ; y ## z \<rbrakk> \<Longrightarrow> x = y"

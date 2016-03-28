@@ -23,7 +23,13 @@ typedecl p
 typedecl val
 typedecl heap
 
-arities heap :: sep_algebra
+axiomatization where
+  heap_algebra: "OFCLASS(heap, sep_algebra_class)"
+
+instantiation heap :: sep_algebra
+begin
+  instance by (rule heap_algebra)
+end
 
 axiomatization
   points_to :: "p \<Rightarrow> val \<Rightarrow> heap \<Rightarrow> bool" and
@@ -34,7 +40,7 @@ where
 consts
   update :: "p \<Rightarrow> val \<Rightarrow> heap \<Rightarrow> heap"
 
-(*
+(* FIXME: revive
 lemma
   "\<lbrakk> Q2 (val h p); (K ** T ** blub ** P ** points_to p v ** P ** J) h \<rbrakk>
    \<Longrightarrow> Q (val h p) (val h p)"
@@ -58,21 +64,12 @@ lemma
   apply simp
   oops
 
-schematic_lemma
+schematic_goal
   assumes a: "\<And>P. (stuff p ** P) H \<Longrightarrow> (other_stuff p v ** P) (update p v H)"
   shows "(X ** Y ** other_stuff p ?v) (update p v H)"
   apply (sep_rule (direct) a)
   oops
 
-
-text {* Example of low-level rewrites *}
-
-lemma "\<lbrakk> unrelated s ; (P ** Q ** R) s \<rbrakk> \<Longrightarrow> (A ** B ** Q ** P) s"
-  apply (tactic {* dtac (mk_sep_select_rule @{context} true (3,[1])) 1 *})
-  apply (tactic {* rtac (mk_sep_select_rule @{context} false (4,[2])) 1 *})
-  (* now sep_conj_impl1 can be used *)
-  apply (erule (1) sep_conj_impl)
-  oops
 
 
 text {* Conjunct selection *}
@@ -92,7 +89,7 @@ section {* Test cases for @{text sep_cancel}. *}
 
 lemma
   assumes forward: "\<And>s g p v. A g p v s \<Longrightarrow> AA g p s "
-  shows "\<And>xv yv P s y x s. (A g x yv ** A g y yv ** P) s \<Longrightarrow> (AA g y ** sep_true) s"
+  shows "\<And>yv P y x s. (A g x yv ** A g y yv ** P) s \<Longrightarrow> (AA g y ** sep_true) s"
   by (sep_solve add: forward)
 
 lemma
@@ -108,7 +105,7 @@ lemma "\<lbrakk> (A ** B) sa ; (A ** Y) s \<rbrakk> \<Longrightarrow> (\<lambda>
   apply (sep_cancel)
   oops
 
-schematic_lemma "\<lbrakk> (B ** A ** C) s \<rbrakk> \<Longrightarrow> (\<lambda>s. (A ** ?X) s) s"
+schematic_goal "\<lbrakk> (B ** A ** C) s \<rbrakk> \<Longrightarrow> (\<lambda>s. (A ** ?X) s) s"
   by (sep_cancel)
 
 (* test backtracking on premises with same state *)
@@ -126,7 +123,7 @@ lemma f1:
 declare sep_conj_true[sep_cancel]
 
 lemma boxo: "P s \<Longrightarrow> (P \<and>* \<box>) s"
-    by (erule sep_conj_sep_emptyI)
+  by (erule sep_conj_sep_emptyI)
 
 lemma f2:
   assumes forward: "\<And>s. generic s \<Longrightarrow> instance s"
@@ -134,5 +131,6 @@ lemma f2:
   shows "generic s \<Longrightarrow> (instance2 ** \<box>) s"
   apply (drule forward forward2)+
   apply (sep_erule_concl (direct) boxo)
-done
+  done
+
 end

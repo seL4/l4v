@@ -13,7 +13,7 @@
                 Rafal Kolanski <rafal.kolanski at nicta.com.au>
 *)
 
-header "Standard Heaps as an Instance of Separation Algebra"
+chapter "Standard Heaps as an Instance of Separation Algebra"
 
 theory Sep_Heap_Instance
 imports Separation_Algebra
@@ -52,7 +52,7 @@ definition
   sep_disj_fun_def: "sep_disj m1 m2 \<equiv> domain m1 \<inter> domain m2 = {}"
 
 instance
-  apply default
+  apply intro_classes
         apply (simp add: sep_disj_fun_def domain_def zero_fun_def)
        apply (fastforce simp: sep_disj_fun_def)
       apply (simp add: plus_fun_def zero_fun_def)
@@ -93,7 +93,7 @@ lemma
 section {* @{typ unit} Instantiation *}
 
 text {*
-  The @{typ unit} type also forms a seperation algebra. Although
+  The @{typ unit} type also forms a separation algebra. Although
   typically not useful as a state space by itself, it may be
   a type parameter to more complex state space.
 *}
@@ -103,16 +103,16 @@ begin
   definition "plus_unit (a :: unit) (b :: unit) \<equiv> ()"
   definition "sep_disj_unit  (a :: unit) (b :: unit) \<equiv> True"
   instance
-    apply default
+    apply intro_classes
     apply (simp add: plus_unit_def sep_disj_unit_def)+
-  done
+    done
 end
 
 lemma unit_disj_sep_unit [simp]: "(a :: unit) ## b"
   by (clarsimp simp: sep_disj_unit_def)
 
 lemma unit_plus_unit [simp]: "(a :: unit) + b = ()"
-  by (clarsimp simp: plus_unit_def)
+  by (rule unit_eq)
 
 section {* @{typ "'a option"} Instantiation *}
 
@@ -120,21 +120,19 @@ text {*
   The @{typ "'a option"} is a seperation algebra, with @{term None}
   indicating emptyness.
 *}
-(* FIXME: should we be instantiating the "opt" class above instead? *)
 
 instantiation option :: (type) stronger_sep_algebra
 begin
-  definition "zero_option \<equiv> None"
-  definition "plus_option (a :: 'a option) (b :: 'a option)
-      \<equiv> (case b of None \<Rightarrow> a | Some x \<Rightarrow> b)"
-  definition "sep_disj_option  (a :: 'a option) (b :: 'a option)
-      \<equiv> a = None \<or> b = None"
+  definition
+    "zero_option \<equiv> None"
+  definition
+    "plus_option (a :: 'a option) (b :: 'a option) \<equiv> (case b of None \<Rightarrow> a | Some x \<Rightarrow> b)"
+  definition
+    "sep_disj_option  (a :: 'a option) (b :: 'a option) \<equiv> a = None \<or> b = None"
 
   instance
-    apply default
-    apply (auto simp: zero_option_def sep_disj_option_def plus_option_def
-           split: option.splits)
-  done
+    by intro_classes
+       (auto simp: zero_option_def sep_disj_option_def plus_option_def split: option.splits)
 end
 
 lemma disj_sep_None [simp]:
