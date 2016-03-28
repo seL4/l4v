@@ -139,7 +139,7 @@ in
 end
 
 fun UNSOLVED' tac i st =
-  tac i st |> Seq.filter (fn st' => Thm.nprems_of st' = Thm.nprems_of st);
+  tac i st |> Seq.filter (fn st' => Thm.nprems_of st' = Thm.nprems_of st)
 
 fun sep_flatten ctxt = 
 let
@@ -162,5 +162,3 @@ in
   assume_tac ctxt THEN'         
   sep_conj_ac_tac
 end
-
-fun sep_select_method lens ns ctxt =  SIMPLE_METHOD' (sep_select_tactic lens ns ctxt) 

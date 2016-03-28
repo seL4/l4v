@@ -14,16 +14,16 @@ begin
 
 (* Constrained lens for sep_erule tactic *)
 lemma sep_asm_eq_erule: 
-  "(P \<and>* R) s \<Longrightarrow> (\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> (T s \<Longrightarrow> (P' \<and>* R') s)
-   \<Longrightarrow> (P' \<and>* R') s" by (clarsimp)
+  "(P \<and>* R) s \<Longrightarrow> (\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> (T s \<Longrightarrow> (P' \<and>* R') s) \<Longrightarrow> (P' \<and>* R') s"
+  by (clarsimp)
 
 lemma sep_rule:
   "(\<And>s. T s \<Longrightarrow> P s) \<Longrightarrow> (T \<and>* R) s \<Longrightarrow> (P \<and>* R) s" 
-    by (rule sep_conj_impl1)
+  by (rule sep_conj_impl1)
 
 lemma sep_erule: 
   "(T \<and>* R') s  \<Longrightarrow> (\<And>s. T s \<Longrightarrow> P s) \<Longrightarrow> (\<And>s. R' s \<Longrightarrow> R s) \<Longrightarrow>  (P \<and>* R) s"
-    by (rule sep_conj_impl)
+  by (rule sep_conj_impl)
 
 (* Construct analogues to rule/drule etc,  for separation logic *)
 
