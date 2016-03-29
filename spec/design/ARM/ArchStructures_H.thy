@@ -213,9 +213,9 @@ asidHighBitsOf :: "asid \<Rightarrow> asid"
 
 defs archObjSize_def:
 "archObjSize a\<equiv> (case a of
-                  KOASIDPool v1 \<Rightarrow>   pageBits
-                | KOPTE v2 \<Rightarrow>   2
-                | KOPDE v3 \<Rightarrow>   2
+                  KOASIDPool v10 \<Rightarrow>   pageBits
+                | KOPTE v11 \<Rightarrow>   2
+                | KOPDE v12 \<Rightarrow>   2
                 )"
 
 defs asidHighBits_def:

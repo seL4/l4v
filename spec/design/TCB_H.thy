@@ -197,11 +197,11 @@ defs decodeBindNotification_def:
     tcb \<leftarrow> returnOk ( capTCBPtr cap);
     ntfn \<leftarrow> withoutFailure $ getBoundNotification tcb;
     (case ntfn of
-          Some v3 \<Rightarrow>   throw IllegalOperation
+          Some v11 \<Rightarrow>   throw IllegalOperation
         | None \<Rightarrow>   returnOk ()
         );
     (ntfnPtr, rights) \<leftarrow> (case fst (head extraCaps) of
-          NotificationCap ptr v4 v5 recv \<Rightarrow>   returnOk (ptr, recv)
+          NotificationCap ptr v12 v13 recv \<Rightarrow>   returnOk (ptr, recv)
         | _ \<Rightarrow>   throw IllegalOperation
         );
     whenE (Not rights) $ throw IllegalOperation;
@@ -222,7 +222,7 @@ defs decodeUnbindNotification_def:
     ntfn \<leftarrow> withoutFailure $ getBoundNotification tcb;
     (case ntfn of
           None \<Rightarrow>   throw IllegalOperation
-        | Some v7 \<Rightarrow>   returnOk ()
+        | Some v15 \<Rightarrow>   returnOk ()
         );
     returnOk NotificationControl_ \<lparr>
         notificationTCB= tcb,

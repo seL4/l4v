@@ -18,7 +18,7 @@ imports
   Setup_Locale
   Platform
 begin
-qualify ARM (deep)
+context ARM begin
 
 (* !!! Generated File !!! Skeleton in ../haskell-translator/ARMMachineTypes.thy *)
 
@@ -29,11 +29,11 @@ text {*
 
 section "Types"
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs decls_only
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM decls_only
 (*<*)
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs instanceproofs
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM instanceproofs
 (*>*)
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs bodies_only
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM bodies_only
 
 section "Machine State"
 
@@ -58,24 +58,32 @@ text {*
   machine. The latter is shadow state: kernel memory is kept in a
   separate, more abstract datatype; user memory is reflected down
   to the underlying memory of the machine.
-*} 
+*}
+end
+qualify ARM 
 record
   machine_state =
-  irq_masks :: "irq \<Rightarrow> bool"
+  irq_masks :: "ARM.irq \<Rightarrow> bool"
   irq_state :: nat
   underlying_memory :: "word32 \<Rightarrow> word8"
-  exclusive_state :: exclusive_monitors
-  machine_state_rest :: machine_state_rest  
+  exclusive_state :: ARM.exclusive_monitors
+  machine_state_rest :: ARM.machine_state_rest  
 
 consts irq_oracle :: "nat \<Rightarrow> 10 word"
+end_qualify
 
+context ARM begin
 text {*
   The machine monad is used for operations on the state defined above.
 *}
 type_synonym 'a machine_monad = "(machine_state, 'a) nondet_monad"
 
+end
+
 translations
-  (type) "'c machine_monad" <= (type) "(machine_state, 'c) nondet_monad"
+  (type) "'c ARM.machine_monad" <= (type) "(ARM.machine_state, 'c) nondet_monad"
+
+context ARM begin
 
 text {*
   After kernel initialisation all IRQs are masked.
@@ -95,8 +103,12 @@ text {*
   The initial exclusive state is the same constant
   that clearExMonitor defaults it to.
 *}
-consts default_exclusive_state :: exclusive_monitors
+end
+qualify ARM
+consts default_exclusive_state :: ARM.exclusive_monitors
+end_qualify
 
+context ARM begin
 text {*
   We leave open the underspecified rest of the machine state in
   the initial state.
@@ -111,8 +123,8 @@ definition
 
 
 (* Machine/Hardware/ARM.lhs - hardware_asid, vmfault_type and vmpage_size *)
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs ONLY HardwareASID VMFaultType VMPageSize pageBits pageBitsForSize
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs instanceproofs ONLY HardwareASID VMFaultType VMPageSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM ONLY HardwareASID VMFaultType VMPageSize pageBits pageBitsForSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM instanceproofs ONLY HardwareASID VMFaultType VMPageSize
 
-end_qualify
+end
 end

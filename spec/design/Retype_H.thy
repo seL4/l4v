@@ -39,15 +39,15 @@ defs deriveCap_def:
   )"
 
 defs finaliseCap_def:
-"finaliseCap x0 x1 x2\<equiv> (let (v1, v2, v3) = (x0, x1, x2) in
-  if isEndpointCap v1
-  then let ptr = capEPPtr v1; final = v2
+"finaliseCap x0 x1 x2\<equiv> (let (v13, v14, v15) = (x0, x1, x2) in
+  if isEndpointCap v13
+  then let ptr = capEPPtr v13; final = v14
   in   (do
     when final $ cancelAllIPC ptr;
     return (NullCap, Nothing)
   od)
-  else if isNotificationCap v1
-  then let ptr = capNtfnPtr v1; final = v2
+  else if isNotificationCap v13
+  then let ptr = capNtfnPtr v13; final = v14
   in   (do
     when final $ (do
         unbindMaybeNotification ptr;
@@ -55,41 +55,41 @@ defs finaliseCap_def:
     od);
     return (NullCap, Nothing)
   od)
-  else if isReplyCap v1
+  else if isReplyCap v13
   then   return (NullCap, Nothing)
-  else if isNullCap v1
+  else if isNullCap v13
   then   return (NullCap, Nothing)
-  else if isDomainCap v1
+  else if isDomainCap v13
   then   return (NullCap, Nothing)
-  else if v3
+  else if v15
   then   haskell_fail []
-  else if isCNodeCap v1 \<and> v2
-  then let ptr = capCNodePtr v1; bits = capCNodeBits v1
+  else if isCNodeCap v13 \<and> v14
+  then let ptr = capCNodePtr v13; bits = capCNodeBits v13
   in  
     return (Zombie ptr (ZombieCNode bits) (bit bits), Nothing)
-  else if isThreadCap v1 \<and> v2
-  then let tcb = capTCBPtr v1
+  else if isThreadCap v13 \<and> v14
+  then let tcb = capTCBPtr v13
   in   (do
     cte_ptr \<leftarrow> getThreadCSpaceRoot tcb;
     unbindNotification tcb;
     suspend tcb;
     return (Zombie cte_ptr ZombieTCB 5, Nothing)
   od)
-  else if isZombie v1 \<and> v2
-  then let z = v1
+  else if isZombie v13 \<and> v14
+  then let z = v13
   in  
     return (z, Nothing)
-  else if isArchObjectCap v1
-  then let cap = capCap v1; final = v2
+  else if isArchObjectCap v13
+  then let cap = capCap v13; final = v14
   in  
     liftM (\<lambda> cap. (cap, Nothing)) $ ArchRetypeDecls_H.finaliseCap cap final
-  else if isIRQHandlerCap v1 \<and> v2
-  then let irq = capIRQ v1
+  else if isIRQHandlerCap v13 \<and> v14
+  then let irq = capIRQ v13
   in   (do
     deletingIRQHandler irq;
     return (NullCap, Just irq)
   od)
-  else if isZombie v1 \<and> \<not> v2
+  else if isZombie v13 \<and> \<not> v14
   then   haskell_fail []
   else   return (NullCap, Nothing)
   )"
@@ -216,25 +216,25 @@ defs sameObjectAs_def:
   )"
 
 defs updateCapData_def:
-"updateCapData x0 x1 x2\<equiv> (let (v4, v5, v6) = (x0, x1, x2) in
-  if isEndpointCap v6
-  then let preserve = v4; new = v5; cap = v6
+"updateCapData x0 x1 x2\<equiv> (let (v16, v17, v18) = (x0, x1, x2) in
+  if isEndpointCap v18
+  then let preserve = v16; new = v17; cap = v18
   in  
     if
     Not preserve \<and> capEPBadge cap = 0 then cap \<lparr> capEPBadge := new && mask badgeBits \<rparr>
     else if
     True      then NullCap
     else undefined
-  else if isNotificationCap v6
-  then let preserve = v4; new = v5; cap = v6
+  else if isNotificationCap v18
+  then let preserve = v16; new = v17; cap = v18
   in  
     if
     Not preserve \<and> capNtfnBadge cap = 0 then cap \<lparr> capNtfnBadge := new && mask badgeBits \<rparr>
     else if
     True      then NullCap
     else undefined
-  else if isCNodeCap v6
-  then let w = v5; cap = v6
+  else if isCNodeCap v18
+  then let w = v17; cap = v18
   in  
     let
         rightsBits = 3;
@@ -262,11 +262,11 @@ defs updateCapData_def:
         capCNodeGuard := guard,
         capCNodeGuardSize := guardSize \<rparr>
     else undefined
-  else if isArchObjectCap v6
-  then let p = v4; w = v5; aoCap = capCap v6
+  else if isArchObjectCap v18
+  then let p = v16; w = v17; aoCap = capCap v18
   in  
     ArchRetypeDecls_H.updateCapData p w aoCap
-  else let cap = v6
+  else let cap = v18
   in   cap
   )"
 

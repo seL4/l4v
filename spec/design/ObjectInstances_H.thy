@@ -277,7 +277,7 @@ definition
                 else undefined)
         in
                                                    (case oldObj of
-          KOCTE v1 \<Rightarrow>   (do
+          KOCTE v3 \<Rightarrow>   (do
             unless (ptr = ptr') $ haskell_fail [];
             alignCheck ptr (objBits cte);
             magnitudeCheck ptr next (objBits cte);

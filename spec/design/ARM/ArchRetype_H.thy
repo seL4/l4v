@@ -213,7 +213,7 @@ defs createObject_def:
     let funupd = (\<lambda> f x v y. if y = x then v else f y) in
     let pointerCast = PPtr \<circ> fromPPtr
     in (case t of 
-        ArchTypes_H.APIObjectType v1 \<Rightarrow> 
+        ArchTypes_H.APIObjectType v2 \<Rightarrow> 
             haskell_fail []
         | ArchTypes_H.SmallPageObject \<Rightarrow>  (do
             createPageObject regionBase 0;

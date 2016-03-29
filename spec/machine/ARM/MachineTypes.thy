@@ -18,7 +18,7 @@ imports
   Setup_Locale
   Platform
 begin
-qualify ARM (deep)
+context ARM begin
 
 (* !!! Generated File !!! Skeleton in ../haskell-translator/ARMMachineTypes.thy *)
 
@@ -51,16 +51,27 @@ datatype register =
 
 type_synonym machine_word = "word32"
 
+end
+qualify ARM (deep)
 consts
 initContext :: "(register * machine_word) list"
+end_qualify
+context ARM begin
 
+end
+qualify ARM (deep)
 consts
 sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
+end_qualify
+context ARM begin
 
 (*<*)
+end
+qualify ARM (deep)
 (* register instance proofs *)
 (*<*)
 instantiation register :: enum begin
+interpretation ARM .
 definition
   enum_register: "enum_class.enum \<equiv> 
     [ 
@@ -101,6 +112,7 @@ end
 
 instantiation register :: enum_alt
 begin
+interpretation ARM .
 definition
   enum_alt_register: "enum_alt \<equiv> 
     alt_from_ord (enum :: register list)"
@@ -109,10 +121,13 @@ end
 
 instantiation register :: enumeration_both
 begin
+interpretation ARM .
 instance by (intro_classes, simp add: enum_alt_register)
 end
 
 (*>*)
+end_qualify
+context ARM begin
 
 (*>*)
 definition
@@ -139,14 +154,22 @@ definition
 definition
 "syscallMessage \<equiv> [R0  .e.  R7] @ [FaultInstruction, SP, LR, CPSR]"
 
+end
+qualify ARM (deep)
 defs initContext_def:
 "initContext\<equiv> [(CPSR,0x150)]"
+end_qualify
+context ARM begin
 
+end
+qualify ARM (deep)
 defs sanitiseRegister_def:
 "sanitiseRegister x0 v\<equiv> (case x0 of
     CPSR \<Rightarrow>    (v && 0xf8000000) || 0x150
   | _ \<Rightarrow>    v
   )"
+end_qualify
+context ARM begin
 
 
 section "Machine State"
@@ -172,24 +195,32 @@ text {*
   machine. The latter is shadow state: kernel memory is kept in a
   separate, more abstract datatype; user memory is reflected down
   to the underlying memory of the machine.
-*} 
+*}
+end
+qualify ARM 
 record
   machine_state =
-  irq_masks :: "irq \<Rightarrow> bool"
+  irq_masks :: "ARM.irq \<Rightarrow> bool"
   irq_state :: nat
   underlying_memory :: "word32 \<Rightarrow> word8"
-  exclusive_state :: exclusive_monitors
-  machine_state_rest :: machine_state_rest  
+  exclusive_state :: ARM.exclusive_monitors
+  machine_state_rest :: ARM.machine_state_rest  
 
 consts irq_oracle :: "nat \<Rightarrow> 10 word"
+end_qualify
 
+context ARM begin
 text {*
   The machine monad is used for operations on the state defined above.
 *}
 type_synonym 'a machine_monad = "(machine_state, 'a) nondet_monad"
 
+end
+
 translations
-  (type) "'c machine_monad" <= (type) "(machine_state, 'c) nondet_monad"
+  (type) "'c ARM.machine_monad" <= (type) "(ARM.machine_state, 'c) nondet_monad"
+
+context ARM begin
 
 text {*
   After kernel initialisation all IRQs are masked.
@@ -209,8 +240,12 @@ text {*
   The initial exclusive state is the same constant
   that clearExMonitor defaults it to.
 *}
-consts default_exclusive_state :: exclusive_monitors
+end
+qualify ARM
+consts default_exclusive_state :: ARM.exclusive_monitors
+end_qualify
 
+context ARM begin
 text {*
   We leave open the underspecified rest of the machine state in
   the initial state.
@@ -273,9 +308,12 @@ where
   | ARMSuperSection \<Rightarrow>    24
   )"
 
+end
+qualify ARM (deep)
 (* vmpage_size instance proofs *)
 (*<*)
 instantiation vmpage_size :: enum begin
+interpretation ARM .
 definition
   enum_vmpage_size: "enum_class.enum \<equiv> 
     [ 
@@ -302,6 +340,7 @@ end
 
 instantiation vmpage_size :: enum_alt
 begin
+interpretation ARM .
 definition
   enum_alt_vmpage_size: "enum_alt \<equiv> 
     alt_from_ord (enum :: vmpage_size list)"
@@ -310,11 +349,14 @@ end
 
 instantiation vmpage_size :: enumeration_both
 begin
+interpretation ARM .
 instance by (intro_classes, simp add: enum_alt_vmpage_size)
 end
 
 (*>*)
-
-
 end_qualify
+context ARM begin
+
+
+end
 end

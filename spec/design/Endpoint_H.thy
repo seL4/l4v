@@ -42,7 +42,7 @@ defs sendIPC_def:
                 setEndpoint epptr $ SendEP $ queue @ [thread]
             od)
             else  return ()
-            | RecvEP v1 \<Rightarrow> (case v1 of dest # queue \<Rightarrow>  (do
+            | RecvEP v3 \<Rightarrow> (case v3 of dest # queue \<Rightarrow>  (do
                 setEndpoint epptr $ (case queue of
                       [] \<Rightarrow>   IdleEP
                     | _ \<Rightarrow>   RecvEP queue

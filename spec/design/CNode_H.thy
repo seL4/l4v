@@ -160,10 +160,10 @@ odE))
 by auto
 
 defs decodeCNodeInvocation_def:
-"decodeCNodeInvocation label x1 x2 extraCaps\<equiv> (let (v1, cap) = (x1, x2) in
+"decodeCNodeInvocation label x1 x2 extraCaps\<equiv> (let (v15, cap) = (x1, x2) in
   if isCNodeCap cap
   then
-  (case v1 of
+  (case v15 of
   (index # bits # args) \<Rightarrow>   (doE
     inv \<leftarrow> returnOk ( invocationType label);
     unlessE (inv `~elem~` [CNodeRevoke  .e.  CNodeSaveCaller]) $
@@ -398,12 +398,12 @@ defs capCyclicZombie_def:
   )"
 
 defs reduceZombie_def:
-"reduceZombie x0 slot x2\<equiv> (let (v5, v6) = (x0, x2) in
-  if isZombie v5 \<and> capZombieNumber v5 = 0
+"reduceZombie x0 slot x2\<equiv> (let (v19, v20) = (x0, x2) in
+  if isZombie v19 \<and> capZombieNumber v19 = 0
   then  
     haskell_fail []
-  else if isZombie v5 \<and> \<not> v6
-  then let ptr = capZombiePtr v5
+  else if isZombie v19 \<and> \<not> v20
+  then let ptr = capZombiePtr v19
   in   (doE
     haskell_assertE (ptr \<noteq> slot) [];
     capAtPtr \<leftarrow> withoutPreemption $ liftM cteCap $ getCTE ptr;
@@ -414,8 +414,8 @@ defs reduceZombie_def:
         );
     withoutPreemption $ capSwapForDelete ptr slot
   odE)
-  else if isZombie v5 \<and> v6
-  then let z = v5; ptr = capZombiePtr z; n = capZombieNumber z
+  else if isZombie v19 \<and> v20
+  then let z = v19; ptr = capZombiePtr z; n = capZombieNumber z
   in   (doE
     endSlot \<leftarrow> withoutPreemption $ locateSlotCap z (fromIntegral (n - 1));
     cteDelete endSlot False;

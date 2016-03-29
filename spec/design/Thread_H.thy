@@ -216,7 +216,7 @@ defs possibleSwitchTo_def:
                 then setSchedulerAction $ SwitchToThread target
                 else tcbSchedEnqueue target;
             (case action of
-                  SwitchToThread v6 \<Rightarrow>   rescheduleRequired
+                  SwitchToThread v18 \<Rightarrow>   rescheduleRequired
                 | _ \<Rightarrow>   return ()
                 )
         od)
@@ -382,15 +382,15 @@ where
        (cap, srcSlot) = arg
     in
     constOnFailure (mi \<lparr> msgExtraCaps := fromIntegral n \<rparr>) $ (
-        (let (v3, v4, v5) = (cap, ep, slots) in
-            if isEndpointCap v3 \<and> v4 \<noteq> None \<and> capEPPtr v3 = the v4
-            then let p1 = capEPPtr v3; p2 = p1
+        (let (v21, v22, v23) = (cap, ep, slots) in
+            if isEndpointCap v21 \<and> v22 \<noteq> None \<and> capEPPtr v21 = the v22
+            then let p1 = capEPPtr v21; p2 = p1
             in  (doE
                 withoutFailure $
                     setExtraBadge rcvBuffer (capEPBadge cap) n;
                 withoutFailure $ transferAgain slots miCapUnfolded
             odE)
-            else (case v5 of
+            else (case v23 of
             destSlot # slots' \<Rightarrow>  (doE
                 cap' \<leftarrow> unifyFailure $ deriveCap srcSlot $ if diminish
                         then allRights \<lparr> capAllowWrite := False \<rparr>
@@ -417,7 +417,7 @@ defs doIPCTransfer_def:
                     sender sendBuffer endpoint badge grant
                     receiver receiveBuffer diminish
               od)
-            | Some v1 \<Rightarrow>   (
+            | Some v25 \<Rightarrow>   (
                 doFaultTransfer badge sender receiver receiveBuffer
             )
             )

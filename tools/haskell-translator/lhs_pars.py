@@ -102,8 +102,8 @@ element matches pred"""
 
 
 def get_defs(filename):
-    if filename in file_defs:
-        return file_defs[filename]
+    #if filename in file_defs:
+    #    return file_defs[filename]
 
     cmdline = os.environ['L4CPP']
     f = os.popen('cpp -Wno-invalid-pp-token -traditional-cpp %s %s' %
@@ -327,16 +327,19 @@ def defs_transform(d):
     return d
 
 
-def wrap_qualify(lines, deep=False):
+def wrap_qualify(lines, deep=True):
+    if len(lines) == 0:
+        return lines
+
     """Close and then re-open a locale so instantiations can go through"""
     if deep:
-        asdfextra = " (deep)"
+        asdfextra = "(deep)"
     else:
         asdfextra = ""
 
     if call.current_context:
-        lines.insert(0, 'end\nqualify{} {} begin'.format(asdfextra,
-            call.current_context[-1]))
+        lines.insert(0, 'end\nqualify {} {}'.format(call.current_context[-1], 
+                asdfextra))
         lines.append('end_qualify\ncontext %s begin' % call.current_context[-1])
     return lines
 
