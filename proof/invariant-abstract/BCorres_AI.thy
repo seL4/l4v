@@ -94,7 +94,7 @@ lemma assert_opt_bcorres_underlying[wp]: "bcorres_underlying t (assert_opt f) (a
   done
 
 crunch_ignore (bcorres)
-  (add: bind gets modify get put do_extended_op empty_slot_ext mapM_x when
+  (add: bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
         select unless mapM catch bindE liftE whenE alternative cap_swap_ext
         cap_insert_ext cap_move_ext liftM create_cap_ext 
          attempt_switch_to decode_set_priority_error_choice

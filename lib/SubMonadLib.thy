@@ -66,7 +66,7 @@ lemma select_f_walk:
   assumes S: "fst S = {} \<Longrightarrow> snd S"
   shows "(do a \<leftarrow> m1; b \<leftarrow> select_f S; m2 a b od) = (do b \<leftarrow> select_f S; a \<leftarrow> m1; m2 a b od)"
   apply (rule ext)
-  apply (subst Pair_fst_snd_eq)
+  apply (rule prod.expand)
   apply (rule conjI)
    apply (simp add: select_f_def bind_def split_def)
    apply fastforce

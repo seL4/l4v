@@ -8,6 +8,8 @@
 # @TAG(GD_GPL)
 #
 
+SHELL=bash
+
 ## Targets
 images: ASpec CKernel
 default: images test
@@ -23,7 +25,6 @@ report-regression:
 
 # Spec heaps.
 HEAPS += ASpec ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
-
 
 # Additional dependencies
 

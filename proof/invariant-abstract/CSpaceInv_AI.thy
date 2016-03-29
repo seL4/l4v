@@ -322,7 +322,7 @@ lemma valid_tcb_state_update:
   "\<lbrakk> valid_tcb p t s; valid_tcb_state st s;
      case st of 
                 Structures_A.Inactive \<Rightarrow> True
-              | Structures_A.BlockedOnReceive e d \<Rightarrow>
+              | Structures_A.BlockedOnReceive e \<Rightarrow>
                      tcb_caller t = cap.NullCap
                    \<and> is_master_reply_cap (tcb_reply t)
                    \<and> obj_ref_of (tcb_reply t) = p
@@ -1012,7 +1012,7 @@ lemma set_cap_zombies':
   apply (simp add: zombies_final_def2 cte_wp_at_caps_of_state)
   apply (rule hoare_pre, wp)
   apply clarsimp
-  apply (metis Int_commute Pair_eq)
+  apply (metis Int_commute prod.inject)
   done
 
 fun ex_zombie_refs :: "(cap \<times> cap) \<Rightarrow> obj_ref set"
@@ -1604,7 +1604,7 @@ lemma unique_table_refsD:
 lemma table_cap_ref_vs_cap_ref_Some:
   "table_cap_ref x = Some y \<Longrightarrow> vs_cap_ref x = Some y"
   by (clarsimp simp: table_cap_ref_def vs_cap_ref_def 
-              split: Structures_A.cap.splits ARM_Structs_A.arch_cap.splits)
+              split: Structures_A.cap.splits Arch_Structs_A.arch_cap.splits)
 
 
 lemma set_cap_valid_vs_lookup:

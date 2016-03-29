@@ -20,7 +20,7 @@ begin
 
 defs receiveBlocked_def:
 "receiveBlocked st\<equiv> (case st of
-      BlockedOnReceive v1 v2 \<Rightarrow>   True
+      BlockedOnReceive v1 \<Rightarrow>   True
     | _ \<Rightarrow>   False
     )"
 

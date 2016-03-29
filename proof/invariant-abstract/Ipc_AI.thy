@@ -151,13 +151,14 @@ lemma update_cap_data_closedform:
    | cap.IRQControlCap \<Rightarrow> cap.IRQControlCap
    | cap.IRQHandlerCap irq \<Rightarrow> cap.IRQHandlerCap irq
    | cap.Zombie r b n \<Rightarrow> cap.Zombie r b n
-   | cap.ArchObjectCap cap \<Rightarrow> cap.ArchObjectCap (arch_update_cap_data w cap))"
+   | cap.ArchObjectCap cap \<Rightarrow> cap.ArchObjectCap cap)"
   apply (cases cap,
          simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
                         is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
                         cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
                         simp_thms cap_rights.simps Let_def split_def
                         the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
+                        arch_update_cap_data_def
                   cong: if_cong)
   apply auto
   done
@@ -604,10 +605,9 @@ lemma masked_as_full_null_cap[simp]:
   "(cap.NullCap  = masked_as_full x x) = (x = cap.NullCap)"
   by (case_tac x,simp_all add:masked_as_full_def)+
 
-
 lemma transfer_caps_loop_mi_label[wp]:
   "\<lbrace>\<lambda>s. P (mi_label mi)\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>mi' s. P (mi_label mi')\<rbrace>"
   apply (induct caps arbitrary: n slots mi)
    apply simp
@@ -671,7 +671,7 @@ lemma transfer_caps_loop_presM:
                                   cte_wp_at (\<lambda>cp. fst x \<noteq> cap.NullCap \<longrightarrow> cp \<noteq> fst x \<longrightarrow> cp = masked_as_full (fst x) (fst x)) (snd x) s
                                            \<and> real_cte_at (snd x) s))
                        \<and> (ex \<longrightarrow> (\<forall>x \<in> set slots. ex_cte_cap_wp_to is_cnode_cap x s))\<rbrace>
-                  transfer_caps_loop ep diminish buffer n caps slots mi
+                  transfer_caps_loop ep buffer n caps slots mi
               \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (induct caps arbitrary: slots n mi)
    apply (simp, wp, simp)
@@ -731,19 +731,19 @@ lemmas transfer_caps_loop_pres =
 
 lemma transfer_caps_loop_typ_at[wp]:
    "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
-      transfer_caps_loop ep diminish buffer n caps slots mi
+      transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
 lemma transfer_loop_aligned[wp]:
   "\<lbrace>pspace_aligned\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
 lemma transfer_loop_distinct[wp]:
   "\<lbrace>pspace_distinct\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
@@ -754,7 +754,7 @@ lemma invs_valid_objs2:
 lemma transfer_caps_loop_valid_objs[wp]:
   "\<lbrace>valid_objs and valid_mdb and (\<lambda>s. \<forall>slot \<in> set slots. real_cte_at slot s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) slot s)
             and transfer_caps_srcs caps and K (distinct slots)\<rbrace>
-      transfer_caps_loop ep diminish buffer n caps slots mi
+      transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (rule hoare_pre)
    apply (rule transfer_caps_loop_presM[where vo=True and em=False and ex=False])
@@ -770,7 +770,7 @@ lemma transfer_caps_loop_valid_mdb[wp]:
   "\<lbrace>\<lambda>s. valid_mdb s \<and> valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s
        \<and> (\<forall>slot \<in> set slots. real_cte_at slot s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) slot s)
        \<and> transfer_caps_srcs caps s \<and> distinct slots\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
   apply (rule hoare_pre)
    apply (rule transfer_caps_loop_presM[where vo=True and em=True and ex=False])
@@ -789,7 +789,7 @@ crunch state_refs_of [wp]: set_extra_badge "\<lambda>s. P (state_refs_of s)"
 
 lemma tcl_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
@@ -797,7 +797,7 @@ crunch if_live [wp]: set_extra_badge if_live_then_nonz_cap
 
 lemma tcl_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   by (wp transfer_caps_loop_pres cap_insert_iflive)
 
@@ -805,7 +805,7 @@ crunch if_unsafe [wp]: set_extra_badge if_unsafe_then_cap
 
 lemma tcl_ifunsafe[wp]:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s \<and> (\<forall>x\<in>set slots. ex_cte_cap_wp_to is_cnode_cap x s)\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   by (wp transfer_caps_loop_presM[where vo=False and em=False and ex=True, simplified]
             cap_insert_ifunsafe | simp)+
@@ -840,20 +840,20 @@ crunch pred_tcb_at [wp]: set_extra_badge "\<lambda>s. pred_tcb_at proj P p s"
 crunch idle [wp]: set_extra_badge "\<lambda>s. P (idle_thread s)"
 
 lemma tcl_idle[wp]:
-  "\<lbrace>valid_idle\<rbrace> transfer_caps_loop ep diminish buffer n caps slots mi \<lbrace>\<lambda>_. valid_idle\<rbrace>"
+  "\<lbrace>valid_idle\<rbrace> transfer_caps_loop ep buffer n caps slots mi \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (wp transfer_caps_loop_pres cap_insert_idle valid_idle_lift)
 
 crunch cur_tcb [wp]: set_extra_badge cur_tcb
 
 lemma tcl_ct[wp]:
-  "\<lbrace>cur_tcb\<rbrace> transfer_caps_loop ep diminish buffer n caps slots mi \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
+  "\<lbrace>cur_tcb\<rbrace> transfer_caps_loop ep buffer n caps slots mi \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
 crunch it[wp]: cap_insert "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma tcl_it[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> transfer_caps_loop ep diminish buffer n caps slots mi
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
@@ -904,7 +904,7 @@ lemma tcl_zombies[wp]:
   "\<lbrace>zombies_final and valid_objs and valid_mdb and K (distinct slots)
           and (\<lambda>s. \<forall>slot \<in> set slots. real_cte_at slot s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) slot s )
           and transfer_caps_srcs caps\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (rule hoare_pre)
    apply (rule transfer_caps_loop_presM[where vo=True and em=False and ex=False])
@@ -947,7 +947,7 @@ lemma transfer_caps_loop_valid_globals [wp]:
   "\<lbrace>valid_global_refs and valid_objs and valid_mdb and K (distinct slots)
        and (\<lambda>s. \<forall>slot \<in> set slots. real_cte_at slot s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) slot s)
        and transfer_caps_srcs caps\<rbrace>
-  transfer_caps_loop ep diminish buffer n caps slots mi 
+  transfer_caps_loop ep buffer n caps slots mi 
   \<lbrace>\<lambda>rv. valid_global_refs\<rbrace>"
   apply (rule hoare_pre)
   apply (rule transfer_caps_loop_presM[where em=False and ex=False and vo=True])
@@ -965,12 +965,12 @@ lemma transfer_caps_loop_valid_globals [wp]:
 
 
 lemma transfer_caps_loop_arch[wp]:
-  "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> transfer_caps_loop ep diminish buffer n caps slots mi \<lbrace>\<lambda>rv s. P (arch_state s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> transfer_caps_loop ep buffer n caps slots mi \<lbrace>\<lambda>rv s. P (arch_state s)\<rbrace>"
   by (rule transfer_caps_loop_pres) wp
 
 
 lemma transfer_caps_loop_valid_arch[wp]:
-  "\<lbrace>valid_arch_state\<rbrace> transfer_caps_loop ep diminish buffer n caps slots mi \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  "\<lbrace>valid_arch_state\<rbrace> transfer_caps_loop ep buffer n caps slots mi \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift) wp
 
 
@@ -986,7 +986,7 @@ lemma tcl_reply':
   "\<lbrace>valid_reply_caps and valid_reply_masters and valid_objs and valid_mdb and K(distinct slots)
          and (\<lambda>s. \<forall>x \<in> set slots. real_cte_at x s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) x s)
          and transfer_caps_srcs caps\<rbrace>
-   transfer_caps_loop ep diminish buffer n caps slots mi
+   transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_reply_caps and valid_reply_masters\<rbrace>"
   apply (rule hoare_pre)
    apply (rule transfer_caps_loop_presM[where vo=True and em=False and ex=False])
@@ -1021,7 +1021,7 @@ lemmas tcl_reply_masters[wp] = tcl_reply' [THEN hoare_strengthen_post
 
 lemma transfer_caps_loop_irq_node[wp]:
   "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)\<rbrace>"
   by (rule transfer_caps_loop_pres) wp
 
@@ -1040,7 +1040,7 @@ lemma transfer_caps_loop_irq_handlers[wp]:
   "\<lbrace>valid_irq_handlers and valid_objs and valid_mdb and K (distinct slots)
          and (\<lambda>s. \<forall>x \<in> set slots. real_cte_at x s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) x s)
          and transfer_caps_srcs caps\<rbrace>
-   transfer_caps_loop ep diminish buffer n caps slots mi
+   transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_irq_handlers\<rbrace>"
   apply (rule hoare_pre)
    apply (rule transfer_caps_loop_presM[where vo=True and em=False and ex=False])
@@ -1063,7 +1063,7 @@ crunch valid_arch_objs [wp]: set_extra_badge valid_arch_objs
 
 lemma transfer_caps_loop_arch_objs[wp]:
   "\<lbrace>valid_arch_objs\<rbrace>
-   transfer_caps_loop ep diminish buffer n caps slots mi
+   transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
   by (rule transfer_caps_loop_pres) wp
 
@@ -1074,7 +1074,7 @@ lemma transfer_caps_loop_valid_arch_caps[wp]:
   "\<lbrace>valid_arch_caps and valid_objs and valid_mdb and K(distinct slots)
            and (\<lambda>s. \<forall>x \<in> set slots. real_cte_at x s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) x s)
            and transfer_caps_srcs caps\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
   apply (wp transfer_caps_loop_presM[where vo=True and em=False and ex=False]
             cap_insert_valid_arch_caps)
@@ -1094,7 +1094,7 @@ crunch valid_global_objs [wp]: set_extra_badge valid_global_objs
 
 lemma transfer_caps_loop_valid_global_objs[wp]:
   "\<lbrace>valid_global_objs\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   by (wp transfer_caps_loop_pres cap_insert_valid_global_objs)
 
@@ -1104,7 +1104,7 @@ crunch valid_kernel_mappings [wp]: set_extra_badge valid_kernel_mappings
 
 lemma transfer_caps_loop_v_ker_map[wp]:
   "\<lbrace>valid_kernel_mappings\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_kernel_mappings\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
@@ -1114,7 +1114,7 @@ crunch equal_kernel_mappings [wp]: set_extra_badge equal_kernel_mappings
 
 lemma transfer_caps_loop_eq_ker_map[wp]:
   "\<lbrace>equal_kernel_mappings\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
@@ -1124,7 +1124,7 @@ crunch valid_asid_map [wp]: set_extra_badge valid_asid_map
 
 lemma transfer_caps_loop_asid_map[wp]:
   "\<lbrace>valid_asid_map\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
   by (wp transfer_caps_loop_pres | simp)+
 
@@ -1134,7 +1134,7 @@ crunch only_idle [wp]: set_extra_badge only_idle
 
 lemma transfer_caps_loop_only_idle[wp]:
   "\<lbrace>only_idle\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. only_idle\<rbrace>"
   by (wp transfer_caps_loop_pres | simp)+
 
@@ -1144,7 +1144,7 @@ crunch valid_global_pd_mappings [wp]: set_extra_badge valid_global_pd_mappings
 
 lemma transfer_caps_loop_valid_global_pd_mappings[wp]:
   "\<lbrace>valid_global_pd_mappings\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
@@ -1154,7 +1154,7 @@ crunch pspace_in_kernel_window [wp]: set_extra_badge pspace_in_kernel_window
 
 lemma transfer_caps_loop_pspace_in_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
@@ -1165,7 +1165,7 @@ lemma transfer_caps_loop_cap_refs_in_kernel_window [wp]:
   "\<lbrace>cap_refs_in_kernel_window and valid_objs and valid_mdb and K (distinct slots)
        and (\<lambda>s. \<forall>slot \<in> set slots. real_cte_at slot s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) slot s )
        and transfer_caps_srcs caps\<rbrace>
-  transfer_caps_loop ep diminish buffer n caps slots mi 
+  transfer_caps_loop ep buffer n caps slots mi 
   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (rule hoare_pre)
   apply (rule transfer_caps_loop_presM[where em=False and ex=False and vo=True])
@@ -1186,7 +1186,7 @@ crunch valid_ioc[wp]: store_word_offs valid_ioc
 
 lemma transfer_caps_loop_valid_ioc[wp]:
   "\<lbrace>\<lambda>s. valid_ioc s\<rbrace>
-    transfer_caps_loop ep diminish buffer n caps slots mi
+    transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   by (wp transfer_caps_loop_pres | simp add: set_extra_badge_def)+
 
@@ -1247,7 +1247,7 @@ by (simp add: set_extra_badge_def) wp
 
 lemma transfer_caps_loop_vms[wp]:
   "\<lbrace>\<lambda>s. valid_machine_state s\<rbrace>
-    transfer_caps_loop ep diminish buffer n caps slots mi
+    transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
@@ -1256,7 +1256,7 @@ crunch valid_irq_states[wp]: set_extra_badge "valid_irq_states"
 
 lemma transfer_caps_loop_valid_irq_states[wp]:
   "\<lbrace>\<lambda>s. valid_irq_states s\<rbrace>
-    transfer_caps_loop ep diminish buffer n caps slots mi
+    transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
   apply(wp transfer_caps_loop_pres)
   done
@@ -1266,7 +1266,7 @@ lemma transfer_caps_loop_invs[wp]:
           \<and> (\<forall>x \<in> set slots. ex_cte_cap_wp_to is_cnode_cap x s) \<and> distinct slots
           \<and> (\<forall>x \<in> set slots. real_cte_at x s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) x s)
           \<and> transfer_caps_srcs caps s\<rbrace> 
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
@@ -1308,7 +1308,7 @@ lemma grs_distinct[wp]:
 
 lemma transfer_caps_mi_label[wp]:
   "\<lbrace>\<lambda>s. P (mi_label mi)\<rbrace>
-     transfer_caps mi caps ep receiver recv_buf diminish
+     transfer_caps mi caps ep receiver recv_buf
    \<lbrace>\<lambda>mi' s. P (mi_label mi')\<rbrace>"
   apply (simp add: transfer_caps_def)
   apply (wp | wpc)+
@@ -1318,7 +1318,7 @@ lemma transfer_caps_mi_label[wp]:
 
 lemma transfer_cap_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
-   transfer_caps mi caps ep receiver recv_buf diminish
+   transfer_caps mi caps ep receiver recv_buf
    \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   apply (simp add: transfer_caps_def split_def split del: split_if |
          wp cap_insert_typ_at hoare_drop_imps|wpc)+
@@ -1327,7 +1327,7 @@ lemma transfer_cap_typ_at[wp]:
 
 lemma transfer_cap_tcb[wp]:
   "\<lbrace>tcb_at t\<rbrace>
-    transfer_caps mi caps ep receiver recv_buf diminish
+    transfer_caps mi caps ep receiver recv_buf
    \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ, wp)
 
@@ -1661,7 +1661,7 @@ crunch typ_at[wp]: do_normal_transfer "\<lambda>s. P (typ_at T p s)"
 lemma do_normal_tcb[wp]:
   "\<lbrace>tcb_at t\<rbrace>
      do_normal_transfer sender send_buf ep badge
-             can_grant receiver recv_buf diminish
+             can_grant receiver recv_buf
    \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ, wp)
 
@@ -1858,7 +1858,7 @@ crunch typ_at[wp]: do_ipc_transfer "\<lambda>s. P (typ_at T p s)"
 
 
 lemma do_ipc_transfer_valid_arch[wp]:
-  "\<lbrace>valid_arch_state\<rbrace> do_ipc_transfer s ep bg grt r dim \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  "\<lbrace>valid_arch_state\<rbrace> do_ipc_transfer s ep bg grt r \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift) wp
 
 
@@ -2080,7 +2080,7 @@ crunch vms[wp]: do_ipc_transfer valid_machine_state (wp: mapM_UNIV_wp)
 
 lemma do_ipc_transfer_invs[wp]:
   "\<lbrace>invs and tcb_at r and tcb_at s\<rbrace>
-   do_ipc_transfer s ep bg grt r dim
+   do_ipc_transfer s ep bg grt r
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: do_ipc_transfer_def)
   apply (wp|wpc)+
@@ -2098,12 +2098,12 @@ lemma do_ipc_transfer_invs[wp]:
   done
 
 lemma dit_tcb_at [wp]:
-  "\<lbrace>tcb_at t\<rbrace> do_ipc_transfer s ep bg grt r dim \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
+  "\<lbrace>tcb_at t\<rbrace> do_ipc_transfer s ep bg grt r \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ) wp
 
 
 lemma dit_cte_at [wp]:
-  "\<lbrace>cte_at t\<rbrace> do_ipc_transfer s ep bg grt r dim \<lbrace>\<lambda>rv. cte_at t\<rbrace>"
+  "\<lbrace>cte_at t\<rbrace> do_ipc_transfer s ep bg grt r \<lbrace>\<lambda>rv. cte_at t\<rbrace>"
   by (wp valid_cte_at_typ)
 
 
@@ -2136,7 +2136,7 @@ lemmas cap_insert_typ_ats [wp] = abs_typ_at_lifts [OF cap_insert_typ_at]
 lemma transfer_caps_loop_cte_wp_at:
   assumes imp: "\<And>cap. P cap \<Longrightarrow> \<not> is_untyped_cap cap"
   shows "\<lbrace>cte_wp_at P sl and K (sl \<notin> set slots) and (\<lambda>s. \<forall>x \<in> set slots. cte_at x s)\<rbrace>
-   transfer_caps_loop ep diminish buffer n caps slots mi
+   transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. cte_wp_at P sl\<rbrace>"
   apply (induct caps arbitrary: slots n mi)
    apply (simp, wp, simp)
@@ -2162,7 +2162,7 @@ lemma transfer_caps_loop_cte_wp_at:
 lemma transfer_caps_tcb_caps:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows  "\<lbrace>valid_objs and cte_wp_at P (t, ref) and tcb_at t\<rbrace>
-     transfer_caps mi caps ep receiver recv_buf diminish
+     transfer_caps mi caps ep receiver recv_buf
    \<lbrace>\<lambda>rv. cte_wp_at P (t, ref)\<rbrace>"
   apply (simp add: transfer_caps_def)
   apply (wp hoare_vcg_const_Ball_lift hoare_vcg_const_imp_lift 
@@ -2193,7 +2193,7 @@ crunch cte_wp_at[wp]: do_fault_transfer "cte_wp_at P p"
 lemma transfer_caps_non_null_cte_wp_at:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows  "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>
-     transfer_caps mi caps ep receiver recv_buf diminish
+     transfer_caps mi caps ep receiver recv_buf
    \<lbrace>\<lambda>_. cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>"
   unfolding transfer_caps_def
   apply simp
@@ -2220,7 +2220,7 @@ lemma transfer_caps_non_null_cte_wp_at:
 lemma do_normal_transfer_non_null_cte_wp_at:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows  "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>
-   do_normal_transfer st send_buffer ep b gr rt recv_buffer dim
+   do_normal_transfer st send_buffer ep b gr rt recv_buffer
    \<lbrace>\<lambda>_. cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>"
   unfolding do_normal_transfer_def
   apply simp
@@ -2233,7 +2233,7 @@ lemma do_ipc_transfer_non_null_cte_wp_at:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows
   "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>
-   do_ipc_transfer st ep b gr rt dim
+   do_ipc_transfer st ep b gr rt
    \<lbrace>\<lambda>_. cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>"
   unfolding do_ipc_transfer_def
   apply (wp do_normal_transfer_non_null_cte_wp_at hoare_drop_imp hoare_allI
@@ -2292,7 +2292,7 @@ lemma do_normal_transfer_tcb_caps:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows
   "\<lbrace>valid_objs and cte_wp_at P (t, ref) and tcb_at t\<rbrace>
-   do_normal_transfer st sb ep badge grant rt rb dim
+   do_normal_transfer st sb ep badge grant rt rb
    \<lbrace>\<lambda>rv. cte_wp_at P (t, ref)\<rbrace>"
   apply (simp add: do_normal_transfer_def)
   apply (rule hoare_pre)
@@ -2305,7 +2305,7 @@ lemma do_ipc_transfer_tcb_caps:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows
   "\<lbrace>valid_objs and cte_wp_at P (t, ref) and tcb_at t\<rbrace>
-   do_ipc_transfer st ep b gr rt dim
+   do_ipc_transfer st ep b gr rt
    \<lbrace>\<lambda>rv. cte_wp_at P (t, ref)\<rbrace>"
   apply (simp add: do_ipc_transfer_def)
   apply (rule hoare_pre)
@@ -2884,7 +2884,7 @@ lemma ri_invs':
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes ext_Q[wp]: "\<And>a (s::'a::state_ext state). \<lbrace>Q and valid_objs\<rbrace> do_extended_op (switch_if_required_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes scc_Q[wp]: "\<And>a b. \<lbrace>valid_mdb and Q\<rbrace> setup_caller_cap a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes dit_Q[wp]: "\<And>a b c d e f. \<lbrace>valid_mdb and valid_objs and Q\<rbrace> do_ipc_transfer a b c d e f \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes dit_Q[wp]: "\<And>a b c d e. \<lbrace>valid_mdb and valid_objs and Q\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes failed_transfer_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> do_nbrecv_failed_transfer a \<lbrace>\<lambda>_. Q\<rbrace>"
   notes dxo_wp_weak[wp del]
   shows
@@ -3212,7 +3212,7 @@ lemma si_invs':
   assumes ext_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (attempt_switch_to a) \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes setup_caller_cap_Q[wp]: "\<And>send receive. \<lbrace>Q and valid_mdb\<rbrace> setup_caller_cap send receive \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e f. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e f \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   notes dxo_wp_weak[wp del]
   shows
   "\<lbrace>invs and Q and st_tcb_at active t
@@ -3269,8 +3269,7 @@ lemma si_invs':
     apply (drule(1) bspec, clarsimp simp: pred_tcb_at_def obj_at_def)
    apply (wp, simp)
   apply (rename_tac list)
-  apply (case_tac list, simp_all)
-  apply (simp add: invs_def valid_state_def valid_pspace_def)
+  apply (case_tac list, simp_all add: invs_def valid_state_def valid_pspace_def split del:split_if)
   apply (rule hoare_pre)
    apply (wp valid_irq_node_typ)
           apply (simp add: if_apply_def2)
@@ -3321,7 +3320,7 @@ lemma hf_invs':
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes ext_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (attempt_switch_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes setup_caller_cap_Q[wp]: "\<And>send receive. \<lbrace>Q and valid_mdb\<rbrace> setup_caller_cap send receive \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e f. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e f \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes thread_set_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> thread_set a b \<lbrace>\<lambda>_.Q\<rbrace>"
   notes si_invs''[wp] = si_invs'[where Q=Q]
   shows
@@ -3438,7 +3437,7 @@ lemma si_blk_makes_simple:
    apply clarsimp
   apply (rule hoare_gen_asm[simplified])
   apply (rename_tac list)
-  apply (case_tac list, simp_all)
+  apply (case_tac list, simp_all split del:split_if)
   apply (rule hoare_seq_ext [OF _ set_ep_pred_tcb_at])
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (case_tac recv_state, simp_all split del: split_if)

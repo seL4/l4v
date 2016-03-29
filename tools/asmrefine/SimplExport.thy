@@ -50,7 +50,7 @@ val ops = Symtab.make [
     (@{const_name "minus"}, ("Minus", true)),
     (@{const_name "times"}, ("Times", true)),
     (@{const_name "div_class.mod"}, ("Modulus", true)),
-    (@{const_name "div_class.div"}, ("DividedBy", true)),
+    (@{const_name "divide_class.divide"}, ("DividedBy", true)),
     (@{const_name "bitAND"}, ("BWAnd", true)),
     (@{const_name "bitOR"}, ("BWOr", true)),
     (@{const_name "bitXOR"}, ("BWXOR", true)),
@@ -348,7 +348,7 @@ fun ptr_simp_term ctxt s pat t = let
     val _ = (not (fst rew aconv snd rew))
         orelse raise TERM ("ptr_simp_term: " ^ s, [fst rew])
     val _ = if not trace_ptr_simp then () else
-        (Display.pretty_thm ctxt rew_thm |> Pretty.writeln;
+        (Thm.pretty_thm ctxt rew_thm |> Pretty.writeln;
          Syntax.pretty_term ctxt t |> Pretty.writeln)
   in Pattern.rewrite_term (Proof_Context.theory_of ctxt) [rew] [] t end
 
@@ -478,7 +478,7 @@ fun triv_mem_upd ctxt p v = case dest_mem_acc_addr v of
       val thm = ptr_simp ctxt (Thm.cterm_of ctxt t)
       val t' = Thm.rhs_of thm |> Thm.term_of
     in t' = @{term "0 :: word32"} 
-        orelse (Display.pretty_thm ctxt thm |> Pretty.writeln; false)
+        orelse (Thm.pretty_thm ctxt thm |> Pretty.writeln; false)
     end
 
 fun narrow_mem_acc _ _ [] p = p

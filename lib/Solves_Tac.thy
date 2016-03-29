@@ -13,10 +13,10 @@ let
   (* Use "etac", but give up if there are countless unifications that
    * don't end up working. *)
   fun limited_etac thm i =
-    Seq.take ETAC_LIMIT o etac thm i
+    Seq.take ETAC_LIMIT o eresolve_tac ctxt [thm] i
 in
   if Thm.no_prems thm then
-    SOLVED' (rtac thm) i goal
+    SOLVED' (resolve_tac ctxt [thm]) i goal
   else
     SOLVED' (
       limited_etac thm
@@ -46,11 +46,11 @@ let
   val assms =
     Proof_Context.get_fact ctxt (Facts.named "local.assms")
       handle ERROR _ => [];
-  fun add_prems i = TRY (Method.insert_tac assms i);
+  fun add_prems i = TRY (Method.insert_tac ctxt assms i);
   val all_facts = all_facts_of ctxt
   val solve_tacs = map (fn thm => solve_tac ctxt thm 1) all_facts
 in
-  (add_prems THEN' atac)
+  (add_prems THEN' assume_tac ctxt)
   ORELSE'
   SOLVED' (Subgoal.FOCUS_PARAMS (K (add_prems 1 THEN FIRST solve_tacs)) ctxt)
 end

@@ -226,7 +226,7 @@ proof -
   have pno': "pspace_no_overlap' frame (objBitsKO ko) \<sigma>" 
     by (simp add:objBits_simps pno ko_def archObjSize_def al)
   
-  have al': "is_aligned frame (objBitsKO (ko\<Colon>kernel_object))"
+  have al': "is_aligned frame (objBitsKO (ko::kernel_object))"
     by (simp add:objBits_simps ko_def archObjSize_def al)
 
   (* s/obj/obj'/ *)
@@ -274,13 +274,13 @@ proof -
    done
 
   have cslift_ptr_retyp_helper:
-   "\<forall>x\<Colon>asid_pool_C ptr\<in>dom (cslift x). is_aligned (ptr_val x) (objBitsKO ko)
+   "\<forall>x::asid_pool_C ptr\<in>dom (cslift x). is_aligned (ptr_val x) (objBitsKO ko)
    \<Longrightarrow> clift (hrs_htd_update (ptr_retyps_gen 1 (ap_Ptr frame) False)
-           (hrs_mem_update (heap_update_list frame (replicate ((2\<Colon>nat) ^ pageBits) (0\<Colon>word8)))
+           (hrs_mem_update (heap_update_list frame (replicate ((2::nat) ^ pageBits) (0::word8)))
              (t_hrs_' (globals x)))) =
-   (\<lambda>y\<Colon>asid_pool_C ptr.
-       if y \<in> (CTypesDefs.ptr_add (ap_Ptr frame) \<circ> of_nat) ` {k\<Colon>nat. k < (2\<Colon>nat) ^ (pageBits - objBitsKO ko)}
-       then Some (from_bytes (replicate (size_of TYPE(asid_pool_C)) (0\<Colon>word8))) else cslift x y)"
+   (\<lambda>y::asid_pool_C ptr.
+       if y \<in> (CTypesDefs.ptr_add (ap_Ptr frame) \<circ> of_nat) ` {k::nat. k < (2::nat) ^ (pageBits - objBitsKO ko)}
+       then Some (from_bytes (replicate (size_of TYPE(asid_pool_C)) (0::word8))) else cslift x y)"
     using guard
     apply (subst clift_ptr_retyps_gen_memset_same, simp_all add: szo szko)
     apply (simp add: szo empty szko)
@@ -484,7 +484,7 @@ shows
        apply (wp getSlotCap_wp)
       apply clarsimp
      apply (rule_tac Q="\<lambda>_. cte_wp_at' (op = (UntypedCap frame pageBits idx) o cteCap) parent 
-                           and (\<lambda>s. descendants_range_in' {frame..frame + (2\<Colon>word32) ^ pageBits - (1\<Colon>word32)} parent (ctes_of s))
+                           and (\<lambda>s. descendants_range_in' {frame..frame + (2::word32) ^ pageBits - (1::word32)} parent (ctes_of s))
                            and pspace_no_overlap' frame pageBits
                            and invs'
                            and ct_active'"
@@ -652,7 +652,7 @@ lemma decodeARMPageTableInvocation_ccorres:
    apply (simp del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (rule ccorres_equals_throwError)
-     apply (simp split: invocation_label.split
+     apply (simp split: invocation_label.split arch_invocation_label.split
                    add: throwError_bind invocationCatch_def)
      apply fastforce
     apply (rule syscall_error_throwError_ccorres_n)
@@ -746,7 +746,7 @@ lemma decodeARMPageTableInvocation_ccorres:
          apply (simp add: if_to_top_of_bind del: Collect_const)
          apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
             apply vcg
-           apply (simp add: kernelBase_def hd_conv_nth length_ineq_not_Nil)
+           apply (simp add: kernelBase_def Platform.kernelBase_def hd_conv_nth length_ineq_not_Nil)
           apply (simp add: throwError_bind invocationCatch_def)
           apply (rule syscall_error_throwError_ccorres_n)
           apply (simp add: syscall_error_to_H_cases)
@@ -1195,7 +1195,8 @@ lemma lookupPTSlot_le_0x3C:
    apply simp
   apply (simp add: Platform.ptrFromPAddr_def physMappingOffset_def)
   apply (erule aligned_add_aligned)
-   apply (simp add: kernelBase_addr_def physBase_def is_aligned_def)
+   apply (simp add: kernelBase_addr_def Platform.physBase_def
+     physBase_def is_aligned_def)
   apply (simp add: word_bits_def)
   done
 
@@ -1436,16 +1437,16 @@ lemma valid_pde_slots_lift2:
   done
 
 lemma obj_at_pte_aligned:
-  "obj_at' (\<lambda>a\<Colon>Hardware_H.pte. True) ptr s ==> is_aligned ptr 2"
+  "obj_at' (\<lambda>a::Hardware_H.pte. True) ptr s ==> is_aligned ptr 2"
   apply (drule obj_at_ko_at')
   apply (clarsimp dest!:ko_at_is_aligned' 
     simp:objBits_simps archObjSize_def)
   done
 
 lemma addrFromPPtr_mask_5:
-  "addrFromPPtr ptr && mask (5\<Colon>nat) = ptr && mask (5\<Colon>nat)" 
+  "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
   apply (simp add:addrFromPPtr_def physMappingOffset_def 
-    kernelBase_addr_def physBase_def)
+    kernelBase_addr_def physBase_def Platform.physBase_def)
   apply word_bitwise
   apply (simp add:mask_def)
   done
@@ -2184,7 +2185,7 @@ lemma vmsz_aligned_addrFromPPtr':
    apply (erule(1) aligned_sub_aligned)
     apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
   apply (simp add: pageBitsForSize_def physMappingOffset_def kernelBase_addr_def
-                   physBase_def is_aligned_def
+                   physBase_def Platform.physBase_def is_aligned_def
             split: vmpage_size.split)
   done
 
@@ -2284,22 +2285,22 @@ lemma slotcap_in_mem_valid:
   done
 
 lemma ivc_label_flush_case:
-  "label = invocation_label.ARMPageUnify_Instruction \<or>
-   label = invocation_label.ARMPageCleanInvalidate_Data \<or>
-   label = invocation_label.ARMPageInvalidate_Data \<or>
-   label = invocation_label.ARMPageClean_Data
+  "label = ArchInvocationLabel arch_invocation_label.ARMPageUnify_Instruction \<or>
+   label = ArchInvocationLabel arch_invocation_label.ARMPageCleanInvalidate_Data \<or>
+   label = ArchInvocationLabel arch_invocation_label.ARMPageInvalidate_Data \<or>
+   label = ArchInvocationLabel arch_invocation_label.ARMPageClean_Data
     \<Longrightarrow> (case label of
-    invocation_label.ARMPageMap \<Rightarrow> A 
-  |  invocation_label.ARMPageRemap \<Rightarrow> B
-  |  invocation_label.ARMPageUnmap \<Rightarrow> C
-  |  invocation_label.ARMPageUnify_Instruction \<Rightarrow> D
-  |  invocation_label.ARMPageCleanInvalidate_Data \<Rightarrow> D
-  |  invocation_label.ARMPageInvalidate_Data \<Rightarrow> D
-  |  invocation_label.ARMPageClean_Data \<Rightarrow> D
-  |  invocation_label.ARMPageGetAddress \<Rightarrow> E
+     ArchInvocationLabel arch_invocation_label.ARMPageMap \<Rightarrow> A 
+  |  ArchInvocationLabel arch_invocation_label.ARMPageRemap \<Rightarrow> B
+  |  ArchInvocationLabel arch_invocation_label.ARMPageUnmap \<Rightarrow> C
+  |  ArchInvocationLabel arch_invocation_label.ARMPageUnify_Instruction \<Rightarrow> D
+  |  ArchInvocationLabel arch_invocation_label.ARMPageCleanInvalidate_Data \<Rightarrow> D
+  |  ArchInvocationLabel arch_invocation_label.ARMPageInvalidate_Data \<Rightarrow> D
+  |  ArchInvocationLabel arch_invocation_label.ARMPageClean_Data \<Rightarrow> D
+  |  ArchInvocationLabel arch_invocation_label.ARMPageGetAddress \<Rightarrow> E
   |  _  \<Rightarrow> H)
   = D"
-  by (case_tac label,simp_all)
+  by (auto split: invocation_label.split arch_invocation_label.split)
    
 
 lemma list_length_less:
@@ -2340,13 +2341,13 @@ lemma pbfs_less: "pageBitsForSize sz < 31"
   by (case_tac sz,simp_all)
 
 lemma flushtype_relation_triv:
-  "InvocationLabels_H.isPageFlush (invocation_type label) \<or>
-   isPDFlush (invocation_type label)
+  "isPageFlushLabel (invocation_type label) \<or>
+   isPDFlushLabel (invocation_type label)
   ==> flushtype_relation (labelToFlushType label) (ucast label)"
   by (clarsimp simp: labelToFlushType_def flushtype_relation_def 
-    invocation_eq_use_types InvocationLabels_H.isPageFlush_def 
-    InvocationLabels_H.isPDFlush_def
-    split: flush_type.splits invocation_label.splits)
+    invocation_eq_use_types ArchLabelFuns_H.isPageFlushLabel_def 
+    ArchLabelFuns_H.isPDFlushLabel_def
+    split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
 lemma setVMRootForFlush_ccorres2:
   "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
@@ -2556,6 +2557,8 @@ lemma unat_sub_le_strg:
   apply (simp add: field_simps)
   done
 
+declare[[goals_limit=2]]
+
 lemma decodeARMFrameInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -2581,16 +2584,17 @@ lemma decodeARMFrameInvocation_ccorres:
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' excaps_' cap_' buffer_'
                 simp: decodeARMMMUInvocation_def decodeARMPageFlush_def)
+
    apply (simp add: Let_def isCap_simps invocation_eq_use_types split_def
                del: Collect_const
               cong: StateSpace.state.fold_congs globals.fold_congs
-                    if_cong invocation_label.case_cong list.case_cong)
+                    if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong)
 
    apply (rule ccorres_Cond_rhs[rotated])+
          apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
         apply (rule ccorres_equals_throwError)
          apply (fastforce simp: throwError_bind invocationCatch_def
-                        split: invocation_label.split)
+                        split: invocation_label.split arch_invocation_label.split)
         apply (rule syscall_error_throwError_ccorres_n)
         apply (simp add: syscall_error_to_H_cases)
        apply (simp add: returnOk_bind bindE_assoc performARMMMUInvocations)
@@ -2605,16 +2609,18 @@ lemma decodeARMFrameInvocation_ccorres:
          apply wp
        apply (vcg exspec=setThreadState_modifies)
       apply (rule ccorres_rhs_assoc)+
-      apply csymbr+
+      apply csymbr+             
       apply (simp add: ivc_label_flush_case decodeARMPageFlush_def
                        list_case_If2 if3_fold2
                   del: Collect_const
                  cong: StateSpace.state.fold_congs globals.fold_congs
-                      if_cong invocation_label.case_cong list.case_cong)
+                      if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong)
       apply (simp add: if_1_0_0 split_def case_option_If2 if_to_top_of_bind
-                  del: Collect_const cong: if_cong)
+                  del: Collect_const cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong)
       apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
          apply vcg
+
+
         apply (clarsimp simp:list_length_less )
         apply (drule unat_less_iff32[where c =2])
          apply (simp add:word_bits_def)
@@ -3074,7 +3080,7 @@ lemma decodeARMFrameInvocation_ccorres:
               apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                  apply vcg
                 apply (frule ccap_relation_PageCap_generics)
-                apply (clarsimp simp add: kernelBase_def word_le_nat_alt)
+                apply (clarsimp simp add: kernelBase_def Platform.kernelBase_def word_le_nat_alt)
                apply (simp add: throwError_bind invocationCatch_def)?
                apply (rule syscall_error_throwError_ccorres_n)
                apply (simp add: syscall_error_to_H_cases)
@@ -3262,7 +3268,7 @@ lemma decodeARMFrameInvocation_ccorres:
                             cap_to_H_def[split_simps cap_CL.split] valid_cap'_def)
       apply (clarsimp split:if_splits)
      apply (clarsimp simp:
-       unat_less_helper isPageFlush_def InvocationLabels_H.isPageFlush_def
+       unat_less_helper isPageFlush_def isPageFlushLabel_def
        dest!:at_least_2_args | intro flushtype_relation_triv allI impI conjI)+
   done
 
@@ -3286,7 +3292,7 @@ lemma maskCapRights_eq_Untyped [simp]:
   "(maskCapRights R cap = UntypedCap p sz idx) = (cap = UntypedCap p sz idx)"
   apply (cases cap)
   apply (auto simp: Let_def isCap_simps maskCapRights_def)
-  apply (simp add: ArchRetype_H.maskCapRights_def Let_def split: arch_capability.splits)
+  apply (simp add: ArchRetype_H.maskCapRights_def isPageCap_def Let_def split: arch_capability.splits)
   done
 
 
@@ -3303,11 +3309,11 @@ lemma le_mask_asid_bits_helper:
 declare WordLemmaBucket.from_bool_mask_simp [simp]
 
 lemma isPDFlush_fold: 
- "(label = invocation_label.ARMPDUnify_Instruction \<or>
- label = invocation_label.ARMPDCleanInvalidate_Data \<or>
- label = invocation_label.ARMPDInvalidate_Data \<or>
- label = invocation_label.ARMPDClean_Data) = isPDFlush label"
-  by (simp_all add:isPDFlush_def split:invocation_label.splits)
+ "(label = ArchInvocationLabel arch_invocation_label.ARMPDUnify_Instruction \<or>
+ label =   ArchInvocationLabel arch_invocation_label.ARMPDCleanInvalidate_Data \<or>
+ label =   ArchInvocationLabel arch_invocation_label.ARMPDInvalidate_Data \<or>
+ label =   ArchInvocationLabel arch_invocation_label.ARMPDClean_Data) = isPDFlushLabel label"
+  by (simp_all add:isPDFlushLabel_def split:invocation_label.splits arch_invocation_label.splits)
 
 lemma injection_handler_liftE:
   "injection_handler a (liftE f) = liftE f"
@@ -3484,7 +3490,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
          apply (simp add: syscall_error_to_H_cases)
         apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
            apply vcg
-          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil kernelBase_def)
+          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil kernelBase_def Platform.kernelBase_def)
          apply (simp add:injection_handler_throwError)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add: syscall_error_to_H_cases)
@@ -3694,7 +3700,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
         to_option_def rel_option_alt_def to_bool_def
         split:option.splits if_splits
       | fastforce simp: mask_def
-      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def
+      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
       | rule word_of_nat_less,simp add: pbfs_less)+
     apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
     apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
@@ -3709,7 +3715,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
         to_option_def rel_option_alt_def to_bool_def
         split:option.splits if_splits
       | fastforce simp: mask_def
-      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def
+      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
       | rule word_of_nat_less,simp add: pbfs_less)+
    apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
    apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
@@ -3724,7 +3730,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
       to_option_def rel_option_alt_def to_bool_def
       split:option.splits if_splits
       | fastforce simp: mask_def
-      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def
+      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
       | rule word_of_nat_less,simp add: pbfs_less)+
   apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
   apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
@@ -3734,14 +3740,13 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
     typ_heap_simps' shiftl_t2n[where n=2] field_simps
     elim!: ccap_relationE)
   apply (intro conjI impI allI)
-   apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
+   by (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
      resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
      to_option_def rel_option_alt_def to_bool_def
      split:option.splits if_splits
      | fastforce simp: mask_def
-     | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def
+     | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
      | rule word_of_nat_less,simp add: pbfs_less)+
-  done
 
 lemma Arch_decodeInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
@@ -3799,7 +3804,7 @@ lemma Arch_decodeInvocation_ccorres:
     apply (rule ccorres_Cond_rhs_Seq)
      apply (rule ccorres_equals_throwError)
       apply (fastforce simp: throwError_bind invocationCatch_def
-                     split: invocation_label.split)
+                     split: invocation_label.split arch_invocation_label.split)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
     apply (simp add: word_less_nat_alt list_case_If2 split_def
@@ -3959,13 +3964,12 @@ lemma Arch_decodeInvocation_ccorres:
                apply vcg
               apply (rule ccorres_rhs_assoc)+
               apply csymbr
-              apply (rule ccorres_move_const_guard)+
               apply csymbr
               apply (simp add: if_1_0_0 objBits_simps archObjSize_def
                           del: Collect_const)
               apply (elim conjE)
               apply (subgoal_tac "(capBlockSize_CL (cap_untyped_cap_lift untyped')
-                                            = scast (Kernel_C.asidLowBits + 2))
+                                            = 0xC)
                                       = (capBlockSize (fst (extraCaps ! 0)) = pageBits)
                                   ")
                prefer 2
@@ -4072,7 +4076,7 @@ lemma Arch_decodeInvocation_ccorres:
     apply (rule ccorres_Cond_rhs_Seq)
      apply (rule ccorres_equals_throwError)
       apply (fastforce simp: throwError_bind invocationCatch_def
-                     split: invocation_label.split)
+                     split: invocation_label.split arch_invocation_label.split)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
     apply (simp add: interpret_excaps_test_null excaps_map_def

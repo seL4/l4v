@@ -11,14 +11,24 @@
 # Config makefile for building sel4 within the l4.verified repository
 SOURCE_ROOT=../../../../seL4
 UMM_TYPES=../../umm_types.txt
-ARCH?=arm
-ARMV?=armv6
-PLAT?=imx31
-CPU?=arm1136jf-s
 PARSERPATH=../../../tools/c-parser/standalone-parser
 PATH:=${PARSERPATH}:${PATH}
 export PATH
 TOOLPREFIX ?= arm-none-eabi-
+SHELL=bash
+
+ifeq ($(L4V_ARCH),ARM)
+    ARCH=arm
+    ARMV=armv7-a
+    PLAT=imx6
+    CPU=cortex-a9
+    CONFIG_DOMAIN_SCHEDULE=config_arm.c
+endif
+
+ifndef ARCH
+    $(error Bad value for L4V_ARCH)
+endif
+
 ifeq ($(shell which ${TOOLPREFIX}cpp),)
   ifeq ($(shell which cpp),)
     $(error C Preprocessor '${TOOLPREFIX}cpp' not found)
@@ -31,7 +41,6 @@ endif
 SKIP_MODIFIES=1
 FASTPATH=yes
 CSPEC_DIR=..
-CONFIG_DOMAIN_SCHEDULE=config.c
 
 # called by ../../spec/Makefile
 cspec: kernel_all.c_pp ${UMM_TYPES} theories

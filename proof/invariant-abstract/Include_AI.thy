@@ -22,7 +22,7 @@ no_notation bind_drop (infixl ">>" 60)
 (* Clagged from Bits_R *)
 
 crunch_ignore (add:
-  bind return when get gets fail 
+  bind return "when" get gets fail 
   assert put modify unless select
   alternative assert_opt gets_the
   returnOk throwError lift bindE

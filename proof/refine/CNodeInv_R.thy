@@ -165,11 +165,11 @@ lemma cnode_invok_case_cleanup:
 
 lemma reycleRightsEq:
   "cap_relation cap cap' \<Longrightarrow> hasRecycleRights cap' = has_recycle_rights cap"
-  apply (auto simp: hasRecycleRights_def has_recycle_rights_def all_rights_def
+  by (auto simp: hasRecycleRights_def has_recycle_rights_def all_rights_def
+                    arch_has_recycle_rights_def
                     ArchRetype_H.hasRecycleRights_def vmrights_map_def
-                  split: cap.splits arch_cap.splits bool.splits if_splits
-         |case_tac x)+
-  done
+                  split: cap.splits arch_cap.splits bool.splits if_splits |
+         case_tac x)+
 
 lemma dec_cnode_inv_corres:
   "\<lbrakk> cap_relation (cap.CNodeCap w n list) cap'; list_all2 cap_relation cs cs';
@@ -207,9 +207,9 @@ lemma dec_cnode_inv_corres:
                                   in corres_splitEE)
                            prefer 2
                            apply (rule corres_trivial)
-                           apply (auto split: list.split invocation_label.split,
-                                  auto simp: returnOk_def all_rights_def
-                                             rightsFromWord_correspondence)[1]
+                           subgoal by (auto split: list.split invocation_label.split,
+                                       auto simp: returnOk_def all_rights_def
+                                                  rightsFromWord_correspondence)
                           apply (rule_tac r'=cap_relation in corres_splitEE)
                              prefer 2
                              apply (simp add: returnOk_def del: imp_disjL)
@@ -222,12 +222,12 @@ lemma dec_cnode_inv_corres:
                              apply (clarsimp simp: maskCapRights_twice cap_map_update_data
                                             split: option.split)
                             apply (rule corres_trivial)
-                            apply (auto simp add: whenE_def, auto simp add: returnOk_def)[1]
+                            subgoal by (auto simp add: whenE_def, auto simp add: returnOk_def)
                            apply (wp | wpc | simp(no_asm))+
                   apply (wp hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
                             hoare_vcg_all_lift_R hoare_vcg_all_lift lsfco_cte_at' hoare_drop_imps
                                  | clarsimp)+
-         apply (auto elim!: valid_cnode_capI)[1]
+         subgoal by (auto elim!: valid_cnode_capI)
         apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
        -- "Revoke"
        apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
@@ -534,8 +534,7 @@ lemma decodeCNodeInv_wf[wp]:
          simp_all add: decodeCNodeInvocation_def isCNodeCap_CNodeCap
                        unlessE_whenE cnode_invok_case_cleanup
                 split: list.split_asm list.split)
-  apply (auto simp: valid_def validE_def validE_R_def in_monad)
-  done
+  by (auto simp: valid_def validE_def validE_R_def in_monad)
 
 declare updateCapData_Zombie' [simp del]
 
@@ -548,8 +547,10 @@ lemma decodeCNodeInvocation_inv[wp]:
         apply (simp_all add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                              Let_def whenE_def unlessE_def cnode_invok_case_cleanup
                   split del: split_if cong del: if_cong)[6]
-        apply (safe intro!: hoare_pre[where P=P],
-                (wp hoare_drop_imps | simp | wpcw)+)[6]
+        apply (fold_subgoals (prefix))[6]
+        subgoal premises prems
+        by (safe intro!: hoare_pre[where P=P],
+                (wp hoare_drop_imps | simp | wpcw)+)
   apply (elim disjE exE conjE,
          simp_all add: decodeCNodeInvocation_def isCNodeCap_CNodeCap
                        cnode_invok_case_cleanup unlessE_whenE
@@ -3062,8 +3063,7 @@ proof -
     thus ?thesis using md nz
       unfolding n_def n'_def  
       apply (simp only: dest2_next dest2_prev)
-      apply (clarsimp simp add: modify_map_same modify_map_other)
-      done
+      by (clarsimp simp add: modify_map_same modify_map_other)
   qed
 qed
 
@@ -3087,8 +3087,7 @@ proof -
     thus ?thesis using nz md neg_pos
       unfolding n_def n'_def  
       apply (simp only: dest2_next dest2_prev)
-      apply (clarsimp simp add: modify_map_same modify_map_other)
-      done
+      by (clarsimp simp add: modify_map_same modify_map_other)
   next
     case pos_neg
     hence pd: "mdbPrev src_node = dest" by simp
@@ -3104,15 +3103,13 @@ proof -
     thus ?thesis using md p_0 pd pos_neg nz
       unfolding n_def n'_def  
       apply (simp only: dest2_next dest2_prev)
-      apply (clarsimp simp add: modify_map_same modify_map_other del: dest2_parts )
-      done
+      by (clarsimp simp add: modify_map_same modify_map_other del: dest2_parts )
   next
     case neg_neg
     thus ?thesis using md nz
       unfolding n_def n'_def  
       apply (simp only: dest2_next dest2_prev)
-      apply (clarsimp simp add: modify_map_same modify_map_other)
-      done
+      by (clarsimp simp add: modify_map_same modify_map_other)
   qed
 qed
 
@@ -4438,8 +4435,7 @@ lemma (in mdb_swap) n_cap_eq':
   apply (rule conjI, clarsimp)
    apply (rule iffI)
     apply (fastforce dest: n_cap)
-   apply (simp add: n_def modify_map_if dest2_node_def n'_def)
-   apply auto[1]
+   subgoal by (simp add: n_def modify_map_if dest2_node_def n'_def, auto)
   apply clarsimp
   apply (rule conjI, fastforce)
   apply clarsimp
@@ -4966,9 +4962,8 @@ proof -
 
     apply (frule n_cap)
     apply (frule revokable)
-    apply (auto simp: weak_derived'_def dest2_node_def 
-                split: split_if_asm)
-    done
+    by (auto simp: weak_derived'_def dest2_node_def 
+            split: split_if_asm)
 qed
 
 lemma scap_class[simp]:
@@ -5841,16 +5836,16 @@ lemma make_zombie_invs':
    apply clarify
    apply (thin_tac "\<not> isUntypedCap cap" for cap)
    apply (clarsimp simp: isCap_simps split: split_if_asm)
-     apply ((elim disjE | clarsimp simp: isCap_simps)+)[1]
-    apply (fastforce simp: isCap_simps sameRegionAs_def3)
+     subgoal by ((elim disjE | clarsimp simp: isCap_simps)+)
+    subgoal by (fastforce simp: isCap_simps sameRegionAs_def3)
    apply (clarsimp simp: mdb_next_unfold)
    apply (erule_tac x=p in allE)
    apply (erule_tac x="mdbNext node" in allE)
-   apply simp
+   subgoal by simp
   apply (rule conjI)
    apply clarsimp
    apply (erule (1) caps_contained_subrange, simp)
-    apply (clarsimp simp: isCap_simps)
+    subgoal by (clarsimp simp: isCap_simps)
    apply (clarsimp simp add: isCap_simps)
   apply (subgoal_tac "valid_mdb' s")
    prefer 2
@@ -8790,8 +8785,7 @@ proof
      apply (erule_tac x=p in allE, erule_tac x=src in allE,
              erule allE, erule impE, erule exI)
      apply clarsimp
-    apply fastforce 
-    done 
+    by fastforce
 
   from valid
   have "caps_contained' m" by (simp add: valid_mdb_ctes_def)
@@ -8812,8 +8806,7 @@ proof
      apply (drule capMaster_capRange)
      apply clarsimp
      apply blast
-    apply fastforce
-    done 
+    by fastforce
 
   show "mdb_chunked m'" by (rule chunked')
 

@@ -422,10 +422,12 @@ lemma ptr_range_memE:
   by(clarsimp simp: ptr_range_def)
 
 lemma is_aligned_2_upto_enum_step_mem:
+  fixes ptr :: "word32"
+  shows
   "\<lbrakk>is_aligned ptr bits; 2 \<le> bits; bits < word_bits;
     x \<in> set [ptr , ptr + word_size .e. ptr + 2 ^ bits - 1]\<rbrakk> \<Longrightarrow>
    is_aligned x 2"
-  apply(clarsimp simp: upto_enum_step_shift_red[where us=2, simplified] word_size_def)
+  apply(clarsimp simp: upto_enum_step_shift_red[where us=2, simplified] word_size_def )
   apply(erule aligned_add_aligned)
     apply(rule is_alignedI)
     apply(simp add: mult.commute)
@@ -434,6 +436,8 @@ lemma is_aligned_2_upto_enum_step_mem:
 
 (* TODO: cleanup this beautiful proof *)
 lemma ptr_range_subset:
+  fixes ptr :: "word32"
+  shows
   "\<lbrakk>is_aligned ptr bits; 2 \<le> bits; bits < word_bits;
     x \<in> set [ptr , ptr + word_size .e. ptr + 2 ^ bits - 1]\<rbrakk> \<Longrightarrow>
    ptr_range x 2 \<subseteq> ptr_range ptr bits"

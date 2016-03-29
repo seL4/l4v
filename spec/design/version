@@ -1,5 +1,4 @@
-Built from git repo at /net/nfshome/export/home/insecure/jbeeren/work/test/seL4/haskell by jbeeren
+Built from git repo at /home/spacekitteh/verification/seL4/haskell by spacekitteh
 
 Generated from changeset:
-e11bb32 archirq: fix x86 invLabel
-
+0d0cf20 Fixed comments due to buggy haskell translator

@@ -17,8 +17,9 @@ chapter "Retyping and Untyped Invocations"
 theory Retype_A
 imports
   CSpaceAcc_A
-  ArchVSpaceAcc_A
+  "./$L4V_ARCH/ArchVSpaceAcc_A"
   Invocations_A
+  "./$L4V_ARCH/ArchRetype_A"
 begin
 
 section "Creating Caps"
@@ -87,6 +88,7 @@ Create @{text "numObjects"} objects, starting from
 @{text obj_ref}, return of list pointers to them. For some types, each
 returned pointer points to a group of objects.
 *}
+ 
 definition
   retype_region :: "obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> apiobject_type \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
 where
@@ -111,49 +113,12 @@ definition
 
 text {* Delete objects within a specified region. *}
 definition
-  delete_objects :: "word32 \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  delete_objects :: "machine_word \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "delete_objects ptr bits = do
      do_machine_op (freeMemory ptr bits);
      modify (detype {ptr..ptr + 2 ^ bits - 1})
   od"
 
-text {* This is a placeholder function. We may wish to extend the specification
-  with explicitly tagging kernel data regions in memory. *}
-definition
-  reserve_region :: "obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "reserve_region ptr byteLength is_kernel \<equiv> return ()"
-
-text {* Create 4096-byte frame objects that can be mapped into memory. These must be
-cleared to prevent past contents being revealed. *}
-
-definition
-  create_word_objects :: "word32 \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "create_word_objects ptr numObjects sz \<equiv>
-  do
-    byteLength \<leftarrow> return $ numObjects * 2 ^ sz;
-    reserve_region ptr byteLength True;
-    rst \<leftarrow>  return (map (\<lambda> n. (ptr + (n << sz))) [0  .e.  (of_nat numObjects) - 1]);
-    do_machine_op $ mapM_x (\<lambda>x. clearMemory x (2 ^ sz)) rst
- od"
-
-text {* Initialise architecture-specific objects. *}
-definition
-  init_arch_objects :: "apiobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> obj_ref list \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "init_arch_objects new_type ptr num_objects obj_sz refs \<equiv> case new_type of
-    ArchObject SmallPageObj \<Rightarrow> create_word_objects ptr num_objects 12
-  | ArchObject LargePageObj \<Rightarrow> create_word_objects ptr num_objects 16
-  | ArchObject SectionObj \<Rightarrow> create_word_objects ptr num_objects 20
-  | ArchObject SuperSectionObj \<Rightarrow> create_word_objects ptr num_objects 24
-  | ArchObject PageTableObj \<Rightarrow>
-      do_machine_op $ mapM_x (\<lambda>x. cleanCacheRange_PoU x (x + ((1::word32) << pt_bits) - 1)
-                                                      (addrFromPPtr x)) refs
-  | ArchObject PageDirectoryObj \<Rightarrow> do
-      mapM_x copy_global_mappings refs;
-      do_machine_op $ mapM_x (\<lambda>x. cleanCacheRange_PoU x (x + ((1::word32) << pd_bits) - 1)
-                                                      (addrFromPPtr x)) refs
-    od
-  | _ \<Rightarrow> return ()"
 
 
 text {* Untyped capabilities confer authority to the Retype method. This

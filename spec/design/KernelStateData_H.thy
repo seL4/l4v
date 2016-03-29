@@ -18,8 +18,8 @@ theory KernelStateData_H
 imports
   PSpaceStruct_H
   Structures_H
-  "../machine/MachineOps"
-  ArchStateData_H
+  "../machine/$L4V_ARCH/MachineOps"
+  "./$L4V_ARCH/ArchStateData_H"
 begin
 
 subsection "The Kernel State"

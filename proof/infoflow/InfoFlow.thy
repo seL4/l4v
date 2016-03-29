@@ -112,7 +112,7 @@ abbreviation aag_can_read :: "'a PAS \<Rightarrow> word32 \<Rightarrow> bool"
 where
 "aag_can_read aag x \<equiv> (pasObjectAbs aag x) \<in> subjectReads (pasPolicy aag) (pasSubject aag)"
 
-abbreviation aag_can_read_irq :: "'a PAS \<Rightarrow> word8 \<Rightarrow> bool"
+abbreviation aag_can_read_irq :: "'a PAS \<Rightarrow> 10 word \<Rightarrow> bool"
 where
 "aag_can_read_irq aag x \<equiv> (pasIRQAbs aag x) \<in> subjectReads (pasPolicy aag) (pasSubject aag)"
 
@@ -275,7 +275,7 @@ lemma equiv_asids_triv:
    is included here. *)
 
 
-definition states_equiv_for :: "(word32 \<Rightarrow> bool) \<Rightarrow> (word8 \<Rightarrow> bool) \<Rightarrow> (asid \<Rightarrow> bool) \<Rightarrow> (domain \<Rightarrow> bool) \<Rightarrow> (word32 \<Rightarrow> (word32 set)) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool"
+definition states_equiv_for :: "(word32 \<Rightarrow> bool) \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarrow> (asid \<Rightarrow> bool) \<Rightarrow> (domain \<Rightarrow> bool) \<Rightarrow> (word32 \<Rightarrow> (word32 set)) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool"
 where
 "states_equiv_for P Q R S X s s' \<equiv> 
    equiv_for P kheap s s' \<and>

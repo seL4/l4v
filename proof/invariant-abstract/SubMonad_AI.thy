@@ -28,7 +28,7 @@ lemma submonad_args_pspace:
   "submonad_args kheap (kheap_update o (\<lambda>x _. x)) \<top>"
   by (simp add: submonad_args_def)
 
-schematic_lemma assert_get_tcb_pspace:
+schematic_goal assert_get_tcb_pspace:
   "gets_the (get_tcb t) = submonad_fn kheap (kheap_update o (\<lambda>x _. x)) \<top> ?f"
   apply (unfold gets_the_def)
   apply (rule submonad_bind_alt [OF submonad_args_pspace])

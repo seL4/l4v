@@ -412,7 +412,7 @@ lemma drop_Suc0_iff:
   by (auto simp: neq_Nil_conv)
   
 lemma receive_blocked_on_def3:
-  "receive_blocked_on ref ts = ((\<exists>d. ts = Structures_A.BlockedOnReceive ref d) \<or> ts =  (Structures_A.BlockedOnNotification ref))"
+  "receive_blocked_on ref ts = ((ts = Structures_A.BlockedOnReceive ref) \<or> ts =  (Structures_A.BlockedOnNotification ref))"
   by (cases ts, auto)
 
 
@@ -473,7 +473,7 @@ lemma cancel_ipc_receive_blocked_respects:
   apply (clarsimp simp: cancel_ipc_def bind_assoc)
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_name_pre_state)
-  apply (subgoal_tac "case state of BlockedOnReceive x _\<Rightarrow> True | _ \<Rightarrow> False")
+  apply (subgoal_tac "case state of BlockedOnReceive x \<Rightarrow> True | _ \<Rightarrow> False")
    apply (simp add: blocked_cancel_ipc_def bind_assoc set_endpoint_def set_object_def
                     get_ep_queue_def get_blocking_object_def
              split: thread_state.splits)
@@ -495,7 +495,7 @@ lemma cancel_ipc_receive_blocked_respects:
      apply (rule_tac x="pasObjectAbs aag t" in exI, rule_tac x=ntfnptr in exI, simp)
      apply (erule get_tcb_recv_blocked_implies_receive, erule get_tcb_rev)
      apply simp
-    apply (rename_tac word be careful tcb your dogs finaly one)
+    apply (rename_tac word careful tcb your dogs finaly one)
     apply (rule_tac ntfn'= "tcb_bound_notification tcb" and ep="ntfnptr" and recv=word in tro_tcb_send, simp+)
       apply (rule_tac x="tcb_context tcb" in exI, simp)
      apply (simp add: tcb_bound_notification_reset_integrity_def )
@@ -535,7 +535,7 @@ lemma integrity_receive_blocked_chain':
   "\<lbrakk> st_tcb_at receive_blocked p s; integrity aag X st s; \<not> is_subject aag p \<rbrakk> \<Longrightarrow> st_tcb_at receive_blocked p st"
   apply (clarsimp simp: integrity_def st_tcb_at_tcb_states_of_state receive_blocked_def)
   apply (simp split: thread_state.split_asm)
-  apply (rename_tac word kp)
+  apply (rename_tac word)
   apply (drule_tac ep=word in tsos_tro [where p = p], simp+ )
   done
 
@@ -668,7 +668,7 @@ lemma transfer_caps_loop_pres_dest_aux:
                      (\<forall>x \<in> set caps. s \<turnstile> fst x \<and> 
                                      cte_wp_at (\<lambda>cp. fst x \<noteq> cap.NullCap \<longrightarrow> cp \<noteq> fst x \<longrightarrow> cp = masked_as_full (fst x) (fst x)) (snd x) s
                                            \<and> real_cte_at (snd x) s))\<rbrace>
-                  transfer_caps_loop ep diminish buffer n caps slots mi
+                  transfer_caps_loop ep buffer n caps slots mi
               \<lbrace>\<lambda>rv. P\<rbrace>" (is "?L \<Longrightarrow> ?P n caps slots mi")
 proof (induct caps arbitrary: slots n mi)
   case Nil 
@@ -743,7 +743,7 @@ lemma transfer_caps_loop_pres_dest:
                                  (\<forall>x \<in> set slots. real_cte_at x s) \<and>
                                  (\<forall>x \<in> set caps. s \<turnstile> fst x \<and> cte_wp_at (\<lambda>cp. fst x \<noteq> cap.NullCap \<longrightarrow> cp \<noteq> fst x \<longrightarrow> cp = masked_as_full (fst x) (fst x)) (snd x) s
                                            \<and> real_cte_at (snd x) s))\<rbrace>
-                  transfer_caps_loop ep diminish buffer n caps slots mi
+                  transfer_caps_loop ep buffer n caps slots mi
               \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
   apply (rule transfer_caps_loop_pres_dest_aux [OF x eb])  
@@ -830,7 +830,7 @@ lemma transfer_caps_loop_pas_refined:
   "\<lbrace>pas_refined aag
             and (\<lambda>s. (\<forall>x \<in> set caps. valid_cap (fst x) s))
             and K ((\<forall>slot \<in> set slots. is_subject aag (fst slot)) \<and> (\<forall>x \<in> set caps. is_subject aag (fst (snd x)) \<and> pas_cap_cur_auth aag (fst x)))\<rbrace>
-    transfer_caps_loop ep diminish buffer n caps slots mi
+    transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
 proof (rule hoare_gen_asm, induct caps arbitrary: slots n mi)
   case Nil thus ?case 
@@ -849,7 +849,6 @@ next
     apply (wp cap_insert_pas_refined hoare_vcg_ball_lift hoare_whenE_wp hoare_drop_imps
       derive_cap_aag_caps 
       | simp split del: split_if add: if_apply_def2)+
-    apply (clarsimp simp: pas_refined_refl intro!:  remove_rights_cur_auth)
     done
 qed
 
@@ -857,7 +856,7 @@ lemma transfer_caps_pas_refined:
   "\<lbrace>pas_refined aag 
     and (\<lambda>s. (\<forall>x \<in> set caps. valid_cap (fst x) s))
     and K (is_subject aag receiver \<and> (\<forall>x \<in> set caps. is_subject aag (fst (snd x))) \<and> (\<forall>x \<in> set caps. pas_cap_cur_auth aag (fst x))) \<rbrace>
-     transfer_caps info caps endpoint receiver recv_buf diminish
+     transfer_caps info caps endpoint receiver recv_buf
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   unfolding transfer_caps_def
   apply (rule hoare_pre)
@@ -908,7 +907,7 @@ lemma lookup_extra_caps_auth:
   done
 
 lemma transfer_caps_empty_inv:
-  "\<lbrace>P\<rbrace>  transfer_caps mi [] endpoint receiver rbuf diminish \<lbrace>\<lambda>_. P\<rbrace>"
+  "\<lbrace>P\<rbrace>  transfer_caps mi [] endpoint receiver rbuf \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding transfer_caps_def
   by (wp | wpc | simp) +
 
@@ -935,7 +934,7 @@ lemma do_normal_transfer_pas_refined:
         and valid_objs 
         and K (grant \<longrightarrow> is_subject aag sender)
         and K (grant \<longrightarrow> is_subject aag receiver)\<rbrace>
-     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf diminish
+     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
 proof(cases grant)
   case True thus ?thesis
@@ -967,7 +966,7 @@ lemma do_ipc_transfer_pas_refined:
         and valid_objs 
         and K (grant \<longrightarrow> is_subject aag sender)
         and K (grant \<longrightarrow> is_subject aag receiver)\<rbrace>
-     do_ipc_transfer sender ep badge grant receiver diminish
+     do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: do_ipc_transfer_def)
   apply (wp do_normal_transfer_pas_refined
@@ -993,10 +992,16 @@ lemma send_ipc_pas_refined:
   apply (simp add: send_ipc_def)
   apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
   apply (rule hoare_pre)
-   apply (wp set_thread_state_pas_refined
-        | wpc
-        | simp add: hoare_if_r_and)+
-         apply (rename_tac list x xs recv_state diminish)
+
+     apply wpc
+     apply wpc
+     apply (wp set_thread_state_pas_refined)
+     apply wpc
+     apply (wp set_thread_state_pas_refined)
+     apply wpc
+     apply (wp set_thread_state_pas_refined)
+     apply (simp add: hoare_if_r_and split del:split_if)
+         apply (rename_tac list x xs recv_state)
          apply (rule_tac Q="\<lambda>rv. pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))"
                          in hoare_strengthen_post[rotated])
           apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
@@ -1053,7 +1058,7 @@ abbreviation receive_ipc_base
 where
   "receive_ipc_base aag thread ep epptr rights is_blocking \<equiv> case ep of
                   IdleEP \<Rightarrow> case is_blocking of
-                    True \<Rightarrow> do set_thread_state thread (BlockedOnReceive epptr (AllowSend \<notin> rights));
+                    True \<Rightarrow> do set_thread_state thread (BlockedOnReceive epptr);
                         set_endpoint epptr (RecvEP [thread])
                       od
                     | False \<Rightarrow> do_nbrecv_failed_transfer thread
@@ -1065,10 +1070,10 @@ where
                          sender_state \<leftarrow> get_thread_state sender;
                          data \<leftarrow> case sender_state of BlockedOnSend ref x \<Rightarrow> return x | _ \<Rightarrow> fail;
                          do_ipc_transfer sender (Some epptr) (sender_badge data)
-                          (sender_can_grant data) thread (AllowSend \<notin> rights);
+                          (sender_can_grant data) thread ;
                          fault \<leftarrow> thread_get tcb_fault sender;
                          if sender_is_call data \<or> fault \<noteq> None
-                         then if sender_can_grant data \<and> \<not> AllowSend \<notin> rights
+                         then if sender_can_grant data 
                               then setup_caller_cap sender thread
                               else set_thread_state sender Inactive
                          else do set_thread_state sender Running;
@@ -1076,7 +1081,7 @@ where
                               od
                       od
                   | RecvEP queue \<Rightarrow> case is_blocking of
-                     True \<Rightarrow> do set_thread_state thread (BlockedOnReceive epptr (AllowSend \<notin> rights));
+                     True \<Rightarrow> do set_thread_state thread (BlockedOnReceive epptr);
                          set_endpoint epptr (RecvEP (queue @ [thread]))
                       od
                      | False \<Rightarrow> do_nbrecv_failed_transfer thread"
@@ -1199,7 +1204,7 @@ lemma transfer_caps_integrity_autarch:
                real_cte_at (snd x) s))
         and K (is_subject aag receiver \<and> ipc_buffer_has_auth aag receiver receive_buffer \<and>  
                (\<forall>x\<in>set caps. is_subject aag (fst (snd x))) \<and> length caps < 6)\<rbrace>
-    transfer_caps mi caps endpoint receiver receive_buffer diminish
+    transfer_caps mi caps endpoint receiver receive_buffer
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: transfer_caps_def)
@@ -1263,7 +1268,7 @@ lemma do_normal_transfer_send_integrity_autarch:
         and K (is_subject aag receiver \<and> 
                ipc_buffer_has_auth aag receiver rbuf \<and>
                (grant \<longrightarrow> is_subject aag sender))\<rbrace>
-     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf diminish
+     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: do_normal_transfer_def)
   apply (wp as_user_integrity_autarch set_message_info_integrity_autarch transfer_caps_integrity_autarch
@@ -1292,7 +1297,7 @@ lemma do_ipc_transfer_integrity_autarch:
         and integrity aag X st
         and valid_objs and valid_mdb
         and K (is_subject aag receiver \<and> (grant \<longrightarrow> is_subject aag sender))\<rbrace>
-     do_ipc_transfer sender ep badge grant receiver diminish
+     do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: do_ipc_transfer_def)
   apply (wp do_normal_transfer_send_integrity_autarch do_fault_transfer_integrity_autarch
@@ -1731,7 +1736,7 @@ lemma transfer_caps_loop_respects_in_ipc_autarch:
               \<and> (\<not> is_subject aag receiver \<longrightarrow> auth_ipc_buffers st receiver = ptr_range buffer msg_align_bits)
               \<and> is_aligned buffer msg_align_bits 
               \<and> n + length caps < 6 \<and> distinct slots)\<rbrace>
-     transfer_caps_loop ep diminish buffer n caps slots mi
+     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (wp transfer_caps_loop_pres_dest cap_inserintegrity_in_ipc_autarch
@@ -1753,7 +1758,7 @@ lemma transfer_caps_respects_in_ipc:
               \<and> (\<not> is_subject aag receiver \<longrightarrow> case_option True (\<lambda>buf'. auth_ipc_buffers st receiver = ptr_range buf' msg_align_bits) recv_buf)
               \<and> (case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits) recv_buf)
               \<and> length caps < 6)\<rbrace>
-     transfer_caps mi caps endpoint receiver recv_buf diminish
+     transfer_caps mi caps endpoint receiver recv_buf
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (cases recv_buf)
@@ -1796,7 +1801,7 @@ lemma do_normal_transfer_respects_in_ipc:
                          \<and> is_subject aag receiver)
          and K ((\<not> is_subject aag receiver \<longrightarrow> (case recv_buf of None \<Rightarrow> True | Some buf' \<Rightarrow> auth_ipc_buffers st receiver = ptr_range buf' msg_align_bits)) \<and>
                 (case recv_buf of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits))\<rbrace>
-     do_normal_transfer sender sbuf (Some epptr) badge grant receiver recv_buf diminish
+     do_normal_transfer sender sbuf (Some epptr) badge grant receiver recv_buf
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   apply (simp add: do_normal_transfer_def)
   apply (wp as_user_respects_in_ipc set_message_info_respects_in_ipc
@@ -1886,7 +1891,7 @@ lemma do_ipc_transfer_respects_in_ipc:
          and (\<lambda>s. grant \<longrightarrow> is_subject aag sender
                          \<and> is_subject aag receiver)
          and K (aag_has_auth_to aag SyncSend epptr)\<rbrace>
-     do_ipc_transfer sender (Some epptr) badge grant receiver diminish
+     do_ipc_transfer sender (Some epptr) badge grant receiver
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   apply (simp add: do_ipc_transfer_def)
   apply (wp do_normal_transfer_respects_in_ipc do_fault_transfer_respects_in_ipc
@@ -1963,7 +1968,7 @@ lemma integrity_tcb_in_ipc_refl:
 lemma ep_queued_st_tcb_at'':
   "\<And>P. \<lbrakk>ko_at (Endpoint ep) ptr s; (t, rt) \<in> ep_q_refs_of ep;
          valid_objs s; sym_refs (state_refs_of s);
-         \<And>pl dim. (rt = EPSend \<and> P (Structures_A.BlockedOnSend ptr pl)) \<or> (rt = EPRecv \<and> P (Structures_A.BlockedOnReceive ptr dim)) \<rbrakk>
+         \<And>pl. (rt = EPSend \<and> P (Structures_A.BlockedOnSend ptr pl)) \<or> (rt = EPRecv \<and> P (Structures_A.BlockedOnReceive ptr)) \<rbrakk>
     \<Longrightarrow> st_tcb_at P t s"
   apply (case_tac ep, simp_all)  
   apply (frule (1) sym_refs_ko_atD, fastforce simp: st_tcb_at_def obj_at_def refs_of_rev)+

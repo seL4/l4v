@@ -673,7 +673,7 @@ lemma map_ensure_empty':
   done
 
 lemma irq_nodes_global:
-  "\<forall>irq :: word8. irq_node' s + (ucast irq) * 16 \<in> global_refs' s"
+  "irq_node' s + (ucast (irq :: 10 word)) * 16 \<in> global_refs' s"
   by (simp add: global_refs'_def mult.commute mult.left_commute)
 
 lemma valid_global_refsD2':
@@ -949,8 +949,8 @@ lemma capRange_sameRegionAs:
   done
 
 locale mdb_insert_again =
-  mdb_ptr_parent: mdb_ptr m _ _ parent parent_cap parent_node +
-  mdb_ptr_site: mdb_ptr m _ _ site site_cap site_node
+  mdb_ptr_parent?: mdb_ptr m _ _ parent parent_cap parent_node +
+  mdb_ptr_site?: mdb_ptr m _ _ site site_cap site_node
     for m parent parent_cap parent_node site site_cap site_node +
 
   fixes c'
@@ -1599,8 +1599,7 @@ shows
        apply(clarsimp)
       apply(simp)
      apply(clarsimp)
-     apply(drule cte_map_inj_eq)
-          apply(simp_all add: cte_wp_at_caps_of_state)[6]
+     apply(drule cte_map_inj_eq; simp add: cte_wp_at_caps_of_state)
     apply(clarsimp)
     apply(case_tac z)
     apply(clarsimp simp: state_relation_def cdt_list_relation_def)
@@ -3046,7 +3045,7 @@ lemma inv_untyped_corres_helper1:
     apply (rule conjI)
      apply clarsimp
      apply (rule conjI)
-      apply fastforce
+      subgoal by fastforce
      apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps valid_cap_def)
     apply (fastforce simp: image_def)
    apply (rule hoare_pre)

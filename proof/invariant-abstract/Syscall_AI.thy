@@ -135,11 +135,11 @@ lemma st_tcb_at_eq:
   by (clarsimp simp add: pred_tcb_at_def obj_at_def)
 
 lemma do_ipc_transfer_tcb_at [wp]:
-  "\<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace> do_ipc_transfer s ep bg grt r dim \<lbrace>\<lambda>rv s. P (tcb_at t s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace> do_ipc_transfer s ep bg grt r \<lbrace>\<lambda>rv s. P (tcb_at t s)\<rbrace>"
   by (simp add: tcb_at_typ) wp
 
 lemma do_ipc_transfer_emptyable[wp]:
-  "\<lbrace>emptyable sl\<rbrace> do_ipc_transfer sender ep badge grant receiver diminis \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
+  "\<lbrace>emptyable sl\<rbrace> do_ipc_transfer sender ep badge grant receiver \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   apply (clarsimp simp add: emptyable_def)
   apply (wp hoare_convert_imp | clarsimp)+
   done
@@ -150,7 +150,7 @@ lemma do_ipc_transfer_non_null_cte_wp_at2:
   fixes P
   assumes PNN: "\<And>cap. P cap \<Longrightarrow> cap \<noteq> cap.NullCap"
   assumes PUC: "\<And>cap. P cap \<Longrightarrow> \<not> is_untyped_cap cap"
-  shows "\<lbrace>valid_objs and cte_wp_at P ptr\<rbrace> do_ipc_transfer st ep b gr rt dim \<lbrace>\<lambda>_. cte_wp_at P ptr\<rbrace>"
+  shows "\<lbrace>valid_objs and cte_wp_at P ptr\<rbrace> do_ipc_transfer st ep b gr rt \<lbrace>\<lambda>_. cte_wp_at P ptr\<rbrace>"
   proof -
     have PimpQ: "\<And>P Q ptr s. \<lbrakk> cte_wp_at P ptr s; \<And>cap. P cap \<Longrightarrow> Q cap \<rbrakk> \<Longrightarrow> cte_wp_at (P and Q) ptr s"
       by (erule cte_wp_at_weakenE, clarsimp)
@@ -1253,7 +1253,7 @@ lemma he_invs[wp]:
   apply (case_tac e, simp_all)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all)
-      apply ((rule hoare_pre, wp hvmf_active hr_invs hy_inv) | 
+      apply ((rule hoare_pre, wp hvmf_active hr_invs hy_inv ) | 
                  wpc | wp hoare_drop_imps hoare_vcg_all_lift |
                  fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
                          elim!: st_tcb_ex_cap)+

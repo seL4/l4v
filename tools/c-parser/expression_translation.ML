@@ -594,7 +594,7 @@ in
       if is_result_signed (ei1, ei2) then
         add_guard div_zero_check (check_signed_binop(@{const_name "sdiv"}, mk_sdiv, ei1, ei2))
       else
-        add_guard div_zero_check (mk_arithop(@{const_name "div"}, ei1, ei2))
+        add_guard div_zero_check (mk_arithop(@{const_name "divide"}, ei1, ei2))
     end
   | Modulus => let
       fun div_zero_check s = let

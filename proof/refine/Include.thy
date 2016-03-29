@@ -12,7 +12,7 @@ theory Include
 imports
   "../../spec/abstract/Syscall_A"
   "../../spec/design/API_H"
-  "../../spec/design/Intermediate_H"
+  "../../spec/design/$L4V_ARCH/Intermediate_H"
 begin
 
 no_notation bind_drop (infixl ">>" 60)

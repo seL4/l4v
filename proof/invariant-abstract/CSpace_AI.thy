@@ -561,11 +561,11 @@ where
   | Structures_A.IRQHandlerCap irq \<Rightarrow> True
   | Structures_A.Zombie r b n \<Rightarrow> True
   | Structures_A.ArchObjectCap ac \<Rightarrow> (case ac of
-    ARM_Structs_A.ASIDPoolCap r as \<Rightarrow> True
-  | ARM_Structs_A.ASIDControlCap \<Rightarrow> False
-  | ARM_Structs_A.PageCap r rghts sz mapdata \<Rightarrow> False
-  | ARM_Structs_A.PageTableCap r mapdata \<Rightarrow> True
-  | ARM_Structs_A.PageDirectoryCap r mapdata \<Rightarrow> True)"
+    Arch_Structs_A.ASIDPoolCap r as \<Rightarrow> True
+  | Arch_Structs_A.ASIDControlCap \<Rightarrow> False
+  | Arch_Structs_A.PageCap r rghts sz mapdata \<Rightarrow> False
+  | Arch_Structs_A.PageTableCap r mapdata \<Rightarrow> True
+  | Arch_Structs_A.PageDirectoryCap r mapdata \<Rightarrow> True)"
 
 
 lemmas final_matters_simps[simp]
@@ -889,8 +889,8 @@ end
 
 definition
   "cap_vptr cap \<equiv> case cap of 
-    Structures_A.ArchObjectCap (ARM_Structs_A.PageCap _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
-  | Structures_A.ArchObjectCap (ARM_Structs_A.PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
+    Structures_A.ArchObjectCap (Arch_Structs_A.PageCap _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
+  | Structures_A.ArchObjectCap (Arch_Structs_A.PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
   | _ \<Rightarrow> None"
 
 
@@ -2000,7 +2000,7 @@ lemma cap_insert_mdb_cte_at:
     set_cap_cte_wp_at get_cap_wp)
   apply (clarsimp simp:free_index_update_def split:cap.splits)
   apply (wp)
-  apply (clarsimp simp:if_True conj_comms split del:if_splits cong:split_weak_cong)
+  apply (clarsimp simp:if_True conj_comms split del:if_splits cong:prod.case_cong_weak)
   apply (wps)
   apply (wp valid_case_option_post_wp get_cap_wp hoare_vcg_if_lift
     hoare_impI set_untyped_cap_as_full_cte_wp_at )

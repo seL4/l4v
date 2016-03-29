@@ -11,55 +11,35 @@
 theory Interrupt_H
 imports
   RetypeDecls_H
-  ArchInterrupt_H
+  "./$L4V_ARCH/ArchInterrupt_H"
   Notification_H
   CNode_H
   KI_Decls_H
+  InterruptDecls_H
 begin
 
-consts
-decodeIRQControlInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> capability list \<Rightarrow> ( syscall_error , irqcontrol_invocation ) kernel_f"
+abbreviation (input)
+  performIRQControl :: "Invocations_H.irqcontrol_invocation \<Rightarrow> unit kernel_p"
+where
+ "performIRQControl \<equiv> InterruptDecls_H.performIRQControl"
 
-consts
-invokeIRQControl :: "irqcontrol_invocation \<Rightarrow> unit kernel_p"
-
-consts
-decodeIRQHandlerInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> irq \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , irqhandler_invocation ) kernel_f"
-
-consts
-toBool :: "machine_word \<Rightarrow> bool"
-
-consts
-invokeIRQHandler :: "irqhandler_invocation \<Rightarrow> unit kernel"
-
-consts
-deletingIRQHandler :: "irq \<Rightarrow> unit kernel"
-
-consts
-initInterruptController :: "capability \<Rightarrow> machine_word \<Rightarrow> capability kernel_init"
-
-consts
-handleInterrupt :: "irq \<Rightarrow> unit kernel"
-
-consts
-isIRQActive :: "irq \<Rightarrow> bool kernel"
-
-consts
-setIRQState :: "irqstate \<Rightarrow> irq \<Rightarrow> unit kernel"
-
-consts
-getIRQState :: "irq \<Rightarrow> irqstate kernel"
-
-consts
-getIRQSlot :: "irq \<Rightarrow> (machine_word) kernel"
+abbreviation (input)
+  "decodeIRQControlInvocation"
+  :: "32 word
+      \<Rightarrow> 32 word list
+         \<Rightarrow> 32 word
+            \<Rightarrow> capability list
+               \<Rightarrow> KernelStateData_H.kernel_state
+                  \<Rightarrow> ((syscall_error + Invocations_H.irqcontrol_invocation) \<times> KernelStateData_H.kernel_state) set \<times> bool"
+where
+  "decodeIRQControlInvocation \<equiv> InterruptDecls_H.decodeIRQControlInvocation"
 
 defs decodeIRQControlInvocation_def:
 "decodeIRQControlInvocation label args srcSlot extraCaps \<equiv>
-    (case (invocationType label,args,extraCaps) of
-          (IRQIssueIRQHandler,irqW#index#depth#_,cnode#_) \<Rightarrow>   (doE
-            rangeCheck irqW
-                (fromEnum minIRQ) (fromEnum maxIRQ);
-            irq \<leftarrow> returnOk ( toEnum (fromIntegral irqW) ::irq);
+    (case (invocationType label, args, extraCaps) of
+          (IRQIssueIRQHandler, irqW#index#depth#_, cnode#_) \<Rightarrow>   (doE
+            ArchInterruptDecls_H.checkIRQ (irqW && mask 16);
+            irq \<leftarrow> returnOk ( toEnum (fromIntegral (irqW && mask 16)) ::irq);
             irqActive \<leftarrow> withoutFailure $ isIRQActive irq;
             whenE irqActive $ throw RevokeFirst;
             destSlot \<leftarrow> lookupTargetSlot cnode
@@ -68,22 +48,22 @@ defs decodeIRQControlInvocation_def:
             returnOk $ IssueIRQHandler irq destSlot srcSlot
           odE)
         | (IRQIssueIRQHandler,_,_) \<Rightarrow>   throw TruncatedMessage
-        | _ \<Rightarrow>   liftME ArchIRQControl $ ArchInterrupt_H.decodeIRQControlInvocation label args srcSlot extraCaps
+        | _ \<Rightarrow>   liftME ArchIRQControl $ ArchInterruptDecls_H.decodeIRQControlInvocation label args srcSlot extraCaps
         )"
 
-defs invokeIRQControl_def:
-"invokeIRQControl x0\<equiv> (case x0 of
+defs performIRQControl_def:
+"performIRQControl x0\<equiv> (case x0 of
     (IssueIRQHandler irq handlerSlot controlSlot) \<Rightarrow>   
   withoutPreemption $ (do
     setIRQState (IRQSignal) irq;
     cteInsert (IRQHandlerCap irq) controlSlot handlerSlot
   od)
   | (ArchIRQControl invok) \<Rightarrow>   
-    ArchInterrupt_H.invokeIRQControl invok
+    ArchInterruptDecls_H.performIRQControl invok
   )"
 
 defs decodeIRQHandlerInvocation_def:
-"decodeIRQHandlerInvocation label args irq extraCaps \<equiv>
+"decodeIRQHandlerInvocation label irq extraCaps \<equiv>
     (case (invocationType label,extraCaps) of
           (IRQAckIRQ,_) \<Rightarrow>   returnOk $ AckIRQ irq
         | (IRQSetIRQHandler,(cap,slot)#_) \<Rightarrow>   (case cap of
@@ -93,10 +73,6 @@ defs decodeIRQHandlerInvocation_def:
                 )
         | (IRQSetIRQHandler,_) \<Rightarrow>   throw TruncatedMessage
         | (IRQClearIRQHandler,_) \<Rightarrow>   returnOk $ ClearIRQHandler irq
-        | (IRQSetMode,_) \<Rightarrow>   (case args of
-                  trig#pol#_ \<Rightarrow>   returnOk $ SetMode irq (toBool trig) (toBool pol)
-                | _ \<Rightarrow>   throw TruncatedMessage
-                )
         | _ \<Rightarrow>   throw IllegalOperation
         )"
 
@@ -116,8 +92,6 @@ defs invokeIRQHandler_def:
     irqSlot \<leftarrow> getIRQSlot irq;
     cteDeleteOne irqSlot
   od)
-  | (SetMode irq trig pol) \<Rightarrow>   
-    doMachineOp $ setInterruptMode irq trig pol
   )"
 
 defs deletingIRQHandler_def:
@@ -154,28 +128,35 @@ defs initInterruptController_def:
 odE)"
 
 defs handleInterrupt_def:
-"handleInterrupt irq\<equiv> (do
-    st \<leftarrow> getIRQState irq;
-    (case st of
-          IRQSignal \<Rightarrow>   (do
-            slot \<leftarrow> getIRQSlot irq;
-            cap \<leftarrow> getSlotCap slot;
-            (case cap of
-                  NotificationCap _ _ True _ \<Rightarrow>  
-                    sendSignal (capNtfnPtr cap) (capNtfnBadge cap)
-                | _ \<Rightarrow>   doMachineOp $ debugPrint $
-                    [] @ show irq
-                );
-            doMachineOp $ maskInterrupt True irq
+"handleInterrupt irq\<equiv> (
+    if (irq > maxIRQ) then doMachineOp $ ((do
+         maskInterrupt True irq;
+         ackInterrupt irq
+    od)
+                         )
+     else (do
+      st \<leftarrow> getIRQState irq;
+      (case st of
+            IRQSignal \<Rightarrow>   (do
+              slot \<leftarrow> getIRQSlot irq;
+              cap \<leftarrow> getSlotCap slot;
+              (case cap of
+                    NotificationCap _ _ True _ \<Rightarrow>  
+                      sendSignal (capNtfnPtr cap) (capNtfnBadge cap)
+                  | _ \<Rightarrow>   doMachineOp $ debugPrint $
+                      [] @ show irq
+                  );
+              doMachineOp $ maskInterrupt True irq
+            od)
+          | IRQTimer \<Rightarrow>   (do
+              timerTick;
+              doMachineOp resetTimer
           od)
-        | IRQTimer \<Rightarrow>   (do
-            timerTick;
-            doMachineOp resetTimer
-        od)
-        | IRQInactive \<Rightarrow>   haskell_fail $ [] @ show irq
-        );
-    doMachineOp $ ackInterrupt irq
-od)"
+          | IRQInactive \<Rightarrow>   haskell_fail $ [] @ show irq
+          );
+      doMachineOp $ ackInterrupt irq
+     od)
+)"
 
 defs isIRQActive_def:
 "isIRQActive irq\<equiv> liftM (\<lambda>x. x \<noteq>IRQInactive) $ getIRQState irq"

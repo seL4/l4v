@@ -264,8 +264,9 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
   fun prove_fold_cong (idupdate, updupd_same) = let
     val upd = (head_of o fst o HOLogic.dest_eq
                  o HOLogic.dest_Trueprop o Thm.concl_of) idupdate;
-    val ct  = Thm.cterm_of (Proof_Context.init_global thy);
-    val cgE = cterm_instantiate [(ct updvar, ct upd)] updcong_foldE;
+    val ctxt = Proof_Context.init_global thy;
+    val ct  = Thm.cterm_of ctxt;
+    val cgE = infer_instantiate ctxt [(#1(dest_Var updvar), ct upd)] updcong_foldE;
   in [idupdate, updupd_same] MRS cgE end;
 
   val fold_congs = map prove_fold_cong (idupdates ~~ updupd_sames);

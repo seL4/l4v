@@ -61,8 +61,7 @@ lemma tcbSchedEnqueue_cslift_spec:
    apply (clarsimp simp: typ_heap_simps cong: if_cong)
    apply (simp split: split_if)
   apply (clarsimp simp: typ_heap_simps if_Some_helper cong: if_cong)
-  apply (simp split: split_if)
-  done
+  by (simp split: split_if)
 
 lemma setThreadState_cslift_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>tptr \<and> (\<forall>x. ksSchedulerAction_' (globals s) = tcb_Ptr x
@@ -104,8 +103,7 @@ lemma setThreadState_cslift_spec:
      apply vcg_step+
   apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
                         fun_eq_iff option_map2_def if_1_0_0)
-  apply (simp split: split_if)
-  done
+  by (simp split: split_if)
 
 lemma ep_queue_relation_shift:
   "(option_map2 tcbEPNext_C (cslift s')
@@ -337,15 +335,15 @@ lemma cancelAllIPC_ccorres:
              apply (erule ko_at_projectKO_opt)
             apply (clarsimp simp: typ_heap_simps setEndpoint_def)
             apply (rule rev_bexI)
-             apply (rule setObject_eq, simp_all add: objBits_simps)[1]
+             apply (rule setObject_eq; simp add: objBits_simps)[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def
                                   Let_def carch_state_relation_def carch_globals_def
                                   cmachine_state_relation_def)
             apply (clarsimp simp: cpspace_relation_def
                                   update_ep_map_tos)
             apply (erule(2) cpspace_relation_ep_update_ep)
-             apply (simp add: cendpoint_relation_def endpoint_state_defs)
-            apply simp
+             subgoal by (simp add: cendpoint_relation_def endpoint_state_defs)
+            subgoal by simp
            apply (rule ceqv_refl)
           apply (simp only: ccorres_seq_skip dc_def[symmetric])
           apply (rule ccorres_split_nothrow_novcg)
@@ -394,8 +392,8 @@ lemma cancelAllIPC_ccorres:
           apply (clarsimp simp: cpspace_relation_def
                                 update_ep_map_tos)
           apply (erule(2) cpspace_relation_ep_update_ep)
-           apply (simp add: cendpoint_relation_def endpoint_state_defs)
-          apply simp
+           subgoal by (simp add: cendpoint_relation_def endpoint_state_defs)
+          subgoal by simp
          apply (rule ceqv_refl)
         apply (simp only: ccorres_seq_skip dc_def[symmetric])
         apply (rule ccorres_split_nothrow_novcg)
@@ -414,10 +412,10 @@ lemma cancelAllIPC_ccorres:
       apply (erule ko_at_projectKO_opt)
      apply (frule obj_at_valid_objs', clarsimp+)
      apply (clarsimp simp: projectKOs valid_obj'_def valid_ep'_def)
-     apply (auto simp: typ_heap_simps cendpoint_relation_def
+     subgoal by (auto simp: typ_heap_simps cendpoint_relation_def
                        Let_def tcb_queue_relation'_def
                        invs_valid_objs' valid_objs'_maxDomain valid_objs'_maxPriority
-               intro!: obj_at_conj')[1]
+               intro!: obj_at_conj')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (wp getEndpoint_wp)
   apply clarsimp
@@ -481,8 +479,8 @@ lemma cancelAllSignals_ccorres:
           apply (clarsimp simp: cpspace_relation_def
                                 update_ntfn_map_tos)
           apply (erule(2) cpspace_relation_ntfn_update_ntfn)
-           apply (simp add: cnotification_relation_def notification_state_defs Let_def)
-          apply simp
+           subgoal by (simp add: cnotification_relation_def notification_state_defs Let_def)
+          subgoal by simp
          apply (rule ceqv_refl)
         apply (simp only: ccorres_seq_skip dc_def[symmetric])
         apply (rule ccorres_split_nothrow_novcg)
@@ -501,10 +499,10 @@ lemma cancelAllSignals_ccorres:
       apply (erule ko_at_projectKO_opt)
      apply (frule obj_at_valid_objs', clarsimp+)
      apply (clarsimp simp add: valid_obj'_def valid_ntfn'_def projectKOs)
-     apply (auto simp: typ_heap_simps cnotification_relation_def
+     subgoal by (auto simp: typ_heap_simps cnotification_relation_def
                        Let_def tcb_queue_relation'_def
                        invs_valid_objs' valid_objs'_maxDomain valid_objs'_maxPriority
-               intro!: obj_at_conj')[1]
+               intro!: obj_at_conj')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (wp getNotification_wp)
   apply clarsimp
@@ -643,8 +641,7 @@ lemma cap_to_H_NTFNCap_tag:
      cap_lift C_cap = Some cap \<rbrakk> \<Longrightarrow>
     cap_get_tag C_cap = scast cap_notification_cap"
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits split_if_asm)
-     apply (simp_all add: Let_def cap_lift_def split: if_splits)
-  done
+     by (simp_all add: Let_def cap_lift_def split: if_splits)
 
 lemmas ccorres_pre_getBoundNotification = ccorres_pre_threadGet [where f=tcbBoundNotification, folded getBoundNotification_def]
 
@@ -678,12 +675,12 @@ lemma doUnbindNotification_ccorres:
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
-               apply (case_tac "ntfnObj rv", (simp add: option_to_ctcb_ptr_def)+)
-             apply (simp add: carch_state_relation_def)
-            apply (simp add: cmachine_state_relation_def)
-           apply (simp add: h_t_valid_clift_Some_iff)
-          apply (simp add: objBits_simps)
-         apply (simp add: objBits_simps)
+               apply (case_tac "ntfnObj rv", ((simp add: option_to_ctcb_ptr_def)+)[4])
+             subgoal by (simp add: carch_state_relation_def)
+            subgoal by (simp add: cmachine_state_relation_def)
+           subgoal by (simp add: h_t_valid_clift_Some_iff)
+          subgoal by (simp add: objBits_simps)
+         subgoal by (simp add: objBits_simps)
         apply assumption
        apply ceqv
       apply (rule ccorres_move_c_guard_tcb)
@@ -725,12 +722,14 @@ lemma doUnbindNotification_ccorres':
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
-               apply (case_tac "ntfnObj ntfn", (simp add: option_to_ctcb_ptr_def)+)
-             apply (simp add: carch_state_relation_def)
-            apply (simp add: cmachine_state_relation_def)
-           apply (simp add: h_t_valid_clift_Some_iff)
-          apply (simp add: objBits_simps)
-         apply (simp add: objBits_simps)
+               apply (fold_subgoals (prefix))[2]
+               subgoal premises prems using prems
+                       by (case_tac "ntfnObj ntfn", (simp add: option_to_ctcb_ptr_def)+)
+             subgoal by (simp add: carch_state_relation_def)
+            subgoal by (simp add: cmachine_state_relation_def)
+           subgoal by (simp add: h_t_valid_clift_Some_iff)
+          subgoal by (simp add: objBits_simps)
+         subgoal by (simp add: objBits_simps)
         apply assumption
        apply ceqv
       apply (rule ccorres_move_c_guard_tcb)
@@ -814,10 +813,9 @@ lemma unbindMaybeNotification_ccorres:
    apply (wp getNotification_wp)
   apply (clarsimp )
   apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
-  apply (auto simp: valid_ntfn'_def valid_bound_tcb'_def obj_at'_def projectKOs 
+  by (auto simp: valid_ntfn'_def valid_bound_tcb'_def obj_at'_def projectKOs 
                       objBitsKO_def is_aligned_def option_to_ctcb_ptr_def tcb_at_not_NULL
              split: ntfn.splits)
-  done
 
 lemma finaliseCap_True_cases_ccorres:
   "\<And>final. isEndpointCap cap \<or> isNotificationCap cap
@@ -1112,10 +1110,11 @@ lemma deleteASIDPool_ccorres:
            apply (simp add: asid_high_bits_of_def unat_ucast asid_low_bits_def)
            apply (rule sym, rule nat_mod_eq')
            apply (rule order_less_le_trans, rule iffD1[OF word_less_nat_alt])
-            apply (rule shiftr_less_t2n[where m=8], simp)
-           apply simp
-          apply (simp add: option_to_ptr_def option_to_0_def)
-         apply (simp add: asid_high_bits_def)
+            apply (rule shiftr_less_t2n[where m=8])
+            subgoal by simp
+           subgoal by simp
+          subgoal by (simp add: option_to_ptr_def option_to_0_def)
+         subgoal by (simp add: asid_high_bits_def)
         apply (rule ccorres_pre_getCurThread)
         apply (ctac add: setVMRoot_ccorres)
        apply wp
@@ -1226,10 +1225,10 @@ lemma deleteASID_ccorres:
                               inv_ASIDPool
                        split: asidpool.split_asm asid_pool_C.split_asm)
              apply (erule array_relation_update)
-               apply (simp add: mask_def)
-              apply (simp add: option_to_ptr_def option_to_0_def)
-             apply (simp add: asid_low_bits_def)
-            apply (simp add: carch_state_relation_def cmachine_state_relation_def 
+               subgoal by (simp add: mask_def)
+              subgoal by (simp add: option_to_ptr_def option_to_0_def)
+             subgoal by (simp add: asid_low_bits_def)
+            subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def 
                              carch_globals_def update_asidpool_map_tos
                              typ_heap_simps)
            apply (rule ccorres_pre_getCurThread)
@@ -1243,7 +1242,7 @@ lemma deleteASID_ccorres:
        apply (simp add: fun_upd_def[symmetric])
        apply wp
       apply (rule ccorres_return_Skip)
-     apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
+     subgoal by (clarsimp simp: guard_is_UNIV_def Collect_const_mem
                            word_sle_def word_sless_def
                            Kernel_C.asidLowBits_def
                            asid_low_bits_def order_le_less_trans [OF word_and_le1])
@@ -1263,12 +1262,11 @@ lemma deleteASID_ccorres:
                          projectKOs invs_valid_pde_mappings'
                          invs_cur')
    apply (rule conjI, blast)
-   apply (fastforce simp: inv_into_def ran_def  split: split_if_asm)
-  apply (clarsimp simp: order_le_less_trans [OF word_and_le1]
+   subgoal by (fastforce simp: inv_into_def ran_def  split: split_if_asm)
+  by (clarsimp simp: order_le_less_trans [OF word_and_le1]
                         asid_shiftr_low_bits_less asid_bits_def mask_def
                         plus_one_helper arg_cong[where f="\<lambda>x. 2 ^ x", OF meta_eq_to_obj_eq, OF asid_low_bits_def]
                  split: option.split_asm)
-  done
 
 lemma setObject_ccorres_lemma:
   fixes val :: "'a :: pspace_storable" shows
@@ -1573,13 +1571,13 @@ lemma Arch_finaliseCap_ccorres:
         apply (rule conjI)
          apply (clarsimp simp: valid_cap'_def mask_def)
          apply (frule cap_get_tag_isCap_unfolded_H_cap, rule refl)
-         apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def to_bool_def
+         subgoal by (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def to_bool_def
                                vmsz_aligned_aligned_pageBits
                         elim!: ccap_relationE
                         split: option.split_asm split_if_asm)
         apply (clarsimp simp: valid_cap'_def mask_def)
         apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
-        apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def to_bool_def
+        subgoal by (clarsimp simp: cap_frame_cap_lift cap_to_H_def to_bool_def
                               vmsz_aligned_aligned_pageBits
                        elim!: ccap_relationE
                        split: option.split_asm split_if_asm)
@@ -1703,10 +1701,9 @@ lemma isFinalCapability_ccorres:
   apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
   apply (simp add: typ_heap_simps)
   apply (clarsimp simp add: ccte_relation_def option_map_Some_eq2)
-  apply (auto,
+  by (auto,
          auto dest!: ctes_of_valid' [OF _ invs_valid_objs']
               elim!: valid_capAligned)
-  done
 
 lemma cteDeleteOne_ccorres:
   "ccorres dc xfdc
@@ -1769,7 +1766,7 @@ lemma of_int_uint_ucast:
 
 lemma getIRQSlot_ccorres_stuff:
   "\<lbrakk> (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow>
-   CTypesDefs.ptr_add (intStateIRQNode_' (globals s')) (uint (irq :: word8))
+   CTypesDefs.ptr_add (intStateIRQNode_' (globals s')) (uint (irq :: 10 word))
      = Ptr (irq_node' s + 2 ^ cte_level_bits * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
@@ -1782,12 +1779,14 @@ lemma deletingIRQHandler_ccorres:
                    (UNIV \<inter> {s. irq_opt_relation (Some irq) (irq_' s)}) []
    (deletingIRQHandler irq) (Call deletingIRQHandler_'proc)"
   apply (cinit lift: irq_' cong: call_ignore_cong)
-   apply (clarsimp simp: irq_opt_relation_def dc_def[symmetric]
-                   cong: call_ignore_cong)
+   apply (clarsimp simp: irq_opt_relation_def ptr_add_assertion_def dc_def[symmetric]
+                   cong: call_ignore_cong )
    apply (rule_tac r'="\<lambda>rv rv'. rv' = Ptr rv"
                 and xf'="slot_'" in ccorres_split_nothrow)
+       apply (simp add: sint_ucast_eq_uint is_down)
        apply (rule ccorres_move_array_assertion_irq)
        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
@@ -1809,10 +1808,10 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap ghost_assertion_data_get_def
                         ghost_assertion_data_set_def)
   apply (simp add: cap_tag_defs)
-  apply (cut_tac x=irq in unat_lt2p)
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
-                        irq_opt_relation_def maxIRQ_def
-                        unat_gt_0)
+                        irq_opt_relation_def maxIRQ_def)
+  apply (drule word_le_nat_alt[THEN iffD1])
+  apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
   done
 
 lemma Zombie_new_spec:
@@ -1836,18 +1835,47 @@ lemma mod_mask_drop:
                 word_bw_assocs)
 
 lemma irq_opt_relation_Some_ucast:
-  "\<lbrakk> x && mask 8 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: word8) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
-    \<Longrightarrow> irq_opt_relation (Some (ucast x)) x"
-  using ucast_ucast_mask[where x=x and 'a=8, symmetric]
+  "\<lbrakk> x && mask 10 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
+    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast ((ucast x):: 10 word))"
+  using ucast_ucast_mask[where x=x and 'a=10, symmetric]
   apply (simp add: irq_opt_relation_def)
   apply (rule conjI, clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def)
-  apply (simp only: unat_arith_simps unat_ucast_8_32)
+  apply (simp only: unat_arith_simps )
   apply (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
   done
 
+lemma upcast_ucast_id:
+    "len_of TYPE('a) \<le> len_of TYPE('b) \<Longrightarrow> 
+    ((ucast (a :: 'a::len word) :: 'b ::len word) = ucast b) \<Longrightarrow> (a = b)"
+  apply (rule word_eqI)
+  apply (simp add:word_size)
+  apply (drule_tac f = "%x. (x !! n)" in arg_cong)
+    apply (simp add:nth_ucast)
+  done
+
+lemma mask_eq_ucast_eq:
+  "\<lbrakk> x && mask (len_of TYPE('a)) = (x :: ('c :: len word)); 
+     len_of TYPE('a) \<le> len_of TYPE('b)\<rbrakk>
+    \<Longrightarrow> ucast (ucast x :: ('a :: len word)) = (ucast x :: ('b :: len word))"
+  apply (rule word_eqI)
+  apply (drule_tac f = "\<lambda>x. (x !! n)" in arg_cong)
+  apply (auto simp:nth_ucast word_size)
+  done
+
+lemma irq_opt_relation_Some_ucast':
+  "\<lbrakk> x && mask 10 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
+    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast x)"
+  apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
+  apply (rule irq_opt_relation_Some_ucast[rotated])
+    apply simp+
+  apply (rule word_eqI)
+  apply (drule_tac f = "%x. (x !! n)" in arg_cong)
+  apply (simp add:nth_ucast and_bang word_size)
+done
+
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
-    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 8
+    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 10
         = capIRQ_CL (cap_irq_handler_cap_lift ccap)"
   apply (simp only: cap_get_tag_isCap[symmetric])
   apply (drule ccap_relation_c_valid_cap)
@@ -1987,20 +2015,24 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def true_def
                 del: Collect_const)
-    apply (rule_tac P="capIRQ cap \<le> Platform.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="(capIRQ cap) \<le>  Platform.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    apply (ctac(no_vcg) add: deletingIRQHandler_ccorres)
-     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-     apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: return_def)
-     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-     apply (simp add: ccap_relation_NullCap_iff split: split_if)
-     apply (frule(1) ccap_relation_IRQHandler_mask)
-     apply (rule irq_opt_relation_Some_ucast)
-      apply simp
-     apply (simp add: Platform.maxIRQ_def Kernel_C.maxIRQ_def)
-    apply wp
+    apply (rule ccorres_symb_exec_r)
+      apply (rule_tac xf'=irq_' in ccorres_abstract,ceqv)
+      apply (rule_tac P="rv' = ucast (capIRQ cap)" in ccorres_gen_asm2)
+      apply (ctac(no_vcg) add: deletingIRQHandler_ccorres)
+       apply (rule ccorres_from_vcg_throws[where P=\<top> ])
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: return_def)
+       apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
+       apply (simp add: ccap_relation_NullCap_iff split: split_if)
+       apply (frule(1) ccap_relation_IRQHandler_mask)
+       apply (erule irq_opt_relation_Some_ucast)
+       apply (simp add: Platform.maxIRQ_def Kernel_C.maxIRQ_def)
+      apply wp
+     apply vcg
+    apply (rule conseqPre,vcg)
+    apply clarsimp
    apply (rule ccorres_if_lhs)
     apply simp
     apply (rule ccorres_fail)
@@ -2029,28 +2061,34 @@ lemma finaliseCap_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem
                         false_def from_bool_def)
   apply (intro impI conjI)
-         apply (clarsimp split: bool.splits)
-        apply (clarsimp split: bool.splits)
-         apply clarsimp
-        apply (clarsimp simp: valid_cap'_def isCap_simps)
-       apply (clarsimp simp: isCap_simps capRange_def
+             apply (clarsimp split: bool.splits)
+            apply (clarsimp split: bool.splits)
+           apply (clarsimp simp: valid_cap'_def isCap_simps)
+          apply (clarsimp simp: isCap_simps capRange_def
                              capAligned_def)
-      apply (clarsimp simp: isCap_simps valid_cap'_def)
-     apply (clarsimp simp: isCap_simps valid_cap'_def)
-    apply (clarsimp simp: isCap_simps split: bool.splits)
+         apply (clarsimp simp: isCap_simps valid_cap'_def)
+        apply (clarsimp simp: isCap_simps valid_cap'_def )
+
+       apply (clarsimp simp: isCap_simps split: bool.splits)
+      apply clarsimp
+      apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
+     apply (clarsimp simp: isCap_simps from_bool_def false_def)
+    apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
    apply clarsimp
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-   apply (clarsimp simp: isCap_simps from_bool_def false_def)
-   apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
+   apply (frule(1) ccap_relation_IRQHandler_mask)
+   apply (clarsimp simp: isCap_simps irqInvalid_def
+                      valid_cap'_def Platform.maxIRQ_def
+                      maxIRQ_def)
+    apply (rule irq_opt_relation_Some_ucast', simp)
+    apply (clarsimp simp: isCap_simps irqInvalid_def
+                      valid_cap'_def Platform.maxIRQ_def
+                      maxIRQ_def)
+   apply fastforce
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
   apply (frule(1) ccap_relation_IRQHandler_mask)
-  apply clarsimp
-  apply (rule irq_opt_relation_Some_ucast, simp)
-  apply (clarsimp simp: isCap_simps irqInvalid_def
-                        valid_cap'_def Platform.maxIRQ_def
-                        maxIRQ_def)
+  apply (clarsimp simp add:mask_eq_ucast_eq)
   done
-
-end
+  end
 end

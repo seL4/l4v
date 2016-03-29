@@ -16,8 +16,9 @@ chapter "CSpace"
 
 theory CSpace_A
 imports
-  ArchVSpace_A
+  "./$L4V_ARCH/ArchVSpace_A"
   IpcCancel_A
+  "./$L4V_ARCH/ArchCSpace_A"
   "../../lib/wp/NonDetMonadLemmas"
   "~~/src/HOL/Library/Prefix_Order"
 begin
@@ -77,7 +78,7 @@ where
   "max_free_index_update cap \<equiv> cap \<lparr> free_index:= max_free_index (untyped_sz_bits cap) \<rparr>"
 
 definition
-  set_untyped_cap_as_full :: "cap \<Rightarrow> cap \<Rightarrow> word32 \<times> bool list\<Rightarrow> (unit,'z::state_ext) s_monad"
+  set_untyped_cap_as_full :: "cap \<Rightarrow> cap \<Rightarrow> obj_ref \<times> bool list\<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_untyped_cap_as_full src_cap new_cap src_slot \<equiv>
    if (is_untyped_cap src_cap \<and> is_untyped_cap new_cap
@@ -128,7 +129,7 @@ definition
         then NullCap
         else CNodeCap oref bits guard'
   else if is_arch_cap cap then
-    ArchObjectCap $ arch_update_cap_data w (the_arch_cap cap)
+    arch_update_cap_data w (the_arch_cap cap)
   else
     cap"
 
@@ -268,7 +269,7 @@ where
   "captransfer_size \<equiv> 3"
 
 definition
-  captransfer_from_words :: "word32 \<Rightarrow> (captransfer,'z::state_ext) s_monad"
+  captransfer_from_words :: "machine_word \<Rightarrow> (captransfer,'z::state_ext) s_monad"
 where
   "captransfer_from_words ptr \<equiv> do
      w0 \<leftarrow> do_machine_op $ loadWord ptr;
@@ -648,23 +649,6 @@ definition
   | ArchObjectCap c \<Rightarrow> arch_is_physical c
   | _ \<Rightarrow> True"
 
-text {* Check whether the second capability is to the same object or an object
-contained in the region of the first one. *}
-fun
-  arch_same_region_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
-where
-  "arch_same_region_as (PageCap r R s x) (PageCap r' R' s' x') =
-   (let
-     topA = r + (1 << pageBitsForSize s) - 1;
-     topB = r' + (1 << pageBitsForSize s') - 1
-   in r \<le> r' \<and> topA \<ge> topB \<and> r' \<le> topB)"
-| "arch_same_region_as (PageTableCap r x) (PageTableCap r' x') = (r' = r)"
-| "arch_same_region_as (PageDirectoryCap r x) (PageDirectoryCap r' x') = (r' = r)"
-| "arch_same_region_as ASIDControlCap ASIDControlCap = True"
-| "arch_same_region_as (ASIDPoolCap r a) (ASIDPoolCap r' a') = (r' = r)"
-| "arch_same_region_as _ _ = False"
-
-
 fun
   same_region_as :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
@@ -699,11 +683,11 @@ definition
    (case (cp, cp') of
       (UntypedCap r bits free, _) \<Rightarrow> False
     | (IRQControlCap, IRQHandlerCap n) \<Rightarrow> False
-    | (ArchObjectCap (PageCap ref _ pgsz _),
-       ArchObjectCap (PageCap ref' _ pgsz' _))
-          \<Rightarrow> (ref, pgsz) = (ref', pgsz')
-              \<and> ref \<le> ref + 2 ^ pageBitsForSize pgsz - 1
+    | (ArchObjectCap ac, ArchObjectCap ac') \<Rightarrow> same_aobject_as ac ac'
     | _ \<Rightarrow> same_region_as cp cp')"
+
+(* Proofs don't want to see this definition *)
+declare same_aobject_as_def[simp]
 
 text {*
 The function @{text "should_be_parent_of"}
@@ -866,7 +850,7 @@ definition
    | DomainCap \<Rightarrow> False
    | EndpointCap _ _ R \<Rightarrow> R = all_rights
    | NotificationCap _ _ R \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
-   | ArchObjectCap (PageCap _ R _ _) \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
+   | ArchObjectCap ac \<Rightarrow> arch_has_recycle_rights ac
    | _ \<Rightarrow> True"
 
 section {* Invoking CNode capabilities *}

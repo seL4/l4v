@@ -440,16 +440,15 @@ lemma tcb_queue_next_prev:
   apply (simp add: inj_eq split: split_if_asm)
 	   apply clarsimp
 	  apply clarsimp
-	 apply (clarsimp simp: last_conv_nth  distinct_nth distinct_nth_cons)
+	 subgoal by (clarsimp simp: last_conv_nth  distinct_nth distinct_nth_cons)
 	apply (clarsimp simp: last_conv_nth distinct_nth distinct_nth_cons)
 	apply (subgoal_tac "list ! Suc na \<noteq> tcbp'")
 	 apply clarsimp
 	apply clarsimp
-       apply (clarsimp  simp: last_conv_nth distinct_nth distinct_nth_cons nth_first_not_member)
-      apply (fastforce  simp: last_conv_nth distinct_nth distinct_nth_cons nth_first_not_member)
-     apply (clarsimp  simp: last_conv_nth distinct_nth distinct_nth_cons distinct_nth_cons' nth_first_not_member)
-    apply (fastforce simp: last_conv_nth distinct_nth distinct_nth_cons distinct_nth_cons' nth_first_not_member)
-  done
+       subgoal by (clarsimp  simp: last_conv_nth distinct_nth distinct_nth_cons nth_first_not_member)
+      subgoal by (fastforce  simp: last_conv_nth distinct_nth distinct_nth_cons nth_first_not_member)
+     subgoal by (clarsimp  simp: last_conv_nth distinct_nth distinct_nth_cons distinct_nth_cons' nth_first_not_member)
+    by (fastforce simp: last_conv_nth distinct_nth distinct_nth_cons distinct_nth_cons' nth_first_not_member)
 
 
 lemma null_not_in: 
@@ -1128,23 +1127,22 @@ lemma rf_sr_tcb_update_no_queue:
   apply (clarsimp simp: projectKOs)
   apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const)
   apply (intro conjI)
-       apply (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
+       subgoal by (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
       apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
       apply simp
       apply (rule cendpoint_relation_upd_tcb_no_queues, assumption+)
-       apply (clarsimp intro!: ext)
-      apply (clarsimp intro!: ext)   
+       subgoal by (clarsimp intro!: ext)
+      subgoal by (clarsimp intro!: ext)   
      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply simp 
      apply (rule cnotification_relation_upd_tcb_no_queues, assumption+) 
-      apply (clarsimp intro!: ext)
-     apply (clarsimp intro!: ext)       
+      subgoal by (clarsimp intro!: ext)
+     subgoal by (clarsimp intro!: ext)       
     apply (erule cready_queues_relation_not_queue_ptrs)
-     apply (clarsimp intro!: ext)
-    apply (clarsimp intro!: ext)
-   apply (simp add: carch_state_relation_def)
-  apply (simp add: cmachine_state_relation_def)
-  done
+     subgoal by (clarsimp intro!: ext)
+    subgoal by (clarsimp intro!: ext)
+   subgoal by (simp add: carch_state_relation_def)
+  by (simp add: cmachine_state_relation_def)
 
 lemma rf_sr_tcb_update_no_queue_helper:
   "(s, s'\<lparr> globals := globals s' \<lparr> t_hrs_' := t_hrs_' (globals (undefined
@@ -1182,34 +1180,33 @@ lemma rf_sr_tcb_update_not_in_queue:
   prefer 2
    apply (auto simp: obj_at'_def ko_wp_at'_def)[1]
   apply (intro conjI)
-       apply (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
+       subgoal by (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
       apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
       apply clarsimp
       apply (subgoal_tac "thread \<notin> (fst ` ep_q_refs_of' a)")
        apply (clarsimp simp: cendpoint_relation_def Let_def split: Structures_H.endpoint.split)
-       apply (intro conjI impI allI, simp_all add: image_def tcb_queue_relation_not_in_q)[1]
+       subgoal by (intro conjI impI allI, simp_all add: image_def tcb_queue_relation_not_in_q)[1]
       apply (drule(1) map_to_ko_atI')
       apply (drule sym_refs_ko_atD', clarsimp+)
-      apply blast
+      subgoal by blast
      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply clarsimp
      apply (subgoal_tac "thread \<notin> (fst ` ntfn_q_refs_of' (ntfnObj a))")
       apply (clarsimp simp: cnotification_relation_def Let_def
                      split: ntfn.splits)
-      apply (simp add: image_def tcb_queue_relation_not_in_q)[1]
+      subgoal by (simp add: image_def tcb_queue_relation_not_in_q)[1]
      apply (drule(1) map_to_ko_atI')
      apply (drule sym_refs_ko_atD', clarsimp+)
-     apply blast
+     subgoal by blast
     apply (simp add: cready_queues_relation_def, erule allEI)
     apply (clarsimp simp: Let_def)
     apply (subst tcb_queue_relation_not_in_q)
      apply clarsimp
      apply (drule valid_queues_obj_at'D, clarsimp)
      apply (clarsimp simp: obj_at'_def projectKOs inQ_def)
-    apply simp
-   apply (simp add: carch_state_relation_def carch_globals_def)
-  apply (simp add: cmachine_state_relation_def)
-  done
+    subgoal by simp
+   subgoal by (simp add: carch_state_relation_def carch_globals_def)
+  by (simp add: cmachine_state_relation_def)
 
 lemmas rf_sr_tcb_update_not_in_queue2
     = rf_sr_tcb_update_no_queue_helper [OF rf_sr_tcb_update_not_in_queue, simplified]

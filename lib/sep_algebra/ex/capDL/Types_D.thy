@@ -13,7 +13,7 @@
                 Rafal Kolanski <rafal.kolanski at nicta.com.au>
 *)
 
-header "A simplified version of the actual capDL specification."
+chapter "A simplified version of the actual capDL specification."
 
 theory Types_D
 imports "~~/src/HOL/Word/Word"

@@ -137,7 +137,7 @@ where
   "tcb_st_refs_of' z \<equiv> case z of (Running)                  => {}
   | (Inactive)                 => {}
   | (Restart)                  => {}
-  | (BlockedOnReceive x b)     => {(x, TCBBlockedRecv)}
+  | (BlockedOnReceive x)     => {(x, TCBBlockedRecv)}
   | (BlockedOnSend x a b c)    => {(x, TCBBlockedSend)}
   | (BlockedOnNotification x)    => {(x, TCBSignal)}
   | (BlockedOnReply)           => {}
@@ -370,18 +370,18 @@ where valid_cap'_def:
             \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
                     \<and> (\<forall>addr. real_cte_at' (r + 16 * (addr && mask n)) s))
   | Structures_H.ArchObjectCap ac \<Rightarrow> (case ac of
-    ARMStructures_H.ASIDPoolCap pool asid \<Rightarrow>
+    ArchStructures_H.ASIDPoolCap pool asid \<Rightarrow>
     typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
-  | ARMStructures_H.ASIDControlCap \<Rightarrow> True
-  | ARMStructures_H.PageCap ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
+  | ArchStructures_H.ASIDControlCap \<Rightarrow> True
+  | ArchStructures_H.PageCap ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' UserDataT (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase)
-  | ARMStructures_H.PageTableCap ref mapdata \<Rightarrow>
+  | ArchStructures_H.PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
-  | ARMStructures_H.PageDirectoryCap ref mapdata \<Rightarrow>
+  | ArchStructures_H.PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
 
@@ -399,7 +399,7 @@ definition
   valid_tcb_state' :: "Structures_H.thread_state \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_tcb_state' ts s \<equiv> case ts of
-    Structures_H.BlockedOnReceive ref d \<Rightarrow> ep_at' ref s
+    Structures_H.BlockedOnReceive ref \<Rightarrow> ep_at' ref s
   | Structures_H.BlockedOnSend ref b d c \<Rightarrow> ep_at' ref s
   | Structures_H.BlockedOnNotification ref \<Rightarrow> ntfn_at' ref s
   | _ \<Rightarrow> True"
@@ -674,6 +674,11 @@ where
   "s \<turnstile> c' parentOf c \<equiv>
   \<exists>cte' cte. s c = Some cte \<and> s c' = Some cte' \<and> isMDBParentOf cte' cte"
 
+
+context 
+notes [[inductive_internals =true]]
+begin
+
 inductive
   subtree :: "cte_heap \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool" ("_ \<turnstile> _ \<rightarrow> _" [60,0,60] 61)
   for s :: cte_heap and c :: word32
@@ -683,6 +688,8 @@ where
  |
   trans_parent:
   "\<lbrakk> s \<turnstile> c \<rightarrow> c'; s \<turnstile> c' \<leadsto> c''; c'' \<noteq> 0; s \<turnstile> c parentOf c'' \<rbrakk> \<Longrightarrow> s \<turnstile> c \<rightarrow> c''"
+
+end
 
 definition
   "descendants_of' c s \<equiv> {c'. s \<turnstile> c \<rightarrow> c'}"
@@ -792,7 +799,7 @@ where
 | "runnable' (Structures_H.Inactive)                = False"
 | "runnable' (Structures_H.Restart)                 = True"
 | "runnable' (Structures_H.IdleThreadState)         = False"
-| "runnable' (Structures_H.BlockedOnReceive a b)    = False"
+| "runnable' (Structures_H.BlockedOnReceive a)    = False"
 | "runnable' (Structures_H.BlockedOnReply)          = False"
 | "runnable' (Structures_H.BlockedOnSend a b c d)   = False"
 | "runnable' (Structures_H.BlockedOnNotification x)   = False"
@@ -1296,7 +1303,7 @@ lemma capability_splits[split]:
   
 lemma thread_state_splits[split]:
   " P (case thread_state of
-     Structures_H.thread_state.BlockedOnReceive x xa \<Rightarrow> f1 x xa
+     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
      | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
      | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
      | Structures_H.thread_state.Running \<Rightarrow> f4
@@ -1305,10 +1312,10 @@ lemma thread_state_splits[split]:
      | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
          f7 x xa xb xc
      | Structures_H.thread_state.Restart \<Rightarrow> f8) =
-  ((\<forall>x11 x12.
+  ((\<forall>x11.
        thread_state =
-       Structures_H.thread_state.BlockedOnReceive x11 x12 \<longrightarrow>
-       P (f1 x11 x12)) \<and>
+       Structures_H.thread_state.BlockedOnReceive x11 \<longrightarrow>
+       P (f1 x11)) \<and>
    (awaiting_reply' thread_state \<longrightarrow> P f2) \<and>
    (\<forall>x3. thread_state =
          Structures_H.thread_state.BlockedOnNotification x3 \<longrightarrow>
@@ -1325,7 +1332,7 @@ lemma thread_state_splits[split]:
        P (f7 x71 x72 x73 x74)) \<and>
    (thread_state = Structures_H.thread_state.Restart \<longrightarrow> P f8))"
   "P (case thread_state of
-     Structures_H.thread_state.BlockedOnReceive x xa \<Rightarrow> f1 x xa
+     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
      | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
      | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
      | Structures_H.thread_state.Running \<Rightarrow> f4
@@ -1334,10 +1341,10 @@ lemma thread_state_splits[split]:
      | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
          f7 x xa xb xc
      | Structures_H.thread_state.Restart \<Rightarrow> f8) =
-  (\<not> ((\<exists>x11 x12.
+  (\<not> ((\<exists>x11.
            thread_state =
-           Structures_H.thread_state.BlockedOnReceive x11 x12 \<and>
-           \<not> P (f1 x11 x12)) \<or>
+           Structures_H.thread_state.BlockedOnReceive x11 \<and>
+           \<not> P (f1 x11)) \<or>
        awaiting_reply' thread_state \<and> \<not> P f2 \<or>
        (\<exists>x3. thread_state =
              Structures_H.thread_state.BlockedOnNotification
@@ -1520,7 +1527,7 @@ lemma tcb_st_refs_of'_simps[simp]:
  "tcb_st_refs_of' (Running)                  = {}"
  "tcb_st_refs_of' (Inactive)                 = {}"
  "tcb_st_refs_of' (Restart)                  = {}"
- "\<And>x b. tcb_st_refs_of' (BlockedOnReceive x b)     = {(x, TCBBlockedRecv)}"
+ "\<And>x. tcb_st_refs_of' (BlockedOnReceive x)     = {(x, TCBBlockedRecv)}"
  "\<And>x c. tcb_st_refs_of' (BlockedOnSend x a b c)  = {(x, TCBBlockedSend)}"
  "\<And>x. tcb_st_refs_of' (BlockedOnNotification x)    = {(x, TCBSignal)}"
  "tcb_st_refs_of' (BlockedOnReply)           = {}"
@@ -1551,7 +1558,7 @@ lemma tcb_bound_refs'_simps[simp]:
 
 lemma refs_of_rev':
  "(x, TCBBlockedRecv) \<in> refs_of' ko =
-    (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>b.  tcbState tcb = BlockedOnReceive x b))"
+    (\<exists>tcb. ko = KOTCB tcb \<and> tcbState tcb = BlockedOnReceive x)"
  "(x, TCBBlockedSend) \<in> refs_of' ko =
     (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a b c. tcbState tcb = BlockedOnSend x a b c))"
  "(x, TCBSignal) \<in> refs_of' ko =
@@ -1588,7 +1595,7 @@ lemma projectKO_opt_tcbD:
 
 lemma st_tcb_at_refs_of_rev':
   "ko_wp_at' (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of' ko) t s
-     = st_tcb_at' (\<lambda>ts. \<exists>b.  ts = BlockedOnReceive x b ) t s"
+     = st_tcb_at' (\<lambda>ts.   ts = BlockedOnReceive x ) t s"
   "ko_wp_at' (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of' ko) t s
      = st_tcb_at' (\<lambda>ts. \<exists>a b c. ts = BlockedOnSend x a b c) t s"
   "ko_wp_at' (\<lambda>ko. (x, TCBSignal) \<in> refs_of' ko) t s

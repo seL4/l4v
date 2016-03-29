@@ -1,5 +1,3 @@
-(* @TAG(OTHER_LGPL) *)
-
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
@@ -136,7 +134,7 @@ lemma inject_str_last:
 definition
   "lift\<^sub>e = (\<lambda>\<Gamma> p. map_option (lift\<^sub>c project_str inject_str) (\<Gamma> p))"
 print_locale lift_state_space
-interpretation ex!: lift_state_space project_str inject_str
+interpretation ex: lift_state_space project_str inject_str
   "xstate_map project_str" lift\<^sub>e "lift\<^sub>c project_str inject_str"
   "lift\<^sub>f project_str inject_str" "lift\<^sub>s project_str"
   "lift\<^sub>r project_str inject_str"
@@ -151,7 +149,7 @@ interpretation ex!: lift_state_space project_str inject_str
   apply simp
   done
 
-interpretation ex!: lift_state_space_ext project_str inject_str
+interpretation ex: lift_state_space_ext project_str inject_str
   "xstate_map project_str" lift\<^sub>e "lift\<^sub>c project_str inject_str"
   "lift\<^sub>f project_str inject_str" "lift\<^sub>s project_str"
   "lift\<^sub>r project_str inject_str"

@@ -97,7 +97,7 @@ lemma getActiveIRQ_le_maxIRQ:
 
 (* FIXME: follows already from getActiveIRQ_le_maxIRQ *)
 lemma getActiveIRQ_neq_Some0xFF:
-  "\<lbrace>\<top>\<rbrace> doMachineOp getActiveIRQ \<lbrace>\<lambda>rv s. rv \<noteq> Some 0xFF\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> doMachineOp getActiveIRQ \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply wp
   apply clarsimp

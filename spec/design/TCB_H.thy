@@ -16,7 +16,7 @@ imports
   TCBDecls_H
   CNode_H
   VSpace_H
-  ArchTCB_H
+  "./$L4V_ARCH/ArchTCB_H"
 begin
 
 defs decodeTCBInvocation_def:
@@ -122,7 +122,7 @@ defs decodeSetPriority_def:
         throw IllegalOperation;
     returnOk $ ThreadControl_ \<lparr>
         tcThread= capTCBPtr cap,
-        tcThreadCapSlot= error [],
+        tcThreadCapSlot= 0,
         tcNewFaultEP= Nothing,
         tcNewPriority= Just $ fromIntegral newPrio,
         tcNewCRoot= Nothing,

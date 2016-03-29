@@ -209,8 +209,8 @@ lemma whileLoop_results_induct_lemma3 [consumes 1]:
   and inv_start: "I r s"
   and inv_step: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in> fst (B r s) \<rbrakk> \<Longrightarrow> I r' s'"
   shows "I r' s'"
-  apply (rule whileLoop_results_induct_lemma2 [where P="split I" and y="(r', s')" and x="(r, s)",
-      simplified split_def, simplified])
+  apply (rule whileLoop_results_induct_lemma2 [where P="case_prod I" and y="(r', s')" and x="(r, s)",
+      simplified case_prod_unfold, simplified])
       apply (rule result)
      apply simp
     apply simp

@@ -797,7 +797,7 @@ lemma arch_recycle_cap_respects:
                    cap_aligned_def is_cap_simps valid_cap_def
             split: arch_cap.split_asm)
      apply (fastforce simp: cap_links_asid_slot_def label_owns_asid_slot_def intro: pas_refined_Control_into_is_subject_asid)
-    apply (fastforce simp: has_recycle_rights_def vspace_cap_rights_to_auth_def pageBitsForSize_def split: vmpage_size.split)
+    subgoal by (fastforce simp: has_recycle_rights_def arch_has_recycle_rights_def vspace_cap_rights_to_auth_def pageBitsForSize_def split: vmpage_size.split)
    apply (rename_tac word option)
    apply (subgoal_tac
      "(\<forall>v\<in>List.set [word , word + 4 .e. word + 2 ^ pt_bits - 1]. is_subject aag (v && ~~ mask pt_bits)) \<and>

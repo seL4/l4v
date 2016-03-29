@@ -100,6 +100,9 @@ lemma Suc_0_lt_cases:
   apply (auto simp add: not_less le_Suc_eq)
   done
 
+lemmas upto_enum_step_shift_red =
+   upto_enum_step_shift_red[where 'a=32, simplified, simplified word_bits_def[symmetric, simplified]]
+
 lemma clearMemory_respects:
   "\<lbrace>\<lambda> a. integrity aag X st (s\<lparr>machine_state := a\<rparr>) \<and>
          is_aligned ptr sz \<and> sz < word_bits \<and> 2 \<le> sz \<and>
@@ -773,7 +776,7 @@ lemma use_retype_region_proofs_ext':
    done
 
 lemmas use_retype_region_proofs_ext
-    = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q, simplified, OF _ _ _ _ TrueI] for Q
+    = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q, simplified] for Q
 
 lemma (in is_extended) pas_refined_tcb_domain_map_wellformed':
   assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag and P\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"

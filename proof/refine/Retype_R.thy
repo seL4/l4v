@@ -1183,7 +1183,7 @@ lemma retype_ekheap_relation:
      apply (clarsimp simp add: ekheap_relation_def 
                       pspace_relation_def default_ext_def cong: if_cong
                       split: split_if_asm)
-      apply (clarsimp simp add: makeObjectKO_def APIType_map2_def cong: if_cong split: sum.splits Structures_H.kernel_object.splits
+      subgoal by (clarsimp simp add: makeObjectKO_def APIType_map2_def cong: if_cong split: sum.splits Structures_H.kernel_object.splits
              arch_kernel_object.splits ArchTypes_H.object_type.splits ArchTypes_H.apiobject_type.splits)
      apply (frule ekh_at_tcb_at[OF et])
      apply (intro impI conjI)
@@ -1194,7 +1194,8 @@ lemma retype_ekheap_relation:
        apply (clarsimp simp add: makeObjectKO_def cong: if_cong split: sum.splits Structures_H.kernel_object.splits
               arch_kernel_object.splits ArchTypes_H.object_type.splits ArchTypes_H.apiobject_type.splits)
       apply (drule_tac x=xa in bspec,simp)
-      apply (force+)[2]
+      subgoal by force
+     subgoal by force
     apply (simp add: foldr_upd_app_if' foldr_upd_app_if[folded data_map_insert_def])
     apply (simp add: obj_relation_retype_addrs_eq[OF not_unt num_r orr cover,symmetric])
     apply (clarsimp simp add: APIType_map2_def default_ext_def ekheap_relation_def 
@@ -1953,14 +1954,14 @@ proof -
   apply (rule_tac x="of_nat x" in exI)
   apply (simp add: unat_sub_if_size range_cover.unat_of_nat_n[OF cover])
   apply (rule nat_le_Suc_less_imp)
-  apply (metis le_unat_uoi nat_less_le not_leE)
+  apply (metis le_unat_uoi nat_less_le not_le_imp_less)
   done
 
   have new_caps_adds_fold:
     "map (\<lambda>n. ptr + 2 ^ objBitsKO ko * n) [0.e.2 ^ gbits * of_nat n - 1] =
      new_cap_addrs (2 ^ gbits * n) ptr ko"
     apply (simp add: new_cap_addrs_def shiftl_t2n)
-    apply (subgoal_tac "1 \<le> (2\<Colon>word32) ^ gbits * of_nat n")
+    apply (subgoal_tac "1 \<le> (2::word32) ^ gbits * of_nat n")
      apply (simp add: upto_enum_red' o_def)
      apply (rule arg_cong2[where f=map, OF refl])
      apply (rule arg_cong2[where f=upt, OF refl])
@@ -2737,7 +2738,7 @@ lemma copy_global_corres:
               apply (drule(1) pde_relation_aligned_eq)
               apply fastforce
              apply (wp hoare_vcg_const_Ball_lift | simp)+
-       apply (simp add: kernel_base_def kernelBase_def list_all2_refl)
+       apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def list_all2_refl)
       apply (rule corres_trivial, clarsimp simp: state_relation_def arch_state_relation_def)
      apply wp
    apply (clarsimp simp: valid_arch_state_def)
@@ -3815,7 +3816,7 @@ lemma threadSet_cte_wp_at2'T:
    apply (subst conj_commute)
    apply (rule setObject_cte_wp_at2')
     apply (clarsimp simp: updateObject_default_def projectKOs in_monad objBits_simps
-                          obj_at'_def objBits_simps in_magnitude_check Pair_fst_snd_eq)
+                          obj_at'_def objBits_simps in_magnitude_check prod_eq_iff)
     apply (case_tac tcba, clarsimp simp: bspec_split [OF spec [OF x]])
    apply (clarsimp simp: updateObject_default_def in_monad bind_def
                          projectKOs)
@@ -4562,7 +4563,7 @@ lemma createNewCaps_ko_wp_atQ':
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type, simp_all split del: split_if)[1]
             apply (rule hoare_pre, wp, simp)
-           apply (wp mapM_x_threadSet_createNewCaps_futz
+           by (wp mapM_x_threadSet_createNewCaps_futz
                      mapM_x_wp' createWordObjects_orig_ko_wp_at
                      createObjects_obj_at
                      createObjects_ko_wp_at2 createObjects_makeObject_not_tcbQueued
@@ -4570,7 +4571,6 @@ lemma createNewCaps_ko_wp_atQ':
                    | simp add: makeObjectKO_def objBitsKO_def archObjSize_def APIType_capBits_def
                                objBits_def pageBits_def pdBits_def ptBits_def curDomain_def
                    | intro conjI | fastforce)+
-done
 
 lemmas createNewCaps_ko_wp_at'
     = createNewCaps_ko_wp_atQ'[simplified, unfolded fold_K]
@@ -5750,8 +5750,7 @@ proof -
              createObjects_ct_idle_or_in_cur_domain'
          | simp)+
   apply clarsimp
-  apply (intro conjI)
-   apply (simp_all add:valid_pspace'_def objBits_def)
+  apply (intro conjI; simp add:valid_pspace'_def objBits_def)
   apply (fastforce simp add: no_cte no_tcb split_def split: option.splits)
   apply (clarsimp simp:invs'_def no_cte no_tcb valid_state'_def no_cte  split:option.splits)
   done

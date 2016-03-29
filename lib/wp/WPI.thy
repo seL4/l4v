@@ -43,12 +43,12 @@ begin
 text \<open>The ML version of repeat_new is slightly faster than the Eisbach one.\<close>
 
 method_setup repeat_new =
- \<open>Method_Closure.parse_method >> (fn m => fn ctxt => fn facts =>
+ \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
    let
      fun tac i st' =
        Goal.restrict i 1 st'
-       |> Method_Closure.method_evaluate m ctxt facts
-       |> Seq.map (Goal.unrestrict i o snd)
+       |> method_evaluate m ctxt facts
+       |> Seq.map (Goal.unrestrict i)
 
    in SIMPLE_METHOD (SUBGOAL (fn (_,i) => REPEAT_ALL_NEW tac i) 1) facts end)
 \<close>
@@ -264,7 +264,7 @@ private method_setup shared_frees =
   \<open>Args.term -- Args.term >> 
     (fn (t,t') => (fn _ =>
     SIMPLE_METHOD (fn st =>
-    if Method_Closure.is_dummy st then Seq.empty else
+    if Method.detect_closure_state st then Seq.empty else
     if has_shared_frees t t' then Seq.single st else Seq.empty )))\<close>
 
 private method uses_arg for C :: "'a \<Rightarrow> 'b \<Rightarrow> bool" =

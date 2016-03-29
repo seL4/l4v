@@ -28,7 +28,7 @@ shows
 lemma of_nat_shiftl:
   "(of_nat x << n) = (of_nat (x * 2 ^ n) :: ('a::len) word)"
 proof -
-  have "(of_nat x\<Colon>'a word) << n = of_nat (2 ^ n) * of_nat x"
+  have "(of_nat x::'a word) << n = of_nat (2 ^ n) * of_nat x"
     using shiftl_t2n by auto
   thus ?thesis by simp
 qed

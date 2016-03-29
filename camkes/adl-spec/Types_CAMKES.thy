@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-header {* \label{sec:types}Types *}
+chapter {* \label{sec:types}Types *}
 
 (*<*)
 theory Types_CAMKES
@@ -132,7 +132,7 @@ record parameter =
   p_direction   :: param_direction
   p_name        :: idl_symbol
 
-record method =
+record "method" =
   m_return_type :: "param_type option"
   m_name        :: idl_symbol
   m_parameters  :: "parameter list"

@@ -326,7 +326,7 @@ lemma hf_cte_at[wp]:
 
 
 lemma do_ipc_transfer_cte_at[wp]:
-  "\<lbrace>cte_at p\<rbrace> do_ipc_transfer s ep b g r d \<lbrace>\<lambda>_. cte_at p\<rbrace>"
+  "\<lbrace>cte_at p\<rbrace> do_ipc_transfer s ep b g r \<lbrace>\<lambda>_. cte_at p\<rbrace>"
   by (wp valid_cte_at_typ)
 
 
@@ -428,10 +428,9 @@ lemma same_object_obj_refs:
   "\<lbrakk> same_object_as cap cap' \<rbrakk>
      \<Longrightarrow> obj_refs cap = obj_refs cap'"
   apply (cases cap, simp_all add: same_object_as_def)
-       apply (clarsimp simp: is_cap_simps bits_of_def
-                      split: cap.split_asm arch_cap.split_asm)+
-     apply (rename_tac arch_cap, case_tac arch_cap, simp_all)+
-  done
+       apply ((clarsimp simp: is_cap_simps bits_of_def
+                      split: cap.split_asm )+)
+  by (cases "the_arch_cap cap"; cases "the_arch_cap cap'"; simp)
 
 
 lemma same_object_zombies:
@@ -486,8 +485,8 @@ lemma cap_master_pt_pd:
 
 definition
   "pt_pd_asid cap \<equiv> case cap of
-    Structures_A.ArchObjectCap (ARM_Structs_A.PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
-  | Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap _ (Some asid)) \<Rightarrow> Some asid
+    Structures_A.ArchObjectCap (Arch_Structs_A.PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
+  | Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap _ (Some asid)) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
 

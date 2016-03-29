@@ -131,7 +131,7 @@ lemma deriveCap_empty_fail[intro!, wp, simp]:
 crunch (empty_fail) empty_fail[intro!, wp, simp]: setExtraBadge, cteInsert
 
 lemma transferCapsToSlots_empty_fail[intro!, wp, simp]:
-  "empty_fail (transferCapsToSlots ep dim buffer n caps slots mi)"
+  "empty_fail (transferCapsToSlots ep buffer n caps slots mi)"
   apply (induct caps arbitrary: slots n mi)
    apply simp
   apply (simp add: Let_def split_def

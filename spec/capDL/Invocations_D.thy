@@ -45,7 +45,6 @@ datatype cdl_irq_handler_invocation =
     AckIrq cdl_irq
   | SetIrqHandler cdl_irq cdl_cap cdl_cap_ref
   | ClearIrqHandler cdl_irq
-  | SetMode cdl_irq bool bool
 
 datatype cdl_endpoint_invocation =
     (* badge, grant, ep *)

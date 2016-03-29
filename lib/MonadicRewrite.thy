@@ -102,7 +102,7 @@ proof -
     apply (clarsimp simp: monadic_rewrite_def bind_def P image_constant_conv
                     cong: image_cong)
     apply (drule empty_failD2[OF ef])
-    apply (clarsimp simp: Pair_fst_snd_eq split: split_if_asm)
+    apply (clarsimp simp: prod_eq_iff split: split_if_asm)
     done
 qed
 
@@ -226,7 +226,7 @@ lemma monadic_rewrite_symb_exec_l':
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
       \<Longrightarrow> monadic_rewrite F E (P and P') (m >>= x) y"
   apply (cases E)
-   apply (clarsimp simp: monadic_rewrite_def bind_def Pair_fst_snd_eq)
+   apply (clarsimp simp: monadic_rewrite_def bind_def prod_eq_iff)
    apply (subgoal_tac "\<not> snd (m s)")
     apply (simp add: empty_fail_def, drule_tac x=s in spec)
     apply (subgoal_tac "\<forall>(rv, s') \<in> fst (m s). x rv s' = y s")
@@ -239,7 +239,7 @@ lemma monadic_rewrite_symb_exec_l':
     apply clarsimp
     apply (drule(1) in_inv_by_hoareD)
     apply (frule(2) use_valid)
-    apply (clarsimp simp: Ball_def Pair_fst_snd_eq)
+    apply (clarsimp simp: Ball_def prod_eq_iff)
    apply (clarsimp simp: no_fail_def)
   apply simp
   apply (rule monadic_rewrite_symb_exec_l'', assumption+)

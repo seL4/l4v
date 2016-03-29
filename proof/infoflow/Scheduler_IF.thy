@@ -2083,11 +2083,6 @@ lemma get_irq_state_reads_respects_scheduler_trivial: "reads_respects_scheduler 
   apply (clarsimp simp: domain_sep_inv_def)
   done
 
-lemma dmo_ack_noop: "do_machine_op (ackInterrupt irq) = return ()"
-  apply (simp add: do_machine_op_def ackInterrupt_def
-                   select_f_def return_def bind_def
-                   gets_def get_def simpler_modify_def)
-  done
 
 lemma resetTimer_underlying_memory[wp]: "\<lbrace>\<lambda>s. P(underlying_memory s)\<rbrace> resetTimer \<lbrace>\<lambda>r s. P (underlying_memory s)\<rbrace>"
   apply (simp add: resetTimer_def machine_op_lift_def machine_rest_lift_def)
@@ -2143,16 +2138,52 @@ lemma irq_inactive_or_timer: "\<lbrace>domain_sep_inv False st and Q IRQTimer an
     apply clarsimp+
   done
 
+lemma ackInterrupt_no_irq[wp]:
+  "no_irq (ackInterrupt irq)"
+  apply (clarsimp simp add:no_irq_def)
+  apply (wp dmo_wp VSpace_AI.ackInterrupt_irq_masks | simp add:no_irq_def)+
+  done
 
+crunch irq_state[wp]: ackInterrupt "\<lambda>s. P (irq_state s)"
+
+lemma ackInterrupt_reads_respects_scheduler:
+  "reads_respects_scheduler aag l \<top> (do_machine_op (ackInterrupt irq))"
+  apply (rule reads_respects_scheduler_unobservable)
+   apply (rule scheduler_equiv_lift)
+        apply (simp add:  globals_equiv_scheduler_def[abs_def] idle_equiv_def)
+        apply (rule hoare_pre)
+         apply wps
+         apply (wp dmo_wp VSpace_AI.ackInterrupt_irq_masks | simp add:no_irq_def)+
+         apply (wp dmo_wp | simp add:ackInterrupt_def)+
+         apply clarsimp
+        apply ((wp silc_dom_lift dmo_wp | simp)+)[5]
+  apply (rule scheduler_affects_equiv_unobservable)
+     apply (simp add: states_equiv_for_def[abs_def] equiv_for_def equiv_asids_def
+                      equiv_asid_def)
+     apply (rule hoare_pre)
+      apply wps
+  apply (wp dmo_wp | simp add:ackInterrupt_def)+
+  apply (wp mol_exclusive_state)
+  done
+
+
+  
 lemma handle_interrupt_reads_respects_scheduler:
-        "reads_respects_scheduler aag l (invs and guarded_pas_domain aag and pas_refined aag and valid_sched and domain_sep_inv False st) (handle_interrupt irq)"
-  apply (simp add: handle_interrupt_def dmo_ack_noop)
-  apply (wp)
-     apply (rule_tac Q="rv = IRQTimer \<or> rv = IRQInactive" in gen_asm_ev(2))
-     apply (elim disjE)
-      apply simp
-      apply (wp timer_tick_reads_respects_scheduler dmo_resetTimer_reads_respects_scheduler get_irq_state_reads_respects_scheduler_trivial fail_ev irq_inactive_or_timer | simp)+
-  apply force
+        "reads_respects_scheduler aag l (invs and guarded_pas_domain aag and pas_refined aag and valid_sched and domain_sep_inv False st and K (irq \<le> maxIRQ)) (handle_interrupt irq)"
+  apply (simp add: handle_interrupt_def )
+  apply (rule conjI; rule impI )
+   apply (rule gen_asm_ev)
+   apply simp
+  apply (wp modify_wp | simp )+
+  apply (rule ackInterrupt_reads_respects_scheduler)
+     apply (rule_tac Q="rv = IRQTimer \<or> rv = IRQInactive" in gen_asm_ev(2))     
+     apply (elim disjE)     
+      apply (wp timer_tick_reads_respects_scheduler        
+        ackInterrupt_reads_respects_scheduler
+        dmo_resetTimer_reads_respects_scheduler
+        get_irq_state_reads_respects_scheduler_trivial 
+        fail_ev irq_inactive_or_timer | simp )+      
+   apply force
   done
 
 

@@ -356,7 +356,7 @@ lemma pspace_relation_tcb_at:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        ARM_Structs_A.arch_kernel_obj.split_asm)
+                        Arch_Structs_A.arch_kernel_obj.split_asm)
   apply (simp add: is_tcb obj_at_def)
   done
 
@@ -486,11 +486,11 @@ lemma setObject_tcb_ctes_of[wp]:
      setObject t v
    \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (rule setObject_ctes_of)
-   apply (clarsimp simp: updateObject_default_def in_monad Pair_fst_snd_eq
+   apply (clarsimp simp: updateObject_default_def in_monad prod_eq_iff
                          obj_at'_def objBits_simps in_magnitude_check
                          projectKOs)
    apply fastforce
-  apply (clarsimp simp: updateObject_default_def in_monad Pair_fst_snd_eq
+  apply (clarsimp simp: updateObject_default_def in_monad prod_eq_iff
                         obj_at'_def objBits_simps in_magnitude_check
                         projectKOs bind_def)
   done
@@ -519,7 +519,7 @@ lemma setObject_tcb_iflive':
   apply (rule setObject_iflive')
       apply (simp add: objBits_simps)+
    apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                         in_magnitude_check objBits_simps Pair_fst_snd_eq
+                         in_magnitude_check objBits_simps prod_eq_iff
                          obj_at'_def)
    apply fastforce
   apply (clarsimp simp: updateObject_default_def bind_def projectKOs)
@@ -548,7 +548,7 @@ lemma setObject_tcb_ifunsafe':
   unfolding pred_conj_def
   apply (rule setObject_ifunsafe')
     apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                          in_magnitude_check objBits_simps Pair_fst_snd_eq
+                          in_magnitude_check objBits_simps prod_eq_iff
                           obj_at'_def)
     apply fastforce
    apply (clarsimp simp: updateObject_default_def bind_def projectKOs)
@@ -583,10 +583,10 @@ lemma setObject_tcb_valid_globals' [wp]:
    apply (rule hoare_lift_Pf2 [where f="gsMaxObjectSize"])
     apply (rule setObject_ctes_of)
      apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                           in_magnitude_check objBits_simps Pair_fst_snd_eq
+                           in_magnitude_check objBits_simps prod_eq_iff
                            obj_at'_def)
      apply fastforce
-    apply (clarsimp simp: updateObject_default_def in_monad Pair_fst_snd_eq
+    apply (clarsimp simp: updateObject_default_def in_monad prod_eq_iff
                           obj_at'_def objBits_simps in_magnitude_check
                           projectKOs bind_def)
    apply (wp | wp setObject_ksPSpace_only updateObject_default_inv | simp)+
@@ -797,7 +797,7 @@ lemma threadSet_cte_wp_at'T:
   apply (rule hoare_seq_ext [where B="\<lambda>rv s. P' (cte_wp_at' P p s) \<and> obj_at' (op = rv) t s"])
    apply (rule setObject_cte_wp_at2')
     apply (clarsimp simp: updateObject_default_def projectKOs in_monad objBits_simps
-                          obj_at'_def objBits_simps in_magnitude_check Pair_fst_snd_eq)
+                          obj_at'_def objBits_simps in_magnitude_check prod_eq_iff)
     apply (case_tac tcba, clarsimp simp: bspec_split [OF spec [OF x]])
    apply (clarsimp simp: updateObject_default_def in_monad bind_def
                          projectKOs)
@@ -1342,8 +1342,7 @@ proof -
            |clarsimp simp: y z a domains|rule refl)+
    apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
    apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def)
-   apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a)
-  done
+   by (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a)
 qed
 
 lemmas threadSet_invs_trivial =
@@ -2159,7 +2158,7 @@ lemma tcbSchedDequeue_corres:
    apply (clarsimp simp: in_monad ethread_get_def set_tcb_queue_def is_etcb_at_def state_relation_def)
    apply (subgoal_tac "t \<notin> set (ready_queues a (tcb_domain y) (tcb_priority y))")
     prefer 2
-    apply (force simp: tcb_sched_dequeue_def Invariants_H.valid_queues_def valid_queues_no_bitmap_def
+    subgoal by (force simp: tcb_sched_dequeue_def Invariants_H.valid_queues_def valid_queues_no_bitmap_def
    ready_queues_relation_def obj_at'_def inQ_def projectKO_eq project_inject)
    apply (subst gets_the_exec)
     apply (simp add: get_etcb_def)
@@ -2752,7 +2751,7 @@ lemma prioToL1Index_bit_set:
 
 lemma prioL2Index_bit_set:
   fixes p :: priority
-  shows "((2\<Colon>32 word) ^ unat (ucast p && (mask wordRadix :: machine_word))) !! unat (p && mask wordRadix)"
+  shows "((2::32 word) ^ unat (ucast p && (mask wordRadix :: machine_word))) !! unat (p && mask wordRadix)"
   apply (simp add: nth_w2p wordRadix_def ucast_and_mask[symmetric] unat_ucast_upcast is_up)
   apply (rule unat_less_helper)
   apply (insert and_mask_less'[where w=p and n=wordRadix], simp add: wordRadix_def)
@@ -3627,7 +3626,7 @@ lemma store_word_corres:
 lemmas msgRegisters_unfold
   = State_H.msgRegisters_def
     msg_registers_def
-    ARMMachineTypes.msgRegisters_def
+    MachineTypes.msgRegisters_def
         [unfolded upto_enum_def, simplified,
          unfolded fromEnum_def enum_register, simplified,
          unfolded toEnum_def enum_register, simplified]
@@ -4757,9 +4756,8 @@ lemma sts_invs_minor':
   apply (drule obj_at_valid_objs')
    apply (clarsimp simp: valid_pspace'_def)
   apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
-  apply (fastforce simp: valid_tcb_state'_def
+  by (fastforce simp: valid_tcb_state'_def
                   split: Structures_H.thread_state.splits)
-  done
 
 lemma sbn_invs_minor':
   "\<lbrace>bound_tcb_at' (\<lambda>ntfn'. tcb_bound_refs' ntfn' = tcb_bound_refs' ntfn) t
@@ -5050,7 +5048,7 @@ lemma set_eobject_corres':
    apply (clarsimp simp: non_exst_same_def)
    apply (case_tac bb; simp)
      apply (clarsimp simp: obj_at'_def other_obj_relation_def cte_relation_def tcb_relation_def projectKOs split: split_if_asm)+
-   apply (clarsimp simp: aobj_relation_cuts_def split: ARM_Structs_A.arch_kernel_obj.splits)
+   apply (clarsimp simp: aobj_relation_cuts_def split: Arch_Structs_A.arch_kernel_obj.splits)
    apply (rename_tac arch_kernel_obj obj d p ts)
    apply (case_tac arch_kernel_obj; simp)
      apply (clarsimp simp: pte_relation_def pde_relation_def is_tcb_def)+
@@ -5061,7 +5059,7 @@ lemma set_eobject_corres':
   apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: projectKOs)
   apply (insert e)
-  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits ARM_Structs_A.arch_kernel_obj.splits)
+  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits Arch_Structs_A.arch_kernel_obj.splits)
   done
 
 lemma set_eobject_corres:

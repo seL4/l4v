@@ -17,7 +17,7 @@
      format.
 
 -->
-<testsuite timeout="3600" depends="isabelle">
+<testsuite cpu-timeout="3600" depends="isabelle">
 
     <!-- Various seL4 specifications. -->
     <test name="ASpec">make ASpec</test>

@@ -56,25 +56,25 @@ where
 
 consts 
   itASID :: asid
-  biCapNull :: word32
-  biCapITTCB :: word32
-  biCapITCNode :: word32
-  biCapITPD :: word32
-  biCapIRQControl :: word32
-  biCapASIDControl :: word32
-  biCapITASIDPool :: word32
-  biCapIOPort :: word32
-  biCapIOSpace :: word32
-  biCapBIFrame :: word32
-  biCapITIPCBuf :: word32
-  biCapDynStart :: word32
+  biCapNull :: machine_word
+  biCapITTCB :: machine_word
+  biCapITCNode :: machine_word
+  biCapITPD :: machine_word
+  biCapIRQControl :: machine_word
+  biCapASIDControl :: machine_word
+  biCapITASIDPool :: machine_word
+  biCapIOPort :: machine_word
+  biCapIOSpace :: machine_word
+  biCapBIFrame :: machine_word
+  biCapITIPCBuf :: machine_word
+  biCapDynStart :: machine_word
   biFrameSizeBits :: nat
   nopBIFrameData :: biframe_data
 
 definition
-  runInit :: "'a kernel_init \<Rightarrow> 'b kernel"
+  runInit :: "word32 \<Rightarrow> 'a kernel_init \<Rightarrow> 'b kernel"
 where
-  "runInit doInit \<equiv> do
+  "runInit initOffset doInit \<equiv> do
     ks \<leftarrow> get;
     initData \<leftarrow> return \<lparr> initFreeMemory = [],
                    initSlotPosCur = 0,

@@ -15,7 +15,7 @@
 theory VSpace_H
 imports
   CNode_H
-  ArchVSpace_H
+  "./$L4V_ARCH/ArchVSpace_H"
   KernelInitMonad_H
 begin
 
@@ -28,6 +28,7 @@ definition
 initPlatform :: "unit kernel"
 where
 "initPlatform\<equiv> (do
+  doMachineOp $ initIRQController;
   doMachineOp $ configureTimer;
   doMachineOp $ initL2Cache
 od)"
@@ -35,7 +36,7 @@ od)"
 definition
 initCPU :: "unit kernel"
 where
-"initCPU \<equiv> ArchVSpaceDecls_H.activateGlobalPD"
+"initCPU \<equiv> ArchVSpaceDecls_H.activateGlobalVSpace"
 
 definition
 createIPCBufferFrame :: "capability \<Rightarrow> vptr \<Rightarrow> capability kernel_init"
@@ -48,7 +49,7 @@ where
 "createBIFrame  \<equiv> ArchVSpaceDecls_H.createBIFrame"
 
 definition
-createFramesOfRegion :: "capability \<Rightarrow> region \<Rightarrow> bool \<Rightarrow> vptr \<Rightarrow> unit kernel_init"
+createFramesOfRegion :: "capability \<Rightarrow> region \<Rightarrow> bool \<Rightarrow> unit kernel_init"
 where
 "createFramesOfRegion \<equiv> ArchVSpaceDecls_H.createFramesOfRegion"
 
@@ -96,6 +97,11 @@ definition
 lookupIPCBuffer :: "bool \<Rightarrow> machine_word \<Rightarrow> ((machine_word) option) kernel"
 where
 "lookupIPCBuffer \<equiv> ArchVSpaceDecls_H.lookupIPCBuffer"
+
+definition
+vptrFromPPtr :: "machine_word \<Rightarrow> vptr kernel_init"
+where
+"vptrFromPPtr \<equiv> ArchVSpaceDecls_H.vptrFromPPtr"
 
 
 end

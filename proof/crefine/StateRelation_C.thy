@@ -199,27 +199,27 @@ definition
 fun
   register_from_H :: "register \<Rightarrow> word32"
   where
-  "register_from_H ARMMachineTypes.R0 = scast Kernel_C.R0"
-  | "register_from_H ARMMachineTypes.R1 = scast Kernel_C.R1"
-  | "register_from_H ARMMachineTypes.R2 = scast Kernel_C.R2"
-  | "register_from_H ARMMachineTypes.R3 = scast Kernel_C.R3"
-  | "register_from_H ARMMachineTypes.R4 = scast Kernel_C.R4"
-  | "register_from_H ARMMachineTypes.R5 = scast Kernel_C.R5"
-  | "register_from_H ARMMachineTypes.R6 = scast Kernel_C.R6"
-  | "register_from_H ARMMachineTypes.R7 = scast Kernel_C.R7"
-  | "register_from_H ARMMachineTypes.R8 = scast Kernel_C.R8"
-  | "register_from_H ARMMachineTypes.R9 = scast Kernel_C.R9"
-  | "register_from_H ARMMachineTypes.SL = scast Kernel_C.R10" 
-  | "register_from_H ARMMachineTypes.FP = scast Kernel_C.R11" 
-  | "register_from_H ARMMachineTypes.IP = scast Kernel_C.R12" 
-  | "register_from_H ARMMachineTypes.SP = scast Kernel_C.SP"
-  | "register_from_H ARMMachineTypes.LR = scast Kernel_C.LR"
-  | "register_from_H ARMMachineTypes.LR_svc = scast Kernel_C.LR_svc"
-  | "register_from_H ARMMachineTypes.CPSR = scast Kernel_C.CPSR" 
-  | "register_from_H ARMMachineTypes.FaultInstruction = scast Kernel_C.FaultInstruction"
+  "register_from_H MachineTypes.R0 = scast Kernel_C.R0"
+  | "register_from_H MachineTypes.R1 = scast Kernel_C.R1"
+  | "register_from_H MachineTypes.R2 = scast Kernel_C.R2"
+  | "register_from_H MachineTypes.R3 = scast Kernel_C.R3"
+  | "register_from_H MachineTypes.R4 = scast Kernel_C.R4"
+  | "register_from_H MachineTypes.R5 = scast Kernel_C.R5"
+  | "register_from_H MachineTypes.R6 = scast Kernel_C.R6"
+  | "register_from_H MachineTypes.R7 = scast Kernel_C.R7"
+  | "register_from_H MachineTypes.R8 = scast Kernel_C.R8"
+  | "register_from_H MachineTypes.R9 = scast Kernel_C.R9"
+  | "register_from_H MachineTypes.SL = scast Kernel_C.R10" 
+  | "register_from_H MachineTypes.FP = scast Kernel_C.R11" 
+  | "register_from_H MachineTypes.IP = scast Kernel_C.R12" 
+  | "register_from_H MachineTypes.SP = scast Kernel_C.SP"
+  | "register_from_H MachineTypes.LR = scast Kernel_C.LR"
+  | "register_from_H MachineTypes.LR_svc = scast Kernel_C.LR_svc"
+  | "register_from_H MachineTypes.CPSR = scast Kernel_C.CPSR" 
+  | "register_from_H MachineTypes.FaultInstruction = scast Kernel_C.FaultInstruction"
 
 definition
-  ccontext_relation :: "(ARMMachineTypes.register \<Rightarrow> word32) \<Rightarrow> user_context_C \<Rightarrow> bool"
+  ccontext_relation :: "(MachineTypes.register \<Rightarrow> word32) \<Rightarrow> user_context_C \<Rightarrow> bool"
 where
   "ccontext_relation regs uc \<equiv>  \<forall>r. regs r = index (registers_C uc) (unat (register_from_H r))"
 
@@ -237,10 +237,9 @@ where
      = (tsType_CL (fst ts') = scast ThreadState_IdleThreadState)"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnReply) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReply)"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref dimin) ts'
+| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive \<and>
-        oref = blockingObject_CL (fst ts') \<and>
-        dimin = to_bool (blockingIPCDiminishCaps_CL (fst ts')))"
+        oref = blockingObject_CL (fst ts'))"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg isc) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnSend 
         \<and> oref = blockingObject_CL (fst ts') 
@@ -587,7 +586,7 @@ fun
 
 
 definition
-  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (word32[64]) \<Rightarrow> bool"
+  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (word32[160]) \<Rightarrow> bool"
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>

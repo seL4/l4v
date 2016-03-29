@@ -166,7 +166,7 @@ lemma koType_objBitsKO:
   "koTypeOf k = koTypeOf k' \<Longrightarrow> objBitsKO k = objBitsKO k'"
   by (auto simp: objBitsKO_def archObjSize_def
           split: Structures_H.kernel_object.splits
-                 ARMStructures_H.arch_kernel_object.splits)
+                 ArchStructures_H.arch_kernel_object.splits)
 
 lemma updateObject_objBitsKO:
     "(ko', t') \<in> fst (updateObject (val :: 'a :: pspace_storable) ko p q n t)
@@ -180,7 +180,7 @@ lemma objBitsKO_bounded:
   apply (cases ko)
   apply (simp_all add: word_bits_def pageBits_def 
                        objBitsKO_simps archObjSize_def
-                split: ARMStructures_H.arch_kernel_object.splits)
+                split: ArchStructures_H.arch_kernel_object.splits)
   done
 
 lemma updateObject_cte_is_tcb_or_cte:
@@ -357,7 +357,7 @@ lemma setObject_cte_wp_at2':
    apply (erule exEI [where 'a=word32])
    apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
    apply (drule(1) x)
-    apply (clarsimp simp: lookupAround2_char1 Pair_fst_snd_eq)
+    apply (clarsimp simp: lookupAround2_char1 prod_eqI)
    apply (fastforce dest: bspec [OF _ ranI])
   apply (erule disjEI)
    apply (clarsimp simp: ps_clear_upd' lookupAround2_char1
@@ -370,7 +370,7 @@ lemma setObject_cte_wp_at2':
   apply (frule updateObject_type)
   apply (case_tac ba, simp_all)
   apply (drule(1) x)
-   apply (clarsimp simp: Pair_fst_snd_eq lookupAround2_char1)
+   apply (clarsimp simp: prod_eqI lookupAround2_char1)
   apply (fastforce dest: bspec [OF _ ranI])
   done
 
@@ -981,7 +981,7 @@ lemma obj_relation_cut_same_type:
                     pte_relation_def pde_relation_def
              split: Structures_A.kernel_object.split_asm split_if_asm
                     Structures_H.kernel_object.split_asm
-                    ARM_Structs_A.arch_kernel_obj.split_asm)
+                    Arch_Structs_A.arch_kernel_obj.split_asm)
   done
 
 definition exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
@@ -1055,7 +1055,7 @@ lemma set_other_obj_corres:
   apply (clarsimp simp: obj_at'_def)
   apply (erule_tac x=obj in allE)
   apply (clarsimp simp: projectKO_eq project_inject)
-  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type t exst_same_def split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits ARM_Structs_A.arch_kernel_obj.splits)
+  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type t exst_same_def split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits Arch_Structs_A.arch_kernel_obj.splits)
   done
 
 lemma set_ep_corres:
@@ -1230,7 +1230,7 @@ lemma setObject_valid_objs':
   apply (drule spec, erule mp)
   apply (drule(1) x)
     apply (simp add: ranI)
-   apply (simp add: Pair_fst_snd_eq lookupAround2_char1)
+   apply (simp add: prod_eqI lookupAround2_char1)
   apply (clarsimp elim!: ranE split: split_if_asm simp: ranI)
   done
 

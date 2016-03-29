@@ -236,8 +236,8 @@ fun fold_of_nat_eq_Ifs ctxt tm = let
             @{const_name If}]
         (Simplifier.rewrite ctxt)
     val thm = @{thm fold_of_nat_eq_Ifs}
-      |> cterm_instantiate [(@{cpat "?f :: nat \<Rightarrow> ?'a"}, Thm.cterm_of ctxt pat),
-          (@{cpat "?m :: nat"}, Thm.cterm_of ctxt m)]
+      |> infer_instantiate ctxt [(("f",0), Thm.cterm_of ctxt pat),
+          (("m",0), Thm.cterm_of ctxt m)]
       |> simplify (put_simpset HOL_basic_ss ctxt
           addsimprocs [Word_Bitwise_Tac.expand_upt_simproc]
           addsimps @{thms foldr.simps id_apply o_apply})
@@ -245,9 +245,12 @@ fun fold_of_nat_eq_Ifs ctxt tm = let
       |> Conv.fconv_rule conv
   in thm end
 
-val fold_of_nat_eq_Ifs_simproc = Simplifier.simproc_global_i
-  @{theory} "fold_of_nat_eq_Ifs"
-  [@{term "If (x = 0) y z"}] (try o fold_of_nat_eq_Ifs)
+val fold_of_nat_eq_Ifs_simproc = Simplifier.make_simproc
+  (Proof_Context.init_global @{theory}) "fold_of_nat_eq_Ifs"
+  { lhss = [@{term "If (x = 0) y z"}]
+  , identifier = []
+  , proc = fn _ => fn ctxt => try (fold_of_nat_eq_Ifs ctxt) o Thm.term_of
+  }
 
 fun unfold_assertion_data_get_set_conv ctxt tm = let
     val (f, xs) = strip_comb tm
@@ -257,14 +260,17 @@ fun unfold_assertion_data_get_set_conv ctxt tm = let
     val defs = map (suffix "_def" #> Proof_Context.get_thm ctxt) (f_nm :: procs)
   in Simplifier.rewrite (ctxt addsimps defs) (Thm.cterm_of ctxt tm) end
 
-val unfold_assertion_data_get_set = Simplifier.simproc_global_i
-  @{theory} "unfold_assertion_data_get"
-  [@{term "ghost_assertion_data_get k acc s"}, @{term "ghost_assertion_data_set k v upd"}]
-  (SOME oo unfold_assertion_data_get_set_conv)
+val unfold_assertion_data_get_set = Simplifier.make_simproc
+  (Proof_Context.init_global @{theory}) "unfold_assertion_data_get"
+  { lhss = [@{term "ghost_assertion_data_get k acc s"}, @{term "ghost_assertion_data_set k v upd"}]
+  , identifier = []
+  , proc = fn _ => fn ctxt => SOME o (unfold_assertion_data_get_set_conv ctxt) o Thm.term_of
+  }
+
 *}
 
 ML {*
-fun wrap_tac tac i t = let
+fun wrap_tac tac i t = if Thm.nprems_of t = 0 then no_tac t else let
     val t' = Goal.restrict i 1 t
     val r = tac 1 t'
   in case Seq.pull r of NONE => Seq.empty
@@ -338,6 +344,8 @@ fun prove_ptr_safe reason ctxt = DETERM o
     (TRY o REPEAT_ALL_NEW (eqsubst_either_wrap_tac ctxt
                 @{thms array_ptr_index_coerce}
             )
+        THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps
+            @{thms word_sle_msb_le word_sless_msb_less})
         THEN_ALL_NEW asm_simp_tac (ctxt addsimps
             @{thms ptr_safe_field[unfolded typ_uinfo_t_def]
                    ptr_safe_Array_element unat_less_helper
@@ -357,10 +365,10 @@ fun prove_heap_update_id ctxt = DETERM o let
         ORELSE except_tac ctxt "prove_heap_update_id: couldn't init" i)
     THEN (simp_tac ctxt
     THEN_ALL_NEW (* simp_tac will solve goal unless globals swap involved *)
-    ((rtac thm
-      ORELSE' (rtac @{thm sym} THEN' rtac thm)
+    ((resolve0_tac [thm]
+      ORELSE' (resolve0_tac [@{thm sym}] THEN' resolve0_tac [thm])
       ORELSE' except_tac ctxt "prove_heap_update_id: couldn't rtac")
-    THEN' (atac (* htd_safe assumption *)
+    THEN' (assume_tac ctxt (* htd_safe assumption *)
       ORELSE' except_tac ctxt "prove_heap_update_id: couldn't atac")
     THEN' prove_ptr_safe "prove_heap_update" ctxt)) i
   end
@@ -407,7 +415,7 @@ fun normalise_mem_accs ctxt = DETERM o let
     val h_val = get_disjoint_h_val_globals_swap ctxt
     val disjoint_h_val_tac
     = (eqsubst_asm_wrap_tac ctxt [h_val] ORELSE' eqsubst_wrap_tac ctxt [h_val])
-         THEN' (atac ORELSE' except_tac ctxt "normalise_mem_accs: couldn't atac")
+         THEN' (assume_tac ctxt ORELSE' except_tac ctxt "normalise_mem_accs: couldn't atac")
   in
     asm_full_simp_tac (ctxt addsimps init_simps addsimps [h_val])
     THEN_ALL_NEW
@@ -429,8 +437,8 @@ fun normalise_mem_accs ctxt = DETERM o let
   end
 
 val heap_update_id_nonsense
-    = Thm.trivial @{cpat "Trueprop
-        (heap_update ?p (h_val ?hp' ?p) (hrs_mem ?hrs) = hrs_mem ?hrs)"}
+    = Thm.trivial (Thm.cterm_of @{context} (Proof_Context.read_term_pattern @{context}
+        "Trueprop (heap_update ?p (h_val ?hp' ?p) (hrs_mem ?hrs) = hrs_mem ?hrs)"))
 
 fun prove_mem_equality ctxt = DETERM o let
     val init_simpset = ctxt
@@ -491,10 +499,10 @@ fun clean_heap_upd_swap ctxt = DETERM o let
     val thm = @{thm disjoint_heap_update_globals_swap_rearranged}
     val thm = res_from_ctxt "clean_heap_upd_swap" "global_acc_valid" ctxt thm
     val thm = res_from_ctxt "clean_heap_upd_swap" "globals_list_distinct" ctxt thm
-  in fn i => rtac @{thm trans}  i
-    THEN (rtac thm i
+  in fn i => resolve_tac ctxt [@{thm trans}]  i
+    THEN (resolve_tac ctxt [thm] i
       ORELSE except_tac ctxt "clean_heap_upd_swap: couldn't rtac" i)
-    THEN (atac i (* htd_safe assumption *)
+    THEN (assume_tac ctxt i (* htd_safe assumption *)
       ORELSE except_tac ctxt "clean_heap_upd_swap: couldn't atac" i)
     THEN prove_ptr_safe "clean_upd_upd_swap" ctxt i
   end
@@ -526,7 +534,7 @@ fun decompose_mem_goals trace ctxt = SUBGOAL (fn (t, i) =>
         => let val thm = res_from_ctxt "decompose_mem_goals"
                         "globals_list_distinct" ctxt
                         @{thm const_globals_in_memory_heap_updateE}
-        in (etac thm THEN' atac THEN' prove_ptr_safe "const_globals" ctxt)
+        in (eresolve_tac ctxt [thm] THEN' assume_tac ctxt THEN' prove_ptr_safe "const_globals" ctxt)
             ORELSE' except_tac ctxt "decompose_mem_goals: const globals"
         end i
     | @{term Trueprop} $ (Const (@{const_name pglobal_valid}, _) $ _ $ _ $ _)
@@ -541,13 +549,14 @@ fun decompose_mem_goals trace ctxt = SUBGOAL (fn (t, i) =>
         | ("HeapUpdWithSwap", "HeapUpd")
             => clean_heap_upd_swap ctxt i THEN prove_mem_equality ctxt i
         | ("HeapUpd", "HeapUpdWithSwap") =>
-            rtac @{thm sym} i THEN clean_heap_upd_swap ctxt i THEN prove_mem_equality ctxt i
+            resolve_tac ctxt [@{thm sym}] i
+              THEN clean_heap_upd_swap ctxt i THEN prove_mem_equality ctxt i
         | ("HeapUpd", "GlobalUpd") => prove_global_equality ctxt i
         | ("GlobalUpd", "HeapUpd") => prove_global_equality ctxt i
         | ("HTDUpdateWithSwap", _)
             => clean_htd_upd_swap ctxt i
         | (_, "HTDUpdateWithSwap")
-            => rtac @{thm sym} i THEN clean_htd_upd_swap ctxt i
+            => resolve_tac ctxt [@{thm sym}] i THEN clean_htd_upd_swap ctxt i
         | _ => raise TERM ("decompose_mem_goals: mixed up "
             ^ heap_upd_kind x ^ "," ^ heap_upd_kind y, [x, y])
       end
@@ -555,7 +564,7 @@ fun decompose_mem_goals trace ctxt = SUBGOAL (fn (t, i) =>
 
 fun unat_mono_tac ctxt = resolve_tac ctxt @{thms unat_mono_intro}
     THEN' ((((TRY o REPEAT_ALL_NEW (resolve_tac ctxt @{thms unat_mono_thms}))
-                THEN_ALL_NEW rtac @{thm order_refl})
+                THEN_ALL_NEW resolve_tac ctxt [@{thm order_refl}])
             THEN_ALL_NEW except_tac ctxt "unat_mono_tac: escaped order_refl")
         ORELSE' except_tac ctxt "unat_mono_tac: couldn't get started")
     THEN' (asm_full_simp_tac (ctxt addsimps @{thms
@@ -641,7 +650,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
             "and adjust ptr_add_assertion facts"],
         (TRY o safe_goal_tac ctxt)
             THEN_ALL_NEW (TRY o DETERM
-                o REPEAT_ALL_NEW (dtac @{thm h_t_valid_orig_and_ptr_safe}))
+                o REPEAT_ALL_NEW (dresolve_tac ctxt [@{thm h_t_valid_orig_and_ptr_safe}]))
             THEN_ALL_NEW (TRY o safe_goal_tac ctxt)),
         (["step 4: split up memory write problems",
           "and expand ptr_add_assertion if needed."],
@@ -699,7 +708,8 @@ fun simpl_to_graph_thm funs csenv ctxt nm = let
     val _ = if Thm.nprems_of res_thm = 0 then ()
         else raise THM ("simpl_to_graph_thm: unsolved subgoals", 1, [res_thm])
     (* FIXME: make the hidden assumptions of the thm appear again *)
-  in res_thm end
+  in res_thm end handle TERM (s, ts) => raise TERM ("simpl_to_graph_thm: " ^ nm
+        ^ ": " ^ s, ts)
 
 fun test_graph_refine_proof funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => ("skipped " ^ nm, @{thm TrueI})
@@ -710,7 +720,9 @@ fun test_graph_refine_proof funs csenv ctxt nm = case
         |> Seq.hd
     val succ = case Thm.nprems_of res_thm of 0 => "success on "
         | n => string_of_int n ^ " failed goals: "
-  in (succ ^ nm, res_thm) end
+  in (succ ^ nm, res_thm) end handle TERM (s, ts) => raise TERM ("test_graph_refine_proof: " ^ nm
+        ^ ": " ^ s, ts)
+
 
 fun test_graph_refine_proof_with_def funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => "skipped " ^ nm

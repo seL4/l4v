@@ -17,13 +17,13 @@
 
 theory Types_D
 imports
-  "../abstract/ARM_VMRights_A"
+  "../abstract/$L4V_ARCH/ArchVMRights_A"
   Intents_D
   "../../lib/SplitRule"
 begin
 
 (* A hardware IRQ number. *)
-type_synonym cdl_irq = word8
+type_synonym cdl_irq = "10 word"
 
 (*
  * How objects are named within the kernel.

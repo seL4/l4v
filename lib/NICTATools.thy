@@ -11,13 +11,14 @@
 (* Miscellaneous Isabelle tools. *)
 theory NICTATools
 imports 
-(* Apply_Trace_Cmd *) 
+  Apply_Trace_Cmd
   Solves_Tac
-  "subgoal_focus/Subgoal_Focus"
   "subgoal_focus/Subgoal_Methods"
   Rule_By_Method
   Eisbach_Methods
   "~~/src/HOL/Eisbach/Eisbach_Tools"
+  Insulin
+  ShowTypes
 begin
 
 section "Detect unused meta-forall"
@@ -66,7 +67,7 @@ let
    * we can produce a "warning" icon in Isabelle/jEdit. *)
   val _ =
     if length results > 0 then
-      warning (message results |> Pretty.str_of)
+      warning (message results |> Pretty.string_of)
     else ()
 in
   (false, ("", []))

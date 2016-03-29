@@ -32,9 +32,11 @@ begin
 instance ..
 end
 
-defs (overloaded)
-x_struct_ex_typ_tag: "typ_info_t (t::'a x_struct_ex_ext itself) \<equiv>
+overloading x_struct_ex_typ_tag \<equiv> typ_info_t begin
+definition
+x_struct_ex_typ_tag: "x_struct_ex_typ_tag (t::'a x_struct_ex_ext itself) \<equiv>
     (x_struct_ex_tag::'a x_struct_ex_scheme typ_info)"
+end
 
 
 lemma aggregate_x_struct_ex_tag [simp]:
@@ -132,9 +134,12 @@ begin
 instance ..
 end
 
-defs (overloaded)
-y_struct_ex_typ_tag: "typ_info_t (t::'a y_struct_ex_ext itself) \<equiv>
+overloading y_struct_ex_typ_tag \<equiv> typ_info_t
+begin
+definition
+y_struct_ex_typ_tag: "y_struct_ex_typ_tag (t::'a y_struct_ex_ext itself) \<equiv>
     (y_struct_ex_tag::'a y_struct_ex_scheme typ_info)"
+end
 
 instantiation y_struct_ex_ext :: (unit_class) mem_type
 begin

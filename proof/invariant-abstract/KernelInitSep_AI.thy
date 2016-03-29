@@ -165,7 +165,7 @@ definition
            PageTable pt             \<Rightarrow> APageTable
          | PageDirectory pd         \<Rightarrow> APageDirectory
          | DataPage sz              \<Rightarrow> AIntData sz
-         | ARM_Structs_A.ASIDPool f \<Rightarrow> AASIDPool)"
+         | Arch_Structs_A.ASIDPool f \<Rightarrow> AASIDPool)"
 
 lemmas a_base_type_simps [simp] =
   a_base_type_def [split_simps kernel_object.split arch_kernel_obj.split]
@@ -342,8 +342,8 @@ definition
   ao_clean :: "arch_kernel_obj \<Rightarrow> component set \<Rightarrow> arch_kernel_obj" where
   "ao_clean ao cmps \<equiv>
     (case ao
-       of ARM_Structs_A.ASIDPool aobj \<Rightarrow>
-            ao_override (ARM_Structs_A.ASIDPool undefined) ao cmps
+       of Arch_Structs_A.ASIDPool aobj \<Rightarrow>
+            ao_override (Arch_Structs_A.ASIDPool undefined) ao cmps
         | PageTable aobj \<Rightarrow> ao_override (PageTable undefined) ao cmps
         | PageDirectory aobj \<Rightarrow> ao_override (PageDirectory undefined) ao cmps
         | DataPage aobj \<Rightarrow> DataPage aobj)" (* type only *)

@@ -138,8 +138,8 @@ lemma sep_map_c_conj:
    apply (rule ext)
    apply (clarsimp simp:map_add_def split:option.splits)
   apply (clarsimp simp:object_to_sep_state_def split:if_splits)
-  apply (rule_tac x = "CNode \<lparr>cdl_cnode_caps = [b\<mapsto> cap],
-    cdl_cnode_size_bits = of_nat b\<rparr>" in exI)
+  apply (rule_tac x = "CNode \<lparr>cdl_cnode_caps = [slot\<mapsto> cap],
+    cdl_cnode_size_bits = of_nat slot\<rparr>" in exI)
   apply (clarsimp simp:object_slots_def)
   apply (rule ext)
   apply (clarsimp simp:object_project_def object_slots_def

@@ -57,14 +57,7 @@ lemma mod_to_dvd:
   by (clarsimp simp: dvd_eq_mod_eq_0)
 
 lemma prime_of_product [simp]: "prime ((a::nat) * b) = ((a = 1 \<and> prime b) \<or> (prime a \<and> b = 1))"
-  apply (case_tac "a=0", clarsimp)
-  apply (case_tac "a=1", clarsimp)
-  apply (case_tac "b=0", clarsimp)
-  apply (case_tac "b=1", clarsimp)
-  apply (metis gcd_lcm_complete_lattice_nat.bot.extremum
-      monoid_mult_class.mult.right_neutral mult_eq_self_implies_10
-      nat_mult_dvd_cancel_disj prime_nat_def)
-  done
+  using prime_product by force
 
 lemma partial_prime_2 [simp]: "(partial_prime a 2) = (a > 1)"
   by (clarsimp simp: partial_prime_def)
@@ -88,15 +81,10 @@ theorem is_prime_correct:
 
 lemma not_prime:
     "\<lbrakk> \<not> prime (a :: nat); a > 1 \<rbrakk> \<Longrightarrow> \<exists>x y. x * y = a \<and> 1 < x \<and> 1 < y \<and> x * x \<le> a"
-  apply (clarsimp simp: prime_nat_def dvd_def)
+  apply (clarsimp simp: prime_def dvd_def)
   apply (case_tac "m > k")
-   apply (rule_tac x=k in exI)
-   apply (rule_tac x=m in exI)
-   apply (clarsimp)
-   apply (metis Suc_lessD Suc_lessI nat_0_less_mult_iff)
-  apply (rule_tac x=m in exI)
-  apply (rule_tac x=k in exI)
-  apply clarsimp
+   apply (metis Suc_lessD Suc_lessI less_imp_le_nat mult.commute nat_0_less_mult_iff nat_mult_less_cancel_disj)
+  apply fastforce
   done
 
 lemma sqrt_prime:
@@ -136,7 +124,7 @@ lemma uint_max_factor [simp]:
 
 lemma prime_dvd:
     "\<lbrakk> prime (p::nat) \<rbrakk> \<Longrightarrow> (r dvd p) = (r = 1 \<or> r = p)"
-  by (fastforce simp: prime_nat_def)
+  by (fastforce simp: prime_def)
 
 definition is_prime_inv
   where [simp]: "is_prime_inv n i s \<equiv> (1 < i \<and> i \<le> n \<and> i \<le> SQRT_UINT_MAX \<and> i * i \<le> SQRT_UINT_MAX * SQRT_UINT_MAX \<and> partial_prime n i)"
@@ -173,7 +161,7 @@ theorem is_prime_faster_correct:
       where I="\<lambda>r s. is_prime_inv n r s"
       and M="(\<lambda>(r, s). (Suc n) * (Suc n) - r * r)"])
    apply wp
-  apply (fastforce elim: nat_leE simp: partial_prime_sqr prime_dvd)+
+    apply (fastforce elim: nat_leE simp: partial_prime_sqr prime_dvd)+
   apply (clarsimp simp: SQRT_UINT_MAX_def)
   done
 

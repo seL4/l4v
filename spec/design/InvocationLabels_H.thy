@@ -11,7 +11,7 @@
 chapter "Kernel Invocation Labels"
 
 theory InvocationLabels_H
-imports "../../lib/Enumeration"
+imports "$L4V_ARCH/ArchInvocationLabels_H"
 begin
 
 text {*
@@ -45,46 +45,8 @@ datatype invocation_label =
   | IRQAckIRQ
   | IRQSetIRQHandler
   | IRQClearIRQHandler
-  | IRQSetMode
   | DomainSetSet
-  | ARMPDClean_Data
-  | ARMPDInvalidate_Data
-  | ARMPDCleanInvalidate_Data
-  | ARMPDUnify_Instruction
-  | ARMPageTableMap
-  | ARMPageTableUnmap
-  | ARMPageMap
-  | ARMPageRemap
-  | ARMPageUnmap
-  | ARMPageClean_Data
-  | ARMPageInvalidate_Data
-  | ARMPageCleanInvalidate_Data
-  | ARMPageUnify_Instruction
-  | ARMPageGetAddress
-  | ARMASIDControlMakePool
-  | ARMASIDPoolAssign
-
-definition
-isPDFlush :: "invocation_label \<Rightarrow> bool"
-where
-"isPDFlush x\<equiv> (case x of
-        ARMPDClean_Data \<Rightarrow>   True
-      | ARMPDInvalidate_Data \<Rightarrow>   True
-      | ARMPDCleanInvalidate_Data \<Rightarrow>   True
-      | ARMPDUnify_Instruction \<Rightarrow>   True
-      | _ \<Rightarrow>   False
-      )"
-
-definition
-isPageFlush :: "invocation_label \<Rightarrow> bool"
-where
-"isPageFlush x\<equiv> (case x of
-        ARMPageClean_Data \<Rightarrow>   True
-      | ARMPageInvalidate_Data \<Rightarrow>   True
-      | ARMPageCleanInvalidate_Data \<Rightarrow>   True
-      | ARMPageUnify_Instruction \<Rightarrow>   True
-      | _ \<Rightarrow>   False
-      )"
+  | ArchInvocationLabel ArchInvocationLabels_H.arch_invocation_label
 
 (* invocation_label instance proofs *)
 (*<*)
@@ -118,25 +80,13 @@ definition
       IRQAckIRQ,
       IRQSetIRQHandler,
       IRQClearIRQHandler,
-      IRQSetMode,
-      DomainSetSet,
-      ARMPDClean_Data,
-      ARMPDInvalidate_Data,
-      ARMPDCleanInvalidate_Data,
-      ARMPDUnify_Instruction,
-      ARMPageTableMap,
-      ARMPageTableUnmap,
-      ARMPageMap,
-      ARMPageRemap,
-      ARMPageUnmap,
-      ARMPageClean_Data,
-      ARMPageInvalidate_Data,
-      ARMPageCleanInvalidate_Data,
-      ARMPageUnify_Instruction,
-      ARMPageGetAddress,
-      ARMASIDControlMakePool,
-      ARMASIDPoolAssign
-    ]"
+      DomainSetSet
+    ]
+    @ (map ArchInvocationLabel enum)"
+
+lemma ArchInvocationLabel_map_distinct[simp]: "distinct (map ArchInvocationLabel enum)"
+  apply (simp add: distinct_map)
+  by (meson injI invocation_label.inject)
 
 definition
   "enum_class.enum_all (P :: invocation_label \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"
@@ -149,8 +99,7 @@ definition
    apply (safe, simp)
    apply (case_tac x)
   apply (simp_all add: enum_invocation_label enum_all_invocation_label_def enum_ex_invocation_label_def)
-  apply fast
-  done
+  by fast+
 end
 
 instantiation invocation_label :: enum_alt

@@ -13,36 +13,36 @@ imports Syscall_AI
 begin
 
 primrec
-  pde_range_sz :: "ARM_Structs_A.pde \<Rightarrow> nat"
+  pde_range_sz :: "Arch_Structs_A.pde \<Rightarrow> nat"
 where
-    "pde_range_sz (ARM_Structs_A.InvalidPDE) = 0"
-  | "pde_range_sz (ARM_Structs_A.SectionPDE ptr x y z) = 0"
-  | "pde_range_sz (ARM_Structs_A.SuperSectionPDE ptr x z) = 4"
-  | "pde_range_sz (ARM_Structs_A.PageTablePDE ptr x z) = 0"
+    "pde_range_sz (Arch_Structs_A.InvalidPDE) = 0"
+  | "pde_range_sz (Arch_Structs_A.SectionPDE ptr x y z) = 0"
+  | "pde_range_sz (Arch_Structs_A.SuperSectionPDE ptr x z) = 4"
+  | "pde_range_sz (Arch_Structs_A.PageTablePDE ptr x z) = 0"
 
 primrec
-  pte_range_sz :: "ARM_Structs_A.pte \<Rightarrow> nat"
+  pte_range_sz :: "Arch_Structs_A.pte \<Rightarrow> nat"
 where
-    "pte_range_sz (ARM_Structs_A.InvalidPTE) = 0"
-  | "pte_range_sz (ARM_Structs_A.LargePagePTE ptr x y) = 4"
-  | "pte_range_sz (ARM_Structs_A.SmallPagePTE ptr x y) = 0"
+    "pte_range_sz (Arch_Structs_A.InvalidPTE) = 0"
+  | "pte_range_sz (Arch_Structs_A.LargePagePTE ptr x y) = 4"
+  | "pte_range_sz (Arch_Structs_A.SmallPagePTE ptr x y) = 0"
 
 primrec
-  pde_range :: "ARM_Structs_A.pde \<Rightarrow> 12 word \<Rightarrow> 12 word set"
+  pde_range :: "Arch_Structs_A.pde \<Rightarrow> 12 word \<Rightarrow> 12 word set"
 where
-    "pde_range (ARM_Structs_A.InvalidPDE) p = {}"
-  | "pde_range (ARM_Structs_A.SectionPDE ptr x y z) p = {p}"
-  | "pde_range (ARM_Structs_A.SuperSectionPDE ptr x z) p =
+    "pde_range (Arch_Structs_A.InvalidPDE) p = {}"
+  | "pde_range (Arch_Structs_A.SectionPDE ptr x y z) p = {p}"
+  | "pde_range (Arch_Structs_A.SuperSectionPDE ptr x z) p =
      (if is_aligned p 4 then {x. x && ~~ mask 4 = p && ~~ mask 4} else {p})"
-  | "pde_range (ARM_Structs_A.PageTablePDE ptr x z) p = {p}"
+  | "pde_range (Arch_Structs_A.PageTablePDE ptr x z) p = {p}"
 
 primrec
-  pte_range :: "ARM_Structs_A.pte \<Rightarrow> word8 \<Rightarrow> word8 set"
+  pte_range :: "Arch_Structs_A.pte \<Rightarrow> word8 \<Rightarrow> word8 set"
 where
-    "pte_range (ARM_Structs_A.InvalidPTE) p = {}"
-  | "pte_range (ARM_Structs_A.LargePagePTE ptr x y) p =
+    "pte_range (Arch_Structs_A.InvalidPTE) p = {}"
+  | "pte_range (Arch_Structs_A.LargePagePTE ptr x y) p =
        (if is_aligned p 4 then {x. x && ~~ mask 4 = p && ~~ mask 4} else {p})"
-  | "pte_range (ARM_Structs_A.SmallPagePTE ptr x y) p = {p}"
+  | "pte_range (Arch_Structs_A.SmallPagePTE ptr x y) p = {p}"
 
 definition valid_entries :: " ('b \<Rightarrow> ('a::len) word \<Rightarrow> 'c set) \<Rightarrow> (('a::len) word \<Rightarrow> 'b) \<Rightarrow> bool"
   where "valid_entries \<equiv> \<lambda>range fun. \<forall>x y. x \<noteq> y \<longrightarrow> range (fun x) x \<inter> range (fun y) y = {}"
@@ -164,7 +164,7 @@ lemmas valid_entries_overwrite_group
 
 lemma shift_0x3C_set:
   "\<lbrakk> is_aligned p 6; 8 \<le> bits; bits < 32; len_of TYPE('a) = bits - 2 \<rbrakk> \<Longrightarrow>
-   (\<lambda>x. ucast (x + p && mask bits >> 2) :: ('a :: len) word) ` set [0 , 4 .e. 0x3C]
+   (\<lambda>x. ucast (x + p && mask bits >> 2) :: ('a :: len) word) ` set [0 :: word32 , 4 .e. 0x3C]
         = {x. x && ~~ mask 4 = ucast (p && mask bits >> 2)}"
   apply (clarsimp simp: upto_enum_step_def word32_shift_by_2 image_image)
   apply (subst image_cong[where N="{x. x < 2 ^ 4}"])
@@ -223,11 +223,11 @@ lemma mapM_x_store_pte_updates:
 
 
 lemma valid_pt_entries_invalid[simp]:
-  "valid_pt_entries (\<lambda>x. ARM_Structs_A.pte.InvalidPTE)"
+  "valid_pt_entries (\<lambda>x. Arch_Structs_A.pte.InvalidPTE)"
    by (simp add:valid_entries_def)
 
 lemma valid_pd_entries_invalid[simp]:
-  "valid_pd_entries (\<lambda>x. ARM_Structs_A.pde.InvalidPDE)"
+  "valid_pd_entries (\<lambda>x. Arch_Structs_A.pde.InvalidPDE)"
   by (simp add:valid_entries_def)
 
 lemma entries_align_pte_update:
@@ -257,7 +257,7 @@ lemma valid_pdpt_objs_ptD:
 
 lemma mapM_x_store_invalid_pte_valid_pdpt:
   "\<lbrace>valid_pdpt_objs and K (is_aligned p 6) \<rbrace>
-     mapM_x (\<lambda>x. store_pte (x + p) ARM_Structs_A.InvalidPTE) [0, 4 .e. 0x3C]
+     mapM_x (\<lambda>x. store_pte (x + p) Arch_Structs_A.InvalidPTE) [0, 4 .e. 0x3C]
    \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (rule hoare_pre, rule_tac p="p && ~~ mask pt_bits" in mapM_x_store_pte_updates)
@@ -320,7 +320,7 @@ lemma mapM_x_store_pde_updates:
 
 lemma mapM_x_store_pde_valid_pdpt_objs:
   "\<lbrace>valid_pdpt_objs and K (is_aligned p 6)\<rbrace>
-     mapM_x (\<lambda>x. store_pde (x + p) ARM_Structs_A.InvalidPDE) [0, 4 .e. 0x3C]
+     mapM_x (\<lambda>x. store_pde (x + p) Arch_Structs_A.InvalidPDE) [0, 4 .e. 0x3C]
    \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (rule hoare_pre, rule_tac p="p && ~~ mask pd_bits" in mapM_x_store_pde_updates)
@@ -361,7 +361,7 @@ lemma valid_entriesD:
 lemma store_invalid_pde_valid_pdpt:
   "\<lbrace>valid_pdpt_objs and
     (\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s
-      \<longrightarrow> pde = ARM_Structs_A.InvalidPDE)\<rbrace>
+      \<longrightarrow> pde = Arch_Structs_A.InvalidPDE)\<rbrace>
        store_pde p pde \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (simp add: store_pde_def set_pd_def, wp get_object_wp)
   apply (clarsimp simp: obj_at_def)
@@ -403,7 +403,7 @@ lemma store_pde_non_master_valid_pdpt:
 lemma store_invalid_pte_valid_pdpt:
   "\<lbrace>valid_pdpt_objs and
         (\<lambda>s. \<forall>pt. ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits) s
-        \<longrightarrow> pte = ARM_Structs_A.InvalidPTE)\<rbrace>
+        \<longrightarrow> pte = Arch_Structs_A.InvalidPTE)\<rbrace>
        store_pte p pte \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (simp add: store_pte_def set_pt_def, wp get_object_wp)
   apply (clarsimp simp: obj_at_def)
@@ -576,11 +576,11 @@ lemma copy_global_mappings_valid_pdpt_objs[wp]:
     apply (clarsimp split:if_splits)
      apply (simp add:kernel_base_shift_cast_le)
      apply (simp add:kernel_base_def)
-     apply (cut_tac y1 = xb and x1 = "0xF00::12 word" in ucast_le_migrate[THEN iffD1,rotated -1])
+     apply (cut_tac y1 = xb and x1 = "0xE00::12 word" in ucast_le_migrate[THEN iffD1,rotated -1])
         apply simp
        apply (simp add:word_size le_less_trans)
       apply (simp add:word_size)
-     apply (drule aligned_le_sharp[where n = 4 and a = "0xF00::12 word"])
+     apply (drule aligned_le_sharp[where n = 4 and a = "0xE00::12 word"])
       apply (simp add:kernel_base_def is_aligned_def)
      apply (erule order_trans)
      apply (erule subst)
@@ -652,7 +652,7 @@ lemma shiftr_eq_neg_mask_eq:
 
 lemma mapM_x_store_pte_valid_pdpt2:
   "\<lbrace>valid_pdpt_objs and K (is_aligned ptr pt_bits)\<rbrace>
-     mapM_x (\<lambda>x. store_pte x ARM_Structs_A.pte.InvalidPTE) [ptr, ptr + 4 .e. ptr + 2 ^ pt_bits - 1]
+     mapM_x (\<lambda>x. store_pte x Arch_Structs_A.pte.InvalidPTE) [ptr, ptr + 4 .e. ptr + 2 ^ pt_bits - 1]
    \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (rule mapM_x_wp')
@@ -673,7 +673,7 @@ lemma mapM_x_store_pte_valid_pdpt2:
 
 lemma mapM_x_store_pde_valid_pdpt2:
   "\<lbrace>valid_pdpt_objs and K (is_aligned pd pd_bits)\<rbrace>
-       mapM_x (\<lambda>x. store_pde ((x << 2) + pd) ARM_Structs_A.pde.InvalidPDE)
+       mapM_x (\<lambda>x. store_pde ((x << 2) + pd) Arch_Structs_A.pde.InvalidPDE)
         [0.e.(kernel_base >> 20) - 1]
        \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -694,12 +694,12 @@ lemma mapM_x_store_pde_valid_pdpt2:
   done
 
 lemma non_invalid_in_pde_range:
-  "pde \<noteq> ARM_Structs_A.pde.InvalidPDE
+  "pde \<noteq> Arch_Structs_A.pde.InvalidPDE
   \<Longrightarrow> x \<in> pde_range pde x"
   by (case_tac pde,simp_all)
 
 lemma non_invalid_in_pte_range:
-  "pte \<noteq> ARM_Structs_A.pte.InvalidPTE
+  "pte \<noteq> Arch_Structs_A.pte.InvalidPTE
   \<Longrightarrow> x \<in> pte_range pte x"
   by (case_tac pte,simp_all)
 
@@ -1155,13 +1155,13 @@ crunch valid_pdpt_objs[wp]: perform_asid_pool_invocation,
 abbreviation (input)
   "safe_pt_range \<equiv> \<lambda>slots s. obj_at (\<lambda>ko. \<exists>pt. ko = ArchObj (PageTable pt)
                                     \<and> (\<forall>x\<in>set (tl slots). pt (ucast (x && mask pt_bits >> 2))
-                                      = ARM_Structs_A.pte.InvalidPTE))
+                                      = Arch_Structs_A.pte.InvalidPTE))
                               (hd slots && ~~ mask pt_bits) s"
 
 abbreviation (input)
   "safe_pd_range \<equiv> \<lambda>slots s. obj_at (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd)
                                     \<and> (\<forall>x\<in>set (tl slots). pd (ucast (x && mask pd_bits >> 2))
-                                      = ARM_Structs_A.pde.InvalidPDE))
+                                      = Arch_Structs_A.pde.InvalidPDE))
                               (hd slots && ~~ mask pd_bits) s"
 
 definition
@@ -1180,8 +1180,8 @@ definition
                  (hd slots && ~~ mask pd_bits)
            and K (pde_range_sz pde = 0)
     else  (\<lambda>s. (\<exists>p. is_aligned p 6 \<and> slots = map (\<lambda>x. x + p) [0, 4 .e. 0x3C])))
-   and K (case entries of Inl (pte,slots) \<Rightarrow> pte \<noteq> ARM_Structs_A.InvalidPTE
-     | Inr (pde,slots) \<Rightarrow> pde \<noteq> ARM_Structs_A.InvalidPDE)"
+   and K (case entries of Inl (pte,slots) \<Rightarrow> pte \<noteq> Arch_Structs_A.InvalidPTE
+     | Inr (pde,slots) \<Rightarrow> pde \<noteq> Arch_Structs_A.InvalidPDE)"
 
 definition
   "page_inv_entries_safe entries \<equiv>
@@ -1214,7 +1214,7 @@ definition
 
 lemma pte_range_interD:
  "pte_range pte p \<inter> pte_range pte' p' \<noteq> {}
-  \<Longrightarrow> pte \<noteq> ARM_Structs_A.InvalidPTE \<and> pte' \<noteq> ARM_Structs_A.InvalidPTE
+  \<Longrightarrow> pte \<noteq> Arch_Structs_A.InvalidPTE \<and> pte' \<noteq> Arch_Structs_A.InvalidPTE
       \<and> p && ~~ mask 4 = p' && ~~ mask 4"
   apply (drule WordLemmaBucket.int_not_emptyD)
   apply (case_tac pte,simp_all split:if_splits)
@@ -1226,7 +1226,7 @@ lemma pte_range_interD:
 
 lemma pde_range_interD:
  "pde_range pde p \<inter> pde_range pde' p' \<noteq> {}
-  \<Longrightarrow> pde \<noteq> ARM_Structs_A.InvalidPDE \<and> pde' \<noteq> ARM_Structs_A.InvalidPDE
+  \<Longrightarrow> pde \<noteq> Arch_Structs_A.InvalidPDE \<and> pde' \<noteq> Arch_Structs_A.InvalidPDE
       \<and> p && ~~ mask 4 = p' && ~~ mask 4"
   apply (drule WordLemmaBucket.int_not_emptyD)
   apply (case_tac pde,simp_all split:if_splits)
@@ -1288,13 +1288,13 @@ lemma pde_range_sz_le:
 
 (* BUG , revisit the following lemmas , moved from ArchAcc_R.thy *)
 lemma mask_pd_bits_shift_ucast_align[simp]:
-  "is_aligned (ucast (p && mask pd_bits >> 2)\<Colon>12 word) 4 =
-   is_aligned ((p\<Colon>word32) >> 2) 4"
+  "is_aligned (ucast (p && mask pd_bits >> 2)::12 word) 4 =
+   is_aligned ((p::word32) >> 2) 4"
   by (clarsimp simp: is_aligned_mask mask_def pd_bits) word_bitwise
 
 lemma mask_pt_bits_shift_ucast_align[simp]:
-  "is_aligned (ucast (p && mask pt_bits >> 2)\<Colon>word8) 4 =
-   is_aligned ((p\<Colon>word32) >> 2) 4"
+  "is_aligned (ucast (p && mask pt_bits >> 2)::word8) 4 =
+   is_aligned ((p::word32) >> 2) 4"
   by (clarsimp simp: is_aligned_mask mask_def pt_bits_def pageBits_def)
      word_bitwise
 
@@ -1307,7 +1307,7 @@ lemma store_pte_valid_pdpt:
    apply (clarsimp simp:store_pte_def set_pt_def)
    apply (wp get_pt_wp get_object_wp)
    apply (clarsimp simp:obj_at_def
-     split:ARM_Structs_A.pte.splits arch_kernel_obj.splits)
+     split:Arch_Structs_A.pte.splits arch_kernel_obj.splits)
   apply (rule conjI)
     apply (drule(1) valid_pdpt_objs_ptD)
     apply (rule valid_entries_overwrite_0)
@@ -1324,7 +1324,7 @@ lemma store_pte_valid_pdpt:
   apply (clarsimp simp:store_pte_def set_pt_def)
   apply (wp get_pt_wp get_object_wp)
   apply (clarsimp simp:obj_at_def
-     split:ARM_Structs_A.pte.splits arch_kernel_obj.splits)
+     split:Arch_Structs_A.pte.splits arch_kernel_obj.splits)
   apply (drule(1) valid_pdpt_objs_ptD)
   apply (rule conjI)
    apply (rule valid_entries_overwrite_0)
@@ -1392,7 +1392,7 @@ lemma store_pde_valid_pdpt:
    apply (clarsimp simp:store_pde_def set_pd_def)
    apply (wp get_pd_wp get_object_wp)
    apply (clarsimp simp:obj_at_def
-     split:ARM_Structs_A.pde.splits arch_kernel_obj.splits)
+     split:Arch_Structs_A.pde.splits arch_kernel_obj.splits)
    apply (drule(1) valid_pdpt_objs_pdD)
    apply (rule conjI)
     apply (rule valid_entries_overwrite_0)
@@ -1409,7 +1409,7 @@ lemma store_pde_valid_pdpt:
   apply (clarsimp simp:store_pde_def set_pd_def)
   apply (wp get_pd_wp get_object_wp)
   apply (clarsimp simp:obj_at_def
-     split:ARM_Structs_A.pde.splits arch_kernel_obj.splits)
+     split:Arch_Structs_A.pde.splits arch_kernel_obj.splits)
   apply (drule(1) valid_pdpt_objs_pdD)
   apply (rule conjI)
    apply (rule valid_entries_overwrite_0)
@@ -1498,16 +1498,16 @@ lemma perform_page_valid_pdpt[wp]:
             apply (wp store_pte_valid_pdpt store_pde_valid_pdpt get_master_pte_wp get_master_pde_wp
                       store_pte_non_master_valid_pdpt store_pde_non_master_valid_pdpt
                       mapM_x_wp'[OF store_invalid_pte_valid_pdpt
-                        [where pte=ARM_Structs_A.pte.InvalidPTE, simplified]]
+                        [where pte=Arch_Structs_A.pte.InvalidPTE, simplified]]
                       mapM_x_wp'[OF store_invalid_pde_valid_pdpt
-                        [where pde=ARM_Structs_A.pde.InvalidPDE, simplified]]
+                        [where pde=Arch_Structs_A.pde.InvalidPDE, simplified]]
                       set_cap_page_inv_entries_safe
                       hoare_vcg_imp_lift[OF set_cap_arch_obj_neg] hoare_vcg_all_lift
                  | clarsimp simp: valid_page_inv_def cte_wp_at_weakenE[OF _ TrueI] obj_at_def
                                   pte_range_sz_def pde_range_sz_def swp_def valid_page_inv_def
                                   valid_slots_def page_inv_entries_safe_def pte_check_if_mapped_def
                                   pde_check_if_mapped_def
-                           split: ARM_Structs_A.pte.splits ARM_Structs_A.pde.splits
+                           split: Arch_Structs_A.pte.splits Arch_Structs_A.pde.splits
                  | wp_once hoare_drop_imps)+
   done
 
@@ -1703,19 +1703,19 @@ lemma mask_out_same_pd:
   done
 
 lemma ensure_safe_mapping_ensures[wp]:
-  "\<lbrace>valid_pdpt_objs and (case entries of (Inl (ARM_Structs_A.SmallPagePTE _ _ _, [_])) \<Rightarrow> \<top>
-                  | (Inl (ARM_Structs_A.SmallPagePTE _ _ _, _)) \<Rightarrow> \<bottom>
-                  | (Inl (ARM_Structs_A.LargePagePTE _ _ _, [])) \<Rightarrow> \<bottom>
-                  | (Inr (ARM_Structs_A.SectionPDE _ _ _ _, [_])) \<Rightarrow> \<top>
-                  | (Inr (ARM_Structs_A.SuperSectionPDE _ _ _, [])) \<Rightarrow> \<bottom>
-                  | (Inr (ARM_Structs_A.SectionPDE _ _ _ _, _)) \<Rightarrow> \<bottom>
+  "\<lbrace>valid_pdpt_objs and (case entries of (Inl (Arch_Structs_A.SmallPagePTE _ _ _, [_])) \<Rightarrow> \<top>
+                  | (Inl (Arch_Structs_A.SmallPagePTE _ _ _, _)) \<Rightarrow> \<bottom>
+                  | (Inl (Arch_Structs_A.LargePagePTE _ _ _, [])) \<Rightarrow> \<bottom>
+                  | (Inr (Arch_Structs_A.SectionPDE _ _ _ _, [_])) \<Rightarrow> \<top>
+                  | (Inr (Arch_Structs_A.SuperSectionPDE _ _ _, [])) \<Rightarrow> \<bottom>
+                  | (Inr (Arch_Structs_A.SectionPDE _ _ _ _, _)) \<Rightarrow> \<bottom>
                   | _ \<Rightarrow> page_inv_entries_pre entries)\<rbrace>
      ensure_safe_mapping entries
    \<lbrace>\<lambda>rv. page_inv_entries_safe entries\<rbrace>,-"
   proof -
     have [simp]:
-      "\<And>s a. page_inv_entries_pre (Inl (ARM_Structs_A.pte.InvalidPTE, a)) s \<Longrightarrow>
-      page_inv_entries_safe (Inl (ARM_Structs_A.pte.InvalidPTE, a)) s"
+      "\<And>s a. page_inv_entries_pre (Inl (Arch_Structs_A.pte.InvalidPTE, a)) s \<Longrightarrow>
+      page_inv_entries_safe (Inl (Arch_Structs_A.pte.InvalidPTE, a)) s"
       apply (clarsimp simp:page_inv_entries_pre_def page_inv_entries_safe_def
         split:if_splits)
       done
@@ -1729,13 +1729,13 @@ lemma ensure_safe_mapping_ensures[wp]:
       "\<And>a m n. a && ~~ mask m && mask n = a && mask n && ~~ mask m"
        by (simp add:word_bw_comms word_bw_lcs)
     have align_entry_ptD:
-      "\<And>pt m x xb xc. \<lbrakk>pt m = ARM_Structs_A.pte.LargePagePTE x xb xc; entries_align pte_range_sz pt\<rbrakk>
+      "\<And>pt m x xb xc. \<lbrakk>pt m = Arch_Structs_A.pte.LargePagePTE x xb xc; entries_align pte_range_sz pt\<rbrakk>
        \<Longrightarrow> is_aligned m 4"
       apply (simp add:entries_align_def)
       apply (drule_tac x = m in spec,simp)
       done
     have align_entry_pdD:
-      "\<And>pd m x xb xc. \<lbrakk>pd m = ARM_Structs_A.pde.SuperSectionPDE x xb xc; entries_align pde_range_sz pd\<rbrakk>
+      "\<And>pd m x xb xc. \<lbrakk>pd m = Arch_Structs_A.pde.SuperSectionPDE x xb xc; entries_align pde_range_sz pd\<rbrakk>
        \<Longrightarrow> is_aligned m 4"
       apply (simp add:entries_align_def)
       apply (drule_tac x = m in spec,simp)
@@ -1751,7 +1751,7 @@ lemma ensure_safe_mapping_ensures[wp]:
     apply word_bitwise
     done
     have mask_neq_0:
-      "\<And>z zs xa p g. \<lbrakk>[0 , 4 .e. 0x3C] = z # zs; xa \<in> set zs; is_aligned p 6; 6 \<le> g\<rbrakk>
+      "\<And>z zs xa p g. \<lbrakk>[0 :: word32, 4 .e. 0x3C] = z # zs; xa \<in> set zs; is_aligned p 6; 6 \<le> g\<rbrakk>
          \<Longrightarrow> (p + xa && mask g >> 2) && mask 4 \<noteq> 0"
      apply (rule ccontr)
       apply (simp add:is_aligned_mask[symmetric])
@@ -1817,16 +1817,16 @@ lemma ensure_safe_mapping_ensures[wp]:
       done
     have invalid_pteI:
       "\<And>a pt x y z. \<lbrakk>valid_pt_entries pt; (a && ~~ mask 4) \<noteq> a;
-       pt (a && ~~ mask 4) = ARM_Structs_A.pte.LargePagePTE x y z \<rbrakk>
-       \<Longrightarrow> pt a = ARM_Structs_A.pte.InvalidPTE"
+       pt (a && ~~ mask 4) = Arch_Structs_A.pte.LargePagePTE x y z \<rbrakk>
+       \<Longrightarrow> pt a = Arch_Structs_A.pte.InvalidPTE"
       apply (drule(1) valid_entriesD[rotated])
       apply (case_tac "pt a"; simp add:mask_lower_twice is_aligned_neg_mask split:if_splits)
       apply fastforce
       done
     have invalid_pdeI:
       "\<And>a pd x y z. \<lbrakk>valid_pd_entries pd; (a && ~~ mask 4) \<noteq> a;
-       pd (a && ~~ mask 4) = ARM_Structs_A.pde.SuperSectionPDE x y z \<rbrakk>
-       \<Longrightarrow> pd a = ARM_Structs_A.pde.InvalidPDE"
+       pd (a && ~~ mask 4) = Arch_Structs_A.pde.SuperSectionPDE x y z \<rbrakk>
+       \<Longrightarrow> pd a = Arch_Structs_A.pde.InvalidPDE"
       apply (drule(1) valid_entriesD[rotated])
       apply (case_tac "pd a",
         simp_all add:mask_lower_twice is_aligned_neg_mask
@@ -1856,7 +1856,7 @@ lemma ensure_safe_mapping_ensures[wp]:
     apply wp
      apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set slots. obj_at
                 (\<lambda>ko. \<exists>pt. ko = ArchObj (PageTable pt) \<and>
-                 pt (ucast (x && mask pt_bits >> 2)) = ARM_Structs_A.pte.InvalidPTE)
+                 pt (ucast (x && mask pt_bits >> 2)) = Arch_Structs_A.pte.InvalidPTE)
                 (hd (slot # slots) && ~~ mask pt_bits) s" in hoare_post_imp_R)
       apply (wp mapME_x_accumulate_checks[where Q = "\<lambda>s. valid_pdpt_objs s"] )
           apply (wp get_master_pte_wp| wpc | simp)+
@@ -1871,7 +1871,7 @@ lemma ensure_safe_mapping_ensures[wp]:
          apply (frule_tac x = z in mask_out_same_pt)
           apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
          apply (clarsimp simp:field_simps obj_at_def
-           split:ARM_Structs_A.pte.splits)
+           split:Arch_Structs_A.pte.splits)
          apply (intro conjI impI)
            apply (clarsimp)
            apply (drule(1) valid_pdpt_objs_ptD)
@@ -1896,7 +1896,7 @@ lemma ensure_safe_mapping_ensures[wp]:
        | wp | intro conjI impI)+
     apply (simp split:list.splits add:page_inv_entries_pre_def mapME_singleton)
     apply (wp get_master_pte_wp |wpc | simp)+
-    apply (clarsimp simp:obj_at_def split:ARM_Structs_A.pte.splits)
+    apply (clarsimp simp:obj_at_def split:Arch_Structs_A.pte.splits)
    apply (clarsimp simp:page_inv_entries_safe_def split:list.splits)
   apply (simp split:list.splits add:page_inv_entries_pre_def mapME_singleton)
   apply (case_tac b,case_tac a)
@@ -1907,7 +1907,7 @@ lemma ensure_safe_mapping_ensures[wp]:
    apply (simp split:list.splits add:page_inv_entries_pre_def mapME_singleton)
    apply (wp get_master_pde_wp | wpc | simp)+
    apply (clarsimp simp:obj_at_def page_inv_entries_safe_def
-     split:ARM_Structs_A.pde.splits)
+     split:Arch_Structs_A.pde.splits)
   apply (simp split:list.splits if_splits
     add:page_inv_entries_pre_def Let_def page_inv_entries_safe_def)
   apply (elim conjE exE)
@@ -1916,7 +1916,7 @@ lemma ensure_safe_mapping_ensures[wp]:
   apply wp
    apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set x22. obj_at
        (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd) \<and>
-       pd (ucast (x && mask pd_bits >> 2)) = ARM_Structs_A.pde.InvalidPDE)
+       pd (ucast (x && mask pd_bits >> 2)) = Arch_Structs_A.pde.InvalidPDE)
        (hd (x21 # x22) && ~~ mask pd_bits) s" in hoare_post_imp_R)
     apply (wp mapME_x_accumulate_checks[where Q = "\<lambda>s. valid_pdpt_objs s"] )
         apply (wp get_master_pde_wp| wpc | simp)+
@@ -1931,7 +1931,7 @@ lemma ensure_safe_mapping_ensures[wp]:
        apply (frule_tac x = z in mask_out_same_pd)
         apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
        apply (clarsimp simp:field_simps obj_at_def
-           split:ARM_Structs_A.pde.splits)
+           split:Arch_Structs_A.pde.splits)
        apply (drule(1) valid_pdpt_objs_pdD)
        apply (intro conjI impI)
           apply clarsimp
@@ -1962,12 +1962,12 @@ lemma create_mapping_entries_safe[wp]:
           and valid_arch_objs and pspace_aligned and
           (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits))\<rbrace>
       create_mapping_entries ptr vptr sz rights attrib pd
-   \<lbrace>\<lambda>entries. case entries of (Inl (ARM_Structs_A.SmallPagePTE _ _ _, [_])) \<Rightarrow> \<top>
-                  | (Inl (ARM_Structs_A.SmallPagePTE _ _ _, _)) \<Rightarrow> \<bottom>
-                  | (Inl (ARM_Structs_A.LargePagePTE _ _ _, [])) \<Rightarrow> \<bottom>
-                  | (Inr (ARM_Structs_A.SectionPDE _ _ _ _, [_])) \<Rightarrow> \<top>
-                  | (Inr (ARM_Structs_A.SectionPDE _ _ _ _, _)) \<Rightarrow> \<bottom>
-                  | (Inr (ARM_Structs_A.SuperSectionPDE _ _ _, [])) \<Rightarrow> \<bottom>
+   \<lbrace>\<lambda>entries. case entries of (Inl (Arch_Structs_A.SmallPagePTE _ _ _, [_])) \<Rightarrow> \<top>
+                  | (Inl (Arch_Structs_A.SmallPagePTE _ _ _, _)) \<Rightarrow> \<bottom>
+                  | (Inl (Arch_Structs_A.LargePagePTE _ _ _, [])) \<Rightarrow> \<bottom>
+                  | (Inr (Arch_Structs_A.SectionPDE _ _ _ _, [_])) \<Rightarrow> \<top>
+                  | (Inr (Arch_Structs_A.SectionPDE _ _ _ _, _)) \<Rightarrow> \<bottom>
+                  | (Inr (Arch_Structs_A.SuperSectionPDE _ _ _, [])) \<Rightarrow> \<bottom>
                   | _ \<Rightarrow> page_inv_entries_pre entries\<rbrace>,-"
   apply (cases sz, simp_all)
      defer 2
@@ -2008,7 +2008,7 @@ lemma create_mapping_entries_safe[wp]:
   apply (clarsimp simp:not_less[symmetric])
   apply (subgoal_tac
     "(\<exists>xa xb. pda (ucast (lookup_pd_slot pd vptr && mask pd_bits >> 2))
-     = ARM_Structs_A.pde.PageTablePDE x xa xb)
+     = Arch_Structs_A.pde.PageTablePDE x xa xb)
      \<longrightarrow> is_aligned (Platform.ptrFromPAddr x + ((vptr >> 12) && 0xFF << 2)) 6")
    apply clarsimp
    apply (subgoal_tac "

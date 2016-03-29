@@ -1664,7 +1664,7 @@ lemma tcb_cap_valid_pagedirectory:
 
 lemma store_pde_unmap_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>
-    store_pde pd_slot ARM_Structs_A.pde.InvalidPDE
+    store_pde pd_slot Arch_Structs_A.pde.InvalidPDE
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
   apply (clarsimp simp: store_pde_def set_pd_def set_object_def)
   apply (wp get_object_wp)
@@ -1679,7 +1679,7 @@ crunch empty[wp]: find_free_hw_asid, store_hw_asid, load_hw_asid, set_vm_root_fo
 
 lemma store_pte_unmap_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>
-    store_pte xa ARM_Structs_A.pte.InvalidPTE
+    store_pte xa Arch_Structs_A.pte.InvalidPTE
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
   apply (wp get_object_wp | simp add: store_pte_def set_pt_def set_object_def)+
   apply (clarsimp simp: obj_at_def empty_table_def)
@@ -1752,7 +1752,7 @@ lemma unmap_page_table_empty:
 lemma mapM_x_store_pte_valid_arch_objs:
   "\<lbrace>invs and (\<lambda>s. \<exists>p' cap. caps_of_state s p' = Some cap \<and> is_pt_cap cap \<and>
     (\<forall>x \<in> set pteptrs. x && ~~ mask pt_bits \<in> obj_refs cap)) \<rbrace>
-    mapM_x (\<lambda>p. store_pte p ARM_Structs_A.InvalidPTE) pteptrs
+    mapM_x (\<lambda>p. store_pte p Arch_Structs_A.InvalidPTE) pteptrs
    \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
   apply (rule hoare_strengthen_post)
    apply (wp  mapM_x_wp')
@@ -1765,7 +1765,7 @@ lemma mapM_x_swp_store_empty_table_set:
     and pspace_aligned
     and K ((UNIV :: word8 set) \<subseteq> (\<lambda>sl. ucast ((sl && mask pt_bits) >> 2)) ` set slots
                        \<and> (\<forall>x\<in>set slots. x && ~~ mask pt_bits = p))\<rbrace>
-    mapM_x (swp store_pte ARM_Structs_A.InvalidPTE) slots
+    mapM_x (swp store_pte Arch_Structs_A.InvalidPTE) slots
    \<lbrace>\<lambda>rv s. obj_at (empty_table (S s)) p s\<rbrace>"
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_swp_store_empty_table)
@@ -2016,7 +2016,7 @@ lemma page_directory_at_def2:
 
 
 definition
-  pde_wp_at :: "(ARM_Structs_A.pde \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> (12 word) \<Rightarrow> 'z state \<Rightarrow> bool"
+  pde_wp_at :: "(Arch_Structs_A.pde \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> (12 word) \<Rightarrow> 'z state \<Rightarrow> bool"
   where
   "pde_wp_at P ptr slot s \<equiv>
      (case (kheap s ptr) of
@@ -2036,9 +2036,9 @@ lemma store_pde_pde_wp_at:
 
 
 lemma store_pde_pde_wp_at2:
-  "\<lbrace>pde_wp_at (\<lambda>pde. pde = ARM_Structs_A.pde.InvalidPDE) ptr slot\<rbrace>
-   store_pde p' ARM_Structs_A.pde.InvalidPDE
-   \<lbrace>\<lambda>_. pde_wp_at (\<lambda>pde. pde = ARM_Structs_A.pde.InvalidPDE) ptr slot\<rbrace>"
+  "\<lbrace>pde_wp_at (\<lambda>pde. pde = Arch_Structs_A.pde.InvalidPDE) ptr slot\<rbrace>
+   store_pde p' Arch_Structs_A.pde.InvalidPDE
+   \<lbrace>\<lambda>_. pde_wp_at (\<lambda>pde. pde = Arch_Structs_A.pde.InvalidPDE) ptr slot\<rbrace>"
   apply (wp
     | simp add: store_pde_def set_pd_def set_object_def get_object_def
                 obj_at_def pde_wp_at_def
@@ -2049,7 +2049,7 @@ lemma store_pde_pde_wp_at2:
 lemma obj_at_empty_tableI:
   "invs s \<and>
   (\<forall>x. x \<notin> kernel_mapping_slots \<longrightarrow>
-      pde_wp_at (\<lambda>pde. pde = ARM_Structs_A.pde.InvalidPDE) p x s)
+      pde_wp_at (\<lambda>pde. pde = Arch_Structs_A.pde.InvalidPDE) p x s)
   \<Longrightarrow> obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s"
   apply safe
   apply (simp add: obj_at_def empty_table_def pde_wp_at_def)
@@ -2121,8 +2121,8 @@ lemma pd_shifting_again5:
 
 lemma pd_shifting_kernel_mapping_slots:
   "\<lbrakk>is_aligned word pd_bits;
-    (sl :: word32) \<le> (kernel_base >> (20\<Colon>nat)) - (1\<Colon>word32)\<rbrakk>
-   \<Longrightarrow> ucast ((sl << (2\<Colon>nat)) + word && mask pd_bits >> (2\<Colon>nat))
+    (sl :: word32) \<le> (kernel_base >> (20::nat)) - (1::word32)\<rbrakk>
+   \<Longrightarrow> ucast ((sl << (2::nat)) + word && mask pd_bits >> (2::nat))
       \<notin> kernel_mapping_slots"
   apply (subst pd_shifting_again5)
     apply assumption+
@@ -2166,7 +2166,7 @@ lemma pd_shifting_global_refs:
 
 lemma mapM_x_store_pde_InvalidPDE_empty:
   "\<lbrace>(invs and  (\<lambda>s. word \<notin> global_refs s)) and K(is_aligned word pd_bits)\<rbrace>
-    mapM_x (swp store_pde ARM_Structs_A.pde.InvalidPDE)
+    mapM_x (swp store_pde Arch_Structs_A.pde.InvalidPDE)
            (map (\<lambda>a. (a << 2) + word) [0.e.(kernel_base >> 20) - 1])
    \<lbrace>\<lambda>_ s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -2373,14 +2373,14 @@ lemma replaceable_or_arch_update_pg:
   done
 
 lemma store_pde_arch_objs_invalid:
-  "\<lbrace>valid_arch_objs\<rbrace> store_pde p ARM_Structs_A.pde.InvalidPDE \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
+  "\<lbrace>valid_arch_objs\<rbrace> store_pde p Arch_Structs_A.pde.InvalidPDE \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
   apply (wp store_pde_arch_objs_unmap)
   apply (simp add: pde_ref_def)
   done
 
 lemma mapM_x_store_pde_InvalidPDE_empty2:
   "\<lbrace>invs and (\<lambda>s. word \<notin> global_refs s) and K (is_aligned word pd_bits) and K (slots = (map (\<lambda>a. (a << 2) + word) [0.e.(kernel_base >> 20) - 1])) \<rbrace>
-  mapM_x (\<lambda>x. store_pde x ARM_Structs_A.pde.InvalidPDE) slots
+  mapM_x (\<lambda>x. store_pde x Arch_Structs_A.pde.InvalidPDE) slots
   \<lbrace>\<lambda>_ s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
   apply (rule hoare_gen_asm)
   apply simp
@@ -2398,21 +2398,21 @@ lemma mapM_x_swp_store_invalid_pte_invs:
   "\<lbrace>invs and (\<lambda>s. \<exists>slot. cte_wp_at
              (\<lambda>c. (\<lambda>x. x && ~~ mask pt_bits) ` set slots \<subseteq> obj_refs c \<and>
                   is_pt_cap c) slot s)\<rbrace>
-  mapM_x (\<lambda>x. store_pte x ARM_Structs_A.pte.InvalidPTE) slots \<lbrace>\<lambda>_. invs\<rbrace>"
+  mapM_x (\<lambda>x. store_pte x Arch_Structs_A.pte.InvalidPTE) slots \<lbrace>\<lambda>_. invs\<rbrace>"
   by (simp add:
     mapM_x_swp_store_pte_invs[unfolded swp_def,
-      where pte=ARM_Structs_A.pte.InvalidPTE, simplified])
+      where pte=Arch_Structs_A.pte.InvalidPTE, simplified])
 
 lemma mapM_x_swp_store_invalid_pde_invs:
   "\<lbrace>invs and
    (\<lambda>s. \<forall>sl\<in>set slots.
          ucast (sl && mask pd_bits >> 2) \<notin> kernel_mapping_slots) and
    (\<lambda>s. \<forall>sl\<in>set slots. sl && ~~ mask pd_bits \<notin> global_refs s)\<rbrace>
-     mapM_x (\<lambda>x. store_pde x ARM_Structs_A.pde.InvalidPDE) slots
+     mapM_x (\<lambda>x. store_pde x Arch_Structs_A.pde.InvalidPDE) slots
    \<lbrace>\<lambda>rv. invs \<rbrace>"
   apply (simp add:mapM_x_mapM)
   apply (wp mapM_swp_store_pde_invs_unmap[unfolded swp_def,
-              where pde=ARM_Structs_A.pde.InvalidPDE, simplified])
+              where pde=Arch_Structs_A.pde.InvalidPDE, simplified])
   done
 
 lemma arch_cap_recycle_replaceable:
@@ -2534,7 +2534,7 @@ lemmas thread_set_final_cap =
     final_cap_lift [OF thread_set_caps_of_state_trivial]
 
 
-schematic_lemma no_cap_to_obj_with_diff_ref_lift:
+schematic_goal no_cap_to_obj_with_diff_ref_lift:
   "\<lbrace>\<lambda>s. ?P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. ?P (caps_of_state s)\<rbrace>
    \<Longrightarrow> \<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
           f
@@ -3073,7 +3073,7 @@ lemma arch_recycle_cap_invs:
    apply (simp add: mask_def kernel_mapping_slots_def kernel_base_def
       word_le_make_less not_le)
    apply (rule le_less_trans[rotated])
-    apply (frule_tac 'a = "12" in ucast_mono[where y = "0xF00::word32"])
+    apply (frule_tac 'a = "12" in ucast_mono[where y = "0xE00::word32"])
      apply (simp+)[2]
    apply (intro eq_refl  arg_cong[where f = ucast] shiftl_shiftr_id)
     apply ((simp add:word_bits_def)+)[2]

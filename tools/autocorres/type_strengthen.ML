@@ -191,16 +191,16 @@ let
       = assume_rec_lifted ctxt prog_info fn_info rule_set fn_thm fn_name
 
   (* Extract the term from our function definition. *)
-  val fn_thm' = fn_thm WHERE [("rec_measure'",
-      Thm.cterm_of ctxt' measure_var)]
-    handle THM _ => fn_thm
+  val fn_thm' = Utils.named_cterm_instantiate ctxt
+                    [("rec_measure'", Thm.cterm_of ctxt' measure_var)] fn_thm
+                handle THM _ => fn_thm
   val ct = Thm.prop_of fn_thm' |> Utils.rhs_of |> Thm.cterm_of ctxt'
 
   (* Rewrite the term using the given rewrite rules. *)
   val t = Thm.term_of ct
   val thm = case Monad_Convert.monad_rewrite ctxt rule_set thms true t of
                 SOME t => t
-              | NONE => @{thm reflexive} WHERE [("x", ct)]
+              | NONE => Utils.named_cterm_instantiate ctxt [("x", ct)] @{thm reflexive}
 
   (* Convert "def == old_body" and "old_body == new_body" into "def == new_body". *)
   val thm_ml = Thm.transitive fn_thm' thm
@@ -281,9 +281,7 @@ let
 
   (* When lifting, also lift our callees. *)
   val rule_set' = Monad_Types.update_mt_lift_rules
-      (fn x =>
-        merge_ss (x, #lift_rules rule_set)
-        |> simpset_map lthy (fn ctxt => ctxt addsimps (callee_proofs @ mono_thms)))
+      (fn thms => Monad_Types.thmset_adds thms (callee_proofs @ mono_thms))
       rule_set
 
   (*
@@ -384,7 +382,7 @@ let
     |> (fn goal_state => if is_recursive then
       goal_state
       |> apply_tac "start induction"
-          (rtac @{thm recguard_induct} 1)
+          (resolve_tac lthy @{thms recguard_induct} 1)
       |> apply_tac "(base case) split subgoals"
           (TRY (REPEAT_ALL_NEW (Tactic.match_tac lthy [@{thm conjI}]) 1))
       |> apply_tac "(base case) solve base cases"
@@ -421,10 +419,10 @@ let
     |> apply_tac "inserting hypothesis"
         (cut_tac thm 1)
     |> apply_tac "normalising into rule format"
-        ((REPEAT (rtac @{thm allI} 1))
-        THEN (REPEAT (etac @{thm conjE} 1))
-        THEN (REPEAT (etac @{thm allE} 1)))
-    |> apply_tac "solving goal" (atac 1)
+        ((REPEAT (resolve_tac lthy @{thms allI} 1))
+        THEN (REPEAT (eresolve_tac lthy @{thms conjE} 1))
+        THEN (REPEAT (eresolve_tac lthy @{thms allE} 1)))
+    |> apply_tac "solving goal" (assume_tac lthy 1)
     |> Goal.finish lthy
     |> Object_Logic.rulify lthy
   val new_thms = map (prove_partial_pred rewrite_thm) final_props

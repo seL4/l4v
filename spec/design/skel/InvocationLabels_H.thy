@@ -11,14 +11,14 @@
 chapter "Kernel Invocation Labels"
 
 theory InvocationLabels_H
-imports "../../lib/Enumeration"
+imports "$L4V_ARCH/ArchInvocationLabels_H"
 begin
 
 text {*
   An enumeration of all system call labels.
 *}
 
-#INCLUDE_HASKELL SEL4/API/Invocation.lhs ONLY InvocationLabel isPDFlush isPageFlush
-#INCLUDE_HASKELL SEL4/API/Invocation.lhs instanceproofs ONLY InvocationLabel
+#INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ArchLabels=ArchInvocationLabels_H ONLY InvocationLabel
+#INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs instanceproofs
 
 end

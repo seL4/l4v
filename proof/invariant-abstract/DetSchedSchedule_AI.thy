@@ -1755,7 +1755,7 @@ crunch not_cur_thread[wp]: cap_insert, set_extra_badge "not_cur_thread t"
   (wp: hoare_drop_imps)
 
 lemma transfer_caps_not_cur_thread[wp]:
-  "\<lbrace>not_cur_thread t\<rbrace> transfer_caps info caps ep recv recv_buf dim
+  "\<lbrace>not_cur_thread t\<rbrace> transfer_caps info caps ep recv recv_buf
    \<lbrace>\<lambda>rv. not_cur_thread t\<rbrace>"
   by (simp add: transfer_caps_def | wp transfer_caps_loop_pres | wpc)+
 
@@ -1810,12 +1810,11 @@ lemma timer_tick_valid_sched[wp]:
            | wp gts_wp reschedule_required_valid_sched tcb_sched_action_append_valid_blocked
            | wpc | rule hoare_strengthen_post, rule dec_domain_time_valid_sched,
                                       simp add: valid_sched_def valid_sched_action_def)+
-  apply (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def pred_tcb_weakenE
+  by (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def pred_tcb_weakenE
          valid_sched_action_def weak_valid_sched_action_def etcb_at_def is_etcb_at_def
          get_etcb_def in_cur_domain_def ct_in_cur_domain_2_def switch_in_cur_domain_def
          valid_idle_etcb_2_def
          split: option.splits)
-  done
 
 lemma cancel_badged_sends_filterM_valid_etcbs[wp]:
    "\<lbrace>valid_etcbs\<rbrace>
@@ -2084,7 +2083,7 @@ lemma invoke_cnode_valid_sched:
 crunch valid_sched[wp]: set_extra_badge valid_sched (wp: crunch_wps)
 
 lemma transfer_caps_valid_sched:
-  "\<lbrace>valid_sched\<rbrace> transfer_caps info caps ep recv recv_buf dim \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  "\<lbrace>valid_sched\<rbrace> transfer_caps info caps ep recv recv_buf \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: transfer_caps_def | wp transfer_caps_loop_pres | wpc)+
   done
 
@@ -2192,10 +2191,9 @@ lemma possible_switch_to_not_queued:
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (simp add: possible_switch_to_def reschedule_required_def
                    set_scheduler_action_def tcb_sched_action_def | wp | wpc)+
-  apply (fastforce simp: etcb_at_def tcb_sched_enqueue_def simple_sched_action_def
+  by (fastforce simp: etcb_at_def tcb_sched_enqueue_def simple_sched_action_def
                          not_queued_def scheduler_act_not_def
                    split: option.splits)
-  done
 
 
 crunch sched_act_not[wp]: attempt_switch_to, switch_if_required_to
@@ -2237,7 +2235,8 @@ lemma send_ipc_valid_sched:
   "\<lbrace>valid_sched and st_tcb_at active thread and scheduler_act_not thread and not_queued thread and invs\<rbrace>
    send_ipc block call badge can_grant thread epptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: send_ipc_def)
-  apply (wp set_thread_state_sched_act_not_valid_sched | wpc)+
+  apply (wp set_thread_state_sched_act_not_valid_sched | wpc )+
+
             apply ((wp set_thread_state_sched_act_not_valid_sched
                        setup_caller_cap_sched_act_not_valid_sched
                        attempt_switch_to_valid_sched'
@@ -2247,9 +2246,8 @@ lemma send_ipc_valid_sched:
                  set_thread_state_valid_blocked_except sts_st_tcb_at')[1]
       apply simp
       apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not thread and not_queued thread and (\<lambda>s. x21 \<noteq> idle_thread s \<and> x21 \<noteq> thread)" in hoare_strengthen_post)
-       apply wp
+       apply ((wp|wpc)+)[1]
       apply (clarsimp simp: valid_sched_def)
-     apply ((wp | wpc)+)[1]
     apply (simp | wp gts_wp hoare_vcg_all_lift)+
    apply (wp hoare_vcg_imp_lift)
     apply ((simp add: set_endpoint_def set_object_def | wp hoare_drop_imps | wpc)+)[1]
@@ -2859,7 +2857,7 @@ crunch ct_not_queued[wp]: do_machine_op, cap_insert, set_extra_badge "\<lambda>s
 
 lemma transfer_caps_ct_not_queued[wp]:
   "\<lbrace>\<lambda>s. not_queued (cur_thread s) s\<rbrace>
-     transfer_caps info caps ep recv recv_buf dim
+     transfer_caps info caps ep recv recv_buf
    \<lbrace>\<lambda>rv s. not_queued (cur_thread s) s\<rbrace>"
   by (simp add: transfer_caps_def | wp transfer_caps_loop_pres | wpc)+
 
@@ -2960,7 +2958,9 @@ lemma handle_event_valid_sched:
   apply (cases e, simp_all)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
-            apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_recv_valid_sched handle_reply_valid_sched | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
+            apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_recv_valid_sched'
+              handle_reply_valid_sched 
+              | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
        apply (wp handle_fault_valid_sched hvmf_active hoare_drop_imps
                  handle_recv_valid_sched' handle_reply_valid_sched | wpc |
               clarsimp simp: ct_in_state_def valid_sched_ct_not_queued valid_fault_def

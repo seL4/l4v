@@ -26,8 +26,9 @@ definition "unit_tag \<equiv> TypDesc (TypScalar 1 0
 
 declare unit_tag_def [simp]
 
-defs (overloaded)
-  typ_info_unit [simp]: "typ_info_t (x::unit itself) \<equiv> unit_tag"
+overloading typ_info_unit \<equiv> typ_info_t begin
+  definition typ_info_unit [simp]: "typ_info_unit (x::unit itself) \<equiv> unit_tag"
+end
 
 instantiation unit :: mem_type
 begin
@@ -139,12 +140,15 @@ instance signed :: (len8) len8
   apply (metis len8_width len_signed)
   done
 
-defs (overloaded)
-  typ_info_word: "typ_info_t (w::'a::len8 word itself) \<equiv> word_tag w"
+overloading typ_info_word \<equiv> typ_info_t begin
+definition
+  typ_info_word: "typ_info_word (w::'a::len8 word itself) \<equiv> word_tag w"
+end
 
-defs (overloaded)
-  typ_name_itself_word: "typ_name_itself (w::'a::len8 word itself) \<equiv> typ_name (typ_info_t w)"
-
+overloading typ_name_itself_word \<equiv> typ_name_itself begin
+definition
+  typ_name_itself_word: "typ_name_itself_word (w::'a::len8 word itself) \<equiv> typ_name (typ_info_t w)"
+end
 
 lemma align_of_word:
   "align_of TYPE('a::len8 word) = len_of TYPE('a) div 8"
@@ -341,21 +345,26 @@ begin
 instance ..
 end
 
-defs (overloaded)
+overloading typ_info_ptr \<equiv> typ_info_t begin
+definition typ_info_ptr :: "'a::c_type ptr itself \<Rightarrow> 'a::c_type ptr field_desc typ_desc" where
   typ_info_ptr:
-  "typ_info_t (p::'a::c_type ptr itself) \<equiv> TypDesc
+  "typ_info_ptr (p::'a::c_type ptr itself) \<equiv> TypDesc
     (TypScalar 4 2 \<lparr> field_access = \<lambda>p bs. rev (word_rsplit (ptr_val p)),
         field_update = \<lambda>bs v. Ptr (word_rcat (rev bs)::addr) \<rparr> )
     (typ_name_itself TYPE('a) @ ''+ptr'')"
+end
 
-defs (overloaded)
-  typ_name_itself_ptr:
-  "typ_name_itself (p::'a::c_type ptr itself) \<equiv>
-    typ_name_itself TYPE('a) @ ''+ptr''"
+overloading typ_name_itself_ptr \<equiv> typ_name_itself begin
+definition typ_name_itself_ptr:
+  "typ_name_itself_ptr (p::'b::c_type ptr itself) \<equiv>
+    typ_name_itself TYPE('b) @ ''+ptr''"
+end
 
-defs (overloaded)
+overloading typ_name_itself_unit \<equiv> typ_name_itself begin
+definition
   typ_name_itself_unit [simp]:
-  "typ_name_itself (p::unit itself) \<equiv> ''void''"
+  "typ_name_itself_unit (p::unit itself) \<equiv> ''void''"
+end
 
 lemma align_of_ptr [simp]:
   "align_of (p::'a::c_type ptr itself) = 4"

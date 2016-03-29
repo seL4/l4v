@@ -10,7 +10,7 @@
 
 theory Kernel_C
 imports
-  "../machine/ARMMachineTypes"
+  "../machine/$L4V_ARCH/MachineTypes"
   "../../lib/CTranslationNICTA"
   "../../tools/asmrefine/CommonOps"
 begin

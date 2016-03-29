@@ -75,7 +75,7 @@ definition
 text {* Lift one kind of exception monad into another by converting the error
 into various other kinds of error or return value. *}
 definition
-  cap_fault_on_failure :: "word32 \<Rightarrow> bool \<Rightarrow> ('a,'z::state_ext) lf_monad \<Rightarrow> ('a,'z::state_ext) f_monad" where
+  cap_fault_on_failure :: "obj_ref \<Rightarrow> bool \<Rightarrow> ('a,'z::state_ext) lf_monad \<Rightarrow> ('a,'z::state_ext) f_monad" where
  "cap_fault_on_failure cptr rp m \<equiv> handleE' m (throwError \<circ> CapFault cptr rp)"
 
 definition

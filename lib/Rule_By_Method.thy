@@ -1,5 +1,5 @@
 theory Rule_By_Method
-imports "~~/src/HOL/Eisbach/Eisbach_Tools"
+imports Main "~~/src/HOL/Eisbach/Eisbach_Tools"
 begin
 
 ML \<open>
@@ -15,9 +15,10 @@ fun atomize ctxt = Conv.fconv_rule (Object_Logic.atomize ctxt);
 fun fix_schematics ctxt raw_st =
   let
     val ((schematic_types, [st']), ctxt1) = Variable.importT [raw_st] ctxt;
-    val ((_, schematic_terms), ctxt2) =
+    fun certify_inst ctxt inst = map (apsnd (Thm.cterm_of ctxt)) (#2 inst)
+    val (schematic_terms, ctxt2) =
       Variable.import_inst true [Thm.prop_of st'] ctxt1
-      |>> Thm.certify_inst (Thm.theory_of_thm st');
+      |>> certify_inst ctxt1;
     val schematics = (schematic_types, schematic_terms);
   in (Thm.instantiate schematics st', ctxt2) end
 
@@ -91,7 +92,7 @@ val empty_rule_prems = Data.map (K ([],true));
 fun add_rule_prem thm = Data.map (apfst (Thm.add_thm thm));
 
 fun with_rule_prems enabled parse =
-  apfst (Context.map_proof (Data.map (K ([Method_Closure.dummy_free_thm],enabled))))
+  apfst (Context.map_proof (Data.map (K ([Drule.free_dummy_thm],enabled))))
   #> parse
 
 fun get_rule_prems ctxt = 
@@ -142,7 +143,7 @@ fun rule_by_tac ctxt {vars,prop} tac asm_tacs pos raw_st  =
 
     val cthesis = Thm.cterm_of ctxt thesis;
 
-    val revcut_rl' = Drule.instantiate' [] ([NONE,SOME cthesis]) @{thm revcut_rl};
+    val revcut_rl' = Thm.instantiate' [] ([NONE,SOME cthesis]) @{thm revcut_rl};
 
     fun is_thesis t = Logic.strip_assums_concl t aconv thesis;
 
@@ -201,20 +202,22 @@ val parse_flags = Args.mode "schematic" -- Args.mode "raw_prop" >> (fn (b,b') =>
 
 (*TODO: Method_Closure.parse_method should do this already *)
 
-val parse_method = Method_Closure.parse_method o apfst (Config.put_generic Method.old_section_parser true)
+val parse_method = Method_Closure.method_text o apfst (Config.put_generic Method.old_section_parser true)
 
-fun tac m ctxt = Method_Closure.method_evaluate m ctxt [] #> Seq.map snd;
+fun tac m ctxt =
+  Method.NO_CONTEXT_TACTIC ctxt
+    (Method_Closure.method_evaluate m ctxt []);
 
 val (rule_prems_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags => 
   position (Scan.repeat1 
     (with_rule_prems (not (#vars flags)) parse_method || 
       Scan.lift (Args.$$$ "_" >> (K Method.succeed_text))))) >> 
-        (fn (flags,(ms,pos)) => Thm.rule_attribute (fn context =>
+        (fn (flags,(ms,pos)) => Thm.rule_attribute [] (fn context =>
           rule_by_tac (Context.proof_of context) flags (K all_tac) (map tac ms) pos))
 
 val (rule_concl_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags => 
   position (with_rule_prems (not (#vars flags)) parse_method)) >> 
-    (fn (flags,(m,pos)) => Thm.rule_attribute (fn context =>
+    (fn (flags,(m,pos)) => Thm.rule_attribute [] (fn context =>
       rule_by_tac (Context.proof_of context) flags (tac m) [] pos))
 
 val _ = Theory.setup 

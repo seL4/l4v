@@ -78,7 +78,7 @@ lemma findM_awesome':
 proof -
   have P: "f = do x \<leftarrow> (do x \<leftarrow> f; return (Some x) od) OR return None; if x \<noteq> None then return (the x) else f od"
     apply (rule ext)
-    apply (auto simp add: bind_def alternative_def return_def split_def Pair_fst_snd_eq)
+    apply (auto simp add: bind_def alternative_def return_def split_def prod_eq_iff)
     done
   have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) OR return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
     by (wp alternative_wp | simp)+
@@ -120,7 +120,7 @@ lemma findM_alternative_awesome:
 proof -
   have P: "f = do x \<leftarrow> (do x \<leftarrow> f; return (Some x) od) OR return None; if x \<noteq> None then return (the x) else f od"
     apply (rule ext)
-    apply (auto simp add: bind_def alternative_def return_def split_def Pair_fst_snd_eq)
+    apply (auto simp add: bind_def alternative_def return_def split_def prod_eq_iff)
     done
   have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) OR return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
     by (wp alternative_wp | simp)+
@@ -202,7 +202,7 @@ lemma st_tcb_at_coerce_abstract:
   apply (clarsimp simp: st_tcb_at_def obj_at_def other_obj_relation_def
                         tcb_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        ARM_Structs_A.arch_kernel_obj.split_asm)
+                        Arch_Structs_A.arch_kernel_obj.split_asm)
   apply fastforce
   done
 
@@ -2558,7 +2558,7 @@ lemma schedule_corres:
   apply (subst thread_get_comm)
   apply (subst schact_bind_inside)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gct_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified, OF TrueI]])
+    apply (rule corres_split[OF _ gct_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified]])
       apply (rule corres_guard_imp)
         apply (rule corres_split[OF _ get_sa_corres'])
           apply (rule corres_split_sched_act,assumption)
@@ -2604,11 +2604,10 @@ lemma schedule_corres:
      apply (simp add:valid_sched_def)
     apply (simp add:valid_sched_def)
    apply simp
-  apply (fastforce simp: invs'_def cur_tcb'_def valid_state'_def st_tcb_at'_def
+  by (fastforce simp: invs'_def cur_tcb'_def valid_state'_def st_tcb_at'_def
                          sch_act_wf_def  valid_pspace'_def valid_objs'_maxDomain
                          valid_objs'_maxPriority comp_def
                    split: scheduler_action.splits)
-  done
 
 lemma ssa_all_invs_but_ct_not_inQ':
   "\<lbrace>all_invs_but_ct_not_inQ' and sch_act_wf sa and 

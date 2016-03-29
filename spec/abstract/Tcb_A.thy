@@ -15,7 +15,7 @@ The TCB and thread related specifications.
 chapter "Threads and TCBs"
 
 theory Tcb_A
-imports Schedule_A
+imports TcbAcc_A Schedule_A
 begin
 
 section "Activating Threads"
@@ -162,7 +162,7 @@ definition
 
 text {* Helper function for binding notifications *}
 definition
-  bind_notification :: "32 word \<Rightarrow> 32 word \<Rightarrow> (unit,'z::state_ext) s_monad"
+  bind_notification :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "bind_notification tcbptr ntfnptr \<equiv> do
      ntfn \<leftarrow> get_notification ntfnptr;

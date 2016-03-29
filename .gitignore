@@ -2,6 +2,7 @@
 *.o
 *~
 .*.attrib_trace
+.*.skip
 
 spec/cspec/c/api/
 spec/cspec/c/arch/

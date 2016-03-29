@@ -173,7 +173,7 @@ fun parse_spec ctxt prog_info term =
     val globals_getter = #globals_getter prog_info
     val t = Utils.abs_over "t" (globals_getter $ dummy_t) t
             |> Utils.abs_over "s" (globals_getter $ dummy_s)
-            |> HOLogic.mk_split
+            |> HOLogic.mk_case_prod
   in
     (* Determine if there are any references left to the dummy state
      * variable. If so, give up on the translation. *)
@@ -404,7 +404,7 @@ fun mk_corresXF_thm' ctxt prog_info name_map return_vars except_vars precond_var
   mk_corresXF_thm ctxt prog_info name_map return_vars except_vars precond_vars l2_term l1_term (
     (rewrite_goal_tac ctxt [mk_meta_eq @{thm split_def}] 1)
     THEN
-    (rtac (rewrite_rule ctxt [mk_meta_eq @{thm split_def}] thm) 1)
+    (resolve_tac ctxt [rewrite_rule ctxt [mk_meta_eq @{thm split_def}] thm] 1)
     THEN
     (REPEAT (CHANGED (asm_full_simp_tac (setup_l2_ss ctxt) 1)))
   )
@@ -550,7 +550,7 @@ let
     tac THEN (TRY (REPEAT (CHANGED (asm_full_simp_tac (setup_l2_ss ctxt) 1))))
 
   (* Apply a rule then simplify all remaining subgoals. *)
-  fun r thm = s (rtac thm 1)
+  fun r thm = s (resolve_tac ctxt [thm] 1)
 
   (* Generate the predicate. *)
   val var_set = make_set [var]
@@ -584,34 +584,34 @@ let
         let
           val body' = mk_preservation_proof ctxt prog_info name_map var body
         in
-          s (rtac @{thm L1_while_lp} 1 THEN rtac body' 1)
+          s (resolve_tac ctxt @{thms L1_while_lp} 1 THEN resolve_tac ctxt [body'] 1)
         end
       | (Const (@{const_name "L1_condition"}, _) $ _ $ lhs $ rhs) =>
         let
           val lhs' = mk_preservation_proof ctxt prog_info name_map var lhs
           val rhs' = mk_preservation_proof ctxt prog_info name_map var rhs
         in
-          s (rtac @{thm L1_condition_lp} 1 THEN rtac lhs' 1 THEN rtac rhs' 1)
+          s (resolve_tac ctxt @{thms L1_condition_lp} 1 THEN resolve_tac ctxt [lhs'] 1 THEN resolve_tac ctxt [rhs'] 1)
         end
       | (Const (@{const_name "L1_seq"}, _) $ lhs $ rhs) =>
         let
           val lhs' = mk_preservation_proof ctxt prog_info name_map var lhs
           val rhs' = mk_preservation_proof ctxt prog_info name_map var rhs
         in
-          s (rtac @{thm L1_seq_lp} 1 THEN rtac lhs' 1 THEN rtac rhs' 1)
+          s (resolve_tac ctxt @{thms L1_seq_lp} 1 THEN resolve_tac ctxt [lhs'] 1 THEN resolve_tac ctxt [rhs'] 1)
         end
       | (Const (@{const_name "L1_catch"}, _) $ lhs $ rhs) =>
         let
           val lhs' = mk_preservation_proof ctxt prog_info name_map var lhs
           val rhs' = mk_preservation_proof ctxt prog_info name_map var rhs
         in
-          s (rtac @{thm L1_catch_lp} 1 THEN rtac lhs' 1 THEN rtac rhs' 1)
+          s (resolve_tac ctxt @{thms L1_catch_lp} 1 THEN resolve_tac ctxt [lhs'] 1 THEN resolve_tac ctxt [rhs'] 1)
         end
       | (Const (@{const_name "L1_recguard"}, _) $ _ $ body) =>
         let
           val body' = mk_preservation_proof ctxt prog_info name_map var body
         in
-          s (rtac @{thm L1_recguard_lp} 1 THEN rtac body' 1)
+          s (resolve_tac ctxt @{thms L1_recguard_lp} 1 THEN resolve_tac ctxt [body'] 1)
         end
       | other => Utils.invalid_term "a L1 term" other)
 in
@@ -695,8 +695,8 @@ let
 in
   Goal.init new_thm
   |> asm_full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps [mk_meta_eq @{thm split_def}]) 1 |> Seq.hd
-  |> rtac (rewrite_rule ctxt [mk_meta_eq @{thm split_def}] thm) 1 |> Seq.hd
-  |> REPEAT (atac 1) |> Seq.hd
+  |> resolve_tac ctxt [rewrite_rule ctxt [mk_meta_eq @{thm split_def}] thm] 1 |> Seq.hd
+  |> REPEAT (assume_tac ctxt 1) |> Seq.hd
   |> Goal.finish ctxt
 end
 
@@ -1057,7 +1057,7 @@ in
             val tracked_vars = (body_reads UNION read_vars UNION loop_iterators)
             val invariant_precond = abs_over_tuple_vars name_map loop_iterators
                   (mk_precond prog_info name_map tracked_vars)
-            val base_thm = Utils.named_cterm_instantiate [
+            val base_thm = Utils.named_cterm_instantiate ctxt [
                   ("P", Thm.cterm_of ctxt invariant_precond),
                   ("A", Thm.cterm_of ctxt new_body)
                 ] @{thm L2corres_while}
@@ -1180,14 +1180,14 @@ in
           val thm =
             mk_corresXF_thm ctxt prog_info name_map ret_vars throw_vars read_vars extractors l1_term (
               (my_debug_tac "unfold folded_gets"
-                    THEN (REPEAT (rtac @{thm L2corres_folded_gets} 1)))
+                    THEN (REPEAT (resolve_tac ctxt @{thms L2corres_folded_gets} 1)))
               THEN (my_debug_tac "apply callee proof"
-                    THEN FIRST (map (fn thm => rtac thm 1 THEN
-                                               rtac (#mono_thm dest_fn) 1 THEN
-                                               rtac callee_thm 1)
+                    THEN FIRST (map (fn thm => resolve_tac ctxt [thm] 1 THEN
+                                               resolve_tac ctxt [#mono_thm dest_fn] 1 THEN
+                                               resolve_tac ctxt [callee_thm] 1)
                                     L2_call_thms @
-                                map (fn thm => rtac thm 1 THEN
-                                               rtac callee_thm 1)
+                                map (fn thm => resolve_tac ctxt [thm] 1 THEN
+                                               resolve_tac ctxt [callee_thm] 1)
                                     L2_reccall_thms))
               THEN (my_debug_tac "final simp"
                     THEN (REPEAT (CHANGED (asm_full_simp_tac (setup_l2_ss ctxt) 1))))
@@ -1241,7 +1241,7 @@ end
 
 (* Extract the abstract body of a L2corres theorem. *)
 fun get_body_of_thm ctxt thm =
-  Thm.concl_of (Drule.gen_all (Variable.maxidx_of ctxt) thm)
+  Thm.concl_of (Variable.gen_all ctxt thm)
   |> HOLogic.dest_Trueprop
   |> dest_L2corres_term_abs
 
@@ -1348,12 +1348,12 @@ fun get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt fn_name
     |> Thm.cterm_of ctxt
     |> Goal.init
     |> apply_tac "unfold RHS" (EqSubst.eqsubst_tac ctxt [0] [init_rule] 1)
-    |> apply_tac "generalise guard" (rtac @{thm L2corres_guard_imp} 1)
-    |> apply_tac "solve main goal" (rtac thm 1)
+    |> apply_tac "generalise guard" (resolve_tac ctxt @{thms L2corres_guard_imp} 1)
+    |> apply_tac "solve main goal" (resolve_tac ctxt [thm] 1)
     |> apply_tac "solve guard_imp" (REPEAT (FIRST [
-          rtac @{thm HOL.refl} 1,
-          rtac @{thm pred_andI} 1,
-          rtac @{thm conjI} 1,
+          resolve_tac ctxt @{thms HOL.refl} 1,
+          resolve_tac ctxt @{thms pred_andI} 1,
+          resolve_tac ctxt @{thms conjI} 1,
           CHANGED (asm_full_simp_tac (setup_l2_ss ctxt) 1)]))
     |> Goal.finish ctxt
 
@@ -1417,20 +1417,20 @@ let
 
   val func_expand = map (fn (_, def) => EqSubst.eqsubst_tac lthy [0] [Utils.abs_def lthy def]) func_defs
   val tac = 
-    rtac @{thm nat.induct} 1
+    resolve_tac lthy @{thms nat.induct} 1
       THEN EVERY (map (fn expand =>
-                          TRY (rtac @{thm conjI} 1)
-                          THEN REPEAT (rtac @{thm allI} 1)
+                          TRY (resolve_tac lthy @{thms conjI} 1)
+                          THEN REPEAT (resolve_tac lthy @{thms allI} 1)
                           THEN expand 1
-                          THEN rtac @{thm monad_mono_step_L2_recguard_0} 1) func_expand)
-    THEN REPEAT (etac @{thm conjE} 1)
+                          THEN resolve_tac lthy @{thms monad_mono_step_L2_recguard_0} 1) func_expand)
+    THEN REPEAT (eresolve_tac lthy @{thms conjE} 1)
     THEN EVERY (map (fn expand =>
-                        TRY (rtac @{thm conjI} 1)
-                        THEN REPEAT (rtac @{thm allI} 1)
+                        TRY (resolve_tac lthy @{thms conjI} 1)
+                        THEN REPEAT (resolve_tac lthy @{thms allI} 1)
                         THEN expand 1
                         THEN REPEAT (FIRST (
-                          map (fn t => rtac t 1) @{thms L2_monad_mono_step_rules}
-                          (* We use simp to solve assumptions (atac doesn't work
+                          map (fn t => resolve_tac lthy [t] 1) @{thms L2_monad_mono_step_rules}
+                          (* We use simp to solve assumptions (assume_tac doesn't work
                            * because the assumptions are ALL-quantified) and to
                            * split tuple cases. *)
                           @ [CHANGED (asm_full_simp_tac (clear_simpset lthy
@@ -1477,11 +1477,12 @@ fun mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args = let
     val ret_xf = mk_xf prog_info fn_ret_vars
     val ex_xf = Abs ("s", #state_type prog_info, HOLogic.unit)
 
-    val thm = @{thm L2corres_L2_call_simpl}
-        WHERE (map (apsnd (Thm.cterm_of ctxt))
-            [("l1_f", betapply (const, Free ("rec_measure'", @{typ "nat"}))),
-             ("ex_xf", ex_xf), ("gs", #globals_getter prog_info),
-             ("ret_xf", ret_xf), ("arg_xf", arg_xf)])
+    val thm = Utils.named_cterm_instantiate ctxt
+              (map (apsnd (Thm.cterm_of ctxt))
+                   [("l1_f", betapply (const, Free ("rec_measure'", @{typ "nat"}))),
+                    ("ex_xf", ex_xf), ("gs", #globals_getter prog_info),
+                    ("ret_xf", ret_xf), ("arg_xf", arg_xf)])
+              @{thm L2corres_L2_call_simpl}
         OF [#definition fn_def]
   in thm end
 
@@ -1500,8 +1501,8 @@ let
         val thm = mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args
         in (get_body_of_thm ctxt thm, thm, []) end
       else let
-        val l1_body_def = #definition l1_def WHERE [
-                ("rec_measure'", Thm.cterm_of ctxt measure_var)]
+        val l1_body_def = Utils.named_cterm_instantiate ctxt
+                          [("rec_measure'", Thm.cterm_of ctxt measure_var)] (#definition l1_def)
         val (thm, traces) = get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt
             fn_name callee_terms fn_args
             (betapply (#const l1_def, measure_var)) l1_body_def

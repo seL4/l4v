@@ -17,7 +17,7 @@
      format.
 
 -->
-<testsuite timeout="3600" depends="isabelle">
+<testsuite depends="isabelle" cpu-timeout="3600">
     <test name="CamkesAdlSpec">make CamkesAdlSpec</test>
     <test name="CamkesCdlRefine" depends="CamkesAdlSpec DPolicy">make CamkesCdlRefine</test>
     <test name="CamkesGlueSpec">make CamkesGlueSpec</test>

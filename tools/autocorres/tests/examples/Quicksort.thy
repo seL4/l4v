@@ -374,9 +374,9 @@ lemma the_updated_array:
 lemma multiset_of_cycle:
   (* Courtesy of Dave G *)
   "\<lbrakk> i < length ls; j < length ls; k < length ls; i = k \<Longrightarrow> ls ! i = ls ! j \<rbrakk> \<Longrightarrow>
-   multiset_of (ls[i := (ls ! j), j := ls ! k, k := ls ! i]) = multiset_of ls"
-  apply (subst (2) multiset_of_swap[symmetric, where i = j and j = i], assumption+)
-  apply (subst (2) multiset_of_swap[symmetric, where i = j and j = k], simp+)
+   mset (ls[i := (ls ! j), j := ls ! k, k := ls ! i]) = mset ls"
+  apply (subst (2) mset_swap[symmetric, where i = j and j = i], assumption+)
+  apply (subst (2) mset_swap[symmetric, where i = j and j = k], simp+)
   apply (clarsimp simp: nth_list_update)
   apply (metis list_update_overwrite list_update_swap)
   done
@@ -506,17 +506,17 @@ where
 
 lemma partition_correct:
   "\<forall>s0. \<lbrace> \<lambda>s. is_array s a (unat n) \<and> n > 0 \<and> s = s0 \<rbrace>
-   partition' a n
-   \<lbrace> \<lambda>r s. is_array s a (unat n) \<and>
-           multiset_of (the_array s a (unat n)) = multiset_of (the_array s0 a (unat n)) \<and>
-           r < n \<and> partitioned s a (unat n) (unat r) \<and>
-           unmodified_outside_range s0 s a (unat n) \<rbrace>!"
+        partition' a n
+        \<lbrace> \<lambda>r s. is_array s a (unat n) \<and>
+                mset (the_array s a (unat n)) = mset (the_array s0 a (unat n)) \<and>
+                r < n \<and> partitioned s a (unat n) (unat r) \<and>
+                unmodified_outside_range s0 s a (unat n) \<rbrace>!"
   apply clarsimp
   apply (unfold partition'_def)
   apply (subst whileLoop_add_inv [where
          I = "\<lambda>(i, pivot_idx) s. is_array s a (unat n) \<and>
-                                 multiset_of (the_array s a (unat n)) = 
-                                 multiset_of (the_array s0 a (unat n)) \<and>
+                                 mset (the_array s a (unat n)) = 
+                                 mset (the_array s0 a (unat n)) \<and>
                                  i \<le> n \<and> pivot_idx < i \<and>
                                  partitioned s a (unat i) (unat pivot_idx) \<and>
                                  unmodified_outside_range s0 s a (unat n)" and
@@ -585,9 +585,6 @@ lemma partition_correct:
     apply (subst (asm) ptr_offsets_eq, simp, unat_arith, simp, unat_arith)+
     apply clarsimp
     apply (drule_tac x = "i" in spec)
- (* apply (metis (hide_lams, mono_tags) Suc_eq_plus1_left Suc_le_D inc_i le_iff_add
-                 le_step less_eq_Suc_le less_le_trans olen_add_eqv unat_1 unat_mono
-                 word_le_nat_alt) *)
     apply (subgoal_tac "i < unat aa")
      apply clarsimp
      apply (subgoal_tac "(i < unat b) = (i < unat (b + 1))", simp)
@@ -690,16 +687,16 @@ lemma is_array_after_changing_right:
  * the following.
  *)
 lemma multiset_of_concat_array:
-  "\<lbrakk> m \<le> n; multiset_of (the_array s a m) = multiset_of (the_array s' a m);
-     multiset_of (the_array s (a +\<^sub>p int m) (n - m)) = multiset_of (the_array s' (a +\<^sub>p int m) (n - m)) \<rbrakk>
-   \<Longrightarrow> multiset_of (the_array s a n) = multiset_of (the_array s' a n)"
+  "\<lbrakk> m \<le> n; mset (the_array s a m) = mset (the_array s' a m);
+     mset (the_array s (a +\<^sub>p int m) (n - m)) = mset (the_array s' (a +\<^sub>p int m) (n - m)) \<rbrakk>
+   \<Longrightarrow> mset (the_array s a n) = mset (the_array s' a n)"
   by (simp add: the_array_concat2)
 
 lemma multiset_same_after_shuffling_left:
   "\<lbrakk> m \<le> n; array_loc_valid a n;
-     multiset_of (the_array s1 a m) = multiset_of (the_array s2 a m);
+     mset (the_array s1 a m) = mset (the_array s2 a m);
      unmodified_outside_range s1 s2 a m \<rbrakk>
-   \<Longrightarrow> multiset_of (the_array s1 a n) = multiset_of (the_array s2 a n)"
+   \<Longrightarrow> mset (the_array s1 a n) = mset (the_array s2 a n)"
   apply (case_tac "m = n", simp)
   apply (frule_tac m = "m" in subarray_not_at_mem_end1, simp)
   apply (rule_tac m = "m" in multiset_of_concat_array, assumption+)
@@ -713,10 +710,10 @@ lemma multiset_same_after_shuffling_left:
 
 lemma multiset_same_after_shuffling_right:
   "\<lbrakk> m \<le> n; array_loc_valid a n;
-     multiset_of (the_array s1 (a +\<^sub>p int m) (n - m)) =
-     multiset_of (the_array s2 (a +\<^sub>p int m) (n - m));
+     mset (the_array s1 (a +\<^sub>p int m) (n - m)) =
+     mset (the_array s2 (a +\<^sub>p int m) (n - m));
      unmodified_outside_range s1 s2 (a +\<^sub>p int m) (n - m) \<rbrakk>
-   \<Longrightarrow> multiset_of (the_array s1 a n) = multiset_of (the_array s2 a n)"
+   \<Longrightarrow> mset (the_array s1 a n) = mset (the_array s2 a n)"
   apply (rule_tac m = "m" in multiset_of_concat_array)
     apply assumption
    apply (subgoal_tac "the_array s2 a m = the_array s1 a m", simp)
@@ -731,10 +728,10 @@ lemma multiset_same_after_shuffling_right:
 (* Preparing for lemmas about partitioned-ness being preserved *)
 
 lemma old_array_elem:
-  "\<lbrakk> multiset_of (the_array s a n) =
-     multiset_of (the_array s0 a n); i < n \<rbrakk>
+  "\<lbrakk> mset (the_array s a n) =
+     mset (the_array s0 a n); i < n \<rbrakk>
    \<Longrightarrow> \<exists>j < n. heap_w32 s (a +\<^sub>p int i) = heap_w32 s0 (a +\<^sub>p int j)"
-  apply (drule multiset_of_eq_setD)
+  apply (drule mset_eq_setD)
   apply (subgoal_tac "heap_w32 s (a +\<^sub>p int i) \<in> set (the_array s a n)")
    apply simp
    apply (frule nth_the_index)
@@ -752,8 +749,8 @@ lemma old_array_elem:
   done
 
 lemma old_array_elem2:
-  "\<lbrakk> multiset_of (the_array s (a +\<^sub>p int k) (n - k)) =
-     multiset_of (the_array s0 (a +\<^sub>p int k) (n - k)); k + i < n \<rbrakk>
+  "\<lbrakk> mset (the_array s (a +\<^sub>p int k) (n - k)) =
+     mset (the_array s0 (a +\<^sub>p int k) (n - k)); k + i < n \<rbrakk>
    \<Longrightarrow> \<exists>j < n. j \<ge> k \<and> heap_w32 s (a +\<^sub>p int (k + i)) = heap_w32 s0 (a +\<^sub>p int j)"
   apply (drule_tac i = "i" in old_array_elem, simp)
   apply clarsimp
@@ -764,8 +761,8 @@ lemma old_array_elem2:
 lemma partitioned_after_shuffling_left:
   "\<lbrakk> is_array s0 a (unat n); pivot_idx < n;
      partitioned s0 a (unat n) (unat pivot_idx);
-     multiset_of (the_array s a (unat pivot_idx)) =
-     multiset_of (the_array s0 a (unat pivot_idx));
+     mset (the_array s a (unat pivot_idx)) =
+     mset (the_array s0 a (unat pivot_idx));
      unmodified_outside_range s0 s a (unat pivot_idx) \<rbrakk>
    \<Longrightarrow> partitioned s a (unat n) (unat pivot_idx)"
   apply (clarsimp simp: partitioned_def unmodified_outside_range_def)
@@ -800,10 +797,10 @@ lemma partitioned_after_shuffling_left:
 lemma partitioned_after_shuffling_right:
   "\<lbrakk> is_array s0 a (unat n); pivot_idx < n;
      partitioned s0 a (unat n) (unat pivot_idx);
-     multiset_of (the_array s (a +\<^sub>p int (Suc (unat pivot_idx)))
-                              (unat n - Suc (unat pivot_idx))) =
-     multiset_of (the_array s0 (a +\<^sub>p int (Suc (unat pivot_idx)))
-                               (unat n - Suc (unat pivot_idx)));
+     mset (the_array s (a +\<^sub>p int (Suc (unat pivot_idx)))
+                       (unat n - Suc (unat pivot_idx))) =
+     mset (the_array s0 (a +\<^sub>p int (Suc (unat pivot_idx)))
+                        (unat n - Suc (unat pivot_idx)));
      unmodified_outside_range s0 s (a +\<^sub>p int (Suc (unat pivot_idx)))
                                    (unat n - unat pivot_idx - 1) \<rbrakk>
    \<Longrightarrow> partitioned s a (unat n) (unat pivot_idx)"
@@ -909,18 +906,16 @@ lemma unat_inc:
   by unat_arith
 
 
-(*
 lemma old_quicksort_correct:
   shows "\<lbrace> \<lambda>s. is_array s a (unat n) \<and> s = s0 \<and> unat n < m \<rbrace>
          quicksort' m a n
          \<lbrace> \<lambda>r s. is_array s a (unat n) \<and>
-                 multiset_of (the_array s a (unat n)) =
-                 multiset_of (the_array s0 a (unat n)) \<and>
+                 mset (the_array s a (unat n)) =
+                 mset (the_array s0 a (unat n)) \<and>
                  sorted (the_array s a (unat n)) \<and>
                  unmodified_outside_range s0 s a (unat n) \<rbrace>!"
    ( is "\<lbrace> ?pre a n s0 m \<rbrace> quicksort' m a n \<lbrace> ?post a n s0 \<rbrace>!" )
-*)
-
+  oops
 
 (* FIXME: move *)
 (* This puts our {partition,quicksort}_correct lemmas into a form that
@@ -939,8 +934,8 @@ lemma quicksort_correct:
   shows "\<forall>a m s0. \<lbrace> \<lambda>s. is_array s a (unat n) \<and> s = s0 \<and> unat n < m \<rbrace>
          quicksort' m a n
          \<lbrace> \<lambda>r s. is_array s a (unat n) \<and>
-                 multiset_of (the_array s a (unat n)) =
-                 multiset_of (the_array s0 a (unat n)) \<and>
+                 mset (the_array s a (unat n)) =
+                 mset (the_array s0 a (unat n)) \<and>
                  sorted (the_array s a (unat n)) \<and>
                  unmodified_outside_range s0 s a (unat n) \<rbrace>!"
    ( is "\<forall>a m s0. \<lbrace> ?pre a n s0 m \<rbrace> quicksort' m a n \<lbrace> ?post a n s0 \<rbrace>!" )
@@ -997,10 +992,10 @@ next
              apply unat_arith
             apply assumption+
          apply (simp add: uint_nat)+
-       apply (subgoal_tac "multiset_of (the_array s'b a (unat n)) =
-                           multiset_of (the_array s'a a (unat n))")
-        apply (subgoal_tac "multiset_of (the_array s'a a (unat n)) =
-                           multiset_of (the_array s' a (unat n))", simp)
+       apply (subgoal_tac "mset (the_array s'b a (unat n)) =
+                           mset (the_array s'a a (unat n))")
+        apply (subgoal_tac "mset (the_array s'a a (unat n)) =
+                            mset (the_array s' a (unat n))", simp)
         apply (rule_tac m = "unat rv" in multiset_same_after_shuffling_left)
            apply unat_arith
           apply (simp add: is_array_def)

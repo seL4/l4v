@@ -75,8 +75,8 @@ fun pretty_fact only_names ctxt (FoundName ((name, idx), thm)) =
             SOME n => Pretty.str ("(" ^ string_of_int (n + 1) ^ ")")
           | NONE => Pretty.str ""] @
           (if only_names then []
-          else [Pretty.str ":",Pretty.brk 1, Display.pretty_thm ctxt thm]))
-  | pretty_fact only_names ctxt (UnknownName (name, prop)) =
+          else [Pretty.str ":",Pretty.brk 1, Thm.pretty_thm ctxt thm]))
+  | pretty_fact _ ctxt (UnknownName (name, prop)) =
       Pretty.block
         [Pretty.str name, Pretty.str "(?) :", Pretty.brk 1,
           Syntax.unparse_term ctxt prop]
@@ -100,7 +100,8 @@ let
 
   val deps = case query of SOME (raw_query,pos) => 
     let
-      val q = Find_Theorems.read_query (Position.advance_offset 1 pos) raw_query;
+      val pos' = perhaps (try (Position.advance_offset 1)) pos;
+      val q = Find_Theorems.read_query pos' raw_query;
       val results = Find_Theorems.find_theorems_cmd ctxt (SOME thm) (SOME 1000000000) false q 
                     |> snd
                     |> map fact_ref_to_name;

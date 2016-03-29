@@ -11,10 +11,11 @@
 theory Invocations_H
 imports
   Structures_H
-  ArchRetypeDecls_H
-  InvocationLabels_H
+  "./$L4V_ARCH/ArchRetypeDecls_H"
+  "./$L4V_ARCH/ArchLabelFuns_H"
 begin
 
-#INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=ArchRetypeDecls_H NOT InvocationLabel isPDFlush isPageFlush
+#INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=ArchRetypeDecls_H NOT InvocationLabel
+#INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ONLY invocationType
 
 end

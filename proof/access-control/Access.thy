@@ -36,7 +36,7 @@ the grant bit set.
 
 type_synonym 'a agent_map = "obj_ref \<Rightarrow> 'a"
 type_synonym 'a agent_asid_map = "asid \<Rightarrow> 'a"
-type_synonym 'a agent_irq_map = "word8 \<Rightarrow> 'a"
+type_synonym 'a agent_irq_map = "10 word \<Rightarrow> 'a"
 
 text{*
 
@@ -263,24 +263,24 @@ where
   "tcb_st_to_auth (Structures_A.BlockedOnNotification ntfn) = {(ntfn, Receive)}"
 | "tcb_st_to_auth (Structures_A.BlockedOnSend ep payl)
      = {(ep, SyncSend)} \<union> (if sender_can_grant payl then {(ep, Grant)} else {})"
-| "tcb_st_to_auth (Structures_A.BlockedOnReceive ep dim) = {(ep, Receive)}"
+| "tcb_st_to_auth (Structures_A.BlockedOnReceive ep) = {(ep, Receive)}"
 | "tcb_st_to_auth _ = {}"
 
 definition
  "pte_ref pte \<equiv> case pte of
-    ARM_Structs_A.pte.SmallPagePTE addr atts rights
+    Arch_Structs_A.pte.SmallPagePTE addr atts rights
        \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSmallPage, vspace_cap_rights_to_auth rights)
-  | ARM_Structs_A.pte.LargePagePTE addr atts rights
+  | Arch_Structs_A.pte.LargePagePTE addr atts rights
        \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMLargePage, vspace_cap_rights_to_auth rights)
   | _ \<Rightarrow> None"
 
 definition
  "pde_ref2 pde \<equiv> case pde of
-    ARM_Structs_A.pde.SectionPDE addr atts domain rights
+    Arch_Structs_A.pde.SectionPDE addr atts domain rights
        \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSection, vspace_cap_rights_to_auth rights)
-  | ARM_Structs_A.pde.SuperSectionPDE addr atts rights
+  | Arch_Structs_A.pde.SuperSectionPDE addr atts rights
        \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSuperSection, vspace_cap_rights_to_auth rights)
-  | ARM_Structs_A.pde.PageTablePDE addr atts domain
+  | Arch_Structs_A.pde.PageTablePDE addr atts domain
        \<Rightarrow> Some (ptrFromPAddr addr, 0, {Control}) (* The 0 is a hack, saying that we own only addr, although 12 would also be OK *)
   | _ \<Rightarrow> None"
 
@@ -298,12 +298,12 @@ definition
             \<Rightarrow> (obj_ref \<times> vs_ref \<times> auth) set"
 where
   "vs_refs_no_global_pts \<equiv> \<lambda>ko. case ko of
-    ArchObj (ARM_Structs_A.ASIDPool pool) \<Rightarrow>
+    ArchObj (Arch_Structs_A.ASIDPool pool) \<Rightarrow>
        (\<lambda>(r,p). (p, VSRef (ucast r) (Some AASIDPool), Control)) ` graph_of pool
-  | ArchObj (ARM_Structs_A.PageDirectory pd) \<Rightarrow>
+  | ArchObj (Arch_Structs_A.PageDirectory pd) \<Rightarrow>
       \<Union>(r,(p, sz, auth)) \<in> graph_of (pde_ref2 o pd) - {(x,y). (ucast (kernel_base >> 20) \<le> x)}.
           (\<lambda>(p, a). (p, VSRef (ucast r) (Some APageDirectory), a)) ` (ptr_range p sz \<times> auth)
-  | ArchObj (ARM_Structs_A.PageTable pt) \<Rightarrow>
+  | ArchObj (Arch_Structs_A.PageTable pt) \<Rightarrow>
       \<Union>(r,(p, sz, auth)) \<in> graph_of (pte_ref o pt).
           (\<lambda>(p, a). (p, VSRef (ucast r) (Some APageTable), a)) ` (ptr_range p sz \<times> auth)
   | _ \<Rightarrow> {}"
@@ -372,15 +372,15 @@ where
 fun
   cap_asid' :: "cap \<Rightarrow> asid set"
 where
-  "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.PageCap _ _ _ mapping))
+  "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.PageCap _ _ _ mapping))
       = fst ` set_option mapping"
-  | "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.PageTableCap _ mapping))
+  | "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.PageTableCap _ mapping))
       = fst ` set_option mapping"
-  | "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap _ asid_opt))
+  | "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap _ asid_opt))
       = set_option asid_opt"
-  | "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.ASIDPoolCap _ asid))
+  | "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.ASIDPoolCap _ asid))
           = {x. asid_high_bits_of x = asid_high_bits_of asid \<and> x \<noteq> 0}"
-  | "cap_asid' (Structures_A.ArchObjectCap ARM_Structs_A.ASIDControlCap) = UNIV"
+  | "cap_asid' (Structures_A.ArchObjectCap Arch_Structs_A.ASIDControlCap) = UNIV"
   | "cap_asid' _ = {}"
 
 inductive_set
@@ -633,7 +633,7 @@ subsection{* How kernel objects can change *}
 fun
   blocked_on :: "obj_ref \<Rightarrow> Structures_A.thread_state \<Rightarrow> bool"
 where
- "blocked_on ref (Structures_A.BlockedOnReceive ref' _)     = (ref = ref')"
+ "blocked_on ref (Structures_A.BlockedOnReceive ref')     = (ref = ref')"
   | "blocked_on ref (Structures_A.BlockedOnSend ref' _)     = (ref = ref')"
   | "blocked_on ref (Structures_A.BlockedOnNotification ref') = (ref = ref')"
   | "blocked_on _ _ = False"
@@ -645,7 +645,7 @@ lemma blocked_on_def2:
 fun
   receive_blocked_on :: "obj_ref \<Rightarrow> Structures_A.thread_state \<Rightarrow> bool"
 where
-   "receive_blocked_on ref (Structures_A.BlockedOnReceive ref' _)     = (ref = ref')"
+   "receive_blocked_on ref (Structures_A.BlockedOnReceive ref')     = (ref = ref')"
   | "receive_blocked_on ref (Structures_A.BlockedOnNotification ref') = (ref = ref')"
   | "receive_blocked_on _ _ = False"
 
@@ -701,7 +701,7 @@ where
 
 abbreviation ep_recv_blocked :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> bool"
 where
-  "ep_recv_blocked ep ts \<equiv> case ts of BlockedOnReceive w b \<Rightarrow> w = ep
+  "ep_recv_blocked ep ts \<equiv> case ts of BlockedOnReceive w \<Rightarrow> w = ep
                              | _ \<Rightarrow> False"
 
 definition indirect_send :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> tcb \<Rightarrow> bool"
@@ -765,8 +765,8 @@ where
                      tcb' = tcb \<lparr>tcb_bound_notification := None\<rparr>;
                      tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) None subjects aag \<rbrakk>
                  \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
-| tro_asidpool_clear: "\<lbrakk> ko = Some (ArchObj (ARM_Structs_A.ASIDPool pool));
-                         ko' = Some (ArchObj (ARM_Structs_A.ASIDPool pool'));
+| tro_asidpool_clear: "\<lbrakk> ko = Some (ArchObj (Arch_Structs_A.ASIDPool pool));
+                         ko' = Some (ArchObj (Arch_Structs_A.ASIDPool pool'));
                          \<forall>x. pool' x \<noteq> pool x \<longrightarrow> pool' x = None
                             \<and> aag_subjects_have_auth_to subjects aag Control (the (pool x)) \<rbrakk>
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
@@ -1407,7 +1407,7 @@ lemma get_endpoint_wp:
 lemma ep_queued_st_tcb_at':
   "\<And>P. \<lbrakk>ko_at (Endpoint ep) ptr s; (t, rt) \<in> ep_q_refs_of ep;
          valid_objs s; sym_refs (state_refs_of s);
-         \<And>pl dim. P (Structures_A.BlockedOnSend ptr pl) \<and> P (Structures_A.BlockedOnReceive ptr dim) \<rbrakk>
+         \<And>pl. P (Structures_A.BlockedOnSend ptr pl) \<and> P (Structures_A.BlockedOnReceive ptr) \<rbrakk>
     \<Longrightarrow> st_tcb_at P t s"
   apply (case_tac ep, simp_all)
   apply (frule(1) sym_refs_ko_atD, clarsimp, erule (1) my_BallE,
@@ -1419,7 +1419,7 @@ lemma ep_queued_st_tcb_at':
 lemma ep_rcv_queued_st_tcb_at:
   "\<And>P. \<lbrakk>ko_at (Endpoint ep) epptr s; (t, EPRecv) \<in> ep_q_refs_of ep;
          valid_objs s; sym_refs (state_refs_of s);
-         \<And>dim. P (Structures_A.BlockedOnReceive epptr dim);
+         P (Structures_A.BlockedOnReceive epptr);
          kheap s' t = kheap s t\<rbrakk>
     \<Longrightarrow> st_tcb_at P t s'"
   apply (case_tac ep, simp_all)

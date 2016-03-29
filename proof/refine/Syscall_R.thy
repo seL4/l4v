@@ -594,12 +594,12 @@ lemma invokeTCB_typ_at'[wp]:
   done
 
 lemmas invokeTCB_typ_ats[wp] = typ_at_lifts [OF invokeTCB_typ_at']
-
+term Interrupt_H.performIRQControl
 crunch typ_at'[wp]: doReplyTransfer "\<lambda>s. P (typ_at' T p s)"
   (wp: hoare_drop_imps)
 lemmas doReplyTransfer_typ_ats[wp] = typ_at_lifts [OF doReplyTransfer_typ_at']
-crunch typ_at'[wp]: invokeIRQControl "\<lambda>s. P (typ_at' T p s)"
-lemmas invokeIRQControl_typ_ats[wp] = typ_at_lifts [OF invokeIRQControl_typ_at']
+crunch typ_at'[wp]: "InterruptDecls_H.performIRQControl" "\<lambda>s. P (typ_at' T p s)"
+lemmas invokeIRQControl_typ_ats[wp] = typ_at_lifts [OF InterruptDecls_H_performIRQControl_typ_at']
 crunch typ_at'[wp]: invokeIRQHandler "\<lambda>s. P (typ_at' T p s)"
 lemmas invokeIRQHandler_typ_ats[wp] = typ_at_lifts [OF invokeIRQHandler_typ_at']
 
@@ -688,7 +688,7 @@ lemma diminished_ReplyCap' [simp]:
   apply (rule iffI)
    apply (clarsimp simp: diminished'_def maskCapRights_def Let_def split del: split_if)
    apply (cases cap, simp_all add: isCap_simps)[1]
-   apply (simp add: ArchRetype_H.maskCapRights_def split: arch_capability.splits)
+   apply (simp add: ArchRetype_H.maskCapRights_def isPageCap_def split: arch_capability.splits)
   apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
   done
 
@@ -773,7 +773,7 @@ crunch sch_act_simple[wp]: handleFaultReply sch_act_simple
 lemma transferCaps_non_null_cte_wp_at':
   assumes PUC: "\<And>cap. P cap \<Longrightarrow> \<not> isUntypedCap cap"
   shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>
-     transferCaps info caps ep rcvr rcvBuf dim
+     transferCaps info caps ep rcvr rcvBuf
    \<lbrace>\<lambda>_. cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>"
 proof -
   have CTEF: "\<And>P p s. \<lbrakk> cte_wp_at' P p s; \<And>cte. P cte \<Longrightarrow> False \<rbrakk> \<Longrightarrow> False"
@@ -801,7 +801,7 @@ lemma doNormalTransfer_non_null_cte_wp_at':
   assumes PUC: "\<And>cap. P cap \<Longrightarrow> \<not> isUntypedCap cap"
   shows
   "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>
-   doNormalTransfer st send_buffer ep b gr rt recv_buffer dim
+   doNormalTransfer st send_buffer ep b gr rt recv_buffer
    \<lbrace>\<lambda>_. cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>"
   unfolding doNormalTransfer_def
   apply (wp transferCaps_non_null_cte_wp_at' | simp add:PUC)+
@@ -823,7 +823,7 @@ lemma doIPCTransfer_non_null_cte_wp_at':
   assumes PUC: "\<And>cap. P cap \<Longrightarrow> \<not> isUntypedCap cap"
   shows
   "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>
-   doIPCTransfer sender endpoint badge grant receiver dim
+   doIPCTransfer sender endpoint badge grant receiver
    \<lbrace>\<lambda>_. cte_wp_at' (\<lambda>cte. P (cteCap cte) \<and> cteCap cte \<noteq> capability.NullCap) ptr\<rbrace>"
   unfolding doIPCTransfer_def
   apply (wp doNormalTransfer_non_null_cte_wp_at' hoare_drop_imp hoare_allI | wpc | clarsimp simp:PUC)+
@@ -834,7 +834,7 @@ lemma doIPCTransfer_non_null_cte_wp_at2':
   assumes PNN: "\<And>cte. P (cteCap cte) \<Longrightarrow> cteCap cte \<noteq> capability.NullCap"
    and    PUC: "\<And>cap. P cap \<Longrightarrow> \<not> isUntypedCap cap"
   shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) ptr\<rbrace>
-         doIPCTransfer sender endpoint badge grant receiver dim
+         doIPCTransfer sender endpoint badge grant receiver
          \<lbrace>\<lambda>_. cte_wp_at' (\<lambda>cte. P (cteCap cte)) ptr\<rbrace>"
   proof -
     have PimpQ: "\<And>P Q ptr s. \<lbrakk> cte_wp_at' (\<lambda>cte. P (cteCap cte)) ptr s;
@@ -2393,11 +2393,11 @@ proof -
 qed
 
 lemma inv_irq_IRQInactive:
-  "\<lbrace>\<top>\<rbrace> invokeIRQControl irqcontrol_invocation 
+  "\<lbrace>\<top>\<rbrace> performIRQControl irqcontrol_invocation 
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: invokeIRQControl_def)
+  apply (simp add: performIRQControl_def)
   apply (rule hoare_pre)
-   apply (wpc|wp|simp add: ArchInterrupt_H.invokeIRQControl_def)+
+   apply (wpc|wp|simp add: ArchInterrupt_H.performIRQControl_def)+
   done
 
 lemma inv_arch_IRQInactive:

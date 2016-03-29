@@ -16,8 +16,8 @@ begin
    This is fairly similar to sep_erule_full sep_cancel. *)
 
 lemma "(A \<and>* B \<and>* C \<and>* D) s \<Longrightarrow> (C \<and>* D \<and>* A \<and>* B) s"
-   apply (sep_cancel)
-   apply (sep_cancel)
-done
+  apply sep_cancel
+  apply sep_cancel
+  done
 
 end

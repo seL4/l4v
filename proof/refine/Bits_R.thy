@@ -13,7 +13,7 @@ imports Corres
 begin
 
 crunch_ignore (add:
-  bind return when get gets fail
+  bind return "when" get gets fail
   assert put modify unless select
   alternative assert_opt gets_the
   returnOk throwError lift bindE
@@ -299,7 +299,7 @@ lemma unifyFailure_injection:
                 rethrowFailure_def o_def)
 
 lemmas unifyFailure_injection_corres
-   = corres_injection [where f=dc, simplified, OF _ unifyFailure_injection TrueI]
+   = corres_injection [where f=dc, simplified, OF _ unifyFailure_injection]
 
 lemmas unifyFailure_discard
    = unifyFailure_injection_corres [OF id_injection, simplified]

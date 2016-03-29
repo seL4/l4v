@@ -13,9 +13,10 @@ chapter "Initialisation"
 theory KernelInit_H
 imports
   KI_Decls_H
-  ArchRetype_H
+  "./$L4V_ARCH/ArchRetype_H"
   Retype_H
   Config_H
+  Thread_H
 begin
 
 fun coverOf :: "region list => region" 
@@ -35,7 +36,7 @@ where "coverOf x0 = (case x0 of
 definition syncBIFrame :: "unit kernel_init"
 where "syncBIFrame \<equiv> returnOk ()"
 
-#INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT isAligned funArray newKernelState distinct rangesBy InitData doKernelOp runInit noInitFailure coverOf
+#INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT isAligned funArray newKernelState distinct rangesBy InitData doKernelOp runInit noInitFailure coverOf foldME
 
 consts
   newKSDomSchedule :: "(domain \<times> machine_word) list"

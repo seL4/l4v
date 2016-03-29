@@ -251,7 +251,7 @@ od))
         state \<leftarrow> getThreadState tptr;
         (case state of
               BlockedOnSend _ _ _ _ \<Rightarrow>   blockedIPCCancel state
-            | BlockedOnReceive _ _ \<Rightarrow>   blockedIPCCancel state
+            | BlockedOnReceive _ \<Rightarrow>   blockedIPCCancel state
             | BlockedOnNotification _ \<Rightarrow>   cancelSignal tptr (waitingOnNotification state)
             | BlockedOnReply  \<Rightarrow>   replyIPCCancel
             | _ \<Rightarrow>   return ()

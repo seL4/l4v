@@ -36,7 +36,7 @@ crunch irq_state_of_state[wp]: set_extra_badge "\<lambda>s. P (irq_state_of_stat
 
 
 lemma transfer_caps_loop_irq_state[wp]:
-  "\<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace> transfer_caps_loop a b c d e f g \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace> transfer_caps_loop a b c d e f \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
   apply(wp transfer_caps_loop_pres)
   done
 
@@ -74,7 +74,7 @@ crunch irq_state_of_state[wp]: invoke_untyped "\<lambda>s. P (irq_state_of_state
 crunch irq_state_of_state[wp]: invoke_irq_control "\<lambda>s. P (irq_state_of_state s)"
 
 crunch irq_state_of_state[wp]: invoke_irq_handler "\<lambda>s. P (irq_state_of_state s)"
-  (wp: dmo_wp simp: maskInterrupt_def setInterruptMode_def)
+  (wp: dmo_wp simp: maskInterrupt_def)
 
 crunch irq_state'[wp]: cleanCacheRange_PoU "\<lambda> s. P (irq_state s)"
   (wp: crunch_wps ignore: ignore_failure)
@@ -810,9 +810,9 @@ lemma unmap_page_reads_respects:
            store_pde_reads_respects[simplified] flush_page_reads_respects 
            find_pd_for_asid_reads_respects find_pd_for_asid_pd_slot_authorised
            mapM_ev''[
-                     where m = "(\<lambda>a. store_pte a ARM_Structs_A.pte.InvalidPTE)" 
+                     where m = "(\<lambda>a. store_pte a Arch_Structs_A.pte.InvalidPTE)" 
                        and P = "\<lambda>x s. is_subject aag (x && ~~ mask pt_bits)"]
-           mapM_ev''[where m = "(\<lambda>a. store_pde a ARM_Structs_A.pde.InvalidPDE)" 
+           mapM_ev''[where m = "(\<lambda>a. store_pde a Arch_Structs_A.pde.InvalidPDE)" 
                        and P = "\<lambda>x s. is_subject aag (x && ~~ mask pd_bits)"]
 
        | wpc 
@@ -2311,10 +2311,10 @@ lemma decode_arch_invocation_authorised_for_globals:
   apply (cases cap, simp_all)
     -- "PageCap"
     apply (clarsimp simp: valid_cap_simps cli_no_irqs)
-    apply (cases "invocation_type label"; simp add: isPageFlush_def isPDFlush_def)
+    apply (cases "invocation_type label";(rename_tac arch, case_tac arch; simp add: isPageFlushLabel_def isPDFlushLabel_def))
            -- "Map"
-           apply (rename_tac word cap_rights vmpage_size option)
-           apply(clarsimp simp: isPageFlush_def isPDFlush_def | rule conjI)+
+           apply (rename_tac word cap_rights vmpage_size option arch)
+           apply(clarsimp simp: isPageFlushLabel_def isPDFlushLabel_def | rule conjI)+
             apply(drule diminished_cte_wp_at_valid_cap)
              apply(clarsimp simp: invs_def valid_state_def)
             apply(simp add: valid_cap_def)
@@ -2347,8 +2347,7 @@ lemma decode_arch_invocation_authorised_for_globals:
     apply(drule diminished_PageDirectoryCapD)
     apply(clarsimp simp: cap_range_def)
    apply(simp)
-  apply(fastforce)
-  done
+  by(fastforce)
 
 
 lemma as_user_valid_ko_at_arm[wp]:

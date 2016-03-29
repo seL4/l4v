@@ -17,8 +17,8 @@ chapter "Basic Data Structures"
 
 theory Structures_A
 imports
-  ARM_Structs_A
-  "../machine/MachineOps"
+  "./$L4V_ARCH/Arch_Structs_A"
+  "../machine/$L4V_ARCH/MachineOps"
 begin
 
 text {*
@@ -133,6 +133,10 @@ definition
   is_arch_cap :: "cap \<Rightarrow> bool" where
   "is_arch_cap cap \<equiv> case cap of ArchObjectCap _ \<Rightarrow> True | _ \<Rightarrow> False"
 
+context 
+notes [[function_internals =true]]
+begin
+
 fun is_cnode_cap :: "cap \<Rightarrow> bool"
 where
   "is_cnode_cap (CNodeCap _ _ _) = True"
@@ -169,6 +173,7 @@ where
   "cap_rights (EndpointCap _ _ cr) = cr"
 | "cap_rights (NotificationCap _ _ cr) = cr"
 | "cap_rights (ArchObjectCap acap) = acap_rights acap"
+end
 
 text {* Various update functions for cap data common to various kinds of
 cap are defined here. *}
@@ -336,7 +341,7 @@ datatype thread_state
   = Running
   | Inactive
   | Restart
-  | BlockedOnReceive obj_ref bool
+  | BlockedOnReceive obj_ref
   | BlockedOnSend obj_ref sender_payload
   | BlockedOnReply
   | BlockedOnNotification obj_ref
@@ -363,7 +368,7 @@ where
   "runnable (Running)               = True"
 | "runnable (Inactive)              = False"
 | "runnable (Restart)               = True"
-| "runnable (BlockedOnReceive x y)  = False"
+| "runnable (BlockedOnReceive x)  = False"
 | "runnable (BlockedOnSend x y)     = False"
 | "runnable (BlockedOnNotification x) = False"
 | "runnable (IdleThreadState)       = False"
@@ -379,7 +384,7 @@ definition
       tcb_caller   = NullCap,
       tcb_ipcframe = NullCap,
       tcb_state    = Inactive,
-      tcb_fault_handler = to_bl (0::word32),
+      tcb_fault_handler = to_bl (0::machine_word),
       tcb_ipc_buffer = 0,
       tcb_context    = new_context,
       tcb_fault      = None, 
@@ -419,7 +424,7 @@ where
 | "obj_bits (ArchObj ao) = arch_kobj_size ao"
 
 primrec (nonexhaustive)
-  obj_size :: "cap \<Rightarrow> word32"
+  obj_size :: "cap \<Rightarrow> machine_word"
 where
   "obj_size NullCap = 0"
 | "obj_size (UntypedCap r bits f) = 1 << bits"

@@ -31,7 +31,7 @@ chapter "Specifications"
  *)
 
 session ASpec in "abstract" = Word +
-  options [document=pdf, timeout=600]
+  options [document=pdf]
   theories [document = false]
     "../../lib/NICTACompat"
     "../../lib/Lib"
@@ -63,10 +63,10 @@ session ASpec in "abstract" = Word +
  *)
 
 session ExecSpec = Word +
-  options [document = false, timeout=600]
+  options [document = false]
   theories
     "design/API_H"
-    "design/Intermediate_H"
+    "design/$L4V_ARCH/Intermediate_H"
 
 
 (*
@@ -118,7 +118,7 @@ session TakeGrant in "take-grant" = "HOL-Word" +
  *)
 
 session ASepSpec = ASpec +
-  options [document = false, timeout=600]
+  options [document = false]
   theories
     "sep-abstract/Syscall_SA"
 

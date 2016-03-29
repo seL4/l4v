@@ -15,7 +15,7 @@ Utilities for the machine level which are not machine-dependent.
 chapter "Machine Accessor Functions"
 
 theory MiscMachine_A
-imports ARM_Machine_A
+imports "./$L4V_ARCH/Machine_A"
 begin
 
 text {* Miscellaneous definitions of constants used in modelling machine
@@ -25,9 +25,6 @@ definition
   nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref" where
   "nat_to_cref ln n \<equiv> drop (word_bits - ln)
                            (to_bl (of_nat n :: machine_word))"
-
-type_synonym user_context = "register \<Rightarrow> data"
-type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 
 definition
  "msg_info_register \<equiv> msgInfoRegister"
@@ -46,9 +43,7 @@ definition
 definition
  "syscall_message \<equiv> syscallMessage"
 
-definition
-  new_context :: "user_context" where
-  "new_context \<equiv> (\<lambda>r. 0) (CPSR := 0x150)"
+type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 
 definition
   get_register :: "register \<Rightarrow> data user_monad" where

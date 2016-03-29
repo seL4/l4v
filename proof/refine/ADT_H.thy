@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header {* Abstract datatype for the executable specification *}
+chapter {* Abstract datatype for the executable specification *}
 
 theory ADT_H
 imports
@@ -42,7 +42,7 @@ definition
   where
   "Init_H \<equiv>
    ({empty_context} \<times> snd `
-      fst (initKernel (VPtr initEntry) (map PPtr initFrames) (PPtr initOffset)
+      fst (initKernel (VPtr initEntry) (PPtr initOffset) (map PPtr initFrames)
                       (map PPtr initKernelFrames) initBootFrames
                       (newKernelState initDataStart))) \<times>
     {UserMode} \<times> {None}"
@@ -67,43 +67,43 @@ lemma vm_rights_of_vmrights_map_id[simp]:
 
 definition
   absPageTable :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                  word8 \<Rightarrow> ARM_Structs_A.pte"
+                  word8 \<Rightarrow> Arch_Structs_A.pte"
   where
   "absPageTable h a \<equiv> %offs.
    case (h (a + (ucast offs << 2))) of
-     Some (KOArch (KOPTE (Hardware_H.InvalidPTE))) \<Rightarrow> ARM_Structs_A.InvalidPTE
+     Some (KOArch (KOPTE (Hardware_H.InvalidPTE))) \<Rightarrow> Arch_Structs_A.InvalidPTE
    | Some (KOArch (KOPTE (Hardware_H.LargePagePTE p c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
-         ARM_Structs_A.LargePagePTE p
+         Arch_Structs_A.LargePagePTE p
            {x. c & x=PageCacheable | g & x=Global | xn & x=XNever}
            (vm_rights_of rights)
-       else ARM_Structs_A.InvalidPTE
+       else Arch_Structs_A.InvalidPTE
    | Some (KOArch (KOPTE (Hardware_H.SmallPagePTE p c g xn rights))) \<Rightarrow>
-       ARM_Structs_A.SmallPagePTE p {x. c & x=PageCacheable |
+       Arch_Structs_A.SmallPagePTE p {x. c & x=PageCacheable |
                                         g & x=Global |
                                         xn & x=XNever} (vm_rights_of rights)"
 
 definition
   absPageDirectory :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                      12 word \<Rightarrow>  ARM_Structs_A.pde"
+                      12 word \<Rightarrow>  Arch_Structs_A.pde"
   where
   "absPageDirectory h a \<equiv> %offs.
    case (h (a + (ucast offs << 2))) of
-     Some (KOArch (KOPDE (Hardware_H.InvalidPDE))) \<Rightarrow> ARM_Structs_A.InvalidPDE
+     Some (KOArch (KOPDE (Hardware_H.InvalidPDE))) \<Rightarrow> Arch_Structs_A.InvalidPDE
    | Some (KOArch (KOPDE (Hardware_H.PageTablePDE p e mw))) \<Rightarrow>
-       ARM_Structs_A.PageTablePDE p {x. e & x=ParityEnabled} mw
+       Arch_Structs_A.PageTablePDE p {x. e & x=ParityEnabled} mw
    | Some (KOArch (KOPDE (Hardware_H.SectionPDE p e mw c g xn rights))) \<Rightarrow>
-       ARM_Structs_A.SectionPDE p {x. e & x=ParityEnabled |
+       Arch_Structs_A.SectionPDE p {x. e & x=ParityEnabled |
                                       c & x=PageCacheable |
                                       g & x=Global |
                                       xn & x=XNever} mw (vm_rights_of rights)
    | Some (KOArch (KOPDE (Hardware_H.SuperSectionPDE p e c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
-         ARM_Structs_A.SuperSectionPDE p
+         Arch_Structs_A.SuperSectionPDE p
            {x. e & x=ParityEnabled | c & x=PageCacheable 
              | g & x=Global | xn & x=XNever}
            (vm_rights_of rights)
-       else ARM_Structs_A.InvalidPDE"
+       else Arch_Structs_A.InvalidPDE"
 
 (* Can't pull the whole heap off at once, start with arch specific stuff.*)
 definition
@@ -112,8 +112,8 @@ definition
   where
   "absHeapArch h a \<equiv> %ako.
    (case ako of
-     KOASIDPool (ARMStructures_H.ASIDPool ap) \<Rightarrow>
-       Some (ARM_Structs_A.ASIDPool (\<lambda>w. ap (ucast w)))
+     KOASIDPool (ArchStructures_H.ASIDPool ap) \<Rightarrow>
+       Some (Arch_Structs_A.ASIDPool (\<lambda>w. ap (ucast w)))
    | KOPTE _ \<Rightarrow>
        if is_aligned a pt_bits then Some (PageTable (absPageTable h a))
        else None
@@ -125,7 +125,7 @@ lemma
   assumes ptes:
     "\<forall>x. (\<exists>pte. ksPSpace \<sigma> x = Some (KOArch (KOPTE pte))) \<longrightarrow>
          is_aligned x pt_bits \<longrightarrow>
-         (\<forall>y\<Colon>word8. \<exists>pte'. ksPSpace \<sigma> (x + (ucast y << 2)) =
+         (\<forall>y::word8. \<exists>pte'. ksPSpace \<sigma> (x + (ucast y << 2)) =
                            Some (KOArch (KOPTE pte')))"
   and pte_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
@@ -138,7 +138,7 @@ lemma
   assumes pdes:
     "\<forall>x. (\<exists>pde. ksPSpace \<sigma> x = Some (KOArch (KOPDE pde))) \<longrightarrow>
          is_aligned x pd_bits \<longrightarrow>
-         (\<forall>y\<Colon>12 word. \<exists>pde'. ksPSpace \<sigma> (x + (ucast y << 2)) =
+         (\<forall>y::12 word. \<exists>pde'. ksPSpace \<sigma> (x + (ucast y << 2)) =
                              Some (KOArch (KOPDE pde')))"
   and pde_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
@@ -356,8 +356,8 @@ where
               Structures_A.thread_state.IdleThreadState"
 | "ThStateMap Structures_H.thread_state.BlockedOnReply =
               Structures_A.thread_state.BlockedOnReply"
-| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref dimin) =
-              Structures_A.thread_state.BlockedOnReceive oref dimin"
+| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref) =
+              Structures_A.thread_state.BlockedOnReceive oref"
 | "ThStateMap (Structures_H.thread_state.BlockedOnSend oref badge grant call) =
               Structures_A.thread_state.BlockedOnSend oref
                 \<lparr> sender_badge = badge,
@@ -537,7 +537,7 @@ shows
   apply (erule disjE)
    prefer 2
    apply (simp add: mask_def)
-  apply (subgoal_tac "obj_bits ko <= (31\<Colon>nat)", simp_all)
+  apply (subgoal_tac "obj_bits ko <= (31::nat)", simp_all)
   apply (simp add: mask_def unat_minus_one word_bits_conv)
   apply (cut_tac w=k and c="2 ^ obj_bits ko" and b="2^(32-obj_bits ko)"
               in less_le_mult_nat)
@@ -823,10 +823,10 @@ proof -
        apply (erule_tac x=offs in allE)
        apply (rename_tac pte')
        apply (case_tac pte', simp_all add: pte_relation_aligned_def)[1]
-        apply (clarsimp split: ARM_Structs_A.pte.splits)
+        apply (clarsimp split: Arch_Structs_A.pte.splits)
         apply (rule set_eqI, clarsimp)
         apply (case_tac x, simp_all)[1]
-       apply (clarsimp split: ARM_Structs_A.pte.splits)
+       apply (clarsimp split: Arch_Structs_A.pte.splits)
        apply (rule set_eqI, clarsimp)
        apply (case_tac x, simp_all)[1]
       apply (clarsimp simp add: pde_relation_def)
@@ -869,12 +869,12 @@ proof -
      apply (erule_tac x=offs in allE)
      apply (rename_tac pde')
      apply (case_tac pde', simp_all add: pde_relation_aligned_def)[1]
-        apply (clarsimp split: ARM_Structs_A.pde.splits)+
+        apply (clarsimp split: Arch_Structs_A.pde.splits)+
        apply (fastforce simp add: subset_eq)
-      apply (clarsimp split: ARM_Structs_A.pde.splits)
+      apply (clarsimp split: Arch_Structs_A.pde.splits)
       apply (rule set_eqI, clarsimp)
       apply (case_tac x, simp_all)[1]
-     apply (clarsimp split: ARM_Structs_A.pde.splits)
+     apply (clarsimp split: Arch_Structs_A.pde.splits)
      apply (rule set_eqI, clarsimp)
      apply (case_tac x, simp_all)[1]
     apply (clarsimp simp add: pde_relation_def)
@@ -927,7 +927,7 @@ shows
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        ARM_Structs_A.arch_kernel_obj.split_asm)
+                        Arch_Structs_A.arch_kernel_obj.split_asm)
   done
 
 text {* The following function can be used to reverse cte_map. *}
@@ -1125,7 +1125,7 @@ proof -
     apply (drule is_aligned_no_overflow'[simplified mask_2pm1[symmetric]])
     apply (cut_tac 'a=32 and xs=b in of_bl_length, simp add: word_bits_conv)
     apply (drule_tac k=16 in word_mult_less_mono1, simp+)
-    apply (subgoal_tac "(0x80\<Colon>word32) < mask 9")
+    apply (subgoal_tac "(0x80::word32) < mask 9")
      prefer 2
      apply (simp add: mask_def)
     apply (rule_tac word_random, simp+)

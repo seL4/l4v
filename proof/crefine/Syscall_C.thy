@@ -334,7 +334,7 @@ lemma decodeInvocation_ccorres:
                           from_bool_to_bool_and_1 word_size
                           order_le_less_trans[OF word_and_le1]
                           mask_eq_iff_w2p word_size ucast_ucast_mask
-                          isCap_simps
+                          isCap_simps mask_eq_ucast_eq
                           mask_eq_iff_w2p[THEN trans[OF eq_commute]])+
   done
 
@@ -1014,9 +1014,9 @@ lemma handleInvocation_ccorres:
     apply wp
    apply (clarsimp simp: Collect_const_mem)
    apply (simp add: Kernel_C.msgInfoRegister_def State_H.msgInfoRegister_def
-                    ARMMachineTypes.msgInfoRegister_def Kernel_C.R1_def
+                    MachineTypes.msgInfoRegister_def Kernel_C.R1_def
                     Kernel_C.capRegister_def State_H.capRegister_def
-                    ARMMachineTypes.capRegister_def Kernel_C.R0_def)
+                    MachineTypes.capRegister_def Kernel_C.R0_def)
    apply (clarsimp simp: cfault_rel_def option_to_ptr_def)
    apply (simp add: fault_cap_fault_lift is_cap_fault_def)
    apply (frule lookup_failure_rel_fault_lift, assumption)
@@ -1484,7 +1484,7 @@ lemma handleRecv_ccorres:
   apply (clarsimp simp add: sch_act_sane_def)
   apply (simp add: cap_get_tag_isCap[symmetric] del: rf_sr_upd_safe)
   apply (simp add: Kernel_C.capRegister_def State_H.capRegister_def ct_in_state'_def
-                   ARMMachineTypes.capRegister_def Kernel_C.R0_def
+                   MachineTypes.capRegister_def Kernel_C.R0_def
                    tcb_at_invs')
   apply (frule invs_valid_objs')
   apply (frule tcb_aligned'[OF tcb_at_invs'])
@@ -1625,14 +1625,171 @@ lemma ucast_eq_0[OF refl]:
   apply (drule inj_eq[where x=x and y=0], simp)
   done
 
+ 
+ lemma is_up_compose': 
+  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
+  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
+  shows
+  "\<lbrakk>is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> is_up (uc' \<circ> uc)"
+  unfolding is_up_def by (simp add: Word.target_size Word.source_size)
+
+ 
+ lemma is_up_compose: 
+  shows
+  "\<lbrakk>is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> is_up (uc' \<circ> uc)"
+  unfolding is_up_def by (simp add: Word.target_size Word.source_size)
+ 
+ lemma uint_is_up_compose: 
+  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
+  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
+  assumes "uc = ucast"
+  and "uc' = ucast"
+  and " uuc = uc' \<circ> uc"
+  shows
+  "\<lbrakk> is_up uc; is_up uc' \<rbrakk> \<Longrightarrow> uint (uuc b) = uint b"
+  apply (simp add: assms)
+  apply (frule is_up_compose)
+   apply (simp_all )
+  apply (simp only: Word.uint_up_ucast)
+ done
+
+ 
+ lemma uint_is_up_compose_pred: 
+  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
+  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
+  assumes "uc = ucast"
+  and "uc' = ucast"
+  and " uuc = uc' \<circ> uc"
+  shows
+  "\<lbrakk> is_up uc; is_up uc' \<rbrakk> \<Longrightarrow> P (uint (uuc b)) \<longleftrightarrow> P( uint b)"
+  apply (simp add: assms)
+  apply (frule is_up_compose)
+   apply (simp_all )
+  apply (simp only: Word.uint_up_ucast)
+ done
+ 
+ lemma is_down_up_sword: 
+  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) sword"
+  shows "\<lbrakk>uc = ucast; len_of TYPE('a) < len_of TYPE('b) \<rbrakk> \<Longrightarrow> is_up uc = (\<not> is_down uc)"
+  by (simp add: target_size source_size  is_up_def is_down_def )
+ 
+ lemma is_not_down_compose: 
+  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
+  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
+  shows
+  "\<lbrakk>uc = ucast; uc' = ucast; len_of TYPE('a) < len_of TYPE('c)\<rbrakk> \<Longrightarrow> \<not> is_down (uc' \<circ> uc)  "
+  unfolding is_down_def
+  by (simp add: Word.target_size Word.source_size)
+ 
+ 
+ 
+ 
+ lemma sint_ucast_uint: 
+  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
+  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
+  assumes "uc = ucast" and " uc' = ucast" and "uuc=uc' \<circ> uc " and "len_of TYPE('a) < len_of TYPE('c signed)"
+  shows
+  "\<lbrakk> is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> sint (uuc b) = uint b"
+  apply (simp add: assms)
+  apply (frule is_up_compose')
+   apply simp_all
+  apply (simp add: ucast_ucast_b )
+  apply (rule WordLemmaBucket.sint_ucast_eq_uint )
+  apply (insert assms)
+  apply (simp add: is_down_def target_size source_size )
+ done
+ 
+ lemma sint_ucast_uint_pred:
+  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
+  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
+  and uuc :: "'a word \<Rightarrow> 'c sword"
+  assumes "uc = ucast" and " uc' = ucast" and "uuc=uc' \<circ> uc " and "len_of TYPE('a) < len_of TYPE('c )"
+  shows "\<lbrakk>is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> P (uint b) \<longleftrightarrow> P (sint (uuc b))"
+  apply (simp add: assms )
+  apply (insert sint_ucast_uint[where uc=uc and uc'=uc' and uuc=uuc and b = b])
+  apply (simp add: assms)
+ done
+lemma sint_uucast_uint_uucast_pred:
+  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
+  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
+  assumes "uc = ucast" and " uc' = ucast" and "uuc=uc' \<circ> uc " and "len_of TYPE('a) < len_of TYPE('c )"
+  shows "\<lbrakk>is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> P (uint(uuc b)) \<longleftrightarrow> P (sint (uuc b))"
+  apply (simp add: assms )
+  apply (insert sint_ucast_uint[where uc=uc and uc'=uc' and uuc=uuc and b = b])
+  apply (insert uint_is_up_compose_pred[where uc=uc and uc'=uc' and uuc=uuc and b=b])
+  apply (simp add: assms uint_is_up_compose_pred)
+ done
+ 
+lemma scast_maxIRQ_is_less: 
+  fixes uc :: "irq \<Rightarrow> 16 word"
+  and uc' :: "16 word\<Rightarrow> 32 sword"
+  and b :: irq
+  shows
+  "(Kernel_C.maxIRQ) <s (ucast \<circ> (ucast :: irq \<Rightarrow> 16 word)) b \<Longrightarrow> scast Kernel_C.maxIRQ < b"
+  apply (simp add: maxIRQ_def word_sless_def word_sle_def, uint_arith, clarify,simp)
+  apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 32 sword) \<le> uint b"; (simp only: Kernel_C.maxIRQ_def)?)
+   apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 32 sword) \<noteq> uint b"; (simp only: Kernel_C.maxIRQ_def)?)
+    apply (simp )
+   apply (subst  uint_is_up_compose[where uc="(ucast :: irq \<Rightarrow> 16 word)" and uc' = "(ucast :: 16 word \<Rightarrow> 32 sword)",symmetric];
+         (simp add:  is_up_def target_size source_size )?)
+   apply fastforce
+  apply (subst sint_ucast_uint_pred[where uc="(ucast :: irq \<Rightarrow> 16 word)" and uc' = "(ucast :: 16 word \<Rightarrow> 32 sword)"];
+        (simp add:  is_up_def target_size source_size  )?)
+  apply fastforce
+done
+
+ lemma validIRQcastingLess: "Kernel_C.maxIRQ <s (ucast((ucast (b :: irq))::word16)) \<Longrightarrow> Platform.maxIRQ < b" 
+ by (simp add: Platform_maxIRQ scast_maxIRQ_is_less is_up_def target_size source_size)
+ 
+
+  
+  
+lemma scast_maxIRQ_is_not_less: "(\<not> (Kernel_C.maxIRQ) <s (ucast \<circ> (ucast :: irq \<Rightarrow> 16 word)) b)  \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < b)"
+  apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 32 sword) \<ge> sint (ucast (ucast b))";
+        (simp only: Kernel_C.maxIRQ_def  word_sless_def word_sle_def )?)
+   apply (simp add: maxIRQ_def word_sless_def word_sle_def, uint_arith, clarify,simp)
+   apply (subst (asm)  sint_ucast_uint[where b=b and 'c = 32  and 'b = 16 and uc=ucast and uc' = ucast and uuc = "ucast \<circ> ucast" , simplified];
+         (simp add: is_up_def target_size source_size)?)
+   apply (subst (asm) uint_is_up_compose[where 'b = 16  and uuc="ucast \<circ> ucast", simplified];
+        (simp add: is_up_def target_size source_size)?)
+  apply (simp add: maxIRQ_def word_sless_def word_sle_def, uint_arith, clarify,simp)
+  apply (subst (asm) (2)  sint_ucast_uint_pred[where 'a = 10 and 'b = 16 and 'c = 32 and uuc = "ucast \<circ> ucast", simplified,symmetric ];
+        ((simp add:  is_up_def target_size source_size)?))
+  apply (subst   sint_ucast_uint_pred[where 'a = 10 and 'b = 16 and 'c = 32 and uuc = "ucast \<circ> ucast", simplified,symmetric ];
+        ((simp add:  is_up_def target_size source_size)?))
+  apply (subst (asm) (2) uint_is_up_compose[where 'b = 16  and uuc="ucast \<circ> ucast", simplified];
+        (simp add: is_up_def target_size source_size)?)
+  apply (uint_arith)
+done
+ 
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc 
-           (invs' and K (irq \<le> ucast maxIRQ))
+           (invs')
            (UNIV \<inter> \<lbrace>\<acute>irq = ucast irq\<rbrace>)
            []
            (handleInterrupt irq) 
-           (Call handleInterrupt_'proc)" 
+           (Call handleInterrupt_'proc)"
   apply (cinit lift: irq_' cong: call_ignore_cong)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (simp  add: Platform_maxIRQ del: Collect_const)
+    apply (drule scast_maxIRQ_is_less[simplified])
+    apply (simp del: Collect_const)
+    apply (rule ccorres_rhs_assoc)+
+    apply (simp del: Collect_const)
+    apply (subst doMachineOp_bind)
+      apply (rule maskInterrupt_empty_fail)
+     apply (rule ackInterrupt_empty_fail)
+    apply (ctac add: maskInterrupt_ccorres[unfolded dc_def])
+      apply (subst bind_return_unit[where f="doMachineOp (ackInterrupt irq)"])
+      apply (ctac add: ackInterrupt_ccorres[unfolded dc_def])
+        apply (rule ccorres_split_throws)
+         apply (rule ccorres_return_void_C[unfolded dc_def])
+        apply vcg
+       apply wp
+      apply (vcg exspec=ackInterrupt_modifies)
+     apply wp
+    apply (vcg exspec=maskInterrupt_modifies)
+   apply (simp add: scast_maxIRQ_is_not_less Platform_maxIRQ del: Collect_const)
    apply (rule ccorres_pre_getIRQState)
    apply wpc
      apply simp
@@ -1644,7 +1801,8 @@ lemma handleInterrupt_ccorres:
     apply csymbr
     apply (rule getIRQSlot_ccorres3)
     apply (rule ccorres_getSlotCap_cte_at)
-    apply (rule_tac P="cte_at' rva" in ccorres_cross_over_guard)
+    apply (rule_tac P="cte_at' rv" in ccorres_cross_over_guard)
+    apply (rule ptr_add_assertion_irq_guard[unfolded dc_def])
     apply (rule ccorres_move_array_assertion_irq ccorres_move_c_guard_cte)+
     apply ctac
       apply csymbr
@@ -1668,8 +1826,7 @@ lemma handleInterrupt_ccorres:
        apply (simp del: Collect_const)
        apply (rule ccorres_cond_true_seq)
        apply (rule ccorres_rhs_assoc)+
-       apply csymbr
-       apply csymbr
+       apply csymbr+
        apply (rule ccorres_cond_false_seq)
        apply simp
        apply (ctac (no_vcg) add: maskInterrupt_ccorres)
@@ -1677,16 +1834,15 @@ lemma handleInterrupt_ccorres:
        apply wp
       apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0 \<and> cap_get_tag cap \<noteq> scast cap_notification_cap}" in ccorres_inst)
       apply (clarsimp simp: isCap_simps simp del: Collect_const)
-      apply (case_tac rvb, simp_all del: Collect_const)[1]
-                prefer 3
-                apply metis
-               apply ((rule ccorres_guard_imp2,
-                       rule ccorres_cond_false_seq, simp, 
+      apply (case_tac rva, simp_all del: Collect_const)[1]
+                 prefer 3
+                 apply metis
+                apply ((rule ccorres_guard_imp2,
+                       rule ccorres_cond_false_seq, simp,
                        rule ccorres_cond_false_seq, simp,
                        ctac (no_vcg) add: maskInterrupt_ccorres,
                        ctac (no_vcg) add: ackInterrupt_ccorres [unfolded dc_def],
                        wp, simp)+)
-     apply simp
      apply (wp getSlotCap_wp)
     apply simp
     apply vcg
@@ -1698,29 +1854,34 @@ lemma handleInterrupt_ccorres:
    apply (rule ccorres_rhs_assoc)+
    apply (ctac (no_vcg) add: timerTick_ccorres)
     apply (ctac (no_vcg) add: resetTimer_ccorres)
-     apply (ctac add: ackInterrupt_ccorres)
+     apply (ctac add: ackInterrupt_ccorres )
     apply wp
+  apply (simp add: sint_ucast_eq_uint is_down uint_up_ucast is_up )
+  apply (clarsimp simp: word_sless_alt word_less_alt word_le_def maxIRQ_def uint_up_ucast is_up_def
+        source_size_def target_size_def word_size
+        sint_ucast_eq_uint is_down is_up word_0_sle_from_less)
   apply (rule conjI)
-   apply (clarsimp simp: cte_wp_at_ctes_of)
-   apply (auto simp: word_less_alt word_le_def maxIRQ_def uint_up_ucast is_up_def
-                     source_size_def target_size_def word_size
-              intro: word_0_sle_from_less sless_positive)[1]
-  apply (simp add: if_1_0_0 Collect_const_mem)
+   apply (clarsimp simp: cte_wp_at_ctes_of )
+  apply (clarsimp simp add: if_1_0_0 Collect_const_mem )
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
-                        cte_wp_at_ctes_of)
-  apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-  apply (clarsimp simp: typ_heap_simps')
-  apply (simp add: cap_get_tag_isCap)
-  apply (cut_tac x=irq in unat_lt2p)
-  apply (simp add: ucast_eq_0 is_up_def source_size_def
-                   target_size_def word_size unat_gt_0
-      | subst array_assertion_abs_irq[rule_format, OF conjI])+
-  apply (clarsimp simp: isCap_simps)
-  apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  apply (frule cap_get_tag_to_H, assumption)
-  apply (clarsimp simp: to_bool_def)
+        cte_wp_at_ctes_of ucast_ucast_b is_up)
+  apply (intro conjI impI)
+     apply clarsimp
+     apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+     apply (clarsimp simp: typ_heap_simps')
+     apply (simp add: cap_get_tag_isCap)
+     apply (clarsimp simp: isCap_simps)
+     apply (frule cap_get_tag_isCap_unfolded_H_cap)
+     apply (frule cap_get_tag_to_H, assumption)
+     apply (clarsimp simp: to_bool_def)
+    apply (cut_tac un_ui_le[where b = 159 and a = irq,
+          simplified word_size])
+    apply (simp add: ucast_eq_0 is_up_def source_size_def
+               target_size_def word_size unat_gt_0
+               | subst array_assertion_abs_irq[rule_format, OF conjI])+
+   apply (erule(1) rf_sr_cte_at_valid[OF ctes_of_cte_at])
+  apply (clarsimp simp:nat_le_iff)
   done
-
 end
 end
 

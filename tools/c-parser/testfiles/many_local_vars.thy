@@ -10,7 +10,7 @@
 
 theory many_local_vars
 imports
-  "../../../spec/machine/ARMMachineTypes"
+  "../../../spec/machine/ARM/MachineTypes"
   "../CTranslation"
 begin
 

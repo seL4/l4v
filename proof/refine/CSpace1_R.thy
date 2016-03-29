@@ -1853,9 +1853,9 @@ lemma cte_map_inj:
   apply (rule notE[OF neq])
   apply (insert cte_at_length_limit [OF c1 vo])
   apply (simp add: shiftl_t2n[where n=4, simplified, simplified mult.commute, symmetric]
-                   word_bits_def cte_level_bits_def Pair_fst_snd_eq)
+                   word_bits_def cte_level_bits_def prod_eq_iff)
   apply (insert cte_at_cref_len[where p="fst p" and c="snd p" and c'="snd p'", simplified, OF c1])
-  apply (simp add: c2 Pair_fst_snd_eq)
+  apply (simp add: c2 prod_eqI)
   apply (subst rev_is_rev_conv[symmetric])
   apply (rule nth_equalityI)
    apply simp
@@ -1902,7 +1902,7 @@ lemma other_obj_relation_KOCTE[simp]:
   "\<not> other_obj_relation ko (KOCTE cte)"
   by (simp add: other_obj_relation_def
          split: Structures_A.kernel_object.splits
-                ARM_Structs_A.arch_kernel_obj.splits)
+                Arch_Structs_A.arch_kernel_obj.splits)
 
 lemma cte_map_pulls_tcb_to_abstract:
   "\<lbrakk> y = cte_map z; pspace_relation (kheap s) (ksPSpace s');
@@ -1915,7 +1915,7 @@ lemma cte_map_pulls_tcb_to_abstract:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        ARM_Structs_A.arch_kernel_obj.split_asm)
+                        Arch_Structs_A.arch_kernel_obj.split_asm)
   apply (drule tcb_cases_related2)
   apply clarsimp
   apply (frule(1) cte_wp_at_tcbI [OF _ _ TrueI, where t="(a, b)" for a b, simplified])
@@ -2058,7 +2058,7 @@ lemma set_cap_not_quite_corres_prequel:
      apply (rule ext, clarsimp simp add: domI p)
      apply (drule cte_map_inj_eq [OF _ _ cr(6) cr(3-5)])
       apply (simp add: cte_at_cases domI)
-     apply (simp add: Pair_fst_snd_eq)
+     apply (simp add: prod_eq_iff)
     apply (insert p)[1]
     apply (clarsimp split: option.split Structures_A.kernel_object.split
                    intro!: ext)
@@ -2194,7 +2194,7 @@ lemma pspace_relation_cte_wp_atI':
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (simp add: other_obj_relation_def
             split: Structures_A.kernel_object.split_asm
-                   ARM_Structs_A.arch_kernel_obj.split_asm)
+                   Arch_Structs_A.arch_kernel_obj.split_asm)
   apply (subgoal_tac "n = x - y", clarsimp)
    apply (drule tcb_cases_related2, clarsimp)
    apply (intro exI, rule conjI)
@@ -2925,7 +2925,7 @@ lemma updateMDB_pspace_relation:
    apply (rule pspace_dom_relatedE, assumption+)
    apply (rule obj_relation_cutsE, assumption+, simp_all)[1]
    apply (clarsimp split: Structures_A.kernel_object.split_asm
-                          ARM_Structs_A.arch_kernel_obj.split_asm
+                          Arch_Structs_A.arch_kernel_obj.split_asm
                     simp: other_obj_relation_def)
    apply (frule(1) tcb_cte_cases_aligned_helpers(1))
    apply (frule(1) tcb_cte_cases_aligned_helpers(2))
@@ -3655,8 +3655,8 @@ lemma freeIndex_update_not_untyped[simp]: "\<not>isUntypedCap c \<Longrightarrow
    by (case_tac c,simp_all add:freeIndex_update_def isCap_simps)
 
 locale mdb_insert =
-  mdb_ptr_src: mdb_ptr m _ _ src src_cap src_node +
-  mdb_ptr_dest: mdb_ptr m _ _ dest dest_cap dest_node
+  mdb_ptr_src?: mdb_ptr m _ _ src src_cap src_node +
+  mdb_ptr_dest?: mdb_ptr m _ _ dest dest_cap dest_node
   for m src src_cap src_node dest dest_cap dest_node +
 
   fixes c' :: capability
@@ -3693,6 +3693,7 @@ begin
 
 lemmas src = mdb_ptr_src.m_p
 lemmas dest = mdb_ptr_dest.m_p
+
 
 lemma no_0_n [intro!]: "no_0 n" by (auto simp: n_def)
 lemmas n_0_simps [iff] = no_0_simps [OF no_0_n]
@@ -4343,8 +4344,8 @@ lemma parentOf_preserve_oneway:
     apply (drule_tac x = x in misc)
       apply assumption
     apply (clarsimp simp:isMDBParentOf_def split:cte.splits split_if_asm)
-    apply (clarsimp simp: sameRegionAs_def isCap_simps split:if_splits | rule conjI)+
-done
+    by (clarsimp simp: sameRegionAs_def isCap_simps split:if_splits | rule conjI)+
+
 
 lemma parentOf_preserve:
   assumes dom:"\<And>x. (x \<in> dom m) = (x \<in> dom m')"
@@ -4373,6 +4374,7 @@ lemma updateUntypedCap_descendants_of:
            (\<lambda>_. (capFreeIndex_update (\<lambda>_. idx) (cteCap cte))) cte)) =
        descendants_of' slot m"
   apply (rule set_eqI)
+
   apply (clarsimp simp:descendants_of'_def subtree_def)
    apply (rule_tac x = x in fun_cong)
    apply (rule_tac f = lfp in arg_cong)
@@ -6541,8 +6543,8 @@ lemma weak_derived_sym':
   by (clarsimp simp: weak_derived'_def isCap_simps)
 
 locale mdb_swap =
-  mdb_ptr_src: mdb_ptr m _ _ src src_cap src_node +
-  mdb_ptr_dest: mdb_ptr m _ _ dest dest_cap dest_node
+  mdb_ptr_src?: mdb_ptr m _ _ src src_cap src_node +
+  mdb_ptr_dest?: mdb_ptr m _ _ dest dest_cap dest_node
   for m src src_cap src_node dest dest_cap dest_node +
 
   assumes neq: "src \<noteq> dest"
@@ -7277,6 +7279,10 @@ lemma next_slot_eq:
   "\<lbrakk>next_slot p t' m' = x; t' = t; m' = m\<rbrakk> \<Longrightarrow> next_slot p t m = x"
   by simp
 
+lemma inj_on_image_set_diff15 : (* for compatibility of assumptions *)
+  "\<lbrakk>inj_on f C; A \<subseteq> C; B \<subseteq> C\<rbrakk> \<Longrightarrow> f ` (A - B) = f ` A - f ` B"
+by (rule inj_on_image_set_diff; auto)
+
 lemma cap_swap_corres:
   assumes srcdst: "src' = cte_map src" "dest' = cte_map dest"
   assumes scr: "cap_relation scap scap'"
@@ -7524,7 +7530,7 @@ lemma cap_swap_corres:
    apply (frule_tac p="s_d_swap c src dest" in inj_on_descendants_cte_map, assumption+)
    apply (rule conjI, clarsimp)
     apply (rule conjI, clarsimp)
-     apply (subst inj_on_image_set_diff, assumption)
+     apply (subst inj_on_image_set_diff15, assumption)
        apply (rule subset_refl)
       apply simp
      apply simp
@@ -7538,7 +7544,7 @@ lemma cap_swap_corres:
     apply (subst insert_minus_eq, assumption)
     apply clarsimp
     apply (subst insert_minus_eq [where x="cte_map dest"], assumption)
-    apply (subst inj_on_image_set_diff)
+    apply (subst inj_on_image_set_diff15)
        apply (erule (3) inj_on_descendants_cte_map)
       apply (rule subset_refl)
      apply clarsimp
@@ -7552,7 +7558,7 @@ lemma cap_swap_corres:
         apply assumption+
      apply simp
     apply clarsimp
-    apply (subst inj_on_image_set_diff)
+    apply (subst inj_on_image_set_diff15)
        apply (erule (3) inj_on_descendants_cte_map)
       apply (rule subset_refl)
      apply clarsimp
@@ -7696,20 +7702,19 @@ lemma cap_swap_corres:
     apply(erule cte_wp_at_weakenE, simp)
    apply(rule conjI)
     apply(rule cte_map_inj)
-         apply(simp_all)[6]
+         apply simp_all[6]
     apply(erule cte_wp_at_weakenE, simp)
    apply(rule conjI)
     apply(frule mdb_swap.m_exists)
      apply(simp)
     apply(clarsimp)
      apply(frule_tac cte="CTE src_cap src_node" in valid_mdbD2')
-      apply(clarsimp)
+      subgoal by (clarsimp)
      apply(simp add: valid_mdb'_def)
     apply(clarsimp)
     apply(drule cte_map_inj_eq)
          apply(rule cte_at_next_slot')
-            apply(simp_all)[4]
-        apply(simp_all)[5]
+            apply(simp_all)[9]
     apply(erule cte_wp_at_weakenE, simp)
    apply(frule mdb_swap.m_exists)
     apply(simp)
@@ -7720,8 +7725,7 @@ lemma cap_swap_corres:
    apply(clarsimp)
    apply(drule cte_map_inj_eq)
          apply(rule cte_at_next_slot')
-           apply(simp_all)[4]
-        apply(simp_all)[5]
+           apply(simp_all)[9]
     apply(erule cte_wp_at_weakenE, simp)
   apply(rule cte_at_next_slot)
      apply(simp_all)

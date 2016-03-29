@@ -300,7 +300,7 @@ lemma sep_drule_side_condition_lemma:
   apply (sep_solve)
   done
 
-schematic_lemma "(P \<and>* ?A) s \<Longrightarrow> (A \<and>* B \<and>* P) s"
+schematic_goal "(P \<and>* ?A) s \<Longrightarrow> (A \<and>* B \<and>* P) s"
   apply (sep_solve)
   done
 

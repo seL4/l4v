@@ -1,5 +1,3 @@
-(* @TAG(OTHER_LGPL) *)
-
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
@@ -92,7 +90,7 @@ text {*
  The assertions of the Hoare tuple are
  ordinary Isabelle sets. As we usually want to refer to the state space
  in the assertions, we provide special brackets for them. They can be written 
- as {\verb+{| |}+} in ASCII or @{text "\<lbrace> \<rbrace>"} with X-symbols. Internally
+ as {\verb+{| |}+} in ASCII or @{text "\<lbrace> \<rbrace>"} with symbols. Internally
  marking variables has two effects. First of all we refer to the implicit
  state and secondary we get rid of the suffix @{text "_'"}.
  So the assertion @{term "{|\<acute>N = 5|}"} internally gets expanded to 
@@ -1076,7 +1074,7 @@ definition "sz = (2::nat)"
 text {* Restrict locale @{text hoare} to the required type. *}
 
 locale hoare_ex =
-  hoare \<Gamma> for \<Gamma> :: "'c ~=> (('a globals_list_alloc_scheme, 'b) list_vars'_scheme, 'c, 'd) com"
+  hoare \<Gamma> for \<Gamma> :: "'c \<rightharpoonup> (('a globals_list_alloc_scheme, 'b) list_vars'_scheme, 'c, 'd) com"
 
 lemma (in hoare_ex)
   "\<Gamma>\<turnstile> \<lbrace>\<acute>i = 0 \<and> \<acute>first = Null \<and> n*sz \<le> \<acute>free\<rbrace>
@@ -1175,7 +1173,7 @@ access unallocated memory, we have to add some guards.
 *}
 
 locale hoare_ex_guard =
-  hoare \<Gamma> for \<Gamma> :: "'c ~=> (('a globals_list_alloc_scheme, 'b) list_vars'_scheme, 'c, bool) com"
+  hoare \<Gamma> for \<Gamma> :: "'c \<rightharpoonup> (('a globals_list_alloc_scheme, 'b) list_vars'_scheme, 'c, bool) com"
 
 lemma 
   (in hoare_ex_guard)

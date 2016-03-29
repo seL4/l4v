@@ -447,7 +447,7 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s; valid_etcbs s\<
                 clarsimp simp: unat_map_def transform_page_table_contents_def cap_counts_def
                           transform_page_directory_contents_def transform_asid_pool_contents_def
                           transform_pte_def transform_pde_def transform_asid_pool_entry_def
-                    split:option.splits if_splits ARM_Structs_A.pte.splits ARM_Structs_A.pde.splits
+                    split:option.splits if_splits Arch_Structs_A.pte.splits Arch_Structs_A.pde.splits
                     dest!:assms)+)
   done
 
@@ -1440,7 +1440,7 @@ lemma fast_finalise_not_idle_thread[wp]:
 lemma block_lift:
   "\<lbrakk>kheap b word = Some (TCB tcb_type); ekheap b word = Some etcb; transform_tcb (machine_state b) word tcb_type etcb = Tcb cdl_tcb_type\<rbrakk>
   \<Longrightarrow> is_thread_blocked_on_endpoint cdl_tcb_type ep = (case tcb_state tcb_type of
-      Structures_A.thread_state.BlockedOnReceive p _ \<Rightarrow> ep = p
+      Structures_A.thread_state.BlockedOnReceive p \<Rightarrow> ep = p
     | Structures_A.thread_state.BlockedOnSend p _ \<Rightarrow> ep = p
     | Structures_A.thread_state.BlockedOnNotification p \<Rightarrow> ep = p
     | _ \<Rightarrow> False)"
@@ -1472,8 +1472,8 @@ where "none_is_sending_ep epptr s \<equiv> (ep_waiting_set_send epptr s) = {}"
 
 definition ep_waiting_set_recv :: "obj_ref\<Rightarrow> 'z::state_ext state\<Rightarrow>obj_ref set"
 where "ep_waiting_set_recv epptr s \<equiv>
-   {tcb. \<exists>t diminish. ((kheap s tcb) = Some (TCB t))
-      \<and> ((tcb_state t) = Structures_A.thread_state.BlockedOnReceive epptr diminish)}"
+   {tcb. \<exists>t. ((kheap s tcb) = Some (TCB t))
+      \<and> ((tcb_state t) = Structures_A.thread_state.BlockedOnReceive epptr)}"
 
 definition none_is_receiving_ep:: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where "none_is_receiving_ep epptr s \<equiv> (ep_waiting_set_recv epptr s) = {}"
@@ -1568,7 +1568,7 @@ lemma ntfn_bound_set_lift:
                          transform_tcb_def restrict_map_Some_iff tcb_slots
                   split: Structures_A.kernel_object.splits option.splits
                          Structures_A.thread_state.splits 
-                         ARM_Structs_A.arch_kernel_obj.splits| drule(1) valid_etcbs_tcb_etcb)+
+                         Arch_Structs_A.arch_kernel_obj.splits| drule(1) valid_etcbs_tcb_etcb)+
   apply (clarsimp simp: transform_def transform_object_def
                         transform_tcb_def transform_objects_def tcb_slots valid_idle_def obj_at_def
                         infer_tcb_bound_notification_def map_add_def restrict_map_Some_iff pred_tcb_at_def
@@ -2161,7 +2161,7 @@ lemma reschedule_required_dcorres: "dcorres dc P P' (return ()) reschedule_requi
   apply (clarsimp simp: reschedule_required_def)
   apply (rule dcorres_symb_exec_r)
     apply (rule dcorres_symb_exec_r)
-      apply (clarsimp simp: set_scheduler_action_def switch_thread_def modify_def bind_def return_def get_def put_def corres_underlying_def)
+      apply (clarsimp simp: set_scheduler_action_def (*switch_thread_def*) modify_def bind_def return_def get_def put_def corres_underlying_def)
      apply (case_tac "\<exists>t. rv = switch_thread t")
       apply (clarsimp | wp)+
     apply (clarsimp split: Deterministic_A.scheduler_action.splits | rule tcb_sched_action_transform | wp )+

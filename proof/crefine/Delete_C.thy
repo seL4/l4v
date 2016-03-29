@@ -405,9 +405,8 @@ lemma ccorres_cutMon_locateSlotCap_Zombie:
   apply (drule(1) rf_sr_gsCNodes_array_assertion)
   apply (erule notE, erule array_assertion_shrink_right)
   apply (frule valid_Zombie_number_word_bits, simp+)
-  apply (simp add: unat_arith_simps unat_of_nat word_bits_def
+  by (simp add: unat_arith_simps unat_of_nat word_bits_def
                    valid_cap_simps')
-  done
 
 lemma reduceZombie_ccorres1:
   assumes fs_cc:
@@ -584,7 +583,7 @@ lemma reduceZombie_ccorres1:
                  apply clarsimp
                  apply (erule(2) zombie_rf_sr_helperE)
                   apply simp
-                 apply clarsimp
+                 subgoal by clarsimp
                 apply ceqv
                apply csymbr
                apply (simp only: if_1_0_0 simp_thms)
@@ -616,12 +615,12 @@ lemma reduceZombie_ccorres1:
                     apply (rule ssubst, rule unat_minus_one)
                      apply (erule of_nat_neq_0)
                      apply (drule(1) valid_cap_capZombieNumber_unats)
-                     apply (simp add: unats_def)
+                     subgoal by (simp add: unats_def)
                     apply (rule conjI)
                      apply (clarsimp simp: isCap_simps valid_cap'_def)
                      apply (erule order_trans[rotated])
                      apply (rule order_trans, rule diff_le_self)
-                     apply (simp add: unat_of_nat)
+                     subgoal by (simp add: unat_of_nat)
                     apply clarsimp
                     apply (erule_tac P="\<lambda>cap. ccap_relation cap cap'" for cap' in rsubst)
                     apply (clarsimp simp: isCap_simps capAligned_def)
@@ -688,7 +687,7 @@ lemma induction_setup_helper:
         \<Longrightarrow> Q s slot exposed"
   by auto
 
-schematic_lemma finaliseSlot_ccorres_induction_helper:
+schematic_goal finaliseSlot_ccorres_induction_helper:
   "\<And>s slot exposed. ?P s slot exposed
         \<Longrightarrow> ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
      (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))
@@ -719,9 +718,8 @@ lemma finaliseSlot_ccorres:
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool exposed}) []
      (cutMon (op = s) (finaliseSlot slot exposed)) (Call finaliseSlot_'proc)"
   apply (rule finaliseSlot_ccorres_induction_helper)
-proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and ?a2.0=s])
-  case (1 slot' exp s')
-  show ?case
+  apply (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and ?a2.0=s])
+  subgoal premises hyps for slot' exp s'
     apply (subst finaliseSlot'.simps)
     apply (fold cteDelete_def[unfolded finaliseSlot_def])
     apply (fold reduceZombie_def)
@@ -858,7 +856,7 @@ proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and 
                 apply (ctac (no_vcg, no_simp) add: reduceZombie_ccorres1)
                     apply (rule ccorres_guard_imp2)
                      apply (rule finaliseSlot_ccorres_induction_helper)
-                     apply (rule "1.hyps"(1), (simp add: in_monad | rule conjI refl)+)[1]
+                     apply (rule hyps(1), (simp add: in_monad | rule conjI refl)+)[1]
                     apply simp
                    apply assumption
                   apply (rule ccorres_cutMon)
@@ -872,7 +870,7 @@ proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and 
                                       Collect_False ccorres_seq_cond_empty
                                       ccorres_seq_skip)
                     apply (rule rsubst[where P="ccorres r xf' P P' hs a" for r xf' P P' hs a])
-                    apply (rule "1.hyps"[folded reduceZombie_def[unfolded cteDelete_def finaliseSlot_def],
+                    apply (rule hyps[folded reduceZombie_def[unfolded cteDelete_def finaliseSlot_def],
                                          unfolded split_def, unfolded K_def],
                            (simp add: in_monad)+)
                     apply (simp add: from_bool_0)
@@ -916,8 +914,8 @@ proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and 
                        simp: valid_cap'_def maxIRQ_def Platform.maxIRQ_def
                              unat_ucast word_le_nat_alt)[1]
          apply (clarsimp dest!: isCapDs)
-         apply (auto dest!: valid_capAligned ctes_of_valid'
-                      simp: isCap_simps final_matters'_def o_def)[1]
+         subgoal by (auto dest!: valid_capAligned ctes_of_valid'
+                      simp: isCap_simps final_matters'_def o_def)
         apply clarsimp
         apply (frule valid_globals_cte_wpD'[rotated], clarsimp)
         apply (clarsimp simp: cte_wp_at_ctes_of false_def from_bool_def)
@@ -935,7 +933,7 @@ proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and 
     apply (clarsimp simp: typ_heap_simps cap_get_tag_isCap
                    dest!: ccte_relation_ccap_relation)
     done
-qed
+  done
 
 lemma ccorres_use_cutMon:
   "(\<And>s. ccorres rvr xf P P' hs (cutMon (op = s) f) g)
@@ -958,11 +956,10 @@ lemma cteRevoke_ccorres1:
    apply (rule ccorres_inst[where P="invs' and sch_act_simple" and P'=UNIV])
    prefer 2
    apply simp   
-proof (induct rule: cteRevoke.induct[where ?a0.0=slot and ?a1.0=s])
-  case (1 slot' s')
-  show ?case
+  apply (induct rule: cteRevoke.induct[where ?a0.0=slot and ?a1.0=s])
+  subgoal premises hyps for slot' s'
     apply (rule ccorres_guard_imp2)
-     apply (subst cteRevoke.simps)
+     apply (subst cteRevoke.simps[abs_def])
      apply (simp add: liftE_bindE cutMon_walk_bind
                  del: Collect_const)
      apply (rule ccorres_drop_cutMon_bind)
@@ -1029,7 +1026,7 @@ proof (induct rule: cteRevoke.induct[where ?a0.0=slot and ?a1.0=s])
                                                  dc_def[symmetric])
              apply (rule ccorres_cutMon)
              apply (rule rsubst[where P="ccorres r xf' P P' hs a" for r xf' P P' hs a])
-              apply (rule "1.hyps"[unfolded K_def],
+              apply (rule hyps[unfolded K_def],
                      (fastforce simp: in_monad)+)[1]
              apply simp
             apply (simp, rule ccorres_split_throws)
@@ -1057,7 +1054,7 @@ proof (induct rule: cteRevoke.induct[where ?a0.0=slot and ?a1.0=s])
     apply (case_tac cte, clarsimp)
     apply (fastforce simp: nullMDBNode_def)
     done
-qed
+  done
 
 lemmas cteRevoke_ccorres = ccorres_use_cutMon [OF cteRevoke_ccorres1]
 

@@ -88,7 +88,7 @@ declare curry1_def[simp] curry2_def[simp]
 definition
   "split1 \<equiv> id"
 definition
-  "split2 \<equiv> split"
+  "split2 \<equiv> case_prod"
 definition
   "split3 f \<equiv> \<lambda>(a, b, c). f a b c"
 definition
@@ -500,7 +500,7 @@ where
     else (\<lambda>(ys, zs). (x # ys, zs)) (break f xs))"
 
 definition
- "uncurry \<equiv> split"
+ "uncurry \<equiv> case_prod"
 
 definition
   sum :: "'a list \<Rightarrow> 'a::{plus,zero}" where

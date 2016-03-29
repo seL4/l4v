@@ -381,7 +381,7 @@ lemma none_some_map: "None \<notin> S \<Longrightarrow> Some x \<in> S = (x \<in
   apply (rule iffI)
    apply force
   apply (subst in_these_eq[symmetric])
-  apply (clarsimp simp:these_def)
+  apply (clarsimp simp:Option.these_def)
   apply (case_tac "\<exists>y. xa = Some y")
    by clarsimp+
 

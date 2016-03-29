@@ -1633,7 +1633,7 @@ lemmas of_nat_shift_distinct_helper32 = of_nat_shift_distinct_helper[where 'a=32
 
 
 lemma ptr_add_distinct_helper:
-  "\<lbrakk> ptr_add p (x * 2 ^ n) = ptr_add p (y * 2 ^ n); x \<noteq> y;
+  "\<lbrakk> ptr_add (p :: word32) (x * 2 ^ n) = ptr_add p (y * 2 ^ n); x \<noteq> y;
      x < bnd; y < bnd; n < word_bits;
      bnd \<le> 2 ^ (word_bits - n) \<rbrakk>
      \<Longrightarrow> P"
@@ -1853,7 +1853,7 @@ proof -
     apply (simp add: init_arch_objects_def create_word_objects_def
                   pres reserve_region_def
            split: Structures_A.apiobject_type.split
-                  ARM_Structs_A.aobject_type.split)
+                  Arch_Structs_A.aobject_type.split)
     apply clarsimp
     apply (rule hoare_pre)
      apply (wp mapM_x_wp' copy_global_mappings_hoare_lift wp)

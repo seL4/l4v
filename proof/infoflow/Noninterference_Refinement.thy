@@ -402,7 +402,7 @@ context valid_initial_state_C begin
 
 lemma xnonleakage_C:
   "abstract_to_C.conc.xNonleakage_gen"
-  apply(rule xNonleakage_gen_refinement_closed)
+  apply(rule abstract_to_C.xNonleakage_gen_refinement_closed)
   apply(rule xnonleakage)
   done
 

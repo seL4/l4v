@@ -22,5 +22,10 @@ invokeIRQControl :: "ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> unit 
 where
 "invokeIRQControl arg1 \<equiv> haskell_fail []"
 
+definition
+checkIRQ :: "machine_word \<Rightarrow> ( syscall_error , unit ) kernel_f"
+where
+"checkIRQ irq\<equiv> rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)"
+
 
 end

@@ -476,10 +476,12 @@ fun doit args =
         if !parse_only then ()
         else
           let
-            val ((ast', inits), cse) = ProgramAnalysis.process_decls
-                                           {anon_vars = false, owners = [],
-                                            allow_underscore_idents = false}
-                                           (SyntaxTransforms.remove_typedefs ast)
+            val ((ast', inits), cse) =
+                ProgramAnalysis.process_decls
+                  {anon_vars = false, owners = [],
+                   munge_info_fname = NONE,
+                   allow_underscore_idents = false}
+                  (SyntaxTransforms.remove_typedefs ast)
             val _ = filename := fname
             fun do_analyses alist =
                 case alist of

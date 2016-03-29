@@ -1,5 +1,3 @@
-(* @TAG(OTHER_LGPL) *)
-
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
@@ -52,7 +50,7 @@ lemma Let'_unfold [vcg_simp]: "Let' x f = f x"
   by (simp add: Let'_def Let_def)
   
 lemma Let'_split_conv [vcg_simp]: 
-  "(Let' x  (\<lambda>p. (split (f p) (g p)))) = 
+  "(Let' x  (\<lambda>p. (case_prod (f p) (g p)))) = 
    (Let' x  (\<lambda>p. (f p) (fst (g p)) (snd (g p))))"
   by (simp add: split_def)
 

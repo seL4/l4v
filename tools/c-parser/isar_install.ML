@@ -62,6 +62,14 @@ in
   cpp_path_config
 end
 
+val munge_info_fname = let
+  val (mifname_config, mifname_setup) = 
+      Attrib.config_string (Binding.name "munge_info_fname") (K "")
+in
+  Context.>>(Context.map_theory mifname_setup);
+  mifname_config
+end
+
 val report_cpp_errors = let
   val (report_cpp_errors_config, report_cpp_errors_setup) =
       Attrib.config_int (Binding.name "report_cpp_errors") (K 10)
@@ -289,10 +297,16 @@ fun install_C_file0 (((((memsafe),ctyps),cdefs),s),statetylist_opt) thy = let
       in
         List.mapPartial getowner ast
       end
+  val mifname = case Config.get_global thy munge_info_fname of
+                  "" => NONE
+                | s => SOME s
+              
   val ((ast, _ (* init_stmts *)), cse) =
       process_decls {anon_vars=anon_vars,owners = owners,
-                     allow_underscore_idents = uscore_idents}
+                     allow_underscore_idents = uscore_idents,
+                     munge_info_fname = mifname}
                     ast
+  val () = export_mungedb cse
   val thy = store_csenv (s, cse) thy
 
   val _ = print_addressed_vars cse
@@ -437,6 +451,7 @@ fun install_C_types s thy = let
       process_decls {
         anon_vars = Config.get_global thy use_anon_vars,
         allow_underscore_idents = Config.get_global thy allow_underscore_idents,
+        munge_info_fname = NONE,
         owners = []} ast
   val (thy, _) = mk_thy_types cse true thy
 in
@@ -450,6 +465,7 @@ fun gen_umm_types_file inputfile outputfile thy = let
       process_decls {
         anon_vars = Config.get_global thy use_anon_vars,
         allow_underscore_idents = Config.get_global thy allow_underscore_idents,
+        munge_info_fname = NONE,
         owners = []} ast
   val _ = CalculateState.gen_umm_types_file cse outputfile
 in
