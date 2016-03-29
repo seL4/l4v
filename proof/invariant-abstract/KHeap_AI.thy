@@ -1219,34 +1219,34 @@ lemma set_object_memory[wp]:
 
 
 locale non_arch_op = fixes f
-  assumes aobj_at[wp]: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
-                        \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>" and
+  assumes aobj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
+                              \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>" and
           arch_state[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
 begin
 
 lemma valid_arch_obj[wp]:"\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-by (rule valid_arch_objs_lift_weak, (wp | simp)+)
+by (rule valid_arch_objs_lift_weak; wp aobj_at; simp)
 
 lemma vs_lookup[wp]: "\<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
-by (rule vs_lookup_arch_obj_at_lift, (wp | simp)+)
+by (rule vs_lookup_arch_obj_at_lift; wp aobj_at; simp)
 
 lemma vs_lookup_pages[wp]: "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
-by (rule vs_lookup_pages_arch_obj_at_lift, (wp | simp)+)
+by (rule vs_lookup_pages_arch_obj_at_lift; wp aobj_at; simp)
 
 lemma valid_global_objs[wp]: "\<lbrace>valid_global_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-by (rule valid_global_objs_lift_weak, wp)
+by (rule valid_global_objs_lift_weak, wp aobj_at)
 
 lemma valid_asid_map[wp]: "\<lbrace>valid_asid_map\<rbrace> f \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-by (rule valid_asid_map_lift, wp)
+by (rule valid_asid_map_lift, wp aobj_at)
 
 lemma valid_kernel_mappings[wp]: "\<lbrace>valid_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
-by (rule valid_kernel_mappings_lift, wp)
+by (rule valid_kernel_mappings_lift, wp aobj_at)
 
 lemma equal_kernel_mappings[wp]: "\<lbrace>equal_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
-by (rule equal_kernel_mappings_lift, wp)
+by (rule equal_kernel_mappings_lift, wp aobj_at)
 
 lemma valid_global_pd_mappings[wp]: "\<lbrace>valid_global_pd_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
-by (rule valid_global_pd_mappings_lift, wp)
+by (rule valid_global_pd_mappings_lift, wp aobj_at)
 
 end
 
@@ -1321,13 +1321,22 @@ interpretation
   unfolding store_word_offs_def do_machine_op_def[abs_def]
   by (wp modify_wp | fastforce)+
 
+lemma store_word_offs_obj_at_P[wp]:
+  "\<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> store_word_offs a b c \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>"
+  unfolding store_word_offs_def
+  by (wp | fastforce)+
+
 interpretation
   set_mrs: non_arch_non_cap_op "set_mrs thread buf msgs"
   apply unfold_locales
   apply (all \<open>(wp ; fail)?\<close>)
   unfolding set_mrs_def set_object_def
   apply (all \<open>(wp mapM_x_inv_wp | wpc | simp add: zipWithM_x_mapM_x split del: split_if | clarsimp)+\<close>)
-  by (fastforce simp: obj_at_def get_tcb_def split: kernel_object.splits option.splits)
+  apply (rule drop_imp)
+  apply (clarsimp simp: obj_at_def get_tcb_def split: kernel_object.splits option.splits)
+  subgoal for _ P'
+    by (subst arch_obj_predE[where P="P'"]) auto
+  done
 
 lemma valid_irq_handlers_lift:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
@@ -1368,9 +1377,7 @@ lemmas set_notification_irq_handlers[wp] =
 
 lemma set_notification_only_idle [wp]:
   "\<lbrace>only_idle\<rbrace> set_notification p ntfn \<lbrace>\<lambda>_. only_idle\<rbrace>"
-  apply (wp only_idle_lift)
-  defer
-  apply (wp)
+  by (wp only_idle_lift)
 
 
 lemma set_endpoint_only_idle [wp]:
