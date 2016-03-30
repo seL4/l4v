@@ -81,6 +81,8 @@ def copy_manifest(output_dir, manifest_file, manifest_base, target):
     Given a manifest file "manifest_file" and a base directory "manifest_base"
     used as the source of the filenames listed in the manifest, copy the
     files into a subdirectory "target" of "output_dir".
+
+    Returns the manifest when done.
     """
     manifest_dest = os.path.join(output_dir, target)
     os.mkdir(manifest_dest)
@@ -94,6 +96,7 @@ def copy_manifest(output_dir, manifest_file, manifest_base, target):
             shutil.copytree(src, dst, symlinks=True)
         else:
             shutil.copyfile(src, dst)
+    return all_files
 
 # Check usage.
 parser = argparse.ArgumentParser(
@@ -157,14 +160,37 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
 
     # Copy autocorres files.
     print "Copying files..."
-    copy_manifest(target_dir,
-            os.path.join(release_files_dir, "AUTOCORRES_FILES"),
-            os.path.join(args.repository, "tools", "autocorres"), "autocorres")
+    ac_files = copy_manifest(target_dir,
+                             os.path.join(release_files_dir, "AUTOCORRES_FILES"),
+                             os.path.join(args.repository, "tools", "autocorres"), "autocorres")
 
     # Copy lib files.
-    copy_manifest(target_dir,
-            os.path.join(release_files_dir, "LIB_FILES"),
-            os.path.join(args.repository, "lib"), "lib")
+    lib_files = copy_manifest(target_dir,
+                              os.path.join(release_files_dir, "LIB_FILES"),
+                              os.path.join(args.repository, "lib"), "lib")
+
+    # Double-check our theory dependencies.
+    thydeps_tool = os.path.join(args.repository, 'misc/scripts/thydeps')
+    if os.path.exists(thydeps_tool):
+        print "Checking theory dependencies..."
+        included_thys = [os.path.join(dir, file)
+                         for dir, file in lib_files if file.endswith('.thy')]
+        included_thys += [os.path.join(dir, file)
+                          for dir, file in ac_files if file.endswith('.thy')]
+        thy_deps = subprocess.check_output([thydeps_tool, '-T', 'text', '-o', '-'] + included_thys,
+                                           cwd=args.repository)
+        thy_deps = thy_deps.splitlines()
+        needed_files = [os.path.join(args.repository, f)
+                        for f in thy_deps if f.startswith('lib') or f.startswith('tools/autocorres')]
+
+        manifest_files = [os.path.join(dir, file) for dir, file in ac_files + lib_files]
+        missing_files = [f for f in needed_files if f not in manifest_files]
+        if missing_files:
+            print "Warning: missing dependencies from release manifest:"
+            for f in missing_files:
+                print("  - %s" % f)
+    else:
+        print "Warning: cannot check theory dependencies: missing tool misc/scripts/thydeps"
 
     # Copy various other files.
     shutil.copyfile(

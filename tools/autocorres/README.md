@@ -9,8 +9,8 @@ in [Isabelle/HOL][1]. In particular, it uses Norrish's
 abstracts the result to produce a result that is (hopefully)
 more pleasant to reason about.
 
-  [1]: http://www.cl.cam.ac.uk/research/hvg/Isabelle/
-  [2]: http://ssrg.nicta.com.au/software/TS/c-parser/
+  [1]: https://www.cl.cam.ac.uk/research/hvg/Isabelle/
+  [2]: https://ssrg.nicta.com.au/software/TS/c-parser/
 
 
 
@@ -29,9 +29,9 @@ Contents of this README
 Installation
 ------------
 
-AutoCorres is packaged as a theory for Isabelle2015:
+AutoCorres is packaged as a theory for Isabelle2016:
 
-    http://isabelle.in.tum.de
+    https://isabelle.in.tum.de
 
 To build it, type
 
@@ -63,7 +63,7 @@ AutoCorres is currently maintained by Japheth Lim <Japheth.Lim@nicta.com.au>.
 Additionally, the latest development version is available on GitHub
 as part of the L4.verified project:
 
-    https://github.com/NICTA/l4v (in tools/autocorres)
+    https://github.com/seL4/l4v (in tools/autocorres)
 
 
 
@@ -248,7 +248,7 @@ L1 (SimplConv), L2 (LocalVarExtract) and TS (TypeStrengthen) were described in
     David Greenaway, June Andronick, Gerwin Klein
     Proceedings of the Third International
             Conference on Interactive Theorem Proving (ITP), August 2012.
-    http://ssrg.nicta.com.au/publications/nictaabstracts/5662.pdf
+    https://ssrg.nicta.com.au/publications/nictaabstracts/5662.pdf
 
 HL (heap abstraction) and WA (word abstraction) were described in
 
@@ -257,11 +257,11 @@ HL (heap abstraction) and WA (word abstraction) were described in
     David Greenaway, Japheth Lim, June Andronick, Gerwin Klein
     Proceedings of the 35th ACM SIGPLAN Conference on
             Programming Language Design and Implementation. ACM, June 2014.
-    http://ssrg.nicta.com.au/publications/nictaabstracts/7629.pdf
+    https://ssrg.nicta.com.au/publications/nictaabstracts/7629.pdf
 
 A more comprehensive source is
 
     "Automated proof-producing abstraction of C code"
     David Greenaway
     PhD thesis, March 2015.
-    http://ssrg.nicta.com.au/publications/nictaabstracts/8758.pdf
+    https://ssrg.nicta.com.au/publications/nictaabstracts/8758.pdf
