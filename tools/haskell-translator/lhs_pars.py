@@ -395,7 +395,7 @@ def def_lines(d, call):
     if type == 'definitions':
         if call.decls_only:
             if typesig:
-                return wrap_qualify(comments + ['consts'] + typesig, deep=True)
+                return comments + ["consts'"] + typesig
             else:
                 return []
         elif call.bodies_only:
@@ -405,8 +405,7 @@ def def_lines(d, call):
                     print('warning body-only primrec:')
                     print(body[0])
                     return comments + ['primrec'] + body
-                return wrap_qualify(comments + ['defs %s:' % defname] + body, 
-                        deep=True)
+                return comments + ['defs %s:' % defname] + body
             else:
                 return comments + ['definition'] + body
         else:
