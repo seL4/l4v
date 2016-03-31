@@ -56,14 +56,16 @@ fun map_types_of str f thy = map_tabs_of str (@{apply 3(3)} f) thy;
 fun make_bind space thy nm = 
   let
     val short_name = 
-      Name_Space.extern_shortest (Proof_Context.init_global thy) space nm 
+      Name_Space.extern (Proof_Context.init_global thy |> Config.put Name_Space.names_short true) space nm 
       |> Long_Name.explode |> rev |> tl |> rev;
     val long_name = Long_Name.explode nm |> tl |> rev |> tl |> rev;
     
     fun do_make_bind (short_qual :: l) (_ :: l') b = Binding.qualify true short_qual (do_make_bind l l' b)
       | do_make_bind [] (long_qual :: l) b = Binding.qualify false long_qual (do_make_bind [] l b)
       | do_make_bind [] [] b = b
-      | do_make_bind _ _ _ = raise Fail "Mismatched long and short identifiers"
+      | do_make_bind _ _ _ = 
+        raise Fail ("Mismatched long and short identifiers:\nsource:" ^ nm ^ "\nshort:" ^ (@{make_string} short_name) ^ "\nlong:" ^ 
+          (@{make_string} long_name)) 
 
     val b = do_make_bind short_name long_name (Binding.make (Long_Name.base_name nm, Position.none))
   
@@ -146,9 +148,9 @@ fun set_global_qualify (args : qualify_args) thy =
      |> map_types_of str (fold (fn (b, nm) => (Symtab.update (nm, b))) types)
 
     val thy''' = thy''
-    |> fold (fn (nm, b) => Global_Theory.alias_fact b nm) (Symtab.dest (get_facts_of thy'' str))
-    |> fold (fn (nm, b) => Sign.const_alias b nm) (Symtab.dest (get_consts_of thy'' str))
-    |> fold (fn (nm, b) => Sign.type_alias b nm) (Symtab.dest (get_types_of thy'' str))
+    |> fold_rev (fn (nm, b) => Global_Theory.alias_fact b nm) (Symtab.dest (get_facts_of thy'' str))
+    |> fold_rev (fn (nm, b) => Sign.const_alias b nm) (Symtab.dest (get_consts_of thy'' str))
+    |> fold_rev (fn (nm, b) => Sign.type_alias b nm) (Symtab.dest (get_types_of thy'' str))
 
   in thy''' end
   else thy'
@@ -203,9 +205,9 @@ fun end_global_qualify thy =
     val lthy = Named_Target.begin (nm, Position.none) thy'';
 
     val lthy' = lthy
-      |> fold (uncurry fact_alias) facts'
-      |> fold (uncurry const_alias) consts'
-      |> fold (uncurry type_alias) types';
+      |> fold (uncurry fact_alias) facts
+      |> fold (uncurry const_alias) consts
+      |> fold (uncurry type_alias) types;
 
   in Local_Theory.exit_global lthy' |> Data.map (apfst (K NONE)) end
 
