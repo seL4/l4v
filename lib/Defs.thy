@@ -8,7 +8,7 @@
 
 theory Defs
 imports Main
-keywords "defs" :: thy_decl
+keywords "defs" :: thy_decl and "consts'" :: thy_decl
 begin
 
 ML_file "defs.ML"
