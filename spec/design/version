@@ -1,5 +1,5 @@
 Built from git repo at /Users/dmatichuk/verification-archsplit/seL4/haskell by dmatichuk
 
 Generated from changeset:
-e35adcb remove mentions of ARM from arch-independent invocation labels
+69b7e07 trivial: make style with astyle 2.03
 

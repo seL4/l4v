@@ -22,6 +22,9 @@ imports
   "./$L4V_ARCH/ArchStateData_H"
 begin
 
+unqualify_types (in Arch)
+  vmpage_size
+
 subsection "The Kernel State"
 
 type_synonym ready_queue = "machine_word list"

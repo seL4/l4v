@@ -20,8 +20,13 @@ imports
   Hardware_H
   "../../../lib/Lib"
 begin
-context ARM begin
 
+datatype apiobject_type =
+    Untyped
+  | TCBObject
+  | EndpointObject
+  | NotificationObject
+  | CapTableObject
 (* apiobject_type instance proofs *)
 (*<*)
 instantiation apiobject_type :: enum begin
@@ -66,9 +71,39 @@ end
 (*>*)
 
 
-end
+definition
+tcbBlockSizeBits :: "nat"
+where
+"tcbBlockSizeBits \<equiv> 9"
 
-qualify ARM
+definition
+epSizeBits :: "nat"
+where
+"epSizeBits \<equiv> 4"
+
+definition
+ntfnSizeBits :: "nat"
+where
+"ntfnSizeBits \<equiv> 4"
+
+definition
+cteSizeBits :: "nat"
+where
+"cteSizeBits \<equiv> 4"
+
+definition
+apiGetObjectSize :: "apiobject_type \<Rightarrow> nat \<Rightarrow> nat"
+where
+"apiGetObjectSize x0 magnitude\<equiv> (case x0 of
+    Untyped \<Rightarrow>    magnitude
+  | TCBObject \<Rightarrow>    tcbBlockSizeBits
+  | EndpointObject \<Rightarrow>    epSizeBits
+  | NotificationObject \<Rightarrow>    ntfnSizeBits
+  | CapTableObject \<Rightarrow>    cteSizeBits + magnitude
+  )"
+
+
+context ARM begin
 
 datatype object_type =
     APIObjectType apiobject_type
@@ -105,14 +140,14 @@ where
   )"
 
 
-end_qualify
+end
 
 text {* object\_type instance proofs *}
 
-instantiation object_type :: enum
+qualify ARM
+instantiation ARM.object_type :: enum
 begin
 interpretation ARM .
-
 definition
   enum_object_type: "enum_class.enum \<equiv> 
     map APIObjectType (enum_class.enum :: apiobject_type list) @ 
@@ -141,18 +176,21 @@ definition
 end
 
 
-instantiation object_type :: enum_alt
+instantiation ARM.object_type :: enum_alt
 begin
+interpretation ARM .
 definition
   enum_alt_object_type: "enum_alt \<equiv>
     alt_from_ord (enum :: object_type list)"
 instance ..
 end
 
-instantiation object_type :: enumeration_both
+instantiation ARM.object_type :: enumeration_both
 begin
+interpretation ARM .
 instance by (intro_classes, simp add: enum_alt_object_type)
 end
 
-end_qualify
+unqualify_types (in ARM) object_type
+
 end

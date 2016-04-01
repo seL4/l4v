@@ -14,6 +14,12 @@ theory FaultHandler_H
 imports FaultHandlerDecls_H TCB_H
 begin
 
+unqualify_consts (in Arch)
+  syscallMessage
+  fromVPtr
+  exceptionMessage
+  debugPrint
+
 
 defs handleFault_def:
 "handleFault tptr ex\<equiv> (
@@ -48,10 +54,10 @@ defs handleDoubleFault_def:
         doMachineOp $ debugPrint errmsg
 od)"
 
-consts
+consts'
 makeFaultMessage :: "fault \<Rightarrow> machine_word \<Rightarrow> (machine_word * machine_word list) kernel"
 
-consts
+consts'
 handleFaultReply :: "fault \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word list \<Rightarrow> bool kernel"
 
 defs makeFaultMessage_def:

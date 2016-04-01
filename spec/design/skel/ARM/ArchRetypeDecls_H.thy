@@ -19,10 +19,17 @@ imports
   "../PSpaceFuns_H"
   ArchObjInsts_H
 begin
-qualify ARM
+context ARM begin
 
-#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs decls_only NOT isPageFlushLabel isPDFlushLabel
-#INCLUDE_HASKELL SEL4/Object/ObjectType/ARM.lhs Arch.Types=ArchTypes_H ArchInv=ArchRetypeDecls_H decls_only
+#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs CONTEXT ARM decls_only NOT isPageFlushLabel isPDFlushLabel Invocation IRQControlInvocation CopyRegisterSets
 
-end_qualify
+end
+
+context Arch begin
+
+#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs CONTEXT Arch decls_only ONLY Invocation IRQControlInvocation CopyRegisterSets
+
+#INCLUDE_HASKELL SEL4/Object/ObjectType/ARM.lhs CONTEXT Arch Arch.Types=ArchTypes_H ArchInv= decls_only
+
+end
 end

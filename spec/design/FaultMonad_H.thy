@@ -14,6 +14,9 @@ theory FaultMonad_H
 imports KernelStateData_H Fault_H
 begin
 
+unqualify_consts (in Arch)
+  getActiveIRQ
+
 type_synonym ('f, 'a) kernel_f = "('f + 'a) kernel"
 
 translations

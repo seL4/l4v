@@ -13,8 +13,7 @@ chapter "Architecture-specific Invocation Labels"
 theory ArchInvocationLabels_H
 imports "../../../lib/Enumeration" "../../machine/ARM/Setup_Locale"
 begin
-
-qualify ARM
+context ARM begin
 
 text {*
   An enumeration of arch-specific system call labels.
@@ -38,9 +37,12 @@ datatype arch_invocation_label =
   | ARMASIDControlMakePool
   | ARMASIDPoolAssign
 
+end
+qualify ARM (deep)
 (* arch_invocation_label instance proofs *)
 (*<*)
 instantiation arch_invocation_label :: enum begin
+interpretation ARM .
 definition
   enum_arch_invocation_label: "enum_class.enum \<equiv> 
     [ 
@@ -79,6 +81,7 @@ end
 
 instantiation arch_invocation_label :: enum_alt
 begin
+interpretation ARM .
 definition
   enum_alt_arch_invocation_label: "enum_alt \<equiv> 
     alt_from_ord (enum :: arch_invocation_label list)"
@@ -87,11 +90,14 @@ end
 
 instantiation arch_invocation_label :: enumeration_both
 begin
+interpretation ARM .
 instance by (intro_classes, simp add: enum_alt_arch_invocation_label)
 end
 
 (*>*)
-
 end_qualify
+context ARM begin
 
+
+end
 end

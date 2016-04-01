@@ -18,23 +18,15 @@ imports
   InterruptDecls_H
 begin
 
-abbreviation (input)
-  performIRQControl :: "Invocations_H.irqcontrol_invocation \<Rightarrow> unit kernel_p"
-where
- "performIRQControl \<equiv> InterruptDecls_H.performIRQControl"
-
-abbreviation (input)
-  "decodeIRQControlInvocation"
-  :: "32 word
-      \<Rightarrow> 32 word list
-         \<Rightarrow> 32 word
-            \<Rightarrow> capability list
-               \<Rightarrow> KernelStateData_H.kernel_state
-                  \<Rightarrow> ((syscall_error + Invocations_H.irqcontrol_invocation) \<times> KernelStateData_H.kernel_state) set \<times> bool"
-where
-  "decodeIRQControlInvocation \<equiv> InterruptDecls_H.decodeIRQControlInvocation"
+unqualify_consts (in Arch)
+  maxIRQ
+  minIRQ
+  maskInterrupt
+  ackInterrupt
+  resetTimer
+  debugPrint
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs
-#INCLUDE_HASKELL SEL4/Object/Interrupt.lhs Arch=ArchInterruptDecls_H bodies_only
+#INCLUDE_HASKELL SEL4/Object/Interrupt.lhs bodies_only
 
 end

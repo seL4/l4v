@@ -20,20 +20,20 @@ imports
   "../FaultMonad_H"
   "../KernelInitMonad_H"
 begin
-qualify ARM
+context Arch begin
 
-consts
+consts'
 switchToThread :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 configureIdleThread :: "machine_word \<Rightarrow> unit kernel_init"
 
-consts
+consts'
 switchToIdleThread :: "unit kernel"
 
-consts
+consts'
 activateIdleThread :: "machine_word \<Rightarrow> unit kernel"
 
 
-end_qualify
+end
 end

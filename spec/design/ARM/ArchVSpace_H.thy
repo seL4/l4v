@@ -18,12 +18,8 @@ imports
   "../KI_Decls_H"
   ArchVSpaceDecls_H
 begin
+context ARM begin
 
-defs vptrFromPPtr_def:
-"vptrFromPPtr ptr \<equiv> returnOk $ ptr + 0x20000000"
-
-defs kernelBase_def:
-"kernelBase \<equiv> VPtr 0xf0000000"
 
 defs globalsBase_def:
 "globalsBase \<equiv> VPtr 0xffffc000"
@@ -34,26 +30,24 @@ defs idleThreadStart_def:
 defs idleThreadCode_def:
 "idleThreadCode \<equiv>
     [ 0xe3a00000
-    , 0xee070f9a
-    , 0xee070f90
     , 0xeafffffc
     ]"
 
 defs mapKernelWindow_def:
 "mapKernelWindow\<equiv> (do
-    vbase \<leftarrow> return ( kernelBase `~shiftR~` pageBitsForSize (ARMSection));
+    baseoffset \<leftarrow> return ( kernelBase `~shiftR~` pageBitsForSize (ARMSection));
     pdeBits \<leftarrow> return ( objBits (undefined ::pde));
     pteBits \<leftarrow> return ( objBits (undefined ::pte));
     ptSize \<leftarrow> return ( ptBits - pteBits);
     pdSize \<leftarrow> return ( pdBits - pdeBits);
     globalPD \<leftarrow> gets $ armKSGlobalPD \<circ> ksArchState;
     globalPTs \<leftarrow> gets $ armKSGlobalPTs \<circ> ksArchState;
-    deleteObjects (PPtr $ fromPPtr globalPD) pdBits;
-    placeNewObject (PPtr $ fromPPtr globalPD) (makeObject ::pde) pdSize;
-    forM_x [vbase, vbase+16  .e.  (bit pdSize) - 16 - 1] $ createSectionPDE;
-    forM_x [(bit pdSize) - 16, (bit pdSize) - 2] (\<lambda> v. (do
-          offset \<leftarrow> return ( fromVPtr v);
-          virt \<leftarrow> return ( v `~shiftL~` pageBitsForSize (ARMSection));
+    startentry \<leftarrow> return $ (PPtr (fromPPtr globalPD ));
+    deleteObjects (startentry) pdBits;
+    placeNewObject (startentry) (makeObject ::pde) pdSize;
+    forM_x [baseoffset, baseoffset+16  .e.  (bit pdSize) - 16 - 1] $ createSectionPDE;
+    forM_x [(bit pdSize) - 16, (bit pdSize) - 2] (\<lambda> offset. (do
+          virt \<leftarrow> return ( offset `~shiftL~` pageBitsForSize (ARMSection));
           phys \<leftarrow> return ( addrFromPPtr $ PPtr $ fromVPtr virt);
           pde \<leftarrow> return ( SectionPDE_ \<lparr>
                   pdeFrame= phys,
@@ -63,7 +57,7 @@ defs mapKernelWindow_def:
                   pdeGlobal= True,
                   pdeExecuteNever= False,
                   pdeRights= VMKernelOnly \<rparr>);
-          slot \<leftarrow> return ( globalPD + PPtr (offset `~shiftL~` pdeBits));
+          slot \<leftarrow> return ( globalPD + PPtr ((fromVPtr offset) `~shiftL~` pdeBits));
           storePDE slot pde
     od));
     paddr \<leftarrow> return ( addrFromPPtr $ PPtr $ fromPPtr $ head globalPTs);
@@ -78,14 +72,13 @@ defs mapKernelWindow_def:
 od)"
 
 defs createSectionPDE_def:
-"createSectionPDE v\<equiv> (do
-    vbase \<leftarrow> return ( kernelBase `~shiftR~` pageBitsForSize (ARMSection));
+"createSectionPDE offset\<equiv> (do
     pdeBits \<leftarrow> return ( objBits (undefined ::pde));
     pteBits \<leftarrow> return ( objBits (undefined ::pte));
     globalPD \<leftarrow> gets $ armKSGlobalPD \<circ> ksArchState;
-    offset \<leftarrow> return ( fromVPtr v);
-    virt \<leftarrow> return ( (v - vbase) `~shiftL~` (pageBitsForSize (ARMSuperSection) - 4));
-    phys \<leftarrow> return ( addrFromPPtr $ PPtr $ fromVPtr virt);
+    virt \<leftarrow> return ( fromVPtr $ offset `~shiftL~` pageBitsForSize (ARMSection));
+    phys \<leftarrow> return ( addrFromPPtr $ PPtr virt);
+    base \<leftarrow> return ( fromVPtr offset);
     pde \<leftarrow> return ( SuperSectionPDE_ \<lparr>
             pdeFrame= phys,
             pdeParity= True,
@@ -94,7 +87,7 @@ defs createSectionPDE_def:
             pdeExecuteNever= False,
             pdeRights= VMKernelOnly \<rparr>);
     slots \<leftarrow> return ( map (\<lambda> n. globalPD + PPtr (n `~shiftL~` pdeBits))
-            [offset  .e.  offset + 15]);
+            [base  .e.  base + 15]);
     (flip $ mapM_x ) slots (\<lambda> slot.  storePDE slot pde)
 od)"
 
@@ -135,7 +128,7 @@ defs createITPDPTs_def:
     odE));
     slotAfter \<leftarrow> noInitFailure $ gets initSlotPosCur;
     bootInfo \<leftarrow> noInitFailure $ gets initBootInfo;
-    bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr> bifUIPTCaps := [slotBefore  .e.  slotAfter - 1] \<rparr>);
+    bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr>bifUIPDCaps := [slotBefore - 1  .e.  slotBefore - 1], bifUIPTCaps := [slotBefore  .e.  slotAfter - 1] \<rparr>);
     noInitFailure $ modify (\<lambda> s. s \<lparr> initBootInfo := bootInfo' \<rparr>);
     returnOk pdCap
 odE)"
@@ -308,13 +301,13 @@ defs createITFrameCap_def:
 odE)"
 
 defs createFramesOfRegion_def:
-"createFramesOfRegion rootCNCap region doMap pvOffset\<equiv> (doE
+"createFramesOfRegion rootCNCap region doMap\<equiv> (doE
     curSlotPos \<leftarrow> noInitFailure $ gets initSlotPosCur;
     (startPPtr, endPPtr) \<leftarrow> returnOk $ fromRegion region;
     forME_x [startPPtr,startPPtr + (bit pageBits)  .e.  endPPtr] (\<lambda> ptr. (doE
-        paddr \<leftarrow> returnOk ( fromPAddr $ addrFromPPtr ptr);
+        vptr \<leftarrow> vptrFromPPtr $ ptr;
         frameCap \<leftarrow> if doMap then
-                    createITFrameCap ptr ((VPtr paddr) + pvOffset ) (Just itASID) False
+                    createITFrameCap ptr vptr (Just itASID) False
                     else createITFrameCap ptr 0 Nothing False;
         provideCap rootCNCap frameCap
     odE));
@@ -1107,6 +1100,7 @@ defs decodeARMMMUInvocation_def:
         )
   else if isPageCap cap
   then  
+ (
     (case (invocationType label, args, extraCaps) of
           (ArchInvocationLabel ARMPageMap, vaddr#rightsMask#attr#_, (pdCap,_)#_) \<Rightarrow>   (doE
             whenE (isJust $ capVPMappedAddress cap) $
@@ -1167,6 +1161,7 @@ defs decodeARMMMUInvocation_def:
         | (ArchInvocationLabel ARMPageGetAddress, _, _) \<Rightarrow>   returnOk $ InvokePage $ PageGetAddr (capVPBasePtr cap)
         | _ \<Rightarrow>   throw IllegalOperation
         )
+ )
   else if isASIDControlCap cap
   then  
     (case (invocationType label, args, extraCaps) of
@@ -1444,4 +1439,5 @@ defs checkValidMappingSize_def:
   "checkValidMappingSize sz \<equiv> stateAssert
     (\<lambda>s. 2 ^ pageBitsForSize sz <= gsMaxObjectSize s) []"
 
+end
 end

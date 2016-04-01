@@ -18,6 +18,6 @@ imports
   Interrupt_H
 begin
 
-#INCLUDE_HASKELL SEL4/Object/ObjectType.lhs Arch=ArchRetypeDecls_H bodies_only
+#INCLUDE_HASKELL SEL4/Object/ObjectType.lhs Arch=Arch bodies_only
 
 end

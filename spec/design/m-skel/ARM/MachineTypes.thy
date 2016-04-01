@@ -103,12 +103,9 @@ text {*
   The initial exclusive state is the same constant
   that clearExMonitor defaults it to.
 *}
-end
-qualify ARM
-consts default_exclusive_state :: ARM.exclusive_monitors
-end_qualify
 
-context ARM begin
+consts' default_exclusive_state :: exclusive_monitors
+
 text {*
   We leave open the underspecified rest of the machine state in
   the initial state.

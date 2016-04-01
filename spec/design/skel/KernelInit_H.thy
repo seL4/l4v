@@ -19,6 +19,11 @@ imports
   Thread_H
 begin
 
+unqualify_consts (in Arch)
+  getMemoryRegions
+  addrFromPPtr
+  init_machine_state
+
 fun coverOf :: "region list => region" 
 where "coverOf x0 = (case x0 of
     [] =>    Region (0,0)

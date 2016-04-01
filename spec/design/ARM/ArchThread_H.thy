@@ -16,7 +16,7 @@ imports
   "../TCBDecls_H"
   ArchVSpaceDecls_H
 begin
-qualify ARM
+context ARM begin
 
 defs switchToThread_def:
 "switchToThread tcb\<equiv> (do
@@ -45,5 +45,5 @@ defs activateIdleThread_def:
 "activateIdleThread arg1 \<equiv> return ()"
 
 
-end_qualify
+end
 end

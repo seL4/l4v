@@ -19,6 +19,19 @@ imports
   "./$L4V_ARCH/ArchTCB_H"
 begin
 
+unqualify_consts (in Arch)
+  decodeTransfer
+  gpRegisters
+  frameRegisters
+  getRegister
+  setNextPC
+  getRestartPC
+  sanitiseRegister
+  setRegister
+  performTransfer
+  msgInfoRegister
+  msgRegisters
+
 defs decodeTCBInvocation_def:
 "decodeTCBInvocation label args cap slot extraCaps \<equiv>
     (case invocationType label of
@@ -43,7 +56,7 @@ defs decodeCopyRegisters_def:
     resumeTarget \<leftarrow> returnOk ( flags !! 1);
     transferFrame \<leftarrow> returnOk ( flags !! 2);
     transferInteger \<leftarrow> returnOk ( flags !! 3);
-    transferArch \<leftarrow> ArchTCB_H.decodeTransfer $ fromIntegral $ flags `~shiftR~` 8;
+    transferArch \<leftarrow> decodeTransfer $ fromIntegral $ flags `~shiftR~` 8;
     whenE (null extraCaps) $ throw TruncatedMessage;
     srcTCB \<leftarrow> (case head extraCaps of
           ThreadCap ptr \<Rightarrow>  
@@ -66,7 +79,7 @@ defs decodeReadRegisters_def:
 "decodeReadRegisters x0 cap\<equiv> (case x0 of
     (flags#n#_) \<Rightarrow>    (doE
     rangeCheck n 1 $ length frameRegisters + length gpRegisters;
-    transferArch \<leftarrow> ArchTCB_H.decodeTransfer $ fromIntegral $ flags `~shiftR~` 8;
+    transferArch \<leftarrow> decodeTransfer $ fromIntegral $ flags `~shiftR~` 8;
     self \<leftarrow> withoutFailure $ getCurThread;
     whenE (capTCBPtr cap = self) $ throw IllegalOperation;
     returnOk ReadRegisters_ \<lparr>
@@ -82,7 +95,7 @@ defs decodeWriteRegisters_def:
 "decodeWriteRegisters x0 cap\<equiv> (case x0 of
     (flags#n#values) \<Rightarrow>    (doE
     whenE (genericLength values < n) $ throw TruncatedMessage;
-    transferArch \<leftarrow> ArchTCB_H.decodeTransfer $ fromIntegral $ flags `~shiftR~` 8;
+    transferArch \<leftarrow> decodeTransfer $ fromIntegral $ flags `~shiftR~` 8;
     self \<leftarrow> withoutFailure $ getCurThread;
     whenE (capTCBPtr cap = self) $ throw IllegalOperation;
     returnOk WriteRegisters_ \<lparr>
@@ -122,7 +135,7 @@ defs decodeSetPriority_def:
         throw IllegalOperation;
     returnOk $ ThreadControl_ \<lparr>
         tcThread= capTCBPtr cap,
-        tcThreadCapSlot= error [],
+        tcThreadCapSlot= 0,
         tcNewFaultEP= Nothing,
         tcNewPriority= Just $ fromIntegral newPrio,
         tcNewCRoot= Nothing,
@@ -309,21 +322,21 @@ defs invokeTCB_def:
                                              )
             gpRegisters
     );
-    ArchTCB_H.performTransfer transferArch src dest;
+    performTransfer transferArch src dest;
     return []
   od)
   | (ReadRegisters src suspendSource n arch) \<Rightarrow>   
   withoutPreemption $ (do
     when suspendSource $ suspend src;
     self \<leftarrow> getCurThread;
-    ArchTCB_H.performTransfer arch src self;
+    performTransfer arch src self;
     regs \<leftarrow> return ( genericTake n $ frameRegisters @ gpRegisters);
     asUser src $ mapM getRegister regs
   od)
   | (WriteRegisters dest resumeTarget values arch) \<Rightarrow>   
   withoutPreemption $ (do
     self \<leftarrow> getCurThread;
-    ArchTCB_H.performTransfer arch self dest;
+    performTransfer arch self dest;
     asUser dest $ (do
         zipWithM (\<lambda> r v. setRegister r (sanitiseRegister r v))
             (frameRegisters @ gpRegisters) values;

@@ -72,7 +72,7 @@ where
 #INCLUDE_HASKELL SEL4/Object/CNode.lhs BODY cteDeleteOne
 )
 (
-#INCLUDE_HASKELL SEL4/Object/ObjectType.lhs Arch=ArchRetypeDecls_H BODY finaliseCap
+#INCLUDE_HASKELL SEL4/Object/ObjectType.lhs Arch=Arch BODY finaliseCap
 )
 )
 (

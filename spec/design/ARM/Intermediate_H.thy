@@ -13,7 +13,8 @@ chapter "Intermediate"
 theory Intermediate_H
 imports "../API_H"
 begin
-
+unqualify_consts (in ARM)
+  clearMemory
 (*
  * Intermediate function bodies that were once in the Haskell spec, but are
  * now no longer.
@@ -56,13 +57,13 @@ defs insertNewCaps_def:
     zipWithM_x (insertNewCap srcSlot) destSlots caps
 od)"
 
-defs Arch_createNewCaps_def:
+defs (in ARM) Arch_createNewCaps_def:
 "Arch_createNewCaps t regionBase numObjects arg4 \<equiv>
     let pointerCast = PPtr \<circ> fromPPtr
     in (case t of 
-        ArchTypes_H.APIObjectType v5 \<Rightarrow> 
+        APIObjectType v5 \<Rightarrow> 
             haskell_fail []
-        | ArchTypes_H.SmallPageObject \<Rightarrow>  (do
+        | SmallPageObject \<Rightarrow>  (do
             addrs \<leftarrow> createWordObjects regionBase numObjects 0;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMSmallPage
@@ -70,7 +71,7 @@ defs Arch_createNewCaps_def:
             return $ map (\<lambda> n. PageCap (pointerCast n) VMReadWrite
                     ARMSmallPage Nothing) addrs
         od)
-        | ArchTypes_H.LargePageObject \<Rightarrow>  (do
+        | LargePageObject \<Rightarrow>  (do
             addrs \<leftarrow> createWordObjects regionBase numObjects 4;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMLargePage
@@ -78,7 +79,7 @@ defs Arch_createNewCaps_def:
             return $ map (\<lambda> n. PageCap (pointerCast n) VMReadWrite
                     ARMLargePage Nothing) addrs
         od)
-        | ArchTypes_H.SectionObject \<Rightarrow>  (do
+        | SectionObject \<Rightarrow>  (do
             addrs \<leftarrow> createWordObjects regionBase numObjects 8;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMSection
@@ -86,7 +87,7 @@ defs Arch_createNewCaps_def:
             return $ map (\<lambda> n. PageCap (pointerCast n) VMReadWrite
                     ARMSection Nothing) addrs
         od)
-        | ArchTypes_H.SuperSectionObject \<Rightarrow>  (do
+        | SuperSectionObject \<Rightarrow>  (do
             addrs \<leftarrow> createWordObjects regionBase numObjects 12;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMSuperSection
@@ -94,7 +95,7 @@ defs Arch_createNewCaps_def:
             return $ map (\<lambda> n. PageCap (pointerCast n) VMReadWrite
                     ARMSuperSection Nothing) addrs
         od)
-        | ArchTypes_H.PageTableObject \<Rightarrow>  (do
+        | PageTableObject \<Rightarrow>  (do
             ptSize \<leftarrow> return ( ptBits - objBits (makeObject ::pte));
             addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::pte) ptSize;
             objSize \<leftarrow> return (((1::nat) `~shiftL~` ptBits));
@@ -104,7 +105,7 @@ defs Arch_createNewCaps_def:
                                                           (addrFromPPtr x)) pts;
             return $ map (\<lambda> pt. PageTableCap pt Nothing) pts
         od)
-        | ArchTypes_H.PageDirectoryObject \<Rightarrow>  (do
+        | PageDirectoryObject \<Rightarrow>  (do
             pdSize \<leftarrow> return ( pdBits - objBits (makeObject ::pde));
             addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::pde) pdSize;
             objSize \<leftarrow> return ( ((1::nat) `~shiftL~` pdBits));

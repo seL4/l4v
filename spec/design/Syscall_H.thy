@@ -31,25 +31,25 @@ where
         )
 odE)"
 
-consts
+consts'
 handleEvent :: "event \<Rightarrow> unit kernel_p"
 
-consts
+consts'
 handleSend :: "bool \<Rightarrow> unit kernel_p"
 
-consts
+consts'
 handleCall :: "unit kernel_p"
 
-consts
+consts'
 handleReply :: "unit kernel"
 
-consts
+consts'
 handleRecv :: "bool \<Rightarrow> unit kernel"
 
-consts
+consts'
 handleYield :: "unit kernel"
 
-consts
+consts'
 handleInvocation :: "bool \<Rightarrow> bool \<Rightarrow> unit kernel_p"
 
 defs handleEvent_def:

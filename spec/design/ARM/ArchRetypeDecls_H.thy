@@ -19,7 +19,7 @@ imports
   "../PSpaceFuns_H"
   ArchObjInsts_H
 begin
-qualify ARM
+context ARM begin
 
 datatype page_table_invocation =
     PageTableUnmap arch_capability machine_word
@@ -601,6 +601,11 @@ lemma assignASID_assignASID_update [simp]:
   "assignASID (assignASID_update f v) = f (assignASID v)"
   by (cases v) simp
 
+
+end
+
+context Arch begin
+
 datatype invocation =
     InvokePageTable page_table_invocation
   | InvokePageDirectory page_directory_invocation
@@ -614,51 +619,52 @@ datatype irqcontrol_invocation =
 datatype copy_register_sets =
     ARMNoExtraRegisters
 
-consts
+
+consts'
 deriveCap :: "machine_word \<Rightarrow> arch_capability \<Rightarrow> ( syscall_error , arch_capability ) kernel_f"
 
-consts
+consts'
 updateCapData :: "bool \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> capability"
 
-consts
+consts'
 maskCapRights :: "cap_rights \<Rightarrow> arch_capability \<Rightarrow> capability"
 
-consts
+consts'
 finaliseCap :: "arch_capability \<Rightarrow> bool \<Rightarrow> capability kernel"
 
-consts
+consts'
 resetMemMapping :: "arch_capability \<Rightarrow> arch_capability"
 
-consts
+consts'
 recycleCap :: "bool \<Rightarrow> arch_capability \<Rightarrow> arch_capability kernel"
 
-consts
+consts'
 hasRecycleRights :: "arch_capability \<Rightarrow> bool"
 
-consts
+consts'
 sameRegionAs :: "arch_capability \<Rightarrow> arch_capability \<Rightarrow> bool"
 
-consts
+consts'
 isPhysicalCap :: "arch_capability \<Rightarrow> bool"
 
-consts
+consts'
 sameObjectAs :: "arch_capability \<Rightarrow> arch_capability \<Rightarrow> bool"
 
-consts
+consts'
 createObject :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> arch_capability kernel"
 
-consts
-decodeInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+consts'
+decodeInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
-consts
-performInvocation :: "ArchRetypeDecls_H.invocation \<Rightarrow> machine_word list kernel_p"
+consts'
+performInvocation :: "invocation \<Rightarrow> machine_word list kernel_p"
 
-consts
+consts'
 capUntypedPtr :: "arch_capability \<Rightarrow> machine_word"
 
-consts
+consts'
 capUntypedSize :: "arch_capability \<Rightarrow> machine_word"
 
 
-end_qualify
+end
 end

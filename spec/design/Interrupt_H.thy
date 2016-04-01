@@ -18,28 +18,20 @@ imports
   InterruptDecls_H
 begin
 
-abbreviation (input)
-  performIRQControl :: "Invocations_H.irqcontrol_invocation \<Rightarrow> unit kernel_p"
-where
- "performIRQControl \<equiv> InterruptDecls_H.performIRQControl"
-
-abbreviation (input)
-  "decodeIRQControlInvocation"
-  :: "32 word
-      \<Rightarrow> 32 word list
-         \<Rightarrow> 32 word
-            \<Rightarrow> capability list
-               \<Rightarrow> KernelStateData_H.kernel_state
-                  \<Rightarrow> ((syscall_error + Invocations_H.irqcontrol_invocation) \<times> KernelStateData_H.kernel_state) set \<times> bool"
-where
-  "decodeIRQControlInvocation \<equiv> InterruptDecls_H.decodeIRQControlInvocation"
+unqualify_consts (in Arch)
+  maxIRQ
+  minIRQ
+  maskInterrupt
+  ackInterrupt
+  resetTimer
+  debugPrint
 
 defs decodeIRQControlInvocation_def:
 "decodeIRQControlInvocation label args srcSlot extraCaps \<equiv>
     (case (invocationType label, args, extraCaps) of
           (IRQIssueIRQHandler, irqW#index#depth#_, cnode#_) \<Rightarrow>   (doE
-            rangeCheck irqW (fromEnum minIRQ) (fromEnum maxIRQ);
-            irq \<leftarrow> returnOk ( toEnum (fromIntegral irqW) ::irq);
+            Arch.checkIRQ (irqW && mask 16);
+            irq \<leftarrow> returnOk ( toEnum (fromIntegral (irqW && mask 16)) ::irq);
             irqActive \<leftarrow> withoutFailure $ isIRQActive irq;
             whenE irqActive $ throw RevokeFirst;
             destSlot \<leftarrow> lookupTargetSlot cnode
@@ -48,7 +40,7 @@ defs decodeIRQControlInvocation_def:
             returnOk $ IssueIRQHandler irq destSlot srcSlot
           odE)
         | (IRQIssueIRQHandler,_,_) \<Rightarrow>   throw TruncatedMessage
-        | _ \<Rightarrow>   liftME ArchIRQControl $ ArchInterruptDecls_H.decodeIRQControlInvocation label args srcSlot extraCaps
+        | _ \<Rightarrow>   liftME ArchIRQControl $ Arch.decodeIRQControlInvocation label args srcSlot extraCaps
         )"
 
 defs performIRQControl_def:
@@ -59,11 +51,11 @@ defs performIRQControl_def:
     cteInsert (IRQHandlerCap irq) controlSlot handlerSlot
   od)
   | (ArchIRQControl invok) \<Rightarrow>   
-    ArchInterruptDecls_H.performIRQControl invok
+    Arch.performIRQControl invok
   )"
 
 defs decodeIRQHandlerInvocation_def:
-"decodeIRQHandlerInvocation label args irq extraCaps \<equiv>
+"decodeIRQHandlerInvocation label irq extraCaps \<equiv>
     (case (invocationType label,extraCaps) of
           (IRQAckIRQ,_) \<Rightarrow>   returnOk $ AckIRQ irq
         | (IRQSetIRQHandler,(cap,slot)#_) \<Rightarrow>   (case cap of
@@ -73,10 +65,6 @@ defs decodeIRQHandlerInvocation_def:
                 )
         | (IRQSetIRQHandler,_) \<Rightarrow>   throw TruncatedMessage
         | (IRQClearIRQHandler,_) \<Rightarrow>   returnOk $ ClearIRQHandler irq
-        | (IRQSetMode,_) \<Rightarrow>   (case args of
-                  trig#pol#_ \<Rightarrow>   returnOk $ SetMode irq (toBool trig) (toBool pol)
-                | _ \<Rightarrow>   throw TruncatedMessage
-                )
         | _ \<Rightarrow>   throw IllegalOperation
         )"
 
@@ -96,8 +84,6 @@ defs invokeIRQHandler_def:
     irqSlot \<leftarrow> getIRQSlot irq;
     cteDeleteOne irqSlot
   od)
-  | (SetMode irq trig pol) \<Rightarrow>   
-    doMachineOp $ setInterruptMode irq trig pol
   )"
 
 defs deletingIRQHandler_def:

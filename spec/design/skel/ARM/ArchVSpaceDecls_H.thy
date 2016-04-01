@@ -13,10 +13,10 @@ chapter "Retyping Objects"
 theory ArchVSpaceDecls_H
 imports ArchRetypeDecls_H "../InvocationLabels_H"
 begin
-qualify ARM
+context ARM begin
 
-#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs
-#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs decls_only ArchInv=ArchRetypeDecls_H ArchLabels=ArchInvocationLabels_H
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs CONTEXT ARM
+#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs CONTEXT ARM decls_only ArchInv=Arch
 
-end_qualify
+end
 end

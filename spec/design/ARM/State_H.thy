@@ -20,7 +20,7 @@ imports
   RegisterSet_H
   "../../machine/ARM/MachineOps"
 begin
-qualify ARM (deep)
+context ARM begin
 
 definition
   Word :: "machine_word \<Rightarrow> machine_word"
@@ -123,5 +123,5 @@ definition
 where
  "nullPointer \<equiv> 0"
 
-end_qualify
+end
 end

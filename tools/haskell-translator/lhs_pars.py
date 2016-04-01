@@ -2771,4 +2771,7 @@ def subst_module_redirects(line, call):
     after = subst_module_redirects(after, call)
     if module in call.moduletranslations:
         module = call.moduletranslations[module]
-    return before + module + '.' + after
+    if module:
+        return before + module + '.' + after
+    else:
+        return before + after

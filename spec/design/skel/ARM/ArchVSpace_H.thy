@@ -18,14 +18,14 @@ imports
   "../KI_Decls_H"
   ArchVSpaceDecls_H
 begin
+context ARM begin
 
-defs vptrFromPPtr_def:
-"vptrFromPPtr ptr \<equiv> returnOk $ ptr + 0x20000000"
 
-#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs bodies_only ArchInv=ArchRetypeDecls_H ArchLabels=ArchInvocationLabels_H NOT checkPDAt checkPTAt checkPDASIDMapMembership checkValidMappingSize vptrFromPPtr
+#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs CONTEXT ARM bodies_only ArchInv=ArchRetypeDecls_H.ARM ArchLabels=ArchInvocationLabels_H.ARM NOT checkPDAt checkPTAt checkPDASIDMapMembership checkValidMappingSize vptrFromPPtr
 
 defs checkValidMappingSize_def:
   "checkValidMappingSize sz \<equiv> stateAssert
     (\<lambda>s. 2 ^ pageBitsForSize sz <= gsMaxObjectSize s) []"
 
+end
 end

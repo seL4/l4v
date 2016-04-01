@@ -17,51 +17,58 @@ imports
   "../../lib/DataMap"
 begin
 
+unqualify_consts (in Arch)
+  fromPPtr
+  PPtr
+  freeMemory
+  storeWord
+  loadWord
+
 definition deleteRange :: "( machine_word , 'a ) DataMap.map \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> ( machine_word , 'a ) DataMap.map"
 where "deleteRange m ptr bits \<equiv> 
         let inRange = (\<lambda> x. x && ((- mask bits) - 1) = fromPPtr ptr) in
         data_map_filterWithKey (\<lambda> x _. Not (inRange x)) m"
 
-consts
+consts'
 newPSpace :: "pspace"
 
-consts
+consts'
 initPSpace :: "(machine_word * machine_word) list \<Rightarrow> unit kernel"
 
-consts
+consts'
 getObject :: "machine_word \<Rightarrow> ('a :: pspace_storable) kernel"
 
-consts
+consts'
 setObject :: "machine_word \<Rightarrow> ('a :: pspace_storable) \<Rightarrow> unit kernel"
 
-consts
+consts'
 placeNewObject :: "machine_word \<Rightarrow> ('a :: pspace_storable) \<Rightarrow> nat \<Rightarrow> unit kernel"
 
-consts
+consts'
 placeNewObject' :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> nat \<Rightarrow> unit kernel"
 
-consts
+consts'
 deleteObjects :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
 
-consts
+consts'
 deletionIsSafe :: "machine_word \<Rightarrow> nat \<Rightarrow> kernel_state \<Rightarrow> bool"
 
-consts
+consts'
 cNodePartialOverlap :: "(machine_word \<Rightarrow> nat option) \<Rightarrow> (machine_word \<Rightarrow> bool) \<Rightarrow> bool"
 
-consts
+consts'
 ksASIDMapSafe :: "kernel_state \<Rightarrow> bool"
 
-consts
+consts'
 reserveFrame :: "machine_word \<Rightarrow> bool \<Rightarrow> unit kernel"
 
-consts
+consts'
 loadWordUser :: "machine_word \<Rightarrow> machine_word kernel"
 
-consts
+consts'
 storeWordUser :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 pointerInUserData :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 
 
@@ -142,9 +149,7 @@ defs deleteObjects_def:
         doMachineOp $ freeMemory (PPtr (fromPPtr ptr)) bits;
         ps \<leftarrow> gets ksPSpace;
         inRange \<leftarrow> return ( (\<lambda> x. x && ((- mask bits) - 1) = fromPPtr ptr));
-        map' \<leftarrow> return ( data_map_filterWithKey
-                        (\<lambda> x _. Not (inRange x))
-                        (psMap ps));
+        map' \<leftarrow> return ( deleteRange (psMap ps) (fromPPtr ptr) bits);
         ps' \<leftarrow> return ( ps \<lparr> psMap := map' \<rparr>);
         modify (\<lambda> ks. ks \<lparr> ksPSpace := ps'\<rparr>);
         modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> x. if inRange x

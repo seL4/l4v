@@ -11,7 +11,7 @@
 theory ArchTCB_H
 imports "../TCBDecls_H"
 begin
-qualify ARM
+context ARM begin
 
 definition
 decodeTransfer :: "word8 \<Rightarrow> ( syscall_error , copy_register_sets ) kernel_f"
@@ -24,5 +24,5 @@ where
 "performTransfer arg1 arg2 arg3 \<equiv> return ()"
 
 
-end_qualify
+end
 end

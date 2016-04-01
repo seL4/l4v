@@ -14,11 +14,11 @@ imports
   "../Types_H"
   Hardware_H
 begin
-qualify ARM
+context ARM begin
 
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs decls_only
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs instanceproofs
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs bodies_only
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM decls_only
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM instanceproofs
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM bodies_only
 
 datatype arch_kernel_object_type =
     PDET
@@ -32,5 +32,5 @@ where
 | "archTypeOf (KOPTE e) = PTET"
 | "archTypeOf (KOASIDPool e) = ASIDPoolT"
 
-end_qualify
+end
 end

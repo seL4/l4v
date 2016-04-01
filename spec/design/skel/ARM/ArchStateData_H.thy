@@ -20,9 +20,16 @@ imports
   ArchTypes_H
   ArchStructures_H
 begin
-qualify ARM
+context ARM begin
 
-#INCLUDE_HASKELL SEL4/Model/StateData/ARM.lhs NOT ArmVSpaceRegionUse
+#INCLUDE_HASKELL SEL4/Model/StateData/ARM.lhs CONTEXT ARM NOT ArmVSpaceRegionUse
 
-end_qualify
+unqualify_types
+  kernel_state
+
+unqualify_consts
+  newKernelState
+
+end
+
 end

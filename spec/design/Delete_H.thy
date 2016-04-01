@@ -192,7 +192,7 @@ od))
   else if isArchObjectCap v1
   then let cap = capCap v1; final = v2
   in  
-    liftM (\<lambda> cap. (cap, Nothing)) $ ArchRetypeDecls_H.finaliseCap cap final
+    liftM (\<lambda> cap. (cap, Nothing)) $ Arch.finaliseCap cap final
   else if isIRQHandlerCap v1 \<and> v2
   then let irq = capIRQ v1
   in   (do
@@ -251,7 +251,7 @@ od))
         state \<leftarrow> getThreadState tptr;
         (case state of
               BlockedOnSend _ _ _ _ \<Rightarrow>   blockedIPCCancel state
-            | BlockedOnReceive _ _ \<Rightarrow>   blockedIPCCancel state
+            | BlockedOnReceive _ \<Rightarrow>   blockedIPCCancel state
             | BlockedOnNotification _ \<Rightarrow>   cancelSignal tptr (waitingOnNotification state)
             | BlockedOnReply  \<Rightarrow>   replyIPCCancel
             | _ \<Rightarrow>   return ()

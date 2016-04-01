@@ -19,7 +19,20 @@ imports
   "./$L4V_ARCH/ArchTCB_H"
 begin
 
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch=ArchTCB_H bodies_only NOT liftFnMaybe assertDerived asUser
+unqualify_consts (in Arch)
+  decodeTransfer
+  gpRegisters
+  frameRegisters
+  getRegister
+  setNextPC
+  getRestartPC
+  sanitiseRegister
+  setRegister
+  performTransfer
+  msgInfoRegister
+  msgRegisters
+
+#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived asUser
 
 
 defs asUser_def:

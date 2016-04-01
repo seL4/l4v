@@ -18,7 +18,7 @@ text {*
   Arch-specific functions on invocation labels
 *}
 
-#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs ONLY isPDFlushLabel isPageFlushLabel
+#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs CONTEXT ARM ONLY isPDFlushLabel isPageFlushLabel
 
 end
 end

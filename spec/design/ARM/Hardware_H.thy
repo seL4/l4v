@@ -351,11 +351,6 @@ where
 "pageColourBits \<equiv> Platform.ARM.pageColourBits"
 
 definition
-setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
-where
-"setInterruptMode arg1 arg2 arg3 \<equiv> return ()"
-
-definition
 clearExMonitor :: "unit machine_monad"
 where
 "clearExMonitor\<equiv> return ()"
@@ -370,17 +365,24 @@ ptBits :: "nat"
 where
 "ptBits \<equiv> pageBits - 2"
 
+definition
+physBase :: "paddr"
+where
+"physBase \<equiv> toPAddr Platform.ARM.physBase"
+
+definition
+kernelBase :: "vptr"
+where
+"kernelBase \<equiv> Platform.ARM.kernelBase"
+
+
 
 end
-
 qualify ARM (deep)
-
-declare ARM.vmrights.exhaust[cases type: ARM.vmrights]
- Hardware_H.ARM.vmrights.simps[simp]
-
 (* vmrights instance proofs *)
 (*<*)
 instantiation vmrights :: enum begin
+interpretation ARM .
 definition
   enum_vmrights: "enum_class.enum \<equiv> 
     [ 
@@ -407,6 +409,7 @@ end
 
 instantiation vmrights :: enum_alt
 begin
+interpretation ARM .
 definition
   enum_alt_vmrights: "enum_alt \<equiv> 
     alt_from_ord (enum :: vmrights list)"
@@ -415,18 +418,14 @@ end
 
 instantiation vmrights :: enumeration_both
 begin
+interpretation ARM .
 instance by (intro_classes, simp add: enum_alt_vmrights)
 end
 
 (*>*)
-
-
 end_qualify
-
-declare ARM.vmrights.exhaust[cases del]
- Hardware_H.ARM.vmrights.simps[simp del]
-
 context ARM begin
+
 
 definition
 wordFromPDE :: "pde \<Rightarrow> machine_word"

@@ -19,10 +19,13 @@ imports
   Config_H
 begin
 
-#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=ArchThreadDecls_H bodies_only NOT doNormalTransfer doIPCTransfer doReplyTransfer doNormalTransfer transferCaps transferCapsToSlots
+unqualify_consts (in Arch)
+  capRegister
 
-#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=ArchThreadDecls_H ONLY transferCapsToSlots
+#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=Arch bodies_only NOT doNormalTransfer doIPCTransfer doReplyTransfer doNormalTransfer transferCaps transferCapsToSlots
 
-#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=ArchThreadDecls_H bodies_only ONLY doNormalTransfer doIPCTransfer doReplyTransfer doNormalTransfer transferCaps
+#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=Arch ONLY transferCapsToSlots
+
+#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=Arch bodies_only ONLY doNormalTransfer doIPCTransfer doReplyTransfer doNormalTransfer transferCaps
 
 end

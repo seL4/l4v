@@ -11,9 +11,9 @@
 theory ArchTCB_H
 imports "../TCBDecls_H"
 begin
-qualify ARM
+context ARM begin
 
-#INCLUDE_HASKELL SEL4/Object/TCB/ARM.lhs
+#INCLUDE_HASKELL SEL4/Object/TCB/ARM.lhs CONTEXT ARM
 
-end_qualify
+end
 end

@@ -23,6 +23,18 @@ imports
   "./$L4V_ARCH/ArchStructures_H"
 begin
 
+unqualify_types (in Arch)
+  irq
+  arch_capability
+  user_context
+  arch_kernel_object
+  asid
+
+unqualify_consts (in Arch)
+  archObjSize
+  pageBits
+  nullPointer
+
 datatype zombie_type =
     ZombieTCB
   | ZombieCNode nat
@@ -736,7 +748,7 @@ lemma cteMDBNode_cteMDBNode_update [simp]:
   by (cases v) simp
 
 datatype thread_state =
-    BlockedOnReceive machine_word bool
+    BlockedOnReceive machine_word
   | BlockedOnReply
   | BlockedOnNotification machine_word
   | Running
@@ -751,25 +763,10 @@ where
   "blockingIPCIsCall (BlockedOnSend v0 v1 v2 v3) = v3"
 
 primrec
-  waitingOnNotification :: "thread_state \<Rightarrow> machine_word"
-where
-  "waitingOnNotification (BlockedOnNotification v0) = v0"
-
-primrec
   blockingObject :: "thread_state \<Rightarrow> machine_word"
 where
-  "blockingObject (BlockedOnReceive v0 v1) = v0"
+  "blockingObject (BlockedOnReceive v0) = v0"
 | "blockingObject (BlockedOnSend v0 v1 v2 v3) = v0"
-
-primrec
-  blockingIPCCanGrant :: "thread_state \<Rightarrow> bool"
-where
-  "blockingIPCCanGrant (BlockedOnSend v0 v1 v2 v3) = v2"
-
-primrec
-  blockingIPCDiminishCaps :: "thread_state \<Rightarrow> bool"
-where
-  "blockingIPCDiminishCaps (BlockedOnReceive v0 v1) = v1"
 
 primrec
   blockingIPCBadge :: "thread_state \<Rightarrow> machine_word"
@@ -777,9 +774,30 @@ where
   "blockingIPCBadge (BlockedOnSend v0 v1 v2 v3) = v1"
 
 primrec
+  waitingOnNotification :: "thread_state \<Rightarrow> machine_word"
+where
+  "waitingOnNotification (BlockedOnNotification v0) = v0"
+
+primrec
+  blockingIPCCanGrant :: "thread_state \<Rightarrow> bool"
+where
+  "blockingIPCCanGrant (BlockedOnSend v0 v1 v2 v3) = v2"
+
+primrec
   blockingIPCIsCall_update :: "(bool \<Rightarrow> bool) \<Rightarrow> thread_state \<Rightarrow> thread_state"
 where
   "blockingIPCIsCall_update f (BlockedOnSend v0 v1 v2 v3) = BlockedOnSend v0 v1 v2 (f v3)"
+
+primrec
+  blockingObject_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> thread_state \<Rightarrow> thread_state"
+where
+  "blockingObject_update f (BlockedOnReceive v0) = BlockedOnReceive (f v0)"
+| "blockingObject_update f (BlockedOnSend v0 v1 v2 v3) = BlockedOnSend (f v0) v1 v2 v3"
+
+primrec
+  blockingIPCBadge_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> thread_state \<Rightarrow> thread_state"
+where
+  "blockingIPCBadge_update f (BlockedOnSend v0 v1 v2 v3) = BlockedOnSend v0 (f v1) v2 v3"
 
 primrec
   waitingOnNotification_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> thread_state \<Rightarrow> thread_state"
@@ -787,30 +805,14 @@ where
   "waitingOnNotification_update f (BlockedOnNotification v0) = BlockedOnNotification (f v0)"
 
 primrec
-  blockingObject_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> thread_state \<Rightarrow> thread_state"
-where
-  "blockingObject_update f (BlockedOnReceive v0 v1) = BlockedOnReceive (f v0) v1"
-| "blockingObject_update f (BlockedOnSend v0 v1 v2 v3) = BlockedOnSend (f v0) v1 v2 v3"
-
-primrec
   blockingIPCCanGrant_update :: "(bool \<Rightarrow> bool) \<Rightarrow> thread_state \<Rightarrow> thread_state"
 where
   "blockingIPCCanGrant_update f (BlockedOnSend v0 v1 v2 v3) = BlockedOnSend v0 v1 (f v2) v3"
 
-primrec
-  blockingIPCDiminishCaps_update :: "(bool \<Rightarrow> bool) \<Rightarrow> thread_state \<Rightarrow> thread_state"
-where
-  "blockingIPCDiminishCaps_update f (BlockedOnReceive v0 v1) = BlockedOnReceive v0 (f v1)"
-
-primrec
-  blockingIPCBadge_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> thread_state \<Rightarrow> thread_state"
-where
-  "blockingIPCBadge_update f (BlockedOnSend v0 v1 v2 v3) = BlockedOnSend v0 (f v1) v2 v3"
-
 abbreviation (input)
-  BlockedOnReceive_trans :: "(machine_word) \<Rightarrow> (bool) \<Rightarrow> thread_state" ("BlockedOnReceive'_ \<lparr> blockingObject= _, blockingIPCDiminishCaps= _ \<rparr>")
+  BlockedOnReceive_trans :: "(machine_word) \<Rightarrow> thread_state" ("BlockedOnReceive'_ \<lparr> blockingObject= _ \<rparr>")
 where
-  "BlockedOnReceive_ \<lparr> blockingObject= v0, blockingIPCDiminishCaps= v1 \<rparr> == BlockedOnReceive v0 v1"
+  "BlockedOnReceive_ \<lparr> blockingObject= v0 \<rparr> == BlockedOnReceive v0"
 
 abbreviation (input)
   BlockedOnNotification_trans :: "(machine_word) \<Rightarrow> thread_state" ("BlockedOnNotification'_ \<lparr> waitingOnNotification= _ \<rparr>")
@@ -826,7 +828,7 @@ definition
   isBlockedOnReceive :: "thread_state \<Rightarrow> bool"
 where
  "isBlockedOnReceive v \<equiv> case v of
-    BlockedOnReceive v0 v1 \<Rightarrow> True
+    BlockedOnReceive v0 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition
@@ -2002,64 +2004,64 @@ lemma intStateIRQTable_intStateIRQTable_update [simp]:
 datatype user_data =
     UserData
 
-consts
+consts'
 kernelObjectTypeName :: "kernel_object \<Rightarrow> unit list"
 
-consts
+consts'
 objBitsKO :: "kernel_object \<Rightarrow> nat"
 
-consts
+consts'
 tcbCTableSlot :: "machine_word"
 
-consts
+consts'
 tcbVTableSlot :: "machine_word"
 
-consts
+consts'
 tcbReplySlot :: "machine_word"
 
-consts
+consts'
 tcbCallerSlot :: "machine_word"
 
-consts
+consts'
 tcbIPCBufferSlot :: "machine_word"
 
-consts
+consts'
 maxPriority :: "priority"
 
-consts
+consts'
 maxDomain :: "priority"
 
-consts
+consts'
 nullMDBNode :: "mdbnode"
 
-consts
+consts'
 dschDomain :: "(domain * machine_word) \<Rightarrow> domain"
 
-consts
+consts'
 dschLength :: "(domain * machine_word) \<Rightarrow> machine_word"
 
-consts
+consts'
 wordBits :: "nat"
 
-consts
+consts'
 wordRadix :: "nat"
 
-consts
+consts'
 wordSize :: "nat"
 
-consts
+consts'
 wordSizeCase :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
 
-consts
+consts'
 isReceive :: "thread_state \<Rightarrow> bool"
 
-consts
+consts'
 isSend :: "thread_state \<Rightarrow> bool"
 
-consts
+consts'
 isReply :: "thread_state \<Rightarrow> bool"
 
-consts
+consts'
 maxFreeIndex :: "nat \<Rightarrow> nat"
 
 defs objBitsKO_def:
@@ -2126,7 +2128,7 @@ defs wordSizeCase_def:
 
 defs isReceive_def:
 "isReceive x0\<equiv> (case x0 of
-    (BlockedOnReceive _ _) \<Rightarrow>    True
+    (BlockedOnReceive _) \<Rightarrow>    True
   | _ \<Rightarrow>    False
   )"
 

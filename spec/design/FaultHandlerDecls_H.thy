@@ -18,13 +18,13 @@ theory FaultHandlerDecls_H
 imports Structures_H FaultMonad_H
 begin
 
-consts
+consts'
 handleFault :: "machine_word \<Rightarrow> fault \<Rightarrow> unit kernel"
 
-consts
+consts'
 sendFaultIPC :: "machine_word \<Rightarrow> fault \<Rightarrow> ( fault , unit ) kernel_f"
 
-consts
+consts'
 handleDoubleFault :: "machine_word \<Rightarrow> fault \<Rightarrow> fault \<Rightarrow> unit kernel"
 
 

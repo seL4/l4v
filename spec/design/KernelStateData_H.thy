@@ -22,6 +22,9 @@ imports
   "./$L4V_ARCH/ArchStateData_H"
 begin
 
+unqualify_types (in Arch)
+  vmpage_size
+
 subsection "The Kernel State"
 
 type_synonym ready_queue = "machine_word list"
@@ -164,7 +167,7 @@ decDomainTime :: "unit kernel"
 where
 "decDomainTime\<equiv> modify (\<lambda> ks. ks \<lparr> ksDomainTime := ksDomainTime ks - 1 \<rparr>)"
 
-consts
+consts'
 capHasProperty :: "machine_word \<Rightarrow> (capability \<Rightarrow> bool) \<Rightarrow> kernel_state \<Rightarrow> bool"
 
 

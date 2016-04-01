@@ -51,19 +51,11 @@ datatype register =
 
 type_synonym machine_word = "word32"
 
-end
-qualify ARM (deep)
-consts
+consts'
 initContext :: "(register * machine_word) list"
-end_qualify
-context ARM begin
 
-end
-qualify ARM (deep)
-consts
+consts'
 sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
-end_qualify
-context ARM begin
 
 (*<*)
 end
@@ -154,22 +146,14 @@ definition
 definition
 "syscallMessage \<equiv> [R0  .e.  R7] @ [FaultInstruction, SP, LR, CPSR]"
 
-end
-qualify ARM (deep)
 defs initContext_def:
 "initContext\<equiv> [(CPSR,0x150)]"
-end_qualify
-context ARM begin
 
-end
-qualify ARM (deep)
 defs sanitiseRegister_def:
 "sanitiseRegister x0 v\<equiv> (case x0 of
     CPSR \<Rightarrow>    (v && 0xf8000000) || 0x150
   | _ \<Rightarrow>    v
   )"
-end_qualify
-context ARM begin
 
 
 section "Machine State"
@@ -240,12 +224,9 @@ text {*
   The initial exclusive state is the same constant
   that clearExMonitor defaults it to.
 *}
-end
-qualify ARM
-consts default_exclusive_state :: ARM.exclusive_monitors
-end_qualify
 
-context ARM begin
+consts' default_exclusive_state :: exclusive_monitors
+
 text {*
   We leave open the underspecified rest of the machine state in
   the initial state.

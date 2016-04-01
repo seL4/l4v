@@ -15,7 +15,10 @@ imports
   "./$L4V_ARCH/ArchLabelFuns_H"
 begin
 
-#INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=ArchRetypeDecls_H NOT InvocationLabel
+unqualify_types (in Arch)
+  copy_register_sets
+
+#INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=Arch NOT InvocationLabel
 #INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ONLY invocationType
 
 end

@@ -14,6 +14,9 @@ theory TCBDecls_H
 imports FaultMonad_H Invocations_H
 begin
 
+unqualify_types (in Arch)
+  user_monad
+
 #INCLUDE_HASKELL SEL4/Object/TCB.lhs decls_only
 
 end

@@ -23,6 +23,18 @@ imports
   "./$L4V_ARCH/ArchStructures_H"
 begin
 
+unqualify_types (in Arch)
+  irq
+  arch_capability
+  user_context
+  arch_kernel_object
+  asid
+
+unqualify_consts (in Arch)
+  archObjSize
+  pageBits
+  nullPointer
+
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap
 

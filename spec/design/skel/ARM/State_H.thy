@@ -20,7 +20,7 @@ imports
   RegisterSet_H
   "../../machine/ARM/MachineOps"
 begin
-qualify ARM (deep)
+context ARM begin
 
 definition
   Word :: "machine_word \<Rightarrow> machine_word"
@@ -28,7 +28,7 @@ where
   Word_def[simp]:
  "Word \<equiv> id"
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet.lhs Arch=MachineTypes all_bits NOT UserContext UserMonad getRegister setRegister newContext mask Word PPtr
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet.lhs Arch=MachineTypes CONTEXT ARM all_bits NOT UserContext UserMonad getRegister setRegister newContext mask Word PPtr
 
 definition
   PPtr :: "machine_word \<Rightarrow> machine_word"
@@ -47,5 +47,5 @@ definition
 where
  "nullPointer \<equiv> 0"
 
-end_qualify
+end
 end
