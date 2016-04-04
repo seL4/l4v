@@ -1346,10 +1346,6 @@ lemma unique_table_caps_pdD:
   by (fastforce simp add: unique_table_caps_def)
 
 
-definition
-  "valid_caps cs s \<equiv> \<forall>slot cap. cs slot = Some cap \<longrightarrow> valid_cap cap s"
-
-
 lemma valid_objs_caps:
   "valid_objs s \<Longrightarrow> valid_caps (caps_of_state s) s"
   apply (clarsimp simp: valid_caps_def)

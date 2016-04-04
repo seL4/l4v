@@ -1305,7 +1305,7 @@ interpretation
    sbm: non_arch_non_cap_non_mem_op "set_bound_notification p b" +
    as_user: non_arch_non_cap_non_mem_op "as_user p g" +
    thread_set: non_arch_op "thread_set f p" +
-   set_cap: non_arch_op "set_cap cap p'"
+   set_cap: non_arch_non_mem_op "set_cap cap p'"
    apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_endpoint_def set_notification_def set_thread_state_def 
             set_bound_notification_def thread_set_def set_cap_def[simplified split_def]

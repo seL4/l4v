@@ -2172,7 +2172,7 @@ lemma set_untyped_cap_invs_simple:
   apply (simp add:valid_irq_node_def)
   apply wps
   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_arch_objs set_cap_valid_arch_caps
-    set_cap_valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at )
+    set_cap.valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at )
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps)
   apply (intro conjI,clarsimp)
         apply (rule ext,clarsimp simp:is_cap_simps)

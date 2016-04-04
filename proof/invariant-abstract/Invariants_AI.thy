@@ -317,6 +317,9 @@ abbreviation
 where
   "s \<turnstile> c \<equiv> valid_cap c s"
 
+definition
+  "valid_caps cs s \<equiv> \<forall>slot cap. cs slot = Some cap \<longrightarrow> valid_cap cap s"
+
 primrec
   cap_class :: "cap \<Rightarrow> capclass"
 where
@@ -1030,8 +1033,6 @@ lemma cte_at_def:
   "cte_at p s \<equiv> \<exists>cap. fst (get_cap p s) = {(cap,s)}"
   by (simp add: cte_wp_at_def)
 
-
-
 lemma valid_cap_def2:
   "s \<turnstile> c \<equiv> cap_aligned c \<and> wellformed_cap c \<and> valid_cap_ref c s"
   apply (rule eq_reflection)
@@ -1041,6 +1042,11 @@ lemma valid_cap_def2:
                         split: option.splits)
     apply (fastforce+)[4]
   by (simp add: valid_arch_cap_def2)
+
+lemma valid_capsD:
+  "\<lbrakk>caps_of_state s p = Some cap; valid_caps (caps_of_state s) s\<rbrakk>
+   \<Longrightarrow> valid_cap cap s"
+  by (cases p, simp add: valid_caps_def)
 
 lemma tcb_cnode_index_distinct[simp]:
   "(tcb_cnode_index n = tcb_cnode_index m)
