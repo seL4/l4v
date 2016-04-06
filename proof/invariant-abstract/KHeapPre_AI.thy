@@ -111,4 +111,15 @@ locale arch_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
   assumes arch_only: "arch_obj_pred P" 
 
+lemma set_object_typ_at:
+  "\<lbrace>\<lambda>s. typ_at (a_type ko) p s \<and> P (typ_at T p' s)\<rbrace> 
+  set_object p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
+  apply (simp add: set_object_def)
+  apply wp
+  apply clarsimp
+  apply (erule rsubst [where P=P])
+  apply (clarsimp simp: obj_at_def)
+  done
+
+
 end

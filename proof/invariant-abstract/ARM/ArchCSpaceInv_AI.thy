@@ -72,18 +72,15 @@ lemma pageBitsForSize_simps[simp]:
   by (simp add: pageBitsForSize_def)+
 
 definition
-  "is_ap_cap cap \<equiv> case cap of (arch_cap.ASIDPoolCap ap asid) \<Rightarrow> True | _ \<Rightarrow> False"
+  "is_ap_cap cap \<equiv> case cap of (ArchObjectCap (arch_cap.ASIDPoolCap ap asid)) \<Rightarrow> True | _ \<Rightarrow> False"
 
-lemmas is_ap_cap_simps [simp] = is_ap_cap_def [split_simps arch_cap.split]
+lemmas is_ap_cap_simps [simp] = is_ap_cap_def [split_simps cap.split arch_cap.split]
 
 definition
   "reachable_pg_cap cap \<equiv> \<lambda>s.
    is_pg_cap cap \<and>
    (\<exists>vref. vs_cap_ref cap = Some vref \<and> (vref \<unrhd> obj_ref_of cap) s)"
 
-lemma empty_table_caps_of:
-  "empty_table S ko \<Longrightarrow> caps_of ko = {}"
-  by (cases ko, simp_all add: empty_table_def caps_of_def cap_of_def)
 
 (*FIXME arch_split: These are probably subsumed by the lifting lemmas *)
 
@@ -138,10 +135,7 @@ lemma vs_lookup_tcb_update:
   by (clarsimp simp add: vs_lookup_def vs_lookup1_tcb_update)
 
 
-lemma only_idle_tcb_update:
-  "\<lbrakk>only_idle s; ko_at (TCB t) p s; tcb_state t = tcb_state t' \<or> \<not>idle (tcb_state t') \<rbrakk>
-    \<Longrightarrow> only_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
-  by (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def)
+
 
 
 lemma tcb_update_global_pd_mappings:
@@ -303,6 +297,7 @@ lemma not_arch_not_reachable_pg[simp]:
   unfolding is_arch_cap_def reachable_pg_cap_def is_pg_cap_def
   by (auto split: cap.splits arch_cap.splits)
 
+(*
 lemma set_cap_valid_arch_caps:
   "\<lbrace>\<lambda>s. valid_arch_caps s
       \<and> (if (\<not>is_arch_cap cap) \<and> (\<forall>cap'. cte_wp_at (op = cap') ptr s \<longrightarrow> \<not>is_arch_cap cap') then  
@@ -310,7 +305,7 @@ lemma set_cap_valid_arch_caps:
          else set_arch_cap_precondition cap ptr s) \<rbrace>
         set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-
+(*
   apply (simp add: valid_arch_caps_def pred_conj_def split del: split_if)
   apply (wp set_cap_valid_vs_lookup set_cap_valid_table_caps
               set_cap_unique_table_caps set_cap_unique_table_refs)
@@ -328,12 +323,30 @@ lemma set_cap_valid_arch_caps:
   apply clarsimp
   apply (simp add: cte_wp_at_caps_of_state)
   apply (case_tac "caps_of_state s ptr"; simp)
-  find_theorems no_cap_to_obj_with_diff_ref
-  apply (simp ; blast)
-  
-find_consts name:"is_arch_cap"
-find_theorems valid_arch_caps
-(*
+  done*) sorry*)
+
+lemma set_cap_valid_arch_caps:
+  "\<lbrace>\<lambda>s. valid_arch_caps s
+      \<and> (\<forall>vref cap'. cte_wp_at (op = cap') ptr s
+                \<longrightarrow> vs_cap_ref cap' = Some vref
+                \<longrightarrow> (vs_cap_ref cap = Some vref \<and> obj_refs cap = obj_refs cap')
+                 \<or> (\<not> is_final_cap' cap' s \<and> \<not> reachable_pg_cap cap' s)
+                 \<or> (\<forall>oref \<in> obj_refs cap'. \<not> (vref \<unrhd> oref) s))
+      \<and> no_cap_to_obj_with_diff_ref cap {ptr} s
+      \<and> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap = None
+            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
+      \<and> ((is_pt_cap cap \<or> is_pd_cap cap)
+             \<longrightarrow> (\<forall>oldcap. caps_of_state s ptr = Some oldcap \<longrightarrow>
+                  (is_pt_cap cap \<and> is_pt_cap oldcap \<or> is_pd_cap cap \<and> is_pd_cap oldcap)
+                    \<longrightarrow> (cap_asid cap = None \<longrightarrow> cap_asid oldcap = None)
+                    \<longrightarrow> obj_refs oldcap \<noteq> obj_refs cap)
+             \<longrightarrow> (\<forall>ptr'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs cap
+                                              \<and> (is_pd_cap cap \<and> is_pd_cap cap' \<or> is_pt_cap cap \<and> is_pt_cap cap')
+                                              \<and> (cap_asid cap = None \<or> cap_asid cap' = None)) ptr' s \<longrightarrow> ptr' = ptr))\<rbrace>
+     set_cap cap ptr
+   \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
+   sorry
+
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at (op = cap) ptr s; valid_table_caps s;
         is_pt_cap cap | is_pd_cap cap; cap_asid cap = None \<rbrakk>
@@ -372,6 +385,25 @@ lemma cap_refs_in_kernel_windowD:
                         cte_wp_at_caps_of_state)
   apply (cases ptr, fastforce)
   done
+
+lemma valid_cap_imp_valid_vm_rights:
+  "valid_cap (cap.ArchObjectCap (PageCap mw rs sz m)) s \<Longrightarrow>
+   rs \<in> valid_vm_rights"
+by (simp add: valid_cap_def valid_vm_rights_def)
+
+lemma acap_rights_update_idem [simp]:
+  "acap_rights_update R (acap_rights_update R' cap) = acap_rights_update R cap"
+  by (simp add: acap_rights_update_def split: arch_cap.splits)
+
+lemma cap_master_arch_cap_rights [simp]:
+  "cap_master_arch_cap (acap_rights_update R cap) = cap_master_arch_cap cap"
+  by (simp add: cap_master_arch_cap_def acap_rights_update_def 
+           split: arch_cap.splits)
+
+lemma acap_rights_update_id [intro!, simp]:
+  "valid_arch_cap ac s \<Longrightarrow> acap_rights_update (acap_rights ac) ac = ac"
+  unfolding acap_rights_update_def acap_rights_def valid_arch_cap_def
+  by (cases ac; simp)
 
 end
 end

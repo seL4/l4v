@@ -2602,7 +2602,7 @@ sublocale Arch \<subseteq> revokable_update: Arch_p_arch_idle_update_int_eq "is_
 interpretation machine_state_update:
   p_arch_idle_update_int_eq "machine_state_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> machine_state_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
+sublocale Arch \<subseteq> machine_state_update: Arch_p_arch_idle_update_int_eq "machine_state_update f" by unfold_locales
 
 interpretation cdt_update:
   p_arch_idle_update_int_eq "cdt_update f"

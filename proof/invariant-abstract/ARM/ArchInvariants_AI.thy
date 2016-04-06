@@ -40,14 +40,15 @@ lemma arch_cap_fun_lift_expand[simp]:
                               | PageCap obj_ref rights sz vr \<Rightarrow> P_PageCap obj_ref rights sz vr
                               | PageTableCap obj_ref vr \<Rightarrow> P_PageTableCap obj_ref vr
                               | PageDirectoryCap obj_ref asid \<Rightarrow> P_PageDirectoryCap obj_ref asid)
-                      F c) =
+                      F) = (\<lambda>c. 
    (case c of
       ArchObjectCap (ASIDPoolCap obj_ref asid) \<Rightarrow> P_ASIDPoolCap obj_ref asid
     | ArchObjectCap (ASIDControlCap) \<Rightarrow> P_ASIDControlCap
     | ArchObjectCap (PageCap obj_ref rights sz vr) \<Rightarrow> P_PageCap obj_ref rights sz vr
     | ArchObjectCap (PageTableCap obj_ref vr) \<Rightarrow> P_PageTableCap obj_ref vr
     | ArchObjectCap (PageDirectoryCap obj_ref asid) \<Rightarrow> P_PageDirectoryCap obj_ref asid
-    | _ \<Rightarrow> F)"
+    | _ \<Rightarrow> F))"
+  apply (rule ext)
   by (simp add: arch_cap_fun_lift_def)
 
 lemma arch_obj_fun_lift_expand[simp]:
@@ -56,17 +57,22 @@ lemma arch_obj_fun_lift_expand[simp]:
                               | PageTable pt \<Rightarrow> P_PageTable pt
                               | PageDirectory pd \<Rightarrow> P_PageDirectory pd
                               | DataPage s \<Rightarrow> P_DataPage s)
-                      F ko) =
+                      F) = (\<lambda>ko. 
    (case ko of
       ArchObj (ASIDPool pool) \<Rightarrow> P_ASIDPool pool
     | ArchObj (PageTable pt) \<Rightarrow> P_PageTable pt
     | ArchObj (PageDirectory pd) \<Rightarrow> P_PageDirectory pd
     | ArchObj (DataPage s) \<Rightarrow> P_DataPage s
-    | _ \<Rightarrow> F)"
+    | _ \<Rightarrow> F))"
+  apply (rule ext)
   by (simp only: arch_obj_fun_lift_def)
 
 lemmas aa_type_simps =
   aa_type_def[split_simps arch_kernel_obj.split]
+
+lemmas a_type_simps = a_type_simps aa_type_simps
+
+lemmas a_type_def = a_type_def[simplified aa_type_def]
 
 definition
   "vmsz_aligned ref sz \<equiv> is_aligned ref (pageBitsForSize sz)"
@@ -159,14 +165,20 @@ where
 | "acap_class (PageDirectoryCap x y) = PhysicalClass"
 
 definition
-  valid_ipc_buffer_cap :: "cap \<Rightarrow> word32 \<Rightarrow> bool"
+  valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> word32 \<Rightarrow> bool"
 where
-  "valid_ipc_buffer_cap c bufptr \<equiv>
-         case c of
-              ArchObjectCap (PageCap ref rghts sz mapdata) \<Rightarrow>
+  "valid_ipc_buffer_cap_arch ac bufptr \<equiv>
+         case ac of
+              (PageCap ref rghts sz mapdata) \<Rightarrow>
                    is_aligned bufptr msg_align_bits
 
             | _ \<Rightarrow> True"
+
+declare valid_ipc_buffer_cap_arch_def[simp]
+
+definition
+  "valid_ipc_buffer_cap c bufptr \<equiv> 
+     arch_cap_fun_lift (\<lambda>ac. valid_ipc_buffer_cap_arch ac bufptr) True c"
 
 primrec
   valid_pte :: "pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -640,18 +652,17 @@ lemma is_arch_cap_simps:
   "is_pt_cap cap = (\<exists>p asid. cap = (ArchObjectCap (PageTableCap p asid)))"
   by (auto simp add: is_pg_cap_def is_pd_cap_def is_pt_cap_def)
 
-
 definition
-  "cap_asid_arch \<equiv> \<lambda> cap. case cap of
+  "cap_asid_arch cap \<equiv> case cap of
     PageCap _ _ _ (Some (asid, _)) \<Rightarrow> Some asid
   | PageTableCap _ (Some (asid, _)) \<Rightarrow> Some asid
   | PageDirectoryCap _ (Some asid) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
-declare cap_asid_arch_def[simp]
+declare cap_asid_arch_def[abs_def, simp]
 
 definition  
-  "cap_asid = arch_cap_fun_lift cap_asid_arch None" 
+  "cap_asid cap = arch_cap_fun_lift cap_asid_arch None cap" 
 
 
   (* needed for retype: if reachable, then cap, if cap then protected by untyped cap.
@@ -934,7 +945,7 @@ lemma atyp_at_eq_kheap_obj:
   "typ_at (AArch APageDirectory) p s \<longleftrightarrow> (\<exists>pd. kheap s p = Some (ArchObj (PageDirectory pd)))"
   "typ_at (AArch (AIntData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage sz)))"
   apply (auto simp add: obj_at_def)
-  apply (simp_all add: a_type_def aa_type_def
+  apply (simp_all add: a_type_def
                 split: split_if_asm kernel_object.splits arch_kernel_obj.splits)
   done
 
@@ -1166,7 +1177,7 @@ lemma aobj_at_default_arch_cap_valid:
   using assms
   by (auto elim!: obj_at_weakenE
         simp add: arch_default_cap_def valid_arch_cap_def default_arch_object_def
-                  a_type_def aa_type_def 
+                  a_type_def 
                   valid_vm_rights_def
            split: apiobject_type.splits aobject_type.splits option.splits)
 
@@ -1203,7 +1214,7 @@ lemma page_directory_pde_atI:
          pspace_aligned s \<rbrakk> \<Longrightarrow> pde_at (p + (x << 2)) s"
   apply (clarsimp simp: obj_at_def pde_at_def)
   apply (drule (1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def aa_type_def
+  apply (clarsimp simp: a_type_def
                  split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
   apply (subgoal_tac "p = (p + (x << 2) && ~~ mask pd_bits)")
@@ -1222,7 +1233,7 @@ lemma page_table_pte_atI:
   "\<lbrakk> page_table_at p s; x < 2^(pt_bits - 2); pspace_aligned s \<rbrakk> \<Longrightarrow> pte_at (p + (x << 2)) s"
   apply (clarsimp simp: obj_at_def pte_at_def)
   apply (drule (1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def aa_type_def
+  apply (clarsimp simp: a_type_def
                  split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
   apply (subgoal_tac "p = (p + (x << 2) && ~~ mask pt_bits)")
@@ -1808,7 +1819,7 @@ lemma vs_ref_order:
   apply (erule vs_lookup_induct)
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def ranI)
   apply (clarsimp dest!: vs_lookup1D elim!: obj_atE)
-  apply (clarsimp simp: vs_refs_def a_type_simps aa_type_simps
+  apply (clarsimp simp: vs_refs_def a_type_simps
                  split: kernel_object.split_asm arch_kernel_obj.split_asm
                  dest!: graph_ofD)
    apply (drule valid_arch_objsD) apply (simp add: obj_at_def) apply (assumption)
@@ -2021,6 +2032,29 @@ lemma acap_rights_update_id [intro!, simp]:
   "\<lbrakk>wellformed_acap cap\<rbrakk> \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding wellformed_acap_def acap_rights_update_def
   by (auto split: arch_cap.splits)
+
+lemmas cap_asid_simps [simp] =
+  cap_asid_def [simplified, split_simps cap.split arch_cap.split option.split prod.split]
+
+
+lemma in_user_frame_def:
+  "in_user_frame p \<equiv> \<lambda>s.
+   \<exists>sz. typ_at (AArch (AIntData sz)) (p && ~~ mask (pageBitsForSize sz)) s"
+  apply (rule eq_reflection, rule ext)
+  apply (simp add: in_user_frame_def obj_at_def)
+  apply (rule_tac f=Ex in arg_cong)
+  apply (rule ext, rule iffI)
+   apply (simp add: a_type_simps)
+  apply clarsimp
+  done
+
+lemma in_user_frame_lift:
+ assumes typ_at: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>_. typ_at (AArch T) p\<rbrace>"
+ shows "\<lbrace>in_user_frame p\<rbrace> f \<lbrace>\<lambda>_. in_user_frame p\<rbrace>"
+ unfolding in_user_frame_def
+ by (wp hoare_vcg_ex_lift typ_at)
+
+
 
 end
 

@@ -28,6 +28,10 @@ unqualify_facts (in Arch)
   valid_validate_vm_rights[simp]
   cap_master_arch_inv[simp]
   unique_table_refs_def
+  valid_ipc_buffer_cap_def
+  acap_rights_update_idem[simp]
+  cap_master_arch_cap_rights[simp]
+  acap_rights_update_id [intro!, simp]
 
 lemma remove_rights_cap_valid[simp]:
   "s \<turnstile> c \<Longrightarrow> s \<turnstile> remove_rights S c"
@@ -377,13 +381,18 @@ lemma cap_master_cap_eqDs1:
   "cap_master_cap cap = cap.ReplyCap ref master
      \<Longrightarrow> master = True
           \<and> (\<exists>master. cap = cap.ReplyCap ref master)"
-  "cap_master_cap cap = ArchObjectCap acap
-     \<Longrightarrow> \<exists>ac. cap = ArchObjectCap ac \<and> acap = cap_master_arch_cap ac"
   by (clarsimp simp: cap_master_cap_def
               split: cap.split_asm)+
 
+lemma cap_master_cap_arch_eqD:
+    "cap_master_cap cap = ArchObjectCap acap
+     \<Longrightarrow> \<exists>ac. cap = ArchObjectCap ac \<and> acap = cap_master_arch_cap ac"
+       by (clarsimp simp: cap_master_cap_def
+              split: cap.split_asm)+
 
-lemmas cap_master_cap_eqDs = cap_master_cap_eqDs1 cap_master_cap_eqDs1 [OF sym]
+lemmas cap_master_cap_eqDs = 
+  cap_master_cap_eqDs1 cap_master_cap_arch_eqD 
+  cap_master_cap_eqDs1 [OF sym] cap_master_cap_arch_eqD [OF sym]
 
 
 definition
@@ -1642,7 +1651,7 @@ lemma replace_cap_invs:
         \<and> s \<turnstile> cap\<rbrace>
      set_cap cap p
    \<lbrace>\<lambda>rv s. invs s\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_mdb_def2)
+ (* apply (simp add: invs_def valid_state_def valid_mdb_def2)
   apply (rule hoare_pre)
    apply (wp replace_cap_valid_pspace
              set_cap_caps_of_state2 set_cap_idle
@@ -1723,7 +1732,7 @@ lemma replace_cap_invs:
                     valid_arch_caps_def unique_table_refs_no_cap_asidE)
   apply simp
   apply (rule Ball_emptyI, simp add: obj_irq_refs_subset)
-  done
+  done*) sorry
 
 crunch cte_wp_at: set_cdt "cte_wp_at P p"
 
@@ -1866,21 +1875,13 @@ lemma set_untyped_cap_as_full_cte_wp_at:
   done
 
 
-lemma free_index_update_test_function_stuff[simp]:
-  "cap_asid (src_cap\<lparr>free_index := a\<rparr>) = cap_asid src_cap"
-  "obj_irq_refs (src_cap\<lparr>free_index := a\<rparr>) = obj_irq_refs src_cap"
-  "vs_cap_ref (src_cap\<lparr>free_index := a\<rparr>) = vs_cap_ref src_cap"
-  "untyped_range (cap \<lparr>free_index :=a \<rparr>) = untyped_range cap"
-  "zobj_refs (c\<lparr>free_index:=a\<rparr>) =  zobj_refs c"
-  "obj_refs (c\<lparr>free_index:=a\<rparr>) = obj_refs c"
-  by (auto simp:cap_asid_def free_index_update_def  vs_cap_ref_def
-    is_cap_simps obj_irq_refs_def split:cap.splits arch_cap.splits)
+
 
 
 lemma valid_cap_free_index_update[simp]:
   "valid_cap cap s \<Longrightarrow> valid_cap (max_free_index_update cap) s"
   apply (case_tac cap)
-  apply (simp_all add:free_index_update_def split:cap.splits arch_cap.splits)
+  apply (simp_all add:free_index_update_def split:cap.splits )
   apply (clarsimp simp:valid_cap_def cap_aligned_def valid_untyped_def max_free_index_def)
   done
 
@@ -1898,7 +1899,7 @@ lemma cap_insert_ex_cap:
         apply (wp set_cap_cap_to get_cap_wp set_cap_cte_wp_at set_untyped_cap_as_full_cte_wp_at)
      apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
      apply (wp set_cap_cap_to get_cap_wp)
-  apply (clarsimp elim!: cte_wp_at_weakenE simp:is_cap_simps cte_wp_at_caps_of_state)
+  apply_trace (clarsimp elim!: cte_wp_at_weakenE simp:is_cap_simps cte_wp_at_caps_of_state)
   apply (simp add:masked_as_full_def)
   done
 
@@ -2052,7 +2053,7 @@ lemma tcb_cap_valid_update_free_index[simp]:
       split:if_splits cap.split_asm Structures_A.thread_state.split_asm)
     apply (clarsimp simp:pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def
       valid_ipc_buffer_cap_def
-      split:cap.split_asm)
+      split:cap.splits)
     done
 
 
@@ -2122,13 +2123,13 @@ lemma cap_insert_valid_cap[wp]:
 
 lemma cap_rights_update_idem [simp]:
   "cap_rights_update R (cap_rights_update R' cap) = cap_rights_update R cap"
-  by (simp add: cap_rights_update_def acap_rights_update_def split: cap.splits arch_cap.splits)
+  by (simp add: cap_rights_update_def split: cap.splits)
 
 
 lemma cap_master_cap_rights [simp]:
   "cap_master_cap (cap_rights_update R cap) = cap_master_cap cap"
-  by (simp add: cap_master_cap_def cap_rights_update_def acap_rights_update_def 
-           split: cap.splits arch_cap.splits)
+  by (simp add: cap_master_cap_def cap_rights_update_def 
+           split: cap.splits)
 
 
 lemma cap_insert_obj_at_other:
@@ -2138,6 +2139,10 @@ lemma cap_insert_obj_at_other:
    apply (wp set_cap_obj_at_other get_cap_wp|simp split del: split_if)+
   done
 
+lemma only_idle_tcb_update:
+  "\<lbrakk>only_idle s; ko_at (TCB t) p s; tcb_state t = tcb_state t' \<or> \<not>idle (tcb_state t') \<rbrakk>
+    \<Longrightarrow> only_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
+  by (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def)
 
 lemma as_user_only_idle :
   "\<lbrace>only_idle\<rbrace> as_user t m \<lbrace>\<lambda>_. only_idle\<rbrace>"
@@ -2151,19 +2156,13 @@ lemma as_user_only_idle :
   done
 
 
-lemma valid_cap_imp_valid_vm_rights:
-  "valid_cap (cap.ArchObjectCap (arch_cap.PageCap mw rs sz m)) s \<Longrightarrow>
-   rs \<in> valid_vm_rights"
-by (simp add: valid_cap_def valid_vm_rights_def)
-
 
 lemma cap_rights_update_id [intro!, simp]:
   "valid_cap c s \<Longrightarrow> cap_rights_update (cap_rights c) c = c"
   unfolding cap_rights_update_def 
-           acap_rights_update_def
   apply (cases c, simp_all)
    apply (simp add: valid_cap_def)
-  apply (clarsimp simp: valid_cap_imp_valid_vm_rights  split: arch_cap.splits)
+  apply (fastforce simp: valid_cap_def)
   done
 
 

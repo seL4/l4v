@@ -56,7 +56,7 @@ lemma set_asid_pool_typ_at:
   apply (simp add: set_asid_pool_def set_object_def get_object_def)
   apply wp
   including unfold_objects
-  by clarsimp (simp add: a_type_def aa_type_def)
+  by clarsimp (simp add: a_type_def)
 
 
 lemmas set_asid_pool_typ_ats [wp] = abs_typ_at_lifts [OF set_asid_pool_typ_at]
@@ -104,7 +104,7 @@ lemma store_pde_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pde ptr pde \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def get_object_def)
   apply wp
-  apply (clarsimp simp: obj_at_def a_type_def aa_type_def)
+  apply (clarsimp simp: obj_at_def a_type_def)
   done
 
 
@@ -149,7 +149,7 @@ lemma store_pte_typ_at:
     "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pte ptr pte \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   apply (simp add: store_pte_def set_pt_def set_object_def get_object_def)
   apply wp
-  apply (clarsimp simp: obj_at_def a_type_def aa_type_def)
+  apply (clarsimp simp: obj_at_def a_type_def)
   done
 
 
@@ -338,7 +338,7 @@ lemma set_pd_aligned [wp]:
   apply (simp add: set_pd_def)
   apply (wp set_object_aligned get_object_wp)
   including unfold_objects_asm
-  by (clarsimp simp: a_type_def aa_type_def)
+  by (clarsimp simp: a_type_def)
 
 
 crunch aligned [wp]: store_pde pspace_aligned
@@ -355,7 +355,7 @@ lemma arch_derive_cap_valid_cap:
   apply(simp add: arch_derive_cap_def)
   apply(cases arch_cap, simp_all add: arch_derive_cap_def o_def)
       apply(rule hoare_pre, wpc?, wp,
-            clarsimp simp add: cap_aligned_def valid_cap_def valid_arch_cap_def split: option.splits)+
+            clarsimp simp add: cap_aligned_def valid_cap_def split: option.splits)+
   done
 
 
@@ -416,7 +416,7 @@ lemma mask_asid_low_bits_ucast_ucast:
   apply (simp add: word_size nth_ucast asid_low_bits_def)
   done
 
-crunch ct[wp]: set_thread_state "\<lambda>s. P (cur_thread s)"
+
 
 lemma set_asid_pool_cur [wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
@@ -443,7 +443,7 @@ lemma set_asid_pool_valid_objs [wp]:
   apply (simp add: set_asid_pool_def)
   apply (wp set_object_valid_objs get_object_wp)
   including unfold_objects
-  by (clarsimp simp: a_type_def aa_type_def valid_obj_def wellformed_arch_obj_def)
+  by (clarsimp simp: a_type_def valid_obj_def wellformed_arch_obj_def)
 
 lemma pde_at_aligned_vptr:
   "\<lbrakk>x \<in> set [0 , 4 .e. 0x3C]; page_directory_at pd s;
@@ -452,7 +452,7 @@ lemma pde_at_aligned_vptr:
   apply (clarsimp simp: lookup_pd_slot_def Let_def
                         obj_at_def pde_at_def)
   apply (drule(1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def aa_type_def
+  apply (clarsimp simp: a_type_def
                  split: kernel_object.split_asm
                         arch_kernel_obj.split_asm split_if_asm
                  cong: kernel_object.case_cong)
@@ -601,7 +601,7 @@ lemma kernel_mapping_slots_empty_pdeI:
   apply (clarsimp simp: invs_def valid_state_def equal_kernel_mappings_def valid_global_objs_def)
   apply (erule_tac x=p in allE, erule_tac x="arm_global_pd (arch_state s)" in allE)
   including unfold_objects
-  by (clarsimp simp: empty_table_def valid_arch_state_def a_type_def aa_type_def)
+  by (clarsimp simp: empty_table_def valid_arch_state_def a_type_def)
 
 
 lemma invs_valid_global_pts:
@@ -824,7 +824,7 @@ lemma set_pt_distinct [wp]:
   "\<lbrace>pspace_distinct\<rbrace> set_pt p pt \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wp set_object_distinct get_object_wp)
-  apply (clarsimp simp: obj_at_def a_type_def aa_type_def
+  apply (clarsimp simp: obj_at_def a_type_def
                 split: kernel_object.splits arch_kernel_obj.splits)
   done
 
@@ -833,7 +833,7 @@ lemma set_pd_distinct [wp]:
   "\<lbrace>pspace_distinct\<rbrace> set_pd p pd \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
   apply (simp add: set_pd_def)
   apply (wp set_object_distinct get_object_wp)
-  apply (clarsimp simp: obj_at_def a_type_def aa_type_def
+  apply (clarsimp simp: obj_at_def a_type_def
                   split: kernel_object.splits arch_kernel_obj.splits)
   done
 
@@ -854,7 +854,7 @@ lemma store_pte_valid_objs [wp]:
     apply (erule allE, erule impE, blast)
     apply (clarsimp simp: valid_obj_def wellformed_arch_obj_def)
    apply assumption
-  by (simp add: a_type_def aa_type_def)
+  by (simp add: a_type_def)
   done
 
 
@@ -889,7 +889,7 @@ lemma store_pte_aligned [wp]:
   apply (simp add: store_pte_def set_pt_def)
   apply (wp set_object_aligned get_object_wp)
   including unfold_objects
-  by (clarsimp simp: a_type_def aa_type_def)
+  by (clarsimp simp: a_type_def)
 
 
 lemma store_pde_valid_objs [wp]:
@@ -908,7 +908,7 @@ lemma store_pde_valid_objs [wp]:
     apply (erule allE, erule impE, blast)
     apply (clarsimp simp: valid_obj_def wellformed_arch_obj_def)
    apply assumption
-  by (simp add: a_type_def aa_type_def)
+  by (simp add: a_type_def)
   done
 
 
@@ -917,14 +917,14 @@ lemma set_asid_pool_aligned [wp]:
   apply (simp add: set_asid_pool_def get_object_def)
   apply (wp set_object_aligned|wpc)+
   including unfold_objects
-  by (auto simp: a_type_def aa_type_def)
+  by (auto simp: a_type_def)
 
 lemma set_asid_pool_distinct [wp]:
   "\<lbrace>pspace_distinct\<rbrace> set_asid_pool p ptr \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
   apply (simp add: set_asid_pool_def get_object_def)
   apply (wp set_object_distinct|wpc)+
   including unfold_objects
-  by (auto simp: a_type_def aa_type_def)
+  by (auto simp: a_type_def)
 
 
 lemma store_pde_arch [wp]:
@@ -952,7 +952,7 @@ lemma set_pd_typ_at [wp]:
   apply clarsimp
   apply (erule rsubst [where P=P])
   including unfold_objects
-  by (clarsimp simp: a_type_def aa_type_def)
+  by (clarsimp simp: a_type_def)
 
 
 lemma set_pd_valid_objs:
@@ -962,7 +962,7 @@ lemma set_pd_valid_objs:
   apply (simp add: set_pd_def)
   apply (wp get_object_wp set_object_valid_objs)
   including unfold_objects
-  by (clarsimp simp: valid_obj_def wellformed_arch_obj_def a_type_def aa_type_def)
+  by (clarsimp simp: valid_obj_def wellformed_arch_obj_def a_type_def)
 
 
 lemma set_pd_iflive:
@@ -1113,7 +1113,7 @@ lemma set_pd_arch_objs_unmap:
   apply (simp add: set_pd_def)
   apply (wp set_object_arch_objs get_object_wp)
   including unfold_objects
-  by (fastforce simp: a_type_def aa_type_def)
+  by (fastforce simp: a_type_def)
 
 
 declare graph_of_None_update[simp]
@@ -1127,7 +1127,7 @@ lemma set_pt_typ_at [wp]:
   apply clarsimp
   apply (erule rsubst [where P=P])
   including unfold_objects
-  by (clarsimp simp: a_type_def aa_type_def)
+  by (clarsimp simp: a_type_def)
 
 
 lemma set_pt_valid_objs:
@@ -1139,7 +1139,7 @@ lemma set_pt_valid_objs:
   apply (clarsimp split: kernel_object.splits
                          arch_kernel_obj.splits)
   apply (clarsimp simp: valid_obj_def obj_at_def a_type_def
-                        aa_type_def wellformed_arch_obj_def)
+                        wellformed_arch_obj_def)
   done
 
 
@@ -1282,7 +1282,7 @@ lemma set_pt_aligned [wp]:
   "\<lbrace>pspace_aligned\<rbrace> set_pt p pt \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wp get_object_wp set_object_aligned)
-  apply (clarsimp simp: a_type_def aa_type_def obj_at_def
+  apply (clarsimp simp: a_type_def obj_at_def
                   split: kernel_object.splits arch_kernel_obj.splits)
   done
 
@@ -1299,7 +1299,7 @@ lemma set_pt_arch_objs [wp]:
   apply (wp set_object_arch_objs get_object_wp)
   apply (clarsimp simp: obj_at_def)
   apply (rule conjI)
-   apply (clarsimp simp: a_type_def aa_type_def
+   apply (clarsimp simp: a_type_def
                   split: kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
   apply (simp add: vs_refs_def)
@@ -1394,7 +1394,7 @@ lemma set_pt_table_caps [wp]:
    apply ((drule spec)+, erule impE, assumption)
    apply (rename_tac arch_cap)
    apply (case_tac arch_cap,
-          simp_all add: valid_cap_def valid_arch_cap_def obj_at_def aa_type_simps)
+          simp_all add: valid_cap_def obj_at_def aa_type_simps)
   apply clarsimp
   apply (erule impE, fastforce simp: cap_asid_def split: option.splits)
   apply (erule disjE, simp add: empty_table_def)
@@ -1464,7 +1464,7 @@ lemma set_pt_valid_arch_objs[wp]:
     apply clarsimp
     apply (drule bspec,fastforce)
     subgoal for "fun" x
-      by (cases "fun x"; clarsimp simp: obj_at_def a_type_simps aa_type_simps)
+      by (cases "fun x"; clarsimp simp: obj_at_def a_type_simps)
     done
   done
 
@@ -1631,7 +1631,7 @@ lemma set_pt_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wp set_object_pspace_in_kernel_window get_object_wp)
-  apply (clarsimp simp: obj_at_def a_type_def aa_type_def
+  apply (clarsimp simp: obj_at_def a_type_def
                  split: kernel_object.split_asm
                         arch_kernel_obj.split_asm)
   done
@@ -1651,7 +1651,7 @@ lemma set_pt_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_pt p pt \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wp set_object_valid_ioc_no_caps get_object_wp)
-  by (clarsimp simp: a_type_simps aa_type_simps obj_at_def is_tcb is_cap_table
+  by (clarsimp simp: a_type_simps obj_at_def is_tcb is_cap_table
               split: kernel_object.splits arch_kernel_obj.splits)
 
 
@@ -1794,7 +1794,7 @@ lemma store_pte_invs [wp]:
   apply (intro impI conjI allI)
    apply (drule (2) vs_lookup_pages_pt_eq[OF invs_arch_objs invs_ran_asid_table,
                                           THEN iffD1, rotated -1])
-    apply (clarsimp simp: obj_at_def a_type_simps aa_type_simps)
+    apply (clarsimp simp: obj_at_def a_type_simps)
    apply (drule spec, erule impE, assumption)+
    apply (erule exEI)+
    apply clarsimp
@@ -1957,7 +1957,7 @@ lemma set_asid_pool_arch_objs_unmap':
   apply (wp get_object_wp set_object_arch_objs)
   apply (clarsimp simp: obj_at_def obj_at_def)
   apply (rule conjI)
-   apply (clarsimp simp: a_type_def aa_type_def split: kernel_object.splits arch_kernel_obj.splits)
+   apply (clarsimp simp: a_type_def split: kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: vs_refs_def)
   apply fastforce
   done
@@ -2044,12 +2044,12 @@ lemma set_asid_pool_global_objs [wp]:
   apply (rule conjI)
    apply (clarsimp simp: obj_at_def)
    apply (rule conjI)
-    subgoal by (clarsimp simp: valid_arch_state_def obj_at_def a_type_def aa_type_def)
+    subgoal by (clarsimp simp: valid_arch_state_def obj_at_def a_type_def)
    apply clarsimp
    apply (erule (1) valid_arch_obj_same_type)
-   subgoal by (simp add: a_type_def aa_type_def)
+   subgoal by (simp add: a_type_def)
   apply (rule conjI)
-   subgoal by (clarsimp simp: obj_at_def valid_arch_state_def a_type_def aa_type_def)
+   subgoal by (clarsimp simp: obj_at_def valid_arch_state_def a_type_def)
   apply (clarsimp simp: obj_at_def)
   apply (drule (1) bspec)
   by clarsimp
@@ -2137,7 +2137,7 @@ lemma set_asid_pool_valid_global_pd_mappings[wp]:
   apply (simp add: set_asid_pool_def)
   apply (wp set_object_global_pd_mappings get_object_wp)
   including unfold_objects
-  by (clarsimp simp: a_type_def aa_type_def)
+  by (clarsimp simp: a_type_def)
 
 
 lemma set_asid_pool_kernel_window[wp]:
@@ -2145,7 +2145,7 @@ lemma set_asid_pool_kernel_window[wp]:
   apply (simp add: set_asid_pool_def)
   apply (wp set_object_pspace_in_kernel_window get_object_wp)
   including unfold_objects_asm
-  by (clarsimp simp: a_type_def aa_type_def)
+  by (clarsimp simp: a_type_def)
 
 
 lemma set_asid_pool_caps_kernel_window[wp]:
@@ -2163,7 +2163,7 @@ lemma set_asid_pool_valid_ioc[wp]:
   including unfold_objects
   by (clarsimp simp: valid_def get_object_def simpler_gets_def assert_def
           return_def fail_def bind_def
-          a_type_simps aa_type_simps is_tcb is_cap_table)
+          a_type_simps is_tcb is_cap_table)
 
 
 lemma set_asid_pool_vms[wp]:
@@ -2771,7 +2771,7 @@ lemma create_mapping_entries_valid_slots [wp]:
     apply (rule shiftl_less_t2n)
      apply (rule word_less_sub_le[THEN iffD1], simp+)
    apply (erule lookup_pd_slot_eq[simplified pd_bits])
-  apply (simp add: a_type_simps aa_type_simps)
+  apply (simp add: a_type_simps)
   apply (subst add.commute)
   apply (fastforce intro!: aligned_add_aligned is_aligned_shiftl_self)
   done
@@ -2826,7 +2826,7 @@ lemma store_pde_lookup_pd:
   apply (frule (1) valid_asid_tableD)
   apply (frule vs_lookup_atI)
   apply (frule (2) stronger_arch_objsD)
-  apply (clarsimp simp: obj_at_def a_type_def aa_type_def)
+  apply (clarsimp simp: obj_at_def a_type_def)
   apply (case_tac ao, simp_all, clarsimp)
   apply (drule tranclD)
   apply clarsimp
@@ -3102,7 +3102,7 @@ lemma set_pd_table_caps [wp]:
    apply (clarsimp simp: is_arch_cap_simps)
   apply (simp add: valid_caps_def)
   apply (erule_tac x=a in allE, erule allE, erule allE, erule (1) impE)
-  apply (clarsimp simp: is_arch_cap_simps valid_cap_def valid_arch_cap_def)
+  apply (clarsimp simp: is_arch_cap_simps valid_cap_def)
   apply (clarsimp simp: obj_at_def)
   done
 
@@ -3129,12 +3129,12 @@ lemma set_pd_global_objs[wp]:
      apply (erule disjE)
       apply (drule(1) empty_table_is_valid)+
       apply (rule valid_arch_obj_same_type, simp+)
-      apply (clarsimp simp: a_type_def aa_type_def)
+      apply (clarsimp simp: a_type_def)
      apply clarsimp
      apply (drule (1) valid_global_refsD2)
      apply (simp add: cap_range_def global_refs_def)
     apply (rule valid_arch_obj_same_type, simp+)
-    apply (simp add: a_type_def aa_type_def)
+    apply (simp add: a_type_def)
    apply (clarsimp simp: obj_at_def)
    apply (drule (1) valid_global_refsD2)
    apply (simp add: cap_range_def global_refs_def)
@@ -3276,7 +3276,7 @@ lemma set_pd_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_pd p pd \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   apply (simp add: set_pd_def)
   apply (wp set_object_pspace_in_kernel_window get_object_wp)
-  apply (clarsimp simp: obj_at_def a_type_def aa_type_def
+  apply (clarsimp simp: obj_at_def a_type_def
                  split: kernel_object.split_asm
                         arch_kernel_obj.split_asm)
   done
@@ -3298,7 +3298,7 @@ lemma set_pd_valid_ioc[wp]:
   apply (wp set_object_valid_ioc_no_caps get_object_inv)
   by (clarsimp simp: valid_def get_object_def simpler_gets_def assert_def
           return_def fail_def bind_def
-          a_type_simps aa_type_simps obj_at_def is_tcb is_cap_table
+          a_type_simps obj_at_def is_tcb is_cap_table
        split: kernel_object.splits arch_kernel_obj.splits)
 
 

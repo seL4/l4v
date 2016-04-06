@@ -12,8 +12,12 @@ theory KHeap_AI
 imports "./$L4V_ARCH/ArchKHeap_AI"
 begin
 
+context Arch begin
 
-unqualify_facts (in Arch)
+unqualify_consts
+  valid_ao_at
+
+unqualify_facts
   pspace_in_kernel_window_atyp_lift
   valid_arch_objs_lift_weak 
   vs_lookup_arch_obj_at_lift
@@ -25,6 +29,12 @@ unqualify_facts (in Arch)
   equal_kernel_mappings_lift
   valid_global_pd_mappings_lift
   valid_machine_state_lift
+  valid_ao_at_lift_aobj_at
+  valid_arch_state_lift_aobj_at
+  valid_global_pts_lift
+  in_user_frame_lift
+
+end
 
 lemma get_object_wp:
   "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object p \<lbrace>Q\<rbrace>"
@@ -209,6 +219,9 @@ shows
   apply (clarsimp simp: mk_ef_def)
   apply (simp add: xopv[simplified trans_state_update'])
 done
+
+
+crunch ct[wp]: set_thread_state "\<lambda>s. P (cur_thread s)"
 
 lemma sts_ep_at_inv[wp]:
   "\<lbrace> ep_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
@@ -1248,6 +1261,15 @@ by (rule equal_kernel_mappings_lift, wp aobj_at)
 lemma valid_global_pd_mappings[wp]: "\<lbrace>valid_global_pd_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
 by (rule valid_global_pd_mappings_lift, wp aobj_at)
 
+lemma valid_ao_at[wp]:"\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>_. valid_ao_at p\<rbrace>"
+by (rule valid_ao_at_lift_aobj_at; wp aobj_at; simp)
+
+lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+by (rule valid_arch_state_lift; wp aobj_at; simp)
+
+lemma in_user_frame[wp]:"\<lbrace>in_user_frame p\<rbrace> f \<lbrace>\<lambda>_. in_user_frame p\<rbrace>"
+by (rule in_user_frame_lift; wp aobj_at; simp)
+
 end
 
 
@@ -1302,9 +1324,9 @@ interpretation
    set_endpoint: non_arch_non_cap_non_mem_op "set_endpoint p ep" + 
    set_notification: non_arch_non_cap_non_mem_op "set_notification p ntfn" +
    sts: non_arch_non_cap_non_mem_op "set_thread_state p st" +
-   sbm: non_arch_non_cap_non_mem_op "set_bound_notification p b" +
+   sbn: non_arch_non_cap_non_mem_op "set_bound_notification p b" +
    as_user: non_arch_non_cap_non_mem_op "as_user p g" +
-   thread_set: non_arch_op "thread_set f p" +
+   thread_set: non_arch_non_mem_op "thread_set f p" +
    set_cap: non_arch_non_mem_op "set_cap cap p'"
    apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_endpoint_def set_notification_def set_thread_state_def 

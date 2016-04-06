@@ -12,9 +12,18 @@ theory CSpaceInvPre_AI
 imports "./$L4V_ARCH/ArchAcc_AI"
 begin
 
-unqualify_consts (in Arch)
-  table_cap_ref :: "cap \<Rightarrow> vs_ref list option"
+context Arch begin
 
+unqualify_consts
+  table_cap_ref :: "cap \<Rightarrow> vs_ref list option"
+  empty_table
+
+unqualify_facts
+  empty_table_def
+
+end
+  
+         
 lemma set_cap_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P ((caps_of_state s) (ptr \<mapsto> cap))\<rbrace> set_cap cap ptr \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (cases ptr)
@@ -123,6 +132,20 @@ where
   \<lambda>s. \<forall>p \<in> UNIV - S. \<not> cte_wp_at (\<lambda>c. obj_refs c = obj_refs cap \<and>
                                      \<not> (table_cap_ref c = table_cap_ref cap)) p s"
                                                  
+lemma empty_table_caps_of:
+  "empty_table S ko \<Longrightarrow> caps_of ko = {}"
+  by (cases ko, simp_all add: empty_table_def caps_of_def cap_of_def)
 
+context begin interpretation ARM . (*FIXME arch_split *) 
+lemma free_index_update_test_function_stuff[simp]:
+  "cap_asid (src_cap\<lparr>free_index := a\<rparr>) = cap_asid src_cap"
+  "obj_irq_refs (src_cap\<lparr>free_index := a\<rparr>) = obj_irq_refs src_cap"
+  "vs_cap_ref (src_cap\<lparr>free_index := a\<rparr>) = vs_cap_ref src_cap"
+  "untyped_range (cap \<lparr>free_index :=a \<rparr>) = untyped_range cap"
+  "zobj_refs (c\<lparr>free_index:=a\<rparr>) =  zobj_refs c"
+  "obj_refs (c\<lparr>free_index:=a\<rparr>) = obj_refs c"
+  by (auto simp:cap_asid_def free_index_update_def  vs_cap_ref_def
+    is_cap_simps obj_irq_refs_def split:cap.splits arch_cap.splits)
+end
 
 end

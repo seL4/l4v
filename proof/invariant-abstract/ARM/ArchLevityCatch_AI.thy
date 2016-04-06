@@ -28,13 +28,6 @@ lemma  ptrFormPAddr_addFromPPtr :
   "Platform.ARM.ptrFromPAddr (Platform.ARM.addrFromPPtr x) = x"
   by (simp add: Platform.ARM.ptrFromPAddr_def Platform.ARM.addrFromPPtr_def)
 
-definition
-  "cap_asid_base cap \<equiv> case cap of 
-    cap.ArchObjectCap (arch_cap.ASIDPoolCap _ asid) \<Rightarrow> Some asid
-  | _ \<Rightarrow> None"
-
-lemmas cap_asid_base_simps [simp] = 
-  cap_asid_base_def [split_simps cap.split arch_cap.split]
 
 (****** From GeneralLib *******)
 

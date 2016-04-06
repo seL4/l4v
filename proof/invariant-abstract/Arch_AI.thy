@@ -1133,7 +1133,7 @@ lemma create_mappings_empty [wp]:
 
 lemma empty_pde_atI:
   "\<lbrakk> ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s;
-     pd (ucast (p && mask pd_bits >> 2)) = Arch_Structs_A.InvalidPDE \<rbrakk> \<Longrightarrow>
+     pd (ucast (p && mask pd_bits >> 2)) = InvalidPDE \<rbrakk> \<Longrightarrow>
    empty_pde_at p s"
   by (fastforce simp add: empty_pde_at_def)
 
@@ -1658,7 +1658,7 @@ lemma arch_decode_inv_wf[wp]:
           apply (erule impE)
            apply clarsimp
           apply (erule impE)
-           apply (clarsimp split:Arch_Structs_A.pde.splits)
+           apply (clarsimp split:pde.splits)
           apply assumption
          apply ((wp whenE_throwError_wp hoare_vcg_all_lift_R
                     find_pd_for_asid_lookup_slot [unfolded lookup_pd_slot_def Let_def]

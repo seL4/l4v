@@ -58,6 +58,7 @@ definition all_invs_but_valid_irq_states_for where
   pspace_in_kernel_window and
   cap_refs_in_kernel_window and cur_tcb"
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma dmo_maskInterrupt_invs:
   "\<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace> 
    do_machine_op (maskInterrupt (state = IRQInactive) irq) 
@@ -66,6 +67,7 @@ lemma dmo_maskInterrupt_invs:
    apply wp
    apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
+end
 
 lemma set_irq_state_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> (state \<noteq> irq_state.IRQSignal \<longrightarrow> cap.IRQHandlerCap irq \<notin> ran (caps_of_state s))\<rbrace>
