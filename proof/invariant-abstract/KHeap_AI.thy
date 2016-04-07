@@ -34,6 +34,7 @@ unqualify_facts
   valid_global_pts_lift
   in_user_frame_lift
 
+
 end
 
 lemma get_object_wp:
@@ -1672,17 +1673,6 @@ lemma do_machine_op_arch_objs [wp]:
   apply wp
   apply simp
   done
-
-
-lemma empty_table_lift:
-  assumes S: "\<And>P. \<lbrace>\<lambda>s. P (S s)\<rbrace> f \<lbrace>\<lambda>_ s. P (S s)\<rbrace>"
-  assumes o: "\<And>P. \<lbrace>obj_at P p and Q\<rbrace> f \<lbrace>\<lambda>_. obj_at P p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. obj_at (empty_table (S s)) p s \<and> Q s\<rbrace> 
-         f \<lbrace>\<lambda>_ s. obj_at (empty_table (S s)) p s\<rbrace>"
-  apply (rule hoare_lift_Pf2 [where f="S"])
-   apply (wp o S|simp)+
-  done
-
 
 
 lemma tcb_cap_wp_at: 

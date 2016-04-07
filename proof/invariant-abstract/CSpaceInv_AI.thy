@@ -1105,8 +1105,7 @@ lemma no_cap_to_obj_with_diff_ref_Null:
   by (rule ext, clarsimp simp: no_cap_to_obj_with_diff_ref_def
                                cte_wp_at_caps_of_state abj_ref_none_no_refs)
 
-abbreviation (input)
-  "arch_cte_wp_at f \<equiv> cte_wp_at (arch_cap_fun_lift f False)"
+
 
 
 definition

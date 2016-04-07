@@ -2251,8 +2251,10 @@ lemma cap_insert_mdb [wp]:
   apply (simp add:valid_mdb_def)
   apply (wp cap_insert_mdb_cte_at)
   apply (simp add: cap_insert_def set_untyped_cap_as_full_def update_cdt_def set_cdt_def bind_assoc)
-  apply (wp set_cap_caps_of_state2 get_cap_wp|simp del: fun_upd_apply split del: split_if)+
-  apply (clarsimp simp: cte_wp_at_caps_of_state split del: split_if)
+  apply (wp | simp del: fun_upd_apply split del: split_if)+
+  apply (rule hoare_lift_Pf3[where f="is_original_cap"])
+        apply (wp set_cap_caps_of_state2 get_cap_wp |simp del: fun_upd_apply split del: split_if)+
+   apply (clarsimp simp: cte_wp_at_caps_of_state split del: split_if)
   apply (subgoal_tac "mdb_insert_abs (cdt s) src dest")
    prefer 2
    apply (rule mdb_insert_abs.intro,simp+)
@@ -3379,8 +3381,9 @@ lemma cap_move_mdb [wp]:
   \<lbrace>\<lambda>_. valid_mdb\<rbrace>"
   apply (simp add: cap_move_def set_cdt_def valid_mdb_def2
                    pred_conj_def cte_wp_at_caps_of_state)
-  apply (wp update_cdt_cdt)
-   apply (wp set_cap_caps_of_state2 | simp split del: split_if)+
+  apply (wp update_cdt_cdt | simp split del: split_if)+
+   apply (rule hoare_lift_Pf3[where f="is_original_cap"])
+    apply (wp set_cap_caps_of_state2 | simp split del: split_if)+
   apply (clarsimp simp: mdb_cte_at_def fun_upd_def[symmetric]
               simp del: fun_upd_apply)
   apply (rule conjI)
@@ -3585,7 +3588,7 @@ lemma set_free_index_invs:
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (drule_tac x = ref in orthD2[rotated])
    apply (simp add:cap_range_def)
-  apply (simp add: not_kernel_window_arch_def)
+  apply (simp)
   done
 end
 

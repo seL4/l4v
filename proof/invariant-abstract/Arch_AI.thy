@@ -639,7 +639,7 @@ lemma set_cap_orth:
 
 lemma set_cap_reachable_pg_cap:
   "\<lbrace>\<lambda>s. P (reachable_pg_cap cap s)\<rbrace> set_cap x y \<lbrace>\<lambda>_ s. P (reachable_pg_cap cap s)\<rbrace>"
-  by (unfold reachable_pg_cap_def, wp hoare_vcg_ex_lift set_cap_vs_lookup_pages)
+  by (unfold reachable_pg_cap_def, wp hoare_vcg_ex_lift set_cap.vs_lookup_pages)
 
 lemma empty_table_caps_of:
   "empty_table S ko \<Longrightarrow> caps_of ko = {}"
@@ -673,7 +673,7 @@ lemma cap_insert_simple_arch_caps_ap:
           | simp split del: split_if)+
        apply (rule_tac P = "cte_wp_at (op = src_cap) src" in set_cap_orth)
        apply (wp hoare_vcg_imp_lift hoare_vcg_ball_lift set_free_index_final_cap 
-                 hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap_vs_lookup_pages 
+                 hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages 
               | clarsimp)+
       apply (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
                 get_cap_wp static_imp_wp)
@@ -1321,13 +1321,13 @@ lemma create_mapping_entries_same_refs:
      apply (clarsimp simp: acap_rights_update_def split: Arch_Structs_A.arch_cap.splits)
      apply (frule (1) vs_lookup_and_unique_refs)
          apply (simp_all add: table_cap_ref_def obj_refs_def)[4]     
-     apply (frule_tac p=pd and p'="Platform.ptrFromPAddr x" in vs_lookup_step)
+     apply (frule_tac p=pd and p'="ptrFromPAddr x" in vs_lookup_step)
       apply (clarsimp simp: vs_lookup1_def)
       apply (rule exI, erule conjI)
       apply (rule exI[where x="VSRef (vaddr >> 20) (Some APageDirectory)"])
       apply (rule conjI, rule refl)
       apply (simp add: vs_refs_def)
-      apply (rule_tac x="(ucast (vaddr >> 20), Platform.ptrFromPAddr x)" in image_eqI)
+      apply (rule_tac x="(ucast (vaddr >> 20), ptrFromPAddr x)" in image_eqI)
        apply (simp add: ucast_ucast_len[OF shiftr_less_t2n'] mask_32_max_word graph_of_def)
       apply (clarsimp simp:graph_of_def)
       apply (frule kernel_base_kernel_mapping_slots, simp add: pde_ref_def)
@@ -1356,13 +1356,13 @@ lemma create_mapping_entries_same_refs:
     apply (clarsimp simp: acap_rights_update_def split: Arch_Structs_A.arch_cap.splits)
     apply (frule (1) vs_lookup_and_unique_refs)
         apply (simp_all add: table_cap_ref_def obj_refs_def)[4]     
-    apply (frule_tac p=pd and p'="Platform.ptrFromPAddr x" in vs_lookup_step)
+    apply (frule_tac p=pd and p'="ptrFromPAddr x" in vs_lookup_step)
      apply (clarsimp simp: vs_lookup1_def)
      apply (rule exI, erule conjI)
      apply (rule exI[where x="VSRef (vaddr >> 20) (Some APageDirectory)"])
      apply (rule conjI, rule refl)
      apply (simp add: vs_refs_def)
-     apply (rule_tac x="(ucast (vaddr >> 20), Platform.ptrFromPAddr x)" in image_eqI)
+     apply (rule_tac x="(ucast (vaddr >> 20), ptrFromPAddr x)" in image_eqI)
       apply (simp add: ucast_ucast_len[OF shiftr_less_t2n'] mask_32_max_word graph_of_def)
      apply (clarsimp simp:graph_of_def)
      apply (frule kernel_base_kernel_mapping_slots, simp add: pde_ref_def)

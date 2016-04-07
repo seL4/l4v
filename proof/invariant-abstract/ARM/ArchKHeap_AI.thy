@@ -14,8 +14,6 @@ begin
 
 context ARM begin
 
-lemmas is_cap_simps = is_cap_simps is_arch_cap_simps
-lemmas valid_cap_def = valid_cap_def[simplified valid_arch_cap_def]
 
 sublocale
   empty_table: arch_only_obj_pred "empty_table S" for S
@@ -584,6 +582,15 @@ lemma store_pde_pred_tcb_at:
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply wp
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
+lemma empty_table_lift:
+  assumes S: "\<And>P. \<lbrace>\<lambda>s. P (S s)\<rbrace> f \<lbrace>\<lambda>_ s. P (S s)\<rbrace>"
+  assumes o: "\<And>P. \<lbrace>obj_at P p and Q\<rbrace> f \<lbrace>\<lambda>_. obj_at P p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. obj_at (empty_table (S s)) p s \<and> Q s\<rbrace> 
+         f \<lbrace>\<lambda>_ s. obj_at (empty_table (S s)) p s\<rbrace>"
+  apply (rule hoare_lift_Pf2 [where f="S"])
+   apply (wp o S|simp)+
   done
 
 end

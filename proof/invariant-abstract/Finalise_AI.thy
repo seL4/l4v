@@ -1679,7 +1679,7 @@ crunch empty[wp]: find_free_hw_asid, store_hw_asid, load_hw_asid, set_vm_root_fo
 
 lemma store_pte_unmap_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>
-    store_pte xa Arch_Structs_A.pte.InvalidPTE
+    store_pte xa InvalidPTE
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
   apply (wp get_object_wp | simp add: store_pte_def set_pt_def set_object_def)+
   apply (clarsimp simp: obj_at_def empty_table_def)
@@ -2398,10 +2398,10 @@ lemma mapM_x_swp_store_invalid_pte_invs:
   "\<lbrace>invs and (\<lambda>s. \<exists>slot. cte_wp_at
              (\<lambda>c. (\<lambda>x. x && ~~ mask pt_bits) ` set slots \<subseteq> obj_refs c \<and>
                   is_pt_cap c) slot s)\<rbrace>
-  mapM_x (\<lambda>x. store_pte x Arch_Structs_A.pte.InvalidPTE) slots \<lbrace>\<lambda>_. invs\<rbrace>"
+  mapM_x (\<lambda>x. store_pte x InvalidPTE) slots \<lbrace>\<lambda>_. invs\<rbrace>"
   by (simp add:
     mapM_x_swp_store_pte_invs[unfolded swp_def,
-      where pte=Arch_Structs_A.pte.InvalidPTE, simplified])
+      where pte=InvalidPTE, simplified])
 
 lemma mapM_x_swp_store_invalid_pde_invs:
   "\<lbrace>invs and

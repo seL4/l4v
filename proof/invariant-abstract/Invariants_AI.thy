@@ -56,10 +56,12 @@ unqualify_facts
   global_refs_lift
   valid_arch_state_lift
   aobj_at_default_arch_cap_valid
-  aobj_ref_default[simp]
+  aobj_ref_default
   valid_arch_objs_def
   acap_rights_update_id[intro!, simp]
   physical_arch_cap_has_ref
+  wellformed_arch_default
+  valid_arch_obj_default'
 
 end
 
@@ -2770,7 +2772,7 @@ lemma obj_at_default_cap_valid:
 
 lemma obj_ref_default [simp]:
   "obj_ref_of (default_cap ty x us) = x"
-  by (cases ty, auto)
+  by (cases ty, auto simp: aobj_ref_default)
 
 lemma valid_pspace_aligned2 [elim!]:
   "valid_pspace s \<Longrightarrow> pspace_aligned s"

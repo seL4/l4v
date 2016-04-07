@@ -485,8 +485,8 @@ lemma cap_master_pt_pd:
 
 definition
   "pt_pd_asid cap \<equiv> case cap of
-    Structures_A.ArchObjectCap (Arch_Structs_A.PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
-  | Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap _ (Some asid)) \<Rightarrow> Some asid
+    Structures_A.ArchObjectCap (PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
+  | Structures_A.ArchObjectCap (PageDirectoryCap _ (Some asid)) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
 

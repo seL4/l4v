@@ -11,6 +11,12 @@
 theory TcbAcc_AI
 imports "./$L4V_ARCH/ArchTcbAcc_AI"
 begin
+context Arch begin
+
+unqualify_facts
+  storeWord_invs[wp]
+
+end
 
 lemmas gts_inv[wp] = get_thread_state_inv
 
@@ -1791,6 +1797,54 @@ lemma sts_tcb_cap_valid_cases:
              hoare_vcg_const_imp_lift sts_tcb_ko_at
              hoare_vcg_all_lift)
   apply (clarsimp simp: tcb_at_typ tcb_cap_valid_def split: option.split)
+  done
+
+
+lemmas set_mrs_redux =
+   set_mrs_def bind_assoc[symmetric]
+   thread_set_def[simplified, symmetric]
+
+lemma set_mrs_invs[wp]:
+  "\<lbrace> invs and tcb_at receiver \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs \<rbrace>"
+  apply (simp add: set_mrs_redux)
+  apply wp
+   apply (rule_tac P="invs" in hoare_triv)
+   apply (case_tac recv_buf)
+    apply simp
+   apply (simp add: zipWithM_x_mapM split del: split_if)
+   apply wp
+   apply (rule mapM_wp)
+    apply (simp add: split_def store_word_offs_def)
+    apply (wp storeWord_invs)
+    apply simp
+   apply blast
+  apply (wp thread_set_invs_trivial)
+  apply (auto simp: tcb_cap_cases_def)
+  done
+
+lemma set_mrs_thread_set_dmo:
+  assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := c tcb\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
+  assumes dmo: "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>rv. Q\<rbrace>"
+  shows "\<lbrace>P\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. Q\<rbrace>"
+  apply (simp add: set_mrs_redux)
+  apply (case_tac t)
+   apply simp
+   apply wp
+   apply (rule ts)
+  apply (simp add: zipWithM_x_mapM store_word_offs_def split_def
+              split del: split_if)
+  apply (wp mapM_wp dmo)
+    apply simp
+   apply blast
+  apply (rule ts)
+  done
+
+lemma set_mrs_st_tcb [wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  apply (rule set_mrs_thread_set_dmo) 
+   apply (rule thread_set_no_change_tcb_pred)
+   apply (simp add: tcb_to_itcb_def)
+  apply wp
   done
 
 end

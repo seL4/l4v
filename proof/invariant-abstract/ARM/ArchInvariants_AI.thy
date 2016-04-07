@@ -70,9 +70,9 @@ lemma arch_obj_fun_lift_expand[simp]:
 lemmas aa_type_simps =
   aa_type_def[split_simps arch_kernel_obj.split]
 
-lemmas a_type_simps = a_type_simps aa_type_simps
-
 lemmas a_type_def = a_type_def[simplified aa_type_def]
+
+lemmas a_type_simps = a_type_def[split_simps kernel_object.split arch_kernel_obj.split]
 
 definition
   "vmsz_aligned ref sz \<equiv> is_aligned ref (pageBitsForSize sz)"
@@ -686,6 +686,8 @@ definition
 where
   "not_kernel_window_arch s \<equiv> {x. arm_kernel_vspace s x \<noteq> ArmVSpaceKernelWindow}"
 
+declare not_kernel_window_arch_def[simp]
+
 abbreviation
   not_kernel_window :: "'z::state_ext state \<Rightarrow> obj_ref set"
 where
@@ -949,33 +951,26 @@ lemma atyp_at_eq_kheap_obj:
                 split: split_if_asm kernel_object.splits arch_kernel_obj.splits)
   done
 
-method split_a_type =
-  (match premises in H[thin]:"P ( a_type ko )" for ko P \<Rightarrow>
-    \<open>(insert H, cases ko; simp only: a_type_simps  split: split_if_asm);
-      (match premises in H'[thin]:"P (AArch (aa_type ako))" for ako \<Rightarrow>
-        \<open>insert H', cases ako; simp only: H' aa_type_simps\<close>)?
-      \<close>)
 
-lemma aa_type_AASIDPoolE:
+lemmas kernel_object_exhaust = 
+  kernel_object.exhaust
+    [rotated -1, OF arch_kernel_obj.exhaust, of _ "\<lambda>x. x", simplified]
+
+lemma shows
+  aa_type_AASIDPoolE:
   "\<lbrakk>a_type ko = AArch AASIDPool;
     (\<And>ap. ko = ArchObj (ASIDPool ap) \<Longrightarrow> R)\<rbrakk>
-   \<Longrightarrow> R"
-  by (split_a_type; simp)
-
-lemma aa_type_APageDirectoryE:
+   \<Longrightarrow> R" and
+  aa_type_APageDirectoryE:
   "\<lbrakk>a_type ko = AArch APageDirectory;
     (\<And>pd. ko = ArchObj (PageDirectory pd) \<Longrightarrow> R)\<rbrakk>
-   \<Longrightarrow> R"
-  by (split_a_type; simp)
-
-lemma aa_type_APageTableE:
+   \<Longrightarrow> R" and
+   aa_type_APageTableE:
   "\<lbrakk>a_type ko = AArch APageTable; (\<And>pt. ko = ArchObj (PageTable pt) \<Longrightarrow> R)\<rbrakk>
-   \<Longrightarrow> R"
-  by (split_a_type; simp)
-
-lemma aa_type_AIntDataE:
+   \<Longrightarrow> R" and
+   aa_type_AIntDataE:
   "\<lbrakk>a_type ko = AArch (AIntData sz); ko = ArchObj (DataPage sz) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
-  by (split_a_type; simp)
+  by (rule kernel_object_exhaust[of ko]; clarsimp simp add: a_type_simps split: split_if_asm)+
 
 lemmas aa_type_elims[elim!] =
    aa_type_AASIDPoolE aa_type_APageDirectoryE aa_type_APageTableE aa_type_AIntDataE
@@ -1181,7 +1176,7 @@ lemma aobj_at_default_arch_cap_valid:
                   valid_vm_rights_def
            split: apiobject_type.splits aobject_type.splits option.splits)
 
-lemma aobj_ref_default[simp]:
+lemma aobj_ref_default:
   "aobj_ref (arch_default_cap x6 x us) = Some x"
   by (auto simp add: arch_default_cap_def split: aobject_type.splits)
 
@@ -1465,9 +1460,6 @@ lemma stronger_arch_objsD:
    apply (erule vs_lookup_atI)
   apply (clarsimp simp: obj_at_def)
   done
-
-(* FIXME: move *)
-declare ranI [intro]
 
 (* An alternative definition for valid_arch_objs.
 
@@ -2054,6 +2046,15 @@ lemma in_user_frame_lift:
  unfolding in_user_frame_def
  by (wp hoare_vcg_ex_lift typ_at)
 
+lemma wellformed_arch_default: 
+  "wellformed_arch_obj (default_arch_object aobject_type us)"
+  unfolding wellformed_arch_obj_def default_arch_object_def
+  by (cases aobject_type; simp)
+
+lemma valid_arch_obj_default': 
+  "valid_arch_obj (default_arch_object aobject_type us) s"
+  unfolding default_arch_object_def
+  by (cases aobject_type; simp)
 
 
 end

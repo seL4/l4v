@@ -15,9 +15,15 @@ Retype refinement
 theory Retype_AI
 imports VSpace_AI
 begin
+context Arch begin
+
+unqualify_facts
+  global_refs_kheap[simp]
+
+end
 
 lemma upto_enum_inc_1:
-  "a < 2^word_bits - 1 \<Longrightarrow> [(0::word32).e.1 + a] = [0.e.a] @ [(1+a)]"
+  "a < 2^word_bits - 1 \<Longrightarrow> [(0::machine_word).e.1 + a] = [0.e.a] @ [(1+a)]"
   apply (simp add:upto_enum_word)
   apply (subgoal_tac "unat (1 +a) = 1 + unat a")
     apply simp
@@ -75,7 +81,7 @@ proof -
   done
 qed
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma clearMemoryVM_return [simp]:
   "clearMemoryVM a b = return ()"
   by (simp add: clearMemoryVM_def storeWordVM_def)
@@ -85,6 +91,7 @@ lemma clearMemoryVM_return_raw:
   "clearMemoryVM  = (\<lambda>x y. return ())"
   apply (rule ext)+
   by (simp add: clearMemoryVM_def storeWordVM_def)
+end
 
 lemma unat_of_nat_minus_1:
   "\<lbrakk>n < 2^len_of TYPE('a);n\<noteq> 0\<rbrakk> \<Longrightarrow> (unat (((of_nat n):: 'a :: len word) - 1)) = n - 1"
@@ -321,14 +328,14 @@ lemma default_object_tcbE:
    \<lbrakk> tcb = default_tcb; ty = Structures_A.TCBObject \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding default_object_def by (cases ty, auto)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma obj_bits_api_default_object:
   "\<lbrakk> ty \<noteq> Untyped\<rbrakk> \<Longrightarrow> obj_bits_api ty us
           = obj_bits (default_object ty us)"
   unfolding obj_bits_api_def default_object_def
   by (cases ty) 
      (simp_all add: slot_bits_def wf_empty_bits cte_level_bits_def)
-
+end
 
 lemma obj_bits_api_default_CapTableObject:
   "obj_bits (default_object Structures_A.apiobject_type.CapTableObject us) 
@@ -341,7 +348,7 @@ lemma empty_cnode_dom:
   "x \<in> dom (empty_cnode n) \<Longrightarrow> length x = n"
   unfolding dom_def empty_cnode_def by (simp split: split_if_asm)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma obj_bits_api_def2:
   "obj_bits_api type obj_size_bits =
    (case type of Structures_A.Untyped \<Rightarrow> obj_size_bits
@@ -350,7 +357,7 @@ lemma obj_bits_api_def2:
                 wf_empty_bits dom_empty_cnode ex_with_length
                 slot_bits_def cte_level_bits_def
          split: Structures_A.apiobject_type.split)
-
+end
 
 lemma obj_bits_api_def3:
   "obj_bits_api type obj_size_bits =
@@ -950,7 +957,7 @@ lemma shiftr_mask_cmp:
     apply (simp add:le_mask_iff shiftr_shiftr)
 done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 definition
   "no_gs_types \<equiv> UNIV - {Structures_A.CapTableObject,
      ArchObject SmallPageObj, ArchObject LargePageObj,
@@ -966,7 +973,7 @@ lemma no_gs_types_simps[simp]:
   "ArchObject PageDirectoryObj \<in> no_gs_types"
   "ArchObject ASIDPoolObj \<in> no_gs_types"
 by (simp_all add: no_gs_types_def)
-
+end
 
 lemma  measure_unat': "p \<noteq> 0 \<Longrightarrow> unat (p - 1) \<le>  unat p - 1"
   apply (insert measure_unat[where p = p])
@@ -1136,7 +1143,7 @@ lemma list_all2_same:
   apply fastforce
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma retype_region_ret_folded:
   "\<lbrace>\<top>\<rbrace> retype_region y n bits ty 
    \<lbrace>\<lambda>r s. r = retype_addrs y ty n bits\<rbrace>"
@@ -1145,14 +1152,12 @@ lemma retype_region_ret_folded:
   apply wp
    apply (simp add:retype_addrs_def)
 done
-
+end
 
 lemmas retype_region_ret = retype_region_ret_folded[unfolded retype_addrs_def]
 
-
 crunch global_refs[wp]: retype_region "\<lambda>s. P (global_refs s)"
   (simp: crunch_simps)
-
 
 lemma retype_region_global_refs_disjoint:
   "\<lbrace>(\<lambda>s. {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<inter> global_refs s = {})
@@ -1192,7 +1197,7 @@ done
 
 crunch valid_pspace: do_machine_op "valid_pspace"
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 declare store_pde_state_refs_of [wp]
 
 
@@ -1309,6 +1314,7 @@ lemma clearMemory_vms:
   apply (simp add: storeWord_def | wp)+
   apply (simp add: word_rsplit_0)
   done
+end
 
 lemma do_machine_op_return_foo:
   "do_machine_op (do x\<leftarrow>a;return () od) = (do (do_machine_op a); return () od)"
@@ -1320,7 +1326,7 @@ lemma do_machine_op_return_foo:
   apply clarsimp
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma create_word_objects_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace>
    create_word_objects ptr bits sz
@@ -1376,7 +1382,7 @@ lemma create_word_objects_invs[wp]:
 crunch invs [wp]: reserve_region "invs"
 
 crunch invs [wp]: reserve_region "invs"
-
+end
 
 abbreviation(input)
  "all_invs_but_equal_kernel_mappings_restricted S
@@ -1397,7 +1403,7 @@ lemma all_invs_but_equal_kernel_mappings_restricted_eq:
         = invs"
   by (rule ext, simp add: invs_def valid_state_def conj_comms restrict_map_def)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch iflive[wp]: copy_global_mappings "if_live_then_nonz_cap"
   (wp: crunch_wps)
 
@@ -1784,7 +1790,7 @@ lemma dmo_eq_kernel_restricted[wp]:
   apply wp
   apply (simp add: equal_kernel_mappings_def obj_at_def)
   done
-
+end
 
 crunch only_idle[wp]: do_machine_op "only_idle"
 crunch valid_global_refs[wp]: do_machine_op "valid_global_refs"
@@ -1792,6 +1798,7 @@ crunch valid_kernel_mappings[wp]: do_machine_op "valid_kernel_mappings"
 crunch global_pd_mappings[wp]: do_machine_op "valid_global_pd_mappings"
 crunch cap_refs_in_kernel_window[wp]: do_machine_op "cap_refs_in_kernel_window"
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 definition
   post_retype_invs :: "Structures_A.apiobject_type \<Rightarrow> word32 list \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -1830,7 +1837,7 @@ lemma init_arch_objects_invs_from_restricted:
                     pd_bits_def pageBits_def obj_bits_api_def
                     global_refs_def)
   done
-
+end
 lemma retype_region_aligned_for_init[wp]:
   "\<lbrace>\<lambda>s. range_cover ptr sz (obj_bits_api new_type obj_sz) n\<rbrace>
      retype_region ptr n obj_sz new_type
@@ -2159,13 +2166,13 @@ lemma retype_addrs_mem_sz_0_is_ptr:
                      dest!: less_two_pow_divD)
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma obj_bits_api_neq_0:
   "ty \<noteq> Untyped \<Longrightarrow> 0 < obj_bits_api ty us"
   unfolding obj_bits_api_def
   by (clarsimp simp: slot_bits_def default_arch_object_def pageBits_def 
                split: Structures_A.apiobject_type.splits aobject_type.splits)
-
+end
 
 lemma retype_addrs_range_subset:
   "\<lbrakk>  p \<in> set (retype_addrs ptr ty n us);
@@ -2320,8 +2327,7 @@ lemma valid_obj_default_object:
    apply safe
     apply (simp split: split_if_asm)
    apply (clarsimp split: split_if_asm)
-  apply (rename_tac aobject_type)
-  apply (case_tac aobject_type, simp_all add: default_arch_object_def)
+  apply (clarsimp simp add: wellformed_arch_default)
   done
 
 
@@ -2329,10 +2335,10 @@ lemma valid_arch_obj_default:
   assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
   shows "ArchObj ao = default_object ty us \<Longrightarrow> valid_arch_obj ao s'"
   apply (cases ty, simp_all add: default_object_def tyunt)
-  apply (simp add: default_arch_object_def split: aobject_type.splits)
+  apply (simp add: valid_arch_obj_default')
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma vs_lookup_trans_sub2:
   assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"
   shows "vs_lookup_trans s \<subseteq> vs_lookup_trans s'" 
@@ -2388,7 +2394,7 @@ lemma vs_lookup_pages_sub2:
   apply (rule image_mono)
   apply (rule table)
   done
-
+end
 
 lemma usable_range_subseteq: 
   "\<lbrakk>cap_aligned cap;is_untyped_cap cap\<rbrakk> \<Longrightarrow> usable_untyped_range cap \<subseteq> untyped_range cap"
@@ -2409,7 +2415,7 @@ lemma usable_range_emptyD:
   done
 
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma valid_untyped_helper:
   assumes valid_c : "s \<turnstile> c" 
   and   cte_at  : "cte_wp_at (op = c) q s"
@@ -2483,6 +2489,7 @@ lemma valid_untyped_helper:
   apply blast+
   done
   qed
+end
 
 locale retype_region_proofs =
   fixes s ty us ptr sz n ps s'
@@ -2772,7 +2779,7 @@ lemma null_filter: "null_filter (caps_of_state s') = null_filter (caps_of_state 
   apply (simp add: F2 cte_retype)
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma valid_cap:
   assumes cap: "s \<turnstile> cap \<and> untyped_range cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} = {}"
   shows "s' \<turnstile> cap"
@@ -2805,7 +2812,7 @@ lemma valid_cap:
     apply (fastforce elim!: obj_at_pres)+
   done
   qed
-
+end
 
 lemma idle_s':
   "idle_thread s' = idle_thread s"
@@ -2827,7 +2834,7 @@ lemma irq_node [simp]:
   "interrupt_irq_node s' = interrupt_irq_node s"
   by (simp add: s'_def)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma valid_global_refs:
   "valid_global_refs s \<Longrightarrow> valid_global_refs s'"
   apply (simp add: valid_global_refs_def valid_refs_def global_refs_def idle_s')
@@ -2839,7 +2846,7 @@ lemma valid_arch_state:
   "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
   by (clarsimp simp: valid_arch_state_def obj_at_pres 
                      valid_asid_table_def valid_global_pts_def)
-
+end
 
 lemma caps_retype:
   assumes nonnull: "cap \<noteq> cap.NullCap"
@@ -2873,7 +2880,7 @@ lemma valid_reply_masters:
   "valid_reply_masters s \<Longrightarrow> valid_reply_masters s'"
   by (clarsimp simp: valid_reply_masters_def cte_retype is_cap_simps obj_at_pres)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma vs_refs_default [simp]:
   "vs_refs (default_object ty us) = {}"
   by (simp add: default_object_def default_arch_object_def tyunt vs_refs_def 
@@ -2953,11 +2960,11 @@ proof
   ultimately
   show "valid_arch_obj ao s'" by blast
 qed
-
+end
 
 end
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 definition
   valid_vs_lookup2 :: "(vs_ref list \<times> word32) set \<Rightarrow> word32 set \<Rightarrow> (cslot_ptr \<rightharpoonup> cap) \<Rightarrow> bool"
 where
@@ -2996,7 +3003,7 @@ lemma unique_table_refs_null:
   apply (auto dest!: obj_ref_none_no_asid[rule_format]
                simp: table_cap_ref_def)
   done
-
+end
 
 lemma ran_null_filter:
   "ran (null_filter m) = (ran m - {cap.NullCap})"
@@ -3014,16 +3021,16 @@ lemma valid_irq_handlers_def2:
                    ran_null_filter)
   apply auto
   done
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 definition
   region_in_kernel_window :: "word32 set \<Rightarrow> 'z state \<Rightarrow> bool"
 where 
  "region_in_kernel_window S \<equiv>
      \<lambda>s. \<forall>x \<in> S. arm_kernel_vspace (arch_state s) x = ArmVSpaceKernelWindow"
-
+end
 context retype_region_proofs
 begin
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemmas unique_table_caps_eq
     = arg_cong[where f=unique_table_caps, OF null_filter,
                simplified unique_table_caps_null]
@@ -3071,7 +3078,7 @@ lemma valid_global_objs:
   apply (rule exEI, erule(1) bspec)
   apply (simp add: obj_at_pres valid_arch_obj_pres)
   done
-
+end
 lemma interrupt_states:
   "interrupt_states s' = interrupt_states s"
   by (simp add: s'_def)
@@ -3091,7 +3098,7 @@ lemma cur_tcb:
   apply (simp add: cur_tcb_def, rule obj_at_pres)
   apply (simp add: s'_def)
   done
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma valid_kernel_mappings:
   "valid_kernel_mappings s \<Longrightarrow> valid_kernel_mappings s'"
   apply (simp add: valid_kernel_mappings_def s'_def
@@ -3116,7 +3123,7 @@ lemma valid_asid_map:
   apply (fastforce simp: vs_asid_refs_def graph_of_def 
                   intro: vs_lookupI vs_lookup1I)
   done
-
+end
 lemma only_idle:
   "only_idle s \<Longrightarrow> only_idle s'"
   apply (clarsimp simp: only_idle_def)
@@ -3124,7 +3131,7 @@ lemma only_idle:
   apply (simp add: default_object_def tyunt split: Structures_A.apiobject_type.splits)
   apply (simp add: default_tcb_def)
   done
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma equal_kernel_mappings:
   "equal_kernel_mappings s \<Longrightarrow>
       if ty = ArchObject PageDirectoryObj
@@ -3160,7 +3167,7 @@ lemma pspace_in_kernel_window:
   apply (drule retype_addrs_mem_subset_ptr_bits[OF cover tyunt])
   apply (fastforce simp: field_simps obj_bits_api_default_object[OF tyunt])
   done
-
+end
 lemma valid_irq_states:
   "valid_irq_states s \<Longrightarrow> valid_irq_states s'"
   apply(simp add: s'_def valid_irq_states_def)
@@ -3176,14 +3183,14 @@ lemma valid_ioc:
   "valid_ioc s \<Longrightarrow> valid_ioc s'"
   using cte_retype
   by (simp add: valid_ioc_def s'_def)
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma vms:
   "valid_machine_state s \<Longrightarrow> valid_machine_state s'"
   apply (simp add: s'_def ps_def valid_machine_state_def in_user_frame_def)
   apply (rule allI, erule_tac x=p in allE, clarsimp)
   apply (rule_tac x=sz in exI, clarsimp simp: obj_at_def orthr)
   done
-
+end
 lemma post_retype_invs:
   "\<lbrakk> invs s; region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} s \<rbrakk>
         \<Longrightarrow> post_retype_invs ty (retype_addrs ptr ty n us) s'"
@@ -3201,9 +3208,8 @@ lemma post_retype_invs:
                      valid_global_pd_mappings valid_ioc vms
                      pspace_in_kernel_window
                      cap_refs_in_kernel_window valid_irq_states)
-
 end
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma use_retype_region_proofs':
   assumes x: "\<And>s. \<lbrakk> retype_region_proofs s ty us ptr sz n; P s \<rbrakk>
    \<Longrightarrow> Q (retype_addrs ptr ty n us) (s\<lparr>kheap :=
@@ -3228,7 +3234,7 @@ lemma use_retype_region_proofs':
    apply (simp add: range_cover_def obj_bits_api_def 
      slot_bits_def word_bits_def cte_level_bits_def)+
   done
-
+end
 
 lemmas use_retype_region_proofs
     = use_retype_region_proofs'[where Q="\<lambda>_. Q" and P=Q, simplified]
@@ -3312,7 +3318,7 @@ crunch irq_node[wp]: retype_region "\<lambda>s. P (interrupt_irq_node s)"
 crunch interrupt_states[wp]: retype_region "\<lambda>s. P (interrupt_states s)"
   (simp: crunch_simps)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma invs_post_retype_invs:
   "invs s \<Longrightarrow> post_retype_invs ty refs s"
   apply (clarsimp simp: post_retype_invs_def invs_def valid_state_def)
@@ -3324,7 +3330,7 @@ lemma equal_kernel_mappings_trans_state[simp]:
   "equal_kernel_mappings (trans_state f s) = equal_kernel_mappings s"
   apply (simp add: equal_kernel_mappings_def)
   done
-
+end
 lemma invs_trans_state[simp]:
   "invs (trans_state f s) = invs s"
   apply (simp add: invs_def valid_state_def)
@@ -3351,7 +3357,7 @@ lemma retype_region_post_retype_invs:
    apply (simp add: invs_post_retype_invs)
    apply (clarsimp simp:invs_def valid_state_def)
   done
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma retype_region_plain_invs:
   "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap ptr sz 
       and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
@@ -3364,11 +3370,11 @@ lemma retype_region_plain_invs:
   apply (rule hoare_strengthen_post[OF retype_region_post_retype_invs])
   apply (simp add: post_retype_invs_def)
   done
-
+end
 
 lemma subset_not_le_trans: "\<lbrakk>\<not> A \<subset> B; C \<subseteq> B\<rbrakk> \<Longrightarrow> \<not> A \<subset> C" by auto
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma storeWord_um_eq_0:
   "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>
     storeWord x 0
@@ -3393,7 +3399,7 @@ lemma cleanCacheRange_PoU_um_inv[wp]:
    \<lbrace>\<lambda>_ m. P (underlying_memory m)\<rbrace>"
   by (simp add: cleanCacheRange_PoU_def cleanByVA_PoU_def machine_op_lift_def machine_rest_lift_def
                 split_def | wp)+
-
+end
 lemma cte_wp_at_trans_state[simp]: "cte_wp_at P ptr (kheap_update f (trans_state f' s)) =
        cte_wp_at P ptr (kheap_update f s)"
   apply (simp add: trans_state_update[symmetric] del: trans_state_update)
@@ -3444,11 +3450,11 @@ lemma pspace_no_overlap_typ_at_lift:
   apply (clarsimp simp: pspace_no_overlap_typ_at_def)
   apply (wp hoare_vcg_all_lift f)
   done
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma swp_clearMemoryVM [simp]:
   "swp clearMemoryVM x = (\<lambda>_. return ())"
   by (rule ext,simp)
-
+end
 
 (* FIXME: move *)
 lemma bind_assoc_reverse:

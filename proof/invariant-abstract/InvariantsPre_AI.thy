@@ -22,6 +22,9 @@ unqualify_consts
 
 end
 
+(* FIXME: move *)
+declare ranI [intro]
+
 section "Locale Setup"
 
 locale pspace_update_eq' =

@@ -373,7 +373,7 @@ lemma set_cap_cap_refs_in_kernel_window[wp]:
                    pred_conj_def)
   apply (rule hoare_lift_Pf2[where f=arch_state])
    apply wp
-   apply (fastforce simp: not_kernel_window_arch_def elim!: ranE split: split_if_asm)
+   apply (fastforce elim!: ranE split: split_if_asm)
   apply wp
   done
 
@@ -381,7 +381,7 @@ lemma cap_refs_in_kernel_windowD:
   "\<lbrakk> caps_of_state s ptr = Some cap; cap_refs_in_kernel_window s \<rbrakk>
    \<Longrightarrow> \<forall>ref \<in> cap_range cap.
          arm_kernel_vspace (arch_state s) ref = ArmVSpaceKernelWindow"
-  apply (clarsimp simp: cap_refs_in_kernel_window_def valid_refs_def not_kernel_window_arch_def
+  apply (clarsimp simp: cap_refs_in_kernel_window_def valid_refs_def
                         cte_wp_at_caps_of_state)
   apply (cases ptr, fastforce)
   done
@@ -404,6 +404,11 @@ lemma acap_rights_update_id [intro!, simp]:
   "valid_arch_cap ac s \<Longrightarrow> acap_rights_update (acap_rights ac) ac = ac"
   unfolding acap_rights_update_def acap_rights_def valid_arch_cap_def
   by (cases ac; simp)
+
+lemma obj_ref_none_no_asid:
+  "{} = obj_refs new_cap \<longrightarrow> None = table_cap_ref new_cap"
+  "obj_refs new_cap = {} \<longrightarrow> table_cap_ref new_cap = None"
+  by (simp add: table_cap_ref_def split: cap.split arch_cap.split)+
 
 end
 end

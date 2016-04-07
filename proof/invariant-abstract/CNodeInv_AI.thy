@@ -2115,7 +2115,7 @@ lemma swap_of_caps_valid_arch_caps:
    apply (simp add: valid_arch_caps_def
                     valid_vs_lookup_def valid_table_caps_def pred_conj_def
                del: split_paired_Ex split_paired_All imp_disjL)
-   apply (wp hoare_vcg_all_lift hoare_convert_imp[OF set_cap_vs_lookup_pages]
+   apply (wp hoare_vcg_all_lift hoare_convert_imp[OF set_cap.vs_lookup_pages]
              hoare_vcg_disj_lift hoare_convert_imp[OF set_cap_caps_of_state]
              hoare_use_eq[OF set_cap_arch set_cap_obj_at_impossible[where P="\<lambda>x. x"]])
   apply (clarsimp simp: valid_arch_caps_def cte_wp_at_caps_of_state
@@ -2176,7 +2176,7 @@ lemma cap_swap_asid_map[wp]:
      cap_swap c a c' b \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
   apply (simp add: cap_swap_def set_cdt_def valid_asid_map_def pd_at_asid_def)
   apply (rule hoare_pre)
-   apply (wp set_cap_vs_lookup|simp
+   apply (wp set_cap.vs_lookup|simp
           |rule hoare_lift_Pf [where f=arch_state])+
   done
 
