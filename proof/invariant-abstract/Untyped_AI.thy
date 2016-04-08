@@ -13,6 +13,12 @@
 theory Untyped_AI
 imports Detype_AI
 begin
+context Arch begin
+
+unqualify_consts
+  region_in_kernel_window
+
+end
 
 primrec
   valid_untyped_inv :: "Invocations_A.untyped_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -1508,10 +1514,10 @@ lemma obj_at_foldr_intro:
   "P obj \<and> p \<in> set xs \<Longrightarrow> obj_at P p (s \<lparr> kheap := foldr (\<lambda>p ps. ps (p \<mapsto> obj)) xs (kheap s) \<rparr>)"
   by (clarsimp simp: obj_at_def foldr_upd_app_if)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context ARM begin (*FIXME: arch_split*)
 lemma asid_bits_ge_0: "(0::word32) < 2 ^ asid_bits" by (simp add: asid_bits_def)
-
-
+end
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma retype_ret_valid_caps:
   "\<lbrace>pspace_no_overlap ptr sz
       and K (tp = Structures_A.CapTableObject \<longrightarrow> us > 0)
@@ -1553,7 +1559,7 @@ lemma set_zip_helper:
   "t \<in> set (zip xs ys) \<Longrightarrow> fst t \<in> set xs \<and> snd t \<in> set ys"
   by (clarsimp simp add: set_zip)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context ARM begin (*FIXME: arch_split*)
 lemma silly_helpers:
   "n < 32 \<Longrightarrow> n < word_bits"
   "word_bits - (pageBits + n) < 32"
@@ -3594,11 +3600,12 @@ lemma valid_cap_aligned:
 
 crunch irq_node[wp]: do_machine_op "\<lambda>s. P (interrupt_irq_node s)"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context ARM begin
 crunch irq_node[wp]: store_pde "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 end
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma init_arch_objects_irq_node[wp]:
   "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> init_arch_objects tp ptr bits us refs \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)\<rbrace>"
   by (wp init_arch_objects_hoare_lift, simp)
@@ -3606,8 +3613,9 @@ lemma init_arch_objects_irq_node[wp]:
 lemma init_arch_objects_excap[wp]:
   "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> init_arch_objects tp ptr bits us refs \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
   by (wp ex_cte_cap_to_pres init_arch_objects_irq_node init_arch_objects_cte_wp_at)
+end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context ARM begin
 crunch nonempty_table[wp]: do_machine_op
   "\<lambda>s. P' (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)"
 
@@ -3635,7 +3643,7 @@ end
 lemma ge_mask_eq: "len_of TYPE('a) \<le> n \<Longrightarrow> (x::'a::len word) && mask n = x"
   by (simp add: mask_def p2_eq_0[THEN iffD2])
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context ARM begin (*FIXME: arch_split*)
 lemma store_pde_nonempty_table:
   "\<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)
            \<and> (\<forall>rf. pde_ref pde = Some rf \<longrightarrow>
@@ -3653,7 +3661,7 @@ end
 
 crunch valid_global_objs[wp]: do_machine_op "valid_global_objs"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context ARM begin (*FIXME: arch_split*)
 lemma store_pde_global_global_objs:
   "\<lbrace>\<lambda>s. valid_global_objs s
            \<and> (\<forall>rf. pde_ref pde = Some rf \<longrightarrow>
@@ -3901,7 +3909,7 @@ lemma ex_cte_cap_wp_to_clear_um[simp]:
   "ex_cte_cap_wp_to P p (clear_um T s) = ex_cte_cap_wp_to P p s"
   by (clarsimp simp:ex_cte_cap_wp_to_def clear_um_def)
 
-
+context ARM begin (*FIXME: arch_split*)
 lemma set_pd_cte_wp_at_iin[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)\<rbrace>
    set_pd q pd
@@ -3925,6 +3933,7 @@ lemma init_arch_objects_ex_cte_cap_wp_to[wp]:
    init_arch_objects tp ptr no us orefs
    \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
   by (simp add: ex_cte_cap_wp_to_def) (wp hoare_vcg_ex_lift)
+end
 
 lemma invoke_untyp_invs':
  assumes create_cap_Q[wp]: "\<And>tp sz p cref oref.\<lbrace>invs and Q and cte_wp_at (\<lambda>c. is_untyped_cap c) p and cte_wp_at (op = NullCap) cref\<rbrace>
@@ -4142,7 +4151,7 @@ lemma invoke_untyp_invs':
 
     note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap (ptr && ~~ mask sz) sz idx"
       ,unfolded free_index_update_def free_index_of_def,simplified]
-
+    interpret ARM .
     have gen_pd_align[simp]:
       "\<And>pd. tp = ArchObject PageDirectoryObj \<Longrightarrow>
              is_aligned pd pd_bits = is_aligned pd (obj_bits_api tp us)"

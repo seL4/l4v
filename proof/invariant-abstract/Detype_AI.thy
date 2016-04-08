@@ -1161,7 +1161,7 @@ lemma dmo_untyped_children_in_mdb[wp]:
    \<lbrace>\<lambda>rv s. untyped_children_in_mdb s\<rbrace>"
   by (wp | simp add: untyped_mdb_alt[symmetric] do_machine_op_def split_def)+
 
-
+context ARM begin
 lemma region_in_kernel_window_detype[simp]:
   "region_in_kernel_window S (detype S' s)
       = region_in_kernel_window S s"
@@ -1179,7 +1179,7 @@ lemma region_in_kernel_window_delete_objects[wp]:
    delete_objects ptr bits
    \<lbrace>\<lambda>_. region_in_kernel_window S\<rbrace>"
   by (wp | simp add: delete_objects_def do_machine_op_def split_def)+
-
+end
 
 lemma detype_machine_state_update_comm:
   "detype S (machine_state_update f s) =
