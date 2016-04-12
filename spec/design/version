@@ -1,5 +1,5 @@
-Built from git repo at /net/nfshome/export/home/insecure/jbeeren/work/test/seL4/haskell by jbeeren
+Built from git repo at /home/joelb/work/verification/seL4/haskell by joelb
 
 Generated from changeset:
-3610254 Merge branch 'master' into deviceuntyped
+89a8d1c SELFOUR-421: Arch_createObject changed to use new user_data_device in ghostupdates for device pages
 

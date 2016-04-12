@@ -203,11 +203,16 @@ defs sameObjectAs_def:
   )"
 
 definition
-"createPageObject ptr numPages isDevice\<equiv> (do
-    addrs \<leftarrow> placeNewObject ptr UserData numPages;
-    unless isDevice $ doMachineOp $ initMemory (PPtr $ fromPPtr ptr) (1 `~shiftL~` (pageBits + numPages) );
-    return addrs
-od)"
+"createPageObject ptr numPages isDevice \<equiv>
+    if isDevice then (do
+      addrs \<leftarrow> placeNewObject ptr UserDataDevice numPages;
+      return addrs
+    od)
+    else (do
+      addrs \<leftarrow> placeNewObject ptr UserData numPages;
+      doMachineOp $ initMemory (PPtr $ fromPPtr ptr) (1 `~shiftL~` (pageBits + numPages) );
+      return addrs
+    od)"
 
 defs createObject_def:
 "createObject t regionBase arg3 isDevice \<equiv>

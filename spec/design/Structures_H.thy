@@ -1941,6 +1941,7 @@ datatype kernel_object =
   | KONotification notification
   | KOKernelData
   | KOUserData
+  | KOUserDataDevice
   | KOTCB tcb
   | KOCTE cte
   | KOArch arch_kernel_object
@@ -2001,6 +2002,9 @@ lemma intStateIRQTable_intStateIRQTable_update [simp]:
 
 datatype user_data =
     UserData
+
+datatype user_data_device =
+    UserDataDevice
 
 consts
 kernelObjectTypeName :: "kernel_object \<Rightarrow> unit list"
@@ -2069,6 +2073,7 @@ defs objBitsKO_def:
   | (KOCTE _) \<Rightarrow>    wordSizeCase 4 5
   | (KOTCB _) \<Rightarrow>    9
   | (KOUserData) \<Rightarrow>    pageBits
+  | (KOUserDataDevice) \<Rightarrow>    pageBits
   | (KOKernelData) \<Rightarrow>    pageBits
   | (KOArch a) \<Rightarrow>    archObjSize a
   )"
