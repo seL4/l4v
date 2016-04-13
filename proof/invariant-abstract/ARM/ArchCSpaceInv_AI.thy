@@ -63,14 +63,6 @@ lemma
   "cap_master_arch_cap (cap_master_arch_cap ac) = cap_master_arch_cap ac"
   by (cases ac; simp add: cap_master_arch_cap_def)
 
-(* FIXME: move to somewhere sensible *)
-lemma pageBitsForSize_simps[simp]:
-  "pageBitsForSize ARMSmallPage    = 12"
-  "pageBitsForSize ARMLargePage    = 16"
-  "pageBitsForSize ARMSection      = 20"
-  "pageBitsForSize ARMSuperSection = 24"
-  by (simp add: pageBitsForSize_def)+
-
 definition
   "is_ap_cap cap \<equiv> case cap of (ArchObjectCap (arch_cap.ASIDPoolCap ap asid)) \<Rightarrow> True | _ \<Rightarrow> False"
 
@@ -81,6 +73,27 @@ definition
    is_pg_cap cap \<and>
    (\<exists>vref. vs_cap_ref cap = Some vref \<and> (vref \<unrhd> obj_ref_of cap) s)"
 
+definition
+  replaceable_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
+where
+  "replaceable_arch_cap s sl newcap \<equiv> \<lambda>cap.
+   (\<forall>vref. vs_cap_ref cap = Some vref
+                \<longrightarrow> (vs_cap_ref newcap = Some vref
+                       \<and> obj_refs newcap = obj_refs cap)
+                 \<or> (\<forall>oref \<in> obj_refs cap. \<not> (vref \<unrhd> oref) s))
+      \<and> no_cap_to_obj_with_diff_ref newcap {sl} s
+      \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap) \<longrightarrow> cap_asid newcap = None
+          \<longrightarrow> (\<forall> r \<in> obj_refs newcap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
+      \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap)
+             \<longrightarrow> ((is_pt_cap newcap \<and> is_pt_cap cap \<or> is_pd_cap newcap \<and> is_pd_cap cap)
+                      \<longrightarrow> (cap_asid newcap = None \<longrightarrow> cap_asid cap = None)
+                      \<longrightarrow> obj_refs cap \<noteq> obj_refs newcap)
+             \<longrightarrow> (\<forall>sl'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs newcap
+                                           \<and> (is_pd_cap newcap \<and> is_pd_cap cap' \<or> is_pt_cap newcap \<and> is_pt_cap cap')
+                                           \<and> (cap_asid newcap = None \<or> cap_asid cap' = None)) sl' s \<longrightarrow> sl' = sl))
+      \<and> \<not>is_ap_cap newcap"
+
+declare replaceable_arch_cap_def[simp]
 
 (*FIXME arch_split: These are probably subsumed by the lifting lemmas *)
 
@@ -263,68 +276,6 @@ lemma set_cap_unique_table_refs:
                  split: split_if_asm)
   done
 
-definition set_arch_cap_precondition where
-  "set_arch_cap_precondition cap ptr s \<equiv>
-        (\<forall>vref cap'. cte_wp_at (op = cap') ptr s
-                \<longrightarrow> vs_cap_ref cap' = Some vref
-                \<longrightarrow> (vs_cap_ref cap = Some vref \<and> obj_refs cap = obj_refs cap')
-                 \<or> (\<not> is_final_cap' cap' s \<and> \<not> reachable_pg_cap cap' s)
-                 \<or> (\<forall>oref \<in> obj_refs cap'. \<not> (vref \<unrhd> oref) s))
-      \<and> no_cap_to_obj_with_diff_ref cap {ptr} s
-      \<and> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
-      \<and> ((is_pt_cap cap \<or> is_pd_cap cap)
-             \<longrightarrow> (\<forall>oldcap. caps_of_state s ptr = Some oldcap \<longrightarrow>
-                  (is_pt_cap cap \<and> is_pt_cap oldcap \<or> is_pd_cap cap \<and> is_pd_cap oldcap)
-                    \<longrightarrow> (cap_asid cap = None \<longrightarrow> cap_asid oldcap = None)
-                    \<longrightarrow> obj_refs oldcap \<noteq> obj_refs cap)
-             \<longrightarrow> (\<forall>ptr'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs cap
-                                              \<and> (is_pd_cap cap \<and> is_pd_cap cap' \<or> is_pt_cap cap \<and> is_pt_cap cap')
-                                              \<and> (cap_asid cap = None \<or> cap_asid cap' = None)) ptr' s \<longrightarrow> ptr' = ptr))"
-
-lemma not_arch_not_pt[simp]:
-  "\<not> is_arch_cap cap \<Longrightarrow> \<not> is_pt_cap cap"
-  unfolding is_arch_cap_def is_pt_cap_def
-  by (auto split: cap.splits arch_cap.splits)
-
-lemma not_arch_not_pd[simp]:
-  "\<not> is_arch_cap cap \<Longrightarrow> \<not> is_pd_cap cap"
-  unfolding is_arch_cap_def is_pd_cap_def
-  by (auto split: cap.splits arch_cap.splits)
-
-lemma not_arch_not_reachable_pg[simp]:
-  "\<not> is_arch_cap cap \<Longrightarrow> \<not> reachable_pg_cap cap s"
-  unfolding is_arch_cap_def reachable_pg_cap_def is_pg_cap_def
-  by (auto split: cap.splits arch_cap.splits)
-
-(*
-lemma set_cap_valid_arch_caps:
-  "\<lbrace>\<lambda>s. valid_arch_caps s
-      \<and> (if (\<not>is_arch_cap cap) \<and> (\<forall>cap'. cte_wp_at (op = cap') ptr s \<longrightarrow> \<not>is_arch_cap cap') then  
-         ((\<forall>cap'. cte_wp_at (op = cap') ptr s \<longrightarrow> \<not>is_final_cap' cap' s) \<and> no_cap_to_obj_with_diff_ref cap {ptr} s)
-         else set_arch_cap_precondition cap ptr s) \<rbrace>
-        set_cap cap ptr
-   \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-(*
-  apply (simp add: valid_arch_caps_def pred_conj_def split del: split_if)
-  apply (wp set_cap_valid_vs_lookup set_cap_valid_table_caps
-              set_cap_unique_table_caps set_cap_unique_table_refs)
-  apply (clarsimp simp: set_arch_cap_precondition_def split: split_if_asm)
-  apply (clarsimp simp: set_arch_cap_precondition_def split: split_if_asm)
-  apply (clarsimp simp: set_arch_cap_precondition_def split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
-  apply (elim disjE; simp?)
-  apply blas
-  apply (clarsimp simp: not_arch_not_pt not_arch_not_pd)
-  apply safe
-  apply clarsimp
-  apply (simp add: cte_wp_at_caps_of_state)
-  apply (case_tac "caps_of_state s ptr"; simp)
-  done*) sorry*)
-
 lemma set_cap_valid_arch_caps:
   "\<lbrace>\<lambda>s. valid_arch_caps s
       \<and> (\<forall>vref cap'. cte_wp_at (op = cap') ptr s
@@ -345,7 +296,10 @@ lemma set_cap_valid_arch_caps:
                                               \<and> (cap_asid cap = None \<or> cap_asid cap' = None)) ptr' s \<longrightarrow> ptr' = ptr))\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-   sorry
+  apply (simp add: valid_arch_caps_def pred_conj_def)
+  apply (wp set_cap_valid_vs_lookup set_cap_valid_table_caps
+            set_cap_unique_table_caps set_cap_unique_table_refs)
+  by simp_all blast+
 
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at (op = cap) ptr s; valid_table_caps s;

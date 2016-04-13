@@ -18,6 +18,7 @@ begin
 
 unqualify_consts (in Arch)
   cap_master_arch_cap :: "arch_cap \<Rightarrow> arch_cap"
+  replaceable_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
   reachable_pg_cap :: "cap \<Rightarrow> 'a state \<Rightarrow> bool"
   unique_table_refs :: "('a \<Rightarrow> cap option) \<Rightarrow> bool"
 
@@ -512,12 +513,6 @@ lemma set_cap_a_type_inv:
    apply (fastforce simp: valid_def)
   apply fastforce
   done
-
-
-
-lemma set_cap_arch_state [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> set_cap cap p \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (wp valid_arch_state_lift set_cap_typ_at)
 
 
 lemma set_cap_tcb:
@@ -1134,6 +1129,7 @@ where
       \<and> \<not> is_reply_cap newcap
       \<and> newcap \<noteq> cap.IRQControlCap
       \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> cap_class newcap = cap_class cap))
+      \<and> replaceable_arch_cap s sl newcap cap
       "
 
 lemma range_not_empty_is_physical:
@@ -1550,12 +1546,6 @@ lemma unique_table_refs_no_cap_asidE:
 lemmas unique_table_refs_no_cap_asidD
      = unique_table_refs_no_cap_asidE[where S="{}"]
 
-(* FIXME: substitute everywhere. *)
-lemmas set_cap_valid_kernel_mappings[wp] = set_cap.valid_kernel_mappings
-lemmas set_cap_equal_kernel_mappings[wp] = set_cap.equal_kernel_mappings
-lemmas set_cap_global_pd_mappings[wp] = set_cap.valid_global_pd_mappings
-lemmas set_cap_vms[wp] = set_cap.valid_machine_state
-
 lemma set_cap_only_idle [wp]:
   "\<lbrace>only_idle\<rbrace> set_cap cap p \<lbrace>\<lambda>_. only_idle\<rbrace>" 
   by (wp only_idle_lift set_cap_typ_at)
@@ -1643,6 +1633,7 @@ lemma descendants_inc_minor:
   apply simp
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma replace_cap_invs:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s p cap) p s
         \<and> cap \<noteq> cap.NullCap
@@ -1650,17 +1641,17 @@ lemma replace_cap_invs:
         \<and> s \<turnstile> cap\<rbrace>
      set_cap cap p
    \<lbrace>\<lambda>rv s. invs s\<rbrace>"
- (* apply (simp add: invs_def valid_state_def valid_mdb_def2)
+  apply (simp add: invs_def valid_state_def valid_mdb_def2)
   apply (rule hoare_pre)
    apply (wp replace_cap_valid_pspace
              set_cap_caps_of_state2 set_cap_idle
              replace_cap_ifunsafe valid_irq_node_typ
              set_cap_typ_at set_cap_irq_handlers
-              set_cap.valid_arch_obj)
+             set_cap_valid_arch_caps)
   apply (clarsimp simp: valid_pspace_def cte_wp_at_caps_of_state
                         replaceable_def)
   apply (rule conjI)
-   apply (gfastforce simp: tcb_cap_valid_def 
+   apply (fastforce simp: tcb_cap_valid_def 
                   dest!: cte_wp_tcb_cap_valid [OF caps_of_state_cteD])
   apply (rule conjI)
    apply (erule_tac P="\<lambda>cps. mdb_cte_at cps (cdt s)" in rsubst)
@@ -1730,8 +1721,10 @@ lemma replace_cap_invs:
    apply (clarsimp simp: valid_table_capsD[OF caps_of_state_cteD]
                     valid_arch_caps_def unique_table_refs_no_cap_asidE)
   apply simp
-  apply (rule Ball_emptyI, simp add: obj_irq_refs_subset)
-  done*) sorry
+  apply (rule Ball_emptyI)
+  apply (simp add: obj_irq_refs_subset)
+  done
+end
 
 crunch cte_wp_at: set_cdt "cte_wp_at P p"
 

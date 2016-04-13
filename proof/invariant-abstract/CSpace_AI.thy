@@ -593,9 +593,8 @@ lemmas final_matters_simps[simp]
     = final_matters_def[split_simps cap.split]
 
 
-lemma cte_wp_at_eqD:
-  "cte_wp_at P p s \<Longrightarrow> \<exists>c. cte_wp_at (op = c) p s \<and> P c"
-  by (auto simp add: cte_wp_at_cases)
+(* FIXME: replace everywhere *)
+lemmas cte_wp_at_eqD = cte_wp_at_norm
 
 
 lemma no_True_set_nth:
@@ -3964,10 +3963,6 @@ lemma set_untyped_cap_as_full_is_final_cap'_neg:
      apply (clarsimp simp:cte_wp_at_caps_of_state masked_as_full_def)
    apply (clarsimp simp:is_final_cap'_def2)
   done
-
-context begin interpretation ARM . (*FIXME: arch_split*)
-
-end
 
 lemma set_untyped_cap_as_full_access[wp]:
   "\<lbrace>(\<lambda>s. P (vs_lookup s))\<rbrace>

@@ -155,7 +155,7 @@ definition
 
 lemma is_simple_cap_arch:
   "\<not>is_arch_cap cap \<Longrightarrow> is_simple_cap_arch cap"
-  by (simp add: is_simple_cap_arch_def)
+  by (simp add: is_cap_simps is_simple_cap_arch_def)
 
 crunch inv[wp]: lookup_ipc_buffer "I"
 

@@ -20,11 +20,11 @@ sublocale
   by (unfold_locales, simp add: empty_table_def del: arch_obj_fun_lift_expand)
 
 sublocale
-  vs_refs: arch_only_obj_pred "\<lambda>ko. x \<in> vs_refs ko" for S
+  vs_refs: arch_only_obj_pred "\<lambda>ko. x \<in> vs_refs ko"
   by (unfold_locales, simp add: vs_refs_def del: vs_refs_arch_def)
 
 sublocale
-  vs_refs_pages: arch_only_obj_pred "\<lambda>ko. x \<in> vs_refs_pages ko" for S
+  vs_refs_pages: arch_only_obj_pred "\<lambda>ko. x \<in> vs_refs_pages ko"
   by (unfold_locales, simp add: vs_refs_pages_def del: vs_refs_pages_arch_def)
 
 lemma pspace_in_kernel_window_atyp_lift_strong:
@@ -59,7 +59,7 @@ lemma pspace_in_kernel_window_atyp_lift:
 lemma cap_refs_in_kernel_window_arch_update[simp]:
   "arm_kernel_vspace (f (arch_state s)) = arm_kernel_vspace (arch_state s)
      \<Longrightarrow> cap_refs_in_kernel_window (arch_state_update f s) = cap_refs_in_kernel_window s"
-  by (simp add: cap_refs_in_kernel_window_def not_kernel_window_arch_def)
+  by (simp add: cap_refs_in_kernel_window_def)
 
 lemma
   ex_ko_at_def2: 
