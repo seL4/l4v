@@ -1619,14 +1619,6 @@ lemma dmo_st_tcb [wp]:
 crunch ct[wp]: do_machine_op "\<lambda>s. P (cur_thread s)" (wp: select_wp)
 
 
-lemma do_machine_op_cur_tcb [wp]:
-  "\<lbrace>cur_tcb\<rbrace> do_machine_op f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (clarsimp simp: cur_tcb_def)
-  done
-
-
 lemma do_machine_op_arch [wp]:
   "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   apply (simp add: do_machine_op_def split_def)

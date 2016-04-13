@@ -2746,14 +2746,8 @@ lemma ps_no_overlap[simp]: "ptr && ~~ mask sz \<noteq> ptr \<Longrightarrow> psp
 
 end
 
-lemma aligned_after_mask:
-  "is_aligned ptr a \<Longrightarrow> is_aligned (ptr && mask sz) a"
-  apply (simp add:is_aligned_mask)
-  apply (rule word_eqI)
-  apply (drule_tac x = n in word_eqD)
-  apply (simp add:word_ops_nth_size)
-  done
-
+lemmas aligned_after_mask =
+  is_aligned_andI1[where x=ptr and n=a and y="mask sz" for ptr sz a]
 
 lemma detype_clear_um_simps[simp]:
  "caps_no_overlap ptr sz (clear_um H s)
@@ -2770,10 +2764,6 @@ lemma detype_clear_um_simps[simp]:
 
 crunch pred_tcb_at[wp]: set_cdt "pred_tcb_at proj P t"
   (simp: pred_tcb_at_def)
-
-lemma pred_tcb_at_revokable[simp]:
-  "pred_tcb_at proj P t (is_original_cap_update f s) = pred_tcb_at proj P t s"
-  by (simp add: pred_tcb_at_def)
 
 crunch pred_tcb_at[wp]: create_cap "pred_tcb_at proj P t"
   (simp: crunch_simps)
