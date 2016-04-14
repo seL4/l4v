@@ -2638,20 +2638,10 @@ interpretation arch_update:
   by unfold_locales auto
 sublocale Arch \<subseteq> arch_update: Arch_pspace_update_eq "arch_state_update f" by unfold_locales
 
-interpretation more_update':
-  pspace_int_update_eq "trans_state f"
-  by unfold_locales auto
-sublocale Arch \<subseteq> more_update': Arch_pspace_update_eq "trans_state f" by unfold_locales
-
 interpretation irq_node_update_arch:
   p_arch_update_eq "interrupt_irq_node_update f"
   by unfold_locales auto
 sublocale Arch \<subseteq> irq_node_update_arch: Arch_p_arch_update_eq "interrupt_irq_node_update f" by unfold_locales
-
-interpretation more_update_arch:
-  p_arch_update_eq "trans_state f"
-  by unfold_locales auto
-sublocale Arch \<subseteq> more_update_arch: Arch_p_arch_update_eq "trans_state f" by unfold_locales
 
 
 lemma obj_ref_in_untyped_range:
@@ -2977,15 +2967,6 @@ lemma zombies_final_arch_update [iff]:
 lemma zombies_final_more_update [iff]:
   "zombies_final (trans_state f s) = zombies_final s"
   by (simp add: zombies_final_def is_final_cap'_def)
-
-lemma state_refs_arch_update [iff]:
-  "state_refs_of (arch_state_update f s) = state_refs_of s"
-  by (simp add: state_refs_of_def)
-
-lemma valid_global_refs_more_update[iff]:
-  "valid_global_refs (trans_state f s) = valid_global_refs s"
-  by (rule more_update.valid_global_refs_update)
-
 
 lemma valid_ioc_arch_state_update[iff]:
   "valid_ioc (arch_state_update f s) = valid_ioc s"

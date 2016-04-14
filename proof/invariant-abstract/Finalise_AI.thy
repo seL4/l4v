@@ -15,6 +15,9 @@ imports
   Retype_AI
 begin
 
+unqualify_consts (in Arch)
+  vs_cap_ref :: "cap \<Rightarrow> vs_ref list option"
+
 text {* Properties about empty_slot *}
 
 definition
@@ -215,12 +218,13 @@ lemma no_cap_to_obj_with_diff_rvk_update[simp]:
         = no_cap_to_obj_with_diff_ref cap S s"
   by (simp add: no_cap_to_obj_with_diff_ref_def)
 
-
+context ARM begin (*FIXME: arch_split*)
 lemma reachable_pg_cap_cdt_update[simp]:
   "reachable_pg_cap x (cdt_update f s) = reachable_pg_cap x s"
   by (simp add: reachable_pg_cap_def)
+end
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma replaceable_cdt_update[simp]:
   "replaceable (cdt_update f s) = replaceable s"
   by (fastforce simp: replaceable_def tcb_cap_valid_def)
@@ -232,6 +236,7 @@ lemma reachable_pg_cap_is_original_cap_update[simp]:
 lemma replaceable_revokable_update[simp]:
   "replaceable (is_original_cap_update f s) = replaceable s"
   by (fastforce simp: replaceable_def is_final_cap'_def2 tcb_cap_valid_def)
+end
 
 lemma zombies_final_cdt_update[simp]:
   "zombies_final (cdt_update f s) = zombies_final s"
@@ -282,22 +287,25 @@ proof -
     by (clarsimp simp: st_tcb_def2)
 qed
 
+context ARM begin (*FIXME: arch_split*)
 lemma reachable_pg_cap_update[simp]:
   "reachable_pg_cap cap' (trans_state f s) = reachable_pg_cap cap' s"
   by (simp add:reachable_pg_cap_def vs_lookup_pages_def
     vs_lookup_pages1_def obj_at_def)
+end
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma replaceable_more_update[simp]:
   "replaceable (trans_state f s) sl cap cap' = replaceable s sl cap cap'"
   by (simp add: replaceable_def)
-
 
 (* FIXME: move *)
 lemma obj_ref_ofI: "obj_refs cap = {x} \<Longrightarrow> obj_ref_of cap = x"
   by (case_tac cap, simp_all) (rename_tac arch_cap, case_tac arch_cap, simp_all)
 lemmas obj_ref_ofI' = obj_ref_ofI[OF obj_ref_elemD]
+end
 
-
+context ARM begin (*FIXME: arch_split*)
 lemma vs_lookup_pages_eq:
   "\<lbrakk>valid_arch_objs s; valid_asid_table (arm_asid_table (arch_state s)) s;
     valid_cap cap s; table_cap_ref cap = Some vref; oref \<in> obj_refs cap\<rbrakk>
@@ -310,8 +318,9 @@ lemma vs_lookup_pages_eq:
   apply (simp add: valid_cap_def)
   apply (erule vs_lookup_vs_lookup_pagesI', clarsimp+)
   done
+end
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma empty_slot_invs:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s sl cap.NullCap) sl s \<and>
         emptyable sl s \<and>
@@ -387,6 +396,7 @@ lemma empty_slot_invs:
    apply auto[1]
   apply (simp add: is_final_cap'_def2 cte_wp_at_caps_of_state)
   done
+end
 
 crunch cte_wp_at[wp]: deleted_irq_handler "cte_wp_at P p"
 
@@ -458,10 +468,10 @@ lemma tcb_cap_cases_lt:
   by (simp add: tcb_cap_cases_def
          | erule less_handy_casesE)+
 
-
+context ARM begin (*FIXME: arch_split*)
 lemma nat_to_cref_unat_of_bl':
   "\<lbrakk> length xs < 32; n = length xs \<rbrakk> \<Longrightarrow>
-   nat_to_cref n (unat (of_bl xs :: word32)) = xs"
+   nat_to_cref n (unat (of_bl xs :: machine_word)) = xs"
   apply (simp add: nat_to_cref_def word_bits_def)
   apply (rule nth_equalityI)
    apply simp
@@ -473,12 +483,12 @@ lemma nat_to_cref_unat_of_bl':
   apply fastforce
   done
 
-
 lemmas nat_to_cref_unat_of_bl = nat_to_cref_unat_of_bl' [OF _ refl]
+end
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma dom_tcb_cap_cases_lt:
-  "dom tcb_cap_cases = {xs. length xs = 3 \<and> unat (of_bl xs :: word32) < 5}"
+  "dom tcb_cap_cases = {xs. length xs = 3 \<and> unat (of_bl xs :: machine_word) < 5}"
   apply (rule set_eqI, rule iffI)
    apply clarsimp
    apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1 split: split_if_asm)
@@ -486,7 +496,7 @@ lemma dom_tcb_cap_cases_lt:
   apply (frule tcb_cap_cases_lt)
   apply (clarsimp simp: nat_to_cref_unat_of_bl')
   done
-
+end
 
 lemma cte_refs_CNode_Zombie_helper[simp]:
   "{xs. length xs = n \<and> unat (of_bl xs :: word32) < 2 ^ n}
@@ -617,7 +627,7 @@ lemma unbind_notification_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. cte_wp_at P slot s\<rbrace> unbind_notification t \<lbrace>\<lambda>rv s. cte_wp_at P slot s\<rbrace>"
   by (wp thread_set_cte_wp_at_trivial hoare_drop_imp | wpc | simp add: unbind_notification_def tcb_cap_cases_def)+
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma unbind_notification_final[wp]:
   "\<lbrace>is_final_cap' cap\<rbrace> unbind_notification t \<lbrace> \<lambda>rv. is_final_cap' cap\<rbrace>"
   unfolding unbind_notification_def
@@ -635,7 +645,6 @@ lemma deleting_irq_handler_final:
   apply (wp cap_delete_one_final_cap[where slot=slot])
   apply simp
   done
-
 
 lemma finalise_cap_cases1:
   "\<lbrace>\<lambda>s. final \<longrightarrow> is_final_cap' cap s
@@ -667,6 +676,7 @@ lemma finalise_cap_cases1:
   apply (rule hoare_pre)
    apply (wp | wpc | simp only: simp_thms)+
   done
+end
 
 
 lemma finalise_cap_cases:
@@ -703,12 +713,13 @@ lemma is_final_cap'_objrefsE:
 crunch typ_at[wp]: deleting_irq_handler "\<lambda>s. P (typ_at T p s)"
   (wp:crunch_wps simp:crunch_simps unless_def assertE_def)
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch typ_at[wp]: arch_finalise_cap "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt )
+end
 
-context
-begin
+context begin 
 declare if_cong[cong]
 crunch typ_at[wp]: finalise_cap "\<lambda>s. P (typ_at T p s)"
 end
@@ -722,6 +733,7 @@ lemma unbind_notification_valid_cap[wp]:
   unfolding unbind_notification_def
   by (wp abs_typ_at_lifts hoare_drop_imps | wpc | clarsimp)+ 
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma finalise_cap_new_valid_cap[wp]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
   apply (cases cap, simp_all)
@@ -736,7 +748,9 @@ lemma finalise_cap_new_valid_cap[wp]:
   apply (wp|simp add: o_def valid_cap_def cap_aligned_def
                  split del: split_if|clarsimp|wpc)+
   done
+end
 
+context ARM begin (*FIXME: arch_split*)
 lemma invs_arm_asid_table_unmap:
   "invs s \<and> is_aligned base asid_low_bits \<and> base \<le> mask asid_bits
        \<and> (\<forall>x\<in>set [0.e.2 ^ asid_low_bits - 1]. arm_asid_map (arch_state s) (base + x) = None)
@@ -748,6 +762,7 @@ lemma invs_arm_asid_table_unmap:
   apply (simp add: valid_irq_node_def valid_kernel_mappings_def
                    valid_global_objs_arch_update)
   apply (simp add: valid_table_caps_def valid_machine_state_def)
+  apply (simp add: valid_global_refs_def global_refs_def)
   done
 
 lemma delete_asid_pool_invs[wp]:
@@ -803,10 +818,11 @@ lemma delete_asid_invs[wp]:
    apply (simp add: mask_def)
   apply blast
   done
+end
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma arch_finalise_cap_invs[wp]:
-  "\<lbrace>invs and valid_cap (cap.ArchObjectCap cap)\<rbrace>
+  "\<lbrace>invs and valid_cap (ArchObjectCap cap)\<rbrace>
      arch_finalise_cap cap final
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: arch_finalise_cap_def)
@@ -815,6 +831,7 @@ lemma arch_finalise_cap_invs[wp]:
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
   apply (auto simp: mask_def vmsz_aligned_def)
   done
+end
 
 lemma refs_in_ntfn_q_refs:
   "(x, ref) \<in> ntfn_q_refs_of ntfn \<Longrightarrow> ref = NTFNSignal"
@@ -863,7 +880,9 @@ lemma unbind_maybe_notification_invs:
 
 crunch invs[wp]: fast_finalise "invs"
 
+context ARM begin (*FIXME: arch_split*)
 crunch invs: page_table_mapped "invs"
+end
 
 lemma cnode_at_unlive[elim!]:
   "s \<turnstile> cap.CNodeCap ptr bits gd \<Longrightarrow> obj_at (\<lambda>ko. \<not> live ko) ptr s"
@@ -894,7 +913,7 @@ lemma tcb_cap_valid_imp_NullCap:
                  split: Structures_A.thread_state.split_asm)
   done
 
-
+context ARM begin (*FIXME: arch_split*)
 lemma delete_asid_pool_unmapped[wp]:
   "\<lbrace>\<top>\<rbrace>
      delete_asid_pool asid poolptr
@@ -926,7 +945,6 @@ lemma delete_asid_pool_unmapped[wp]:
                  dest!: graph_ofD)
  done
 
-
 lemma set_asid_pool_unmap:
   "\<lbrace>[VSRef highbits None] \<rhd> poolptr\<rbrace>
      set_asid_pool poolptr (pool(lowbits := None))
@@ -940,7 +958,6 @@ lemma set_asid_pool_unmap:
   apply (fastforce simp: vs_refs_def up_ucast_inj_eq
                  dest!: graph_ofD)
   done
-
 
 lemma delete_asid_unmapped[wp]:
   "\<lbrace>\<top>\<rbrace>
@@ -963,34 +980,36 @@ lemma delete_asid_unmapped[wp]:
   apply (clarsimp simp: obj_at_def vs_refs_def up_ucast_inj_eq
                  dest!: graph_ofD)
   done
-
+end
 
 lemma a_type_arch_live:
   "a_type ko = AArch tp \<Longrightarrow> \<not> live ko"
   by (simp add: a_type_def
          split: Structures_A.kernel_object.split_asm)
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma obj_at_not_live_valid_arch_cap_strg:
-  "(s \<turnstile> cap.ArchObjectCap cap \<and> aobj_ref cap = Some r)
+  "(s \<turnstile> ArchObjectCap cap \<and> aobj_ref cap = Some r)
         \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"
   by (clarsimp simp: valid_cap_def obj_at_def
                      a_type_arch_live
               split: arch_cap.split_asm)
+end
 
-
+context ARM begin (*FIXME: arch_split*)
 lemma set_pt_tcb_at:
   "\<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace> set_pt a b \<lbrace>\<lambda>_ s. P (ko_at (TCB tcb) t s)\<rbrace>"
   by (clarsimp simp: simpler_set_pt_def valid_def obj_at_def)
 
-
 lemma set_pd_tcb_at:
   "\<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace> set_pd a b \<lbrace>\<lambda>_ s. P (ko_at (TCB tcb) t s)\<rbrace>"
   by (clarsimp simp: simpler_set_pd_def valid_def obj_at_def)
+end
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch tcb_at: unmap_page "\<lambda>s. P (ko_at (TCB tcb) t s)"
   (simp: crunch_simps wp: crunch_wps set_pt_tcb_at set_pd_tcb_at)
-
+end
 
 lemma pred_tcb_at_def2:
   "pred_tcb_at proj P t \<equiv> \<lambda>s. \<exists>tcb. ko_at (TCB tcb) t s \<and> P (proj (tcb_to_itcb tcb))"
@@ -999,7 +1018,7 @@ lemma pred_tcb_at_def2:
 (* sseefried: 'st_tcb_at_def2' only exists to make existing proofs go through. Can use 'pred_tcb_at_def2' instead *)
 lemmas st_tcb_at_def2 = pred_tcb_at_def2[where proj=itcb_state,simplified]
 
-
+context ARM begin (*FIXME: arch_split*)
 lemma unmap_page_tcb_cap_valid:
  "\<lbrace>\<lambda>s. tcb_cap_valid cap r s\<rbrace>
   unmap_page sz asid vaddr pptr
@@ -1009,7 +1028,7 @@ lemma unmap_page_tcb_cap_valid:
   apply (simp add: pred_tcb_at_def2)
   apply (wp unmap_page_tcb_at hoare_vcg_ex_lift hoare_vcg_all_lift)
   done
-
+end
 
 lemma imp_and_strg: "Q \<and> C \<longrightarrow> (A \<longrightarrow> Q \<and> C) \<and> C" by blast
 
@@ -1018,6 +1037,7 @@ lemma cases_conj_strg: "A \<and> B \<longrightarrow> (P \<and> A) \<or> (\<not> 
 
 lemma and_not_not_or_imp: "(~ A & ~ B | C) = ((A | B) \<longrightarrow> C)" by blast
 
+context ARM begin (*FIXME: arch_split*)
 lemma arch_finalise_cap_replaceable[wp]:
   notes strg = tcb_cap_valid_imp_NullCap
                obj_at_not_live_valid_arch_cap_strg[where cap=cap]
@@ -1058,6 +1078,7 @@ lemma arch_finalise_cap_replaceable[wp]:
              elim!: tcb_cap_valid_imp_NullCap[rule_format, rotated]
              split: cap.splits arch_cap.splits vmpage_size.splits)[1]
   done
+end
 
 lemmas tcb_cap_valid_imp = mp [OF mp [OF tcb_cap_valid_imp'], rotated]
 
@@ -1091,7 +1112,7 @@ lemma cnode_zombie_thread_appropriate[simp]:
   "appropriate_cte_cap cp (cap.Zombie h i j)"
   by (simp add: appropriate_cte_cap_def split: cap.splits)+
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma deleting_irq_handler_slot_not_irq_node:
   "\<lbrace>if_unsafe_then_cap and valid_global_refs
            and cte_wp_at (\<lambda>cp. cap_irqs cp \<noteq> {}) sl\<rbrace>
@@ -1112,7 +1133,6 @@ lemma deleting_irq_handler_slot_not_irq_node:
    apply (simp add: global_refs_def)
   apply (clarsimp simp: appropriate_cte_cap_def split: cap.split_asm)
   done
-
 
 lemma no_cap_to_obj_with_diff_ref_finalI:
   "\<lbrakk> cte_wp_at (op = cap) p s; is_final_cap' cap s;
@@ -1135,7 +1155,6 @@ lemma no_cap_to_obj_with_diff_ref_finalI:
                         obj_irq_refs_Int)
   done
 
-
 lemma suspend_no_cap_to_obj_ref[wp]:
   "\<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
      suspend t
@@ -1146,6 +1165,7 @@ lemma suspend_no_cap_to_obj_ref[wp]:
   apply (clarsimp simp: table_cap_ref_simps
                  dest!: obj_ref_none_no_asid[rule_format])
   done
+end
 
 lemma unbind_notification_not_bound:
   "\<lbrace>\<lambda>s. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_bound_tcb ntfn = Some tcbptr) ntfnptr s
@@ -1192,6 +1212,7 @@ lemma unbind_notification_no_cap_to_obj_ref[wp]:
   apply (wp unbind_notification_caps_of_state)
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma finalise_cap_replaceable:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s
         \<and> cte_wp_at (op = cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
@@ -1243,6 +1264,7 @@ lemma finalise_cap_replaceable:
                          obj_irq_refs_subset vs_cap_ref_def)+
   apply (fastforce split: option.splits vmpage_size.splits)
   done
+end
 
 lemma empty_slot_cte_wp_elsewhere:
   "\<lbrace>(\<lambda>s. cte_wp_at P p s) and K (p \<noteq> p')\<rbrace> empty_slot p' opt \<lbrace>\<lambda>rv s. cte_wp_at P p s\<rbrace>"
@@ -1274,7 +1296,7 @@ lemma cap_delete_one_cte_wp_at_preserved:
   apply (clarsimp simp: cte_wp_at_caps_of_state x)
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma deleting_irq_handler_cte_preserved:
   assumes x: "\<And>cap flag. P cap \<Longrightarrow> \<not> can_fast_finalise cap"
   shows "\<lbrace>cte_wp_at P p\<rbrace> deleting_irq_handler irq \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
@@ -1282,9 +1304,9 @@ lemma deleting_irq_handler_cte_preserved:
   apply (wp cap_delete_one_cte_wp_at_preserved | simp add: x)+
   done
 
-
 crunch cte_wp_at[wp]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
+end
 
 
 interpretation delete_one_pre
@@ -1407,7 +1429,7 @@ lemma fast_finalise_emptyable[wp]:
       apply (wp unbind_maybe_notification_invs hoare_drop_imps | simp add: o_def  | wpc)+
   done
  
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma cap_delete_one_invs[wp]:
   "\<lbrace>invs and emptyable ptr\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
@@ -1416,6 +1438,7 @@ lemma cap_delete_one_invs[wp]:
   apply clarsimp
   apply (drule cte_wp_at_valid_objs_valid_cap, fastforce+)
   done
+end
 
 lemma cap_delete_one_deletes[wp]:
   "\<lbrace>\<top>\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) ptr\<rbrace>"

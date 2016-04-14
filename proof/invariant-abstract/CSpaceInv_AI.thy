@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 CSpace invariants
 *)
 
@@ -18,8 +18,8 @@ begin
 
 unqualify_consts (in Arch)
   cap_master_arch_cap :: "arch_cap \<Rightarrow> arch_cap"
-  replaceable_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
-  reachable_pg_cap :: "cap \<Rightarrow> 'a state \<Rightarrow> bool"
+  replaceable_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
+  replaceable_non_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
   unique_table_refs :: "('a \<Rightarrow> cap option) \<Rightarrow> bool"
 
 unqualify_facts (in Arch)
@@ -1100,18 +1100,19 @@ lemma no_cap_to_obj_with_diff_ref_Null:
   by (rule ext, clarsimp simp: no_cap_to_obj_with_diff_ref_def
                                cte_wp_at_caps_of_state abj_ref_none_no_refs)
 
-
-
+lemma "(a \<or> (\<not>b \<and> c \<and> d) \<or> (b \<and> e \<and> f)) \<longleftrightarrow> (a \<or> (if b then e else c) \<and> (if b then f else d))"
+by simp
 
 definition
   replaceable :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
 where
  "replaceable s sl newcap \<equiv> \<lambda>cap.
     (cap = newcap)
-  \<or> (\<not> is_final_cap' cap s \<and> newcap = cap.NullCap \<and> \<not> reachable_pg_cap cap s)
+  \<or> (\<not> is_final_cap' cap s
+      \<and> newcap = NullCap
+      \<and> replaceable_non_final_arch_cap s sl newcap cap)
   \<or> (is_final_cap' cap s
-      \<and> (\<forall>p\<in>zobj_refs cap - zobj_refs newcap.
-              obj_at (Not \<circ> live) p s)
+      \<and> (\<forall>p\<in>zobj_refs cap - zobj_refs newcap. obj_at (Not \<circ> live) p s)
       \<and> (\<forall>p'. p' \<in> cte_refs cap (interrupt_irq_node s)
                \<and> (p' \<notin> cte_refs newcap (interrupt_irq_node s)
                     \<or> (\<exists>cp. appropriate_cte_cap cp cap
@@ -1128,9 +1129,8 @@ where
       \<and> \<not> is_untyped_cap newcap \<and> \<not> is_master_reply_cap newcap
       \<and> \<not> is_reply_cap newcap
       \<and> newcap \<noteq> cap.IRQControlCap
-      \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> cap_class newcap = cap_class cap))
-      \<and> replaceable_arch_cap s sl newcap cap
-      "
+      \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> cap_class newcap = cap_class cap)
+      \<and> replaceable_final_arch_cap s sl newcap cap)"
 
 lemma range_not_empty_is_physical:
   "valid_cap cap s \<Longrightarrow> (cap_class cap = PhysicalClass) = (cap_range cap \<noteq> {})"

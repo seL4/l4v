@@ -114,7 +114,7 @@ lemma dmo_kheap_arch_state[wp]:
   by (clarsimp simp: do_machine_op_def simpler_gets_def select_f_def
           simpler_modify_def return_def bind_def valid_def)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context ARM begin (*FIXME: arch_split*)
 lemma set_vm_root_kheap_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace> set_vm_root a
    \<lbrace>\<lambda>_ s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace>" (is "valid ?P _ _")
@@ -128,14 +128,18 @@ lemma set_vm_root_kheap_arch_state[wp]:
      apply (wp | simp add: returnOk_def validE_E_def validE_def)+
     apply (wp | simp add: throwError_def validE_R_def validE_def)+
 done
+end
 
+context ARM begin (*FIXME: arch_split*)
 lemma clearExMonitor_invs [wp]:
   "\<lbrace>invs\<rbrace> do_machine_op clearExMonitor \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wp dmo_invs)
   apply (clarsimp simp: clearExMonitor_def machine_op_lift_def
                         machine_rest_lift_def in_monad select_f_def)
   done
+end
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma arch_stt_invs [wp]:
   "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
@@ -181,7 +185,7 @@ lemma stt_invs [wp]:
     apply (clarsimp simp: invs_def valid_state_def valid_idle_def
                           valid_irq_node_def valid_machine_state_def)
     apply (fastforce simp: cur_tcb_def obj_at_def
-                    elim: valid_pspace_eqI ifunsafe_pspaceI)
+                     elim: valid_pspace_eqI ifunsafe_pspaceI)
    apply wp
   apply clarsimp
   apply (simp add: is_tcb_def)
@@ -289,7 +293,5 @@ lemma schedule_ct_activateable[wp]:
     apply (clarsimp simp: pred_tcb_at_def obj_at_def split: split_if_asm)
     done
 qed
-
-
 
 end

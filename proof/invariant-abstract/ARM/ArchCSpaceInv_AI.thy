@@ -74,26 +74,34 @@ definition
    (\<exists>vref. vs_cap_ref cap = Some vref \<and> (vref \<unrhd> obj_ref_of cap) s)"
 
 definition
-  replaceable_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
+  replaceable_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
 where
-  "replaceable_arch_cap s sl newcap \<equiv> \<lambda>cap.
-   (\<forall>vref. vs_cap_ref cap = Some vref
-                \<longrightarrow> (vs_cap_ref newcap = Some vref
-                       \<and> obj_refs newcap = obj_refs cap)
-                 \<or> (\<forall>oref \<in> obj_refs cap. \<not> (vref \<unrhd> oref) s))
-      \<and> no_cap_to_obj_with_diff_ref newcap {sl} s
-      \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap) \<longrightarrow> cap_asid newcap = None
-          \<longrightarrow> (\<forall> r \<in> obj_refs newcap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
-      \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap)
-             \<longrightarrow> ((is_pt_cap newcap \<and> is_pt_cap cap \<or> is_pd_cap newcap \<and> is_pd_cap cap)
-                      \<longrightarrow> (cap_asid newcap = None \<longrightarrow> cap_asid cap = None)
-                      \<longrightarrow> obj_refs cap \<noteq> obj_refs newcap)
-             \<longrightarrow> (\<forall>sl'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs newcap
-                                           \<and> (is_pd_cap newcap \<and> is_pd_cap cap' \<or> is_pt_cap newcap \<and> is_pt_cap cap')
-                                           \<and> (cap_asid newcap = None \<or> cap_asid cap' = None)) sl' s \<longrightarrow> sl' = sl))
-      \<and> \<not>is_ap_cap newcap"
+ "replaceable_final_arch_cap s sl newcap \<equiv> \<lambda>cap.
+    (\<forall>vref. vs_cap_ref cap = Some vref
+            \<longrightarrow> (vs_cap_ref newcap = Some vref
+                   \<and> obj_refs newcap = obj_refs cap)
+             \<or> (\<forall>oref \<in> obj_refs cap. \<not> (vref \<unrhd> oref) s))
+  \<and> no_cap_to_obj_with_diff_ref newcap {sl} s
+  \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap) \<longrightarrow> cap_asid newcap = None
+      \<longrightarrow> (\<forall> r \<in> obj_refs newcap.
+            obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
+  \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap)
+         \<longrightarrow> ((is_pt_cap newcap \<and> is_pt_cap cap \<or> is_pd_cap newcap \<and> is_pd_cap cap)
+                  \<longrightarrow> (cap_asid newcap = None \<longrightarrow> cap_asid cap = None)
+                  \<longrightarrow> obj_refs cap \<noteq> obj_refs newcap)
+         \<longrightarrow> (\<forall>sl'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs newcap
+                     \<and> (is_pd_cap newcap \<and> is_pd_cap cap' \<or> is_pt_cap newcap \<and> is_pt_cap cap')
+                     \<and> (cap_asid newcap = None \<or> cap_asid cap' = None)) sl' s \<longrightarrow> sl' = sl))
+  \<and> \<not>is_ap_cap newcap"
 
-declare replaceable_arch_cap_def[simp]
+definition
+  replaceable_non_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
+where
+ "replaceable_non_final_arch_cap s sl newcap \<equiv> \<lambda>cap. \<not> reachable_pg_cap cap s"
+
+declare
+  replaceable_final_arch_cap_def[simp]
+  replaceable_non_final_arch_cap_def[simp]
 
 (*FIXME arch_split: These are probably subsumed by the lifting lemmas *)
 
