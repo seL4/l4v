@@ -18,12 +18,9 @@ autocorres
   [
    skip_heap_abs, skip_word_abs, (* for compatibility *)
    scope = handleYield,
-   scope_depth = 0
+   scope_depth = 0,
+   c_locale = kernel_all_substitute
   ] "c/kernel_all.c_pp"
-
-find_theorems
-  handleSyscall_'proc
-  Substitute.kernel_all_substitute.\<Gamma>
 
 
 subsection \<open>Proof frameworks\<close>
@@ -138,22 +135,18 @@ lemma ccorres_rrel_nat_unit:
   "ccorres op = (\<lambda>s. ()) st_P arg_P hs m c = ccorres dc xfdc st_P arg_P hs m c"
   by (simp add: ccorres_underlying_def dc_def xfdc_def unif_rrel_def cong del: xstate.case_cong)
 
-(* FIXME: this is a lie *)
-lemma \<Gamma>_eq: "kernel_all_global_addresses.\<Gamma> symbol_table = kernel_all_substitute.\<Gamma> symbol_table domain"
-  sorry
-
 
 
 subsection \<open>Case study: handleYield\<close>
 
 (* AutoCorres translation of handleYield *)
-thm kernel_all.handleYield'_def
+thm handleYield'_def
 
 (* handleYield calls un-translated functions, such as tcbSchedDequeue *)
 thm tcbSchedDequeue_body_def
 (* AutoCorres produces a monadic wrapper of the SIMPL code *)
-thm kernel_all.tcbSchedDequeue'_def
-    kernel_all.tcbSchedDequeue'_def[unfolded AC_call_L1_def L2_call_L1_def L1_call_simpl_def]
+thm tcbSchedDequeue'_def
+    tcbSchedDequeue'_def[unfolded AC_call_L1_def L2_call_L1_def L1_call_simpl_def]
 
 
 text \<open>
@@ -185,9 +178,9 @@ lemma tcbSchedDequeue_corres:
   "tcb_ptr_to_ctcb_ptr ct = ct' \<Longrightarrow>
    corres_underlying {(x, y). cstate_relation x y} True True (op=)
      (Invariants_H.valid_queues and valid_queues' and tcb_at' ct and valid_objs') \<top>
-     (tcbSchedDequeue ct) (kernel_all.tcbSchedDequeue' symbol_table ct')"
+     (tcbSchedDequeue ct) (tcbSchedDequeue' ct')"
   apply (rule ccorres_to_corres)
-   apply (simp add: kernel_all.tcbSchedDequeue'_def \<Gamma>_eq)
+   apply (simp add: tcbSchedDequeue'_def)
   apply (clarsimp simp: ccorres_rrel_nat_unit tcbSchedDequeue_ccorres[simplified])
   done
 
@@ -196,9 +189,9 @@ lemma tcbSchedAppend_corres:
   "tcb_ptr_to_ctcb_ptr ct = ct' \<Longrightarrow>
    corres_underlying {(x, y). cstate_relation x y} True True (op=)
      (Invariants_H.valid_queues and tcb_at' ct and valid_objs') \<top>
-     (tcbSchedAppend ct) (kernel_all.tcbSchedAppend' symbol_table ct')"
+     (tcbSchedAppend ct) (tcbSchedAppend' ct')"
   apply (rule ccorres_to_corres)
-   apply (simp add: kernel_all.tcbSchedAppend'_def \<Gamma>_eq)
+   apply (simp add: tcbSchedAppend'_def)
   apply (clarsimp simp: ccorres_rrel_nat_unit tcbSchedAppend_ccorres[simplified])
   done
 
@@ -206,9 +199,9 @@ thm rescheduleRequired_ccorres
 lemma rescheduleRequired_corres:
   "corres_underlying {(x, y). cstate_relation x y} True True (op=)
      (Invariants_H.valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs') \<top>
-     rescheduleRequired (kernel_all.rescheduleRequired' symbol_table)"
+     rescheduleRequired rescheduleRequired'"
   apply (rule ccorres_to_corres)
-   apply (simp add: kernel_all.rescheduleRequired'_def \<Gamma>_eq)
+   apply (simp add: rescheduleRequired'_def)
   apply (clarsimp simp: ccorres_rrel_nat_unit rescheduleRequired_ccorres[simplified])
   done
 
@@ -225,7 +218,7 @@ lemma handleYield_alt_def:
                      rescheduleRequired
                   od"
   sorry
-(* ... matches this \<longrightarrow> *) thm kernel_all.handleYield'_def
+(* ... matches this \<longrightarrow> *) thm handleYield'_def
 
 
 (* ugly modifies rules *)
@@ -260,9 +253,8 @@ text \<open>ccorres proof using AutoCorres\<close>
 lemma (* handleYield_ccorres: *)
   "ccorres dc xfdc (invs' and ct_active') UNIV [] handleYield (Call handleYield_'proc)"
   apply (rule autocorres_to_ccorres[where arg_rel = \<top>, simplified Collect_True])
-   apply (subst \<Gamma>_eq[symmetric])
-   apply (rule kernel_all.handleYield'_ac_corres)
-  apply (simp add: handleYield_alt_def kernel_all.handleYield'_def)
+   apply (rule kernel_all_substitute.handleYield'_ac_corres)
+  apply (simp add: handleYield_alt_def handleYield'_def)
 
   apply (rule corres_guard_imp)
     apply (rule corres_pre_getCurThread)
