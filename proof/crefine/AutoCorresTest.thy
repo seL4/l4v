@@ -221,9 +221,118 @@ lemma handleYield_alt_def:
 (* ... matches this \<longrightarrow> *) thm handleYield'_def
 
 
-(* ugly modifies rules *)
-thm tcbSchedDequeue_modifies
-desugar_thm tcbSchedDequeue_modifies "["
+text \<open>Interlude: modifies proofs\<close>
+(* transferring modifies rules *)
+lemma autocorres_modifies_transfer:
+  fixes \<Gamma> globals f' f_'proc modifies_eqn P xf
+  assumes f'_def: "f' \<equiv> AC_call_L1 P globals xf (L1_call_simpl \<Gamma> f_'proc)"
+  assumes f_modifies: "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call f_'proc {t. modifies_eqn (globals t) (globals \<sigma>)}"
+  shows "\<forall>\<sigma>. \<lbrace> \<lambda>s. s = \<sigma> \<rbrace> f' \<lbrace> \<lambda>_ s. modifies_eqn s \<sigma> \<rbrace>"
+  apply (clarsimp simp: f'_def AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
+  apply (simp add: liftM_def bind_assoc)
+  apply wp
+      apply (clarsimp split: sum.splits)
+      apply wp
+   apply (rule select_wp)
+  apply wp
+  apply (clarsimp simp: in_monad select_def split: xstate.splits)
+  apply (case_tac xa; clarsimp)
+   apply (drule exec_normal[OF singletonI _ f_modifies[rule_format]])
+   apply (clarsimp simp: mex_def meq_def)
+  apply (drule exec_abrupt[OF singletonI _ f_modifies[rule_format]])
+  apply (clarsimp simp: mex_def meq_def)
+  done
+
+thm autocorres_modifies_transfer[OF tcbSchedDequeue'_def tcbSchedDequeue_modifies]
+thm autocorres_modifies_transfer[OF APFromVMRights'_def APFromVMRights_modifies]
+thm autocorres_modifies_transfer[OF handleSyscall'_def handleSyscall_modifies]
+
+(* proving modifies rules *)
+lemma autocorres_modifies_AC_call:
+  fixes \<Gamma> globals f' f_'proc modifies_eqn P xf
+  assumes f'_def: "f' \<equiv> AC_call_L1 P globals xf (L1_call_simpl \<Gamma> f_'proc)"
+  assumes f_modifies: "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call f_'proc {t. modifies_eqn (globals t) (globals \<sigma>)}"
+  assumes modifies_some: "\<And>x y. modifies_eqn x y \<Longrightarrow> modifies_eqn' x y"
+  assumes modifies_eqn': "\<And>x y z. modifies_eqn' x y \<Longrightarrow> modifies_eqn' y z \<Longrightarrow> modifies_eqn' x z"
+  shows "\<forall>\<sigma>. \<lbrace> \<lambda>s. modifies_eqn' s \<sigma> \<rbrace> f' \<lbrace> \<lambda>_ s. modifies_eqn' s \<sigma> \<rbrace>"
+  apply (clarsimp simp: f'_def AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
+  apply (simp add: liftM_def bind_assoc)
+  apply wp
+      apply (clarsimp split: sum.splits)
+      apply wp
+   apply (rule select_wp)
+  apply wp
+  apply (clarsimp simp: in_monad select_def split: xstate.splits)
+  apply (case_tac xa; clarsimp)
+   apply (drule exec_normal[OF singletonI _ f_modifies[rule_format]])
+   apply (clarsimp simp: mex_def meq_def)
+   apply (blast dest: modifies_some intro: modifies_eqn')
+  apply (drule exec_abrupt[OF singletonI _ f_modifies[rule_format]])
+  apply (clarsimp simp: mex_def meq_def)
+  done
+
+desugar_thm handleYield_modifies "may_only"
+thm handleYield'_def
+
+find_theorems whileLoop
+
+find_theorems fg_cons -name:"Kernel_C"
+find_theorems read_write_valid
+
+
+lemma globals_upd_transitive__ksReadyQueues:
+  fixes x y z :: globals and f g h :: "globals \<Rightarrow> globals"
+  shows
+  "\<lbrakk> \<And>x. f (g x) = f x;
+     \<And>x. ksReadyQueues_' (g x) = ksReadyQueues_' x;
+     \<And>x. ksReadyQueues_' (h x) = ksReadyQueues_' x;
+     \<And>x y z. \<lbrakk> x = f y; y = g z \<rbrakk> \<Longrightarrow> x = h z;
+     x = (f y)\<lparr>ksReadyQueues_' := a\<rparr>;
+     y = (g z)\<lparr>ksReadyQueues_' := b\<rparr>
+   \<rbrakk> \<Longrightarrow> \<exists>c. x = (h z)\<lparr>ksReadyQueues_' := c\<rparr>"
+  apply (rule exI)
+  apply (case_tac x)
+  apply (case_tac y)
+  apply (case_tac z)
+  apply clarsimp
+  apply (rule globals.equality)
+  apply simp
+  oops
+
+lemma handleYield'_modifies:
+  "\<forall>\<sigma>. \<lbrace>\<lambda>s. s = \<sigma>\<rbrace> handleYield'
+       \<lbrace>\<lambda>_ s. mex (\<lambda>ksReadyQueues_'.
+               mex (\<lambda>ksReadyQueuesL1Bitmap_'.
+                mex (\<lambda>ksReadyQueuesL2Bitmap_'.
+                 mex (\<lambda>ksSchedulerAction_'.
+                  mex (\<lambda>t_hrs_'.
+                   meq s (\<sigma>\<lparr>ksReadyQueues_' := ksReadyQueues_',
+                            ksReadyQueuesL1Bitmap_' := ksReadyQueuesL1Bitmap_',
+                            ksReadyQueuesL2Bitmap_' := ksReadyQueuesL2Bitmap_',
+                            ksSchedulerAction_' := ksSchedulerAction_',
+                            t_hrs_' := t_hrs_'\<rparr>))))))\<rbrace>"
+  apply (unfold handleYield'_def)
+  apply (rule allI)
+  apply wp
+
+  apply (rule autocorres_modifies_AC_call[OF rescheduleRequired'_def rescheduleRequired_modifies, rule_format])
+   apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
+  apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
+
+  apply (rule autocorres_modifies_AC_call[OF tcbSchedAppend'_def tcbSchedAppend_modifies, rule_format])
+   apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
+  apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
+
+  apply wp
+
+  apply (rule autocorres_modifies_AC_call[OF tcbSchedDequeue'_def tcbSchedDequeue_modifies, rule_format])
+   apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
+  apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
+
+  apply wp
+  apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
+  done
+text \<open>End interlude\<close>
 
 
 text \<open>Existing ccorres proof, for reference\<close>
