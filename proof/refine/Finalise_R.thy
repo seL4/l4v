@@ -4034,7 +4034,7 @@ lemma arch_recycle_cap_corres:
       apply (wp cteCaps_of_ctes_of_lift mapM_storePTE_invs
                 mapM_wp' cteCaps_of_ctes_of_lift hoare_vcg_all_lift
              | simp add: swp_def)+
-    apply (clarsimp simp: invs_pspace_alignedI valid_cap_def)
+    apply (clarsimp simp: invs_psp_aligned valid_cap_def)
     apply (intro conjI)
      apply (clarsimp simp: upto_enum_step_def)
      apply (erule page_table_pte_atI[simplified shiftl_t2n mult.commute mult.left_commute,simplified])

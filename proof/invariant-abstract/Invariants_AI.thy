@@ -2968,6 +2968,8 @@ lemma zombies_final_more_update [iff]:
   "zombies_final (trans_state f s) = zombies_final s"
   by (simp add: zombies_final_def is_final_cap'_def)
 
+lemmas state_refs_arch_update [iff] = arch_update.state_refs_update
+
 lemma valid_ioc_arch_state_update[iff]:
   "valid_ioc (arch_state_update f s) = valid_ioc s"
   by (simp add: valid_ioc_def)
