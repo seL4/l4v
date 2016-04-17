@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory SignedWords
+theory Signed_Words
 imports "~~/src/HOL/Word/Word"
 begin
 

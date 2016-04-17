@@ -8,11 +8,11 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory WordLemmaBucket
+theory Word_Lemmas
 imports
   Aligned
-  DistinctPropLemmas
-  WordEnum
+  Distinct_Prop_Lemmas
+  Word_Enum
 begin
 
 (* Setup "quickcheck" to support words. *)
@@ -1629,7 +1629,7 @@ lemma of_bl_length:
 (* FIXME: do we need this? *)
 lemma power_overflow_simp [simp]:
   "(2 ^ n = (0::'a :: len word)) = (len_of TYPE ('a) \<le> n)"
-  by (rule WordLib.p2_eq_0)
+  by (rule p2_eq_0)
 
 lemma unat_of_nat_eq:
   "x < 2 ^ len_of TYPE('a) \<Longrightarrow> unat (of_nat x ::'a::len word) = x"
@@ -2854,7 +2854,7 @@ lemma of_nat_n_less_equal_power_2:
   apply (induct n)
    apply clarsimp
   apply clarsimp
-  apply (metis WordLemmaBucket.of_nat_power n_less_equal_power_2 of_nat_Suc power_Suc)
+  apply (metis of_nat_power n_less_equal_power_2 of_nat_Suc power_Suc)
   done
 
 lemma eq_mask_less:
@@ -4790,9 +4790,7 @@ lemma unat_shiftr_less_t2n:
 
 lemma le_or_mask:
   "w \<le> w' \<Longrightarrow> w || mask x \<le> w' || mask x"
-  by (metis WordLemmaBucket.neg_mask_add_mask add.commute
-            le_word_or1 mask_2pm1 neg_mask_mono_le
-            word_plus_mono_left)
+  by (metis neg_mask_add_mask add.commute le_word_or1 mask_2pm1 neg_mask_mono_le word_plus_mono_left)
 
 lemma le_shiftr1':
   "\<lbrakk> shiftr1 u \<le> shiftr1 v ; shiftr1 u \<noteq> shiftr1 v \<rbrakk> \<Longrightarrow> u \<le> v"
@@ -4970,14 +4968,15 @@ lemma bl_cast_long_short_long_ingoreLeadingZero_generic:
 "length (dropWhile Not (to_bl w)) \<le> len_of TYPE('s) \<Longrightarrow>
  len_of TYPE('s) \<le> len_of TYPE('l) \<Longrightarrow>
   (of_bl:: bool list \<Rightarrow> 'l::len word) (to_bl ((of_bl:: bool list \<Rightarrow> 's::len word) (to_bl w))) = w"
-  apply(rule Word.word_uint_eqI)
-  apply(subst WordLib.uint_of_bl_is_bl_to_bin)
+  apply(rule word_uint_eqI)
+  apply(subst uint_of_bl_is_bl_to_bin)
    apply(simp; fail)
-  apply(subst Word.to_bl_bin)
+  apply(subst to_bl_bin)
   apply(subst uint_of_bl_is_bl_to_bin_drop)
    apply blast
   apply(simp)
   done
+
 (*
  Casting between longer and shorter word.
   'l is the longer word.

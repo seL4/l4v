@@ -15,8 +15,8 @@
 
 chapter "Enumeration instances for Words"
 
-theory WordEnum
-imports Enumeration WordLib
+theory Word_Enum
+imports Enumeration Word_Lib
 begin
 
 instantiation word :: (len) enum
@@ -75,7 +75,6 @@ lemma toEnum_of_nat[simp]: "n < 2 ^ len_of TYPE('a) \<Longrightarrow> ((toEnum n
   done
 
 declare of_nat_diff [simp]
-declare word_pow_0 [simp]
 
 lemma "(maxBound :: ('a :: len) word) = -1"
   apply (unfold maxBound_def enum_word_def)

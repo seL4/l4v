@@ -10,13 +10,15 @@
 
 (* FIXME: update *)
 
-theory NICTACompat
+theory Word_Syntax
 imports
   "~~/src/HOL/Word/WordBitwise"
-  SignedWords
+  Signed_Words
   Hex_Words
   Neg_Words
 begin
+
+text {* Additional bit and type syntax that forces word types. *}
 
 type_synonym word8 = "8 word"
 type_synonym word16 = "16 word"

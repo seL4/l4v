@@ -10,8 +10,8 @@
 
 theory Aligned
 imports
-  WordLib
-  MoreDivides
+  Word_Lib
+  More_Divides
 begin
 
 

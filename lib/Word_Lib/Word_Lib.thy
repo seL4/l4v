@@ -10,7 +10,7 @@
 
 (* Miscellaneous additional library definitions and lemmas for the word type. *)
 
-theory WordLib
+theory Word_Lib
 imports
   Word_Syntax
 begin
@@ -148,8 +148,8 @@ lemma and_mask_arith:
   "w AND mask n = ((w * (2 ^ (size w - n))) div (2 ^ (size w - n)))"
   apply (cases "0 < n")
    apply (erule and_mask_arith')
-  apply (simp add : word_size p2len)
-  apply (simp add : word_of_int_hom_syms word_div_def)
+  apply (simp add: word_size)
+  apply (simp add: word_of_int_hom_syms word_div_def)
   done
 
 lemma mask_2pm1: "mask n = 2 ^ n - 1"
@@ -323,18 +323,9 @@ lemma bang_eq:
   apply simp
   done
 
-declare of_nat_power [simp]
-declare of_nat_mult [simp]
-
 lemma word_unat_power:
   "(2 :: ('a :: len) word) ^ n = of_nat (2 ^ n)"
-  by (induct n) simp+
-
-(*
-lemmas no_power_simps =
-  power_int.simps power_nat.simps
-  power_nat_number_of_number_of power_Suc_no power_pred_simp_no
-*)
+  by simp
 
 lemma of_nat_mono_maybe:
   fixes Y :: "nat"

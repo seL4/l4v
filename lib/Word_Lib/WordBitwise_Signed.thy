@@ -1,4 +1,15 @@
-theory WordBitwiseSigned imports
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
+theory WordBitwise_Signed
+imports
   Aligned
   "~~/src/HOL/Library/Prefix_Order"
 begin

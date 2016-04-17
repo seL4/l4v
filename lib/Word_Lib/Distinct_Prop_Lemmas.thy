@@ -8,10 +8,10 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory DistinctPropLemmas
+theory Distinct_Prop_Lemmas
 imports
-  DistinctProp
-  HOLLemmaBucket
+  Distinct_Prop
+  HOL_Lemma_Bucket
   "~~/src/HOL/Library/Prefix_Order"
 begin
 

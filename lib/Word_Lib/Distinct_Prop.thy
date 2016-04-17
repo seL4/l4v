@@ -10,7 +10,7 @@
 
 chapter "Distinct Proposition"
 
-theory DistinctProp
+theory Distinct_Prop
 imports Main
 begin
 

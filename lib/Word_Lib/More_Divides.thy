@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory MoreDivides
+theory More_Divides
 imports "~~/src/HOL/Main"
 begin
 

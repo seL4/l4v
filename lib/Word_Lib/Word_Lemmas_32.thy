@@ -8,9 +8,9 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory WordLemmas32
+theory Word_Lemmas_32
 imports
-  WordLemmaBucket
+  Word_Lemmas
   "../WordSetup"
 begin
 

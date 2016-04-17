@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory HOLLemmaBucket
+theory HOL_Lemma_Bucket
 imports Main
 begin
 
