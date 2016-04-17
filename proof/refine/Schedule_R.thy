@@ -2271,7 +2271,7 @@ lemma enumPrio_word_div:
     apply (simp add: maxPriority_def numPriorities_def)
    apply (clarsimp simp: unat_of_nat_eq)
   apply (erule conjE)
-  apply (drule_tac Y="unat v" and X="x" in of_nat_mono_maybe[rotated, where 'a="8"])
+  apply (drule_tac y="unat v" and x="x" in of_nat_mono_maybe[rotated, where 'a="8"])
    apply (simp add: maxPriority_def numPriorities_def)+
   done
 

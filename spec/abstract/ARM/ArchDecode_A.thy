@@ -18,7 +18,6 @@ theory ArchDecode_A
 imports
   "../Interrupt_A"
   "../InvocationLabels_A"
-  "../../../lib/WordLib"
 begin
 context Arch begin global_naming ARM_A
 

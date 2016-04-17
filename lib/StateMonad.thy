@@ -14,7 +14,7 @@
 
 chapter "Monads"
 
-theory StateMonad
+theory StateMonad (* FIXME: bitrotted *)
 imports Lib
 begin
 

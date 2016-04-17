@@ -11,7 +11,7 @@
 chapter "Machine Word Setup"
 
 theory WordSetup
-imports "Word_Lib/Word_Enum"
+imports "Word_Lib/Word_Lemmas_32"
 begin
 
 text {* This theory defines the standard platform-specific word size

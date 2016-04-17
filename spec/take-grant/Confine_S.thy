@@ -32,7 +32,7 @@ lemma extra_rights_idem [simp]:
 
 lemma extra_rights_image_idem [simp]:
   "(extra_rights ` (extra_rights ` S)) = (extra_rights ` S)"
-  by (rule set_eqI, simp add: image_iff)
+  by (rule set_eqI) (simp add: image_iff)
 
 lemma extra_rights_empty_rights_ident [simp]:
    "extra_rights \<lparr> target = e, rights = {} \<rparr> = \<lparr> target = e, rights = {} \<rparr>"

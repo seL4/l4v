@@ -9027,7 +9027,7 @@ lemma cteMove_valid_pspace' [wp]:
   apply (simp add: pred_conj_def valid_pspace'_def valid_mdb'_def)
   apply (wp sch_act_wf_lift valid_queues_lift 
     cur_tcb_lift updateCap_no_0  updateCap_ctes_of_wp getCTE_wp | simp)+
-  apply (clarsimp simp: invs'_def valid_state'_def elim!: valid_pspaceE')+
+  apply (clarsimp simp: invs'_def valid_state'_def)+
   apply (clarsimp dest!: cte_at_cte_wp_atD)
   apply (rule_tac x = cte in exI)
   apply clarsimp

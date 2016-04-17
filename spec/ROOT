@@ -33,18 +33,19 @@ chapter "Specifications"
 session ASpec in "abstract" = Word +
   options [document=pdf]
   theories [document = false]
-    "../../lib/NICTACompat"
     "../../lib/Lib"
-    "../../lib/DistinctProp"
+    "../../lib/Defs"
     "../../lib/List_Lib"
+    "../../lib/WordSetup"
   theories
     "Intro_Doc"
-    "../../lib/wp/NonDetMonad"
+    "../../lib/Monad_WP/NonDetMonad"
   theories [document = false]
-    "../../lib/wp/NonDetMonadLemmas"
+    "../../lib/Monad_WP/NonDetMonadLemmas"
   theories
     "Syscall_A"
     "Glossary_Doc"
+	(* "KernelInit_A" *)
   document_files
     "VERSION"
     "root.tex"

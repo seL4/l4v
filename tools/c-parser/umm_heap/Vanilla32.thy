@@ -11,7 +11,7 @@
 (* License: BSD, terms see file ./LICENSE *)
 
 theory Vanilla32
-imports "../../../lib/Word_Lib/WordLib" CTypes
+imports "../../../lib/Word_Lib/Word_Lib" CTypes
 begin
 
 section "Words and Pointers"

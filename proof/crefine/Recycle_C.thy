@@ -695,6 +695,7 @@ lemma arch_recycleCap_ccorres:
   notes Collect_const [simp del]
   notes ccorres_if_True_False_simps [simp]
   notes if_cong[cong]
+  notes from_bool_neq_0 [simp del]
   shows "ccorres (ccap_relation o ArchObjectCap) ret__struct_cap_C_'
          (invs' and valid_cap' (ArchObjectCap cp)
                 and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
@@ -708,10 +709,9 @@ lemma arch_recycleCap_ccorres:
    apply (simp add: ARM_H.recycleCap_def cap_get_tag_isCap
                     cap_get_tag_isCap_ArchObject
                     isArchPageCap_ArchObjectCap
-               del: Collect_const cong: call_ignore_cong)
+               cong: call_ignore_cong)
    apply (rule ccorres_if_lhs)
-    apply (simp add: ccorres_cond_iffs Collect_True
-                del: Collect_const)
+    apply (simp add: ccorres_cond_iffs Collect_True)
     apply (rule ccorres_rhs_assoc)+
     apply (rule ccorres_symb_exec_r)
       apply (rule ccorres_Guard_Seq)
@@ -725,9 +725,8 @@ lemma arch_recycleCap_ccorres:
      apply vcg
     apply (rule conseqPre, vcg, clarsimp)
    apply (rule ccorres_if_lhs)
-    apply (simp add: ccorres_cond_iffs Collect_True Collect_False
-                     Let_def
-                del: Collect_const cong: call_ignore_cong)
+    apply (simp add: ccorres_cond_iffs Collect_True Collect_False Let_def
+                cong: call_ignore_cong)
     apply (rule ccorres_rhs_assoc)+
     apply (csymbr, csymbr, csymbr)
     apply (subst bind_assoc[symmetric])
@@ -770,8 +769,7 @@ lemma arch_recycleCap_ccorres:
                           ccap_relation_def option_map_Some_eq2)
    apply (rule ccorres_if_lhs)
     apply (simp add: ccorres_cond_iffs Collect_True Collect_False
-                     Let_def ARMSectionBits_def
-                del: Collect_const)
+                     Let_def ARMSectionBits_def)
     apply (rule ccorres_rhs_assoc)+
     apply (csymbr, csymbr)
     apply (rule ccorres_Guard_Seq)+
@@ -829,7 +827,7 @@ lemma arch_recycleCap_ccorres:
                          update_pde_map_to_pdes carray_map_relation_upd_triv)
         apply (rule cmap_relation_updI, simp_all)[1]
         subgoal by (simp add: cpde_relation_def Let_def pde_lift_def
-                         fcp_beta pde_get_tag_def pde_tag_defs)
+                              pde_get_tag_def pde_tag_defs)
        subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                         typ_heap_simps pde_stored_asid_update_valid_offset
                         update_pde_map_tos)
@@ -854,7 +852,7 @@ lemma arch_recycleCap_ccorres:
           apply (rule ccorres_split_nothrowE)
                apply (ctac add: findPDForASID_ccorres)
               apply ceqv
-             apply (simp add: liftE_liftM when_def dc_def[symmetric] del: Collect_const)
+             apply (simp add: liftE_liftM when_def dc_def[symmetric])
              apply (rule ccorres_cond2[where R=\<top>])
                apply fastforce
               apply (ctac add: invalidateTLBByASID_ccorres)

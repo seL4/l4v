@@ -13,7 +13,7 @@
 theory OptionMonadND
 imports
   OptionMonad
-  "wp/NonDetMonadLemmas"
+  NonDetMonadLemmas
 begin
 
 (* FIXME: better concrete syntax? *)

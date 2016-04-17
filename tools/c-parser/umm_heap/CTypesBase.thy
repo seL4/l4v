@@ -19,7 +19,7 @@ theory CTypesBase
 imports
   "./$L4V_ARCH/Addr_Type"
   "~~/src/HOL/Library/Prefix_Order"
-  "../../../lib/Word_Lib/SignedWords"
+  "../../../lib/Word_Lib/Signed_Words"
 begin
 
 section "Type setup"

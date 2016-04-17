@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory SimplRewrite
+theory SimplRewrite (* FIXME: bitrotted *)
 imports
   "CTranslationNICTA"
   "SplitRule"

@@ -20,7 +20,7 @@
  *)
 
 theory System_S
-imports "../../lib/NICTACompat"
+imports "../../lib/WordSetup"
 begin
 
 (* System entities: Definition of entities that constitute the system

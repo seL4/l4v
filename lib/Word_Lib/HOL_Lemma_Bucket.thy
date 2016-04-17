@@ -2179,7 +2179,7 @@ lemma dvd_reduce_multiple:
   shows "(k dvd k * m + n) = (k dvd n)"
   by (induct m) (auto simp: add_ac)
 
-lemma image_iff:
+lemma image_iff2:
   "inj f \<Longrightarrow> f x \<in> f ` S = (x \<in> S)"
   by (rule inj_image_mem_iff)
 

@@ -1859,7 +1859,7 @@ lemma dcorres_unmap_large_section:
    apply simp
    apply (subgoal_tac "0 < (of_nat (slot * 4)::word32)")
     apply simp
-   apply (rule le_less_trans[OF _ of_nat_mono_maybe[where Y = 0]])
+   apply (rule le_less_trans[OF _ of_nat_mono_maybe[where y = 0]])
      apply fastforce
     apply simp
    apply fastforce
@@ -1971,7 +1971,7 @@ lemma dcorres_unmap_large_page:
    apply simp
    apply (subgoal_tac "0 < (of_nat (x * 4)::word32)")
     apply simp
-   apply (rule le_less_trans[OF _ of_nat_mono_maybe[where Y = 0]])
+   apply (rule le_less_trans[OF _ of_nat_mono_maybe[where y = 0]])
      apply fastforce
     apply simp
    apply fastforce

@@ -3438,7 +3438,7 @@ lemma sai_invs'[wp]:
      apply (clarsimp | wp cancelIPC_ct')+
     apply (wp set_ntfn_minor_invs' gts_wp' | clarsimp)+
    apply (frule pred_tcb_at')
-   apply (wp set_ntfn_minor_invs'
+   by (wp set_ntfn_minor_invs'
         | rule conjI
         | clarsimp elim!: st_tcb_ex_cap''
         | fastforce simp: invs'_def valid_state'_def receiveBlocked_def projectKOs
@@ -3448,7 +3448,6 @@ lemma sai_invs'[wp]:
         | fastforce simp: receiveBlocked_def projectKOs pred_tcb_at'_def obj_at'_def
                    dest!: invs_rct_ct_activatable'
                    split: thread_state.splits)+
-  done
 
 lemma ncof_invs' [wp]:
   "\<lbrace>invs'\<rbrace> nullCapOnFailure (lookupCap t ref) \<lbrace>\<lambda>rv. invs'\<rbrace>"

@@ -123,22 +123,21 @@ declare typ_info_word [simp del]
 declare typ_info_ptr [simp del]
 
 lemma valid_call_Spec_eq_subset:
-"\<Gamma>' procname = Some (Spec R)
-\<Longrightarrow> HoarePartialDef.valid \<Gamma>' NF P (Call procname) Q A
-= (P \<subseteq> fst ` R \<and> (R \<subseteq> (- P) \<times> UNIV \<union> UNIV \<times> Q))"
-apply (safe, simp_all)
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (rule ccontr)
-apply (drule_tac x="Normal x" in spec, elim allE,
-drule mp, erule exec.Call, rule exec.SpecStuck)
-apply (auto simp: image_def)[2]
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (elim allE, drule mp, erule exec.Call, erule exec.Spec)
-apply auto[1]
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (erule exec_Normal_elim_cases, simp_all)
-apply (erule exec_Normal_elim_cases, auto)
-done
+  "\<Gamma>' procname = Some (Spec R) \<Longrightarrow> 
+  HoarePartialDef.valid \<Gamma>' NF P (Call procname) Q A = (P \<subseteq> fst ` R \<and> (R \<subseteq> (- P) \<times> UNIV \<union> UNIV \<times> Q))"
+  apply (safe, simp_all)
+    apply (clarsimp simp: HoarePartialDef.valid_def)
+    apply (rule ccontr)
+     apply (drule_tac x="Normal x" in spec, elim allE,
+            drule mp, erule exec.Call, rule exec.SpecStuck)
+     apply (auto simp: image_def)[2]
+   apply (clarsimp simp: HoarePartialDef.valid_def)
+   apply (elim allE, drule mp, erule exec.Call, erule exec.Spec)
+   apply auto[1]
+  apply (clarsimp simp: HoarePartialDef.valid_def)
+  apply (erule exec_Normal_elim_cases, simp_all)
+  apply (erule exec_Normal_elim_cases, auto)
+  done
 
 lemma creturn_wp [vcg_hoare]:
   assumes "P \<subseteq> {s. (exnupd (\<lambda>_. Return)) (rvupd (\<lambda>_. v s) s) \<in> A}"

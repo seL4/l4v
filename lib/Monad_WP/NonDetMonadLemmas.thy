@@ -292,7 +292,7 @@ lemma whileLoopE_unroll:
   apply (clarsimp simp: lift_def split: sum.splits)
   apply (subst whileLoop_unroll)
   apply (subst condition_false)
-   apply metis
+   apply fastforce
   apply (clarsimp simp: throwError_def)
   done
 

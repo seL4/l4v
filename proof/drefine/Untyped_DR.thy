@@ -443,14 +443,11 @@ lemma transform_default_object:
            split: aobject_type.split nat.splits)
 
 lemma obj_bits_bound32:
-  "\<lbrakk>type = Structures_A.Untyped \<longrightarrow> us < 32;
-  type = Structures_A.CapTableObject \<longrightarrow> us < 28\<rbrakk>
-  \<Longrightarrow>obj_bits_api type us < WordSetup.word_bits"
-  apply (case_tac type)
-       apply (simp_all add:obj_bits_api_def word_bits_def slot_bits_def)
+  "\<lbrakk>type = Structures_A.Untyped \<longrightarrow> us < 32; type = Structures_A.CapTableObject \<longrightarrow> us < 28\<rbrakk>
+  \<Longrightarrow> obj_bits_api type us < word_bits"
+  apply (case_tac type; simp add:obj_bits_api_def word_bits_def slot_bits_def)
   apply (rename_tac aobject_type)
-  apply (case_tac aobject_type)
-        apply (simp_all add:arch_kobj_size_def default_arch_object_def pageBits_def)
+  apply (case_tac aobject_type; simp add:arch_kobj_size_def default_arch_object_def pageBits_def)
   done
 
 lemma obj_bits_bound4:

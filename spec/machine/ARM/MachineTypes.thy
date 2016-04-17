@@ -12,15 +12,13 @@ chapter "ARM Machine Types"
 
 theory MachineTypes
 imports
-  "../../../lib/Enumeration"
-  "../../../lib/WordSetup"
-  "../../../lib/wp/NonDetMonad"
+  "../../../lib/Monad_WP/NonDetMonad"
   Setup_Locale
   Platform
 begin
 context Arch begin global_naming ARM
 
-(* !!! Generated File !!! Skeleton in ../haskell-translator/ARMMachineTypes.thy *)
+(* !!! Generated File !!! Skeleton in ../../design/skel-m/ARMMachineTypes.thy *)
 
 text {*
   An implementation of the machine's types, defining register set 

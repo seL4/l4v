@@ -12,7 +12,7 @@ theory Include_AI
 imports
   BCorres_AI
   "./$L4V_ARCH/ArchCrunchSetup_AI"
-  "../../lib/wp/Eisbach_WP"
+  "../../lib/Monad_WP/wp/Eisbach_WP"
   "../../spec/abstract/Syscall_A"
   "../../lib/LemmaBucket"
   "../../lib/ListLibLemmas"

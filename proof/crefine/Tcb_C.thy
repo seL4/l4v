@@ -2524,8 +2524,9 @@ lemma slotCapLongRunningDelete_ccorres:
                  split: capability.split)[1]
       apply simp
       apply (wp hoare_drop_imps isFinalCapability_inv)
-     apply (clarsimp simp: Collect_const_mem guard_is_UNIV_def
-                           from_bool_0 false_def true_def)
+     apply (clarsimp simp: Collect_const_mem guard_is_UNIV_def)
+     apply (rename_tac rv')
+     apply (case_tac rv'; clarsimp simp: false_def true_def)
     apply vcg
    apply (rule conseqPre, vcg, clarsimp)
   apply (clarsimp simp: cte_wp_at_ctes_of)

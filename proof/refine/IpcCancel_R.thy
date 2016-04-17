@@ -145,9 +145,7 @@ lemma cancelIPC_tcb_at'[wp]:
 end
 
 declare if_weak_cong [cong]
-
 declare delete_remove1 [simp]
-
 declare delete.simps [simp del]
 
 lemma invs_weak_sch_act_wf[elim!]:
@@ -626,9 +624,7 @@ lemma valid_ep_remove:
   apply (auto simp add: valid_ep'_def dest: subsetD [OF set_remove1_subset])
   done
 
-(* Levity: added (20090201 10:50:13) *)
 declare cart_singleton_empty [simp]
-
 declare cart_singleton_empty2[simp]
 
 crunch ksQ[wp]: setNotification "\<lambda>s. P (ksReadyQueues s p)"
@@ -680,12 +676,15 @@ lemma cancelSignal_invs':
        apply (rule conjI, erule delta_sym_refs)
          apply (clarsimp simp: ntfn_bound_refs'_def split: split_if_asm)
         apply (clarsimp split: split_if_asm)
-          subgoal by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
-                                      tcb_bound_refs'_def ntfn_q_refs_of'_def
-                               split: ntfn.splits)
-         apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
+          subgoal 
+          by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
+                               tcb_bound_refs'_def ntfn_q_refs_of'_def
+                        split: ntfn.splits)
+         subgoal							   
+         by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
                                 tcb_bound_refs'_def)
-        apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
+        subgoal
+        by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
                                tcb_bound_refs'_def ntfn_q_refs_of'_def remove1_empty
                         split: ntfn.splits)
        apply (rule conjI, clarsimp elim!: if_live_state_refsE)
@@ -716,25 +715,14 @@ lemma cancelSignal_invs':
 lemmas setEndpoint_valid_arch[wp]
     = valid_arch_state_lift' [OF setEndpoint_typ_at' setEndpoint_ksArchState]
 
-(* Levity: added (20090201 10:50:13) *)
 declare setEndpoint_ksArch [wp]
-
-lemma setEndpoint_irq_node'[wp]:
-  "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace>
-     setEndpoint ep_ptr val
-   \<lbrace>\<lambda>_ s. P (irq_node' s)\<rbrace>"
-  apply (simp add: setEndpoint_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
 
 lemma ep_redux_simps3:
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> RecvEP (y # ys))
         = (set xs \<times> {EPRecv})"
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> SendEP (y # ys))
         = (set xs \<times> {EPSend})"
-  by (fastforce split: list.splits
-                simp: valid_ep_def valid_ntfn_def
-              intro!: ext)+
+  by (fastforce split: list.splits simp: valid_ep_def valid_ntfn_def)+
 
 lemma setEndpoint_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
@@ -744,10 +732,7 @@ lemma setEndpoint_pde_mappings'[wp]:
   apply (clarsimp dest!: updateObject_default_result)
   done
 
-(* Levity: added (20090126 19:32:18) *)
 declare setEndpoint_ksMachine [wp]
-
-(* Levity: added (20090201 10:50:14) *)
 declare setEndpoint_valid_irq_states' [wp]
 
 lemma setEndpoint_vms[wp]:
@@ -765,9 +750,9 @@ crunch ksCurDomain[wp]: setEndpoint "\<lambda>s. P (ksCurDomain s)"
 
 lemma setEndpoint_ksDomSchedule[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setEndpoint ptr ep \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-apply (simp add: setEndpoint_def setObject_def split_def)
-apply (wp updateObject_default_inv | simp)+
-done
+  apply (simp add: setEndpoint_def setObject_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
 
 lemma setEndpoint_ct_idle_or_in_cur_domain'[wp]:
   "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> setEndpoint ptr ep \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
@@ -789,9 +774,9 @@ lemma setEndpoint_ct_not_inQ[wp]:
 
 lemma setEndpoint_ksDomScheduleIdx[wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setEndpoint ptr ep \<lbrace>\<lambda>_ s. P (ksDomScheduleIdx s)\<rbrace>"
-apply (simp add: setEndpoint_def setObject_def split_def)
-apply (wp updateObject_default_inv | simp)+
-done
+  apply (simp add: setEndpoint_def setObject_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
 end
 
 lemma (in delete_one_conc) cancelIPC_invs[wp]:
@@ -866,10 +851,9 @@ proof -
                     cong: list.case_cong)
      apply (frule_tac x=t in distinct_remove1)
      apply (frule_tac x=t in set_remove1_eq)
-     apply (auto elim!: delta_sym_refs
-                  simp: symreftype_inverse' tcb_st_refs_of'_def tcb_bound_refs'_def 
-                 split: thread_state.splits split_if_asm)
-    done
+     by (auto elim!: delta_sym_refs
+               simp: symreftype_inverse' tcb_st_refs_of'_def tcb_bound_refs'_def 
+              split: thread_state.splits split_if_asm)
   have R:
     "\<lbrace>invs' and tcb_at' t\<rbrace>
      do y \<leftarrow> threadSet (\<lambda>tcb. tcb \<lparr> tcbFault := None \<rparr>) t;
@@ -894,12 +878,11 @@ proof -
     apply (rule hoare_seq_ext [OF _ gts_sp'])
     apply (case_tac state,
            simp_all add: isTS_defs)
-           apply (safe intro!:  
-                                hoare_weaken_pre[OF Q]
-                                hoare_weaken_pre[OF R]
-                                hoare_weaken_pre[OF return_wp]
-                                hoare_weaken_pre[OF cancelSignal_invs']
-                       elim!: invs_valid_objs' pred_tcb'_weakenE)
+           apply (safe intro!: hoare_weaken_pre[OF Q]
+                               hoare_weaken_pre[OF R]
+                               hoare_weaken_pre[OF return_wp]
+                               hoare_weaken_pre[OF cancelSignal_invs']
+                       elim!: pred_tcb'_weakenE)
           apply (auto simp: pred_tcb_at'_def obj_at'_def
                       dest: invs_sch_act_wf')
   done
@@ -936,8 +919,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at:
   apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def
              cong: if_cong Structures_H.thread_state.case_cong)
   apply (rule hoare_seq_ext [OF _ gts_sp'])
-  apply (case_tac x, simp_all add: isTS_defs list_case_If
-                                   isBlockedOnNotification_def)
+  apply (case_tac x, simp_all add: isTS_defs list_case_If)
          apply (wp sts_st_tcb_at'_cases delete_one_st_tcb_at
                    threadSet_pred_tcb_no_state
                    cancelSignal_st_tcb_at hoare_drop_imps
@@ -1135,7 +1117,7 @@ lemma (in delete_one_conc_pre) cancelIPC_sch_act_not:
             delete_one_sch_act_not
        | wpc
        | simp add: getThreadReplySlot_def o_def if_apply_def2
-              split del: if_splits
+              split del: split_if
        | rule hoare_drop_imps)+
   done
 
@@ -1703,13 +1685,14 @@ lemma sts_invs_minor'_no_valid_queues:
      apply (drule obj_at_valid_objs')
       apply (clarsimp simp: valid_pspace'_def)
      apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
-     apply (fastforce simp: valid_tcb_state'_def
-                     split: Structures_H.thread_state.splits)
+     subgoal
+     by (fastforce simp: valid_tcb_state'_def
+                  split: Structures_H.thread_state.splits)
     apply (clarsimp dest!: st_tcb_at_state_refs_ofD'
                     elim!: rsubst[where P=sym_refs]
                    intro!: ext)
    apply (fastforce simp: valid_queues_def inQ_def pred_tcb_at' pred_tcb_at'_def
-                   elim!: pred_tcb_at' st_tcb_ex_cap'' obj_at'_weakenE)+
+                   elim!: st_tcb_ex_cap'' obj_at'_weakenE)+
   done
 
 crunch ct_idle_or_in_cur_domain'[wp]: tcbSchedDequeue ct_idle_or_in_cur_domain'
@@ -1949,13 +1932,8 @@ lemma suspend_makes_inactive:
   apply (wp threadSet_pred_tcb_no_state setThreadState_st_tcb | simp)+
   done
 
-(* Levity: added (20090723 09:16:50) *)
 declare threadSet_sch_act_sane [wp]
-
-(* Levity: added (20090721 10:56:34) *)
 declare sane_update [simp]
-
-(* Levity: added (20090725 09:07:51) *)
 declare sts_sch_act_sane [wp]
 
 lemma tcbSchedEnqueue_ksQset_weak:
@@ -2596,8 +2574,7 @@ lemma cancelAllSignals_unlive:
     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
    apply (simp add: projectKOs projectKO_opt_tcb)
   apply (fastforce simp: ko_wp_at'_def valid_obj'_def valid_ntfn'_def
-                        obj_at'_def projectKOs 
-                  elim: valid_objsE')+
+                        obj_at'_def projectKOs)+
   done
 
 crunch ep_at'[wp]: tcbSchedEnqueue "ep_at' epptr"

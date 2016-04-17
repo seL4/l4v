@@ -15,8 +15,6 @@
 theory CSpace_D
 imports
   PageTableUnmap_D
-  "../../lib/WordEnum"
-  "../../lib/wp/NonDetMonadVCG"
 begin
 
 (* Does the given cap have any children? *)

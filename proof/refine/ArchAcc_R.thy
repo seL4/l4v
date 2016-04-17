@@ -388,10 +388,9 @@ lemma get_master_pde_corres:
       apply (clarsimp simp:pde_relation_aligned_def
         split:if_splits ARM_H.pde.splits)
       apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
-          apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
-         apply (clarsimp simp: vs_ptr_align_def)
-        apply (simp add:and_not_mask_twice)
-       apply simp
+         apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
+        apply (clarsimp simp: vs_ptr_align_def)
+       apply (simp add:and_not_mask_twice)
       apply (drule_tac x = "(ucast ((p && ~~ mask 6) && mask pd_bits >> 2))" in pde_relation_alignedD)
         apply assumption
        apply (simp add:expand)
@@ -413,10 +412,9 @@ lemma get_master_pde_corres:
      apply (clarsimp simp:pde_relation_aligned_def
        split:if_splits ARM_H.pde.splits)
      apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
-         apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
-        apply (clarsimp simp: vs_ptr_align_def)
-       apply (simp add:and_not_mask_twice)
-      apply simp
+        apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
+       apply (clarsimp simp: vs_ptr_align_def)
+      apply (simp add:and_not_mask_twice)
      apply (drule_tac x = "(ucast ((p && ~~ mask 6) && mask pd_bits >> 2))" in pde_relation_alignedD)
        apply assumption
       apply (simp add: expand)
@@ -633,10 +631,9 @@ lemma get_master_pte_corres:
       apply (clarsimp simp:pte_relation_aligned_def
         split:if_splits ARM_H.pte.splits)
       apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
-          apply (simp add:is_aligned_weaken[where y = 2] is_aligned_neg_mask)
-         apply (clarsimp simp: vs_ptr_align_def)
-        apply (simp add:and_not_mask_twice)
-       apply simp 
+         apply (simp add:is_aligned_weaken[where y = 2] is_aligned_neg_mask)
+        apply (clarsimp simp: vs_ptr_align_def)
+       apply (simp add:and_not_mask_twice)
       apply (frule_tac x = "(ucast ((p && ~~ mask 6) && mask pt_bits >> 2))" in pte_relation_alignedD)
         apply assumption
        apply (simp add:expand)
@@ -671,8 +668,7 @@ lemma get_master_pte_corres:
       apply assumption
      apply (rename_tac pte)
      apply (case_tac pte)
-       apply (simp_all add:pte_relation_aligned_def
-         is_aligned_mask[symmetric])+
+       apply (simp_all add:pte_relation_aligned_def is_aligned_mask[symmetric])
      apply (drule_tac p = "p && ~~ mask 6" and p' = p  in valid_duplicates'_D)
         apply assumption
        apply simp
@@ -694,10 +690,9 @@ lemma get_master_pte_corres:
    apply (clarsimp simp:pte_relation_aligned_def
      split:if_splits ARM_H.pte.splits)
    apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
-       apply (simp add:is_aligned_weaken[where y = 2] is_aligned_neg_mask)
-      apply (clarsimp simp: vs_ptr_align_def)
-     apply (simp add:and_not_mask_twice)
-    apply simp
+      apply (simp add:is_aligned_weaken[where y = 2] is_aligned_neg_mask)
+     apply (clarsimp simp: vs_ptr_align_def)
+    apply (simp add:and_not_mask_twice)
    apply (drule_tac x = "(ucast ((p && ~~ mask 6) && mask pt_bits >> 2))"
                  in pte_relation_alignedD)
      apply assumption
@@ -1036,8 +1031,7 @@ lemma page_directory_at_state_relation:
   "\<lbrakk>page_directory_at ptr s; pspace_aligned s;
      (s, sa) \<in> state_relation;pspace_distinct' sa\<rbrakk> 
   \<Longrightarrow> page_directory_at' ptr sa"
-  apply (clarsimp simp:page_directory_at'_def state_relation_def
-    obj_at_def)
+  apply (clarsimp simp:page_directory_at'_def state_relation_def obj_at_def)
   apply (clarsimp simp:pspace_relation_def)
   apply (drule bspec)
    apply fastforce
@@ -1058,8 +1052,7 @@ lemma page_directory_at_state_relation:
    apply fastforce
   apply (thin_tac "dom a = b" for a b)
   apply (frule(1) pspace_alignedD)
-  apply (clarsimp simp:ucast_ucast_len
-    split:if_splits)
+  apply (clarsimp simp:ucast_ucast_len split:if_splits)
   apply (drule pde_relation_must_pde)
   apply (drule(1) pspace_distinctD')
   apply (clarsimp simp:objBits_simps archObjSize_def)
@@ -1162,7 +1155,7 @@ lemma copy_global_mappings_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [where r'="op =" and P=\<top>  and P'=\<top>])
        prefer 2
-       apply (clarsimp simp: corres_gets state_relation_def arch_state_relation_def)
+       apply (clarsimp simp: state_relation_def arch_state_relation_def)
        apply (rule_tac F = "is_aligned global_pd 6 \<and> is_aligned pd 6" in corres_gen_asm)
       apply (rule corres_mapM_x)
           prefer 5

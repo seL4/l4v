@@ -9,7 +9,7 @@
  *)
 
 
-theory Crunch_Test
+theory Crunch_Test (* FIXME: not tested *)
 imports Crunch Crunch_Test_Qualified GenericLib Defs
 begin
 

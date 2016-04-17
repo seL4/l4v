@@ -1047,6 +1047,7 @@ lemma default_non_Null[simp]:
   "cap.NullCap \<noteq> default_cap tp oref sz"
   by (cases tp, simp_all)
 
+end
 
 locale vo_abs = vmdb_abs +
   assumes valid_objs: "valid_objs s"

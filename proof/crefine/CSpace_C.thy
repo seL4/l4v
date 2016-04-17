@@ -3862,11 +3862,8 @@ lemma cap_small_frame_cap_set_capFMappedASID_spec:
                  cap_small_frame_cap_CL.capFMappedASIDLow_CL  := \<^bsup>s\<^esup>asid && mask asidLowBits \<rparr>
         \<and> cap_get_tag \<acute>ret__struct_cap_C = scast cap_small_frame_cap\<rbrace>"
   apply vcg
-  apply (clarsimp simp: Kernel_C.asidLowBits_def word_sle_def
-                        Kernel_C.asidHighBits_def asid_low_bits_def
-                        asid_high_bits_def mask_def)
-  apply (simp add: word_bw_assocs)
-  done
+  by (clarsimp simp: Kernel_C.asidLowBits_def word_sle_def
+                     Kernel_C.asidHighBits_def asid_low_bits_def asid_high_bits_def mask_def)
 
 lemma cap_frame_cap_set_capFMappedASID_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. cap_get_tag \<^bsup>s\<^esup>cap = scast cap_frame_cap\<rbrace>
@@ -3877,11 +3874,8 @@ lemma cap_frame_cap_set_capFMappedASID_spec:
                  cap_frame_cap_CL.capFMappedASIDLow_CL  := \<^bsup>s\<^esup>asid && mask asidLowBits \<rparr>
         \<and> cap_get_tag \<acute>ret__struct_cap_C = scast cap_frame_cap\<rbrace>"
   apply vcg
-  apply (clarsimp simp: Kernel_C.asidLowBits_def word_sle_def
-                        Kernel_C.asidHighBits_def asid_low_bits_def
-                        asid_high_bits_def mask_def)
-  apply (simp add: word_bw_assocs)
-  done
+  by (clarsimp simp: Kernel_C.asidLowBits_def word_sle_def
+                     Kernel_C.asidHighBits_def asid_low_bits_def asid_high_bits_def mask_def)
 
 lemma Arch_deriveCap_ccorres:
   "ccorres (syscall_error_rel \<currency> (ccap_relation \<circ> ArchObjectCap)) deriveCap_xf

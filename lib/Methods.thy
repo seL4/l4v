@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory Methods
+theory Methods (* FIXME: bitrotted *)
 imports Lib
 begin
 

@@ -805,7 +805,7 @@ proof -
         apply (rule pspace_aligned_distinct_None'
                     [OF pspace_aligned pspace_distinct], simp+)
         apply (cut_tac x=ya and n="2^10" in
-               ucast_less_shiftl_helper[simplified word_bits_conv], simp+)
+               ucast_less_shiftl_helper[where 'a=32,simplified word_bits_conv], simp+)
         apply (clarsimp simp add: word_gt_0)
        apply clarsimp
        apply (subgoal_tac "ucast ya << 2 = 0")
@@ -813,7 +813,6 @@ proof -
         apply (rule ccontr)
         apply (frule_tac x=y in unaligned_helper, assumption)
          apply (rule ucast_less_shiftl_helper, simp_all)
-        apply (simp add: word_bits_conv)
        apply (rule ext)
        apply (frule pspace_relation_absD[OF _ pspace_relation])
        apply simp
@@ -851,7 +850,7 @@ proof -
       apply (rule pspace_aligned_distinct_None'
                   [OF pspace_aligned pspace_distinct], simp+)
       apply (cut_tac x=ya and n="2^14" in
-             ucast_less_shiftl_helper[simplified word_bits_conv], simp+)
+             ucast_less_shiftl_helper[where 'a=32, simplified word_bits_conv], simp+)
       apply (clarsimp simp add: word_gt_0)
      apply clarsimp
      apply (subgoal_tac "ucast ya << 2 = 0")
@@ -859,7 +858,6 @@ proof -
       apply (rule ccontr)
       apply (frule_tac x=y in unaligned_helper, assumption)
        apply (rule ucast_less_shiftl_helper, simp_all)
-      apply (simp add: word_bits_conv)
      apply (rule ext)
      apply (frule pspace_relation_absD[OF _ pspace_relation])
      apply simp

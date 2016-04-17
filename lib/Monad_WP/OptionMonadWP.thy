@@ -60,7 +60,7 @@ lemma obind_wp [wp]:
 
 lemma oreturn_wp [wp]:
   "ovalid (P x) (oreturn x) P"
-  by (simp add: ovalid_def oreturn_def K_def)
+  by (simp add: ovalid_def)
 
 lemma ocondition_wp [wp]:
   "\<lbrakk> ovalid L l Q; ovalid R r Q \<rbrakk>

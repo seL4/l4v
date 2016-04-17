@@ -12,8 +12,6 @@ chapter "Machine Operations"
 
 theory MachineOps
 imports
-  "../../../lib/WordSetup"
-  "../../../lib/wp/NonDetMonad"
   "../MachineMonad"
 begin
 

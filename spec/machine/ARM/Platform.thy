@@ -14,7 +14,7 @@ theory Platform
 imports
   "../../../lib/Defs"
   "../../../lib/Lib"
-  "../../../lib/WordEnum"
+  "../../../lib/WordSetup"
   Setup_Locale
 begin
 

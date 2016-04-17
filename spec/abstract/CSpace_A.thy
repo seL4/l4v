@@ -19,7 +19,7 @@ imports
   "./$L4V_ARCH/ArchVSpace_A"
   IpcCancel_A
   "./$L4V_ARCH/ArchCSpace_A"
-  "../../lib/wp/NonDetMonadLemmas"
+  "../../lib/Monad_WP/NonDetMonadLemmas"
   "~~/src/HOL/Library/Prefix_Order"
 begin
 

@@ -14,8 +14,6 @@
 
 theory CTypesDefs
 imports
-  "~~/src/HOL/Library/Prefix_Order"
-  "../../../lib/Word_Lib/SignedWords"
   CTypesBase
 begin
 

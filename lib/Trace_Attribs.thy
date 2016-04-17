@@ -36,7 +36,7 @@
  * a hopefully-sensible set of differences.
  *)
 
-theory Trace_Attribs
+theory Trace_Attribs (* FIXME: bitrotted *)
 imports HOL
 keywords
   "diff_attributes" :: thy_decl

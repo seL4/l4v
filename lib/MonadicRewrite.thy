@@ -12,7 +12,7 @@
 
 theory MonadicRewrite
 imports
-  "wp/NonDetMonadVCG"
+  "Monad_WP/NonDetMonadVCG"
   Corres_UL
   EmptyFailLib
   LemmaBucket

@@ -17,14 +17,11 @@ theory HaskellLib_H
 imports
   Lib
   "Monad_WP/NonDetMonadVCG"
-  "Word_Lib/WordEnum"
+  "Word_Lib/Word_Enum"
 begin
 
 abbreviation (input) "flip \<equiv> swp"
 
-(* add syntax here which conflicts with word shift \<dots>
-   we can turn off this abbreviation later (with no_notation)
-   to avoid syntax conflicts *)
 abbreviation(input) bind_drop :: "('a, 'c) nondet_monad \<Rightarrow> ('a, 'b) nondet_monad
                       \<Rightarrow> ('a, 'b) nondet_monad" (infixl ">>_" 60)
   where "bind_drop \<equiv> (\<lambda>x y. bind x (K_bind y))"

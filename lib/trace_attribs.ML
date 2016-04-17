@@ -110,7 +110,7 @@ fun ugly_print_term t =
 
 (* Render a thm to a string. *)
 fun render_thm _ thm =
-  prop_of thm
+  Thm.prop_of thm
   |> ugly_print_term
   |> SHA1.digest
   |> SHA1.rep

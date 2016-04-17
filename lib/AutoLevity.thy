@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory AutoLevity
+theory AutoLevity (* FIXME: broken *)
 imports "./proof_counting/ProofGraph"
 begin
 ML {* val infoflow_file = "~~/../lib/proof_counting/Noninterference_Refinement_graphs.xml" *}

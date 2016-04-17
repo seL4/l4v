@@ -918,15 +918,14 @@ lemma copyGlobalMappings_ksPSpace_concrete:
      apply simp+
     apply (clarsimp split:if_splits)
     apply (frule_tac x = "(armKSGlobalPD (ksArchState s') + (x && mask pdBits))"
-     in copyGlobalMappings_ksPSpaceD)
+           in copyGlobalMappings_ksPSpaceD)
      apply simp+
     apply (drule use_valid[OF _ pd])
      apply simp
-    apply (clarsimp split:if_splits 
-      simp:mask_add_aligned field_simps)
+    apply (clarsimp split: if_splits simp: field_simps)
+    apply (clarsimp simp: mask_add_aligned)
     apply (frule comp)
-    apply (clarsimp simp:pdBits_def pageBits_def
-      mask_twice blah)
+    apply (clarsimp simp:pdBits_def pageBits_def mask_twice blah)
     apply (drule_tac y = "armKSGlobalPD a + b" for a b in neg_mask_mono_le[where n = 14])
     apply (drule_tac x = "armKSGlobalPD a + b" for a b in neg_mask_mono_le[where n = 14])
     apply (frule_tac d1 = "x && mask 14" in is_aligned_add_helper[THEN conjunct2])

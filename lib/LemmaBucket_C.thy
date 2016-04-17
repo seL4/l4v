@@ -10,9 +10,9 @@
 
 theory LemmaBucket_C
 imports
+  Lib
   TypHeapLib
-  Aligned
-  WordLemmaBucket
+  "Word_Lib/Word_Lemmas_32"
   "../tools/c-parser/umm_heap/ArrayAssertion"
 begin
 
@@ -651,13 +651,7 @@ lemma take_drop_foldl_concat:
    apply (induct x, simp_all)[1]
   apply simp
   done
-
-(* FIXME : Move to WordLib *)
-lemma scast_of_nat [simp]:
-    "scast (of_nat x :: 'a::len signed word) = (of_nat x :: 'a word)"
-  by (metis (hide_lams, no_types) len_signed scast_def uint_sint
-         word_of_nat word_ubin.Abs_norm word_ubin.eq_norm)
-
+  
 definition
   array_ptr_index :: "(('a :: c_type)['b :: finite]) ptr \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> 'a ptr"
 where
@@ -926,7 +920,7 @@ lemma h_t_valid_Array_element':
    apply (clarsimp simp: intvl_def)
    apply (drule_tac x="offs * size_of TYPE('a) + k" in spec)
    apply (drule mp)
-    apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def field_simps of_nat_nat)
+    apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def field_simps)
    apply (erule notE)
    apply (rule_tac y="Suc offs * size_of TYPE('a)" in order_less_le_trans)
     apply (simp add: size_of_def)

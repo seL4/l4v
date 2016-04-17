@@ -18,7 +18,6 @@ theory Decode_A
 imports
   Interrupt_A
   "./$L4V_ARCH/ArchDecode_A"
-  "../../lib/WordLib"
   "../design/InvocationLabels_H"
 begin
 

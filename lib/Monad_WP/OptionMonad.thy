@@ -7,6 +7,7 @@
  *
  * @TAG(NICTA_BSD)
  *)
+
 (*
  * Contributions by:
  *   2012 Lars Noschinski <noschinl@in.tum.de>
@@ -14,7 +15,7 @@
  *)
 
 theory OptionMonad
-imports Lib
+imports "../Lib" (* FIXME: reduce dependencies *)
 begin
 
 type_synonym ('s,'a) lookup = "'s \<Rightarrow> 'a option"

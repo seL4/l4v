@@ -711,6 +711,8 @@ schematic_goal finaliseSlot_ccorres_induction_helper:
   done
 
 lemma finaliseSlot_ccorres:
+  notes from_bool_neq_0 [simp del]
+  shows
   "ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
      (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))
                    ret__struct_finaliseSlot_ret_C_')
@@ -881,7 +883,7 @@ lemma finaliseSlot_ccorres:
                     apply (clarsimp simp: throwError_def return_def cintr_def)
                    apply vcg
                   apply (wp preemptionPoint_invR)
-		  apply simp
+                 apply simp
                  apply simp
                  apply (rule ccorres_split_throws)
                   apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])

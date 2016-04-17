@@ -17,9 +17,7 @@ chapter "ARM Machine Instantiation"
 
 theory Machine_A
 imports
-  "../../../lib/WordSetup"
-  "../../../lib/wp/NonDetMonad"
-  "../../machine/MachineExports"
+  "../../machine/$L4V_ARCH/MachineTypes"
 begin
 
 context Arch begin global_naming ARM_A

@@ -57,7 +57,7 @@ lemma asid_high_bits_of_add:
    apply (case_tac "na < asid_low_bits")
     apply (simp add: asid_low_bits_def linorder_not_less word_bits_def)
   apply (auto dest: test_bit_size
-              simp: asid_low_bits_def nth_ucast)
+              simp: asid_low_bits_def word_bits_def nth_ucast)
   done
 
 lemma preemption_point_success [simp,intro]:

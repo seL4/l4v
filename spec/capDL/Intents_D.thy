@@ -28,7 +28,7 @@
 
 theory Intents_D
 imports
-  "../../lib/NICTACompat"
+  "../../lib/WordSetup"
   "../abstract/CapRights_A"
 begin
 

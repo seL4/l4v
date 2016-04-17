@@ -282,11 +282,7 @@ lemma to_bool_to_bool_bf:
 
 lemma to_bool_bf_mask_1 [simp]:
   "to_bool_bf (w && mask (Suc 0)) = to_bool_bf w"
-  apply (simp add: to_bool_bf_def)
-  apply (rule eq_eqI)
-  apply (rule word_eqI)
-  apply simp
-  done
+  by (simp add: to_bool_bf_def)
 
 lemma to_bool_bf_and [simp]:
   "to_bool_bf (a && b) = (to_bool_bf a \<and> to_bool_bf (b::word32))"

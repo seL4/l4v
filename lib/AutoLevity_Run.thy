@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory AutoLevity_Run
+theory AutoLevity_Run (* FIXME: broken *)
 imports AutoLevity
 begin
 

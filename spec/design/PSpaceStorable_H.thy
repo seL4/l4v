@@ -11,7 +11,6 @@
 theory PSpaceStorable_H
 imports
   Structures_H
-  "../../lib/wp/NonDetMonad"
   KernelStateData_H
   "../../lib/DataMap"
 begin

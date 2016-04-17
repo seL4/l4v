@@ -56,18 +56,18 @@ lemma asid_low_high_bits:
     x \<le> 2 ^ asid_bits - 1; y \<le> 2 ^ asid_bits - 1 \<rbrakk>
   \<Longrightarrow> x = y" 
   apply (rule word_eqI)
-  apply (simp add: word_less_sub_le upper_bits_unset_is_l2p [symmetric] bang_eq nth_ucast word_size)
+  apply (simp add: upper_bits_unset_is_l2p_32 [symmetric] bang_eq nth_ucast word_size)
   apply (clarsimp simp: asid_high_bits_of_def nth_ucast nth_shiftr)
   apply (simp add: asid_high_bits_def asid_bits_def asid_low_bits_def word_bits_def)
   subgoal premises prems[rule_format] for n
-   apply (cases "n < 10")
-    using prems(1)
+  apply (cases "n < 10")
+   using prems(1)
    apply fastforce
-   apply (cases "n < 18")
-     using prems(2)[where n="n - 10"]
-     apply fastforce
-   using prems(3-)
-   by (simp add: linorder_not_less)
+  apply (cases "n < 18")
+   using prems(2)[where n="n - 10"]
+   apply fastforce
+  using prems(3-)
+  by (simp add: linorder_not_less)
   done
 
 lemma asid_low_high_bits':
@@ -689,7 +689,7 @@ lemma ex_asid_high_bits_plus:
    apply (simp add: mask_def)
    apply (rule word_and_le1)
   apply (subst (asm) mask_def)
-  apply (simp add: upper_bits_unset_is_l2p [symmetric])
+  apply (simp add: upper_bits_unset_is_l2p_32 [symmetric])
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
    apply (clarsimp simp: word_size nth_ucast nth_shiftl)
@@ -710,7 +710,7 @@ lemma ex_asid_high_bits_plus:
 
 lemma asid_high_bits_shl:
   "\<lbrakk> is_aligned base asid_low_bits; base \<le> mask asid_bits \<rbrakk> \<Longrightarrow> ucast (asid_high_bits_of base) << asid_low_bits = base"
-  apply (simp add: mask_def upper_bits_unset_is_l2p [symmetric])
+  apply (simp add: mask_def upper_bits_unset_is_l2p_32 [symmetric])
   apply (rule word_eqI)
   apply (simp add: is_aligned_nth nth_ucast nth_shiftl nth_shiftr asid_low_bits_def 
                    asid_high_bits_of_def word_size asid_bits_def word_bits_def)
@@ -1802,7 +1802,7 @@ lemma vs_lookup:
   apply (rule order_trans)
    apply (rule Image_mono [OF _ order_refl])
    apply (rule vs_lookup_trans)
-  apply (clarsimp simp: rel_comp_Image Un_Image)
+  apply (clarsimp simp: relcomp_Image Un_Image)
   done
 
 lemma vs_lookup2:
@@ -4770,7 +4770,7 @@ lemma new_lookups_rtrancl:
 lemma vs_lookup:
   "vs_lookup s' = vs_lookup s \<union> new_lookups^* `` vs_lookup s"
   unfolding vs_lookup_def
-  by (simp add: vs_lookup_trans rel_comp_Image Un_Image)
+  by (simp add: vs_lookup_trans relcomp_Image Un_Image)
 
 lemma vs_lookup2:
   "vs_lookup s' = vs_lookup s \<union> (new_lookups `` vs_lookup s)"
@@ -4804,7 +4804,7 @@ lemma vs_lookup_pages:
   "vs_lookup_pages s' =
    vs_lookup_pages s \<union> new_lookups^* `` vs_lookup_pages s"
   unfolding vs_lookup_pages_def
-  by (simp add: vs_lookup_pages_trans rel_comp_Image Un_Image)
+  by (simp add: vs_lookup_pages_trans relcomp_Image Un_Image)
 
 lemma vs_lookup_pages2:
   "vs_lookup_pages s' = vs_lookup_pages s \<union> (new_lookups `` vs_lookup_pages s)"
