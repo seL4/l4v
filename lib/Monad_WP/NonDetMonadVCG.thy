@@ -9,7 +9,11 @@
  *)
 
 theory NonDetMonadVCG
-imports NonDetMonadLemmas WP WPC "../Strengthen"
+imports
+  NonDetMonadLemmas
+  "wp/WP"
+  "wp/WPC"
+  "Strengthen"
 begin
 
 declare K_def [simp]

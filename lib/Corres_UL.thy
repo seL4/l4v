@@ -11,7 +11,7 @@
 theory Corres_UL
 imports
   Crunch
-  "wp/WPEx"
+  "Monad_WP/wp/WPEx"
   HaskellLemmaBucket
 begin
 

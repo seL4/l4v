@@ -10,11 +10,10 @@
 
 theory NonDetMonadLemmaBucket
 imports
-  "wp/NonDetMonadVCG"
-  WordLemmaBucket
-  MonadEq
-  WhileLoopRules
-  WhileLoopRulesCompleteness
+  "Monad_WP/NonDetMonadVCG"
+  "Word_Lib/WordLemmas32"
+  "MonadEq"
+  "Monad_WP/WhileLoopRulesCompleteness"
 begin
 
 lemma no_fail_assume_pre:

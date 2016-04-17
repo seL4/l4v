@@ -8,19 +8,11 @@
  * @TAG(NICTA_BSD)
  *)
 
-(*
-   Miscellaneous library definitions and lemmas.
-*)
-
 chapter "Distinct Proposition"
 
 theory DistinctProp
-imports
-  "../lib/Lib"
-  "~~/src/HOL/Library/Sublist"
+imports Main
 begin
-
-text {* distinct\_prop *}
 
 primrec
   distinct_prop :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> ('a list \<Rightarrow> bool)"

@@ -9,7 +9,7 @@
  *)
 
 theory WhileLoopRules
-imports "wp/NonDetMonadVCG"
+imports "NonDetMonadVCG"
 begin
 
 section "Well-ordered measures"

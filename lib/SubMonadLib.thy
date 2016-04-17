@@ -9,7 +9,9 @@
  *)
 
 theory SubMonadLib
-imports EmptyFailLib Corres_UL
+imports
+  EmptyFailLib
+  Corres_UL
 begin
 
 locale submonad_args =

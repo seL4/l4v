@@ -9,7 +9,9 @@
  *)
 
 theory WPEx
-imports NonDetMonadVCG "../Strengthen"
+imports
+  "../NonDetMonadVCG"
+  "../Strengthen"
 begin
 
 text {* WPEx - the WP Extension Experiment *}

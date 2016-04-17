@@ -8,11 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* Author: Gerwin Klein and Thomas Sewell
-   Type class for enumerations.
-*)
-
-chapter "Enumerations"
+chapter "Enumeration extensions and alternative definition"
 
 theory Enumeration
 imports "~~/src/HOL/Main"
@@ -40,13 +36,7 @@ lemma nth_the_index:
 
 lemma distinct_the_index_is_index[simp]:
   "\<lbrakk> distinct xs ; n < length xs \<rbrakk> \<Longrightarrow> the_index xs (xs ! n) = n"
-  apply (subst nth_eq_iff_index_eq[symmetric])
-     apply assumption
-    apply (rule the_index_bounded)
-   apply simp_all
-  apply (rule nth_the_index)
-  apply simp
-  done
+  by (meson nth_eq_iff_index_eq nth_mem nth_the_index the_index_bounded)
 
 lemma the_index_last_distinct:
   "distinct xs \<and> xs \<noteq> [] \<Longrightarrow> the_index xs (last xs) = length xs - 1"
@@ -64,20 +54,12 @@ lemma the_index_last_distinct:
 
 context enum begin
 
-  (* These two are added for historical reasons.
-   * We had an enum class first, and these are the two
-   * assumptions we had, which were added to the simp set.
-   *)
-  lemmas enum_surj[simp] = enum_UNIV
-  declare enum_distinct[simp]
+(* These two are added for historical reasons. *)
+lemmas enum_surj[simp] = enum_UNIV
+declare enum_distinct[simp]
 
 lemma enum_nonempty[simp]: "(enum :: 'a list) \<noteq> []"
-  apply (rule classical, simp)
-  apply (subgoal_tac "\<exists>X. X \<in> set (enum :: 'a list)")
-   apply simp
-  apply (subst enum_surj)
-  apply simp
-  done
+  using enum_surj by fastforce
 
 definition
   maxBound :: 'a where
@@ -86,6 +68,7 @@ definition
 definition
   minBound :: 'a where
   "minBound \<equiv> hd enum"
+
 definition
   toEnum :: "nat \<Rightarrow> 'a" where
   "toEnum n \<equiv> if n < length (enum :: 'a list) then enum ! n else the None"
@@ -97,11 +80,7 @@ definition
 
 lemma maxBound_is_length:
   "fromEnum maxBound = length (enum :: 'a list) - 1"
-  apply (simp add: maxBound_def fromEnum_def)
-  apply (subst the_index_last_distinct)
-   apply simp
-  apply simp
-  done
+  by (simp add: maxBound_def fromEnum_def the_index_last_distinct)
 
 lemma maxBound_less_length:
   "(x \<le> fromEnum maxBound) = (x < length (enum :: 'a list))"
@@ -207,16 +186,13 @@ definition
  "alt_from_ord L \<equiv> \<lambda>n. if (n < length L) then Some (L ! n) else None"
 
 lemma handy_enum_lemma1: "((if P then Some A else None) = None) = (\<not> P)"
-  apply simp
-  done
+  by simp
 
 lemma handy_enum_lemma2: "Some x \<notin> empty ` S"
-  apply safe
-  done
+  by safe
 
 lemma handy_enum_lemma3: "((if P then Some A else None) = Some B) = (P \<and> (A = B))"
-  apply simp
-  done
+  by simp
 
 class enumeration_both = enum_alt + enum +
   assumes enum_alt_rel: "enum_alt = alt_from_ord enum"
@@ -343,5 +319,9 @@ lemma to_from_enum_alt[simp]:
   apply (rule enum_alt_inj_2)
    apply auto
   done
+
+lemma upto_enum_triv [simp]:
+  "[x .e. x] = [x]"
+  unfolding upto_enum_def by simp
 
 end

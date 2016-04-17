@@ -171,4 +171,20 @@ lemma split_paired_Bex:
   "(\<exists>x \<in> A. P x) = (\<exists>x y. (x,y) \<in> A \<and> P (x,y))"
   by auto
 
+lemma delete_remove1:
+  "delete x xs = remove1 x xs"
+  by (induct xs, auto)
+
+lemma ignore_if:
+  "(y and z) s \<Longrightarrow> (if x then y else z) s"
+  by (clarsimp simp: pred_conj_def)
+
+lemma zipWith_Nil2 :
+  "zipWith f xs [] = []"
+  unfolding zipWith_def by simp
+
+lemma isRight_right_map:
+  "isRight (case_sum Inl (Inr o f) v) = isRight v"
+  by (simp add: isRight_def split: sum.split)
+
 end

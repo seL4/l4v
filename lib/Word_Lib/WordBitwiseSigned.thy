@@ -1,10 +1,5 @@
 theory WordBitwiseSigned imports
-  Lib
-  MoreDivides
   Aligned
-  HOLLemmaBucket
-  DistinctPropLemmaBucket
-  "~~/src/HOL/Library/Sublist"
   "~~/src/HOL/Library/Prefix_Order"
 begin
 

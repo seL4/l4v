@@ -106,6 +106,9 @@ lemma isRight_rel_sum_comb2:
        \<Longrightarrow> isRight v \<and> r (theRight v) (theRight v')"
   by (clarsimp simp: isRight_def)
 
+lemma isRight_case_sum: "isRight x \<Longrightarrow> case_sum f g x = g (theRight x)"
+  by (clarsimp simp add: isRight_def)
+
 lemma enumerate_append:"enumerate i (xs @ ys) = enumerate i xs @ enumerate (i + length xs) ys"
   apply (induct xs arbitrary:ys i)
    apply clarsimp+

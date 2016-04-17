@@ -8,18 +8,12 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory DistinctPropLemmaBucket
+theory DistinctPropLemmas
 imports
-  Lib
-  MoreDivides
-  Aligned
-  HOLLemmaBucket
   DistinctProp
-  "~~/src/HOL/Library/Sublist"
+  HOLLemmaBucket
   "~~/src/HOL/Library/Prefix_Order"
-
 begin
-
 
 lemma n_less_equal_power_2 [simp]:
   "n < 2 ^ n"
@@ -27,16 +21,7 @@ lemma n_less_equal_power_2 [simp]:
 
 lemma drop_Suc_nth:
   "n < length xs \<Longrightarrow> drop n xs = xs!n # drop (Suc n) xs"
-  apply (induct xs arbitrary: n)
-   apply simp
-  apply simp
-  apply (case_tac "n = length xs")
-   apply simp
-   apply (case_tac xs, simp)
-   apply (simp add: nth_append)
-  apply (case_tac n, simp)
-  apply simp
-  done
+  by (simp add: Cons_nth_drop_Suc)
 
 lemma minus_Suc_0_lt:
   "a \<noteq> 0 \<Longrightarrow> a - Suc 0 < a"
@@ -228,13 +213,6 @@ lemma inj_Pair:
 lemma inj_on_split:
   "inj_on f S \<Longrightarrow> inj_on (\<lambda>x. (z, f x)) S"
   by (auto simp: inj_on_def)
-
-lemma less_Suc_unat_less_bound:
-  "n < Suc (unat (x :: ('a :: len) word)) \<Longrightarrow> n < 2 ^ len_of TYPE('a)"
-  apply (erule order_less_le_trans)
-  apply (rule Suc_leI)
-  apply simp
-  done
 
 lemma map_snd_zip_prefix:
   "map snd (zip xs ys) \<le> ys"
@@ -659,6 +637,19 @@ lemma enumerate_member:"i < length xs \<Longrightarrow> (n + i, xs ! i) \<in> se
   apply (rule conjI)
    apply (simp add:fst_enumerate)
   apply (simp add:snd_enumerate)
+  done
+
+lemma distinct_prop_nth:
+  "\<lbrakk> distinct_prop P ls; n < n'; n' < length ls \<rbrakk> \<Longrightarrow> P (ls ! n) (ls ! n')"
+  apply (induct ls arbitrary: n n')
+   apply simp
+  apply simp
+  apply (case_tac n')
+   apply simp
+  apply simp
+  apply (case_tac n)
+   apply simp
+  apply simp
   done
 
 end

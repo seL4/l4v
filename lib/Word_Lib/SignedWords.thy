@@ -12,6 +12,8 @@ theory SignedWords
 imports "~~/src/HOL/Word/Word"
 begin
 
+text {* Signed words as separate (isomorphic) word length class. Useful for tagging words in C. *}
+
 subsection {* Type definition *}
 
 typedef ('a::len0) signed = "UNIV :: 'a set" ..
@@ -33,8 +35,8 @@ end
 instance signed :: (len) len
   by (intro_classes, simp)
 
-type_synonym 'a sword = "('a signed) word"
-type_synonym sword8 = "8 sword"
+type_synonym 'a sword = "'a signed word"
+type_synonym  sword8 =  "8 sword"
 type_synonym sword16 = "16 sword"
 type_synonym sword32 = "32 sword"
 type_synonym sword64 = "64 sword"

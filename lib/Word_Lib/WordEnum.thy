@@ -108,4 +108,23 @@ where
       if c < a then [] else map (\<lambda>x. a + x * (b - a)) [0 .e. (c - a) div (b - a)]"
   (* in the wraparound case, bad things happen. *)
 
+lemma maxBound_word:
+  "(maxBound::'a::len word) = -1"
+  by (simp add: maxBound_def enum_word_def last_map)
+
+lemma minBound_word:
+  "(minBound::'a::len word) = 0"
+  by (simp add: minBound_def enum_word_def upt_conv_Cons)
+
+lemma maxBound_max_word:
+  "(maxBound::'a::len word) = max_word"
+  apply (subst maxBound_word)
+  apply (subst max_word_minus [symmetric])
+  apply (rule refl)
+  done
+
+lemma leq_maxBound [simp]:
+  "(x::'a::len word) \<le> maxBound"
+  by (simp add: maxBound_max_word)
+
 end

@@ -9,8 +9,16 @@
  *)
 
 theory Aligned
-imports WordLib MoreDivides WordSetup
+imports
+  WordLib
+  MoreDivides
 begin
+
+
+definition
+  is_aligned :: "'a :: len word \<Rightarrow> nat \<Rightarrow> bool" where
+  "is_aligned ptr n \<equiv> 2^n dvd unat ptr"
+
 
 lemma is_aligned_mask: "(is_aligned w n) = (w && mask n = 0)"
   unfolding is_aligned_def by (rule and_mask_dvd_nat)
@@ -892,6 +900,65 @@ lemma is_aligned_minus:
   apply (fold is_aligned_def)
   apply (erule_tac Q="0<p" in contrapos_pp)
   apply (clarsimp simp add: is_aligned_mask mask_def power_overflow)
+  done
+
+lemma add_mask_lower_bits:
+  "\<lbrakk>is_aligned (x :: 'a :: len word) n;
+    \<forall>n' \<ge> n. n' < len_of TYPE('a) \<longrightarrow> \<not> p !! n'\<rbrakk> \<Longrightarrow> x + p && ~~mask n = x"
+  apply (subst word_plus_and_or_coroll)
+   apply (rule word_eqI)
+   apply (clarsimp simp: word_size is_aligned_nth)
+   apply (erule_tac x=na in allE)+
+   apply simp
+  apply (rule word_eqI)
+  apply (clarsimp simp: word_size is_aligned_nth word_ops_nth_size le_def)
+  apply blast
+  done
+
+lemma is_aligned_andI1:
+  "is_aligned x n \<Longrightarrow> is_aligned (x && y) n"
+  by (simp add: is_aligned_nth)
+
+lemma is_aligned_andI2:
+  "is_aligned y n \<Longrightarrow> is_aligned (x && y) n"
+  by (simp add: is_aligned_nth)
+
+lemma is_aligned_shiftl:
+  "is_aligned w (n - m) \<Longrightarrow> is_aligned (w << m) n"
+  by (simp add: is_aligned_nth nth_shiftl)
+
+lemma is_aligned_shiftr:
+  "is_aligned w (n + m) \<Longrightarrow> is_aligned (w >> m) n"
+  by (simp add: is_aligned_nth nth_shiftr)
+
+lemma is_aligned_shiftl_self:
+  "is_aligned (p << n) n"
+  by (rule is_aligned_shift)
+
+lemma is_aligned_neg_mask_eq:
+  "is_aligned p n \<Longrightarrow> p && ~~ mask n = p"
+  apply (simp add: is_aligned_nth)
+  apply (rule word_eqI)
+  apply (clarsimp simp: word_size word_ops_nth_size)
+  apply fastforce
+  done
+
+lemma is_aligned_shiftr_shiftl:
+  "is_aligned w n \<Longrightarrow> w >> n << n = w"
+  apply (simp add: shiftr_shiftl1)
+  apply (erule is_aligned_neg_mask_eq)
+  done
+
+lemma aligned_shiftr_mask_shiftl:
+  "is_aligned x n \<Longrightarrow> ((x >> n) && mask v) << n = x && mask (v + n)"
+  apply (rule word_eqI)
+  apply (simp add: word_size nth_shiftl nth_shiftr)
+  apply (subgoal_tac "\<forall>m. x !! m \<longrightarrow> m \<ge> n")
+   apply auto[1]
+  apply (clarsimp simp: is_aligned_mask)
+  apply (drule_tac x=m in word_eqD)
+  apply (frule test_bit_size)
+  apply (simp add: word_size)
   done
 
 end

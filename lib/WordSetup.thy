@@ -11,8 +11,7 @@
 chapter "Machine Word Setup"
 
 theory WordSetup
-imports WordEnum DistinctProp
-
+imports "Word_Lib/WordEnum"
 begin
 
 text {* This theory defines the standard platform-specific word size
@@ -34,10 +33,6 @@ lemma word_bits_word_size_conv:
   unfolding word_bits_def word_size_def by simp
 
 definition
-  is_aligned :: "'a :: len word \<Rightarrow> nat \<Rightarrow> bool" where
-  "is_aligned ptr n \<equiv> 2^n dvd unat ptr"
-
-definition
   ptr_add :: "'a :: len word \<Rightarrow> nat \<Rightarrow> 'a word" where
   "ptr_add ptr n \<equiv> ptr + of_nat n"
 
@@ -48,5 +43,9 @@ definition
 definition
   alignUp :: "'a::len word \<Rightarrow> nat \<Rightarrow> 'a word" where
  "alignUp x n \<equiv> x + 2 ^ n - 1 && complement (2 ^ n - 1)"
+
+lemma ptr_add_0 [simp]:
+  "ptr_add ref 0 = ref "
+  unfolding ptr_add_def by simp
 
 end

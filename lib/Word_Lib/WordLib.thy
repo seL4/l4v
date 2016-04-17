@@ -8,15 +8,13 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* Miscellaneous additional library definitions and lemmas for the word type.
-   Builds on WORD image.
-*)
+(* Miscellaneous additional library definitions and lemmas for the word type. *)
 
 theory WordLib
-imports NICTACompat SignedWords
+imports
+  NICTACompat
+  SignedWords
 begin
-
-(* stuff to move to word/* *)
 
 lemma shiftl_power:
   "(shiftl1 ^^ x) (y::'a::len word) = 2 ^ x * y"
