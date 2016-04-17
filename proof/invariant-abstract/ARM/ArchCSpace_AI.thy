@@ -153,9 +153,11 @@ lemma ups_of_heap_non_arch_upd:
 definition
   "is_simple_cap_arch cap \<equiv> \<not>is_pt_cap cap \<and> \<not> is_pd_cap cap"
 
+declare is_simple_cap_arch_def[simp]
+
 lemma is_simple_cap_arch:
   "\<not>is_arch_cap cap \<Longrightarrow> is_simple_cap_arch cap"
-  by (simp add: is_cap_simps is_simple_cap_arch_def)
+  by (simp add: is_cap_simps)
 
 crunch inv[wp]: lookup_ipc_buffer "I"
 

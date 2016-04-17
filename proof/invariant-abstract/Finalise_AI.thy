@@ -2701,7 +2701,7 @@ lemma valid_arch_state_table_strg:
 end
 
 
-lemma valid_irq_node_arch [simp]:
+lemma valid_irq_node_arch [iff]:
   "valid_irq_node (arch_state_update f s) = valid_irq_node s"
   by (simp add: valid_irq_node_def)
 
@@ -2714,7 +2714,7 @@ lemma valid_global_objs_table [simp]:
   "valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table'\<rparr>\<rparr>) = valid_global_objs s"
   by (simp add: valid_global_objs_def)
 
-lemma valid_kernel_mappings [simp]:
+lemma valid_kernel_mappings [iff]:
   "valid_kernel_mappings (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table'\<rparr>\<rparr>) = valid_kernel_mappings s"
   by (simp add: valid_kernel_mappings_def)
 
