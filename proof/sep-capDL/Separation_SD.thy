@@ -24,17 +24,6 @@ imports
   Types_SD
 begin
 
-(*
- * capDL and WordSetup both define word_bits.
- * These are equal, so let's just use WordSetup.
- *)
-lemma word_bits_eq [simp]:
- "Types_D.word_bits = WordSetup.word_bits"
-  by (simp add: Types_D.word_bits_def WordSetup.word_bits_def)
-
-hide_const (open) Types_D.word_bits
-
-
 
 definition
   object_at_heap :: "(cdl_object \<Rightarrow> bool) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_heap \<Rightarrow> bool"
@@ -310,6 +299,8 @@ lemma offset_0 [simp]:
 lemma offset_slot':
   "\<lbrakk>slot < 2^radix\<rbrakk> \<Longrightarrow> offset slot radix = unat slot"
   by (clarsimp simp: offset_def Word.less_mask_eq)
+
+lemmas word_bits_def = Word_Setup_32.word_bits_def
 
 lemma offset_slot:
   "\<lbrakk>slot < 2^radix; radix < word_bits\<rbrakk> \<Longrightarrow> offset (of_nat slot) radix = slot"
