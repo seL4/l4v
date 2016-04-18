@@ -41,7 +41,7 @@ text \<open>
 ML {*
 structure Term_Pattern_Antiquote = struct
 
-val quote_string = quote o String.toString
+val quote_string = quote
 
 (* typ matching; doesn't support matching on named TVars.
  * This is because each TVar is likely to appear many times in the pattern. *)
