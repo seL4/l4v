@@ -99,4 +99,9 @@ fun eval_num @{term_pat "numeral ?n"} = HOLogic.dest_num n
 eval_num @{term "(1 + 2) * 3 - 4 div 5"}
 *}
 
+text \<open>Regression test: backslash handling\<close>
+ML_val {*
+val @{term_pat "\<alpha>"} = @{term "\<alpha>"}
+*}
+
 end
