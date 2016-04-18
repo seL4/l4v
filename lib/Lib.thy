@@ -91,12 +91,6 @@ where
   "delete y [] = []"
 | "delete y (x#xs) = (if y=x then xs else x # delete y xs)"
 
-primrec
-  find :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> 'a option"
-where
-  "find f [] = None"
-| "find f (x # xs) = (if f x then Some x else find f xs)"
-
 definition
  "swp f \<equiv> \<lambda>x y. f y x"
 
