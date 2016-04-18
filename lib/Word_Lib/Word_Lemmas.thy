@@ -2518,7 +2518,7 @@ proof -
     apply (subst unat_word_ariths)
     apply (subst unat_div)
     apply simp
-    apply (rule order_le_less_trans [OF mod_le_dividend])
+    apply (rule order_le_less_trans [OF mod_less_eq_dividend])
     apply (erule order_le_neq_trans [OF div_mult_le])
     done
 

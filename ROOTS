@@ -6,3 +6,4 @@ proof
 tools
 camkes
 sys-init
+lib/Word_Lib

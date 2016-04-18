@@ -19,6 +19,12 @@ imports "~~/src/HOL/Main"
 begin
 
 (* FIXME: eliminate *)
+abbreviation (input)
+  split   :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a \<times> 'b \<Rightarrow> 'c"
+where
+  "split == case_prod"
+
+(* FIXME: eliminate *)
 lemma hd_map_simp:
   "b \<noteq> [] \<Longrightarrow> hd (map a b) = a (hd b)"
   by (rule hd_map)

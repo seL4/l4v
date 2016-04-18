@@ -56,7 +56,7 @@
 <testsuite>
 
     <!-- Build Isabelle and common theories (Pure, HOL, HOL-Word, Word). -->
-    <test name="isabelle" cwd="../.." cpu-timeout="3600">isabelle/bin/isabelle build -d . -vb Word</test>
+    <test name="isabelle" cwd="../.." cpu-timeout="3600">isabelle/bin/isabelle build -d . -vb Word_Lib</test>
 
     <!-- Ensure that all of our XML files are strictly correct. -->
     <test name="tests-xml-correct" cwd="../../" cpu-timeout="60">

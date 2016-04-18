@@ -10,5 +10,4 @@
 
 session Word_Lib = "HOL-Word" +
   theories
-    "WordBitwise_Signed"
     "Word_Lemmas_32"

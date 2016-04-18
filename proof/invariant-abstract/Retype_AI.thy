@@ -541,7 +541,7 @@ proof -
    apply (insert pointer)
    apply (clarsimp simp: range_cover_def pointer)
    apply (simp add:unat_word_ariths)
-   apply (rule le_less_trans[OF mod_le_dividend])
+   apply (rule le_less_trans[OF mod_less_eq_dividend])
    apply (rule less_le_trans[OF mult_less_mono1[where j = n]])
    apply (cut_tac no_overflow_p)
      apply (drule multi_lessD[OF no_overflow_p],simp)

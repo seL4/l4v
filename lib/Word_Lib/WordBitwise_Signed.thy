@@ -10,7 +10,8 @@
 
 theory WordBitwise_Signed
 imports
-  Aligned
+  "~~/src/HOL/Word/WordBitwise"
+  Signed_Words
   "~~/src/HOL/Library/Prefix_Order"
 begin
 

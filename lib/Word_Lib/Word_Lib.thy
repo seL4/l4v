@@ -15,6 +15,88 @@ imports
   Word_Syntax
 begin
 
+definition
+  ptr_add :: "'a :: len word \<Rightarrow> nat \<Rightarrow> 'a word" where
+  "ptr_add ptr n \<equiv> ptr + of_nat n"
+
+definition
+  complement :: "('a :: len) word \<Rightarrow> 'a word"  where
+ "complement x \<equiv> ~~ x"
+
+definition
+  alignUp :: "'a::len word \<Rightarrow> nat \<Rightarrow> 'a word" where
+ "alignUp x n \<equiv> x + 2 ^ n - 1 && complement (2 ^ n - 1)"
+
+(* some Haskellish syntax *)
+notation (input)
+  test_bit ("testBit")
+
+definition
+  w2byte :: "'a :: len word \<Rightarrow> 8 word" where
+  "w2byte \<equiv> ucast"
+
+
+(*
+ * Signed division: when the result of a division is negative,
+ * we will round towards zero instead of towards minus infinity.
+ *)
+class signed_div =
+  fixes sdiv :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "sdiv" 70)
+  fixes smod :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "smod" 70)
+
+instantiation int :: signed_div
+begin
+definition "(a :: int) sdiv b \<equiv> sgn (a * b) * (abs a div abs b)"
+definition "(a :: int) smod b \<equiv> a - (a sdiv b) * b"
+instance ..
+end
+
+instantiation word :: (len) signed_div
+begin
+definition "(a :: ('a::len) word) sdiv b = word_of_int (sint a sdiv sint b)"
+definition "(a :: ('a::len) word) smod b = word_of_int (sint a smod sint b)"
+instance ..
+end
+
+(* Tests *)
+lemma
+  "( 4 :: word32) sdiv  4 =  1"
+  "(-4 :: word32) sdiv  4 = -1"
+  "(-3 :: word32) sdiv  4 =  0"
+  "( 3 :: word32) sdiv -4 =  0"
+  "(-3 :: word32) sdiv -4 =  0"
+  "(-5 :: word32) sdiv -4 =  1"
+  "( 5 :: word32) sdiv -4 = -1"
+  by (simp_all add: sdiv_word_def sdiv_int_def)
+
+lemma
+  "( 4 :: word32) smod  4 =   0"
+  "( 3 :: word32) smod  4 =   3"
+  "(-3 :: word32) smod  4 =  -3"
+  "( 3 :: word32) smod -4 =   3"
+  "(-3 :: word32) smod -4 =  -3"
+  "(-5 :: word32) smod -4 =  -1"
+  "( 5 :: word32) smod -4 =   1"
+  by (simp_all add: smod_word_def smod_int_def sdiv_int_def)
+
+(* Count leading zeros and log2 of a word *)
+
+definition
+  word_clz :: "'a::len word \<Rightarrow> nat"
+where
+  "word_clz w \<equiv> length (takeWhile Not (to_bl w))"
+
+definition
+  word_log2 :: "'a::len word \<Rightarrow> nat"
+where
+  "word_log2 (w::'a::len word) \<equiv> size w - 1 - word_clz w"
+  
+
+
+lemma ptr_add_0 [simp]:
+  "ptr_add ref 0 = ref "
+  unfolding ptr_add_def by simp
+
 lemma shiftl_power:
   "(shiftl1 ^^ x) (y::'a::len word) = 2 ^ x * y"
   apply (induct x)
@@ -477,16 +559,6 @@ lemma word_1_and_bl:
   by (subst word_bw_comms)
      (simp add: word_and_1)
 
-(* can stay here: *)
-(* some Haskellish syntax *)
-
-notation (input)
-  test_bit ("testBit")
-
-definition
-  w2byte :: "'a :: len word \<Rightarrow> 8 word" where
-  "w2byte \<equiv> ucast"
-
 lemma scast_scast_id':
   fixes x :: "('a::len) word"
   assumes is_up: "is_up (scast :: 'a word \<Rightarrow> ('b::len) word)"
@@ -597,10 +669,10 @@ corollary word_plus_and_or_coroll2:
   apply blast
   done
 
-(* FIXME: The two lemmas below are not exactly word-related but they
-     correspond to the lemmas less_le_mult' and less_le_mult from the theory
-     isabelle/src/HOL/Word/Num_Lemmas.
- *)
+(* The two lemmas below are not exactly word-related but they
+   correspond to the lemmas less_le_mult' and less_le_mult from the theory
+   isabelle/src/HOL/Word/Num_Lemmas.
+*)
 lemma less_le_mult_nat':
   "w * c < b * c ==> 0 \<le> c ==> Suc w * c \<le> b * (c::nat)"
   apply (rule mult_right_mono)
@@ -627,60 +699,5 @@ lemmas extra_sle_sless_unfolds
     word_sless_alt[where a="numeral n" and b=0]
     word_sless_alt[where a="numeral n" and b=1]
   for n
-
-(*
- * Signed division: when the result of a division is negative,
- * we will round towards zero instead of towards minus infinity.
- *)
-class signed_div =
-  fixes sdiv :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "sdiv" 70)
-  fixes smod :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" (infixl "smod" 70)
-
-instantiation int :: signed_div
-begin
-definition "(a :: int) sdiv b \<equiv> sgn (a * b) * (abs a div abs b)"
-definition "(a :: int) smod b \<equiv> a - (a sdiv b) * b"
-instance ..
-end
-
-instantiation word :: (len) signed_div
-begin
-definition "(a :: ('a::len) word) sdiv b = word_of_int (sint a sdiv sint b)"
-definition "(a :: ('a::len) word) smod b = word_of_int (sint a smod sint b)"
-instance ..
-end
-
-(* Tests *)
-lemma
-  "( 4 :: word32) sdiv  4 =  1"
-  "(-4 :: word32) sdiv  4 = -1"
-  "(-3 :: word32) sdiv  4 =  0"
-  "( 3 :: word32) sdiv -4 =  0"
-  "(-3 :: word32) sdiv -4 =  0"
-  "(-5 :: word32) sdiv -4 =  1"
-  "( 5 :: word32) sdiv -4 = -1"
-  by (simp_all add: sdiv_word_def sdiv_int_def)
-
-lemma
-  "( 4 :: word32) smod  4 =   0"
-  "( 3 :: word32) smod  4 =   3"
-  "(-3 :: word32) smod  4 =  -3"
-  "( 3 :: word32) smod -4 =   3"
-  "(-3 :: word32) smod -4 =  -3"
-  "(-5 :: word32) smod -4 =  -1"
-  "( 5 :: word32) smod -4 =   1"
-  by (simp_all add: smod_word_def smod_int_def sdiv_int_def)
-
-(* Count leading zeros and log2 of a word; proofs about these are in WordLemmaBucket *)
-
-definition
-  word_clz :: "'a::len word \<Rightarrow> nat"
-where
-  "word_clz w \<equiv> length (takeWhile Not (to_bl w))"
-
-definition
-  word_log2 :: "'a::len word \<Rightarrow> nat"
-where
-  "word_log2 (w::'a::len word) \<equiv> size w - 1 - word_clz w"
 
 end

@@ -37,12 +37,8 @@ lemma eq_zero_set_bl: "(w = 0) = (True \<notin> set (to_bl w))"
   apply simp
   done
 
-lemmas and_bang = word_and_nth
-
 lemma diff_diff_less: "(i < m - (m - (n :: nat))) = (i < m \<and> i < n)"
-  apply (case_tac "n \<le> m")
-   apply fastforce+
-  done
+  by auto
 
 lemma is_aligned_to_bl:
   "is_aligned (w :: 'a :: len word) n = (True \<notin> set (drop (size w - n) (to_bl w)))"
@@ -681,7 +677,7 @@ lemma is_aligned_no_wrap''':
    apply (simp add: word_less_nat_alt)
    apply (erule order_le_less_trans[rotated])
    apply (subst unat_of_nat)
-   apply (rule mod_le_dividend)
+   apply (rule mod_less_eq_dividend)
   apply (subst(asm) unat_of_nat_len)
    apply (erule order_less_trans)
    apply (erule power_strict_increasing)

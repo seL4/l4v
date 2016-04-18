@@ -30,7 +30,7 @@ chapter "Specifications"
  * Abstract Specification
  *)
 
-session ASpec in "abstract" = Word +
+session ASpec in "abstract" = Word_Lib +
   options [document=pdf]
   theories [document = false]
     "../../lib/Lib"
@@ -63,7 +63,7 @@ session ASpec in "abstract" = Word +
  * Executable/Design Specification
  *)
 
-session ExecSpec = Word +
+session ExecSpec = Word_Lib +
   options [document = false]
   theories
     "design/API_H"
@@ -97,7 +97,7 @@ session SimplExport = CSpec +
  * CapDL
  *)
 
-session DSpec = Word +
+session DSpec = Word_Lib +
   theories
     "capDL/Syscall_D"
 
@@ -123,11 +123,3 @@ session ASepSpec = ASpec +
   theories
     "sep-abstract/Syscall_SA"
 
-
-(*
- * Libraries
- *)
-
-session Word = "HOL-Word" +
-  theories
-    "../lib/NICTACompat"

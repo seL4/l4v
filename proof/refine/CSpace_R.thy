@@ -3916,7 +3916,7 @@ lemma cte_map_nat_to_cref:
    defer
    apply assumption
   apply (subst unat_of_nat)
-  apply (rule mod_le_dividend)
+  apply (rule mod_less_eq_dividend)
   done
 
 lemma valid_nullcapsE:

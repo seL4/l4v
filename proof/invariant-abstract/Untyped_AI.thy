@@ -43,7 +43,7 @@ lemma of_bl_nat_to_cref:
                   simp: nat_to_cref_def of_drop_to_bl
                         word_size word_less_nat_alt word_bits_def)
   apply (subst unat_of_nat)
-  apply (erule order_le_less_trans [OF mod_le_dividend])
+  apply (erule order_le_less_trans [OF mod_less_eq_dividend])
   done
 end
 

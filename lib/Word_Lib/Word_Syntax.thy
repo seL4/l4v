@@ -8,12 +8,10 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* FIXME: update *)
-
 theory Word_Syntax
 imports
   "~~/src/HOL/Word/WordBitwise"
-  Signed_Words
+  WordBitwise_Signed
   Hex_Words
   Neg_Words
 begin
@@ -63,11 +61,5 @@ lemma bin_nth_minus_Bit0[simp]:
 lemma bin_nth_minus_Bit1[simp]:
   "0 < n \<Longrightarrow> bin_nth (numeral (num.Bit1 w)) n = bin_nth (numeral w) (n - 1)"
   by (cases n; simp)
-
-(* FIXME: (re)move *)
-abbreviation (input)
-  split   :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a \<times> 'b \<Rightarrow> 'c"
-where
-  "split == case_prod"
 
 end

@@ -11,7 +11,7 @@
 theory Word_Lemmas_32
 imports
   Word_Lemmas
-  "../WordSetup"
+  Word_Setup_32
 begin
 
 lemma ucast_8_32_inj:
