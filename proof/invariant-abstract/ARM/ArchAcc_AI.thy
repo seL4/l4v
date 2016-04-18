@@ -51,7 +51,7 @@ lemma get_asid_pool_wp [wp]:
   done
 
 
-lemma set_asid_pool_typ_at:
+lemma set_asid_pool_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def get_object_def)
   apply wp
