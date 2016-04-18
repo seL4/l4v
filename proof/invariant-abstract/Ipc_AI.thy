@@ -17,12 +17,10 @@ declare if_cong[cong del]
 lemmas lookup_slot_wrapper_defs[simp] =
    lookup_source_slot_def lookup_target_slot_def lookup_pivot_slot_def
 
-
 lemma get_mi_inv[wp]: "\<lbrace>I\<rbrace> get_message_info a \<lbrace>\<lambda>x. I\<rbrace>"
   by (simp add: get_message_info_def user_getreg_inv | wp)+
 
-
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma set_mi_tcb [wp]:
   "\<lbrace> tcb_at t \<rbrace> set_message_info receiver msg \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: set_message_info_def) wp
@@ -32,29 +30,13 @@ lemma mask_mask:
   by (auto simp: mask_cap_def cap_rights_update_def acap_rights_update_def
                  validate_vm_rights_inter Int_assoc Int_commute[of R']
           split: cap.splits arch_cap.splits)
-
-
-lemma lsfco_real_cte_at:
-  "\<lbrace>valid_objs and valid_cap cn\<rbrace> 
-  lookup_slot_for_cnode_op f cn idx depth 
-  \<lbrace>\<lambda>rv. real_cte_at rv\<rbrace>,-"
-  apply (simp add: lookup_slot_for_cnode_op_def split_def)
-  apply (rule conjI)
-   prefer 2
-   apply clarsimp
-   apply (rule hoare_pre)
-    apply wp
-  apply (clarsimp simp: unlessE_def whenE_def split del: split_if)
-  apply (rule hoare_pre)
-   apply (wp resolve_address_bits_real_cte_at | wpcw)+
-  apply simp
-  done
+end
 
 lemma lsfco_cte_at: 
   "\<lbrace>valid_objs and valid_cap cn\<rbrace> 
   lookup_slot_for_cnode_op f cn idx depth 
   \<lbrace>\<lambda>rv. cte_at rv\<rbrace>,-"
-  by (rule hoare_post_imp_R, rule lsfco_real_cte_at, simp add: real_cte_at_cte)
+  by (rule hoare_post_imp_R, rule lookup_cnode_slot_real_cte, simp add: real_cte_at_cte)
 
 declare do_machine_op_tcb[wp]
 
@@ -72,13 +54,11 @@ lemma get_recv_slot_inv[wp]:
   apply (wp | simp)+
   done
 
-
 lemma cte_wp_at_eq_simp:
   "cte_wp_at (op = cap) = cte_wp_at (\<lambda>c. c = cap)"
   apply (rule arg_cong [where f=cte_wp_at])
   apply (safe intro!: ext)
   done
-
 
 lemma get_rs_cte_at[wp]:
   "\<lbrace>\<top>\<rbrace>
@@ -90,7 +70,6 @@ lemma get_rs_cte_at[wp]:
   apply (wp | simp add: cte_wp_at_eq_simp | rule get_cap_wp)+
   done
 
-
 lemma get_rs_cte_at2[wp]:
   "\<lbrace>\<top>\<rbrace>
   get_receive_slots receiver recv_buf 
@@ -99,7 +78,6 @@ lemma get_rs_cte_at2[wp]:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
 
-
 lemma get_rs_real_cte_at[wp]:
   "\<lbrace>valid_objs\<rbrace>
    get_receive_slots receiver recv_buf
@@ -107,12 +85,10 @@ lemma get_rs_real_cte_at[wp]:
   apply (cases recv_buf)
    apply (simp,wp,simp)
   apply (clarsimp simp add: split_def whenE_def)
-  apply (wp hoare_drop_imps lsfco_real_cte_at lookup_cap_valid | simp | rule get_cap_wp)+
+  apply (wp hoare_drop_imps lookup_cnode_slot_real_cte lookup_cap_valid | simp | rule get_cap_wp)+
   done
 
-
 declare returnOKE_R_wp [wp]
-
 
 lemma cap_derive_not_null_helper:
   "\<lbrace>P\<rbrace> derive_cap slot cap \<lbrace>Q\<rbrace>,- \<Longrightarrow>
@@ -126,32 +102,32 @@ lemma cap_derive_not_null_helper:
    apply (wp | simp add: derive_cap_def is_zombie_def)+
   done
 
-
 lemma mask_cap_Null [simp]:
   "(mask_cap R c = cap.NullCap) = (c = cap.NullCap)"
   by (cases c) (auto simp: mask_cap_def cap_rights_update_def)
 
-
+context ARM begin (*FIXME arch_split*)
+(* Will non-ARM6 architectures ever have arch-cap data updates? *)
 lemma update_cap_data_closedform:
   "update_cap_data pres w cap =
    (case cap of
-     cap.EndpointCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (cap.EndpointCap r (w && mask 28) rights) else cap.NullCap
-   | cap.NotificationCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (cap.NotificationCap r (w && mask 28) rights) else cap.NullCap
-   | cap.CNodeCap r bits guard \<Rightarrow>
+     EndpointCap r badge rights \<Rightarrow>
+       if badge = 0 \<and> \<not> pres then (EndpointCap r (w && mask 28) rights) else NullCap
+   | NotificationCap r badge rights \<Rightarrow>
+       if badge = 0 \<and> \<not> pres then (NotificationCap r (w && mask 28) rights) else NullCap
+   | CNodeCap r bits guard \<Rightarrow>
        if word_bits < unat ((w >> 3) && mask 5) + bits
-       then cap.NullCap
-       else cap.CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> 3) && mask 5)) (to_bl g'')) ((w >> 8) && mask 18))
-   | cap.ThreadCap r \<Rightarrow> cap.ThreadCap r
-   | cap.DomainCap \<Rightarrow> cap.DomainCap
-   | cap.UntypedCap p n idx \<Rightarrow> cap.UntypedCap p n idx
-   | cap.NullCap \<Rightarrow> cap.NullCap
-   | cap.ReplyCap t m \<Rightarrow> cap.ReplyCap t m
-   | cap.IRQControlCap \<Rightarrow> cap.IRQControlCap
-   | cap.IRQHandlerCap irq \<Rightarrow> cap.IRQHandlerCap irq
-   | cap.Zombie r b n \<Rightarrow> cap.Zombie r b n
-   | cap.ArchObjectCap cap \<Rightarrow> cap.ArchObjectCap cap)"
+       then NullCap
+       else CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> 3) && mask 5)) (to_bl g'')) ((w >> 8) && mask 18))
+   | ThreadCap r \<Rightarrow> ThreadCap r
+   | DomainCap \<Rightarrow> DomainCap
+   | UntypedCap p n idx \<Rightarrow> UntypedCap p n idx
+   | NullCap \<Rightarrow> NullCap
+   | ReplyCap t m \<Rightarrow> ReplyCap t m
+   | IRQControlCap \<Rightarrow> IRQControlCap
+   | IRQHandlerCap irq \<Rightarrow> IRQHandlerCap irq
+   | Zombie r b n \<Rightarrow> Zombie r b n
+   | ArchObjectCap cap \<Rightarrow> ArchObjectCap cap)"
   apply (cases cap,
          simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
                         is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
@@ -162,12 +138,13 @@ lemma update_cap_data_closedform:
                   cong: if_cong)
   apply auto
   done
+end
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma update_cap_Null:
-  "update_cap_data p D c \<noteq> cap.NullCap \<Longrightarrow> c \<noteq> cap.NullCap"
+  "update_cap_data p D c \<noteq> NullCap \<Longrightarrow> c \<noteq> NullCap"
   by (auto simp: update_cap_data_closedform is_cap_defs)
-
+end
 
 lemma ensure_no_children_wp:
   "\<lbrace>\<lambda>s. descendants_of p (cdt s) = {} \<longrightarrow> P s\<rbrace> ensure_no_children p \<lbrace>\<lambda>_. P\<rbrace>, -"
@@ -175,32 +152,33 @@ lemma ensure_no_children_wp:
   apply (auto simp: in_monad)
   done
 
-
+context ARM begin (*FIXME: arch_split*)
 lemma cap_asid_PageCap_None [simp]:
-  "cap_asid (cap.ArchObjectCap (arch_cap.PageCap r R pgsz None)) = None"
+  "cap_asid (ArchObjectCap (PageCap r R pgsz None)) = None"
   by (simp add: cap_asid_def)
-
 
 lemma arch_derive_cap_is_derived:
   "\<lbrace>\<lambda>s. cte_wp_at (\<lambda>cap . cap_master_cap cap =
-                          cap_master_cap (cap.ArchObjectCap c') \<and> 
+                          cap_master_cap (ArchObjectCap c') \<and> 
                           cap_aligned cap \<and> 
-                          cap_asid cap = cap_asid (cap.ArchObjectCap c') \<and>
-                          vs_cap_ref cap = vs_cap_ref (cap.ArchObjectCap c')) p s\<rbrace>
+                          cap_asid cap = cap_asid (ArchObjectCap c') \<and>
+                          vs_cap_ref cap = vs_cap_ref (ArchObjectCap c')) p s\<rbrace>
      arch_derive_cap c'
-   \<lbrace>\<lambda>rv s. cte_wp_at (is_derived (cdt s) p (cap.ArchObjectCap rv)) p s\<rbrace>, -"
+   \<lbrace>\<lambda>rv s. cte_wp_at (is_derived (cdt s) p (ArchObjectCap rv)) p s\<rbrace>, -"
   unfolding arch_derive_cap_def
   apply(cases c', simp_all add: is_cap_simps cap_master_cap_def)
       apply((wp throwError_validE_R
-             | clarsimp simp: is_derived_def is_cap_simps cap_master_cap_def
+             | clarsimp simp: is_derived_def is_derived_arch_def
+                              is_cap_simps cap_master_cap_def
                               cap_aligned_def is_aligned_no_overflow is_pt_cap_def
                               cap_asid_def vs_cap_ref_def
              | erule cte_wp_at_weakenE
-             | rule conjI
-             | simp split: arch_cap.split_asm cap.split_asm option.splits)+)
+             | simp split: arch_cap.split_asm cap.split_asm option.splits
+             | rule conjI)+)
   done
+end
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma derive_cap_is_derived:
   "\<lbrace>\<lambda>s. c'\<noteq> cap.NullCap \<longrightarrow> cte_wp_at (\<lambda>cap. cap_master_cap cap = cap_master_cap c'
                      \<and> (cap_badge cap, cap_badge c') \<in> capBadge_ordering False
@@ -213,7 +191,8 @@ lemma derive_cap_is_derived:
   unfolding derive_cap_def
   apply (cases c', simp_all add: is_cap_simps)
           apply ((wp ensure_no_children_wp
-                    | clarsimp simp: is_derived_def is_cap_simps
+                    | clarsimp simp: is_derived_def is_derived_arch_def
+                                     is_cap_simps
                                      cap_master_cap_def bits_of_def
                                      same_object_as_def is_pt_cap_def
                                      cap_asid_def
@@ -228,30 +207,30 @@ lemma derive_cap_is_derived:
   apply(clarsimp simp: valid_cap_def)
   done
 
-
 lemma arch_derive_cap_cte:
-  "\<lbrace>\<lambda>s. cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap \<and> is_derived (cdt s) p (cap.ArchObjectCap c') c) p s\<rbrace>
+  "\<lbrace>\<lambda>s. cte_wp_at (\<lambda>c. c \<noteq> NullCap \<and> is_derived (cdt s) p (ArchObjectCap c') c) p s\<rbrace>
     arch_derive_cap c'
-  \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap \<and> is_derived (cdt s) p (cap.ArchObjectCap rv) c) p s\<rbrace>, -"
+  \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>c. c \<noteq> NullCap \<and> is_derived (cdt s) p (ArchObjectCap rv) c) p s\<rbrace>, -"
   unfolding arch_derive_cap_def
   apply(cases c', simp_all add: is_cap_simps)
       apply(rule hoare_pre, wp ensure_no_children_wp, clarsimp)+
     apply wp?
     apply(erule cte_wp_at_weakenE)
-    apply(case_tac c, (clarsimp simp: is_derived_def cap_master_cap_def is_cap_simps 
+    apply(case_tac c, (clarsimp simp: is_derived_def is_derived_arch_def
+                                      cap_master_cap_def is_cap_simps 
                                       cap_asid_def is_pt_cap_def vs_cap_ref_def
                                split: cap.splits arch_cap.splits)+)
    apply(rule hoare_pre, wpc, wp, clarsimp)+
   done
-
+end
 
 lemma derive_cap_cte:
-  "\<lbrace>\<lambda>s. c' \<noteq> cap.NullCap \<and> \<not>is_zombie c' \<and> c' \<noteq> cap.IRQControlCap \<longrightarrow> 
+  "\<lbrace>\<lambda>s. c' \<noteq> NullCap \<and> \<not>is_zombie c' \<and> c' \<noteq> IRQControlCap \<longrightarrow> 
         (is_untyped_cap c' \<longrightarrow> descendants_of p (cdt s) = {}) \<longrightarrow>
-        cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap \<and> is_derived (cdt s) p c' c) p s\<rbrace>
+        cte_wp_at (\<lambda>c. c \<noteq> NullCap \<and> is_derived (cdt s) p c' c) p s\<rbrace>
     derive_cap p c'
-  \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> 
-          cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap \<and> is_derived (cdt s) p rv c) p s\<rbrace>, -"
+  \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> 
+          cte_wp_at (\<lambda>c. c \<noteq> NullCap \<and> is_derived (cdt s) p rv c) p s\<rbrace>, -"
   unfolding derive_cap_def 
   apply (cases c', simp_all add: is_cap_simps)
           apply ((rule hoare_pre, wp ensure_no_children_wp, simp)+)[11]
@@ -261,11 +240,11 @@ lemma derive_cap_cte:
   apply assumption
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma is_derived_cap_rights [simp]:
   "is_derived m p (cap_rights_update R c) = is_derived m p c"
   apply (rule ext)
-  apply (simp add: cap_rights_update_def is_derived_def is_cap_simps)
+  apply (simp add: cap_rights_update_def is_derived_def is_derived_arch_def is_cap_simps)
   apply (case_tac x, simp_all)
            apply (simp add: cap_master_cap_def bits_of_def is_cap_simps
                              vs_cap_ref_def
@@ -275,28 +254,30 @@ lemma is_derived_cap_rights [simp]:
   apply (simp split: arch_cap.split cap.split
                 add: is_cap_simps acap_rights_update_def is_pt_cap_def)
   done
-
+end
 
 lemma is_derived_mask [simp]:
   "is_derived m p (mask_cap R c) = is_derived m p c"
   by (simp add: mask_cap_def)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma is_derived_cap_data:
   "\<lbrakk> update_cap_data pres D c \<noteq> cap.NullCap; is_derived (cdt s) p c c' \<rbrakk> \<Longrightarrow> 
   is_derived (cdt s) p (update_cap_data pres D c) c'"
   apply (case_tac c)
-  apply (simp_all add: is_derived_def cap_master_cap_simps split del: split_if
-                     split: split_if_asm)
-    apply (clarsimp dest!:cap_master_cap_eqDs
-      simp:update_cap_data_closedform cap_master_cap_simps
-      is_cap_simps vs_cap_ref_def  arch_update_cap_data_def
-      split:if_splits)+
+   apply (simp_all add: is_derived_def is_derived_arch_def
+                        cap_master_cap_simps split del: split_if
+                 split: split_if_asm)
+    apply (clarsimp dest!: cap_master_cap_eqDs
+                     simp: update_cap_data_closedform cap_master_cap_simps
+                           is_cap_simps vs_cap_ref_def  arch_update_cap_data_def
+                    split: if_splits)+
   apply (case_tac c')
-   apply (clarsimp dest!:cap_master_cap_eqDs 
-     simp:cap_master_cap_simps cap_asid_def split:arch_cap.splits option.splits)+
+   apply (clarsimp dest!: cap_master_cap_eqDs 
+                    simp: cap_asid_def
+                   split: arch_cap.splits option.splits)+
   done
-
+end
 
 lemma is_derived_remove_rights [simp]:
   "is_derived m p (remove_rights R c) = is_derived m p c"
@@ -308,14 +289,14 @@ definition
      mi_length mi \<le> of_nat msg_max_length \<and>
      mi_extra_caps mi \<le> of_nat msg_max_extra_caps"
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma data_to_message_info_valid:
   "valid_message_info (data_to_message_info w)"
   apply (simp add: valid_message_info_def data_to_message_info_def)
   apply (rule conjI)
   apply (simp add: word_and_le1 msg_max_length_def msg_max_extra_caps_def Let_def not_less)+
   done
-
+end
 
 lemma get_mi_valid[wp]:
   "\<lbrace>valid_mdb\<rbrace> get_message_info a \<lbrace>\<lambda>rv s. valid_message_info rv\<rbrace>"
@@ -348,7 +329,7 @@ lemma mapM_length[wp]:
   apply wp
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma get_extra_cptrs_length[wp]:
   "\<lbrace>\<lambda>s . valid_message_info mi\<rbrace>
    get_extra_cptrs buf mi
@@ -363,33 +344,19 @@ lemma get_extra_cptrs_length[wp]:
                         word_le_nat_alt
                  intro: length_upt)
   done
-
-
-lemma cap_insert_ep_at[wp]:
-  "\<lbrace>ep_at ep\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>rv. ep_at ep\<rbrace>"
-  by (simp add: ep_at_typ, wp)
-
-
-lemma cap_master_cap_remove_rights[simp]:
-  "cap_master_cap (cap_rights_update rights cap) = cap_master_cap cap"
-  apply (simp add: cap_rights_update_def 
-                   acap_rights_update_def
-            split: cap.split arch_cap.split)
-  apply (simp add: cap_master_cap_def)
-  done
-
+end
 
 lemma cap_badge_rights_update[simp]:
   "cap_badge (cap_rights_update rights cap) = cap_badge cap"
   by (simp add: cap_rights_update_def split: cap.split)
 
-
+context ARM begin (*FIXME: arch_split*)
 lemma cap_asid_rights_update [simp]:
   "cap_asid (cap_rights_update R c) = cap_asid c"
   apply (simp add: cap_rights_update_def acap_rights_update_def split: cap.splits arch_cap.splits)
   apply (clarsimp simp: cap_asid_def)
   done
-
+end
 
 lemma get_cap_cte_wp_at_rv:
   "\<lbrace>cte_wp_at (\<lambda>cap. P cap cap) p\<rbrace> get_cap p \<lbrace>\<lambda>rv. cte_wp_at (P rv) p\<rbrace>"
@@ -421,13 +388,13 @@ lemma bits_low_high_eq:
   apply (simp add: nth_shiftr)
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma cap_rights_update_vs_cap_ref[simp]:
   "vs_cap_ref (cap_rights_update rs cap) = vs_cap_ref cap"
   by (simp add: vs_cap_ref_def cap_rights_update_def
                 acap_rights_update_def
          split: cap.split arch_cap.split)
-
+end
 
 lemma mask_cap_vs_cap_ref[simp]:
   "vs_cap_ref (mask_cap msk cap) = vs_cap_ref cap"
@@ -451,23 +418,19 @@ crunch valid_mdb [wp]: set_extra_badge valid_mdb
 
 crunch cte_wp_at [wp]: set_extra_badge "cte_wp_at P p"
 
-
-crunch inv[wp]: get_extra_cptr P (wp: dmo_inv loadWord_inv)
-
 lemma impEM:
   "\<lbrakk>P \<longrightarrow> Q; P; \<lbrakk>P; Q\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   by auto
-
 
 lemma derive_cap_is_derived_foo:
   "\<lbrace>\<lambda>s. \<forall>cap'. (cte_wp_at (\<lambda>capa.
                  cap_master_cap capa = cap_master_cap cap \<and>
                  (cap_badge capa, cap_badge cap) \<in> capBadge_ordering False \<and>
                  cap_asid capa = cap_asid cap \<and> vs_cap_ref capa = vs_cap_ref cap)
-      slot s \<and> valid_objs s \<and> cap' \<noteq> cap.NullCap
+      slot s \<and> valid_objs s \<and> cap' \<noteq> NullCap
           \<longrightarrow> cte_at slot s )
             \<and> (s \<turnstile> cap \<longrightarrow> s \<turnstile> cap')
-            \<and> (cap' \<noteq> cap.NullCap \<longrightarrow> cap \<noteq> cap.NullCap \<and> \<not> is_zombie cap \<and> cap \<noteq> cap.IRQControlCap)
+            \<and> (cap' \<noteq> NullCap \<longrightarrow> cap \<noteq> NullCap \<and> \<not> is_zombie cap \<and> cap \<noteq> IRQControlCap)
           \<longrightarrow> Q cap' s \<rbrace>
       derive_cap slot cap \<lbrace>Q\<rbrace>,-"
   apply (clarsimp simp add: validE_R_def validE_def valid_def
@@ -493,6 +456,7 @@ lemma cap_rights_update_NullCap[simp]:
 crunch in_user_frame[wp]: set_extra_badge "in_user_frame buffer"
 
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma cap_insert_cte_wp_at:
   "\<lbrace>\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s \<and> valid_mdb s \<and> valid_objs s
     \<and> (if p = dest then P cap else cte_wp_at (\<lambda>c. P (masked_as_full c cap)) p s)\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>uu. cte_wp_at P p\<rbrace>"
@@ -516,7 +480,7 @@ lemma cap_insert_cte_wp_at:
    apply (clarsimp simp:is_cap_simps cap_aligned_def
       dest!:valid_cap_aligned split:split_if_asm)
     apply (drule_tac y = "of_nat fa" in word_plus_mono_right[OF _ is_aligned_no_overflow',rotated])
-     apply (simp add:word_of_nat_less unat_power_lower32)
+     apply (simp add:word_of_nat_less)
     apply (clarsimp simp:p_assoc_help)
    apply (drule(1) caps_of_state_valid)+
    apply (clarsimp simp:valid_cap_def valid_untyped_def max_free_index_def)
@@ -531,11 +495,7 @@ lemma cap_insert_cte_wp_at:
    apply (clarsimp simp:is_cap_simps cap_master_cap_simps dest!:cap_master_cap_eqDs)
    apply (clarsimp simp:is_derived_def is_cap_simps cap_master_cap_simps)
   done
-
-
-lemma set_cap_in_user_frame[wp]:
-  "\<lbrace>in_user_frame buffer\<rbrace> set_cap cap ref \<lbrace>\<lambda>_. in_user_frame buffer\<rbrace>"
-  by (simp add: in_user_frame_def) (wp hoare_vcg_ex_lift set_cap_typ_at)
+end
 
 
 lemma cap_insert_weak_cte_wp_at2:
@@ -570,22 +530,16 @@ lemma descendants_insert_update:
 (* FIXME: name conflicts with WordLemmaBucket.in_emptyE. *)
 lemma in_emptyE: "\<lbrakk>A={}; \<exists>x. x\<in> A\<rbrakk> \<Longrightarrow> P" by clarsimp
 
-lemma caps_of_state_orth_original:
-  "caps_of_state(s\<lparr>is_original_cap := M \<rparr>) = caps_of_state s"
-  by (rule Invariants_AI.revokable_update.caps_of_state_update)
-
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma is_derived_cap_rights2[simp]:
   "is_derived m p c (cap_rights_update R c') = is_derived m p c c'"
   apply (case_tac c')
   apply (simp_all add:cap_rights_update_def)
-  apply (clarsimp simp:is_derived_def is_cap_simps cap_master_cap_def 
+  apply (clarsimp simp:is_derived_def is_derived_arch_def is_cap_simps cap_master_cap_def 
     vs_cap_ref_def split:cap.splits )+
   apply (rename_tac acap1 acap2)
   apply (case_tac acap1)
-   apply (simp_all add:acap_rights_update_def)
-  done
-
+   by (auto simp: acap_rights_update_def)
 
 lemma weak_derived_update_rights:
   "valid_cap cap s \<Longrightarrow> weak_derived cap (cap_rights_update R cap)"
@@ -598,6 +552,7 @@ lemma weak_derived_update_rights:
   apply (clarsimp simp:valid_cap_def cap_aligned_def)
   apply (erule is_aligned_no_overflow)
   done
+end
 
 
 lemma masked_as_full_null_cap[simp]:
@@ -619,11 +574,11 @@ lemma transfer_caps_loop_mi_label[wp]:
   apply simp
   done
 
-
+(* FIXME: remove
 lemma cap_insert_real_cte_at[wp]:
   "\<lbrace>real_cte_at p\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>rv. real_cte_at p\<rbrace>"
   by (simp add: cap_table_at_typ, wp)
-
+*)
 
 lemma valid_remove_rights_If[simp]:
   "valid_cap cap s \<Longrightarrow> valid_cap (if P then remove_rights rs cap else cap) s"
@@ -635,11 +590,6 @@ declare const_on_failure_wp [wp]
 
 crunch ex_cte_cap_wp_to [wp]: set_extra_badge "ex_cte_cap_wp_to P p"
   (lift: ex_cte_cap_to_pres)
-
-
-lemma return_value_any_R:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
-  by (erule hoare_post_imp_R, simp)
 
 
 lemma cap_insert_assume_null:
@@ -815,9 +765,9 @@ lemma get_cap_global_refs[wp]:
   apply (rule hoare_pre)
    apply (rule get_cap_wp)
   apply (clarsimp simp: valid_refs_def2 valid_global_refs_def cte_wp_at_caps_of_state)
-  apply (blast intro: ranI)
-  done
+  by blast
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma cap_range_update [simp]:
   "cap_range (cap_rights_update R cap) = cap_range cap"
   by (simp add: cap_range_def cap_rights_update_def acap_rights_update_def
@@ -834,6 +784,7 @@ lemma derive_cap_idle[wp]:
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all)
   done
+end
 
 
 crunch pred_tcb_at [wp]: set_extra_badge "\<lambda>s. pred_tcb_at proj P p s"
@@ -858,6 +809,7 @@ lemma tcl_it[wp]:
   by (wp transfer_caps_loop_pres)
 
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma arch_derive_cap_objrefs_iszombie:
   "\<lbrace>\<lambda>s . P (set_option (aobj_ref cap)) False s\<rbrace>
      arch_derive_cap cap
@@ -865,7 +817,7 @@ lemma arch_derive_cap_objrefs_iszombie:
   apply(cases cap, simp_all add: is_zombie_def arch_derive_cap_def)
       apply(rule hoare_pre, wpc?, wp, simp)+
   done
-
+end
 
 lemma derive_cap_objrefs_iszombie:
   "\<lbrace>\<lambda>s. \<not> is_zombie cap \<longrightarrow> P (obj_refs cap) False s\<rbrace>
@@ -876,13 +828,13 @@ lemma derive_cap_objrefs_iszombie:
                  (wp | simp add: o_def arch_derive_cap_objrefs_iszombie)+)+
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma obj_refs_remove_rights[simp]:
   "obj_refs (remove_rights rs cap) = obj_refs cap"
   by (simp add: remove_rights_def cap_rights_update_def
                 acap_rights_update_def
          split: cap.splits arch_cap.splits)
-
+end
 
 lemma is_zombie_rights[simp]:
   "is_zombie (remove_rights rs cap) = is_zombie cap"
@@ -899,10 +851,10 @@ lemma set_extra_badge_zombies_final[wp]:
   apply (wp hoare_vcg_all_lift final_cap_lift)
   done  
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma tcl_zombies[wp]:
   "\<lbrace>zombies_final and valid_objs and valid_mdb and K (distinct slots)
-          and (\<lambda>s. \<forall>slot \<in> set slots. real_cte_at slot s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) slot s )
+          and (\<lambda>s. \<forall>slot \<in> set slots. real_cte_at slot s \<and> cte_wp_at (\<lambda>cap. cap = NullCap) slot s )
           and transfer_caps_srcs caps\<rbrace>
      transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
@@ -930,7 +882,7 @@ lemma tcl_zombies[wp]:
   apply (drule(1) bspec,clarsimp)
   apply (fastforce dest!:caps_of_state_valid)
   done
-
+end
 
 lemma derive_cap_valid_globals [wp]:
   "\<lbrace>valid_global_refs\<rbrace> derive_cap r cap \<lbrace>\<lambda>rv. valid_global_refs\<rbrace>"
@@ -973,14 +925,14 @@ lemma transfer_caps_loop_valid_arch[wp]:
   "\<lbrace>valid_arch_state\<rbrace> transfer_caps_loop ep buffer n caps slots mi \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift) wp
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma derive_cap_not_reply:
   "\<lbrace>\<top>\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. \<not> is_reply_cap rv\<rbrace>, -"
   apply (rule hoare_pre)
   apply (wpc | wp
        | clarsimp simp: derive_cap_def arch_derive_cap_def is_reply_cap_def)+
   done
-
+end
 
 lemma tcl_reply':
   "\<lbrace>valid_reply_caps and valid_reply_masters and valid_objs and valid_mdb and K(distinct slots)
@@ -1190,7 +1142,7 @@ lemma transfer_caps_loop_valid_ioc[wp]:
    \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   by (wp transfer_caps_loop_pres | simp add: set_extra_badge_def)+
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma storeWord_um_inv:
   "\<lbrace>\<lambda>s. underlying_memory s = um\<rbrace>
    storeWord a v
@@ -1199,7 +1151,6 @@ lemma storeWord_um_inv:
   apply wp
   apply simp
   done
-
 
 lemma store_word_offs_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> store_word_offs ptr offs v \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
@@ -1239,6 +1190,7 @@ proof -
     apply (rule aligned_offset_ignore[symmetric], simp+)+
     done
 qed
+end
 
 lemma set_extra_badge_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_extra_badge buffer b n \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
@@ -1401,12 +1353,12 @@ lemma get_cap_zombies_helper:
   apply clarsimp
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma is_zombie_update_cap_data[simp]:
   "is_zombie (update_cap_data P data cap) = is_zombie cap"
   by (simp add: update_cap_data_closedform is_zombie_def
          split: cap.splits)
-
+end
 
 lemma random_helper[simp]:
   "is_zombie (case ct_send_data ct of None \<Rightarrow> mask_cap ms cap
@@ -1611,7 +1563,7 @@ lemma copy_mrs_ep_at[wp]:
   "\<lbrace>ep_at x\<rbrace> copy_mrs s sb r rb n \<lbrace>\<lambda>rv. ep_at x\<rbrace>"
   by (simp add: ep_at_typ, wp)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma valid_msg_length_strengthen:
   "valid_message_info mi \<longrightarrow> unat (mi_length mi) \<le> msg_max_length"
   apply (clarsimp simp: valid_message_info_def)
@@ -1619,7 +1571,7 @@ lemma valid_msg_length_strengthen:
    apply (clarsimp simp: unat_of_nat msg_max_length_def)
   apply (clarsimp simp: un_ui_le word_le_def)
   done
-
+end
 
 crunch cte_wp_at[wp]: copy_mrs "cte_wp_at P p"
   (wp: crunch_wps)
@@ -1650,13 +1602,13 @@ lemma mapME_length:
    apply (wp | simp | assumption)+
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma copy_mrs_in_user_frame[wp]:
   "\<lbrace>in_user_frame p\<rbrace> copy_mrs t buf t' buf' n \<lbrace>\<lambda>rv. in_user_frame p\<rbrace>"
   by (simp add: in_user_frame_def) (wp hoare_vcg_ex_lift)
 
-
 crunch typ_at[wp]: do_normal_transfer "\<lambda>s. P (typ_at T p s)"
+end
 
 lemma do_normal_tcb[wp]:
   "\<lbrace>tcb_at t\<rbrace>
@@ -1665,7 +1617,7 @@ lemma do_normal_tcb[wp]:
    \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ, wp)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma make_fault_message_inv[wp]:
   "\<lbrace>P\<rbrace> make_fault_msg ft t \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (cases ft, simp_all split del: split_if)
@@ -1679,12 +1631,13 @@ lemma do_fault_transfer_invs[wp]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (simp add: do_fault_transfer_def split_def | wp
     | clarsimp split: option.split)+
+end
 
 lemma valid_recv_ep_tcb:
-  "\<lbrakk> valid_ep (Structures_A.endpoint.RecvEP (a # lista)) s \<rbrakk> \<Longrightarrow> tcb_at a s"
+  "\<lbrakk> valid_ep (RecvEP (a # lista)) s \<rbrakk> \<Longrightarrow> tcb_at a s"
   by (simp add: valid_ep_def tcb_at_def)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma lookup_ipc_buffer_in_user_frame[wp]:
   "\<lbrace>valid_objs and tcb_at t\<rbrace> lookup_ipc_buffer b t
    \<lbrace>case_option (\<lambda>_. True) in_user_frame\<rbrace>"
@@ -1704,36 +1657,24 @@ lemma lookup_ipc_buffer_in_user_frame[wp]:
   apply (case_tac xc, simp_all)
   done
 
-
 crunch aligned[wp]: do_ipc_transfer "pspace_aligned"
   (wp: crunch_wps simp: crunch_simps zipWithM_x_mapM)
-
 
 crunch "distinct"[wp]: do_ipc_transfer "pspace_distinct"
   (wp: crunch_wps simp: crunch_simps zipWithM_x_mapM)
 
-
-lemma get_receive_slots_real_ctes[wp]:
-  "\<lbrace>valid_objs\<rbrace> get_receive_slots  rcvr buf \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. real_cte_at x s\<rbrace>"
-  apply (cases buf, simp_all add: split_def whenE_def split del: split_if)
-   apply (wp lookup_cap_valid | simp | rule hoare_drop_imps)+
-  done
-
-
 crunch vmdb[wp]: set_message_info "valid_mdb"
-
 
 crunch vmdb[wp]: do_ipc_transfer "valid_mdb"
   (ignore: as_user simp: crunch_simps ball_conj_distrib
        wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_valid_mdb)
-
-
+end
 
 
 lemma copy_mrs_thread_set_dmo:
   assumes ts: "\<And>c. \<lbrace>Q\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := c tcb\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
   assumes dmo: "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>rv. Q\<rbrace>"
-               "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (loadWord x) \<lbrace>\<lambda>rv. Q\<rbrace>"
+               "\<And>x. \<lbrace>Q\<rbrace> do_machine_op (loadWord x) \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows "\<lbrace>Q\<rbrace> copy_mrs s sb r rb n \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (simp add: copy_mrs_redux)
   apply (wp mapM_wp [where S=UNIV, simplified] dmo ts | wpc
@@ -1789,6 +1730,7 @@ lemma set_mrs_valid_globals[wp]:
          ball_tcb_cap_casesI valid_global_refs_cte_lift | simp)+
 
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch ifunsafe[wp]: do_ipc_transfer "if_unsafe_then_cap"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
@@ -1801,16 +1743,15 @@ crunch state_refs_of[wp]: do_ipc_transfer "\<lambda>s. P (state_refs_of s)"
 crunch ct[wp]: do_ipc_transfer "cur_tcb"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
-
 crunch zombies[wp]: do_ipc_transfer "zombies_final"
   (wp: crunch_wps hoare_vcg_const_Ball_lift tcl_zombies simp: crunch_simps ball_conj_distrib )
 
 crunch it[wp]: do_ipc_transfer "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps zipWithM_x_mapM)
 
-
 crunch valid_globals[wp]: do_ipc_transfer "valid_global_refs"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: crunch_simps zipWithM_x_mapM ball_conj_distrib)
+end
 
 
 lemma set_mrs_idle[wp]:
@@ -1835,35 +1776,34 @@ crunch reply_masters[wp]: copy_mrs valid_reply_masters
   (wp: crunch_wps)
 
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 crunch reply[wp]: do_ipc_transfer "valid_reply_caps"
   (wp: crunch_wps hoare_vcg_const_Ball_lift tcl_reply simp: zipWithM_x_mapM ball_conj_distrib
        ignore: const_on_failure)
-
 
 crunch reply_masters[wp]: do_ipc_transfer "valid_reply_masters"
   (wp: crunch_wps hoare_vcg_const_Ball_lift tcl_reply_masters
       simp: zipWithM_x_mapM ball_conj_distrib )
 
-
 crunch valid_idle[wp]: do_ipc_transfer "valid_idle"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
-
 
 crunch arch[wp]: do_ipc_transfer "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
-
 crunch typ_at[wp]: do_ipc_transfer "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
+
+crunch irq_node[wp]: do_ipc_transfer "\<lambda>s. P (interrupt_irq_node s)"
+  (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
+
+end
 
 
 lemma do_ipc_transfer_valid_arch[wp]:
   "\<lbrace>valid_arch_state\<rbrace> do_ipc_transfer s ep bg grt r \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift) wp
-
-
-crunch irq_node[wp]: do_ipc_transfer "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
 
 
 lemma set_mrs_irq_handlers[wp]:
@@ -1883,54 +1823,20 @@ lemma copy_mrs_irq_handlers[wp]:
   apply wp
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 crunch irq_handlers[wp]: do_ipc_transfer "valid_irq_handlers"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
 
-
-declare store_word_offs_arch_objs [wp]
-
-
-declare set_mrs_arch_objs [wp]
-
-
-declare as_user_arch_obj [wp]
-
-
 crunch arch_objs[wp]: do_ipc_transfer "valid_arch_objs"
   (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
-
-
-lemmas set_mrs_valid_global_objs[wp]
-    = set_mrs_thread_set_dmo [OF thread_set_valid_globals do_machine_op_valid_global_objs]
-
-
-lemma as_user_valid_global_objs [wp]:
-  "\<lbrace>valid_global_objs\<rbrace> as_user t m \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
-  by (wp as_user_wp_thread_set_helper, simp)
-
 
 crunch valid_global_objs[wp]: do_ipc_transfer "valid_global_objs"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
-
-lemma as_user_valid_arch_caps [wp]:
-  "\<lbrace>valid_arch_caps\<rbrace> as_user t m \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
-  apply (wp as_user_wp_thread_set_helper thread_set_arch_caps_trivial
-            | rule ball_tcb_cap_casesI | simp)+
-  done
-
-
-lemmas set_mrs_valid_arch_caps[wp]
-    = set_mrs_thread_set_dmo [OF thread_set_arch_caps_trivial
-                                 do_machine_op_valid_arch_caps,
-                                 OF ball_tcb_cap_casesI, simplified]
-
-
 crunch arch_caps[wp]: do_ipc_transfer "valid_arch_caps"
   (wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_valid_arch_caps
    simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
-
 
 crunch v_ker_map[wp]: do_ipc_transfer "valid_kernel_mappings"
   (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
@@ -1940,10 +1846,10 @@ crunch eq_ker_map[wp]: do_ipc_transfer "equal_kernel_mappings"
        simp: zipWithM_x_mapM crunch_simps
      ignore: set_object)
 
-declare as_user_asid_map [wp]
-
 crunch asid_map [wp]: do_ipc_transfer valid_asid_map
   (wp: crunch_wps simp: crunch_simps vs_refs_def)
+
+end
 
 declare as_user_only_idle [wp]
 
@@ -1963,29 +1869,18 @@ lemma set_mrs_only_idle [wp]:
    apply simp
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 crunch only_idle [wp]: do_ipc_transfer only_idle
   (wp: crunch_wps simp: crunch_simps)
-
-lemma as_user_global_pd_mappings [wp]:
-  "\<lbrace>valid_global_pd_mappings\<rbrace> as_user t m \<lbrace>\<lambda>_. valid_global_pd_mappings\<rbrace>"
-  by (wp as_user_wp_thread_set_helper, simp)
-
-lemmas set_mrs_global_pd_mappings[wp]
-    = set_mrs_thread_set_dmo[OF thread_set_global_pd_mappings do_machine_op_global_pd_mappings]
 
 crunch global_pd_mappings [wp]: do_ipc_transfer "valid_global_pd_mappings"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma as_user_pspace_in_kernel_window[wp]:
-  "\<lbrace>pspace_in_kernel_window\<rbrace> as_user t m \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
-  by (wp as_user_wp_thread_set_helper | simp)+
-
-lemmas set_mrs_pspace_in_kernel_window[wp]
-    = set_mrs_thread_set_dmo[OF thread_set_pspace_in_kernel_window
-                                do_machine_op_pspace_in_kernel_window]
-
 crunch pspace_in_kernel_window[wp]: do_ipc_transfer "pspace_in_kernel_window"
   (wp: crunch_wps simp: crunch_simps)
+
+end
 
 lemma as_user_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> as_user t m \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
@@ -1997,12 +1892,16 @@ lemmas set_mrs_cap_refs_in_kernel_window[wp]
     = set_mrs_thread_set_dmo[OF thread_set_cap_refs_in_kernel_window
                                 do_machine_op_cap_refs_in_kernel_window]
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 crunch cap_refs_in_kernel_window[wp]: do_ipc_transfer "cap_refs_in_kernel_window"
   (wp: crunch_wps hoare_vcg_const_Ball_lift ball_tcb_cap_casesI
      simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
 
 crunch valid_objs[wp]: do_ipc_transfer "valid_objs"
   (wp: hoare_vcg_const_Ball_lift simp:ball_conj_distrib )
+
+end
 
 lemma as_user_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> as_user r f \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
@@ -2037,16 +1936,13 @@ lemma set_mrs_valid_ioc[wp]:
   apply (simp add: tcb_cap_cases_def split: split_if_asm)
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch valid_ioc[wp]: do_ipc_transfer "valid_ioc" (wp: mapM_UNIV_wp)
+end
 
 lemma as_user_machine_state[wp]:
   "\<lbrace>\<lambda>s. P(machine_state s)\<rbrace> as_user r f \<lbrace>\<lambda>_. \<lambda>s. P(machine_state s)\<rbrace>"
   by (wp | simp add: as_user_def split_def)+
-
-lemma as_user_vms[wp]:
-  "\<lbrace>\<lambda>s. valid_machine_state s\<rbrace> as_user r f \<lbrace>\<lambda>_ s. valid_machine_state s\<rbrace>"
-  by (simp add: valid_machine_state_def)
-     (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
 
 lemma set_mrs_def2:
   "set_mrs thread buf msgs \<equiv>
@@ -2076,6 +1972,8 @@ lemma set_mrs_vms[wp]:
    apply simp_all
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 crunch vms[wp]: do_ipc_transfer valid_machine_state (wp: mapM_UNIV_wp)
 
 lemma do_ipc_transfer_invs[wp]:
@@ -2096,6 +1994,8 @@ lemma do_ipc_transfer_invs[wp]:
    apply (wp lookup_ipc_buffer_inv)
   apply (clarsimp simp: obj_at_def is_tcb invs_valid_objs)
   done
+
+end
 
 lemma dit_tcb_at [wp]:
   "\<lbrace>tcb_at t\<rbrace> do_ipc_transfer s ep bg grt r \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
@@ -2133,6 +2033,8 @@ lemma valid_reply_caps_awaiting_reply:
 
 lemmas cap_insert_typ_ats [wp] = abs_typ_at_lifts [OF cap_insert_typ_at]
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 lemma transfer_caps_loop_cte_wp_at:
   assumes imp: "\<And>cap. P cap \<Longrightarrow> \<not> is_untyped_cap cap"
   shows "\<lbrace>cte_wp_at P sl and K (sl \<notin> set slots) and (\<lambda>s. \<forall>x \<in> set slots. cte_at x s)\<rbrace>
@@ -2158,6 +2060,7 @@ lemma transfer_caps_loop_cte_wp_at:
              | case_tac slots)+
   done
 
+end
 
 lemma transfer_caps_tcb_caps:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
@@ -2181,13 +2084,13 @@ lemma transfer_caps_tcb_caps:
     apply (rule hoare_post_imp)
      apply (rule_tac Q="\<lambda>x. real_cte_at x s" in ballEI, assumption)
      apply (erule real_cte_at_cte)
-    apply (rule get_receive_slots_real_ctes)
+    apply (rule get_rs_real_cte_at)
    apply clarsimp
  done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch cte_wp_at[wp]: do_fault_transfer "cte_wp_at P p"
-
+end
 
 
 lemma transfer_caps_non_null_cte_wp_at:
@@ -2228,7 +2131,7 @@ lemma do_normal_transfer_non_null_cte_wp_at:
     | clarsimp simp:imp)+
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma do_ipc_transfer_non_null_cte_wp_at:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows
@@ -2239,7 +2142,7 @@ lemma do_ipc_transfer_non_null_cte_wp_at:
   apply (wp do_normal_transfer_non_null_cte_wp_at hoare_drop_imp hoare_allI
     | wpc | simp add:imp)+
   done
-
+end
 
 lemma thread_get_tcb_at:
   "\<lbrace>\<top>\<rbrace> thread_get f tptr \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
@@ -2277,15 +2180,16 @@ lemma cte_wp_at_reply_cap_can_fast_finalise:
   by (clarsimp simp: cte_wp_at_caps_of_state can_fast_finalise_def)
 
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma is_derived_ReplyCap [simp]:
   "\<And>m p. is_derived m p (cap.ReplyCap t False) = (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)"
   apply (subst fun_eq_iff)
   apply clarsimp
-  apply (case_tac x, simp_all add: is_derived_def is_cap_simps
+  apply (case_tac x, simp_all add: is_derived_def is_derived_arch_def is_cap_simps
                                    cap_master_cap_def conj_comms is_pt_cap_def
                                    vs_cap_ref_def)
   done
-
+end
 
 
 lemma do_normal_transfer_tcb_caps:
@@ -2301,6 +2205,8 @@ lemma do_normal_transfer_tcb_caps:
   done
 
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 lemma do_ipc_transfer_tcb_caps:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows
@@ -2313,15 +2219,10 @@ lemma do_ipc_transfer_tcb_caps:
        | wpc | simp add:imp)+
   done
 
-lemma set_mrs_pred_tcb [wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  apply (rule set_mrs_thread_set_dmo)
-   apply (rule thread_set_no_change_tcb_pred)
-   apply (wp | simp add: tcb_to_itcb_def)+
-  done
-
 crunch pred_tcb[wp]: do_ipc_transfer "pred_tcb_at proj P t"
   (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM)
+
+end
 
 
 crunch tcb_at[wp]: setup_caller_cap "tcb_at t"
@@ -2350,8 +2251,9 @@ where
 | "threads_of (Endpoint x)      = queue_of x"
 
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch ex_cap[wp]: set_message_info "ex_nonz_cap_to p"
-
+end
 
 lemma tcb_bound_refs_eq_restr:
   "tcb_bound_refs mptr = {x. x \<in> id tcb_bound_refs mptr \<and> snd x = TCBBound}"
@@ -2539,12 +2441,12 @@ lemma recv_ep_distinct:
   apply (clarsimp simp: valid_obj_def valid_ep_def)
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma rfk_invs: "\<lbrace>invs and tcb_at t\<rbrace> reply_from_kernel t r \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (cases r, simp_all add: reply_from_kernel_def)
   apply (wp | simp | clarsimp)+
   done
-
+end
 
 lemma st_tcb_at_valid_st: 
   "\<lbrakk> invs s ; tcb_at t s ; st_tcb_at (op= st) t s \<rbrakk> \<Longrightarrow> valid_tcb_state st s"
@@ -2717,11 +2619,11 @@ lemmas transfer_caps_loop_cap_to[wp] = transfer_caps_loop_pres [OF cap_insert_ex
 
 crunch cap_to[wp]: set_extra_badge "ex_nonz_cap_to p"
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch cap_to[wp]: do_ipc_transfer "ex_nonz_cap_to p"
   (wp: crunch_wps 
     simp: zipWithM_x_mapM ignore: transfer_caps_loop)
-
+end
 
 crunch it[wp]: receive_ipc "\<lambda>s. P (idle_thread s)"
   (wp: hoare_drop_imps simp: crunch_simps zipWithM_x_mapM)
@@ -2806,14 +2708,14 @@ lemma setup_caller_cap_valid_arch_caps[wp]:
   apply (auto elim: st_tcb_at_reply_cap_valid)
   done
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma setup_caller_cap_valid_global_objs[wp]:
   "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   apply (wp valid_global_objs_lift valid_ao_at_lift)
   apply (simp_all add: setup_caller_cap_def)
    apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
   done
-
+end
 
 crunch irq_handlers[wp]: set_endpoint "valid_irq_handlers"
   (wp: crunch_wps)
@@ -2851,12 +2753,10 @@ crunch vms[wp]: setup_caller_cap "valid_machine_state"
 
 crunch valid_irq_states[wp]: setup_caller_cap "valid_irq_states"
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch valid_irq_states[wp]: do_ipc_transfer "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
-(*
-lemma as_user_obj_at_ntfn:
-  "\<lbrace>obj_at P ntfnptr\<rbrace> as_user t m \<lbrace>obj_at P ntfnptr\<rbrace>"
-*)
+end
 
 lemma complete_signal_invs:
   "\<lbrace>invs and tcb_at tcb\<rbrace>
@@ -2876,6 +2776,8 @@ lemma complete_signal_invs:
               elim: if_live_then_nonz_capD[OF invs_iflive] obj_at_weakenE 
                     obj_at_valid_objsE[OF _ invs_valid_objs])
   done
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma ri_invs':
   notes split_if[split del]
@@ -2995,6 +2897,8 @@ lemmas ri_invs[wp] = ri_invs'[where Q=\<top>,simplified hoare_post_taut, OF True
 
 crunch ntfn_at[wp]: set_message_info "ntfn_at ntfn"
 
+end
+
 crunch typ_at[wp]: set_message_info "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -3008,7 +2912,9 @@ lemma set_message_info_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_message_info a b \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift) wp
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch caps[wp]: set_message_info "\<lambda>s. P (caps_of_state s)"
+end
 
 crunch irq_node[wp]: set_message_info "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps)
@@ -3017,19 +2923,13 @@ lemma set_message_info_global_refs [wp]:
   "\<lbrace>valid_global_refs\<rbrace> set_message_info a b \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
   by (rule valid_global_refs_cte_lift) wp
 
-lemma set_mrs_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> set_mrs a b c \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp
-
 crunch irq_node[wp]: set_mrs "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma set_mrs_global_refs [wp]:
-  "\<lbrace>valid_global_refs\<rbrace> set_mrs a b c \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
-  by (rule valid_global_refs_cte_lift) wp
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch interrupt_states[wp]: set_message_info "\<lambda>s. P (interrupt_states s)"
   (simp: crunch_simps )
+end
 
 crunch interrupt_states[wp]: set_mrs "\<lambda>s. P (interrupt_states s)"
   (simp: crunch_simps wp: crunch_wps)
@@ -3053,6 +2953,8 @@ lemma valid_bound_tcb_typ_at:
   apply (wp hoare_vcg_all_lift tcb_at_typ_at static_imp_wp)
   apply (fastforce)
   done
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 crunch bound_tcb[wp]: set_thread_state, set_message_info, set_mrs "valid_bound_tcb t"
 (wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp ignore: set_object
@@ -3147,6 +3049,8 @@ lemma rai_invs':
                   dest: valid_reply_capsD)
   done
 
+end
+
 lemmas rai_invs[wp] = rai_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI,simplified]
 
 lemma pspace_clear_update1:
@@ -3185,7 +3089,7 @@ crunch ex_nonz_cap_to[wp]: set_message_info "ex_nonz_cap_to p"
 
 
 lemma is_derived_not_Null [simp]:
-  "\<not>is_derived m p c cap.NullCap"
+  "\<not>is_derived m p c NullCap"
   by (auto simp add: is_derived_def cap_master_cap_simps dest: cap_master_cap_eqDs)
 
 crunch mdb[wp]: set_message_info valid_mdb 
