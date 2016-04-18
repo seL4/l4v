@@ -11,7 +11,7 @@
 theory AbstractArrays
 imports
   "../../lib/TypHeapLib"
-  "../../lib/WordLemmaBucket"
+  "../../lib/WordSetup"
 begin
 
 (*

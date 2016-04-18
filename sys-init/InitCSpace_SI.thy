@@ -438,8 +438,8 @@ lemma mint_pre:
   apply (drule guard_equal_si_cspace_cap)+
   apply clarsimp
   apply (clarsimp simp: word_bits_def guard_equal_def Let_unfold)
-  apply (metis word_bits_def less_or_eq_imp_le
-               well_formed_object_size_bits_word_bits word_bits_eq)
+  apply (drule (1) well_formed_object_size_bits_word_bits)
+  apply (simp add: word_bits_def)
   done
 
 lemma move_pre_irq_handler:
@@ -549,8 +549,8 @@ lemma move_pre_irq_handler:
   apply (drule guard_equal_si_cspace_cap)+
   apply clarsimp
   apply (clarsimp simp: word_bits_def guard_equal_def Let_unfold)
-  apply (metis word_bits_def less_or_eq_imp_le
-               well_formed_object_size_bits_word_bits word_bits_eq)
+  apply (drule (1) well_formed_object_size_bits_word_bits)
+  apply (simp add: word_bits_def)
   done
 
 lemma mint_post:

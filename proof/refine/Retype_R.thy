@@ -1087,7 +1087,7 @@ proof
     apply (clarsimp simp:foldr_upd_app_if[folded data_map_insert_def])
     apply (drule domI[where m = "ksPSpace s'"])
     apply (drule(1) IntI)
-    apply (erule_tac A = "A \<inter> B" for A B in WordLemmaBucket.in_emptyE[rotated])
+    apply (erule_tac A = "A \<inter> B" for A B in in_emptyE[rotated])
     apply (rule disjoint_subset[OF new_cap_addrs_subset[OF cover']])
     apply (clarsimp simp:ptr_add_def field_simps)
     apply (rule pspace_no_overlap_disjoint'[OF vs'(1) pn'])
@@ -2040,8 +2040,8 @@ proof -
       apply simp
       apply (subst unat_minus_one)
        apply (subst mult.commute)
-       apply (rule word_power_nonzero)
-         apply (rule of_nat_less_pow[OF n_estimate])
+       apply (rule word_power_nonzero_32)
+         apply (rule of_nat_less_pow_32[OF n_estimate])
          apply (simp add:word_bits_def objBitsKO_bounded_low ko)
         apply (simp add:range_cover_def obj_bits_api ko word_bits_def)
        apply (cut_tac not_zero',clarsimp simp:ko)
@@ -4014,7 +4014,7 @@ lemma valid_cap'_range_no_overlap:
     apply clarsimp
     apply (rule is_aligned_no_wrap')
      apply (fastforce simp:capAligned_def)
-    apply (erule of_nat_less_pow)
+    apply (erule of_nat_less_pow_32)
     apply (simp add:capAligned_def)
    apply (drule(1) disjoint_subset2)
    apply blast

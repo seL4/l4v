@@ -870,7 +870,7 @@ lemma mask_in_range:
    apply simp
    apply (subst conj_commute)
    apply (rule exI, rule context_conjI[OF _ word_plus_and_or_coroll])
-    apply (subst mask_eq_iff_w2p_alt)
+    apply (subst mask_eq_iff_w2p)
      apply (simp add: word_bits_conv word_size)
     apply (rule minus_one_helper5)
      apply simp

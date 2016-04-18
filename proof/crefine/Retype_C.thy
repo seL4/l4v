@@ -358,7 +358,7 @@ lemma memset_spec:
   done
 
 lemma is_aligned_power2: "b \<le> a \<Longrightarrow> is_aligned (2 ^ a) b"
-  apply (metis WordLemmaBucket.is_aligned_0' is_aligned_triv
+  apply (metis Word_Lemmas.is_aligned_0' is_aligned_triv
       is_aligned_weaken le_def power_overflow)
   done
 
@@ -1350,7 +1350,7 @@ proof (rule ctes_of_retype)
     apply -
     apply (drule(1) pspace_no_overlap_disjoint')
     apply (frule new_cap_addrs_subset)
-    apply (clarsimp simp: WordSetup.ptr_add_def field_simps)
+    apply (clarsimp simp: Word_Lib.ptr_add_def field_simps)
     apply fastforce
     done
 qed
@@ -1713,7 +1713,7 @@ qed
 lemma ccte_relation_makeObject:
   notes option.case_cong_weak [cong]
   shows "ccte_relation makeObject (from_bytes (replicate (size_of TYPE(cte_C)) 0))"
-  apply (simp add: Let_def makeObject_cte size_of_def ccte_relation_def option_map_Some_eq2)
+  apply (simp add: Let_def makeObject_cte size_of_def ccte_relation_def map_option_Some_eq2)
   apply (simp add: from_bytes_def)
   apply (simp add: typ_info_simps cte_C_tag_def  cte_lift_def 
     size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
@@ -1732,7 +1732,7 @@ lemma ccte_relation_makeObject:
 lemma ccte_relation_nullCap:
   notes option.case_cong_weak [cong]
   shows "ccte_relation (CTE NullCap (MDB 0 0 False False)) (from_bytes (replicate (size_of TYPE(cte_C)) 0))"
-  apply (simp add: Let_def makeObject_cte size_of_def ccte_relation_def option_map_Some_eq2)
+  apply (simp add: Let_def makeObject_cte size_of_def ccte_relation_def map_option_Some_eq2)
   apply (simp add: from_bytes_def)
   apply (simp add: typ_info_simps cte_C_tag_def  cte_lift_def 
     size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
@@ -2554,7 +2554,7 @@ lemma insertNewCap_ccorres_helper:
    apply (rule conjI)
     apply (erule (2) cmap_relation_updI)
     apply (simp add: ccap_relation_def ccte_relation_def cte_lift_def)
-    subgoal by (simp add: cte_to_H_def option_map_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf is_aligned_neg_mask
+    subgoal by (simp add: cte_to_H_def map_option_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf is_aligned_neg_mask
       c_valid_cte_def true_def
       split: option.splits)
    subgoal by simp
@@ -3774,7 +3774,7 @@ lemma mapM_x_storeWord_step:
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
    apply (simp add: mapM_x_map comp_def upto_enum_word del: upt.simps)
-   apply (subst div_power_helper [OF sz2, simplified])
+   apply (subst div_power_helper_32 [OF sz2, simplified])
     apply assumption
    apply (simp add: word_bits_def unat_minus_one del: upt.simps)
    apply (subst mapM_x_storeWord)
@@ -4204,13 +4204,13 @@ lemma copyGlobalMappings_ccorres:
             apply (simp add: iffD2[OF mask_eq_iff_w2p] word_size pdBits_def pageBits_def)
             apply (subst(asm) iffD2[OF mask_eq_iff_w2p])
               subgoal by (simp add: word_size)
-             apply (simp only: word32_shift_by_2)
+             apply (simp only: word_shift_by_2)
              apply (rule shiftl_less_t2n)
               apply (rule of_nat_power)
                subgoal by simp
               subgoal by simp
              subgoal by simp
-            apply (simp add: word32_shift_by_2)
+            apply (simp add: word_shift_by_2)
             apply (drule arg_cong[where f="\<lambda>x. x >> 2"], subst(asm) shiftl_shiftr_id)
               subgoal by (simp add: word_bits_def)
              apply (rule of_nat_power)
@@ -4608,19 +4608,17 @@ lemma ccorres_placeNewObject_tcb:
    apply vcg
   apply (clarsimp simp: rf_sr_htd_safe)
   apply (subgoal_tac "c_guard (tcb_Ptr (regionBase + 0x100))")
-   apply (subgoal_tac "hrs_htd
-                (hrs_htd_update (ptr_retyp (Ptr regionBase :: (cte_C[5]) ptr)
-                    \<circ> ptr_retyp (tcb_Ptr (regionBase + 0x100)))
-                  (hrs_mem_update (heap_update_list regionBase (replicate 512 0))
-                    (t_hrs_' (globals x)))) \<Turnstile>\<^sub>t tcb_Ptr (regionBase + 0x100)")
+   apply (subgoal_tac "hrs_htd (hrs_htd_update (ptr_retyp (Ptr regionBase :: (cte_C[5]) ptr)
+                                 \<circ> ptr_retyp (tcb_Ptr (regionBase + 0x100)))
+                                 (hrs_mem_update (heap_update_list regionBase (replicate 512 0))
+                                 (t_hrs_' (globals x)))) \<Turnstile>\<^sub>t tcb_Ptr (regionBase + 0x100)")
     prefer 2
     apply (clarsimp simp: hrs_htd_update)
-    apply (rule h_t_valid_ptr_retyps_gen_disjoint[where n=1 and arr=False,
-        unfolded ptr_retyps_gen_def, simplified])
+    apply (rule h_t_valid_ptr_retyps_gen_disjoint[where n=1 and arr=False, 
+                unfolded ptr_retyps_gen_def, simplified])
      apply (rule ptr_retyp_h_t_valid)
      apply simp
     apply (rule tcb_ptr_orth_cte_ptrs')
-   apply (simp add:word_0_sle_from_less)
    apply (intro conjI allI impI)
               apply (rule is_aligned_no_wrap')
                apply (erule range_cover.aligned)
@@ -4632,8 +4630,7 @@ lemma ccorres_placeNewObject_tcb:
          apply (simp only: rf_sr_domain_eq)
          apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                kernel_data_refs_domain_eq_rotate)
-         apply (intro ptr_retyps_htd_safe_neg ptr_retyp_htd_safe_neg,
-                simp_all add: size_of_def)[1]
+         apply (intro ptr_retyps_htd_safe_neg ptr_retyp_htd_safe_neg, simp_all add: size_of_def)[1]
           apply (erule disjoint_subset[rotated])
           apply (rule intvl_sub_offset, simp)
          apply (erule disjoint_subset[rotated], simp add: intvl_start_le size_td_array cte_C_size)
@@ -4646,19 +4643,18 @@ lemma ccorres_placeNewObject_tcb:
    apply (rule bexI [OF _ placeNewObject_eq])
       apply (clarsimp simp: split_def new_cap_addrs_def)
       apply (cut_tac \<sigma>=\<sigma>
-         and x="globals_update (t_hrs_'_update (hrs_mem_update (heap_update_list regionBase (replicate 512 0)))) x"
-         and ks="ksPSpace \<sigma>" and p="tcb_Ptr (regionBase + 0x100)" in cnc_tcb_helper)
+                   and x="globals_update (t_hrs_'_update (hrs_mem_update (heap_update_list regionBase (replicate 512 0)))) x"
+                   and ks="ksPSpace \<sigma>" and p="tcb_Ptr (regionBase + 0x100)" in cnc_tcb_helper)
                    apply clarsimp
-                   apply (clarsimp cong: globals.unfold_congs
-                      StateSpace.state.unfold_congs
-                      kernel_state.unfold_congs)
+                   apply (clarsimp cong: globals.unfold_congs StateSpace.state.unfold_congs
+                                         kernel_state.unfold_congs)
                    apply (erule rf_sr_rep0, simp add: region_actually_is_bytes)
                   apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def
-                    ctcb_offset_def objBitsKO_def range_cover.aligned)
+                                        ctcb_offset_def objBitsKO_def range_cover.aligned)
                  apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_def objBitsKO_def)
                 apply (simp add:olen_add_eqv[symmetric])
                 apply (erule is_aligned_no_wrap'[OF range_cover.aligned])
-                 apply simp
+                apply simp
                apply simp
               apply (clarsimp)
              apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_def objBitsKO_def)
@@ -4666,17 +4662,14 @@ lemma ccorres_placeNewObject_tcb:
            apply simp
           apply clarsimp
          apply (frule region_actually_is_bytes)
-         apply (clarsimp simp: region_is_bytes'_def
-           ctcb_ptr_to_tcb_ptr_def ctcb_offset_def split_def
-           hrs_mem_update_def hrs_htd_def)
-        apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_def
-          hrs_mem_update_def split_def)
-        apply (rule heap_list_update', auto simp: length_replicate word_bits_conv)[1]
+         apply (clarsimp simp: region_is_bytes'_def ctcb_ptr_to_tcb_ptr_def ctcb_offset_def split_def
+                               hrs_mem_update_def hrs_htd_def)
+        apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_def hrs_mem_update_def split_def)
+        apply (rule heap_list_update', auto simp: word_bits_conv)[1]
        apply (simp add: ctcb_ptr_to_tcb_ptr_def ctcb_offset_def)
-      apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_def
-        hrs_mem_update_def split_def)
+      apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_def hrs_mem_update_def split_def)
       apply (clarsimp simp: rf_sr_def ptr_retyps_gen_def cong: Kernel_C.globals.unfold_congs
-        StateSpace.state.unfold_congs kernel_state.unfold_congs)
+                            StateSpace.state.unfold_congs kernel_state.unfold_congs)
      apply (clarsimp simp: word_bits_def)
     apply (clarsimp simp: objBitsKO_def range_cover.aligned)
    apply (clarsimp simp: no_fail_def)

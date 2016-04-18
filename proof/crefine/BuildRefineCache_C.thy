@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-theory BuildRefineCache_C
+theory BuildRefineCache_C (* FIXME: broken *)
 imports "~~/src/HOL/Main"
 begin
 

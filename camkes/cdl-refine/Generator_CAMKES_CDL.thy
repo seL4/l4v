@@ -3,7 +3,6 @@ theory Generator_CAMKES_CDL imports
   "../adl-spec/Library_CAMKES"
   "../../spec/capDL/Syscall_D"
   Types_CAMKES_CDL
-  "../../lib/WordLemmaBucket"
   "../../proof/access-control/Dpolicy"
 begin
 

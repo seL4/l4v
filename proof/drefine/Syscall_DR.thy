@@ -1079,7 +1079,7 @@ lemma reply_from_kernel_error:
      apply (simp add:get_tcb_message_info_def data_to_message_info_def word_neq_0_conv)
      apply (simp add:shiftr_over_or_dist le_mask_iff word_neq_0_conv)
      apply (subst shiftl_shiftr_id)
-       apply (simp add:WordSetup.word_bits_def mask_def le_mask_iff[symmetric])+
+       apply (simp add:word_bits_def mask_def le_mask_iff[symmetric])+
       apply unat_arith
      apply simp
     apply (wp hoare_drop_imp hoare_vcg_all_lift)
@@ -1347,7 +1347,7 @@ lemma handle_invocation_corres:
         apply (rule_tac Q = "\<lambda>x. \<top>" and Q'="\<lambda>x. op = s'a" in corres_initial_splitE)
            apply (clarsimp simp: transform_full_intent_def Let_def)
            apply (rule corres_guard_imp[OF dcorres_lookup_cap_and_slot[simplified]])
-              apply (clarsimp simp: Types_D.word_bits_def not_idle_thread_def invs_def valid_state_def)+
+              apply (clarsimp simp: word_bits_def not_idle_thread_def invs_def valid_state_def)+
           apply (rule dcorres_symb_exec_r_evalMonad)
              apply wp
             apply (case_tac rv)
@@ -1510,7 +1510,7 @@ lemma handle_recv_corres:
                defer(* NEED RECEIVE ASYNC IPC *)
                apply clarsimp
               apply (rule lookup_cap_corres, simp)
-              apply (simp add: Types_D.word_bits_def)
+              apply (simp add: word_bits_def)
              apply wp
             apply (rule hoare_vcg_conj_liftE_R)
              apply (rule hoare_post_imp_R, rule lookup_cap_valid)

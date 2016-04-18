@@ -1434,7 +1434,7 @@ lemma valid_bound_tcb'_Some[simp]:
   by (auto simp: valid_bound_tcb'_def)
 
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def
-lemmas objBitsKO_simps = objBitsKO_def word_size_def objBits_simps
+lemmas objBitsKO_simps = objBits_simps
 
 lemmas wordRadix_def' = wordRadix_def[simplified]
 

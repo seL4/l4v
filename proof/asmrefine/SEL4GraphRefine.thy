@@ -9,11 +9,11 @@
  *)
 
 theory SEL4GraphRefine
-
-imports "../../tools/asmrefine/ProveGraphRefine"
+imports
+  "../../tools/asmrefine/ProveGraphRefine"
   "../../spec/cspec/Substitute"
-  "SEL4GlobalsSwap" "SEL4SimplExport"
-
+  "SEL4GlobalsSwap"
+  "SEL4SimplExport"
 begin
 
 declare ptr_add_assertion_uint[simp del]

@@ -187,4 +187,12 @@ lemma isRight_right_map:
   "isRight (case_sum Inl (Inr o f) v) = isRight v"
   by (simp add: isRight_def split: sum.split)
 
+lemma zipWith_nth:
+  "\<lbrakk> n < min (length xs) (length ys) \<rbrakk> \<Longrightarrow> zipWith f xs ys ! n = f (xs ! n) (ys ! n)"
+  unfolding zipWith_def by simp
+
+lemma length_zipWith [simp]:
+  "length (zipWith f xs ys) = min (length xs) (length ys)"
+  unfolding zipWith_def by simp
+  
 end

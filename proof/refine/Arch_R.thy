@@ -82,7 +82,7 @@ lemma createObject_typ_at':
     (s\<lparr>ksPSpace := \<lambda>a. if a = ptr then Some ty else ksPSpace s a\<rparr>)")
   apply (simp add:ps_clear_def)+
   apply (rule ccontr)
-  apply (drule WordLemmaBucket.int_not_emptyD)
+  apply (drule int_not_emptyD)
   apply clarsimp
   apply (unfold pspace_no_overlap'_def)
   apply (erule allE)+
@@ -325,10 +325,10 @@ lemma pac_corres:
            apply (simp add:empty_descendants_range_in')
           apply (simp add:word_bits_def pageBits_def)
          apply (clarsimp simp:max_free_index_def)
+         apply (rule is_aligned_weaken)
+          apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
+         apply (simp add:pageBits_def)
         apply (clarsimp simp:max_free_index_def)
-        apply (rule is_aligned_weaken)
-         apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
-        apply (simp add:pageBits_def)
        apply clarsimp
        apply (drule(1) cte_cap_in_untyped_range)
             apply (fastforce simp:cte_wp_at_ctes_of)

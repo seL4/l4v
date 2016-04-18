@@ -467,7 +467,7 @@ lemma unaligned_page_offsets_helper:
   apply (cut_tac mask_eq_iff_w2p [of "pageBitsForSize vmpage_size" "n * 2 ^ pageBits"])
    prefer 2
    apply (case_tac vmpage_size, simp_all add: pageBits_def word_size)
-  apply (cut_tac word_power_nonzero[of n pageBits];
+  apply (cut_tac word_power_nonzero_32[of n pageBits];
          simp add: word_bits_conv pageBits_def)
    prefer 2
    apply (case_tac vmpage_size, simp_all add: pageBits_def word_size)

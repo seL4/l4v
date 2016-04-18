@@ -11,8 +11,8 @@
 theory LemmaBucket_C
 imports
   Lib
-  TypHeapLib
   "Word_Lib/Word_Lemmas_32"
+  TypHeapLib
   "../tools/c-parser/umm_heap/ArrayAssertion"
 begin
 
@@ -53,8 +53,7 @@ lemma exec_Guard:
   "(G \<turnstile> \<langle>Guard Err S c, Normal s\<rangle> \<Rightarrow> s')
        = (if s \<in> S then G \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> s'
                 else s' = Fault Err)"
-  by (auto split: split_if elim!: exec_elim_cases
-           intro: exec.intros)
+  by (auto split: split_if elim!: exec_elim_cases intro: exec.intros)
 
 lemma to_bytes_word8:
   "to_bytes (v :: word8) xs = [v]"
@@ -215,7 +214,7 @@ lemma upto_intvl_eq':
     apply (subst field_simps [symmetric], rule word_plus_mono_right)
      apply simp
     apply assumption
-   apply (subst of_nat_mono_maybe_le [symmetric])
+   apply (subst Word_Lemmas.of_nat_mono_maybe_le [symmetric])
      apply simp
     apply simp
    apply simp
@@ -396,7 +395,7 @@ proof (rule disjointI, rule notI)
   
   also have "\<dots> \<le> c" by (rule abc)  
   also have "\<dots> \<le> c + of_nat ky" using cld dlt ky
-    by - (rule word_random [OF _ iffD1 [OF of_nat_mono_maybe_le]], simp+ )
+    by - (rule word_random [OF _ iffD1 [OF Word_Lemmas.of_nat_mono_maybe_le]], simp+ )
   finally show False using ac by simp
 qed
 

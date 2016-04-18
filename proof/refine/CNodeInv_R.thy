@@ -5950,7 +5950,7 @@ lemma make_zombie_tcb_invs':
    apply (drule ctes_of_valid', clarsimp)
    apply (clarsimp simp: valid_cap'_def capAligned_def objBits_simps)
   apply (rule Ball_emptyI, simp)
-  apply (simp add: tcb_cte_cases_def word32_count_from_top)
+  apply (simp add: tcb_cte_cases_def word_count_from_top)
   done
 
 lemma isFinal_Zombie:

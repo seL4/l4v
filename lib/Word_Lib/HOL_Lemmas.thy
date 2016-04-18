@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory HOL_Lemma_Bucket
+theory HOL_Lemmas
 imports Main
 begin
 
@@ -38,9 +38,6 @@ lemma None_upd_eq:
   "g x = None \<Longrightarrow> g(x := None) = g"
   by (rule ext) simp
 
-(******** GeneralLib ****************)
-
-(* these sometimes crop up in simplified terms and should be blown away *)
 lemma exx [iff]: "\<exists>x. x" by blast
 lemma ExNot [iff]: "Ex Not" by blast
 
@@ -48,13 +45,9 @@ lemma cases_simp2 [simp]:
   "((\<not> P \<longrightarrow> Q) \<and> (P \<longrightarrow> Q)) = Q"
   by blast
 
-(* FIXME : Should probably be in the simpset, but would cause too much
- * legacy breakage. *)
 lemma a_imp_b_imp_b:
   "((a \<longrightarrow> b) \<longrightarrow> b) = (a \<or> b)"
   by blast
-
-(* List stuff *)
 
 lemma length_neq:
   "length as \<noteq> length bs \<Longrightarrow> as \<noteq> bs" by auto
@@ -77,15 +70,10 @@ lemma eq_concat_lenD:
   by simp
 
 lemma map_upt_reindex': "map f [a ..< b] = map (\<lambda>n. f (n + a - x)) [x ..< x + b - a]"
-  apply (rule nth_equalityI)
-   apply simp
-  apply (clarsimp simp: add.commute)
-  done
+  by (rule nth_equalityI; clarsimp simp: add.commute)
 
 lemma map_upt_reindex: "map f [a ..< b] = map (\<lambda>n. f (n + a)) [0 ..< b - a]"
-  apply (subst map_upt_reindex' [where x=0])
-  apply clarsimp
-  done
+  by (subst map_upt_reindex' [where x=0]) clarsimp
 
 lemma notemptyI:
   "x \<in> S \<Longrightarrow> S \<noteq> {}"
@@ -106,18 +94,11 @@ lemma cons_set_intro:
 
 lemma takeWhile_take_has_property:
   "n \<le> length (takeWhile P xs) \<Longrightarrow> \<forall>x \<in> set (take n xs). P x"
-  apply (induct xs arbitrary: n)
-   apply simp
-  apply (simp split: split_if_asm)
-  apply (case_tac n, simp_all)
-  done
+  by (induct xs arbitrary: n; simp split: split_if_asm) (case_tac n, simp_all)
 
 lemma takeWhile_take_has_property_nth:
   "\<lbrakk> n < length (takeWhile P xs) \<rbrakk> \<Longrightarrow> P (xs ! n)"
-  apply (induct xs arbitrary: n, simp)
-  apply (simp split: split_if_asm)
-  apply (case_tac n, simp_all)
-  done
+  by (induct xs arbitrary: n; simp split: split_if_asm) (case_tac n, simp_all)
 
 lemma takeWhile_replicate:
   "takeWhile f (replicate len x) = (if f x then replicate len x else [])"
@@ -130,8 +111,6 @@ lemma takeWhile_replicate_empty:
 lemma takeWhile_replicate_id:
   "f x \<Longrightarrow> takeWhile f (replicate len x) = replicate len x"
   by (simp add: takeWhile_replicate)
-
-(* These aren't used, but are generally useful *)
 
 lemma list_all2_conj_nth:
   assumes lall: "list_all2 P as cs"
@@ -214,11 +193,9 @@ next
    case False
    then obtain max where mv: "max \<in> set ls" and mm: "\<forall>z \<in> set ls. z \<le> max" using Cons.hyps
      by auto
-
    show ?thesis
    proof (cases "max \<le> l")
      case True
-
      have "l \<in> set (l # ls)" by simp
      thus ?thesis
      proof
@@ -226,7 +203,6 @@ next
      qed
    next
      case False
-
      from mv have "max \<in> set (l # ls)" by simp
      thus ?thesis
      proof
@@ -236,30 +212,23 @@ next
  qed
 qed
 
-text {* Bits *}
-
-lemma True_notin_set_replicate_conv: "True \<notin> set ls = (ls = replicate (length ls) False)"
+lemma True_notin_set_replicate_conv:
+  "True \<notin> set ls = (ls = replicate (length ls) False)"
   by (induct ls) simp+
 
 lemma Collect_singleton_eqI:
   "(\<And>x. P x = (x = v)) \<Longrightarrow> {x. P x} = {v}"
-  apply (subst singleton_conv [symmetric])
-  apply (rule Collect_cong)
-  apply simp
-  done
+  by auto
 
 lemma exEI:
   "\<lbrakk> \<exists>y. P y; \<And>x. P x \<Longrightarrow> Q x \<rbrakk> \<Longrightarrow> \<exists>z. Q z"
-  apply (erule exE)
-  apply (rule_tac x = y in exI)
-  apply simp
-  done
+  by (rule ex_forward)
 
 lemma allEI:
-  assumes x: "\<forall>x. P x"
-  assumes y: "\<And>x. P x \<Longrightarrow> Q x"
-  shows      "\<forall>x. Q x"
-  by (rule allI, rule y, rule spec, rule x)
+  assumes "\<forall>x. P x"
+  assumes "\<And>x. P x \<Longrightarrow> Q x"
+  shows   "\<forall>x. Q x"
+  using assms by (rule all_forward)
 
 text {* General lemmas that should be in the library *}
 
@@ -277,7 +246,9 @@ lemma distinct_element:
   "\<lbrakk> b \<inter> d = {}; a \<in> b; c \<in> d\<rbrakk>\<Longrightarrow> a \<noteq> c"
   by auto
 
-lemma ball_reorder: "(\<forall>x \<in> A. \<forall>y \<in> B. P x y) = (\<forall>y \<in> B. \<forall>x \<in> A.  P x y)" by auto
+lemma ball_reorder:
+  "(\<forall>x \<in> A. \<forall>y \<in> B. P x y) = (\<forall>y \<in> B. \<forall>x \<in> A.  P x y)"
+  by auto
 
 lemma map_id: "map id = id"
   by (rule List.map.id)
@@ -317,19 +288,12 @@ lemma image_invert:
   assumes r: "f \<circ> g = id"
   and     g: "B = g ` A"
   shows  "A = f ` B"
-  by (subst image_id' [symmetric], (subst g image_comp)+)
-(rule image_cong [OF _ arg_cong [OF r, symmetric]], rule refl)
+  by (simp add: g image_comp r)
 
 lemma Collect_image_fun_cong:
   assumes rl: "\<And>a. P a \<Longrightarrow> f a = g a"
   shows   "{f x | x. P x} = {g x | x. P x}"
-  apply (rule Collect_cong)
-  apply rule
-   apply (erule exEI)
-   apply (clarsimp simp: rl)
-  apply (erule exEI)
-  apply (clarsimp simp: rl)
-done
+  using rl by force
 
 lemma inj_on_take:
   shows "inj_on (take n) {x. drop n x = k}"
@@ -340,17 +304,10 @@ proof (rule inj_onI)
     and tk: "take n x = take n y"
 
   from xv have "take n x @ k = x"
-    apply simp
-    apply (erule subst, subst append_take_drop_id)
-    apply (rule refl)
-    done
-
-  moreover from yv tk have "take n x @ k = y"
-    apply simp
-    apply (erule subst, subst append_take_drop_id)
-    apply (rule refl)
-    done
-
+    using append_take_drop_id mem_Collect_eq by auto
+  moreover from yv tk
+  have "take n x @ k = y"
+    using append_take_drop_id mem_Collect_eq by auto
   ultimately show "x = y" by simp
 qed
 
@@ -387,31 +344,17 @@ proof (induct as)
   case Nil thus ?case by simp
 next
   case (Cons a as)
-
   show ?case
   proof (cases "a \<in> set as \<or> a \<in> dom g")
     case True
     hence ain: "a \<in> dom g \<union> set as" by auto
     hence "dom g \<union> set (a # as) = dom g \<union> set as" by auto
-    thus ?thesis
-      apply (rule ssubst)
-      apply (subst foldr.simps[unfolded o_def])
-      apply (subst dom_fun_upd)
-      apply (subst Cons.hyps)+
-      apply simp
-      apply (rule insert_absorb [OF ain])
-      done
+    thus ?thesis using Cons by fastforce
   next
     case False
     hence "a \<notin> (dom g \<union> set as)" by simp
     hence "dom g \<union> set (a # as) = insert a (dom g \<union> set as)" by simp
-    thus ?thesis
-      apply (rule ssubst)
-      apply (subst foldr.simps[unfolded o_def])
-      apply (subst dom_fun_upd)
-      apply (subst Cons.hyps)+
-      apply simp
-      done
+    thus ?thesis using Cons by fastforce
   qed
 qed
 
@@ -424,7 +367,6 @@ proof (induct as arbitrary: x)
   case Nil thus ?case by simp
 next
   case (Cons a as)
-
   from Cons.prems show ?case  by (subst foldr.simps) (auto intro: Cons.hyps)
 qed
 
@@ -437,33 +379,29 @@ proof (induct as arbitrary: x)
   case Nil thus ?case by simp
 next
   case (Cons a as)
-
   from Cons.prems show ?case
     by (subst foldr.simps) (auto intro: Cons.hyps)
 qed
 
 lemma foldr_upd_app_if:
-  "(foldr (\<lambda>p ps. ps(p \<mapsto> f p)) as g) = (\<lambda>x. if x \<in> set as then Some (f x) else g x)"
-  apply (rule ext)
-  apply (case_tac "x \<in> set as")
-   apply (simp add: foldr_upd_app)
-  apply (simp add: foldr_upd_app_other)
-  done
+  "foldr (\<lambda>p ps. ps(p \<mapsto> f p)) as g = (\<lambda>x. if x \<in> set as then Some (f x) else g x)"
+  by (auto simp: foldr_upd_app foldr_upd_app_other)
 
 lemma foldl_fun_upd_value:
- "\<And>Y. foldl (\<lambda>f p. f(p := X p)) Y e p = (if p\<in>set e then X p else Y p)"
-by (induct e) simp_all
+  "\<And>Y. foldl (\<lambda>f p. f(p := X p)) Y e p = (if p\<in>set e then X p else Y p)"
+  by (induct e) simp_all
 
 lemma foldr_fun_upd_value:
- "\<And>Y. foldr (\<lambda>p f. f(p := X p)) e Y p = (if p\<in>set e then X p else Y p)"
-by (induct e) simp_all
+  "\<And>Y. foldr (\<lambda>p f. f(p := X p)) e Y p = (if p\<in>set e then X p else Y p)"
+  by (induct e) simp_all
 
 lemma foldl_fun_upd_eq_foldr:
-"!!m. foldl (\<lambda>f p. f(p := g p)) m xs = foldr (\<lambda>p f. f(p := g p)) xs m"
-by (rule ext) (simp add: foldl_fun_upd_value foldr_fun_upd_value)
+  "!!m. foldl (\<lambda>f p. f(p := g p)) m xs = foldr (\<lambda>p f. f(p := g p)) xs m"
+  by (rule ext) (simp add: foldl_fun_upd_value foldr_fun_upd_value)
 
 lemma Cons_eq_neq:
-  "\<lbrakk> y = x; x # xs \<noteq> y # ys \<rbrakk> \<Longrightarrow> xs \<noteq> ys" by simp
+  "\<lbrakk> y = x; x # xs \<noteq> y # ys \<rbrakk> \<Longrightarrow> xs \<noteq> ys"
+  by simp
 
 lemma map_upt_append:
   assumes lt: "x \<le> y"
@@ -477,8 +415,6 @@ proof (subst map_append [symmetric], rule arg_cong [where f = "map f"])
     using lt2
     by (auto intro: upt_add_eq_append)
 qed
-
-(* Other word lemmas *)
 
 lemma Min_image_distrib:
   assumes minf: "\<And>x y. \<lbrakk> x \<in> A; y \<in> A \<rbrakk> \<Longrightarrow> min (f x) (f y) = f (min x y)"
@@ -517,34 +453,19 @@ lemma min_of_mono':
 lemma nat_diff_less:
   fixes x :: nat
   shows "\<lbrakk> x < y + z; z \<le> x\<rbrakk> \<Longrightarrow> x - z < y"
-  apply (subst nat_add_left_cancel_less [where k = z, symmetric])
-  apply (subst add_diff_assoc)
-  apply assumption
-  apply simp
-  done
+  using less_diff_conv2 by blast
 
 definition
   strict_part_mono :: "'a set \<Rightarrow> ('a :: order \<Rightarrow> 'b :: order) \<Rightarrow> bool" where
  "strict_part_mono S f \<equiv> \<forall>A\<in>S. \<forall>B\<in>S. A < B \<longrightarrow> f A < f B"
 
 lemma strict_part_mono_by_steps:
-  "strict_part_mono {..n :: nat} f
-    = (n \<noteq> 0 \<longrightarrow> f (n - 1) < f n \<and> strict_part_mono {.. n - 1} f)"
-  apply (cases n)
-   apply (simp add: strict_part_mono_def)
-  apply (simp add: strict_part_mono_def)
-  apply safe
-    apply simp
-   apply simp
-  apply clarsimp
-  apply (case_tac "B = Suc nat")
-   apply (case_tac "A = nat")
-    apply simp
-   apply clarsimp
-   apply (rule order_less_trans)
-    prefer 2
-    apply assumption
-   apply simp
+  "strict_part_mono {..n :: nat} f = (n \<noteq> 0 \<longrightarrow> f (n - 1) < f n \<and> strict_part_mono {.. n - 1} f)"
+  apply (cases n; simp add: strict_part_mono_def)
+  apply (safe; clarsimp)
+  apply (case_tac "B = Suc nat"; simp)
+  apply (case_tac "A = nat"; clarsimp)
+  apply (erule order_less_trans [rotated])
   apply simp
   done
 
@@ -553,33 +474,16 @@ lemma strict_part_mono_singleton[simp]:
   by (simp add: strict_part_mono_def)
 
 lemma strict_part_mono_lt:
-  "\<lbrakk> x < f 0; strict_part_mono {.. n :: nat} f \<rbrakk>
-     \<Longrightarrow> \<forall>m \<le> n. x < f m"
-  apply (simp add: strict_part_mono_def)
-  apply clarsimp
-  apply (case_tac m)
-   apply simp
-  apply (erule order_less_trans)
-  apply simp
-  done
+  "\<lbrakk> x < f 0; strict_part_mono {.. n :: nat} f \<rbrakk> \<Longrightarrow> \<forall>m \<le> n. x < f m"
+  by (metis atMost_iff le_0_eq le_cases neq0_conv order.strict_trans strict_part_mono_def)
 
 lemma strict_part_mono_reverseE:
   "\<lbrakk> f n \<le> f m; strict_part_mono {.. N :: nat} f; n \<le> N \<rbrakk> \<Longrightarrow> n \<le> m"
-  apply (rule ccontr)
-  apply (clarsimp simp: linorder_not_le strict_part_mono_def)
-  apply (drule bspec)
-   prefer 2
-   apply (drule bspec)
-    prefer 2
-     apply (drule(1) mp)
-     apply simp+
-  done
+  by (rule ccontr) (fastforce simp: linorder_not_le strict_part_mono_def)
 
 lemma take_map_Not:
   "(take n (map Not xs) = take n xs) = (n = 0 \<or> xs = [])"
-  apply (cases n, simp_all)
-  apply (cases xs, simp_all)
-  done
+  by (cases n; simp) (cases xs; simp)
 
 lemma nat_power_0 [simp]:
   "((x::nat) ^ n = 0) = (x = 0 \<and> 0 < n)"
@@ -591,9 +495,7 @@ lemma union_trans:
   apply (rule set_eqI)
   apply clarsimp
   apply (rule iffI)
-   apply (erule rtrancl_induct)
-    apply simp
-   apply simp
+   apply (erule rtrancl_induct; simp)
    apply (erule disjE)
     apply (erule disjE)
      apply (drule (1) rtrancl_into_rtrancl)
@@ -661,7 +563,7 @@ lemma append_len2:
   by auto
 
 lemma if_flip:
-  "(if (\<not> P) then T else F) = (if P then F else T)"
+  "(if \<not>P then T else F) = (if P then F else T)"
   by simp
 
 lemma not_in_domIff:"f x = None = (x \<notin> dom f)"
@@ -674,27 +576,22 @@ lemma not_in_domD:
 definition
   "graph_of f \<equiv> {(x,y). f x = Some y}"
 
-(* ArchAcc_R.thy:graph_of_None_update line 2021 *)
 lemma graph_of_None_update:
   "graph_of (f (p := None)) = graph_of f - {p} \<times> UNIV"
   by (auto simp: graph_of_def split: split_if_asm)
 
-(* ArchAcc_R.thy:graph_of_Some_update line 2023 *)
 lemma graph_of_Some_update:
   "graph_of (f (p \<mapsto> v)) = (graph_of f - {p} \<times> UNIV) \<union> {(p,v)}"
   by (auto simp: graph_of_def split: split_if_asm)
 
-(* ArchAcc_R.thy:graph_of_restrict_map line 2568 *)
 lemma graph_of_restrict_map:
   "graph_of (m |` S) \<subseteq> graph_of m"
   by (simp add: graph_of_def restrict_map_def subset_iff)
 
-(* Wellformed.thy:graph_ofD line 5613 *)
 lemma graph_ofD:
   "(x,y) \<in> graph_of f \<Longrightarrow> f x = Some y"
   by (simp add: graph_of_def)
 
-(* Wellformed.thy:graph_ofI line 5706 *)
 lemma graph_ofI:
   "m x = Some y \<Longrightarrow> (x, y) \<in> graph_of m"
   by (simp add: graph_of_def)
@@ -712,15 +609,12 @@ lemma map_conv_upd:
   by (rule ext) (clarsimp simp: o_def)
 
 lemma sum_all_ex [simp]:
-    "(\<forall>a. x \<noteq> Inl a) = (\<exists>a. x = Inr a)"
-    "(\<forall>a. x \<noteq> Inr a) = (\<exists>a. x = Inl a)"
-   apply (metis Inr_not_Inl sum.exhaust)
-  apply (metis Inl_not_Inr sum.exhaust)
-  done
+  "(\<forall>a. x \<noteq> Inl a) = (\<exists>a. x = Inr a)"
+  "(\<forall>a. x \<noteq> Inr a) = (\<exists>a. x = Inl a)"
+  by (metis Inr_not_Inl sum.exhaust)+
 
 lemma split_distrib: "case_prod (\<lambda>a b. T (f a b)) = (\<lambda>x. T (case_prod (\<lambda>a b. f a b) x))"
-  apply (clarsimp simp: split_def)
-  done
+  by (clarsimp simp: split_def)
 
 lemma case_sum_triv [simp]:
     "(case x of Inl x \<Rightarrow> Inl x | Inr x \<Rightarrow> Inr x) = x"
@@ -742,9 +636,7 @@ lemma my_BallE: "\<lbrakk> \<forall>x \<in> A. P x; y \<in> A; P y \<Longrightar
 lemma unit_Inl_or_Inr [simp]:
   "\<And>a. (a \<noteq> Inl ()) = (a = Inr ())"
   "\<And>a. (a \<noteq> Inr ()) = (a = Inl ())"
-  apply (case_tac a, auto)[1]
-  apply (case_tac a, auto)[1]
-  done
+  by (case_tac a; clarsimp)+
 
 lemma disjE_L: "\<lbrakk> a \<or> b; a \<Longrightarrow> R; \<lbrakk> \<not> a; b \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by blast
@@ -757,13 +649,13 @@ lemma int_max_thms:
     "(b :: int) \<le> max a b"
   by (auto simp: max_def)
 
-lemma sgn_negation [simp]: "sgn (-(x::int)) = - sgn x"
-  apply (clarsimp simp: sgn_if)
-  done
+lemma sgn_negation [simp]:
+  "sgn (-(x::int)) = - sgn x"
+  by (clarsimp simp: sgn_if)
 
-lemma sgn_sgn_nonneg [simp]: "sgn (a :: int) * sgn a \<noteq> -1"
-  apply (clarsimp simp: sgn_if)
-  done
+lemma sgn_sgn_nonneg [simp]:
+  "sgn (a :: int) * sgn a \<noteq> -1"
+  by (clarsimp simp: sgn_if)
 
 
 lemma inj_inj_on:
@@ -803,16 +695,14 @@ lemma Ball_conj_increase:
  ***************)
 
 lemma disjoint_subset:
-  assumes aa: "A' \<subseteq> A"
-  and     ab: "A \<inter> B = {}"
+  assumes "A' \<subseteq> A" and "A \<inter> B = {}"
   shows   "A' \<inter> B = {}"
-  using aa ab by auto
+  using assms by auto
 
 lemma disjoint_subset2:
-  assumes aa: "B' \<subseteq> B"
-  and     ab: "A \<inter> B = {}"
+  assumes "B' \<subseteq> B" and "A \<inter> B = {}"
   shows   "A \<inter> B' = {}"
-  using aa ab by auto
+  using assms by auto
 
 lemma UN_nth_mem:
   "i < length xs \<Longrightarrow> f (xs ! i) \<subseteq> (\<Union>x\<in>set xs. f x)"
@@ -820,9 +710,7 @@ lemma UN_nth_mem:
 
 lemma Union_equal:
   "f ` A = f ` B \<Longrightarrow> (\<Union>x \<in> A. f x) = (\<Union>x \<in> B. f x)"
-  apply (subst Union_image_eq [symmetric])+
-  apply simp
-  done
+  by (subst Union_image_eq [symmetric]) simp
 
 lemma UN_Diff_disjoint:
   "i < length xs \<Longrightarrow> (A - (\<Union>x\<in>set xs. f x)) \<inter> f (xs ! i) = {}"
@@ -834,11 +722,8 @@ lemma image_list_update:
   by (metis list_update_id map_update set_map)
 
 lemma Union_list_update_id:
-  "f a = f (xs ! i)
-  \<Longrightarrow> (\<Union>x\<in>set (xs [i := a]). f x) = (\<Union>x\<in>set xs. f x)"
-  apply (rule Union_equal)
-  apply (erule image_list_update)
-  done
+  "f a = f (xs ! i) \<Longrightarrow> (\<Union>x\<in>set (xs [i := a]). f x) = (\<Union>x\<in>set xs. f x)"
+  by (rule Union_equal) (erule image_list_update)
 
 lemma Union_list_update_id':
   "\<lbrakk>i < length xs; \<And>x. g (f x) = g x\<rbrakk>
@@ -858,8 +743,7 @@ lemma Union_subset:
   by (metis UN_mono order_refl)
 
 lemma UN_sub_empty:
-  "\<lbrakk>list_all P xs; \<And>x. P x \<Longrightarrow> f x = g x\<rbrakk>
-  \<Longrightarrow> (\<Union>x\<in>set xs. f x) - (\<Union>x\<in>set xs. g x) = {}"
+  "\<lbrakk>list_all P xs; \<And>x. P x \<Longrightarrow> f x = g x\<rbrakk> \<Longrightarrow> (\<Union>x\<in>set xs. f x) - (\<Union>x\<in>set xs. g x) = {}"
   by (metis Ball_set_list_all Diff_cancel SUP_cong)
 
 (*******************
@@ -867,10 +751,8 @@ lemma UN_sub_empty:
  *******************)
 
 lemma bij_betw_fun_updI:
-  "\<lbrakk>x \<notin> A; y \<notin> B; bij_betw f A B\<rbrakk>
-  \<Longrightarrow> bij_betw (f(x := y)) (insert x A) (insert y B)"
-  by (clarsimp simp: bij_betw_def fun_upd_image inj_on_fun_updI
-              split: split_if_asm)
+  "\<lbrakk>x \<notin> A; y \<notin> B; bij_betw f A B\<rbrakk> \<Longrightarrow> bij_betw (f(x := y)) (insert x A) (insert y B)"
+  by (clarsimp simp: bij_betw_def fun_upd_image inj_on_fun_updI split: split_if_asm)
 
 definition
   "bij_betw_map f A B \<equiv> bij_betw f A (Some ` B)"
@@ -878,9 +760,7 @@ definition
 lemma bij_betw_map_fun_updI:
   "\<lbrakk>x \<notin> A; y \<notin> B; bij_betw_map f A B\<rbrakk>
   \<Longrightarrow> bij_betw_map (f(x \<mapsto> y)) (insert x A) (insert y B)"
-  apply (clarsimp simp: bij_betw_map_def)
-  apply (erule bij_betw_fun_updI, clarsimp+)
-  done
+  unfolding bij_betw_map_def by clarsimp (erule bij_betw_fun_updI; clarsimp)
 
 lemma bij_betw_map_imp_inj_on:
   "bij_betw_map f A B \<Longrightarrow> inj_on f A"
@@ -949,41 +829,36 @@ lemma equiv_relation_to_projection:
   apply (metis UNIV_I equiv equivE mem_Collect_eq refl_on_def)
   done
 
-
-(*
- * Misc
- *)
-
-lemma range_constant [simp]: "range (\<lambda>_. k) = {k}"
+lemma range_constant [simp]:
+  "range (\<lambda>_. k) = {k}"
   by (clarsimp simp: image_def)
 
-lemma dom_unpack:"dom (map_of (map (\<lambda>x. (f x, g x)) xs)) = set (map (\<lambda>x. f x) xs)"
+lemma dom_unpack:
+  "dom (map_of (map (\<lambda>x. (f x, g x)) xs)) = set (map (\<lambda>x. f x) xs)"
   by (simp add: dom_map_of_conv_image_fst image_image)
 
-lemma fold_to_disj:"fold op ++ ms a x = Some y \<Longrightarrow> (\<exists>b \<in> set ms. b x = Some y) \<or> a x = Some y"
-  apply (induct ms arbitrary:a x y; clarsimp)
-  apply blast
-  done
+lemma fold_to_disj:
+"fold op ++ ms a x = Some y \<Longrightarrow> (\<exists>b \<in> set ms. b x = Some y) \<or> a x = Some y"
+  by (induct ms arbitrary:a x y; clarsimp) blast
 
-lemma fold_ignore1:"a x = Some y \<Longrightarrow> fold op ++ ms a x = Some y"
+lemma fold_ignore1:
+  "a x = Some y \<Longrightarrow> fold op ++ ms a x = Some y"
   by (induct ms arbitrary:a x y; clarsimp)
 
-lemma fold_ignore2:"fold op ++ ms a x = None \<Longrightarrow> a x = None"
+lemma fold_ignore2:
+  "fold op ++ ms a x = None \<Longrightarrow> a x = None"
   by (metis fold_ignore1 option.collapse)
 
-lemma fold_ignore3:"fold op ++ ms a x = None \<Longrightarrow> (\<forall>b \<in> set ms. b x = None)"
-  apply (induct ms arbitrary:a x; clarsimp)
-  by (meson fold_ignore2 map_add_None)
+lemma fold_ignore3:
+  "fold op ++ ms a x = None \<Longrightarrow> (\<forall>b \<in> set ms. b x = None)"
+  by (induct ms arbitrary:a x; clarsimp) (meson fold_ignore2 map_add_None)
 
-lemma fold_ignore4:"b \<in> set ms \<Longrightarrow> b x = Some y \<Longrightarrow> \<exists>y. fold op ++ ms a x = Some y"
-  apply (rule ccontr)
-  apply (subst (asm) not_ex)
-  apply clarsimp
-  apply (drule fold_ignore3)
-  apply fastforce
-  done
+lemma fold_ignore4:
+  "b \<in> set ms \<Longrightarrow> b x = Some y \<Longrightarrow> \<exists>y. fold op ++ ms a x = Some y"
+  using fold_ignore3 by fastforce
 
-lemma dom_unpack2:"dom (fold op ++ ms empty) = \<Union>(set (map dom ms))"
+lemma dom_unpack2:
+  "dom (fold op ++ ms empty) = \<Union>(set (map dom ms))"
   apply (induct ms; clarsimp simp:dom_def)
   apply (rule equalityI; clarsimp)
    apply (drule fold_to_disj)
@@ -997,23 +872,23 @@ lemma dom_unpack2:"dom (fold op ++ ms empty) = \<Union>(set (map dom ms))"
    apply (rule_tac x=y in exI)
    apply (erule fold_ignore1)
   apply clarsimp
-  apply (rename_tac a ms x xa y)
+  apply (rename_tac y)
   apply (erule_tac y=y in fold_ignore4; clarsimp)
   done
 
 lemma fold_ignore5:"fold op ++ ms a x = Some y \<Longrightarrow> a x = Some y \<or> (\<exists>b \<in> set ms. b x = Some y)"
-  apply (induct ms arbitrary:a x y; clarsimp)
-  apply blast
-  done
+  by (induct ms arbitrary:a x y; clarsimp) blast
 
 lemma dom_inter_nothing:"dom f \<inter> dom g = {} \<Longrightarrow> \<forall>x. f x = None \<or> g x = None"
   by auto
 
-lemma fold_ignore6:"f x = None \<Longrightarrow> fold op ++ ms f x = fold op ++ ms empty x"
+lemma fold_ignore6:
+  "f x = None \<Longrightarrow> fold op ++ ms f x = fold op ++ ms empty x"
   apply (induct ms arbitrary:f x; clarsimp simp:map_add_def)
   by (metis (no_types, lifting) fold_ignore1 option.collapse option.simps(4))
 
-lemma fold_ignore7:"m x = m' x \<Longrightarrow> fold op ++ ms m x = fold op ++ ms m' x"
+lemma fold_ignore7:
+  "m x = m' x \<Longrightarrow> fold op ++ ms m x = fold op ++ ms m' x"
   apply (case_tac "m x")
    apply (frule_tac ms=ms in fold_ignore6)
    apply (cut_tac f=m' and ms=ms and x=x in fold_ignore6)
@@ -1023,23 +898,23 @@ lemma fold_ignore7:"m x = m' x \<Longrightarrow> fold op ++ ms m x = fold op ++ 
   apply (cut_tac ms=ms and a=m' and x=x and y=a in fold_ignore1; clarsimp)
   done
 
-lemma fold_ignore8:"fold op ++ ms [x \<mapsto> y] = (fold op ++ ms empty)(x \<mapsto> y)"
+lemma fold_ignore8:
+  "fold op ++ ms [x \<mapsto> y] = (fold op ++ ms empty)(x \<mapsto> y)"
   apply (rule ext)
   apply (rename_tac xa)
   apply (case_tac "xa = x")
    apply clarsimp
    apply (rule fold_ignore1)
    apply clarsimp
-  apply (subst fold_ignore6)
-   apply clarsimp+
+  apply (subst fold_ignore6; clarsimp)
   done
 
-lemma fold_ignore9:"\<lbrakk>fold op ++ ms [x \<mapsto> y] x' = Some z; x = x'\<rbrakk> \<Longrightarrow> y = z"
-  apply (subst (asm) fold_ignore8)
-  apply clarsimp
-  done
+lemma fold_ignore9:
+  "\<lbrakk>fold op ++ ms [x \<mapsto> y] x' = Some z; x = x'\<rbrakk> \<Longrightarrow> y = z"
+  by (subst (asm) fold_ignore8) clarsimp
 
-lemma fold_to_map_of:"fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) empty = map_of (map (\<lambda>x. (f x, g x)) xs)"
+lemma fold_to_map_of:
+  "fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) empty = map_of (map (\<lambda>x. (f x, g x)) xs)"
   apply (rule ext)
   apply (rename_tac x)
   apply (case_tac "fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) Map.empty x")
@@ -1058,11 +933,8 @@ lemma fold_to_map_of:"fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) empt
   apply (rule conjI; clarsimp)
    apply (drule fold_ignore9; clarsimp)
   apply (cut_tac ms="map (\<lambda>x. [f x \<mapsto> g x]) xs" and f="[f a \<mapsto> g a]" and x="f b" in fold_ignore6, clarsimp)
-  apply clarsimp
-  apply (erule disjE; clarsimp)
+  apply auto
   done
-
-
 
 lemma if_n_0_0:
   "((if P then n else 0) \<noteq> 0) = (P \<and> n \<noteq> 0)"
@@ -1149,11 +1021,7 @@ lemma map_option_comp2:
 
 lemma compD:
   "\<lbrakk>f \<circ> g = f \<circ> g'; g x = v \<rbrakk> \<Longrightarrow> f (g' x) = f v"
-  apply clarsimp
-  apply (subgoal_tac "(f (g x)) = (f \<circ> g) x")
-   apply simp
-  apply (simp (no_asm))
-  done
+  by (metis comp_apply)
 
 lemma map_option_comp_eqE:
   assumes om: "map_option f \<circ> mp = map_option f \<circ> mp'"
@@ -1181,12 +1049,7 @@ lemma Some_the:
 
 lemma map_comp_update:
   "f \<circ>\<^sub>m (g(x \<mapsto> v)) = (f \<circ>\<^sub>m g)(x := f v)"
-  apply (rule ext)
-  apply clarsimp
-  apply (case_tac "g xa")
-   apply simp
-  apply simp
-  done
+  by (rule ext, rename_tac y) (case_tac "g y"; simp)
 
 lemma restrict_map_eqI:
   assumes req: "A |` S = B |` S"
@@ -1227,19 +1090,11 @@ lemma modify_map_id:
 lemma modify_map_addr_com:
   assumes com: "x \<noteq> y"
   shows "modify_map (modify_map m x g) y f = modify_map (modify_map m y f) x g"
-  by (rule ext)
-     (simp add: modify_map_def map_option_case com split: option.splits)
+  by (rule ext) (simp add: modify_map_def map_option_case com split: option.splits)
 
 lemma modify_map_dom :
   "dom (modify_map m p f) = dom m"
-  unfolding modify_map_def
-  apply (cases "m p")
-   apply simp
-   apply (simp add: dom_def)
-  apply simp
-  apply (rule insert_absorb)
-  apply (simp add: dom_def)
-  done
+  unfolding modify_map_def by (auto simp: dom_def)
 
 lemma modify_map_None:
   "m x = None \<Longrightarrow> modify_map m x f = m"
@@ -1284,16 +1139,11 @@ lemma next_update_is_modify:
 
 lemma nat_power_minus_less:
   "a < 2 ^ (x - n) \<Longrightarrow> (a :: nat) < 2 ^ x"
-  apply (erule order_less_le_trans)
-  apply simp
-  done
+  by (erule order_less_le_trans) simp
 
 lemma neg_rtranclI:
   "\<lbrakk> x \<noteq> y; (x, y) \<notin> R\<^sup>+ \<rbrakk> \<Longrightarrow> (x, y) \<notin> R\<^sup>*"
-  apply (erule contrapos_nn)
-  apply (drule rtranclD)
-  apply simp
-  done
+  by (meson rtranclD)
 
 lemma neg_rtrancl_into_trancl:
   "\<not> (x, y) \<in> R\<^sup>* \<Longrightarrow> \<not> (x, y) \<in> R\<^sup>+"
@@ -1305,20 +1155,16 @@ lemma set_neqI:
 
 lemma set_pair_UN:
   "{x. P x} = UNION {xa. \<exists>xb. P (xa, xb)} (\<lambda>xa. {xa} \<times> {xb. P (xa, xb)})"
-  apply safe
-  apply (rule_tac a=a in UN_I)
-   apply blast+
-  done
+  by fastforce
 
-lemma singleton_elemD:
-  "S = {x} \<Longrightarrow> x \<in> S"
+lemma singleton_elemD: "S = {x} \<Longrightarrow> x \<in> S"
   by simp
 
-lemma singleton_eqD: "A = {x} \<Longrightarrow> x \<in> A" by blast
+lemma singleton_eqD: "A = {x} \<Longrightarrow> x \<in> A"
+  by blast
 
 lemma ball_ran_fun_updI:
-  "\<lbrakk> \<forall>v \<in> ran m. P v; \<forall>v. y = Some v \<longrightarrow> P v \<rbrakk>
-        \<Longrightarrow> \<forall>v \<in> ran (m (x := y)). P v"
+  "\<lbrakk> \<forall>v \<in> ran m. P v; \<forall>v. y = Some v \<longrightarrow> P v \<rbrakk> \<Longrightarrow> \<forall>v \<in> ran (m (x := y)). P v"
   by (auto simp add: ran_def)
 
 lemma ball_ran_eq:
@@ -1343,20 +1189,12 @@ lemma not_singletonE:
 
 lemma not_singleton_oneE:
   "\<lbrakk> \<forall>p. S \<noteq> {p}; p \<in> S; \<And>p'. \<lbrakk> p \<noteq> p'; p' \<in> S \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
-  apply (erule not_singletonE)
-   apply clarsimp
-  apply (case_tac "p = p'")
-   apply fastforce
-  apply fastforce
-  done
+  using not_singletonE by fastforce
 
 lemma ball_ran_modify_map_eq:
   "\<lbrakk> \<forall>v. m x = Some v \<longrightarrow> P (f v) = P v \<rbrakk>
-        \<Longrightarrow> (\<forall>v \<in> ran (modify_map m x f). P v) = (\<forall>v \<in> ran m. P v)"
-  apply (simp add: ball_ran_eq)
-  apply (rule iff_allI)
-  apply (auto simp: modify_map_def)
-  done
+  \<Longrightarrow> (\<forall>v \<in> ran (modify_map m x f). P v) = (\<forall>v \<in> ran m. P v)"
+  by (auto simp: modify_map_def ball_ran_eq)
 
 lemma disj_imp: "(P \<or> Q) = (\<not>P \<longrightarrow> Q)" by blast
 
@@ -1365,13 +1203,11 @@ lemma eq_singleton_redux:
   by simp
 
 lemma if_eq_elem_helperE:
-  "\<lbrakk> x \<in> (if P then S else S');
-    \<lbrakk> P;   x \<in> S  \<rbrakk> \<Longrightarrow> a = b;
-    \<lbrakk> \<not> P; x \<in> S' \<rbrakk> \<Longrightarrow> a = c
-   \<rbrakk> \<Longrightarrow> a = (if P then b else c)"
+  "\<lbrakk> x \<in> (if P then S else S');  \<lbrakk> P;   x \<in> S  \<rbrakk> \<Longrightarrow> a = b;  \<lbrakk> \<not> P; x \<in> S' \<rbrakk> \<Longrightarrow> a = c \<rbrakk>
+  \<Longrightarrow> a = (if P then b else c)"
   by fastforce
 
-lemma if_option_Some :
+lemma if_option_Some:
   "((if P then None else Some x) = Some y) = (\<not>P \<and> x = y)"
   by simp
 
@@ -1412,14 +1248,7 @@ lemma Collect_Int_pred_eq:
 
 lemma Collect_restrict_predR:
   "{x. P x} \<inter> T = {} \<Longrightarrow> {x. P x} \<inter> {x \<in> T. Q x} = {}"
-  apply (subst Collect_conj_eq [symmetric])
-  apply (simp add: disjoint_iff_not_equal)
-  apply rule
-  apply (drule_tac x = x in spec)
-  apply clarsimp
-  apply (drule (1) bspec)
-  apply simp
-  done
+  by (fastforce simp: disjoint_iff_not_equal)
 
 lemma Diff_Un2:
   assumes emptyad: "A \<inter> D = {}"
@@ -1448,9 +1277,8 @@ lemma ballEI:
   by auto
 
 lemma dom_if_None:
-  "dom (\<lambda>x. if P x then None else f x)
-     = dom f - {x. P x}"
-  by (simp add: dom_def, fastforce)
+  "dom (\<lambda>x. if P x then None else f x) = dom f - {x. P x}"
+  by (simp add: dom_def) fastforce
 
 lemma restrict_map_Some_iff:
   "((m |` S) x = Some y) = (m x = Some y \<and> x \<in> S)"
@@ -1462,17 +1290,11 @@ lemma context_case_bools:
 
 lemma inj_on_fun_upd_strongerI:
   "\<lbrakk>inj_on f A; y \<notin> f ` (A - {x})\<rbrakk> \<Longrightarrow> inj_on (f(x := y)) A"
-  apply (simp add: inj_on_def)
-  apply blast
-  done
+  by (fastforce simp: inj_on_def)
 
 lemma less_handy_casesE:
-  "\<lbrakk> m < n; m = 0 \<Longrightarrow> R;
-     \<And>m' n'. \<lbrakk> n = Suc n'; m = Suc m'; m < n \<rbrakk> \<Longrightarrow> R \<rbrakk>
-     \<Longrightarrow> R"
-  apply (case_tac n, simp_all)
-  apply (case_tac m, simp_all)
-  done
+  "\<lbrakk> m < n; m = 0 \<Longrightarrow> R; \<And>m' n'. \<lbrakk> n = Suc n'; m = Suc m'; m < n \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+  by (case_tac n; simp) (case_tac m; simp)
 
 lemma subset_drop_Diff_strg:
   "(A \<subseteq> C) \<longrightarrow> (A - B \<subseteq> C)"
@@ -1480,37 +1302,19 @@ lemma subset_drop_Diff_strg:
 
 lemma inj_case_bool:
   "inj (case_bool a b) = (a \<noteq> b)"
-  by (auto dest: inj_onD[where x=True and y=False]
-          intro: inj_onI split: bool.split_asm)
+  by (auto dest: inj_onD[where x=True and y=False] intro: inj_onI split: bool.split_asm)
 
-lemma zip_map2:
-  "zip as (map f bs) = map (\<lambda>(a, b). (a, f b)) (zip as bs)"
-  apply (induct bs arbitrary: as)
-   apply simp
-  apply (case_tac as)
-   apply simp
-  apply simp
-  done
-
-lemma zip_same: "zip xs xs = map (\<lambda>v. (v, v)) xs"
-  by (induct xs, simp+)
+lemmas zip_same = zip_same_conv_map
 
 lemma foldl_fun_upd:
-  "foldl (\<lambda>s r. s (r := g r)) f rs
-     = (\<lambda>x. if x \<in> set rs then g x else f x)"
-  apply (induct rs arbitrary: f)
-   apply simp
-  apply (auto simp: fun_eq_iff split: split_if)
-  done
+  "foldl (\<lambda>s r. s (r := g r)) f rs = (\<lambda>x. if x \<in> set rs then g x else f x)"
+  by (induct rs arbitrary: f) (auto simp: fun_eq_iff)
 
 lemma all_rv_choice_fn_eq_pred:
-  "\<lbrakk> \<And>rv. P rv \<Longrightarrow> \<exists>fn. f rv = g fn \<rbrakk>
-    \<Longrightarrow> \<exists>fn. \<forall>rv. P rv \<longrightarrow> f rv = g (fn rv)"
+  "\<lbrakk> \<And>rv. P rv \<Longrightarrow> \<exists>fn. f rv = g fn \<rbrakk> \<Longrightarrow> \<exists>fn. \<forall>rv. P rv \<longrightarrow> f rv = g (fn rv)"
   apply (rule_tac x="\<lambda>rv. SOME h. f rv = g h" in exI)
   apply (clarsimp split: split_if)
-  apply (erule meta_allE, drule(1) meta_mp, elim exE)
-  apply (erule someI)
-  done
+  by (meson someI_ex)
 
 lemma ex_const_function:
   "\<exists>f. \<forall>s. f (f' s) = v"
@@ -1526,19 +1330,13 @@ lemma expand_restrict_map_eq:
   "(m |` S = m' |` S) = (\<forall>x. x \<in> S \<longrightarrow> m x = m' x)"
   by (simp add: fun_eq_iff restrict_map_def split: split_if)
 
-
 lemma disj_imp_rhs:
   "(P \<Longrightarrow> Q) \<Longrightarrow> (P \<or> Q) = Q"
   by blast
 
 lemma remove1_filter:
   "distinct xs \<Longrightarrow> remove1 x xs = filter (\<lambda>y. x \<noteq> y) xs"
-  apply (induct xs)
-   apply simp
-  apply clarsimp
-  apply (rule sym, rule filter_True)
-  apply clarsimp
-  done
+  by (induct xs) (auto intro!: filter_True [symmetric])
 
 lemma Int_Union_empty:
   "(\<And>x. x \<in> S \<Longrightarrow> A \<inter> P x = {}) \<Longrightarrow> A \<inter> (\<Union>x \<in> S. P x) = {}"
@@ -1555,11 +1353,7 @@ lemma disjointI:
 lemma UN_disjointI:
   assumes rl: "\<And>x y. \<lbrakk> x \<in> A; y \<in> B \<rbrakk> \<Longrightarrow> P x \<inter> Q y = {}"
   shows "(\<Union>x \<in> A. P x) \<inter> (\<Union>x \<in> B. Q x) = {}"
-  apply (rule disjointI)
-  apply clarsimp
-  apply (drule (1) rl)
-  apply auto
-  done
+  by (auto dest: rl)
 
 lemma UN_set_member:
   assumes sub: "A \<subseteq> (\<Union>x \<in> S. P x)"
@@ -1574,10 +1368,10 @@ qed
 
 lemma append_Cons_cases [consumes 1, case_names pre mid post]:
   "\<lbrakk>(x, y) \<in> set (as @ b # bs);
-  (x, y) \<in> set as \<Longrightarrow> R;
-  \<lbrakk>(x, y) \<notin> set as; (x, y) \<notin> set bs; (x, y) = b\<rbrakk> \<Longrightarrow> R;
-  (x, y) \<in> set bs \<Longrightarrow> R\<rbrakk>
-  \<Longrightarrow> R" by auto
+    (x, y) \<in> set as \<Longrightarrow> R;
+    \<lbrakk>(x, y) \<notin> set as; (x, y) \<notin> set bs; (x, y) = b\<rbrakk> \<Longrightarrow> R;
+    (x, y) \<in> set bs \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  by auto
 
 lemma cart_singletons:
   "{a} \<times> {b} = {(a, b)}"
@@ -1596,9 +1390,8 @@ lemma iffE2:
   by blast
 
 lemma list_case_If:
-  "(case xs of [] \<Rightarrow> P | _ \<Rightarrow> Q)
-    = (if xs = [] then P else Q)"
-  by (clarsimp simp: neq_Nil_conv)
+  "(case xs of [] \<Rightarrow> P | _ \<Rightarrow> Q) = (if xs = [] then P else Q)"
+  by (rule list.case_eq_if)
 
 lemma remove1_Nil_in_set:
   "\<lbrakk> remove1 x xs = []; xs \<noteq> [] \<rbrakk> \<Longrightarrow> x \<in> set xs"
@@ -1606,19 +1399,14 @@ lemma remove1_Nil_in_set:
 
 lemma remove1_empty:
   "(remove1 v xs = []) = (xs = [v] \<or> xs = [])"
-  by (cases xs, simp_all)
+  by (cases xs; simp)
 
 lemma set_remove1:
   "x \<in> set (remove1 y xs) \<Longrightarrow> x \<in> set xs"
-  apply (induct xs)
-   apply simp
-  apply (case_tac "y = a")
-   apply clarsimp+
-  done
+  by (induct xs) (auto split: split_if_asm)
 
 lemma If_rearrage:
-  "(if P then if Q then x else y else z)
-     = (if P \<and> Q then x else if P then y else z)"
+  "(if P then if Q then x else y else z) = (if P \<and> Q then x else if P then y else z)"
   by simp
 
 lemma disjI2_strg:
@@ -1669,8 +1457,7 @@ lemma strengthen_ignore_if:
   by clarsimp
 
 lemma case_sum_True :
-  "(case r of Inl a \<Rightarrow> True | Inr b \<Rightarrow> f b)
-  = (\<forall>b. r = Inr b \<longrightarrow> f b)"
+  "(case r of Inl a \<Rightarrow> True | Inr b \<Rightarrow> f b) = (\<forall>b. r = Inr b \<longrightarrow> f b)"
   by (cases r) auto
 
 lemma sym_ex_elim:
@@ -1683,16 +1470,11 @@ lemma tl_drop_1 :
 
 lemma upt_lhs_sub_map:
   "[x ..< y] = map (op + x) [0 ..< y - x]"
-  apply (induct y)
-   apply simp
-  apply (clarsimp simp: Suc_diff_le)
-  done
+  by (induct y) (auto simp: Suc_diff_le)
 
 lemma upto_0_to_4:
   "[0..<4] = 0 # [1..<4]"
-  apply (subst upt_rec)
-  apply simp
-  done
+  by (subst upt_rec) simp
 
 lemma disjEI:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> R; Q \<Longrightarrow> S \<rbrakk>
@@ -1737,9 +1519,7 @@ lemma inj_on_fun_updI2:
 
 lemma inj_on_fun_upd_elsewhere:
   "x \<notin> S \<Longrightarrow> inj_on (f (x := y)) S = inj_on f S"
-  apply (simp add: inj_on_def)
-  apply blast
-  done
+  by (simp add: inj_on_def) blast
 
 lemma not_Some_eq_tuple:
   "(\<forall>y z. x \<noteq> Some (y, z)) = (x = None)"
@@ -1760,19 +1540,11 @@ lemma Int_image_empty:
 
 lemma Max_prop:
   "\<lbrakk> Max S \<in> S \<Longrightarrow> P (Max S); (S :: ('a :: {finite, linorder}) set) \<noteq> {} \<rbrakk> \<Longrightarrow> P (Max S)"
-  apply (erule meta_mp)
-  apply (rule Max_in)
-   apply simp
-  apply assumption
-  done
+  by auto
 
 lemma Min_prop:
   "\<lbrakk> Min S \<in> S \<Longrightarrow> P (Min S); (S :: ('a :: {finite, linorder}) set) \<noteq> {} \<rbrakk> \<Longrightarrow> P (Min S)"
-  apply (erule meta_mp)
-  apply (rule Min_in)
-   apply simp
-  apply assumption
-  done
+  by auto
 
 lemma findSomeD:
   "find P xs = Some x \<Longrightarrow> P x \<and> x \<in> set xs"
@@ -1788,21 +1560,10 @@ lemma dom_upd:
 
 lemma ran_upd:
   "\<lbrakk> inj_on f (dom f); f y = Some z \<rbrakk> \<Longrightarrow> ran (\<lambda>x. if x = y then None else f x) = ran f - {z}"
+  unfolding ran_def
   apply (rule set_eqI)
-  apply (unfold ran_def)
   apply simp
-  apply (rule iffI)
-   apply clarsimp
-   apply (rule conjI, blast)
-   apply clarsimp
-   apply (drule_tac x=a and y=y in inj_onD, simp)
-     apply blast
-    apply blast
-   apply simp
-  apply clarsimp
-  apply (rule_tac x=a in exI)
-  apply clarsimp
-  done
+  by (metis domI if_option_Some inj_onD)
 
 definition
   is_inv :: "('a \<rightharpoonup> 'b) \<Rightarrow> ('b \<rightharpoonup> 'a) \<Rightarrow> bool" where
@@ -1846,66 +1607,45 @@ lemma is_inv_inj:
   apply (frule is_inv_com)
   apply (clarsimp simp: inj_on_def)
   apply (drule (1) is_inv_SomeD)
-  apply (drule_tac f=f in is_inv_SomeD, assumption)
-  apply simp
+  apply (auto dest: is_inv_SomeD)
   done
 
 lemma ran_upd':
-  "\<lbrakk>inj_on f (dom f); f y = Some z\<rbrakk>
-  \<Longrightarrow> ran (f (y := None)) = ran f - {z}"
-  apply (drule (1) ran_upd)
-  apply (simp add: ran_def)
-  done
+  "\<lbrakk>inj_on f (dom f); f y = Some z\<rbrakk> \<Longrightarrow> ran (f (y := None)) = ran f - {z}"
+  by (drule (1) ran_upd) (simp add: ran_def)
 
 lemma is_inv_None_upd:
   "\<lbrakk> is_inv f g; g x = Some y\<rbrakk> \<Longrightarrow> is_inv (f(y := None)) (g(x := None))"
   apply (subst is_inv_def)
-  apply (clarsimp simp add: dom_upd)
+  apply (clarsimp simp: dom_upd)
   apply (drule is_inv_SomeD, erule is_inv_com)
   apply (frule is_inv_inj)
-  apply (simp add: ran_upd')
-  apply (rule conjI)
-   apply (simp add: is_inv_def)
-  apply (drule (1) is_inv_SomeD)
-  apply (clarsimp simp: is_inv_def)
+  apply (auto simp: ran_upd' is_inv_def dest: is_inv_SomeD is_inv_inj)
   done
 
 lemma is_inv_inj2:
   "is_inv f g \<Longrightarrow> inj_on g (dom g)"
-  apply (drule is_inv_com)
-  apply (erule is_inv_inj)
-  done
+  using is_inv_com is_inv_inj by blast
 
 lemma range_convergence1:
-  "\<lbrakk> \<forall>z. x < z \<and> z \<le> y \<longrightarrow> P z; \<forall>z > y. P (z :: 'a :: linorder) \<rbrakk>
-     \<Longrightarrow> \<forall>z > x. P z"
-  apply clarsimp
-  apply (case_tac "z \<le> y")
-   apply simp
-  apply (simp add: linorder_not_le)
-  done
+  "\<lbrakk> \<forall>z. x < z \<and> z \<le> y \<longrightarrow> P z; \<forall>z > y. P (z :: 'a :: linorder) \<rbrakk> \<Longrightarrow> \<forall>z > x. P z"
+  using not_le by blast
 
 lemma range_convergence2:
   "\<lbrakk> \<forall>z. x < z \<and> z \<le> y \<longrightarrow> P z; \<forall>z. z > y \<and> z < w \<longrightarrow> P (z :: 'a :: linorder) \<rbrakk>
      \<Longrightarrow> \<forall>z. z > x \<and> z < w \<longrightarrow> P z"
-  apply (cut_tac range_convergence1[where P="\<lambda>z. z < w \<longrightarrow> P z" and x=x and y=y])
-    apply simp
-   apply simp
-  apply simp
-  done
+  using range_convergence1[where P="\<lambda>z. z < w \<longrightarrow> P z" and x=x and y=y]
+  by auto
 
 lemma zip_upt_Cons:
-  "a < b \<Longrightarrow> zip [a ..< b] (x # xs)
-        = (a, x) # zip [Suc a ..< b] xs"
+  "a < b \<Longrightarrow> zip [a ..< b] (x # xs) = (a, x) # zip [Suc a ..< b] xs"
   by (simp add: upt_conv_Cons)
 
 lemma map_comp_eq:
-  "(f \<circ>\<^sub>m g) = (case_option None f \<circ> g)"
+  "f \<circ>\<^sub>m g = case_option None f \<circ> g"
   apply (rule ext)
   apply (case_tac "g x")
-   apply simp
-  apply simp
-  done
+  by auto
 
 lemma dom_If_Some:
    "dom (\<lambda>x. if x \<in> S then Some v else f x) = (S \<union> dom f)"
@@ -1914,17 +1654,11 @@ lemma dom_If_Some:
 lemma foldl_fun_upd_const:
   "foldl (\<lambda>s x. s(f x := v)) s xs
     = (\<lambda>x. if x \<in> f ` set xs then v else s x)"
-  apply (induct xs arbitrary: s)
-   apply simp
-  apply (rule ext, simp)
-  done
+  by (induct xs arbitrary: s) auto
 
 lemma foldl_id:
   "foldl (\<lambda>s x. s) s xs = s"
-  apply (induct xs)
-   apply simp
-  apply simp
-  done
+  by (induct xs) auto
 
 lemma SucSucMinus: "2 \<le> n \<Longrightarrow> Suc (Suc (n - 2)) = n" by arith
 
@@ -1949,8 +1683,7 @@ lemma case_option_If2:
   by (simp split: option.split)
 
 lemma if3_fold:
-  "(if P then x else if Q then y else x)
-     = (if P \<or> \<not> Q then x else y)"
+  "(if P then x else if Q then y else x) = (if P \<or> \<not> Q then x else y)"
   by simp
 
 lemma rtrancl_insert:
@@ -1963,16 +1696,7 @@ proof -
     by (subst Image_Un) simp
   also
   have "R^* `` {x} = {x}"
-    apply (clarsimp simp: Image_singleton)
-    apply (rule set_eqI, clarsimp)
-    apply (rule iffI)
-     apply (drule rtranclD)
-     apply (erule disjE, simp)
-     apply clarsimp
-     apply (drule tranclD)
-     apply (clarsimp simp: x_new)
-    apply fastforce
-    done
+    by (meson Image_closed_trancl Image_singleton_iff subsetI x_new)
   finally
   show ?thesis by simp
 qed
@@ -1998,16 +1722,8 @@ lemma trancl_step_lift:
    apply (erule disjE)
     apply (drule trancl_trans, drule r_into_trancl, assumption)
     apply blast
-   apply clarsimp
-  apply (erule disjE)
-   apply clarsimp
-   apply (drule x_step)
-   apply (erule disjE)
-    apply (simp add: y_new)
-   apply simp
-  apply clarsimp
-  apply (drule x_step)
-  apply (simp add: y_new)
+   apply fastforce
+  apply (fastforce simp: y_new dest: x_step)
   done
 
 lemma sum_to_zero:
@@ -2042,30 +1758,18 @@ lemma psubset_singleton:
   by blast
 
 lemma length_takeWhile_ge:
-  "length (takeWhile f xs) = n
-     \<Longrightarrow> length xs = n \<or> (length xs > n \<and> \<not> f (xs ! n))"
-  apply (induct xs arbitrary: n)
-   apply simp
-  apply (simp split: split_if_asm)
-  apply (case_tac n, simp_all)
-  done
+  "length (takeWhile f xs) = n \<Longrightarrow> length xs = n \<or> (length xs > n \<and> \<not> f (xs ! n))"
+  by (induct xs arbitrary: n) (auto split: split_if_asm)
 
 lemma length_takeWhile_le:
-  "\<not> f (xs ! n) \<Longrightarrow>
-     length (takeWhile f xs) \<le> n"
-  apply (induct xs arbitrary: n)
-   apply simp
-  apply (clarsimp split: split_if)
-  apply (case_tac n, simp_all)
-  done
+  "\<not> f (xs ! n) \<Longrightarrow> length (takeWhile f xs) \<le> n"
+  by (induct xs arbitrary: n; simp) (case_tac n; simp)
 
 lemma length_takeWhile_gt:
   "n < length (takeWhile f xs)
        \<Longrightarrow> (\<exists>ys zs. length ys = Suc n \<and> xs = ys @ zs \<and> takeWhile f xs = ys @ takeWhile f zs)"
-  apply (induct xs arbitrary: n)
-   apply simp
-  apply (simp split: split_if_asm)
-  apply (case_tac n, simp_all)
+  apply (induct xs arbitrary: n; simp split: split_if_asm)
+  apply (case_tac n; simp)
    apply (rule_tac x="[a]" in exI)
    apply simp
   apply (erule meta_allE, drule(1) meta_mp)
@@ -2097,13 +1801,7 @@ lemma nat_less_cases':
 
 lemma filter_to_shorter_upto:
   "n \<le> m \<Longrightarrow> filter (\<lambda>x. x < n) [0 ..< m] = [0 ..< n]"
-  apply (induct m)
-   apply simp
-  apply clarsimp
-  apply (erule le_SucE)
-   apply simp
-  apply simp
-  done
+  by (induct m) (auto elim: le_SucE)
 
 lemma in_emptyE: "\<lbrakk> A = {}; x \<in> A \<rbrakk> \<Longrightarrow> P" by blast
 
@@ -2136,13 +1834,15 @@ lemma dom_eqD:
   "\<lbrakk> f x = Some v; dom f = S \<rbrakk> \<Longrightarrow> x \<in> S"
   by clarsimp
 
-lemma exception_set_finite:
+lemma exception_set_finite_1:
   "finite {x. P x} \<Longrightarrow> finite {x. (x = y \<longrightarrow> Q x) \<and> P x}"
+  by (simp add: Collect_conj_eq)
+
+lemma exception_set_finite_2:
   "finite {x. P x} \<Longrightarrow> finite {x. x \<noteq> y \<longrightarrow> P x}"
-   apply (simp add: Collect_conj_eq)
-  apply (subst imp_conv_disj, subst Collect_disj_eq)
-  apply simp
-  done
+  by (simp add: imp_conv_disj)
+
+lemmas exception_set_finite = exception_set_finite_1 exception_set_finite_2
 
 lemma exfEI:
   "\<lbrakk> \<exists>x. P x; \<And>x. P x \<Longrightarrow> Q (f x) \<rbrakk> \<Longrightarrow> \<exists>x. Q x"
@@ -2189,20 +1889,12 @@ lemma map_comp_restrict_map_Some_iff:
 
 lemma range_subsetD:
   fixes a :: "'a :: order"
-  shows "\<lbrakk> {a..b} \<subseteq> {c..d}; a \<le> b \<rbrakk> \<Longrightarrow> c \<le> a \<and> b \<le> d"
-  apply (rule conjI)
-   apply (drule subsetD [where c = a])
-    apply simp
-   apply simp
-  apply (drule subsetD [where c = b])
-   apply simp
-  apply simp
-  done
+  shows "\<lbrakk> {a..b} \<subseteq> {c..d}; a \<le> b \<rbrakk> \<Longrightarrow> c \<le> a \<and> b \<le> d" 
+  by simp
 
 lemma case_option_dom:
-  "(case f x of None \<Rightarrow> a | Some v \<Rightarrow> b v)
-      = (if x \<in> dom f then b (the (f x)) else a)"
-  by (auto split: split_if option.split)
+  "(case f x of None \<Rightarrow> a | Some v \<Rightarrow> b v) = (if x \<in> dom f then b (the (f x)) else a)"
+  by (auto split: option.split)
 
 lemma contrapos_imp:
   "P \<longrightarrow> Q \<Longrightarrow> \<not> Q \<longrightarrow> \<not> P"
@@ -2210,19 +1902,15 @@ lemma contrapos_imp:
 
 lemma filter_eq_If:
   "distinct xs \<Longrightarrow> filter (\<lambda>v. v = x) xs = (if x \<in> set xs then [x] else [])"
-  apply (induct xs)
-   apply simp
-  apply (clarsimp split: split_if)
-  done
+  by (induct xs) auto
 
-(*FIXME: isabelle-2012 *)
 lemma (in semigroup_add) foldl_assoc:
 shows "foldl op+ (x+y) zs = x + (foldl op+ y zs)"
-by (induct zs arbitrary: y) (simp_all add:add.assoc)
+  by (induct zs arbitrary: y) (simp_all add:add.assoc)
 
 lemma (in monoid_add) foldl_absorb0:
 shows "x + (foldl op+ 0 zs) = foldl op+ x zs"
-by (induct zs) (simp_all add:foldl_assoc)
+  by (induct zs) (simp_all add:foldl_assoc)
 
 lemma foldl_conv_concat:
   "foldl (op @) xs xss = xs @ concat xss"
@@ -2239,16 +1927,11 @@ lemma foldl_concat_concat:
 
 lemma foldl_does_nothing:
   "\<lbrakk> \<And>x. x \<in> set xs \<Longrightarrow> f s x = s \<rbrakk> \<Longrightarrow> foldl f s xs = s"
-  by (induct xs, simp_all)
+  by (induct xs) auto
 
 lemma foldl_use_filter:
-  "\<lbrakk> \<And>v x. \<lbrakk> \<not> g x; x \<in> set xs \<rbrakk> \<Longrightarrow> f v x = v \<rbrakk>
-     \<Longrightarrow>
-    foldl f v xs = foldl f v (filter g xs)"
-  apply (induct xs arbitrary: v)
-   apply simp
-  apply (simp split: split_if)
-  done
+  "\<lbrakk> \<And>v x. \<lbrakk> \<not> g x; x \<in> set xs \<rbrakk> \<Longrightarrow> f v x = v \<rbrakk> \<Longrightarrow> foldl f v xs = foldl f v (filter g xs)"
+  by (induct xs arbitrary: v) auto
 
 lemma upt_add_eq_append':
   assumes "i \<le> j" and "j \<le> k"
@@ -2277,5 +1960,78 @@ lemma case_option_over_if:
   "case_option P Q (if G then Some v else None)
         = (if G then Q v else P)"
   by (simp split: split_if)+
+
+lemma n_less_equal_power_2 [simp]:
+  "n < 2 ^ n"
+  by (induct_tac n, simp_all)
+
+lemma drop_Suc_nth:
+  "n < length xs \<Longrightarrow> drop n xs = xs!n # drop (Suc n) xs"
+  by (simp add: Cons_nth_drop_Suc)
+
+lemma minus_Suc_0_lt:
+  "a \<noteq> 0 \<Longrightarrow> a - Suc 0 < a"
+  by simp
+
+lemma map_length_cong:
+  "\<lbrakk> length xs = length ys; \<And>x y. (x, y) \<in> set (zip xs ys) \<Longrightarrow> f x = g y \<rbrakk>
+     \<Longrightarrow> map f xs = map g ys"
+  apply atomize
+  apply (erule rev_mp, erule list_induct2)
+   apply auto
+  done
+
+lemma take_min_len:
+  "take (min (length xs) n) xs = take n xs"
+  by (simp add: min_def)
+
+lemma zip_take_triv:
+  "n \<ge> length bs \<Longrightarrow> zip (take n as) bs = zip as bs"
+  apply (induct bs arbitrary: n as; simp)
+  apply (case_tac n; simp)
+  apply (case_tac as; simp)
+  done
+
+lemma zip_take_triv2:
+  "length as \<le> n \<Longrightarrow> zip as (take n bs) = zip as bs"
+  apply (induct as arbitrary: n bs; simp)
+  apply (case_tac n; simp)
+  apply (case_tac bs; simp)
+  done
+
+lemma zip_is_empty:
+  "(zip xs ys = []) = (xs = [] \<or> ys = [])"
+  by (cases xs; simp) (cases ys; simp)
+
+lemma x_power_minus_1:
+  fixes x :: "'a :: {ab_group_add, power, numeral, one}"
+  shows "x + (2::'a) ^ n - (1::'a) = x + (2 ^ n - 1)" by simp
+
+lemma nat_less_power_trans:
+  fixes n :: nat
+  assumes nv: "n < 2 ^ (m - k)" 
+  and     kv: "k \<le> m"
+  shows "2 ^ k * n < 2 ^ m"
+proof (rule order_less_le_trans)
+  show "2 ^ k * n < 2 ^ k * 2 ^ (m - k)"
+    by (rule mult_less_mono2 [OF nv zero_less_power]) simp
+    
+  show "(2::nat) ^ k * 2 ^ (m - k) \<le> 2 ^ m" using nv kv
+    by (subst power_add [symmetric]) simp
+qed
+
+lemma nat_le_power_trans:
+  fixes n :: nat
+  shows "\<lbrakk>n \<le> 2 ^ (m - k); k \<le> m\<rbrakk> \<Longrightarrow> 2 ^ k * n \<le> 2 ^ m"
+  by (metis le_imp_less_or_eq less_imp_le nat_less_power_trans power_sub split_div_lemma
+            zero_less_numeral zero_less_power)
+  
+lemma nat_diff_add:
+  fixes i :: nat
+  shows "\<lbrakk> i + j = k \<rbrakk> \<Longrightarrow> i = k - j"
+  by arith
+
+lemma pow_2_gt: "n \<ge> 2 \<Longrightarrow> (2::int) < 2 ^ n"
+  by (induct n) auto
 
 end

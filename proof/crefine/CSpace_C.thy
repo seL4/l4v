@@ -787,7 +787,7 @@ schematic_goal ccap_relation_tag_Master:
                                 then scast cap_small_frame_cap else scast cap_frame_cap)
                            ?ad ?ae) ?h ?i ?j ?k
             (capMasterCap cap)"
-  by (fastforce simp: ccap_relation_def option_map_Some_eq2
+  by (fastforce simp: ccap_relation_def map_option_Some_eq2
                      Let_def cap_lift_def cap_to_H_def
               split: split_if_asm)
 
@@ -3097,7 +3097,7 @@ lemma get_capSizeBits_valid_shift:
      (* zombie *)
      apply (clarsimp simp: Let_def split: split_if)
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
-     apply (clarsimp simp: ccap_relation_def option_map_Some_eq2
+     apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                            cap_lift_zombie_cap cap_to_H_def
                            Let_def capAligned_def objBits_simps
                            word_bits_conv)
@@ -3120,7 +3120,7 @@ lemma get_capSizeBits_valid_shift:
    apply (simp add: word_and_le1)
   (* cnode *)
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  apply (clarsimp simp: ccap_relation_def option_map_Some_eq2
+  apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                         cap_lift_cnode_cap cap_to_H_def
                         Let_def capAligned_def objBits_simps
                         word_bits_conv)

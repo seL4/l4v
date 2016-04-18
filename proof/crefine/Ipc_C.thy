@@ -1146,7 +1146,7 @@ lemma setMRs_syscall_error_ccorres:
              apply (wp hoare_case_option_wp
                 | (simp add: Collect_const_mem,
                           vcg exspec=setMR_modifies exspec=setMRs_lookup_failure_modifies))+
-         apply (clarsimp simp: option_map_Some_eq2)
+         apply (clarsimp simp: map_option_Some_eq2)
         apply (rule ccorres_return_C, simp+)[1]
        apply (rule ccorres_rhs_assoc
                  | (rule ccorres_inst, ctac add: setMR_ccorres_dc)
@@ -1156,7 +1156,7 @@ lemma setMRs_syscall_error_ccorres:
                  | (simp del: Collect_const, vcg exspec=setMR_modifies)
                )+
    apply (simp add: msgMaxLength_unfold if_1_0_0 true_def false_def)
-   apply (clarsimp split:split_if_asm simp:syscall_error_to_H_def option_map_Some_eq2)
+   apply (clarsimp split:split_if_asm simp:syscall_error_to_H_def map_option_Some_eq2)
    apply (simp add: msgFromLookupFailure_def
                  split: lookup_failure.split
             | simp add: to_bool_def split: split_if)+
@@ -2575,11 +2575,11 @@ next
     done
   note split_if[split del]
   note if_cong[cong]
+  note extra_sle_sless_unfolds [simp del]
   from Cons.prems
   show ?case
-    apply (clarsimp simp: Let_def word_sle_def[where b=5]
-                          split_def
-               split del: split_if cong: call_ignore_cong
+    apply (clarsimp simp: Let_def word_sle_def[where b=5] split_def
+                    cong: call_ignore_cong
                 simp del: Collect_const)
     apply (rule ccorres_constOnFailure)
     apply (rule ccorres_guard_imp2)
@@ -2726,7 +2726,7 @@ next
             apply (rule conjI)
              apply (clarsimp simp: cap_get_tag_EndpointCap cap_get_tag_isCap[symmetric]
                                  ep_cap_not_null)
-             apply (clarsimp simp: ccap_relation_def option_map_Some_eq2)
+             apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
              apply (simp add: message_info_to_H_def word_ao_dist)
              apply (fold shiftl_1)[1]
              apply (subst and_mask_eq_iff_shiftr_0[THEN iffD2],
@@ -2757,7 +2757,7 @@ next
              apply (drule_tac acap = acap in ccap_relation_inject)
               apply assumption
              apply clarsimp
-             apply (clarsimp simp: ccap_relation_def option_map_Some_eq2 split:option.splits)
+             apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 split:option.splits)
              apply (clarsimp simp: cap_endpoint_cap_lift_def option_to_ptr_def
                                 option_to_0_def cap_to_H_def Let_def split:cap_CL.splits split:if_splits)
             apply clarsimp
@@ -2817,7 +2817,7 @@ next
        apply (clarsimp dest!:ccap_relation_lift simp:cap_get_tag_isCap is_the_ep_def)
       apply (clarsimp simp:valid_cap_simps' isCap_simps)
      apply (intro exI conjI,assumption)
-    apply (clarsimp simp: ccap_relation_def option_map_Some_eq2
+    apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                             isCap_simps valid_cap_simps')+
     done
 qed
@@ -2840,6 +2840,7 @@ lemma lookupExtraCaps_srcs2:
 
 lemma transferCaps_ccorres [corres]: 
   notes if_cong[cong]
+  notes extra_sle_sless_unfolds[simp del]
   shows
   "ccorres (\<lambda>r r'. r = message_info_to_H r') ret__struct_seL4_MessageInfo_C_'
     (valid_pspace' and tcb_at' receiver
@@ -2863,22 +2864,20 @@ lemma transferCaps_ccorres [corres]:
    apply (rule_tac P="?P" and P'="{s. info_' s = info}" in ccorres_inst)
    apply (cases "receiveBuffer = None")
     apply (clarsimp simp: option_to_0_def getReceiveSlots_def
-                simp del: Collect_const
-               split del: split_if)
+                simp del: Collect_const)
     apply (rule ccorres_guard_imp2)
      apply (rule ccorres_move_const_guards)+
-     apply (simp (no_asm) split del: split_if)
+     apply (simp (no_asm))
      apply (rule_tac R'=UNIV in ccorres_split_throws [OF ccorres_return_C], simp_all)[1]
      apply vcg
      apply simp
     apply (simp add: message_info_to_H_def word_sless_def word_sle_def)
    apply (cases "caps = []")
     apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
-                simp del: Collect_const not_None_eq
-               split del: split_if)
+                simp del: Collect_const not_None_eq)
     apply (erule notE, rule ccorres_guard_imp2)
      apply (rule ccorres_move_const_guards)+
-     apply (simp (no_asm) split del: split_if)
+     apply (simp (no_asm))
      apply (rule ccorres_symb_exec_l)
         apply (rule_tac R'=UNIV in ccorres_split_throws [OF ccorres_return_C], simp_all)[1]
         apply vcg
@@ -2888,12 +2887,12 @@ lemma transferCaps_ccorres [corres]:
    apply (simp add: option_to_0_def ccorres_cond_iffs
                     interpret_excaps_test_null excaps_map_def
                del: Collect_const
-               cong: call_ignore_cong split del: split_if)
+               cong: call_ignore_cong)
    apply (elim exE)
    apply (clarsimp simp: Collect_const[symmetric] Collect_False
                          signed_shift_guard_simpler_32
                simp del: Collect_const
-                   cong: call_ignore_cong split del: split_if)
+                   cong: call_ignore_cong)
    apply (rule ccorres_guard_imp2)
     apply (rule ccorres_move_const_guards)+
     apply (simp (no_asm) only: ccorres_seq_cond_empty ccorres_seq_skip)
@@ -2967,7 +2966,7 @@ where
 lemma ccorres_add_returnOk2:
   "ccorres_underlying rf_sr G r xf arrel axf P P' hs (a >>=E returnOk) c
     \<Longrightarrow> ccorres_underlying rf_sr G r xf arrel axf P P' hs a c"
-  by (simp add: bindE_returnOk)
+  by (rule ccorres_add_returnOk)
 
 lemma capFaultOnFailure_ccorres:
   "ccorres (f \<currency> r) xf P P' hs a c
@@ -2997,7 +2996,6 @@ next
   have P: "\<And>v m. \<lbrakk> (x # xs') ! m = v; m < length ys' \<rbrakk>
                      \<Longrightarrow> P v"
     using Cons.prems by clarsimp
-  note split_if[split del]
   show ?case using Cons.prems(2-3)
     apply simp
     apply (cases ys')

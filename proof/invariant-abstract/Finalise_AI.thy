@@ -2239,7 +2239,7 @@ lemma word32_ucast_enumerates_word8:
     apply (simp, simp add: pt_bits_def pageBits_def word_bits_def)
   apply clarsimp
   apply (rule_tac x="ucast x" in image_eqI)
-   apply (simp add: word32_shift_by_2)
+   apply (simp add: word_shift_by_2)
   apply (clarsimp simp: pt_bits_def pageBits_def)
   apply (rule order_trans)
    apply (rule minus_one_helper3)
@@ -3055,11 +3055,11 @@ lemma arch_recycle_cap_invs:
     apply (clarsimp simp: valid_cap_simps)
    apply (clarsimp simp: is_cap_simps valid_cap_simps mask_def asid_bits_def
      vmsz_aligned_def upto_enum_step_def pt_bits_def pageBits_def
-     image_image word32_shift_by_2 split: split_if_asm)
+     image_image word_shift_by_2 split: split_if_asm)
     apply (erule order_le_less_trans, simp)+
    apply (rule_tac x=a in exI, rule_tac x=b in exI)
    apply (clarsimp simp: upto_enum_step_def pt_bits_def pageBits_def is_cap_simps
-                         image_image word32_shift_by_2 split: split_if_asm)
+                         image_image word_shift_by_2 split: split_if_asm)
   apply (frule_tac d="xb << 2" in is_aligned_add_helper)
     apply (rule shiftl_less_t2n)
      apply (erule order_le_less_trans, simp)

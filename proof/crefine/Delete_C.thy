@@ -120,7 +120,7 @@ lemma cap_zombie_cap_set_capZombieNumber_spec:
   apply clarsimp
   apply (frule(2) ccap_zombie_radix_less1)
   apply (clarsimp simp: cap_zombie_cap_lift
-                        ccap_relation_def option_map_Some_eq2
+                        ccap_relation_def map_option_Some_eq2
                         cap_to_H_def get_capZombieBits_CL_def
                  split: split_if_asm)
    apply (simp add: mask_def word_bw_assocs word_ao_dist)
@@ -975,7 +975,7 @@ lemma cteRevoke_ccorres1:
          apply (clarsimp simp: cte_wp_at_ctes_of)
          apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])         
          apply (simp add: typ_heap_simps)
-         apply (clarsimp simp: ccte_relation_def option_map_Some_eq2)
+         apply (clarsimp simp: ccte_relation_def map_option_Some_eq2)
         apply ceqv
        apply (rule ccorres_rhs_assoc2)+
        apply (rule iffD1 [OF ccorres_expand_while_iff_Seq2])

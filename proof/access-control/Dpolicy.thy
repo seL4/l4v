@@ -237,10 +237,10 @@ lemma fst_transform_cslot_ptr:
 definition
   transform_cslot_ptr_rev :: "cdl_cap_ref \<Rightarrow> cslot_ptr"
 where
-  "transform_cslot_ptr_rev \<equiv> \<lambda>(a, b). (a, the (nat_to_bl WordSetup.word_bits b))"
+  "transform_cslot_ptr_rev \<equiv> \<lambda>(a, b). (a, the (nat_to_bl word_bits b))"
 
 lemma transform_cslot_pre_onto:
-  "snd ptr < 2 ^ WordSetup.word_bits \<Longrightarrow> \<exists>ptr'. ptr = transform_cslot_ptr ptr'"
+  "snd ptr < 2 ^ word_bits \<Longrightarrow> \<exists>ptr'. ptr = transform_cslot_ptr ptr'"
   apply (rule_tac x="transform_cslot_ptr_rev ptr" in exI)
   apply (case_tac ptr)
   apply (clarsimp simp:transform_cslot_ptr_def transform_cslot_ptr_rev_def)
@@ -361,7 +361,7 @@ abbreviation
    | cdl_cap.PageTableCap _ _ _ \<Rightarrow> 0"
 
 lemma opt_cap_None_word_bits:
-  "\<lbrakk> einvs s; snd ptr \<ge> 2 ^ WordSetup.word_bits \<rbrakk> \<Longrightarrow> opt_cap ptr (transform s) = None"
+  "\<lbrakk> einvs s; snd ptr \<ge> 2 ^ word_bits \<rbrakk> \<Longrightarrow> opt_cap ptr (transform s) = None"
   apply (case_tac ptr)
   apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
   apply (rule_tac P="a=idle_thread s" in case_split)
@@ -382,18 +382,18 @@ lemma opt_cap_None_word_bits:
                   lt_word_bits_lt_pow zero_less_Suc)
     apply (clarsimp simp:option_map_join_def nat_to_bl_def)
     apply (drule not_le_imp_less)
-    apply (subgoal_tac "b < 2 ^ WordSetup.word_bits")
+    apply (subgoal_tac "b < 2 ^ word_bits")
      apply simp
     apply (rule less_trans)
      apply simp
     apply (rule power_strict_increasing, simp+)
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
-   apply (clarsimp simp:transform_tcb_def tcb_slot_defs WordSetup.word_bits_def
+   apply (clarsimp simp:transform_tcb_def tcb_slot_defs word_bits_def
                         tcb_pending_op_slot_def tcb_boundntfn_slot_def)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj; simp)
     apply (simp add:transform_asid_pool_contents_def transform_page_table_contents_def
-                    transform_page_directory_contents_def unat_map_def WordSetup.word_bits_def)+
+                    transform_page_directory_contents_def unat_map_def word_bits_def)+
   done
 
 lemma opt_cap_Some_rev:

@@ -11,6 +11,7 @@
 theory Aligned
 imports
   Word_Lib
+  HOL_Lemmas
   More_Divides
 begin
 
@@ -23,22 +24,6 @@ definition
 lemma is_aligned_mask: "(is_aligned w n) = (w && mask n = 0)"
   unfolding is_aligned_def by (rule and_mask_dvd_nat)
 
-
-lemma list_of_false:
-  "True \<notin> set xs \<Longrightarrow> xs = replicate (length xs) False"
-  by (induct xs, simp_all)
-
-lemma eq_zero_set_bl: "(w = 0) = (True \<notin> set (to_bl w))"
-  apply (subst word_bl.Rep_inject[symmetric])
-  apply (subst to_bl_0)
-  apply (rule iffI)
-   apply clarsimp
-  apply (drule list_of_false)
-  apply simp
-  done
-
-lemma diff_diff_less: "(i < m - (m - (n :: nat))) = (i < m \<and> i < n)"
-  by auto
 
 lemma is_aligned_to_bl:
   "is_aligned (w :: 'a :: len word) n = (True \<notin> set (drop (size w - n) (to_bl w)))"
@@ -66,23 +51,12 @@ lemma is_aligned_to_bl:
 
 lemma unat_power_lower [simp]:
   assumes nv: "n < len_of TYPE('a::len)"
-  shows "unat ((2::'a::len word) ^ n) = 2 ^ n" 
-  apply (subst word_unat_power)
-  apply (subst unat_of_nat)
-  apply (subst mod_less)
-   apply (simp add: nv)
-  apply simp
-  done
+  shows "unat ((2::'a::len word) ^ n) = 2 ^ n"
+  by (simp add: assms nat_power_eq uint_2p_alt unat_def) 
 
 lemma power_overflow:
   "n \<ge> len_of TYPE('a) \<Longrightarrow> 2 ^ n = (0 :: 'a::len word)"
-  apply (subgoal_tac "\<exists>m. n = (len_of TYPE ('a)) + m")
-   apply safe
-   apply (simp only: power_add word_pow_0)
-   apply simp
-  apply (rule exI[where x="n - len_of TYPE ('a)"])
-  apply simp
-  done
+  by (simp add: p2_eq_0)
 
 lemma is_alignedI [intro?]:
   fixes x::"'a::len word"
@@ -112,13 +86,8 @@ qed
 
 lemma is_aligned_weaken:
   "\<lbrakk> is_aligned w x; x \<ge> y \<rbrakk> \<Longrightarrow> is_aligned w y"
-  apply (simp add: is_aligned_def)
-  apply (rule dvd_trans)
-   prefer 2
-   apply assumption
-  apply (simp add: le_imp_power_dvd)
-  done
-
+  unfolding is_aligned_def
+  by (erule dvd_trans [rotated]) (simp add: le_imp_power_dvd)
 
 lemma nat_power_less_diff:
   assumes lt: "(2::nat) ^ n * q < 2 ^ m"
@@ -181,16 +150,12 @@ lemma is_aligned_replicate:
   and          nv: "n \<le> len_of TYPE('a)"
   shows   "to_bl w = (take (len_of TYPE('a) - n) (to_bl w)) @ replicate n False"
 proof -
-    from nv have rl: "\<And>q. q < 2 ^ (len_of TYPE('a) - n) \<Longrightarrow> 
+  from nv have rl: "\<And>q. q < 2 ^ (len_of TYPE('a) - n) \<Longrightarrow> 
       to_bl (2 ^ n * (of_nat q :: 'a word)) =
       drop n (to_bl (of_nat q :: 'a word)) @ replicate n False"
-      apply (subst shiftl_t2n [symmetric])
-      apply (subst bl_shiftl)
-      apply (simp add: min_def word_size)
-      done
-
-    show ?thesis using aligned
-      by (auto simp: rl elim: is_alignedE)
+    by (metis bl_shiftl le_antisym min_def shiftl_t2n wsst_TYs(3))
+  show ?thesis using aligned
+    by (auto simp: rl elim: is_alignedE)
 qed
 
 lemma is_aligned_drop:
@@ -209,13 +174,7 @@ lemma less_is_drop_replicate:
   fixes x::"'a::len word"
   assumes lt: "x < 2 ^ n"
   shows   "to_bl x = replicate (len_of TYPE('a) - n) False @ drop (len_of TYPE('a) - n) (to_bl x)"
-proof -
-  show ?thesis 
-    apply (subst less_mask_eq [OF lt, symmetric])
-    apply (subst bl_and_mask)
-    apply simp
-    done
-qed
+  by (metis assms bl_and_mask' less_mask_eq)
 
 lemma is_aligned_add_conv:
   fixes off::"'a::len word"
@@ -237,19 +196,6 @@ proof cases
 next
   assume "\<not> n \<le> len_of TYPE('a)"
   with offv show ?thesis by (simp add: power_overflow)
-qed
-
-lemma nat_less_power_trans:
-  fixes n :: nat
-  assumes nv: "n < 2 ^ (m - k)" 
-  and     kv: "k \<le> m"
-  shows "2 ^ k * n < 2 ^ m"
-proof (rule order_less_le_trans)
-  show "2 ^ k * n < 2 ^ k * 2 ^ (m - k)"
-    by (rule mult_less_mono2 [OF nv zero_less_power]) simp
-    
-  show "(2::nat) ^ k * 2 ^ (m - k) \<le> 2 ^ m" using nv kv
-    by (subst power_add [symmetric]) simp
 qed
 
 lemma aligned_add_aligned:
@@ -288,16 +234,8 @@ proof cases
       by simp
 
     ultimately have upls: "unat x + unat y = 2 ^ m * (2 ^ k * q1 + q2)"
-      apply -
-      apply (erule ssubst)+
-      apply (subst unat_of_nat)
-      apply (subst mod_less [OF l1])
-      apply (subst unat_of_nat)
-      apply (subst mod_less [OF l2])
-      apply (subst power_add)
-      apply (subst add_mult_distrib2)
-      apply simp
-      done
+      by (metis Divides.mod_less l1 l2 power_add semiring_normalization_rules(18)
+                semiring_normalization_rules(34) word_unat.inverse_norm)
 
     (* (2 ^ k * q1 + q2) *)
     show "\<exists>d. unat (x + y) = 2 ^ m * d"
@@ -317,13 +255,14 @@ proof cases
       also have "\<dots> = (2 ^ m * (2 ^ k * q1 + q2)) mod 2 ^ len_of TYPE('a)"
         by (subst upls, rule refl)
 
-      also have "\<dots> = 2 ^ m * ((2 ^ k * q1 +  q2) mod 2 ^ (len_of TYPE('a) - m))"
-        apply (subst mult_mod_right)
-        apply (subst power_add [symmetric])
-        apply (subst le_add_diff_inverse
-                     [OF order_trans[OF lt order_less_imp_le[OF nlt]]])
-        apply (rule refl)
-        done
+      also
+      have "\<dots> = 2 ^ m * ((2 ^ k * q1 +  q2) mod 2 ^ (len_of TYPE('a) - m))"
+      proof -
+        have "m \<le> len_of (TYPE('a))"
+          by (meson le_trans less_imp_le_nat lt nlt)
+        then show ?thesis
+          by (metis mult_mod_right ordered_cancel_comm_monoid_diff_class.add_diff_inverse power_add)
+      qed
 
       finally show ?thesis ..
     qed
@@ -385,16 +324,11 @@ proof cases
   with al
   show ?thesis
     unfolding is_aligned_def
-    apply -
-    apply (rule word_unat.Rep_eqD)
-    apply (subst unat_mod)
-    apply (simp add: dvd_eq_mod_eq_0)
-    done
+    by (simp add: and_mask_dvd_nat p2_gt_0 word_mod_2p_is_mask)
 next
   assume "\<not> sz < len_of TYPE('a)"
   with al show ?thesis
-    by (simp add: not_less power_overflow is_aligned_mask mask_def
-                  word_mod_by_0)
+    by (simp add: not_less power_overflow is_aligned_mask mask_def word_mod_by_0)
 qed
 
 lemma is_aligned_triv: "is_aligned (2 ^ n ::'a::len word) n"
@@ -435,9 +369,7 @@ lemma is_aligned_no_wrap:
   shows  "unat ptr + unat off < 2 ^ len_of TYPE('a)"
 proof -
   have szv: "sz < len_of TYPE('a)"
-    apply (rule ccontr)
-    using off
-    by (clarsimp simp: not_less p2_eq_0[THEN iffD2])
+  using off p2_gt_0 word_neq_0_conv by fastforce
 
   from al obtain q where ptrq: "ptr = 2 ^ sz * of_nat q" and
     qv: "q < 2 ^ (len_of TYPE('a) - sz)" by (auto elim: is_alignedE)
@@ -445,8 +377,7 @@ proof -
   show ?thesis
   proof (cases "sz = 0")
     case True
-    thus ?thesis using off ptrq qv
-      by clarsimp
+    thus ?thesis using off ptrq qv by clarsimp
   next
     case False
     hence sne: "0 < sz" ..
@@ -523,21 +454,6 @@ lemma is_aligned_replicateI:
   apply (drule arg_cong [where f=length])
   apply simp
   done 
-
-lemma to_bl_1: "to_bl (1::'a::len word) = replicate (len_of TYPE('a) - 1) False @ [True]"
-proof -
-  have "to_bl (1 :: 'a::len word) = to_bl (mask 1 :: 'a::len word)"
-    by (simp add: mask_def)
-  
-  also have "\<dots> = replicate (len_of TYPE('a) - 1) False @ [True]"
-    apply (subst to_bl_mask)
-    apply (clarsimp simp add: min_def)
-    apply (case_tac "len_of TYPE('a)", simp)
-    apply simp
-    done
-  
-  finally show ?thesis .
-qed
 
 lemma to_bl_2p:
   "n < len_of TYPE('a) \<Longrightarrow>
@@ -626,7 +542,6 @@ proof cases
   apply (subgoal_tac "\<not> len_of TYPE('a) - Suc n \<le> len_of TYPE('a) - n'")
    prefer 2
    apply arith
-  apply (simp add: min_def)
   apply (subst replicate_Suc [symmetric])
   apply (subst replicate_add [symmetric])
   apply simp
@@ -876,17 +791,13 @@ qed
 
 lemma is_aligned_neg_mask:
   "m \<le> n \<Longrightarrow> is_aligned (x && ~~ mask n) m"
-  apply (simp add: and_not_mask)
-  apply (erule is_aligned_weaken[rotated])
-  apply (rule is_aligned_shift)
-  done
+  by (metis and_not_mask is_aligned_shift is_aligned_weaken)
 
 lemma unat_minus:
   "unat (- (x :: ('a :: len) word))
     = (if x = 0 then 0 else (2 ^ size x) - unat x)"
   using unat_sub_if_size[where x="2 ^ size x" and y=x]
-  apply (simp add: unat_eq_0 word_size)
-  done
+  by (simp add: unat_eq_0 word_size)
 
 lemma is_aligned_minus:
   "is_aligned p n \<Longrightarrow> is_aligned (- p) n"
@@ -933,17 +844,11 @@ lemma is_aligned_shiftl_self:
 
 lemma is_aligned_neg_mask_eq:
   "is_aligned p n \<Longrightarrow> p && ~~ mask n = p"
-  apply (simp add: is_aligned_nth)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size word_ops_nth_size)
-  apply fastforce
-  done
+  by (metis add.left_neutral is_aligned_mask word_plus_and_or_coroll2)
 
 lemma is_aligned_shiftr_shiftl:
   "is_aligned w n \<Longrightarrow> w >> n << n = w"
-  apply (simp add: shiftr_shiftl1)
-  apply (erule is_aligned_neg_mask_eq)
-  done
+  by (metis and_not_mask is_aligned_neg_mask_eq)
 
 lemma aligned_shiftr_mask_shiftl:
   "is_aligned x n \<Longrightarrow> ((x >> n) && mask v) << n = x && mask (v + n)"

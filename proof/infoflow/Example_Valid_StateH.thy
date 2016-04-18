@@ -1233,7 +1233,7 @@ lemma range_tcb_not_kh0H_dom:
   "{(x && ~~ mask 9) + 1..(x && ~~ mask 9) + 2 ^ 9 - 1} \<inter> dom kh0H \<noteq> {} \<Longrightarrow> (x && ~~ mask 9) \<noteq> Low_tcb_ptr"
   "{(x && ~~ mask 9) + 1..(x && ~~ mask 9) + 2 ^ 9 - 1} \<inter> dom kh0H \<noteq> {} \<Longrightarrow> (x && ~~ mask 9) \<noteq> idle_tcb_ptr"
     apply clarsimp
-    apply (drule WordLemmaBucket.int_not_emptyD)
+    apply (drule int_not_emptyD)
     apply (clarsimp simp: kh0H_dom)
     apply (subgoal_tac "xa \<in> tcb_offs_range High_tcb_ptr")
      prefer 2
@@ -1246,7 +1246,7 @@ lemma range_tcb_not_kh0H_dom:
           | clarsimp simp: kh0H_dom_sets_distinct[THEN orthD1])+)[1]
     apply (clarsimp simp: s0_ptr_defs tcb_offs_range_def)
    apply clarsimp
-   apply (drule WordLemmaBucket.int_not_emptyD)
+   apply (drule int_not_emptyD)
    apply (clarsimp simp: kh0H_dom)
    apply (subgoal_tac "xa \<in> tcb_offs_range Low_tcb_ptr")
     prefer 2
@@ -1259,7 +1259,7 @@ lemma range_tcb_not_kh0H_dom:
          | clarsimp simp: kh0H_dom_sets_distinct[THEN orthD1])+)[1]
    apply (clarsimp simp: s0_ptr_defs tcb_offs_range_def)
   apply clarsimp
-  apply (drule WordLemmaBucket.int_not_emptyD)
+  apply (drule int_not_emptyD)
   apply (clarsimp simp: kh0H_dom)
   apply (subgoal_tac "xa \<in> tcb_offs_range idle_tcb_ptr")
    prefer 2
@@ -1373,7 +1373,7 @@ lemma map_to_ctes_kh0H:
           clarsimp,
           clarsimp simp: s0_ptr_defs cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def objBitsKO_def kh0H_dom,
           rule FalseE,
-          drule WordLemmaBucket.int_not_emptyD,
+          drule int_not_emptyD,
           clarsimp,
           (elim disjE, (clarsimp | drule(1) order_trans le_less_trans, fastforce)+)[1])+)[3]
    apply (clarsimp simp: map_to_ctes_def Let_def kh0H_obj_def split del: split_if,
@@ -1392,7 +1392,7 @@ lemma map_to_ctes_kh0H:
           rule impI,
           clarsimp simp: s0_ptr_defs cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def objBitsKO_def kh0H_dom is_aligned_def,
           rule FalseE,
-          drule WordLemmaBucket.int_not_emptyD,
+          drule int_not_emptyD,
           clarsimp,
           (elim disjE, (clarsimp | drule(1) order_trans le_less_trans, fastforce)+)[1])
    apply (clarsimp simp: map_to_ctes_def Let_def kh0H_obj_def split del: split_if)
@@ -1419,7 +1419,7 @@ lemma map_to_ctes_kh0H:
    apply (drule plus_one_helper[where n="0x3FFF", simplified])
    apply (elim disjE)
          apply (unat_arith+)[6]
-   apply (drule WordLemmaBucket.int_not_emptyD)
+   apply (drule int_not_emptyD)
    apply clarsimp
    apply (elim disjE,
           ((clarsimp,
@@ -1455,7 +1455,7 @@ lemma map_to_ctes_kh0H:
            frule_tac 'a=32 in of_bl_length_le,
             simp,
            simp,
-          drule WordLemmaBucket.int_not_emptyD,
+          drule int_not_emptyD,
           clarsimp simp: kh0H_dom s0_ptr_defs cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def cte_level_bits_def,
           (elim disjE,
            (clarsimp simp: s0_ptr_defs,

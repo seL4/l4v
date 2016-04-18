@@ -951,7 +951,7 @@ lemma heap_relation_user_word_at_cross_over:
    apply (insert int_and_leR [where a="uint (p >> 2)" and b=1023], clarsimp)[1]
   apply (simp add: field_lvalue_def
             field_lookup_offset_eq[OF trans, OF _ arg_cong[where f=Some, symmetric], OF _ prod.collapse]
-            word32_shift_by_2 shiftr_shiftl1 is_aligned_neg_mask_eq is_aligned_andI1)
+            word_shift_by_2 shiftr_shiftl1 is_aligned_neg_mask_eq is_aligned_andI1)
   apply (drule_tac x="ucast (p >> 2)" in spec)
   apply (simp add: byte_to_word_heap_def Let_def ucast_ucast_mask)
   apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
@@ -2035,7 +2035,7 @@ lemma ccte_relation_eq_ccap_relation:
       = (ccap_relation (cteCap cte) (cte_C.cap_C ccte)
             \<and> mdb_node_to_H (mdb_node_lift (cteMDBNode_C ccte))
                    = (cteMDBNode cte))"
-  apply (simp add: ccte_relation_def option_map_Some_eq2 cte_lift_def
+  apply (simp add: ccte_relation_def map_option_Some_eq2 cte_lift_def
                    ccap_relation_def)
   apply (simp add: cte_to_H_def split: option.split)
   apply (cases cte, clarsimp simp: c_valid_cte_def conj_comms)
@@ -2499,7 +2499,7 @@ lemma fastpath_call_ccorres:
                    apply (rule slowpath_ccorres, simp+)
                 apply (vcg exspec=slowpath_noreturn_spec)
                  apply (simp add: ccap_relation_pd_helper cap_get_tag_isCap_ArchObject2
-                         del: Collect_const WordSetup.ptr_add_def cong: call_ignore_cong)
+                         del: Collect_const Word_Lib.ptr_add_def cong: call_ignore_cong)
                  apply csymbr
                  apply (rule ccorres_symb_exec_l3[OF _ gets_inv _ empty_fail_gets])
                   apply (rename_tac asidMap)
@@ -3217,7 +3217,7 @@ lemma fastpath_reply_recv_ccorres:
                    apply (simp add: ccap_relation_pd_helper cap_get_tag_isCap_ArchObject2
                                     ccap_relation_reply_helper
                                     ptr_add_assertion_positive
-                           del: Collect_const WordSetup.ptr_add_def cong: call_ignore_cong)
+                           del: Collect_const Word_Lib.ptr_add_def cong: call_ignore_cong)
                    apply (rule ccorres_move_array_assertion_pd
                         | (rule ccorres_flip_Guard ccorres_flip_Guard2,
                             rule ccorres_move_array_assertion_pd))+
@@ -3342,7 +3342,7 @@ lemma fastpath_reply_recv_ccorres:
                             apply (clarsimp simp: typ_heap_simps' cte_level_bits_def
                                                   tcbCallerSlot_def size_of_def
                                                   tcb_cnode_index_defs tcb_ptr_to_ctcb_ptr_mask)
-                            apply (clarsimp simp: ccte_relation_def option_map_Some_eq2)
+                            apply (clarsimp simp: ccte_relation_def map_option_Some_eq2)
                            apply ceqv
                           apply (rule ccorres_assert)
                           apply (rename_tac mdbPrev_cte mdbPrev_cte_c)
@@ -3360,7 +3360,7 @@ lemma fastpath_reply_recv_ccorres:
                              apply (rule cmap_relationE1[OF cmap_relation_cte], assumption+)
                              apply (clarsimp simp: typ_heap_simps' split_def)
                              apply (rule getCTE_setCTE_rf_sr, simp_all)[1]
-                             apply (clarsimp simp: ccte_relation_def option_map_Some_eq2
+                             apply (clarsimp simp: ccte_relation_def map_option_Some_eq2
                                                    cte_to_H_def mdb_node_to_H_def
                                                    c_valid_cte_def)
                             apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
@@ -5561,7 +5561,7 @@ lemma emptySlot_cnode_caps:
   "\<lbrace>\<lambda>s. P (only_cnode_caps (ctes_of s)) \<and> cte_wp_at' (\<lambda>cte. \<not> isCNodeCap (cteCap cte)) slot s\<rbrace>
      emptySlot slot None
    \<lbrace>\<lambda>rv s. P (only_cnode_caps (ctes_of s))\<rbrace>"
-  apply (simp add: only_cnode_caps_def option_map_comp2
+  apply (simp add: only_cnode_caps_def map_option_comp2
                    o_assoc[symmetric] cteCaps_of_def[symmetric])
   apply (wp emptySlot_cteCaps_of)
   apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of
@@ -5573,7 +5573,7 @@ lemma cteDeleteOne_cnode_caps:
   "\<lbrace>\<lambda>s. P (only_cnode_caps (ctes_of s))\<rbrace>
      cteDeleteOne slot
    \<lbrace>\<lambda>rv s. P (only_cnode_caps (ctes_of s))\<rbrace>"
-  apply (simp add: only_cnode_caps_def option_map_comp2
+  apply (simp add: only_cnode_caps_def map_option_comp2
                    o_assoc[symmetric] cteCaps_of_def[symmetric])
   apply (wp cteDeleteOne_cteCaps_of)
   apply clarsimp

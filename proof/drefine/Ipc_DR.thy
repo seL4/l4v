@@ -1640,7 +1640,7 @@ lemma get_receive_slot_dcorres:
            apply (wp lsfco_not_idle)
     apply (clarsimp simp:handleE'_def Monads_D.unify_failure_def Exceptions_A.unify_failure_def)
          apply (rule corres_split_bind_case_sum [OF lookup_cap_corres])
-        apply (clarsimp simp:word_bl.Rep_inverse word_size Types_D.word_bits_def)+
+        apply (clarsimp simp:word_bl.Rep_inverse word_size word_bits_def)+
        apply (rule hoareE_TrueI)+
       apply clarsimp
      apply (rule hoare_post_impErr[OF hoareE_TrueI])
@@ -1760,7 +1760,7 @@ lemma dcorres_lookup_extra_caps:
   apply (rule corres_symb_exec_r)
     apply (rule_tac F = "evalMonad (get_extra_cptrs buffer (data_to_message_info (tcb_context t msg_info_register))) s = Some rv"
       in corres_gen_asm2)
-  apply (rule corres_mapME[where S = "{(x,y). x = of_bl y \<and> length y = Types_D.word_bits}"])
+  apply (rule corres_mapME[where S = "{(x,y). x = of_bl y \<and> length y = word_bits}"])
     prefer 3
            apply simp
            apply (erule conjE)
@@ -1785,7 +1785,7 @@ lemma dcorres_lookup_extra_caps:
       apply (drule evalMonad_get_extra_cptrs)
       apply (simp del:get_extra_cptrs.simps
         add: zip_map_eqv[where g = "\<lambda>x. x",simplified])+
-      apply (simp add: Types_D.word_bits_def del:get_extra_cptrs.simps)
+      apply (simp add: word_bits_def del:get_extra_cptrs.simps)
    apply (wp evalMonad_wp)
    apply (case_tac buffer)
      apply (simp add:get_extra_cptrs_def empty_when_fail_simps)+
@@ -2867,11 +2867,11 @@ done
 
 lemma tcb_fault_handler_length:
   "\<lbrakk>valid_state s;ko_at (TCB tcb) thread s\<rbrakk>
-           \<Longrightarrow> length (tcb_fault_handler tcb) = Types_D.word_bits"
+           \<Longrightarrow> length (tcb_fault_handler tcb) = word_bits"
   apply (clarsimp simp:valid_state_def valid_pspace_def)
   apply (drule valid_tcb_objs)
     apply (simp add:obj_at_def,erule get_tcb_rev)
-  apply (simp add:valid_tcb_def WordSetup.word_bits_def Types_D.word_bits_def)
+  apply (simp add:valid_tcb_def word_bits_def)
   done
 
 

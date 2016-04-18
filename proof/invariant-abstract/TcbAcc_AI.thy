@@ -868,31 +868,6 @@ lemma mab_wb [simp]:
   unfolding msg_align_bits word_bits_conv by simp
 end
 
-lemma take_min_len:
-  "take (min (length xs) n) xs = take n xs"
-  apply (cases "length xs \<le> n")
-   apply simp
-  apply (subst min.commute)
-  apply (subst min.absorb1)
-   apply simp
-  apply simp
-  done
-
-lemma zip_take_triv2:
-  "n \<ge> length as \<Longrightarrow> zip as (take n bs) = zip as bs"
-  apply (induct as arbitrary: n bs)
-   apply simp
-  apply simp
-  apply (case_tac n, simp_all)
-  apply (case_tac bs, simp_all)
-  done
-
-lemma zip_take_triv:
-  "n \<ge> length bs \<Longrightarrow> zip (take n as) bs = zip as bs"
-  apply (induct bs arbitrary: n as, simp_all)
-  apply (case_tac n, simp_all)
-  apply (case_tac as, simp_all)
-  done
 
 lemma fold_fun_upd:
   "distinct keys \<Longrightarrow>

@@ -1091,7 +1091,7 @@ lemma deleteASIDPool_ccorres:
               apply (subst(asm) Suc_unat_diff_1)
                apply (simp add: asid_low_bits_def)
               apply (simp add: unat_power_lower asid_low_bits_word_bits)
-              apply (erule of_nat_less_pow [OF _ asid_low_bits_word_bits])
+              apply (erule of_nat_less_pow_32 [OF _ asid_low_bits_word_bits])
              apply (simp add: asid_low_bits_def asid_bits_def)
             apply (simp add: asid_bits_def)
            apply (simp add: upto_enum_word )
@@ -1630,7 +1630,7 @@ lemma Arch_finaliseCap_ccorres:
 lemma ccte_relation_ccap_relation:
   "ccte_relation cte cte' \<Longrightarrow> ccap_relation (cteCap cte) (cte_C.cap_C cte')"
   by (clarsimp simp: ccte_relation_def ccap_relation_def
-                     cte_to_H_def option_map_Some_eq2
+                     cte_to_H_def map_option_Some_eq2
                      c_valid_cte_def)
 
 lemma isFinalCapability_ccorres:
@@ -1704,7 +1704,7 @@ lemma isFinalCapability_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
   apply (simp add: typ_heap_simps)
-  apply (clarsimp simp add: ccte_relation_def option_map_Some_eq2)
+  apply (clarsimp simp add: ccte_relation_def map_option_Some_eq2)
   by (auto,
          auto dest!: ctes_of_valid' [OF _ invs_valid_objs']
               elim!: valid_capAligned)

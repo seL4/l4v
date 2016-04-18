@@ -118,7 +118,7 @@ let
     case T of
       (* Signed words are converted to standard words on the heap. *)
         Type (@{type_name "Word.word"},
-          [Type (@{type_name "SignedWords.signed"}, x)]) =>
+          [Type (@{type_name "Signed_Words.signed"}, x)]) =>
             Type (@{type_name "Word.word"}, x)
 
       (* Pointers are valid if their inner type is valid. *)

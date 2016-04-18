@@ -555,7 +555,7 @@ lemma leq_asid_bits_shift:
   apply (rule ccontr)
   apply (clarsimp simp: linorder_not_less asid_high_bits_def asid_low_bits_def)
   apply (simp add: mask_def)  
-  apply (simp add: upper_bits_unset_is_l2p [symmetric])
+  apply (simp add: upper_bits_unset_is_l2p_32 [symmetric])
   apply (simp add: asid_bits_def word_bits_def)
   apply (erule_tac x="n+10" in allE)
   apply (simp add: linorder_not_less)
@@ -565,7 +565,7 @@ lemma leq_asid_bits_shift:
 
 lemma ucast_asid_high_bits_is_shift:
   "asid \<le> mask asid_bits \<Longrightarrow> ucast (asid_high_bits_of asid) = (asid >> asid_low_bits)"
-  apply (simp add: mask_def upper_bits_unset_is_l2p [symmetric])
+  apply (simp add: mask_def upper_bits_unset_is_l2p_32 [symmetric])
   apply (simp add: asid_high_bits_of_def)
   apply (rule word_eqI)
   apply (simp add: word_size nth_shiftr nth_ucast asid_low_bits_def asid_bits_def word_bits_def)
@@ -738,7 +738,7 @@ lemma lookupPDSlot_spec:
    apply (rule order_less_imp_le, rule vptr_shiftr_le_2p)
   apply (simp add: Let_def word_sle_def)
   apply (case_tac pd)
-  apply (simp add: word32_shift_by_2)
+  apply (simp add: word_shift_by_2)
   done
 
 lemma lookupPTSlot_nofail_spec:
@@ -753,7 +753,7 @@ lemma lookupPTSlot_nofail_spec:
    apply (rule order_le_less_trans, rule word_and_le1, simp add: ptBits_def pageBits_def)
   apply (simp add: Let_def word_sle_def)
   apply (case_tac pt)
-  apply (simp add: word32_shift_by_2)
+  apply (simp add: word_shift_by_2)
   done
 
 lemma ccorres_pre_getObject_pde:
@@ -864,7 +864,7 @@ lemma lookupPTSlot_ccorres:
                   split: pde.split_asm)
    apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
     apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
-   apply (simp add: word32_shift_by_2 lookup_pt_slot_no_fail_def)
+   apply (simp add: word_shift_by_2 lookup_pt_slot_no_fail_def)
   apply (clarsimp simp: Collect_const_mem h_t_valid_clift)
   apply (frule(1) page_directory_at_rf_sr, clarsimp)
   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
@@ -2721,7 +2721,7 @@ lemma aligend_mask_disjoint:
   "\<lbrakk>is_aligned (a :: word32) n; b \<le> mask n; n < word_bits\<rbrakk> \<Longrightarrow> a && b = 0"
   apply (rule word_eqI)
   apply (clarsimp simp: is_aligned_nth word_size mask_def simp del: word_less_sub_le)
-  apply (drule le2p_bits_unset[OF word_less_sub_1])
+  apply (drule le2p_bits_unset_32[OF word_less_sub_1])
   apply (case_tac "na < n")
    apply simp
   apply (simp add: linorder_not_less word_bits_def)
@@ -3313,7 +3313,7 @@ lemma performASIDPoolInvocation_ccorres:
     apply simp
    apply (simp add: option_to_ptr_def option_to_0_def)
    apply (erule(1) rf_sr_ctes_of_cliftE, simp(no_asm_simp))
-   apply (clarsimp simp: ccap_relation_def option_map_Some_eq2 cap_lift_PDCap_Base)
+   apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_lift_PDCap_Base)
   apply (simp add: asid_low_bits_def)
   done
 

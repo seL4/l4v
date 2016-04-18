@@ -324,4 +324,14 @@ lemma upto_enum_triv [simp]:
   "[x .e. x] = [x]"
   unfolding upto_enum_def by simp
 
+lemma toEnum_eq_to_fromEnum_eq:
+  fixes v :: "'a :: enum" shows
+  "n \<le> fromEnum (maxBound :: 'a) \<Longrightarrow> (toEnum n = v) = (n = fromEnum v)"
+  apply (rule iffI)
+   apply (drule arg_cong[where f=fromEnum])
+   apply simp
+  apply (drule arg_cong[where f="toEnum :: nat \<Rightarrow> 'a"])
+  apply simp
+  done
+
 end

@@ -732,7 +732,7 @@ lemma retype_untyped_loop_inv_success:
                  in retype_untyped_bij_success,
           (assumption|simp|clarsimp)+)
          apply (drule list_all_nth [where xs=free_slots], simp)
-         apply (metis of_nat_less_pow offset_slot_si_cnode_size
+         apply (metis of_nat_less_pow_32 offset_slot_si_cnode_size
                        offset_slot' si_cnode_size_less_than_word_size)
         apply simp
         apply (drule list_all_nth [where xs=untyped_slots], simp)
@@ -740,9 +740,9 @@ lemma retype_untyped_loop_inv_success:
                      si_cnode_size_less_than_word_size unat_power_lower32)
        apply force
       apply (drule list_all_nth [where xs=free_slots], simp)
-      apply (metis nth_map' of_nat_less_pow si_cnode_size_less_than_word_size)
+      apply (metis nth_map' of_nat_less_pow_32 si_cnode_size_less_than_word_size)
      apply (drule list_all_nth [where xs=untyped_slots], simp)
-     apply (metis nth_map' of_nat_less_pow si_cnode_size_less_than_word_size)
+     apply (metis nth_map' of_nat_less_pow_32 si_cnode_size_less_than_word_size)
     apply (frule (1) well_formed_object_untyped, simp)
    apply (clarsimp)
    apply (rule conjI)
@@ -977,9 +977,9 @@ lemma retype_untyped_loop_inv_fail:
                  in hoare_vcg_conj_lift [OF retype_untyped_bij_fail],
                  (assumption|simp|clarsimp)+)
          apply (drule list_all_nth [where xs=free_slots], simp)
-         apply (metis of_nat_less_pow si_cnode_size_less_than_word_size)
+         apply (metis of_nat_less_pow_32 si_cnode_size_less_than_word_size)
         apply (drule list_all_nth [where xs=untyped_slots], simp)
-        apply (metis nth_map' of_nat_less_pow si_cnode_size_less_than_word_size)
+        apply (metis nth_map' of_nat_less_pow_32 si_cnode_size_less_than_word_size)
        apply clarsimp
        apply (drule list_all_nth [where xs=free_slots], simp)
        apply (metis (hide_lams, no_types) Diff_disjoint Int_commute UN_nth_mem disjoint_subset2)

@@ -306,7 +306,7 @@ lemma offset_slot:
   "\<lbrakk>slot < 2^radix; radix < word_bits\<rbrakk> \<Longrightarrow> offset (of_nat slot) radix = slot"
   apply (clarsimp simp: offset_def)
   apply (subst Word.less_mask_eq)
-   apply (erule (1) of_nat_less_pow)
+   apply (erule (1) of_nat_less_pow_32)
   apply (subst unat_of_nat_eq)
    apply (drule_tac a="2::nat" and n=radix and N = word_bits in power_strict_increasing)
     apply simp

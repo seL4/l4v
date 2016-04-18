@@ -458,7 +458,7 @@ lemma pde_at_aligned_vptr:
                  cong: kernel_object.case_cong)
   apply (prove "is_aligned x 2")
   subgoal
-    apply (clarsimp simp: upto_enum_step_def word32_shift_by_2)
+    apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
     by (rule is_aligned_shiftl_self)
   apply (simp add: aligned_add_aligned word_bits_conv
                    is_aligned_shiftl_self)+
@@ -472,16 +472,16 @@ lemma pde_at_aligned_vptr:
         apply simp
        apply (simp add: word_bits_conv)
       apply simp
-     apply (subst upper_bits_unset_is_l2p[unfolded word_bits_conv])
+     apply (subst upper_bits_unset_is_l2p_32[unfolded word_bits_conv])
       apply simp
-     apply (clarsimp simp: upto_enum_step_def word32_shift_by_2)
+     apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
      apply (rule shiftl_less_t2n[where m=6, simplified])
       apply (rule minus_one_helper5)
        apply simp+
     apply (rule sym, rule add_mask_lower_bits)
      apply (simp add: pd_bits_def pageBits_def)
     apply simp
-    apply (subst upper_bits_unset_is_l2p[unfolded word_bits_conv])
+    apply (subst upper_bits_unset_is_l2p_32[unfolded word_bits_conv])
      apply (simp add: pd_bits_def pageBits_def)
     apply (rule shiftl_less_t2n)
      apply (rule shiftr_less_t2n')
@@ -496,7 +496,7 @@ lemma pde_at_aligned_vptr:
 lemma pde_shifting:
   "\<lbrakk>is_aligned (vptr::word32) 24; x \<le> 0xF\<rbrakk> \<Longrightarrow> x + (vptr >> 20) < 0x1000"
   apply (rule order_less_le_trans)
-   apply (subst upper_bits_unset_is_l2p [where n=12, symmetric])
+   apply (subst upper_bits_unset_is_l2p_32 [where n=12, symmetric])
     apply (clarsimp simp: word_bits_def)
    prefer 2
    apply simp
@@ -536,7 +536,7 @@ lemma pde_shifting:
 
 lemma p_le_0xF_helper:
   "((p::word32) \<le> 0xF) = (\<forall>n'\<ge>4. n'< word_bits \<longrightarrow> \<not> p !! n')"
-  apply (subst upper_bits_unset_is_l2p)
+  apply (subst upper_bits_unset_is_l2p_32)
    apply (simp add: word_bits_def)
   apply (auto intro: plus_one_helper dest: plus_one_helper2)
   done
@@ -635,7 +635,7 @@ lemma pte_at_aligned_vptr:
   \<Longrightarrow> pte_at (x + (pt + (((vptr >> 12) && 0xFF) << 2))) s"
   apply (erule page_table_pte_at_diffE[where x="(x >> 2) + ((vptr >> 12) && 0xFF)"];simp?)
    apply (simp add: word_shiftl_add_distrib upto_enum_step_def)
-   apply (clarsimp simp: word32_shift_by_2 shiftr_shiftl1
+   apply (clarsimp simp: word_shift_by_2 shiftr_shiftl1
                          is_aligned_neg_mask_eq is_aligned_shift)
   apply (subst add.commute, rule is_aligned_add_less_t2n)
       apply (rule is_aligned_andI1[where n=4], rule is_aligned_shiftr, simp)
@@ -744,7 +744,7 @@ lemma page_directory_pde_at_lookupI:
 
 lemma vptr_shiftr_le_2pt:
   "((vptr :: word32) >> 12) && 0xFF < 2 ^ (pt_bits - 2)"
-  apply (clarsimp simp: word32_FF_is_mask pt_bits_def pageBits_def)
+  apply (clarsimp simp: word_FF_is_mask pt_bits_def pageBits_def)
   apply (rule and_mask_less_size[where n=8, simplified])
   apply (clarsimp simp: word_size)
   done
@@ -796,7 +796,7 @@ lemma create_mapping_entries_valid [wp]:
      apply (clarsimp intro!: is_aligned_shiftl is_aligned_shiftr)
     apply (clarsimp simp: word_bits_def)
    apply clarsimp
-  apply (clarsimp simp: upto_enum_step_def word32_shift_by_2)
+  apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
   apply (clarsimp simp: pde_at_def)
   apply (simp add: add.commute add.left_commute)
   apply (subst add_mask_lower_bits)
@@ -2371,14 +2371,14 @@ lemma lookup_pt_slot_reachable2 [wp]:
     prefer 2
     apply simp
    apply (clarsimp simp: pt_bits_def pageBits_def)
-   apply (clarsimp simp: upto_enum_step_def word32_shift_by_2 p_le_0xF_helper)
+   apply (clarsimp simp: upto_enum_step_def word_shift_by_2 p_le_0xF_helper)
    apply (thin_tac "pda x = t" for x t)
    apply (subst (asm) word_plus_and_or_coroll)
     apply (rule word_eqI)
-    apply (clarsimp simp: word_size word_bits_def nth_shiftr nth_shiftl is_aligned_nth word32_FF_is_mask)
+    apply (clarsimp simp: word_size word_bits_def nth_shiftr nth_shiftl is_aligned_nth word_FF_is_mask)
     apply (erule_tac x="n - 2" in allE)
     apply simp
-   apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth word32_FF_is_mask word_bits_def)
+   apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth word_FF_is_mask word_bits_def)
   apply (rule conjI, rule refl)
   apply (simp add: add.commute add.left_commute)
   apply (rule vs_refs_pdI)
@@ -2432,14 +2432,14 @@ lemma lookup_pt_slot_reachable3 [wp]:
     prefer 2
     apply simp
    apply (clarsimp simp: pt_bits_def pageBits_def)
-   apply (clarsimp simp: upto_enum_step_def word32_shift_by_2 p_le_0xF_helper)
+   apply (clarsimp simp: upto_enum_step_def word_shift_by_2 p_le_0xF_helper)
    apply (thin_tac "pda x = t" for x t)
    apply (subst (asm) word_plus_and_or_coroll)
     apply (rule word_eqI)
-    apply (clarsimp simp: word_size word_bits_def nth_shiftr nth_shiftl is_aligned_nth word32_FF_is_mask)
+    apply (clarsimp simp: word_size word_bits_def nth_shiftr nth_shiftl is_aligned_nth word_FF_is_mask)
     apply (erule_tac x="n - 2" in allE)
     apply simp
-   apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth word32_FF_is_mask word_bits_def)
+   apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth word_FF_is_mask word_bits_def)
   apply (simp add: add.commute add.left_commute)
   apply (rule vs_refs_pdI)
    prefer 3
@@ -2742,7 +2742,7 @@ lemma create_mapping_entries_valid_slots [wp]:
                    intro!: is_aligned_shiftl is_aligned_shiftr)
     apply (clarsimp simp: word_bits_def)
    apply clarsimp
-  apply (clarsimp simp: upto_enum_step_def word32_shift_by_2)
+  apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
   apply (clarsimp simp: obj_at_def pde_at_def)
   apply (subgoal_tac "is_aligned pd pd_bits")
    prefer 2
@@ -2896,7 +2896,7 @@ lemma lookup_pd_slot_add_eq:
   "\<lbrakk> is_aligned pd pd_bits; is_aligned vptr 24; x \<in> set [0 , 4 .e. 0x3C] \<rbrakk>
   \<Longrightarrow> (x + lookup_pd_slot pd vptr && ~~ mask pd_bits) = pd"
   apply (simp add: pd_bits_def pageBits_def add.commute add.left_commute lookup_pd_slot_def Let_def)
-  apply (clarsimp simp: upto_enum_step_def word32_shift_by_2)
+  apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
   apply (subst add_mask_lower_bits, assumption)
    prefer 2
    apply simp

@@ -331,7 +331,7 @@ lemma unat_ucast_mask_pageBits_shift:
 lemma mask_pageBits_shift_sum:
   "unat n = unat (p && mask 2) \<Longrightarrow> 
   (p && ~~ mask pageBits) + (p && mask pageBits >> 2) * 4 + n = (p::word32)"
-  apply (clarsimp simp: word32_shift_by_2)
+  apply (clarsimp simp: word_shift_by_2)
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
    apply (clarsimp simp: word_size pageBits_def nth_shiftl nth_shiftr word_ops_nth_size)

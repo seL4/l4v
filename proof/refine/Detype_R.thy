@@ -581,9 +581,7 @@ lemma ekheap_relation_detype:
 lemma cap_table_at_gsCNodes_eq:
   "(s, s') \<in> state_relation
     \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
-  apply (clarsimp simp: state_relation_def ghost_relation_def
-                        obj_at_def is_cap_table)
-  by blast
+  by (fastforce simp: state_relation_def ghost_relation_def obj_at_def is_cap_table)
 
 lemma cNodeNoPartialOverlap:
   "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (op = (cap.UntypedCap base magnitude idx)) cref s
@@ -597,7 +595,7 @@ lemma cNodeNoPartialOverlap:
      apply simp
     apply (clarsimp simp: cNodePartialOverlap_def)
     apply (drule(1) cte_wp_valid_cap)
-    apply (clarsimp simp: valid_cap_def valid_untyped_def cap_table_at_gsCNodes_eq
+    apply (clarsimp simp: valid_cap_def valid_untyped_def cap_table_at_gsCNodes_eq 
                           obj_at_def is_cap_table)
     apply (frule(1) pspace_alignedD)
     apply simp
@@ -1618,16 +1616,14 @@ lemma deleteObjects_invs':
 proof -
   show ?thesis
   apply (rule hoare_pre)
-  apply (rule_tac G="is_aligned ptr bits \<and> 2 \<le> bits \<and> bits \<le> word_bits"
-         in hoare_grab_asm)
-  apply (clarsimp simp add: deleteObjects_def2)
-  apply (simp add: freeMemory_def bind_assoc doMachineOp_bind
-                   empty_fail_mapM_x ef_storeWord)
-  apply (simp add: bind_assoc[where f="\<lambda>_. modify f" for f, symmetric])
-  apply (simp add: word_size_def mapM_x_storeWord_step doMachineOp_modify
+   apply (rule_tac G="is_aligned ptr bits \<and> 2 \<le> bits \<and> bits \<le> word_bits" in hoare_grab_asm)
+   apply (clarsimp simp add: deleteObjects_def2)
+   apply (simp add: freeMemory_def bind_assoc doMachineOp_bind ef_storeWord)
+   apply (simp add: bind_assoc[where f="\<lambda>_. modify f" for f, symmetric])
+   apply (simp add: word_size_def mapM_x_storeWord_step doMachineOp_modify
                    modify_modify)
-  apply (simp add: bind_assoc intvl_range_conv'[where 'a=32, folded word_bits_def] mask_def field_simps)
-  apply (wp)
+   apply (simp add: bind_assoc intvl_range_conv'[where 'a=32, folded word_bits_def] mask_def field_simps)
+   apply (wp)
   apply (simp cong: if_cong)
   apply (subgoal_tac "is_aligned ptr bits \<and> 2 \<le> bits \<and> bits < word_bits",simp)
    apply clarsimp
@@ -1698,8 +1694,7 @@ lemma deleteObjects_cap_to':
       ksMachineState_update (\<lambda>_. b)
       (s\<lparr>ksPSpace := \<lambda>x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then None
                          else ksPSpace s x\<rparr>)",erule ssubst)
-    apply (simp add: field_simps ex_cte_cap_wp_to'_def
-      cong:if_cong)
+    apply (simp add: field_simps ex_cte_cap_wp_to'_def cong:if_cong)
    apply simp
   apply (simp add: delete_locale_def)
   done
@@ -1707,8 +1702,8 @@ lemma deleteObjects_cap_to':
 lemma valid_untyped_no_overlap:
   "\<lbrakk> valid_untyped' ptr bits idx s; is_aligned ptr bits; valid_pspace' s \<rbrakk>
   \<Longrightarrow> pspace_no_overlap' ptr bits (s\<lparr>ksPSpace := ksPSpace s |` (- {ptr .. ptr + 2 ^ bits - 1})\<rparr>)"
-  apply (clarsimp simp del:atLeastAtMost_iff 
-    simp: pspace_no_overlap'_def valid_cap'_def valid_untyped'_def is_aligned_neg_mask_eq)
+  apply (clarsimp simp del: atLeastAtMost_iff 
+            simp: pspace_no_overlap'_def valid_cap'_def valid_untyped'_def is_aligned_neg_mask_eq)
   apply (drule_tac x=x in spec)
   apply (drule restrict_map_Some_iff[THEN iffD1])
   apply clarsimp
@@ -1718,10 +1713,10 @@ lemma valid_untyped_no_overlap:
    apply (simp add: valid_pspace'_def)
   apply (unfold ko_wp_at'_def obj_range'_def)
   apply (drule (1) aligned_ranges_subset_or_disjoint)
-    apply (clarsimp simp del: Int_atLeastAtMost atLeastAtMost_iff atLeastatMost_subset_iff)
+  apply (clarsimp simp del: Int_atLeastAtMost atLeastAtMost_iff atLeastatMost_subset_iff)
   apply (elim disjE)
     apply (subgoal_tac "ptr \<in> {x..x + 2 ^ objBitsKO ko - 1}")
-      apply (clarsimp simp:p_assoc_help)
+     apply (clarsimp simp:p_assoc_help)
     apply (clarsimp simp:p_assoc_help)
    apply fastforce+
   done
@@ -1729,9 +1724,9 @@ lemma valid_untyped_no_overlap:
 lemma pspace_no_overlap'_gsCNodes_update[simp]:
   "pspace_no_overlap' p b (gsCNodes_update f s') = pspace_no_overlap' p b s'"
   by (simp add: pspace_no_overlap'_def)
+
 lemma pspace_no_overlap'_gsUserPages_update[simp]:
-  "pspace_no_overlap' p b (gsUserPages_update f s') =
-   pspace_no_overlap' p b s'"
+  "pspace_no_overlap' p b (gsUserPages_update f s') = pspace_no_overlap' p b s'"
   by (simp add: pspace_no_overlap'_def)
 
 lemma pspace_no_overlap'_ksMachineState_update[simp]:
@@ -2066,10 +2061,8 @@ lemma cte_wp_at_top:
          cte_check_def split:Structures_H.kernel_object.splits)+)[4]
     apply (simp add:loadObject_cte cte_check_def 
       tcbIPCBufferSlot_def tcbCallerSlot_def 
-      tcbCallerSlot_def tcbReplySlot_def 
       tcbReplySlot_def tcbCTableSlot_def
-      tcbCTableSlot_def tcbVTableSlot_def
-      loadObject_tcb objBits_simps cteSizeBits_def)
+      tcbVTableSlot_def objBits_simps cteSizeBits_def)
     apply (simp add:alignCheck_def bind_def
       alignError_def fail_def return_def objBits_simps
       magnitudeCheck_def in_monad is_aligned_mask
@@ -2122,8 +2115,8 @@ proof -
   have src_in_range:
    "\<And>obj src a m s'. \<lbrakk>cte_check obj src a m;ksPSpace s' a = Some obj\<rbrakk> \<Longrightarrow> src \<in> {a..a + 2 ^ objBitsKO obj - 1}"
   proof -
-    fix obj src a m s'
-    show "\<lbrakk>cte_check obj src a m; ksPSpace s' a = Some obj\<rbrakk> \<Longrightarrow> src \<in> {a..a + 2 ^ objBitsKO obj - 1}"
+    fix obj src a m
+    show "\<And>s'. \<lbrakk>cte_check obj src a m; ksPSpace s' a = Some obj\<rbrakk> \<Longrightarrow> src \<in> {a..a + 2 ^ objBitsKO obj - 1}"
     apply (case_tac obj)
           apply (simp_all add:cte_check_def cteSizeBits_def)
      apply (clarsimp simp add:objBits_simps)
@@ -2173,9 +2166,9 @@ proof -
   apply (frule_tac x = a in pspace_distinctD')
    apply simp
   apply (frule_tac s = s' and a = ptr in rule_out_intv[rotated])
-  apply simp+
+     apply simp+
   apply (frule_tac s = s' and b = ptr and a = a in rule_out_intv)
-  apply simp+
+     apply simp+
   apply (thin_tac "\<forall>x. P x \<longrightarrow> Q x" for P Q)+
   apply (drule_tac p = ptr and p' = a in aligned_ranges_subset_or_disjoint)
    apply (erule(1) pspace_alignedD')
@@ -2187,9 +2180,6 @@ proof -
     apply simp
    apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
   apply (clarsimp simp:field_simps)
-  apply (elim disjE)
-    apply blast
-   apply blast
   apply blast
   done
   assume
@@ -2209,13 +2199,9 @@ lemma empty_fail_locateCTE:
 
 lemma fail_empty_locateCTE:
   "snd (locateCTE src s) \<Longrightarrow> fst (locateCTE src s) = {}"
-  apply (clarsimp simp:locateCTE_def bind_assoc 
-    return_def split_def split_def gets_def
-    get_def bind_def assert_opt_def image_def)
-  apply (elim disjE)
-   apply (clarsimp simp:assert_def fail_def return_def
-     split:option.splits split_if_asm)+
-  done
+  by (auto simp: assert_def fail_def locateCTE_def bind_assoc return_def split_def gets_def
+                 get_def bind_def assert_opt_def image_def
+           split:option.splits split_if_asm)+
 
 lemma locateCTE_commute:
   assumes nf: "no_fail P0 f" "no_fail P1 (locateCTE src)"
@@ -2238,14 +2224,13 @@ proof -
   apply (clarsimp simp:monad_commute_def)
   apply (clarsimp simp:bind_def return_def)
   apply (intro conjI iffI set_eqI)
-     apply (clarsimp dest!:singletonD)
+     apply (clarsimp)
      apply (frule same)
      apply (clarsimp)
      apply (rule bexI[rotated], assumption)
      apply (frule singleton_locateCTE[THEN iffD1])
-     apply (frule locateCTE_monad
-      [OF ko_wp_at cte_wp_at psp_distinct psp_aligned])
-        apply assumption+
+     apply (frule locateCTE_monad [OF ko_wp_at cte_wp_at psp_distinct psp_aligned])
+         apply assumption+
       apply simp
      apply (clarsimp)
      apply (rule bexI[rotated])
@@ -2255,13 +2240,12 @@ proof -
     apply (frule empty_failD2[OF empty_fail_locateCTE no_failD[OF nf(2)]])
     apply clarsimp
     apply (rule bexI[rotated],assumption)
-    apply (clarsimp dest!:singletonD)
+    apply (clarsimp)
     apply (frule_tac s = bb in same)
     apply (frule_tac s = s in same)
     apply clarsimp
     apply (frule_tac s1 = s in singleton_locateCTE[THEN iffD1])
-    apply (frule locateCTE_monad
-      [OF ko_wp_at cte_wp_at psp_distinct psp_aligned])
+    apply (frule locateCTE_monad [OF ko_wp_at cte_wp_at psp_distinct psp_aligned])
         apply assumption+
      apply simp
     apply (rule bexI[rotated],assumption)
@@ -2283,8 +2267,7 @@ proof -
    apply (frule same)
    apply simp
    apply (frule singleton_locateCTE[THEN iffD1])
-   apply (frule locateCTE_monad
-      [OF ko_wp_at cte_wp_at psp_distinct psp_aligned])
+   apply (frule locateCTE_monad [OF ko_wp_at cte_wp_at psp_distinct psp_aligned])
        apply assumption+
     apply simp
    apply (clarsimp)
@@ -2307,14 +2290,14 @@ lemma createObject_cte_wp_at':
         | wp createWordObjects_orig_cte_wp_at[where sz = "(Types_H.getObjectSize ty us)"]
              createObjects_orig_cte_wp_at'[where sz = "(Types_H.getObjectSize ty us)"]
              threadSet_cte_wp_at'
-        | simp add: ARM_H.createObject_def createPageObject_def placeNewObject_def2 createPageObject_def curDomain_def)+
+        | simp add: ARM_H.createObject_def placeNewObject_def2 createPageObject_def curDomain_def)+
   apply (case_tac ty)
-   apply (clarsimp simp: apiGetObjectSize_def
-     ARM_H.toAPIType_def tcbBlockSizeBits_def
-     ARM_H.getObjectSize_def objBits_simps epSizeBits_def ntfnSizeBits_def
-     cteSizeBits_def pageBits_def ptBits_def archObjSize_def pdBits_def
-     range_cover_full
-     split:apiobject_type.splits)+
+        apply (clarsimp simp: apiGetObjectSize_def 
+                        ARM_H.toAPIType_def tcbBlockSizeBits_def
+                        ARM_H.getObjectSize_def objBits_simps epSizeBits_def ntfnSizeBits_def
+                        cteSizeBits_def pageBits_def ptBits_def archObjSize_def pdBits_def
+                        range_cover_full
+                        split: apiobject_type.splits)+
   done
 
 lemma createObject_getCTE_commute:
@@ -2325,7 +2308,7 @@ lemma createObject_getCTE_commute:
       K (is_aligned ptr (Types_H.getObjectSize ty us)))
      (RetypeDecls_H.createObject ty ptr us) (getCTE dests)"
   apply (rule monad_commute_guard_imp[OF commute_commute])
-  apply (rule getCTE_commute)
+   apply (rule getCTE_commute)
    apply (rule hoare_pre)
     apply (wp createObject_cte_wp_at')
    apply (clarsimp simp:cte_wp_at_ctes_of)
@@ -2340,33 +2323,28 @@ lemma simpler_placeNewObject_def:
        (\<lambda>_. foldr (\<lambda>addr map. map(addr \<mapsto> injectKOS val)) (new_cap_addrs (2 ^ us) ptr (injectKOS val))
        (ksPSpace s))) s"
   apply (clarsimp simp:placeNewObject_def2)
-   apply (clarsimp simp:createObjects'_def)
-   apply (simp add:bind_def in_monad when_def is_aligned_mask[THEN iffD1])
-   apply (clarsimp simp:return_def bind_def gets_def assert_def fail_def 
-     get_def split_def split:option.splits)
-   apply (clarsimp simp: new_cap_addrs_fold' word_1_le_power[where 'a=32, folded word_bits_def] lookupAround2_char1 not_less)
-   apply (drule(1) pspace_no_overlapD'[rotated])
-   apply (drule_tac x = a in in_empty_interE)
+  apply (clarsimp simp:createObjects'_def)
+  apply (simp add:bind_def in_monad when_def is_aligned_mask[THEN iffD1])
+  apply (clarsimp simp:return_def bind_def gets_def assert_def fail_def get_def split_def
+                  split:option.splits)
+  apply (clarsimp simp: new_cap_addrs_fold' word_1_le_power[where 'a=32, folded word_bits_def] lookupAround2_char1 not_less)
+  apply (drule(1) pspace_no_overlapD'[rotated])
+  apply (drule_tac x = a in in_empty_interE)
     apply clarsimp
     apply (drule(1) pspace_alignedD')
-    apply (simp add:is_aligned_no_overflow objBitsKO_bounded2)
+    apply (simp add:is_aligned_no_overflow)
    apply (clarsimp simp: is_aligned_neg_mask_eq shiftL_nat p_assoc_help)
   apply simp
   done
 
-lemma snd_fail: "snd (fail s)"
-  apply (clarsimp simp: fail_def)
-  done
-
 lemma fail_set: "fst (fail s) = {}"
-  apply (clarsimp simp: fail_def)
-  done
+  by (clarsimp simp: fail_def)
 
 lemma locateCTE_cte_no_fail:
  "no_fail (cte_at' src) (locateCTE src)"
   apply (clarsimp simp:no_fail_def cte_wp_at'_def getObject_def
      locateCTE_def return_def gets_def get_def bind_def split_def
-     assert_opt_def assert_def in_fail snd_fail fail_set split:option.splits)
+     assert_opt_def assert_def in_fail fail_set split:option.splits)
   apply (clarsimp simp:cte_check_def ObjectInstances_H.loadObject_cte)
   apply (drule in_singleton)
   by (auto simp: objBits_simps cteSizeBits_def alignError_def
@@ -2380,17 +2358,17 @@ lemma not_in_new_cap_addrs:
     pspace_no_overlap' ptr (objBitsKO obj + us) s; 
     ksPSpace s dest = Some ko;pspace_aligned' s\<rbrakk>
    \<Longrightarrow> dest \<notin> set (new_cap_addrs (2 ^ us) ptr obj)"
-   apply (rule ccontr)
-   apply simp
-   apply (drule(1) pspace_no_overlapD'[rotated])
-   apply (erule_tac x = dest in in_empty_interE)
-    apply (clarsimp)
-    apply (erule(1) is_aligned_no_overflow[OF pspace_alignedD'])
-   apply (erule subsetD[rotated])
-   apply (simp add:p_assoc_help)
-   apply (rule new_cap_addrs_subset[unfolded ptr_add_def,simplified])
+  apply (rule ccontr)
+  apply simp
+  apply (drule(1) pspace_no_overlapD'[rotated])
+  apply (erule_tac x = dest in in_empty_interE)
+   apply (clarsimp)
+   apply (erule(1) is_aligned_no_overflow[OF pspace_alignedD'])
+  apply (erule subsetD[rotated])
+  apply (simp add:p_assoc_help)
+  apply (rule new_cap_addrs_subset[unfolded ptr_add_def,simplified])
   apply (rule range_cover_rel[OF range_cover_full])
-   apply simp+
+     apply simp+
   done
 
 lemma placeNewObject_pspace_aligned':
@@ -2400,14 +2378,13 @@ lemma placeNewObject_pspace_aligned':
     pspace_no_overlap' ptr (objBitsKO (injectKOS val) + us)\<rbrace>
    placeNewObject ptr val us
    \<lbrace>\<lambda>r s. pspace_aligned' s\<rbrace>"
- apply (clarsimp simp:valid_def)
+  apply (clarsimp simp:valid_def)
   apply (simp add:simpler_placeNewObject_def simpler_modify_def)
- apply (subst data_map_insert_def[symmetric])+
- apply (erule(2) Retype_R.retype_aligned_distinct'
-   [unfolded data_map_insert_def[symmetric]])
- apply (rule range_cover_rel[OF range_cover_full])
-  apply simp+
- done
+  apply (subst data_map_insert_def[symmetric])+
+  apply (erule(2) Retype_R.retype_aligned_distinct' [unfolded data_map_insert_def[symmetric]])
+  apply (rule range_cover_rel[OF range_cover_full])
+     apply simp+
+  done
 
 lemma placeNewObject_pspace_distinct':
   "\<lbrace>\<lambda>s. objBitsKO (injectKOS val) + us < word_bits \<and>
@@ -2435,14 +2412,14 @@ lemma placeNewObject_ko_wp_at':
         pspace_aligned' s \<and> pspace_distinct' s\<rbrace>
    placeNewObject ptr val us
    \<lbrace>\<lambda>a. ko_wp_at' P slot\<rbrace>"
- apply (clarsimp simp:valid_def split del:if_splits)
- apply (simp add:simpler_placeNewObject_def simpler_modify_def)
- apply (subst data_map_insert_def[symmetric])+
- apply (subst retype_ko_wp_at')
-   apply simp+
-  apply (rule range_cover_rel[OF range_cover_full])
-     apply simp+
- done
+  apply (clarsimp simp:valid_def split del:split_if)
+  apply (simp add:simpler_placeNewObject_def simpler_modify_def)
+  apply (subst data_map_insert_def[symmetric])+
+  apply (subst retype_ko_wp_at')
+      apply simp+
+   apply (rule range_cover_rel[OF range_cover_full])
+      apply simp+
+  done
 
 lemma cte_wp_at_cases_mask':
   "cte_wp_at' P p = (\<lambda>s. 
@@ -2546,7 +2523,7 @@ lemma placeNewObject_modify_commute:
     bind_def split_def return_def)
   apply (subst simpler_placeNewObject_def)
       apply ((simp add:range_cover_def)+)[4]
-  apply (clarsimp simp: simpler_modify_def dest!:singletonD)
+  apply (clarsimp simp: simpler_modify_def)
   apply (frule(1) range_cover_full)
   apply (simp add: simpler_placeNewObject_def)
   apply (subgoal_tac "pspace_no_overlap' ptr (objBitsKO (injectKOS val) + us)
@@ -2693,7 +2670,7 @@ lemma getPDE_det:
                        assert_opt_def split:if_splits)
 
   apply (clarsimp simp: fail_def return_def lookupAround2_known1)
-   apply (simp add:ArchObjInsts_H.loadObject_pde loadObject_default_def)
+   apply (simp add: loadObject_default_def)
   apply (clarsimp simp:projectKO_def projectKO_opt_pde alignCheck_def 
     is_aligned_mask objBits_simps unless_def)
   apply (clarsimp simp:bind_def return_def)
@@ -3101,9 +3078,7 @@ lemma cte_wp_at_modify_pde:
    apply (simp add:ps_clear_def)
    apply (rule ccontr)
    apply simp
-   apply (erule in_emptyE)
-   apply (rule_tac x = ptr' in exI)
-    apply blast
+   apply (erule in_emptyE, blast)
   apply simp
   apply (rule disjI2)
   apply (clarsimp simp:ko_wp_at'_def)
@@ -3351,7 +3326,7 @@ lemma threadSet_det:
     is_aligned_mask objBits_simps)
   apply (clarsimp simp:magnitudeCheck_det bind_def)
   apply (cut_tac ko = "KOTCB obj" in magnitudeCheck_det)
-   apply (simp add:objBits_simps objBitsKO_def is_aligned_mask)+
+   apply (simp add:objBits_simps is_aligned_mask)+
   apply (clarsimp simp:modify_def get_def put_def bind_def)
   done
 
@@ -3388,8 +3363,8 @@ lemma setCTE_modify_tcbDomain_commute:
        apply (simp add:ps_clear_def)
        apply (rule ccontr,simp)
        apply (erule in_emptyE)
-       apply (rule_tac x = a in exI)
        apply (clarsimp simp:ko_wp_at'_def)
+       apply blast
       apply (simp add:threadSet_det simpler_modify_def)
       apply (subst (asm) obj_at'_def)
       apply (thin_tac "tcb_at' ptr P" for P)

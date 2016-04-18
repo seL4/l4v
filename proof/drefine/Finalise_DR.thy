@@ -1440,12 +1440,12 @@ lemma mask_compare_imply:
 done
 
 lemma aligned_in_step_up_to:
-  "\<lbrakk>x\<in> set (map (\<lambda>x. x + ptr) [0 , (2^t) .e. up]);t< WordSetup.word_bits; is_aligned ptr t\<rbrakk>
+  "\<lbrakk>x\<in> set (map (\<lambda>x. x + ptr) [0 , (2^t) .e. up]); t < word_bits; is_aligned ptr t\<rbrakk>
   \<Longrightarrow> is_aligned x t"
   apply (clarsimp simp:upto_enum_step_def image_def)
   apply (rule aligned_add_aligned[where n = t])
   apply (rule is_aligned_mult_triv2)
-  apply (simp add:WordSetup.word_bits_def)+
+  apply (simp add:word_bits_def)+
 done
 
 lemma remain_pt_pd_relation:

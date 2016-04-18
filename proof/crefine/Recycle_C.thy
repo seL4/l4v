@@ -660,7 +660,7 @@ lemma arch_recycleCap_ccorres_helper:
     apply csymbr -- "C reset mem mapping"
     apply (rule ccorres_return_C_seq, simp_all)[1]
    apply wp
-  by (clarsimp elim!: ccap_relationE simp: option_map_Some_eq2 ccap_relation_def)
+  by (clarsimp elim!: ccap_relationE simp: map_option_Some_eq2 ccap_relation_def)
 
 lemma arch_recycleCap_ccorres_helper':
   notes Collect_const [simp del]
@@ -689,7 +689,7 @@ lemma arch_recycleCap_ccorres_helper':
   apply (rule ccorres_return_C_seq, simp_all)[1]
    apply vcg
   apply wp
-  by (clarsimp simp: from_bool_0 ccap_relation_def option_map_Some_eq2)
+  by (clarsimp simp: from_bool_0 ccap_relation_def map_option_Some_eq2)
 
 lemma arch_recycleCap_ccorres:
   notes Collect_const [simp del]
@@ -766,7 +766,7 @@ lemma arch_recycleCap_ccorres:
                           true_def false_def
                    elim!: ccap_relationE split: split_if_asm)
     apply (clarsimp simp: word_neq_0_conv resetMemMapping_def
-                          ccap_relation_def option_map_Some_eq2)
+                          ccap_relation_def map_option_Some_eq2)
    apply (rule ccorres_if_lhs)
     apply (simp add: ccorres_cond_iffs Collect_True Collect_False
                      Let_def ARMSectionBits_def)

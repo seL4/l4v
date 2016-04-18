@@ -1132,7 +1132,7 @@ lemma set_asid_pool_empty'_helper:
   "n < 1023 \<Longrightarrow>
    (if x = ucast ((1 :: word32) + of_nat n) then None else if x \<le> of_nat n then None else ap x) =
    (if (x :: 10 word) \<le> 1 + of_nat n then None else ap x)"
-  apply (frule of_nat_mono_maybe[where X="2^10 - 1" and 'a=10, simplified])
+  apply (frule of_nat_mono_maybe[where x="2^10 - 1" and 'a=10, simplified])
   apply (subgoal_tac "ucast (1 + of_nat n :: word32) = (1 + of_nat n :: 10 word)")
    prefer 2
    apply (rule word_unat.Rep_eqD)
@@ -1148,9 +1148,9 @@ lemma set_asid_pool_empty':
           [0 :: word32 .e. of_nat n]"
   apply (induct n)
    apply (simp add: mapM_x_Cons mapM_x_Nil fun_upd_def)
-  apply (subgoal_tac "of_nat n < (2 :: word32) ^ WordSetup.word_bits - 1")
+  apply (subgoal_tac "of_nat n < (2 :: word32) ^ word_bits - 1")
    prefer 2
-   apply (rule of_nat_mono_maybe[where X="2^word_bits - 1", simplified])
+   apply (rule of_nat_mono_maybe[where x="2^word_bits - 1", simplified])
     apply (simp add:word_bits_def)
    apply (simp add:asid_low_bits_def word_bits_def)
   apply (simp, drule sym)
@@ -1928,7 +1928,7 @@ lemma dcorres_clear_object_caps_pt:
       apply (drule cte_wp_valid_cap,simp)
       apply (clarsimp simp:valid_cap_def cap_aligned_def)
       apply (rule is_aligned_no_overflow)
-    apply (simp add:pt_bits_def pageBits_def pageBits_def WordSetup.word_bits_def )+
+    apply (simp add:pt_bits_def pageBits_def pageBits_def word_bits_def)+
   apply (rule corres_guard_imp)
     apply (rule_tac x = "(map (\<lambda>x. (w,unat (x >> 2))) [0 , 4 .e. 2 ^ pt_bits - 1])" in select_pick_corres)
       apply (rule_tac S = "{(x,y). x = (y && ~~ mask pt_bits,unat (y && mask pt_bits >> 2))}"  in corres_mapM_x)
@@ -1937,7 +1937,7 @@ lemma dcorres_clear_object_caps_pt:
       apply (rule hoare_pre)
        apply (wp valid_idle_store_pte store_pte_ct |clarsimp simp:cur_tcb_def | wps store_pte_ct )+
       apply (simp add:swp_def)
-    apply (simp add:pt_bits_def pageBits_def pageBits_def WordSetup.word_bits_def )+
+    apply (simp add:pt_bits_def pageBits_def pageBits_def word_bits_def)+
     apply clarsimp
     apply (subst (asm) zip_map_eqv)
     apply (clarsimp)
@@ -2620,9 +2620,9 @@ lemma lookup_slot_for_cnode_op_corres:
                    cdl_resolve_address_bits_error_branch1)
   apply (rule conjI)
    prefer 2
-   apply (cases "depth = 0 \<or> Types_D.word_bits < depth", simp)
+   apply (cases "depth = 0 \<or> word_bits < depth", simp)
    apply (simp add: fault_to_except_def throw_handle)
-  apply (clarsimp simp: Types_D.word_bits_def WordSetup.word_bits_def)
+  apply (clarsimp simp: word_bits_def)
   apply (rule whenE_throwError_corres_initial, simp, rule refl)
   apply (simp add: fault_to_except_def lookup_error_on_failure_def)
   apply (rule corres_handle2')
@@ -2784,10 +2784,10 @@ lemma dcorres_update_cap_data:
     apply (simp add: CSpace_D.badge_update_def update_cap_badge_def
                      Structures_A.badge_update_def Types_D.badge_bits_def)
    apply (simp add:  bind_assoc gets_the_def gets_def the_cnode_cap_def)
-   apply (clarsimp simp:word_bits_def Types_D.word_bits_def dest!:leI)
+   apply (clarsimp simp:word_bits_def dest!:leI)
    apply (simp add:of_drop_to_bl)
    apply (simp add:mask_twice)
-   apply (clarsimp simp:word_size opt_object_def Types_D.word_bits_def)
+   apply (clarsimp simp:word_size opt_object_def word_bits_def)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_update_cap_data_def)
   done

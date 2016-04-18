@@ -231,7 +231,7 @@ lemma update_cnode_cap_data:
   apply (clarsimp simp: update_cap_data_def arch_update_cap_data_def split:if_splits)
   apply ((cases ab,simp_all add:badge_update_def)+)[2]
   apply (clarsimp simp:is_cap_simps the_cnode_cap_def word_size split:split_if_asm simp:Let_def)
-  apply (clarsimp simp:cdl_update_cnode_cap_data_def WordSetup.word_bits_def of_drop_to_bl
+  apply (clarsimp simp:cdl_update_cnode_cap_data_def word_bits_def of_drop_to_bl
     word_size mask_twice dest!:leI)
 done
 
@@ -1396,7 +1396,7 @@ lemma dcorres_thread_control:
              | Some v \<Rightarrow> case_option True ((swp valid_ipc_buffer_cap (fst v) and is_arch_cap and cap_aligned) \<circ> fst) (snd v)
             \<and> is_aligned (fst v) msg_align_bits)
           \<and> case_option (\<lambda>_. True) (\<lambda>a. case snd a of None \<Rightarrow> \<lambda>_. True | Some a \<Rightarrow> cte_wp_at (\<lambda>_. True) (snd a)) ipc_buffer' s
-          \<and> (case fault_ep' of None \<Rightarrow> True | Some bl \<Rightarrow> length bl = WordSetup.word_bits))
+          \<and> (case fault_ep' of None \<Rightarrow> True | Some bl \<Rightarrow> length bl = word_bits))
        (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   (is "\<lbrakk> ?eq; ?eq' \<rbrakk> \<Longrightarrow> dcorres (dc \<oplus> dc) \<top> ?P ?f ?g")
   apply (clarsimp simp: Tcb_D.invoke_tcb_def)
@@ -1484,7 +1484,7 @@ lemma dcorres_thread_control:
   apply (clarsimp simp:is_valid_vtable_root_def is_cnode_or_valid_arch_def
                        is_arch_cap_def not_idle_thread_def emptyable_def
                   split:option.splits)
-  apply (rule_tac P = "(case fault_ep' of None \<Rightarrow> True | Some bl \<Rightarrow> length bl = WordSetup.word_bits)" in hoare_gen_asm)
+  apply (rule_tac P = "(case fault_ep' of None \<Rightarrow> True | Some bl \<Rightarrow> length bl = word_bits)" in hoare_gen_asm)
   apply (wp out_invs_trivialT)
     apply (clarsimp simp:tcb_cap_cases_def)+
   apply (wp case_option_wp out_cte_at out_valid_cap hoare_case_some| simp)+

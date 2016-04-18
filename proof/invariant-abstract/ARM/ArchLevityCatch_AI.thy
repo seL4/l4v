@@ -28,7 +28,6 @@ lemma  ptrFormPAddr_addFromPPtr :
   "ptrFromPAddr (Platform.ARM.addrFromPPtr x) = x"
   by (simp add: ptrFromPAddr_def Platform.ARM.addrFromPPtr_def)
 
-
 (****** From GeneralLib *******)
 
 lemma asid_high_bits_of_add_ucast:
@@ -50,7 +49,7 @@ lemma asid_high_bits_of_add:
   apply (rule word_eqI)
   apply (simp add: word_size asid_high_bits_of_def nth_ucast nth_shiftr
                    is_aligned_nth)
-  apply (drule le2p_bits_unset, simp add: asid_low_bits_def word_bits_def)
+  apply (drule le2p_bits_unset_32, simp add: asid_low_bits_def)
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
    apply (clarsimp simp: word_size)
@@ -59,7 +58,7 @@ lemma asid_high_bits_of_add:
   apply (auto dest: test_bit_size
               simp: asid_low_bits_def word_bits_def nth_ucast)
   done
-
+ 
 lemma preemption_point_success [simp,intro]:
   "((Inr (), s') \<in> fst (preemption_point s)) \<Longrightarrow> 
   \<exists>f es. s' = s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr>, exst := es \<rparr>"

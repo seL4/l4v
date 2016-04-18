@@ -14,9 +14,8 @@
 
 theory NonDetMonadEx
 imports
-  "../../lib/wp/NonDetMonad"
   "../../lib/NonDetMonadLemmaBucket"
-  "../../lib/OptionMonadND"
+  "../../lib/Monad_WP/OptionMonadND"
 begin
 
 (*

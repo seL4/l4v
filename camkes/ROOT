@@ -42,7 +42,6 @@ session CamkesCdlBase (Camkes) in "adl-spec" = DPolicy +
       "Wellformed_CAMKES"
       "Examples_CAMKES"
     (* Lemma buckets *)
-      "../../lib/WordLemmaBucket"
       "../../lib/LemmaBucket"
 
 (* CAmkES<->CapDL reasoning. *)

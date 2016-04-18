@@ -16,63 +16,18 @@ begin
 
 lemma ucast_8_32_inj:
   "inj (ucast ::  8 word \<Rightarrow> 32 word)"
-  apply (rule down_ucast_inj)
-  apply (clarsimp simp: is_down_def target_size source_size)
-  done
+  by (rule down_ucast_inj) (clarsimp simp: is_down_def target_size source_size)
 
-(* FIXME: generalise *)
 lemma upto_2_helper:
-  "{0..<2 :: word32} = {0, 1}"
-  apply (safe, simp_all)
-  apply unat_arith
-  done
+  "{0..<2 :: 32 word} = {0, 1}"
+  by (safe; simp) unat_arith
 
-(* FIXME: generalise *)
-lemma two_power_strict_part_mono:
-  "strict_part_mono {..31} (\<lambda>x. (2 :: word32) ^ x)"
-  by (simp | subst strict_part_mono_by_steps)+
+lemmas upper_bits_unset_is_l2p_32 = upper_bits_unset_is_l2p [where 'a=32, folded word_bits_def]
+lemmas le_2p_upper_bits_32 = le_2p_upper_bits [where 'a=32, folded word_bits_def]
+lemmas le2p_bits_unset_32 = le2p_bits_unset[where 'a=32, folded word_bits_def]
 
-(* FIXME: generalise *)
-lemma take_n_subset_le:
-  "\<lbrakk> {x. take n (to_bl x) = take n xs} \<subseteq> {y :: word32. take m (to_bl y) = take m ys};
-     n \<le> 32; m \<le> 32; length xs = 32; length ys = 32 \<rbrakk>
-    \<Longrightarrow> m \<le> n"
-  apply (rule ccontr, simp add: le_def)
-  apply (simp add: subset_iff)
-  apply (drule spec[where x="of_bl (take n xs @ take (32 - n) (map Not (drop n ys)))"])
-  apply (simp add: word_bl.Abs_inverse)
-  apply (subgoal_tac "\<exists>p. m = n + p")
-   apply clarsimp
-   apply (simp add: take_add take_map_Not)
-  apply (rule exI[where x="m - n"])
-  apply simp
-  done
-
-lemma word32_shift_by_2:
-  "x * 4 = (x::word32) << 2"
-  by (simp add: shiftl_t2n)
-
-(* FIXME: generalise *)
-lemma upper_bits_unset_is_l2p:
-  "n < word_bits \<Longrightarrow> (\<forall>n' \<ge> n. n' < word_bits \<longrightarrow> \<not> p !! n') = ((p::word32) < 2 ^ n)"
-  apply (rule iffI)
-   prefer 2
-   apply (clarsimp simp: word_bits_def)
-   apply (drule bang_is_le)
-   apply (drule_tac y=p in order_le_less_trans, assumption)
-   apply (drule word_power_increasing)
-      apply simp
-     apply simp
-    apply simp
-   apply simp
-  apply (subst mask_eq_iff_w2p [symmetric])
-   apply (clarsimp simp: word_size word_bits_def)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size word_bits_def)
-  apply (case_tac "na < n", auto)
-  done
-
-lemma word_bits_len_of: "len_of TYPE (32) = word_bits"
+lemma word_bits_len_of:
+  "len_of TYPE (32) = word_bits"
   by (simp add: word_bits_conv)
 
 lemmas unat_power_lower32' = unat_power_lower[where 'a=32]
@@ -88,18 +43,6 @@ lemma word_bits_size:
 lemmas word32_power_less_1' = word_power_less_1[where 'a = 32]
 lemmas word32_power_less_1[simp] = word32_power_less_1'[folded word_bits_def]
 
-(* FIXME: generalise *)
-lemma ucast_less_shiftl_helper:
-  "\<lbrakk> len_of TYPE('b) + 2 < word_bits;
-     2 ^ (len_of TYPE('b) + 2) \<le> n\<rbrakk>
-    \<Longrightarrow> (ucast (x :: ('b :: len) word) << 2) < (n :: word32)"
-  apply (erule order_less_le_trans[rotated])
-  apply (cut_tac ucast_less[where x=x and 'a=32])
-   apply (simp only: shiftl_t2n field_simps)
-   apply (rule word_less_power_trans2)
-     apply (simp_all add: word_bits_def)
-  done
-
 lemma of_nat32_0:
   "\<lbrakk>of_nat n = (0::word32); n < 2 ^ word_bits\<rbrakk> \<Longrightarrow> n = 0"
   by (erule of_nat_0, simp add: word_bits_def)
@@ -114,91 +57,17 @@ lemma unat_mask_2_less_4:
 lemmas unat_of_nat32' = unat_of_nat_eq[where 'a=32]
 lemmas unat_of_nat32 = unat_of_nat32'[unfolded word_bits_len_of]
 
-(* FIXME: generalise *)
-lemma le_2p_upper_bits:
-  "\<lbrakk> (p::word32) \<le> 2^n - 1; n < word_bits \<rbrakk> \<Longrightarrow> \<forall>n'\<ge>n. n' < word_bits \<longrightarrow> \<not> p !! n'"
-  apply (subst upper_bits_unset_is_l2p, assumption)
-  apply simp
-  done
-
-(* FIXME: generalise *)
-lemma le2p_bits_unset:
-  "p \<le> 2 ^ n - 1 \<Longrightarrow> \<forall>n'\<ge>n. n' < word_bits \<longrightarrow> \<not> (p::word32) !! n'"
-  apply (case_tac "n < word_bits")
-   apply (frule upper_bits_unset_is_l2p [where p=p])
-   apply simp_all
-  done
-
-(* FIXME: generalise *)
-lemma word_power_nonzero:
-  "\<lbrakk> (x :: word32) < 2 ^ (word_bits - n); n < word_bits; x \<noteq> 0 \<rbrakk> \<Longrightarrow> x * 2 ^ n \<noteq> 0"
-  apply (cases "n = 0")
-   apply simp
-  apply (simp only: word_neq_0_conv word_less_nat_alt
-                    shiftl_t2n mod_0 unat_word_ariths
-                    unat_power_lower word_le_nat_alt word_bits_def)
-  apply (unfold word_bits_len_of)
-  apply (subst mod_less)
-   apply (subst mult.commute, erule nat_less_power_trans)
-   apply simp
-  apply simp
-  done
+lemmas word_power_nonzero_32 = word_power_nonzero [where 'a=32, folded word_bits_def]
 
 lemmas unat_mult_simple = iffD1 [OF unat_mult_lem [where 'a = 32, unfolded word_bits_len_of]]
 
-(* FIXME: generalise *)
-lemma div_power_helper:
-  "\<lbrakk> x \<le> y; y < word_bits \<rbrakk> \<Longrightarrow> (2 ^ y - 1) div (2 ^ x :: word32) = 2 ^ (y - x) - 1"
-  apply (rule word_uint.Rep_eqD)
-  apply (simp only: uint_word_ariths uint_div uint_power_lower word_bits_len_of)
-  apply (subst mod_pos_pos_trivial, fastforce, fastforce)+
-  apply (subst mod_pos_pos_trivial)
-    apply (simp add: le_diff_eq uint_2p_alt)
-   apply (rule less_1_helper)
-   apply (rule power_increasing)
-    apply (simp add: word_bits_def)
-   apply simp
-  apply (subst mod_pos_pos_trivial)
-    apply (simp add: uint_2p_alt)
-   apply (rule less_1_helper)
-   apply (rule power_increasing)
-    apply (simp add: word_bits_def)
-   apply simp
-  apply (subst int_div_sub_1)
-    apply simp
-   apply (simp add: uint_2p_alt)
-  apply (subst power_0[symmetric])
-  apply (simp add: uint_2p_alt le_imp_power_dvd_int power_sub_int)
-  done
+lemmas div_power_helper_32 = div_power_helper [where 'a=32, folded word_bits_def]
 
 lemma n_less_word_bits:
   "(n < word_bits) = (n < 32)"
   by (simp add: word_bits_def)
 
-(* FIXME: generalise *)
-lemma of_nat_less_pow:
-  "\<lbrakk> x < 2 ^ n; n < word_bits \<rbrakk> \<Longrightarrow> of_nat x < (2 :: word32) ^ n"
-  apply (subst word_unat_power)
-  apply (rule of_nat_mono_maybe)
-   apply (rule power_strict_increasing)
-    apply (simp add: word_bits_def)
-   apply simp
-  apply assumption
-  done
-
-(* FIXME: generalise *)
-lemma power_helper:
-  "\<lbrakk> (x :: word32) < 2 ^ (m - n); n \<le> m; m < word_bits \<rbrakk> \<Longrightarrow> x * (2 ^ n) < 2 ^ m"
-  apply (drule word_mult_less_mono1[where k="2 ^ n"])
-    apply (simp add: word_neq_0_conv[symmetric] word_bits_def)
-   apply (simp only: unat_power_lower[where 'a=32] word_bits_len_of
-                     power_add[symmetric])
-   apply (rule power_strict_increasing)
-    apply (simp add: word_bits_def)
-   apply simp
-  apply (simp add: power_add[symmetric])
-  done
-
+lemmas of_nat_less_pow_32 = of_nat_power [where 'a=32, folded word_bits_def]
 
 lemma lt_word_bits_lt_pow:
   "sz < word_bits \<Longrightarrow> sz < 2 ^ word_bits"
@@ -209,62 +78,6 @@ lemma unat_less_word_bits:
   shows "x < unat y \<Longrightarrow> x < 2 ^ word_bits"
   unfolding word_bits_def
   by (rule order_less_trans [OF _ unat_lt2p])
-
-(* FIXME: generalise *)
-lemma word_add_power_off:
-  fixes a :: word32
-  assumes ak: "a < k"
-  and kw: "k < 2 ^ (word_bits - m)"
-  and mw: "m < word_bits"
-  and off: "off < 2 ^ m"
-  shows "(a * 2 ^ m) + off < k * 2 ^ m"
-proof (cases "m = 0")
-  case True
-  thus ?thesis using off ak by simp
-next
-  case False
-
-  from ak have ak1: "a + 1 \<le> k" by (rule inc_le)
-  hence "(a + 1) * 2 ^ m \<noteq> 0"
-    apply -
-    apply (rule word_power_nonzero)
-    apply (erule order_le_less_trans  [OF _ kw])
-    apply (rule mw)
-    apply (rule less_is_non_zero_p1 [OF ak])
-    done
-  hence "(a * 2 ^ m) + off < ((a + 1) * 2 ^ m)" using kw mw
-    apply -
-    apply (simp add: distrib_right)
-    apply (rule word_plus_strict_mono_right [OF off])
-    apply (rule is_aligned_no_overflow'')
-    apply (rule is_aligned_mult_triv2)
-    apply assumption
-    done
-  also have "\<dots> \<le> k * 2 ^ m" using ak1 mw kw False
-    apply -
-    apply (erule word_mult_le_mono1)
-    apply (simp add: p2_gt_0 word_bits_def)
-    apply (simp add: word_bits_len_of word_less_nat_alt word_bits_def)
-    apply (rule nat_less_power_trans2[where m=32, simplified])
-    apply (simp add: word_less_nat_alt)
-    apply simp
-    done
-  finally show ?thesis .
-qed
-
-lemma word32_gr0_conv_Suc:"(m::word32) > 0 \<Longrightarrow> \<exists>n. m = n + 1"
-  by (rule word_gr0_conv_Suc)
-
-(* FIXME: generalise *)
-lemma offset_not_aligned:
-  "\<lbrakk> is_aligned (p::word32) n; i > 0; i < 2 ^ n; n < 32\<rbrakk>
-     \<Longrightarrow> \<not> is_aligned (p + of_nat i) n"
-  apply (erule is_aligned_add_not_aligned)
-  unfolding is_aligned_def apply clarsimp
-  apply (subst (asm) unat_of_nat_len)
-   apply (metis len32 unat_less_word_bits unat_power_lower32 word_bits_conv)
-  apply (metis nat_dvd_not_less)
-  done
 
 lemmas unat_mask_word32' = unat_mask[where 'a=32]
 lemmas unat_mask_word32 = unat_mask_word32'[folded word_bits_def]
@@ -284,31 +97,6 @@ lemma Suc_unat_mask_div:
   apply (simp add: unat_word_ariths
                    unat_mask_word32 min_def word_bits_def word_size_def)
   done
-
-(* FIXME: generalise *)
-lemma length_upto_enum_one:
-  fixes x :: word32
-  assumes lt1: "x < y" and lt2: "z < y" and lt3: "x \<le> z"
-  shows "[x , y .e. z] = [x]"
-unfolding upto_enum_step_def
-proof (subst upto_enum_red, subst if_not_P [OF leD [OF lt3]], clarsimp, rule)
-  show "unat ((z - x) div (y - x)) = 0"
-  proof (subst unat_div, rule div_less)
-    have syx: "unat (y - x) = unat y - unat x"
-      by (rule unat_sub [OF order_less_imp_le]) fact
-    moreover have "unat (z - x) = unat z - unat x"
-      by (rule unat_sub) fact
-
-    ultimately show "unat (z - x) < unat (y - x)"
-      using lt3
-      apply simp
-      apply (rule diff_less_mono[OF unat_mono, OF lt2])
-      apply (simp add: word_le_nat_alt[symmetric])
-      done
-  qed
-
-  thus "toEnum (unat ((z - x) div (y - x))) * (y - x) = 0" by simp
-qed
 
 lemmas word32_minus_one_le' = word_minus_one_le[where 'a=32]
 lemmas word32_minus_one_le = word32_minus_one_le'[simplified]
@@ -375,10 +163,7 @@ lemma x_less_2_0_1:
   "x < 2 \<Longrightarrow> x = 0 \<or> x = 1"
   by (rule x_less_2_0_1') auto
 
-lemma mask_32_max_word :
-  shows "mask 32 = (max_word :: word32)"
-  unfolding mask_def
-  by (simp add: max_word_def)
+lemmas mask_32_max_word  = max_word_mask [symmetric, where 'a=32, simplified]
 
 lemma of_nat32_n_less_equal_power_2:
  "n < 32 \<Longrightarrow> ((of_nat n)::32 word) < 2 ^ n"
@@ -465,11 +250,18 @@ lemma le_step_down_word_3:
   shows "\<lbrakk>x \<le>  y; x \<noteq> y; y < 2 ^ 32 - 1\<rbrakk> \<Longrightarrow> x \<le> y - 1"
   by (rule le_step_down_word_2, assumption+)
 
-lemma shiftr_1[simplified]:"(x::word32) >> 1 = 0 \<Longrightarrow> x < 2"
+lemma shiftr_1:
+  "(x::word32) >> 1 = 0 \<Longrightarrow> x < 2"
   by word_bitwise clarsimp
 
-(* FIXME: generalise *)
-lemma mask_step_down:
+lemma has_zero_byte:
+  "~~ (((((v::word32) && 0x7f7f7f7f) + 0x7f7f7f7f) || v) || 0x7f7f7f7f) \<noteq> 0
+    \<Longrightarrow> v && 0xff000000 = 0 \<or> v && 0xff0000 = 0 \<or> v && 0xff00 = 0 \<or> v && 0xff = 0"
+  apply clarsimp
+  apply word_bitwise
+  by metis
+
+lemma mask_step_down_32:
   "(b::32word) && 0x1 = (1::32word) \<Longrightarrow> (\<exists>x. x < 32 \<and> mask x = b >> 1) \<Longrightarrow> (\<exists>x. mask x = b)"
   apply clarsimp
   apply (rule_tac x="x + 1" in exI)
@@ -479,23 +271,7 @@ lemma mask_step_down:
   apply clarsimp
   done
 
-
-lemma has_zero_byte:
-  "~~ (((((v::word32) && 0x7f7f7f7f) + 0x7f7f7f7f) || v) || 0x7f7f7f7f) \<noteq> 0
-    \<Longrightarrow> v && 0xff000000 = 0 \<or> v && 0xff0000 = 0 \<or> v && 0xff00 = 0 \<or> v && 0xff = 0"
-  apply clarsimp
-  apply word_bitwise
-  by metis
-
-
-(* FIXME: generalise *)
-lemma mask_exceed:"n \<ge> 32 \<Longrightarrow> (x::word32) && ~~ mask n = 0"
-  apply (metis (erased, hide_lams) is_aligned_neg_mask is_aligned_neg_mask_eq mask_32_max_word
-                                   word_bool_alg.compl_one word_bool_alg.conj_zero_right)
-  done
-
-(* FIXME: rename *)
-lemma unat_nat:
+lemma unat_of_int_32:
   "\<lbrakk>i \<ge> 0; i \<le>2 ^ 31\<rbrakk> \<Longrightarrow> (unat ((of_int i)::sword32)) = nat i"
   unfolding unat_def 
   apply (subst eq_nat_nat_iff, clarsimp+)

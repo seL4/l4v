@@ -3394,7 +3394,7 @@ lemma not_idle_thread_resolve_address_bits:
   done
 
 lemma lookup_cap_corres:
-  "\<lbrakk>w = of_bl blist;length blist = Types_D.word_bits\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>w = of_bl blist;length blist = word_bits\<rbrakk> \<Longrightarrow>
   dcorres (dc \<oplus> (\<lambda>x y. x = transform_cap y)) \<top>
      (valid_global_refs and valid_objs and valid_irq_node and valid_idle and not_idle_thread thread and valid_etcbs)
      (CSpace_D.lookup_cap thread w)
@@ -3411,8 +3411,8 @@ lemma lookup_cap_corres:
         apply simp
        apply (rule corres_rel_imp)
         apply (rule resolve_address_bits_corres)
-          apply (simp add:Types_D.word_bits_def)
-         apply (clarsimp simp: obj_at_def opt_cap_tcb not_idle_thread_def transform_cap_def Types_D.word_bits_def)+
+          apply (simp add: word_bits_def)
+         apply (clarsimp simp: obj_at_def opt_cap_tcb not_idle_thread_def transform_cap_def word_bits_def)+
        apply (case_tac x, auto)[1]
       apply (wp_once+)[1]
      apply wp
@@ -3443,7 +3443,7 @@ lemma get_cap_get_tcb_dcorres:
   done
 
 lemma dcorres_lookup_slot:
-  "\<lbrakk>w = of_bl ptr;length ptr = Types_D.word_bits\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>w = of_bl ptr;length ptr = word_bits\<rbrakk> \<Longrightarrow>
   dcorres (dc \<oplus> (\<lambda>x y. x = transform_cslot_ptr (fst y))) \<top>
   (not_idle_thread thread and valid_global_refs and valid_objs and valid_irq_node and valid_idle and valid_etcbs)
   (CSpace_D.lookup_slot thread w)
@@ -3459,7 +3459,7 @@ lemma dcorres_lookup_slot:
            apply clarsimp
            apply (rule corres_returnOk [where P=\<top> and P'=\<top>])
            apply clarsimp
-          apply (clarsimp simp: Types_D.word_bits_def)
+          apply (clarsimp simp: word_bits_def)
          apply assumption
         apply simp
        apply wp
@@ -3470,7 +3470,7 @@ lemma dcorres_lookup_slot:
 
 
 lemma dcorres_lookup_cap_and_slot:
- "\<lbrakk>w = of_bl ptr;length ptr = Types_D.word_bits\<rbrakk> \<Longrightarrow>
+ "\<lbrakk>w = of_bl ptr;length ptr = word_bits\<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> (\<lambda>x y. fst x = transform_cap (fst y) \<and> snd x = transform_cslot_ptr (snd y))) \<top>
   (not_idle_thread thread and valid_global_refs and valid_objs and valid_irq_node and valid_idle and valid_etcbs)
   (CSpace_D.lookup_cap_and_slot thread w)

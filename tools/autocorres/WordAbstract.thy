@@ -250,7 +250,7 @@ lemma abstract_val_signed_unary_minus:
 lemma abstract_val_unsigned_unary_minus:
   "\<lbrakk> abstract_val P r unat r' \<rbrakk> \<Longrightarrow>
        abstract_val P (if r = 0 then 0 else UWORD_MAX TYPE('a::len) + 1 - r) unat ( - (r' :: 'a word))"
-  by (clarsimp simp: unat_minus word_size unat_eq_zero UWORD_MAX_def)
+  by (clarsimp simp: unat_minus' word_size unat_eq_zero UWORD_MAX_def)
 
 lemmas abstract_val_signed_ops [simplified simp_thms] =
   abstract_expr_bool_binop [OF snat_abstract_bool_binops(1)]
@@ -563,7 +563,7 @@ lemma corresTA_L2_call:
 lemma corresTA_measure_call:
   "\<lbrakk> monad_mono B; \<And>m. corresTA P rx id (A m) (B m) \<rbrakk> \<Longrightarrow>
         corresTA P rx id (measure_call A) (measure_call B)"
-  by (simp add: corresTA_def corresXF_measure_call)
+  by (simp add: corresXF_measure_call)
 
 lemma corresTA_L2_unknown:
   "corresTA \<top> rx ex (L2_unknown x) (L2_unknown x)"

@@ -2433,7 +2433,7 @@ lemma usable_range_subseteq:
 lemma usable_range_emptyD:
   "\<lbrakk>cap_aligned cap;is_untyped_cap cap ;usable_untyped_range cap = {}\<rbrakk> \<Longrightarrow> 2 ^ cap_bits cap \<le> free_index_of cap"
   apply (clarsimp simp:is_cap_simps not_le free_index_of_def cap_aligned_def split:if_splits)
-  apply (drule(1) of_nat_less_pow)
+  apply (drule(1) of_nat_less_pow_32)
   apply (drule word_plus_mono_right[OF _ is_aligned_no_overflow[unfolded p_assoc_help],rotated])
    apply simp
   apply (simp add:p_assoc_help)

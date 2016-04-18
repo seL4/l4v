@@ -1151,7 +1151,7 @@ lemma valid_ipc_buffer_ptr_array:
   apply (erule clift_array_assertion_imp, simp+)
   apply (simp add: field_lvalue_def msg_align_bits)
   apply (rule_tac x="unat (ptr_val p && mask pageBits >> 2)" in exI,
-    simp add: word32_shift_by_2 shiftr_shiftl1
+    simp add: word_shift_by_2 shiftr_shiftl1
               is_aligned_andI1[OF is_aligned_weaken])
   apply (simp add: add.commute word_plus_and_or_coroll2)
   apply (cut_tac x="(ptr_val p && mask pageBits ) >> 2"

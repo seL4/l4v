@@ -2503,7 +2503,7 @@ lemma finaliseCap_cte_refs:
    apply (wp | wpc | simp only: o_def)+
   apply (frule valid_capAligned)
   apply (cases cap, simp_all add: isCap_simps)
-   apply (clarsimp simp: tcb_cte_cases_def word32_count_from_top)
+   apply (clarsimp simp: tcb_cte_cases_def word_count_from_top)
   apply clarsimp
   apply (rule ext, simp)
   apply (rule image_cong [OF _ refl])
@@ -4065,7 +4065,7 @@ lemma arch_recycle_cap_corres:
      apply clarsimp
     apply (cases slot, clarsimp)
     apply (intro exI, erule cte_wp_at_weakenE)
-    apply (clarsimp simp: is_cap_simps word32_shift_by_2 upto_enum_step_def)
+    apply (clarsimp simp: is_cap_simps word_shift_by_2 upto_enum_step_def)
     apply (rule conjunct2[OF is_aligned_add_helper[OF _ shiftl_less_t2n]],
            simp_all add: pt_bits_def pageBits_def ptBits_def)[1]
     apply (simp add: word_less_nat_alt word_le_nat_alt unat_of_nat)

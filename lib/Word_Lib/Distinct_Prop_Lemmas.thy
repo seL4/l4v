@@ -11,45 +11,9 @@
 theory Distinct_Prop_Lemmas
 imports
   Distinct_Prop
-  HOL_Lemma_Bucket
+  HOL_Lemmas
   "~~/src/HOL/Library/Prefix_Order"
 begin
-
-lemma n_less_equal_power_2 [simp]:
-  "n < 2 ^ n"
-  by (induct_tac n, simp_all)
-
-lemma drop_Suc_nth:
-  "n < length xs \<Longrightarrow> drop n xs = xs!n # drop (Suc n) xs"
-  by (simp add: Cons_nth_drop_Suc)
-
-lemma minus_Suc_0_lt:
-  "a \<noteq> 0 \<Longrightarrow> a - Suc 0 < a"
-  by simp
-
-lemma map_length_cong:
-  "\<lbrakk> length xs = length ys; \<And>x y. (x, y) \<in> set (zip xs ys) \<Longrightarrow> f x = g y \<rbrakk>
-     \<Longrightarrow> map f xs = map g ys"
-  apply atomize
-  apply (erule rev_mp, erule list_induct2)
-   apply auto
-  done
-
-(* FIXME: duplicate *)
-lemma zip_take_triv2:
-  "n \<ge> length as \<Longrightarrow> zip as (take n bs) = zip as bs"
-  apply (induct as arbitrary: n bs)
-   apply simp
-  apply simp
-  apply (case_tac n, simp_all)
-  apply (case_tac bs, simp_all)
-  done
-
-lemma zip_is_empty:
-  "(zip xs ys = []) = (xs = [] \<or> ys = [])"
-  apply (case_tac xs, simp_all)
-  apply (case_tac ys, simp_all)
-  done
 
 lemma fst_last_zip_upt:
   "zip [0 ..< m] xs \<noteq> [] \<Longrightarrow>

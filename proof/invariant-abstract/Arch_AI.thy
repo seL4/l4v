@@ -152,7 +152,7 @@ lemma dom_ucast_eq:
   apply safe
    apply clarsimp
    apply (rule ccontr)
-   apply (erule_tac x="ucast x" in WordLemmaBucket.in_emptyE)
+   apply (erule_tac x="ucast x" in in_emptyE)
    apply (clarsimp simp: p2_low_bits_max)
    apply (rule conjI)
     apply (clarsimp simp: ucast_ucast_mask)
@@ -170,7 +170,7 @@ lemma dom_ucast_eq:
   apply (clarsimp simp: p2_low_bits_max)
   apply (rule ccontr)
   apply simp
-  apply (erule_tac x="ucast x" in WordLemmaBucket.in_emptyE)
+  apply (erule_tac x="ucast x" in in_emptyE)
   apply clarsimp
   apply (rule conjI, blast)
   apply (rule word_less_sub_1)
@@ -189,7 +189,7 @@ lemma dom_ucast_eq_8:
   apply safe
    apply clarsimp
    apply (rule ccontr)
-   apply (erule_tac x="ucast x" in WordLemmaBucket.in_emptyE)
+   apply (erule_tac x="ucast x" in in_emptyE)
    apply (clarsimp simp: asid_high_bits_max_word)
    apply (clarsimp simp: ucast_ucast_mask)
    apply (subst (asm) less_mask_eq)
@@ -200,7 +200,7 @@ lemma dom_ucast_eq_8:
   apply (clarsimp simp: asid_high_bits_max_word)
   apply (rule ccontr)
   apply simp
-  apply (erule_tac x="ucast x" in WordLemmaBucket.in_emptyE)
+  apply (erule_tac x="ucast x" in in_emptyE)
   apply clarsimp
   apply (rule conjI, blast)
   apply (rule word_less_sub_1)

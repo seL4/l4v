@@ -47,7 +47,7 @@ qed
 lemma mask_pageBits_inner_beauty:
   "is_aligned p 2 \<Longrightarrow>
   (p && ~~ mask pageBits) + (ucast ((ucast (p && mask pageBits >> 2)):: 10 word) * 4) = (p::word32)"
-  apply (simp add: is_aligned_nth word32_shift_by_2)
+  apply (simp add: is_aligned_nth word_shift_by_2)
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
    apply (clarsimp simp: word_size word_ops_nth_size nth_ucast nth_shiftr nth_shiftl)
@@ -76,7 +76,7 @@ lemma more_pageBits_inner_beauty:
   assumes x: "x \<noteq> ucast (p && mask pageBits >> 2)"
   shows "(p && ~~ mask pageBits) + (ucast x * 4) \<noteq> p"
   apply clarsimp
-  apply (simp add: word32_shift_by_2)
+  apply (simp add: word_shift_by_2)
   apply (subst (asm) word_plus_and_or_coroll)
    apply (clarsimp simp: word_size word_ops_nth_size nth_ucast
                          nth_shiftl bang_eq)
@@ -323,7 +323,7 @@ proof (intro allI impI)
     apply (subst heap_update_Array_element)
      apply (insert ptr_mask_less)[1]
      apply (simp add: word_less_nat_alt)
-    apply (simp add: ptr_add_def word32_shift_by_2 shiftr_shiftl1)
+    apply (simp add: ptr_add_def word_shift_by_2 shiftr_shiftl1)
     apply (simp add: is_aligned_neg_mask_eq al is_aligned_andI1)
     apply (simp add: word_plus_and_or_coroll2 add.commute)
     done

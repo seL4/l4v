@@ -9,7 +9,7 @@
  *)
 
 theory ptr_modifies
-imports "../../../lib/WordLib" "../CTranslation"
+imports "../../../lib/WordSetup" "../CTranslation"
 begin
 
 install_C_file "ptr_modifies.c"

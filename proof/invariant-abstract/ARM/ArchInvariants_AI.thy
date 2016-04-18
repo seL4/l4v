@@ -1224,7 +1224,7 @@ lemma page_directory_pde_atI:
   apply (rule sym, rule add_mask_lower_bits)
    apply (simp add: pd_bits_def pageBits_def)
   apply simp
-  apply (subst upper_bits_unset_is_l2p[unfolded word_bits_conv])
+  apply (subst upper_bits_unset_is_l2p_32[unfolded word_bits_conv])
    apply (simp add: pd_bits_def pageBits_def)
   apply (rule shiftl_less_t2n)
    apply (simp add: pd_bits_def pageBits_def)
@@ -1243,7 +1243,7 @@ lemma page_table_pte_atI:
   apply (rule sym, rule add_mask_lower_bits)
    apply (simp add: pt_bits_def pageBits_def)
   apply simp
-  apply (subst upper_bits_unset_is_l2p[unfolded word_bits_conv])
+  apply (subst upper_bits_unset_is_l2p_32[unfolded word_bits_conv])
    apply (simp add: pt_bits_def pageBits_def)
   apply (rule shiftl_less_t2n)
    apply (simp add: pt_bits_def pageBits_def)

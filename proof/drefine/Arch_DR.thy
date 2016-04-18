@@ -348,7 +348,7 @@ proof -
      apply (simp add: lookup_pd_slot_def)
      apply (rule aligned_add_aligned[OF pd_aligned],
             simp_all add: pd_bits_def pageBits_def word_bits_conv)
-     apply (simp_all add: is_aligned_shiftl word32_shift_by_2)
+     apply (simp_all add: is_aligned_shiftl word_shift_by_2)
     done
   have inj_on_pd:
     "inj_on (\<lambda>x. transform_pd_slot_ref (lookup_pd_slot pd_ptr vptr + toEnum x * 4)) {0 ..< 16}"
@@ -356,7 +356,7 @@ proof -
     apply (drule bits_low_high_eq[rotated])
      apply (simp add: mask_twice pd_bits_def pageBits_def)
     apply (drule(1) mask_eqI[rotated])
-    apply (simp add: word32_shift_by_2)
+    apply (simp add: word_shift_by_2)
     apply (rule ccontr, erule(3) of_nat_shift_distinct_helper)
      apply (simp_all add: word_bits_conv)
     done
@@ -457,7 +457,7 @@ proof -
          apply (clarsimp simp: upto_enum_step_def pt_bits_def pageBits_def
                         split: split_if_asm)
          apply (subst add.assoc, subst is_aligned_add_helper, assumption)
-          apply (simp only: word32_shift_by_2 word_shiftl_add_distrib[symmetric])
+          apply (simp only: word_shift_by_2 word_shiftl_add_distrib[symmetric])
           apply (rule shiftl_less_t2n)
            apply (rule is_aligned_add_less_t2n[where n=4])
               apply (rule is_aligned_andI1)
@@ -575,7 +575,7 @@ proof (induct x)
                      decode_invocation_def arch_decode_invocation_def
                split del: split_if)
     apply (clarsimp simp: get_asid_pool_intent_def transform_intent_def
-                          option_map_Some_eq2 throw_opt_def
+                          map_option_Some_eq2 throw_opt_def
                           decode_asid_pool_invocation_def
                split del: split_if split: label_split_asm list.split_asm)
     apply (simp add: split_beta corres_alternate2
@@ -631,7 +631,7 @@ next
                      bindE_assoc
                split del: split_if)
     apply (clarsimp simp: get_asid_control_intent_def transform_intent_def
-                          option_map_Some_eq2 throw_opt_def
+                          map_option_Some_eq2 throw_opt_def
                           decode_asid_control_invocation_def
                           transform_cnode_index_and_depth_def
                split del: split_if split: label_split_asm list.split_asm)
@@ -691,7 +691,7 @@ next
                      decode_invocation_def arch_decode_invocation_def
                split del: split_if)
     apply (clarsimp simp: get_page_intent_def transform_intent_def
-                          option_map_Some_eq2 throw_opt_def
+                          map_option_Some_eq2 throw_opt_def
                           decode_page_invocation_def
                           transform_intent_page_map_def
                           transform_intent_page_remap_def
@@ -851,7 +851,7 @@ next
                      decode_invocation_def arch_decode_invocation_def
                split del: split_if)
     apply (clarsimp simp: get_page_table_intent_def transform_intent_def
-                          option_map_Some_eq2 throw_opt_def cdl_get_pt_mapped_addr_def
+                          map_option_Some_eq2 throw_opt_def cdl_get_pt_mapped_addr_def
                           decode_page_table_invocation_def
                           transform_intent_page_table_map_def
                split del: split_if
@@ -916,7 +916,7 @@ next
   isPDFlushLabel_def
   split del: split_if)
   apply (clarsimp simp: get_page_directory_intent_def transform_intent_def
-           option_map_Some_eq2 throw_opt_def decode_page_directory_invocation_def 
+           map_option_Some_eq2 throw_opt_def decode_page_directory_invocation_def 
     split: label_split_asm  cdl_intent.splits
            InvocationLabels_H.invocation_label.splits arch_invocation_label.splits)
      apply (clarsimp simp: neq_Nil_conv valid_cap_simps obj_at_def
@@ -1921,7 +1921,7 @@ proof -
         apply (clarsimp simp:image_def)
         apply (clarsimp simp: page_bits_def)
        apply (clarsimp simp:image_def)
-      apply (rule_tac P = "is_aligned frame page_bits \<and> page_bits \<le> WordSetup.word_bits \<and>
+      apply (rule_tac P = "is_aligned frame page_bits \<and> page_bits \<le> word_bits \<and>
                            2 \<le> page_bits" in hoare_gen_asm)
       apply (simp add: delete_objects_rewrite is_aligned_neg_mask_eq)
       apply (rule_tac Q="\<lambda>_ s.

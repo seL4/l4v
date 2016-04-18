@@ -2568,7 +2568,7 @@ lemma isValidVTableRoot_conv:
    apply (clarsimp simp: cap_get_tag_isCap cap_get_tag_isCap_ArchObject)
    apply (case_tac "cap_get_tag cap' = scast cap_page_directory_cap")
     apply (clarsimp split: arch_capability.split simp: isCap_simps)
-    apply (clarsimp simp: ccap_relation_def option_map_Some_eq2
+    apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                           cap_page_directory_cap_lift cap_to_H_def
                           from_bool_def)
     apply (clarsimp simp: to_bool_def split: split_if)
@@ -2775,7 +2775,7 @@ lemma decodeTCBConfigure_ccorres:
                          apply (drule obj_at_ko_at', clarsimp+)
                          apply (erule cmap_relationE1 [OF cmap_relation_tcb], erule ko_at_projectKO_opt)
                          apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-                         apply (simp add: word32_FF_is_mask ucast_ucast_mask8)
+                         apply (simp add: word_FF_is_mask ucast_ucast_mask8)
                          apply (drule sym, simp, fastforce simp: unat_ucast_8_32 word_less_nat_alt)
                         apply (simp add: injection_handler_throwError)
                         apply (rule syscall_error_throwError_ccorres_n)
@@ -3002,7 +3002,7 @@ lemma decodeTCBConfigure_ccorres:
                        apply (subgoal_tac "args \<noteq> [] \<and> extraCaps \<noteq> []")
                         apply (simp add: word_sle_def cap_get_tag_isCap numeral_eqs
                                          hd_conv_nth hd_drop_conv_nth2 ucast_ucast_mask8
-                                         word32_FF_is_mask split_def
+                                         word_FF_is_mask split_def
                                          thread_control_update_priority_def
                                          thread_control_update_space_def
                                          thread_control_update_ipc_buffer_def
@@ -3117,7 +3117,7 @@ lemma decodeSetPriority_ccorres:
             apply (frule rf_sr_ksCurThread)
             apply (erule cmap_relationE1 [OF cmap_relation_tcb], erule ko_at_projectKO_opt)
             apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-            apply (simp add: ucast_ucast_mask8 word32_FF_is_mask)
+            apply (simp add: ucast_ucast_mask8 word_FF_is_mask)
             apply (drule sym, simp, fastforce simp: unat_ucast_8_32 word_less_nat_alt)
            apply (simp add: invocationCatch_def
                       cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -3162,14 +3162,13 @@ lemma decodeSetPriority_ccorres:
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (clarsimp simp: valid_cap'_def capAligned_def)
   apply (intro conjI impI allI)
-      apply (clarsimp simp: unat_eq_0)
-     apply (clarsimp simp: word32_FF_is_mask ucast_ucast_mask)
-    apply (thin_tac "tcb_at' p s" for p s)+
-    apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
-    apply (drule obj_at_ko_at', clarsimp)
-    apply (erule cmap_relationE1 [OF cmap_relation_tcb], erule ko_at_projectKO_opt)
-    apply (fastforce intro: typ_heap_simps)
-   apply (simp add: word_sle_def)
+     apply (clarsimp simp: unat_eq_0)
+    apply (clarsimp simp: word_FF_is_mask ucast_ucast_mask)
+   apply (thin_tac "tcb_at' p s" for p s)+
+   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
+   apply (drule obj_at_ko_at', clarsimp)
+   apply (erule cmap_relationE1 [OF cmap_relation_tcb], erule ko_at_projectKO_opt)
+   apply (fastforce intro: typ_heap_simps)
   apply clarsimp
   done
 

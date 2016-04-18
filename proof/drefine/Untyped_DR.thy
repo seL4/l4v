@@ -263,7 +263,7 @@ lemma freeMemory_dcorres:
     apply clarsimp
     apply (erule use_valid[where P=P and Q="%_. P" for P])
      apply wp
-     apply (clarsimp simp: is_aligned_no_wrap' of_nat_less_pow word_bits_def
+     apply (clarsimp simp: is_aligned_no_wrap' of_nat_less_pow_32 word_bits_def
                            x_power_minus_1 word_plus_mono_right)
     apply (rule refl)
    apply (rule refl)
@@ -1746,7 +1746,7 @@ lemma descendants_of_empty_lift :
   done
 
 lemma alignUp_gt_0:
-  "\<lbrakk>is_aligned (x :: 'a :: len word) n; n < len_of TYPE('a); x \<noteq> 0 ; a \<le> x\<rbrakk> \<Longrightarrow> (0 < WordSetup.alignUp a n) = (a \<noteq> 0)"
+  "\<lbrakk>is_aligned (x :: 'a :: len word) n; n < len_of TYPE('a); x \<noteq> 0 ; a \<le> x\<rbrakk> \<Longrightarrow> (0 < Word_Lib.alignUp a n) = (a \<noteq> 0)"
   apply (rule iffI)
    apply (rule ccontr)
    apply (clarsimp simp:not_less alignUp_def2 mask_def)
@@ -1786,7 +1786,7 @@ lemma decode_untyped_corres:
            and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at (diminished (fst x)) (snd x) s) and valid_etcbs)
      (Untyped_D.decode_untyped_invocation cap slot excaps ui)
      (Decode_A.decode_untyped_invocation label' args' slot' cap' (map fst excaps'))"
-  apply (simp add: transform_intent_def option_map_Some_eq2
+  apply (simp add: transform_intent_def map_option_Some_eq2
                    transform_intent_untyped_retype_def
             split: invocation_label.split_asm arch_invocation_label.split_asm list.split_asm
                    option.split_asm)
@@ -1839,7 +1839,7 @@ lemma decode_untyped_corres:
               apply (rule corres_underlying_gets_pre_lhs)
               apply (rule_tac P' = "\<lambda>s. valid_mdb s \<and> cte_at slot' s \<and> is_cnode_cap cnode_cap' \<and>
                 cap_aligned cnode_cap' \<and> invs s \<and> not_idle_thread (obj_ref_of cnode_cap') s \<and>
-                free_index \<le> 2^sz \<and> is_aligned ptr sz \<and> sz < WordSetup.word_bits \<and>
+                free_index \<le> 2^sz \<and> is_aligned ptr sz \<and> sz < word_bits \<and>
                 (free_index = 0) = (descendants_of slot' (cdt s) ={} ) \<and> valid_etcbs s"
                 and P = "\<lambda>s. s = x" in corres_returnOk)
               apply (simp add: translate_untyped_invocation_def transform_def get_free_ref_def)

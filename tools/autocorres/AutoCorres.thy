@@ -25,7 +25,7 @@ imports
   TypHeapSimple
   HeapLift
   WordAbstract
-  "../../lib/OptionMonadWP"
+  "../../lib/Monad_WP/OptionMonadWP"
   "../../lib/Apply_Trace"
   AutoCorresSimpset
   keywords "autocorres" :: thy_decl

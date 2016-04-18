@@ -922,7 +922,7 @@ lemma zip_take_length[simp]:
   done
 
 
-lemma int_not_emptyD:
+lemma int_not_empty_subsetD:
   "\<lbrakk> A\<inter> B = {}; A\<noteq> {};B\<noteq> {}\<rbrakk> \<Longrightarrow> \<not> A \<subset> B \<and> \<not> B\<subset> A \<and> \<not> A = B"
   by auto
 
@@ -1177,7 +1177,7 @@ lemma untyped_inc':
       apply simp+
      apply (drule(1) untyped_range_non_empty[OF _ cs_cap_aligned])
      apply (drule(1) untyped_range_non_empty)
-     apply (rule int_not_emptyD)
+     apply (rule int_not_empty_subsetD)
        apply (simp add:Int_ac)
       apply simp
      apply simp
@@ -2342,7 +2342,7 @@ lemma mask_out_eq_0:
   "\<lbrakk>idx < 2^ sz;sz<word_bits\<rbrakk> \<Longrightarrow> ((of_nat idx)::word32) && ~~ mask sz = 0"
   apply (clarsimp simp:mask_out_sub_mask)
   apply (subst less_mask_eq[symmetric])
-   apply (erule(1) of_nat_less_pow)
+   apply (erule(1) of_nat_less_pow_32)
   apply simp
   done
 

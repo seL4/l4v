@@ -3650,14 +3650,14 @@ lemma perform_page_table_invocation_invs[wp]:
     apply (subst is_aligned_no_overflow,
            erule is_aligned_weaken,
            (simp_all add: pt_bits_def pageBits_def)[2])+
-    apply (clarsimp simp: image_def word32_shift_by_2)
+    apply (clarsimp simp: image_def word_shift_by_2)
     apply (rule exI, rule conjI[OF _ refl])
     apply (rule plus_one_helper)
     apply (rule order_less_le_trans, rule ucast_less, simp+)
   apply (clarsimp simp: upto_enum_step_def)
   apply (rule conjunct2, rule is_aligned_add_helper)
    apply (simp add: pt_bits_def pageBits_def)
-  apply (simp only: word32_shift_by_2)
+  apply (simp only: word_shift_by_2)
   apply (rule shiftl_less_t2n)
    apply (rule minus_one_helper5)
     apply (simp add: pt_bits_def pageBits_def)+
@@ -3925,7 +3925,7 @@ lemma lookup_pd_slot_kernel_mappings_set_strg:
           \<longrightarrow>
    (\<forall>x\<in>set [0 , 4 .e. 0x3C]. ucast (x + lookup_pd_slot pd vptr && mask pd_bits >> 2)
             \<notin> kernel_mapping_slots)"
-  apply (clarsimp simp: upto_enum_step_def word32_shift_by_2)
+  apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
   apply (simp add: less_kernel_base_mapping_slots_both minus_one_helper5)
   done
 

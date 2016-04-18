@@ -1628,7 +1628,7 @@ lemma ucast_eq_0[OF refl]:
   done
 
  
- lemma is_up_compose': 
+lemma is_up_compose': 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   shows
@@ -1636,12 +1636,12 @@ lemma ucast_eq_0[OF refl]:
   unfolding is_up_def by (simp add: Word.target_size Word.source_size)
 
  
- lemma is_up_compose: 
+lemma is_up_compose: 
   shows
   "\<lbrakk>is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> is_up (uc' \<circ> uc)"
   unfolding is_up_def by (simp add: Word.target_size Word.source_size)
  
- lemma uint_is_up_compose: 
+lemma uint_is_up_compose: 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   assumes "uc = ucast"
@@ -1653,10 +1653,10 @@ lemma ucast_eq_0[OF refl]:
   apply (frule is_up_compose)
    apply (simp_all )
   apply (simp only: Word.uint_up_ucast)
- done
+  done
 
  
- lemma uint_is_up_compose_pred: 
+lemma uint_is_up_compose_pred: 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   assumes "uc = ucast"
@@ -1670,12 +1670,12 @@ lemma ucast_eq_0[OF refl]:
   apply (simp only: Word.uint_up_ucast)
  done
  
- lemma is_down_up_sword: 
+lemma is_down_up_sword: 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) sword"
   shows "\<lbrakk>uc = ucast; len_of TYPE('a) < len_of TYPE('b) \<rbrakk> \<Longrightarrow> is_up uc = (\<not> is_down uc)"
   by (simp add: target_size source_size  is_up_def is_down_def )
  
- lemma is_not_down_compose: 
+lemma is_not_down_compose: 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   shows
@@ -1684,9 +1684,7 @@ lemma ucast_eq_0[OF refl]:
   by (simp add: Word.target_size Word.source_size)
  
  
- 
- 
- lemma sint_ucast_uint: 
+lemma sint_ucast_uint: 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   assumes "uc = ucast" and " uc' = ucast" and "uuc=uc' \<circ> uc " and "len_of TYPE('a) < len_of TYPE('c signed)"
@@ -1695,13 +1693,13 @@ lemma ucast_eq_0[OF refl]:
   apply (simp add: assms)
   apply (frule is_up_compose')
    apply simp_all
-  apply (simp add: ucast_ucast_b )
-  apply (rule WordLemmaBucket.sint_ucast_eq_uint )
+  apply (simp add: ucast_ucast_b)
+  apply (rule sint_ucast_eq_uint)
   apply (insert assms)
-  apply (simp add: is_down_def target_size source_size )
- done
+  apply (simp add: is_down_def target_size source_size)
+  done
  
- lemma sint_ucast_uint_pred:
+lemma sint_ucast_uint_pred:
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   and uuc :: "'a word \<Rightarrow> 'c sword"
@@ -1711,6 +1709,7 @@ lemma ucast_eq_0[OF refl]:
   apply (insert sint_ucast_uint[where uc=uc and uc'=uc' and uuc=uuc and b = b])
   apply (simp add: assms)
  done
+
 lemma sint_uucast_uint_uucast_pred:
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"

@@ -266,7 +266,7 @@ lemma seL4_CapInitThreadCNode_less_than_si_cnode_size [simp]:
   apply (insert si_cnode_size_greater_than_1)
   apply (insert power_strict_increasing [where n=1 and a="(2::nat)" and N=si_cnode_size, simplified])
   apply (clarsimp)
-  apply (drule  of_nat_less_pow)
+  apply (drule  of_nat_less_pow_32)
    apply (clarsimp simp: seL4_CapInitThreadCNode_def)+
   done
 
@@ -279,7 +279,7 @@ lemma seL4_CapIRQControl_less_than_si_cnode_size [simp]:
   apply (simp add: seL4_CapIRQControl_def)
   apply (insert si_cnode_size_greater_than_2)
   apply (insert power_strict_increasing [where n=2 and a="(2::nat)" and N=si_cnode_size, simplified])
-  apply (drule  of_nat_less_pow, simp_all)
+  apply (drule  of_nat_less_pow_32, simp_all)
   done
 
 lemma offset_seL4_CapIRQControl [simp]:

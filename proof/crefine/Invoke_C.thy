@@ -1446,7 +1446,7 @@ lemma decodeCNodeInvocation_ccorres:
             | clarsimp simp: rightsFromWord_wordFromRights
                              ccte_relation_def c_valid_cte_def
                              cl_valid_cte_def c_valid_cap_def
-                             option_map_Some_eq2 neq_Nil_conv
+                             map_option_Some_eq2 neq_Nil_conv
                              ccap_relation_def numeral_eqs
                              ccap_relation_NullCap_iff[symmetric]
                              if_1_0_0 interpret_excaps_test_null
@@ -2071,16 +2071,16 @@ lemma invokeUntyped_Retype_ccorres:
                      apply (clarsimp dest!: invokeUntyped_proofs.slots_invD[OF proofs] split: split_if)
                     apply (simp add: atLeastAtMost_iff)
 
-                   apply (rule contra_subsetD[rotated],
-                     erule(1) invokeUntyped_proofs.ex_cte_no_overlap')
-                   apply (simp add: shiftl_t2n mult.commute)
-                   apply (rule order_trans, erule range_cover_subset', simp_all)[1]
-
-                  apply (rule_tac us1="unat userSize" in is_aligned_weaken
-                            [OF _ APIType_capBits_low[where newType = newType]])
-                    apply (rule is_aligned_mult_triv2)
+                   apply (rule_tac us1="unat userSize" in is_aligned_weaken
+                             [OF _ APIType_capBits_low[where newType = newType]])
+                     apply (rule is_aligned_mult_triv2)
+                    apply simp
                    apply simp
-                  apply simp
+
+                  apply (rule contra_subsetD[rotated], erule(1) invokeUntyped_proofs.ex_cte_no_overlap')
+                  apply (simp add: shiftl_t2n mult.commute)
+                  apply (rule order_trans, erule range_cover_subset', simp_all)[1]
+
                  apply (frule range_cover.unat_of_nat_n_shift[OF _ le_refl])
                  apply (clarsimp simp: shiftl_t2n)
                  apply (frule range_cover.range_cover_n_le(2))
@@ -2160,7 +2160,6 @@ lemma invokeUntyped_Retype_ccorres:
             apply (rule APIType_capBits_high)
              apply (clarsimp simp: unat_of_nat32[where x=us] word_bits_def)+
           apply (clarsimp simp:getFreeIndex_def)
-         apply (simp add: word_sle_def)
          apply (simp add: shiftL_nat word_bits_conv shiftl_t2n)
          apply (clarsimp dest!: range_cover_sz'
                           simp: unat_of_nat32 word_bits_def)

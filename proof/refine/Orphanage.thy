@@ -1352,20 +1352,20 @@ lemma invokeUntyped_no_orphans' [wp]:
                    invokeUntyped_proofs.slots_invD[OF ivk_pf]
                    invokeUntyped_proofs.caps_no_overlap'[OF ivk_pf])
    apply (intro conjI)
-       apply (simp add: range_cover_unat
-                        range_cover.unat_of_nat_shift field_simps)+
-      apply (drule range_cover.range_cover_compare_bound)
+       apply (simp add: range_cover_unat range_cover.unat_of_nat_shift field_simps)
+      apply (rule aligned_add_aligned[OF aligned_after_mask])
+        apply (erule range_cover.aligned)
+       apply simp
       apply simp
-     apply (rule aligned_add_aligned[OF aligned_after_mask])
-       apply (erule range_cover.aligned)
-      apply simp
-     apply (simp add:range_cover_def)
+     apply (simp add: range_cover_unat range_cover.unat_of_nat_shift field_simps)
+     apply (drule range_cover.range_cover_compare_bound)
+     apply simp
     apply simp+
    apply (rule subset_trans[OF invokeUntyped_proofs.subset_stuff[OF ivk_pf]])
    apply (clarsimp simp:blah word_and_le2)
   using ivk_pf
   apply clarsimp
-  apply (wp createNewObjects_no_orphans[where sz = sz] getSlotCap_wp 
+  apply (wp createNewObjects_no_orphans[where sz = sz] getSlotCap_wp
               updateFreeIndex_invs_simple' updateFreeIndex_pspace_no_overlap'
               hoare_vcg_ball_lift updateCap_weak_cte_wp_at
               updateFreeIndex_caps_no_overlap''
@@ -1373,10 +1373,10 @@ lemma invokeUntyped_no_orphans' [wp]:
    apply (strengthen invs_pspace_aligned' invs_valid_pspace'
           invs_pspace_distinct' invs_arch_state invs_psp_aligned)
    apply (clarsimp simp:conj_comms invokeUntyped_proofs.slots_invD[OF ivk_pf])
-   apply (rule_tac P = "cap = capability.UntypedCap (ptr && ~~ mask sz) sz idx" 
+   apply (rule_tac P = "cap = capability.UntypedCap (ptr && ~~ mask sz) sz idx"
        in hoare_gen_asm)
    apply (clarsimp simp:misc)
-   apply (wp deleteObjects_invs'[where idx = idx and p = "cref"] 
+   apply (wp deleteObjects_invs'[where idx = idx and p = "cref"]
      deleteObjects_caps_no_overlap''[where idx = idx and slot = "cref"] 
      deleteObject_no_overlap[where idx = idx]
      deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz]
@@ -1386,29 +1386,29 @@ lemma invokeUntyped_no_orphans' [wp]:
      deleteObjects_st_tcb_at'[where p = cref]
      deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz]
      deleteObjects_ct_active'[where idx = idx and cref = cref])
-   apply (clarsimp simp:conj_comms)
-   apply (wp getSlotCap_wp)
-   using invokeUntyped_proofs.usableRange_disjoint[OF ivk_pf]
+  apply (clarsimp simp:conj_comms)
+  apply (wp getSlotCap_wp)
+  using invokeUntyped_proofs.usableRange_disjoint[OF ivk_pf]
      invokeUntyped_proofs.descendants_range[OF ivk_pf]
      invokeUntyped_proofs.slots_invD[OF ivk_pf]
      invokeUntyped_proofs.vc'[OF ivk_pf]
      invokeUntyped_proofs.cref_inv[OF ivk_pf]
-   apply (clarsimp simp:invs_valid_pspace' invokeUntyped_proofs_def
+  apply (clarsimp simp:invs_valid_pspace' invokeUntyped_proofs_def
                         is_aligned_neg_mask_eq' range_cover.aligned
                         no_orph getFreeIndex_def misc range_cover.sz )
-   apply (simp add: getFreeIndex_def add_minus_neg_mask field_simps shiftL_nat
+  apply (simp add: getFreeIndex_def add_minus_neg_mask field_simps shiftL_nat
                     invokeUntyped_proofs.not_0_ptr[OF ivk_pf]
                     descendants_range'_def2 shiftL_nat
                     range_cover_unat range_cover.unat_of_nat_shift
                     invokeUntyped_proofs.caps_no_overlap'[OF ivk_pf]
                     is_aligned_mask[unfolded is_aligned_neg_mask_eq']
                     invs_pspace_distinct')
-   apply (intro conjI)
+  apply (intro conjI)
       apply (simp add: range_cover_def word_bits_def)
      apply simp
-    apply (drule range_cover.range_cover_compare_bound)
-    apply (simp add:is_aligned_mask[unfolded is_aligned_neg_mask_eq'])
-   apply (simp add:is_aligned_mask[symmetric])
+    apply (simp add:is_aligned_mask[symmetric])
+   apply (drule range_cover.range_cover_compare_bound)
+   apply (simp add:is_aligned_mask[unfolded is_aligned_neg_mask_eq'])
   apply (rule subset_trans[OF invokeUntyped_proofs.subset_stuff[OF ivk_pf]])
   apply (simp add:is_aligned_mask[unfolded is_aligned_neg_mask_eq',symmetric])
   done

@@ -13,8 +13,10 @@
  * Any recursive functions from AutoCorres are monotonic in the measure,
  * which allows us to use the "measure_call" mechanism for calling them.
  *)
-theory MonadMono imports
-  NonDetMonadEx "../../lib/OptionMonadWP"
+theory MonadMono
+imports
+  NonDetMonadEx
+  "../../lib/Monad_WP/OptionMonadWP"
 begin
 
 (*

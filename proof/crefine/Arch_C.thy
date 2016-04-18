@@ -98,10 +98,10 @@ lemma performPageTableInvocationUnmap_ccorres:
        apply (clarsimp simp: ccte_relation_def c_valid_cte_def
                       elim!: ccap_relationE)
        apply (subst cteCap_update_cte_to_H)
-         apply (clarsimp simp: option_map_Some_eq2)
+         apply (clarsimp simp: map_option_Some_eq2)
          apply (rule trans, rule sym, rule option.sel, rule sym, erule arg_cong)
         apply (erule iffD1[OF cap_page_table_cap_lift])
-       apply (clarsimp simp: option_map_Some_eq2 cap_get_tag_isCap_ArchObject[symmetric]
+       apply (clarsimp simp: map_option_Some_eq2 cap_get_tag_isCap_ArchObject[symmetric]
                              cap_lift_page_table_cap cap_to_H_def
                              cap_page_table_cap_lift_def)
       apply simp
@@ -3301,14 +3301,14 @@ lemma maskCapRights_eq_Untyped [simp]:
 lemma le_mask_asid_bits_helper:
   "x \<le> 2 ^ asid_high_bits - 1 \<Longrightarrow> (x::word32) << asid_low_bits \<le> mask asid_bits"
   apply (simp add: mask_def)
-  apply (drule le2p_bits_unset)
+  apply (drule le2p_bits_unset_32)
    apply (simp add: asid_high_bits_def word_bits_def)
-  apply (subst upper_bits_unset_is_l2p [symmetric])
+  apply (subst upper_bits_unset_is_l2p_32 [symmetric])
    apply (simp add: asid_bits_def word_bits_def)
   apply (clarsimp simp: asid_bits_def asid_low_bits_def asid_high_bits_def nth_shiftl)
   done
 
-declare WordLemmaBucket.from_bool_mask_simp [simp]
+declare Word_Lemmas.from_bool_mask_simp [simp]
 
 lemma isPDFlush_fold: 
  "(label = ArchInvocationLabel arch_invocation_label.ARMPDUnify_Instruction \<or>

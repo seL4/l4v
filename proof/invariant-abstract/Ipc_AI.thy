@@ -526,8 +526,6 @@ lemma descendants_insert_update:
   apply (clarsimp simp:is_cdt_parent_def)
   done
 
-(* FIXME: name conflicts with WordLemmaBucket.in_emptyE. *)
-lemma in_emptyE: "\<lbrakk>A={}; \<exists>x. x\<in> A\<rbrakk> \<Longrightarrow> P" by clarsimp
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma is_derived_cap_rights2[simp]:

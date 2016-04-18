@@ -864,7 +864,7 @@ lemma nextDomain_ccorres:
    apply (simp only: Abs_fnat_hom_1 Abs_fnat_hom_add word_not_le)
    apply clarsimp
    apply (subst (asm) of_nat_Suc[symmetric])
-   apply (drule iffD1[OF of_nat_mono_maybe'[where X=3, simplified, symmetric], rotated 2])
+   apply (drule iffD1[OF of_nat_mono_maybe'[where x=3, simplified, symmetric], rotated 2])
      apply simp
     apply (frule invs'_ksDomScheduleIdx)
     apply (simp add: invs'_ksDomSchedule newKernelState_def)

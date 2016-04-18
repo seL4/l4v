@@ -365,7 +365,7 @@ lemma shift_0x3C_set:
   "\<lbrakk> is_aligned p 6; 8 \<le> bits; bits < 32; len_of TYPE('a) = bits - 2 \<rbrakk> \<Longrightarrow>
    (\<lambda>x. ucast (x + p && mask bits >> 2) :: ('a :: len) word) ` set [0 :: word32 , 4 .e. 0x3C]
         = {x. x && ~~ mask 4 = ucast (p && mask bits >> 2)}"
-  apply (clarsimp simp: upto_enum_step_def word32_shift_by_2 image_image)
+  apply (clarsimp simp: upto_enum_step_def word_shift_by_2 image_image)
   apply (subst image_cong[where N="{x. x < 2 ^ 4}"])
     apply (safe, simp_all)[1]
      apply (drule plus_one_helper2, simp_all)[1]
@@ -374,7 +374,7 @@ lemma shift_0x3C_set:
    apply (rule trans[OF add.commute is_aligned_add_or], assumption)
    apply (rule shiftl_less_t2n, simp_all)[1]
   apply safe
-   apply (frule upper_bits_unset_is_l2p[THEN iffD2, rotated])
+   apply (frule upper_bits_unset_is_l2p_32[THEN iffD2, rotated])
     apply (simp add: word_bits_conv)
    apply (rule word_eqI)
    apply (simp add: word_ops_nth_size word_size nth_ucast nth_shiftr
@@ -1374,7 +1374,7 @@ lemma pte_range_interD:
  "pte_range pte p \<inter> pte_range pte' p' \<noteq> {}
   \<Longrightarrow> pte \<noteq> InvalidPTE \<and> pte' \<noteq> InvalidPTE
       \<and> p && ~~ mask 4 = p' && ~~ mask 4"
-  apply (drule WordLemmaBucket.int_not_emptyD)
+  apply (drule int_not_emptyD)
   apply (case_tac pte,simp_all split:if_splits)
    apply (case_tac pte',simp_all split:if_splits)
    apply clarsimp
@@ -1386,7 +1386,7 @@ lemma pde_range_interD:
  "pde_range pde p \<inter> pde_range pde' p' \<noteq> {}
   \<Longrightarrow> pde \<noteq> InvalidPDE \<and> pde' \<noteq> InvalidPDE
       \<and> p && ~~ mask 4 = p' && ~~ mask 4"
-  apply (drule WordLemmaBucket.int_not_emptyD)
+  apply (drule int_not_emptyD)
   apply (case_tac pde,simp_all split:if_splits)
      apply (case_tac pde',simp_all split:if_splits)
     apply (case_tac pde',simp_all split:if_splits)
@@ -1773,7 +1773,7 @@ lemma ensure_safe_mapping_ensures[wp]:
       apply simp
      apply (clarsimp simp :upto_enum_def upto_enum_step_def
          Fun.comp_def upto_0_to_n2)
-     apply (cut_tac x = "of_nat x" and n = 2 in word_power_nonzero)
+     apply (cut_tac x = "of_nat x" and n = 2 in word_power_nonzero_32)
         apply (simp add:word_of_nat_less word_bits_def)+
       apply (simp add: of_nat_neq_0)
      apply simp

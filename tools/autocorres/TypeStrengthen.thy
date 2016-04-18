@@ -18,7 +18,7 @@
 theory TypeStrengthen
 imports
   L2Defs
-  "../../lib/OptionMonadND"
+  "../../lib/Monad_WP/OptionMonadND"
   ExecConcrete
 begin
 

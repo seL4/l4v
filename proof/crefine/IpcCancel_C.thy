@@ -646,7 +646,7 @@ lemma threadSet_queued_ccorres [corres]:
    apply (rule rf_sr_tcb_update_no_queue, assumption+, simp_all)
    apply (rule ball_tcb_cte_casesI, simp_all)
    apply (simp add: ctcb_relation_def cthread_state_relation_def)
-   apply (case_tac "tcbState ko", simp_all add: WordLemmaBucket.from_bool_mask_simp)[1]
+   apply (case_tac "tcbState ko", simp_all add: Word_Lemmas.from_bool_mask_simp)[1]
   apply (frule (1) obj_at_cslift_tcb)   
   apply (clarsimp simp: typ_heap_simps)
   done
@@ -1942,10 +1942,6 @@ lemma isBlocked_spec:
   apply (clarsimp simp: typ_heap_simps)
 done
 
-
-declare scast_from_bool [simp]
-declare from_bool_1 [simp]
-
 lemma isRunnable_spec:
   "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. cslift s (thread_' s) \<noteq> None}) Call isRunnable_'proc 
        {s'. ret__unsigned_long_' s' = from_bool (tsType_CL (thread_state_lift (tcbState_C (the (cslift s (thread_' s))))) \<in>
@@ -2878,7 +2874,7 @@ lemma cancelIPC_ccorres_reply_helper:
           apply (clarsimp simp: cte_wp_at_ctes_of)
           apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
           apply (clarsimp simp: typ_heap_simps)
-          apply (clarsimp simp: ccte_relation_def option_map_Some_eq2)
+          apply (clarsimp simp: ccte_relation_def map_option_Some_eq2)
          apply ceqv
         apply csymbr
         apply (rule ccorres_Cond_rhs)
