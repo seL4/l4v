@@ -907,7 +907,6 @@ lemma null_no_mdb:
 end
 
 
-
 definition
   is_derived :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
 where
@@ -5378,5 +5377,10 @@ proof -
     apply clarsimp
     done
 qed
+
+(*FIXME: arch_split*)
+context Arch begin
+lemmas is_derived_def = is_derived_def[simplified is_derived_arch_def]
+end
 
 end

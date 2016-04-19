@@ -168,7 +168,7 @@ lemma arch_derive_cap_is_derived:
   unfolding arch_derive_cap_def
   apply(cases c', simp_all add: is_cap_simps cap_master_cap_def)
       apply((wp throwError_validE_R
-             | clarsimp simp: is_derived_def is_derived_arch_def
+             | clarsimp simp: is_derived_def
                               is_cap_simps cap_master_cap_def
                               cap_aligned_def is_aligned_no_overflow is_pt_cap_def
                               cap_asid_def vs_cap_ref_def
@@ -191,8 +191,7 @@ lemma derive_cap_is_derived:
   unfolding derive_cap_def
   apply (cases c', simp_all add: is_cap_simps)
           apply ((wp ensure_no_children_wp
-                    | clarsimp simp: is_derived_def is_derived_arch_def
-                                     is_cap_simps
+                    | clarsimp simp: is_derived_def is_cap_simps
                                      cap_master_cap_def bits_of_def
                                      same_object_as_def is_pt_cap_def
                                      cap_asid_def
@@ -216,7 +215,7 @@ lemma arch_derive_cap_cte:
       apply(rule hoare_pre, wp ensure_no_children_wp, clarsimp)+
     apply wp?
     apply(erule cte_wp_at_weakenE)
-    apply(case_tac c, (clarsimp simp: is_derived_def is_derived_arch_def
+    apply(case_tac c, (clarsimp simp: is_derived_def
                                       cap_master_cap_def is_cap_simps 
                                       cap_asid_def is_pt_cap_def vs_cap_ref_def
                                split: cap.splits arch_cap.splits)+)
@@ -244,7 +243,7 @@ context begin interpretation ARM . (*FIXME: arch_split*)
 lemma is_derived_cap_rights [simp]:
   "is_derived m p (cap_rights_update R c) = is_derived m p c"
   apply (rule ext)
-  apply (simp add: cap_rights_update_def is_derived_def is_derived_arch_def is_cap_simps)
+  apply (simp add: cap_rights_update_def is_derived_def is_cap_simps)
   apply (case_tac x, simp_all)
            apply (simp add: cap_master_cap_def bits_of_def is_cap_simps
                              vs_cap_ref_def
@@ -265,7 +264,7 @@ lemma is_derived_cap_data:
   "\<lbrakk> update_cap_data pres D c \<noteq> cap.NullCap; is_derived (cdt s) p c c' \<rbrakk> \<Longrightarrow> 
   is_derived (cdt s) p (update_cap_data pres D c) c'"
   apply (case_tac c)
-   apply (simp_all add: is_derived_def is_derived_arch_def
+   apply (simp_all add: is_derived_def
                         cap_master_cap_simps split del: split_if
                  split: split_if_asm)
     apply (clarsimp dest!: cap_master_cap_eqDs
@@ -535,7 +534,7 @@ lemma is_derived_cap_rights2[simp]:
   "is_derived m p c (cap_rights_update R c') = is_derived m p c c'"
   apply (case_tac c')
   apply (simp_all add:cap_rights_update_def)
-  apply (clarsimp simp:is_derived_def is_derived_arch_def is_cap_simps cap_master_cap_def 
+  apply (clarsimp simp:is_derived_def is_cap_simps cap_master_cap_def
     vs_cap_ref_def split:cap.splits )+
   apply (rename_tac acap1 acap2)
   apply (case_tac acap1)
@@ -2185,7 +2184,7 @@ lemma is_derived_ReplyCap [simp]:
   "\<And>m p. is_derived m p (cap.ReplyCap t False) = (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)"
   apply (subst fun_eq_iff)
   apply clarsimp
-  apply (case_tac x, simp_all add: is_derived_def is_derived_arch_def is_cap_simps
+  apply (case_tac x, simp_all add: is_derived_def is_cap_simps
                                    cap_master_cap_def conj_comms is_pt_cap_def
                                    vs_cap_ref_def)
   done

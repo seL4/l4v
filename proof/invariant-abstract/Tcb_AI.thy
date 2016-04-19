@@ -502,7 +502,7 @@ lemma checked_insert_is_derived:
   apply (frule master_cap_obj_refs)
   apply (frule cap_master_eq_badge_none)
   apply (frule same_master_cap_same_types)
-  apply (simp add: is_derived_def is_derived_arch_def)
+  apply (simp add: is_derived_def)
   apply clarsimp
   apply (auto simp: is_cap_simps cap_master_cap_def
                     is_cnode_or_valid_arch_def vs_cap_ref_def
