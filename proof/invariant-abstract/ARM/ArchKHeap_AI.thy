@@ -214,16 +214,6 @@ lemma set_object_vs_lookup_pages:
   apply simp
   done
 
-lemma set_object_neg_ko:
-  "\<lbrace>not ko_at ko' p' and K (p = p' \<longrightarrow> ko \<noteq> ko')\<rbrace> 
-  set_object p ko 
-  \<lbrace>\<lambda>_ s. \<not> ko_at ko' p' s\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply (simp add: pred_neg_def obj_at_def)
-  done
-
-
 
 lemma set_object_atyp_at:
   "\<lbrace>\<lambda>s. typ_at (AArch (aa_type ako)) p s \<and> P (typ_at (AArch T) p' s)\<rbrace> 

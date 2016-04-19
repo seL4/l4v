@@ -11,106 +11,12 @@
 theory PDPTEntries_AI
 imports Syscall_AI
 begin
-context begin interpretation ARM . (*FIXME: arch_split*)
-
-lemma a_type_pdD:
-  "a_type ko = AArch APageDirectory \<Longrightarrow> \<exists>pd. ko = ArchObj (PageDirectory pd)"
-  by (clarsimp)
-
-primrec
-  pde_range_sz :: "pde \<Rightarrow> nat"
-where
-    "pde_range_sz (InvalidPDE) = 0"
-  | "pde_range_sz (SectionPDE ptr x y z) = 0"
-  | "pde_range_sz (SuperSectionPDE ptr x z) = 4"
-  | "pde_range_sz (PageTablePDE ptr x z) = 0"
-
-primrec
-  pte_range_sz :: "pte \<Rightarrow> nat"
-where
-    "pte_range_sz (InvalidPTE) = 0"
-  | "pte_range_sz (LargePagePTE ptr x y) = 4"
-  | "pte_range_sz (SmallPagePTE ptr x y) = 0"
-
-primrec
-  pde_range :: "pde \<Rightarrow> 12 word \<Rightarrow> 12 word set"
-where
-    "pde_range (InvalidPDE) p = {}"
-  | "pde_range (SectionPDE ptr x y z) p = {p}"
-  | "pde_range (SuperSectionPDE ptr x z) p =
-     (if is_aligned p 4 then {x. x && ~~ mask 4 = p && ~~ mask 4} else {p})"
-  | "pde_range (PageTablePDE ptr x z) p = {p}"
-
-primrec
-  pte_range :: "pte \<Rightarrow> word8 \<Rightarrow> word8 set"
-where
-    "pte_range (InvalidPTE) p = {}"
-  | "pte_range (LargePagePTE ptr x y) p =
-       (if is_aligned p 4 then {x. x && ~~ mask 4 = p && ~~ mask 4} else {p})"
-  | "pte_range (SmallPagePTE ptr x y) p = {p}"
 
 definition valid_entries :: " ('b \<Rightarrow> ('a::len) word \<Rightarrow> 'c set) \<Rightarrow> (('a::len) word \<Rightarrow> 'b) \<Rightarrow> bool"
   where "valid_entries \<equiv> \<lambda>range fun. \<forall>x y. x \<noteq> y \<longrightarrow> range (fun x) x \<inter> range (fun y) y = {}"
 
-abbreviation "valid_pt_entries \<equiv> \<lambda>pt. valid_entries pte_range pt"
-
-abbreviation "valid_pd_entries \<equiv> \<lambda>pd. valid_entries pde_range pd"
-
 definition entries_align :: "('b \<Rightarrow> nat ) \<Rightarrow> (('a::len) word \<Rightarrow> 'b) \<Rightarrow> bool"
   where "entries_align \<equiv> \<lambda>sz fun. \<forall>x. is_aligned x (sz (fun x))"
-
-definition
-  obj_valid_pdpt :: "Structures_A.kernel_object \<Rightarrow> bool"
-where
- "obj_valid_pdpt obj \<equiv> case obj of
-    ArchObj (PageTable pt) \<Rightarrow> valid_pt_entries pt \<and> entries_align pte_range_sz pt
-  | ArchObj (PageDirectory pd) \<Rightarrow> valid_pd_entries pd \<and> entries_align pde_range_sz pd
-  | _ \<Rightarrow> True"
-
-lemmas obj_valid_pdpt_simps[simp]
-    = obj_valid_pdpt_def
-        [split_simps Structures_A.kernel_object.split
-                     arch_kernel_obj.split]
-
-abbreviation
-  valid_pdpt_objs :: "'z state \<Rightarrow> bool"
-where
- "valid_pdpt_objs s \<equiv> \<forall>x \<in> ran (kheap s). obj_valid_pdpt x"
-
-lemma valid_pdpt_init[iff]:
-  "valid_pdpt_objs init_A_st"
-proof -
-  have P: "valid_pd_entries (global_pd :: 12 word \<Rightarrow> _)"
-    apply (clarsimp simp: valid_entries_def global_pd_def)
-    done
-  also have Q: "entries_align pde_range_sz (global_pd :: 12 word \<Rightarrow> _)"
-    apply (clarsimp simp: entries_align_def global_pd_def)
-    done
-  thus ?thesis using P
-    by (auto simp: init_A_st_def init_kheap_def
-            elim!: ranE split: split_if_asm)
-qed
-
-lemma set_object_valid_pdpt[wp]:
-  "\<lbrace>valid_pdpt_objs and K (obj_valid_pdpt obj)\<rbrace>
-      set_object ptr obj
-   \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: set_object_def, wp)
-  apply (auto simp: fun_upd_def[symmetric] del: ballI elim: ball_ran_updI)
-  done
-
-crunch valid_pdpt_objs[wp]: cap_insert, cap_swap_for_delete,empty_slot "valid_pdpt_objs"
-  (wp: crunch_wps simp: crunch_simps ignore:set_object)
-
-crunch valid_pdpt_objs[wp]: flush_page "valid_pdpt_objs"
-  (wp: crunch_wps simp: crunch_simps)
-
-lemma lookup_pt_slot_inv_any:
-  "\<lbrace>\<lambda>s. \<forall>x. Q x s\<rbrace> lookup_pt_slot pd vptr \<lbrace>Q\<rbrace>,-"
-  "\<lbrace>E\<rbrace> lookup_pt_slot pd vptr -, \<lbrace>\<lambda>ft. E\<rbrace>"
-  apply (simp_all add: lookup_pt_slot_def)
-  apply (wp get_pde_wp | simp | wpc)+
-  done
 
 lemma valid_entries_overwrite_0:
   assumes ve: "valid_entries rg tab"
@@ -158,14 +64,302 @@ lemma valid_entries_partial_copy:
   done
 
 lemma valid_entries_overwrite_groups:
-  "\<lbrakk> valid_entries rg tab; valid_entries rg (\<lambda>x. v);
-    \<forall>v x. P x \<longrightarrow> (rg v x \<subseteq> S);
-    \<forall>v x. \<not> P x \<longrightarrow> (rg v x \<inter> S) = {}\<rbrakk>
+  "\<lbrakk>valid_entries rg tab; valid_entries rg (\<lambda>_. v);
+    \<forall>v x. P x \<longrightarrow> rg v x \<subseteq> S;
+    \<forall>v x. \<not> P x \<longrightarrow> rg v x \<inter> S = {}\<rbrakk>
        \<Longrightarrow> valid_entries rg (\<lambda>x. if P x then v else tab x)"
-  by (rule valid_entries_partial_copy[where S=S and tab = "\<lambda>x. v",simplified],simp_all)
+  by (rule valid_entries_partial_copy)
 
 lemmas valid_entries_overwrite_group
     = valid_entries_overwrite_groups[where S="{y}" for y, simplified]
+
+lemma valid_entriesD:
+  "\<lbrakk>x \<noteq> y; valid_entries rg fun\<rbrakk> \<Longrightarrow> rg (fun x) x \<inter> rg (fun y) y = {}"
+  by (simp add:valid_entries_def)
+
+lemma aligned_le_sharp:
+  "\<lbrakk>a \<le> b;is_aligned a n\<rbrakk> \<Longrightarrow> a \<le> b &&~~ mask n"
+  apply (simp add:is_aligned_mask)
+  apply (drule neg_mask_mono_le[where n = n])
+  apply (simp add:mask_out_sub_mask)
+  done
+
+lemma ucast_neg_mask:
+  "len_of TYPE('a) \<le> len_of TYPE ('b)
+   \<Longrightarrow> ((ucast ptr && ~~ mask n)::('a :: len) word) = ucast ((ptr::('b :: len) word) && ~~ mask n)"
+  apply (rule word_eqI)
+  apply (auto simp:nth_ucast neg_mask_bang word_size)
+  done
+
+lemma shiftr_eq_neg_mask_eq:
+  "a >> b = c >> b \<Longrightarrow> a && ~~ mask b = c && ~~ mask b"
+  apply (rule word_eqI)
+   apply (simp add:neg_mask_bang)
+  apply (drule_tac f = "\<lambda>x. x !! (n - b)" in arg_cong)
+  apply (simp add:nth_shiftr)
+  apply (rule iffI)
+   apply simp+
+  done
+
+lemma delete_objects_reduct:
+  "valid (\<lambda>s. P (kheap (s :: ('z::state_ext) state))) (modify (detype {ptr..ptr + 2 ^ bits - 1}))
+         (\<lambda>_ s. P(kheap (s :: ('z::state_ext) state))) \<Longrightarrow>
+   valid (\<lambda>s. P (kheap (s :: ('z::state_ext) state))) (delete_objects ptr bits) (\<lambda>_ s. P (kheap s))"
+  apply (clarsimp simp add: delete_objects_def do_machine_op_def split_def)
+  apply wp
+  apply (clarsimp simp add: valid_def simpler_modify_def)
+  done
+
+(* FIXME: move *)
+lemma upto_0_to_n:
+  "0 < n \<Longrightarrow> tl [0..<n] = [1..<n]"
+  apply (erule(1) impE[rotated])
+  apply (induct_tac n)
+   apply simp
+  apply simp
+  done
+
+(* FIXME: move *)
+lemma upto_0_to_n2:
+  "0 < n \<Longrightarrow> [0..<n] = 0 # [1..<n]"
+  apply (erule(1) impE[rotated])
+  apply (induct_tac n)
+   apply simp
+  apply simp
+  done
+
+(* FIXME: move *)
+lemma neg_mask_add_mask:
+  "((a && ~~ mask b) + c && mask b) = c && mask b"
+  by (subst mask_add_aligned[OF is_aligned_neg_mask],simp+)
+
+lemma ucast_pt_index:
+  "\<lbrakk>is_aligned (p::word32) 6\<rbrakk>
+   \<Longrightarrow> ucast ((pa && mask 4) + (ucast (p && mask 10 >> 2)::word8))
+   =  ucast (pa && mask 4) + (p && mask 10 >> 2)"
+  apply (simp add:is_aligned_mask mask_def)
+  apply word_bitwise
+  apply (auto simp:carry_def)
+  done
+
+lemma ucast_pd_index:
+  "\<lbrakk>is_aligned (p::word32) 6\<rbrakk>
+   \<Longrightarrow> ucast ((pa && mask 4) + (ucast (p && mask 14 >> 2)::12 word))
+   =  ucast (pa && mask 4) + (p && mask 14 >> 2)"
+  apply (simp add:is_aligned_mask mask_def)
+  apply word_bitwise
+  apply (auto simp:carry_def)
+  done
+
+lemma unat_ucast_12_32:
+  "unat (ucast (x::(12 word))::word32) = unat x"
+  apply (subst unat_ucast)
+  apply (rule mod_less)
+  apply (rule less_le_trans[OF unat_lt2p])
+  apply simp
+  done
+
+lemma all_imp_ko_at_from_ex_strg:
+  "((\<exists>v. ko_at (f v) p s \<and> P v) \<and> inj f) \<longrightarrow> (\<forall>v. ko_at (f v) p s \<longrightarrow> P v)"
+  apply (clarsimp simp add: obj_at_def)
+  apply (auto dest: inj_onD)
+  done
+
+lemma set_cap_arch_obj_neg:
+  "\<lbrace>\<lambda>s. \<not>ko_at (ArchObj ao) p s \<and> cte_wp_at (\<lambda>_. True) p' s\<rbrace> set_cap cap p' \<lbrace>\<lambda>_ s. \<not>ko_at (ArchObj ao) p s\<rbrace>"
+  apply (simp add: set_cap_def split_def)
+  apply (wp set_object_neg_ko get_object_wp| wpc)+
+  apply (auto simp: pred_neg_def)
+  done
+
+lemma mapME_x_Nil:
+  "mapME_x f [] = returnOk ()"
+  unfolding mapME_x_def sequenceE_x_def
+  by simp
+
+lemma mapME_x_mapME:
+  "mapME_x m l = (mapME m l >>=E (%_. returnOk ()))"
+  apply (simp add: mapME_x_def sequenceE_x_def mapME_def sequenceE_def)
+  apply (induct l, simp_all add: Let_def bindE_assoc)
+  done
+
+lemma mapME_wp:
+  assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
+  shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME f xs \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
+  apply (induct xs)
+   apply (simp add: mapME_def sequenceE_def)
+   apply wp
+  apply (simp add: mapME_Cons)
+  apply wp
+   apply simp
+  apply (simp add: x)
+  done
+
+lemma mapME_x_wp:
+  assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
+  shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
+  apply (subst mapME_x_mapME)
+  apply wp
+  apply simp
+  apply (rule mapME_wp)
+   apply (rule x)
+   apply assumption+
+  done
+
+lemmas mapME_x_wp' = mapME_x_wp [OF _ subset_refl]
+
+lemma hoare_vcg_all_liftE:
+  "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
+  by (fastforce simp: validE_def valid_def split: sum.splits)
+
+lemma hoare_vcg_const_Ball_liftE:
+  "\<lbrakk> \<And>x. x \<in> S \<Longrightarrow> \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>\<lambda>s. True\<rbrace> f \<lbrace>\<lambda>r s. True\<rbrace>, \<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x\<in>S. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x\<in>S. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
+  by (fastforce simp: validE_def valid_def split: sum.splits)
+
+lemma hoare_post_conjE:
+  "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>,\<lbrace>E\<rbrace>; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>,\<lbrace>E\<rbrace>"
+  by (clarsimp simp: validE_def valid_def split_def bipred_conj_def
+              split: sum.splits)
+
+lemma hoare_vcg_conj_liftE:
+  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>,\<lbrace>E\<rbrace>"
+  apply (subst bipred_conj_def[symmetric], rule hoare_post_conjE)
+   apply (rule hoare_vcg_precond_impE [OF x], simp)
+  apply (rule hoare_vcg_precond_impE [OF y], simp)
+  done
+
+lemma mapME_x_accumulate_checks:
+  assumes P:  "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>Q\<rbrace> f x \<lbrace>\<lambda>rv. P x\<rbrace>, \<lbrace>E\<rbrace>"
+  and Q : "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>Q\<rbrace> f x \<lbrace>\<lambda>rv. Q\<rbrace>, \<lbrace>E\<rbrace>"
+  and P': "\<And>x y. y \<noteq> x  \<Longrightarrow> \<lbrace>P y\<rbrace> f x \<lbrace>\<lambda>rv. P y\<rbrace>, \<lbrace>E\<rbrace>"
+  and distinct: "distinct xs"
+  shows       "\<lbrace>Q \<rbrace> mapME_x f xs \<lbrace>\<lambda>rv s. \<forall>x \<in> set xs. P x s\<rbrace>, \<lbrace>E\<rbrace>"
+  using assms
+  proof (induct xs)
+    case Nil
+    show ?case
+      by (simp add: mapME_x_Nil, wp)
+  next
+    case (Cons y ys)
+    show ?case
+      apply (simp add: mapME_x_Cons)
+      apply wp
+       apply (rule hoare_vcg_conj_liftE)
+        apply (wp mapME_x_wp' P P'
+          hoare_vcg_const_Ball_liftE
+          | simp add:Q
+          | rule hoare_post_impErr[OF P])+
+        using Cons.prems
+        apply fastforce
+      apply (wp Cons.hyps)
+         apply (rule Cons.prems,simp)
+        apply (wp Cons.prems(2),simp)
+       apply (wp Cons.prems(3),simp)
+      using Cons.prems
+      apply fastforce
+     apply (rule hoare_pre)
+     apply (rule hoare_vcg_conj_liftE)
+     apply (wp Cons.prems| simp)+
+    done
+  qed
+
+lemma hoare_vcg_ex_liftE:
+  "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<exists>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<exists>x. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
+  by (fastforce simp: validE_def valid_def split: sum.splits)
+
+lemma mapME_singleton:
+  "mapME_x f [x] = f x"
+  by (simp add:mapME_x_def sequenceE_x_def)
+
+context ARM begin (*FIXME: arch_split*)
+
+lemma a_type_pdD:
+  "a_type ko = AArch APageDirectory \<Longrightarrow> \<exists>pd. ko = ArchObj (PageDirectory pd)"
+  by (clarsimp)
+
+primrec
+  pde_range_sz :: "pde \<Rightarrow> nat"
+where
+    "pde_range_sz (InvalidPDE) = 0"
+  | "pde_range_sz (SectionPDE ptr x y z) = 0"
+  | "pde_range_sz (SuperSectionPDE ptr x z) = 4"
+  | "pde_range_sz (PageTablePDE ptr x z) = 0"
+
+primrec
+  pte_range_sz :: "pte \<Rightarrow> nat"
+where
+    "pte_range_sz (InvalidPTE) = 0"
+  | "pte_range_sz (LargePagePTE ptr x y) = 4"
+  | "pte_range_sz (SmallPagePTE ptr x y) = 0"
+
+primrec
+  pde_range :: "pde \<Rightarrow> 12 word \<Rightarrow> 12 word set"
+where
+    "pde_range (InvalidPDE) p = {}"
+  | "pde_range (SectionPDE ptr x y z) p = {p}"
+  | "pde_range (SuperSectionPDE ptr x z) p =
+     (if is_aligned p 4 then {x. x && ~~ mask 4 = p && ~~ mask 4} else {p})"
+  | "pde_range (PageTablePDE ptr x z) p = {p}"
+
+primrec
+  pte_range :: "pte \<Rightarrow> word8 \<Rightarrow> word8 set"
+where
+    "pte_range (InvalidPTE) p = {}"
+  | "pte_range (LargePagePTE ptr x y) p =
+       (if is_aligned p 4 then {x. x && ~~ mask 4 = p && ~~ mask 4} else {p})"
+  | "pte_range (SmallPagePTE ptr x y) p = {p}"
+
+abbreviation "valid_pt_entries \<equiv> \<lambda>pt. valid_entries pte_range pt"
+
+abbreviation "valid_pd_entries \<equiv> \<lambda>pd. valid_entries pde_range pd"
+
+definition
+  obj_valid_pdpt :: "kernel_object \<Rightarrow> bool"
+where
+ "obj_valid_pdpt obj \<equiv> case obj of
+    ArchObj (PageTable pt) \<Rightarrow> valid_pt_entries pt \<and> entries_align pte_range_sz pt
+  | ArchObj (PageDirectory pd) \<Rightarrow> valid_pd_entries pd \<and> entries_align pde_range_sz pd
+  | _ \<Rightarrow> True"
+
+lemmas obj_valid_pdpt_simps[simp]
+    = obj_valid_pdpt_def
+        [split_simps Structures_A.kernel_object.split
+                     arch_kernel_obj.split]
+
+abbreviation
+  valid_pdpt_objs :: "'z state \<Rightarrow> bool"
+where
+ "valid_pdpt_objs s \<equiv> \<forall>x \<in> ran (kheap s). obj_valid_pdpt x"
+
+lemma valid_pdpt_init[iff]:
+  "valid_pdpt_objs init_A_st"
+proof -
+  have P: "valid_pd_entries (global_pd :: 12 word \<Rightarrow> _)"
+    apply (clarsimp simp: valid_entries_def global_pd_def)
+    done
+  also have Q: "entries_align pde_range_sz (global_pd :: 12 word \<Rightarrow> _)"
+    apply (clarsimp simp: entries_align_def global_pd_def)
+    done
+  thus ?thesis using P
+    by (auto simp: init_A_st_def init_kheap_def
+            elim!: ranE split: split_if_asm)
+qed
+
+lemma set_object_valid_pdpt[wp]:
+  "\<lbrace>valid_pdpt_objs and K (obj_valid_pdpt obj)\<rbrace>
+      set_object ptr obj
+   \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+  apply (simp add: set_object_def, wp)
+  apply (auto simp: fun_upd_def[symmetric] del: ballI elim: ball_ran_updI)
+  done
+
+crunch valid_pdpt_objs[wp]: cap_insert, cap_swap_for_delete,empty_slot "valid_pdpt_objs"
+  (wp: crunch_wps simp: crunch_simps ignore:set_object)
+
+crunch valid_pdpt_objs[wp]: flush_page "valid_pdpt_objs"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma shift_0x3C_set:
   "\<lbrakk> is_aligned p 6; 8 \<le> bits; bits < 32; len_of TYPE('a) = bits - 2 \<rbrakk> \<Longrightarrow>
@@ -184,7 +378,7 @@ lemma shift_0x3C_set:
     apply (simp add: word_bits_conv)
    apply (rule word_eqI)
    apply (simp add: word_ops_nth_size word_size nth_ucast nth_shiftr
-                    nth_shiftl pt_bits_def pageBits_def neg_mask_bang
+                    nth_shiftl neg_mask_bang
                     word_bits_conv)
    apply (safe, simp_all add: is_aligned_nth)[1]
    apply (drule_tac x="Suc (Suc n)" in spec)
@@ -193,7 +387,7 @@ lemma shift_0x3C_set:
    apply (rule word_eqI)
    apply (drule_tac x=n in word_eqD)
    apply (simp add: word_ops_nth_size word_size nth_ucast nth_shiftr
-                    pt_bits_def pageBits_def nth_shiftl)
+                    nth_shiftl)
    apply (safe, simp_all)
   apply (rule order_less_le_trans, rule and_mask_less_size)
    apply (simp_all add: word_size)
@@ -226,13 +420,12 @@ lemma mapM_x_store_pte_updates:
   apply (rule ext, clarsimp)
   done
 
-
 lemma valid_pt_entries_invalid[simp]:
-  "valid_pt_entries (\<lambda>x. pte.InvalidPTE)"
+  "valid_pt_entries (\<lambda>x. InvalidPTE)"
    by (simp add:valid_entries_def)
 
 lemma valid_pd_entries_invalid[simp]:
-  "valid_pd_entries (\<lambda>x. pde.InvalidPDE)"
+  "valid_pd_entries (\<lambda>x. InvalidPDE)"
   by (simp add:valid_entries_def)
 
 lemma entries_align_pte_update:
@@ -358,10 +551,6 @@ lemma mapM_x_store_pde_valid_pdpt_objs:
    apply simp
   apply simp
   done
-
-lemma valid_entriesD:
-  "\<lbrakk>x \<noteq> y; valid_entries rg fun\<rbrakk> \<Longrightarrow> rg (fun x) x \<inter> rg (fun y) y = {}"
-  by (simp add:valid_entries_def)
 
 lemma store_invalid_pde_valid_pdpt:
   "\<lbrace>valid_pdpt_objs and
@@ -535,16 +724,6 @@ lemma mapM_x_copy_pde_updates:
   apply (rule ext, simp add: mask_add_aligned)
   done
 
-lemma all_eq_trans: "\<lbrakk> \<forall>x. P x = Q x; \<forall>x. Q x = R x \<rbrakk> \<Longrightarrow> \<forall>x. P x = R x"
-  by simp
-
-lemma aligned_le_sharp:
-  "\<lbrakk>a \<le> b;is_aligned a n\<rbrakk> \<Longrightarrow> a \<le> b &&~~ mask n"
-  apply (simp add:is_aligned_mask)
-  apply (drule neg_mask_mono_le[where n = n])
-  apply (simp add:mask_out_sub_mask)
-  done
-
 lemma copy_global_mappings_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs and valid_arch_state and pspace_aligned
             and K (is_aligned p pd_bits)\<rbrace>
@@ -638,26 +817,9 @@ lemma in_pde_rangeD:
   "x \<in> pde_range v y \<Longrightarrow> x && ~~ mask 4 = y && ~~ mask 4"
   by (case_tac v,simp_all split:if_splits)
 
-lemma ucast_neg_mask:
-  "len_of TYPE('a) \<le> len_of TYPE ('b)
-   \<Longrightarrow> ((ucast ptr && ~~ mask n)::('a :: len) word) = ucast ((ptr::('b :: len) word) && ~~ mask n)"
-  apply (rule word_eqI)
-  apply (auto simp:nth_ucast neg_mask_bang word_size)
-  done
-
-lemma shiftr_eq_neg_mask_eq:
-  "a >> b = c >> b \<Longrightarrow> a && ~~ mask b = c && ~~ mask b"
-  apply (rule word_eqI)
-   apply (simp add:neg_mask_bang)
-  apply (drule_tac f = "\<lambda>x. x !! (n - b)" in arg_cong)
-  apply (simp add:nth_shiftr)
-  apply (rule iffI)
-   apply simp+
-  done
-
 lemma mapM_x_store_pte_valid_pdpt2:
   "\<lbrace>valid_pdpt_objs and K (is_aligned ptr pt_bits)\<rbrace>
-     mapM_x (\<lambda>x. store_pte x pte.InvalidPTE) [ptr, ptr + 4 .e. ptr + 2 ^ pt_bits - 1]
+     mapM_x (\<lambda>x. store_pte x InvalidPTE) [ptr, ptr + 4 .e. ptr + 2 ^ pt_bits - 1]
    \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (rule mapM_x_wp')
@@ -699,12 +861,12 @@ lemma mapM_x_store_pde_valid_pdpt2:
   done
 
 lemma non_invalid_in_pde_range:
-  "pde \<noteq> pde.InvalidPDE
+  "pde \<noteq> InvalidPDE
   \<Longrightarrow> x \<in> pde_range pde x"
   by (case_tac pde,simp_all)
 
 lemma non_invalid_in_pte_range:
-  "pte \<noteq> pte.InvalidPTE
+  "pte \<noteq> InvalidPTE
   \<Longrightarrow> x \<in> pte_range pte x"
   by (case_tac pte,simp_all)
 
@@ -836,15 +998,6 @@ lemma init_arch_objects_valid_pdpt:
        arch_kobj_size_def default_arch_object_def range_cover_def)+
    apply wp
   apply simp
-  done
-
-lemma delete_objects_reduct:
-  "valid (\<lambda>s. P (kheap (s :: ('z::state_ext) state))) (modify (detype {ptr..ptr + 2 ^ bits - 1}))
-         (\<lambda>_ s. P(kheap (s :: ('z::state_ext) state))) \<Longrightarrow>
-   valid (\<lambda>s. P (kheap (s :: ('z::state_ext) state))) (delete_objects ptr bits) (\<lambda>_ s. P (kheap s))"
-  apply (clarsimp simp add: delete_objects_def do_machine_op_def split_def)
-  apply wp
-  apply (clarsimp simp add: valid_def simpler_modify_def)
   done
 
 lemma delete_objects_valid_pdpt:
@@ -1149,7 +1302,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
    apply (simp add:shiftl_t2n field_simps)
   apply (simp add:clear_um_def)
  apply (erule descendants_range_in_subseteq)
- apply (simp add:subset_stuff)
+ apply simp
  done
 qed
 
@@ -1242,47 +1395,6 @@ lemma pde_range_interD:
   apply (case_tac pde', simp_all split:if_splits)
   done
 
-(* FIXME: move *)
-lemma upto_0_to_n:
-  "0 < n \<Longrightarrow> tl [0..<n] = [1..<n]"
-  apply (erule(1) impE[rotated])
-  apply (induct_tac n)
-   apply simp
-  apply simp
-  done
-
-(* FIXME: move *)
-lemma upto_0_to_n2:
-  "0 < n \<Longrightarrow> [0..<n] = 0 # [1..<n]"
-  apply (erule(1) impE[rotated])
-  apply (induct_tac n)
-   apply simp
-  apply simp
-  done
-
-(* FIXME: move *)
-lemma neg_mask_add_mask:
-  "((a && ~~ mask b) + c && mask b) = c && mask b"
-  by (subst mask_add_aligned[OF is_aligned_neg_mask],simp+)
-
-lemma ucast_pt_index:
-  "\<lbrakk>is_aligned (p::word32) 6\<rbrakk>
-   \<Longrightarrow> ucast ((pa && mask 4) + (ucast (p && mask 10 >> 2)::word8))
-   =  ucast (pa && mask 4) + (p && mask 10 >> 2)"
-  apply (simp add:is_aligned_mask mask_def)
-  apply word_bitwise
-  apply (auto simp:carry_def)
-  done
-
-lemma ucast_pd_index:
-  "\<lbrakk>is_aligned (p::word32) 6\<rbrakk>
-   \<Longrightarrow> ucast ((pa && mask 4) + (ucast (p && mask 14 >> 2)::12 word))
-   =  ucast (pa && mask 4) + (p && mask 14 >> 2)"
-  apply (simp add:is_aligned_mask mask_def)
-  apply word_bitwise
-  apply (auto simp:carry_def)
-  done
-
 lemma pte_range_sz_le:
   "(pte_range_sz pte) \<le> 4"
   by (case_tac pte,simp_all)
@@ -1302,7 +1414,6 @@ lemma mask_pt_bits_shift_ucast_align[simp]:
    is_aligned ((p::word32) >> 2) 4"
   by (clarsimp simp: is_aligned_mask mask_def pt_bits_def pageBits_def)
      word_bitwise
-
 
 lemma store_pte_valid_pdpt:
   "\<lbrace>valid_pdpt_objs and page_inv_entries_safe (Inl (pte, slots))\<rbrace>
@@ -1379,14 +1490,6 @@ lemma store_pte_valid_pdpt:
   apply (simp add:fun_upd_def entries_align_def)
   apply (rule is_aligned_weaken[OF _ pte_range_sz_le])
   apply (simp add:is_aligned_shiftr)
-  done
-
-lemma unat_ucast_12_32:
-  "unat (ucast (x::(12 word))::word32) = unat x"
-  apply (subst unat_ucast)
-  apply (rule mod_less)
-  apply (rule less_le_trans[OF unat_lt2p])
-  apply simp
   done
 
 lemma store_pde_valid_pdpt:
@@ -1466,19 +1569,6 @@ lemma store_pde_valid_pdpt:
   apply (simp add:is_aligned_shiftr)
   done
 
-lemma all_imp_ko_at_from_ex_strg:
-  "((\<exists>v. ko_at (f v) p s \<and> P v) \<and> inj f) \<longrightarrow> (\<forall>v. ko_at (f v) p s \<longrightarrow> P v)"
-  apply (clarsimp simp add: obj_at_def)
-  apply (auto dest: inj_onD)
-  done
-
-lemma set_cap_arch_obj_neg:
-  "\<lbrace>\<lambda>s. \<not>ko_at (ArchObj ao) p s \<and> cte_wp_at (\<lambda>_. True) p' s\<rbrace> set_cap cap p' \<lbrace>\<lambda>_ s. \<not>ko_at (ArchObj ao) p s\<rbrace>"
-  apply (simp add: set_cap_def split_def)
-  apply (wp set_object_neg_ko get_object_wp| wpc)+
-  apply (auto simp: pred_neg_def)
-  done
-
 lemma set_cap_page_inv_entries_safe:
   "\<lbrace>page_inv_entries_safe x\<rbrace> set_cap y z \<lbrace>\<lambda>_. page_inv_entries_safe x\<rbrace>"
   apply (simp add:page_inv_entries_safe_def set_cap_def split_def
@@ -1527,11 +1617,12 @@ definition
            and K (pde_range_sz pde = 0)
   | _ \<Rightarrow> \<top>"
 
+
 definition
   "invocation_duplicates_valid i \<equiv>
    case i of
-     Invocations_A.InvokeArchObject (arch_invocation.InvokePage pi) \<Rightarrow> page_inv_duplicates_valid pi
-   | Invocations_A.InvokeArchObject (arch_invocation.InvokePageTable pti) \<Rightarrow> pti_duplicates_valid pti
+     InvokeArchObject (InvokePage pi) \<Rightarrow> page_inv_duplicates_valid pi
+   | InvokeArchObject (InvokePageTable pti) \<Rightarrow> pti_duplicates_valid pti
    | _ \<Rightarrow> \<top>"
 
 lemma perform_page_table_valid_pdpt[wp]:
@@ -1559,7 +1650,6 @@ lemma perform_page_directory_valid_pdpt[wp]:
   apply (rule hoare_pre)
    apply (wp | wpc | simp)+
   done
-
 
 lemma perform_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_pdpt_objs
@@ -1591,107 +1681,6 @@ lemma neg_mask_pd_6_4:
   apply word_bitwise
   apply (simp add:word_size)
   done
-
-lemma mapME_x_Nil:
-  "mapME_x f [] = returnOk ()"
-  unfolding mapME_x_def sequenceE_x_def
-  by simp
-
-lemma mapME_x_mapME:
-  "mapME_x m l = (mapME m l >>=E (%_. returnOk ()))"
-  apply (simp add: mapME_x_def sequenceE_x_def mapME_def sequenceE_def)
-  apply (induct l, simp_all add: Let_def bindE_assoc)
-  done
-
-lemma mapME_wp:
-  assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
-  shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME f xs \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (induct xs)
-   apply (simp add: mapME_def sequenceE_def)
-   apply wp
-  apply (simp add: mapME_Cons)
-  apply wp
-   apply simp
-  apply (simp add: x)
-  done
-
-lemma mapME_x_wp:
-  assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
-  shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (subst mapME_x_mapME)
-  apply wp
-  apply simp
-  apply (rule mapME_wp)
-   apply (rule x)
-   apply assumption+
-  done
-
-lemmas mapME_x_wp' = mapME_x_wp [OF _ subset_refl]
-
-lemma hoare_vcg_all_liftE:
-  "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
-  by (fastforce simp: validE_def valid_def split: sum.splits)
-
-lemma hoare_vcg_const_Ball_liftE:
-  "\<lbrakk> \<And>x. x \<in> S \<Longrightarrow> \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>\<lambda>s. True\<rbrace> f \<lbrace>\<lambda>r s. True\<rbrace>, \<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x\<in>S. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x\<in>S. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
-  by (fastforce simp: validE_def valid_def split: sum.splits)
-
-lemma hoare_post_conjE:
-  "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>,\<lbrace>E\<rbrace>; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>,\<lbrace>E\<rbrace>"
-  by (clarsimp simp: validE_def valid_def split_def bipred_conj_def
-              split: sum.splits)
-
-lemma hoare_vcg_conj_liftE:
-  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>,\<lbrace>E\<rbrace>"
-  apply (subst bipred_conj_def[symmetric], rule hoare_post_conjE)
-   apply (rule hoare_vcg_precond_impE [OF x], simp)
-  apply (rule hoare_vcg_precond_impE [OF y], simp)
-  done
-
-lemma mapME_x_accumulate_checks:
-  assumes P:  "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>Q\<rbrace> f x \<lbrace>\<lambda>rv. P x\<rbrace>, \<lbrace>E\<rbrace>"
-  and Q : "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>Q\<rbrace> f x \<lbrace>\<lambda>rv. Q\<rbrace>, \<lbrace>E\<rbrace>"
-  and P': "\<And>x y. y \<noteq> x  \<Longrightarrow> \<lbrace>P y\<rbrace> f x \<lbrace>\<lambda>rv. P y\<rbrace>, \<lbrace>E\<rbrace>"
-  and distinct: "distinct xs"
-  shows       "\<lbrace>Q \<rbrace> mapME_x f xs \<lbrace>\<lambda>rv s. \<forall>x \<in> set xs. P x s\<rbrace>, \<lbrace>E\<rbrace>"
-  using assms
-  proof (induct xs)
-    case Nil
-    show ?case
-      by (simp add: mapME_x_Nil, wp)
-  next
-    case (Cons y ys)
-    show ?case
-      apply (simp add: mapME_x_Cons)
-      apply wp
-       apply (rule hoare_vcg_conj_liftE)
-        apply (wp mapME_x_wp' P P'
-          hoare_vcg_const_Ball_liftE
-          | simp add:Q
-          | rule hoare_post_impErr[OF P])+
-        using Cons.prems
-        apply fastforce
-      apply (wp Cons.hyps)
-         apply (rule Cons.prems,simp)
-        apply (wp Cons.prems(2),simp)
-       apply (wp Cons.prems(3),simp)
-      using Cons.prems
-      apply fastforce
-     apply (rule hoare_pre)
-     apply (rule hoare_vcg_conj_liftE)
-     apply (wp Cons.prems| simp)+
-    done
-  qed
-
-lemma hoare_vcg_ex_liftE:
-  "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<exists>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<exists>x. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
-  by (fastforce simp: validE_def valid_def split: sum.splits)
-
-lemma mapME_singleton:
-  "mapME_x f [x] = f x"
-  by (simp add:mapME_x_def sequenceE_x_def)
 
 lemma mask_out_same_pt:
   "\<lbrakk>is_aligned p 6; x < 2 ^ 6 \<rbrakk> \<Longrightarrow> p + x && ~~ mask pt_bits = p && ~~ mask pt_bits"
@@ -2177,7 +2166,6 @@ crunch valid_pdpt[wp]: handle_event, activate_thread,switch_to_thread,
        switch_to_idle_thread "valid_pdpt_objs"
   (simp: crunch_simps wp: crunch_wps alternative_valid select_wp OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
-
               getFAR getDFSR getIFSR OR_choice set_scheduler_action
               clearExMonitor)
 
@@ -2200,4 +2188,5 @@ lemma call_kernel_valid_pdpt[wp]:
   done
 
 end
+
 end

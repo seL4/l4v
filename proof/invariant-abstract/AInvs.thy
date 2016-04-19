@@ -15,7 +15,7 @@ The main theorem
 theory AInvs
 imports PDPTEntries_AI ADT_AI
 begin
-context begin interpretation ARM . (*FIXME: arch_split*)
+
 lemma st_tcb_at_nostate_upd:
   "\<lbrakk> get_tcb t s = Some y; tcb_state y = tcb_state y' \<rbrakk> \<Longrightarrow>
   st_tcb_at P t' (s \<lparr>kheap := kheap s(t \<mapsto> TCB y')\<rparr>) = st_tcb_at P t' s"
@@ -73,6 +73,8 @@ lemma Collect_subseteq:
 
 definition
   "kernel_mappings \<equiv> {x. x \<ge> kernel_base}"
+
+context ARM begin (*FIXME: arch_split*)
 
 lemma kernel_mappings_slots_eq:
   "p \<in> kernel_mappings \<longleftrightarrow> ucast (p >> 20) \<in> kernel_mapping_slots"
@@ -223,10 +225,14 @@ lemma some_get_page_info_umapsD:
    apply (clarsimp simp:a_type_simps)
   done
 
+end
+
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 lemma ptable_rights_imp_user_frame:
   assumes "valid_state s"
   shows "ptable_rights t s x \<noteq> {} \<Longrightarrow>
-         ptable_lift t s x = Some (Platform.ARM.addrFromPPtr y) \<Longrightarrow>
+         ptable_lift t s x = Some (addrFromPPtr y) \<Longrightarrow>
          in_user_frame y s"
   apply (clarsimp simp: ptable_rights_def ptable_lift_def in_user_frame_def
                  split: option.splits)
@@ -263,6 +269,8 @@ lemma ptable_rights_imp_user_frame:
   apply simp
   done
 
+end
+
 lemma do_user_op_invs:
   "\<lbrace>invs and ct_running\<rbrace>
    do_user_op f tc
@@ -275,5 +283,4 @@ lemma do_user_op_invs:
              split: option.splits split_if_asm)
   done
 
-end
 end

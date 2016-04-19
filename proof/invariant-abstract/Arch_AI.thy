@@ -387,6 +387,7 @@ lemma invoke_arch_tcb:
 
 end
 
+(*FIXME: arch_split*)
 locale asid_update = ARM +
   fixes ap asid s s'
   assumes ko: "ko_at (ArchObj (ASIDPool empty)) ap s"

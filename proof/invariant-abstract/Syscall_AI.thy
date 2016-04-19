@@ -19,7 +19,6 @@ imports
   Arch_AI
   Interrupt_AI
 begin
-context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
@@ -227,6 +226,7 @@ lemma handle_fault_reply_has_no_reply_cap:
   apply (clarsimp)
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma do_reply_invs[wp]:
   "\<lbrace>tcb_at t and tcb_at t' and cte_wp_at (op = (cap.ReplyCap t False)) slot and
     invs\<rbrace>
@@ -312,6 +312,7 @@ lemma do_reply_invs[wp]:
    apply (erule emptyable_cte_wp_atD)
     apply (clarsimp simp add: invs_def valid_state_def is_master_reply_cap_def)+
   done
+end
 
 lemmas si_invs[wp] = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI hoare_TrueI,simplified]
 
@@ -329,7 +330,9 @@ lemma pinv_invs[wp]:
 crunch typ_at[wp]: do_reply_transfer "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps)
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch typ_at[wp]: invoke_irq_control "\<lambda>s. P (typ_at T p s)"
+end
 
 crunch typ_at[wp]: invoke_irq_handler "\<lambda>s. P (typ_at T p s)"
 
@@ -435,12 +438,14 @@ lemma sts_Restart_stay_simple:
   done
 
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma decode_inv_inv[wp]:
   "\<lbrace>P\<rbrace> decode_invocation label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (case_tac cap, simp_all add: decode_invocation_def)
           apply (wp decode_tcb_inv_inv decode_domain_inv_inv | rule conjI | clarsimp
                       | simp split: bool.split)+
   done
+end
 
 lemma diminished_Untyped [simp]:
   "diminished (cap.UntypedCap x xa idx) = (\<lambda>c. c = cap.UntypedCap x xa idx)"
@@ -472,6 +477,7 @@ lemma cnode_diminished_strg:
   apply (clarsimp simp: diminished_def)
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma obj_refs_cap_rights_update[simp]:
   "obj_refs (cap_rights_update rs cap) = obj_refs cap"
   by (simp add: cap_rights_update_def acap_rights_update_def
@@ -491,6 +497,7 @@ lemma diminished_no_cap_to_obj_with_diff_ref:
   apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def 
     table_cap_ref_mask_cap diminished_def Ball_def)
   done
+end
 
 lemma invs_valid_arch_caps[elim!]:
   "invs s \<Longrightarrow> valid_arch_caps s"
@@ -799,8 +806,10 @@ lemma lookup_extra_caps_diminished [wp]:
   apply (wp mapME_set|simp)+
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch tcb_at[wp]: reply_from_kernel "tcb_at t"
   (simp: crunch_simps)
+end
 
 (*FIXME: move to NonDetMonadVCG.valid_validE_R *)
 lemma valid_validE_R_gen:
@@ -819,6 +828,7 @@ lemma ts_Restart_case_helper:
  = (if ts = Structures_A.Restart then A else B)"
   by (case_tac ts, simp_all)
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch pred_tcb_at[wp]: reply_from_kernel "pred_tcb_at proj P t"
   (simp: crunch_simps)
 crunch cap_to[wp]: reply_from_kernel "ex_nonz_cap_to p"
@@ -827,6 +837,7 @@ crunch it[wp]: reply_from_kernel "\<lambda>s. P (idle_thread s)"
   (simp: crunch_simps)
 crunch cte_wp_at[wp]: reply_from_kernel "cte_wp_at P p"
   (simp: crunch_simps)
+end
 
 lemma lcs_ex_cap_to2[wp]:
   "\<lbrace>invs and K (\<forall>cap. is_cnode_cap cap \<longrightarrow> P cap)\<rbrace>
@@ -848,6 +859,7 @@ lemmas validE_E_combs[wp_comb] =
     valid_validE_E
     hoare_vcg_E_conj[where Q'="\<top>\<top>", folded validE_E_def, OF valid_validE_E]
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma hinv_invs':
   assumes perform_invocation_Q[wp]:
            "\<And>block class i. \<lbrace>invs and Q and ct_active and valid_invocation i\<rbrace> perform_invocation block class i \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -902,6 +914,7 @@ lemma hinv_tcb[wp]:
                         ct_in_state_def)
   apply (fastforce elim!: st_tcb_ex_cap)
   done
+end
 
 lemma hs_tcb_on_err:
   "\<lbrace>st_tcb_at active t and invs and ct_active\<rbrace>
@@ -1042,6 +1055,7 @@ lemma hy_inv: "(\<And>s f. P (trans_state f s) = P s) \<Longrightarrow> \<lbrace
   apply (wp | simp)+
   done
 
+context ARM begin (*FIXME: arch_split*)
 lemma getDFSR_invs[wp]:
   "valid invs (do_machine_op getDFSR) (\<lambda>_. invs)"
   by (simp add: getDFSR_def do_machine_op_def split_def select_f_returns | wp)+
@@ -1053,7 +1067,9 @@ lemma getFAR_invs[wp]:
 lemma getIFSR_invs[wp]:
   "valid invs (do_machine_op getIFSR) (\<lambda>_. invs)"
   by (simp add: getIFSR_def do_machine_op_def split_def select_f_returns | wp)+
+end
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma hv_invs[wp]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (cases flt, simp_all)
   apply (wp|simp)+
@@ -1066,6 +1082,7 @@ lemma hv_inv_ex:
             det_getRestartPC as_user_inv
          | wpcw | simp)+
   done
+end
 
 declare hoare_seq_ext[wp] hoare_vcg_precond_imp [wp_comb]
 
@@ -1100,10 +1117,12 @@ lemma hr_invs[wp]:
 
 crunch cur_thread[wp]: set_extra_badge "\<lambda>s. P (cur_thread s)"
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch cur_thread[wp]: handle_reply "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps transfer_caps_loop_pres
         simp: unless_def crunch_simps
       ignore: transfer_caps_loop)
+end
 
 lemmas cap_delete_one_st_tcb_at_simple[wp] =
     cap_delete_one_st_tcb_at[where P=simple, simplified]
@@ -1219,16 +1238,17 @@ lemma hr_ct_active[wp]:
                   elim: valid_reply_caps_of_stateD)
   done
 
+(* FIXME: move *) (* FIXME: should we add this to the simpset? *)
+lemma select_insert:
+  "select (insert x X) = (return x \<sqinter> select X)"
+  by (simp add: alternative_def select_def return_def)
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma handle_vm_fault_valid_fault[wp]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
   apply (cases ft, simp_all)
    apply (wp no_irq_getDFSR no_irq_getIFSR| simp add: valid_fault_def)+
   done
-
-(* FIXME: move *) (* FIXME: should we add this to the simpset? *)
-lemma select_insert:
-  "select (insert x X) = (return x \<sqinter> select X)"
-  by (simp add: alternative_def select_def return_def)
 
 lemma hvmf_active:
   "\<lbrace>st_tcb_at active t\<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
@@ -1236,15 +1256,12 @@ lemma hvmf_active:
    apply (wp | simp)+
   done
 
-lemma dmo_ex_cap[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> do_machine_op oper \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  by (wp ex_nonz_cap_to_pres)
-
 lemma hvmf_ex_cap[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> handle_vm_fault t b \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   apply (cases b, simp_all)
    apply (wp | simp)+
   done
+end
 
 lemma he_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace> 
@@ -1258,5 +1275,5 @@ lemma he_invs[wp]:
                  fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
                          elim!: st_tcb_ex_cap)+
   done
-end
+
 end
