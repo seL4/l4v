@@ -71,7 +71,7 @@ fun proof_body_descend' (_,("",_,body)) = fold (append o proof_body_descend') (t
 
 fun used_facts thm = fold (append o proof_body_descend') (thms_of (Thm.proof_body_of thm)) []
 
-fun raw_primitive_text f = Method.Basic (fn _ => (Method.METHOD (K (fn thm => Seq.single (f thm)))))
+fun raw_primitive_text f = Method.Basic (fn _ => ((K (fn (ctxt, thm) => Seq.make_results (Seq.single (ctxt, f thm))))))
     
 
 (*Find local facts from new hyps*)
