@@ -15,7 +15,7 @@ Refinement for interrupt controller operations
 theory Interrupt_AI
 imports Ipc_AI
 begin
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 definition
   interrupt_derived :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
@@ -172,15 +172,15 @@ lemma real_cte_emptyable_strg:
   "real_cte_at p s \<longrightarrow> emptyable p s"
   by (clarsimp simp: emptyable_def obj_at_def is_tcb is_cap_table)
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma is_derived_use_interrupt:
   "(is_ntfn_cap cap \<and> interrupt_derived cap cap') \<longrightarrow> (is_derived m p cap cap')"
   apply (clarsimp simp: is_cap_simps)
   apply (clarsimp simp: interrupt_derived_def is_derived_def)
   apply (clarsimp simp: cap_master_cap_def split: cap.split_asm)
-  apply (simp add: is_cap_simps is_pt_cap_def vs_cap_ref_def)
-  done
-
+  apply (simp add: is_cap_simps is_pt_cap_def vs_cap_ref_def is_derived_arch_def)
+  done (* FIXME: arch_split *)
+end
 
 lemma cap_delete_one_cte_cap_to[wp]:
   "\<lbrace>ex_cte_cap_wp_to P ptr\<rbrace> cap_delete_one ptr' \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P ptr\<rbrace>"
@@ -382,4 +382,5 @@ lemma handle_interrupt_invs[wp]:
     apply (wp hoare_drop_imps | simp add: get_irq_state_def)+
   done
 
+end
 end

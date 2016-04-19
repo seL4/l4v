@@ -14,7 +14,7 @@
 theory KernelInit_AI
 imports ADT_AI Tcb_AI Arch_AI
 begin
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 text {*
   Showing that there is a state that satisfies the abstract invariants.
 *}
@@ -373,6 +373,7 @@ lemma invs_A:
                   valid_refs_def[unfolded cte_wp_at_caps_of_state])
   apply word_bitwise
   done
+end
 
 axiomatization where
   akernel_init_invs: "\<forall>((tc,s),m,e) \<in> Init_A. invs s \<and> ct_running s"

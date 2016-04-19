@@ -77,9 +77,9 @@ lemma VSRef_AASIDPool_in_vs_refs:
    apply (simp_all add: asid_low_bits_def)
   done
 
-context begin
-
-declare vs_refs_arch_def[simp del]
+context
+notes vs_refs_arch_def[simp del]
+begin
 
 lemma get_pd_of_thread_def2:
   "get_pd_of_thread khp astate tcb_ref \<equiv>

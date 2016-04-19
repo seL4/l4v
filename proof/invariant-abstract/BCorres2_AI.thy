@@ -14,6 +14,7 @@ imports
   "../../lib/BCorres_UL"
   CNodeInv_AI
 begin
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 definition all_but_exst where
 "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
@@ -92,13 +93,13 @@ lemma dxo_ex: "((),x :: det_ext state) \<in> fst (do_extended_op f s) \<Longrigh
                             wrap_ext_op_det_ext_ext_def)
   apply force
   done
-
+end
 
 locale is_extended' =
 fixes f :: "'a det_ext_monad"
 assumes a: "(\<And>P. \<lbrace>all_but_exst P\<rbrace> f \<lbrace>\<lambda>_. all_but_exst P\<rbrace>)"
 begin
-
+interpretation ARM . (*FIXME: arch_split*)
 lemmas v = use_valid[OF _ a, OF _ all_but_obvious,simplified all_but_exst_def, THEN bluh]
 
 lemma ex_st: "(a,x :: det_ext state) \<in> fst (f s) \<Longrightarrow>
@@ -309,7 +310,7 @@ lemma cap_revoke_s_bcorres:
   qed
 
 lemmas cap_revoke_bcorres = use_sbcorres_underlying[OF cap_revoke_s_bcorres]
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch (bcorres)bcorres[wp]: invoke_cnode truncate_state (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set recycle_cap_ext)
 
 crunch (bcorres)bcorres[wp]: "Tcb_A.restart",as_user,option_update_thread truncate_state (simp: gets_the_def ignore: clearMemory check_cap_at gets_the getRegister setRegister getRestartPC setNextPC)
@@ -672,4 +673,5 @@ lemma schedule_bcorres[wp]: "bcorres (schedule :: (unit,det_ext) s_monad) schedu
   done
 *)
 
+end
 end

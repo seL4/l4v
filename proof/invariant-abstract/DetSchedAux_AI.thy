@@ -19,12 +19,14 @@ crunch_ignore (del:
 
 crunch_ignore (add: do_extended_op)
 
+
 crunch ekheap[wp]: update_cdt_list "\<lambda>s. P (ekheap s)"
 crunch rqueues[wp]: update_cdt_list "\<lambda>s. P (ready_queues s)"
 crunch schedact[wp]: update_cdt_list "\<lambda>s. P (scheduler_action s)"
 crunch cur_domain[wp]: update_cdt_list "\<lambda>s. P (cur_domain s)"
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch exst[wp]: init_arch_objects "\<lambda>s. P (exst s)" (wp: crunch_wps)
+end
 
 crunch ekheap[wp]: create_cap, cap_insert "\<lambda>s :: det_ext state. P (ekheap s)" (wp: crunch_wps)
 
@@ -33,9 +35,9 @@ crunch rqueues[wp]: create_cap, cap_insert "\<lambda>s :: det_ext state. P (read
 crunch schedact[wp]: create_cap, cap_insert "\<lambda>s :: det_ext state. P (scheduler_action s)" (wp: crunch_wps)
 
 crunch cur_domain[wp]: create_cap, cap_insert "\<lambda>s :: det_ext state. P (cur_domain s)" (wp: crunch_wps)
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch ct[wp]: init_arch_objects "\<lambda>s. P (cur_thread s)" (wp: crunch_wps)
-
+end
 
 lemma create_cap_ct[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> create_cap a b c d \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   apply (simp add: create_cap_def)
@@ -45,11 +47,11 @@ lemma create_cap_ct[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> create_
 
 
 
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at Q t" (wp: mapM_x_wp')
 
 crunch valid_etcbs[wp]: create_cap,cap_insert,init_arch_objects,set_cap valid_etcbs (wp: valid_etcbs_lift set_cap_typ_at)
-
+end
 
 lemma valid_etcb_fold_update: "valid_etcbs_2 ekh kh \<Longrightarrow> type \<noteq> apiobject_type.Untyped \<Longrightarrow> valid_etcbs_2
           (foldr (\<lambda>p ekh. ekh(p := default_ext type cdom))
@@ -202,7 +204,7 @@ lemma delete_objects_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> delete_obje
    apply (wp|wpc)+
   apply (simp add: valid_etcbs_def st_tcb_at_kh_def obj_at_kh_def obj_at_def is_etcb_at_def)
   done
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma invoke_untyped_etcb_at: "\<lbrace>(\<lambda>s :: det_ext state. etcb_at P t s) and valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
   apply (cases ui)
   apply (simp add: mapM_x_def[symmetric])
@@ -211,17 +213,17 @@ lemma invoke_untyped_etcb_at: "\<lbrace>(\<lambda>s :: det_ext state. etcb_at P 
                  hoare_convert_imp typ_at_pred_tcb_at_lift )
   apply simp
   done
-
+end
 lemma invoke_untyped_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>_.valid_etcbs\<rbrace>"
   apply (cases ui)
   apply (simp add: mapM_x_def[symmetric])
   apply (wp mapM_x_wp')
   apply simp
   done
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch valid_blocked[wp]: create_cap,cap_insert,init_arch_objects,set_cap valid_blocked
   (wp: valid_blocked_lift set_cap_typ_at)
-
+end
 lemma valid_blocked_fold_update: "valid_blocked_2 queues kh sa ct \<Longrightarrow> type \<noteq> apiobject_type.Untyped \<Longrightarrow> valid_blocked_2
           queues
           (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type o_bits))
@@ -364,9 +366,9 @@ crunch ready_queues[wp]: invoke_untyped "\<lambda>s :: det_ext state. P (ready_q
 crunch scheduler_action[wp]: invoke_untyped "\<lambda>s :: det_ext state. P (scheduler_action s)" (wp: crunch_wps simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym ignore: freeMemory)
 
 crunch cur_domain[wp]: invoke_untyped "\<lambda>s :: det_ext state. P (cur_domain s)" (wp: crunch_wps simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym ignore: freeMemory)
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch idle_thread[wp]: invoke_untyped "\<lambda>s. P (idle_thread s)" (wp: crunch_wps dxo_wp_weak simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym  ignore: freeMemory retype_region_ext)
-
+end
 lemma valid_idle_etcb_lift:
   assumes "\<And>P t. \<lbrace>\<lambda>s. etcb_at P t s\<rbrace> f \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
   shows "\<lbrace>valid_idle_etcb\<rbrace> f \<lbrace>\<lambda>r. valid_idle_etcb\<rbrace>"
@@ -396,7 +398,7 @@ lemma hoare_imp_lift_something: "\<lbrakk>\<lbrace>\<lambda>s. \<not> P s \<rbra
   apply (clarsimp simp add: valid_def)
   apply force
   done
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma perform_asid_control_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcbs\<rbrace>
           perform_asid_control_invocation aci
           \<lbrace>\<lambda>r s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
@@ -440,11 +442,11 @@ perform_asid_control_invocation aci \<lbrace>\<lambda>_. valid_sched\<rbrace>"
       apply wp
   apply simp
   done
-
+end
 crunch valid_queues[wp]: create_cap,cap_insert,init_arch_objects valid_queues (wp: valid_queues_lift)
 
 crunch valid_sched_action[wp]: create_cap,cap_insert,init_arch_objects valid_sched_action (wp: valid_sched_action_lift)
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 crunch valid_sched[wp]: create_cap,cap_insert,init_arch_objects valid_sched (wp: valid_sched_lift)
-
+end
 end

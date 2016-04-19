@@ -19,7 +19,7 @@ imports
   Arch_AI
   Interrupt_AI
 begin
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
@@ -1258,5 +1258,5 @@ lemma he_invs[wp]:
                  fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
                          elim!: st_tcb_ex_cap)+
   done
-
+end
 end

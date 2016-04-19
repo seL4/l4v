@@ -9,9 +9,9 @@
  *)
 
 theory EmptyFail_AI
-imports Tcb_AI
+imports Tcb_AI 
 begin
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemmas [wp] = empty_fail_bind empty_fail_bindE empty_fail_get empty_fail_modify
               empty_fail_whenEs empty_fail_when empty_fail_gets empty_fail_assertE
               empty_fail_error_bits empty_fail_mapM_x empty_fail_mapM empty_fail_sequence_x
@@ -133,17 +133,31 @@ lemma without_preemption_empty_fail[wp]:
 lemma put_empty_fail[wp]:
   "empty_fail (put f)"
   by (simp add: put_def empty_fail_def)
-
+end
 
 crunch_ignore (empty_fail)
   (add: bind bindE lift liftE liftM "when" whenE unless unlessE return fail assert_opt
-        mapM mapM_x sequence_x catch handleE invalidateTLB_ASID_impl
-        invalidateTLB_VAASID_impl cleanByVA_impl cleanByVA_PoU_impl invalidateByVA_impl
-        invalidateByVA_I_impl invalidate_I_PoU_impl cleanInvalByVA_impl branchFlush_impl
+        mapM mapM_x sequence_x catch handleE do_extended_op
+        cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
+        reschedule_required switch_if_required_to attempt_switch_to set_thread_state_ext
+        OR_choice OR_choiceE set_priority timer_tick)
+
+context ARM begin
+
+crunch_ignore (empty_fail)
+  (add: invalidateTLB_ASID_impl invalidateTLB_VAASID_impl cleanByVA_impl
+        cleanByVA_PoU_impl invalidateByVA_impl invalidateByVA_I_impl
+        invalidate_I_PoU_impl cleanInvalByVA_impl branchFlush_impl
         clean_D_PoU_impl cleanInvalidate_D_PoC_impl cleanInvalidateL2Range_impl
-        invalidateL2Range_impl cleanL2Range_impl flushBTAC_impl writeContextID_impl
-        isb_impl dsb_impl dmb_impl setHardwareASID_impl writeTTBR0_impl do_extended_op
-        cacheRangeOp)
+        invalidateL2Range_impl cleanL2Range_impl flushBTAC_impl
+        writeContextID_impl isb_impl dsb_impl dmb_impl setHardwareASID_impl
+        writeTTBR0_impl cacheRangeOp)
+
+end
+
+
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 
 crunch (empty_fail) empty_fail[wp]: set_object, gets_the, get_register, get_cap
   (simp: split_def kernel_object.splits)
@@ -245,10 +259,7 @@ lemma get_extra_cptrs_empty_fail[wp]:
    apply (simp | wp)+
    done
 
-crunch_ignore (empty_fail)
-  (add: cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
-        reschedule_required switch_if_required_to attempt_switch_to set_thread_state_ext
-        OR_choice OR_choiceE set_priority timer_tick)
+
 
 crunch (empty_fail) empty_fail[wp]: storeWord, set_register, lookup_slot_for_cnode_op,
                    getRestartPC, decode_untyped_invocation, get_mrs, range_check,
@@ -477,4 +488,5 @@ lemma call_kernel_empty_fail': "empty_fail ((call_kernel a) :: (unit,unit) s_mon
   apply (wp schedule_empty_fail | simp add: empty_fail_error_bits)+
   done
 
+end
 end

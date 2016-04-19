@@ -11,7 +11,7 @@
 theory DetSchedSchedule_AI
 imports DetSchedAux_AI
 begin
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma ethread_get_wp[wp]: "\<lbrace>\<lambda>s. etcb_at (\<lambda>t. P (f t) s) ptr s\<rbrace> ethread_get f ptr \<lbrace>P\<rbrace>"
   apply (simp add: ethread_get_def)
   apply wp
@@ -3001,4 +3001,5 @@ lemma call_kernel_valid_sched:
      apply (force intro: active_from_running)+
   done
 
+end
 end

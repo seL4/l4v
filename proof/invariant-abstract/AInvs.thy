@@ -15,7 +15,7 @@ The main theorem
 theory AInvs
 imports PDPTEntries_AI ADT_AI
 begin
-
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma st_tcb_at_nostate_upd:
   "\<lbrakk> get_tcb t s = Some y; tcb_state y = tcb_state y' \<rbrakk> \<Longrightarrow>
   st_tcb_at P t' (s \<lparr>kheap := kheap s(t \<mapsto> TCB y')\<rparr>) = st_tcb_at P t' s"
@@ -118,7 +118,7 @@ lemma some_get_page_info_kmapsD:
                          kernel_mappings_slots_eq
                   split: option.splits Structures_A.kernel_object.splits
                          arch_kernel_obj.splits
-                         Arch_Structs_A.pde.splits Arch_Structs_A.pte.splits)
+                         pde.splits pte.splits)
       apply (rule conjI, rule_tac x=ARMLargePage in exI, simp)
       apply (simp add: valid_pde_kernel_mappings_def obj_at_def
                        valid_pt_kernel_mappings_def)
@@ -159,20 +159,21 @@ lemma get_pd_of_thread_reachable:
                  cap.splits arch_cap.splits)
 
 lemma is_aligned_ptrFromPAddrD:
-"\<lbrakk>is_aligned (Platform.ptrFromPAddr b) a; a \<le> 24\<rbrakk> \<Longrightarrow> is_aligned b a"
-  apply (clarsimp simp:Platform.ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def)
+"\<lbrakk>is_aligned (ptrFromPAddr b) a; a \<le> 24\<rbrakk> \<Longrightarrow> is_aligned b a"
+  apply (clarsimp simp:ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def)
   apply (erule is_aligned_addD2)
   apply (rule is_aligned_weaken[where x = 24])
    apply (simp add:is_aligned_def)
   apply simp
   done
 
+
 lemma some_get_page_info_umapsD:
   "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
     (\<exists>\<rhd> pd_ref) s; p \<notin> kernel_mappings; valid_arch_objs s; pspace_aligned s;
     valid_asid_table (arm_asid_table (arch_state s)) s; valid_objs s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and>
-             typ_at (AArch (AIntData sz)) (Platform.ptrFromPAddr b) s)"
+             typ_at (AArch (AIntData sz)) (ptrFromPAddr b) s)"
   apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
                         kernel_mappings_slots_eq
                  split: option.splits Structures_A.kernel_object.splits
@@ -181,12 +182,12 @@ lemma some_get_page_info_umapsD:
    apply (simp add: obj_at_def)
   apply (simp add: valid_arch_obj_def)
   apply (drule bspec, simp)
-  apply (simp split: Arch_Structs_A.pde.splits)
+  apply (simp split: pde.splits)
      apply (rename_tac rs pd pt_ref rights w)
      apply (subgoal_tac
         "((rs, pd_ref) \<rhd>1
           (VSRef (ucast (ucast (p >> 20))) (Some APageDirectory) # rs,
-           Platform.ptrFromPAddr pt_ref)) s")
+           ptrFromPAddr pt_ref)) s")
      prefer 2
      apply (rule vs_lookup1I[rotated 2], simp)
       apply (simp add: obj_at_def)
@@ -199,24 +200,24 @@ lemma some_get_page_info_umapsD:
     apply (simp add: get_pt_info_def get_pt_entry_def)
     apply (drule_tac x="(ucast ((p >> 12) && mask 8))" in spec)
     apply (clarsimp simp: obj_at_def valid_arch_obj_def
-      split: Arch_Structs_A.pte.splits)
+      split: pte.splits)
      apply (clarsimp simp: pspace_aligned_def)
-     apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec, fastforce)
+     apply (drule_tac x = "(ptrFromPAddr b)" in  bspec, fastforce)
      apply (drule is_aligned_ptrFromPAddrD)
       apply simp
      apply (clarsimp simp:a_type_simps)
     apply (clarsimp simp: pspace_aligned_def)
-    apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec, fastforce)
+    apply (drule_tac x = "(ptrFromPAddr b)" in  bspec, fastforce)
     apply (drule is_aligned_ptrFromPAddrD)
      apply simp
     apply (clarsimp simp:a_type_simps)
    apply (clarsimp simp: pspace_aligned_def obj_at_def)
-   apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec, fastforce)
+   apply (drule_tac x = "(ptrFromPAddr b)" in  bspec, fastforce)
    apply (drule is_aligned_ptrFromPAddrD)
     apply simp
    apply (clarsimp simp:a_type_simps)
   apply (clarsimp simp: pspace_aligned_def obj_at_def)
-  apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec, fastforce)
+  apply (drule_tac x = "(ptrFromPAddr b)" in  bspec, fastforce)
   apply (drule is_aligned_ptrFromPAddrD)
    apply simp
    apply (clarsimp simp:a_type_simps)
@@ -248,7 +249,7 @@ lemma ptable_rights_imp_user_frame:
   apply (frule is_aligned_add_helper[OF _ and_mask_less',
                                      THEN conjunct2, of _ _ x])
    apply (simp only: pbfs_less_wb'[simplified word_bits_def])
-  apply (clarsimp simp: Platform.ptrFromPAddr_def Platform.ARM.addrFromPPtr_def
+  apply (clarsimp simp: ptrFromPAddr_def Platform.ARM.addrFromPPtr_def
                         field_simps)
   apply (rule_tac x=sz in exI)
   apply (subst add.assoc[symmetric])
@@ -274,4 +275,5 @@ lemma do_user_op_invs:
              split: option.splits split_if_asm)
   done
 
+end
 end
