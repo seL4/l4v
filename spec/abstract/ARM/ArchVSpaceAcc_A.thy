@@ -18,7 +18,7 @@ theory ArchVSpaceAcc_A
 imports "../KHeap_A"
 begin
 
-context ARM begin
+context ARM_A begin
 
 text {* 
   This part of the specification is fairly concrete as the machine architecture

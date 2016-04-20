@@ -25,12 +25,23 @@ begin
    constants, facts and types but expect the block (begin ... end) 
    to be valid in all architectures.
 
+   Additionally we give ourselves ARM_A and ARM_H locales (equivalent to ARM/Arch) which are used
+   to disambiguate abstract and haskell constants which have the same name.
+
 *)
 
 locale ARM
+locale ARM_A
+locale ARM_H
 locale Arch
 
 sublocale Arch \<subseteq> ARM .
 sublocale ARM \<subseteq> Arch .
+
+sublocale ARM \<subseteq> ARM_A .
+sublocale ARM_A \<subseteq> ARM .
+
+sublocale ARM_H \<subseteq> ARM .
+sublocale ARM \<subseteq> ARM_H .
 
 end

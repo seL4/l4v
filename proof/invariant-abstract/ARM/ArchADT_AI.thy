@@ -159,7 +159,7 @@ lemma get_pd_of_thread_eq:
    get_pd_of_thread (kheap s) (arch_state s) tcb_ref = pd_ref \<longleftrightarrow>
    (\<exists>tcb. kheap s tcb_ref = Some (TCB tcb) \<and>
           (\<exists>asid. tcb_vtable tcb =
-                  cap.ArchObjectCap (Arch_Structs_A.ARM.PageDirectoryCap
+                  cap.ArchObjectCap (PageDirectoryCap
                                        pd_ref (Some asid)) \<and>
                   (the (vs_cap_ref_arch (the_arch_cap (tcb_vtable tcb))) \<rhd> pd_ref) s))"
   by (auto simp: get_pd_of_thread_vs_lookup vs_cap_ref_def
@@ -179,7 +179,7 @@ text {* Non-monad versions of @{term get_pte} and @{term get_pde}.
 definition
   "get_pt_entry ahp pt_ref vptr \<equiv>
    case ahp pt_ref of
-     Some (Arch_Structs_A.ARM.PageTable pt) \<Rightarrow>
+     Some (PageTable pt) \<Rightarrow>
        Some (pt (ucast ((vptr >> 12) && mask 8)))
    | _ \<Rightarrow> None"
 definition
@@ -302,8 +302,8 @@ done
 definition
   "get_pt_info ahp pt_ref vptr \<equiv>
    case get_pt_entry ahp pt_ref vptr of
-     Some (Arch_Structs_A.ARM.SmallPagePTE base attrs rights) \<Rightarrow> Some (base, 12, attrs, rights)
-   | Some (Arch_Structs_A.ARM.LargePagePTE base attrs rights) \<Rightarrow> Some (base, 16, attrs, rights)
+     Some (SmallPagePTE base attrs rights) \<Rightarrow> Some (base, 12, attrs, rights)
+   | Some (LargePagePTE base attrs rights) \<Rightarrow> Some (base, 16, attrs, rights)
    | _ \<Rightarrow> None"
 
 text {*
@@ -322,10 +322,10 @@ where
   get_page_info_def:
   "get_page_info ahp pd_ref vptr \<equiv>
    case get_pd_entry ahp pd_ref vptr of
-     Some (Arch_Structs_A.ARM.PageTablePDE p _ _) \<Rightarrow>
-       get_pt_info ahp (Platform.ARM.ptrFromPAddr p) vptr
-   | Some (Arch_Structs_A.ARM.SectionPDE base attrs _ rights) \<Rightarrow> Some (base, 20, attrs, rights)
-   | Some (Arch_Structs_A.ARM.SuperSectionPDE base attrs rights) \<Rightarrow> Some (base,24, attrs, rights)
+     Some (PageTablePDE p _ _) \<Rightarrow>
+       get_pt_info ahp (ptrFromPAddr p) vptr
+   | Some (SectionPDE base attrs _ rights) \<Rightarrow> Some (base, 20, attrs, rights)
+   | Some (SuperSectionPDE base attrs rights) \<Rightarrow> Some (base,24, attrs, rights)
    | _ \<Rightarrow> None"
 
 
@@ -364,7 +364,7 @@ by (auto simp add: lookup_pt_slot_def lookup_pd_slot_def liftE_def bindE_def
         get_pde_def get_pd_def Union_eq get_object_def simpler_gets_def
         assert_def fail_def mask_eqs
       split: sum.splits split_if_asm Structures_A.kernel_object.splits
-             arch_kernel_obj.splits Arch_Structs_A.ARM.pde.splits)
+             arch_kernel_obj.splits pde.splits)
 
 (* FIXME: Lemma can be found in ArchAcc_R *)
 lemma shiftr_shiftl_mask_pd_bits:
@@ -386,14 +386,14 @@ lemma lookup_pt_slot_no_fail:
    kheap s pd = Some (ArchObj (PageDirectory pdo)) \<Longrightarrow>
    lookup_pt_slot pd vptr s =
    (case pdo (ucast (vptr >> 20)) of
-      Arch_Structs_A.ARM.InvalidPDE \<Rightarrow>
+      InvalidPDE \<Rightarrow>
         ({(Inl (ExceptionTypes_A.MissingCapability 20),s)},False)
-    | Arch_Structs_A.ARM.PageTablePDE p _ _ \<Rightarrow>
-        ({(Inr (Platform.ARM.ptrFromPAddr p + ((vptr >> 12) && 0xFF << 2)),s)},
+    | PageTablePDE p _ _ \<Rightarrow>
+        ({(Inr (ptrFromPAddr p + ((vptr >> 12) && 0xFF << 2)),s)},
          False)
-    | Arch_Structs_A.ARM.SectionPDE _ _ _ _ \<Rightarrow>
+    | SectionPDE _ _ _ _ \<Rightarrow>
         ({(Inl (ExceptionTypes_A.MissingCapability 20),s)},False)
-    | Arch_Structs_A.ARM.SuperSectionPDE _ _ _ \<Rightarrow>
+    | SuperSectionPDE _ _ _ \<Rightarrow>
         ({(Inl (ExceptionTypes_A.MissingCapability 20),s)},False)  )"
 apply (frule pd_shifting'[of _ vptr])
 apply (cut_tac shiftr_shiftl_mask_pd_bits[of vptr])
@@ -411,7 +411,7 @@ by (clarsimp simp add: lookup_pt_slot_def lookup_pd_slot_def liftE_def bindE_def
         get_pde_def get_pd_def Union_eq get_object_def simpler_gets_def
         assert_def fail_def mask_add_aligned
       split: sum.splits split_if_asm kernel_object.splits arch_kernel_obj.splits
-             Arch_Structs_A.ARM.pde.splits)
+             pde.splits)
 
 lemma get_page_info_pte:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
@@ -420,8 +420,8 @@ lemma get_page_info_pte:
    get_pte x s = ({(pte,s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
    (case pte of
-     Arch_Structs_A.ARM.SmallPagePTE base attrs rights \<Rightarrow> Some (base, 12, attrs, rights)
-   | Arch_Structs_A.ARM.LargePagePTE base attrs rights \<Rightarrow> Some (base, 16, attrs, rights)
+     SmallPagePTE base attrs rights \<Rightarrow> Some (base, 12, attrs, rights)
+   | LargePagePTE base attrs rights \<Rightarrow> Some (base, 16, attrs, rights)
    | _ \<Rightarrow> None)"
 apply (clarsimp simp add: get_page_info_def get_pd_entry_def
                 split: option.splits)
@@ -433,7 +433,7 @@ apply (intro conjI impI allI)
 apply (frule lookup_pt_slot_fail[of _ vptr s],
        clarsimp simp add: get_arch_obj_def)
 apply (frule (1) lookup_pt_slot_no_fail[where vptr=vptr])
-apply (clarsimp split: Arch_Structs_A.ARM.pde.splits option.splits)
+apply (clarsimp split: pde.splits option.splits)
 apply (clarsimp simp add: get_pt_info_def split: option.splits)
 apply (intro conjI impI)
  apply (drule get_pt_entry_None_iff_get_pte_fail[where s=s and vptr=vptr])
@@ -446,7 +446,7 @@ done
 lemma get_page_info_section:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
    get_pde (lookup_pd_slot pd_ref vptr) s =
-     ({(Arch_Structs_A.ARM.SectionPDE base attrs X rights, s)},False) \<Longrightarrow>
+     ({(SectionPDE base attrs X rights, s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
      Some (base, 20, attrs, rights)"
 apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
@@ -460,7 +460,7 @@ done
 lemma get_page_info_super_section:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
    get_pde (lookup_pd_slot pd_ref vptr) s =
-     ({(Arch_Structs_A.ARM.SuperSectionPDE base attrs rights,s)},False) \<Longrightarrow>
+     ({(SuperSectionPDE base attrs rights,s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
      Some (base, 24, attrs, rights)"
 apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)

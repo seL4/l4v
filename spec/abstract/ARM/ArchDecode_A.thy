@@ -20,7 +20,7 @@ imports
   "../InvocationLabels_A"
   "../../../lib/WordLib"
 begin
-context ARM begin
+context ARM_A begin
 
 section "Helper definitions"
 

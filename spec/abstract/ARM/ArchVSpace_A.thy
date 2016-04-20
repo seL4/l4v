@@ -18,7 +18,7 @@ theory ArchVSpace_A
 imports "../Retype_A"
 begin
 
-context ARM begin
+context ARM_A begin
 
 text {* Save the set of entries that would be inserted into a page table or
 page directory to map various different sizes of frame at a given virtual
@@ -53,17 +53,17 @@ where
     returnOk $ Inr (SuperSectionPDE base (attrib - {Global}) vm_rights, [p, p + 4  .e.  p + 60])
   odE"
 
-definition get_master_pde :: "word32 \<Rightarrow> (Arch_Structs_A.ARM.pde,'z::state_ext)s_monad"
+definition get_master_pde :: "word32 \<Rightarrow> (pde,'z::state_ext)s_monad"
   where "get_master_pde ptr \<equiv> do
     pde \<leftarrow> (get_pde (ptr && ~~ mask 6));
-    (case pde of Arch_Structs_A.ARM.pde.SuperSectionPDE _ _ _ \<Rightarrow> return pde
+    (case pde of SuperSectionPDE _ _ _ \<Rightarrow> return pde
     | _ \<Rightarrow> get_pde ptr)
   od"
 
-definition get_master_pte :: "word32 \<Rightarrow> (Arch_Structs_A.ARM.pte, 'z::state_ext)s_monad"
+definition get_master_pte :: "word32 \<Rightarrow> (pte, 'z::state_ext)s_monad"
   where "get_master_pte ptr \<equiv> do
     pte \<leftarrow> (get_pte (ptr && ~~ mask 6));
-    (case pte of Arch_Structs_A.ARM.pte.LargePagePTE _ _ _ \<Rightarrow> return pte
+    (case pte of LargePagePTE _ _ _ \<Rightarrow> return pte
     | _ \<Rightarrow> get_pte ptr)
   od"
 

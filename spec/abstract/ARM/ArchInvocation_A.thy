@@ -18,7 +18,7 @@ theory ArchInvocation_A
 imports "../Structures_A"
 begin
 
-context ARM begin
+context ARM_A begin
 
 text {* These datatypes encode the arguments to the various possible
 ARM-specific system calls. Selectors are defined for various fields

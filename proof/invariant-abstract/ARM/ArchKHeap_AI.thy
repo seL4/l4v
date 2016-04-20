@@ -519,7 +519,7 @@ lemma valid_global_pd_mappings_pres:
   apply (drule_tac x=x in spec)
   apply (clarsimp simp: valid_pde_kernel_mappings_def obj_at_def
                         valid_pt_kernel_mappings_def pde_ref_def
-                 split: Arch_Structs_A.ARM.pde.split_asm)
+                 split: pde.split_asm)
   apply (simp split: kernel_object.split_asm
                      arch_kernel_obj.split_asm)
   apply (drule spec, drule spec, drule(1) mp)

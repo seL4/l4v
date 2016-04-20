@@ -22,7 +22,7 @@ imports
   "../../machine/MachineExports"
 begin
 
-context ARM begin
+context ARM_A begin
 
 text {*
   The specification is written with abstract type names for object

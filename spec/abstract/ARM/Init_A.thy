@@ -18,7 +18,7 @@ theory Init_A
 imports "../Retype_A"
 begin
 
-context ARM begin
+context ARM_A begin
 
 text {* 
   This is not a specification of true kernel

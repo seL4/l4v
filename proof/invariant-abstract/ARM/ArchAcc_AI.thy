@@ -2275,8 +2275,8 @@ lemma lookup_pt_slot_looks_up [wp]:
   apply (clarsimp simp: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting pd_shifting_dual)
   apply (rule exI, rule conjI, assumption)
   subgoal for s _ x
-    apply (prove "Platform.ARM.ptrFromPAddr x + ((vptr >> 12) && 0xFF << 2) && ~~ mask pt_bits = Platform.ARM.ptrFromPAddr x")
-     apply (prove "is_aligned (Platform.ARM.ptrFromPAddr x) 10")
+    apply (prove "ptrFromPAddr x + ((vptr >> 12) && 0xFF << 2) && ~~ mask pt_bits = ptrFromPAddr x")
+     apply (prove "is_aligned (ptrFromPAddr x) 10")
       apply (drule (2) valid_arch_objsD)
       apply clarsimp
       apply (erule_tac x="ucast (vptr >> 20 << 2 >> 2)" in ballE)
@@ -2347,9 +2347,9 @@ lemma lookup_pt_slot_reachable2 [wp]:
                         add.commute add.left_commute)
   apply (rule exI, rule conjI, assumption)
   apply (rule_tac x="VSRef (vptr >> 20 << 2 >> 2) (Some APageDirectory)" in exI)
-  apply (subgoal_tac "Platform.ARM.ptrFromPAddr x + (xa + ((vptr >> 12) && 0xFF << 2)) && ~~ mask pt_bits = Platform.ARM.ptrFromPAddr x")
+  apply (subgoal_tac "ptrFromPAddr x + (xa + ((vptr >> 12) && 0xFF << 2)) && ~~ mask pt_bits = ptrFromPAddr x")
    prefer 2
-   apply (subgoal_tac "is_aligned (Platform.ARM.ptrFromPAddr x) 10")
+   apply (subgoal_tac "is_aligned (ptrFromPAddr x) 10")
     prefer 2
     apply (drule (2) valid_arch_objsD)
     apply clarsimp
@@ -2362,7 +2362,7 @@ lemma lookup_pt_slot_reachable2 [wp]:
     apply (frule kernel_mapping_slots_empty_pdeI)
     apply (simp add: obj_at_def)+
     apply clarsimp
-    apply (erule_tac x="Platform.ARM.ptrFromPAddr x" in allE)
+    apply (erule_tac x="ptrFromPAddr x" in allE)
     apply (clarsimp simp: pde_ref_def)
     apply (rule is_aligned_global_pt[unfolded pt_bits_def pageBits_def, simplified])
     apply simp+
@@ -2408,7 +2408,7 @@ lemma lookup_pt_slot_reachable3 [wp]:
   apply (clarsimp del: ballI)
   apply (erule_tac x="(ucast (pd + (vptr >> 20 << 2) && mask pd_bits >> 2))" in ballE)
   apply (clarsimp del: ballI)
-  apply (subgoal_tac "is_aligned (Platform.ARM.ptrFromPAddr x) 10")
+  apply (subgoal_tac "is_aligned (ptrFromPAddr x) 10")
    prefer 2
    apply (thin_tac "ko_at P p s" for P p)+
    apply (clarsimp simp: obj_at_def add.commute add.left_commute pspace_aligned_def)
@@ -2425,7 +2425,7 @@ lemma lookup_pt_slot_reachable3 [wp]:
   apply (rule exI, rule conjI, assumption)
   apply (rule_tac x="VSRef (vptr >> 20 << 2 >> 2) (Some APageDirectory)" in exI)
   apply (rule conjI, rule refl)
-  apply (subgoal_tac "Platform.ARM.ptrFromPAddr x + (xc + ((vptr >> 12) && 0xFF << 2)) && ~~ mask pt_bits = Platform.ARM.ptrFromPAddr x")
+  apply (subgoal_tac "ptrFromPAddr x + (xc + ((vptr >> 12) && 0xFF << 2)) && ~~ mask pt_bits = ptrFromPAddr x")
    prefer 2
    apply (subst add_mask_lower_bits)
      apply (simp add: pt_bits_def pageBits_def)
@@ -2681,7 +2681,7 @@ lemma lookup_pt_slot_non_empty:
      apply (simp add:obj_bits_def pageBits_def pd_bits_def)
     apply simp
    apply (clarsimp simp: obj_at_def)
-   apply (drule_tac p = "(Platform.ARM.ptrFromPAddr x)" in pspace_alignedD)
+   apply (drule_tac p = "(ptrFromPAddr x)" in pspace_alignedD)
     apply simp
    apply (drule arg_cong[where f = length])
    apply (subst (asm) length_upto_enum_step)
@@ -2792,8 +2792,8 @@ lemma is_aligned_addrFromPPtr:
 
 lemma is_aligned_ptrFromPAddr_n:
   "\<lbrakk>is_aligned x sz; sz\<le> 28\<rbrakk>
-  \<Longrightarrow> is_aligned (Platform.ARM.ptrFromPAddr x) sz"
-  apply (simp add:Platform.ARM.ptrFromPAddr_def physMappingOffset_def
+  \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
+  apply (simp add:ptrFromPAddr_def physMappingOffset_def
     kernelBase_addr_def physBase_def)
   apply (erule aligned_add_aligned)
    apply (erule is_aligned_weaken[rotated])
@@ -2802,7 +2802,7 @@ lemma is_aligned_ptrFromPAddr_n:
   done
 
 lemma is_aligned_ptrFromPAddr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (Platform.ARM.ptrFromPAddr p) pageBits"
+  "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
   by (simp add: is_aligned_ptrFromPAddr_n pageBits_def)
 
 lemma store_pde_lookup_pd:
