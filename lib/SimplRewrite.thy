@@ -8,8 +8,9 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory SimplRewrite (* FIXME: bitrotted *)
+theory SimplRewrite
 imports
+  "~~/src/HOL/Eisbach/Eisbach"
   "CTranslationNICTA"
   "SplitRule"
 begin
@@ -64,7 +65,7 @@ lemma add_statefn_xstate_id[simp]:
 lemma add_statefn_exec1:
   assumes bij: "bij f"
   shows "\<Gamma> \<turnstile> \<langle>c, xs\<rangle> \<Rightarrow> t
-        \<Longrightarrow> (option_map (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>add_statefn (inv f) c,
+        \<Longrightarrow> (map_option (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>add_statefn (inv f) c,
                  add_statefn_xstate f xs\<rangle> \<Rightarrow> add_statefn_xstate f t"
 proof (induct rule: exec.induct)
 
@@ -80,7 +81,7 @@ qed (auto intro: exec.intros simp: inv_f_f[OF bij_is_inj, OF bij]
 lemma add_statefn_exec:
   assumes bij: "bij f"
   shows "\<Gamma> \<turnstile> \<langle>add_statefn f c, xs\<rangle> \<Rightarrow> t
-    = (option_map (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>c, add_statefn_xstate f xs\<rangle>
+    = (map_option (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>c, add_statefn_xstate f xs\<rangle>
          \<Rightarrow> add_statefn_xstate f t"
   apply (rule iffI)
    apply (drule add_statefn_exec1[OF bij])
@@ -166,15 +167,15 @@ definition
 where
  "exec_statefn_simulates f S T a b =
     (\<forall>s \<in> S. \<forall>\<Gamma> t. \<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> t
-            \<longrightarrow> (option_map (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> add_statefn_xstate f t
-                  \<or> (\<exists>ft. (option_map (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> Fault ft)
-                  \<or> (\<exists>t' \<in> - T. (option_map (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> Normal (f t')))"
+            \<longrightarrow> (map_option (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> add_statefn_xstate f t
+                  \<or> (\<exists>ft. (map_option (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> Fault ft)
+                  \<or> (\<exists>t' \<in> - T. (map_option (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> Normal (f t')))"
 
 lemma exec_statefn_simulatesD:
   "\<lbrakk> \<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> t; exec_statefn_simulates f S T a b; s \<in> S \<rbrakk>
-    \<Longrightarrow> (option_map (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> add_statefn_xstate f t
-                  \<or> (\<exists>ft. (option_map (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> Fault ft)
-                  \<or> (\<exists>t' \<in> - T. (option_map (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> Normal (f t'))"
+    \<Longrightarrow> (map_option (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> add_statefn_xstate f t
+                  \<or> (\<exists>ft. (map_option (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> Fault ft)
+                  \<or> (\<exists>t' \<in> - T. (map_option (add_statefn (inv f)) o \<Gamma>) \<turnstile> \<langle>b, Normal (f s)\<rangle> \<Rightarrow> Normal (f t'))"
   unfolding exec_statefn_simulates_def by auto
 
 lemmas exec_statefn_simulatesI
@@ -197,7 +198,7 @@ definition
 
 lemma spec_statefn_simulates_via_statefn:
   "bij f \<Longrightarrow> spec_statefn_simulates f G G'
-      = spec_simulates G (option_map (add_statefn f) o G')"
+      = spec_simulates G (map_option (add_statefn f) o G')"
   apply (simp add: spec_statefn_simulates_def spec_simulates_def)
   apply (rule arg_cong[where f=All, OF ext])
   apply (rule HOL.conj_cong[OF refl])
@@ -358,11 +359,11 @@ lemma exec_statefn_simulates_While_lemma:
   assumes subs: "com_final_guards UNIV b \<subseteq> S"
   shows "\<lbrakk> \<Gamma> \<turnstile> \<langle>bdy, xs\<rangle> \<Rightarrow> t \<rbrakk>
             \<Longrightarrow> \<forall>s. bdy = While C a \<and> xs = Normal s \<and> f s \<in> S
-                \<longrightarrow> (option_map (add_statefn (inv f)) o \<Gamma>)
+                \<longrightarrow> (map_option (add_statefn (inv f)) o \<Gamma>)
                          \<turnstile> \<langle>While C' b, Normal (f s)\<rangle> \<Rightarrow> add_statefn_xstate f t
-                   \<or> (\<exists>ft. (option_map (add_statefn (inv f)) o \<Gamma>)
+                   \<or> (\<exists>ft. (map_option (add_statefn (inv f)) o \<Gamma>)
                          \<turnstile> \<langle>While C' b,Normal (f s)\<rangle> \<Rightarrow> Fault ft)
-                   \<or> (\<exists>t' \<in> - T. (option_map (add_statefn (inv f)) o \<Gamma>)
+                   \<or> (\<exists>t' \<in> - T. (map_option (add_statefn (inv f)) o \<Gamma>)
                          \<turnstile> \<langle>While C' b,Normal (f s)\<rangle> \<Rightarrow> Normal (f t'))"
   apply (induct rule: exec.induct, simp_all)
    apply clarsimp
@@ -666,6 +667,18 @@ lemma xstate_inv_set_UNIV:
   "xstate_inv_set UNIV = UNIV"
   by (simp add: xstate_inv_set_def split: xstate.split)
 
+method gs_simple_cases =
+  (simp_all add: xstate_inv_set_simps,
+   ((erule guards_adjust_by_invariant.cases, simp_all)[1],
+     clarsimp simp: xstate_inv_set_simps,
+     (fastforce intro: exec.intros guards_adjust_by_invariant.intros)[1])+)
+
+method gs_case methods m uses g_def = 
+  ((erule guards_adjust_by_invariant.cases; simp),
+   clarsimp simp: g_def xstate_inv_set_simps,
+   m,
+   auto intro: exec.intros guards_adjust_by_invariant.intros)[1]
+
 lemma gabi_simulation:
   "\<lbrakk> G \<turnstile> \<langle>c, xs\<rangle> \<Rightarrow> xs'; 
         guards_adjust_by_invariant S T c c'; 
@@ -674,39 +687,16 @@ lemma gabi_simulation:
 proof (induct arbitrary: c' T rule: exec.induct)
   case (Call proc bdy s t)
   show ?case using Call.prems Call.hyps
-    apply -
-    apply (erule guards_adjust_by_invariant.cases, simp_all)
-    apply (simp add: context_gabi_def xstate_inv_set_simps)
-    apply (drule_tac x=proc in spec, clarsimp)
-    apply (auto intro: exec.intros guards_adjust_by_invariant.intros)[1]
-    done
+    by - (gs_case \<open>drule_tac x=proc in spec\<close> g_def: context_gabi_def)
 next
   case (CallUndefined proc s t)
   show ?case using CallUndefined.prems CallUndefined.hyps
-    apply -
-    apply (erule guards_adjust_by_invariant.cases, simp_all)
-    apply (simp add: context_gabi_def xstate_inv_set_simps)
-    apply (drule_tac x=proc in spec, clarsimp)
-    apply (auto intro: exec.intros guards_adjust_by_invariant.intros)[1]
-    done
+    by - (gs_case \<open>drule_tac x=proc in spec\<close> g_def: context_gabi_def)
 next
   case (WhileTrue s S c s' t)
   show ?case using WhileTrue.prems WhileTrue.hyps
-    apply  -
-    apply (erule guards_adjust_by_invariant.cases, simp_all)
-    apply (clarsimp simp add: xstate_inv_set_simps)
-    apply (erule_tac x=UNIV in meta_allE)+
-    apply (auto intro: exec.intros guards_adjust_by_invariant.intros)[1]
-    done
+    by - (gs_case \<open>(erule_tac x=UNIV in meta_allE)+\<close>)
+qed gs_simple_cases
 
-    
-
-
-apply_end (simp_all add: xstate_inv_set_simps)
-apply_end (((erule guards_adjust_by_invariant.cases, simp_all)[1],
-    clarsimp simp: xstate_inv_set_simps,
-    (fastforce intro: exec.intros guards_adjust_by_invariant.intros)[1])+)
-
-qed
 
 end
