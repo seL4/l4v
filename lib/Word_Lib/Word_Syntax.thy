@@ -13,7 +13,7 @@ imports
   "~~/src/HOL/Word/WordBitwise"
   WordBitwise_Signed
   Hex_Words
-  Neg_Words
+  Norm_Words
 begin
 
 text {* Additional bit and type syntax that forces word types. *}

@@ -1613,7 +1613,7 @@ lemma range_cover_subset':
   "\<lbrakk>range_cover ptr sz sbit n; n \<noteq> 0\<rbrakk>
   \<Longrightarrow> {ptr ..ptr + of_nat n * 2 ^ sbit - 1} \<subseteq> {ptr..(ptr && ~~ mask sz) + 2^ sz - 1}"
   apply clarsimp
-  apply (frule range_cover_cell_subset[OF _ of_nat_mono_maybe,where Y1 = "(n - 1)"])
+  apply (frule range_cover_cell_subset[OF _ of_nat_mono_maybe,where y1 = "(n - 1)"])
     apply (drule range_cover.range_cover_n_less)
      apply (simp add:word_bits_def)
    apply simp
