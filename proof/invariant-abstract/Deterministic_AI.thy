@@ -3923,29 +3923,34 @@ lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cance
 context begin interpretation ARM . (*FIXME: arch_split*)
 crunch valid_list[wp]: cap_swap_for_delete,set_cap,finalise_cap valid_list (wp: crunch_wps simp: unless_def crunch_simps)
 end
+
 lemmas rec_del_valid_list[wp] =  rec_del_preservation[OF cap_swap_for_delete_valid_list set_cap_valid_list empty_slot_valid_list finalise_cap_valid_list]
 
 
 crunch all_but_exst[wp]: update_work_units "all_but_exst P"
 
-interpretation update_work_units_ext_extended: is_extended "update_work_units"
+(*FIXME: arch_split*)
+sublocale Arch < update_work_units_ext_extended: is_extended "update_work_units"
   apply (unfold_locales)
   apply wp
   done
 
 crunch all_but_exst[wp]: reset_work_units "all_but_exst P"
 
-interpretation reset_work_units_ext_extended: is_extended "reset_work_units"
+(*FIXME: arch_split*)
+sublocale Arch < reset_work_units_ext_extended: is_extended "reset_work_units"
   apply (unfold_locales)
   apply wp
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 lemma preemption_point_inv':
   "\<lbrakk>irq_state_independent_A P; \<And>f s. P (work_units_completed_update f s) = P s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   apply (intro impI conjI | simp add: preemption_point_def o_def
        | wp hoare_post_imp[OF _ getActiveIRQ_wp] OR_choiceE_weak_wp alternative_wp[where P=P]
        | wpc | simp add: update_work_units_def reset_work_units_def)+
   done
+end
 
 crunch valid_list[wp]: cap_delete valid_list
   (wp: preemption_point_inv')
@@ -3974,13 +3979,16 @@ crunch valid_list[wp]: recycle_cap_ext "valid_list"
 
 crunch all_but_exst[wp]: recycle_cap_ext "all_but_exst P"
 
-interpretation recycle_cap_ext_extended: is_extended "recycle_cap_ext a"
+(*FIXME: arch_split*)
+sublocale Arch < recycle_cap_ext_extended: is_extended "recycle_cap_ext a"
   apply (unfold_locales)
   apply wp
   done
+
 context begin interpretation ARM . (*FIXME: arch_split*)
 crunch valid_list[wp]: cap_recycle valid_list (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM unless_def ignore: without_preemption filterM recycle_cap_ext)
 end
+
 lemma invoke_cnode_valid_list[wp]: "\<lbrace>valid_list\<rbrace>
            invoke_cnode ci
        \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4021,12 +4029,14 @@ interpretation set_priority_extended: is_extended "set_priority a b"
 
 crunch all_but_exst[wp]: set_domain "all_but_exst P" (simp: ethread_get_def)
 
-interpretation set_domain_extended: is_extended "set_domain a b"
+(*FIXME: arch_split*)
+sublocale Arch < set_domain_extended: is_extended "set_domain a b"
   apply (unfold_locales)
   apply wp
   done
 
-interpretation thread_set_domain_extended: is_extended "thread_set_domain a b"
+(*FIXME: arch_split*)
+sublocale Arch < thread_set_domain_extended: is_extended "thread_set_domain a b"
   apply (unfold_locales)
   apply wp
   done
@@ -4065,7 +4075,9 @@ interpretation retype_region_ext_extended: is_extended "retype_region_ext a b"
   apply (unfold_locales)
   apply wp
   done
+
 context begin interpretation ARM . (*FIXME: arch_split*)
+
 crunch valid_list[wp]: invoke_untyped valid_list (wp: crunch_wps simp: mapM_x_def_bak)
 
 crunch valid_list[wp]: invoke_irq_control valid_list
@@ -4084,14 +4096,18 @@ lemma perform_page_invocation_valid_list[wp]:
   apply (cases a,simp_all)
   apply (wp mapM_x_wp' mapM_wp' crunch_wps | intro impI conjI allI | wpc | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits option.splits sum.splits)+
   done
+
 end
+
 crunch valid_list[wp]: attempt_switch_to "valid_list"
 
 interpretation attempt_switch_to_extended: is_extended "attempt_switch_to a"
   apply (simp add: attempt_switch_to_def)
   apply (unfold_locales)
   done
+
 context begin interpretation ARM . (*FIXME: arch_split*)
+
 crunch valid_list[wp]: perform_invocation valid_list (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
 
 crunch valid_list[wp]: handle_invocation valid_list (wp: crunch_wps syscall_valid simp: crunch_simps ignore: without_preemption)
@@ -4104,13 +4120,15 @@ lemma handle_vm_fault_valid_list[wp]:
   apply (wp|simp)+
   done
 
+end
+
 crunch valid_list[wp]: thread_set_time_slice,timer_tick "valid_list" (simp: Let_def)
 
 crunch all_but_exst[wp]: timer_tick "all_but_exst P" (simp: ethread_get_def crunch_simps)
 
 crunch (empty_fail)empty_fail[wp]: timer_tick
   (simp: thread_state.splits)
-end
+
 interpretation timer_tick_extended: is_extended "timer_tick"
   apply (unfold_locales)
   apply wp
