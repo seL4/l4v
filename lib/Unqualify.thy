@@ -5,9 +5,10 @@
 
 theory Unqualify
 imports Main
-keywords "unqualify_facts" :: thy_decl and "unqualify_consts" :: thy_decl and "unqualify_types" :: thy_decl
+keywords "unqualify_facts" :: thy_decl and "unqualify_consts" :: thy_decl and "unqualify_types" :: thy_decl and
+         "shadow_facts" :: thy_decl and "shadow_types" :: thy_decl and "shadow_consts" :: thy_decl
 begin
-
+ML \<open>Long_Name.dest_local "local.baz.bing"\<close>
 ML \<open>
 
 local
@@ -34,6 +35,44 @@ fun make_notation b =
       |> String.translate(fn #"_" => "'_" | x => Char.toString x)
 
   in str end
+
+fun all_facts_of ctxt =
+  let
+    val thy = Proof_Context.theory_of ctxt;
+    val global_facts = Global_Theory.facts_of thy;
+  in
+   Facts.dest_static false [] global_facts
+  end;
+
+fun global_fact ctxt nm =
+let
+   val facts = Proof_Context.facts_of ctxt;
+   val {name, thms, ...} = (Facts.retrieve (Context.Proof ctxt) facts (nm, Position.none));
+   
+   fun tl' (_ :: xs) = xs
+     | tl' _ = []
+
+   fun matches suf (gnm, gthms)  =
+   let
+     val gsuf = Long_Name.explode gnm |> tl' |> tl' |> Long_Name.implode;
+     
+   in suf = gsuf andalso eq_list Thm.eq_thm_prop (thms, gthms) 
+   end
+in
+  case Long_Name.dest_local name of NONE => (name, thms) | SOME suf =>
+    (case (find_first (matches suf) (all_facts_of ctxt)) of 
+       SOME x => x
+     | NONE => raise Fail ("Couldn't find global equivalent of local fact: " ^ nm))
+end
+
+fun syntax_alias global_alias local_alias b (name : string) =
+  Local_Theory.declaration {syntax = true, pervasive = true} (fn phi =>
+    let val b' = Morphism.binding phi b
+    in Context.mapping (global_alias b' name) (local_alias b' name) end);
+
+val fact_alias = syntax_alias Global_Theory.alias_fact Proof_Context.fact_alias;
+val const_alias = syntax_alias Sign.const_alias Proof_Context.const_alias;
+val type_alias = syntax_alias Sign.type_alias Proof_Context.type_alias;
 
 in
 
@@ -125,7 +164,7 @@ val _ =
        in
        lthy'
        end)))
-                                                  
+
 
 val _ =
   Outer_Syntax.command @{command_keyword unqualify_types} "unqualify types"
@@ -178,6 +217,43 @@ val _ =
        in
        lthy'
        end)))
+
+fun gen_shadow get_proper_nm alias = 
+  (Parse.opt_target  --  Scan.repeat1 (Parse.position (Parse.name)) 
+    >> (fn (target,bs) =>
+      Toplevel.local_theory NONE target (fn lthy =>
+      let
+     
+        fun read_entry (t, pos) lthy =
+        let
+          val global_ctxt = Proof_Context.init_global (Proof_Context.theory_of lthy);
+          val (global_nm : string) = get_proper_nm global_ctxt t;
+          val local_nm = get_proper_nm lthy t;
+          val b = Binding.make (t, pos)
+     
+          val global_naming = Proof_Context.naming_of global_ctxt;
+     
+          val lthy' = lthy
+          |> alias b local_nm
+          |> Local_Theory.map_background_naming (K global_naming)
+          |> alias b global_nm
+          |> Local_Theory.restore_background_naming lthy
+     
+        in lthy' end
+     
+       in fold read_entry bs lthy end)))
+
+val _ =
+  Outer_Syntax.command @{command_keyword shadow_consts} "shadow local consts with global ones"
+    (gen_shadow ((fst o dest_Const) oo (Proof_Context.read_const {proper = true, strict = false})) const_alias)
+
+val _ =
+  Outer_Syntax.command @{command_keyword shadow_types} "shadow local types with global ones"
+    (gen_shadow ((fst o dest_Type) oo (Proof_Context.read_type_name {proper = true, strict = false})) type_alias)
+
+val _ =
+  Outer_Syntax.command @{command_keyword shadow_facts} "shadow local facts with global ones"
+    (gen_shadow (fst oo global_fact) fact_alias)
 
 end
 \<close>
