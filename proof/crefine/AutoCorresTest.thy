@@ -7,6 +7,7 @@
 theory AutoCorresTest
 imports "../../tools/autocorres/AutoCorres"
         "../../tools/autocorres/L4VerifiedLinks"
+        AutoCorresModifiesProofs
         "../../../../isabelle-hacks/insulin/Insulin"
         "../../../../isabelle-hacks/ShowTypes"
         (* import Refine_C last to minimise change to global context *)
@@ -23,21 +24,24 @@ autocorres
   ] "c/kernel_all.c_pp"
 
 
+(* Prove and store modifies rules. *)
+context kernel_all_substitute begin
+local_setup \<open>fn ctxt =>
+let val fn_info = Symtab.lookup (AutoCorresFunctionInfo.get (Proof_Context.theory_of ctxt)) "c/kernel_all.c_pp" |> the;
+    val prog_info = ProgramInfo.get_prog_info ctxt "c/kernel_all.c_pp";
+    val all_function_groups = FunctionInfo.get_topo_sorted_functions fn_info;
+    val (callee_modifies, results, ctxt') =
+          fold (AutoCorresModifiesProofs.define_modifies_group fn_info prog_info)
+               all_function_groups (AutoCorresModifiesProofs.build_incr_net [], Symtab.empty, ctxt)
+in ctxt' end
+\<close>
+
+end
+
+
 subsection \<open>Proof frameworks\<close>
 
 context kernel_m begin
-
-text \<open>
-  Strengthening of ccorres_underlying. Sorried; for testing purposes only.
-\<close>
-lemma ccorres_underlying_idealised_def:
-  "ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs \<equiv>
-  \<lambda>m c. \<forall>(s, s')\<in>srel.
-            G s \<and> s' \<in> G' \<and> \<not> snd (m s) \<longrightarrow>
-            \<Gamma> \<turnstile> c \<down> Normal s' \<and>
-            (\<forall>n t. \<Gamma>\<turnstile>\<^sub>h \<langle>c # hs,s'\<rangle> \<Rightarrow> (n, t) \<longrightarrow>
-                   (case t of Normal s'' \<Rightarrow> \<exists>(r, t)\<in>fst (m s). (t, s'') \<in> srel \<and> unif_rrel (n = length hs) rrel xf arrel axf r s'' | _ \<Rightarrow> False))"
-  sorry
 
 text \<open>
   From AutoCorres @{term ac_corres}, obtain @{term ccorres}.
@@ -80,7 +84,22 @@ lemma ccorres_to_corres_partial:
   by (fastforce simp: unif_rrel_def ac_def corres_underlying_def ccorres_underlying_def rf_sr_def
                 intro: EHOther dest: in_AC_call_simpl)
 
-lemma ccorres_to_corres:
+text \<open>
+  A fantasy world where ccorres_underlying is as strong as we need.
+\<close>
+context begin
+
+private lemma ccorres_underlying_idealised_def:
+  "\<And>srel rrel xf arrel axf G G' hs.
+   ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs \<equiv>
+   \<lambda>m c. \<forall>(s, s')\<in>srel.
+            G s \<and> s' \<in> G' \<and> \<not> snd (m s) \<longrightarrow>
+            \<Gamma> \<turnstile> c \<down> Normal s' \<and>
+            (\<forall>n t. \<Gamma>\<turnstile>\<^sub>h \<langle>c # hs,s'\<rangle> \<Rightarrow> (n, t) \<longrightarrow>
+                   (case t of Normal s'' \<Rightarrow> \<exists>(r, t)\<in>fst (m s). (t, s'') \<in> srel \<and> unif_rrel (n = length hs) rrel xf arrel axf r s'' | _ \<Rightarrow> False))"
+  sorry
+
+private lemma ccorres_to_corres_idealised:
   assumes ac_def: "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl \<Gamma> f_'proc)"
   shows "\<lbrakk> ccorres R ret_xf P (Collect arg_rel) [] dspec_f (Call f_'proc) \<rbrakk> \<Longrightarrow>
          corres_underlying {(s, s'). cstate_relation s s'} True True R P \<top> dspec_f ac_f"
@@ -107,7 +126,7 @@ lemma ccorres_to_corres:
   done
 
 text \<open>With proposed alternative ccorres...\<close>
-lemma
+private lemma
   assumes ac_def: "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl \<Gamma> f_'proc)"
   shows "\<lbrakk> ccorres R ret_xf P (Collect arg_rel) [] dspec_f (Call f_'proc) \<rbrakk> \<Longrightarrow>
          corres_underlying {(s, s'). cstate_relation s s'} True True R P \<top> dspec_f ac_f"
@@ -155,8 +174,7 @@ text \<open>
 thm getCurThread_ccorres
 lemma getCurThread_corres:
   "corres_underlying {(x, y). cstate_relation x y} True True (\<lambda>ct ct'. tcb_ptr_to_ctcb_ptr ct = ct') invs' (\<lambda>_. True) getCurThread (gets ksCurThread_')"
-  apply (simp add: getCurThread_def cstate_relation_def)
-  by metis
+  by (simp add: getCurThread_def cstate_relation_def Let_def)
 
 thm ccorres_pre_getCurThread
 lemma corres_pre_getCurThread:
@@ -174,13 +192,227 @@ lemma corres_pre_getCurThread:
   done
 
 thm tcbSchedDequeue_ccorres
+private lemma tcbSchedDequeue_corres_cheat:
+  "tcb_ptr_to_ctcb_ptr ct = ct' \<Longrightarrow>
+   corres_underlying {(x, y). cstate_relation x y} True True (op=)
+     (Invariants_H.valid_queues and valid_queues' and tcb_at' ct and valid_objs') \<top>
+     (tcbSchedDequeue ct) (tcbSchedDequeue' ct')"
+  apply (rule ccorres_to_corres_idealised)
+   apply (simp add: tcbSchedDequeue'_def)
+  apply (clarsimp simp: ccorres_rrel_nat_unit tcbSchedDequeue_ccorres[simplified])
+  done
+
+thm tcbSchedAppend_ccorres
+private lemma tcbSchedAppend_corres_cheat:
+  "tcb_ptr_to_ctcb_ptr ct = ct' \<Longrightarrow>
+   corres_underlying {(x, y). cstate_relation x y} True True (op=)
+     (Invariants_H.valid_queues and tcb_at' ct and valid_objs') \<top>
+     (tcbSchedAppend ct) (tcbSchedAppend' ct')"
+  apply (rule ccorres_to_corres_idealised)
+   apply (simp add: tcbSchedAppend'_def)
+  apply (clarsimp simp: ccorres_rrel_nat_unit tcbSchedAppend_ccorres[simplified])
+  done
+
+thm rescheduleRequired_ccorres
+private lemma rescheduleRequired_corres_cheat:
+  "corres_underlying {(x, y). cstate_relation x y} True True (op=)
+     (Invariants_H.valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs') \<top>
+     rescheduleRequired rescheduleRequired'"
+  apply (rule ccorres_to_corres_idealised)
+   apply (simp add: rescheduleRequired'_def)
+  apply (clarsimp simp: ccorres_rrel_nat_unit rescheduleRequired_ccorres[simplified])
+  done
+
+text \<open>Returning to the real world...\<close>
+end
+
+
+
+text \<open>
+  Instead of adding termination to ccorres in one go,
+  we can also prove terminates as incremental side conditions.
+
+  To begin with, we can automatically prove terminates for most
+  helper functions as they do not have recursion or loops.
+\<close>
+
+named_theorems terminates_trivial
+
+lemma [terminates_trivial]:
+  "\<lbrakk> \<And>s. \<Gamma> \<turnstile> c \<down> Normal s \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> Guard F G c \<down> Normal s"
+  apply (blast intro: terminates.Guard terminates.GuardFault)
+  done
+lemma [terminates_trivial]:
+  "\<lbrakk> \<And>s. \<Gamma> \<turnstile> c1 \<down> Normal s; \<And>s. \<Gamma> \<turnstile> c2 \<down> Normal s \<rbrakk> \<Longrightarrow>
+   \<Gamma> \<turnstile> Cond C c1 c2 \<down> Normal s"
+  apply (blast intro: terminates.CondTrue terminates.CondFalse)
+  done
+lemma [terminates_trivial]:
+  "\<lbrakk> \<Gamma> \<turnstile> c1 \<down> Normal s; \<And>s. \<Gamma> \<turnstile> c2 \<down> Normal s \<rbrakk> \<Longrightarrow>
+   \<Gamma> \<turnstile> c1;;c2 \<down> Normal s"
+  apply (erule terminates.Seq)
+  apply clarsimp
+  apply (case_tac s'; auto)
+  done
+
+lemma [terminates_trivial]:
+  fixes \<Gamma> return init shows
+  "\<lbrakk> \<And>s. \<Gamma> \<turnstile> Call p \<down> Normal s; \<And>s t u. \<Gamma> \<turnstile> c s t \<down> Normal u \<rbrakk> \<Longrightarrow>
+   \<Gamma> \<turnstile> call init p return c \<down> Normal s"
+  apply (case_tac "\<Gamma> p")
+   apply (erule terminates_callUndefined)
+  apply (fastforce simp: terminates_Call_body intro: terminates_call)
+  done
+
+lemmas [terminates_trivial] =
+  terminates.Basic
+  terminates.Catch[rule_format]
+  terminates.Throw
+  terminates.Skip
+  terminates.Spec
+
+lemma cap_get_capType_terminates:
+  "\<Gamma> \<turnstile> Call cap_get_capType_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule cap_get_capType_impl)
+  apply (unfold cap_get_capType_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial)
+  done
+
+lemma thread_state_get_tcbQueued_terminates:
+  "\<Gamma> \<turnstile> Call thread_state_get_tcbQueued_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule thread_state_get_tcbQueued_impl)
+  apply (unfold thread_state_get_tcbQueued_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial)
+  done
+
+lemma thread_state_ptr_set_tcbQueued_terminates:
+  "\<Gamma> \<turnstile> Call thread_state_ptr_set_tcbQueued_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule thread_state_ptr_set_tcbQueued_impl)
+  apply (unfold thread_state_ptr_set_tcbQueued_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial)
+  done
+
+lemma ready_queues_index_terminates:
+  "\<Gamma> \<turnstile> Call ready_queues_index_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule ready_queues_index_impl)
+  apply (unfold ready_queues_index_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial)
+  done
+
+lemma prio_to_l1index_terminates:
+  "\<Gamma> \<turnstile> Call prio_to_l1index_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule prio_to_l1index_impl)
+  apply (unfold prio_to_l1index_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial)
+  done
+
+lemma removeFromBitmap_terminates:
+  "\<Gamma> \<turnstile> Call removeFromBitmap_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule removeFromBitmap_impl)
+  apply (unfold removeFromBitmap_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial prio_to_l1index_terminates)
+  done
+
+lemma addToBitmap_terminates:
+  "\<Gamma> \<turnstile> Call addToBitmap_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule addToBitmap_impl)
+  apply (unfold addToBitmap_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial prio_to_l1index_terminates)
+  done
+
+lemma tcbSchedDequeue_terminates:
+   "\<Gamma> \<turnstile> Call tcbSchedDequeue_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule tcbSchedDequeue_impl)
+  apply (unfold tcbSchedDequeue_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial
+          thread_state_get_tcbQueued_terminates
+          thread_state_ptr_set_tcbQueued_terminates
+          ready_queues_index_terminates
+          removeFromBitmap_terminates)
+  done
+
+lemma tcbSchedAppend_terminates:
+   "\<Gamma> \<turnstile> Call tcbSchedAppend_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule tcbSchedAppend_impl)
+  apply (unfold tcbSchedAppend_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial
+          thread_state_get_tcbQueued_terminates
+          thread_state_ptr_set_tcbQueued_terminates
+          ready_queues_index_terminates
+          addToBitmap_terminates)
+  done
+
+lemma tcbSchedEnqueue_terminates:
+   "\<Gamma> \<turnstile> Call tcbSchedEnqueue_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule tcbSchedEnqueue_impl)
+  apply (unfold tcbSchedEnqueue_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial
+          thread_state_get_tcbQueued_terminates
+          thread_state_ptr_set_tcbQueued_terminates
+          ready_queues_index_terminates
+          addToBitmap_terminates)
+  done
+
+lemma rescheduleRequired_terminates:
+   "\<Gamma> \<turnstile> Call rescheduleRequired_'proc \<down> Normal s"
+  apply (rule terminates.Call)
+   apply (rule rescheduleRequired_impl)
+  apply (unfold rescheduleRequired_body_def return_C_def lvar_nondet_init_def)
+  apply (intro terminates_trivial
+          tcbSchedEnqueue_terminates)
+  done
+
+
+text \<open>Verify handleYield without cheating\<close>
+
+lemma ccorres_to_corres:
+  assumes ac_def: "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl \<Gamma> f_'proc)"
+  assumes terminates:
+    "\<And>s s'. \<lbrakk> cstate_relation s (globals s'); P s; \<not> snd (dspec_f s); arg_rel s' \<rbrakk> \<Longrightarrow>
+            \<Gamma> \<turnstile> Call f_'proc \<down> Normal s'"
+  shows "\<lbrakk> ccorres R ret_xf P (Collect arg_rel) [] dspec_f (Call f_'proc) \<rbrakk> \<Longrightarrow>
+         corres_underlying {(s, s'). cstate_relation s s'} True True R P \<top> dspec_f ac_f"
+  apply (clarsimp simp: ac_def corres_underlying_def ccorres_underlying_def rf_sr_def Ball_def Bex_def)
+  apply (rule conjI)
+   -- "proof for return values"
+   apply (fastforce simp: unif_rrel_def intro: EHOther dest: in_AC_call_simpl)
+
+  -- "proof for fail bit is trickier"
+  apply (clarsimp simp: AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
+  apply (clarsimp simp: select_f_def select_def snd_bind split: sum.splits prod.splits)
+  apply (clarsimp simp: Bex_def get_def)
+  apply (erule impE)
+   apply (blast intro: terminates)
+  apply (erule disjE)
+   apply (monad_eq split: xstate.splits sum.splits)
+    apply (drule EHOther, fastforce)
+    apply blast
+   apply (drule EHOther, fastforce)
+   apply blast
+  apply (monad_eq split: xstate.splits)
+  apply (fastforce dest: EHAbrupt[OF _ EHEmpty])
+  done
+
+
+thm tcbSchedDequeue_ccorres
 lemma tcbSchedDequeue_corres:
   "tcb_ptr_to_ctcb_ptr ct = ct' \<Longrightarrow>
    corres_underlying {(x, y). cstate_relation x y} True True (op=)
      (Invariants_H.valid_queues and valid_queues' and tcb_at' ct and valid_objs') \<top>
      (tcbSchedDequeue ct) (tcbSchedDequeue' ct')"
   apply (rule ccorres_to_corres)
-   apply (simp add: tcbSchedDequeue'_def)
+    apply (simp add: tcbSchedDequeue'_def)
+   apply (rule tcbSchedDequeue_terminates)
   apply (clarsimp simp: ccorres_rrel_nat_unit tcbSchedDequeue_ccorres[simplified])
   done
 
@@ -191,7 +423,8 @@ lemma tcbSchedAppend_corres:
      (Invariants_H.valid_queues and tcb_at' ct and valid_objs') \<top>
      (tcbSchedAppend ct) (tcbSchedAppend' ct')"
   apply (rule ccorres_to_corres)
-   apply (simp add: tcbSchedAppend'_def)
+    apply (simp add: tcbSchedAppend'_def)
+   apply (rule tcbSchedAppend_terminates)
   apply (clarsimp simp: ccorres_rrel_nat_unit tcbSchedAppend_ccorres[simplified])
   done
 
@@ -201,139 +434,17 @@ lemma rescheduleRequired_corres:
      (Invariants_H.valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs') \<top>
      rescheduleRequired rescheduleRequired'"
   apply (rule ccorres_to_corres)
-   apply (simp add: rescheduleRequired'_def)
+    apply (simp add: rescheduleRequired'_def)
+   apply (rule rescheduleRequired_terminates)
   apply (clarsimp simp: ccorres_rrel_nat_unit rescheduleRequired_ccorres[simplified])
   done
 
 text \<open>
-  This spec (one extra getCurThread) is easier to prove.
-  Doing the corres proof on handleYield_def requires reasoning about modifies
-  for tcbSchedDequeue.
+  Proving handleYield_ccorres via handleYield'.
+  The handleYield spec has one less getCurThread, so we need to use the fact
+  that tcbSchedDequeue does not modify ksCurThread.
 \<close>
-lemma handleYield_alt_def:
-  "handleYield \<equiv> do thread \<leftarrow> getCurThread;
-                     tcbSchedDequeue thread;
-                     thread \<leftarrow> getCurThread;
-                     tcbSchedAppend thread;
-                     rescheduleRequired
-                  od"
-  sorry
-(* ... matches this \<longrightarrow> *) thm handleYield'_def
-
-
-text \<open>Interlude: modifies proofs\<close>
-(* transferring modifies rules *)
-lemma autocorres_modifies_transfer:
-  fixes \<Gamma> globals f' f_'proc modifies_eqn P xf
-  assumes f'_def: "f' \<equiv> AC_call_L1 P globals xf (L1_call_simpl \<Gamma> f_'proc)"
-  assumes f_modifies: "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call f_'proc {t. modifies_eqn (globals t) (globals \<sigma>)}"
-  shows "\<forall>\<sigma>. \<lbrace> \<lambda>s. s = \<sigma> \<rbrace> f' \<lbrace> \<lambda>_ s. modifies_eqn s \<sigma> \<rbrace>"
-  apply (clarsimp simp: f'_def AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
-  apply (simp add: liftM_def bind_assoc)
-  apply wp
-      apply (clarsimp split: sum.splits)
-      apply wp
-   apply (rule select_wp)
-  apply wp
-  apply (clarsimp simp: in_monad select_def split: xstate.splits)
-  apply (case_tac xa; clarsimp)
-   apply (drule exec_normal[OF singletonI _ f_modifies[rule_format]])
-   apply (clarsimp simp: mex_def meq_def)
-  apply (drule exec_abrupt[OF singletonI _ f_modifies[rule_format]])
-  apply (clarsimp simp: mex_def meq_def)
-  done
-
-thm autocorres_modifies_transfer[OF tcbSchedDequeue'_def tcbSchedDequeue_modifies]
-thm autocorres_modifies_transfer[OF APFromVMRights'_def APFromVMRights_modifies]
-thm autocorres_modifies_transfer[OF handleSyscall'_def handleSyscall_modifies]
-
-(* proving modifies rules *)
-lemma autocorres_modifies_AC_call:
-  fixes \<Gamma> globals f' f_'proc modifies_eqn P xf
-  assumes f'_def: "f' \<equiv> AC_call_L1 P globals xf (L1_call_simpl \<Gamma> f_'proc)"
-  assumes f_modifies: "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call f_'proc {t. modifies_eqn (globals t) (globals \<sigma>)}"
-  assumes modifies_some: "\<And>x y. modifies_eqn x y \<Longrightarrow> modifies_eqn' x y"
-  assumes modifies_eqn': "\<And>x y z. modifies_eqn' x y \<Longrightarrow> modifies_eqn' y z \<Longrightarrow> modifies_eqn' x z"
-  shows "\<forall>\<sigma>. \<lbrace> \<lambda>s. modifies_eqn' s \<sigma> \<rbrace> f' \<lbrace> \<lambda>_ s. modifies_eqn' s \<sigma> \<rbrace>"
-  apply (clarsimp simp: f'_def AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
-  apply (simp add: liftM_def bind_assoc)
-  apply wp
-      apply (clarsimp split: sum.splits)
-      apply wp
-   apply (rule select_wp)
-  apply wp
-  apply (clarsimp simp: in_monad select_def split: xstate.splits)
-  apply (case_tac xa; clarsimp)
-   apply (drule exec_normal[OF singletonI _ f_modifies[rule_format]])
-   apply (clarsimp simp: mex_def meq_def)
-   apply (blast dest: modifies_some intro: modifies_eqn')
-  apply (drule exec_abrupt[OF singletonI _ f_modifies[rule_format]])
-  apply (clarsimp simp: mex_def meq_def)
-  done
-
-desugar_thm handleYield_modifies "may_only"
-thm handleYield'_def
-
-find_theorems whileLoop
-
-find_theorems fg_cons -name:"Kernel_C"
-find_theorems read_write_valid
-
-
-lemma globals_upd_transitive__ksReadyQueues:
-  fixes x y z :: globals and f g h :: "globals \<Rightarrow> globals"
-  shows
-  "\<lbrakk> \<And>x. f (g x) = f x;
-     \<And>x. ksReadyQueues_' (g x) = ksReadyQueues_' x;
-     \<And>x. ksReadyQueues_' (h x) = ksReadyQueues_' x;
-     \<And>x y z. \<lbrakk> x = f y; y = g z \<rbrakk> \<Longrightarrow> x = h z;
-     x = (f y)\<lparr>ksReadyQueues_' := a\<rparr>;
-     y = (g z)\<lparr>ksReadyQueues_' := b\<rparr>
-   \<rbrakk> \<Longrightarrow> \<exists>c. x = (h z)\<lparr>ksReadyQueues_' := c\<rparr>"
-  apply (rule exI)
-  apply (case_tac x)
-  apply (case_tac y)
-  apply (case_tac z)
-  apply clarsimp
-  apply (rule globals.equality)
-  apply simp
-  oops
-
-lemma handleYield'_modifies:
-  "\<forall>\<sigma>. \<lbrace>\<lambda>s. s = \<sigma>\<rbrace> handleYield'
-       \<lbrace>\<lambda>_ s. mex (\<lambda>ksReadyQueues_'.
-               mex (\<lambda>ksReadyQueuesL1Bitmap_'.
-                mex (\<lambda>ksReadyQueuesL2Bitmap_'.
-                 mex (\<lambda>ksSchedulerAction_'.
-                  mex (\<lambda>t_hrs_'.
-                   meq s (\<sigma>\<lparr>ksReadyQueues_' := ksReadyQueues_',
-                            ksReadyQueuesL1Bitmap_' := ksReadyQueuesL1Bitmap_',
-                            ksReadyQueuesL2Bitmap_' := ksReadyQueuesL2Bitmap_',
-                            ksSchedulerAction_' := ksSchedulerAction_',
-                            t_hrs_' := t_hrs_'\<rparr>))))))\<rbrace>"
-  apply (unfold handleYield'_def)
-  apply (rule allI)
-  apply wp
-
-  apply (rule autocorres_modifies_AC_call[OF rescheduleRequired'_def rescheduleRequired_modifies, rule_format])
-   apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
-  apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
-
-  apply (rule autocorres_modifies_AC_call[OF tcbSchedAppend'_def tcbSchedAppend_modifies, rule_format])
-   apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
-  apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
-
-  apply wp
-
-  apply (rule autocorres_modifies_AC_call[OF tcbSchedDequeue'_def tcbSchedDequeue_modifies, rule_format])
-   apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
-  apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
-
-  apply wp
-  apply (fastforce intro: globals.equality surjective_pairing simp: mex_def meq_def)
-  done
-text \<open>End interlude\<close>
-
+thm tcbSchedDequeue'_modifies
 
 text \<open>Existing ccorres proof, for reference\<close>
 lemma
@@ -357,34 +468,47 @@ lemma
   apply (auto simp: obj_at'_def st_tcb_at'_def ct_in_state'_def valid_objs'_maxDomain)
   done
 
+lemma reorder_gets:
+  "(\<And>x. \<lbrace> \<lambda>s. x = f s \<rbrace> g \<lbrace> \<lambda>_ s. x = f s \<rbrace>) \<Longrightarrow>
+   (do x \<leftarrow> gets f;
+       g;
+       h x od) =
+   (do g;
+       x \<leftarrow> gets f;
+       h x od)"
+  by (fastforce simp: bind_def' valid_def gets_def get_def return_def)
 
-text \<open>ccorres proof using AutoCorres\<close>
+text \<open>Now the proof.\<close>
 lemma (* handleYield_ccorres: *)
   "ccorres dc xfdc (invs' and ct_active') UNIV [] handleYield (Call handleYield_'proc)"
   apply (rule autocorres_to_ccorres[where arg_rel = \<top>, simplified Collect_True])
    apply (rule kernel_all_substitute.handleYield'_ac_corres)
-  apply (simp add: handleYield_alt_def handleYield'_def)
+  apply (simp add: handleYield_def handleYield'_def)
 
   apply (rule corres_guard_imp)
+    (* Emulate vcg exspec=tcbSchedDequeue_modifies
+     * FIXME: proper way to do this? *)
+    apply (subst reorder_gets[symmetric, unfolded K_bind_def])
+     using tcbSchedDequeue'_modifies apply (fastforce simp: valid_def)
+    apply (subst gets_gets)
+
     apply (rule corres_pre_getCurThread)
     apply (rule corres_split[OF _ tcbSchedDequeue_corres])
-       apply (rule corres_split[OF _ getCurThread_corres])
-         apply (rule corres_split[OF _ tcbSchedAppend_corres])
-            apply (rule rescheduleRequired_corres)
-           apply simp
-          apply ((wp weak_sch_act_wf_lift_linear tcbSchedAppend_valid_objs' | simp)+)[5]
-     apply (clarsimp simp: pred_conj_def)
+       apply (rule corres_split[OF _ tcbSchedAppend_corres])
+          apply (rule rescheduleRequired_corres)
+         apply (solves simp)
+        apply (solves \<open>wp tcbSchedAppend_valid_objs' weak_sch_act_wf_lift_linear | simp\<close>)+
      apply wps
-     apply (wp tcbSchedDequeue_invs' tcbSchedDequeue_typ_at' tcbSchedDequeue_valid_queues tcbSchedDequeue_valid_objs' weak_sch_act_wf_lift_linear)[1]
-    apply wp[1]
+     apply (solves \<open>wp tcbSchedDequeue_invs' tcbSchedDequeue_typ_at'
+                       tcbSchedDequeue_valid_queues tcbSchedDequeue_valid_objs'
+                       weak_sch_act_wf_lift_linear\<close>)
+    apply (solves wp)
    apply (clarsimp simp: invs_valid_objs' invs_queues invs_valid_queues' tcb_at_invs'
                          valid_objs'_maxPriority valid_objs'_maxDomain)
-   apply (drule ct_active_runnable')
-   apply (clarsimp simp: obj_at'_def st_tcb_at'_def ct_in_state'_def)
-  apply clarsimp
+   apply (fastforce simp: obj_at'_def st_tcb_at'_def ct_in_state'_def dest: ct_active_runnable')
+  apply fastforce
   done
 
 end
-
 
 end
