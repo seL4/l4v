@@ -12,6 +12,8 @@ theory Ipc_AC
 imports Finalise_AC "../../lib/MonadicRewrite"
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 section{* Notifications *}
 
 subsection{* @{term "pas_refined"} *}
@@ -1239,6 +1241,9 @@ lemma copy_mrs_integrity_autarch:
        | fastforce simp: length_msg_registers msg_align_bits split: split_if_asm)+
   done
 
+(* FIXME: Why was the [wp] attribute clobbered by interpretation of the ARM locale? *)
+declare as_user_thread_bound_ntfn[wp]
+
 lemma get_mi_valid':
   "\<lbrace>\<top>\<rbrace> get_message_info a \<lbrace>\<lambda>rv s. valid_message_info rv\<rbrace>"
   apply (simp add: get_message_info_def)
@@ -2284,5 +2289,7 @@ lemma reply_from_kernel_integrity_autarch:
   apply (simp add: reply_from_kernel_def split_def)
   apply (wp set_message_info_integrity_autarch set_mrs_integrity_autarch as_user_integrity_autarch | simp)+
   done
+
+end
 
 end

@@ -16,6 +16,8 @@ imports
   DomainSepInv
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 definition
   authorised_invocation :: "'a PAS \<Rightarrow> Invocations_A.invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -1003,11 +1005,15 @@ lemma cap_revoke_arm_globals_frame [wp]:
    apply simp+
   done
 
+end
+
 crunch_ignore (add:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action attempt_switch_to ethread_set
   reschedule_required set_thread_state_ext switch_if_required_to next_domain
   set_domain recycle_cap_ext
   attempt_switch_to timer_tick set_priority retype_region_ext)
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 crunch arm_globals_frame [wp]: handle_event "\<lambda>s. P (arm_globals_frame (arch_state s))"
    (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch select_wp
@@ -1155,5 +1161,7 @@ lemma call_kernel_pas_refined:
     apply (wp he_invs handle_event_pas_refined)
      apply auto
   done
+
+end
 
 end

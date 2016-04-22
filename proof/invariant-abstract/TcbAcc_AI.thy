@@ -1767,6 +1767,11 @@ lemmas thread_set_caps_of_state_trivial2
 
 lemmas sts_typ_ats = abs_typ_at_lifts [OF set_thread_state_typ_at]
 
+(*FIXME: arch_split*)
+context Arch begin
+lemmas sts_typ_ats = sts_typ_ats abs_atyp_at_lifts [OF set_thread_state_typ_at]
+end
+
 
 lemma sts_tcb_ko_at:
   "\<lbrace>\<lambda>s. \<forall>v'. v = (if t = t' then v' \<lparr>tcb_state := ts\<rparr> else v')

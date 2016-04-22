@@ -14,6 +14,8 @@ imports
   (* cap_delete_one *)
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 definition
   authorised_irq_ctl_inv :: "'a PAS \<Rightarrow> Invocations_A.irq_control_invocation \<Rightarrow> bool"
 where
@@ -107,5 +109,7 @@ lemma decode_irq_handler_invocation_authorised [wp]:
    apply wp
   apply (auto dest!: hd_in_set)
   done
+
+end
 
 end

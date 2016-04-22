@@ -12,6 +12,8 @@ theory CNode_AC
 imports Access
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 (* FIXME: Move. *)
 lemma tcb_domain_map_wellformed_ekheap[intro!, simp]:
   "ekheap (P s) = ekheap s \<Longrightarrow> tcb_domain_map_wellformed aag (P s) = tcb_domain_map_wellformed aag s"
@@ -85,7 +87,13 @@ lemma integrity_cdt_list_as_list_integ: "(\<forall>x. cdt_list_integrity aag x (
   apply force
   done
 
-lemma (in is_extended) list_integ_lift:
+end
+
+context is_extended begin
+
+interpretation ARM . (*FIXME: arch_split*)
+
+lemma list_integ_lift:
   assumes li: "\<lbrace>list_integ (\<lambda>x. is_subject aag (fst x)) st and Q\<rbrace> f \<lbrace>\<lambda>_. list_integ (\<lambda>x. is_subject aag (fst x)) st\<rbrace>"
   assumes ekh: "\<And>P. \<lbrace>\<lambda>s. P (ekheap s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
   assumes rq: "\<And>P. \<lbrace> \<lambda>s. P (ready_queues s) \<rbrace> f \<lbrace> \<lambda>rv s. P (ready_queues s) \<rbrace>"
@@ -100,6 +108,9 @@ lemma (in is_extended) list_integ_lift:
    apply (simp add: tcb_states_of_state_def get_tcb_def)
   done
 
+end
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 crunch ekheap[wp]: cap_insert_ext,cap_swap_ext,cap_move_ext,empty_slot_ext,create_cap_ext "\<lambda>s. P (ekheap s)"
 
@@ -523,7 +534,13 @@ apply (simp add: tcb_domain_map_wellformed_aux_def get_etcb_def)
 apply (wp ekh)
 done
 
-lemma (in is_extended) pas_refined_tcb_domain_map_wellformed[wp]:
+end
+
+context is_extended begin
+
+interpretation ARM . (*FIXME: arch_split*)
+
+lemma pas_refined_tcb_domain_map_wellformed[wp]:
   assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"
   shows "\<lbrace>pas_refined aag\<rbrace> f \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
 apply (simp add: pas_refined_def)
@@ -531,6 +548,10 @@ apply (wp tdmw)
 apply (wp lift_inv)
 apply simp
 done
+
+end
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma cap_insert_pas_refined:
   "\<lbrace>pas_refined aag and K (is_subject aag (fst dest_slot)
@@ -983,8 +1004,8 @@ lemma store_pde_pas_refined[wp]:
               split: split_if_asm)
   done
 
-lemmas pde_ref_simps = pde_ref_def[split_simps Arch_Structs_A.pde.split]
-    pde_ref2_def[split_simps Arch_Structs_A.pde.split]
+lemmas pde_ref_simps = pde_ref_def[split_simps pde.split]
+    pde_ref2_def[split_simps pde.split]
 
 lemma set_asid_pool_st_vrefs[wp]:
   "\<lbrace>\<lambda>s. P ((state_vrefs s) (p := (\<lambda>(r, p). (p, VSRef (ucast r)
@@ -1384,5 +1405,7 @@ lemma untyped_range_update_cap_data [simp]:
   "untyped_range (update_cap_data b w c) = untyped_range c"
   unfolding update_cap_data_def arch_update_cap_data_def
   by (cases c, simp_all add: is_cap_simps badge_update_def Let_def the_cnode_cap_def)
+
+end
 
 end

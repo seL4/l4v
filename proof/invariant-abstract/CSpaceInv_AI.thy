@@ -1891,7 +1891,7 @@ lemma cap_insert_ex_cap:
         apply (wp set_cap_cap_to get_cap_wp set_cap_cte_wp_at set_untyped_cap_as_full_cte_wp_at)
      apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
      apply (wp set_cap_cap_to get_cap_wp)
-  apply_trace (clarsimp elim!: cte_wp_at_weakenE simp:is_cap_simps cte_wp_at_caps_of_state)
+  apply (clarsimp elim!: cte_wp_at_weakenE simp:is_cap_simps cte_wp_at_caps_of_state)
   apply (simp add:masked_as_full_def)
   done
 

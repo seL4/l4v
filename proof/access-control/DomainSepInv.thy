@@ -13,6 +13,8 @@ imports    "Ipc_AC" (* for transfer_caps_loop_pres_dest lec_valid_cap' set_endpo
   "../../lib/wp/WPBang"
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 text {*
   We define and prove an invariant that is necessary to achieve domain
   separation on seL4. In its strongest form, we require that all IRQs, other than
@@ -1391,7 +1393,11 @@ lemma domain_sep_inv_cur_thread_update[simp]:
 crunch domain_sep_inv[wp]: choose_thread "domain_sep_inv irqs st"
   (wp: crunch_wps dxo_wp_weak ignore: tcb_sched_action MachineOps.clearExMonitor)
 
+end
+
 lemma (in is_extended') domain_sep_inv[wp]: "I (domain_sep_inv irqs st)" by (rule lift_inv, simp)
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma schedule_domain_sep_inv: "\<lbrace>domain_sep_inv irqs st\<rbrace> (schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
@@ -1408,5 +1414,7 @@ apply (simp add: call_kernel_def getActiveIRQ_def)
 apply (wp handle_interrupt_domain_sep_inv handle_event_domain_sep_inv schedule_domain_sep_inv
      | simp)+
 done
+
+end
 
 end

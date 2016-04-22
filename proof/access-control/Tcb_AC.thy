@@ -12,6 +12,8 @@ theory Tcb_AC
 imports Finalise_AC
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 (* FIXME-NTFN: The 'NotificationControl' case of the following definition needs to be changed. *)
 
 definition
@@ -207,12 +209,15 @@ lemma simplify_post: "(\<And>r s. x r s \<Longrightarrow> safe_id (Q' r s) \<Lon
   apply (clarsimp simp add: safe_id_def)+
   done
 
+end
 
 lemma (in is_extended') valid_cap_syn[wp]: "I (\<lambda>s. valid_cap_syn s a)" by (rule lift_inv,simp)
 
 lemma (in is_extended') no_cap_to_obj_dr_emp[wp]: "I (no_cap_to_obj_dr_emp a)" by (rule lift_inv,simp)
 
 lemma (in is_extended') cte_wp_at[wp]: "I (cte_wp_at P a)" by (rule lift_inv,simp)
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma invoke_tcb_tc_respects_aag:
 
@@ -543,5 +548,7 @@ text{*
 to show @{term "integrity"} or @{term "pas_refined"}.
 
 *}
+
+end
 
 end

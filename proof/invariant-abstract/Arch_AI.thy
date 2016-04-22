@@ -549,8 +549,6 @@ end
 crunch arch [wp]: retype_region "\<lambda>s. P (arch_state s)"
   (simp: crunch_simps)
 
-declare detype_arch_state [simp]
-
 context ARM begin (*FIXME: arch_split*)
 lemma retype_region_ap:
   "\<lbrace>\<top>\<rbrace>
@@ -1065,12 +1063,9 @@ lemma sts_same_refs_inv[wp]:
   "\<lbrace>\<lambda>s. same_refs m cap s\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. same_refs m cap s\<rbrace>"
   by (cases m, (clarsimp simp: same_refs_def, wp)+)
 
-(* FIXME: move *)
-lemmas sts_atyp_ats = abs_atyp_at_lifts [OF set_thread_state_typ_at]
-
 lemma sts_valid_slots_inv[wp]:
   "\<lbrace>valid_slots m\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_slots m\<rbrace>"
-  by (cases m, (clarsimp simp: valid_slots_def, wp hoare_vcg_ball_lift sts.vs_lookup sts_atyp_ats)+)
+  by (cases m, (clarsimp simp: valid_slots_def, wp hoare_vcg_ball_lift sts.vs_lookup sts_typ_ats)+)
 
 lemma sts_valid_page_inv[wp]:
 "\<lbrace>valid_page_inv page_invocation\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_page_inv page_invocation\<rbrace>"
@@ -1095,7 +1090,7 @@ lemma sts_valid_arch_inv:
       apply ((wp valid_pde_lift set_thread_state_valid_cap 
                  hoare_vcg_all_lift hoare_vcg_const_imp_lift
                  hoare_vcg_ex_lift set_thread_state_ko 
-                 sts_typ_ats sts_atyp_ats set_thread_state_cte_wp_at
+                 sts_typ_ats set_thread_state_cte_wp_at
                | clarsimp simp: is_tcb_def)+)[4]
    apply (rename_tac asid_control_invocation)
    apply (case_tac asid_control_invocation)
@@ -1236,6 +1231,7 @@ lemma diminished_cte_wp_at_valid_cap:
   done
 
 context ARM begin (*FIXME; arch_split*)
+
 lemma find_pd_for_asid_shifting_voodoo:
   "\<lbrace>pspace_aligned and valid_arch_objs\<rbrace>
      find_pd_for_asid asid
@@ -1734,14 +1730,17 @@ lemma arch_decode_inv_wf[wp]:
    apply (clarsimp simp: valid_cap_def mask_def)
   apply (clarsimp, wp throwError_validE_R)
   done
+
 end
+
+context ARM begin (*FIXME: arch_split*)
 
 declare word_less_sub_le [simp]
 
-context ARM begin (*FIXME: arch_split*)
 crunch pred_tcb_at: perform_page_table_invocation, perform_page_invocation,
            perform_asid_pool_invocation, perform_page_directory_invocation "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
+
 end
 
 lemma delete_objects_st_tcb_at:
