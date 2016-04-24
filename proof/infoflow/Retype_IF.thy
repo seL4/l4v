@@ -12,6 +12,8 @@ theory Retype_IF
 imports CNode_IF
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 lemma create_cap_reads_respects:
   "reads_respects aag l (K (is_subject aag (fst (fst slot)))) (create_cap type bits untyped slot)"
   apply(rule gen_asm_ev)
@@ -1151,7 +1153,7 @@ region_in_kernel_window
                     2 ^
                     (bits_of rv) -
                     1}
-            s \<and> (apiobject_type = Invariants_AI.CapTableObject \<longrightarrow> 0 < nat) \<and>
+            s \<and> (apiobject_type = CapTableObject \<longrightarrow> 0 < nat) \<and>
 {word2..(word2 &&
                     ~~ mask
                         (bits_of rv)) +
@@ -1373,7 +1375,7 @@ word_object_range_cover_globals apiobject_type word2
                     (bits_of cap) -
                     1}
             s \<and>
-           (apiobject_type = Invariants_AI.CapTableObject \<longrightarrow> 0 < nat) \<and>
+           (apiobject_type = CapTableObject \<longrightarrow> 0 < nat) \<and>
 {word2..(word2 &&
                     ~~ mask
                         (bits_of cap)) +
@@ -1493,5 +1495,7 @@ word_object_range_cover_globals apiobject_type word2
   apply(erule disjoint_subset[rotated])
   apply(simp add: ptr_range_def blah word_and_le2)
   done
+
+end
 
 end

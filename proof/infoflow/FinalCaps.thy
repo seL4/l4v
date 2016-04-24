@@ -12,6 +12,8 @@ theory FinalCaps
 imports InfoFlow
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 definition cap_points_to_label where
   "cap_points_to_label aag cap l \<equiv> 
          (\<forall> x \<in> Structures_A.obj_refs cap. (pasObjectAbs aag x = l))
@@ -72,7 +74,11 @@ lemma silc_inv_exst[simp]:
   apply(auto simp: silc_inv_def intra_label_cap_def slots_holding_overlapping_caps_def silc_dom_equiv_def equiv_for_def)
   done
 
+end
+
 lemma (in is_extended') silc_inv[wp]: "I (silc_inv aag st)" by (rule lift_inv,simp) 
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma get_cap_cte_wp_at':
   "(fst (get_cap p s) = {(r,s)}) = cte_wp_at (op = r) p s"
@@ -1019,7 +1025,11 @@ crunch kheap[wp]: deleted_irq_handler "\<lambda>s. P (kheap s x)"
 crunch silc_inv[wp]: deleted_irq_handler "silc_inv aag st"
   (wp: silc_inv_triv)
 
+end
+
 lemma (in is_extended') not_cte_wp_at[wp]: "I (\<lambda>s. \<not> cte_wp_at P t s)" by (rule lift_inv,simp)
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma set_thread_state_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace>
@@ -3209,5 +3219,7 @@ lemma call_kernel_silc_inv:
   apply (simp add: call_kernel_def getActiveIRQ_def)
   apply (wp handle_interrupt_silc_inv handle_event_silc_inv[where st'=st'] | simp)+
   done
+
+end
 
 end

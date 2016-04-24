@@ -643,6 +643,8 @@ lemma big_step_adt_enabled_Step_system:
   using assms apply(simp add: enabled_Step_system_def big_step_adt_Step_system big_step_adt_enabled_system)
   done
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 text {*
   We define a bunch of states that the system can be in. The first two
   are when the processor is in user mode, the final four are for when in
@@ -1195,6 +1197,9 @@ lemma guarded_pas_domain_machine_state_update[simp]: "guarded_pas_domain aag (s\
   apply (simp add: guarded_pas_domain_def)
   done
 
+(* FIXME: Why was the [wp] attribute clobbered by interpretation of the ARM locale? *)
+declare storeWord_irq_masks[wp]
+
 lemma switch_to_idle_thread_guarded_pas_domain[wp]: "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>xb. guarded_pas_domain aag\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
   apply (wp modify_wp dmo_wp | wp_once hoare_drop_imps | simp add: guarded_pas_domain_def)+
@@ -1370,10 +1375,13 @@ definition full_invs_if :: "observable_if set" where
                      scheduler_action (internal_state_if s) = resume_cur_thread
                               | _ \<Rightarrow> True) }"
 
+end
 
 (*We'll define this later, currently it doesn't matter if
   we restrict the permitted steps of the system*)
 consts step_restrict :: "(det_state global_sys_state) \<Rightarrow> bool"
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 definition
   ADT_A_if :: "(user_transition_if) \<Rightarrow> (det_state global_sys_state, observable_if, unit) data_type"
@@ -1485,6 +1493,8 @@ abbreviation valid_domain_list where
   "valid_domain_list s \<equiv> valid_domain_list_2 (domain_list s)"
 
 definition cur_context where "cur_context s = tcb_context (the (get_tcb (cur_thread s) s))"
+
+end
 
 (* the second argument of det_inv the user_context, which is saved in kernel state
    on kernel_entry_if, and restored on kernel_exit_if.
@@ -1607,7 +1617,9 @@ lemma recurring_next_irq_state_dom:
       thus "next_irq_state_dom (i, irq_masks (machine_state s))" by(rule next_irq_state.domintros)
     qed
   qed
- 
+
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 crunch irq_state_of_state[wp]: cap_move "\<lambda>s. P (irq_state_of_state s)"
 crunch domain_fields[wp]: handle_yield "domain_fields P"
 crunch domain_fields[wp]: handle_vm_fault "domain_fields P"
@@ -1999,7 +2011,11 @@ lemma rel_terminate_weaken:
   apply (force simp: rel_terminate_def)
   done
 
+end
+
 context valid_initial_state begin
+
+interpretation ARM . (*FIXME arch_split*)
 
 lemma current_aag_initial: "current_aag s0_internal = initial_aag"
   apply (simp add: current_aag_def cur_domain_subject_s0)
@@ -3585,6 +3601,8 @@ lemma big_step_ADT_A_if_enabled_Step_system:
 
 end
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 definition internal_R where
   "internal_R A R s s' \<equiv> R (Fin A s) (Fin A s')"
 
@@ -3770,5 +3788,7 @@ definition
 where
   "uop_sane f \<equiv> \<forall>t pl pr pxn tcu. (f t pl pr pxn tcu) \<noteq> {} \<and> 
                 (\<forall>tc um es. (Some Interrupt, tc, um, es) \<notin> (f t pl pr pxn tcu))"
+
+end
 
 end

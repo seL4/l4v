@@ -10,12 +10,14 @@
 
 theory Syscall_IF
 imports    
-     "PasUpdates" (*Only needed for idle thread stuff*)
-     "Tcb_IF"
+    "PasUpdates" (*Only needed for idle thread stuff*)
+    "Tcb_IF"
     "Interrupt_IF"
     "Decode_IF"
 
 begin
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 crunch_ignore (add: OR_choice set_scheduler_action)
 
@@ -916,13 +918,14 @@ lemma handle_interrupt_globals_equiv:
     | wpc | simp add: ackInterrupt_def resetTimer_def invs_imps invs_valid_idle)+
   done
 
-
+end
 
 axiomatization dmo_reads_respects where
   dmo_getDFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op getDFSR)" and
   dmo_getFAR_reads_respects: "reads_respects aag l \<top> (do_machine_op getFAR)" and
   dmo_getIFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op getIFSR)"
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma handle_vm_fault_reads_respects:
   "reads_respects aag l (K(is_subject aag thread)) (handle_vm_fault thread vmfault_type)"
@@ -1178,5 +1181,7 @@ lemma handle_event_globals_equiv:
               | wpc | simp add: handle_send_def handle_call_def Let_def
               | wp_once hoare_drop_imps | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle)+
   done
+
+end
 
 end

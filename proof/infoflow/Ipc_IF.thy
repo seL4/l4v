@@ -12,6 +12,8 @@ theory Ipc_IF
 imports Finalise_IF
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 section "reads_respects"
 subsection "Notifications"
 
@@ -2887,5 +2889,7 @@ lemma reply_from_kernel_reads_respects_g:
    apply(rule doesnt_touch_globalsI)
    apply(wp reply_from_kernel_globals_equiv | simp)+
   done
+
+end
 
 end

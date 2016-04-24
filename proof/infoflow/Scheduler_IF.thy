@@ -13,6 +13,7 @@ imports    "Syscall_IF" "PasUpdates"
 
 begin
 
+context begin interpretation ARM . (*FIXME: arch_splits*)
 
 crunch cur_thread: activate_thread "\<lambda>s. P (cur_thread s)"
 crunch cur_thread: arch_switch_to_thread "\<lambda>s. P( cur_thread s)"
@@ -391,12 +392,14 @@ lemma ethread_get_reads_respects_scheduler[wp]: "reads_respects_scheduler aag l 
   apply (clarsimp simp add: scheduler_affects_equiv_def states_equiv_for_def
                             equiv_for_def get_etcb_def)
   done
-  
+
+end  
 
 lemma (in is_extended') globals_equiv[wp]: "I (globals_equiv st)" by (rule lift_inv,simp)
 
 lemma (in is_extended') globals_equiv_scheduler[wp]: "I (globals_equiv_scheduler st)" by (rule lift_inv,simp)
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma tcb_domain_wellformed: "pas_refined aag s \<Longrightarrow> ekheap s t = Some a \<Longrightarrow> pasObjectAbs aag t = pasDomainAbs aag (tcb_domain a)"
   apply (clarsimp simp add: pas_refined_def tcb_domain_map_wellformed_aux_def)
@@ -421,8 +424,11 @@ lemma silc_dom_equiv_trans_state[simp]: "silc_dom_equiv aag st (trans_state f s)
   apply (simp add: silc_dom_equiv_def equiv_for_def)
   done
 
+end
+
 lemma (in is_extended') silc_dom_equiv[wp]: "I (silc_dom_equiv aag st)" by (rule lift_inv,simp)
 
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 lemma tcb_action_reads_respects_scheduler[wp]: "reads_respects_scheduler aag l (pas_refined aag) (tcb_sched_action f t)"
   apply (rule reads_respects_scheduler_cases)
@@ -2141,7 +2147,7 @@ lemma irq_inactive_or_timer: "\<lbrace>domain_sep_inv False st and Q IRQTimer an
 lemma ackInterrupt_no_irq[wp]:
   "no_irq (ackInterrupt irq)"
   apply (clarsimp simp add:no_irq_def)
-  apply (wp dmo_wp VSpace_AI.ackInterrupt_irq_masks | simp add:no_irq_def)+
+  apply (wp dmo_wp ackInterrupt_irq_masks | simp add:no_irq_def)+
   done
 
 crunch irq_state[wp]: ackInterrupt "\<lambda>s. P (irq_state s)"
@@ -2153,7 +2159,7 @@ lemma ackInterrupt_reads_respects_scheduler:
         apply (simp add:  globals_equiv_scheduler_def[abs_def] idle_equiv_def)
         apply (rule hoare_pre)
          apply wps
-         apply (wp dmo_wp VSpace_AI.ackInterrupt_irq_masks | simp add:no_irq_def)+
+         apply (wp dmo_wp ackInterrupt_irq_masks | simp add:no_irq_def)+
          apply (wp dmo_wp | simp add:ackInterrupt_def)+
          apply clarsimp
         apply ((wp silc_dom_lift dmo_wp | simp)+)[5]
@@ -2602,5 +2608,7 @@ lemma SilcLabel_affects_scheduler_equiv:
                    states_equiv_for_def equiv_for_def scheduler_equiv_def equiv_asids_def
                    equiv_asid_def globals_equiv_scheduler_def)
   done
+
+end
 
 end

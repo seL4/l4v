@@ -12,6 +12,8 @@ theory IRQMasks_IF
 imports "../access-control/DomainSepInv"
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 abbreviation irq_masks_of_state :: "det_ext state \<Rightarrow> irq \<Rightarrow> bool" where
   "irq_masks_of_state s \<equiv> irq_masks (machine_state s)"
 
@@ -434,5 +436,7 @@ lemma call_kernel_irq_masks:
     apply(rule valid_validE)
     apply(wp handle_event_irq_masks[where st=st] valid_validE[OF handle_event_domain_sep_inv] | simp)+
   done
+
+end
 
 end
