@@ -20,6 +20,8 @@ theory ExampleSpecIRQ_SI
 imports WellFormed_SI
 begin
 
+context begin interpretation ARM . (*FIXME: arch_split*)
+
 (****************************************************
  * Definitions of all the objects and capabilities. *
  ***************************************************)
@@ -896,6 +898,8 @@ lemma well_formed_example:
                     new_cnode_def new_cap_map_def empty_irq_node_def
                     new_irq_node_def
              split: split_if_asm)
+
+end
 
 end
 
