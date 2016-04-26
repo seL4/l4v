@@ -3,3 +3,6 @@ Built from git repo at /Users/dmatichuk/verification-archsplit/seL4/haskell by d
 Generated from changeset:
 69b7e07 trivial: make style with astyle 2.03
 
+
+Warning - uncomitted changes used:
+?? src/SEL4/Kernel/Thread/.ARM.lhs.swp

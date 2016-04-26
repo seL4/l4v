@@ -20,11 +20,11 @@ imports
   "../PSpaceStorable_H"
   "../ObjectInstances_H"
 begin
-qualify ARM
+qualify ARM_H (in Arch)
 
-instantiation ARM.pde :: pre_storable
+instantiation ARM_H.pde :: pre_storable
 begin
-interpretation ARM .
+interpretation Arch .
 
 definition
   projectKO_opt_pde:
@@ -45,9 +45,9 @@ instance
 
 end
 
-instantiation ARM.pte :: pre_storable
+instantiation ARM_H.pte :: pre_storable
 begin
-interpretation ARM .
+interpretation Arch .
 
 definition
   projectKO_opt_pte:
@@ -69,9 +69,9 @@ instance
 end
 
 
-instantiation ARM.asidpool :: pre_storable
+instantiation ARM_H.asidpool :: pre_storable
 begin
-interpretation ARM .
+interpretation Arch .
 
 definition
   injectKO_asidpool:
@@ -92,11 +92,11 @@ instance
 
 end
 
-lemmas (in ARM) projectKO_opts_defs = 
+lemmas (in Arch) projectKO_opts_defs = 
   projectKO_opt_pde projectKO_opt_pte projectKO_opt_asidpool
   ObjectInstances_H.projectKO_opts_defs
 
-lemmas (in ARM) [simp] =
+lemmas (in Arch) [simp] =
   injectKO_pde koType_pde
   injectKO_pte koType_pte
   injectKO_asidpool koType_asidpool
@@ -105,9 +105,9 @@ lemmas (in ARM) [simp] =
 
 
 
-instantiation ARM.pde :: pspace_storable
+instantiation ARM_H.pde :: pspace_storable
 begin
-interpretation ARM .
+interpretation Arch .
 
 (* pde extra instance defs *)
 
@@ -135,9 +135,9 @@ instance
 
 end
 
-instantiation ARM.pte :: pspace_storable
+instantiation ARM_H.pte :: pspace_storable
 begin
-interpretation ARM .
+interpretation Arch .
 
 (* pte extra instance defs *)
 
@@ -167,9 +167,9 @@ end
 
 (* This is hard coded since using funArray in haskell for 2^32 bound is risky *)
 
-instantiation ARM.asidpool :: pspace_storable
+instantiation ARM_H.asidpool :: pspace_storable
 begin
-interpretation ARM .
+interpretation Arch .
 
 definition
   makeObject_asidpool: "(makeObject :: asidpool)  \<equiv> ASIDPool $
@@ -203,6 +203,6 @@ declare load_update_defs[simp del]
 
 end_qualify
 
-declare (in ARM) load_update_defs[simp]
+declare (in Arch) load_update_defs[simp]
 
 end

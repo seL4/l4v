@@ -583,7 +583,7 @@ lemma set_thread_state_valid_blocked_except:
   apply (clarsimp simp: valid_blocked_def valid_blocked_except_def st_tcb_at_def obj_at_def)
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 crunch valid_etcbs[wp]: switch_to_idle_thread, switch_to_thread valid_etcbs
   (simp: whenE_def ignore: clearExMonitor)
@@ -597,7 +597,7 @@ crunch weak_valid_sched_action[wp]: switch_to_idle_thread,
 
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma switch_to_idle_thread_ct_not_in_q[wp]:
   "\<lbrace>valid_queues and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
@@ -648,7 +648,7 @@ lemma tcb_sched_action_dequeue_valid_sched_action_2_ct_upd:
   apply (clarsimp simp: etcb_at_def valid_sched_action_def split: option.split)
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 crunch ct_not_in_q[wp]: arch_switch_to_thread ct_not_in_q
   (simp: whenE_def ignore: clearExMonitor)
@@ -667,7 +667,7 @@ crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
 
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma switch_to_thread_ct_not_queued[wp]:
   "\<lbrace>valid_queues\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv s. not_queued (cur_thread s) s\<rbrace>"
   apply (simp add: switch_to_thread_def)
@@ -689,7 +689,7 @@ lemma switch_to_thread_ct_not_in_q[wp]:
   apply (wp hoare_drop_imps | simp)+
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma switch_to_thread_valid_sched_action[wp]:
   "\<lbrace>valid_sched_action and is_activatable t\<rbrace>
      switch_to_thread t
@@ -711,12 +711,12 @@ apply wp
 apply (simp add: etcb_at_def split: option.split)
 done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 crunch ct_in_cur_domain_2[wp]: set_vm_root "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
 (simp: whenE_def)
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma switch_to_thread_ct_in_cur_domain[wp]:
   "\<lbrace>\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)\<rbrace> switch_to_thread thread \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
   apply (simp add: switch_to_thread_def arch_switch_to_thread_def)
@@ -764,7 +764,7 @@ lemma tcb_sched_action_dequeue_valid_blocked':
   apply force
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 crunch valid_blocked[wp]: do_machine_op, set_vm_root valid_blocked
   (simp: crunch_simps)
 end
@@ -777,12 +777,12 @@ lemma ct_in_q_machine_state_upd[simp]:
   "ct_in_q (s\<lparr>machine_state := f\<rparr>) = ct_in_q s"
   by (simp add: ct_in_q_def)
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 crunch ct_in_q[wp]: set_vm_root ct_in_q
   (simp: crunch_simps)
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma switch_to_thread_valid_blocked[wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
@@ -936,7 +936,7 @@ lemma next_thread_queued: "queues p \<noteq> [] \<Longrightarrow> \<exists>p. ne
   apply blast
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch etcb_at[wp]: switch_to_idle_thread "etcb_at P t"
 
 lemma switch_to_idle_thread_valid_sched:
@@ -994,7 +994,7 @@ lemma switch_to_thread_cur_in_cur_domain[wp]:
   apply (simp add: switch_to_thread_def | wp tcb_sched_action_dequeue_in_cur_domain)+
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma switch_to_idle_thread_cur_thread_idle_thread [wp]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_ s. cur_thread s = idle_thread s\<rbrace>"
 by (wp | simp add:switch_to_idle_thread_def arch_switch_to_idle_thread_def)+
@@ -1006,7 +1006,7 @@ lemma tcb_sched_enqueue_cur_ct_in_q:
   apply (force simp: etcb_at_def ct_in_q_def tcb_sched_enqueue_def split: option.splits)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch scheduler_action[wp]: switch_to_idle_thread, next_domain "\<lambda>s. P (scheduler_action s)"
   (simp: Let_def)
 end
@@ -1078,7 +1078,7 @@ lemma schedule_valid_sched:
              split: option.splits)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch ct_not_in_q[wp]: finalise_cap ct_not_in_q
   (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
@@ -1176,7 +1176,7 @@ lemma thread_set_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
   by (wp hoare_drop_imps valid_etcbs_lift | simp add: thread_set_def)+
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 lemma set_pd_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> set_pd ptr pd \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
@@ -1220,7 +1220,7 @@ lemma unbind_notification_valid_sched[wp]:
   apply (wp set_bound_notification_valid_sched, clarsimp)
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 crunch valid_etcbs[wp]: finalise_cap valid_etcbs
   (wp: hoare_drop_imps hoare_unless_wp select_inv mapM_x_wp mapM_wp subset_refl
        if_fun_split simp: crunch_simps ignore: set_object thread_set)
@@ -1235,7 +1235,7 @@ lemma reply_cancel_ipc_valid_sched[wp]:
   apply (wp select_wp hoare_drop_imps thread_set_not_state_valid_sched | simp)+
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 lemma set_pt_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> set_pt ptr pt \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
@@ -1372,13 +1372,13 @@ lemma reschedule_required_simple_sched_action[wp]:
 
 crunch simple_sched_action[wp]: tcb_sched_action, update_cdt_list simple_sched_action
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 crunch simple_sched_action[wp]: finalise_cap simple_sched_action
   (wp: hoare_drop_imps mapM_x_wp mapM_wp select_wp subset_refl
    simp: unless_def if_fun_split)
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma suspend_valid_sched[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace> suspend t \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
 apply (simp add: suspend_def)
@@ -1399,7 +1399,7 @@ apply (rule seq_ext)
     done
 end
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 crunch valid_sched[wp]: finalise_cap valid_sched
   (ignore: set_object wp: crunch_wps subset_refl simp: if_fun_split)
 end
@@ -1407,7 +1407,7 @@ end
 crunch simple_sched_action[wp]: cap_swap_for_delete, cap_insert simple_sched_action
   (wp: mapM_wp subset_refl hoare_drop_imps)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma rec_del_valid_sched'[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
@@ -1559,7 +1559,7 @@ lemma set_priority_valid_sched[wp]:
 
 crunch simple_sched_action[wp]: set_priority simple_sched_action
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma tc_valid_sched[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
       invoke_tcb (ThreadControl a sl b pr e f g)
@@ -1817,7 +1817,7 @@ lemma transfer_caps_not_cur_thread[wp]:
    \<lbrace>\<lambda>rv. not_cur_thread t\<rbrace>"
   by (simp add: transfer_caps_def | wp transfer_caps_loop_pres | wpc)+
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch not_cur_thread[wp]: do_ipc_transfer, as_user "not_cur_thread t"
   (wp: crunch_wps simp: crunch_simps ignore: const_on_failure)
 end
@@ -2046,7 +2046,7 @@ lemma thread_set_state_eq_valid_sched:
   apply (wp thread_set_state_eq_valid_queues thread_set_state_eq_valid_blocked thread_set_state_eq_valid_sched_action thread_set_state_eq_ct_in_cur_domain | simp)+
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch valid_sched[wp]: arch_recycle_cap valid_sched (wp: crunch_wps)
 end
 
@@ -2109,7 +2109,7 @@ apply (simp add: recycle_cap_ext_def)
 apply (wp ethread_set_inactive_valid_sched)
 done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma recycle_cap_valid_sched[wp]:
   "\<lbrace>valid_sched and valid_idle\<rbrace> recycle_cap is_final cap \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (rule hoare_pre)
@@ -2152,7 +2152,7 @@ lemma transfer_caps_valid_sched:
   apply (simp add: transfer_caps_def | wp transfer_caps_loop_pres | wpc)+
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch valid_sched[wp]: do_ipc_transfer, handle_fault_reply valid_sched
   (wp: crunch_wps)
 end
@@ -2282,7 +2282,7 @@ lemma set_thread_state_ready_queues[wp]:
 crunch scheduler_act[wp]: cap_insert_ext "\<lambda>s :: det_ext state. P (scheduler_action s)"
 crunch scheduler_act[wp]: set_extra_badge,cap_insert "\<lambda>s :: det_state. P (scheduler_action s)" (wp: crunch_wps)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch scheduler_act[wp]: do_ipc_transfer "\<lambda>s :: det_state. P (scheduler_action s)"
   (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure)
 crunch ready_queues[wp]: cap_insert_ext "\<lambda>s :: det_ext state. P (ready_queues s)"
@@ -2407,7 +2407,7 @@ lemma handle_fault_valid_sched:
    handle_fault thread ex \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   by (simp add: handle_fault_def | wp handle_double_fault_valid_sched send_fault_ipc_valid_sched)+
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma activate_thread_valid_sched:
   "\<lbrace>valid_sched\<rbrace> activate_thread \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (simp add: activate_thread_def)
@@ -2759,11 +2759,11 @@ crunch etcb_at[wp]: cap_insert "\<lambda>s. etcb_at P t s"
   (wp: crunch_wps
    simp : cap_insert_ext_def)
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 crunch valid_sched[wp]: perform_page_invocation,perform_page_table_invocation,perform_asid_pool_invocation, perform_page_directory_invocation valid_sched (wp: mapM_x_wp' mapM_wp')
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma arch_perform_invocation_valid_sched[wp]:
   "\<lbrace>invs and valid_sched and ct_active and valid_arch_inv a\<rbrace>
@@ -2835,7 +2835,7 @@ lemma tcb_sched_action_valid_idle_etcb[wp]:
   apply(wp valid_idle_etcb_lift)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma invoke_domain_valid_sched[wp]:
   "\<lbrace>valid_sched and tcb_at t and (\<lambda>s. t \<noteq> idle_thread s)
                 and simple_sched_action and valid_idle\<rbrace>
@@ -2885,7 +2885,7 @@ crunch ct_not_queued[wp]: set_thread_state ct_not_queued (wp: ct_not_queued_lift
 
 crunch valid_sched[wp]: lookup_cap_and_slot valid_sched
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma handle_invocation_valid_sched:
   "\<lbrace>invs and valid_sched and ct_active and
     (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
@@ -2921,7 +2921,7 @@ lemma handle_reply_valid_sched:
   apply (auto simp: invs_valid_objs idle_not_reply_cap invs_valid_idle invs_valid_reply_caps)
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 crunch valid_sched[wp]: handle_vm_fault valid_sched
   (ignore: getFAR getDFSR getIFSR)
@@ -2951,7 +2951,7 @@ crunch not_queued[wp]: handle_fault_reply "not_queued t"
 
 crunch sched_act_not[wp]: handle_fault_reply "scheduler_act_not t"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch valid_etcbs[wp]: set_extra_badge, do_ipc_transfer valid_etcbs
   (wp: transfer_caps_loop_pres crunch_wps const_on_failure_wp simp: crunch_simps)
 end
@@ -3034,7 +3034,7 @@ lemma do_reply_transfer_scheduler_act_sane[wp]:
 crunch ct_not_queued[wp]: handle_reply "ct_not_queued"
 crunch scheduler_act_sane[wp]: handle_reply "scheduler_act_sane"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma handle_event_valid_sched:
   "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and

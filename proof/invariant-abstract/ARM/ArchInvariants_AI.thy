@@ -14,7 +14,7 @@ begin
 
 section "Move this up"
 
-qualify ARM
+qualify ARM (in Arch)
 
 -- ---------------------------------------------------------------------------
 section "Things to Move Up"
@@ -29,7 +29,7 @@ end_qualify
 -- ---------------------------------------------------------------------------
 section "ARM-specific invariant definitions"
 
-context ARM begin
+context Arch begin global_naming ARM
 
 (* These simplifications allows us to keep many arch-specific proofs unchanged. *)
 
@@ -339,7 +339,7 @@ abbreviation
   ("_ \<rhd> _" [80,80] 81) where
   "rs \<rhd> p \<equiv> \<lambda>s. (rs,p) \<in> vs_lookup s"
 
-context ARM begin
+context Arch begin global_naming ARM
 
 abbreviation
   is_reachable_abbr :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" ("\<exists>\<rhd> _" [80] 81) where
@@ -424,7 +424,7 @@ abbreviation
   "\<exists>\<unrhd> p \<equiv> \<lambda>s. \<exists>ref. (ref \<unrhd> p) s"
 
 
-context ARM begin
+context Arch begin global_naming ARM
 
 definition
   pde_mapping_bits :: "nat"
@@ -1131,7 +1131,7 @@ lemma valid_table_caps_update [iff]:
 
 end
 
-context ARM begin
+context Arch begin global_naming ARM
 
 lemma global_refs_equiv:
   assumes "idle_thread s = idle_thread s'"

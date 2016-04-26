@@ -317,7 +317,7 @@ lemma get_epq_sp:
   apply (wp|simp)+
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch v_ker_map[wp]: set_endpoint "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)

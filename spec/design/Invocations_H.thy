@@ -14,9 +14,9 @@ imports
   "./$L4V_ARCH/ArchRetypeDecls_H"
   "./$L4V_ARCH/ArchLabelFuns_H"
 begin
-
-unqualify_types (in Arch)
-  copy_register_sets
+requalify_types (in Arch)
+  copy_register_sets irqcontrol_invocation
+  invocation
 
 datatype tcbinvocation =
     Suspend machine_word
@@ -930,5 +930,8 @@ where
     True      then InvalidInvocation
     else undefined"
 
+
+shadow_types (in Arch)
+  invocation
 
 end

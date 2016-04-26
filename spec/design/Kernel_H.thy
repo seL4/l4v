@@ -18,4 +18,21 @@ imports
   CSpace_H
 begin
 
+context Arch begin
+
+requalify_types
+  kernel_state
+
+shadow_types
+  kernel_state
+
+shadow_facts
+  deriveCap_def finaliseCap_def recycleCap_def
+  hasRecycleRights_def sameRegionAs_def isPhysicalCap_def
+  sameObjectAs_def updateCapData_def maskCapRights_def
+  createObject_def capUntypedPtr_def capUntypedSize_def
+  performInvocation_def decodeInvocation_def
+
+end
+
 end

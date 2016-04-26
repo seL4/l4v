@@ -19,10 +19,15 @@ imports
   Thread_H
 begin
 
-unqualify_consts (in Arch)
+context Arch begin
+unqualify_consts
   getMemoryRegions
   addrFromPPtr
   init_machine_state
+
+requalify_consts
+  newKernelState
+end
 
 fun coverOf :: "region list => region" 
 where "coverOf x0 = (case x0 of
@@ -295,10 +300,10 @@ consts
   newKSDomScheduleIdx :: nat
   newKSCurDomain :: domain
   newKSDomainTime :: machine_word
- 
-definition
   newKernelState :: "machine_word \<Rightarrow> kernel_state"
-where
+
+defs
+newKernelState_def:
 "newKernelState arg \<equiv> \<lparr>
         ksPSpace= newPSpace,
         gsUserPages= (\<lambda>x. None),
@@ -316,8 +321,15 @@ where
         ksSchedulerAction= ResumeCurrentThread,
         ksInterruptState= error [],
         ksWorkUnitsCompleted= 0,
-        ksArchState= fst (ArchStateData_H.newKernelState arg),
+        ksArchState= fst (Arch.newKernelState arg),
         ksMachineState= init_machine_state
 	\<rparr>"
+
+context Arch begin
+shadow_facts
+   newKernelState_def
+shadow_consts
+   newKernelState
+end
 
 end

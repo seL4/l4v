@@ -89,7 +89,7 @@ lemma dmo_storeWord_valid_irq_states[wp]:
   apply(erule use_valid[OF _ storeWord_valid_irq_states])
   by simp
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma dmo_mapM_storeWord_0_invs[wp]:
   "valid invs (do_machine_op (mapM (\<lambda>p. storeWord p 0) S)) (\<lambda>_. invs)"
   apply (simp add: dom_mapM ef_storeWord)
@@ -114,7 +114,7 @@ lemma dmo_kheap_arch_state[wp]:
   by (clarsimp simp: do_machine_op_def simpler_gets_def select_f_def
           simpler_modify_def return_def bind_def valid_def)
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma set_vm_root_kheap_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace> set_vm_root a
    \<lbrace>\<lambda>_ s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace>" (is "valid ?P _ _")
@@ -130,7 +130,7 @@ lemma set_vm_root_kheap_arch_state[wp]:
 done
 end
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma clearExMonitor_invs [wp]:
   "\<lbrace>invs\<rbrace> do_machine_op clearExMonitor \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wp dmo_invs)
@@ -139,7 +139,7 @@ lemma clearExMonitor_invs [wp]:
   done
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_stt_invs [wp]:
   "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
@@ -157,7 +157,7 @@ end
 lemmas do_machine_op_tcb[wp] =
   do_machine_op_obj_at[where P=id and Q=is_tcb, simplified]
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_stt_tcb [wp]:
   "\<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. tcb_at t'\<rbrace>"
   apply (simp add: arch_switch_to_thread_def) 
@@ -194,7 +194,7 @@ lemma stt_invs [wp]:
 abbreviation
   "activatable \<equiv> \<lambda>st. runnable st \<or> idle st"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_stt_runnable:
   "\<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . st_tcb_at runnable t\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
@@ -218,7 +218,7 @@ lemma invs_upd_cur_valid:
     \<Longrightarrow> \<lbrace>P and Q\<rbrace> f \<lbrace>\<lambda>rv s. invs (s\<lparr>cur_thread := thread\<rparr>)\<rbrace>"
   by (fastforce simp: valid_def invs_def valid_state_def cur_tcb_def valid_machine_state_def)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma stit_invs [wp]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
@@ -239,7 +239,7 @@ lemma pred_tcb_weaken_strongerE:
   "\<lbrakk> pred_tcb_at proj P t s; \<And>tcb . P (proj tcb) \<Longrightarrow> P' (proj' tcb) \<rbrakk> \<Longrightarrow> pred_tcb_at proj' P' t s"
   by (auto simp: pred_tcb_at_def elim: obj_at_weakenE)
 
-context begin interpretation ARM . (* FIXME: arch_split*)
+context begin interpretation Arch . (* FIXME: arch_split*)
 lemma stit_activatable:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)

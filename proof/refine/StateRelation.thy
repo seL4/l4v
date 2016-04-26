@@ -16,6 +16,7 @@ theory StateRelation
 imports Invariants_H
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 definition
   cte_map :: "cslot_ptr \<Rightarrow> word32"
 where
@@ -117,7 +118,7 @@ where
                                \<and> cs y = Some cap \<and> cap_relation cap (cteCap cte)"
 
 definition
-  asid_pool_relation :: "(10 word \<rightharpoonup> word32) \<Rightarrow> ArchStructures_H.asidpool \<Rightarrow> bool"
+  asid_pool_relation :: "(10 word \<rightharpoonup> word32) \<Rightarrow> asidpool \<Rightarrow> bool"
 where
   "asid_pool_relation \<equiv> \<lambda>p p'. p = inv ASIDPool p' o ucast"
 
@@ -189,62 +190,62 @@ where
         (TCB tcb, KOTCB tcb') \<Rightarrow> tcb_relation tcb tcb'
       | (Endpoint ep, KOEndpoint ep') \<Rightarrow> ep_relation ep ep'
       | (Notification ntfn, KONotification ntfn') \<Rightarrow> ntfn_relation ntfn ntfn'
-      | (ArchObj (Arch_Structs_A.ASIDPool pool), KOArch (KOASIDPool pool'))
+      | (ArchObj (ARM_A.ASIDPool pool), KOArch (KOASIDPool pool'))
              \<Rightarrow> asid_pool_relation pool pool'
       | _ \<Rightarrow> False)"
 
 primrec
-   pde_relation' :: "Arch_Structs_A.pde \<Rightarrow> Hardware_H.pde \<Rightarrow> bool"
+   pde_relation' :: "ARM_A.pde \<Rightarrow> ARM_H.pde \<Rightarrow> bool"
 where
-  "pde_relation'  Arch_Structs_A.InvalidPDE x = (x = Hardware_H.InvalidPDE)"
-| "pde_relation' (Arch_Structs_A.PageTablePDE ptr atts domain) x
-      = (x = Hardware_H.PageTablePDE ptr (ParityEnabled \<in> atts) domain)"
-| "pde_relation' (Arch_Structs_A.SectionPDE ptr atts domain rghts) x
-      = (x = Hardware_H.SectionPDE ptr (ParityEnabled \<in> atts) domain
+  "pde_relation'  ARM_A.InvalidPDE x = (x = ARM_H.InvalidPDE)"
+| "pde_relation' (ARM_A.PageTablePDE ptr atts domain) x
+      = (x = ARM_H.PageTablePDE ptr (ParityEnabled \<in> atts) domain)"
+| "pde_relation' (ARM_A.SectionPDE ptr atts domain rghts) x
+      = (x = ARM_H.SectionPDE ptr (ParityEnabled \<in> atts) domain
                (PageCacheable \<in> atts) (Global \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
-| "pde_relation' (Arch_Structs_A.SuperSectionPDE ptr atts rghts) x
-      = (x = Hardware_H.SuperSectionPDE ptr (ParityEnabled \<in> atts)
+| "pde_relation' (ARM_A.SuperSectionPDE ptr atts rghts) x
+      = (x = ARM_H.SuperSectionPDE ptr (ParityEnabled \<in> atts)
                (PageCacheable \<in> atts) (Global \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
 
 
 primrec
-   pte_relation' :: "Arch_Structs_A.pte \<Rightarrow> Hardware_H.pte \<Rightarrow> bool"
+   pte_relation' :: "ARM_A.pte \<Rightarrow> ARM_H.pte \<Rightarrow> bool"
 where
-  "pte_relation'  Arch_Structs_A.InvalidPTE x = (x = Hardware_H.InvalidPTE)"
-| "pte_relation' (Arch_Structs_A.LargePagePTE ptr atts rghts) x
-      = (x = Hardware_H.LargePagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) 
+  "pte_relation'  ARM_A.InvalidPTE x = (x = ARM_H.InvalidPTE)"
+| "pte_relation' (ARM_A.LargePagePTE ptr atts rghts) x
+      = (x = ARM_H.LargePagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) 
                                          (XNever \<in> atts) (vmrights_map rghts))"
-| "pte_relation' (Arch_Structs_A.SmallPagePTE ptr atts rghts) x
-      = (x = Hardware_H.SmallPagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) 
+| "pte_relation' (ARM_A.SmallPagePTE ptr atts rghts) x
+      = (x = ARM_H.SmallPagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) 
                                          (XNever \<in> atts) (vmrights_map rghts))"
 
 
 definition
-  pde_align' :: "Hardware_H.pde \<Rightarrow> nat"
+  pde_align' :: "ARM_H.pde \<Rightarrow> nat"
 where
  "pde_align' pde \<equiv>
-  case pde of Hardware_H.pde.SuperSectionPDE _ _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
+  case pde of ARM_H.pde.SuperSectionPDE _ _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
 
 lemmas pde_align_simps[simp] =
-  pde_align'_def[split_simps Arch_Structs_A.pde.split]
+  pde_align'_def[split_simps ARM_A.pde.split]
 
 definition
-  pte_align' :: "Hardware_H.pte \<Rightarrow> nat"
+  pte_align' :: "ARM_H.pte \<Rightarrow> nat"
 where
- "pte_align' pte \<equiv> case pte of Hardware_H.pte.LargePagePTE _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
+ "pte_align' pte \<equiv> case pte of ARM_H.pte.LargePagePTE _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
 
 lemmas pte_align_simps[simp] =
-  pte_align'_def[split_simps Arch_Structs_A.pte.split]
+  pte_align'_def[split_simps ARM_A.pte.split]
 
 definition
   "pde_relation_aligned y pde pde' \<equiv>
    if is_aligned y (pde_align' pde') then pde_relation' pde pde'
-   else pde = Arch_Structs_A.InvalidPDE"
+   else pde = ARM_A.InvalidPDE"
 
 definition
   "pte_relation_aligned y pte pte' \<equiv>
    if is_aligned y (pte_align' pte') then pte_relation' pte pte'
-   else pte = Arch_Structs_A.InvalidPTE"
+   else pte = ARM_A.InvalidPTE"
 
 definition
  "pte_relation y \<equiv> \<lambda>ko ko'. \<exists>pt pte. ko = ArchObj (PageTable pt) \<and> ko' = KOArch (KOPTE pte)
@@ -256,10 +257,10 @@ definition
 
 
 primrec
- aobj_relation_cuts :: "Arch_Structs_A.arch_kernel_obj \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
+ aobj_relation_cuts :: "ARM_A.arch_kernel_obj \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
 where
   "aobj_relation_cuts (DataPage sz) x = {(x + n * 2 ^ pageBits, \<lambda>_. (op =) KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }"
-| "aobj_relation_cuts (Arch_Structs_A.ASIDPool pool) x =
+| "aobj_relation_cuts (ARM_A.ASIDPool pool) x =
      {(x, other_obj_relation)}"
 | "aobj_relation_cuts (PageTable pt) x =
      (\<lambda>y. (x + (ucast y << 2), pte_relation y)) ` UNIV"
@@ -291,7 +292,7 @@ lemma obj_relation_cuts_def2:
              | ArchObj (DataPage sz)      \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_. (op =) KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
              | _ \<Rightarrow> {(x, other_obj_relation)})"
   by (simp split: Structures_A.kernel_object.split
-                  Arch_Structs_A.arch_kernel_obj.split)
+                  ARM_A.arch_kernel_obj.split)
 
 lemma obj_relation_cuts_def3:
   "obj_relation_cuts ko x =
@@ -306,7 +307,7 @@ lemma obj_relation_cuts_def3:
    | _ \<Rightarrow> {(x, other_obj_relation)})"
   apply (simp add: obj_relation_cuts_def2 a_type_def
             split: Structures_A.kernel_object.split
-                  Arch_Structs_A.arch_kernel_obj.split)
+                  ARM_A.arch_kernel_obj.split)
   apply (clarsimp simp: well_formed_cnode_n_def length_set_helper)
   done
 
@@ -421,7 +422,7 @@ where
               \<and> (\<forall>irq. irq_state_relation (irqs irq) (irqs' irq)))"
 
 definition
-  arch_state_relation :: "(arch_state \<times> ArchStateData_H.kernel_state) set"
+  arch_state_relation :: "(arch_state \<times> ARM_H.kernel_state) set"
 where
   "arch_state_relation \<equiv> {(s, s') .
          arm_globals_frame s = armKSGlobalsFrame s'
@@ -458,7 +459,7 @@ lemma obj_relation_cutsE:
   apply (simp add: obj_relation_cuts_def2 is_other_obj_relation_type_def
                    a_type_def
             split: Structures_A.kernel_object.split_asm split_if_asm
-                   Arch_Structs_A.arch_kernel_obj.split_asm)
+                   ARM_A.arch_kernel_obj.split_asm)
     apply (force simp: cte_relation_def pte_relation_def pde_relation_def)+
   done
 
@@ -650,9 +651,9 @@ lemma objBits_obj_bits:
   by (simp add: other_obj_relation_def objBitsKO_simps pageBits_def
                 archObjSize_def
          split: Structures_A.kernel_object.split_asm
-                Arch_Structs_A.arch_kernel_obj.split_asm
+                ARM_A.arch_kernel_obj.split_asm
                 Structures_H.kernel_object.split_asm
-                ArchStructures_H.arch_kernel_object.split_asm)
+                ARM_H.arch_kernel_object.split_asm)
 
 lemma replicate_length_cong:
   "x = y \<Longrightarrow> replicate x n = replicate y n" by simp
@@ -736,4 +737,5 @@ lemma ghost_relation_typ_at:
    (\<forall>a n. typ_at (ACapTable n) a s = (cns a = Some n))"
 by (rule eq_reflection) (clarsimp simp: ghost_relation_def typ_at_eq_kheap_obj)
 
+end
 end

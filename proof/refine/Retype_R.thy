@@ -2705,7 +2705,7 @@ lemma pde_relation_aligned_eq:
    \<Longrightarrow> pde_relation_aligned (pd + x >> 2) xa ya =
        pde_relation_aligned (pd' + x >> 2) xa ya"
   apply (clarsimp simp: pde_relation_aligned_def is_aligned_mask mask_def
-                 split: Hardware_H.pde.splits)
+                 split: ARM_H.pde.splits)
   apply word_bitwise
   apply auto
   done

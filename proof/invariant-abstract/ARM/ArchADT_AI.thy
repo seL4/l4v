@@ -15,7 +15,7 @@ imports
   "../../../lib/Simulation"
   "../Invariants_AI"
 begin
-context ARM begin
+context Arch begin global_naming ARM
 
 subsection {* Constructing a virtual-memory view *}
 

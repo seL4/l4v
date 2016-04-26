@@ -187,7 +187,7 @@ schematic_goal tcb_ipcframe_in_cases:
   "(tcb_ipcframe, ?x) \<in> ran tcb_cap_cases"
   by (fastforce simp add: ran_tcb_cap_cases)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_ipc_buffer_cap_0[simp]:
   "valid_ipc_buffer_cap cap 0"
   by (simp add: valid_ipc_buffer_cap_def split: cap.split arch_cap.split)
@@ -856,7 +856,7 @@ lemma as_user_tcb [wp]: "\<lbrace>tcb_at t'\<rbrace> as_user t m \<lbrace>\<lamb
   apply simp
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma mab_pb [simp]:
   "msg_align_bits \<le> pageBits"
   unfolding msg_align_bits pageBits_def by simp
@@ -929,7 +929,7 @@ proof -
   thus ?thesis by (simp add: valid_tcb_def valid_obj_def)
 qed
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma get_cap_valid_ipc:
   "\<lbrace>valid_objs and obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_ipc_buffer tcb = v) t\<rbrace>
      get_cap (t, tcb_cnode_index 4)
@@ -1378,7 +1378,7 @@ lemma bound_tcb_ex_cap:
   unfolding pred_tcb_at_def
   by (erule (1) if_live_then_nonz_capD, fastforce)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma pred_tcb_cap_wp_at:
   "\<lbrakk>pred_tcb_at proj P t s; valid_objs s;
     ref \<in> dom tcb_cap_cases;

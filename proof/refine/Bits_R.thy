@@ -31,13 +31,28 @@ crunch_ignore (add:
   withoutPreemption preemptionPoint
   cap_fault_on_failure lookup_error_on_failure)
 
+context Arch begin (*FIXME: arch_split*)
+
 crunch_ignore (add:
-  storeWord storeWordVM loadWord setRegister getRegister getRestartPC
-  debugPrint set_register get_register invalidateTLB_ASID invalidateTLB_VAASID
+  invalidateTLB_ASID invalidateTLB_VAASID
   cleanByVA cleanByVA_PoU invalidateByVA invalidateByVA_I invalidate_I_PoU
   cleanInvalByVA branchFlush clean_D_PoU cleanInvalidate_D_PoC cleanInvalidateL2Range
   invalidateL2Range cleanL2Range flushBTAC writeContextID isb dsb dmb
-  setHardwareASID setCurrentPD setNextPC maskInterrupt clearMemory throw_on_false)
+  setHardwareASID setCurrentPD)
+
+end
+
+crunch_ignore (add:
+  storeWordVM loadWord setRegister getRegister getRestartPC
+  debugPrint set_register get_register
+  setNextPC maskInterrupt clearMemory throw_on_false)
+
+crunch_ignore (add: unifyFailure ignoreFailure)
+
+crunch_ignore (add: empty_on_failure)
+crunch_ignore (add: emptyOnFailure)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp
@@ -320,7 +335,7 @@ lemma ignoreFailure_wp[wp_split]:
   done
 
 
-crunch_ignore (add: unifyFailure ignoreFailure)
+
 
 lemma ep'_cases_weak_wp:
   assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>"
@@ -468,8 +483,6 @@ lemma corres_empty_on_failure:
   done
 
 
-crunch_ignore (add: empty_on_failure)
-crunch_ignore (add: emptyOnFailure)
 
 lemma emptyOnFailure_wp[wp]:
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q []\<rbrace>
@@ -552,4 +565,5 @@ lemma constOnFailure_wp :
   apply (wp|simp)+
   done
 
+end
 end

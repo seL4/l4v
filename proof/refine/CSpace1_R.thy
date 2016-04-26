@@ -334,7 +334,7 @@ lemma maskCapRights [simp]:
 lemma maskCap_valid [simp]:
   "s \<turnstile>' RetypeDecls_H.maskCapRights R cap = s \<turnstile>' cap"
   by (simp    add: valid_cap'_def maskCapRights_def isCap_simps
-                   capAligned_def ArchRetype_H.maskCapRights_def
+                   capAligned_def ARM.maskCapRights_def
             split: capability.split arch_capability.split
         split del: split_if)
 
@@ -434,7 +434,7 @@ proof -
    apply (rename_tac arch_cap)
    apply (case_tac arch_cap)
         apply (simp_all add: simps arch_update_cap_data_def
-                             ArchRetype_H.updateCapData_def)[5]
+                             ARM.updateCapData_def)[5]
   -- CNodeCap
   apply (simp add: simps word_bits_def the_cnode_cap_def andCapRights_def
                    rightsFromWord_def data_to_rights_def nth_ucast)
@@ -1529,7 +1529,7 @@ lemma capASID_update [simp]:
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
          simp_all add: updateCapData_def
-                       ArchRetype_H.updateCapData_def
+                       ARM.updateCapData_def
                        isCap_simps Let_def)
   done
 
@@ -1540,7 +1540,7 @@ lemma cap_vptr_update' [simp]:
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
          simp_all add: updateCapData_def
-                       ArchRetype_H.updateCapData_def
+                       ARM.updateCapData_def
                        isCap_simps Let_def)
   done
 
@@ -1551,7 +1551,7 @@ lemma cap_asid_base_update' [simp]:
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
          simp_all add: updateCapData_def
-                       ArchRetype_H.updateCapData_def
+                       ARM.updateCapData_def
                        isCap_simps Let_def)
   done
 
@@ -1561,7 +1561,7 @@ lemma updateCapData_Master:
   apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
                            split: split_if_asm)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all add: ArchRetype_H.updateCapData_def)
+  apply (case_tac arch_capability, simp_all add: ARM.updateCapData_def)
   done
 
 lemma updateCapData_Reply:
@@ -1597,7 +1597,7 @@ lemma capASID_mask [simp]:
   apply (cases c, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
-         simp_all add: maskCapRights_def ArchRetype_H.maskCapRights_def isCap_simps Let_def)
+         simp_all add: maskCapRights_def ARM.maskCapRights_def isCap_simps Let_def)
   done
 
 lemma cap_vptr_mask' [simp]:
@@ -1606,7 +1606,7 @@ lemma cap_vptr_mask' [simp]:
   apply (cases c, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
-         simp_all add: maskCapRights_def ArchRetype_H.maskCapRights_def isCap_simps Let_def)
+         simp_all add: maskCapRights_def ARM.maskCapRights_def isCap_simps Let_def)
   done
 
 lemma cap_asid_base_mask' [simp]:
@@ -1615,7 +1615,7 @@ lemma cap_asid_base_mask' [simp]:
   apply (cases c, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
-         simp_all add: maskCapRights_def ArchRetype_H.maskCapRights_def isCap_simps Let_def)
+         simp_all add: maskCapRights_def ARM.maskCapRights_def isCap_simps Let_def)
   done
 
 lemma weak_derived_maskCapRights:
@@ -1902,7 +1902,7 @@ lemma other_obj_relation_KOCTE[simp]:
   "\<not> other_obj_relation ko (KOCTE cte)"
   by (simp add: other_obj_relation_def
          split: Structures_A.kernel_object.splits
-                Arch_Structs_A.arch_kernel_obj.splits)
+                ARM_A.arch_kernel_obj.splits)
 
 lemma cte_map_pulls_tcb_to_abstract:
   "\<lbrakk> y = cte_map z; pspace_relation (kheap s) (ksPSpace s');
@@ -1915,7 +1915,7 @@ lemma cte_map_pulls_tcb_to_abstract:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        Arch_Structs_A.arch_kernel_obj.split_asm)
+                        ARM_A.arch_kernel_obj.split_asm)
   apply (drule tcb_cases_related2)
   apply clarsimp
   apply (frule(1) cte_wp_at_tcbI [OF _ _ TrueI, where t="(a, b)" for a b, simplified])
@@ -2194,7 +2194,7 @@ lemma pspace_relation_cte_wp_atI':
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (simp add: other_obj_relation_def
             split: Structures_A.kernel_object.split_asm
-                   Arch_Structs_A.arch_kernel_obj.split_asm)
+                   ARM_A.arch_kernel_obj.split_asm)
   apply (subgoal_tac "n = x - y", clarsimp)
    apply (drule tcb_cases_related2, clarsimp)
    apply (intro exI, rule conjI)
@@ -2925,7 +2925,7 @@ lemma updateMDB_pspace_relation:
    apply (rule pspace_dom_relatedE, assumption+)
    apply (rule obj_relation_cutsE, assumption+, simp_all)[1]
    apply (clarsimp split: Structures_A.kernel_object.split_asm
-                          Arch_Structs_A.arch_kernel_obj.split_asm
+                          ARM_A.arch_kernel_obj.split_asm
                     simp: other_obj_relation_def)
    apply (frule(1) tcb_cte_cases_aligned_helpers(1))
    apply (frule(1) tcb_cte_cases_aligned_helpers(2))

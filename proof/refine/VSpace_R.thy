@@ -1408,7 +1408,7 @@ lemma page_table_mapped_corres:
          apply (rule corres_trivial)
          apply (case_tac rv,
            simp_all add: returnOk_def pde_relation_aligned_def
-           split:if_splits Hardware_H.pde.splits)[1]
+           split:if_splits ARM_H.pde.splits)[1]
         apply (wp | simp add: lookup_pd_slot_def Let_def)+
    apply (simp add: word_neq_0_conv)
   apply simp
@@ -1507,7 +1507,7 @@ lemma check_mapping_corres:
          auto simp add: is_aligned_mask[symmetric]
          is_aligned_shiftr pg_entry_align_def
          unlessE_def returnOk_def pte_relation_aligned_def
-         split: Arch_Structs_A.pte.split if_splits Hardware_H.pte.split )
+         split: ARM_A.pte.split if_splits ARM_H.pte.split )
       apply wp
     apply simp
    apply (simp add:is_aligned_mask[symmetric] is_aligned_shiftr pg_entry_align_def)
@@ -1518,7 +1518,7 @@ lemma check_mapping_corres:
          auto simp add: is_aligned_mask[symmetric]
          is_aligned_shiftr pg_entry_align_def
          unlessE_def returnOk_def pde_relation_aligned_def
-         split: Arch_Structs_A.pde.split if_splits Hardware_H.pde.split )
+         split: ARM_A.pde.split if_splits ARM_H.pde.split )
      apply wp
    apply simp+
   done
@@ -1791,7 +1791,7 @@ proof -
   using assms
   apply -
   apply (clarsimp simp:valid_slots_duplicated'_def 
-    split:Hardware_H.pte.splits)
+    split:ARM_H.pte.splits)
   apply (subgoal_tac "p \<le> p + mask 6")
    apply (clarsimp simp:upto_enum_step_def not_less)
    apply (intro conjI impI,simp)
@@ -1839,7 +1839,7 @@ proof -
   using assms
   apply -
   apply (clarsimp simp:valid_slots_duplicated'_def 
-    split:Hardware_H.pde.splits)
+    split:ARM_H.pde.splits)
   apply (subgoal_tac "p \<le> p + mask 6")
    apply (clarsimp simp:upto_enum_step_def not_less)
    apply (intro conjI impI,simp)
@@ -1926,7 +1926,7 @@ lemma corres_store_pde_with_invalid_tail:
   "\<forall>slot \<in>set ys. \<not> is_aligned (slot >> 2) (pde_align' ab)
   \<Longrightarrow>corres dc ((\<lambda>s. \<forall>y\<in> set ys. pde_at y s) and pspace_aligned and valid_etcbs)
            (pspace_aligned' and pspace_distinct')
-           (mapM (swp store_pde Arch_Structs_A.pde.InvalidPDE) ys)
+           (mapM (swp store_pde ARM_A.pde.InvalidPDE) ys)
            (mapM (swp storePDE ab) ys)"
   apply (rule_tac S ="{(x,y). x = y \<and> x \<in> set ys}"
                in corres_mapM[where r = dc and r' = dc])
@@ -1949,7 +1949,7 @@ lemma corres_store_pte_with_invalid_tail:
   "\<forall>slot\<in> set ys. \<not> is_aligned (slot >> 2) (pte_align' aa)
   \<Longrightarrow> corres dc ((\<lambda>s. \<forall>y\<in>set ys. pte_at y s) and pspace_aligned and valid_etcbs)
                 (pspace_aligned' and pspace_distinct')
-             (mapM (swp store_pte Arch_Structs_A.pte.InvalidPTE) ys)
+             (mapM (swp store_pte ARM_A.pte.InvalidPTE) ys)
              (mapM (swp storePTE aa) ys)"
   apply (rule_tac S ="{(x,y). x = y \<and> x \<in> set ys}"
                in corres_mapM[where r = dc and r' = dc])
@@ -2189,7 +2189,7 @@ proof -
                     apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. pd_at_asid word pd s)" in hoare_strengthen_post)
                      prefer 2
                      apply auto[1]
-                    apply (wp mapM_swp_store_pte_invs[where pte="Arch_Structs_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
+                    apply (wp mapM_swp_store_pte_invs[where pte="ARM_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
                     apply (wp mapM_UNIV_wp | simp add: swp_def del: fun_upd_apply)+
                   apply (clarsimp simp:pte_relation_aligned_def)
                   apply (clarsimp dest!:valid_slots_duplicated_pteD')
@@ -2230,7 +2230,7 @@ proof -
                    apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. pd_at_asid word pd s)" in hoare_strengthen_post)
                     prefer 2
                     apply auto[1]
-                   apply (wp mapM_swp_store_pde_invs_unmap[where pde="Arch_Structs_A.pde.InvalidPDE", simplified] hoare_vcg_ex_lift)
+                   apply (wp mapM_swp_store_pde_invs_unmap[where pde="ARM_A.pde.InvalidPDE", simplified] hoare_vcg_ex_lift)
                    apply (wp mapM_UNIV_wp store_pde_pd_at_asid | clarsimp simp add: swp_def del: fun_upd_apply)+
                  apply (clarsimp simp: pde_relation_aligned_def)
                  apply (clarsimp  dest!:valid_slots_duplicated_pdeD')
@@ -2256,7 +2256,7 @@ proof -
              apply (clarsimp simp: cap_range_def)
             apply (rule conjI)
              apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
-             apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm Arch_Structs_A.arch_kernel_obj.splits)
+             apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm ARM_A.arch_kernel_obj.splits)
             apply (rule conjI[rotated], fastforce)
             apply (erule ballEI)
             apply (clarsimp simp: pde_at_def obj_at_def
@@ -2300,7 +2300,7 @@ proof -
                apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. pd_at_asid word pd s)" in hoare_strengthen_post)
                 prefer 2
                 apply auto[1]
-               apply (wp mapM_swp_store_pte_invs[where pte="Arch_Structs_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
+               apply (wp mapM_swp_store_pte_invs[where pte="ARM_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
                apply (wp mapM_UNIV_wp | simp add: swp_def del: fun_upd_apply)+
              apply (clarsimp simp:pte_relation_aligned_def valid_page_inv'_def)
              apply (clarsimp dest!:valid_slots_duplicated_pteD')
@@ -2341,7 +2341,7 @@ proof -
               apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. pd_at_asid word pd s)" in hoare_strengthen_post)
                prefer 2
                apply auto[1]
-              apply (wp mapM_swp_store_pde_invs_unmap[where pde="Arch_Structs_A.pde.InvalidPDE", simplified] hoare_vcg_ex_lift)
+              apply (wp mapM_swp_store_pde_invs_unmap[where pde="ARM_A.pde.InvalidPDE", simplified] hoare_vcg_ex_lift)
               apply (wp mapM_UNIV_wp store_pde_pd_at_asid | clarsimp simp add: swp_def del: fun_upd_apply)+
             apply (clarsimp simp: pde_relation_aligned_def valid_page_inv'_def)
             apply (clarsimp  dest!:valid_slots_duplicated_pdeD')
@@ -2373,7 +2373,7 @@ proof -
                                 is_pg_cap_def
                         split: cap.splits Structures_A.kernel_object.splits
                                split_if_asm
-                               Arch_Structs_A.arch_kernel_obj.splits option.splits
+                               ARM_A.arch_kernel_obj.splits option.splits
                                arch_cap.splits)+)
        apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
        apply (case_tac ko, simp_all split: split_if_asm)[1]
@@ -2499,9 +2499,9 @@ definition
 lemma clear_page_table_corres:
   "corres dc (pspace_aligned and page_table_at p and valid_etcbs)
              (pspace_aligned' and pspace_distinct')
-    (mapM_x (swp store_pte Arch_Structs_A.InvalidPTE)
+    (mapM_x (swp store_pte ARM_A.InvalidPTE)
        [p , p + 4 .e. p + 2 ^ ptBits - 1])
-    (mapM_x (swp storePTE Hardware_H.InvalidPTE)
+    (mapM_x (swp storePTE ARM_H.InvalidPDE)
        [p , p + 4 .e. p + 2 ^ ptBits - 1])"
   apply (rule_tac F="is_aligned p ptBits" in corres_req)
    apply (clarsimp simp: obj_at_def a_type_def)
@@ -2558,7 +2558,7 @@ lemma perform_page_table_corres:
     apply auto[1]
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
    apply auto[1]
-   apply (clarsimp simp:valid_pde_mapping'_def split:Hardware_H.pde.split)
+   apply (clarsimp simp:valid_pde_mapping'_def split:ARM_H.pde.split)
   apply (rename_tac cap a b)
   apply (clarsimp simp: page_table_invocation_map_def)
   apply (rule_tac F="is_pt_cap cap" in corres_req)
@@ -3760,7 +3760,7 @@ lemma diminished_valid':
   apply (rule ext)
   apply (simp add: maskCapRights_def Let_def split del: split_if)
   apply (cases cap'; simp add: isCap_simps valid_cap'_def capAligned_def split del: split_if)
-  by (simp add: ArchRetype_H.maskCapRights_def isPageCap_def Let_def split del: split_if split: arch_capability.splits)
+  by (simp add: ARM.maskCapRights_def isPageCap_def Let_def split del: split_if split: arch_capability.splits)
 
 lemma diminished_isPDCap:
   "diminished' cap cap' \<Longrightarrow> isPDCap cap' = isPDCap cap"

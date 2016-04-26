@@ -11,7 +11,7 @@
 theory ArchTcbAcc_AI
 imports "../CSpace_AI"
 begin
-context ARM begin
+context Arch begin global_naming ARM
 
 lemmas cap_master_cap_simps = 
   cap_master_cap_def[simplified cap_master_arch_cap_def, split_simps cap.split arch_cap.split]

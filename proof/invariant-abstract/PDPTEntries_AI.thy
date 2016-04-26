@@ -273,7 +273,7 @@ lemma mapME_singleton:
   "mapME_x f [x] = f x"
   by (simp add:mapME_x_def sequenceE_x_def)
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 lemma a_type_pdD:
   "a_type ko = AArch APageDirectory \<Longrightarrow> \<exists>pd. ko = ArchObj (PageDirectory pd)"

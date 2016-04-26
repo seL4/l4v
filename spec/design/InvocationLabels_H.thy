@@ -49,7 +49,7 @@ datatype invocation_label =
   | IRQSetIRQHandler
   | IRQClearIRQHandler
   | DomainSetSet
-  | ArchInvocationLabel ArchInvocationLabels_H.ARM.arch_invocation_label
+  | ArchInvocationLabel arch_invocation_label
 
 (* invocation_label instance proofs *)
 (*<*)

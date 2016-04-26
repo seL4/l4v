@@ -21,7 +21,7 @@ imports
   ArchVMRights_A
 begin
 
-context ARM_A begin
+context Arch begin global_naming ARM_A
 
 text {*
 This theory provides architecture-specific definitions and datatypes 
@@ -200,7 +200,7 @@ currently active page directory. The second component of
 
 end
 
-qualify ARM
+qualify ARM_A (in Arch)
 
 record arch_state =
   arm_globals_frame :: obj_ref
@@ -214,7 +214,7 @@ record arch_state =
 
 end_qualify
 
-context ARM_A begin
+context Arch begin global_naming ARM_A
 
 definition
   pd_bits :: "nat" where

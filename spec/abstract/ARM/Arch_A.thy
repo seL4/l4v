@@ -18,7 +18,7 @@ theory Arch_A
 imports "../TcbAcc_A"
 begin
 
-context ARM_A begin
+context Arch begin global_naming ARM_A
 
 definition "page_bits \<equiv> pageBits"
 

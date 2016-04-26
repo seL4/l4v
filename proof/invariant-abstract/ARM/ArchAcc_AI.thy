@@ -24,7 +24,7 @@ method spec for x :: "_ :: type" = (erule allE[of _ x])
 method bspec for x :: "_ :: type" = (erule ballE[of _ _ x])
 method prove for x :: "prop" = (rule revcut_rl[of "PROP x"])
 
-context ARM begin
+context Arch begin global_naming ARM
 
 
 bundle unfold_objects = 

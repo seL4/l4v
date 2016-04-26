@@ -18,7 +18,7 @@ imports
   Setup_Locale
   Platform
 begin
-context ARM begin
+context Arch begin global_naming ARM
 
 (* !!! Generated File !!! Skeleton in ../haskell-translator/ARMMachineTypes.thy *)
 
@@ -60,7 +60,7 @@ text {*
   to the underlying memory of the machine.
 *}
 end
-qualify ARM 
+qualify ARM (in Arch)
 record
   machine_state =
   irq_masks :: "ARM.irq \<Rightarrow> bool"
@@ -72,7 +72,7 @@ record
 consts irq_oracle :: "nat \<Rightarrow> 10 word"
 end_qualify
 
-context ARM begin
+context Arch begin global_naming ARM
 text {*
   The machine monad is used for operations on the state defined above.
 *}
@@ -83,7 +83,7 @@ end
 translations
   (type) "'c ARM.machine_monad" <= (type) "(ARM.machine_state, 'c) nondet_monad"
 
-context ARM begin
+context Arch begin global_naming ARM
 
 text {*
   After kernel initialisation all IRQs are masked.

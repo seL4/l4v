@@ -1633,7 +1633,7 @@ lemma descendants_inc_minor:
   apply simp
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma replace_cap_invs:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s p cap) p s
         \<and> cap \<noteq> cap.NullCap

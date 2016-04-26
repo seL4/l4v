@@ -20,7 +20,7 @@ imports
   "../InvocationLabels_A"
   "../../../lib/WordLib"
 begin
-context ARM_A begin
+context Arch begin global_naming ARM_A
 
 section "Helper definitions"
 

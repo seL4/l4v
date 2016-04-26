@@ -144,7 +144,7 @@ crunch_ignore (empty_fail)
         reschedule_required switch_if_required_to attempt_switch_to set_thread_state_ext
         OR_choice OR_choiceE set_priority timer_tick)
 
-context ARM begin
+context Arch begin global_naming ARM
 crunch_ignore (empty_fail)
   (add: invalidateTLB_ASID_impl invalidateTLB_VAASID_impl cleanByVA_impl
         cleanByVA_PoU_impl invalidateByVA_impl invalidateByVA_I_impl
@@ -246,7 +246,7 @@ proof (induct arbitrary: s rule: resolve_address_bits'.induct)
 lemmas resolve_address_bits_empty_fail[wp] =
        resolve_address_bits_spec_empty_fail[THEN use_spec_empty_fail]
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch (empty_fail) empty_fail[wp]: loadWord, load_word_offs
 end
 
@@ -259,7 +259,7 @@ lemma get_extra_cptrs_empty_fail[wp]:
 
 
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch (empty_fail) empty_fail[wp]: storeWord, set_register, lookup_slot_for_cnode_op,
                    getRestartPC, decode_untyped_invocation, get_mrs, range_check,
                    handle_fault
@@ -294,7 +294,7 @@ lemma OR_choice_empty_fail[wp]:
   "\<lbrakk>empty_fail f; empty_fail g\<rbrakk> \<Longrightarrow> empty_fail (OR_choice c f g)"
   by (simp add: OR_choice_def mk_ef_def split_def | wp)+
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification
   (simp: cap.splits arch_cap.splits split_def)
 end
@@ -306,7 +306,7 @@ lemma decode_tcb_invocation_empty_fail[wp]:
 
 lemmas empty_fail_return[wp]
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 crunch (empty_fail) empty_fail[wp]: find_pd_for_asid, get_master_pde, check_vp_alignment,
                    create_mapping_entries, ensure_safe_mapping, get_asid_pool, resolve_vaddr
@@ -350,7 +350,7 @@ lemma arch_decode_ARMASIDPoolAssign_empty_fail:
 
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_decode_invocation_empty_fail[wp]:
   "empty_fail (arch_decode_invocation label b c d e f)"
   apply (case_tac "invocation_type label")
@@ -363,7 +363,7 @@ lemma arch_decode_invocation_empty_fail[wp]:
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 end
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot,
     setHardwareASID, setCurrentPD, finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
@@ -372,7 +372,7 @@ crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot,
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits)
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch (empty_fail) empty_fail[wp]: setRegister, setNextPC
 
@@ -437,7 +437,7 @@ lemma rec_del_empty_fail[wp]:
 
 crunch (empty_fail) empty_fail[wp]: cap_delete
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cap_revoke_spec_empty_fail:
   "spec_empty_fail (cap_revoke slot) s"
 proof (induct rule: cap_revoke.induct)
@@ -461,7 +461,7 @@ lemma cap_revoke_empty_fail[wp]:
   apply (rule cap_revoke_spec_empty_fail[simplified spec_empty_fail_def])
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch (empty_fail) empty_fail[wp]: choose_thread
 end
 
@@ -485,7 +485,7 @@ lemma schedule_empty_fail'[wp]:
             intro impI conjI)+
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 crunch (empty_fail) empty_fail[wp]: handle_event,activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
@@ -497,7 +497,7 @@ crunch (empty_fail) empty_fail[wp]: handle_event,activate_thread
    ignore: resetTimer_impl ackInterrupt_impl)
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma call_kernel_empty_fail: "empty_fail ((call_kernel a) :: (unit,det_ext) s_monad)"
   apply (simp add: call_kernel_def)
   apply (wp schedule_empty_fail | simp)+

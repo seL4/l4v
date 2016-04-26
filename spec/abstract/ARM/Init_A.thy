@@ -18,7 +18,7 @@ theory Init_A
 imports "../Retype_A"
 begin
 
-context ARM_A begin
+context Arch begin global_naming ARM_A
 
 text {* 
   This is not a specification of true kernel

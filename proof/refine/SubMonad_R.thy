@@ -76,6 +76,8 @@ lemma threadGet_stateAssert_gets_asUser:
   apply (clarsimp simp: obj_at'_def asUser_fetch_def projectKOs)
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma threadSet_modify_asUser:
   "tcb_at' t st \<Longrightarrow>
    threadSet (tcbContext_update (\<lambda>_. uc)) t st = modify (asUser_replace t uc) st"
@@ -143,4 +145,5 @@ lemma doMachineOp_nosch [wp]:
   apply simp
   done
 
+end
 end

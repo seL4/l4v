@@ -15,7 +15,7 @@ imports
   "../../../lib/HaskellLib_H"
   "../../machine/ARM/MachineTypes"
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
 definition
   newContext :: "register => machine_word"

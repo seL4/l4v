@@ -19,7 +19,7 @@ imports
   "../PSpaceFuns_H"
   ArchObjInsts_H
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
 datatype page_table_invocation =
     PageTableUnmap arch_capability machine_word
@@ -601,10 +601,6 @@ lemma assignASID_assignASID_update [simp]:
   "assignASID (assignASID_update f v) = f (assignASID v)"
   by (cases v) simp
 
-
-end
-
-context Arch begin
 
 datatype invocation =
     InvokePageTable page_table_invocation

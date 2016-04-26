@@ -15,7 +15,7 @@ theory KernelInit_AI
 imports ADT_AI Tcb_AI Arch_AI
 begin
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 text {*
   Showing that there is a state that satisfies the abstract invariants.

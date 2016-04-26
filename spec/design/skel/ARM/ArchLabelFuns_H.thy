@@ -13,12 +13,12 @@ chapter "Architecture-specific Invocation Label Functions"
 theory ArchLabelFuns_H
 imports "../InvocationLabels_H"
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 text {*
   Arch-specific functions on invocation labels
 *}
 
-#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs CONTEXT ARM ONLY isPDFlushLabel isPageFlushLabel
+#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs CONTEXT ARM_H ONLY isPDFlushLabel isPageFlushLabel
 
 end
 end

@@ -22,8 +22,15 @@ imports
   "./$L4V_ARCH/ArchStateData_H"
 begin
 
-unqualify_types (in Arch)
+
+context Arch begin
+
+unqualify_types
   vmpage_size
+
+type_synonym kernel_state = kernel_state
+
+end
 
 subsection "The Kernel State"
 
@@ -53,7 +60,7 @@ record kernel_state =
   ksSchedulerAction    :: scheduler_action
   ksInterruptState     :: interrupt_state
   ksWorkUnitsCompleted :: machine_word
-  ksArchState          :: ArchStateData_H.kernel_state
+  ksArchState          :: Arch.kernel_state
   ksMachineState       :: machine_state
 
 type_synonym 'a kernel = "(kernel_state, 'a) nondet_monad"

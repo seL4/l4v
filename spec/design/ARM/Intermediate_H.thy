@@ -13,7 +13,7 @@ chapter "Intermediate"
 theory Intermediate_H
 imports "../API_H"
 begin
-unqualify_consts (in ARM)
+unqualify_consts (in Arch)
   clearMemory
 (*
  * Intermediate function bodies that were once in the Haskell spec, but are
@@ -57,7 +57,7 @@ defs insertNewCaps_def:
     zipWithM_x (insertNewCap srcSlot) destSlots caps
 od)"
 
-defs (in ARM) Arch_createNewCaps_def:
+defs (in Arch) Arch_createNewCaps_def:
 "Arch_createNewCaps t regionBase numObjects arg4 \<equiv>
     let pointerCast = PPtr \<circ> fromPPtr
     in (case t of 

@@ -15,7 +15,7 @@ ARM-specific CSpace invariants
 theory ArchCSpace_AI
 imports "../CSpacePre_AI"
 begin
-context ARM begin
+context Arch begin global_naming ARM
 
 lemmas typ_at_eq_kheap_obj = typ_at_eq_kheap_obj atyp_at_eq_kheap_obj
 

@@ -69,7 +69,7 @@ lemma decode_irq_handler_valid[wp]:
 
 crunch inv[wp]: is_irq_active "P"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma decode_irq_control_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: decode_irq_control_invocation_def Let_def arch_check_irq_def
@@ -87,7 +87,7 @@ lemma mod_le:
   apply (subst mod_mod_cancel[symmetric],simp)
   by simp
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma decode_irq_control_valid[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
@@ -170,7 +170,7 @@ lemma cap_delete_one_still_derived:
   done
 
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma is_derived_use_interrupt:
   "(is_ntfn_cap cap \<and> interrupt_derived cap cap') \<longrightarrow> (is_derived m p cap cap')"
   apply (clarsimp simp: is_cap_simps)
@@ -201,7 +201,7 @@ lemma get_irq_slot_ex_cte:
   apply clarsimp
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma maskInterrupt_invs:
   "\<lbrace>invs and (\<lambda>s. interrupt_states s irq \<noteq> IRQInactive)\<rbrace> 
    do_machine_op (maskInterrupt b irq) 
@@ -240,7 +240,7 @@ lemma IRQHandler_valid:
   by (simp add: valid_cap_def cap_aligned_def word_bits_conv)
 
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma no_cap_to_obj_with_diff_IRQHandler[simp]:
   "no_cap_to_obj_with_diff_ref (IRQHandlerCap irq) S = \<top>"
@@ -371,7 +371,7 @@ lemma send_signal_interrupt_states[wp_unsafe]:
   apply (auto simp: pred_tcb_at_def obj_at_def receive_blocked_def)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma handle_interrupt_invs[wp]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: handle_interrupt_def)

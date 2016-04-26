@@ -21,7 +21,7 @@ text {*
   An enumeration of all system call labels.
 *}
 
-#INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ArchLabels=ArchInvocationLabels_H.ARM ONLY InvocationLabel
+#INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ArchLabels= ONLY InvocationLabel
 #INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs instanceproofs
 
 end

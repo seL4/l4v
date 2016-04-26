@@ -13,7 +13,7 @@ imports
   "../../../spec/abstract/Syscall_A"
   "../../../lib/Crunch"
 begin
-context ARM begin
+context Arch begin global_naming ARM
 
 
 crunch_ignore (add: debugPrint invalidateTLB_ASID invalidateTLB_VAASID cleanByVA

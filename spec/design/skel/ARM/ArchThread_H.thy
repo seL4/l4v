@@ -16,9 +16,9 @@ imports
   "../TCBDecls_H"
   ArchVSpaceDecls_H
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
-#INCLUDE_HASKELL SEL4/Kernel/Thread/ARM.lhs CONTEXT ARM ARMHardware=MachineOps bodies_only
+#INCLUDE_HASKELL SEL4/Kernel/Thread/ARM.lhs CONTEXT ARM_H ARMHardware=MachineOps bodies_only
 
 end
 end

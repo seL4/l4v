@@ -13,10 +13,10 @@ chapter "Retyping Objects"
 theory ArchVSpaceDecls_H
 imports ArchRetypeDecls_H "../InvocationLabels_H"
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
-#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs CONTEXT ARM
-#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs CONTEXT ARM decls_only ArchInv=Arch
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs CONTEXT ARM_H
+#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs CONTEXT ARM_H decls_only ArchInv=
 
 end
 end

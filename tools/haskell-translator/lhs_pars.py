@@ -338,9 +338,9 @@ def wrap_qualify(lines, deep=True):
         asdfextra = ""
 
     if call.current_context:
-        lines.insert(0, 'end\nqualify {} {}'.format(call.current_context[-1], 
+        lines.insert(0, 'end\nqualify {} (in Arch) {}'.format(call.current_context[-1], 
                 asdfextra))
-        lines.append('end_qualify\ncontext %s begin' % call.current_context[-1])
+        lines.append('end_qualify\ncontext Arch begin global_naming %s' % call.current_context[-1])
     return lines
 
 def def_lines(d, call):
@@ -1018,7 +1018,7 @@ def finite_instance_proofs(header, cons):
     lines.append('')
     lines.append('instance %s :: finite' % header)
     if call.current_context:
-        lines.append('interpretation %s .' % call.current_context[-1])
+        lines.append('interpretation Arch .')
     lines.append('  apply (intro_classes)')
     lines.append('  apply (rule_tac f="%s" in finite_surj_type)'
                  % cons)
@@ -1203,7 +1203,7 @@ def enum_instance_proofs (header, canonical, d):
         assert n == 1
         lines.append('instantiation %s :: enum begin' % header)
         if call.current_context:
-            lines.append('interpretation {} .'.format(call.current_context[-1]))
+            lines.append('interpretation Arch .')
         lines.append('definition')
         lines.append('  enum_%s: "enum_class.enum \<equiv> map %s enum"' \
                      % (header, cons))
@@ -1215,7 +1215,7 @@ def enum_instance_proofs (header, canonical, d):
         assert cons_two_args == []
         lines.append ('instantiation %s :: enum begin' % header)
         if call.current_context:
-            lines.append('interpretation {} .'.format(call.current_context[-1]))
+            lines.append('interpretation Arch .')
         lines.append ('definition')
         lines.append ('  enum_%s: "enum_class.enum \<equiv> ' % header)
         lines.append ('    [ ')
@@ -1259,7 +1259,7 @@ def enum_instance_proofs (header, canonical, d):
     lines.append('instantiation %s :: enum_alt' % header)
     lines.append('begin')
     if call.current_context:
-        lines.append('interpretation {} .'.format(call.current_context[-1]))
+        lines.append('interpretation Arch .')
     lines.append('definition')
     lines.append('  enum_alt_%s: "enum_alt \<equiv> ' % header)
     lines.append('    alt_from_ord (enum :: %s list)"' % header)
@@ -1269,7 +1269,7 @@ def enum_instance_proofs (header, canonical, d):
     lines.append('instantiation %s :: enumeration_both' % header)
     lines.append('begin')
     if call.current_context:
-        lines.append('interpretation {} .'.format(call.current_context[-1]))
+        lines.append('interpretation Arch .')
     lines.append('instance by (intro_classes, simp add: enum_alt_%s)' \
             % header)
     lines.append('end')

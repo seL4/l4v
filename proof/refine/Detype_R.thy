@@ -868,7 +868,7 @@ lemma valid_cap':
        apply blast
       apply (rename_tac arch_capability)
       apply (case_tac arch_capability,
-             simp_all add: ArchRetype_H.capUntypedPtr_def
+             simp_all add: ARM.capUntypedPtr_def
                            page_table_at'_def page_directory_at'_def
                            shiftl_t2n
                       del: atLeastAtMost_iff)[1]
@@ -2680,7 +2680,7 @@ lemma magnitudeCheck_det:
 
 lemma getPDE_det:
   "ko_wp_at' (op = (KOArch (KOPDE pde))) p s
-   \<Longrightarrow> getObject p s = ({((pde::Hardware_H.pde),s)},False)"
+   \<Longrightarrow> getObject p s = ({((pde::ARM_H.pde),s)},False)"
   apply (clarsimp simp:ko_wp_at'_def getObject_def split_def
                        bind_def gets_def return_def get_def 
                        assert_opt_def split:if_splits)
@@ -2830,7 +2830,7 @@ lemma getPDE_placeNewObject_commute:
 
 lemma storePDE_det:
   "ko_wp_at' (op = (KOArch (KOPDE pde))) ptr s
-   \<Longrightarrow> storePDE ptr (new_pde::Hardware_H.pde) s = 
+   \<Longrightarrow> storePDE ptr (new_pde::ARM_H.pde) s = 
        modify
          (ksPSpace_update (\<lambda>_. ksPSpace s(ptr \<mapsto> KOArch (KOPDE new_pde)))) s"
   apply (clarsimp simp:ko_wp_at'_def storePDE_def split_def
@@ -2969,7 +2969,7 @@ lemma modify_mapM_x:
 
 lemma doMachineOp_storePDE_commute:
   "monad_commute (pde_at' src) (doMachineOp f)
-                 (storePDE src (new_pde::Hardware_H.pde))"
+                 (storePDE src (new_pde::ARM_H.pde))"
   proof -
   have  eq_fail: "\<And>sa ks. snd (doMachineOp f (sa\<lparr>ksPSpace := ks\<rparr>)) = snd (doMachineOp f sa)"
     apply (clarsimp simp:doMachineOp_def bind_def return_def gets_def 
@@ -3017,7 +3017,7 @@ lemma storePDE_placeNewObject_commute:
       pspace_no_overlap' ptr (objBitsKO (injectKOS val) + sz) and
       K (is_aligned ptr (objBitsKO (injectKOS val) + sz) \<and> 
       objBitsKO (injectKOS val) + sz < word_bits) )
-     (placeNewObject ptr val sz) (storePDE src (new_pde::Hardware_H.pde))"
+     (placeNewObject ptr val sz) (storePDE src (new_pde::ARM_H.pde))"
   apply (rule commute_name_pre_state)
   apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
   apply (case_tac ko,simp_all)
@@ -3119,7 +3119,7 @@ lemma storePDE_setCTE_commute:
   shows "monad_commute
      (pde_at' ptr and pspace_distinct' and pspace_aligned' and
       cte_wp_at' (\<lambda>_. True) src)
-     (setCTE src cte) (storePDE ptr (new_pde::Hardware_H.pde))"
+     (setCTE src cte) (storePDE ptr (new_pde::ARM_H.pde))"
   apply (rule commute_name_pre_state)
   apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
   apply (case_tac ko,simp_all)
@@ -3256,8 +3256,8 @@ lemma placeNewObject_valid_arch_state:
 lemma placeNewObject_pd_at':
   "\<lbrace>K (is_aligned ptr pdBits) and pspace_no_overlap' ptr pdBits and
     pspace_aligned' and pspace_distinct'\<rbrace>
-   placeNewObject ptr (makeObject::Hardware_H.pde)
-                      (pdBits - objBits (makeObject::Hardware_H.pde)) 
+   placeNewObject ptr (makeObject::ARM_H.pde)
+                      (pdBits - objBits (makeObject::ARM_H.pde)) 
    \<lbrace>\<lambda>rv s. page_directory_at' ptr s\<rbrace>"
   apply (simp add:page_directory_at'_def typ_at'_def)
   apply (rule hoare_pre)
@@ -5119,7 +5119,7 @@ proof -
          apply (simp add:objBits_simps archObjSize_def pdBits_def pageBits_def
                 getObjectSize_def ArchTypes_H.getObjectSize_def)
          apply (simp add:bind_assoc)
-         apply (simp add: placeNewObject_def2[where val = "makeObject::Hardware_H.pde",simplified,symmetric])
+         apply (simp add: placeNewObject_def2[where val = "makeObject::ARM_H.pde",simplified,symmetric])
          apply (rule_tac Q = "\<lambda>r s. valid_arch_state' s \<and> 
            (\<forall>x\<le>of_nat n. page_directory_at' (ptr + (x << 14)) s) \<and> Q s" for Q in monad_eq_split)
            apply (rule sym)

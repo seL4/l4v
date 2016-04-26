@@ -16,7 +16,7 @@ theory ArchVSpace_AI
 imports "../VSpacePre_AI"
 begin
 
-context ARM begin
+context Arch begin global_naming ARM
 
 
 (* FIXME: move to Invariant_AI *)
@@ -1741,7 +1741,7 @@ lemma set_cap_valid_pte_stronger:
 
 end
 
-locale vs_lookup_map_some_pdes = ARM +
+locale vs_lookup_map_some_pdes = Arch +
   fixes pd pdp s s' S T pd'
   defines "s' \<equiv> s\<lparr>kheap := kheap s(pdp \<mapsto> ArchObj (PageDirectory pd'))\<rparr>"
   assumes refs: "vs_refs (ArchObj (PageDirectory pd')) =
@@ -1814,7 +1814,7 @@ lemma vs_lookup2:
 
 end
 
-context ARM begin
+context Arch begin global_naming ARM
 
 lemma set_pd_arch_objs_map:
   notes valid_arch_obj.simps[simp del] and a_type_elims[rule del]
@@ -4703,7 +4703,7 @@ lemma perform_page_invs [wp]:
 
 end
 
-locale asid_pool_map = ARM +
+locale asid_pool_map = Arch +
   fixes s ap pool asid pdp pd s'
   defines "(s' :: ('a::state_ext) state) \<equiv>
            s\<lparr>kheap := kheap s(ap \<mapsto> ArchObj (ASIDPool
@@ -4810,7 +4810,7 @@ lemma vs_lookup_pages2:
 
 end
 
-context ARM begin
+context Arch begin global_naming ARM
 
 lemma not_kernel_slot_not_global_pt: 
   "\<lbrakk>pde_ref (pd x) = Some p; x \<notin> kernel_mapping_slots;

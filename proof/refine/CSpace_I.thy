@@ -16,6 +16,63 @@ theory CSpace_I
 imports ArchAcc_R
 begin
 
+context ARM begin 
+
+shadow_consts 
+  maskCapRights isPhysicalCap capUntypedSize
+
+shadow_facts isPhysicalCap_def
+
+end
+
+context Arch begin
+
+shadow_consts 
+  maskCapRights isPhysicalCap capUntypedSize
+
+
+ML \<open>Locale.get_witnesses @{context}\<close>
+end
+
+ML \<open>
+fun syntax_alias global_alias local_alias b (name : string) =
+  Local_Theory.declaration {syntax = true, pervasive = true} (fn phi =>
+    let val b' = Morphism.binding phi b
+    in Context.mapping (global_alias b' name) (local_alias b' name) end);
+
+val fact_alias = syntax_alias Global_Theory.alias_fact Proof_Context.fact_alias;
+val const_alias = syntax_alias Sign.const_alias Proof_Context.const_alias;
+val type_alias = syntax_alias Sign.type_alias Proof_Context.type_alias;
+\<close>
+local_setup \<open>
+Local_Theory.target (Locale.add_thmss "Setup_Locale.Arch" "lemmaK" [((@{binding "fooss"},[]), [(@{thms TrueI}, [])])])
+\<close>
+
+ML \<open>\<close>
+
+local_setup \<open>
+Local_Theory.target (
+Locale.add_declaration "Setup_Locale.Arch" true 
+  (fn phi => Context.mapping (Global_Theory.alias_fact @{binding "foos"} "HOL.TrueI") (Proof_Context.fact_alias @{binding "foos"} "HOL.TrueI"))
+)
+\<close>
+
+context Arch begin
+
+
+thm foos
+
+end
+
+context ARM_H begin
+
+thm foos
+
+ML \<open>Locale.specification_of @{theory} "Setup_Locale.Arch"\<close>
+
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 declare word_neq_0_conv[simp del]
 
 lemma capUntypedPtr_simps [simp]:
@@ -23,16 +80,16 @@ lemma capUntypedPtr_simps [simp]:
   "capUntypedPtr (NotificationCap r badge a b) = r"
   "capUntypedPtr (EndpointCap r badge a b c) = r"
   "capUntypedPtr (Zombie r bits n) = r"
-  "capUntypedPtr (ArchObjectCap x) = ArchRetypeDecls_H.capUntypedPtr x"
+  "capUntypedPtr (ArchObjectCap x) = Arch.capUntypedPtr x"
   "capUntypedPtr (UntypedCap r n f) = r"
   "capUntypedPtr (CNodeCap r n g n2) = r"
   "capUntypedPtr (ReplyCap r m) = r"
-  "ArchRetypeDecls_H.capUntypedPtr (ASIDPoolCap r asid) = r"
-  "ArchRetypeDecls_H.capUntypedPtr (PageCap r rghts sz mapdata) = r"
-  "ArchRetypeDecls_H.capUntypedPtr (PageTableCap r mapdata2) = r"
-  "ArchRetypeDecls_H.capUntypedPtr (PageDirectoryCap r mapdata3) = r"
+  "Arch.capUntypedPtr (ARM_H.ASIDPoolCap r asid) = r"
+  "Arch.capUntypedPtr (ARM_H.PageCap r rghts sz mapdata) = r"
+  "Arch.capUntypedPtr (ARM_H.PageTableCap r mapdata2) = r"
+  "Arch.capUntypedPtr (ARM_H.PageDirectoryCap r mapdata3) = r"
   by (auto simp: capUntypedPtr_def
-                 ArchRetype_H.capUntypedPtr_def)
+                 ARM.capUntypedPtr_def)
 
 lemma rights_mask_map_UNIV [simp]:
   "rights_mask_map UNIV = allRights"
@@ -43,7 +100,7 @@ declare insert_UNIV[simp]
 lemma maskCapRights_allRights [simp]:
   "maskCapRights allRights c = c"
   unfolding maskCapRights_def isCap_defs allRights_def
-            ArchRetype_H.maskCapRights_def maskVMRights_def
+            ARM.maskCapRights_def maskVMRights_def
   by (cases c) (simp_all add: Let_def split: arch_capability.split vmrights.split)
 
 lemma diminished_refl'[simp]:
@@ -613,7 +670,7 @@ lemma isDomainCap [simp]:
 
 lemma isPhysicalCap[simp]:
   "isPhysicalCap cap = (capClass cap = PhysicalClass)"
-  by (simp add: isPhysicalCap_def ArchRetype_H.isPhysicalCap_def
+  by (simp add: isPhysicalCap_def ARM.isPhysicalCap_def
          split: capability.split arch_capability.split)
 
 definition
@@ -953,7 +1010,7 @@ lemma capMasterCap_maskCapRights[simp]:
          simp add: maskCapRights_def Let_def isCap_simps capMasterCap_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: ArchRetype_H.maskCapRights_def Let_def isCap_simps)
+         simp add: ARM.maskCapRights_def Let_def isCap_simps)
   done
 
 lemma capBadge_maskCapRights[simp]:
@@ -963,7 +1020,7 @@ lemma capBadge_maskCapRights[simp]:
          simp add: maskCapRights_def Let_def isCap_simps capBadge_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: ArchRetype_H.maskCapRights_def Let_def isCap_simps)
+         simp add: ARM.maskCapRights_def Let_def isCap_simps)
   done
 
 lemma maskCapRights_region [simp]:

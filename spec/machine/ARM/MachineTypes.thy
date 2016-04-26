@@ -18,7 +18,7 @@ imports
   Setup_Locale
   Platform
 begin
-context ARM begin
+context Arch begin global_naming ARM
 
 (* !!! Generated File !!! Skeleton in ../haskell-translator/ARMMachineTypes.thy *)
 
@@ -59,11 +59,11 @@ sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_w
 
 (*<*)
 end
-qualify ARM (deep)
+qualify ARM (in Arch) (deep)
 (* register instance proofs *)
 (*<*)
 instantiation register :: enum begin
-interpretation ARM .
+interpretation Arch .
 definition
   enum_register: "enum_class.enum \<equiv> 
     [ 
@@ -104,7 +104,7 @@ end
 
 instantiation register :: enum_alt
 begin
-interpretation ARM .
+interpretation Arch .
 definition
   enum_alt_register: "enum_alt \<equiv> 
     alt_from_ord (enum :: register list)"
@@ -113,13 +113,13 @@ end
 
 instantiation register :: enumeration_both
 begin
-interpretation ARM .
+interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_register)
 end
 
 (*>*)
 end_qualify
-context ARM begin
+context Arch begin global_naming ARM
 
 (*>*)
 definition
@@ -181,7 +181,7 @@ text {*
   to the underlying memory of the machine.
 *}
 end
-qualify ARM 
+qualify ARM (in Arch)
 record
   machine_state =
   irq_masks :: "ARM.irq \<Rightarrow> bool"
@@ -193,7 +193,7 @@ record
 consts irq_oracle :: "nat \<Rightarrow> 10 word"
 end_qualify
 
-context ARM begin
+context Arch begin global_naming ARM
 text {*
   The machine monad is used for operations on the state defined above.
 *}
@@ -204,7 +204,7 @@ end
 translations
   (type) "'c ARM.machine_monad" <= (type) "(ARM.machine_state, 'c) nondet_monad"
 
-context ARM begin
+context Arch begin global_naming ARM
 
 text {*
   After kernel initialisation all IRQs are masked.
@@ -290,11 +290,11 @@ where
   )"
 
 end
-qualify ARM (deep)
+qualify ARM (in Arch) (deep)
 (* vmpage_size instance proofs *)
 (*<*)
 instantiation vmpage_size :: enum begin
-interpretation ARM .
+interpretation Arch .
 definition
   enum_vmpage_size: "enum_class.enum \<equiv> 
     [ 
@@ -321,7 +321,7 @@ end
 
 instantiation vmpage_size :: enum_alt
 begin
-interpretation ARM .
+interpretation Arch .
 definition
   enum_alt_vmpage_size: "enum_alt \<equiv> 
     alt_from_ord (enum :: vmpage_size list)"
@@ -330,13 +330,13 @@ end
 
 instantiation vmpage_size :: enumeration_both
 begin
-interpretation ARM .
+interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_vmpage_size)
 end
 
 (*>*)
 end_qualify
-context ARM begin
+context Arch begin global_naming ARM
 
 
 end

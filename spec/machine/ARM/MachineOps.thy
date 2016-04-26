@@ -35,7 +35,7 @@ text {*
 *}
 
 
-qualify ARM (deep)
+qualify ARM (in Arch) (deep)
 
 section "The Operations"
 
@@ -331,7 +331,7 @@ where
 
 end_qualify
 
-context ARM begin
+context Arch begin global_naming ARM
 
 
 -- "Interrupt controller operations"

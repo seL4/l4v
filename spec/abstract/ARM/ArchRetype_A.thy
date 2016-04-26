@@ -20,7 +20,7 @@ imports
   ArchInvocation_A
 begin
 
-context ARM_A begin
+context Arch begin global_naming ARM_A
 
 text {* This is a placeholder function. We may wish to extend the specification
   with explicitly tagging kernel data regions in memory. *}

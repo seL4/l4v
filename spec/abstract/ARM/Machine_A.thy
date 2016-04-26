@@ -22,7 +22,7 @@ imports
   "../../machine/MachineExports"
 begin
 
-context ARM_A begin
+context Arch begin global_naming ARM_A
 
 text {*
   The specification is written with abstract type names for object

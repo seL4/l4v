@@ -72,7 +72,7 @@ lemma ex_cte_cap_to_obj_ref_disj:
   apply clarsimp
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_globals_irq_node:
   "\<lbrakk> valid_global_refs s; cte_wp_at (op = cap) ptr s \<rbrakk>
         \<Longrightarrow> interrupt_irq_node s irq \<notin> cap_range cap"
@@ -156,7 +156,7 @@ lemma cap_range_untyped_range_eq[simp]:
   "is_untyped_cap a \<Longrightarrow> cap_range a = untyped_range a"
   by (clarsimp simp:is_cap_simps cap_range_def)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma caps_of_state_ko: 
   "valid_cap cap s \<Longrightarrow> is_untyped_cap cap \<or> cap_range cap = {} \<or> (\<forall>ptr \<in> cap_range cap. \<exists>ko. kheap s ptr = Some ko)"
   apply (case_tac cap)
@@ -361,7 +361,7 @@ lemma drange:"descendants_range_in (cap_range cap) ptr s"
    using nodesc
    by (simp add:descendants_range_def2)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_cap:
     "\<And>cap'. \<lbrakk> s \<turnstile> cap'; obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap) \<rbrakk>
     \<Longrightarrow> detype (untyped_range cap) s \<turnstile> cap'"
@@ -461,7 +461,7 @@ lemma valid_cap2:
     apply (simp add: pred_tcb_at_def)
     apply (fastforce dest: live_okE)
     done
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma invariants:
   assumes ct_act: "ct_active s"
   shows "(invs and untyped_children_in_mdb)
@@ -1050,7 +1050,7 @@ lemma detype_invariants:
   apply (rule_tac ptr=ptr in detype_locale.invariants)
    apply (unfold detype_locale_def, simp_all add: assms)
   done
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 (* FIXME: taken from Retype_C.thy and adapted wrt. the missing intvl syntax. *)
 lemma mapM_x_storeWord:
   assumes al: "is_aligned ptr 2"
@@ -1134,7 +1134,7 @@ proof -
                      modify_modify detype_msu_independent)
     done
 qed
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 (* FIXME: move *)
 lemma empty_fail_freeMemory: "empty_fail (freeMemory ptr bits)"
   by (simp add: freeMemory_def mapM_x_mapM ef_storeWord)
@@ -1161,7 +1161,7 @@ lemma dmo_untyped_children_in_mdb[wp]:
    \<lbrace>\<lambda>rv s. untyped_children_in_mdb s\<rbrace>"
   by (wp | simp add: untyped_mdb_alt[symmetric] do_machine_op_def split_def)+
 
-context ARM begin
+context Arch begin global_naming ARM
 lemma region_in_kernel_window_detype[simp]:
   "region_in_kernel_window S (detype S' s)
       = region_in_kernel_window S s"
@@ -1425,7 +1425,7 @@ lemma invs_untyped_children[elim!]:
   "invs s \<Longrightarrow> untyped_children_in_mdb s"
   by (clarsimp simp: invs_def valid_state_def valid_mdb_def
                      untyped_mdb_alt)
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma delete_objects_invs[wp]:
   "\<lbrace>(\<lambda>s. \<exists>slot. cte_wp_at (op = (cap.UntypedCap ptr bits f)) slot s
     \<and> descendants_range (cap.UntypedCap ptr bits f) slot s) and

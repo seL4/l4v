@@ -226,7 +226,7 @@ lemma handle_fault_reply_has_no_reply_cap:
   apply (clarsimp)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma do_reply_invs[wp]:
   "\<lbrace>tcb_at t and tcb_at t' and cte_wp_at (op = (cap.ReplyCap t False)) slot and
     invs\<rbrace>
@@ -330,7 +330,7 @@ lemma pinv_invs[wp]:
 crunch typ_at[wp]: do_reply_transfer "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch typ_at[wp]: invoke_irq_control "\<lambda>s. P (typ_at T p s)"
 end
 
@@ -438,7 +438,7 @@ lemma sts_Restart_stay_simple:
   done
 
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma decode_inv_inv[wp]:
   "\<lbrace>P\<rbrace> decode_invocation label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (case_tac cap, simp_all add: decode_invocation_def)
@@ -477,7 +477,7 @@ lemma cnode_diminished_strg:
   apply (clarsimp simp: diminished_def)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma obj_refs_cap_rights_update[simp]:
   "obj_refs (cap_rights_update rs cap) = obj_refs cap"
   by (simp add: cap_rights_update_def acap_rights_update_def
@@ -806,7 +806,7 @@ lemma lookup_extra_caps_diminished [wp]:
   apply (wp mapME_set|simp)+
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch tcb_at[wp]: reply_from_kernel "tcb_at t"
   (simp: crunch_simps)
 end
@@ -828,7 +828,7 @@ lemma ts_Restart_case_helper:
  = (if ts = Structures_A.Restart then A else B)"
   by (case_tac ts, simp_all)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch pred_tcb_at[wp]: reply_from_kernel "pred_tcb_at proj P t"
   (simp: crunch_simps)
 crunch cap_to[wp]: reply_from_kernel "ex_nonz_cap_to p"
@@ -859,7 +859,7 @@ lemmas validE_E_combs[wp_comb] =
     valid_validE_E
     hoare_vcg_E_conj[where Q'="\<top>\<top>", folded validE_E_def, OF valid_validE_E]
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma hinv_invs':
   assumes perform_invocation_Q[wp]:
            "\<And>block class i. \<lbrace>invs and Q and ct_active and valid_invocation i\<rbrace> perform_invocation block class i \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -1055,7 +1055,7 @@ lemma hy_inv: "(\<And>s f. P (trans_state f s) = P s) \<Longrightarrow> \<lbrace
   apply (wp | simp)+
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma getDFSR_invs[wp]:
   "valid invs (do_machine_op getDFSR) (\<lambda>_. invs)"
   by (simp add: getDFSR_def do_machine_op_def split_def select_f_returns | wp)+
@@ -1069,7 +1069,7 @@ lemma getIFSR_invs[wp]:
   by (simp add: getIFSR_def do_machine_op_def split_def select_f_returns | wp)+
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma hv_invs[wp]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (cases flt, simp_all)
   apply (wp|simp)+
@@ -1117,7 +1117,7 @@ lemma hr_invs[wp]:
 
 crunch cur_thread[wp]: set_extra_badge "\<lambda>s. P (cur_thread s)"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch cur_thread[wp]: handle_reply "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps transfer_caps_loop_pres
         simp: unless_def crunch_simps
@@ -1243,7 +1243,7 @@ lemma select_insert:
   "select (insert x X) = (return x \<sqinter> select X)"
   by (simp add: alternative_def select_def return_def)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma handle_vm_fault_valid_fault[wp]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
   apply (cases ft, simp_all)

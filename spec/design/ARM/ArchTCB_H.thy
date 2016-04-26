@@ -11,7 +11,7 @@
 theory ArchTCB_H
 imports "../TCBDecls_H"
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
 definition
 decodeTransfer :: "word8 \<Rightarrow> ( syscall_error , copy_register_sets ) kernel_f"

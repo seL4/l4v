@@ -356,7 +356,7 @@ lemma pspace_relation_tcb_at:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        Arch_Structs_A.arch_kernel_obj.split_asm)
+                        ARM_A.arch_kernel_obj.split_asm)
   apply (simp add: is_tcb obj_at_def)
   done
 
@@ -3960,7 +3960,7 @@ lemma lipcb_corres':
                 and pspace_distinct' and no_0_obj')
                (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
   apply (simp add: lookup_ipc_buffer_def lookupIPCBuffer_def
-                   ArchVSpace_H.lookupIPCBuffer_def)
+                   ARM_H.lookupIPCBuffer_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ threadget_corres])
        apply (simp add: getThreadBufferSlot_def locateSlot_conv)
@@ -4009,7 +4009,7 @@ lemma lipcb_corres:
 
 lemma lookupIPC_inv[wp]: "\<lbrace>I\<rbrace> lookupIPCBuffer w t \<lbrace>\<lambda>rv. I\<rbrace>"
   by (simp add:      lookupIPCBuffer_def nothingOnFailure_def
-                     ArchVSpace_H.lookupIPCBuffer_def Let_def
+                     ARM_H.lookupIPCBuffer_def Let_def
                      getThreadBufferSlot_def
           split del: split_if | wp crunch_wps)+
 
@@ -5048,7 +5048,7 @@ lemma set_eobject_corres':
    apply (clarsimp simp: non_exst_same_def)
    apply (case_tac bb; simp)
      apply (clarsimp simp: obj_at'_def other_obj_relation_def cte_relation_def tcb_relation_def projectKOs split: split_if_asm)+
-   apply (clarsimp simp: aobj_relation_cuts_def split: Arch_Structs_A.arch_kernel_obj.splits)
+   apply (clarsimp simp: aobj_relation_cuts_def split: ARM_A.arch_kernel_obj.splits)
    apply (rename_tac arch_kernel_obj obj d p ts)
    apply (case_tac arch_kernel_obj; simp)
      apply (clarsimp simp: pte_relation_def pde_relation_def is_tcb_def)+
@@ -5059,7 +5059,7 @@ lemma set_eobject_corres':
   apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: projectKOs)
   apply (insert e)
-  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits Arch_Structs_A.arch_kernel_obj.splits)
+  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits ARM_A.arch_kernel_obj.splits)
   done
 
 lemma set_eobject_corres:

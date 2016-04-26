@@ -102,7 +102,7 @@ lemma gets_machine_state_modify:
    gets machine_state >>= f"
   by (simp add: bind_def split_def simpler_gets_def simpler_modify_def)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 (* FIXME: move? *)
 lemma getActiveIRQ_wp[wp]:
   "irq_state_independent_A P \<Longrightarrow>
@@ -2720,7 +2720,7 @@ lemma weak_derived_Null:
   apply simp
   done
 
-context begin interpretation ARM . (* FIXME: arch_split*)
+context begin interpretation Arch . (* FIXME: arch_split*)
 lemma weak_derived_valid_cap:
   "\<lbrakk> s \<turnstile> c; wellformed_cap c'; weak_derived c' c\<rbrakk> \<Longrightarrow> s \<turnstile> c'"
   apply (case_tac "c = c'", simp)
@@ -3093,7 +3093,7 @@ lemma copy_of_Null2 [simp]:
   "\<not>copy_of c cap.NullCap"
   by (auto simp add: copy_of_def same_object_as_def is_cap_simps)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma copy_obj_refs:
   "copy_of cap cap' \<Longrightarrow> obj_refs cap' = obj_refs cap"
   apply (cases cap)
@@ -3251,7 +3251,7 @@ lemma weak_derived_is_reply_master:
                  same_object_as_def is_cap_simps
          split: split_if_asm cap.split_asm)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma weak_derived_obj_ref_of:
   "weak_derived dcap cap \<Longrightarrow> obj_ref_of dcap = obj_ref_of cap"
   by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def 
@@ -3545,7 +3545,7 @@ lemma set_free_index_valid_pspace:
   apply clarsimp
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma set_free_index_invs:
   "\<lbrace>\<lambda>s. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap) \<and>
         invs s \<and> cte_wp_at (op = cap ) cref s\<rbrace>
@@ -3904,7 +3904,7 @@ lemma unique_table_refs_upd_eqD:
 
 
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma set_untyped_cap_as_full_valid_arch_caps:
   "\<lbrace>valid_arch_caps and cte_wp_at (op = src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src 
@@ -3976,7 +3976,7 @@ lemma set_untyped_cap_as_full_vs_lookup_pages[wp]:
    \<lbrace>\<lambda>r s. P (vs_lookup_pages s)\<rbrace>"
   by (clarsimp simp:set_untyped_cap_as_full_def, wp)+
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma set_untyped_cap_as_full[wp]:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src 
@@ -4018,7 +4018,7 @@ lemma set_untyped_cap_as_full_access2[wp]:
    \<lbrace>\<lambda>r s. P (vs_lookup_pages s)\<rbrace>"
   by (clarsimp simp:set_untyped_cap_as_full_def, wp)+
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma is_derived_is_cap:
   "is_derived m p cap cap' \<Longrightarrow> 
     (is_pg_cap cap = is_pg_cap cap')
@@ -4096,7 +4096,7 @@ end
 lemma derived_cap_master_cap_eq: "is_derived m n b c \<Longrightarrow> cap_master_cap b = cap_master_cap c"
   by (clarsimp simp:is_derived_def split:if_splits)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma is_derived_cap_asid_issues:
   "is_derived m p cap cap'
       \<Longrightarrow> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap \<noteq> None)
@@ -4246,7 +4246,7 @@ crunch pspace_in_kernel_window[wp]: cap_insert "pspace_in_kernel_window"
 
 crunch cap_refs_in_kernel_window[wp]: update_cdt "cap_refs_in_kernel_window"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cap_insert_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window
           and cte_wp_at (\<lambda>c. cap_range cap \<subseteq> cap_range c) src\<rbrace>
@@ -4446,7 +4446,7 @@ lemma cap_swap_valid_objs:
          |simp split del: split_if)+
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma mask_cap_valid[simp]:
   "s \<turnstile> c \<Longrightarrow> s \<turnstile> mask_cap R c"
   apply (cases c, simp_all add: valid_cap_def mask_cap_def
@@ -4468,7 +4468,7 @@ lemma lookup_cap_valid:
   apply auto
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma mask_cap_objrefs[simp]:
   "obj_refs (mask_cap rs cap) = obj_refs cap"
   by (cases cap, simp_all add: mask_cap_def cap_rights_update_def
@@ -4571,7 +4571,7 @@ lemma enc_inv [wp]:
   apply simp
   done
   
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma derive_cap_valid_cap:
   "\<lbrace>valid_cap cap\<rbrace> derive_cap slot cap \<lbrace>valid_cap\<rbrace>,-"
   apply (simp add: derive_cap_def)
@@ -4586,7 +4586,7 @@ lemma badge_update_valid [iff]:
   by (rule ext, cases cap) 
      (auto simp: badge_update_def valid_cap_def cap_aligned_def)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_cap_update_rights[simp]:
   "valid_cap cap s \<Longrightarrow> valid_cap (cap_rights_update cr cap) s"
   apply (case_tac cap,
@@ -4759,7 +4759,7 @@ lemma of_nat_ucast:
   apply (simp add: is_down_def target_size_def source_size_def word_size)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma tcb_cnode_index_def2:
   "tcb_cnode_index n = nat_to_cref 3 n"
   apply (simp add: tcb_cnode_index_def nat_to_cref_def)
@@ -4840,7 +4840,7 @@ lemma setup_reply_master_mdb[wp]:
                   elim!: allEI)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma ex_nonz_tcb_cte_caps:
   "\<lbrakk>ex_nonz_cap_to t s; tcb_at t s; valid_objs s;
     ref \<in> dom tcb_cap_cases\<rbrakk>
@@ -4883,7 +4883,7 @@ lemma setup_reply_master_reply_masters[wp]:
   apply (fastforce elim: tcb_at_cte_at)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma setup_reply_master_globals[wp]:
   "\<lbrace>valid_global_refs and ex_nonz_cap_to t\<rbrace> setup_reply_master t \<lbrace>\<lambda>rv. valid_global_refs\<rbrace>"
   apply (simp add: setup_reply_master_def)
@@ -4912,7 +4912,7 @@ crunch typ_at[wp]: setup_reply_master "\<lambda>s. P (typ_at T p s)"
 
 crunch cur[wp]: setup_reply_master "cur_tcb"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma no_cap_to_obj_with_diff_ref_triv:
   "\<lbrakk> valid_objs s; valid_cap cap s; \<not> is_pt_cap cap;
            \<not> is_pd_cap cap; table_cap_ref cap = None \<rbrakk>
@@ -4927,7 +4927,7 @@ lemma no_cap_to_obj_with_diff_ref_triv:
         apply auto
   done
 end
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma setup_reply_master_arch_caps[wp]:
   "\<lbrace>valid_arch_caps and tcb_at t and valid_objs and pspace_aligned\<rbrace>
      setup_reply_master t
@@ -4979,7 +4979,7 @@ crunch global_pd_mappings[wp]: setup_reply_master "valid_global_pd_mappings"
 
 crunch pspace_in_kernel_window[wp]: setup_reply_master "pspace_in_kernel_window"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma setup_reply_master_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window and tcb_at t and pspace_in_kernel_window\<rbrace>
       setup_reply_master t
@@ -5041,7 +5041,7 @@ definition
    ((\<exists>irq. cap = cap.IRQHandlerCap irq) \<and> parent = cap.IRQControlCap \<or> 
     is_untyped_cap parent \<and> descendants_of p m = {})"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 (* FIXME: prove same_region_as_def2 instead or change def *)
 lemma same_region_as_Untyped2:
   "\<lbrakk> is_untyped_cap pcap; same_region_as pcap cap \<rbrakk> \<Longrightarrow>
@@ -5204,7 +5204,7 @@ lemma safe_parent_same_region:
   "safe_parent_for m p cap pcap \<Longrightarrow> same_region_as pcap cap"
   by (simp add: safe_parent_for_def)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma same_region_as_cap_class:
   shows "same_region_as a b \<Longrightarrow> cap_class a = cap_class b"
   apply (case_tac a)
@@ -5284,7 +5284,7 @@ lemma set_untyped_cap_as_full_caps_of_state_diff:
   apply (wp|clarsimp)+
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cap_insert_simple_arch_caps_no_ap:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s)
              and no_cap_to_obj_with_diff_ref cap {dest} and K (is_simple_cap cap \<and> \<not>is_ap_cap cap)\<rbrace>

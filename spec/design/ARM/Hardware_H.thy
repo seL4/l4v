@@ -13,7 +13,7 @@ imports
   "../../machine/ARM/MachineOps"
   State_H
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
 type_synonym irq = "Platform.ARM.irq"
 
@@ -378,11 +378,11 @@ where
 
 
 end
-qualify ARM (deep)
+qualify ARM_H (in Arch) (deep)
 (* vmrights instance proofs *)
 (*<*)
 instantiation vmrights :: enum begin
-interpretation ARM .
+interpretation Arch .
 definition
   enum_vmrights: "enum_class.enum \<equiv> 
     [ 
@@ -409,7 +409,7 @@ end
 
 instantiation vmrights :: enum_alt
 begin
-interpretation ARM .
+interpretation Arch .
 definition
   enum_alt_vmrights: "enum_alt \<equiv> 
     alt_from_ord (enum :: vmrights list)"
@@ -418,13 +418,13 @@ end
 
 instantiation vmrights :: enumeration_both
 begin
-interpretation ARM .
+interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_vmrights)
 end
 
 (*>*)
 end_qualify
-context ARM begin
+context Arch begin global_naming ARM_H
 
 
 definition

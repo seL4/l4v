@@ -14,11 +14,14 @@ imports
   "./$L4V_ARCH/ArchRetypeDecls_H"
   "./$L4V_ARCH/ArchLabelFuns_H"
 begin
-
-unqualify_types (in Arch)
-  copy_register_sets
+requalify_types (in Arch)
+  copy_register_sets irqcontrol_invocation
+  invocation
 
 #INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=Arch NOT InvocationLabel
 #INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ONLY invocationType
+
+shadow_types (in Arch)
+  invocation
 
 end

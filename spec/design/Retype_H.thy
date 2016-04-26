@@ -17,6 +17,21 @@ imports
   Untyped_H
   Interrupt_H
 begin
+context Arch begin
+requalify_consts
+  deriveCap finaliseCap recycleCap
+  hasRecycleRights sameRegionAs isPhysicalCap
+  sameObjectAs updateCapData maskCapRights
+  createObject capUntypedPtr capUntypedSize
+  performInvocation decodeInvocation
+
+shadow_consts
+  deriveCap finaliseCap recycleCap
+  hasRecycleRights sameRegionAs isPhysicalCap
+  sameObjectAs updateCapData maskCapRights
+  createObject capUntypedPtr capUntypedSize
+  performInvocation decodeInvocation
+end
 
 defs deriveCap_def:
 "deriveCap slot x1\<equiv> (let cap = x1 in

@@ -58,7 +58,7 @@ definition all_invs_but_valid_irq_states_for where
   pspace_in_kernel_window and
   cap_refs_in_kernel_window and cur_tcb"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma dmo_maskInterrupt_invs:
   "\<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace> 
    do_machine_op (maskInterrupt (state = IRQInactive) irq) 

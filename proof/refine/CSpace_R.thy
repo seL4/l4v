@@ -5976,7 +5976,7 @@ lemma cte_refs_maskCapRights[simp]:
   "cte_refs' (maskCapRights rghts cap) = cte_refs' cap"
   by (rule ext, cases cap,
       simp_all add: maskCapRights_def isCap_defs Let_def
-                    ArchRetype_H.maskCapRights_def
+                    ARM.maskCapRights_def
          split del: split_if
              split: arch_capability.split)
 
@@ -6225,7 +6225,7 @@ lemma diminished_Untyped' :
    (* 6 subgoals *)
    apply (rename_tac arch_capability R)
    apply (case_tac arch_capability)
-    apply (clarsimp simp: isCap_simps ArchRetype_H.maskCapRights_def maskCapRights_def
+    apply (clarsimp simp: isCap_simps ARM.maskCapRights_def maskCapRights_def
                           diminished'_def Let_def)+
 done
 

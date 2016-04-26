@@ -15,6 +15,7 @@ imports
   "../invariant-abstract/AInvs"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 -- ---------------------------------------------------------------------------
 section "Invariants on Executable Spec"
 
@@ -30,6 +31,8 @@ definition
   "ko_wp_at' P p s \<equiv>
    \<exists>ko. ksPSpace s p = Some ko \<and> is_aligned p (objBitsKO ko) \<and> P ko \<and>
         ps_clear p (objBitsKO ko) s"
+
+
 
 definition
   obj_at' :: "('a::pspace_storable \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -58,6 +61,7 @@ abbreviation
   "pde_at' \<equiv> typ_at' (ArchT PDET)"
 abbreviation
   "pte_at' \<equiv> typ_at' (ArchT PTET)"
+end
 
 record itcb' =
   itcbState          :: thread_state
@@ -273,6 +277,8 @@ where
 
 section "Valid caps and objects (Haskell)"
 
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 primrec
   acapBits :: "arch_capability \<Rightarrow> nat"
 where
@@ -281,6 +287,8 @@ where
 | "acapBits (PageCap x y sz z) = pageBitsForSize sz"
 | "acapBits (PageTableCap x y) = 10"
 | "acapBits (PageDirectoryCap x y) = 14"
+end
+
 
 primrec
   zBits :: "zombie_type \<Rightarrow> nat"
@@ -307,7 +315,7 @@ where
 definition
   "capAligned c \<equiv>
    is_aligned (capUntypedPtr c) (capBits c) \<and> capBits c < word_bits"
-
+                       
 definition
  "obj_range' (p::word32) ko \<equiv> {p .. p + 2 ^ objBitsKO ko - 1}"
 
@@ -321,6 +329,10 @@ definition
   "valid_untyped' ptr bits idx s \<equiv>
   \<forall>ptr'. \<not> ko_wp_at' (\<lambda>ko. {ptr .. ptr + 2 ^ bits - 1} \<subset> obj_range' ptr' ko
   \<or> obj_range' ptr' ko \<inter> usableUntypedRange(UntypedCap ptr bits idx) \<noteq> {}) ptr' s"
+
+
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   page_table_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -370,18 +382,18 @@ where valid_cap'_def:
             \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
                     \<and> (\<forall>addr. real_cte_at' (r + 16 * (addr && mask n)) s))
   | Structures_H.ArchObjectCap ac \<Rightarrow> (case ac of
-    ArchStructures_H.ASIDPoolCap pool asid \<Rightarrow>
+    ASIDPoolCap pool asid \<Rightarrow>
     typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
-  | ArchStructures_H.ASIDControlCap \<Rightarrow> True
-  | ArchStructures_H.PageCap ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
+  | ASIDControlCap \<Rightarrow> True
+  | PageCap ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' UserDataT (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase)
-  | ArchStructures_H.PageTableCap ref mapdata \<Rightarrow>
+  | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
-  | ArchStructures_H.PageDirectoryCap ref mapdata \<Rightarrow>
+  | PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
 
@@ -457,17 +469,17 @@ definition
   valid_mapping' :: "word32 \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz)
-                            \<and> Platform.ptrFromPAddr x \<noteq> 0"
+                            \<and> ptrFromPAddr x \<noteq> 0"
 
 primrec
-  valid_pte' :: "Hardware_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_pte' :: "ARM_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_pte' (InvalidPTE) = \<top>"
 | "valid_pte' (LargePagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMLargePage)"
 | "valid_pte' (SmallPagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMSmallPage)"
 
 primrec
-  valid_pde' :: "Hardware_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_pde' :: "ARM_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_pde' (InvalidPDE) = \<top>"
 | "valid_pde' (SectionPDE ptr _ _ _ _ _ _) = (valid_mapping' ptr ARMSection)"
@@ -773,8 +785,8 @@ definition
 definition
   vs_ptr_align :: "Structures_H.kernel_object \<Rightarrow> nat" where
  "vs_ptr_align obj \<equiv>
-  case obj of KOArch (KOPTE (Hardware_H.pte.LargePagePTE _ _ _ _ _)) \<Rightarrow> 6
-            | KOArch (KOPDE (Hardware_H.pde.SuperSectionPDE _ _ _ _ _ _)) \<Rightarrow> 6
+  case obj of KOArch (KOPTE (pte.LargePagePTE _ _ _ _ _)) \<Rightarrow> 6
+            | KOArch (KOPDE (pde.SuperSectionPDE _ _ _ _ _ _)) \<Rightarrow> 6
             | _ \<Rightarrow> 0"
 
 definition "vs_valid_duplicates' \<equiv> \<lambda>h.
@@ -1199,6 +1211,7 @@ abbreviation (input)
 lemma invs'_to_invs_no_cicd'_def:
   "invs' = (all_invs_but_ct_idle_or_in_cur_domain' and ct_idle_or_in_cur_domain')"
   by (fastforce simp: invs'_def all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def )
+end
 
 locale mdb_next =
   fixes m :: cte_heap
@@ -1215,7 +1228,7 @@ locale mdb_order = mdb_next +
 
 -- ---------------------------------------------------------------------------
 section "Alternate split rules for preserving subgoal order"
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma capability_splits[split]:
   "P (case capability of capability.ThreadCap x \<Rightarrow> f1 x
      | capability.NullCap \<Rightarrow> f2
@@ -2811,7 +2824,7 @@ lemma mdb_next_fold:
   "(m \<turnstile> p \<leadsto> c) = (mdb_next m p = Some c)"
   unfolding mdb_next_rel_def
   by simp
-
+end
 locale PSpace_update_eq =
   fixes f :: "kernel_state \<Rightarrow> kernel_state"
   assumes pspace: "ksPSpace (f s) = ksPSpace s"
@@ -3093,7 +3106,7 @@ lemma ex_cte_cap_to'_pres:
    apply assumption
   apply simp
   done
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma page_directory_pde_atI':
   "\<lbrakk> page_directory_at' p s; x < 2 ^ pageBits \<rbrakk> \<Longrightarrow> pde_at' (p + (x << 2)) s"
   by (simp add: page_directory_at'_def pageBits_def)
@@ -3261,6 +3274,7 @@ lemma sch_act_wf_cases:
   | ChooseNewThread     \<Rightarrow> \<top>
   | SwitchToThread t    \<Rightarrow> \<lambda>s. st_tcb_at' runnable' t s \<and> tcb_in_cur_domain' t s)"
 by (cases action) auto
+end
 
 lemma (in PSpace_update_eq) cteCaps_of_update[iff]: "cteCaps_of (f s) = cteCaps_of s"
   by (simp add: cteCaps_of_def pspace)
@@ -3269,7 +3283,7 @@ lemma vms_sch_act_update'[iff]:
   "valid_machine_state' (ksSchedulerAction_update f s) =
    valid_machine_state' s"
   by (simp add: valid_machine_state'_def )
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma objBitsT_simps:
   "objBitsT EndpointT = 4"
   "objBitsT NotificationT = 4"
@@ -3513,7 +3527,7 @@ lemma valid_bitmap_valid_bitmapQ_exceptI[intro]:
   "valid_bitmapQ s \<Longrightarrow> valid_bitmapQ_except d p s"
   unfolding valid_bitmapQ_except_def valid_bitmapQ_def
   by simp
-
+end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:
   ko_at' ko p s \<Longrightarrow>
   obj_at' (complicated_P (obj_at' (complicated_Q (obj_at' ...)) p s)) p s

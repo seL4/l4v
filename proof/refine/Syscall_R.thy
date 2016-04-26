@@ -688,7 +688,7 @@ lemma diminished_ReplyCap' [simp]:
   apply (rule iffI)
    apply (clarsimp simp: diminished'_def maskCapRights_def Let_def split del: split_if)
    apply (cases cap, simp_all add: isCap_simps)[1]
-   apply (simp add: ArchRetype_H.maskCapRights_def isPageCap_def split: arch_capability.splits)
+   apply (simp add: ARM.maskCapRights_def isPageCap_def split: arch_capability.splits)
   apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
   done
 

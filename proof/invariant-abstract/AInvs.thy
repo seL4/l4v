@@ -74,7 +74,7 @@ lemma Collect_subseteq:
 definition
   "kernel_mappings \<equiv> {x. x \<ge> kernel_base}"
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 lemma kernel_mappings_slots_eq:
   "p \<in> kernel_mappings \<longleftrightarrow> ucast (p >> 20) \<in> kernel_mapping_slots"
@@ -227,7 +227,7 @@ lemma some_get_page_info_umapsD:
 
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma ptable_rights_imp_user_frame:
   assumes "valid_state s"

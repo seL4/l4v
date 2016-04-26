@@ -656,11 +656,11 @@ lemma vs_refs_pages_ptI:
   done
 
 lemmas vs_refs_pages_pt_largeI
-    = vs_refs_pages_ptI[where pte="Arch_Structs_A.pte.LargePagePTE x y z" for x y z,
+    = vs_refs_pages_ptI[where pte="ARM_A.pte.LargePagePTE x y z" for x y z,
         unfolded pte_ref_pages_def, simplified, OF _ refl]
 
 lemmas vs_refs_pages_pt_smallI
-    = vs_refs_pages_ptI[where pte="Arch_Structs_A.pte.SmallPagePTE x y z" for x y z,
+    = vs_refs_pages_ptI[where pte="ARM_A.pte.SmallPagePTE x y z" for x y z,
         unfolded pte_ref_pages_def, simplified, OF _ refl]
 
 lemma vs_refs_pages_pdI:
@@ -673,11 +673,11 @@ lemma vs_refs_pages_pdI:
   done
 
 lemmas vs_refs_pages_pd_sectionI
-    = vs_refs_pages_pdI[where pde="Arch_Structs_A.pde.SectionPDE x y z w" for x y z w,
+    = vs_refs_pages_pdI[where pde="ARM_A.pde.SectionPDE x y z w" for x y z w,
         unfolded pde_ref_pages_def, simplified, OF _ refl]
 
 lemmas vs_refs_pages_pd_supersectionI
-    = vs_refs_pages_pdI[where pde="Arch_Structs_A.pde.SuperSectionPDE x y z" for x y z,
+    = vs_refs_pages_pdI[where pde="ARM_A.pde.SuperSectionPDE x y z" for x y z,
         unfolded pde_ref_pages_def, simplified, OF _ refl]
 
 lemma get_master_pde_sp:
@@ -1661,8 +1661,8 @@ lemma ensureSafeMapping_valid_slots_duplicated':
   done
 
 lemma is_aligned_ptrFromPAddr_aligned:
-  "m \<le> 28 \<Longrightarrow> is_aligned (Platform.ptrFromPAddr p) m = is_aligned p m"
-  apply (simp add:Platform.ptrFromPAddr_def is_aligned_mask
+  "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
+  apply (simp add:ptrFromPAddr_def is_aligned_mask
     physMappingOffset_def kernelBase_addr_def Platform.physBase_def physBase_def)
   apply (subst add.commute)
   apply (subst mask_add_aligned)
@@ -1911,7 +1911,7 @@ lemma arch_decodeInvocation_wf[wp]:
       simp add: valid_arch_inv'_def valid_pti'_def unlessE_whenE|
       rule_tac x="fst p" in hoare_imp_eq_substR
       )+)
-              apply (rule_tac Q'="\<lambda>b c. ko_at' Hardware_H.pde.InvalidPDE (b + (hd args >> 20 << 2)) c \<longrightarrow>
+              apply (rule_tac Q'="\<lambda>b c. ko_at' ARM_H.pde.InvalidPDE (b + (hd args >> 20 << 2)) c \<longrightarrow>
                  cte_wp_at'
                   (is_arch_update'
                     (capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, hd args >> 20 << 20)))))

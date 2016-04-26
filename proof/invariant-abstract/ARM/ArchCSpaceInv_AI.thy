@@ -15,7 +15,7 @@ CSpace invariants
 theory ArchCSpaceInv_AI
 imports "../CSpaceInvPre_AI"
 begin
-context ARM begin
+context Arch begin global_naming ARM
 
 lemma aobj_ref_acap_rights_update[simp]:
   "aobj_ref (acap_rights_update f x) = aobj_ref x"

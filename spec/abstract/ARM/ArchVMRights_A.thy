@@ -14,7 +14,7 @@ theory ArchVMRights_A
 imports "../CapRights_A" "../../machine/ARM/Setup_Locale"
 begin
 
-context ARM_A begin
+context Arch begin global_naming ARM_A
 
 text {*
 This theory provides architecture-specific definitions and datatypes

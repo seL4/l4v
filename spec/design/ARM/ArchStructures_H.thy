@@ -14,7 +14,7 @@ imports
   "../Types_H"
   Hardware_H
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
 type_synonym asid = "word32"
 

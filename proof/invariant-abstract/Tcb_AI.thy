@@ -28,7 +28,7 @@ lemma set_thread_state_ct_st:
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma activate_idle_invs:
   "\<lbrace>invs and ct_idle\<rbrace>
      arch_activate_idle_thread thread
@@ -139,7 +139,7 @@ lemma copyAreaToRegs_tcb'[wp]:
   "\<lbrace>tcb_at t\<rbrace> copyAreaToRegs regs a b \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ, wp copyAreaToRegs_typ_at)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma empty_fail_getRegister [intro!, simp]:
   "empty_fail (getRegister r)"
   by (simp add: getRegister_def)
@@ -398,7 +398,7 @@ lemma out_cte_wp_at_trivialT:
   done
 
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma same_object_also_valid:
   "\<lbrakk> same_object_as cap cap'; s \<turnstile> cap'; wellformed_cap cap;
      cap_asid cap = None \<or> (\<exists>asid. cap_asid cap = Some asid \<and> 0 < asid \<and> asid \<le> 2^asid_bits - 1);
@@ -428,7 +428,7 @@ lemma same_object_untyped_range:
   by (cases cap, (clarsimp simp: same_object_as_def is_cap_simps)+)
 
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma same_object_obj_refs:
   "\<lbrakk> same_object_as cap cap' \<rbrakk>
      \<Longrightarrow> obj_refs cap = obj_refs cap'"
@@ -456,7 +456,7 @@ lemma zombies_final_helperE:
   done
 
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 definition
   is_cnode_or_valid_arch :: "cap \<Rightarrow> bool"
 where
@@ -480,7 +480,7 @@ lemma cap_master_eq_badge_none:
   apply (simp add: cap_badge_none_master)
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 definition
   "pt_pd_asid cap \<equiv> case cap of
@@ -591,7 +591,7 @@ lemma thread_set_emptyable[wp]:
 crunch not_cte_wp_at[wp]: unbind_maybe_notification "\<lambda>s. \<forall>cp\<in>ran (caps_of_state s). P cp"
   (wp: thread_set_caps_of_state_trivial simp: tcb_cap_cases_def)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma finalise_cap_not_cte_wp_at:
   assumes x: "P cap.NullCap"
   shows      "\<lbrace>\<lambda>s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>
@@ -684,7 +684,7 @@ qed
 abbreviation
  "no_cap_to_obj_dr_emp cap \<equiv> no_cap_to_obj_with_diff_ref cap {}"
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma use_no_cap_to_obj_asid_strg:
   "(cte_at p s \<and> no_cap_to_obj_dr_emp cap s \<and> valid_cap cap s \<and> invs s)
          \<longrightarrow> cte_wp_at (\<lambda>c. obj_refs c = obj_refs cap
@@ -709,7 +709,7 @@ lemma no_cap_to_obj_with_diff_ref_ran_caps_form:
   apply auto
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cap_delete_no_cap_to_obj_asid[wp]:
   "\<lbrace>no_cap_to_obj_dr_emp cap\<rbrace>
      cap_delete slot
@@ -746,7 +746,7 @@ lemma thread_set_no_cap_to_trivial:
             | simp)+
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma table_cap_ref_max_free_index_upd[simp]:
   "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
   by (simp add:free_index_update_def table_cap_ref_def split:cap.splits)
@@ -854,7 +854,7 @@ lemma thread_set_ipc_tcb_cap_valid:
                  dest!: get_tcb_SomeD)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma tc_invs:
   "\<lbrace>invs and tcb_at a
@@ -1177,7 +1177,7 @@ lemma decode_set_priority_inv[wp]:
   apply simp
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma check_valid_ipc_buffer_inv:
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -1214,7 +1214,7 @@ lemma derive_is_arch[wp]:
   apply fastforce
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma derive_no_cap_asid[wp]:
   "\<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
      derive_cap slot cap
@@ -1280,7 +1280,7 @@ lemma val_le_length_Cons:
   apply (cases n, simp_all)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma no_cap_to_obj_with_diff_ref_update_cap_data:
   "no_cap_to_obj_with_diff_ref c S s \<longrightarrow>
@@ -1401,7 +1401,7 @@ lemma derived_cap_cnode_valid:
   apply (clarsimp simp add: liftME_def in_monad)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma update_cap_valid:
   "valid_cap cap s \<Longrightarrow>
    valid_cap (case capdata of
@@ -1506,7 +1506,7 @@ lemma pred_tcb_at_arch_state[simp]:
   "pred_tcb_at proj P t (arch_state_update f s) = pred_tcb_at proj P t s"
   by (simp add: pred_tcb_at_def obj_at_def)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 end

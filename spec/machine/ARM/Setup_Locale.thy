@@ -15,33 +15,14 @@ begin
 
 (* 
    We use a locale for namespacing architecture-specific definitions.
-   An Arch locale is defined to precisely copy ARM so that we
-   can open an architecture context in generic theories.
 
-   Note that we always open ARM (as opposed to Arch) in ARM-specific theories so that
-   constants, facts and types are correctly under the "ARM" namespace.
-
-   We open Arch in generic theories when we want access to architecture-specific
-   constants, facts and types but expect the block (begin ... end) 
-   to be valid in all architectures.
-
-   Additionally we give ourselves ARM_A and ARM_H locales (equivalent to ARM/Arch) which are used
-   to disambiguate abstract and haskell constants which have the same name.
+   The global_naming command changes the underlying naming of the locale. The intention is that
+   we liberally put everything into the "ARM" namespace, and then carefully unqualify (put into global namespace)
+   or requalify (change qualifier to "Arch" instead of "ARM") in order to refer to entities in
+   generic proofs.
 
 *)
 
-locale ARM
-locale ARM_A
-locale ARM_H
 locale Arch
-
-sublocale Arch \<subseteq> ARM .
-sublocale ARM \<subseteq> Arch .
-
-sublocale ARM \<subseteq> ARM_A .
-sublocale ARM_A \<subseteq> ARM .
-
-sublocale ARM_H \<subseteq> ARM .
-sublocale ARM \<subseteq> ARM_H .
 
 end

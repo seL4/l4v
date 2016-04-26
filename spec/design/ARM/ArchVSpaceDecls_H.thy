@@ -13,7 +13,7 @@ chapter "Retyping Objects"
 theory ArchVSpaceDecls_H
 imports ArchRetypeDecls_H "../InvocationLabels_H"
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
 consts'
 globalsBase :: "vptr"
@@ -217,10 +217,10 @@ consts'
 resolveVAddr :: "machine_word \<Rightarrow> vptr \<Rightarrow> ((vmpage_size * paddr) option) kernel"
 
 consts'
-decodeARMMMUInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , Arch.invocation ) kernel_f"
+decodeARMMMUInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
-decodeARMPageFlush :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> arch_capability \<Rightarrow> ( syscall_error , Arch.invocation ) kernel_f"
+decodeARMPageFlush :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> arch_capability \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
 checkVPAlignment :: "vmpage_size \<Rightarrow> vptr \<Rightarrow> ( syscall_error , unit ) kernel_f"
@@ -229,7 +229,7 @@ consts'
 checkValidMappingSize :: "vmpage_size \<Rightarrow> unit kernel"
 
 consts'
-performARMMMUInvocation :: "Arch.invocation \<Rightarrow> machine_word list kernel_p"
+performARMMMUInvocation :: "invocation \<Rightarrow> machine_word list kernel_p"
 
 consts'
 performPageDirectoryInvocation :: "page_directory_invocation \<Rightarrow> unit kernel"

@@ -18,6 +18,8 @@ lemma lookupAround2_known1:
   "m x = Some y \<Longrightarrow> fst (lookupAround2 x m) = Some (x, y)"
   by (fastforce simp: lookupAround2_char1)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma obj_at_getObject:
   assumes R: 
   "\<And>a b p q n ko s obj::'a::pspace_storable. 
@@ -47,10 +49,12 @@ lemma getObject_inv_tcb [wp]: "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda
   apply simp
   apply (rule loadObject_default_inv)
   done
-
+end
 (* FIXME: this should go somewhere in spec *)
 translations 
   (type) "'a kernel" <=(type) "kernel_state \<Rightarrow> ('a \<times> kernel_state) set \<times> bool"
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma no_fail_loadObject_default [wp]:
   "no_fail (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and> 
@@ -166,7 +170,7 @@ lemma koType_objBitsKO:
   "koTypeOf k = koTypeOf k' \<Longrightarrow> objBitsKO k = objBitsKO k'"
   by (auto simp: objBitsKO_def archObjSize_def
           split: Structures_H.kernel_object.splits
-                 ArchStructures_H.arch_kernel_object.splits)
+                 ARM_H.arch_kernel_object.splits)
 
 lemma updateObject_objBitsKO:
     "(ko', t') \<in> fst (updateObject (val :: 'a :: pspace_storable) ko p q n t)
@@ -180,7 +184,7 @@ lemma objBitsKO_bounded:
   apply (cases ko)
   apply (simp_all add: word_bits_def pageBits_def 
                        objBitsKO_simps archObjSize_def
-                split: ArchStructures_H.arch_kernel_object.splits)
+                split: ARM_H.arch_kernel_object.splits)
   done
 
 lemma updateObject_cte_is_tcb_or_cte:
@@ -981,7 +985,7 @@ lemma obj_relation_cut_same_type:
                     pte_relation_def pde_relation_def
              split: Structures_A.kernel_object.split_asm split_if_asm
                     Structures_H.kernel_object.split_asm
-                    Arch_Structs_A.arch_kernel_obj.split_asm)
+                    ARM_A.arch_kernel_obj.split_asm)
   done
 
 definition exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
@@ -1055,7 +1059,7 @@ lemma set_other_obj_corres:
   apply (clarsimp simp: obj_at'_def)
   apply (erule_tac x=obj in allE)
   apply (clarsimp simp: projectKO_eq project_inject)
-  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type t exst_same_def split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits Arch_Structs_A.arch_kernel_obj.splits)
+  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type t exst_same_def split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits ARM_A.arch_kernel_obj.splits)
   done
 
 lemma set_ep_corres:
@@ -1343,7 +1347,7 @@ lemma setObject_no_0_obj' [wp]:
 
 lemma valid_updateCapDataI:
   "s \<turnstile>' c \<Longrightarrow> s \<turnstile>' updateCapData b x c"
-  apply (unfold updateCapData_def Let_def ArchRetype_H.updateCapData_def)
+  apply (unfold updateCapData_def Let_def ARM.updateCapData_def)
   apply (cases c)
   apply (simp_all add: isCap_defs valid_cap'_def capUntypedPtr_def isCap_simps 
                        capAligned_def word_size word_bits_def word_bw_assocs)
@@ -2339,4 +2343,5 @@ crunch ksArchState[wp]: setEndpoint "\<lambda>s. P (ksArchState s)"
 lemmas setEndpoint_valid_globals[wp]
     = valid_global_refs_lift' [OF set_ep_ctes_of setEndpoint_ksArchState
                                   setEndpoint_it setEndpoint_ksInterruptState]
+end
 end

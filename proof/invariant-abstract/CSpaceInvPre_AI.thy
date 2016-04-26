@@ -136,7 +136,7 @@ lemma empty_table_caps_of:
   "empty_table S ko \<Longrightarrow> caps_of ko = {}"
   by (cases ko, simp_all add: empty_table_def caps_of_def cap_of_def)
 
-context begin interpretation ARM . (*FIXME arch_split *) 
+context begin interpretation Arch . (*FIXME arch_split *) 
 lemma free_index_update_test_function_stuff[simp]:
   "cap_asid (src_cap\<lparr>free_index := a\<rparr>) = cap_asid src_cap"
   "obj_irq_refs (src_cap\<lparr>free_index := a\<rparr>) = obj_irq_refs src_cap"

@@ -3920,7 +3920,7 @@ lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cance
   apply (wp select_wp hoare_drop_imps thread_set_mdb | simp)+
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch valid_list[wp]: cap_swap_for_delete,set_cap,finalise_cap valid_list (wp: crunch_wps simp: unless_def crunch_simps)
 end
 
@@ -3943,7 +3943,7 @@ sublocale Arch < reset_work_units_ext_extended: is_extended "reset_work_units"
   apply wp
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma preemption_point_inv':
   "\<lbrakk>irq_state_independent_A P; \<And>f s. P (work_units_completed_update f s) = P s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   apply (intro impI conjI | simp add: preemption_point_def o_def
@@ -3985,7 +3985,7 @@ sublocale Arch < recycle_cap_ext_extended: is_extended "recycle_cap_ext a"
   apply wp
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch valid_list[wp]: cap_recycle valid_list (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM unless_def ignore: without_preemption filterM recycle_cap_ext)
 end
 
@@ -4076,7 +4076,7 @@ interpretation retype_region_ext_extended: is_extended "retype_region_ext a b"
   apply wp
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch valid_list[wp]: invoke_untyped valid_list (wp: crunch_wps simp: mapM_x_def_bak)
 
@@ -4106,7 +4106,7 @@ interpretation attempt_switch_to_extended: is_extended "attempt_switch_to a"
   apply (unfold_locales)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch valid_list[wp]: perform_invocation valid_list (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
 

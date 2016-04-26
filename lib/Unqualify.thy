@@ -6,9 +6,11 @@
 theory Unqualify
 imports Main
 keywords "unqualify_facts" :: thy_decl and "unqualify_consts" :: thy_decl and "unqualify_types" :: thy_decl and
-         "shadow_facts" :: thy_decl and "shadow_types" :: thy_decl and "shadow_consts" :: thy_decl
+         "shadow_facts" :: thy_decl and "shadow_types" :: thy_decl and "shadow_consts" :: thy_decl and
+         "requalify_facts" :: thy_decl and "requalify_types" :: thy_decl and "requalify_consts" :: thy_decl and
+         "global_naming" :: thy_decl
 begin
-ML \<open>Long_Name.dest_local "local.baz.bing"\<close>
+
 ML \<open>
 
 local
@@ -66,7 +68,7 @@ in
 end
 
 fun syntax_alias global_alias local_alias b (name : string) =
-  Local_Theory.declaration {syntax = true, pervasive = true} (fn phi =>
+  Local_Theory.declaration {syntax = false, pervasive = true} (fn phi =>
     let val b' = Morphism.binding phi b
     in Context.mapping (global_alias b' name) (local_alias b' name) end);
 
@@ -223,39 +225,97 @@ fun gen_shadow get_proper_nm alias =
     >> (fn (target,bs) =>
       Toplevel.local_theory NONE target (fn lthy =>
       let
+
      
         fun read_entry (t, pos) lthy =
         let
+          
           val global_ctxt = Proof_Context.init_global (Proof_Context.theory_of lthy);
           val (global_nm : string) = get_proper_nm global_ctxt t;
+         
           val local_nm = get_proper_nm lthy t;
+
+
+          val _ = if local_nm = global_nm then error (global_nm ^ " is already globally defined." ^ Position.here pos) else ()
+
           val b = Binding.make (t, pos)
      
           val global_naming = Proof_Context.naming_of global_ctxt;
-     
+
           val lthy' = lthy
-          |> alias b local_nm
           |> Local_Theory.map_background_naming (K global_naming)
           |> alias b global_nm
           |> Local_Theory.restore_background_naming lthy
-     
+
         in lthy' end
      
        in fold read_entry bs lthy end)))
 
+fun gen_requalify get_proper_nm alias = 
+  (Parse.opt_target  --  Scan.repeat1 (Parse.position (Parse.name)) 
+    >> (fn (target,bs) =>
+      Toplevel.local_theory NONE target (fn lthy =>
+      let
+     
+        fun read_entry (t, pos) lthy =
+        let
+          val local_nm = get_proper_nm lthy t;
+          val global_ctxt = Proof_Context.init_global (Proof_Context.theory_of lthy);
+          val opt_global_nm = try (get_proper_nm global_ctxt) t;
+
+          val _ = if SOME local_nm = opt_global_nm 
+            then error (local_nm ^ " is already globally accessible." ^ Position.here pos) 
+            else ()
+
+          val b = Binding.make (t, pos)
+
+          val lthy' = lthy
+          |> alias b local_nm
+
+        in lthy' end
+     
+       in fold read_entry bs lthy  end)))
+
+local
+
+val get_const_nm = ((fst o dest_Const) oo (Proof_Context.read_const {proper = true, strict = false}))
+val get_type_nm = ((fst o dest_Type) oo (Proof_Context.read_type_name {proper = true, strict = false}))
+val get_fact_nm = (fst oo global_fact)
+
+in
+
 val _ =
   Outer_Syntax.command @{command_keyword shadow_consts} "shadow local consts with global ones"
-    (gen_shadow ((fst o dest_Const) oo (Proof_Context.read_const {proper = true, strict = false})) const_alias)
+    (gen_shadow get_const_nm const_alias)
 
 val _ =
   Outer_Syntax.command @{command_keyword shadow_types} "shadow local types with global ones"
-    (gen_shadow ((fst o dest_Type) oo (Proof_Context.read_type_name {proper = true, strict = false})) type_alias)
+    (gen_shadow get_type_nm type_alias)
 
 val _ =
   Outer_Syntax.command @{command_keyword shadow_facts} "shadow local facts with global ones"
-    (gen_shadow (fst oo global_fact) fact_alias)
+    (gen_shadow get_fact_nm fact_alias)
+
+val _ =
+  Outer_Syntax.command @{command_keyword requalify_consts} "alias local const with current naming"
+    (gen_requalify get_const_nm const_alias)
+
+val _ =
+  Outer_Syntax.command @{command_keyword requalify_types} "alias local type with current naming"
+    (gen_requalify get_type_nm type_alias)
+
+val _ =
+  Outer_Syntax.command @{command_keyword requalify_facts} "alias local fact with current naming"
+    (gen_requalify get_fact_nm fact_alias)
+
+val _ =
+  Outer_Syntax.command @{command_keyword global_naming} "change global naming of context block"
+    (Parse.name >> (fn naming =>
+      Toplevel.local_theory NONE NONE 
+        (Local_Theory.map_background_naming (Name_Space.parent_path #> Name_Space.mandatory_path naming))))
+
+end
 
 end
 \<close>
-
 end

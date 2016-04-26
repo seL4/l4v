@@ -20,15 +20,9 @@ imports
   ArchTypes_H
   ArchStructures_H
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
-#INCLUDE_HASKELL SEL4/Model/StateData/ARM.lhs CONTEXT ARM NOT ArmVSpaceRegionUse
-
-unqualify_types
-  kernel_state
-
-unqualify_consts
-  newKernelState
+#INCLUDE_HASKELL SEL4/Model/StateData/ARM.lhs CONTEXT ARM_H NOT ArmVSpaceRegionUse
 
 end
 

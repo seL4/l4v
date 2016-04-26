@@ -16,7 +16,7 @@ imports
   "../TCBDecls_H"
   ArchVSpaceDecls_H
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
 defs switchToThread_def:
 "switchToThread tcb\<equiv> (do

@@ -13,7 +13,7 @@ keywords "qualify" :: thy_decl and "end_qualify" :: thy_decl
 begin
 ML \<open>
 
-type qualify_args = {name : string, deep : bool}
+type qualify_args = {name : string, deep : bool, target_name : string}
 
 structure Data = Theory_Data
   (
@@ -120,14 +120,14 @@ fun make_bind_local nm =
 fun set_global_qualify (args : qualify_args) thy =
   let
     val str = #name args
-    val _ = Locale.check thy (str, Position.none)
+    val _ = Locale.check thy (#target_name args, Position.none)
     val _ = case get_qualify thy of SOME _ => error "Already in a qualify block!" | NONE => ();
 
     val thy' = Data.map (apfst (K (SOME (thy,args)))) thy;
 
   in if #deep args then
   let
-    val lthy = Named_Target.begin (str, Position.none) thy';
+    val lthy = Named_Target.begin (#target_name args, Position.none) thy';
 
     val facts = 
       Facts.fold_static (fn (nm, _) => add_qualified str nm) (Global_Theory.facts_of thy) []
@@ -158,8 +158,9 @@ fun set_global_qualify (args : qualify_args) thy =
 
 val _ =
   Outer_Syntax.command @{command_keyword qualify} "begin global qualification"
-    (Parse.name -- Args.mode "deep">> 
-      (fn (str, deep) => Toplevel.theory (set_global_qualify {name = str, deep = deep})));
+    (Parse.name -- (Parse.opt_target -- Args.mode "deep")>> 
+      (fn (str, (target, deep)) => 
+          Toplevel.theory (set_global_qualify {name = str, deep = deep, target_name = case target of SOME (nm, _) => nm | _ => str})));
 
 fun syntax_alias global_alias local_alias b name =
   Local_Theory.declaration {syntax = true, pervasive = true} (fn phi =>
@@ -202,7 +203,8 @@ fun end_global_qualify thy =
      |> (fn thy => fold (Sign.hide_const false o snd) consts' thy)
      |> (fn thy => fold (Sign.hide_type false o snd) types' thy);
 
-    val lthy = Named_Target.begin (nm, Position.none) thy'';
+    val lthy = Named_Target.begin (#target_name args, Position.none) thy'' 
+      |> Local_Theory.map_background_naming (Name_Space.parent_path #> Name_Space.mandatory_path nm);
 
     val lthy' = lthy
       |> fold (uncurry fact_alias) facts

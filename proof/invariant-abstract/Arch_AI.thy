@@ -16,7 +16,7 @@ theory Arch_AI
 imports Untyped_AI Finalise_AI
 begin
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 definition
   "valid_aci aci \<equiv> case aci of MakePool frame slot parent base \<Rightarrow>   
@@ -62,7 +62,7 @@ lemma invs_strgs:
   "invs s \<longrightarrow> pspace_aligned s"
   by auto
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 definition
   valid_arch_inv :: "arch_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -122,7 +122,7 @@ proof -
     by (clarsimp simp: in_assocs_is_fun)
 qed
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 lemma check_vp_wpR [wp]:
   "\<lbrace>\<lambda>s. vmsz_aligned w sz \<longrightarrow> P () s\<rbrace> 
@@ -248,7 +248,7 @@ lemma ucast_le_migrate:
   done
 
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 lemma ucast_fst_hd_assocs:
   "- dom (\<lambda>x. pool (ucast (x::10 word)::word32)) \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + (w::word32) \<noteq> 0} \<noteq> {}
@@ -307,7 +307,7 @@ lemma obj_at_delete_objects:
   apply (simp add: detype_machine_state_update_comm)
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 lemma perform_asid_control_invocation_tcb_at:
   "\<lbrace>invs and valid_aci aci and st_tcb_at active p and
@@ -352,7 +352,7 @@ lemma ucast_asid_high_btis_of_le [simp]:
 
 end
 
-context begin interpretation ARM . (*FIXME: arch_split: *)
+context begin interpretation Arch . (*FIXME: arch_split: *)
 
 lemma invoke_arch_tcb:
   "\<lbrace>invs and valid_arch_inv ai and st_tcb_at active tptr\<rbrace> 
@@ -388,7 +388,7 @@ lemma invoke_arch_tcb:
 end
 
 (*FIXME: arch_split*)
-locale asid_update = ARM +
+locale asid_update = Arch +
   fixes ap asid s s'
   assumes ko: "ko_at (ArchObj (ASIDPool empty)) ap s"
   assumes empty: "arm_asid_table (arch_state s) asid = None"
@@ -518,7 +518,7 @@ lemma valid_asid_map':
 
 end
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma valid_arch_state_strg:
   "valid_arch_state s \<and> ap \<notin> ran (arm_asid_table (arch_state s)) \<and> asid_pool_at ap s \<longrightarrow>
    valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
@@ -549,7 +549,7 @@ end
 crunch arch [wp]: retype_region "\<lambda>s. P (arch_state s)"
   (simp: crunch_simps)
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma retype_region_ap:
   "\<lbrace>\<top>\<rbrace>
   retype_region ap 1 0 (ArchObject ASIDPoolObj) 
@@ -570,7 +570,7 @@ lemma retype_region_ap':
   done
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma no_cap_to_obj_with_diff_ref_null_filter:
   "no_cap_to_obj_with_diff_ref cap S
      = (\<lambda>s. \<forall>c \<in> ran (null_filter (caps_of_state s) |` (- S)).
@@ -602,7 +602,7 @@ lemma retype_region_no_cap_to_obj:
   apply fastforce
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma valid_table_caps_asid_upd [iff]:
   "valid_table_caps (s\<lparr>arch_state := (arm_asid_table_update f (arch_state s))\<rparr>) =
    valid_table_caps s"
@@ -653,7 +653,7 @@ lemma set_cap_orth:
    apply clarsimp
    done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma set_cap_reachable_pg_cap:
   "\<lbrace>\<lambda>s. P (reachable_pg_cap cap s)\<rbrace> set_cap x y \<lbrace>\<lambda>_ s. P (reachable_pg_cap cap s)\<rbrace>"
   by (unfold reachable_pg_cap_def, wp hoare_vcg_ex_lift set_cap.vs_lookup_pages)
@@ -669,7 +669,7 @@ lemma set_cap_empty_tables[wp]:
   apply (clarsimp simp: empty_table_caps_of)
   done
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma cap_insert_simple_arch_caps_ap:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s)
      and no_cap_to_obj_with_diff_ref cap {dest} 
@@ -805,7 +805,7 @@ lemma max_index_upd_invs_simple:
   apply (auto simp:cte_wp_at_caps_of_state max_free_index_def)
   done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma max_index_upd_no_cap_to:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref cap {slot} s \<and>
         cte_wp_at (op = ucap) cref s \<and> is_untyped_cap ucap\<rbrace>
@@ -820,7 +820,7 @@ lemma max_index_upd_no_cap_to:
   done
 end
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma perform_asid_control_invocation_st_tcb_at:
   "\<lbrace>st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
     and ct_active and invs and valid_aci aci\<rbrace> 
@@ -1030,7 +1030,7 @@ qed
 lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma invoke_arch_invs[wp]:
   "\<lbrace>invs and ct_active and valid_arch_inv ai\<rbrace>
    arch_perform_invocation ai
@@ -1044,7 +1044,7 @@ lemma sts_pspace_no_overlap [wp]:
   "\<lbrace>pspace_no_overlap w b\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. pspace_no_overlap w b\<rbrace>"
   by (wp pspace_no_overlap_typ_at_lift)
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma sts_empty_pde [wp]:
   "\<lbrace>empty_pde_at p\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. empty_pde_at p\<rbrace>"
   apply (simp add: empty_pde_at_def)
@@ -1081,7 +1081,7 @@ lemma sts_valid_pdi_inv[wp]:
   done
 end
   
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma sts_valid_arch_inv:
   "\<lbrace>valid_arch_inv ai\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_arch_inv ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv_def)
@@ -1104,7 +1104,7 @@ lemma sts_valid_arch_inv:
   done
 end
 
-context ARM begin (*FIXME; arch_split*)
+context Arch begin global_naming ARM (*FIXME; arch_split*)
 lemma ensure_safe_mapping_inv [wp]:
   "\<lbrace>P\<rbrace> ensure_safe_mapping m \<lbrace>\<lambda>_. P\<rbrace>"
   apply (cases m, simp_all)
@@ -1230,7 +1230,7 @@ lemma diminished_cte_wp_at_valid_cap:
   apply (clarsimp simp: diminished_def)
   done
 
-context ARM begin (*FIXME; arch_split*)
+context Arch begin global_naming ARM (*FIXME; arch_split*)
 
 lemma find_pd_for_asid_shifting_voodoo:
   "\<lbrace>pspace_aligned and valid_arch_objs\<rbrace>
@@ -1464,7 +1464,7 @@ lemma aligned_sum_less_kernel_base:
   done
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_decode_inv_wf[wp]:
   "\<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
     cte_wp_at (diminished (ArchObjectCap arch_cap)) slot and  
@@ -1733,7 +1733,7 @@ lemma arch_decode_inv_wf[wp]:
 
 end
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 declare word_less_sub_le [simp]
 
@@ -1749,7 +1749,7 @@ lemma delete_objects_st_tcb_at:
   \<lbrace>\<lambda>y. pred_tcb_at proj P t\<rbrace>"
   by (wp|simp add: delete_objects_def do_machine_op_def split_def)+
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_pinv_st_tcb_at:
   "\<lbrace>invs and valid_arch_inv ai and ct_active and 
     st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t\<rbrace>

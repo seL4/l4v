@@ -20,7 +20,7 @@ imports
   RegisterSet_H
   "../../machine/ARM/MachineOps"
 begin
-context ARM begin
+context Arch begin global_naming ARM_H
 
 definition
   Word :: "machine_word \<Rightarrow> machine_word"

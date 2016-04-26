@@ -12,7 +12,7 @@ theory ArchKHeap_AI
 imports "../KHeapPre_AI"
 begin
 
-context ARM begin
+context Arch begin global_naming ARM
 
 
 sublocale

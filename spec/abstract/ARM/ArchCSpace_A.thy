@@ -18,7 +18,7 @@ theory ArchCSpace_A
 imports
   ArchVSpace_A
 begin
-context ARM_A begin
+context Arch begin global_naming ARM_A
 
 text {* For some purposes capabilities to physical objects are treated
 differently to others. *}
