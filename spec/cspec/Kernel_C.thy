@@ -15,7 +15,12 @@ imports
   "../../tools/asmrefine/CommonOps"
 begin
 
+unqualify_types (in Arch)
+  machine_state
+
 declare [[populate_globals=true]]
+
+context begin interpretation ARM . (*FIXME: arch_split*)
 
 type_synonym cghost_state = "(machine_word \<rightharpoonup> vmpage_size) * (machine_word \<rightharpoonup> nat)
     * ghost_assertions"
@@ -56,6 +61,8 @@ abbreviation
 
 declare [[record_codegen = false]]
 declare [[allow_underscore_idents = true]]
+
+end
 
 install_C_file "c/kernel_all.c_pp"
   [machinety=machine_state, ghostty=cghost_state]
