@@ -469,13 +469,11 @@ lemma ctes_of_ko:
      apply (frule_tac ptr = ptr and sz = "pageBits" in nasty_range [where 'a=32, folded word_bits_def])
         apply assumption
        apply (simp add: pbfs_atleast_pageBits)+
-     apply (clarsimp)
-     apply (drule_tac x = idx in spec)
-     apply (clarsimp simp: objBitsT_koTypeOf [symmetric] objBitsT_simps)
+     apply (clarsimp,drule_tac x = idx in spec,clarsimp)
      apply (intro exI conjI,assumption)
      apply (clarsimp simp:obj_range'_def)
-     apply (case_tac ko, simp_all)
-     apply (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)
+     apply (case_tac ko, simp_all split:if_splits,
+             (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
     -- "PT case"
     apply (rename_tac word option)
     apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def
@@ -3270,7 +3268,7 @@ where
   oops *)
 
 lemma createObjects_null_filter':
-  "\<lbrace>\<lambda>s. P (null_filter' (ctes_of s)) \<and> makeObjectKO ty = Some val \<and>
+  "\<lbrace>\<lambda>s. P (null_filter' (ctes_of s)) \<and> (makeObjectKO dev ty = Some val) \<and> 
         range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0 \<and>
         pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' ptr sz s\<rbrace>
    createObjects' ptr n val gbits
@@ -3320,6 +3318,10 @@ lemma createObjects_null_filter':
   apply (simp add:field_simps foldr_upd_app_if[folded data_map_insert_def] shiftl_t2n)
   apply auto
   done
+           
+lemmas makeObjectKO_simp = makeObjectKO_def[split_simps ArchTypes_H.object_type.split
+  Structures_H.kernel_object.split ArchTypes_H.apiobject_type.split
+  sum.split arch_kernel_object.split]
 
 lemma createNewCaps_null_filter':
   "\<lbrace>(\<lambda>s. P (null_filter' (ctes_of s)))
@@ -3336,13 +3338,16 @@ lemma createNewCaps_null_filter':
           apply (rename_tac apiobject_type)
           apply (case_tac apiobject_type, simp_all split del: split_if)
               apply (rule hoare_pre, wp,simp)
-             by (simp add: createWordObjects_def createObjects_def
+              apply (simp add: createObjects_def
+ createWordObjects_def createObjects_def
                               objBitsKO_def makeObjectKO_def unless_def
                               APIType_capBits_def objBits_def pageBits_def
                               archObjSize_def ptBits_def pdBits_def curDomain_def
-                    | wp createObjects_null_filter'[where ty = "Inr ty" and sz = sz]
+                    | wp createObjects_null_filter'[where sz = sz and ty = "Inr ty"]
                          copyGlobalMappings_ctes_of threadSet_ctes_of mapM_x_wp'
-                    | fastforce)+
+                    | clarsimp | intro conjI impI | rule exI[where x = "Inr ty"], fastforce)+
+  done
+
 
 lemma createNewCaps_descendants_range':
   "\<lbrace>\<lambda>s. descendants_range' p q (ctes_of s) \<and>
@@ -3457,7 +3462,7 @@ lemma createNewCaps_not_parents:
   done
 
 lemma createObjects_distinct:
-  "\<lbrace>\<lambda>s. 0<n \<and> range_cover ptr sz ((objBitsKO (injectKO obj)) + us) n\<rbrace> createObjects ptr n obj us \<lbrace>\<lambda>rv s. distinct_prop op \<noteq> rv\<rbrace>"
+  "\<lbrace>\<lambda>s. 0<n \<and> range_cover ptr sz ((objBitsKO obj) + us) n\<rbrace> createObjects ptr n obj us \<lbrace>\<lambda>rv s. distinct_prop op \<noteq> rv\<rbrace>"
   apply (simp add: createObjects_def unless_def alignError_def split_def
                    lookupAround2_pspace_no createObjects'_def
              cong: if_cong split del: split_if)
@@ -3483,7 +3488,7 @@ lemma createObjects_distinct:
    apply (simp add:word_bits_def)
   apply (subst(asm) toEnum_of_nat)
    apply (simp add:word_bits_def)
-  apply (drule_tac f = "\<lambda>x. x >> (objBitsKO (injectKOS obj) + us)" and x= "x << l" for x l in arg_cong)
+  apply (drule_tac f = "\<lambda>x. x >> (objBitsKO obj + us)" and x= "x << l" for x l in arg_cong)
   apply (subst (asm) shiftl_shiftr_id)
     apply (simp add:range_cover_def)
    apply (rule of_nat_power[OF range_cover.range_cover_le_n_less(2)])

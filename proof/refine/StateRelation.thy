@@ -254,7 +254,6 @@ definition
  "pde_relation y \<equiv> \<lambda>ko ko'. \<exists>pd pde. ko = ArchObj (PageDirectory pd) \<and> ko' = KOArch (KOPDE pde)
                               \<and> pde_relation_aligned y (pd y) pde"
 
-
 primrec
  aobj_relation_cuts :: "Arch_Structs_A.arch_kernel_obj \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
 where

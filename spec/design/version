@@ -1,5 +1,21 @@
-Built from git repo at /home/joelb/work/verification/seL4/haskell by joelb
+Built from git repo at /Users/xgao/joel/seL4/haskell by xgao
 
 Generated from changeset:
 89a8d1c SELFOUR-421: Arch_createObject changed to use new user_data_device in ghostupdates for device pages
 
+
+Warning - uncomitted changes used:
+ M ../include/api/types.h
+ M ../include/arch/arm/arch/types.h
+ M ../include/arch/x86/arch/types.h
+ M ../include/bootinfo.h
+ M ../include/kernel/boot.h
+ M ../libsel4/include/sel4/bootinfo.h
+ M ../libsel4/sel4_arch_include/aarch32/sel4/sel4_arch/types.h
+ M ../src/arch/arm/32/kernel/vspace.c
+ M ../src/arch/arm/kernel/boot.c
+ M ../src/arch/x86/32/kernel/vspace.c
+ M ../src/arch/x86/kernel/boot.c
+ M ../src/kernel/boot.c
+?? ../include/api/bootinfo_types.h
+?? ../libsel4/include/sel4/bootinfo_types.h

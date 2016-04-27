@@ -2666,7 +2666,7 @@ lemma tcb_valid_nonspecial_cap:
   "\<lbrakk> caps_of_state s p = Some cap; valid_objs s;
        \<forall>ptr st. \<forall>(getF, setF, restr) \<in> ran tcb_cap_cases.
                     \<not> restr ptr st cap \<or> (\<forall>cap. restr ptr st cap);
-       \<forall>ptr. (is_arch_cap cap \<or> cap = cap.NullCap) \<and>
+       \<forall>ptr. (is_nondevice_page_cap cap \<or> cap = cap.NullCap) \<and>
              valid_ipc_buffer_cap cap ptr
                 \<longrightarrow> valid_ipc_buffer_cap cap' ptr \<rbrakk>
       \<Longrightarrow> tcb_cap_valid cap' p s"

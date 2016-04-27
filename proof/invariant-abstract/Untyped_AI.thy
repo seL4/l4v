@@ -2140,27 +2140,21 @@ lemma set_free_index_valid_pspace_simple:
   apply (frule(1) caps_of_state_valid_cap)
   apply (clarsimp simp:valid_cap_def cap_aligned_def )
   apply (intro conjI)
-  defer
+   apply (simp add:valid_untyped_def)
+   apply (intro impI allI)
+   apply (elim allE allE impE)
+     apply simp+
+    apply (drule(1) pspace_no_overlapD3)
+   apply (drule(1) valid_cap_aligned[OF caps_of_state_valid_cap])
+    apply (simp add:valid_cap_simps)
+   apply simp
   apply (clarsimp simp add:pred_tcb_at_def tcb_cap_valid_def obj_at_def is_tcb
           valid_ipc_buffer_cap_def split: option.split)
-  apply (rule exI)
-  apply (intro conjI)
-    apply fastforce
-   apply (drule caps_of_state_cteD)
-   apply (clarsimp simp:cte_wp_at_cases)
-   apply (erule(1) valid_objsE)
-   apply (drule_tac m = "tcb_cap_cases" in ranI)
-   apply (clarsimp simp:valid_obj_def valid_tcb_def)
-   apply (drule(1) bspec)
-   apply (auto simp:tcb_cap_cases_def is_cap_simps split:Structures_A.thread_state.splits)[1]
-  apply (simp add:valid_untyped_def)
-  apply (intro impI allI)
-  apply (elim allE allE impE)
-    apply simp+
-  apply (drule(1) pspace_no_overlapD3)
-   apply (drule(1) valid_cap_aligned[OF caps_of_state_valid_cap])
-   apply (simp add:valid_cap_simps)
-  apply simp
+  apply (drule(2) tcb_cap_slot_regular)
+  apply (clarsimp simp:tcb_cap_cases_def split:if_splits)
+    apply (fastforce simp:is_nondevice_page_cap_def)
+   apply (clarsimp split:thread_state.splits simp:is_reply_cap_def)
+  apply (clarsimp simp:is_master_reply_cap_def)
   done
 
 lemma set_untyped_cap_invs_simple:

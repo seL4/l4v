@@ -93,6 +93,7 @@ lemmas typ_at_to_obj_at_arches
     typ_at_to_obj_at' [where 'a=pde, simplified]
     typ_at_to_obj_at'[where 'a=asidpool, simplified]
     typ_at_to_obj_at'[where 'a=user_data, simplified]
+    typ_at_to_obj_at'[where 'a=user_data_device, simplified]
 
 lemmas page_table_at_obj_at'
   = page_table_at'_def[unfolded typ_at_to_obj_at_arches]

@@ -841,7 +841,7 @@ lemma out_tcb_valid:
 
 
 lemma thread_set_ipc_tcb_cap_valid:
-  "\<lbrace>\<lambda>s. is_arch_cap cap
+  "\<lbrace>\<lambda>s. is_nondevice_page_cap cap
            \<and> (\<forall>ptr. valid_ipc_buffer_cap cap (f ptr))\<rbrace>
      thread_set (tcb_ipc_buffer_update f) t
    \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
@@ -913,6 +913,10 @@ lemma tc_invs:
                         invs_valid_objs cap_asid_def vs_cap_ref_def
                  split: option.split_asm
        | rule conjI)+
+thm valid_ipc_buffer_cap_def
+      apply (simp add:valid_ipc_buffer_cap_def split:arch_cap.splits)
+       apply (simp add: case_bool_If)
+       apply clarsimp
   done
 
 primrec

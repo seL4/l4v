@@ -428,6 +428,11 @@ abbreviation
                    | Structures_A.IdleThreadState \<Rightarrow> True
                    | _ \<Rightarrow> False"
 
+definition 
+"is_nondevice_page_cap \<equiv> \<lambda>cap. case cap of
+    ArchObjectCap (PageCap False x xa xb xc) \<Rightarrow>  True
+  | _ \<Rightarrow> False"
+
 definition
   tcb_cap_cases ::
   "cap_ref \<rightharpoonup> ((Structures_A.tcb \<Rightarrow> cap) \<times>
@@ -446,17 +451,17 @@ where
                                       (op = cap.NullCap)
                                   | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap))),
     tcb_cnode_index 4 \<mapsto> (tcb_ipcframe, tcb_ipcframe_update,
-                          (\<lambda>_ _. is_arch_cap or (op = cap.NullCap)))]"
+                          (\<lambda>_ _. is_nondevice_page_cap or (op = cap.NullCap)))]"
 
 definition
   valid_ipc_buffer_cap :: "cap \<Rightarrow> word32 \<Rightarrow> bool"
 where
   "valid_ipc_buffer_cap c bufptr \<equiv>
          case c of
-              cap.ArchObjectCap (arch_cap.PageCap dev ref rghts sz mapdata) \<Rightarrow>
-                   is_aligned bufptr msg_align_bits \<and> bufptr \<noteq> 0 \<longrightarrow> \<not> dev
-
-            | _ \<Rightarrow> True"
+              cap.ArchObjectCap (arch_cap.PageCap False ref rghts sz mapdata) \<Rightarrow>
+                   is_aligned bufptr msg_align_bits \<and> bufptr \<noteq> 0
+            | cap.NullCap \<Rightarrow> True
+            | _ \<Rightarrow> False"
 
 definition
   valid_fault :: "ExceptionTypes_A.fault \<Rightarrow> bool"
@@ -1796,7 +1801,7 @@ lemma tcb_cap_cases_simps[simp]:
                  | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)))"
   "tcb_cap_cases (tcb_cnode_index 4) =
    Some (tcb_ipcframe, tcb_ipcframe_update,
-         (\<lambda>_ _. is_arch_cap or (op = cap.NullCap)))"
+         (\<lambda>_ _. is_nondevice_page_cap or (op = cap.NullCap)))"
   by (simp add: tcb_cap_cases_def)+
 
 lemma ran_tcb_cap_cases:
@@ -1810,7 +1815,7 @@ lemma ran_tcb_cap_cases:
                                        Structures_A.BlockedOnReceive e \<Rightarrow>
                                          (op = cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap))),
-     (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_arch_cap or (op = cap.NullCap)))}"
+     (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or (op = cap.NullCap)))}"
   by (simp add: tcb_cap_cases_def ran_map_upd
                 insert_commute)
 
@@ -3174,8 +3179,10 @@ lemma is_cap_simps':
   "is_arch_cap cap = (\<exists>a. cap = cap.ArchObjectCap a)"
   "is_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x False)"
   "is_master_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x True)"
-  by (cases cap, auto simp: is_zombie_def is_arch_cap_def
-                            is_reply_cap_def is_master_reply_cap_def)+
+  "is_nondevice_page_cap cap = (\<exists> u v w x. cap = ArchObjectCap (PageCap False u v w x))"
+  by (cases cap,  (auto simp: is_zombie_def is_arch_cap_def is_nondevice_page_cap_def
+                            is_reply_cap_def is_master_reply_cap_def
+                            split:cap.splits arch_cap.splits )+)+
 
 lemmas is_cap_simps =
   is_cap_simps' is_pd_cap_def is_pg_cap_def is_pt_cap_def

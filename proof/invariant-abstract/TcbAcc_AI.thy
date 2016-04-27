@@ -80,7 +80,7 @@ lemma ball_tcb_cap_casesI:
                                        Structures_A.BlockedOnReceive e \<Rightarrow>
                                          (op = cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)));
-     P (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_arch_cap or (op = cap.NullCap))) \<rbrakk>
+     P (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or (op = cap.NullCap))) \<rbrakk>
     \<Longrightarrow> \<forall>x \<in> ran tcb_cap_cases. P x"
   by (simp add: tcb_cap_cases_def)
 
@@ -181,10 +181,14 @@ schematic_goal tcb_ipcframe_in_cases:
   "(tcb_ipcframe, ?x) \<in> ran tcb_cap_cases"
   by (fastforce simp add: ran_tcb_cap_cases)
 
-
+(* Do we allow ipc buffer to be null in old spec ?
 lemma valid_ipc_buffer_cap_0[simp]:
-  "valid_ipc_buffer_cap cap 0"
-  by (simp add: valid_ipc_buffer_cap_def split: cap.split arch_cap.split)
+  "valid_ipc_buffer_cap cap a \<Longrightarrow> valid_ipc_buffer_cap cap 0"
+  apply (simp add: valid_ipc_buffer_cap_def split: cap.split arch_cap.split)
+  apply auto
+  apply (case_tac x31)
+*)
+
 
 lemma thread_set_valid_objs_triv:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.

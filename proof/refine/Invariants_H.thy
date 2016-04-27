@@ -177,6 +177,7 @@ where
   | (KOEndpoint ep)       => ep_q_refs_of' ep
   | (KONotification ntfn)     => ntfn_q_refs_of' (ntfnObj ntfn) \<union> ntfn_bound_refs' (ntfnBoundTCB ntfn)
   | (KOUserData)          => {}
+  | (KOUserDataDevice)    => {}
   | (KOKernelData)        => {}
   | (KOArch ako)          => {}"
 
@@ -201,6 +202,7 @@ where
 | "live' (KOEndpoint ep)       = (ep \<noteq> IdleEP)"
 | "live' (KONotification ntfn)     = (bound (ntfnBoundTCB ntfn) \<or> (\<exists>ts. ntfnObj ntfn = WaitingNtfn ts))"
 | "live' (KOUserData)          = False"
+| "live' (KOUserDataDevice)    = False"
 | "live' (KOKernelData)        = False"
 | "live' (KOArch ako)          = False"
 
@@ -374,7 +376,8 @@ where valid_cap'_def:
     typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
   | ArchStructures_H.ASIDControlCap \<Rightarrow> True
   | ArchStructures_H.PageCap d ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
-    (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' UserDataT (ref + p * 2 ^ pageBits) s) \<and>
+    (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
+    (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase)
   | ArchStructures_H.PageTableCap ref mapdata \<Rightarrow>
@@ -496,6 +499,7 @@ where
   | KONotification notification \<Rightarrow> valid_ntfn' notification s
   | KOKernelData \<Rightarrow> False
   | KOUserData \<Rightarrow> True
+  | KOUserDataDevice \<Rightarrow> True
   | KOTCB tcb \<Rightarrow> valid_tcb' tcb s
   | KOCTE cte \<Rightarrow> valid_cte' cte s
   | KOArch arch_kernel_object \<Rightarrow> valid_arch_obj' arch_kernel_object s"
@@ -1113,6 +1117,7 @@ definition
                     | CTET \<Rightarrow> injectKO (makeObject :: cte)
                     | TCBT \<Rightarrow> injectKO (makeObject :: tcb)
                     | UserDataT \<Rightarrow> injectKO (makeObject :: user_data)
+                    | UserDataDeviceT \<Rightarrow> injectKO (makeObject :: user_data_device)
                     | KernelDataT \<Rightarrow> KOKernelData
                     | ArchT atp \<Rightarrow> (case atp of
                                           PDET \<Rightarrow> injectKO (makeObject :: pde)
@@ -1349,6 +1354,7 @@ lemma refs_of'_simps[simp]:
  "refs_of' (KOEndpoint ep)       = ep_q_refs_of' ep"
  "refs_of' (KONotification ntfn)     = ntfn_q_refs_of' (ntfnObj ntfn) \<union> ntfn_bound_refs' (ntfnBoundTCB ntfn)"
  "refs_of' (KOUserData)          = {}"
+ "refs_of' (KOUserDataDevice)          = {}"
  "refs_of' (KOKernelData)        = {}"
  "refs_of' (KOArch ako)          = {}"
   by (auto simp: refs_of'_def)
@@ -2264,7 +2270,7 @@ lemma typ_at_tcb':
   apply (rule iffI)
    apply clarsimp
    apply (case_tac ko)
-   apply (auto simp: projectKO_opt_tcb)[8]
+   apply (auto simp: projectKO_opt_tcb)[9]
   apply (case_tac ko)
   apply (auto simp: projectKO_opt_tcb)
   done
@@ -2277,7 +2283,7 @@ lemma typ_at_ep:
   apply (rule iffI)
    apply clarsimp
    apply (case_tac ko)
-   apply (auto simp: projectKO_opt_ep)[8]
+   apply (auto simp: projectKO_opt_ep)[9]
   apply (case_tac ko)
   apply (auto simp: projectKO_opt_ep)
   done
@@ -2290,7 +2296,7 @@ lemma typ_at_ntfn:
   apply (rule iffI)
    apply clarsimp
    apply (case_tac ko)
-   apply (auto simp: projectKO_opt_ntfn)[7]
+   apply (auto simp: projectKO_opt_ntfn)[8]
   apply clarsimp
   apply (case_tac ko)
   apply (auto simp: projectKO_opt_ntfn)
@@ -2304,7 +2310,7 @@ lemma typ_at_cte:
   apply (rule iffI)
    apply clarsimp
    apply (case_tac ko)
-   apply (auto simp: projectKO_opt_cte)[7]
+   apply (auto simp: projectKO_opt_cte)[8]
   apply clarsimp
   apply (case_tac ko)
   apply (auto simp: projectKO_opt_cte)
@@ -2412,7 +2418,8 @@ lemma typ_at_lift_valid_cap':
     apply (rename_tac arch_capability)
     apply (case_tac arch_capability,
            simp_all add: P [where P=id, simplified] page_table_at'_def
-                         hoare_vcg_prop page_directory_at'_def All_less_Ball)
+                         hoare_vcg_prop page_directory_at'_def All_less_Ball
+                    split del:if_splits)
      apply (wp hoare_vcg_const_Ball_lift P)
    apply (wp typ_at_lift_valid_untyped' [OF P])
   apply (wp hoare_vcg_all_lift typ_at_lift_cte' P)
@@ -3105,6 +3112,7 @@ lemma objBitsT_simps:
   "objBitsT CTET = 4"
   "objBitsT TCBT = 9"
   "objBitsT UserDataT = pageBits"
+  "objBitsT UserDataDeviceT = pageBits"
   "objBitsT KernelDataT = pageBits"
   "objBitsT (ArchT PDET) = 2"
   "objBitsT (ArchT PTET) = 2"
@@ -3366,6 +3374,5 @@ method normalise_obj_at' =
    clarsimp simp: ko_at_defn_unique, clarsimp simp: ko_at'_defn_def)
 
 end
-
 
 end

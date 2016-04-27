@@ -141,10 +141,9 @@ lemma pac_corres:
             apply (rule corres_split)
                prefer 2
                apply (simp add: retype_region2_ext_retype_region_ArchObject )
-               apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))",
+               apply (rule corres_retype [where 'a = asidpool and ty="Inl (KOArch (KOASIDPool F))",
                                           unfolded APIType_map2_def makeObjectKO_def, 
-                                          THEN createObjects_corres',simplified,
-                                          where val = "makeObject::asidpool"])
+                                          THEN createObjects_corres',where 'b = asidpool,simplified])
                      apply simp
                     apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def
                                      default_arch_object_def archObjSize_def)+
@@ -153,7 +152,8 @@ lemma pac_corres:
                  apply (simp add: other_obj_relation_def asid_pool_relation_def)
                  apply (simp add: makeObject_asidpool const_def inv_def)
                 apply (rule range_cover_full)
-                 apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
+                 apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def
+                   )+
               apply (rule corres_split)
                  prefer 2
                  apply (rule cins_corres_simple, simp, rule refl, rule refl)
@@ -2170,7 +2170,8 @@ lemma performASIDControlInvocation_invs' [wp]:
    apply (wp hoare_vcg_const_imp_lift)
        apply (strengthen invs_asid_table_strenghten')
        apply (wp cteInsert_simple_invs)
-      apply (wp createObjects'_wp_subst[where c = "makeObject::asidpool",OF _
+thm createObjects'_wp_subst
+      apply (wp createObjects'_wp_subst[OF
                 createObjects_no_cte_invs [where sz = pageBits and ty="Inl (KOArch (KOASIDPool pool))"]]
                 createObjects_orig_cte_wp_at'[where sz = pageBits]  hoare_vcg_const_imp_lift
          |simp add: makeObjectKO_def projectKOs asid_pool_typ_at_ext' valid_cap'_def cong: rev_conj_cong
@@ -2184,8 +2185,7 @@ lemma performASIDControlInvocation_invs' [wp]:
           | simp add: makeObjectKO_def projectKOs asid_pool_typ_at_ext' valid_cap'_def 
                 cong: rev_conj_cong)+
        apply (simp add: objBits_simps archObjSize_def valid_cap'_def capAligned_def range_cover_full)
-      apply (wp  createObjects'_wp_subst[where c = "makeObject::asidpool",OF _
-                    createObjects_ex_cte_cap_to[where sz = pageBits]]
+      apply (wp  createObjects'_wp_subst[OF createObjects_ex_cte_cap_to[where sz = pageBits]]
                  createObjects_orig_cte_wp_at'[where sz = pageBits]
                  hoare_vcg_const_imp_lift
          |simp add: makeObjectKO_def projectKOs asid_pool_typ_at_ext' valid_cap'_def cong: rev_conj_cong

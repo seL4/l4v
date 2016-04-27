@@ -3579,6 +3579,27 @@ lemma set_untyped_cap_as_full_cap_to:
 done
 
 
+lemma tcb_cap_slot_regular:
+ "\<lbrakk>caps_of_state s cref = Some cap; valid_objs s; kheap s (fst cref) = Some (TCB tcb)\<rbrakk>
+  \<Longrightarrow> \<exists>f upd check. tcb_cap_cases (snd cref) = Some (f, upd, check) \<and>
+        check (fst cref) (tcb_state tcb) cap "
+  apply (case_tac cref)
+  apply (clarsimp simp: caps_of_state_def gets_the_def  return_def assert_def
+    assert_opt_def tcb_at_def get_cap_def
+    bind_def get_object_def simpler_gets_def
+    dest!: get_tcb_SomeD
+    split: if_splits)
+  apply (clarsimp simp:fail_def return_def split:option.splits)
+  apply (erule valid_objsE)
+   apply assumption
+  apply (simp add:valid_obj_def valid_tcb_def)
+  apply (clarsimp simp: tcb_cnode_map_tcb_cap_cases)
+  apply (drule bspec(1))
+   apply (erule ranI)
+  apply clarsimp
+  done
+
+
 lemma set_free_index_valid_pspace:
   "\<lbrace>\<lambda>s. valid_pspace s \<and> cte_wp_at (op = cap) cref s \<and>
         (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and>idx \<le> 2^ cap_bits cap)\<rbrace>
@@ -3613,16 +3634,9 @@ lemma set_free_index_valid_pspace:
   apply (clarsimp simp add: pred_tcb_at_def tcb_cap_valid_def obj_at_def is_tcb
                             valid_ipc_buffer_cap_def
                      split: option.split)
-  apply (rule exI)
-  apply (intro conjI)
-   apply fastforce
-  apply (drule caps_of_state_cteD)
-  apply (clarsimp simp:cte_wp_at_cases)
-  apply (erule(1) valid_objsE)
-  apply (drule_tac m = "tcb_cap_cases" in ranI)
-  apply (clarsimp simp:valid_obj_def valid_tcb_def)
-  apply (drule(1) bspec)
-  apply clarsimp
+  apply (frule tcb_cap_slot_regular)
+   apply simp+
+  apply (clarsimp simp:is_nondevice_page_cap_def)
   done
 
 lemma set_free_index_invs:

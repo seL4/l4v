@@ -2564,6 +2564,7 @@ lemma set_untyped_cap_as_full_tcb_cap_valid:
       apply (intro conjI impI allI)
       apply (drule use_valid[OF _ set_cap_pred_tcb],simp+)
         apply (clarsimp simp:valid_ipc_buffer_cap_def is_cap_simps)
+        apply (fastforce simp:tcb_at_def obj_at_def is_tcb)
     apply (clarsimp simp:tcb_at_typ)
     apply (drule use_valid[OF _ set_cap_typ_at])
       apply (assumption)
