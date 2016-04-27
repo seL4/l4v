@@ -14,7 +14,7 @@ imports
   "../../lib/Distinct_Cmd"
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 section {* Example *}
 
@@ -1174,7 +1174,7 @@ end
 
 consts s0_context :: user_context
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   "s0 \<equiv> ((if ct_idle s0_internal then idle_context s0_internal else s0_context,s0_internal),KernelExit)"

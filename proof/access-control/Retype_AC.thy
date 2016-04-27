@@ -12,7 +12,7 @@ theory Retype_AC
 imports CNode_AC
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* put in here that we own the region mentioned in the invocation *)
 definition
@@ -687,7 +687,7 @@ locale retype_region_proofs' = retype_region_proofs + constrains s ::"det_ext st
 context retype_region_proofs
 begin
 
-interpretation ARM . (*FIXME; arch_split*)
+interpretation Arch . (*FIXME; arch_split*)
 
 lemma vs_refs_no_global_pts_default [simp]:
   "vs_refs_no_global_pts (default_object ty us) = {}"
@@ -721,7 +721,7 @@ end
 context retype_region_proofs'
 begin
 
-interpretation ARM . (*FIXME; arch_split*)
+interpretation Arch . (*FIXME; arch_split*)
 
 lemma domains_of_state: "domains_of_state s' \<subseteq> domains_of_state s"
   unfolding s'_def by simp
@@ -747,7 +747,7 @@ lemma pas_refined: "pas_refined aag s \<Longrightarrow> pas_refined aag s'"
 
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma retype_region_ext_kheap_update:
   "\<lbrace>Q xs and R xs\<rbrace> retype_region_ext xs ty \<lbrace>\<lambda>_. Q xs\<rbrace>
@@ -799,7 +799,7 @@ apply (wp lift_inv)
 apply simp+
 done
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma retype_region_ext_pas_refined:
   "\<lbrace>pas_refined aag and pas_cur_domain aag and K (\<forall>x\<in> set xs. is_subject aag x)\<rbrace> retype_region_ext xs ty \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"

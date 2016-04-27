@@ -16,7 +16,7 @@ imports    "Noninterference_Base"
     "../access-control/ADT_AC"
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 datatype 'a partition = Partition 'a | PSched
 
@@ -1315,7 +1315,7 @@ lemma Fin_big_step_adt:
 
 context valid_initial_state begin
 
-interpretation ARM . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch_split*)
 
 lemma small_step_reachable:
   "ni.reachable s \<Longrightarrow> system.reachable (ADT_A_if utf) s0 s"

@@ -26,7 +26,7 @@ imports
   "../lib/SimpStrategy"
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma cap_has_object_NullCap [simp]:
   "\<not>cap_has_object NullCap"

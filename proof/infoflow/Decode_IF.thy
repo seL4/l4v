@@ -12,7 +12,7 @@ theory Decode_IF
 imports Ipc_IF
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma data_to_obj_type_rev:
   "reads_equiv_valid_inv A aag \<top> (data_to_obj_type type)"

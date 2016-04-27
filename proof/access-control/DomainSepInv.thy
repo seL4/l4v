@@ -13,7 +13,7 @@ imports    "Ipc_AC" (* for transfer_caps_loop_pres_dest lec_valid_cap' set_endpo
   "../../lib/wp/WPBang"
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 text {*
   We define and prove an invariant that is necessary to achieve domain
@@ -1397,7 +1397,7 @@ end
 
 lemma (in is_extended') domain_sep_inv[wp]: "I (domain_sep_inv irqs st)" by (rule lift_inv, simp)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma schedule_domain_sep_inv: "\<lbrace>domain_sep_inv irqs st\<rbrace> (schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)

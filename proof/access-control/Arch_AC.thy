@@ -12,7 +12,7 @@ theory Arch_AC
 imports Retype_AC
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 text{*
 

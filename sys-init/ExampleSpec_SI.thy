@@ -20,7 +20,7 @@ theory ExampleSpec_SI
 imports WellFormed_SI
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare cap_object_simps [simp]
 

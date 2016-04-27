@@ -12,7 +12,7 @@ theory Access
 imports Deterministic_AC
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 text{*
 
@@ -109,7 +109,7 @@ record 'a PAS =
   pasMaySendIrqs :: "bool"
   pasDomainAbs :: "domain \<Rightarrow> 'a"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 text{*
 
@@ -463,7 +463,7 @@ end
 
 context pspace_update_eq begin
 
-interpretation ARM . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch_split*)
 
 lemma state_vrefs[iff]: "state_vrefs (f s) = state_vrefs s"
   by (simp add: state_vrefs_def pspace)
@@ -481,7 +481,7 @@ lemma thread_bound_ntfns[iff]: "thread_bound_ntfns (f s) = thread_bound_ntfns s"
 
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma tcb_states_of_state_preserved:
   "\<lbrakk> get_tcb thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
@@ -1222,7 +1222,7 @@ end
 
 context pspace_update_eq begin
 
-interpretation ARM . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch_split*)
 
 lemma integrity_update_eq[iff]:
   "tcb_states_of_state (f s) = tcb_states_of_state s"
@@ -1230,7 +1230,7 @@ lemma integrity_update_eq[iff]:
 
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   label_owns_asid_slot :: "'a PAS \<Rightarrow> 'a \<Rightarrow> asid \<Rightarrow> bool"

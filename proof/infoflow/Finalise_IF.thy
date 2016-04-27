@@ -12,7 +12,7 @@ theory Finalise_IF
 imports Arch_IF IRQMasks_IF
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch_ignore (add: tcb_sched_action)
 
@@ -1371,7 +1371,7 @@ lemma thread_set_tcb_at:
   apply (clarsimp simp: get_tcb_def obj_at_def is_tcb_def split: option.splits Structures_A.kernel_object.splits)
   done
 
-(* FIXME: Why was the [wp] attribute on this lemma clobbered by interpretation of the ARM locale? *)
+(* FIXME: Why was the [wp] attribute on this lemma clobbered by interpretation of the Arch locale? *)
 lemmas [wp] = thread_set_fault_valid_global_refs
 
 lemma reply_cancel_ipc_reads_respects_f:

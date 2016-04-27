@@ -14,7 +14,7 @@ imports
   "../../lib/EquivValid"
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* We take the authority graph from the access proofs. We identify each
    label in that graph with an information flow domain. Our goal is to

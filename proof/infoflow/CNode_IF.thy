@@ -12,7 +12,7 @@ theory CNode_IF
 imports FinalCaps
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma cap_fault_on_failure_rev:
   "reads_equiv_valid_inv A aag P m \<Longrightarrow> reads_equiv_valid_inv A aag P (cap_fault_on_failure cptr rp m)"
@@ -384,7 +384,7 @@ end
 
 lemma (in is_extended') globals_equiv: "I (globals_equiv st)" by (rule lift_inv,simp)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma cap_insert_globals_equiv:
   "\<lbrace>globals_equiv s and valid_global_objs\<rbrace>

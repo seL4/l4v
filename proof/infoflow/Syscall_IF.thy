@@ -17,7 +17,7 @@ imports
 
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch_ignore (add: OR_choice set_scheduler_action)
 
@@ -925,7 +925,7 @@ axiomatization dmo_reads_respects where
   dmo_getFAR_reads_respects: "reads_respects aag l \<top> (do_machine_op getFAR)" and
   dmo_getIFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op getIFSR)"
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma handle_vm_fault_reads_respects:
   "reads_respects aag l (K(is_subject aag thread)) (handle_vm_fault thread vmfault_type)"

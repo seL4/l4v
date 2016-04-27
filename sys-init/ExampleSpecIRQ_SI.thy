@@ -20,7 +20,7 @@ theory ExampleSpecIRQ_SI
 imports WellFormed_SI
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 (****************************************************
  * Definitions of all the objects and capabilities. *

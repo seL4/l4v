@@ -13,7 +13,7 @@ imports    "Finalise_IF"
 
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 section "arm global pd"
 

@@ -12,7 +12,7 @@ theory IRQMasks_IF
 imports "../access-control/DomainSepInv"
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 abbreviation irq_masks_of_state :: "det_ext state \<Rightarrow> irq \<Rightarrow> bool" where
   "irq_masks_of_state s \<equiv> irq_masks (machine_state s)"

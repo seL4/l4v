@@ -20,7 +20,7 @@ unqualify_types (in Arch)
 
 declare [[populate_globals=true]]
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 type_synonym cghost_state = "(machine_word \<rightharpoonup> vmpage_size) * (machine_word \<rightharpoonup> nat)
     * ghost_assertions"

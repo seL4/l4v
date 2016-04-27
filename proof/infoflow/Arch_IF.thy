@@ -12,7 +12,7 @@ theory Arch_IF
 imports Retype_IF
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 abbreviation irq_state_of_state :: "det_state \<Rightarrow> nat" where
   "irq_state_of_state s \<equiv> irq_state (machine_state s)"

@@ -12,7 +12,7 @@ theory Interrupt_IF
 imports Finalise_IF
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 subsection "reads respects"
 

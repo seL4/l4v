@@ -12,7 +12,7 @@ theory ExampleSystem
 imports Access
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list option"

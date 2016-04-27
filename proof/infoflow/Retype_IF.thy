@@ -12,7 +12,7 @@ theory Retype_IF
 imports CNode_IF
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma create_cap_reads_respects:
   "reads_respects aag l (K (is_subject aag (fst (fst slot)))) (create_cap type bits untyped slot)"

@@ -16,7 +16,7 @@ imports
   DomainSepInv
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   authorised_invocation :: "'a PAS \<Rightarrow> Invocations_A.invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -1013,7 +1013,7 @@ crunch_ignore (add:
   set_domain recycle_cap_ext
   attempt_switch_to timer_tick set_priority retype_region_ext)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch arm_globals_frame [wp]: handle_event "\<lambda>s. P (arm_globals_frame (arch_state s))"
    (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch select_wp

@@ -12,7 +12,7 @@ theory Ipc_AC
 imports Finalise_AC "../../lib/MonadicRewrite"
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 section{* Notifications *}
 
@@ -1241,7 +1241,7 @@ lemma copy_mrs_integrity_autarch:
        | fastforce simp: length_msg_registers msg_align_bits split: split_if_asm)+
   done
 
-(* FIXME: Why was the [wp] attribute clobbered by interpretation of the ARM locale? *)
+(* FIXME: Why was the [wp] attribute clobbered by interpretation of the Arch locale? *)
 declare as_user_thread_bound_ntfn[wp]
 
 lemma get_mi_valid':

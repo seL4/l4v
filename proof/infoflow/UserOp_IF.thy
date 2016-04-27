@@ -12,7 +12,7 @@ theory UserOp_IF
 imports Syscall_IF "../access-control/ADT_AC"
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 text {*
   This theory defines an enhanced @{term do_user_op} function for the

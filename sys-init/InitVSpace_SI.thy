@@ -18,7 +18,7 @@ imports
   SysInit_SI
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma all_fake_pd_caps_in_pd:
   "well_formed spec \<Longrightarrow>

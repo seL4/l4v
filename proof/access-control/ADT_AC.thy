@@ -12,7 +12,7 @@ theory ADT_AC
 imports Syscall_AC
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma pd_of_thread_same_agent:
   "\<lbrakk> pas_refined aag s; is_subject aag tcb_ptr;

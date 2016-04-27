@@ -12,7 +12,7 @@ theory CNode_AC
 imports Access
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* FIXME: Move. *)
 lemma tcb_domain_map_wellformed_ekheap[intro!, simp]:
@@ -91,7 +91,7 @@ end
 
 context is_extended begin
 
-interpretation ARM . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch_split*)
 
 lemma list_integ_lift:
   assumes li: "\<lbrace>list_integ (\<lambda>x. is_subject aag (fst x)) st and Q\<rbrace> f \<lbrace>\<lambda>_. list_integ (\<lambda>x. is_subject aag (fst x)) st\<rbrace>"
@@ -110,7 +110,7 @@ lemma list_integ_lift:
 
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch ekheap[wp]: cap_insert_ext,cap_swap_ext,cap_move_ext,empty_slot_ext,create_cap_ext "\<lambda>s. P (ekheap s)"
 
@@ -538,7 +538,7 @@ end
 
 context is_extended begin
 
-interpretation ARM . (*FIXME: arch_split*)
+interpretation Arch . (*FIXME: arch_split*)
 
 lemma pas_refined_tcb_domain_map_wellformed[wp]:
   assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"
@@ -551,7 +551,7 @@ done
 
 end
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma cap_insert_pas_refined:
   "\<lbrace>pas_refined aag and K (is_subject aag (fst dest_slot)

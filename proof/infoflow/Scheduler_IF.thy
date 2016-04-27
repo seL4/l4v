@@ -13,7 +13,7 @@ imports    "Syscall_IF" "PasUpdates"
 
 begin
 
-context begin interpretation ARM . (*FIXME: arch_splits*)
+context begin interpretation Arch . (*FIXME: arch_splits*)
 
 crunch cur_thread: activate_thread "\<lambda>s. P (cur_thread s)"
 crunch cur_thread: arch_switch_to_thread "\<lambda>s. P( cur_thread s)"
@@ -399,7 +399,7 @@ lemma (in is_extended') globals_equiv[wp]: "I (globals_equiv st)" by (rule lift_
 
 lemma (in is_extended') globals_equiv_scheduler[wp]: "I (globals_equiv_scheduler st)" by (rule lift_inv,simp)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma tcb_domain_wellformed: "pas_refined aag s \<Longrightarrow> ekheap s t = Some a \<Longrightarrow> pasObjectAbs aag t = pasDomainAbs aag (tcb_domain a)"
   apply (clarsimp simp add: pas_refined_def tcb_domain_map_wellformed_aux_def)
@@ -428,7 +428,7 @@ end
 
 lemma (in is_extended') silc_dom_equiv[wp]: "I (silc_dom_equiv aag st)" by (rule lift_inv,simp)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma tcb_action_reads_respects_scheduler[wp]: "reads_respects_scheduler aag l (pas_refined aag) (tcb_sched_action f t)"
   apply (rule reads_respects_scheduler_cases)

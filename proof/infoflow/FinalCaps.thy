@@ -12,7 +12,7 @@ theory FinalCaps
 imports InfoFlow
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition cap_points_to_label where
   "cap_points_to_label aag cap l \<equiv> 
@@ -78,7 +78,7 @@ end
 
 lemma (in is_extended') silc_inv[wp]: "I (silc_inv aag st)" by (rule lift_inv,simp) 
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma get_cap_cte_wp_at':
   "(fst (get_cap p s) = {(r,s)}) = cte_wp_at (op = r) p s"
@@ -1029,7 +1029,7 @@ end
 
 lemma (in is_extended') not_cte_wp_at[wp]: "I (\<lambda>s. \<not> cte_wp_at P t s)" by (rule lift_inv,simp)
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma set_thread_state_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace>

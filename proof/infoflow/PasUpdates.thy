@@ -16,7 +16,7 @@ imports
 
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread s)"
 (wp: OR_choiceE_weak_wp crunch_wps simp: crunch_simps ignore: do_extended_op OR_choiceE)

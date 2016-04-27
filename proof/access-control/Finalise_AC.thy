@@ -12,7 +12,7 @@ theory Finalise_AC
 imports Arch_AC
 begin
 
-context begin interpretation ARM . (*FIXME: arch_split*)
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma tcb_sched_action_dequeue_integrity[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and K (is_subject aag thread)\<rbrace>
