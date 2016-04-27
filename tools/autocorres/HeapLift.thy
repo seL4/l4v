@@ -174,8 +174,8 @@ lemma L2Tcorres_condition [heap_abs]:
   apply (clarsimp simp: L2_defs L2Tcorres_def abs_expr_def abs_guard_def struct_rewrite_expr_def struct_rewrite_guard_def)
   apply (rule corresXF_exec_abs_guard [unfolded guardE_def])
   apply (rule corresXF_cond)
-    apply (metis corresXF_guard_imp)
-   apply (metis corresXF_guard_imp)
+    apply (blast intro: corresXF_guard_imp)
+   apply (blast intro: corresXF_guard_imp)
   apply simp
   done
 
@@ -185,7 +185,7 @@ lemma L2Tcorres_seq [heap_abs]:
   apply (clarsimp simp: L2Tcorres_def L2_defs)
   apply (rule corresXF_guard_imp)
   apply (erule corresXF_join [where P'="\<lambda>x y s. x = y" and Q="\<lambda>_. True"])
-     apply (metis (full_types) corresXF_assume_pre)
+     apply (fastforce intro: corresXF_assume_pre)
     apply simp
     apply (rule hoareE_TrueI)
    apply simp
@@ -199,7 +199,7 @@ lemma L2Tcorres_catch [heap_abs]:
   apply (clarsimp simp: L2Tcorres_def L2_defs)
   apply (rule corresXF_guard_imp)
   apply (erule corresXF_except [where P'="\<lambda>x y s. x = y" and Q="\<lambda>_. True"])
-     apply (metis (full_types) corresXF_assume_pre)
+     apply (fastforce intro: corresXF_assume_pre)
     apply simp
     apply (rule hoareE_TrueI)
    apply simp

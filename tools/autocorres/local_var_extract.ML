@@ -331,16 +331,8 @@ let
     case Symtab.lookup (#var_getters prog_info) var of
         SOME x => (x $ dummy_state)
       | NONE =>  Utils.invalid_input "valid local variable name" var
-
-  (* Chain together multiple preconditions. *)
-  fun chain_preconds [] = Abs ("s", myvarsT, @{term "HOL.True"})
-    | chain_preconds [x] = x
-    | chain_preconds (x::xs) =
-        Const (@{const_name "pred_conj"},
-            (myvarsT --> @{typ bool}) --> (myvarsT --> @{typ bool}) --> (myvarsT --> @{typ bool}))
-          $ x $ (chain_preconds xs)
 in
-  chain_preconds
+  Utils.chain_preds myvarsT
     (map (fn (var_name, var_type) => Utils.abs_over "s" dummy_state
               (HOLogic.mk_eq (var_getter var_name, name_map (var_name, var_type))))
           (dest_set vars))
@@ -1393,7 +1385,7 @@ end
  * Prove monad_mono property for recursive functions.
  *)
 
-fun l2_monad_mono func_defs lthy =
+fun l2_monad_mono fn_defs lthy =
 let
   (*
    * For the induction, we need to have the form
@@ -1401,21 +1393,21 @@ let
    * and this gets annoying pretty quickly. But it is probably unavoidable.
    *)
   val measure = Free ("rec_measure'", @{typ nat})
-  fun make_mono_step_stmt (func, def) =
+  fun make_mono_step_stmt fn_def =
       let
           (* def should be of the form "func ?locale_args... ?measure ?args... = ..." *)
-          val (_, locale_args) = strip_comb func
-          val (_, all_args) = Utils.lhs_of_eq (term_of_thm def) |> strip_comb
+          val (_, locale_args) = strip_comb (#const fn_def)
+          val (_, all_args) = Utils.lhs_of_eq (term_of_thm (#definition fn_def)) |> strip_comb
           val _ :: args = drop (length locale_args) all_args
           val args = args |> map (fn Var ((name, _), typ) => Free (name, typ))
       in
           fold (fn arg => fn t => @{mk_term "All ?P" P} (lambda arg t)) args
                (@{mk_term "monad_mono_step ?f ?m" (f, m)}
-                    (lambda measure (betapplys (func, measure :: args)), measure))
+                    (lambda measure (betapplys (#const fn_def, measure :: args)), measure))
       end
   val mk_conj_list = foldr1 (fn (a, b) => @{term "conj"} $ a $ b)
 
-  val func_expand = map (fn (_, def) => EqSubst.eqsubst_tac lthy [0] [Utils.abs_def lthy def]) func_defs
+  val func_expand = map (fn fn_def => EqSubst.eqsubst_tac lthy [0] [Utils.abs_def lthy (#definition fn_def)]) fn_defs
   val tac = 
     resolve_tac lthy @{thms nat.induct} 1
       THEN EVERY (map (fn expand =>
@@ -1437,25 +1429,25 @@ let
                                addsimps @{thms split_conv split_tupled_all}) 1)])))
                 func_expand)
 
-  val mono_thm = map make_mono_step_stmt func_defs
+  val mono_thm = map make_mono_step_stmt fn_defs
                  |> mk_conj_list
                  |> (fn t => Logic.all measure (@{term "Trueprop"} $ t))
                  |> (fn t => Goal.prove lthy [] [] t (K tac))
 
   (* We have finished the induction, now we extract the individual results. *)
-  fun make_mono_stmt (func, def) =
+  fun make_mono_stmt fn_def =
       let
-          val (_, locale_args) = strip_comb func
-          val (_, all_args) = Utils.lhs_of_eq (term_of_thm def) |> strip_comb
+          val (_, locale_args) = strip_comb (#const fn_def)
+          val (_, all_args) = Utils.lhs_of_eq (term_of_thm (#definition fn_def)) |> strip_comb
           val _ :: args = drop (length locale_args) all_args
           val args = args |> map (fn Var ((name, _), typ) => Free (name, typ))
       in
           fold Logic.all args
                (@{mk_term "Trueprop (monad_mono ?f)" f}
-                    (lambda measure (betapplys (func, measure :: args))))
+                    (lambda measure (betapplys (#const fn_def, measure :: args))))
       end
-  val final_thms = func_defs
-        |> map (fn func_def => Goal.prove lthy [] [] (make_mono_stmt func_def)
+  val final_thms = fn_defs
+        |> map (fn fn_def => Goal.prove lthy [] [] (make_mono_stmt fn_def)
                      (K (asm_full_simp_tac (lthy addsimps [@{thm monad_mono_alt_def}, mono_thm]) 1)))
 in
   final_thms

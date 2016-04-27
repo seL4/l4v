@@ -18,7 +18,7 @@ sig
         -> FunctionInfo.fn_info
         -> (local_theory -> string -> 'a)
         -> (local_theory -> 'b Symtab.table -> 'c -> (string * 'a) list -> ('b list * 'c * local_theory))
-        -> ((term * thm) list -> local_theory -> thm list)
+        -> (FunctionInfo.function_def list -> local_theory -> thm list)
         -> (local_theory -> 'c -> FunctionInfo.function_def -> FunctionInfo.function_def)
         -> 'c -> (local_theory * FunctionInfo.fn_info * 'c)
 
@@ -38,8 +38,8 @@ sig
            [ callee_terms : (recursive, callee, corres_thm) table ] *)
         -> (Proof.context -> string -> ((bool * term * thm) Symtab.table)
             -> term -> term list -> (term * thm * (string * AutoCorresData.Trace) list))
-        (* prove_mono : (fn_term, fn_def) list -> ctxt -> mono_thms *)
-        -> ((term * thm) list -> Proof.context -> thm list)
+        (* prove_mono : (translated) fn_defs list -> ctxt -> mono_thms *)
+        -> (FunctionInfo.function_def list -> Proof.context -> thm list)
         (* update function info *)
         -> (local_theory -> FunctionInfo.function_def -> FunctionInfo.function_def)
         (* recursion basecase *)
@@ -186,8 +186,7 @@ fun translate lthy fn_info convert define prove_mono fn_def_translate v =
         |> map (fn funcs => if not (FunctionInfo.is_function_recursive fn_info (hd funcs))
                   then K [] else (fn _ => time_limit (fn _ =>
                       List.mapPartial (Symtab.lookup new_fn_defs) funcs
-                      |> (fn fn_defs => prove_mono (map #const fn_defs ~~
-                                                    map #definition fn_defs) lthy)
+                      |> (fn fn_defs => prove_mono fn_defs lthy)
                       |> (fn thms => funcs ~~ thms)) funcs))
         |> maybe_fork lthy |> map maybe_join
         |> List.concat |> Symtab.make
@@ -625,7 +624,7 @@ fun do_translation_phase
     (get_const_name : string -> string)
     (convert : Proof.context -> string -> ((bool * term * thm) Symtab.table) ->
                term -> term list -> (term * thm * (string * AutoCorresData.Trace) list))
-    (prove_mono : (term * thm) list -> Proof.context -> thm list)
+    (prove_mono : FunctionInfo.function_def list -> Proof.context -> thm list)
     (update_fn_info : Proof.context -> FunctionInfo.function_def -> FunctionInfo.function_def)
     (rec_base_case : thm)
     (ctxt : Proof.context) =

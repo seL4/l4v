@@ -22,10 +22,10 @@
     <!-- C Parser -->
     <set cwd="c-parser">
         <sequence>
-            <test name="CParser">isabelle env make -f IsaMakefile CParser</test>
-            <test name="CParserTest" cpu-timeout="7200">isabelle env make -f IsaMakefile cparser_test</test>
+            <test name="CParser">../../isabelle/bin/isabelle env make -f IsaMakefile CParser</test>
+            <test name="CParserTest" cpu-timeout="7200">../../isabelle/bin/isabelle env make -f IsaMakefile cparser_test</test>
         </sequence>
-        <test name="CParserTools">isabelle env make -f IsaMakefile cparser_tools</test>
+        <test name="CParserTools">../../isabelle/bin/isabelle env make -f IsaMakefile cparser_tools</test>
     </set>
 
     <!-- AutoCorres -->

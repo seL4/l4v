@@ -375,12 +375,12 @@ fun split_conj thm =
   handle THM _ => [thm]
 
 (* Prove monad_mono for recursive functions. *)
-fun l1_monad_mono (func_defs : (term * thm) list) lthy =
+fun l1_monad_mono (fn_defs : FunctionInfo.function_def list) lthy =
 let
     fun mk_stmt [func] = @{mk_term "monad_mono ?f" f} func
       | mk_stmt (func :: funcs) = @{mk_term "monad_mono ?f \<and> ?g" (f, g)} (func, mk_stmt funcs)
-    val mono_thm = @{term "Trueprop"} $ mk_stmt (map #1 func_defs)
-    val func_expand = map (fn (_, def) => EqSubst.eqsubst_tac lthy [0] [Utils.abs_def lthy def]) func_defs
+    val mono_thm = @{term "Trueprop"} $ mk_stmt (map #const fn_defs)
+    val func_expand = map (fn fn_def => EqSubst.eqsubst_tac lthy [0] [Utils.abs_def lthy (#definition fn_def)]) fn_defs
     val tac =
         REPEAT (EqSubst.eqsubst_tac lthy [0]
                 [@{thm monad_mono_alt_def}, @{thm all_conj_distrib} RS @{thm sym}] 1)
