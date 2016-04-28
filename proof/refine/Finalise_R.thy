@@ -3956,7 +3956,6 @@ lemma cteCaps_of_ctes_of_lift:
   "(\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s) \<rbrace> f \<lbrace>\<lambda>_ s. P (cteCaps_of s)\<rbrace>"
   unfolding cteCaps_of_def .
 
-context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_recycle_cap_corres:
   notes arch_reset_mem_mapping.simps [simp del]
         static_imp_wp [wp]
@@ -4677,5 +4676,7 @@ lemma cteDeleteOne_ct_not_ksQ:
     apply (wp finaliseCapTrue_standin_ct_not_ksQ isFinalCapability_inv)
   apply (clarsimp)
   done
+
+end
 
 end
