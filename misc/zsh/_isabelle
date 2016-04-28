@@ -22,11 +22,11 @@
 #
 # Caution
 # ----
-# This is a slow, shoddy, and possibly unsafe script that gets its completions by
+# This is a slow and unsafe script that gets its completions by
 #            *** running isabelle and parsing the output ***
 # so it may break and do strange things, especially if your Isabelle is not
 # configured properly, or its version has changed since this script
-# was written (Isabelle 2015).
+# was updated (Isabelle 2016).
 #
 #
 # Known problems
@@ -42,7 +42,7 @@ _isabelle_completer_path=$(dirname "${(%):-%x}")
 
 _isabelle() {
     local -x _isabelle_path
-    _isabelle_path="${words[1]}"
+    _isabelle_path=${~words[1]}
     if (( CURRENT == 2 )); then
         # completing isabelle subcommand
         # Isabelle's top-level command description has the format
@@ -87,9 +87,7 @@ _isabelle() {
 }
 
 _isabelle_usage_to_completion() {
-    # Ugly hack that takes advantage of the fact that
-    # isabelle "usage" messages are fairly uniform.
-    # The typical usage message looks like:
+    # Isabelle subcommands have standard usage messages e.g.
     #
     # Usage: blah [OPTIONS] [ARGS]
     #   Options are:
@@ -140,8 +138,8 @@ _isabelle_usage_to_completion() {
         allopts+="$optspec"
     fi
 
-    # non-OPTION arguments
-    if [[ ${words[CURRENT][1]} != '-' ]]; then
+    # non-OPTION arguments, if any
+    if [[ "$usage" =~ '.*Usage: isabelle '$cmd' .*' && ${words[CURRENT][1]} != '-' ]]; then
         opt=( $(echo "$usage" | \
             sed -e "/Usage: isabelle $cmd/ !d" \
             -e 's/Usage: isabelle '$cmd' \([][A-Z_]\+ *\)*.*$/\1/' \
@@ -181,18 +179,23 @@ _isabelle_usage_to_completion() {
 _isabelle_parse_option() {
     local opt="$1" session_dirs="${@:2}"
 
-    # Parse option:
-    #     "   -a   ARG    description of a (and more stuff)"
-    # -->  [name] [arg]   [             help              ]
-    #                     [   shorthelp  ]
+    # Parse a single option description:
+    #     "   -a   ARG=VAL   description of a (and more stuff)"
+    # -->  [name] [arg]      [             help              ]
+    #                        [   shorthelp  ]
 
     # FIXME? we only parse single-letter options,
     #        because isabelle only uses single-letter options
     local name="$(echo "$opt" | sed -e 's/^ *-\(.\).*$/\1/')"
     local arg="$(echo "$opt" | sed -e 's/^ *-. \+\([A-Z_]\+\)\?.*$/\1/')"
-    local help="$(echo "$opt" | sed -e 's/^ *-. \+\([A-Z_]\+ \+\)\?\(.*[^ ]\) *$/\2/')"
+    local help="$(echo "$opt" | sed -e 's/^ *-. \+\([A-Z_=]\+ \+\)\?\(.*[^ ]\) *$/\2/')"
 
-    local optspec="-${name}[$help]"
+    # session dirs and runtime options can be given multiple times
+    local multiple=
+    if [[ "$help" =~ '.*(session directory|option|OPTION).*' ]]; then
+        multiple='*'
+    fi
+    local optspec="${multiple}-${name}[$help]"
 
     if [[ -n "$arg" ]]; then
         # short version for tab completing argument
@@ -230,7 +233,7 @@ _isabelle_session_name() {
     _tags isa_heaps isa_sessions
     local heap_names session_names
     heap_names=$("$_isabelle_path" env sh -c 'echo -n "$ISABELLE_PATH"' | \
-                 xargs "-d:" sh -c 'find "$@" -maxdepth 2 -type f' . 2>/dev/null | \
+                 xargs "-d:" sh -c 'find "$@" -maxdepth 2 -type f' dummy-arg 2>/dev/null | \
                  xargs -d'\n' -n1 basename | sort -u)
     session_names=$(python "${_isabelle_completer_path}/isabelle_session_names.py" "$@" | sort -u)
     _requested isa_heaps expl 'heap name' compadd -- ${=heap_names}

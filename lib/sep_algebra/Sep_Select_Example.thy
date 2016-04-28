@@ -17,6 +17,6 @@ lemma sep_select: "(A \<and>* B \<and>* C \<and>* D) s \<Longrightarrow> (A \<an
   apply (sep_select 2 3 4 1) (* we can reorder multiple conjuncts at once *)
   apply (sep_select 2 3 4)   (* the list can be partial *)
   apply (sep_select_asm 3 4) (* sep_select_asm works for the assumptions *)
-oops
+  oops
 
 end

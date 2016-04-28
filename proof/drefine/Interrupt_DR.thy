@@ -281,6 +281,12 @@ lemma handle_interrupt_corres:
   "dcorres dc \<top> (invs and valid_etcbs) (Interrupt_D.handle_interrupt x) (Interrupt_A.handle_interrupt x)"
   apply (clarsimp simp:Interrupt_A.handle_interrupt_def)
   apply (clarsimp simp:get_irq_state_def gets_def bind_assoc)
+  apply (rule conjI; rule impI)
+   apply (subst Interrupt_D.handle_interrupt_def, simp)
+   apply (subst Retype_AI.do_machine_op_bind)
+     apply (rule maskInterrupt_empty_fail)
+    apply (rule ackInterrupt_empty_fail)
+   using corres_guard2_imp handle_interrupt_corres_branch apply blast
   apply (rule dcorres_absorb_get_r)+
   apply (clarsimp split:irq_state.splits simp:corres_free_fail | rule conjI)+
    apply (simp add:Interrupt_D.handle_interrupt_def bind_assoc)

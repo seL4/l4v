@@ -60,7 +60,9 @@ text {*
   to the underlying memory of the machine.
 *}
 end
+
 qualify ARM (in Arch)
+
 record
   machine_state =
   irq_masks :: "ARM.irq \<Rightarrow> bool"
@@ -70,9 +72,14 @@ record
   machine_state_rest :: ARM.machine_state_rest  
 
 consts irq_oracle :: "nat \<Rightarrow> 10 word"
+
+axiomatization irq_oracle_max_irqInst where
+  irq_oracle_max_irq: "\<forall> n. (irq_oracle n) <= ARM.maxIRQ"
+
 end_qualify
 
 context Arch begin global_naming ARM
+
 text {*
   The machine monad is used for operations on the state defined above.
 *}

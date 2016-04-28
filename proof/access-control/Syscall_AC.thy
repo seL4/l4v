@@ -493,7 +493,7 @@ lemma handle_interrupt_pas_refined:
      handle_interrupt irq
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: handle_interrupt_def)
-  apply (rule hoare_pre)
+  apply (rule conjI; rule impI;rule hoare_pre)
   apply (wp send_signal_pas_refined get_cap_wp
        | wpc
        | simp add: get_irq_slot_def get_irq_state_def)+
@@ -524,7 +524,7 @@ lemma handle_interrupt_integrity_autarch:
      handle_interrupt irq
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_interrupt_def  cong: irq_state.case_cong maskInterrupt_def ackInterrupt_def resetTimer_def )
-  apply (rule hoare_pre)
+  apply (rule conjI; rule impI; rule hoare_pre)
   apply (wp_once send_signal_respects get_cap_auth_wp [where aag = aag] dmo_mol_respects
        | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def
        | wp dmo_no_mem_respects
@@ -548,7 +548,7 @@ lemma handle_interrupt_integrity:
      handle_interrupt irq
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_interrupt_def maskInterrupt_def ackInterrupt_def resetTimer_def cong: irq_state.case_cong bind_cong)
-  apply (rule hoare_pre)
+  apply (rule conjI; rule impI; rule hoare_pre)
   apply (wp_once send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
        | wpc
        | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def)+
@@ -960,6 +960,7 @@ lemma schedule_pas_refined:
 lemma handle_interrupt_arch_state [wp]:
   "\<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   unfolding handle_interrupt_def
+  apply (rule hoare_if)
   apply (rule hoare_pre)
   apply clarsimp
   apply (wp get_cap_inv dxo_wp_weak send_signal_arch_state | wpc | simp add: get_irq_state_def)+

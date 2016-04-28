@@ -96,6 +96,10 @@ lemma simp_expr_weaken:
 
 (*
  * Monad simplification rules.
+ *
+ * When solving "monad_equiv P A B R E", the l2_opt tactics assume that P is concrete;
+ * to ensure this, monad_equiv rules should result in R being instantiated.
+ * See e.g. monad_equiv_unreachable where we have to constrain the rule.
  *)
 
 lemma monad_equiv_gets [L2flow]:
@@ -322,8 +326,12 @@ lemma monad_equiv_recguard [L2flow]:
 
 lemma monad_equiv_unreachable' [L2flow]:
   "monad_equiv (\<lambda>_. False) L (L2_gets (\<lambda>_. undefined) [''L2Opt_internal_var'']) Q R"
-  apply (monad_eq simp: monad_equiv_def L2_defs simp_expr_def valid_def validE_def)
-  done
+  by (simp add: monad_equiv_def)
+
+(* avoid leaving schematic Q in goal *)
+lemma monad_equiv_unreachable [L2flow]:
+  "monad_equiv (\<lambda>_. False) L (L2_gets (\<lambda>_. undefined) [''L2Opt_internal_var'']) (\<lambda>_ _. False) R"
+  by (rule monad_equiv_unreachable')
 
 lemma monad_equiv_split [L2flow]:
   "\<lbrakk> \<And>a b. monad_equiv (P (a, b)) (X a b) (Y a b) (Q a b) (E a b) \<rbrakk> \<Longrightarrow>

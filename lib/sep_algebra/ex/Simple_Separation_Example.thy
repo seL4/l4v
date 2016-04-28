@@ -14,7 +14,7 @@
                 Rafal Kolanski <rafal.kolanski at nicta.com.au>
 *)
 
-header "Example from HOL/Hoare/Separation"
+chapter "Example from HOL/Hoare/Separation"
 
 theory Simple_Separation_Example
 imports

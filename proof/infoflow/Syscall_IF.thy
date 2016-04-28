@@ -909,21 +909,28 @@ declare gts_st_tcb_at[wp del]
 lemma handle_interrupt_globals_equiv:
   "\<lbrace>globals_equiv (st :: det_ext state) and invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   unfolding handle_interrupt_def
-  apply (wp dmo_maskInterrupt_globals_equiv
+  apply (rule hoare_if)
+  apply (wp dmo_maskInterrupt_globals_equiv 
             dmo_return_globals_equiv
             send_signal_globals_equiv
+            dmo_ackInterrupt
             hoare_vcg_if_lift2
             hoare_drop_imps
             dxo_wp_weak
-    | wpc | simp add: ackInterrupt_def resetTimer_def invs_imps invs_valid_idle)+
+            Retype_IF.dmo_mol_globals_equiv
+            NonDetMonadLemmaBucket.no_fail_bind
+            NonDetMonadLemmaBucket.bind_known_operation_eq  
+            Retype_IF.dmo_mol_globals_equiv
+    | wpc  | simp add: dmo_bind_valid ackInterrupt_def resetTimer_def invs_imps invs_valid_idle)+
+  
   done
 
 end
 
 axiomatization dmo_reads_respects where
-  dmo_getDFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op getDFSR)" and
-  dmo_getFAR_reads_respects: "reads_respects aag l \<top> (do_machine_op getFAR)" and
-  dmo_getIFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op getIFSR)"
+  dmo_getDFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op ARM.getDFSR)" and
+  dmo_getFAR_reads_respects: "reads_respects aag l \<top> (do_machine_op ARM.getFAR)" and
+  dmo_getIFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op ARM.getIFSR)"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 

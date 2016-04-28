@@ -27,16 +27,31 @@ lemma shiftl_power:
 
 lemmas of_bl_reasoning = to_bl_use_of_bl of_bl_append
 
-lemma uint_of_bl_is_bl_to_bin:
-  "length l\<le>len_of TYPE('a) \<Longrightarrow>
+(*TODO: delete, this will be in the Isabelle main distribution in future*)
+lemma bl_to_bin_lt2p_drop: "bl_to_bin bs < 2 ^ length (dropWhile Not bs)"
+  unfolding bl_to_bin_def
+  proof(induction bs)
+  case(Cons b bs)
+    with bl_to_bin_lt2p_aux[where w=1] show ?case by simp
+  qed(simp)
+
+lemma uint_of_bl_is_bl_to_bin_drop:
+  "length (dropWhile Not l) \<le> len_of TYPE('a) \<Longrightarrow>
    uint ((of_bl::bool list\<Rightarrow> ('a :: len) word) l) = bl_to_bin l"
   apply (simp add: of_bl_def)
   apply (rule word_uint.Abs_inverse)
   apply (simp add: uints_num bl_to_bin_ge0)
-  apply (rule order_less_le_trans, rule bl_to_bin_lt2p)
-  apply (rule order_trans, erule power_increasing)
-   apply simp_all
+  apply (rule order_less_le_trans)
+  apply (rule bl_to_bin_lt2p_drop)
+  apply(simp)
   done
+
+corollary uint_of_bl_is_bl_to_bin:
+  "length l\<le>len_of TYPE('a) \<Longrightarrow>
+   uint ((of_bl::bool list\<Rightarrow> ('a :: len) word) l) = bl_to_bin l"
+  apply(rule uint_of_bl_is_bl_to_bin_drop)
+  using le_trans length_dropWhile_le by blast
+
 
 lemma bin_to_bl_or:
   "bin_to_bl n (a OR b) = map2 (op \<or>) (bin_to_bl n a) (bin_to_bl n b)"

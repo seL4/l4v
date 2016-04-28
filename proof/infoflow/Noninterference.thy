@@ -3230,7 +3230,18 @@ lemma confidentiality_part_not_PSched:
   apply(fastforce dest: non_PSched_steps_run_in_lock_step)
   done
   
-
+lemma getActiveIRQ_ret_no_dmo[wp]: "\<lbrace>\<lambda>_. True\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
+  apply (simp add: getActiveIRQ_def)
+  apply(rule hoare_pre)
+   apply (insert irq_oracle_max_irq)
+   apply (wp alternative_wp select_wp dmo_getActiveIRQ_irq_masks)
+  apply clarsimp
+  done
+  
+  
+lemma try_some_magic: "(\<forall>x. y = Some x \<longrightarrow> P x) = ((\<exists>x. y = Some x) \<longrightarrow> P (the y))"
+by auto
+  
 lemma preemption_interrupt_scheduler_invisible: 
     "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l) (scheduler_affects_equiv aag l) (\<lambda>r r'. r = uc \<and> snd r' = uc')  
       (einvs and pas_refined aag and guarded_pas_domain aag and domain_sep_inv False st and silc_inv aag st' and (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s) and (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s)
@@ -3242,22 +3253,19 @@ lemma preemption_interrupt_scheduler_invisible:
   apply (rule equiv_valid_2_bind_right)
        apply (rule equiv_valid_2_bind_right)
             apply (simp add: liftE_def bind_assoc)
+            apply (simp only: option.case_eq_if)
             apply (rule equiv_valid_2_bind_pre[where R'="op ="])
-                 apply simp
-                 apply (case_tac "rv'")
-                  prefer 2
-                  apply simp
-                  apply (rule equiv_valid_2_bind_pre[where R'="op =" and Q="\<top>\<top>" and Q'="\<top>\<top>"])
-                       apply (rule return_ev2)
-                       apply simp
-                      apply (rule equiv_valid_2)
-                      apply (rule handle_interrupt_reads_respects_scheduler)
-                     apply (wp | simp)+
-                 apply (rule return_ev2)
-                 apply simp
+                 apply (simp add: when_def split del: split_if)
+                 apply (subst if_swap)
+                 apply (simp split del: split_if)
+                 apply (rule equiv_valid_2_bind_pre[where R'="op =" and Q="\<top>\<top>" and Q'="\<top>\<top>"])
+                      apply (rule return_ev2)
+                      apply simp
+                     apply (rule equiv_valid_2)
+                     apply (wp handle_interrupt_reads_respects_scheduler[where st=st] | simp)+
                 apply (rule equiv_valid_2)
                 apply (rule dmo_getActive_IRQ_reads_respect_scheduler)
-               apply (wp | simp | elim conjE | intro conjI)+
+               apply (wp dmo_getActiveIRQ_return_axiom[simplified try_some_magic] | simp  add: imp_conjR | elim conjE | intro conjI | wp_once hoare_drop_imps)+
            apply (subst thread_set_as_user)
            apply (wp guarded_pas_domain_lift)
           apply ((simp | wp | force)+)[7]
@@ -3280,8 +3288,8 @@ lemma handle_preemption_agnostic_ret: "\<lbrace>\<top>\<rbrace> handle_preemptio
 lemma handle_preemption_reads_respects_scheduler:
   "reads_respects_scheduler aag l (einvs and pas_refined aag and guarded_pas_domain aag and domain_sep_inv False st and silc_inv aag st' and (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)) (handle_preemption_if uc)"
   apply (simp add: handle_preemption_if_def)
-  apply (wp when_ev handle_interrupt_reads_respects_scheduler
-         dmo_getActive_IRQ_reads_respect_scheduler | simp | wp_once hoare_drop_imps)+
+  apply (wp when_ev handle_interrupt_reads_respects_scheduler dmo_getActiveIRQ_return_axiom[simplified try_some_magic]
+         dmo_getActive_IRQ_reads_respect_scheduler | simp add: imp_conjR| wp_once hoare_drop_imps)+
   apply force
   done
 
@@ -3303,8 +3311,8 @@ lemma kernel_entry_scheduler_equiv_2:
       apply (rule equiv_valid_2_bind_pre[where R'="op ="])
            apply (rule equiv_valid_2)
            apply simp
-           apply (wp del: no_irq add: handle_interrupt_reads_respects_scheduler 
-                     dmo_getActive_IRQ_reads_respect_scheduler hoare_vcg_all_lift | wpc | simp | wp_once hoare_drop_imps)+
+           apply (wp del: no_irq add: handle_interrupt_reads_respects_scheduler[where st=st] 
+                     dmo_getActive_IRQ_reads_respect_scheduler  | wpc | simp add: imp_conjR all_conj_distrib | wp_once hoare_drop_imps)+
            apply (rule context_update_cur_thread_snippit)
          apply (wp thread_set_invs_trivial guarded_pas_domain_lift
                    thread_set_pas_refined thread_set_not_state_valid_sched | simp add: tcb_cap_cases_def)+
@@ -3320,15 +3328,15 @@ lemma kernel_entry_if_reads_respects_scheduler:
   apply (rule bind_ev_pre)
      apply wp_once
     apply (rule bind_ev_pre)
-       apply ((wp del: no_irq add: when_ev handle_interrupt_reads_respects_scheduler  dmo_getActive_IRQ_reads_respect_scheduler hoare_vcg_all_lift liftE_ev | simp | wpc | wp_once hoare_drop_imps)+)[1]
+       apply ((wp del: no_irq add: when_ev  handle_interrupt_reads_respects_scheduler[where st=st]  dmo_getActive_IRQ_reads_respect_scheduler liftE_ev | simp add: imp_conjR all_conj_distrib | wpc | wp_once hoare_drop_imps)+)[1]
       apply (rule reads_respects_scheduler_cases')
          prefer 3
          apply (rule reads_respects_scheduler_unobservable'')
            apply ((wp thread_set_scheduler_equiv | simp | elim conjE)+)[3]
         apply ((wp | simp | elim conjE)+)[2]
       apply (clarsimp simp: guarded_pas_domain_def)
-     apply (wp thread_set_invs_trivial guarded_pas_domain_lift 
-               thread_set_pas_refined thread_set_not_state_valid_sched | simp add: tcb_cap_cases_def)+
+     apply ((wp thread_set_invs_trivial guarded_pas_domain_lift hoare_vcg_all_lift
+               thread_set_pas_refined thread_set_not_state_valid_sched | simp add: tcb_cap_cases_def)+)
   apply (clarsimp simp: cur_thread_idle cur_thread_not_SilcLabel)
   apply force
   done

@@ -4134,11 +4134,13 @@ interpretation timer_tick_extended: is_extended "timer_tick"
   apply wp
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma handle_interrupt_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  unfolding handle_interrupt_def
-  apply (wp get_cap_wp | wpc | simp add: get_irq_slot_def get_irq_state_def)+
-  done
+  "\<lbrace>valid_list \<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  unfolding handle_interrupt_def ackInterrupt_def
+  apply (rule hoare_pre)
+   by (wp get_cap_wp  do_machine_op_valid_list | wpc | simp add: get_irq_slot_def | wp_once hoare_drop_imps)+
+end
 
 crunch valid_list[wp]: handle_send,handle_reply valid_list
 

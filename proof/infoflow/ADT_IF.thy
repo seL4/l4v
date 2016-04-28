@@ -1129,16 +1129,16 @@ lemma handle_preemption_if_guarded_pas_domain[wp]: "\<lbrace>guarded_pas_domain 
 crunch valid_sched[wp]: handle_preemption_if "valid_sched"
   (wp: crunch_wps simp: crunch_simps ignore: getActiveIRQ)
 
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma handle_preemption_if_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
    handle_preemption_if tc
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  apply(simp add: handle_preemption_if_def | wp handle_interrupt_irq_masks)+
-  apply(rule_tac Q="\<lambda>_ s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s" in hoare_strengthen_post)
-    apply(wp | simp)+
-  by blast
-  
+  apply(simp add: handle_preemption_if_def | wp handle_interrupt_irq_masks[where st=st])+
+  apply(rule_tac Q="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ) " in hoare_strengthen_post)
+    by(wp | simp)+
+end
+
 crunch valid_list[wp]: handle_preemption_if "valid_list"
   (ignore: getActiveIRQ)
 
@@ -1732,8 +1732,9 @@ lemma handle_interrupt_domain_time_sched_action:
   "num_domains > 1 \<Longrightarrow>
    \<lbrace>\<lambda>s. domain_time s > 0\<rbrace> 
    handle_interrupt e
-   \<lbrace>\<lambda>r s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-  apply(simp add: handle_interrupt_def)
+   \<lbrace>\<lambda>r s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"   
+  apply(simp add: handle_interrupt_def split del: split_if)
+  apply (rule hoare_pre)
   apply (wp)
    apply(case_tac "st \<noteq> IRQTimer")
     apply((wp hoare_vcg_imp_lift' | simp | wpc)+)[1]

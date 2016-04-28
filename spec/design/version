@@ -1,8 +1,5 @@
-Built from git repo at /Users/dmatichuk/verification-archsplit/seL4/haskell by dmatichuk
+Built from git repo at /home/matthewb/verification/arch_split/seL4/haskell by matthewb
 
 Generated from changeset:
-69b7e07 trivial: make style with astyle 2.03
+dd5d5d7 [boot] A trivial patch that checks `mod_count` before using it.
 
-
-Warning - uncomitted changes used:
-?? src/SEL4/Kernel/Thread/.ARM.lhs.swp

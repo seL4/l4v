@@ -20,12 +20,13 @@ axiomatization
 where  Moo_Bar[sep_cancel] : "Moo s \<Longrightarrow> Bar s" 
 
 lemma "((Bar \<and>* Q \<and>* R \<longrightarrow>* B) \<and>* Moo \<and>* A \<and>* R \<and>* Q) s \<Longrightarrow> (A \<and>* B) s"
-    apply (sep_solve)
-done
+  apply (sep_solve)
+  done
 
 (* encouraging better proof style with different command for schematics in assumption *)
 
-schematic_lemma "((Bar \<and>* Q \<and>* R \<longrightarrow>* B) \<and>* Moo \<and>* A \<and>* R \<and>* ?Q) s \<Longrightarrow> (A \<and>* B) s"
+schematic_goal "((Bar \<and>* Q \<and>* R \<longrightarrow>* B) \<and>* Moo \<and>* A \<and>* R \<and>* ?Q) s \<Longrightarrow> (A \<and>* B) s"
   apply (sep_schem)
-done
+  done
 
+end

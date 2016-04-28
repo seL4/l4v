@@ -85,14 +85,18 @@ crunch irq_masks[wp]: machine_op_lift "\<lambda>s. P (irq_masks s)"
 
 lemma handle_interrupt_irq_masks:
   notes no_irq[wp del]
+  
   shows
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and K (irq \<le> maxIRQ)\<rbrace>
    handle_interrupt irq
    \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
-  apply(simp add: handle_interrupt_def)
-  apply(wp dmo_wp | simp add:  ackInterrupt_def maskInterrupt_def when_def 
-    split del: split_if | wpc | simp add: get_irq_state_def |wp_once hoare_drop_imp)+
-  apply(fastforce simp: domain_sep_inv_def)
+  apply (rule hoare_gen_asm)
+  apply(simp add: handle_interrupt_def split del: split_if)
+  apply (rule hoare_pre)
+   apply (rule hoare_if)
+    apply simp
+   apply(wp dmo_wp | simp add: ackInterrupt_def maskInterrupt_def when_def split del: split_if | wpc | simp add: get_irq_state_def | wp_once hoare_drop_imp)+
+  apply (fastforce simp: domain_sep_inv_def)
   done
 
 crunch irq_masks[wp]: cap_swap_for_delete "\<lambda>s. P (irq_masks_of_state s)"
@@ -398,12 +402,27 @@ crunch irq_masks[wp]: handle_vm_fault "\<lambda>s. P (irq_masks_of_state s)"
 lemma dmo_getActiveIRQ_irq_masks[wp]:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s))\<rbrace>
     do_machine_op getActiveIRQ 
-    \<lbrace>\<lambda>x s. P (irq_masks_of_state s)\<rbrace>" 
+    \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)  \<rbrace>" 
   apply(rule hoare_pre, rule dmo_wp)
   apply(simp add: getActiveIRQ_def | wp | simp add: no_irq_def | clarsimp)+
   done
+  
+lemma dmo_getActiveIRQ_return_axiom[wp]:
+  "\<lbrace>\<top>\<rbrace> 
+  do_machine_op getActiveIRQ 
+  \<lbrace>(\<lambda>rv s. (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)) \<rbrace>"
+  apply (simp add: getActiveIRQ_def)
+  apply(rule hoare_pre, rule dmo_wp)
+   apply (insert irq_oracle_max_irq)
+   apply (wp alternative_wp select_wp dmo_getActiveIRQ_irq_masks)
+  apply clarsimp
+  done
+  
 
-lemma handle_yield_irq_masks_of_state[wp]: "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and invs\<rbrace> handle_yield \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+lemma handle_yield_irq_masks_of_state[wp]: 
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and invs\<rbrace>
+  handle_yield
+  \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
   apply (simp add: handle_yield_def)
   apply wp
   apply simp
@@ -414,9 +433,20 @@ lemma handle_event_irq_masks:
    handle_event ev
    \<lbrace> \<lambda> rv s. P (irq_masks_of_state s) \<rbrace>"
   apply(case_tac ev)
-      apply (rename_tac syscall)
-      apply(case_tac syscall)
-            apply(simp add: handle_send_def handle_call_def | wp handle_invocation_irq_masks[where st=st] handle_interrupt_irq_masks[where st=st] hoare_vcg_all_lift | wpc | wp_once hoare_drop_imps)+
+      prefer 4
+      apply (rule hoare_pre)
+       apply simp
+       apply (wp handle_interrupt_irq_masks[where st=st] | wpc | simp )+
+       apply (rule_tac Q="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
+        apply (wp | clarsimp)+
+     apply (rename_tac syscall)
+     apply (case_tac syscall)
+            apply (simp add: handle_send_def handle_call_def 
+                 | wp handle_invocation_irq_masks[where st=st] handle_interrupt_irq_masks[where st=st] hoare_vcg_all_lift  
+                 | wpc 
+                 | wp_once hoare_drop_imps)+
+            
+            
   done
 
 crunch irq_masks[wp]: activate_thread "\<lambda>s. P (irq_masks_of_state s)"
@@ -430,8 +460,8 @@ lemma call_kernel_irq_masks:
    \<lbrace> \<lambda> rv s. P (irq_masks_of_state s) \<rbrace>"
   apply(simp add: call_kernel_def)
   apply (wp handle_interrupt_irq_masks[where st=st])+
-   apply(rule_tac Q="\<lambda>_ s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s" in hoare_strengthen_post)
-    apply(wp | simp)+
+   apply (rule_tac Q="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
+    apply (wp | simp)+
   apply(rule_tac Q="\<lambda> x s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s" and F="E" for E in hoare_post_impErr)
     apply(rule valid_validE)
     apply(wp handle_event_irq_masks[where st=st] valid_validE[OF handle_event_domain_sep_inv] | simp)+
