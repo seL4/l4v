@@ -46,7 +46,7 @@ context kernel_m begin
 text \<open>
   From AutoCorres @{term ac_corres}, obtain @{term ccorres}.
   This requires a separate corres_underlying proof between the
-  AutoCorres spec and DSpec, in order to establish @{term cstate_relation}.
+  AutoCorres spec and design Spec, in order to establish @{term cstate_relation}.
 \<close>
 lemma autocorres_to_ccorres:
   "\<lbrakk> ac_corres globals \<Gamma> ret_xf arg_rel (liftE ac_f) (Call f_'proc);
@@ -85,13 +85,12 @@ lemma ccorres_to_corres_partial:
                 intro: EHOther dest: in_AC_call_simpl)
 
 text \<open>
-  A fantasy world where ccorres_underlying is as strong as we need.
+  A fantasy world where ccorres_underlying proves termination.
 \<close>
 context begin
 
 private lemma ccorres_underlying_idealised_def:
-  "\<And>srel rrel xf arrel axf G G' hs.
-   ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs \<equiv>
+  "ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs \<equiv>
    \<lambda>m c. \<forall>(s, s')\<in>srel.
             G s \<and> s' \<in> G' \<and> \<not> snd (m s) \<longrightarrow>
             \<Gamma> \<turnstile> c \<down> Normal s' \<and>
@@ -228,6 +227,7 @@ end
 
 
 
+subsection \<open>Termination on demand\<close>
 text \<open>
   Instead of adding termination to ccorres in one go,
   we can also prove terminates as incremental side conditions.
@@ -373,7 +373,7 @@ lemma rescheduleRequired_terminates:
   done
 
 
-text \<open>Verify handleYield without cheating\<close>
+text \<open>Process handleYield's callees without cheating\<close>
 
 lemma ccorres_to_corres:
   assumes ac_def: "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl \<Gamma> f_'proc)"
@@ -486,7 +486,7 @@ lemma (* handleYield_ccorres: *)
   apply (simp add: handleYield_def handleYield'_def)
 
   apply (rule corres_guard_imp)
-    (* Emulate vcg exspec=tcbSchedDequeue_modifies
+    (* Show that current thread is unmodified.
      * FIXME: proper way to do this? *)
     apply (subst reorder_gets[symmetric, unfolded K_bind_def])
      using tcbSchedDequeue'_modifies apply (fastforce simp: valid_def)
