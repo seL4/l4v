@@ -847,7 +847,7 @@ lemma sameObject_corres2:
   apply clarsimp
   apply (case_tac d, (simp_all split: arch_cap.split)[11])
   apply (rename_tac arch_capa)
-  apply (clarsimp simp add: ArchRetype_H.sameObjectAs_def Let_def)
+  apply (clarsimp simp add: ARM_H.sameObjectAs_def Let_def)
   apply (intro conjI impI)
    apply (case_tac arch_cap; simp add: isCap_simps)
    apply (case_tac arch_capa; simp)

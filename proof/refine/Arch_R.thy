@@ -530,7 +530,7 @@ lemma flush_type_map:
           flush_type_map (label_to_flush_type (invocation_type (mi_label mi)))"
   by (clarsimp simp: label_to_flush_type_def labelToFlushType_def flush_type_map_def
                         ArchLabelFuns_H.isPageFlushLabel_def ArchLabelFuns_H.isPDFlushLabel_def
-                 split: ArchInvocation_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
+                 split: ARM_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
 lemma resolve_vaddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
@@ -620,7 +620,7 @@ lemma dec_arch_inv_page_flush_corres:
       apply (clarsimp simp: archinv_relation_def page_invocation_map_def
                             label_to_flush_type_def labelToFlushType_def flush_type_map_def
                             ArchLabelFuns_H.isPageFlushLabel_def
-                     split: ArchRetypeDecls_H.flush_type.splits invocation_label.splits arch_invocation_label.splits)
+                     split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
      apply wp
    apply (fastforce simp: valid_cap_def mask_def)
   apply auto
@@ -1022,7 +1022,7 @@ shows
                          in corres_splitEE)
             prefer 2
             apply (rule corres_whenE)
-              apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def shiftl_t2n)
+              apply (simp add: kernel_base_def kernelBase_def kernelBase_def shiftl_t2n)
              apply (rule corres_trivial, simp)
             apply simp
            apply (rule corres_guard_imp)
@@ -1031,7 +1031,7 @@ shows
                 apply (rule check_vp_corres)
                apply (rule corres_splitEE)
                   prefer 2
-                  apply (simp only: Platform.addrFromPPtr_def)
+                  apply (simp only: addrFromPPtr_def)
                   apply (rule create_mapping_entries_corres)
                    apply (simp add: mask_vmrights_corres)
                   apply (simp add: vm_attributes_corres)
@@ -1094,7 +1094,7 @@ shows
               apply (rule check_vp_corres)
              apply (rule corres_splitEE)
                 prefer 2
-                apply (simp only: Platform.addrFromPPtr_def)
+                apply (simp only: addrFromPPtr_def)
                 apply (rule create_mapping_entries_corres)
                  apply (simp add: mask_vmrights_corres)
                 apply (simp add: vm_attributes_corres)
@@ -1151,7 +1151,7 @@ shows
     apply (simp split: cap.split arch_cap.split option.split,
            intro conjI allI impI, simp_all)[1]
     apply (rule whenE_throwError_corres_initial, simp)
-     apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def)
+     apply (simp add: kernel_base_def kernelBase_def kernelBase_def)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE)
          prefer 2
@@ -1226,7 +1226,7 @@ shows
      apply (rule whenE_throwError_corres, simp)
       apply clarsimp
      apply (rule whenE_throwError_corres, simp)
-      apply (clarsimp simp: kernel_base_def Platform.kernelBase_def kernelBase_def)
+      apply (clarsimp simp: kernel_base_def kernelBase_def kernelBase_def)
      apply (rule case_option_corresE)
       apply (rule corres_trivial)
       apply clarsimp
@@ -1485,7 +1485,7 @@ lemma sts_valid_arch_inv':
 lemma less_kernelBase_valid_pde_offset':
   "\<lbrakk> vptr < kernelBase; x = 0 \<or> is_aligned vptr 24; x \<le> 0xF \<rbrakk>
      \<Longrightarrow> valid_pde_mapping_offset' (((x * 4) + (vptr >> 20 << 2)) && mask pdBits)"
-  apply (clarsimp simp: kernelBase_def Platform.kernelBase_def pdBits_def pageBits_def
+  apply (clarsimp simp: kernelBase_def kernelBase_def pdBits_def pageBits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def)
   apply (drule minus_one_helper3, simp)
   apply (drule le_shiftr[where u=vptr and n=20])

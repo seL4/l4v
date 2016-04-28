@@ -17,8 +17,14 @@ theory Retype_R
 imports VSpace_R
 begin
 
+context Arch begin
+declare no_irq[wp del]
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
-  APIType_map2 :: "kernel_object + ArchTypes_H.object_type \<Rightarrow> Structures_A.apiobject_type"
+  APIType_map2 :: "kernel_object + ARM_H.object_type \<Rightarrow> Structures_A.apiobject_type"
 where
  "APIType_map2 ty \<equiv> case ty of
       Inr (APIObjectType ArchTypes_H.Untyped) \<Rightarrow> Structures_A.Untyped
@@ -45,11 +51,11 @@ lemma createObject_def2:
    createNewCaps ty ptr (Suc 0) us"
   apply (clarsimp simp:createObject_def createNewCaps_def placeNewObject_def2)
   apply (case_tac ty)
-        apply (simp_all add:Types_H.toAPIType_def ArchTypes_H.toAPIType_def)
+        apply (simp_all add: toAPIType_def)
         defer
         apply ((clarsimp simp: Arch_createNewCaps_def  
           createWordObjects_def createObjects_def shiftL_nat
-          ArchRetype_H.createObject_def createPageObject_def 
+          ARM_H.createObject_def createPageObject_def 
           placeNewObject_def2 objBits_simps bind_assoc
           clearMemory_def clearMemoryVM_def fun_upd_def[symmetric]
           word_size mapM_x_singleton storeWordVM_def)+)[6]
@@ -57,7 +63,7 @@ lemma createObject_def2:
   apply (case_tac apiobject_type)
       apply (clarsimp simp: Arch_createNewCaps_def  
         createWordObjects_def createObjects_def shiftL_nat
-        ArchRetype_H.createObject_def createPageObject_def 
+        ARM_H.createObject_def createPageObject_def 
         placeNewObject_def2 objBits_simps bind_assoc
         clearMemory_def clearMemoryVM_def 
         word_size mapM_x_singleton storeWordVM_def)+
@@ -92,7 +98,7 @@ lemma objBitsKO_bounded2[simp]:
 declare select_singleton_is_return[simp]
 
 definition
-  APIType_capBits :: "ArchTypes_H.object_type \<Rightarrow> nat \<Rightarrow> nat"
+  APIType_capBits :: "ARM_H.object_type \<Rightarrow> nat \<Rightarrow> nat"
 where
   "APIType_capBits ty us \<equiv> case ty of
       APIObjectType ArchTypes_H.Untyped \<Rightarrow> us
@@ -108,7 +114,7 @@ where
     | PageDirectoryObject \<Rightarrow> 14"
 
 definition
-  makeObjectKO :: "(kernel_object + ArchTypes_H.object_type) \<rightharpoonup> kernel_object"
+  makeObjectKO :: "(kernel_object + ARM_H.object_type) \<rightharpoonup> kernel_object"
 where
   "makeObjectKO ty \<equiv> case ty of
       Inl KOUserData \<Rightarrow> Some KOUserData
@@ -178,7 +184,7 @@ lemma makeObjectKO_valid:
   "makeObjectKO tp = Some v \<Longrightarrow> valid_obj' v s"
   by (clarsimp simp: makeObjectKO_def valid_obj_makeObject_rules
               split: sum.splits object_type.splits
-                     ArchTypes_H.apiobject_type.splits kernel_object.splits 
+                     apiobject_type.splits kernel_object.splits 
                      arch_kernel_object.splits)
 
 lemma loadObject_cte_same:
@@ -554,8 +560,8 @@ lemma makeObjectKO_eq:
        (tp = Inr (APIObjectType ArchTypes_H.TCBObject) \<and> tcb = makeObject)"
   using x
   by (simp add: makeObjectKO_def eq_commute
-         split: ArchTypes_H.apiobject_type.split_asm sum.split_asm kernel_object.split_asm
-                ArchTypes_H.object_type.split_asm arch_kernel_object.split_asm)+
+         split: apiobject_type.split_asm sum.split_asm kernel_object.split_asm
+                ARM_H.object_type.split_asm arch_kernel_object.split_asm)+
 
 lemma pspace_no_overlap_base':
   "\<lbrakk>pspace_aligned' s;pspace_no_overlap' x n s; is_aligned x n \<rbrakk> \<Longrightarrow> ksPSpace s x = None"
@@ -911,7 +917,7 @@ lemma APIType_map2_Untyped[simp]:
         = (tp = Inr (APIObjectType ArchTypes_H.Untyped))"
  by (simp add: APIType_map2_def
          split: sum.split object_type.split kernel_object.split arch_kernel_object.splits
-                ArchTypes_H.apiobject_type.split)
+                apiobject_type.split)
 
 lemma obj_relation_retype_leD:
   "\<lbrakk> obj_relation_retype ko ko' \<rbrakk>
@@ -1016,7 +1022,7 @@ lemma objBits_le_obj_bits_api:
     apply (auto simp:default_arch_object_def pageBits_def archObjSize_def
       makeObjectKO_def objBitsKO_def APIType_map2_def obj_bits_api_def slot_bits_def
       split:Structures_H.kernel_object.splits arch_kernel_object.splits object_type.splits
-      Structures_H.kernel_object.splits arch_kernel_object.splits ArchTypes_H.apiobject_type.splits)
+      Structures_H.kernel_object.splits arch_kernel_object.splits apiobject_type.splits)
   done
 
 
@@ -1174,7 +1180,7 @@ lemma retype_ekheap_relation:
   have not_unt: "ty \<noteq> Inr (APIObjectType ArchTypes_H.Untyped)"
      by (rule makeObjectKO_Untyped[OF ko])
   show ?thesis
-    apply (case_tac "ty \<noteq> Inr (APIObjectType ArchTypes_H.apiobject_type.TCBObject)")
+    apply (case_tac "ty \<noteq> Inr (APIObjectType apiobject_type.TCBObject)")
      apply (insert ko)
      apply (cut_tac retype_pspace_relation[OF sr' vs vs' pn pn' ko cover orr num_r])
      apply (simp add: foldr_upd_app_if' foldr_upd_app_if[folded data_map_insert_def])
@@ -1184,7 +1190,7 @@ lemma retype_ekheap_relation:
                       pspace_relation_def default_ext_def cong: if_cong
                       split: split_if_asm)
       subgoal by (clarsimp simp add: makeObjectKO_def APIType_map2_def cong: if_cong split: sum.splits Structures_H.kernel_object.splits
-             arch_kernel_object.splits ArchTypes_H.object_type.splits ArchTypes_H.apiobject_type.splits)
+             arch_kernel_object.splits ARM_H.object_type.splits apiobject_type.splits)
      apply (frule ekh_at_tcb_at[OF et])
      apply (intro impI conjI)
       apply clarsimp
@@ -1192,7 +1198,7 @@ lemma retype_ekheap_relation:
       apply (clarsimp simp add: other_obj_relation_def split: split_if_asm)
        apply (case_tac ko,simp_all)
        apply (clarsimp simp add: makeObjectKO_def cong: if_cong split: sum.splits Structures_H.kernel_object.splits
-              arch_kernel_object.splits ArchTypes_H.object_type.splits ArchTypes_H.apiobject_type.splits)
+              arch_kernel_object.splits ARM_H.object_type.splits apiobject_type.splits)
       apply (drule_tac x=xa in bspec,simp)
       subgoal by force
      subgoal by force
@@ -1361,8 +1367,12 @@ lemma ksPSpace_update_gs_eq[simp]:
   by (simp add: update_gs_def
            split: Structures_A.apiobject_type.splits aobject_type.splits)
 
+end
+
 interpretation update_gs: PSpace_update_eq "update_gs ty us ptrs"
   by (simp add: PSpace_update_eq_def)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma update_gs_id:
   "tp \<in> no_gs_types \<Longrightarrow> update_gs tp us addrs = id"
@@ -1658,10 +1668,14 @@ definition retype_region2_ext :: "obj_ref list \<Rightarrow> Structures_A.apiobj
 crunch all_but_exst[wp]: retype_region2_ext "all_but_exst P"
 crunch (empty_fail) empty_fail[wp]: retype_region2_ext
 
+end
+
 interpretation retype_region2_ext_extended: is_extended "retype_region2_ext ptrs type"
   apply (unfold_locales)
   apply wp
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
  "retype_region2_extra_ext ptrs type \<equiv>
@@ -1673,10 +1687,14 @@ definition
 crunch all_but_exst[wp]: retype_region2_extra_ext "all_but_exst P" (wp: mapM_x_wp)
 crunch (empty_fail) empty_fail[wp]: retype_region2_extra_ext (wp: mapM_x_wp)
 
+end
+
 interpretation retype_region2_extra_ext_extended: is_extended "retype_region2_extra_ext ptrs type"
   apply (unfold_locales)
   apply wp
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   retype_region2 :: "obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> Structures_A.apiobject_type \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
@@ -2368,7 +2386,7 @@ lemma createNewCaps_valid_cap:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n "
   assumes not_0: "n \<noteq> 0"
   assumes ct: "ty = APIObjectType ArchTypes_H.CapTableObject \<Longrightarrow> 0 < us"
-              "ty = APIObjectType ArchTypes_H.apiobject_type.Untyped \<Longrightarrow> 4 \<le> us \<and> us \<le> 30"
+              "ty = APIObjectType apiobject_type.Untyped \<Longrightarrow> 4 \<le> us \<and> us \<le> 30"
   assumes ptr: " ptr \<noteq> 0"
   shows "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> valid_pspace' s\<rbrace>
            createNewCaps ty ptr n us
@@ -2384,8 +2402,8 @@ proof -
       using cover
       apply (simp add: range_cover_def)
       using cover
-      apply (clarsimp simp: Types_H.toAPIType_def ArchTypes_H.toAPIType_def APIType_capBits_def 
-                     split: ArchTypes_H.object_type.splits)
+      apply (clarsimp simp: ARM_H.toAPIType_def APIType_capBits_def 
+                     split: ARM_H.object_type.splits)
 
        -- "SmallPageObject"
        apply wp
@@ -2472,9 +2490,9 @@ proof -
     proof(cases a)
       case Untyped with Some cover ct show ?thesis
         apply (clarsimp simp: Arch_createNewCaps_def createNewCaps_def)
-        apply (simp_all add: set_map toAPIType_def ArchTypes_H.toAPIType_def 
+        apply (simp_all add: set_map ARM_H.toAPIType_def 
                              fromIntegral_def toInteger_nat fromInteger_nat APIType_capBits_def
-                      split: ArchTypes_H.object_type.splits)
+                      split: ARM_H.object_type.splits)
         apply wp
         apply (intro ballI)
         apply (clarsimp simp: set_map image_def upto_enum_red' valid_cap'_def capAligned_def
@@ -2501,16 +2519,16 @@ proof -
     next
       case TCBObject with Some cover ct show ?thesis
         apply (clarsimp simp: Arch_createNewCaps_def createNewCaps_def)
-        apply (simp_all add: set_map toAPIType_def ArchTypes_H.toAPIType_def 
+        apply (simp_all add: set_map ARM_H.toAPIType_def 
                              fromIntegral_def toInteger_nat fromInteger_nat APIType_capBits_def curDomain_def
-                      split: ArchTypes_H.object_type.splits)
+                      split: ARM_H.object_type.splits)
         apply (wp mapM_x_wp' hoare_vcg_const_Ball_lift)+
         apply (rule hoare_post_imp)
          prefer 2
          apply (rule createObjects_obj_at [OF _ not_0])
           using cover
-          apply (clarsimp simp: Types_H.toAPIType_def ArchTypes_H.toAPIType_def APIType_capBits_def objBits_simps 
-                         split: ArchTypes_H.object_type.splits)
+          apply (clarsimp simp: ARM_H.toAPIType_def APIType_capBits_def objBits_simps 
+                         split: ARM_H.object_type.splits)
          apply (simp add: projectKOs)
         apply (clarsimp simp: valid_cap'_def objBits_simps)
         apply (fastforce intro: capAligned_tcbI)
@@ -2518,16 +2536,16 @@ proof -
     next
       case EndpointObject with Some cover ct show ?thesis
         apply (clarsimp simp: Arch_createNewCaps_def createNewCaps_def)
-        apply (simp_all add: set_map toAPIType_def ArchTypes_H.toAPIType_def 
+        apply (simp_all add: set_map ARM_H.toAPIType_def 
                              fromIntegral_def toInteger_nat fromInteger_nat APIType_capBits_def
-                      split: ArchTypes_H.object_type.splits)
+                      split: ARM_H.object_type.splits)
         apply wp
         apply (rule hoare_post_imp)
          prefer 2
          apply (rule createObjects_obj_at [OF _ not_0])
           using cover
-          apply (clarsimp simp: Types_H.toAPIType_def ArchTypes_H.toAPIType_def APIType_capBits_def objBits_simps 
-                         split: ArchTypes_H.object_type.splits)
+          apply (clarsimp simp: ARM_H.toAPIType_def APIType_capBits_def objBits_simps 
+                         split: ARM_H.object_type.splits)
          apply (simp add: projectKOs)
         apply (clarsimp simp: valid_cap'_def objBits_simps)
         apply (fastforce intro: capAligned_epI)
@@ -2535,16 +2553,16 @@ proof -
     next
       case NotificationObject with Some cover ct show ?thesis
         apply (clarsimp simp: Arch_createNewCaps_def createNewCaps_def)
-        apply (simp_all add: set_map toAPIType_def ArchTypes_H.toAPIType_def 
+        apply (simp_all add: set_map ARM_H.toAPIType_def 
                              fromIntegral_def toInteger_nat fromInteger_nat APIType_capBits_def
-                      split: ArchTypes_H.object_type.splits)
+                      split: ARM_H.object_type.splits)
         apply wp
         apply (rule hoare_post_imp)
          prefer 2
          apply (rule createObjects_obj_at [OF _ not_0])
           using cover
-          apply (clarsimp simp: Types_H.toAPIType_def ArchTypes_H.toAPIType_def APIType_capBits_def objBits_simps 
-                         split: ArchTypes_H.object_type.splits)
+          apply (clarsimp simp: ARM_H.toAPIType_def APIType_capBits_def objBits_simps 
+                         split: ARM_H.object_type.splits)
          apply (simp add: projectKOs)
         apply (clarsimp simp: valid_cap'_def objBits_simps)
         apply (fastforce intro: capAligned_ntfnI)
@@ -2552,12 +2570,12 @@ proof -
     next
       case CapTableObject with Some cover ct show ?thesis
         apply (clarsimp simp: Arch_createNewCaps_def createNewCaps_def)
-        apply (simp_all add: set_map toAPIType_def ArchTypes_H.toAPIType_def 
+        apply (simp_all add: set_map ARM_H.toAPIType_def 
                              fromIntegral_def toInteger_nat fromInteger_nat APIType_capBits_def
-                      split: ArchTypes_H.object_type.splits)
+                      split: ARM_H.object_type.splits)
         apply wp
-        apply (clarsimp simp: Types_H.toAPIType_def ArchTypes_H.toAPIType_def APIType_capBits_def objBits_simps 
-                       split: ArchTypes_H.object_type.split object_type.splits)
+        apply (clarsimp simp: ARM_H.toAPIType_def APIType_capBits_def objBits_simps 
+                       split: ARM_H.object_type.split object_type.splits)
         apply (rule hoare_chain)
           apply (rule hoare_vcg_conj_lift)
            apply (rule createObjects_aligned [OF _ _ not_0 ])
@@ -2590,7 +2608,7 @@ qed
 lemma createNewCaps_CapTable_ret:
   "\<lbrakk>sz < word_bits;n < 2 ^ word_bits; n \<noteq> 0\<rbrakk> \<Longrightarrow>
    \<lbrace>\<top>\<rbrace> 
-  createNewCaps (fromAPIType ArchTypes_H.apiobject_type.CapTableObject) ptr n us 
+  createNewCaps (fromAPIType apiobject_type.CapTableObject) ptr n us 
   \<lbrace>\<lambda>r s. r = map (\<lambda>p. capability.CNodeCap (ptr + (of_nat p << us + 4)) us 0 0)
                  [0 ..< n]\<rbrace>"
   unfolding createNewCaps_def fun_app_def
@@ -2695,9 +2713,9 @@ lemma init_arch_objects_APIType_map2:
   "init_arch_objects (APIType_map2 (Inr ty)) ptr bits sz refs =
      (case ty of APIObjectType _ \<Rightarrow> return ()
    | _ \<Rightarrow> init_arch_objects (APIType_map2 (Inr ty)) ptr bits sz refs)"
-  apply (clarsimp split: ArchTypes_H.object_type.split)
+  apply (clarsimp split: ARM_H.object_type.split)
   apply (simp add: init_arch_objects_def APIType_map2_def
-            split: ArchTypes_H.apiobject_type.split)
+            split: apiobject_type.split)
   done
 
 lemma pde_relation_aligned_eq:
@@ -2738,7 +2756,7 @@ lemma copy_global_corres:
               apply (drule(1) pde_relation_aligned_eq)
               apply fastforce
              apply (wp hoare_vcg_const_Ball_lift | simp)+
-       apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def list_all2_refl)
+       apply (simp add: kernel_base_def ARM.kernelBase_def kernelBase_def list_all2_refl)
       apply (rule corres_trivial, clarsimp simp: state_relation_def arch_state_relation_def)
      apply wp
    apply (clarsimp simp: valid_arch_state_def)
@@ -2790,8 +2808,8 @@ lemmas copyGlobalMappings_ctes_of[wp]
                              OF copyGlobalMappings_cte_wp_at]
 
 lemmas object_splits =
-  ArchTypes_H.apiobject_type.split_asm
-  ArchTypes_H.object_type.split_asm
+  apiobject_type.split_asm
+  ARM_H.object_type.split_asm
   sum.split_asm kernel_object.split_asm
   arch_kernel_object.split_asm
 
@@ -2954,12 +2972,15 @@ lemma capRange_Null [simp]: "capRange NullCap = {}"
 lemma isUntyped_Null [simp]: "\<not>isUntypedCap NullCap"
   by (simp add: isCap_simps)
 
+end
+
 locale retype_mdb = vmdb +
   fixes P n
   assumes P: "\<And>p. P p \<Longrightarrow> m p = None"
   assumes 0: "\<not>P 0"
   defines "n \<equiv> \<lambda>p. if P p then Some makeObject else m p"
 begin
+interpretation Arch . (*FIXME: arch_split*)
 
 lemma no_0_n: "no_0 n"
   using no_0 by (simp add: no_0_def n_def 0)
@@ -3311,7 +3332,7 @@ lemma caps_no_overlapD'':
   apply (erule(1) impE)
   apply blast
 done
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_untyped'_helper:
   assumes valid : "valid_cap' c s"
   and  cte_at : "cte_wp_at' (\<lambda>cap. cteCap cap = c) q s"
@@ -3475,8 +3496,8 @@ proof (intro conjI impI)
      apply (insert sym[OF mko])[1]
      apply (clarsimp simp: makeObjectKO_def
                     split: bool.split_asm sum.split_asm
-                           ArchTypes_H.object_type.split_asm
-                           ArchTypes_H.apiobject_type.split_asm
+                           ARM_H.object_type.split_asm
+                           apiobject_type.split_asm
                            kernel_object.split_asm
                            arch_kernel_object.split_asm)
     apply (drule bspec, erule ranI)
@@ -3835,7 +3856,7 @@ lemma createNewCaps_cte_wp_at2:
       \<and> pspace_no_overlap' ptr sz s\<rbrace>
      createNewCaps ty ptr n objsz
    \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
-  apply (simp add: createNewCaps_def createObjects_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (simp add: createNewCaps_def createObjects_def ARM_H.toAPIType_def
            split del: split_if)
   apply (case_tac ty; simp add: createNewCaps_def createObjects_def Arch_createNewCaps_def
                            split del: split_if cong: if_cong)
@@ -3953,7 +3974,7 @@ lemma createNewCaps_cte_wp_at':
       \<and> pspace_no_overlap' ptr sz s\<rbrace>
      createNewCaps ty ptr n us
    \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
-  apply (simp add: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (simp add: createNewCaps_def ARM_H.toAPIType_def
               split del: split_if)
   apply (case_tac ty; simp add: Arch_createNewCaps_def
                            split del: split_if)
@@ -4083,7 +4104,7 @@ lemma createNewCaps_valid_cap_other:
   createNewCaps ty ptr n us 
   \<lbrace>\<lambda>_. valid_cap' c\<rbrace>"
   unfolding createNewCaps_def
-  apply (clarsimp simp: toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: createNewCaps_def Arch_createNewCaps_def
                          split del: split_if)
@@ -4197,7 +4218,7 @@ lemma createNewCaps_state_refs_of':
      createNewCaps ty ptr n us 
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   unfolding createNewCaps_def
-  apply (clarsimp simp: toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty; simp add: createNewCaps_def Arch_createNewCaps_def
                         split del: split_if)
@@ -4295,7 +4316,7 @@ lemma createNewCaps_iflive'[wp]:
    \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
   unfolding createNewCaps_def 
   apply (insert cover)
-  apply (clarsimp simp: toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: createNewCaps_def Arch_createNewCaps_def
                       split del: split_if)
@@ -4346,7 +4367,7 @@ crunch qsL2[wp]: createObjects "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
 
 lemma createNewCaps_qs[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> createNewCaps ty ptr n us \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
-  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: createNewCaps_def ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: createNewCaps_def Arch_createNewCaps_def
                       split del: split_if)
@@ -4367,7 +4388,7 @@ lemma threadSet_qsL2[wp]:
 
 lemma createNewCaps_qsL1[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> createNewCaps ty ptr n us \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
-  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: createNewCaps_def ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: createNewCaps_def Arch_createNewCaps_def
                       split del: split_if)
@@ -4379,7 +4400,7 @@ lemma createNewCaps_qsL1[wp]:
 
 lemma createNewCaps_qsL2[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> createNewCaps ty ptr n us \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
-  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: createNewCaps_def ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: createNewCaps_def Arch_createNewCaps_def
                       split del: split_if)
@@ -4439,7 +4460,7 @@ crunch ct[wp]: createObjects "\<lambda>s. P (ksCurThread s)"
 
 lemma createNewCaps_ct[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> createNewCaps ty ptr n us \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: createNewCaps_def ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: Arch_createNewCaps_def
                       split del: split_if)
@@ -4455,7 +4476,7 @@ crunch ksCurDomain[wp]: createObjects "\<lambda>s. P (ksCurDomain s)"
 
 lemma createNewCaps_ksCurDomain[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> createNewCaps ty ptr n us \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: createNewCaps_def ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: Arch_createNewCaps_def
                       split del: split_if)
@@ -4556,7 +4577,7 @@ lemma createNewCaps_ko_wp_atQ':
      createNewCaps ty ptr n us
    \<lbrace>\<lambda>rv s. P (ko_wp_at' P' p s)\<rbrace>"
   apply (rule hoare_name_pre_state)
-  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: createNewCaps_def ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: Arch_createNewCaps_def
                       split del: split_if)
@@ -4672,7 +4693,7 @@ lemma createNewCaps_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
      createNewCaps tp ptr sz1 sz2
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: createNewCaps_def ARM_H.toAPIType_def
              split del: split_if)
   apply (cases tp, simp_all add: Arch_createNewCaps_def
                       split del: split_if)
@@ -4731,7 +4752,7 @@ lemma createNewCaps_idle'[wp]:
    createNewCaps ty ptr n us
    \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: createNewCaps_def ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: Arch_createNewCaps_def
                       split del: split_if)
@@ -4959,7 +4980,7 @@ lemma createNewCaps_pde_mappings'[wp]:
   apply (case_tac ty; simp)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
-  apply (auto simp: Types_H.toAPIType_def ArchTypes_H.toAPIType_def objBits_simps ptBits_def pageBits_def
+  apply (auto simp: ARM_H.toAPIType_def objBits_simps ptBits_def pageBits_def
                     makeObject_pde valid_arch_state'_def pdBits_def page_directory_at'_def)
   done
 
@@ -4971,7 +4992,8 @@ lemma createObjects'_irq_states' [wp]:
   done
 
 crunch irq_states' [wp]: createNewCaps valid_irq_states'
-  (ignore: getObject wp: crunch_wps no_irq_clearMemory)
+  (ignore: getObject wp: crunch_wps no_irq no_irq_clearMemory)
+
 crunch ksMachine[wp]: createObjects "\<lambda>s. P (ksMachineState s)"
   (simp: crunch_simps unless_def)
 crunch cur_domain[wp]: createObjects "\<lambda>s. P (ksCurDomain s)"
@@ -4987,10 +5009,10 @@ lemma createNewCaps_valid_queues':
   apply (clarsimp simp: projectKOs)
   apply (simp add: makeObjectKO_def
             split: object_type.split_asm
-                   ArchTypes_H.apiobject_type.split_asm)
+                   apiobject_type.split_asm)
   apply (clarsimp simp: inQ_def)
   apply (auto simp: makeObject_tcb
-             split: object_type.splits ArchTypes_H.apiobject_type.splits)
+             split: object_type.splits apiobject_type.splits)
   done
 
 lemma createNewCaps_valid_queues:
@@ -5036,7 +5058,7 @@ lemma createNewCaps_valid_pspace:
   createNewCaps ty ptr n us \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   unfolding createNewCaps_def Arch_createNewCaps_def
   using valid_obj_makeObject_rules
-  apply (clarsimp simp: toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: ARM_H.toAPIType_def
              split del: split_if cong: option.case_cong)
   apply (cases ty, simp_all split del: split_if)
         apply (rename_tac apiobject_type)
@@ -5106,7 +5128,7 @@ lemma createNewCaps_vms:
          | clarsimp simp: createObjects_def Arch_createNewCaps_def curDomain_def| assumption)+
   apply (case_tac ty)
    apply (auto simp: APIType_capBits_def archObjSize_def objBits_simps pageBits_def ptBits_def 
-                     pdBits_def Types_H.toAPIType_def ArchTypes_H.toAPIType_def object_type.splits)
+                     pdBits_def ARM_H.toAPIType_def object_type.splits)
   done
 
 lemma createObjects_pspace_domain_valid':
@@ -5171,7 +5193,7 @@ lemma createNewCaps_pspace_domain_valid[wp]:
             createObjects_pspace_domain_valid[where sz=sz]
             mapM_x_wp'
         | wpc | simp add: Arch_createNewCaps_def curDomain_def)+
-  apply (simp add: toAPIType_def ArchTypes_H.toAPIType_def
+  apply (simp add: ARM_H.toAPIType_def
             split: object_type.splits)
   apply (auto simp: objBits_simps APIType_capBits_def pageBits_def
                     archObjSize_def ptBits_def pdBits_def)
@@ -5371,7 +5393,7 @@ proof (rule hoare_assume_pre, elim conjE)
               "range_cover ptr sz (APIType_capBits ty us) n"
   show ?thesis
   unfolding createNewCaps_def using valid_obj_makeObject_rules
-  apply (clarsimp simp: toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: ARM_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: Arch_createNewCaps_def
                       split del: split_if)
@@ -5848,7 +5870,7 @@ apply (rule corres_guard_imp)
 done
 
 lemma retype_region2_extra_ext_trivial:
-  "ty \<noteq> APIType_map2 (Inr (APIObjectType ArchTypes_H.apiobject_type.TCBObject))
+  "ty \<noteq> APIType_map2 (Inr (APIObjectType apiobject_type.TCBObject))
       \<Longrightarrow> retype_region2_extra_ext ptrs ty = return ()"
 by (simp add: retype_region2_extra_ext_def when_def APIType_map2_def)
 
@@ -5901,7 +5923,6 @@ lemma corres_retype_region_createNewCaps:
                        \<longrightarrow> 0 < us)"
             in corres_req, simp)
   apply (clarsimp simp add: createNewCaps_def toAPIType_def
-                            ArchTypes_H.toAPIType_def
                  split del: split_if cong: if_cong)
   apply (subst init_arch_objects_APIType_map2)
   apply (cases ty, simp_all add: Arch_createNewCaps_def
@@ -6178,4 +6199,5 @@ lemma createObjects'_wp_subst:
   apply auto
   done
 
+end
 end

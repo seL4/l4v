@@ -16,61 +16,6 @@ theory CSpace_I
 imports ArchAcc_R
 begin
 
-context ARM begin 
-
-shadow_consts 
-  maskCapRights isPhysicalCap capUntypedSize
-
-shadow_facts isPhysicalCap_def
-
-end
-
-context Arch begin
-
-shadow_consts 
-  maskCapRights isPhysicalCap capUntypedSize
-
-
-ML \<open>Locale.get_witnesses @{context}\<close>
-end
-
-ML \<open>
-fun syntax_alias global_alias local_alias b (name : string) =
-  Local_Theory.declaration {syntax = true, pervasive = true} (fn phi =>
-    let val b' = Morphism.binding phi b
-    in Context.mapping (global_alias b' name) (local_alias b' name) end);
-
-val fact_alias = syntax_alias Global_Theory.alias_fact Proof_Context.fact_alias;
-val const_alias = syntax_alias Sign.const_alias Proof_Context.const_alias;
-val type_alias = syntax_alias Sign.type_alias Proof_Context.type_alias;
-\<close>
-local_setup \<open>
-Local_Theory.target (Locale.add_thmss "Setup_Locale.Arch" "lemmaK" [((@{binding "fooss"},[]), [(@{thms TrueI}, [])])])
-\<close>
-
-ML \<open>\<close>
-
-local_setup \<open>
-Local_Theory.target (
-Locale.add_declaration "Setup_Locale.Arch" true 
-  (fn phi => Context.mapping (Global_Theory.alias_fact @{binding "foos"} "HOL.TrueI") (Proof_Context.fact_alias @{binding "foos"} "HOL.TrueI"))
-)
-\<close>
-
-context Arch begin
-
-
-thm foos
-
-end
-
-context ARM_H begin
-
-thm foos
-
-ML \<open>Locale.specification_of @{theory} "Setup_Locale.Arch"\<close>
-
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare word_neq_0_conv[simp del]
@@ -89,7 +34,7 @@ lemma capUntypedPtr_simps [simp]:
   "Arch.capUntypedPtr (ARM_H.PageTableCap r mapdata2) = r"
   "Arch.capUntypedPtr (ARM_H.PageDirectoryCap r mapdata3) = r"
   by (auto simp: capUntypedPtr_def
-                 ARM.capUntypedPtr_def)
+                 ARM_H.capUntypedPtr_def)
 
 lemma rights_mask_map_UNIV [simp]:
   "rights_mask_map UNIV = allRights"
@@ -100,7 +45,7 @@ declare insert_UNIV[simp]
 lemma maskCapRights_allRights [simp]:
   "maskCapRights allRights c = c"
   unfolding maskCapRights_def isCap_defs allRights_def
-            ARM.maskCapRights_def maskVMRights_def
+            ARM_H.maskCapRights_def maskVMRights_def
   by (cases c) (simp_all add: Let_def split: arch_capability.split vmrights.split)
 
 lemma diminished_refl'[simp]:
@@ -670,7 +615,7 @@ lemma isDomainCap [simp]:
 
 lemma isPhysicalCap[simp]:
   "isPhysicalCap cap = (capClass cap = PhysicalClass)"
-  by (simp add: isPhysicalCap_def ARM.isPhysicalCap_def
+  by (simp add: isPhysicalCap_def ARM_H.isPhysicalCap_def
          split: capability.split arch_capability.split)
 
 definition
@@ -816,7 +761,7 @@ lemma isCap_Master:
 lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
   apply (simp add: capUntypedSize_def objBits_simps
-                   ArchRetype_H.capUntypedSize_def
+                   ARM_H.capUntypedSize_def
             split: capability.splits arch_capability.splits
                    zombie_type.splits)
   apply fastforce
@@ -847,7 +792,7 @@ lemma sameRegionAs_def2:
                        capBadge_simps isArchPageCap_def
                 split: capability.split
             split del: split_if cong: if_cong)
-  apply (simp    add: ArchRetype_H.sameRegionAs_def isCap_simps
+  apply (simp    add: ARM_H.sameRegionAs_def isCap_simps
                split: arch_capability.split
            split del: split_if cong: if_cong)
   apply (clarsimp simp: capRange_def Let_def)
@@ -868,9 +813,9 @@ lemma sameObjectAs_def2:
   apply (simp add: sameObjectAs_def sameRegionAs_def2
                    isCap_simps capMasterCap_def
             split: capability.split)
-  apply (clarsimp simp: ArchRetype_H.sameObjectAs_def isCap_simps
+  apply (clarsimp simp: ARM_H.sameObjectAs_def isCap_simps
                  split: arch_capability.split)
-  apply (clarsimp simp: ArchRetype_H.sameRegionAs_def isCap_simps
+  apply (clarsimp simp: ARM_H.sameRegionAs_def isCap_simps
              split del: split_if)
   apply (simp add: capRange_def interval_empty)
   apply fastforce
@@ -947,7 +892,7 @@ lemma capUntypedSize_simps [simp]:
   "capUntypedSize (Zombie r zs n) = 1 << (zBits zs)"
   "capUntypedSize NullCap = 0"
   "capUntypedSize DomainCap = 1"
-  "capUntypedSize (ArchObjectCap x) = ArchRetypeDecls_H.capUntypedSize x"
+  "capUntypedSize (ArchObjectCap x) = Arch.capUntypedSize x"
   "capUntypedSize (UntypedCap r n f) = 1 << n"
   "capUntypedSize (CNodeCap r n g n2) = 1 << (objBits (undefined::cte) + n)"
   "capUntypedSize (ReplyCap r m) = 1 << objBits (undefined :: tcb)"
@@ -1010,7 +955,7 @@ lemma capMasterCap_maskCapRights[simp]:
          simp add: maskCapRights_def Let_def isCap_simps capMasterCap_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: ARM.maskCapRights_def Let_def isCap_simps)
+         simp add: ARM_H.maskCapRights_def Let_def isCap_simps)
   done
 
 lemma capBadge_maskCapRights[simp]:
@@ -1020,7 +965,7 @@ lemma capBadge_maskCapRights[simp]:
          simp add: maskCapRights_def Let_def isCap_simps capBadge_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: ARM.maskCapRights_def Let_def isCap_simps)
+         simp add: ARM_H.maskCapRights_def Let_def isCap_simps)
   done
 
 lemma maskCapRights_region [simp]:
@@ -1100,7 +1045,7 @@ lemma capUntypedSize_range:
    apply simp
   apply (clarsimp simp add: capAligned_def)
   apply (erule is_aligned_get_word_bits)
-   apply (simp add: capUntypedSize_def ArchRetype_H.capUntypedSize_def objBits_simps
+   apply (simp add: capUntypedSize_def ARM_H.capUntypedSize_def objBits_simps
                  isCap_simps
           split: capability.splits arch_capability.split
                  zombie_type.splits)
@@ -1417,6 +1362,7 @@ lemma no_loops_trancl_simp:
 lemma subtree_mdb_next:
   "m \<turnstile> a \<rightarrow> b \<Longrightarrow> m \<turnstile> a \<leadsto>\<^sup>+ b"
   by (erule subtree.induct) (auto simp: mdb_next_rel_def intro: trancl_into_trancl)
+end
 
 context mdb_order
 begin
@@ -1727,6 +1673,7 @@ lemma no_mdb_not_target:
   apply (simp add: no_mdb_def)
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_dlist_init:
   "\<lbrakk> valid_dlist m; m p = Some cte; no_mdb cte \<rbrakk> \<Longrightarrow> 
   valid_dlist (m (p \<mapsto> CTE cap initMDBNode))"
@@ -1734,6 +1681,7 @@ lemma valid_dlist_init:
   apply (clarsimp simp: no_mdb_def valid_dlist_def Let_def)
   apply fastforce
   done
+end
 
 lemma (in mdb_ptr) descendants_of_init':
   assumes n: "no_mdb (CTE cap node)"
@@ -1923,10 +1871,11 @@ lemma untyped_inc_init:
     apply (rule untypedRange_in_capRange)+
   apply (simp add:Int_ac)
   done
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_nullcaps_init:
   "\<lbrakk> valid_nullcaps m; cap \<noteq> NullCap \<rbrakk> \<Longrightarrow> valid_nullcaps (m(p \<mapsto> CTE cap initMDBNode))"
   by (simp add: valid_nullcaps_def initMDBNode_def nullPointer_def)
+end
 
 lemma class_links_def2:
   "class_links m = (\<forall>p cte. m p = Some cte \<longrightarrow> mdbNext (cteMDBNode cte) \<in> dom m
@@ -1987,7 +1936,7 @@ lemma distinct_zombies_copyE:
 lemmas distinct_zombies_sameE
     = distinct_zombies_copyE [where y=x and x=x for x, simplified,
                               OF _ _ _ _ _]
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma capBits_Master:
   "capBits (capMasterCap cap) = capBits cap"
   by (clarsimp simp: capMasterCap_def split: capability.split arch_capability.split)
@@ -2310,6 +2259,7 @@ crunch idle[wp]: get_object "valid_idle"
 lemma cte_refs_Master:
   "cte_refs' (capMasterCap cap) = cte_refs' cap"
   by (rule ext, simp add: capMasterCap_def split: capability.split)
+end
 
 lemma (in vmdb) untyped_mdb': "untyped_mdb' m"
   using valid ..
@@ -2320,5 +2270,6 @@ lemma (in vmdb) untyped_inc': "untyped_inc' m"
 lemma diminished_capMaster:
   "diminished' cap cap' \<Longrightarrow> capMasterCap cap' = capMasterCap cap"
   by (clarsimp simp: diminished'_def)
+
 
 end (* of theory *)

@@ -12,6 +12,7 @@ theory TcbAcc_R
 imports CSpace_R
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 (* FIXME MOVE *)
 lemma hoare_pre_post:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> Q s ; \<lbrace> Q \<rbrace> f \<lbrace>\<lambda>_. Q \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>_. Q \<rbrace>"
@@ -3624,7 +3625,7 @@ lemma store_word_corres:
   done
 
 lemmas msgRegisters_unfold
-  = State_H.msgRegisters_def
+  = ARM_H.msgRegisters_def
     msg_registers_def
     MachineTypes.msgRegisters_def
         [unfolded upto_enum_def, simplified,
@@ -3639,12 +3640,12 @@ lemma get_mrs_corres:
   have S: "get = gets id"
     by (simp add: gets_def)
   have T: "corres (\<lambda>con regs. regs = map con msg_registers) (tcb_at t) (tcb_at' t)
-     (thread_get tcb_context t) (asUser t (mapM getRegister State_H.msgRegisters))"
+     (thread_get tcb_context t) (asUser t (mapM getRegister ARM_H.msgRegisters))"
     apply (subst thread_get_as_user)
     apply (rule corres_as_user')
     apply (subst mapM_gets)
      apply (simp add: getRegister_def)
-    apply (simp add: S State_H.msgRegisters_def msg_registers_def)
+    apply (simp add: S ARM_H.msgRegisters_def msg_registers_def)
     done
   show ?thesis
   apply (case_tac mi, simp add: get_mrs_def getMRs_def split del: split_if)
@@ -3825,7 +3826,7 @@ proof -
              (\<lambda>ra. do v \<leftarrow> asUser s (getRegister ra);
                       asUser r (setRegister ra v)
                    od)
-             (take (unat n) State_H.msgRegisters))"
+             (take (unat n) msgRegisters))"
     apply (rule corres_guard_imp)
     apply (rule_tac S=Id in corres_mapM, simp+)
         apply (rule corres_split_eqr [OF user_setreg_corres user_getreg_corres])
@@ -5127,4 +5128,5 @@ lemma non_exst_same_timeSlice_upd[simp]:
   "non_exst_same tcb (tcbTimeSlice_update f tcb)"
   by (cases tcb, simp add: non_exst_same_def)
 
+end
 end

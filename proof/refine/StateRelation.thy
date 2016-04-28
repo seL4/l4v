@@ -513,7 +513,7 @@ where
 | "syscall_error_map (ExceptionTypes_A.NotEnoughMemory n)       = Fault_H.syscall_error.NotEnoughMemory n"
 
 definition
-  APIType_map :: "Structures_A.apiobject_type \<Rightarrow> ArchTypes_H.object_type"
+  APIType_map :: "Structures_A.apiobject_type \<Rightarrow> ARM_H.object_type"
 where
   "APIType_map ty \<equiv> case ty of
                     Structures_A.Untyped \<Rightarrow> APIObjectType ArchTypes_H.Untyped

@@ -688,7 +688,7 @@ lemma diminished_ReplyCap' [simp]:
   apply (rule iffI)
    apply (clarsimp simp: diminished'_def maskCapRights_def Let_def split del: split_if)
    apply (cases cap, simp_all add: isCap_simps)[1]
-   apply (simp add: ARM.maskCapRights_def isPageCap_def split: arch_capability.splits)
+   apply (simp add: ARM_H.maskCapRights_def isPageCap_def split: arch_capability.splits)
   apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
   done
 
@@ -1902,14 +1902,14 @@ lemma getIFSR_invs'[wp]:
   by (simp add: getIFSR_def doMachineOp_def split_def select_f_returns | wp)+
 
 lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. invs'\<rbrace>"
-  apply (simp add: handleVMFault_def ArchVSpace_H.handleVMFault_def
+  apply (simp add: handleVMFault_def ARM_H.handleVMFault_def
              cong: vmfault_type.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpcw | simp)+
   done
 
 lemma hv_tcb'[wp]: "\<lbrace>tcb_at' t\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. tcb_at' t\<rbrace>"
-  apply (simp add: handleVMFault_def ArchVSpace_H.handleVMFault_def
+  apply (simp add: handleVMFault_def ARM_H.handleVMFault_def
              cong: vmfault_type.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpcw)+
@@ -1921,7 +1921,7 @@ crunch nosch[wp]: handleVMFault "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma hv_inv_ex':
   "\<lbrace>P\<rbrace> handleVMFault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: handleVMFault_def ArchVSpace_H.handleVMFault_def
+  apply (simp add: handleVMFault_def ARM_H.handleVMFault_def
              cong: vmfault_type.case_cong)
   apply (rule hoare_pre)
    apply (wp dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv 
@@ -2320,7 +2320,7 @@ crunch ksit[wp]: handleVMFault "\<lambda>s. P (ksIdleThread s)"
 
 lemma hv_inv':
   "\<lbrace>P\<rbrace> handleVMFault p t \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: handleVMFault_def ArchVSpace_H.handleVMFault_def)
+  apply (simp add: handleVMFault_def ARM_H.handleVMFault_def)
   apply (rule hoare_pre)
    apply (wp dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv 
              det_getRestartPC asUser_inv

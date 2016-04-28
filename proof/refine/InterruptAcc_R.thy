@@ -25,6 +25,8 @@ lemma get_irq_slot_corres:
 crunch inv[wp]: get_irq_slot "P"
 crunch inv[wp]: getIRQSlot "P"
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma set_irq_state_corres:
   "irq_state_relation state state' \<Longrightarrow>
    corres dc \<top> \<top> (set_irq_state state irq) (setIRQState state' irq)"
@@ -83,4 +85,5 @@ lemma getIRQSlot_cte_at[wp]:
   apply (clarsimp simp: real_cte_at')
   done
 
+end
 end

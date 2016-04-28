@@ -62,7 +62,7 @@ lemma maskCapRights_twice:
             split del: split_if)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability)
-  apply (simp_all add: ARM.maskCapRights_def isCap_simps Let_def
+  apply (simp_all add: ARM_H.maskCapRights_def isCap_simps Let_def
                        maskVMRights_def
             split del: split_if)
   apply (simp split: vmrights.split bool.split)
@@ -98,7 +98,7 @@ lemma cap_relation_NullCap:
      apply simp
     apply simp
    apply (clarsimp simp: word_size word_size_def)
-  apply (clarsimp simp: ARM.updateCapData_def isCap_simps split del: split_if)  
+  apply (clarsimp simp: ARM_H.updateCapData_def isCap_simps split del: split_if)  
   done 
 
 (* Sometimes I need something about the state. This is neater (IMHO) and req *)  
@@ -398,7 +398,7 @@ lemma mask_Zombiness[simp]:
   "isZombie (maskCapRights R cap) = isZombie cap"
   apply (cases cap, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all add: ARM.maskCapRights_def Let_def)
+  apply (case_tac arch_capability, simp_all add: ARM_H.maskCapRights_def Let_def)
   done
 
 lemma updateCapData_Zombie:
@@ -427,7 +427,7 @@ lemma capBadge_updateCapData_True:
   "updateCapData True x c \<noteq> NullCap \<Longrightarrow> capBadge (updateCapData True x c) = capBadge c"
   apply (simp add: updateCapData_def isCap_simps Let_def
             split: split_if_asm split del: split_if)
-  apply (simp add: ARM.updateCapData_def)
+  apply (simp add: ARM_H.updateCapData_def)
   done
 
 lemma badge_derived_updateCapData:
@@ -8563,7 +8563,7 @@ lemma sameRegion_cap'_src [simp]:
   apply (case_tac "isReplyCap src_cap")
    apply simp
   apply (clarsimp simp: capMasterCap_def split: capability.splits arch_capability.splits)
-         apply (auto simp: sameRegionAs_def ArchRetype_H.sameRegionAs_def isCap_simps split: split_if_asm)
+         apply (auto simp: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps split: split_if_asm)
   done
 
 lemma chunked':

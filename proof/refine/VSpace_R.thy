@@ -15,6 +15,15 @@
 theory VSpace_R
 imports TcbAcc_R
 begin
+context Arch begin global_naming ARM (*FIXME: arch_split*)
+
+lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
+lemmas store_pde_typ_ats[wp] = store_pde_typ_ats abs_atyp_at_lifts[OF store_pde_typ_at]
+
+end
+
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch_ignore (add: throw_on_false)
 
@@ -507,7 +516,7 @@ lemma arm_context_switch_corres:
 lemma hv_corres: 
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
-  apply (simp add: handleVMFault_def ArchVSpace_H.handleVMFault_def)
+  apply (simp add: handleVMFault_def ARM_H.handleVMFault_def)
   apply (cases fault)
    apply simp
    apply (rule corres_guard_imp)
@@ -683,7 +692,7 @@ lemma set_vm_root_corres:
 proof -
   have P: "corres dc \<top> \<top>
         (do global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-            do_machine_op (MachineOps.setCurrentPD (Platform.addrFromPPtr global_pd))
+            do_machine_op (MachineOps.setCurrentPD (addrFromPPtr global_pd))
          od)
         (do globalPD \<leftarrow> gets (armKSGlobalPD \<circ> ksArchState);
             doMachineOp (setCurrentPD (addrFromPPtr globalPD))
@@ -698,7 +707,7 @@ proof -
   have Q: "\<And>P P'. corres dc P P'
         (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch>
          (\<lambda>_ . do global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-                  do_machine_op $ setCurrentPD $ Platform.addrFromPPtr global_pd
+                  do_machine_op $ setCurrentPD $ addrFromPPtr global_pd
                od))
         (throwError Fault_H.lookup_failure.InvalidRoot <catch>
          (\<lambda>_ . do globalPD \<leftarrow> gets (armKSGlobalPD \<circ> ksArchState);
@@ -1540,7 +1549,7 @@ lemma unmap_page_corres:
              (valid_objs' and valid_arch_state' and pspace_aligned' and 
               pspace_distinct' and no_0_obj' and cur_tcb')
              (unmap_page sz asid vptr pptr)
-             (unmapPage sz asid vptr pptr)" 
+             (unmapPage sz asid vptr pptr)"
   apply (clarsimp simp: unmap_page_def unmapPage_def ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch [where E="\<lambda>_. \<top>" and E'="\<lambda>_. \<top>"], simp)
@@ -1676,10 +1685,10 @@ lemma unmap_page_corres:
 
 definition
   "flush_type_map type \<equiv> case type of
-     ArchInvocation_A.flush_type.Clean \<Rightarrow> ArchRetypeDecls_H.flush_type.Clean
-   | ArchInvocation_A.flush_type.Invalidate \<Rightarrow> ArchRetypeDecls_H.flush_type.Invalidate
-   | ArchInvocation_A.flush_type.CleanInvalidate \<Rightarrow> ArchRetypeDecls_H.flush_type.CleanInvalidate
-   | ArchInvocation_A.flush_type.Unify \<Rightarrow> ArchRetypeDecls_H.flush_type.Unify"
+     ARM_A.flush_type.Clean \<Rightarrow> ARM_H.flush_type.Clean
+   | ARM_A.flush_type.Invalidate \<Rightarrow> ARM_H.flush_type.Invalidate
+   | ARM_A.flush_type.CleanInvalidate \<Rightarrow> ARM_H.flush_type.CleanInvalidate
+   | ARM_A.flush_type.Unify \<Rightarrow> ARM_H.flush_type.Unify"
 
 lemma do_flush_corres:
   "corres_underlying Id nf dc \<top> \<top>
@@ -1700,8 +1709,8 @@ lemma do_flush_corres:
 
 definition
   "page_directory_invocation_map pdi pdi' \<equiv> case pdi of
-    ArchInvocation_A.PageDirectoryNothing \<Rightarrow> pdi' = PageDirectoryNothing
-  | ArchInvocation_A.PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
+    ARM_A.PageDirectoryNothing \<Rightarrow> pdi' = PageDirectoryNothing
+  | ARM_A.PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
       pdi' = PageDirectoryFlush (flush_type_map typ) start end pstart pd asid"
 
 lemma perform_page_directory_corres:
@@ -1735,19 +1744,19 @@ lemma perform_page_directory_corres:
 
 definition
   "page_invocation_map pi pi' \<equiv> case pi of
-    ArchInvocation_A.PageMap a c ptr m \<Rightarrow> 
+    ARM_A.PageMap a c ptr m \<Rightarrow> 
       \<exists>c' m'. pi' = PageMap a c' (cte_map ptr) m' \<and> 
               cap_relation c c' \<and> 
               mapping_map m m'
               
-  | ArchInvocation_A.PageRemap a m \<Rightarrow> 
+  | ARM_A.PageRemap a m \<Rightarrow> 
       \<exists>m'. pi' = PageRemap a m' \<and> mapping_map m m'
-  | ArchInvocation_A.PageUnmap c ptr \<Rightarrow>
+  | ARM_A.PageUnmap c ptr \<Rightarrow>
       \<exists>c'. pi' = PageUnmap c' (cte_map ptr) \<and> 
          acap_relation c c' 
-  | ArchInvocation_A.PageFlush typ start end pstart pd asid \<Rightarrow>
+  | ARM_A.PageFlush typ start end pstart pd asid \<Rightarrow>
       pi' = PageFlush (flush_type_map typ) start end pstart pd asid
-  | ArchInvocation_A.PageGetAddr ptr \<Rightarrow>
+  | ARM_A.PageGetAddr ptr \<Rightarrow>
       pi' = PageGetAddr ptr"
 
 definition
@@ -2027,7 +2036,7 @@ lemma set_cap_pd_at_asid [wp]:
 
 lemma set_cap_valid_slots_inv[wp]:
   "\<lbrace>valid_slots m\<rbrace> set_cap t st \<lbrace>\<lambda>rv. valid_slots m\<rbrace>"
-  by (cases m, (clarsimp simp: valid_slots_def, wp hoare_vcg_ball_lift set_cap_vs_lookup set_cap_typ_ats)+)
+  by (cases m, (clarsimp simp: valid_slots_def, wp hoare_vcg_ball_lift set_cap.vs_lookup set_cap_typ_ats)+)
 
 lemma set_cap_same_refs_inv[wp]:
   "\<lbrace>\<lambda>s. same_refs m cap s\<rbrace> set_cap t st \<lbrace>\<lambda>rv s. same_refs m cap s\<rbrace>"
@@ -2042,7 +2051,7 @@ definition
   (\<lambda>s. \<exists>pd. pd_at_asid asid pd s)"
 
 lemma set_cap_valid_page_map_inv:
-  "\<lbrace>valid_page_inv (ArchInvocation_A.page_invocation.PageMap asid cap slot m)\<rbrace> set_cap cap slot \<lbrace>\<lambda>rv. valid_page_map_inv asid cap slot m\<rbrace>"
+  "\<lbrace>valid_page_inv (ARM_A.page_invocation.PageMap asid cap slot m)\<rbrace> set_cap cap slot \<lbrace>\<lambda>rv. valid_page_map_inv asid cap slot m\<rbrace>"
   apply (simp add: valid_page_inv_def valid_page_map_inv_def)
   apply (wp set_cap_cte_wp_at_cases hoare_vcg_ex_lift| simp)+
        apply (simp_all) 
@@ -2476,11 +2485,11 @@ qed
 
 definition
   "page_table_invocation_map pti pti' \<equiv> case pti of 
-     ArchInvocation_A.PageTableMap cap ptr pde p \<Rightarrow>
+     ARM_A.PageTableMap cap ptr pde p \<Rightarrow>
     \<exists>cap' pde'. pti' = PageTableMap cap' (cte_map ptr) pde' p \<and>
                 cap_relation cap cap' \<and>
                 pde_relation' pde pde' \<and> is_aligned (p >> 2) (pde_align' pde')
-   | ArchInvocation_A.PageTableUnmap cap ptr \<Rightarrow>
+   | ARM_A.PageTableUnmap cap ptr \<Rightarrow>
     \<exists>cap'. pti' = PageTableUnmap cap' (cte_map ptr) \<and>
            cap_relation cap (ArchObjectCap cap')"
 
@@ -2501,7 +2510,7 @@ lemma clear_page_table_corres:
              (pspace_aligned' and pspace_distinct')
     (mapM_x (swp store_pte ARM_A.InvalidPTE)
        [p , p + 4 .e. p + 2 ^ ptBits - 1])
-    (mapM_x (swp storePTE ARM_H.InvalidPDE)
+    (mapM_x (swp storePTE ARM_H.InvalidPTE)
        [p , p + 4 .e. p + 2 ^ ptBits - 1])"
   apply (rule_tac F="is_aligned p ptBits" in corres_req)
    apply (clarsimp simp: obj_at_def a_type_def)
@@ -2627,7 +2636,7 @@ lemma pap_corres:
   apply (rename_tac word1 word2 prod)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ getSlotCap_corres])
-      apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap p asid)" in corres_gen_asm)
+      apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (ARM_A.PageDirectoryCap p asid)" in corres_gen_asm)
       apply clarsimp
       apply (rule_tac Q="valid_objs and pspace_aligned and pspace_distinct and asid_pool_at word2 and valid_etcbs and
                          cte_wp_at (\<lambda>c. cap_master_cap c = 
@@ -3760,10 +3769,11 @@ lemma diminished_valid':
   apply (rule ext)
   apply (simp add: maskCapRights_def Let_def split del: split_if)
   apply (cases cap'; simp add: isCap_simps valid_cap'_def capAligned_def split del: split_if)
-  by (simp add: ARM.maskCapRights_def isPageCap_def Let_def split del: split_if split: arch_capability.splits)
+  by (simp add: ARM_H.maskCapRights_def isPageCap_def Let_def split del: split_if split: arch_capability.splits)
 
 lemma diminished_isPDCap:
   "diminished' cap cap' \<Longrightarrow> isPDCap cap' = isPDCap cap"
   by (blast dest: diminished_capMaster capMaster_isPDCap)
 
+end
 end

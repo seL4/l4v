@@ -16,7 +16,7 @@ theory ArchAcc_R
 imports SubMonad_R
 begin
 
-context ARM begin (*FIXME: arch_split*)
+context Arch begin global_naming ARM_A (*FIXME: arch_split*)
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (ARM_A.ASIDPool pool)) p s"
@@ -26,10 +26,8 @@ lemma asid_pool_at_ko:
   apply (case_tac arch_kernel_obj, auto)
   done
 
-shadow_facts maskCapRights_def deriveCap_def
 
 end
-
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -66,7 +64,7 @@ lemma get_asid_pool_corres:
                       split: option.split)
   apply (clarsimp simp: in_monad loadObject_default_def projectKOs)
   apply (simp add: bind_assoc exec_gets)
-  apply (drule ARM.asid_pool_at_ko)
+  apply (drule asid_pool_at_ko)
   apply (clarsimp simp: obj_at_def)
   apply (simp add: return_def)
   apply (simp add: in_magnitude_check objBits_simps
@@ -1160,7 +1158,7 @@ lemma copy_global_mappings_corres:
           (copy_global_mappings pd) (copyGlobalMappings pd)"
   apply (simp add: copy_global_mappings_def copyGlobalMappings_def)
   apply (simp add: pd_bits_def pdBits_def objBits_simps
-                   archObjSize_def kernel_base_def kernelBase_def ARM_H.kernelBase_def)
+                   archObjSize_def kernel_base_def ARM.kernelBase_def ARM_H.kernelBase_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [where r'="op =" and P=\<top>  and P'=\<top>])
        prefer 2
@@ -1206,7 +1204,7 @@ lemma arch_cap_rights_update:
   "acap_relation c c' \<Longrightarrow>
    cap_relation (cap.ArchObjectCap (acap_rights_update (acap_rights c \<inter> msk) c))
                  (Arch.maskCapRights (rights_mask_map msk) c')"
-  apply (cases c, simp_all add: ARM.maskCapRights_def
+  apply (cases c, simp_all add: ARM_H.maskCapRights_def
                                 acap_rights_update_def Let_def isCap_simps)
   apply (simp add: maskVMRights_def vmrights_map_def rights_mask_map_def
                    validate_vm_rights_def vm_read_write_def vm_read_only_def
@@ -1215,7 +1213,7 @@ lemma arch_cap_rights_update:
 
 lemma arch_deriveCap_inv:
   "\<lbrace>P\<rbrace> Arch.deriveCap arch_cap u \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp      add: ARM.deriveCap_def
+  apply (simp      add: ARM_H.deriveCap_def
                   cong: if_cong
              split del: split_if)
   apply (rule hoare_pre, wp undefined_valid)
@@ -1226,13 +1224,13 @@ lemma arch_deriveCap_valid:
   "\<lbrace>valid_cap' (ArchObjectCap arch_cap)\<rbrace>
      Arch.deriveCap u arch_cap
    \<lbrace>\<lambda>rv. valid_cap' (ArchObjectCap rv)\<rbrace>,-"
-  apply (simp      add: ARM.deriveCap_def
+  apply (simp      add: ARM_H.deriveCap_def
                   cong: if_cong
              split del: split_if)
   apply (rule hoare_pre, wp undefined_validE_R)
   apply (cases arch_cap, simp_all add: isCap_defs)
   apply (simp add: valid_cap'_def capAligned_def
-                   capUntypedPtr_def ARM.capUntypedPtr_def)
+                   capUntypedPtr_def ARM_H.capUntypedPtr_def)
   done
 
 lemma arch_derive_corres:
@@ -1241,7 +1239,7 @@ lemma arch_derive_corres:
          \<top> \<top> 
          (arch_derive_cap c) 
          (Arch.deriveCap slot c')"
-  unfolding arch_derive_cap_def ARM.deriveCap_def Let_def
+  unfolding arch_derive_cap_def ARM_H.deriveCap_def Let_def
   apply (cases c, simp_all add: isCap_simps split: option.splits split del: split_if)
       apply (rule corres_noopE, wp, simp, rule no_fail_pre, wp)+
    apply clarsimp

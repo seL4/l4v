@@ -326,7 +326,7 @@ lemma deriveCap_derived:
                   | drule valid_capAligned
                   | drule(1) bits_low_high_eq
                   | simp add: capBadge_def sameObjectAs_def
-                              ArchRetype_H.sameObjectAs_def
+                              ARM_H.sameObjectAs_def
                               is_derived'_def isCap_simps up_ucast_inj_eq
                               is_aligned_no_overflow badge_derived'_def
                               capAligned_def capASID_def vsCapRef_def
@@ -345,7 +345,7 @@ lemma maskCapRights_vsCapRef[simp]:
   apply (cases cap, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: maskCapRights_def ARM.maskCapRights_def isCap_simps Let_def)
+         simp add: maskCapRights_def ARM_H.maskCapRights_def isCap_simps Let_def)
   done
 
 lemma corres_set_extra_badge:
@@ -491,7 +491,7 @@ lemma maskCapRights_eq_null:
   apply (cases xa; simp add: maskCapRights_def isCap_simps)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability)
-      apply (simp_all add: ARM.maskCapRights_def isCap_simps)
+      apply (simp_all add: ARM_H.maskCapRights_def isCap_simps)
   done
 
 lemma capMasterCap_maskedAsFull[simp]:
@@ -980,7 +980,7 @@ lemma maskCapRights_capRange[simp]:
   "capRange (maskCapRights r c) = capRange c"
   apply (case_tac c)
   apply (simp_all add: maskCapRights_def isCap_defs capRange_def Let_def
-                       ARM.maskCapRights_def
+                       ARM_H.maskCapRights_def
                 split: arch_capability.split)
   done
 
@@ -1277,7 +1277,7 @@ lemma capRights_Null_eq [simp]:
   "(maskCapRights R cap = NullCap) = (cap = NullCap)"
   apply (cases cap)
   apply (simp_all add: Let_def maskCapRights_def isCap_simps)
-  apply (simp add: ARM.maskCapRights_def
+  apply (simp add: ARM_H.maskCapRights_def
             split: arch_capability.split)
   done
 
@@ -1299,7 +1299,7 @@ lemma isIRQControlCap_mask [simp]:
             apply (clarsimp simp: isCap_simps maskCapRights_def Let_def)+
       apply (rename_tac arch_capability)
       apply (case_tac arch_capability)
-          apply (clarsimp simp: isCap_simps ARM.maskCapRights_def
+          apply (clarsimp simp: isCap_simps ARM_H.maskCapRights_def
                                 maskCapRights_def Let_def)+
   done
 
@@ -1307,7 +1307,7 @@ lemma isPageCap_maskCapRights[simp]:
 " isArchCap isPageCap (RetypeDecls_H.maskCapRights R c) = isArchCap isPageCap c"
   apply (case_tac c; simp add: isCap_simps isArchCap_def maskCapRights_def)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability; simp add: isCap_simps ARM.maskCapRights_def)
+  apply (case_tac arch_capability; simp add: isCap_simps ARM_H.maskCapRights_def)
   done
    
 lemma capReplyMaster_mask[simp]:
@@ -1329,7 +1329,7 @@ lemma updateCapData_ordering:
   "\<lbrakk> (x, capBadge cap) \<in> capBadge_ordering P; updateCapData p d cap \<noteq> NullCap \<rbrakk>
     \<Longrightarrow> (x, capBadge (updateCapData p d cap)) \<in> capBadge_ordering P"
   apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
-                                  capBadge_def ARM.updateCapData_def
+                                  capBadge_def ARM_H.updateCapData_def
                            split: split_if_asm)
    apply fastforce+
   done
@@ -1342,7 +1342,7 @@ lemma updateCapData_is_Reply[simp]:
   "(updateCapData p d cap = ReplyCap x y) = (cap = ReplyCap x y)"
   by (rule ccontr,
       clarsimp simp: isCap_simps updateCapData_def Let_def
-                     ARM.updateCapData_def
+                     ARM_H.updateCapData_def
           split del: split_if
               split: split_if_asm)
 
@@ -1350,7 +1350,7 @@ lemma updateCapDataIRQ:
   "updateCapData p d cap \<noteq> NullCap \<Longrightarrow> 
   isIRQControlCap (updateCapData p d cap) = isIRQControlCap cap"
   apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
-                                  ARM.updateCapData_def
+                                  ARM_H.updateCapData_def
                            split: split_if_asm)
   done
 
@@ -1358,7 +1358,7 @@ lemma updateCapData_vsCapRef[simp]:
   "vsCapRef (updateCapData pr D c) = vsCapRef c"
   by (rule ccontr,
       clarsimp simp: isCap_simps updateCapData_def Let_def
-                     ARM.updateCapData_def
+                     ARM_H.updateCapData_def
                      vsCapRef_def
           split del: split_if
               split: split_if_asm)
@@ -1367,7 +1367,7 @@ lemma isPageCap_updateCapData[simp]:
 "isArchCap isPageCap (updateCapData pr D c) = isArchCap isPageCap c"
   apply (case_tac c; simp add:updateCapData_def isCap_simps isArchCap_def)
    apply (rename_tac arch_capability)
-   apply (case_tac arch_capability; simp add: ARM.updateCapData_def isCap_simps isArchCap_def)
+   apply (case_tac arch_capability; simp add: ARM_H.updateCapData_def isCap_simps isArchCap_def)
   apply (clarsimp split:capability.splits simp:Let_def)
   done
 
@@ -4351,7 +4351,7 @@ lemma zobj_refs_maskCapRights[simp]:
   by (cases cap;
       clarsimp
           simp add: maskCapRights_def isCap_simps
-                    Let_def ARM.maskCapRights_def
+                    Let_def ARM_H.maskCapRights_def
              split: arch_capability.split)
 
 lemma getCTE_cap_to_refs[wp]:

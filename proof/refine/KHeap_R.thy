@@ -1347,7 +1347,7 @@ lemma setObject_no_0_obj' [wp]:
 
 lemma valid_updateCapDataI:
   "s \<turnstile>' c \<Longrightarrow> s \<turnstile>' updateCapData b x c"
-  apply (unfold updateCapData_def Let_def ARM.updateCapData_def)
+  apply (unfold updateCapData_def Let_def ARM_H.updateCapData_def)
   apply (cases c)
   apply (simp_all add: isCap_defs valid_cap'_def capUntypedPtr_def isCap_simps 
                        capAligned_def word_size word_bits_def word_bw_assocs)
