@@ -16,6 +16,7 @@ sig
   val translate :
         local_theory
         -> FunctionInfo.fn_info
+        -> 'b Symtab.table
         -> (local_theory -> string -> 'a)
         -> (local_theory -> 'b Symtab.table -> 'c -> (string * 'a) list -> ('b list * 'c * local_theory))
         -> (FunctionInfo.function_def list -> local_theory -> thm list)
@@ -142,7 +143,7 @@ fun has_simpl_body_def lthy name =
  * "define" is handed a list of functions which must all be defined in one
  * step.
  *)
-fun translate lthy fn_info convert define prove_mono fn_def_translate v =
+fun translate lthy fn_info initial_callees convert define prove_mono fn_def_translate v =
   let
     (* Get list of functions we need to translate. *)
     val function_groups = FunctionInfo.get_topo_sorted_functions fn_info
@@ -179,7 +180,7 @@ fun translate lthy fn_info convert define prove_mono fn_def_translate v =
       end
 
     val (proof_table, new_fn_defs, v, lthy)
-        = fold translate function_groups (Symtab.empty, Symtab.empty, v, lthy)
+        = fold translate function_groups (initial_callees, Symtab.empty, v, lthy)
 
     val mono_thms =
         function_groups
@@ -635,9 +636,16 @@ let
   val do_define_funcs =
     define_funcs phase filename fn_info get_const_name get_fn_type
         get_fn_assumption get_fn_args rec_base_case
+  val initial_callees = Symtab.dest (FunctionInfo.get_functions fn_info)
+        |> List.mapPartial (fn (fn_name, fn_def) =>
+             if not (#finished fn_def) then NONE else
+               AutoCorresData.get_thm (Proof_Context.theory_of ctxt)
+                                      filename (phase ^ "corres") fn_name
+               |> Option.map (fn thm => (fn_name, thm)))
+        |> Symtab.make
 
   (* Do the translation. *)
-  val (ctxt', new_fn_info, _) = translate ctxt fn_info do_gen_corres do_define_funcs prove_mono
+  val (ctxt', new_fn_info, _) = translate ctxt fn_info initial_callees do_gen_corres do_define_funcs prove_mono
       (fn lthy => K (update_fn_info lthy)) ()
 
   (* Map function information. *)
