@@ -16,6 +16,8 @@ theory Syscall_R
 imports Tcb_R Arch_R Interrupt_R
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 (*
 syscall has 5 sections: m_fault h_fault m_error h_error m_finalise
 
@@ -594,14 +596,33 @@ lemma invokeTCB_typ_at'[wp]:
   done
 
 lemmas invokeTCB_typ_ats[wp] = typ_at_lifts [OF invokeTCB_typ_at']
-term Interrupt_H.performIRQControl
+
 crunch typ_at'[wp]: doReplyTransfer "\<lambda>s. P (typ_at' T p s)"
   (wp: hoare_drop_imps)
+
 lemmas doReplyTransfer_typ_ats[wp] = typ_at_lifts [OF doReplyTransfer_typ_at']
-crunch typ_at'[wp]: "InterruptDecls_H.performIRQControl" "\<lambda>s. P (typ_at' T p s)"
-lemmas invokeIRQControl_typ_ats[wp] = typ_at_lifts [OF InterruptDecls_H_performIRQControl_typ_at']
+
+end
+
+(* FIXME: arch_split crunch bug *)
+lemmas (in Arch) performIRQControl_def = ARM_H.performIRQControl_def
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+crunch typ_at'[wp]: "performIRQControl" "\<lambda>s. P (typ_at' T p s)"
+end
+
+(* FIXME: arch_split crunch bug *)
+shadow_facts (in Arch) performIRQControl_def
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+lemmas invokeIRQControl_typ_ats[wp] =
+  typ_at_lifts [OF performIRQControl_typ_at']
+
 crunch typ_at'[wp]: invokeIRQHandler "\<lambda>s. P (typ_at' T p s)"
-lemmas invokeIRQHandler_typ_ats[wp] = typ_at_lifts [OF invokeIRQHandler_typ_at']
+
+lemmas invokeIRQHandler_typ_ats[wp] =
+  typ_at_lifts [OF invokeIRQHandler_typ_at']
 
 crunch tcb_at'[wp]: setDomain "tcb_at' tptr"
   (simp: crunch_simps)
@@ -2397,13 +2418,13 @@ lemma inv_irq_IRQInactive:
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: performIRQControl_def)
   apply (rule hoare_pre)
-   apply (wpc|wp|simp add: ArchInterrupt_H.performIRQControl_def)+
+   apply (wpc|wp|simp add: ARM_H.performIRQControl_def)+
   done
 
 lemma inv_arch_IRQInactive:
-  "\<lbrace>\<top>\<rbrace> ArchRetypeDecls_H.performInvocation invocation 
+  "\<lbrace>\<top>\<rbrace> ARM_H.performInvocation invocation 
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def)
+  apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
   apply wp
   done
 
@@ -2452,5 +2473,7 @@ lemma he_IRQInactive:
    apply (wp handleSend_IRQInactive handleCall_IRQInactive
            | wpc | simp)+
   done
+
+end
 
 end

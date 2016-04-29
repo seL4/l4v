@@ -436,12 +436,17 @@ end
 lemmas (in Arch) decodeInvocation_def = ARM_H.decodeInvocation_def
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
 crunch inv [wp]: "ARM_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
    simp: forME_x_def crunch_simps
          ARMMMU_improve_cases
    ignore: forME_x getObject)
+end
+
+(* FIXME: arch_split crunch bug *)
+shadow_facts (in Arch) decodeInvocation_def
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* FIXME: Move *)
 lemma case_option_corres:
