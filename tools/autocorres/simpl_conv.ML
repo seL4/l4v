@@ -38,7 +38,8 @@ fun mk_l1monadT stateT =
 (*
  * Extract the L1 monadic term out of a L1corres constant.
  *)
-fun get_L1corres_monad (_ $ _ $ monad $ _) = monad
+fun get_L1corres_monad (prop as (_ $ _ $ _ $ monad $ _)) = monad
+  | get_L1corres_monad t = raise TERM ("get_L1corres_monad", [t])
 
 (*
  * Generate a SIMPL term that calls the given function.
@@ -51,22 +52,28 @@ fun mk_SIMPL_call_term ctxt prog_info fn_info target_fn =
   @{mk_term "Call ?proc :: (?'s, int, strictc_errortype) com" (proc, 's)}
       (FunctionInfo.get_function_def fn_info target_fn |> #const, #state_type prog_info)
 
+(* FIXME: unify with somewhere else *)
+fun mk_bool true = @{term True}
+  | mk_bool false = @{term False}
+
+
 (*
  * Construct a correspondence lemma between a given monadic term and a SIMPL fragment.
  *
  * The term is of the form:
  *
- *    L1corres \<Gamma> monad simpl
+ *    L1corres ct \<Gamma> monad simpl
  *)
 fun mk_L1corres_prop prog_info monad_term simpl_term =
-  @{mk_term "L1corres ?gamma ?monad ?simpl" (gamma, monad, simpl)}
-      (#gamma prog_info, monad_term, simpl_term)
+  @{mk_term "L1corres ?ct ?gamma ?monad ?simpl" (ct, gamma, monad, simpl)}
+      (mk_bool (#check_termination prog_info),
+       #gamma prog_info, monad_term, simpl_term)
 
 (*
  * Construct a prop claiming that the given term is equivalent to
  * a call to the given SIMPL function:
  *
- *    L1corres \<Gamma> <term> (Call foo_'proc)
+ *    L1corres ct \<Gamma> <term> (Call foo_'proc)
  *
  *)
 fun mk_L1corres_call_prop ctxt prog_info fn_info target_fn_name term =
@@ -255,7 +262,7 @@ let
 
   (* Conversion combinator to apply a conversion only to the L1 subterm of a
    * L1corres term. *)
-  fun l1conv conv = (Conv.arg_conv (Utils.nth_arg_conv 2 conv))
+  fun l1conv conv = (Conv.arg_conv (Utils.nth_arg_conv 3 conv))
 
   (* Conversion to simplify guards. *)
   fun guard_conv' c =

@@ -56,28 +56,28 @@ declare L1_set_to_pred_def [simp]
 
 (* Our corres rule converting from the deeply-embedded SIMPL to a shallow embedding. *)
 definition
-  L1corres :: "('p \<Rightarrow> ('s, 'p, 'e) com option)
+  L1corres :: "bool \<Rightarrow> ('p \<Rightarrow> ('s, 'p, 'e) com option)
                      \<Rightarrow> ('s, unit + unit) nondet_monad \<Rightarrow> ('s, 'p, 'e) com \<Rightarrow> bool"
 where
-  "L1corres \<Gamma> \<equiv>
+  "L1corres check_term \<Gamma> \<equiv>
    \<lambda>A C. \<forall>s. \<not> snd (A s) \<longrightarrow>
        ((\<forall>t. \<Gamma> \<turnstile> \<langle>C, Normal s\<rangle> \<Rightarrow> t \<longrightarrow>
         (case t of
               Normal s' \<Rightarrow> (Inr (), s') \<in> fst (A s)
             | Abrupt s' \<Rightarrow> (Inl (), s') \<in> fst (A s)
             | _ \<Rightarrow> False))
-        \<and> (\<Gamma> \<turnstile> C \<down> Normal s))"
+        \<and> (check_term \<longrightarrow> \<Gamma> \<turnstile> C \<down> Normal s))"
 
-lemma L1corres_alt_def: "L1corres \<Gamma> = ccorresE (\<lambda>x. x) \<Gamma> \<top> UNIV"
+lemma L1corres_alt_def: "L1corres ct \<Gamma> = ccorresE (\<lambda>x. x) ct \<Gamma> \<top> UNIV"
   apply (rule ext)+
   apply (clarsimp simp: L1corres_def ccorresE_def)
   done
 
 (* Wrapper for calling un-translated functions. *)
 definition
-  "L1_call_simpl Gamma proc
+  "L1_call_simpl check_term Gamma proc
     = do s \<leftarrow> get;
-         assert (Gamma \<turnstile> Call proc \<down> Normal s);
+         assert (check_term \<longrightarrow> Gamma \<turnstile> Call proc \<down> Normal s);
          xs \<leftarrow> select {t. Gamma \<turnstile> \<langle>Call proc, Normal s\<rangle> \<Rightarrow> t};
          case xs :: (_, strictc_errortype) xstate of
              Normal s \<Rightarrow> liftE (put s)
@@ -87,7 +87,7 @@ definition
       od"
 
 lemma L1corres_call_simpl:
-  "L1corres Gamma (L1_call_simpl Gamma proc) (Call proc)"
+  "L1corres ct Gamma (L1_call_simpl ct Gamma proc) (Call proc)"
   apply (clarsimp simp: L1corres_def L1_call_simpl_def in_monad
                         exec_get assert_def)
   apply (case_tac t, simp_all add: in_monad in_select)
@@ -96,7 +96,7 @@ lemma L1corres_call_simpl:
 
 
 lemma L1corres_skip:
-  "L1corres \<Gamma> L1_skip SKIP"
+  "L1corres ct \<Gamma> L1_skip SKIP"
   apply (clarsimp simp: L1corres_alt_def)
   apply (clarsimp simp: liftE_def return_def L1_skip_def returnOk_def)
   apply (clarsimp simp: ccorresE_def)
@@ -104,23 +104,25 @@ lemma L1corres_skip:
    apply clarsimp
    apply (erule exec_Normal_elim_cases)
    apply (clarsimp simp: split_def return_def bindE_def bind_def)
+  apply clarify
   apply (rule terminates.Skip)
   done
 
 lemma L1corres_throw:
-  "L1corres \<Gamma> L1_throw Throw"
+  "L1corres ct \<Gamma> L1_throw Throw"
   apply (clarsimp simp: L1corres_alt_def)
   apply (clarsimp simp: ccorresE_def L1_throw_def)
   apply (rule conjI)
    apply clarsimp
    apply (erule exec_Normal_elim_cases)
    apply (clarsimp simp: throwError_def return_def)
+  apply clarify
   apply (rule terminates.Throw)
   done
 
 lemma L1corres_seq:
-  "\<lbrakk> L1corres \<Gamma> L L'; L1corres \<Gamma> R R' \<rbrakk> \<Longrightarrow>
-    L1corres \<Gamma> (L1_seq L R) (L' ;; R')"
+  "\<lbrakk> L1corres ct \<Gamma> L L'; L1corres ct \<Gamma> R R' \<rbrakk> \<Longrightarrow>
+    L1corres ct \<Gamma> (L1_seq L R) (L' ;; R')"
   apply (clarsimp simp: L1corres_alt_def)
   apply (clarsimp simp: L1_seq_def)
   apply (rule ccorresE_Seq)
@@ -128,7 +130,7 @@ lemma L1corres_seq:
   done
 
 lemma L1corres_modify:
-  "L1corres \<Gamma> (L1_modify m) (Basic m)"
+  "L1corres ct \<Gamma> (L1_modify m) (Basic m)"
   apply (clarsimp simp: L1corres_alt_def)
   apply (clarsimp simp: liftE_def modify_def get_def put_def bind_def L1_modify_def)
   apply (clarsimp simp: ccorresE_def)
@@ -136,8 +138,8 @@ lemma L1corres_modify:
   done
 
 lemma L1corres_condition:
-  "\<lbrakk> L1corres \<Gamma> L L'; L1corres \<Gamma> R R' \<rbrakk> \<Longrightarrow>
-    L1corres \<Gamma> (L1_condition (L1_set_to_pred c) L R) (Cond c L' R')"
+  "\<lbrakk> L1corres ct \<Gamma> L L'; L1corres ct \<Gamma> R R' \<rbrakk> \<Longrightarrow>
+    L1corres ct \<Gamma> (L1_condition (L1_set_to_pred c) L R) (Cond c L' R')"
   apply (clarsimp simp: L1corres_alt_def)
   apply (clarsimp simp: L1_defs)
   apply (rule ccorresE_Cond_match)
@@ -147,8 +149,8 @@ lemma L1corres_condition:
   done
 
 lemma L1corres_catch:
-  "\<lbrakk> L1corres \<Gamma> L L'; L1corres \<Gamma> R R' \<rbrakk> \<Longrightarrow>
-    L1corres \<Gamma> (L1_catch L R) (Catch L' R')"
+  "\<lbrakk> L1corres ct \<Gamma> L L'; L1corres ct \<Gamma> R R' \<rbrakk> \<Longrightarrow>
+    L1corres ct \<Gamma> (L1_catch L R) (Catch L' R')"
   apply (clarsimp simp: L1corres_alt_def)
   apply (clarsimp simp: L1_catch_def)
   apply (erule ccorresE_Catch)
@@ -156,8 +158,8 @@ lemma L1corres_catch:
   done
 
 lemma L1corres_while:
-  "\<lbrakk> L1corres \<Gamma> B B' \<rbrakk> \<Longrightarrow>
-      L1corres \<Gamma> (L1_while (L1_set_to_pred c) B) (While c B')"
+  "\<lbrakk> L1corres ct \<Gamma> B B' \<rbrakk> \<Longrightarrow>
+      L1corres ct \<Gamma> (L1_while (L1_set_to_pred c) B) (While c B')"
   apply (clarsimp simp: L1corres_alt_def)
   apply (clarsimp simp: L1_defs)
   apply (rule ccorresE_While)
@@ -166,8 +168,8 @@ lemma L1corres_while:
   done
 
 lemma L1corres_guard:
-  "\<lbrakk> L1corres \<Gamma> B B' \<rbrakk> \<Longrightarrow>
-      L1corres \<Gamma> (L1_seq (L1_guard (L1_set_to_pred c)) B) (Guard f c B')"
+  "\<lbrakk> L1corres ct \<Gamma> B B' \<rbrakk> \<Longrightarrow>
+      L1corres ct \<Gamma> (L1_seq (L1_guard (L1_set_to_pred c)) B) (Guard f c B')"
   apply (clarsimp simp: L1corres_alt_def)
   apply (clarsimp simp: ccorresE_def L1_defs)
   apply (erule_tac x=s in allE)
@@ -182,7 +184,7 @@ lemma L1corres_guard:
   done
 
 lemma L1corres_spec:
-  "L1corres \<Gamma> (L1_spec x) (Spec x)"
+  "L1corres ct \<Gamma> (L1_spec x) (Spec x)"
   apply (clarsimp simp: L1corres_alt_def)
   apply (clarsimp simp: ccorresE_def L1_spec_def)
   apply (rule conjI)
@@ -190,11 +192,12 @@ lemma L1corres_spec:
    apply (erule exec_Normal_elim_cases)
     apply (clarsimp simp: liftE_def spec_def bind_def return_def)
    apply (clarsimp simp: liftE_def spec_def bind_def return_def)
+  apply clarify
   apply (rule terminates.Spec)
   done
 
 lemma L1corres_guarded_spec:
-  "L1corres \<Gamma> (L1_spec R) (guarded_spec_body F R)"
+  "L1corres ct \<Gamma> (L1_spec R) (guarded_spec_body F R)"
   apply (clarsimp simp: L1corres_alt_def ccorresE_def L1_spec_def guarded_spec_body_def)
   apply (force simp: liftE_def spec_def bind_def return_def
                elim: exec_Normal_elim_cases intro: terminates.Guard terminates.Spec)
@@ -206,8 +209,8 @@ lemma liftE_get_bindE:
   done
 
 lemma L1corres_call:
-  "(\<And>m. L1corres \<Gamma> (\<lambda>s. dest_fn m s) (Call dest)) \<Longrightarrow>
-    L1corres \<Gamma>
+  "(\<And>m. L1corres ct \<Gamma> (\<lambda>s. dest_fn m s) (Call dest)) \<Longrightarrow>
+    L1corres ct \<Gamma>
         (L1_call scope_setup (measure_call dest_fn) scope_teardown f)
         (call scope_setup dest scope_teardown (\<lambda>_ t. Basic (f t)))"
   apply (clarsimp simp: L1corres_alt_def)
@@ -240,8 +243,8 @@ lemma L1corres_call:
   done
 
 lemma L1corres_reccall:
-  "\<lbrakk> L1corres \<Gamma> (dest_fn m) (Call dest) \<rbrakk> \<Longrightarrow>
-    L1corres \<Gamma>
+  "\<lbrakk> L1corres ct \<Gamma> (dest_fn m) (Call dest) \<rbrakk> \<Longrightarrow>
+    L1corres ct \<Gamma>
         (L1_call scope_setup (dest_fn m) scope_teardown f)
         (call scope_setup dest scope_teardown (\<lambda>_ t. Basic (f t)))"
   apply (clarsimp simp: L1corres_alt_def)
@@ -272,14 +275,14 @@ lemma L1corres_reccall:
   done
 
 lemma L1corres_fail:
-  "L1corres \<Gamma> L1_fail X"
+  "L1corres ct \<Gamma> L1_fail X"
   apply (clarsimp simp: L1corres_alt_def)
   apply (clarsimp simp: L1_fail_def)
   apply (rule ccorresE_fail)
   done
 
 lemma L1corres_recguard:
-  "L1corres \<Gamma> A B \<Longrightarrow> L1corres \<Gamma> (L1_recguard n A) B"
+  "L1corres ct \<Gamma> A B \<Longrightarrow> L1corres ct \<Gamma> (L1_recguard n A) B"
   apply (clarsimp simp: L1_recguard_def)
   apply (case_tac "n = 0")
    apply clarsimp
@@ -288,7 +291,7 @@ lemma L1corres_recguard:
   done
 
 lemma L1corres_recguard_0:
-  "L1corres \<Gamma> (L1_recguard 0 x) y"
+  "L1corres ct \<Gamma> (L1_recguard 0 x) y"
   apply (clarsimp simp: L1_recguard_def)
   apply (rule L1corres_fail [unfolded L1_fail_def])
   done
@@ -299,7 +302,7 @@ lemma L1_recguard_cong [fundef_cong, cong]:
   done
 
 lemma L1corres_prepend_unknown_var':
-  "\<lbrakk> L1corres \<Gamma> A C; \<And>s::'s::type. X (\<lambda>_::'a::type. (X' s)) s = s \<rbrakk> \<Longrightarrow> L1corres \<Gamma> (L1_seq (L1_init X) A) C"
+  "\<lbrakk> L1corres ct \<Gamma> A C; \<And>s::'s::type. X (\<lambda>_::'a::type. (X' s)) s = s \<rbrakk> \<Longrightarrow> L1corres ct \<Gamma> (L1_seq (L1_init X) A) C"
   apply atomize
   apply (clarsimp simp: L1corres_alt_def)
   apply (unfold L1_seq_def)
@@ -328,8 +331,8 @@ lemma no_throw_L1_init [simp]: "no_throw P (L1_init f)"
   done
 
 lemma L1corres_prepend_unknown_var:
-  "\<lbrakk> L1corres \<Gamma> (L1_catch A B) C; \<And>s. X (\<lambda>_::'d::type. (X' s)) s = s \<rbrakk>
-         \<Longrightarrow> L1corres \<Gamma> (L1_catch (L1_seq (L1_init X) A) B) C"
+  "\<lbrakk> L1corres ct \<Gamma> (L1_catch A B) C; \<And>s. X (\<lambda>_::'d::type. (X' s)) s = s \<rbrakk>
+         \<Longrightarrow> L1corres ct \<Gamma> (L1_catch (L1_seq (L1_init X) A) B) C"
   apply atomize
   apply (clarsimp simp: L1corres_alt_def)
   apply (unfold L1_seq_def L1_catch_def)
@@ -340,8 +343,8 @@ lemma L1corres_prepend_unknown_var:
   done
 
 lemma L1corres_prepend_unknown_var_recguard:
-  "\<lbrakk> L1corres \<Gamma> (L1_recguard n A) C; \<And>s. X (\<lambda>_::'a::type. X' s) s = s\<rbrakk>
-    \<Longrightarrow> L1corres \<Gamma> (L1_recguard n (L1_seq (L1_init X) A)) C"
+  "\<lbrakk> L1corres ct \<Gamma> (L1_recguard n A) C; \<And>s. X (\<lambda>_::'a::type. X' s) s = s\<rbrakk>
+    \<Longrightarrow> L1corres ct \<Gamma> (L1_recguard n (L1_seq (L1_init X) A)) C"
   apply (clarsimp simp: L1_recguard_def)
   apply (case_tac n)
    apply clarsimp
@@ -351,8 +354,8 @@ lemma L1corres_prepend_unknown_var_recguard:
   done
 
 lemma L1corres_Call:
-  "\<lbrakk> \<Gamma> X' = Some Z'; L1corres \<Gamma> Z Z' \<rbrakk> \<Longrightarrow>
-    L1corres \<Gamma> Z (Call X')"
+  "\<lbrakk> \<Gamma> X' = Some Z'; L1corres ct \<Gamma> Z Z' \<rbrakk> \<Longrightarrow>
+    L1corres ct \<Gamma> Z (Call X')"
   apply (clarsimp simp: L1corres_alt_def)
   apply (erule (1) ccorresE_Call)
   done
@@ -369,7 +372,7 @@ lemma L1_call_corres [fundef_cong]:
 
 (* Saying \<And>measure is the same thing as \<And>s *)
 lemma L1corres_measure_from_state:
-  "\<And>\<Gamma> l1_f m f. (\<And>(measure' :: nat). L1corres \<Gamma> (l1_f measure') f) \<Longrightarrow> L1corres \<Gamma> (\<lambda>s. l1_f (m s) s) f"
+  "\<And>\<Gamma> l1_f m f. (\<And>(measure' :: nat). L1corres ct \<Gamma> (l1_f measure') f) \<Longrightarrow> L1corres ct \<Gamma> (\<lambda>s. l1_f (m s) s) f"
   apply (unfold L1corres_def)
   apply simp
   done
@@ -392,7 +395,7 @@ where
   "undefined_function_body \<equiv> Guard UndefinedFunction {x. UNDEFINED_FUNCTION} SKIP"
 
 lemma L1corres_undefined_call:
-    "L1corres \<Gamma> ((L1_seq (L1_guard (L1_set_to_pred {x. UNDEFINED_FUNCTION})) L1_skip)) (Call X')"
+    "L1corres ct \<Gamma> ((L1_seq (L1_guard (L1_set_to_pred {x. UNDEFINED_FUNCTION})) L1_skip)) (Call X')"
   by (clarsimp simp: L1corres_def L1_defs UNDEFINED_FUNCTION_def)
 
 (* L1 monad_mono rules *)
