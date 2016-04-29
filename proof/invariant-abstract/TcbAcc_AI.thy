@@ -69,6 +69,10 @@ proof -
     done
 qed
 
+lemma valid_ipc_buffer_cap_0[simp]:
+  "valid_ipc_buffer_cap cap a \<Longrightarrow> valid_ipc_buffer_cap cap 0"
+  by (auto simp add: valid_ipc_buffer_cap_def case_bool_If
+    split: cap.split arch_cap.split)
 
 lemma ball_tcb_cap_casesI:
   "\<lbrakk> P (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>));
@@ -181,21 +185,15 @@ schematic_goal tcb_ipcframe_in_cases:
   "(tcb_ipcframe, ?x) \<in> ran tcb_cap_cases"
   by (fastforce simp add: ran_tcb_cap_cases)
 
-(* Do we allow ipc buffer to be null in old spec ?
-lemma valid_ipc_buffer_cap_0[simp]:
-  "valid_ipc_buffer_cap cap a \<Longrightarrow> valid_ipc_buffer_cap cap 0"
-  apply (simp add: valid_ipc_buffer_cap_def split: cap.split arch_cap.split)
-  apply auto
-  apply (case_tac x31)
-*)
 
+lemmas valid_ipc_buffer_cap_simps= valid_ipc_buffer_cap_def[split_simps cap.split]
 
 lemma thread_set_valid_objs_triv:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
   assumes z: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (f tcb) = tcb_ipc_buffer tcb
-                         \<or> tcb_ipc_buffer (f tcb) = 0"
+                        \<or> (tcb_ipc_buffer (f tcb) = 0)"
   assumes y: "\<And>tcb. tcb_fault_handler (f tcb) \<noteq> tcb_fault_handler tcb
                        \<longrightarrow> length (tcb_fault_handler (f tcb)) = word_bits"
   assumes a: "\<And>tcb. tcb_fault (f tcb) \<noteq> tcb_fault tcb
@@ -218,7 +216,9 @@ lemma thread_set_valid_objs_triv:
   apply (rule conjI)
    apply (elim allEI)
    apply auto[1]
-  apply (cut_tac tcb=y in w)
+  apply (rule conjI)
+   apply (cut_tac tcb = y in w)
+   apply (auto simp:valid_ipc_buffer_cap_simps)[1]
   apply (cut_tac tcb=y in y)
   apply (cut_tac tcb=y in a)
   apply (cut_tac tcb=y in b)
@@ -474,7 +474,7 @@ lemma thread_set_invs_trivial:
   assumes z:  "\<And>tcb. tcb_state     (f tcb) = tcb_state tcb"
   assumes z': "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (f tcb) = tcb_ipc_buffer tcb
-                       \<or> tcb_ipc_buffer (f tcb) = 0"
+                        \<or> (tcb_ipc_buffer (f tcb) = 0)"
   assumes y: "\<And>tcb. tcb_fault_handler (f tcb) \<noteq> tcb_fault_handler tcb
                        \<longrightarrow> length (tcb_fault_handler (f tcb)) = word_bits"
   assumes a: "\<And>tcb. tcb_fault (f tcb) \<noteq> tcb_fault tcb
@@ -597,6 +597,7 @@ qed
 
 lemma as_user_invs[wp]: "\<lbrace>invs\<rbrace> as_user t m \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule as_user_wp_thread_set_helper)
+  apply (rule hoare_pre)
   apply (wp thread_set_invs_trivial ball_tcb_cap_casesI | simp)+
   done
 
@@ -783,7 +784,8 @@ lemma gts_wf[wp]: "\<lbrace>tcb_at t and invs\<rbrace> get_thread_state t \<lbra
 
 lemma idle_thread_idle[wp]:
   "\<lbrace>\<lambda>s. valid_idle s \<and> t = idle_thread s\<rbrace> get_thread_state t \<lbrace>\<lambda>r s. idle r\<rbrace>"
-  apply (clarsimp simp: valid_def get_thread_state_def thread_get_def bind_def return_def gets_the_def gets_def get_def assert_opt_def get_tcb_def
+  apply (clarsimp simp: valid_def get_thread_state_def thread_get_def bind_def return_def
+                        gets_the_def gets_def get_def assert_opt_def get_tcb_def
                         fail_def valid_idle_def obj_at_def pred_tcb_at_def
                   split: option.splits Structures_A.kernel_object.splits)
   done

@@ -24,14 +24,15 @@ text {* User memory content is the same on both levels *}
 lemma typ_at_UserDataI:
   "\<lbrakk> typ_at (AArch (AIntData sz)) p s; pspace_relation (kheap s) (ksPSpace s');
      pspace_aligned' s'; pspace_distinct' s'; n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk>
-        \<Longrightarrow> typ_at' UserDataT (p + n * 2 ^ pageBits) s'"
+        \<Longrightarrow> typ_at' UserDataT (p + n * 2 ^ pageBits) s' \<or>
+        typ_at' UserDataDeviceT (p + n * 2 ^ pageBits) s'"
   apply (clarsimp simp add: obj_at_def a_type_def)
   apply (simp split: Structures_A.kernel_object.split_asm
                      split_if_asm arch_kernel_obj.split_asm)
   apply (drule(1) pspace_relation_absD)
   apply (clarsimp)
   apply (drule_tac x = "p + n * 2 ^ pageBits" in spec)
-  apply (drule_tac x = "\<lambda>_. op = KOUserData" in spec)
+  apply (drule_tac x = "\<lambda>_ obj. obj = KOUserData \<or> obj = KOUserDataDevice" in spec)
   apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def
                         projectKOs)
   apply (rule exI [where x = KOUserData])
@@ -41,15 +42,17 @@ lemma typ_at_UserDataI:
   apply (clarsimp simp: pspace_aligned'_def)
   apply (drule (1) bspec [OF _ domI])
   apply (clarsimp simp: objBits_simps)
-  apply (clarsimp  dest!: pspace_distinctD'  simp: objBits_simps)
+  apply (fastforce  dest!: pspace_distinctD'  simp: objBits_simps)
   done
+   
 
 lemma typ_at_AIntDataI:
-  "\<lbrakk> typ_at' UserDataT (p && ~~ mask pageBits) s'; pspace_relation (kheap s) (ksPSpace s'); pspace_aligned s \<rbrakk>
+  "\<lbrakk> typ_at' UserDataT (p && ~~ mask pageBits) s' \<or>  typ_at' UserDataDeviceT (p && ~~ mask pageBits) s';
+     pspace_relation (kheap s) (ksPSpace s'); pspace_aligned s \<rbrakk>
   \<Longrightarrow> \<exists>sz. typ_at (AArch (AIntData sz)) (p && ~~ mask (pageBitsForSize sz)) s"
-  apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def
+  apply (clarsimp simp: exists_disj obj_at'_def typ_at'_def ko_wp_at'_def
                         projectKOs)
-  apply (case_tac ko, simp_all) 
+
   apply (frule (1) in_related_pspace_dom)
   apply (clarsimp simp: pspace_dom_def)
   apply (clarsimp simp: pspace_relation_def dom_def)
@@ -61,7 +64,8 @@ lemma typ_at_AIntDataI:
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
                         cte_relation_def other_obj_relation_def
                         pde_relation_def
-              split: Structures_A.kernel_object.split_asm
+              split: Structures_A.kernel_object.split_asm 
+                     Structures_H.kernel_object.split_asm
                      split_if_asm arch_kernel_obj.split_asm)
   apply (rename_tac vmpage_size n)
   apply (rule_tac x = vmpage_size in exI)

@@ -1055,7 +1055,8 @@ abbreviation
   valid_irq_masks' (intStateIRQTable (ksInterruptState s)) (irq_masks (ksMachineState s))"
 
 defs pointerInUserData_def:
-  "pointerInUserData p \<equiv> typ_at' UserDataT (p && ~~ mask pageBits)"
+  "pointerInUserData p \<equiv> \<lambda>s. (typ_at' UserDataT (p && ~~ mask pageBits) s
+    \<or> typ_at' UserDataDeviceT (p && ~~ mask pageBits) s)"
 
 definition
   "valid_machine_state' \<equiv>

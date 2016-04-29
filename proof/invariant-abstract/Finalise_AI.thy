@@ -3127,9 +3127,6 @@ lemma dxo_noop: "do_extended_op f = (return () :: (unit,unit) s_monad)"
   apply force
   done
 
-
-
-
 lemma recycle_cap_invs:
   "\<lbrace>cte_wp_at (op = cap) slot and invs\<rbrace>
      recycle_cap is_final cap
@@ -3178,6 +3175,7 @@ lemma recycle_cap_invs:
     apply (fastforce simp: cap_range_def elim!: pred_tcb_weakenE)
    apply (wp arch_recycle_cap_invs[where slot=slot] | simp)+
   done
+
 
 lemma cap_recycle_cte_replaceable:
   "\<lbrace>cte_wp_at (op = cap) slot and zombies_final

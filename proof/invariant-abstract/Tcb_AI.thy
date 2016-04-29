@@ -911,12 +911,9 @@ lemma tc_invs:
                         is_cap_simps is_valid_vtable_root_def
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         invs_valid_objs cap_asid_def vs_cap_ref_def
-                 split: option.split_asm
-       | rule conjI)+
-thm valid_ipc_buffer_cap_def
-      apply (simp add:valid_ipc_buffer_cap_def split:arch_cap.splits)
-       apply (simp add: case_bool_If)
-       apply clarsimp
+                 split: option.split_asm )+
+      apply (simp add: case_bool_If valid_ipc_buffer_cap_def 
+        split:arch_cap.splits if_splits)+
   done
 
 primrec

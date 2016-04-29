@@ -459,7 +459,7 @@ where
   "valid_ipc_buffer_cap c bufptr \<equiv>
          case c of
               cap.ArchObjectCap (arch_cap.PageCap False ref rghts sz mapdata) \<Rightarrow>
-                   is_aligned bufptr msg_align_bits \<and> bufptr \<noteq> 0
+                   is_aligned bufptr msg_align_bits (* \<and> bufptr \<noteq> 0 *)
             | cap.NullCap \<Rightarrow> True
             | _ \<Rightarrow> False"
 

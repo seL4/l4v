@@ -1210,6 +1210,11 @@ lemma mdb_parent_rev:
 
 end
 
+lemma exists_disj: 
+  "((\<exists>a. P a \<and> Q a)\<or>(\<exists>a. P a \<and> Q' a))
+   = (\<exists>a. P a \<and> (Q a \<or> Q' a))"
+   by auto
+
 lemma (in delete_locale) delete_invs':
   "invs' (ksMachineState_update
            (\<lambda>ms. underlying_memory_update
@@ -1452,11 +1457,10 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (clarsimp simp: valid_machine_state'_def)
     apply (drule_tac x=p in spec)
     apply (simp add: pointerInUserData_def typ_at'_def)
-    apply (simp add: ko_wp_at'_def)
+    apply (simp add: ko_wp_at'_def exists_disj)
     apply (elim exE conjE)
-    apply (drule_tac ptr'=p in mask_in_range)
-    apply (case_tac ko, simp_all)
-    apply (simp add: objBitsKO_def)
+    apply (cut_tac ptr'=p in mask_in_range)
+     apply fastforce
     using valid_untyped[simplified valid_cap'_def capability.simps]
     apply (simp add: valid_untyped'_def capAligned_def)
     apply (elim conjE)
@@ -1467,6 +1471,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (frule is_aligned_no_overflow'[of _ pageBits])
     apply (frule (1) aligned_ranges_subset_or_disjoint
                      [where n=bits and n'=pageBits])
+    apply (case_tac ko, simp_all add: objBits_simps)
     apply (auto simp add: x_power_minus_1)
     done
 

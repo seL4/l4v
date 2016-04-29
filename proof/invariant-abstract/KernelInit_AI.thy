@@ -240,11 +240,11 @@ lemma invs_A:
    apply (rule conjI)
     apply (clarsimp simp: kernel_base_def valid_objs_def state_defs
                           valid_obj_def valid_vm_rights_def vm_kernel_only_def
-                          dom_if_Some cte_level_bits_def)
+                          dom_if_Some cte_level_bits_def valid_ipc_buffer_cap_simps)
     apply (rule conjI)
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def 
                            valid_cap_def obj_at_def valid_tcb_state_def 
-                           cap_aligned_def word_bits_def)+
+                           cap_aligned_def word_bits_def valid_ipc_buffer_cap_simps)+
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
                           init_irq_ptrs_all_ineqs valid_tcb_def
                    split: split_if_asm)

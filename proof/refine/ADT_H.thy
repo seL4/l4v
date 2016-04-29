@@ -450,6 +450,7 @@ definition
      | Some (KONotification ntfn) \<Rightarrow> Some (Notification (AEndpointMap ntfn))
      | Some KOKernelData \<Rightarrow> undefined (* forbidden by pspace_relation *)
      | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage) (ups x)
+     | Some KOUserDataDevice \<Rightarrow> map_option (ArchObj \<circ> DataPage) (ups x)
      | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
      | Some (KOCTE cte) \<Rightarrow> map_option (%sz. absCNode sz h x) (cns x)
      | Some (KOArch ako) \<Rightarrow> map_option ArchObj (absHeapArch h x ako)
@@ -595,6 +596,7 @@ proof -
      apply (erule_tac x=x in allE, clarsimp)
      apply (erule_tac x=x in allE, simp add: Ball_def)
      apply (erule_tac x=x in allE, clarsimp)
+
      apply (case_tac a)
          apply (simp_all add: other_obj_relation_def
                        split: split_if_asm Structures_H.kernel_object.splits)
@@ -677,7 +679,32 @@ proof -
          apply (clarsimp simp add: pageBits_def mask_def)
         apply (case_tac vmpage_size; simp)
           apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
-
+        apply (erule pspace_dom_relatedE[OF _ pspace_relation])
+        apply (case_tac ko, simp_all add: other_obj_relation_def)
+          apply (clarsimp simp add: cte_relation_def split: split_if_asm)
+        apply (rename_tac arch_kernel_obj)
+        apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
+          apply (clarsimp simp add: pte_relation_def)
+         apply (clarsimp simp add: pde_relation_def)
+        apply (rename_tac vmpage_size)
+        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp)
+        apply (case_tac "n=0", simp)
+        apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
+         apply (rule ccontr)
+         apply (clarsimp simp: gsUserPages[symmetric, THEN iffD1])
+        using pspace_aligned
+        apply (simp add: pspace_aligned_def dom_def)
+        apply (erule_tac x=y in allE)
+        apply (case_tac "n=0",simp+)
+        apply (frule (2) unaligned_page_offsets_helper)
+        apply (frule_tac y="n*2^pageBits" in pspace_aligned_distinct_None'
+                                          [OF pspace_aligned pspace_distinct])
+         apply simp
+         apply (rule conjI, clarsimp simp add: word_gt_0)
+         apply (simp add: is_aligned_mask)
+         apply (clarsimp simp add: pageBits_def mask_def)
+        apply (case_tac vmpage_size; simp)
+          apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
        apply (erule pspace_dom_relatedE[OF _ pspace_relation])
        apply (case_tac ko, simp_all add: other_obj_relation_def)
          apply (clarsimp simp add: cte_relation_def split: split_if_asm)

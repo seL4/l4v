@@ -257,7 +257,8 @@ definition
 primrec
  aobj_relation_cuts :: "Arch_Structs_A.arch_kernel_obj \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
 where
-  "aobj_relation_cuts (DataPage sz) x = {(x + n * 2 ^ pageBits, \<lambda>_. (op =) KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }"
+  "aobj_relation_cuts (DataPage sz) x = 
+      {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserData \<or> obj = KOUserDataDevice) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }"
 | "aobj_relation_cuts (Arch_Structs_A.ASIDPool pool) x =
      {(x, other_obj_relation)}"
 | "aobj_relation_cuts (PageTable pt) x =
@@ -287,7 +288,8 @@ lemma obj_relation_cuts_def2:
                                            ` (UNIV :: word8 set)
              | ArchObj (PageDirectory pd) \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
                                            ` (UNIV :: 12 word set)
-             | ArchObj (DataPage sz)      \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_. (op =) KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
+             | ArchObj (DataPage sz)      \<Rightarrow> 
+                 {(x + n * 2 ^ pageBits,  \<lambda>_ obj. obj = KOUserData \<or> obj = KOUserDataDevice) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
              | _ \<Rightarrow> {(x, other_obj_relation)})"
   by (simp split: Structures_A.kernel_object.split
                   Arch_Structs_A.arch_kernel_obj.split)
@@ -300,7 +302,7 @@ lemma obj_relation_cuts_def3:
                             ` (UNIV :: word8 set)
    | AArch APageDirectory \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
                             ` (UNIV :: 12 word set)
-   | AArch (AIntData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_. (op =) KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
+   | AArch (AIntData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserData \<or> obj = KOUserDataDevice) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
    | AGarbage \<Rightarrow> {(x, \<bottom>\<bottom>)}
    | _ \<Rightarrow> {(x, other_obj_relation)})"
   apply (simp add: obj_relation_cuts_def2 a_type_def
@@ -451,7 +453,7 @@ lemma obj_relation_cutsE:
      \<And>pd (z :: 12 word) pde'. \<lbrakk> ko = ArchObj (PageDirectory pd); y = x + (ucast z << 2);
                               ko' = KOArch (KOPDE pde'); pde_relation_aligned z (pd z) pde' \<rbrakk>
               \<Longrightarrow> R;
-     \<And>sz n. \<lbrakk> ko = ArchObj (DataPage sz); ko' = KOUserData; y = x + n * 2 ^ pageBits; n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk> \<Longrightarrow> R;
+     \<And>sz n. \<lbrakk> ko = ArchObj (DataPage sz); ko' = KOUserData \<or> ko' = KOUserDataDevice; y = x + n * 2 ^ pageBits; n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk> \<Longrightarrow> R;
      \<lbrakk> y = x; other_obj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R
     \<rbrakk> \<Longrightarrow> R"
   apply (simp add: obj_relation_cuts_def2 is_other_obj_relation_type_def

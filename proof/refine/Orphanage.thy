@@ -1098,8 +1098,8 @@ crunch inv [wp]: alignError "P"
 
 lemma createObjects_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> pspace_aligned' s \<and> pspace_no_overlap' ptr sz s \<and> pspace_distinct' s 
-      \<and> n \<noteq> 0 \<and> range_cover ptr sz (objBitsKO (injectKOS val) + gbits) n
-      \<and> \<not> case_option False (is_active_thread_state \<circ> tcbState) (projectKO_opt (injectKOS val)) \<rbrace>
+      \<and> n \<noteq> 0 \<and> range_cover ptr sz (objBitsKO val + gbits) n
+      \<and> \<not> case_option False (is_active_thread_state \<circ> tcbState) (projectKO_opt val) \<rbrace>
    createObjects ptr n val gbits
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (clarsimp simp: no_orphans_def all_active_tcb_ptrs_def
@@ -1117,12 +1117,12 @@ lemma createObjects_no_orphans [wp]:
 
 lemma createWordObjects_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> pspace_aligned' s \<and> pspace_distinct' s 
-   \<and> pspace_no_overlap' ptr sz s \<and> n \<noteq> 0 \<and> range_cover ptr sz (objBitsKO KOUserData + us) n\<rbrace>
+   \<and> pspace_no_overlap' ptr sz s \<and> n \<noteq> 0 \<and> range_cover ptr sz (pageBits + us) n\<rbrace>
    createWordObjects ptr n us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding createWordObjects_def
-  apply (wp hoare_unless_wp | clarsimp simp: projectKO_opt_tcb)+
-  apply (intro conjI,simp+)
+  apply (wp hoare_unless_wp | clarsimp simp: projectKO_opt_tcb split del:split_if)+
+  apply (intro conjI | simp add:objBits_simps)+
   done
 
 lemma copyGlobalMappings_no_orphans [wp]:
@@ -1169,49 +1169,52 @@ lemma createObject_no_orphans:
    RetypeDecls_H.createObject tp ptr us d
    \<lbrace>\<lambda>xa. no_orphans\<rbrace>"
   apply (case_tac tp)
-        apply (simp_all add:createObject_def ArchRetype_H.createObject_def)
+        apply (simp_all add:createObject_def ArchRetype_H.createObject_def split del:split_if)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
             apply (simp_all add:ArchRetype_H.createObject_def createPageObject_def placeNewObject_def2
-              toAPIType_def ArchTypes_H.toAPIType_def placeNewObject_def2)+
+              toAPIType_def ArchTypes_H.toAPIType_def  split del:split_if)+
             apply (wp threadSet_no_orphans | clarsimp)+
-           apply ((wp createObjects'_wp_subst[where c = "makeObject::Structures_H.tcb"]
+           apply ((wp createObjects'_wp_subst
                   createObjects_no_orphans[where sz = sz] | 
              clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
              is_active_thread_state_def makeObject_tcb
              projectKO_opt_tcb isRunning_def isRestart_def
              APIType_capBits_def objBits_simps split:option.splits)+)[1]
-          apply ((wp createObjects'_wp_subst[where c = "makeObject::Structures_H.endpoint"]
+          apply ((wp createObjects'_wp_subst
                   createObjects_no_orphans[where sz = sz] | 
           clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
           is_active_thread_state_def makeObject_tcb
           projectKO_opt_tcb isRunning_def isRestart_def
           APIType_capBits_def objBits_simps split:option.splits)+)[1]
-         apply ((wp createObjects'_wp_subst[where c = "makeObject::Structures_H.notification"]
+         apply ((wp createObjects'_wp_subst
                   createObjects_no_orphans[where sz = sz] | 
           clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
           is_active_thread_state_def makeObject_tcb
           projectKO_opt_tcb isRunning_def isRestart_def
           APIType_capBits_def objBits_simps split:option.splits)+)[1]
-        apply ((wp createObjects'_wp_subst[where c = "makeObject::cte"]
+        apply ((wp createObjects'_wp_subst
                    createObjects_no_orphans[where sz = sz] | 
          clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
          is_active_thread_state_def makeObject_tcb
          projectKO_opt_tcb isRunning_def isRestart_def
-         APIType_capBits_def objBits_simps split:option.splits)+)[1]
-       apply ((wp createObjects'_wp_subst[where c = "makeObject::user_data"]
+         APIType_capBits_def objBits_simps
+         split:option.splits split del:split_if)+)[1]
+       apply ((wp createObjects'_wp_subst hoare_if
                 createObjects_no_orphans[where sz = sz] | 
-        clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
+        clarsimp simp: placeNewObject_def2
+        projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
         is_active_thread_state_def makeObject_tcb pageBits_def unless_def
         projectKO_opt_tcb isRunning_def isRestart_def
-        APIType_capBits_def objBits_simps split:option.splits)+)[4]
-   apply ((wp createObjects'_wp_subst[where c = "makeObject::pte"]
+        APIType_capBits_def objBits_simps split:option.splits 
+        split del:split_if)+)[4]
+   apply ((wp createObjects'_wp_subst
                createObjects_no_orphans[where sz = sz ] | 
        clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
        is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def
        projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
        APIType_capBits_def objBits_simps split:option.splits)+)[1]
-  apply ((wp createObjects'_wp_subst[where c = "makeObject::pde"]
+  apply ((wp createObjects'_wp_subst
               createObjects_no_orphans[where sz = sz] | 
       clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
       is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def pdBits_def
@@ -2056,8 +2059,7 @@ lemma performASIDControlInvocation_no_orphans [wp]:
      apply (clarsimp simp: no_orphans_def all_active_tcb_ptrs_def
                            is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
     apply (wp | clarsimp simp:placeNewObject_def2)+
-     apply (wp createObjects'_wp_subst[where c = "makeObject::asidpool"])
-      apply simp
+     apply (wp createObjects'_wp_subst)
      apply (wp static_imp_wp updateFreeIndex_pspace_no_overlap'[where sz= pageBits] getSlotCap_wp | simp)+
   apply (strengthen invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace')
   apply (clarsimp simp:conj_comms)
