@@ -2118,12 +2118,18 @@ crunch nosch [wp]: "ARM_H.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
 
 end
 
-lemmas (in Arch) finaliseCap_def = ARM_H.finaliseCap_def (* FIXME: arch_split crunch bug *)
+(* FIXME: arch_split crunch bug *)
+lemmas (in Arch) finaliseCap_def = ARM_H.finaliseCap_def
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
 crunch st_tcb_at' [wp]: "ARM_H.finaliseCap" "st_tcb_at' P t"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
+end
+
+(* FIXME: arch_split crunch bug *)
+shadow_facts (in Arch) finaliseCap_def
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch typ_at' [wp]: "ARM_H.finaliseCap" "\<lambda>s. P (typ_at' T p s)"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)

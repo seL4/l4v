@@ -19,6 +19,8 @@ imports
   PageTableDuplicates
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 text {* User memory content is the same on both levels *}
 
 lemma typ_at_UserDataI:
@@ -360,7 +362,7 @@ lemma ptable_rights_imp_UserData:
   assumes rel: "(s,s') : state_relation"
   assumes rights: "ptable_rights t (absKState s') x \<noteq> {}"
   assumes trans:
-    "ptable_lift t (absKState s') x = Some (Platform.addrFromPPtr y)"
+    "ptable_lift t (absKState s') x = Some (ARM.addrFromPPtr y)"
   shows "pointerInUserData y s'"
 proof -
   from invs invs' rel have [simp]: "absKState s' = s"
@@ -806,5 +808,7 @@ theorem refinement:
    apply (rule ckernel_invariant)
   apply (rule fw_sim_A_H)
   done
+
+end
 
 end

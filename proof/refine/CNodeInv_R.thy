@@ -8320,7 +8320,8 @@ lemma arch_recycleCap_improve_cases': "\<lbrakk>\<not> isPageCap param_b; \<not>
 
 end
 
-lemmas (in Arch) recycleCap_def = ARM_H.recycleCap_def (*FIXME: arch_split crunch bug *)
+(*FIXME: arch_split crunch bug *)
+lemmas (in Arch) recycleCap_def = ARM_H.recycleCap_def
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -9546,10 +9547,18 @@ lemma recycleCap_valid[wp]:
   apply (auto simp: isCap_simps valid_cap'_def capAligned_def objBits_simps)
   done
 
+
 crunch cte_wp_at'[wp]: recycleCap "cte_wp_at' P p"
   (ignore: filterM setObject getObject
      simp: filterM_mapM crunch_simps arch_recycleCap_improve_cases'
        wp: crunch_wps)
+
+end
+
+(*FIXME: arch_split crunch bug *)
+shadow_facts (in Arch) recycleCap_def
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma recycleCap_cases:
   "\<lbrace>\<top>\<rbrace>

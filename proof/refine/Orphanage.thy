@@ -12,6 +12,14 @@ theory Orphanage
 imports Refine
 begin
 
+context Arch begin
+shadow_facts
+  switchToIdleThread_def
+  switchToThread_def
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
    is_active_thread_state :: "thread_state \<Rightarrow> bool"
 where
@@ -542,7 +550,7 @@ lemma switchToIdleThread_no_orphans' [wp]:
              \<longrightarrow> ksCurThread s \<in> all_queued_tcb_ptrs s) \<rbrace>
    switchToIdleThread
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding switchToIdleThread_def setCurThread_def ArchThread_H.switchToIdleThread_def
+  unfolding switchToIdleThread_def setCurThread_def ARM_H.switchToIdleThread_def
   apply (simp add: no_orphans_disj all_queued_tcb_ptrs_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_disj_lift storeWordUser_typ'
        | clarsimp)+
@@ -562,24 +570,25 @@ lemma no_orphans_ksIdle [simp]:
   apply auto
   done
 
-crunch no_orphans [wp]: "ArchThreadDecls_H.switchToThread" "no_orphans"
-(wp: no_orphans_lift ignore: MachineOps.clearExMonitor)
+(* FIXME: arch_split: Should this be ARM_H.switchToThread? *)
+crunch no_orphans [wp]: "Arch.switchToThread" "no_orphans"
+  (wp: no_orphans_lift ignore: MachineOps.clearExMonitor)
 
-crunch ksCurThread [wp]: "ArchThreadDecls_H.switchToThread" "\<lambda> s. P (ksCurThread s)"
+crunch ksCurThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksCurThread s)"
   (ignore: MachineOps.clearExMonitor)
 
-crunch ksIdleThread [wp]: "ArchThreadDecls_H.switchToThread" "\<lambda> s. P (ksIdleThread s)"
+crunch ksIdleThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksIdleThread s)"
   (ignore: MachineOps.clearExMonitor)
 
 lemma ArchThreadDecls_H_switchToThread_all_queued_tcb_ptrs [wp]:
   "\<lbrace> \<lambda>s. P (all_queued_tcb_ptrs s) \<rbrace>
-   ArchThreadDecls_H.switchToThread tcb_ptr
+   Arch.switchToThread tcb_ptr
    \<lbrace> \<lambda>rv s. P (all_queued_tcb_ptrs s) \<rbrace>"
-  unfolding ArchThread_H.switchToThread_def all_queued_tcb_ptrs_def
+  unfolding ARM_H.switchToThread_def all_queued_tcb_ptrs_def
   apply (wp | clarsimp)+
   done
 
-crunch ksSchedulerAction [wp]: "ArchThreadDecls_H.switchToThread" "\<lambda>s. P (ksSchedulerAction s)"
+crunch ksSchedulerAction [wp]: "Arch.switchToThread" "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: MachineOps.clearExMonitor)
 
 lemma setCurThread_no_orphans [wp]:
@@ -772,7 +781,7 @@ lemma setCurThread_ct [wp]:
 
 lemma ThreadDecls_H_switchToThread_ct [wp]:
   "\<lbrace> \<top> \<rbrace>
-   ThreadDecls_H.switchToThread tcb_ptr
+   switchToThread tcb_ptr
    \<lbrace> \<lambda>rv s. ksCurThread s = tcb_ptr \<rbrace>"
   unfolding switchToThread_def
   apply (wp | clarsimp)+
@@ -2282,5 +2291,7 @@ theorem callKernel_no_orphans [wp]:
                   E="\<lambda>y s. invs' s \<and> no_orphans s" in hoare_post_impErr)
     apply (wp hoare_vcg_conj_liftE | clarsimp)+
   done
+
+end
 
 end
