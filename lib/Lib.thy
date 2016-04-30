@@ -15,7 +15,9 @@
 chapter "Library"
 
 theory Lib
-imports "~~/src/HOL/Main"
+imports
+  "~~/src/HOL/Eisbach/Eisbach"
+  "~~/src/HOL/Library/Prefix_Order"
 begin
 
 (* FIXME: eliminate *)
@@ -110,6 +112,21 @@ definition
 
 definition
  "const x \<equiv> \<lambda>y. x"
+
+primrec
+  opt_rel :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> 'a option \<Rightarrow> 'b option \<Rightarrow> bool"
+where
+  "opt_rel f  None    y = (y = None)"
+| "opt_rel f (Some x) y = (\<exists>y'. y = Some y' \<and> f x y')"
+
+
+lemma opt_rel_None_rhs[simp]:
+  "opt_rel f x None = (x = None)"
+  by (cases x, simp_all)
+
+lemma opt_rel_Some_rhs[simp]:
+  "opt_rel f x (Some y) = (\<exists>x'. x = Some x' \<and> f x' y)"
+  by (cases x, simp_all)
 
 lemma tranclD2:
   "(x, y) \<in> R\<^sup>+ \<Longrightarrow> \<exists>z. (x, z) \<in> R\<^sup>* \<and> (z, y) \<in> R"
@@ -1995,5 +2012,311 @@ lemma take_min_len:
   by (simp add: min_def)
 
 lemmas interval_empty = atLeastatMost_empty_iff
+
+lemma fold_and_false[simp]:
+  "\<not>(fold (op \<and>) xs False)"
+  apply clarsimp
+  apply (induct xs)
+   apply simp
+  apply simp
+  done
+
+lemma fold_and_true:
+  "fold (op \<and>) xs True \<Longrightarrow> \<forall>i < length xs. xs ! i"
+  apply clarsimp
+  apply (induct xs)
+   apply simp
+  apply (case_tac "i = 0"; simp)
+   apply (case_tac a; simp)
+  apply (case_tac a; simp)
+  done
+
+lemma fold_or_true[simp]:
+  "fold (op \<or>) xs True"
+  by (induct xs, simp+)
+
+lemma fold_or_false:
+  "\<not>(fold (op \<or>) xs False) \<Longrightarrow> \<forall>i < length xs. \<not>(xs ! i)"
+  apply (induct xs, simp+)
+  apply (case_tac a, simp+)
+  apply (rule allI, case_tac "i = 0", simp+)
+  done
+
+
+
+section \<open> Take, drop, zip, list_all etc rules \<close>
+
+method two_induct for xs ys =
+  ((induct xs arbitrary: ys; simp?), (case_tac ys; simp)?)
+
+lemma map_fst_zip_prefix:
+  "map fst (zip xs ys) \<le> xs"
+  by (two_induct xs ys)
+
+lemma map_snd_zip_prefix:
+  "map snd (zip xs ys) \<le> ys"
+  by (two_induct xs ys)
+
+lemma nth_upt_0 [simp]:
+  "i < length xs \<Longrightarrow> [0..<length xs] ! i = i"
+  by simp
+
+lemma take_insert_nth:
+  "i < length xs\<Longrightarrow> insert (xs ! i) (set (take i xs)) = set (take (Suc i) xs)"
+  by (subst take_Suc_conv_app_nth, assumption, fastforce)
+
+lemma zip_take_drop:
+  "\<lbrakk>n < length xs; length ys = length xs\<rbrakk> \<Longrightarrow>
+    zip xs (take n ys @ a # drop (Suc n) ys) =
+    zip (take n xs) (take n ys) @ (xs ! n, a) #  zip (drop (Suc n) xs) (drop (Suc n) ys)"
+  by (subst id_take_nth_drop, assumption, simp)
+
+lemma take_nth_distinct:
+  "\<lbrakk>distinct xs; n < length xs; xs ! n \<in> set (take n xs)\<rbrakk> \<Longrightarrow> False"
+  by (fastforce simp: distinct_conv_nth in_set_conv_nth)
+
+lemma take_drop_append:
+  "drop a xs = take b (drop a xs) @ drop (a + b) xs"
+  by (metis append_take_drop_id drop_drop add.commute)
+
+lemma drop_take_drop:
+  "drop a (take (b + a) xs) @ drop (b + a) xs = drop a xs"
+  by (metis add.commute take_drop take_drop_append)
+
+lemma not_prefixI:
+  "\<lbrakk> xs \<noteq> ys; length xs = length ys\<rbrakk> \<Longrightarrow> \<not> xs \<le> ys"
+  by (auto elim: prefixE)
+
+lemma map_fst_zip':
+  "length xs \<le> length ys \<Longrightarrow> map fst (zip xs ys) = xs"
+  by (metis length_map length_zip map_fst_zip_prefix min_absorb1 not_prefixI)
+
+lemma zip_take_triv:
+  "n \<ge> length bs \<Longrightarrow> zip (take n as) bs = zip as bs"
+  apply (induct bs arbitrary: n as; simp)
+  apply (case_tac n; simp)
+  apply (case_tac as; simp)
+  done
+
+lemma zip_take_triv2:
+  "length as \<le> n \<Longrightarrow> zip as (take n bs) = zip as bs"
+  apply (induct as arbitrary: n bs; simp)
+  apply (case_tac n; simp)
+  apply (case_tac bs; simp)
+  done
+
+lemma zip_take_length:
+  "zip xs (take (length xs) ys) = zip xs ys"
+  by (metis order_refl zip_take_triv2)
+
+lemma zip_singleton:
+  "ys \<noteq> [] \<Longrightarrow> zip [a] ys = [(a, ys ! 0)]"
+  by (case_tac ys, simp_all)
+
+lemma zip_append_singleton:
+  "\<lbrakk>i = length xs; length xs < length ys\<rbrakk> \<Longrightarrow> zip (xs @ [a]) ys = (zip xs ys) @ [(a,ys ! i)]"
+  by (induct xs; case_tac ys; simp)
+     (clarsimp simp: zip_append1 zip_take_length zip_singleton)
+
+lemma ran_map_of_zip:
+  "\<lbrakk>length xs = length ys; distinct xs\<rbrakk> \<Longrightarrow> ran (map_of (zip xs ys)) = set ys"
+  by (induct rule: list_induct2) auto
+
+lemma ranE:
+  "\<lbrakk> v \<in> ran f; \<And>x. f x = Some v \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  by (auto simp: ran_def)
+
+lemma ran_map_option_restrict_eq:
+  "\<lbrakk> x \<in> ran (map_option f o g); x \<notin> ran (map_option f o (g |` (- {y}))) \<rbrakk>
+        \<Longrightarrow> \<exists>v. g y = Some v \<and> f v = x"
+  apply (clarsimp simp: elim!: ranE)
+  apply (rename_tac w z)
+  apply (case_tac "w = y")
+   apply clarsimp
+  apply (erule notE, rule_tac a=w in ranI)
+  apply (simp add: restrict_map_def)
+  done
+
+lemma map_of_zip_range:
+  "\<lbrakk>length xs = length ys; distinct xs\<rbrakk> \<Longrightarrow> (\<lambda>x. (the (map_of (zip xs ys) x))) ` set xs = set ys"
+  apply (clarsimp simp: image_def)
+  apply (subst ran_map_of_zip [symmetric, where xs=xs and ys=ys]; simp?)
+  apply (clarsimp simp: ran_def)
+  apply (rule equalityI)
+   apply clarsimp
+   apply (rename_tac x)
+   apply (frule_tac x=x in map_of_zip_is_Some; fastforce)
+  apply (clarsimp simp: set_zip)
+  by (metis domI dom_map_of_zip nth_mem ranE ran_map_of_zip option.sel)
+
+lemma map_zip_fst:
+  "length xs = length ys \<Longrightarrow> map (\<lambda>(x, y). f x) (zip xs ys) = map f xs"
+  by (two_induct xs ys)
+
+lemma map_zip_fst':
+  "length xs \<le> length ys \<Longrightarrow> map (\<lambda>(x, y). f x) (zip xs ys) = map f xs"
+  by (metis length_map map_fst_zip' map_zip_fst zip_map_fst_snd)
+
+lemma map_zip_snd:
+  "length xs = length ys \<Longrightarrow> map (\<lambda>(x, y). f y) (zip xs ys) = map f ys"
+  by (two_induct xs ys)
+
+lemma map_zip_snd':
+  "length ys \<le> length xs \<Longrightarrow> map (\<lambda>(x, y). f y) (zip xs ys) = map f ys"
+  by (two_induct xs ys)
+
+lemma map_of_zip_tuple_in:
+  "\<lbrakk>(x, y) \<in> set (zip xs ys); distinct xs\<rbrakk> \<Longrightarrow> map_of (zip xs ys) x = Some y"
+  by (two_induct xs ys) (auto intro: in_set_zipE)
+
+lemma in_set_zip1:
+  "(x, y) \<in> set (zip xs ys) \<Longrightarrow> x \<in> set xs"
+  by (erule in_set_zipE)
+
+lemma in_set_zip2:
+  "(x, y) \<in> set (zip xs ys) \<Longrightarrow> y \<in> set ys"
+  by (erule in_set_zipE)
+
+lemma map_zip_snd_take:
+  "map (\<lambda>(x, y). f y) (zip xs ys) = map f (take (length xs) ys)"
+  apply (subst map_zip_snd' [symmetric, where xs=xs and ys="take (length xs) ys"], simp)
+  apply (subst zip_take_length [symmetric], simp)
+  done
+
+lemma map_of_zip_is_index:
+  "\<lbrakk>length xs = length ys; x \<in> set xs\<rbrakk> \<Longrightarrow> \<exists>i. (map_of (zip xs ys)) x = Some (ys ! i)"
+  apply (induct rule: list_induct2; simp)
+  apply (rule conjI; clarsimp)
+   apply (metis nth_Cons_0)
+  apply (metis nth_Cons_Suc)
+  done
+
+lemma map_of_zip_take_update:
+  "\<lbrakk>i < length xs; length xs \<le> length ys; distinct xs\<rbrakk>
+  \<Longrightarrow> map_of (zip (take i xs) ys)(xs ! i \<mapsto> (ys ! i)) = map_of (zip (take (Suc i) xs) ys)"
+  apply (rule ext, rename_tac x)
+  apply (case_tac "x=xs ! i"; clarsimp)
+   apply (rule map_of_is_SomeI[symmetric])
+    apply (simp add: map_fst_zip')
+   apply (force simp add: set_zip)
+  apply (clarsimp simp: take_Suc_conv_app_nth zip_append_singleton map_add_def split: option.splits)
+  done
+
+(* A weaker version of map_of_zip_is_Some (from HOL). *)
+lemma map_of_zip_is_Some':
+  "length xs \<le> length ys \<Longrightarrow> (x \<in> set xs) = (\<exists>y. map_of (zip xs ys) x = Some y)"
+  apply (subst zip_take_length[symmetric])
+  apply (rule map_of_zip_is_Some)
+  by (metis length_take min_absorb2)
+
+lemma map_of_zip_inj:
+  "\<lbrakk>distinct xs; distinct ys; length xs = length ys\<rbrakk>
+    \<Longrightarrow> inj_on (\<lambda>x. (the (map_of (zip xs ys) x))) (set xs)"
+  apply (clarsimp simp: inj_on_def)
+  apply (subst (asm) map_of_zip_is_Some, assumption)+
+  apply clarsimp
+  apply (clarsimp simp: set_zip)
+  by (metis nth_eq_iff_index_eq)
+
+lemma map_of_zip_inj':
+  "\<lbrakk>distinct xs; distinct ys; length xs \<le> length ys\<rbrakk>
+    \<Longrightarrow> inj_on (\<lambda>x. (the (map_of (zip xs ys) x))) (set xs)"
+  apply (subst zip_take_length[symmetric])
+  apply (erule map_of_zip_inj, simp)
+  by (metis length_take min_absorb2)
+
+lemma list_all_nth:
+  "\<lbrakk>list_all P xs; i < length xs\<rbrakk> \<Longrightarrow> P (xs ! i)"
+  by (metis list_all_length)
+
+lemma list_all_update:
+  "\<lbrakk>list_all P xs; i < length xs; \<And>x. P x \<Longrightarrow> P (f x)\<rbrakk>
+  \<Longrightarrow> list_all P (xs [i := f (xs ! i)])"
+  by (metis length_list_update list_all_length nth_list_update)
+
+lemma list_allI:
+  "\<lbrakk>list_all P xs; \<And>x. P x \<Longrightarrow> P' x\<rbrakk> \<Longrightarrow> list_all P' xs"
+  by (metis list_all_length)
+
+lemma list_all_imp_filter:
+  "list_all (\<lambda>x. f x \<longrightarrow> g x) xs = list_all (\<lambda>x. g x) [x\<leftarrow>xs . f x]"
+  by (fastforce simp: Ball_set_list_all[symmetric])
+
+lemma list_all_imp_filter2:
+  "list_all (\<lambda>x. f x \<longrightarrow> g x) xs = list_all (\<lambda>x. \<not>f x) [x\<leftarrow>xs . (\<lambda>x. \<not>g x) x]"
+  by (fastforce simp: Ball_set_list_all[symmetric])
+
+lemma list_all_imp_chain:
+  "\<lbrakk>list_all (\<lambda>x. f x \<longrightarrow> g x) xs; list_all (\<lambda>x. f' x \<longrightarrow> f x) xs\<rbrakk>
+  \<Longrightarrow>  list_all (\<lambda>x. f' x \<longrightarrow> g x) xs"
+  by (clarsimp simp: Ball_set_list_all [symmetric])
+
+
+
+
+
+lemma inj_Pair:
+  "inj_on (Pair x) S"
+  by (rule inj_onI, simp)
+
+lemma inj_on_split:
+  "inj_on f S \<Longrightarrow> inj_on (\<lambda>x. (z, f x)) S"
+  by (auto simp: inj_on_def)
+
+lemma split_state_strg:
+  "(\<exists>x. f s = x \<and> P x s) \<longrightarrow> P (f s) s" by clarsimp
+
+lemma theD:
+  "\<lbrakk>the (f x) = y;  x \<in> dom f \<rbrakk> \<Longrightarrow> f x = Some y"
+  by (auto simp add: dom_def)
+
+lemma bspec_split:
+  "\<lbrakk> \<forall>(a, b) \<in> S. P a b; (a, b) \<in> S \<rbrakk> \<Longrightarrow> P a b"
+  by fastforce
+
+lemma set_zip_same:
+  "set (zip xs xs) = Id \<inter> (set xs \<times> set xs)"
+  by (induct xs) auto
+
+lemma ball_ran_updI:
+  "(\<forall>x \<in> ran m. P x) \<Longrightarrow> P v \<Longrightarrow> (\<forall>x \<in> ran (m (y \<mapsto> v)). P x)"
+  by (auto simp add: ran_def)
+
+lemma not_psubset_eq:
+  "\<lbrakk> \<not> A \<subset> B; A \<subseteq> B \<rbrakk> \<Longrightarrow> A = B"
+  by blast
+
+
+lemma in_image_op_plus:
+  "(x + y \<in> op + x ` S) = ((y :: 'a :: ring) \<in> S)"
+  by (simp add: image_def)
+
+lemma insert_subtract_new:
+  "x \<notin> S \<Longrightarrow> (insert x S - S) = {x}"
+  by auto
+
+lemma zip_is_empty:
+  "(zip xs ys = []) = (xs = [] \<or> ys = [])"
+  by (cases xs; simp) (cases ys; simp)
+
+lemma minus_Suc_0_lt:
+  "a \<noteq> 0 \<Longrightarrow> a - Suc 0 < a"
+  by simp
+
+lemma fst_last_zip_upt:
+  "zip [0 ..< m] xs \<noteq> [] \<Longrightarrow>
+   fst (last (zip [0 ..< m] xs)) = (if length xs < m then length xs - 1 else m - 1)"
+  apply (subst last_conv_nth, assumption)
+  apply (simp only: One_nat_def)
+  apply (subst nth_zip)
+    apply (rule order_less_le_trans[OF minus_Suc_0_lt])
+     apply (simp add: zip_is_empty)
+    apply simp
+   apply (rule order_less_le_trans[OF minus_Suc_0_lt])
+    apply (simp add: zip_is_empty)
+   apply simp
+  apply (simp add: min_def zip_is_empty)
+  done
+
 
 end

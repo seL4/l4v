@@ -11,7 +11,7 @@
 theory Word_Lemmas
 imports
   Aligned
-  Distinct_Prop_Lemmas
+  Distinct_Prop
   Word_Enum
 begin
 
@@ -2331,8 +2331,7 @@ lemma word_le_make_less:
   apply (simp add: eq_diff_eq[symmetric])
   done
 
-lemma finite_word: "finite (S :: 'a :: len word set)"
-  by (rule finite)
+lemmas finite_word = finite [where 'a="'a::len word"]
 
 lemma word_to_1_set:
   "{0 ..< (1 :: 'a :: len word)} = {0}"
@@ -2340,7 +2339,7 @@ lemma word_to_1_set:
                                                                                                    
 lemma range_subset_eq2:
   "{a :: 'a :: len word .. b} \<noteq> {} \<Longrightarrow> ({a .. b} \<subseteq> {c .. d}) = (c \<le> a \<and> b \<le> d)"
-  by (simp add: atLeastatMost_empty_iff)
+  by simp
 
 lemma word_count_from_top:
   "n \<noteq> 0 \<Longrightarrow> {0 ..< n :: 'a :: len word} = {0 ..< n - 1} \<union> {n - 1}"
@@ -3294,15 +3293,13 @@ lemma signed_arith_sint:
     \<Longrightarrow> sint (a sdiv b) = (sint a sdiv sint b)"
   "((- (2 ^ (size a - 1)) \<le> (sint a smod sint b)) \<and> (sint a smod sint b \<le> (2 ^ (size a - 1) - 1)))
     \<Longrightarrow> sint (a smod b) = (sint a smod sint b)"
-  by (metis signed_arith_ineq_checks_to_eq)+
+  by (subst (asm) signed_arith_ineq_checks_to_eq; simp)+
 
 lemma signed_mult_eq_checks_double_size:
-  assumes mult_le: "(2 ^ (len_of TYPE ('a) - 1) + 1) ^ 2
-       \<le> (2 :: int) ^ (len_of TYPE ('b) - 1)"
-    and le: "2 ^ (len_of TYPE('a) - 1) \<le> (2 :: int) ^ (len_of TYPE ('b) - 1)"
-  shows
-  "(sint (a :: 'a :: len word) * sint b = sint (a * b))
-    = (scast a * scast b = (scast (a * b) :: 'b :: len word))"
+  assumes mult_le: "(2 ^ (len_of TYPE ('a) - 1) + 1) ^ 2 \<le> (2 :: int) ^ (len_of TYPE ('b) - 1)"
+           and le: "2 ^ (len_of TYPE('a) - 1) \<le> (2 :: int) ^ (len_of TYPE ('b) - 1)"
+  shows "(sint (a :: 'a :: len word) * sint b = sint (a * b))
+       = (scast a * scast b = (scast (a * b) :: 'b :: len word))"
 proof -
   have P: "sbintrunc (size a - 1) (sint a * sint b) \<in> range (sbintrunc (size a - 1))"
     by simp
@@ -3319,8 +3316,7 @@ proof -
     apply (simp add: sint_word_ariths scast_def)
     apply (simp add: wi_hom_mult)
     apply (subst word_sint.Abs_inject, simp_all)
-     apply (simp add: sints_def range_sbintrunc
-                      abs_less_iff)
+     apply (simp add: sints_def range_sbintrunc abs_less_iff)
     apply clarsimp
     apply (simp add: sints_def range_sbintrunc word_size)
     apply (auto elim: order_less_le_trans order_trans[rotated])
@@ -4923,6 +4919,10 @@ lemma word_power_nonzero:
    apply simp
   apply simp
   done
+
+lemma less_1_helper:
+  "n \<le> m \<Longrightarrow> (n - 1 :: int) < m"
+  by arith
 
 lemma div_power_helper:
   "\<lbrakk> x \<le> y; y < len_of TYPE('a) \<rbrakk> \<Longrightarrow> (2 ^ y - 1) div (2 ^ x :: 'a::len word) = 2 ^ (y - x) - 1"

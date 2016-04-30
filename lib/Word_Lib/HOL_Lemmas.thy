@@ -98,21 +98,6 @@ lemma insert_sub:
   "x \<in> xs \<Longrightarrow> (insert x (xs - ys)) = (xs - (ys - {x}))"
   by blast
 
-lemma ranE:
-  "\<lbrakk> v \<in> ran f; \<And>x. f x = Some v \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
-  by (auto simp: ran_def)
-
-lemma ran_map_option_restrict_eq:
-  "\<lbrakk> x \<in> ran (map_option f o g); x \<notin> ran (map_option f o (g |` (- {y}))) \<rbrakk>
-        \<Longrightarrow> \<exists>v. g y = Some v \<and> f v = x"
-  apply (clarsimp simp: elim!: ranE)
-  apply (rename_tac w z)
-  apply (case_tac "w = y")
-   apply clarsimp
-  apply (erule notE, rule_tac a=w in ranI)
-  apply (simp add: restrict_map_def)
-  done
-
 lemma ran_upd:
   "\<lbrakk> inj_on f (dom f); f y = Some z \<rbrakk> \<Longrightarrow> ran (\<lambda>x. if x = y then None else f x) = ran f - {z}"
   unfolding ran_def
@@ -139,24 +124,6 @@ lemma nat_le_power_trans:
   by (metis le_imp_less_or_eq less_imp_le nat_less_power_trans power_sub split_div_lemma
             zero_less_numeral zero_less_power)
   
-lemma zip_take_triv:
-  "n \<ge> length bs \<Longrightarrow> zip (take n as) bs = zip as bs"
-  apply (induct bs arbitrary: n as; simp)
-  apply (case_tac n; simp)
-  apply (case_tac as; simp)
-  done
-
-lemma zip_take_triv2:
-  "length as \<le> n \<Longrightarrow> zip as (take n bs) = zip as bs"
-  apply (induct as arbitrary: n bs; simp)
-  apply (case_tac n; simp)
-  apply (case_tac bs; simp)
-  done
-
-lemma zip_is_empty:
-  "(zip xs ys = []) = (xs = [] \<or> ys = [])"
-  by (cases xs; simp) (cases ys; simp)
-
 lemma x_power_minus_1:
   fixes x :: "'a :: {ab_group_add, power, numeral, one}"
   shows "x + (2::'a) ^ n - (1::'a) = x + (2 ^ n - 1)" by simp
@@ -203,10 +170,6 @@ lemma drop_Suc_nth:
   "n < length xs \<Longrightarrow> drop n xs = xs!n # drop (Suc n) xs"
   by (simp add: Cons_nth_drop_Suc)
 
-lemma minus_Suc_0_lt:
-  "a \<noteq> 0 \<Longrightarrow> a - Suc 0 < a"
-  by simp
-
 lemma n_less_equal_power_2 [simp]:
   "n < 2 ^ n"
   by (induct n; simp)
@@ -215,5 +178,13 @@ lemma nat_min_simps [simp]:
   "(a::nat) \<le> b \<Longrightarrow> min b a = a"
   "a \<le> b \<Longrightarrow> min a b = a"
   by auto
+
+lemma power_sub_int:
+  "\<lbrakk> m \<le> n; 0 < b \<rbrakk> \<Longrightarrow> b ^ n div b ^ m = (b ^ (n - m) :: int)"
+  apply (subgoal_tac "\<exists>n'. n = m + n'")
+   apply (clarsimp simp: power_add)
+  apply (rule exI[where x="n - m"])
+  apply simp
+  done
 
 end
