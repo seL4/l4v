@@ -308,12 +308,8 @@ lemma data_to_obj_type_sp:
   apply clarsimp
   apply (simp add: arch_data_to_obj_type_def split: split_if_asm)
   done
-end
-lemma alignUp_def2:
-  "alignUp a sz = a + 2 ^ sz - 1 && ~~ mask sz"
-   unfolding alignUp_def[unfolded complement_def]
-   by (simp add:mask_def[symmetric,unfolded shiftl_t2n,simplified])
 
+end
 
 lemma is_aligned_triv2:
   "is_aligned (2^a) a"
@@ -322,85 +318,6 @@ lemma is_aligned_triv2:
    done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-lemma alignUp_def3:
-  "alignUp a sz = 2^ sz + (a - 1 && ~~ mask sz)" (is "?lhs = ?rhs")
-   apply (simp add:alignUp_def2)
-   apply (subgoal_tac "2 ^ sz + a - 1 && ~~ mask sz = ?rhs")
-    apply (clarsimp simp:field_simps)
-   apply (subst mask_out_add_aligned)
-   apply (rule is_aligned_triv2)
-   apply (simp add:field_simps)
-   done
-
-
-lemma  alignUp_plus:
-  "is_aligned w us \<Longrightarrow> alignUp (w + a) us  = w + alignUp a us"
-  apply (clarsimp simp:alignUp_def2 add.assoc)
-  apply (simp add: mask_out_add_aligned field_simps)
-  done
-
-
-lemma alignUp_distance:
-  "(alignUp (q :: 'a :: len word) sz) - q \<le> mask sz"
-  apply (case_tac "len_of TYPE('a) \<le> sz")
-   apply (simp add:alignUp_def2 mask_def power_overflow)
-  apply (case_tac "is_aligned q sz")
-  apply (clarsimp simp:alignUp_def2 p_assoc_help)
-   apply (subst mask_out_add_aligned[symmetric],simp)+
-   apply (simp add:mask_lower_twice word_and_le2)
-   apply (simp add:and_not_mask)
-   apply (subst le_mask_iff[THEN iffD1])
-    apply (simp add:mask_def)
-   apply simp
-  apply (clarsimp simp:alignUp_def3)
-  apply (subgoal_tac "2 ^ sz - (q - (q - 1 && ~~ mask sz)) \<le> 2 ^ sz - 1")
-   apply (simp add:field_simps mask_def)
-  apply (rule word_sub_mono)
-   apply simp
-   apply (rule ccontr)
-   apply (clarsimp simp:not_le)
-   apply (drule eq_refl)
-   apply (drule order_trans[OF _ word_and_le2])
-   apply (subgoal_tac "q \<noteq>  0")
-    apply (drule minus_one_helper[rotated])
-     apply simp
-    apply simp
-   apply (fastforce)
-  apply (simp add: word_sub_le_iff)
-  apply (subgoal_tac "q - 1 && ~~ mask sz = (q - 1) - (q - 1 && mask sz)")
-   apply simp
-   apply (rule order_trans)
-    apply (rule word_add_le_mono2)
-     apply (rule word_and_le1)
-    apply (subst unat_plus_simple[THEN iffD1,symmetric])
-     apply (simp add:not_le mask_def)
-     apply (rule word_sub_1_le)
-     apply simp
-    apply (rule unat_lt2p)
-   apply (simp add:mask_def)
-  apply (simp add:mask_out_sub_mask)
-  apply (rule word_sub_1_le)
-  apply simp
-  done
-
-
-lemma is_aligned_diff_neg_mask:
-  "is_aligned p sz \<Longrightarrow> (p - q && ~~ mask sz) = (p - ((alignUp q sz) && ~~ mask sz))"
-  apply (clarsimp simp only:word_and_le2 diff_conv_add_uminus)
-  apply (subst mask_out_add_aligned[symmetric])
-   apply simp+
-  apply (rule sum_to_zero)
-  apply (subst add.commute)
-  apply (subst  mask_out_add_aligned)
-   apply (simp add:is_aligned_neg_mask)
-  apply simp
-  apply (subst and_not_mask[where w = "(alignUp q sz && ~~ mask sz) - q "])
-  apply (subst le_mask_iff[THEN iffD1])
-   apply (simp add:is_aligned_neg_mask_eq)
-   apply (rule alignUp_distance)
-  apply simp
-done
-end
 
 lemma strengthen_imp_ex2: "(P \<longrightarrow> Q x y) \<Longrightarrow> (P \<longrightarrow> (\<exists>x y. Q x y))"
  by auto

@@ -5327,6 +5327,150 @@ proof
   qed
 qed
 
+lemma alignUp_def2:
+  "alignUp a sz = a + 2 ^ sz - 1 && ~~ mask sz"
+   unfolding alignUp_def[unfolded complement_def]
+   by (simp add:mask_def[symmetric,unfolded shiftl_t2n,simplified])
+
+
+lemma mask_out_first_mask_some:
+  "\<lbrakk> x && ~~ mask n = y; n \<le> m \<rbrakk> \<Longrightarrow> x && ~~ mask m = y && ~~ mask m"
+  apply (rule word_eqI, rename_tac n')
+  apply (drule_tac x=n' in word_eqD)
+  apply (auto simp: word_ops_nth_size word_size)
+  done
+
+lemma gap_between_aligned:
+  "\<lbrakk>a < (b :: 'a ::len word); is_aligned a n; is_aligned b n; n < len_of TYPE('a) \<rbrakk>
+  \<Longrightarrow> a + (2^n - 1) < b"
+  apply (rule ccontr,simp add:not_less)
+  apply (drule le_shiftr[where n = n])
+  apply (simp add: aligned_shift')
+  apply (case_tac "b >> n = a >> n")
+   apply (drule arg_cong[where f = "\<lambda>x. x<<n"])
+   apply (drule le_shiftr')
+    apply (clarsimp simp:is_aligned_shiftr_shiftl)
+   apply fastforce
+  apply (drule(1) le_shiftr')
+  apply simp
+  done
+  
+lemma mask_out_add_aligned:
+  assumes al: "is_aligned p n"
+  shows "p + (q && ~~ mask n) = (p + q) && ~~ mask n"
+  using mask_add_aligned [OF al]
+  by (simp add: mask_out_sub_mask)
+
+lemma alignUp_def3:
+  "alignUp a sz = 2^ sz + (a - 1 && ~~ mask sz)" (is "?lhs = ?rhs")
+  apply (simp add:alignUp_def2)
+  apply (subgoal_tac "2 ^ sz + a - 1 && ~~ mask sz = ?rhs")
+   apply (clarsimp simp:field_simps)
+  apply (subst mask_out_add_aligned)
+   apply (rule is_aligned_triv)
+  apply (simp add:field_simps)
+  done
+
+lemma  alignUp_plus:
+  "is_aligned w us \<Longrightarrow> alignUp (w + a) us  = w + alignUp a us"
+  apply (clarsimp simp:alignUp_def2 add.assoc)
+  apply (simp add: mask_out_add_aligned field_simps)
+  done
+
+lemma mask_lower_twice:
+  "n \<le> m \<Longrightarrow> (x && ~~ mask n) && ~~ mask m = x && ~~ mask m"
+  apply (rule word_eqI)
+  apply (simp add: word_size word_ops_nth_size)
+  apply safe
+  apply simp
+  done
+
+lemma mask_lower_twice2:
+  "(a && ~~ mask n) && ~~ mask m = a && ~~ mask (max n m)"
+  by (rule word_eqI, simp add: neg_mask_bang conj_comms)
+
+lemma ucast_and_neg_mask:
+  "ucast (x && ~~ mask n) = ucast x && ~~ mask n"
+  apply (rule word_eqI)
+  apply (simp add: word_size neg_mask_bang nth_ucast)
+  apply (auto simp add: test_bit_bl word_size)
+  done
+
+lemma ucast_and_mask:
+  "ucast (x && mask n) = ucast x && mask n"
+  apply (rule word_eqI)
+  apply (simp add: nth_ucast)
+  apply (auto simp add: test_bit_bl word_size)
+  done
+
+lemma ucast_mask_drop:
+  "len_of TYPE('a :: len) \<le> n \<Longrightarrow> (ucast (x && mask n) :: 'a word) = ucast x"
+  apply (rule word_eqI)
+  apply (simp add: nth_ucast word_size)
+  apply safe
+  apply (simp add: test_bit_bl word_size)
+  done
+
+lemma alignUp_distance:
+  "alignUp (q :: 'a :: len word) sz - q \<le> mask sz"
+  apply (case_tac "len_of TYPE('a) \<le> sz")
+   apply (simp add:alignUp_def2 mask_def power_overflow)
+  apply (case_tac "is_aligned q sz")
+   apply (clarsimp simp:alignUp_def2 p_assoc_help)
+   apply (subst mask_out_add_aligned[symmetric],simp)+
+   apply (simp add:mask_lower_twice word_and_le2)
+   apply (simp add:and_not_mask)
+   apply (subst le_mask_iff[THEN iffD1])
+    apply (simp add:mask_def)
+   apply simp
+  apply (clarsimp simp:alignUp_def3)
+  apply (subgoal_tac "2 ^ sz - (q - (q - 1 && ~~ mask sz)) \<le> 2 ^ sz - 1")
+   apply (simp add:field_simps mask_def)
+  apply (rule word_sub_mono)
+     apply simp
+    apply (rule ccontr)
+    apply (clarsimp simp:not_le)
+    apply (drule eq_refl)
+    apply (drule order_trans[OF _ word_and_le2])
+    apply (subgoal_tac "q \<noteq>  0")
+     apply (drule minus_one_helper[rotated])
+      apply simp
+     apply simp
+    apply (fastforce)
+   apply (simp add: word_sub_le_iff)
+   apply (subgoal_tac "q - 1 && ~~ mask sz = (q - 1) - (q - 1 && mask sz)")
+    apply simp
+    apply (rule order_trans)
+     apply (rule word_add_le_mono2)
+      apply (rule word_and_le1)
+     apply (subst unat_plus_simple[THEN iffD1,symmetric])
+      apply (simp add:not_le mask_def)
+      apply (rule word_sub_1_le)
+      apply simp
+     apply (rule unat_lt2p)
+    apply (simp add:mask_def)
+   apply (simp add:mask_out_sub_mask)
+  apply (rule word_sub_1_le)
+  apply simp
+  done
+
+lemma is_aligned_diff_neg_mask:
+  "is_aligned p sz \<Longrightarrow> (p - q && ~~ mask sz) = (p - ((alignUp q sz) && ~~ mask sz))"
+  apply (clarsimp simp only:word_and_le2 diff_conv_add_uminus)
+  apply (subst mask_out_add_aligned[symmetric])
+   apply simp+
+  apply (rule sum_to_zero)
+  apply (subst add.commute)
+  apply (subst  mask_out_add_aligned)
+   apply (simp add:is_aligned_neg_mask)
+  apply simp
+  apply (subst and_not_mask[where w = "(alignUp q sz && ~~ mask sz) - q "])
+  apply (subst le_mask_iff[THEN iffD1])
+   apply (simp add:is_aligned_neg_mask_eq)
+   apply (rule alignUp_distance)
+  apply simp
+  done
+
 lemma map_bits_rev_to_bl:
   "map (op !! x) [0..<size x] = rev (to_bl x)"
   by (auto simp: list_eq_iff_nth_eq test_bit_bl word_size)

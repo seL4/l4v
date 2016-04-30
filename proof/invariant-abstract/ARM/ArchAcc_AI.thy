@@ -2555,30 +2555,6 @@ lemma vptr_shifting_helper_magic:
   done
 
 
-lemma mask_out_first_mask_some:
-  "\<lbrakk> x && ~~ mask n = y; n \<le> m \<rbrakk> \<Longrightarrow> x && ~~ mask m = y && ~~ mask m"
-  apply (rule word_eqI, drule_tac x=na in word_eqD)
-  apply (simp add: word_ops_nth_size word_size)
-  apply auto
-  done
-
-
-lemma gap_between_aligned:
-  "\<lbrakk>a < (b :: ('a ::len word)); is_aligned a n; 
-  is_aligned b n;n < len_of TYPE('a) \<rbrakk> \<Longrightarrow> a + (2^ n - 1) < b"
-  apply (rule ccontr,simp add:not_less)
-  apply (drule le_shiftr[where n = n])
-  apply (simp add: aligned_shift')
-  apply (case_tac "b >> n = a >> n")
-   apply (drule arg_cong[where f = "%x. x<<n"])
-  apply (drule le_shiftr')
-   apply (clarsimp simp:is_aligned_shiftr_shiftl)
-   apply fastforce
-  apply (drule(1) le_shiftr')
-  apply simp
-  done
-  
-
 lemma less_kernel_base_mapping_slots_both:
   "\<lbrakk> vptr < kernel_base; is_aligned pd pd_bits;
           (x = 0)
@@ -2615,12 +2591,6 @@ done
 lemmas less_kernel_base_mapping_slots
     = less_kernel_base_mapping_slots_both[where x=0, simplified]
 
-
-lemma mask_out_add_aligned:
-  assumes al: "is_aligned p n"
-  shows "p + (q && ~~ mask n) = (p + q) && ~~ mask n"
-  using mask_add_aligned [OF al]
-  by (simp add: mask_out_sub_mask)
 
 lemma is_aligned_lookup_pd_slot:
   "\<lbrakk>is_aligned vptr 24; is_aligned pd 6\<rbrakk>

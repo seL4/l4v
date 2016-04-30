@@ -46,38 +46,10 @@ lemmas cap_irq_opt_simps[simp] =
 lemmas cap_irqs_simps[simp] =
     cap_irqs_def [unfolded cap_irq_opt_def, split_simps cap.split sum.split, simplified option.simps]
 
-(* FIXME: move *)
-lemma mask_lower_twice:
-  "n \<le> m \<Longrightarrow> (x && ~~ mask n) && ~~ mask m = x && ~~ mask m"
-  apply (rule word_eqI)
-  apply (simp add: word_size word_ops_nth_size)
-  apply safe
-  apply simp
-  done
-
-(* FIXME: move *)
-lemma mask_lower_twice2:
-  "(a && ~~ mask n) && ~~ mask m = a && ~~ mask (max n m)"
-  by (rule word_eqI, simp add: neg_mask_bang conj_comms)
 
 lemma all_eq_trans: "\<lbrakk> \<forall>x. P x = Q x; \<forall>x. Q x = R x \<rbrakk> \<Longrightarrow> \<forall>x. P x = R x"
   by simp
 
-(* FIXME: move *)
-lemma ucast_and_neg_mask:
-  "ucast (x && ~~ mask n) = ucast x && ~~ mask n"
-  apply (rule word_eqI)
-  apply (simp add: word_size neg_mask_bang nth_ucast)
-  apply (auto simp add: test_bit_bl word_size)
-  done
-
-(* FIXME: move *)
-lemma ucast_and_mask:
-  "ucast (x && mask n) = ucast x && mask n"
-  apply (rule word_eqI)
-  apply (simp add: nth_ucast)
-  apply (auto simp add: test_bit_bl word_size)
-  done
 
 lemma mask_out_8_le_kernel_base:
   "(x && ~~ mask 8 \<ge> kernel_base >> 20) = (x \<ge> kernel_base >> 20)"
@@ -91,15 +63,6 @@ lemma mask_out_8_less_kernel_base:
   "(x && ~~ mask 8 < kernel_base >> 20) = (x < kernel_base >> 20)"
   using mask_out_8_le_kernel_base[where x=x]
   by (simp add: linorder_not_less[symmetric])
-
-(* FIXME: move *)
-lemma ucast_mask_drop:
-  "len_of TYPE('a :: len) \<le> n \<Longrightarrow> (ucast (x && mask n) :: 'a word) = ucast x"
-  apply (rule word_eqI)
-  apply (simp add: nth_ucast word_size)
-  apply safe
-  apply (simp add: test_bit_bl word_size)
-  done
 
 declare liftE_wp[wp]
 declare case_sum_True[simp]
