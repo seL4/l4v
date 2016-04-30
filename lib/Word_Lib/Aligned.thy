@@ -56,7 +56,7 @@ lemma unat_power_lower [simp]:
 
 lemma power_overflow:
   "n \<ge> len_of TYPE('a) \<Longrightarrow> 2 ^ n = (0 :: 'a::len word)"
-  by (simp add: p2_eq_0)
+  by simp
 
 lemma is_alignedI [intro?]:
   fixes x::"'a::len word"
@@ -529,22 +529,16 @@ proof cases
   apply (rule word_bl.Rep_eqD)
   apply (subst xor_2p_to_bl)
   apply simp
-  apply (subst is_aligned_add_conv, simp,
-         simp add: word_less_nat_alt)+
+  apply (subst is_aligned_add_conv, simp, simp add: word_less_nat_alt)+
   apply (simp add: to_bl_2p nth_append)
   apply (cases "n' = Suc n")
    apply simp
-   apply (subst is_aligned_replicate [where n="Suc n", 
-                                      simplified, symmetric])
-     apply assumption
-    apply simp
-   apply (rule refl)
+   apply (subst is_aligned_replicate [where n="Suc n", simplified, symmetric]; simp)
   apply (subgoal_tac "\<not> len_of TYPE('a) - Suc n \<le> len_of TYPE('a) - n'")
    prefer 2
    apply arith
   apply (subst replicate_Suc [symmetric])
   apply (subst replicate_add [symmetric])
-  apply simp
   apply (simp add: is_aligned_replicate [simplified, symmetric])
   done
 next

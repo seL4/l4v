@@ -2340,7 +2340,7 @@ lemma word_to_1_set:
                                                                                                    
 lemma range_subset_eq2:
   "{a :: 'a :: len word .. b} \<noteq> {} \<Longrightarrow> ({a .. b} \<subseteq> {c .. d}) = (c \<le> a \<and> b \<le> d)"
-  by (simp add: interval_empty)
+  by (simp add: atLeastatMost_empty_iff)
 
 lemma word_count_from_top:
   "n \<noteq> 0 \<Longrightarrow> {0 ..< n :: 'a :: len word} = {0 ..< n - 1} \<union> {n - 1}"

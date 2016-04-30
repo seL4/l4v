@@ -3044,7 +3044,7 @@ lemma ccorres_sequenceE_while':
   done
 
 lemma lookupExtraCaps_ccorres:
-  notes if_cong[cong] min_simps [simp del]
+  notes if_cong[cong] nat_min_simps [simp del]
   shows
   "ccorres
      ((\<lambda>ft _ err.

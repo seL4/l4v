@@ -1397,7 +1397,7 @@ lemma create_objects_sep:
      apply (fastforce simp: list_all_iff unat_less_2_si_cnode_size')
     apply (clarsimp simp: length_real_object_at_card)
    apply (rule_tac x=untyped_caps in exI)
-   apply (clarsimp simp: zip_map comp_tuple sep_conj_assoc)
+   apply (clarsimp simp: zip_map1 comp_tuple sep_conj_assoc)
    apply (subst comp_apply)+
    apply (subst sep_list_conj_sep_map_set_conj, simp add: distinct_zipI1)
    apply (subst sep_list_conj_sep_map_set_conj, simp add: distinct_zipI1)
@@ -1409,7 +1409,7 @@ lemma create_objects_sep:
   apply (rule_tac x=untyped_capsa in exI)
   apply (rule_tac x=all_available_ids in exI)
   apply (subst (asm) sep_list_conj_sep_map_set_conj [where xs="[obj\<leftarrow>obj_ids . real_object_at obj spec]"], simp)+
-  apply (clarsimp simp: zip_map drop_map comp_def split_beta')
+  apply (clarsimp simp: zip_map1 drop_map comp_def split_beta')
   apply (subst (asm) sep_list_conj_sep_map_set_conj, simp add: distinct_zipI1)+
   apply sep_solve
   done

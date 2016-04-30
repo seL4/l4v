@@ -2071,7 +2071,7 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
   done
 
 lemma fastpath_copy_mrs_ccorres:
-notes min_simps [simp del]
+notes nat_min_simps [simp del]
 shows
   "ccorres dc xfdc (\<top> and (\<lambda>_. ln <= length ARM_H.msgRegisters))
      (UNIV \<inter> {s. unat (length___unsigned_long_' s) = ln}
@@ -5327,7 +5327,7 @@ lemma fastpath_callKernel_SysCall_corres:
                                   cong: if_cong)
                   apply (drule obj_at_ko_at', clarsimp)
                   apply (frule get_tcb_state_regs_ko_at')
-                  apply (clarsimp simp: zip_map2 zip_same foldl_map
+                  apply (clarsimp simp: zip_map2 zip_same_conv_map foldl_map
                                         foldl_fun_upd
                                         foldr_copy_register_tsrs
                                         isRight_case_sum
@@ -6257,7 +6257,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                       cong: if_cong)
                       apply (drule obj_at_ko_at', clarsimp)
                       apply (frule get_tcb_state_regs_ko_at')
-                      apply (clarsimp simp: zip_map2 zip_same foldl_map
+                      apply (clarsimp simp: zip_map2 zip_same_conv_map foldl_map
                                             foldl_fun_upd
                                             foldr_copy_register_tsrs
                                             isRight_case_sum

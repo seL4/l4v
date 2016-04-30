@@ -682,7 +682,7 @@ lemma clearMemory_unused_corres_noop:
         apply (simp add:mask_in_range)
        apply wp
       apply (simp | wp hoare_vcg_ball_lift)+
-     apply (simp add:zip_same)
+     apply (simp add:zip_same_conv_map)
      apply (rule conjI)
       apply clarsimp
      apply (clarsimp simp: word_size_def)
@@ -724,7 +724,7 @@ lemma dcorres_create_word_objects:
          apply simp
         apply wp
        apply (wp hoare_vcg_ball_lift | simp)+
-      apply (clarsimp simp:zip_same retype_addrs_def ptr_add_def image_def shiftl_t2n)
+      apply (clarsimp simp:zip_same_conv_map retype_addrs_def ptr_add_def image_def shiftl_t2n)
       apply (rule_tac x = "unat x" in bexI)
        apply simp
       apply clarsimp
@@ -1438,7 +1438,7 @@ lemma invoke_untyped_corres:
               apply (rule corres_split[OF _ retype_region_dcorres[where sz = sz]])
                 apply (rule corres_split_noop_rhs[OF _ init_arch_objects_corres_noop[where sz =sz]])
                     apply (simp add: liftM_def[symmetric] mapM_x_def[symmetric]
-                             zip_map zip_map2 o_def split_beta dc_def[symmetric])
+                             zip_map1 zip_map2 o_def split_beta dc_def[symmetric])
                     apply (rule create_caps_loop_dcorres)
                    apply clarsimp
                    apply (erule retype_addrs_aligned[OF _ range_cover.aligned _ le_refl])
@@ -1555,7 +1555,7 @@ lemma invoke_untyped_corres:
          apply (rule corres_split[OF _ retype_region_dcorres[where sz = sz]])
            apply (rule corres_split_noop_rhs[OF _ init_arch_objects_corres_noop[where sz =sz]])
                apply (simp add: liftM_def[symmetric] mapM_x_def[symmetric]
-                             zip_map zip_map2 o_def split_beta dc_def[symmetric])
+                             zip_map1 zip_map2 o_def split_beta dc_def[symmetric])
                apply (rule create_caps_loop_dcorres)
               apply clarsimp
               apply (erule retype_addrs_aligned[OF _ range_cover.aligned _ le_refl])

@@ -1601,7 +1601,7 @@ lemma asUser_valid_ipc_buffer_ptr':
 
 lemma invokeTCB_ReadRegisters_ccorres:
 notes
-  min_simps [simp del]
+  nat_min_simps [simp del]
   wordSize_def' [simp]
 shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
