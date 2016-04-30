@@ -12,7 +12,7 @@ theory ArchInterruptDecls_H
 imports "../RetypeDecls_H" "../CNode_H" 
 begin
 
-context Arch begin
+context Arch begin global_naming ARM_H
 
 consts'
 decodeIRQControlInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> capability list \<Rightarrow> ( syscall_error , irqcontrol_invocation ) kernel_f"

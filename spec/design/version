@@ -1,5 +1,5 @@
 Built from git repo at /home/matthewb/verification/arch_split/seL4/haskell by matthewb
 
 Generated from changeset:
-dd5d5d7 [boot] A trivial patch that checks `mod_count` before using it.
+128abb8 Merge pull request #162 in SEL4/sel4 from ~HALMATARY/sel4:master to master
 

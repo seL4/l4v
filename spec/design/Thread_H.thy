@@ -19,8 +19,23 @@ imports
   Config_H
 begin
 
-unqualify_consts (in Arch)
+context Arch begin
+
+requalify_consts
+  activateIdleThread
+  configureIdleThread
+  switchToIdleThread
+  switchToThread
+
+shadow_consts
+  configureIdleThread
+  switchToIdleThread
+  switchToThread
+
+unqualify_consts
   capRegister
+
+end
 
 defs configureIdleThread_def:
 "configureIdleThread tcb\<equiv> (doE

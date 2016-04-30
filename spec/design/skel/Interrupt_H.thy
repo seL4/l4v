@@ -18,13 +18,26 @@ imports
   InterruptDecls_H
 begin
 
-unqualify_consts (in Arch)
+context Arch begin
+
+requalify_consts
+  checkIRQ
+  decodeIRQControlInvocation
+  performIRQControl
+
+shadow_consts
+  decodeIRQControlInvocation
+  performIRQControl
+
+unqualify_consts
   maxIRQ
   minIRQ
   maskInterrupt
   ackInterrupt
   resetTimer
   debugPrint
+
+end
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs
 #INCLUDE_HASKELL SEL4/Object/Interrupt.lhs bodies_only

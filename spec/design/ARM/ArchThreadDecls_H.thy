@@ -20,7 +20,8 @@ imports
   "../FaultMonad_H"
   "../KernelInitMonad_H"
 begin
-context Arch begin
+
+context Arch begin global_naming ARM_H
 
 consts'
 switchToThread :: "machine_word \<Rightarrow> unit kernel"

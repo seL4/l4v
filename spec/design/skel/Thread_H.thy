@@ -19,8 +19,23 @@ imports
   Config_H
 begin
 
-unqualify_consts (in Arch)
+context Arch begin
+
+requalify_consts
+  activateIdleThread
+  configureIdleThread
+  switchToIdleThread
+  switchToThread
+
+shadow_consts
+  configureIdleThread
+  switchToIdleThread
+  switchToThread
+
+unqualify_consts
   capRegister
+
+end
 
 #INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=Arch bodies_only NOT doNormalTransfer doIPCTransfer doReplyTransfer doNormalTransfer transferCaps transferCapsToSlots
 

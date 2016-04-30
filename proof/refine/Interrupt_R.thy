@@ -16,16 +16,17 @@ theory Interrupt_R
 imports Ipc_R Invocations_R
 begin
 
-(*FIXME: arch_split*)
 context Arch begin
 
+(*FIXME: arch_split: move up *)
+requalify_types
+  irqcontrol_invocation
+
+(*FIXME: arch_split: move up *)
 shadow_types
   irqcontrol_invocation
 
-shadow_consts
-  decodeIRQControlInvocation
-  performIRQControl
-
+(*FIXME: arch_split*)
 shadow_facts
   decodeIRQControlInvocation_def
   performIRQControl_def
@@ -41,7 +42,7 @@ where
        (\<exists>cap'. x = SetIRQHandler irq cap' (cte_map ptr) \<and> cap_relation cap cap')"
 
 consts
-  interrupt_control_relation :: "arch_irq_control_invocation \<Rightarrow> ARM_H.irqcontrol_invocation \<Rightarrow> bool"
+  interrupt_control_relation :: "arch_irq_control_invocation \<Rightarrow> Arch.irqcontrol_invocation \<Rightarrow> bool"
 
 primrec
   irq_control_inv_relation :: "irq_control_invocation \<Rightarrow> irqcontrol_invocation \<Rightarrow> bool"

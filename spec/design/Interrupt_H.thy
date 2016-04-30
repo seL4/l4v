@@ -18,13 +18,26 @@ imports
   InterruptDecls_H
 begin
 
-unqualify_consts (in Arch)
+context Arch begin
+
+requalify_consts
+  checkIRQ
+  decodeIRQControlInvocation
+  performIRQControl
+
+shadow_consts
+  decodeIRQControlInvocation
+  performIRQControl
+
+unqualify_consts
   maxIRQ
   minIRQ
   maskInterrupt
   ackInterrupt
   resetTimer
   debugPrint
+
+end
 
 defs decodeIRQControlInvocation_def:
 "decodeIRQControlInvocation label args srcSlot extraCaps \<equiv>

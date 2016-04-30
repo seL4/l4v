@@ -12,13 +12,6 @@ theory Schedule_R
 imports VSpace_R
 begin
 
-context Arch begin
-shadow_consts
-  switchToThread
-  switchToIdleThread
-end
-
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
  (* FIXME REMOVE and rename other uses, also there is a duplicate of this in KHeap_R too *)
@@ -972,7 +965,7 @@ proof -
     apply (rule P_bool_lift [OF pos])
     thm  lift_neg_pred_tcb_at'
 
-    by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_Arch_switchToThread_typ_at' pos])
+    by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_ARM_H_switchToThread_typ_at' pos])
 qed
 
 crunch ksQ[wp]: storeWordUser "\<lambda>s. P (ksReadyQueues s p)"
