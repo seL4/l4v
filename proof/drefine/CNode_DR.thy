@@ -12,6 +12,8 @@ theory CNode_DR
 imports Finalise_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
   translate_cnode_invocation :: "Invocations_A.cnode_invocation \<Rightarrow> cdl_cnode_invocation"
 where
@@ -1157,7 +1159,7 @@ lemma set_asid_pool_empty':
   done
 
 lemma empty_pool:
-  "(\<lambda>x. if x \<le> 2 ^ Arch_Structs_A.asid_low_bits - 1 then None else (ap :: 10 word \<rightharpoonup> word32) x) = Map.empty"
+  "(\<lambda>x. if x \<le> 2 ^ ARM_A.asid_low_bits - 1 then None else (ap :: 10 word \<rightharpoonup> word32) x) = Map.empty"
   apply (rule ext)
   apply (cut_tac ptr=x and 'a=10 in word_up_bound)
   apply (simp add:asid_low_bits_def)
@@ -1177,8 +1179,8 @@ lemma get_set_asid_pool:
 lemma set_asid_pool_empty:
   "set_asid_pool a Map.empty \<equiv>
    mapM_x (\<lambda>slot. get_asid_pool a >>= (\<lambda>pool. set_asid_pool a (pool(ucast slot:=None))))
-          [0 :: word32 .e. 2 ^ Arch_Structs_A.asid_low_bits - 1]"
-  using set_asid_pool_empty' [of "2 ^ Arch_Structs_A.asid_low_bits - 1" a]
+          [0 :: word32 .e. 2 ^ ARM_A.asid_low_bits - 1]"
+  using set_asid_pool_empty' [of "2 ^ ARM_A.asid_low_bits - 1" a]
   apply -
   apply (rule eq_reflection)
   apply simp
@@ -1240,7 +1242,7 @@ lemma dcorres_set_asid_pool_empty:
   "dcorres dc \<top> (valid_idle and asid_pool_at a and
                  (\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)))
     (mapM_x PageTableUnmap_D.empty_slot
-                            (map (Pair a) [0 .e. 2 ^ Arch_Structs_A.asid_low_bits - 1]))
+                            (map (Pair a) [0 .e. 2 ^ ARM_A.asid_low_bits - 1]))
     (set_asid_pool a Map.empty)"
   apply (unfold set_asid_pool_empty)
   apply (rule dcorres_list_all2_mapM_[where F="\<lambda>x y. snd x = snd (transform_asid y)"])
@@ -1266,7 +1268,7 @@ lemma dcorres_set_asid_pool_empty:
            apply (wp | clarsimp)+
         apply simp
        apply (wp get_asid_pool_triv | clarsimp simp:typ_at_eq_kheap_obj obj_at_def swp_def)+
-     apply (subgoal_tac "(aa, snd (transform_asid y)) \<in> set (map (Pair a) [0..<2 ^ Arch_Structs_A.asid_low_bits])")
+     apply (subgoal_tac "(aa, snd (transform_asid y)) \<in> set (map (Pair a) [0..<2 ^ ARM_A.asid_low_bits])")
       apply (clarsimp simp:set_map)
      apply (clarsimp simp del:set_map simp:suffixeq_def)
     apply (wp | clarsimp simp:swp_def)+
@@ -1399,7 +1401,7 @@ crunch st_tcb_at[wp] : copy_global_mappings "st_tcb_at P thread"
   (wp: crunch_wps  simp: crunch_simps)
 
 lemma delete_asid_pool_idle [wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> ArchVSpace_A.delete_asid_pool p q\<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> ARM_A.delete_asid_pool p q\<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   apply (simp add:delete_asid_pool_def)
   apply wp
   apply (rule mapM_wp)
@@ -1484,7 +1486,7 @@ lemma dcorres_arch_recycle_cap_page_cap:
   apply (clarsimp simp: CSpace_D.recycle_cap_def arch_recycle_cap_def
                         clearMemory_def bind_assoc
                         mapM_x_mapM do_machine_op_bind
-                        empty_fail_mapM ef_storeWord ef_machine_op_lift)
+                        ef_storeWord)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
        apply (rule dcorres_symb_exec_r)
@@ -1496,8 +1498,8 @@ lemma dcorres_arch_recycle_cap_page_cap:
      apply wp
    apply simp
   apply (clarsimp dest!: cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs]
-    simp: cap_aligned_def  valid_cap_def typ_at_pg)
-  apply (rule conjI, fastforce)+ -- "all but Ball within_page"
+    simp: cap_aligned_def valid_cap_def typ_at_eq_kheap_obj)
+  apply (rule conjI, fastforce simp: obj_at_def)+ -- "all but Ball within_page"
   apply (clarsimp simp: within_page_def word_size_def upto_enum_step_shift_red [where us = 2,simplified])
   apply (erule is_aligned_add_helper [THEN conjunct2])
   apply (erule word_less_power_trans_ofnat [where k = 2, simplified])
@@ -1543,7 +1545,7 @@ lemma dcorres_empty_pde_slot:"
 ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
  \<Longrightarrow> dcorres dc \<top> (valid_idle and cur_tcb and (\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)))
   (PageTableUnmap_D.empty_slot (y && ~~ mask pd_bits,unat (y && mask pd_bits >>2)))
-  (store_pde y Arch_Structs_A.pde.InvalidPDE)"
+  (store_pde y ARM_A.pde.InvalidPDE)"
   apply (clarsimp simp:store_pde_def get_pd_def get_object_def bind_assoc gets_def)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -1565,7 +1567,7 @@ ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
    apply (rule ext)
    apply (clarsimp simp: transform_page_directory_contents_def unat_map_def
                          kernel_pde_mask_def ucast_nat_def transform_pde_def
-                   split: if_splits Arch_Structs_A.pte.split_asm)
+                   split: if_splits ARM_A.pte.split_asm)
   apply (clarsimp simp:)+
   apply (rule corres_dummy_return_pr)
   apply (rule_tac P'="\<lambda>r. op = s'" in  corres_underlying_split[where r'=dc])
@@ -1594,7 +1596,7 @@ ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
 lemma dcorres_empty_pte_slot:
   " dcorres dc \<top> (valid_idle and cur_tcb and (\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)))
      (PageTableUnmap_D.empty_slot (y && ~~ mask pt_bits, unat (y && mask pt_bits >> 2)))
-     (store_pte y Arch_Structs_A.pte.InvalidPTE)"
+     (store_pte y ARM_A.pte.InvalidPTE)"
   apply (clarsimp simp:store_pte_def get_pt_def get_object_def bind_assoc gets_def)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -1615,7 +1617,7 @@ lemma dcorres_empty_pte_slot:
    apply (clarsimp simp: not_idle_thread_def transform_objects_def restrict_map_def map_add_def)
    apply (rule ext)
    apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def ucast_nat_def
-                   split: if_splits Arch_Structs_A.pte.split_asm)
+                   split: if_splits ARM_A.pte.split_asm)
   apply (clarsimp simp: )+
   apply (rule corres_dummy_return_pr)
   apply (rule_tac P'="\<lambda>r. op = s'" in  corres_underlying_split[where r'=dc])
@@ -1916,7 +1918,7 @@ lemma dcorres_recycle_pd_caps:
 lemma dcorres_clear_object_caps_pt:
   "dcorres dc \<top> (invs and  cte_wp_at (op = (cap.ArchObjectCap (arch_cap.PageTableCap w option))) (a, b))
     (clear_object_caps w)
-    (mapM_x (swp store_pte Arch_Structs_A.pte.InvalidPTE) [w , w + 4 .e. w + 2 ^ pt_bits - 1])"
+    (mapM_x (swp store_pte ARM_A.pte.InvalidPTE) [w , w + 4 .e. w + 2 ^ pt_bits - 1])"
   apply (clarsimp simp:arch_recycle_cap_def clear_object_caps_def gets_def)
   apply (rule dcorres_absorb_get_l)
   apply (subgoal_tac "\<exists>ptx. (ko_at (ArchObj (arch_kernel_obj.PageTable ptx)) w) s'")
@@ -3253,5 +3255,7 @@ lemma decode_cnode_label_not_match:
    apply wp
   apply (clarsimp simp: upto_enum_def fromEnum_def toEnum_def enum_invocation_label)
   done
+
+end
 
 end

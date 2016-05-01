@@ -16,6 +16,8 @@ theory StateTranslationProofs_DR
 imports StateTranslation_D
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 declare transform_current_domain_def [simp]
 
 lemma asid_high_bits [simp]:
@@ -330,5 +332,7 @@ lemma map_lift_over_if_eq:
   using inj_f map_lift_over_if_eq_twice[where f=f and m=m and y=y and z=z and y'=y and z'=z]
   apply (simp del: inj_on_insert)
   done
+
+end
 
 end

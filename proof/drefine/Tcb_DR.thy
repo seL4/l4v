@@ -12,6 +12,8 @@ theory Tcb_DR
 imports Ipc_DR Arch_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 (*
  * A "normal" TCB is a non-idle TCB. (Idle is special, because it
  * doesn't get lifted up to capDL.
@@ -621,6 +623,8 @@ lemma invoke_tcb_corres_read_regs:
      apply (wp | simp)+
   done
 
+end
+
 (* Write the reigsters of another thread. *)
 lemma invoke_tcb_corres_write_regs:
   "\<lbrakk> t' = tcb_invocation.WriteRegisters obj_id resume data flags;
@@ -638,6 +642,8 @@ lemma invoke_tcb_corres_write_regs:
          apply (rule corrupt_tcb_intent_as_user_corres)
          apply (wp | simp add:invs_def valid_state_def | fastforce)+
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma corres_mapM_x_rhs_induct:
   "\<lbrakk> corres_underlying sr nf dc P P' g (return ());
@@ -1615,5 +1621,7 @@ lemma invoke_tcb_corres:
    apply (simp only:, rule corres_guard_imp[OF invoke_tcb_corres_unbind], simp , auto intro!: invoke_tcb_rules)[1]
   apply (simp only:, rule corres_guard_imp[OF invoke_tcb_corres_bind], simp , auto intro!: invoke_tcb_rules)[1]
   done
+
+end
 
 end

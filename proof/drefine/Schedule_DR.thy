@@ -12,6 +12,8 @@ theory Schedule_DR
 imports Finalise_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 (* getActiveTCBs returns a subset of CapDL's all_active_tcbs. *)
 lemma getActiveTCBs_subset:
   "\<lbrakk> getActiveTCB x s' = Some y; invs s'; valid_etcbs s' \<rbrakk> \<Longrightarrow>
@@ -696,5 +698,7 @@ lemma activate_thread_corres:
              when_def pred_tcb_at_def ct_in_state_def obj_at_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
              dest!:get_tcb_SomeD)+
   done
+
+end
 
 end

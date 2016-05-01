@@ -16,6 +16,8 @@ theory Refine_D
 imports Syscall_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 text {*
   Toplevel @{text dcorres} theorem. 
 *}
@@ -63,5 +65,7 @@ lemma dcorres_call_kernel:
    apply fastforce
   apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def valid_sched_def)
   done
+
+end
 
 end
