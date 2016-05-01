@@ -15,7 +15,7 @@ begin
 definition
   "replyFromKernel_success_empty thread \<equiv> do
      VSpace_H.lookupIPCBuffer True thread;
-     asUser thread $ setRegister State_H.badgeRegister 0;
+     asUser thread $ setRegister ARM_H.badgeRegister 0;
      setMessageInfo thread $ (Types_H.MI 0 0 0 0)
    od"
 
@@ -400,7 +400,7 @@ lemma asUser_storeWordUser_comm:
   done
 
 lemma length_syscallMessage:
-  "length State_H.syscallMessage = unat n_syscallMessage"
+  "length ARM_H.syscallMessage = unat n_syscallMessage"
   apply (simp add: syscallMessage_def MachineTypes.syscallMessage_def
                 msgRegisters_unfold n_syscallMessage_def)
   apply (simp add: upto_enum_def)
@@ -409,9 +409,9 @@ lemma length_syscallMessage:
 
 lemma (in kernel_m) syscallMessage_ccorres:
   "n < unat n_syscallMessage
-      \<Longrightarrow> register_from_H (State_H.syscallMessage ! n)
+      \<Longrightarrow> register_from_H (ARM_H.syscallMessage ! n)
            = index syscallMessage n"
-  apply (simp add: State_H.syscallMessage_def syscallMessage_def
+  apply (simp add: ARM_H.syscallMessage_def syscallMessage_def
                    MachineTypes.syscallMessage_def
                    n_syscallMessage_def msgRegisters_unfold)
   apply (simp add: upto_enum_def fromEnum_def enum_register)
@@ -516,7 +516,7 @@ lemma stateAssert_mapM_loadWordUser_comm:
   done
 
 lemmas syscallMessage_unfold
-  = State_H.syscallMessage_def
+  = ARM_H.syscallMessage_def
     MachineTypes.syscallMessage_def
         [unfolded upto_enum_def, simplified,
          unfolded fromEnum_def enum_register, simplified,
@@ -542,7 +542,7 @@ lemma handleFaultReply':
                         asUser_return submonad_asUser.fn_stateAssert)
   apply (case_tac f)
      apply (clarsimp simp: handleFaultReply_def zipWithM_x_mapM_x
-                           zip_Cons State_H.exceptionMessage_def
+                           zip_Cons ARM_H.exceptionMessage_def
                            MachineTypes.exceptionMessage_def
                            mapM_x_Cons mapM_x_Nil)
      apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
@@ -553,7 +553,7 @@ lemma handleFaultReply':
                              asUser_comm [OF neq] asUser_getRegister_discarded
                              submonad_asUser.fn_stateAssert asUser_return
                              bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                             State_H.sanitiseRegister_def
+                             ARM_H.sanitiseRegister_def
                              MachineTypes.sanitiseRegister_def
                              n_msgRegisters_def
                        dest: word_less_cases)
@@ -562,7 +562,7 @@ lemma handleFaultReply':
                             asUser_comm [OF neq] asUser_getRegister_discarded
                             submonad_asUser.fn_stateAssert asUser_return
                             bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                            word_less_nat_alt State_H.sanitiseRegister_def
+                            word_less_nat_alt ARM_H.sanitiseRegister_def
                             MachineTypes.sanitiseRegister_def
                             n_msgRegisters_def)
      apply (case_tac "msgLength tag < scast n_msgRegisters")
@@ -571,7 +571,7 @@ lemma handleFaultReply':
                             asUser_comm [OF neq] asUser_getRegister_discarded
                             submonad_asUser.fn_stateAssert asUser_return
                             bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                            bind_assoc State_H.sanitiseRegister_def
+                            bind_assoc ARM_H.sanitiseRegister_def
                             MachineTypes.sanitiseRegister_def
                             bind_comm_mapM_comm [OF asUser_loadWordUser_comm]
                             word_size stateAssert_mapM_loadWordUser_comm
@@ -582,7 +582,7 @@ lemma handleFaultReply':
                             asUser_comm [OF neq] asUser_getRegister_discarded
                             submonad_asUser.fn_stateAssert asUser_return
                             bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                            bind_assoc State_H.sanitiseRegister_def
+                            bind_assoc ARM_H.sanitiseRegister_def
                             MachineTypes.sanitiseRegister_def
                             bind_comm_mapM_comm [OF asUser_loadWordUser_comm]
                             word_size stateAssert_mapM_loadWordUser_comm
@@ -609,7 +609,7 @@ lemma handleFaultReply':
                           asUser_comm [OF neq] asUser_getRegister_discarded
                           submonad_asUser.fn_stateAssert asUser_return
                           bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                          State_H.sanitiseRegister_def
+                          ARM_H.sanitiseRegister_def
                           MachineTypes.sanitiseRegister_def
                           n_msgRegisters_def
                     dest: word_less_cases)
@@ -618,7 +618,7 @@ lemma handleFaultReply':
                          asUser_comm [OF neq] asUser_getRegister_discarded
                          submonad_asUser.fn_stateAssert asUser_return
                          bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                         word_less_nat_alt State_H.sanitiseRegister_def
+                         word_less_nat_alt ARM_H.sanitiseRegister_def
                          MachineTypes.sanitiseRegister_def take_Cons
                   split: nat.split)
   apply (case_tac "msgLength tag < scast n_msgRegisters")
@@ -627,7 +627,7 @@ lemma handleFaultReply':
                          asUser_comm [OF neq] asUser_getRegister_discarded
                          submonad_asUser.fn_stateAssert asUser_return
                          bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                         bind_assoc State_H.sanitiseRegister_def
+                         bind_assoc ARM_H.sanitiseRegister_def
                          MachineTypes.sanitiseRegister_def
                          bind_comm_mapM_comm [OF asUser_loadWordUser_comm]
                          word_size stateAssert_mapM_loadWordUser_comm
@@ -647,7 +647,7 @@ lemma handleFaultReply':
                          asUser_comm [OF neq] asUser_getRegister_discarded
                          submonad_asUser.fn_stateAssert
                          bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                         word_less_nat_alt State_H.sanitiseRegister_def
+                         word_less_nat_alt ARM_H.sanitiseRegister_def
                          MachineTypes.sanitiseRegister_def
                          split_def n_msgRegisters_def msgMaxLength_def
                          word_size msgLengthBits_def n_syscallMessage_def
@@ -828,7 +828,7 @@ lemma getMessageInfo_ccorres:
     apply wp
    apply vcg
   apply (frule (1) obj_at_cslift_tcb)
-  apply (clarsimp simp: typ_heap_simps State_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
+  apply (clarsimp simp: typ_heap_simps ARM_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
     Kernel_C.msgInfoRegister_def Kernel_C.R1_def dest!: c_guard_clift)
   done
 
@@ -845,7 +845,7 @@ lemma getMessageInfo_ccorres':
     apply wp
    apply vcg
   apply (frule (1) obj_at_cslift_tcb)
-  apply (clarsimp simp: typ_heap_simps State_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
+  apply (clarsimp simp: typ_heap_simps ARM_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
     Kernel_C.msgInfoRegister_def Kernel_C.R1_def dest!: c_guard_clift)
   done
 
@@ -867,17 +867,17 @@ lemma replyFromKernel_success_empty_ccorres [corres]:
       apply wp
      apply vcg
     apply wp
-  apply (simp add: State_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
+  apply (simp add: ARM_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
                    Kernel_C.msgInfoRegister_def Kernel_C.R1_def
-                   State_H.badgeRegister_def MachineTypes.badgeRegister_def
+                   ARM_H.badgeRegister_def MachineTypes.badgeRegister_def
                    Kernel_C.badgeRegister_def Kernel_C.R0_def
                    message_info_to_H_def)
   done
 
 lemma msgRegisters_offset_conv:
-  "\<And>offset i. \<lbrakk> offset + i < length State_H.msgRegisters \<rbrakk> \<Longrightarrow> 
+  "\<And>offset i. \<lbrakk> offset + i < length ARM_H.msgRegisters \<rbrakk> \<Longrightarrow> 
    index msgRegisters (unat ((of_nat offset :: word32) + of_nat i)) =
-   register_from_H (State_H.msgRegisters ! (offset + i))"
+   register_from_H (ARM_H.msgRegisters ! (offset + i))"
   apply (simp add: msgRegisters_def msgRegisters_unfold fupdate_def)
   apply (subst of_nat_add [symmetric])
   apply (case_tac "offset + i", simp_all del: of_nat_add)
@@ -1179,9 +1179,9 @@ lemma replyFromKernel_error_ccorres [corres]:
     apply (wp lookupIPCBuffer_aligned_option_to_0)
    apply (simp del: Collect_const)
    apply (vcg exspec=lookupIPCBuffer_modifies)
-  apply (simp add: State_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
+  apply (simp add: ARM_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
                    Kernel_C.msgInfoRegister_def Kernel_C.R1_def
-                   State_H.badgeRegister_def MachineTypes.badgeRegister_def
+                   ARM_H.badgeRegister_def MachineTypes.badgeRegister_def
                    Kernel_C.badgeRegister_def Kernel_C.R0_def
                    message_info_to_H_def valid_pspace_valid_objs')
   apply (clarsimp simp: msgLengthBits_def msgFromSyscallError_def
@@ -1192,7 +1192,7 @@ lemma replyFromKernel_error_ccorres [corres]:
 
 lemma copyMRs_register_loop_helper:
   fixes n
-  defines regs: "regs \<equiv> take (unat n) State_H.msgRegisters"
+  defines regs: "regs \<equiv> take (unat n) ARM_H.msgRegisters"
   shows
   "\<forall>i. i<length regs \<longrightarrow>
    ccorres dc xfdc \<top> \<lbrace>\<acute>i = of_nat i\<rbrace> hs
@@ -1272,7 +1272,7 @@ shows
                simp: whileAnno_def)
    apply (simp only: mapM_discarded)
    apply (rule ccorres_rhs_assoc2)
-   apply (rule_tac P = "length (take (unat n) State_H.msgRegisters) <
+   apply (rule_tac P = "length (take (unat n) ARM_H.msgRegisters) <
                         2 ^ word_bits"
                 in ccorres_gen_asm)
    apply (rule ccorres_split_nothrow_novcg)
@@ -1293,14 +1293,14 @@ shows
       apply (rule ccorres_split_throws, rule ccorres_return_C, simp+)
       apply vcg
      apply (subst mapM_only_length)
-     apply (rule_tac P="unat n \<le> length State_H.msgRegisters" in ccorres_cases)
+     apply (rule_tac P="unat n \<le> length ARM_H.msgRegisters" in ccorres_cases)
       apply (simp add: upto_enum_def length_msgRegisters n_msgRegisters_def
                        mapM_x_Nil)
       apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
       apply (rule ccorres_cond_false)
       apply (rule ccorres_return_C, simp+)
      apply (rule ccorres_split_nothrow_novcg)
-         apply (rule_tac i="length State_H.msgRegisters"
+         apply (rule_tac i="length ARM_H.msgRegisters"
                and F="\<lambda>_. valid_ipc_buffer_ptr' (the sendBuffer)
                  and valid_ipc_buffer_ptr' (the recvBuffer)
                  and valid_pspace'"
@@ -1439,9 +1439,9 @@ lemma user_getreg_rv:
 
 lemma exceptionMessage_ccorres:
   "n < unat n_exceptionMessage
-      \<Longrightarrow> register_from_H (State_H.exceptionMessage ! n)
+      \<Longrightarrow> register_from_H (ARM_H.exceptionMessage ! n)
              = index exceptionMessage n"
-  apply (simp add: exceptionMessage_def State_H.exceptionMessage_def
+  apply (simp add: exceptionMessage_def ARM_H.exceptionMessage_def
                    MachineTypes.exceptionMessage_def)
   apply (simp add: Arrays.update_def n_exceptionMessage_def fcp_beta nth_Cons'
                    fupdate_def
@@ -1504,12 +1504,12 @@ proof -
             apply csymbr
             apply (simp del: Collect_const split del: split_if)
             apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow)
-                apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map (tcbContext tcb) State_H.exceptionMessage = msg) sender"
+                apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map (tcbContext tcb) ARM_H.exceptionMessage = msg) sender"
                             in ccorres_mapM_x_while)
                     apply (clarsimp simp: setMR_def msgRegisters_unfold liftM_def[symmetric]
                                split del: split_if)
                     apply (rule ccorres_guard_imp2)
-                     apply (rule_tac t=sender and r="State_H.exceptionMessage ! n"
+                     apply (rule_tac t=sender and r="ARM_H.exceptionMessage ! n"
                                in ccorres_add_getRegister)
                      apply ctac
                        apply (rule_tac P="\<lambda>s. rv = msg ! n" in ccorres_cross_over_guard)
@@ -1690,11 +1690,11 @@ proof -
          apply (simp del: Collect_const)
          apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
              apply (simp only: whileAnno_def)
-             apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map (tcbContext tcb) State_H.syscallMessage = msg) sender"
+             apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map (tcbContext tcb) ARM_H.syscallMessage = msg) sender"
                           in ccorres_mapM_x_while)
                  apply (clarsimp simp: n_msgRegisters_def)
                  apply (rule ccorres_guard_imp2)
-                  apply (rule_tac t=sender and r="State_H.syscallMessage ! n"
+                  apply (rule_tac t=sender and r="ARM_H.syscallMessage ! n"
                             in ccorres_add_getRegister)
                   apply (ctac(no_vcg))
                    apply (rule_tac P="\<lambda>s. rv = msg ! n" in ccorres_cross_over_guard)
@@ -1720,7 +1720,7 @@ proof -
             apply (simp del: Collect_const)
             apply (rule ccorres_split_nothrow_novcg)
                 apply (simp only: whileAnno_def)
-                apply (rule_tac F="\<lambda>_. obj_at' (\<lambda>tcb. map (tcbContext tcb) State_H.syscallMessage = msg)
+                apply (rule_tac F="\<lambda>_. obj_at' (\<lambda>tcb. map (tcbContext tcb) ARM_H.syscallMessage = msg)
                                        sender and valid_pspace'
                                        and (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)"
                            in ccorres_mapM_x_while'[where i="unat n_msgRegisters"])
@@ -1728,7 +1728,7 @@ proof -
                                           option_to_0_def liftM_def[symmetric]
                                    split: option.split_asm)
                     apply (rule ccorres_guard_imp2)
-                     apply (rule_tac t=sender and r="State_H.syscallMessage ! (n + unat n_msgRegisters)"
+                     apply (rule_tac t=sender and r="ARM_H.syscallMessage ! (n + unat n_msgRegisters)"
                                   in ccorres_add_getRegister)
                      apply (ctac(no_vcg))
                       apply (rule_tac P="\<lambda>s. rv = msg ! (n + unat n_msgRegisters)"
@@ -1829,7 +1829,7 @@ proof -
       apply simp
      apply (rule guard_is_UNIVI, clarsimp simp: option_to_ptr_def)
     apply (clarsimp simp: msgMaxLength_unfold length_syscallMessage
-                          State_H.exceptionMessage_def
+                          ARM_H.exceptionMessage_def
                           MachineTypes.exceptionMessage_def
                           n_exceptionMessage_def)
     apply (drule(1) obj_at_cslift_tcb[where thread=sender])
@@ -2531,7 +2531,7 @@ next
      apply (simp_all add:isCap_simps)
     apply (rename_tac acap)
     apply (case_tac acap)
-     apply (clarsimp simp:ArchRetype_H.maskCapRights_def isPageCap_def)+
+     apply (clarsimp simp:ARM_H.maskCapRights_def isPageCap_def)+
     done
 
   have is_the_ep_deriveCap:
@@ -2543,7 +2543,7 @@ next
      apply (wp,clarsimp)+
     apply (rename_tac acap)
     apply (case_tac acap)
-     apply (simp_all add:ArchRetype_H.deriveCap_def Let_def isCap_simps is_the_ep_def)
+     apply (simp_all add:ARM_H.deriveCap_def Let_def isCap_simps is_the_ep_def)
     apply (wp |clarsimp|rule conjI)+
     done
 
@@ -2553,7 +2553,7 @@ next
      apply (simp_all add:maskCapRights_def isCap_simps)
     apply (rename_tac acap)
     apply (case_tac acap)
-     apply (simp add:ArchRetype_H.maskCapRights_def isPageCap_def)+
+     apply (simp add:ARM_H.maskCapRights_def isPageCap_def)+
     done
   note split_if[split del]
   note if_cong[cong]
@@ -3298,7 +3298,7 @@ proof -
            apply (ctac(c_lines 2, no_vcg) add: setMessageInfo_ccorres)             
              apply ctac
             apply wp
-           apply (clarsimp simp: Kernel_C.badgeRegister_def State_H.badgeRegister_def
+           apply (clarsimp simp: Kernel_C.badgeRegister_def ARM_H.badgeRegister_def
                               MachineTypes.badgeRegister_def Kernel_C.R0_def)
           apply wp
          apply simp
@@ -3321,7 +3321,7 @@ qed
 
 lemma lookupIPCBuffer_not_Some_0:
   "\<lbrace>\<top>\<rbrace> lookupIPCBuffer r t \<lbrace>\<lambda>rv. K (rv \<noteq> Some 0)\<rbrace>"
-  apply (simp add: lookupIPCBuffer_def ArchVSpace_H.lookupIPCBuffer_def)
+  apply (simp add: lookupIPCBuffer_def ARM_H.lookupIPCBuffer_def)
   apply (wp hoare_post_taut | simp add: Let_def | intro conjI impI)+
   done
 
@@ -3335,7 +3335,7 @@ lemma pbfs_msg_align_bits [simp]:
 
 lemma lookupIPCBuffer_aligned:
   "\<lbrace>valid_objs'\<rbrace> lookupIPCBuffer r t \<lbrace>\<lambda>rv. K (case_option True (\<lambda>x. is_aligned x msg_align_bits) rv)\<rbrace>"
-  apply (simp add: lookupIPCBuffer_def ArchVSpace_H.lookupIPCBuffer_def 
+  apply (simp add: lookupIPCBuffer_def ARM_H.lookupIPCBuffer_def 
                    getThreadBufferSlot_def locateSlot_conv
                    Let_def getSlotCap_def cong: if_cong)
   apply (rule hoare_pre, wp getCTE_wp' threadGet_wp)
@@ -3366,7 +3366,7 @@ lemma lookupIPCBuffer_ccorres [corres]:
      (lookupIPCBuffer recv thread)
      (Call lookupIPCBuffer_'proc)"
   apply (cinit lift: isReceiver_' thread_'
-               simp: ArchVSpace_H.lookupIPCBuffer_def)
+               simp: ARM_H.lookupIPCBuffer_def)
    apply (rule_tac P="thread = ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00"
                 in ccorres_gen_asm)
    apply (rule ccorres_move_c_guard_tcb)
@@ -3566,8 +3566,8 @@ lemma fault_case_absorb_bind:
   by (simp split: fault.split)
 
 lemma length_exceptionMessage:
-  "length State_H.exceptionMessage = unat n_exceptionMessage"
-  by (simp add: State_H.exceptionMessage_def MachineTypes.exceptionMessage_def n_exceptionMessage_def)
+  "length ARM_H.exceptionMessage = unat n_exceptionMessage"
+  by (simp add: ARM_H.exceptionMessage_def MachineTypes.exceptionMessage_def n_exceptionMessage_def)
 
 lemma handleFaultReply_ccorres [corres]:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
@@ -3636,7 +3636,7 @@ lemma handleFaultReply_ccorres [corres]:
                          apply wp
                         apply vcg
                        apply vcg
-                       apply (rule conjI, simp add: State_H.exceptionMessage_def
+                       apply (rule conjI, simp add: ARM_H.exceptionMessage_def
                                     MachineTypes.exceptionMessage_def word_of_nat_less)
                        apply (thin_tac "n < unat n'" for n')
                        apply (simp add: msgRegisters_ccorres n_msgRegisters_def length_msgRegisters
@@ -3644,10 +3644,10 @@ lemma handleFaultReply_ccorres [corres]:
                                         n_exceptionMessage_def length_exceptionMessage)
                        apply (simp add: word_less_nat_alt unat_of_nat)
                       apply (rule conseqPre, vcg)
-                      apply (clarsimp simp: word_of_nat_less State_H.exceptionMessage_def
+                      apply (clarsimp simp: word_of_nat_less ARM_H.exceptionMessage_def
                                             MachineTypes.exceptionMessage_def)
                      apply (clarsimp simp: min_def n_exceptionMessage_def
-                                           State_H.exceptionMessage_def
+                                           ARM_H.exceptionMessage_def
                                            MachineTypes.exceptionMessage_def
                                            length_msgRegisters n_msgRegisters_def
                                            message_info_to_H_def
@@ -3657,7 +3657,7 @@ lemma handleFaultReply_ccorres [corres]:
                     apply clarsimp
                    apply wp
                    apply simp
-                  apply (clarsimp simp: State_H.exceptionMessage_def
+                  apply (clarsimp simp: ARM_H.exceptionMessage_def
                                         MachineTypes.exceptionMessage_def
                                         word_bits_def)
                   apply unat_arith
@@ -5466,7 +5466,7 @@ lemma completeSignal_ccorres:
         apply (simp add: objBits_simps)
        apply assumption
       apply wp
-     apply (clarsimp simp: guard_is_UNIV_def State_H.badgeRegister_def 
+     apply (clarsimp simp: guard_is_UNIV_def ARM_H.badgeRegister_def 
                            MachineTypes.badgeRegister_def Kernel_C.badgeRegister_def
                            Kernel_C.R0_def)
     -- "WaitingNtfn case"
@@ -5486,7 +5486,7 @@ lemma doNBRecvFailedTransfer_ccorres[corres]:
             (Call doNBRecvFailedTransfer_'proc)"
   apply (cinit lift: thread_')
    apply (ctac add: setRegister_ccorres)
-  by (clarsimp simp: Kernel_C.badgeRegister_def State_H.badgeRegister_def
+  by (clarsimp simp: Kernel_C.badgeRegister_def ARM_H.badgeRegister_def
                         MachineTypes.badgeRegister_def Kernel_C.R0_def)
 
 lemma receiveIPC_ccorres [corres]:
@@ -6073,7 +6073,7 @@ lemma sendSignal_ccorres [corres]:
        apply simp
        apply (ctac add: ntfn_set_active_ccorres[unfolded dc_def])
       apply (clarsimp simp: guard_is_UNIV_def option_to_ctcb_ptr_def
-                            State_H.badgeRegister_def Kernel_C.badgeRegister_def
+                            ARM_H.badgeRegister_def Kernel_C.badgeRegister_def
                             MachineTypes.badgeRegister_def Kernel_C.R0_def
                             "StrictC'_thread_state_defs"less_mask_eq
                             Collect_const_mem)

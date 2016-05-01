@@ -15,6 +15,8 @@ imports
   StoreWord_C  DetWP
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 declare word_neq_0_conv[simp del]
 
 definition
@@ -94,6 +96,8 @@ lemma replyOnRestart_twice[simplified]:
    apply (erule replyOnRestart_twice')
   apply simp
   done
+
+end
 
 context kernel_m begin
 
@@ -621,7 +625,7 @@ lemma msgRegisters_scast:
    
 lemma msgRegisters_ccorres:
   "n < unat n_msgRegisters \<Longrightarrow> 
-  register_from_H (State_H.msgRegisters ! n) = (index msgRegisters n)"
+  register_from_H (ARM_H.msgRegisters ! n) = (index msgRegisters n)"
   apply (simp add: msgRegisters_def msgRegisters_unfold fupdate_def)
   apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: split_if)
   done
@@ -668,7 +672,7 @@ lemma asUser_const_rv:
 lemma getMRs_tcbContext:
   "\<lbrace>\<lambda>s. n < unat n_msgRegisters \<and> n < unat (msgLength info) \<and> thread = ksCurThread s \<and> cur_tcb' s\<rbrace>
   getMRs thread buffer info 
-  \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. tcbContext tcb (State_H.msgRegisters ! n) = rv ! n) (ksCurThread s) s\<rbrace>"
+  \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. tcbContext tcb (ARM_H.msgRegisters ! n) = rv ! n) (ksCurThread s) s\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
   apply (thin_tac "thread = t" for t)
@@ -773,7 +777,7 @@ lemma lookupIPCBuffer_ccorres:
                   \<inter> {s. isReceiver_' s = from_bool isReceiver}) []
       (lookupIPCBuffer isReceiver t) (Call lookupIPCBuffer_'proc)"
   apply (cinit lift: thread_' isReceiver_')
-   apply (unfold ArchVSpace_H.lookupIPCBuffer_def Let_def)
+   apply (unfold ARM_H.lookupIPCBuffer_def Let_def)
    apply (rule ccorres_split_nothrow)
        apply simp
        apply (rule threadGet_tcbIpcBuffer_ccorres)
@@ -1035,7 +1039,7 @@ lemma getMRs_rel:
   done
 
 lemma length_msgRegisters:
-  "length State_H.msgRegisters = unat (scast n_msgRegisters :: word32)"
+  "length ARM_H.msgRegisters = unat (scast n_msgRegisters :: word32)"
   by (simp add: msgRegisters_unfold n_msgRegisters_def)
 
 lemma getMRs_len[simplified]:
@@ -1184,7 +1188,7 @@ lemma getSyscallArg_ccorres_foo:
      apply (simp add: word_less_nat_alt split: split_if)
     apply (rule ccorres_add_return2)
     apply (rule ccorres_symb_exec_l)
-       apply (rule_tac P="\<lambda>s. n < unat (scast n_msgRegisters :: word32) \<and> obj_at' (\<lambda>tcb. tcbContext tcb (State_H.msgRegisters!n) = x!n) (ksCurThread s) s" 
+       apply (rule_tac P="\<lambda>s. n < unat (scast n_msgRegisters :: word32) \<and> obj_at' (\<lambda>tcb. tcbContext tcb (ARM_H.msgRegisters!n) = x!n) (ksCurThread s) s" 
                    and P' = UNIV 
          in ccorres_from_vcg_split_throws)
         apply vcg
@@ -1246,9 +1250,9 @@ lemma getSyscallArg_ccorres_foo:
   apply (clarsimp simp: bind_def gets_def return_def split_def get_def)  
   done
 
-
-
 end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma invocation_eq_use_type:
   "\<lbrakk> value \<equiv> (value' :: 32 signed word);

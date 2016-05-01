@@ -1365,7 +1365,7 @@ lemma pageTableMapped_ccorres:
             apply (rule conjI)
              apply (simp add: pde_lift_def Let_def split: split_if_asm)
             apply (clarsimp simp: option_to_0_def option_to_ptr_def split: split_if)
-            apply (clarsimp simp: Platform.addrFromPPtr_def Platform.ptrFromPAddr_def)
+            apply (clarsimp simp: ARM.addrFromPPtr_def ARM.ptrFromPAddr_def)
            apply ((rule ccorres_cond_false_seq ccorres_cond_false
                           ccorres_return_C | simp)+)[3]
         apply (simp only: simp_thms)
@@ -1460,10 +1460,10 @@ lemma Arch_finaliseCap_ccorres:
        and (\<lambda>s. 2 ^ acapBits cap \<le> gsMaxObjectSize s))
    (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}
                         \<inter> {s. final_' s = from_bool final}) []
-   (ArchRetypeDecls_H.finaliseCap cap final) (Call Arch_finaliseCap_'proc)"
+   (ARM_H.finaliseCap cap final) (Call Arch_finaliseCap_'proc)"
   apply (cinit lift: cap_' final_' cong: call_ignore_cong)
    apply csymbr
-   apply (simp add: ArchRetype_H.finaliseCap_def cap_get_tag_isCap_ArchObject
+   apply (simp add: ARM_H.finaliseCap_def cap_get_tag_isCap_ArchObject
                del: Collect_const)
    apply (wpc, simp_all add: isCap_simps Collect_False Collect_True
                              case_bool_If
@@ -2015,7 +2015,7 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def true_def
                 del: Collect_const)
-    apply (rule_tac P="(capIRQ cap) \<le>  Platform.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="(capIRQ cap) \<le>  ARM.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
     apply (rule ccorres_symb_exec_r)
       apply (rule_tac xf'=irq_' in ccorres_abstract,ceqv)
@@ -2028,7 +2028,7 @@ lemma finaliseCap_ccorres:
        apply (simp add: ccap_relation_NullCap_iff split: split_if)
        apply (frule(1) ccap_relation_IRQHandler_mask)
        apply (erule irq_opt_relation_Some_ucast)
-       apply (simp add: Platform.maxIRQ_def Kernel_C.maxIRQ_def)
+       apply (simp add: ARM.maxIRQ_def Kernel_C.maxIRQ_def)
       apply wp
      apply vcg
     apply (rule conseqPre,vcg)
@@ -2078,11 +2078,11 @@ lemma finaliseCap_ccorres:
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
    apply (frule(1) ccap_relation_IRQHandler_mask)
    apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def Platform.maxIRQ_def
+                      valid_cap'_def ARM.maxIRQ_def
                       maxIRQ_def)
     apply (rule irq_opt_relation_Some_ucast', simp)
     apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def Platform.maxIRQ_def
+                      valid_cap'_def ARM.maxIRQ_def
                       maxIRQ_def)
    apply fastforce
   apply clarsimp

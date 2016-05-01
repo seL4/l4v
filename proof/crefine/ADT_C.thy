@@ -282,7 +282,7 @@ lemma cirqstate_cancel:
 definition
   "cint_state_to_H cnode cirqs \<equiv>
    InterruptState (ptr_val cnode)
-     (\<lambda>i::10 word. if i \<le> scast Platform.maxIRQ then cirqstate_to_H (index cirqs (unat i))
+     (\<lambda>i::10 word. if i \<le> scast ARM.maxIRQ then cirqstate_to_H (index cirqs (unat i))
                 else irqstate.IRQInactive)"
 
 lemma cint_rel_to_H:
@@ -293,7 +293,7 @@ lemma cint_rel_to_H:
   apply (cases "ksInterruptState s")
   apply (rename_tac "fun")
   apply (clarsimp simp: cinterrupt_relation_def cint_state_to_H_def
-                        Platform.maxIRQ_def Kernel_C.maxIRQ_def)
+                        ARM.maxIRQ_def Kernel_C.maxIRQ_def)
   apply (rule ext)
   apply clarsimp
   apply (drule spec, erule impE, assumption)
@@ -1469,7 +1469,7 @@ definition (in state_rel)
                           {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va})));
       setUserMem_C (restrict_map um'
                         {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
-                      \<circ> Platform.addrFromPPtr);
+                      \<circ> ARM.addrFromPPtr);
       return (e,tc')
    od"
 

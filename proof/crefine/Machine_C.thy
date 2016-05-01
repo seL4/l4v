@@ -215,7 +215,7 @@ assumes fastpath_restore_ccorres:
            \<inter> {s. cur_thread_' s = tcb_ptr_to_ctcb_ptr t})
      [SKIP]
      (asUser t (zipWithM_x setRegister
-               [State_H.badgeRegister, State_H.msgInfoRegister]
+               [ARM_H.badgeRegister, ARM_H.msgInfoRegister]
                [bdg, msginfo]))
      (Call fastpath_restore_'proc)"
 

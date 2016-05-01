@@ -18,6 +18,8 @@ imports
   "../../spec/cspec/Substitute"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 abbreviation
   cte_Ptr :: "word32 \<Rightarrow> cte_C ptr" where "cte_Ptr == Ptr"
 abbreviation
@@ -230,9 +232,13 @@ gen_framesize_to_H:: "word32 \<Rightarrow> vmpage_size" where
   else if c = scast Kernel_C.ARMSection then ARMSection
   else ARMSuperSection"
 
+end
+
 record cte_CL =
   cap_CL :: cap_CL
   cteMDBNode_CL :: mdb_node_CL
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   cte_lift :: "cte_C \<rightharpoonup> cte_CL"
@@ -519,6 +525,6 @@ abbreviation(input)
 where
   "prioInvalid == seL4_InvalidPrio"
 
-
+end
 
 end

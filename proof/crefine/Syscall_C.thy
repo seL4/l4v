@@ -418,7 +418,7 @@ lemma getCurThread_ccorres:
 lemma getMessageInfo_ccorres:
   "ccorres (\<lambda>rv rv'. rv = messageInfoFromWord rv') ret__unsigned_long_' \<top>
        (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}
-             \<inter> {s. reg_' s = register_from_H State_H.msgInfoRegister}) []
+             \<inter> {s. reg_' s = register_from_H ARM_H.msgInfoRegister}) []
        (getMessageInfo thread) (Call getRegister_'proc)"
   apply (simp add: getMessageInfo_def liftM_def[symmetric]
                    ccorres_liftM_simp)
@@ -469,7 +469,7 @@ lemma handleInvocation_def2:
   "handleInvocation isCall isBlocking =
    do thread \<leftarrow> getCurThread;
       info \<leftarrow> getMessageInfo thread;
-      ptr \<leftarrow> asUser thread (getRegister State_H.capRegister);
+      ptr \<leftarrow> asUser thread (getRegister ARM_H.capRegister);
       v \<leftarrow> (doE (cap, slot) \<leftarrow> capFaultOnFailure ptr False (lookupCapAndSlot thread ptr);
           buffer \<leftarrow> withoutFailure (VSpace_H.lookupIPCBuffer False thread);
           extracaps \<leftarrow> lookupExtraCaps thread buffer info;
@@ -1013,9 +1013,9 @@ lemma handleInvocation_ccorres:
     apply simp
     apply wp
    apply (clarsimp simp: Collect_const_mem)
-   apply (simp add: Kernel_C.msgInfoRegister_def State_H.msgInfoRegister_def
+   apply (simp add: Kernel_C.msgInfoRegister_def ARM_H.msgInfoRegister_def
                     MachineTypes.msgInfoRegister_def Kernel_C.R1_def
-                    Kernel_C.capRegister_def State_H.capRegister_def
+                    Kernel_C.capRegister_def ARM_H.capRegister_def
                     MachineTypes.capRegister_def Kernel_C.R0_def)
    apply (clarsimp simp: cfault_rel_def option_to_ptr_def)
    apply (simp add: fault_cap_fault_lift is_cap_fault_def)
@@ -1483,7 +1483,7 @@ lemma handleRecv_ccorres:
   
   apply (clarsimp simp add: sch_act_sane_def)
   apply (simp add: cap_get_tag_isCap[symmetric] del: rf_sr_upd_safe)
-  apply (simp add: Kernel_C.capRegister_def State_H.capRegister_def ct_in_state'_def
+  apply (simp add: Kernel_C.capRegister_def ARM_H.capRegister_def ct_in_state'_def
                    MachineTypes.capRegister_def Kernel_C.R0_def
                    tcb_at_invs')
   apply (frule invs_valid_objs')
@@ -1738,7 +1738,7 @@ lemma scast_maxIRQ_is_less:
   apply fastforce
 done
 
- lemma validIRQcastingLess: "Kernel_C.maxIRQ <s (ucast((ucast (b :: irq))::word16)) \<Longrightarrow> Platform.maxIRQ < b" 
+ lemma validIRQcastingLess: "Kernel_C.maxIRQ <s (ucast((ucast (b :: irq))::word16)) \<Longrightarrow> ARM.maxIRQ < b" 
  by (simp add: Platform_maxIRQ scast_maxIRQ_is_less is_up_def target_size source_size)
  
 

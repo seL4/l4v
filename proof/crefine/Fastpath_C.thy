@@ -68,7 +68,7 @@ definition
                    \<and> mdbRevocable (cteMDBNode replySlotCTE));
       cteInsert (ReplyCap curThread False) replySlot callerSlot;
 
-      forM_x (take (unat (msgLength mi)) State_H.msgRegisters)
+      forM_x (take (unat (msgLength mi)) ARM_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser curThread (getRegister r);
                     asUser dest (setRegister r v) od);
       setThreadState Running dest;
@@ -76,7 +76,7 @@ definition
       setCurThread dest;
 
       asUser dest $ zipWithM_x setRegister
-               [State_H.badgeRegister, State_H.msgInfoRegister]
+               [ARM_H.badgeRegister, ARM_H.msgInfoRegister]
                [capEPBadge epCap, wordFromMessageInfo (mi\<lparr> msgCapsUnwrapped := 0 \<rparr>)]
     od
 
@@ -139,7 +139,7 @@ definition
                                               o mdbRevocable_update (K True));
       setCTE callerSlot makeObject;
 
-      forM_x (take (unat (msgLength mi)) State_H.msgRegisters)
+      forM_x (take (unat (msgLength mi)) ARM_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser curThread (getRegister r);
                     asUser caller (setRegister r v) od);
       setThreadState Running caller;
@@ -147,7 +147,7 @@ definition
       setCurThread caller;
 
       asUser caller $ zipWithM_x setRegister
-               [State_H.badgeRegister, State_H.msgInfoRegister]
+               [ARM_H.badgeRegister, ARM_H.msgInfoRegister]
                [0, wordFromMessageInfo (mi\<lparr> msgCapsUnwrapped := 0 \<rparr>)]
     od
 
@@ -1549,7 +1549,7 @@ lemma fastpath_mi_check_spec:
 lemma isValidVTableRoot_fp_lemma:
   "(index (cap_C.words_C ccap) 0 && 0x1F = 0x10 || scast cap_page_directory_cap)
             = isValidVTableRoot_C ccap"
-  apply (simp add: isValidVTableRoot_C_def ArchVSpace_H.isValidVTableRoot_def
+  apply (simp add: isValidVTableRoot_C_def ARM_H.isValidVTableRoot_def
                    cap_case_isPageDirectoryCap if_bool_simps)
   apply (subst split_word_eq_on_mask[where m="mask 4"])
   apply (simp add: mask_def word_bw_assocs word_ao_dist cap_page_directory_cap_def)
@@ -1594,9 +1594,9 @@ lemma ccorres_cond_both_seq:
   done
 
 lemma copyMRs_simple:
-  "msglen \<le> of_nat (length State_H.msgRegisters) \<longrightarrow>
+  "msglen \<le> of_nat (length ARM_H.msgRegisters) \<longrightarrow>
     copyMRs sender sbuf receiver rbuf msglen
-        = forM_x (take (unat msglen) State_H.msgRegisters)
+        = forM_x (take (unat msglen) ARM_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                     asUser receiver (setRegister r v) od)
            >>= (\<lambda>rv. return msglen)"
@@ -2069,11 +2069,11 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
 lemma fastpath_copy_mrs_ccorres:
 notes min_simps [simp del]
 shows
-  "ccorres dc xfdc (\<top> and (\<lambda>_. ln <= length State_H.msgRegisters))
+  "ccorres dc xfdc (\<top> and (\<lambda>_. ln <= length ARM_H.msgRegisters))
      (UNIV \<inter> {s. unat (length___unsigned_long_' s) = ln}
            \<inter> {s. src_' s = tcb_ptr_to_ctcb_ptr src}
            \<inter> {s. dest_' s = tcb_ptr_to_ctcb_ptr dest}) []
-     (forM_x (take ln State_H.msgRegisters)
+     (forM_x (take ln ARM_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser src (getRegister r);
                     asUser dest (setRegister r v) od))
      (Call fastpath_copy_mrs_'proc)"
@@ -2262,8 +2262,8 @@ lemma fastpath_call_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
      (\<lambda>s. invs' s \<and> ct_in_state' (op = Running) s
-                  \<and> obj_at' (\<lambda>tcb. tcbContext tcb State_H.capRegister = cptr
-                                 \<and> tcbContext tcb State_H.msgInfoRegister = msginfo)
+                  \<and> obj_at' (\<lambda>tcb. tcbContext tcb ARM_H.capRegister = cptr
+                                 \<and> tcbContext tcb ARM_H.msgInfoRegister = msginfo)
                         (ksCurThread s) s)
      (UNIV \<inter> {s. cptr_' s = cptr} \<inter> {s. msgInfo_' s = msginfo}) []
      (fastpaths SysCall) (Call fastpath_call_'proc)"
@@ -2812,7 +2812,7 @@ apply (simp add: getThreadCSpaceRoot_def locateSlot_conv
                          conj_comms tcb_cnode_index_defs field_simps
                          obj_at_tcbs_of)
    apply (clarsimp simp: cte_level_bits_def isValidVTableRoot_def
-                         ArchVSpace_H.isValidVTableRoot_def
+                         ARM_H.isValidVTableRoot_def
                          capAligned_def objBits_simps)
    apply (simp cong: conj_cong)
    apply (frule invs_mdb', clarsimp simp: valid_mdb'_def valid_mdb_ctes_def)
@@ -3536,7 +3536,7 @@ lemma fastpath_reply_recv_ccorres:
      apply (frule invs_mdb')
      apply (clarsimp simp: cte_wp_at_ctes_of tcbSlots cte_level_bits_def
                            makeObject_cte isValidVTableRoot_def
-                           ArchVSpace_H.isValidVTableRoot_def
+                           ARM_H.isValidVTableRoot_def
                            pde_stored_asid_def to_bool_def
                            valid_mdb'_def valid_tcb_state'_def
                            word_le_nat_alt[symmetric] length_msgRegisters)
@@ -4254,16 +4254,16 @@ lemma doIPCTransfer_simple_rewrite:
   "monadic_rewrite True True
    ((\<lambda>_. msgExtraCaps (messageInfoFromWord msgInfo) = 0
                \<and> msgLength (messageInfoFromWord msgInfo)
-                      \<le> of_nat (length State_H.msgRegisters))
+                      \<le> of_nat (length ARM_H.msgRegisters))
       and obj_at' (\<lambda>tcb. tcbFault tcb = None
                \<and> tcbContext tcb msgInfoRegister = msgInfo) sender)
    (doIPCTransfer sender ep badge True rcvr)
    (do rv \<leftarrow> mapM_x (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                              asUser rcvr (setRegister r v)
                           od)
-               (take (unat (msgLength (messageInfoFromWord msgInfo))) State_H.msgRegisters);
+               (take (unat (msgLength (messageInfoFromWord msgInfo))) ARM_H.msgRegisters);
          y \<leftarrow> setMessageInfo rcvr ((messageInfoFromWord msgInfo) \<lparr>msgCapsUnwrapped := 0\<rparr>);
-         asUser rcvr (setRegister State_H.badgeRegister badge)
+         asUser rcvr (setRegister ARM_H.badgeRegister badge)
       od)"
   apply (rule monadic_rewrite_gen_asm)
   apply (simp add: doIPCTransfer_def bind_assoc doNormalTransfer_def

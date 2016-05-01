@@ -647,7 +647,7 @@ lemma arch_recycleCap_ccorres_helper:
            (invs' and valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
                and K (ccap_relation (ArchObjectCap cp) cap))
            UNIV [SKIP]
-           (do y \<leftarrow> ArchRetypeDecls_H.finaliseCap cp is_final;
+           (do y \<leftarrow> ARM_H.finaliseCap cp is_final;
                return (resetMemMapping cp)
             od)
            (call (\<lambda>s. s\<lparr>cap_' := cap, final_' := from_bool is_final\<rparr>) Arch_finaliseCap_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s t. Basic (\<lambda>s. s));;
@@ -668,7 +668,7 @@ lemma arch_recycleCap_ccorres_helper':
                     and K (ccap_relation (ArchObjectCap cp) cap))
                  UNIV 
             [SKIP]
-           (do y \<leftarrow> ArchRetypeDecls_H.finaliseCap cp is_final;
+           (do y \<leftarrow> ARM_H.finaliseCap cp is_final;
                return (if is_final then resetMemMapping cp else cp)
             od)
            (call (\<lambda>s. s\<lparr>cap_' := cap, final_' := from_bool is_final\<rparr>) Arch_finaliseCap_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s t. Basic (\<lambda>s. s));;
@@ -699,11 +699,11 @@ lemma arch_recycleCap_ccorres:
                 and (\<lambda>s. capRange (ArchObjectCap cp) \<inter> kernel_data_refs = {}))
          (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
          ) []
-     (ArchRetypeDecls_H.recycleCap is_final cp) (Call Arch_recycleCap_'proc)"
+     (ARM_H.recycleCap is_final cp) (Call Arch_recycleCap_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: is_final_' cap_'  )
    apply csymbr
-   apply (simp add: ArchRetype_H.recycleCap_def cap_get_tag_isCap
+   apply (simp add: ARM_H.recycleCap_def cap_get_tag_isCap
                     cap_get_tag_isCap_ArchObject
                     isArchPageCap_ArchObjectCap
                del: Collect_const cong: call_ignore_cong)
@@ -798,7 +798,7 @@ lemma arch_recycleCap_ccorres:
         apply (erule subsetD, simp)
         apply (erule subsetD[rotated], rule intvl_start_le)
         apply simp
-       apply (clarsimp simp: split_def upto_enum_word kernelBase_def Platform.kernelBase_def
+       apply (clarsimp simp: split_def upto_enum_word kernelBase_def ARM.kernelBase_def
                        cong: StateSpace.state.fold_congs globals.fold_congs)
        apply (erule_tac S="{x. valid_pde_mapping_offset' (x && mask pdBits)}"
                   in mapM_x_store_memset_ccorres_assist[unfolded split_def],

@@ -12,6 +12,8 @@ theory StateRelation_C
 imports Wellformed_C
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
   "lifth p s \<equiv> the (clift (t_hrs_' s) p)"
 
@@ -81,6 +83,8 @@ where
                         then Some (ucast (stored_hw_asid_CL (pde_pde_invalid_lift pde)))
                         else None"
 
+end
+
 text {*
   Conceptually, the constant armKSKernelVSpace_C resembles ghost state.
   The constant specifies the use of certain address ranges, or ``windows''.
@@ -96,7 +100,7 @@ text {*
   which can subsequently be instantiated for
   @{text kernel_all_global_addresses} as well as @{text kernel_all_substitute}.
 *}
-locale state_rel = substitute_pre +
+locale state_rel = Arch + substitute_pre +
   fixes armKSKernelVSpace_C :: "machine_word \<Rightarrow> arm_vspace_region_use"
 
 locale kernel = kernel_all_substitute + state_rel
@@ -112,7 +116,7 @@ definition
   (armKSGlobalsFrame s = symbol_table ''armKSGlobalsFrame'')"
 
 definition
-  carch_state_relation :: "ArchStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
+  carch_state_relation :: "ARM_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
   "carch_state_relation astate cstate \<equiv>
   armKSNextASID_' cstate = armKSNextASID astate \<and>
@@ -124,6 +128,8 @@ where
   carch_globals astate"
 
 end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   cmachine_state_relation :: "machine_state \<Rightarrow> globals \<Rightarrow> bool"
@@ -637,6 +643,8 @@ where
             \<longrightarrow> cbitmap2.[unat d].[i] = abitmap2 (d, i)) \<and>
            ((\<not> (d \<le> maxDomain \<and> i \<le> numPriorities div wordBits))
             \<longrightarrow>  abitmap2 (d, i) = 0)"
+
+end
 
 definition (in state_rel)
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"

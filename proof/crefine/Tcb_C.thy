@@ -994,13 +994,13 @@ lemma Arch_performTransfer_ccorres:
   done
 
 lemma frame_gp_registers_convs:
-  "length State_H.frameRegisters = unat n_frameRegisters"
-  "length State_H.gpRegisters = unat n_gpRegisters"
-  "n < length State_H.frameRegisters \<Longrightarrow>
-     index frameRegisters n = register_from_H (State_H.frameRegisters ! n)"
-  "n < length State_H.gpRegisters \<Longrightarrow>
-     index gpRegisters n = register_from_H (State_H.gpRegisters ! n)"
-  apply (simp_all add: State_H.gpRegisters_def State_H.frameRegisters_def
+  "length ARM_H.frameRegisters = unat n_frameRegisters"
+  "length ARM_H.gpRegisters = unat n_gpRegisters"
+  "n < length ARM_H.frameRegisters \<Longrightarrow>
+     index frameRegisters n = register_from_H (ARM_H.frameRegisters ! n)"
+  "n < length ARM_H.gpRegisters \<Longrightarrow>
+     index gpRegisters n = register_from_H (ARM_H.gpRegisters ! n)"
+  apply (simp_all add: ARM_H.gpRegisters_def ARM_H.frameRegisters_def
                        MachineTypes.gpRegisters_def n_gpRegisters_def
                        MachineTypes.frameRegisters_def n_frameRegisters_def
                        frameRegisters_def gpRegisters_def msgRegisters_unfold
@@ -1430,7 +1430,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
           apply (rule ccorres_stateAssert)
           apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg) 
               apply (rule_tac F="\<lambda>n. sysargs_rel args buffer 
-                                     and sysargs_rel_n args buffer (n + length State_H.frameRegisters + 2)
+                                     and sysargs_rel_n args buffer (n + length ARM_H.frameRegisters + 2)
                                      and (\<lambda>s. dst \<noteq> ksCurThread s)"
                           and Q=UNIV
                            in ccorres_mapM_x_whileQ)
@@ -1454,7 +1454,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                 apply (clarsimp simp: n_msgRegisters_def frame_gp_registers_convs
                                       n_frameRegisters_def)
                 apply arith
-               apply (simp add: State_H.gpRegisters_def word_bits_def
+               apply (simp add: ARM_H.gpRegisters_def word_bits_def
                                 MachineTypes.gpRegisters_def)
               apply simp
              apply (rule ceqv_refl)
@@ -1546,9 +1546,9 @@ lemmas getRegister_ccorres_defer
     = ccorres_defer[OF getRegister_ccorres, OF no_fail_asUser [OF no_fail_getRegister]]
 
 lemma msg_registers_convs:
-  "length State_H.msgRegisters = unat n_msgRegisters"
-  "n < length State_H.msgRegisters \<Longrightarrow>
-     index msgRegisters n = register_from_H (State_H.msgRegisters ! n)"
+  "length ARM_H.msgRegisters = unat n_msgRegisters"
+  "n < length ARM_H.msgRegisters \<Longrightarrow>
+     index msgRegisters n = register_from_H (ARM_H.msgRegisters ! n)"
   apply (simp_all add: msgRegisters_unfold
                        MachineTypes.msgRegisters_def n_msgRegisters_def
                        msgRegisters_def fupdate_def Arrays.update_def)
@@ -1578,7 +1578,7 @@ lemma valid_ipc_buffer_ptr_the_strengthen:
 lemma lookupIPCBuffer_Some_0:
   "\<lbrace>\<top>\<rbrace> lookupIPCBuffer w t \<lbrace>\<lambda>rv s. rv \<noteq> Some 0\<rbrace>"
   apply (simp add: lookupIPCBuffer_def
-                   ArchVSpace_H.lookupIPCBuffer_def
+                   ARM_H.lookupIPCBuffer_def
                    Let_def getThreadBufferSlot_def
                    locateSlot_conv
              cong: if_cong)
@@ -1645,7 +1645,7 @@ shows
                                 in ccorres_gen_asm)
                     apply (rule ccorres_split_nothrow_novcg)
                         apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
-                                                     (State_H.frameRegisters @ State_H.gpRegisters))
+                                                     (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                               = reply) target s"
                                    in ccorres_mapM_x_while)
                             apply clarsimp
@@ -1712,7 +1712,7 @@ shows
                            apply (simp del: Collect_const)
                            apply (rule ccorres_rel_imp,
                                   rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
-                                                      (State_H.frameRegisters @ State_H.gpRegisters))
+                                                      (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                                = reply) target s
                                                  \<and> valid_ipc_buffer_ptr' (the rva) s
                                                  \<and> valid_pspace' s"
@@ -1826,7 +1826,7 @@ shows
                             apply (rule ccorres_Cond_rhs)
                              apply (simp del: Collect_const)
                              apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
-                                                       (State_H.frameRegisters @ State_H.gpRegisters))
+                                                       (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                                 = reply) target s
                                                   \<and> valid_ipc_buffer_ptr' (the rva) s \<and> valid_pspace' s"
                                         and i="0" in ccorres_mapM_x_while')
@@ -1962,7 +1962,7 @@ shows
                  apply (strengthen valid_ipc_buffer_ptr_the_strengthen)
                  apply simp
                  apply (wp lookupIPCBuffer_Some_0 | wp_once hoare_drop_imps)+
-                apply (simp add: Collect_const_mem State_H.badgeRegister_def
+                apply (simp add: Collect_const_mem ARM_H.badgeRegister_def
                                  MachineTypes.badgeRegister_def
                                  "StrictC'_register_defs")
                 apply (vcg exspec=lookupIPCBuffer_modifies)
@@ -2420,7 +2420,7 @@ lemma checkValidIPCBuffer_ccorres:
   apply (cases "isArchPageCap cp")
    apply (simp only: isCap_simps, safe)[1]
    apply (cinit lift: vptr_' cap_')
-    apply (simp add: ArchVSpace_H.checkValidIPCBuffer_def del: Collect_const)
+    apply (simp add: ARM_H.checkValidIPCBuffer_def del: Collect_const)
     apply (csymbr, csymbr)
     apply (simp add: cap_get_tag_isCap if_1_0_0 isCap_simps del: Collect_const)
     apply (rule ccorres_add_return,
@@ -2455,7 +2455,7 @@ lemma checkValidIPCBuffer_ccorres:
    apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
   apply (cinit lift: vptr_' cap_')
    apply csymbr
-   apply (simp add: ArchVSpace_H.checkValidIPCBuffer_def
+   apply (simp add: ARM_H.checkValidIPCBuffer_def
                     cap_get_tag_isCap)
    apply csymbr
    apply simp
@@ -2554,7 +2554,7 @@ lemma isValidVTableRoot_conv:
       \<Longrightarrow> isValidVTableRoot_C cap' = isValidVTableRoot cap"
   apply (clarsimp simp: isValidVTableRoot_C_def
                         if_1_0_0 from_bool_0 isValidVTableRoot_def
-                        ArchVSpace_H.isValidVTableRoot_def)
+                        ARM_H.isValidVTableRoot_def)
   apply (case_tac "isArchCap_tag (cap_get_tag cap')")
    apply (clarsimp simp: cap_get_tag_isCap cap_get_tag_isCap_ArchObject)
    apply (case_tac "cap_get_tag cap' = scast cap_page_directory_cap")

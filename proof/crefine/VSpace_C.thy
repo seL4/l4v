@@ -12,6 +12,7 @@ theory VSpace_C
 imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* FIXME: move *)
 lemma empty_fail_findPDForASID[iff]:
@@ -41,6 +42,8 @@ lemma mask_AND_less_0:
   apply (erule is_aligned_AND_less_0)
   apply (clarsimp simp: mask_2pm1 two_power_increasing)
   done
+
+end
 
 context kernel_m begin
 
@@ -460,8 +463,8 @@ lemma invalidateASID_ccorres:
 definition
   "vm_fault_type_from_H fault \<equiv>  
   case fault of 
-    vmfault_type.ARMDataAbort \<Rightarrow> (scast ARMDataAbort :: word32)
-  | vmfault_type.ARMPrefetchAbort \<Rightarrow> scast ARMPrefetchAbort"
+    vmfault_type.ARMDataAbort \<Rightarrow> (scast Kernel_C.ARMDataAbort :: word32)
+  | vmfault_type.ARMPrefetchAbort \<Rightarrow> scast Kernel_C.ARMPrefetchAbort"
 
 lemma mask_32_id [simp]:
   "(x::word32) && mask 32 = x"
@@ -479,7 +482,6 @@ lemma handleVMFault_ccorres:
            (handleVMFault thread vm_fault)
            (Call handleVMFault_'proc)"
   apply (cinit lift: vm_faultType_')
-  apply (unfold ArchVSpace_H.handleVMFault_def)
    apply wpc
     apply (simp add: vm_fault_type_from_H_def Kernel_C.ARMDataAbort_def Kernel_C.ARMPrefetchAbort_def)
     apply (simp add: ccorres_cond_univ_iff)
@@ -730,7 +732,7 @@ lemma lookupPDSlot_spec:
   \<lbrace>  \<acute>ret__ptr_to_struct_pde_C =  Ptr (lookupPDSlot (ptr_val (pd_' s))  (vptr_' s)) \<rbrace>"
   apply vcg
   apply (clarsimp simp: lookupPDSlot_def)
-  apply (simp add: ArchVSpaceAcc_A.lookup_pd_slot_def)
+  apply (simp add: ARM_A.lookup_pd_slot_def)
   apply (subst array_assertion_shrink_right, assumption)
    apply (rule unat_le_helper, simp)
    apply (rule order_less_imp_le, rule vptr_shiftr_le_2p)
@@ -745,7 +747,7 @@ lemma lookupPTSlot_nofail_spec:
   \<lbrace>  \<acute>ret__ptr_to_struct_pte_C =  Ptr (lookup_pt_slot_no_fail (ptr_val (pt_' s))  (vptr_' s)) \<rbrace>"
   apply vcg
   apply (clarsimp simp: )
-  apply (simp add: ArchVSpaceAcc_A.lookup_pt_slot_no_fail_def)
+  apply (simp add: ARM_A.lookup_pt_slot_no_fail_def)
   apply (subst array_assertion_shrink_right, assumption)
    apply (rule order_less_imp_le, rule unat_less_helper, simp)
    apply (rule order_le_less_trans, rule word_and_le1, simp add: ptBits_def pageBits_def)
@@ -794,8 +796,8 @@ lemma ptrFromPAddr_spec:
   Call ptrFromPAddr_'proc
   \<lbrace>  \<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s) ) \<rbrace>"
   apply vcg
-  apply (simp add: Platform.ptrFromPAddr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def Platform.physBase_def)
+  apply (simp add: ARM.ptrFromPAddr_def physMappingOffset_def
+                   kernelBase_addr_def physBase_def ARM.physBase_def)
   done
 
 lemma addrFromPPtr_spec:
@@ -804,8 +806,8 @@ lemma addrFromPPtr_spec:
   \<lbrace>  \<acute>ret__unsigned_long =  (addrFromPPtr (ptr_val (pptr_' s)) ) \<rbrace>" 
   apply vcg
   apply (simp add: addrFromPPtr_def 
-                   Platform.addrFromPPtr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def Platform.physBase_def)
+                   ARM.addrFromPPtr_def physMappingOffset_def
+                   kernelBase_addr_def physBase_def ARM.physBase_def)
   done
   
 
@@ -1246,6 +1248,8 @@ lemma rf_sr_armKSNextASID:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 crunch armKSNextASID[wp]: invalidateASID
     "\<lambda>s. P (armKSNextASID (ksArchState s))"
 crunch armKSNextASID[wp]: invalidateHWASIDEntry
@@ -1256,6 +1260,8 @@ lemma scast_ucast_down_same:
   apply (rule down_cast_same [symmetric])
   apply (simp add: is_down_def target_size_def source_size_def word_size)
   done
+
+end
 
 context kernel_m begin
 
@@ -1671,7 +1677,7 @@ lemma framesize_from_H_mask:
 
 lemma dmo_invalidateCacheRange_RAM_invs'[wp]:
   "valid invs' (doMachineOp (invalidateCacheRange_RAM vs ve ps)) (\<lambda>rv. invs')"
-  apply (wp dmo_invs' no_irq_invalidateCacheRange_RAM)
+  apply (wp dmo_invs' no_irq no_irq_invalidateCacheRange_RAM)
   apply (clarsimp simp: disj_commute[of "pointerInUserData p s" for p s])
   apply (erule use_valid)
    apply (wp, simp)
@@ -1679,23 +1685,23 @@ lemma dmo_invalidateCacheRange_RAM_invs'[wp]:
 
 lemma dmo_flushtype_case:
   "(doMachineOp (case t of 
-    ArchRetypeDecls_H.flush_type.Clean \<Rightarrow> f 
-  | ArchRetypeDecls_H.flush_type.Invalidate \<Rightarrow> g
-  | ArchRetypeDecls_H.flush_type.CleanInvalidate \<Rightarrow> h
-  | ArchRetypeDecls_H.flush_type.Unify \<Rightarrow> i)) = 
+    ARM_H.flush_type.Clean \<Rightarrow> f 
+  | ARM_H.flush_type.Invalidate \<Rightarrow> g
+  | ARM_H.flush_type.CleanInvalidate \<Rightarrow> h
+  | ARM_H.flush_type.Unify \<Rightarrow> i)) = 
   (case t of 
-    ArchRetypeDecls_H.flush_type.Clean \<Rightarrow> doMachineOp f 
-  | ArchRetypeDecls_H.flush_type.Invalidate \<Rightarrow> doMachineOp g
-  | ArchRetypeDecls_H.flush_type.CleanInvalidate \<Rightarrow> doMachineOp h
-  | ArchRetypeDecls_H.flush_type.Unify \<Rightarrow> doMachineOp i)"
+    ARM_H.flush_type.Clean \<Rightarrow> doMachineOp f 
+  | ARM_H.flush_type.Invalidate \<Rightarrow> doMachineOp g
+  | ARM_H.flush_type.CleanInvalidate \<Rightarrow> doMachineOp h
+  | ARM_H.flush_type.Unify \<Rightarrow> doMachineOp i)"
   by (case_tac "t", simp_all)
 
 definition
   "flushtype_relation typ label \<equiv> case typ of
-    ArchRetypeDecls_H.flush_type.Clean \<Rightarrow> (label = Kernel_C.ARMPageClean_Data \<or> label = Kernel_C.ARMPDClean_Data) 
-  | ArchRetypeDecls_H.flush_type.Invalidate \<Rightarrow>(label = Kernel_C.ARMPageInvalidate_Data \<or> label = Kernel_C.ARMPDInvalidate_Data)
-  | ArchRetypeDecls_H.flush_type.CleanInvalidate \<Rightarrow> (label = Kernel_C.ARMPageCleanInvalidate_Data \<or> label = Kernel_C.ARMPDCleanInvalidate_Data)
-  | ArchRetypeDecls_H.flush_type.Unify \<Rightarrow> (label = Kernel_C.ARMPageUnify_Instruction \<or> label = Kernel_C.ARMPDUnify_Instruction)"
+    ARM_H.flush_type.Clean \<Rightarrow> (label = Kernel_C.ARMPageClean_Data \<or> label = Kernel_C.ARMPDClean_Data) 
+  | ARM_H.flush_type.Invalidate \<Rightarrow>(label = Kernel_C.ARMPageInvalidate_Data \<or> label = Kernel_C.ARMPDInvalidate_Data)
+  | ARM_H.flush_type.CleanInvalidate \<Rightarrow> (label = Kernel_C.ARMPageCleanInvalidate_Data \<or> label = Kernel_C.ARMPDCleanInvalidate_Data)
+  | ARM_H.flush_type.Unify \<Rightarrow> (label = Kernel_C.ARMPageUnify_Instruction \<or> label = Kernel_C.ARMPDUnify_Instruction)"
 
 lemma doFlush_ccorres:
   "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
@@ -1738,12 +1744,14 @@ lemma doFlush_ccorres:
                         Kernel_C.ARMPageCleanInvalidate_Data_def Kernel_C.ARMPDCleanInvalidate_Data_def
                         Kernel_C.ARMPageUnify_Instruction_def Kernel_C.ARMPDUnify_Instruction_def
                   dest: ghost_assertion_size_logic[rotated]
-                 split: ArchRetypeDecls_H.flush_type.splits)
+                 split: ARM_H.flush_type.splits)
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch gsMaxObjectSize[wp]: setVMRootForFlush "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps)
+end
 
 context kernel_m begin
 
@@ -1790,8 +1798,8 @@ lemma performPageFlush_ccorres:
   done
 
 lemma length_of_msgRegisters:
-  "length State_H.msgRegisters = 4"
-  by (auto simp: State_H.msgRegisters_def msgRegisters_unfold)
+  "length ARM_H.msgRegisters = 4"
+  by (auto simp: ARM_H.msgRegisters_def msgRegisters_unfold)
 
 
 (* FIXME: move *)
@@ -1893,7 +1901,7 @@ lemma setMessageInfo_ccorres:
      apply (ctac add: setRegister_ccorres)
     apply wp
    apply vcg
-  apply (simp add: State_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
+  apply (simp add: ARM_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
                    Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
   done
 
@@ -1928,7 +1936,7 @@ lemma performPageGetAddress_ccorres:
      apply (simp add: guard_is_UNIV_def)
     apply wp
    apply vcg
-  by (auto simp: Hardware_H.fromPAddr_def message_info_to_H_def mask_def State_H.msgInfoRegister_def
+  by (auto simp: Hardware_H.fromPAddr_def message_info_to_H_def mask_def ARM_H.msgInfoRegister_def
                     MachineTypes.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def 
                     word_sle_def word_sless_def Kernel_C.R2_def 
                     kernel_all_global_addresses.msgRegisters_def fupdate_def Arrays.update_def 
@@ -2059,7 +2067,9 @@ lemmas unfold_checkMapping_return
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch no_0_obj'[wp]: flushPage "no_0_obj'"
+end
 
 context kernel_m begin
 
@@ -2702,7 +2712,7 @@ lemma diminished_PageCap:
   apply (clarsimp simp: diminished'_def)
   apply (clarsimp simp: maskCapRights_def Let_def)
   apply (cases cap, simp_all add: isCap_simps)
-  apply (simp add: ArchRetype_H.maskCapRights_def)
+  apply (simp add: ARM_H.maskCapRights_def)
   apply (simp add: isPageCap_def split: arch_capability.splits)
   done
 

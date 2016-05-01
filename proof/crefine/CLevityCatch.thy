@@ -15,6 +15,8 @@ imports
   "../../lib/LemmaBucket"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 declare word_neq_0_conv [simp del]
 
 (* Rule previously in the simpset, now not. *)
@@ -244,5 +246,7 @@ lemma exec_Basic_Guard_UNIV:
   apply simp_all
   apply (rule exec_Seq' exec.Basic exec.Guard | simp)+
   done
+
+end
 
 end

@@ -19,7 +19,7 @@ begin
 lemma maskCapRights_cap_cases:
   "return (maskCapRights R c) =
   (case c of
-    ArchObjectCap ac \<Rightarrow> return (ArchRetypeDecls_H.maskCapRights R ac)
+    ArchObjectCap ac \<Rightarrow> return (ARM_H.maskCapRights R ac)
   | EndpointCap _ _ _ _ _ \<Rightarrow> 
     return (capEPCanGrant_update
        (\<lambda>_. capEPCanGrant c \<and> capAllowGrant R)
@@ -100,11 +100,11 @@ lemma Arch_maskCapRights_ccorres [corres]:
   (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap arch_cap) \<acute>cap\<rbrace> \<inter>
   \<lbrace>ccap_rights_relation R \<acute>cap_rights_mask\<rbrace>)
   []
-  (return (ArchRetypeDecls_H.maskCapRights R arch_cap))
+  (return (ARM_H.maskCapRights R arch_cap))
   (Call Arch_maskCapRights_'proc)"
   apply (cinit' (trace) lift: cap_' cap_rights_mask_')
    apply csymbr
-   apply (unfold ArchRetype_H.maskCapRights_def)
+   apply (unfold ARM_H.maskCapRights_def)
    apply (simp only: Let_def)
    apply (case_tac "cap_get_tag cap = scast cap_small_frame_cap")
     apply (clarsimp simp add: ccorres_cond_iffs cap_get_tag_isCap isCap_simps)
@@ -2669,11 +2669,11 @@ lemma Arch_sameRegionAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>  ccap_relation (ArchObjectCap capa) \<acute>cap_a \<and>
                  ccap_relation (ArchObjectCap capb) \<acute>cap_b  \<rbrace>
   Call Arch_sameRegionAs_'proc
-  \<lbrace>  \<acute>ret__unsigned_long = from_bool (ArchRetypeDecls_H.sameRegionAs capa capb) \<rbrace>"
+  \<lbrace>  \<acute>ret__unsigned_long = from_bool (ARM_H.sameRegionAs capa capb) \<rbrace>"
   apply vcg
   apply clarsimp
 
-  apply (simp add: ArchRetype_H.sameRegionAs_def)
+  apply (simp add: ARM_H.sameRegionAs_def)
   subgoal for capa capb cap_b cap_a  
   apply (cases capa; simp add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
 
@@ -3036,7 +3036,7 @@ lemma cap_get_capSizeBits_spec:
 lemma ccap_relation_get_capSizeBits_physical:
   notes unfolds = ccap_relation_def get_capSizeBits_CL_def cap_lift_def
                   cap_tag_defs cap_to_H_def objBits_def objBitsKO_simps
-                  Let_def field_simps mask_def asid_low_bits_def ArchRetype_H.capUntypedSize_def
+                  Let_def field_simps mask_def asid_low_bits_def ARM_H.capUntypedSize_def
   shows
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap = PhysicalClass;
             capAligned hcap \<rbrakk> \<Longrightarrow>
@@ -3478,9 +3478,9 @@ lemma Arch_sameObjectAs_spec:
                      capAligned (ArchObjectCap capa) \<and>
                      capAligned (ArchObjectCap capb) \<rbrace>
   Call Arch_sameObjectAs_'proc
-  \<lbrace> \<acute>ret__unsigned_long = from_bool (ArchRetypeDecls_H.sameObjectAs capa capb) \<rbrace>"
+  \<lbrace> \<acute>ret__unsigned_long = from_bool (ARM_H.sameObjectAs capa capb) \<rbrace>"
   apply vcg
-  apply (clarsimp simp: ArchRetype_H.sameObjectAs_def)
+  apply (clarsimp simp: ARM_H.sameObjectAs_def)
   apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                       isCap_defs cap_tag_defs)
       apply fastforce+
@@ -3741,7 +3741,7 @@ lemma updateCapData_spec:
    apply clarsimp
    apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
    apply (simp add: isArchCap_tag_def2)
-   apply (simp add: ArchRetype_H.updateCapData_def) 
+   apply (simp add: ARM_H.updateCapData_def) 
 
   -- "CNodeCap"
   apply clarsimp
@@ -3882,10 +3882,10 @@ lemma cap_frame_cap_set_capFMappedASID_spec:
 lemma Arch_deriveCap_ccorres:
   "ccorres (syscall_error_rel \<currency> (ccap_relation \<circ> ArchObjectCap)) deriveCap_xf
   \<top> (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}) []
-  (ArchRetypeDecls_H.deriveCap slot cap) (Call Arch_deriveCap_'proc)"
+  (ARM_H.deriveCap slot cap) (Call Arch_deriveCap_'proc)"
   apply (cinit lift: cap_')
    apply csymbr
-   apply (unfold ArchRetype_H.deriveCap_def Let_def)
+   apply (unfold ARM_H.deriveCap_def Let_def)
    apply (fold case_bool_If)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
