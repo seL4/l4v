@@ -561,4 +561,200 @@ lemma (* handleYield_ccorres: *)
 
 end
 
+context kernel_m begin
+ML \<open>
+(* Search for function call testcase:
+ *   function calls with the smallest caller + callee *)
+let val ctxt = @{context};
+    val fn_info = FunctionInfo.init_fn_info ctxt "c/kernel_all.c_pp";
+    val real_funcs =
+          Symtab.dest (FunctionInfo.get_functions fn_info)
+          |> filter (fn (f, info) => case Thm.prop_of (#definition info) of
+                        @{term_pat "_ \<equiv> Spec _"} => false
+                      | @{term_pat "_ \<equiv> TRY SKIP CATCH SKIP END"} => false
+                      | _ => true)
+          |> map fst
+          |> filter (fn f => isSome (try (Proof_Context.get_thm ctxt) (f ^ "_ccorres")))
+          |> Symset.make;
+    val call2s = Symtab.dest (FunctionInfo.get_functions fn_info)
+          |> maps (fn (fn_name, fn_def) =>
+                if not (Symset.contains real_funcs fn_name) then [] else
+                FunctionInfo.get_function_callees fn_info fn_name
+                |> filter (Symset.contains real_funcs)
+                |> map (fn callee =>
+                    (size_of_thm (#definition fn_def) +
+                       size_of_thm (#definition (FunctionInfo.get_function_def fn_info callee)),
+                     (fn_name, callee))));
+in sort (prod_ord int_ord (K EQUAL)) call2s end
+\<close>
+thm handleFault_body_def handleDoubleFault_body_def
+thm handleFault_ccorres handleDoubleFault_ccorres
+end
+
+
+autocorres
+  [
+   skip_heap_abs, skip_word_abs, (* for compatibility *)
+   scope = handleDoubleFault,
+   scope_depth = 0,
+   c_locale = kernel_all_substitute,
+   no_c_termination
+  ] "c/kernel_all.c_pp"
+
+(* Prove and store modifies rules. *)
+context kernel_all_substitute begin
+local_setup \<open>do_ac_modifies_rules "c/kernel_all.c_pp"\<close>
+end
+
+context kernel_m begin
+lemma (*handleDoubleFault_ccorres:*)
+  "ccorres dc xfdc (invs' and  tcb_at' tptr and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and
+        sch_act_not tptr and (\<lambda>s. \<forall>p. tptr \<notin> set (ksReadyQueues s p)))
+      (UNIV \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr tptr})
+      [] (handleDoubleFault tptr ex1 ex2)
+         (Call handleDoubleFault_'proc)"
+  apply (cinit lift: tptr_')
+   apply (subst ccorres_seq_skip'[symmetric])
+   apply (ctac (no_vcg))
+    apply (rule ccorres_symb_exec_l)
+       apply (rule ccorres_return_Skip)
+      apply (wp asUser_inv getRestartPC_inv)
+    apply (rule empty_fail_asUser)
+    apply (simp add: getRestartPC_def)
+   apply wp
+  apply clarsimp
+  apply (simp add: ThreadState_Inactive_def)
+  apply (fastforce simp: valid_tcb_state'_def)
+  done
+
+thm setThreadState_ccorres[no_vars]
+lemma setThreadState_corres:
+  "(\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := ts && mask 4\<rparr>, fl)) \<and>
+   tptr = tcb_ptr_to_ctcb_ptr thread \<Longrightarrow>
+   corres_underlying {(x, y). cstate_relation x y} True True (op=)
+     (\<lambda>s. tcb_at' thread s \<and>
+       Invariants_H.valid_queues s \<and>
+       valid_objs' s \<and>
+       valid_tcb_state' st s \<and>
+       (ksSchedulerAction s = SwitchToThread thread \<longrightarrow> runnable' st) \<and> (\<forall>p. thread \<in> set (ksReadyQueues s p) \<longrightarrow> runnable' st) \<and> sch_act_wf (ksSchedulerAction s) s) \<top>
+     (setThreadState st thread) (setThreadState' tptr ts)"
+  apply (rule ccorres_to_corres_no_termination)
+   apply (simp add: setThreadState'_def)
+  apply (clarsimp simp: ccorres_rrel_nat_unit)
+  using setThreadState_ccorres
+  apply (fastforce simp: ccorres_underlying_def Ball_def)
+  done
+
+lemma corres_gen_asm':
+  "\<lbrakk> corres_underlying sr nf nf' r Q P' f g; \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; P' s' \<rbrakk> \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow>
+   corres_underlying sr nf nf' r P P' f g"
+  by (fastforce simp: corres_underlying_def)
+
+lemma corres_add_noop_rhs2:
+  "corres_underlying sr nf nf' r P P' f (do _ \<leftarrow> g; return () od)
+      \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by simp
+
+(* use termination (nf=True) to avoid exs_valid *)
+lemma corres_noop2_no_exs:
+  assumes x: "\<And>s. P s  \<Longrightarrow> \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>r. op = s\<rbrace> \<and> empty_fail f"
+  assumes y: "\<And>s. P' s \<Longrightarrow> \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes z: "nf' \<Longrightarrow> no_fail P f" "no_fail P' g"
+  shows      "corres_underlying sr True nf' dc P P' f g"
+  apply (clarsimp simp: corres_underlying_def)
+  apply (rule conjI)
+   apply (drule x, drule y)
+   apply (clarsimp simp: valid_def empty_fail_def Ball_def Bex_def)
+   apply fast
+  apply (insert z)
+  apply (clarsimp simp: no_fail_def)
+  done
+
+lemma corres_symb_exec_l_no_exs:
+  assumes z: "\<And>rv. corres_underlying sr True nf' r (Q rv) P' (x rv) y"
+  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace> \<and> empty_fail m"
+  assumes y: "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>"
+  assumes nf: "nf' \<Longrightarrow> no_fail P m"
+  shows      "corres_underlying sr True nf' r P P' (m >>= (\<lambda>rv. x rv)) y"
+  apply (rule corres_guard_imp)
+    apply (subst gets_bind_ign[symmetric], rule corres_split)
+       apply (rule z)
+      apply (rule corres_noop2_no_exs)
+         apply (erule x)
+        apply (rule gets_wp)
+       apply (erule nf)
+      apply (rule non_fail_gets)
+     apply (rule y)
+    apply (rule gets_wp)
+   apply simp+
+  done
+
+lemma (*handleDoubleFault_ccorres:*)
+  "ccorres dc xfdc (invs' and tcb_at' tptr and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and
+        sch_act_not tptr and (\<lambda>s. \<forall>p. tptr \<notin> set (ksReadyQueues s p)))
+      (UNIV \<inter> {s. ex1_' s = ex1' \<and> tptr_' s = tcb_ptr_to_ctcb_ptr tptr})
+      [] (handleDoubleFault tptr ex1 ex2)
+         (Call handleDoubleFault_'proc)"
+  apply (rule autocorres_to_ccorres[where R="op="])
+    apply (rule handleDoubleFault'_ac_corres)
+   apply (simp add: pred_conj_def)
+  apply (unfold handleDoubleFault_def handleDoubleFault'_def)
+  apply (simp only: K_bind_def) -- "normalise"
+  apply (rule corres_add_noop_rhs2) -- "split out extra haskell code"
+  apply (rule corres_split')
+     (* call setThreadState *)
+     apply (rule corres_gen_asm')
+      apply (rule setThreadState_corres)
+      apply (simp add: ThreadState_Inactive_def)
+     apply (fastforce simp: valid_tcb_state'_def ThreadState_Inactive_def)
+    (* extra haskell code *)
+    apply simp
+    apply (rule corres_symb_exec_l_no_exs)
+       apply simp
+      apply (rule conjI)
+       apply (wp asUser_inv getRestartPC_inv)
+      apply (wp empty_fail_asUser)[1]
+     apply (rule hoare_TrueI)
+    apply (simp add: getRestartPC_def)
+    apply wp
+   apply simp
+  apply (rule hoare_TrueI)
+  done
+
+end
+
+autocorres
+  [
+   skip_heap_abs, skip_word_abs, (* for compatibility *)
+   scope = handleFault,
+   scope_depth = 0,
+   c_locale = kernel_all_substitute,
+   no_c_termination
+  ] "c/kernel_all.c_pp"
+
+(* Prove and store modifies rules. *)
+context kernel_all_substitute begin
+local_setup \<open>do_ac_modifies_rules "c/kernel_all.c_pp"\<close>
+end
+
+context kernel_m begin
+
+thm handleFault_ccorres
+
+end
+
+
+(* FIXME: using hoare specs *)
+autocorres
+  [
+   skip_heap_abs, skip_word_abs, ts_rules = nondet, (* for compatibility *)
+   scope = clzl,
+   scope_depth = 0,
+   c_locale = kernel_all_substitute
+  ] "c/kernel_all.c_pp"
+thm kernel_all_substitute.clzl'_def
+thm kernel_m.clzl_spec
+thm kernel_all_substitute.clzl_body_def[unfolded guarded_spec_body_def]
+find_theorems ImpossibleSpec
+
 end
