@@ -19,7 +19,7 @@ begin
 lemma maskCapRights_cap_cases:
   "return (maskCapRights R c) =
   (case c of
-    ArchObjectCap ac \<Rightarrow> return (ARM_H.maskCapRights R ac)
+    ArchObjectCap ac \<Rightarrow> return (Arch.maskCapRights R ac)
   | EndpointCap _ _ _ _ _ \<Rightarrow> 
     return (capEPCanGrant_update
        (\<lambda>_. capEPCanGrant c \<and> capAllowGrant R)
@@ -100,7 +100,7 @@ lemma Arch_maskCapRights_ccorres [corres]:
   (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap arch_cap) \<acute>cap\<rbrace> \<inter>
   \<lbrace>ccap_rights_relation R \<acute>cap_rights_mask\<rbrace>)
   []
-  (return (ARM_H.maskCapRights R arch_cap))
+  (return (Arch.maskCapRights R arch_cap))
   (Call Arch_maskCapRights_'proc)"
   apply (cinit' (trace) lift: cap_' cap_rights_mask_')
    apply csymbr
@@ -2669,7 +2669,7 @@ lemma Arch_sameRegionAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>  ccap_relation (ArchObjectCap capa) \<acute>cap_a \<and>
                  ccap_relation (ArchObjectCap capb) \<acute>cap_b  \<rbrace>
   Call Arch_sameRegionAs_'proc
-  \<lbrace>  \<acute>ret__unsigned_long = from_bool (ARM_H.sameRegionAs capa capb) \<rbrace>"
+  \<lbrace>  \<acute>ret__unsigned_long = from_bool (Arch.sameRegionAs capa capb) \<rbrace>"
   apply vcg
   apply clarsimp
 
@@ -3478,7 +3478,7 @@ lemma Arch_sameObjectAs_spec:
                      capAligned (ArchObjectCap capa) \<and>
                      capAligned (ArchObjectCap capb) \<rbrace>
   Call Arch_sameObjectAs_'proc
-  \<lbrace> \<acute>ret__unsigned_long = from_bool (ARM_H.sameObjectAs capa capb) \<rbrace>"
+  \<lbrace> \<acute>ret__unsigned_long = from_bool (Arch.sameObjectAs capa capb) \<rbrace>"
   apply vcg
   apply (clarsimp simp: ARM_H.sameObjectAs_def)
   apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap
@@ -3882,7 +3882,7 @@ lemma cap_frame_cap_set_capFMappedASID_spec:
 lemma Arch_deriveCap_ccorres:
   "ccorres (syscall_error_rel \<currency> (ccap_relation \<circ> ArchObjectCap)) deriveCap_xf
   \<top> (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}) []
-  (ARM_H.deriveCap slot cap) (Call Arch_deriveCap_'proc)"
+  (Arch.deriveCap slot cap) (Call Arch_deriveCap_'proc)"
   apply (cinit lift: cap_')
    apply csymbr
    apply (unfold ARM_H.deriveCap_def Let_def)

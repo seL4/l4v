@@ -647,7 +647,7 @@ lemma arch_recycleCap_ccorres_helper:
            (invs' and valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
                and K (ccap_relation (ArchObjectCap cp) cap))
            UNIV [SKIP]
-           (do y \<leftarrow> ARM_H.finaliseCap cp is_final;
+           (do y \<leftarrow> Arch.finaliseCap cp is_final;
                return (resetMemMapping cp)
             od)
            (call (\<lambda>s. s\<lparr>cap_' := cap, final_' := from_bool is_final\<rparr>) Arch_finaliseCap_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s t. Basic (\<lambda>s. s));;
@@ -668,7 +668,7 @@ lemma arch_recycleCap_ccorres_helper':
                     and K (ccap_relation (ArchObjectCap cp) cap))
                  UNIV 
             [SKIP]
-           (do y \<leftarrow> ARM_H.finaliseCap cp is_final;
+           (do y \<leftarrow> Arch.finaliseCap cp is_final;
                return (if is_final then resetMemMapping cp else cp)
             od)
            (call (\<lambda>s. s\<lparr>cap_' := cap, final_' := from_bool is_final\<rparr>) Arch_finaliseCap_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s t. Basic (\<lambda>s. s));;
@@ -699,7 +699,7 @@ lemma arch_recycleCap_ccorres:
                 and (\<lambda>s. capRange (ArchObjectCap cp) \<inter> kernel_data_refs = {}))
          (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
          ) []
-     (ARM_H.recycleCap is_final cp) (Call Arch_recycleCap_'proc)"
+     (Arch.recycleCap is_final cp) (Call Arch_recycleCap_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: is_final_' cap_'  )
    apply csymbr

@@ -1185,7 +1185,7 @@ lemma lookupPTSlot_le_0x3C:
   apply (clarsimp simp: projectKOs)
   apply (clarsimp simp: valid_obj'_def ptBits_def pageBits_def vmsz_aligned'_def
                         lookup_pt_slot_no_fail_def)
-  apply (subgoal_tac "is_aligned (ARM.ptrFromPAddr x) 10")
+  apply (subgoal_tac "is_aligned (ptrFromPAddr x) 10")
    apply (rule is_aligned_no_wrap' [where sz=6])
     apply (erule aligned_add_aligned)
       apply clarsimp
@@ -3765,7 +3765,7 @@ lemma Arch_decodeInvocation_ccorres:
              \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
-       (ARM_H.decodeInvocation label args cptr slot cp extraCaps
+       (Arch.decodeInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call Arch_decodeInvocation_'proc)"
   (is "?F \<Longrightarrow> ccorres ?r ?xf ?P (?P' slot_') [] ?a ?c")

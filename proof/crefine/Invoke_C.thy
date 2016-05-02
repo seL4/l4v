@@ -532,7 +532,7 @@ lemma cnode_invok_case_cleanup2:
 lemma Arch_hasRecycleRights_spec:
   "\<forall>cap. \<Gamma> \<turnstile> \<lbrace> ccap_relation (ArchObjectCap cap) \<acute>cap \<rbrace> 
              Call Arch_hasRecycleRights_'proc 
-             \<lbrace> \<acute>ret__unsigned_long = from_bool (ARM_H.hasRecycleRights cap) \<rbrace>"
+             \<lbrace> \<acute>ret__unsigned_long = from_bool (Arch.hasRecycleRights cap) \<rbrace>"
   apply vcg
   apply clarsimp
   apply (rule conjI)
@@ -1512,7 +1512,7 @@ lemma globals_update_id:
    by (simp add:id_def hrs_htd_update_def)
 
 lemma getObjectSize_spec:
-  "\<forall>s. \<Gamma>\<turnstile>\<lbrace>s. \<acute>t \<le> of_nat (length (enum::ARM_H.object_type list) - 1)\<rbrace> Call getObjectSize_'proc
+  "\<forall>s. \<Gamma>\<turnstile>\<lbrace>s. \<acute>t \<le> of_nat (length (enum::object_type list) - 1)\<rbrace> Call getObjectSize_'proc
            \<lbrace>\<acute>ret__unsigned_long = of_nat (getObjectSize (object_type_to_H (t_' s)) (unat (userObjSize_' s)))\<rbrace>"
   apply vcg
   apply (clarsimp simp:ARMSmallPageBits_def ARMLargePageBits_def objBits_simps
@@ -1523,7 +1523,7 @@ lemma getObjectSize_spec:
   done
 
 lemma object_type_from_H_bound:
-  "object_type_from_H newType \<le> of_nat (length (enum::ARM_H.object_type list) - Suc 0)"
+  "object_type_from_H newType \<le> of_nat (length (enum::object_type list) - Suc 0)"
   apply (simp add:enum_object_type enum_apiobject_type object_type_from_H_def)
   apply (case_tac newType)
   apply (clarsimp simp:ARMSmallPageBits_def ARMLargePageBits_def objBits_simps
@@ -2378,7 +2378,7 @@ lemma setThreadStateRestart_ct_active':
   done
 
 lemma toEnum_object_type_to_H:
-  "unat v \<le> (fromEnum::ARM_H.object_type \<Rightarrow> nat) maxBound
+  "unat v \<le> (fromEnum::object_type \<Rightarrow> nat) maxBound
   \<Longrightarrow> toEnum (unat v) = (object_type_to_H (v::word32))"
   apply (simp add:enum_object_type enum_apiobject_type object_type_to_H_def toEnum_def
                   maxBound_less_length)
@@ -2404,7 +2404,7 @@ lemma valid_untyped_inv'_D:
   done
   
 lemma  object_type_from_to_H:
-  "unat v \<le> (fromEnum::ARM_H.object_type \<Rightarrow> nat) maxBound
+  "unat v \<le> (fromEnum::object_type \<Rightarrow> nat) maxBound
          \<Longrightarrow> v = object_type_from_H (object_type_to_H v)"
   apply (simp add:toEnum_object_type_to_H[symmetric])
   apply (rule iffD1[OF word_unat.Rep_inject])

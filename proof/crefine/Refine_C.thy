@@ -828,7 +828,7 @@ lemma do_user_op_corres_C:
                  in corres_split)
              prefer 2
              apply clarsimp
-             apply (rule fun_cong[where x=ARM.ptrFromPAddr])
+             apply (rule fun_cong[where x=ptrFromPAddr])
              apply (rule_tac f=comp in arg_cong)
              apply (rule user_mem_C_relation[symmetric])
               apply (simp add: rf_sr_def cstate_relation_def Let_def

@@ -1460,7 +1460,7 @@ lemma Arch_finaliseCap_ccorres:
        and (\<lambda>s. 2 ^ acapBits cap \<le> gsMaxObjectSize s))
    (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}
                         \<inter> {s. final_' s = from_bool final}) []
-   (ARM_H.finaliseCap cap final) (Call Arch_finaliseCap_'proc)"
+   (Arch.finaliseCap cap final) (Call Arch_finaliseCap_'proc)"
   apply (cinit lift: cap_' final_' cong: call_ignore_cong)
    apply csymbr
    apply (simp add: ARM_H.finaliseCap_def cap_get_tag_isCap_ArchObject

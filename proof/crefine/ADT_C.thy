@@ -1469,7 +1469,7 @@ definition (in state_rel)
                           {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va})));
       setUserMem_C (restrict_map um'
                         {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
-                      \<circ> ARM.addrFromPPtr);
+                      \<circ> addrFromPPtr);
       return (e,tc')
    od"
 

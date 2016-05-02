@@ -4309,22 +4309,24 @@ lemma upt_enum_offset_trivial:
      apply (simp add:max_word_def word_bits_def)
      done
    qed
-find_theorems name:getObjectSize_def
+
 lemma getObjectSize_max_size:
   "\<lbrakk> newType =  APIObjectType apiobject_type.Untyped \<longrightarrow> x < 32;
          newType =  APIObjectType apiobject_type.CapTableObject \<longrightarrow> x < 28 \<rbrakk> \<Longrightarrow> getObjectSize newType x < word_bits"
-  apply (clarsimp simp: getObjectSize_def ArchTypes_H.getObjectSize_def apiGetObjectSize_def)
-  apply (clarsimp simp: apiGetObjectSize_def word_bits_def split: object_type.splits apiobject_type.splits)
-  apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def pdBits_def pageBits_def ptBits_def)
+  apply (clarsimp simp only: getObjectSize_def apiGetObjectSize_def word_bits_def
+                  split: ARM_H.object_type.splits apiobject_type.splits)
+  apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
+                        pdBits_def pageBits_def ptBits_def)
   done
 
 lemma getObjectSize_min_size:
   "\<lbrakk> newType =  APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> x;
      newType =  APIObjectType apiobject_type.CapTableObject \<longrightarrow> 2 \<le> x \<rbrakk> \<Longrightarrow>
     4 \<le> getObjectSize newType x"
-  apply (clarsimp simp: getObjectSize_def ArchTypes_H.getObjectSize_def apiGetObjectSize_def)
-  apply (clarsimp simp: apiGetObjectSize_def word_bits_def split: object_type.splits apiobject_type.splits)
-  apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def pdBits_def pageBits_def ptBits_def)
+  apply (clarsimp simp only: getObjectSize_def apiGetObjectSize_def word_bits_def
+                  split: ARM_H.object_type.splits apiobject_type.splits)
+  apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
+                        pdBits_def pageBits_def ptBits_def)
   done
 
 (*
@@ -4773,7 +4775,7 @@ lemma placeNewObject_pde:
       apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
       apply (clarsimp elim!:is_aligned_weaken simp: objBitsKO_def word_bits_def)+
       apply (clarsimp simp: split_def objBitsKO_def archObjSize_def
-          Fun.comp_def rf_sr_def split_def Let_def ptr_retyps_gen_def
+          Fun.comp_def rf_sr_def Let_def ptr_retyps_gen_def
           new_cap_addrs_def field_simps power_add)
       apply (simp add:Int_ac pdBits_def pageBits_def)
      apply (clarsimp simp: word_bits_conv range_cover_def archObjSize_def)
@@ -5002,7 +5004,7 @@ lemma Arch_createObject_ccorres:
      (createObject_hs_preconds regionBase newType userSize) 
      (createObject_c_preconds regionBase newType userSize)
      []
-     (ARM_H.createObject newType regionBase userSize)
+     (Arch.createObject newType regionBase userSize)
      (Call Arch_createObject_'proc)"
 proof -
   note if_cong[cong]
@@ -5454,7 +5456,7 @@ lemma threadSet_domain_ccorres [corres]:
 lemma createObject_ccorres:
   notes APITypecapBits_simps[simp] =
           APIType_capBits_def[split_simps
-          ARM_H.split apiobject_type.split]
+          object_type.split apiobject_type.split]
   shows
     "ccorres ccap_relation ret__struct_cap_C_'
      (createObject_hs_preconds regionBase newType userSize)
@@ -5761,7 +5763,7 @@ proof -
     apply (auto simp: createObject_c_preconds_def objBits_simps field_simps
                split: apiobject_type.splits)[1]
    apply (clarsimp simp: nAPIObjects_def object_type_from_H_def Kernel_C_defs
-                  split: ARM_H.splits)
+                  split: object_type.splits)
   apply (clarsimp simp: createObject_c_preconds_def
                         createObject_hs_preconds_def)
   done
@@ -6924,7 +6926,7 @@ shows
   apply (rule createObject_untypedRange)
   apply (clarsimp | wp)+
   apply (clarsimp simp: blah toAPIType_def APIType_capBits_def
-    ArchTypes_H.toAPIType_def split:ARM_H.splits)
+    ArchTypes_H.toAPIType_def split: object_type.splits)
   apply (clarsimp simp:shiftl_t2n field_simps)
   apply (drule word_eq_zeroI)
   apply (drule(1) range_cover_no_0[where p = "Suc n"])
@@ -7128,7 +7130,7 @@ lemma APIType_capBits_min:
 end
 
 crunch gsCNodes[wp]: insertNewCap, Arch_createNewCaps, threadSet,
-        "ARM_H.createObject" "\<lambda>s. P (gsCNodes s)"
+        "Arch.createObject" "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only
      simp: unless_def updateObject_default_def ignore: getObject setObject)
 
