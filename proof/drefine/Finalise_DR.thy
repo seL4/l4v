@@ -596,7 +596,7 @@ lemma invalidate_hw_asid_entry_dwp[wp]:
 done
 
 lemma set_current_pd_dwp[wp]:
-  " \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> setCurrentPD (ARM.addrFromPPtr x) \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
+  " \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> setCurrentPD (addrFromPPtr x) \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
   by (clarsimp simp:setCurrentPD_def writeTTBR0_def isb_def dsb_def,wp)
 
 lemma set_hardware_asid_dwp[wp]:
@@ -911,28 +911,28 @@ definition pd_pt_relation :: "word32\<Rightarrow>word32\<Rightarrow>word32\<Righ
 where "pd_pt_relation pd pt offset s \<equiv>
   \<exists>fun u v ref. ( kheap s pd = Some (ArchObj (arch_kernel_obj.PageDirectory fun))
   \<and> page_table_at pt s \<and> fun (ucast (offset && mask pd_bits >> 2)) = ARM_A.pde.PageTablePDE ref u v
-  \<and> pt = ARM.ptrFromPAddr ref )"
+  \<and> pt = ptrFromPAddr ref )"
 
 definition pd_section_relation :: "word32\<Rightarrow>word32\<Rightarrow>word32\<Rightarrow>'z::state_ext state\<Rightarrow>bool"
 where "pd_section_relation pd pt offset s \<equiv>
   \<exists>fun u v ref1 ref2. ( kheap s pd = Some (ArchObj (arch_kernel_obj.PageDirectory fun))
   \<and> fun (ucast (offset && mask pd_bits >> 2)) = ARM_A.pde.SectionPDE ref1 u ref2 v
-  \<and> pt = ARM.ptrFromPAddr ref1 )"
+  \<and> pt = ptrFromPAddr ref1 )"
 
 definition pd_super_section_relation :: "word32\<Rightarrow>word32\<Rightarrow>word32\<Rightarrow>'z::state_ext state\<Rightarrow>bool"
 where "pd_super_section_relation pd pt offset s \<equiv>
   \<exists>fun u v ref1. ( kheap s pd = Some (ArchObj (arch_kernel_obj.PageDirectory fun))
   \<and> fun (ucast (offset && mask pd_bits >> 2)) = ARM_A.pde.SuperSectionPDE ref1 u v
-  \<and> pt = ARM.ptrFromPAddr ref1 )"
+  \<and> pt = ptrFromPAddr ref1 )"
 
 definition pt_page_relation :: "word32\<Rightarrow>word32\<Rightarrow>word32\<Rightarrow>vmpage_size set\<Rightarrow>'z::state_ext state\<Rightarrow>bool"
 where "pt_page_relation pt page offset S s \<equiv>
   \<exists>fun. (kheap s pt = Some (ArchObj (arch_kernel_obj.PageTable fun)))
   \<and> (case fun (ucast (offset && mask pt_bits >> 2)) of
     ARM_A.pte.LargePagePTE ref fun1 fun2 \<Rightarrow>
-        page = ARM.ptrFromPAddr ref \<and> ARMLargePage \<in> S
+        page = ptrFromPAddr ref \<and> ARMLargePage \<in> S
   | ARM_A.pte.SmallPagePTE ref fun1 fun2 \<Rightarrow>
-        page = ARM.ptrFromPAddr ref \<and> ARMSmallPage \<in> S
+        page = ptrFromPAddr ref \<and> ARMSmallPage \<in> S
   | _ \<Rightarrow> False)"
 
 lemma slot_with_pt_frame_relation:

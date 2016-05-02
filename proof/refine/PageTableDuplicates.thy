@@ -1145,9 +1145,9 @@ lemma valid_duplicates'_update:
 
 lemma createObject_valid_duplicates'[wp]:
   "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct'
-   and pspace_no_overlap' ptr (ARM_H.getObjectSize ty us)
+   and pspace_no_overlap' ptr (getObjectSize ty us)
    and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
-   and K (is_aligned ptr (ARM_H.getObjectSize ty us)) 
+   and K (is_aligned ptr (getObjectSize ty us)) 
    and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
   RetypeDecls_H.createObject ty ptr us 
   \<lbrace>\<lambda>xa s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
@@ -1277,7 +1277,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma createNewObjects_valid_duplicates'[wp]:
  "\<lbrace> (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_no_overlap' ptr sz
   and pspace_aligned' and pspace_distinct' and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
-  and K (range_cover ptr sz (ARM_H.getObjectSize ty us) (length dest) \<and> 
+  and K (range_cover ptr sz (getObjectSize ty us) (length dest) \<and> 
       ptr \<noteq> 0 \<and> (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28) ) \<rbrace>
        createNewObjects ty src dest ptr us 
   \<lbrace>\<lambda>reply s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
@@ -1810,7 +1810,7 @@ crunch valid_duplicates'[wp]:
 lemma archFinaliseCap_valid_duplicates'[wp]:
   "\<lbrace>valid_objs' and pspace_aligned' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) 
     and (valid_cap' (capability.ArchObjectCap arch_cap))\<rbrace>
-  ARM_H.finaliseCap arch_cap is_final 
+  Arch.finaliseCap arch_cap is_final 
   \<lbrace>\<lambda>ya a. vs_valid_duplicates' (ksPSpace a)\<rbrace>"
   apply (case_tac arch_cap,simp_all add:ARM_H.finaliseCap_def)
       apply (rule hoare_pre)
@@ -2327,7 +2327,7 @@ lemma setASIDPool_valid_duplicates':
 lemma performArchInvocation_valid_duplicates':
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p
     and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
-     ARM_H.performInvocation ai
+     Arch.performInvocation ai
    \<lbrace>\<lambda>reply s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
   apply (cases ai, simp_all)

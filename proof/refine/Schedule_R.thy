@@ -963,8 +963,6 @@ proof -
     done
   show ?thesis
     apply (rule P_bool_lift [OF pos])
-    thm  lift_neg_pred_tcb_at'
-
     by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_ARM_H_switchToThread_typ_at' pos])
 qed
 

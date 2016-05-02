@@ -13,9 +13,6 @@ imports Refine
 begin
 
 context Arch begin
-requalify_facts
-  switchToIdleThread_def
-  switchToThread_def
 shadow_facts
   switchToIdleThread_def
   switchToThread_def
@@ -592,7 +589,7 @@ lemma ArchThreadDecls_H_switchToThread_all_queued_tcb_ptrs [wp]:
   "\<lbrace> \<lambda>s. P (all_queued_tcb_ptrs s) \<rbrace>
    Arch.switchToThread tcb_ptr
    \<lbrace> \<lambda>rv s. P (all_queued_tcb_ptrs s) \<rbrace>"
-  unfolding Arch.switchToThread_def all_queued_tcb_ptrs_def
+  unfolding ARM_H.switchToThread_def all_queued_tcb_ptrs_def
   apply (wp | clarsimp)+
   done
 
@@ -1688,7 +1685,7 @@ lemma arch_finaliseCap_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    Arch.finaliseCap cap fin
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding Arch.finaliseCap_def
+  unfolding ARM_H.finaliseCap_def
   apply (rule hoare_pre)
    apply (wp | wpc | clarsimp)+
   done
@@ -1990,7 +1987,7 @@ lemma invokeIRQControl_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    performIRQControl i
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (cases i, simp_all add: performIRQControl_def Arch.performIRQControl_def)
+  apply (cases i, simp_all add: performIRQControl_def ARM_H.performIRQControl_def)
   apply (wp | clarsimp)+
   done
 

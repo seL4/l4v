@@ -345,7 +345,7 @@ lemma pac_corres:
      by (fastforce simp:cte_wp_at_ctes_of)+
 
 definition
-  archinv_relation :: "arch_invocation \<Rightarrow> ARM_H.invocation \<Rightarrow> bool"
+  archinv_relation :: "arch_invocation \<Rightarrow> Arch.invocation \<Rightarrow> bool"
 where
   "archinv_relation ai ai' \<equiv> case ai of
      arch_invocation.InvokePageTable pti \<Rightarrow> 
@@ -360,7 +360,7 @@ where
        \<exists>ap'. ai' = InvokeASIDPool ap' \<and>  ap' = asid_pool_invocation_map ap"
 
 definition
-  valid_arch_inv' :: "ARM_H.invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_arch_inv' :: "Arch.invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_arch_inv' ai \<equiv> case ai of
      InvokePageTable pti \<Rightarrow> valid_pti' pti
@@ -436,7 +436,7 @@ end
 lemmas (in Arch) decodeInvocation_def = ARM_H.decodeInvocation_def
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch inv [wp]: "ARM_H.decodeInvocation" "P"
+crunch inv [wp]: "Arch.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
    simp: forME_x_def crunch_simps
          ARMMMU_improve_cases
@@ -847,7 +847,7 @@ shows
      (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
    (arch_decode_invocation (mi_label mi) args (to_bl cptr') slot
       arch_cap excaps)
-   (ARM_H.decodeInvocation (mi_label mi) args cptr'
+   (Arch.decodeInvocation (mi_label mi) args cptr'
      (cte_map slot) arch_cap' excaps')" 
   apply (simp add: arch_decode_invocation_def
                    ARM_H.decodeInvocation_def
@@ -1294,7 +1294,7 @@ lemma inv_arch_corres:
    corres (intr \<oplus> op=)
      (einvs and ct_active and valid_arch_inv ai) 
      (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
-     (arch_perform_invocation ai) (ARM_H.performInvocation ai')"
+     (arch_perform_invocation ai) (Arch.performInvocation ai')"
   apply (clarsimp simp: arch_perform_invocation_def 
                         ARM_H.performInvocation_def 
                         performARMMMUInvocation_def)
@@ -1384,7 +1384,7 @@ lemma performASIDControlInvocation_tcb_at':
 
 lemma invokeArch_tcb_at':
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>
-     ARM_H.performInvocation ai
+     Arch.performInvocation ai
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
   apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
   apply (cases ai, simp_all)
@@ -1774,7 +1774,7 @@ lemma arch_decodeInvocation_wf[wp]:
     cte_wp_at' (diminished' (ArchObjectCap arch_cap) o cteCap) slot and  
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' (diminished' (fst x) o cteCap) (snd x) s) and
     sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
-   ARM_H.decodeInvocation label args cap_index slot arch_cap excaps
+   Arch.decodeInvocation label args cap_index slot arch_cap excaps
    \<lbrace>valid_arch_inv'\<rbrace>,-" 
   apply (cases arch_cap)
       apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def 
@@ -2015,7 +2015,7 @@ crunch nosch [wp]: performARMMMUInvocation "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma arch_pinv_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
-     ARM_H.performInvocation invok
+     Arch.performInvocation invok
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
   by (simp add: ARM_H.performInvocation_def) wp
 
@@ -2073,7 +2073,7 @@ lemma performASIDControlInvocation_st_tcb_at':
 lemma arch_pinv_st_tcb_at':
   "\<lbrace>valid_arch_inv' ai and st_tcb_at' (P and op \<noteq> Inactive and op \<noteq> IdleThreadState) t and 
     invs' and ct_active'\<rbrace>
-     ARM_H.performInvocation ai
+     Arch.performInvocation ai
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>" (is "?pre (pi ai) ?post")
 proof(cases ai)
   txt {* The preservation rules for each invocation have already been proved by crunch, so
@@ -2103,26 +2103,28 @@ next
         wp performPageDirectoryInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 qed
 
-crunch aligned': "ARM_H.finaliseCap" pspace_aligned'
+crunch aligned': "Arch.finaliseCap" pspace_aligned'
   (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
 
-crunch distinct': "ARM_H.finaliseCap" pspace_distinct'
+crunch distinct': "Arch.finaliseCap" pspace_distinct'
   (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
-crunch nosch [wp]: "ARM_H.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
+crunch nosch [wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps updateObject_default_def)
 
 end
 
 (* FIXME: arch_split crunch bug *)
-lemmas (in Arch) finaliseCap_def = ARM_H.finaliseCap_def
+context Arch begin global_naming ARM_H''
+lemmas finaliseCap_def = ARM_H.finaliseCap_def
+end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch st_tcb_at' [wp]: "ARM_H.finaliseCap" "st_tcb_at' P t"
+crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
 end
 
@@ -2131,10 +2133,10 @@ shadow_facts (in Arch) finaliseCap_def
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch typ_at' [wp]: "ARM_H.finaliseCap" "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at' [wp]: "Arch.finaliseCap" "\<lambda>s. P (typ_at' T p s)"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
-crunch cte_wp_at':  "ARM_H.finaliseCap" "cte_wp_at' P p"
+crunch cte_wp_at':  "Arch.finaliseCap" "cte_wp_at' P p"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma invs_asid_table_strenghten':
@@ -2300,7 +2302,7 @@ lemma performPageDirectoryInvocation_invs'[wp]:
 
 lemma arch_performInvocation_invs':
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace> 
-  ARM_H.performInvocation invocation 
+  Arch.performInvocation invocation 
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding ARM_H.performInvocation_def
   by (cases invocation,

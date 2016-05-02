@@ -6954,22 +6954,28 @@ crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
 end
 
-lemmas (in Arch) finaliseCap_def = ARM_H.finaliseCap_def (*FIXME: arch_split crunch bug*)
+(*FIXME: arch_split crunch bug*)
+context Arch begin global_naming ARM_H'''
+lemmas finaliseCap_def = ARM_H.finaliseCap_def
+end
+
+(* FIXME: move to Finalise_R *)
+context begin interpretation Arch . (*FIXME: arch_split*)
+crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification "st_tcb_at' P t"
+  (ignore: getObject setObject simp: crunch_simps
+   wp: crunch_wps getObject_inv loadObject_default_inv)
+end
+
+shadow_facts (in Arch) finaliseCap_def
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME: move to Finalise_R *)
-crunch st_tcb_at'[wp]: "ARM_H.finaliseCap", unbindMaybeNotification "st_tcb_at' P t"
-  (ignore: getObject setObject simp: crunch_simps
-   wp: crunch_wps getObject_inv loadObject_default_inv)
-
-(* FIXME: arch_split: is there a better way to refer to Retype_H.finaliseCap_def? *)
 lemma finaliseCap2_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
   shows "\<lbrace>st_tcb_at' P t\<rbrace>
      finaliseCap cap final flag
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (simp add: Retype_H.finaliseCap_def Let_def
+  apply (simp add: finaliseCap_def Let_def
                    getThreadCSpaceRoot deletingIRQHandler_def
              cong: if_cong split del: split_if)
   apply (rule hoare_pre)
@@ -7065,12 +7071,26 @@ lemmas threadSet_ctesCaps_of = ctes_of_cteCaps_of_lift[OF threadSet_ctes_of]
 lemmas storePTE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePTE_ctes]
 lemmas storePDE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePDE_ctes]
 
+end
+
+(*FIXME: arch_split crunch bug getting ridiculous *)
+context Arch begin global_naming ARM_H''''
+lemmas finaliseCap_def = ARM_H.finaliseCap_def
+end
+
+(* FIXME: move to Finalise_R *)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
        getObject_inv loadObject_default_inv 
         simp: crunch_simps unless_def setBoundNotification_def
       ignore: getObject setObject setCTE)
+end
+
+shadow_facts (in Arch) finaliseCap_def
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
@@ -8324,11 +8344,15 @@ end
 lemmas (in Arch) recycleCap_def = ARM_H.recycleCap_def
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunch st_tcb_at'[wp]: "ARM_H.recycleCap" "st_tcb_at' P t"
+crunch st_tcb_at'[wp]: "Arch.recycleCap" "st_tcb_at' P t"
   (ignore: getObject setObject
        wp: crunch_wps undefined_valid
      simp: crunch_simps arch_recycleCap_improve_cases')
+end
+
+shadow_facts (in Arch) recycleCap_def
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma threadSet_st_tcb_at2:
   assumes x: "\<forall>tcb. P (tcbState tcb) \<longrightarrow> P (tcbState (f tcb))"
@@ -9523,7 +9547,7 @@ lemmas arch_recycleCap_improve_cases'' = arch_recycleCap_improve_cases'[simplifi
 
 lemma arch_recycleCap_valid[wp]:
   "\<lbrace>valid_cap' (ArchObjectCap cap) and valid_objs'\<rbrace>
-     ARM_H.recycleCap is_final cap
+     Arch.recycleCap is_final cap
    \<lbrace>valid_cap' \<circ> capability.ArchObjectCap\<rbrace>"
   apply (simp add: ARM_H.recycleCap_def Let_def
                    arch_recycleCap_improve_cases
@@ -9547,12 +9571,18 @@ lemma recycleCap_valid[wp]:
   apply (auto simp: isCap_simps valid_cap'_def capAligned_def objBits_simps)
   done
 
+end
 
+(*FIXME: arch_split crunch bug *)
+context Arch begin global_naming ARM_H'
+lemmas recycleCap_def = ARM_H.recycleCap_def
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch cte_wp_at'[wp]: recycleCap "cte_wp_at' P p"
   (ignore: filterM setObject getObject
      simp: filterM_mapM crunch_simps arch_recycleCap_improve_cases'
        wp: crunch_wps)
-
 end
 
 (*FIXME: arch_split crunch bug *)
@@ -9568,7 +9598,7 @@ lemma recycleCap_cases:
                                           ZombieTCB \<Rightarrow> isThreadCap rv
                                         | ZombieCNode n \<Rightarrow> isCNodeCap rv)
                                     \<and> capUntypedPtr rv = capUntypedPtr cap)\<rbrace>"
-  apply (simp add: Retype_H.recycleCap_def Let_def ARM_H.recycleCap_def
+  apply (simp add: recycleCap_def Let_def ARM_H.recycleCap_def
                    arch_recycleCap_improve_cases
                       split del: split_if cong: if_cong)
   apply (rule hoare_pre)
@@ -9728,12 +9758,26 @@ declare withoutPreemption_lift [wp]
 
 crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
+end
+
+(*FIXME: arch_split crunch bug*)
+context Arch begin global_naming ARM_H'''''
+lemmas finaliseCap_def = ARM_H.finaliseCap_def
+end
+
+(* FIXME: move to Finalise_R *)
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
        no_irq_invalidateTLB_ASID no_irq_setHardwareASID
        no_irq_setCurrentPD no_irq_invalidateTLB_VAASID
        no_irq_cleanByVA_PoU
    simp: crunch_simps armv_contextSwitch_HWASID_def ignore: getObject setObject)
+end
+
+shadow_facts (in Arch) finaliseCap_def
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b

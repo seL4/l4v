@@ -159,7 +159,7 @@ lemma dcorres_lookup_pt_slot:
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ dcorres_get_pde])
       apply (rule_tac F = "case rv' of ARM_A.pde.PageTablePDE ptab x xa \<Rightarrow>
-        is_aligned (ARM.ptrFromPAddr ptab) 10 | _ \<Rightarrow> True"
+        is_aligned (ptrFromPAddr ptab) 10 | _ \<Rightarrow> True"
         in corres_gen_asm2)
       apply (case_tac rv')
          prefer 2
@@ -395,7 +395,7 @@ proof -
         apply (clarsimp simp: obj_at_def a_type_def del: disjCI)
         apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
                                arch_kernel_obj.split_asm del: disjCI)
-        apply (frule_tac p="ARM.ptrFromPAddr v" for v in pspace_alignedD, simp+)
+        apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
         apply (rule disjI2, rule conjI)
          apply (rule_tac x="unat (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)"
                     in exI)
@@ -438,14 +438,14 @@ proof -
         apply (clarsimp simp: obj_at_def a_type_def del: disjCI)
         apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
                                arch_kernel_obj.split_asm del: disjCI)
-        apply (frule_tac p="ARM.ptrFromPAddr v" for v in pspace_alignedD, simp+)
+        apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
         apply (rule map_includedI)
          apply (clarsimp simp: transform_pt_slot_ref_def all_pd_pt_slots_def
                                opt_object_page_directory[unfolded opt_object_def]
                                object_slots_def transform_page_directory_contents_def
                                unat_map_def kernel_pde_mask_def
                           del: disjCI UnCI)
-         apply (subgoal_tac "x && ~~ mask pt_bits = ARM.ptrFromPAddr word1")
+         apply (subgoal_tac "x && ~~ mask pt_bits = ptrFromPAddr word1")
           apply (rule disjI2, rule conjI)
            apply (rule_tac x="unat (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)"
                       in exI)

@@ -1417,9 +1417,8 @@ lemma setSchedulerAction_invs'[wp]:
 
 end
 
-(*FIXME: arch_split*)
 consts
-  copyregsets_map :: "arch_copy_register_sets \<Rightarrow> ARM_H.copy_register_sets"
+  copyregsets_map :: "arch_copy_register_sets \<Rightarrow> Arch.copy_register_sets"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 

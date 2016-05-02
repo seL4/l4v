@@ -2422,7 +2422,7 @@ lemma inv_irq_IRQInactive:
   done
 
 lemma inv_arch_IRQInactive:
-  "\<lbrace>\<top>\<rbrace> ARM_H.performInvocation invocation 
+  "\<lbrace>\<top>\<rbrace> Arch.performInvocation invocation 
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
   apply wp
