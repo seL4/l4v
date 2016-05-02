@@ -24,7 +24,6 @@ type prog_info =
   state_type : typ,
   globals_type : typ,
   gamma : term,
-  check_termination : bool,
 
   var_getters : term Symtab.table,
   var_setters : term Symtab.table,
@@ -210,7 +209,6 @@ fun get_prog_info ctxt filename : prog_info =
       state_type = state_type,
       globals_type = globals_type,
       gamma = gamma,
-      check_termination = true,
 
       var_getters = var_getters,
       var_setters = var_setters,

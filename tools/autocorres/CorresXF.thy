@@ -690,11 +690,11 @@ proof -
 qed
 
 (* Merge of lemmas ccorresE and corresXF. *)
-definition "ac_corres st ct \<Gamma> rx G \<equiv>
+definition "ac_corres st check_termination \<Gamma> rx G \<equiv>
   \<lambda>A B. \<forall>s. (G s \<and> \<not> snd (A (st s))) \<longrightarrow>
          (\<forall>t. \<Gamma> \<turnstile> \<langle>B, Normal s\<rangle> \<Rightarrow> t \<longrightarrow>
             (\<exists>s'. t = Normal s' \<and> (Inr (rx s'), st s') \<in> fst (A (st s))))
-          \<and> (ct \<longrightarrow> \<Gamma> \<turnstile> B \<down> Normal s)"
+          \<and> (check_termination \<longrightarrow> \<Gamma> \<turnstile> B \<down> Normal s)"
 
 (* We can merge ccorresE and corresXF to form a ccorresXF statement. *)
 lemma ccorresE_corresXF_merge:

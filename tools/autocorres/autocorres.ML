@@ -44,6 +44,7 @@ struct
  *                scope = FUNC_NAMES,
  *                scope_depth = NUM,
  *                c_locale = "STRING",
+ *                c_termination,
  *
  *                gen_word_heaps,
  *                statistics,
@@ -96,6 +97,11 @@ type autocorres_options = {
 
   (* Do the translation in this locale (and use functions in this locale) *)
   c_locale: string option ref,
+
+  (* Generate SIMPL wrappers that do not assert termination for the SIMPL.
+   * Also generates ac_corres proofs minus the termination flag.
+   * This option is for temporary CRefine compatibility. *)
+  no_c_termination: bool option ref,
 
   (* Store detailed traces for conversions of the selected functions. *)
   trace_heap_lift : string list option ref,
@@ -182,6 +188,10 @@ val c_locale_parser =
   named_option Parse.text "c_locale" "locale name" >>
   (fn funcs => none_to_some (#c_locale) funcs
                  "autocorres: c_locale option specified multiple times")
+
+val no_c_termination_parser =
+  Parse.reserved "no_c_termination" >>
+  (fn _ => none_to_some (#no_c_termination) true "autocorres: no_c_termination option specified multiple times")
 
 val ts_force_parser =
   ((Parse.reserved "ts_force" |--
@@ -285,6 +295,7 @@ fun default_opts _ = {
     scope = ref NONE,
     scope_depth = ref NONE,
     c_locale = ref NONE,
+    no_c_termination = ref NONE,
     trace_heap_lift = ref NONE,
     trace_word_abs = ref NONE,
     no_opt = ref NONE,
@@ -314,6 +325,7 @@ let
      scope_parser ||
      scope_depth_parser ||
      c_locale_parser ||
+     no_c_termination_parser ||
      trace_heap_lift_parser ||
      trace_word_abs_parser ||
      no_opt_parser ||
@@ -653,7 +665,7 @@ let
                               case fn_info of FunctionInfo.FunctionInfo x => Symtab.dest (#function_callees x)))
   val (lthy, fn_info) =
         SimplConv.translate_simpl
-            filename prog_info fn_info
+            filename prog_info fn_info (!(#no_c_termination opt) <> SOME true)
             do_opt trace_opt (prefix "l1_" o make_function_name) lthy
 
   val _ = @{trace} ("debug: L1 fn_info", FunctionInfo.get_functions fn_info |> Symtab.dest)

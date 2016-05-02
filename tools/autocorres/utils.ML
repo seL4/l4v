@@ -985,6 +985,8 @@ fun mk_Some T t = Const (@{const_name "Some"}, T --> mk_optionT T) $ t
 fun mk_fun_upd rangeT domT f src dest =
   Const (@{const_name "fun_upd"}, (rangeT --> domT) --> rangeT --> domT --> rangeT --> domT)
     $ f $ src $ dest
+fun mk_bool true = @{term True}
+  | mk_bool false = @{term False}
 
 (* Succeed only if there are no subgoals. *)
 fun solved_tac thm =
