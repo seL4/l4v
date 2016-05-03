@@ -5326,4 +5326,13 @@ lemma map_bits_rev_to_bl:
   "map (op !! x) [0..<size x] = rev (to_bl x)"
   by (auto simp: list_eq_iff_nth_eq test_bit_bl word_size)
 
+(* negating a mask which has been shifted to the very left *)
+lemma NOT_mask_shifted_lenword:
+  "~~ ((mask len << (len_of(TYPE('a)) - len))::'a::len word) = mask (len_of(TYPE('a)) - len)"
+  apply(rule Word.word_bool_alg.compl_unique)
+   subgoal using mask_shift_and_negate by simp
+  apply (rule word_eqI)
+  apply (simp add: word_size nth_shiftl nth_shiftr)
+  by auto
+
 end
