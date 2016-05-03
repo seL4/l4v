@@ -10,7 +10,7 @@
 
 
 theory Setup_Locale
-imports "../../../lib/Qualify" "../../../lib/Unqualify"
+imports "../../../lib/Qualify" "../../../lib/Requalify"
 begin
 
 (* 

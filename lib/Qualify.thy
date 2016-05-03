@@ -13,45 +13,17 @@ keywords "qualify" :: thy_decl and "end_qualify" :: thy_decl
 begin
 ML \<open>
 
-type qualify_args = {name : string, deep : bool, target_name : string}
+type qualify_args = {name : string, target_name : string}
 
 structure Data = Theory_Data
   (
-    type T = (theory * qualify_args) option * 
-             ((string * 
-              ((binding Symtab.table) * (* facts *)
-               (binding Symtab.table) * (* consts *)
-               (binding Symtab.table) (* types *))) list);
-    val empty = (NONE, []);
+    type T = (theory * qualify_args) option;
+    val empty = NONE;
     val extend = I;
-    fun merge (((_, tabs), (_, tabs')) : T * T) = 
-      (NONE, AList.join (op =) 
-      (fn _ => fn ((facts, consts, types), (facts', consts', types')) =>
-        (Symtab.merge (op =) (facts, facts'), 
-         Symtab.merge (op =) (consts, consts'),
-         Symtab.merge (op =) (types, types')))
-      (tabs, tabs'));
+    fun merge ((_, _) : T * T) = NONE;
   );
 
-fun get_qualify thy = fst (Data.get thy);
-
-fun get_tabs_of thy str = 
-  the_default (Symtab.empty, Symtab.empty, Symtab.empty) (AList.lookup (op =) (snd (Data.get thy)) str);
-
-fun get_facts_of thy str = #1 (get_tabs_of thy str);
-
-fun get_consts_of thy str = #2 (get_tabs_of thy str);
-
-fun get_types_of thy str = #3 (get_tabs_of thy str);
-
-fun map_tabs_of str f thy = 
-  Data.map (apsnd (AList.map_default (op =) (str, (Symtab.empty, Symtab.empty, Symtab.empty)) f)) thy;
-
-fun map_facts_of str f thy = map_tabs_of str (@{apply 3(1)} f) thy;
-
-fun map_consts_of str f thy = map_tabs_of str (@{apply 3(2)} f) thy;
-
-fun map_types_of str f thy = map_tabs_of str (@{apply 3(3)} f) thy;
+fun get_qualify thy = Data.get thy;
 
 fun make_bind space thy nm = 
   let
@@ -119,48 +91,18 @@ fun make_bind_local nm =
 
 fun set_global_qualify (args : qualify_args) thy =
   let
-    val str = #name args
     val _ = Locale.check thy (#target_name args, Position.none)
     val _ = case get_qualify thy of SOME _ => error "Already in a qualify block!" | NONE => ();
 
-    val thy' = Data.map (apfst (K (SOME (thy,args)))) thy;
+    val thy' = Data.map (K (SOME (thy,args))) thy;
 
-  in if #deep args then
-  let
-    val lthy = Named_Target.begin (#target_name args, Position.none) thy';
-
-    val facts = 
-      Facts.fold_static (fn (nm, _) => add_qualified str nm) (Global_Theory.facts_of thy) []
-      |> map (`make_bind_local)
-
-    val const_space = #const_space (Consts.dest (Proof_Context.consts_of lthy));
-
-    val consts = fold (fn (nm, _) => add_qualified str nm) (#constants (Consts.dest (Sign.consts_of thy))) []
-      |> map (`(make_bind const_space thy'))                                                
-
-    val types = 
-      Name_Space.fold_table (fn (nm, _) => add_qualified str nm) (#types (Type.rep_tsig (Sign.tsig_of thy))) []
-      |> map (`make_bind_local)
-
-    val thy'' = thy'
-     |> map_facts_of str (fold (fn (b, nm) => (Symtab.update (nm, b))) facts)
-     |> map_consts_of str (fold (fn (b, nm) => (Symtab.update (nm, b))) consts)
-     |> map_types_of str (fold (fn (b, nm) => (Symtab.update (nm, b))) types)
-
-    val thy''' = thy''
-    |> fold_rev (fn (nm, b) => Global_Theory.alias_fact b nm) (Symtab.dest (get_facts_of thy'' str))
-    |> fold_rev (fn (nm, b) => Sign.const_alias b nm) (Symtab.dest (get_consts_of thy'' str))
-    |> fold_rev (fn (nm, b) => Sign.type_alias b nm) (Symtab.dest (get_types_of thy'' str))
-
-  in thy''' end
-  else thy'
-  end
+  in  thy'  end
 
 val _ =
   Outer_Syntax.command @{command_keyword qualify} "begin global qualification"
-    (Parse.name -- (Parse.opt_target -- Args.mode "deep")>> 
-      (fn (str, (target, deep)) => 
-          Toplevel.theory (set_global_qualify {name = str, deep = deep, target_name = case target of SOME (nm, _) => nm | _ => str})));
+    (Parse.name -- Parse.opt_target>> 
+      (fn (str, target) => 
+          Toplevel.theory (set_global_qualify {name = str, target_name = case target of SOME (nm, _) => nm | _ => str})));
 
 fun syntax_alias global_alias local_alias b name =
   Local_Theory.declaration {syntax = true, pervasive = true} (fn phi =>
@@ -188,20 +130,10 @@ fun end_global_qualify thy =
 
     val types = get_new_types old_thy (Sign.tsig_of thy);
 
-
-    val thy' = thy
-     |> map_facts_of nm (fold (fn (b, nm) => (Symtab.update (nm, b))) facts)
-     |> map_consts_of nm (fold (fn (b, nm) => (Symtab.update (nm, b))) consts)
-     |> map_types_of nm (fold (fn (b, nm) => (Symtab.update (nm, b))) types);
-
-    val facts' = (if #deep args then (map swap (Symtab.dest (get_facts_of thy' nm))) else facts);
-    val consts' = (if #deep args then (map swap (Symtab.dest (get_consts_of thy' nm))) else consts);
-    val types' = (if #deep args then (map swap (Symtab.dest (get_types_of thy' nm))) else types);
-
-    val thy'' = thy'      
-     |> (fn thy => fold (Global_Theory.hide_fact false o snd) facts' thy)
-     |> (fn thy => fold (Sign.hide_const false o snd) consts' thy)
-     |> (fn thy => fold (Sign.hide_type false o snd) types' thy);
+    val thy'' = thy
+     |> (fn thy => fold (Global_Theory.hide_fact false o snd) facts thy)
+     |> (fn thy => fold (Sign.hide_const false o snd) consts thy)
+     |> (fn thy => fold (Sign.hide_type false o snd) types thy);
 
     val lthy = Named_Target.begin (#target_name args, Position.none) thy'' 
       |> Local_Theory.map_background_naming (Name_Space.parent_path #> Name_Space.mandatory_path nm);
@@ -211,7 +143,7 @@ fun end_global_qualify thy =
       |> fold (uncurry const_alias) consts
       |> fold (uncurry type_alias) types;
 
-  in Local_Theory.exit_global lthy' |> Data.map (apfst (K NONE)) end
+  in Local_Theory.exit_global lthy' |> Data.map (K NONE) end
 
 val _ =
   Outer_Syntax.command @{command_keyword end_qualify} "end global qualification"
