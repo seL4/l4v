@@ -779,7 +779,7 @@ lemma finaliseSlot_ccorres:
              apply (rule ccorres_drop_cutMon,
                     rule ccorres_split_throws)
               apply (rule_tac P="\<lambda>s. case (snd rvb) of None \<Rightarrow> True
-                                  | Some v \<Rightarrow> ucast v \<le> maxIRQ"
+                                  | Some v \<Rightarrow> ucast v \<le> Kernel_C.maxIRQ"
                         in ccorres_from_vcg_throws[where P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)
               apply (clarsimp simp: returnOk_def return_def
@@ -911,7 +911,7 @@ lemma finaliseSlot_ccorres:
           apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of
                          split: option.split)
           apply (auto dest!: ctes_of_valid'
-                       simp: valid_cap'_def maxIRQ_def ARM.maxIRQ_def
+                       simp: valid_cap'_def Kernel_C.maxIRQ_def ARM.maxIRQ_def
                              unat_ucast word_le_nat_alt)[1]
          apply (clarsimp dest!: isCapDs)
          subgoal by (auto dest!: valid_capAligned ctes_of_valid'

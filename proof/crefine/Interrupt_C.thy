@@ -294,7 +294,7 @@ lemma mask_of_mask[simp]:
 
 lemma invokeIRQControl_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-      (invs' and cte_at' parent and (\<lambda>_. (ucast irq) \<le> (scast maxIRQ :: word32)))
+      (invs' and cte_at' parent and (\<lambda>_. (ucast irq) \<le> (scast Kernel_C.maxIRQ :: word32)))
       (UNIV \<inter> {s. irq_' s = ucast irq}
                   \<inter> {s. controlSlot_' s = cte_Ptr parent}
                   \<inter> {s. handlerSlot_' s = cte_Ptr slot}) []
@@ -337,11 +337,11 @@ lemma unat_ucast_16_32:
 
 lemma isIRQActive_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
-        (\<lambda>s. irq \<le> scast maxIRQ) (UNIV \<inter> {s. irq_' s = ucast irq}) []
+        (\<lambda>s. irq \<le> scast Kernel_C.maxIRQ) (UNIV \<inter> {s. irq_' s = ucast irq}) []
         (isIRQActive irq) (Call isIRQActive_'proc)"
   apply (cinit lift: irq_')
    apply (simp add: getIRQState_def getInterruptState_def)
-   apply (rule_tac P="irq \<le> scast maxIRQ \<and> unat irq < (160::nat)" in ccorres_gen_asm)
+   apply (rule_tac P="irq \<le> scast Kernel_C.maxIRQ \<and> unat irq < (160::nat)" in ccorres_gen_asm)
    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
    apply (rule allI, rule conseqPre, vcg)
    apply (clarsimp simp: simpler_gets_def word_sless_msb_less maxIRQ_def

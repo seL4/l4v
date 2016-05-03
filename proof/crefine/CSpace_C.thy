@@ -2224,7 +2224,9 @@ definition
   irq_opt_relation_def:
   "irq_opt_relation (airq :: (10 word) option) (cirq :: word16) \<equiv>
        case airq of
-         Some irq \<Rightarrow> (cirq = ucast irq \<and> irq \<noteq> scast irqInvalid \<and> ucast irq \<le> (scast maxIRQ :: word16))
+         Some irq \<Rightarrow> (cirq = ucast irq \<and>
+                      irq \<noteq> scast irqInvalid \<and>
+                      ucast irq \<le> (scast Kernel_C.maxIRQ :: word16))
        | None \<Rightarrow> cirq = scast irqInvalid"
 
 
@@ -2233,7 +2235,7 @@ declare unat_ucast_up_simp[simp]
 
 lemma setIRQState_ccorres:
   "ccorres dc xfdc
-          (\<top> and (\<lambda>s. ucast irq \<le> (scast maxIRQ :: word16)))
+          (\<top> and (\<lambda>s. ucast irq \<le> (scast Kernel_C.maxIRQ :: word16)))
           (UNIV \<inter> {s. irqState_' s = irqstate_to_C irqState} 
                 \<inter> {s. irq_' s = (ucast irq :: word16)}  )
           []
@@ -2260,7 +2262,7 @@ show ?thesis
           apply (clarsimp simp: simpler_modify_def) 
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                 carch_state_relation_def cmachine_state_relation_def)
-          apply (simp add: cinterrupt_relation_def maxIRQ_def)
+          apply (simp add: cinterrupt_relation_def Kernel_C.maxIRQ_def)
           apply (clarsimp simp:  word_sless_msb_less order_le_less_trans
                             unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b 
                          split: split_if )
@@ -2291,7 +2293,9 @@ qed
 
 
 lemma deletedIRQHandler_ccorres:
-  "ccorres dc xfdc (\<lambda>s. ucast irq \<le> (scast maxIRQ :: 16 word)) (UNIV\<inter> {s. irq_' s = ucast irq}) []
+  "ccorres dc xfdc
+         (\<lambda>s. ucast irq \<le> (scast Kernel_C.maxIRQ :: 16 word))
+         (UNIV\<inter> {s. irq_' s = ucast irq}) []
          (deletedIRQHandler irq)
          (Call deletedIRQHandler_'proc )"
   apply (cinit simp del: return_bind)

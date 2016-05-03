@@ -116,7 +116,7 @@ definition
   (armKSGlobalsFrame s = symbol_table ''armKSGlobalsFrame'')"
 
 definition
-  carch_state_relation :: "ARM_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
+  carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
   "carch_state_relation astate cstate \<equiv>
   armKSNextASID_' cstate = armKSNextASID astate \<and>
@@ -596,7 +596,8 @@ definition
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>
-     (\<forall>irq \<le> (ucast maxIRQ). irqstate_to_C (intStateIRQTable airqs irq) = index cirqs (unat irq))"
+     (\<forall>irq \<le> (ucast Kernel_C.maxIRQ).
+       irqstate_to_C (intStateIRQTable airqs irq) = index cirqs (unat irq))"
 
 definition
   cscheduler_action_relation :: "Structures_H.scheduler_action \<Rightarrow> tcb_C ptr \<Rightarrow> bool"

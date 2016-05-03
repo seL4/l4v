@@ -4787,17 +4787,23 @@ lemma placeNewObject_pde:
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
 definition "placeNewObject_with_memset regionBase us \<equiv> 
   (do x \<leftarrow> placeNewObject regionBase UserData us;
       doMachineOp (mapM_x (\<lambda>p::word32. storeWord p (0::word32))
                [regionBase , regionBase + (4::word32) .e. regionBase + (2::word32) ^ (pageBits + us) - (1::word32)])
    od)"
+end
 
+context Arch begin global_naming ARM_H
+lemmas createObject_def = ARM_H.createObject_def
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch gsMaxObjectSize[wp]: placeNewObject_with_memset, createObject "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps simp: unless_def)
-
 end
+
+shadow_facts (in Arch) createObject_def
 
 context kernel_m begin
 
@@ -5021,7 +5027,7 @@ proof -
     apply (frule range_cover.aligned)
     apply (cut_tac t)
     apply (case_tac newType,
-           simp_all add: toAPIType_def ArchTypes_H.toAPIType_def
+           simp_all add: toAPIType_def ARM_H.toAPIType_def
                ARM_H.createObject_def createPageObject_def bind_assoc
                ARMLargePageBits_def)
 
@@ -5500,7 +5506,7 @@ proof -
                            region_actually_is_bytes
                            region_actually_is_bytes_def)
     apply (clarsimp simp: object_type_from_H_def
-      ArchTypes_H.toAPIType_def Kernel_C_defs toAPIType_def
+      ARM_H.toAPIType_def Kernel_C_defs toAPIType_def
       nAPIObjects_def word_sle_def createObject_c_preconds_def
       word_le_nat_alt split:
       apiobject_type.splits object_type.splits)
@@ -5511,7 +5517,7 @@ proof -
 
           (* Untyped *)
           apply (clarsimp simp: Kernel_C_defs object_type_from_H_def
-            toAPIType_def ArchTypes_H.toAPIType_def nAPIObjects_def
+            toAPIType_def ARM_H.toAPIType_def nAPIObjects_def
             word_sle_def intro!: Corres_UL_C.ccorres_cond_empty
             Corres_UL_C.ccorres_cond_univ ccorres_rhs_assoc)
           apply (rule_tac
@@ -5526,7 +5532,7 @@ proof -
             apply (rule conseqPre, vcg, clarsimp)
            apply simp
           apply (clarsimp simp: ccap_relation_def cap_to_H_def
-                     getObjectSize_def ArchTypes_H.getObjectSize_def
+                     getObjectSize_def ARM_H.getObjectSize_def
                      apiGetObjectSize_def Collect_const_mem
                      cap_untyped_cap_lift to_bool_def true_def
                      aligned_add_aligned
@@ -5540,7 +5546,7 @@ proof -
 
          (* TCB *)
          apply (clarsimp simp: Kernel_C_defs object_type_from_H_def
-           toAPIType_def ArchTypes_H.toAPIType_def nAPIObjects_def
+           toAPIType_def ARM_H.toAPIType_def nAPIObjects_def
            word_sle_def intro!: Corres_UL_C.ccorres_cond_empty
            Corres_UL_C.ccorres_cond_univ ccorres_rhs_assoc)
          apply (rule_tac
@@ -5576,7 +5582,7 @@ proof -
          apply (frule invs_queues)
          apply (frule invs_sym')
          apply (simp add: getObjectSize_def objBits_simps word_bits_conv
-                          ArchTypes_H.getObjectSize_def apiGetObjectSize_def
+                          ARM_H.getObjectSize_def apiGetObjectSize_def
                           tcbBlockSizeBits_def new_cap_addrs_def projectKO_opt_tcb)
          apply (clarsimp simp: range_cover.aligned
                                region_actually_is_bytes_def APIType_capBits_def)
@@ -5593,7 +5599,7 @@ proof -
                region_actually_is_bytes_dom_s[OF _ order_refl, THEN subsetD]
                intro!: range_cover_simpleI)[1]
          apply (clarsimp simp: ccap_relation_def cap_to_H_def
-                    getObjectSize_def ArchTypes_H.getObjectSize_def
+                    getObjectSize_def ARM_H.getObjectSize_def
                     apiGetObjectSize_def Collect_const_mem
                     cap_thread_cap_lift to_bool_def true_def
                     aligned_add_aligned
@@ -5611,7 +5617,7 @@ proof -
 
         (* Endpoint *)
         apply (clarsimp simp: Kernel_C_defs object_type_from_H_def
-          toAPIType_def ArchTypes_H.toAPIType_def nAPIObjects_def
+          toAPIType_def ARM_H.toAPIType_def nAPIObjects_def
           word_sle_def intro!: ccorres_cond_empty ccorres_cond_univ
           ccorres_rhs_assoc)
         apply (rule_tac
@@ -5633,7 +5639,7 @@ proof -
            apply (rule conseqPre, vcg, clarsimp)
           apply wp
          apply (clarsimp simp: ccap_relation_def cap_to_H_def
-                    getObjectSize_def ArchTypes_H.getObjectSize_def
+                    getObjectSize_def ARM_H.getObjectSize_def
                     objBits_simps apiGetObjectSize_def epSizeBits_def
                     Collect_const_mem cap_endpoint_cap_lift
                     to_bool_def true_def
@@ -5644,17 +5650,17 @@ proof -
         apply (frule invs_queues)
         apply (frule invs_sym')
         apply (auto simp: getObjectSize_def objBits_simps
-                    ArchTypes_H.getObjectSize_def apiGetObjectSize_def
+                    ARM_H.getObjectSize_def apiGetObjectSize_def
                     epSizeBits_def word_bits_conv
                   elim!: is_aligned_no_wrap'   intro!: range_cover_simpleI)[1]
 
        (* Notification *)
        apply (clarsimp simp: createObject_c_preconds_def)
        apply (clarsimp simp: getObjectSize_def objBits_simps
-                  ArchTypes_H.getObjectSize_def apiGetObjectSize_def
+                  ARM_H.getObjectSize_def apiGetObjectSize_def
                   epSizeBits_def word_bits_conv word_sle_def word_sless_def)
        apply (clarsimp simp: Kernel_C_defs object_type_from_H_def
-         toAPIType_def ArchTypes_H.toAPIType_def nAPIObjects_def
+         toAPIType_def ARM_H.toAPIType_def nAPIObjects_def
          word_sle_def intro!: ccorres_cond_empty ccorres_cond_univ
          ccorres_rhs_assoc)
        apply (rule_tac
@@ -5676,7 +5682,7 @@ proof -
           apply (rule conseqPre, vcg, clarsimp)
          apply wp
         apply (clarsimp simp: ccap_relation_def cap_to_H_def
-            getObjectSize_def ArchTypes_H.getObjectSize_def
+            getObjectSize_def ARM_H.getObjectSize_def
             apiGetObjectSize_def ntfnSizeBits_def objBits_simps
             Collect_const_mem cap_notification_cap_lift to_bool_def true_def
             dest!: range_cover.aligned split: option.splits)
@@ -5686,17 +5692,17 @@ proof -
        apply (frule invs_queues)
        apply (frule invs_sym')
        apply (auto simp: getObjectSize_def objBits_simps
-                   ArchTypes_H.getObjectSize_def apiGetObjectSize_def
+                   ARM_H.getObjectSize_def apiGetObjectSize_def
                    ntfnSizeBits_def word_bits_conv
                 elim!: is_aligned_no_wrap'  intro!: range_cover_simpleI)[1]
 
       (* CapTable *)
       apply (clarsimp simp: createObject_c_preconds_def)
       apply (clarsimp simp: getObjectSize_def objBits_simps
-                  ArchTypes_H.getObjectSize_def apiGetObjectSize_def
+                  ARM_H.getObjectSize_def apiGetObjectSize_def
                   ntfnSizeBits_def word_bits_conv)
       apply (clarsimp simp: Kernel_C_defs object_type_from_H_def
-                 toAPIType_def ArchTypes_H.toAPIType_def nAPIObjects_def
+                 toAPIType_def ARM_H.toAPIType_def nAPIObjects_def
                  word_sle_def word_sless_def zero_le_sint
                intro!: ccorres_cond_empty ccorres_cond_univ ccorres_rhs_assoc
                        ccorres_move_c_guards ccorres_Guard_Seq)
@@ -5732,7 +5738,7 @@ proof -
        apply (frule invs_sym')
        apply (frule(1) ghost_assertion_size_logic_no_unat)
        apply (clarsimp simp: getObjectSize_def objBits_simps
-                  ArchTypes_H.getObjectSize_def apiGetObjectSize_def
+                  ARM_H.getObjectSize_def apiGetObjectSize_def
                   cteSizeBits_def word_bits_conv add.commute createObject_c_preconds_def
                   region_actually_is_bytes_def
                  elim!: is_aligned_no_wrap' 
@@ -5744,7 +5750,7 @@ proof -
       apply (frule range_cover.aligned)
       apply (clarsimp simp: ccap_relation_def cap_to_H_def
          cap_cnode_cap_lift to_bool_def true_def
-         getObjectSize_def ArchTypes_H.getObjectSize_def
+         getObjectSize_def ARM_H.getObjectSize_def
          apiGetObjectSize_def cteSizeBits_def
          objBits_simps field_simps is_aligned_power2
          addr_card_wb is_aligned_weaken[where y=2]
@@ -6648,7 +6654,7 @@ shows "\<lbrace>P\<rbrace>createObject ty ptr us \<lbrace>\<lambda>m s. capRange
   using assms
   apply (simp add:createObject_def)
   apply (case_tac "ty")
-    apply (simp_all add:toAPIType_def ArchTypes_H.toAPIType_def)
+    apply (simp_all add:toAPIType_def ARM_H.toAPIType_def)
         apply (rule hoare_pre)
          apply wpc
              apply wp
@@ -6926,7 +6932,7 @@ shows
   apply (rule createObject_untypedRange)
   apply (clarsimp | wp)+
   apply (clarsimp simp: blah toAPIType_def APIType_capBits_def
-    ArchTypes_H.toAPIType_def split: object_type.splits)
+    ARM_H.toAPIType_def split: object_type.splits)
   apply (clarsimp simp:shiftl_t2n field_simps)
   apply (drule word_eq_zeroI)
   apply (drule(1) range_cover_no_0[where p = "Suc n"])
@@ -7129,10 +7135,22 @@ lemma APIType_capBits_min:
 
 end
 
+(*FIXME: arch_split crunch bug *)
+context Arch begin global_naming ARM_H'
+lemmas createObject_def = ARM_H.createObject_def
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch gsCNodes[wp]: insertNewCap, Arch_createNewCaps, threadSet,
         "Arch.createObject" "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only
      simp: unless_def updateObject_default_def ignore: getObject setObject)
+end
+
+(*FIXME: arch_split crunch bug *)
+shadow_facts (in Arch) createObject_def
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma createNewCaps_1_gsCNodes_p:
   "\<lbrace>\<lambda>s. P (gsCNodes s p) \<and> p \<noteq> ptr\<rbrace> createNewCaps newType ptr 1 n \<lbrace>\<lambda>rv s. P (gsCNodes s p)\<rbrace>"
@@ -7156,7 +7174,7 @@ lemma createObject_cnodes_have_size:
   apply (simp add: createObject_def)
   apply (rule hoare_pre)
    apply (wp mapM_x_wp' | wpc | simp add: createObjects_def)+
-  apply (cases newType, simp_all add: toAPIType_def ArchTypes_H.toAPIType_def)
+  apply (cases newType, simp_all add: toAPIType_def ARM_H.toAPIType_def)
   apply (clarsimp simp: APIType_capBits_def objBits_simps
                         cnodes_retype_have_size_def cte_level_bits_def)
   done
@@ -7174,6 +7192,8 @@ lemma range_cover_not_in_neqD:
    apply (simp add: is_aligned_mult_triv2)
   apply simp
   done
+
+end
 
 context kernel_m begin
 

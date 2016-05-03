@@ -473,6 +473,7 @@ lemma ignoreFailure_liftM:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch pde_mappings'[wp]: invalidateTLBByASID "valid_pde_mappings'"
 crunch ksArchState[wp]: invalidateTLBByASID "\<lambda>s. P (ksArchState s)"
 
@@ -480,6 +481,7 @@ crunch gsMaxObjectSize[wp]: invalidateTLBByASID "\<lambda>s. P (gsMaxObjectSize 
 crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
   (ignore: setObject getObject wp: crunch_wps getObject_inv loadObject_default_inv
      simp: crunch_simps)
+end
 
 context kernel_m begin
 
@@ -526,8 +528,8 @@ lemma clearMemory_setObject_PTE_ccorres:
                 and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)
                 and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
             (UNIV \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr} \<inter> {s. bits_' s = of_nat ptBits}) []
-       (do x \<leftarrow> mapM_x (\<lambda>a. setObject a Hardware_H.pte.InvalidPTE)
-                       [ptr , ptr + 2 ^ objBits Hardware_H.pte.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
+       (do x \<leftarrow> mapM_x (\<lambda>a. setObject a ARM_H.InvalidPTE)
+                       [ptr , ptr + 2 ^ objBits ARM_H.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
            doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits - 1) pstart)
         od)
        (Call clearMemory_'proc)"
@@ -1149,11 +1151,13 @@ lemma cpspace_relation_ep_update_ep2:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma setObject_tcb_ep_obj_at'[wp]:
   "\<lbrace>obj_at' (P :: endpoint \<Rightarrow> bool) ptr\<rbrace> setObject ptr' (tcb :: tcb) \<lbrace>\<lambda>rv. obj_at' P ptr\<rbrace>"
   apply (rule obj_at_setObject2, simp_all)
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
+end
 
 crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
   (ignore: getObject setObject simp: unless_def)

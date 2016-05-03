@@ -15,6 +15,12 @@ imports
   StoreWord_C  DetWP
 begin
 
+(*FIXME: arch_split: C kernel names hidden by Haskell names *)
+context kernel_m begin
+abbreviation "msgRegistersC \<equiv> kernel_all_substitute.msgRegisters"
+lemmas msgRegistersC_def = kernel_all_substitute.msgRegisters_def
+end
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare word_neq_0_conv[simp del]
@@ -617,16 +623,16 @@ lemma no_fail_getMRs:
 
 lemma msgRegisters_scast:
   "n < unat (scast n_msgRegisters :: word32) \<Longrightarrow> 
-  unat (scast (index msgRegisters n)::word32) = unat (index msgRegisters n)"
+  unat (scast (index msgRegistersC n)::word32) = unat (index msgRegistersC n)"
   apply (simp add: msgRegisters_def fupdate_def update_def n_msgRegisters_def fcp_beta 
                    Kernel_C.R2_def Kernel_C.R3_def Kernel_C.R4_def Kernel_C.R5_def 
                    Kernel_C.R6_def Kernel_C.R7_def)
   done
-   
+
 lemma msgRegisters_ccorres:
   "n < unat n_msgRegisters \<Longrightarrow> 
-  register_from_H (ARM_H.msgRegisters ! n) = (index msgRegisters n)"
-  apply (simp add: msgRegisters_def msgRegisters_unfold fupdate_def)
+  register_from_H (ARM_H.msgRegisters ! n) = (index msgRegistersC n)"
+  apply (simp add: msgRegistersC_def msgRegisters_unfold fupdate_def)
   apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: split_if)
   done
 
@@ -1089,13 +1095,13 @@ lemma getMRs_length:
   done
 
 lemma index_msgRegisters_less':
-  "n < 4 \<Longrightarrow> index msgRegisters n < 0x12"
-  by (simp add: msgRegisters_def fupdate_def Arrays.update_def
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x12"
+  by (simp add: msgRegistersC_def fupdate_def Arrays.update_def
                 fcp_beta "StrictC'_register_defs")
 
 lemma index_msgRegisters_less:
-  "n < 4 \<Longrightarrow> index msgRegisters n <s 0x12"
-  "n < 4 \<Longrightarrow> index msgRegisters n < 0x12"
+  "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x12"
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x12"
   using index_msgRegisters_less'
   by (simp_all add: word_sless_msb_less)
 
@@ -1280,5 +1286,7 @@ lemma ccorres_equals_throwError:
   "\<lbrakk> f = throwError v; ccorres_underlying sr Gamm rr xf arr axf P P' hs (throwError v) c \<rbrakk>
      \<Longrightarrow> ccorres_underlying sr Gamm rr xf arr axf P P' hs f c"
   by simp
+
+end
 
 end

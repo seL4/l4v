@@ -956,7 +956,9 @@ lemma offset_xf_for_sequence:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch pde_mappings'[wp]: invalidateHWASIDEntry "valid_pde_mappings'"
+end
 
 context kernel_m begin
 
@@ -997,12 +999,14 @@ lemma invalidateASIDEntry_ccorres:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch obj_at'[wp]: invalidateASIDEntry "obj_at' P p"
 crunch obj_at'[wp]: flushSpace "obj_at' P p"
 crunch valid_objs'[wp]: invalidateASIDEntry "valid_objs'"
 crunch valid_objs'[wp]: flushSpace "valid_objs'"
 crunch pde_mappings'[wp]: invalidateASIDEntry "valid_pde_mappings'"
 crunch pde_mappings'[wp]: flushSpace "valid_pde_mappings'"
+end
 
 context kernel_m begin
 
@@ -1809,7 +1813,7 @@ lemma deletingIRQHandler_ccorres:
                         ghost_assertion_data_set_def)
   apply (simp add: cap_tag_defs)
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
-                        irq_opt_relation_def maxIRQ_def)
+                        irq_opt_relation_def Kernel_C.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
   apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
   done
@@ -2079,11 +2083,11 @@ lemma finaliseCap_ccorres:
    apply (frule(1) ccap_relation_IRQHandler_mask)
    apply (clarsimp simp: isCap_simps irqInvalid_def
                       valid_cap'_def ARM.maxIRQ_def
-                      maxIRQ_def)
+                      Kernel_C.maxIRQ_def)
     apply (rule irq_opt_relation_Some_ucast', simp)
     apply (clarsimp simp: isCap_simps irqInvalid_def
                       valid_cap'_def ARM.maxIRQ_def
-                      maxIRQ_def)
+                      Kernel_C.maxIRQ_def)
    apply fastforce
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])

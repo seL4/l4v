@@ -1540,7 +1540,7 @@ lemma getIRQState_sp:
 lemma ccorres_pre_getIRQState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf 
-                  (\<lambda>s. irq \<le> ucast maxIRQ \<and> P (intStateIRQTable (ksInterruptState s) irq) s)
+                  (\<lambda>s. irq \<le> ucast Kernel_C.maxIRQ \<and> P (intStateIRQTable (ksInterruptState s) irq) s)
                   {s. \<forall>rv. index (intStateIRQTable_' (globals s)) (unat irq) = irqstate_to_C rv \<longrightarrow> s \<in> P' rv }
                           hs (getIRQState irq >>= (\<lambda>rv. f rv)) c" 
   apply (rule ccorres_guard_imp)
