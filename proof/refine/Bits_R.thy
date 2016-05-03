@@ -118,6 +118,12 @@ lemma projectKO_user_data:
   by (cases ko)
      (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
 
+lemma projectKO_user_data_device:
+  "(projectKO_opt ko = Some (t :: user_data_device)) = (ko = KOUserDataDevice)"
+  by (cases ko)
+     (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
+
+
 lemmas projectKOs =
   projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb
   projectKO_ASID projectKO_PTE projectKO_PDE projectKO_user_data
