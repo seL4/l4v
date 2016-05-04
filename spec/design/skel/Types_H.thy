@@ -21,18 +21,20 @@ imports
   "./$L4V_ARCH/ArchTypes_H"
 begin
 
-unqualify_types (in Arch) 
+context begin interpretation Arch .
+requalify_types
   object_type
   machine_word
   paddr
   vptr
 
-unqualify_consts (in Arch)
+requalify_consts
   getObjectSize
   fromAPIType
   toAPIType
   pageType
   ptrFromPAddr
+end
 
 #INCLUDE_HASKELL SEL4/API/Types.lhs Arch=ArchTypes_H all_bits NOT wordsFromBootInfo messageInfoFromWord wordFromMessageInfo ObjectType getObjectSize fromAPIType toAPIType pageType
 #INCLUDE_HASKELL SEL4/API/Types.lhs Arch=ArchTypes_H all_bits ONLY wordsFromBootInfo messageInfoFromWord wordFromMessageInfo

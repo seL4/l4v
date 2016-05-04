@@ -19,7 +19,16 @@ text {*
   An enumeration of arch-specific system call labels.
 *}
 
-#INCLUDE_HASKELL SEL4/API/InvocationLabels/ARM.lhs CONTEXT ARM_H ONLY ArchInvocationLabel 
+#INCLUDE_HASKELL SEL4/API/InvocationLabels/ARM.lhs CONTEXT ARM_H ONLY ArchInvocationLabel
+
+end
+
+context begin interpretation Arch .
+requalify_types arch_invocation_label
+end
+
+context Arch begin global_naming ARM_H
+
 #INCLUDE_HASKELL SEL4/API/InvocationLabels/ARM.lhs CONTEXT ARM_H instanceproofs ONLY ArchInvocationLabel
 
 end

@@ -15,12 +15,14 @@ Retype refinement
 theory Retype_AI
 imports VSpace_AI
 begin
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_facts
-  global_refs_kheap[simp]
+requalify_facts
+  global_refs_kheap
 
 end
+
+declare global_refs_kheap[simp]
 
 lemma upto_enum_inc_1:
   "a < 2^word_bits - 1 \<Longrightarrow> [(0::machine_word).e.1 + a] = [0.e.a] @ [(1+a)]"
@@ -1368,7 +1370,7 @@ lemma create_word_objects_valid_irq_states[wp]:
    apply (wp mapM_wp' | simp add: do_machine_op_def | wpc)+
    apply clarsimp
    apply (erule use_valid)
-   apply (simp add: valid_irq_states_def | wp no_irq_clearMemory)+
+   apply (simp add: valid_irq_states_def | wp no_irq_clearMemory no_irq)+
   done
 
 lemma create_word_objects_invs[wp]:
@@ -1814,10 +1816,12 @@ definition
 
 declare post_retype_invs_check_def[simp]
 
-unqualify_consts
-  post_retype_invs_check
-
 end
+
+context begin interpretation Arch .
+requalify_consts post_retype_invs_check
+end
+
 
 definition
   post_retype_invs :: "Structures_A.apiobject_type \<Rightarrow> word32 list \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -3057,7 +3061,12 @@ definition
 where 
  "region_in_kernel_window S \<equiv>
      \<lambda>s. \<forall>x \<in> S. arm_kernel_vspace (arch_state s) x = ArmVSpaceKernelWindow"
-unqualify_consts region_in_kernel_window
+end
+
+context begin interpretation Arch .
+
+requalify_consts region_in_kernel_window
+
 end
 
 context retype_region_proofs_arch

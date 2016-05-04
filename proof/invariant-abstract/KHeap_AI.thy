@@ -12,12 +12,12 @@ theory KHeap_AI
 imports "./$L4V_ARCH/ArchKHeap_AI"
 begin
 
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_consts
+requalify_consts
   valid_ao_at
 
-unqualify_facts
+requalify_facts
   pspace_in_kernel_window_atyp_lift
   valid_arch_objs_lift_weak 
   vs_lookup_arch_obj_at_lift

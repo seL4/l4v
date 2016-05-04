@@ -360,7 +360,7 @@ lemma machine_rest_lift_no_irq:
 
 crunch (no_irq) no_irq[wp, simp]: machine_op_lift
 
-lemma no_irq [wp]:
+lemma no_irq:
   "no_irq f \<Longrightarrow> \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
   by (simp add: no_irq_def)
 
@@ -458,6 +458,7 @@ lemma no_irq_resetTimer: "no_irq resetTimer"
 lemma no_irq_debugPrint: "no_irq (debugPrint $ xs)"
   by (simp add: no_irq_def)
 
+context notes no_irq[wp] begin
 
 lemma no_irq_ackInterrupt: "no_irq (ackInterrupt irq)"
   by (wp | clarsimp simp: no_irq_def ackInterrupt_def)+
@@ -749,6 +750,7 @@ lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
   by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
 
+end
 end
 
 end

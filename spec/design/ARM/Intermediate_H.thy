@@ -13,8 +13,10 @@ chapter "Intermediate"
 theory Intermediate_H
 imports "../API_H"
 begin
-unqualify_consts (in Arch)
+context begin interpretation Arch .
+requalify_consts
   clearMemory
+end
 (*
  * Intermediate function bodies that were once in the Haskell spec, but are
  * now no longer.

@@ -23,17 +23,21 @@ imports
   "./$L4V_ARCH/ArchStructures_H"
 begin
 
-unqualify_types (in Arch)
+context begin interpretation Arch .
+
+requalify_types
   irq
   arch_capability
   user_context
   arch_kernel_object
   asid
 
-unqualify_consts (in Arch)
+requalify_consts
   archObjSize
   pageBits
   nullPointer
+
+end
 
 datatype zombie_type =
     ZombieTCB

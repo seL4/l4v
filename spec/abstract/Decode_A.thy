@@ -22,16 +22,17 @@ imports
   "../design/InvocationLabels_H"
 begin
 
-unqualify_consts (in Arch)
- ArchDefaultExtraRegisters :: "arch_copy_register_sets"
- check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) se_monad"
- is_valid_vtable_root :: "cap \<Rightarrow> bool"
+context begin interpretation Arch .
+
+requalify_consts
+ ArchDefaultExtraRegisters
+ check_valid_ipc_buffer
+ is_valid_vtable_root
  arch_decode_irq_control_invocation 
-  :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"
- arch_data_to_obj_type :: "nat \<Rightarrow> aobject_type option"
- arch_decode_invocation ::
-   "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> 
-    (arch_invocation,'z::state_ext) se_monad"
+ arch_data_to_obj_type
+ arch_decode_invocation
+
+end
           
 
 text {*

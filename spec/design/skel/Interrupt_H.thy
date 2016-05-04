@@ -25,11 +25,17 @@ requalify_consts
   decodeIRQControlInvocation
   performIRQControl
 
-shadow_consts
-  decodeIRQControlInvocation
-  performIRQControl
+context begin global_naming global
+requalify_consts
+  InterruptDecls_H.decodeIRQControlInvocation
+  InterruptDecls_H.performIRQControl
+end
 
-unqualify_consts
+end
+
+context begin interpretation Arch .
+
+requalify_consts
   maxIRQ
   minIRQ
   maskInterrupt

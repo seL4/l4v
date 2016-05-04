@@ -27,12 +27,20 @@ requalify_consts
   switchToIdleThread
   switchToThread
 
-shadow_consts
-  configureIdleThread
-  switchToIdleThread
-  switchToThread
+context begin global_naming global
 
-unqualify_consts
+requalify_consts
+  ThreadDecls_H.configureIdleThread
+  ThreadDecls_H.switchToIdleThread
+  ThreadDecls_H.switchToThread
+
+end
+
+end
+
+context begin interpretation Arch .
+
+requalify_consts
   capRegister
 
 end

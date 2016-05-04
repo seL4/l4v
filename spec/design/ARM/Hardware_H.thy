@@ -376,9 +376,16 @@ where
 "kernelBase \<equiv> Platform.ARM.kernelBase"
 
 
+end
+
+context begin interpretation Arch .
+requalify_types vmrights
+end
+
+context Arch begin global_naming ARM_H
 
 end
-qualify ARM_H (in Arch) (deep)
+qualify ARM_H (in Arch) 
 (* vmrights instance proofs *)
 (*<*)
 instantiation vmrights :: enum begin

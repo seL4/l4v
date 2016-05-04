@@ -15,8 +15,12 @@ imports
   "../../tools/asmrefine/CommonOps"
 begin
 
-unqualify_types (in Arch)
+context begin interpretation Arch .
+
+requalify_types
   machine_state
+
+end
 
 declare [[populate_globals=true]]
 
@@ -64,7 +68,36 @@ declare [[allow_underscore_idents = true]]
 
 end
 
+(* workaround for the fact that the C parser wants to know the vmpage sizes*)
+
+(* create appropriately qualified aliases *)
+context begin interpretation Arch . global_naming vmpage_size
+
+requalify_consts ARMSmallPage ARMLargePage ARMSection ARMSuperSection
+
+end
+
 install_C_file "c/kernel_all.c_pp"
   [machinety=machine_state, ghostty=cghost_state]
+
+(* hide them again *)
+
+hide_const 
+ vmpage_size.ARMSmallPage 
+ vmpage_size.ARMLargePage 
+ vmpage_size.ARMSection 
+ vmpage_size.ARMSuperSection
+
+(* re-allow fully qualified accesses (for consistency). Slightly clunky *)
+
+context Arch begin 
+
+global_naming "ARM.vmpage_size"
+requalify_consts ARMSmallPage ARMLargePage ARMSection ARMSuperSection
+
+global_naming ARM
+requalify_consts ARMSmallPage ARMLargePage ARMSection ARMSuperSection
+end
+
 
 end

@@ -1065,8 +1065,8 @@ lemma dcorres_ep_cancel_badge_sends:
 
 lemma neq_CPSR:
   "msg_info_register \<noteq> CPSR \<and> cap_register \<noteq> CPSR"
-  by (clarsimp simp:msg_info_register_def cap_register_def MachineTypes.capRegister_def
-    MachineTypes.msgInfoRegister_def register.simps )
+  by (clarsimp simp:msg_info_register_def cap_register_def ARM.capRegister_def
+    ARM.msgInfoRegister_def register.simps )
 
 lemma transform_intent_invalid_invocation:
   "transform_intent (invocation_type (mi_label (data_to_message_info 0))) = (\<lambda>x. None)"

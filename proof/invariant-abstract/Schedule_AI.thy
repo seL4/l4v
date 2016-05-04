@@ -12,13 +12,16 @@ theory Schedule_AI
 imports VSpace_AI
 begin
 
+context begin interpretation Arch .
 (* FIXME arch_split: some of these could be moved to generic theories
    so they don't need to be unqualified. *)
-unqualify_facts (in Arch)
+requalify_facts 
   no_irq
   no_irq_storeWord
   ef_storeWord
   mapM_UNIV_wp
+
+end
 
 lemma findM_inv'':
   assumes p: "suffixeq xs xs'"

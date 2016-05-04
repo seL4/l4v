@@ -16,8 +16,10 @@ theory Interrupt_AI
 imports Ipc_AI
 begin
 
-unqualify_consts (in Arch)
-  maxIRQ :: irq
+context begin interpretation Arch . 
+requalify_consts
+  maxIRQ
+end
 
 definition
   interrupt_derived :: "cap \<Rightarrow> cap \<Rightarrow> bool"
@@ -344,7 +346,7 @@ lemma resetTimer_invs[wp]:
                       machine_op_lift_def machine_rest_lift_def split_def)
      apply wp
     apply (clarsimp+)[2]
-  apply(erule use_valid, wp no_irq_resetTimer, assumption)
+  apply(erule use_valid, wp no_irq_resetTimer no_irq, assumption)
   done
 
 end

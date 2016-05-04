@@ -14,11 +14,13 @@ theory FaultHandler_H
 imports FaultHandlerDecls_H TCB_H
 begin
 
-unqualify_consts (in Arch)
+context begin interpretation Arch .
+requalify_consts
   syscallMessage
   fromVPtr
   exceptionMessage
   debugPrint
+end
 
 
 defs handleFault_def:

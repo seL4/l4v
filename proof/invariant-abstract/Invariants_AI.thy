@@ -12,43 +12,43 @@ theory Invariants_AI
 imports "./$L4V_ARCH/ArchInvariants_AI"
 begin
 
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_types
+requalify_types
   vs_chain
   vs_ref
 
-unqualify_consts
-  not_kernel_window :: "'z::state_ext state \<Rightarrow> obj_ref set"
-  global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set"
-  arch_obj_bits_type :: "aa_type \<Rightarrow> nat"
+requalify_consts
+  not_kernel_window
+  global_refs
+  arch_obj_bits_type
 
-  wellformed_acap :: "arch_cap \<Rightarrow> bool"
-  valid_arch_cap :: "arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-  valid_arch_cap_ref :: "arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-  acap_class :: "arch_cap \<Rightarrow> capclass"
-  valid_ipc_buffer_cap :: "cap \<Rightarrow> obj_ref \<Rightarrow> bool"
-  wellformed_arch_obj :: "arch_kernel_obj \<Rightarrow> bool"
-  valid_asid_map :: "'z::state_ext state \<Rightarrow> bool"
-  valid_arch_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  wellformed_acap
+  valid_arch_cap
+  valid_arch_cap_ref
+  acap_class
+  valid_ipc_buffer_cap
+  wellformed_arch_obj
+  valid_asid_map
+  valid_arch_obj
 
-  valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
-  valid_arch_objs :: "'z::state_ext state \<Rightarrow> bool"
-  valid_arch_caps :: "'z::state_ext state \<Rightarrow> bool"
-  valid_global_objs :: "'z::state_ext state \<Rightarrow> bool"
-  valid_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool"
-  equal_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool"
-  valid_global_pd_mappings :: "'z::state_ext state \<Rightarrow> bool"
-  pspace_in_kernel_window :: "'z::state_ext state \<Rightarrow> bool"
+  valid_arch_state
+  valid_arch_objs
+  valid_arch_caps
+  valid_global_objs
+  valid_kernel_mappings
+  equal_kernel_mappings
+  valid_global_pd_mappings
+  pspace_in_kernel_window
 
-  ASIDPoolObj :: "aobject_type"
+  ASIDPoolObj
 
 
-unqualify_facts
+requalify_facts
   valid_arch_sizes
   aobj_bits_T
   valid_arch_cap_def2
-  idle_global[intro!]
+  idle_global
   valid_ipc_buffer_cap_null
   valid_arch_cap_typ
   valid_arch_obj_typ
@@ -58,12 +58,16 @@ unqualify_facts
   aobj_at_default_arch_cap_valid
   aobj_ref_default
   valid_arch_objs_def
-  acap_rights_update_id[intro!, simp]
+  acap_rights_update_id
   physical_arch_cap_has_ref
   wellformed_arch_default
   valid_arch_obj_default'
 
 end
+
+lemmas [intro!] =  idle_global acap_rights_update_id
+
+lemmas [simp] =  acap_rights_update_id
 
 (* Checking that vs_lookup notation is installed *)
 
@@ -1555,8 +1559,11 @@ lemma valid_arch_cap_pspaceI:
   unfolding valid_arch_cap_def
   by (auto intro: obj_at_pspaceI split: arch_cap.split)
 
+end
 
-unqualify_facts valid_arch_cap_pspaceI valid_arch_obj_pspaceI
+context begin interpretation Arch .
+
+requalify_facts valid_arch_cap_pspaceI valid_arch_obj_pspaceI
 
 end
 
@@ -2811,12 +2818,13 @@ lemma valid_idle_lift:
 
 lemmas caps_of_state_valid_cap = cte_wp_valid_cap [OF caps_of_state_cteD]
 
-context Arch begin
-  lemma obj_ref_is_arch:
-    "\<lbrakk>aobj_ref c = Some r; valid_arch_cap c s\<rbrakk> \<Longrightarrow> \<exists> ako. kheap s r = Some (ArchObj ako)"
-  by (auto simp add: valid_arch_cap_def obj_at_def split: arch_cap.splits)
-  unqualify_facts obj_ref_is_arch
-end
+
+lemma (in Arch) obj_ref_is_arch:
+  "\<lbrakk>aobj_ref c = Some r; valid_arch_cap c s\<rbrakk> \<Longrightarrow> \<exists> ako. kheap s r = Some (ArchObj ako)"
+by (auto simp add: valid_arch_cap_def obj_at_def split: arch_cap.splits)
+
+
+requalify_facts Arch.obj_ref_is_arch
 
 
 lemma obj_ref_is_tcb:

@@ -248,7 +248,7 @@ lemma arch_switch_thread_corres:
              apply (rule corres_split_nor [OF _ store_word_corres])
                apply (rule corres_machine_op)
                apply (rule corres_Id[where r=dc], simp+)
-               apply (simp add: MachineOps.clearExMonitor_def)
+               apply (simp add: ARM.clearExMonitor_def)
               apply wp
 	    apply simp
 	   apply (simp add: tcb_relation_def)
@@ -943,15 +943,8 @@ lemma cur_thread_update_corres:
 lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
   by (unfold ARM_H.switchToThread_def, wp typ_at_lift_tcb')
 
-context begin
-private lemmas switchToThread_def = ARM_H.switchToThread_def
-
-crunch typ_at'[wp]: "Arch.switchToThread" "\<lambda>s. P (typ_at' T p s)"
-  (ignore: MachineOps.clearExMonitor)
-end
-
 crunch typ_at'[wp]: "switchToThread" "\<lambda>s. P (typ_at' T p s)"
-  (ignore: MachineOps.clearExMonitor)
+  (ignore: clearExMonitor)
 
 lemma Arch_switchToThread_pred_tcb'[wp]:
   "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>
@@ -978,7 +971,7 @@ lemma arch_switch_thread_ksQ[wp]:
   done
 
 crunch valid_queues[wp]: "Arch.switchToThread" "Invariants_H.valid_queues"
-(wp: crunch_wps simp: crunch_simps ignore: MachineOps.clearExMonitor)
+(wp: crunch_wps simp: crunch_simps ignore: clearExMonitor)
 
 lemma switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map 
@@ -1279,10 +1272,10 @@ lemma setCurThread_invs_idle_thread:
      (clarsimp simp: invs'_to_invs_no_cicd'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
 
 lemma clearExMonitor_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp MachineOps.clearExMonitor \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs')
+  "\<lbrace>invs'\<rbrace> doMachineOp ARM.clearExMonitor \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq)
    apply (simp add: no_irq_clearExMonitor)
-  apply (clarsimp simp: MachineOps.clearExMonitor_def machine_op_lift_def
+  apply (clarsimp simp: ARM.clearExMonitor_def machine_op_lift_def
                         in_monad select_f_def)
   done
 
@@ -1341,10 +1334,10 @@ lemma Arch_switchToThread_obj_at:
 declare doMachineOp_obj_at[wp]
 
 lemma clearExMonitor_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp MachineOps.clearExMonitor \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wp dmo_invs_no_cicd')
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp ARM.clearExMonitor \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wp dmo_invs_no_cicd' no_irq)
    apply (simp add: no_irq_clearExMonitor)
-  apply (clarsimp simp: MachineOps.clearExMonitor_def machine_op_lift_def
+  apply (clarsimp simp: ARM.clearExMonitor_def machine_op_lift_def
                         in_monad select_f_def)
   done
 
@@ -1441,10 +1434,10 @@ lemma sct_cap_to'[wp]:
 
 
 crunch cap_to'[wp]: "Arch.switchToThread" "ex_nonz_cap_to' p"
-  (simp: crunch_simps ignore: MachineOps.clearExMonitor)
+  (simp: crunch_simps ignore: ARM.clearExMonitor)
 
 crunch cap_to'[wp]: switchToThread "ex_nonz_cap_to' p"
-  (simp: crunch_simps ignore: MachineOps.clearExMonitor)
+  (simp: crunch_simps ignore: ARM.clearExMonitor)
 
 lemma no_longer_inQ[simp]:
   "\<not> inQ d p (tcbQueued_update (\<lambda>x. False) tcb)"
@@ -1953,15 +1946,11 @@ lemma setCurThread_const:
   "\<lbrace>\<lambda>_. P t \<rbrace> setCurThread t \<lbrace>\<lambda>_ s. P (ksCurThread s) \<rbrace>"
   by (simp add: setCurThread_def | wp)+
 
-context begin (*FIXME: arch_split crunch bug*)
-global_naming Schedule_R1
-private lemmas switchToIdleThread_def = ARM_H.switchToIdleThread_def
-private lemmas switchToThread_def = ARM_H.switchToThread_def
+
 
 crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)" 
 crunch it[wp]: switchToThread "\<lambda>s. P (ksIdleThread s)"
-    (ignore: MachineOps.clearExMonitor)
-end
+    (ignore: clearExMonitor)
 
 lemma switchToIdleThread_curr_is_idle:
   "\<lbrace>\<top>\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv s. ksCurThread s = ksIdleThread s\<rbrace>"

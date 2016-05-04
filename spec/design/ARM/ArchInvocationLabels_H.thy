@@ -37,8 +37,17 @@ datatype arch_invocation_label =
   | ARMASIDControlMakePool
   | ARMASIDPoolAssign
 
+
 end
-qualify ARM_H (in Arch) (deep)
+
+context begin interpretation Arch .
+requalify_types arch_invocation_label
+end
+
+context Arch begin global_naming ARM_H
+
+end
+qualify ARM_H (in Arch) 
 (* arch_invocation_label instance proofs *)
 (*<*)
 instantiation arch_invocation_label :: enum begin

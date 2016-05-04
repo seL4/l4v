@@ -14,9 +14,18 @@ begin
 
 (*FIXME: arch_split: move up? *)
 context Arch begin
-shadow_facts
+
+requalify_facts
   switchToIdleThread_def
   switchToThread_def
+
+lemmas [crunch_def] = switchToIdleThread_def switchToThread_def
+
+context begin global_naming global
+requalify_facts
+  Thread_H.switchToIdleThread_def
+  Thread_H.switchToThread_def
+end
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -571,20 +580,15 @@ lemma no_orphans_ksIdle [simp]:
   apply auto
   done
 
-end
-
-lemmas (in Arch) switchToThread_def = ARM_H.switchToThread_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch no_orphans [wp]: "Arch.switchToThread" "no_orphans"
-  (wp: no_orphans_lift ignore: MachineOps.clearExMonitor)
+  (wp: no_orphans_lift ignore: ARM.clearExMonitor)
 
 crunch ksCurThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksCurThread s)"
-  (ignore: MachineOps.clearExMonitor)
+  (ignore: ARM.clearExMonitor)
 
 crunch ksIdleThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksIdleThread s)"
-  (ignore: MachineOps.clearExMonitor)
+  (ignore: ARM.clearExMonitor)
 
 lemma ArchThreadDecls_H_switchToThread_all_queued_tcb_ptrs [wp]:
   "\<lbrace> \<lambda>s. P (all_queued_tcb_ptrs s) \<rbrace>
@@ -595,13 +599,8 @@ lemma ArchThreadDecls_H_switchToThread_all_queued_tcb_ptrs [wp]:
   done
 
 crunch ksSchedulerAction [wp]: "Arch.switchToThread" "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: MachineOps.clearExMonitor)
+  (ignore: ARM.clearExMonitor)
 
-end
-
-shadow_facts (in Arch) switchToThread_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma setCurThread_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and>
@@ -712,7 +711,7 @@ lemma findM_on_success:
   done
 
 crunch st_tcb' [wp]: switchToThread "\<lambda>s. P' (st_tcb_at' P t s)"
-  (ignore: MachineOps.clearExMonitor)
+  (ignore: ARM.clearExMonitor)
 
 lemma setQueue_deq_not_empty:
   "\<lbrace> \<lambda>s. (\<exists>tcb. tcb \<in> set (ksReadyQueues s p) \<and> st_tcb_at' P tcb s) \<and>

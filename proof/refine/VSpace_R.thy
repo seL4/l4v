@@ -692,7 +692,7 @@ lemma set_vm_root_corres:
 proof -
   have P: "corres dc \<top> \<top>
         (do global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-            do_machine_op (MachineOps.setCurrentPD (addrFromPPtr global_pd))
+            do_machine_op (setCurrentPD (addrFromPPtr global_pd))
          od)
         (do globalPD \<leftarrow> gets (armKSGlobalPD \<circ> ksArchState);
             doMachineOp (setCurrentPD (addrFromPPtr globalPD))
@@ -787,7 +787,7 @@ qed
 lemma invalidateTLBByASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> invalidateTLBByASID param_a \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: invalidateTLBByASID_def loadHWASID_def
-         | wp dmo_invs' no_irq_invalidateTLB_ASID | wpc)+
+         | wp dmo_invs' no_irq_invalidateTLB_ASID no_irq | wpc)+
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
     apply (clarsimp simp: invalidateTLB_ASID_def machine_op_lift_def
@@ -2778,7 +2778,7 @@ lemma dmo_armv_contextSwitch_HWASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (armv_contextSwitch_HWASID pd hwasid) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_invs')
    apply (simp add: armv_contextSwitch_HWASID_def)
-   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID)
+   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID no_irq)
   apply safe
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -2791,7 +2791,7 @@ lemma dmo_armv_contextSwitch_HWASID_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (armv_contextSwitch_HWASID pd hwasid) \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   apply (wp dmo_invs_no_cicd')
    apply (simp add: armv_contextSwitch_HWASID_def)
-   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID)
+   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID no_irq)
   apply safe
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -2808,7 +2808,7 @@ lemma no_irq_armv_contextSwitch_HWASID:
 lemma armv_contextSwitch_invs [wp]:
   "\<lbrace>invs'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: armv_contextSwitch_def)
-  apply (wp dmo_invs' no_irq_armv_contextSwitch_HWASID)
+  apply (wp dmo_invs' no_irq_armv_contextSwitch_HWASID no_irq)
   apply (rule hoare_post_imp[rotated], wp)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
@@ -2820,7 +2820,7 @@ lemma armv_contextSwitch_invs [wp]:
 lemma armv_contextSwitch_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: armv_contextSwitch_def armv_contextSwitch_HWASID_def)
-  apply (wp dmo_invs_no_cicd' no_irq_setHardwareASID no_irq_setCurrentPD)
+  apply (wp dmo_invs_no_cicd' no_irq_setHardwareASID no_irq_setCurrentPD no_irq)
   apply (rule hoare_post_imp[rotated], wp getHWASID_invs_no_cicd')
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
@@ -2830,7 +2830,7 @@ lemma armv_contextSwitch_invs_no_cicd':
 
 lemma dmo_setCurrentPD_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_setCurrentPD)
+  apply (wp dmo_invs' no_irq_setCurrentPD no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -2840,7 +2840,7 @@ lemma dmo_setCurrentPD_invs'[wp]:
 
 lemma dmo_setCurrentPD_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wp dmo_invs_no_cicd' no_irq_setCurrentPD)
+  apply (wp dmo_invs_no_cicd' no_irq_setCurrentPD no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -3517,7 +3517,7 @@ lemma setVMRootForFlush_invs'[wp]: "\<lbrace>invs'\<rbrace> setVMRootForFlush a 
 
 lemma dmo_invalidateTLB_VAASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTLB_VAASID x) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_invalidateTLB_VAASID)
+  apply (wp dmo_invs' no_irq_invalidateTLB_VAASID no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -3527,7 +3527,7 @@ lemma dmo_invalidateTLB_VAASID_invs'[wp]:
 
 lemma dmo_cVA_PoU_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (cleanByVA_PoU w p) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_cleanByVA_PoU)
+  apply (wp dmo_invs' no_irq_cleanByVA_PoU no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' pa = underlying_memory m pa"
          in use_valid)
@@ -3537,7 +3537,7 @@ lemma dmo_cVA_PoU_invs'[wp]:
 
 lemma dmo_ccr_PoU_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (cleanCacheRange_PoU s e p) \<lbrace>\<lambda>r. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_cleanCacheRange_PoU)
+  apply (wp dmo_invs' no_irq_cleanCacheRange_PoU no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' pa = underlying_memory m pa"
          in use_valid)
@@ -3548,7 +3548,7 @@ lemma dmo_ccr_PoU_invs'[wp]:
 (* FIXME: Move *)
 lemma dmo_invalidateTLB_ASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTLB_ASID a) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_invalidateTLB_ASID)
+  apply (wp dmo_invs' no_irq_invalidateTLB_ASID no_irq)
   apply clarsimp
   apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
          in use_valid[where P=P and Q="\<lambda>_. P" for P])
@@ -3558,7 +3558,7 @@ lemma dmo_invalidateTLB_ASID_invs'[wp]:
 
 lemma dmo_cleanCaches_PoU_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp cleanCaches_PoU \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_cleanCaches_PoU)
+  apply (wp dmo_invs' no_irq_cleanCaches_PoU no_irq)
   apply clarsimp
   apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
          in use_valid[where P=P and Q="\<lambda>_. P" for P])
@@ -3679,6 +3679,8 @@ crunch valid_pde'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pde' pde"
   (ignore: getObject)
 
 lemma perform_pt_invs [wp]:
+  notes no_irq[wp]
+  shows
   "\<lbrace>invs' and valid_page_inv' pt\<rbrace> performPageInvocation pt \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: performPageInvocation_def)
   apply (cases pt)

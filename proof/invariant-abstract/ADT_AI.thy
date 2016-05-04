@@ -15,15 +15,15 @@ imports
   "./$L4V_ARCH/ArchADT_AI"
 begin
 
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_consts
-  empty_context :: user_context
-  init_A_st :: "'z :: state_ext state"
-  ptable_lift :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref"
-  ptable_rights :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> vm_rights"
-  addrFromPPtr :: "machine_word \<Rightarrow> paddr"
-  ptrFromPAddr :: "paddr \<Rightarrow> machine_word"
+requalify_consts
+  empty_context
+  init_A_st
+  ptable_lift
+  ptable_rights
+  addrFromPPtr
+  ptrFromPAddr
 
 end
 

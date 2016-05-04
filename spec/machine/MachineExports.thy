@@ -13,34 +13,34 @@ theory MachineExports
 imports "./$L4V_ARCH/MachineOps"
 begin
 
-context Arch begin
+context begin interpretation Arch .
   
-unqualify_types
+requalify_types
   machine_word 
   vmfault_type
   irq
 
-unqualify_consts
-  getActiveIRQ :: "(irq option) machine_monad"
-  maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_monad"
-  freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
-  loadWord :: "machine_word \<Rightarrow> machine_word machine_monad"
-  storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  setNextPC :: "machine_word \<Rightarrow> unit user_monad"
-  getRestartPC :: "machine_word user_monad"
-  setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad"
-  getRegister :: "register \<Rightarrow> machine_word user_monad"
-  sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
-  initContext :: "(register * machine_word) list"
-  exceptionMessage :: "register list"
-  syscallMessage :: "register list"
-  gpRegisters :: "register list"
-  frameRegisters :: "register list"
-  ackInterrupt :: "irq \<Rightarrow> unit machine_monad"
-  resetTimer :: "unit machine_monad"
-  maxIRQ :: "irq"
-  minIRQ :: "irq"
+requalify_consts
+  getActiveIRQ
+  maskInterrupt
+  freeMemory
+  loadWord
+  storeWord
+  storeWordVM
+  setNextPC
+  getRestartPC
+  setRegister
+  getRegister
+  sanitiseRegister
+  initContext
+  exceptionMessage
+  syscallMessage
+  gpRegisters
+  frameRegisters
+  ackInterrupt
+  resetTimer
+  maxIRQ
+  minIRQ
 
 end
 

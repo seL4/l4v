@@ -412,10 +412,10 @@ lemma transform_default_tcb:
         = Tcb (Types_D.default_tcb domain)"
   apply (simp add: transform_tcb_def default_tcb_def Types_D.default_tcb_def)
   apply (simp add: transform_full_intent_def Let_def new_context_def
-                   cap_register_def MachineTypes.capRegister_def
+                   cap_register_def ARM.capRegister_def
                    get_tcb_mrs_def
                    Suc_le_eq get_tcb_message_info_def msg_info_register_def
-                   MachineTypes.msgInfoRegister_def data_to_message_info_def
+                   ARM.msgInfoRegister_def data_to_message_info_def
                    get_ipc_buffer_words_def)
   apply (simp add: transform_intent_def invocation_type_def fromEnum_def
                    enum_invocation_label toEnum_def)

@@ -28,7 +28,7 @@ where
   Word_def[simp]:
  "Word \<equiv> id"
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet.lhs Arch=MachineTypes CONTEXT ARM_H all_bits NOT UserContext UserMonad getRegister setRegister newContext mask Word PPtr
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet.lhs Arch=ARM CONTEXT ARM_H all_bits NOT UserContext UserMonad getRegister setRegister newContext mask Word PPtr
 
 definition
   PPtr :: "machine_word \<Rightarrow> machine_word"

@@ -2163,11 +2163,7 @@ lemma finaliseCap_cases[wp]:
   apply (intro allI impI conjI TrueI)
   apply (auto simp add: isCap_simps)
   done
-end
 
-lemmas (in Arch) finaliseCap_def = ARM_H.finaliseCap_def (*FIXME: arch_split crunch bug *)
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch aligned'[wp]: finaliseCap "pspace_aligned'"
   (simp: crunch_simps assertE_def unless_def
@@ -2188,11 +2184,7 @@ crunch it'[wp]: finaliseCap "\<lambda>s. P (ksIdleThread s)"
    wp: mapM_x_wp_inv mapM_wp' hoare_drop_imps getObject_inv loadObject_default_inv
    simp: whenE_def crunch_simps unless_def)
 
-end
 
-shadow_facts (in Arch) finaliseCap_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch vs_lookup[wp]: flush_space "\<lambda>s. P (vs_lookup s)"
   (wp: crunch_wps)
@@ -2479,22 +2471,11 @@ lemma cteDeleteOne_deletes[wp]:
   apply (wp cteDeleteOne_cteCaps_of)
   apply clarsimp
   done
-end
 
-context Arch begin global_naming ARM_H
-lemmas finaliseCap_def = ARM_H.finaliseCap_def (*FIXME: arch_split crunch bug *)
-end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch irq_node'[wp]: finaliseCap "\<lambda>s. P (irq_node' s)"
   (wp: mapM_x_wp crunch_wps getObject_inv loadObject_default_inv
        updateObject_default_inv setObject_ksInterrupt
        ignore: getObject setObject simp: crunch_simps unless_def)
-end
-
-shadow_facts (in Arch) finaliseCap_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma deletingIRQHandler_removeable':
   "\<lbrace>invs' and (\<lambda>s. isFinal (IRQHandlerCap irq) slot (cteCaps_of s))
@@ -3415,9 +3396,6 @@ lemma finaliseCap_valid_cap[wp]:
                          objBits_simps shiftL_nat)+
   done
 
-context Arch begin global_naming ARM_H'
-lemmas finaliseCap_def = ARM_H.finaliseCap_def
-end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -3432,8 +3410,6 @@ crunch sch_act_simple[wp]: finaliseCap sch_act_simple
    ignore: getObject)
 
 end
-
-shadow_facts (in Arch) finaliseCap_def
 
 
 lemma interrupt_cap_null_or_ntfn:
@@ -4468,15 +4444,11 @@ lemma recycle_cap_corres:
      apply (force simp: valid_sched_def)+
   done
 
-context begin
-private lemmas recycleCap_def = ARM_H.recycleCap_def
-
 crunch typ_at'[wp]: recycleCap "\<lambda>s. P (typ_at' T p s)"
   (ignore: filterM 
      simp: crunch_simps filterM_mapM unless_def
            arch_recycleCap_improve_cases
        wp: crunch_wps)
-end
 
 lemmas recycleCap_typ_at_lifts[wp]
     = typ_at_lifts [OF recycleCap_typ_at']

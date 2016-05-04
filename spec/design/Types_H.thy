@@ -21,18 +21,20 @@ imports
   "./$L4V_ARCH/ArchTypes_H"
 begin
 
-unqualify_types (in Arch) 
+context begin interpretation Arch .
+requalify_types
   object_type
   machine_word
   paddr
   vptr
 
-unqualify_consts (in Arch)
+requalify_consts
   getObjectSize
   fromAPIType
   toAPIType
   pageType
   ptrFromPAddr
+end
 
 datatype cap_rights =
     CapRights bool bool bool

@@ -21,7 +21,11 @@ requalify_types (in Arch)
 #INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=Arch NOT InvocationLabel
 #INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ONLY invocationType
 
-shadow_types (in Arch)
-  invocation
+context Arch begin
+context begin global_naming global
+requalify_types
+  Invocations_H.invocation
+end
+end
 
 end

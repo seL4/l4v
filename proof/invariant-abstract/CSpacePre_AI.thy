@@ -16,8 +16,10 @@ theory CSpacePre_AI
 imports CSpaceInv_AI
 begin
 
-unqualify_consts (in Arch)
+context begin interpretation Arch .
+requalify_consts
   cap_asid
+end
 
 lemma fun_upd_Some:
   "ms p = Some k \<Longrightarrow> (ms(a \<mapsto> b)) p = Some (if a = p then b else k)"

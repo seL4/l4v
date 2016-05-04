@@ -931,7 +931,11 @@ where
     else undefined"
 
 
-shadow_types (in Arch)
-  invocation
+context Arch begin
+context begin global_naming global
+requalify_types
+  Invocations_H.invocation
+end
+end
 
 end

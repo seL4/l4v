@@ -21,9 +21,13 @@ imports
   "./$L4V_ARCH/Init_A"
 begin
 
-unqualify_consts (in Arch)
-  arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
-  handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
+context begin interpretation Arch .
+
+requalify_consts
+  arch_perform_invocation
+  handle_vm_fault
+
+end
 
 
 text{*

@@ -1606,7 +1606,7 @@ lemma store_hw_asid_invs:
 lemma invalidateTLB_ASID_valid_irq_states:
   "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> invalidateTLB_ASID x
    \<lbrace>\<lambda>a b. valid_irq_states (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  apply(simp add: valid_irq_states_def | wp | simp add: no_irq_invalidateTLB_ASID)+
+  apply(simp add: valid_irq_states_def | wp no_irq | simp add: no_irq_invalidateTLB_ASID)+
   done
 
 lemma find_free_hw_asid_invs [wp]:
@@ -1658,7 +1658,7 @@ lemma arm_context_switch_invs [wp]:
                             isb_def dsb_def machine_op_lift_def
                             machine_rest_lift_def split_def | wp)+)[3]
   apply(erule use_valid)
-   apply(wp | simp add: no_irq_setHardwareASID no_irq_setCurrentPD)+
+   apply(wp no_irq | simp add: no_irq_setHardwareASID no_irq_setCurrentPD)+
   done
 
 lemmas setCurrentPD_irq_masks = no_irq[OF no_irq_setCurrentPD]
@@ -3135,7 +3135,7 @@ lemma unmap_page_table_invs[wp]:
         apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = 
                                    underlying_memory m p" in use_valid)
           apply ((wp | simp)+)[3]
-       apply(erule use_valid, wp no_irq_cleanByVA_PoU, assumption)
+       apply(erule use_valid, wp no_irq_cleanByVA_PoU no_irq, assumption)
    apply (wp store_pde_invs_unmap page_table_mapped_wp | wpc | simp)+
   apply (simp add: lookup_pd_slot_pd pde_ref_def)
   apply (strengthen lookup_pd_slot_kernel_mappings_strg
@@ -3533,12 +3533,14 @@ lemma perform_page_directory_invocation_invs[wp]:
      apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
             in use_valid)
        apply ((clarsimp | wp)+)[3]
-    apply(erule use_valid, wp no_irq_do_flush, assumption)
+    apply(erule use_valid, wp no_irq_do_flush no_irq, assumption)
    apply(wp set_vm_root_for_flush_invs | simp add: valid_pdi_def)+
   apply (clarsimp simp: perform_page_directory_invocation_def)
   done
 
 lemma perform_page_table_invocation_invs[wp]:
+  notes no_irq[wp]
+  shows
   "\<lbrace>invs and valid_pti pti\<rbrace> 
    perform_page_table_invocation pti
    \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -3551,7 +3553,7 @@ lemma perform_page_table_invocation_invs[wp]:
                                 underlying_memory m p" in use_valid)
        apply ((clarsimp simp: machine_op_lift_def
                              machine_rest_lift_def split_def | wp)+)[3]
-     apply(erule use_valid, wp no_irq_cleanByVA_PoU, assumption)
+     apply(erule use_valid, wp no_irq_cleanByVA_PoU no_irq, assumption)
     apply (wp store_pde_map_invs)[1]
    apply simp
    apply (wp arch_update_cap_invs_map arch_update_cap_pspace
@@ -3687,7 +3689,7 @@ lemma flush_page_invs:
       apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
              in use_valid)
         apply ((clarsimp | wp)+)[3]
-       apply(erule use_valid, wp no_irq_invalidateTLB_VAASID, assumption)
+       apply(erule use_valid, wp no_irq_invalidateTLB_VAASID no_irq, assumption)
       apply (wp set_vm_root_for_flush_invs hoare_drop_imps, simp)
   done
 
@@ -3973,7 +3975,7 @@ lemma dmo_ccMVA_invs[wp]:
    apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
           in use_valid)
      apply ((clarsimp | wp)+)[3]
-  apply(erule use_valid, wp no_irq_cleanByVA_PoU, assumption)
+  apply(erule use_valid, wp no_irq_cleanByVA_PoU no_irq, assumption)
   done
 
 
@@ -3984,7 +3986,7 @@ lemma dmo_ccr_invs[wp]:
    apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
           in use_valid)
      apply ((clarsimp | wp)+)[3]
-  apply(erule use_valid, wp no_irq_cleanCacheRange_PoU, assumption)
+  apply(erule use_valid, wp no_irq_cleanCacheRange_PoU no_irq, assumption)
   done
 
 (* FIXME: move to Invariants_A *)
@@ -4697,7 +4699,7 @@ lemma perform_page_invs [wp]:
      apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
             in use_valid)
        apply ((clarsimp | wp)+)[3]
-    apply(erule use_valid, wp no_irq_do_flush, assumption)
+    apply(erule use_valid, wp no_irq_do_flush no_irq, assumption)
    apply(wp set_vm_root_for_flush_invs | simp add: valid_page_inv_def tcb_at_invs)+
   done
 

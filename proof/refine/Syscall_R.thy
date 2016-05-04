@@ -602,19 +602,7 @@ crunch typ_at'[wp]: doReplyTransfer "\<lambda>s. P (typ_at' T p s)"
 
 lemmas doReplyTransfer_typ_ats[wp] = typ_at_lifts [OF doReplyTransfer_typ_at']
 
-end
-
-(* FIXME: arch_split crunch bug *)
-lemmas (in Arch) performIRQControl_def = ARM_H.performIRQControl_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch typ_at'[wp]: "performIRQControl" "\<lambda>s. P (typ_at' T p s)"
-end
-
-(* FIXME: arch_split crunch bug *)
-shadow_facts (in Arch) performIRQControl_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemmas invokeIRQControl_typ_ats[wp] =
   typ_at_lifts [OF performIRQControl_typ_at']

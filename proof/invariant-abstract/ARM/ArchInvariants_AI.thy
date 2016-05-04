@@ -330,7 +330,11 @@ definition
 where
   "vs_lookup \<equiv> \<lambda>s. vs_lookup_trans s `` vs_asid_refs (arm_asid_table (arch_state s))"
 
-unqualify_consts vs_lookup
+end
+
+context begin interpretation Arch .
+
+requalify_consts vs_lookup
 
 end
 
@@ -410,8 +414,11 @@ definition
 where
   "vs_lookup_pages \<equiv> \<lambda>s. vs_lookup_pages_trans s `` vs_asid_refs (arm_asid_table (arch_state s))"
 
-unqualify_consts vs_lookup_pages
 
+end
+
+context begin interpretation Arch .
+requalify_consts vs_lookup_pages
 end
 
 abbreviation

@@ -1259,20 +1259,10 @@ lemma createObject_valid_duplicates'[wp]:
   apply (clarsimp simp:word_bits_def)
   done
 
-end
 
-(* FIXME: arch_split crunch bug *)
-lemmas (in Arch) createObject_def = ARM_H.createObject_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch arch_inv[wp]: createNewObjects "\<lambda>s. P (armKSGlobalPD (ksArchState s))"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps hoare_unless_wp)
-end
 
-(* FIXME: arch_split crunch bug *)
-shadow_facts (in Arch) createObject_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma createNewObjects_valid_duplicates'[wp]:
  "\<lbrace> (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_no_overlap' ptr sz
@@ -2542,7 +2532,7 @@ lemma handleInterrupt_valid_duplicates'[wp]:
 
 crunch valid_duplicates' [wp]: 
   schedule "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (ignore: setNextPC MachineOps.clearExMonitor threadSet simp:crunch_simps wp:findM_inv)
+  (ignore: setNextPC clearExMonitor threadSet simp:crunch_simps wp:findM_inv)
 
 lemma activate_sch_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. ct_in_state' activatable' s \<and> vs_valid_duplicates' (ksPSpace s)\<rbrace>

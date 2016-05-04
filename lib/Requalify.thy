@@ -96,9 +96,9 @@ val _ =
 
 val _ =
   Outer_Syntax.command @{command_keyword global_naming} "change global naming of context block"
-    (Parse.name >> (fn naming =>
+    (Parse.binding >> (fn naming =>
       Toplevel.local_theory NONE NONE 
-        (Local_Theory.map_background_naming (Name_Space.parent_path #> Name_Space.mandatory_path naming))))
+        (Local_Theory.map_background_naming (Name_Space.parent_path #> Name_Space.qualified_path true naming))))
 
 end
 

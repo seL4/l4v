@@ -333,7 +333,7 @@ def wrap_qualify(lines, deep=True):
 
     """Close and then re-open a locale so instantiations can go through"""
     if deep:
-        asdfextra = "(deep)"
+        asdfextra = ""
     else:
         asdfextra = ""
 

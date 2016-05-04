@@ -18,8 +18,10 @@ theory Notification_H imports    "NotificationDecls_H"
   ObjectInstances_H
 begin
 
-unqualify_consts (in Arch)
+context begin interpretation Arch .
+requalify_consts
   badgeRegister
+end
 
 defs receiveBlocked_def:
 "receiveBlocked st\<equiv> (case st of

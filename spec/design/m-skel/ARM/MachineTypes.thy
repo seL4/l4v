@@ -31,6 +31,12 @@ section "Types"
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM decls_only
 (*<*)
+end
+context begin interpretation Arch .
+requalify_types register
+end
+context Arch begin global_naming ARM
+
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM instanceproofs
 (*>*)
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM bodies_only
@@ -128,6 +134,15 @@ definition
 
 (* Machine/Hardware/ARM.lhs - hardware_asid, vmfault_type and vmpage_size *)
 #INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM ONLY HardwareASID VMFaultType VMPageSize pageBits pageBitsForSize
+
+end
+
+context begin interpretation Arch .
+requalify_types vmpage_size
+end
+
+context Arch begin global_naming ARM
+
 #INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM instanceproofs ONLY HardwareASID VMFaultType VMPageSize
 
 end

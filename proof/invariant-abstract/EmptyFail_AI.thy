@@ -12,8 +12,10 @@ theory EmptyFail_AI
 imports Tcb_AI
 begin
 
-unqualify_facts (in Arch)
+context begin interpretation Arch .
+requalify_facts
   ef_machine_op_lift
+end
 
 lemmas [wp] = empty_fail_bind empty_fail_bindE empty_fail_get empty_fail_modify
               empty_fail_whenEs empty_fail_when empty_fail_gets empty_fail_assertE

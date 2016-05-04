@@ -203,10 +203,13 @@ lemma throw_on_false_bcorres[wp]: "bcorres f f' \<Longrightarrow>  bcorres (thro
   done
 
 context Arch begin
-  thm refl
   crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state (simp: swp_def)
-  unqualify_facts arch_finalise_cap_bcorres[wp]
 end
+
+requalify_facts Arch.arch_finalise_cap_bcorres
+
+declare arch_finalise_cap_bcorres[wp]
+
 
 crunch (bcorres)bcorres[wp]: "IpcCancel_A.suspend",deleting_irq_handler truncate_state (simp: gets_the_def swp_def ignore: gets_the ignore: throw_on_false)
 

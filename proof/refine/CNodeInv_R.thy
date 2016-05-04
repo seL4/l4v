@@ -2,8 +2,7 @@
  * Copyright 2014, General Dynamics C4 Systems
  *
  * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided. * See "LICENSE_GPLv2.txt" for details.
  *
  * @TAG(GD_GPL)
  *)
@@ -6952,23 +6951,11 @@ lemma cteDelete_sch_act_simple:
 
 crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
-end
-
-(*FIXME: arch_split crunch bug*)
-context Arch begin global_naming ARM_H'''
-lemmas finaliseCap_def = ARM_H.finaliseCap_def
-end
-
-(* FIXME: move to Finalise_R *)
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification "st_tcb_at' P t"
   (ignore: getObject setObject simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
 end
 
-shadow_facts (in Arch) finaliseCap_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma finaliseCap2_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -7071,26 +7058,14 @@ lemmas threadSet_ctesCaps_of = ctes_of_cteCaps_of_lift[OF threadSet_ctes_of]
 lemmas storePTE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePTE_ctes]
 lemmas storePDE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePDE_ctes]
 
-end
-
-(*FIXME: arch_split crunch bug getting ridiculous *)
-context Arch begin global_naming ARM_H''''
-lemmas finaliseCap_def = ARM_H.finaliseCap_def
-end
-
-(* FIXME: move to Finalise_R *)
 context begin interpretation Arch . (*FIXME: arch_split*)
+
 crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
        getObject_inv loadObject_default_inv 
         simp: crunch_simps unless_def setBoundNotification_def
       ignore: getObject setObject setCTE)
-end
-
-shadow_facts (in Arch) finaliseCap_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
@@ -8338,21 +8313,11 @@ lemma arch_recycleCap_improve_cases': "\<lbrakk>\<not> isPageCap param_b; \<not>
   apply simp+
   done
 
-end
 
-(*FIXME: arch_split crunch bug *)
-lemmas (in Arch) recycleCap_def = ARM_H.recycleCap_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch st_tcb_at'[wp]: "Arch.recycleCap" "st_tcb_at' P t"
   (ignore: getObject setObject
        wp: crunch_wps undefined_valid
      simp: crunch_simps arch_recycleCap_improve_cases')
-end
-
-shadow_facts (in Arch) recycleCap_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma threadSet_st_tcb_at2:
   assumes x: "\<forall>tcb. P (tcbState tcb) \<longrightarrow> P (tcbState (f tcb))"
@@ -9571,24 +9536,11 @@ lemma recycleCap_valid[wp]:
   apply (auto simp: isCap_simps valid_cap'_def capAligned_def objBits_simps)
   done
 
-end
 
-(*FIXME: arch_split crunch bug *)
-context Arch begin global_naming ARM_H'
-lemmas recycleCap_def = ARM_H.recycleCap_def
-end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch cte_wp_at'[wp]: recycleCap "cte_wp_at' P p"
   (ignore: filterM setObject getObject
      simp: filterM_mapM crunch_simps arch_recycleCap_improve_cases'
        wp: crunch_wps)
-end
-
-(*FIXME: arch_split crunch bug *)
-shadow_facts (in Arch) recycleCap_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma recycleCap_cases:
   "\<lbrace>\<top>\<rbrace>
@@ -9758,26 +9710,13 @@ declare withoutPreemption_lift [wp]
 
 crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
-end
 
-(*FIXME: arch_split crunch bug*)
-context Arch begin global_naming ARM_H'''''
-lemmas finaliseCap_def = ARM_H.finaliseCap_def
-end
-
-(* FIXME: move to Finalise_R *)
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
        no_irq_invalidateTLB_ASID no_irq_setHardwareASID
        no_irq_setCurrentPD no_irq_invalidateTLB_VAASID
        no_irq_cleanByVA_PoU
    simp: crunch_simps armv_contextSwitch_HWASID_def ignore: getObject setObject)
-end
-
-shadow_facts (in Arch) finaliseCap_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b

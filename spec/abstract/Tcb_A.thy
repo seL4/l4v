@@ -18,8 +18,12 @@ theory Tcb_A
 imports TcbAcc_A Schedule_A
 begin
 
-unqualify_consts (in Arch)
-  arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+context begin interpretation Arch .
+
+requalify_consts
+  arch_activate_idle_thread
+
+end
 
 section "Activating Threads"
 

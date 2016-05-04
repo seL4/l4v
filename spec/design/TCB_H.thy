@@ -19,7 +19,8 @@ imports
   "./$L4V_ARCH/ArchTCB_H"
 begin
 
-unqualify_consts (in Arch)
+context begin interpretation Arch .
+requalify_consts
   decodeTransfer
   gpRegisters
   frameRegisters
@@ -31,6 +32,7 @@ unqualify_consts (in Arch)
   performTransfer
   msgInfoRegister
   msgRegisters
+end
 
 defs decodeTCBInvocation_def:
 "decodeTCBInvocation label args cap slot extraCaps \<equiv>

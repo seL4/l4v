@@ -16,9 +16,9 @@ theory CSpace_AI
 imports "./$L4V_ARCH/ArchCSpace_AI"
 begin
 
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_consts
+requalify_consts
   irq_state_update
   irq_state
   final_matters_arch
@@ -29,7 +29,7 @@ unqualify_consts
   ups_of_heap
   is_simple_cap_arch
 
-unqualify_facts
+requalify_facts
   is_derived_arch_non_arch
   ups_of_heap_non_arch_upd
   master_arch_cap_obj_refs

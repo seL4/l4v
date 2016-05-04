@@ -16,23 +16,33 @@ theory CSpaceInv_AI
 imports "./$L4V_ARCH/ArchCSpaceInv_AI"
 begin
 
-unqualify_consts (in Arch)
-  cap_master_arch_cap :: "arch_cap \<Rightarrow> arch_cap"
-  replaceable_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
-  replaceable_non_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
-  unique_table_refs :: "('a \<Rightarrow> cap option) \<Rightarrow> bool"
+context begin interpretation Arch .
 
-unqualify_facts (in Arch)
-  aobj_ref_acap_rights_update[simp]
-  arch_obj_size_acap_rights_update[simp]
-  valid_arch_cap_acap_rights_update[intro]
-  valid_validate_vm_rights[simp]
-  cap_master_arch_inv[simp]
+requalify_consts
+  cap_master_arch_cap
+  replaceable_final_arch_cap
+  replaceable_non_final_arch_cap
+  unique_table_refs
+
+requalify_facts
+  aobj_ref_acap_rights_update
+  arch_obj_size_acap_rights_update
+  valid_arch_cap_acap_rights_update
+  valid_validate_vm_rights
+  cap_master_arch_inv
   unique_table_refs_def
   valid_ipc_buffer_cap_def
-  acap_rights_update_idem[simp]
-  cap_master_arch_cap_rights[simp]
-  acap_rights_update_id [intro!, simp]
+  acap_rights_update_idem
+  cap_master_arch_cap_rights
+  acap_rights_update_id
+end
+
+lemmas [simp] = aobj_ref_acap_rights_update arch_obj_size_acap_rights_update 
+  valid_validate_vm_rights cap_master_arch_inv acap_rights_update_idem
+  cap_master_arch_cap_rights acap_rights_update_id
+
+lemmas [intro] = valid_arch_cap_acap_rights_update
+lemmas [intro!] = acap_rights_update_id
 
 lemma remove_rights_cap_valid[simp]:
   "s \<turnstile> c \<Longrightarrow> s \<turnstile> remove_rights S c"
@@ -1090,10 +1100,9 @@ lemma abj_ref_none_no_refs:
   subgoal for ac by (cases ac; simp)
   done
 
-unqualify_facts 
-  abj_ref_none_no_refs
-
 end
+
+requalify_facts Arch.abj_ref_none_no_refs
 
 lemma no_cap_to_obj_with_diff_ref_Null:
   "no_cap_to_obj_with_diff_ref NullCap S = \<top>"

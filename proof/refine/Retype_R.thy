@@ -17,10 +17,6 @@ theory Retype_R
 imports VSpace_R
 begin
 
-context Arch begin
-declare no_irq[wp del]
-end
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition

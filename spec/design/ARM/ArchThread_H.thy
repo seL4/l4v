@@ -24,7 +24,7 @@ defs switchToThread_def:
     globals \<leftarrow> gets $ armKSGlobalsFrame \<circ> ksArchState;
     bufferPtr \<leftarrow> threadGet tcbIPCBuffer tcb;
     storeWordUser globals $ fromVPtr bufferPtr;
-    doMachineOp $ MachineOps.clearExMonitor
+    doMachineOp $ ARM.clearExMonitor
 od)"
 
 defs configureIdleThread_def:

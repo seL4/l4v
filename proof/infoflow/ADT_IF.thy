@@ -816,7 +816,7 @@ lemma no_irq_user_memory_update[simp]:
   done
 
 crunch irq_masks[wp]: do_user_op_if "\<lambda>s. P (irq_masks_of_state s)"
-  (ignore: user_memory_update wp: select_wp dmo_wp)
+  (ignore: user_memory_update wp: select_wp dmo_wp no_irq)
 
 crunch valid_list[wp]: do_user_op_if "valid_list"
   (ignore: user_memory_update wp: select_wp)

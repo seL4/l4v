@@ -1392,7 +1392,7 @@ lemma no_irq_case_option:
   apply (subst no_irq_def)
   apply clarsimp
   apply (rule hoare_pre)
-   apply (wpc|wp|simp)+
+   apply (wpc|wp no_irq|simp)+
   done
 
 

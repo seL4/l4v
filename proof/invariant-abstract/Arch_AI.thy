@@ -79,9 +79,11 @@ where
    | InvokeASIDPool ap \<Rightarrow>
        valid_apinv ap"
 
-unqualify_consts
-  valid_arch_inv :: "arch_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+end
 
+context begin interpretation Arch .
+requalify_consts
+  valid_arch_inv
 end
 
 lemma assocs_dom_comp:

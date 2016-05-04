@@ -22,9 +22,11 @@ imports
   Config_H
 begin
 
-unqualify_consts (in Arch)
+context begin interpretation Arch .
+requalify_consts
   VPtr
   newContext
+end
 
 lemma projectKO_eq2:
   "((obj,s') \<in> fst (projectKO ko s)) = (projectKO_opt ko = Some obj \<and> s' = s)"

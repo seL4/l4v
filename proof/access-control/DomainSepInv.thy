@@ -1391,7 +1391,7 @@ lemma domain_sep_inv_cur_thread_update[simp]:
   done
 
 crunch domain_sep_inv[wp]: choose_thread "domain_sep_inv irqs st"
-  (wp: crunch_wps dxo_wp_weak ignore: tcb_sched_action MachineOps.clearExMonitor)
+  (wp: crunch_wps dxo_wp_weak ignore: tcb_sched_action ARM.clearExMonitor)
 
 end
 

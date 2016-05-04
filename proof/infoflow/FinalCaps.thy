@@ -3209,7 +3209,7 @@ lemma silc_inv_cur_thread[simp]:
   done
 
 crunch silc_inv[wp]: schedule "silc_inv aag st"
-  (wp: alternative_wp OR_choice_weak_wp select_wp crunch_wps ignore: set_scheduler_action MachineOps.clearExMonitor simp: crunch_simps ignore: set_scheduler_action MachineOps.clearExMonitor)
+  (wp: alternative_wp OR_choice_weak_wp select_wp crunch_wps ignore: set_scheduler_action ARM.clearExMonitor simp: crunch_simps ignore: set_scheduler_action ARM.clearExMonitor)
 
 lemma call_kernel_silc_inv:
   "\<lbrace> silc_inv aag st and einvs and simple_sched_action and

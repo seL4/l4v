@@ -73,14 +73,14 @@ definition
   where
   "absPageTable h a \<equiv> %offs.
    case (h (a + (ucast offs << 2))) of
-     Some (KOArch (KOPTE (Hardware_H.InvalidPTE))) \<Rightarrow> ARM_A.InvalidPTE
-   | Some (KOArch (KOPTE (Hardware_H.LargePagePTE p c g xn rights))) \<Rightarrow>
+     Some (KOArch (KOPTE (ARM_H.InvalidPTE))) \<Rightarrow> ARM_A.InvalidPTE
+   | Some (KOArch (KOPTE (ARM_H.LargePagePTE p c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
          ARM_A.LargePagePTE p
            {x. c & x=PageCacheable | g & x=Global | xn & x=XNever}
            (vm_rights_of rights)
        else ARM_A.InvalidPTE
-   | Some (KOArch (KOPTE (Hardware_H.SmallPagePTE p c g xn rights))) \<Rightarrow>
+   | Some (KOArch (KOPTE (ARM_H.SmallPagePTE p c g xn rights))) \<Rightarrow>
        ARM_A.SmallPagePTE p {x. c & x=PageCacheable |
                                         g & x=Global |
                                         xn & x=XNever} (vm_rights_of rights)"
@@ -91,15 +91,15 @@ definition
   where
   "absPageDirectory h a \<equiv> %offs.
    case (h (a + (ucast offs << 2))) of
-     Some (KOArch (KOPDE (Hardware_H.InvalidPDE))) \<Rightarrow> ARM_A.InvalidPDE
-   | Some (KOArch (KOPDE (Hardware_H.PageTablePDE p e mw))) \<Rightarrow>
+     Some (KOArch (KOPDE (ARM_H.InvalidPDE))) \<Rightarrow> ARM_A.InvalidPDE
+   | Some (KOArch (KOPDE (ARM_H.PageTablePDE p e mw))) \<Rightarrow>
        ARM_A.PageTablePDE p {x. e & x=ParityEnabled} mw
-   | Some (KOArch (KOPDE (Hardware_H.SectionPDE p e mw c g xn rights))) \<Rightarrow>
+   | Some (KOArch (KOPDE (ARM_H.SectionPDE p e mw c g xn rights))) \<Rightarrow>
        ARM_A.SectionPDE p {x. e & x=ParityEnabled |
                                       c & x=PageCacheable |
                                       g & x=Global |
                                       xn & x=XNever} mw (vm_rights_of rights)
-   | Some (KOArch (KOPDE (Hardware_H.SuperSectionPDE p e c g xn rights))) \<Rightarrow>
+   | Some (KOArch (KOPDE (ARM_H.SuperSectionPDE p e c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
          ARM_A.SuperSectionPDE p
            {x. e & x=ParityEnabled | c & x=PageCacheable 
@@ -131,10 +131,10 @@ lemma
                            Some (KOArch (KOPTE pte')))"
   and pte_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPTE (Hardware_H.LargePagePTE _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPTE (ARM_H.LargePagePTE _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPTE (Hardware_H.SmallPagePTE _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPTE (ARM_H.SmallPagePTE _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
 
   assumes pdes:
@@ -144,10 +144,10 @@ lemma
                              Some (KOArch (KOPDE pde')))"
   and pde_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPDE (Hardware_H.SectionPDE _ _ _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPDE (ARM_H.SectionPDE _ _ _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPDE (Hardware_H.SuperSectionPDE _ _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPDE (ARM_H.SuperSectionPDE _ _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
 
   assumes fst_pte:
@@ -243,7 +243,7 @@ lemma
    apply simp
    apply (erule_tac x=y in allE)
    apply clarsimp
-   apply (simp add: absPageTable_def  split:option.splits Hardware_H.pte.splits)
+   apply (simp add: absPageTable_def  split:option.splits ARM_H.pte.splits)
    apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
               vm_kernel_only_def vm_read_only_def vm_read_write_def
             split: vmrights.splits)
@@ -259,7 +259,7 @@ lemma
   apply clarsimp
   apply (simp add: pde_relation_def pde_relation_aligned_def)
   apply (simp add: absPageDirectory_def
-              split: option.splits Hardware_H.pde.splits)
+              split: option.splits ARM_H.pde.splits)
   apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
              vm_kernel_only_def vm_read_only_def vm_read_write_def
            split: vmrights.splits)

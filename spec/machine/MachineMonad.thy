@@ -13,19 +13,18 @@ theory MachineMonad
 imports "./$L4V_ARCH/MachineTypes"
 begin
 
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_types
+requalify_types
   machine_state
   machine_state_rest
 
-
-unqualify_consts
-  underlying_memory :: "machine_state \<Rightarrow> machine_word \<Rightarrow> word8"
-  underlying_memory_update :: "((32 word \<Rightarrow> 8 word) \<Rightarrow> 32 word \<Rightarrow> 8 word) \<Rightarrow> machine_state \<Rightarrow> machine_state"
-  irq_masks :: "machine_state \<Rightarrow> irq \<Rightarrow> bool"
-  machine_state_rest :: "machine_state \<Rightarrow> machine_state_rest"
-  machine_state_rest_update :: "(machine_state_rest \<Rightarrow> machine_state_rest) \<Rightarrow> machine_state \<Rightarrow> machine_state"
+requalify_consts
+  underlying_memory
+  underlying_memory_update
+  irq_masks
+  machine_state_rest
+  machine_state_rest_update
 
 end
 

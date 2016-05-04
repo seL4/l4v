@@ -3627,7 +3627,7 @@ lemma store_word_corres:
 lemmas msgRegisters_unfold
   = ARM_H.msgRegisters_def
     msg_registers_def
-    MachineTypes.msgRegisters_def
+    ARM.msgRegisters_def
         [unfolded upto_enum_def, simplified,
          unfolded fromEnum_def enum_register, simplified,
          unfolded toEnum_def enum_register, simplified]
@@ -4917,7 +4917,7 @@ proof -
   qed
 
   show ?thesis
-    apply (wp dmo_invs' no_irq_storeWord)
+    apply (wp dmo_invs' no_irq_storeWord no_irq)
     apply (clarsimp simp: storeWord_def invs'_def valid_state'_def)
     apply (clarsimp simp: valid_machine_state'_def pointerInUserData_def
                assert_def simpler_modify_def fail_def bind_def return_def
@@ -4942,7 +4942,7 @@ proof -
   qed
 
   show ?thesis
-    apply (wp dmo_invs_no_cicd' no_irq_storeWord)
+    apply (wp dmo_invs_no_cicd' no_irq_storeWord no_irq)
     apply (clarsimp simp: storeWord_def invs'_def valid_state'_def)
     apply (clarsimp simp: valid_machine_state'_def pointerInUserData_def
                assert_def simpler_modify_def fail_def bind_def return_def

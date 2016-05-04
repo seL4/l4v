@@ -14,14 +14,14 @@ imports
 
 begin
 
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_types
+requalify_types
   vm_rights
 
-unqualify_consts
-  valid_vm_rights :: "vm_rights set"
-  validate_vm_rights :: "vm_rights \<Rightarrow> vm_rights"
+requalify_consts
+  valid_vm_rights
+  validate_vm_rights
 
 end
 

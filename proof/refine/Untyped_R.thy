@@ -5540,12 +5540,8 @@ lemma sts_valid_untyped_inv':
 crunch nosch[wp]: insertNewCaps "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps)
 
-context begin
-private lemmas createObject_def = ARM_H.createObject_def (*FIXME: arch_split crunch bug *)
-
 crunch nosch[wp]: createNewObjects "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM  wp: crunch_wps hoare_unless_wp)
-end
 
 lemma invokeUntyped_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>

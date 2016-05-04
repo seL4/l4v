@@ -14,8 +14,10 @@ theory InvocationLabels_H
 imports "$L4V_ARCH/ArchInvocationLabels_H"
 begin
 
-unqualify_types (in Arch)
+context begin interpretation Arch .
+requalify_types
   arch_invocation_label
+end
 
 text {*
   An enumeration of all system call labels.

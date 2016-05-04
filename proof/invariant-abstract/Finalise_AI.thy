@@ -15,12 +15,15 @@ imports
   Retype_AI
 begin
 
-unqualify_consts (in Arch)
-  vs_cap_ref :: "cap \<Rightarrow> vs_ref list option"
+context begin interpretation Arch .
 
-unqualify_facts (in Arch)
+requalify_consts
+  vs_cap_ref
+
+requalify_facts
   final_cap_lift
   no_irq_clearMemory
+end
 
 context Arch begin global_naming ARM (* FIXME: arch_split, also move somewhere sensible. *)
 lemma valid_global_refs_asid_table_udapte [iff]:
@@ -1809,9 +1812,10 @@ where
           (\<forall>oref\<in>obj_refs cap'. \<not> (vref \<unrhd> oref) s))
    else replaceable s slot cap cap'"
 
-unqualify_consts
-  replaceable_or_arch_update
+end
 
+context begin interpretation Arch .
+requalify_consts replaceable_or_arch_update
 end
 
 
@@ -2980,16 +2984,17 @@ lemma arch_recycle_slots_kernel_mapping_slots:
   done
 end
 
-unqualify_consts (in Arch)
+context begin interpretation Arch .
+
+requalify_consts
   clearMemory
 
-unqualify_facts (in Arch)
-  no_irq[wp]
+end
 
 lemma clearMemory_valid_irq_states:
   "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> clearMemory w x
    \<lbrace>\<lambda>a b. valid_irq_states (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  apply (simp add: valid_irq_states_def | wp | simp add: no_irq_clearMemory)+
+  apply (simp add: valid_irq_states_def | wp no_irq | simp add: no_irq_clearMemory)+
   done
 
 (* FIXME: move *)
@@ -3136,8 +3141,10 @@ lemma dxo_noop: "do_extended_op f = (return () :: (unit,unit) s_monad)"
   apply force
   done
 
-unqualify_facts (in Arch)
+context begin interpretation Arch . 
+requalify_facts
   valid_global_refsD
+end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma recycle_cap_invs:
@@ -3256,8 +3263,10 @@ lemma zombie_not_ex_cap_to:
   apply fastforce
   done
 
-unqualify_facts (in Arch)
+context begin interpretation Arch .
+requalify_facts
   valid_global_refsD2
+end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_idle_has_null_cap:

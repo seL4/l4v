@@ -59,7 +59,13 @@ sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_w
 
 (*<*)
 end
-qualify ARM (in Arch) (deep)
+context begin interpretation Arch .
+requalify_types register
+end
+context Arch begin global_naming ARM
+
+end
+qualify ARM (in Arch) 
 (* register instance proofs *)
 (*<*)
 instantiation register :: enum begin
@@ -296,8 +302,17 @@ where
   | ARMSuperSection \<Rightarrow>    24
   )"
 
+
 end
-qualify ARM (in Arch) (deep)
+
+context begin interpretation Arch .
+requalify_types vmpage_size
+end
+
+context Arch begin global_naming ARM
+
+end
+qualify ARM (in Arch) 
 (* vmpage_size instance proofs *)
 (*<*)
 instantiation vmpage_size :: enum begin

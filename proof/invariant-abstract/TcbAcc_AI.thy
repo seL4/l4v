@@ -11,12 +11,14 @@
 theory TcbAcc_AI
 imports "./$L4V_ARCH/ArchTcbAcc_AI"
 begin
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_facts
-  storeWord_invs[wp]
+requalify_facts
+  storeWord_invs
 
 end
+
+declare storeWord_invs[wp]
 
 lemmas gts_inv[wp] = get_thread_state_inv
 

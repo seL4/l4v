@@ -19,15 +19,17 @@ imports
   Thread_H
 begin
 
-context Arch begin
-unqualify_consts
+context begin interpretation Arch .
+
+requalify_consts
   getMemoryRegions
   addrFromPPtr
   init_machine_state
 
-requalify_consts
-  newKernelState
 end
+
+requalify_consts (in Arch)
+  newKernelState
 
 fun coverOf :: "region list => region" 
 where "coverOf x0 = (case x0 of
@@ -326,10 +328,10 @@ newKernelState_def:
 	\<rparr>"
 
 context Arch begin
-shadow_facts
-   newKernelState_def
-shadow_consts
-   newKernelState
+requalify_facts
+   KernelInit_H.newKernelState_def
+requalify_consts
+   KernelInit_H.newKernelState
 end
 
 end

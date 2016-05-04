@@ -17,12 +17,14 @@ imports
   "../../lib/DataMap"
 begin
 
-unqualify_consts (in Arch)
+context begin interpretation Arch .
+requalify_consts
   fromPPtr
   PPtr
   freeMemory
   storeWord
   loadWord
+end
 
 definition deleteRange :: "( machine_word , 'a ) DataMap.map \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> ( machine_word , 'a ) DataMap.map"
 where "deleteRange m ptr bits \<equiv> 

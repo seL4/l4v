@@ -34,12 +34,11 @@ text {*
   All this is done only to avoid a large number of axioms (2 for each operation).
 *}
 
-
-qualify ARM (in Arch) (deep)
+context Arch begin global_naming ARM
 
 section "The Operations"
 
-consts
+consts'
   memory_regions :: "(paddr \<times> paddr) list" (* avail_p_regs *)
   device_regions :: "(paddr \<times> paddr) list" (* dev_p_regs *)
 
@@ -47,7 +46,7 @@ definition
   getMemoryRegions :: "(paddr * paddr) list machine_monad"
   where "getMemoryRegions \<equiv> return memory_regions"
 
-consts
+consts'
   getDeviceRegions_impl :: "unit machine_rest_monad"
   getDeviceRegions_val :: "machine_state \<Rightarrow> (paddr * paddr) list"
 
@@ -56,7 +55,7 @@ definition
 where
   "getDeviceRegions \<equiv> return device_regions"
 
-consts
+consts'
   getKernelDevices_impl :: "unit machine_rest_monad"
   getKernelDevices_val :: "machine_state \<Rightarrow> (paddr * machine_word) list"
 
@@ -99,7 +98,7 @@ definition
   storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
   where "storeWordVM w p \<equiv> return ()"
 
-consts
+consts'
   configureTimer_impl :: "unit machine_rest_monad"
   configureTimer_val :: "machine_state \<Rightarrow> irq"
 
@@ -111,28 +110,28 @@ where
     gets configureTimer_val
   od"
 
-consts (* XXX: replaces configureTimer in new boot code
+consts' (* XXX: replaces configureTimer in new boot code
           TODO: remove configureTimer when haskell updated *)
   initTimer_impl :: "unit machine_rest_monad"
 definition
   initTimer :: "unit machine_monad"
 where "initTimer \<equiv> machine_op_lift initTimer_impl"
 
-consts
+consts'
   resetTimer_impl :: "unit machine_rest_monad"
 
 definition
   resetTimer :: "unit machine_monad"
 where "resetTimer \<equiv> machine_op_lift resetTimer_impl"
 
-consts
+consts'
   writeTTBR0_impl :: "paddr \<Rightarrow> unit machine_rest_monad"
 definition
   writeTTBR0 :: "paddr \<Rightarrow> unit machine_monad"
 where "writeTTBR0 pd \<equiv> machine_op_lift (writeTTBR0_impl pd)"
 
 
-consts
+consts'
   setHardwareASID_impl :: "hardware_asid \<Rightarrow> unit machine_rest_monad"
 definition
   setHardwareASID:: "hardware_asid \<Rightarrow> unit machine_monad"
@@ -142,19 +141,19 @@ where "setHardwareASID a \<equiv> machine_op_lift (setHardwareASID_impl a)"
 (* Memory Barriers *)
 
 
-consts
+consts'
   isb_impl :: "unit machine_rest_monad"
 definition
   isb :: "unit machine_monad"
 where "isb \<equiv> machine_op_lift isb_impl"
 
-consts
+consts'
   dsb_impl :: "unit machine_rest_monad"
 definition
   dsb :: "unit machine_monad"
 where "dsb \<equiv> machine_op_lift dsb_impl"
 
-consts
+consts'
   dmb_impl :: "unit machine_rest_monad"
 definition
   dmb :: "unit machine_monad"
@@ -169,14 +168,14 @@ where "setCurrentPD pd \<equiv> do
              isb
           od"
 
-consts
+consts'
   invalidateTLB_impl :: "unit machine_rest_monad"
 definition
   invalidateTLB :: "unit machine_monad"
 where "invalidateTLB \<equiv> machine_op_lift invalidateTLB_impl"
 
 
-consts
+consts'
   invalidateTLB_ASID_impl :: "hardware_asid \<Rightarrow> unit machine_rest_monad"
 definition
   invalidateTLB_ASID :: "hardware_asid \<Rightarrow> unit machine_monad"
@@ -184,85 +183,85 @@ where "invalidateTLB_ASID a \<equiv> machine_op_lift (invalidateTLB_ASID_impl a)
 
 
 (* C implementation takes one argument, which is w || a *)
-consts
+consts'
   invalidateTLB_VAASID_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
   invalidateTLB_VAASID :: "machine_word \<Rightarrow> unit machine_monad"
 where "invalidateTLB_VAASID w \<equiv> machine_op_lift (invalidateTLB_VAASID_impl w)"
 
-consts
+consts'
   cleanByVA_impl :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition
   cleanByVA :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where "cleanByVA w p \<equiv> machine_op_lift (cleanByVA_impl w p)"
 
-consts
+consts'
   cleanByVA_PoU_impl :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition
   cleanByVA_PoU :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where "cleanByVA_PoU w p \<equiv> machine_op_lift (cleanByVA_PoU_impl w p)"
 
-consts
+consts'
   invalidateByVA_impl :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition
   invalidateByVA :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where "invalidateByVA w p \<equiv> machine_op_lift (invalidateByVA_impl w p)"
 
-consts
+consts'
   invalidateByVA_I_impl :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition
   invalidateByVA_I :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where "invalidateByVA_I w p \<equiv> machine_op_lift (invalidateByVA_I_impl w p)"
 
-consts
+consts'
   invalidate_I_PoU_impl :: "unit machine_rest_monad"
 definition
   invalidate_I_PoU :: "unit machine_monad"
 where "invalidate_I_PoU \<equiv> machine_op_lift invalidate_I_PoU_impl"
 
-consts
+consts'
   cleanInvalByVA_impl :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition
   cleanInvalByVA :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where "cleanInvalByVA w p \<equiv> machine_op_lift (cleanInvalByVA_impl w p)"
 
-consts
+consts'
   branchFlush_impl :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition
   branchFlush :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where "branchFlush w p \<equiv> machine_op_lift (branchFlush_impl w p)"
 
-consts
+consts'
   clean_D_PoU_impl :: "unit machine_rest_monad"
 definition
   clean_D_PoU :: "unit machine_monad"
 where "clean_D_PoU \<equiv> machine_op_lift clean_D_PoU_impl"
 
-consts
+consts'
   cleanInvalidate_D_PoC_impl :: "unit machine_rest_monad"
 definition
   cleanInvalidate_D_PoC :: "unit machine_monad"
 where "cleanInvalidate_D_PoC \<equiv> machine_op_lift cleanInvalidate_D_PoC_impl"
 
-consts
+consts'
   cleanInvalidateL2Range_impl :: "paddr \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition
   cleanInvalidateL2Range :: "paddr \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where "cleanInvalidateL2Range w p \<equiv> machine_op_lift (cleanInvalidateL2Range_impl w p)"
 
-consts
+consts'
   invalidateL2Range_impl :: "paddr \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition
   invalidateL2Range :: "paddr \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where "invalidateL2Range w p \<equiv> machine_op_lift (invalidateL2Range_impl w p)"
 
-consts
+consts'
   cleanL2Range_impl :: "paddr \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition
   cleanL2Range :: "paddr \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where "cleanL2Range w p \<equiv> machine_op_lift (cleanL2Range_impl w p)"
 
-consts
+consts'
   initL2Cache_impl :: "unit machine_rest_monad"
 definition
   initL2Cache :: "unit machine_monad"
@@ -272,13 +271,13 @@ definition
   clearExMonitor :: "unit machine_monad"
 where "clearExMonitor \<equiv> modify (\<lambda>s. s \<lparr> exclusive_state := default_exclusive_state \<rparr>)"
 
-consts
+consts'
   flushBTAC_impl :: "unit machine_rest_monad"
 definition
   flushBTAC :: "unit machine_monad"
 where "flushBTAC \<equiv> machine_op_lift flushBTAC_impl"
 
-consts
+consts'
   initIRQController_impl :: "unit machine_rest_monad"
 definition
   initIRQController :: "unit machine_monad"
@@ -286,7 +285,7 @@ where "initIRQController \<equiv> machine_op_lift initIRQController_impl"
 
 
 
-consts
+consts'
   writeContextID_impl :: "unit machine_rest_monad"
 definition
   writeContextID :: "unit machine_monad"
@@ -299,7 +298,7 @@ lemmas cache_machine_op_defs = isb_def dsb_def dmb_def writeContextID_def flushB
                                invalidate_I_PoU_def invalidateByVA_I_def invalidateByVA_def
                                cleanByVA_PoU_def cleanByVA_def invalidateTLB_VAASID_def
                                invalidateTLB_ASID_def invalidateTLB_def
-consts
+consts'
   IFSR_val :: "machine_state \<Rightarrow> machine_word"
   DFSR_val :: "machine_state \<Rightarrow> machine_word"
   FAR_val :: "machine_state \<Rightarrow> machine_word"
@@ -322,16 +321,12 @@ where
   debugPrint_def[simp]:
  "debugPrint \<equiv> \<lambda>message. return ()"
 
-consts
+consts'
   ackInterrupt_impl :: "irq \<Rightarrow> unit machine_rest_monad"
 definition
   ackInterrupt :: "irq \<Rightarrow> unit machine_monad"
 where
   "ackInterrupt irq \<equiv> machine_op_lift (ackInterrupt_impl irq)"
-
-end_qualify
-
-context Arch begin global_naming ARM
 
 
 -- "Interrupt controller operations"

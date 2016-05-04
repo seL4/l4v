@@ -12,13 +12,13 @@ theory CSpaceInvPre_AI
 imports "./$L4V_ARCH/ArchAcc_AI"
 begin
 
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_consts
-  table_cap_ref :: "cap \<Rightarrow> vs_ref list option"
+requalify_consts
+  table_cap_ref
   empty_table
 
-unqualify_facts
+requalify_facts
   empty_table_def
 
 end

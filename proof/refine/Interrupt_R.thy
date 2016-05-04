@@ -22,15 +22,20 @@ context Arch begin
 requalify_types
   irqcontrol_invocation
 
+lemmas [crunch_def] = decodeIRQControlInvocation_def performIRQControl_def
+
+context begin global_naming global
+
 (*FIXME: arch_split: move up *)
-shadow_types
-  irqcontrol_invocation
+requalify_types
+  Invocations_H.irqcontrol_invocation
 
 (*FIXME: arch_split*)
-shadow_facts
-  decodeIRQControlInvocation_def
-  performIRQControl_def
+requalify_facts
+  Interrupt_H.decodeIRQControlInvocation_def
+  Interrupt_H.performIRQControl_def
 
+end
 end
 
 primrec
@@ -184,22 +189,9 @@ lemma decode_irq_control_corres:
   apply arith
   done
 
-end
-
-(* FIXME: arch_split crunch bug *)
-lemmas (in Arch) decodeIRQControlInvocation_def = ARM_H.decodeIRQControlInvocation_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch inv[wp]: "InterruptDecls_H.decodeIRQControlInvocation"  "P"
-  (simp: crunch_simps ARM_H.decodeIRQControlInvocation_def)
-end
+  (simp: crunch_simps)
 
-(*FIXME: arch_split*)
-context Arch begin
-shadow_facts decodeIRQControlInvocation_def
-end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* Levity: added (20090201 10:50:27) *)
 declare ensureEmptySlot_stronger [wp]

@@ -19,7 +19,8 @@ imports
   KernelInitMonad_H
 begin
 
-unqualify_consts (in Arch)
+context begin interpretation Arch .
+requalify_consts
   mapKernelWindow
   activateGlobalVSpace
   configureTimer
@@ -39,7 +40,8 @@ unqualify_consts (in Arch)
   checkValidIPCBuffer
   lookupIPCBuffer
   vptrFromPPtr
-  
+end
+
 #INCLUDE_HASKELL SEL4/Kernel/VSpace.lhs Arch= ONLY initKernelVM initPlatform initCPU
 
 end

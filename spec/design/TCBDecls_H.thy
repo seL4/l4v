@@ -14,8 +14,10 @@ theory TCBDecls_H
 imports FaultMonad_H Invocations_H
 begin
 
-unqualify_types (in Arch)
+context begin interpretation Arch .
+requalify_types
   user_monad
+end
 
 consts'
 decodeTCBInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> capability \<Rightarrow> machine_word \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"

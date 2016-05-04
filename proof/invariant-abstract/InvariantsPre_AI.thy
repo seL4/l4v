@@ -12,13 +12,13 @@ theory InvariantsPre_AI
 imports LevityCatch_AI
 begin
 
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_types
+requalify_types
   aa_type
 
-unqualify_consts
-  aa_type :: "arch_kernel_obj \<Rightarrow> aa_type"
+requalify_consts
+  aa_type
 
 end
 

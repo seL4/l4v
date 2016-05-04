@@ -19,7 +19,7 @@ abbreviation irq_masks_of_state :: "det_ext state \<Rightarrow> irq \<Rightarrow
 
 lemma resetTimer_irq_masks[wp]:
   "\<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> resetTimer \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
-  apply(simp add: resetTimer_def | wp)+
+  apply(simp add: resetTimer_def | wp no_irq)+
   done
 
 lemma storeWord_irq_masks[wp]:
@@ -37,12 +37,12 @@ lemma delete_objects_irq_masks[wp]:
   "\<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace> delete_objects param_a param_b 
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply(simp add: delete_objects_def)
-  apply(wp dmo_wp no_irq_mapM_x | simp add: freeMemory_def no_irq_storeWord)+
+  apply(wp dmo_wp no_irq_mapM_x no_irq | simp add: freeMemory_def no_irq_storeWord)+
   done
   
 
 crunch irq_masks[wp]: invoke_untyped "\<lambda>s. P (irq_masks_of_state s)"
-  (ignore: delete_objects wp: crunch_wps dmo_wp simp: crunch_simps no_irq_clearMemory no_irq_cleanCacheRange_PoU mapM_x_def_bak)
+  (ignore: delete_objects wp: crunch_wps dmo_wp no_irq simp: crunch_simps no_irq_clearMemory no_irq_cleanCacheRange_PoU mapM_x_def_bak)
 
 crunch irq_masks[wp]: cap_insert "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps)
@@ -75,13 +75,13 @@ crunch irq_masks[wp]: do_reply_transfer "\<lambda>s. P (irq_masks_of_state s)"
 
 
 crunch irq_masks[wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: select_wp crunch_wps dmo_wp simp: crunch_simps no_irq_setHardwareASID no_irq_setCurrentPD no_irq_invalidateTLB_ASID no_irq_invalidateTLB_VAASID no_irq_cleanByVA_PoU)
+  (wp: select_wp crunch_wps dmo_wp no_irq simp: crunch_simps no_irq_setHardwareASID no_irq_setCurrentPD no_irq_invalidateTLB_ASID no_irq_invalidateTLB_VAASID no_irq_cleanByVA_PoU)
 
 crunch irq_masks[wp]: send_signal "\<lambda>s. P (irq_masks_of_state s)"  
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
 
 crunch irq_masks[wp]: machine_op_lift "\<lambda>s. P (irq_masks s)" 
-  (wp: crunch_wps ignore: machine_op_lift wp:dmo_wp)
+  (wp: crunch_wps no_irq ignore: machine_op_lift wp:dmo_wp)
 
 lemma handle_interrupt_irq_masks:
   notes no_irq[wp del]
@@ -187,7 +187,7 @@ lemma invoke_irq_control_irq_masks:
   done
       
 crunch irq_masks[wp]: arch_perform_invocation, bind_notification "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp crunch_wps simp: crunch_simps no_irq_cleanByVA_PoU no_irq_invalidateTLB_ASID no_irq_do_flush)
+  (wp: dmo_wp crunch_wps no_irq simp: crunch_simps no_irq_cleanByVA_PoU no_irq_invalidateTLB_ASID no_irq_do_flush)
 
 crunch irq_masks[wp]: restart "\<lambda>s. P (irq_masks_of_state s)"
 
@@ -307,7 +307,7 @@ lemma cap_revoke_irq_masks':
 lemmas cap_revoke_irq_masks = use_spec(2)[OF cap_revoke_irq_masks']
 
 crunch irq_masks[wp]: recycle_cap "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: crunch_wps dmo_wp simp: filterM_mapM crunch_simps no_irq_clearMemory no_irq_invalidateTLB_ASID
+  (wp: crunch_wps dmo_wp no_irq simp: filterM_mapM crunch_simps no_irq_clearMemory no_irq_invalidateTLB_ASID
    ignore: filterM)
 
 lemma finalise_slot_irq_masks:
@@ -397,7 +397,7 @@ crunch irq_masks[wp]: handle_recv "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch irq_masks[wp]: handle_vm_fault "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp ignore: getFAR getDFSR getIFSR simp: no_irq_getDFSR no_irq_getFAR no_irq_getIFSR)
+  (wp: dmo_wp no_irq ignore: getFAR getDFSR getIFSR simp: no_irq_getDFSR no_irq_getFAR no_irq_getIFSR)
 
 lemma dmo_getActiveIRQ_irq_masks[wp]:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s))\<rbrace>

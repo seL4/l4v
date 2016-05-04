@@ -1,5 +1,5 @@
-Built from git repo at /home/matthewb/verification/arch_split/seL4/haskell by matthewb
+Built from git repo at /Users/dmatichuk/verification-archsplit/seL4/haskell by dmatichuk
 
 Generated from changeset:
-128abb8 Merge pull request #162 in SEL4/sel4 from ~HALMATARY/sel4:master to master
+fd5246f Use constant to specify first dynamic cptr in doc
 

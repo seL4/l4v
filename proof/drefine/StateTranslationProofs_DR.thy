@@ -92,20 +92,20 @@ lemma get_tcb_mrs_update_state :
 lemma msg_info_badge_register_no_overlap:
   "badge_register \<noteq> msg_info_register"
   by (clarsimp simp:badge_register_def msg_info_register_def
-    MachineTypes.badgeRegister_def
-                  MachineTypes.msgInfoRegister_def)
+    ARM.badgeRegister_def
+                  ARM.msgInfoRegister_def)
 
 lemma badge_cap_register_overlap:
   "badge_register = cap_register"
 by (clarsimp simp:badge_register_def cap_register_def
-                  MachineTypes.badgeRegister_def
-                  MachineTypes.capRegister_def)
+                  ARM.badgeRegister_def
+                  ARM.capRegister_def)
 
 lemma cap_msg_info_register_no_overlap:
   "cap_register \<noteq> msg_info_register"
 by (clarsimp simp:msg_info_register_def cap_register_def
-                  MachineTypes.msgInfoRegister_def
-                  MachineTypes.capRegister_def)
+                  ARM.msgInfoRegister_def
+                  ARM.capRegister_def)
 
 lemmas register_overlap_check = msg_info_badge_register_no_overlap
                                 cap_msg_info_register_no_overlap

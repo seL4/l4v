@@ -140,12 +140,12 @@ lemma arch_switch_to_thread_dcorres:
             apply simp
             apply (rule corres_split_noop_rhs[OF _ dcorres_storeWord_globals])
              apply (rule dcorres_machine_op_noop)
-             apply (simp add: MachineOps.clearExMonitor_def, wp)[1]
+             apply (simp add: ARM.clearExMonitor_def, wp)[1]
             apply (wp|simp)+
   done
 
 crunch idle_thread [wp]: arch_switch_to_thread "\<lambda>s. P (idle_thread s)"
-  (simp: crunch_simps wp: crunch_wps ignore: MachineOps.clearExMonitor)
+  (simp: crunch_simps wp: crunch_wps ignore: ARM.clearExMonitor)
 
 (*
  * Setting the current thread.
@@ -589,12 +589,12 @@ lemma get_tcb_message_info_nextPC [simp]:
   "get_tcb_message_info (tcb\<lparr>tcb_context := (tcb_context tcb)(LR_svc := pc)\<rparr>) =
    get_tcb_message_info tcb"
   by (simp add: get_tcb_message_info_def
-                msg_info_register_def MachineTypes.msgInfoRegister_def)
+                msg_info_register_def ARM.msgInfoRegister_def)
 
 lemma map_msg_registers_nextPC [simp]:
   "map ((tcb_context tcb)(LR_svc := pc)) msg_registers =
    map (tcb_context tcb) msg_registers"
-  by (simp add: msg_registers_def MachineTypes.msgRegisters_def
+  by (simp add: msg_registers_def ARM.msgRegisters_def
                 upto_enum_red fromEnum_def toEnum_def enum_register)
 
 lemma get_ipc_buffer_words_nextPC [simp]:
@@ -611,7 +611,7 @@ lemma transform_tcb_LR_svc:
   "transform_tcb m t (tcb\<lparr>tcb_context := (tcb_context tcb)(LR_svc := pc)\<rparr>)
   = transform_tcb m t tcb"
   by (auto simp add: transform_tcb_def transform_full_intent_def Let_def
-                     cap_register_def MachineTypes.capRegister_def)
+                     cap_register_def ARM.capRegister_def)
 
 (*
  * setNextPC in the tcb context is not observable on the capDL level.

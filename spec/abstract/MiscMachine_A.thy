@@ -18,9 +18,9 @@ theory MiscMachine_A
 imports "./$L4V_ARCH/Machine_A" "../machine/MachineExports"
 begin
 
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_types
+requalify_types
   user_context 
   register 
   data 
@@ -30,33 +30,32 @@ unqualify_types
   cap_ref
   length_type
   vspace_ref
-  data_offset
+  data_offset   
 
+requalify_consts
+  nat_to_cref
+  msg_info_register
+  msg_registers
+  cap_register
+  badge_register
+  frame_registers
+  gp_registers
+  exception_message
+  syscall_message
 
-unqualify_consts
-  nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref"
-  msg_info_register :: "register"
-  msg_registers :: "register list"
-  cap_register :: "register"
-  badge_register :: "register"
-  frame_registers :: "register list"
-  gp_registers :: "register list"
-  exception_message :: "register list"
-  syscall_message :: "register list"
-
-  new_context :: "user_context"
-  slot_bits :: "nat"
-  oref_to_data   :: "obj_ref \<Rightarrow> data"
-  data_to_oref   :: "data \<Rightarrow> obj_ref"
-  vref_to_data   :: "vspace_ref \<Rightarrow> data"
-  data_to_vref   :: "data \<Rightarrow> vspace_ref"
-  nat_to_len     :: "nat \<Rightarrow> length_type"
-  data_to_nat    :: "data \<Rightarrow> nat"
-  data_to_16     :: "data \<Rightarrow> 16 word"
-  data_to_cptr :: "data \<Rightarrow> cap_ref"
-  data_offset_to_nat :: "data_offset \<Rightarrow> nat"
-  combine_ntfn_badges :: "data \<Rightarrow> data \<Rightarrow> data"
-  combine_ntfn_msgs :: "data \<Rightarrow> data \<Rightarrow> data"
+  new_context
+  slot_bits
+  oref_to_data
+  data_to_oref
+  vref_to_data
+  data_to_vref
+  nat_to_len
+  data_to_nat
+  data_to_16
+  data_to_cptr
+  data_offset_to_nat
+  combine_ntfn_badges
+  
 
 end
 

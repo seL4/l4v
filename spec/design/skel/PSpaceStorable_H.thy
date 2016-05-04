@@ -16,11 +16,13 @@ imports
   "../../lib/DataMap"
 begin
 
-unqualify_types (in Arch)
+context begin interpretation Arch .
+requalify_types
   arch_kernel_object_type
 
-unqualify_consts (in Arch)
+requalify_consts
   archTypeOf
+end
 
 lemma UserData_singleton [simp]:
   "(v = UserData) = True" "(UserData = v) = True" 

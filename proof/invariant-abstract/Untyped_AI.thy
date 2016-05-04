@@ -13,9 +13,9 @@
 theory Untyped_AI
 imports Detype_AI
 begin
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_consts
+requalify_consts
   region_in_kernel_window
 
 end

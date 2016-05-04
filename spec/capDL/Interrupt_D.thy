@@ -16,11 +16,13 @@ theory Interrupt_D
 imports Endpoint_D "../machine/$L4V_ARCH/Platform"
 begin
 
-unqualify_types (in Arch)
+context begin interpretation Arch .
+requalify_types
   irq
 
-unqualify_consts (in Arch)
-  maxIRQ :: irq
+requalify_consts
+  maxIRQ
+end
 
 (* Return the currently pending IRQ. *)
 definition

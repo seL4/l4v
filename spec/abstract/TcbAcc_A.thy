@@ -18,8 +18,12 @@ theory TcbAcc_A
 imports CSpace_A
 begin
 
-unqualify_consts (in Arch)
-  in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+context begin interpretation Arch .
+
+requalify_consts
+  in_user_frame
+
+end
 
 text {* Store or load a word at an offset from an IPC buffer. *}
 definition

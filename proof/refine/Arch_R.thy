@@ -430,23 +430,12 @@ lemma ARMMMU_improve_cases:
     else T)"
   by (cases cap, simp_all add: isCap_simps)
 
-end
 
-(* FIXME: arch_split crunch bug *)
-lemmas (in Arch) decodeInvocation_def = ARM_H.decodeInvocation_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch inv [wp]: "Arch.decodeInvocation" "P"
+crunch inv [wp]: "ARM_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
    simp: forME_x_def crunch_simps
          ARMMMU_improve_cases
    ignore: forME_x getObject)
-end
-
-(* FIXME: arch_split crunch bug *)
-shadow_facts (in Arch) decodeInvocation_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* FIXME: Move *)
 lemma case_option_corres:
@@ -2116,22 +2105,9 @@ lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 crunch nosch [wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps updateObject_default_def)
 
-end
 
-(* FIXME: arch_split crunch bug *)
-context Arch begin global_naming ARM_H''
-lemmas finaliseCap_def = ARM_H.finaliseCap_def
-end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
-end
-
-(* FIXME: arch_split crunch bug *)
-shadow_facts (in Arch) finaliseCap_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch typ_at' [wp]: "Arch.finaliseCap" "\<lambda>s. P (typ_at' T p s)"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)

@@ -18,8 +18,12 @@ theory Interrupt_A
 imports Ipc_A
 begin
 
-unqualify_consts (in Arch)
-  arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
+context begin interpretation Arch .
+
+requalify_consts
+  arch_invoke_irq_control
+
+end
   
   
 text {* Tests whether an IRQ identifier is in use. *}

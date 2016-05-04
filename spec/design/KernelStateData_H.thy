@@ -23,14 +23,15 @@ imports
 begin
 
 
-context Arch begin
+context begin interpretation Arch .
 
-unqualify_types
+requalify_types
   vmpage_size
 
-type_synonym kernel_state = kernel_state
-
 end
+
+requalify_types (in Arch) 
+  kernel_state
 
 subsection "The Kernel State"
 

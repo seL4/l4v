@@ -16,8 +16,12 @@ theory VSpacePre_AI
 imports TcbAcc_AI
 begin
 
-unqualify_facts (in Arch)
+context begin interpretation Arch .
+
+requalify_facts
   cap_master_cap_tcb_cap_valid_arch
+
+end
 
 lemma throw_on_false_wp[wp]:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. (rv \<longrightarrow> Q () s) \<and> (\<not> rv \<longrightarrow> E x s)\<rbrace>
