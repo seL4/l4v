@@ -1369,7 +1369,7 @@ lemma ksPSpace_update_gs_eq[simp]:
 
 end
 
-interpretation update_gs: PSpace_update_eq "update_gs ty us ptrs"
+global_interpretation update_gs: PSpace_update_eq "update_gs ty us ptrs"
   by (simp add: PSpace_update_eq_def)
 
 context begin interpretation Arch . (*FIXME: arch_split*)

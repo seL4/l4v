@@ -12,6 +12,8 @@ theory Schedule_C
 imports Tcb_C
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma nat_add_less_by_max:
   "\<lbrakk> (x::nat) \<le> xmax ; y < k - xmax \<rbrakk> \<Longrightarrow> x + y < k"
   by simp
@@ -103,12 +105,21 @@ lemma setVMRoot_valid_queues':
   done
 
 (* FIXME move to REFINE *)
-crunch valid_queues'[wp]: "ArchThreadDecls_H.switchToThread" valid_queues'
+crunch valid_queues'[wp]: "Arch.switchToThread" valid_queues'
     (ignore: MachineOps.clearExMonitor)
 crunch ksCurDomain[wp]: switchToIdleThread "\<lambda>s. P (ksCurDomain s)"
 crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
 (simp: whenE_def)
 crunch valid_arch_state'[wp]: switchToThread valid_arch_state'
+
+end
+
+(*FIXME: arch_split: move up?*)
+context Arch begin
+shadow_facts
+  switchToIdleThread_def
+  switchToThread_def
+end
 
 context kernel_m begin
 
@@ -116,9 +127,9 @@ context kernel_m begin
 lemma ccorres_pre_gets_armKSGlobalsFrame_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ArchStateData_H.armKSGlobalsFrame (ksArchState s) = rv  \<longrightarrow> P rv s))
+                  (\<lambda>s. (\<forall>rv. ARM_H.armKSGlobalsFrame (ksArchState s) = rv  \<longrightarrow> P rv s))
                   {s. \<forall>rv. symbol_table ''armKSGlobalsFrame'' = rv \<longrightarrow> s \<in> P' rv }
-                          hs (gets (ArchStateData_H.armKSGlobalsFrame \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+                          hs (gets (ARM_H.armKSGlobalsFrame \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
        defer
@@ -168,12 +179,12 @@ lemma ccorres_pre_getDomainTime:
 
 lemma user_word_at_armKSGlobalsFrame:
   "\<lbrakk> valid_pspace' s; valid_arch_state' s \<rbrakk>
-   \<Longrightarrow> \<exists>w. user_word_at w (ArchStateData_H.armKSGlobalsFrame (ksArchState s)) s"
+   \<Longrightarrow> \<exists>w. user_word_at w (ARM_H.armKSGlobalsFrame (ksArchState s)) s"
   apply (simp add: user_word_at_def)
   apply (simp add: pointerInUserData_def)
   apply (clarsimp simp: valid_pspace'_def)
   apply (clarsimp simp: valid_arch_state'_def)
-  apply (subgoal_tac "is_aligned (ArchStateData_H.armKSGlobalsFrame (ksArchState s)) pageBits")
+  apply (subgoal_tac "is_aligned (ARM_H.armKSGlobalsFrame (ksArchState s)) pageBits")
    apply simp
    apply (erule is_aligned_weaken)
    apply (simp add: pageBits_def)
@@ -213,8 +224,8 @@ lemma c_guard_abs_word32_armKSGlobalsFrame:
 
 lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc (valid_pspace' and valid_arch_state') UNIV []
-           ArchThreadDecls_H.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
-  apply (cinit simp: ArchThread_H.switchToIdleThread_def)
+           Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
+  apply (cinit simp: ARM_H.switchToIdleThread_def)
    apply (rule ccorres_pre_gets_armKSGlobalsFrame_ksArchState)
    apply (rule ccorres_Guard)
    apply (simp add: storeWordUser_def)
@@ -246,7 +257,7 @@ lemma switchToIdleThread_ccorres:
        apply (clarsimp simp: simpler_modify_def)
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                              carch_state_relation_def cmachine_state_relation_def)
-      apply (simp add: ArchThread_H.switchToIdleThread_def)
+      apply (simp add: ARM_H.switchToIdleThread_def)
       apply wp
    apply simp
   apply simp
@@ -257,15 +268,15 @@ lemma Arch_switchToThread_ccorres:
            (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t)
            (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace>)
            [] 
-           (ArchThreadDecls_H.switchToThread t) (Call Arch_switchToThread_'proc)"
+           (Arch.switchToThread t) (Call Arch_switchToThread_'proc)"
   apply (cinit lift: tcb_')
-   apply (unfold ArchThread_H.switchToThread_def)[1]
+   apply (unfold ARM_H.switchToThread_def)[1]
    apply (ctac (no_vcg) add: setVMRoot_ccorres)
     apply (simp (no_asm) del: Collect_const)
-    apply (rule_tac Q="\<lambda>globals s. globals = ArchStateData_H.armKSGlobalsFrame (ksArchState s) \<and> 
+    apply (rule_tac Q="\<lambda>globals s. globals = ARM_H.armKSGlobalsFrame (ksArchState s) \<and> 
                        all_invs_but_ct_idle_or_in_cur_domain' s" in ccorres_symb_exec_l) 
        apply (rule_tac Q="\<lambda>ib s. (\<exists>tcb. ko_at' tcb t s \<and> ib = tcbIPCBuffer tcb) \<and> 
-                                 rva = ArchStateData_H.armKSGlobalsFrame (ksArchState s) \<and> 
+                                 rva = ARM_H.armKSGlobalsFrame (ksArchState s) \<and> 
                                  all_invs_but_ct_idle_or_in_cur_domain' s" in ccorres_symb_exec_l)
           apply (unfold storeWordUser_def)[1]
           apply (simp (no_asm) only: K_bind_def bind_assoc) 

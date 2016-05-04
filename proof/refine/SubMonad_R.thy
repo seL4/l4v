@@ -120,7 +120,9 @@ lemma submonad_asUser:
   apply (rule refl)
   done
 
-interpretation submonad_asUser:
+end
+
+global_interpretation submonad_asUser:
   submonad "asUser_fetch t" "asUser_replace t" "tcb_at' t" "asUser t"
   by (rule submonad_asUser)
 
@@ -145,5 +147,4 @@ lemma doMachineOp_nosch [wp]:
   apply simp
   done
 
-end
 end

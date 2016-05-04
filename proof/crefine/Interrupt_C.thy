@@ -314,7 +314,7 @@ lemma invokeIRQControl_ccorres:
    apply (clarsimp simp: is_simple_cap'_def isCap_simps valid_cap_simps' capAligned_def)
    apply (subst ucast_le_ucast[where 'a = 16 and 'b = 32,symmetric],simp)
    apply (subst ucast_le_ucast_10_32[symmetric])
-   apply (auto simp:ucast_up_ucast is_up ARM.maxIRQ_def maxIRQ_def word_bits_def )[1]
+   apply (auto simp:ucast_up_ucast is_up ARM.maxIRQ_def Kernel_C.maxIRQ_def word_bits_def )[1]
   apply (clarsimp simp: Collect_const_mem ccap_relation_def cap_irq_handler_cap_lift
                         cap_to_H_def c_valid_cap_def cl_valid_cap_def
                         word_bw_assocs mask_twice Kernel_C.maxIRQ_def ucast_ucast_a
@@ -348,12 +348,12 @@ lemma isIRQActive_ccorres:
                          word_less_nat_alt)
    apply (clarsimp simp: order_le_less_trans unat_less_helper
                          word_0_sle_from_less[OF order_less_le_trans, OF ucast_less])
-   apply (clarsimp simp: rf_sr_def cstate_relation_def maxIRQ_def
+   apply (clarsimp simp: rf_sr_def cstate_relation_def Kernel_C.maxIRQ_def
                          Let_def cinterrupt_relation_def)
 
    apply (drule spec, drule(1) mp)
    apply (case_tac "intStateIRQTable (ksInterruptState \<sigma>) irq")
-     apply (simp add: from_bool_def irq_state_defs maxIRQ_def
+     apply (simp add: from_bool_def irq_state_defs Kernel_C.maxIRQ_def
                       word_le_nat_alt)+
   done
 
@@ -361,14 +361,13 @@ lemma Platform_maxIRQ:
   "ARM.maxIRQ = scast Kernel_C.maxIRQ"
   by (simp add: ARM.maxIRQ_def Kernel_C.maxIRQ_def)
 
-
 lemma Arch_decodeIRQControlInvocation_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       \<top> UNIV []
-     (ArchInterruptDecls_H.decodeIRQControlInvocation label args srcSlot extraCaps
+     (Arch.decodeIRQControlInvocation label args srcSlot extraCaps
         >>= invocationCatch thread isBlocking isCall (InvokeIRQControl o ArchIRQControl))
      (Call Arch_decodeIRQControlInvocation_'proc)"
-  apply (cinit' simp: ArchInterrupt_H.decodeIRQControlInvocation_def)
+  apply (cinit' simp: ARM_H.decodeIRQControlInvocation_def)
    apply (simp add: throwError_bind invocationCatch_def
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule syscall_error_throwError_ccorres_n)

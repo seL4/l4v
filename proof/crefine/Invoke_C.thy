@@ -1457,6 +1457,8 @@ lemma decodeCNodeInvocation_ccorres:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 crunch valid_queues[wp]: insertNewCap "valid_queues"
   (wp: crunch_wps)
 
@@ -1487,6 +1489,8 @@ lemma deleteObjects_gsCNodes_at_pt:
 
 crunch gsCNodes[wp]: setThreadState "\<lambda>s. P (gsCNodes s)"
   (simp: unless_def)
+
+end
 
 context kernel_m begin
 
@@ -3015,7 +3019,7 @@ shows
    apply (clarsimp simp: linorder_not_less isCap_simps)
    apply (clarsimp simp: sysargs_rel_to_n)
    apply (rule conjI, clarsimp)
-   apply (clarsimp simp: ARM_H.fromAPIType_def Types_H.fromAPIType_def)
+   apply (clarsimp simp: fromAPIType_def)
    apply (subgoal_tac "unat (args ! Suc 0) < word_bits")
     prefer 2
     apply (erule le_less_trans)

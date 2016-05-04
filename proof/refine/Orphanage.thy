@@ -12,6 +12,7 @@ theory Orphanage
 imports Refine
 begin
 
+(*FIXME: arch_split: move up? *)
 context Arch begin
 shadow_facts
   switchToIdleThread_def

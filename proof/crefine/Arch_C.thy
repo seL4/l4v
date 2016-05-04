@@ -21,6 +21,7 @@ lemma ksPSpace_update_eq_ExD:
      \<Longrightarrow> \<exists>ps. s = t \<lparr> ksPSpace := ps \<rparr>"
   by (erule exI)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch ctes_of[wp]: unmapPageTable "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
 
@@ -31,6 +32,7 @@ crunch inv[wp]: pteCheckIfMapped "P"
 
 crunch inv[wp]: pdeCheckIfMapped "P"
   (ignore: getObject setObject)
+end
 
 context kernel_m begin
 
@@ -1652,7 +1654,7 @@ lemma performPageInvocationMapPTE_ccorres:
   done
 
 lemma pde_align_ptBits:
-  "\<lbrakk> ko_at' (Hardware_H.pde.PageTablePDE x xa xb) slot s ;valid_objs' s\<rbrakk>
+  "\<lbrakk> ko_at' (ARM_H.PageTablePDE x xa xb) slot s ;valid_objs' s\<rbrakk>
   \<Longrightarrow> is_aligned (ptrFromPAddr x) ptBits"
   apply (drule ko_at_valid_objs')
     apply simp
@@ -2345,8 +2347,8 @@ lemma flushtype_relation_triv:
    isPDFlushLabel (invocation_type label)
   ==> flushtype_relation (labelToFlushType label) (ucast label)"
   by (clarsimp simp: labelToFlushType_def flushtype_relation_def 
-    invocation_eq_use_types ArchLabelFuns_H.isPageFlushLabel_def 
-    ArchLabelFuns_H.isPDFlushLabel_def
+    invocation_eq_use_types ARM_H.isPageFlushLabel_def 
+    ARM_H.isPDFlushLabel_def
     split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
 lemma setVMRootForFlush_ccorres2:

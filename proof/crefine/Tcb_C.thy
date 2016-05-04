@@ -75,11 +75,13 @@ lemma doMachineOp_sched:
   apply fastforce
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch queues[wp]: setupReplyMaster "valid_queues"
   (simp: crunch_simps wp: crunch_wps)
 
 crunch curThread [wp]: restart "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps simp: crunch_simps)
+end
 
 context kernel_m
 begin
@@ -993,17 +995,23 @@ lemma Arch_performTransfer_ccorres:
      apply simp+
   done
 
+(*FIXME: arch_split: C kernel names hidden by Haskell names *)
+abbreviation "frameRegistersC \<equiv> kernel_all_substitute.frameRegisters"
+lemmas frameRegistersC_def = kernel_all_substitute.frameRegisters_def
+abbreviation "gpRegistersC \<equiv> kernel_all_substitute.gpRegisters"
+lemmas gpRegistersC_def = kernel_all_substitute.gpRegisters_def
+
 lemma frame_gp_registers_convs:
   "length ARM_H.frameRegisters = unat n_frameRegisters"
   "length ARM_H.gpRegisters = unat n_gpRegisters"
   "n < length ARM_H.frameRegisters \<Longrightarrow>
-     index frameRegisters n = register_from_H (ARM_H.frameRegisters ! n)"
+     index frameRegistersC n = register_from_H (ARM_H.frameRegisters ! n)"
   "n < length ARM_H.gpRegisters \<Longrightarrow>
-     index gpRegisters n = register_from_H (ARM_H.gpRegisters ! n)"
+     index gpRegistersC n = register_from_H (ARM_H.gpRegisters ! n)"
   apply (simp_all add: ARM_H.gpRegisters_def ARM_H.frameRegisters_def
                        MachineTypes.gpRegisters_def n_gpRegisters_def
                        MachineTypes.frameRegisters_def n_frameRegisters_def
-                       frameRegisters_def gpRegisters_def msgRegisters_unfold
+                       frameRegistersC_def gpRegistersC_def msgRegisters_unfold
                        fupdate_def Arrays.update_def toEnum_def
                        upto_enum_def fromEnum_def enum_register)
   apply (auto simp: less_Suc_eq fcp_beta Kernel_C.LR_def R14_def)
@@ -1548,10 +1556,10 @@ lemmas getRegister_ccorres_defer
 lemma msg_registers_convs:
   "length ARM_H.msgRegisters = unat n_msgRegisters"
   "n < length ARM_H.msgRegisters \<Longrightarrow>
-     index msgRegisters n = register_from_H (ARM_H.msgRegisters ! n)"
+     index msgRegistersC n = register_from_H (ARM_H.msgRegisters ! n)"
   apply (simp_all add: msgRegisters_unfold
                        MachineTypes.msgRegisters_def n_msgRegisters_def
-                       msgRegisters_def fupdate_def Arrays.update_def)
+                       msgRegistersC_def fupdate_def Arrays.update_def)
   apply (auto simp: less_Suc_eq fcp_beta)
   done
 

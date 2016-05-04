@@ -12,6 +12,8 @@ theory Ipc_C
 imports Finalise_C CSpace_All
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
   "replyFromKernel_success_empty thread \<equiv> do
      VSpace_H.lookupIPCBuffer True thread;
@@ -407,11 +409,21 @@ lemma length_syscallMessage:
   apply (simp add: fromEnum_def enum_register)
   done
 
-lemma (in kernel_m) syscallMessage_ccorres:
+end
+
+context kernel_m begin
+
+(*FIXME: arch_split: C kernel names hidden by Haskell names *)
+abbreviation "syscallMessageC \<equiv> kernel_all_substitute.syscallMessage"
+lemmas syscallMessageC_def = kernel_all_substitute.syscallMessage_def
+abbreviation "exceptionMessageC \<equiv> kernel_all_substitute.exceptionMessage"
+lemmas exceptionMessageC_def = kernel_all_substitute.exceptionMessage_def
+
+lemma syscallMessage_ccorres:
   "n < unat n_syscallMessage
       \<Longrightarrow> register_from_H (ARM_H.syscallMessage ! n)
-           = index syscallMessage n"
-  apply (simp add: ARM_H.syscallMessage_def syscallMessage_def
+           = index syscallMessageC n"
+  apply (simp add: ARM_H.syscallMessage_def syscallMessageC_def
                    MachineTypes.syscallMessage_def
                    n_syscallMessage_def msgRegisters_unfold)
   apply (simp add: upto_enum_def fromEnum_def enum_register)
@@ -419,6 +431,10 @@ lemma (in kernel_m) syscallMessage_ccorres:
   apply (clarsimp simp: fupdate_def
               | drule nat_less_cases' | erule disjE)+
   done
+
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   "handleFaultReply' f sender receiver \<equiv> do
@@ -671,6 +687,8 @@ lemma handleFaultReply':
               del: upt.simps upt_rec_numeral)
   done
 
+end
+
 context kernel_m
 begin
 
@@ -876,9 +894,9 @@ lemma replyFromKernel_success_empty_ccorres [corres]:
 
 lemma msgRegisters_offset_conv:
   "\<And>offset i. \<lbrakk> offset + i < length ARM_H.msgRegisters \<rbrakk> \<Longrightarrow> 
-   index msgRegisters (unat ((of_nat offset :: word32) + of_nat i)) =
+   index msgRegistersC (unat ((of_nat offset :: word32) + of_nat i)) =
    register_from_H (ARM_H.msgRegisters ! (offset + i))"
-  apply (simp add: msgRegisters_def msgRegisters_unfold fupdate_def)
+  apply (simp add: msgRegistersC_def msgRegisters_unfold fupdate_def)
   apply (subst of_nat_add [symmetric])
   apply (case_tac "offset + i", simp_all del: of_nat_add)
   apply (case_tac nat, simp, rename_tac nat, simp)+
@@ -968,10 +986,10 @@ lemma setMR_ccorres_dc:
 end
 
 (* FIXME: move *)
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch valid_pspace'[wp]: setMR "valid_pspace'"
-
 crunch valid_ipc_buffer_ptr'[wp]: setMR "valid_ipc_buffer_ptr' p"
+end
 
 context kernel_m begin
 
@@ -1201,10 +1219,10 @@ lemma copyMRs_register_loop_helper:
       od)
      (Guard ArrayBounds \<lbrace>\<acute>i < 4\<rbrace>
       (\<acute>ret__unsigned_long :== CALL getRegister(tcb_ptr_to_ctcb_ptr sender,
-               ucast (index msgRegisters (unat \<acute>i))));;
+               ucast (index msgRegistersC (unat \<acute>i))));;
       Guard ArrayBounds \<lbrace>\<acute>i < 4\<rbrace>
       (CALL setRegister(tcb_ptr_to_ctcb_ptr receiver,
-               ucast (index msgRegisters (unat \<acute>i)),
+               ucast (index msgRegistersC (unat \<acute>i)),
                \<acute>ret__unsigned_long)))"
   apply clarsimp
   apply (rule ccorres_guard_imp)
@@ -1213,7 +1231,7 @@ lemma copyMRs_register_loop_helper:
      apply wp
     apply vcg
    apply simp
-  apply (clarsimp simp: regs msgRegisters_def msgRegisters_unfold)
+  apply (clarsimp simp: regs msgRegistersC_def msgRegisters_unfold)
   apply (simp |
          (case_tac i,
           clarsimp simp: fupdate_def index_update index_update2 Kernel_C.R2_def
@@ -1440,8 +1458,8 @@ lemma user_getreg_rv:
 lemma exceptionMessage_ccorres:
   "n < unat n_exceptionMessage
       \<Longrightarrow> register_from_H (ARM_H.exceptionMessage ! n)
-             = index exceptionMessage n"
-  apply (simp add: exceptionMessage_def ARM_H.exceptionMessage_def
+             = index exceptionMessageC n"
+  apply (simp add: exceptionMessageC_def ARM_H.exceptionMessage_def
                    MachineTypes.exceptionMessage_def)
   apply (simp add: Arrays.update_def n_exceptionMessage_def fcp_beta nth_Cons'
                    fupdate_def

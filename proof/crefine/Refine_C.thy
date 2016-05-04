@@ -14,9 +14,10 @@ theory Refine_C
 imports Init_C Fastpath_C "../../lib/clib/CToCRefine"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch ksQ[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getFAR getDFSR getIFSR)
-
+end
 
 context kernel_m
 begin
@@ -558,8 +559,8 @@ lemma ccorres_get_registers:
    ccorres dc xfdc
      (P and Q and ct_in_state' \<top> and R)
      {s. \<exists>v. cslift s (ksCurThread_' (globals s)) = Some v
-              \<and> cptr_' s = index (registers_C (tcbContext_C (tcbArch_C v))) (unat capRegister)
-              \<and> msgInfo_' s = index (registers_C (tcbContext_C (tcbArch_C v))) (unat msgInfoRegister)} []
+              \<and> cptr_' s = index (registers_C (tcbContext_C (tcbArch_C v))) (unat Kernel_C.capRegister)
+              \<and> msgInfo_' s = index (registers_C (tcbContext_C (tcbArch_C v))) (unat Kernel_C.msgInfoRegister)} []
      m c"
   apply (rule ccorres_assume_pre)
   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)

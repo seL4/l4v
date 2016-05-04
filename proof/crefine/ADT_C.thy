@@ -46,8 +46,8 @@ definition
 definition
   "callKernel_withFastpath_C e \<equiv>
    if e = SyscallEvent syscall.SysCall \<or> e = SyscallEvent syscall.SysReplyRecv
-   then exec_C \<Gamma> (\<acute>cptr :== CALL getRegister(\<acute>ksCurThread, scast capRegister);;
-                  \<acute>msgInfo :== CALL getRegister(\<acute>ksCurThread, scast msgInfoRegister);;
+   then exec_C \<Gamma> (\<acute>cptr :== CALL getRegister(\<acute>ksCurThread, scast Kernel_C.capRegister);;
+                  \<acute>msgInfo :== CALL getRegister(\<acute>ksCurThread, scast Kernel_C.msgInfoRegister);;
                    IF e = SyscallEvent syscall.SysCall
                    THEN CALL fastpath_call(\<acute>cptr, \<acute>msgInfo)
                    ELSE CALL fastpath_reply_recv(\<acute>cptr, \<acute>msgInfo) FI)
@@ -192,6 +192,8 @@ end
 (*Restrict our undefined initial state to only use the nondeterministic state*)
 consts
   Init_C' :: "unit observable \<Rightarrow> cstate global_state set"
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition "Init_C \<equiv> \<lambda>((tc,s),m,e). Init_C' ((tc, truncate_state s),m,e)"
 
@@ -549,6 +551,8 @@ lemma inj_hwasidsI:
   apply (fastforce simp: ran_def dom_def)
   done
 
+end
+
 lemma (in kernel_m)
   assumes valid: "valid_arch_state' astate"
   assumes rel: "carch_state_relation (ksArchState astate) cstate"
@@ -635,6 +639,8 @@ lemma (in kernel_m)  carch_state_to_H_correct:
   using valid[simplified valid_arch_state'_def]
   apply (fastforce simp: valid_asid_table'_def)
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma tcb_queue_rel_unique:
   "hp NULL = None \<Longrightarrow>
@@ -1283,6 +1289,8 @@ lemma cstate_to_pspace_H_correct:
   apply (drule (2) cpspace_relation_unique, simp+)
   done
 
+end
+
 lemma (in kernel_m) cDomScheduleIdx_to_H_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
@@ -1512,8 +1520,8 @@ definition
 definition
   "callKernel_withFastpath_C e \<equiv>
    if e = SyscallEvent syscall.SysCall \<or> e = SyscallEvent syscall.SysReplyRecv
-   then exec_C \<Gamma> (\<acute>cptr :== CALL getRegister(\<acute>ksCurThread, scast capRegister);;
-                  \<acute>msgInfo :== CALL getRegister(\<acute>ksCurThread, scast msgInfoRegister);;
+   then exec_C \<Gamma> (\<acute>cptr :== CALL getRegister(\<acute>ksCurThread, scast Kernel_C.capRegister);;
+                  \<acute>msgInfo :== CALL getRegister(\<acute>ksCurThread, scast Kernel_C.msgInfoRegister);;
                    IF e = SyscallEvent syscall.SysCall
                    THEN CALL fastpath_call(\<acute>cptr, \<acute>msgInfo)
                    ELSE CALL fastpath_reply_recv(\<acute>cptr, \<acute>msgInfo) FI)

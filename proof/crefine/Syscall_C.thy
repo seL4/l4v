@@ -17,7 +17,9 @@ imports
   Arch_C
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch sch_act_wf [wp]: replyFromKernel "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+end
 
 context kernel_m begin
 
@@ -1726,7 +1728,7 @@ lemma scast_maxIRQ_is_less:
   and b :: irq
   shows
   "(Kernel_C.maxIRQ) <s (ucast \<circ> (ucast :: irq \<Rightarrow> 16 word)) b \<Longrightarrow> scast Kernel_C.maxIRQ < b"
-  apply (simp add: maxIRQ_def word_sless_def word_sle_def, uint_arith, clarify,simp)
+  apply (simp add: Kernel_C.maxIRQ_def word_sless_def word_sle_def, uint_arith, clarify,simp)
   apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 32 sword) \<le> uint b"; (simp only: Kernel_C.maxIRQ_def)?)
    apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 32 sword) \<noteq> uint b"; (simp only: Kernel_C.maxIRQ_def)?)
     apply (simp )
@@ -1857,9 +1859,10 @@ lemma handleInterrupt_ccorres:
      apply (ctac add: ackInterrupt_ccorres )
     apply wp
   apply (simp add: sint_ucast_eq_uint is_down uint_up_ucast is_up )
-  apply (clarsimp simp: word_sless_alt word_less_alt word_le_def maxIRQ_def uint_up_ucast is_up_def
-        source_size_def target_size_def word_size
-        sint_ucast_eq_uint is_down is_up word_0_sle_from_less)
+  apply (clarsimp simp: word_sless_alt word_less_alt word_le_def Kernel_C.maxIRQ_def
+                        uint_up_ucast is_up_def
+                        source_size_def target_size_def word_size
+                        sint_ucast_eq_uint is_down is_up word_0_sle_from_less)
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of )
   apply (clarsimp simp add: if_1_0_0 Collect_const_mem )
