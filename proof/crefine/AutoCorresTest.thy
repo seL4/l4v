@@ -748,13 +748,266 @@ end
 autocorres
   [
    skip_heap_abs, skip_word_abs, ts_rules = nondet, (* for compatibility *)
-   scope = clzl,
+   scope = clzl cap_get_capType,
    scope_depth = 0,
    c_locale = kernel_all_substitute
   ] "c/kernel_all.c_pp"
-thm kernel_all_substitute.clzl'_def
-thm kernel_m.clzl_spec
-thm kernel_all_substitute.clzl_body_def[unfolded guarded_spec_body_def]
-find_theorems ImpossibleSpec
 
+thm kernel_all_substitute.clzl'_def
+    kernel_m.clzl_spec
+    kernel_all_substitute.clzl_body_def[unfolded guarded_spec_body_def]
+thm kernel_all_substitute.cap_get_capType'_def
+    kernel_all_substitute.cap_get_capType_spec
+    kernel_all_substitute.cap_get_capType_body_def
+desugar_thm kernel_all_substitute.cap_get_capType_spec "\<^bsup>"
+
+autocorres
+  [
+   skip_heap_abs, skip_word_abs, ts_rules = nondet, (* for compatibility *)
+   scope = cap_capType_equals
+     cap_cnode_cap_get_capCNodePtr
+     cap_cnode_cap_get_capCNodeGuard
+     cap_cnode_cap_get_capCNodeRadix,
+   scope_depth = 0,
+   c_locale = kernel_all_substitute
+  ] "c/kernel_all.c_pp"
+
+thm kernel_all_substitute.cap_capType_equals_spec
+thm kernel_all_substitute.cap_capType_equals'_def
+    kernel_all_substitute.cap_capType_equals_body_def
+lemma of_bl_from_cond:
+  "(if C then 1 else 0) = of_bl [C]"
+  by (simp add: word_1_bl)
+lemma of_bl_cond:
+  "(if C then of_bl [A] else of_bl [B]) = of_bl [if C then A else B]"
+  by (rule if_f)
+
+thm kernel_all_substitute.cap_get_capType'_def[
+      simplified of_bl_from_cond of_bl_cond,
+      folded cap_get_tag_def[simplified mask_def, simplified]]
+thm kernel_all_substitute.cap_cnode_cap_get_capCNodePtr'_def
+thm kernel_all_substitute.cap_cnode_cap_get_capCNodePtr_spec
+thm cap_cnode_cap_lift_def cap_lift_def
+
+context kernel_m begin
+lemma "\<lbrace>\<lambda>_. cap_get_tag cap = scast cap_cnode_cap\<rbrace> cap_cnode_cap_get_capCNodePtr' cap \<lbrace>\<lambda>r _. r = capCNodePtr_CL (cap_cnode_cap_lift cap)\<rbrace>"
+  apply (unfold cap_cnode_cap_get_capCNodePtr'_def)
+  apply wp
+  apply (simp add: cap_get_tag_def cap_cnode_cap_lift_def cap_lift_def cap_tag_values shiftr_over_and_dist)
+  done
+
+lemma "\<lbrace>\<lambda>_. cap_get_tag cap = scast cap_cnode_cap\<rbrace> cap_cnode_cap_get_capCNodeGuard' cap \<lbrace>\<lambda>r _. r = capCNodeGuard_CL (cap_cnode_cap_lift cap)\<rbrace>"
+  apply (unfold cap_cnode_cap_get_capCNodeGuard'_def)
+  apply wp
+  apply (simp add: cap_get_tag_def cap_cnode_cap_lift_def cap_lift_def cap_tag_values shiftr_over_and_dist)
+  done
+
+lemma "\<lbrace>\<lambda>_. cap_get_tag cap = scast cap_cnode_cap\<rbrace> cap_cnode_cap_get_capCNodeRadix' cap \<lbrace>\<lambda>r _. r = capCNodeRadix_CL (cap_cnode_cap_lift cap)\<rbrace>"
+  apply (unfold cap_cnode_cap_get_capCNodeRadix'_def)
+  apply wp
+  apply (simp add: cap_get_tag_def cap_cnode_cap_lift_def cap_lift_def cap_tag_values shiftr_over_and_dist)
+  done
+
+thm cap_cnode_cap_get_capCNodeRadix'_ac_corres
+thm cap_cnode_cap_get_capCNodeRadix_spec
+thm cap_cnode_cap_get_capCNodeRadix_modifies
+
+end
+
+
+
+(* Test recursion + call to previously translated (cap_get_capType) *)
+autocorres
+  [
+   skip_heap_abs, skip_word_abs, ts_rules = nondet, (* for compatibility *)
+   scope = (*cteDelete finaliseSlot*) reduceZombie,
+   scope_depth = 0,
+   c_locale = kernel_all_substitute
+  ] "c/kernel_all.c_pp"
+
+subsection \<open>Experiment with transferring bitfield specs\<close>
+lemma autocorres_transfer_spec:
+  assumes ac_def:
+    "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl check_termination \<Gamma> f_'proc)"
+  assumes c_spec:
+    "\<forall>s0. \<Gamma>\<turnstile> (Collect (\<lambda>s. s0 = s \<and> P s)) Call f_'proc (Collect (Q s0))"
+  assumes precond_deps:
+    "\<And>s t. \<lbrakk> arg_rel s; arg_rel t; globals s = globals t \<rbrakk> \<Longrightarrow> P s = P t"
+  assumes postcond_deps:
+    "\<And>s0 s0' s t. \<lbrakk> arg_rel s0; arg_rel s0'; globals s0 = globals s0';
+                    ret_xf s = ret_xf t; globals s = globals t \<rbrakk> \<Longrightarrow> Q s0 s = Q s0' t"
+  shows "\<lbrace>\<lambda>s. P cs \<and> s = globals cs \<and> arg_rel cs \<rbrace>
+           ac_f
+         \<lbrace>\<lambda>r s'. \<exists>cs'. s' = globals cs' \<and> r = ret_xf cs' \<and> Q cs cs' \<rbrace>"
+  apply (clarsimp simp: valid_def ac_def AC_call_L1_def L2_call_L1_def L1_call_simpl_def
+                        in_monad' in_liftM select_f_def in_select in_fail
+                  split: sum.splits xstate.splits)
+  apply (rename_tac r', case_tac r'; clarsimp)
+  apply (rename_tac xst, case_tac xst; clarsimp)
+  apply (drule_tac ?s0.1=s in exec_normal[OF _ _ c_spec[rule_format], rotated])
+   apply (blast dest: precond_deps)
+  apply (blast dest: postcond_deps)
+  done
+
+lemma autocorres_transfer_spec_no_modifies:
+  assumes ac_def:
+    "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl check_termination \<Gamma> f_'proc)"
+  assumes c_spec:
+    "\<forall>s0. hoarep \<Gamma> {} {} (P' s0) (Call f_'proc) (Collect (Q s0)) A" -- \<open>syntax parser barfs...\<close>
+  assumes c_modifies:
+    "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call f_'proc {t. t may_not_modify_globals \<sigma>}"
+  assumes c_spec_unify:
+    "\<And>s0. P' s0 = {s. s0 = s \<and> P s}"
+  assumes precond_deps:
+    "\<And>s t. \<lbrakk> arg_rel s; arg_rel t; globals s = globals t \<rbrakk> \<Longrightarrow> P s = P t"
+  assumes postcond_deps:
+    "\<And>s0 s0' s t. \<lbrakk> arg_rel s0; arg_rel s0'; globals s0 = globals s0';
+                    ret_xf s = ret_xf t; globals s = globals t \<rbrakk> \<Longrightarrow> Q s0 s = Q s0' t"
+  shows "\<lbrace>\<lambda>s. s = globals cs \<and> P cs \<and> arg_rel cs \<rbrace>
+           ac_f
+         \<lbrace>\<lambda>r s'. s' = globals cs \<and> (\<exists>cs'. r = ret_xf cs' \<and> Q cs cs') \<rbrace>"
+  apply (clarsimp simp: valid_def ac_def AC_call_L1_def L2_call_L1_def L1_call_simpl_def
+                        in_monad' in_liftM select_f_def in_select in_fail
+                  split: sum.splits xstate.splits)
+  apply (rename_tac r', case_tac r'; clarsimp)
+  apply (rename_tac xst, case_tac xst; clarsimp)
+  apply (frule_tac ?s0.1=s in exec_normal[OF _ _ c_spec[rule_format], rotated])
+   apply (clarsimp simp: c_spec_unify)
+   apply (blast dest: precond_deps)
+  apply (frule exec_normal[OF singletonI _ c_modifies[rule_format]])
+  apply (clarsimp simp: meq_def)
+  apply (blast dest: postcond_deps)
+  done
+
+context kernel_m begin
+
+thm cap_zombie_cap_get_capZombiePtr_spec
+lemma cap_zombie_cap_get_capZombiePtr'_spec:
+  "\<lbrace>\<lambda>s. s = s0 \<and> cap_get_tag cap = scast cap_zombie_cap \<and> get_capZombieBits_CL (cap_zombie_cap_lift cap) < 0x1F\<rbrace>
+     cap_zombie_cap_get_capZombiePtr' cap
+   \<lbrace>\<lambda>r s. s = s0 \<and> r = get_capZombiePtr_CL (cap_zombie_cap_lift cap)\<rbrace>"
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_strengthen_post)
+    thm autocorres_transfer_spec_no_modifies[OF
+          cap_zombie_cap_get_capZombiePtr'_def cap_zombie_cap_get_capZombiePtr_spec]
+    apply (rule autocorres_transfer_spec_no_modifies[OF
+                  cap_zombie_cap_get_capZombiePtr'_def cap_zombie_cap_get_capZombiePtr_spec _ refl,
+                  where cs="undefined\<lparr>globals := s0, cap_' := cap\<rparr>"])
+      apply (rule cap_zombie_cap_get_capZombiePtr_modifies)
+     apply auto
+  done
+
+thm cap_zombie_cap_get_capZombieType_spec
+lemma cap_zombie_cap_get_capZombieType'_spec:
+  "\<lbrace>\<lambda>s. s = s0 \<and> cap_get_tag cap = scast cap_zombie_cap \<rbrace>
+     cap_zombie_cap_get_capZombieType' cap
+   \<lbrace>\<lambda>r s. s = s0 \<and> r = capZombieType_CL (cap_zombie_cap_lift cap)\<rbrace>"
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_strengthen_post)
+    thm autocorres_transfer_spec_no_modifies[OF
+          cap_zombie_cap_get_capZombieType'_def cap_zombie_cap_get_capZombieType_spec]
+    apply (rule autocorres_transfer_spec_no_modifies[OF
+                  cap_zombie_cap_get_capZombieType'_def cap_zombie_cap_get_capZombieType_spec _ refl,
+                  where cs="undefined\<lparr>globals := s0, cap_' := cap\<rparr>"])
+      apply (rule cap_zombie_cap_get_capZombieType_modifies)
+     apply auto
+  done
+
+thm cap_capType_equals_spec
+lemma cap_capType_equals'_spec:
+  "\<lbrace>\<lambda>s. s = s0 \<rbrace>
+     AC_call_L1 (\<lambda>s. cap_' s = cap \<and> cap_type_tag_' s = cap_type_tag) globals ret__int_'
+       (L1_call_simpl check_termination \<Gamma> cap_capType_equals_'proc)
+   \<lbrace>\<lambda>r s. s = s0 \<and> r = of_bl [cap_get_tag cap = cap_type_tag]\<rbrace>"
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_strengthen_post)
+    thm autocorres_transfer_spec_no_modifies[OF reflexive cap_capType_equals_spec]
+    apply (rule autocorres_transfer_spec_no_modifies[
+                  OF reflexive cap_capType_equals_spec,
+                  where cs="undefined\<lparr>globals := s0, cap_' := cap, cap_type_tag_' := cap_type_tag\<rparr>"])
+      apply (rule cap_capType_equals_modifies)
+     apply auto
+  done
+
+
+subsection \<open>Experiment with wrapping specs\<close>
+definition L1_call_simpl_spec where
+  "L1_call_simpl_spec check_term Gamma proc precond postcond exncond =
+     do s0 \<leftarrow> get;
+        assert (s0 \<in> precond s0);
+        assert (check_term \<longrightarrow> Gamma\<turnstile>(Call proc :: ('a, 'b', 'c) com) \<down> Normal s0);
+        (xs :: ('a, 'c) xstate) \<leftarrow> select ((Normal ` postcond s0) \<union> (Abrupt ` exncond s0));
+        case xs of Normal s \<Rightarrow> liftE (put s)
+                 | Abrupt s \<Rightarrow> do put s; throwError () od
+                 | _ \<Rightarrow> fail
+     od"
+
+lemma exec_no_fault:
+  assumes asms: "s \<in> P"
+  and     ce: "Gamma \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> Fault f"
+  and  valid: "Gamma \<turnstile> P c Q, A"
+  shows   "False"
+  using valid ce asms
+  apply -
+  apply (frule hoare_sound)
+  apply (clarsimp simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
+  apply (drule spec, drule spec, drule (1) mp)
+  apply auto
+  done
+
+lemma exec_no_stuck:
+  assumes asms: "s \<in> P"
+  and     ce: "Gamma \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> Stuck"
+  and  valid: "Gamma \<turnstile> P c Q, A"
+  shows   "False"
+  using valid ce asms
+  apply -
+  apply (frule hoare_sound)
+  apply (clarsimp simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
+  apply (drule spec, drule spec, drule (1) mp)
+  apply auto
+  done
+
+lemma L1corres_call_simpl_spec:
+  "\<forall>s0. Gamma\<turnstile> (precond s0) (Call proc) (postcond s0), (exncond s0) \<Longrightarrow>
+   L1corres ct Gamma (L1_call_simpl_spec ct Gamma proc precond postcond exncond) (Call proc)"
+  apply (clarsimp simp: L1corres_def L1_call_simpl_spec_def in_monad
+                        exec_get assert_def snd_bind snd_select in_monad' in_select Ball_def
+                  split: split_if xstate.splits)
+  apply (case_tac t; clarsimp)
+     apply (rename_tac x, rule_tac x="Normal x" in exI)
+     apply (blast dest: exec_normal)
+    apply (rename_tac x, rule_tac x="Abrupt x" in exI)
+    apply (blast dest: exec_abrupt)
+   apply (rename_tac x, drule_tac x="Fault x" in spec)
+   apply (rule exec_no_fault; fastforce)
+  apply (drule_tac x="Stuck" in spec)
+  apply (rule exec_no_stuck; fastforce)
+  done
+
+thm L1corres_call_simpl_spec[OF clzl_spec]
+
+thm clzl_body_def clzl_spec
+
+definition L1_call_simpl_spec2 where
+  "L1_call_simpl_spec2 check_term Gamma proc precond postcond =
+     L1_spec (Collect (\<lambda>(s, t). precond s s \<and> postcond s t))"
+
+lemma L1corres_call_simpl_spec2:
+  "\<lbrakk> \<forall>s0. Gamma\<turnstile> (Collect (precond s0)) (Call proc) (Collect (postcond s0));
+     \<And>s. ct \<Longrightarrow> Gamma\<turnstile>Call proc \<down> Normal s \<rbrakk> \<Longrightarrow>
+   L1corres ct Gamma (L1_call_simpl_spec2 ct Gamma proc precond postcond) (Call proc)"
+  apply (clarsimp simp: L1corres_def L1_call_simpl_spec2_def L1_defs
+                        assert_def snd_select snd_liftE snd_spec
+                        in_monad' in_spec
+                  split: xstate.splits)
+  apply (case_tac t)
+     apply (blast dest: exec_normal[rotated])
+    apply (blast dest: exec_abrupt[rotated])
+   apply (blast intro: exec_no_fault[rotated])
+  apply (blast intro: exec_no_stuck[rotated])
+  done
+
+
+thm cteDelete'.simps finaliseSlot'.simps reduceZombie'.simps
 end
