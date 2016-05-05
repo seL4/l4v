@@ -1016,9 +1016,9 @@ lemma handleInvocation_ccorres:
     apply wp
    apply (clarsimp simp: Collect_const_mem)
    apply (simp add: Kernel_C.msgInfoRegister_def ARM_H.msgInfoRegister_def
-                    MachineTypes.msgInfoRegister_def Kernel_C.R1_def
+                    ARM.msgInfoRegister_def Kernel_C.R1_def
                     Kernel_C.capRegister_def ARM_H.capRegister_def
-                    MachineTypes.capRegister_def Kernel_C.R0_def)
+                    ARM.capRegister_def Kernel_C.R0_def)
    apply (clarsimp simp: cfault_rel_def option_to_ptr_def)
    apply (simp add: fault_cap_fault_lift is_cap_fault_def)
    apply (frule lookup_failure_rel_fault_lift, assumption)
@@ -1486,7 +1486,7 @@ lemma handleRecv_ccorres:
   apply (clarsimp simp add: sch_act_sane_def)
   apply (simp add: cap_get_tag_isCap[symmetric] del: rf_sr_upd_safe)
   apply (simp add: Kernel_C.capRegister_def ARM_H.capRegister_def ct_in_state'_def
-                   MachineTypes.capRegister_def Kernel_C.R0_def
+                   ARM.capRegister_def Kernel_C.R0_def
                    tcb_at_invs')
   apply (frule invs_valid_objs')
   apply (frule tcb_aligned'[OF tcb_at_invs'])

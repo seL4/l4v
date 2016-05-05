@@ -106,7 +106,7 @@ lemma setVMRoot_valid_queues':
 
 (* FIXME move to REFINE *)
 crunch valid_queues'[wp]: "Arch.switchToThread" valid_queues'
-    (ignore: MachineOps.clearExMonitor)
+    (ignore: clearExMonitor)
 crunch ksCurDomain[wp]: switchToIdleThread "\<lambda>s. P (ksCurDomain s)"
 crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
 (simp: whenE_def)
@@ -116,9 +116,11 @@ end
 
 (*FIXME: arch_split: move up?*)
 context Arch begin
-shadow_facts
-  switchToIdleThread_def
-  switchToThread_def
+context begin global_naming global
+requalify_facts
+  Thread_H.switchToIdleThread_def
+  Thread_H.switchToThread_def
+end
 end
 
 context kernel_m begin

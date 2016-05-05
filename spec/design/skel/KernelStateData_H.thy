@@ -22,7 +22,6 @@ imports
   "./$L4V_ARCH/ArchStateData_H"
 begin
 
-
 context begin interpretation Arch .
 
 requalify_types
@@ -30,7 +29,7 @@ requalify_types
 
 end
 
-requalify_types (in Arch) 
+requalify_types (in Arch)
   kernel_state
 
 subsection "The Kernel State"
@@ -63,6 +62,12 @@ record kernel_state =
   ksWorkUnitsCompleted :: machine_word
   ksArchState          :: Arch.kernel_state
   ksMachineState       :: machine_state
+
+context Arch begin
+context begin global_naming global
+requalify_types KernelStateData_H.kernel_state
+end
+end
 
 type_synonym 'a kernel = "(kernel_state, 'a) nondet_monad"
 

@@ -4792,18 +4792,10 @@ definition "placeNewObject_with_memset regionBase us \<equiv>
       doMachineOp (mapM_x (\<lambda>p::word32. storeWord p (0::word32))
                [regionBase , regionBase + (4::word32) .e. regionBase + (2::word32) ^ (pageBits + us) - (1::word32)])
    od)"
-end
 
-context Arch begin global_naming ARM_H
-lemmas createObject_def = ARM_H.createObject_def
-end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch gsMaxObjectSize[wp]: placeNewObject_with_memset, createObject "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps simp: unless_def)
 end
-
-shadow_facts (in Arch) createObject_def
 
 context kernel_m begin
 
@@ -7135,22 +7127,12 @@ lemma APIType_capBits_min:
 
 end
 
-(*FIXME: arch_split crunch bug *)
-context Arch begin global_naming ARM_H'
-lemmas createObject_def = ARM_H.createObject_def
-end
-
 context begin interpretation Arch . (*FIXME: arch_split*)
+
 crunch gsCNodes[wp]: insertNewCap, Arch_createNewCaps, threadSet,
         "Arch.createObject" "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps setObject_ksPSpace_only
      simp: unless_def updateObject_default_def ignore: getObject setObject)
-end
-
-(*FIXME: arch_split crunch bug *)
-shadow_facts (in Arch) createObject_def
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma createNewCaps_1_gsCNodes_p:
   "\<lbrace>\<lambda>s. P (gsCNodes s p) \<and> p \<noteq> ptr\<rbrace> createNewCaps newType ptr 1 n \<lbrace>\<lambda>rv s. P (gsCNodes s p)\<rbrace>"
@@ -7174,9 +7156,10 @@ lemma createObject_cnodes_have_size:
   apply (simp add: createObject_def)
   apply (rule hoare_pre)
    apply (wp mapM_x_wp' | wpc | simp add: createObjects_def)+
-  apply (cases newType, simp_all add: toAPIType_def ARM_H.toAPIType_def)
+  apply (cases newType, simp_all add: ARM_H.toAPIType_def)
   apply (clarsimp simp: APIType_capBits_def objBits_simps
-                        cnodes_retype_have_size_def cte_level_bits_def)
+                              cnodes_retype_have_size_def cte_level_bits_def
+                       split: split_if_asm)
   done
 
 lemma range_cover_not_in_neqD:

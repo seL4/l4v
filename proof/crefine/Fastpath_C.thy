@@ -986,11 +986,11 @@ lemma pointerInUserData_h_t_valid2:
   done
 
 lemma dmo_clearExMonitor_setCurThread_swap:
-  "(do _ \<leftarrow> doMachineOp MachineOps.clearExMonitor;
+  "(do _ \<leftarrow> doMachineOp ARM.clearExMonitor;
                setCurThread thread
             od)
     = (do _ \<leftarrow> setCurThread thread;
-            doMachineOp MachineOps.clearExMonitor od)"
+            doMachineOp ARM.clearExMonitor od)"
   apply (simp add: setCurThread_def doMachineOp_def split_def)
   apply (rule oblivious_modify_swap[symmetric])
   apply (intro oblivious_bind,
@@ -4930,7 +4930,7 @@ lemma setCurThread_isolatable:
 end
 
 crunch tcb2[wp]: "Arch.switchToThread" "tcb_at' t"
-  (ignore: MachineOps.clearExMonitor)
+  (ignore: ARM.clearExMonitor)
 
 context kernel_m begin
 
@@ -5339,8 +5339,8 @@ lemma fastpath_callKernel_SysCall_corres:
                   apply (clarsimp split: split_if)
                   apply (rule ext)
                   apply (simp add: badgeRegister_def msgInfoRegister_def
-                                   MachineTypes.badgeRegister_def
-                                   MachineTypes.msgInfoRegister_def
+                                   ARM.badgeRegister_def
+                                   ARM.msgInfoRegister_def
                             split: split_if)
                  apply simp
                 apply (wp | simp cong: if_cong bool.case_cong
@@ -6269,8 +6269,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                       apply (clarsimp split: split_if)
                       apply (rule ext)
                       apply (simp add: badgeRegister_def msgInfoRegister_def
-                                       MachineTypes.msgInfoRegister_def
-                                       MachineTypes.badgeRegister_def
+                                       ARM.msgInfoRegister_def
+                                       ARM.badgeRegister_def
                                 split: split_if)
                      apply simp
                     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps

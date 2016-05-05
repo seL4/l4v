@@ -353,7 +353,7 @@ lemma storeHWASID_ccorres:
        apply (simp split: split_if_asm)
        apply (clarsimp simp: cpde_relation_def Let_def
                              pde_lift_pde_invalid
-                       cong: Hardware_H.pde.case_cong)
+                       cong: ARM_H.pde.case_cong)
       apply (erule array_relation_update)
         subgoal by simp
        subgoal by (simp add: option_to_0_def)
@@ -449,7 +449,7 @@ lemma invalidateASID_ccorres:
       apply (simp split: split_if_asm)
       apply (clarsimp simp: cpde_relation_def Let_def
                             pde_lift_pde_invalid
-                      cong: Hardware_H.pde.case_cong)
+                      cong: ARM_H.pde.case_cong)
      apply (subst asid_map_pd_to_hwasids_clear, assumption)
       subgoal by clarsimp
      apply (rule ext, simp add: pd_pointer_to_asid_slot_def map_comp_def split: split_if)
@@ -871,7 +871,7 @@ lemma lookupPTSlot_ccorres:
    apply (simp add: pageBits_def)
   apply (clarsimp simp: cpde_relation_def pde_pde_coarse_lift_def
                         pde_pde_coarse_lift Let_def isPageTablePDE_def
-                 split: Hardware_H.pde.split_asm)
+                 split: ARM_H.pde.split_asm)
   done
 
 lemma cap_case_isPageDirectoryCap:
@@ -1654,10 +1654,10 @@ lemma setVMRootForFlush_ccorres:
 (* FIXME: move to StateRelation_C *)
 definition
   "framesize_from_H sz \<equiv> case sz of
-    MachineTypes.ARMSmallPage \<Rightarrow> (scast Kernel_C.ARMSmallPage :: word32)
-  | MachineTypes.ARMLargePage \<Rightarrow> scast Kernel_C.ARMLargePage
-  | MachineTypes.ARMSection \<Rightarrow> scast Kernel_C.ARMSection
-  | MachineTypes.ARMSuperSection \<Rightarrow> scast Kernel_C.ARMSuperSection"
+    ARM.ARMSmallPage \<Rightarrow> (scast Kernel_C.ARMSmallPage :: word32)
+  | ARM.ARMLargePage \<Rightarrow> scast Kernel_C.ARMLargePage
+  | ARM.ARMSection \<Rightarrow> scast Kernel_C.ARMSection
+  | ARM.ARMSuperSection \<Rightarrow> scast Kernel_C.ARMSuperSection"
 
 lemma framesize_from_to_H:
   "gen_framesize_to_H (framesize_from_H sz) = sz"
@@ -1901,7 +1901,7 @@ lemma setMessageInfo_ccorres:
      apply (ctac add: setRegister_ccorres)
     apply wp
    apply vcg
-  apply (simp add: ARM_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
+  apply (simp add: ARM_H.msgInfoRegister_def ARM.msgInfoRegister_def
                    Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
   done
 
@@ -1936,8 +1936,8 @@ lemma performPageGetAddress_ccorres:
      apply (simp add: guard_is_UNIV_def)
     apply wp
    apply vcg
-  by (auto simp: Hardware_H.fromPAddr_def message_info_to_H_def mask_def ARM_H.msgInfoRegister_def
-                    MachineTypes.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def 
+  by (auto simp: ARM_H.fromPAddr_def message_info_to_H_def mask_def ARM_H.msgInfoRegister_def
+                    ARM.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def 
                     word_sle_def word_sless_def Kernel_C.R2_def 
                     kernel_all_global_addresses.msgRegisters_def fupdate_def Arrays.update_def 
                     fcp_beta)

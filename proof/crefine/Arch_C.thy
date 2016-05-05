@@ -977,7 +977,7 @@ lemma cpde_relation_pde_case:
                  then R else S)"
   by (clarsimp simp: cpde_relation_def Let_def pde_get_tag_alt
                      pde_tag_defs pde_pde_section_lift_def
-              split: Hardware_H.pde.split_asm)
+              split: ARM_H.pde.split_asm)
 
 lemma pde_pde_section_size_0_1:
   "pde_get_tag pde = scast pde_pde_section
@@ -1098,7 +1098,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
                   apply (rule allI, rule conseqPre, vcg)
                   apply (clarsimp simp: isPageTablePDE_def isSectionPDE_def
                                         fst_throwError_returnOk
-                                 split: Hardware_H.pde.split)
+                                 split: ARM_H.pde.split)
                   apply (auto simp: exception_defs syscall_error_rel_def
                                     syscall_error_to_H_cases)[1]
                  apply wp
@@ -1157,7 +1157,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
 lemma pte_case_isLargePagePTE:
   "(case pte of LargePagePTE _ _ _ _ _ \<Rightarrow> P | _ \<Rightarrow> Q)
        = (if isLargePagePTE pte then P else Q)"
-  by (simp add: isLargePagePTE_def split: Hardware_H.pte.split)
+  by (simp add: isLargePagePTE_def split: ARM_H.pte.split)
 
 lemma ccorres_pre_getObject_pte:
   "(\<And>rv. ccorresG rf_sr \<Gamma> r xf (P rv) (P' rv) hs (f rv) c) \<Longrightarrow>
@@ -1258,7 +1258,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
              apply (clarsimp simp: typ_heap_simps cpte_relation_def Let_def)
              apply (simp add: isLargePagePTE_def pte_pte_large_lift_def pte_lift_def Let_def
                               pte_tag_defs pte_pte_invalid_def
-                       split: Hardware_H.pte.split_asm split_if_asm)
+                       split: ARM_H.pte.split_asm split_if_asm)
             apply ceqv
            apply (simp add: pte_case_isLargePagePTE if_to_top_of_bindE del: Collect_const)
            apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
@@ -1439,7 +1439,7 @@ lemma valid_pde_slots_lift2:
   done
 
 lemma obj_at_pte_aligned:
-  "obj_at' (\<lambda>a::Hardware_H.pte. True) ptr s ==> is_aligned ptr 2"
+  "obj_at' (\<lambda>a::ARM_H.pte. True) ptr s ==> is_aligned ptr 2"
   apply (drule obj_at_ko_at')
   apply (clarsimp dest!:ko_at_is_aligned' 
     simp:objBits_simps archObjSize_def)

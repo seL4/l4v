@@ -113,7 +113,7 @@ definition
   makeObjectKO :: "(kernel_object + ARM_H.object_type) \<rightharpoonup> kernel_object"
 where
   "makeObjectKO ty \<equiv> case ty of
-      Inl KOUserData \<Rightarrow> Some KOUserData
+      Inl KOUserData \<Rightarrow> Some KOUserData              
     | Inl (KOArch (KOASIDPool _)) \<Rightarrow> Some (KOArch (KOASIDPool makeObject))
     | Inr (APIObjectType ArchTypes_H.TCBObject) \<Rightarrow> Some (KOTCB makeObject)
     | Inr (APIObjectType ArchTypes_H.EndpointObject) \<Rightarrow> Some (KOEndpoint makeObject)

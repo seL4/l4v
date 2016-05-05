@@ -572,7 +572,7 @@ lemma ccorres_get_registers:
   apply (drule(1) obj_at_cslift_tcb, clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                         ARM_H.msgInfoRegister_def ARM_H.capRegister_def
-                        MachineTypes.msgInfoRegister_def MachineTypes.capRegister_def
+                        ARM.msgInfoRegister_def ARM.capRegister_def
                         "StrictC'_register_defs")
   done
 

@@ -1,5 +1,5 @@
-Built from git repo at /Users/dmatichuk/verification-archsplit/seL4/haskell by dmatichuk
+Built from git repo at /home/matthewb/verification/arch_split/seL4/haskell by matthewb
 
 Generated from changeset:
-fd5246f Use constant to specify first dynamic cptr in doc
+35add5e Updated bootinfo doc for userImagePaging field
 

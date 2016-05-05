@@ -126,7 +126,7 @@ assumes cleanL2Range_ccorres:
 
 assumes clearExMonitor_ccorres:
   "ccorres dc xfdc \<top> UNIV []
-           (doMachineOp MachineOps.clearExMonitor)
+           (doMachineOp ARM.clearExMonitor)
            (Call clearExMonitor_'proc)"
 
 assumes getIFSR_ccorres:
@@ -181,7 +181,7 @@ assumes cleanCacheRange_PoU_spec:
 
 (*  clearExMonitor_fp is an inline-friendly version of clearExMonitor *)
 assumes clearExMonitor_fp_ccorres:
-  "ccorres dc xfdc (\<lambda>_. True) UNIV [] (doMachineOp MachineOps.clearExMonitor)
+  "ccorres dc xfdc (\<lambda>_. True) UNIV [] (doMachineOp ARM.clearExMonitor)
    (Call clearExMonitor_fp_'proc)"
 
 (*

@@ -17,15 +17,4 @@ imports
   FaultHandler_H
   CSpace_H
 begin
-
-context Arch begin
-
-requalify_types
-  kernel_state
-
-requalify_types
-  KernelStateData_H.kernel_state
-
-end
-
 end
