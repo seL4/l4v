@@ -1199,7 +1199,7 @@ num_instance_proofs.order = 2
 def enum_instance_proofs (header, canonical, d):
     lines = ['(*<*)']
     if len(canonical) == 1:
-        [(_, (cons, n))] = canonical 
+        [(_, (cons, n))] = canonical
         assert n == 1
         lines.append('instantiation %s :: enum begin' % header)
         if call.current_context:
@@ -2141,6 +2141,7 @@ regexes = [
     (re.compile('\\(Right'), '(Inr'),
     (re.compile(r"\$!"), r"$"),
     (re.compile('([^>])>='), r'\1\<ge>'),
+    (re.compile('>>([^=])'), r'>>_\1'),
     (re.compile('<='), '\<le>'),
     (re.compile(r" \\\\ "), " `~listSubtract~` "),
     (re.compile(r"(\s\w+)\s*@\s*\w+\s*{\s*}\s*\<leftarrow>"),
