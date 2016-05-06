@@ -1,5 +1,8 @@
-Built from git repo at /Users/kleing/verification/seL4/haskell by kleing
+Built from git repo at /home/joelb/work/verification/seL4/haskell by joelb
 
 Generated from changeset:
-2f34d63 manual: Corrected introduction of cnode radix
+2eb93eb x64: minor fix for capVPMapType
 
+
+Warning - uncomitted changes used:
+ M src/SEL4/Machine/Hardware/X64.lhs

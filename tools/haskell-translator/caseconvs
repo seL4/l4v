@@ -1608,3 +1608,15 @@ case \x of cap@(PageCap {}) -> cap@(PDPointerTableCap {}) -> cap@(PageDirectoryC
 
 case \x of (ArchInvocationLabel X64PDPTMap, vaddr':attr:_, (vspaceCap,_):_) -> (ArchInvocationLabel X64PDPTMap, _, _) -> (ArchInvocationLabel X64PDPTUnmap, _, _) -> _ ->  ---X>
 
+case \x of (ArchInvocationLabel X64IOPageTableMap, ioaddr:_, (iospaceCap,_):_) -> (ArchInvocationLabel X64IOPageTableMap, _, _) -> (ArchInvocationLabel X64IOPageTableUnmap, _, _) -> _ ->  ---X>
+
+case \x of cap@(IOPageTableCap {}) -> _ ->  ---X>
+
+case \x of (ArchInvocationLabel X64PageMapIO, rw:ioaddr:_, (iospaceCap,_):_) -> (ArchInvocationLabel X64PageMapIO, _, _) -> (ArchInvocationLabel X64PageUnmap, _, _) -> _ ->  ---X>
+
+case \x of cap@(PageCap {}) -> _ ->  ---X>
+
+case \x of (PageMap asid cap ctSlot entries) -> (PageRemap entries) -> (PageUnmap cap ctSlot) -> (PageIOMap cap cptr vtdpte slot) -> (PageIOUnmap (ArchObjectCap cap@PageCap {}) ctSlot) -> (PageIOUnmap _ _) -> (PageGetAddr ptr) ->  ---X>
+
+case \x of (cap@IOPageTableCap {}) -> _ ->  ---X>
+

@@ -86,6 +86,10 @@ where
     maxCount \<leftarrow> returnOk ( untypedFreeBytes `~shiftR~` objectSize);
     whenE (fromIntegral maxCount < nodeWindow) $
         throw $ NotEnoughMemory $ fromIntegral untypedFreeBytes;
+    notFrame \<leftarrow> returnOk ( Not $ isFrameType newType);
+    isDevice \<leftarrow> returnOk ( capIsDevice cap);
+    whenE (isDevice \<and> notFrame \<and> newType \<noteq> fromAPIType Untyped) $
+           throw $ InvalidArgument 1;
     alignedFreeRef \<leftarrow> returnOk ( PPtr $ alignUp (fromPPtr freeRef) objectSize);
     returnOk $ Retype_ \<lparr>
         retypeSource= slot,
@@ -93,7 +97,8 @@ where
         retypeFreeRegionBase= alignedFreeRef,
         retypeNewType= newType,
         retypeNewSizeBits= userObjSize,
-        retypeSlots= slots \<rparr>
+        retypeSlots= slots,
+        retypeIsDevice= isDevice \<rparr>
   odE)
   | (_, _) \<Rightarrow>    throw $
     if invocationType label = UntypedRetype
@@ -105,7 +110,7 @@ definition
 invokeUntyped :: "untyped_invocation \<Rightarrow> unit kernel"
 where
 "invokeUntyped x0\<equiv> (case x0 of
-    (Retype srcSlot base freeRegionBase newType userSize destSlots) \<Rightarrow>    (do
+    (Retype srcSlot base freeRegionBase newType userSize destSlots isDevice) \<Rightarrow>    (do
     cap \<leftarrow> getSlotCap srcSlot;
     when (base = freeRegionBase) $
         deleteObjects base (capBlockSize cap);
@@ -116,7 +121,7 @@ where
         [];
     freeRef \<leftarrow> return ( freeRegionBase + PPtr (fromIntegral totalObjectSize));
     updateCap srcSlot (cap \<lparr>capFreeIndex := getFreeIndex base freeRef\<rparr>);
-    createNewObjects newType srcSlot destSlots freeRegionBase userSize
+    createNewObjects newType srcSlot destSlots freeRegionBase userSize isDevice
     od)
   )"
 

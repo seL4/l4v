@@ -49,7 +49,7 @@ consts'
 maskCapRights :: "cap_rights \<Rightarrow> capability \<Rightarrow> capability"
 
 consts'
-createObject :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> capability kernel"
+createObject :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> capability kernel"
 
 consts'
 decodeInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"

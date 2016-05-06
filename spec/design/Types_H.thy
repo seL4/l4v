@@ -1698,6 +1698,11 @@ lemma initBootInfo_initBootInfo_update [simp]:
   by (cases v) simp
 
 definition
+isFrameType :: "object_type \<Rightarrow> bool"
+where
+"isFrameType \<equiv> ArchTypes_H.isFrameType"
+
+definition
 allRights :: "cap_rights"
 where
 "allRights \<equiv> CapRights True True True"
