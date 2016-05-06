@@ -48,6 +48,7 @@ end
 
 subsection \<open>Proof frameworks\<close>
 
+
 context kernel_m begin
 
 thm handleYield_body_def
@@ -744,23 +745,146 @@ thm handleFault_ccorres
 end
 
 
-(* FIXME: using hoare specs *)
+
+
+
+text \<open>
+  __builtin_clzl is defined using guarded_spec_body,
+  which is a bit hard to translate generically.
+  This is an experiment to translate clzl manually.
+\<close>
+context kernel_all_substitute begin
+
+thm kernel_m.clzl_spec clzl_body_def
+
+definition l1_clzl' :: "nat \<Rightarrow> (globals myvars, unit + unit) nondet_monad" where
+  "l1_clzl' rec_measure' \<equiv>
+     L1_spec ({(s', t). (\<forall>s. s' \<in> \<lbrace>s. \<^bsup>s\<^esup>x \<noteq> 0\<rbrace> \<longrightarrow> t \<in> \<lbrace>\<acute>ret__long = of_nat (word_clz \<^bsup>s\<^esup>x)\<rbrace>) \<and>
+                          (\<exists>s. s' \<in> \<lbrace>s. \<^bsup>s\<^esup>x \<noteq> 0\<rbrace>)} \<inter> {(s, t). t may_not_modify_globals s})"
+
+lemma l1_clzl'_corres:
+  "L1corres ct \<Gamma> (l1_clzl' rec_measure') (Call clzl_'proc)"
+  apply (unfold l1_clzl'_def)
+  apply (rule L1corres_Call)
+   apply (rule clzl_impl)
+  apply (unfold clzl_body_def)
+  apply (rule L1corres_guarded_spec)
+  done
+
+definition l2_clzl' :: "nat \<Rightarrow> 32 word \<Rightarrow> (globals, unit + 32 signed word) nondet_monad" where
+  "l2_clzl' rec_measure' x \<equiv>
+     L2_seq (L2_guard (\<lambda>_. x \<noteq> 0))
+       (\<lambda>_. L2_gets (\<lambda>_. of_nat (word_clz x)) [''ret''])"
+
+lemma l2_clzl'_corres:
+  "L2corres globals ret__long_' (\<lambda>_. ()) (\<lambda>s. x_' s = x) (l2_clzl' rec_measure' x) (l1_clzl' rec_measure')"
+  apply (unfold l2_clzl'_def l1_clzl'_def)
+  apply (monad_eq simp: L1_defs L2_defs L2corres_def corresXF_def meq_def)
+  apply (subst myvars.splits)
+  apply simp
+  done
+
+definition clzl' :: "32 word \<Rightarrow> (globals, 32 signed word) nondet_monad" where
+  "clzl' x \<equiv> do guard (\<lambda>_. x \<noteq> 0);
+                return (of_nat (word_clz x)) od"
+
+lemma clzl'_TScorres:
+  "L2_call (l2_clzl' rec_measure' x) = liftE (clzl' x)"
+  apply (unfold l2_clzl'_def clzl'_def)
+  apply (tactic {* simp_tac (@{context} addsimps
+      (#lift_rules (the (Monad_Types.get_monad_type "nondet" (Context.Proof @{context})))
+       |> Thmtab.dest |> map fst)) 1 *})
+  done
+
+lemma "ac_corres globals ct \<Gamma> ret__long_' (\<lambda>s. x_' s = x) (liftE (clzl' x)) (Call clzl_'proc)"
+  apply (rule ac_corres_chain[OF _ _ L2Tcorres_id corresTA_trivial, simplified o_def, simplified])
+    apply (rule l1_clzl'_corres)
+   apply (rule l2_clzl'_corres)
+  apply (rule clzl'_TScorres)
+  done
+end
+
+text \<open>Add our manual translation of clzl into the AutoCorres function info.\<close>
+setup {*
+let val clzl_raw_const = @{term "kernel_all_substitute.clzl'"};
+    val clzl_const = @{term "kernel_all_substitute.clzl'"};
+    val clzl_info = {
+      name = "clzl",
+      args = [("x", @{typ "32 word"})],
+      return_type = @{typ "32 signed word"},
+      const = clzl_const,
+      raw_const = clzl_raw_const,
+      definition = @{thm kernel_all_substitute.clzl'_def},
+      finished = false,
+      invented_body = false,
+      is_simpl_wrapper = false,
+      mono_thm = @{thm TrueI}
+    }: FunctionInfo.function_def;
+    val file = "c/kernel_all.c_pp";
+    val fn_info = the (Symtab.lookup (AutoCorresFunctionInfo.get @{theory}) file);
+    val fn_info' = case fn_info of FunctionInfo.FunctionInfo x =>
+      FunctionInfo.FunctionInfo
+        {const_to_function = Termtab.update_new (clzl_raw_const, "clzl") (#const_to_function x),
+         function_callees = Symtab.update_new ("clzl", []) (#function_callees x),
+         topo_sorted_functions = ["clzl"] :: #topo_sorted_functions x,
+         recursive_functions = Symtab.update_new ("clzl", []) (#recursive_functions x),
+         function_info = Symtab.update_new ("clzl", clzl_info) (#function_info x)
+        };
+in
+  AutoCorresFunctionInfo.map (Symtab.update (file, fn_info'))
+  #> AutoCorresData.add_def file "L1def" "clzl" @{thm kernel_all_substitute.l1_clzl'_def}
+  #> AutoCorresData.add_def file "L2def" "clzl" @{thm kernel_all_substitute.l2_clzl'_def}
+  #> AutoCorresData.add_def file "TSdef" "clzl" @{thm kernel_all_substitute.clzl'_def}
+  #> AutoCorresData.add_thm file "L1corres" "clzl" @{thm kernel_all_substitute.l1_clzl'_corres}
+  #> AutoCorresData.add_thm file "L2corres" "clzl" @{thm kernel_all_substitute.l2_clzl'_corres}
+  #> AutoCorresData.add_thm file "TScorres" "clzl" @{thm kernel_all_substitute.clzl'_TScorres}
+end
+*}
+
+text \<open>Now AutoCorres will use our manual specification in clzl calls.\<close>
+autocorres
+  [
+   skip_heap_abs, skip_word_abs, (* for compatibility *)
+   scope = chooseThread,
+   scope_depth = 0,
+   c_locale = kernel_all_substitute,
+   no_c_termination
+  ] "c/kernel_all.c_pp"
+
+context kernel_m begin
+thm clzl'_def chooseThread'_def
+end
+
+
+
+subsection \<open>Test recursion + call to previously translated (cap_get_capType)\<close>
 autocorres
   [
    skip_heap_abs, skip_word_abs, ts_rules = nondet, (* for compatibility *)
-   scope = clzl cap_get_capType,
+   scope = cap_get_capType,
    scope_depth = 0,
    c_locale = kernel_all_substitute
   ] "c/kernel_all.c_pp"
 
-thm kernel_all_substitute.clzl'_def
-    kernel_m.clzl_spec
-    kernel_all_substitute.clzl_body_def[unfolded guarded_spec_body_def]
 thm kernel_all_substitute.cap_get_capType'_def
-    kernel_all_substitute.cap_get_capType_spec
     kernel_all_substitute.cap_get_capType_body_def
-desugar_thm kernel_all_substitute.cap_get_capType_spec "\<^bsup>"
 
+autocorres
+  [
+   skip_heap_abs, skip_word_abs, ts_rules = nondet, (* for compatibility *)
+   scope = cteDelete finaliseSlot reduceZombie,
+   scope_depth = 0,
+   c_locale = kernel_all_substitute
+  ] "c/kernel_all.c_pp"
+
+context kernel_m begin
+thm cteDelete'.simps finaliseSlot'.simps reduceZombie'.simps
+end
+
+
+
+
+subsection \<open>Experiment with proving bitfield specs\<close>
 autocorres
   [
    skip_heap_abs, skip_word_abs, ts_rules = nondet, (* for compatibility *)
@@ -775,6 +899,7 @@ autocorres
 thm kernel_all_substitute.cap_capType_equals_spec
 thm kernel_all_substitute.cap_capType_equals'_def
     kernel_all_substitute.cap_capType_equals_body_def
+
 lemma of_bl_from_cond:
   "(if C then 1 else 0) = of_bl [C]"
   by (simp add: word_1_bl)
@@ -815,17 +940,9 @@ thm cap_cnode_cap_get_capCNodeRadix_modifies
 end
 
 
-
-(* Test recursion + call to previously translated (cap_get_capType) *)
-autocorres
-  [
-   skip_heap_abs, skip_word_abs, ts_rules = nondet, (* for compatibility *)
-   scope = (*cteDelete finaliseSlot*) reduceZombie,
-   scope_depth = 0,
-   c_locale = kernel_all_substitute
-  ] "c/kernel_all.c_pp"
-
 subsection \<open>Experiment with transferring bitfield specs\<close>
+
+text \<open>Generic transfer rules\<close>
 lemma autocorres_transfer_spec:
   assumes ac_def:
     "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl check_termination \<Gamma> f_'proc)"
@@ -849,6 +966,7 @@ lemma autocorres_transfer_spec:
   apply (blast dest: postcond_deps)
   done
 
+text \<open>This one is probably more useful\<close>
 lemma autocorres_transfer_spec_no_modifies:
   assumes ac_def:
     "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl check_termination \<Gamma> f_'proc)"
@@ -859,7 +977,7 @@ lemma autocorres_transfer_spec_no_modifies:
   assumes c_spec_unify:
     "\<And>s0. P' s0 = {s. s0 = s \<and> P s}"
   assumes precond_deps:
-    "\<And>s t. \<lbrakk> arg_rel s; arg_rel t; globals s = globals t \<rbrakk> \<Longrightarrow> P s = P t"
+    "\<And>s0 s t. \<lbrakk> arg_rel s; arg_rel t; globals s = globals t \<rbrakk> \<Longrightarrow> P s = P t"
   assumes postcond_deps:
     "\<And>s0 s0' s t. \<lbrakk> arg_rel s0; arg_rel s0'; globals s0 = globals s0';
                     ret_xf s = ret_xf t; globals s = globals t \<rbrakk> \<Longrightarrow> Q s0 s = Q s0' t"
@@ -913,6 +1031,36 @@ lemma cap_zombie_cap_get_capZombieType'_spec:
      apply auto
   done
 
+text \<open>Helpers\<close>
+lemma All_to_all':
+  "(\<forall>x. P x) \<Longrightarrow> (\<And>x. P x)"
+  by simp
+text \<open>Convert references to global or local state variables, to the opposite one.
+  FIXME: surely this has been proven already.\<close>
+lemma collect_lift:
+  "Collect (\<lambda>s. s0 = s \<and> f s) = Collect (\<lambda>s. s0 = s \<and> f s0)"
+  by blast
+lemma collect_unlift:
+  "Collect (\<lambda>s. s0 = s \<and> f s0 s) = Collect (\<lambda>s. s0 = s \<and> f s s)"
+  by blast
+
+thm cap_zombie_cap_set_capZombieNumber_spec[THEN All_to_all']
+lemma cap_zombie_cap_set_capZombieNumber'_spec:
+  "\<lbrace>\<lambda>s. s = s0 \<and> ccap_relation cap' cap \<and> isZombie cap' \<and> capAligned cap' \<and> unat n \<le> zombieCTEs (capZombieType cap')\<rbrace>
+     cap_zombie_cap_set_capZombieNumber' cap n
+   \<lbrace>\<lambda>r s. s = s0 \<and> ccap_relation (capZombieNumber_update (\<lambda>_. unat n) cap') r\<rbrace>"
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_strengthen_post)
+    thm autocorres_transfer_spec_no_modifies[OF
+          cap_zombie_cap_set_capZombieNumber'_def cap_zombie_cap_set_capZombieNumber_spec[THEN All_to_all']]
+    apply (rule autocorres_transfer_spec_no_modifies[OF
+                  cap_zombie_cap_set_capZombieNumber'_def cap_zombie_cap_set_capZombieNumber_spec[THEN All_to_all'],
+                  where cs="undefined\<lparr>globals := s0, cap_' := cap, n_' := n\<rparr>"])
+      apply (rule cap_zombie_cap_set_capZombieNumber_modifies)
+     apply (rule collect_unlift)
+    apply auto
+  done
+
 thm cap_capType_equals_spec
 lemma cap_capType_equals'_spec:
   "\<lbrace>\<lambda>s. s = s0 \<rbrace>
@@ -931,17 +1079,6 @@ lemma cap_capType_equals'_spec:
 
 
 subsection \<open>Experiment with wrapping specs\<close>
-definition L1_call_simpl_spec where
-  "L1_call_simpl_spec check_term Gamma proc precond postcond exncond =
-     do s0 \<leftarrow> get;
-        assert (s0 \<in> precond s0);
-        assert (check_term \<longrightarrow> Gamma\<turnstile>(Call proc :: ('a, 'b', 'c) com) \<down> Normal s0);
-        (xs :: ('a, 'c) xstate) \<leftarrow> select ((Normal ` postcond s0) \<union> (Abrupt ` exncond s0));
-        case xs of Normal s \<Rightarrow> liftE (put s)
-                 | Abrupt s \<Rightarrow> do put s; throwError () od
-                 | _ \<Rightarrow> fail
-     od"
-
 lemma exec_no_fault:
   assumes asms: "s \<in> P"
   and     ce: "Gamma \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> Fault f"
@@ -968,36 +1105,17 @@ lemma exec_no_stuck:
   apply auto
   done
 
-lemma L1corres_call_simpl_spec:
-  "\<forall>s0. Gamma\<turnstile> (precond s0) (Call proc) (postcond s0), (exncond s0) \<Longrightarrow>
-   L1corres ct Gamma (L1_call_simpl_spec ct Gamma proc precond postcond exncond) (Call proc)"
-  apply (clarsimp simp: L1corres_def L1_call_simpl_spec_def in_monad
-                        exec_get assert_def snd_bind snd_select in_monad' in_select Ball_def
-                  split: split_if xstate.splits)
-  apply (case_tac t; clarsimp)
-     apply (rename_tac x, rule_tac x="Normal x" in exI)
-     apply (blast dest: exec_normal)
-    apply (rename_tac x, rule_tac x="Abrupt x" in exI)
-    apply (blast dest: exec_abrupt)
-   apply (rename_tac x, drule_tac x="Fault x" in spec)
-   apply (rule exec_no_fault; fastforce)
-  apply (drule_tac x="Stuck" in spec)
-  apply (rule exec_no_stuck; fastforce)
-  done
-
-thm L1corres_call_simpl_spec[OF clzl_spec]
-
 thm clzl_body_def clzl_spec
 
-definition L1_call_simpl_spec2 where
-  "L1_call_simpl_spec2 check_term Gamma proc precond postcond =
+definition L1_call_simpl_spec where
+  "L1_call_simpl_spec check_term Gamma proc precond postcond =
      L1_spec (Collect (\<lambda>(s, t). precond s s \<and> postcond s t))"
 
-lemma L1corres_call_simpl_spec2:
+lemma L1corres_call_simpl_spec:
   "\<lbrakk> \<forall>s0. Gamma\<turnstile> (Collect (precond s0)) (Call proc) (Collect (postcond s0));
      \<And>s. ct \<Longrightarrow> Gamma\<turnstile>Call proc \<down> Normal s \<rbrakk> \<Longrightarrow>
-   L1corres ct Gamma (L1_call_simpl_spec2 ct Gamma proc precond postcond) (Call proc)"
-  apply (clarsimp simp: L1corres_def L1_call_simpl_spec2_def L1_defs
+   L1corres ct Gamma (L1_call_simpl_spec ct Gamma proc precond postcond) (Call proc)"
+  apply (clarsimp simp: L1corres_def L1_call_simpl_spec_def L1_defs
                         assert_def snd_select snd_liftE snd_spec
                         in_monad' in_spec
                   split: xstate.splits)
@@ -1009,5 +1127,4 @@ lemma L1corres_call_simpl_spec2:
   done
 
 
-thm cteDelete'.simps finaliseSlot'.simps reduceZombie'.simps
 end
