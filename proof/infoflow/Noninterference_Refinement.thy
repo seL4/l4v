@@ -15,6 +15,8 @@ begin
 (* FIXME: fp is currently ignored by ADT_C_if *)
 consts fp :: bool
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma internal_R_ADT_A_if:
   "internal_R (ADT_A_if uop) R = R"
   apply (rule ext, rule ext)
@@ -45,6 +47,8 @@ lemma LI_trans:
   apply simp
   done
 
+end
+
 context kernel_m begin
 
 definition big_step_ADT_C_if where
@@ -64,6 +68,8 @@ lemma big_step_ADT_C_if_big_step_ADT_A_if_refines:
   done
 
 end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma LI_sub_big_steps':
   "\<lbrakk>(s',as) \<in> sub_big_steps C (internal_R C R) s;
@@ -185,6 +191,8 @@ lemma LI_rel_terminate:
   apply (drule_tac x=z in set_mp, blast)
   apply simp
   done
+
+end
 
 locale valid_initial_state_C = valid_initial_state + kernel_m +
   assumes ADT_C_if_serial:

@@ -13,6 +13,7 @@ imports
     "ADT_IF" "../refine/Refine" "../refine/EmptyFail_H"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   kernelEntry_if
@@ -403,7 +404,7 @@ lemma do_user_op_if_corres':
                              apply clarsimp
                             apply (rule corres_machine_op')
                             apply (rule corres_underlying_trivial)
-                            apply wp
+                            apply (wp do_machine_op_domain_list)
                          apply (clarsimp simp: addrFromPPtr_def)
                          apply (rule corres_machine_op')
                          apply (rule corres_underlying_trivial)
@@ -489,7 +490,7 @@ lemma check_active_irq_if_corres:
   apply (simp add: checkActiveIRQ_if_def check_active_irq_if_def)
   apply (rule corres_underlying_split[where r'="op ="])
   apply (rule dmo_getActiveIRQ_corres)
-  apply wp
+  apply (wp do_machine_op_domain_list)
   apply clarsimp
   done
 
@@ -854,9 +855,7 @@ lemma step_corresE:
     apply simp+
     done
 
-
-
-
+end
 
 locale global_automaton_invs =
   fixes check_active_irq
@@ -1533,5 +1532,5 @@ sublocale valid_initial_state_noenabled \<subseteq> valid_initial_state
      using ADT_A_if_Init_Fin_serial[OF uop_sane, of s0]
      apply (simp only: Init_Fin_serial_def serial_system_def Init_Fin_serial_axioms_def s0_def)+
   done
- 
+
 end
