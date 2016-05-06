@@ -10,7 +10,7 @@
 
 
 theory Setup_Locale
-imports "../../../lib/Qualify" "../../../lib/Requalify"
+imports "../../../lib/Qualify" "../../../lib/Requalify" "../../../lib/Extend_Locale"
 begin
 
 (* 
