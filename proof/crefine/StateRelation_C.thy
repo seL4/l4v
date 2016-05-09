@@ -100,7 +100,7 @@ text {*
   which can subsequently be instantiated for
   @{text kernel_all_global_addresses} as well as @{text kernel_all_substitute}.
 *}
-locale state_rel = Arch + substitute_pre +
+locale state_rel = Arch + substitute_pre + (*FIXME: arch_split*)
   fixes armKSKernelVSpace_C :: "machine_word \<Rightarrow> arm_vspace_region_use"
 
 locale kernel = kernel_all_substitute + state_rel
