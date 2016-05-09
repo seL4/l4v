@@ -2095,7 +2095,7 @@ apply(rule ccontr)
 apply(drule intvl_inter)
 apply(erule disjE)
  apply(drule intvlD, clarsimp)
- apply(subgoal_tac "k < 2 ^ len_of TYPE(32)")
+ apply(subgoal_tac "k < 2 ^ len_of TYPE(addr_bitsize)")
   apply(simp only: unat_simps)
  apply(rule less_trans)
   prefer 2
@@ -2968,7 +2968,7 @@ lemma super_field_update_lookup:
           (lift_t g h)(p \<mapsto> field_update (field_desc s) (to_bytes_p v) v')"
 proof -
   from assms have "size_of TYPE('b) < addr_card" by simp
-  with assms have [simp]: "unat (of_nat n :: 32 word) = n"
+  with assms have [simp]: "unat (of_nat n :: addr_bitsize word) = n"
     apply(subst unat_of_nat)
     apply(subst mod_less)
      apply(drule td_set_field_lookupD)+

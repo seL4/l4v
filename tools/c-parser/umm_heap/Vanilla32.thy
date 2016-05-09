@@ -302,7 +302,7 @@ lemma ptr_add_word32_signed [simp]:
   by (cases a) (simp add: ptr_add_def scast_id)
 
 lemma ptr_add_word32 [simp]:
-  fixes a :: "32 word ptr" and x :: "32 word"
+  fixes a :: "32 word ptr" 
   shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 4 * x"
   by (cases a) (simp add: ptr_add_def scast_id)
 (*
@@ -315,7 +315,7 @@ lemma ptr_add_0_id[simp]:"x +\<^sub>p 0 = x"
   by (clarsimp simp:ptr_add_def)
 
 lemma from_bytes_ptr_to_bytes_ptr:
-  "from_bytes (to_bytes (v::32 word) bs) = (Ptr v :: 'a::c_type ptr)"
+  "from_bytes (to_bytes (v::addr_bitsize word) bs) = (Ptr v :: 'a::c_type ptr)"
   by (simp add: from_bytes_def to_bytes_def typ_info_ptr word_tag_def
                 typ_info_word word_size
                 length_word_rsplit_exp_size' word_rcat_rsplit)

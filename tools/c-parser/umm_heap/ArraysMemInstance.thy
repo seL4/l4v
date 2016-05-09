@@ -263,14 +263,16 @@ begin
 instance
 apply intro_classes
 apply simp
-apply (subgoal_tac "addr_card = 2 ^ 13 * 2 ^ 19")
+apply (subgoal_tac "addr_card = 2 ^ (addr_bitsize - 19) * 2 ^ 19")
   apply (erule ssubst)
   apply (rule less_le_trans[where y = "card (UNIV::'b set) * 2 ^ 19"])
     apply (rule mult_less_mono2)
       apply (rule oneMB_size_ax)
     apply simp
   apply (rule mult_le_mono1)
-    apply (rule fourthousand_count_ax)
+    apply (rule le_trans[where j = "2 ^ 13"])
+      apply (rule fourthousand_count_ax)
+    apply simp
   apply simp
 apply (simp add: addr_card)
 done
@@ -353,7 +355,7 @@ class lt5 = lt6 +
   assumes lt5_ax: "CARD ('a) < 2 ^ 5"
 class lt4 = lt5 +
   assumes lt4_ax: "CARD ('a) < 2 ^ 4"
-class lt3 = lt4 + 
+class lt3 = lt4 +
   assumes lt3_ax: "CARD ('a) < 2 ^ 3"
 class lt2 = lt3 +
   assumes lt2_ax: "CARD ('a) < 2 ^ 2"
@@ -506,7 +508,7 @@ end
 
 instantiation num1 :: lt1
 begin
-instance 
+instance
   by (intro_classes, simp_all)
 end
 
