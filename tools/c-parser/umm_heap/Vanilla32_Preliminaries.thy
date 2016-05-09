@@ -59,7 +59,8 @@ end
 
 definition
   "bogus_log2lessthree (n::nat) ==
-             if n = 64 then (3::nat)
+             if n = 128 then 4
+             else if n = 64 then (3::nat)
              else if n = 32 then 2
              else if n = 16 then 1
              else if n = 8 then 0

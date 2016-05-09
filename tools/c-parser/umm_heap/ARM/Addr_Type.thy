@@ -14,13 +14,16 @@ theory Addr_Type
 imports "~~/src/HOL/Word/Word"
 begin
 
-type_synonym addr_bitsize = "64"
+type_synonym addr_bitsize = "32"
 type_synonym addr = "addr_bitsize word"
+definition addr_bitsize :: nat where "addr_bitsize \<equiv> 32"
+definition addr_align :: nat where "addr_align \<equiv> 2"
+declare addr_align_def[simp]
 
 definition addr_card :: nat where
   "addr_card \<equiv> card (UNIV::addr set)"
   
-definition addr_bitsize :: nat where "addr_bitsize \<equiv> 64"
+
 
 declare addr_bitsize_def[simp]
 
