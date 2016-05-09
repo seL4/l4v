@@ -386,6 +386,8 @@ def main():
             help="Number of tests to run in parallel")
     parser.add_argument("-l", "--list", action="store_true",
             help="list known tests")
+    parser.add_argument("--no-dependencies", action="store_true",
+            help="don't check for dependencies when running specific tests")
     parser.add_argument("--legacy", action="store_true",
             help="use legacy 'IsaMakefile' specs")
     # --legacy-status used by top-level regression-v2 script
@@ -432,7 +434,18 @@ def main():
         bad_names = desired_names - set([t.name for t in tests])
         if len(bad_names) > 0:
             parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
-        tests_to_run = [t for t in tests if t.name in desired_names]
+        # Given a list of names return the corresponding set of Test objects.
+        get_tests = lambda x: {t for t in tests if t.name in x}
+        # Given a list/set of Tests return a superset that includes all dependencies.
+        def get_deps(x):
+            x.update({t for w in x for t in get_deps(get_tests(w.depends))})
+            return x
+        tests_to_run_set = get_tests(desired_names)
+        # Are we skipping dependencies? if not, add them.
+        if not args.no_dependencies:
+            tests_to_run_set = get_deps(tests_to_run_set)
+        # Preserve the order of the original set of Tests.
+        tests_to_run = [t for t in tests if t in tests_to_run_set]
 
     args.exclude = set(args.exclude)
     bad_names = args.exclude - set(t.name for t in tests)
