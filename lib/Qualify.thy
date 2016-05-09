@@ -1,4 +1,14 @@
 (*
+ * Copyright 2016, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
+(*
   Post-hoc qualification of global constants, facts and types using name space aliasing.
   Can be used to add mandatory qualification to otherwise non-localised commands (i.e. "record",
   "instantiation").
