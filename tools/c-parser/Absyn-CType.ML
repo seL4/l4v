@@ -10,7 +10,7 @@
 
 structure CTypeDatatype =
 struct
-datatype inttype = Char | Short | Int | Long | LongLong
+datatype inttype = datatype BaseCTypes.base_inttype
 datatype 'c ctype =
          Signed of inttype
        | Unsigned of inttype
@@ -139,7 +139,7 @@ structure ImplementationTypes =
 struct
   val size_t = Unsigned Int
   val ptrdiff_t = Signed Int
-  val ptrval_t = Unsigned Int
+  val ptrval_t = Unsigned ImplementationNumbers.ptr_t
 end
 
 fun scalar_type ty =

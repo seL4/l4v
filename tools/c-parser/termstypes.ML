@@ -26,7 +26,7 @@ val sword16 = sword_ty @{typ "16"}
 val sword32 = sword_ty @{typ "32"}
 val sword64 = sword_ty @{typ "64"}
 
-val symbol_table = Free ("symbol_table", @{typ "string => word32"})
+val symbol_table = Free ("symbol_table", @{typ "string => addr"})
 
 fun dest_array_type ty =
     case ty of

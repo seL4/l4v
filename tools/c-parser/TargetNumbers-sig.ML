@@ -8,6 +8,11 @@
  * @TAG(NICTA_BSD)
  *)
 
+structure BaseCTypes =
+struct
+  datatype base_inttype = Char | Short | Int | Long | LongLong (* | ITY_Word of int *)
+end
+
 signature IMPLEMENTATION_NUMBERS =
 sig
 
@@ -42,6 +47,7 @@ sig
   val longWidth : int
   val llongWidth : int
   val ptrWidth : int
+  val ptr_t : BaseCTypes.base_inttype
 
   exception BadChar
   val charliteral_conversion : int -> int
