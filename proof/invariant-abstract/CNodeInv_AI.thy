@@ -176,7 +176,7 @@ lemma update_cap_hoare_helper:
 lemma mask_cap_hoare_helper:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap (C rv s) s\<rbrace> \<Longrightarrow>
    \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap (mask_cap (M rv s) (C rv s)) s\<rbrace>"
-  by (fastforce simp add: valid_def mask_cap_valid)
+  by (fastforce simp add: valid_def)
 
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -1168,16 +1168,6 @@ lemma cap_swap_cte_at:
   apply(wp cap_swap_cte_at)
   apply(simp)
   done
-
-
-lemma obj_at_interrupt_states[simp]:
-  "obj_at P p (interrupt_states_update f s) = obj_at P p s"
-  by (simp add: obj_at_def)
-
-
-lemma obj_at_arch_state[simp]:
-  "obj_at P p (arch_state_update f s) = obj_at P p s"
-  by (simp add: obj_at_def)
 
 
 lemma rec_del_typ_at:
@@ -2968,7 +2958,7 @@ next
    by (clarsimp simp: replicate_not_True)
   case (3 ptr bits n slot s)
   show ?case
-    apply (simp add: rec_del_call.simps simp_thms)
+    apply simp
     apply wp
     apply clarsimp
     apply (rule context_conjI')
@@ -3395,7 +3385,7 @@ next
 next
   case (3 ptr bits n slot s)
   show ?case
-    apply (simp add: rec_del.simps)
+    apply simp
     apply (fold o_def)
     apply (rule hoare_pre_spec_validE)
      apply (simp del: o_apply | wp_once cap_swap_fd_rvk_prog)+
@@ -3718,11 +3708,6 @@ lemma invoke_cnode_tcb[wp]:
   by (simp add: tcb_at_typ, wp inv_cnode_typ_at)
 
 
-lemma iflive_mdb[simp]:
-  "if_live_then_nonz_cap (cdt_update f s) = if_live_then_nonz_cap s"
-  by (fastforce elim!: iflive_pspaceI)
-
-
 lemma duplicate_creation:
   "\<lbrace>cte_wp_at (\<lambda>c. obj_refs c = obj_refs cap
                   \<and> cap_irqs c = cap_irqs cap) p
@@ -3745,22 +3730,6 @@ lemma duplicate_creation:
   apply (wp set_cap_cte_wp_at)
    apply simp_all
   done
-
-
-lemma state_refs_mdb[simp]:
-  "state_refs_of (cdt_update f s) = state_refs_of s"
-  by (rule state_refs_of_pspaceI [OF refl], simp)
-
-
-lemma ifunsafe_mdb[simp]:
-  "if_unsafe_then_cap (cdt_update f s) = if_unsafe_then_cap s"
-  by (fastforce elim!: ifunsafe_pspaceI)
-
-
-lemma zombies_final_mdb[simp]:
-  "zombies_final (cdt_update f s) = zombies_final s"
-  by (fastforce elim!: zombies_final_pspaceI)
-
 
 definition
   zombies_final_caps :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> bool"
@@ -3795,11 +3764,6 @@ lemma set_cdt_caps_of_state[wp]:
   apply wp
   apply (simp add: caps_of_state_cte_wp_at)
   done
-
-
-lemma caps_of_state_revokable[simp]:
-  "caps_of_state (is_original_cap_update f s) = caps_of_state s"
-  by (simp add: caps_of_state_cte_wp_at)
 
 
 lemma cap_move_caps_of_state:
@@ -4041,6 +4005,8 @@ lemma cap_move_valid_ioc[wp]:
   apply clarsimp
   done
 
+declare cdt_update.state_refs_update [simp]
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cap_move_invs[wp]:
   "\<lbrace>invs and valid_cap cap and cte_wp_at (op = cap.NullCap) ptr'
@@ -4124,8 +4090,7 @@ lemma weak_derived_cte_refs_abs:
   "weak_derived c c' \<Longrightarrow> cte_refs c' = cte_refs c"
   apply (clarsimp simp: weak_derived_def copy_of_def)
   apply (auto simp: same_object_as_def is_cap_simps bits_of_def
-             split: split_if_asm cap.splits
-            intro!: ext)
+             split: split_if_asm cap.splits)
   done
 
 

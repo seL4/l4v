@@ -337,11 +337,9 @@ lemma valid_pdpt_init[iff]:
   "valid_pdpt_objs init_A_st"
 proof -
   have P: "valid_pd_entries (global_pd :: 12 word \<Rightarrow> _)"
-    apply (clarsimp simp: valid_entries_def global_pd_def)
-    done
+    by (clarsimp simp: valid_entries_def)
   also have Q: "entries_align pde_range_sz (global_pd :: 12 word \<Rightarrow> _)"
-    apply (clarsimp simp: entries_align_def global_pd_def)
-    done
+    by (clarsimp simp: entries_align_def)
   thus ?thesis using P
     by (auto simp: init_A_st_def init_kheap_def
             elim!: ranE split: split_if_asm)
@@ -1260,7 +1258,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
     apply (erule subset_trans[OF range_cover_subset'])
     apply (simp add:vslot)
    apply (clarsimp simp:blah word_and_le2)
-   apply (clarsimp simp:blah field_simps add.assoc[symmetric] add.commute shiftl_t2n
+   apply (clarsimp simp:blah field_simps add.assoc[symmetric] shiftl_t2n
                     dest!:idx_compare'')
    apply simp
   apply (wp mapM_x_wp'
@@ -1598,7 +1596,7 @@ lemma perform_page_valid_pdpt[wp]:
                         [where pde=pde.InvalidPDE, simplified]]
                       set_cap_page_inv_entries_safe
                       hoare_vcg_imp_lift[OF set_cap_arch_obj_neg] hoare_vcg_all_lift
-                 | clarsimp simp: valid_page_inv_def cte_wp_at_weakenE[OF _ TrueI] obj_at_def
+                 | clarsimp simp: cte_wp_at_weakenE[OF _ TrueI] obj_at_def
                                   pte_range_sz_def pde_range_sz_def swp_def valid_page_inv_def
                                   valid_slots_def page_inv_entries_safe_def pte_check_if_mapped_def
                                   pde_check_if_mapped_def
@@ -1989,7 +1987,7 @@ lemma create_mapping_entries_safe[wp]:
   apply (drule_tac ref = refa in valid_arch_objsD)
     apply (simp add:obj_at_def)
    apply simp
-  apply (simp add:valid_arch_obj.simps)
+  apply (simp)
   apply (drule_tac x = "ucast (lookup_pd_slot pd vptr && mask pd_bits >> 2)"
     in bspec)
    apply simp
@@ -2057,7 +2055,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
                          mask_lower_twice pd_bits_def bitwise pageBits_def
                          not_le sz
-                    del: hoare_post_taut hoare_True_E_R
+                    del: hoare_True_E_R
                      split del: split_if
              | simp only: obj_at_def)+)
          apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
@@ -2077,7 +2075,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
                          mask_lower_twice pd_bits_def bitwise pageBits_def
                          not_le sz
-                    del: hoare_post_taut hoare_True_E_R
+                    del: hoare_True_E_R
                      split del: split_if
              | simp only: obj_at_def)+)
          apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
@@ -2098,7 +2096,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
                          mask_lower_twice pd_bits_def bitwise pageBits_def
                          not_le sz
-                    del: hoare_post_taut hoare_True_E_R
+                    del: hoare_True_E_R
                      split del: split_if
              | simp only: obj_at_def)+)
          apply (rule hoare_post_imp_R[where P=\<top>])
@@ -2108,7 +2106,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
              | wpc
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
-                     del: hoare_post_taut hoare_True_E_R
+                     del: hoare_True_E_R
                      split del: split_if
              | simp only: obj_at_def)+)
   apply (auto simp:valid_cap_simps)

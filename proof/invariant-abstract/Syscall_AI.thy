@@ -885,7 +885,7 @@ lemma hinv_invs':
               simp: st_tcb_at_tcb_at)[1]
   apply (rule gts_sp)
   apply wp
-  apply (simp add: ct_in_state_def conj_ac)
+  apply (simp add: ct_in_state_def conj_commute conj_left_commute)
   apply wp
   apply (rule_tac Q = "\<lambda>rv s. st_tcb_at active thread s \<and> cur_thread s = thread" in
          hoare_post_imp)
@@ -1174,7 +1174,7 @@ lemma do_reply_transfer_nonz_cap:
       apply (wp drop_when_dxo_wp hoare_vcg_ex_lift
 	        thread_set_no_change_tcb_state thread_set_cte_wp_at_trivial
                 ex_nonz_cap_to_pres [OF thread_set_cte_wp_at_trivial]
-	     | simp add: tcb_cap_cases_def del: split_if)+
+	     | simp add: tcb_cap_cases_def)+
      apply (wp hoare_vcg_ex_lift cap_delete_one_cte_wp_at_preserved
             | strengthen ex_nonz_cap_to_tcb_strg)+
      apply (clarsimp simp add: tcb_cap_cases_def is_cap_simps can_fast_finalise_def)

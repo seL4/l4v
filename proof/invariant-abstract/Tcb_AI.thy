@@ -1408,7 +1408,7 @@ lemma update_cap_valid:
               None \<Rightarrow> cap_rights_update rs cap
             | Some x \<Rightarrow> update_cap_data p x
                      (cap_rights_update rs cap)) s"
-  apply (case_tac capdata, simp_all add: valid_cap_update_rights)
+  apply (case_tac capdata, simp_all)[1]
   apply (case_tac cap,
          simp_all add: update_cap_data_def cap_rights_update_def
                        is_cap_defs Let_def split_def valid_cap_def

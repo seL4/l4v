@@ -292,10 +292,9 @@ crunch (bcorres)bcorres[wp]: cap_delete truncate_state
 
    
 lemma cap_revoke_s_bcorres: 
-  notes cap_revoke.simps[simp del]
   shows
   "s_bcorres (cap_revoke slot) (cap_revoke slot) s"
-  proof (induct rule: cap_revoke.induct[where ?a1.0=s])
+proof (induct rule: cap_revoke.induct[where ?a1.0=s])
   case (1 slot s)
   show ?case
     apply (simp add: cap_revoke.simps)
@@ -307,7 +306,7 @@ lemma cap_revoke_s_bcorres:
             apply (rule "1"[simplified],(simp add: in_monad | force)+)
            apply (simp add:  | force | wp drop_sbcorres_underlying)+
     done
-  qed
+qed
 
 lemmas cap_revoke_bcorres = use_sbcorres_underlying[OF cap_revoke_s_bcorres]
 
@@ -350,11 +349,9 @@ lemma invoke_untyped_bcorres[wp]:" bcorres (invoke_untyped a) (invoke_untyped a)
 
 
 lemma resolve_address_bits'_sbcorres:
-  notes resolve_address_bits'.simps[simp del]
   shows
   "s_bcorres (resolve_address_bits' TYPE('a::state_ext) a)
-            (resolve_address_bits' TYPE(unit) a) s"
-  
+            (resolve_address_bits' TYPE(unit) a) s"  
 proof (induct a arbitrary: s rule: resolve_address_bits'.induct[where ?a0.0="TYPE('a::state_ext)"])
   case (1 z cap cref s')
   show ?case
@@ -530,13 +527,11 @@ crunch (bcorres)bcorres[wp]: guarded_switch_to,switch_to_idle_thread truncate_st
 
 end
 
-lemma alternative_first:"x \<in> fst (f s) \<Longrightarrow> x \<in> fst ((f OR g) s)"
-  apply (simp add: alternative_def)
-  done
+lemma alternative_first:"x \<in> fst (f s) \<Longrightarrow> x \<in> fst ((f \<sqinter> g) s)"
+  by (simp add: alternative_def)
 
-lemma alternative_second:"x \<in> fst (g s) \<Longrightarrow> x \<in> fst ((f OR g) s)"
-  apply (simp add: alternative_def)
-  done
+lemma alternative_second:"x \<in> fst (g s) \<Longrightarrow> x \<in> fst ((f \<sqinter> g) s)"
+  by (simp add: alternative_def)
 
 
 lemma bcorres_underlying_dest: "bcorres_underlying l f k \<Longrightarrow> ((),s') \<in> fst (f s) \<Longrightarrow>

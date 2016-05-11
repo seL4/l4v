@@ -3189,15 +3189,14 @@ lemma si_invs':
   apply clarsimp
   apply (subgoal_tac "distinct ([t, a, ep, idle_thread s])")
    apply (clarsimp simp: fun_upd_def[symmetric] fun_upd_idem)
-   apply (clarsimp simp: valid_obj_def valid_ep_def neq_Nil_conv
-                         fun_upd_triv)
+   apply (clarsimp simp: valid_obj_def valid_ep_def neq_Nil_conv)
    apply (rule conjI, erule(1) st_tcb_ex_cap)
     apply clarsimp
    apply (simp add: obj_at_def is_ep idle_not_queued')
    apply (subgoal_tac "state_refs_of s t = {r \<in> state_refs_of s t. snd r = TCBBound}")
-    apply (subst fun_upd_idem[where x=t], force simp: conj_ac)
+    apply (subst fun_upd_idem[where x=t], force simp: conj_commute)
     apply (subgoal_tac "sym_refs ((state_refs_of s)(ep := set lista \<times> {EPRecv}, a := {r \<in> state_refs_of s a. snd r = TCBBound}))")
-     apply (fastforce elim!: pred_tcb_weakenE st_tcb_at_reply_cap_valid simp: conj_ac)
+     apply (fastforce elim!: pred_tcb_weakenE st_tcb_at_reply_cap_valid simp: conj_commute)
 
     apply (erule delta_sym_refs)
      apply (clarsimp simp: fun_upd_def split: split_if_asm)

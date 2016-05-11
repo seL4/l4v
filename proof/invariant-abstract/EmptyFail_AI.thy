@@ -241,7 +241,7 @@ proof (induct arbitrary: s rule: resolve_address_bits'.induct)
   case (1 z cap cref s')
   show ?case
     apply (simp add: resolve_address_bits'.simps)
-    apply (case_tac cap,(wp | simp del: resolve_address_bits'.simps | intro impI conjI | rule "1.hyps" | rule drop_spec_empty_fail | simp add: whenE_def in_monad | force)+)
+    apply (case_tac cap,(wp | simp | intro impI conjI | rule "1.hyps" | rule drop_spec_empty_fail | simp add: whenE_def in_monad | force)+)
     done
  qed
 
@@ -289,7 +289,7 @@ lemma decode_copy_registers_empty_fail[wp]:
   by (simp add: decode_copy_registers_def split: list.splits cap.splits | wp | intro allI impI conjI)+
 
 lemma alternative_empty_fail[wp]:
-  "empty_fail f \<or> empty_fail g \<Longrightarrow> empty_fail (f OR g)"
+  "empty_fail f \<or> empty_fail g \<Longrightarrow> empty_fail (f \<sqinter> g)"
   by (auto simp: alternative_def empty_fail_def)
 
 lemma OR_choice_empty_fail[wp]:

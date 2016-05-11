@@ -35,7 +35,7 @@ lemma akernel_invs:
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   apply wp
    apply (simp add: call_kernel_def)
-   apply (wp activate_invs | simp add: invs_irq_state_independent)+
+   apply (wp activate_invs | simp)+
    apply (auto simp: active_from_running)
   done
 
@@ -45,7 +45,7 @@ lemma akernel_invs_det_ext:
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   apply wp
    apply (simp add: call_kernel_def)
-   apply (wp activate_invs | simp add: invs_irq_state_independent)+
+   apply (wp activate_invs | simp)+
    apply (auto simp: active_from_running)
   done
 
