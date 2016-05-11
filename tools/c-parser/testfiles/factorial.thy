@@ -279,7 +279,7 @@ apply(subgoal_tac "(\<turnstile>\<^sub>s ret__ptr_to_unsigned \<and>\<^sup>* sep
    apply clarsimp
    apply(subst fac_unfold)
     apply unat_arith
-   apply clarsimp
+   apply (simp add: ucast_id)
    apply(sep_select_tac "(_ +\<^sub>p _) \<mapsto> _")
    apply(rule sep_heap_update_global')
    apply(sep_select_tac "_ \<mapsto> _")
@@ -333,7 +333,7 @@ apply sep_point_tac
     apply(erule double_word_sep_cut')
    apply assumption
   apply simp
- apply clarsimp
+ apply (simp add: ucast_id)
  apply(subgoal_tac "Suc (k - Suc (length list)) = k - length list")
   apply force
  apply arith

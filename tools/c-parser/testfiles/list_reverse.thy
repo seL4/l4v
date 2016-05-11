@@ -32,7 +32,7 @@ declare sep_conj_left_com [simp del]
 install_C_file memsafe "list_reverse.c"
 
 thm list_reverse_global_addresses.reverse_body_def
-
+declare[[show_consts=true]]
 lemma (in list_reverse_global_addresses)
   shows "reverse_spec"
 apply (unfold reverse_spec_def)
@@ -57,7 +57,7 @@ apply vcg
  apply rule
   apply(erule sep_map'_ptr_safe)
  apply(rule_tac x="lista" in exI)
- apply clarsimp
+ apply (simp add: ucast_id) 
  apply sep_exists_tac
  apply(rule_tac x=j in exI)
  apply simp
