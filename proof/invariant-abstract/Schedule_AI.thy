@@ -12,6 +12,14 @@ theory Schedule_AI
 imports VSpace_AI
 begin
 
+locale Schedule_AI begin
+
+extend_locale 
+  fixes Schedule_AI_dummy_const :: nat
+  assumes Schedule_AI_trivial_asm: "Schedule_AI_dummy_const > 0"
+
+end
+
 context begin interpretation Arch .
 (* FIXME arch_split: some of these could be moved to generic theories
    so they don't need to be unqualified. *)

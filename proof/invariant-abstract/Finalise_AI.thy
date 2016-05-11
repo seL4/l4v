@@ -10,10 +10,18 @@
 
 theory Finalise_AI
 imports
-  IpcCancel_AI
+  "./$L4V_ARCH/ArchIpcCancel_AI"
   InterruptAcc_AI
-  Retype_AI
+  "./$L4V_ARCH/ArchRetype_AI"
 begin
+
+locale Finalise_AI begin
+
+extend_locale 
+  fixes Finalise_AI_dummy_const :: nat
+  assumes Finalise_AI_trivial_asm: "Finalise_AI_dummy_const > 0"
+
+end
 
 context begin interpretation Arch .
 

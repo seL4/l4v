@@ -13,8 +13,16 @@ Refinement for interrupt controller operations
 *)
 
 theory Interrupt_AI
-imports Ipc_AI
+imports "./$L4V_ARCH/ArchIpc_AI"
 begin
+
+locale Interrupt_AI begin
+
+extend_locale 
+  fixes Interrupt_AI_dummy_const :: nat
+  assumes Interrupt_AI_trivial_asm: "Interrupt_AI_dummy_const > 0"
+
+end
 
 context begin interpretation Arch . 
 requalify_consts

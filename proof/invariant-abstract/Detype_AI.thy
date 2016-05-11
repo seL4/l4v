@@ -9,8 +9,16 @@
  *)
 
 theory Detype_AI
-imports Retype_AI
+imports "./$L4V_ARCH/ArchRetype_AI"
 begin
+
+locale Detype_AI begin
+
+extend_locale 
+  fixes Detype_AI_dummy_const :: nat
+  assumes Detype_AI_trivial_asm: "Detype_AI_dummy_const > 0"
+
+end
 
 lemma obj_at_detype[simp]:
   "obj_at P p (detype S s) = (p \<notin> S \<and> obj_at P p s)"

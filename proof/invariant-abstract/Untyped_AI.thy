@@ -11,8 +11,17 @@
 (* Proofs about untyped invocations. *)
 
 theory Untyped_AI
-imports Detype_AI
+imports "./$L4V_ARCH/ArchDetype_AI"
 begin
+
+locale Untyped_AI begin
+
+extend_locale 
+  fixes Untyped_AI_dummy_const :: nat
+  assumes Untyped_AI_trivial_asm: "Untyped_AI_dummy_const > 0"
+
+end
+
 context begin interpretation Arch .
 
 requalify_consts

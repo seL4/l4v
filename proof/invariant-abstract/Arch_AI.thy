@@ -13,8 +13,16 @@ Top level architecture related proofs.
 *)
 
 theory Arch_AI
-imports Untyped_AI Finalise_AI
+imports "./$L4V_ARCH/ArchUntyped_AI" "./$L4V_ARCH/ArchFinalise_AI"
 begin
+
+locale Arch_AI begin
+
+extend_locale 
+  fixes Arch_AI_dummy_const :: nat
+  assumes Arch_AI_trivial_asm: "Arch_AI_dummy_const > 0"
+
+end
 
 context Arch begin global_naming ARM (*FIXME: arch_split*)
 

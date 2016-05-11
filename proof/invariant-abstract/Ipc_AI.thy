@@ -9,8 +9,16 @@
  *)
 
 theory Ipc_AI
-imports Finalise_AI
+imports "./$L4V_ARCH/ArchFinalise_AI"
 begin
+
+locale Ipc_AI begin
+
+extend_locale 
+  fixes Ipc_AI_dummy_const :: nat
+  assumes Ipc_AI_trivial_asm: "Ipc_AI_dummy_const > 0"
+
+end
 
 declare if_cong[cong del]
 

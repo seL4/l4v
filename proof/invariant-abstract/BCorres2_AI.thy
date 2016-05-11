@@ -12,7 +12,7 @@ theory BCorres2_AI
 imports
   EmptyFail_AI
   "../../lib/BCorres_UL"
-  CNodeInv_AI
+  "./$L4V_ARCH/ArchCNodeInv_AI"
 begin
 
 definition all_but_exst where

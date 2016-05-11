@@ -9,8 +9,16 @@
  *)
 
 theory IpcCancel_AI
-imports Schedule_AI
+imports "./$L4V_ARCH/ArchSchedule_AI"
 begin
+
+locale IpcCancel_AI begin
+
+extend_locale 
+  fixes IpcCancel_AI_dummy_const :: nat
+  assumes IpcCancel_AI_trivial_asm: "IpcCancel_AI_dummy_const > 0"
+
+end
 
 lemma blocked_cancel_ipc_simple:
   "\<lbrace>tcb_at t\<rbrace> blocked_cancel_ipc ts t \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"

@@ -20,10 +20,14 @@ context begin interpretation Arch .
 requalify_facts
   global_refs_kheap
 
+requalify_consts clearMemoryVM
+
 end
 
 declare global_refs_kheap[simp]
 
+locale Retype_AI begin
+                       
 lemma upto_enum_inc_1:
   "a < 2^word_bits - 1 \<Longrightarrow> [(0::machine_word).e.1 + a] = [0.e.a] @ [(1+a)]"
   apply (simp add:upto_enum_word)
@@ -83,17 +87,12 @@ proof -
   done
 qed
 
-context Arch begin global_naming ARM (*FIXME: arch_split*)
-lemma clearMemoryVM_return [simp]:
+
+extend_locale 
+  assumes clearMemoryVM_return [simp]:
   "clearMemoryVM a b = return ()"
-  by (simp add: clearMemoryVM_def storeWordVM_def)
-
-
-lemma clearMemoryVM_return_raw:
-  "clearMemoryVM  = (\<lambda>x y. return ())"
-  apply (rule ext)+
-  by (simp add: clearMemoryVM_def storeWordVM_def)
-end
+ 
+lemmas clearMemoryVM_return_raw = clearMemoryVM_return[abs_def]
 
 lemma unat_of_nat_minus_1:
   "\<lbrakk>n < 2^len_of TYPE('a);n\<noteq> 0\<rbrakk> \<Longrightarrow> (unat (((of_nat n):: 'a :: len word) - 1)) = n - 1"
@@ -468,12 +467,12 @@ lemma word_plus_mono_right_split:
   done
 
 lemmas word32_plus_mono_right_split = word_plus_mono_right_split[where 'a=32, folded word_bits_def]
-
+end
 
 (* range_cover locale:
    proves properties when a small range is inside in a large range
  *)
-locale range_cover = 
+locale range_cover = Retype_AI +
   fixes ptr :: "'a :: len word"
   and   sz sbit n
   assumes aligned: "is_aligned ptr sbit"
@@ -640,6 +639,11 @@ lemma range_cover_base_le:
 
 
 end
+
+context Retype_AI begin
+
+lemmas range_cover_def = 
+  range_cover_def[simplified range_cover_axioms_def Retype_AI_axioms, simplified]
 
 lemma range_cover_subset:
   fixes ptr :: "'a :: len word"
@@ -959,6 +963,8 @@ lemma shiftr_mask_cmp:
     apply (simp add:le_mask_iff shiftr_shiftr)
 done
 
+end
+
 context Arch begin global_naming ARM (*FIXME: arch_split*)
 definition
   "no_gs_types \<equiv> UNIV - {Structures_A.CapTableObject,
@@ -1000,6 +1006,7 @@ lemma range_cover_not_zero:
    apply simp
   done
 
+context Retype_AI begin
 
 lemma range_cover_not_zero_shift:
   "\<lbrakk>n \<noteq> 0; range_cover (ptr :: 'a :: len word) sz bits n; gbits \<le> bits\<rbrakk>
@@ -1206,6 +1213,7 @@ done
 
 
 crunch valid_pspace: do_machine_op "valid_pspace"
+end
 
 context Arch begin global_naming ARM (*FIXME: arch_split*)
 declare store_pde_state_refs_of [wp]
@@ -1863,6 +1871,8 @@ lemma init_arch_objects_invs_from_restricted:
   done
 end
 
+context Retype_AI begin
+
 lemma retype_region_aligned_for_init[wp]:
   "\<lbrace>\<lambda>s. range_cover ptr sz (obj_bits_api new_type obj_sz) n\<rbrace>
      retype_region ptr n obj_sz new_type
@@ -2363,6 +2373,8 @@ lemma valid_arch_obj_default:
   apply (simp add: valid_arch_obj_default')
   done
 
+end
+
 context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma vs_lookup_trans_sub2:
   assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"
@@ -2440,7 +2452,7 @@ lemma usable_range_emptyD:
   done
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context Retype_AI begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_untyped_helper:
   assumes valid_c : "s \<turnstile> c" 
   and   cte_at  : "cte_wp_at (op = c) q s"
@@ -2518,7 +2530,7 @@ end
 
 
 
-locale retype_region_proofs_gen =
+locale retype_region_proofs_gen = Retype_AI + 
   fixes s ty us ptr sz n ps s'
    assumes   vp: "valid_pspace s"
       and    vm: "valid_mdb s"
@@ -3257,7 +3269,11 @@ lemma post_retype_invs:
 end
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+context Retype_AI begin interpretation Arch . (*FIXME: arch_split*)
+
+lemmas retype_region_proofs_gen_intro =
+  retype_region_proofs_gen.intro[simplified Retype_AI_axioms retype_region_proofs_gen_axioms_def]
+
 lemma use_retype_region_proofs':
   assumes x: "\<And>s. \<lbrakk> retype_region_proofs s ty us ptr sz n; P s \<rbrakk>
    \<Longrightarrow> Q (retype_addrs ptr ty n us) (s\<lparr>kheap :=
@@ -3278,11 +3294,13 @@ lemma use_retype_region_proofs':
                         foldr_upd_app_if fun_upd_def[symmetric])
   apply safe
   apply (rule x)
-   apply (rule retype_region_proofs.intro[OF retype_region_proofs_gen.intro], simp_all)[1]
-   apply (simp add: range_cover_def obj_bits_api_def 
+   apply (rule retype_region_proofs.intro[OF retype_region_proofs_gen_intro], simp_all)[1]
+   apply (clarsimp simp add: range_cover_def obj_bits_api_def 
      slot_bits_def word_bits_def cte_level_bits_def)+
   done
 end
+
+context Retype_AI begin
 
 lemmas use_retype_region_proofs
     = use_retype_region_proofs'[where Q="\<lambda>_. Q" and P=Q, simplified]
@@ -3408,49 +3426,9 @@ lemma retype_region_post_retype_invs:
   done
 
 
-context Arch begin global_naming ARM (*FIXME: arch_split*)
-lemma retype_region_plain_invs:
-  "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap ptr sz 
-      and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
-      and region_in_kernel_window {ptr .. (ptr &&~~ mask sz) + 2 ^ sz - 1}
-      and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
-      and K (range_cover ptr sz (obj_bits_api ty us) n)
-      and K (ty \<noteq> ArchObject PageDirectoryObj)\<rbrace>
-      retype_region ptr n us ty \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (rule hoare_strengthen_post[OF retype_region_post_retype_invs])
-  apply (simp add: post_retype_invs_def)
-  done
-end
-
 lemma subset_not_le_trans: "\<lbrakk>\<not> A \<subset> B; C \<subseteq> B\<rbrakk> \<Longrightarrow> \<not> A \<subset> C" by auto
 
-context Arch begin global_naming ARM (*FIXME: arch_split*)
-lemma storeWord_um_eq_0:
-  "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>
-    storeWord x 0
-   \<lbrace>\<lambda>_ m. underlying_memory m p = 0\<rbrace>"
-  by (simp add: storeWord_def word_rsplit_0 | wp)+
 
-
-lemma clearMemory_um_eq_0:
-  "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>
-    clearMemory ptr bits
-   \<lbrace>\<lambda>_ m. underlying_memory m p = 0\<rbrace>"
-  apply (clarsimp simp: clearMemory_def)
-  apply (wp mapM_x_wp_inv | simp)+
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps storeWord_um_eq_0)
-  apply (fastforce simp: ignore_failure_def split: split_if_asm)
-  done
-
-lemma cleanCacheRange_PoU_um_inv[wp]:
-  "\<lbrace>\<lambda>m. P (underlying_memory m)\<rbrace>
-    cleanCacheRange_PoU ptr w p
-   \<lbrace>\<lambda>_ m. P (underlying_memory m)\<rbrace>"
-  by (simp add: cleanCacheRange_PoU_def cleanByVA_PoU_def machine_op_lift_def machine_rest_lift_def
-                split_def | wp)+
-end
 
 lemma cte_wp_at_trans_state[simp]: "cte_wp_at P ptr (kheap_update f (trans_state f' s)) =
        cte_wp_at P ptr (kheap_update f s)"
@@ -3541,4 +3519,6 @@ lemma no_cap_to_obj_with_diff_ref_more_update[simp]:
   "no_cap_to_obj_with_diff_ref cap sl (trans_state f s) =
    no_cap_to_obj_with_diff_ref cap sl s"
   by (simp add: no_cap_to_obj_with_diff_ref_def)
+end
+
 end

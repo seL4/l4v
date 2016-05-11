@@ -9,8 +9,16 @@
  *)
 
 theory Tcb_AI
-imports CNodeInv_AI
+imports "./$L4V_ARCH/ArchCNodeInv_AI"
 begin
+
+locale Tcb_AI begin
+
+extend_locale 
+  fixes Tcb_AI_dummy_const :: nat
+  assumes Tcb_AI_trivial_asm: "Tcb_AI_dummy_const > 0"
+
+end
  
 lemma ct_in_state_weaken:
   "\<lbrakk> ct_in_state Q s; \<And>st. Q st \<Longrightarrow> P st \<rbrakk> \<Longrightarrow> ct_in_state P s"

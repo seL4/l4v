@@ -14,8 +14,16 @@ recursive revoke and delete operations.
 *)
 
 theory CNodeInv_AI
-imports Ipc_AI
+imports "./$L4V_ARCH/ArchIpc_AI"
 begin
+
+locale CNodeInv_AI begin
+
+extend_locale 
+  fixes CNodeInv_AI_dummy_const :: nat
+  assumes CNodeInv_AI_trivial_asm: "CNodeInv_AI_dummy_const > 0"
+
+end
 
 primrec
   valid_cnode_inv :: "cnode_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"

@@ -15,9 +15,9 @@ Refinement for handleEvent and syscalls
 theory Syscall_AI
 imports
   BCorres2_AI
-  Tcb_AI
-  Arch_AI
-  Interrupt_AI
+  "./$L4V_ARCH/ArchTcb_AI"
+  "./$L4V_ARCH/ArchArch_AI"
+  "./$L4V_ARCH/ArchInterrupt_AI"
 begin
 
 lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
