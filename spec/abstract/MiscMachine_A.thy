@@ -15,33 +15,50 @@ Utilities for the machine level which are not machine-dependent.
 chapter "Machine Accessor Functions"
 
 theory MiscMachine_A
-imports "./$L4V_ARCH/Machine_A"
+imports "./$L4V_ARCH/Machine_A" "../machine/MachineExports"
 begin
 
-text {* Miscellaneous definitions of constants used in modelling machine
-operations. *}
+context begin interpretation Arch .
 
-definition
-  nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref" where
-  "nat_to_cref ln n \<equiv> drop (word_bits - ln)
-                           (to_bl (of_nat n :: machine_word))"
+requalify_types
+  user_context 
+  register 
+  data 
+  obj_ref
+  asid_index
+  asid_pool_index
+  cap_ref
+  length_type
+  vspace_ref
+  data_offset   
 
-definition
- "msg_info_register \<equiv> msgInfoRegister"
-definition
- "msg_registers \<equiv> msgRegisters"
-definition
- "cap_register \<equiv> capRegister"
-definition
- "badge_register \<equiv> badgeRegister"
-definition
- "frame_registers \<equiv> frameRegisters"
-definition
- "gp_registers \<equiv> gpRegisters"
-definition
- "exception_message \<equiv> exceptionMessage"
-definition
- "syscall_message \<equiv> syscallMessage"
+requalify_consts
+  nat_to_cref
+  msg_info_register
+  msg_registers
+  cap_register
+  badge_register
+  frame_registers
+  gp_registers
+  exception_message
+  syscall_message
+
+  new_context
+  slot_bits
+  oref_to_data
+  data_to_oref
+  vref_to_data
+  data_to_vref
+  nat_to_len
+  data_to_nat
+  data_to_16
+  data_to_cptr
+  data_offset_to_nat
+  combine_ntfn_badges
+  
+
+end
+
 
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 
@@ -56,5 +73,6 @@ definition
 definition
   set_register :: "register \<Rightarrow> data \<Rightarrow> unit user_monad" where
   "set_register r v \<equiv> modify (\<lambda>uc. uc (r := v))"
+
 
 end

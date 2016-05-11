@@ -22,6 +22,16 @@ imports
   "./$L4V_ARCH/ArchStateData_H"
 begin
 
+context begin interpretation Arch .
+
+requalify_types
+  vmpage_size
+
+end
+
+requalify_types (in Arch)
+  kernel_state
+
 subsection "The Kernel State"
 
 type_synonym ready_queue = "machine_word list"
@@ -50,8 +60,14 @@ record kernel_state =
   ksSchedulerAction    :: scheduler_action
   ksInterruptState     :: interrupt_state
   ksWorkUnitsCompleted :: machine_word
-  ksArchState          :: ArchStateData_H.kernel_state
+  ksArchState          :: Arch.kernel_state
   ksMachineState       :: machine_state
+
+context Arch begin
+context begin global_naming global
+requalify_types KernelStateData_H.kernel_state
+end
+end
 
 type_synonym 'a kernel = "(kernel_state, 'a) nondet_monad"
 
@@ -164,7 +180,7 @@ decDomainTime :: "unit kernel"
 where
 "decDomainTime\<equiv> modify (\<lambda> ks. ks \<lparr> ksDomainTime := ksDomainTime ks - 1 \<rparr>)"
 
-consts
+consts'
 capHasProperty :: "machine_word \<Rightarrow> (capability \<Rightarrow> bool) \<Rightarrow> kernel_state \<Rightarrow> bool"
 
 

@@ -11,6 +11,7 @@
 theory ArchInterrupt_H
 imports "../RetypeDecls_H" "../CNode_H" "../InterruptDecls_H" ArchInterruptDecls_H
 begin
+context Arch begin global_naming ARM_H
 
 defs decodeIRQControlInvocation_def:
 "decodeIRQControlInvocation arg1 arg2 arg3 arg4 \<equiv> throw IllegalOperation"
@@ -22,4 +23,5 @@ defs checkIRQ_def:
 "checkIRQ irq\<equiv> rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)"
 
 
+end
 end

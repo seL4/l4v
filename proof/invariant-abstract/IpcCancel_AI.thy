@@ -317,6 +317,7 @@ lemma get_epq_sp:
   apply (wp|simp)+
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch v_ker_map[wp]: set_endpoint "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
@@ -324,18 +325,7 @@ crunch v_ker_map[wp]: set_endpoint "valid_kernel_mappings"
 crunch eq_ker_map[wp]: set_endpoint "equal_kernel_mappings"
   (ignore: set_object wp: set_object_equal_mappings crunch_wps)
 
-
-lemma set_endpoint_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_pd_mappings\<rbrace>
-      set_endpoint p val
-   \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
-  apply (simp add: set_endpoint_def)
-  apply (wp get_object_wp set_object_global_pd_mappings)
-  apply (clarsimp simp: obj_at_def a_type_def
-                 split: Structures_A.kernel_object.split_asm
-                        arch_kernel_obj.splits)
-  done  
-
+end
 
 lemma set_ep_cap_refs_in_kernel_window [wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_endpoint ep p \<lbrace>\<lambda>_. cap_refs_in_kernel_window\<rbrace>"
@@ -356,14 +346,6 @@ lemma set_endpoint_valid_ioc[wp]:
            split: Structures_A.kernel_object.splits)
   done
 
-
-lemma set_endpoint_vms[wp]:
-  "\<lbrace>valid_machine_state\<rbrace> set_endpoint p q \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
-  apply (simp add: valid_machine_state_def in_user_frame_def)
-  apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift hoare_vcg_ex_lift)
-  apply (simp add: set_endpoint_def)
-  apply (wp hoare_drop_imps)
-  done
 
 lemma refs_in_tcb_bound_refs:
   "(x, ref) \<in> tcb_bound_refs ntfn \<Longrightarrow> ref = TCBBound"

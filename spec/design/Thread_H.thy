@@ -19,9 +19,35 @@ imports
   Config_H
 begin
 
+context Arch begin
+
+requalify_consts
+  activateIdleThread
+  configureIdleThread
+  switchToIdleThread
+  switchToThread
+
+context begin global_naming global
+
+requalify_consts
+  ThreadDecls_H.configureIdleThread
+  ThreadDecls_H.switchToIdleThread
+  ThreadDecls_H.switchToThread
+
+end
+
+end
+
+context begin interpretation Arch .
+
+requalify_consts
+  capRegister
+
+end
+
 defs configureIdleThread_def:
 "configureIdleThread tcb\<equiv> (doE
-    ArchThreadDecls_H.configureIdleThread tcb;
+    Arch.configureIdleThread tcb;
     doKernelOp $ setThreadState IdleThreadState tcb
 odE)"
 
@@ -49,7 +75,7 @@ defs activateThread_def:
                 setThreadState Running thread
             od)
             | IdleThreadState \<Rightarrow>   (
-                ArchThreadDecls_H.activateIdleThread thread
+                Arch.activateIdleThread thread
             )
             | _ \<Rightarrow>   haskell_fail $ [] @ show state
             )
@@ -167,7 +193,7 @@ od)"
 
 defs switchToThread_def:
 "switchToThread thread\<equiv> (do
-        ArchThreadDecls_H.switchToThread thread;
+        Arch.switchToThread thread;
         tcbSchedDequeue thread;
         setCurThread thread
 od)"
@@ -175,7 +201,7 @@ od)"
 defs switchToIdleThread_def:
 "switchToIdleThread\<equiv> (do
         thread \<leftarrow> getIdleThread;
-        ArchThreadDecls_H.switchToIdleThread;
+        Arch.switchToIdleThread;
         setCurThread thread
 od)"
 
@@ -216,7 +242,7 @@ defs possibleSwitchTo_def:
                 then setSchedulerAction $ SwitchToThread target
                 else tcbSchedEnqueue target;
             (case action of
-                  SwitchToThread v6 \<Rightarrow>   rescheduleRequired
+                  SwitchToThread v18 \<Rightarrow>   rescheduleRequired
                 | _ \<Rightarrow>   return ()
                 )
         od)
@@ -385,15 +411,15 @@ where
        (cap, srcSlot) = arg
     in
     constOnFailure (mi \<lparr> msgExtraCaps := fromIntegral n \<rparr>) $ (
-        (let (v3, v4, v5) = (cap, ep, slots) in
-            if isEndpointCap v3 \<and> v4 \<noteq> None \<and> capEPPtr v3 = the v4
-            then let p1 = capEPPtr v3; p2 = p1
+        (let (v21, v22, v23) = (cap, ep, slots) in
+            if isEndpointCap v21 \<and> v22 \<noteq> None \<and> capEPPtr v21 = the v22
+            then let p1 = capEPPtr v21; p2 = p1
             in  (doE
                 withoutFailure $
                     setExtraBadge rcvBuffer (capEPBadge cap) n;
                 withoutFailure $ transferAgain slots miCapUnfolded
             odE)
-            else (case v5 of
+            else (case v23 of
             destSlot # slots' \<Rightarrow>  (doE
                 cap' \<leftarrow> unifyFailure $ deriveCap srcSlot $ cap;
                 whenE (isNullCap cap') $ throw undefined;
@@ -417,7 +443,7 @@ defs doIPCTransfer_def:
                     sender sendBuffer endpoint badge grant
                     receiver receiveBuffer
               od)
-            | Some v1 \<Rightarrow>   (
+            | Some v25 \<Rightarrow>   (
                 doFaultTransfer badge sender receiver receiveBuffer
             )
             )

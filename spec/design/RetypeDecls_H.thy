@@ -18,53 +18,53 @@ imports
   Invocations_H
 begin
 
-consts
+consts'
 deriveCap :: "machine_word \<Rightarrow> capability \<Rightarrow> ( syscall_error , capability ) kernel_f"
 
-consts
+consts'
 finaliseCap :: "capability \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> (capability * irq option) kernel"
 
-consts
+consts'
 recycleCap :: "bool \<Rightarrow> capability \<Rightarrow> capability kernel"
 
-consts
+consts'
 hasRecycleRights :: "capability \<Rightarrow> bool"
 
-consts
+consts'
 sameRegionAs :: "capability \<Rightarrow> capability \<Rightarrow> bool"
 
-consts
+consts'
 isPhysicalCap :: "capability \<Rightarrow> bool"
 
-consts
+consts'
 sameObjectAs :: "capability \<Rightarrow> capability \<Rightarrow> bool"
 
-consts
+consts'
 updateCapData :: "bool \<Rightarrow> machine_word \<Rightarrow> capability \<Rightarrow> capability"
 
-consts
+consts'
 badgeBits :: "nat"
 
-consts
+consts'
 maskCapRights :: "cap_rights \<Rightarrow> capability \<Rightarrow> capability"
 
-consts
+consts'
 createObject :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> capability kernel"
 
-consts
+consts'
 decodeInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
-consts
+consts'
 performInvocation :: "bool \<Rightarrow> bool \<Rightarrow> invocation \<Rightarrow> machine_word list kernel_p"
 
-consts
+consts'
 capUntypedPtr :: "capability \<Rightarrow> machine_word"
 
-consts
+consts'
 capUntypedSize :: "capability \<Rightarrow> machine_word"
 
 
-consts
+consts'
 deletedIRQHandler :: "irq \<Rightarrow> unit kernel"
 
 

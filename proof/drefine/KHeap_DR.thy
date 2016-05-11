@@ -12,6 +12,8 @@ theory KHeap_DR
 imports Intent_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma nat_bl_to_bin_surj:
   "\<exists>bl. n = nat (bl_to_bin bl)"
   using n_less_equal_power_2[where n=n, folded zless_int, simplified]
@@ -447,7 +449,7 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s; valid_etcbs s\<
                 clarsimp simp: unat_map_def transform_page_table_contents_def cap_counts_def
                           transform_page_directory_contents_def transform_asid_pool_contents_def
                           transform_pte_def transform_pde_def transform_asid_pool_entry_def
-                    split:option.splits if_splits Arch_Structs_A.pte.splits Arch_Structs_A.pde.splits
+                    split:option.splits if_splits ARM_A.pte.splits ARM_A.pde.splits
                     dest!:assms)+)
   done
 
@@ -1568,7 +1570,7 @@ lemma ntfn_bound_set_lift:
                          transform_tcb_def restrict_map_Some_iff tcb_slots
                   split: Structures_A.kernel_object.splits option.splits
                          Structures_A.thread_state.splits 
-                         Arch_Structs_A.arch_kernel_obj.splits| drule(1) valid_etcbs_tcb_etcb)+
+                         ARM_A.arch_kernel_obj.splits| drule(1) valid_etcbs_tcb_etcb)+
   apply (clarsimp simp: transform_def transform_object_def
                         transform_tcb_def transform_objects_def tcb_slots valid_idle_def obj_at_def
                         infer_tcb_bound_notification_def map_add_def restrict_map_Some_iff pred_tcb_at_def
@@ -3537,4 +3539,4 @@ lemma set_cap_noop_dcorres2:
 
 end
 
-
+end

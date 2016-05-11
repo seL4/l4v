@@ -17,6 +17,7 @@ theory CNodeInv_R
 imports Ipc_R Invocations_R
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 primrec
   valid_cnode_inv' :: "Invocations_H.cnode_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -62,7 +63,7 @@ lemma maskCapRights_twice:
             split del: split_if)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability)
-  apply (simp_all add: ArchRetype_H.maskCapRights_def isCap_simps Let_def
+  apply (simp_all add: ARM_H.maskCapRights_def isCap_simps Let_def
                        maskVMRights_def
             split del: split_if)
   apply (simp split: vmrights.split bool.split)
@@ -98,7 +99,7 @@ lemma cap_relation_NullCap:
      apply simp
     apply simp
    apply (clarsimp simp: word_size word_size_def)
-  apply (clarsimp simp: ArchRetype_H.updateCapData_def isCap_simps split del: split_if)  
+  apply (clarsimp simp: ARM_H.updateCapData_def isCap_simps split del: split_if)  
   done 
 
 (* Sometimes I need something about the state. This is neater (IMHO) and req *)  
@@ -167,7 +168,7 @@ lemma reycleRightsEq:
   "cap_relation cap cap' \<Longrightarrow> hasRecycleRights cap' = has_recycle_rights cap"
   by (auto simp: hasRecycleRights_def has_recycle_rights_def all_rights_def
                     arch_has_recycle_rights_def
-                    ArchRetype_H.hasRecycleRights_def vmrights_map_def
+                    ARM_H.hasRecycleRights_def vmrights_map_def
                   split: cap.splits arch_cap.splits bool.splits if_splits |
          case_tac x)+
 
@@ -398,7 +399,7 @@ lemma mask_Zombiness[simp]:
   "isZombie (maskCapRights R cap) = isZombie cap"
   apply (cases cap, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all add: ArchRetype_H.maskCapRights_def Let_def)
+  apply (case_tac arch_capability, simp_all add: ARM_H.maskCapRights_def Let_def)
   done
 
 lemma updateCapData_Zombie:
@@ -427,7 +428,7 @@ lemma capBadge_updateCapData_True:
   "updateCapData True x c \<noteq> NullCap \<Longrightarrow> capBadge (updateCapData True x c) = capBadge c"
   apply (simp add: updateCapData_def isCap_simps Let_def
             split: split_if_asm split del: split_if)
-  apply (simp add: ArchRetype_H.updateCapData_def)
+  apply (simp add: ARM_H.updateCapData_def)
   done
 
 lemma badge_derived_updateCapData:
@@ -1776,6 +1777,8 @@ lemma ndom_is_0D:
   apply (drule tranclD)
   apply (clarsimp simp: next_unfold')
   done
+
+end
 
 (* almost exactly 1000 lines --- yuck.  There is a lot of redundancy here, but I doubt it is worth
    exploiting above the cut'n'paste already here.
@@ -4950,7 +4953,7 @@ proof -
     apply (erule_tac x=p in allE)
     apply simp
     apply (case_tac n)
-    apply (clarsimp simp: s_d_swap_def nullMDBNode_def nullPointer_def split: split_if_asm)
+    apply (clarsimp simp: s_d_swap_def nullMDBNode_def ARM_H.nullPointer_def split: split_if_asm)
     done
 qed
 
@@ -5192,6 +5195,8 @@ lemma cteSwap_valid_pspace'[wp]:
    apply (simp)
   apply clarsimp+
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch tcb_at [wp]: cteSwap "tcb_at' t"
 crunch sch [wp]: cteSwap "\<lambda>s. P (ksSchedulerAction s)"
@@ -6947,11 +6952,11 @@ lemma cteDelete_sch_act_simple:
 
 crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
-
-(* FIXME: move to Finalise_R *)
-crunch st_tcb_at'[wp]: "ArchRetypeDecls_H.finaliseCap", unbindMaybeNotification "st_tcb_at' P t"
+crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification "st_tcb_at' P t"
   (ignore: getObject setObject simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
+end
+
 
 lemma finaliseCap2_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -7053,6 +7058,8 @@ lemmas threadSet_ctesCaps_of = ctes_of_cteCaps_of_lift[OF threadSet_ctes_of]
 
 lemmas storePTE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePTE_ctes]
 lemmas storePDE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePDE_ctes]
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
@@ -7602,7 +7609,7 @@ next
            apply (clarsimp simp: cte_wp_at_caps_of_state)
            apply (erule disjE[where P="c = cap.NullCap \<and> P" for c P])
             apply clarsimp
-           apply (clarsimp simp: conj_comms dest!: is_cap_simps' [THEN iffD1])
+           apply (clarsimp simp: conj_comms dest!: is_cap_simps [THEN iffD1])
            apply (frule trans [OF _ appropriate_Zombie, OF sym])
            apply (case_tac rv, simp_all add: fst_cte_ptrs_def is_cap_simps
                                              is_final_cap'_def)[1]
@@ -8307,7 +8314,8 @@ lemma arch_recycleCap_improve_cases': "\<lbrakk>\<not> isPageCap param_b; \<not>
   apply simp+
   done
 
-crunch st_tcb_at'[wp]: "ArchRetypeDecls_H.recycleCap" "st_tcb_at' P t"
+
+crunch st_tcb_at'[wp]: "Arch.recycleCap" "st_tcb_at' P t"
   (ignore: getObject setObject
        wp: crunch_wps undefined_valid
      simp: crunch_simps arch_recycleCap_improve_cases')
@@ -8375,6 +8383,8 @@ lemma updateCap_valid_objs [wp]:
   apply (erule cte_at_cte_wp_atD)
   done
 
+end
+
 lemma (in mdb_move) [intro!]:
   shows "mdb_chain_0 m" using valid
   by (auto simp: valid_mdb_ctes_def)
@@ -8438,6 +8448,8 @@ lemma (in mdb_move) m'_cap:
 
 context mdb_move
 begin
+
+interpretation Arch . (*FIXME: arch_split*)
 
 lemma m_to_src:
   "m \<turnstile> p \<leadsto> src = (p \<noteq> 0 \<and> p = mdbPrev src_node)"
@@ -8563,7 +8575,7 @@ lemma sameRegion_cap'_src [simp]:
   apply (case_tac "isReplyCap src_cap")
    apply simp
   apply (clarsimp simp: capMasterCap_def split: capability.splits arch_capability.splits)
-         apply (auto simp: sameRegionAs_def ArchRetype_H.sameRegionAs_def isCap_simps split: split_if_asm)
+         apply (auto simp: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps split: split_if_asm)
   done
 
 lemma chunked':
@@ -8645,9 +8657,7 @@ lemma m'_revocable:
   apply (clarsimp simp: m'_def n_def modify_map_if nullMDBNode_def split: split_if_asm)
   done
 
-end
-
-lemma (in mdb_move) cteMove_valid_mdb_helper: 
+lemma cteMove_valid_mdb_helper: 
   "(isUntypedCap cap' \<Longrightarrow> cap' = src_cap) \<Longrightarrow>valid_mdb_ctes m'"
 proof  
   note sameRegion_cap'_src [simp del]
@@ -8969,6 +8979,10 @@ proof
     done
 
 qed
+
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma cte_wp_at_extract2':
   "\<lbrakk>cte_wp_at' (op = x) p s; cte_wp_at' P p s \<rbrakk> \<Longrightarrow> P x"
@@ -9499,9 +9513,9 @@ lemmas arch_recycleCap_improve_cases'' = arch_recycleCap_improve_cases'[simplifi
 
 lemma arch_recycleCap_valid[wp]:
   "\<lbrace>valid_cap' (ArchObjectCap cap) and valid_objs'\<rbrace>
-     ArchRetypeDecls_H.recycleCap is_final cap
+     Arch.recycleCap is_final cap
    \<lbrace>valid_cap' \<circ> capability.ArchObjectCap\<rbrace>"
-  apply (simp add: ArchRetype_H.recycleCap_def Let_def
+  apply (simp add: ARM_H.recycleCap_def Let_def
                    arch_recycleCap_improve_cases
                    doMachineOp_bind doMachineOp_return
                split del: split_if
@@ -9515,13 +9529,14 @@ lemma arch_recycleCap_valid[wp]:
 
 lemma recycleCap_valid[wp]:
   "\<lbrace>valid_cap' cap and valid_objs'\<rbrace> recycleCap is_final cap \<lbrace>valid_cap'\<rbrace>"
-  apply (simp add: recycleCap_def Let_def curDomain_def
+  apply (simp add: Retype_H.recycleCap_def Let_def curDomain_def
              cong: zombie_type.case_cong split del: split_if cong: if_cong)
   apply (rule hoare_pre)
    apply (wp typ_at_lifts [OF cancelBadgedSends_typ_at']
               | wpc | wp_once hoare_drop_imps)+
   apply (auto simp: isCap_simps valid_cap'_def capAligned_def objBits_simps)
   done
+
 
 crunch cte_wp_at'[wp]: recycleCap "cte_wp_at' P p"
   (ignore: filterM setObject getObject
@@ -9536,7 +9551,7 @@ lemma recycleCap_cases:
                                           ZombieTCB \<Rightarrow> isThreadCap rv
                                         | ZombieCNode n \<Rightarrow> isCNodeCap rv)
                                     \<and> capUntypedPtr rv = capUntypedPtr cap)\<rbrace>"
-  apply (simp add: recycleCap_def Let_def ArchRetype_H.recycleCap_def
+  apply (simp add: recycleCap_def Let_def ARM_H.recycleCap_def
                    arch_recycleCap_improve_cases
                       split del: split_if cong: if_cong)
   apply (rule hoare_pre)
@@ -9696,8 +9711,9 @@ declare withoutPreemption_lift [wp]
 
 crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
+
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
-  (wp: crunch_wps hoare_unless_wp getASID_wp
+  (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
        no_irq_invalidateTLB_ASID no_irq_setHardwareASID
        no_irq_setCurrentPD no_irq_invalidateTLB_VAASID
        no_irq_cleanByVA_PoU
@@ -9809,5 +9825,7 @@ lemma inv_cnode_IRQInactive:
            | wpc 
            | simp add: cteRecycle_def split_def)+
   done
+
+end
 
 end

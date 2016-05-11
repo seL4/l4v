@@ -13,249 +13,251 @@ chapter "Retyping Objects"
 theory ArchVSpaceDecls_H
 imports ArchRetypeDecls_H "../InvocationLabels_H"
 begin
+context Arch begin global_naming ARM_H
 
-consts
+consts'
 globalsBase :: "vptr"
 
-consts
+consts'
 idleThreadStart :: "vptr"
 
-consts
+consts'
 idleThreadCode :: "machine_word list"
 
-consts
+consts'
 mapKernelWindow :: "unit kernel"
 
-consts
+consts'
 createSectionPDE :: "vptr \<Rightarrow> unit kernel"
 
-consts
+consts'
 mapKernelDevice :: "(paddr * machine_word) \<Rightarrow> unit kernel"
 
-consts
+consts'
 activateGlobalVSpace :: "unit kernel"
 
-consts
+consts'
 createITPDPTs :: "capability \<Rightarrow> vptr \<Rightarrow> vptr \<Rightarrow> capability kernel_init"
 
-consts
+consts'
 writeITPDPTs :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel_init"
 
-consts
+consts'
 createITASIDPool :: "capability \<Rightarrow> capability kernel_init"
 
-consts
+consts'
 writeITASIDPool :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel"
 
-consts
+consts'
 mapITPTCap :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel"
 
-consts
+consts'
 mapITFrameCap :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel"
 
-consts
+consts'
 createIPCBufferFrame :: "capability \<Rightarrow> vptr \<Rightarrow> capability kernel_init"
 
-consts
+consts'
 createBIFrame :: "capability \<Rightarrow> vptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> capability kernel_init"
 
-consts
+consts'
 createITFrameCap :: "machine_word \<Rightarrow> vptr \<Rightarrow> asid option \<Rightarrow> bool \<Rightarrow> capability kernel_init"
 
-consts
+consts'
 vptrFromPPtr :: "machine_word \<Rightarrow> vptr kernel_init"
 
-consts
+consts'
 createFramesOfRegion :: "capability \<Rightarrow> region \<Rightarrow> bool \<Rightarrow> unit kernel_init"
 
-consts
+consts'
 mapGlobalsFrame :: "unit kernel"
 
-consts
+consts'
 writeIdleCode :: "unit kernel"
 
-consts
+consts'
 mapKernelFrame :: "paddr \<Rightarrow> vptr \<Rightarrow> vmrights \<Rightarrow> vmattributes \<Rightarrow> unit kernel"
 
-consts
+consts'
 getARMGlobalPT :: "(machine_word) kernel"
 
-consts
+consts'
 createDeviceFrames :: "capability \<Rightarrow> unit kernel_init"
 
-consts
+consts'
 copyGlobalMappings :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 createMappingEntries :: "paddr \<Rightarrow> vptr \<Rightarrow> vmpage_size \<Rightarrow> vmrights \<Rightarrow> vmattributes \<Rightarrow> machine_word \<Rightarrow> ( syscall_error , ((pte * machine_word list) + (pde * machine_word list)) ) kernel_f"
 
-consts
+consts'
 ensureSafeMapping :: "(pte * machine_word list) + (pde * machine_word list) \<Rightarrow> ( syscall_error , unit ) kernel_f"
 
-consts
+consts'
 lookupIPCBuffer :: "bool \<Rightarrow> machine_word \<Rightarrow> ((machine_word) option) kernel"
 
-consts
+consts'
 findPDForASID :: "asid \<Rightarrow> ( lookup_failure , (machine_word) ) kernel_f"
 
-consts
+consts'
 findPDForASIDAssert :: "asid \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 checkPDAt :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 checkPTAt :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 checkPDASIDMapMembership :: "machine_word \<Rightarrow> asid list \<Rightarrow> unit kernel"
 
-consts
+consts'
 checkPDUniqueToASID :: "machine_word \<Rightarrow> asid \<Rightarrow> unit kernel"
 
-consts
+consts'
 checkPDNotInASIDMap :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 lookupPTSlot :: "machine_word \<Rightarrow> vptr \<Rightarrow> ( lookup_failure , (machine_word) ) kernel_f"
 
-consts
+consts'
 lookupPTSlotFromPT :: "machine_word \<Rightarrow> vptr \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 lookupPDSlot :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word"
 
-consts
+consts'
 handleVMFault :: "machine_word \<Rightarrow> vmfault_type \<Rightarrow> ( fault , unit ) kernel_f"
 
-consts
+consts'
 deleteASIDPool :: "asid \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 deleteASID :: "asid \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 pageTableMapped :: "asid \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> ((machine_word) option) kernel"
 
-consts
+consts'
 unmapPageTable :: "asid \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 unmapPage :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 checkMappingPPtr :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> (machine_word) + (machine_word) \<Rightarrow> ( lookup_failure , unit ) kernel_f"
 
-consts
+consts'
 armv_contextSwitch_HWASID :: "machine_word \<Rightarrow> hardware_asid \<Rightarrow> unit machine_monad"
 
-consts
+consts'
 armv_contextSwitch :: "machine_word \<Rightarrow> asid \<Rightarrow> unit kernel"
 
-consts
+consts'
 setVMRoot :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 setVMRootForFlush :: "machine_word \<Rightarrow> asid \<Rightarrow> bool kernel"
 
-consts
+consts'
 isValidVTableRoot :: "capability \<Rightarrow> bool"
 
-consts
+consts'
 checkValidIPCBuffer :: "vptr \<Rightarrow> capability \<Rightarrow> ( syscall_error , unit ) kernel_f"
 
-consts
+consts'
 maskVMRights :: "vmrights \<Rightarrow> cap_rights \<Rightarrow> vmrights"
 
-consts
+consts'
 attribsFromWord :: "machine_word \<Rightarrow> vmattributes"
 
-consts
+consts'
 storeHWASID :: "asid \<Rightarrow> hardware_asid \<Rightarrow> unit kernel"
 
-consts
+consts'
 loadHWASID :: "asid \<Rightarrow> (hardware_asid option) kernel"
 
-consts
+consts'
 invalidateASID :: "asid \<Rightarrow> unit kernel"
 
-consts
+consts'
 invalidateHWASIDEntry :: "hardware_asid \<Rightarrow> unit kernel"
 
-consts
+consts'
 invalidateASIDEntry :: "asid \<Rightarrow> unit kernel"
 
-consts
+consts'
 findFreeHWASID :: "hardware_asid kernel"
 
-consts
+consts'
 getHWASID :: "asid \<Rightarrow> hardware_asid kernel"
 
-consts
+consts'
 doFlush :: "flush_type \<Rightarrow> vptr \<Rightarrow> vptr \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 
-consts
+consts'
 flushPage :: "vmpage_size \<Rightarrow> machine_word \<Rightarrow> asid \<Rightarrow> vptr \<Rightarrow> unit kernel"
 
-consts
+consts'
 flushTable :: "machine_word \<Rightarrow> asid \<Rightarrow> vptr \<Rightarrow> unit kernel"
 
-consts
+consts'
 flushSpace :: "asid \<Rightarrow> unit kernel"
 
-consts
+consts'
 invalidateTLBByASID :: "asid \<Rightarrow> unit kernel"
 
-consts
+consts'
 labelToFlushType :: "machine_word \<Rightarrow> flush_type"
 
-consts
+consts'
 pageBase :: "vptr \<Rightarrow> vmpage_size \<Rightarrow> vptr"
 
-consts
+consts'
 resolveVAddr :: "machine_word \<Rightarrow> vptr \<Rightarrow> ((vmpage_size * paddr) option) kernel"
 
-consts
-decodeARMMMUInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+consts'
+decodeARMMMUInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
-consts
-decodeARMPageFlush :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> arch_capability \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+consts'
+decodeARMPageFlush :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> arch_capability \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
-consts
+consts'
 checkVPAlignment :: "vmpage_size \<Rightarrow> vptr \<Rightarrow> ( syscall_error , unit ) kernel_f"
 
-consts
+consts'
 checkValidMappingSize :: "vmpage_size \<Rightarrow> unit kernel"
 
-consts
-performARMMMUInvocation :: "ArchRetypeDecls_H.invocation \<Rightarrow> machine_word list kernel_p"
+consts'
+performARMMMUInvocation :: "invocation \<Rightarrow> machine_word list kernel_p"
 
-consts
+consts'
 performPageDirectoryInvocation :: "page_directory_invocation \<Rightarrow> unit kernel"
 
-consts
+consts'
 performPageTableInvocation :: "page_table_invocation \<Rightarrow> unit kernel"
 
-consts
+consts'
 pteCheckIfMapped :: "machine_word \<Rightarrow> bool kernel"
 
-consts
+consts'
 pdeCheckIfMapped :: "machine_word \<Rightarrow> bool kernel"
 
-consts
+consts'
 performPageInvocation :: "page_invocation \<Rightarrow> unit kernel"
 
-consts
+consts'
 performASIDControlInvocation :: "asidcontrol_invocation \<Rightarrow> unit kernel"
 
-consts
+consts'
 performASIDPoolInvocation :: "asidpool_invocation \<Rightarrow> unit kernel"
 
-consts
+consts'
 storePDE :: "machine_word \<Rightarrow> pde \<Rightarrow> unit kernel"
 
-consts
+consts'
 storePTE :: "machine_word \<Rightarrow> pte \<Rightarrow> unit kernel"
 
 
+end
 end

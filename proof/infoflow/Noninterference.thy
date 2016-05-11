@@ -16,6 +16,7 @@ imports    "Noninterference_Base"
     "../access-control/ADT_AC"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 datatype 'a partition = Partition 'a | PSched
 
@@ -1269,6 +1270,8 @@ where
 crunch schact_is_rct[wp]: thread_set "schact_is_rct"  
   (simp: schact_is_rct_def)
 
+end
+
 context valid_initial_state begin
 
 definition part where
@@ -1311,6 +1314,8 @@ lemma Fin_big_step_adt:
   done
 
 context valid_initial_state begin
+
+interpretation Arch . (*FIXME: arch_split*)
 
 lemma small_step_reachable:
   "ni.reachable s \<Longrightarrow> system.reachable (ADT_A_if utf) s0 s"
@@ -3774,4 +3779,5 @@ lemma xnonleakage:
   done
 
 end
+
 end

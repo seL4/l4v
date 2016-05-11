@@ -16,6 +16,21 @@ theory ArchAcc_R
 imports SubMonad_R
 begin
 
+context Arch begin global_naming ARM_A (*FIXME: arch_split*)
+
+lemma asid_pool_at_ko:
+  "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (ARM_A.ASIDPool pool)) p s"
+  apply (clarsimp simp: obj_at_def a_type_def)
+  apply (case_tac ko, simp_all split: split_if_asm)
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj, auto)
+  done
+
+
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 declare if_cong[cong]
 
 lemma corres_gets_asid:
@@ -201,7 +216,7 @@ lemma pde_relation_aligned_simp:
   "pde_relation_aligned (ucast (p && mask pd_bits >> 2)::12 word) pde pde'
        = pde_relation_aligned ((p::word32) >> 2) pde pde'"
   by (clarsimp simp: pde_relation_aligned_def
-              split: Hardware_H.pde.splits if_splits)
+              split: ARM_H.pde.splits if_splits)
 
 lemma get_pde_corres:
   "corres (pde_relation_aligned (p >> 2)) (pde_at p) (pde_at' p)
@@ -276,7 +291,7 @@ lemma pde_relation_alignedD:
   apply (clarsimp simp:pde_relation_def)
   apply (drule_tac x = x in spec)
   apply (clarsimp simp:pde_relation_aligned_def
-     split:Hardware_H.pde.splits)
+     split:ARM_H.pde.splits)
   done
 
 lemma pde_at_ksPSpace_not_None:
@@ -331,7 +346,7 @@ lemma get_master_pde_corres:
       projectKOs and_not_mask_twice)
     apply (simp add: bind_assoc exec_gets)
     apply (clarsimp simp: pde_at_def obj_at_def)
-    apply (clarsimp split:Arch_Structs_A.pde.splits)
+    apply (clarsimp split:ARM_A.pde.splits)
     apply (intro conjI impI)
   -- "master_pde = InvaliatePTE"
        apply (clarsimp simp add: a_type_def return_def get_pd_def
@@ -345,7 +360,7 @@ lemma get_master_pde_corres:
          apply assumption
         apply (simp add:mask_pd_bits_inner_beauty)
        apply (clarsimp simp: pde_relation_aligned_def
-                      split: if_splits Hardware_H.pde.splits)
+                      split: if_splits ARM_H.pde.splits)
        apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
           apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
          apply (clarsimp simp: vs_ptr_align_def and_not_mask_twice)
@@ -371,7 +386,7 @@ lemma get_master_pde_corres:
         apply assumption
        apply (simp add:mask_pd_bits_inner_beauty)
       apply (clarsimp simp:pde_relation_aligned_def
-        split:if_splits Hardware_H.pde.splits)
+        split:if_splits ARM_H.pde.splits)
       apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
           apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
          apply (clarsimp simp: vs_ptr_align_def)
@@ -396,7 +411,7 @@ lemma get_master_pde_corres:
        apply assumption
       apply (simp add:mask_pd_bits_inner_beauty)
      apply (clarsimp simp:pde_relation_aligned_def
-       split:if_splits Hardware_H.pde.splits)
+       split:if_splits ARM_H.pde.splits)
      apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
          apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
         apply (clarsimp simp: vs_ptr_align_def)
@@ -474,7 +489,7 @@ lemma pte_relation_aligned_simp:
   "pte_relation_aligned (ucast (p && mask pt_bits >> 2)::word8) pde pde' =
    pte_relation_aligned ((p::word32) >> 2) pde pde'"
   by (clarsimp simp: pte_relation_aligned_def
-              split: Hardware_H.pte.splits if_splits)
+              split: ARM_H.pte.splits if_splits)
 
 lemma get_pte_corres:
   "corres (pte_relation_aligned (p >> 2)) (pte_at p) (pte_at' p)
@@ -603,7 +618,7 @@ lemma get_master_pte_corres:
       projectKOs and_not_mask_twice)
     apply (simp add: bind_assoc exec_gets)
     apply (clarsimp simp: pte_at_def obj_at_def)
-    apply (clarsimp split:Arch_Structs_A.pte.splits)
+    apply (clarsimp split:ARM_A.pte.splits)
     apply (intro conjI impI)
   -- "master_pde = InvaliatePTE"
       apply (clarsimp simp add: a_type_def return_def get_pt_def
@@ -616,7 +631,7 @@ lemma get_master_pte_corres:
         apply assumption
        apply (simp add:mask_pt_bits_inner_beauty)
       apply (clarsimp simp:pte_relation_aligned_def
-        split:if_splits Hardware_H.pte.splits)
+        split:if_splits ARM_H.pte.splits)
       apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
           apply (simp add:is_aligned_weaken[where y = 2] is_aligned_neg_mask)
          apply (clarsimp simp: vs_ptr_align_def)
@@ -677,7 +692,7 @@ lemma get_master_pte_corres:
      apply assumption
     apply (simp add:mask_pt_bits_inner_beauty)
    apply (clarsimp simp:pte_relation_aligned_def
-     split:if_splits Hardware_H.pte.splits)
+     split:if_splits ARM_H.pte.splits)
    apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
        apply (simp add:is_aligned_weaken[where y = 2] is_aligned_neg_mask)
       apply (clarsimp simp: vs_ptr_align_def)
@@ -990,7 +1005,7 @@ lemma page_table_at_state_relation:
    apply fastforce
   apply clarsimp
   apply (frule(1) pspace_alignedD)
-   apply (simp add:Platform.ptrFromPAddr_def ptBits_def pageBits_def)
+   apply (simp add:ptrFromPAddr_def ptBits_def pageBits_def)
   apply clarsimp
   apply (drule_tac x = "ucast y" in spec)
   apply (drule sym[where s = "pspace_dom (kheap s)"])
@@ -1084,7 +1099,7 @@ lemma lookup_pt_slot_corres:
      apply simp
     apply (case_tac rv, simp_all add: lookup_failure_map_def lookupPTSlotFromPT_def
                                       pde_relation_aligned_def
-                               split: Hardware_H.pde.splits)[1]
+                               split: ARM_H.pde.splits)[1]
     apply (simp add: returnOk_liftE checkPTAt_def)
     apply (rule corres_stateAssert_implied[where P=\<top>, simplified])
      apply simp
@@ -1132,7 +1147,7 @@ lemma align_entry_add_cong:
   \<Longrightarrow> is_aligned (pd + x >> 2) (pde_align' y)  =
       is_aligned (pd' + x >> 2) (pde_align' y) "
   apply (clarsimp simp: pde_align'_def is_aligned_mask mask_def
-                 split: Hardware_H.pde.splits)
+                 split: ARM_H.pde.splits)
   apply word_bitwise
   apply auto
   done
@@ -1143,7 +1158,7 @@ lemma copy_global_mappings_corres:
           (copy_global_mappings pd) (copyGlobalMappings pd)"
   apply (simp add: copy_global_mappings_def copyGlobalMappings_def)
   apply (simp add: pd_bits_def pdBits_def objBits_simps
-                   archObjSize_def kernel_base_def Platform.kernelBase_def kernelBase_def)
+                   archObjSize_def kernel_base_def ARM.kernelBase_def ARM_H.kernelBase_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [where r'="op =" and P=\<top>  and P'=\<top>])
        prefer 2
@@ -1188,8 +1203,8 @@ lemma copy_global_mappings_corres:
 lemma arch_cap_rights_update:
   "acap_relation c c' \<Longrightarrow>
    cap_relation (cap.ArchObjectCap (acap_rights_update (acap_rights c \<inter> msk) c))
-                 (ArchRetypeDecls_H.maskCapRights (rights_mask_map msk) c')"
-  apply (cases c, simp_all add: ArchRetype_H.maskCapRights_def
+                 (Arch.maskCapRights (rights_mask_map msk) c')"
+  apply (cases c, simp_all add: ARM_H.maskCapRights_def
                                 acap_rights_update_def Let_def isCap_simps)
   apply (simp add: maskVMRights_def vmrights_map_def rights_mask_map_def
                    validate_vm_rights_def vm_read_write_def vm_read_only_def
@@ -1197,8 +1212,8 @@ lemma arch_cap_rights_update:
   done
 
 lemma arch_deriveCap_inv:
-  "\<lbrace>P\<rbrace> ArchRetypeDecls_H.deriveCap arch_cap u \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp      add: ArchRetype_H.deriveCap_def
+  "\<lbrace>P\<rbrace> Arch.deriveCap arch_cap u \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (simp      add: ARM_H.deriveCap_def
                   cong: if_cong
              split del: split_if)
   apply (rule hoare_pre, wp undefined_valid)
@@ -1207,15 +1222,15 @@ lemma arch_deriveCap_inv:
 
 lemma arch_deriveCap_valid:
   "\<lbrace>valid_cap' (ArchObjectCap arch_cap)\<rbrace>
-     ArchRetypeDecls_H.deriveCap u arch_cap
+     Arch.deriveCap u arch_cap
    \<lbrace>\<lambda>rv. valid_cap' (ArchObjectCap rv)\<rbrace>,-"
-  apply (simp      add: ArchRetype_H.deriveCap_def
+  apply (simp      add: ARM_H.deriveCap_def
                   cong: if_cong
              split del: split_if)
   apply (rule hoare_pre, wp undefined_validE_R)
   apply (cases arch_cap, simp_all add: isCap_defs)
   apply (simp add: valid_cap'_def capAligned_def
-                   capUntypedPtr_def ArchRetype_H.capUntypedPtr_def)
+                   capUntypedPtr_def ARM_H.capUntypedPtr_def)
   done
 
 lemma arch_derive_corres:
@@ -1223,8 +1238,8 @@ lemma arch_derive_corres:
   corres (ser \<oplus> (\<lambda>c c'. cap_relation (cap.ArchObjectCap c) (ArchObjectCap c')))
          \<top> \<top> 
          (arch_derive_cap c) 
-         (ArchRetypeDecls_H.deriveCap slot c')"
-  unfolding arch_derive_cap_def ArchRetype_H.deriveCap_def Let_def
+         (Arch.deriveCap slot c')"
+  unfolding arch_derive_cap_def ARM_H.deriveCap_def Let_def
   apply (cases c, simp_all add: isCap_simps split: option.splits split del: split_if)
       apply (rule corres_noopE, wp, simp, rule no_fail_pre, wp)+
    apply clarsimp
@@ -1237,8 +1252,8 @@ definition
   "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PageCacheable \<in> R) (ParityEnabled \<in> R) (XNever \<in> R)"
 
 definition 
-  mapping_map :: "Arch_Structs_A.pte \<times> word32 list + Arch_Structs_A.pde \<times> word32 list \<Rightarrow> 
-                  Hardware_H.pte \<times> word32 list + Hardware_H.pde \<times> word32 list \<Rightarrow> bool"
+  mapping_map :: "ARM_A.pte \<times> word32 list + ARM_A.pde \<times> word32 list \<Rightarrow> 
+                  ARM_H.pte \<times> word32 list + ARM_H.pde \<times> word32 list \<Rightarrow> bool"
 where
   "mapping_map \<equiv> pte_relation' \<otimes> (op =) \<oplus> pde_relation' \<otimes> (op =)"
 
@@ -1281,7 +1296,7 @@ lemma create_mapping_entries_corres:
   done
 
 lemma pte_relation'_Invalid_inv [simp]:
-  "pte_relation' x Hardware_H.pte.InvalidPTE = (x = Arch_Structs_A.pte.InvalidPTE)"
+  "pte_relation' x ARM_H.pte.InvalidPTE = (x = ARM_A.pte.InvalidPTE)"
   by (cases x) auto
 
 definition
@@ -1304,7 +1319,7 @@ lemma valid_slots_typ_at':
 
 lemma createMappingEntries_valid_slots' [wp]:
   "\<lbrace>valid_objs' and
-    K (vmsz_aligned' base sz \<and> vmsz_aligned' vptr sz \<and> Platform.ptrFromPAddr base \<noteq> 0) \<rbrace>
+    K (vmsz_aligned' base sz \<and> vmsz_aligned' vptr sz \<and> ptrFromPAddr base \<noteq> 0) \<rbrace>
   createMappingEntries base vptr sz vm_rights attrib pd
   \<lbrace>\<lambda>m. valid_slots' m\<rbrace>, -"
   apply (simp add: createMappingEntries_def)
@@ -1332,7 +1347,7 @@ lemma ensure_safe_mapping_corres:
              apply simp
              apply (rule get_master_pte_corres')
             apply (case_tac rv, simp_all add: pte_relation_aligned_def 
-              corres_returnOk split:Hardware_H.pte.splits if_splits)[1]
+              corres_returnOk split:ARM_H.pte.splits if_splits)[1]
            apply wp[2]
           apply (wp hoare_drop_imps|wpc|simp add: 
             valid_mapping_entries_def)+
@@ -1343,7 +1358,7 @@ lemma ensure_safe_mapping_corres:
            apply simp
            apply (rule get_master_pte_corres')
           apply (case_tac rv, simp_all add: pte_relation_aligned_def 
-              corres_returnOk split:Hardware_H.pte.splits if_splits)[1]
+              corres_returnOk split:ARM_H.pte.splits if_splits)[1]
          apply wp[2]
        apply (wp hoare_drop_imps|wpc|simp add: 
             valid_mapping_entries_def)+
@@ -1645,4 +1660,5 @@ lemma loadWordUser_inv :
   unfolding loadWordUser_def 
   by (wp dmo_inv' loadWord_inv stateAssert_wp | simp)+
 
+end
 end

@@ -14,6 +14,8 @@ imports
   "../refine/Invariants_H"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 section "ctes"
 
 subsection "capabilities"
@@ -979,6 +981,8 @@ lemma valid_mdb_ctes_of_prev:
   apply (erule (2) valid_dlistE)
   apply (simp add: cte_wp_at_ctes_of)
   done
+
+end
 
 context kernel
 begin

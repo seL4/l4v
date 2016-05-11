@@ -13,8 +13,59 @@ Properties of machine operations.
 *)
 
 theory Machine_AI
-imports Bits_AI
+imports "../Bits_AI"
 begin
+
+
+definition
+  "no_irq f \<equiv> \<forall>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
+
+lemma wpc_helper_no_irq:
+  "no_irq f \<Longrightarrow>  wpc_helper (P, P') (Q, Q') (no_irq f)"
+  by (simp add: wpc_helper_def)
+
+wpc_setup "\<lambda>m. no_irq m" wpc_helper_no_irq
+
+ML {*
+structure CrunchNoIrqInstance : CrunchInstance =
+struct
+  type extra = unit;
+  val name = "no_irq";
+  val has_preconds = false;
+  fun mk_term _ body _ =
+    (Syntax.parse_term @{context} "no_irq") $ body;
+  fun get_precond _ = error "crunch no_irq should not be calling get_precond";
+  fun put_precond _ _ = error "crunch no_irq should not be calling put_precond";
+  val pre_thms = [];
+  val wpc_tactic = wp_cases_tactic_weak;
+  fun parse_extra ctxt extra
+        = case extra of
+            "" => (Syntax.parse_term ctxt "%_. True", ())
+          | _ => error "no_irq does not need a precondition";
+  val magic = Syntax.parse_term @{context}
+    "\<lambda>mapp_lambda_ignore. no_irq mapp_lambda_ignore"
+end;
+
+structure CrunchNoIrq : CRUNCH = Crunch(CrunchNoIrqInstance);
+*}
+
+setup {*
+  add_crunch_instance "no_irq" (CrunchNoIrq.crunch_x, CrunchNoIrq.crunch_ignore_add_del)
+*}
+
+crunch_ignore (no_irq) (add:
+  bind return "when" get gets fail
+  assert put modify unless select
+  alternative assert_opt gets_the
+  returnOk throwError lift bindE
+  liftE whenE unlessE throw_opt
+  assertE liftM liftME sequence_x
+  zipWithM_x mapM_x sequence mapM sequenceE_x
+  mapME_x catch select_f
+  handleE' handleE handle_elseE forM forM_x
+  zipWithM ignore_failure)
+
+context Arch begin
 
 lemma det_getRegister: "det (getRegister x)"
   by (simp add: getRegister_def)
@@ -291,53 +342,6 @@ lemma no_fail_ackInterrupt[wp]: "no_fail \<top> (ackInterrupt irq)"
 lemma no_fail_maskInterrupt[wp]: "no_fail \<top> (maskInterrupt irq bool)"
   by (simp add: maskInterrupt_def)
 
-definition
-  "no_irq f \<equiv> \<forall>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
-
-lemma wpc_helper_no_irq:
-  "no_irq f \<Longrightarrow>  wpc_helper (P, P') (Q, Q') (no_irq f)"
-  by (simp add: wpc_helper_def)
-
-wpc_setup "\<lambda>m. no_irq m" wpc_helper_no_irq
-
-ML {*
-structure CrunchNoIrqInstance : CrunchInstance =
-struct
-  type extra = unit;
-  val name = "no_irq";
-  val has_preconds = false;
-  fun mk_term _ body _ =
-    (Syntax.parse_term @{context} "no_irq") $ body;
-  fun get_precond _ = error "crunch no_irq should not be calling get_precond";
-  fun put_precond _ _ = error "crunch no_irq should not be calling put_precond";
-  val pre_thms = [];
-  val wpc_tactic = wp_cases_tactic_weak;
-  fun parse_extra ctxt extra
-        = case extra of
-            "" => (Syntax.parse_term ctxt "%_. True", ())
-          | _ => error "no_irq does not need a precondition";
-  val magic = Syntax.parse_term @{context}
-    "\<lambda>mapp_lambda_ignore. no_irq mapp_lambda_ignore"
-end;
-
-structure CrunchNoIrq : CRUNCH = Crunch(CrunchNoIrqInstance);
-*}
-
-setup {*
-  add_crunch_instance "no_irq" (CrunchNoIrq.crunch_x, CrunchNoIrq.crunch_ignore_add_del)
-*}
-
-crunch_ignore (no_irq) (add:
-  bind return "when" get gets fail
-  assert put modify unless select
-  alternative assert_opt gets_the
-  returnOk throwError lift bindE
-  liftE whenE unlessE throw_opt
-  assertE liftM liftME sequence_x
-  zipWithM_x mapM_x sequence mapM sequenceE_x
-  mapME_x catch select_f
-  handleE' handleE handle_elseE forM forM_x
-  zipWithM ignore_failure)
 
 
 lemma no_irq_use:
@@ -356,7 +360,7 @@ lemma machine_rest_lift_no_irq:
 
 crunch (no_irq) no_irq[wp, simp]: machine_op_lift
 
-lemma no_irq [wp]:
+lemma no_irq:
   "no_irq f \<Longrightarrow> \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
   by (simp add: no_irq_def)
 
@@ -454,6 +458,7 @@ lemma no_irq_resetTimer: "no_irq resetTimer"
 lemma no_irq_debugPrint: "no_irq (debugPrint $ xs)"
   by (simp add: no_irq_def)
 
+context notes no_irq[wp] begin
 
 lemma no_irq_ackInterrupt: "no_irq (ackInterrupt irq)"
   by (wp | clarsimp simp: no_irq_def ackInterrupt_def)+
@@ -744,5 +749,8 @@ lemma empty_fail_cleanInvalidateL1Caches[simp, intro!]:
 lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
   by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
+
+end
+end
 
 end

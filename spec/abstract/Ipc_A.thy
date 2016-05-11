@@ -18,6 +18,14 @@ theory Ipc_A
 imports Tcb_A
 begin
 
+context begin interpretation Arch .
+
+requalify_consts
+  set_message_info
+  lookup_ipc_buffer
+
+end
+
 section {* Getting and setting the message info register. *}
 
 definition

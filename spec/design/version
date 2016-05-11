@@ -1,4 +1,5 @@
-Built from git repo at /home/spacekitteh/verification/seL4/haskell by spacekitteh
+Built from git repo at /home/matthewb/verification/arch_split/seL4/haskell by matthewb
 
 Generated from changeset:
-0d0cf20 Fixed comments due to buggy haskell translator
+2f34d63 manual: Corrected introduction of cnode radix
+

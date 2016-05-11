@@ -15,6 +15,8 @@ imports
   "../drefine/Include_D"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
   cdl_cap_auth_conferred :: "cdl_cap \<Rightarrow> auth set"
 where
@@ -196,27 +198,27 @@ lemmas cdl_state_objs_to_policy_cases
     = cdl_state_bits_to_policy.cases[OF cdl_state_objs_to_policy_mem[THEN iffD1]]
 
 lemma transform_asid_rev [simp]:
-  "asid \<le> 2 ^ Arch_Structs_A.asid_bits - 1 \<Longrightarrow> transform_asid_rev (transform_asid asid) = asid"
+  "asid \<le> 2 ^ ARM_A.asid_bits - 1 \<Longrightarrow> transform_asid_rev (transform_asid asid) = asid"
   apply (clarsimp simp:transform_asid_def transform_asid_rev_def
-                       asid_high_bits_of_def Arch_Structs_A.asid_low_bits_def)
+                       asid_high_bits_of_def ARM_A.asid_low_bits_def)
   apply (clarsimp simp:ucast_nat_def)
   apply (subgoal_tac "asid >> 10 < 2 ^ asid_high_bits")
-   apply (simp add:Arch_Structs_A.asid_high_bits_def Arch_Structs_A.asid_bits_def)
+   apply (simp add:ARM_A.asid_high_bits_def ARM_A.asid_bits_def)
    apply (subst ucast_ucast_len)
     apply simp
    apply (subst shiftr_shiftl1)
     apply simp
    apply (subst ucast_ucast_mask)
    apply (simp add:mask_out_sub_mask)
-  apply (simp add:Arch_Structs_A.asid_high_bits_def)
+  apply (simp add:ARM_A.asid_high_bits_def)
   apply (rule shiftr_less_t2n[where m=8, simplified])
-  apply (simp add:Arch_Structs_A.asid_bits_def)
+  apply (simp add:ARM_A.asid_bits_def)
   done
 
 abbreviation
   "valid_asid_mapping mapping \<equiv> (case mapping of
     None \<Rightarrow> True
-  | Some (asid, ref) \<Rightarrow> asid \<le>  2 ^ Arch_Structs_A.asid_bits - 1)"
+  | Some (asid, ref) \<Rightarrow> asid \<le>  2 ^ ARM_A.asid_bits - 1)"
 
 lemma transform_asid_rev_transform_mapping [simp]:
   "valid_asid_mapping mapping \<Longrightarrow>
@@ -347,10 +349,10 @@ lemma caps_of_state_transform_opt_cap_rev:
                     split:option.splits)
    apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:split_if_asm)
    apply (clarsimp simp:is_real_cap_def is_null_cap_def transform_pte_def
-                   split:Arch_Structs_A.pte.splits)
+                   split:ARM_A.pte.splits)
   apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:split_if_asm)
   apply (clarsimp simp:is_real_cap_def is_null_cap_def transform_pde_def
-                  split:Arch_Structs_A.pde.splits)
+                  split:ARM_A.pde.splits)
   done
 
 abbreviation
@@ -485,9 +487,9 @@ lemma thread_state_cap_transform_tcb:
     apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def transform_asid_pool_entry_def
                     split:split_if_asm option.splits)
    apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def
-                   split:split_if_asm Arch_Structs_A.pte.splits)
+                   split:split_if_asm ARM_A.pte.splits)
   apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def
-                   split:split_if_asm Arch_Structs_A.pde.splits)
+                   split:split_if_asm ARM_A.pde.splits)
   done
 
 
@@ -515,9 +517,9 @@ lemma thread_bound_ntfn_cap_transform_tcb:
   apply (case_tac arch_obj;clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
   apply (clarsimp simp:transform_asid_pool_entry_def is_bound_ntfn_cap_def split:option.splits)
      apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def is_bound_ntfn_cap_def
-                   split:split_if_asm Arch_Structs_A.pte.splits)
+                   split:split_if_asm ARM_A.pte.splits)
   apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def is_bound_ntfn_cap_def
-                   split:split_if_asm Arch_Structs_A.pde.splits)
+                   split:split_if_asm ARM_A.pde.splits)
   done
 
 
@@ -849,7 +851,7 @@ lemma state_objs_transform_rev:
   done
 
 lemma state_vrefs_asidpool_control:
- "(pdptr, Invariants_AI.VSRef asid (Some Invariants_AI.AASIDPool), auth) \<in>
+ "(pdptr, VSRef asid (Some AASIDPool), auth) \<in>
                                 state_vrefs s poolptr \<Longrightarrow> auth = Control"
   apply (clarsimp simp:state_vrefs_def )
   apply (cases "kheap s poolptr")
@@ -860,7 +862,7 @@ lemma state_vrefs_asidpool_control:
   done
 
 lemma idle_thread_no_asid:
-  "\<lbrakk> invs s; Invariants_AI.caps_of_state s ptr = Some cap;
+  "\<lbrakk> invs s; caps_of_state s ptr = Some cap;
      asid \<in> cap_asid' cap \<rbrakk> \<Longrightarrow> fst ptr \<noteq> idle_thread s"
   apply (rule notI)
   apply (drule idle_thread_null_cap, simp+)
@@ -961,16 +963,16 @@ lemma opt_cap_Some_asid_real:
     apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
     apply (clarsimp simp:transform_asid_pool_entry_def split:option.splits)
    apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:split_if_asm)
-   apply (clarsimp simp:transform_pte_def split:Arch_Structs_A.pte.splits)
+   apply (clarsimp simp:transform_pte_def split:ARM_A.pte.splits)
   apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:split_if_asm)
-  apply (clarsimp simp:transform_pde_def split:Arch_Structs_A.pde.splits)
+  apply (clarsimp simp:transform_pde_def split:ARM_A.pde.splits)
   done
 
 lemma state_vrefs_asid_pool_transform_rev:
   "\<lbrakk> einvs s; cdl_asid_table (transform s) (fst (transform_asid asid)) = Some poolcap;
      \<not> is_null_cap poolcap; \<not> is_null_cap pdcap; pdptr = cap_object pdcap;
      opt_cap (cap_object poolcap, snd (transform_asid asid)) (transform s) = Some pdcap \<rbrakk> \<Longrightarrow>
-     (pdptr, VSRef (asid && mask Arch_Structs_A.asid_low_bits) (Some AASIDPool), Control)
+     (pdptr, VSRef (asid && mask ARM_A.asid_low_bits) (Some AASIDPool), Control)
           \<in> state_vrefs s (cap_object poolcap)"
   apply (subgoal_tac "cap_object poolcap \<noteq> idle_thread s")
    prefer 2
@@ -1036,7 +1038,7 @@ lemma state_asids_transform_rev:
   done
 
 lemma idle_thread_no_irqs:
-  "\<lbrakk> invs s; Invariants_AI.caps_of_state s ptr = Some cap;
+  "\<lbrakk> invs s; caps_of_state s ptr = Some cap;
      irq \<in> cap_irqs_controlled cap \<rbrakk> \<Longrightarrow> fst ptr \<noteq> idle_thread s"
   apply (rule notI)
   apply (drule idle_thread_null_cap, simp+)
@@ -1184,5 +1186,7 @@ lemma pas_refined_transform:
   apply (rule_tac A="cdl_state_irqs_to_policy aag (transform s)" in subsetD, simp)
   apply (clarsimp simp:state_irqs_transform)
   done
+
+end
 
 end

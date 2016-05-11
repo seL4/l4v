@@ -18,6 +18,8 @@ theory ArchInvocation_A
 imports "../Structures_A"
 begin
 
+context Arch begin global_naming ARM_A
+
 text {* These datatypes encode the arguments to the various possible
 ARM-specific system calls. Selectors are defined for various fields
 for convenience elsewhere. *}
@@ -74,5 +76,7 @@ datatype arch_copy_register_sets =
 
 -- "There are no additional interrupt control operations on ARM."
 typedecl arch_irq_control_invocation
+
+end
 
 end

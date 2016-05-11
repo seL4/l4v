@@ -21,6 +21,15 @@ imports
   "./$L4V_ARCH/Init_A"
 begin
 
+context begin interpretation Arch .
+
+requalify_consts
+  arch_perform_invocation
+  handle_vm_fault
+
+end
+
+
 text{*
 \label{c:syscall}
 

@@ -57,6 +57,8 @@ locale mdb_move =
   modify_map n (mdbNext src_node)
                (cteMDBNode_update (mdbPrev_update (\<lambda>_. dest)))"
 begin
+interpretation Arch . (*FIXME: arch_split*)
+
 
 lemmas src = m_p
 
@@ -898,7 +900,7 @@ lemma set_cap_not_quite_corres':
                 using cr
                 apply (fastforce simp: c p pspace_relations_def)+
                 done
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cap_move_corres:
   assumes cr: "cap_relation cap cap'"
   notes trans_state_update'[symmetric,simp]
@@ -1302,10 +1304,10 @@ lemma setObject_cte_ct:
 
 crunch ct[wp]: cteInsert "\<lambda>s. P (ksCurThread s)"
   (wp: setObject_cte_ct hoare_drop_imps ignore: setObject)
-
+end
 context mdb_insert
 begin
-
+interpretation Arch . (*FIXME: arch_split*)
 lemma n_src_dest:
   "n \<turnstile> src \<leadsto> dest"
   by (simp add: n_direct_eq)
@@ -1825,7 +1827,7 @@ lemma untyped_inc_prev_update:
 lemma is_derived_badge_derived':
   "is_derived' m src cap cap' \<Longrightarrow> badge_derived' cap cap'"
   by (simp add: is_derived'_def)
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cteInsert_mdb_chain_0:
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and
     (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)\<rbrace>
@@ -4524,14 +4526,14 @@ definition
   \<not> isCNodeCap cap \<and>
   \<not> isZombie cap \<and>
   \<not> isArchPageCap cap"
-
+end
 
 (* FIXME: duplicated *)
 locale mdb_insert_simple = mdb_insert +
   assumes safe_parent: "safe_parent_for' m src c'"
   assumes simple: "is_simple_cap' c'"
 begin
-
+interpretation Arch . (*FIXME: arch_split*)
 lemma dest_no_parent_n:
   "n \<turnstile> dest \<rightarrow> p = False"
   using src simple safe_parent
@@ -4732,7 +4734,7 @@ done
 lemma is_simple_cap'_maskedAsFull[simp]:
   "is_simple_cap' (maskedAsFull src_cap' c') =  is_simple_cap' src_cap'"
   by (auto simp: is_simple_cap'_def maskedAsFull_def isCap_simps split:if_splits)
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cins_corres_simple:
   assumes "cap_relation c c'" "src' = cte_map src" "dest' = cte_map dest"
   notes trans_state_update'[symmetric,simp]
@@ -5097,12 +5099,12 @@ lemma safe_parent_capClass:
   by (auto simp: safe_parent_for'_def isCap_simps sameRegionAs_def2 capRange_Master capRange_def
            capMasterCap_def
            split: capability.splits arch_capability.splits)
-
+end
 locale mdb_insert_simple' = mdb_insert_simple +
   fixes n'
   defines  "n' \<equiv> modify_map n (mdbNext src_node) (cteMDBNode_update (mdbPrev_update (\<lambda>_. dest)))"
 begin
-
+interpretation Arch . (*FIXME: arch_split*)
 lemma no_0_n' [intro!]: "no_0 n'" by (auto simp: n'_def)
 lemmas n_0_simps' [iff] = no_0_simps [OF no_0_n']
 
@@ -5886,7 +5888,7 @@ setUntypedCapAsFull (cteCap srcCTE) cap src
   apply wp
   apply clarsimp
 done
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cteInsert_simple_mdb':
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and K (capAligned cap) and
     (\<lambda>s. safe_parent_for' (ctes_of s) src cap) and K (is_simple_cap' cap) \<rbrace>
@@ -5976,7 +5978,7 @@ lemma cte_refs_maskCapRights[simp]:
   "cte_refs' (maskCapRights rghts cap) = cte_refs' cap"
   by (rule ext, cases cap,
       simp_all add: maskCapRights_def isCap_defs Let_def
-                    ArchRetype_H.maskCapRights_def
+                    ARM_H.maskCapRights_def
          split del: split_if
              split: arch_capability.split)
 
@@ -6225,7 +6227,7 @@ lemma diminished_Untyped' :
    (* 6 subgoals *)
    apply (rename_tac arch_capability R)
    apply (case_tac arch_capability)
-    apply (clarsimp simp: isCap_simps ArchRetype_H.maskCapRights_def maskCapRights_def
+    apply (clarsimp simp: isCap_simps ARM_H.maskCapRights_def maskCapRights_def
                           diminished'_def Let_def)+
 done
 
@@ -6349,4 +6351,5 @@ lemma updateFreeIndex_invs':
   apply (clarsimp simp:isCap_simps cte_wp_at_ctes_of)+
   done
 
+end
 end

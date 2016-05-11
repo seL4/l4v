@@ -12,6 +12,8 @@ theory ADT_AC
 imports Syscall_AC
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma pd_of_thread_same_agent:
   "\<lbrakk> pas_refined aag s; is_subject aag tcb_ptr;
      get_pd_of_thread (kheap s) (arch_state s) tcb_ptr = pd;
@@ -46,15 +48,13 @@ lemma objs_valid_tcb_vtable:
   done
 
 lemma pd_of_thread_page_directory_at:
-  "\<lbrakk> invs s;
-     (get_pd_of_thread (kheap s) (arch_state s) tcb) \<noteq> arm_global_pd (arch_state s) \<rbrakk>
+  "\<lbrakk> invs s; get_pd_of_thread (kheap s) (arch_state s) tcb \<noteq> arm_global_pd (arch_state s) \<rbrakk>
     \<Longrightarrow> page_directory_at ((get_pd_of_thread (kheap s) (arch_state s) tcb)) s"
   apply (clarsimp simp: get_pd_of_thread_def
-                  split: option.splits kernel_object.splits cap.splits arch_cap.splits
-                         if_splits)
+                 split: option.splits kernel_object.splits cap.splits arch_cap.splits if_splits)
   apply (frule_tac t=tcb in objs_valid_tcb_vtable[OF invs_valid_objs])
    apply (simp add: get_tcb_def)
-  apply (fastforce simp: valid_cap_def2 valid_cap_ref_def)
+  apply (fastforce simp: valid_cap_def2 valid_cap_ref_def valid_arch_cap_ref_simps)
   done
 
 lemma ptr_offset_in_ptr_range:
@@ -278,5 +278,7 @@ lemma do_user_op_respects:
   apply (drule_tac auth=Write in user_op_access')
       apply (simp add: vspace_cap_rights_to_auth_def)+
   done
+
+end
 
 end

@@ -12,6 +12,7 @@ theory TcbAcc_R
 imports CSpace_R
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 (* FIXME MOVE *)
 lemma hoare_pre_post:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> Q s ; \<lbrace> Q \<rbrace> f \<lbrace>\<lambda>_. Q \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>_. Q \<rbrace>"
@@ -356,7 +357,7 @@ lemma pspace_relation_tcb_at:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        Arch_Structs_A.arch_kernel_obj.split_asm)
+                        ARM_A.arch_kernel_obj.split_asm)
   apply (simp add: is_tcb obj_at_def)
   done
 
@@ -3624,9 +3625,9 @@ lemma store_word_corres:
   done
 
 lemmas msgRegisters_unfold
-  = State_H.msgRegisters_def
+  = ARM_H.msgRegisters_def
     msg_registers_def
-    MachineTypes.msgRegisters_def
+    ARM.msgRegisters_def
         [unfolded upto_enum_def, simplified,
          unfolded fromEnum_def enum_register, simplified,
          unfolded toEnum_def enum_register, simplified]
@@ -3639,12 +3640,12 @@ lemma get_mrs_corres:
   have S: "get = gets id"
     by (simp add: gets_def)
   have T: "corres (\<lambda>con regs. regs = map con msg_registers) (tcb_at t) (tcb_at' t)
-     (thread_get tcb_context t) (asUser t (mapM getRegister State_H.msgRegisters))"
+     (thread_get tcb_context t) (asUser t (mapM getRegister ARM_H.msgRegisters))"
     apply (subst thread_get_as_user)
     apply (rule corres_as_user')
     apply (subst mapM_gets)
      apply (simp add: getRegister_def)
-    apply (simp add: S State_H.msgRegisters_def msg_registers_def)
+    apply (simp add: S ARM_H.msgRegisters_def msg_registers_def)
     done
   show ?thesis
   apply (case_tac mi, simp add: get_mrs_def getMRs_def split del: split_if)
@@ -3825,7 +3826,7 @@ proof -
              (\<lambda>ra. do v \<leftarrow> asUser s (getRegister ra);
                       asUser r (setRegister ra v)
                    od)
-             (take (unat n) State_H.msgRegisters))"
+             (take (unat n) msgRegisters))"
     apply (rule corres_guard_imp)
     apply (rule_tac S=Id in corres_mapM, simp+)
         apply (rule corres_split_eqr [OF user_setreg_corres user_getreg_corres])
@@ -3960,7 +3961,7 @@ lemma lipcb_corres':
                 and pspace_distinct' and no_0_obj')
                (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
   apply (simp add: lookup_ipc_buffer_def lookupIPCBuffer_def
-                   ArchVSpace_H.lookupIPCBuffer_def)
+                   ARM_H.lookupIPCBuffer_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ threadget_corres])
        apply (simp add: getThreadBufferSlot_def locateSlot_conv)
@@ -4009,7 +4010,7 @@ lemma lipcb_corres:
 
 lemma lookupIPC_inv[wp]: "\<lbrace>I\<rbrace> lookupIPCBuffer w t \<lbrace>\<lambda>rv. I\<rbrace>"
   by (simp add:      lookupIPCBuffer_def nothingOnFailure_def
-                     ArchVSpace_H.lookupIPCBuffer_def Let_def
+                     ARM_H.lookupIPCBuffer_def Let_def
                      getThreadBufferSlot_def
           split del: split_if | wp crunch_wps)+
 
@@ -4916,7 +4917,7 @@ proof -
   qed
 
   show ?thesis
-    apply (wp dmo_invs' no_irq_storeWord)
+    apply (wp dmo_invs' no_irq_storeWord no_irq)
     apply (clarsimp simp: storeWord_def invs'_def valid_state'_def)
     apply (clarsimp simp: valid_machine_state'_def pointerInUserData_def
                assert_def simpler_modify_def fail_def bind_def return_def
@@ -4941,7 +4942,7 @@ proof -
   qed
 
   show ?thesis
-    apply (wp dmo_invs_no_cicd' no_irq_storeWord)
+    apply (wp dmo_invs_no_cicd' no_irq_storeWord no_irq)
     apply (clarsimp simp: storeWord_def invs'_def valid_state'_def)
     apply (clarsimp simp: valid_machine_state'_def pointerInUserData_def
                assert_def simpler_modify_def fail_def bind_def return_def
@@ -5048,7 +5049,7 @@ lemma set_eobject_corres':
    apply (clarsimp simp: non_exst_same_def)
    apply (case_tac bb; simp)
      apply (clarsimp simp: obj_at'_def other_obj_relation_def cte_relation_def tcb_relation_def projectKOs split: split_if_asm)+
-   apply (clarsimp simp: aobj_relation_cuts_def split: Arch_Structs_A.arch_kernel_obj.splits)
+   apply (clarsimp simp: aobj_relation_cuts_def split: ARM_A.arch_kernel_obj.splits)
    apply (rename_tac arch_kernel_obj obj d p ts)
    apply (case_tac arch_kernel_obj; simp)
      apply (clarsimp simp: pte_relation_def pde_relation_def is_tcb_def)+
@@ -5059,7 +5060,7 @@ lemma set_eobject_corres':
   apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: projectKOs)
   apply (insert e)
-  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits Arch_Structs_A.arch_kernel_obj.splits)
+  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits ARM_A.arch_kernel_obj.splits)
   done
 
 lemma set_eobject_corres:
@@ -5127,4 +5128,5 @@ lemma non_exst_same_timeSlice_upd[simp]:
   "non_exst_same tcb (tcbTimeSlice_update f tcb)"
   by (cases tcb, simp add: non_exst_same_def)
 
+end
 end

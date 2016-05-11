@@ -11,6 +11,7 @@
 theory Include_AI
 imports
   BCorres_AI
+  "./$L4V_ARCH/ArchCrunchSetup_AI"
   "../../lib/wp/Eisbach_WP"
   "../../spec/abstract/Syscall_A"
   "../../lib/LemmaBucket"
@@ -37,11 +38,7 @@ crunch_ignore (add: cap_fault_on_failure lookup_error_on_failure)
 
 crunch_ignore (add:
   storeWord storeWordVM loadWord setRegister getRegister getRestartPC
-  debugPrint set_register get_register invalidateTLB_ASID invalidateTLB_VAASID
-  cleanByVA cleanByVA_PoU invalidateByVA invalidateByVA_I invalidate_I_PoU
-  cleanInvalByVA branchFlush clean_D_PoU cleanInvalidate_D_PoC cleanInvalidateL2Range
-  invalidateL2Range cleanL2Range flushBTAC writeContextID isb dsb dmb
-  setHardwareASID setCurrentPD setNextPC maskInterrupt clearMemory throw_on_false)
+  set_register get_register setNextPC maskInterrupt  throw_on_false)
 
 crunch_ignore (add:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action

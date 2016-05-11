@@ -532,7 +532,7 @@ lemma cnode_invok_case_cleanup2:
 lemma Arch_hasRecycleRights_spec:
   "\<forall>cap. \<Gamma> \<turnstile> \<lbrace> ccap_relation (ArchObjectCap cap) \<acute>cap \<rbrace> 
              Call Arch_hasRecycleRights_'proc 
-             \<lbrace> \<acute>ret__unsigned_long = from_bool (ArchRetypeDecls_H.hasRecycleRights cap) \<rbrace>"
+             \<lbrace> \<acute>ret__unsigned_long = from_bool (Arch.hasRecycleRights cap) \<rbrace>"
   apply vcg
   apply clarsimp
   apply (rule conjI)
@@ -540,7 +540,7 @@ lemma Arch_hasRecycleRights_spec:
    apply (frule cap_get_tag_PageCap_frame [THEN iffD1], assumption)
    apply clarsimp
    apply (drule ccap_relation_PageCap_generics)
-   apply (auto simp: ArchRetype_H.hasRecycleRights_def 
+   apply (auto simp: ARM_H.hasRecycleRights_def 
                          vmrights_to_H_def true_def false_def 
                          vmrights_defs
                    dest: less_4_cases
@@ -550,13 +550,13 @@ lemma Arch_hasRecycleRights_spec:
    apply (frule cap_get_tag_PageCap_small_frame [THEN iffD1], assumption)
    apply clarsimp
    apply (drule ccap_relation_PageCap_generics)
-   apply (auto simp: ArchRetype_H.hasRecycleRights_def 
+   apply (auto simp: ARM_H.hasRecycleRights_def 
                          vmrights_to_H_def true_def false_def 
                          vmrights_defs
                    dest: less_4_cases
                    split: if_splits)[1]
   apply (case_tac cap,
-         auto simp: ArchRetype_H.hasRecycleRights_def
+         auto simp: ARM_H.hasRecycleRights_def
               dest: ccap_relation_frame_tags)[1]
   done
 
@@ -1457,6 +1457,8 @@ lemma decodeCNodeInvocation_ccorres:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 crunch valid_queues[wp]: insertNewCap "valid_queues"
   (wp: crunch_wps)
 
@@ -1488,6 +1490,8 @@ lemma deleteObjects_gsCNodes_at_pt:
 crunch gsCNodes[wp]: setThreadState "\<lambda>s. P (gsCNodes s)"
   (simp: unless_def)
 
+end
+
 context kernel_m begin
 
 lemma wordFromMessageInfo_spec:
@@ -1512,7 +1516,7 @@ lemma globals_update_id:
    by (simp add:id_def hrs_htd_update_def)
 
 lemma getObjectSize_spec:
-  "\<forall>s. \<Gamma>\<turnstile>\<lbrace>s. \<acute>t \<le> of_nat (length (enum::ArchTypes_H.object_type list) - 1)\<rbrace> Call getObjectSize_'proc
+  "\<forall>s. \<Gamma>\<turnstile>\<lbrace>s. \<acute>t \<le> of_nat (length (enum::object_type list) - 1)\<rbrace> Call getObjectSize_'proc
            \<lbrace>\<acute>ret__unsigned_long = of_nat (getObjectSize (object_type_to_H (t_' s)) (unat (userObjSize_' s)))\<rbrace>"
   apply vcg
   apply (clarsimp simp:ARMSmallPageBits_def ARMLargePageBits_def objBits_simps
@@ -1523,7 +1527,7 @@ lemma getObjectSize_spec:
   done
 
 lemma object_type_from_H_bound:
-  "object_type_from_H newType \<le> of_nat (length (enum::ArchTypes_H.object_type list) - Suc 0)"
+  "object_type_from_H newType \<le> of_nat (length (enum::object_type list) - Suc 0)"
   apply (simp add:enum_object_type enum_apiobject_type object_type_from_H_def)
   apply (case_tac newType)
   apply (clarsimp simp:ARMSmallPageBits_def ARMLargePageBits_def objBits_simps
@@ -2378,7 +2382,7 @@ lemma setThreadStateRestart_ct_active':
   done
 
 lemma toEnum_object_type_to_H:
-  "unat v \<le> (fromEnum::ArchTypes_H.object_type \<Rightarrow> nat) maxBound
+  "unat v \<le> (fromEnum::object_type \<Rightarrow> nat) maxBound
   \<Longrightarrow> toEnum (unat v) = (object_type_to_H (v::word32))"
   apply (simp add:enum_object_type enum_apiobject_type object_type_to_H_def toEnum_def
                   maxBound_less_length)
@@ -2404,7 +2408,7 @@ lemma valid_untyped_inv'_D:
   done
   
 lemma  object_type_from_to_H:
-  "unat v \<le> (fromEnum::ArchTypes_H.object_type \<Rightarrow> nat) maxBound
+  "unat v \<le> (fromEnum::object_type \<Rightarrow> nat) maxBound
          \<Longrightarrow> v = object_type_from_H (object_type_to_H v)"
   apply (simp add:toEnum_object_type_to_H[symmetric])
   apply (rule iffD1[OF word_unat.Rep_inject])
@@ -2592,7 +2596,7 @@ shows
                  apply (simp add: toEnum_eq_to_fromEnum_eq
                                   fromEnum_object_type_to_H
                                   object_type_from_H_def
-                                  fromAPIType_def ArchTypes_H.fromAPIType_def)
+                                  fromAPIType_def ARM_H.fromAPIType_def)
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
                apply (rule ccorres_split_when_throwError_cond
@@ -2604,7 +2608,7 @@ shows
                                        toEnum_eq_to_fromEnum_eq)
                  apply (simp add: fromEnum_object_type_to_H
                                   object_type_from_H_def
-                                  fromAPIType_def ArchTypes_H.fromAPIType_def)
+                                  fromAPIType_def ARM_H.fromAPIType_def)
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
                 apply (rule_tac xf'="nodeCap_'"
@@ -3015,7 +3019,7 @@ shows
    apply (clarsimp simp: linorder_not_less isCap_simps)
    apply (clarsimp simp: sysargs_rel_to_n)
    apply (rule conjI, clarsimp)
-   apply (clarsimp simp: ArchTypes_H.fromAPIType_def Types_H.fromAPIType_def)
+   apply (clarsimp simp: fromAPIType_def)
    apply (subgoal_tac "unat (args ! Suc 0) < word_bits")
     prefer 2
     apply (erule le_less_trans)

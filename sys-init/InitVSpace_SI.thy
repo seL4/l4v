@@ -18,6 +18,8 @@ imports
   SysInit_SI
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma all_fake_pd_caps_in_pd:
   "well_formed spec \<Longrightarrow>
    {(obj_id, slot). pd_at obj_id spec \<and> fake_pt_cap_at (obj_id, slot) spec} =
@@ -1152,5 +1154,7 @@ lemma init_pd_asids_sep:
   apply (rule mapM_x_wp', clarsimp)
   apply (wp sep_wp: set_asid_wp [where t=t], simp+, sep_solve)
   done
+
+end
 
 end

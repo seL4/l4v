@@ -10,12 +10,14 @@
 
 theory Syscall_IF
 imports    
-     "PasUpdates" (*Only needed for idle thread stuff*)
-     "Tcb_IF"
+    "PasUpdates" (*Only needed for idle thread stuff*)
+    "Tcb_IF"
     "Interrupt_IF"
     "Decode_IF"
 
 begin
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch_ignore (add: OR_choice set_scheduler_action)
 
@@ -911,7 +913,7 @@ lemma handle_interrupt_globals_equiv:
   apply (wp dmo_maskInterrupt_globals_equiv 
             dmo_return_globals_equiv
             send_signal_globals_equiv
-            VSpace_AI.dmo_ackInterrupt
+            dmo_ackInterrupt
             hoare_vcg_if_lift2
             hoare_drop_imps
             dxo_wp_weak
@@ -919,17 +921,18 @@ lemma handle_interrupt_globals_equiv:
             NonDetMonadLemmaBucket.no_fail_bind
             NonDetMonadLemmaBucket.bind_known_operation_eq  
             Retype_IF.dmo_mol_globals_equiv
-    | wpc  | simp add: Interrupt_AI.empty_fail_ackInterrupt dmo_bind_valid  ackInterrupt_def resetTimer_def invs_imps invs_valid_idle)+
+    | wpc  | simp add: dmo_bind_valid ackInterrupt_def resetTimer_def invs_imps invs_valid_idle)+
   
   done
 
-
+end
 
 axiomatization dmo_reads_respects where
-  dmo_getDFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op getDFSR)" and
-  dmo_getFAR_reads_respects: "reads_respects aag l \<top> (do_machine_op getFAR)" and
-  dmo_getIFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op getIFSR)"
+  dmo_getDFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op ARM.getDFSR)" and
+  dmo_getFAR_reads_respects: "reads_respects aag l \<top> (do_machine_op ARM.getFAR)" and
+  dmo_getIFSR_reads_respects: "reads_respects aag l \<top> (do_machine_op ARM.getIFSR)"
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma handle_vm_fault_reads_respects:
   "reads_respects aag l (K(is_subject aag thread)) (handle_vm_fault thread vmfault_type)"
@@ -1185,5 +1188,7 @@ lemma handle_event_globals_equiv:
               | wpc | simp add: handle_send_def handle_call_def Let_def
               | wp_once hoare_drop_imps | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle)+
   done
+
+end
 
 end

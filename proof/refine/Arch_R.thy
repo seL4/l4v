@@ -16,13 +16,15 @@ theory Arch_R
 imports Untyped_R Finalise_R
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 declare is_aligned_shiftl [intro!]
 declare is_aligned_shiftr [intro!]
 
 definition
   "asid_ci_map i \<equiv>  
-  case i of ArchInvocation_A.MakePool frame slot parent base \<Rightarrow> 
-  ArchRetypeDecls_H.MakePool frame (cte_map slot) (cte_map parent) base"
+  case i of ARM_A.MakePool frame slot parent base \<Rightarrow> 
+  ARM_H.MakePool frame (cte_map slot) (cte_map parent) base"
 
 definition
   "valid_aci' aci \<equiv> case aci of MakePool frame slot parent base \<Rightarrow> 
@@ -343,7 +345,7 @@ lemma pac_corres:
      by (fastforce simp:cte_wp_at_ctes_of)+
 
 definition
-  archinv_relation :: "arch_invocation \<Rightarrow> ArchRetypeDecls_H.invocation \<Rightarrow> bool"
+  archinv_relation :: "arch_invocation \<Rightarrow> Arch.invocation \<Rightarrow> bool"
 where
   "archinv_relation ai ai' \<equiv> case ai of
      arch_invocation.InvokePageTable pti \<Rightarrow> 
@@ -358,7 +360,7 @@ where
        \<exists>ap'. ai' = InvokeASIDPool ap' \<and>  ap' = asid_pool_invocation_map ap"
 
 definition
-  valid_arch_inv' :: "ArchRetypeDecls_H.invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_arch_inv' :: "Arch.invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_arch_inv' ai \<equiv> case ai of
      InvokePageTable pti \<Rightarrow> valid_pti' pti
@@ -428,7 +430,8 @@ lemma ARMMMU_improve_cases:
     else T)"
   by (cases cap, simp_all add: isCap_simps)
 
-crunch inv [wp]: "ArchRetypeDecls_H.decodeInvocation" "P"
+
+crunch inv [wp]: "ARM_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
    simp: forME_x_def crunch_simps
          ARMMMU_improve_cases
@@ -524,13 +527,13 @@ lemma page_base_corres[simp]:
   by (clarsimp simp: pageBase_def page_base_def complement_def)
 
 lemma flush_type_map:
-  "ArchLabelFuns_H.isPageFlushLabel (invocation_type (mi_label mi))
-   \<or> ArchLabelFuns_H.isPDFlushLabel (invocation_type (mi_label mi))
+  "ARM_H.isPageFlushLabel (invocation_type (mi_label mi))
+   \<or> ARM_H.isPDFlushLabel (invocation_type (mi_label mi))
   \<Longrightarrow> labelToFlushType (mi_label mi) =
           flush_type_map (label_to_flush_type (invocation_type (mi_label mi)))"
   by (clarsimp simp: label_to_flush_type_def labelToFlushType_def flush_type_map_def
-                        ArchLabelFuns_H.isPageFlushLabel_def ArchLabelFuns_H.isPDFlushLabel_def
-                 split: ArchInvocation_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
+                        ARM_H.isPageFlushLabel_def ARM_H.isPDFlushLabel_def
+                 split: ARM_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
 lemma resolve_vaddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
@@ -561,7 +564,7 @@ lemma resolve_vaddr_corres:
   done
 
 lemma dec_arch_inv_page_flush_corres:
-  "ArchLabelFuns_H.isPageFlushLabel (invocation_type (mi_label mi)) \<Longrightarrow>
+  "ARM_H.isPageFlushLabel (invocation_type (mi_label mi)) \<Longrightarrow>
    corres (ser \<oplus> archinv_relation)
            (invs and
             valid_cap (cap.ArchObjectCap (arch_cap.PageCap word seta vmpage_size option)) and
@@ -590,7 +593,7 @@ lemma dec_arch_inv_page_flush_corres:
                         throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 0;
                         returnOk $
                         arch_invocation.InvokePage $
-                        ArchInvocation_A.page_invocation.PageFlush
+                        ARM_A.page_invocation.PageFlush
                          (label_to_flush_type (invocation_type (mi_label mi))) (start + vaddr)
                          (end + vaddr - 1) (addrFromPPtr word + start) pd asid
                     odE
@@ -619,8 +622,8 @@ lemma dec_arch_inv_page_flush_corres:
       apply (rule corres_returnOk)
       apply (clarsimp simp: archinv_relation_def page_invocation_map_def
                             label_to_flush_type_def labelToFlushType_def flush_type_map_def
-                            ArchLabelFuns_H.isPageFlushLabel_def
-                     split: ArchRetypeDecls_H.flush_type.splits invocation_label.splits arch_invocation_label.splits)
+                            ARM_H.isPageFlushLabel_def
+                     split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
      apply wp
    apply (fastforce simp: valid_cap_def mask_def)
   apply auto
@@ -656,11 +659,11 @@ lemma vs_refs_pages_ptI:
   done
 
 lemmas vs_refs_pages_pt_largeI
-    = vs_refs_pages_ptI[where pte="Arch_Structs_A.pte.LargePagePTE x y z" for x y z,
+    = vs_refs_pages_ptI[where pte="ARM_A.pte.LargePagePTE x y z" for x y z,
         unfolded pte_ref_pages_def, simplified, OF _ refl]
 
 lemmas vs_refs_pages_pt_smallI
-    = vs_refs_pages_ptI[where pte="Arch_Structs_A.pte.SmallPagePTE x y z" for x y z,
+    = vs_refs_pages_ptI[where pte="ARM_A.pte.SmallPagePTE x y z" for x y z,
         unfolded pte_ref_pages_def, simplified, OF _ refl]
 
 lemma vs_refs_pages_pdI:
@@ -673,11 +676,11 @@ lemma vs_refs_pages_pdI:
   done
 
 lemmas vs_refs_pages_pd_sectionI
-    = vs_refs_pages_pdI[where pde="Arch_Structs_A.pde.SectionPDE x y z w" for x y z w,
+    = vs_refs_pages_pdI[where pde="ARM_A.pde.SectionPDE x y z w" for x y z w,
         unfolded pde_ref_pages_def, simplified, OF _ refl]
 
 lemmas vs_refs_pages_pd_supersectionI
-    = vs_refs_pages_pdI[where pde="Arch_Structs_A.pde.SuperSectionPDE x y z" for x y z,
+    = vs_refs_pages_pdI[where pde="ARM_A.pde.SuperSectionPDE x y z" for x y z,
         unfolded pde_ref_pages_def, simplified, OF _ refl]
 
 lemma get_master_pde_sp:
@@ -825,18 +828,18 @@ shows
      list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
    corres
    (ser \<oplus> archinv_relation)
-  (invs and valid_cap (cap.ArchObjectCap arch_cap) and 
+   (invs and valid_cap (cap.ArchObjectCap arch_cap) and 
         cte_wp_at (is_arch_diminished (cap.ArchObjectCap arch_cap)) slot and
-    (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_at (snd x) s))
-  (invs' and valid_cap' (capability.ArchObjectCap arch_cap') and
-    (\<lambda>s. \<forall>x\<in>set excaps'. s \<turnstile>' fst x \<and> cte_at' (snd x) s) and 
-    (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
-    (arch_decode_invocation (mi_label mi) args (to_bl cptr') slot
-       arch_cap excaps)
-    (ArchRetypeDecls_H.decodeInvocation (mi_label mi) args cptr'
-       (cte_map slot) arch_cap' excaps')" 
+     (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_at (snd x) s))
+   (invs' and valid_cap' (capability.ArchObjectCap arch_cap') and
+     (\<lambda>s. \<forall>x\<in>set excaps'. s \<turnstile>' fst x \<and> cte_at' (snd x) s) and 
+     (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+   (arch_decode_invocation (mi_label mi) args (to_bl cptr') slot
+      arch_cap excaps)
+   (Arch.decodeInvocation (mi_label mi) args cptr'
+     (cte_map slot) arch_cap' excaps')" 
   apply (simp add: arch_decode_invocation_def
-                   ArchRetype_H.decodeInvocation_def
+                   ARM_H.decodeInvocation_def
                    decodeARMMMUInvocation_def
               split del: split_if)
   apply (cases arch_cap)
@@ -1022,7 +1025,7 @@ shows
                          in corres_splitEE)
             prefer 2
             apply (rule corres_whenE)
-              apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def shiftl_t2n)
+              apply (simp add: kernel_base_def ARM.kernelBase_def kernelBase_def shiftl_t2n)
              apply (rule corres_trivial, simp)
             apply simp
            apply (rule corres_guard_imp)
@@ -1031,7 +1034,7 @@ shows
                 apply (rule check_vp_corres)
                apply (rule corres_splitEE)
                   prefer 2
-                  apply (simp only: Platform.addrFromPPtr_def)
+                  apply (simp only: addrFromPPtr_def)
                   apply (rule create_mapping_entries_corres)
                    apply (simp add: mask_vmrights_corres)
                   apply (simp add: vm_attributes_corres)
@@ -1094,7 +1097,7 @@ shows
               apply (rule check_vp_corres)
              apply (rule corres_splitEE)
                 prefer 2
-                apply (simp only: Platform.addrFromPPtr_def)
+                apply (simp only: addrFromPPtr_def)
                 apply (rule create_mapping_entries_corres)
                  apply (simp add: mask_vmrights_corres)
                 apply (simp add: vm_attributes_corres)
@@ -1131,12 +1134,12 @@ shows
      apply simp
      apply (rule corres_returnOk)
      apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
-    apply (cases "ArchLabelFuns_H.isPageFlushLabel (invocation_type (mi_label mi))")
-     apply (clarsimp simp: ArchLabelFuns_H.isPageFlushLabel_def split del: split_if)
+    apply (cases "ARM_H.isPageFlushLabel (invocation_type (mi_label mi))")
+     apply (clarsimp simp: ARM_H.isPageFlushLabel_def split del: split_if)
      apply (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: split_if)
         apply (rule dec_arch_inv_page_flush_corres, 
-                clarsimp simp: ArchLabelFuns_H.isPageFlushLabel_def)+
-    apply (clarsimp simp: ArchLabelFuns_H.isPageFlushLabel_def split del: split_if)
+                clarsimp simp: ARM_H.isPageFlushLabel_def)+
+    apply (clarsimp simp: ARM_H.isPageFlushLabel_def split del: split_if)
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageGetAddress")
      apply simp
      apply (rule corres_returnOk)
@@ -1151,7 +1154,7 @@ shows
     apply (simp split: cap.split arch_cap.split option.split,
            intro conjI allI impI, simp_all)[1]
     apply (rule whenE_throwError_corres_initial, simp)
-     apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def)
+     apply (simp add: kernel_base_def ARM.kernelBase_def kernelBase_def)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE)
          prefer 2
@@ -1215,7 +1218,7 @@ shows
           erule invs_pspace_aligned', clarsimp+)
    apply (simp add: isCap_simps)
   apply (simp add: isCap_simps split del: split_if)
-  apply (cases "ArchLabelFuns_H.isPDFlushLabel (invocation_type (mi_label mi))")
+  apply (cases "ARM_H.isPDFlushLabel (invocation_type (mi_label mi))")
    apply (clarsimp split del: split_if)
    apply (cases args, simp)
    apply (rename_tac a0 as)
@@ -1226,7 +1229,7 @@ shows
      apply (rule whenE_throwError_corres, simp)
       apply clarsimp
      apply (rule whenE_throwError_corres, simp)
-      apply (clarsimp simp: kernel_base_def Platform.kernelBase_def kernelBase_def)
+      apply (clarsimp simp: kernel_base_def ARM.kernelBase_def kernelBase_def)
      apply (rule case_option_corresE)
       apply (rule corres_trivial)
       apply clarsimp
@@ -1280,9 +1283,9 @@ lemma inv_arch_corres:
    corres (intr \<oplus> op=)
      (einvs and ct_active and valid_arch_inv ai) 
      (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
-     (arch_perform_invocation ai) (ArchRetypeDecls_H.performInvocation ai')"
+     (arch_perform_invocation ai) (Arch.performInvocation ai')"
   apply (clarsimp simp: arch_perform_invocation_def 
-                        ArchRetype_H.performInvocation_def 
+                        ARM_H.performInvocation_def 
                         performARMMMUInvocation_def)
   apply (rule corres_split' [where r'=dc])
      prefer 2
@@ -1370,9 +1373,9 @@ lemma performASIDControlInvocation_tcb_at':
 
 lemma invokeArch_tcb_at':
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>
-     ArchRetypeDecls_H.performInvocation ai
+     Arch.performInvocation ai
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
-  apply (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def)
+  apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
   apply (cases ai, simp_all)
      apply (wp, clarsimp simp: pred_tcb_at')
     apply (wp, clarsimp simp: pred_tcb_at')
@@ -1485,7 +1488,7 @@ lemma sts_valid_arch_inv':
 lemma less_kernelBase_valid_pde_offset':
   "\<lbrakk> vptr < kernelBase; x = 0 \<or> is_aligned vptr 24; x \<le> 0xF \<rbrakk>
      \<Longrightarrow> valid_pde_mapping_offset' (((x * 4) + (vptr >> 20 << 2)) && mask pdBits)"
-  apply (clarsimp simp: kernelBase_def Platform.kernelBase_def pdBits_def pageBits_def
+  apply (clarsimp simp: ARM.kernelBase_def kernelBase_def pdBits_def pageBits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def)
   apply (drule minus_one_helper3, simp)
   apply (drule le_shiftr[where u=vptr and n=20])
@@ -1661,9 +1664,9 @@ lemma ensureSafeMapping_valid_slots_duplicated':
   done
 
 lemma is_aligned_ptrFromPAddr_aligned:
-  "m \<le> 28 \<Longrightarrow> is_aligned (Platform.ptrFromPAddr p) m = is_aligned p m"
-  apply (simp add:Platform.ptrFromPAddr_def is_aligned_mask
-    physMappingOffset_def kernelBase_addr_def Platform.physBase_def physBase_def)
+  "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
+  apply (simp add:ptrFromPAddr_def is_aligned_mask
+    physMappingOffset_def kernelBase_addr_def ARM.physBase_def physBase_def)
   apply (subst add.commute)
   apply (subst mask_add_aligned)
    apply (erule is_aligned_weaken[rotated])
@@ -1733,7 +1736,7 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
    done
 
 lemma arch_decodeARMPageFlush_wf:
-  "ArchLabelFuns_H.isPageFlushLabel (invocation_type label) \<Longrightarrow>
+  "ARM_H.isPageFlushLabel (invocation_type label) \<Longrightarrow>
        \<lbrace>invs' and
         valid_cap'
          (capability.ArchObjectCap (arch_capability.PageCap word vmrights vmpage_size option)) and
@@ -1760,10 +1763,10 @@ lemma arch_decodeInvocation_wf[wp]:
     cte_wp_at' (diminished' (ArchObjectCap arch_cap) o cteCap) slot and  
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' (diminished' (fst x) o cteCap) (snd x) s) and
     sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
-   ArchRetypeDecls_H.decodeInvocation label args cap_index slot arch_cap excaps
+   Arch.decodeInvocation label args cap_index slot arch_cap excaps
    \<lbrace>valid_arch_inv'\<rbrace>,-" 
   apply (cases arch_cap)
-      apply (simp add: decodeARMMMUInvocation_def ArchRetype_H.decodeInvocation_def 
+      apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def 
                        Let_def split_def isCap_simps
                   cong: if_cong split del: split_if)
       apply (rule hoare_pre)
@@ -1783,7 +1786,7 @@ lemma arch_decodeInvocation_wf[wp]:
         apply assumption
        apply (simp add: asid_low_bits_def asid_bits_def)
       apply assumption
-     apply (simp add: decodeARMMMUInvocation_def ArchRetype_H.decodeInvocation_def 
+     apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def 
                        Let_def split_def isCap_simps 
                   cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong prod.case_cong
                   split del: split_if)
@@ -1827,7 +1830,7 @@ lemma arch_decodeInvocation_wf[wp]:
      apply (simp add: ex_cte_cap_to'_def cte_wp_at_ctes_of)
      apply (rule_tac x=ba in exI)
      apply (simp add: diminished_cte_refs')
-    apply (simp add: decodeARMMMUInvocation_def ArchRetype_H.decodeInvocation_def 
+    apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def 
                        Let_def split_def isCap_simps
                 cong: if_cong split del: split_if)
     apply (cases "invocation_type label = ArchInvocationLabel ARMPageMap")
@@ -1890,17 +1893,17 @@ lemma arch_decodeInvocation_wf[wp]:
      apply (thin_tac "Ball S P" for S P)
      apply (erule cte_wp_at_weakenE')
      apply (clarsimp simp: is_arch_update'_def isCap_simps dest!: diminished_capMaster)
-    apply (cases "ArchLabelFuns_H.isPageFlushLabel (invocation_type label)")
-     apply (clarsimp simp: ArchLabelFuns_H.isPageFlushLabel_def split: invocation_label.splits arch_invocation_label.splits)
+    apply (cases "ARM_H.isPageFlushLabel (invocation_type label)")
+     apply (clarsimp simp: ARM_H.isPageFlushLabel_def split: invocation_label.splits arch_invocation_label.splits)
         apply (rule arch_decodeARMPageFlush_wf,
-               clarsimp simp: ArchLabelFuns_H.isPageFlushLabel_def)+
+               clarsimp simp: ARM_H.isPageFlushLabel_def)+
     apply (cases "invocation_type label = ArchInvocationLabel ARMPageGetAddress")
      apply (simp split del: split_if)
      apply (rule hoare_pre, wp)
      apply (clarsimp simp: valid_arch_inv'_def valid_page_inv'_def)
-    apply (simp add: ArchLabelFuns_H.isPageFlushLabel_def throwError_R'
+    apply (simp add: ARM_H.isPageFlushLabel_def throwError_R'
               split: invocation_label.split_asm arch_invocation_label.split_asm)
-   apply (simp add: decodeARMMMUInvocation_def ArchRetype_H.decodeInvocation_def 
+   apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def 
                     Let_def split_def isCap_simps vs_entry_align_def
                cong: if_cong list.case_cong invocation_label.case_cong arch_invocation_label.case_cong prod.case_cong
                split del: split_if)
@@ -1911,7 +1914,7 @@ lemma arch_decodeInvocation_wf[wp]:
       simp add: valid_arch_inv'_def valid_pti'_def unlessE_whenE|
       rule_tac x="fst p" in hoare_imp_eq_substR
       )+)
-              apply (rule_tac Q'="\<lambda>b c. ko_at' Hardware_H.pde.InvalidPDE (b + (hd args >> 20 << 2)) c \<longrightarrow>
+              apply (rule_tac Q'="\<lambda>b c. ko_at' ARM_H.pde.InvalidPDE (b + (hd args >> 20 << 2)) c \<longrightarrow>
                  cte_wp_at'
                   (is_arch_update'
                     (capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, hd args >> 20 << 20)))))
@@ -1947,8 +1950,8 @@ lemma arch_decodeInvocation_wf[wp]:
                          invs_valid_objs' vs_entry_align_def and_not_mask[symmetric])
    apply (erule order_le_less_trans[rotated])
    apply (rule word_and_le2)
-   apply (simp add: decodeARMMMUInvocation_def ArchRetype_H.decodeInvocation_def isCap_simps Let_def)
-  apply(cases "ArchLabelFuns_H.isPDFlushLabel (invocation_type label)", simp_all)
+   apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def isCap_simps Let_def)
+  apply(cases "ARM_H.isPDFlushLabel (invocation_type label)", simp_all)
   apply(cases args, simp_all)
   apply(rule hoare_pre, wp)
    defer
@@ -2001,9 +2004,9 @@ crunch nosch [wp]: performARMMMUInvocation "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma arch_pinv_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
-     ArchRetypeDecls_H.performInvocation invok
+     Arch.performInvocation invok
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  by (simp add: ArchRetype_H.performInvocation_def) wp
+  by (simp add: ARM_H.performInvocation_def) wp
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 
@@ -2059,56 +2062,57 @@ lemma performASIDControlInvocation_st_tcb_at':
 lemma arch_pinv_st_tcb_at':
   "\<lbrace>valid_arch_inv' ai and st_tcb_at' (P and op \<noteq> Inactive and op \<noteq> IdleThreadState) t and 
     invs' and ct_active'\<rbrace>
-     ArchRetypeDecls_H.performInvocation ai
+     Arch.performInvocation ai
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>" (is "?pre (pi ai) ?post")
 proof(cases ai)
   txt {* The preservation rules for each invocation have already been proved by crunch, so
     this just becomes a case distinction. *}
   case InvokePage thus ?thesis
-    by (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def,
+    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def,
         wp performPageInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokeASIDControl thus ?thesis
-    by (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def
+    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
         wp performASIDControlInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokeASIDPool thus ?thesis
-    by (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def
+    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
         wp performASIDPoolInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokePageTable thus ?thesis
-    by (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def
+    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
         wp performPageTableInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokePageDirectory thus ?thesis
-    by (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def
+    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
         wp performPageDirectoryInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 qed
 
-crunch aligned': "ArchRetypeDecls_H.finaliseCap" pspace_aligned'
+crunch aligned': "Arch.finaliseCap" pspace_aligned'
   (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
 
-crunch distinct': "ArchRetypeDecls_H.finaliseCap" pspace_distinct'
+crunch distinct': "Arch.finaliseCap" pspace_distinct'
   (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
-crunch nosch [wp]: "ArchRetypeDecls_H.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
+crunch nosch [wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: getObject wp: crunch_wps getASID_wp simp: crunch_simps updateObject_default_def)
 
-crunch st_tcb_at' [wp]: "ArchRetypeDecls_H.finaliseCap" "st_tcb_at' P t"
+
+crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
-crunch typ_at' [wp]: "ArchRetypeDecls_H.finaliseCap" "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at' [wp]: "Arch.finaliseCap" "\<lambda>s. P (typ_at' T p s)"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
-crunch cte_wp_at':  "ArchRetypeDecls_H.finaliseCap" "cte_wp_at' P p"
+crunch cte_wp_at':  "Arch.finaliseCap" "cte_wp_at' P p"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma invs_asid_table_strenghten':
@@ -2261,7 +2265,7 @@ lemma dmo_invs'_simple:
   "no_irq f \<Longrightarrow>
    (\<And>p um. \<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> f \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>) \<Longrightarrow>
    \<lbrace> invs' \<rbrace> doMachineOp f \<lbrace> \<lambda>y. invs' \<rbrace>"
-  by(rule hoare_pre, rule dmo_invs', wp, simp_all add:valid_def split_def)
+  by (rule hoare_pre, rule dmo_invs', wp no_irq, simp_all add:valid_def split_def)
 
 (* FIXME: move *)
 lemma doFlush_invs[wp]:
@@ -2274,11 +2278,13 @@ lemma performPageDirectoryInvocation_invs'[wp]:
 
 lemma arch_performInvocation_invs':
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace> 
-  ArchRetypeDecls_H.performInvocation invocation 
+  Arch.performInvocation invocation 
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  unfolding ArchRetype_H.performInvocation_def
+  unfolding ARM_H.performInvocation_def
   by (cases invocation,
       simp_all add: performARMMMUInvocation_def valid_arch_inv'_def,
       (wp|simp)+)
+
+end
 
 end

@@ -11,7 +11,7 @@
 theory Invocations_R
 imports Invariants_H
 begin
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma invocation_type_eq[simp]:
   "invocationType = invocation_type"
   apply (rule ext)
@@ -22,7 +22,7 @@ lemma invocation_type_eq[simp]:
   apply (cut_tac x=v in maxBound_is_bound)
   apply simp
   done
-
+end
 declare resolveAddressBits.simps[simp del]
 
 end

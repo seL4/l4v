@@ -205,6 +205,23 @@ val unfold_get_params = @{thms Let_def return_bind returnOk_bindE
     K_bind_def split_def bind_assoc bindE_assoc
     trans[OF liftE_bindE return_bind]};
 
+fun def_from_ctxt ctxt const =
+  let
+    val crunch_defs = Named_Theorems.get ctxt "Crunch.crunch_def"
+    val abs_def = Local_Defs.meta_rewrite_rule ctxt #> Drule.abs_def;
+    fun do_filter thm =
+    let
+      val (Const (nm, _), _) = Logic.dest_equals (Thm.prop_of (abs_def thm));
+    in nm = const end
+      
+  in 
+   case crunch_defs |> filter do_filter of
+     [x] => [x]
+   | [] => []
+   | _ => raise Fail ("Multiple definitions declared for:" ^ const)  
+ 
+  end
+
 fun unfold ctxt const triple nmspce =
     let
       val _ = debug_trace "unfold"
@@ -419,7 +436,7 @@ fun crunch cfg pre extra stack const' thms =
             let
               val ctxt' = Variable.auto_fixes goal ctxt;
               val cgoal = goal |> var_precond |> HOLogic.mk_Trueprop |> Thm.cterm_of ctxt';
-              val unfolds' = filter (fn (a, _) => a = const) (#unfolds cfg)
+              val unfolds' = filter (fn (a, _) => a = const) (#unfolds cfg) @ (map (pair "") (def_from_ctxt ctxt const))
               val (ms, unfold_rule) = unfold_data ctxt' const cgoal (#nmspce cfg) unfolds'
                 |>> map (fn t => (real_const_from_name (fst (dest_Const (head_of t))) (#nmspce cfg) ctxt', t))
                 |>> subtract (fn (a, b) => a = (fst b))

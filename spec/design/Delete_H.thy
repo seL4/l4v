@@ -63,12 +63,12 @@ odE))
 
 )
 (
-(\<lambda>x0 slot x2.  (let (v5, v6) = (x0, x2) in
-  if isZombie v5 \<and> capZombieNumber v5 = 0
+(\<lambda>x0 slot x2.  (let (v33, v34) = (x0, x2) in
+  if isZombie v33 \<and> capZombieNumber v33 = 0
   then  
     haskell_fail []
-  else if isZombie v5 \<and> \<not> v6
-  then let ptr = capZombiePtr v5
+  else if isZombie v33 \<and> \<not> v34
+  then let ptr = capZombiePtr v33
   in   (doE
     haskell_assertE (ptr \<noteq> slot) [];
     capAtPtr \<leftarrow> withoutPreemption $ liftM cteCap $ getCTE ptr;
@@ -79,8 +79,8 @@ odE))
         );
     withoutPreemption $ capSwapForDelete ptr slot
   odE)
-  else if isZombie v5 \<and> v6
-  then let z = v5; ptr = capZombiePtr z; n = capZombieNumber z
+  else if isZombie v33 \<and> v34
+  then let z = v33; ptr = capZombiePtr z; n = capZombieNumber z
   in   (doE
     endSlot \<leftarrow> withoutPreemption $ locateSlotCap z (fromIntegral (n - 1));
     cteDelete endSlot False;
@@ -192,7 +192,7 @@ od))
   else if isArchObjectCap v1
   then let cap = capCap v1; final = v2
   in  
-    liftM (\<lambda> cap. (cap, Nothing)) $ ArchRetypeDecls_H.finaliseCap cap final
+    liftM (\<lambda> cap. (cap, Nothing)) $ Arch.finaliseCap cap final
   else if isIRQHandlerCap v1 \<and> v2
   then let irq = capIRQ v1
   in   (do

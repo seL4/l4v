@@ -21,6 +21,7 @@ lemma ksPSpace_update_eq_ExD:
      \<Longrightarrow> \<exists>ps. s = t \<lparr> ksPSpace := ps \<rparr>"
   by (erule exI)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch ctes_of[wp]: unmapPageTable "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
 
@@ -31,6 +32,7 @@ crunch inv[wp]: pteCheckIfMapped "P"
 
 crunch inv[wp]: pdeCheckIfMapped "P"
   (ignore: getObject setObject)
+end
 
 context kernel_m begin
 
@@ -572,7 +574,7 @@ shows
 
 lemmas performARMMMUInvocations
     = ccorres_invocationCatch_Inr performInvocation_def
-      ArchRetype_H.performInvocation_def performARMMMUInvocation_def
+      ARM_H.performInvocation_def performARMMMUInvocation_def
       liftE_bind_return_bindE_returnOk
 
 lemma slotcap_in_mem_PageDirectory:
@@ -746,7 +748,7 @@ lemma decodeARMPageTableInvocation_ccorres:
          apply (simp add: if_to_top_of_bind del: Collect_const)
          apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
             apply vcg
-           apply (simp add: kernelBase_def Platform.kernelBase_def hd_conv_nth length_ineq_not_Nil)
+           apply (simp add: kernelBase_def ARM.kernelBase_def hd_conv_nth length_ineq_not_Nil)
           apply (simp add: throwError_bind invocationCatch_def)
           apply (rule syscall_error_throwError_ccorres_n)
           apply (simp add: syscall_error_to_H_cases)
@@ -975,7 +977,7 @@ lemma cpde_relation_pde_case:
                  then R else S)"
   by (clarsimp simp: cpde_relation_def Let_def pde_get_tag_alt
                      pde_tag_defs pde_pde_section_lift_def
-              split: Hardware_H.pde.split_asm)
+              split: ARM_H.pde.split_asm)
 
 lemma pde_pde_section_size_0_1:
   "pde_get_tag pde = scast pde_pde_section
@@ -1096,7 +1098,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
                   apply (rule allI, rule conseqPre, vcg)
                   apply (clarsimp simp: isPageTablePDE_def isSectionPDE_def
                                         fst_throwError_returnOk
-                                 split: Hardware_H.pde.split)
+                                 split: ARM_H.pde.split)
                   apply (auto simp: exception_defs syscall_error_rel_def
                                     syscall_error_to_H_cases)[1]
                  apply wp
@@ -1155,7 +1157,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
 lemma pte_case_isLargePagePTE:
   "(case pte of LargePagePTE _ _ _ _ _ \<Rightarrow> P | _ \<Rightarrow> Q)
        = (if isLargePagePTE pte then P else Q)"
-  by (simp add: isLargePagePTE_def split: Hardware_H.pte.split)
+  by (simp add: isLargePagePTE_def split: ARM_H.pte.split)
 
 lemma ccorres_pre_getObject_pte:
   "(\<And>rv. ccorresG rf_sr \<Gamma> r xf (P rv) (P' rv) hs (f rv) c) \<Longrightarrow>
@@ -1185,7 +1187,7 @@ lemma lookupPTSlot_le_0x3C:
   apply (clarsimp simp: projectKOs)
   apply (clarsimp simp: valid_obj'_def ptBits_def pageBits_def vmsz_aligned'_def
                         lookup_pt_slot_no_fail_def)
-  apply (subgoal_tac "is_aligned (Platform.ptrFromPAddr x) 10")
+  apply (subgoal_tac "is_aligned (ptrFromPAddr x) 10")
    apply (rule is_aligned_no_wrap' [where sz=6])
     apply (erule aligned_add_aligned)
       apply clarsimp
@@ -1193,9 +1195,9 @@ lemma lookupPTSlot_le_0x3C:
      apply clarsimp
     apply (simp add: word_bits_def)
    apply simp
-  apply (simp add: Platform.ptrFromPAddr_def physMappingOffset_def)
+  apply (simp add: ARM.ptrFromPAddr_def physMappingOffset_def)
   apply (erule aligned_add_aligned)
-   apply (simp add: kernelBase_addr_def Platform.physBase_def
+   apply (simp add: kernelBase_addr_def ARM.physBase_def
      physBase_def is_aligned_def)
   apply (simp add: word_bits_def)
   done
@@ -1256,7 +1258,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
              apply (clarsimp simp: typ_heap_simps cpte_relation_def Let_def)
              apply (simp add: isLargePagePTE_def pte_pte_large_lift_def pte_lift_def Let_def
                               pte_tag_defs pte_pte_invalid_def
-                       split: Hardware_H.pte.split_asm split_if_asm)
+                       split: ARM_H.pte.split_asm split_if_asm)
             apply ceqv
            apply (simp add: pte_case_isLargePagePTE if_to_top_of_bindE del: Collect_const)
            apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
@@ -1437,7 +1439,7 @@ lemma valid_pde_slots_lift2:
   done
 
 lemma obj_at_pte_aligned:
-  "obj_at' (\<lambda>a::Hardware_H.pte. True) ptr s ==> is_aligned ptr 2"
+  "obj_at' (\<lambda>a::ARM_H.pte. True) ptr s ==> is_aligned ptr 2"
   apply (drule obj_at_ko_at')
   apply (clarsimp dest!:ko_at_is_aligned' 
     simp:objBits_simps archObjSize_def)
@@ -1446,7 +1448,7 @@ lemma obj_at_pte_aligned:
 lemma addrFromPPtr_mask_5:
   "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
   apply (simp add:addrFromPPtr_def physMappingOffset_def 
-    kernelBase_addr_def physBase_def Platform.physBase_def)
+    kernelBase_addr_def physBase_def ARM.physBase_def)
   apply word_bitwise
   apply (simp add:mask_def)
   done
@@ -1652,7 +1654,7 @@ lemma performPageInvocationMapPTE_ccorres:
   done
 
 lemma pde_align_ptBits:
-  "\<lbrakk> ko_at' (Hardware_H.pde.PageTablePDE x xa xb) slot s ;valid_objs' s\<rbrakk>
+  "\<lbrakk> ko_at' (ARM_H.PageTablePDE x xa xb) slot s ;valid_objs' s\<rbrakk>
   \<Longrightarrow> is_aligned (ptrFromPAddr x) ptBits"
   apply (drule ko_at_valid_objs')
     apply simp
@@ -2176,7 +2178,7 @@ lemma vmsz_aligned_addrFromPPtr':
   "vmsz_aligned' (addrFromPPtr p) sz
        = vmsz_aligned' p sz"
   apply (simp add: vmsz_aligned'_def addrFromPPtr_def
-                   Platform.addrFromPPtr_def)
+                   ARM.addrFromPPtr_def)
   apply (subgoal_tac "is_aligned physMappingOffset (pageBitsForSize sz)")
    apply (rule iffI)
     apply (drule(1) aligned_add_aligned)
@@ -2185,7 +2187,7 @@ lemma vmsz_aligned_addrFromPPtr':
    apply (erule(1) aligned_sub_aligned)
     apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
   apply (simp add: pageBitsForSize_def physMappingOffset_def kernelBase_addr_def
-                   physBase_def Platform.physBase_def is_aligned_def
+                   physBase_def ARM.physBase_def is_aligned_def
             split: vmpage_size.split)
   done
 
@@ -2345,8 +2347,8 @@ lemma flushtype_relation_triv:
    isPDFlushLabel (invocation_type label)
   ==> flushtype_relation (labelToFlushType label) (ucast label)"
   by (clarsimp simp: labelToFlushType_def flushtype_relation_def 
-    invocation_eq_use_types ArchLabelFuns_H.isPageFlushLabel_def 
-    ArchLabelFuns_H.isPDFlushLabel_def
+    invocation_eq_use_types ARM_H.isPageFlushLabel_def 
+    ARM_H.isPDFlushLabel_def
     split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
 lemma setVMRootForFlush_ccorres2:
@@ -3080,7 +3082,7 @@ lemma decodeARMFrameInvocation_ccorres:
               apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                  apply vcg
                 apply (frule ccap_relation_PageCap_generics)
-                apply (clarsimp simp add: kernelBase_def Platform.kernelBase_def word_le_nat_alt)
+                apply (clarsimp simp add: kernelBase_def ARM.kernelBase_def word_le_nat_alt)
                apply (simp add: throwError_bind invocationCatch_def)?
                apply (rule syscall_error_throwError_ccorres_n)
                apply (simp add: syscall_error_to_H_cases)
@@ -3292,7 +3294,7 @@ lemma maskCapRights_eq_Untyped [simp]:
   "(maskCapRights R cap = UntypedCap p sz idx) = (cap = UntypedCap p sz idx)"
   apply (cases cap)
   apply (auto simp: Let_def isCap_simps maskCapRights_def)
-  apply (simp add: ArchRetype_H.maskCapRights_def isPageCap_def Let_def split: arch_capability.splits)
+  apply (simp add: ARM_H.maskCapRights_def isPageCap_def Let_def split: arch_capability.splits)
   done
 
 
@@ -3490,7 +3492,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
          apply (simp add: syscall_error_to_H_cases)
         apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
            apply vcg
-          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil kernelBase_def Platform.kernelBase_def)
+          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil kernelBase_def ARM.kernelBase_def)
          apply (simp add:injection_handler_throwError)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add: syscall_error_to_H_cases)
@@ -3550,7 +3552,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                 apply vcg
                apply (clarsimp simp:resolve_ret_rel_def to_bool_def to_option_def
                         rel_option_alt_def not_le split:option.splits if_splits)
-              apply (simp add:invocationCatch_def ArchRetype_H.performInvocation_def
+              apply (simp add:invocationCatch_def ARM_H.performInvocation_def
                 performInvocation_def performARMMMUInvocation_def)
               apply (simp add:performPageDirectoryInvocation_def 
                 liftE_case_sum liftE_bindE liftE_alternative)
@@ -3765,7 +3767,7 @@ lemma Arch_decodeInvocation_ccorres:
              \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
-       (ArchRetypeDecls_H.decodeInvocation label args cptr slot cp extraCaps
+       (Arch.decodeInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call Arch_decodeInvocation_'proc)"
   (is "?F \<Longrightarrow> ccorres ?r ?xf ?P (?P' slot_') [] ?a ?c")
@@ -3778,7 +3780,7 @@ lemma Arch_decodeInvocation_ccorres:
                       excaps_' cap_' buffer_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap_ArchObject
-                    ArchRetype_H.decodeInvocation_def
+                    ARM_H.decodeInvocation_def
                     invocation_eq_use_types
                del: Collect_const
               cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -4000,7 +4002,7 @@ lemma Arch_decodeInvocation_ccorres:
                                            [OF ensureEmptySlot_ccorres])
                        apply (simp add: ccorres_invocationCatch_Inr
                                         performInvocation_def
-                                        ArchRetype_H.performInvocation_def
+                                        ARM_H.performInvocation_def
                                         performARMMMUInvocation_def)
                        apply (simp add: liftE_bindE)
                        apply (ctac add: setThreadState_ccorres)
@@ -4280,7 +4282,7 @@ lemma Arch_decodeInvocation_ccorres:
             apply (simp add: syscall_error_to_H_cases)
            apply (simp add: returnOk_bind ccorres_invocationCatch_Inr
                             performInvocation_def
-                            ArchRetype_H.performInvocation_def
+                            ARM_H.performInvocation_def
                             performARMMMUInvocation_def liftE_bindE)
            apply csymbr
            apply (ctac add: setThreadState_ccorres)
@@ -4373,7 +4375,7 @@ lemma Arch_decodeInvocation_ccorres:
                   split: asidpool.split_asm)
    apply (clarsimp simp: isCap_simps Let_def valid_cap'_def
                          maskCapRights_def[where ?x1.0="ArchObjectCap cp" for cp]
-                         ArchRetype_H.maskCapRights_def
+                         ARM_H.maskCapRights_def
                   split: arch_capability.split_asm)
    apply (clarsimp simp: null_def neq_Nil_conv mask_def field_simps
                          asid_low_bits_word_bits

@@ -12,6 +12,8 @@ theory DetWP
 imports "../../lib/clib/DetWPLib" Include_C
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma det_wp_doMachineOp [wp]:
   "det_wp (\<lambda>_. P) f \<Longrightarrow> det_wp (\<lambda>_. P) (doMachineOp f)"
   apply (simp add: doMachineOp_def split_def)
@@ -154,5 +156,7 @@ lemma det_wp_getMRs:
   apply (erule valid_ipc_buffer_ptr_aligned_2)
   apply (simp add: wordSize_def' is_aligned_mult_triv2 [where n = 2, simplified] word_bits_conv)
   done
+
+end
 
 end

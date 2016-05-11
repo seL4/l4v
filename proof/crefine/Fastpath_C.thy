@@ -18,6 +18,8 @@ imports
   "../../lib/clib/MonadicRewrite_C"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
  "fastpaths sysc \<equiv> case sysc of
   SysCall \<Rightarrow> doE
@@ -68,15 +70,15 @@ definition
                    \<and> mdbRevocable (cteMDBNode replySlotCTE));
       cteInsert (ReplyCap curThread False) replySlot callerSlot;
 
-      forM_x (take (unat (msgLength mi)) State_H.msgRegisters)
+      forM_x (take (unat (msgLength mi)) ARM_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser curThread (getRegister r);
                     asUser dest (setRegister r v) od);
       setThreadState Running dest;
-      ArchThreadDecls_H.switchToThread dest;
+      Arch.switchToThread dest;
       setCurThread dest;
 
       asUser dest $ zipWithM_x setRegister
-               [State_H.badgeRegister, State_H.msgInfoRegister]
+               [ARM_H.badgeRegister, ARM_H.msgInfoRegister]
                [capEPBadge epCap, wordFromMessageInfo (mi\<lparr> msgCapsUnwrapped := 0 \<rparr>)]
     od
 
@@ -139,15 +141,15 @@ definition
                                               o mdbRevocable_update (K True));
       setCTE callerSlot makeObject;
 
-      forM_x (take (unat (msgLength mi)) State_H.msgRegisters)
+      forM_x (take (unat (msgLength mi)) ARM_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser curThread (getRegister r);
                     asUser caller (setRegister r v) od);
       setThreadState Running caller;
-      ArchThreadDecls_H.switchToThread caller;
+      Arch.switchToThread caller;
       setCurThread caller;
 
       asUser caller $ zipWithM_x setRegister
-               [State_H.badgeRegister, State_H.msgInfoRegister]
+               [ARM_H.badgeRegister, ARM_H.msgInfoRegister]
                [0, wordFromMessageInfo (mi\<lparr> msgCapsUnwrapped := 0 \<rparr>)]
     od
 
@@ -190,9 +192,9 @@ lemma tcbSchedEnqueue_obj_at_unchangedT:
 (* FIXME: Move to Schedule_R.thy. Make Arch_switchToThread_obj_at a specialisation of this *)
 lemma Arch_switchToThread_obj_at_pre:
   "\<lbrace>obj_at' P t\<rbrace>
-   ArchThreadDecls_H.switchToThread t
+   Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: ArchThread_H.switchToThread_def storeWordUser_def)
+  apply (simp add: ARM_H.switchToThread_def storeWordUser_def)
   apply (wp doMachineOp_obj_at setVMRoot_obj_at hoare_drop_imps)
   done
 
@@ -279,6 +281,8 @@ lemma obj_at_tcbs_of:
 lemma st_tcb_at_tcbs_of:
   "st_tcb_at' P t s = (EX tcb. tcbs_of s t = Some tcb & P (tcbState tcb))"
   by (simp add: st_tcb_at'_def obj_at_tcbs_of)
+
+end
 
 context kernel_m begin
 
@@ -982,11 +986,11 @@ lemma pointerInUserData_h_t_valid2:
   done
 
 lemma dmo_clearExMonitor_setCurThread_swap:
-  "(do _ \<leftarrow> doMachineOp MachineOps.clearExMonitor;
+  "(do _ \<leftarrow> doMachineOp ARM.clearExMonitor;
                setCurThread thread
             od)
     = (do _ \<leftarrow> setCurThread thread;
-            doMachineOp MachineOps.clearExMonitor od)"
+            doMachineOp ARM.clearExMonitor od)"
   apply (simp add: setCurThread_def doMachineOp_def split_def)
   apply (rule oblivious_modify_swap[symmetric])
   apply (intro oblivious_bind,
@@ -1062,11 +1066,11 @@ lemma switchToThread_fp_ccorres:
                    (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}
                          \<inter> {s. cap_pd_' s = pde_Ptr pd}
                          \<inter> {s. stored_hw_asid___struct_pde_C_' s = v}) []
-      (ArchThreadDecls_H.switchToThread thread
+      (Arch.switchToThread thread
             >>= (\<lambda>_. setCurThread thread))
       (Call switchToThread_fp_'proc)"
   apply (cinit' lift: thread_' cap_pd_' stored_hw_asid___struct_pde_C_')
-   apply (simp add: ArchThread_H.switchToThread_def bind_assoc
+   apply (simp add: ARM_H.switchToThread_def bind_assoc
                     setVMRoot_def cap_case_isPageDirectoryCap
                del: Collect_const cong: call_ignore_cong)
    apply (simp add: getThreadVSpaceRoot_def locateSlot_conv getSlotCap_def
@@ -1549,7 +1553,7 @@ lemma fastpath_mi_check_spec:
 lemma isValidVTableRoot_fp_lemma:
   "(index (cap_C.words_C ccap) 0 && 0x1F = 0x10 || scast cap_page_directory_cap)
             = isValidVTableRoot_C ccap"
-  apply (simp add: isValidVTableRoot_C_def ArchVSpace_H.isValidVTableRoot_def
+  apply (simp add: isValidVTableRoot_C_def ARM_H.isValidVTableRoot_def
                    cap_case_isPageDirectoryCap if_bool_simps)
   apply (subst split_word_eq_on_mask[where m="mask 4"])
   apply (simp add: mask_def word_bw_assocs word_ao_dist cap_page_directory_cap_def)
@@ -1594,9 +1598,9 @@ lemma ccorres_cond_both_seq:
   done
 
 lemma copyMRs_simple:
-  "msglen \<le> of_nat (length State_H.msgRegisters) \<longrightarrow>
+  "msglen \<le> of_nat (length ARM_H.msgRegisters) \<longrightarrow>
     copyMRs sender sbuf receiver rbuf msglen
-        = forM_x (take (unat msglen) State_H.msgRegisters)
+        = forM_x (take (unat msglen) ARM_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                     asUser receiver (setRegister r v) od)
            >>= (\<lambda>rv. return msglen)"
@@ -2069,11 +2073,11 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
 lemma fastpath_copy_mrs_ccorres:
 notes min_simps [simp del]
 shows
-  "ccorres dc xfdc (\<top> and (\<lambda>_. ln <= length State_H.msgRegisters))
+  "ccorres dc xfdc (\<top> and (\<lambda>_. ln <= length ARM_H.msgRegisters))
      (UNIV \<inter> {s. unat (length___unsigned_long_' s) = ln}
            \<inter> {s. src_' s = tcb_ptr_to_ctcb_ptr src}
            \<inter> {s. dest_' s = tcb_ptr_to_ctcb_ptr dest}) []
-     (forM_x (take ln State_H.msgRegisters)
+     (forM_x (take ln ARM_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser src (getRegister r);
                     asUser dest (setRegister r v) od))
      (Call fastpath_copy_mrs_'proc)"
@@ -2095,7 +2099,7 @@ shows
         apply (simp add: msgRegisters_ccorres[symmetric] length_msgRegisters)
         apply (simp add: n_msgRegisters_def msgRegisters_unfold)
         apply (drule(1) order_less_le_trans)
-        apply (clarsimp simp: "StrictC'_register_defs" msgRegisters_def fupdate_def
+        apply (clarsimp simp: "StrictC'_register_defs" msgRegistersC_def fupdate_def
           | drule nat_less_cases' | erule disjE)+
        apply (simp add: min.absorb2)
       apply (rule allI, rule conseqPre, vcg)
@@ -2188,6 +2192,8 @@ lemma setUntypedCapAsFull_replyCap[simp]:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma getObject_return:
   fixes v :: "'a :: pspace_storable" shows
   "\<lbrakk> \<And>a b c d. (loadObject a b c d :: 'a kernel) = loadObject_default a b c d;
@@ -2201,6 +2207,7 @@ lemma getObject_return:
   apply (simp add: magnitudeCheck_assert in_monad)
   done
 
+end
 
 context kernel_m begin
 
@@ -2262,8 +2269,8 @@ lemma fastpath_call_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
      (\<lambda>s. invs' s \<and> ct_in_state' (op = Running) s
-                  \<and> obj_at' (\<lambda>tcb. tcbContext tcb State_H.capRegister = cptr
-                                 \<and> tcbContext tcb State_H.msgInfoRegister = msginfo)
+                  \<and> obj_at' (\<lambda>tcb. tcbContext tcb ARM_H.capRegister = cptr
+                                 \<and> tcbContext tcb ARM_H.msgInfoRegister = msginfo)
                         (ksCurThread s) s)
      (UNIV \<inter> {s. cptr_' s = cptr} \<inter> {s. msgInfo_' s = msginfo}) []
      (fastpaths SysCall) (Call fastpath_call_'proc)"
@@ -2346,7 +2353,7 @@ lemma fastpath_call_ccorres:
          apply (simp del: Collect_const cong: call_ignore_cong)
          apply (elim conjE)
        apply (rule ccorres_abstract_ksCurThread, ceqv)
-apply (simp add: getThreadCSpaceRoot_def locateSlot_conv
+       apply (simp add: getThreadCSpaceRoot_def locateSlot_conv
                    del: Collect_const cong: call_ignore_cong)
        apply (rule ccorres_pre_getCTE2)
        apply (rule ccorres_move_array_assertion_tcb_ctes
@@ -2806,13 +2813,12 @@ apply (simp add: getThreadCSpaceRoot_def locateSlot_conv
    apply (frule_tac p="x + offs" for offs in ctes_of_valid', clarsimp)
    apply (clarsimp simp: isCap_simps valid_cap'_def invs_valid_pde_mappings'
                   dest!: isValidVTableRootD)
-   apply (clarsimp simp: invs_sym'
-                         cte_wp_at_ctes_of tcbCallerSlot_def
+   apply (clarsimp simp: invs_sym' tcbCallerSlot_def
                          tcbVTableSlot_def tcbReplySlot_def
                          conj_comms tcb_cnode_index_defs field_simps
                          obj_at_tcbs_of)
    apply (clarsimp simp: cte_level_bits_def isValidVTableRoot_def
-                         ArchVSpace_H.isValidVTableRoot_def
+                         ARM_H.isValidVTableRoot_def cte_wp_at_ctes_of
                          capAligned_def objBits_simps)
    apply (simp cong: conj_cong)
    apply (frule invs_mdb', clarsimp simp: valid_mdb'_def valid_mdb_ctes_def)
@@ -3536,7 +3542,7 @@ lemma fastpath_reply_recv_ccorres:
      apply (frule invs_mdb')
      apply (clarsimp simp: cte_wp_at_ctes_of tcbSlots cte_level_bits_def
                            makeObject_cte isValidVTableRoot_def
-                           ArchVSpace_H.isValidVTableRoot_def
+                           ARM_H.isValidVTableRoot_def
                            pde_stored_asid_def to_bool_def
                            valid_mdb'_def valid_tcb_state'_def
                            word_le_nat_alt[symmetric] length_msgRegisters)
@@ -4254,16 +4260,16 @@ lemma doIPCTransfer_simple_rewrite:
   "monadic_rewrite True True
    ((\<lambda>_. msgExtraCaps (messageInfoFromWord msgInfo) = 0
                \<and> msgLength (messageInfoFromWord msgInfo)
-                      \<le> of_nat (length State_H.msgRegisters))
+                      \<le> of_nat (length ARM_H.msgRegisters))
       and obj_at' (\<lambda>tcb. tcbFault tcb = None
                \<and> tcbContext tcb msgInfoRegister = msgInfo) sender)
    (doIPCTransfer sender ep badge True rcvr)
    (do rv \<leftarrow> mapM_x (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                              asUser rcvr (setRegister r v)
                           od)
-               (take (unat (msgLength (messageInfoFromWord msgInfo))) State_H.msgRegisters);
+               (take (unat (msgLength (messageInfoFromWord msgInfo))) ARM_H.msgRegisters);
          y \<leftarrow> setMessageInfo rcvr ((messageInfoFromWord msgInfo) \<lparr>msgCapsUnwrapped := 0\<rparr>);
-         asUser rcvr (setRegister State_H.badgeRegister badge)
+         asUser rcvr (setRegister ARM_H.badgeRegister badge)
       od)"
   apply (rule monadic_rewrite_gen_asm)
   apply (simp add: doIPCTransfer_def bind_assoc doNormalTransfer_def
@@ -4478,7 +4484,7 @@ lemma oblivious_setVMRoot_schact:
 
 lemma oblivious_switchToThread_schact:
   "oblivious (ksSchedulerAction_update f) (ThreadDecls_H.switchToThread t)"
-  apply (simp add: switchToThread_def ArchThread_H.switchToThread_def bind_assoc
+  apply (simp add: switchToThread_def ARM_H.switchToThread_def bind_assoc
                    getCurThread_def setCurThread_def threadGet_def liftM_def
                    threadSet_def tcbSchedEnqueue_def unless_when
                    getQueue_def setQueue_def storeWordUser_def
@@ -4860,7 +4866,7 @@ lemma switchToThread_rewrite:
   "monadic_rewrite True True
        (ct_in_state' (Not \<circ> runnable') and cur_tcb' and obj_at' (Not \<circ> tcbQueued) t)
        (switchToThread t)
-       (do ArchThreadDecls_H.switchToThread t; setCurThread t od)"
+       (do Arch.switchToThread t; setCurThread t od)"
   apply (simp add: switchToThread_def)
   apply (rule monadic_rewrite_imp)
    apply (rule monadic_rewrite_trans)
@@ -4899,8 +4905,8 @@ lemma threadGet_isolatable:
   done
 
 lemma switchToThread_isolatable:
-  "thread_actions_isolatable idx (ArchThreadDecls_H.switchToThread t)"
-  apply (simp add: ArchThread_H.switchToThread_def
+  "thread_actions_isolatable idx (Arch.switchToThread t)"
+  apply (simp add: ARM_H.switchToThread_def
                    storeWordUser_def stateAssert_def2)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                gets_isolatable setVMRoot_isolatable
@@ -4923,8 +4929,8 @@ lemma setCurThread_isolatable:
 
 end
 
-crunch tcb2[wp]: "ArchThreadDecls_H.switchToThread" "tcb_at' t"
-  (ignore: MachineOps.clearExMonitor)
+crunch tcb2[wp]: "Arch.switchToThread" "tcb_at' t"
+  (ignore: ARM.clearExMonitor)
 
 context kernel_m begin
 
@@ -5333,8 +5339,8 @@ lemma fastpath_callKernel_SysCall_corres:
                   apply (clarsimp split: split_if)
                   apply (rule ext)
                   apply (simp add: badgeRegister_def msgInfoRegister_def
-                                   MachineTypes.badgeRegister_def
-                                   MachineTypes.msgInfoRegister_def
+                                   ARM.badgeRegister_def
+                                   ARM.msgInfoRegister_def
                             split: split_if)
                  apply simp
                 apply (wp | simp cong: if_cong bool.case_cong
@@ -5401,6 +5407,8 @@ lemma in_getCTE_slot:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma inj2_assert_opt:
   "(assert_opt v s = assert_opt v' s') = (v = v' \<and> (v' = None \<or> s = s'))"
   by (simp add: assert_opt_def return_def fail_def split: option.split)
@@ -5462,6 +5470,8 @@ lemma monadic_rewrite_if_known:
   apply (simp split del: split_if)
   apply (rule monadic_rewrite_refl)
   done
+
+end
 
 context kernel_m begin
 
@@ -5642,7 +5652,7 @@ lemma schedule_known_rewrite:
                \<and> ksCurThread s = t'
                \<and> st_tcb_at' (Not \<circ> runnable') t' s)
       (schedule)
-      (do ArchThreadDecls_H.switchToThread t;
+      (do Arch.switchToThread t;
           setCurThread t;
           setSchedulerAction ResumeCurrentThread od)"
   apply (simp add: schedule_def)
@@ -6259,8 +6269,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                       apply (clarsimp split: split_if)
                       apply (rule ext)
                       apply (simp add: badgeRegister_def msgInfoRegister_def
-                                       MachineTypes.msgInfoRegister_def
-                                       MachineTypes.badgeRegister_def
+                                       ARM.msgInfoRegister_def
+                                       ARM.badgeRegister_def
                                 split: split_if)
                      apply simp
                     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps

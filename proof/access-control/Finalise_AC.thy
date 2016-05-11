@@ -12,6 +12,8 @@ theory Finalise_AC
 imports Arch_AC
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma tcb_sched_action_dequeue_integrity[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and K (is_subject aag thread)\<rbrace>
     tcb_sched_action tcb_sched_dequeue thread
@@ -1303,5 +1305,7 @@ lemma invoke_cnode_pas_refined:
                     | drule auth_derived_caps_of_state_impls
                     | fastforce intro: cap_cur_auth_caps_of_state )+
   done
+
+end
 
 end

@@ -46,8 +46,8 @@ definition
 definition
   "callKernel_withFastpath_C e \<equiv>
    if e = SyscallEvent syscall.SysCall \<or> e = SyscallEvent syscall.SysReplyRecv
-   then exec_C \<Gamma> (\<acute>cptr :== CALL getRegister(\<acute>ksCurThread, scast capRegister);;
-                  \<acute>msgInfo :== CALL getRegister(\<acute>ksCurThread, scast msgInfoRegister);;
+   then exec_C \<Gamma> (\<acute>cptr :== CALL getRegister(\<acute>ksCurThread, scast Kernel_C.capRegister);;
+                  \<acute>msgInfo :== CALL getRegister(\<acute>ksCurThread, scast Kernel_C.msgInfoRegister);;
                    IF e = SyscallEvent syscall.SysCall
                    THEN CALL fastpath_call(\<acute>cptr, \<acute>msgInfo)
                    ELSE CALL fastpath_reply_recv(\<acute>cptr, \<acute>msgInfo) FI)
@@ -193,6 +193,8 @@ end
 consts
   Init_C' :: "unit observable \<Rightarrow> cstate global_state set"
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition "Init_C \<equiv> \<lambda>((tc,s),m,e). Init_C' ((tc, truncate_state s),m,e)"
 
 definition
@@ -282,7 +284,7 @@ lemma cirqstate_cancel:
 definition
   "cint_state_to_H cnode cirqs \<equiv>
    InterruptState (ptr_val cnode)
-     (\<lambda>i::10 word. if i \<le> scast Platform.maxIRQ then cirqstate_to_H (index cirqs (unat i))
+     (\<lambda>i::10 word. if i \<le> scast ARM.maxIRQ then cirqstate_to_H (index cirqs (unat i))
                 else irqstate.IRQInactive)"
 
 lemma cint_rel_to_H:
@@ -293,7 +295,7 @@ lemma cint_rel_to_H:
   apply (cases "ksInterruptState s")
   apply (rename_tac "fun")
   apply (clarsimp simp: cinterrupt_relation_def cint_state_to_H_def
-                        Platform.maxIRQ_def Kernel_C.maxIRQ_def)
+                        ARM.maxIRQ_def Kernel_C.maxIRQ_def)
   apply (rule ext)
   apply clarsimp
   apply (drule spec, erule impE, assumption)
@@ -549,6 +551,8 @@ lemma inj_hwasidsI:
   apply (fastforce simp: ran_def dom_def)
   done
 
+end
+
 lemma (in kernel_m)
   assumes valid: "valid_arch_state' astate"
   assumes rel: "carch_state_relation (ksArchState astate) cstate"
@@ -635,6 +639,8 @@ lemma (in kernel_m)  carch_state_to_H_correct:
   using valid[simplified valid_arch_state'_def]
   apply (fastforce simp: valid_asid_table'_def)
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma tcb_queue_rel_unique:
   "hp NULL = None \<Longrightarrow>
@@ -1283,6 +1289,8 @@ lemma cstate_to_pspace_H_correct:
   apply (drule (2) cpspace_relation_unique, simp+)
   done
 
+end
+
 lemma (in kernel_m) cDomScheduleIdx_to_H_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
@@ -1469,7 +1477,7 @@ definition (in state_rel)
                           {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va})));
       setUserMem_C (restrict_map um'
                         {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
-                      \<circ> Platform.addrFromPPtr);
+                      \<circ> addrFromPPtr);
       return (e,tc')
    od"
 
@@ -1512,8 +1520,8 @@ definition
 definition
   "callKernel_withFastpath_C e \<equiv>
    if e = SyscallEvent syscall.SysCall \<or> e = SyscallEvent syscall.SysReplyRecv
-   then exec_C \<Gamma> (\<acute>cptr :== CALL getRegister(\<acute>ksCurThread, scast capRegister);;
-                  \<acute>msgInfo :== CALL getRegister(\<acute>ksCurThread, scast msgInfoRegister);;
+   then exec_C \<Gamma> (\<acute>cptr :== CALL getRegister(\<acute>ksCurThread, scast Kernel_C.capRegister);;
+                  \<acute>msgInfo :== CALL getRegister(\<acute>ksCurThread, scast Kernel_C.msgInfoRegister);;
                    IF e = SyscallEvent syscall.SysCall
                    THEN CALL fastpath_call(\<acute>cptr, \<acute>msgInfo)
                    ELSE CALL fastpath_reply_recv(\<acute>cptr, \<acute>msgInfo) FI)

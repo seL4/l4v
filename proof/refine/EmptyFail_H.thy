@@ -18,7 +18,14 @@ lemma wpc_helper_empty_fail:
 
 wpc_setup "\<lambda>m. empty_fail m" wpc_helper_empty_fail
 
-crunch_ignore (empty_fail) (add: handleE' getCTE getObject updateObject)
+crunch_ignore (empty_fail)
+  (add: handleE' getCTE getObject updateObject
+        CSpaceDecls_H.resolveAddressBits
+        doMachineOp
+        suspend restart
+        schedule)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemmas forM_empty_fail[intro!, wp, simp] = empty_fail_mapM[simplified forM_def[symmetric]]
 lemmas forM_x_empty_fail[intro!, wp, simp] = empty_fail_mapM_x[simplified forM_x_def[symmetric]]
@@ -90,12 +97,10 @@ proof (induct arbitrary: s rule: resolveAddressBits.induct)
 
 lemmas resolveAddressBits_empty_fail[intro!, wp, simp] =
        resolveAddressBits_spec_empty_fail[THEN use_spec_empty_fail]
-crunch_ignore (empty_fail) (add: CSpaceDecls_H.resolveAddressBits)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: lookupIPCBuffer
 (simp:Let_def)
 
-crunch_ignore (empty_fail) (add: doMachineOp)
 declare ef_dmo'[intro!, wp, simp]
 
 lemma empty_fail_getObject_ep [intro!, wp, simp]:
@@ -113,8 +118,8 @@ lemma constOnFailure_empty_fail[intro!, wp, simp]:
 lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
   "isPageTableCap y \<or> isPageDirectoryCap y \<or> isPageCap y
    \<or> isASIDControlCap y \<or> isASIDPoolCap y
-   \<Longrightarrow> empty_fail (ArchRetypeDecls_H.deriveCap x y)"
-  apply (simp add: ArchRetype_H.deriveCap_def)
+   \<Longrightarrow> empty_fail (Arch.deriveCap x y)"
+  apply (simp add: ARM_H.deriveCap_def)
   by auto
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: ensureNoChildren
@@ -180,8 +185,6 @@ lemma ThreadDecls_H_suspend_empty_fail[intro!, wp, simp]:
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
   by (simp add:restart_def)
-
-crunch_ignore (empty_fail) (add: suspend restart)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: finaliseCap, preemptionPoint, capSwapForDelete
 (wp: empty_fail_catch simp:  Let_def ignore: cacheRangeOp)
@@ -305,17 +308,11 @@ lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   apply (simp | wp | wpc)+
   done
 
-crunch_ignore (empty_fail) (add: schedule)
-
-
 lemma empty_fail_resetTimer[wp]: "empty_fail resetTimer"
   by (simp add: resetTimer_def)
 
 crunch (empty_fail) empty_fail: callKernel
 (wp: empty_fail_catch simp: const_def Let_def ignore: cacheRangeOp)
-
-
-
 
 lemma call_kernel_serial:
   " \<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
@@ -330,5 +327,7 @@ lemma call_kernel_serial:
    apply (rule callKernel_empty_fail)
   apply auto
   done
+
+end
 
 end

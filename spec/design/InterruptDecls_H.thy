@@ -16,40 +16,40 @@ imports
   KI_Decls_H
 begin
 
-consts
+consts'
 decodeIRQControlInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> capability list \<Rightarrow> ( syscall_error , irqcontrol_invocation ) kernel_f"
 
-consts
+consts'
 performIRQControl :: "irqcontrol_invocation \<Rightarrow> unit kernel_p"
 
-consts
+consts'
 decodeIRQHandlerInvocation :: "machine_word \<Rightarrow> irq \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , irqhandler_invocation ) kernel_f"
 
-consts
+consts'
 toBool :: "machine_word \<Rightarrow> bool"
 
-consts
+consts'
 invokeIRQHandler :: "irqhandler_invocation \<Rightarrow> unit kernel"
 
-consts
+consts'
 deletingIRQHandler :: "irq \<Rightarrow> unit kernel"
 
-consts
+consts'
 initInterruptController :: "capability \<Rightarrow> machine_word \<Rightarrow> capability kernel_init"
 
-consts
+consts'
 handleInterrupt :: "irq \<Rightarrow> unit kernel"
 
-consts
+consts'
 isIRQActive :: "irq \<Rightarrow> bool kernel"
 
-consts
+consts'
 setIRQState :: "irqstate \<Rightarrow> irq \<Rightarrow> unit kernel"
 
-consts
+consts'
 getIRQState :: "irq \<Rightarrow> irqstate kernel"
 
-consts
+consts'
 getIRQSlot :: "irq \<Rightarrow> (machine_word) kernel"
 
 

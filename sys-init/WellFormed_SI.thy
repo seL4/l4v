@@ -26,6 +26,7 @@ imports
   "../lib/SimpStrategy"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma cap_has_object_NullCap [simp]:
   "\<not>cap_has_object NullCap"
@@ -1658,5 +1659,7 @@ lemma update_cap_data:
    apply (subst cap_rights_default_cap_eq, fast)
   apply simp
   done
+
+end
 
 end

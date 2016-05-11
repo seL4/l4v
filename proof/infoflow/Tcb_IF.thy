@@ -13,6 +13,7 @@ imports    "Finalise_IF"
 
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 section "arm global pd"
 
@@ -735,5 +736,7 @@ lemma decode_tcb_invocation_authorised_extra:
                               
                          split del: split_if)+
   done
- 
+
+end
+
 end

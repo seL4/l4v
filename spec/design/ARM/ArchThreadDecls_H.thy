@@ -21,17 +21,20 @@ imports
   "../KernelInitMonad_H"
 begin
 
-consts
+context Arch begin global_naming ARM_H
+
+consts'
 switchToThread :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 configureIdleThread :: "machine_word \<Rightarrow> unit kernel_init"
 
-consts
+consts'
 switchToIdleThread :: "unit kernel"
 
-consts
+consts'
 activateIdleThread :: "machine_word \<Rightarrow> unit kernel"
 
 
+end
 end

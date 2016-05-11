@@ -12,6 +12,17 @@ theory Schedule_AI
 imports VSpace_AI
 begin
 
+context begin interpretation Arch .
+(* FIXME arch_split: some of these could be moved to generic theories
+   so they don't need to be unqualified. *)
+requalify_facts 
+  no_irq
+  no_irq_storeWord
+  ef_storeWord
+  mapM_UNIV_wp
+
+end
+
 lemma findM_inv'':
   assumes p: "suffixeq xs xs'"
   assumes x: "\<And>x xs. suffixeq (x # xs) xs' \<Longrightarrow> \<lbrace>P (x # xs)\<rbrace> m x \<lbrace>\<lambda>rv s. (rv \<longrightarrow> Q s) \<and> (\<not> rv \<longrightarrow> P xs s)\<rbrace>"
@@ -59,10 +70,6 @@ lemma postfix_tails:
   done
 
 
-lemma cte_wp_at_cur [simp]:
-  "cte_wp_at P p (cur_thread_update f s) = cte_wp_at P p s"
-  by (simp add: cte_wp_at_cases)
-
 lemma valid_irq_states_cur_thread_update[simp]:
   "valid_irq_states (cur_thread_update f s) = valid_irq_states s"
   by(simp add: valid_irq_states_def)
@@ -72,11 +79,10 @@ lemma sct_invs:
   by wp (clarsimp simp add: invs_def cur_tcb_def valid_state_def valid_idle_def
                             valid_irq_node_def valid_machine_state_def)
 
-
 lemma storeWord_valid_irq_states:
   "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> storeWord x y
    \<lbrace>\<lambda>a b. valid_irq_states (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  apply(simp add: valid_irq_states_def | wp | simp add: no_irq_storeWord)+  
+  apply (simp add: valid_irq_states_def | wp no_irq | simp add: no_irq_storeWord)+
   done
 
 lemma dmo_storeWord_valid_irq_states[wp]:
@@ -86,6 +92,7 @@ lemma dmo_storeWord_valid_irq_states[wp]:
   apply(erule use_valid[OF _ storeWord_valid_irq_states])
   by simp
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma dmo_mapM_storeWord_0_invs[wp]:
   "valid invs (do_machine_op (mapM (\<lambda>p. storeWord p 0) S)) (\<lambda>_. invs)"
   apply (simp add: dom_mapM ef_storeWord)
@@ -101,6 +108,7 @@ lemma dmo_mapM_storeWord_0_invs[wp]:
    apply wp
   apply simp
   done
+end
 
 lemma dmo_kheap_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (kheap s) (arch_state s)\<rbrace>
@@ -109,6 +117,7 @@ lemma dmo_kheap_arch_state[wp]:
   by (clarsimp simp: do_machine_op_def simpler_gets_def select_f_def
           simpler_modify_def return_def bind_def valid_def)
 
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma set_vm_root_kheap_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace> set_vm_root a
    \<lbrace>\<lambda>_ s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace>" (is "valid ?P _ _")
@@ -122,14 +131,18 @@ lemma set_vm_root_kheap_arch_state[wp]:
      apply (wp | simp add: returnOk_def validE_E_def validE_def)+
     apply (wp | simp add: throwError_def validE_R_def validE_def)+
 done
+end
 
+context Arch begin global_naming ARM (*FIXME: arch_split*)
 lemma clearExMonitor_invs [wp]:
   "\<lbrace>invs\<rbrace> do_machine_op clearExMonitor \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wp dmo_invs)
   apply (clarsimp simp: clearExMonitor_def machine_op_lift_def
                         machine_rest_lift_def in_monad select_f_def)
   done
+end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_stt_invs [wp]:
   "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
@@ -142,19 +155,18 @@ lemma arch_stt_invs [wp]:
   apply (drule spec, erule impE, fastforce)
   apply (clarsimp simp: is_aligned_neg_mask_eq a_type_simps)
   done
+end
 
-lemma do_machine_op_tcb[wp]:
-  "\<lbrace>tcb_at p\<rbrace> do_machine_op opr \<lbrace>\<lambda>rv. tcb_at p\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (clarsimp simp: tcb_at_def get_tcb_def)
-  done
+lemmas do_machine_op_tcb[wp] =
+  do_machine_op_obj_at[where P=id and Q=is_tcb, simplified]
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_stt_tcb [wp]:
   "\<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. tcb_at t'\<rbrace>"
   apply (simp add: arch_switch_to_thread_def) 
-  apply (wp do_machine_op_tcb)
+  apply (wp)
   done
+end
 
 lemma stt_tcb [wp]:
   "\<lbrace>tcb_at t\<rbrace> switch_to_thread t \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
@@ -176,7 +188,7 @@ lemma stt_invs [wp]:
     apply (clarsimp simp: invs_def valid_state_def valid_idle_def
                           valid_irq_node_def valid_machine_state_def)
     apply (fastforce simp: cur_tcb_def obj_at_def
-                    elim: valid_pspace_eqI ifunsafe_pspaceI)
+                     elim: valid_pspace_eqI ifunsafe_pspaceI)
    apply wp
   apply clarsimp
   apply (simp add: is_tcb_def)
@@ -185,11 +197,13 @@ lemma stt_invs [wp]:
 abbreviation
   "activatable \<equiv> \<lambda>st. runnable st \<or> idle st"
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_stt_runnable:
   "\<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . st_tcb_at runnable t\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
   apply wp
   done
+end
 
 lemma stt_activatable:
   "\<lbrace>st_tcb_at runnable t\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
@@ -207,6 +221,7 @@ lemma invs_upd_cur_valid:
     \<Longrightarrow> \<lbrace>P and Q\<rbrace> f \<lbrace>\<lambda>rv s. invs (s\<lparr>cur_thread := thread\<rparr>)\<rbrace>"
   by (fastforce simp: valid_def invs_def valid_state_def cur_tcb_def valid_machine_state_def)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma stit_invs [wp]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
@@ -220,12 +235,14 @@ lemma stit_invs [wp]:
   apply (drule_tac addr="arm_globals_frame (arch_state s)" in valid_pspace_aligned, simp)
   apply (drule is_aligned_neg_mask_eq, simp add: a_type_def)
   done
+end
 
 (* FIXME move *)
 lemma pred_tcb_weaken_strongerE:
   "\<lbrakk> pred_tcb_at proj P t s; \<And>tcb . P (proj tcb) \<Longrightarrow> P' (proj' tcb) \<rbrakk> \<Longrightarrow> pred_tcb_at proj' P' t s"
   by (auto simp: pred_tcb_at_def elim: obj_at_weakenE)
 
+context begin interpretation Arch . (* FIXME: arch_split*)
 lemma stit_activatable:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
@@ -233,6 +250,7 @@ lemma stit_activatable:
   apply (clarsimp simp: invs_def valid_state_def cur_tcb_def valid_idle_def
                  elim!: pred_tcb_weaken_strongerE)
   done
+end
 
 lemma OR_choice_weak_wp:
   "\<lbrace>P\<rbrace> f \<sqinter> g \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> OR_choice b f g \<lbrace>Q\<rbrace>"
@@ -247,23 +265,6 @@ lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,u
             do_machine_op_tcb select_ext_weak_wp select_wp when_def
           | clarsimp simp: getActiveTCB_def get_tcb_def)+
   done
-
-lemma obj_at_machine_state [iff]:
-  "obj_at P p (machine_state_update f s) = obj_at P p s"
-  by (auto intro: obj_at_pspaceI)
-
-lemma dmo_pred_tcb_at:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> do_machine_op m \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-proof -
-  have pred_tcb_at_ms: "\<And>P addr f s.
-       pred_tcb_at proj P addr (machine_state_update f s) = pred_tcb_at proj P addr s"
-    by (simp add: pred_tcb_at_def)
-  show ?thesis
-    apply (simp add: do_machine_op_def split_def)
-    apply (wp select_wp)
-    apply (simp add: pred_tcb_at_ms)
-    done
-qed
 
 (* FIXME - move *)
 lemma get_tcb_exst_update:
@@ -281,7 +282,7 @@ lemma schedule_ct_activateable[wp]:
     by (fastforce simp: ct_in_state_def pred_tcb_at_def intro: obj_at_pspaceI)
   show ?thesis
     apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
-    apply (wp alternative_wp dmo_pred_tcb_at
+    apply (wp alternative_wp
               select_ext_weak_wp select_wp stt_activatable stit_activatable
                | simp add: P)+
     apply (clarsimp simp: getActiveTCB_def ct_in_state_def)
@@ -295,7 +296,5 @@ lemma schedule_ct_activateable[wp]:
     apply (clarsimp simp: pred_tcb_at_def obj_at_def split: split_if_asm)
     done
 qed
-
-
 
 end

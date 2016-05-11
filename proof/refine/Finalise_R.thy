@@ -14,6 +14,7 @@ imports
   InterruptAcc_R
   Retype_R
 begin
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare doUnbindNotification_def[simp]
 
@@ -147,7 +148,7 @@ lemma no_0_no_0_lhs_rtrancl [simp]:
   "\<lbrakk> no_0 m; x \<noteq> 0 \<rbrakk> \<Longrightarrow> \<not> m \<turnstile> 0 \<leadsto>\<^sup>* x"
   by (clarsimp dest!: rtranclD)
 
-
+end
 locale mdb_empty = 
   mdb_ptr?: mdb_ptr m _ _ slot s_cap s_node
     for m slot s_cap s_node +
@@ -166,6 +167,7 @@ locale mdb_empty =
                slot (cteCap_update (%_. capability.NullCap)))
               slot (cteMDBNode_update (const nullMDBNode))"
 begin
+interpretation Arch . (*FIXME: arch_split*)
 
 lemmas m_slot_prev = m_p_prev
 lemmas m_slot_next = m_p_next
@@ -1351,6 +1353,7 @@ lemma deletedIRQHandler_irqs_masked'[wp]:
 
 crunch irqs_masked'[wp]: emptySlot "irqs_masked'"
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma setIRQState_umm:
  "\<lbrace>\<lambda>s. P (underlying_memory (ksMachineState s))\<rbrace>
    setIRQState irqState irq
@@ -1889,6 +1892,7 @@ lemma isFinal:
   apply clarsimp
   apply (clarsimp simp: isCap_simps sameObjectAs_def3)
   done
+end
 
 lemma (in vmdb) isFinal_no_subtree: 
   "\<lbrakk> m \<turnstile> sl \<rightarrow> p; isFinal cap sl (option_map cteCap o m);
@@ -1951,6 +1955,8 @@ lemma isFinal2:
    apply simp
   apply (simp|wp)+
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma no_fail_isFinalCapability [wp]:
   "no_fail (valid_mdb' and cte_wp_at' (op = cte) p) (isFinalCapability cte)"
@@ -2145,7 +2151,7 @@ lemma finaliseCap_cases[wp]:
        isZombie (fst rv) \<and> final \<and> \<not> flag \<and> snd rv = None
         \<and> capUntypedPtr (fst rv) = capUntypedPtr cap
         \<and> (isThreadCap cap \<or> isCNodeCap cap \<or> isZombie cap)\<rbrace>"
-  apply (simp add: finaliseCap_def ArchRetype_H.finaliseCap_def Let_def
+  apply (simp add: finaliseCap_def ARM_H.finaliseCap_def Let_def
                    getThreadCSpaceRoot
              cong: if_cong split del: split_if)
   apply (rule hoare_pre)
@@ -2157,6 +2163,7 @@ lemma finaliseCap_cases[wp]:
   apply (intro allI impI conjI TrueI)
   apply (auto simp add: isCap_simps)
   done
+
 
 crunch aligned'[wp]: finaliseCap "pspace_aligned'"
   (simp: crunch_simps assertE_def unless_def
@@ -2176,6 +2183,8 @@ crunch it'[wp]: finaliseCap "\<lambda>s. P (ksIdleThread s)"
   (ignore: getObject setObject forM ignoreFailure maskInterrupt
    wp: mapM_x_wp_inv mapM_wp' hoare_drop_imps getObject_inv loadObject_default_inv
    simp: whenE_def crunch_simps unless_def)
+
+
 
 crunch vs_lookup[wp]: flush_space "\<lambda>s. P (vs_lookup s)"
   (wp: crunch_wps)
@@ -2361,9 +2370,9 @@ lemma deleteASID_invs'[wp]:
 
 lemma arch_finaliseCap_invs[wp]:
   "\<lbrace>invs' and valid_cap' (ArchObjectCap cap)\<rbrace>
-     ArchRetypeDecls_H.finaliseCap cap fin
+     Arch.finaliseCap cap fin
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: ArchRetype_H.finaliseCap_def)
+  apply (simp add: ARM_H.finaliseCap_def)
   apply (rule hoare_pre)
    apply (wp | wpc)+
   apply clarsimp
@@ -2373,9 +2382,9 @@ lemma arch_finaliseCap_removeable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile>' ArchObjectCap cap \<and> invs' s
        \<and> (final \<and> final_matters' (ArchObjectCap cap)
             \<longrightarrow> isFinal (ArchObjectCap cap) slot (cteCaps_of s))\<rbrace>
-     ArchRetypeDecls_H.finaliseCap cap final
+     Arch.finaliseCap cap final
    \<lbrace>\<lambda>rv s. isNullCap rv \<and> removeable' slot s (ArchObjectCap cap)\<rbrace>"
-  apply (simp add: ArchRetype_H.finaliseCap_def
+  apply (simp add: ARM_H.finaliseCap_def
                    removeable'_def)
   apply (rule hoare_pre)
    apply (wp | wpc)+
@@ -2488,7 +2497,7 @@ lemma finaliseCap_cte_refs:
      finaliseCap cap final flag
    \<lbrace>\<lambda>rv s. fst rv \<noteq> NullCap \<longrightarrow> cte_refs' (fst rv) = cte_refs' cap\<rbrace>"
   apply (simp  add: finaliseCap_def Let_def getThreadCSpaceRoot
-                    ArchRetype_H.finaliseCap_def
+                    ARM_H.finaliseCap_def
              cong: if_cong split del: split_if)
   apply (rule hoare_pre)
    apply (wp | wpc | simp only: o_def)+
@@ -2726,6 +2735,8 @@ lemma unbindMaybeNotification_tcb_at'[wp]:
   apply (wp gbn_wp' | wpc | simp)+
   done
 
+end
+
 lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s
        \<and> (final_matters' cap \<longrightarrow> (final = isFinal cap slot (cteCaps_of s)))
@@ -2842,6 +2853,8 @@ lemma suspend_cte_wp_at':
              | simp add: x)+
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 crunch cte_wp_at'[wp]: deleteASIDPool "cte_wp_at' P p"
   (simp: crunch_simps assertE_def
          wp: crunch_wps getObject_inv loadObject_default_inv
@@ -2865,8 +2878,8 @@ crunch cte_wp_at'[wp]: unmapPageTable, unmapPage, unbindNotification, finaliseCa
      ignore: getObject setObject)
 
 lemma arch_finaliseCap_cte_wp_at[wp]:
-  "\<lbrace>cte_wp_at' P p\<rbrace> ArchRetypeDecls_H.finaliseCap cap fin \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
-  apply (simp add: ArchRetype_H.finaliseCap_def)
+  "\<lbrace>cte_wp_at' P p\<rbrace> Arch.finaliseCap cap fin \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
+  apply (simp add: ARM_H.finaliseCap_def)
   apply (rule hoare_pre)
    apply (wp unmapPage_cte_wp_at'| simp | wpc)+
   done
@@ -3262,7 +3275,9 @@ lemma cteDeleteOne_tcbDomain_obj_at':
   apply (clarsimp simp: cte_wp_at'_def)
   done
 
-interpretation delete_one_conc_pre
+end
+
+global_interpretation delete_one_conc_pre
   by (unfold_locales, wp) (wp cteDeleteOne_tcbDomain_obj_at' cteDeleteOne_typ_at' cteDeleteOne_reply_pred_tcb_at | simp)+
 
 lemma cteDeleteOne_invs[wp]:
@@ -3294,7 +3309,7 @@ lemma cteDeleteOne_invs[wp]:
   apply (fastforce simp: cte_wp_at_ctes_of)
   done
 
-interpretation delete_one_conc_fr: delete_one_conc
+global_interpretation delete_one_conc_fr: delete_one_conc
   by unfold_locales wp
 
 declare cteDeleteOne_invs[wp]
@@ -3371,7 +3386,7 @@ lemma finaliseCap_valid_cap[wp]:
   "\<lbrace>valid_cap' cap\<rbrace> finaliseCap cap final flag \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>"
   apply (simp add: finaliseCap_def Let_def
                    getThreadCSpaceRoot
-                   ArchRetype_H.finaliseCap_def
+                   ARM_H.finaliseCap_def
              cong: if_cong split del: split_if)
   apply (rule hoare_pre)
    apply (wp | simp only: valid_NullCap o_def fst_conv | wpc)+
@@ -3381,7 +3396,10 @@ lemma finaliseCap_valid_cap[wp]:
                          objBits_simps shiftL_nat)+
   done
 
-crunch nosch[wp]: "ArchRetypeDecls_H.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+crunch nosch[wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: loadObject_default_def updateObject_default_def
    ignore: getObject)
 
@@ -3390,6 +3408,8 @@ crunch sch_act_simple[wp]: finaliseCap sch_act_simple
    lift: sch_act_simple_lift
    wp: getObject_inv loadObject_default_inv crunch_wps
    ignore: getObject)
+
+end
 
 
 lemma interrupt_cap_null_or_ntfn:
@@ -3441,6 +3461,8 @@ lemma (in delete_one) deleting_irq_corres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma arch_finalise_cap_corres:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>
      \<Longrightarrow> corres cap_relation
@@ -3452,9 +3474,9 @@ lemma arch_finalise_cap_corres:
            (\<lambda>s. invs' s \<and> s \<turnstile>' ArchObjectCap cap' \<and>
                  (final_matters' (ArchObjectCap cap') \<longrightarrow>
                       final' = isFinal (ArchObjectCap cap') (cte_map sl) (cteCaps_of s)))
-           (arch_finalise_cap cap final) (ArchRetypeDecls_H.finaliseCap cap' final')"
+           (arch_finalise_cap cap final) (Arch.finaliseCap cap' final')"
   apply (cases cap,
-         simp_all add: arch_finalise_cap_def ArchRetype_H.finaliseCap_def
+         simp_all add: arch_finalise_cap_def ARM_H.finaliseCap_def
                        final_matters'_def case_bool_If liftM_def[symmetric]
                        o_def dc_def[symmetric]
                 split: option.split,
@@ -3596,10 +3618,10 @@ lemma cap_delete_one_corres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply fastforce
   done
-
+end
 (* FIXME: strengthen locale instead *)
 
-interpretation delete_one
+global_interpretation delete_one
   apply unfold_locales
   apply (rule corres_guard_imp)
     apply (rule cap_delete_one_corres)
@@ -3659,7 +3681,7 @@ lemma finalise_cap_corres:
   apply (clarsimp split del: split_if simp: o_def)
   apply (rule corres_guard_imp [OF arch_finalise_cap_corres], (fastforce simp: valid_sched_def)+)
   done
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_recycleCap_improve_cases:
    "\<lbrakk> \<not> isPageCap cap; \<not> isPageTableCap cap; \<not> isPageDirectoryCap cap;
          \<not> isASIDControlCap cap \<rbrakk> \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"
@@ -3752,9 +3774,9 @@ lemma ct_in_current_domain_ArchState_update[simp]:
 
 lemma arch_recycleCap_invs:
   "\<lbrace>cte_wp_at' (\<lambda>cte. cteCap cte = ArchObjectCap cap) slot and invs'\<rbrace>
-     ArchRetypeDecls_H.recycleCap is_final cap
+     Arch.recycleCap is_final cap
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: ArchRetype_H.recycleCap_def arch_recycleCap_improve_cases
+  apply (simp add: ARM_H.recycleCap_def arch_recycleCap_improve_cases
                    Let_def
               split del: split_if)
   apply (rule hoare_pre)
@@ -3921,8 +3943,8 @@ lemma arch_recycle_cap_corres:
      (invs' and valid_cap' (capability.ArchObjectCap cap') and 
       (\<lambda>s. final_matters' (capability.ArchObjectCap cap') \<longrightarrow>
            is_final' = isFinal (capability.ArchObjectCap cap') (cte_map slot) (cteCaps_of s)))
-     (arch_recycle_cap is_final cap) (ArchRetypeDecls_H.recycleCap is_final' cap')"
-  apply (simp add: arch_recycle_cap_def ArchRetype_H.recycleCap_def final_matters'_def split_def
+     (arch_recycle_cap is_final cap) (Arch.recycleCap is_final' cap')"
+  apply (simp add: arch_recycle_cap_def ARM_H.recycleCap_def final_matters'_def split_def
                     split del: split_if)
   apply (cases cap, simp_all add: isCap_simps split del: split_if)
      -- "ASID pool"
@@ -4034,7 +4056,7 @@ lemma arch_recycle_cap_corres:
       apply (wp cteCaps_of_ctes_of_lift mapM_storePTE_invs
                 mapM_wp' cteCaps_of_ctes_of_lift hoare_vcg_all_lift
              | simp add: swp_def)+
-    apply (clarsimp simp: invs_pspace_alignedI valid_cap_def)
+    apply (clarsimp simp: invs_psp_aligned valid_cap_def)
     apply (intro conjI)
      apply (clarsimp simp: upto_enum_step_def)
      apply (erule page_table_pte_atI[simplified shiftl_t2n mult.commute mult.left_commute,simplified])
@@ -4061,7 +4083,7 @@ lemma arch_recycle_cap_corres:
        prefer 2
        apply (simp add: liftM_def[symmetric] o_def dc_def[symmetric]
                         mapM_x_mapM)
-       apply (simp add: kernel_base_def Platform.kernelBase_def kernelBase_def 
+       apply (simp add: kernel_base_def kernelBase_def ARM.kernelBase_def 
                         objBits_simps archObjSize_def)
        apply (rule corres_guard_imp)
          apply (rule_tac r'=dc and S="op ="
@@ -4227,7 +4249,7 @@ lemma set_thread_all_corres:
   apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: projectKOs)
   apply (insert e is_t)
-  by (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits Arch_Structs_A.arch_kernel_obj.splits)
+  by (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits ARM_A.arch_kernel_obj.splits)
 
 lemma tcb_update_all_corres':
   assumes tcbs: "tcb_relation tcb tcb' \<Longrightarrow> tcb_relation tcbu tcbu'"
@@ -4626,5 +4648,7 @@ lemma cteDeleteOne_ct_not_ksQ:
     apply (wp finaliseCapTrue_standin_ct_not_ksQ isFinalCapability_inv)
   apply (clarsimp)
   done
+
+end
 
 end

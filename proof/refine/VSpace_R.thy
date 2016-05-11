@@ -15,6 +15,15 @@
 theory VSpace_R
 imports TcbAcc_R
 begin
+context Arch begin global_naming ARM (*FIXME: arch_split*)
+
+lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
+lemmas store_pde_typ_ats[wp] = store_pde_typ_ats abs_atyp_at_lifts[OF store_pde_typ_at]
+
+end
+
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch_ignore (add: throw_on_false)
 
@@ -507,7 +516,7 @@ lemma arm_context_switch_corres:
 lemma hv_corres: 
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
-  apply (simp add: handleVMFault_def ArchVSpace_H.handleVMFault_def)
+  apply (simp add: handleVMFault_def ARM_H.handleVMFault_def)
   apply (cases fault)
    apply simp
    apply (rule corres_guard_imp)
@@ -683,7 +692,7 @@ lemma set_vm_root_corres:
 proof -
   have P: "corres dc \<top> \<top>
         (do global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-            do_machine_op (MachineOps.setCurrentPD (Platform.addrFromPPtr global_pd))
+            do_machine_op (setCurrentPD (addrFromPPtr global_pd))
          od)
         (do globalPD \<leftarrow> gets (armKSGlobalPD \<circ> ksArchState);
             doMachineOp (setCurrentPD (addrFromPPtr globalPD))
@@ -698,7 +707,7 @@ proof -
   have Q: "\<And>P P'. corres dc P P'
         (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch>
          (\<lambda>_ . do global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-                  do_machine_op $ setCurrentPD $ Platform.addrFromPPtr global_pd
+                  do_machine_op $ setCurrentPD $ addrFromPPtr global_pd
                od))
         (throwError Fault_H.lookup_failure.InvalidRoot <catch>
          (\<lambda>_ . do globalPD \<leftarrow> gets (armKSGlobalPD \<circ> ksArchState);
@@ -778,7 +787,7 @@ qed
 lemma invalidateTLBByASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> invalidateTLBByASID param_a \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: invalidateTLBByASID_def loadHWASID_def
-         | wp dmo_invs' no_irq_invalidateTLB_ASID | wpc)+
+         | wp dmo_invs' no_irq_invalidateTLB_ASID no_irq | wpc)+
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
     apply (clarsimp simp: invalidateTLB_ASID_def machine_op_lift_def
@@ -1408,7 +1417,7 @@ lemma page_table_mapped_corres:
          apply (rule corres_trivial)
          apply (case_tac rv,
            simp_all add: returnOk_def pde_relation_aligned_def
-           split:if_splits Hardware_H.pde.splits)[1]
+           split:if_splits ARM_H.pde.splits)[1]
         apply (wp | simp add: lookup_pd_slot_def Let_def)+
    apply (simp add: word_neq_0_conv)
   apply simp
@@ -1507,7 +1516,7 @@ lemma check_mapping_corres:
          auto simp add: is_aligned_mask[symmetric]
          is_aligned_shiftr pg_entry_align_def
          unlessE_def returnOk_def pte_relation_aligned_def
-         split: Arch_Structs_A.pte.split if_splits Hardware_H.pte.split )
+         split: ARM_A.pte.split if_splits ARM_H.pte.split )
       apply wp
     apply simp
    apply (simp add:is_aligned_mask[symmetric] is_aligned_shiftr pg_entry_align_def)
@@ -1518,7 +1527,7 @@ lemma check_mapping_corres:
          auto simp add: is_aligned_mask[symmetric]
          is_aligned_shiftr pg_entry_align_def
          unlessE_def returnOk_def pde_relation_aligned_def
-         split: Arch_Structs_A.pde.split if_splits Hardware_H.pde.split )
+         split: ARM_A.pde.split if_splits ARM_H.pde.split )
      apply wp
    apply simp+
   done
@@ -1540,7 +1549,7 @@ lemma unmap_page_corres:
              (valid_objs' and valid_arch_state' and pspace_aligned' and 
               pspace_distinct' and no_0_obj' and cur_tcb')
              (unmap_page sz asid vptr pptr)
-             (unmapPage sz asid vptr pptr)" 
+             (unmapPage sz asid vptr pptr)"
   apply (clarsimp simp: unmap_page_def unmapPage_def ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch [where E="\<lambda>_. \<top>" and E'="\<lambda>_. \<top>"], simp)
@@ -1676,10 +1685,10 @@ lemma unmap_page_corres:
 
 definition
   "flush_type_map type \<equiv> case type of
-     ArchInvocation_A.flush_type.Clean \<Rightarrow> ArchRetypeDecls_H.flush_type.Clean
-   | ArchInvocation_A.flush_type.Invalidate \<Rightarrow> ArchRetypeDecls_H.flush_type.Invalidate
-   | ArchInvocation_A.flush_type.CleanInvalidate \<Rightarrow> ArchRetypeDecls_H.flush_type.CleanInvalidate
-   | ArchInvocation_A.flush_type.Unify \<Rightarrow> ArchRetypeDecls_H.flush_type.Unify"
+     ARM_A.flush_type.Clean \<Rightarrow> ARM_H.flush_type.Clean
+   | ARM_A.flush_type.Invalidate \<Rightarrow> ARM_H.flush_type.Invalidate
+   | ARM_A.flush_type.CleanInvalidate \<Rightarrow> ARM_H.flush_type.CleanInvalidate
+   | ARM_A.flush_type.Unify \<Rightarrow> ARM_H.flush_type.Unify"
 
 lemma do_flush_corres:
   "corres_underlying Id nf nf' dc \<top> \<top>
@@ -1700,8 +1709,8 @@ lemma do_flush_corres:
 
 definition
   "page_directory_invocation_map pdi pdi' \<equiv> case pdi of
-    ArchInvocation_A.PageDirectoryNothing \<Rightarrow> pdi' = PageDirectoryNothing
-  | ArchInvocation_A.PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
+    ARM_A.PageDirectoryNothing \<Rightarrow> pdi' = PageDirectoryNothing
+  | ARM_A.PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
       pdi' = PageDirectoryFlush (flush_type_map typ) start end pstart pd asid"
 
 lemma perform_page_directory_corres:
@@ -1735,19 +1744,19 @@ lemma perform_page_directory_corres:
 
 definition
   "page_invocation_map pi pi' \<equiv> case pi of
-    ArchInvocation_A.PageMap a c ptr m \<Rightarrow> 
+    ARM_A.PageMap a c ptr m \<Rightarrow> 
       \<exists>c' m'. pi' = PageMap a c' (cte_map ptr) m' \<and> 
               cap_relation c c' \<and> 
               mapping_map m m'
               
-  | ArchInvocation_A.PageRemap a m \<Rightarrow> 
+  | ARM_A.PageRemap a m \<Rightarrow> 
       \<exists>m'. pi' = PageRemap a m' \<and> mapping_map m m'
-  | ArchInvocation_A.PageUnmap c ptr \<Rightarrow>
+  | ARM_A.PageUnmap c ptr \<Rightarrow>
       \<exists>c'. pi' = PageUnmap c' (cte_map ptr) \<and> 
          acap_relation c c' 
-  | ArchInvocation_A.PageFlush typ start end pstart pd asid \<Rightarrow>
+  | ARM_A.PageFlush typ start end pstart pd asid \<Rightarrow>
       pi' = PageFlush (flush_type_map typ) start end pstart pd asid
-  | ArchInvocation_A.PageGetAddr ptr \<Rightarrow>
+  | ARM_A.PageGetAddr ptr \<Rightarrow>
       pi' = PageGetAddr ptr"
 
 definition
@@ -1791,7 +1800,7 @@ proof -
   using assms
   apply -
   apply (clarsimp simp:valid_slots_duplicated'_def 
-    split:Hardware_H.pte.splits)
+    split:ARM_H.pte.splits)
   apply (subgoal_tac "p \<le> p + mask 6")
    apply (clarsimp simp:upto_enum_step_def not_less)
    apply (intro conjI impI,simp)
@@ -1839,7 +1848,7 @@ proof -
   using assms
   apply -
   apply (clarsimp simp:valid_slots_duplicated'_def 
-    split:Hardware_H.pde.splits)
+    split:ARM_H.pde.splits)
   apply (subgoal_tac "p \<le> p + mask 6")
    apply (clarsimp simp:upto_enum_step_def not_less)
    apply (intro conjI impI,simp)
@@ -1926,7 +1935,7 @@ lemma corres_store_pde_with_invalid_tail:
   "\<forall>slot \<in>set ys. \<not> is_aligned (slot >> 2) (pde_align' ab)
   \<Longrightarrow>corres dc ((\<lambda>s. \<forall>y\<in> set ys. pde_at y s) and pspace_aligned and valid_etcbs)
            (pspace_aligned' and pspace_distinct')
-           (mapM (swp store_pde Arch_Structs_A.pde.InvalidPDE) ys)
+           (mapM (swp store_pde ARM_A.pde.InvalidPDE) ys)
            (mapM (swp storePDE ab) ys)"
   apply (rule_tac S ="{(x,y). x = y \<and> x \<in> set ys}"
                in corres_mapM[where r = dc and r' = dc])
@@ -1949,7 +1958,7 @@ lemma corres_store_pte_with_invalid_tail:
   "\<forall>slot\<in> set ys. \<not> is_aligned (slot >> 2) (pte_align' aa)
   \<Longrightarrow> corres dc ((\<lambda>s. \<forall>y\<in>set ys. pte_at y s) and pspace_aligned and valid_etcbs)
                 (pspace_aligned' and pspace_distinct')
-             (mapM (swp store_pte Arch_Structs_A.pte.InvalidPTE) ys)
+             (mapM (swp store_pte ARM_A.pte.InvalidPTE) ys)
              (mapM (swp storePTE aa) ys)"
   apply (rule_tac S ="{(x,y). x = y \<and> x \<in> set ys}"
                in corres_mapM[where r = dc and r' = dc])
@@ -2027,7 +2036,7 @@ lemma set_cap_pd_at_asid [wp]:
 
 lemma set_cap_valid_slots_inv[wp]:
   "\<lbrace>valid_slots m\<rbrace> set_cap t st \<lbrace>\<lambda>rv. valid_slots m\<rbrace>"
-  by (cases m, (clarsimp simp: valid_slots_def, wp hoare_vcg_ball_lift set_cap_vs_lookup set_cap_typ_ats)+)
+  by (cases m, (clarsimp simp: valid_slots_def, wp hoare_vcg_ball_lift set_cap.vs_lookup set_cap_typ_ats)+)
 
 lemma set_cap_same_refs_inv[wp]:
   "\<lbrace>\<lambda>s. same_refs m cap s\<rbrace> set_cap t st \<lbrace>\<lambda>rv s. same_refs m cap s\<rbrace>"
@@ -2042,7 +2051,7 @@ definition
   (\<lambda>s. \<exists>pd. pd_at_asid asid pd s)"
 
 lemma set_cap_valid_page_map_inv:
-  "\<lbrace>valid_page_inv (ArchInvocation_A.page_invocation.PageMap asid cap slot m)\<rbrace> set_cap cap slot \<lbrace>\<lambda>rv. valid_page_map_inv asid cap slot m\<rbrace>"
+  "\<lbrace>valid_page_inv (ARM_A.page_invocation.PageMap asid cap slot m)\<rbrace> set_cap cap slot \<lbrace>\<lambda>rv. valid_page_map_inv asid cap slot m\<rbrace>"
   apply (simp add: valid_page_inv_def valid_page_map_inv_def)
   apply (wp set_cap_cte_wp_at_cases hoare_vcg_ex_lift| simp)+
        apply (simp_all) 
@@ -2189,7 +2198,7 @@ proof -
                     apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. pd_at_asid word pd s)" in hoare_strengthen_post)
                      prefer 2
                      apply auto[1]
-                    apply (wp mapM_swp_store_pte_invs[where pte="Arch_Structs_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
+                    apply (wp mapM_swp_store_pte_invs[where pte="ARM_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
                     apply (wp mapM_UNIV_wp | simp add: swp_def del: fun_upd_apply)+
                   apply (clarsimp simp:pte_relation_aligned_def)
                   apply (clarsimp dest!:valid_slots_duplicated_pteD')
@@ -2230,7 +2239,7 @@ proof -
                    apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. pd_at_asid word pd s)" in hoare_strengthen_post)
                     prefer 2
                     apply auto[1]
-                   apply (wp mapM_swp_store_pde_invs_unmap[where pde="Arch_Structs_A.pde.InvalidPDE", simplified] hoare_vcg_ex_lift)
+                   apply (wp mapM_swp_store_pde_invs_unmap[where pde="ARM_A.pde.InvalidPDE", simplified] hoare_vcg_ex_lift)
                    apply (wp mapM_UNIV_wp store_pde_pd_at_asid | clarsimp simp add: swp_def del: fun_upd_apply)+
                  apply (clarsimp simp: pde_relation_aligned_def)
                  apply (clarsimp  dest!:valid_slots_duplicated_pdeD')
@@ -2256,7 +2265,7 @@ proof -
              apply (clarsimp simp: cap_range_def)
             apply (rule conjI)
              apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
-             apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm Arch_Structs_A.arch_kernel_obj.splits)
+             apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm ARM_A.arch_kernel_obj.splits)
             apply (rule conjI[rotated], fastforce)
             apply (erule ballEI)
             apply (clarsimp simp: pde_at_def obj_at_def
@@ -2300,7 +2309,7 @@ proof -
                apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. pd_at_asid word pd s)" in hoare_strengthen_post)
                 prefer 2
                 apply auto[1]
-               apply (wp mapM_swp_store_pte_invs[where pte="Arch_Structs_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
+               apply (wp mapM_swp_store_pte_invs[where pte="ARM_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
                apply (wp mapM_UNIV_wp | simp add: swp_def del: fun_upd_apply)+
              apply (clarsimp simp:pte_relation_aligned_def valid_page_inv'_def)
              apply (clarsimp dest!:valid_slots_duplicated_pteD')
@@ -2341,7 +2350,7 @@ proof -
               apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. pd_at_asid word pd s)" in hoare_strengthen_post)
                prefer 2
                apply auto[1]
-              apply (wp mapM_swp_store_pde_invs_unmap[where pde="Arch_Structs_A.pde.InvalidPDE", simplified] hoare_vcg_ex_lift)
+              apply (wp mapM_swp_store_pde_invs_unmap[where pde="ARM_A.pde.InvalidPDE", simplified] hoare_vcg_ex_lift)
               apply (wp mapM_UNIV_wp store_pde_pd_at_asid | clarsimp simp add: swp_def del: fun_upd_apply)+
             apply (clarsimp simp: pde_relation_aligned_def valid_page_inv'_def)
             apply (clarsimp  dest!:valid_slots_duplicated_pdeD')
@@ -2373,7 +2382,7 @@ proof -
                                 is_pg_cap_def
                         split: cap.splits Structures_A.kernel_object.splits
                                split_if_asm
-                               Arch_Structs_A.arch_kernel_obj.splits option.splits
+                               ARM_A.arch_kernel_obj.splits option.splits
                                arch_cap.splits)+)
        apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
        apply (case_tac ko, simp_all split: split_if_asm)[1]
@@ -2476,11 +2485,11 @@ qed
 
 definition
   "page_table_invocation_map pti pti' \<equiv> case pti of 
-     ArchInvocation_A.PageTableMap cap ptr pde p \<Rightarrow>
+     ARM_A.PageTableMap cap ptr pde p \<Rightarrow>
     \<exists>cap' pde'. pti' = PageTableMap cap' (cte_map ptr) pde' p \<and>
                 cap_relation cap cap' \<and>
                 pde_relation' pde pde' \<and> is_aligned (p >> 2) (pde_align' pde')
-   | ArchInvocation_A.PageTableUnmap cap ptr \<Rightarrow>
+   | ARM_A.PageTableUnmap cap ptr \<Rightarrow>
     \<exists>cap'. pti' = PageTableUnmap cap' (cte_map ptr) \<and>
            cap_relation cap (ArchObjectCap cap')"
 
@@ -2499,9 +2508,9 @@ definition
 lemma clear_page_table_corres:
   "corres dc (pspace_aligned and page_table_at p and valid_etcbs)
              (pspace_aligned' and pspace_distinct')
-    (mapM_x (swp store_pte Arch_Structs_A.InvalidPTE)
+    (mapM_x (swp store_pte ARM_A.InvalidPTE)
        [p , p + 4 .e. p + 2 ^ ptBits - 1])
-    (mapM_x (swp storePTE Hardware_H.InvalidPTE)
+    (mapM_x (swp storePTE ARM_H.InvalidPTE)
        [p , p + 4 .e. p + 2 ^ ptBits - 1])"
   apply (rule_tac F="is_aligned p ptBits" in corres_req)
    apply (clarsimp simp: obj_at_def a_type_def)
@@ -2558,7 +2567,7 @@ lemma perform_page_table_corres:
     apply auto[1]
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
    apply auto[1]
-   apply (clarsimp simp:valid_pde_mapping'_def split:Hardware_H.pde.split)
+   apply (clarsimp simp:valid_pde_mapping'_def split:ARM_H.pde.split)
   apply (rename_tac cap a b)
   apply (clarsimp simp: page_table_invocation_map_def)
   apply (rule_tac F="is_pt_cap cap" in corres_req)
@@ -2627,7 +2636,7 @@ lemma pap_corres:
   apply (rename_tac word1 word2 prod)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ getSlotCap_corres])
-      apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap p asid)" in corres_gen_asm)
+      apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (ARM_A.PageDirectoryCap p asid)" in corres_gen_asm)
       apply clarsimp
       apply (rule_tac Q="valid_objs and pspace_aligned and pspace_distinct and asid_pool_at word2 and valid_etcbs and
                          cte_wp_at (\<lambda>c. cap_master_cap c = 
@@ -2769,7 +2778,7 @@ lemma dmo_armv_contextSwitch_HWASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (armv_contextSwitch_HWASID pd hwasid) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_invs')
    apply (simp add: armv_contextSwitch_HWASID_def)
-   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID)
+   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID no_irq)
   apply safe
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -2782,7 +2791,7 @@ lemma dmo_armv_contextSwitch_HWASID_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (armv_contextSwitch_HWASID pd hwasid) \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   apply (wp dmo_invs_no_cicd')
    apply (simp add: armv_contextSwitch_HWASID_def)
-   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID)
+   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID no_irq)
   apply safe
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -2799,7 +2808,7 @@ lemma no_irq_armv_contextSwitch_HWASID:
 lemma armv_contextSwitch_invs [wp]:
   "\<lbrace>invs'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: armv_contextSwitch_def)
-  apply (wp dmo_invs' no_irq_armv_contextSwitch_HWASID)
+  apply (wp dmo_invs' no_irq_armv_contextSwitch_HWASID no_irq)
   apply (rule hoare_post_imp[rotated], wp)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
@@ -2811,7 +2820,7 @@ lemma armv_contextSwitch_invs [wp]:
 lemma armv_contextSwitch_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: armv_contextSwitch_def armv_contextSwitch_HWASID_def)
-  apply (wp dmo_invs_no_cicd' no_irq_setHardwareASID no_irq_setCurrentPD)
+  apply (wp dmo_invs_no_cicd' no_irq_setHardwareASID no_irq_setCurrentPD no_irq)
   apply (rule hoare_post_imp[rotated], wp getHWASID_invs_no_cicd')
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
@@ -2821,7 +2830,7 @@ lemma armv_contextSwitch_invs_no_cicd':
 
 lemma dmo_setCurrentPD_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_setCurrentPD)
+  apply (wp dmo_invs' no_irq_setCurrentPD no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -2831,7 +2840,7 @@ lemma dmo_setCurrentPD_invs'[wp]:
 
 lemma dmo_setCurrentPD_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wp dmo_invs_no_cicd' no_irq_setCurrentPD)
+  apply (wp dmo_invs_no_cicd' no_irq_setCurrentPD no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -3508,7 +3517,7 @@ lemma setVMRootForFlush_invs'[wp]: "\<lbrace>invs'\<rbrace> setVMRootForFlush a 
 
 lemma dmo_invalidateTLB_VAASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTLB_VAASID x) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_invalidateTLB_VAASID)
+  apply (wp dmo_invs' no_irq_invalidateTLB_VAASID no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -3518,7 +3527,7 @@ lemma dmo_invalidateTLB_VAASID_invs'[wp]:
 
 lemma dmo_cVA_PoU_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (cleanByVA_PoU w p) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_cleanByVA_PoU)
+  apply (wp dmo_invs' no_irq_cleanByVA_PoU no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' pa = underlying_memory m pa"
          in use_valid)
@@ -3528,7 +3537,7 @@ lemma dmo_cVA_PoU_invs'[wp]:
 
 lemma dmo_ccr_PoU_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (cleanCacheRange_PoU s e p) \<lbrace>\<lambda>r. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_cleanCacheRange_PoU)
+  apply (wp dmo_invs' no_irq_cleanCacheRange_PoU no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' pa = underlying_memory m pa"
          in use_valid)
@@ -3539,7 +3548,7 @@ lemma dmo_ccr_PoU_invs'[wp]:
 (* FIXME: Move *)
 lemma dmo_invalidateTLB_ASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTLB_ASID a) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_invalidateTLB_ASID)
+  apply (wp dmo_invs' no_irq_invalidateTLB_ASID no_irq)
   apply clarsimp
   apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
          in use_valid[where P=P and Q="\<lambda>_. P" for P])
@@ -3549,7 +3558,7 @@ lemma dmo_invalidateTLB_ASID_invs'[wp]:
 
 lemma dmo_cleanCaches_PoU_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp cleanCaches_PoU \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_cleanCaches_PoU)
+  apply (wp dmo_invs' no_irq_cleanCaches_PoU no_irq)
   apply clarsimp
   apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
          in use_valid[where P=P and Q="\<lambda>_. P" for P])
@@ -3670,6 +3679,8 @@ crunch valid_pde'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pde' pde"
   (ignore: getObject)
 
 lemma perform_pt_invs [wp]:
+  notes no_irq[wp]
+  shows
   "\<lbrace>invs' and valid_page_inv' pt\<rbrace> performPageInvocation pt \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: performPageInvocation_def)
   apply (cases pt)
@@ -3760,10 +3771,11 @@ lemma diminished_valid':
   apply (rule ext)
   apply (simp add: maskCapRights_def Let_def split del: split_if)
   apply (cases cap'; simp add: isCap_simps valid_cap'_def capAligned_def split del: split_if)
-  by (simp add: ArchRetype_H.maskCapRights_def isPageCap_def Let_def split del: split_if split: arch_capability.splits)
+  by (simp add: ARM_H.maskCapRights_def isPageCap_def Let_def split del: split_if split: arch_capability.splits)
 
 lemma diminished_isPDCap:
   "diminished' cap cap' \<Longrightarrow> isPDCap cap' = isPDCap cap"
   by (blast dest: diminished_capMaster capMaster_isPDCap)
 
+end
 end

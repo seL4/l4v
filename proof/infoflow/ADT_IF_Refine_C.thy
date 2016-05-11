@@ -13,6 +13,7 @@ imports
     "ADT_IF_Refine" "../crefine/Refine_C"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition handleInterruptEntry_C_body_if (*:: "(globals myvars, int, l4c_errortype) com"*) where
 "handleInterruptEntry_C_body_if \<equiv> (
@@ -96,7 +97,7 @@ definition handleVMFaultEvent_C_body_if
           FI;;
             \<acute>ret__unsigned_long :== scast EXCEPTION_NONE))"
 
-
+end
 
 context kernel_m begin
 
@@ -161,9 +162,9 @@ proof -
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: return_def)
     apply wp
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> Platform.maxIRQ)
+   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)
                                      \<and> rv \<noteq> Some 0xFFFF" in hoare_post_imp)
-    apply (clarsimp simp: Kernel_C.maxIRQ_def Platform.maxIRQ_def)
+    apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
    apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done

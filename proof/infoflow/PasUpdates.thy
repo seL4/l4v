@@ -16,6 +16,8 @@ imports
 
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread s)"
 (wp: OR_choiceE_weak_wp crunch_wps simp: crunch_simps ignore: do_extended_op OR_choiceE)
   
@@ -300,5 +302,7 @@ lemma pas_refined_pasMayEditReadyQueues_update:
   apply(simp add: pas_refined_def)
   apply(clarsimp simp: irq_map_wellformed_aux_def state_asids_to_policy_pasMayEditReadyQueues_update state_irqs_to_policy_pasMayEditReadyQueues_update tcb_domain_map_wellformed_aux_def)
   done
+
+end
 
 end

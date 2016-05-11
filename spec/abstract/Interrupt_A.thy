@@ -18,6 +18,14 @@ theory Interrupt_A
 imports Ipc_A
 begin
 
+context begin interpretation Arch .
+
+requalify_consts
+  arch_invoke_irq_control
+
+end
+  
+  
 text {* Tests whether an IRQ identifier is in use. *}
 definition
   is_irq_active :: "irq \<Rightarrow> (bool,'z::state_ext) s_monad" where

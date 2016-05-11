@@ -59,6 +59,10 @@ for line in instructions:
             call.bodies_only = 'bodies_only' in bits
             call.moduletranslations = dict([bit.split('=')
                                             for bit in bits if '=' in bit])
+            
+            if 'CONTEXT' in bits:
+                n = bits.index('CONTEXT')
+                call.current_context.append(bits[n + 1])
 
             if 'ONLY' in bits:
                 n = bits.index('ONLY')

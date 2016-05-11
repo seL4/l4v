@@ -18,6 +18,13 @@ theory TcbAcc_A
 imports CSpace_A
 begin
 
+context begin interpretation Arch .
+
+requalify_consts
+  in_user_frame
+
+end
+
 text {* Store or load a word at an offset from an IPC buffer. *}
 definition
   store_word_offs :: "obj_ref \<Rightarrow> nat \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad" where

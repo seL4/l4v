@@ -13,7 +13,7 @@ imports
   Schedule_R
   "../../lib/SimpStrategy"
 begin
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch aligned'[wp]: cancelAllIPC pspace_aligned'
   (wp: crunch_wps mapM_x_wp' simp: unless_def)
@@ -59,7 +59,7 @@ definition valid_inQ_queues :: "KernelStateData_H.kernel_state \<Rightarrow> boo
 
 defs capHasProperty_def:
   "capHasProperty ptr P \<equiv> cte_wp_at' (\<lambda>c. P (cteCap c)) ptr"
-
+end
 (* Assume various facts about cteDeleteOne, proved in Finalise_R *)
 locale delete_one_conc_pre =
   assumes delete_one_st_tcb_at:
@@ -354,6 +354,8 @@ lemma cte_map_tcb_2:
   "cte_map (t, tcb_cnode_index 2) = t + 0x20"
   by (simp add: cte_map_def tcb_cnode_index_def to_bl_1)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma reply_no_descendants_mdbNext_null:
   assumes descs: "descendants_of (t, tcb_cnode_index 2) (cdt s) = {}"
   and        sr: "(s, s') \<in> state_relation" 
@@ -485,6 +487,7 @@ proof -
     apply fastforce
     done
 qed
+end
 
 locale delete_one_conc = delete_one_conc_pre +
   assumes delete_one_invs:
@@ -510,6 +513,9 @@ lemma (in delete_one) reply_cancel_ipc_corres:
               cteDeleteOne callerCap
           od)
        od)"
+  proof -
+  interpret Arch . (*FIXME: arch_split*)
+  show ?thesis
   apply (simp add: reply_cancel_ipc_def getThreadReplySlot_def
                    locateSlot_conv liftM_def cte_level_bits_def
                    tcbReplySlot_def
@@ -576,6 +582,7 @@ lemma (in delete_one) reply_cancel_ipc_corres:
                del: split_paired_Ex split_paired_All)
   apply (rule no_fail_pre, wp)
   done
+qed
 
 lemma (in delete_one) cancel_ipc_corres:
   "corres dc (einvs and tcb_at t) (invs' and tcb_at' t)
@@ -630,6 +637,8 @@ crunch ksQ[wp]: setNotification "\<lambda>s. P (ksReadyQueues s p)"
 lemma sch_act_simple_not_t[simp]: "sch_act_simple s \<Longrightarrow> sch_act_not t s"
   by (clarsimp simp: sch_act_simple_def)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma cancelSignal_invs':
   "\<lbrace>invs' and st_tcb_at' (\<lambda>st. st = BlockedOnNotification ntfn) t and sch_act_not t\<rbrace>
     cancelSignal t ntfn \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -671,9 +680,9 @@ lemma cancelSignal_invs':
        apply (rule conjI, erule delta_sym_refs)
          apply (clarsimp simp: ntfn_bound_refs'_def split: split_if_asm)
         apply (clarsimp split: split_if_asm)
-          apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
-                                 tcb_bound_refs'_def ntfn_q_refs_of'_def
-                          split: ntfn.splits)
+          subgoal by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
+                                      tcb_bound_refs'_def ntfn_q_refs_of'_def
+                               split: ntfn.splits)
          apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
                                 tcb_bound_refs'_def)
         apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
@@ -783,6 +792,7 @@ lemma setEndpoint_ksDomScheduleIdx[wp]:
 apply (simp add: setEndpoint_def setObject_def split_def)
 apply (wp updateObject_default_inv | simp)+
 done
+end
 
 lemma (in delete_one_conc) cancelIPC_invs[wp]:
   shows "\<lbrace>tcb_at' t and invs'\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2513,6 +2523,7 @@ lemma cancelAll_unlive_helper:
   apply (clarsimp elim!: ko_wp_at'_weakenE)
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma setObject_ko_wp_at':
   fixes v :: "'a :: pspace_storable"
   assumes x: "\<And>v :: 'a. updateObject v = updateObject_default v"
@@ -2766,4 +2777,5 @@ lemma suspend_unqueued:
   apply (rule hoare_post_taut)
   done
 
+end
 end

@@ -441,10 +441,10 @@ where
     AlignmentError \<Rightarrow> True
   | _ \<Rightarrow> False"
 
-consts
+consts'
 msgFromSyscallError :: "syscall_error \<Rightarrow> (machine_word * machine_word list)"
 
-consts
+consts'
 msgFromLookupFailure :: "lookup_failure \<Rightarrow> machine_word list"
 
 defs msgFromSyscallError_def:

@@ -14,6 +14,8 @@ imports
   "../../lib/Distinct_Cmd"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 section {* Example *}
 
 (* This example is a classic 'one way information flow'
@@ -374,24 +376,24 @@ lemma empty_cnode_eq_None [simp]:
 text {* Low's CSpace *}
 
 definition 
-  Low_caps :: Structures_A.cnode_contents 
+  Low_caps :: cnode_contents 
 where
   "Low_caps \<equiv> 
    (empty_cnode 10)
       ( (the_nat_to_bl_10 1)  
-            \<mapsto> Structures_A.ThreadCap Low_tcb_ptr, 
+            \<mapsto> ThreadCap Low_tcb_ptr, 
         (the_nat_to_bl_10 2)
-            \<mapsto> Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2), 
+            \<mapsto> CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2), 
         (the_nat_to_bl_10 3)
-            \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap Low_pd_ptr 
+            \<mapsto> ArchObjectCap (PageDirectoryCap Low_pd_ptr 
                                              (Some Low_asid)),
         (the_nat_to_bl_10 318) 
-            \<mapsto> Structures_A.NotificationCap ntfn_ptr 0 {AllowSend} )"
+            \<mapsto> NotificationCap ntfn_ptr 0 {AllowSend} )"
 
 definition
-  Low_cnode :: Structures_A.kernel_object 
+  Low_cnode :: kernel_object 
 where
-  "Low_cnode \<equiv> Structures_A.CNode 10 Low_caps"
+  "Low_cnode \<equiv> CNode 10 Low_caps"
 
 lemma ran_empty_cnode [simp]:
     "ran (empty_cnode C) = {NullCap}"
@@ -408,12 +410,12 @@ lemma in_ran_If [simp]:
 
 
 lemma Low_caps_ran:
-  "ran Low_caps = {Structures_A.ThreadCap Low_tcb_ptr,
-                   Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2),
-                   Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap Low_pd_ptr 
+  "ran Low_caps = {ThreadCap Low_tcb_ptr,
+                   CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2),
+                   ArchObjectCap (PageDirectoryCap Low_pd_ptr 
                                               (Some Low_asid)),
-                   Structures_A.NotificationCap ntfn_ptr 0 {AllowSend},
-                   Structures_A.NullCap}"
+                   NotificationCap ntfn_ptr 0 {AllowSend},
+                   NullCap}"
   apply (rule equalityI)
    apply (clarsimp simp: Low_caps_def fun_upd_def empty_cnode_def split: split_if_asm)
   apply (clarsimp simp: Low_caps_def fun_upd_def empty_cnode_def split: split_if_asm
@@ -425,32 +427,32 @@ lemma Low_caps_ran:
 text {* High's Cspace *}
 
 definition
-  High_caps :: Structures_A.cnode_contents 
+  High_caps :: cnode_contents 
 where
   "High_caps \<equiv> 
    (empty_cnode 10)
       ( (the_nat_to_bl_10 1)  
-            \<mapsto> Structures_A.ThreadCap High_tcb_ptr, 
+            \<mapsto> ThreadCap High_tcb_ptr, 
         (the_nat_to_bl_10 2)
-            \<mapsto> Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2),
+            \<mapsto> CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2),
         (the_nat_to_bl_10 3)
-           \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap High_pd_ptr 
+           \<mapsto> ArchObjectCap (PageDirectoryCap High_pd_ptr 
                                             (Some High_asid)),
         (the_nat_to_bl_10 318)
-           \<mapsto> Structures_A.NotificationCap ntfn_ptr 0 {AllowRecv}) "
+           \<mapsto> NotificationCap ntfn_ptr 0 {AllowRecv}) "
 
 definition 
-  High_cnode :: Structures_A.kernel_object
+  High_cnode :: kernel_object
 where
-  "High_cnode \<equiv> Structures_A.CNode 10 High_caps"
+  "High_cnode \<equiv> CNode 10 High_caps"
 
 lemma High_caps_ran:
-  "ran High_caps = {Structures_A.ThreadCap High_tcb_ptr,
-                    Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2),
-                    Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap High_pd_ptr 
+  "ran High_caps = {ThreadCap High_tcb_ptr,
+                    CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2),
+                    ArchObjectCap (PageDirectoryCap High_pd_ptr 
                                                (Some High_asid)),
-                    Structures_A.NotificationCap ntfn_ptr 0 {AllowRecv},
-                    Structures_A.NullCap}"
+                    NotificationCap ntfn_ptr 0 {AllowRecv},
+                    NullCap}"
   apply (rule equalityI)
    apply (clarsimp simp: High_caps_def ran_def empty_cnode_def split: split_if_asm)
   apply (clarsimp simp: High_caps_def ran_def empty_cnode_def split: split_if_asm
@@ -463,25 +465,25 @@ text {* We need a copy of boundary crossing caps owned by SilcLabel.
         The only such cap is Low's cap to the notification *}
 
 definition 
-  Silc_caps :: Structures_A.cnode_contents 
+  Silc_caps :: cnode_contents 
 where
   "Silc_caps \<equiv> 
    (empty_cnode 10)
       ( (the_nat_to_bl_10 2)
-            \<mapsto> Structures_A.CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2),
+            \<mapsto> CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2),
         (the_nat_to_bl_10 318) 
-            \<mapsto> Structures_A.NotificationCap ntfn_ptr 0 {AllowSend} )"
+            \<mapsto> NotificationCap ntfn_ptr 0 {AllowSend} )"
 
 
 definition
-  Silc_cnode :: Structures_A.kernel_object 
+  Silc_cnode :: kernel_object 
 where
-  "Silc_cnode \<equiv> Structures_A.CNode 10 Silc_caps"
+  "Silc_cnode \<equiv> CNode 10 Silc_caps"
 
 lemma Silc_caps_ran:
-  "ran Silc_caps = {Structures_A.CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2),
-                    Structures_A.NotificationCap ntfn_ptr 0 {AllowSend},
-                    Structures_A.NullCap}"
+  "ran Silc_caps = {CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2),
+                    NotificationCap ntfn_ptr 0 {AllowSend},
+                    NullCap}"
   apply (rule equalityI)
    apply (clarsimp simp: Silc_caps_def ran_def empty_cnode_def)
   apply (clarsimp simp: ran_def Silc_caps_def empty_cnode_def cong: conj_cong)
@@ -492,32 +494,32 @@ lemma Silc_caps_ran:
 text {* notification between Low and High *}
 
 definition
-  ntfn :: Structures_A.kernel_object 
+  ntfn :: kernel_object 
 where
-  "ntfn \<equiv> Structures_A.Notification \<lparr>ntfn_obj = Structures_A.WaitingNtfn [High_tcb_ptr], ntfn_bound_tcb=None\<rparr>"
+  "ntfn \<equiv> Notification \<lparr>ntfn_obj = WaitingNtfn [High_tcb_ptr], ntfn_bound_tcb=None\<rparr>"
 
 
 text {* Low's VSpace (PageDirectory)*}
 
 definition
-  Low_pt' :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
+  Low_pt' :: "word8 \<Rightarrow> pte " 
 where
-  "Low_pt' \<equiv> (\<lambda>_. Arch_Structs_A.InvalidPTE)
-            (0 := Arch_Structs_A.SmallPagePTE shared_page_ptr {} vm_read_write)"
+  "Low_pt' \<equiv> (\<lambda>_. InvalidPTE)
+            (0 := SmallPagePTE shared_page_ptr {} vm_read_write)"
 
 definition 
-  Low_pt :: Structures_A.kernel_object 
+  Low_pt :: kernel_object 
 where
-  "Low_pt \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable Low_pt')"
+  "Low_pt \<equiv> ArchObj (PageTable Low_pt')"
 
 
 definition
-  Low_pd' :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
+  Low_pd' :: "12 word \<Rightarrow> pde " 
 where
   "Low_pd' \<equiv> 
     global_pd
-     (0 := Arch_Structs_A.PageTablePDE 
-              (Platform.addrFromPPtr Low_pt_ptr) 
+     (0 := PageTablePDE 
+              (addrFromPPtr Low_pt_ptr) 
               {}
               undefined )"
 
@@ -525,35 +527,35 @@ where
 if it's right *)
 
 definition
-  Low_pd :: Structures_A.kernel_object 
+  Low_pd :: kernel_object 
 where
-  "Low_pd \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory Low_pd')"
+  "Low_pd \<equiv> ArchObj (PageDirectory Low_pd')"
 
 
 text {* High's VSpace (PageDirectory)*}
 
 
 definition
-  High_pt' :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
+  High_pt' :: "word8 \<Rightarrow> pte " 
 where
   "High_pt' \<equiv> 
-    (\<lambda>_. Arch_Structs_A.InvalidPTE)
-     (0 := Arch_Structs_A.SmallPagePTE shared_page_ptr {} vm_read_only)"
+    (\<lambda>_. InvalidPTE)
+     (0 := SmallPagePTE shared_page_ptr {} vm_read_only)"
 
 
 definition
-  High_pt :: Structures_A.kernel_object 
+  High_pt :: kernel_object 
 where
-  "High_pt \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable High_pt')"
+  "High_pt \<equiv> ArchObj (PageTable High_pt')"
 
 
 definition
-  High_pd' :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
+  High_pd' :: "12 word \<Rightarrow> pde " 
 where
   "High_pd' \<equiv>
     global_pd
-     (0 := Arch_Structs_A.PageTablePDE  
-             (Platform.addrFromPPtr High_pt_ptr) 
+     (0 := PageTablePDE  
+             (addrFromPPtr High_pt_ptr) 
              {}
              undefined )" 
 
@@ -561,25 +563,25 @@ where
 if it's right *)
 
 definition
-  High_pd :: Structures_A.kernel_object 
+  High_pd :: kernel_object 
 where
-  "High_pd \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory High_pd')"
+  "High_pd \<equiv> ArchObj (PageDirectory High_pd')"
 
 
 text {* Low's tcb *}
 
 definition
-  Low_tcb :: Structures_A.kernel_object 
+  Low_tcb :: kernel_object 
 where
   "Low_tcb \<equiv> 
-   Structures_A.TCB \<lparr> 
-     tcb_ctable        = Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2),
-     tcb_vtable        = Structures_A.ArchObjectCap 
-                           (Arch_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid)),
-     tcb_reply         = Structures_A.ReplyCap Low_tcb_ptr True, (* master reply cap to itself *)
-     tcb_caller        = Structures_A.NullCap,
-     tcb_ipcframe      = Structures_A.NullCap,
-     tcb_state         = Structures_A.Running, 
+   TCB \<lparr> 
+     tcb_ctable        = CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2),
+     tcb_vtable        = ArchObjectCap 
+                           (PageDirectoryCap Low_pd_ptr (Some Low_asid)),
+     tcb_reply         = ReplyCap Low_tcb_ptr True, (* master reply cap to itself *)
+     tcb_caller        = NullCap,
+     tcb_ipcframe      = NullCap,
+     tcb_state         = Running, 
      tcb_fault_handler = replicate word_bits False, 
      tcb_ipc_buffer    = 0,
      tcb_context       = undefined,
@@ -597,17 +599,17 @@ where
 text {* High's tcb *}
 
 definition
-  High_tcb :: Structures_A.kernel_object 
+  High_tcb :: kernel_object 
 where
   "High_tcb \<equiv> 
-   Structures_A.TCB \<lparr> 
-     tcb_ctable        = Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2) ,
-     tcb_vtable        = Structures_A.ArchObjectCap 
-                           (Arch_Structs_A.PageDirectoryCap High_pd_ptr (Some High_asid)),
-     tcb_reply         = Structures_A.ReplyCap High_tcb_ptr True, (* master reply cap to itself *)
-     tcb_caller        = Structures_A.NullCap,
-     tcb_ipcframe      = Structures_A.NullCap,
-     tcb_state         = Structures_A.BlockedOnNotification ntfn_ptr,
+   TCB \<lparr> 
+     tcb_ctable        = CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2) ,
+     tcb_vtable        = ArchObjectCap 
+                           (PageDirectoryCap High_pd_ptr (Some High_asid)),
+     tcb_reply         = ReplyCap High_tcb_ptr True, (* master reply cap to itself *)
+     tcb_caller        = NullCap,
+     tcb_ipcframe      = NullCap,
+     tcb_state         = BlockedOnNotification ntfn_ptr,
      tcb_fault_handler = replicate word_bits False, 
      tcb_ipc_buffer    = 0,
      tcb_context       = undefined,
@@ -625,16 +627,16 @@ where
 text {* idle's tcb *}
 
 definition
-  idle_tcb :: Structures_A.kernel_object 
+  idle_tcb :: kernel_object 
 where
   "idle_tcb \<equiv> 
-   Structures_A.TCB \<lparr> 
-     tcb_ctable        = Structures_A.NullCap,
-     tcb_vtable        = Structures_A.NullCap,
-     tcb_reply         = Structures_A.NullCap,
-     tcb_caller        = Structures_A.NullCap,
-     tcb_ipcframe      = Structures_A.NullCap,
-     tcb_state         = Structures_A.IdleThreadState,
+   TCB \<lparr> 
+     tcb_ctable        = NullCap,
+     tcb_vtable        = NullCap,
+     tcb_reply         = NullCap,
+     tcb_caller        = NullCap,
+     tcb_ipcframe      = NullCap,
+     tcb_state         = IdleThreadState,
      tcb_fault_handler = replicate word_bits False, 
      tcb_ipc_buffer    = 0,
      tcb_context       = empty_context,
@@ -643,7 +645,7 @@ where
 
 
 definition
- "irq_cnode \<equiv> Structures_A.CNode 0 (Map.empty([] \<mapsto> cap.NullCap))"
+ "irq_cnode \<equiv> CNode 0 (Map.empty([] \<mapsto> cap.NullCap))"
 
 definition
   kh0 :: kheap 
@@ -929,28 +931,28 @@ lemma Silc_caps_well_formed: "well_formed_cnode_n 10 Silc_caps"
 
 lemma s0_caps_of_state : 
   "caps_of_state s0_internal p = Some cap \<Longrightarrow>
-     cap = Structures_A.NullCap \<or>
+     cap = NullCap \<or>
      (p,cap) \<in>  
-       { ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap Low_tcb_ptr),
-         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid))), 
-         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.NotificationCap ntfn_ptr 0 {AllowSend}),
-         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap High_tcb_ptr), 
-         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap High_pd_ptr (Some High_asid))), 
-         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.NotificationCap  ntfn_ptr 0 {AllowRecv}) ,
-         ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),Structures_A.CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.NotificationCap ntfn_ptr 0 {AllowSend}),
-         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid))),
-         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap Low_tcb_ptr True), 
-         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
-         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap),
-         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap High_pd_ptr (Some High_asid))),
-         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap High_tcb_ptr True),
-         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
-         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap)} "
+       { ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap Low_tcb_ptr),
+         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
+         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))), 
+         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),NotificationCap ntfn_ptr 0 {AllowSend}),
+         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap High_tcb_ptr), 
+         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
+         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))), 
+         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),NotificationCap  ntfn_ptr 0 {AllowRecv}) ,
+         ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2)),
+         ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),NotificationCap ntfn_ptr 0 {AllowSend}),
+         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 0)), CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
+         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))),
+         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 2)), ReplyCap Low_tcb_ptr True), 
+         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 3)), NullCap),
+         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 4)), NullCap),
+         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 0)), CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
+         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))),
+         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 2)), ReplyCap High_tcb_ptr True),
+         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 3)), NullCap),
+         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 4)), NullCap)} "
   apply (insert High_caps_well_formed)
   apply (insert Low_caps_well_formed)
   apply (insert Silc_caps_well_formed)
@@ -965,7 +967,7 @@ lemma s0_caps_of_state :
   done
 
 lemma tcb_states_of_state_s0:
-  "tcb_states_of_state s0_internal = [High_tcb_ptr \<mapsto> Structures_A.thread_state.BlockedOnNotification ntfn_ptr,  Low_tcb_ptr \<mapsto> Structures_A.thread_state.Running, idle_tcb_ptr \<mapsto> Structures_A.thread_state.IdleThreadState ]"
+  "tcb_states_of_state s0_internal = [High_tcb_ptr \<mapsto> thread_state.BlockedOnNotification ntfn_ptr,  Low_tcb_ptr \<mapsto> thread_state.Running, idle_tcb_ptr \<mapsto> thread_state.IdleThreadState ]"
   unfolding s0_internal_def tcb_states_of_state_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
@@ -1118,7 +1120,7 @@ lemma silc_inv_s0:
    apply (rule conjI)
     apply (rule_tac x="the_nat_to_bl_10 318" in exI)
     apply (clarsimp simp: slots_holding_overlapping_caps_def2)
-    apply (case_tac "cap = Structures_A.NullCap")
+    apply (case_tac "cap = NullCap")
      apply clarsimp
      apply (simp add: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def)
      apply (case_tac a, clarsimp)
@@ -1168,7 +1170,11 @@ lemma s0_valid_domain_list:
   "valid_domain_list s0_internal"
   by (clarsimp simp: valid_domain_list_2_def s0_internal_def exst0_def)
 
+end
+
 consts s0_context :: user_context
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   "s0 \<equiv> ((if ct_idle s0_internal then idle_context s0_internal else s0_context,s0_internal),KernelExit)"
@@ -1598,12 +1604,12 @@ lemma valid_global_objs_s0[simp]:
 lemma valid_kernel_mappings_s0[simp]:
   "valid_kernel_mappings s0_internal"
   apply (clarsimp simp: valid_kernel_mappings_def s0_internal_def ran_def
-                 valid_kernel_mappings_if_pd_def split: Structures_A.kernel_object.splits
-                                                        Arch_Structs_A.arch_kernel_obj.splits)
+                 valid_kernel_mappings_if_pd_def split: kernel_object.splits
+                                                        arch_kernel_obj.splits)
   apply (drule kh0_SomeD)
   apply (clarsimp simp: arch_state0_def kernel_mapping_slots_def)
   apply (erule disjE | simp add: pde_ref_def s0_ptr_defs kh0_obj_def High_pd'_def Low_pd'_def
-                          split: split_if_asm Arch_Structs_A.pde.splits)+
+                          split: split_if_asm pde.splits)+
   done
 
 lemma equal_kernel_mappings_s0[simp]:
@@ -1781,5 +1787,7 @@ lemma Sys1_valid_initial_state_noenabled:
 
 text {* the extra assumptions in valid_initial_state of being enabled,
         and a serial system, follow from ADT_IF_Refine *}
+
+end
 
 end

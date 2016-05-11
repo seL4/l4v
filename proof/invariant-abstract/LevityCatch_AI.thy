@@ -10,9 +10,7 @@
 
 theory LevityCatch_AI
 imports
-  Include_AI
-  "../../lib/LemmaBucket"
-  "../../lib/SplitRule"
+  "./$L4V_ARCH/ArchLevityCatch_AI"
 begin
 
 lemma detype_arch_state :
@@ -23,59 +21,11 @@ lemma obj_ref_elemD:
   "r \<in> obj_refs cap \<Longrightarrow> obj_refs cap = {r}"
   by (cases cap, simp_all)
 
-lemma asid_high_bits_of_shift :
-  "asid_high_bits_of (ucast x << asid_low_bits) = x"
-  apply (simp add: asid_high_bits_of_def)
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast nth_shiftr nth_shiftl asid_low_bits_def)
-  done
-
-lemma  ptrFormPAddr_addFromPPtr :
-  "Platform.ptrFromPAddr (Platform.addrFromPPtr x) = x"
-  by (simp add: Platform.ptrFromPAddr_def Platform.addrFromPPtr_def)
-
-definition
-  "cap_asid_base cap \<equiv> case cap of 
-    cap.ArchObjectCap (arch_cap.ASIDPoolCap _ asid) \<Rightarrow> Some asid
-  | _ \<Rightarrow> None"
-
-lemmas cap_asid_base_simps [simp] = 
-  cap_asid_base_def [split_simps cap.split arch_cap.split]
 
 definition
   "diminished cap cap' \<equiv> \<exists>R. cap = mask_cap R cap'"
 
 
-(****** From GeneralLib *******)
-
-lemma asid_high_bits_of_add_ucast:
-  "is_aligned w asid_low_bits \<Longrightarrow> 
-  asid_high_bits_of (ucast (x::10 word) + w) = asid_high_bits_of w"
-  apply (rule word_eqI)
-  apply (simp add: word_size asid_high_bits_of_def nth_ucast nth_shiftr is_aligned_nth)
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI) 
-   apply (clarsimp simp: nth_ucast)
-   apply (drule test_bit_size)
-   apply (simp add: word_size asid_low_bits_def)
-  apply (auto dest: test_bit_size simp: word_size asid_low_bits_def nth_ucast)
-  done
-
-lemma asid_high_bits_of_add:
-  "\<lbrakk>is_aligned w asid_low_bits; x \<le> 2 ^ asid_low_bits - 1\<rbrakk>
-   \<Longrightarrow> asid_high_bits_of (w + x) = asid_high_bits_of w"
-  apply (rule word_eqI)
-  apply (simp add: word_size asid_high_bits_of_def nth_ucast nth_shiftr
-                   is_aligned_nth)
-  apply (drule le2p_bits_unset, simp add: asid_low_bits_def word_bits_def)
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size)
-   apply (case_tac "na < asid_low_bits")
-    apply (simp add: asid_low_bits_def linorder_not_less word_bits_def)
-  apply (auto dest: test_bit_size
-              simp: asid_low_bits_def nth_ucast)
-  done
 
 lemma const_on_failure_wp : 
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>rv. Q n\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> const_on_failure n m \<lbrace>Q\<rbrace>"
@@ -83,18 +33,6 @@ lemma const_on_failure_wp :
   apply wp
   apply simp
   done
-
-lemma preemption_point_success [simp,intro]:
-  "((Inr (), s') \<in> fst (preemption_point s)) \<Longrightarrow> 
-  \<exists>f es. s' = s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr>, exst := es \<rparr>"
-  apply (auto simp: in_monad preemption_point_def do_machine_op_def 
-                    select_f_def select_def getActiveIRQ_def alternative_def
-                    do_extended_op_def OR_choiceE_def mk_ef_def
-             split: option.splits if_splits
-             intro: exI[where x=id])
-      apply (rule_tac x=Suc in exI, rule_tac x="exst bb" in exI, force)+
-    apply (rule_tac x=id in exI, rule_tac x="exst b" in exI, force)+
-    done
 
 lemma get_cap_id:
   "(v, s') \<in> fst (get_cap p s) \<Longrightarrow> (s' = s)"
@@ -108,9 +46,6 @@ lemmas cap_irq_opt_simps[simp] =
 
 lemmas cap_irqs_simps[simp] =
     cap_irqs_def [unfolded cap_irq_opt_def, split_simps cap.split sum.split, simplified option.simps]
-
-lemma pageBits_less_word_bits [simp]:
-  "pageBits < word_bits" by (simp add: pageBits_def word_bits_conv)
 
 (* FIXME: move *)
 lemma mask_lower_twice:

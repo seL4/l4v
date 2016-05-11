@@ -18,7 +18,7 @@ theory ArchCSpace_A
 imports
   ArchVSpace_A
 begin
-
+context Arch begin global_naming ARM_A
 
 text {* For some purposes capabilities to physical objects are treated
 differently to others. *}
@@ -53,6 +53,9 @@ definition
               \<and> ref \<le> ref + 2 ^ pageBitsForSize pgsz - 1
     | _ \<Rightarrow> arch_same_region_as cp cp')"
 
+(* Proofs don't want to see this definition *)
+declare same_aobject_as_def[simp]
+
 text {* Only caps with sufficient rights can be recycled. *}
 definition
   arch_has_recycle_rights :: "arch_cap \<Rightarrow> bool" where
@@ -60,4 +63,5 @@ definition
      PageCap _ R _ _ \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
    | _ \<Rightarrow> True"
 
+end
 end

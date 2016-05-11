@@ -22,6 +22,12 @@ imports
   Config_H
 begin
 
+context begin interpretation Arch .
+requalify_consts
+  VPtr
+  newContext
+end
+
 lemma projectKO_eq2:
   "((obj,s') \<in> fst (projectKO ko s)) = (projectKO_opt ko = Some obj \<and> s' = s)"
   by (auto simp: projectKO_def fail_def return_def split: option.splits)
@@ -46,7 +52,7 @@ definition
 
 instance
   by (intro_classes,
-      auto simp: projectKO_opt_ep split: kernel_object.splits arch_kernel_object.splits)
+      auto simp: projectKO_opt_ep split: kernel_object.splits)
 
 end
 
@@ -67,7 +73,7 @@ definition
 
 instance
   by (intro_classes,
-      auto simp: projectKO_opt_ntfn split: kernel_object.splits arch_kernel_object.splits)
+      auto simp: projectKO_opt_ntfn split: kernel_object.splits)
 
 end
 
@@ -89,7 +95,7 @@ definition
 
 instance
   by (intro_classes,
-      auto simp: projectKO_opt_cte split: kernel_object.splits arch_kernel_object.splits)
+      auto simp: projectKO_opt_cte split: kernel_object.splits)
 
 end
 
@@ -111,7 +117,7 @@ definition
 
 instance
   by (intro_classes,
-      auto simp: projectKO_opt_user_data split: kernel_object.splits arch_kernel_object.splits)
+      auto simp: projectKO_opt_user_data split: kernel_object.splits)
 
 end
 
@@ -133,7 +139,7 @@ definition
 
 instance
   by (intro_classes,
-      auto simp: projectKO_opt_tcb split: kernel_object.splits arch_kernel_object.splits)
+      auto simp: projectKO_opt_tcb split: kernel_object.splits)
 
 end
 
@@ -277,7 +283,7 @@ definition
                 else undefined)
         in
                                                    (case oldObj of
-          KOCTE v1 \<Rightarrow>   (do
+          KOCTE v3 \<Rightarrow>   (do
             unless (ptr = ptr') $ haskell_fail [];
             alignCheck ptr (objBits cte);
             magnitudeCheck ptr next (objBits cte);

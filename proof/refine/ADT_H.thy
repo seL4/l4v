@@ -32,6 +32,8 @@ consts
   initBootFrames :: "word32 list"
   initDataStart :: word32
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 text {*
   The construction of the abstract data type
   for the executable specification largely follows
@@ -67,43 +69,43 @@ lemma vm_rights_of_vmrights_map_id[simp]:
 
 definition
   absPageTable :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                  word8 \<Rightarrow> Arch_Structs_A.pte"
+                  word8 \<Rightarrow> ARM_A.pte"
   where
   "absPageTable h a \<equiv> %offs.
    case (h (a + (ucast offs << 2))) of
-     Some (KOArch (KOPTE (Hardware_H.InvalidPTE))) \<Rightarrow> Arch_Structs_A.InvalidPTE
-   | Some (KOArch (KOPTE (Hardware_H.LargePagePTE p c g xn rights))) \<Rightarrow>
+     Some (KOArch (KOPTE (ARM_H.InvalidPTE))) \<Rightarrow> ARM_A.InvalidPTE
+   | Some (KOArch (KOPTE (ARM_H.LargePagePTE p c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
-         Arch_Structs_A.LargePagePTE p
+         ARM_A.LargePagePTE p
            {x. c & x=PageCacheable | g & x=Global | xn & x=XNever}
            (vm_rights_of rights)
-       else Arch_Structs_A.InvalidPTE
-   | Some (KOArch (KOPTE (Hardware_H.SmallPagePTE p c g xn rights))) \<Rightarrow>
-       Arch_Structs_A.SmallPagePTE p {x. c & x=PageCacheable |
+       else ARM_A.InvalidPTE
+   | Some (KOArch (KOPTE (ARM_H.SmallPagePTE p c g xn rights))) \<Rightarrow>
+       ARM_A.SmallPagePTE p {x. c & x=PageCacheable |
                                         g & x=Global |
                                         xn & x=XNever} (vm_rights_of rights)"
 
 definition
   absPageDirectory :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                      12 word \<Rightarrow>  Arch_Structs_A.pde"
+                      12 word \<Rightarrow>  ARM_A.pde"
   where
   "absPageDirectory h a \<equiv> %offs.
    case (h (a + (ucast offs << 2))) of
-     Some (KOArch (KOPDE (Hardware_H.InvalidPDE))) \<Rightarrow> Arch_Structs_A.InvalidPDE
-   | Some (KOArch (KOPDE (Hardware_H.PageTablePDE p e mw))) \<Rightarrow>
-       Arch_Structs_A.PageTablePDE p {x. e & x=ParityEnabled} mw
-   | Some (KOArch (KOPDE (Hardware_H.SectionPDE p e mw c g xn rights))) \<Rightarrow>
-       Arch_Structs_A.SectionPDE p {x. e & x=ParityEnabled |
+     Some (KOArch (KOPDE (ARM_H.InvalidPDE))) \<Rightarrow> ARM_A.InvalidPDE
+   | Some (KOArch (KOPDE (ARM_H.PageTablePDE p e mw))) \<Rightarrow>
+       ARM_A.PageTablePDE p {x. e & x=ParityEnabled} mw
+   | Some (KOArch (KOPDE (ARM_H.SectionPDE p e mw c g xn rights))) \<Rightarrow>
+       ARM_A.SectionPDE p {x. e & x=ParityEnabled |
                                       c & x=PageCacheable |
                                       g & x=Global |
                                       xn & x=XNever} mw (vm_rights_of rights)
-   | Some (KOArch (KOPDE (Hardware_H.SuperSectionPDE p e c g xn rights))) \<Rightarrow>
+   | Some (KOArch (KOPDE (ARM_H.SuperSectionPDE p e c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
-         Arch_Structs_A.SuperSectionPDE p
+         ARM_A.SuperSectionPDE p
            {x. e & x=ParityEnabled | c & x=PageCacheable 
              | g & x=Global | xn & x=XNever}
            (vm_rights_of rights)
-       else Arch_Structs_A.InvalidPDE"
+       else ARM_A.InvalidPDE"
 
 (* Can't pull the whole heap off at once, start with arch specific stuff.*)
 definition
@@ -112,8 +114,8 @@ definition
   where
   "absHeapArch h a \<equiv> %ako.
    (case ako of
-     KOASIDPool (ArchStructures_H.ASIDPool ap) \<Rightarrow>
-       Some (Arch_Structs_A.ASIDPool (\<lambda>w. ap (ucast w)))
+     KOASIDPool (ARM_H.ASIDPool ap) \<Rightarrow>
+       Some (ARM_A.ASIDPool (\<lambda>w. ap (ucast w)))
    | KOPTE _ \<Rightarrow>
        if is_aligned a pt_bits then Some (PageTable (absPageTable h a))
        else None
@@ -129,10 +131,10 @@ lemma
                            Some (KOArch (KOPTE pte')))"
   and pte_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPTE (Hardware_H.LargePagePTE _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPTE (ARM_H.LargePagePTE _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPTE (Hardware_H.SmallPagePTE _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPTE (ARM_H.SmallPagePTE _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
 
   assumes pdes:
@@ -142,10 +144,10 @@ lemma
                              Some (KOArch (KOPDE pde')))"
   and pde_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPDE (Hardware_H.SectionPDE _ _ _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPDE (ARM_H.SectionPDE _ _ _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPDE (Hardware_H.SuperSectionPDE _ _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPDE (ARM_H.SuperSectionPDE _ _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
 
   assumes fst_pte:
@@ -241,7 +243,7 @@ lemma
    apply simp
    apply (erule_tac x=y in allE)
    apply clarsimp
-   apply (simp add: absPageTable_def  split:option.splits Hardware_H.pte.splits)
+   apply (simp add: absPageTable_def  split:option.splits ARM_H.pte.splits)
    apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
               vm_kernel_only_def vm_read_only_def vm_read_write_def
             split: vmrights.splits)
@@ -257,7 +259,7 @@ lemma
   apply clarsimp
   apply (simp add: pde_relation_def pde_relation_aligned_def)
   apply (simp add: absPageDirectory_def
-              split: option.splits Hardware_H.pde.splits)
+              split: option.splits ARM_H.pde.splits)
   apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
              vm_kernel_only_def vm_read_only_def vm_read_write_def
            split: vmrights.splits)
@@ -329,6 +331,7 @@ apply (case_tac arch_capability,
               split: vmrights.splits)
 done
 
+(* FIXME: wellformed_cap_simps has lots of duplicates. *)
 lemma cap_relation_imp_CapabilityMap:
   "\<lbrakk>wellformed_cap c; cap_relation c c'\<rbrakk> \<Longrightarrow> CapabilityMap c' = c"
   apply (case_tac c; simp add: wellformed_cap_simps)
@@ -340,7 +343,7 @@ lemma cap_relation_imp_CapabilityMap:
    apply (simp add: zbits_map_def split: option.splits)
   apply (rename_tac arch_cap)
   apply clarsimp
-  apply (case_tac arch_cap, simp_all add: wellformed_acap_simps)
+  apply (case_tac arch_cap, simp_all add: wellformed_cap_simps)
   done
 
 primrec
@@ -823,10 +826,10 @@ proof -
        apply (erule_tac x=offs in allE)
        apply (rename_tac pte')
        apply (case_tac pte', simp_all add: pte_relation_aligned_def)[1]
-        apply (clarsimp split: Arch_Structs_A.pte.splits)
+        apply (clarsimp split: ARM_A.pte.splits)
         apply (rule set_eqI, clarsimp)
         apply (case_tac x, simp_all)[1]
-       apply (clarsimp split: Arch_Structs_A.pte.splits)
+       apply (clarsimp split: ARM_A.pte.splits)
        apply (rule set_eqI, clarsimp)
        apply (case_tac x, simp_all)[1]
       apply (clarsimp simp add: pde_relation_def)
@@ -869,12 +872,12 @@ proof -
      apply (erule_tac x=offs in allE)
      apply (rename_tac pde')
      apply (case_tac pde', simp_all add: pde_relation_aligned_def)[1]
-        apply (clarsimp split: Arch_Structs_A.pde.splits)+
+        apply (clarsimp split: ARM_A.pde.splits)+
        apply (fastforce simp add: subset_eq)
-      apply (clarsimp split: Arch_Structs_A.pde.splits)
+      apply (clarsimp split: ARM_A.pde.splits)
       apply (rule set_eqI, clarsimp)
       apply (case_tac x, simp_all)[1]
-     apply (clarsimp split: Arch_Structs_A.pde.splits)
+     apply (clarsimp split: ARM_A.pde.splits)
      apply (rule set_eqI, clarsimp)
      apply (case_tac x, simp_all)[1]
     apply (clarsimp simp add: pde_relation_def)
@@ -927,7 +930,7 @@ shows
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        Arch_Structs_A.arch_kernel_obj.split_asm)
+                        ARM_A.arch_kernel_obj.split_asm)
   done
 
 text {* The following function can be used to reverse cte_map. *}
@@ -1464,6 +1467,8 @@ lemma has_child_cte_at:"valid_mdb s \<Longrightarrow> (cdt s) c = Some p \<Longr
 definition sort_cdt_list where
 "sort_cdt_list cd m = (\<lambda>p. (THE xs. set xs = {c. cd c = Some p} \<and> partial_sort.psorted (\<lambda>x y. m \<turnstile> cte_map x \<leadsto>\<^sup>* cte_map y) xs \<and> distinct xs))"
 
+end
+
 locale partial_sort_cdt = partial_sort "\<lambda> x y.  m' \<turnstile> cte_map x \<leadsto>\<^sup>* cte_map y" 
                                        "\<lambda> x y. cte_at x (s::det_state) \<and> cte_at y s \<and> (\<exists>p. m' \<turnstile> p \<rightarrow> cte_map x \<and> m' \<turnstile> p \<rightarrow> cte_map y)" for m' s +
   fixes s'::"kernel_state"
@@ -1477,8 +1482,9 @@ locale partial_sort_cdt = partial_sort "\<lambda> x y.  m' \<turnstile> cte_map 
                    "pspace_distinct' s'" "valid_objs s" "valid_mdb s" "valid_list s"
   
 begin
-  
- 
+
+interpretation Arch . (*FIXME: arch_split*)
+
 lemma valid_list_2 : "valid_list_2 t m"
     apply (insert assms')
     apply (simp add: t_def m_def)
@@ -1676,6 +1682,7 @@ lemma sort_cdt_list_correct:
   
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition absCDTList where
 "absCDTList cnp h \<equiv> sort_cdt_list (absCDT cnp h) h"
@@ -1806,7 +1813,7 @@ apply (subgoal_tac "(arch_state s, ksArchState s') \<in> arch_state_relation")
  apply (simp add: state_relation_def)
 apply (clarsimp simp add: arch_state_relation_def)
 by (clarsimp simp add: absArchState_def
-             split: ArchStateData_H.kernel_state.splits)
+             split: ARM_H.kernel_state.splits)
 
 definition absSchedulerAction where
   "absSchedulerAction action \<equiv> 
@@ -1949,4 +1956,5 @@ definition
     Step = (\<lambda>u. global_automaton check_active_irq_H (do_user_op_H uop) kernel_call_H)\<rparr>"
 
 end
- 
+
+end

@@ -15,6 +15,8 @@ theory KernelInit_AI
 imports ADT_AI Tcb_AI Arch_AI
 begin
 
+context Arch begin global_naming ARM (*FIXME: arch_split*)
+
 text {*
   Showing that there is a state that satisfies the abstract invariants.
 *}
@@ -332,7 +334,7 @@ lemma invs_A:
    apply (clarsimp simp: valid_ao_at_def obj_at_def empty_table_def pde_ref_def
                          valid_pde_mappings_def)
    apply (simp add: kernel_base_def kernel_mapping_slots_def 
-                    Platform.addrFromPPtr_def physMappingOffset_def
+                    Platform.ARM.addrFromPPtr_def physMappingOffset_def
                     kernelBase_addr_def physBase_def pageBits_def is_aligned_def)
   apply (rule conjI)
    apply (simp add: valid_kernel_mappings_def state_defs
@@ -373,6 +375,8 @@ lemma invs_A:
                   valid_refs_def[unfolded cte_wp_at_caps_of_state])
   apply word_bitwise
   done
+
+end
 
 axiomatization where
   akernel_init_invs: "\<forall>((tc,s),m,e) \<in> Init_A. invs s \<and> ct_running s"

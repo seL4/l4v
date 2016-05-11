@@ -21,6 +21,8 @@ imports
   ArchVMRights_A
 begin
 
+context Arch begin global_naming ARM_A
+
 text {*
 This theory provides architecture-specific definitions and datatypes 
 including architecture-specific capabilities and objects.
@@ -45,6 +47,13 @@ datatype arch_cap =
  | PageCap obj_ref cap_rights vmpage_size "(asid * vspace_ref) option"
  | PageTableCap obj_ref "(asid * vspace_ref) option"
  | PageDirectoryCap obj_ref "asid option"
+
+lemmas arch_cap_cases =
+  arch_cap.induct[where arch_cap=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
+
+lemmas arch_cap_cases_asm =
+arch_cap.induct[where arch_cap=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+  simplified, rule_format, rotated -1]
 
 definition
   is_page_cap :: "arch_cap \<Rightarrow> bool" where
@@ -88,6 +97,13 @@ datatype arch_kernel_obj =
  | PageTable "word8 \<Rightarrow> pte"
  | PageDirectory "12 word \<Rightarrow> pde"
  | DataPage vmpage_size
+
+lemmas arch_kernel_obj_cases =
+  arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
+
+lemmas arch_kernel_obj_cases_asm =
+arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+  simplified, rule_format, rotated -1]
 
 primrec
   arch_obj_size :: "arch_cap \<Rightarrow> nat"
@@ -182,15 +198,23 @@ currently active page directory. The second component of
 @{text "arm_asid_map"} values is the address of that page directory.
 *}
 
+end
+
+qualify ARM_A (in Arch)
+
 record arch_state =
   arm_globals_frame :: obj_ref
   arm_asid_table    :: "word8 \<rightharpoonup> obj_ref"
-  arm_hwasid_table  :: "hw_asid \<rightharpoonup> asid"
-  arm_next_asid     :: hw_asid
-  arm_asid_map      :: "asid \<rightharpoonup> (hw_asid \<times> obj_ref)"
+  arm_hwasid_table  :: "ARM_A.hw_asid \<rightharpoonup> ARM_A.asid"
+  arm_next_asid     :: ARM_A.hw_asid
+  arm_asid_map      :: "ARM_A.asid \<rightharpoonup> (ARM_A.hw_asid \<times> obj_ref)"
   arm_global_pd     :: obj_ref
   arm_global_pts    :: "obj_ref list"
-  arm_kernel_vspace :: arm_vspace_region_uses
+  arm_kernel_vspace :: ARM_A.arm_vspace_region_uses
+
+end_qualify
+
+context Arch begin global_naming ARM_A
 
 definition
   pd_bits :: "nat" where
@@ -199,5 +223,24 @@ definition
 definition
   pt_bits :: "nat" where
   "pt_bits \<equiv> pageBits - 2"
+
+
+section "Type declarations for invariant definitions"
+
+datatype aa_type =
+    AASIDPool
+  | APageTable
+  | APageDirectory
+  | AIntData vmpage_size
+
+definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type"
+where 
+ "aa_type ao \<equiv> (case ao of
+           PageTable pt             \<Rightarrow> APageTable
+         | PageDirectory pd         \<Rightarrow> APageDirectory
+         | DataPage sz              \<Rightarrow> AIntData sz
+         | ASIDPool f               \<Rightarrow> AASIDPool)"
+
+end
 
 end

@@ -18,9 +18,8 @@ imports
   "../KI_Decls_H"
   ArchVSpaceDecls_H
 begin
+context Arch begin global_naming ARM_H
 
-defs vptrFromPPtr_def:
-"vptrFromPPtr ptr \<equiv> returnOk $ ptr + 0x20000000"
 
 defs globalsBase_def:
 "globalsBase \<equiv> VPtr 0xffffc000"
@@ -491,9 +490,9 @@ defs lookupIPCBuffer_def:
     bufferPtr \<leftarrow> threadGet tcbIPCBuffer thread;
     bufferFrameSlot \<leftarrow> getThreadBufferSlot thread;
     bufferCap \<leftarrow> getSlotCap bufferFrameSlot;
-    (let v3 = bufferCap in
-        if isArchObjectCap v3 \<and> isPageCap (capCap v3)
-        then let frame = capCap v3
+    (let v40 = bufferCap in
+        if isArchObjectCap v40 \<and> isPageCap (capCap v40)
+        then let frame = capCap v40
         in  (do
             rights \<leftarrow> return ( capVPRights frame);
             pBits \<leftarrow> return ( pageBitsForSize $ capVPSize frame);
@@ -779,8 +778,8 @@ defs setVMRootForFlush_def:
     tcb \<leftarrow> getCurThread;
     threadRootSlot \<leftarrow> getThreadVSpaceRoot tcb;
     threadRoot \<leftarrow> getSlotCap threadRootSlot;
-    (let v7 = threadRoot in
-        if isArchObjectCap v7 \<and> isPageDirectoryCap (capCap v7) \<and> capPDMappedASID (capCap v7) \<noteq> None \<and> capPDBasePtr (capCap v7) = pd
+    (let v44 = threadRoot in
+        if isArchObjectCap v44 \<and> isPageDirectoryCap (capCap v44) \<and> capPDMappedASID (capCap v44) \<noteq> None \<and> capPDBasePtr (capCap v44) = pd
         then let cur_pd = pd in  return False
         else  (do
             armv_contextSwitch pd asid;
@@ -1000,15 +999,15 @@ defs resolveVAddr_def:
     pdSlot \<leftarrow> return ( lookupPDSlot pd vaddr);
     pde \<leftarrow> getObject pdSlot;
     (case pde of
-          SectionPDE frame v17 v18 v19 v20 v21 v22 \<Rightarrow>   return $ Just (ARMSection, frame)
-        | SuperSectionPDE frame v23 v24 v25 v26 v27 \<Rightarrow>   return $ Just (ARMSuperSection, frame)
-        | PageTablePDE table v28 v29 \<Rightarrow>   (do
+          SectionPDE frame v54 v55 v56 v57 v58 v59 \<Rightarrow>   return $ Just (ARMSection, frame)
+        | SuperSectionPDE frame v60 v61 v62 v63 v64 \<Rightarrow>   return $ Just (ARMSuperSection, frame)
+        | PageTablePDE table v65 v66 \<Rightarrow>   (do
             pt \<leftarrow> return ( ptrFromPAddr table);
             pteSlot \<leftarrow> lookupPTSlotFromPT pt vaddr;
             pte \<leftarrow> getObject pteSlot;
             (case pte of
-                  LargePagePTE frame v9 v10 v11 v12 \<Rightarrow>   return $ Just (ARMLargePage, frame)
-                | SmallPagePTE frame v13 v14 v15 v16 \<Rightarrow>   return $ Just (ARMSmallPage, frame)
+                  LargePagePTE frame v46 v47 v48 v49 \<Rightarrow>   return $ Just (ARMLargePage, frame)
+                | SmallPagePTE frame v50 v51 v52 v53 \<Rightarrow>   return $ Just (ARMSmallPage, frame)
                 | _ \<Rightarrow>   return Nothing
                 )
         od)
@@ -1172,8 +1171,8 @@ defs decodeARMMMUInvocation_def:
             whenE (null free) $ throw DeleteFirst;
             base \<leftarrow> returnOk ( (fst $ head free) `~shiftL~` asidLowBits);
             pool \<leftarrow> returnOk ( makeObject ::asidpool);
-            frame \<leftarrow> (let v30 = untyped in
-                if isUntypedCap v30 \<and> capBlockSize v30 = objBits pool
+            frame \<leftarrow> (let v67 = untyped in
+                if isUntypedCap v67 \<and> capBlockSize v67 = objBits pool
                 then  (doE
                     ensureNoChildren parentSlot;
                     returnOk $ capPtr untyped
@@ -1440,4 +1439,5 @@ defs checkValidMappingSize_def:
   "checkValidMappingSize sz \<equiv> stateAssert
     (\<lambda>s. 2 ^ pageBitsForSize sz <= gsMaxObjectSize s) []"
 
+end
 end

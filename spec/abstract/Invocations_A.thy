@@ -18,6 +18,15 @@ theory Invocations_A
 imports "./$L4V_ARCH/ArchInvocation_A"
 begin
 
+context begin interpretation Arch .
+
+requalify_types
+  arch_copy_register_sets
+  arch_irq_control_invocation
+  arch_invocation
+
+end
+
 text {* These datatypes encode the arguments to the available system calls. *}
 
 datatype cnode_invocation =
@@ -32,7 +41,7 @@ datatype cnode_invocation =
 datatype untyped_invocation =
     Retype cslot_ptr obj_ref obj_ref apiobject_type nat "cslot_ptr list"
 
-datatype tcb_invocation =
+datatype tcb_invocation =                                          
     WriteRegisters machine_word bool "machine_word list" arch_copy_register_sets
   | ReadRegisters machine_word bool machine_word arch_copy_register_sets
   | CopyRegisters machine_word machine_word bool bool bool bool arch_copy_register_sets

@@ -15,7 +15,10 @@ imports
   "../../../lib/Defs"
   "../../../lib/Lib"
   "../../../lib/WordEnum"
+  Setup_Locale
 begin
+
+context Arch begin global_naming ARM
 
 text {*
   This theory lists platform-specific types and basic constants, in particular
@@ -74,5 +77,7 @@ definition
 definition
   maxIRQ :: "irq" where
   "maxIRQ \<equiv> 0x9F"
+
+end
 
 end

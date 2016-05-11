@@ -13,10 +13,11 @@ imports
   "../../machine/ARM/MachineOps"
   State_H
 begin
+context Arch begin global_naming ARM_H
 
-type_synonym irq = "Platform.irq"
+type_synonym irq = "Platform.ARM.irq"
 
-type_synonym paddr = "Platform.paddr"
+type_synonym paddr = "Platform.ARM.paddr"
 
 datatype vmrights =
     VMNoAccess
@@ -342,12 +343,12 @@ lemma armPageCacheable_armPageCacheable_update [simp]:
 definition
 fromPAddr :: "paddr \<Rightarrow> machine_word"
 where
-"fromPAddr \<equiv> Platform.fromPAddr"
+"fromPAddr \<equiv> Platform.ARM.fromPAddr"
 
 definition
 pageColourBits :: "nat"
 where
-"pageColourBits \<equiv> Platform.pageColourBits"
+"pageColourBits \<equiv> Platform.ARM.pageColourBits"
 
 definition
 clearExMonitor :: "unit machine_monad"
@@ -367,17 +368,28 @@ where
 definition
 physBase :: "paddr"
 where
-"physBase \<equiv> toPAddr Platform.physBase"
+"physBase \<equiv> toPAddr Platform.ARM.physBase"
 
 definition
 kernelBase :: "vptr"
 where
-"kernelBase \<equiv> Platform.kernelBase"
+"kernelBase \<equiv> Platform.ARM.kernelBase"
 
 
+end
+
+context begin interpretation Arch .
+requalify_types vmrights
+end
+
+context Arch begin global_naming ARM_H
+
+end
+qualify ARM_H (in Arch) 
 (* vmrights instance proofs *)
 (*<*)
 instantiation vmrights :: enum begin
+interpretation Arch .
 definition
   enum_vmrights: "enum_class.enum \<equiv> 
     [ 
@@ -404,6 +416,7 @@ end
 
 instantiation vmrights :: enum_alt
 begin
+interpretation Arch .
 definition
   enum_alt_vmrights: "enum_alt \<equiv> 
     alt_from_ord (enum :: vmrights list)"
@@ -412,10 +425,13 @@ end
 
 instantiation vmrights :: enumeration_both
 begin
+interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_vmrights)
 end
 
 (*>*)
+end_qualify
+context Arch begin global_naming ARM_H
 
 
 definition
@@ -465,4 +481,5 @@ where
   )"
 
 
+end
 end

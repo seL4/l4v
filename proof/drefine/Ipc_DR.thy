@@ -12,6 +12,8 @@ theory Ipc_DR
 imports CNode_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 abbreviation
 "thread_is_running y s \<equiv> st_tcb_at (op=Structures_A.thread_state.Running) y s"
 
@@ -709,7 +711,7 @@ lemma receive_blocked_waiting_syncs:
     apply (subst (asm) handy_enum_lemma3)+
     apply clarsimp
    apply (case_tac "x \<noteq> idle_thread s")
-    apply (clarsimp simp: transform_object_def split: Structures_A.kernel_object.splits Arch_Structs_A.arch_kernel_obj.splits option.splits nat.splits)
+    apply (clarsimp simp: transform_object_def split: Structures_A.kernel_object.splits ARM_A.arch_kernel_obj.splits option.splits nat.splits)
      apply (frule_tac ptr=x in valid_etcbs_tcb_etcb, simp+)
     apply (clarsimp simp add: transform_tcb_def tcb_pending_op_slot_def tcb_boundntfn_slot_def infer_tcb_bound_notification_def split: option.splits)
     apply (frule_tac tcb="x2a" in  bound_tcb_fold, simp)
@@ -1824,7 +1826,7 @@ lemma dcorres_copy_mrs':
            apply (rule corres_split[OF _ set_registers_corres])
              apply (rule corres_symb_exec_r)+
           apply (rule corres_trivial[OF corres_free_return])
-        apply (wp|clarsimp split:option.splits)+
+        apply (wp no_fail_getRegister | clarsimp split:option.splits)+
       apply (clarsimp simp:get_ipc_buffer_def gets_the_def exs_valid_def gets_def
         get_def bind_def return_def assert_opt_def fail_def split:option.splits | rule conjI)+
       apply (frule(1) tcb_at_is_etcb_at, clarsimp simp: is_etcb_at_def, fold get_etcb_def)
@@ -2836,9 +2838,7 @@ lemma tcb_fault_update_valid_state[wp]:
      apply (erule disjE,clarsimp)+
      apply simp+
    apply (clarsimp simp:irq_issued_def)
-  apply (wp thread_set_arch_objs thread_set_arch_caps_trivial
-            thread_set_valid_globals thread_set_v_ker_map thread_set_eq_ker_map
-            thread_set_asid_map thread_set_global_pd_mappings
+  apply (wp thread_set_arch_caps_trivial
             thread_set_pspace_in_kernel_window
             thread_set_cap_refs_in_kernel_window
          | simp_all | clarsimp simp:tcb_cap_cases_def)+
@@ -2962,5 +2962,7 @@ lemma send_fault_ipc_corres:
        apply (rule lookup_cap_valid[THEN validE_R_validE])
       apply (clarsimp simp:valid_cap_def valid_state_def valid_pspace_def)+
   done
+
+end
 
 end

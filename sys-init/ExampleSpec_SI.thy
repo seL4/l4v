@@ -20,6 +20,8 @@ theory ExampleSpec_SI
 imports WellFormed_SI
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 declare cap_object_simps [simp]
 
 lemma object_slots_empty_object [simp]:
@@ -355,6 +357,8 @@ lemma well_formed_example:
                          small_frame_size_def object_at_def
                          irq_nodes_def range_example_irq_node
                   split: split_if_asm)
+
+end
 
 end
 

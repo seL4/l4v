@@ -18,6 +18,8 @@ theory ArchVSpace_A
 imports "../Retype_A"
 begin
 
+context Arch begin global_naming ARM_A
+
 text {* Save the set of entries that would be inserted into a page table or
 page directory to map various different sizes of frame at a given virtual
 address. *}
@@ -51,17 +53,17 @@ where
     returnOk $ Inr (SuperSectionPDE base (attrib - {Global}) vm_rights, [p, p + 4  .e.  p + 60])
   odE"
 
-definition get_master_pde :: "word32 \<Rightarrow> (Arch_Structs_A.pde,'z::state_ext)s_monad"
+definition get_master_pde :: "word32 \<Rightarrow> (pde,'z::state_ext)s_monad"
   where "get_master_pde ptr \<equiv> do
     pde \<leftarrow> (get_pde (ptr && ~~ mask 6));
-    (case pde of Arch_Structs_A.pde.SuperSectionPDE _ _ _ \<Rightarrow> return pde
+    (case pde of SuperSectionPDE _ _ _ \<Rightarrow> return pde
     | _ \<Rightarrow> get_pde ptr)
   od"
 
-definition get_master_pte :: "word32 \<Rightarrow> (Arch_Structs_A.pte, 'z::state_ext)s_monad"
+definition get_master_pte :: "word32 \<Rightarrow> (pte, 'z::state_ext)s_monad"
   where "get_master_pte ptr \<equiv> do
     pte \<leftarrow> (get_pte (ptr && ~~ mask 6));
-    (case pte of Arch_Structs_A.pte.LargePagePTE _ _ _ \<Rightarrow> return pte
+    (case pte of LargePagePTE _ _ _ \<Rightarrow> return pte
     | _ \<Rightarrow> get_pte ptr)
   od"
 
@@ -473,10 +475,6 @@ check_mapping_pptr :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> (obj_ref 
      | _ \<Rightarrow> False
    od"
 
-text {* Raise an exception if a property does not hold. *}
-definition
-throw_on_false :: "'e \<Rightarrow> (bool,'z::state_ext) s_monad \<Rightarrow> ('e + unit,'z::state_ext) s_monad" where
-"throw_on_false ex f \<equiv> doE v \<leftarrow> liftE f; unlessE v $ throwError ex odE"
 
 definition
   "last_byte_pte x \<equiv> let pte_bits = 2 in x + ((1 << pte_bits) - 1)"
@@ -750,6 +748,8 @@ definition
   in_user_frame :: "word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "in_user_frame p s \<equiv>
    \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) =
-        Some (ArchObj (DataPage sz))"           
+        Some (ArchObj (DataPage sz))"
+
+end
 
 end

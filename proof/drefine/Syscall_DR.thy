@@ -15,6 +15,8 @@ imports
   Interrupt_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 (*
  * Translate an abstract invocation into a corresponding
  * CDL invocation.
@@ -1724,5 +1726,7 @@ lemma handle_event_corres:
     apply (clarsimp simp:invs_def valid_state_def st_tcb_at_def generates_pending_def obj_at_def)
    apply (wp|simp)+
   done
+
+end
 
 end

@@ -20,6 +20,7 @@ imports
   "../InvocationLabels_A"
   "../../../lib/WordLib"
 begin
+context Arch begin global_naming ARM_A
 
 section "Helper definitions"
 
@@ -277,5 +278,7 @@ definition
   else if n = 4 then Some PageTableObj
   else if n = 5 then Some PageDirectoryObj
   else None"
+
+end
 
 end

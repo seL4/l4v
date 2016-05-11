@@ -21,7 +21,20 @@ imports
   "./$L4V_ARCH/ArchTypes_H"
 begin
 
-type_synonym object_type = "ArchTypes_H.object_type"
+context begin interpretation Arch .
+requalify_types
+  object_type
+  machine_word
+  paddr
+  vptr
+
+requalify_consts
+  getObjectSize
+  fromAPIType
+  toAPIType
+  pageType
+  ptrFromPAddr
+end
 
 datatype cap_rights =
     CapRights bool bool bool
@@ -1683,26 +1696,6 @@ lemma initBootInfo_initBootInfoFrame_update [simp]:
 lemma initBootInfo_initBootInfo_update [simp]:
   "initBootInfo (initBootInfo_update f v) = f (initBootInfo v)"
   by (cases v) simp
-
-definition
-getObjectSize :: "object_type \<Rightarrow> nat \<Rightarrow> nat"
-where
-"getObjectSize \<equiv> ArchTypes_H.getObjectSize"
-
-definition
-fromAPIType :: "apiobject_type \<Rightarrow> object_type"
-where
-"fromAPIType \<equiv> ArchTypes_H.fromAPIType"
-
-definition
-toAPIType :: "object_type \<Rightarrow> apiobject_type option"
-where
-"toAPIType \<equiv> ArchTypes_H.toAPIType"
-
-definition
-pageType :: "object_type"
-where
-"pageType \<equiv> ArchTypes_H.pageType"
 
 definition
 allRights :: "cap_rights"

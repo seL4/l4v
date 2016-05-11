@@ -12,6 +12,24 @@ theory Orphanage
 imports Refine
 begin
 
+(*FIXME: arch_split: move up? *)
+context Arch begin
+
+requalify_facts
+  switchToIdleThread_def
+  switchToThread_def
+
+lemmas [crunch_def] = switchToIdleThread_def switchToThread_def
+
+context begin global_naming global
+requalify_facts
+  Thread_H.switchToIdleThread_def
+  Thread_H.switchToThread_def
+end
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
    is_active_thread_state :: "thread_state \<Rightarrow> bool"
 where
@@ -542,7 +560,7 @@ lemma switchToIdleThread_no_orphans' [wp]:
              \<longrightarrow> ksCurThread s \<in> all_queued_tcb_ptrs s) \<rbrace>
    switchToIdleThread
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding switchToIdleThread_def setCurThread_def ArchThread_H.switchToIdleThread_def
+  unfolding switchToIdleThread_def setCurThread_def ARM_H.switchToIdleThread_def
   apply (simp add: no_orphans_disj all_queued_tcb_ptrs_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_disj_lift storeWordUser_typ'
        | clarsimp)+
@@ -562,25 +580,27 @@ lemma no_orphans_ksIdle [simp]:
   apply auto
   done
 
-crunch no_orphans [wp]: "ArchThreadDecls_H.switchToThread" "no_orphans"
-(wp: no_orphans_lift ignore: MachineOps.clearExMonitor)
 
-crunch ksCurThread [wp]: "ArchThreadDecls_H.switchToThread" "\<lambda> s. P (ksCurThread s)"
-  (ignore: MachineOps.clearExMonitor)
+crunch no_orphans [wp]: "Arch.switchToThread" "no_orphans"
+  (wp: no_orphans_lift ignore: ARM.clearExMonitor)
 
-crunch ksIdleThread [wp]: "ArchThreadDecls_H.switchToThread" "\<lambda> s. P (ksIdleThread s)"
-  (ignore: MachineOps.clearExMonitor)
+crunch ksCurThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksCurThread s)"
+  (ignore: ARM.clearExMonitor)
+
+crunch ksIdleThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksIdleThread s)"
+  (ignore: ARM.clearExMonitor)
 
 lemma ArchThreadDecls_H_switchToThread_all_queued_tcb_ptrs [wp]:
   "\<lbrace> \<lambda>s. P (all_queued_tcb_ptrs s) \<rbrace>
-   ArchThreadDecls_H.switchToThread tcb_ptr
+   Arch.switchToThread tcb_ptr
    \<lbrace> \<lambda>rv s. P (all_queued_tcb_ptrs s) \<rbrace>"
-  unfolding ArchThread_H.switchToThread_def all_queued_tcb_ptrs_def
+  unfolding ARM_H.switchToThread_def all_queued_tcb_ptrs_def
   apply (wp | clarsimp)+
   done
 
-crunch ksSchedulerAction [wp]: "ArchThreadDecls_H.switchToThread" "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: MachineOps.clearExMonitor)
+crunch ksSchedulerAction [wp]: "Arch.switchToThread" "\<lambda>s. P (ksSchedulerAction s)"
+  (ignore: ARM.clearExMonitor)
+
 
 lemma setCurThread_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and>
@@ -691,7 +711,7 @@ lemma findM_on_success:
   done
 
 crunch st_tcb' [wp]: switchToThread "\<lambda>s. P' (st_tcb_at' P t s)"
-  (ignore: MachineOps.clearExMonitor)
+  (ignore: ARM.clearExMonitor)
 
 lemma setQueue_deq_not_empty:
   "\<lbrace> \<lambda>s. (\<exists>tcb. tcb \<in> set (ksReadyQueues s p) \<and> st_tcb_at' P tcb s) \<and>
@@ -772,7 +792,7 @@ lemma setCurThread_ct [wp]:
 
 lemma ThreadDecls_H_switchToThread_ct [wp]:
   "\<lbrace> \<top> \<rbrace>
-   ThreadDecls_H.switchToThread tcb_ptr
+   switchToThread tcb_ptr
    \<lbrace> \<lambda>rv s. ksCurThread s = tcb_ptr \<rbrace>"
   unfolding switchToThread_def
   apply (wp | clarsimp)+
@@ -1146,11 +1166,11 @@ lemma createNewCaps_no_orphans:
   "\<lbrace> (\<lambda>s. no_orphans s 
          \<and>  pspace_aligned' s \<and> pspace_distinct' s
          \<and>  pspace_no_overlap' ptr sz s
-         \<and>  (tp = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0))
+         \<and>  (tp = APIObjectType CapTableObject \<longrightarrow> us > 0))
          and K (range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n) \<rbrace> 
    createNewCaps tp ptr n us
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+  apply (clarsimp simp: createNewCaps_def toAPIType_def
     split del: split_if cong: option.case_cong)
   apply (cases tp, simp_all split del: split_if)
         apply (rename_tac apiobject_type)
@@ -1169,11 +1189,11 @@ lemma createObject_no_orphans:
    RetypeDecls_H.createObject tp ptr us
    \<lbrace>\<lambda>xa. no_orphans\<rbrace>"
   apply (case_tac tp)
-        apply (simp_all add:createObject_def ArchRetype_H.createObject_def)
+        apply (simp_all add:createObject_def ARM_H.createObject_def)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
-            apply (simp_all add:ArchRetype_H.createObject_def createPageObject_def placeNewObject_def2
-              toAPIType_def ArchTypes_H.toAPIType_def placeNewObject_def2)+
+            apply (simp_all add: ARM_H.createObject_def createPageObject_def placeNewObject_def2
+                                 toAPIType_def)+
             apply (wp threadSet_no_orphans | clarsimp)+
            apply ((wp createObjects'_wp_subst[where c = "makeObject::Structures_H.tcb"]
                   createObjects_no_orphans[where sz = sz] | 
@@ -1663,9 +1683,9 @@ lemma deleteASID_no_orphans [wp]:
 
 lemma arch_finaliseCap_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
-   ArchRetypeDecls_H.finaliseCap cap fin
+   Arch.finaliseCap cap fin
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding ArchRetype_H.finaliseCap_def
+  unfolding ARM_H.finaliseCap_def
   apply (rule hoare_pre)
    apply (wp | wpc | clarsimp)+
   done
@@ -1767,9 +1787,9 @@ crunch no_orphans [wp]: invalidateTLBByASID "no_orphans"
 lemma arch_recycleCap_no_orphans:
   "\<lbrace> \<lambda>s. cte_wp_at' (\<lambda>cte. cteCap cte = ArchObjectCap cap) slot s
          \<and> invs' s \<and> no_orphans s \<rbrace>
-   ArchRetypeDecls_H.recycleCap is_final cap
+   Arch.recycleCap is_final cap
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (simp add: ArchRetype_H.recycleCap_def
+  apply (simp add: ARM_H.recycleCap_def
               split del: split_if)
   apply (rule hoare_pre)
    apply (wp mapM_x_wp' static_imp_wp | wpc | clarsimp simp: Let_def split del: split_if)+
@@ -1967,7 +1987,7 @@ lemma invokeIRQControl_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    performIRQControl i
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (cases i, simp_all add: performIRQControl_def ArchInterrupt_H.performIRQControl_def)
+  apply (cases i, simp_all add: performIRQControl_def ARM_H.performIRQControl_def)
   apply (wp | clarsimp)+
   done
 
@@ -2094,9 +2114,9 @@ lemma performPageDirectoryInvocation_no_orphans [wp]:
 
 lemma arch_performInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_arch_inv' i s \<and> ct_active' s \<rbrace>
-   ArchRetypeDecls_H.performInvocation i
+   Arch.performInvocation i
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
-  unfolding ArchRetype_H.performInvocation_def performARMMMUInvocation_def
+  unfolding ARM_H.performInvocation_def performARMMMUInvocation_def
   apply (cases i, simp_all add: valid_arch_inv'_def)
       apply (wp | clarsimp)+
   done
@@ -2282,5 +2302,7 @@ theorem callKernel_no_orphans [wp]:
                   E="\<lambda>y s. invs' s \<and> no_orphans s" in hoare_post_impErr)
     apply (wp hoare_vcg_conj_liftE | clarsimp)+
   done
+
+end
 
 end

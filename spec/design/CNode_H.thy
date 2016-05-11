@@ -22,118 +22,118 @@ imports
 begin
 
 
-consts
+consts'
 decodeCNodeInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> capability \<Rightarrow> capability list \<Rightarrow> ( syscall_error , cnode_invocation ) kernel_f"
 
-consts
+consts'
 invokeCNode :: "cnode_invocation \<Rightarrow> unit kernel_p"
 
-consts
+consts'
 setUntypedCapAsFull :: "capability \<Rightarrow> capability \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 cteInsert :: "capability \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 cteMove :: "capability \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 capSwapForDelete :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 cteSwap :: "capability \<Rightarrow> machine_word \<Rightarrow> capability \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 cteDelete :: "machine_word \<Rightarrow> bool \<Rightarrow> unit kernel_p"
 
-consts
+consts'
 emptySlot :: "machine_word \<Rightarrow> irq option \<Rightarrow> unit kernel"
 
-consts
+consts'
 finaliseSlot :: "machine_word \<Rightarrow> bool \<Rightarrow> (bool * irq option) kernel_p"
 
-consts
+consts'
 capRemovable :: "capability \<Rightarrow> machine_word \<Rightarrow> bool"
 
-consts
+consts'
 capCyclicZombie :: "capability \<Rightarrow> machine_word \<Rightarrow> bool"
 
-consts
+consts'
 reduceZombie :: "capability \<Rightarrow> machine_word \<Rightarrow> bool \<Rightarrow> unit kernel_p"
 
-consts
+consts'
 cteDeleteOne :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 cteRecycle :: "machine_word \<Rightarrow> unit kernel_p"
 
-consts
+consts'
 createNewObjects :: "object_type \<Rightarrow> machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
 
-consts
+consts'
 insertNewCap :: "machine_word \<Rightarrow> machine_word \<Rightarrow> capability \<Rightarrow> unit kernel"
 
-consts
+consts'
 insertInitCap :: "machine_word \<Rightarrow> capability \<Rightarrow> unit kernel"
 
-consts
+consts'
 setupReplyMaster :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 noReplyCapsFor :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 
-consts
+consts'
 isMDBParentOf :: "cte \<Rightarrow> cte \<Rightarrow> bool"
 
-consts
+consts'
 updateMDB :: "machine_word \<Rightarrow> (mdbnode \<Rightarrow> mdbnode) \<Rightarrow> unit kernel"
 
-consts
+consts'
 ensureNoChildren :: "machine_word \<Rightarrow> ( syscall_error , unit ) kernel_f"
 
-consts
+consts'
 ensureEmptySlot :: "machine_word \<Rightarrow> ( syscall_error , unit ) kernel_f"
 
-consts
+consts'
 locateSlotBasic :: "machine_word \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 locateSlotTCB :: "machine_word \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 locateSlotCNode :: "machine_word \<Rightarrow> nat \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 locateSlotCap :: "capability \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 getCTE :: "machine_word \<Rightarrow> cte kernel"
 
-consts
+consts'
 setCTE :: "machine_word \<Rightarrow> cte \<Rightarrow> unit kernel"
 
-consts
+consts'
 updateCap :: "machine_word \<Rightarrow> capability \<Rightarrow> unit kernel"
 
-consts
+consts'
 getSlotCap :: "machine_word \<Rightarrow> capability kernel"
 
-consts
+consts'
 isFinalCapability :: "cte \<Rightarrow> bool kernel"
 
-consts
+consts'
 longRunningDelete :: "capability \<Rightarrow> bool"
 
-consts
+consts'
 slotCapLongRunningDelete :: "machine_word \<Rightarrow> bool kernel"
 
-consts
+consts'
 getReceiveSlots :: "machine_word \<Rightarrow> (machine_word) option \<Rightarrow> machine_word list kernel"
 
-consts
+consts'
 loadCapTransfer :: "machine_word \<Rightarrow> cap_transfer kernel"
 
-consts
+consts'
 capTransferFromWords :: "machine_word \<Rightarrow> cap_transfer kernel"
 
 
@@ -160,10 +160,10 @@ odE))
 by auto
 
 defs decodeCNodeInvocation_def:
-"decodeCNodeInvocation label x1 x2 extraCaps\<equiv> (let (v1, cap) = (x1, x2) in
+"decodeCNodeInvocation label x1 x2 extraCaps\<equiv> (let (v15, cap) = (x1, x2) in
   if isCNodeCap cap
   then
-  (case v1 of
+  (case v15 of
   (index # bits # args) \<Rightarrow>   (doE
     inv \<leftarrow> returnOk ( invocationType label);
     unlessE (inv `~elem~` [CNodeRevoke  .e.  CNodeSaveCaller]) $
@@ -398,12 +398,12 @@ defs capCyclicZombie_def:
   )"
 
 defs reduceZombie_def:
-"reduceZombie x0 slot x2\<equiv> (let (v5, v6) = (x0, x2) in
-  if isZombie v5 \<and> capZombieNumber v5 = 0
+"reduceZombie x0 slot x2\<equiv> (let (v19, v20) = (x0, x2) in
+  if isZombie v19 \<and> capZombieNumber v19 = 0
   then  
     haskell_fail []
-  else if isZombie v5 \<and> \<not> v6
-  then let ptr = capZombiePtr v5
+  else if isZombie v19 \<and> \<not> v20
+  then let ptr = capZombiePtr v19
   in   (doE
     haskell_assertE (ptr \<noteq> slot) [];
     capAtPtr \<leftarrow> withoutPreemption $ liftM cteCap $ getCTE ptr;
@@ -414,8 +414,8 @@ defs reduceZombie_def:
         );
     withoutPreemption $ capSwapForDelete ptr slot
   odE)
-  else if isZombie v5 \<and> v6
-  then let z = v5; ptr = capZombiePtr z; n = capZombieNumber z
+  else if isZombie v19 \<and> v20
+  then let z = v19; ptr = capZombiePtr z; n = capZombieNumber z
   in   (doE
     endSlot \<leftarrow> withoutPreemption $ locateSlotCap z (fromIntegral (n - 1));
     cteDelete endSlot False;

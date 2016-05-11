@@ -103,6 +103,8 @@ where
   )"
 
 
+context Arch begin global_naming ARM_H
+
 datatype object_type =
     APIObjectType apiobject_type
   | SmallPageObject
@@ -138,11 +140,14 @@ where
   )"
 
 
+end
 
 text {* object\_type instance proofs *}
 
-instantiation object_type :: enum
+qualify ARM_H (in Arch)
+instantiation ARM_H.object_type :: enum
 begin
+interpretation Arch .
 definition
   enum_object_type: "enum_class.enum \<equiv> 
     map APIObjectType (enum_class.enum :: apiobject_type list) @ 
@@ -171,17 +176,23 @@ definition
 end
 
 
-instantiation object_type :: enum_alt
+instantiation ARM_H.object_type :: enum_alt
 begin
+interpretation Arch .
 definition
   enum_alt_object_type: "enum_alt \<equiv>
     alt_from_ord (enum :: object_type list)"
 instance ..
 end
 
-instantiation object_type :: enumeration_both
+instantiation ARM_H.object_type :: enumeration_both
 begin
+interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_object_type)
+end
+
+context begin interpretation Arch .
+requalify_types object_type
 end
 
 end
