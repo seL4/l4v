@@ -150,18 +150,28 @@ fun mk_l2monadT stateT retT exT =
  *)
 fun parse_spec ctxt prog_info term =
   let
+    (*
+     * If simplification was turned off in L1, the spec may still contain
+     * unions and intersections, i.e. be of the form
+     *   {(s, t). f s t} \<union> {(s, t). g s t} ...
+     * We blithely rewrite them here.
+     *)
+    val term = Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt)
+        (map mk_meta_eq @{thms Collect_conj_eq[symmetric] Collect_disj_eq[symmetric]}) [] term
+
     (* Apply a dummy old and new state variable to the term. *)
-    val dummy_s = Free ("_dummy_state1", (#state_type prog_info))
-    val dummy_t = Free ("_dummy_state2", (#state_type prog_info))
+    val dummy_s = Free ("_dummy_state1", #state_type prog_info)
+    val dummy_t = Free ("_dummy_state2", #state_type prog_info)
     val dummy_tuple = HOLogic.mk_tuple [dummy_s, dummy_t]
     val t = Envir.beta_eta_contract (
         (Const (@{const_name "Set.member"},
             fastype_of dummy_tuple --> fastype_of term --> @{typ bool})
           $ dummy_tuple $ term))
 
-    (* Pull apart the "split" at the beginning of the term. *)
+    (* Pull apart the "split" at the beginning of the term, then apply
+     * to our dummy variables *)
     val t = Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt)
-        [mk_meta_eq @{thm split_def}, mk_meta_eq @{thm fst_conv}, mk_meta_eq @{thm snd_conv}] [] t
+        (map mk_meta_eq @{thms split_def fst_conv snd_conv mem_Collect_eq}) [] t
 
     (*
      * Pull out any references to any other variables into a lambda
@@ -174,6 +184,8 @@ fun parse_spec ctxt prog_info term =
     val t = Utils.abs_over "t" (globals_getter $ dummy_t) t
             |> Utils.abs_over "s" (globals_getter $ dummy_s)
             |> HOLogic.mk_case_prod
+    val t_collect = @{mk_term "Collect :: (?'s \<Rightarrow> bool) \<Rightarrow> ?'s set" ('s)}
+                       (domain_type (fastype_of t))
   in
     (* Determine if there are any references left to the dummy state
      * variable. If so, give up on the translation. *)
@@ -182,7 +194,7 @@ fun parse_spec ctxt prog_info term =
       (warning ("Can't parse spec term: "
           ^ (Utils.term_to_string ctxt term)); NONE)
     else
-      SOME t
+      SOME (t_collect $ t)
   end
 
 
