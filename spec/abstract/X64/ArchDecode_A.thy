@@ -200,7 +200,7 @@ definition
     | ArchObjectCap (IOPageTableCap _ _ (Some asid)) \<Rightarrow> return $ fst asid
     | _\<Rightarrow> fail"
                 
-
+(* FIXME x64-vtd:
 definition
   decode_io_pt_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> 
                             (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
@@ -292,7 +292,8 @@ definition
 where
   "decode_io_map_invocation label args cte cap extra_caps \<equiv> undefined"
 (*X64STUB*)
-  
+*)
+
 definition
 decode_page_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap 
                             \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
@@ -351,8 +352,10 @@ where
              case map_type of
                  VMIOSpaceMap \<Rightarrow> decode_io_unmap_invocation label args cte cap extra_caps
                | _ \<Rightarrow> returnOk $ InvokePage $ PageUnmap cap cte
+    (* FIXME x64-vtd:
     else if invocation_type label = ArchInvocationLabel X64PageMapIO
     then decode_io_map_invocation label args cte cap extra_caps
+    *)
     else if invocation_type label = ArchInvocationLabel X64PageGetAddress 
     then returnOk $ InvokePage $ PageGetAddr p
   else throwError IllegalOperation         

@@ -141,9 +141,10 @@ datatype arch_kernel_obj =
  | PDPointerTable "9 word \<Rightarrow> pdpte"
  | PageMapL4 "9 word \<Rightarrow> pml4e"
  | DataPage vmpage_size
+(* FIXME x64-vtd:
  | IORootTable "16 word \<Rightarrow> iorte"
  | IOContextTable "16 word \<Rightarrow> iocte"
- | IOPageTable "16 word \<Rightarrow> iopte"
+ | IOPageTable "16 word \<Rightarrow> iopte" *)
 
 
 definition
@@ -164,8 +165,9 @@ where
   "arch_obj_size (ASIDPoolCap _ _) = pageBits"
 | "arch_obj_size ASIDControlCap = 0"
 | "arch_obj_size (IOPortCap _ _) = 0"
+(* FIXME x64-vtd:
 | "arch_obj_size (IOSpaceCap _ _) = 0"
-| "arch_obj_size (IOPageTableCap _ _ _) = iotable_size" (* FIXME: check *)
+| "arch_obj_size (IOPageTableCap _ _ _) = iotable_size" (* FIXME: check *) *)
 | "arch_obj_size (PageCap _ _ _ sz _) = pageBitsForSize sz"
 | "arch_obj_size (PageTableCap _ _) = table_size"
 | "arch_obj_size (PageDirectoryCap _ _) = table_size"
@@ -188,8 +190,9 @@ where
   "aobj_ref (ASIDPoolCap x _) = Some x"
 | "aobj_ref ASIDControlCap = None"
 | "aobj_ref (IOPortCap _ _) = None"
+(* FIXME x64-vtd:
 | "aobj_ref (IOSpaceCap _ _) = None"
-| "aobj_ref (IOPageTableCap x _ _) = Some x"
+| "aobj_ref (IOPageTableCap x _ _) = Some x" *)
 | "aobj_ref (PageCap x _ _ _ _) = Some x"
 | "aobj_ref (PageDirectoryCap x _) = Some x"
 | "aobj_ref (PageTableCap x _) = Some x"
@@ -250,11 +253,12 @@ section {* Architecture-specific state *}
 record arch_state =
   x64_gdt                   :: obj_ref
   x64_asid_table            :: "3 word \<rightharpoonup> obj_ref"
+  x64_global_pml4           :: obj_ref
+(* FIXME x64-vtd:
   x64_num_io_domain_bits    :: "16 word"
   x64_first_valid_io_domain :: "16 word"
   x64_num_io_domain_id_bits :: "32 word"
-  x64_global_pml4           :: obj_ref
-  x64_io_root_table         :: obj_ref
+  x64_io_root_table         :: obj_ref *)
 
 end_qualify 
 
@@ -308,6 +312,27 @@ definition
   x64_num_io_pt_levels :: "nat" where
   "x64_num_io_pt_levels \<equiv> 4"
 
+section "Type declarations for invariant definitions"
+
+(* FIXME x64-vtd: add *)
+datatype aa_type =
+    AASIDPool
+  | APageTable
+  | APageDirectory
+  | APDPointerTable
+  | APageMapL4
+  | AIntData vmpage_size
+
+(* FIXME x64-vtd: add *)
+definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type"
+where 
+ "aa_type ao \<equiv> (case ao of
+           PageTable pt             \<Rightarrow> APageTable
+         | PageDirectory pd         \<Rightarrow> APageDirectory
+         | DataPage sz              \<Rightarrow> AIntData sz
+         | ASIDPool f               \<Rightarrow> AASIDPool
+         | PDPointerTable pdpt      \<Rightarrow> APDPointerTable
+         | PageMapL4 pm             \<Rightarrow> APageMapL4)"
 
 end
 end

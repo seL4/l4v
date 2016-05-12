@@ -109,6 +109,25 @@ definition
   new_context :: "user_context" where
   "new_context \<equiv> (\<lambda>r. 0) (CPSR := 0x150)"
 
+text {* The lowest virtual address in the kernel window. The kernel reserves the
+virtual addresses from here up in every virtual address space. *}
+definition
+  kernel_base :: "vspace_ref" where
+  "kernel_base \<equiv> 0xe0000000"
+
+definition
+  idle_thread_ptr :: vspace_ref where
+  "idle_thread_ptr = kernel_base + 0x1000"
+
+end 
+
+context begin interpretation Arch .
+  requalify_consts idle_thread_ptr
+end
+
+context Arch begin global_naming ARM_A
+
+  
 text {* Miscellaneous definitions of constants used in modelling machine
 operations. *}
 

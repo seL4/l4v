@@ -51,18 +51,6 @@ lemma all_eq_trans: "\<lbrakk> \<forall>x. P x = Q x; \<forall>x. Q x = R x \<rb
   by simp
 
 
-lemma mask_out_8_le_kernel_base:
-  "(x && ~~ mask 8 \<ge> kernel_base >> 20) = (x \<ge> kernel_base >> 20)"
-  apply (rule iffI)
-   apply (erule order_trans, rule word_and_le2)
-  apply (drule_tac n=8 in neg_mask_mono_le)
-  apply (simp add: kernel_base_def mask_def)
-  done
-
-lemma mask_out_8_less_kernel_base:
-  "(x && ~~ mask 8 < kernel_base >> 20) = (x < kernel_base >> 20)"
-  using mask_out_8_le_kernel_base[where x=x]
-  by (simp add: linorder_not_less[symmetric])
 
 declare liftE_wp[wp]
 declare case_sum_True[simp]

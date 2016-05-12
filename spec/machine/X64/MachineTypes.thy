@@ -300,7 +300,7 @@ qualify X64 (in Arch)
 
 record
   machine_state =
-  irq_masks :: "irq \<Rightarrow> bool"
+  irq_masks :: "X64.irq \<Rightarrow> bool"
   irq_state :: nat
   underlying_memory :: "word64 \<Rightarrow> word8"
   machine_state_rest :: X64.machine_state_rest  

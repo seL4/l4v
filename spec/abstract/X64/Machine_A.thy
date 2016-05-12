@@ -114,8 +114,26 @@ definition
 
 definition
   pptr_base :: "machine_word" where
-  "pptr_base = Platform.pptrBase"
+  "pptr_base = Platform.X64.pptrBase"
 
+
+text {* The lowest virtual address in the kernel window. The kernel reserves the
+virtual addresses from here up in every virtual address space. *}
+definition
+  kernel_base :: "vspace_ref" where
+  "kernel_base \<equiv> 0xffffffffc0000000"
+
+definition
+  idle_thread_ptr :: vspace_ref where
+  "idle_thread_ptr = kernel_base + 0x1000"
+
+end 
+
+context begin interpretation Arch .
+  requalify_consts idle_thread_ptr
+end
+
+context Arch begin global_naming X64_A
 
 (* is nat_to_cref arch specific ? *)
 definition

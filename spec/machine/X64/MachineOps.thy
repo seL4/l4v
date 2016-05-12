@@ -242,11 +242,11 @@ definition
   initL2Cache :: "unit machine_monad"
 where "initL2Cache \<equiv> machine_op_lift initL2Cache_impl"
  
-definition getCurrentCR3 :: "Platform.cr3 machine_monad"
+definition getCurrentCR3 :: "Platform.X64.cr3 machine_monad"
   where
   "getCurrentCR3 \<equiv> undefined"
   
-definition setCurrentCR3 :: "Platform.cr3 \<Rightarrow> unit machine_monad"
+definition setCurrentCR3 :: "Platform.X64.cr3 \<Rightarrow> unit machine_monad"
   where
   "setCurrentCR3 \<equiv> undefined"
   

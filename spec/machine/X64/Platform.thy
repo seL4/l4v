@@ -19,6 +19,7 @@ imports
 begin
 (* FIXME X64: Missing lots of stuff *)
 
+context Arch begin global_naming X64
 
 type_synonym irq = word8
 type_synonym paddr = word64
@@ -29,7 +30,7 @@ abbreviation (input) "fromPAddr \<equiv> id"
 
 definition
   pptrBase :: word64 where
-  "pptrBase = undefined"
+  "pptrBase = 0xffffff8000000000"
 
 definition
   cacheLineBits :: nat where
@@ -41,11 +42,11 @@ definition
 
 definition
   ptrFromPAddr :: "paddr \<Rightarrow> word64" where
-  "ptrFromPAddr paddr \<equiv> undefined"
+  "ptrFromPAddr paddr \<equiv> paddr + pptrBase"
 
 definition
   addrFromPPtr :: "word64 \<Rightarrow> paddr" where
-  "addrFromPPtr pptr \<equiv> undefined"
+  "addrFromPPtr pptr \<equiv> pptr - pptrBase"
   
 definition
   addrFromKPPtr :: "word64 \<Rightarrow> paddr" where
@@ -79,5 +80,5 @@ primrec cr3pcid_update where
 
 
 
-
+end
 end

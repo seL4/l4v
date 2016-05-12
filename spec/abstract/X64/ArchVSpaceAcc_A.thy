@@ -299,6 +299,7 @@ lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::s
         | _ \<Rightarrow> throwError $ MissingCapability 20)
    odE"
 
+(* FIXME x64-vtd:
 text {* The following functions helped us locating the actual iopte *}
 definition
   get_iopt :: "obj_ref \<Rightarrow> (16 word \<Rightarrow> iopte,'z::state_ext) s_monad" where
@@ -454,6 +455,7 @@ definition lookup_io_pt_slot :: "obj_ref \<Rightarrow> 64 word \<Rightarrow>  ((
 where "lookup_io_pt_slot pte_ref ioaddr \<equiv> lookup_io_ptr_resolve_levels pte_ref  (ioaddr >> pageBits)
   (x64_num_io_pt_levels - 1) (x64_num_io_pt_levels - 1)"
 
+*)
 
    
 end
