@@ -2528,8 +2528,6 @@ lemma valid_untyped_helper:
   qed
 end
 
-
-
 locale retype_region_proofs_gen = Retype_AI + 
   fixes s ty us ptr sz n ps s'
    assumes   vp: "valid_pspace s"
@@ -2545,9 +2543,7 @@ locale retype_region_proofs_gen = Retype_AI +
        and "s' \<equiv> kheap_update (\<lambda>y. ps) s"
 
 locale retype_region_proofs = retype_region_proofs_gen
-locale retype_region_proofs_arch = retype_region_proofs_gen
-sublocale retype_region_proofs_arch \<subseteq> Arch .
-sublocale retype_region_proofs_arch \<subseteq> retype_region_proofs by unfold_locales
+locale retype_region_proofs_arch = retype_region_proofs + Arch
 
 context retype_region_proofs begin
 lemma obj_at_pres: "\<And>P x. obj_at P x s \<Longrightarrow> obj_at P x s'"

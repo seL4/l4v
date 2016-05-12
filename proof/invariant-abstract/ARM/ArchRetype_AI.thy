@@ -16,8 +16,6 @@ theory ArchRetype_AI
 imports "../Retype_AI"
 begin
 
-
-
 context Arch begin
 
 named_theorems Retype_AI_asms
@@ -28,12 +26,16 @@ lemma clearMemoryVM_return[simp, Retype_AI_asms]:
 
 end
 
-
 interpretation Retype_AI?: Retype_AI 
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales, fact Retype_AI_asms)?)
   qed
+
+context begin global_naming retype_region_proofs
+lemmas intro = retype_region_proofs.intro[OF retype_region_proofs_gen.intro
+                    [OF Retype_AI_axioms retype_region_proofs_gen_axioms.intro]]
+end
 
 context Arch begin global_naming ARM
 
