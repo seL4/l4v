@@ -1110,6 +1110,26 @@ lemma struct_rewrite_modifies_globals_setter [heap_abs]:
   apply (clarsimp simp: valid_globals_field_def struct_rewrite_expr_def struct_rewrite_modifies_def)
   done
 
+(* Translate Hoare modifies specs. *)
+lemma abs_spec_may_not_modify_globals[heap_abs]:
+  "abs_spec st \<top> {(a, b). meq b a} {(a, b). meq b a}"
+  apply (clarsimp simp: abs_spec_def meq_def)
+  done
+
+lemma abs_spec_modify_global[heap_abs]:
+  "valid_globals_field st old_getter old_setter new_getter new_setter \<Longrightarrow>
+   abs_spec st \<top> {(a, b). C a b} {(a, b). C' a b} \<Longrightarrow>
+   abs_spec st \<top> {(a, b). mex (\<lambda>x. C (new_setter (\<lambda>_. x) a) b)} {(a, b). mex (\<lambda>x. C' (old_setter (\<lambda>_. x) a) b)}"
+  apply (fastforce simp: abs_spec_def mex_def valid_globals_field_def)
+  done
+
+(* Remove the Hoare modifies constants after we're finished,
+ * as they have very buggy print translations.
+ * In particular, applying abs_spec_modify_global replaces the bound variable by "x"
+ * and confuses the print translation into producing "may_only_modify_globals [x]". *)
+lemmas [polish] = mex_def meq_def
+
+
 (* Signed words are stored on the heap as unsigned words. *)
 
 lemma uint_scast [simp]:

@@ -513,6 +513,13 @@ lemma corresTA_L2_guard:
   apply (monad_eq simp: L2_defs corresXF_def)
   done
 
+lemma corresTA_L2_spec:
+  "(\<And>s t. abstract_val (Q s) (P s t) id (P' s t)) \<Longrightarrow>
+   corresTA Q rx ex (L2_spec {(s, t). P s t}) (L2_spec {(s, t). P' s t})"
+  apply (monad_eq simp: L2_defs corresXF_def in_liftE split: sum.splits)
+  apply (erule exI)
+  done
+
 lemma corresTA_L2_condition:
   "\<lbrakk> corresTA P rx ex L L';
      corresTA Q rx ex R R';
@@ -842,6 +849,7 @@ lemmas [word_abs] =
   corresTA_L2_catch
   corresTA_L2_while
   corresTA_L2_guard
+  corresTA_L2_spec
   corresTA_L2_condition
   corresTA_L2_unknown
   corresTA_L2_recguard

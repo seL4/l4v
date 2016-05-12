@@ -15,33 +15,35 @@ theory Test_Spec_Translation
 imports "../../AutoCorres"
 begin
 
-install_C_file "../parse-tests/bodyless_function.c"
+install_C_file "test_spec_translation.c"
 
-(* FIXME: move these *)
-lemma abs_spec_may_not_modify_globals[heap_abs]:
-  "abs_spec st \<top> {(a, b). meq b a} {(a, b). meq b a}"
-  apply (clarsimp simp: abs_spec_def meq_def)
-  done
-(* TODO: also handle may_only_modify_globals specs. This will be more difficult *)
+autocorres "test_spec_translation.c"
 
-lemma corresTA_L2_spec[word_abs]:
-  "(\<And>s t. abstract_val (Q s) (P s t) id (P' s t)) \<Longrightarrow>
-   corresTA Q rx ex (L2_spec {(s, t). P s t}) (L2_spec {(s, t). P' s t})"
-  apply (monad_eq simp: L2_defs corresXF_def in_liftE split: sum.splits)
-  apply (erule exI)
-  done
-
-autocorres "../parse-tests/bodyless_function.c"
-
-context bodyless_function begin
-(* We don't know what this function does, but it's guaranteed to not modify the global state. *)
-thm bodyless_body_def bodyless'_def
+context test_spec_translation begin
+(* We don't know what this function does, but it's guaranteed to only modify "reg". *)
+thm magic_body_def magic'_def
+thm call_magic_body_def call_magic'_def
 
 (* Check that our translation did honour the given spec. *)
-lemma "\<lbrace>P\<rbrace> bodyless' \<lbrace>\<lambda>_. P\<rbrace>!"
-  apply (simp add: bodyless'_def)
-  apply (monad_eq simp: validNF_def valid_def no_fail_def meq_def)
+lemma validNF_spec[wp]:
+  "\<lbrace>\<lambda>s. (\<exists>t. (s, t) \<in> f) \<and> (\<forall>t. (s, t) \<in> f \<longrightarrow> P () t)\<rbrace> spec f \<lbrace>P\<rbrace>!"
+  by (clarsimp simp: validNF_def valid_def no_fail_def spec_def)
+
+lemma magic'_wp:
+  "\<lbrace>P\<rbrace> magic' x \<lbrace>\<lambda>_ s. \<exists>x. P (s\<lparr>reg_'' := x\<rparr>)\<rbrace>!"
+  apply (unfold magic'_def)
+  apply wp
+  apply (fastforce simp: lifted_globals.splits)
   done
+
+lemma call_magic'_wp:
+  "of_int x < (42 :: 32 signed word) \<Longrightarrow>
+   \<lbrace>P\<rbrace> call_magic' x \<lbrace>\<lambda>_ s. \<exists>x. P (s\<lparr>reg_'' := x\<rparr>)\<rbrace>!"
+  apply (unfold call_magic'_def)
+  apply (wp magic'_wp)
+  apply (fastforce simp: lifted_globals.splits)
+  done
+
 end
 
 end
