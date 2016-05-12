@@ -55,7 +55,7 @@ lemma do_fault_transfer_cur_thread_idle_thread:
 done
 
 lemma do_normal_transfer_cur_thread_idle_thread:
-  "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s) \<rbrace> Ipc_A.do_normal_transfer a b c d e f g h\<lbrace>\<lambda>rv s. P (cur_thread s)  (idle_thread s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s) \<rbrace> Ipc_A.do_normal_transfer a b c d e f g \<lbrace>\<lambda>rv s. P (cur_thread s)  (idle_thread s)\<rbrace>"
   apply (simp add:do_normal_transfer_def set_message_info_def)
   apply (wp as_user_cur_thread_idle_thread |wpc|clarsimp)+
   apply (wps | wp transfer_caps_it copy_mrs_it)+
@@ -63,7 +63,7 @@ lemma do_normal_transfer_cur_thread_idle_thread:
 done
 
 lemma do_ipc_transfer_cur_thread_idle_thread:
-  "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s) \<rbrace> Ipc_A.do_ipc_transfer a b c d e f\<lbrace>\<lambda>rv s. P (cur_thread s)  (idle_thread s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s) \<rbrace> Ipc_A.do_ipc_transfer a b c d e \<lbrace>\<lambda>rv s. P (cur_thread s)  (idle_thread s)\<rbrace>"
   apply (simp add:do_ipc_transfer_def)
   apply (wp do_fault_transfer_cur_thread_idle_thread do_normal_transfer_cur_thread_idle_thread|wpc)+
   apply (wp | simp add:thread_get_def)+
@@ -441,7 +441,7 @@ lemma block_thread_on_recv_corres:
   "dcorres dc \<top> (not_idle_thread thread and valid_etcbs)
              (KHeap_D.set_cap (thread, tcb_pending_op_slot)
                (PendingSyncRecvCap epptr False))
-             (set_thread_state thread (Structures_A.thread_state.BlockedOnReceive epptr x))"
+             (set_thread_state thread (Structures_A.thread_state.BlockedOnReceive epptr))"
   apply (clarsimp simp:KHeap_D.set_cap_def set_thread_state_def)
   apply (rule dcorres_gets_the, clarsimp)
    apply (rule dcorres_rhs_noop_below_True[OF set_thread_state_ext_dcorres])
@@ -1040,7 +1040,7 @@ lemma set_thread_state_block_on_send_corres:
 lemma set_thread_state_block_on_receive_corres:
   "dcorres dc \<top> (not_idle_thread thread and valid_etcbs)
       (block_thread_on_ipc thread (PendingSyncRecvCap epptr False))
-      (set_thread_state thread (Structures_A.thread_state.BlockedOnReceive epptr x))"
+      (set_thread_state thread (Structures_A.thread_state.BlockedOnReceive epptr))"
    apply (simp add:block_thread_on_ipc_def)
    apply (rule block_thread_on_recv_corres)
    done
@@ -1367,7 +1367,7 @@ lemma dcorres_transfer_caps_loop:
             length dests \<le> 1 \<and>
             2 + msg_max_length + n + length caps' < unat max_ipc_words) and valid_etcbs)
            (Endpoint_D.transfer_caps_loop ep rcv caps dest)
-           (Ipc_A.transfer_caps_loop ep' d rcv_buffer n caps' dests mi)"
+           (Ipc_A.transfer_caps_loop ep' rcv_buffer n caps' dests mi)"
 proof (induct caps' arbitrary: mi n dests dest caps ep ep')
   case Nil thus ?case by clarsimp
 next
@@ -1416,20 +1416,9 @@ next
       apply (rule corres_splitEE)
          prefer 2
          apply (subst alternative_bindE_distrib)
-         apply (cases d)
-          prefer 2
           apply simp
           apply (rule corres_alternate2)
           apply (rule derive_cap_dcorres [where P="\<top>"], simp)
-         apply (rule corres_alternate1)
-         apply simp
-         apply (rule corres_guard_imp)
-           apply (rule derive_cap_dcorres [where P="\<top>"])
-           apply (unfold remove_rights_def)[1]
-           apply (rule update_cap_rights_cong [symmetric])
-           apply (simp add: transform_cap_rights)
-          apply assumption
-         apply (simp add: swp_def)
         apply (rule corres_splitEE)
            prefer 2
            apply (rule corres_whenE, simp)
@@ -1725,7 +1714,7 @@ lemma transfer_caps_dcorres:
            (Endpoint_D.transfer_caps ep
               (map (\<lambda>(cap, slot). (transform_cap cap, transform_cslot_ptr slot)) caps)
               sender rcv)
-           (Ipc_A.transfer_caps info caps ep rcv rcv_buffer d)"
+           (Ipc_A.transfer_caps info caps ep rcv rcv_buffer)"
   unfolding Ipc_A.transfer_caps_def Endpoint_D.transfer_caps_def
   apply clarsimp
   apply (cases rcv_buffer)
@@ -2021,7 +2010,7 @@ lemma corres_complete_ipc_transfer:
             and (\<lambda>s. not_idle_thread (cur_thread s) s) and valid_irq_node
             and valid_idle and not_idle_thread recv and not_idle_thread send and valid_etcbs)
            (Endpoint_D.do_ipc_transfer ep' send recv can_grant)
-           (Ipc_A.do_ipc_transfer send ep badge can_grant recv diminish)"
+           (Ipc_A.do_ipc_transfer send ep badge can_grant recv)"
   apply (clarsimp simp: Endpoint_D.do_ipc_transfer_def Ipc_A.do_ipc_transfer_def)
   apply (rule dcorres_expand_pfx)
       apply (rule dcorres_symb_exec_r_evalMonad)
@@ -2413,7 +2402,7 @@ lemma dcorres_receive_sync:
         (case rv of
             Structures_A.endpoint.IdleEP \<Rightarrow> case is_blocking of
                 True \<Rightarrow> do set_thread_state thread
-                      (Structures_A.thread_state.BlockedOnReceive word1 (AllowWrite \<notin> rights));
+                      (Structures_A.thread_state.BlockedOnReceive word1);
                        set_endpoint word1 (Structures_A.endpoint.RecvEP [thread])
                    od
                 | False \<Rightarrow> do_nbrecv_failed_transfer thread
@@ -2428,10 +2417,10 @@ lemma dcorres_receive_sync:
                    data \<leftarrow> case sender_state of
                        Structures_A.thread_state.BlockedOnSend ref x \<Rightarrow> return x | _ \<Rightarrow> fail;
                    Ipc_A.do_ipc_transfer sender (Some word1) (sender_badge data)
-                        (sender_can_grant data) thread (AllowWrite \<notin> rights);
+                        (sender_can_grant data) thread;
                    fault \<leftarrow> thread_get tcb_fault sender;
                    if sender_is_call data \<or> fault \<noteq> None
-                   then if sender_can_grant data \<and> \<not> AllowWrite \<notin> rights
+                   then if sender_can_grant data
                         then setup_caller_cap sender thread
                         else set_thread_state sender Structures_A.thread_state.Inactive
                    else do set_thread_state sender Structures_A.thread_state.Running;
@@ -2440,7 +2429,7 @@ lemma dcorres_receive_sync:
                 od
           | Structures_A.endpoint.RecvEP queue \<Rightarrow> case is_blocking of
               True \<Rightarrow> do set_thread_state thread
-                     (Structures_A.thread_state.BlockedOnReceive word1 (AllowWrite \<notin> rights));
+                     (Structures_A.thread_state.BlockedOnReceive word1);
                       set_endpoint word1 (Structures_A.endpoint.RecvEP (queue @ [thread]))
                    od
               | False \<Rightarrow> do_nbrecv_failed_transfer thread)"
@@ -2710,27 +2699,28 @@ lemma send_sync_ipc_corres:
    apply (clarsimp simp: dest!: not_empty_list_not_empty_set)
   apply (rename_tac list)
   apply (drule_tac s = "set list" in sym)
-  apply (clarsimp simp: bind_assoc neq_Nil_conv)
+  apply (clarsimp simp: bind_assoc neq_Nil_conv split del:split_if)
   apply (rule_tac P1="\<top>" and P'="op = s'a" and x1 = y
          in dcorres_absorb_pfx[OF select_pick_corres[OF dcorres_expand_pfx]])
       defer
-      apply simp+
+      apply (simp+)[3]
+  apply (simp split del:split_if)
   apply (drule_tac x1 = y in iffD2[OF eqset_imp_iff], simp)
-  apply (clarsimp simp:obj_at_def dc_def[symmetric])
+  apply (clarsimp simp:obj_at_def dc_def[symmetric] split del:split_if)
   apply (subst when_def)+
   apply (rule corres_guard_imp)
     apply (rule dcorres_symb_exec_r)
       apply (rule corres_symb_exec_r)
-         apply (rule corres_symb_exec_r)
+       apply (case_tac "recv_state"; simp add: corres_free_fail split del: split_if)
                  apply (rule corres_split[OF _ corres_complete_ipc_transfer])
                     apply (rule corres_split[OF _ set_thread_state_corres])
                       apply (rule dcorres_rhs_noop_above[OF attempt_switch_to_dcorres])
                        apply (rule_tac corres_symb_exec_r)
                           apply (rule dcorres_if_rhs)
                            apply (rule dcorres_if_rhs)
-                            apply simp
+                            apply (simp only:if_True)
                             apply (rule corres_alternate1)+
-                            apply (rule corres_setup_caller_cap)
+                            apply (rule corres_setup_caller_cap) 
                             apply (clarsimp simp:ep_waiting_set_recv_def pred_tcb_at_def obj_at_def generates_pending_def)
                            apply (rule corres_alternate1[OF corres_alternate2])
                            apply (rule set_thread_state_corres)
@@ -2747,11 +2737,8 @@ lemma send_sync_ipc_corres:
             apply (wp hoare_vcg_conj_lift)
              apply (rule hoare_disjI1)
              apply (wp do_ipc_transfer_pred_tcb | wpc | simp)+
-          apply (simp add:return_def fail_def valid_def split:Structures_A.thread_state.splits)
          apply (clarsimp simp:conj_comms not_idle_thread_def)+
-        apply (rule hoare_drop_imp)
         apply wp
-      apply clarsimp
      apply (wp|wps)+
     apply (simp add:not_idle_thread_def)
     apply (clarsimp simp:ep_waiting_set_recv_def obj_at_def st_tcb_at_def)+

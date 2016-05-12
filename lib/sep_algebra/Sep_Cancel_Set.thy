@@ -14,9 +14,9 @@ begin
 
 ML {*
   structure SepCancel_Rules = Named_Thms (
-    val name = @{binding "sep_cancel"};
-    val description = "sep_cancel rules";
-  );
+    val name = @{binding "sep_cancel"}
+    val description = "sep_cancel rules"
+  )
 *}
 
 setup SepCancel_Rules.setup

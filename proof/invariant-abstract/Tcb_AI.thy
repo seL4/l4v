@@ -326,7 +326,7 @@ lemma hf_cte_at[wp]:
 
 
 lemma do_ipc_transfer_cte_at[wp]:
-  "\<lbrace>cte_at p\<rbrace> do_ipc_transfer s ep b g r d \<lbrace>\<lambda>_. cte_at p\<rbrace>"
+  "\<lbrace>cte_at p\<rbrace> do_ipc_transfer s ep b g r \<lbrace>\<lambda>_. cte_at p\<rbrace>"
   by (wp valid_cte_at_typ)
 
 

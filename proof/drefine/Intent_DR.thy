@@ -43,7 +43,7 @@ lemma tcb_cap_casesE:
                                        \<or> (halted st \<and> (c = cap.NullCap))) \<rbrakk> \<Longrightarrow> R"
               "\<lbrakk> p = tcb_cnode_index 3; gf = tcb_caller; sf = tcb_caller_update; restr =
                                      (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e d \<Rightarrow>
+                                       Structures_A.BlockedOnReceive e \<Rightarrow>
                                          (op = cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)) \<rbrakk> \<Longrightarrow> R"
               "\<lbrakk> p = tcb_cnode_index 4; gf = tcb_ipcframe; sf = tcb_ipcframe_update; restr =
@@ -101,7 +101,7 @@ lemma tcb_cap_cases_slot_simps[simp]:
                                        \<or> (halted st \<and> (c = cap.NullCap))))"
   "tcb_cap_cases (tcb_cnode_index tcb_caller_slot) = Some (tcb_caller, tcb_caller_update,
                                      (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e d \<Rightarrow>
+                                       Structures_A.BlockedOnReceive e \<Rightarrow>
                                          (op = cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)))"
   "tcb_cap_cases (tcb_cnode_index tcb_ipcbuffer_slot) = Some (tcb_ipcframe, tcb_ipcframe_update,
@@ -187,7 +187,7 @@ definition
   generates_pending :: "Structures_A.thread_state \<Rightarrow> bool"
 where
   "generates_pending st \<equiv> case st of
-            Structures_A.BlockedOnReceive ptr diminish \<Rightarrow> True
+            Structures_A.BlockedOnReceive ptr \<Rightarrow> True
           | Structures_A.BlockedOnSend ptr payload \<Rightarrow> True
           | Structures_A.BlockedOnReply \<Rightarrow> True
           | Structures_A.BlockedOnNotification ptr \<Rightarrow> True

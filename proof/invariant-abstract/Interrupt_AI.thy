@@ -203,13 +203,15 @@ lemma get_irq_slot_ex_cte:
   apply clarsimp
   done
 
+  
 lemma maskInterrupt_invs:
-  "\<lbrace>invs and (\<lambda>s. interrupt_states s irq \<noteq> IRQInactive)\<rbrace> 
+  "\<lbrace>invs and (\<lambda>s. \<not>b \<longrightarrow> interrupt_states s irq \<noteq> IRQInactive)\<rbrace> 
    do_machine_op (maskInterrupt b irq) 
    \<lbrace>\<lambda>rv. invs\<rbrace>"
    apply (simp add: do_machine_op_def split_def maskInterrupt_def)
    apply wp
-   apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
+   apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def 
+     valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
 
 crunch pspace_aligned[wp]: set_irq_state "pspace_aligned"
@@ -370,16 +372,23 @@ lemma send_signal_interrupt_states[wp_unsafe]:
   apply (auto simp: pred_tcb_at_def obj_at_def receive_blocked_def)
   done
 
-lemma handle_interrupt_invs[wp]:
+lemma empty_fail_ackInterrupt[simp, intro!]: "empty_fail (ackInterrupt irq)"
+  by (wp | simp add: ackInterrupt_def)+
+
+lemma empty_fail_maskInterrupt[simp, intro!]: "empty_fail (maskInterrupt f irq)"
+  by (wp | simp add: maskInterrupt_def)+
+ 
+lemma handle_interrupt_invs[wp]: 
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: handle_interrupt_def)
-  apply (wp maskInterrupt_invs | wpc)+
+  apply (simp add: handle_interrupt_def  )
+  apply (rule conjI; rule impI)  
+  apply (simp add: do_machine_op_bind)
+     apply (wp dmo_maskInterrupt_invs maskInterrupt_invs dmo_ackInterrupt | wpc | simp)+
      apply (wp get_cap_wp send_signal_interrupt_states )
     apply (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
      apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
      apply (intro allI exI, erule cte_wp_at_weakenE)
      apply (clarsimp simp: is_cap_simps)
     apply (wp hoare_drop_imps | simp add: get_irq_state_def)+
-  done
-
-end
+ done
+end 

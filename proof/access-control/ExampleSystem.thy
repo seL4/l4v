@@ -330,7 +330,7 @@ where
      tcb_reply         = Structures_A.ReplyCap 3080 True, (* master reply cap to itself *)
      tcb_caller        = Structures_A.NullCap,
      tcb_ipcframe      = Structures_A.NullCap,
-     tcb_state         = Structures_A.BlockedOnReceive 9 True,
+     tcb_state         = Structures_A.BlockedOnReceive 9,
      tcb_fault_handler = undefined, 
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
@@ -534,7 +534,7 @@ lemma Sys1_wellformed: "pas_wellformed Sys1PAS"
  done
 
 lemma tcb_states_of_state_1:
-  "tcb_states_of_state s1 = [0xC08 \<mapsto> Structures_A.thread_state.BlockedOnReceive 9 True,  0xC07 \<mapsto> Structures_A.thread_state.Running ]"
+  "tcb_states_of_state s1 = [0xC08 \<mapsto> Structures_A.thread_state.BlockedOnReceive 9,  0xC07 \<mapsto> Structures_A.thread_state.Running ]"
   unfolding s1_def tcb_states_of_state_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
@@ -869,7 +869,7 @@ where
      tcb_reply         = Structures_A.ReplyCap 3080 True, (* master reply cap to itself *)
      tcb_caller        = Structures_A.NullCap,
      tcb_ipcframe      = Structures_A.NullCap,
-     tcb_state         = Structures_A.BlockedOnReceive 9 True,
+     tcb_state         = Structures_A.BlockedOnReceive 9,
      tcb_fault_handler = undefined, 
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,

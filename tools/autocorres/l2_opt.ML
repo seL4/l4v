@@ -96,11 +96,15 @@ fun simp_monad_equiv_pre_tac ctxt =
       Const (@{const_name Trueprop}, _) $
         (Const (@{const_name monad_equiv}, _) $ P $ _ $ _ $ _ $ _) =>
         let
+          (* If P is schematic, we could end up with flex-flex pairs that Isabelle refuses to solve.
+           * Our monad_equiv rules should never allow this to happen. *)
+          val _ = if not (exists_subterm is_Var P) then () else
+                    raise CTERM ("autocorres: bad schematic in monad_equiv_pre", [Thm.cprem_of thm 1])
           (* Perform basic simplification of the term. *)
           val simp_thm = Simplifier.asm_full_rewrite (map_opt_simpset false ctxt) (Thm.cterm_of ctxt P)
         in
           (resolve_tac ctxt [@{thm monad_equiv_weaken_pre''} OF [simp_thm]] 1
-            ORELSE (fn t => raise (CTERM ("failed to prove goal", [Thm.cprem_of t 1])))) thm
+            ORELSE (fn t => raise (CTERM ("autocorres: monad_equiv_pre failed to prove goal", [Thm.cprem_of t 1])))) thm
         end
     | _ =>
         all_tac thm

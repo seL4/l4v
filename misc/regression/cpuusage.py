@@ -97,7 +97,7 @@ class Poller(threading.Thread):
                 # For children that are no longer running, remember their
                 # most recently recorded CPU time.
                 reaped_cpu = 0.0
-                for c_id, c_t in self.current_children.iteritems():
+                for c_id, c_t in self.current_children.items():
                     if c_id not in new_current_children:
                         reaped_cpu += c_t
                 self.old_children_cpu += reaped_cpu

@@ -263,7 +263,7 @@ where
   "tcb_st_to_auth (Structures_A.BlockedOnNotification ntfn) = {(ntfn, Receive)}"
 | "tcb_st_to_auth (Structures_A.BlockedOnSend ep payl)
      = {(ep, SyncSend)} \<union> (if sender_can_grant payl then {(ep, Grant)} else {})"
-| "tcb_st_to_auth (Structures_A.BlockedOnReceive ep dim) = {(ep, Receive)}"
+| "tcb_st_to_auth (Structures_A.BlockedOnReceive ep) = {(ep, Receive)}"
 | "tcb_st_to_auth _ = {}"
 
 definition
@@ -633,7 +633,7 @@ subsection{* How kernel objects can change *}
 fun
   blocked_on :: "obj_ref \<Rightarrow> Structures_A.thread_state \<Rightarrow> bool"
 where
- "blocked_on ref (Structures_A.BlockedOnReceive ref' _)     = (ref = ref')"
+ "blocked_on ref (Structures_A.BlockedOnReceive ref')     = (ref = ref')"
   | "blocked_on ref (Structures_A.BlockedOnSend ref' _)     = (ref = ref')"
   | "blocked_on ref (Structures_A.BlockedOnNotification ref') = (ref = ref')"
   | "blocked_on _ _ = False"
@@ -645,7 +645,7 @@ lemma blocked_on_def2:
 fun
   receive_blocked_on :: "obj_ref \<Rightarrow> Structures_A.thread_state \<Rightarrow> bool"
 where
-   "receive_blocked_on ref (Structures_A.BlockedOnReceive ref' _)     = (ref = ref')"
+   "receive_blocked_on ref (Structures_A.BlockedOnReceive ref')     = (ref = ref')"
   | "receive_blocked_on ref (Structures_A.BlockedOnNotification ref') = (ref = ref')"
   | "receive_blocked_on _ _ = False"
 
@@ -701,7 +701,7 @@ where
 
 abbreviation ep_recv_blocked :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> bool"
 where
-  "ep_recv_blocked ep ts \<equiv> case ts of BlockedOnReceive w b \<Rightarrow> w = ep
+  "ep_recv_blocked ep ts \<equiv> case ts of BlockedOnReceive w \<Rightarrow> w = ep
                              | _ \<Rightarrow> False"
 
 definition indirect_send :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> tcb \<Rightarrow> bool"
@@ -1407,7 +1407,7 @@ lemma get_endpoint_wp:
 lemma ep_queued_st_tcb_at':
   "\<And>P. \<lbrakk>ko_at (Endpoint ep) ptr s; (t, rt) \<in> ep_q_refs_of ep;
          valid_objs s; sym_refs (state_refs_of s);
-         \<And>pl dim. P (Structures_A.BlockedOnSend ptr pl) \<and> P (Structures_A.BlockedOnReceive ptr dim) \<rbrakk>
+         \<And>pl. P (Structures_A.BlockedOnSend ptr pl) \<and> P (Structures_A.BlockedOnReceive ptr) \<rbrakk>
     \<Longrightarrow> st_tcb_at P t s"
   apply (case_tac ep, simp_all)
   apply (frule(1) sym_refs_ko_atD, clarsimp, erule (1) my_BallE,
@@ -1419,7 +1419,7 @@ lemma ep_queued_st_tcb_at':
 lemma ep_rcv_queued_st_tcb_at:
   "\<And>P. \<lbrakk>ko_at (Endpoint ep) epptr s; (t, EPRecv) \<in> ep_q_refs_of ep;
          valid_objs s; sym_refs (state_refs_of s);
-         \<And>dim. P (Structures_A.BlockedOnReceive epptr dim);
+         P (Structures_A.BlockedOnReceive epptr);
          kheap s' t = kheap s t\<rbrakk>
     \<Longrightarrow> st_tcb_at P t s'"
   apply (case_tac ep, simp_all)

@@ -999,7 +999,7 @@ lemma transfer_caps_domain_sep_inv:
                       cp = fst x)
                 (snd x) s \<and>
                real_cte_at (snd x) s))\<rbrace>
-  transfer_caps mi caps endpoint receiver receive_buffer diminish
+  transfer_caps mi caps endpoint receiver receive_buffer
   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (simp add: transfer_caps_def)
   apply (wpc | wp)+
@@ -1013,7 +1013,7 @@ lemma transfer_caps_domain_sep_inv:
 
 lemma do_normal_transfer_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb\<rbrace>
-   do_normal_transfer sender send_buffer ep badge grant receiver recv_buffer diminish
+   do_normal_transfer sender send_buffer ep badge grant receiver recv_buffer
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   unfolding do_normal_transfer_def
   apply (wp transfer_caps_domain_sep_inv hoare_vcg_ball_lift lec_valid_cap' | simp)+
@@ -1023,7 +1023,7 @@ crunch domain_sep_inv[wp]: do_fault_transfer "domain_sep_inv irqs st"
 
 lemma do_ipc_transfer_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb\<rbrace>
-   do_ipc_transfer sender ep badge grant receiver diminish
+   do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   unfolding do_ipc_transfer_def
   apply (wp do_normal_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | wp_once hoare_drop_imps)+

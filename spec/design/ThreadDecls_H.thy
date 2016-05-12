@@ -40,19 +40,19 @@ consts
 restart :: "machine_word \<Rightarrow> unit kernel"
 
 consts
-doIPCTransfer :: "machine_word \<Rightarrow> (machine_word) option \<Rightarrow> machine_word \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> bool \<Rightarrow> unit kernel"
+doIPCTransfer :: "machine_word \<Rightarrow> (machine_word) option \<Rightarrow> machine_word \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts
 doReplyTransfer :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts
-doNormalTransfer :: "machine_word \<Rightarrow> (machine_word) option \<Rightarrow> (machine_word) option \<Rightarrow> machine_word \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> (machine_word) option \<Rightarrow> bool \<Rightarrow> unit kernel"
+doNormalTransfer :: "machine_word \<Rightarrow> (machine_word) option \<Rightarrow> (machine_word) option \<Rightarrow> machine_word \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> (machine_word) option \<Rightarrow> unit kernel"
 
 consts
 doFaultTransfer :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> (machine_word) option \<Rightarrow> unit kernel"
 
 consts
-transferCaps :: "message_info \<Rightarrow> (capability * machine_word) list \<Rightarrow> (machine_word) option \<Rightarrow> machine_word \<Rightarrow> (machine_word) option \<Rightarrow> bool \<Rightarrow> message_info kernel"
+transferCaps :: "message_info \<Rightarrow> (capability * machine_word) list \<Rightarrow> (machine_word) option \<Rightarrow> machine_word \<Rightarrow> (machine_word) option \<Rightarrow> message_info kernel"
 
 consts
 schedule :: "unit kernel"

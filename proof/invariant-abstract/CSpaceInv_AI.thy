@@ -322,7 +322,7 @@ lemma valid_tcb_state_update:
   "\<lbrakk> valid_tcb p t s; valid_tcb_state st s;
      case st of 
                 Structures_A.Inactive \<Rightarrow> True
-              | Structures_A.BlockedOnReceive e d \<Rightarrow>
+              | Structures_A.BlockedOnReceive e \<Rightarrow>
                      tcb_caller t = cap.NullCap
                    \<and> is_master_reply_cap (tcb_reply t)
                    \<and> obj_ref_of (tcb_reply t) = p

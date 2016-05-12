@@ -148,11 +148,12 @@ sub thy_dep {
 
 # FIXME: tags and crazy names (e.g. theory 007 or theory \<AA>) not supported
 sub read_thy {
-  my $re_word    = '\b[a-zA-Z][a-zA-Z0-9_]*\b';  # a word starts with a letter
-  my $re_id      = '(?:'.$re_word.'|"[^"]*")';   # bare word or "quoted string"
-  my $re_braces  = '\{\*(?:[^*]|\*(?!\}))*\*\}'; # {* curly braced string *}
-  my $re_comment = '\(\*(?:[^*]|\*(?!\)))*\*\)'; # (* parenthesized comment *)
-  my $re_string  = '"[^"]*"';                    # "simple quoted string"
+  my $re_word    = '(?:\b[a-zA-Z][a-zA-Z0-9_]*\b)';   # a word starts with a letter
+  my $re_string  = '(?:".*?")';                       # "simple quoted string"
+  my $re_id      = '(?:'.$re_word.'|'.$re_string.')'; # bare word or "quoted string"
+  my $re_braces  = '(?:\{\*.*?\*\})';                 # {* curly braced string *}
+  my $re_comment = '(?:\(\*.*?\*\))';                 # (* parenthesized comment *)
+  my $re_cartouche = '(?:\\\\<open>.*?\\\\<close>)';  # ‹cartouches›
 
   my $ofn = shift; # original filename as specified by the user (used in error messages)
   my $afn = shift; # absolute filename (hopefully unique) internal identifier
@@ -176,6 +177,7 @@ sub read_thy {
   close(FILE) || die "$!";
 
   $_ = $content;
+  s/^(?:\s*(?:text|section|subsection|chapter)\s*(?:$re_word|$re_braces|$re_string|$re_cartouche))*//;
   if (s/^\s*theory\s*($re_id)\s*//) {
     diagnose(1, "$ofn: theory name $1 does not match file name, assuming $tn.\n")
       unless $1 eq $tn;

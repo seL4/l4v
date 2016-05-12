@@ -356,8 +356,8 @@ where
               Structures_A.thread_state.IdleThreadState"
 | "ThStateMap Structures_H.thread_state.BlockedOnReply =
               Structures_A.thread_state.BlockedOnReply"
-| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref dimin) =
-              Structures_A.thread_state.BlockedOnReceive oref dimin"
+| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref) =
+              Structures_A.thread_state.BlockedOnReceive oref"
 | "ThStateMap (Structures_H.thread_state.BlockedOnSend oref badge grant call) =
               Structures_A.thread_state.BlockedOnSend oref
                 \<lparr> sender_badge = badge,

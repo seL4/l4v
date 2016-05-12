@@ -13,7 +13,7 @@
                 Rafal Kolanski <rafal.kolanski at nicta.com.au>
 *)
 
-header "Instantiating capDL as a separation algebra."
+chapter "Instantiating capDL as a separation algebra."
 
 theory Abstract_Separation_D
 imports
@@ -170,7 +170,7 @@ where
    | _ \<Rightarrow> True)"
 
 
-(* "Cleans" slots to conform with the compontents. *)
+(* "Cleans" slots to conform with the components. *)
 definition
   clean_slots :: "cdl_cap_map \<Rightarrow> cdl_components \<Rightarrow> cdl_cap_map"
 where
@@ -215,7 +215,7 @@ where
      then (update_slots (object_slots clean_obj_a ++ object_slots clean_obj_b) clean_obj_b)
      else (update_slots (object_slots clean_obj_a ++ object_slots clean_obj_b) clean_obj_a)"
 
-(* Heaps are added by adding their repsective objects.
+(* Heaps are added by adding their respective objects.
  * The ghost state tells us which object's fields should be taken.
  * Adding objects of the same type adds their caps
  *   (overwrites the left with the right).
@@ -224,15 +224,18 @@ definition
   cdl_heap_add :: "sep_state \<Rightarrow> sep_state \<Rightarrow> cdl_heap"
 where
   "cdl_heap_add state_a state_b \<equiv> \<lambda>obj_id.
- let heap_a = sep_heap state_a;
-     heap_b = sep_heap state_b;
-     gs_a = sep_ghost_state state_a;
-     gs_b = sep_ghost_state state_b
- in case heap_b obj_id of
+  let
+    heap_a = sep_heap state_a;
+    heap_b = sep_heap state_b;
+    gs_a = sep_ghost_state state_a;
+    gs_b = sep_ghost_state state_b
+  in
+    case heap_b obj_id of
       None \<Rightarrow> heap_a obj_id
-    | Some obj_b \<Rightarrow> case heap_a obj_id of
-                     None \<Rightarrow> heap_b obj_id
-                   | Some obj_a \<Rightarrow> Some (object_add obj_a obj_b (gs_a obj_id) (gs_b obj_id))"
+    | Some obj_b \<Rightarrow> 
+        (case heap_a obj_id of
+           None \<Rightarrow> heap_b obj_id
+         | Some obj_a \<Rightarrow> Some (object_add obj_a obj_b (gs_a obj_id) (gs_b obj_id)))"
 
 (* Heaps are added by adding their repsective objects.
  * The ghost state tells us which object's fields should be taken.
@@ -686,12 +689,12 @@ definition "(op +) \<equiv> sep_state_add"
  **********************************************)
 
 instance
-  apply default
+  apply intro_classes
 (* x ## 0 *)
        apply (simp add: sep_disj_sep_state_def sep_state_disj_def zero_sep_state_def)
 (* x ## y \<Longrightarrow> y ## x *)
       apply (clarsimp simp: not_conflicting_objects_comm sep_disj_sep_state_def sep_state_disj_def Let_unfold
-                            map_disj_com not_conflicting_objects_comm Int_commute)
+                            map_disj_com Int_commute)
 (* x + 0 = x *)
      apply (simp add: plus_sep_state_def sep_state_add_def zero_sep_state_def)
      apply (case_tac x)

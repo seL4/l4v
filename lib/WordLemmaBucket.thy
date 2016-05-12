@@ -6816,5 +6816,49 @@ lemma unat_ucast_no_overflow_le:
    thus ?thesis by (simp add:RL LR iffI)
 qed
 
+(* casting a long word to a shorter word and casting back to the long word 
+   is equal to the original long word -- if the word is small enough.
+  'l is the longer word.
+  's is the shorter word.
+*)
+lemma bl_cast_long_short_long_ingoreLeadingZero_generic:
+"length (dropWhile Not (to_bl w)) \<le> len_of TYPE('s) \<Longrightarrow>
+ len_of TYPE('s) \<le> len_of TYPE('l) \<Longrightarrow>
+  (of_bl:: bool list \<Rightarrow> 'l::len word) (to_bl ((of_bl:: bool list \<Rightarrow> 's::len word) (to_bl w))) = w"
+  apply(rule Word.word_uint_eqI)
+  apply(subst WordLib.uint_of_bl_is_bl_to_bin)
+   apply(simp; fail)
+  apply(subst Word.to_bl_bin)
+  apply(subst uint_of_bl_is_bl_to_bin_drop)
+   apply blast
+  apply(simp)
+  done
+(*
+ Casting between longer and shorter word.
+  'l is the longer word.
+  's is the shorter word.
+ For example: 'l::len word is 128 word (full ipv6 address)
+              's::len word is 16 word (address piece of ipv6 address in colon-text-representation)
+*)
+corollary ucast_short_ucast_long_ingoreLeadingZero:
+"length (dropWhile Not (to_bl w)) \<le> len_of TYPE('s) \<Longrightarrow>
+ len_of TYPE('s) \<le> len_of TYPE('l) \<Longrightarrow>
+  (ucast:: 's::len word \<Rightarrow> 'l::len word) ((ucast:: 'l::len word \<Rightarrow> 's::len word) w) = w"
+  apply(subst Word.ucast_bl)+
+  apply(rule bl_cast_long_short_long_ingoreLeadingZero_generic)
+   apply(simp_all)
+  done
+
+lemma length_drop_mask:
+  fixes w::"'a::len word"
+  shows "length (dropWhile Not (to_bl (w AND mask n))) \<le> n"
+  proof -
+    have length_takeWhile_Not_replicate_False:
+      "length (takeWhile Not (replicate n False @ ls)) = n + length (takeWhile Not ls)"
+      for ls n by(subst takeWhile_append2) simp+
+    show ?thesis
+      unfolding Word.bl_and_mask
+      by (simp add: List.dropWhile_eq_drop length_takeWhile_Not_replicate_False)
+  qed
 
 end

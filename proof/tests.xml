@@ -23,15 +23,15 @@
     <sequence depends="ASpec ExecSpec">
         <test name="AInvs" cpu-timeout="7200">make AInvs</test>
         <test name="BaseRefine">make BaseRefine</test>
-        <test name="Refine" cpu-timeout="10800">make Refine</test>
+        <test name="Refine" cpu-timeout="14400">make Refine</test>
     </sequence>
 
     <!-- CRefine -->
     <sequence depends="CParser">
         <test name="CKernel" cpu-timeout="7200">make CKernel</test>
-        <test name="CSpec">make CSpec</test>
-        <test name="CBaseRefine" depends="Refine" cpu-timeout="21600">make CBaseRefine</test>
-        <test name="CRefine" cpu-timeout="25200">make CRefine</test>
+        <test name="CSpec" cpu-timeout="7200">make CSpec</test>
+        <test name="CBaseRefine" depends="Refine" cpu-timeout="28800">make CBaseRefine</test>
+        <test name="CRefine" cpu-timeout="28800">make CRefine</test>
     </sequence>
 
     <!-- DSpec / DRefine -->
@@ -44,7 +44,7 @@
     <sequence depends="AInvs">
         <test name="Access">make Access</test>
         <test name="InfoFlow" cpu-timeout="7200">make InfoFlow</test>
-        <test name="InfoFlowC" depends="CRefine" cpu-timeout="16200">make InfoFlowC</test>
+        <test name="InfoFlowC" depends="CRefine" cpu-timeout="14400">make InfoFlowC</test>
     </sequence>
 
     <!-- Access Control and capDL -->
@@ -59,7 +59,7 @@
 
     <!-- Binary Verification -->
     <sequence depends="CSpec">
-        <test name="SimplExportAndRefine" cpu-timeout="14400">make SimplExportAndRefine</test>
+        <test name="SimplExportAndRefine" cpu-timeout="21600">make SimplExportAndRefine</test>
     </sequence>
 
     <!-- Separation Logic. -->

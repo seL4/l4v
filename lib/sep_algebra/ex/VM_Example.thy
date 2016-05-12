@@ -14,7 +14,7 @@
                 Rafal Kolanski <rafal.kolanski at nicta.com.au>
 *)
 
-header "Separation Algebra for Virtual Memory"
+chapter "Separation Algebra for Virtual Memory"
 
 theory VM_Example
 imports
@@ -70,7 +70,7 @@ fun
      = VMSepState (x ++ y, r \<union> r')"
 
 instance
-  apply default
+  apply intro_classes
         apply (simp add: zero_vm_sep_state_def sep_disj_vm_sep_state_def)
        apply (fastforce simp: sep_disj_vm_sep_state_def map_disj_def)
       apply (case_tac x, clarsimp simp: zero_vm_sep_state_def)

@@ -144,7 +144,7 @@ crunch valid_duplicates'[wp]: getReceiveSlots "\<lambda>s. vs_valid_duplicates' 
 
 lemma transferCapsToSlots_duplicates'[wp]:
  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace> 
-  transferCapsToSlots ep diminish buffer n caps slots mi
+  transferCapsToSlots ep buffer n caps slots mi
   \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by (rule transferCapsToSlots_pres1,wp)
 
@@ -2519,7 +2519,7 @@ lemma handleInterrupt_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
   handleInterrupt irq \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: handleInterrupt_def)
-  apply (rule hoare_pre)
+  apply (rule conjI; rule impI)
    apply (wp sai_st_tcb' hoare_vcg_all_lift hoare_drop_imps
              threadSet_pred_tcb_no_state getIRQState_inv haskell_fail_wp
           |wpc|simp)+

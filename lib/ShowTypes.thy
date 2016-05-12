@@ -1,5 +1,5 @@
 (*
- * @LICENSE(NICTA_BSD)
+ * @TAG(NICTA_BSD)
  *
  * ShowTypes: show "hidden" type constraints in terms.
  * This is a simple utility around Sledgehammer's type annotation code.

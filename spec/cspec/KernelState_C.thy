@@ -12,6 +12,7 @@ theory KernelState_C
 imports
   "../../lib/WordLib"
   "../../lib/TypHeapLib"
+  "../../lib/BitFieldProofsLib"
   Kernel_C
   Substitute
 begin

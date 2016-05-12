@@ -341,7 +341,7 @@ datatype thread_state
   = Running
   | Inactive
   | Restart
-  | BlockedOnReceive obj_ref bool
+  | BlockedOnReceive obj_ref
   | BlockedOnSend obj_ref sender_payload
   | BlockedOnReply
   | BlockedOnNotification obj_ref
@@ -368,7 +368,7 @@ where
   "runnable (Running)               = True"
 | "runnable (Inactive)              = False"
 | "runnable (Restart)               = True"
-| "runnable (BlockedOnReceive x y)  = False"
+| "runnable (BlockedOnReceive x)  = False"
 | "runnable (BlockedOnSend x y)     = False"
 | "runnable (BlockedOnNotification x) = False"
 | "runnable (IdleThreadState)       = False"

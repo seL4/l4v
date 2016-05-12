@@ -137,7 +137,7 @@ where
   "tcb_st_refs_of' z \<equiv> case z of (Running)                  => {}
   | (Inactive)                 => {}
   | (Restart)                  => {}
-  | (BlockedOnReceive x b)     => {(x, TCBBlockedRecv)}
+  | (BlockedOnReceive x)     => {(x, TCBBlockedRecv)}
   | (BlockedOnSend x a b c)    => {(x, TCBBlockedSend)}
   | (BlockedOnNotification x)    => {(x, TCBSignal)}
   | (BlockedOnReply)           => {}
@@ -399,7 +399,7 @@ definition
   valid_tcb_state' :: "Structures_H.thread_state \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_tcb_state' ts s \<equiv> case ts of
-    Structures_H.BlockedOnReceive ref d \<Rightarrow> ep_at' ref s
+    Structures_H.BlockedOnReceive ref \<Rightarrow> ep_at' ref s
   | Structures_H.BlockedOnSend ref b d c \<Rightarrow> ep_at' ref s
   | Structures_H.BlockedOnNotification ref \<Rightarrow> ntfn_at' ref s
   | _ \<Rightarrow> True"
@@ -799,7 +799,7 @@ where
 | "runnable' (Structures_H.Inactive)                = False"
 | "runnable' (Structures_H.Restart)                 = True"
 | "runnable' (Structures_H.IdleThreadState)         = False"
-| "runnable' (Structures_H.BlockedOnReceive a b)    = False"
+| "runnable' (Structures_H.BlockedOnReceive a)    = False"
 | "runnable' (Structures_H.BlockedOnReply)          = False"
 | "runnable' (Structures_H.BlockedOnSend a b c d)   = False"
 | "runnable' (Structures_H.BlockedOnNotification x)   = False"
@@ -1303,7 +1303,7 @@ lemma capability_splits[split]:
   
 lemma thread_state_splits[split]:
   " P (case thread_state of
-     Structures_H.thread_state.BlockedOnReceive x xa \<Rightarrow> f1 x xa
+     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
      | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
      | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
      | Structures_H.thread_state.Running \<Rightarrow> f4
@@ -1312,10 +1312,10 @@ lemma thread_state_splits[split]:
      | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
          f7 x xa xb xc
      | Structures_H.thread_state.Restart \<Rightarrow> f8) =
-  ((\<forall>x11 x12.
+  ((\<forall>x11.
        thread_state =
-       Structures_H.thread_state.BlockedOnReceive x11 x12 \<longrightarrow>
-       P (f1 x11 x12)) \<and>
+       Structures_H.thread_state.BlockedOnReceive x11 \<longrightarrow>
+       P (f1 x11)) \<and>
    (awaiting_reply' thread_state \<longrightarrow> P f2) \<and>
    (\<forall>x3. thread_state =
          Structures_H.thread_state.BlockedOnNotification x3 \<longrightarrow>
@@ -1332,7 +1332,7 @@ lemma thread_state_splits[split]:
        P (f7 x71 x72 x73 x74)) \<and>
    (thread_state = Structures_H.thread_state.Restart \<longrightarrow> P f8))"
   "P (case thread_state of
-     Structures_H.thread_state.BlockedOnReceive x xa \<Rightarrow> f1 x xa
+     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
      | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
      | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
      | Structures_H.thread_state.Running \<Rightarrow> f4
@@ -1341,10 +1341,10 @@ lemma thread_state_splits[split]:
      | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
          f7 x xa xb xc
      | Structures_H.thread_state.Restart \<Rightarrow> f8) =
-  (\<not> ((\<exists>x11 x12.
+  (\<not> ((\<exists>x11.
            thread_state =
-           Structures_H.thread_state.BlockedOnReceive x11 x12 \<and>
-           \<not> P (f1 x11 x12)) \<or>
+           Structures_H.thread_state.BlockedOnReceive x11 \<and>
+           \<not> P (f1 x11)) \<or>
        awaiting_reply' thread_state \<and> \<not> P f2 \<or>
        (\<exists>x3. thread_state =
              Structures_H.thread_state.BlockedOnNotification
@@ -1527,7 +1527,7 @@ lemma tcb_st_refs_of'_simps[simp]:
  "tcb_st_refs_of' (Running)                  = {}"
  "tcb_st_refs_of' (Inactive)                 = {}"
  "tcb_st_refs_of' (Restart)                  = {}"
- "\<And>x b. tcb_st_refs_of' (BlockedOnReceive x b)     = {(x, TCBBlockedRecv)}"
+ "\<And>x. tcb_st_refs_of' (BlockedOnReceive x)     = {(x, TCBBlockedRecv)}"
  "\<And>x c. tcb_st_refs_of' (BlockedOnSend x a b c)  = {(x, TCBBlockedSend)}"
  "\<And>x. tcb_st_refs_of' (BlockedOnNotification x)    = {(x, TCBSignal)}"
  "tcb_st_refs_of' (BlockedOnReply)           = {}"
@@ -1558,7 +1558,7 @@ lemma tcb_bound_refs'_simps[simp]:
 
 lemma refs_of_rev':
  "(x, TCBBlockedRecv) \<in> refs_of' ko =
-    (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>b.  tcbState tcb = BlockedOnReceive x b))"
+    (\<exists>tcb. ko = KOTCB tcb \<and> tcbState tcb = BlockedOnReceive x)"
  "(x, TCBBlockedSend) \<in> refs_of' ko =
     (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a b c. tcbState tcb = BlockedOnSend x a b c))"
  "(x, TCBSignal) \<in> refs_of' ko =
@@ -1595,7 +1595,7 @@ lemma projectKO_opt_tcbD:
 
 lemma st_tcb_at_refs_of_rev':
   "ko_wp_at' (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of' ko) t s
-     = st_tcb_at' (\<lambda>ts. \<exists>b.  ts = BlockedOnReceive x b ) t s"
+     = st_tcb_at' (\<lambda>ts.   ts = BlockedOnReceive x ) t s"
   "ko_wp_at' (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of' ko) t s
      = st_tcb_at' (\<lambda>ts. \<exists>a b c. ts = BlockedOnSend x a b c) t s"
   "ko_wp_at' (\<lambda>ko. (x, TCBSignal) \<in> refs_of' ko) t s

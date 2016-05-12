@@ -67,6 +67,9 @@ record
 
 consts irq_oracle :: "nat \<Rightarrow> 10 word"
 
+axiomatization irq_oracle_max_irqInst where
+  irq_oracle_max_irq: "\<forall> n. (irq_oracle n) <= maxIRQ"
+
 text {*
   The machine monad is used for operations on the state defined above.
 *}

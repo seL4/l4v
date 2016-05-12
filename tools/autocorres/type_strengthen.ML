@@ -221,6 +221,9 @@ in
     NONE
 end
 
+(* See comment for try_mono_thm *)
+fun mono_thm_name make_function_name fn_name = make_function_name fn_name ^ "_mono"
+
 (* Like perform_lift, but also applies the polishing rules, hopefully yielding
  * an even nicer definition. *)
 fun perform_lift_and_polish ctxt prog_info fn_info rule_set do_opt
@@ -245,14 +248,14 @@ in (polish_thm, dict) end
 
 
 (*
- * Attempt to lift a function into the given monad, defining a new function.
+ * Attempt to lift a function (or recursive function group) into the given monad.
  *
- * If the lift succeeds, we return a theorem of the form:
+ * If successful, we define the new function (vis. group) to the theory.
+ * We then return a theorem of the form:
  *
  *   "L2_call foo x y z == <lift> $ new_foo x y z"
  *
- * where "lift" is a lifting function, such as "returnOk" or "gets", etc. New
- * constants may be defined during the lift.
+ * where "lift" is a lifting function, such as "returnOk" or "gets", etc.
  *
  * If the lift does not succeed, the function returns NONE.
  *)
@@ -343,6 +346,12 @@ let
   end
   val input_defs = map gen_fun_def_term (Utils.zip3 fn_names dicts thms)
   val (defs, lthy) = Utils.define_functions input_defs false is_recursive lthy
+
+  (* Record the definitions in our theory data. *)
+  val lthy = fold (fn (fn_name, def) =>
+      Local_Theory.background_theory (
+          AutoCorresData.add_def filename ("TS" ^ "def") fn_name def))
+      (Utils.zip fn_names defs) lthy
 
   (* Instantiate variables in our equivalence theorem to their newly-defined values. *)
   fun do_inst_thm thm =
@@ -444,23 +453,11 @@ let
   val new_thms = map (fn t => #polymorphic_thm rule_set' OF [t]) new_thms
     |> map (fn t => Drule.generalize ([], ["rec_measure'"]) t)
 
-
   (* Record correctness theorem(s) for what we just did. *)
   val lthy = fold (fn (fn_name, thm) =>
                       Local_Theory.background_theory
                       (AutoCorresData.add_thm filename "TScorres" fn_name thm))
              (fn_names ~~ new_thms) lthy
-
-  (* Provide final mono rules for recursive functions. *)
-  fun final_mono_thm (fn_name, rewrite_thm) lthy =
-  let
-    val mono_thm = #mono_thm (FunctionInfo.get_function_def fn_info fn_name)
-    val mono_thm' = #prove_mono rule_set' rewrite_thm mono_thm
-    val (_, lthy) = Utils.define_lemma (make_function_name fn_name ^ "_mono") mono_thm' lthy
-    val lthy = Utils.simp_add [mono_thm'] lthy
-  in lthy end
-  val lthy = if is_recursive then fold final_mono_thm (fn_names ~~ new_thms) lthy
-             else lthy
 
   (* Output final corres rule. *)
   (* FIXME: Move to better location. *)
@@ -499,6 +496,29 @@ let
   end
 
   val lthy = fold output_rule fn_names lthy
+
+  (* Provide final mono rules for recursive functions.
+   * It's inconvenient to do this at AutoCorresUtil.translate because
+   * the prover depends on the rule set being used.
+   * However, we still want "translate" to store the resulting thms into the
+   * final fn_info. As a workaround, we define them in the theory here
+   * and then retrieve them later. *)
+  fun try_mono_thm (fn_name, rewrite_thm) lthy =
+    let
+      val mono_thm = #mono_thm (FunctionInfo.get_function_def fn_info fn_name)
+    in (* We need to be permissive because we call user-supplied provers. *)
+       case try (#prove_mono rule_set' rewrite_thm) mono_thm of
+           NONE => (Utils.ac_warning ("Failed to prove monad_mono for function: " ^ fn_name);
+                    lthy)
+         | SOME mono_thm' => let
+              val name = mono_thm_name make_function_name fn_name
+              val _ = tracing ("Defining monad_mono theorem: " ^ name)
+              val (_, lthy) = Utils.define_lemma name mono_thm' lthy
+              (* Also add to the simpset. (Does this actually help?) *)
+              val lthy = Utils.simp_add [mono_thm'] lthy
+              in lthy end
+    end
+  val lthy = if is_recursive then fold try_mono_thm (fn_names ~~ new_thms) lthy else lthy
 in
   (lthy, fn_names ~~ new_thms, #name rule_set')
 end
@@ -597,13 +617,33 @@ let
     val _ = writeln ("  --> " ^ monad_name)
     val _ = @{trace} ("Converted (TS) " ^ Utils.commas (map fst functions) ^ " in " ^
                       Time.toString (Timer.checkRealTimer start_time) ^ " s")
+    val all_callee_proofs' = fold Symtab.update_new new_rewrites all_callee_proofs
   in
-    (map (K ()) functions, (fold Symtab.update_new new_rewrites all_callee_proofs,
-        monad_name :: callee_stats), lthy)
+      (map (K ()) functions,
+       (all_callee_proofs', monad_name :: callee_stats),
+       lthy)
   end
 
+  (* Retrieve monad_mono thms defined by try_monad_mono *)
+  fun retrieve_mono_thm lthy fn_def = let
+    val fn_name = #name fn_def
+    val thm_name = mono_thm_name make_function_name fn_name
+    val mono_thm = Proof_Context.get_thm lthy thm_name handle ERROR _ => @{thm TrueI}
+    in mono_thm end
+
+  (* Update function information. *)
+  fun update_function_def lthy _ fn_def =
+    FunctionInfo.fn_def_update_const (Utils.get_term lthy (make_function_name (#name fn_def))) fn_def
+    |> FunctionInfo.fn_def_update_definition (
+        (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
+            filename "TSdef" (#name fn_def))))
+
   val (lthy, fn_info, (_, results)) =
-      AutoCorresUtil.translate lthy fn_info convert define (K o map snd (* FIXME *)) (K (K I)) (Symtab.empty, [])
+      AutoCorresUtil.translate
+        lthy fn_info convert define
+        (fn defs => fn lthy => map (retrieve_mono_thm lthy) defs)
+        update_function_def
+        (Symtab.empty, [])
 
   (* Print some statistics for curiosity's sake. *)
   (*

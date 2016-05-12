@@ -2907,7 +2907,7 @@ lemma cancelIPC_ccorres_reply_helper:
   done
 
 lemma ep_blocked_in_queueD_recv:
-  "\<lbrakk>st_tcb_at' (op = (Structures_H.thread_state.BlockedOnReceive x xa)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isRecvEP ep'"
+  "\<lbrakk>st_tcb_at' (op = (Structures_H.thread_state.BlockedOnReceive x)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isRecvEP ep'"
   apply (frule sym_refs_st_tcb_atD', clarsimp)
   apply (clarsimp simp: refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)
   apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]

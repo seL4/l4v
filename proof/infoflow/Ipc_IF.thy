@@ -509,7 +509,7 @@ lemma cancel_ipc_to_blocked_nosts:
   apply (rule monadic_rewrite_bind_tail)
    apply (rule monadic_rewrite_transverse)
     apply (rename_tac state)
-    apply (rule_tac P="\<lambda>_. \<exists>xa d. state = BlockedOnReceive xa d" in monadic_rewrite_bind_head)
+    apply (rule_tac P="\<lambda>_. \<exists>xa. state = BlockedOnReceive xa" in monadic_rewrite_bind_head)
     apply (rule monadic_rewrite_gen_asm[where Q=\<top>,simplified])
     apply clarsimp
     apply (rule monadic_rewrite_refl)
@@ -552,7 +552,7 @@ lemma ev2_invisible_simple:
 
 lemma blocked_cancel_ipc_nosts_equiv_but_for_labels:
   "\<lbrace>pas_refined aag and
-    st_tcb_at (\<lambda>st. \<exists>xa. st = BlockedOnReceive x xa) t and
+    st_tcb_at (\<lambda>st. st = BlockedOnReceive x) t and
     bound_tcb_at (op = (Some ntfnptr)) t and
     equiv_but_for_labels aag L st and
     K(pasObjectAbs aag x \<in> L) and
@@ -568,7 +568,7 @@ lemma blocked_cancel_ipc_nosts_equiv_but_for_labels:
 
 lemma blocked_cancel_ipc_nosts_reads_respects:
   "reads_respects aag l (pas_refined aag  
-                          and st_tcb_at (\<lambda>st. \<exists>xa. st = (BlockedOnReceive x xa)) t
+                          and st_tcb_at (\<lambda>st. \<exists>xa. st = (BlockedOnReceive x)) t
                           
                           and bound_tcb_at (op = (Some ntfnptr)) t 
                           and (\<lambda>s. is_subject aag (cur_thread s))
@@ -652,8 +652,8 @@ crunch pas_refined[wp]: blocked_cancel_ipc_nosts "pas_refined aag"
 crunch cur_thread[wp]: blocked_cancel_ipc_nosts "\<lambda>s. P (cur_thread s)"
 
 lemma BlockedOnReceive_inj: 
-  "x = (case (BlockedOnReceive x xa) of BlockedOnReceive x xa \<Rightarrow> x)"
-  by (cases "BlockedOnReceive x xa";simp)
+  "x = (case (BlockedOnReceive x) of BlockedOnReceive x \<Rightarrow> x)"
+  by (cases "BlockedOnReceive x";simp)
 
 
 lemma send_signal_reads_respects:
@@ -718,7 +718,7 @@ lemma send_signal_reads_respects:
      apply (clarsimp simp: pred_tcb_at_def get_tcb_def obj_at_def)
      apply (rule context_conjI)
       apply (fastforce simp: receive_blocked_def intro!: BlockedOnReceive_inj split:thread_state.splits)
-     apply (frule_tac t=x and tcb=tcb and ep = "case (tcb_state tcb) of BlockedOnReceive a xb \<Rightarrow> a"
+     apply (frule_tac t=x and tcb=tcb and ep = "case (tcb_state tcb) of BlockedOnReceive a \<Rightarrow> a"
               in get_tcb_recv_blocked_implies_receive)
        apply (fastforce simp: pred_tcb_at_def get_tcb_def obj_at_def)
       apply (fastforce simp: receive_blocked_def split:thread_state.splits)
@@ -1098,7 +1098,7 @@ lemma transfer_caps_loop_reads_respects:
         K ((\<forall>cap\<in>set caps. is_subject aag (fst (snd cap)) \<and> 
                            pas_cap_cur_auth aag (fst cap)) \<and>
            (\<forall>slot\<in>set slots. is_subject aag (fst slot))))
-    (transfer_caps_loop ep diminish rcv_buffer n caps slots mi)"
+    (transfer_caps_loop ep rcv_buffer n caps slots mi)"
   apply(induct caps arbitrary: slots n mi)
    apply simp
    apply(rule return_ev_pre)
@@ -1409,7 +1409,7 @@ lemma transfer_caps_reads_respects:
         ipc_buffer_has_read_auth aag (pasSubject aag) receive_buffer \<and> 
         (\<forall>cap\<in>set caps.
             is_subject aag (fst (snd cap)) \<and> pas_cap_cur_auth aag (fst cap)))) 
-     (transfer_caps mi caps endpoint receiver receive_buffer diminish)"
+     (transfer_caps mi caps endpoint receiver receive_buffer)"
   unfolding transfer_caps_def fun_app_def
   apply(wp transfer_caps_loop_reads_respects get_receive_slots_rev get_receive_slots_authorised
            hoare_vcg_all_lift static_imp_wp
@@ -1585,7 +1585,7 @@ lemma do_normal_transfer_reads_respects:
              ipc_buffer_has_read_auth aag (pasObjectAbs aag sender) sbuf \<and> 
              ipc_buffer_has_read_auth aag (pasObjectAbs aag receiver) rbuf \<and> 
              (grant \<longrightarrow> (is_subject aag sender \<and> is_subject aag receiver)))) 
-   (do_normal_transfer sender sbuf endpoint badge grant receiver rbuf diminish)"
+   (do_normal_transfer sender sbuf endpoint badge grant receiver rbuf)"
   apply(case_tac grant)
    apply(rule gen_asm_ev)
    apply(simp add: do_normal_transfer_def)
@@ -1759,7 +1759,7 @@ lemma do_ipc_transfer_reads_respects:
                            aag_can_read_or_affect aag l sender \<and> 
                            aag_can_read_or_affect aag l receiver
                            ))
-     (do_ipc_transfer sender ep badge grant receiver diminish)"
+     (do_ipc_transfer sender ep badge grant receiver)"
   unfolding do_ipc_transfer_def
   apply (wp do_normal_transfer_reads_respects lookup_ipc_buffer_reads_respects
             lookup_ipc_buffer_has_read_auth do_fault_transfer_reads_respects
@@ -1955,7 +1955,7 @@ lemma send_ipc_reads_respects:
   apply (wp set_endpoint_reads_respects set_thread_state_reads_respects 
             when_ev setup_caller_cap_reads_respects thread_get_reads_respects
         | wpc | simp split del: split_if)+
-               apply(rename_tac list word list' rvb rvc)
+               apply(rename_tac list word list' rvb)
                apply(rule_tac Q="\<lambda>r s. is_subject aag (cur_thread s) \<and> 
                                        (can_grant \<longrightarrow> is_subject aag (hd list))"
                               in hoare_strengthen_post)
@@ -1969,7 +1969,6 @@ lemma send_ipc_reads_respects:
                          do_ipc_transfer_pas_refined
                      | wpc
                      | simp add: get_thread_state_def thread_get_def)+
-  apply (clarsimp simp: conj_comms)
   apply (rule conjI)
    apply(fastforce dest: reads_ep)
   apply clarsimp
@@ -2171,7 +2170,7 @@ lemma set_extra_badge_globals_equiv:
 
 lemma transfer_caps_loop_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs and (\<lambda>sa. \<forall>x<length caps. ptr_range (rcv_buffer + (of_nat buffer_cptr_index + of_nat (x + n)) * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})\<rbrace>
-    transfer_caps_loop ep diminish rcv_buffer n caps slots mi
+    transfer_caps_loop ep rcv_buffer n caps slots mi
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
 proof (induct caps arbitrary: slots n mi)
   case Nil
@@ -2197,8 +2196,7 @@ next
          apply(simp add: whenE_def, rule conjI)
           apply(rule impI, wp)+
          apply(simp)+
-      apply(rule conjI)
-       apply(rule impI, wp)+
+       apply wp
     apply(rule conjI)
      apply(clarsimp)
      apply(rule conjI)
@@ -2219,7 +2217,7 @@ qed
 lemma transfer_caps_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs and (\<lambda>sa. \<forall>rb. recv_buffer = Some rb     \<longrightarrow> (\<forall>x<length caps.
     ptr_range (rb + (of_nat buffer_cptr_index + of_nat x) * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {}))\<rbrace>
-    transfer_caps info caps endpoint receiver recv_buffer diminish
+    transfer_caps info caps endpoint receiver recv_buffer
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding transfer_caps_def
   apply(wp transfer_caps_loop_globals_equiv | wpc | simp)+
@@ -2260,7 +2258,7 @@ lemma do_normal_transfer_globals_equiv:
     (x\<in>set [length msg_registers + 1..< (2 ^ (msg_align_bits - 2))]) \<longrightarrow>
     ptr_range (rb + of_nat x * of_nat word_size) 2 \<inter>
       range_of_arm_globals_frame sa = {}))\<rbrace>
-    do_normal_transfer sender sbuf endpoint badge grant receiver rbuf diminish
+    do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding do_normal_transfer_def
   apply(wp as_user_globals_equiv set_message_info_globals_equiv transfer_caps_globals_equiv)
@@ -2388,7 +2386,7 @@ lemma auth_ipc_buffers_do_not_overlap_arm_globals_frame:
 
 lemma do_ipc_transfer_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
-    do_ipc_transfer sender ep badge grant receiver diminish
+    do_ipc_transfer sender ep badge grant receiver
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding do_ipc_transfer_def
   apply(wp do_normal_transfer_globals_equiv do_fault_transfer_globals_equiv | wpc)+
@@ -2467,9 +2465,8 @@ lemma send_ipc_globals_equiv:
           apply(rule thread_get_inv)
          apply(fastforce)
         apply(wp set_thread_state_globals_equiv dxo_wp_weak | simp)+
+        apply wpc
       apply(wp do_ipc_transfer_globals_equiv)
-     apply(wpc)
-            apply(rule fail_wp | rule return_wp)+
     apply(clarsimp)
     apply(rule hoare_drop_imps)
     apply(wp set_endpoint_globals_equiv)
@@ -2668,7 +2665,7 @@ lemma send_ipc_valid_global_objs:
         apply(rule_tac Q="\<lambda>_. valid_global_objs" in hoare_strengthen_post)
          apply(wp, simp, (wp dxo_wp_weak |simp)+)
      apply(wpc)
-            apply(rule fail_wp | rule return_wp)+
+            apply(rule fail_wp | rule return_wp | wp)+
     apply(simp)
     apply(rule hoare_drop_imps)
     apply(wp)
