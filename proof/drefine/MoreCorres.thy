@@ -19,9 +19,9 @@ begin
  * equivalent, we can prove each pair separately.
  *)
 lemma corres_alternate_match:
-  "\<lbrakk> corres_underlying sr nf r P P' a c;
-     corres_underlying sr nf r P P' b d \<rbrakk> \<Longrightarrow>
-   corres_underlying sr nf r P P' (a \<sqinter> b) (c \<sqinter> d)"
+  "\<lbrakk> corres_underlying sr nf nf' r P P' a c;
+     corres_underlying sr nf nf' r P P' b d \<rbrakk> \<Longrightarrow>
+   corres_underlying sr nf nf' r P P' (a \<sqinter> b) (c \<sqinter> d)"
   apply (simp add: corres_underlying_def alternative_def)
   apply (clarsimp)
   apply (drule (1) bspec, clarsimp)+
@@ -34,9 +34,9 @@ lemma corres_alternate_match:
  * system refine the abstract system.
  *)
 lemma corres_alternate_split:
-  "\<lbrakk> corres_underlying sr nf r P Q a x;
-     corres_underlying sr nf r P' Q' a y \<rbrakk> \<Longrightarrow>
-   corres_underlying sr nf r (P and P') (Q and Q') a (x \<sqinter> y)"
+  "\<lbrakk> corres_underlying sr nf nf' r P Q a x;
+     corres_underlying sr nf nf' r P' Q' a y \<rbrakk> \<Longrightarrow>
+   corres_underlying sr nf nf' r (P and P') (Q and Q') a (x \<sqinter> y)"
   apply (simp add: corres_underlying_def alternative_def)
   apply (clarsimp)
   apply (drule (1) bspec, clarsimp)+
@@ -48,7 +48,7 @@ lemma corres_alternate_split:
  * a subset of the abstract's select set.
  *)
 lemma corres_select_equiv:
-  "\<lbrakk> \<forall>a' \<in> A'. \<exists>a \<in> A. r a a' \<rbrakk> \<Longrightarrow> corres_underlying sr nf r \<top> \<top> (select A) (select A')"
+  "\<lbrakk> \<forall>a' \<in> A'. \<exists>a \<in> A. r a a' \<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r \<top> \<top> (select A) (select A')"
   apply (clarsimp simp: corres_underlying_def)
   apply (clarsimp simp: split_def)
   apply (clarsimp simp: select_def)
@@ -63,9 +63,9 @@ lemma corres_select_equiv:
  * This will likely need to be used with 'stronger_corres_guard_imp'.
  *)
 lemma corres_if_rhs:
-  "\<lbrakk>  G \<Longrightarrow> corres_underlying sr nf rvr P  Q  a b;
-     \<not>G \<Longrightarrow> corres_underlying sr nf rvr P' Q' a c \<rbrakk> \<Longrightarrow>
-   corres_underlying sr nf rvr
+  "\<lbrakk>  G \<Longrightarrow> corres_underlying sr nf nf' rvr P  Q  a b;
+     \<not>G \<Longrightarrow> corres_underlying sr nf nf' rvr P' Q' a c \<rbrakk> \<Longrightarrow>
+   corres_underlying sr nf nf' rvr
        (\<lambda>s. (G \<longrightarrow> P s) \<and> (\<not>G \<longrightarrow> P' s)) (\<lambda>s. (G \<longrightarrow> Q s) \<and> (\<not>G \<longrightarrow> Q' s))
        a (if G then b else c)"
   by (auto elim: corres_guard_imp)
@@ -89,21 +89,21 @@ lemma alternative_bindE_distrib: "((f \<sqinter> g) >>=E h) = ((f >>=E h) \<sqin
  * doesn't care about them.
  *)
 lemma corres_return_dc [simp]:
-  "corres_underlying sr nf dc \<top> \<top> (return a) (return b)"
+  "corres_underlying sr nf nf' dc \<top> \<top> (return a) (return b)"
   apply (clarsimp simp: corres_underlying_def dc_def return_def)
   done
 
 (* If our return relation doesn't matter, return statements are meaningless. *)
 lemma corres_return_dc_rhs:
-  "corres_underlying sr nf dc G G' P P' \<Longrightarrow> corres_underlying sr nf dc G G' P (do P'; return a od)"
+  "corres_underlying sr nf nf' dc G G' P P' \<Longrightarrow> corres_underlying sr nf nf' dc G G' P (do P'; return a od)"
   by (fastforce simp: corres_underlying_def dc_def return_def bind_def)
 
 (* If our return relation doesn't matter, return statements are meaningless. *)
 lemma corres_return_dc_lhs:
-  "corres_underlying sr nf dc G G' P P' \<Longrightarrow> corres_underlying sr nf dc G G' (do P; return a od) P'"
+  "corres_underlying sr nf nf' dc G G' P P' \<Longrightarrow> corres_underlying sr nf nf' dc G G' (do P; return a od) P'"
   apply (case_tac nf)
    apply (clarsimp simp: corres_underlying_def dc_def return_def bind_def, force)
-  apply (clarsimp simp: corres_underlying_def dc_def return_def bind_def, force)
+  apply (clarsimp simp: corres_underlying_def dc_def return_def bind_def, force) (* slow 10s *)
   done
 
 (* liftE distributes inside bind. *)
@@ -118,8 +118,8 @@ lemma liftE_alternative_distrib: "(liftE (a \<sqinter> b)) = ((liftE a) \<sqinte
   by (metis alternative_bind_distrib bindE_returnOk liftE_bindE)
 
 lemma corres_skip_catch:
-  "corres_underlying sr nf dc P P' f g \<Longrightarrow>
-   corres_underlying sr nf dc P P' f (g <catch> (\<lambda>_. return x))"
+  "corres_underlying sr nf nf' dc P P' f g \<Longrightarrow>
+   corres_underlying sr nf nf' dc P P' f (g <catch> (\<lambda>_. return x))"
   by (clarsimp simp: corres_underlying_def catch_def return_def bind_def 
                      split_def 
                split: sum.splits)

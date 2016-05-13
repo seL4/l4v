@@ -34,8 +34,8 @@ where
               (transform_cslot_ptr slot3)"
 
 lemma corres_assert_lhs:
-  "(F \<Longrightarrow> corres_underlying sr False r P P' (f ()) g)
-    \<Longrightarrow> corres_underlying sr False r (\<lambda>s. F \<and> P s) P' (assert F >>= f) g"
+  "(F \<Longrightarrow> corres_underlying sr False False r P P' (f ()) g)
+    \<Longrightarrow> corres_underlying sr False False r (\<lambda>s. F \<and> P s) P' (assert F >>= f) g"
   by (cases F, simp_all)
 
 lemma ex_cte_cap_to_not_idle:
@@ -503,9 +503,9 @@ lemma cap_null_reply_case_If:
 
 (* FIXME: move *)
 lemma corres_if_rhs2:
-  "\<lbrakk> G \<Longrightarrow> corres_underlying sr nf rvr P Q a b;
-      \<not> G \<Longrightarrow> corres_underlying sr nf rvr P' Q' a c \<rbrakk>
-     \<Longrightarrow> corres_underlying sr nf rvr (P and P') (\<lambda>s. (G \<longrightarrow> Q s) \<and> (\<not> G \<longrightarrow> Q' s))
+  "\<lbrakk> G \<Longrightarrow> corres_underlying sr nf nf' rvr P Q a b;
+      \<not> G \<Longrightarrow> corres_underlying sr nf nf' rvr P' Q' a c \<rbrakk>
+     \<Longrightarrow> corres_underlying sr nf nf' rvr (P and P') (\<lambda>s. (G \<longrightarrow> Q s) \<and> (\<not> G \<longrightarrow> Q' s))
         a (if G then b else c)"
   by (rule corres_guard_imp, rule corres_if_rhs, simp+)
 
@@ -877,8 +877,8 @@ lemma cancel_badged_sends_def'':
 done
 
 lemma corres_mapM_to_mapM_x:
-  "corres_underlying sr fl dc P P' f (mapM_x g xs)
-     \<Longrightarrow> corres_underlying sr fl dc P P' f (mapM g xs)"
+  "corres_underlying sr fl fl' dc P P' f (mapM_x g xs)
+     \<Longrightarrow> corres_underlying sr fl fl' dc P P' f (mapM g xs)"
   by (simp add: mapM_x_mapM liftM_def[symmetric])
 
 lemma ep_waiting_set_recv_upd_kh:
@@ -2558,9 +2558,9 @@ crunch inv[wp]: ensure_empty "P"
 
 lemma corres_symb_exec_r_dcE:
   "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>rv. P\<rbrace>;
-     \<And>x. corres_underlying rel False (dc \<oplus> anyrel) P (R x) (throwError e) (h x);
+     \<And>x. corres_underlying rel False False (dc \<oplus> anyrel) P (R x) (throwError e) (h x);
      \<lbrace>Q\<rbrace> g \<lbrace>R\<rbrace>,- \<rbrakk> \<Longrightarrow>
-   corres_underlying rel False (dc \<oplus> anyrel) P Q
+   corres_underlying rel False False (dc \<oplus> anyrel) P Q
       (throwError e) (g >>=E (\<lambda>x. h x))"
   unfolding bindE_def
   apply (rule corres_symb_exec_r[where Q'="\<lambda>rv. case rv of Inl _ \<Rightarrow> \<top> | Inr x \<Rightarrow> R x"])
@@ -2880,7 +2880,7 @@ lemma cnode_decode_rotate_throw:
 lemma corres_bindE_throwError:
   assumes f:"\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
   assumes nf: "sf \<Longrightarrow> no_fail P' f"
-  shows "corres_underlying sr sf (dc \<oplus> r) P P' (Monads_D.throw) (doE x \<leftarrow> f; throwError (e x) odE)"
+  shows "corres_underlying sr af sf (dc \<oplus> r) P P' (Monads_D.throw) (doE x \<leftarrow> f; throwError (e x) odE)"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    apply (clarsimp simp: in_monad bindE_def throwError_def return_def)

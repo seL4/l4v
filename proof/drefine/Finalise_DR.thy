@@ -2968,8 +2968,8 @@ lemma monadic_trancl_preemptible_return:
 
 lemma monadic_rewrite_corres2:
   "\<lbrakk> monadic_rewrite False E Q a a';
-        corres_underlying R F r P P' a' c \<rbrakk>
-     \<Longrightarrow> corres_underlying R F r (P and Q) P' a c"
+        corres_underlying R False F r P P' a' c \<rbrakk>
+     \<Longrightarrow> corres_underlying R False F r (P and Q) P' a c"
   apply (simp add: corres_underlying_def monadic_rewrite_def)
   apply (erule ballEI, clarsimp)
   apply (drule(1) bspec, clarsimp)
@@ -3137,8 +3137,8 @@ lemma finalise_zombie:
   by (clarsimp simp add: is_cap_simps)
 
 lemma corres_assert_rhs:
-  "(F \<Longrightarrow> corres_underlying sr False r P P' f (g ()))
-    \<Longrightarrow> corres_underlying sr False r P (\<lambda>s. F \<longrightarrow> P' s) f (assert F >>= g)"
+  "(F \<Longrightarrow> corres_underlying sr False False r P P' f (g ()))
+    \<Longrightarrow> corres_underlying sr False False r P (\<lambda>s. F \<longrightarrow> P' s) f (assert F >>= g)"
   by (cases F, simp_all add: corres_fail)
 
 lemma monadic_rewrite_select_x:
@@ -3158,8 +3158,8 @@ lemma finalise_cap_zombie':
   by (simp split: cdl_cap.split_asm)
 
 lemma corres_use_cutMon:
-  "\<lbrakk> \<And>s. corres_underlying sr fl r P P' f (cutMon (op = s) g) \<rbrakk>
-       \<Longrightarrow> corres_underlying sr fl r P P' f g"
+  "\<lbrakk> \<And>s. corres_underlying sr False fl r P P' f (cutMon (op = s) g) \<rbrakk>
+       \<Longrightarrow> corres_underlying sr False fl r P P' f g"
   apply atomize
   apply (simp add: corres_underlying_def cutMon_def fail_def
             split: split_if_asm)
@@ -3167,31 +3167,31 @@ lemma corres_use_cutMon:
   done
 
 lemma corres_drop_cutMon:
-  "corres_underlying sr False r P P' f g
-     \<Longrightarrow> corres_underlying sr False r P P' f (cutMon Q g)"
+  "corres_underlying sr False False r P P' f g
+     \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon Q g)"
   apply (simp add: corres_underlying_def cutMon_def fail_def
             split: split_if)
   apply (clarsimp simp: split_def)
   done
 
 lemma corres_drop_cutMon_bind:
-  "corres_underlying sr False r P P' f (g >>= h)
-     \<Longrightarrow> corres_underlying sr False r P P' f (cutMon Q g >>= h)"
+  "corres_underlying sr False False r P P' f (g >>= h)
+     \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon Q g >>= h)"
   apply (simp add: corres_underlying_def cutMon_def fail_def bind_def
             split: split_if)
   apply (clarsimp simp: split_def)
   done
 
 lemma corres_drop_cutMon_bindE:
-  "corres_underlying sr False r P P' f (g >>=E h)
-     \<Longrightarrow> corres_underlying sr False r P P' f (cutMon Q g >>=E h)"
+  "corres_underlying sr False False r P P' f (g >>=E h)
+     \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon Q g >>=E h)"
   apply (simp add: bindE_def)
   apply (erule corres_drop_cutMon_bind)
   done
 
 lemma corres_cutMon:
-  "\<lbrakk> \<And>s. Q s \<Longrightarrow> corres_underlying sr False r P P' f (cutMon (op = s) g) \<rbrakk>
-         \<Longrightarrow> corres_underlying sr False r P P' f (cutMon Q g)"
+  "\<lbrakk> \<And>s. Q s \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon (op = s) g) \<rbrakk>
+         \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon Q g)"
   apply atomize
   apply (simp add: corres_underlying_def cutMon_def fail_def
             split: split_if_asm)
@@ -3285,8 +3285,8 @@ lemma cutMon_fail:
 declare rec_del.simps[simp del]
 
 lemma select_pick_corres_asm:
-  "\<lbrakk> x \<in> S; corres_underlying sr nf r P Q (f x) g \<rbrakk>
-    \<Longrightarrow> corres_underlying sr nf r P Q (select S >>= f) g"
+  "\<lbrakk> x \<in> S; corres_underlying sr nf nf' r P Q (f x) g \<rbrakk>
+    \<Longrightarrow> corres_underlying sr nf nf' r P Q (select S >>= f) g"
   by (drule select_pick_corres[where x=x and S=S], simp)
 
 lemma invs_weak_valid_mdb:
@@ -3372,9 +3372,9 @@ lemma finalise_slot_inner1_add_if_Null:
   done
 
 lemma corres_if_rhs_only:
-  "\<lbrakk> G \<Longrightarrow> corres_underlying sr nf rvr P Q a b;
-      \<not> G \<Longrightarrow> corres_underlying sr nf rvr P' Q' a c\<rbrakk>
-       \<Longrightarrow> corres_underlying sr nf rvr
+  "\<lbrakk> G \<Longrightarrow> corres_underlying sr nf nf' rvr P Q a b;
+      \<not> G \<Longrightarrow> corres_underlying sr nf nf' rvr P' Q' a c\<rbrakk>
+       \<Longrightarrow> corres_underlying sr nf nf' rvr
              (P and P') (\<lambda>s. (G \<longrightarrow> Q s) \<and> (\<not> G \<longrightarrow> Q' s))
              a (if G then b else c)"
   by (rule corres_guard_imp, rule corres_if_rhs, simp+)
@@ -3448,13 +3448,13 @@ lemma zombie_is_cap_toE_pre2:
   done
 
 lemma corres_note_assumption:
-  "\<lbrakk> F; corres_underlying sr fl r P P' f g \<rbrakk>
-        \<Longrightarrow> corres_underlying sr fl r (\<lambda>s. F \<longrightarrow> P s) P' f g"
+  "\<lbrakk> F; corres_underlying sr fl fl' r P P' f g \<rbrakk>
+        \<Longrightarrow> corres_underlying sr fl fl' r (\<lambda>s. F \<longrightarrow> P s) P' f g"
   by simp
 
 lemma corres_req2:
-  "\<lbrakk>\<And>s s'. \<lbrakk>(s, s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> F; F \<Longrightarrow> corres_underlying sr nf r Q Q' f g\<rbrakk>
-         \<Longrightarrow> corres_underlying sr nf r (P and Q) (P' and Q') f g"
+  "\<lbrakk>\<And>s s'. \<lbrakk>(s, s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> F; F \<Longrightarrow> corres_underlying sr nf nf' r Q Q' f g\<rbrakk>
+         \<Longrightarrow> corres_underlying sr nf nf' r (P and Q) (P' and Q') f g"
   apply (rule_tac F=F in corres_req, simp_all)
   apply (erule corres_guard_imp, simp_all)
   done
@@ -3479,12 +3479,12 @@ lemma opt_cap_cnode:
    apply (clarsimp, rule conjI)
     apply (metis nat_to_bl_id2 option.distinct(1) wf_cs_nD)
    apply (metis (full_types) nat_to_bl_to_bin nat_to_bl_id2
-                             option.inject wf_cs_nD)
+                             option.inject wf_cs_nD) (* slow 20s *)
   (* "sz \<noteq> 0" *)
   apply (clarsimp, rule conjI)
    apply (metis nat_to_bl_id2 option.distinct(1) wf_cs_nD)
   apply (metis (full_types) nat_to_bl_to_bin nat_to_bl_id2
-                            option.inject wf_cs_nD)
+                            option.inject wf_cs_nD) (* slow 30s *)
   done
 
 lemma preemption_point_valid_etcbs[wp]: "\<lbrace> valid_etcbs \<rbrace> preemption_point \<lbrace> \<lambda>_. valid_etcbs \<rbrace>"
