@@ -8,8 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-(*  Title:      WPI.thy
-    Author:     Daniel Matichuk, NICTA/UNSW
+(*  Author:     Daniel Matichuk, NICTA/UNSW
     
     Solve postconditions using wp by decomposing the HOL connectives.
     The default method, wpi, is safe in the sense that it won't do anything that
@@ -36,8 +35,10 @@
 *)
 
 theory WPI
-imports "../Eisbach_Methods" NonDetMonadLemmas "WPEx"
-        
+imports
+  "../../Eisbach_Methods"
+  "../NonDetMonadLemmas"
+  "WPEx"
 begin
 
 text \<open>The ML version of repeat_new is slightly faster than the Eisbach one.\<close>

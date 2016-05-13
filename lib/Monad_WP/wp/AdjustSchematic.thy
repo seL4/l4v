@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory AdjustSchematic
+theory AdjustSchematic (* FIXME: bitrotted *)
 imports "~~/src/HOL/Main"
 begin
 
@@ -105,7 +105,7 @@ fun tac ctxt = CSUBGOAL (fn (csg, i) => let
 end
 *}
 
-schematic_lemma
+schematic_goal
   "\<And>x y z. ?P (x, y) True (a, (b, (c, d), e)) z"
   apply (tactic {* AdjustSchematics.tac @{context} 1 *})
   oops

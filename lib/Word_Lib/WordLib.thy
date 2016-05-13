@@ -12,8 +12,7 @@
 
 theory WordLib
 imports
-  NICTACompat
-  SignedWords
+  Word_Syntax
 begin
 
 lemma shiftl_power:

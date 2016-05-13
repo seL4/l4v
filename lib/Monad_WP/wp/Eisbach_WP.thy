@@ -1,12 +1,22 @@
-(*  Title:      Eisbach_WP.thy
-    Author:     Daniel Matichuk, NICTA/UNSW
-    
-    WP-specific Eisbach methods
-*)
+(*
+ * Copyright 2015, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
+(*  WP-specific Eisbach methods *)
 
 theory Eisbach_WP
-imports "../Eisbach_Methods" NonDetMonadVCG "../Conjuncts" "../Rule_By_Method" "WPI"
-        
+imports
+  "../../Eisbach_Methods"
+  "../NonDetMonadVCG"
+  "../../Conjuncts"
+  "../../Rule_By_Method"
+  "WPI"
 begin
 
 
@@ -16,7 +26,6 @@ text \<open>
 
   post_asm can be used with the @ attribute to modify existing proofs. Useful
   for proving large postconditions in one proof and then subsequently decomposing it.
-  
 
 \<close>
 context begin
