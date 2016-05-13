@@ -446,19 +446,19 @@ definition cap_swap_ext where
        update_cdt_list
         (\<lambda>list. case if slot2_op = Some slot1 then Some slot2
                      else if slot2_op = Some slot2 then Some slot1 else slot2_op of
-                None \<Rightarrow> case if slot1_op = Some slot1 then Some slot2
+                None \<Rightarrow> (case if slot1_op = Some slot1 then Some slot2
                             else if slot1_op = Some slot2 then Some slot1 else slot1_op of
                        None \<Rightarrow> list
-                       | Some slot2_p \<Rightarrow> list(slot2_p := list_replace (list slot2_p) slot1 slot2)
+                       | Some slot2_p \<Rightarrow> list(slot2_p := list_replace (list slot2_p) slot1 slot2))
                 | Some slot1_p \<Rightarrow>
-                    case if slot1_op = Some slot1 then Some slot2
+                    (case if slot1_op = Some slot1 then Some slot2
                          else if slot1_op = Some slot2 then Some slot1 else slot1_op of
                     None \<Rightarrow> list(slot1_p := list_replace (list slot1_p) slot2 slot1)
                     | Some slot2_p \<Rightarrow>
                         if slot1_p = slot2_p
                         then list(slot1_p := list_swap (list slot1_p) slot1 slot2)
                         else list(slot1_p := list_replace (list slot1_p) slot2 slot1,
-                                  slot2_p := list_replace (list slot2_p) slot1 slot2))
+                                  slot2_p := list_replace (list slot2_p) slot1 slot2)))
     od)"
 
 definition cap_move_ext where
