@@ -708,7 +708,7 @@ lemma receive_blocked_waiting_syncs:
    apply (frule (3) ntfn_bound_tcb_at[where P="\<lambda>a. a = Some ntfnptr"], simp)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
    apply (clarsimp simp: transform_def transform_objects_def restrict_map_def map_add_def split: option.splits)
-    apply (subst (asm) handy_enum_lemma3)+
+    apply (subst (asm) handy_if_lemma)+
     apply clarsimp
    apply (case_tac "x \<noteq> idle_thread s")
     apply (clarsimp simp: transform_object_def split: Structures_A.kernel_object.splits ARM_A.arch_kernel_obj.splits option.splits nat.splits)

@@ -84,34 +84,24 @@ lemma maxBound_is_length:
 
 lemma maxBound_less_length:
   "(x \<le> fromEnum maxBound) = (x < length (enum :: 'a list))"
-  apply (simp only: maxBound_is_length)
-  apply (case_tac "length (enum :: 'a list)")
-   apply simp
-  apply simp
-  apply arith
-  done
+  unfolding maxBound_is_length by (cases "length enum") auto
 
 lemma maxBound_is_bound [simp]:
- "fromEnum x \<le> fromEnum maxBound"
-  apply (simp only: maxBound_less_length)
-  apply (simp add: fromEnum_def)
-  apply (rule the_index_bounded)
-  by simp
+  "fromEnum x \<le> fromEnum maxBound"
+  unfolding maxBound_less_length
+  by (fastforce simp: fromEnum_def intro: the_index_bounded)
 
 lemma to_from_enum [simp]:
   fixes x :: 'a
   shows "toEnum (fromEnum x) = x"
 proof -
   have "x \<in> set enum" by simp
-  thus ?thesis
-    by (simp add: toEnum_def fromEnum_def nth_the_index the_index_bounded)
+  thus ?thesis by (simp add: toEnum_def fromEnum_def nth_the_index the_index_bounded)
 qed
 
 lemma from_to_enum [simp]:
   "x \<le> fromEnum maxBound \<Longrightarrow> fromEnum (toEnum x) = x"
-  apply (simp only: maxBound_less_length)
-  apply (simp add: toEnum_def fromEnum_def)
-  done
+  unfolding maxBound_less_length by (simp add: toEnum_def fromEnum_def)
 
 lemma map_enum:
   fixes x :: 'a
@@ -152,75 +142,58 @@ class enum_alt =
 class enumeration_alt = enum_alt +
   assumes enum_alt_one_bound:
     "enum_alt x = (None :: 'a option) \<Longrightarrow> enum_alt (Suc x) = (None :: 'a option)"
-  assumes enum_alt_surj: "range enum_alt \<union> {None} = UNIV"
+  assumes enum_alt_surj:
+    "range enum_alt \<union> {None} = UNIV"
   assumes enum_alt_inj:
     "(enum_alt x :: 'a option) = enum_alt y \<Longrightarrow> (x = y) \<or> (enum_alt x = (None :: 'a option))"
 begin
 
 lemma enum_alt_inj_2:
-  "\<lbrakk> enum_alt x = (enum_alt y :: 'a option);
-     enum_alt x \<noteq> (None :: 'a option) \<rbrakk>
-    \<Longrightarrow> x = y"
-  apply (subgoal_tac "(x = y) \<or> (enum_alt x = (None :: 'a option))")
-   apply clarsimp
-  apply (rule enum_alt_inj)
-  apply simp
-  done
+  assumes "enum_alt x = (enum_alt y :: 'a option)"
+          "enum_alt x \<noteq> (None :: 'a option)"
+  shows "x = y"
+proof -
+  from assms
+  have "(x = y) \<or> (enum_alt x = (None :: 'a option))" by (fastforce intro!: enum_alt_inj)
+  with assms show ?thesis by clarsimp
+qed
 
 lemma enum_alt_surj_2:
   "\<exists>x. enum_alt x = Some y"
-  apply (subgoal_tac "Some y \<in> range enum_alt")
-   apply (erule rangeE)
-   apply (rule exI)
-   apply simp
-  apply (subgoal_tac "Some y \<in> range enum_alt \<union> {None}")
-   apply simp
-  apply (subst enum_alt_surj)
-  apply simp
-  done
+proof -
+  have "Some y \<in> range enum_alt \<union> {None}" by (subst enum_alt_surj) simp
+  then have "Some y \<in> range enum_alt" by simp
+  then show ?thesis by auto
+qed
 
 end
 
 definition
-  alt_from_ord :: "'a list \<Rightarrow> nat \<Rightarrow> 'a option" where
- "alt_from_ord L \<equiv> \<lambda>n. if (n < length L) then Some (L ! n) else None"
+  alt_from_ord :: "'a list \<Rightarrow> nat \<Rightarrow> 'a option"
+where
+  "alt_from_ord L \<equiv> \<lambda>n. if (n < length L) then Some (L ! n) else None"
 
-lemma handy_enum_lemma1: "((if P then Some A else None) = None) = (\<not> P)"
-  by simp
-
-lemma handy_enum_lemma2: "Some x \<notin> empty ` S"
-  by safe
-
-lemma handy_enum_lemma3: "((if P then Some A else None) = Some B) = (P \<and> (A = B))"
+lemma handy_if_lemma: "((if P then Some A else None) = Some B) = (P \<and> (A = B))"
   by simp
 
 class enumeration_both = enum_alt + enum +
   assumes enum_alt_rel: "enum_alt = alt_from_ord enum"
 
 instance enumeration_both < enumeration_alt
-  apply (intro_classes)
-    apply (simp_all add: enum_alt_rel alt_from_ord_def)
-    apply (simp add: handy_enum_lemma1)
-   apply (safe, simp_all)
-   apply (simp add: handy_enum_lemma2)
-   apply (rule rev_image_eqI, simp_all)
-   defer
-   apply (subst nth_the_index, simp_all)
-   apply (simp add: handy_enum_lemma3)
-   apply (subst nth_eq_iff_index_eq[symmetric], simp_all)
-   apply safe
-  apply (rule the_index_bounded)
-  apply simp
+  apply (intro_classes; simp add: enum_alt_rel alt_from_ord_def)
+    apply auto[1]
+   apply (safe; simp)[1]
+   apply (rule rev_image_eqI; simp)
+    apply (rule the_index_bounded; simp)
+   apply (subst nth_the_index; simp)
+  apply (clarsimp simp: handy_if_lemma)
+  apply (subst nth_eq_iff_index_eq[symmetric]; simp)
   done
 
 instantiation bool :: enumeration_both
 begin
-
-definition
-  enum_alt_bool: "enum_alt \<equiv> alt_from_ord [False, True]"
-
-instance
-  by (intro_classes, simp add: enum_bool_def enum_alt_bool)
+  definition enum_alt_bool: "enum_alt \<equiv> alt_from_ord [False, True]"
+  instance by (intro_classes, simp add: enum_bool_def enum_alt_bool)
 end
 
 definition
@@ -238,100 +211,75 @@ definition
 lemma fromEnum_alt_red[simp]:
   "fromEnumAlt = (fromEnum :: ('a :: enumeration_both) \<Rightarrow> nat)"
   apply (rule ext)
-  apply (simp add: fromEnumAlt_def fromEnum_def)
-  apply (simp add: enum_alt_rel alt_from_ord_def)
+  apply (simp add: fromEnumAlt_def fromEnum_def enum_alt_rel alt_from_ord_def)
   apply (rule theI2)
-    apply safe
-     apply (rule nth_the_index, simp)
+    apply (rule conjI)
+     apply (clarify, rule nth_the_index, simp)
     apply (rule the_index_bounded, simp)
-   apply simp_all
-  done
-
-lemma toEnum_alt_red[simp]:
-  "toEnumAlt = (toEnum :: nat \<Rightarrow> ('a :: enumeration_both))"
-  apply (rule ext)
-  apply (unfold toEnum_def toEnumAlt_def)
-  apply (simp add: enum_alt_rel alt_from_ord_def)
-  done
-
-lemma upto_enum_red:
-  "[(n :: ('a :: enumeration_both)) .e. m] = map toEnum [fromEnum n ..< Suc (fromEnum m)]"
-  apply (unfold upto_enum_def)
-  apply simp
-  done
-
-instantiation nat :: enumeration_alt
-begin
-
-definition
-  enum_alt_nat: "enum_alt \<equiv> Some"
-
-instance
-  apply (intro_classes)
-    apply (simp_all add: enum_alt_nat)
-   apply (safe, simp_all)
-   apply (case_tac x, simp_all)
-  done
-
-end
-
-lemma toEnumAlt_nat[simp]: "toEnumAlt = id"
-  apply (rule ext)
-  apply (simp add: toEnumAlt_def enum_alt_nat)
-  done
-
-lemma fromEnumAlt_nat[simp]: "fromEnumAlt = id"
-  apply (rule ext)
-  apply (simp add: fromEnumAlt_def enum_alt_nat)
-  done
-
-lemma upto_enum_nat[simp]: "[n .e. m] = [n ..< Suc m]"
-  apply (subst upto_enum_def)
-  apply simp
-  done
-
-definition
-  zipE1 :: "('a :: enum_alt) \<Rightarrow> 'b list \<Rightarrow> ('a \<times> 'b) list" where
- "zipE1 x L \<equiv> zip (map toEnumAlt [(fromEnumAlt x) ..< (fromEnumAlt x) + length L]) L"
-
-definition
-  zipE2 :: "('a :: enum_alt) \<Rightarrow> 'a \<Rightarrow> 'b list \<Rightarrow> ('a \<times> 'b) list" where
- "zipE2 x xn L \<equiv> zip (map (\<lambda>n. toEnumAlt ((fromEnumAlt x) + ((fromEnumAlt xn) - (fromEnumAlt x)) * n)) [0 ..< length L]) L"
-
-definition
-  zipE3 :: "'a list \<Rightarrow> ('b :: enum_alt) \<Rightarrow> ('a \<times> 'b) list" where
- "zipE3 L x \<equiv> zip L (map toEnumAlt [(fromEnumAlt x) ..< (fromEnumAlt x) + length L])"
-
-definition
-  zipE4 :: "'a list \<Rightarrow> ('b :: enum_alt) \<Rightarrow> 'b \<Rightarrow> ('a \<times> 'b) list" where
- "zipE4 L x xn \<equiv> zip L (map (\<lambda>n. toEnumAlt ((fromEnumAlt x) + ((fromEnumAlt xn) - (fromEnumAlt x)) * n)) [0 ..< length L])"
-
-lemma handy_lemma: "a = Some b \<Longrightarrow> the a = b"
-  by (simp)
-
-lemma to_from_enum_alt[simp]:
- "toEnumAlt (fromEnumAlt x) = (x :: ('a :: enumeration_alt))"
-  apply (simp add: fromEnumAlt_def toEnumAlt_def)
-  apply (rule handy_lemma)
-  apply (rule theI')
-  apply safe
-   apply (rule enum_alt_surj_2)
-  apply (rule enum_alt_inj_2)
    apply auto
   done
 
-lemma upto_enum_triv [simp]:
-  "[x .e. x] = [x]"
+lemma toEnum_alt_red[simp]:
+  "toEnumAlt = (toEnum :: nat \<Rightarrow> 'a :: enumeration_both)"
+  by (rule ext) (simp add: enum_alt_rel alt_from_ord_def toEnum_def toEnumAlt_def)
+
+lemma upto_enum_red:
+  "[(n :: ('a :: enumeration_both)) .e. m] = map toEnum [fromEnum n ..< Suc (fromEnum m)]"
+  unfolding upto_enum_def by simp
+
+instantiation nat :: enumeration_alt
+begin
+  definition enum_alt_nat: "enum_alt \<equiv> Some"
+  instance by (intro_classes; simp add: enum_alt_nat UNIV_option_conv)
+end
+
+lemma toEnumAlt_nat[simp]: "toEnumAlt = id"
+  by (rule ext) (simp add: toEnumAlt_def enum_alt_nat)
+
+lemma fromEnumAlt_nat[simp]: "fromEnumAlt = id"
+  by (rule ext) (simp add: fromEnumAlt_def enum_alt_nat)
+
+lemma upto_enum_nat[simp]: "[n .e. m] = [n ..< Suc m]"
+  by (subst upto_enum_def) simp
+
+definition
+  zipE1 :: "'a :: enum_alt \<Rightarrow> 'b list \<Rightarrow> ('a \<times> 'b) list"
+where
+  "zipE1 x L \<equiv> zip (map toEnumAlt [fromEnumAlt x ..< fromEnumAlt x + length L]) L"
+
+definition
+  zipE2 :: "'a :: enum_alt \<Rightarrow> 'a \<Rightarrow> 'b list \<Rightarrow> ('a \<times> 'b) list"
+where
+  "zipE2 x xn L \<equiv> zip (map (\<lambda>n. toEnumAlt (fromEnumAlt x + (fromEnumAlt xn - fromEnumAlt x) * n))
+                      [0 ..< length L]) L"
+
+definition
+  zipE3 :: "'a list \<Rightarrow> 'b :: enum_alt \<Rightarrow> ('a \<times> 'b) list"
+where
+  "zipE3 L x \<equiv> zip L (map toEnumAlt [fromEnumAlt x ..< fromEnumAlt x + length L])"
+
+definition
+  zipE4 :: "'a list \<Rightarrow> 'b :: enum_alt \<Rightarrow> 'b \<Rightarrow> ('a \<times> 'b) list"
+where
+  "zipE4 L x xn \<equiv> zip L (map (\<lambda>n. toEnumAlt (fromEnumAlt x + (fromEnumAlt xn - fromEnumAlt x) * n))
+                         [0 ..< length L])"
+
+
+lemma to_from_enum_alt[simp]:
+  "toEnumAlt (fromEnumAlt x) = (x :: 'a :: enumeration_alt)"
+proof -
+  have rl: "\<And>a b. a = Some b \<Longrightarrow> the a = b" by simp
+  show ?thesis
+    unfolding fromEnumAlt_def toEnumAlt_def
+    by (rule rl, rule theI') (metis enum_alt_inj enum_alt_surj_2 not_None_eq)
+qed
+
+lemma upto_enum_triv [simp]: "[x .e. x] = [x]"
   unfolding upto_enum_def by simp
 
 lemma toEnum_eq_to_fromEnum_eq:
-  fixes v :: "'a :: enum" shows
-  "n \<le> fromEnum (maxBound :: 'a) \<Longrightarrow> (toEnum n = v) = (n = fromEnum v)"
-  apply (rule iffI)
-   apply (drule arg_cong[where f=fromEnum])
-   apply simp
-  apply (drule arg_cong[where f="toEnum :: nat \<Rightarrow> 'a"])
-  apply simp
-  done
+  fixes v :: "'a :: enum"
+  shows "n \<le> fromEnum (maxBound :: 'a) \<Longrightarrow> (toEnum n = v) = (n = fromEnum v)"
+  by auto
 
 end
