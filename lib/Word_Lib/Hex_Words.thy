@@ -13,10 +13,10 @@ imports
   "~~/src/HOL/Word/Word"
 begin
 
-text {* Print words in hex. *}
+text \<open>Print words in hex.\<close>
 
 (* mostly clagged from Num.thy *)
-typed_print_translation  {*
+typed_print_translation  \<open>
 let
   fun dest_num (Const (@{const_syntax Num.Bit0}, _) $ n) = 2 * dest_num n
     | dest_num (Const (@{const_syntax Num.Bit1}, _) $ n) = 2 * dest_num n + 1
@@ -45,6 +45,6 @@ let
       | T' => if T' = dummyT then t' else raise Match
     end;
 in [(@{const_syntax numeral}, num_tr' "")] end
-*}
+\<close>
 
 end

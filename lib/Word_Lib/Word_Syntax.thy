@@ -16,7 +16,7 @@ imports
   Norm_Words
 begin
 
-text {* Additional bit and type syntax that forces word types. *}
+text \<open>Additional bit and type syntax that forces word types.\<close>
 
 type_synonym word8 = "8 word"
 type_synonym word16 = "16 word"

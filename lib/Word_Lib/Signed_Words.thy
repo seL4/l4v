@@ -12,9 +12,9 @@ theory Signed_Words
 imports "~~/src/HOL/Word/Word"
 begin
 
-text {* Signed words as separate (isomorphic) word length class. Useful for tagging words in C. *}
+text \<open>Signed words as separate (isomorphic) word length class. Useful for tagging words in C.\<close>
 
-subsection {* Type definition *}
+subsection \<open>Type definition\<close>
 
 typedef ('a::len0) signed = "UNIV :: 'a set" ..
 

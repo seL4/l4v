@@ -14,7 +14,7 @@ theory Word_Setup_32
 imports Word_Enum
 begin
 
-text {* This theory defines standard platform-specific word size and alignment. *}
+text \<open>This theory defines standard platform-specific word size and alignment.\<close>
 
 definition
   word_bits :: nat where

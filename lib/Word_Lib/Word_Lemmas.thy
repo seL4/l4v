@@ -206,7 +206,7 @@ proof -
   qed
 qed
 
-text {* Parallel etc. and lemmas for list prefix *}
+text \<open>Parallel etc. and lemmas for list prefix\<close>
 
 lemma prefix_induct [consumes 1, case_names Nil Cons]:
   fixes prefix
@@ -289,7 +289,7 @@ next
     by (simp only: pv) (erule not_prefix_cases, auto intro: r1 r2 ih)
 qed
 
-text {* right-padding a word to a certain length *}
+text \<open>right-padding a word to a certain length\<close>
 
 definition
   "bl_pad_to bl sz \<equiv> bl @ (replicate (sz - length bl) False)"
@@ -318,7 +318,7 @@ proof (rule, rule)
   qed
 qed
 
-text {* Lemmas about words *}
+text \<open>Lemmas about words\<close>
 
 lemmas and_bang = word_and_nth
 
