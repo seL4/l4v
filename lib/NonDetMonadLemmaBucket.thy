@@ -11,7 +11,7 @@
 theory NonDetMonadLemmaBucket
 imports
   "Monad_WP/NonDetMonadVCG"
-  "Word_Lib/Word_Lemmas_32"
+  "WordSetup"
   "MonadEq"
   "Monad_WP/WhileLoopRulesCompleteness"
 begin

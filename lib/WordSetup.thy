@@ -8,8 +8,8 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory WordSetup
-imports "Word_Lib/Word_Setup_32"
+theory WordSetup           
+imports "Word_Lib/Word_Lemmas_32"
 begin
 
 (* select 32 bits *)
