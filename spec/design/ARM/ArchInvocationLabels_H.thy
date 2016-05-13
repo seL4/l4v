@@ -13,7 +13,7 @@ chapter "Architecture-specific Invocation Labels"
 theory ArchInvocationLabels_H
 imports
     "../../../lib/Word_Lib/Enumeration"
-    "../../machine/ARM/Setup_Locale"
+    "../../machine/Setup_Locale"
 begin
 context Arch begin global_naming ARM_H
 
@@ -49,14 +49,14 @@ end
 context Arch begin global_naming ARM_H
 
 end
-qualify ARM_H (in Arch) 
+qualify ARM_H (in Arch)
 (* arch_invocation_label instance proofs *)
 (*<*)
 instantiation arch_invocation_label :: enum begin
 interpretation Arch .
 definition
-  enum_arch_invocation_label: "enum_class.enum \<equiv> 
-    [ 
+  enum_arch_invocation_label: "enum_class.enum \<equiv>
+    [
       ARMPDClean_Data,
       ARMPDInvalidate_Data,
       ARMPDCleanInvalidate_Data,
@@ -94,7 +94,7 @@ instantiation arch_invocation_label :: enum_alt
 begin
 interpretation Arch .
 definition
-  enum_alt_arch_invocation_label: "enum_alt \<equiv> 
+  enum_alt_arch_invocation_label: "enum_alt \<equiv>
     alt_from_ord (enum :: arch_invocation_label list)"
 instance ..
 end

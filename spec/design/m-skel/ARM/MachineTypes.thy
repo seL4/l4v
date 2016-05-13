@@ -13,15 +13,15 @@ chapter "ARM Machine Types"
 theory MachineTypes
 imports
   "../../../lib/Monad_WP/NonDetMonad"
-  Setup_Locale
+  "../Setup_Locale"
   Platform
 begin
 context Arch begin global_naming ARM
 
-(* !!! Generated File !!! Skeleton in ../../design/skel-m/ARMMachineTypes.thy *)
+(* !!! Generated File !!! Skeleton in ../../design/skel-m/ARM/MachineTypes.thy *)
 
 text {*
-  An implementation of the machine's types, defining register set 
+  An implementation of the machine's types, defining register set
   and some observable machine state.
 *}
 
@@ -55,9 +55,9 @@ text {*
 *}
 type_synonym exclusive_monitors = "(word32 \<Rightarrow> bool) list \<times> (word32 \<times> nat \<Rightarrow> bool)"
 
-text {* 
+text {*
   The full machine state is the state observable by the kernel plus
-  the underspecified rest above. The observable parts are the 
+  the underspecified rest above. The observable parts are the
   interrupt controller (which IRQs are masked) and the memory of the
   machine. The latter is shadow state: kernel memory is kept in a
   separate, more abstract datatype; user memory is reflected down
@@ -73,7 +73,7 @@ record
   irq_state :: nat
   underlying_memory :: "word32 \<Rightarrow> word8"
   exclusive_state :: ARM.exclusive_monitors
-  machine_state_rest :: ARM.machine_state_rest  
+  machine_state_rest :: ARM.machine_state_rest
 
 consts irq_oracle :: "nat \<Rightarrow> 10 word"
 
@@ -123,9 +123,9 @@ text {*
 *}
 definition
   init_machine_state :: machine_state where
- "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks, 
+ "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,
                          irq_state = 0,
-                         underlying_memory = init_underlying_memory, 
+                         underlying_memory = init_underlying_memory,
                          exclusive_state = default_exclusive_state,
                          machine_state_rest = undefined \<rparr>"
 

@@ -13,7 +13,7 @@ chapter "Architecture-specific Invocation Labels"
 theory ArchInvocationLabels_H
 imports
     "../../../lib/Word_Lib/Enumeration"
-    "../../machine/ARM/Setup_Locale"
+    "../../machine/Setup_Locale"
 begin
 context Arch begin global_naming ARM_H
 

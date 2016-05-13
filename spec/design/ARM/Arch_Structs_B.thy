@@ -13,7 +13,7 @@
 chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
-imports "~~/src/HOL/Main" "../../../spec/machine/$L4V_ARCH/Setup_Locale"
+imports "~~/src/HOL/Main" "../../../spec/machine/Setup_Locale"
 begin
 context Arch begin global_naming ARM_H
 
