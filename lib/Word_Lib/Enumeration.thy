@@ -96,7 +96,7 @@ lemma to_from_enum [simp]:
   shows "toEnum (fromEnum x) = x"
 proof -
   have "x \<in> set enum" by simp
-  thus ?thesis by (simp add: toEnum_def fromEnum_def nth_the_index the_index_bounded)
+  then show ?thesis by (simp add: toEnum_def fromEnum_def nth_the_index the_index_bounded)
 qed
 
 lemma from_to_enum [simp]:
@@ -109,12 +109,12 @@ lemma map_enum:
 proof -
   have "fromEnum x \<le> fromEnum (maxBound :: 'a)"
     by (rule maxBound_is_bound)
-  hence "fromEnum x < length (enum::'a list)"
+  then have "fromEnum x < length (enum::'a list)"
     by (simp add: maxBound_less_length)
-  hence "map f enum ! fromEnum x = f (enum ! fromEnum x)" by simp
+  then have "map f enum ! fromEnum x = f (enum ! fromEnum x)" by simp
   also
   have "x \<in> set enum" by simp
-  hence "enum ! fromEnum x = x"
+  then have "enum ! fromEnum x = x"
     by (simp add: fromEnum_def nth_the_index)
   finally
   show ?thesis .

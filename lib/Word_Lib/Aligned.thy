@@ -95,7 +95,7 @@ lemma nat_power_less_diff:
   using lt
 proof (induct n arbitrary: m)
   case 0
-  thus ?case by simp
+  then show ?case by simp
 next
   case (Suc n)
 
@@ -105,10 +105,10 @@ next
   show ?case
   proof (cases m)
     case 0
-    thus ?thesis using Suc by simp
+    then show ?thesis using Suc by simp
   next
     case (Suc m')
-    thus ?thesis using prem
+    then show ?thesis using prem
       by (simp add: ac_simps ih)
   qed
 qed
@@ -126,7 +126,7 @@ proof -
     show "q < 2 ^ (len_of TYPE('a) - n)"
     proof (rule nat_power_less_diff)
       have "unat w < 2 ^ size w" unfolding word_size ..
-      hence "unat w < 2 ^ len_of TYPE('a)" by simp
+      then have "unat w < 2 ^ len_of TYPE('a)" by simp
       with wv show "2 ^ n * q < 2 ^ len_of TYPE('a)" by simp
     qed
 
@@ -134,8 +134,8 @@ proof -
       by (induct n) simp+
     
     from wv have "of_nat (unat w) = of_nat (2 ^ n * q)" by simp
-    hence "w = of_nat (2 ^ n * q)" by (subst word_unat.Rep_inverse [symmetric])
-    thus "w = 2 ^ n * (of_nat q)" by (simp add: r)      
+    then have "w = of_nat (2 ^ n * q)" by (subst word_unat.Rep_inverse [symmetric])
+    then show "w = 2 ^ n * (of_nat q)" by (simp add: r)      
   qed
 qed
 
@@ -165,7 +165,7 @@ lemma is_aligned_drop:
 proof -
   have "to_bl w = take (len_of TYPE('a) - n) (to_bl w) @ replicate n False" 
     by (rule is_aligned_replicate) fact+
-  hence "drop (len_of TYPE('a) - n) (to_bl w) = drop (len_of TYPE('a) - n) \<dots>" by simp
+  then have "drop (len_of TYPE('a) - n) (to_bl w) = drop (len_of TYPE('a) - n) \<dots>" by simp
   also have "\<dots> = replicate n False" by simp
   finally show ?thesis .
 qed
@@ -249,7 +249,7 @@ proof cases
       finally show ?thesis ..
     next
       case False
-      hence "unat (x + y) = (unat x + unat y) mod 2 ^ len_of TYPE('a)"
+      then have "unat (x + y) = (unat x + unat y) mod 2 ^ len_of TYPE('a)"
         by (subst unat_word_ariths(1)) simp
 
       also have "\<dots> = (2 ^ m * (2 ^ k * q1 + q2)) mod 2 ^ len_of TYPE('a)"
@@ -304,10 +304,10 @@ proof cases
     finally show "unat (k << m) = 2 ^ m * (unat k mod 2 ^ q)" .
   qed
 
-  thus ?thesis by (unfold is_aligned_def)
+  then show ?thesis by (unfold is_aligned_def)
 next
   assume "\<not> m < len_of TYPE('a)"
-  thus ?thesis
+  then show ?thesis
     by (simp add: not_less power_overflow is_aligned_mask mask_def
                   shiftl_zero_size word_size)
 qed
@@ -377,10 +377,10 @@ proof -
   show ?thesis
   proof (cases "sz = 0")
     case True
-    thus ?thesis using off ptrq qv by clarsimp
+    then show ?thesis using off ptrq qv by clarsimp
   next
     case False
-    hence sne: "0 < sz" ..
+    then have sne: "0 < sz" ..
     
     show ?thesis
     proof -
@@ -471,7 +471,7 @@ lemma map_zip_replicate_False_xor:
 lemma drop_minus_lem:
   "\<lbrakk> n \<le> length xs; 0 < n; n' = length xs \<rbrakk> \<Longrightarrow> drop (n' - n) xs = rev xs ! (n - 1)  # drop (Suc (n' - n)) xs"  
 proof (induct xs arbitrary: n n')
-  case Nil thus ?case by simp
+  case Nil then show ?case by simp
 next
   case (Cons y ys)
   from Cons.prems
@@ -743,7 +743,7 @@ proof -
   show ?thesis
   proof (cases "sz = 0")
     case True
-    thus ?thesis using off ptrq qv
+    then show ?thesis using off ptrq qv
       apply (clarsimp)
       apply (erule le_SucE)
        apply (simp add: unat_of_nat)
@@ -751,7 +751,7 @@ proof -
       done
   next
     case False
-    hence sne: "0 < sz" ..
+    then have sne: "0 < sz" ..
 
     show ?thesis
     proof -

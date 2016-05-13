@@ -85,7 +85,7 @@ next
     ultimately show "(a ^ m div a ^ n) * a ^ n = a ^ m" by simp
   qed
 
-  thus "a ^ n * a ^ (m - n) = a ^ n * (a ^ m div a ^ n)" using lt
+  then show "a ^ n * a ^ (m - n) = a ^ n * (a ^ m div a ^ n)" using lt
     by (simp add: power_add [symmetric])
 qed
 

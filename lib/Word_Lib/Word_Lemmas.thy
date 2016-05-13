@@ -191,7 +191,7 @@ proof -
   def as' == as
 
   have "suffixeq as as'" unfolding as'_def by simp
-  thus ?thesis
+  then show ?thesis
   proof (induct as)
     case Nil show ?case by fact
   next
@@ -200,8 +200,8 @@ proof -
     show ?case
     proof (rule consr)
       from Cons.prems show "suffixeq (x # xs) as" unfolding as'_def .
-      hence "suffixeq xs as'" by (auto dest: suffixeq_ConsD simp: as'_def)
-      thus "P xs" using Cons.hyps by simp
+      then have "suffixeq xs as'" by (auto dest: suffixeq_ConsD simp: as'_def)
+      then show "P xs" using Cons.hyps by simp
     qed
   qed
 qed
@@ -238,7 +238,7 @@ lemma not_prefix_cases:
   and c3: "\<And>a as x xs. \<lbrakk> prefix = a#as; lst = x#xs; x \<noteq> a\<rbrakk> \<Longrightarrow> R"
   shows "R"
 proof (cases prefix)
-  case Nil thus ?thesis using pfx by simp
+  case Nil then show ?thesis using pfx by simp
 next
   case (Cons a as)
 
@@ -246,7 +246,7 @@ next
 
   show ?thesis
   proof (cases lst)
-    case Nil thus ?thesis
+    case Nil then show ?thesis
       by (intro c1, simp add: Cons)
   next
     case (Cons x xs)
@@ -274,7 +274,7 @@ lemma not_prefix_induct [consumes 1, case_names Nil Neq Eq]:
   shows "P prefix lst"
   using np
 proof (induct lst arbitrary: prefix)
-  case Nil thus ?case
+  case Nil then show ?case
     by (auto simp: neq_Nil_conv elim!: not_prefix_cases intro!: base)
 next
   case (Cons y ys)
@@ -347,7 +347,7 @@ proof (subst mn)
      by (rule order_less_le_trans [OF unat_mono [OF xv] order_eq_refl],
        rule unat_power_lower[OF mv])
 
-  thus "x * 2 ^ n + y < 2 ^ (m + n)" using ux uy nv mnv xv'
+  then show "x * 2 ^ n + y < 2 ^ (m + n)" using ux uy nv mnv xv'
   apply (subst word_less_nat_alt)
   apply (subst unat_word_ariths)+
   apply (subst mod_less)
@@ -401,7 +401,7 @@ proof -
   have "Suc (unat ((2::'a word) ^ n - 1)) = unat ((2::'a word) ^ n)" using nv
     by (metis Suc_pred' power_2_ge_iff unat_gt_0 unat_minus_one word_not_simps(1))
 
-  thus ?thesis using nv
+  then show ?thesis using nv
     apply -
     apply (subst word_le_nat_alt)
     apply (subst less_Suc_eq_le [symmetric])
@@ -419,7 +419,7 @@ proof -
   have "0 < unat x"
     by (rule order_less_le_trans [where y = 1], simp, subst unat_1 [symmetric], rule iffD1 [OF word_le_nat_alt lt])
 
-  thus ?thesis
+  then show ?thesis
     by ((subst unat_sub [OF lt])+, simp only:  unat_1)
 qed
 
@@ -456,7 +456,7 @@ proof -
   from ij ujk knz have jk: "unat i * unat k < 2 ^ len_of TYPE ('a)"
     by (auto intro: order_less_subst2 simp: word_less_nat_alt elim: mult_less_mono1)
 
-  thus ?thesis using ujk knz ij
+  then show ?thesis using ujk knz ij
     by (auto simp: word_less_nat_alt iffD1 [OF unat_mult_lem])
 qed
 
@@ -658,7 +658,7 @@ proof -
     apply (erule order_less_trans [OF _ unat_lt2p])
     done
 
-  thus ?thesis
+  then show ?thesis
     by (rule ssubst) (rule distinct_sublistI, simp)
 qed
 
@@ -705,7 +705,7 @@ lemma upto_enum_less:
   shows   "x < 2 ^ n"
 proof (cases n)
   case 0
-  thus ?thesis using xin by simp
+  then show ?thesis using xin by simp
 next
   case (Suc m)
   show ?thesis using xin nv by simp
@@ -769,7 +769,7 @@ proof -
   from ij ujk have jk: "unat i + unat k < 2 ^ len_of TYPE ('a)"
     by (auto elim: order_le_less_subst2 simp: word_le_nat_alt elim: add_le_mono1)
 
-  thus ?thesis using ujk ij
+  then show ?thesis using ujk ij
     by (auto simp: word_le_nat_alt iffD1 [OF unat_add_lem])
 qed
 
@@ -800,7 +800,7 @@ proof -
   from ij ujk have jk: "unat i + unat k < 2 ^ len_of TYPE ('a)"
     by (auto elim: order_le_less_subst2 simp: word_less_nat_alt elim: add_less_mono1)
 
-  thus ?thesis using ujk ij
+  then show ?thesis using ujk ij
     by (auto simp: word_less_nat_alt iffD1 [OF unat_add_lem])
 qed
 
@@ -883,7 +883,7 @@ proof -
   from ij ujk knz have jk: "unat i * unat k < 2 ^ len_of TYPE ('a)"
     by (auto elim: order_le_less_subst2 simp: word_le_nat_alt elim: mult_le_mono1)
 
-  thus ?thesis using ujk knz ij
+  then show ?thesis using ujk knz ij
     by (auto simp: word_le_nat_alt iffD1 [OF unat_mult_lem])
 qed
 
@@ -900,7 +900,7 @@ next
   assume p: "i * k \<le> j * k"
 
   have "0 < unat k" using knz by (simp add: word_less_nat_alt)
-  thus "i \<le> j" using p
+  then show "i \<le> j" using p
     by (clarsimp simp: word_le_nat_alt iffD1 [OF unat_mult_lem uik]
       iffD1 [OF unat_mult_lem ujk])
 qed
@@ -922,13 +922,13 @@ lemma MinI:
   and    min: "\<forall>y \<in> A. m \<le> y"
   shows "Min A = m" using fa ne xv min
 proof (induct A arbitrary: m rule: finite_ne_induct)
-  case singleton thus ?case by simp
+  case singleton then show ?case by simp
 next
   case (insert y F)
 
   from insert.prems have yx: "m \<le> y" and fx: "\<forall>y \<in> F. m \<le> y" by auto
   have "m \<in> insert y F" by fact
-  thus ?case
+  then show ?case
   proof
     assume mv: "m = y"
 
@@ -942,7 +942,7 @@ next
       done
   next
     assume "m \<in> F"
-    hence mf: "Min F = m"
+    then have mf: "Min F = m"
       by (rule insert.hyps(4) [OF _ fx])
 
     show ?case
@@ -1060,7 +1060,7 @@ lemma unat_of_bl_length:
   "unat (of_bl xs :: 'a::len word) < 2 ^ (length xs)"
 proof (cases "length xs < len_of TYPE('a)")
   case True
-  hence "(of_bl xs::'a::len word) < 2 ^ length xs"
+  then have "(of_bl xs::'a::len word) < 2 ^ length xs"
     by (simp add: of_bl_length_less)
   with True
   show ?thesis
@@ -1072,7 +1072,7 @@ next
   also
   from False
   have "len_of TYPE('a) \<le> length xs" by simp
-  hence "2 ^ len_of TYPE('a) \<le> (2::nat) ^ length xs"
+  then have "2 ^ len_of TYPE('a) \<le> (2::nat) ^ length xs"
     by (rule power_increasing) simp
   finally
   show ?thesis .
@@ -1207,11 +1207,11 @@ proof cases
   show ?thesis
   proof (cases "sz = 0")
     case True
-    thus ?thesis using kv szv
+    then show ?thesis using kv szv
      by (simp add: unat_of_nat)
   next
     case False
-    hence sne: "0 < sz" ..
+    then have sne: "0 < sz" ..
 
     have uk: "unat (of_nat k :: 'a word) = k"
       apply (subst unat_of_nat)
@@ -1345,13 +1345,13 @@ proof cases
       ultimately show ?thesis by simp
     qed
 
-    thus False using neq by simp
+    then show False using neq by simp
   qed
 next
   assume "\<not> sz < len_of TYPE('a)"
   with neq alx aly
   have False by (simp add: is_aligned_mask mask_def power_overflow)
-  thus ?thesis ..
+  then show ?thesis ..
 qed
 
 lemma less_two_pow_divD:
@@ -1481,7 +1481,7 @@ proof -
   proof -
     fix m :: nat and  s
     assume m: "m < 2 ^ (len_of TYPE('a) - s)" and s: "s < len_of TYPE('a)"
-    hence "unat ((of_nat m) :: 'a word) = m"
+    then have "unat ((of_nat m) :: 'a word) = m"
       apply (subst unat_of_nat)
       apply (subst mod_less)
        apply (erule order_less_le_trans)
@@ -1489,7 +1489,7 @@ proof -
         apply simp_all
       done
 
-    thus "?thesis m s" using s m
+    then show "?thesis m s" using s m
       apply (subst iffD1 [OF unat_mult_lem])
       apply (simp add: nat_less_power_trans)+
       done
@@ -1505,10 +1505,10 @@ proof -
   note us2 = rl [OF nq s2wb]
 
   from nm have "n \<le> m" by clarsimp
-  hence "(2::'a word) ^ s2 * of_nat nq \<le> 2 ^ s1 * of_nat mq" using nnq mmq by simp
-  hence "2 ^ s2 * nq \<le> 2 ^ s1 * mq" using s1wb s2wb
+  then have "(2::'a word) ^ s2 * of_nat nq \<le> 2 ^ s1 * of_nat mq" using nnq mmq by simp
+  then have "2 ^ s2 * nq \<le> 2 ^ s1 * mq" using s1wb s2wb
     by (simp add: word_le_nat_alt us1 us2)
-  hence nqmq: "2 ^ sq * nq \<le> mq" using sq by (simp add: power_add)
+  then have nqmq: "2 ^ sq * nq \<le> mq" using sq by (simp add: power_add)
 
   have "m - n = 2 ^ s1 * of_nat mq - 2 ^ s2 * of_nat nq" using mmq nnq by simp
   also have "\<dots> = 2 ^ s1 * of_nat mq - 2 ^ s1 * 2 ^ sq * of_nat nq" using sq by (simp add: power_add)
@@ -1519,8 +1519,8 @@ proof -
   moreover
   from nm have "m - n \<le> 2 ^ s2 - 1"
     by - (rule word_diff_ls', (simp add: field_simps)+)
-  hence "(2::'a word) ^ s1 * of_nat (mq - 2 ^ sq * nq) < 2 ^ s2" using mn s2wb by (simp add: field_simps)
-  hence "of_nat (mq - 2 ^ sq * nq) < (2::'a word) ^ (s2 - s1)"
+  then have "(2::'a word) ^ s1 * of_nat (mq - 2 ^ sq * nq) < 2 ^ s2" using mn s2wb by (simp add: field_simps)
+  then have "of_nat (mq - 2 ^ sq * nq) < (2::'a word) ^ (s2 - s1)"
   proof (rule word_power_less_diff)
     have mm: "mq - 2 ^ sq * nq < 2 ^ (len_of TYPE('a) - s1)" using mq by simp
     moreover from s10 have "len_of TYPE('a) - s1 < len_of TYPE('a)"
@@ -1533,7 +1533,7 @@ proof -
        apply simp+
       done
   qed
-  hence "mq - 2 ^ sq * nq < 2 ^ (s2 - s1)" using mq s2wb
+  then have "mq - 2 ^ sq * nq < 2 ^ (s2 - s1)" using mq s2wb
     apply (simp add: word_less_nat_alt)
     apply (subst (asm) unat_of_nat)
     apply (subst (asm) mod_less)
@@ -1743,14 +1743,14 @@ lemma list_all2_induct [consumes 1, case_names Nil Cons]:
   shows  "P xs ys"
   using lall
 proof (induct rule: list_induct2 [OF list_all2_lengthD [OF lall]])
-  case 1 thus ?case by auto fact+
+  case 1 then show ?case by auto fact+
 next
   case (2 x xs y ys)
 
   show ?case
   proof (rule consr)
     from "2.prems" show "list_all2 Q xs ys" and "Q x y" by simp_all
-    thus "P xs ys" by (intro "2.hyps")
+    then show "P xs ys" by (intro "2.hyps")
   qed
 qed
 
@@ -1766,7 +1766,7 @@ proof -
   def bs' == bs
 
   have "suffixeq as as' \<and> suffixeq bs bs'" unfolding as'_def bs'_def by simp
-  thus ?thesis using lall
+  then show ?thesis using lall
   proof (induct rule: list_induct2 [OF list_all2_lengthD [OF lall]])
     case 1 show ?case by fact
   next
@@ -1775,7 +1775,7 @@ proof -
     show ?case
     proof (rule consr)
       from "2.prems" show "list_all2 Q xs ys" and "Q x y" by simp_all
-      thus "P xs ys" using "2.hyps" "2.prems" by (auto dest: suffixeq_ConsD)
+      then show "P xs ys" using "2.hyps" "2.prems" by (auto dest: suffixeq_ConsD)
       from "2.prems" show "suffixeq (x # xs) as" and "suffixeq (y # ys) bs"
 	by (auto simp: as'_def bs'_def)
     qed
@@ -2020,9 +2020,9 @@ lemma mask_add_aligned:
 lemma take_prefix:
   "(take (length xs) ys = xs) = (xs \<le> ys)"
 proof (induct xs arbitrary: ys)
-  case Nil thus ?case by simp
+  case Nil then show ?case by simp
 next
-  case Cons thus ?case by (cases ys) auto
+  case Cons then show ?case by (cases ys) auto
 qed
 
 lemma take_is_prefix:
@@ -2057,7 +2057,7 @@ lemma is_aligned_addD1:
   shows "is_aligned y n"
   using al2
 proof (rule is_aligned_get_word_bits)
-  assume "x = 0" thus ?thesis using al1 by simp
+  assume "x = 0" then show ?thesis using al1 by simp
 next
   assume nv: "n < len_of TYPE('a)"
   from al1 obtain q1
@@ -2068,7 +2068,7 @@ next
     by (rule is_alignedE)
   ultimately have "y = 2 ^ n * (of_nat q1 - of_nat q2)"
     by (simp add: field_simps)
-  thus ?thesis using nv by (simp add: is_aligned_mult_triv1)
+  then show ?thesis using nv by (simp add: is_aligned_mult_triv1)
 qed
 
 lemmas is_aligned_addD2 =
@@ -2343,7 +2343,7 @@ lemma mod_mod_power:
 proof (cases "m \<le> n")
   case True
 
-  hence "k mod 2 ^ m mod 2 ^ n = k mod 2 ^ m"
+  then have "k mod 2 ^ m mod 2 ^ n = k mod 2 ^ m"
     apply -
     apply (subst mod_less [where n = "2 ^ n"])
     apply (rule order_less_le_trans [OF mod_less_divisor])
@@ -2353,14 +2353,14 @@ proof (cases "m \<le> n")
   finally show ?thesis .
 next
   case False
-  hence "n < m" by simp
+  then have "n < m" by simp
   then obtain d where md: "m = n + d"
     by (auto dest: less_imp_add_positive)
-  hence "k mod 2 ^ m = 2 ^ n * (k div 2 ^ n mod 2 ^ d) + k mod 2 ^ n"
+  then have "k mod 2 ^ m = 2 ^ n * (k div 2 ^ n mod 2 ^ d) + k mod 2 ^ n"
     by (simp add: mod_mult2_eq power_add)
-  hence "k mod 2 ^ m mod 2 ^ n = k mod 2 ^ n"
+  then have "k mod 2 ^ m mod 2 ^ n = k mod 2 ^ n"
     by (simp add: mod_add_left_eq)
-  thus ?thesis using False
+  then show ?thesis using False
     by simp
 qed
 
@@ -2428,7 +2428,7 @@ proof -
     finally show ?thesis ..
   qed
 
-  hence "a div 2 ^ n * 2 ^ n < a" using sz anz
+  then have "a div 2 ^ n * 2 ^ n < a" using sz anz
     apply (subst word_less_nat_alt)
     apply (subst unat_word_ariths)
     apply (subst unat_div)
@@ -2459,7 +2459,7 @@ lemma power_mod_div:
   shows "x mod 2 ^ n div 2 ^ m = x div 2 ^ m mod 2 ^ (n - m)" (is "?LHS = ?RHS")
 proof (cases "n \<le> m")
   case True
-  hence "?LHS = 0"
+  then have "?LHS = 0"
     apply -
     apply (rule div_less)
     apply (rule order_less_le_trans [OF mod_less_divisor])
@@ -2471,14 +2471,14 @@ proof (cases "n \<le> m")
   finally show ?thesis .
 next
   case False
-  hence lt: "m < n" by simp
+  then have lt: "m < n" by simp
   then obtain q where nv: "n = m + q" and "0 < q"
     by (auto dest: less_imp_Suc_add)
 
-  hence "x mod 2 ^ n = 2 ^ m * (x div 2 ^ m mod 2 ^ q) + x mod 2 ^ m"
+  then have "x mod 2 ^ n = 2 ^ m * (x div 2 ^ m mod 2 ^ q) + x mod 2 ^ m"
     by (simp add: power_add mod_mult2_eq)
 
-  hence "?LHS = x div 2 ^ m mod 2 ^ q"
+  then have "?LHS = x div 2 ^ m mod 2 ^ q"
     by (simp add: div_add1_eq)
 
   also have "\<dots> = ?RHS" using nv
@@ -2856,7 +2856,7 @@ proof (subst bang_eq, rule allI)
   show "x !! m = y !! m"
   proof (cases "m < n")
     case True
-    hence "x !! m = ((x && mask n) !! m)"
+    then have "x !! m = ((x && mask n) !! m)"
       by (simp add: word_size bang_conj_lt)
     also have "\<dots> = ((y && mask n) !! m)" using m1 by simp
     also have "\<dots> = y !! m" using True
@@ -2864,7 +2864,7 @@ proof (subst bang_eq, rule allI)
     finally show ?thesis .
   next
     case False
-    hence "x !! m = ((x && ~~ mask n) !! m)"
+    then have "x !! m = ((x && ~~ mask n) !! m)"
       by (simp add: neg_mask_bang bang_conj_lt)
     also have "\<dots> = ((y && ~~ mask n) !! m)" using m2 by simp
     also have "\<dots> = y !! m" using False
@@ -3115,7 +3115,7 @@ proof -
   from T
   have P: "unat x < 2 ^ len_of TYPE('b)" "unat y < 2 ^ len_of TYPE('b)"
     by (fastforce intro!: less_le_trans[OF unat_lt2p])+
-  thus ?thesis
+  then show ?thesis
     by (simp add: unat_arith_simps unat_ucast assms[simplified unat_arith_simps])
 qed
 
@@ -4530,9 +4530,9 @@ proof -
       using mod_pos_pos_trivial by force
     have "(1::int) \<le> 2 ^ len_of TYPE('b)"
       by simp
-    hence "2 ^ len_of TYPE('b) + - (1::int) * ((- 1 + 2 ^ len_of TYPE('b)) mod 2 ^ len_of TYPE ('b)) = 1"
+    then have "2 ^ len_of TYPE('b) + - (1::int) * ((- 1 + 2 ^ len_of TYPE('b)) mod 2 ^ len_of TYPE ('b)) = 1"
       using f3 f2 by blast
-    hence f4: "- (1::int) + 2 ^ len_of TYPE('b) = (- 1 + 2 ^ len_of TYPE('b)) mod 2 ^ len_of TYPE('b)"
+    then have f4: "- (1::int) + 2 ^ len_of TYPE('b) = (- 1 + 2 ^ len_of TYPE('b)) mod 2 ^ len_of TYPE('b)"
       by linarith
     have f5: "x \<le> word_of_int (uint (word_of_int (- 1 + 2 ^ len_of TYPE('b))::'b word))"
       using a1 by force
@@ -4756,12 +4756,12 @@ lemma unat_ucast_no_overflow_le:
         apply (simp add: ucast_nat_def[symmetric])
         apply (rule unat_ucast_less_no_overflow[OF no_overflow ineq])
         done
-      thus ?thesis
+      then show ?thesis
         apply (rule order_less_le_trans)
         apply (simp add:ucast_ucast_mask word_and_le2)
         done
    qed
-   thus ?thesis by (simp add:RL LR iffI)
+   then show ?thesis by (simp add:RL LR iffI)
 qed
 
 (* casting a long word to a shorter word and casting back to the long word 
@@ -4822,7 +4822,7 @@ proof -
   { fix n
     have "n < len_of TYPE('a) \<Longrightarrow> strict_part_mono {..n} (\<lambda>x. (2 :: 'a :: len word) ^ x)"
     proof (induct n)
-      case 0 thus ?case by simp
+      case 0 then show ?case by simp
     next
       case (Suc n)
       from Suc.prems
@@ -4832,7 +4832,7 @@ proof -
       show ?case by (subst strict_part_mono_by_steps) simp
     qed
   }
-  thus ?thesis by simp
+  then show ?thesis by simp
 qed
 
 lemma word_shift_by_2:
@@ -4924,19 +4924,19 @@ lemma word_add_power_off:
   shows "(a * 2 ^ m) + off < k * 2 ^ m"
 proof (cases "m = 0")
   case True
-  thus ?thesis using off ak by simp
+  then show ?thesis using off ak by simp
 next
   case False
 
   from ak have ak1: "a + 1 \<le> k" by (rule inc_le)
-  hence "(a + 1) * 2 ^ m \<noteq> 0"
+  then have "(a + 1) * 2 ^ m \<noteq> 0"
     apply -
     apply (rule word_power_nonzero)
     apply (erule order_le_less_trans  [OF _ kw])
     apply (rule mw)
     apply (rule less_is_non_zero_p1 [OF ak])
     done
-  hence "(a * 2 ^ m) + off < ((a + 1) * 2 ^ m)" using kw mw
+  then have "(a * 2 ^ m) + off < ((a + 1) * 2 ^ m)" using kw mw
     apply -
     apply (simp add: distrib_right)
     apply (rule word_plus_strict_mono_right [OF off])
@@ -4988,7 +4988,7 @@ proof (subst upto_enum_red, subst if_not_P [OF leD [OF lt3]], clarsimp, rule con
       done
   qed
 
-  thus "(z - x) div (y - x) * (y - x) = 0"
+  then show "(z - x) div (y - x) * (y - x) = 0"
     by (metis mult_zero_left unat_0 word_unat.Rep_eqD)
 qed
 
@@ -5040,7 +5040,7 @@ proof -
   have anz: "a mod 2 ^ n \<noteq> 0" 
     by (rule not_aligned_mod_nz) fact+
   
-  hence um: "unat (a mod 2 ^ n - 1) div 2 ^ n = 0" using sz
+  then have um: "unat (a mod 2 ^ n - 1) div 2 ^ n = 0" using sz
     apply -
     apply (rule div_less)
     apply (simp add: unat_minus_one)
@@ -5095,7 +5095,7 @@ lemma alignUp_ge:
   shows "a \<le> alignUp a n"
 proof (cases "is_aligned a n")
   case True
-  thus ?thesis using sz
+  then show ?thesis using sz
     by (subst alignUp_idem, simp_all)
 next
   case False
@@ -5149,17 +5149,17 @@ lemma alignUp_le_greater_al:
   shows   "alignUp a n \<le> x"
 proof (cases "is_aligned a n")
   case True
-  thus ?thesis using sz le by (simp add: alignUp_idem)
+  then show ?thesis using sz le by (simp add: alignUp_idem)
 next
   case False
 
-  hence anz: "a mod 2 ^ n \<noteq> 0" 
+  then have anz: "a mod 2 ^ n \<noteq> 0" 
     by (rule not_aligned_mod_nz)
   
   from al obtain k where xk: "x = 2 ^ n * of_nat k" and kv: "k < 2 ^ (len_of TYPE('a) - n)"
     by (auto elim!: is_alignedE)
   
-  hence kn: "unat (of_nat k :: 'a word) * unat ((2::'a word) ^ n) < 2 ^ len_of TYPE('a)" 
+  then have kn: "unat (of_nat k :: 'a word) * unat ((2::'a word) ^ n) < 2 ^ len_of TYPE('a)" 
     using sz
     apply (subst unat_of_nat_eq)
      apply (erule order_less_le_trans)
@@ -5193,11 +5193,11 @@ lemma alignUp_is_aligned_nz:
   shows   "alignUp (a::'a :: len word) n \<noteq> 0"
 proof (cases "is_aligned a n")
   case True
-  hence "alignUp a n = a" using sz by (simp add: alignUp_idem)
-  thus ?thesis using az by simp
+  then have "alignUp a n = a" using sz by (simp add: alignUp_idem)
+  then show ?thesis using az by simp
 next
   case False
-  hence anz: "a mod 2 ^ n \<noteq> 0" 
+  then have anz: "a mod 2 ^ n \<noteq> 0" 
     by (rule not_aligned_mod_nz)
 
   {
@@ -5221,10 +5221,10 @@ next
     from al obtain k where  kv: "k < 2 ^ (len_of TYPE('a) - n)" and xk: "x = 2 ^ n * of_nat k"
       by (auto elim!: is_alignedE)
 
-    hence "a div 2 ^ n < of_nat k" using ax sz anz
+    then have "a div 2 ^ n < of_nat k" using ax sz anz
       by (rule alignUp_div_helper)
 
-    hence r: "unat a div 2 ^ n < k" using sz
+    then have r: "unat a div 2 ^ n < k" using sz
       apply (simp add: unat_div word_less_nat_alt)
       apply (subst (asm) unat_of_nat)
       apply (subst (asm) mod_less)
@@ -5235,8 +5235,8 @@ next
     have "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n"
       by (rule alignUp_not_aligned_eq) fact+
     
-    hence "\<dots> = 0" using asm by simp
-    hence "unat a div 2 ^ n = 2 ^ (len_of TYPE('a) - n) - 1" using sz leq
+    then have "\<dots> = 0" using asm by simp
+    then have "unat a div 2 ^ n = 2 ^ (len_of TYPE('a) - n) - 1" using sz leq
       apply -
       apply (rule nat_diff_add)
       apply simp
@@ -5256,10 +5256,10 @@ next
       apply (simp)
       done
     
-    hence "2 ^ (len_of TYPE('a) - n) - 1 < k" using r
+    then have "2 ^ (len_of TYPE('a) - n) - 1 < k" using r
       by simp
-    hence False using kv by simp
-  } thus ?thesis by (clarsimp)
+    then have False using kv by simp
+  } then show ?thesis by (clarsimp)
 qed
 
 lemma alignUp_ar_helper:
@@ -5288,13 +5288,13 @@ proof
     
     from ax have "alignUp a n \<le> x"
       by (rule alignUp_le_greater_al) fact+
-    hence "alignUp a n + (2 ^ n - 1) \<le> x + (2 ^ n - 1)" using xl
+    then have "alignUp a n + (2 ^ n - 1) \<le> x + (2 ^ n - 1)" using xl
       apply -
       apply (erule word_plus_mono_left)
       apply (subst olen_add_eqv)
       apply (simp add: field_simps)
       done
-    thus "alignUp a n + 2 ^ n - 1 \<le> x + 2 ^ n - 1"
+    then show "alignUp a n + 2 ^ n - 1 \<le> x + 2 ^ n - 1"
       by (simp add: field_simps)
   qed
 qed
