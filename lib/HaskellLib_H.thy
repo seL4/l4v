@@ -16,8 +16,8 @@
 theory HaskellLib_H
 imports
   Lib
+  WordSetup
   "Monad_WP/NonDetMonadVCG"
-  "Word_Lib/Word_Enum"
 begin
 
 abbreviation (input) "flip \<equiv> swp"

@@ -12,7 +12,7 @@ chapter "Distinct Proposition"
 
 theory Distinct_Prop
 imports
-  HOL_Lemmas
+  "Word_Lib/HOL_Lemmas"
   "~~/src/HOL/Library/Prefix_Order"
 begin
 
