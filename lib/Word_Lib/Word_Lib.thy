@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* Miscellaneous additional library definitions and lemmas for the word type. *)
+section "Additional Word Operations"
 
 theory Word_Lib
 imports

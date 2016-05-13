@@ -9,5 +9,11 @@
  *)
 
 session Word_Lib = "HOL-Word" +
+  options [timeout = 150]
+  theories [document = false]
+    "~~/src/HOL/Word/WordBitwise"
+    "~~/src/HOL/Library/Prefix_Order"
   theories
     "Word_Lemmas_32"
+  document_files
+    "root.tex"

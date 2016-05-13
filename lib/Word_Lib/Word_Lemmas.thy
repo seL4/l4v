@@ -8,13 +8,15 @@
  * @TAG(NICTA_BSD)
  *)
 
+section "Lemmas with Generic Word Length"
+
 theory Word_Lemmas
 imports
   Aligned
   Word_Enum
 begin
 
-section \<open>Set up quickcheck to support words\<close>
+text \<open>Set up quickcheck to support words\<close>
 
 quickcheck_generator word
   constructors:

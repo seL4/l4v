@@ -8,6 +8,8 @@
  * @TAG(NICTA_BSD)
  *)
 
+section "Print Words in Hex"
+
 theory Hex_Words
 imports
   "~~/src/HOL/Word/Word"

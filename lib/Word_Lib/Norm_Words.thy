@@ -8,6 +8,8 @@
  * @TAG(NICTA_BSD)
  *)
 
+section "Normalising Word Numerals"
+
 theory Norm_Words
 imports "Signed_Words"
 begin

@@ -8,6 +8,8 @@
  * @TAG(NICTA_BSD)
  *)
 
+section "Word Alignment"
+
 theory Aligned
 imports
   Word_Lib

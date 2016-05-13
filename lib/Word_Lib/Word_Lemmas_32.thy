@@ -8,6 +8,8 @@
  * @TAG(NICTA_BSD)
  *)
 
+section "Lemmas for Word Length 32"
+
 theory Word_Lemmas_32
 imports
   Word_Lemmas

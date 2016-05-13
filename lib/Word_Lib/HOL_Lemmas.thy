@@ -8,6 +8,8 @@
  * @TAG(NICTA_BSD)
  *)
 
+section "Generic Lemmas used in the Word Library"
+
 theory HOL_Lemmas
 imports Main
 begin

@@ -8,6 +8,8 @@
  * @TAG(NICTA_BSD)
  *)
 
+section "More Lemmas on Division"
+
 theory More_Divides
 imports "~~/src/HOL/Main"
 begin

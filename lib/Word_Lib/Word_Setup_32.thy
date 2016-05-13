@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-chapter "32-Bit Machine Word Setup"
+section "32-Bit Machine Word Setup"
 
 theory Word_Setup_32
 imports Word_Enum

@@ -8,12 +8,9 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* Author: Thomas Sewell
+(* Author: Thomas Sewell *)
 
-  Instance of words in the enumeration class.
-*)
-
-chapter "Enumeration instances for Words"
+section "Enumeration Instances for Words"
 
 theory Word_Enum
 imports Enumeration Word_Lib

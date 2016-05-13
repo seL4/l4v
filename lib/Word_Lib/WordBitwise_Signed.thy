@@ -8,6 +8,8 @@
  * @TAG(NICTA_BSD)
  *)
 
+section "Bitwise tactic for Signed Words"
+
 theory WordBitwise_Signed
 imports
   "~~/src/HOL/Word/WordBitwise"

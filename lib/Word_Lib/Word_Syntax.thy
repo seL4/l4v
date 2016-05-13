@@ -8,6 +8,8 @@
  * @TAG(NICTA_BSD)
  *)
 
+section "Additional Syntax for Word Bit Operations"
+
 theory Word_Syntax
 imports
   "~~/src/HOL/Word/WordBitwise"

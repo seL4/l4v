@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-chapter "Enumeration extensions and alternative definition"
+section "Enumeration extensions and alternative definition"
 
 theory Enumeration
 imports "~~/src/HOL/Main"
