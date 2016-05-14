@@ -75,25 +75,25 @@ definition
 
 text {* Monad laws *}
 lemma oreturn_bind [simp]: "(oreturn x |>> f) = f x"
-  by (auto simp add: oreturn_def obind_def K_def intro!: ext)
+  by (auto simp add: oreturn_def obind_def K_def)
 
 lemma obind_return [simp]: "(m |>> oreturn) = m"
-  by (auto simp add: oreturn_def obind_def K_def intro!: ext split: option.splits)
+  by (auto simp add: oreturn_def obind_def K_def split: option.splits)
  
 lemma obind_assoc: 
   "(m |>> f) |>> g  =  m |>> (\<lambda>x. f x |>> g)"
-  by (auto simp add: oreturn_def obind_def K_def intro!: ext split: option.splits)
+  by (auto simp add: oreturn_def obind_def K_def split: option.splits)
 
 
 text {* Binding fail *}
 
 lemma obind_fail [simp]:
   "f |>> (\<lambda>_. ofail) = ofail"
-  by (auto simp add: ofail_def obind_def K_def intro!: ext split: option.splits)
+  by (auto simp add: ofail_def obind_def K_def split: option.splits)
 
 lemma ofail_bind [simp]:
   "ofail |>> m = ofail"
-  by (auto simp add: ofail_def obind_def K_def intro!: ext split: option.splits)
+  by (auto simp add: ofail_def obind_def K_def split: option.splits)
 
 
 

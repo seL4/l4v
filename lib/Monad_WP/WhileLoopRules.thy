@@ -594,7 +594,7 @@ lemma whileLoopE_liftE:
     apply (rule_tac x="theRight a" in exI)
     apply (rule conjI)
      apply (erule whileLoop_results_bisim [where rt=theRight and st="\<lambda>x. x" and I="\<lambda>r s. case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"],
-        auto intro: whileLoop_results.intros intro!: bexI simp: bind_def return_def lift_def split: sum.splits)[1]
+        auto intro: whileLoop_results.intros simp: bind_def return_def lift_def split: sum.splits)[1]
     apply (drule whileLoop_results_induct_lemma2 [where P="\<lambda>(r, s). case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"] )
         apply (rule refl)
        apply (rule refl)
@@ -608,7 +608,7 @@ lemma whileLoopE_liftE:
    apply (clarsimp simp: whileLoop_def liftE_def del: notI)
    apply (erule disjE)
     apply (erule whileLoop_results_bisim [where rt=theRight and st="\<lambda>x. x" and I="\<lambda>r s. case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"],
-      auto intro: whileLoop_results.intros intro!: bexI simp: bind_def return_def lift_def split: sum.splits)[1]
+      auto intro: whileLoop_results.intros simp: bind_def return_def lift_def split: sum.splits)[1]
    apply (subst (asm) whileLoop_terminates_liftE [symmetric])
    apply (fastforce simp: whileLoop_def liftE_def whileLoop_terminatesE_def)
   apply (clarsimp simp: whileLoop_def liftE_def del: notI)
