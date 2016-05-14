@@ -2318,5 +2318,131 @@ lemma fst_last_zip_upt:
   apply (simp add: min_def zip_is_empty)
   done
 
+lemma neq_into_nprefixeq:
+  "\<lbrakk> x \<noteq> take (length x) y \<rbrakk> \<Longrightarrow> \<not> x \<le> y"
+  by (clarsimp simp: prefixeq_def less_eq_list_def)
+
+lemma suffixeq_eqI:
+  "\<lbrakk> suffixeq xs as; suffixeq xs bs; length as = length bs;
+    take (length as - length xs) as \<le> take (length bs - length xs) bs\<rbrakk> \<Longrightarrow> as = bs"
+  by (clarsimp elim!: prefixE suffixeqE)
+
+lemma suffixeq_Cons_mem:
+  "suffixeq (x # xs) as \<Longrightarrow> x \<in> set as"
+  by (drule suffixeq_set_subset) simp
+
+lemma distinct_imply_not_in_tail:
+  "\<lbrakk> distinct list; suffixeq (y # ys) list\<rbrakk> \<Longrightarrow> y \<notin> set ys"
+  by (clarsimp simp:suffixeq_def)
+
+lemma list_induct_suffixeq [case_names Nil Cons]:
+  assumes nilr: "P []"
+  and    consr: "\<And>x xs. \<lbrakk>P xs; suffixeq (x # xs) as \<rbrakk> \<Longrightarrow> P (x # xs)"
+  shows  "P as"
+proof -
+  def as' == as
+
+  have "suffixeq as as'" unfolding as'_def by simp
+  then show ?thesis
+  proof (induct as)
+    case Nil show ?case by fact
+  next
+    case (Cons x xs)
+
+    show ?case
+    proof (rule consr)
+      from Cons.prems show "suffixeq (x # xs) as" unfolding as'_def .
+      then have "suffixeq xs as'" by (auto dest: suffixeq_ConsD simp: as'_def)
+      then show "P xs" using Cons.hyps by simp
+    qed
+  qed
+qed
+
+text \<open>Parallel etc. and lemmas for list prefix\<close>
+
+lemma prefix_induct [consumes 1, case_names Nil Cons]:
+  fixes prefix
+  assumes np: "prefix \<le> lst"
+  and base:   "\<And>xs. P [] xs"
+  and rl:     "\<And>x xs y ys. \<lbrakk> x = y; xs \<le> ys; P xs ys \<rbrakk> \<Longrightarrow> P (x#xs) (y#ys)"
+  shows "P prefix lst"
+  using np
+proof (induct prefix arbitrary: lst)
+  case Nil show ?case by fact
+next
+  case (Cons x xs)
+
+  have prem: "(x # xs) \<le> lst" by fact
+  then obtain y ys where lv: "lst = y # ys"
+    by (rule prefixE, auto)
+
+  have ih: "\<And>lst. xs \<le> lst \<Longrightarrow> P xs lst" by fact
+
+  show ?case using prem
+    by (auto simp: lv intro!: rl ih)
+qed
+
+lemma not_prefix_cases:
+  fixes prefix
+  assumes pfx: "\<not> prefix \<le> lst"
+  and c1: "\<lbrakk> prefix \<noteq> []; lst = [] \<rbrakk> \<Longrightarrow> R"
+  and c2: "\<And>a as x xs. \<lbrakk> prefix = a#as; lst = x#xs; x = a; \<not> as \<le> xs\<rbrakk> \<Longrightarrow> R"
+  and c3: "\<And>a as x xs. \<lbrakk> prefix = a#as; lst = x#xs; x \<noteq> a\<rbrakk> \<Longrightarrow> R"
+  shows "R"
+proof (cases prefix)
+  case Nil then show ?thesis using pfx by simp
+next
+  case (Cons a as)
+
+  have c: "prefix = a#as" by fact
+
+  show ?thesis
+  proof (cases lst)
+    case Nil then show ?thesis
+      by (intro c1, simp add: Cons)
+  next
+    case (Cons x xs)
+    show ?thesis
+    proof (cases "x = a")
+      case True
+      show ?thesis
+      proof (intro c2)
+     	show "\<not> as \<le> xs" using pfx c Cons True
+	  by simp
+      qed fact+
+    next
+      case False
+      show ?thesis by (rule c3) fact+
+    qed
+  qed
+qed
+
+lemma not_prefix_induct [consumes 1, case_names Nil Neq Eq]:
+  fixes prefix
+  assumes np: "\<not> prefix \<le> lst"
+  and base:   "\<And>x xs. P (x#xs) []"
+  and r1:     "\<And>x xs y ys. x \<noteq> y \<Longrightarrow> P (x#xs) (y#ys)"
+  and r2:     "\<And>x xs y ys. \<lbrakk> x = y; \<not> xs \<le> ys; P xs ys \<rbrakk> \<Longrightarrow> P (x#xs) (y#ys)"
+  shows "P prefix lst"
+  using np
+proof (induct lst arbitrary: prefix)
+  case Nil then show ?case
+    by (auto simp: neq_Nil_conv elim!: not_prefix_cases intro!: base)
+next
+  case (Cons y ys)
+
+  have npfx: "\<not> prefix \<le> (y # ys)" by fact
+  then obtain x xs where pv: "prefix = x # xs"
+    by (rule not_prefix_cases) auto
+
+  have ih: "\<And>prefix. \<not> prefix \<le> ys \<Longrightarrow> P prefix ys" by fact
+
+  show ?case using npfx
+    by (simp only: pv) (erule not_prefix_cases, auto intro: r1 r2 ih)
+qed
+
+lemma rsubst:
+  "\<lbrakk> P s; s = t \<rbrakk> \<Longrightarrow> P t"
+  by simp
 
 end

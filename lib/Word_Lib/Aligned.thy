@@ -608,10 +608,6 @@ lemma is_aligned_get_word_bits:
                         power_overflow)
   done
 
-lemma rsubst:
-  "\<lbrakk> P s; s = t \<rbrakk> \<Longrightarrow> P t"
-  by simp
-
 lemma aligned_small_is_0:
   "\<lbrakk> is_aligned x n; x < 2 ^ n \<rbrakk> \<Longrightarrow> x = 0"
   apply (erule is_aligned_get_word_bits)
