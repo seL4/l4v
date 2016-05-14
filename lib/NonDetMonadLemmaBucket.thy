@@ -11,9 +11,9 @@
 theory NonDetMonadLemmaBucket
 imports
   "Monad_WP/NonDetMonadVCG"
-  "WordSetup"
   "MonadEq"
   "Monad_WP/WhileLoopRulesCompleteness"
+  Distinct_Prop
 begin
 
 lemma no_fail_assume_pre:
@@ -1244,14 +1244,7 @@ lemma set_preserved_proof:
   assumes x: "\<And>x. \<lbrace>\<lambda>s. Q s \<and> x \<notin> S s\<rbrace> f \<lbrace>\<lambda>rv s. x \<notin> S s\<rbrace>"
   shows      "\<lbrace>\<lambda>s. Q s \<and> P (S s)\<rbrace> f \<lbrace>\<lambda>rv s. P (S s)\<rbrace>"
   apply (clarsimp simp: valid_def)
-  apply (erule rsubst[where P=P])
-  apply (rule set_eqI)
-  apply (rule iffI)
-   apply (erule use_valid [OF _ y])
-   apply simp
-  apply (rule ccontr)
-  apply (drule use_valid [OF _ x], simp+)
-  done
+  by (metis (mono_tags, lifting) equalityI post_by_hoare subsetI x y)
 
 lemma set_shrink_proof:
   assumes x: "\<And>x. \<lbrace>\<lambda>s. x \<notin> S s\<rbrace> f \<lbrace>\<lambda>rv s. x \<notin> S s\<rbrace>"
@@ -1487,18 +1480,13 @@ lemma static_imp_conj_wp:
   done
 
 lemma hoare_eq_P:
-  assumes x:"\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
   shows "\<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace>"
-  apply (clarsimp simp: valid_def)
-  apply (drule_tac P="op = s" in use_valid)
-    apply (rule x)
-   apply (rule refl)
-  apply assumption
-  done
+  by (rule assms)
 
 lemma hoare_validE_R_conj:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -; \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q And R\<rbrace>, -"
-  by (simp add: valid_def validE_def validE_R_def Let_def if_fun_split split_def split: sum.splits)
+  by (simp add: valid_def validE_def validE_R_def Let_def split_def split: sum.splits)
 
 lemma hoare_vcg_const_imp_lift_R:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. F \<longrightarrow> P s\<rbrace> f \<lbrace>\<lambda>rv s. F \<longrightarrow> Q rv s\<rbrace>,-"
@@ -2665,8 +2653,7 @@ lemma empty_fail_select [simp]: "empty_fail (select V) = (V \<noteq> {})"
 
 lemma bind_fail_propagates: "\<lbrakk> empty_fail A \<rbrakk> \<Longrightarrow> A >>= (\<lambda>_. fail) = fail"
   apply (monad_eq simp: empty_fail_def)
-  apply (metis not_empty_eq split_paired_Ball split_paired_Bex)
-  done
+  by fastforce
 
 lemma bindE_fail_propagates: "\<lbrakk> no_throw \<top> A; empty_fail A \<rbrakk> \<Longrightarrow> A >>=E (\<lambda>_. fail) = fail"
   apply (rule ext)
