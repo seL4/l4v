@@ -27,45 +27,42 @@ declare ranI [intro]
 
 section "Locale Setup"
 
-locale pspace_update_eq' =
+locale pspace_update_eq =
   fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
   assumes pspace: "kheap (f s) = kheap s"
 
-locale Arch_pspace_update_eq = pspace_update_eq'
-sublocale Arch_pspace_update_eq \<subseteq> Arch .
+locale Arch_pspace_update_eq = pspace_update_eq + Arch
 
-locale pspace_update_eq = pspace_update_eq'
-
-
-locale arch_update_eq' =
+locale arch_update_eq =
   fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
   assumes arch: "arch_state (f s) = arch_state s"
 
-locale Arch_arch_update_eq = arch_update_eq'
-sublocale Arch_arch_update_eq \<subseteq> Arch .
-
-locale arch_update_eq = arch_update_eq'
+locale Arch_arch_update_eq = arch_update_eq + Arch
 
 locale arch_idle_update_eq_more =
   fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
   assumes idle: "idle_thread (f s) = idle_thread s"
   assumes irq: "interrupt_irq_node (f s) = interrupt_irq_node s"
 
-locale Arch_arch_idle_update_eq = Arch_arch_update_eq + arch_idle_update_eq_more
-sublocale Arch_arch_idle_update_eq \<subseteq> Arch .
-
 locale arch_idle_update_eq = arch_update_eq + arch_idle_update_eq_more
-
-
-locale Arch_p_arch_update_eq = Arch_pspace_update_eq + Arch_arch_update_eq
-sublocale Arch_p_arch_update_eq \<subseteq> Arch .
+locale Arch_arch_idle_update_eq = Arch_arch_update_eq + arch_idle_update_eq_more
 
 locale p_arch_update_eq = pspace_update_eq + arch_update_eq
+locale Arch_p_arch_update_eq = Arch_pspace_update_eq + Arch_arch_update_eq
 
-locale Arch_p_arch_idle_update_eq = Arch_p_arch_update_eq + Arch_arch_idle_update_eq
 locale p_arch_idle_update_eq = p_arch_update_eq + arch_idle_update_eq
+locale Arch_p_arch_idle_update_eq = Arch_p_arch_update_eq + Arch_arch_idle_update_eq
 
-locale Arch_p_arch_idle_update_int_eq = Arch_p_arch_idle_update_eq + Arch_pspace_update_eq
+locale irq_states_update_eq =
+  fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
+  assumes int: "interrupt_states (f s) = interrupt_states s"
+
+locale pspace_int_update_eq = pspace_update_eq + irq_states_update_eq
+locale Arch_pspace_int_update_eq = Arch_pspace_update_eq + irq_states_update_eq
+
+locale p_arch_idle_update_int_eq = p_arch_idle_update_eq + pspace_int_update_eq
+locale Arch_p_arch_idle_update_int_eq = Arch_p_arch_idle_update_eq + Arch_pspace_int_update_eq
+
 
 section "Base definitions for Invariants"
 
@@ -93,8 +90,8 @@ lemma ko_at_weakenE:
   "\<lbrakk> ko_at k ptr s; P k \<rbrakk> \<Longrightarrow> obj_at P ptr s"
   by (erule obj_at_weakenE, simp)
 
-text {* An alternative formulation that allows abstraction over type: *}
 
+text {* An alternative formulation that allows abstraction over type: *}
 
 datatype a_type =
     ATCB

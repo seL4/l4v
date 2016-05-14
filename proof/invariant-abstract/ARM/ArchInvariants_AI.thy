@@ -12,12 +12,10 @@ theory ArchInvariants_AI
 imports "../InvariantsPre_AI"
 begin
 
+-- ---------------------------------------------------------------------------
 section "Move this up"
 
 qualify ARM (in Arch)
-
--- ---------------------------------------------------------------------------
-section "Things to Move Up"
 
 (* FIXME: move to spec level *)
 (* global data and code of the kernel, not covered by any cap *)
@@ -333,9 +331,7 @@ where
 end
 
 context begin interpretation Arch .
-
 requalify_consts vs_lookup
-
 end
 
 abbreviation
@@ -836,6 +832,13 @@ lemma vs_lookup1_stateI:
   assumes ko: "\<And>ko. ko_at ko (snd r) s \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') (snd r) s'"
   shows "(r \<rhd>1 r') s'" using 1 ko
   by (fastforce simp: obj_at_def vs_lookup1_def)
+
+lemma vs_lookup_pages1_stateI2:
+  assumes 1: "(r \<unrhd>1 r') s"
+  assumes ko: "\<And>ko. \<lbrakk> ko_at ko (snd r) s; vs_refs_pages ko \<noteq> {} \<rbrakk> 
+               \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') (snd r) s'"
+  shows "(r \<unrhd>1 r') s'" using 1 ko
+  by (fastforce simp: obj_at_def vs_lookup_pages1_def)
 
 lemma vs_lookup_trans_sub:
   assumes ko: "\<And>ko p. ko_at ko p s \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"

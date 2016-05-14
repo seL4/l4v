@@ -16,11 +16,6 @@ theory VSpace_AI
 imports "./$L4V_ARCH/ArchVSpace_AI"
 begin
 
-context Arch begin
-
-
-end
-
-
+(* Nothing to see here. *)
 
 end
