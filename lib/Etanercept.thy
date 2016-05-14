@@ -8,9 +8,9 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory Etanercept (* FIXME: broken *)
+theory Etanercept (* FIXME: broken, untested *)
 imports
-  "Word_Lib/WordBitwise_Signed"
+  "WordSetup"
   "ml-helpers/TermPatternAntiquote"
 keywords
   "word_refute" :: diag
