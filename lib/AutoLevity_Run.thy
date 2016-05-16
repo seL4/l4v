@@ -8,10 +8,40 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory AutoLevity_Run (* FIXME: broken *)
-imports AutoLevity
+theory AutoLevity_Run
+imports AutoLevity_Theory_Report AutoLevity_Test
 begin
 
+ML \<open>val theories = Thy_Info.get_names () |> map Thy_Info.get_theory\<close>
+
+ML \<open>\<close> 
+ML \<open>
+fun get_report thy =
+let
+  val _ = @{print} ("Reporting on " ^ Context.theory_name thy)
+  val k = AutoLevity_Base.get_transactions ();
+
+in
+if Symtab.defined k (Context.theory_name thy) then
+SOME (AutoLevity_Theory_Report.get_reports_for_thy thy |> 
+  AutoLevity_Theory_Report.string_reports_of)
+else NONE
+end
+\<close>
+ML \<open>Symtab.lookup (AutoLevity_Base.get_transactions ()) "AutoLevity_Test" |> the
+  |> Postab_strict.dest\<close>
+
+ML \<open>AutoLevity_Theory_Report.get_reports_for_thy @}\<close>
+declare [[ML_print_depth=1000]]
+ML \<open>val undepss = !undeps\<close>
+ML \<open>undepss |> rev |> filter 
+  (fn (x,_) => x = "ArchInvocationLabels_H.ARM_H.arch_invocation_label.case_1")
+  |> map snd |> distinct (op =) \<close>
+
+term CapRights_A.random_aux_rights
+ML \<open>val k = get_report @{theory AutoLevity_Test} |> the\<close>
+
+(*
 (* Custom run of AutoLevity for seL4 *)
 
 (* Requires up-to-date graph report *)
@@ -103,7 +133,7 @@ ML {* write_thys true sorted (Path.explode "~~/../l4v/lib/autolevity_buckets/") 
 ML {* val refactor_proof = true 
 
 val _ = if refactor_proof then clear_thys thy_deps sorted else () *}
-
+*)
 
 end
 

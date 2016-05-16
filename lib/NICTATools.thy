@@ -17,6 +17,7 @@ imports
   Eisbach_Methods
   Insulin
   ShowTypes
+  AutoLevity_Hooks
 begin
 
 section "Detect unused meta-forall"
