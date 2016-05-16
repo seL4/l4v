@@ -8,8 +8,6 @@ theory AutoCorresTest
 imports "../../tools/autocorres/AutoCorres"
         "../../tools/autocorres/L4VerifiedLinks"
         AutoCorresModifiesProofs
-        "../../../../isabelle-hacks/insulin/Insulin"
-        "../../../../isabelle-hacks/ShowTypes"
         (* import Refine_C last to minimise change to global context *)
         Refine_C
 begin
