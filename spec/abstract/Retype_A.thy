@@ -132,30 +132,76 @@ definition
      modify (detype {ptr..ptr + 2 ^ bits - 1})
   od"
 
+(* FIXME: we need a sensible place for these configurable constants. *)
+definition
+  reset_chunk_bits :: nat
+where "reset_chunk_bits = 8"
+
+definition
+  get_free_ref :: "obj_ref \<Rightarrow> nat \<Rightarrow> obj_ref" where
+  "get_free_ref base free_index \<equiv> base +  (of_nat free_index)"
+
+definition
+  get_free_index :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> nat" where
+  "get_free_index base free \<equiv> unat $ (free - base)"
+
+primrec(nonexhaustive) is_device_ut_cap
+where
+  "is_device_ut_cap (UntypedCap isd _ _ _) = isd"
+
+text {* Untyped capabilities note a currently free region. Sometimes this
+region is reset during a Retype operation. This progressively clears the
+underlying memory and also the object level representation, moving the free
+region pointer back to the start of the newly cleared region each time. *}
+definition
+  reset_untyped_cap :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad"
+where
+  "reset_untyped_cap src_slot = doE
+  cap \<leftarrow> liftE $ get_cap src_slot;
+  sz \<leftarrow> returnOk $ bits_of cap;
+  base \<leftarrow> returnOk $ obj_ref_of cap;
+  liftE $ delete_objects base sz;
+
+  if sz < reset_chunk_bits
+    then liftE $ do
+        do_machine_op $ clearMemory base (2 ^ sz);
+        set_cap (UntypedCap (is_device_ut_cap cap)
+            (obj_ref_of cap) (bits_of cap) 0) src_slot
+    od
+    else mapME_x (\<lambda>i. doE
+        liftE $ do_machine_op $ clearMemory (base + (of_nat i << reset_chunk_bits))
+            (2 ^ reset_chunk_bits);
+        liftE $ set_cap (UntypedCap (is_device_ut_cap cap)
+            (obj_ref_of cap) (bits_of cap)
+            (i * 2 ^ reset_chunk_bits)) src_slot;
+        preemption_point
+      odE) (rev [i \<leftarrow> [0 ..< 2 ^ (sz - reset_chunk_bits)].
+          i * 2 ^ reset_chunk_bits < free_index_of cap])
+  odE"
 
 text {* Untyped capabilities confer authority to the Retype method. This
 clears existing objects from a region, creates new objects of the requested type,
 initialises them and installs new capabilities to them. *}
-fun
-  invoke_untyped :: "untyped_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
+definition
+  invoke_untyped :: "untyped_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
-"invoke_untyped (Retype src_slot base free_region_base new_type obj_sz slots is_device) =
-do
+"invoke_untyped ui \<equiv> case ui
+    of Retype src_slot reset base retype_base new_type obj_sz slots is_device \<Rightarrow>
+doE
+  whenE reset $ reset_untyped_cap src_slot;
+  liftE $ do
+  
   cap \<leftarrow> get_cap src_slot;
-
-  (* If we are creating the first object, detype the entire region. *)
-  when (base = free_region_base)
-    $ delete_objects base (bits_of cap);
 
   (* Update the untyped cap to track the amount of space used. *)
   total_object_size \<leftarrow> return $ (of_nat (length slots) << (obj_bits_api new_type obj_sz));
-  free_ref \<leftarrow> return $ free_region_base + total_object_size;
+  free_ref \<leftarrow> return $ retype_base + total_object_size;
   set_cap (UntypedCap is_device base (bits_of cap) (unat (free_ref - base))) src_slot;
 
   (* Create new objects. *)
-  orefs \<leftarrow> retype_region free_region_base (length slots) obj_sz new_type is_device;
-  init_arch_objects new_type free_region_base (length slots) obj_sz orefs is_device;
+  orefs \<leftarrow> retype_region retype_base (length slots) obj_sz new_type is_device;
+  init_arch_objects new_type retype_base (length slots) obj_sz orefs;
   sequence_x (map (create_cap new_type obj_sz src_slot is_device) (zip slots orefs))
-od"
+od odE"
 
 end

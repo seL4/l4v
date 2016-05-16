@@ -45,6 +45,7 @@ requalify_consts
   resetTimer
   maxIRQ
   minIRQ
+  clearMemory
 
 end
 

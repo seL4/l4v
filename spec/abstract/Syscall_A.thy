@@ -161,7 +161,7 @@ fun
 where
   "perform_invocation block call (InvokeUntyped i) =
     doE
-      without_preemption $ invoke_untyped i;
+      invoke_untyped i;
       returnOk []
     odE"
 

@@ -27,12 +27,12 @@ requalify_consts
  ArchDefaultExtraRegisters
  check_valid_ipc_buffer
  is_valid_vtable_root
- arch_decode_irq_control_invocation 
+ arch_decode_irq_control_invocation
  arch_data_to_obj_type
  arch_decode_invocation
 
 end
-          
+
 
 text {*
   This theory includes definitions describing how user arguments are 
@@ -495,14 +495,6 @@ definition
   odE"
 
 definition
-  get_free_ref :: "obj_ref \<Rightarrow> nat \<Rightarrow> obj_ref" where
-  "get_free_ref base free_index \<equiv> base +  (of_nat free_index)"
-
-definition
-  get_free_index :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> nat" where
-  "get_free_index base free \<equiv> unat $ (free - base)"
-
-definition
   decode_untyped_invocation :: 
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap list \<Rightarrow> (untyped_invocation,'z::state_ext) se_monad"
 where
@@ -555,14 +547,15 @@ where
 
   mapME_x ensure_empty slots;
 
-  free_index \<leftarrow> liftE $ const_on_failure (free_index_of cap) $ (doE
+  reset \<leftarrow> liftE $ const_on_failure False $ (doE
     ensure_no_children slot;
-    returnOk 0
+    returnOk True
   odE);
 
-  free_ref \<leftarrow> returnOk ( get_free_ref (obj_ref_of cap) free_index);
-  object_size \<leftarrow> returnOk ( obj_bits_api new_type user_obj_size);
-  aligned_free_ref \<leftarrow> returnOk ( alignUp free_ref object_size);
+  free_index \<leftarrow> returnOk (if reset then 0 else free_index_of cap);
+  free_ref \<leftarrow> returnOk (get_free_ref (obj_ref_of cap) free_index);
+  object_size \<leftarrow> returnOk (obj_bits_api new_type user_obj_size);
+  aligned_free_ref \<leftarrow> returnOk (alignUp free_ref object_size);
   untyped_free_bytes \<leftarrow> returnOk (obj_size cap - of_nat (free_index));
 
   max_count \<leftarrow> returnOk ( untyped_free_bytes >> object_size);
@@ -570,12 +563,12 @@ where
         throwError $ NotEnoughMemory $ untyped_free_bytes;
 
   not_frame \<leftarrow> returnOk (\<not> is_frame_type new_type);
-  (ptr, is_device) \<leftarrow> case cap of 
-                        UntypedCap dev p n f \<Rightarrow> returnOk (p,dev) 
+  (ptr, is_device) \<leftarrow> case cap of
+                        UntypedCap dev p n f \<Rightarrow> returnOk (p,dev)
                       | _ \<Rightarrow> fail;
-  whenE (is_device \<and> not_frame \<and> new_type \<noteq> Untyped) $ 
-           throwError $ InvalidArgument 1; 
-  returnOk $ Retype slot ptr aligned_free_ref new_type user_obj_size slots is_device
+  whenE (is_device \<and> not_frame \<and> new_type \<noteq> Untyped) $
+           throwError $ InvalidArgument 1;
+  returnOk $ Retype slot reset ptr aligned_free_ref new_type user_obj_size slots is_device
 odE"
 
 section "Toplevel invocation decode."
