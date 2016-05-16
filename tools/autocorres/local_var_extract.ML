@@ -157,7 +157,7 @@ fun parse_spec ctxt prog_info term =
      * We blithely rewrite them here.
      *)
     val term = Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt)
-        (map mk_meta_eq @{thms Collect_conj_eq[symmetric] Collect_disj_eq[symmetric]}) [] term
+        (map safe_mk_meta_eq @{thms Collect_prod_inter Collect_prod_union}) [] term
 
     (* Apply a dummy old and new state variable to the term. *)
     val dummy_s = Free ("_dummy_state1", #state_type prog_info)

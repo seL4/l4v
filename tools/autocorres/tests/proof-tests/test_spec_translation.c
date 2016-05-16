@@ -17,7 +17,12 @@ int magic(int x) {
   return x;
 }
 
-/* Make sure \<Gamma> is generated. */
+/* abort will generate an empty spec "{}" if optimisation is enabled. */
+/** MODIFIES:
+    FNSPEC abort_spec: "\<Gamma> \<turnstile> {} Call abort_'proc {}" */
+void abort(void);
+
+/* Test specs interleaved with function bodies. */
 int call_magic(int x) {
   /** GHOSTUPD: "(\<acute>x < 42, id)" */
   return magic(x);

@@ -25,7 +25,10 @@ val AUTOCORRES_SIMPSET =
     (* affects boolean expressions *)
     @ @{thms word_neq_0_conv}
     (* interferes with struct_rewrite *)
-    @ @{thms ptr_coerce.simps ptr_add_0_id})
+    @ @{thms ptr_coerce.simps ptr_add_0_id}
+    (* oversimplifies Spec sets prior to L2 stage
+       (we will control this explicitly in L2Peephole) *)
+    @ @{thms CollectPairFalse})
   |> simpset_of
 
 *}
