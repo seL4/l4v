@@ -42,9 +42,10 @@ session BaseRefine = AInvs +
     "refine/Include"
 
 session AInvs = ASpec +
+  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
+    "invariant-abstract/AInvs"
   theories
     "invariant-abstract/AInvs"
-    "invariant-abstract/EmptyFail_AI"
     "invariant-abstract/KernelInit_AI"
     "invariant-abstract/DetSchedSchedule_AI"
 

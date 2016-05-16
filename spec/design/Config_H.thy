@@ -49,5 +49,10 @@ retypeFanOutLimit :: "machine_word"
 where
 "retypeFanOutLimit \<equiv> 256"
 
+definition
+resetChunkBits :: "nat"
+where
+"resetChunkBits \<equiv> 8"
+
 
 end

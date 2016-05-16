@@ -400,7 +400,7 @@ lemma page_table_at_pte_atD':
    apply simp
   apply simp
   apply (subst (asm) is_aligned_neg_mask_eq[where n = 2])
-   apply (simp add:aligned_after_mask)
+   apply (simp add: is_aligned_andI1)
   apply (simp add:mask_out_sub_mask)
   done
 
@@ -489,7 +489,7 @@ lemma page_directory_at_pde_atD':
    apply simp
   apply simp
   apply (subst (asm) is_aligned_neg_mask_eq[where n = 2])
-   apply (simp add:aligned_after_mask)
+   apply (simp add: is_aligned_andI1)
   apply (simp add:mask_out_sub_mask)
   done
 
@@ -1154,7 +1154,7 @@ lemma createObject_valid_duplicates'[wp]:
   apply (simp add:createObject_def) 
   apply (rule hoare_pre)
   apply (wpc | wp| simp add: ARM_H.createObject_def split del: split_if)+
-         apply (simp add: createPageObject_def placeNewObject_def
+         apply (simp add: placeNewObject_def placeNewDataObject_def
                           placeNewObject'_def split_def split del: split_if
            | wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>]
            | wpc | simp add: alignError_def split del: split_if)+
@@ -1430,71 +1430,74 @@ lemma deleteObjects_valid_duplicates'[wp]:
   apply simp
   done
 
-crunch arch_inv[wp]: deleteObjects "\<lambda>s. P (ksArchState s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore:freeMemory)
+crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
+  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp mapME_x_inv_wp
+      preemptionPoint_inv
+    ignore:freeMemory forME_x)
+
+lemma resetUntypedCap_valid_duplicates'[wp]:
+  "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s))
+      and valid_objs' and cte_wp_at' (isUntypedCap o cteCap) slot\<rbrace>
+    resetUntypedCap slot
+  \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  (is "\<lbrace>?P\<rbrace> ?f \<lbrace>\<lambda>_. ?Q\<rbrace>")
+  apply (clarsimp simp: resetUntypedCap_def)
+  apply (rule hoare_pre)
+   apply (wp | simp add: unless_def)+
+   apply (wp mapME_x_inv_wp preemptionPoint_inv | simp | wp_once hoare_drop_imps)+
+   apply (wp getSlotCap_wp)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
+  apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def)
+  done
+
+lemma is_aligned_armKSGlobalPD:
+  "valid_arch_state' s
+    \<Longrightarrow> is_aligned (armKSGlobalPD (ksArchState s)) pdBits"
+  by (clarsimp simp: valid_arch_state'_def page_directory_at'_def)
+
+lemma new_CapTable_bound:
+  "range_cover (ptr :: obj_ref) sz (APIType_capBits tp us) n
+    \<Longrightarrow> tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28"
+  apply (frule range_cover.sz)
+  apply (drule range_cover.sz(2))
+  apply (clarsimp simp:APIType_capBits_def objBits_simps word_bits_def)
+  done
 
 lemma invokeUntyped_valid_duplicates[wp]:
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
          and valid_untyped_inv' ui and ct_active'\<rbrace>
      invokeUntyped ui
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s) \<rbrace>"
+  apply (simp only: invokeUntyped_def updateCap_def)
   apply (rule hoare_name_pre_state)
   apply (cases ui)
-  apply (clarsimp)
-  apply (rename_tac s cref ptr tp us slots sz idx)
-proof -
- fix s cref ptr tp us slots sz idx d
-    assume cte_wp_at': "cte_wp_at' (\<lambda>cte. cteCap cte = capability.UntypedCap d (ptr && ~~ mask sz) sz idx) cref s"
-    assume cover     : "range_cover ptr sz (APIType_capBits tp us) (length (slots::word32 list))"
-    assume  misc     : "distinct slots" "idx \<le> unat (ptr && mask sz) \<or> ptr = ptr && ~~ mask sz"
-      "invs' s" "slots \<noteq> []" "sch_act_simple s" "vs_valid_duplicates' (ksPSpace s)"
-      "\<forall>slot\<in>set slots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s"
-      "\<forall>x\<in>set slots. ex_cte_cap_wp_to' (\<lambda>_. True) x s"  "ct_active' s"
-      "tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29"
-    assume desc_range: "ptr = ptr && ~~ mask sz \<longrightarrow> descendants_range_in' {ptr..ptr + 2 ^ sz - 1} (cref) (ctes_of s)"
-    
-  have pf: "invokeUntyped_proofs s cref ptr tp us slots sz idx d"
-    using cte_wp_at' cover misc desc_range
-    by (simp add:invokeUntyped_proofs_def)
-  have bound[simp]: "tp = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28"
-    using cover
-    apply -
-    apply (frule range_cover.sz)
-    apply (drule range_cover.sz(2))
-    apply (clarsimp simp:APIType_capBits_def objBits_simps word_bits_def)
-    done
-  have pd_aligned[simp]:
-    "armKSGlobalPD (ksArchState s) && ~~ mask pdBits = armKSGlobalPD (ksArchState s)"
-    using misc
-    apply -
-    apply (clarsimp dest!:invs_arch_state' simp:valid_arch_state'_def
-      page_directory_at'_def is_aligned_neg_mask_eq')
-    done
-  show 
-  "\<lbrace>op = s\<rbrace>
-    invokeUntyped
-    (Invocations_H.untyped_invocation.Retype cref (ptr && ~~ mask sz) ptr tp us slots d) 
-    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (clarsimp simp:invokeUntyped_def updateCap_def)
+  apply (clarsimp simp only: pred_conj_def valid_untyped_inv_wcap'
+                             Invocations_H.untyped_invocation.simps)
+  apply (frule(2) invokeUntyped_proofs.intro)
   apply (rule hoare_pre)
-   apply (wp setCTE_pspace_no_overlap'[where sz = sz ]
-     deleteObjects_invs_derivatives[where idx = idx and p = cref and d=d])
-    apply (rule_tac P = "cap = capability.UntypedCap d (ptr && ~~ mask sz) sz idx" 
-       in hoare_gen_asm)
+   apply simp
+   apply (wp setCTE_pspace_no_overlap')
+   apply (rule hoare_post_impErr)
+     apply (rule combine_validE)
+      apply (rule_tac ui=ui in whenE_reset_resetUntypedCap_invs_etc)
+     apply (rule hoare_whenE_wp)
+     apply (rule valid_validE)
+     apply (rule resetUntypedCap_valid_duplicates')
+    defer
     apply simp
-    apply (wp getSlotCap_wp hoare_drop_imps
-      deleteObject_no_overlap deleteObjects_invs_derivatives[where idx = idx and p = cref and d=d])
-  using cte_wp_at' misc cover desc_range 
-        invokeUntyped_proofs.not_0_ptr[OF pf] invokeUntyped_proofs.vc'[OF pf]
-  apply (clarsimp simp:cte_wp_at_ctes_of)
-  apply (rule_tac x = "capability.UntypedCap d (ptr && ~~ mask sz) sz idx" in exI)
-  apply (clarsimp simp: is_aligned_neg_mask_eq' conj_comms invs_valid_pspace'
-             invs_pspace_aligned' invs_pspace_distinct'
-             range_cover.sz[where 'a=32, folded word_bits_def]
-             invokeUntyped_proofs.ps_no_overlap'[OF pf])
-  apply (simp add:descendants_range'_def2)
+   apply (clarsimp simp del: valid_untyped_inv_wcap'.simps
+                split del: split_if)
+   apply (rule conjI, assumption)
+   apply (auto simp: cte_wp_at_ctes_of isCap_simps)[1]
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (frule new_CapTable_bound)
+  apply (frule invokeUntyped_proofs.not_0_ptr)
+  apply (strengthen is_aligned_armKSGlobalPD)
+  apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
+  apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def)
+  apply (auto split: split_if_asm)
   done
-  qed
 
 crunch valid_duplicates'[wp]:
   doReplyTransfer "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"

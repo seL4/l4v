@@ -497,15 +497,16 @@ lemma pinv_corres:
      (perform_invocation block call i) (performInvocation block call i')"
   apply (simp add: performInvocation_def)
   apply (case_tac i)
-          apply (clarsimp simp: o_def liftE_bindE)
+           apply (clarsimp simp: o_def liftE_bindE)
+           apply (rule corres_guard_imp)
+             apply (rule corres_split_norE[OF corres_returnOkTT])
+                apply simp
+               apply (rule corres_rel_imp, rule inv_untyped_corres)
+                apply simp
+               apply (case_tac x, simp_all)[1]
+              apply wp
+            apply simp+
           apply (rule corres_guard_imp)
-            apply (rule corres_split[OF corres_returnOkTT])
-               apply simp
-              apply (erule corres_guard_imp [OF inv_untyped_corres])
-               apply assumption+
-             apply wp
-          apply simp+
-         apply (rule corres_guard_imp)
            apply (rule corres_split [OF _ gct_corres])
              apply simp
              apply (rule corres_split [OF _ send_ipc_corres])
@@ -2443,7 +2444,7 @@ lemma retype_pi_IRQInactive:
   apply (rule hoare_pre)
    apply (wpc | 
           wp inv_tcb_IRQInactive inv_cnode_IRQInactive inv_irq_IRQInactive 
-             inv_arch_IRQInactive |
+             inv_untyped_IRQInactive inv_arch_IRQInactive |
           simp)+
   done
 

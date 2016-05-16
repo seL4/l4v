@@ -128,11 +128,15 @@ The destination slots must all be empty. If any of them contains a capability, t
 
 >     mapM_ ensureEmptySlot slots
 
-Find out how much free room is available in the Untyped. If we discover that we don't have any children (for instance, they have all been manually deleted), we can just start allocating from the beginning of region again.
+If we discover we don't have any children (for instance, they have all been manually deleted), we reset the untyped region, clearing any memory that had been used.
 
->     freeIndex <- withoutFailure $ constOnFailure (capFreeIndex cap) $ do
+>     reset <- withoutFailure $ constOnFailure False $ do
 >             ensureNoChildren slot
->             return 0
+>             return True
+
+The memory free for use begins at the current free pointer, unless we are performing a reset, in which case it begins at the start of the region.
+
+>     let freeIndex = if reset then 0 else capFreeIndex cap
 >     let freeRef = getFreeRef (capPtr cap) freeIndex
 
 Ensure that sufficient space is available in the region of memory.
@@ -157,6 +161,7 @@ Align up the free region pointer to ensure that created objects are aligned to t
 
 >     return $! Retype {
 >         retypeSource = slot,
+>         retypeResetUntyped = reset,
 >         retypeRegionBase = capPtr cap,
 >         retypeFreeRegionBase = alignedFreeRef,
 >         retypeNewType = newType,
@@ -169,35 +174,57 @@ Align up the free region pointer to ensure that created objects are aligned to t
 >         then TruncatedMessage
 >         else IllegalOperation
 
-> invokeUntyped :: UntypedInvocation -> Kernel ()
-> invokeUntyped (Retype srcSlot base freeRegionBase newType userSize destSlots isDevice) = do
+A Retype operation may begin with a reset of an Untyped cap. This returns the free space pointer to the start of the Untyped region. For large regions this is done preemptibly, one chunk at a time.
 
->     cap <- getSlotCap srcSlot
+> resetUntypedCap :: PPtr CTE -> KernelP ()
+> resetUntypedCap slot = do
+>     cap <- withoutPreemption $ getSlotCap slot
+>     let sz = capBlockSize cap
 
 \begin{impdetails}
-The following code removes any existing objects in the physical memory region. This operation is specific to the Haskell physical memory model, in which memory objects are typed; it is not necessary (or possible) when running on real hardware.
-
->     when (base == freeRegionBase) $
->         deleteObjects base (capBlockSize cap)
+The objects in the Haskell model are removed at this time. This operation is specific to the Haskell physical memory model, in which memory objects are typed; it is not necessary (or possible) when running on real hardware.
+ 
+>     withoutPreemption $ deleteObjects (capPtr cap) sz
 
 \end{impdetails}
 
-Update the untyped capability we are using to create these objects to record that this space now has objects in it.
+>     if (capIsDevice cap || sz < resetChunkBits)
+>         then withoutPreemption $ do
+>             unless (capIsDevice cap) $ doMachineOp $
+>                 clearMemory (PPtr (fromPPtr (capPtr cap))) (1 `shiftL` sz)
+>             updateCap slot (cap {capFreeIndex = 0})
+>         else do
+>             forM_ (reverse [capPtr cap, capPtr cap + (1 `shiftL` resetChunkBits) ..
+>                         getFreeRef (capPtr cap) (capFreeIndex cap) - 1])
+>                 $ \addr -> do
+>                     withoutPreemption $ doMachineOp $ clearMemory
+>                         (PPtr (fromPPtr addr)) (1 `shiftL` resetChunkBits)
+>                     withoutPreemption $ updateCap slot (cap {capFreeIndex
+>                         = getFreeIndex (capPtr cap) addr})
+>                     preemptionPoint
+
+> invokeUntyped :: UntypedInvocation -> KernelP ()
+> invokeUntyped (Retype srcSlot reset base retypeBase newType userSize destSlots isDev) = do
+
+>     when reset $ resetUntypedCap srcSlot
+>     withoutPreemption $ do
+>         cap <- getSlotCap srcSlot
 
 For verification purposes a check is made that the region the objects are created in does not overlap with any existing CNodes.
 
->     let totalObjectSize = (length destSlots) `shiftL` (getObjectSize newType userSize)
->     stateAssert (\x -> not (cNodeOverlap (gsCNodes x)
->             (\x -> fromPPtr freeRegionBase <= x
->                 && x <= fromPPtr freeRegionBase + fromIntegral totalObjectSize - 1)))
->         "CNodes present in region to be retyped."
->     let freeRef = freeRegionBase + PPtr (fromIntegral totalObjectSize)
->     updateCap srcSlot (cap {capFreeIndex = getFreeIndex base freeRef})
+>         let totalObjectSize = (length destSlots) `shiftL` (getObjectSize newType userSize)
+>         stateAssert (\x -> not (cNodeOverlap (gsCNodes x)
+>                 (\x -> fromPPtr retypeBase <= x
+>                     && x <= fromPPtr retypeBase + fromIntegral totalObjectSize - 1)))
+>             "CNodes present in region to be retyped."
+>         let freeRef = retypeBase + PPtr (fromIntegral totalObjectSize)
+>         updateCap srcSlot
+>             (cap {capFreeIndex = getFreeIndex base freeRef})
 
 Create the new objects and insert caps to these objects into the destination slots.
-
->     createNewObjects newType srcSlot destSlots freeRegionBase userSize isDevice
-
+ 
+>         createNewObjects newType srcSlot destSlots retypeBase userSize isDev
+ 
 This function performs the check that CNodes do not overlap with the retyping region. Its actual definition is provided in the Isabelle translation.
 
 > cNodeOverlap :: (Word -> Maybe Int) -> (Word -> Bool) -> Bool

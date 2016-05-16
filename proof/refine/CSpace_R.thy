@@ -3561,15 +3561,20 @@ lemma lsfc_corres:
   apply clarsimp
   done
 
-(* this helper characterisation of ctes_of
-   is needed in CNodeInv and Untyped *)
-
 lemma ensureNoChildren_wp:
-  "\<lbrace>\<lambda>s. Q s \<and> (descendants_of' p (ctes_of s) = {} \<longrightarrow> P () s)\<rbrace> ensureNoChildren p \<lbrace>P\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
+  "\<lbrace>\<lambda>s. (descendants_of' p (ctes_of s) \<noteq> {} \<longrightarrow> Q s)
+    \<and> (descendants_of' p (ctes_of s) = {} \<longrightarrow> P () s)\<rbrace>
+      ensureNoChildren p
+   \<lbrace>P\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
   apply (simp add: ensureNoChildren_def whenE_def)
   apply (wp getCTE_wp')
   apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def descendants_of'_def)
-  apply (rule conjI)
+  apply (intro conjI impI allI)
+    apply clarsimp
+    apply (drule spec, erule notE, rule subtree.direct_parent)
+      apply (simp add:mdb_next_rel_def mdb_next_def)
+     apply simp
+    apply (simp add: parentOf_def)
    apply clarsimp
    apply (erule (4) subtree_no_parent)
   apply clarsimp
@@ -6349,6 +6354,12 @@ lemma updateFreeIndex_invs':
         apply (clarsimp simp: isCap_simps)
        apply (drule(1) valid_global_refsD_with_objSize)
   apply (clarsimp simp:isCap_simps cte_wp_at_ctes_of)+
+  done
+
+lemma no_fail_getSlotCap:
+  "no_fail (cte_at' p) (getSlotCap p)"
+  apply (rule no_fail_pre)
+  apply (simp add: getSlotCap_def | wp)+
   done
 
 end

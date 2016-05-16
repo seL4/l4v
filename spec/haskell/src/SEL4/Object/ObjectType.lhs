@@ -470,7 +470,7 @@ This function just dispatches invocations to the type-specific invocation functi
 > performInvocation :: Bool -> Bool -> Invocation -> KernelP [Word]
 > 
 > performInvocation _ _ (InvokeUntyped invok) = do
->     withoutPreemption $ invokeUntyped invok
+>     invokeUntyped invok
 >     return $! []
 > 
 > performInvocation block call (InvokeEndpoint ep badge canGrant) =

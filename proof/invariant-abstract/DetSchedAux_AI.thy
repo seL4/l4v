@@ -149,9 +149,9 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
         invoke_untyped ui
       \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
   assumes init_arch_objects_valid_etcbs[wp]:
-    "\<And>t r n sz refs dev. \<lbrace>valid_etcbs\<rbrace> init_arch_objects t r n sz refs dev\<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
+    "\<And>t r n sz refs. \<lbrace>valid_etcbs\<rbrace> init_arch_objects t r n sz refs \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   assumes init_arch_objects_valid_blocked[wp]:
-    "\<And>t r n sz refs dev. \<lbrace>valid_blocked\<rbrace> init_arch_objects t r n sz refs dev \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
+    "\<And>t r n sz refs. \<lbrace>valid_blocked\<rbrace> init_arch_objects t r n sz refs \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   assumes invoke_untyped_cur_domain[wp]:
     "\<And>P i. \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
   assumes invoke_untyped_ready_queues[wp]:
@@ -175,7 +175,7 @@ context DetSchedAux_AI_det_ext begin
 
 crunch valid_etcbs[wp]: invoke_untyped "valid_etcbs"
   (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps whenE_inv
-     simp: mapM_x_defsym)
+     simp: mapM_x_defsym crunch_simps unless_def)
 
 end
 
@@ -220,7 +220,7 @@ context DetSchedAux_AI_det_ext begin
 
 crunch valid_blocked[wp]: invoke_untyped "valid_blocked"
   (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps whenE_inv
-     simp: mapM_x_defsym)
+     simp: mapM_x_defsym crunch_simps unless_def)
 
 end
 
@@ -317,52 +317,11 @@ lemma valid_sched_tcb_state_preservation:
   apply(fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
-crunch ct[wp]: invoke_untyped "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps dxo_wp_weak preemption_point_inv mapME_x_inv_wp
-    simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym
-    ignore: freeMemory ignore: retype_region_ext)
-crunch ready_queues[wp]: invoke_untyped "\<lambda>s. P (ready_queues s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-    simp: detype_def detype_ext_def whenE_def
-          wrap_ext_det_ext_ext_def mapM_x_defsym 
-  ignore: freeMemory)
-crunch scheduler_action[wp]: invoke_untyped "\<lambda>s. P (scheduler_action s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-      simp: detype_def detype_ext_def whenE_def
-            wrap_ext_det_ext_ext_def mapM_x_defsym
-    ignore: freeMemory)
-crunch cur_domain[wp]: invoke_untyped "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-      simp: detype_def detype_ext_def whenE_def
-            wrap_ext_det_ext_ext_def mapM_x_defsym
-    ignore: freeMemory)
-crunch idle_thread[wp]: invoke_untyped "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv dxo_wp_weak
-      simp: detype_def detype_ext_def whenE_def
-            wrap_ext_det_ext_ext_def mapM_x_defsym
-    ignore: freeMemory retype_region_ext)
 lemma valid_idle_etcb_lift:
   assumes "\<And>P t. \<lbrace>\<lambda>s. etcb_at P t s\<rbrace> f \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
   shows "\<lbrace>valid_idle_etcb\<rbrace> f \<lbrace>\<lambda>r. valid_idle_etcb\<rbrace>"
   apply(simp add: valid_idle_etcb_def)
   apply(wp assms)
-  done
-
-crunch etcb_at[wp]: reset_untyped_cap "etcb_at P t"
-  (wp: preemption_point_inv' mapME_x_inv_wp)
-
-lemma invoke_untyped_etcb_at:
-  "\<lbrace>(\<lambda>s :: det_ext state. etcb_at P t s) and valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
-  apply (cases ui)
-  apply (simp add: mapM_x_def[symmetric] invoke_untyped_def whenE_def
-           split del: split_if)
-  apply (rule hoare_pre)
-   apply (wp retype_region_etcb_at mapM_x_wp'
-             create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift
-             hoare_convert_imp[OF create_cap_no_pred_tcb_at]
-             hoare_convert_imp[OF _ init_arch_objects_exst]
-      | simp
-      | (wp_once hoare_drop_impE_E))+
   done
 
 context DetSchedAux_AI_det_ext begin

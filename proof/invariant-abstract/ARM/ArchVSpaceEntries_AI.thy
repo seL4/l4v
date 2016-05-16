@@ -743,7 +743,7 @@ lemma delete_objects_valid_pdpt:
   by (rule delete_objects_reduct) (wp detype_valid_pdpt)
 
 crunch valid_pdpt[wp]: reset_untyped_cap "valid_pdpt_objs"
-  (wp: mapME_x_inv_wp)
+  (wp: mapME_x_inv_wp crunch_wps simp: crunch_simps unless_def)
 
 lemma invoke_untyped_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs and invs and ct_active

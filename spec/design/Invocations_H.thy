@@ -563,82 +563,92 @@ where
   | _ \<Rightarrow> False"
 
 datatype untyped_invocation =
-    Retype machine_word machine_word machine_word object_type nat "machine_word list" bool
+    Retype machine_word bool machine_word machine_word object_type nat "machine_word list" bool
 
 primrec
   retypeSource :: "untyped_invocation \<Rightarrow> machine_word"
 where
-  "retypeSource (Retype v0 v1 v2 v3 v4 v5 v6) = v0"
+  "retypeSource (Retype v0 v1 v2 v3 v4 v5 v6 v7) = v0"
 
 primrec
   retypeNewType :: "untyped_invocation \<Rightarrow> object_type"
 where
-  "retypeNewType (Retype v0 v1 v2 v3 v4 v5 v6) = v3"
+  "retypeNewType (Retype v0 v1 v2 v3 v4 v5 v6 v7) = v4"
 
 primrec
   retypeIsDevice :: "untyped_invocation \<Rightarrow> bool"
 where
-  "retypeIsDevice (Retype v0 v1 v2 v3 v4 v5 v6) = v6"
+  "retypeIsDevice (Retype v0 v1 v2 v3 v4 v5 v6 v7) = v7"
 
 primrec
   retypeRegionBase :: "untyped_invocation \<Rightarrow> machine_word"
 where
-  "retypeRegionBase (Retype v0 v1 v2 v3 v4 v5 v6) = v1"
+  "retypeRegionBase (Retype v0 v1 v2 v3 v4 v5 v6 v7) = v2"
 
 primrec
   retypeSlots :: "untyped_invocation \<Rightarrow> machine_word list"
 where
-  "retypeSlots (Retype v0 v1 v2 v3 v4 v5 v6) = v5"
+  "retypeSlots (Retype v0 v1 v2 v3 v4 v5 v6 v7) = v6"
+
+primrec
+  retypeResetUntyped :: "untyped_invocation \<Rightarrow> bool"
+where
+  "retypeResetUntyped (Retype v0 v1 v2 v3 v4 v5 v6 v7) = v1"
 
 primrec
   retypeFreeRegionBase :: "untyped_invocation \<Rightarrow> machine_word"
 where
-  "retypeFreeRegionBase (Retype v0 v1 v2 v3 v4 v5 v6) = v2"
+  "retypeFreeRegionBase (Retype v0 v1 v2 v3 v4 v5 v6 v7) = v3"
 
 primrec
   retypeNewSizeBits :: "untyped_invocation \<Rightarrow> nat"
 where
-  "retypeNewSizeBits (Retype v0 v1 v2 v3 v4 v5 v6) = v4"
+  "retypeNewSizeBits (Retype v0 v1 v2 v3 v4 v5 v6 v7) = v5"
 
 primrec
   retypeSource_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
 where
-  "retypeSource_update f (Retype v0 v1 v2 v3 v4 v5 v6) = Retype (f v0) v1 v2 v3 v4 v5 v6"
+  "retypeSource_update f (Retype v0 v1 v2 v3 v4 v5 v6 v7) = Retype (f v0) v1 v2 v3 v4 v5 v6 v7"
 
 primrec
   retypeNewType_update :: "(object_type \<Rightarrow> object_type) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
 where
-  "retypeNewType_update f (Retype v0 v1 v2 v3 v4 v5 v6) = Retype v0 v1 v2 (f v3) v4 v5 v6"
+  "retypeNewType_update f (Retype v0 v1 v2 v3 v4 v5 v6 v7) = Retype v0 v1 v2 v3 (f v4) v5 v6 v7"
 
 primrec
   retypeIsDevice_update :: "(bool \<Rightarrow> bool) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
 where
-  "retypeIsDevice_update f (Retype v0 v1 v2 v3 v4 v5 v6) = Retype v0 v1 v2 v3 v4 v5 (f v6)"
+  "retypeIsDevice_update f (Retype v0 v1 v2 v3 v4 v5 v6 v7) = Retype v0 v1 v2 v3 v4 v5 v6 (f v7)"
 
 primrec
   retypeRegionBase_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
 where
-  "retypeRegionBase_update f (Retype v0 v1 v2 v3 v4 v5 v6) = Retype v0 (f v1) v2 v3 v4 v5 v6"
+  "retypeRegionBase_update f (Retype v0 v1 v2 v3 v4 v5 v6 v7) = Retype v0 v1 (f v2) v3 v4 v5 v6 v7"
 
 primrec
   retypeSlots_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
 where
-  "retypeSlots_update f (Retype v0 v1 v2 v3 v4 v5 v6) = Retype v0 v1 v2 v3 v4 (f v5) v6"
+  "retypeSlots_update f (Retype v0 v1 v2 v3 v4 v5 v6 v7) = Retype v0 v1 v2 v3 v4 v5 (f v6) v7"
+
+primrec
+  retypeResetUntyped_update :: "(bool \<Rightarrow> bool) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
+where
+  "retypeResetUntyped_update f (Retype v0 v1 v2 v3 v4 v5 v6 v7) = Retype v0 (f v1) v2 v3 v4 v5 v6 v7"
 
 primrec
   retypeFreeRegionBase_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
 where
-  "retypeFreeRegionBase_update f (Retype v0 v1 v2 v3 v4 v5 v6) = Retype v0 v1 (f v2) v3 v4 v5 v6"
+  "retypeFreeRegionBase_update f (Retype v0 v1 v2 v3 v4 v5 v6 v7) = Retype v0 v1 v2 (f v3) v4 v5 v6 v7"
 
 primrec
   retypeNewSizeBits_update :: "(nat \<Rightarrow> nat) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
 where
-  "retypeNewSizeBits_update f (Retype v0 v1 v2 v3 v4 v5 v6) = Retype v0 v1 v2 v3 (f v4) v5 v6"
+  "retypeNewSizeBits_update f (Retype v0 v1 v2 v3 v4 v5 v6 v7) = Retype v0 v1 v2 v3 v4 (f v5) v6 v7"
 
 abbreviation (input)
-  Retype_trans :: "(machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (object_type) \<Rightarrow> (nat) \<Rightarrow> (machine_word list) \<Rightarrow> (bool) \<Rightarrow> untyped_invocation" ("Retype'_ \<lparr> retypeSource= _, retypeRegionBase= _, retypeFreeRegionBase= _, retypeNewType= _, retypeNewSizeBits= _, retypeSlots= _, retypeIsDevice= _ \<rparr>")
+  Retype_trans :: "(machine_word) \<Rightarrow> (bool) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (object_type) \<Rightarrow> (nat) \<Rightarrow> (machine_word list) \<Rightarrow> (bool) \<Rightarrow> untyped_invocation" ("Retype'_ \<lparr> retypeSource= _, retypeResetUntyped= _, retypeRegionBase= _, retypeFreeRegionBase= _, retypeNewType= _, retypeNewSizeBits= _, retypeSlots= _, retypeIsDevice= _ \<rparr>")
 where
-  "Retype_ \<lparr> retypeSource= v0, retypeRegionBase= v1, retypeFreeRegionBase= v2, retypeNewType= v3, retypeNewSizeBits= v4, retypeSlots= v5, retypeIsDevice= v6 \<rparr> == Retype v0 v1 v2 v3 v4 v5 v6"
+  "Retype_ \<lparr> retypeSource= v0, retypeResetUntyped= v1, retypeRegionBase= v2, retypeFreeRegionBase= v3, retypeNewType= v4, retypeNewSizeBits= v5, retypeSlots= v6, retypeIsDevice= v7 \<rparr> == Retype v0 v1 v2 v3 v4 v5 v6 v7"
 
 lemma retypeSource_retypeSource_update [simp]:
   "retypeSource (retypeSource_update f v) = f (retypeSource v)"
@@ -658,6 +668,10 @@ lemma retypeSource_retypeRegionBase_update [simp]:
 
 lemma retypeSource_retypeSlots_update [simp]:
   "retypeSource (retypeSlots_update f v) = retypeSource v"
+  by (cases v) simp
+
+lemma retypeSource_retypeResetUntyped_update [simp]:
+  "retypeSource (retypeResetUntyped_update f v) = retypeSource v"
   by (cases v) simp
 
 lemma retypeSource_retypeFreeRegionBase_update [simp]:
@@ -688,6 +702,10 @@ lemma retypeNewType_retypeSlots_update [simp]:
   "retypeNewType (retypeSlots_update f v) = retypeNewType v"
   by (cases v) simp
 
+lemma retypeNewType_retypeResetUntyped_update [simp]:
+  "retypeNewType (retypeResetUntyped_update f v) = retypeNewType v"
+  by (cases v) simp
+
 lemma retypeNewType_retypeFreeRegionBase_update [simp]:
   "retypeNewType (retypeFreeRegionBase_update f v) = retypeNewType v"
   by (cases v) simp
@@ -714,6 +732,10 @@ lemma retypeIsDevice_retypeRegionBase_update [simp]:
 
 lemma retypeIsDevice_retypeSlots_update [simp]:
   "retypeIsDevice (retypeSlots_update f v) = retypeIsDevice v"
+  by (cases v) simp
+
+lemma retypeIsDevice_retypeResetUntyped_update [simp]:
+  "retypeIsDevice (retypeResetUntyped_update f v) = retypeIsDevice v"
   by (cases v) simp
 
 lemma retypeIsDevice_retypeFreeRegionBase_update [simp]:
@@ -744,6 +766,10 @@ lemma retypeRegionBase_retypeSlots_update [simp]:
   "retypeRegionBase (retypeSlots_update f v) = retypeRegionBase v"
   by (cases v) simp
 
+lemma retypeRegionBase_retypeResetUntyped_update [simp]:
+  "retypeRegionBase (retypeResetUntyped_update f v) = retypeRegionBase v"
+  by (cases v) simp
+
 lemma retypeRegionBase_retypeFreeRegionBase_update [simp]:
   "retypeRegionBase (retypeFreeRegionBase_update f v) = retypeRegionBase v"
   by (cases v) simp
@@ -772,12 +798,48 @@ lemma retypeSlots_retypeSlots_update [simp]:
   "retypeSlots (retypeSlots_update f v) = f (retypeSlots v)"
   by (cases v) simp
 
+lemma retypeSlots_retypeResetUntyped_update [simp]:
+  "retypeSlots (retypeResetUntyped_update f v) = retypeSlots v"
+  by (cases v) simp
+
 lemma retypeSlots_retypeFreeRegionBase_update [simp]:
   "retypeSlots (retypeFreeRegionBase_update f v) = retypeSlots v"
   by (cases v) simp
 
 lemma retypeSlots_retypeNewSizeBits_update [simp]:
   "retypeSlots (retypeNewSizeBits_update f v) = retypeSlots v"
+  by (cases v) simp
+
+lemma retypeResetUntyped_retypeSource_update [simp]:
+  "retypeResetUntyped (retypeSource_update f v) = retypeResetUntyped v"
+  by (cases v) simp
+
+lemma retypeResetUntyped_retypeNewType_update [simp]:
+  "retypeResetUntyped (retypeNewType_update f v) = retypeResetUntyped v"
+  by (cases v) simp
+
+lemma retypeResetUntyped_retypeIsDevice_update [simp]:
+  "retypeResetUntyped (retypeIsDevice_update f v) = retypeResetUntyped v"
+  by (cases v) simp
+
+lemma retypeResetUntyped_retypeRegionBase_update [simp]:
+  "retypeResetUntyped (retypeRegionBase_update f v) = retypeResetUntyped v"
+  by (cases v) simp
+
+lemma retypeResetUntyped_retypeSlots_update [simp]:
+  "retypeResetUntyped (retypeSlots_update f v) = retypeResetUntyped v"
+  by (cases v) simp
+
+lemma retypeResetUntyped_retypeResetUntyped_update [simp]:
+  "retypeResetUntyped (retypeResetUntyped_update f v) = f (retypeResetUntyped v)"
+  by (cases v) simp
+
+lemma retypeResetUntyped_retypeFreeRegionBase_update [simp]:
+  "retypeResetUntyped (retypeFreeRegionBase_update f v) = retypeResetUntyped v"
+  by (cases v) simp
+
+lemma retypeResetUntyped_retypeNewSizeBits_update [simp]:
+  "retypeResetUntyped (retypeNewSizeBits_update f v) = retypeResetUntyped v"
   by (cases v) simp
 
 lemma retypeFreeRegionBase_retypeSource_update [simp]:
@@ -798,6 +860,10 @@ lemma retypeFreeRegionBase_retypeRegionBase_update [simp]:
 
 lemma retypeFreeRegionBase_retypeSlots_update [simp]:
   "retypeFreeRegionBase (retypeSlots_update f v) = retypeFreeRegionBase v"
+  by (cases v) simp
+
+lemma retypeFreeRegionBase_retypeResetUntyped_update [simp]:
+  "retypeFreeRegionBase (retypeResetUntyped_update f v) = retypeFreeRegionBase v"
   by (cases v) simp
 
 lemma retypeFreeRegionBase_retypeFreeRegionBase_update [simp]:
@@ -826,6 +892,10 @@ lemma retypeNewSizeBits_retypeRegionBase_update [simp]:
 
 lemma retypeNewSizeBits_retypeSlots_update [simp]:
   "retypeNewSizeBits (retypeSlots_update f v) = retypeNewSizeBits v"
+  by (cases v) simp
+
+lemma retypeNewSizeBits_retypeResetUntyped_update [simp]:
+  "retypeNewSizeBits (retypeResetUntyped_update f v) = retypeNewSizeBits v"
   by (cases v) simp
 
 lemma retypeNewSizeBits_retypeFreeRegionBase_update [simp]:

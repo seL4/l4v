@@ -53,3 +53,8 @@ To limit the impact of "Retype" calls on interrupt latency, there is a fixed max
 > retypeFanOutLimit :: Word
 > retypeFanOutLimit = 256
 
+Also related to interrupt latency, clearing of memory before "Retype" is done one chunk at a time, with a configurable chunk size. The chunk size must be a power of two, and is represented by a number of bits.
+
+> resetChunkBits :: Int
+> resetChunkBits = 8
+

@@ -1,5 +1,95 @@
-Built from git repo at /home/matthewb/verification/patch/l4v/spec/haskell by matthewb
+Built from git repo at /home/tsewell/dev/verification2/l4v/spec/haskell by tsewell
 
 Generated from changeset:
-1c569f1 SELFOUR-276: reworked haskell
+af80ffc Invariants proven for preemptible retype.
 
+
+Warning - uncomitted changes used:
+M  ../../proof/ROOT
+ M ../../proof/invariant-abstract/ARM/ArchDetSchedAux_AI.thy
+ M ../../proof/invariant-abstract/ARM/ArchDeterministic_AI.thy
+ M ../../proof/invariant-abstract/DetSchedAux_AI.thy
+ M ../../proof/invariant-abstract/Deterministic_AI.thy
+ M ../../proof/invariant-abstract/Untyped_AI.thy
+M  ../../proof/refine/ArchAcc_R.thy
+M  ../../proof/refine/Arch_R.thy
+M  ../../proof/refine/CNodeInv_R.thy
+M  ../../proof/refine/CSpace_R.thy
+MM ../../proof/refine/Detype_R.thy
+M  ../../proof/refine/Finalise_R.thy
+M  ../../proof/refine/InterruptAcc_R.thy
+M  ../../proof/refine/Orphanage.thy
+M  ../../proof/refine/PageTableDuplicates.thy
+MM ../../proof/refine/Retype_R.thy
+M  ../../proof/refine/Syscall_R.thy
+MM ../../proof/refine/Untyped_R.thy
+ M ../abstract/Retype_A.thy
+ M ../design/ARM/ArchRetypeDecls_H.thy
+MM ../design/ARM/ArchRetype_H.thy
+MM ../design/ARM/Intermediate_H.thy
+M  ../design/Config_H.thy
+MM ../design/Invocations_H.thy
+M  ../design/Retype_H.thy
+MM ../design/Untyped_H.thy
+ M ../design/skel/Untyped_H.thy
+MM ../design/version
+ M src/SEL4/API/Invocation.lhs
+ M src/SEL4/Config.lhs
+ M src/SEL4/Object/ObjectType.lhs
+ M src/SEL4/Object/ObjectType/ARM.lhs
+ M src/SEL4/Object/Untyped.lhs
+?? ../../Test.thy
+?? ../../camkes/glue-proofs/umm_types.txt
+?? ../../lib/Test.thy
+?? ../../lib/foo.c
+?? ../../patch
+?? ../../proof/Ctac.thy
+?? ../../proof/Old_Arch.thy
+?? ../../proof/Old_Retype_R.thy
+?? ../../proof/Old_Untyped_AI.thy
+?? ../../proof/Test.thy
+?? ../../proof/asmrefine/CFunDump.txt
+?? ../../proof/crefine/Test.thy
+?? ../../proof/foo
+?? ../../proof/invariant-abstract/ARM/ArchVSpaceEntries_AI.thy.orig
+?? ../../proof/invariant-abstract/Arch_AI.thy.orig
+?? ../../proof/invariant-abstract/BCorres2_AI.thy.orig
+?? ../../proof/invariant-abstract/CNodeInv_AI.thy.orig
+?? ../../proof/invariant-abstract/CSpace_AI.thy.orig
+?? ../../proof/invariant-abstract/DetSchedAux_AI.thy.orig
+?? ../../proof/invariant-abstract/Deterministic_AI.thy.orig
+?? ../../proof/invariant-abstract/Finalise_AI.thy.orig
+?? ../../proof/invariant-abstract/Retype_AI.thy.orig
+?? ../../proof/invariant-abstract/Untyped_AI.thy.orig
+?? ../../proof/lhs_pars.py
+?? ../../proof/refine/.Untyped_R.thy.marks
+?? ../../proof/refine/Arch_R.thy.orig
+?? ../../proof/refine/Detype_R.thy.orig
+?? ../../proof/refine/Orphanage.thy.orig
+?? ../../proof/refine/PageTableDuplicates.thy.orig
+?? ../../proof/refine/Retype_R.thy.orig
+?? ../../proof/refine/Untyped_R.thy.orig
+?? ../../proof/switch_glob.c
+?? ../../proof/switch_glob.thy
+?? ../../proof/untyped.c
+?? ../abstract/ARM/ArchRetype_A.thy.orig
+?? ../abstract/Decode_A.thy.orig
+?? ../abstract/Invocations_A.thy.orig
+?? ../abstract/Retype_A.thy.orig
+?? ../cspec/c/foo.c
+?? ../cspec/c/foo.s
+?? ../design/ARM/ArchRetype_H.thy.orig
+?? ../design/ARM/Intermediate_H.thy.orig
+?? ../design/Invocations_H.thy.orig
+?? ../design/Untyped_H.thy.orig
+?? ../design/version.orig
+?? ../foo.c
+?? src/SEL4/API/Invocation.lhs.orig
+?? src/SEL4/Object/ObjectType/ARM.lhs.orig
+?? src/SEL4/Object/ObjectType/ARM.lhs.rej
+?? src/SEL4/Object/Untyped.lhs.orig
+?? src/SEL4/Object/Untyped.lhs.rej
+?? ../patch
+?? ../../tools/autocorres/doc/quickstart/umm_types.txt
+?? ../../tools/autocorres/tests/umm_types.txt
+?? ../../use-this-isabelle

@@ -2872,8 +2872,8 @@ lemma reset_untyped_cap_invs_etc:
      (simp add: cte_wp_at_caps_of_state descendants_range_def)+)
    apply (drule caps_of_state_valid_cap | clarify)+
    apply (intro conjI; clarify?; blast)[1]
-  apply (cases "sz < reset_chunk_bits")
-   apply simp
+  apply (cases "dev \<or> sz < reset_chunk_bits")
+   apply (simp add: unless_def)
    apply (rule hoare_pre)
     apply (wp set_untyped_cap_invs_simple set_cap_cte_wp_at set_cap_no_overlap
               hoare_vcg_const_Ball_lift set_cap_cte_cap_wp_to
@@ -2882,7 +2882,8 @@ lemma reset_untyped_cap_invs_etc:
     apply (rule hoare_lift_Pf2 [where f="interrupt_irq_node"])
      apply (wp hoare_vcg_const_Ball_lift hoare_vcg_const_imp_lift
                hoare_vcg_ex_lift ct_in_state_thread_state_lift)
-   apply (clarsimp simp add: bits_of_def field_simps cte_wp_at_caps_of_state)
+   apply (clarsimp simp add: bits_of_def field_simps cte_wp_at_caps_of_state
+                             empty_descendants_range_in)
   apply (cut_tac a=sz and b=reset_chunk_bits and n=idx in upt_mult_lt_prop)
     apply (frule caps_of_state_valid_cap, clarsimp+)
     apply (simp add: valid_cap_def)
@@ -2929,11 +2930,11 @@ lemma reset_untyped_cap_st_tcb_at:
   \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>, \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_pre)
-   apply (wp mapME_x_inv_wp preemption_point_inv | simp)+
+   apply (wp mapME_x_inv_wp preemption_point_inv | simp add: unless_def)+
     apply (simp add: delete_objects_def)
-    apply (wp get_cap_wp | simp)+
-  apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_def
-                        bits_of_def split: cap.split_asm)
+    apply (wp get_cap_wp hoare_vcg_const_imp_lift | simp)+
+  apply (auto simp: cte_wp_at_caps_of_state cap_range_def
+                    bits_of_def split: cap.split_asm)
   done
 
 lemma create_cap_iflive[wp]:

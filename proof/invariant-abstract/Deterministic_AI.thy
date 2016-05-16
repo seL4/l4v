@@ -4085,9 +4085,6 @@ global_interpretation retype_region_ext_extended: is_extended "retype_region_ext
   apply wp
   done
 
-crunch valid_list[wp]: invoke_untyped valid_list
-  (wp: crunch_wps preemption_point_inv' mapME_x_inv_wp
-    simp: mapM_x_def_bak whenE_def)
 crunch valid_list[wp]: invoke_irq_handler valid_list
 
 crunch valid_list[wp]: attempt_switch_to "valid_list"

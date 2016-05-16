@@ -145,9 +145,9 @@ definition
   get_free_index :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> nat" where
   "get_free_index base free \<equiv> unat $ (free - base)"
 
-primrec(nonexhaustive) is_device_ut_cap
+primrec(nonexhaustive) is_device_untyped_cap
 where
-  "is_device_ut_cap (UntypedCap isd _ _ _) = isd"
+  "is_device_untyped_cap (UntypedCap isdev _ _ _) = isdev"
 
 text {* Untyped capabilities note a currently free region. Sometimes this
 region is reset during a Retype operation. This progressively clears the
@@ -161,18 +161,17 @@ where
   sz \<leftarrow> returnOk $ bits_of cap;
   base \<leftarrow> returnOk $ obj_ref_of cap;
   liftE $ delete_objects base sz;
+  dev \<leftarrow> returnOk $ is_device_untyped_cap cap;
 
-  if sz < reset_chunk_bits
+  if dev \<or> sz < reset_chunk_bits
     then liftE $ do
-        do_machine_op $ clearMemory base (2 ^ sz);
-        set_cap (UntypedCap (is_device_ut_cap cap)
-            (obj_ref_of cap) (bits_of cap) 0) src_slot
+        unless dev $ do_machine_op $ clearMemory base (2 ^ sz);
+        set_cap (UntypedCap dev base sz 0) src_slot
     od
     else mapME_x (\<lambda>i. doE
         liftE $ do_machine_op $ clearMemory (base + (of_nat i << reset_chunk_bits))
             (2 ^ reset_chunk_bits);
-        liftE $ set_cap (UntypedCap (is_device_ut_cap cap)
-            (obj_ref_of cap) (bits_of cap)
+        liftE $ set_cap (UntypedCap dev base sz
             (i * 2 ^ reset_chunk_bits)) src_slot;
         preemption_point
       odE) (rev [i \<leftarrow> [0 ..< 2 ^ (sz - reset_chunk_bits)].

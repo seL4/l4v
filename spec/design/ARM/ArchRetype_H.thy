@@ -205,17 +205,10 @@ defs sameObjectAs_def:
   else   sameRegionAs a b
   )"
 
-definition
-"createPageObject ptr numPages isDevice \<equiv>
-    if isDevice then (do
-      addrs \<leftarrow> placeNewObject ptr UserDataDevice numPages;
-      return addrs
-    od)
-    else (do
-      addrs \<leftarrow> placeNewObject ptr UserData numPages;
-      doMachineOp $ initMemory (PPtr $ fromPPtr ptr) (1 `~shiftL~` (pageBits + numPages) );
-      return addrs
-    od)"
+defs placeNewDataObject_def:
+"placeNewDataObject regionBase sz isDevice \<equiv> if isDevice
+    then placeNewObject regionBase UserDataDevice sz
+    else placeNewObject regionBase UserData sz"
 
 defs createObject_def:
 "createObject t regionBase arg3 isDevice \<equiv>
@@ -225,7 +218,7 @@ defs createObject_def:
         APIObjectType v2 \<Rightarrow> 
             haskell_fail []
         | SmallPageObject \<Rightarrow>  (do
-            createPageObject regionBase 0 isDevice;
+            placeNewDataObject regionBase 0 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSmallPage)\<rparr>);
@@ -233,7 +226,7 @@ defs createObject_def:
                   VMReadWrite ARMSmallPage Nothing
         od)
         | LargePageObject \<Rightarrow>  (do
-            createPageObject regionBase 4 isDevice;
+            placeNewDataObject regionBase 4 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMLargePage)\<rparr>);
@@ -241,7 +234,7 @@ defs createObject_def:
                   VMReadWrite ARMLargePage Nothing
         od)
         | SectionObject \<Rightarrow>  (do
-            createPageObject regionBase 8 isDevice;
+            placeNewDataObject regionBase 8 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSection)\<rparr>);
@@ -249,7 +242,7 @@ defs createObject_def:
                   VMReadWrite ARMSection Nothing
         od)
         | SuperSectionObject \<Rightarrow>  (do
-            createPageObject regionBase 12 isDevice;
+            placeNewDataObject regionBase 12 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSuperSection)\<rparr>);
@@ -258,12 +251,7 @@ defs createObject_def:
         od)
         | PageTableObject \<Rightarrow>  (do
             ptSize \<leftarrow> return ( ptBits - objBits (makeObject ::pte));
-            regionSize \<leftarrow> return ( (1 `~shiftL~` ptBits));
             placeNewObject regionBase (makeObject ::pte) ptSize;
-            doMachineOp $
-                cleanCacheRange_PoU (VPtr $ fromPPtr regionBase)
-                      (VPtr $ fromPPtr regionBase + regionSize - 1)
-                      (addrFromPPtr regionBase);
             return $ PageTableCap (pointerCast regionBase) Nothing
         od)
         | PageDirectoryObject \<Rightarrow>  (do

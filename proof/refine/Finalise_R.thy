@@ -3735,40 +3735,6 @@ lemma dmo'_bind_return:
   by (clarsimp simp: doMachineOp_def bind_def return_def valid_def select_f_def
                      split_def)
 
-lemma clearMemory_vms':
-  "valid_machine_state' s \<Longrightarrow>
-   \<forall>x\<in>fst (clearMemory ptr bits (ksMachineState s)).
-      valid_machine_state' (s\<lparr>ksMachineState := snd x\<rparr>)"
-  apply (clarsimp simp: valid_machine_state'_def
-                        disj_commute[of "pointerInUserData p s" for p s])
-  apply (drule_tac x=p in spec, simp)
-  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = 0"
-         in use_valid[where P=P and Q="\<lambda>_. P" for P], simp_all)
-  apply (rule clearMemory_um_eq_0)
-  done
-
-lemma ct_not_inQ_ksMachineState_update[simp]:
-  "ct_not_inQ (s\<lparr>ksMachineState := v\<rparr>) = ct_not_inQ s"
-  by (simp add: ct_not_inQ_def)
-
-lemma ct_in_current_domain_ksMachineState_update[simp]:
-  "ct_idle_or_in_cur_domain' (s\<lparr>ksMachineState := v\<rparr>) = ct_idle_or_in_cur_domain' s"
-  by (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-
-lemma dmo_clearMemory_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (clearMemory w sz) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  apply (clarsimp simp: invs'_def valid_state'_def)
-  apply (rule conjI)
-   apply (simp add: valid_irq_masks'_def, elim allEI, clarsimp)
-   apply (drule use_valid)
-     apply (rule no_irq_clearMemory[simplified no_irq_def, rule_format])
-    apply simp_all
-  apply (drule clearMemory_vms')
-  apply fastforce
-  done
-
 lemma ct_in_current_domain_ArchState_update[simp]:
   "ct_idle_or_in_cur_domain' (s\<lparr>ksArchState := v\<rparr>) = ct_idle_or_in_cur_domain' s"
   by (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
@@ -4456,12 +4422,6 @@ crunch typ_at'[wp]: recycleCap "\<lambda>s. P (typ_at' T p s)"
 
 lemmas recycleCap_typ_at_lifts[wp]
     = typ_at_lifts [OF recycleCap_typ_at']
-
-lemma no_fail_getSlotCap:
-  "no_fail (cte_at' p) (getSlotCap p)"
-  apply (rule no_fail_pre)
-  apply (simp add: getSlotCap_def | wp)+
-  done
 
 crunch idle_thread[wp]: deleteCallerCap "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps)

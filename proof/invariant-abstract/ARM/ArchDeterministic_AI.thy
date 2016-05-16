@@ -34,7 +34,9 @@ crunch valid_list[wp, Deterministic_AI_assms]: cap_recycle valid_list
    ignore: without_preemption filterM recycle_cap_ext)
 
 crunch valid_list[wp]: invoke_untyped valid_list
-  (wp: crunch_wps hoare_unless_wp simp: mapM_x_def_bak)
+  (wp: crunch_wps preemption_point_inv' hoare_unless_wp mapME_x_wp'
+    simp: mapM_x_def_bak crunch_simps
+    ignore: Deterministic_A.OR_choiceE)
 
 crunch valid_list[wp]: invoke_irq_control valid_list
 

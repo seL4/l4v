@@ -113,6 +113,7 @@ The following data type defines the parameters expected for invocations of Untyp
 > data UntypedInvocation
 >         = Retype {
 >             retypeSource :: PPtr CTE,
+>             retypeResetUntyped :: Bool,
 >             retypeRegionBase :: PPtr (),
 >             retypeFreeRegionBase :: PPtr (),
 >             retypeNewType :: ObjectType,

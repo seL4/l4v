@@ -221,7 +221,7 @@ lemma pac_corres:
           apply (wp set_untyped_cap_invs_simple[where sz = pageBits]
                     set_cap_cte_wp_at
                     set_cap_caps_no_overlap[where sz = pageBits]
-                    set_cap_no_overlap[where sz = pageBits]
+                    set_cap_no_overlap
                     set_cap_device_and_range_aligned[where dev = False,simplified]
                     set_untyped_cap_caps_overlap_reserved[where sz = pageBits] | assumption)+
          apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
@@ -252,7 +252,8 @@ lemma pac_corres:
     apply (clarsimp simp: conj_comms ex_disj_distrib
            | strengthen invs_valid_pspace' invs_pspace_aligned'
                         invs_pspace_distinct')+
-    apply (wp deleteObjects_invs' deleteObjects_cte_wp_at')
+    apply (wp deleteObjects_invs' deleteObjects_cte_wp_at'
+              deleteObjects_descendants)
     apply (rule_tac Q= "\<lambda>r s. ct_active' s \<and>
                                (\<exists>x. (x = capability.UntypedCap False word1 pageBits idx \<and> F r s x))" for F
                      in hoare_strengthen_post)
@@ -271,6 +272,7 @@ lemma pac_corres:
               deleteObject_no_overlap deleteObjects_ct_active')
     apply (clarsimp simp: is_simple_cap_def valid_cap'_def max_free_index_def is_cap_simps
                     cong: conj_cong)
+    apply (strengthen empty_descendants_range_in')
     apply (wp deleteObjects_descendants deleteObjects_cte_wp_at' deleteObjects_null_filter)
    apply (clarsimp simp:invs_mdb max_free_index_def invs_untyped_children)
    apply (subgoal_tac "detype_locale x y sa" for x y)
@@ -311,8 +313,6 @@ lemma pac_corres:
    apply clarsimp
    apply (rule conjI,clarsimp simp:clear_um_def)
    apply (simp add:detype_clear_um_independent)
-   apply (rule conjI,rule pspace_no_overlap_detype[OF caps_of_state_valid])
-       apply (simp add:invs_psp_aligned invs_valid_objs)+
    apply (rule conjI,erule caps_no_overlap_detype[OF descendants_range_caps_no_overlapI])
      apply (clarsimp simp:is_aligned_neg_mask_eq cte_wp_at_caps_of_state)
      apply (simp add:empty_descendants_range_in)+
@@ -322,6 +322,9 @@ lemma pac_corres:
      apply fastforce
     apply (clarsimp simp: region_in_kernel_window_def valid_cap_def
                           cap_aligned_def is_aligned_neg_mask_eq detype_def clear_um_def)
+   apply (rule conjI, rule pspace_no_overlap_subset,
+         rule pspace_no_overlap_detype[OF caps_of_state_valid])
+        apply (simp add:invs_psp_aligned invs_valid_objs is_aligned_neg_mask_eq)+
    apply (clarsimp simp: detype_def clear_um_def detype_ext_def valid_sched_def valid_etcbs_def
             st_tcb_at_kh_def obj_at_kh_def st_tcb_at_def obj_at_def is_etcb_at_def)
   apply (simp add: detype_def clear_um_def)
@@ -2247,6 +2250,7 @@ lemma performASIDControlInvocation_invs' [wp]:
      apply (clarsimp simp:isCap_simps)
     apply assumption
    apply (clarsimp split del:if_splits simp:valid_cap'_def max_free_index_def)
+   apply (strengthen empty_descendants_range_in')
    apply (wp hoare_vcg_ex_lift deleteObjects_caps_no_overlap''
              deleteObjects_cte_wp_at'[where d=False] deleteObjects_null_filter[where d=False]
              deleteObject_no_overlap[where d=False] deleteObjects_descendants[where d=False])

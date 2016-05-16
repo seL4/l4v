@@ -410,7 +410,7 @@ defs decodeInvocation_def:
 defs performInvocation_def:
 "performInvocation block call x2\<equiv> (case x2 of
     (InvokeUntyped invok) \<Rightarrow>    (doE
-    withoutPreemption $ invokeUntyped invok;
+    invokeUntyped invok;
     returnOk $ []
     odE)
   | (InvokeEndpoint ep badge canGrant) \<Rightarrow>   

@@ -20,6 +20,7 @@ imports
   Invocations_H
   InvocationLabels_H
   Config_H
+  "../machine/MachineExports"
 begin
 
 consts
@@ -78,10 +79,11 @@ where
         mapM (locateSlotCap nodeCap)
             [nodeOffset  .e.  nodeOffset+nodeWindow - 1];
     mapME_x ensureEmptySlot slots;
-    freeIndex \<leftarrow> withoutFailure $ constOnFailure (capFreeIndex cap) $ (doE
+    reset \<leftarrow> withoutFailure $ constOnFailure False $ (doE
             ensureNoChildren slot;
-            returnOk 0
+            returnOk True
     odE);
+    freeIndex \<leftarrow> returnOk ( if reset then 0 else capFreeIndex cap);
     freeRef \<leftarrow> returnOk ( getFreeRef (capPtr cap) freeIndex);
     objectSize \<leftarrow> returnOk ( getObjectSize newType userObjSize);
     untypedFreeBytes \<leftarrow> returnOk ( (bit (capBlockSize cap)) - freeIndex);
@@ -95,6 +97,7 @@ where
     alignedFreeRef \<leftarrow> returnOk ( PPtr $ alignUp (fromPPtr freeRef) objectSize);
     returnOk $ Retype_ \<lparr>
         retypeSource= slot,
+        retypeResetUntyped= reset,
         retypeRegionBase= capPtr cap,
         retypeFreeRegionBase= alignedFreeRef,
         retypeNewType= newType,
@@ -109,22 +112,50 @@ where
   )"
 
 definition
-invokeUntyped :: "untyped_invocation \<Rightarrow> unit kernel"
+resetUntypedCap :: "machine_word \<Rightarrow> unit kernel_p"
+where
+"resetUntypedCap slot\<equiv> (doE
+    cap \<leftarrow> withoutPreemption $ getSlotCap slot;
+    sz \<leftarrow> returnOk ( capBlockSize cap);
+    withoutPreemption $ deleteObjects (capPtr cap) sz;
+    if (capIsDevice cap \<or> sz < resetChunkBits)
+        then withoutPreemption $ (do
+            unless (capIsDevice cap) $ doMachineOp $
+                clearMemory (PPtr (fromPPtr (capPtr cap))) (1 `~shiftL~` sz);
+            updateCap slot (cap \<lparr>capFreeIndex := 0\<rparr>)
+        od)
+        else (
+            forME_x (reverse [capPtr cap, capPtr cap + (1 `~shiftL~` resetChunkBits)  .e.
+                        getFreeRef (capPtr cap) (capFreeIndex cap) - 1])
+                (\<lambda> addr. (doE
+                    withoutPreemption $ doMachineOp $ clearMemory
+                        (PPtr (fromPPtr addr)) (1 `~shiftL~` resetChunkBits);
+                    withoutPreemption $ updateCap slot (cap \<lparr>capFreeIndex
+                        := getFreeIndex (capPtr cap) addr\<rparr>);
+                    preemptionPoint
+                odE))
+        )
+odE)"
+
+definition
+invokeUntyped :: "untyped_invocation \<Rightarrow> unit kernel_p"
 where
 "invokeUntyped x0\<equiv> (case x0 of
-    (Retype srcSlot base freeRegionBase newType userSize destSlots isDevice) \<Rightarrow>    (do
-    cap \<leftarrow> getSlotCap srcSlot;
-    when (base = freeRegionBase) $
-        deleteObjects base (capBlockSize cap);
-    totalObjectSize \<leftarrow> return ( (length destSlots) `~shiftL~` (getObjectSize newType userSize));
-    stateAssert (\<lambda> x. Not (cNodeOverlap (gsCNodes x)
-            (\<lambda> x. fromPPtr freeRegionBase \<le> x
-                \<and> x \<le> fromPPtr freeRegionBase + fromIntegral totalObjectSize - 1)))
-        [];
-    freeRef \<leftarrow> return ( freeRegionBase + PPtr (fromIntegral totalObjectSize));
-    updateCap srcSlot (cap \<lparr>capFreeIndex := getFreeIndex base freeRef\<rparr>);
-    createNewObjects newType srcSlot destSlots freeRegionBase userSize isDevice
+    (Retype srcSlot reset base retypeBase newType userSize destSlots isDev) \<Rightarrow>    (doE
+    whenE reset $ resetUntypedCap srcSlot;
+    withoutPreemption $ (do
+        cap \<leftarrow> getSlotCap srcSlot;
+        totalObjectSize \<leftarrow> return ( (length destSlots) `~shiftL~` (getObjectSize newType userSize));
+        stateAssert (\<lambda> x. Not (cNodeOverlap (gsCNodes x)
+                (\<lambda> x. fromPPtr retypeBase \<le> x
+                    \<and> x \<le> fromPPtr retypeBase + fromIntegral totalObjectSize - 1)))
+            [];
+        freeRef \<leftarrow> return ( retypeBase + PPtr (fromIntegral totalObjectSize));
+        updateCap srcSlot
+            (cap \<lparr>capFreeIndex := getFreeIndex base freeRef\<rparr>);
+        createNewObjects newType srcSlot destSlots retypeBase userSize isDev
     od)
+    odE)
   )"
 
 
