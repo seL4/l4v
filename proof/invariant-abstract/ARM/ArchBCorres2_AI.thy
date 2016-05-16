@@ -25,10 +25,8 @@ crunch (bcorres)bcorres[wp]: create_cap,init_arch_objects,retype_region,delete_o
 
 crunch (bcorres)bcorres[wp]: set_extra_badge,derive_cap truncate_state (ignore: storeWord)
 
-lemma invoke_untyped_bcorres[wp]:" bcorres (invoke_untyped a) (invoke_untyped a)"
-  apply (cases a)
-  apply (wp | simp)+
-  done
+crunch (bcorres)bcorres[wp]: invoke_untyped truncate_state
+  (ignore: sequence_x)
 
 crunch (bcorres)bcorres[wp]: set_mcpriority truncate_state
 

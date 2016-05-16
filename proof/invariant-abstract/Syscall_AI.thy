@@ -8,8 +8,8 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
-Refinement for handleEvent and syscalls
+(*
+Invariant preservation for all syscalls.
 *)
 
 theory Syscall_AI

@@ -241,9 +241,9 @@ definition
   "obj_range p obj \<equiv> {p .. p + 2^obj_bits obj - 1}"
 
 definition
-  "pspace_no_overlap ptr bits \<equiv>
+  "pspace_no_overlap S \<equiv>
            \<lambda>s. \<forall>x ko. kheap s x = Some ko \<longrightarrow>
-                {x .. x + (2 ^ obj_bits ko - 1)} \<inter> {ptr .. (ptr &&~~ mask bits)  + (2 ^  bits - 1)} = {}"
+                {x .. x + (2 ^ obj_bits ko - 1)} \<inter> S = {}"
 
 definition
   "valid_untyped c \<equiv> \<lambda>s.
@@ -1712,6 +1712,13 @@ lemma cte_wp_caps_of_lift:
   apply (clarsimp dest!: caps_of_state_cteD simp add: c [symmetric])
   apply (simp add: cte_wp_at_caps_of_state)
   done
+
+lemma ex_cte_cap_to_pres:
+  assumes x: "\<And>P p. \<lbrace>cte_wp_at P p\<rbrace> f \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
+  assumes irq: "\<And>P. \<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> f \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)\<rbrace>"
+  shows      "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> f \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
+  by (simp add: ex_cte_cap_wp_to_def,
+      wp hoare_vcg_ex_lift hoare_use_eq[where f=interrupt_irq_node, OF irq, OF x])
 
 lemma valid_mdb_eqI:
   assumes "valid_mdb s"

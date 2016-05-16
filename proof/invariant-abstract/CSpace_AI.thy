@@ -427,6 +427,11 @@ lemma get_cap_cte_wp_at:
   apply (clarsimp elim!: cte_wp_at_weakenE)
   done
 
+lemma get_cap_sp:
+  "\<lbrace>P\<rbrace> get_cap p \<lbrace>\<lambda>rv. P and cte_wp_at (\<lambda>c. c = rv) p\<rbrace>"
+  apply (wp get_cap_cte_wp_at)
+  apply simp
+  done
 
 lemma wf_cs_nD:
   "\<lbrakk> f x = Some y; well_formed_cnode_n n f \<rbrakk> \<Longrightarrow> length x = n"
@@ -3559,15 +3564,30 @@ lemma set_free_index_valid_pspace:
   apply (clarsimp simp: is_nondevice_page_cap_simps)
   done
 
-
 locale CSpace_AI_4 = CSpace_AI_3 state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +
-  assumes set_free_index_invs:
+  assumes set_free_index_invs_known_cap:
     "\<And>cap idx.
       \<lbrace>\<lambda>s::'state_ext state. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap)
            \<and> invs s \<and> cte_wp_at (op = cap ) cref s\<rbrace>
         set_cap (free_index_update (\<lambda>_. idx) cap) cref 
       \<lbrace>\<lambda>rv s'. invs s'\<rbrace>"
+
+lemma (in CSpace_AI_4) set_free_index_invs:
+  "\<lbrace>\<lambda>s::'state_ext state. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap) \<and>
+        invs s \<and> cte_wp_at (\<lambda>cp. \<exists>ptr sz dev idx' idx''. idx' \<le> idx
+            \<and> cp = UntypedCap dev ptr sz idx' \<and> cap = UntypedCap dev ptr sz idx'') cref s\<rbrace>
+   set_cap (free_index_update (\<lambda>_. idx) cap) cref 
+   \<lbrace>\<lambda>rv s'. invs s'\<rbrace>"
+  apply (rule hoare_name_pre_state)
+  apply (simp add: cte_wp_at_caps_of_state)
+  apply clarify
+  apply (cut_tac cap="the (caps_of_state s cref)"
+     in set_free_index_invs_known_cap)
+  apply clarsimp
+  apply (erule hoare_pre)
+  apply (clarsimp simp: cte_wp_at_caps_of_state free_index_of_def)
+  done
 
 lemma set_untyped_cap_as_full_cap_zombies_final:
   "\<lbrace>zombies_final and cte_wp_at (op = src_cap) src\<rbrace>
@@ -4406,15 +4426,6 @@ lemma set_cdt_ifunsafe[wp]:
   apply wp
   apply (clarsimp elim!: ifunsafe_pspaceI)
   done
-
-
-lemma ex_cte_cap_to_pres:
-  assumes x: "\<And>P p. \<lbrace>cte_wp_at P p\<rbrace> f \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
-  assumes irq: "\<And>P. \<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> f \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)\<rbrace>"
-  shows      "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> f \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
-  by (simp add: ex_cte_cap_wp_to_def,
-      wp hoare_vcg_ex_lift hoare_use_eq[where f=interrupt_irq_node, OF irq, OF x])
-
 
 lemma set_cdt_ex_cap[wp]:
   "\<lbrace>ex_cte_cap_to p\<rbrace> set_cdt m \<lbrace>\<lambda>rv. ex_cte_cap_to p\<rbrace>"

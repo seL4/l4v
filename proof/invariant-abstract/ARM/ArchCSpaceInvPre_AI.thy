@@ -309,4 +309,5 @@ lemma obj_ref_none_no_asid:
   "obj_refs new_cap = {} \<longrightarrow> table_cap_ref new_cap = None"
   by (simp add: table_cap_ref_def split: cap.split arch_cap.split)+
 end
+
 end

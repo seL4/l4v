@@ -1985,17 +1985,8 @@ lemmas (* recycle_cap_cte_cap_to *) [wp,Finalise_AI_asms] =
 lemmas (* recycle_cap_valid_cap *)[Finalise_AI_asms] =
   valid_cap_typ [OF recycle_cap_typ_at]
 
-(* FIXME: move *)
-lemma (* clearMemory_invs *) [wp,Finalise_AI_asms]:
-  "\<lbrace>invs\<rbrace> do_machine_op (clearMemory w sz) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply (clarsimp simp: invs_def valid_state_def clearMemory_vms cur_tcb_def)
-  apply (frule use_valid)
-    apply (rule_tac P = "\<lambda>ms. ms = device_state (machine_state s)" in clearMemory_device_state_inv)
-   apply clarsimp+
-  apply(erule use_valid[OF _ clearMemory_valid_irq_states], simp)
-  done
+lemmas clearMemory_invs [wp,Finalise_AI_asms]
+    = clearMemory_invs
 
 lemma arch_recycle_cap_invs_ARCH [Finalise_AI_asms]:
   notes split_if [split del]

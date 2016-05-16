@@ -169,15 +169,13 @@ lemma delete_objects_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> delete_obje
   apply (simp add: valid_etcbs_def st_tcb_at_kh_def obj_at_kh_def obj_at_def is_etcb_at_def)
   done
 
+lemmas mapM_x_defsym = mapM_x_def[symmetric]
 
 context DetSchedAux_AI_det_ext begin
 
-lemma invoke_untyped_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>_.valid_etcbs\<rbrace>"
-  apply (cases ui)
-  apply (simp add: mapM_x_def[symmetric])
-  apply (wp mapM_x_wp')
-  apply simp
-  done
+crunch valid_etcbs[wp]: invoke_untyped "valid_etcbs"
+  (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps whenE_inv
+     simp: mapM_x_defsym)
 
 end
 
@@ -220,12 +218,9 @@ lemma delete_objects_valid_blocked[wp]: "\<lbrace>valid_blocked\<rbrace> delete_
 
 context DetSchedAux_AI_det_ext begin
 
-lemma invoke_untyped_valid_blocked[wp]: "\<lbrace>valid_blocked\<rbrace> invoke_untyped ui \<lbrace>\<lambda>_.valid_blocked\<rbrace>"
-  apply (cases ui)
-  apply (simp add: mapM_x_def[symmetric])
-  apply (wp mapM_x_wp')
-  apply simp
-  done
+crunch valid_blocked[wp]: invoke_untyped "valid_blocked"
+  (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps whenE_inv
+     simp: mapM_x_defsym)
 
 end
 
@@ -322,8 +317,30 @@ lemma valid_sched_tcb_state_preservation:
   apply(fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
-lemmas mapM_x_defsym = mapM_x_def[symmetric]
-
+crunch ct[wp]: invoke_untyped "\<lambda>s. P (cur_thread s)"
+  (wp: crunch_wps dxo_wp_weak preemption_point_inv mapME_x_inv_wp
+    simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym
+    ignore: freeMemory ignore: retype_region_ext)
+crunch ready_queues[wp]: invoke_untyped "\<lambda>s. P (ready_queues s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
+    simp: detype_def detype_ext_def whenE_def
+          wrap_ext_det_ext_ext_def mapM_x_defsym 
+  ignore: freeMemory)
+crunch scheduler_action[wp]: invoke_untyped "\<lambda>s. P (scheduler_action s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
+      simp: detype_def detype_ext_def whenE_def
+            wrap_ext_det_ext_ext_def mapM_x_defsym
+    ignore: freeMemory)
+crunch cur_domain[wp]: invoke_untyped "\<lambda>s. P (cur_domain s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
+      simp: detype_def detype_ext_def whenE_def
+            wrap_ext_det_ext_ext_def mapM_x_defsym
+    ignore: freeMemory)
+crunch idle_thread[wp]: invoke_untyped "\<lambda>s. P (idle_thread s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv dxo_wp_weak
+      simp: detype_def detype_ext_def whenE_def
+            wrap_ext_det_ext_ext_def mapM_x_defsym
+    ignore: freeMemory retype_region_ext)
 lemma valid_idle_etcb_lift:
   assumes "\<And>P t. \<lbrace>\<lambda>s. etcb_at P t s\<rbrace> f \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
   shows "\<lbrace>valid_idle_etcb\<rbrace> f \<lbrace>\<lambda>r. valid_idle_etcb\<rbrace>"
@@ -331,6 +348,22 @@ lemma valid_idle_etcb_lift:
   apply(wp assms)
   done
 
+crunch etcb_at[wp]: reset_untyped_cap "etcb_at P t"
+  (wp: preemption_point_inv' mapME_x_inv_wp)
+
+lemma invoke_untyped_etcb_at:
+  "\<lbrace>(\<lambda>s :: det_ext state. etcb_at P t s) and valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
+  apply (cases ui)
+  apply (simp add: mapM_x_def[symmetric] invoke_untyped_def whenE_def
+           split del: split_if)
+  apply (rule hoare_pre)
+   apply (wp retype_region_etcb_at mapM_x_wp'
+             create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift
+             hoare_convert_imp[OF create_cap_no_pred_tcb_at]
+             hoare_convert_imp[OF _ init_arch_objects_exst]
+      | simp
+      | (wp_once hoare_drop_impE_E))+
+  done
 
 context DetSchedAux_AI_det_ext begin
 
@@ -339,12 +372,13 @@ lemma invoke_untyped_valid_sched:
      invoke_untyped ui
    \<lbrace> \<lambda>_ . valid_sched \<rbrace>"
   apply (rule hoare_pre)
-   apply (rule_tac I="invs and valid_untyped_inv ui and ct_active" in valid_sched_tcb_state_preservation)
+   apply (rule_tac I="invs and valid_untyped_inv ui and ct_active"
+     in valid_sched_tcb_state_preservation)
           apply (wp invoke_untyped_st_tcb_at)
           apply simp
          apply (wp invoke_untyped_etcb_at)
-    apply (rule hoare_strengthen_post)
-     apply (wp invoke_untyp_invs, simp add: invs_def valid_state_def)
+    apply (rule hoare_post_impErr, rule hoare_pre, rule invoke_untyp_invs,
+        simp_all add: invs_valid_idle)[1]
    apply (rule_tac f="\<lambda>s. P (scheduler_action s)" in hoare_lift_Pf)
     apply (rule_tac f="\<lambda>s. x (ready_queues s)" in hoare_lift_Pf)
      apply wp
@@ -352,12 +386,9 @@ lemma invoke_untyped_valid_sched:
   done
 
 end
+lemmas hoare_imp_lift_something = hoare_convert_imp
 
 
-lemma hoare_imp_lift_something: "\<lbrakk>\<lbrace>\<lambda>s. \<not> P s \<rbrace> f \<lbrace>\<lambda>r s. \<not> P s\<rbrace>;\<lbrace>Q\<rbrace> f \<lbrace>\<lambda>_.Q\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P s \<longrightarrow> Q s\<rbrace> f \<lbrace>\<lambda>r s. P s \<longrightarrow> Q s\<rbrace>"
-  apply (clarsimp simp add: valid_def)
-  apply force
-  done
 
 crunch valid_queues[wp]: create_cap,cap_insert valid_queues
   (wp: valid_queues_lift)

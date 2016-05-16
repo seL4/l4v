@@ -911,35 +911,15 @@ lemma suspend_thread_cap:
    apply (simp add: cte_wp_at_caps_of_state)+
   done
 
-lemma not_recursive_cspaces_irq_state_independent[intro!, simp]:
-  "not_recursive_cspaces (s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)  
-   = not_recursive_cspaces s"
-  by (simp add: not_recursive_cspaces_def)
-
-
-lemma cte_wp_at_irq_state_independent[intro!, simp]:
-  "is_final_cap' x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
-   = is_final_cap' x s"
-  by (simp add: is_final_cap'_def)
-
-
-lemma zombies_final_irq_state_independent[intro!, simp]:
-  "zombies_final (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
-   = zombies_final s"
-  by (simp add: zombies_final_def)
-
-
-lemma ex_cte_cap_wp_to_irq_state_independent[intro!, simp]:
-  "ex_cte_cap_wp_to x y (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
-   = ex_cte_cap_wp_to x y s"
-  by (simp add: ex_cte_cap_wp_to_def)
-
-
 lemma emptyable_irq_state_independent[intro!, simp]:
   "emptyable x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = emptyable x s"
   by (auto simp: emptyable_def)
 
+lemma not_recursive_cspaces_irq_state_independent[intro!, simp]:
+  "not_recursive_cspaces (s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)  
+   = not_recursive_cspaces s"
+  by (simp add: not_recursive_cspaces_def)
 
 context CNodeInv_AI begin
 

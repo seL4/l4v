@@ -579,4 +579,41 @@ lemma cap_insert_simple_invs:
 lemmas is_derived_def = is_derived_def[simplified is_derived_arch_def]
 end
 
+(* is this the right way? we need this fact globally but it's proven with
+   ARM defns. *)
+lemma set_cap_valid_arch_caps_simple:
+  "\<lbrace>\<lambda>s. valid_arch_caps s
+      \<and> valid_objs s
+      \<and> cte_wp_at (Not o is_arch_cap) ptr s
+      \<and> (obj_refs cap \<noteq> {} \<longrightarrow> s \<turnstile> cap)
+      \<and> \<not> (is_arch_cap cap)\<rbrace>
+     set_cap cap ptr
+   \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
+  apply (wp ARM.set_cap_valid_arch_caps)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (frule(1) caps_of_state_valid_cap)
+  apply (rename_tac cap')
+  apply (subgoal_tac "\<forall>x \<in> {cap, cap'}. \<not> ARM.is_pt_cap x \<and> \<not> ARM.is_pd_cap x")
+   apply simp
+   apply (rule conjI)
+    apply (clarsimp simp: ARM.vs_cap_ref_def is_cap_simps)
+   apply (erule impCE)
+    apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
+                          cte_wp_at_caps_of_state
+                          ARM.obj_ref_none_no_asid)
+   apply (rule ARM.no_cap_to_obj_with_diff_ref_triv, simp_all)
+   apply (rule ccontr, clarsimp simp: ARM.table_cap_ref_def is_cap_simps)
+  apply (auto simp: ARM.is_cap_simps)
+  done
+
+lemma set_cap_kernel_window_simple:
+  "\<lbrace>\<lambda>s. cap_refs_in_kernel_window s
+      \<and> cte_wp_at (\<lambda>cap'. cap_range cap' = cap_range cap) ptr s\<rbrace>
+     set_cap cap ptr
+   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
+  apply (wp ARM.set_cap_cap_refs_in_kernel_window)
+  apply (clarsimp simp: cte_wp_at_caps_of_state
+                        ARM.cap_refs_in_kernel_windowD)
+  done
+
 end

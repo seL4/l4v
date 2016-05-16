@@ -1004,11 +1004,11 @@ lemma cap_refs_respects_region_cong:
 
 lemmas device_region_congs[cong] = pspace_respects_region_cong cap_refs_respects_region_cong
 
-lemma dmo_invs:
+lemma dmo_invs1:
   assumes valid_mf: "\<And>P. \<lbrace>\<lambda>ms.  P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms.  P (device_state ms)\<rbrace>"
-  shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). (\<forall>p.
+  shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). m = machine_state s \<longrightarrow> (\<forall>p.
        in_user_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
-         (m = machine_state s \<longrightarrow> (\<forall>irq. (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or> (irq_masks m' irq = irq_masks m irq))))
+         ((\<forall>irq. (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or> (irq_masks m' irq = irq_masks m irq))))
     and invs\<rbrace>
    do_machine_op f
    \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -1027,10 +1027,23 @@ lemma dmo_invs:
                            valid_machine_state_def
                     intro: valid_irq_states_machine_state_updateI
                      elim: valid_irq_statesE)
-   apply (drule_tac x = "machine_state s" in spec,fastforce)
+   apply (fastforce)
    done
 
-
+lemma dmo_invs:
+  assumes valid_mf: "\<And>P. \<lbrace>\<lambda>ms.  P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms.  P (device_state ms)\<rbrace>"
+  shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). (\<forall>p.
+       in_user_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
+         ((\<forall>irq. m = machine_state s \<longrightarrow> 
+           (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or> (irq_masks m' irq = irq_masks m irq))))
+    and invs\<rbrace>
+   do_machine_op f
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (wp dmo_invs1 valid_mf)
+  apply clarsimp
+  apply (drule spec, drule(1) bspec)
+  apply simp
+  done
 
 lemma as_user_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> as_user t m \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"

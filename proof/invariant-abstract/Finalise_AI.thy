@@ -391,12 +391,6 @@ lemma empty_slot_deletes[wp]:
   done
 
 
-lemma get_cap_sp:
-  "\<lbrace>P\<rbrace> get_cap p \<lbrace>\<lambda>rv. P and cte_wp_at (\<lambda>c. c = rv) p\<rbrace>"
-  apply (wp get_cap_cte_wp_at)
-  apply simp
-  done
-
 
 crunch caps_of_state[wp]: deleted_irq_handler "\<lambda>s. P (caps_of_state s)"
 
@@ -1278,12 +1272,6 @@ lemma valid_irq_node_arch [iff]:
 lemma vms_arch_state_update[simp]:
   "valid_machine_state (arch_state_update f s) = valid_machine_state s"
   by (simp add: valid_machine_state_def)
-
-lemma clearMemory_valid_irq_states:
-  "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> clearMemory w x
-   \<lbrace>\<lambda>a b. valid_irq_states (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  apply (simp add: valid_irq_states_def | wp no_irq | simp add: no_irq_clearMemory)+
-  done
 
 (* FIXME: move *)
 lemma dmo_bind_return:
