@@ -85,7 +85,7 @@ ML_Antiquotation.inline @{binding string_record}
 
 
       fun mk_elem nm _ value =
-        (ML_Syntax.print_string nm ^ "^ \" = \" ") ^ "^ (" ^ value ^ ")"
+        (ML_Syntax.print_string nm ^ "^ \" : \" ") ^ "^ (" ^ value ^ ")"
 
       fun mk_head body =
         "(\"" ^ "{\" ^ String.concatWith \", \" (" ^  body ^ ") ^ \"}\")"
@@ -419,17 +419,22 @@ fun get_reports_for_thy thy =
 
    in (thy_nm, thy_parents, lemmas, consts, types) end
 
+fun add_commas (s :: s' :: ss) = s ^ "," :: (add_commas (s' :: ss))
+  | add_commas [s] = [s]
+  | add_commas _ = []
+
+
 fun string_reports_of (thy_nm, thy_parents, lemmas, consts, types) =
-      ["{theory_name = " ^ thy_nm, 
-        "theory_imports = {"] @
-      (map theory_entry_encode thy_parents) @
-      ["}","lemmas = {"] @
-      (map lemma_entry_encode lemmas) @
-      ["}","consts = {"] @
-      (map dep_entry_encode consts) @
-      ["}","types = {"] @
-      (map dep_entry_encode types) @
-      ["}}"]
+      ["{theory_name : " ^ quote thy_nm ^ ",", 
+        "theory_imports : ["] @
+      add_commas (map (theory_entry_encode) thy_parents) @
+      ["],","lemmas : ["] @
+      add_commas (map (lemma_entry_encode) lemmas) @
+      ["],","consts : ["] @
+      add_commas (map ( dep_entry_encode) consts) @
+      ["],","types : ["] @
+      add_commas (map ( dep_entry_encode) types) @
+      ["]}"]
       |> map (fn s => s ^ "\n")
 
 structure Data = Theory_Data
