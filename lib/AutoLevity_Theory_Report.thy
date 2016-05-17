@@ -85,7 +85,7 @@ ML_Antiquotation.inline @{binding string_record}
 
 
       fun mk_elem nm _ value =
-        (ML_Syntax.print_string nm ^ "^ \" : \" ") ^ "^ (" ^ value ^ ")"
+        (ML_Syntax.print_string (quote nm) ^ "^ \" : \" ") ^ "^ (" ^ value ^ ")"
 
       fun mk_head body =
         "(\"" ^ "{\" ^ String.concatWith \", \" (" ^  body ^ ") ^ \"}\")"
@@ -425,14 +425,14 @@ fun add_commas (s :: s' :: ss) = s ^ "," :: (add_commas (s' :: ss))
 
 
 fun string_reports_of (thy_nm, thy_parents, lemmas, consts, types) =
-      ["{theory_name : " ^ quote thy_nm ^ ",", 
-        "theory_imports : ["] @
+      ["{\"theory_name\" : " ^ quote thy_nm ^ ",", 
+        "\"theory_imports\" : ["] @
       add_commas (map (theory_entry_encode) thy_parents) @
-      ["],","lemmas : ["] @
+      ["],","\"lemmas\" : ["] @
       add_commas (map (lemma_entry_encode) lemmas) @
-      ["],","consts : ["] @
+      ["],","\"consts\" : ["] @
       add_commas (map ( dep_entry_encode) consts) @
-      ["],","types : ["] @
+      ["],","\"types\" : ["] @
       add_commas (map ( dep_entry_encode) types) @
       ["]}"]
       |> map (fn s => s ^ "\n")
