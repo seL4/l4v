@@ -6039,6 +6039,15 @@ lemma mask_shift_and_negate[simp]:"(w && mask n << m) && ~~ (mask n << m) = 0"
   apply (clarsimp simp:mask_def)
   by (metis (erased, hide_lams) mask_eq_x_eq_0 shiftl_over_and_dist word_bool_alg.conj_absorb word_bw_assocs(1))
 
+(*negating a mask which has been shifted to the very left*)
+lemma NOT_mask_shifted_lenword: "~~ ((mask len << (len_of(TYPE('a)) - len))::'a::len word) = mask (len_of(TYPE('a)) - len)"
+  apply(rule Word.word_bool_alg.compl_unique)
+   subgoal using mask_shift_and_negate by simp
+  subgoal apply (rule word_eqI)
+  apply (simp add: word_size nth_shiftl nth_shiftr)
+  by auto
+  done
+
 lemma shiftr_1[simplified]:"(x::word32) >> 1 = 0 \<Longrightarrow> x < 2"
   apply word_bitwise apply clarsimp
   done
