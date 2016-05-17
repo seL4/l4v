@@ -364,7 +364,7 @@ fun modifies_invariant_tac quiet_fail ctxt n st = if Thm.nprems_of st = 0 then n
                     [] => raise THM ("modifies_invariant_tac: failed to find invariant assumption", n, [st])
                   | idx::_ => idx;
     fun split_conv idx (Const ("Pure.all", _) $ Abs (_, _, body)) ct =
-            if idx > s_idx then Conv.forall_conv (fn _ => split_conv (idx - 1) body) ctxt ct else let 
+            if idx > s_idx then Conv.forall_conv (fn _ => split_conv (idx - 1) body) ctxt ct else let
               val (_, cP) = Thm.dest_comb ct
               val inst = Drule.infer_instantiate' ctxt [SOME cP] globals_splits
               (*val _ = @{trace} (cP, inst, case Thm.prop_of inst of @{term_pat "?x \<equiv> _"} => x, Thm.term_of ct);*)
@@ -524,7 +524,7 @@ fun do_modifies_recursive ctxt fn_info (prog_info: ProgramInfo.prog_info) (calle
   fun hd_of_equal [x] = x
     | hd_of_equal (x::xs) = if forall (fn x' => x = x') xs then x else
                               raise TERM ("do_modifies_group bug: unequal terms", xs);
-  val (measure_var, final_props) = 
+  val (measure_var, final_props) =
     modifies_props
     |> map (fn (state0_var, arg_vars, SOME measure_var, prop) =>
               (measure_var,
@@ -637,6 +637,27 @@ fun define_modifies_group fn_info prog_info f_names (acc as (callee_modifies, re
        | missing =>
            (warning ("Can't do proof because C-parser modifies rules are missing for: " ^ commas missing);
                      acc));
+
+(*
+ * This is the top-level wrapper that generates modifies rules for the most
+ * recently translated set of functions from a given C file.
+ *)
+fun new_modifies_rules filename ctxt = let
+    val fn_info = Symtab.lookup (AutoCorresFunctionInfo.get (Proof_Context.theory_of ctxt)) filename |> the;
+    val prog_info = ProgramInfo.get_prog_info ctxt filename;
+    (* Assume that the user has already generated and named modifies rules
+     * for previously-translated callees. *)
+    val existing_modifies =
+          Symtab.dest (FunctionInfo.get_functions fn_info)
+          |> List.mapPartial (fn (fn_name, fn_def) =>
+               if not (#finished fn_def) then NONE else
+                 SOME (fn_name, Proof_Context.get_thm ctxt (fn_name ^ "'_modifies")))
+    val all_function_groups = FunctionInfo.get_topo_sorted_functions fn_info;
+    val (callee_modifies, results, ctxt') =
+          fold (define_modifies_group fn_info prog_info)
+               all_function_groups (build_incr_net (map snd existing_modifies),
+                                    Symtab.make existing_modifies, ctxt)
+in ctxt' end
 
 end;
 \<close>
