@@ -1767,7 +1767,7 @@ lemma gq_wp[wp]: "\<lbrace>\<lambda>s. Q (ksReadyQueues s (d, p)) s\<rbrace> get
 
 lemma get_tcb_corres:
   "corres tcb_relation (tcb_at t) (tcb_at' t) (gets_the (get_tcb t)) (getObject t)"
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply wp
   apply (clarsimp simp add: gets_def 
                             get_def return_def bind_def get_tcb_def 
@@ -1834,7 +1834,7 @@ lemma fun_if_triv[simp]:
 lemma corres_get_etcb:
   "corres (etcb_relation) (is_etcb_at t) (tcb_at' t)
                     (gets_the (get_etcb t)) (getObject t)"
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply wp
   apply (clarsimp simp add: get_etcb_def gets_the_def gets_def
                             get_def assert_opt_def bind_def
@@ -1868,7 +1868,7 @@ lemma ethreadget_corres:
 
 lemma setQueue_corres:
   "corres dc \<top> \<top> (set_tcb_queue d p q) (setQueue d p q)"
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
   apply (clarsimp simp: setQueue_def in_monad set_tcb_queue_def return_def
                         simpler_modify_def)
@@ -1983,7 +1983,7 @@ lemma set_sa_corres:
   "sched_act_relation sa sa'
     \<Longrightarrow> corres dc \<top> \<top> (set_scheduler_action sa) (setSchedulerAction sa')"
   apply (simp add: setSchedulerAction_def set_scheduler_action_def)
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply wp
   apply (clarsimp simp: in_monad simpler_modify_def state_relation_def)
   done
@@ -2154,7 +2154,7 @@ lemma tcbSchedDequeue_corres:
   apply (case_tac queued)
    defer
    apply (simp add: when_def)
-   apply (rule corres_no_failI, erule FalseE)
+   apply (rule corres_no_failI)
     apply (rule no_fail_pre, wp)
    apply (clarsimp simp: in_monad ethread_get_def set_tcb_queue_def is_etcb_at_def state_relation_def)
    apply (subgoal_tac "t \<notin> set (ready_queues a (tcb_domain y) (tcb_priority y))")
@@ -3898,7 +3898,7 @@ lemma get_tcb_cap_corres:
                        (liftM getF (gets_the (get_tcb t)))
                        (getSlotCap (cte_map (t, ref)))"
   apply (simp add: getSlotCap_def liftM_def[symmetric])
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
    apply (cases v, simp)
    apply (frule tcb_cases_related)
@@ -5028,7 +5028,7 @@ lemma set_eobject_corres':
             (obj_at' (\<lambda>ko. non_exst_same ko tcb') ptr
             and obj_at' P ptr)
             (set_eobject ptr etcb) (setObject ptr tcb')"
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply (rule no_fail_pre)
     apply wp
    apply (clarsimp simp: obj_at'_def)

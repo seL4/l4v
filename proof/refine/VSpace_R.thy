@@ -428,7 +428,7 @@ lemma find_free_hw_asid_corres:
             apply (rule corres_split [OF _ invalidate_asid_ext_corres])
               apply (rule corres_split' [where r'=dc])
                  apply (rule corres_trivial, rule corres_machine_op)
-                 apply (rule corres_no_failI, erule FalseE)
+                 apply (rule corres_no_failI)
                   apply (rule no_fail_invalidateTLB_ASID)
                  apply fastforce
                 apply (rule corres_split)
@@ -540,7 +540,7 @@ lemma hv_corres:
        prefer 2
        apply simp
        apply (rule corres_as_user')
-       apply (rule corres_no_failI [where R="op ="], erule FalseE)
+       apply (rule corres_no_failI [where R="op ="])
         apply (rule no_fail_getRestartPC)
        apply fastforce
       apply (rule corres_splitEE)

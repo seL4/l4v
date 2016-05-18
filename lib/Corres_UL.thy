@@ -96,12 +96,20 @@ lemma corres_throwError[simp]:
    ((\<exists>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr) \<longrightarrow> r (Inl a) (Inl b))"
   by (simp add: throwError_def)
 
-lemma corres_no_failI:
+lemma corres_no_failI_base:
   assumes f: "nf \<Longrightarrow> no_fail P f"
   assumes f': "nf' \<Longrightarrow> no_fail P' f'"
   assumes corres: "\<forall>(s, s') \<in> S. P s \<and> P' s' \<longrightarrow>
                      (\<forall>(r', t') \<in> fst (f' s'). \<exists>(r, t) \<in> fst (f s). (t, t') \<in> S \<and> R r r')"
   shows "corres_underlying S nf nf' R P P' f f'"
+  using assms by (simp add: corres_underlying_def no_fail_def)
+
+(* This lemma gets the shorter name because many existing proofs want nf=False *)
+lemma corres_no_failI:
+  assumes f': "nf' \<Longrightarrow> no_fail P' f'"
+  assumes corres: "\<forall>(s, s') \<in> S. P s \<and> P' s' \<longrightarrow>
+                     (\<forall>(r', t') \<in> fst (f' s'). \<exists>(r, t) \<in> fst (f s). (t, t') \<in> S \<and> R r r')"
+  shows "corres_underlying S False nf' R P P' f f'"
   using assms by (simp add: corres_underlying_def no_fail_def)
 
 text {* A congruence rule for the correspondence functions. *}

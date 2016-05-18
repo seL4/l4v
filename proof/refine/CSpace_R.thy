@@ -940,7 +940,7 @@ lemma cap_move_corres:
     apply wp
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp add: cte_wp_at_ctes_of)
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp hoare_weak_lift_imp)
    apply (clarsimp simp add: cte_wp_at_ctes_of)
    apply (drule invs_mdb')
@@ -3582,7 +3582,7 @@ lemma set_cap_pspace_corres:
       (pspace_aligned' and pspace_distinct' and cte_at' (cte_map p))
       (set_cap cap p)
       (setCTE (cte_map p) cte)"
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
    apply simp
   apply clarsimp
@@ -3737,7 +3737,7 @@ qed
 
 lemma getCTE_symb_exec_r:
   "corres_underlying sr False nf' dc \<top> (cte_at' p) (return ()) (getCTE p)"
-  apply (rule corres_no_failI, erule FalseE, wp)
+  apply (rule corres_no_failI, wp)
   apply (clarsimp simp: return_def
                  elim!: use_valid [OF _ getCTE_inv])
   done

@@ -46,7 +46,7 @@ lemma get_asid_pool_corres:
           (asid_pool_at p) (asid_pool_at' p)
           (get_asid_pool p) (getObject p)"
   apply (simp add: getObject_def get_asid_pool_def get_object_def split_def)
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
    apply (case_tac ko; simp)
@@ -222,7 +222,7 @@ lemma get_pde_corres:
   "corres (pde_relation_aligned (p >> 2)) (pde_at p) (pde_at' p)
      (get_pde p) (getObject p)"
   apply (simp add: getObject_def get_pde_def get_pd_def get_object_def split_def bind_assoc)
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
    apply (case_tac ko; simp)
@@ -330,7 +330,7 @@ lemma get_master_pde_corres:
   show ?thesis
     apply (simp add: getObject_def get_pde_def get_pd_def  get_object_def
       split_def bind_assoc pde_relation_aligned_def get_master_pde_def)
-    apply (rule corres_no_failI, erule FalseE)
+    apply (rule corres_no_failI)
      apply (rule no_fail_pre, wp)
      apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
      apply (case_tac ko, simp_all)[1]
@@ -495,7 +495,7 @@ lemma get_pte_corres:
   "corres (pte_relation_aligned (p >> 2)) (pte_at p) (pte_at' p)
      (get_pte p) (getObject p)"
   apply (simp add: getObject_def get_pte_def get_pt_def get_object_def split_def bind_assoc)
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
    apply (case_tac ko, simp_all)[1]
@@ -602,7 +602,7 @@ lemma get_master_pte_corres:
   show ?thesis
     apply (simp add: getObject_def get_pte_def get_pt_def  get_object_def
       split_def bind_assoc pte_relation_aligned_def get_master_pte_def)
-    apply (rule corres_no_failI, erule FalseE)
+    apply (rule corres_no_failI)
      apply (rule no_fail_pre, wp)
      apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
      apply (case_tac ko, simp_all)[1]
@@ -759,7 +759,7 @@ lemma set_pd_corres:
           (set_pd (p && ~~ mask pd_bits) (pd(ucast (p && mask pd_bits >> 2) := pde)))
           (setObject p pde')"
   apply (simp add: set_pd_def get_object_def bind_assoc)
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
     apply simp
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def typ_at'_def lookupAround2_known1 projectKOs) 
@@ -837,7 +837,7 @@ lemma set_pt_corres:
           (set_pt (p && ~~ mask pt_bits) (pt(ucast (p && mask pt_bits >> 2) := pte)))
           (setObject p pte')"
   apply (simp add: set_pt_def get_object_def bind_assoc)
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
     apply simp
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def typ_at'_def lookupAround2_known1 projectKOs) 

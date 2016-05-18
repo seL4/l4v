@@ -279,7 +279,7 @@ lemma tcbSchedAppend_corres:
    apply (rule no_fail_pre, wp, simp)
   apply (case_tac queued)
    apply (simp add: unless_def when_def)
-   apply (rule corres_no_failI, erule FalseE)
+   apply (rule corres_no_failI)
     apply (rule no_fail_pre, wp)
    apply (clarsimp simp: in_monad ethread_get_def gets_the_def bind_assoc
                          assert_opt_def exec_gets is_etcb_at_def get_etcb_def get_tcb_queue_def
@@ -2052,7 +2052,7 @@ lemma get_sa_corres':
 
 lemma corres_assert_ret:
   "corres dc (\<lambda>s. P) \<top> (assert P) (return ())"
-  apply (rule corres_no_failI, erule FalseE)
+  apply (rule corres_no_failI)
    apply simp
   apply (simp add: assert_def return_def fail_def)
   done
