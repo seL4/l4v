@@ -79,7 +79,7 @@ let
   val {goal, ...} = Proof.raw_goal proof_state;
 in Thm.nprems_of goal end
 
-fun get_subgoals state = the_default ~1 (try get_subgoals' state);
+fun get_subgoals state = the_default 0 (try get_subgoals' state);
 
 fun setup_command_hook () =
   Toplevel.add_hook (fn transition => fn start_state => fn end_state =>
