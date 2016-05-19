@@ -243,6 +243,7 @@ definition
   | PML4Obj \<Rightarrow> PageMapL4 (\<lambda>x. InvalidPML4E)
   | ASIDPoolObj \<Rightarrow> ASIDPool (\<lambda>_. None)"
 
+type_synonym x64_vspace_region_uses = "vspace_ref \<Rightarrow> x64_vspace_region_use"
 
 end
 
@@ -254,6 +255,12 @@ record arch_state =
   x64_gdt                   :: obj_ref
   x64_asid_table            :: "3 word \<rightharpoonup> obj_ref"
   x64_global_pml4           :: obj_ref
+  x64_kernel_vspace         :: X64_A.x64_vspace_region_uses
+  x64_global_pts            :: "obj_ref list"
+  x64_global_pdpts          :: "obj_ref list"
+  x64_global_pds            :: "obj_ref list"
+  x64_globals_frame         :: obj_ref
+  
 (* FIXME x64-vtd:
   x64_num_io_domain_bits    :: "16 word"
   x64_first_valid_io_domain :: "16 word"
@@ -333,6 +340,8 @@ where
          | ASIDPool f               \<Rightarrow> AASIDPool
          | PDPointerTable pdpt      \<Rightarrow> APDPointerTable
          | PageMapL4 pm             \<Rightarrow> APageMapL4)"
+
+
 
 end
 end

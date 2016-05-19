@@ -456,8 +456,7 @@ definition
 where
   "pde_ref_pages pde \<equiv> case pde of
     PageTablePDE ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
-  | SectionPDE ptr x y z \<Rightarrow> Some (ptrFromPAddr ptr)
-  | SuperSectionPDE ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
+  | LargePagePDE ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
   | _ \<Rightarrow> None"
 
 definition
@@ -465,17 +464,37 @@ definition
 where
   "pte_ref_pages pte \<equiv> case pte of
     SmallPagePTE ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
-  | LargePagePTE ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
+  | _ \<Rightarrow> None"
+  
+definition
+  pdpte_ref_pages :: "pdpte \<Rightarrow> obj_ref option"
+where
+  "pdpte_ref_pages pdpte \<equiv> case pdpte of
+    HugePagePDPTE ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
+  | PageDirectoryPDPTE ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
   | _ \<Rightarrow> None"
 
+definition
+  pml4e_ref_pages :: "pml4e \<Rightarrow> obj_ref option"
+where
+  "pml4e_ref_pages pml4e \<equiv> case pml4e of
+    PDPointerTablePML4E ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
+  | _ \<Rightarrow> None"
+  
 definition
   vs_refs_pages_arch :: "arch_kernel_obj \<Rightarrow> (vs_ref \<times> obj_ref) set" where
   "vs_refs_pages_arch \<equiv> \<lambda>ko. case ko of
     (ASIDPool pool) \<Rightarrow>
       (\<lambda>(r,p). (VSRef (ucast r) (Some AASIDPool), p)) ` graph_of pool
+  | (PageMapL4 pm) \<Rightarrow>
+      (\<lambda>(r,p). (VSRef (ucast r) (Some APageMapL4), p)) `
+      graph_of (\<lambda>x. if x \<in> kernel_mapping_slots then None else pml4e_ref_pages (pm x))
+  | (PDPointerTable pdpt) \<Rightarrow>
+      (\<lambda>(r,p). (VSRef (ucast r) (Some APDPointerTable), p)) `
+      graph_of (pdpte_ref_pages \<circ> pdpt)
   | (PageDirectory pd) \<Rightarrow>
       (\<lambda>(r,p). (VSRef (ucast r) (Some APageDirectory), p)) `
-      graph_of (\<lambda>x. if x \<in> kernel_mapping_slots then None else pde_ref_pages (pd x))
+      graph_of (pde_ref_pages \<circ> pd)
   | (PageTable pt) \<Rightarrow>
       (\<lambda>(r,p). (VSRef (ucast r) (Some APageTable), p)) `
       graph_of (pte_ref_pages o pt)
@@ -509,7 +528,7 @@ abbreviation
 definition
   vs_lookup_pages :: "'z ::state_ext state \<Rightarrow> vs_chain set"
 where
-  "vs_lookup_pages \<equiv> \<lambda>s. vs_lookup_pages_trans s `` vs_asid_refs (arm_asid_table (arch_state s))"
+  "vs_lookup_pages \<equiv> \<lambda>s. vs_lookup_pages_trans s `` vs_asid_refs (x64_asid_table (arch_state s))"
 
 
 end
@@ -528,41 +547,45 @@ abbreviation
   "\<exists>\<unrhd> p \<equiv> \<lambda>s. \<exists>ref. (ref \<unrhd> p) s"
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 definition
   pde_mapping_bits :: "nat"
 where
- "pde_mapping_bits \<equiv> pageBitsForSize ARMSection"
+ "pde_mapping_bits \<equiv> pageBitsForSize X64LargePage"
 
 definition
   pte_mapping_bits :: "nat"
 where
- "pte_mapping_bits \<equiv> pageBitsForSize ARMSmallPage"
-
+ "pte_mapping_bits \<equiv> pageBitsForSize X64SmallPage"
+ 
+definition
+  pdpte_mapping_bits :: "nat"
+where
+ "pdpte_mapping_bits \<equiv> pageBitsForSize X64HugePage"
+ 
+definition
+  pml4e_mapping_bits :: "nat"
+where
+  "pml4e_mapping_bits \<equiv> pageBitsForSize X64HugePage + ptTranslationBits"
+  
 definition
   valid_pte_kernel_mappings :: "pte \<Rightarrow> vspace_ref
-                                   \<Rightarrow> arm_vspace_region_uses \<Rightarrow> bool"
+                                   \<Rightarrow> x64_vspace_region_uses \<Rightarrow> bool"
 where
  "valid_pte_kernel_mappings pte vref uses \<equiv> case pte of
     InvalidPTE \<Rightarrow>
         \<forall>x \<in> {vref .. vref + 2 ^ pte_mapping_bits - 1}.
-                    uses x \<noteq> ArmVSpaceKernelWindow
+                    uses x \<noteq> X64VSpaceKernelWindow
   | SmallPagePTE ptr atts rghts \<Rightarrow>
         ptrFromPAddr ptr = vref
         \<and> (\<exists>use. (\<forall>x \<in> {vref .. vref + 2 ^ pte_mapping_bits - 1}. uses x = use)
-             \<and> (use = ArmVSpaceKernelWindow
-                    \<or> use = ArmVSpaceDeviceWindow))
-        \<and> rghts = {}
-  | LargePagePTE ptr atts rghts \<Rightarrow>
-        ptrFromPAddr ptr = (vref && ~~ mask (pageBitsForSize ARMLargePage))
-        \<and> (\<exists>use. (\<forall>x \<in> {vref .. vref + 2 ^ pte_mapping_bits - 1}. uses x = use)
-             \<and> (use = ArmVSpaceKernelWindow
-                    \<or> use = ArmVSpaceDeviceWindow))
+             \<and> (use = X64VSpaceKernelWindow
+                    \<or> use = X64VSpaceDeviceWindow))
         \<and> rghts = {}"
 
 definition
-  valid_pt_kernel_mappings_arch :: "vspace_ref \<Rightarrow> arm_vspace_region_uses \<Rightarrow> arch_kernel_obj \<Rightarrow> bool"
+  valid_pt_kernel_mappings_arch :: "vspace_ref \<Rightarrow> x64_vspace_region_uses \<Rightarrow> arch_kernel_obj \<Rightarrow> bool"
 where
  "valid_pt_kernel_mappings_arch vref uses \<equiv> \<lambda> obj. case obj of
     PageTable pt \<Rightarrow>
@@ -576,49 +599,104 @@ definition
   "valid_pt_kernel_mappings vref uses = arch_obj_fun_lift (valid_pt_kernel_mappings_arch vref uses) False"
 
 definition
-  valid_pde_kernel_mappings :: "pde \<Rightarrow> vspace_ref \<Rightarrow> arm_vspace_region_uses \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_pde_kernel_mappings :: "pde \<Rightarrow> vspace_ref \<Rightarrow> x64_vspace_region_uses \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
  "valid_pde_kernel_mappings pde vref uses \<equiv> case pde of
     InvalidPDE \<Rightarrow>
         (\<lambda>s. \<forall>x \<in> {vref .. vref + 2 ^ pde_mapping_bits - 1}.
-                    uses x \<noteq> ArmVSpaceKernelWindow)
+                    uses x \<noteq> X64VSpaceKernelWindow)
   | PageTablePDE ptr _ _ \<Rightarrow>
         obj_at (valid_pt_kernel_mappings vref uses)
                     (ptrFromPAddr ptr)
-  | SectionPDE ptr atts _ rghts \<Rightarrow>
+  | LargePagePDE ptr atts rghts \<Rightarrow>
         (\<lambda>s. ptrFromPAddr ptr = vref
              \<and> (\<exists>use. (\<forall>x \<in> {vref .. vref + 2 ^ pde_mapping_bits - 1}. uses x = use)
-                   \<and> (use = ArmVSpaceKernelWindow
-                            \<or> use = ArmVSpaceDeviceWindow))
-             \<and> rghts = {})
-  | SuperSectionPDE ptr atts rghts \<Rightarrow>
-        (\<lambda>s. ptrFromPAddr ptr = (vref && ~~ mask (pageBitsForSize ARMSuperSection))
-             \<and> (\<forall>x \<in> {vref .. vref + 2 ^ pde_mapping_bits - 1}.
-                   uses x = ArmVSpaceKernelWindow)
+                   \<and> (use = X64VSpaceKernelWindow
+                            \<or> use = X64VSpaceDeviceWindow))
              \<and> rghts = {})"
 
 definition
-  valid_pd_kernel_mappings_arch :: "arm_vspace_region_uses \<Rightarrow> 'z::state_ext state
+  valid_pd_kernel_mappings_arch :: "vspace_ref \<Rightarrow> x64_vspace_region_uses \<Rightarrow> 'z::state_ext state
                                     \<Rightarrow> arch_kernel_obj \<Rightarrow> bool"
 where
- "valid_pd_kernel_mappings_arch uses \<equiv> \<lambda>s obj.
+ "valid_pd_kernel_mappings_arch vref uses \<equiv> \<lambda>s obj.
   case obj of
     PageDirectory pd \<Rightarrow>
       (\<forall>x. valid_pde_kernel_mappings
-             (pd x) (ucast x << pde_mapping_bits) uses s)
+             (pd x) (vref + (ucast x << pde_mapping_bits)) uses s)
   | _ \<Rightarrow> False"
 
 declare valid_pd_kernel_mappings_arch_def[simp]
 
 definition
-  "valid_pd_kernel_mappings uses = (\<lambda>s. arch_obj_fun_lift (valid_pd_kernel_mappings_arch uses s) False)"
+  "valid_pd_kernel_mappings vref uses = (\<lambda>s. arch_obj_fun_lift (valid_pd_kernel_mappings_arch vref uses s) False)"
 
 definition
-  valid_global_pd_mappings :: "'z::state_ext state \<Rightarrow> bool"
+  valid_pdpte_kernel_mappings :: "pdpte \<Rightarrow> vspace_ref \<Rightarrow> x64_vspace_region_uses \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
- "valid_global_pd_mappings \<equiv> \<lambda>s.
-  obj_at (valid_pd_kernel_mappings (arm_kernel_vspace (arch_state s)) s)
-    (arm_global_pd (arch_state s)) s"
+ "valid_pdpte_kernel_mappings pdpte vref uses \<equiv> case pdpte of
+    InvalidPDPTE \<Rightarrow>
+        (\<lambda>s. \<forall>x \<in> {vref .. vref + 2 ^ pdpte_mapping_bits - 1}.
+                    uses x \<noteq> X64VSpaceKernelWindow)
+  | PageDirectoryPDPTE ptr _ _ \<Rightarrow>
+        (\<lambda>s. obj_at (valid_pd_kernel_mappings vref uses s)
+                    (ptrFromPAddr ptr) s) 
+  | HugePagePDPTE ptr atts rghts \<Rightarrow>
+        (\<lambda>s. ptrFromPAddr ptr = vref
+             \<and> (\<exists>use. (\<forall>x \<in> {vref .. vref + 2 ^ pdpte_mapping_bits - 1}. uses x = use)
+                   \<and> (use = X64VSpaceKernelWindow
+                            \<or> use = X64VSpaceDeviceWindow))
+             \<and> rghts = {})"
+
+definition
+  valid_pdpt_kernel_mappings_arch :: "vspace_ref \<Rightarrow> x64_vspace_region_uses \<Rightarrow> 'z::state_ext state
+                                    \<Rightarrow> arch_kernel_obj \<Rightarrow> bool"
+where
+ "valid_pdpt_kernel_mappings_arch vref uses \<equiv> \<lambda>s obj.
+  case obj of
+    PDPointerTable pdpt \<Rightarrow>
+      (\<forall>x. valid_pdpte_kernel_mappings
+             (pdpt x) (vref + (ucast x << pdpte_mapping_bits)) uses s)
+  | _ \<Rightarrow> False"
+  
+declare valid_pdpt_kernel_mappings_arch_def[simp]
+
+definition
+  "valid_pdpt_kernel_mappings vref uses = (\<lambda>s. arch_obj_fun_lift (valid_pdpt_kernel_mappings_arch vref uses s) False)"
+
+definition
+  valid_pml4e_kernel_mappings :: "pml4e \<Rightarrow> vspace_ref \<Rightarrow> x64_vspace_region_uses \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+ "valid_pml4e_kernel_mappings pml4e vref uses \<equiv> case pml4e of
+    InvalidPML4E \<Rightarrow>
+        (\<lambda>s. \<forall>x \<in> {vref .. vref + 2 ^ pml4e_mapping_bits - 1}.
+                    uses x \<noteq> X64VSpaceKernelWindow)
+  | PDPointerTablePML4E ptr _ _ \<Rightarrow>
+        (\<lambda>s. obj_at (valid_pdpt_kernel_mappings vref uses s)
+                    (ptrFromPAddr ptr) s)"
+
+definition
+  valid_pml4_kernel_mappings_arch :: "x64_vspace_region_uses \<Rightarrow> 'z::state_ext state
+                                    \<Rightarrow> arch_kernel_obj \<Rightarrow> bool"
+where
+ "valid_pml4_kernel_mappings_arch uses \<equiv> \<lambda>s obj.
+  case obj of
+    PageMapL4 pm \<Rightarrow>
+      (\<forall>x. valid_pml4e_kernel_mappings
+             (pm x) ((ucast x << pml4e_mapping_bits)) uses s)
+  | _ \<Rightarrow> False"
+
+declare valid_pml4_kernel_mappings_arch_def[simp]
+
+definition
+  "valid_pml4_kernel_mappings uses = (\<lambda>s. arch_obj_fun_lift (valid_pml4_kernel_mappings_arch uses s) False)"
+  
+definition
+  valid_global_pml4_mappings :: "'z::state_ext state \<Rightarrow> bool"
+where
+ "valid_global_pml4_mappings \<equiv> \<lambda>s.
+  obj_at (valid_pml4_kernel_mappings (x64_kernel_vspace (arch_state s)) s)
+    (x64_global_pml4 (arch_state s)) s"
 
 definition
   valid_ao_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -626,18 +704,14 @@ where
   "valid_ao_at p \<equiv> \<lambda>s. \<exists>ao. ko_at (ArchObj ao) p s \<and> valid_arch_obj ao s"
 
 definition
-  "valid_pde_mappings pde \<equiv> case pde of
-    SectionPDE ptr _ _ _ \<Rightarrow> is_aligned ptr pageBits
-  | SuperSectionPDE ptr _ _ \<Rightarrow> is_aligned ptr pageBits
-  | _ \<Rightarrow> True"
-
-definition
   "empty_table_arch S \<equiv> \<lambda> ko.
    case ko of
-     PageDirectory pd \<Rightarrow>
-       \<forall>x. (\<forall>r. pde_ref (pd x) = Some r \<longrightarrow> r \<in> S) \<and>
-            valid_pde_mappings (pd x) \<and>
-            (x \<notin> kernel_mapping_slots \<longrightarrow> pd x = InvalidPDE)
+     PageMapL4 pm \<Rightarrow>
+       \<forall>x. (\<forall>r. pml4e_ref (pm x) = Some r \<longrightarrow> r \<in> S) \<and>
+            (x \<notin> kernel_mapping_slots \<longrightarrow> pm x = InvalidPML4E)
+   
+   | PDPointerTable pdpt \<Rightarrow> \<forall>x. pdpt x = InvalidPDPTE
+   | PageDirectory pd \<Rightarrow> \<forall>x. pd x = InvalidPDE
    | PageTable pt \<Rightarrow> \<forall>x. pt x = InvalidPTE
    | _ \<Rightarrow> False"
 
@@ -647,40 +721,60 @@ definition
   "empty_table S \<equiv> arch_obj_fun_lift (empty_table_arch S) False"
 
 definition
-  "valid_kernel_mappings_if_pd_arch S \<equiv> \<lambda> ko. case ko of
-     (PageDirectory pd) \<Rightarrow>
-        \<forall>x r. pde_ref (pd x) = Some r
+  "valid_kernel_mappings_if_pm_arch S \<equiv> \<lambda> ko. case ko of
+     (PageMapL4 pm) \<Rightarrow>
+        \<forall>x r. pml4e_ref (pm x) = Some r
                   \<longrightarrow> ((r \<in> S) = (x \<in> kernel_mapping_slots))
   | _ \<Rightarrow> True"
 
-declare valid_kernel_mappings_if_pd_arch_def[simp]
+declare valid_kernel_mappings_if_pm_arch_def[simp]
 
 definition
-  "valid_kernel_mappings_if_pd S \<equiv> arch_obj_fun_lift (valid_kernel_mappings_if_pd_arch S) True"
+  "valid_kernel_mappings_if_pm S \<equiv> arch_obj_fun_lift (valid_kernel_mappings_if_pm_arch S) True"
 
 definition
   "aligned_pte pte \<equiv>
      case pte of
-       LargePagePTE p _ _ \<Rightarrow> vmsz_aligned p ARMLargePage
-     | SmallPagePTE p _ _ \<Rightarrow> vmsz_aligned p ARMSmallPage
+     SmallPagePTE p _ _ \<Rightarrow> vmsz_aligned p X64SmallPage
      | _ \<Rightarrow> True"
 
 lemmas aligned_pte_simps[simp] =
        aligned_pte_def[split_simps pte.split]
 
+definition
+  "aligned_pde pde \<equiv>
+     case pde of
+     LargePagePDE p _ _ \<Rightarrow> vmsz_aligned p X64LargePage
+     | _ \<Rightarrow> True"
 
+lemmas aligned_pde_simps[simp] =
+       aligned_pde_def[split_simps pde.split]
+
+definition
+  "aligned_pdpte pdpte \<equiv>
+     case pdpte of
+     HugePagePDPTE p _ _ \<Rightarrow> vmsz_aligned p X64HugePage
+     | _ \<Rightarrow> True"
+
+lemmas aligned_pdpte_simps[simp] =
+       aligned_pdpte_def[split_simps pdpte.split]
+       
 definition
   valid_global_objs :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_global_objs \<equiv>
-  \<lambda>s. valid_ao_at (arm_global_pd (arch_state s)) s \<and>
-           obj_at (empty_table (set (arm_global_pts (arch_state s))))
-                  (arm_global_pd (arch_state s)) s \<and>
-      (\<forall>p\<in>set (arm_global_pts (arch_state s)).
-          \<exists>pt. ko_at (ArchObj (PageTable pt)) p s \<and> (\<forall>x. aligned_pte (pt x)))"
+  \<lambda>s. valid_ao_at (x64_global_pml4 (arch_state s)) s \<and>
+           obj_at (empty_table (set (x64_global_pdpts (arch_state s))))
+                  (x64_global_pml4 (arch_state s)) s \<and>
+      (\<forall>p\<in>set (x64_global_pts (arch_state s)).
+          \<exists>pt. ko_at (ArchObj (PageTable pt)) p s \<and> (\<forall>x. aligned_pte (pt x))) \<and>
+      (\<forall>p\<in>set (x64_global_pds (arch_state s)). 
+          \<exists>pd. ko_at (ArchObj (PageDirectory pd)) p s \<and> (\<forall>x. aligned_pde (pd x))) \<and>
+      (\<forall>p\<in>set (x64_global_pdpts (arch_state s)).
+          \<exists>pdpt. ko_at (ArchObj (PDPointerTable pdpt)) p s \<and> (\<forall>x. aligned_pdpte (pdpt x)))"
 
 definition
-  valid_asid_table :: "(word8 \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_asid_table :: "(3 word \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_asid_table table \<equiv> \<lambda>s. (\<forall>p \<in> ran table. asid_pool_at p s) \<and>
                                 inj_on table (dom table)"
@@ -689,18 +783,28 @@ definition
   valid_global_pts :: "'z :: state_ext state \<Rightarrow> bool"
 where
   "valid_global_pts \<equiv> \<lambda>s.
-   \<forall>p \<in> set (arm_global_pts (arch_state s)). typ_at (AArch APageTable) p s"
+   \<forall>p \<in> set (x64_global_pts (arch_state s)). typ_at (AArch APageTable) p s"
 
+definition
+  valid_global_pds :: "'z :: state_ext state \<Rightarrow> bool"
+where
+  "valid_global_pds \<equiv> \<lambda>s.
+   \<forall>p \<in> set (x64_global_pds (arch_state s)). typ_at (AArch APageDirectory) p s"
+ 
+definition
+  valid_global_pdpts :: "'z :: state_ext state \<Rightarrow> bool"
+where
+  "valid_global_pdpts \<equiv> \<lambda>s.
+   \<forall>p \<in> set (x64_global_pdpts (arch_state s)). typ_at (AArch APDPointerTable) p s"
+   
 definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_state \<equiv> \<lambda>s.
-  typ_at (AArch (AIntData ARMSmallPage)) (arm_globals_frame (arch_state s)) s \<and>
-  valid_asid_table (arm_asid_table (arch_state s)) s \<and>
-  page_directory_at (arm_global_pd (arch_state s)) s \<and>
-  valid_global_pts s \<and>
-  is_inv (arm_hwasid_table (arch_state s))
-             (option_map fst o arm_asid_map (arch_state s))"
+  typ_at (AArch (AIntData X64SmallPage)) (x64_globals_frame (arch_state s)) s \<and>
+  valid_asid_table (x64_asid_table (arch_state s)) s \<and>
+  page_map_l4_at (x64_global_pml4 (arch_state s)) s \<and>
+  valid_global_pts s \<and> valid_global_pds s \<and> valid_global_pdpts s"
 
 definition
   vs_cap_ref_arch :: "arch_cap \<Rightarrow> vs_ref list option"
@@ -708,29 +812,40 @@ where
   "vs_cap_ref_arch \<equiv> \<lambda> cap. case cap of
    ASIDPoolCap _ asid \<Rightarrow>
      Some [VSRef (ucast (asid_high_bits_of asid)) None]
- | PageDirectoryCap _ (Some asid) \<Rightarrow>
+ | PML4Cap _ (Some asid) \<Rightarrow>
      Some [VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
+ | PDPointerTableCap _ (Some (asid, vptr)) \<Rightarrow>
+     Some [VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | PageDirectoryCap _ (Some (asid, vptr)) \<Rightarrow>
+     Some [VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
  | PageTableCap _ (Some (asid, vptr)) \<Rightarrow>
-     Some [VSRef (vptr >> 20) (Some APageDirectory),
+     Some [VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
+           VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | PageCap word rights ARMSmallPage (Some (asid, vptr)) \<Rightarrow>
-     Some [VSRef ((vptr >> 12) && mask 8) (Some APageTable),
-           VSRef (vptr >> 20) (Some APageDirectory),
+ | PageCap word rights typ X64SmallPage (Some (asid, vptr)) \<Rightarrow>
+     Some [VSRef ((vptr >> 12) && mask 9) (Some APageTable),
+           VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
+           VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | PageCap word rights ARMLargePage (Some (asid, vptr)) \<Rightarrow>
-     Some [VSRef ((vptr >> 12) && mask 8) (Some APageTable),
-           VSRef (vptr >> 20) (Some APageDirectory),
+ | PageCap word rights typ X64LargePage  (Some (asid, vptr)) \<Rightarrow>
+     Some [VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
+           VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | PageCap word rights ARMSection (Some (asid, vptr)) \<Rightarrow>
-     Some [VSRef (vptr >> 20) (Some APageDirectory),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-           VSRef (ucast (asid_high_bits_of asid)) None]
- | PageCap word rights ARMSuperSection (Some (asid, vptr)) \<Rightarrow>
-     Some [VSRef (vptr >> 20) (Some APageDirectory),
+ | PageCap word rights typ X64HugePage (Some (asid, vptr)) \<Rightarrow>
+     Some [VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | _ \<Rightarrow> None"
@@ -741,7 +856,15 @@ definition
   "vs_cap_ref cap \<equiv> arch_cap_fun_lift vs_cap_ref_arch None cap"
 
 definition
-  "is_pg_cap cap \<equiv> \<exists>p R sz m. cap = ArchObjectCap (PageCap p R sz m)"
+  "is_pg_cap cap \<equiv> \<exists>p R tp sz m. cap = ArchObjectCap (PageCap p R tp sz m)"
+
+definition
+  "is_pml4_cap c \<equiv>
+   \<exists>p asid. c = ArchObjectCap (PML4Cap p asid)"
+  
+definition
+  "is_pdpt_cap c \<equiv>
+   \<exists>p asid. c = ArchObjectCap (PDPointerTableCap p asid)"  
 
 definition
   "is_pd_cap c \<equiv>
@@ -751,16 +874,20 @@ definition
   "is_pt_cap c \<equiv> \<exists>p asid. c = ArchObjectCap (PageTableCap p asid)"
 
 lemma is_arch_cap_simps:
-  "is_pg_cap cap = (\<exists>p R sz m. cap = (ArchObjectCap (PageCap p R sz m)))"
-  "is_pd_cap cap = (\<exists>p asid. cap = (ArchObjectCap (PageDirectoryCap p asid)))"
-  "is_pt_cap cap = (\<exists>p asid. cap = (ArchObjectCap (PageTableCap p asid)))"
-  by (auto simp add: is_pg_cap_def is_pd_cap_def is_pt_cap_def)
+  "is_pg_cap cap   = (\<exists>p R ty sz m. cap = (ArchObjectCap (PageCap p R ty sz m)))"
+  "is_pd_cap cap   = (\<exists>p asid. cap = (ArchObjectCap (PageDirectoryCap p asid)))"
+  "is_pt_cap cap   = (\<exists>p asid. cap = (ArchObjectCap (PageTableCap p asid)))"
+  "is_pdpt_cap cap = (\<exists>p asid. cap = (ArchObjectCap (PDPointerTableCap p asid)))"
+  "is_pml4_cap cap = (\<exists>p asid. cap = (ArchObjectCap (PML4Cap p asid)))"
+  by (auto simp add: is_pg_cap_def is_pd_cap_def is_pt_cap_def is_pdpt_cap_def is_pml4_cap_def)
 
 definition
   "cap_asid_arch cap \<equiv> case cap of
-    PageCap _ _ _ (Some (asid, _)) \<Rightarrow> Some asid
+    PageCap _ _ _ _ (Some (asid, _)) \<Rightarrow> Some asid
   | PageTableCap _ (Some (asid, _)) \<Rightarrow> Some asid
-  | PageDirectoryCap _ (Some asid) \<Rightarrow> Some asid
+  | PageDirectoryCap _ (Some (asid, _)) \<Rightarrow> Some asid
+  | PDPointerTableCap _ (Some (asid, _)) \<Rightarrow> Some asid
+  | PML4Cap _ (Some asid) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
 declare cap_asid_arch_def[abs_def, simp]
@@ -781,14 +908,14 @@ definition
   global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set"
 where
   "global_refs \<equiv> \<lambda>s.
-  {idle_thread s, arm_globals_frame (arch_state s), arm_global_pd (arch_state s)} \<union>
-   range (interrupt_irq_node s) \<union>
-   set (arm_global_pts (arch_state s))"
+  {idle_thread s, x64_globals_frame (arch_state s), x64_global_pml4 (arch_state s)} \<union>
+   range (interrupt_irq_node s) \<union> set (x64_global_pdpts (arch_state s)) \<union>
+   set (x64_global_pds (arch_state s)) \<union> set (x64_global_pts (arch_state s))"
 
 definition
   not_kernel_window_arch :: "arch_state \<Rightarrow> obj_ref set"
 where
-  "not_kernel_window_arch s \<equiv> {x. arm_kernel_vspace s x \<noteq> ArmVSpaceKernelWindow}"
+  "not_kernel_window_arch s \<equiv> {x. x64_kernel_vspace s x \<noteq> X64VSpaceKernelWindow}"
 
 declare not_kernel_window_arch_def[simp]
 
@@ -799,13 +926,14 @@ where
 
 
   (* needed for map: installing new object should add only one mapping *)
+(* FIXME x64: more stuff for global pdpt, global pd? *)
 definition
   "valid_table_caps \<equiv> \<lambda>s.
   \<forall>r p cap. (caps_of_state s) p = Some cap \<longrightarrow>
-            (is_pd_cap cap \<or> is_pt_cap cap) \<longrightarrow>
+            (is_pd_cap cap \<or> is_pt_cap cap \<or> is_pdpt_cap cap \<or> is_pml4_cap cap) \<longrightarrow>
             cap_asid cap = None \<longrightarrow>
             r \<in> obj_refs cap \<longrightarrow>
-            obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s"
+            obj_at (empty_table (set (x64_global_pts (arch_state s)))) r s"
 
   (* needed to preserve valid_table_caps in map *)
 definition
@@ -814,7 +942,9 @@ definition
   cap_asid cap = None \<longrightarrow>
   obj_refs cap' = obj_refs cap \<longrightarrow>
   (is_pd_cap cap \<longrightarrow> is_pd_cap cap' \<longrightarrow> p' = p) \<and>
-  (is_pt_cap cap \<longrightarrow> is_pt_cap cap' \<longrightarrow> p' = p)"
+  (is_pt_cap cap \<longrightarrow> is_pt_cap cap' \<longrightarrow> p' = p) \<and>
+  (is_pdpt_cap cap \<longrightarrow> is_pdpt_cap cap' \<longrightarrow> p' = p) \<and>
+  (is_pml4_cap cap \<longrightarrow> is_pml4_cap cap' \<longrightarrow> p' = p)"
 
 definition
   table_cap_ref_arch :: "arch_cap \<Rightarrow> vs_ref list option"
@@ -822,13 +952,24 @@ where
   "table_cap_ref_arch \<equiv> \<lambda> cap. case cap of
      ASIDPoolCap _ asid \<Rightarrow>
        Some [VSRef (ucast (asid_high_bits_of asid)) None]
-   | PageDirectoryCap _ (Some asid) \<Rightarrow>
-       Some [VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-             VSRef (ucast (asid_high_bits_of asid)) None]
-   | PageTableCap _ (Some (asid, vptr)) \<Rightarrow>
-       Some [VSRef (vptr >> 20) (Some APageDirectory),
-             VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-             VSRef (ucast (asid_high_bits_of asid)) None]
+ | PML4Cap _ (Some asid) \<Rightarrow>
+     Some [VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | PDPointerTableCap _ (Some (asid, vptr)) \<Rightarrow>
+     Some [VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | PageDirectoryCap _ (Some (asid, vptr)) \<Rightarrow>
+     Some [VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | PageTableCap _ (Some (asid, vptr)) \<Rightarrow>
+     Some [VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
+           VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
    | _ \<Rightarrow> None"
 
 declare table_cap_ref_arch_def[simp]
@@ -844,13 +985,14 @@ definition
   obj_refs cap' = obj_refs cap \<longrightarrow>
   table_cap_ref cap' = table_cap_ref cap"
 
+(* FIXME x64: should this be pdpts \<union> pds \<union> pts? *)
 definition
   valid_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_kernel_mappings \<equiv>
      \<lambda>s. \<forall>ko \<in> ran (kheap s).
-          valid_kernel_mappings_if_pd
-             (set (arm_global_pts (arch_state s))) ko"
+          valid_kernel_mappings_if_pm
+             (set (x64_global_pdpts (arch_state s)) ) ko"
 
 definition
   "valid_arch_caps \<equiv> valid_vs_lookup and valid_table_caps and
@@ -865,7 +1007,7 @@ where
  "pspace_in_kernel_window \<equiv> \<lambda>s.
     \<forall>x ko. kheap s x = Some ko \<longrightarrow>
        (\<forall>y \<in> {x .. x + (2 ^ obj_bits ko) - 1}.
-             arm_kernel_vspace (arch_state s) y = ArmVSpaceKernelWindow)"
+             x64_kernel_vspace (arch_state s) y = X64VSpaceKernelWindow)"
 
 definition
   arch_obj_bits_type :: "aa_type \<Rightarrow> nat"
@@ -874,15 +1016,19 @@ where
     AASIDPool \<Rightarrow> arch_kobj_size (ASIDPool undefined)
   | AIntData sz \<Rightarrow> arch_kobj_size (DataPage sz)
   | APageDirectory \<Rightarrow> arch_kobj_size (PageDirectory undefined)
-  | APageTable \<Rightarrow> arch_kobj_size (PageTable undefined))"
+  | APageTable \<Rightarrow> arch_kobj_size (PageTable undefined)
+  | APDPointerTable \<Rightarrow> arch_kobj_size (PDPointerTable undefined)
+  | APageMapL4 \<Rightarrow> arch_kobj_size (PageMapL4 undefined))"
 
 definition
-  pd_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  pm_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "pd_at_asid asid pd \<equiv> \<lambda>s.
+  "pm_at_asid asid pm \<equiv> \<lambda>s.
          ([VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-           VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> pd) s"
+           VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> pm) s"
 
+(* FIXME x64: do we need this? *)
+(*
 definition
   valid_asid_map :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -890,13 +1036,13 @@ where
    \<lambda>s. dom (arm_asid_map (arch_state s)) \<subseteq> {0 .. mask asid_bits} \<and>
        (\<forall>(asid, hwasid, pd) \<in> graph_of (arm_asid_map (arch_state s)).
             pd_at_asid asid pd s \<and> asid \<noteq> 0)"
-
+*)
 
 
 section "Lemmas"
 
-lemma vmsz_aligned_ARMSection:
-  "vmsz_aligned vref ARMSection = is_aligned vref (pageBitsForSize ARMSection)"
+lemma vmsz_aligned_X64LargePage:
+  "vmsz_aligned vref X64LargePage = is_aligned vref (pageBitsForSize X64LargePage)"
   by (simp add: vmsz_aligned_def pageBitsForSize_def)
 
 lemma valid_arch_cap_def2:
@@ -904,7 +1050,7 @@ lemma valid_arch_cap_def2:
   apply (rule eq_reflection)
   apply (cases c)
     by (auto simp add: wellformed_acap_simps valid_arch_cap_simps
-                       valid_arch_cap_ref_simps vmsz_aligned_ARMSection
+                       valid_arch_cap_ref_simps vmsz_aligned_X64LargePage
                 split: option.splits)
 
 lemmas vs_ref_aatype_simps[simp] = vs_ref_aatype_def[split_simps vs_ref.split]
@@ -945,7 +1091,7 @@ qed
 
 lemma vs_lookup_sub:
   assumes ko: "\<And>ko p. ko_at ko p s \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"
-  assumes table: "graph_of (arm_asid_table (arch_state s)) \<subseteq> graph_of (arm_asid_table (arch_state s'))"
+  assumes table: "graph_of (x64_asid_table (arch_state s)) \<subseteq> graph_of (x64_asid_table (arch_state s'))"
   shows "vs_lookup s \<subseteq> vs_lookup s'"
   unfolding vs_lookup_def
   apply (rule Image_mono)
@@ -976,8 +1122,8 @@ lemma vs_lookup_pages_sub:
   assumes ko: "\<And>ko p. ko_at ko p s \<Longrightarrow>
                       obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') p s'"
   assumes table:
-    "graph_of (arm_asid_table (arch_state s)) \<subseteq>
-     graph_of (arm_asid_table (arch_state s'))"
+    "graph_of (x64_asid_table (arch_state s)) \<subseteq>
+     graph_of (x64_asid_table (arch_state s'))"
   shows "vs_lookup_pages s \<subseteq> vs_lookup_pages s'"
   unfolding vs_lookup_pages_def
   apply (rule Image_mono)
@@ -989,7 +1135,7 @@ lemma vs_lookup_pages_sub:
   done
 
 lemma vs_lookup_pagesI:
-  "\<lbrakk> ref' \<in> vs_asid_refs (arm_asid_table (arch_state s));
+  "\<lbrakk> ref' \<in> vs_asid_refs (x64_asid_table (arch_state s));
      (ref',(ref,p)) \<in> (vs_lookup_pages1 s)^*  \<rbrakk> \<Longrightarrow>
   (ref \<unrhd> p) s"
   by (simp add: vs_lookup_pages_def) blast
@@ -997,7 +1143,7 @@ lemma vs_lookup_pagesI:
 lemma vs_lookup_stateI:
   assumes 1: "(ref \<rhd> p) s"
   assumes ko: "\<And>ko p. ko_at ko p s \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"
-  assumes table: "graph_of (arm_asid_table (arch_state s)) \<subseteq> graph_of (arm_asid_table (arch_state s'))"
+  assumes table: "graph_of (x64_asid_table (arch_state s)) \<subseteq> graph_of (x64_asid_table (arch_state s'))"
   shows "(ref \<rhd> p) s'"
   using 1 vs_lookup_sub [OF ko table] by blast
 
@@ -1009,7 +1155,7 @@ lemma valid_arch_objsD:
 lemma valid_arch_objs_stateI:
   assumes 1: "valid_arch_objs s"
   assumes ko: "\<And>ko p. ko_at ko p s' \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s"
-  assumes arch: "graph_of (arm_asid_table (arch_state s')) \<subseteq> graph_of (arm_asid_table (arch_state s))"
+  assumes arch: "graph_of (x64_asid_table (arch_state s')) \<subseteq> graph_of (x64_asid_table (arch_state s))"
   assumes vao: "\<And>p ref ao'.
                 \<lbrakk> (ref \<rhd> p) s; (ref \<rhd> p) s'; \<forall>ao. ko_at (ArchObj ao) p s \<longrightarrow> valid_arch_obj ao s;
                   ko_at (ArchObj ao') p s' \<rbrakk> \<Longrightarrow> valid_arch_obj ao' s'"
@@ -1034,13 +1180,19 @@ lemma valid_arch_obj_typ:
   assumes P: "\<And>p T. \<lbrace>\<lambda>s. (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s.  (typ_at (AArch T) p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_arch_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_obj ob s\<rbrace>"
   apply (cases ob, simp_all)
-     apply (rule hoare_vcg_ball_lift [OF P])
+       apply (rule hoare_vcg_ball_lift [OF P])
+      apply (rule hoare_vcg_all_lift)
+      apply (rename_tac "fun" x)
+      apply (case_tac "fun x"; simp; wp P)
+     apply (rule hoare_vcg_all_lift)
+     apply (rename_tac "fun" x)
+     apply (case_tac "fun x"; simp; wp P)
     apply (rule hoare_vcg_all_lift)
     apply (rename_tac "fun" x)
     apply (case_tac "fun x"; simp; wp P)
-  apply (rule hoare_vcg_ball_lift)
-  apply (rename_tac "fun" x)
-  apply (case_tac "fun x";simp; wp P)
+   apply (rule hoare_vcg_ball_lift)
+   apply (rename_tac "fun" x)
+   apply (case_tac "fun x";simp; wp P)
   apply wp
   done
 
@@ -1049,6 +1201,8 @@ lemma atyp_at_eq_kheap_obj:
   "typ_at (AArch AASIDPool) p s \<longleftrightarrow> (\<exists>f. kheap s p = Some (ArchObj (ASIDPool f)))"
   "typ_at (AArch APageTable) p s \<longleftrightarrow> (\<exists>pt. kheap s p = Some (ArchObj (PageTable pt)))"
   "typ_at (AArch APageDirectory) p s \<longleftrightarrow> (\<exists>pd. kheap s p = Some (ArchObj (PageDirectory pd)))"
+  "typ_at (AArch APDPointerTable) p s \<longleftrightarrow> (\<exists>pdpt. kheap s p = Some (ArchObj (PDPointerTable pdpt)))"
+  "typ_at (AArch APageMapL4) p s \<longleftrightarrow> (\<exists>pm. kheap s p = Some (ArchObj (PageMapL4 pm)))"
   "typ_at (AArch (AIntData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage sz)))"
   apply (auto simp add: obj_at_def)
   apply (simp_all add: a_type_def
@@ -1064,6 +1218,14 @@ lemma shows
   aa_type_AASIDPoolE:
   "\<lbrakk>a_type ko = AArch AASIDPool;
     (\<And>ap. ko = ArchObj (ASIDPool ap) \<Longrightarrow> R)\<rbrakk>
+   \<Longrightarrow> R" and
+  aa_type_APageMapL4E:
+  "\<lbrakk>a_type ko = AArch APageMapL4;
+    (\<And>pm. ko = ArchObj (PageMapL4 pm) \<Longrightarrow> R)\<rbrakk>
+   \<Longrightarrow> R" and
+  aa_type_APDPointerTableE:
+  "\<lbrakk>a_type ko = AArch APDPointerTable;
+    (\<And>pdpt. ko = ArchObj (PDPointerTable pdpt) \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R" and
   aa_type_APageDirectoryE:
   "\<lbrakk>a_type ko = AArch APageDirectory;
@@ -1082,7 +1244,13 @@ lemmas aa_type_elims[elim!] =
 lemma valid_arch_obj_pspaceI:
   "\<lbrakk> valid_arch_obj obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_obj obj s'"
   apply (cases obj, simp_all)
-    apply (simp add: obj_at_def)
+      apply (simp add: obj_at_def)
+     apply (erule allEI)
+     apply (rename_tac "fun" x)
+     apply (case_tac "fun x", simp_all add: obj_at_def)
+    apply (erule allEI)
+    apply (rename_tac "fun" x)
+    apply (case_tac "fun x", simp_all add: obj_at_def)
    apply (erule allEI)
    apply (rename_tac "fun" x)
    apply (case_tac "fun x", simp_all add: obj_at_def)
@@ -1243,7 +1411,7 @@ lemma global_refs_equiv:
   assumes "arm_globals_frame (arch_state s) = arm_globals_frame (arch_state s')"
   assumes "arm_global_pd (arch_state s) = arm_global_pd (arch_state s')"
   assumes "set (arm_global_pts (arch_state s)) = set (arm_global_pts (arch_state s'))"
-  assumes "ran (arm_asid_table (arch_state s)) = ran (arm_asid_table (arch_state s'))"
+  assumes "ran (x64_asid_table (arch_state s)) = ran (x64_asid_table (arch_state s'))"
   shows "global_refs s = global_refs s'"
   by (simp add: assms global_refs_def)
 
@@ -1420,12 +1588,12 @@ lemma vs_asid_refsI:
 (* Non-recursive introduction rules for vs_lookup and vs_lookup_pages
    NOTE: exhaustive if assuming valid_objs and valid_asid_table *)
 lemma vs_lookup_atI:
-  "arm_asid_table (arch_state s) a = Some p \<Longrightarrow> ([VSRef (ucast a) None] \<rhd> p) s"
+  "x64_asid_table (arch_state s) a = Some p \<Longrightarrow> ([VSRef (ucast a) None] \<rhd> p) s"
   unfolding vs_lookup_def by (drule vs_asid_refsI) fastforce
 
 lemma vs_lookup_apI:
   "\<And>a p\<^sub>1 ap b.
-     \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
+     \<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
       kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
       ap b = Some p\<rbrakk>
      \<Longrightarrow> ([VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] \<rhd> p) s"
@@ -1438,7 +1606,7 @@ lemma vs_lookup_apI:
 
 lemma vs_lookup_pdI:
   "\<And>a p\<^sub>1 ap b p\<^sub>2 pd c.
-     \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
+     \<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
       kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
       ap b = Some p\<^sub>2;
       kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
@@ -1486,7 +1654,7 @@ lemmas
   vs_lookup_pages_apI = vs_lookup_apI[THEN vs_lookup_pages_vs_lookupI]
 
 lemma vs_lookup_pages_pdI:
-  "\<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
+  "\<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
     kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
     ap b = Some p\<^sub>2;
     kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
@@ -1500,7 +1668,7 @@ lemma vs_lookup_pages_pdI:
                split: split_if_asm)
 
 lemma vs_lookup_pages_ptI:
-  "\<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
+  "\<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
     kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
     ap b = Some p\<^sub>2;
     kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
@@ -1542,7 +1710,7 @@ lemma stronger_arch_objsD_lemma:
 lemma stronger_arch_objsD:
   "\<lbrakk> (ref \<rhd> p) s;
      valid_arch_objs s;
-     valid_asid_table (arm_asid_table (arch_state s)) s \<rbrakk> \<Longrightarrow>
+     valid_asid_table (x64_asid_table (arch_state s)) s \<rbrakk> \<Longrightarrow>
   \<exists>ao. ko_at (ArchObj ao) p s \<and>
        valid_arch_obj ao s"
   apply (clarsimp simp: vs_lookup_def vs_asid_refs_def graph_of_def)
@@ -1572,22 +1740,22 @@ lemma stronger_arch_objsD:
    The lemma below basically unrolls vs_lookup.
    Though less elegant, this formulation better separates the relevant cases. *)
 lemma valid_arch_objs_alt:
-  "(\<forall>p\<in>ran (arm_asid_table (arch_state s)). asid_pool_at p s) \<and>
+  "(\<forall>p\<in>ran (x64_asid_table (arch_state s)). asid_pool_at p s) \<and>
    valid_arch_objs s \<longleftrightarrow>
-   (\<forall>a p. arm_asid_table (arch_state s) a = Some p \<longrightarrow>
+   (\<forall>a p. x64_asid_table (arch_state s) a = Some p \<longrightarrow>
           typ_at (AArch AASIDPool) p s) \<and>
    (\<forall>a p\<^sub>1 ap b p.
-          arm_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
+          x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
           kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
           ap b = Some p \<longrightarrow> page_directory_at p s) \<and>
    (\<forall>a p\<^sub>1 ap b p\<^sub>2 pd c.
-          arm_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
+          x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
           kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
           ap b = Some p\<^sub>2 \<longrightarrow>
           kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd)) \<longrightarrow>
           c \<notin> kernel_mapping_slots \<longrightarrow> valid_pde (pd c) s) \<and>
    (\<forall>a p\<^sub>1 ap b p\<^sub>2 pd c addr f w pt.
-          arm_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
+          x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
           kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
           ap b = Some p\<^sub>2 \<longrightarrow>
           kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd)) \<longrightarrow>
@@ -1671,7 +1839,7 @@ lemma valid_arch_objs_alt:
 
 lemma vs_lookupE:
   "\<lbrakk> (ref \<rhd> p) s;
-    \<And>ref' p'. \<lbrakk> (ref',p') \<in> vs_asid_refs (arm_asid_table (arch_state s));
+    \<And>ref' p'. \<lbrakk> (ref',p') \<in> vs_asid_refs (x64_asid_table (arch_state s));
                 ((ref',p') \<rhd>* (ref,p)) s \<rbrakk> \<Longrightarrow> P \<rbrakk>
   \<Longrightarrow> P"
   by (auto simp: vs_lookup_def)
@@ -1681,17 +1849,17 @@ lemma vs_lookupE:
 lemma vs_lookupE_alt:
   assumes vl: "(ref \<rhd> p) s"
   assumes va: "valid_arch_objs s"
-  assumes vt: "(\<forall>p\<in>ran (arm_asid_table (arch_state s)). asid_pool_at p s)"
-  assumes 0: "\<And>a. arm_asid_table (arch_state s) a = Some p \<Longrightarrow>
+  assumes vt: "(\<forall>p\<in>ran (x64_asid_table (arch_state s)). asid_pool_at p s)"
+  assumes 0: "\<And>a. x64_asid_table (arch_state s) a = Some p \<Longrightarrow>
                    typ_at (AArch AASIDPool) p s \<Longrightarrow>
                    R [VSRef (ucast a) None] p"
   assumes 1: "\<And>a p\<^sub>1 ap b.
-       \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
+       \<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
         kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
         ap b = Some p; page_directory_at p s\<rbrakk>
        \<Longrightarrow> R [VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] p"
   assumes 2: "\<And>a p\<^sub>1 ap b p\<^sub>2 pd c.
-       \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
+       \<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
         kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
         ap b = Some p\<^sub>2;
         kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
@@ -1734,17 +1902,17 @@ qed
 lemma vs_lookup_pagesE_alt:
   assumes vl: "(ref \<unrhd> p) s"
   assumes va: "valid_arch_objs s"
-  assumes vt: "(\<forall>p\<in>ran (arm_asid_table (arch_state s)). asid_pool_at p s)"
-  assumes 0: "\<And>a. arm_asid_table (arch_state s) a = Some p \<Longrightarrow>
+  assumes vt: "(\<forall>p\<in>ran (x64_asid_table (arch_state s)). asid_pool_at p s)"
+  assumes 0: "\<And>a. x64_asid_table (arch_state s) a = Some p \<Longrightarrow>
                    typ_at (AArch AASIDPool) p s \<Longrightarrow>
                    R [VSRef (ucast a) None] p"
   assumes 1: "\<And>a p\<^sub>1 ap b.
-       \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
+       \<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
         kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
         ap b = Some p; page_directory_at p s\<rbrakk>
        \<Longrightarrow> R [VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] p"
   assumes 2: "\<And>a p\<^sub>1 ap b p\<^sub>2 pd c.
-       \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
+       \<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
         kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
         ap b = Some p\<^sub>2;
         kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
@@ -1753,7 +1921,7 @@ lemma vs_lookup_pagesE_alt:
        \<Longrightarrow> R [VSRef (ucast c) (Some APageDirectory),
               VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] p"
   assumes 3: "\<And>a p\<^sub>1 ap b p\<^sub>2 pd c addr x y pt d.
-       \<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
+       \<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
         kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
         ap b = Some p\<^sub>2;
         kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
@@ -1871,7 +2039,7 @@ lemma valid_vs_lookupD:
 
 lemma vs_lookup_induct:
   assumes r: "(ref \<rhd> p) s"
-  assumes a: "\<And>asid p. \<lbrakk> arm_asid_table (arch_state s) asid = Some p \<rbrakk> \<Longrightarrow> P [VSRef (ucast asid) None] p s"
+  assumes a: "\<And>asid p. \<lbrakk> x64_asid_table (arch_state s) asid = Some p \<rbrakk> \<Longrightarrow> P [VSRef (ucast asid) None] p s"
   assumes s: "\<And>ref p ref' p'. \<lbrakk> (ref \<rhd> p) s; ((ref,p) \<rhd>1 (ref',p')) s; P ref p s \<rbrakk> \<Longrightarrow> P ref' p' s"
   shows "P ref p s"
   using r
@@ -1890,7 +2058,7 @@ lemma vs_lookup_induct:
 
 lemma vs_lookup_pages_induct:
   assumes r: "(ref \<unrhd> p) s"
-  assumes a: "\<And>asid p. \<lbrakk> arm_asid_table (arch_state s) asid = Some p \<rbrakk> \<Longrightarrow> P [VSRef (ucast asid) None] p s"
+  assumes a: "\<And>asid p. \<lbrakk> x64_asid_table (arch_state s) asid = Some p \<rbrakk> \<Longrightarrow> P [VSRef (ucast asid) None] p s"
   assumes s: "\<And>ref p ref' p'. \<lbrakk> (ref \<unrhd> p) s; ((ref,p) \<unrhd>1 (ref',p')) s; P ref p s \<rbrakk> \<Longrightarrow> P ref' p' s"
   shows "P ref p s"
   using r
@@ -1978,7 +2146,7 @@ lemma vs_lookup1_stateI2:
 
 
 lemma vs_lookupI:
-  "\<lbrakk> ref' \<in> vs_asid_refs (arm_asid_table (arch_state s));
+  "\<lbrakk> ref' \<in> vs_asid_refs (x64_asid_table (arch_state s));
      (ref',(ref,p)) \<in> (vs_lookup1 s)^*  \<rbrakk> \<Longrightarrow>
   (ref \<rhd> p) s"
   by (simp add: vs_lookup_def) blast
@@ -2009,7 +2177,7 @@ lemma vs_lookup_trans_ptr_eq:
   by (drule vs_lookup_trans_ptr_eq') simp
 
 lemma vs_lookup_atD:
-  "([VSRef (ucast asid) None] \<rhd> p) s \<Longrightarrow> arm_asid_table (arch_state s) asid = Some p"
+  "([VSRef (ucast asid) None] \<rhd> p) s \<Longrightarrow> x64_asid_table (arch_state s) asid = Some p"
   apply (simp add: vs_lookup_def)
   apply (clarsimp simp: vs_asid_refs_def graph_of_def)
   apply (drule rtranclD)
@@ -2024,7 +2192,7 @@ lemma vs_lookup_atD:
   done
 
 lemma vs_lookup_atE:
-  "([VSRef (ucast asid) None] \<rhd> p) s \<Longrightarrow> (arm_asid_table (arch_state s) asid = Some p \<Longrightarrow> P) \<Longrightarrow> P"
+  "([VSRef (ucast asid) None] \<rhd> p) s \<Longrightarrow> (x64_asid_table (arch_state s) asid = Some p \<Longrightarrow> P) \<Longrightarrow> P"
   by (blast dest: vs_lookup_atD)
 
 lemma vs_lookup_2ConsD:
@@ -2036,7 +2204,7 @@ lemma vs_lookup_2ConsD:
   done
 
 lemma global_refs_asid_table_update [iff]:
-  "global_refs (s\<lparr>arch_state := arm_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
+  "global_refs (s\<lparr>arch_state := x64_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
   by (simp add: global_refs_def)
 
 lemma pspace_in_kernel_window_arch_update[simp]:
