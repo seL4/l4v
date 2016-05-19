@@ -2222,10 +2222,10 @@ lemma isValidVTableRoot:
 
 lemma corres_splitEE':
   assumes y: "\<And>x y x' y'. r' (x, y) (x', y')
-              \<Longrightarrow> corres_underlying sr nf (f \<oplus> r) (R x y) (R' x' y') (b x y) (d x' y')"
-  assumes    "corres_underlying sr nf (f \<oplus> r') P P' a c"
+              \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (R x y) (R' x' y') (b x y) (d x' y')"
+  assumes    "corres_underlying sr nf nf' (f \<oplus> r') P P' a c"
   assumes x: "\<lbrace>Q\<rbrace> a \<lbrace>%(x, y). R x y \<rbrace>,\<lbrace>\<top>\<top>\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>%(x, y). R' x y\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
-  shows      "corres_underlying sr nf (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>(x, y). b x y)) (c >>=E (\<lambda>(x, y). d x y))"
+  shows      "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>(x, y). b x y)) (c >>=E (\<lambda>(x, y). d x y))"
   using assms
   apply (unfold bindE_def validE_def split_def)
   apply (rule corres_split)

@@ -1350,12 +1350,12 @@ lemma in_getCTE2:
 declare wrap_ext_op_det_ext_ext_def[simp]
 
 lemma do_ext_op_update_cdt_list_symb_exec_l:
-  "corres_underlying {(s :: det_ext state, s'). f (kheap s) s'} nf dc P P' (update_cdt_list g) (return x)"
+  "corres_underlying {(s :: det_ext state, s'). f (kheap s) s'} nf nf' dc P P' (update_cdt_list g) (return x)"
   by (simp add: corres_underlying_def
   update_cdt_list_def set_cdt_list_def bind_def put_def get_def gets_def return_def)
 
 lemma do_ext_op_update_cdt_list_symb_exec_l':
-  "corres_underlying {(s::det_state, s'). f (kheap s) (ekheap s) s'} nf dc P P' (create_cap_ext p z a) (return x)"
+  "corres_underlying {(s::det_state, s'). f (kheap s) (ekheap s) s'} nf nf' dc P P' (create_cap_ext p z a) (return x)"
   apply (simp add: corres_underlying_def create_cap_ext_def
   update_cdt_list_def set_cdt_list_def bind_def put_def get_def gets_def return_def)
   done
@@ -1381,11 +1381,11 @@ lemma state_relation_queues[elim!]: "(s,s') \<in> state_relation \<Longrightarro
   done
 
 lemma set_original_symb_exec_l:
-  "corres_underlying {(s, s'). f (kheap s) (exst s) s'} nf dc P P' (set_original p b) (return x)"
+  "corres_underlying {(s, s'). f (kheap s) (exst s) s'} nf nf' dc P P' (set_original p b) (return x)"
   by (simp add: corres_underlying_def return_def set_original_def in_monad Bex_def)
 
 lemma set_cdt_symb_exec_l:
-  "corres_underlying {(s, s'). f (kheap s) (exst s) s'} nf dc P P' (set_cdt g) (return x)"
+  "corres_underlying {(s, s'). f (kheap s) (exst s) s'} nf nf' dc P P' (set_cdt g) (return x)"
   by (simp add: corres_underlying_def return_def set_cdt_def in_monad Bex_def)
 
 crunch domain_index[wp]: create_cap_ext "\<lambda>s. P (domain_index s)"

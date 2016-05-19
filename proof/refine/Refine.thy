@@ -541,7 +541,7 @@ lemma ct_idle_related:
 (* FIXME: move *)
 lemma valid_corres_combined:
   assumes "valid P f Q"
-  assumes "corres_underlying sr nf rr P P' f f'"
+  assumes "corres_underlying sr False nf' rr P P' f f'"
   assumes "valid (\<lambda>s'. \<exists>s. (s,s')\<in>sr \<and> P s \<and> P' s') f' Q'" (is "valid ?P _ _")
   shows "valid ?P f' (\<lambda>r' s'. \<exists>r s. (s,s') \<in> sr \<and> Q r s \<and> Q' r' s' \<and> rr r r')"
   using assms

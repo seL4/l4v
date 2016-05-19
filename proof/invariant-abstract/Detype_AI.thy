@@ -1371,8 +1371,8 @@ lemma corres_submonad2:
   "\<lbrakk> submonad f r g fn; submonad f' r' g' fn';
      \<forall>s s'. (s, s') \<in> sr \<and> g s \<and> g' s' \<longrightarrow> (f s, f' s') \<in> ssr;
      \<forall>s s' ss ss'. ((s, s') \<in> sr \<and> (ss, ss') \<in> ssr) \<longrightarrow> (r ss s, r' ss' s') \<in> sr;
-     corres_underlying ssr nf rvr P P' x x'\<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf rvr (g and P o f) (g' and P' o f') (fn x) (fn' x')"
+     corres_underlying ssr nf nf' rvr P P' x x'\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' rvr (g and P o f) (g' and P' o f') (fn x) (fn' x')"
   apply (subst submonad.fn_is_sm, assumption)+
   apply (clarsimp simp: submonad_fn_def)
   apply (rule corres_split' [OF _ _ stateAssert_sp stateAssert_sp])
@@ -1399,8 +1399,8 @@ lemma corres_submonad3:
     \<forall>s s' ss ss'. ((s, s') \<in> sr \<and> (ss, ss') \<in> ssr) \<longrightarrow>
                   (r ss s, r' ss' s') \<in> sr;
     \<forall>s. G s \<longrightarrow> g s \<and> P (f s); \<forall>s'. G' s' \<longrightarrow> g' s' \<and> P' (f' s');
-    corres_underlying ssr nf rvr P P' x x'\<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf rvr G G' (fn x) (fn' x')"
+    corres_underlying ssr nf nf' rvr P P' x x'\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' rvr G G' (fn x) (fn' x')"
   apply (subst submonad.fn_is_sm, assumption)+
   apply (clarsimp simp: submonad_fn_def)
   apply (rule corres_split' [OF _ _ stateAssert_sp stateAssert_sp])

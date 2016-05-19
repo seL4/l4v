@@ -638,12 +638,19 @@ let
         (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
             filename "TSdef" (#name fn_def))))
 
+  val initial_callees = Symtab.dest (FunctionInfo.get_functions fn_info)
+        |> List.mapPartial (fn (fn_name, fn_def) =>
+             if not (#finished fn_def) then NONE else
+               AutoCorresData.get_thm (Proof_Context.theory_of lthy)
+                                      filename ("TScorres") fn_name
+               |> Option.map (fn thm => (fn_name, thm)))
+        |> Symtab.make
   val (lthy, fn_info, (_, results)) =
       AutoCorresUtil.translate
-        lthy fn_info convert define
+        lthy fn_info Symtab.empty convert define
         (fn defs => fn lthy => map (retrieve_mono_thm lthy) defs)
         update_function_def
-        (Symtab.empty, [])
+        (initial_callees, [])
 
   (* Print some statistics for curiosity's sake. *)
   (*

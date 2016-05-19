@@ -4301,8 +4301,8 @@ lemma omgwtfbbq[simp]:
 
 
 lemma corres_underlying_lift_ex1:
-  assumes c: "\<And>v. corres_underlying sr nf r (P v and Q) P' a c" 
-  shows "corres_underlying sr nf r ((\<lambda>s. \<exists>v. P v s) and Q) P' a c" 
+  assumes c: "\<And>v. corres_underlying sr nf nf' r (P v and Q) P' a c" 
+  shows "corres_underlying sr nf nf' r ((\<lambda>s. \<exists>v. P v s) and Q) P' a c" 
   unfolding corres_underlying_def
   apply clarsimp
   apply (cut_tac v = v in c)
@@ -4314,8 +4314,8 @@ lemmas corres_underlying_lift_ex1' = corres_underlying_lift_ex1 [where Q = \<top
 
 
 lemma corres_underlying_lift_ex2:
-  assumes c: "\<And>v. corres_underlying sr nf r P (P' v and Q) a c" 
-  shows "corres_underlying sr nf r P ((\<lambda>s. \<exists>v. P' v s) and Q) a c" 
+  assumes c: "\<And>v. corres_underlying sr nf nf' r P (P' v and Q) a c" 
+  shows "corres_underlying sr nf nf' r P ((\<lambda>s. \<exists>v. P' v s) and Q) a c" 
   unfolding corres_underlying_def
   apply clarsimp
   apply (cut_tac v = v in c)

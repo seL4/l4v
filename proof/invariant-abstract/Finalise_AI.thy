@@ -3234,8 +3234,8 @@ end
 
 (*FIXME: move *)
 lemma corres_option_split:
-  "\<lbrakk>v = v'; corres_underlying sr nf r P P' a c; (\<And>x. v = Some x \<Longrightarrow> corres_underlying sr nf r (Q x) (Q' x) (b x) (d x))\<rbrakk>
-  \<Longrightarrow> corres_underlying sr nf r (case_option P Q v) (case_option P' Q' v') (case_option a b v) (case_option c d v')"
+  "\<lbrakk>v = v'; corres_underlying sr nf nf' r P P' a c; (\<And>x. v = Some x \<Longrightarrow> corres_underlying sr nf nf' r (Q x) (Q' x) (b x) (d x))\<rbrakk>
+  \<Longrightarrow> corres_underlying sr nf nf' r (case_option P Q v) (case_option P' Q' v') (case_option a b v) (case_option c d v')"
   by (cases v', simp_all)
 
 

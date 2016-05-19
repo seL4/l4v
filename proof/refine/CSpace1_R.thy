@@ -516,9 +516,9 @@ lemma cap_relation_Null2 [simp]:
 lemmas cnode_cap_case_if = cap_case_CNodeCap
 
 lemma corres_stateAssert_assume_stronger:
-  "\<lbrakk> corres_underlying sr nf r P Q f (g ());
+  "\<lbrakk> corres_underlying sr nf nf' r P Q f (g ());
     \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; Q s' \<rbrakk> \<Longrightarrow> P' s' \<rbrakk> \<Longrightarrow>
-   corres_underlying sr nf r P Q f (stateAssert P' [] >>= g)"
+   corres_underlying sr nf nf' r P Q f (stateAssert P' [] >>= g)"
   apply (clarsimp simp: bind_assoc stateAssert_def)
   apply (rule corres_symb_exec_r [OF _ get_sp])
     apply (rule_tac F="P' x" in corres_req)

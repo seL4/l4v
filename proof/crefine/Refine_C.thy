@@ -440,7 +440,7 @@ lemma handleSyscall_ccorres:
 
 lemma ccorres_corres_u:
   "\<lbrakk> ccorres dc xfdc P (Collect P') [] H C; no_fail P H \<rbrakk> \<Longrightarrow>
-  corres_underlying rf_sr nf dc P P' H (exec_C \<Gamma> C)"
+  corres_underlying rf_sr nf nf' dc P P' H (exec_C \<Gamma> C)"
   apply (clarsimp simp: ccorres_underlying_def corres_underlying_def)
   apply (drule (1) bspec)
   apply (clarsimp simp: exec_C_def no_fail_def)
@@ -461,7 +461,7 @@ lemma ccorres_corres_u:
 
 lemma ccorres_corres_u_xf:
   "\<lbrakk> ccorres rel xf P (Collect P') [] H C; no_fail P H \<rbrakk> \<Longrightarrow>
-  corres_underlying rf_sr nf rel  P P' H ((exec_C \<Gamma> C) >>= (\<lambda>_. gets xf))"
+  corres_underlying rf_sr nf nf' rel P P' H ((exec_C \<Gamma> C) >>= (\<lambda>_. gets xf))"
   apply (clarsimp simp: ccorres_underlying_def corres_underlying_def)
   apply (drule (1) bspec)
   apply (clarsimp simp: exec_C_def no_fail_def)
@@ -495,14 +495,15 @@ lemma no_fail_callKernel:
   "no_fail (all_invs' e) (callKernel e)"
   unfolding all_invs'_def
   apply (rule corres_nofail)
-  apply (rule corres_guard_imp)
-    apply (rule kernel_corres)
-   apply force
-  apply (simp add: sch_act_simple_def)
+   apply (rule corres_guard_imp)
+     apply (rule kernel_corres)
+    apply force
+   apply (simp add: sch_act_simple_def)
+  apply metis
   done
 
 lemma callKernel_corres_C:
-  "corres_underlying rf_sr True dc
+  "corres_underlying rf_sr False True dc
            (all_invs' e)
            \<top>
            (callKernel e) (callKernel_C e)"
@@ -577,7 +578,7 @@ lemma ccorres_get_registers:
   done
 
 lemma callKernel_withFastpath_corres_C:
-  "corres_underlying rf_sr True dc
+  "corres_underlying rf_sr False True dc
            (all_invs' e)
            \<top>
            (callKernel e) (callKernel_withFastpath_C e)"
@@ -628,7 +629,7 @@ lemma threadSet_all_invs_triv':
 
 lemma getContext_corres:
   "t' = tcb_ptr_to_ctcb_ptr t \<Longrightarrow> 
-  corres_underlying rf_sr True (op =) (tcb_at' t) \<top> 
+  corres_underlying rf_sr False True (op =) (tcb_at' t) \<top> 
                     (threadGet tcbContext t) (gets (getContext_C t'))"
   apply (clarsimp simp: corres_underlying_def simpler_gets_def)
   apply (drule obj_at_ko_at')
@@ -653,7 +654,7 @@ lemma callKernel_cur:
   done
 
 lemma entry_corres_C: 
-  "corres_underlying rf_sr True (op =)
+  "corres_underlying rf_sr False True (op =)
            (all_invs' e)
            \<top>
            (kernelEntry e uc) (kernelEntry_C fp e uc)"
@@ -775,7 +776,7 @@ apply (simp add: o_def hrs_mem_update_def)
 done
 
 lemma user_memory_update_corres_C:
-  "corres_underlying rf_sr True (%_ _. True)
+  "corres_underlying rf_sr False True (%_ _. True)
      (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> dom um \<subseteq> dom (user_mem' s))
      \<top>
      (doMachineOp (user_memory_update um)) (setUserMem_C um)"
@@ -809,7 +810,7 @@ lemma user_memory_update_corres_C:
   done
 
 lemma do_user_op_corres_C:
-  "corres_underlying rf_sr True (op =) (invs' and ex_abs einvs) \<top>
+  "corres_underlying rf_sr False True (op =) (invs' and ex_abs einvs) \<top>
                      (doUserOp f tc) (doUserOp_C f tc)"
   apply (simp only: doUserOp_C_def doUserOp_def split_def)
   apply (rule corres_guard_imp)
@@ -875,7 +876,7 @@ lemma checkActiveIRQ_ex_abs_einvs:
   done
 
 lemma check_active_irq_corres_C:
-  "corres_underlying rf_sr True (op =) 
+  "corres_underlying rf_sr False True (op =)
              (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ex_abs valid_state) \<top>
              (checkActiveIRQ) (checkActiveIRQ_C)"
   apply (simp add: checkActiveIRQ_C_def checkActiveIRQ_def getActiveIRQ_C_def)

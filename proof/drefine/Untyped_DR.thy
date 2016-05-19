@@ -1662,9 +1662,9 @@ lemma transform_translate_type:
   done
 
 lemma corres_whenE_throwError_split_rhs:
-  "corres_underlying sr f r P Q a (whenE G (throwError e) >>=E (\<lambda>_. b))
-     = ((G \<longrightarrow> corres_underlying sr f r P Q a (throwError e))
-           \<and> (\<not> G \<longrightarrow> corres_underlying sr f r P Q a b))"
+  "corres_underlying sr nf nf' r P Q a (whenE G (throwError e) >>=E (\<lambda>_. b))
+     = ((G \<longrightarrow> corres_underlying sr nf nf' r P Q a (throwError e))
+           \<and> (\<not> G \<longrightarrow> corres_underlying sr nf nf' r P Q a b))"
   by (simp add: whenE_bindE_throwError_to_if)
 
 lemma nat_bl_to_bin_nat_to_cref:

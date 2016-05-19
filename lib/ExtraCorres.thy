@@ -15,11 +15,11 @@ begin
 lemma corres_mapM:
   assumes x: "r [] []"
   assumes y: "\<And>x xs y ys. \<lbrakk> r xs ys; r' x y \<rbrakk> \<Longrightarrow> r (x # xs) (y # ys)"
-  assumes z: "\<And>x y. (x, y) \<in> S \<Longrightarrow> corres_underlying R nf r' P P' (f x) (f' y)"
+  assumes z: "\<And>x y. (x, y) \<in> S \<Longrightarrow> corres_underlying R nf nf' r' P P' (f x) (f' y)"
   assumes w: "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
              "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P'\<rbrace> f' y \<lbrace>\<lambda>rv. P'\<rbrace>"
   shows      "\<lbrakk> length xs = length ys; set (zip xs ys) \<subseteq> S \<rbrakk> \<Longrightarrow>
-                   corres_underlying R nf r P P' (mapM f xs) (mapM f' ys)"
+                   corres_underlying R nf nf' r P P' (mapM f xs) (mapM f' ys)"
 proof (induct xs ys rule: list_induct2)
   case Nil
   show ?case
@@ -28,7 +28,7 @@ next
   case (Cons a as b bs)
   from Cons have P: "(a, b) \<in> S"
     by simp
-  from Cons have Q: "corres_underlying R nf r P P' (mapM f as) (mapM f' bs)"
+  from Cons have Q: "corres_underlying R nf nf' r P P' (mapM f as) (mapM f' bs)"
     by simp
   show ?case
     apply (simp add: mapM_Cons)
@@ -46,11 +46,11 @@ lemma corres_mapM_list_all2:
   assumes rn: "r [] []"
   and     rc: "\<And>x xs y ys. \<lbrakk> r xs ys; r' x y \<rbrakk> \<Longrightarrow> r (x # xs) (y # ys)"
   and   corr: "\<And>x xs y ys. \<lbrakk> S x y; list_all2 S xs ys \<rbrakk> 
-               \<Longrightarrow> corres_underlying sr nf r' (Q (x # xs)) (Q' (y # ys)) (f x) (f' y)"
+               \<Longrightarrow> corres_underlying sr nf nf' r' (Q (x # xs)) (Q' (y # ys)) (f x) (f' y)"
   and     ha: "\<And>x xs y. \<lbrakk> S x y; suffixeq (x#xs) as \<rbrakk> \<Longrightarrow> \<lbrace>Q  (x # xs)\<rbrace> f x \<lbrace>\<lambda>r. Q xs\<rbrace>"
   and     hc: "\<And>x y ys. \<lbrakk> S x y; suffixeq (y#ys) cs \<rbrakk> \<Longrightarrow> \<lbrace>Q' (y # ys) \<rbrace> f' y \<lbrace>\<lambda>r. Q' ys\<rbrace>"
   and   lall: "list_all2 S as cs"
-  shows       "corres_underlying sr nf r (Q as) (Q' cs) (mapM f as) (mapM f' cs)"
+  shows       "corres_underlying sr nf nf' r (Q as) (Q' cs) (mapM f as) (mapM f' cs)"
   using lall
 proof (induct rule: list_all2_induct_suffixeq)
   case Nil
@@ -59,7 +59,7 @@ proof (induct rule: list_all2_induct_suffixeq)
 next
   case  (Cons x xs y ys)
   
-  have corr': "corres_underlying sr nf r' (Q (x # xs)) (Q' (y # ys)) (f x) (f' y)"
+  have corr': "corres_underlying sr nf nf' r' (Q (x # xs)) (Q' (y # ys)) (f x) (f' y)"
   proof (rule corr)
     show "list_all2 S xs ys" by (simp add: Cons)
   qed fact+
@@ -74,12 +74,12 @@ next
 qed
 
 lemma corres_mapM_x:
-  assumes x: "\<And>x y. (x, y) \<in> S \<Longrightarrow> corres_underlying sr nf dc P P' (f x) (f' y)"
+  assumes x: "\<And>x y. (x, y) \<in> S \<Longrightarrow> corres_underlying sr nf nf' dc P P' (f x) (f' y)"
   assumes y: "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
              "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P'\<rbrace> f' y \<lbrace>\<lambda>rv. P'\<rbrace>"
   assumes z: "length xs = length ys"
   assumes w: "set (zip xs ys) \<subseteq> S"
-  shows      "corres_underlying sr nf dc P P' (mapM_x f xs) (mapM_x f' ys)"
+  shows      "corres_underlying sr nf nf' dc P P' (mapM_x f xs) (mapM_x f' ys)"
   apply (simp add: mapM_x_mapM)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
@@ -91,11 +91,11 @@ lemma corres_mapM_x:
 lemma corres_mapME:
   assumes x: "r [] []"
   assumes y: "\<And>x xs y ys. \<lbrakk> r xs ys; r' x y \<rbrakk> \<Longrightarrow> r (x # xs) (y # ys)"
-  assumes z: "\<And>x y. (x, y) \<in> S \<Longrightarrow> corres_underlying R nf (F \<oplus> r') P P' (f x) (f' y)"
+  assumes z: "\<And>x y. (x, y) \<in> S \<Longrightarrow> corres_underlying R nf nf' (F \<oplus> r') P P' (f x) (f' y)"
   assumes w: "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
              "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P'\<rbrace> f' y \<lbrace>\<lambda>rv. P'\<rbrace>"
   shows      "\<lbrakk> length xs = length ys; set (zip xs ys) \<subseteq> S \<rbrakk> \<Longrightarrow>
-                   corres_underlying R nf (F \<oplus> r) P P' (mapME f xs) (mapME f' ys)"
+                   corres_underlying R nf nf' (F \<oplus> r) P P' (mapME f xs) (mapME f' ys)"
 proof (induct xs ys rule: list_induct2)
   case Nil
   show ?case
@@ -104,7 +104,7 @@ next
   case (Cons a as b bs)
   from Cons have P: "(a, b) \<in> S"
     by simp
-  from Cons have Q: "corres_underlying R nf (F \<oplus> r) P P' (mapME f as) (mapME f' bs)"
+  from Cons have Q: "corres_underlying R nf nf' (F \<oplus> r) P P' (mapME f as) (mapME f' bs)"
     by simp
   show ?case
     apply (simp add: mapME_Cons)
@@ -128,38 +128,38 @@ next
 qed
 
 lemma corres_Id:
-  "\<lbrakk> f = g; \<And>rv. r rv rv; nf \<Longrightarrow> no_fail P' g \<rbrakk> \<Longrightarrow> corres_underlying Id nf r \<top> P' f g"
+  "\<lbrakk> f = g; \<And>rv. r rv rv; nf' \<Longrightarrow> no_fail P' g \<rbrakk> \<Longrightarrow> corres_underlying Id nf nf' r \<top> P' f g"
   apply (clarsimp simp: corres_underlying_def Ball_def no_fail_def)
   apply (rule rev_bexI, assumption)
   apply simp
   done
 
 lemma select_pick_corres_underlying:
-  "corres_underlying sr nf r P Q (f x) g
-     \<Longrightarrow> corres_underlying sr nf r (P and (\<lambda>s. x \<in> S)) Q (select S >>= f) g"
+  "corres_underlying sr nf nf' r P Q (f x) g
+     \<Longrightarrow> corres_underlying sr nf nf' r (P and (\<lambda>s. x \<in> S)) Q (select S >>= f) g"
   by (fastforce simp: corres_underlying_def select_def bind_def)
 
 lemma select_pick_corres:
-  "corres_underlying sr nf r P Q (f x) g
-     \<Longrightarrow> corres_underlying sr nf r (P and (\<lambda>s. x \<in> S)) Q (select S >>= f) g"
+  "corres_underlying sr nf nf' r P Q (f x) g
+     \<Longrightarrow> corres_underlying sr nf nf' r (P and (\<lambda>s. x \<in> S)) Q (select S >>= f) g"
   by (fastforce simp: intro: select_pick_corres_underlying)
 
 lemma select_pick_corresE:
-  "corres_underlying sr nf r P Q (f x) g
-     \<Longrightarrow> corres_underlying sr nf r (P and (\<lambda>s. x \<in> S)) Q (liftE (select S) >>=E f) g"
+  "corres_underlying sr nf nf' r P Q (f x) g
+     \<Longrightarrow> corres_underlying sr nf nf' r (P and (\<lambda>s. x \<in> S)) Q (liftE (select S) >>=E f) g"
   by (fastforce simp: liftE_bindE intro: select_pick_corres)
 
 lemma corres_modify:
   assumes rl:
   "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> (f s, g s') \<in> sr"
-  shows "corres_underlying sr nf dc P P' (modify f) (modify g)"
+  shows "corres_underlying sr nf nf' dc P P' (modify f) (modify g)"
   by (simp add: simpler_modify_def corres_singleton rl)
 
 lemma corres_gets_the:
-  assumes x: "corres_underlying sr nf (r \<circ> the) P P' (gets f) y"
-  shows      "corres_underlying sr nf r (P and (\<lambda>s. f s \<noteq> None)) P' (gets_the f) y"
+  assumes x: "corres_underlying sr nf nf' (r \<circ> the) P P' (gets f) y"
+  shows      "corres_underlying sr nf nf' r (P and (\<lambda>s. f s \<noteq> None)) P' (gets_the f) y"
 proof -
-  have z: "corres_underlying sr nf (\<lambda>x y. \<exists>x'. x = Some x' \<and> r x' y)
+  have z: "corres_underlying sr nf nf' (\<lambda>x y. \<exists>x'. x = Some x' \<and> r x' y)
                  (P and (\<lambda>s. f s \<noteq> None)) P' (gets f) y"
     apply (subst corres_cong [OF refl refl refl refl])
      defer
@@ -177,42 +177,35 @@ qed
 
 
 lemma corres_u_nofail:
-  "corres_underlying S True r P P' f g \<Longrightarrow> 
+  "corres_underlying S nf True r P P' f g \<Longrightarrow> (nf \<Longrightarrow> no_fail P f) \<Longrightarrow>
   no_fail (\<lambda>s'. \<exists>s. (s,s') \<in> S \<and> P s \<and> P' s') g"
   apply (clarsimp simp add: corres_underlying_def no_fail_def)
   apply fastforce
   done
 
 lemma wp_from_corres_u:
-  "\<lbrakk> corres_underlying R nf r G G' f f'; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f' \<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> corres_underlying R nf nf' r G G' f f'; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f' \<lbrace>Q'\<rbrace>; nf \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow>
   \<lbrace>\<lambda>s'. \<exists>s. (s,s') \<in> R \<and> P s \<and> G s \<and> P' s' \<and> G' s'\<rbrace> f' \<lbrace>\<lambda>rv' s'. \<exists>rv s. (s,s') \<in> R \<and> r rv rv' \<and> Q rv s \<and> Q' rv' s'\<rbrace>"
-  apply (clarsimp simp: corres_underlying_def valid_def)
-  apply (drule (1) bspec)
-  apply clarsimp
-  apply (drule (1) bspec)
-  apply fastforce
+  apply (fastforce simp: corres_underlying_def valid_def no_fail_def)
   done
 
 lemma wp_from_corres_u_unit:
-  "\<lbrakk> corres_underlying R nf r G G' f f'; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>; \<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>_. Q'\<rbrace> \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> corres_underlying R nf nf' r G G' f f'; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>; \<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>_. Q'\<rbrace>; nf \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow>
   \<lbrace>\<lambda>s'. \<exists>s. (s,s') \<in> R \<and> P s \<and> G s \<and> P' s' \<and> G' s'\<rbrace> 
   f' \<lbrace>\<lambda>_ s'. \<exists>s. (s,s') \<in> R \<and> Q s \<and> Q' s'\<rbrace>"
-  apply (drule (2) wp_from_corres_u)
-  apply (erule hoare_strengthen_post)
-  apply fastforce
+  apply (fastforce dest: wp_from_corres_u elim: hoare_strengthen_post)
   done
 
 lemma corres_nofail:
-  "corres_underlying state_relation True r P P' f g \<Longrightarrow>
+  "corres_underlying state_relation nf True r P P' f g \<Longrightarrow> (nf \<Longrightarrow> no_fail P f) \<Longrightarrow>
   no_fail (\<lambda>s'. \<exists>s. (s,s') \<in> state_relation \<and> P s \<and> P' s') g"
   by (rule corres_u_nofail)
 
 lemma wp_from_corres_unit:
-  "\<lbrakk> corres_underlying state_relation nf r G G' f f';
-     \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>; \<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>_. Q'\<rbrace> \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> corres_underlying state_relation nf nf' r G G' f f';
+     \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>; \<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>_. Q'\<rbrace>; nf \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow>
   \<lbrace>\<lambda>s'. \<exists>s. (s,s') \<in> state_relation \<and> P s \<and> G s \<and> P' s' \<and> G' s'\<rbrace> 
   f' \<lbrace>\<lambda>_ s'. \<exists>s. (s,s') \<in> state_relation \<and> Q s \<and> Q' s'\<rbrace>"
-  apply (auto intro!: wp_from_corres_u_unit)
-  done
+  by (auto intro!: wp_from_corres_u_unit)
 
 end

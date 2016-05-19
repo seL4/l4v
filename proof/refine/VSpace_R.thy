@@ -1691,7 +1691,7 @@ definition
    | ARM_A.flush_type.Unify \<Rightarrow> ARM_H.flush_type.Unify"
 
 lemma do_flush_corres:
-  "corres_underlying Id nf dc \<top> \<top>
+  "corres_underlying Id nf nf' dc \<top> \<top>
              (do_flush typ start end pstart) (doFlush (flush_type_map typ) start end pstart)"
   apply (simp add: do_flush_def doFlush_def)
   apply (cases "typ", simp_all add: flush_type_map_def)

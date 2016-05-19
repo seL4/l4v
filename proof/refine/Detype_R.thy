@@ -565,7 +565,7 @@ lemma ksASIDMapSafeI:
 (* FIXME: generalizes lemma SubMonad_R.corres_machine_op *)
 (* FIXME: move *)
 lemma corres_machine_op:
-  assumes P: "corres_underlying Id True r P Q x x'"
+  assumes P: "corres_underlying Id False True r P Q x x'"
   shows      "corres r (P \<circ> machine_state) (Q \<circ> ksMachineState)
                        (do_machine_op x) (doMachineOp x')"
   apply (rule corres_submonad3

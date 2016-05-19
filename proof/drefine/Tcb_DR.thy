@@ -646,12 +646,12 @@ lemma invoke_tcb_corres_write_regs:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma corres_mapM_x_rhs_induct:
-  "\<lbrakk> corres_underlying sr nf dc P P' g (return ());
-     \<And>a. corres_underlying sr nf dc P P' g (g' a);
+  "\<lbrakk> corres_underlying sr nf nf' dc P P' g (return ());
+     \<And>a. corres_underlying sr nf nf' dc P P' g (g' a);
      g = do g; g od;
      \<lbrace> P \<rbrace> g \<lbrace> \<lambda>_. P \<rbrace>;
      \<And>a. \<lbrace> P' \<rbrace> g' a \<lbrace> \<lambda>_. P'\<rbrace> \<rbrakk> \<Longrightarrow>
-  corres_underlying sr nf dc P P' g (mapM_x g' l)"
+  corres_underlying sr nf nf' dc P P' g (mapM_x g' l)"
   apply (induct_tac l)
    apply (clarsimp simp: mapM_x_def sequence_x_def dc_def)
   apply (clarsimp simp: mapM_x_def sequence_x_def dc_def)

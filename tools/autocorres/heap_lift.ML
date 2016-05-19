@@ -375,22 +375,17 @@ fun system_heap_lift
     (filename : string)
     (prog_info : ProgramInfo.prog_info)
     (fn_info : FunctionInfo.fn_info)
+    (heap_info : HeapLiftBase.heap_info)
     (no_heap_abs : Symset.key Symset.set)
     (force_heap_abs : Symset.key Symset.set)
-    (make_lifted_globals_field_name : string -> string)
     (heap_abs_syntax : bool)
     (keep_going : bool)
     (trace_funcs : string list)
     (do_opt : bool)
     (trace_opt : bool)
     (hl_function_name : string -> string)
-    (gen_word_heaps : bool)
     lthy =
 let
-  (* Create base definitions for the new program, including a new
-   * "globals" record with a lifted heap. *)
-  val (heap_info, lthy) = HeapLiftBase.setup prog_info fn_info make_lifted_globals_field_name gen_word_heaps lthy
-
   (* Do some extra lifting and create syntax (see field_syntax comment). *)
   val (syntax_lift_rules, lthy) =
     if not heap_abs_syntax then
@@ -747,11 +742,6 @@ let
     (get_body_of_thm ctxt thm, Variable.gen_all ctxt thm,
      (if member (op =) trace_funcs fn_name then [("HL", AutoCorresData.RuleTrace trace)] else []) @ opt_traces)
   end
-
-  (* Save the heap info to the theory data. *)
-  val lthy = Local_Theory.background_theory (
-	  HeapInfo.map (fn tbl =>
-	    Symtab.update (filename, heap_info) tbl)) lthy
 
   (* Update function information. *)
   fun update_function_defs lthy fn_def =

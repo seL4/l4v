@@ -99,10 +99,10 @@ where "arch_invocation_relation cdl_invok arch_invok \<equiv>
   translate_arch_invocation arch_invok = Some cdl_invok"
 
 lemma corres_symb_exec_in_gets:
-  "corres_underlying sr flg r P P' f (gets g >>= j)
-    = (\<forall>v. corres_underlying sr flg r P (P' and (\<lambda>s. g s = v)) f (j v))"
-  "corres_underlying sr flg r P P' (gets g' >>= j') f'
-    = (\<forall>v. corres_underlying sr flg r (P and (\<lambda>s. g' s = v)) P' (j' v) f')"
+  "corres_underlying sr nf nf' r P P' f (gets g >>= j)
+    = (\<forall>v. corres_underlying sr nf nf' r P (P' and (\<lambda>s. g s = v)) f (j v))"
+  "corres_underlying sr nf nf' r P P' (gets g' >>= j') f'
+    = (\<forall>v. corres_underlying sr nf nf' r (P and (\<lambda>s. g' s = v)) P' (j' v) f')"
   by (auto simp add: corres_underlying_def exec_gets split_def)
 
 lemma select_ignored:
@@ -127,8 +127,8 @@ lemma corres_from_rdonly:
   assumes rdonly: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. P\<rbrace>" "\<And>P. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>rv. P\<rbrace>"
   assumes rv: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk>
                      \<Longrightarrow> \<lbrace>op = s'\<rbrace> g \<lbrace>\<lambda>rv s''. \<exists>rv' s'''. (rv', s''') \<in> fst (f s) \<and> r rv' rv\<rbrace>"
-  assumes nfl: "fl \<Longrightarrow> no_fail P' g"
-  shows "corres_underlying sr fl r P P' f g"
+  assumes nfl: "fl' \<Longrightarrow> no_fail P' g"
+  shows "corres_underlying sr fl fl' r P P' f g"
   apply (clarsimp simp: corres_underlying_def no_failD[OF nfl])
   apply (frule in_inv_by_hoareD[OF rdonly(2)], simp)
   apply (frule(3) use_valid[OF _ rv], simp)
@@ -1173,8 +1173,8 @@ lemma pde_opt_cap_eq:
   done
 
 lemma corres_add_noop_rhs:
-  "corres_underlying sr fl r P P' f (do _ \<leftarrow> return (); g od)
-    \<Longrightarrow> corres_underlying sr fl r P P' f g"
+  "corres_underlying sr fl fl' r P P' f (do _ \<leftarrow> return (); g od)
+    \<Longrightarrow> corres_underlying sr fl fl' r P P' f g"
   by simp
 
 lemma gets_the_noop_dcorres:
@@ -1994,7 +1994,7 @@ proof -
 qed
 
 lemma corres_return_r:
-  "corres_underlying st nf dc P P' a (do b; return () od) \<Longrightarrow> corres_underlying st nf dc P P' a b"
+  "corres_underlying st nf nf' dc P P' a (do b; return () od) \<Longrightarrow> corres_underlying st nf nf' dc P P' a b"
   apply (clarsimp simp: bind_def dc_def return_def)
   apply (clarsimp simp: corres_underlying_def)
   apply fastforce

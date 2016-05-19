@@ -24,7 +24,8 @@ begin
  * The ccorresE framework implies the ccorres framework.
  *)
 lemma ccorresE_ccorres_underlying:
-  " \<lbrakk> ccorresE st \<Gamma> G G' A B; \<not> exceptions_thrown B \<rbrakk>  \<Longrightarrow> ccorres_underlying {(s', s). s' = st s} \<Gamma> dc (\<lambda>_. ()) dc (\<lambda>_. ()) G G' [] A B"
+  "\<lbrakk> ccorresE st check_termination \<Gamma> G G' A B; \<not> exceptions_thrown B \<rbrakk> \<Longrightarrow>
+  ccorres_underlying {(s', s). s' = st s} \<Gamma> dc (\<lambda>_. ()) dc (\<lambda>_. ()) G G' [] A B"
   apply (clarsimp simp: ccorres_underlying_def dc_def)
   apply (clarsimp simp: ccorresE_def)
   apply (erule allE, erule impE, force)
@@ -43,7 +44,8 @@ lemma ccorresE_ccorres_underlying:
  * The ccorresE framework implies the ccorres framework.
  *)
 lemma ccorresE_ccorres_underlying':
-  " \<lbrakk> ccorresE st \<Gamma> G G' A B; no_throw G A \<rbrakk>  \<Longrightarrow> ccorres_underlying {(s', s). s' = st s} \<Gamma> dc (\<lambda>_. ()) dc (\<lambda>_. ()) G G' [] A B"
+  "\<lbrakk> ccorresE st check_termination \<Gamma> G G' A B; no_throw G A \<rbrakk> \<Longrightarrow>
+  ccorres_underlying {(s', s). s' = st s} \<Gamma> dc (\<lambda>_. ()) dc (\<lambda>_. ()) G G' [] A B"
   apply (clarsimp simp: ccorres_underlying_def dc_def)
   apply (clarsimp simp: ccorresE_def)
   apply (erule allE, erule impE, force)
@@ -63,7 +65,7 @@ lemma ccorresE_ccorres_underlying':
   done
 
 lemma ac_corres_ccorres_underlying:
-  "ac_corres st \<Gamma> rx G A B \<Longrightarrow>
+  "ac_corres st check_termination \<Gamma> rx G A B \<Longrightarrow>
    ccorres_underlying {(a, b). a = st b} \<Gamma> ((\<lambda>_ _. False) \<oplus> (\<lambda>r s. r = rx s)) Inr ((\<lambda>_ _. False) \<oplus> (\<lambda>r s. r = rx s)) Inr (\<lambda>_. True) (Collect G) [] A B"
   apply (clarsimp simp: ac_corres_def ccorres_underlying_def)
   apply (erule allE, erule impE, force)
@@ -87,7 +89,8 @@ lemma ac_corres_ccorres_underlying:
  * assuming we don't use the extraction functions.
  *)
 lemma corres_impl_corresXF:
-  "corres_underlying {(a, b). a = st b} True (dc \<oplus> dc) \<top> P G G' \<Longrightarrow> corresXF st (\<lambda>_ _. ()) (\<lambda>_ _. ()) P G G'"
+  "corres_underlying {(a, b). a = st b} nf True (dc \<oplus> dc) \<top> P G G' \<Longrightarrow>
+   corresXF st (\<lambda>_ _. ()) (\<lambda>_ _. ()) P G G'"
   apply (rule corresXF_I)
     apply (clarsimp simp: corres_underlying_def corresXF_def)
     apply (erule allE, erule (1) impE)
@@ -99,7 +102,8 @@ lemma corres_impl_corresXF:
   done
 
 lemma corresXF_impl_corres:
-  "\<lbrakk> corresXF st (\<lambda>_ _. ()) (\<lambda>_ _. ()) P G G'; no_fail \<top> G \<rbrakk> \<Longrightarrow> corres_underlying {(a, b). a = st b} True (dc \<oplus> dc) \<top> P G G'"
+  "\<lbrakk> corresXF st (\<lambda>_ _. ()) (\<lambda>_ _. ()) P G G'; no_fail \<top> G \<rbrakk> \<Longrightarrow>
+   corres_underlying {(a, b). a = st b} nf True (dc \<oplus> dc) \<top> P G G'"
   apply (clarsimp simp: corres_underlying_def corresXF_def no_fail_def)
   apply (erule allE, erule (1) impE)
   apply clarsimp

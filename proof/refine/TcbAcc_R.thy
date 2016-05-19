@@ -1386,7 +1386,7 @@ lemma threadSet_valid_objs':
   done
 
 lemma corres_as_user':
-  assumes y: "corres_underlying Id True r \<top> \<top> f g"
+  assumes y: "corres_underlying Id False True r \<top> \<top> f g"
   shows      "corres r (tcb_at t) 
                        (tcb_at' t)
                        (as_user t f) (asUser t g)"
@@ -1440,7 +1440,7 @@ lemma corres_as_user':
 qed
 
 lemma corres_as_user:
-  assumes y: "corres_underlying Id True r \<top> \<top> f g"
+  assumes y: "corres_underlying Id False True r \<top> \<top> f g"
   shows      "corres r (tcb_at t and invs) (tcb_at' t and invs') (as_user t f) (asUser t g)"
   apply (rule corres_guard_imp)
     apply (rule corres_as_user' [OF y])
@@ -2196,7 +2196,7 @@ lemma thread_get_isRunnable_corres: "corres op = (tcb_at t) (tcb_at' t) (thread_
   done
 
 
-lemma corres_return_trivial: "corres_underlying srel nf dc \<top> \<top> (return a) (return b)"
+lemma corres_return_trivial: "corres_underlying srel nf' nf dc \<top> \<top> (return a) (return b)"
   apply (simp add: corres_underlying_def return_def)
   done
 

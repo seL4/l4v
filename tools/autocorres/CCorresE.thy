@@ -21,25 +21,25 @@ begin
  * exception if the other also throws an exception.
  *)
 definition
-  ccorresE :: "('t \<Rightarrow> 's) \<Rightarrow> ('p \<Rightarrow> ('t, 'p, 'ee) com option)
+  ccorresE :: "('t \<Rightarrow> 's) \<Rightarrow> bool \<Rightarrow> ('p \<Rightarrow> ('t, 'p, 'ee) com option)
                         \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('t set)
                         \<Rightarrow> ('s, unit + unit) nondet_monad \<Rightarrow> ('t, 'p, 'ee) com \<Rightarrow> bool"
 where
-  "ccorresE st \<Gamma> G G' \<equiv>
+  "ccorresE st check_term \<Gamma> G G' \<equiv>
    \<lambda>m c. \<forall>s. G (st s) \<and> (s \<in> G') \<and> \<not> snd (m (st s)) \<longrightarrow>
   ((\<forall>t. \<Gamma> \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> t \<longrightarrow>
    (case t of
          Normal s' \<Rightarrow> (Inr (), st s') \<in> fst (m (st s))
        | Abrupt s' \<Rightarrow> (Inl (), st s') \<in> fst (m (st s))
        | _ \<Rightarrow> False))
-   \<and> (\<Gamma> \<turnstile> c \<down> Normal s))"
+   \<and> (check_term \<longrightarrow> \<Gamma> \<turnstile> c \<down> Normal s))"
 
 lemma ccorresE_cong:
   "\<lbrakk> \<And>s. P s = P' s;
      \<And>s. (s \<in> Q) = (s \<in> Q');
      \<And>s. P' s \<Longrightarrow> f s = f' s;
      \<And>s x. s \<in> Q' \<Longrightarrow> \<Gamma>\<turnstile> \<langle>g, Normal s\<rangle> \<Rightarrow> x = \<Gamma>\<turnstile> \<langle>g', Normal s\<rangle> \<Rightarrow> x \<rbrakk> \<Longrightarrow>
-  ccorresE st \<Gamma> P Q f g = ccorresE st \<Gamma> P' Q' f' g"
+  ccorresE st ct \<Gamma> P Q f g = ccorresE st ct \<Gamma> P' Q' f' g"
   apply atomize
   apply (clarsimp simp: ccorresE_def split: xstate.splits)
   apply (rule iffI)
@@ -48,32 +48,32 @@ lemma ccorresE_cong:
   done
 
 lemma ccorresE_guard_imp:
-  "\<lbrakk> ccorresE st \<Gamma> Q Q' A B; \<And>s. P s \<Longrightarrow> Q s; \<And>t. t \<in> P' \<Longrightarrow> t \<in> Q' \<rbrakk>  \<Longrightarrow> ccorresE st \<Gamma> P P' A B"
+  "\<lbrakk> ccorresE st ct \<Gamma> Q Q' A B; \<And>s. P s \<Longrightarrow> Q s; \<And>t. t \<in> P' \<Longrightarrow> t \<in> Q' \<rbrakk>  \<Longrightarrow> ccorresE st ct \<Gamma> P P' A B"
   apply atomize
   apply (clarsimp simp: ccorresE_def split: xstate.splits)
   done
 
 lemma ccorresE_guard_imp_stronger:
-  "\<lbrakk> ccorresE st \<Gamma> Q Q' A B;
+  "\<lbrakk> ccorresE st ct \<Gamma> Q Q' A B;
      \<And>s. \<lbrakk> P (st s); s \<in> P' \<rbrakk> \<Longrightarrow> Q (st s);
      \<And>s. \<lbrakk> P (st s); s \<in> P' \<rbrakk> \<Longrightarrow> s \<in> Q' \<rbrakk> \<Longrightarrow>
-  ccorresE st \<Gamma> P P' A B"
+  ccorresE st ct \<Gamma> P P' A B"
   apply atomize
   apply (clarsimp simp: ccorresE_def split_def split: xstate.splits)
   done
 
 lemma ccorresE_assume_pre:
   "\<lbrakk> \<And>s. \<lbrakk> G (st s); s \<in> G' \<rbrakk> \<Longrightarrow>
-         ccorresE st \<Gamma> (G and (\<lambda>s'. s' = st s)) (G' \<inter> {t'. t' = s}) A B \<rbrakk> \<Longrightarrow>
-     ccorresE st \<Gamma> G G' A B"
+         ccorresE st ct \<Gamma> (G and (\<lambda>s'. s' = st s)) (G' \<inter> {t'. t' = s}) A B \<rbrakk> \<Longrightarrow>
+     ccorresE st ct \<Gamma> G G' A B"
   apply atomize
   apply (clarsimp simp: ccorresE_def)
   done
 
 lemma ccorresE_Seq:
-  "\<lbrakk> ccorresE st \<Gamma> \<top> UNIV L L';
-     ccorresE st \<Gamma> \<top> UNIV R R' \<rbrakk> \<Longrightarrow>
-   ccorresE st \<Gamma> \<top> UNIV (doE _ \<leftarrow> L; R odE) (L' ;; R')"
+  "\<lbrakk> ccorresE st ct \<Gamma> \<top> UNIV L L';
+     ccorresE st ct \<Gamma> \<top> UNIV R R' \<rbrakk> \<Longrightarrow>
+   ccorresE st ct \<Gamma> \<top> UNIV (doE _ \<leftarrow> L; R odE) (L' ;; R')"
   apply (clarsimp simp: ccorresE_def)
   apply (rule conjI)
    apply clarsimp
@@ -89,6 +89,7 @@ lemma ccorresE_Seq:
    apply (erule exec_elim_cases)
    apply clarsimp
    apply auto[1]
+  apply clarsimp
   apply (rule terminates.Seq)
    apply monad_eq
   apply (monad_eq simp: Bex_def split_def split: xstate.splits)
@@ -96,15 +97,16 @@ lemma ccorresE_Seq:
   done
 
 lemma ccorresE_Cond:
-  "\<lbrakk> ccorresE st \<Gamma> \<top> C A L';
-     ccorresE st \<Gamma> \<top> (UNIV - C) A R' \<rbrakk> \<Longrightarrow>
-   ccorresE st \<Gamma> \<top> UNIV A (Cond C L' R')"
+  "\<lbrakk> ccorresE st ct \<Gamma> \<top> C A L';
+     ccorresE st ct \<Gamma> \<top> (UNIV - C) A R' \<rbrakk> \<Longrightarrow>
+   ccorresE st ct \<Gamma> \<top> UNIV A (Cond C L' R')"
   apply (clarsimp simp: ccorresE_def pred_neg_def)
   apply (rule conjI)
    apply clarsimp
    apply (erule exec_Normal_elim_cases)
     apply (erule_tac x=s in allE, erule impE, fastforce, fastforce)
    apply (erule_tac x=s in allE, erule impE, fastforce, fastforce)
+  apply clarsimp
   apply (case_tac "s \<in> C")
    apply (rule terminates.CondTrue, assumption)
    apply (erule allE, erule impE, fastforce)
@@ -115,10 +117,10 @@ lemma ccorresE_Cond:
   done
 
 lemma ccorresE_Cond_match:
-  "\<lbrakk> ccorresE st \<Gamma> C C' L L';
-     ccorresE st \<Gamma> (not C) (UNIV - C') R R';
+  "\<lbrakk> ccorresE st ct \<Gamma> C C' L L';
+     ccorresE st ct \<Gamma> (not C) (UNIV - C') R R';
      \<And>s. C (st s) = (s \<in> C') \<rbrakk> \<Longrightarrow>
-   ccorresE st \<Gamma> \<top> UNIV (condition C L R) (Cond C' L' R')"
+   ccorresE st ct \<Gamma> \<top> UNIV (condition C L R) (Cond C' L' R')"
   apply atomize
   apply (clarsimp simp: ccorresE_def pred_neg_def condition_def)
   apply (erule_tac x=s in allE)+
@@ -126,18 +128,19 @@ lemma ccorresE_Cond_match:
   done
 
 lemma ccorresE_Guard:
-  "\<lbrakk> ccorresE st \<Gamma> \<top> G X Y \<rbrakk> \<Longrightarrow>  ccorresE st \<Gamma> \<top> G X (Guard F G Y)"
+  "\<lbrakk> ccorresE st ct \<Gamma> \<top> G X Y \<rbrakk> \<Longrightarrow>  ccorresE st ct \<Gamma> \<top> G X (Guard F G Y)"
   apply (clarsimp simp: ccorresE_def)
   apply (rule conjI)
    apply clarsimp
    apply (erule exec_Normal_elim_cases, auto)[1]
+  apply clarsimp
   apply (rule terminates.Guard, assumption)
   apply force
   done
 
 lemma ccorresE_Catch:
-  "\<lbrakk>ccorresE st \<Gamma> \<top> UNIV A A'; ccorresE st \<Gamma> \<top> UNIV B B'\<rbrakk> \<Longrightarrow>
-    ccorresE st \<Gamma> \<top> UNIV (A <handle> (\<lambda>_. B)) (TRY A' CATCH B' END)"
+  "\<lbrakk>ccorresE st ct \<Gamma> \<top> UNIV A A'; ccorresE st ct \<Gamma> \<top> UNIV B B'\<rbrakk> \<Longrightarrow>
+    ccorresE st ct \<Gamma> \<top> UNIV (A <handle> (\<lambda>_. B)) (TRY A' CATCH B' END)"
   apply (clarsimp simp: ccorresE_def)
   apply (rule conjI)
    apply clarsimp
@@ -155,45 +158,46 @@ lemma ccorresE_Catch:
   done
 
 lemma ccorresE_Call:
-  "\<lbrakk> \<Gamma> X' = Some Z'; ccorresE st \<Gamma> \<top> UNIV Z Z' \<rbrakk> \<Longrightarrow>
-    ccorresE st \<Gamma> \<top> UNIV Z (Call X')"
+  "\<lbrakk> \<Gamma> X' = Some Z'; ccorresE st ct \<Gamma> \<top> UNIV Z Z' \<rbrakk> \<Longrightarrow>
+    ccorresE st ct \<Gamma> \<top> UNIV Z (Call X')"
   apply (clarsimp simp: ccorresE_def)
   apply (rule conjI)
    apply clarsimp
    apply (erule exec_Normal_elim_cases)
     apply (clarsimp)
    apply clarsimp
+  apply clarify
   apply (erule terminates.Call)
   apply (erule allE, erule (1) impE)
   apply clarsimp
   done
 
 lemma ccorresE_exec_Normal:
-    "\<lbrakk> ccorresE st \<Gamma> G G' B B'; \<Gamma>\<turnstile> \<langle>B', Normal s\<rangle> \<Rightarrow> Normal t; s \<in> G'; G (st s); \<not> snd (B (st s)) \<rbrakk> \<Longrightarrow> (Inr (), st t) \<in> fst (B (st s))"
+    "\<lbrakk> ccorresE st ct \<Gamma> G G' B B'; \<Gamma>\<turnstile> \<langle>B', Normal s\<rangle> \<Rightarrow> Normal t; s \<in> G'; G (st s); \<not> snd (B (st s)) \<rbrakk> \<Longrightarrow> (Inr (), st t) \<in> fst (B (st s))"
   apply (clarsimp simp: ccorresE_def)
   apply force
   done
 
 lemma ccorresE_exec_Abrupt:
-    "\<lbrakk> ccorresE st \<Gamma> G G' B B'; \<Gamma>\<turnstile> \<langle>B', Normal s\<rangle> \<Rightarrow> Abrupt t; s \<in> G'; G (st s); \<not> snd (B (st s)) \<rbrakk> \<Longrightarrow> (Inl (), st t) \<in> fst (B (st s))"
+    "\<lbrakk> ccorresE st ct \<Gamma> G G' B B'; \<Gamma>\<turnstile> \<langle>B', Normal s\<rangle> \<Rightarrow> Abrupt t; s \<in> G'; G (st s); \<not> snd (B (st s)) \<rbrakk> \<Longrightarrow> (Inl (), st t) \<in> fst (B (st s))"
   apply (clarsimp simp: ccorresE_def)
   apply force
   done
 
 lemma ccorresE_exec_Fault:
-    "\<lbrakk> ccorresE st \<Gamma> G G' B B'; \<Gamma>\<turnstile> \<langle>B', Normal s\<rangle> \<Rightarrow> Fault f; s \<in> G'; G (st s); \<not> snd (B (st s)) \<rbrakk> \<Longrightarrow> P"
+    "\<lbrakk> ccorresE st ct \<Gamma> G G' B B'; \<Gamma>\<turnstile> \<langle>B', Normal s\<rangle> \<Rightarrow> Fault f; s \<in> G'; G (st s); \<not> snd (B (st s)) \<rbrakk> \<Longrightarrow> P"
   apply (clarsimp simp: ccorresE_def)
   apply force
   done
 
 lemma ccorresE_exec_Stuck:
-    "\<lbrakk> ccorresE st \<Gamma> G G' B B'; \<Gamma>\<turnstile> \<langle>B', Normal s\<rangle> \<Rightarrow> Stuck; s \<in> G'; G (st s); \<not> snd (B (st s)) \<rbrakk> \<Longrightarrow> P"
+    "\<lbrakk> ccorresE st ct \<Gamma> G G' B B'; \<Gamma>\<turnstile> \<langle>B', Normal s\<rangle> \<Rightarrow> Stuck; s \<in> G'; G (st s); \<not> snd (B (st s)) \<rbrakk> \<Longrightarrow> P"
   apply (clarsimp simp: ccorresE_def)
   apply force
   done
 
 lemma ccorresE_exec_cases [consumes 5]:
-    "\<lbrakk> ccorresE st \<Gamma> G G' B B'; \<Gamma>\<turnstile> \<langle>B', Normal s\<rangle> \<Rightarrow> s'; s \<in> G'; G (st s); \<not> snd (B (st s));
+    "\<lbrakk> ccorresE st ct \<Gamma> G G' B B'; \<Gamma>\<turnstile> \<langle>B', Normal s\<rangle> \<Rightarrow> s'; s \<in> G'; G (st s); \<not> snd (B (st s));
                   \<And>t'. \<lbrakk> s' = Normal t'; (Inr (), st t') \<in> fst (B (st s)) \<rbrakk> \<Longrightarrow> R;
                   \<And>t'. \<lbrakk> s' = Abrupt t'; (Inl (), st t') \<in> fst (B (st s)) \<rbrakk> \<Longrightarrow> R
                   \<rbrakk> \<Longrightarrow> R"
@@ -206,7 +210,7 @@ lemma ccorresE_exec_cases [consumes 5]:
   done
 
 lemma ccorresE_terminates:
-  "\<lbrakk> ccorresE st \<Gamma> \<top> UNIV B B'; \<not> snd (B (st s)) \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> B' \<down> Normal s"
+  "\<lbrakk> ccorresE st ct \<Gamma> \<top> UNIV B B'; \<not> snd (B (st s)); ct \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> B' \<down> Normal s"
    by (clarsimp simp: ccorresE_def)
 
 lemma exec_While_final_inv':
@@ -247,8 +251,9 @@ lemma not_snd_loop_terminatesE:
 lemma ccorresE_termination':
   assumes no_fail: "\<not> snd (whileLoopE CC BB r s)"
   and s_match: "s = st s' \<and> CC = (\<lambda>_. C) \<and> BB = (\<lambda>_. B)"
-  and corres: "ccorresE st \<Gamma> \<top> UNIV B B'"
+  and corres: "ccorresE st ct \<Gamma> \<top> UNIV B B'"
   and cond_match: "\<And>s. C (st s) = (s \<in> C')"
+  and ct: "ct"
   shows "\<Gamma>\<turnstile> While C' B' \<down> Normal s'"
   apply (insert not_snd_loop_terminatesE[OF no_fail] s_match)
   apply (insert no_fail)
@@ -261,7 +266,7 @@ lemma ccorresE_termination':
   apply (clarsimp simp: ccorresE_def s_match)
   apply (frule (1) snd_whileLoopE_first_step)
   apply (erule allE, erule (1) impE)
-  apply clarsimp
+  apply (clarsimp simp: ct)
   apply (rule terminates.intros)
     apply (clarsimp simp: cond_match)
    apply clarsimp
@@ -280,16 +285,17 @@ lemma ccorresE_termination':
 lemma ccorresE_termination:
   assumes no_fail: "\<not> snd (whileLoopE (\<lambda>_. C) (\<lambda>_. B) r s)"
   and s_match: "s = st s'"
-  and corres: "ccorresE st \<Gamma> \<top> UNIV B B'"
+  and corres: "ccorresE st ct \<Gamma> \<top> UNIV B B'"
   and cond_match: "\<And>s. C (st s) = (s \<in> C')"
+  and ct: "ct"
   shows "\<Gamma>\<turnstile> While C' B' \<down> Normal s'"
-  apply (auto intro: ccorresE_termination' [OF no_fail _ corres] simp: s_match cond_match)
+  apply (auto intro: ccorresE_termination' [OF no_fail _ corres _ ct] simp: s_match cond_match)
   done
 
 lemma ccorresE_While:
-  assumes body_refines: "ccorresE st \<Gamma> \<top> UNIV B B'"
+  assumes body_refines: "ccorresE st ct \<Gamma> \<top> UNIV B B'"
       and cond_match: "\<And>s. C (st s) = (s \<in> C')"
-    shows "ccorresE st \<Gamma> G G' (whileLoopE (\<lambda>_. C) (\<lambda>_. B) ()) (While C' B')"
+    shows "ccorresE st ct \<Gamma> G G' (whileLoopE (\<lambda>_. C) (\<lambda>_. B) ()) (While C' B')"
  proof (clarsimp simp: ccorresE_def, rule conjI, clarsimp)
   fix s t
   assume guard_abs: "G (st s)"
@@ -348,28 +354,30 @@ next
   assume guard_abs: "G (st s)"
   assume guard_conc: "s \<in> G'"
   assume no_fail: "\<not> snd (whileLoopE (\<lambda>_. C) (\<lambda>_. B) () (st s))"
-  show "\<Gamma>\<turnstile>While C' B' \<down> Normal s"
+  show "ct \<longrightarrow> \<Gamma>\<turnstile>While C' B' \<down> Normal s"
+    apply clarify
     apply (rule ccorresE_termination [OF no_fail])
-      apply (rule refl)
-     apply (rule body_refines)
-    apply (rule cond_match)
+       apply (rule refl)
+      apply (rule body_refines)
+     apply (rule cond_match)
+    apply simp
     done
 qed
 
 lemma ccorresE_get:
-  "(\<And>s. ccorresE st \<Gamma> (P and (\<lambda>s'. s' = s)) Q (L s) R) \<Longrightarrow> ccorresE st \<Gamma> P Q ((liftE get) >>=E L) R"
+  "(\<And>s. ccorresE st ct \<Gamma> (P and (\<lambda>s'. s' = s)) Q (L s) R) \<Longrightarrow> ccorresE st ct \<Gamma> P Q ((liftE get) >>=E L) R"
   apply atomize
   apply (clarsimp simp: liftE_def get_def bindE_def lift_def bind_def return_def)
   apply (clarsimp simp: ccorresE_def)
   done
 
 lemma ccorresE_fail:
-  "ccorresE st \<Gamma> P Q fail R"
+  "ccorresE st ct \<Gamma> P Q fail R"
   apply (clarsimp simp: ccorresE_def fail_def)
   done
 
 lemma ccorresE_DynCom:
-  "\<lbrakk> \<And>t. \<lbrakk> t \<in> P' \<rbrakk> \<Longrightarrow> ccorresE st \<Gamma> P (P' \<inter> {t'. t' = t}) A (B t) \<rbrakk> \<Longrightarrow> ccorresE st \<Gamma> P P' A (DynCom B)"
+  "\<lbrakk> \<And>t. \<lbrakk> t \<in> P' \<rbrakk> \<Longrightarrow> ccorresE st ct \<Gamma> P (P' \<inter> {t'. t' = t}) A (B t) \<rbrakk> \<Longrightarrow> ccorresE st ct \<Gamma> P P' A (DynCom B)"
   apply atomize
   apply (clarsimp simp: ccorresE_def)
   apply (rule conjI)
@@ -377,13 +385,14 @@ lemma ccorresE_DynCom:
    apply (erule exec_Normal_elim_cases)
    apply (erule allE, erule(1) impE)
    apply clarsimp
+  apply clarify
   apply (rule terminates.DynCom)
   apply clarsimp
   done
 
 lemma ccorresE_Catch_nothrow:
-  "\<lbrakk>ccorresE st \<Gamma> \<top> UNIV A A'; \<not> exceptions_thrown A'\<rbrakk> \<Longrightarrow>
-    ccorresE st \<Gamma> \<top> UNIV A (TRY A' CATCH B' END)"
+  "\<lbrakk>ccorresE st ct \<Gamma> \<top> UNIV A A'; \<not> exceptions_thrown A'\<rbrakk> \<Longrightarrow>
+    ccorresE st ct \<Gamma> \<top> UNIV A (TRY A' CATCH B' END)"
   apply (clarsimp simp: ccorresE_def)
   apply (rule conjI)
    apply clarsimp
@@ -391,6 +400,7 @@ lemma ccorresE_Catch_nothrow:
     apply (frule exceptions_thrown_not_abrupt, simp, simp)
     apply simp
    apply simp
+  apply clarify
   apply (rule terminates.Catch)
    apply clarsimp
   apply clarsimp
@@ -400,10 +410,10 @@ lemma ccorresE_Catch_nothrow:
   done
 
 lemma ccorresE_symb_exec_l:
-  "\<lbrakk> \<And>x. ccorresE st \<Gamma> (P' x) Q (B x) C;
+  "\<lbrakk> \<And>x. ccorresE st ct \<Gamma> (P' x) Q (B x) C;
     \<And>s. P s \<Longrightarrow> \<lbrace> op = s \<rbrace> A \<exists>\<lbrace> \<lambda>r' s'. (\<exists>a. r' = Inr a) \<and> s = s' \<rbrace>;
     \<lbrace> P \<rbrace> A \<lbrace> P' \<rbrace>,\<lbrace> \<lambda>_ _. False \<rbrace> \<rbrakk>
-   \<Longrightarrow> ccorresE st \<Gamma> P Q (A >>=E B) C"
+   \<Longrightarrow> ccorresE st ct \<Gamma> P Q (A >>=E B) C"
   apply atomize
   apply (clarsimp simp: ccorresE_def validE_def valid_def exs_valid_def)
   apply (erule allE, erule impE, assumption)+
@@ -417,7 +427,7 @@ lemma ccorresE_symb_exec_l:
   done
 
 lemma ccorresE_no_fail_term:
-  " \<lbrakk> ccorresE st \<Gamma> G G' A B; no_fail G A; s \<in> G'; G (st s) \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> B \<down> Normal s"
+  " \<lbrakk> ccorresE st ct \<Gamma> G G' A B; no_fail G A; s \<in> G'; G (st s); ct \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> B \<down> Normal s"
   apply (clarsimp simp: ccorresE_def no_fail_def)
   done
 

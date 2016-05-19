@@ -14,7 +14,6 @@
  *)
 signature FUNCTION_INFO =
 sig
-  type fn_info;
 
   type function_def = {
     name : string,
@@ -25,7 +24,25 @@ sig
     definition : thm,
     mono_thm : thm,
     invented_body : bool,
-    is_simpl_wrapper : bool
+    is_simpl_wrapper : bool,
+    finished : bool
+  };
+
+datatype fn_info = FunctionInfo of {
+  (* Database of "function_info" records. *)
+  function_info : function_def Symtab.table,
+
+  (* Functions directly called by a particular function. *)
+  function_callees : string list Symtab.table,
+
+  (* Mapping from "const" back to the function name. (cache) *)
+  const_to_function : string Termtab.table,
+
+  (* Topologically sorted functions, based on call graph. (cache) *)
+  topo_sorted_functions : string list list,
+
+  (* List of recursive calls a function makes. (cache) *)
+  recursive_functions : string list Symtab.table
   };
 
   val init_fn_info : Proof.context -> string -> fn_info;
@@ -49,6 +66,7 @@ sig
   val fn_def_update_mono_thm : thm -> function_def -> function_def;
   val fn_def_update_invented_body : bool -> function_def -> function_def;
   val fn_def_update_is_simpl_wrapper : bool -> function_def -> function_def;
+  val fn_def_update_finished : bool -> function_def -> function_def;
 
   val is_function_recursive : fn_info -> string -> bool;
   val get_recursive_group : fn_info -> string -> string list;
@@ -89,7 +107,11 @@ type function_def = {
 
     (* Is this just a wrapper around a SIMPL procedure?
      * True if function is excluded from translation "scope". *)
-    is_simpl_wrapper : bool
+    is_simpl_wrapper : bool,
+
+    (* Remember whether we have already translated this function,
+     * and should skip it on later runs. *)
+    finished : bool
 };
 
 datatype fn_info = FunctionInfo of {
@@ -241,7 +263,8 @@ let
       definition = hd definition,
       mono_thm = @{thm TrueI}, (* placeholder *)
       invented_body = invented,
-      is_simpl_wrapper = false
+      is_simpl_wrapper = false,
+      finished = false
     }
   end
 in
@@ -325,34 +348,38 @@ fun get_topo_sorted_functions (FunctionInfo functions) =
 (* SML record update insanity. *)
 fun fn_def_update_name new_val old
   = { name = new_val,
-      args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old,  definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old }
+      args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old,  definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
 fun fn_def_update_args new_val old
   = { name = #name old,
       args = new_val,
-      return_type = #return_type old, const = #const old, raw_const = #raw_const old,  definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old }
+      return_type = #return_type old, const = #const old, raw_const = #raw_const old,  definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
 fun fn_def_update_const new_val old
   = { name = #name old, args = #args old, return_type = #return_type old,
       const = new_val, raw_const = head_of new_val,
-      definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old }
+      definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
 fun fn_def_update_definition new_val old
   = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old,
       definition = new_val,
-      mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old }
+      mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
 fun fn_def_update_return_type new_val old
   = { name = #name old, args = #args old,
       return_type = new_val,
-      const = #const old, raw_const = #raw_const old, definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old }
+      const = #const old, raw_const = #raw_const old, definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
 fun fn_def_update_mono_thm new_val old
   = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old, definition = #definition old,
       mono_thm = new_val,
-      invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old }
+      invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
 fun fn_def_update_invented_body new_val old
   = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old, definition = #definition old, mono_thm = #mono_thm old,
       invented_body = new_val,
-      is_simpl_wrapper = #is_simpl_wrapper old }
+      is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
 fun fn_def_update_is_simpl_wrapper new_val old
   = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old, definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old,
-      is_simpl_wrapper = new_val }
+      is_simpl_wrapper = new_val,
+      finished = #finished old }
+fun fn_def_update_finished new_val old
+  = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old, definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old,
+      finished = new_val }
 
 end
 

@@ -359,17 +359,17 @@ lemma dcorres_when_l:
 
 lemma corres_name_pre:
   "\<lbrakk> \<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk>
-                 \<Longrightarrow> corres_underlying sr nf r (op = s) (op = s') f g \<rbrakk>
-        \<Longrightarrow> corres_underlying sr nf r P P' f g"
+                 \<Longrightarrow> corres_underlying sr nf nf' r (op = s) (op = s') f g \<rbrakk>
+        \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
   apply (simp add: corres_underlying_def split_def
                    Ball_def)
   apply blast
   done
 
 lemma corres_guard_from_wp_r:
-  assumes ac: "corres_underlying sr False r G G' a c"
+  assumes ac: "corres_underlying sr False False r G G' a c"
   and     rl: "\<lbrace>\<lambda>s. \<not> P s\<rbrace> c \<lbrace>\<lambda>_ _. False\<rbrace>"
-  shows "corres_underlying sr False r G (\<lambda>s. P s \<longrightarrow> G' s) a c"
+  shows "corres_underlying sr False False r G (\<lambda>s. P s \<longrightarrow> G' s) a c"
   apply (rule corres_name_pre)
   apply (case_tac "P s'")
    apply simp
@@ -385,9 +385,9 @@ lemma corres_guard_from_wp_r:
   done
 
 lemma corres_guard_from_wp_bind_r:
-  assumes ac: "corres_underlying sr False r G G' a (c >>= d)"
+  assumes ac: "corres_underlying sr False False r G G' a (c >>= d)"
   and     rl: "\<lbrace>\<lambda>s. \<not> P s\<rbrace> c \<lbrace>\<lambda>_ _. False\<rbrace>"
-  shows "corres_underlying sr False r G (\<lambda>s. P s \<longrightarrow> G' s) a (c >>= d)"
+  shows "corres_underlying sr False False r G (\<lambda>s. P s \<longrightarrow> G' s) a (c >>= d)"
   apply (rule corres_guard_from_wp_r)
   apply (rule ac)
   apply (wp rl)
@@ -2383,9 +2383,9 @@ lemma set_endpoint_valid_irq_node[wp]:
 done
 
 lemma dcorres_if_rhs:
-  assumes G: "G \<Longrightarrow> corres_underlying sr nf rvr P Q a b"
-  and nG: "\<not> G \<Longrightarrow> corres_underlying sr nf rvr P Q' a c"
-  shows "corres_underlying sr nf rvr P
+  assumes G: "G \<Longrightarrow> corres_underlying sr nf nf' rvr P Q a b"
+  and nG: "\<not> G \<Longrightarrow> corres_underlying sr nf nf' rvr P Q' a c"
+  shows "corres_underlying sr nf nf' rvr P
     (\<lambda>s. (G \<longrightarrow> Q s) \<and> (\<not> G \<longrightarrow> Q' s)) a (if G then b else c)"
   apply (clarsimp)
   apply (safe)
@@ -2615,15 +2615,15 @@ lemma dcorres_splits:
 done
 
 lemma dcorres_alternate_seq1:
-  "corres_underlying t rl r P Q (do y \<leftarrow> f; g y od) rh
-    \<Longrightarrow> corres_underlying t rl r P Q (do y \<leftarrow> f; g y \<sqinter> h y od) rh"
+  "corres_underlying t nf nf' r P Q (do y \<leftarrow> f; g y od) rh
+    \<Longrightarrow> corres_underlying t nf nf' r P Q (do y \<leftarrow> f; g y \<sqinter> h y od) rh"
   apply (simp add:alternative_distrib2)
   apply (erule corres_alternate1)
   done
 
 lemma dcorres_alternate_seq2:
-  "corres_underlying t rl r P Q (do y \<leftarrow> f; h y od) rh
-    \<Longrightarrow> corres_underlying t rl r P Q (do y \<leftarrow> f; g y \<sqinter> h y od) rh"
+  "corres_underlying t nf nf' r P Q (do y \<leftarrow> f; h y od) rh
+    \<Longrightarrow> corres_underlying t nf nf' r P Q (do y \<leftarrow> f; g y \<sqinter> h y od) rh"
   apply (simp add:alternative_distrib2)
   apply (erule corres_alternate2)
   done

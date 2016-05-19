@@ -16,7 +16,7 @@ imports
 begin
 
 lemma corres_underlying_trivial:
-  "\<lbrakk> nf \<Longrightarrow> no_fail P' f \<rbrakk> \<Longrightarrow> corres_underlying Id nf op = \<top> P' f f"
+  "\<lbrakk> nf' \<Longrightarrow> no_fail P' f \<rbrakk> \<Longrightarrow> corres_underlying Id nf nf' op = \<top> P' f f"
   by (auto simp add: corres_underlying_def Id_def no_fail_def)
 
 lemma hoare_spec_gen_asm:
@@ -35,7 +35,7 @@ lemma mresults_fail: "mresults fail = {}"
   by (simp add: mresults_def fail_def)
 
 lemma gets_symb_exec_l:
-  "corres_underlying sr nf dc P P' (gets f) (return x)"
+  "corres_underlying sr nf nf' dc P P' (gets f) (return x)"
   by (simp add: corres_underlying_def return_def simpler_gets_def split_def)
 
 lemmas mapM_x_wp_inv = mapM_x_wp[where S=UNIV, simplified]
@@ -50,13 +50,13 @@ lemma mapM_wp_inv:
 lemmas mapM_x_wp' = mapM_x_wp [OF _ subset_refl]
 
 lemma corres_underlying_similar:
-  "\<lbrakk> a = a'; b = b'; nf \<Longrightarrow> no_fail \<top> (f a b) \<rbrakk>
-         \<Longrightarrow> corres_underlying Id nf dc \<top> \<top> (f a b) (f a' b')"
+  "\<lbrakk> a = a'; b = b'; nf' \<Longrightarrow> no_fail \<top> (f a b) \<rbrakk>
+         \<Longrightarrow> corres_underlying Id nf nf' dc \<top> \<top> (f a b) (f a' b')"
   by (simp add: corres_underlying_def no_fail_def, blast)
 
 lemma corres_underlying_gets_pre_lhs:
-  "(\<And>x. corres_underlying S nf r (P x) P' (g x) g') \<Longrightarrow>
-  corres_underlying S nf r (\<lambda>s. P (f s) s) P' (gets f >>= (\<lambda>x. g x)) g'"
+  "(\<And>x. corres_underlying S nf nf' r (P x) P' (g x) g') \<Longrightarrow>
+  corres_underlying S nf nf' r (\<lambda>s. P (f s) s) P' (gets f >>= (\<lambda>x. g x)) g'"
   apply (simp add: simpler_gets_def bind_def split_def corres_underlying_def)
   apply force
   done

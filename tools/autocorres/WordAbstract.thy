@@ -590,6 +590,41 @@ lemma corresTA_L2_call_exec_abstract:
   apply fastforce
   done
 
+(* More backup rules for calls. *)
+lemma corresTA_L2_call_exec_concrete':
+  "\<lbrakk> corresTA P f1 x1 A B;
+     valid_typ_abs_fn Q1 Q1' f1 f1';
+     valid_typ_abs_fn Q2 Q2' f2 f2'
+   \<rbrakk> \<Longrightarrow>
+   corresTA (\<lambda>s. \<forall>s'. s = st s' \<longrightarrow> P s') f2 x2
+       (L2_seq (exec_concrete st (L2_call A)) (\<lambda>ret. (L2_seq (L2_guard (\<lambda>_. Q1' ret)) (\<lambda>_. L2_gets (\<lambda>_. f2 (f1' ret)) [''ret'']))))
+       (exec_concrete st (L2_call B))"
+  apply (clarsimp simp: L2_defs L2_call_def corresXF_def)
+  apply (monad_eq split: sum.splits)
+  apply (rule conjI)
+   apply clarsimp
+   apply metis
+  apply clarsimp
+  apply blast
+  done
+
+lemma corresTA_L2_call_exec_abstract':
+  "\<lbrakk> corresTA P f1 x1 A B;
+     valid_typ_abs_fn Q1 Q1' f1 f1';
+     valid_typ_abs_fn Q2 Q2' f2 f2'
+   \<rbrakk> \<Longrightarrow>
+   corresTA (\<lambda>s. P (st s)) f2 x2
+       (L2_seq (exec_abstract st (L2_call A)) (\<lambda>ret. (L2_seq (L2_guard (\<lambda>_. Q1' ret)) (\<lambda>_. L2_gets (\<lambda>_. f2 (f1' ret)) [''ret'']))))
+       (exec_abstract st (L2_call B))"
+  apply (clarsimp simp: L2_defs L2_call_def corresXF_def)
+  apply (monad_eq split: sum.splits)
+  apply (rule conjI)
+   apply metis
+  apply clarsimp
+  apply blast
+  done
+
+
 lemma abstract_val_fun_app:
    "\<lbrakk> abstract_val Q b id b'; abstract_val P a id a' \<rbrakk> \<Longrightarrow>
            abstract_val (P \<and> Q) (f $ (a $ b)) f (a' $ b')"
@@ -854,7 +889,9 @@ lemmas [word_abs] =
   corresTA_L2_unknown
   corresTA_L2_recguard
   corresTA_case_prod
+  corresTA_L2_call_exec_concrete'
   corresTA_L2_call_exec_concrete
+  corresTA_L2_call_exec_abstract'
   corresTA_L2_call_exec_abstract
   corresTA_L2_call'
   corresTA_L2_call

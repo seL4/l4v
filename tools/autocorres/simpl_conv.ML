@@ -38,7 +38,8 @@ fun mk_l1monadT stateT =
 (*
  * Extract the L1 monadic term out of a L1corres constant.
  *)
-fun get_L1corres_monad (_ $ _ $ monad $ _) = monad
+fun get_L1corres_monad (prop as (_ $ _ $ _ $ monad $ _)) = monad
+  | get_L1corres_monad t = raise TERM ("get_L1corres_monad", [t])
 
 (*
  * Generate a SIMPL term that calls the given function.
@@ -56,21 +57,21 @@ fun mk_SIMPL_call_term ctxt prog_info fn_info target_fn =
  *
  * The term is of the form:
  *
- *    L1corres \<Gamma> monad simpl
+ *    L1corres check_termination \<Gamma> monad simpl
  *)
-fun mk_L1corres_prop prog_info monad_term simpl_term =
-  @{mk_term "L1corres ?gamma ?monad ?simpl" (gamma, monad, simpl)}
-      (#gamma prog_info, monad_term, simpl_term)
+fun mk_L1corres_prop prog_info check_termination monad_term simpl_term =
+  @{mk_term "L1corres ?ct ?gamma ?monad ?simpl" (ct, gamma, monad, simpl)}
+      (Utils.mk_bool check_termination, #gamma prog_info, monad_term, simpl_term)
 
 (*
  * Construct a prop claiming that the given term is equivalent to
  * a call to the given SIMPL function:
  *
- *    L1corres \<Gamma> <term> (Call foo_'proc)
+ *    L1corres ct \<Gamma> <term> (Call foo_'proc)
  *
  *)
-fun mk_L1corres_call_prop ctxt prog_info fn_info target_fn_name term =
-    mk_L1corres_prop prog_info term
+fun mk_L1corres_call_prop ctxt prog_info fn_info check_termination target_fn_name term =
+    mk_L1corres_prop prog_info check_termination term
       (mk_SIMPL_call_term ctxt prog_info fn_info target_fn_name)
     |> HOLogic.mk_Trueprop
 
@@ -255,7 +256,7 @@ let
 
   (* Conversion combinator to apply a conversion only to the L1 subterm of a
    * L1corres term. *)
-  fun l1conv conv = (Conv.arg_conv (Utils.nth_arg_conv 2 conv))
+  fun l1conv conv = (Conv.arg_conv (Utils.nth_arg_conv 3 conv))
 
   (* Conversion to simplify guards. *)
   fun guard_conv' c =
@@ -319,7 +320,7 @@ in
   (unfolded_simpl_term, unfolded_simpl_thm, impl_thm)
 end
 
-fun get_l1corres_thm prog_info fn_info ctxt do_opt trace_opt fn_name
+fun get_l1corres_thm prog_info fn_info check_termination ctxt do_opt trace_opt fn_name
     callee_terms measure_var = let
   val thy = Proof_Context.theory_of ctxt
   val (simpl_term, simpl_thm, impl_thm) = get_simpl_body ctxt fn_info fn_name
@@ -352,7 +353,7 @@ fun get_l1corres_thm prog_info fn_info ctxt do_opt trace_opt fn_name
    * SIMPL body (with folded constants) and the output monad term.
    *)
 in
-  mk_L1corres_call_prop ctxt prog_info fn_info fn_name monad
+  mk_L1corres_call_prop ctxt prog_info fn_info check_termination fn_name monad
   |> Thm.cterm_of ctxt
   |> Goal.init
   |> apply_tac "unfold SIMPL body"
@@ -403,7 +404,7 @@ end
 
 
 (* For functions that are not translated, just generate a trivial wrapper. *)
-fun mk_l1corres_call_simpl_thm fn_info ctxt fn_name = let
+fun mk_l1corres_call_simpl_thm fn_info check_termination ctxt fn_name = let
     val info = Symtab.lookup (FunctionInfo.get_functions fn_info) fn_name
         |> the
     val const = #const info
@@ -411,7 +412,9 @@ fun mk_l1corres_call_simpl_thm fn_info ctxt fn_name = let
     val gamma = safe_mk_meta_eq impl_thm |> Thm.concl_of |> Logic.dest_equals
         |> fst |> (fn (f $ _) => f | t => raise TERM ("gamma", [t]))
     val thm = Utils.named_cterm_instantiate ctxt
-        [("proc", Thm.cterm_of ctxt const), ("Gamma", Thm.cterm_of ctxt gamma)]
+        [("ct", Thm.cterm_of ctxt (Utils.mk_bool check_termination)),
+         ("proc", Thm.cterm_of ctxt const),
+         ("Gamma", Thm.cterm_of ctxt gamma)]
         @{thm L1corres_call_simpl}
   in thm end
 
@@ -428,15 +431,15 @@ fun mk_l1corres_call_simpl_thm fn_info ctxt fn_name = let
  * correspondence between our generated specs and the original SIMPL
  * code).
  *)
-fun translate_simpl filename prog_info fn_info do_opt trace_opt l1_function_name lthy =
+fun translate_simpl filename prog_info fn_info check_termination do_opt trace_opt l1_function_name lthy =
 let
   (* Abstract the function to a new body with a proof of correspondence. *)
   fun convert ctxt fn_name callee_terms measure_var fn_args =
   let
     val (thm, opt_traces) =
       if #is_simpl_wrapper (FunctionInfo.get_function_def fn_info fn_name)
-      then (mk_l1corres_call_simpl_thm fn_info ctxt fn_name, [])
-      else get_l1corres_thm prog_info fn_info ctxt do_opt trace_opt fn_name
+      then (mk_l1corres_call_simpl_thm fn_info check_termination ctxt fn_name, [])
+      else get_l1corres_thm prog_info fn_info check_termination ctxt do_opt trace_opt fn_name
                             callee_terms measure_var
   in (get_body_of_l1corres_thm thm, thm, opt_traces) end
 
@@ -452,7 +455,7 @@ let
 
   (* Fetch the expected theorem about the translated function. *)
   fun get_l1_fn_assumption ctxt fn_name free _ is_recursive measure_var =
-      mk_L1corres_call_prop ctxt prog_info fn_info fn_name (betapply (free, measure_var))
+      mk_L1corres_call_prop ctxt prog_info fn_info check_termination fn_name (betapply (free, measure_var))
 in
   AutoCorresUtil.do_translation_phase
       "L1" filename prog_info fn_info
