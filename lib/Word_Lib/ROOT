@@ -15,5 +15,6 @@ session Word_Lib = "HOL-Word" +
     "~~/src/HOL/Library/Prefix_Order"
   theories
     "Word_Lemmas_32"
+    "Word_Lemmas_64"
   document_files
     "root.tex"
