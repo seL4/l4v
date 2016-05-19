@@ -19,11 +19,6 @@ begin
 
 context Arch begin global_naming X64_H
 
-datatype x64_vspace_region_use =
-     X64VSpaceUserRegion
-   | X64VSpaceInvalidRegion
-   | X64VSpaceKernelWindow
-   | X64VSpaceDeviceWindow
 
 end (* context X64 *)
 
