@@ -29,6 +29,13 @@ chapter "Specifications"
 (*
  * Abstract Specification
  *)
+session AutoLevity_Test in "abstract" = Word +
+  theories
+    "../../lib/AutoLevity_Test"
+
+session AutoLevity_Run in "abstract" = AutoLevity_Test +
+  theories
+    "../../lib/AutoLevity_Run"
 
 session ASpec in "abstract" = Word_Lib +
   options [document=pdf]

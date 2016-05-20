@@ -14,6 +14,7 @@
 theory AutoLevity_Theory_Report
 imports AutoLevity_Base
 begin
+
 ML \<open>
 
 val _ = Theory.setup(
@@ -117,9 +118,11 @@ ML \<open>
 @{string_record deps = "const_deps : string list, type_deps: string list"}
 @{string_record location = "file : string, start_line : int, end_line : int"}
 @{string_record levity_tag = "tag : string, location : location"}
+@{string_record apply_dep = "name : string, attribs : string list"}
 
 @{string_record proof_command = 
-  "command_name : string, location : location, subgoals : int, depth : int" }
+  "command_name : string, location : location, subgoals : int, depth : int,
+   apply_deps : apply_dep list" }
 
 @{string_record lemma_entry = 
   "name : string, command_name : string, levity_tag : levity_tag option, location : location,
@@ -133,6 +136,9 @@ ML \<open>
 @{string_record theory_entry =
   "name : string, file : string"}
 
+@{string_record log_entry =
+  "errors : string list, location : location"}
+
 fun encode_list enc x = "[" ^ (String.concatWith ", " (map enc x)) ^ "]"
 
 fun encode_option enc (SOME x) = enc x
@@ -140,13 +146,15 @@ fun encode_option enc (SOME x) = enc x
 
 val opt_levity_tag_encode = encode_option (levity_tag_encode location_encode);
 
-val proof_command_encode = proof_command_encode (location_encode);
+val proof_command_encode = proof_command_encode (location_encode, encode_list apply_dep_encode);
 
 val lemma_entry_encode = lemma_entry_encode 
   (opt_levity_tag_encode, location_encode, encode_list proof_command_encode, deps_encode)
 
 val dep_entry_encode = dep_entry_encode 
   (opt_levity_tag_encode, location_encode, deps_encode)
+
+val log_entry_encode = log_entry_encode (location_encode)
 
 \<close>
 
@@ -155,41 +163,45 @@ ML \<open>
 signature AUTOLEVITY_THEORY_REPORT =
 sig
 val get_reports_for_thy: theory -> 
-  string * theory_entry list * lemma_entry list * dep_entry list * dep_entry list
+  string * log_entry list * theory_entry list * lemma_entry list * dep_entry list * dep_entry list
 
 val string_reports_of:
-  string * theory_entry list * lemma_entry list * dep_entry list * dep_entry list
+  string * log_entry list * theory_entry list * lemma_entry list * dep_entry list * dep_entry list
   -> string list
-
-val setup_theory_hook: theory -> theory
-
   
 end;
 
 structure AutoLevity_Theory_Report : AUTOLEVITY_THEORY_REPORT =
 struct
 
-fun thms_of (PBody {thms,...}) = thms
+fun map_pos_line f pos =
+let
+  val line = Position.line_of pos |> the;
+  val file = Position.file_of pos |> the;
 
-fun proof_body_descend' f (ident,(nm,_,body)) deptab =
-if f nm then
-  ((fold (proof_body_descend' f) (thms_of (Future.join body)) 
-    (Inttab.update_new (ident, NONE) deptab)) handle Inttab.DUP _ => deptab)
-else
-  (Inttab.update_new (ident, SOME nm) deptab handle Inttab.DUP _ => deptab)
+  val line' = f line;
 
-fun used_facts' f thm =
+  val _ = if line' < 1 then raise Option else ();
+  
+in SOME (Position.line_file_only line' file) end handle Option => NONE
+
+
+fun search_by_lines ord_kind f h pos = 
   let
-    val body = thms_of (Thm.proof_body_of thm)
-  in fold (proof_body_descend' f) body Inttab.empty end
-
-fun used_facts f thm =
-  let
-    val nm = Thm.get_name_hint thm
+    val line_change = case ord_kind of LESS => ~1 | GREATER => 1 | _ => raise Fail "Bad relation"
+    val idx_change = case ord_kind of GREATER => 1 | _ => 0;
   in
-    used_facts' (fn nm' => nm' = "" orelse nm' = nm orelse f nm) thm
-    |> Inttab.dest |> map_filter snd
-  end       
+  case f pos of 
+   SOME x => 
+    let
+      val i = find_index (fn e => h (pos, e) = ord_kind) x;
+    in if i > ~1 then SOME (List.nth(x, i + idx_change)) else SOME (hd x) end
+      
+  | NONE => 
+    (case (map_pos_line (fn i => i + line_change) pos) of 
+      SOME pos' => search_by_lines ord_kind f h pos'
+     | NONE => NONE)
+   end
 
 fun location_from_range (start_pos, end_pos) =
   let
@@ -202,15 +214,28 @@ fun location_from_range (start_pos, end_pos) =
   SOME ({file = start_file, start_line = start_line, end_line = end_line} : location) end
   handle Option => NONE
 
+
 fun get_command_ranges_of keywords thy_nm =
 let
   fun is_ignored nm' = nm' = "<ignored>"
   fun is_levity_tag nm' = nm' = "levity_tag"
 
-  val transactions =
+  fun is_proof_cmd nm' = nm' = "apply" orelse nm' = "by" orelse nm' = "proof"
+
+  val (transactions, log) =
           Symtab.lookup (AutoLevity_Base.get_transactions ()) thy_nm 
-          |> the_default Postab_strict.empty
-          |> Postab_strict.dest
+          |> the_default (Postab_strict.empty, Postab_strict.empty)
+          ||> Postab_strict.dest
+          |>> Postab_strict.dest
+
+  val applytab = 
+    Symtab.lookup (AutoLevity_Base.get_applys ()) thy_nm
+    |> the_default Postab_strict.empty
+    |> Postab_strict.dest
+    |> map (fn (pos,e) => (pos, (pos,e)))
+    |> Postab.make_list
+    |> Postab.map (fn _ => sort (fn ((pos,_),(pos', _)) => pos_ord true (pos, pos')))
+    
 
   fun find_cmd_end last_pos ((pos', (nm', ext)) :: rest) =
     if is_ignored nm' then
@@ -224,6 +249,13 @@ let
     else if Keyword.is_qed_global keywords nm then ~1
     else level
 
+
+  fun make_apply_deps lemma_deps =
+    map (fn (nm, atts) => {name = nm, attribs = atts} : apply_dep) lemma_deps
+   
+  fun find_apply pos = if Postab.is_empty applytab then [] else
+   search_by_lines GREATER (Postab.lookup applytab) (fn (pos, (pos', _)) => pos_ord true (pos, pos')) pos
+   |> Option.map snd |> the_default [] |> make_apply_deps
   
   fun find_proof_end level ((pos', (nm', ext)) :: rest) =
     let val level' = change_level nm' level in
@@ -232,12 +264,13 @@ let
          val (cmd_end, rest') = find_cmd_end pos' rest;
          val ((prf_cmds, prf_end), rest'') = find_proof_end level' rest'
        in (({command_name = nm', location = location_from_range (pos', cmd_end) |> the,
-            depth = level,
+            depth = level, apply_deps = if is_proof_cmd nm' then find_apply pos' else [],
             subgoals = #subgoals ext} :: prf_cmds, prf_end), rest'') end
      else
        let
          val (cmd_end, rest') = find_cmd_end pos' rest;
         in (([{command_name = nm', location = location_from_range (pos', cmd_end) |> the,
+            apply_deps = if is_proof_cmd nm' then find_apply pos' else [],
             depth = level, subgoals = #subgoals ext}], cmd_end), rest') end
      end
      | find_proof_end _ _ = (([], Position.none), [])
@@ -252,7 +285,7 @@ let
        then find_proof_end 0 rest'
        else (([],cmd_end),rest');
 
-     val tab' = Postab.cons_list (pos, (pos, nm, pos', tag, prf_cmds)) tab;
+     val tab' = Postab.cons_list (pos, (pos, (nm, pos', tag, prf_cmds))) tab;
 
      val tag' = 
        if is_levity_tag nm then Option.map (rpair (pos,pos')) (#levity_tag ext) else NONE;
@@ -260,10 +293,12 @@ let
    in find_ends tab' tag' rest'' end
      | find_ends tab _ [] = tab
 
-in find_ends Postab.empty NONE transactions end
+   val command_ranges = find_ends Postab.empty NONE transactions
+    |> Postab.map (fn _ => sort (fn ((pos,_),(pos',_)) => pos_ord true (pos, pos')))
 
-fun cmd_entries_ord ((start_pos, _, _, _, _), (start_pos', _, _, _, _)) = 
-  (pos_ord true (start_pos, start_pos'))
+in (command_ranges, log) end
+
+
 
 fun base_name_of nm = 
   let
@@ -271,24 +306,7 @@ fun base_name_of nm =
     val _ = Int.fromString idx |> the;
   in rest |> rev |> space_implode "_" end handle Option => nm
 
-fun map_pos_line f pos =
-let
-  val line = Position.line_of pos |> the;
-  val file = Position.file_of pos |> the;
 
-  val line' = f line;
-
-  val _ = if line' < 1 then raise Option else ();
-  
-in SOME (Position.line_file_only line' file) end handle Option => NONE
-
-fun search_backwards f pos = 
-  case f pos of 
-   SOME x => SOME x
-  | NONE => 
-    (case (map_pos_line (fn i => i - 1) pos) of 
-      SOME pos' => search_backwards f pos'
-     | NONE => NONE)
   
 fun make_deps (const_deps, type_deps) = 
   ({const_deps = distinct (op =) const_deps, type_deps = distinct (op =) type_deps} : deps)
@@ -330,15 +348,21 @@ fun file_of_thy thy =
 
 fun entry_of_thy thy = ({name = Context.theory_name thy, file = file_of_thy thy} : theory_entry)
 
+fun used_facts thm = map fst (AutoLevity_Base.used_facts 0 NONE thm)
+
 fun get_reports_for_thy thy =
   let
     val thy_nm = Context.theory_name thy;
     val all_facts = Global_Theory.facts_of thy;
     val fact_space = Facts.space_of all_facts;
 
-    val tab = get_command_ranges_of (Thy_Header.get_keywords thy) thy_nm;
+    val (tab, log) = get_command_ranges_of (Thy_Header.get_keywords thy) thy_nm;
 
     val parent_facts = map Global_Theory.facts_of (Theory.parents_of thy);
+
+    val search_backwards = search_by_lines LESS (Postab.lookup tab) 
+      (fn (pos, (pos', _)) => pos_ord true (pos, pos'))
+      #> the
 
     val lemmas =  Facts.dest_static false parent_facts (Global_Theory.facts_of thy)
     |> map_filter (fn (xnm, thms) =>
@@ -349,11 +373,10 @@ fun get_reports_for_thy thy =
             let
              val thms' = map (Thm.transfer thy) thms;
 
-             val (_, cmd_name, end_pos, tag, prf_cmds) = search_backwards (Postab.lookup tab) pos 
-               |> the |> sort cmd_entries_ord |> List.getItem |> the |> fst
+             val (real_start, (cmd_name, end_pos, tag, prf_cmds)) = search_backwards pos 
 
              val lemma_deps' = if cmd_name = "datatype" then [] else
-                map (used_facts (not o can (Name_Space.the_entry fact_space) o base_name_of)) thms' 
+                map used_facts thms'
                 |> flat;
 
              val lemma_deps = map base_name_of lemma_deps' |> distinct (op =)
@@ -361,7 +384,7 @@ fun get_reports_for_thy thy =
              val deps = 
                map deps_of_thm thms' |> ListPair.unzip |> apply2 flat |> make_deps
 
-             val location = location_from_range (pos, end_pos) |> the;
+             val location = location_from_range (real_start, end_pos) |> the;
 
              val (lemma_entry : lemma_entry) =  
               {name  = xnm, command_name = cmd_name, levity_tag = make_tag tag, 
@@ -389,11 +412,9 @@ fun get_reports_for_thy thy =
                |> ListPair.unzip
                |> (apply2 flat #> make_deps);
 
-              val (_, cmd_name, end_pos, tag, _) = pos
-               |> search_backwards (Postab.lookup tab) 
-               |> the |> sort cmd_entries_ord |> List.getItem |> the |> fst
+              val (real_start, (cmd_name, end_pos, tag, _)) = search_backwards pos
               
-              val loc = location_from_range (pos, end_pos) |> the;
+              val loc = location_from_range (real_start, end_pos) |> the;
 
               val entry = 
                 ({name = xnm, command_name = cmd_name, levity_tag = make_tag tag,
@@ -417,16 +438,21 @@ fun get_reports_for_thy thy =
                                    
     val thy_parents = map entry_of_thy (Theory.parents_of thy);
 
-   in (thy_nm, thy_parents, lemmas, consts, types) end
+    val logs = log |> 
+     map (fn (pos, errs) => {errors = errs, location = location_from_range (pos, pos) |> the} : log_entry)
+
+   in (thy_nm, logs, thy_parents, lemmas, consts, types) end
 
 fun add_commas (s :: s' :: ss) = s ^ "," :: (add_commas (s' :: ss))
   | add_commas [s] = [s]
   | add_commas _ = []
 
 
-fun string_reports_of (thy_nm, thy_parents, lemmas, consts, types) =
-      ["{\"theory_name\" : " ^ quote thy_nm ^ ",", 
-        "\"theory_imports\" : ["] @
+fun string_reports_of (thy_nm, logs, thy_parents, lemmas, consts, types) =
+      ["{\"theory_name\" : " ^ quote thy_nm ^ ","] @
+      ["\"logs\" : ["] @
+      add_commas (map (log_entry_encode) logs) @
+      ["],","\"theory_imports\" : ["] @
       add_commas (map (theory_entry_encode) thy_parents) @
       ["],","\"lemmas\" : ["] @
       add_commas (map (lemma_entry_encode) lemmas) @
@@ -437,31 +463,7 @@ fun string_reports_of (thy_nm, thy_parents, lemmas, consts, types) =
       ["]}"]
       |> map (fn s => s ^ "\n")
 
-structure Data = Theory_Data
-  (
-    type T = string list;
-    val empty = [];
-    val extend = I;
-    fun merge ((a, b) : T * T) = union (op =) a b;
-  );
-
-fun theory_is_processed thy = member (op =) (Data.get thy) (Context.theory_name thy);
-fun process_theory thy = Data.map (insert (op =) (Context.theory_name thy)) thy; 
-
-val setup_theory_hook = Theory.at_end (fn thy => if theory_is_processed thy then NONE else
-  let
-    val reports = get_reports_for_thy thy;
-    
-    val lines = string_reports_of reports;
-
-    val thy_nm = Context.theory_name thy;
-    val file_path = Path.append (Resources.master_directory thy) (Path.basic (thy_nm ^ ".lev"));
-    
-    val _ = File.write_list file_path lines;
-  in SOME (process_theory thy) end)
-
 end
-
 \<close>
 
 end
