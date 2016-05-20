@@ -12,7 +12,7 @@
 theory WordSetup
 imports
   "../Distinct_Prop"
-  "Word_Lib/Word_Lemmas_32"
+  "../Word_Lib/Word_Lemmas_32"
 begin
 
 (* Distinct_Prop lemmas that need word lemmas: *)
