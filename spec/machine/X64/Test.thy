@@ -1,7 +1,7 @@
 theory Test
 imports
   "../../../lib/Enumeration"
-  "../../../lib/WordSetup"
+  "../../../lib/$L4V_ARCH/WordSetup"
   "../../../lib/wp/NonDetMonad"
   "../../../lib/HaskellLib_H"
   Setup_locale

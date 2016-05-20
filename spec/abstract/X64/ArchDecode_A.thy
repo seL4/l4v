@@ -18,7 +18,7 @@ theory ArchDecode_A
 imports
   "../Interrupt_A"
   "../InvocationLabels_A"
-  "../../../lib/WordLib"
+  "../../../lib/Word_Lib/Word_Lib"
   "../../design/InvocationLabels_H"
 begin
 

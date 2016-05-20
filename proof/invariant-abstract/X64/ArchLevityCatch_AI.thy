@@ -58,7 +58,7 @@ lemma asid_high_bits_of_add:
     apply (simp add: asid_low_bits_def linorder_not_less word_bits_def)
   apply (auto dest: test_bit_size
               simp: asid_low_bits_def nth_ucast)
-  sorry (* FIXME x64-word: needs 64-bit word lemmas *)
+  done
 
 lemma preemption_point_success [simp,intro]:
   "((Inr (), s') \<in> fst (preemption_point s)) \<Longrightarrow> 
