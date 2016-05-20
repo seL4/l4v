@@ -11,7 +11,7 @@
 theory AbstractArrays
 imports
   "../../lib/TypHeapLib"
-  "../../lib/WordSetup"
+  "../../lib/$L4V_ARCH/WordSetup"
 begin
 
 (*

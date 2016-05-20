@@ -14,7 +14,7 @@ theory Platform
 imports
   "../../../lib/Defs"
   "../../../lib/Lib"
-  "../../../lib/WordSetup"
+  "../../../lib/$L4V_ARCH/WordSetup"
   Setup_Locale
 begin
 

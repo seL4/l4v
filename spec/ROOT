@@ -36,7 +36,7 @@ session ASpec in "abstract" = Word_Lib +
     "../../lib/Lib"
     "../../lib/Defs"
     "../../lib/List_Lib"
-    "../../lib/WordSetup"
+    "../../lib/$L4V_ARCH/WordSetup"
   theories
     "Intro_Doc"
     "../../lib/Monad_WP/NonDetMonad"
