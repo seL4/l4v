@@ -10,7 +10,7 @@
 
 theory Etanercept (* FIXME: broken, untested *)
 imports
-  "WordSetup"
+  "$L4V_ARCH/WordSetup"
   "ml-helpers/TermPatternAntiquote"
 keywords
   "word_refute" :: diag

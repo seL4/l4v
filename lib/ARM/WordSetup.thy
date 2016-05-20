@@ -11,7 +11,7 @@
 
 theory WordSetup
 imports
-  Distinct_Prop
+  "../Distinct_Prop"
   "Word_Lib/Word_Lemmas_32"
 begin
 

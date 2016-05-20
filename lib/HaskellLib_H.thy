@@ -16,7 +16,7 @@
 theory HaskellLib_H
 imports
   Lib
-  WordSetup
+  "$L4V_ARCH/WordSetup"
   "Monad_WP/NonDetMonadVCG"
 begin
 

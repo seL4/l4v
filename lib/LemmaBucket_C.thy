@@ -11,7 +11,7 @@
 theory LemmaBucket_C
 imports
   Lib
-  WordSetup
+  "$L4V_ARCH/WordSetup"
   TypHeapLib
   "../tools/c-parser/umm_heap/ArrayAssertion"
 begin
