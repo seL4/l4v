@@ -9,7 +9,7 @@
  *)
 
 theory PackedTypes
-imports "../../lib/WordSetup" CProof
+imports "../../lib/$L4V_ARCH/WordSetup" CProof
 begin
 
 section {* Underlying definitions for the class axioms *}

@@ -2,7 +2,7 @@ theory CommonOpsLemmas
 
 imports
   "CommonOps"
-	"../../lib/WordSetup"
+	"../../lib/$L4V_ARCH/WordSetup"
 begin
 
 lemma fold_all_htd_updates':
