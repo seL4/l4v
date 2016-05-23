@@ -1573,14 +1573,14 @@ apply (blast dest: state_irqs_to_policy_aux.intros)
 done
 
 (* MOVE *)
-lemma cap_cur_auth_caps_of_state:
-  "\<lbrakk> caps_of_state s p = Some cap; pas_refined aag s; is_subject aag (fst p) \<rbrakk>
-  \<Longrightarrow> pas_cap_cur_auth aag cap"
+lemma cap_auth_caps_of_state:
+  "\<lbrakk> caps_of_state s p = Some cap; pas_refined aag s \<rbrakk>
+  \<Longrightarrow> aag_cap_auth aag (pasObjectAbs aag (fst p)) cap"
   unfolding aag_cap_auth_def
   apply (intro conjI)
     apply clarsimp
     apply (drule (2) sta_caps)
-    apply (drule (1) auth_graph_map_memI [where x = "pasSubject aag", OF _ sym refl])
+    apply (drule_tac f="pasObjectAbs aag" in auth_graph_map_memI[OF _ refl refl])
     apply (fastforce simp: pas_refined_def)
    apply clarsimp
    apply (drule (2) sta_untyped [THEN pas_refined_mem] )
@@ -1590,6 +1590,11 @@ lemma cap_cur_auth_caps_of_state:
   apply (drule (1) cli_caps_of_state)
   apply simp
   done
+
+lemma cap_cur_auth_caps_of_state:
+  "\<lbrakk> caps_of_state s p = Some cap; pas_refined aag s; is_subject aag (fst p) \<rbrakk>
+  \<Longrightarrow> pas_cap_cur_auth aag cap"
+  by (metis cap_auth_caps_of_state)
 
 lemma new_range_subset':
   assumes al: "is_aligned (ptr :: 'a :: len word) sz" and al': "is_aligned x sz'"

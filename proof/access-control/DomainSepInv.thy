@@ -776,8 +776,8 @@ lemma domain_sep_inv_cap_UntypedCap[simp]:
 
 crunch domain_sep_inv[wp]: invoke_untyped "domain_sep_inv irqs st"
   (ignore: freeMemory retype_region wp: crunch_wps domain_sep_inv_detype_lift
-   get_cap_wp hoare_unless_wp
-   simp: crunch_simps mapM_x_def_bak)
+   get_cap_wp mapME_x_inv_wp
+   simp: crunch_simps mapM_x_def_bak unless_def)
 
 lemma perform_page_invocation_domain_sep_inv_get_cap_helper:
   "\<lbrace>\<top>\<rbrace>

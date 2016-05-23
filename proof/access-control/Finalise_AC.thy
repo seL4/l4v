@@ -730,32 +730,6 @@ lemma store_pte_respects:
   done
 
 
-lemma dmo_clearMemory_respects':
-  "\<lbrace>integrity aag X st and K (is_aligned ptr bits \<and> bits < word_bits \<and> 2 \<le> bits \<and> (\<forall>p \<in> ptr_range ptr bits. aag_has_auth_to aag Write p))\<rbrace>
-  do_machine_op (clearMemory ptr (2 ^ bits))
-  \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  unfolding do_machine_op_def clearMemory_def
-  apply (simp add: split_def cleanCacheRange_PoU_def)
-  apply wp
-  apply clarsimp
-  apply (erule use_valid)
-  apply wp
-   apply (simp add: cleanByVA_PoU_def)
-   apply (wp mol_respects mapM_x_wp' storeWord_respects)
-   apply simp
-   apply (clarsimp simp add: word_size_def upto_enum_step_shift_red [where us = 2, simplified])
-   apply (erule bspec)
-   apply (erule set_mp [rotated])
-   apply (rule ptr_range_subset)
-      apply simp
-     apply (simp add: is_aligned_mult_triv2 [where n = 2, simplified])
-    apply assumption
-   apply (erule word_less_power_trans_ofnat [where k = 2, simplified])
-    apply assumption
-   apply (fold word_bits_def, assumption)
-  apply simp
-  done
-
 crunch pas_refined[wp]: invalidate_tlb_by_asid "pas_refined aag"
 
 (* FIXME: CLAG *)

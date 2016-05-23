@@ -3283,7 +3283,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs_inv:
        \<and> (\<forall>tup \<in> set ((cref,oref)#list).
               real_cte_at (fst tup) s)
        \<and> (\<forall>tup \<in> set ((cref,oref)#list). \<forall>r \<in> obj_refs (default_cap tp (snd tup) sz dev).
-                (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
+                (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> Structures_A.obj_refs cap) p' s)
               \<and> \<not> obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)
        \<and> distinct (p # (map fst ((cref,oref)#list)))
        \<and> tp \<noteq> ArchObject ASIDPoolObj) \<rbrace>
@@ -3308,7 +3308,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs_inv:
        \<and> (\<forall>tup \<in> set list.
               real_cte_at (fst tup) s)
        \<and> (\<forall>tup \<in> set list. \<forall>r \<in> obj_refs (default_cap tp (snd tup) sz dev).
-                (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
+                (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> Structures_A.obj_refs cap) p' s)
               \<and> \<not> obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)
        \<and> distinct (p # (map fst list))
        \<and> tp \<noteq> ArchObject ASIDPoolObj) \<rbrace>"
@@ -3316,13 +3316,14 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs_inv:
   apply (wp hoare_vcg_const_Ball_lift | clarsimp)+
   apply (clarsimp simp: conj_comms invs_mdb distinct_sets_prop distinct_prop_map
                         ex_cte_cap_to_cnode_always_appropriate_strg)
-  apply (clarsimp simp: cte_wp_at_caps_of_state[where p=p])
+  apply (simp add: cte_wp_at_caps_of_state[where p=p]
+      | erule exE conjE)+
   apply (intro conjI)
-      apply (clarsimp simp: image_def)
+      apply (clarsimp simp:image_def)
       apply (drule(1) bspec)+
-      apply clarsimp
-     apply (fastforce simp: cap_range_def)
-    apply (clarsimp simp: is_cap_simps)
+      apply simp
+     apply (fastforce simp:cap_range_def)
+    apply (clarsimp simp:is_cap_simps)
     apply (simp only: UN_extend_simps UNION_empty_conv)
     apply (drule(1) bspec)+
     apply clarsimp
@@ -3359,7 +3360,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs:
        \<and> (\<forall>tup \<in> set (zip crefs orefs).
               real_cte_at (fst tup) s)
        \<and> (\<forall>tup \<in> set (zip crefs orefs). \<forall>r \<in> obj_refs (default_cap tp (snd tup) sz dev).
-                (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
+                (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> Structures_A.obj_refs cap) p' s)
               \<and> \<not> obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)
        \<and> distinct (p # (map fst (zip crefs orefs)))
        \<and> tp \<noteq> ArchObject ASIDPoolObj)
@@ -3380,7 +3381,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs:
   apply (thin_tac "valid a b c" for a b c)
   apply (rule hoare_pre)
    apply (rule hoare_strengthen_post)
-    apply (rule_tac list=list and us=us  in create_caps_invs_inv)
+    apply (rule_tac list=list and us=us in create_caps_invs_inv)
     apply (rule hoare_pre, rule create_cap_Q)
     apply (clarsimp | drule(1) bspec)+
   done
@@ -3781,6 +3782,10 @@ lemma invoke_untyp_invs':
       apply (simp add:valid_cap_def)
       done
 
+   have cover: "range_cover ptr sz (obj_bits_api tp us) (length slots)"
+     using vui
+     by (clarsimp simp:cte_wp_at_caps_of_state)
+
    note neg_mask_add_mask = word_plus_and_or_coroll2[symmetric,where w = "mask sz" and t = ptr,symmetric]
 
    note set_cap_free_index_invs_spec = set_free_index_invs[where
@@ -3789,11 +3794,6 @@ lemma invoke_untyp_invs':
 
     have slot_not_in: "(cref, oref) \<notin> set slots"
       using vui cte_at
-      by (auto simp: cte_wp_at_caps_of_state)
-
-    have cover: "range_cover ptr sz (obj_bits_api tp us) (length slots)"
-     and vslot: "slots\<noteq> []"
-      using vui
       by (auto simp: cte_wp_at_caps_of_state)
 
     note reset_Q' = reset_Q[simplified ui, simplified]
@@ -3806,7 +3806,7 @@ lemma invoke_untyp_invs':
     note msimp[simp] = neg_mask_add_mask
     let ?ui = "Retype (cref, oref) reset ptr_base ptr tp us slots dev"
     show "\<lbrace>op = s\<rbrace> invoke_untyped ?ui \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>, \<lbrace>\<lambda>_ s. invs s \<and> Q s\<rbrace>"
-     using cover
+      using cover
       apply (simp add:mapM_x_def[symmetric] invoke_untyped_def)
       apply (rule_tac B="\<lambda>_ s. invs s \<and> Q s \<and> ct_active s
           \<and> valid_untyped_inv_wcap ?ui
@@ -3820,7 +3820,7 @@ lemma invoke_untyp_invs':
           apply (clarsimp simp only: pred_conj_def if_True, blast)
          apply (wp | simp)+
        apply (cut_tac vui Q Q' invs)
-       apply (clarsimp simp: cte_wp_at_caps_of_state vslot slot_not_in)
+       apply (clarsimp simp: cte_wp_at_caps_of_state slot_not_in)
        apply blast
 
       apply (simp add: cte_wp_at_conj ball_conj_distrib
@@ -3843,14 +3843,14 @@ lemma invoke_untyp_invs':
                    retype_region_ranges_obj_bits_api[where sz=sz]
                    retype_region_caps_reserved [where sz = sz]
                    retype_region_distinct_sets [where sz = sz]
-                   create_caps_invs[where Q=Q and ptr=ptr and slots=slots and us=us]
+                   create_caps_invs[where ptr=ptr and slots=slots and us=us]
                    create_cap_Q[OF ui']
                    init_arch_Q[OF ui']
+                   retype_region_Q[OF ui']
                    retype_region_descendants_range_ret[where sz = sz]
                    retype_region_obj_at_other2
                      [where P="is_cap_table n" for n]
                    distinct_tuple_helper
-                   retype_region_Q[OF ui']
                    init_arch_objects_wps
                    init_arch_objects_nonempty_table
               | wp_once retype_region_ret_folded_general)+
@@ -3917,18 +3917,18 @@ lemma invoke_untyp_invs':
 
       apply (intro conjI)
 
-             (* slots not in retype_addrs *)
-             apply (clarsimp dest!:retype_addrs_subset_ptr_bits)
-             apply (drule(1) invoke_untyped_proofs.slots_invD)
-             apply (drule(1) subsetD)
-             apply (simp add:p_assoc_help)
+            (* slots not in retype_addrs *)
+            apply (clarsimp dest!:retype_addrs_subset_ptr_bits)
+            apply (drule(1) invoke_untyped_proofs.slots_invD)
+            apply (drule(1) subsetD)
+            apply (simp add:p_assoc_help)
 
-            (* not global refs*)
-            apply (simp add: Int_commute, erule disjoint_subset2[rotated])
-            apply (simp add: atLeastatMost_subset_iff word_and_le2)
+           (* not global refs*)
+           apply (simp add: Int_commute, erule disjoint_subset2[rotated])
+           apply (simp add: atLeastatMost_subset_iff word_and_le2)
 
-           (* idx less_eq new offs *)
-           apply (auto dest: invoke_untyped_proofs.idx_le_new_offs)[1]
+          (* idx less_eq new offs *)
+          apply (auto dest: invoke_untyped_proofs.idx_le_new_offs)[1]
 
           (* not empty tables *)
           apply clarsimp

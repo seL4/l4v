@@ -22,7 +22,7 @@ definition
   authorised_invocation :: "'a PAS \<Rightarrow> Invocations_A.invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
  "authorised_invocation aag i \<equiv> \<lambda>s. case i of
-     Invocations_A.InvokeUntyped i' \<Rightarrow> valid_untyped_inv i' s \<and> (authorised_untyped_inv aag i' \<and> authorised_untyped_inv_state aag i' s) \<and> ct_active s
+     Invocations_A.InvokeUntyped i' \<Rightarrow> valid_untyped_inv i' s \<and> (authorised_untyped_inv aag i') \<and> ct_active s
    | Invocations_A.InvokeEndpoint epptr badge can_grant \<Rightarrow>
                \<exists>ep. ko_at (Endpoint ep) epptr s \<and>
                     (can_grant \<longrightarrow>  (\<forall>r \<in> ep_q_refs_of ep. snd r = EPRecv \<longrightarrow> is_subject aag (fst r)) \<and> aag_has_auth_to aag Grant epptr)
@@ -150,8 +150,7 @@ lemma decode_invocation_authorised:
    \<lbrace>\<lambda>rv. authorised_invocation aag rv\<rbrace>, -"
   unfolding decode_invocation_def
   apply (rule hoare_pre)
-  apply (wp decode_untyped_invocation_authorised[THEN hoare_conjunct1_R]
-    decode_untyped_invocation_authorised[THEN hoare_conjunct2_R]
+  apply (wp decode_untyped_invocation_authorised
     decode_cnode_invocation_auth_derived
     decode_cnode_inv_authorised
     decode_tcb_invocation_authorised decode_tcb_inv_wf
@@ -194,23 +193,6 @@ lemma in_extended: "(u,a) \<in> fst (do_extended_op f s) \<Longrightarrow> \<exi
    apply force
    done
  
-lemma set_thread_state_authorised_untyped_inv_state:
-  "\<lbrace>valid_objs and authorised_untyped_inv_state aag ui\<rbrace>
-    set_thread_state t ts
-   \<lbrace>\<lambda>_. authorised_untyped_inv_state aag ui\<rbrace>"
-  unfolding set_thread_state_def 
-  apply(clarsimp simp:  authorised_untyped_inv_state_def split: untyped_invocation.splits simp: valid_def)
-  apply(subgoal_tac "cte_wp_at (op = cap) (a, b) s", fastforce)
-  apply(clarsimp simp: set_object_def gets_the_def bind_def in_monad dest!: in_extended)
-  apply(subgoal_tac "obj_at (same_caps (TCB (ab\<lparr>tcb_state := ts\<rparr>))) t s")
-   apply(drule_tac P="op = cap" and p="(a,b)" in cte_wp_at_after_update)
-   apply(clarsimp simp: fun_upd_def)
-  apply(clarsimp simp: get_tcb_def split: option.splits kernel_object.splits)
-  apply(clarsimp simp: obj_at_def)
-  apply(clarsimp simp: tcb_cap_cases_def)
-  apply auto
-  done
-
 lemma set_thread_state_authorised[wp]:
   "\<lbrace>authorised_invocation aag i and (\<lambda>s. thread = cur_thread s) and valid_objs\<rbrace>
      set_thread_state thread Structures_A.thread_state.Restart
@@ -219,7 +201,6 @@ lemma set_thread_state_authorised[wp]:
            apply (simp_all add: authorised_invocation_def)
           apply (wp sts_valid_untyped_inv ct_in_state_set
                     hoare_vcg_ex_lift sts_obj_at_impossible
-                    set_thread_state_authorised_untyped_inv_state
                   | simp)+
       apply (rename_tac tcb_invocation)
       apply (case_tac tcb_invocation, simp_all)
@@ -971,6 +952,7 @@ lemmas sequence_x_mapM_x = mapM_x_def [symmetric]
 
 crunch arm_globals_frame [wp]: invoke_untyped "\<lambda>s. P (arm_globals_frame (arch_state s))"
    (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch hoare_unless_wp
+        preemption_point_inv mapME_x_inv_wp
      simp: crunch_simps sequence_x_mapM_x
      ignore: do_machine_op freeMemory clearMemory)
 
