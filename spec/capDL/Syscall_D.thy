@@ -68,7 +68,7 @@ where
 fun
   perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> cdl_invocation \<Rightarrow> unit preempt_monad"
 where
-    "perform_invocation is_call can_block (InvokeUntyped untyped_params) = liftE (invoke_untyped untyped_params)"
+    "perform_invocation is_call can_block (InvokeUntyped untyped_params) = (invoke_untyped untyped_params)"
   | "perform_invocation is_call can_block (InvokeEndpoint endpoint_params) = liftE (invoke_endpoint is_call can_block endpoint_params)"
   | "perform_invocation is_call can_block (InvokeNotification ntfn_params) = liftE (invoke_notification ntfn_params)"
   | "perform_invocation is_call can_block (InvokeReply reply_params) = liftE (invoke_reply reply_params)"

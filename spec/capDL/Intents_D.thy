@@ -119,7 +119,7 @@ datatype cdl_tcb_intent =
  |  TcbUnbindNTFNIntent
 
 datatype cdl_untyped_intent =
-    (* Retype: (target), type, size_bits, (root), node_index, node_depth, node_offset, node_window, has_children *)
+    (* Retype: (target), (do_reset), type, size_bits, (root), node_index, node_depth, node_offset, node_window, has_children *)
     UntypedRetypeIntent cdl_object_type word32 word32 word32 word32 word32
 
 datatype cdl_irq_handler_intent =
