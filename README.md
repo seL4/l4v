@@ -43,6 +43,8 @@ The repository is organised as follows.
 
  * [`spec`](spec/): a number of different formal specifications of seL4
     * [`abstract`](spec/abstract/): the functional abstract specification of seL4
+    * [`haskell`](spec/haskell/): Haskell model of the seL4 kernel, kept in sync
+      with the C code
     * [`design`](spec/design/): the Haskell-generated design-level specification of seL4
     * [`machine`](spec/machine/): the machine interface of these two specifications
     * [`cspec`](spec/cspec/): the entry point for automatically translating the seL4 C code
@@ -125,6 +127,10 @@ The dependencies for installing Isabelle are
 For running the standalone version of the C Parser you will additionally need
 
  * [MLton][7] ML compiler (package `mlton-compiler` on Ubuntu)
+
+For building the Haskell kernel model, GHC 7.8.x is currently required.
+Note that this repository does not contain the QEmu interface for actually
+running the model.
 
 For running the C proofs, you need a working C preprocessor setup for the seL4
 repository.
