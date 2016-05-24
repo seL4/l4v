@@ -35,7 +35,7 @@ figures/%.pdf: figures/%.mps
 version.txt: always
 	@echo "`git log -n 1 --date=short --abbrev=20 --abbrev-commit --format='%h %ad' HEAD`" > $@
 
-.PHONY: always
+.PHONY: always all clean
 
 functions.aux: $(LHSFILES)
 	perl mkfunctions.pl

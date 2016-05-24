@@ -33,3 +33,5 @@ pdf:
 clean:
 	rm -f $(BOOT_FILES)
 	cabal clean
+
+.PHONY: all build pdf clean
