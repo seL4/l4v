@@ -3,6 +3,7 @@
 *~
 .*.attrib_trace
 .*.skip
+*.lev
 
 spec/cspec/c/api/
 spec/cspec/c/arch/
