@@ -119,7 +119,7 @@ function test_filenames () {
 
 # Generate spec.
 cd ${HASKELL_TRANS}
-export L4CAP="${BASE}/../seL4/haskell"
+export L4CAP="${BASE}/spec/haskell"
 echo "Generating spec from haskell..."
 
 for ARCH in ${ARCHES[@]}
