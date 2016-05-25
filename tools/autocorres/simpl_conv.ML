@@ -50,7 +50,7 @@ fun get_L1corres_monad (prop as (_ $ _ $ _ $ monad $ _)) = monad
  *)
 fun mk_SIMPL_call_term ctxt prog_info fn_info target_fn =
   @{mk_term "Call ?proc :: (?'s, int, strictc_errortype) com" (proc, 's)}
-      (FunctionInfo.get_function_def fn_info target_fn |> #const, #state_type prog_info)
+      (FunctionInfo.get_phase_info fn_info FunctionInfo.CP target_fn |> #const, #state_type prog_info)
 
 (*
  * Construct a correspondence lemma between a given monadic term and a SIMPL fragment.
@@ -159,7 +159,7 @@ fun simpl_conv'
        * "call": This is primarily what is output by the C parser. We
        * accept input terms of the form:
        *
-       *     "call <argument_setup> <proc_to_call> <locals_reset> (%_ s. Basic (f s))".
+       *     "call <argument_setup> <proc_to_call> <locals_reset> (%_ s. Basic (<store return value> s))".
        *
        * In particular, the last argument needs to be of precisely the
        * form above. SIMPL, in theory, supports complex expressions in
@@ -297,7 +297,7 @@ end
 fun get_simpl_body ctxt fn_info fn_name =
 let
   (* Find the definition of the given function. *)
-  val simpl_thm = #definition (FunctionInfo.get_function_def fn_info fn_name)
+  val simpl_thm = #definition (FunctionInfo.get_phase_info fn_info FunctionInfo.CP fn_name)
       handle ERROR _ => raise FunctionNotFound fn_name;
 
   (* Unfold terms in the body which we don't want to deal with. *)
@@ -376,12 +376,14 @@ fun split_conj thm =
   handle THM _ => [thm]
 
 (* Prove monad_mono for recursive functions. *)
-fun l1_monad_mono (fn_defs : FunctionInfo.function_def list) lthy =
+fun l1_monad_mono lthy (fn_defs : FunctionInfo.function_info list) =
 let
     fun mk_stmt [func] = @{mk_term "monad_mono ?f" f} func
       | mk_stmt (func :: funcs) = @{mk_term "monad_mono ?f \<and> ?g" (f, g)} (func, mk_stmt funcs)
-    val mono_thm = @{term "Trueprop"} $ mk_stmt (map #const fn_defs)
-    val func_expand = map (fn fn_def => EqSubst.eqsubst_tac lthy [0] [Utils.abs_def lthy (#definition fn_def)]) fn_defs
+    val l1_defs = map (fn info => the' "l1_monad_mono: expected L1 info"
+                                    (FunctionInfo.Phasetab.lookup (#phases info) FunctionInfo.L1)) fn_defs
+    val mono_thm = @{term "Trueprop"} $ mk_stmt (map #const l1_defs)
+    val func_expand = map (fn fn_def => EqSubst.eqsubst_tac lthy [0] [Utils.abs_def lthy (#definition fn_def)]) l1_defs
     val tac =
         REPEAT (EqSubst.eqsubst_tac lthy [0]
                 [@{thm monad_mono_alt_def}, @{thm all_conj_distrib} RS @{thm sym}] 1)
@@ -400,13 +402,14 @@ let
 in
   Goal.prove lthy [] [] mono_thm (K tac)
   |> split_conj
+  |> (fn thms => map #name fn_defs ~~ thms)
+  |> Symtab.make
 end
 
 
 (* For functions that are not translated, just generate a trivial wrapper. *)
 fun mk_l1corres_call_simpl_thm fn_info check_termination ctxt fn_name = let
-    val info = Symtab.lookup (FunctionInfo.get_functions fn_info) fn_name
-        |> the
+    val info = FunctionInfo.get_phase_info fn_info FunctionInfo.CP fn_name
     val const = #const info
     val impl_thm = Proof_Context.get_thm ctxt (fn_name ^ "_impl")
     val gamma = safe_mk_meta_eq impl_thm |> Thm.concl_of |> Logic.dest_equals
@@ -437,18 +440,23 @@ let
   fun convert ctxt fn_name callee_terms measure_var fn_args =
   let
     val (thm, opt_traces) =
-      if #is_simpl_wrapper (FunctionInfo.get_function_def fn_info fn_name)
+      if #is_simpl_wrapper (FunctionInfo.get_function_info fn_info fn_name)
       then (mk_l1corres_call_simpl_thm fn_info check_termination ctxt fn_name, [])
       else get_l1corres_thm prog_info fn_info check_termination ctxt do_opt trace_opt fn_name
                             callee_terms measure_var
   in (get_body_of_l1corres_thm thm, thm, opt_traces) end
 
   (* Update function information. *)
-  fun update_function_defs lthy fn_def =
-    FunctionInfo.fn_def_update_const (Utils.get_term lthy (l1_function_name (#name fn_def))) fn_def
-    |> FunctionInfo.fn_def_update_definition (
-        (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
-            filename "L1def" (#name fn_def))))
+  fun update_function_defs lthy (fn_def: FunctionInfo.function_info) = let
+    val phase_info = FunctionInfo.get_1_phase_info fn_def FunctionInfo.CP
+    val fn_const = Utils.get_term lthy (l1_function_name (#name fn_def))
+    val phase_info' =
+          phase_info
+          |> FunctionInfo.phase_info_upd_phase FunctionInfo.L1
+          |> FunctionInfo.phase_info_upd_const fn_const
+          |> FunctionInfo.phase_info_upd_definition (
+               (the (AutoCorresData.get_def (Proof_Context.theory_of lthy) filename "L1def" (#name fn_def))))
+    in phase_info' end
 
   (* Fetch the expected type of the translated function. *)
   val l1_fn_type = @{typ nat} --> mk_l1monadT (#state_type prog_info)
@@ -458,14 +466,14 @@ let
       mk_L1corres_call_prop ctxt prog_info fn_info check_termination fn_name (betapply (free, measure_var))
 in
   AutoCorresUtil.do_translation_phase
-      "L1" filename prog_info fn_info
+      FunctionInfo.L1 filename prog_info fn_info
       (K l1_fn_type)
       get_l1_fn_assumption
       (fn _ => [])
       l1_function_name
       convert
-      l1_monad_mono
       update_function_defs
+      l1_monad_mono
       @{thm L1corres_recguard_0}
       lthy
 end

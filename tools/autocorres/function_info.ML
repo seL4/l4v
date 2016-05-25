@@ -11,75 +11,96 @@
 (*
  * Information about functions in the program we are translating,
  * and the call-graph between them.
+ * To support incremental translation, we store the function information
+ * for every intermediate phase as well.
  *)
 signature FUNCTION_INFO =
 sig
+  (*** Basic data types ***)
+  type fn_info;
+  datatype phase = CP | L1 | L2 | HL | WA | TS;
+  val string_of_phase : phase -> string;
+  val phase_ord : phase * phase -> order;
+  structure Phasetab : TABLE;
 
-  type function_def = {
-    name : string,
+  (* Function info for a single phase. *)
+  type phase_info = {
     args : (string * typ) list,
     return_type : typ,
     const : term,
     raw_const : term,
     definition : thm,
-    mono_thm : thm,
+    mono_thm : thm option,
+    phase : phase
+  };
+  val phase_info_upd_args        : (string * typ) list -> phase_info -> phase_info;
+  val phase_info_upd_return_type : typ                 -> phase_info -> phase_info;
+  (* also updates raw_const *)
+  val phase_info_upd_const       : term                -> phase_info -> phase_info;
+  val phase_info_upd_definition  : thm                 -> phase_info -> phase_info;
+  val phase_info_upd_mono_thm    : thm option          -> phase_info -> phase_info;
+  val phase_info_upd_phase       : phase               -> phase_info -> phase_info;
+
+  (* Function info for a single function. *)
+  type function_info = {
+    name : string,
     invented_body : bool,
     is_simpl_wrapper : bool,
-    finished : bool
+    phases : phase_info Phasetab.table
   };
+  val function_info_upd_name             : string -> function_info -> function_info;
+  val function_info_upd_invented_body    : bool   -> function_info -> function_info;
+  val function_info_upd_is_simpl_wrapper : bool   -> function_info -> function_info;
+  val function_info_add_phase            : phase_info -> function_info -> function_info;
 
-datatype fn_info = FunctionInfo of {
-  (* Database of "function_info" records. *)
-  function_info : function_def Symtab.table,
-
-  (* Functions directly called by a particular function. *)
-  function_callees : string list Symtab.table,
-
-  (* Mapping from "const" back to the function name. (cache) *)
-  const_to_function : string Termtab.table,
-
-  (* Topologically sorted functions, based on call graph. (cache) *)
-  topo_sorted_functions : string list list,
-
-  (* List of recursive calls a function makes. (cache) *)
-  recursive_functions : string list Symtab.table
-  };
-
+  (*** Whole-program info ***)
   val init_fn_info : Proof.context -> string -> fn_info;
 
-  val get_functions : fn_info -> function_def Symtab.table;
-  val get_function_def : fn_info -> string -> function_def;
-  val get_function_args : fn_info -> string -> (string * typ) list;
-  val get_function_from_const : fn_info -> term -> function_def option;
-
-  val map_fn_info : (function_def -> function_def option) -> fn_info -> fn_info;
+  (*** fn_info accesses ***)
+  val get_all_functions : fn_info -> function_info Symtab.table;
+  val get_function_info : fn_info -> string -> function_info;
+  val get_phase_info : fn_info -> phase -> string -> phase_info;
+  val get_1_phase_info : function_info -> phase -> phase_info;
+  val get_function_from_const : fn_info -> term -> function_info option;
 
   val get_function_callees : fn_info -> string -> string list;
   val get_topo_sorted_functions : fn_info -> string list list;
-  val set_autocorres_scope : fn_info -> string Symset.set -> fn_info;
-
-  val fn_def_update_name : string -> function_def -> function_def;
-  val fn_def_update_args : (string * typ) list -> function_def -> function_def;
-  val fn_def_update_const : term -> function_def -> function_def;
-  val fn_def_update_definition : thm -> function_def -> function_def;
-  val fn_def_update_return_type : typ -> function_def -> function_def;
-  val fn_def_update_mono_thm : thm -> function_def -> function_def;
-  val fn_def_update_invented_body : bool -> function_def -> function_def;
-  val fn_def_update_is_simpl_wrapper : bool -> function_def -> function_def;
-  val fn_def_update_finished : bool -> function_def -> function_def;
 
   val is_function_recursive : fn_info -> string -> bool;
   val get_recursive_group : fn_info -> string -> string list;
   val get_recursive_functions : fn_info -> string list;
+
+  (*** fn_info updaters. These automatically recalculate auxillary info ***)
+  (* Add info from a translation phase. NONE = leave untouched *)
+  val add_phases : (string -> function_info -> phase_info option) -> fn_info -> fn_info;
+  (* Translate function infos. NONE = forget function *)
+  val map_fn_info : (function_info -> function_info option) -> fn_info -> fn_info;
 end;
 
 structure FunctionInfo : FUNCTION_INFO =
 struct
 
-type function_def = {
-    (* Name of the function. *)
-    name : string,
+(* List of AutoCorres phases.
+ * "CP" represents the initial definition we get from the C parser. *)
+datatype phase = CP | L1 | L2 | HL | WA | TS;
+fun string_of_phase CP = "CP"
+  | string_of_phase L1 = "L1"
+  | string_of_phase L2 = "L2"
+  | string_of_phase HL = "HL"
+  | string_of_phase WA = "WA"
+  | string_of_phase TS = "TS";
+fun encode_phase CP = 0
+  | encode_phase L1 = 1
+  | encode_phase L2 = 2
+  | encode_phase HL = 3
+  | encode_phase WA = 4
+  | encode_phase TS = 5;
+val phase_ord = int_ord o apply2 encode_phase;
+structure Phasetab = Table(
+  type key = phase
+  val ord = phase_ord);
 
+type phase_info = {
     (* Arguments of the function, in order, excluding measure variables. *)
     args : (string * typ) list,
 
@@ -98,25 +119,93 @@ type function_def = {
     (* Definition of the function. *)
     definition : thm,
 
-    (* monad_mono theorem for the function. *)
-    mono_thm : thm,
+    (* monad_mono theorem for the function, if it is recursive. *)
+    mono_thm : thm option,
+
+    (* The translation phase for this definition. *)
+    phase : phase
+};
+
+type function_info = {
+    (* Name of the function. *)
+    name : string,
+
+    (* Is this function actually being translated, or are we just wrapping the SIMPL code? *)
+    is_simpl_wrapper : bool,
 
     (* Is this function generated by AutoCorres as a placeholder for
      * a function we didn't have the source code to? *)
     invented_body : bool,
 
-    (* Is this just a wrapper around a SIMPL procedure?
-     * True if function is excluded from translation "scope". *)
-    is_simpl_wrapper : bool,
-
-    (* Remember whether we have already translated this function,
-     * and should skip it on later runs. *)
-    finished : bool
+    (* All versions of the function that we have generated so far. *)
+    phases : phase_info Phasetab.table
 };
+
+(* FunctionalRecordUpdate instances *)
+open FunctionalRecordUpdate;
+local
+  fun from args return_type const raw_const definition mono_thm phase =
+    { args = args,
+      return_type = return_type,
+      const = const,
+      raw_const = raw_const,
+      definition = definition,
+      mono_thm = mono_thm,
+      phase = phase };
+  fun from' phase mono_thm definition raw_const const return_type args =
+    { args = args,
+      return_type = return_type,
+      const = const,
+      raw_const = raw_const,
+      definition = definition,
+      mono_thm = mono_thm,
+      phase = phase };
+  fun to f { args,
+             return_type,
+             const,
+             raw_const,
+             definition,
+             mono_thm,
+             phase } =
+        f args return_type const raw_const definition mono_thm phase;
+  fun update x = makeUpdate7 (from, from', to) x;
+in
+  fun phase_info_upd_args args pinfo = update pinfo (U#args args) $$;
+  fun phase_info_upd_return_type return_type pinfo = update pinfo (U#return_type return_type) $$;
+  fun phase_info_upd_definition definition pinfo = update pinfo (U#definition definition) $$;
+  fun phase_info_upd_mono_thm mono_thm pinfo = update pinfo (U#mono_thm mono_thm) $$;
+  fun phase_info_upd_phase phase pinfo = update pinfo (U#phase phase) $$;
+
+  fun phase_info_upd_const_ const pinfo = update pinfo (U#const const) $$;
+  fun phase_info_upd_raw_const_ raw_const pinfo = update pinfo (U#raw_const raw_const) $$;
+  fun phase_info_upd_const t = phase_info_upd_const_ t o phase_info_upd_raw_const_ (head_of t);
+end;
+
+fun function_info_upd_name name finfo = {
+  name = name,
+  is_simpl_wrapper = #is_simpl_wrapper finfo,
+  invented_body = #invented_body finfo,
+  phases = #phases finfo };
+fun function_info_upd_invented_body invented_body finfo = {
+  name = #name finfo,
+  is_simpl_wrapper = #is_simpl_wrapper finfo,
+  invented_body = invented_body,
+  phases = #phases finfo };
+fun function_info_upd_is_simpl_wrapper is_simpl_wrapper finfo = {
+  name = #name finfo,
+  is_simpl_wrapper = is_simpl_wrapper,
+  invented_body = #invented_body finfo,
+  phases = #phases finfo };
+fun function_info_add_phase phase finfo = {
+  name = #name finfo,
+  is_simpl_wrapper = #is_simpl_wrapper finfo,
+  invented_body = #invented_body finfo,
+  phases = Phasetab.update_new (#phase phase, phase) (#phases finfo) };
+
 
 datatype fn_info = FunctionInfo of {
   (* Database of "function_info" records. *)
-  function_info : function_def Symtab.table,
+  function_info : function_info Symtab.table,
 
   (* Functions directly called by a particular function. *)
   function_callees : string list Symtab.table,
@@ -185,22 +274,30 @@ in
   }
 end
 
-fun mk_function_info fn_info_dict =
+fun mk_function_info (fn_info_dict : function_info Symtab.table) =
 let
-  (* Construct a dictionary from the constant name of a function to its name. *)
+  (* Construct a dictionary from the constant names of a function to its name. *)
   val const_to_function =
-    map (fn (a, b) => (#raw_const b, a)) (Symtab.dest fn_info_dict)
+    Symtab.dest fn_info_dict
+    |> maps (fn (name, finfo) => Phasetab.dest (#phases finfo)
+               |> map (fn (phase, pinfo) => (#raw_const pinfo, name)))
+    (* If HL or WA are disabled, they reuse the L2 defs,
+     * so we ignore duplicates with the same function name. *)
+    |> sort_distinct (prod_ord Term_Ord.fast_term_ord fast_string_ord)
     |> Termtab.make
 
   (* Get a function's direct callees, based on the list of constants that appear
    * in its definition. *)
-  fun get_direct_callees function =
+  fun get_direct_callees finfo =
   let
+    val SOME (_, latest_phase) = Phasetab.max (#phases finfo);
     val body =
-      #definition function
+      #definition latest_phase
       |> Thm.concl_of
       |> Utils.rhs_of
   in
+    (* Ignore the bodies of SIMPL wrappers. *)
+    if #is_simpl_wrapper finfo then [] else
     Term.fold_aterms (fn t => fn a =>
           (Termtab.lookup const_to_function t
           |> Option.map single
@@ -254,17 +351,19 @@ let
           ([Thm.instantiate ([((("'a", 0), ["HOL.type"]), Thm.ctyp_of ctxt myvars_typ)], [])
                             @{thm undefined_function_body_def}], true)
   in
-    {
-      name = name,
-      args = arg_list,
-      return_type = return_type,
-      const = const,
-      raw_const = const,
-      definition = hd definition,
-      mono_thm = @{thm TrueI}, (* placeholder *)
-      invented_body = invented,
+    { name = name,
       is_simpl_wrapper = false,
-      finished = false
+      invented_body = invented,
+      phases = Phasetab.make [(CP,
+          {
+            args = arg_list,
+            return_type = return_type,
+            const = const,
+            raw_const = const,
+            definition = hd definition,
+            mono_thm = NONE,
+            phase = CP
+          })]
     }
   end
 in
@@ -277,48 +376,36 @@ in
 end
 
 (*
- * Remove calls from a set of functions, potentially breaking some
- * recursive function groups. Used for "scope" option.
- *)
-fun set_autocorres_scope (FunctionInfo fn_info) scope_fns = let
-  val const_to_function = #const_to_function fn_info
-  val fn_info_dict = #function_info fn_info
-  val function_callees =
-        #function_callees fn_info
-        |> Symtab.map (fn f => fn callees =>
-                if Symset.contains scope_fns f then callees else [])
-  in precalc_function_info const_to_function fn_info_dict function_callees end
-
-(*
  * Misc getters for function information.
  *)
 
-fun get_functions (FunctionInfo x) = (#function_info x);
+fun get_all_functions (FunctionInfo x) = (#function_info x);
 
-fun get_function_def fn_info name =
-    Symtab.lookup (get_functions fn_info) name
+fun get_function_info fn_info name =
+    Symtab.lookup (get_all_functions fn_info) name
     |> Utils.the' ("Function " ^ quote name ^ " does not exist")
 
-fun get_function_args fn_info name =
-    get_function_def fn_info name |> #args
+fun get_1_phase_info info phase =
+    Phasetab.lookup (#phases info) phase
+    |> Utils.the' ("Phase " ^ string_of_phase phase ^ " does not exist for function " ^ quote (#name info))
+
+fun get_phase_info fn_info phase name = get_1_phase_info (get_function_info fn_info name) phase
 
 fun get_function_from_const (fn_info as FunctionInfo x) term =
     Termtab.lookup (#const_to_function x) term
-    |> Option.map (get_function_def fn_info)
+    |> Option.map (get_function_info fn_info)
 
-(*
- * Map function information for each function in the given program.
- *
- * A return result of "NONE" indicates that the function no longer exists (for
- * example, it has been inlined).
- *)
 fun map_fn_info f (FunctionInfo x) =
-  Symtab.dest (#function_info x)
-  |> map snd
-  |> List.mapPartial f
-  |> map (fn x => (#name x, x))
+  #function_info x
+  |> Symtab.dest
+  |> List.mapPartial (fn (name, info) => Option.map (fn info' => (name, info')) (f info))
   |> Symtab.make
-  |> mk_function_info
+  |> mk_function_info;
+
+fun add_phases f =
+  map_fn_info (fn info => case f (#name info) info of
+                              NONE => SOME info
+                            | SOME pinfo' => SOME (function_info_add_phase pinfo' info));
 
 (* Get a list of functions called by the given function. *)
 fun get_function_callees (FunctionInfo functions) fn_name =
@@ -344,42 +431,6 @@ fun get_recursive_functions (FunctionInfo functions) =
  * functions remain in the same list. *)
 fun get_topo_sorted_functions (FunctionInfo functions) =
   #topo_sorted_functions functions
-
-(* SML record update insanity. *)
-fun fn_def_update_name new_val old
-  = { name = new_val,
-      args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old,  definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
-fun fn_def_update_args new_val old
-  = { name = #name old,
-      args = new_val,
-      return_type = #return_type old, const = #const old, raw_const = #raw_const old,  definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
-fun fn_def_update_const new_val old
-  = { name = #name old, args = #args old, return_type = #return_type old,
-      const = new_val, raw_const = head_of new_val,
-      definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
-fun fn_def_update_definition new_val old
-  = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old,
-      definition = new_val,
-      mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
-fun fn_def_update_return_type new_val old
-  = { name = #name old, args = #args old,
-      return_type = new_val,
-      const = #const old, raw_const = #raw_const old, definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
-fun fn_def_update_mono_thm new_val old
-  = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old, definition = #definition old,
-      mono_thm = new_val,
-      invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
-fun fn_def_update_invented_body new_val old
-  = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old, definition = #definition old, mono_thm = #mono_thm old,
-      invented_body = new_val,
-      is_simpl_wrapper = #is_simpl_wrapper old, finished = #finished old }
-fun fn_def_update_is_simpl_wrapper new_val old
-  = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old, definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old,
-      is_simpl_wrapper = new_val,
-      finished = #finished old }
-fun fn_def_update_finished new_val old
-  = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old, definition = #definition old, mono_thm = #mono_thm old, invented_body = #invented_body old, is_simpl_wrapper = #is_simpl_wrapper old,
-      finished = new_val }
 
 end
 
