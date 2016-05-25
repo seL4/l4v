@@ -2,6 +2,6 @@ theory AutoLevity_Hooks
 imports "AutoLevity_Base"
 begin
               
-ML \<open>(AutoLevity_Base.setup_command_hook ()) : unit\<close>
+setup \<open>AutoLevity_Base.setup_command_hook {trace_apply = true}\<close>
 
 end

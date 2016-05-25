@@ -16,6 +16,9 @@ imports AutoLevity_Base
 begin
 
 ML \<open>
+(* An antiquotation for creating json-like serializers for
+   simple records. Serializers for primitive types are automatically used,
+   while serializers for complex types are given as parameters. *)
 
 val _ = Theory.setup(
 ML_Antiquotation.inline @{binding string_record}
@@ -186,7 +189,16 @@ let
 in SOME (Position.line_file_only line' file) end handle Option => NONE
 
 
-fun search_by_lines ord_kind f h pos = 
+(* A Position.T table based on offsets (Postab_strict) can be collapsed into a line-based one
+   with lists of entries on for each line. This function searches such a table
+   for the closest entry, either backwards (LESS) or forwards (GREATER) from
+   the given position. *)
+ 
+(* TODO: If everything is sane then the search depth shouldn't be necessary. In practice
+   entries won't be more than one or two lines apart, but if something has gone wrong in the 
+   collection phase we might end up wasting a lot of time looking for an entry that doesn't exist. *)
+
+fun search_by_lines depth ord_kind f h pos = if depth = 0 then NONE else
   let
     val line_change = case ord_kind of LESS => ~1 | GREATER => 1 | _ => raise Fail "Bad relation"
     val idx_change = case ord_kind of GREATER => 1 | _ => 0;
@@ -199,7 +211,7 @@ fun search_by_lines ord_kind f h pos =
       
   | NONE => 
     (case (map_pos_line (fn i => i + line_change) pos) of 
-      SOME pos' => search_by_lines ord_kind f h pos'
+      SOME pos' => search_by_lines (depth - 1) ord_kind f h pos'
      | NONE => NONE)
    end
 
@@ -214,6 +226,7 @@ fun location_from_range (start_pos, end_pos) =
   SOME ({file = start_file, start_line = start_line, end_line = end_line} : location) end
   handle Option => NONE
 
+(* Here we collapse our proofs (lemma foo .. done) into single entries with start/end positions. *)
 
 fun get_command_ranges_of keywords thy_nm =
 let
@@ -222,11 +235,15 @@ let
 
   fun is_proof_cmd nm' = nm' = "apply" orelse nm' = "by" orelse nm' = "proof"
 
+  (* All top-level transactions for the given theory *)
+
   val (transactions, log) =
           Symtab.lookup (AutoLevity_Base.get_transactions ()) thy_nm 
           |> the_default (Postab_strict.empty, Postab_strict.empty)
           ||> Postab_strict.dest
           |>> Postab_strict.dest
+
+  (* Line-based position table of all apply statements for the given theory *)
 
   val applytab = 
     Symtab.lookup (AutoLevity_Base.get_applys ()) thy_nm
@@ -236,6 +253,10 @@ let
     |> Postab.make_list
     |> Postab.map (fn _ => sort (fn ((pos,_),(pos', _)) => pos_ord true (pos, pos')))
     
+
+  (* A special "ignored" command lets us find the real end of commands which span
+     multiple lines. After finding a real command, we assume the last "ignored" one
+     was part of the syntax for that command *)
 
   fun find_cmd_end last_pos ((pos', (nm', ext)) :: rest) =
     if is_ignored nm' then
@@ -252,9 +273,12 @@ let
 
   fun make_apply_deps lemma_deps =
     map (fn (nm, atts) => {name = nm, attribs = atts} : apply_dep) lemma_deps
+
+  (* For a given apply statement, search forward in the document for the closest method to retrieve
+     its lemma dependencies *)
    
   fun find_apply pos = if Postab.is_empty applytab then [] else
-   search_by_lines GREATER (Postab.lookup applytab) (fn (pos, (pos', _)) => pos_ord true (pos, pos')) pos
+   search_by_lines 5 GREATER (Postab.lookup applytab) (fn (pos, (pos', _)) => pos_ord true (pos, pos')) pos
    |> Option.map snd |> the_default [] |> make_apply_deps
   
   fun find_proof_end level ((pos', (nm', ext)) :: rest) =
@@ -348,7 +372,7 @@ fun file_of_thy thy =
 
 fun entry_of_thy thy = ({name = Context.theory_name thy, file = file_of_thy thy} : theory_entry)
 
-fun used_facts thm = map fst (AutoLevity_Base.used_facts 0 NONE thm)
+fun used_facts thm = map fst (AutoLevity_Base.used_facts NONE thm)
 
 fun get_reports_for_thy thy =
   let
@@ -360,7 +384,7 @@ fun get_reports_for_thy thy =
 
     val parent_facts = map Global_Theory.facts_of (Theory.parents_of thy);
 
-    val search_backwards = search_by_lines LESS (Postab.lookup tab) 
+    val search_backwards = search_by_lines 5 LESS (Postab.lookup tab) 
       (fn (pos, (pos', _)) => pos_ord true (pos, pos'))
       #> the
 
