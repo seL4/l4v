@@ -24,6 +24,7 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Spec::Functions;
 use Cwd;
+use Env;
 
 sub shell_quote { my ($_) = @_; s/([ ><();*?\\|#'"])/\\$1/g; return $_; }
 my $cmdline = join(' ', map { shell_quote($_) } ($0, @ARGV));
@@ -69,6 +70,16 @@ sub rel2abs {
       return $1.$relpath;
     }
   }
+  while ($abspath =~ /\$([A-Za-z0-9_]+)/) {
+    if (defined $ENV{$1}) {
+      $abspath =~ s/\$([A-Za-z0-9_]+)/${ENV{$1}}/;
+      diagnose (2, qq{DEBUG: $relpath -> $abspath\n});
+    } else {
+      diagnose (1, qq{DEBUG: path depends on "\$$1" which is unspecified.\n});
+      # HACK: just quit now so that we don't loop forever
+      last;
+    }
+  }
   return Cwd::abs_path($abspath) || $abspath; # avoid returning the empty string
   # abs_path returns the empty string if the path could not be resolved
   # because of a missing directory (the file itself does not need to exist)
@@ -108,15 +119,18 @@ sub splitname { my $_ = shift; m{^(.*/)?([^/]*)\.([^.]*)$}; return ($1,$2,$3); }
 # It is similar to sub rel2abs but uses $o{thypath} to locate theory files.
 # Certainly, files must exist.
 sub findthy {
-  my $relpath = shift;
+  my $ofn = shift;
+  my $thyname = shift;
   my $basedir = shift;
-  my ($dir,$tn,$ext) = splitname($relpath);
+  my ($dir,$tn,$ext) = splitname("$thyname.thy");
   my @dirs = (rel2abs($dir,$basedir), @thypath);
 
+  my $abspath;
   while ($#dirs>=0) {
-    my $abspath = (shift @dirs)."/$tn.$ext";
+    $abspath = (shift @dirs)."/$tn.$ext";
     return $abspath if -r $abspath;
   }
+  diagnose(1, qq{$ofn: dependent theory "$thyname" -> "$abspath" not found.\n});
   return;
 }
 
@@ -129,18 +143,17 @@ sub thy_dep {
   my $ofn = shift; # original filename as specified by the user (used in error messages)
   my $afn = shift; # absolute filename (hopefully unique) internal identifier
 
-  $dtn =~ m{^(?:.*/)?([^/]*)$}; 
+  $dtn =~ m{^(?:.*/)?([^/]*)$};
   foreach my $_ (@{$o{ignore}}) { return if $_ eq $1; };
 
   my $dir = (splitname($afn))[0];
-  my $dfn = findthy("$dtn.thy", $dir);
+  my $dfn = findthy($ofn, $dtn, $dir);
   if (defined $dfn) {
     push @{$deps{$afn}}, abs2rel($dfn, $o{basedir});
     if ($o{recursive}) { push @thyfiles, abs2rel($dfn); }
     else { $leaves{$dfn} = 1; }
   }
   else {
-    diagnose(1, qq{$ofn: dependent theory "$dtn" not found.\n});
     $afn = rel2abs("$dtn.thy", $dir);
     $missing{$afn} = 1;
   }
@@ -447,6 +460,11 @@ appropriate extension according the output format.
 For standard output, specify C<->.
 
 =back
+
+=head1 ENVIRONMENT
+
+If theory imports contain variables e.g. foo/$VAR/bar, the variables are
+expanded from the environment. If a variable is missing, a warning is printed.
 
 =head1 SEE ALSO
 
