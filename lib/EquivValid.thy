@@ -494,7 +494,7 @@ lemma liftME_ev:
 
 lemma whenE_ev:
   assumes a: "b \<Longrightarrow> equiv_valid_inv I A P m"
-  shows "equiv_valid_inv I A P (whenE b m)"
+  shows "equiv_valid_inv I A (\<lambda>s. b \<longrightarrow> P s) (whenE b m)"
   unfolding whenE_def by (auto intro: a returnOk_ev_pre)
 
 lemma whenE_throwError_bindE_ev:

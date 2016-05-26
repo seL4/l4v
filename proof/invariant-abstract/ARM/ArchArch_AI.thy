@@ -706,7 +706,8 @@ lemma perform_asid_control_invocation_st_tcb_at:
   done
 
 lemma set_cap_idx_up_aligned_area:
-  "\<lbrace>K (pcap = UntypedCap dev ptr pageBits idx) and cte_wp_at (op = pcap) slot and valid_objs\<rbrace> set_cap (max_free_index_update pcap) slot
+  "\<lbrace>K (\<exists>idx. pcap = UntypedCap dev ptr pageBits idx) and cte_wp_at (op = pcap) slot
+      and valid_objs\<rbrace> set_cap (max_free_index_update pcap) slot
   \<lbrace>\<lambda>rv s. (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr pageBits \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)\<rbrace>"
   apply (rule hoare_pre)
   apply (wp hoare_vcg_ex_lift set_cap_cte_wp_at)
@@ -717,7 +718,7 @@ lemma set_cap_idx_up_aligned_area:
                         p_assoc_help valid_cap_def valid_untyped_def cap_aligned_def)
   done
 
-primrec  get_untyped_cap_idx :: "cap \<Rightarrow> nat"
+primrec(nonexhaustive)  get_untyped_cap_idx :: "cap \<Rightarrow> nat"
 where "get_untyped_cap_idx (UntypedCap dev ref sz idx) = idx"
 
 lemma aci_invs':

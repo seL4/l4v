@@ -40,10 +40,11 @@ lemma delete_objects_irq_masks[wp]:
   apply(wp dmo_wp no_irq_mapM_x no_irq | simp add: freeMemory_def no_irq_storeWord)+
   done
   
-
 crunch irq_masks[wp]: invoke_untyped "\<lambda>s. P (irq_masks_of_state s)"
-  (ignore: delete_objects wp: hoare_unless_wp 
-    crunch_wps dmo_wp no_irq simp: crunch_simps no_irq_clearMemory no_irq_cleanCacheRange_PoU mapM_x_def_bak)
+  (ignore: delete_objects wp: crunch_wps dmo_wp
+       wp: mapME_x_inv_wp preemption_point_inv
+     simp: crunch_simps no_irq_clearMemory no_irq_cleanCacheRange_PoU
+           mapM_x_def_bak unless_def)
 
 crunch irq_masks[wp]: cap_insert "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps)

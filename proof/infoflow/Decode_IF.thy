@@ -25,8 +25,7 @@ lemma data_to_obj_type_rev:
 lemma ensure_empty_rev:
   "reads_equiv_valid_inv A aag (K (is_subject aag (fst slot))) (ensure_empty slot)"
   unfolding ensure_empty_def fun_app_def
-  apply (wp get_cap_rev)
-  apply simp
+  apply (wp get_cap_rev | simp)+
   done
 
 
@@ -116,11 +115,14 @@ lemma decode_cnode_invocation_rev:
   unfolding decode_cnode_invocation_def fun_app_def
   apply (rule equiv_valid_guard_imp)
   apply (simp add: unlessE_whenE)
-  apply (wp if_apply_ev derive_cap_rev whenE_inv hoare_vcg_imp_lift_R
+  apply wp
+  apply ((wp if_apply_ev derive_cap_rev whenE_inv hoare_vcg_imp_lift_R
             lookup_slot_for_cnode_op_rev hoare_vcg_all_lift_R
             lookup_slot_for_cnode_op_authorised ensure_empty_rev get_cap_rev
         | simp add: split_def unlessE_whenE split del: split_if
-        | wpc)+
+               del: hoare_True_E_R
+        | wpc
+        | (wp_once hoare_drop_imps, wp_once lookup_slot_for_cnode_op_authorised))+)
    apply(auto dest: bspec[where x="excaps ! 0"] bspec[where x="excaps ! Suc 0"] 
               intro: nth_mem elim: prop_of_obj_ref_of_cnode_cap  
               dest!: is_cnode_into_is_subject simp: expand_len_gr_Suc_0)
@@ -129,7 +131,9 @@ lemma decode_cnode_invocation_rev:
 lemma range_check_ev:
   "equiv_valid_inv I A \<top> (range_check v v_min v_max)"
   unfolding range_check_def fun_app_def unlessE_whenE
-  apply wp
+  apply (rule equiv_valid_guard_imp)
+   apply wp
+  apply simp
   done
 
 
@@ -202,7 +206,7 @@ lemma OR_choice_def2: "(\<And>P. \<lbrace>P\<rbrace> (c :: bool det_ext_monad) \
 lemma check_prio_rev:
   "reads_respects aag l (is_subject aag \<circ> cur_thread) (check_prio prio)"
   apply (clarsimp simp: check_prio_def)
-  apply (wp thread_get_reads_respects)
+  apply (wp thread_get_reads_respects hoare_drop_imps)
   by (clarsimp simp: reads_equiv_def)
 
 lemma decode_set_priority_rev:

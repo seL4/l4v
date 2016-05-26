@@ -70,9 +70,11 @@ lemma detype_irq_state_of_state[simp]:
   apply(simp add: detype_def)
   done
 
-crunch irq_state_of_state[wp]: invoke_untyped "\<lambda>s. P (irq_state_of_state s)"
-  (wp: dmo_wp modify_wp hoare_unless_wp crunch_wps simp: crunch_simps 
-    ignore: freeMemory simp: freeMemory_def storeWord_def clearMemory_def machine_op_lift_def machine_rest_lift_def mapM_x_defsym)
+text {* Not true of invoke_untyped any more. *}
+crunch irq_state_of_state[wp]: retype_region,create_cap,delete_objects "\<lambda>s. P (irq_state_of_state s)"
+  (wp: dmo_wp modify_wp crunch_wps 
+    simp: crunch_simps ignore: freeMemory
+    simp: freeMemory_def storeWord_def clearMemory_def machine_op_lift_def machine_rest_lift_def mapM_x_defsym)
 
 crunch irq_state_of_state[wp]: invoke_irq_control "\<lambda>s. P (irq_state_of_state s)"
 
@@ -2184,7 +2186,7 @@ lemma perform_asid_control_invocation_globals_equiv:
                             word1 \<noteq> idle_thread b \<and>
                             (\<exists> idx. cte_wp_at (op = (UntypedCap False word1 pageBits idx)) cslot_ptr2 b) \<and> 
                              descendants_of cslot_ptr2 (cdt b) = {} \<and>
-                             pspace_no_overlap word1 pageBits b" 
+                             pspace_no_overlap_range_cover word1 pageBits b" 
          in hoare_strengthen_post)
     prefer 2
     apply (clarsimp simp: globals_equiv_def invs_valid_global_objs)
@@ -2194,22 +2196,22 @@ lemma perform_asid_control_invocation_globals_equiv:
     apply (rule conjI, fastforce simp: cte_wp_at_def)
     apply (clarsimp simp: obj_bits_api_def default_arch_object_def)
     apply (frule untyped_cap_aligned, simp add: invs_valid_objs)
+    apply (clarsimp simp: cte_wp_at_caps_of_state)
+    apply (strengthen refl caps_region_kernel_window_imp[mk_strg I E])
+    apply (simp add: invs_valid_objs invs_cap_refs_in_kernel_window
+                     atLeastatMost_subset_iff word_and_le2
+                     is_aligned_neg_mask_eq)
     apply(rule conjI, rule descendants_range_caps_no_overlapI)
        apply assumption
-      apply(simp add: is_aligned_neg_mask_eq)
+      apply(simp add: is_aligned_neg_mask_eq cte_wp_at_caps_of_state)
      apply(simp add: is_aligned_neg_mask_eq empty_descendants_range_in)
-    apply(rule conjI, drule cap_refs_in_kernel_windowD2)
-      apply(simp add: invs_cap_refs_in_kernel_window)
-     apply(fastforce simp: cap_range_def is_aligned_neg_mask_eq)
     apply(clarsimp simp: range_cover_def)
     apply(subst is_aligned_neg_mask_eq[THEN sym], assumption)
     apply(simp add: mask_neg_mask_is_zero pageBits_def)
-    apply (rule conjI)
-     apply (rule free_index_of_UntypedCap[symmetric])
-    apply (simp add: invs_valid_objs)
-   apply(wp delete_objects_invs_ex[where dev=False] delete_objects_pspace_no_overlap[where dev=False]
+   apply(wp add: delete_objects_invs_ex[where dev=False] delete_objects_pspace_no_overlap[where dev=False]
             delete_objects_globals_equiv delete_objects_valid_ko_at_arm
             hoare_vcg_ex_lift 
+            del: Untyped_AI.delete_objects_pspace_no_overlap
         | simp add: page_bits_def)+
   apply (clarsimp simp: conj_comms invs_valid_ko_at_arm invs_psp_aligned invs_valid_objs valid_aci_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)

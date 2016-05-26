@@ -1931,12 +1931,9 @@ proof -
               set_cap_caps_no_overlap set_cap_no_overlap
               set_cap_cte_wp_at set_cap_cte_cap_wp_to)
             apply (simp add:region_in_kernel_window_def obj_bits_api_def default_arch_object_def)
-            apply (wp set_untyped_cap_caps_overlap_reserved get_cap_wp)
-            apply (rule hoare_strengthen_post)
-            apply (rule set_cap_device_and_range_aligned[where dev = False,simp])
-             apply simp
-            apply simp
-            apply (wp set_untyped_cap_caps_overlap_reserved get_cap_wp)
+            apply (wp set_untyped_cap_caps_overlap_reserved get_cap_wp
+                      set_cap_no_overlap set_cap_cte_wp_at
+                    | strengthen exI[where x=cref])+
           apply clarsimp
          apply clarsimp
         apply (intro set_eqI)
@@ -1948,7 +1945,7 @@ proof -
                            2 \<le> page_bits" in hoare_gen_asm)
       apply (simp add: delete_objects_rewrite is_aligned_neg_mask_eq)
       apply (rule_tac Q="\<lambda>_ s.
-        invs s \<and> valid_etcbs s \<and> pspace_no_overlap frame pageBits s \<and>
+        invs s \<and> valid_etcbs s \<and> pspace_no_overlap_range_cover frame pageBits s \<and>
         descendants_range_in (untyped_range (cap.UntypedCap False frame pageBits idx)) cref s \<and>
         cte_wp_at (op = (cap.UntypedCap False frame pageBits idx)) cref s \<and>
         cte_wp_at (op = cap.NullCap) cnode_ref s \<and>

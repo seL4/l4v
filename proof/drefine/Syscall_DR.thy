@@ -689,12 +689,9 @@ lemma perform_invocation_corres:
   apply (case_tac i')
     apply (simp_all add: translate_invocation_def split: Invocations_A.invocation.splits)
 (* untyped *)
-    apply (simp add:liftE_bindE)
-    apply (simp add:liftE_def returnOk_def)
-    apply (rule corres_guard_imp[OF corres_split'])
-    apply (rule invoke_untyped_corres)
-     apply (rule corres_trivial,simp)
-     apply wp
+    apply (simp add: liftME_def[symmetric])
+    apply (rule corres_guard_imp, rule invoke_untyped_corres)
+     apply clarsimp
     apply clarsimp
 
 (* send_ipc *)

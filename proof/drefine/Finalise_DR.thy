@@ -1842,12 +1842,12 @@ lemma dcorres_unmap_large_section:
     apply (simp add:pd_bits_def pageBits_def)
    apply (simp add:shiftr_shiftl1)
    apply (subst (asm) is_aligned_neg_mask_eq[where n = 2])
-    apply (erule aligned_after_mask[OF aligned_add_aligned])
+    apply (erule is_aligned_andI1[OF aligned_add_aligned])
      apply (simp add:shiftl_t2n[symmetric,where n =2,
        simplified field_simps,simplified] is_aligned_shiftl_self)
     apply simp
    apply (subst (asm) is_aligned_neg_mask_eq[where n = 2])
-    apply (erule aligned_after_mask[OF is_aligned_weaken])
+    apply (erule is_aligned_andI1[OF is_aligned_weaken])
     apply simp
    apply (subst (asm) and_mask_plus)
        apply (erule(1) lookup_pd_slot_aligned_6)
@@ -1954,12 +1954,12 @@ lemma dcorres_unmap_large_page:
     apply (simp add:pt_bits_def pageBits_def)
    apply (simp add:shiftr_shiftl1)
    apply (subst (asm) is_aligned_neg_mask_eq[where n = 2])
-    apply (erule aligned_after_mask[OF aligned_add_aligned])
+    apply (erule is_aligned_andI1[OF aligned_add_aligned])
      apply (simp add:shiftl_t2n[symmetric,where n =2,
        simplified field_simps,simplified] is_aligned_shiftl_self)
     apply simp
    apply (subst (asm) is_aligned_neg_mask_eq[where n = 2])
-    apply (erule aligned_after_mask[OF is_aligned_weaken])
+    apply (erule is_aligned_andI1[OF is_aligned_weaken])
     apply simp
    apply (subst (asm) and_mask_plus)
        apply simp

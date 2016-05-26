@@ -2088,80 +2088,114 @@ lemma delete_objects_silc_inv:
   apply (wp detype_silc_inv |  simp add: ptr_range_def)+
   done
 
-(* yet another horrendous invoke_untyped proof -- TODO: clean me up *)
+lemma set_cap_silc_inv_simple:
+  "\<lbrace> silc_inv aag st and cte_wp_at (\<lambda>cp. cap_irqs cp = cap_irqs cap
+          \<and> Structures_A.obj_refs cp = Structures_A.obj_refs cap) slot
+      and K (is_subject aag (fst slot))\<rbrace>
+    set_cap cap slot
+    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  apply (wp set_cap_silc_inv)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (rule conjI; clarsimp)
+   apply (drule caps_of_state_cteD)
+   apply (frule(1) silc_invD)
+    apply (clarsimp simp: intra_label_cap_def)
+    apply (rule exI, rule conjI, assumption)
+    apply (simp add: cap_points_to_label_def)
+   apply (simp add: slots_holding_overlapping_caps_def)
+  apply (simp add: silc_inv_def)
+  done
+
+lemma reset_untyped_cap_silc_inv:
+  "\<lbrace> silc_inv aag st and cte_wp_at is_untyped_cap slot
+      and invs and pas_refined aag
+      and (\<lambda>s. descendants_of slot (cdt s) = {})
+      and K (is_subject aag (fst slot))\<rbrace>
+    reset_untyped_cap slot 
+  \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (simp add: reset_untyped_cap_def)
+  apply (wp set_cap_silc_inv_simple | simp add: unless_def)+
+    apply (rule valid_validE, rule_tac Q="\<lambda>_. cte_wp_at is_untyped_cap slot
+          and silc_inv aag st" in hoare_strengthen_post)
+     apply (rule validE_valid, rule mapME_x_inv_wp, rule hoare_pre)
+      apply (wp mapME_x_inv_wp preemption_point_inv set_cap_cte_wp_at
+                set_cap_silc_inv_simple | simp)+
+     apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
+    apply simp
+   apply (wp hoare_vcg_const_imp_lift delete_objects_silc_inv get_cap_wp | simp)+
+  apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
+  apply (frule(1) cap_auth_caps_of_state)
+  apply (clarsimp simp: aag_cap_auth_def aag_has_Control_iff_owns
+                        ptr_range_def[symmetric])
+  apply (frule if_unsafe_then_capD[OF caps_of_state_cteD], clarsimp+)
+  apply (drule ex_cte_cap_protects[OF _ _ _ _ order_refl], erule caps_of_state_cteD)
+     apply (clarsimp simp: descendants_range_def2 empty_descendants_range_in)
+    apply clarsimp+
+  done
+
+lemma reset_untyped_cap_untyped_cap:
+  "\<lbrace>cte_wp_at (\<lambda>cp. is_untyped_cap cp \<and> P True (untyped_range cp)) slot
+      and invs
+      and (\<lambda>s. descendants_of slot (cdt s) = {})\<rbrace>
+    reset_untyped_cap slot 
+  \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>cp. P (is_untyped_cap cp) (untyped_range cp)) slot\<rbrace>"
+  apply (simp add: reset_untyped_cap_def)
+  apply (rule hoare_pre)
+   apply (wp set_cap_cte_wp_at | simp add: unless_def)+
+     apply (rule valid_validE, rule_tac Q="\<lambda>rv. cte_wp_at (\<lambda>cp. is_untyped_cap cp
+           \<and> is_untyped_cap cap
+           \<and> untyped_range cp = untyped_range cap
+           \<and> P True (untyped_range cp)) slot"
+       in hoare_strengthen_post)
+     apply (wp mapME_x_inv_wp preemption_point_inv set_cap_cte_wp_at
+       | simp | clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def
+                               ptr_range_def[symmetric])+
+   apply (wp get_cap_wp)
+  apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps ptr_range_def[symmetric])
+  apply (frule if_unsafe_then_capD[OF caps_of_state_cteD], clarsimp+)
+  apply (drule ex_cte_cap_protects[OF _ _ _ _ order_refl], erule caps_of_state_cteD)
+     apply (clarsimp simp: descendants_range_def2 empty_descendants_range_in)
+    apply clarsimp+
+  done
+
 lemma invoke_untyped_silc_inv:
-  "\<lbrace> silc_inv aag st and authorised_untyped_inv_state aag ui and valid_untyped_inv ui and
-                           K (authorised_untyped_inv aag ui)\<rbrace>
+  "\<lbrace> silc_inv aag st and invs and pas_refined aag 
+      and ct_active and valid_untyped_inv ui
+      and K (authorised_untyped_inv aag ui)\<rbrace>
    invoke_untyped ui
    \<lbrace> \<lambda>_. silc_inv aag st \<rbrace>"
   apply(rule hoare_gen_asm)
-  apply(case_tac ui, simp add: mapM_x_def[symmetric] authorised_untyped_inv_def)
-  apply(rename_tac word1 word2 apiobjt nat list dev)
-  apply wp
-       apply(rule_tac Q="\<lambda> r s. silc_inv aag st s \<and> (\<forall> x\<in>set list. is_subject aag (fst x)) \<and> (\<forall> oref\<in>set orefs. is_subject aag oref)" in hoare_strengthen_post)
-  apply (wp mapM_x_wp[OF _ subset_refl] create_cap_silc_inv retype_region_silc_inv
-            retype_region_ret_is_subject[simplified] set_cap_silc_inv
-            slots_holding_overlapping_caps_from_silc_inv[where aag=aag and st=st] 
-            hoare_vcg_ex_lift delete_objects_silc_inv get_cap_wp static_imp_wp
-        | erule in_set_zipE 
-        | clarsimp simp: split_paired_Ball 
-        | blast )+
-  apply(intro allI impI conjI)
-              apply(simp add: valid_untyped_inv_def)
-              apply(drule (1) silc_invD)
-               apply(fastforce simp: intra_label_cap_def cap_points_to_label_def)
-              apply(elim exE, rename_tac lslot)
-              apply(rule_tac x="fst lslot" in exI, simp add: authorised_untyped_inv_state_def)
-              apply(rule_tac x="snd lslot" in exI)
-              apply(drule (1) cte_wp_at_eqD2)
-              apply(simp add: bits_of_def)
-              apply(elim conjE)
-              apply(rule subst[rotated, OF _ slots_holding_overlapping_caps_eq])
-                apply assumption
-               apply simp
-              apply simp
-             apply(fastforce simp: authorised_untyped_inv_state_def dest: cte_wp_at_eqD2)
-            apply(fastforce simp: silc_inv_def)
-           apply(drule (1) cte_wp_at_eqD2, simp)
-           apply(subst (asm) bits_of_UntypedCap[symmetric], assumption)
-          apply(drule (1) cte_wp_at_eqD2, clarsimp simp: authorised_untyped_inv_state_def bits_of_UntypedCap ptr_range_def cte_wp_at_sym p_assoc_help)
-         apply(drule (1) cte_wp_at_eqD2, simp)
-         apply(subst (asm) bits_of_UntypedCap[symmetric], assumption)
-        apply(drule (1) cte_wp_at_eqD2, clarsimp simp: authorised_untyped_inv_state_def bits_of_UntypedCap ptr_range_def cte_wp_at_sym p_assoc_help)        
-       apply(drule (1) silc_invD)
-        apply(fastforce simp: intra_label_cap_def cap_points_to_label_def)
-       apply(elim exE, rename_tac lslot)
-       apply(rule_tac x="fst lslot" in exI, simp)
-       apply(rule_tac x="snd lslot" in exI)
-       apply(drule (1) cte_wp_at_eqD2)
-       apply(simp add: bits_of_def)
-       apply(elim conjE)
-       apply(rule subst[rotated, OF _ slots_holding_overlapping_caps_eq])
-         apply assumption
-        apply simp
-       apply simp
-      apply(fastforce simp: silc_inv_def)
-     apply(simp add: cte_wp_at_sym)
-     apply(drule (1) cte_wp_at_eqD2)
-     apply(simp add: bits_of_UntypedCap)
-    apply(simp add: cte_wp_at_sym)
-    apply(drule (1) cte_wp_at_eqD2)
-    apply(clarsimp simp: bits_of_UntypedCap ptr_range_def authorised_untyped_inv_state_def word_and_le2 p_assoc_help word_and_le1)
-    apply(drule spec, erule impE, assumption)
-    apply(simp add: bits_of_UntypedCap)
-    apply(drule_tac y=word2 in order_trans[rotated])
-     apply(rule word_and_le2)
-    apply fastforce
-   apply(drule (1) cte_wp_at_eqD2, simp)
-   apply(subst (asm) bits_of_UntypedCap[symmetric], assumption)
-  apply(simp add: cte_wp_at_sym)
-  apply(drule (1) cte_wp_at_eqD2)
-  apply(clarsimp simp: bits_of_UntypedCap ptr_range_def authorised_untyped_inv_state_def p_assoc_help)
-  apply(drule spec, erule impE, assumption)
-  apply(simp add: bits_of_UntypedCap)
-  apply(drule_tac y=word2 in order_trans[rotated])
-   apply(rule word_and_le2)
-  by fastforce
+  apply (rule hoare_pre)
+   apply (rule_tac Q="\<lambda>_. silc_inv aag st
+          and cte_wp_at (\<lambda>cp. is_untyped_cap cp \<longrightarrow> (\<forall>x \<in> untyped_range cp.
+              is_subject aag x)) (case ui of Invocations_A.Retype src_slot _ _ _ _ _ _ _ \<Rightarrow>
+              src_slot)" in hoare_strengthen_post)
+    apply (rule invoke_untyped_Q)
+        apply (rule hoare_pre, wp create_cap_silc_inv create_cap_pas_refined)
+        apply (clarsimp simp: authorised_untyped_inv_def)
+        apply (auto simp: cte_wp_at_caps_of_state)[1]
+       apply ((wp | simp)+)[1]
+      apply (rule hoare_pre)
+       apply (wp retype_region_silc_inv retype_cte_wp_at | simp)+
+      apply clarsimp
+      apply (strengthen range_cover_le[mk_strg I E])
+      apply (clarsimp simp: cte_wp_at_caps_of_state)
+      apply (simp add: invs_valid_pspace)
+      apply (erule ball_subset)
+      apply (simp add: word_and_le2 field_simps)
+     apply (rule hoare_pre)
+      apply (wp set_cap_silc_inv_simple set_cap_cte_wp_at)
+     apply (cases ui, clarsimp simp: cte_wp_at_caps_of_state is_cap_simps
+                 split del: split_if cong: if_cong)
+     apply (clarsimp simp: authorised_untyped_inv_def)
+    apply (wp reset_untyped_cap_silc_inv reset_untyped_cap_untyped_cap)
+   apply simp
+  apply (cases ui, clarsimp simp: cte_wp_at_caps_of_state
+    authorised_untyped_inv_def)
+  apply (frule(1) cap_auth_caps_of_state)
+  apply (clarsimp simp: aag_cap_auth_def aag_has_Control_iff_owns)
+  done
 
 lemma perform_page_table_invocation_silc_ionv_get_cap_helper:
    "\<lbrace>silc_inv aag st and cte_wp_at (is_pt_cap or is_pg_cap) xa\<rbrace>

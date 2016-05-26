@@ -1107,8 +1107,7 @@ crunch globals_equiv[wp]: invoke_domain "globals_equiv st"
 
 lemma perform_invocation_globals_equiv:
   "\<lbrace>invs and ct_active and valid_invocation oper and globals_equiv (st :: det_ext state) and 
-    authorised_for_globals_inv oper 
-    and K (case oper of (InvokeUntyped i) \<Rightarrow> (0::word32) < of_nat (length (slots_of_untyped_inv i)) | _ \<Rightarrow> True)\<rbrace>
+    authorised_for_globals_inv oper \<rbrace>
     perform_invocation blocking calling oper
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (subst pi_cases)
@@ -1128,30 +1127,6 @@ lemma perform_invocation_globals_equiv:
                         authorised_for_globals_inv_def)
   done
 
-lemma dui_length_slots:
-  "\<lbrace>\<top>\<rbrace>
-  decode_untyped_invocation label args slot cap excaps
-  \<lbrace>\<lambda>rv s. (0::word32) < of_nat (length (slots_of_untyped_inv rv))\<rbrace>,-"
-  unfolding decode_untyped_invocation_def
-  apply(rule hoare_pre)
-  apply (simp add: unlessE_def[symmetric] whenE_def[symmetric] unlessE_whenE
-           split del: split_if)
-    apply(wp whenE_throwError_wp
-         |wpc
-         |simp add: nonzero_unat_simp split del: split_if add: split_def)+
-  apply(intro impI, rule TrueI)
-  done
-
-lemma di_untyped_length_slots:
-  "\<lbrace>\<top>\<rbrace>
-   decode_invocation label args cap_index slot cap excaps
-   \<lbrace>\<lambda> rv s. (case rv of (InvokeUntyped ui) \<Rightarrow> (0::word32) < of_nat (length (slots_of_untyped_inv ui)) | _ \<Rightarrow> True)\<rbrace>,-"
-  unfolding decode_invocation_def
-  apply(rule hoare_pre)
-  apply(wp dui_length_slots | wpc | simp add: comp_def split_def uncurry_def)+
-  apply auto
-  done
-
 lemma handle_invocation_globals_equiv:
   "\<lbrace>invs and ct_active and globals_equiv st\<rbrace> handle_invocation calling blocking \<lbrace>\<lambda>_. globals_equiv (st::det_ext state)\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
@@ -1167,7 +1142,6 @@ lemma handle_invocation_globals_equiv:
                     set_thread_state_ct_st' set_thread_state_globals_equiv
                     sts_authorised_for_globals_inv
                     decode_invocation_authorised_globals_inv
-                    di_untyped_length_slots
                 | simp add: crunch_simps invs_imps)+
   apply (auto intro: st_tcb_ex_cap simp: ct_active_not_idle ct_in_state_def)
   done

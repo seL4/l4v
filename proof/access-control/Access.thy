@@ -1596,41 +1596,7 @@ lemma cap_cur_auth_caps_of_state:
   \<Longrightarrow> pas_cap_cur_auth aag cap"
   by (metis cap_auth_caps_of_state)
 
-lemma new_range_subset':
-  assumes al: "is_aligned (ptr :: 'a :: len word) sz" and al': "is_aligned x sz'"
-  and     szv: "sz' \<le> sz" and xsz: "x < 2 ^ sz"
-  shows       "{ptr + x .. (ptr + x) + 2 ^ sz' - 1} \<subseteq> {ptr .. ptr + 2 ^ sz - 1}"
-  using al
-proof (rule is_aligned_get_word_bits)
-  assume p0: "ptr = 0" and szv': "len_of TYPE ('a) \<le> sz"
-  hence "(2 :: 'a word) ^ sz = 0" by simp
-
-  thus ?thesis using p0
-    apply -
-    apply (erule ssubst)
-    apply simp
-    done
-next
-  assume szv': "sz < len_of TYPE('a)"
-
-  hence blah: "2 ^ (sz - sz') < (2 :: nat) ^ len_of TYPE('a)"
-    using szv
-    apply -
-    apply (rule power_strict_increasing, simp+)
-    done
-  show ?thesis using szv szv'
-    apply (intro range_subsetI)
-     apply (rule is_aligned_no_wrap' [OF al xsz])
-    apply (simp only: add_diff_eq[symmetric])
-    apply (subst add.assoc, rule word_plus_mono_right)
-    apply (subst iffD1 [OF le_m1_iff_lt])
-    apply (simp add: p2_gt_0 word_bits_conv)
-    apply (rule is_aligned_add_less_t2n[OF al' _ szv xsz])
-    apply simp
-    apply (simp add: field_simps szv al is_aligned_no_overflow)
-    done
-qed
-
+lemmas new_range_subset' = aligned_range_offset_subset
 lemmas ptr_range_subset = new_range_subset' [folded ptr_range_def]
 
 lemma pbfs_less_wb:

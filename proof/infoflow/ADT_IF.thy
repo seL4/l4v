@@ -3047,6 +3047,34 @@ lemma irq_state_inv_trivE':
   apply simp
   done
 
+crunch irq_state_of_state[wp]: init_arch_objects "\<lambda>s. P (irq_state_of_state s)"
+  (wp: crunch_wps dmo_wp ignore: do_machine_op)
+
+lemma reset_untyped_cap_irq_state_inv:
+  "\<lbrace>irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
+      reset_untyped_cap slot \<lbrace>\<lambda>y. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>y. irq_state_next st\<rbrace>"
+  apply (cases "irq_is_recurring irq st", simp_all)
+  apply (simp add: reset_untyped_cap_def)
+  apply (rule hoare_pre)
+   apply (wp no_irq_clearMemory mapME_x_wp'
+             hoare_vcg_const_imp_lift
+             preemption_point_irq_state_inv'[where irq=irq]
+     | rule irq_state_inv_triv
+     | simp
+     | wp_once dmo_wp)+
+  done
+
+lemma invoke_untyped_irq_state_inv:
+  "\<lbrace>irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
+    invoke_untyped ui \<lbrace>\<lambda>y. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>y. irq_state_next st\<rbrace>"
+  apply (cases ui, simp add: invoke_untyped_def mapM_x_def[symmetric])
+  apply (rule hoare_pre)
+   apply (wp mapM_x_wp' hoare_whenE_wp
+             reset_untyped_cap_irq_state_inv[where irq=irq]
+     | rule irq_state_inv_triv
+     | simp)+
+  done
+
 lemma perform_invocation_irq_state_inv:
    "\<lbrace>irq_state_inv st and
       (\<lambda>s. \<forall>blah.
@@ -3060,7 +3088,7 @@ lemma perform_invocation_irq_state_inv:
    perform_invocation x y oper \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply(case_tac oper)
           apply(simp | wp)+
-          apply((wp irq_state_inv_triv | simp)+)[4]
+          apply((wp invoke_untyped_irq_state_inv[where irq=irq] irq_state_inv_triv | simp)+)[4]
       apply((wp invoke_tcb_irq_state_inv invoke_cnode_irq_state_inv[simplified validE_R_def] | simp add: invoke_domain_def |blast)+)[5]
       apply (rule hoare_validE_cases)
     apply(rule hoare_post_impErr[OF valid_validE])
