@@ -10,7 +10,7 @@
 
 theory AutoCorresCRefine
 
-imports Ctac "../../autocorres/LegacyAutoCorres"
+imports Ctac "../../tools/autocorres/LegacyAutoCorres"
 
 begin
 

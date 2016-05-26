@@ -9,7 +9,7 @@
  *)
 
 theory AutoLevity (* FIXME: broken *)
-imports "./proof_counting/ProofGraph"
+imports "../tools/proofcount/ProofGraph"
 begin
 ML {* val infoflow_file = "~~/../lib/proof_counting/Noninterference_Refinement_graphs.xml" *}
 ML {* val (full_spec,proof_spec_raw,thy_deps) = Proof_Graph.read_graph_spec_from infoflow_file *}

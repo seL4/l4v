@@ -14,7 +14,7 @@ imports
   CSpaceInv_AI
   "../../spec/abstract/KernelInit_A"
 uses
-  "../../misc/isabelle_hacks/const_deps.ML"
+  "../../internal/misc/isabelle_hacks/const_deps.ML"
 begin
 
 lemma propagate_do_kernel_op:

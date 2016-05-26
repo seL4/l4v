@@ -9,7 +9,7 @@
  *)
 
 theory Noninterference_Base_Enabledness_weak_asym
-imports Simulation
+imports "../../lib/Simulation"
 begin
 
 text {*

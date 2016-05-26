@@ -12,7 +12,7 @@ theory AutoCorresModifiesProofs imports
   "../../lib/ml-helpers/TermPatternAntiquote"
   "../../tools/autocorres/AutoCorres"
   "../../lib/SIMPL_Lemmas"
-  "../../lib/wp/NonDetMonadVCG"
+  "../../lib/Monad_WP/NonDetMonadVCG"
 begin
 
 text \<open>

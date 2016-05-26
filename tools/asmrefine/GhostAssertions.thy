@@ -1,6 +1,6 @@
 theory GhostAssertions
 
-imports CTranslation
+imports "../c-parser/CTranslation"
 
 begin
 
