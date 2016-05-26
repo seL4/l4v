@@ -25,6 +25,7 @@ use Pod::Usage;
 use File::Spec::Functions;
 use Cwd;
 use Env;
+no warnings 'experimental';
 
 sub shell_quote { my ($_) = @_; s/([ ><();*?\\|#'"])/\\$1/g; return $_; }
 my $cmdline = join(' ', map { shell_quote($_) } ($0, @ARGV));
@@ -165,8 +166,8 @@ sub read_thy {
   my $re_string  = '(?:".*?")';                       # "simple quoted string"
   my $re_id      = '(?:'.$re_word.'|'.$re_string.')'; # bare word or "quoted string"
   my $re_braces  = '(?:\{\*.*?\*\})';                 # {* curly braced string *}
-  my $re_comment = '(?:\(\*.*?\*\))';                 # (* parenthesized comment *)
   my $re_cartouche = '(?:\\\\<open>.*?\\\\<close>)';  # ‹cartouches›
+  my $re_comment = '(?:\(\*(?:(?!\(\*).)*?\*\))';     # (* parenthesized comment *)
 
   my $ofn = shift; # original filename as specified by the user (used in error messages)
   my $afn = shift; # absolute filename (hopefully unique) internal identifier
@@ -180,7 +181,9 @@ sub read_thy {
          (not $content =~ m/\bbegin\b/ or $content =~ m/--|\bheader\b|\(\*/)) {
     $content .= <FILE>;
     $content =~ s/\n$/ /;
-    $content =~ s/(?:$re_comment|(?:--|\bheader)\s*(?:$re_braces|$re_id))//gc;
+    $content =~ s/(?:--|\bheader)\s*(?:$re_braces|$re_id)//gc;
+    # iterate to strip (* nested (* comments *) *)
+    1 while $content =~ s/$re_comment//gc;
   }
   my $body = '';
   while (not eof(FILE)) {
