@@ -370,8 +370,11 @@ where
    | PageCap r R mt pgs x \<Rightarrow> returnOk (PageCap r R mt pgs None)
    | ASIDControlCap \<Rightarrow> returnOk c
    | ASIDPoolCap _ _ \<Rightarrow> returnOk c
+(* FIXME x64-vtd: *)
+(*
    | IOSpaceCap _ _ \<Rightarrow> returnOk c
    | IOPageTableCap _ _ _ \<Rightarrow> returnOk c
+*)
    | IOPortCap _ _ \<Rightarrow> returnOk c"
 
 (* FIXME: update when IOSpace comes through *)
@@ -436,7 +439,10 @@ where
 | "arch_reset_mem_mapping (PageDirectoryCap ptr ma) = PageDirectoryCap ptr None"
 | "arch_reset_mem_mapping (PDPointerTableCap ptr ma) = PDPointerTableCap ptr None"
 | "arch_reset_mem_mapping (PML4Cap ptr ma) = PML4Cap ptr None"
+(* FIXME x64-vtd: *)
+(*
 | "arch_reset_mem_mapping (IOPageTableCap ptr lvl ma) = IOPageTableCap ptr lvl None"
+*)
 | "arch_reset_mem_mapping cap = cap"
 
 text {* Actions that must be taken to recycle x64-specific capabilities. *}
@@ -498,12 +504,15 @@ where
       od;
       return cap
     od
-  | IOPortCap _ _ \<Rightarrow> return cap
+  | IOPortCap _ _ \<Rightarrow> return cap"
+(* FIXME x64-vtd: *)
+(*
   | IOSpaceCap _ _  \<Rightarrow> do
      arch_finalise_cap cap is_final;
      return cap
     od
   | IOPageTableCap ptr _ mp \<Rightarrow> undefined (* FIXME: TODO *)"
+*)
 
 
 text {* A thread's virtual address space capability must be to a mapped PML4 (page map level 4)

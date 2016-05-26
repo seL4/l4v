@@ -192,6 +192,7 @@ where "get_iovm_rights cover base \<equiv>
      (if AllowRead \<in> cover then  {AllowRead} \<union> (if AllowWrite \<in> base then {AllowWrite} else {})
      else (if AllowWrite \<in> base then {AllowWrite} else {})))"
 
+(* FIXME x64-vtd:
 definition
   pci_request_id_from_cap :: "cap \<Rightarrow> (16 word, 'z::state_ext) s_monad"
   where "pci_request_id_from_cap cap \<equiv>
@@ -200,7 +201,7 @@ definition
     | ArchObjectCap (IOPageTableCap _ _ (Some asid)) \<Rightarrow> return $ fst asid
     | _\<Rightarrow> fail"
                 
-(* FIXME x64-vtd:
+
 definition
   decode_io_pt_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> 
                             (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"

@@ -9,7 +9,7 @@
  *)
 
 theory ArchInvariants_AI
-imports "../InvariantsPre_AI"
+imports "../InvariantsPre_AI" "../../../lib/Apply_Trace_Cmd"
 begin
 
 section "Move this up"
@@ -42,9 +42,11 @@ lemma arch_cap_fun_lift_expand[simp]:
                               | PageDirectoryCap obj_ref vr \<Rightarrow> P_PageDirectoryCap obj_ref vr
                               | PDPointerTableCap obj_ref vr \<Rightarrow> P_PDPointerTableCap obj_ref vr
                               | PML4Cap obj_ref asid \<Rightarrow> P_PML4Cap obj_ref asid
-                              | IOPortCap first lst \<Rightarrow> P_IOPortCap first lst
+                              | IOPortCap first lst \<Rightarrow> P_IOPortCap first lst)
+                              (* FIXME x64-vtd:
                               | IOSpaceCap domn pci \<Rightarrow> P_IOSpaceCap domn pci
                               | IOPageTableCap obj_ref lvl vr \<Rightarrow> P_IOPageTableCap obj_ref lvl vr)
+                              *)
                       F) = (\<lambda>c. 
    (case c of
       ArchObjectCap (ASIDPoolCap obj_ref asid) \<Rightarrow> P_ASIDPoolCap obj_ref asid
@@ -55,8 +57,10 @@ lemma arch_cap_fun_lift_expand[simp]:
     | ArchObjectCap (PDPointerTableCap obj_ref vr) \<Rightarrow> P_PDPointerTableCap obj_ref vr
     | ArchObjectCap (PML4Cap obj_ref asid) \<Rightarrow> P_PML4Cap obj_ref asid
     | ArchObjectCap (IOPortCap first lst) \<Rightarrow> P_IOPortCap first lst
+(* FIXME x64-vtd: 
     | ArchObjectCap (IOSpaceCap domn pci) \<Rightarrow> P_IOSpaceCap domn pci
     | ArchObjectCap (IOPageTableCap obj_ref lvl vr) \<Rightarrow> P_IOPageTableCap obj_ref lvl vr
+*)
     | _ \<Rightarrow> F))"
   apply (rule ext)
   by (simp add: arch_cap_fun_lift_def)
@@ -206,6 +210,7 @@ where
 | "acap_class (PageDirectoryCap x y)  = PhysicalClass"
 | "acap_class (PDPointerTableCap x y) = PhysicalClass"
 | "acap_class (PML4Cap x y)           = PhysicalClass"
+| "acap_class (IOPortCap x y)         = IOPortClass"
 
 definition
   valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> word32 \<Rightarrow> bool"
@@ -268,7 +273,7 @@ primrec
   valid_arch_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_obj (ASIDPool pool) =
-   (\<lambda>s. \<forall>x \<in> ran pool. typ_at (AArch APageDirectory) x s)"
+   (\<lambda>s. \<forall>x \<in> ran pool. typ_at (AArch APageMapL4) x s)"
 | "valid_arch_obj (PageMapL4 pm) =
    (\<lambda>s. \<forall>x \<in> -kernel_mapping_slots. valid_pml4e (pm x) s)"
 | "valid_arch_obj (PDPointerTable pdpt) = (\<lambda>s. \<forall>x. valid_pdpte (pdpt x) s)"
@@ -1240,6 +1245,7 @@ lemma shows
 
 lemmas aa_type_elims[elim!] =
    aa_type_AASIDPoolE aa_type_APageDirectoryE aa_type_APageTableE aa_type_AIntDataE
+   aa_type_APDPointerTableE aa_type_APageMapL4E
 
 lemma valid_arch_obj_pspaceI:
   "\<lbrakk> valid_arch_obj obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_obj obj s'"
@@ -1264,9 +1270,10 @@ lemmas  pageBitsForSize_simps[simp] =
 
 lemma arch_kobj_size_bounded:
   "arch_kobj_size obj < word_bits"
-  apply (cases obj, simp_all add: word_bits_conv pageBits_def)
+  apply (cases obj, simp_all add: word_bits_conv pageBits_def table_size_def
+                                  ptTranslationBits_def word_size_bits_def)
   apply (rename_tac vmpage_size)
-  apply (case_tac vmpage_size, simp_all)
+  apply (case_tac vmpage_size, simp_all add: pageBits_def ptTranslationBits_def)
   done
 
 lemma valid_arch_sizes:
@@ -1307,7 +1314,7 @@ lemma valid_asid_table_update [iff]:
   by (simp add: valid_asid_table_def)
 
 lemma valid_global_pts_update [iff]:
-  "arm_global_pts (arch_state (f s)) = arm_global_pts (arch_state s) \<Longrightarrow>
+  "x64_global_pts (arch_state (f s)) = x64_global_pts (arch_state s) \<Longrightarrow>
    valid_global_pts (f s) = valid_global_pts s"
   by (simp add: valid_global_pts_def)
 
@@ -1318,7 +1325,15 @@ lemma valid_pte_update [iff]:
 lemma valid_pde_update [iff]:
   "valid_pde pde (f s) = valid_pde pde s"
   by (cases pde) auto
+  
+lemma valid_pdpte_update [iff]:
+  "valid_pdpte pte (f s) = valid_pdpte pte s"
+  by (cases pte) auto
 
+lemma valid_pml4e_update [iff]:
+  "valid_pml4e pte (f s) = valid_pml4e pte s"
+  by (cases pte) auto
+  
 lemma valid_arch_obj_update [iff]:
   "valid_arch_obj ao (f s) = valid_arch_obj ao s"
   by (cases ao) auto
@@ -1337,10 +1352,29 @@ lemma valid_pt_kernel_mappings [iff]:
   by (cases pde, simp_all add: valid_pde_kernel_mappings_def)
 
 lemma valid_pd_kernel_mappings [iff]:
-  "valid_pd_kernel_mappings uses (f s)
-      = valid_pd_kernel_mappings uses s"
+  "valid_pd_kernel_mappings uses vref (f s)
+      = valid_pd_kernel_mappings uses vref s"
   by (rule ext, simp add: valid_pd_kernel_mappings_def)
+  
+lemma valid_pdpte_kernel_mappings [iff]:
+  "valid_pdpte_kernel_mappings pde vref uses (f s)
+      = valid_pdpte_kernel_mappings pde vref uses s"
+  by (cases pde, simp_all add: valid_pdpte_kernel_mappings_def)
 
+lemma valid_pdpt_kernel_mappings [iff]:
+  "valid_pdpt_kernel_mappings uses vref (f s)
+      = valid_pdpt_kernel_mappings uses vref s"
+  by (rule ext, simp add: valid_pdpt_kernel_mappings_def)
+  
+lemma valid_pml4e_kernel_mappings [iff]:
+  "valid_pml4e_kernel_mappings pde vref uses (f s)
+      = valid_pml4e_kernel_mappings pde vref uses s"
+  by (cases pde, simp_all add: valid_pml4e_kernel_mappings_def)
+
+lemma valid_pml4_kernel_mappings [iff]:
+  "valid_pml4_kernel_mappings uses (f s)
+      = valid_pml4_kernel_mappings uses s"
+  by (rule ext, simp add: valid_pml4_kernel_mappings_def)
 
 (* FIXME: Clagged *)
 lemma get_cap_update [iff]:
@@ -1408,9 +1442,11 @@ context Arch begin global_naming ARM
 lemma global_refs_equiv:
   assumes "idle_thread s = idle_thread s'"
   assumes "interrupt_irq_node s = interrupt_irq_node s'"
-  assumes "arm_globals_frame (arch_state s) = arm_globals_frame (arch_state s')"
-  assumes "arm_global_pd (arch_state s) = arm_global_pd (arch_state s')"
-  assumes "set (arm_global_pts (arch_state s)) = set (arm_global_pts (arch_state s'))"
+  assumes "x64_globals_frame (arch_state s) = x64_globals_frame (arch_state s')"
+  assumes "x64_global_pml4 (arch_state s) = x64_global_pml4 (arch_state s')"
+  assumes "set (x64_global_pts (arch_state s)) = set (x64_global_pts (arch_state s'))"
+  assumes "set (x64_global_pds (arch_state s)) = set (x64_global_pds (arch_state s'))"
+  assumes "set (x64_global_pdpts (arch_state s)) = set (x64_global_pdpts (arch_state s'))"
   assumes "ran (x64_asid_table (arch_state s)) = ran (x64_asid_table (arch_state s'))"
   shows "global_refs s = global_refs s'"
   by (simp add: assms global_refs_def)
@@ -1432,7 +1468,7 @@ lemma valid_arch_state_lift:
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   apply (simp add: valid_arch_state_def valid_asid_table_def
-                   valid_global_pts_def)
+                   valid_global_pts_def valid_global_pds_def valid_global_pdpts_def)
   apply (rule hoare_lift_Pf[where f="\<lambda>s. arch_state s"])
    apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift )
   done
@@ -1476,45 +1512,87 @@ lemmas abs_atyp_at_lifts =
   valid_pde_lift valid_pte_lift
   pde_at_atyp pte_at_atyp
 
+lemma table_size:
+  "table_size = 12"
+  by (simp add: table_size_def ptTranslationBits_def word_size_bits_def)
+  
 lemma page_directory_pde_atI:
-  "\<lbrakk> page_directory_at p s; x < 2 ^ pageBits;
-         pspace_aligned s \<rbrakk> \<Longrightarrow> pde_at (p + (x << 2)) s"
+  "\<lbrakk> page_directory_at p s; x < 2 ^ ptTranslationBits;
+         pspace_aligned s \<rbrakk> \<Longrightarrow> pde_at (p + (x << 3)) s"
   apply (clarsimp simp: obj_at_def pde_at_def)
   apply (drule (1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def
+  apply (clarsimp simp: a_type_def table_size
                  split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
-  apply (subgoal_tac "p = (p + (x << 2) && ~~ mask pd_bits)")
+  apply (subgoal_tac "p = (p + (x << 3) && ~~ mask pd_bits)")
    subgoal by auto
   apply (rule sym, rule add_mask_lower_bits)
-   apply (simp add: pd_bits_def pageBits_def)
-  apply simp
-  apply (subst upper_bits_unset_is_l2p[unfolded word_bits_conv])
-   apply (simp add: pd_bits_def pageBits_def)
+   apply (simp add: pd_bits_def pageBits_def table_size)
+  apply (simp)
+  apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
+   apply (simp add: pd_bits_def pageBits_def table_size)
   apply (rule shiftl_less_t2n)
-   apply (simp add: pd_bits_def pageBits_def)
-  apply (simp add: pd_bits_def pageBits_def)
+   apply (simp add: pd_bits_def ptTranslationBits_def table_size)
+  apply (simp add: pd_bits_def table_size)
   done
 
 lemma page_table_pte_atI:
-  "\<lbrakk> page_table_at p s; x < 2^(pt_bits - 2); pspace_aligned s \<rbrakk> \<Longrightarrow> pte_at (p + (x << 2)) s"
+  "\<lbrakk> page_table_at p s; x < 2^ptTranslationBits; pspace_aligned s \<rbrakk> \<Longrightarrow> pte_at (p + (x << 3)) s"
   apply (clarsimp simp: obj_at_def pte_at_def)
   apply (drule (1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def
+  apply (clarsimp simp: a_type_def table_size
                  split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
-  apply (subgoal_tac "p = (p + (x << 2) && ~~ mask pt_bits)")
+  apply (subgoal_tac "p = (p + (x << 3) && ~~ mask pt_bits)")
    subgoal by auto
   apply (rule sym, rule add_mask_lower_bits)
-   apply (simp add: pt_bits_def pageBits_def)
+   apply (simp add: pt_bits_def pageBits_def table_size)
   apply simp
-  apply (subst upper_bits_unset_is_l2p[unfolded word_bits_conv])
-   apply (simp add: pt_bits_def pageBits_def)
+  apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
+   apply (simp add: pt_bits_def pageBits_def table_size)
   apply (rule shiftl_less_t2n)
-   apply (simp add: pt_bits_def pageBits_def)
-  apply (simp add: pt_bits_def pageBits_def)
+   apply (simp add: pt_bits_def ptTranslationBits_def table_size)
+  apply (simp add: pt_bits_def table_size)
   done
 
+lemma pd_pointer_table_pdpte_atI:
+  "\<lbrakk> pd_pointer_table_at p s; x < 2^ptTranslationBits; pspace_aligned s \<rbrakk> \<Longrightarrow> pdpte_at (p + (x << 3)) s"
+  apply (clarsimp simp: obj_at_def pdpte_at_def)
+  apply (drule (1) pspace_alignedD[rotated])
+  apply (clarsimp simp: a_type_def table_size
+                 split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+  apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
+  apply (subgoal_tac "p = (p + (x << 3) && ~~ mask pdpt_bits)")
+   subgoal by auto
+  apply (rule sym, rule add_mask_lower_bits)
+   apply (simp add: pdpt_bits_def pageBits_def table_size)
+  apply simp
+  apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
+   apply (simp add: pdpt_bits_def pageBits_def table_size)
+  apply (rule shiftl_less_t2n)
+   apply (simp add: pdpt_bits_def ptTranslationBits_def table_size)
+  apply (simp add: pdpt_bits_def table_size)
+  done
+  
+lemma page_map_l4_pml4e_atI:
+  "\<lbrakk> page_map_l4_at p s; x < 2^ptTranslationBits; pspace_aligned s \<rbrakk> \<Longrightarrow> pml4e_at (p + (x << 3)) s"
+  apply (clarsimp simp: obj_at_def pml4e_at_def)
+  apply (drule (1) pspace_alignedD[rotated])
+  apply (clarsimp simp: a_type_def table_size
+                 split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+  apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
+  apply (subgoal_tac "p = (p + (x << 3) && ~~ mask pml4_bits)")
+   subgoal by auto
+  apply (rule sym, rule add_mask_lower_bits)
+   apply (simp add: pml4_bits_def pageBits_def table_size)
+  apply simp
+  apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
+   apply (simp add: pml4_bits_def pageBits_def table_size)
+  apply (rule shiftl_less_t2n)
+   apply (simp add: pml4_bits_def ptTranslationBits_def table_size)
+  apply (simp add: pml4_bits_def table_size)
+  done
+  
 lemma physical_arch_cap_has_ref: 
   "(acap_class arch_cap = PhysicalClass) = (\<exists>y. aobj_ref arch_cap = Some y)"
   by (cases arch_cap; simp)
@@ -1529,14 +1607,24 @@ lemma vs_lookup1_ko_at_dest:
   apply (drule vs_lookup1D)
   apply (clarsimp simp: obj_at_def vs_refs_def)
   apply (cases ao, simp_all add: graph_of_def)
-   apply clarsimp
-   apply (drule bspec, fastforce simp: ran_def)
-   apply (clarsimp simp add: aa_type_def obj_at_def)
+     apply clarsimp
+     apply (drule bspec, fastforce simp: ran_def)
+     apply (clarsimp simp: aa_type_def obj_at_def)
+    apply (clarsimp split: arch_kernel_obj.split_asm split_if_asm)
+    apply (simp add: pde_ref_def aa_type_def
+              split: pde.splits)
+    apply (drule_tac x=a in spec)
+    apply (clarsimp simp: valid_pde_def obj_at_def aa_type_def)
+   apply (clarsimp split: arch_kernel_obj.split_asm split_if_asm)
+   apply (simp add: pdpte_ref_def aa_type_def 
+             split: pdpte.splits)
+   apply (drule_tac x=a in spec)
+   apply (clarsimp simp: valid_pdpte_def obj_at_def aa_type_def)
   apply (clarsimp split: arch_kernel_obj.split_asm split_if_asm)
-  apply (simp add: pde_ref_def aa_type_def
-            split: pde.splits)
+  apply (simp add: pml4e_ref_def aa_type_def 
+            split: pml4e.splits)
   apply (erule_tac x=a in ballE)
-   apply (clarsimp simp add: obj_at_def)
+   apply (clarsimp simp: obj_at_def)
   apply simp
   done
 
@@ -1604,15 +1692,15 @@ lemma vs_lookup_apI:
   apply (fastforce simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def image_def)
   done
 
-lemma vs_lookup_pdI:
-  "\<And>a p\<^sub>1 ap b p\<^sub>2 pd c.
+lemma vs_lookup_pml4I:
+  "\<And>a p\<^sub>1 ap b p\<^sub>2 pm c.
      \<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
       kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
       ap b = Some p\<^sub>2;
-      kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
+      kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm));
       c \<notin> kernel_mapping_slots;
-      pd c = pde.PageTablePDE p f w\<rbrakk>
-     \<Longrightarrow> ([VSRef (ucast c) (Some APageDirectory),
+      pm c = pml4e.PDPointerTablePML4E p f w\<rbrakk>
+     \<Longrightarrow> ([VSRef (ucast c) (Some APageMapL4),
            VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None]
           \<rhd> ptrFromPAddr p) s"
   apply (simp add: vs_lookup_def Image_def vs_asid_refs_def graph_of_def)
@@ -1624,8 +1712,51 @@ lemma vs_lookup_pdI:
                           vs_refs_def graph_of_def image_def)
   apply (simp add: vs_lookup1_def obj_at_def vs_refs_def graph_of_def image_def)
   apply (rule_tac x=c in exI)
-  apply (simp add: pde_ref_def ptrFormPAddr_addFromPPtr)
+  apply (simp add: pml4e_ref_def ptrFormPAddr_addFromPPtr)
   done
+
+lemma vs_lookup_pdptI:
+  "\<And>a p\<^sub>1 ap b p\<^sub>2 pm c pdpt d addr x y.
+     \<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
+      kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
+      ap b = Some p\<^sub>2;
+      kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm));
+      c \<notin> kernel_mapping_slots;
+      pm c = PDPointerTablePML4E addr x y;
+      kheap s (ptrFromPAddr addr) = Some (ArchObj (PDPointerTable pdpt));
+      pdpt d = pdpte.PageDirectoryPDPTE p f w\<rbrakk>
+     \<Longrightarrow> ([VSRef (ucast d) (Some APDPointerTable), VSRef (ucast c) (Some APageMapL4),
+           VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None]
+          \<rhd> ptrFromPAddr p) s"
+  apply (frule (5) vs_lookup_pml4I)
+  apply (erule vs_lookup_step)
+  apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def image_def 
+                 split: split_if_asm)
+  apply (rule_tac x=d in exI)
+  by (clarsimp simp: pdpte_ref_def ptrFormPAddr_addFromPPtr)
+  
+lemma vs_lookup_pdI:
+  "\<And>a p\<^sub>1 ap b p\<^sub>2 pm c pdpt d addr x y e p f w pd.
+     \<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
+      kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
+      ap b = Some p\<^sub>2;
+      kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm));
+      c \<notin> kernel_mapping_slots;
+      pm c = PDPointerTablePML4E addr x y;
+      kheap s (ptrFromPAddr addr) = Some (ArchObj (PDPointerTable pdpt));
+      pdpt d = pdpte.PageDirectoryPDPTE p f w;
+      kheap s (ptrFromPAddr p) = Some (ArchObj (PageDirectory pd));
+      pd e = pde.PageTablePDE p' f' w'\<rbrakk>
+     \<Longrightarrow> ([VSRef (ucast e) (Some APageDirectory),
+           VSRef (ucast d) (Some APDPointerTable), VSRef (ucast c) (Some APageMapL4),
+           VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None]
+          \<rhd> ptrFromPAddr p') s"
+  apply (frule (7) vs_lookup_pdptI)
+  apply (erule vs_lookup_step)
+  apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def image_def 
+                 split: split_if_asm)
+  apply (rule_tac x=e in exI)
+  by (clarsimp simp: pde_ref_def ptrFormPAddr_addFromPPtr)
 
 (* FIXME: move *)
 lemma bexEI: "\<lbrakk>\<exists>x\<in>S. Q x; \<And>x. \<lbrakk>x \<in> S; Q x\<rbrakk> \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> \<exists>x\<in>S. P x" by blast
@@ -1642,10 +1773,15 @@ lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unr
   apply clarsimp
   apply (case_tac x, simp_all add: vs_refs_def vs_refs_pages_def
                             split: arch_kernel_obj.splits)
-  apply (clarsimp simp: split_def graph_of_def image_def  split: split_if_asm)
+    apply (clarsimp simp: split_def graph_of_def image_def  split: split_if_asm)
+    apply (rule_tac x=a in exI)
+    apply (simp add: pde_ref_def pde_ref_pages_def split: pde.splits)
+   apply (clarsimp simp: split_def graph_of_def image_def split: split_if_asm)
+   apply (rule_tac x=a in exI)
+   apply (simp add: pdpte_ref_def pdpte_ref_pages_def split: pdpte.splits)
+  apply (clarsimp simp: split_def graph_of_def image_def split: split_if_asm)
   apply (intro exI conjI impI, assumption)
-   apply (simp add: pde_ref_def pde_ref_pages_def
-             split: pde.splits)
+   apply (simp add: pml4e_ref_def pml4e_ref_pages_def split: pml4e.splits)
   apply (rule refl)
   done
 
@@ -1653,32 +1789,71 @@ lemmas
   vs_lookup_pages_atI = vs_lookup_atI[THEN vs_lookup_pages_vs_lookupI] and
   vs_lookup_pages_apI = vs_lookup_apI[THEN vs_lookup_pages_vs_lookupI]
 
-lemma vs_lookup_pages_pdI:
+lemma vs_lookup_pages_pml4I:
   "\<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
     kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
     ap b = Some p\<^sub>2;
-    kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
-    c \<notin> kernel_mapping_slots; pde_ref_pages (pd c) = Some p\<rbrakk>
-   \<Longrightarrow> ([VSRef (ucast c) (Some APageDirectory),
+    kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm));
+    c \<notin> kernel_mapping_slots; pml4e_ref_pages (pm c) = Some p\<rbrakk>
+   \<Longrightarrow> ([VSRef (ucast c) (Some APageMapL4),
          VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] \<unrhd> p) s"
   apply (frule (2) vs_lookup_pages_apI)
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def
                       vs_refs_pages_def graph_of_def image_def
                split: split_if_asm)
+  
+lemma vs_lookup_pages_pdptI:
+  "\<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
+    kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
+    ap b = Some p\<^sub>2;
+    kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm));
+    c \<notin> kernel_mapping_slots; pm c = PDPointerTablePML4E addr x y;
+    kheap s (ptrFromPAddr addr) = Some (ArchObj (PDPointerTable pdpt));
+    pdpte_ref_pages (pdpt d) = Some p\<rbrakk>
+   \<Longrightarrow> ([VSRef (ucast d) (Some APDPointerTable), VSRef (ucast c) (Some APageMapL4),
+         VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] \<unrhd> p) s"
+  apply (frule (5) vs_lookup_pml4I[THEN vs_lookup_pages_vs_lookupI])
+  apply (erule vs_lookup_pages_step)
+  by (fastforce simp: vs_lookup_pages1_def obj_at_def
+                      vs_refs_pages_def graph_of_def image_def
+               split: split_if_asm)
 
+lemma vs_lookup_pages_pdI:
+  "\<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
+    kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
+    ap b = Some p\<^sub>2;
+    kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm));
+    c \<notin> kernel_mapping_slots; pm c = PDPointerTablePML4E addr x y;
+    kheap s (ptrFromPAddr addr) = Some (ArchObj (PDPointerTable pdpt));
+    pdpt d = PageDirectoryPDPTE addr' x' y'; 
+    kheap s (ptrFromPAddr addr') = Some (ArchObj (PageDirectory pd));
+    pde_ref_pages (pd e) = Some p\<rbrakk>
+   \<Longrightarrow> ([VSRef (ucast e) (Some APageDirectory),
+         VSRef (ucast d) (Some APDPointerTable), VSRef (ucast c) (Some APageMapL4),
+         VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] \<unrhd> p) s"
+  apply (frule (7) vs_lookup_pdptI[THEN vs_lookup_pages_vs_lookupI])
+  apply (erule vs_lookup_pages_step)
+  by (fastforce simp: vs_lookup_pages1_def obj_at_def
+                      vs_refs_pages_def graph_of_def image_def
+               split: split_if_asm)
+  
 lemma vs_lookup_pages_ptI:
   "\<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
     kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap));
     ap b = Some p\<^sub>2;
-    kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd));
-    c \<notin> kernel_mapping_slots; pd c = PageTablePDE addr x y;
-    kheap s (ptrFromPAddr addr) = Some (ArchObj (PageTable pt));
-    pte_ref_pages (pt d) = Some p\<rbrakk>
-   \<Longrightarrow> ([VSRef (ucast d) (Some APageTable),
-         VSRef (ucast c) (Some APageDirectory),
+    kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm));
+    c \<notin> kernel_mapping_slots; pm c = PDPointerTablePML4E addr x y;
+    kheap s (ptrFromPAddr addr) = Some (ArchObj (PDPointerTable pdpt));
+    pdpt d = PageDirectoryPDPTE addr' x' y'; 
+    kheap s (ptrFromPAddr addr') = Some (ArchObj (PageDirectory pd));
+    pd e = PageTablePDE addr'' x'' y'';
+    kheap s (ptrFromPAddr addr'') = Some (ArchObj (PageTable pt));
+    pte_ref_pages (pt f) = Some p\<rbrakk>
+   \<Longrightarrow> ([VSRef (ucast f) (Some APageTable), VSRef (ucast e) (Some APageDirectory),
+         VSRef (ucast d) (Some APDPointerTable), VSRef (ucast c) (Some APageMapL4),
          VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None] \<unrhd> p) s"
-  apply (frule (5) vs_lookup_pdI[THEN vs_lookup_pages_vs_lookupI])
+  apply (frule (9) vs_lookup_pdI[THEN vs_lookup_pages_vs_lookupI])
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def
                       vs_refs_pages_def graph_of_def image_def
@@ -1747,23 +1922,52 @@ lemma valid_arch_objs_alt:
    (\<forall>a p\<^sub>1 ap b p.
           x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
           kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
-          ap b = Some p \<longrightarrow> page_directory_at p s) \<and>
-   (\<forall>a p\<^sub>1 ap b p\<^sub>2 pd c.
+          ap b = Some p \<longrightarrow> page_map_l4_at p s) \<and>
+   (\<forall>a p\<^sub>1 ap b p\<^sub>2 pm c.
           x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
           kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
           ap b = Some p\<^sub>2 \<longrightarrow>
-          kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd)) \<longrightarrow>
-          c \<notin> kernel_mapping_slots \<longrightarrow> valid_pde (pd c) s) \<and>
-   (\<forall>a p\<^sub>1 ap b p\<^sub>2 pd c addr f w pt.
+          kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm)) \<longrightarrow>
+          c \<notin> kernel_mapping_slots \<longrightarrow> valid_pml4e (pm c) s) \<and>
+   (\<forall>a p\<^sub>1 ap b p\<^sub>2 pm c addr f w pdpt.
           x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
           kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
           ap b = Some p\<^sub>2 \<longrightarrow>
-          kheap s p\<^sub>2 = Some (ArchObj (PageDirectory pd)) \<longrightarrow>
+          kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm)) \<longrightarrow>
           c \<notin> kernel_mapping_slots \<longrightarrow>
-          pd c = pde.PageTablePDE addr f w \<longrightarrow>
+          pm c = pml4e.PDPointerTablePML4E addr f w \<longrightarrow>
           kheap s (ptrFromPAddr addr) =
+            Some (ArchObj (PDPointerTable pdpt)) \<longrightarrow>
+          (\<forall>d. valid_pdpte (pdpt d) s)) \<and>
+    (\<forall>a p\<^sub>1 ap b p\<^sub>2 pm c addr f w pdpt d addr' f' w' pd.
+          x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
+          kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
+          ap b = Some p\<^sub>2 \<longrightarrow>
+          kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm)) \<longrightarrow>
+          c \<notin> kernel_mapping_slots \<longrightarrow>
+          pm c = pml4e.PDPointerTablePML4E addr f w \<longrightarrow>
+          kheap s (ptrFromPAddr addr) =
+            Some (ArchObj (PDPointerTable pdpt)) \<longrightarrow>
+          pdpt d = pdpte.PageDirectoryPDPTE addr' f' w' \<longrightarrow>
+          kheap s (ptrFromPAddr addr') =
+            Some (ArchObj (PageDirectory pd)) \<longrightarrow>
+          (\<forall>e. valid_pde (pd e) s)) \<and>
+     (\<forall>a p\<^sub>1 ap b p\<^sub>2 pm c addr f w pdpt d addr' f' w' pd e addr'' f'' w'' pt.
+          x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
+          kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
+          ap b = Some p\<^sub>2 \<longrightarrow>
+          kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm)) \<longrightarrow>
+          c \<notin> kernel_mapping_slots \<longrightarrow>
+          pm c = pml4e.PDPointerTablePML4E addr f w \<longrightarrow>
+          kheap s (ptrFromPAddr addr) =
+            Some (ArchObj (PDPointerTable pdpt)) \<longrightarrow>
+          pdpt d = pdpte.PageDirectoryPDPTE addr' f' w' \<longrightarrow>
+          kheap s (ptrFromPAddr addr') =
+            Some (ArchObj (PageDirectory pd)) \<longrightarrow>
+          pd e = pde.PageTablePDE addr'' f'' w'' \<longrightarrow>
+          kheap s (ptrFromPAddr addr'') =
             Some (ArchObj (PageTable pt)) \<longrightarrow>
-          (\<forall>d. valid_pte (pt d) s))"
+          (\<forall>f. valid_pte (pt f) s))"
   apply (intro iffI conjI)
        apply fastforce
       apply (clarsimp simp: obj_at_def)
@@ -1782,7 +1986,21 @@ lemma valid_arch_objs_alt:
      apply fastforce
     apply (clarsimp simp: obj_at_def)
     apply (thin_tac "Ball S P" for S P)
-    apply (frule (5) vs_lookup_pdI)
+    apply (frule (5) vs_lookup_pml4I)
+    apply (drule valid_arch_objsD)
+      apply (simp add: obj_at_def)
+     apply assumption
+    apply fastforce
+    apply (clarsimp simp: obj_at_def)
+    apply (thin_tac "Ball S P" for S P)
+    apply (frule (7) vs_lookup_pdptI)
+    apply (drule valid_arch_objsD)
+      apply (simp add: obj_at_def)
+     apply assumption
+    apply fastforce
+        apply (clarsimp simp: obj_at_def)
+    apply (thin_tac "Ball S P" for S P)
+    apply (frule (9) vs_lookup_pdI)
     apply (drule valid_arch_objsD)
       apply (simp add: obj_at_def)
      apply assumption
@@ -1799,8 +2017,12 @@ lemma valid_arch_objs_alt:
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
+   apply (drule spec, drule spec, erule impE, assumption)
+   apply (drule spec, drule spec, erule impE, assumption)
    apply (clarsimp simp: obj_at_def)
    apply (clarsimp simp: vs_refs_def graph_of_def image_def)
+   apply (drule spec, drule spec, erule impE, assumption)
+   apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
    apply fastforce
@@ -1811,17 +2033,23 @@ lemma valid_arch_objs_alt:
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
+   apply (drule spec, drule spec, erule impE, assumption)
+   apply (drule spec, drule spec, erule impE, assumption)
    apply (clarsimp simp: obj_at_def)
    apply (clarsimp simp: vs_refs_def graph_of_def image_def)
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
+   apply (drule spec, drule spec, erule impE, assumption)
+   apply (drule spec, drule spec, erule impE, assumption)
    apply (clarsimp simp: graph_of_def  split: split_if_asm)
    apply (drule_tac x=ab in spec)
-   apply (clarsimp simp: pde_ref_def obj_at_def
-                  split: pde.splits)
+   apply (clarsimp simp: pml4e_ref_def obj_at_def
+                  split: pml4e.splits)
   apply (clarsimp dest!: vs_lookup1D)
   apply (clarsimp simp: vs_asid_refs_def graph_of_def)
+  apply (drule spec, drule spec, erule impE, assumption)
+  apply (drule spec, drule spec, erule impE, assumption)
   apply (drule spec, drule spec, erule impE, assumption)
   apply (drule spec, drule spec, erule impE, assumption)
   apply (drule spec, drule spec, erule impE, assumption)
@@ -1831,10 +2059,17 @@ lemma valid_arch_objs_alt:
   apply (drule spec, drule spec, erule impE, assumption)
   apply (drule spec, drule spec, erule impE, assumption)
   apply (drule spec, drule spec, erule impE, assumption)
+  apply (drule spec, drule spec, erule impE, assumption)
+  apply (drule spec, drule spec, erule impE, assumption)
   apply (clarsimp simp: graph_of_def  split: split_if_asm)
   apply (drule_tac x=ab in spec)
-  apply (clarsimp simp: pde_ref_def obj_at_def
-                 split: pde.splits)
+  apply (clarsimp simp: pml4e_ref_def obj_at_def
+                 split: pml4e.splits)
+  apply (clarsimp simp: graph_of_def split: split_if_asm)
+  apply (drule_tac x=ac in spec)
+  apply (clarsimp simp: pdpte_ref_def obj_at_def
+                 split: pdpte.splits)
+  apply clarsimp
   done
 
 lemma vs_lookupE:

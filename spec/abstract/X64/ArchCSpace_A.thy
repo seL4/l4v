@@ -41,10 +41,13 @@ where
 | "arch_same_region_as (PageDirectoryCap r _) c = (is_PageDirectoryCap c \<and> aobj_ref c = Some r)"
 | "arch_same_region_as (PDPointerTableCap r _) c = (is_PDPointerTableCap c \<and> aobj_ref c = Some r)"
 | "arch_same_region_as (PML4Cap r _) c = (is_PML4Cap c \<and> aobj_ref c = Some r)"
-| "arch_same_region_as (IOPageTableCap r _ _) c = (is_IOPageTableCap c \<and> aobj_ref c = Some r)"
 | "arch_same_region_as ASIDControlCap c = (c = ASIDControlCap)"
 | "arch_same_region_as (ASIDPoolCap r _) c = (is_ASIDPoolCap c \<and> aobj_ref c = Some r)"
+(* FIXME x64-vtd: *)
+(*
+| "arch_same_region_as (IOPageTableCap r _ _) c = (is_IOPageTableCap c \<and> aobj_ref c = Some r)"
 | "arch_same_region_as (IOSpaceCap d_id pci_d) c = (is_IOSpaceCap c \<and> cap_io_pci_device c = pci_d)"
+*)
   --"FIXME: should this also check domain id equality? C kernel does not"
 | "arch_same_region_as (IOPortCap frst lst) c = (is_IOPortCap c)"
   --"FIXME: would an interval check make sense here?"
