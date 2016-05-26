@@ -279,21 +279,3 @@ lemma cast_down_s64: "(scast::64 sword \<Rightarrow> 32 word) = (ucast::64 sword
   done
 
 end
-
-(* Another variant of packing and unpacking a 64-bit variable. *)
-lemma cast_chunk_assemble_id_64'[simp]:
-  "(((ucast ((scast (x::64 word))::32 word))::64 word) || (((ucast ((scast (x >> 32))::32 word))::64 word) << 32)) = x"
-  by (simp add:cast_chunk_scast_assemble_id)
-
-(* Specialiasations of down_cast_same for adding to local simpsets. *)
-lemma cast_down_u64: "(scast::64 word \<Rightarrow> 32 word) = (ucast::64 word \<Rightarrow> 32 word)"
-  apply (subst down_cast_same[symmetric])
-   apply (simp add:is_down)+
-  done
-
-lemma cast_down_s64: "(scast::64 sword \<Rightarrow> 32 word) = (ucast::64 sword \<Rightarrow> 32 word)"
-  apply (subst down_cast_same[symmetric])
-   apply (simp add:is_down)+
-  done
-
-end
