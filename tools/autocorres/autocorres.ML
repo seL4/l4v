@@ -16,41 +16,7 @@ struct
 
 (*
  * Option parsing for the autocorres command.
- * The most general form of the command is
- *   autocorres [ no_heap_abs = FUNC_NAMES,
- *                force_heap_abs = FUNC_NAMES,
- *       (* or *) skip_heap_abs,
- *
- *                heap_abs_syntax,
- *
- *                unsigned_word_abs = FUNC_NAMES,
- *                no_signed_word_abs = FUNC_NAMES,
- *       (* or *) skip_word_abs,
- *
- *                ts_rules = RULE_NAMES,
- *                ts_force RULE_NAME = FUNC_NAMES,
- *                ts_force ... = ...,
- *
- *                lifted_globals_field_prefix = "STRING",
- *                lifted_globals_field_suffix = "STRING",
- *                function_name_prefix = "STRING",
- *                function_name_suffix = "STRING",
- *
- *                trace_heap_lift = FUNC_NAMES,
- *                trace_word_abs = FUNC_NAMES,
- *                trace_opt,
- *                no_opt,
- *
- *                scope = FUNC_NAMES,
- *                scope_depth = NUM,
- *                c_locale = "STRING",
- *                c_termination,
- *
- *                gen_word_heaps,
- *                statistics,
- *                keep_going
- *              ]
- *              "prog.c"
+ * These options are documented in the README.md.
  *)
 
 (*

@@ -72,9 +72,25 @@ Options
 
 AutoCorres supports a variety of options, which are used as follows:
 
-    autocorres [option, key=val, list=a b c d] "file.c"
+    autocorres [option, key=val, list=a b c d] "path/to/file.c"
+
+`path/to/file.c` is the same path given to `install_C_file`, and
+AutoCorres will define the translated functions in the C-parser's
+generated locale (named `file`).
 
 The options are:
+
+  * `no_heap_abs = FUNC_NAMES`: Disable _heap abstraction_
+    on the given list of functions.
+
+  * `force_heap_abs = FUNC_NAMES`: Attempt _heap abstraction_
+    on the given list of functions, even if AutoCorres' heuristics
+    believes that they cannot be lifted.
+
+  * `heap_abs_syntax`: Enable experimental heap abstraction
+    syntactic sugar.
+
+  * `skip_heap_abs`: Completely disable _heap abstraction_.
 
   * `unsigned_word_abs = FUNC_NAMES`: Use _word abstraction_
     on unsigned integers in the given functions.
@@ -94,17 +110,12 @@ The options are:
     even if a "better" type could otherwise be used.
     See `tests/examples/type_strengthen_tricks.thy`.
 
-  * `no_heap_abs = FUNC_NAMES`: Disable _heap abstraction_
-    on the given list of functions.
+  * `scope = FUNC_NAMES`: Only translate the given functions
+    and their callees, up to depth `scope_depth`.
+    AutoCorres can be invoked multiple times to translate
+    parts of a program. See `tests/examples/Incremental.thy`.
 
-  * `force_heap_abs = FUNC_NAMES`: Attempt _heap abstraction_
-    on the given list of functions, even if AutoCorres' heuristics
-    believes that they cannot be lifted.
-
-  * `heap_abs_syntax`: Enable experimental heap abstraction
-    syntactic sugar.
-
-  * `skip_word_abs`: Completely disable _heap abstraction_.
+  * `scope_depth = N`: Call depth for `scope`.
 
 Name compatibility options (see `tests/examples/AC_Rename.thy`):
 
@@ -120,14 +131,6 @@ Less common options (mainly for debugging):
 
   * `keep_going`: Attempt to ignore certain non-critical
     errors.
-
-  * `scope`: Only parse the given functions and their
-    callees, up to depth `scope_depth`.
-
-  * `c_locale`: Run in this locale, rather than the default locale
-    used by the C-parser. This locale must behave like the C-parser
-    one except that the function bodies may be different.
-    This option is for interfacing with the seL4 proofs.
 
   * `trace_heap_lift = FUNC_NAMES`: Trace the _heap abstraction_
     process for each of the given functions. The traces
@@ -148,29 +151,43 @@ Less common options (mainly for debugging):
     (`word8`, `word16`, `word32`, `word64`) even if they
     are not needed.
 
+The following options are for interfacing with the seL4 proofs.
+
+  * `c_locale = NAME`: Run in this locale, rather than the default locale
+    created by the C-parser. This locale must behave like the C-parser
+    one except that the function bodies may be different.
+
+  * `no_c_termination`: Generate SIMPL wrappers and correspondence
+    proofs that do not require program termination for the SIMPL source.
+
 An example of invoking AutoCorres with _all_ of the options
 is as follows:
 
     autocorres [
-        unsigned_word_abs = f g h,
-        no_signed_word_abs = i j k,
-        skip_word_abs,  (* mutually exclusive with previous rules *)
-        ts_rules = pure nondet,
-        ts_force nondet = l m n,
         no_heap_abs = a b,
         force_heap_abs = c d,
         gen_word_heaps,
-        skip_heap_abs,  (* mutually exclusive with previous rules *)
+        skip_heap_abs,  (* mutually exclusive with previous options *)
         heap_abs_syntax,
-        keep_going,
+
+        unsigned_word_abs = f g h,
+        no_signed_word_abs = i j k,
+        skip_word_abs,  (* mutually exclusive with previous options *)
+
+        ts_rules = pure nondet,
+        ts_force nondet = l m n,
+
         scope = o p q,
         scope_depth = 5,
+        keep_going,
         c_locale = "my_locale",
+        no_c_termination,
         trace_heap_lift = c d,
         trace_word_abs = f h i,
         no_opt,
-        lifted_globals_name_prefix="my_global_",
-        lifted_globals_name_suffix="",
+
+        lifted_globals_field_prefix="my_global_",
+        lifted_globals_field_suffix="",
         function_name_prefix="my_func_",
         function_name_suffix=""
         ] "filename.c"
@@ -236,6 +253,8 @@ but demonstrate AutoCorres features:
   * `TraceDemo.thy`: how to use the (experimental) tracing.
 
   * `type_strengthen_tricks.thy`: configuring type-strengthening.
+
+  * `Incremental.thy`: (experimental) support for incremental translation.
 
 
 
