@@ -147,6 +147,10 @@ fun simpl_conv'
           prove_term [body] @{thm L1corres_guard}
             (fn [body] => mk_l1 @{term "L1_seq"} [mk_l1 @{term "L1_guard"} [set_to_pred c], body])
 
+      | @{term_pat "lvar_nondet_init _ ?upd"} =>
+          prove_term [] @{thm L1corres_init}
+            (fn _ => mk_l1 @{term "L1_init"} [upd])
+
       | (Const (@{const_name Spec}, _) $ s) =>
           prove_term [] @{thm L1corres_spec}
             (fn _ => mk_l1 @{term "L1_spec"} [s])

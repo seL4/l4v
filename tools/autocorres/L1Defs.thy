@@ -196,6 +196,18 @@ lemma L1corres_spec:
   apply (rule terminates.Spec)
   done
 
+lemma L1_init_alt_def:
+  "L1_init upd \<equiv> L1_spec {(s, t). \<exists>v. t = upd (\<lambda>_. v) s}"
+  apply (rule eq_reflection)
+  apply (clarsimp simp: L1_defs bind_liftE_distrib [symmetric])
+  apply (rule arg_cong [where f=liftE])
+  apply (fastforce simp: spec_def select_def simpler_modify_def bind_def)
+  done
+
+lemma L1corres_init:
+  "L1corres ct \<Gamma> (L1_init upd) (lvar_nondet_init accessor upd)"
+  by (auto simp: L1_init_alt_def lvar_nondet_init_def intro: L1corres_spec)
+
 lemma L1corres_guarded_spec:
   "L1corres ct \<Gamma> (L1_spec R) (guarded_spec_body F R)"
   apply (clarsimp simp: L1corres_alt_def ccorresE_def L1_spec_def guarded_spec_body_def)

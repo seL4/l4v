@@ -31,25 +31,6 @@ lemma switch_alt_defs [L1unfold]:
   "switch v ((a, b) # vs) \<equiv> Cond {s. v s \<in> a} b (switch v vs)"
   by auto
 
-(* Convert "lvar_nondet_init" (which sets local variables to
- * undefined values) into a "Spec" command we can translate. *)
-definition "lvar_init_spec upd \<equiv> {(s, t). \<exists>v. t = upd (\<lambda>_. v) s}"
-lemma lvar_nondet_init_rewrite [L1unfold]:
-  "lvar_nondet_init accessor upd \<equiv> Spec (lvar_init_spec upd)"
-  apply (clarsimp simp: lvar_nondet_init_def lvar_init_spec_def)
-  done
-
-lemma lvar_init_spec_to_L1_init [L1opt]:
-  "L1_spec (lvar_init_spec upd) \<equiv> L1_init upd"
-  apply (rule eq_reflection)
-  apply (clarsimp simp: L1_defs lvar_init_spec_def)
-  apply (clarsimp simp: bind_liftE_distrib [symmetric])
-  apply (rule arg_cong [where f=liftE])
-  apply (rule ext)
-  apply (clarsimp simp: spec_def select_def simpler_modify_def bind_def)
-  apply force
-  done
-
 lemma not_msb_from_less:
   "(v :: 'a word) < 2 ^ (len_of TYPE('a :: len) - 1) \<Longrightarrow> \<not> msb v"
   apply (clarsimp simp add: msb_nth)
@@ -92,7 +73,6 @@ lemma recguard_induct: "\<lbrakk> P 0; \<And>n. P (recguard_dec n) \<Longrightar
  *)
 lemmas [L1except] =
   L1_set_to_pred_def in_set_to_pred in_set_if_then (* rewrite SIMPL set notation *)
-  lvar_init_spec_to_L1_init (* rewrite variable initialisers *)
   L1_seq_assoc (* not strictly required, but useful *)
 
 end
