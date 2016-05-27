@@ -360,10 +360,11 @@ in
   mk_L1corres_call_prop ctxt prog_info fn_info check_termination fn_name monad
   |> Thm.cterm_of ctxt
   |> Goal.init
-  |> apply_tac "unfold SIMPL body"
-        (case impl_thm of
-            NONE => (resolve_tac ctxt @{thms L1corres_undefined_call} 1)
-          | SOME thm => ((resolve_tac ctxt @{thms L1corres_Call} 1) THEN (resolve_tac ctxt [thm] 1) THEN tactic))
+  |> (case impl_thm of
+          NONE     => apply_tac "unfold SIMPL body" (resolve_tac ctxt @{thms L1corres_undefined_call} 1)
+        | SOME def => apply_tac "unfold SIMPL body" (resolve_tac ctxt @{thms L1corres_Call} 1 THEN
+                                                     resolve_tac ctxt [def] 1)
+                      #> apply_tac "solve L1corres" tactic)
   |> Goal.finish ctxt
   (* Apply simplifications to the L1 term. *)
   |> cleanup_thm ctxt do_opt trace_opt prog_info fn_name
