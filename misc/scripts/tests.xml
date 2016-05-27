@@ -18,6 +18,6 @@
 
 -->
 <testsuite cpu-timeout="60">
-    <!-- Check theory import paths -->
-    <test name="theory_imports">bash check_theory_imports</test>
+    <!-- Check theory import paths. Depends on kernel theories to be generated. -->
+    <test name="theory_imports" depends="CKernel">bash check_theory_imports</test>
 </testsuite>
