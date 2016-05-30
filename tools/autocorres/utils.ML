@@ -1002,6 +1002,21 @@ fun mk_simproc' ctxt (name : string, pats : string list, proc : Proof.context ->
  * so that user-added rules can override the built-in ones. *)
 fun get_rules ctxt = Named_Theorems.get ctxt #> rev
 
+(* As Substring.position but searches from the end *)
+fun positionr pat s = let
+  val (s0, begin0, size0) = Substring.base s
+  fun search i = if i < begin0 then
+                   (s, Substring.substring (s0, begin0 + size0, 0)) (* not found *)
+                 else if Substring.isPrefix pat (Substring.substring (s0, i, size0 - i)) then
+                   (Substring.substring (s0, begin0, i), (* found *)
+                    Substring.substring (s0, begin0 + i, size0 - i))
+                 else search (i - 1)
+  in search size0 end
+val _ = assert (apply2 Substring.string (positionr "br" (Substring.full "abracadabra"))
+                 = ("abracada", "bra")) ""
+val _ = assert (apply2 Substring.string (positionr "xx" (Substring.full "abracadabra"))
+                 = ("abracadabra", "")) ""
+
 end
 
 (* Insist the the given tactic solves a subgoal. *)
