@@ -718,10 +718,12 @@ lemma tcbSchedEnqueue_invs'[wp]:
      tcbSchedEnqueue t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wp tcbSchedEnqueue_ct_not_inQ valid_irq_node_lift irqs_masked_lift hoare_vcg_disj_lift
-            valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-       | simp add: cteCaps_of_def
-       | auto elim!: st_tcb_ex_cap'' valid_objs'_maxDomain valid_objs'_maxPriority split: thread_state.split_asm simp: valid_pspace'_def)+
+  apply (rule hoare_pre)
+   apply (wp tcbSchedEnqueue_ct_not_inQ valid_irq_node_lift irqs_masked_lift hoare_vcg_disj_lift
+             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+             untyped_ranges_zero_lift
+        | simp add: cteCaps_of_def o_def
+        | auto elim!: st_tcb_ex_cap'' valid_objs'_maxDomain valid_objs'_maxPriority split: thread_state.split_asm simp: valid_pspace'_def)+
   done
 
 lemma tcb_at'_has_tcbPriority:
@@ -840,12 +842,17 @@ lemma tcbSchedAppend_tcb_in_cur_domain'[wp]:
 crunch ksDomScheduleIdx[wp]: tcbSchedAppend "\<lambda>s. P (ksDomScheduleIdx s)"
   (simp: unless_def)
 
+crunch gsUntypedZeroRanges[wp]: tcbSchedAppend, tcbSchedDequeue "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (simp: unless_def)
+
 lemma tcbSchedAppend_invs'[wp]:
   "\<lbrace>invs' and st_tcb_at' runnable' t  and (\<lambda>s. t \<noteq> ksCurThread s) \<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wp tcbSchedAppend_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
-            valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-       | simp add: cteCaps_of_def
+  apply (rule hoare_pre)
+   apply (wp tcbSchedAppend_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
+             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+             untyped_ranges_zero_lift
+       | simp add: cteCaps_of_def o_def
        | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
   done
 
@@ -853,10 +860,12 @@ lemma tcbSchedAppend_invs_but_ct_not_inQ':
   "\<lbrace>invs' and st_tcb_at' runnable' t and tcb_in_cur_domain' t \<rbrace>
    tcbSchedAppend t \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
-            valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-       | simp add: cteCaps_of_def
-       | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
+  apply (rule hoare_pre)
+   apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
+             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+             untyped_ranges_zero_lift
+        | simp add: cteCaps_of_def o_def
+        | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
   done
 
 crunch ksMachine[wp]: tcbSchedDequeue "\<lambda>s. P (ksMachineState s)"
@@ -911,10 +920,12 @@ lemma tcbSchedDequeue_invs'[wp]:
      tcbSchedDequeue t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
-  apply (wp tcbSchedDequeue_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
-            valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-            tcbSchedDequeue_valid_queues
-       | simp add: cteCaps_of_def)+
+  apply (rule hoare_pre)
+   apply (wp tcbSchedDequeue_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
+             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+             tcbSchedDequeue_valid_queues
+             untyped_ranges_zero_lift
+        | simp add: cteCaps_of_def o_def)+
   apply (fastforce elim: valid_objs'_maxDomain valid_objs'_maxPriority simp: valid_pspace'_def)+
   done
 
@@ -1352,12 +1363,13 @@ lemma tcbSchedDequeue_invs_no_cicd'[wp]:
      tcbSchedDequeue t
    \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   unfolding all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
-  apply (wp tcbSchedDequeue_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
-            valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-            tcbSchedDequeue_valid_queues_weak
-       | simp add: cteCaps_of_def )+
-  (*21*)apply (fastforce elim: valid_objs'_maxDomain valid_objs'_maxPriority simp: valid_pspace'_def)+
-    apply simp_all
+  apply (rule hoare_pre)
+   apply (wp tcbSchedDequeue_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
+             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+             tcbSchedDequeue_valid_queues_weak
+             untyped_ranges_zero_lift
+        | simp add: cteCaps_of_def o_def)+
+  apply clarsimp
   apply (fastforce simp: valid_pspace'_def valid_queues_def
                    elim: valid_objs'_maxDomain valid_objs'_maxPriority intro: obj_at'_conjI)
   done
@@ -2596,6 +2608,7 @@ lemma schedule_corres:
              apply (simp_all only: cong: if_cong Deterministic_A.scheduler_action.case_cong
                                            Structures_H.scheduler_action.case_cong)
            apply ((wp thread_get_wp' hoare_vcg_conj_lift hoare_drop_imps | clarsimp)+)
+thm tcbSchedEnqueue_invs'
    apply (rule conjI,simp)
    apply (clarsimp split:Deterministic_A.scheduler_action.splits
      simp: invs_psp_aligned invs_distinct invs_valid_objs

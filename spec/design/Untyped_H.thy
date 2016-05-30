@@ -132,17 +132,17 @@ updateFreeIndex :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
 where
 "updateFreeIndex slot idx\<equiv> (do
     cap \<leftarrow> getSlotCap slot;
+    modify (\<lambda> ks. (case untypedZeroRange cap of
+          None \<Rightarrow>   ks
+        | Some r \<Rightarrow>   ks \<lparr>gsUntypedZeroRanges := data_set_delete
+            r (gsUntypedZeroRanges ks)\<rparr>)
+        );
     modify (\<lambda> ks. (case untypedZeroRange (cap \<lparr>capFreeIndex := idx\<rparr>) of
           None \<Rightarrow>   ks
         | Some r \<Rightarrow>   ks \<lparr>gsUntypedZeroRanges := data_set_insert
             r (gsUntypedZeroRanges ks)\<rparr>)
         );
-    updateCap slot (cap \<lparr>capFreeIndex := idx\<rparr>);
-    modify (\<lambda> ks. (case untypedZeroRange cap of
-          None \<Rightarrow>   ks
-        | Some r \<Rightarrow>   ks \<lparr>gsUntypedZeroRanges := data_set_delete
-            r (gsUntypedZeroRanges ks)\<rparr>)
-        )
+    updateCap slot (cap \<lparr>capFreeIndex := idx\<rparr>)
 od)"
 
 definition

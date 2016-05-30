@@ -1518,6 +1518,20 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     done
 
   from cdm show "ksCurDomain s \<le> maxDomain" .
+
+  from invs
+  have urz: "untyped_ranges_zero' s" by (simp add: invs'_def valid_state'_def)
+  show "untyped_ranges_zero_inv (cteCaps_of state')
+    (gsUntypedZeroRanges s)"
+    apply (simp add: untyped_zero_ranges_cte_def
+                     urz[unfolded untyped_zero_ranges_cte_def, rule_format, symmetric])
+    apply (clarsimp simp: fun_eq_iff intro!: arg_cong[where f=Ex])
+    apply safe
+    apply (drule non_null_present[OF cte_wp_at_weakenE'])
+     apply (clarsimp simp: untypedZeroRange_def)
+    apply simp
+    done
+
 qed (clarsimp)
 
 lemma (in delete_locale) delete_ko_wp_at':

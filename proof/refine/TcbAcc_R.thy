@@ -1283,6 +1283,13 @@ apply (rule ct_idle_or_in_cur_domain'_lift)
 apply (wp hoare_vcg_disj_lift| simp)+
 done
 
+crunch ksDomScheduleIdx[wp]: threadSet "\<lambda>s. P (ksDomScheduleIdx s)"
+  (wp: setObject_ksPSpace_only updateObject_default_inv
+     ignore: getObject setObject)
+crunch gsUntypedZeroRanges[wp]: threadSet "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: setObject_ksPSpace_only updateObject_default_inv
+     ignore: getObject setObject)
+
 lemma setObject_tcb_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s) \<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_ s. P (ksDomScheduleIdx s)\<rbrace>"
   apply (simp add:setObject_def)
@@ -1341,9 +1348,10 @@ proof -
               threadSet_valid_dom_schedule'
               threadSet_valid_queues'
               threadSet_cur
-           |clarsimp simp: y z a domains|rule refl)+
+              untyped_ranges_zero_lift
+           |clarsimp simp: y z a domains cteCaps_of_def |rule refl)+
    apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
-   apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def)
+   apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def o_def)
    by (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a)
 qed
 
@@ -4725,14 +4733,20 @@ apply (simp add: setBoundNotification_def)
 apply (wp  | simp)+
 done
 
-crunch ksDomScheduleIdx[wp]: rescheduleRequired, setBoundNotification "\<lambda>s. P (ksDomScheduleIdx s)"
+crunch ksDomScheduleIdx[wp]: rescheduleRequired, setBoundNotification,
+  setThreadState "\<lambda>s. P (ksDomScheduleIdx s)"
 (ignore: setObject getObject getObject wp:crunch_wps hoare_unless_wp)
 
-lemma setThreadState_ksDomScheduleIdx[wp]:
-  "\<lbrace> \<lambda>s. P (ksDomScheduleIdx s) \<rbrace> setThreadState st tptr \<lbrace>\<lambda>_ s. P (ksDomScheduleIdx s) \<rbrace>"
-apply (simp add: setThreadState_def)
-apply (wp  | simp)+
-done
+crunch gsUntypedZeroRanges[wp]: rescheduleRequired, setBoundNotification,
+  setThreadState "\<lambda>s. P (gsUntypedZeroRanges s)"
+(ignore: setObject getObject getObject wp:crunch_wps hoare_unless_wp)
+
+lemma sts_utr[wp]:
+  "\<lbrace>untyped_ranges_zero'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. untyped_ranges_zero'\<rbrace>"
+  apply (simp add: cteCaps_of_def)
+  apply (rule hoare_pre, wp untyped_ranges_zero_lift)
+  apply (simp add: o_def)
+  done
 
 lemma sts_invs_minor':
   "\<lbrace>st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = tcb_st_refs_of' st
@@ -4746,20 +4760,22 @@ lemma sts_invs_minor':
      setThreadState st t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wp sts_valid_queues valid_irq_node_lift irqs_masked_lift
-             setThreadState_ct_not_inQ, simp_all)
-     apply (clarsimp simp: sch_act_simple_def)
-    apply (clarsimp elim!: st_tcb_ex_cap'')
-   apply (clarsimp dest!: st_tcb_at_state_refs_ofD'
-                   elim!: rsubst[where P=sym_refs]
-                  intro!: ext)
-  apply (rule conjI, clarsimp)
-  apply (clarsimp simp: pred_tcb_at'_def)
-  apply (drule obj_at_valid_objs')
-   apply (clarsimp simp: valid_pspace'_def)
-  apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
-  by (fastforce simp: valid_tcb_state'_def
-                  split: Structures_H.thread_state.splits)
+  apply (rule hoare_pre)
+   apply (wp sts_valid_queues valid_irq_node_lift irqs_masked_lift
+              setThreadState_ct_not_inQ
+            | simp add: cteCaps_of_def o_def)+
+  apply (clarsimp simp: sch_act_simple_def)
+  apply (intro conjI)
+     apply clarsimp
+    defer
+    apply (clarsimp dest!: st_tcb_at_state_refs_ofD'
+                    elim!: rsubst[where P=sym_refs]
+                   intro!: ext)
+   apply (clarsimp elim!: st_tcb_ex_cap'')
+  apply (frule tcb_in_valid_state', clarsimp+)
+  apply (cases st, simp_all add: valid_tcb_state'_def
+                  split: Structures_H.thread_state.split_asm)
+  done
 
 lemma sbn_invs_minor':
   "\<lbrace>bound_tcb_at' (\<lambda>ntfn'. tcb_bound_refs' ntfn' = tcb_bound_refs' ntfn) t
@@ -4769,19 +4785,22 @@ lemma sbn_invs_minor':
      setBoundNotification ntfn t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wp irqs_masked_lift valid_irq_node_lift setBoundNotification_valid_queues' sbn_valid_queues
-            setBoundNotification_ct_not_inQ sbn_sch_act', simp_all)
-    apply clarsimp
-   apply (clarsimp dest!: bound_tcb_at_state_refs_ofD'
-                   elim!: rsubst[where P=sym_refs]
-                  intro!: ext,
-               simp add: Un_commute)
-  apply (clarsimp simp: pred_tcb_at'_def)
-  apply (frule obj_at_valid_objs')
-   apply (clarsimp simp: valid_pspace'_def)
-  apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
-  apply (clarsimp simp: valid_bound_ntfn'_def obj_at'_def projectKOs tcb_bound_refs'_def
-                 split: Structures_H.thread_state.splits option.splits)
+  apply (rule hoare_pre)
+   apply (wp irqs_masked_lift valid_irq_node_lift setBoundNotification_valid_queues' sbn_valid_queues
+             setBoundNotification_ct_not_inQ sbn_sch_act' untyped_ranges_zero_lift
+          | simp add: cteCaps_of_def o_def)+
+  apply (clarsimp simp: pred_tcb_at')
+  apply (intro conjI)
+   apply (clarsimp simp: pred_tcb_at'_def)
+   apply (frule obj_at_valid_objs')
+    apply (clarsimp simp: valid_pspace'_def)
+   apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
+   apply (clarsimp simp: valid_bound_ntfn'_def obj_at'_def projectKOs tcb_bound_refs'_def
+                  split: Structures_H.thread_state.splits option.splits)
+  apply (clarsimp dest!: bound_tcb_at_state_refs_ofD'
+                  elim!: rsubst[where P=sym_refs]
+                 intro!: ext,
+              simp add: Un_commute)
   done
 
 lemma sts_invs_minor'_notrunnable':

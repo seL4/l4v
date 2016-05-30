@@ -13,6 +13,7 @@ imports
   LevityCatch
   "../invariant-abstract/Deterministic_AI"
   "../invariant-abstract/AInvs"
+  "../../lib/AddUpdSimps"
 begin
 
 context Arch begin
@@ -630,14 +631,11 @@ definition
      capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
      mdbFirstBadged node')"
 
-function (sequential)
+fun (sequential)
   untypedRange :: "capability \<Rightarrow> word32 set"
 where
    "untypedRange (UntypedCap d p n f) = {p .. p + 2 ^ n - 1}"
 |  "untypedRange c = {}"
-  by pat_completeness auto
-
-termination by lexicographic_order
 
 primrec
   acapClass :: "arch_capability \<Rightarrow> capclass"
@@ -906,6 +904,21 @@ where
  "valid_queues \<equiv> \<lambda>s. valid_queues_no_bitmap s \<and> valid_bitmapQ s \<and> 
                      bitmapQ_no_L2_orphans s \<and> bitmapQ_no_L1_orphans s"
 
+ML {*
+@{term "(\<forall>d p. (\<forall>t\<in>set (ksReadyQueues y1 (d, p)).
+           obj_at' (inQ d p and runnable' \<circ> tcbState) t (gsUntypedZeroRanges_update y0 y1)) \<and>
+       distinct (ksReadyQueues y1 (d, p)) \<and>
+       (maxDomain < d \<longrightarrow> ksReadyQueues y1 (d, p) = []) \<and>
+       (maxPriority < p \<longrightarrow> ksReadyQueues y1 (d, p) = [])) =
+(\<forall>d p. (\<forall>t\<in>set (ksReadyQueues y1 (d, p)). obj_at' (inQ d p and runnable' \<circ> tcbState) t y1) \<and>
+       distinct (ksReadyQueues y1 (d, p)) \<and>
+       (maxDomain < d \<longrightarrow> ksReadyQueues y1 (d, p) = []) \<and>
+       (maxPriority < p \<longrightarrow> ksReadyQueues y1 (d, p) = [])) \<Longrightarrow>
+valid_queues_no_bitmap (gsUntypedZeroRanges_update y0 y1) = valid_queues_no_bitmap y1"}
+  |> get_upd_apps
+  |> map (Syntax.pretty_term @{context} #> Pretty.writeln)
+*}
+
 definition
   (* when a thread gets added to / removed from a queue, but before bitmap updated *)
   valid_bitmapQ_except :: "domain \<Rightarrow> priority \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1111,6 +1124,14 @@ definition
   "valid_machine_state' \<equiv>
    \<lambda>s. \<forall>p. pointerInUserData p s \<or> pointerInDeviceData p s \<or> underlying_memory (ksMachineState s) p = 0"
 
+definition
+  "untyped_ranges_zero_inv cps urs \<equiv>
+    urs = ran (untypedZeroRange \<circ>\<^sub>m cps)"
+
+abbreviation
+  "untyped_ranges_zero' s \<equiv> untyped_ranges_zero_inv (cteCaps_of s)
+      (gsUntypedZeroRanges s)"
+
 (* FIXME: this really should be a definition like the above. *)
 (* The schedule is invariant. *)
 abbreviation
@@ -1138,7 +1159,8 @@ where
                       \<and> valid_pde_mappings' s
                       \<and> pspace_domain_valid s
                       \<and> ksCurDomain s \<le> maxDomain
-                      \<and> valid_dom_schedule' s"
+                      \<and> valid_dom_schedule' s
+                      \<and> untyped_ranges_zero' s"
 
 definition
   "cur_tcb' s \<equiv> tcb_at' (ksCurThread s) s"
@@ -1205,7 +1227,7 @@ abbreviation(input)
            \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s \<and> valid_pde_mappings' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
-           \<and> valid_dom_schedule' s"
+           \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
 abbreviation(input)
  "all_invs_but_ct_not_inQ'
@@ -1218,7 +1240,7 @@ abbreviation(input)
            \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s \<and> valid_pde_mappings' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
-           \<and> valid_dom_schedule' s"
+           \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
 lemma all_invs_but_sym_refs_not_ct_inQ_check':
   "(all_invs_but_sym_refs_ct_not_inQ' and sym_refs \<circ> state_refs_of' and ct_not_inQ) = invs'"
@@ -1239,7 +1261,7 @@ definition
            \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_not_inQ s \<and> valid_pde_mappings' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
-           \<and> valid_dom_schedule' s"
+           \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
 lemmas invs_no_cicd'_def = all_invs_but_ct_idle_or_in_cur_domain'_def
 
@@ -3114,6 +3136,10 @@ interpretation ksDomainTime:
   P_Arch_Idle_Int_Cur_update_eq "ksDomainTime_update f"
   by unfold_locales auto
 
+interpretation gsUntypedZeroRanges:
+  P_Arch_Idle_Int_Cur_update_eq "gsUntypedZeroRanges_update f"
+  by unfold_locales auto
+
 lemma ko_wp_at_norm:
   "ko_wp_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> ko_wp_at' (op = ko) p s"
   by (auto simp add: ko_wp_at'_def)
@@ -3591,15 +3617,35 @@ context begin
 private definition
   "ko_at'_defn v \<equiv> ko_at' v"
 
-private lemma ko_at_defn_unique:
+private lemma ko_at_defn_rewr:
   "ko_at'_defn ko p s \<Longrightarrow> (obj_at' P p s = P ko)"
   unfolding ko_at'_defn_def
   by (auto simp: obj_at'_def)
 
+private lemma ko_at_defn_uniqueD:
+  "ko_at'_defn ko p s \<Longrightarrow> ko_at'_defn ko' p s \<Longrightarrow> ko' = ko"
+  unfolding ko_at'_defn_def
+  by (auto simp: obj_at'_def)
+
+private lemma ko_at_defn_pred_tcb_at':
+  "ko_at'_defn ko p s \<Longrightarrow> (pred_tcb_at' proj P p s = P (proj (tcb_to_itcb' ko)))"
+  by (auto simp: pred_tcb_at'_def ko_at_defn_rewr)
+
+private lemma ko_at_defn_ko_wp_at':
+  "ko_at'_defn ko p s \<Longrightarrow> (ko_wp_at' P p s = P (injectKO ko))"
+  by (clarsimp simp: ko_at'_defn_def obj_at'_real_def
+                     ko_wp_at'_def project_inject)
+
 method normalise_obj_at' =
   (clarsimp?, elim obj_at_ko_at'[folded ko_at'_defn_def, elim_format],
-   clarsimp simp: ko_at_defn_unique, clarsimp simp: ko_at'_defn_def)
+   clarsimp simp: ko_at_defn_rewr ko_at_defn_pred_tcb_at' ko_at_defn_ko_wp_at',
+   ((drule(1) ko_at_defn_uniqueD)+)?,
+   clarsimp simp: ko_at'_defn_def)
 
 end
 
+add_upd_simps "invs' (gsUntypedZeroRanges_update f s)
+    \<and> valid_queues (gsUntypedZeroRanges_update f s)"
+  (obj_at'_real_def)
+declare upd_simps[simp]
 end

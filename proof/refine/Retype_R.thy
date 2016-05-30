@@ -5038,6 +5038,7 @@ proof (rule hoare_gen_asm, erule conjE)
   apply (simp add: invs'_def valid_state'_def
                    pointerInUserData_def typ_at'_def)
     apply (rule hoare_pre)
+sorry (*
      apply (wp createNewCaps_valid_pspace [OF not_0 cover]
                createNewCaps_state_refs_of' [OF cover not_0 ]
                createNewCaps_iflive' [OF cover not_0 ]
@@ -5059,7 +5060,7 @@ proof (rule hoare_gen_asm, erule conjE)
   using cover
   apply (intro conjI)
    apply simp_all
-  done
+  done *)
 qed
 
 lemma createNewCaps_vp:
@@ -5399,6 +5400,44 @@ apply (wp ct_idle_or_in_cur_domain'_lift_futz createObjects_obj_at_other[where s
 apply simp_all
 done
 
+lemma untyped_zero_ranges_cte_def:
+  "untyped_ranges_zero_inv (cteCaps_of s) rs
+    = (\<forall>r. (\<exists>p. cte_wp_at' (\<lambda>cte. untypedZeroRange (cteCap cte) = Some r) p s)
+        = (r \<in> rs))"
+  apply (clarsimp simp: untyped_ranges_zero_inv_def cte_wp_at_ctes_of
+                        cteCaps_of_def set_eq_iff ran_def map_comp_Some_iff)
+  apply (safe, metis+)
+  done
+
+crunch gsUntypedZeroRanges[wp]: createObjects "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (simp: unless_def)
+
+lemma createObjects_untyped_ranges_zero':
+  assumes moKO: "makeObjectKO ty = Some (injectKOS val)"
+  shows
+  "\<lbrace>ct_active' and valid_pspace' and pspace_no_overlap' ptr sz
+       and untyped_ranges_zero'
+       and K (range_cover ptr sz (objBitsKO (injectKOS val) + gSize) n \<and> n \<noteq> 0)\<rbrace>
+     createObjects ptr n val gSize
+   \<lbrace>\<lambda>_. untyped_ranges_zero'\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (simp add: untyped_zero_ranges_cte_def iff_conv_conj_imp
+                   createObjects_def)
+  apply (simp only: imp_conv_disj not_all not_ex)
+  apply (rule hoare_pre)
+   apply (wp hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_conj_lift
+             hoare_vcg_disj_lift createObjects_orig_cte_wp_at2'[where sz=sz])
+  apply (clarsimp simp: valid_pspace'_def)
+  apply (cut_tac moKO[symmetric])
+  apply (simp add: makeObjectKO_def projectKO_opt_tcb projectKO_opt_cte
+                   split: sum.split_asm kernel_object.split_asm
+                          arch_kernel_object.split_asm
+                          object_type.split_asm apiobject_type.split_asm)
+   apply (simp add: makeObject_tcb tcb_cte_cases_def makeObject_cte
+                    untypedZeroRange_def)
+  apply (simp add: makeObject_cte untypedZeroRange_def)
+  done
+
 lemma createObjects_no_cte_invs:
   assumes moKO: "makeObjectKO dev ty = Some val"
   assumes no_cte: "\<And>c. projectKO_opt val \<noteq> Some (c::cte)"
@@ -5460,6 +5499,7 @@ proof -
              createObjects_queues' [OF no_tcb] assms
              createObjects_pspace_domain_valid co_ct_not_inQ
              createObjects_ct_idle_or_in_cur_domain'
+             createObjects_untyped_ranges_zero'[OF moKO]
          | simp)+
   apply clarsimp
   apply (intro conjI; simp add: valid_pspace'_def objBits_def)

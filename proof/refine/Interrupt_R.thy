@@ -321,7 +321,6 @@ lemma ct_in_current_domain_ksMachineState:
   apply (simp add:tcb_in_cur_domain'_def)
   done
 
-
 lemma invoke_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
     invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -332,7 +331,7 @@ lemma invoke_irq_handler_invs'[wp]:
       ct_in_current_domain_ksMachineState)
    apply (wp cteInsert_invs)
    apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg)
-   apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
+   apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])[1]
   apply (rename_tac word1 cap word2)
   apply (simp add: getInterruptState_def getIRQSlot_def locateSlot_conv)
   apply wp
@@ -340,7 +339,7 @@ lemma invoke_irq_handler_invs'[wp]:
   apply (drule_tac irq=word1 in valid_globals_ex_cte_cap_irq)
     apply clarsimp+
   apply (clarsimp simp: cte_wp_at_ctes_of ex_cte_cap_to'_def
-                        isCap_simps)
+                        isCap_simps untyped_derived_eq_def)
   apply (fastforce simp: cte_level_bits_def badge_derived'_def)+
   done
 
@@ -478,11 +477,14 @@ lemma tcbSchedAppend_invs_but_ct_not_inQ':
   "\<lbrace>invs' and st_tcb_at' runnable' t \<rbrace>
    tcbSchedAppend t \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
-            valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-       | simp add: cteCaps_of_def 
-       | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
+  apply (rule hoare_pre)
+   apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
+             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+             untyped_ranges_zero_lift
+        | simp add: cteCaps_of_def o_def
+        | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
   done
+
 lemma timerTick_corres:
   "corres dc (cur_tcb and valid_sched) 
              invs'

@@ -216,24 +216,6 @@ lemma get_rs_real_cte_at'[wp]:
   apply simp
   done
 
-lemma deriveCap_valid [wp]:
-  "\<lbrace>\<lambda>s. s \<turnstile>' c\<rbrace> 
-  deriveCap slot c 
-  \<lbrace>\<lambda>rv s. s \<turnstile>' rv\<rbrace>,-"
-  apply (cases c)
-          apply (simp_all add: deriveCap_def validE_R_def return_def
-                               validE_def valid_def returnOk_def Let_def
-                               bindE_def bind_def isCap_simps valid_NullCap)
-   apply (rename_tac arch_capability)
-   apply (case_tac arch_capability;
-          simp add: liftME_def bindE_def returnOk_def lift_def
-                    return_def bind_def ARM_H.deriveCap_def
-                    isCap_simps Let_def valid_cap'_def capAligned_def
-                    throwError_def)
-  apply (clarsimp simp: lift_def throwError_def return_def split: sum.splits)
-  apply (erule(1) use_valid [OF _ ensureNoChildren_inv])
-  done
-
 declare word_div_1 [simp]
 declare word_minus_one_le [simp]
 declare word32_minus_one_le [simp]
@@ -296,43 +278,6 @@ lemma getSlotCap_cte_wp_at_rv:
   apply (simp add: getSlotCap_def)
   apply (wp getCTE_ctes_wp)
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
-
-lemma deriveCap_derived:
-  "\<lbrace>\<lambda>s. c'\<noteq> capability.NullCap \<longrightarrow> cte_wp_at' (\<lambda>cte. badge_derived' c' (cteCap cte)
-                           \<and> capASID c' = capASID (cteCap cte)
-                           \<and> cap_asid_base' c' = cap_asid_base' (cteCap cte)
-                           \<and> cap_vptr' c' = cap_vptr' (cteCap cte)) slot s
-       \<and> valid_objs' s\<rbrace>
-  deriveCap slot c'
-  \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow>
-          cte_wp_at' (is_derived' (ctes_of s) slot rv \<circ> cteCap) slot s\<rbrace>, -"
-  unfolding deriveCap_def badge_derived'_def
-  apply (cases c', simp_all add: isCap_simps Let_def)
-            defer 8 (* arch *)
-            apply ((wp ensureNoChildren_wp
-                     | clarsimp simp: isCap_simps capMasterCap_def
-                                      is_derived'_def capBadge_def
-                                      sameObjectAs_def badge_derived'_def
-                                      vsCapRef_def
-                     | erule cte_wp_at_weakenE' disjE
-                     | simp split: capability.split_asm
-                     )+)[11]
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability;
-         simp add: ARM_H.deriveCap_def Let_def isCap_simps
-              split: split_if,
-         safe)
-        apply ((wp throwError_validE_R undefined_validE_R
-                  | clarsimp simp: isCap_simps capAligned_def cte_wp_at_ctes_of
-                  | drule valid_capAligned
-                  | drule(1) bits_low_high_eq
-                  | simp add: capBadge_def sameObjectAs_def
-                              ARM_H.sameObjectAs_def
-                              is_derived'_def isCap_simps up_ucast_inj_eq
-                              is_aligned_no_overflow badge_derived'_def
-                              capAligned_def capASID_def vsCapRef_def
-                  | clarsimp split: option.split_asm)+)
   done
 
 lemma badge_derived_mask [simp]:
@@ -406,15 +351,19 @@ lemma deriveCap_derived_foo:
                      \<and> capASID cap = capASID (cteCap cte) \<and> cap_asid_base' cap = cap_asid_base' (cteCap cte)
                      \<and> cap_vptr' cap = cap_vptr' (cteCap cte)) slot s
               \<and> valid_objs' s \<and> cap' \<noteq> NullCap \<longrightarrow> cte_wp_at' (is_derived' (ctes_of s) slot cap' \<circ> cteCap) slot s)
+        \<and> (cte_wp_at' (untyped_derived_eq cap \<circ> cteCap) slot s
+            \<longrightarrow> cte_wp_at' (untyped_derived_eq cap' \<circ> cteCap) slot s)
         \<and> (s \<turnstile>' cap \<longrightarrow> s \<turnstile>' cap') \<and> (cap' \<noteq> NullCap \<longrightarrow> cap \<noteq> NullCap) \<longrightarrow> Q cap' s\<rbrace>
     deriveCap slot cap \<lbrace>Q\<rbrace>,-"
   using deriveCap_derived[where slot=slot and c'=cap] deriveCap_valid[where slot=slot and c=cap]
-        deriveCap_not_null[where slot=slot and cap=cap]
+        deriveCap_untyped_derived[where slot=slot and c'=cap] deriveCap_not_null[where slot=slot and cap=cap]
   apply (clarsimp simp: validE_R_def validE_def valid_def split: sum.split)
   apply (frule in_inv_by_hoareD[OF deriveCap_inv])
-  apply clarsimp
+  apply (clarsimp simp: o_def)
   apply (drule spec, erule mp)
   apply safe
+     apply fastforce
+    apply (drule spec, drule(1) mp)
     apply fastforce
    apply (drule spec, drule(1) mp)
    apply fastforce
@@ -772,7 +721,9 @@ lemma cteInsert_weak_cte_wp_at2:
 lemma transferCapsToSlots_presM:
   assumes x: "\<And>cap src dest. \<lbrace>\<lambda>s. P s \<and> (emx \<longrightarrow> cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) dest s \<and> ex_cte_cap_to' dest s)
                                        \<and> (vo \<longrightarrow> valid_objs' s \<and> valid_cap' cap s \<and> real_cte_at' dest s)
-                                       \<and> (drv \<longrightarrow> cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)
+                                       \<and> (drv \<longrightarrow> cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s
+                                               \<and> cte_wp_at' (untyped_derived_eq cap o cteCap) src s
+                                               \<and> valid_mdb' s)
                                        \<and> (pad \<longrightarrow> pspace_aligned' s \<and> pspace_distinct' s)\<rbrace>
                                            cteInsert cap src dest \<lbrace>\<lambda>rv. P\<rbrace>"
   assumes eb: "\<And>b n. \<lbrace>P\<rbrace> setExtraBadge buffer b n \<lbrace>\<lambda>_. P\<rbrace>"
@@ -821,6 +772,14 @@ lemma transferCapsToSlots_presM:
   apply (clarsimp simp:conj_comms split del:split_if)
   apply (intro conjI allI)
      apply (clarsimp simp:Fun.comp_def cte_wp_at_ctes_of)+
+sorry (*
+  the masked as full bit is there because in principle we can try to
+  send two copies of the same untyped cap? yuck.
+
+thm transferCapsToSlots.simps
+find_theorems transferCapsToSlots
+find_theorems transferCaps
+find_theorems lookupExtraCaps
   apply (clarsimp simp:valid_capAligned)
   apply (rule conjI,clarsimp)
   apply (rule ballI)
@@ -829,6 +788,7 @@ lemma transferCapsToSlots_presM:
   apply (case_tac "cteCap cteb \<noteq> aa")
    apply (clarsimp simp:maskedAsFull_def isCap_simps )
   by (clarsimp simp:maskedAsFull_def split:split_if_asm)
+*)
 
 lemmas transferCapsToSlots_pres2
     = transferCapsToSlots_presM[where vo=False and emx=True
@@ -1079,7 +1039,7 @@ lemma setExtraBadge_irq_states'[wp]:
   apply (simp add: setExtraBadge_def storeWordUser_def)
   apply (wp no_irq dmo_lift' no_irq_storeWord)
   done
-  
+
 lemma transferCapsToSlots_irq_states' [wp]: 
   "\<lbrace>valid_irq_states'\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   by (wp transferCapsToSlots_pres1)
@@ -1151,6 +1111,30 @@ lemma tcts_ct_not_inQ[wp]:
    \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   by (wp transferCapsToSlots_pres1)
 
+crunch gsUntypedZeroRanges[wp]: setExtraBadge "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunch ctes_of[wp]: setExtraBadge "\<lambda>s. P (ctes_of s)"
+
+lemma tcts_zero_ranges[wp]:
+  "\<lbrace>\<lambda>s. untyped_ranges_zero' s \<and> valid_pspace' s \<and> distinct slots
+          \<and> (\<forall>x \<in> set slots. ex_cte_cap_to' x s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) x s)
+          \<and> (\<forall>x \<in> set slots. real_cte_at' x s)
+          \<and> transferCaps_srcs caps s\<rbrace>
+    transferCapsToSlots ep buffer n caps slots mi
+  \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
+  apply (wp transferCapsToSlots_presM[where emx=True and vo=True
+      and drv=True and pad=True])
+    apply (clarsimp simp: cte_wp_at_ctes_of)
+   apply (simp add: cteCaps_of_def)
+   apply (rule hoare_pre, wp untyped_ranges_zero_lift)
+   apply (simp add: o_def)
+  apply (clarsimp simp: valid_pspace'_def ball_conj_distrib[symmetric])
+  apply (drule(1) bspec)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (case_tac cte, clarsimp)
+  apply (frule(1) ctes_of_valid_cap')
+  apply auto[1]
+  done
+
 crunch ct_idle_or_in_cur_domain'[wp]: setExtraBadge ct_idle_or_in_cur_domain'
 crunch ct_idle_or_in_cur_domain'[wp]: transferCapsToSlots ct_idle_or_in_cur_domain'
 crunch ksCurDomain[wp]: transferCapsToSlots "\<lambda>s. P (ksCurDomain s)"
@@ -1195,7 +1179,6 @@ lemma grs_distinct'[wp]:
   apply (wp | simp only: distinct.simps list.simps empty_iff)+
   apply simp
   done
-
 lemma getExtraCPtrs_length [wp]:
   "\<lbrace>\<lambda>s. msgExtraCaps msg < 6\<rbrace> 
   getExtraCPtrs send_buf msg \<lbrace>\<lambda>rv s. Suc (Suc (msg_max_length + length rv)) < unat max_ipc_words\<rbrace>"
@@ -1725,6 +1708,28 @@ crunch aligned'[wp]: doNormalTransfer pspace_aligned'
   (wp: crunch_wps)
 crunch distinct'[wp]: doNormalTransfer pspace_distinct'
   (wp: crunch_wps)
+
+lemma transferCaps_urz[wp]:
+  "\<lbrace>untyped_ranges_zero' and valid_pspace'
+      and (\<lambda>s. (\<forall>x\<in>set caps. cte_wp_at' (\<lambda>cte. fst x \<noteq> capability.NullCap \<longrightarrow> cteCap cte = fst x) (snd x) s))\<rbrace>
+    transferCaps tag caps ep receiver recv_buf
+  \<lbrace>\<lambda>r. untyped_ranges_zero'\<rbrace>"
+  apply (simp add: transferCaps_def)
+  apply (rule hoare_pre)
+   apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
+      | wpc
+      | simp add: ball_conj_distrib)+
+  apply clarsimp
+  done
+
+crunch gsUntypedZeroRanges[wp]: doNormalTransfer "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: crunch_wps transferCapsToSlots_pres1 ignore: constOnFailure)
+
+lemmas asUser_cteCaps_of[wp] = cteCaps_of_ctes_of_lift[OF asUser_ctes_of]
+lemmas asUser_urz = untyped_ranges_zero_lift[OF asUser_gsUntypedZeroRanges]
+
+crunch urz[wp]: doNormalTransfer "untyped_ranges_zero'"
+  (ignore: asUser wp: crunch_wps asUser_urz hoare_vcg_const_Ball_lift)
 
 lemma msgFromLookupFailure_map[simp]:
   "msgFromLookupFailure (lookup_failure_map lf)
@@ -3371,27 +3376,28 @@ lemma sai_invs'[wp]:
                set_ntfn_valid_objs' cur_tcb_lift sts_st_tcb'
                hoare_convert_imp [OF setNotification_nosch]
            | simp)+
-                                  apply (rule impI)
-                                  apply (simp add: invs'_def valid_state'_def)
-                                  apply (elim conjE)
-                                  apply (drule(1) ct_not_in_ntfnQueue)
-                                    apply (simp)+
-                                 apply (simp_all add: invs'_def valid_state'_def
-                                            split del: split_if)[23]
-              apply (clarsimp simp: valid_pspace'_def)
-              apply (frule(1) ko_at_valid_objs')
-               apply (simp add: projectKOs)
-              apply (clarsimp simp: valid_obj'_def valid_ntfn'_def
-                         split: list.splits)
-             apply clarsimp+
-            apply (clarsimp simp: st_tcb_at_refs_of_rev' valid_idle'_def pred_tcb_at'_def
-                           dest!: sym_refs_ko_atD' sym_refs_st_tcb_atD' sym_refs_obj_atD'
+                                   apply (rule impI)
+                                   apply (simp add: invs'_def valid_state'_def)
+                                   apply (elim conjE)
+                                   apply (drule(1) ct_not_in_ntfnQueue)
+                                     apply (simp)+
+                                  apply (simp_all add: invs'_def valid_state'_def
+                                             split del: split_if)[23]
+               apply (clarsimp simp: valid_pspace'_def)
+               apply (frule(1) ko_at_valid_objs')
+                apply (simp add: projectKOs)
+               apply (clarsimp simp: valid_obj'_def valid_ntfn'_def
                           split: list.splits)
-           apply (clarsimp simp: valid_pspace'_def)
-           apply (frule(1) ko_at_valid_objs')
-            apply (simp add: projectKOs)
-           apply (clarsimp simp: valid_obj'_def valid_ntfn'_def
-                       split: list.splits option.splits)
+              apply clarsimp+
+             apply (clarsimp simp: st_tcb_at_refs_of_rev' valid_idle'_def pred_tcb_at'_def
+                            dest!: sym_refs_ko_atD' sym_refs_st_tcb_atD' sym_refs_obj_atD'
+                           split: list.splits)
+            apply (clarsimp simp: valid_pspace'_def)
+            apply (frule(1) ko_at_valid_objs')
+             apply (simp add: projectKOs)
+            apply (clarsimp simp: valid_obj'_def valid_ntfn'_def
+                        split: list.splits option.splits)
+           apply clarsimp
           apply (clarsimp elim!: if_live_then_nonz_capE' simp:invs'_def valid_state'_def)
           apply (drule(1) sym_refs_ko_atD')
           apply (clarsimp elim!: ko_wp_at'_weakenE
@@ -4129,6 +4135,33 @@ lemma completeSignal_invs:
                    simp: valid_obj'_def projectKOs)[1]
   done
 
+lemma setupCallerCap_urz[wp]:
+  "\<lbrace>untyped_ranges_zero' and valid_pspace' and tcb_at' sender\<rbrace>
+    setupCallerCap sender t \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
+  apply (simp add: setupCallerCap_def getSlotCap_def
+                   getThreadCallerSlot_def getThreadReplySlot_def
+                   locateSlot_conv)
+  apply (wp getCTE_wp')
+  apply (rule_tac Q="\<lambda>_. untyped_ranges_zero' and valid_mdb' and valid_objs'" in hoare_post_imp)
+   apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def untyped_derived_eq_def
+                         isCap_simps)
+  apply (rule hoare_pre, wp sts_valid_pspace_hangers)
+  apply (clarsimp simp: valid_tcb_state'_def)
+  done
+
+lemmas threadSet_urz = untyped_ranges_zero_lift[where f="cteCaps_of", OF _ threadSet_cteCaps_of]
+
+crunch urz[wp]: doIPCTransfer "untyped_ranges_zero'"
+  (ignore: threadSet wp: threadSet_urz crunch_wps simp: zipWithM_x_mapM)
+
+crunch gsUntypedZeroRanges[wp]: receiveIPC "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: crunch_wps transferCapsToSlots_pres1 simp: zipWithM_x_mapM ignore: constOnFailure)
+
+crunch ctes_of[wp]: switchIfRequiredTo "\<lambda>s. P (ctes_of s)"
+  (wp: crunch_wps ignore: constOnFailure)
+lemmas switchIfRequiredTo_cteCaps_of[wp]
+    = cteCaps_of_ctes_of_lift[OF switchIfRequiredTo_ctes_of]
+
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:
   "\<lbrace>invs' and sch_act_not t
@@ -4152,9 +4185,10 @@ lemma ri_invs' [wp]:
      apply (rule hoare_pre, wpc, wp valid_irq_node_lift)
       apply (simp add: valid_ep'_def)
       apply (wp sts_sch_act' hoare_vcg_const_Ball_lift valid_irq_node_lift
-                sts_valid_queues setThreadState_ct_not_inQ 
-           | simp add: doNBRecvFailedTransfer_def)+
-     apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at')
+                sts_valid_queues setThreadState_ct_not_inQ
+                asUser_urz
+           | simp add: doNBRecvFailedTransfer_def cteCaps_of_def)+
+     apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at' o_def)
      apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
      apply (frule obj_at_valid_objs')
       apply (clarsimp simp: valid_pspace'_def)
@@ -4182,8 +4216,9 @@ lemma ri_invs' [wp]:
      apply (simp add: valid_ep'_def)
      apply (wp sts_sch_act' valid_irq_node_lift
                sts_valid_queues setThreadState_ct_not_inQ
-          | simp add: doNBRecvFailedTransfer_def)+
-    apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def)
+               asUser_urz
+          | simp add: doNBRecvFailedTransfer_def cteCaps_of_def)+
+    apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def o_def)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "t \<noteq> capEPPtr cap")
      apply (drule simple_st_tcb_at_state_refs_ofD')
@@ -4208,11 +4243,12 @@ lemma ri_invs' [wp]:
               setThreadState_ct_not_inQ switchIfRequiredTo_valid_queues
               switchIfRequiredTo_valid_queues'
               switchIfRequiredTo_ct_not_inQ hoare_vcg_all_lift
-             setEndpoint_ksQ setEndpoint_ct'
+              setEndpoint_ksQ setEndpoint_ct'
          | simp add: valid_tcb_state'_def case_bool_If
                      case_option_If
               split del: split_if cong: if_cong
-        | wp_once sch_act_sane_lift hoare_vcg_conj_lift hoare_vcg_all_lift)+
+        | wp_once sch_act_sane_lift hoare_vcg_conj_lift hoare_vcg_all_lift
+                  untyped_ranges_zero_lift)+
    apply (clarsimp split del: split_if simp: pred_tcb_at')
    apply (frule obj_at_valid_objs')
     apply (clarsimp simp: valid_pspace'_def)
@@ -4276,6 +4312,7 @@ lemma rai_invs'[wp]:
     apply (rule hoare_pre)
      apply (wp valid_irq_node_lift sts_sch_act' typ_at_lifts
                sts_valid_queues setThreadState_ct_not_inQ
+               asUser_urz
             | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def | wpc)+
     apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
@@ -4298,6 +4335,7 @@ lemma rai_invs'[wp]:
    apply (simp add: invs'_def valid_state'_def)
    apply (rule hoare_pre)
     apply (wp valid_irq_node_lift sts_valid_objs' typ_at_lifts static_imp_wp
+              asUser_urz
          | simp add: valid_ntfn'_def)+
    apply (clarsimp simp: pred_tcb_at' valid_pspace'_def)
    apply (frule (1) ko_at_valid_objs')
@@ -4312,6 +4350,7 @@ lemma rai_invs'[wp]:
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act'
              sts_valid_queues setThreadState_ct_not_inQ typ_at_lifts
+             asUser_urz
         | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def | wpc)+
   apply (clarsimp simp: valid_tcb_state'_def)
   apply (frule_tac t=t in not_in_ntfnQueue)
@@ -4434,6 +4473,8 @@ crunch ct_idle_or_in_cur_domain'[wp]: attemptSwitchTo ct_idle_or_in_cur_domain'
 crunch ct'[wp]: attemptSwitchTo "\<lambda>s. P (ksCurThread s)"
 crunch it[wp]: attemptSwitchTo "\<lambda>s. P (ksIdleThread s)"
 crunch irqs_masked'[wp]: attemptSwitchTo "irqs_masked'"
+crunch urz[wp]: attemptSwitchTo "untyped_ranges_zero'"
+  (simp: crunch_simps unless_def wp: crunch_wps)
 
 lemma si_invs'[wp]: 
   "\<lbrace>invs' and st_tcb_at' simple' t
@@ -4631,8 +4672,8 @@ lemma sts_invs_minor'':
    apply (drule obj_at_valid_objs')
     apply (clarsimp simp: valid_pspace'_def)
    apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
-   subgoal by (fastforce simp: valid_tcb_state'_def
-                        split: Structures_H.thread_state.splits)
+   subgoal by (cases st, auto simp: valid_tcb_state'_def
+                        split: Structures_H.thread_state.splits)[1]
   apply (rule conjI)
    apply (clarsimp dest!: st_tcb_at_state_refs_ofD'
                    elim!: rsubst[where P=sym_refs]

@@ -92,10 +92,6 @@ lemma updateCap_valid_objs' [wp]:
   unfolding updateCap_def
   by (wp setCTE_valid_objs getCTE_wp) (clarsimp dest!: cte_at_cte_wp_atD)
 
-lemma valid_NullCap:
-  "valid_cap' NullCap = \<top>"
-  by (rule ext, simp add: valid_cap'_def)
-
 crunch valid_objs'[wp]: deletedIRQHandler "valid_objs'"
 
 lemma emptySlot_objs [wp]:
@@ -1423,8 +1419,9 @@ lemma emptySlot_invs'[wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp valid_arch_state_lift' valid_irq_node_lift)
+   sorry (* I think this needs a check too
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
+  done *)
 
 lemma opt_deleted_irq_corres:
   "corres dc \<top> \<top>
@@ -2192,6 +2189,15 @@ crunch vs_lookup[wp]: flush_space "\<lambda>s. P (vs_lookup s)"
 
 declare doUnbindNotification_def[simp]
 
+lemma ntfn_q_refs_of'_mult:
+  "ntfn_q_refs_of' ntfn = (case ntfn of Structures_H.WaitingNtfn q \<Rightarrow> set q | _ \<Rightarrow> {}) \<times> {NTFNSignal}"
+  by (cases ntfn, simp_all)
+
+lemma tcb_st_not_Bound:
+  "(p, NTFNBound) \<notin> tcb_st_refs_of' ts"
+  "(p, TCBBound) \<notin> tcb_st_refs_of' ts"
+  by (auto simp: tcb_st_refs_of'_def split: Structures_H.thread_state.split)
+
 lemma unbindNotification_invs[wp]:
   "\<lbrace>invs'\<rbrace> unbindNotification tcb \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: unbindNotification_def invs'_def valid_state'_def)
@@ -2199,32 +2205,29 @@ lemma unbindNotification_invs[wp]:
   apply (case_tac ntfnPtr, clarsimp, wp, clarsimp)
   apply clarsimp
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule hoare_pre)
   apply (wp sbn'_valid_pspace'_inv sbn_sch_act' sbn_valid_queues valid_irq_node_lift 
-            irqs_masked_lift setBoundNotification_ct_not_inQ | clarsimp)+
-          defer 5
-          apply (fold_subgoals (prefix))[8]
-          subgoal by (auto simp: pred_tcb_at' valid_pspace'_def projectKOs valid_obj'_def valid_ntfn'_def
-                            ko_wp_at'_def
-                     elim!: obj_atE' valid_objsE' if_live_then_nonz_capE'
-                     split: option.splits ntfn.splits)
-  apply (clarsimp elim!: obj_atE' simp: projectKOs)
+            irqs_masked_lift setBoundNotification_ct_not_inQ
+            untyped_ranges_zero_lift | clarsimp simp: cteCaps_of_def o_def)+
   apply (rule conjI)
    apply (clarsimp elim!: obj_atE' valid_objsE' 
                     simp: projectKOs
                    dest!: pred_tcb_at')
-  apply (clarsimp)
-  apply (rule delta_sym_refs, assumption)
-   apply (fastforce simp: state_refs_of'_def
-                   split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
-   subgoal by (fastforce simp: state_refs_of'_def tcb_st_refs_of'_def tcb_bound_refs'_def
-                           ntfn_q_refs_of'_def
-                   dest!: pred_tcb_at' bound_tcb_at_state_refs_ofD'
-                   split: thread_state.splits ntfn.splits split_if_asm)
-  by (fastforce simp: tcb_ntfn_is_bound'_def state_refs_of'_def ntfn_q_refs_of'_def
-                         ntfn_bound_refs'_def tcb_st_refs_of'_def tcb_bound_refs'_def ko_wp_at'_def
-                  split: option.splits split_if_asm ntfn.splits
-                  dest!: sym_refs_bound_tcb_atD')
+  apply (clarsimp simp: pred_tcb_at' conj_comms)
+  apply (frule bound_tcb_ex_cap'', clarsimp+)
+  apply (frule(1) sym_refs_bound_tcb_atD')
+  apply (frule(1) sym_refs_obj_atD')
+  apply (clarsimp simp: refs_of_rev')
+  apply normalise_obj_at'
+  apply (subst delta_sym_refs, assumption)
+    apply (auto split: split_if_asm)[1]
+   apply (auto simp: tcb_st_not_Bound ntfn_q_refs_of'_mult split: split_if_asm)[1]
+  apply (frule obj_at_valid_objs', clarsimp+)
+  apply (simp add: valid_ntfn'_def valid_obj'_def projectKOs
+            split: ntfn.splits)
+  apply (erule if_live_then_nonz_capE')
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+  done
 
 lemma ntfn_bound_tcb_at':
   "\<lbrakk>sym_refs (state_refs_of' s); valid_objs' s; ko_at' ntfn ntfnptr s; 
@@ -2247,7 +2250,9 @@ lemma unbindMaybeNotification_invs[wp]:
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
    apply (wp sbn'_valid_pspace'_inv sbn_sch_act' sbn_valid_queues valid_irq_node_lift 
-             irqs_masked_lift setBoundNotification_ct_not_inQ | wpc | clarsimp)+
+             irqs_masked_lift setBoundNotification_ct_not_inQ
+             untyped_ranges_zero_lift
+             | wpc | clarsimp simp: cteCaps_of_def o_def)+
   apply safe[1]
            defer 3
            defer 7
@@ -3720,13 +3725,18 @@ crunch tcb_in_cur_domain'[wp]: copyGlobalMappings "tcb_in_cur_domain' t"
 crunch ct__in_cur_domain'[wp]: copyGlobalMappings ct_idle_or_in_cur_domain'
   (wp: crunch_wps ignore: getObject)
 
+crunch gsUntypedZeroRanges[wp]: copyGlobalMappings "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: crunch_wps ignore: getObject)
+
 lemma copyGlobalMappings_invs'[wp]:
   "\<lbrace>invs' and K (is_aligned pd pdBits)\<rbrace> copyGlobalMappings pd \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
-  apply (wp valid_irq_node_lift_asm valid_global_refs_lift' sch_act_wf_lift
-            valid_irq_handlers_lift'' cur_tcb_lift typ_at_lifts irqs_masked_lift
-            copyGlobalMappings_pde_mappings2'
-       | clarsimp)+
+  apply (rule hoare_pre)
+   apply (wp valid_irq_node_lift_asm valid_global_refs_lift' sch_act_wf_lift
+             valid_irq_handlers_lift'' cur_tcb_lift typ_at_lifts irqs_masked_lift
+             copyGlobalMappings_pde_mappings2'
+             untyped_ranges_zero_lift
+        | clarsimp simp: cteCaps_of_def o_def)+
   done
 
 lemma dmo'_bind_return:
@@ -3815,7 +3825,8 @@ lemma recycleCap_invs:
    apply (rule hoare_name_pre_state)
    apply (clarsimp simp: invs'_def valid_state'_def
                   split: thread_state.split_asm split del: split_if)
-   apply (wp
+   apply (rule hoare_pre)
+    apply (wp
              threadSet_valid_pspace'T_P[where P=False, simplified]
              threadSet_sch_act_wf
              threadSet_valid_queues
@@ -3834,8 +3845,11 @@ lemma recycleCap_invs:
              threadSet_ct_idle_or_in_cur_domain'
              threadSet_valid_dom_schedule'
              threadSet_ct_idle_or_in_cur_domain'
-        | simp add: tcb_cte_cases_def makeObject_tcb valid_tcb_state'_def minBound_word)+
-                 apply (auto simp: ksReadyQueues_update_id inQ_def addToQs_def obj_at'_def pred_tcb_at'_def makeObject_tcb projectKOs objBits_simps ct_in_state'_def)[15]
+             untyped_ranges_zero_lift
+        | simp add: tcb_cte_cases_def makeObject_tcb valid_tcb_state'_def minBound_word
+                    cteCaps_of_def o_def)+
+   apply (auto simp: ksReadyQueues_update_id inQ_def addToQs_def obj_at'_def pred_tcb_at'_def
+                     makeObject_tcb projectKOs objBits_simps ct_in_state'_def)[1]
   apply wp
   apply simp
   done

@@ -156,62 +156,64 @@ lemma pac_corres:
        apply (simp add:pageBits_def)
       apply (rule corres_split[OF _ getSlotCap_corres])
          apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
-         apply (rule corres_split[OF _ updateCap_same_master])
-            apply (rule corres_split)
-               prefer 2
-               apply (simp add: retype_region2_ext_retype_region_ArchObject )
-               apply (rule corres_retype [where 'a = asidpool and ty="Inl (KOArch (KOASIDPool F))",
-                                          unfolded APIType_map2_def makeObjectKO_def, 
-                                          THEN createObjects_corres',where 'b = asidpool,simplified])
-                     apply simp
-                    apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def
-                                     default_arch_object_def archObjSize_def)+
-                 apply (simp add: obj_relation_retype_def default_object_def
-                                  default_arch_object_def objBits_simps archObjSize_def)
-                 apply (simp add: other_obj_relation_def asid_pool_relation_def)
-                 apply (simp add: makeObject_asidpool const_def inv_def)
-                apply (rule range_cover_full)
-                 apply (simp add: obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
-              apply (rule corres_split)
-                 prefer 2
-                 apply (rule cins_corres_simple, simp, rule refl, rule refl)
-                apply (rule_tac F="is_aligned word2 asid_low_bits" in corres_gen_asm)
-                apply (simp add: is_aligned_mask dc_def[symmetric])
-                apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
-                   prefer 2
-                   apply (clarsimp simp: state_relation_def arch_state_relation_def)
-                  apply (rule corres_trivial)
-                  apply (rule corres_modify)
-                  apply (thin_tac "x \<in> state_relation" for x)
-                  apply (clarsimp simp: state_relation_def arch_state_relation_def o_def)
-                  apply (rule ext)
-                  apply clarsimp
-                  apply (erule_tac P = "x = asid_high_bits_of word2" in notE)
-                  apply (rule word_eqI)
-                  apply (drule_tac x1="ucast x" in bang_eq [THEN iffD1])
-                  apply (erule_tac x=n in allE)
-                  apply (simp add: word_size nth_ucast)
-                 apply wp
-             apply (strengthen safe_parent_strg[where idx = "2^pageBits"])
-             apply (strengthen invs_valid_objs invs_distinct
-                               invs_psp_aligned invs_mdb
-                    | simp cong:conj_cong)+
-             apply (wp retype_region_plain_invs[where sz = pageBits]
-                       retype_cte_wp_at[where sz = pageBits])
-            apply (strengthen vp_strgs'
-                   safe_parent_strg'[where idx = "2^pageBits"])
-            apply (simp cong: conj_cong)
-            apply (wp createObjects_valid_pspace'
-                      [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))"])
-               apply (simp add: makeObjectKO_def)+
-              apply (simp add:objBits_simps archObjSize_def range_cover_full)+
-            apply (clarsimp simp:valid_cap'_def)
-            apply (wp createObject_typ_at'
-                      createObjects_orig_cte_wp_at'[where sz = pageBits])
-            apply (rule descendants_of'_helper)
-            apply (wp createObjects_null_filter'
-                      [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))"])
-           apply (clarsimp simp:is_cap_simps)
+         apply (rule corres_split[OF _ updateFreeIndex_corres])
+             apply (rule corres_split)
+                prefer 2
+                apply (simp add: retype_region2_ext_retype_region_ArchObject )
+                apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))",
+                                           unfolded APIType_map2_def makeObjectKO_def, 
+                                           THEN createObjects_corres',simplified,
+                                           where val = "makeObject::asidpool"])
+                      apply simp
+                     apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def
+                                      default_arch_object_def archObjSize_def)+
+                  apply (simp add: obj_relation_retype_def default_object_def
+                                   default_arch_object_def objBits_simps archObjSize_def)
+                  apply (simp add: other_obj_relation_def asid_pool_relation_def)
+                  apply (simp add: makeObject_asidpool const_def inv_def)
+                 apply (rule range_cover_full)
+                  apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
+               apply (rule corres_split)
+                  prefer 2
+                  apply (rule cins_corres_simple, simp, rule refl, rule refl)
+                 apply (rule_tac F="is_aligned word2 asid_low_bits" in corres_gen_asm)
+                 apply (simp add: is_aligned_mask dc_def[symmetric])
+                 apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
+                    prefer 2
+                    apply (clarsimp simp: state_relation_def arch_state_relation_def)
+                   apply (rule corres_trivial)
+                   apply (rule corres_modify)
+                   apply (thin_tac "x \<in> state_relation" for x)
+                   apply (clarsimp simp: state_relation_def arch_state_relation_def o_def)
+                   apply (rule ext)
+                   apply clarsimp
+                   apply (erule_tac P = "x = asid_high_bits_of word2" in notE)
+                   apply (rule word_eqI)
+                   apply (drule_tac x1="ucast x" in bang_eq [THEN iffD1])
+                   apply (erule_tac x=n in allE)
+                   apply (simp add: word_size nth_ucast)
+                  apply wp
+              apply (strengthen safe_parent_strg[where idx = "2^pageBits"])
+              apply (strengthen invs_valid_objs invs_distinct
+                                invs_psp_aligned invs_mdb
+                     | simp cong:conj_cong)+
+              apply (wp retype_region_plain_invs[where sz = pageBits]
+                        retype_cte_wp_at[where sz = pageBits])
+             apply (strengthen vp_strgs'
+                    safe_parent_strg'[where idx = "2^pageBits"])
+             apply (simp cong: conj_cong)
+             apply (wp createObjects_valid_pspace'
+                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))"])
+                apply (simp add: makeObjectKO_def)+
+               apply (simp add:objBits_simps archObjSize_def range_cover_full)+
+             apply (clarsimp simp:valid_cap'_def)
+             apply (wp createObject_typ_at'
+                       createObjects_orig_cte_wp_at'[where sz = pageBits])
+             apply (rule descendants_of'_helper)
+             apply (wp createObjects_null_filter'
+                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))"])
+            apply (clarsimp simp:is_cap_simps)
+           apply (simp add: free_index_of_def)
           apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
                  objBits_simps archObjSize_def default_arch_object_def
                  pred_conj_def)
@@ -230,19 +232,14 @@ lemma pac_corres:
                          simp del: capFreeIndex_update.simps 
                 | strengthen invs_valid_pspace' invs_pspace_aligned'
                              invs_pspace_distinct')+
-         apply (wp updateFreeIndex_invs_simple'
+         apply (wp updateFreeIndex_forward_invs'
            updateFreeIndex_pspace_no_overlap'
            updateFreeIndex_caps_no_overlap''
-           updateFreeIndex_descendants_of'
-           updateCap_cte_wp_at_cases)
-         apply (rule hoare_vcg_conj_lift)
-          apply (rule_tac P1 = "\<lambda>m. m x = {}" for x in hoare_strengthen_post[OF
-                          updateFreeIndex_descendants_of'])
-          apply (clarsimp, assumption)
-         apply (wp updateFreeIndex_caps_overlap_reserved' updateCap_cte_wp_at_cases)
-        apply simp
+           updateFreeIndex_descendants_of2
+           updateFreeIndex_cte_wp_at
+           updateFreeIndex_caps_overlap_reserved
+             | simp add: descendants_of_null_filter' split del: split_if)+
        apply (wp get_cap_wp)
-      apply (wp getSlotCap_wp)
      apply (subgoal_tac "word1 && ~~ mask pageBits = word1 \<and> pageBits \<le> word_bits \<and> 2 \<le> pageBits")
       prefer 2
       apply (clarsimp simp:pageBits_def word_bits_def is_aligned_neg_mask_eq)
@@ -252,28 +249,20 @@ lemma pac_corres:
     apply (clarsimp simp: conj_comms ex_disj_distrib
            | strengthen invs_valid_pspace' invs_pspace_aligned'
                         invs_pspace_distinct')+
-    apply (wp deleteObjects_invs' deleteObjects_cte_wp_at'
-              deleteObjects_descendants)
-    apply (rule_tac Q= "\<lambda>r s. ct_active' s \<and>
-                               (\<exists>x. (x = capability.UntypedCap False word1 pageBits idx \<and> F r s x))" for F
-                     in hoare_strengthen_post)
-     prefer 2
-     apply (elim conjE)
-     apply (rule conjI)
-      apply assumption
-     apply (erule exE)
-     apply (rule_tac x = x in exI)
-     apply (elim conjE)
-     apply (rule conjI)
-      apply (clarsimp simp: isCap_simps)
-     apply assumption
+    apply (wp deleteObjects_invs'[where p="makePoolParent i'"]
+              deleteObjects_cte_wp_at'
+              deleteObjects_descendants[where p="makePoolParent i'"])
     apply (clarsimp split del: split_if simp:valid_cap'_def)
-    apply (wp hoare_vcg_ex_lift deleteObjects_caps_no_overlap''
-              deleteObject_no_overlap deleteObjects_ct_active')
+    apply (wp hoare_vcg_ex_lift
+              deleteObjects_caps_no_overlap''[where slot="makePoolParent i'"]
+              deleteObject_no_overlap
+              deleteObjects_ct_active'[where cref="makePoolParent i'"])
     apply (clarsimp simp: is_simple_cap_def valid_cap'_def max_free_index_def is_cap_simps
                     cong: conj_cong)
     apply (strengthen empty_descendants_range_in')
-    apply (wp deleteObjects_descendants deleteObjects_cte_wp_at' deleteObjects_null_filter)
+    apply (wp deleteObjects_descendants[where p="makePoolParent i'"]
+              deleteObjects_cte_wp_at'
+              deleteObjects_null_filter[where p="makePoolParent i'"])
    apply (clarsimp simp:invs_mdb max_free_index_def invs_untyped_children)
    apply (subgoal_tac "detype_locale x y sa" for x y)
     prefer 2
@@ -333,35 +322,37 @@ lemma pac_corres:
   apply clarsimp
   apply (drule cte_map_inj_eq)
        apply ((fastforce simp:cte_wp_at_caps_of_state)+)[5]
-  apply (clarsimp simp:cte_wp_at_caps_of_state invs_valid_pspace' conj_comms cte_wp_at_ctes_of)
+  apply (clarsimp simp:cte_wp_at_caps_of_state invs_valid_pspace' conj_comms cte_wp_at_ctes_of
+                       valid_cap_simps')
+  apply (strengthen refl)
+  apply clarsimp
   apply (frule empty_descendants_range_in')
-  apply (intro conjI)
-                          apply (simp_all add: is_simple_cap'_def isCap_simps descendants_range'_def2
-                                               null_filter_descendants_of'[OF null_filter_simp']
-                                               capAligned_def asid_low_bits_def)
-           apply (erule descendants_range_caps_no_overlapI')
-            apply (fastforce simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
-           apply (simp add:empty_descendants_range_in')
-          apply (simp add:word_bits_def pageBits_def)
-         apply (clarsimp simp:max_free_index_def)
-         apply (rule is_aligned_weaken)
-          apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
-         apply (simp add:pageBits_def)
+  apply (intro conjI,
+    simp_all add: is_simple_cap'_def isCap_simps descendants_range'_def2
+                  null_filter_descendants_of'[OF null_filter_simp']
+                  capAligned_def asid_low_bits_def)
+      apply (erule descendants_range_caps_no_overlapI')
+       apply (fastforce simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
+      apply (simp add:empty_descendants_range_in')
+     apply (simp add:word_bits_def pageBits_def)
+    apply (rule is_aligned_weaken)
+     apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
+    apply (simp add:pageBits_def)
         apply (clarsimp simp:max_free_index_def)
-       apply clarsimp
-       apply (drule(1) cte_cap_in_untyped_range)
-            apply (fastforce simp:cte_wp_at_ctes_of)
-           apply assumption+
-        apply fastforce
-       apply simp
-      apply clarsimp
-      apply (drule (1) cte_cap_in_untyped_range)
-           apply (fastforce simp add: cte_wp_at_ctes_of)
-          apply assumption+
-        apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-       apply fastforce
-      apply simp
-     by (fastforce simp:cte_wp_at_ctes_of)+
+   apply clarsimp
+   apply (drule(1) cte_cap_in_untyped_range)
+        apply (fastforce simp:cte_wp_at_ctes_of)
+       apply assumption+
+    apply fastforce
+   apply simp
+  apply clarsimp
+  apply (drule (1) cte_cap_in_untyped_range)
+       apply (fastforce simp add: cte_wp_at_ctes_of)
+      apply assumption+
+    apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
+   apply fastforce
+  apply simp
+  done
 
 definition
   archinv_relation :: "arch_invocation \<Rightarrow> Arch.invocation \<Rightarrow> bool"
@@ -1363,38 +1354,31 @@ lemma performASIDControlInvocation_tcb_at':
     apply (wp createObjects_orig_obj_at2' updateFreeIndex_pspace_no_overlap' getSlotCap_wp static_imp_wp)
    apply (clarsimp simp: projectKO_opts_defs)
    apply (strengthen st_tcb_strg' [where P=\<top>]) 
-   apply (wp deleteObjects_invs_derivatives
+   apply (wp deleteObjects_invs_derivatives[where p="makePoolParent aci"]
      hoare_vcg_ex_lift deleteObjects_cte_wp_at'
-     deleteObjects_st_tcb_at' deleteObjects_invs_derivatives static_imp_wp)
+     deleteObjects_st_tcb_at'[where p="makePoolParent aci"] static_imp_wp
+     updateFreeIndex_pspace_no_overlap')
   apply (case_tac ctea)
   apply (clarsimp)
   apply (frule ctes_of_valid_cap')
    apply (simp add:invs_valid_objs')+
   apply (clarsimp simp:valid_cap'_def capAligned_def cte_wp_at_ctes_of)
-  apply (rule conjI)
-    apply clarsimp
-    apply (drule (1) cte_cap_in_untyped_range)
-        apply (fastforce simp add: cte_wp_at_ctes_of)
-       apply assumption+
-      apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-     apply fastforce
-    apply simp
-   apply (rule conjI,assumption)
-  apply (clarsimp simp:invs_valid_pspace' objBits_simps archObjSize_def
-    range_cover_full descendants_range'_def2)
-  apply (intro conjI)
-               apply (fastforce simp:empty_descendants_range_in')+
-         apply (erule pred_tcb'_weakenE)
-          apply fastforce
-        apply (fastforce simp:empty_descendants_range_in')+
-       apply clarsimp
-    apply (drule (1) cte_cap_in_untyped_range)
-        apply (fastforce simp add: cte_wp_at_ctes_of)
-       apply assumption+
-      apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-     apply fastforce
-    apply simp
-  apply auto
+  apply (strengthen refl order_refl
+                    pred_tcb'_weakenE[mk_strg I E])
+  apply (clarsimp simp: conj_comms invs_valid_pspace' isCap_simps
+                        descendants_range'_def2 empty_descendants_range_in')
+  apply (frule ctes_of_valid', clarsimp, simp,
+    drule capFreeIndex_update_valid_cap'[where fb="2 ^ pageBits", rotated -1],
+    simp_all)
+   apply (simp add: pageBits_def is_aligned_def)
+  apply (simp add: valid_cap_simps' range_cover_def objBits_simps archObjSize_def
+                   capAligned_def unat_eq_0 and_mask_eq_iff_shiftr_0[symmetric]
+                   word_bw_assocs)
+  apply clarsimp
+  apply (drule(1) cte_cap_in_untyped_range,
+    fastforce simp add: cte_wp_at_ctes_of, assumption, simp_all)
+   apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
+  apply clarsimp
   done
 
 lemma invokeArch_tcb_at':
@@ -2072,7 +2056,7 @@ lemma performASIDControlInvocation_st_tcb_at':
     apply simp
    apply (rule conjI,assumption)
   apply (clarsimp simp:invs_valid_pspace' objBits_simps archObjSize_def
-    range_cover_full descendants_range'_def2)
+    range_cover_full descendants_range'_def2 isCap_simps)
   apply (intro conjI)
                apply (fastforce simp:empty_descendants_range_in')+
        apply clarsimp
@@ -2223,42 +2207,35 @@ lemma performASIDControlInvocation_invs' [wp]:
          capAligned_def range_cover_full makeObjectKO_def
          projectKOs asid_pool_typ_at_ext'
          cong: rev_conj_cong)
-    apply (clarsimp simp:conj_comms | 
-      strengthen invs_pspace_aligned' invs_pspace_distinct'
-      invs_pspace_aligned' invs_valid_pspace')+
-    apply (wp updateFreeIndex_invs_simple' updateCap_ct_active'
+    apply (clarsimp simp:conj_comms
+                         descendants_of_null_filter'
+      | strengthen invs_pspace_aligned' invs_pspace_distinct'
+          invs_pspace_aligned' invs_valid_pspace')+
+    apply (wp updateFreeIndex_forward_invs'
+           updateFreeIndex_cte_wp_at
            updateFreeIndex_pspace_no_overlap'
            updateFreeIndex_caps_no_overlap''
-           updateCap_cte_wp_at_cases freeIndexUpdate_ex_cte static_imp_wp)
-    apply (rule hoare_vcg_conj_lift)
-      apply (rule_tac P1 = "\<lambda>m. m x = {}" for x in hoare_strengthen_post[OF 
-           updateFreeIndex_descendants_of'])
-      apply (clarsimp,assumption)
-     apply (wp updateFreeIndex_caps_overlap_reserved' getSlotCap_wp
-                   updateCap_cte_wp_at_cases updateCap_ct_active')
+           updateFreeIndex_descendants_of2
+           updateFreeIndex_caps_overlap_reserved
+           updateCap_cte_wp_at_cases freeIndexUpdate_ex_cte static_imp_wp
+           getSlotCap_wp)
   apply (clarsimp simp:conj_comms ex_disj_distrib is_aligned_mask
            | strengthen invs_valid_pspace' invs_pspace_aligned'
-                        invs_pspace_distinct')+
-     apply (wp deleteObjects_invs' deleteObjects_cte_wp_at' )
-     apply (rule_tac Q= "\<lambda>r s. \<exists>x. (x = capability.UntypedCap False w1 pageBits idx \<and> F r s x)"
-                     for F in hoare_strengthen_post)
-    prefer 2
-    apply (erule exE)
-    apply (rule_tac x = x in exI)
-    apply (elim conjE)
-    apply (rule conjI)
-     apply (clarsimp simp:isCap_simps)
-    apply assumption
-   apply (clarsimp split del:if_splits simp:valid_cap'_def max_free_index_def)
-   apply (strengthen empty_descendants_range_in')
-   apply (wp hoare_vcg_ex_lift deleteObjects_caps_no_overlap''
-             deleteObjects_cte_wp_at'[where d=False] deleteObjects_null_filter[where d=False]
-             deleteObject_no_overlap[where d=False] deleteObjects_descendants[where d=False])
-   apply (wp deleteObjects_cap_to' deleteObjects_ct_active'
-             deleteObjects_descendants[where d=False] deleteObjects_cte_wp_at'[where d=False] deleteObjects_null_filter[where d=False])
+                        invs_pspace_distinct' empty_descendants_range_in')+
+  apply (wp deleteObjects_invs'[where p="makePoolParent aci"]
+            hoare_vcg_ex_lift
+            deleteObjects_caps_no_overlap''[where slot="makePoolParent aci"]
+            deleteObject_no_overlap
+            deleteObjects_cap_to'[where p="makePoolParent aci"]
+            deleteObjects_ct_active'[where cref="makePoolParent aci"]
+            deleteObjects_descendants[where p="makePoolParent aci"]
+            deleteObjects_cte_wp_at'
+            deleteObjects_null_filter[where p="makePoolParent aci"])
   apply (frule valid_capAligned)
   apply (clarsimp simp: invs_mdb' invs_valid_pspace' capAligned_def
                         cte_wp_at_ctes_of is_simple_cap'_def isCap_simps)
+  apply (strengthen refl ctes_of_valid_cap'[mk_strg I E])
+  apply (clarsimp simp: conj_comms invs_valid_objs')
   apply (frule_tac ptr="w1" in descendants_range_caps_no_overlapI'[where sz = pageBits])
     apply (fastforce simp:is_aligned_neg_mask_eq cte_wp_at_ctes_of)
    apply (simp add:empty_descendants_range_in')
@@ -2275,10 +2252,11 @@ lemma performASIDControlInvocation_invs' [wp]:
    apply (simp add:pageBits_def)
   apply (frule_tac cte="CTE (capability.UntypedCap False a b c) m" for a b c m in valid_global_refsD', clarsimp)
   apply (simp add: is_aligned_neg_mask_eq Int_commute)
-  by (auto simp:empty_descendants_range_in' objBits_simps
+  by (auto simp:empty_descendants_range_in' objBits_simps max_free_index_def
                     archObjSize_def asid_low_bits_def word_bits_def pageBits_def
                     range_cover_full descendants_range'_def2 is_aligned_mask
-                    null_filter_descendants_of'[OF null_filter_simp'])
+                    null_filter_descendants_of'[OF null_filter_simp']
+                    valid_cap_simps' mask_def)+
 
 lemma doFlush_underlying_memory[wp]:
   "\<lbrace> \<lambda>m'. underlying_memory m' p = um \<rbrace>

@@ -3700,16 +3700,18 @@ lemma getObjectSize_def_eq:
 
 lemma updateFreeIndex_pspace_no_overlap':
   "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and>
-        valid_pspace' s \<and> cte_wp_at' (\<lambda>c. cteCap c = cap) src s\<rbrace>
-   updateCap src (capFreeIndex_update (\<lambda>_. index) cap)
+        valid_pspace' s \<and> cte_wp_at' (isUntypedCap o cteCap) src s\<rbrace>
+   updateFreeIndex src index
    \<lbrace>\<lambda>r s. pspace_no_overlap' ptr sz s\<rbrace>"
+  apply (simp add: updateFreeIndex_def getSlotCap_def)
   apply (rule hoare_pre)
-   apply (wp pspace_no_overlap'_lift)
-  apply (clarsimp simp:valid_pspace'_def)
+   apply (wp getCTE_wp' | wp_once pspace_no_overlap'_lift
+     | simp add: fiddle_gsUntypedZeroRanges_update)+
+  apply (clarsimp simp:valid_pspace'_def pspace_no_overlap'_def)
   done
 
-lemma updateFreeIndex_caps_overlap_reserved':
-  "\<lbrace>\<lambda>s. invs' s \<and> S \<subseteq> untypedRange cap \<and>
+lemma updateFreeIndex_updateCap_caps_overlap_reserved:
+  "\<lbrace>\<lambda>s. valid_mdb' s \<and> valid_objs' s \<and> S \<subseteq> untypedRange cap \<and>
         usableUntypedRange (capFreeIndex_update (\<lambda>_. index) cap) \<inter> S = {} \<and>
         isUntypedCap cap \<and> descendants_range_in' S src (ctes_of s) \<and>
         cte_wp_at' (\<lambda>c. cteCap c = cap) src s\<rbrace>
@@ -3719,7 +3721,6 @@ lemma updateFreeIndex_caps_overlap_reserved':
   apply (wp updateCap_ctes_of_wp)
   apply (clarsimp simp:modify_map_def cte_wp_at_ctes_of)
   apply (erule ranE)
-  apply (frule invs_mdb')
   apply (clarsimp split:split_if_asm simp:valid_mdb'_def valid_mdb_ctes_def)
   apply (case_tac cte)
   apply (case_tac ctea)
@@ -3739,7 +3740,7 @@ lemma updateFreeIndex_caps_overlap_reserved':
     apply simp
     apply (rule disjoint_subset[OF usableRange_subseteq])
       apply (rule valid_capAligned)
-      apply (erule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
+      apply (erule(1) ctes_of_valid_cap')
      apply (simp add:untypedCapRange)+
    apply (elim disjE)
     apply clarsimp
@@ -3747,17 +3748,30 @@ lemma updateFreeIndex_caps_overlap_reserved':
     apply simp
     apply (rule disjoint_subset[OF usableRange_subseteq])
       apply (rule valid_capAligned)
-      apply (erule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
+      apply (erule(1) ctes_of_valid_cap')
      apply (simp add:untypedCapRange)+
   apply (thin_tac "P\<longrightarrow>Q" for P Q)+
   apply (rule disjoint_subset[OF usableRange_subseteq])
     apply (rule valid_capAligned)
-    apply (erule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
+    apply (erule(1) ctes_of_valid_cap')
    apply simp+
   apply blast
   done
 
-lemma updateFreeIndex_caps_no_overlap'':
+lemma updateFreeIndex_caps_overlap_reserved:
+  "\<lbrace>\<lambda>s. valid_pspace' s \<and> descendants_range_in' S src (ctes_of s)
+        \<and> cte_wp_at' ((\<lambda>cap. S \<subseteq> untypedRange cap \<and>
+            usableUntypedRange (capFreeIndex_update (\<lambda>_. index) cap) \<inter> S = {} \<and>
+            isUntypedCap cap) o cteCap) src s\<rbrace>
+   updateFreeIndex src index
+   \<lbrace>\<lambda>r s. caps_overlap_reserved' S s\<rbrace>"
+  apply (simp add: updateFreeIndex_def getSlotCap_def)
+  apply (wp updateFreeIndex_updateCap_caps_overlap_reserved getCTE_wp')
+  apply (clarsimp simp: cte_wp_at_ctes_of valid_pspace'_def)
+  apply (clarsimp simp: valid_mdb'_def split: option.split)
+  done
+
+lemma updateFreeIndex_updateCap_caps_no_overlap'':
   "\<lbrace>\<lambda>s. isUntypedCap cap \<and> caps_no_overlap'' ptr sz s \<and>
         cte_wp_at' (\<lambda>c. cteCap c = cap) src s\<rbrace>
    updateCap src (capFreeIndex_update (\<lambda>_. index) cap)
@@ -3785,13 +3799,16 @@ lemma updateFreeIndex_caps_no_overlap'':
   apply fastforce+
   done
 
-lemma updateCap_ct_active':
-  "\<lbrace>ct_active'\<rbrace> updateCap slot newCap \<lbrace>\<lambda>_. ct_active'\<rbrace>"
-apply (simp add: updateCap_def ct_in_state'_def)
-apply wp
-apply (wps setCTE_ct)
-apply (wp setCTE_pred_tcb_at')
-done
+lemma updateFreeIndex_caps_no_overlap'':
+  "\<lbrace>\<lambda>s. caps_no_overlap'' ptr sz s \<and>
+        cte_wp_at' (isUntypedCap o cteCap) src s\<rbrace>
+   updateFreeIndex src index
+   \<lbrace>\<lambda>r s. caps_no_overlap'' ptr sz s\<rbrace>"
+  apply (simp add: updateFreeIndex_def getSlotCap_def)
+  apply (wp updateFreeIndex_updateCap_caps_no_overlap'' getCTE_wp')
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: caps_no_overlap''_def split: option.split)
+  done
 
 (* FIXME: move to CSpace_R *)
 lemma mdb_preserve_refl: "mdb_inv_preserve m m"
@@ -3818,7 +3835,7 @@ lemma updateFreeIndex_descendants_of':
   apply (clarsimp simp: isCap_simps)
   done
 
-lemma updateFreeIndex_descendants_range_in':
+lemma updateFreeIndex_updateCap_descendants_range_in':
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. cteCap c = cap) slot s \<and> isUntypedCap cap \<and>
         descendants_range_in' S slot (ctes_of s)\<rbrace>
    updateCap slot (capFreeIndex_update (\<lambda>_. index) cap)
@@ -3833,6 +3850,17 @@ lemma updateFreeIndex_descendants_range_in':
    apply (wp setCTE_weak_cte_wp_at getCTE_wp)
    apply (fastforce simp:cte_wp_at_ctes_of isCap_simps)
   apply (clarsimp)
+  done
+
+lemma updateFreeIndex_descendants_range_in':
+  "\<lbrace>\<lambda>s. cte_wp_at' (isUntypedCap o cteCap) slot s
+      \<and> descendants_range_in' S slot (ctes_of s)\<rbrace>
+     updateFreeIndex slot index
+   \<lbrace>\<lambda>r s. descendants_range_in' S slot (ctes_of s)\<rbrace>"
+  apply (simp add: updateFreeIndex_def getSlotCap_def)
+  apply (wp updateFreeIndex_updateCap_descendants_range_in' getCTE_wp')
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (clarsimp split: option.split)
   done
 
 lemma caps_no_overlap''_def2:
@@ -4027,31 +4055,32 @@ lemma pspace_no_overlap_valid_untyped':
   apply (clarsimp simp: is_aligned_no_wrap'[OF _ word_of_nat_less])
   done
 
-lemma updateFreeIndex_pspace_simple':
-  "\<lbrace>\<lambda>s. pspace_no_overlap' (capPtr cap) (capBlockSize cap) s \<and>
-        valid_pspace' s \<and> cte_wp_at' (\<lambda>c. \<exists>idx'. cteCap c = capFreeIndex_update (\<lambda>_. idx') cap) src s \<and>
-        isUntypedCap cap \<and> is_aligned (of_nat idx :: word32) 4 \<and>
-        descendants_of' src (ctes_of s) = {} \<and>
-        idx \<le> 2 ^ (capBlockSize cap)\<rbrace>
-   updateCap src (capFreeIndex_update (\<lambda>_. idx) cap)
+lemma updateFreeIndex_valid_pspace_no_overlap':
+  "\<lbrace>\<lambda>s. valid_pspace' s \<and>
+        (\<exists>ptr sz. pspace_no_overlap' ptr sz s \<and> idx \<le> 2 ^ sz \<and>
+        cte_wp_at' ((\<lambda>c. isUntypedCap c \<and> capPtr c = ptr \<and> capBlockSize c = sz) o cteCap) src s)
+        \<and> is_aligned (of_nat idx :: word32) 4 \<and>
+        descendants_of' src (ctes_of s) = {}\<rbrace>
+     updateFreeIndex src idx
    \<lbrace>\<lambda>r s. valid_pspace' s\<rbrace>"
 
-   apply (clarsimp simp:valid_pspace'_def)
+   apply (clarsimp simp:valid_pspace'_def updateFreeIndex_def)
    apply (rule hoare_pre)
     apply (rule hoare_vcg_conj_lift)
-     apply (clarsimp simp:updateCap_def)
-     apply (wp getCTE_wp)
-    apply (wp updateFreeIndex_mdb_simple')
+     apply (clarsimp simp:updateCap_def getSlotCap_def)
+     apply (wp getCTE_wp | simp add: fiddle_gsUntypedZeroRanges_update)+
+    apply (wp updateFreeIndex_mdb_simple' getCTE_wp'
+       | simp add: fiddle_gsUntypedZeroRanges_update getSlotCap_def)+
   apply (clarsimp simp:cte_wp_at_ctes_of valid_pspace'_def)
   apply (case_tac cte,simp add:isCap_simps)
   apply (frule(1) ctes_of_valid_cap')
   apply (clarsimp simp: valid_cap_simps' capAligned_def
                         pspace_no_overlap_valid_untyped')
+  apply (clarsimp simp: pspace_no_overlap'_def)
   done
 
-lemma updateCap_vms'[wp]:
-  "\<lbrace>valid_machine_state'\<rbrace> updateCap src cap' \<lbrace>\<lambda>rv s. valid_machine_state' s\<rbrace>"
-  by (clarsimp simp:updateCap_def,wp)
+crunch vms'[wp]: updateFreeIndex "valid_machine_state'"
+  (simp: fiddle_gsUntypedZeroRanges_update)
 
 (* FIXME: move *)
 lemma setCTE_tcbDomain_inv[wp]:
@@ -4073,44 +4102,59 @@ apply (wp | clarsimp elim: obj_at'_weakenE)+
 apply (auto simp: obj_at'_def)
 done
 
-lemma updateFreeIndex_invs_simple':
-  "\<lbrace>\<lambda>s. ct_active' s \<and> descendants_of' src (ctes_of s) = {} \<and>
-        pspace_no_overlap' (capPtr cap) (capBlockSize cap) s \<and> invs' s \<and>
-        cte_wp_at' (\<lambda>c. \<exists>idx'. cteCap c = capFreeIndex_update (\<lambda>_. idx') cap) src s \<and> isUntypedCap cap \<and>
-        is_aligned (of_nat index :: word32) 4 \<and> index \<le> 2 ^ capBlockSize cap\<rbrace>
-   updateCap src (capFreeIndex_update (\<lambda>_. index) cap)
+lemma updateFreeIndex_clear_invs':
+  "\<lbrace>\<lambda>s. invs' s \<and>
+        (\<exists>ptr sz. pspace_no_overlap' ptr sz s \<and> idx \<le> 2 ^ sz \<and>
+        cte_wp_at' ((\<lambda>c. isUntypedCap c \<and> capPtr c = ptr \<and> capBlockSize c = sz) o cteCap) src s)
+        \<and> is_aligned (of_nat idx :: word32) 4
+        \<and> descendants_of' src (ctes_of s) = {}\<rbrace>
+   updateFreeIndex src idx
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
-   apply (clarsimp simp:invs'_def valid_state'_def )
-   apply (wp updateFreeIndex_pspace_simple' sch_act_wf_lift valid_queues_lift updateCap_iflive' tcb_in_cur_domain'_lift)
-        apply (rule hoare_pre)
-         apply (rule hoare_vcg_conj_lift)
-         apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def
+  apply (clarsimp simp:invs'_def valid_state'_def)
+  apply (rule hoare_pre)
+   apply (wp updateFreeIndex_valid_pspace_no_overlap')
+   apply (simp add: updateFreeIndex_def)
+   apply (wp updateFreeIndex_valid_pspace_no_overlap' sch_act_wf_lift valid_queues_lift
+             updateCap_iflive' tcb_in_cur_domain'_lift
+            | simp add: pred_tcb_at'_def fiddle_gsUntypedZeroRanges_update)+
+      apply (rule hoare_vcg_conj_lift)
+       apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def
                split del: split_if)
-         apply (wp getCTE_wp)
-       apply (rule hoare_vcg_conj_lift)
-        apply (simp add:updateCap_def)
-        apply wp
-       apply (wp valid_irq_node_lift)
-       apply (rule hoare_vcg_conj_lift)
-        apply (simp add:updateCap_def)
-        apply (wp setCTE_irq_handlers' getCTE_wp)
-       apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift)
-      apply (clarsimp simp:cte_wp_at_ctes_of)
-      apply (intro conjI allI impI)
-         apply (clarsimp simp: modify_map_def cteCaps_of_def ifunsafe'_def3 split:if_splits)
-          apply (drule_tac x=src in spec)
-          apply (clarsimp simp:isCap_simps)
-          apply (rule_tac x = cref' in exI)
-          apply clarsimp
-         apply (drule_tac x = cref in spec)
-         apply clarsimp
-         apply (rule_tac x = cref' in exI)
-         apply clarsimp
-        apply (drule(1) valid_global_refsD_with_objSize)
-        apply (clarsimp simp: isCap_simps)
-       apply (drule(1) valid_global_refsD_with_objSize)
-  apply (clarsimp simp:isCap_simps cte_wp_at_ctes_of)+
+       apply wp
+      apply (rule hoare_vcg_conj_lift)
+       apply (simp add:updateCap_def)
+       apply wp
+      apply (wp valid_irq_node_lift)
+      apply (rule hoare_vcg_conj_lift)
+       apply (simp add:updateCap_def)
+       apply (wp setCTE_irq_handlers' getCTE_wp)
+      apply (simp add:updateCap_def)
+      apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift
+                hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
+               | wp_once hoare_use_eq[where f="gsUntypedZeroRanges"]
+               | simp add: getSlotCap_def
+               | simp add: cte_wp_at_ctes_of)+
+  apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric]
+                        fiddle_gsUntypedZeroRanges_update)
+  apply (clarsimp simp: isCap_simps)
+  apply (frule(1) valid_global_refsD_with_objSize)
+  apply clarsimp
+  apply (intro conjI allI impI)
+   apply (clarsimp simp: modify_map_def cteCaps_of_def ifunsafe'_def3 split:if_splits)
+    apply (drule_tac x=src in spec)
+    apply (clarsimp simp:isCap_simps)
+    apply (rule_tac x = cref' in exI)
+    apply clarsimp
+   apply (drule_tac x = cref in spec)
+   apply clarsimp
+   apply (rule_tac x = cref' in exI)
+   apply clarsimp
+  apply (clarsimp simp: valid_pspace'_def)
+  apply (erule untyped_ranges_zero_fun_upd, simp_all)
+  apply (clarsimp simp: untypedZeroRange_def cteCaps_of_def isCap_simps)
   done
+
+
 
 lemma cte_wp_at_pspace_no_overlapI':
   "\<lbrakk>invs' s; cte_wp_at' (\<lambda>c. cteCap c = capability.UntypedCap
@@ -4296,6 +4340,43 @@ lemma update_untyped_cap_corres:
     apply (clarsimp simp: cte_wp_at_ctes_of cte_wp_at_caps_of_state)+
   done
 end
+lemma updateFreeIndex_corres:
+  "\<lbrakk>is_untyped_cap cap; free_index_of cap = idx \<rbrakk>
+   \<Longrightarrow> corres dc
+         (cte_wp_at (\<lambda>c. is_untyped_cap c \<and> obj_ref_of c = obj_ref_of cap \<and>
+          cap_bits c = cap_bits cap) src and valid_objs
+           and pspace_aligned and pspace_distinct)
+         (cte_at' (cte_map src)
+           and pspace_distinct' and pspace_aligned')
+         (set_cap cap src) (updateFreeIndex (cte_map src) idx)"
+  apply (rule corres_name_pre)
+  apply (simp add: updateFreeIndex_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_symb_exec_r_conj[where P'="cte_at' (cte_map src)"])+
+             apply (rule_tac F="isUntypedCap capa
+                 \<and> cap_relation cap (capFreeIndex_update (\<lambda>_. idx) capa)"
+               in corres_gen_asm2)
+             apply (rule update_untyped_cap_corres, simp+)
+              apply (clarsimp simp: isCap_simps)
+             apply simp
+            apply wp
+           apply (clarsimp simp: state_relation_def split: option.split)
+          apply (rule no_fail_pre, wp)
+        apply (clarsimp simp: state_relation_def split: option.split)
+       apply (rule no_fail_pre, wp)
+      apply (simp add: getSlotCap_def)
+      apply (wp getCTE_wp')
+     apply simp
+    apply (rule no_fail_pre, wp no_fail_getSlotCap)
+    apply simp
+   apply clarsimp
+  apply (clarsimp simp: cte_wp_at_ctes_of cte_wp_at_caps_of_state)
+  apply (frule state_relation_pspace_relation)
+  apply (frule(1) pspace_relation_ctes_ofI[OF _ caps_of_state_cteD], simp+)
+  apply (clarsimp split: option.split)
+  apply (clarsimp simp: isCap_simps is_cap_simps
+                        cte_wp_at_caps_of_state free_index_of_def)
+  done
 
 locale invokeUntyped_proofs =
  fixes s cref reset ptr_base ptr tp us slots sz idx dev
@@ -4680,12 +4761,39 @@ lemmas deleteObjects_descendants
     = deleteObjects_null_filter[where P="\<lambda>c. Q (descendants_of' p c)" for p Q,
                    simplified descendants_of_null_filter']
 
-lemmas updateFreeIndex_descendants_of2
-    = updateFreeIndex_descendants_of'[simplified swp_def descendants_of_null_filter']
+lemma updateFreeIndex_descendants_of2:
+  " \<lbrace>\<lambda>s. cte_wp_at' (isUntypedCap o cteCap) ptr s \<and>
+         P (\<lambda>y. descendants_of' y (ctes_of s))\<rbrace>
+    updateFreeIndex ptr index
+  \<lbrace>\<lambda>r s. P (\<lambda>y. descendants_of' y (ctes_of s))\<rbrace>"
+  apply (simp add: updateFreeIndex_def getSlotCap_def)
+  apply (wp updateFreeIndex_descendants_of'[simplified swp_def descendants_of_null_filter']
+           getCTE_wp')
+  apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
+  apply (clarsimp split: option.split)
+  done
 
-lemma ctes_of_cte_wpD:
-  "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' (op = cte) p s"
-  by (simp add: cte_wp_at_ctes_of)
+crunch typ_at'[wp]: updateFreeIndex "\<lambda>s. P (typ_at' T p s)"
+  (simp: fiddle_gsUntypedZeroRanges_update)
+
+crunch pspace_aligned'[wp]: updateFreeIndex "pspace_aligned'"
+  (simp: fiddle_gsUntypedZeroRanges_update)
+
+crunch pspace_distinct'[wp]: updateFreeIndex "pspace_distinct'"
+  (simp: fiddle_gsUntypedZeroRanges_update)
+
+lemma updateFreeIndex_cte_wp_at:
+  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. P (cteCap_update (if p = slot
+      then capFreeIndex_update (\<lambda>_. idx) else id) c)) p s\<rbrace>
+    updateFreeIndex slot idx
+  \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
+  apply (simp add: updateFreeIndex_def getSlotCap_def split del: split_if)
+  apply (rule hoare_pre, wp updateCap_cte_wp_at' getCTE_wp')
+  apply (clarsimp simp: cte_wp_at_ctes_of
+                        fiddle_gsUntypedZeroRanges_update)
+  apply (case_tac "the (ctes_of s p)")
+  apply (auto split: split_if_asm)
+  done
 
 lemma ex_tupI:
   "P (fst x) (snd x) \<Longrightarrow> \<exists>a b. P a b"
@@ -4718,9 +4826,8 @@ lemma reset_untyped_cap_corres:
              apply (simp add: reset_chunk_bits_def resetChunkBits_def)
             apply (simp add: bits_of_def shiftL_nat)
             apply (rule corres_split_nor)
-               apply (rule update_untyped_cap_corres, simp)
-                apply (simp add: isCap_simps)
-               apply simp
+               apply (rule updateFreeIndex_corres, simp)
+               apply (simp add: free_index_of_def)
               apply (simp add: unless_def)
               apply (rule corres_when, simp)
               apply (rule corres_machine_op)
@@ -4743,11 +4850,11 @@ lemma reset_untyped_cap_corres:
                  in mapME_x_corres_same_xs)
               apply (rule corres_guard_imp)
                 apply (rule corres_split_nor)
-                   apply (rule corres_split_nor[OF _ update_untyped_cap_corres])
-                        apply (rule preemption_corres)
-                       apply simp
-                      apply (simp add: isCap_simps)
-                     apply (simp add: getFreeRef_def getFreeIndex_def)
+                   apply (rule corres_split_nor[OF _ updateFreeIndex_corres])
+                       apply (rule preemption_corres)
+                      apply simp
+                     apply (simp add: getFreeRef_def getFreeIndex_def
+                                      free_index_of_def)
                      apply (subst unat_mult_simple)
                       apply (clarsimp )
                       apply (rule order_less_trans[rotated],
@@ -4755,8 +4862,9 @@ lemma reset_untyped_cap_corres:
                       apply (rule nat_less_power_trans2, simp_all)[1]
                       apply (simp add: unat_of_nat)
                      apply clarsimp
-                     apply (rule unat_of_nat32)
-                     apply (erule order_less_le_trans)
+                     apply (subst unat_of_nat32)
+                      apply (erule order_less_le_trans)
+                      apply simp
                      apply simp
                     apply wp
                   apply (rule corres_machine_op)
@@ -4787,12 +4895,13 @@ lemma reset_untyped_cap_corres:
             apply (rule hoare_pre)
              apply (simp del: capFreeIndex_update.simps)
              apply (strengthen imp_consequent)
-             apply (wp updateFreeIndex_pspace_simple'
+             apply (wp updateFreeIndex_valid_pspace_no_overlap'
                        updateFreeIndex_descendants_of2
                        doMachineOp_psp_no_overlap
-                       updateCap_cte_wp_at'
+                       updateFreeIndex_cte_wp_at
                        pspace_no_overlap'_lift
                        preemptionPoint_inv
+                       hoare_vcg_ex_lift
                        | simp)+
             apply (clarsimp simp add: cte_wp_at_ctes_of exI isCap_simps valid_pspace'_def)
             apply (clarsimp simp: getFreeIndex_def getFreeRef_def)
@@ -4900,6 +5009,45 @@ lemma ex_cte_cap_wp_to_irq_state_independent_H[simp]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+lemma updateFreeIndex_ctes_of:
+  "\<lbrace>\<lambda>s.  P (modify_map (ctes_of s) ptr (cteCap_update (capFreeIndex_update (\<lambda>_. idx))))\<rbrace>
+    updateFreeIndex ptr idx
+  \<lbrace>\<lambda>r s.  P (ctes_of s)\<rbrace>"
+  apply (simp add: updateFreeIndex_def getSlotCap_def)
+  apply (wp updateCap_ctes_of_wp getCTE_wp' | simp)+
+  apply (clarsimp simp: cte_wp_at_ctes_of fiddle_gsUntypedZeroRanges_update)
+  apply (erule rsubst[where P=P])
+  apply (case_tac cte)
+  apply (clarsimp simp: modify_map_def fun_eq_iff)
+  done
+
+lemma updateFreeIndex_cte_cap_wp_to'[wp]:
+  "\<lbrace>\<lambda>s. cte_wp_at' (isUntypedCap o cteCap) p s
+        \<and> ex_cte_cap_wp_to' P p' s\<rbrace>
+     updateFreeIndex p idx
+   \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P p'\<rbrace>"
+  apply (simp add: updateFreeIndex_def getSlotCap_def)
+  apply (wp updateCap_cte_cap_wp_to' getCTE_wp')
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: isCap_simps ex_cte_cap_wp_to'_def split: option.split)
+  done
+
+crunch ksSchedulerAction[wp]: updateFreeIndex "\<lambda>s. P (ksSchedulerAction s)"
+  (simp: fiddle_gsUntypedZeroRanges_update)
+
+lemma setCTE_ct_in_state:
+  "\<lbrace>ct_in_state' P\<rbrace> setCTE p cte \<lbrace>\<lambda>rv. ct_in_state' P\<rbrace>"
+  apply (rule hoare_name_pre_state)
+  apply (rule hoare_pre, wp ct_in_state'_decomp setCTE_pred_tcb_at')
+  apply (auto simp: ct_in_state'_def)
+  done
+
+add_upd_simps "ct_in_state' P (gsUntypedZeroRanges_update f s)"
+declare upd_simps[simp]
+
+crunch ct_in_state[wp]: updateFreeIndex "ct_in_state' P"
+  (simp: fiddle_gsUntypedZeroRanges_update)
+
 lemma resetUntypedCap_invs_etc:
   "\<lbrace>invs' and valid_untyped_inv_wcap' ui
       (Some (UntypedCap dev ptr sz idx))
@@ -4952,17 +5100,16 @@ lemma resetUntypedCap_invs_etc:
    apply (simp add: pred_conj_def unless_def)
    apply (rule hoare_pre)
     apply (strengthen exI[where x=sz])
-    apply (wp updateFreeIndex_invs_simple'[where cap="?cap", simplified]
+    apply (wp updateFreeIndex_clear_invs'
               hoare_vcg_ex_lift
               hoare_vcg_const_Ball_lift
-              updateFreeIndex_descendants_of2[where cap="?cap", simplified]
-              updateCap_cte_cap_wp_to'
+              updateFreeIndex_descendants_of2
               sch_act_simple_lift
               pspace_no_overlap'_lift
-              updateCap_ct_active'
               doMachineOp_psp_no_overlap
               doMachineOp_cte_wp_at'
-              updateCap_ctes_of_wp
+              updateFreeIndex_ctes_of
+              updateFreeIndex_cte_wp_at
             | simp | wps | wp_once ex_cte_cap_to'_pres)+
    apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps
                          modify_map_def)
@@ -4977,14 +5124,16 @@ lemma resetUntypedCap_invs_etc:
      apply (rule hoare_pre)
       apply simp
       apply (wp preemptionPoint_invs
-                updateFreeIndex_invs_simple'[where cap="UntypedCap False ptr sz 0", simplified]
-                updateFreeIndex_descendants_of2[where cap="UntypedCap False ptr sz 0", simplified]
-                updateCap_cte_cap_wp_to'
+                updateFreeIndex_clear_invs'
+                hoare_vcg_ex_lift
+                updateFreeIndex_descendants_of2
+                updateFreeIndex_ctes_of
+                updateFreeIndex_cte_wp_at
                 doMachineOp_psp_no_overlap
-                updateCap_cte_wp_at'
                 hoare_vcg_ex_lift hoare_vcg_const_Ball_lift
                 pspace_no_overlap'_lift[OF preemptionPoint_inv]
                 pspace_no_overlap'_lift
+                updateFreeIndex_ct_in_state[unfolded ct_in_state'_def]
               | strengthen invs_pspace_aligned' invs_pspace_distinct'
               | simp add: ct_in_state'_def
                           sch_act_simple_def
@@ -5074,6 +5223,9 @@ lemma (in range_cover) funky_aligned:
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
+
+crunch ksCurDomain[wp]: updateFreeIndex "\<lambda>s. P (ksCurDomain s)"
+  (simp: fiddle_gsUntypedZeroRanges_update)
 
 lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
@@ -5321,24 +5473,25 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
             apply (simp add: ui ui')
            apply simp
           apply simp
-          apply (rule corres_split[OF _ get_cap_corres])
-            apply (rule_tac F = "cap = cap.UntypedCap dev (ptr && ~~ mask sz)
-                  sz (if reset then 0 else idx)" in corres_gen_asm)
-            apply (rule corres_add_noop_lhs)
-            apply (rule corres_split_nor[OF _ cNodeNoOverlap return_wp stateAssert_wp])
-            apply (rule corres_split[OF _ update_untyped_cap_corres,rotated])
-               apply (simp add:isCap_simps)+
-             apply (clarsimp simp:getFreeIndex_def bits_of_def shiftL_nat shiftl_t2n)
+          apply (rule corres_symb_exec_l_Ex)
+          apply (rule_tac F = "cap = cap.UntypedCap dev (ptr && ~~ mask sz)
+                sz (if reset then 0 else idx)" in corres_gen_asm)
+          apply (rule corres_add_noop_lhs)
+          apply (rule corres_split_nor[OF _ cNodeNoOverlap return_wp stateAssert_wp])
+          apply (rule corres_split[OF _ updateFreeIndex_corres,rotated])
+              apply (simp add:isCap_simps)+
+             apply (clarsimp simp:getFreeIndex_def bits_of_def shiftL_nat shiftl_t2n
+                                  free_index_of_def)
             prefer 3
             apply (insert range_cover.range_cover_n_less[OF cover] vslot)
             apply (rule createNewObjects_corres_helper)
                 apply simp+
              apply (simp add: insertNewCaps_def)
-              apply (rule corres_split_retype_createNewCaps[where sz = sz,OF corres_rel_imp])
-                 apply (rule inv_untyped_corres_helper1)
-                 apply simp
+             apply (rule corres_split_retype_createNewCaps[where sz = sz,OF corres_rel_imp])
+                apply (rule inv_untyped_corres_helper1)
                 apply simp
-               apply ((wp retype_region_invs_extras[where sz = sz]
+               apply simp
+              apply ((wp retype_region_invs_extras[where sz = sz]
                    retype_region_plain_invs [where sz = sz]
                    retype_region_descendants_range_ret[where sz = sz]
                    retype_region_caps_overlap_reserved_ret[where sz = sz]
@@ -5351,7 +5504,7 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
                    set_tuple_pick distinct_tuple_helper
                    retype_region_obj_at_other3[where sz = sz]
                  | assumption)+)[1]
-          apply (wp set_tuple_pick createNewCaps_cte_wp_at'[where sz= sz]
+             apply (wp set_tuple_pick createNewCaps_cte_wp_at'[where sz= sz]
                  hoare_vcg_ex_lift distinct_tuple_helper
                  createNewCaps_parent_helper [where p="cte_map cref" and sz = sz]
                  createNewCaps_valid_pspace_extras [where ptr=ptr and sz = sz]
@@ -5360,76 +5513,69 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
                  hoare_vcg_const_Ball_lift createNewCaps_valid_cap'[where sz = sz]
                  createNewCaps_descendants_range_ret'[where sz = sz]
                  createNewCaps_caps_overlap_reserved_ret'[where sz = sz])
-         apply clarsimp
-         apply (erule cte_wp_at_weakenE')
-         apply (case_tac c, simp)
-         apply hypsubst
-         apply (case_tac c,clarsimp simp: isCap_simps)
-        apply (clarsimp simp: shiftl_t2n
-               getFreeIndex_def is_cap_simps bits_of_def shiftL_nat)
-        apply (clarsimp simp: conj_comms)
-        apply (strengthen invs_mdb invs_valid_objs
+            apply clarsimp
+            apply (erule cte_wp_at_weakenE')
+            apply (case_tac c, simp)
+            apply hypsubst
+            apply (case_tac c,clarsimp simp:isCap_simps)
+           apply (clarsimp simp: getObjectSize_def_eq
+              getFreeIndex_def is_cap_simps bits_of_def shiftL_nat)
+           apply (clarsimp simp:conj_comms)
+           apply (strengthen invs_mdb invs_valid_objs
               invs_valid_pspace invs_arch_state invs_psp_aligned)
-            apply (clarsimp simp: conj_comms bits_of_def region_in_kernel_window_def)
-            apply (wp set_cap_free_index_invs_spec set_cap_caps_no_overlap set_cap_no_overlap
-                      set_cap_cte_wp_at set_cap_no_overlap hoare_vcg_ball_lift
-                      set_cap_device_and_range set_cap_descendants_range_in
+           apply (clarsimp simp:conj_comms bits_of_def region_in_kernel_window_def)
+           apply (wp set_cap_free_index_invs_spec set_cap_caps_no_overlap set_cap_no_overlap)
+           apply (rule hoare_vcg_conj_lift)
+            apply (rule hoare_strengthen_post[OF set_cap_sets])
+            apply (clarsimp simp:cte_wp_at_caps_of_state)
+           apply (wp set_cap_no_overlap hoare_vcg_ball_lift
                       set_untyped_cap_caps_overlap_reserved[where
                         idx="if reset then 0 else idx"])
-       apply (clarsimp simp: conj_comms ball_conj_distrib simp del: capFreeIndex_update.simps)
-       apply (strengthen invs_pspace_aligned' invs_pspace_distinct'
+          apply (clarsimp simp:conj_comms ball_conj_distrib simp del:capFreeIndex_update.simps)
+          apply (strengthen invs_pspace_aligned' invs_pspace_distinct'
                invs_valid_pspace' invs_arch_state'
                imp_consequent[where Q = "(\<exists>x. x \<in> cte_map ` set slots)"]
              | clarsimp simp: conj_comms simp del: capFreeIndex_update.simps)+
-       apply (wp updateFreeIndex_invs' updateFreeIndex_caps_overlap_reserved'
-                 updateFreeIndex_caps_no_overlap'' updateFreeIndex_pspace_no_overlap')
-       apply (rule hoare_vcg_conj_lift[OF hoare_vcg_ball_lift])
-        apply (simp add:updateCap_def)
-        apply (wp setCTE_weak_cte_wp_at getCTE_wp)
-       apply (wp updateFreeIndex_caps_overlap_reserved' updateFreeIndex_descendants_range_in' )
-       apply (simp add:updateCap_def)
-       apply (wp setCTE_weak_cte_wp_at,simp)
-       apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]])
-       apply fastforce
-      apply (clarsimp simp:conj_comms ball_conj_distrib and_distrib)
-          apply (strengthen invs_mdb invs_valid_objs
+          apply (wp updateFreeIndex_forward_invs' updateFreeIndex_caps_overlap_reserved
+             updateFreeIndex_caps_no_overlap'' updateFreeIndex_pspace_no_overlap'
+             hoare_vcg_const_Ball_lift updateFreeIndex_cte_wp_at
+             updateFreeIndex_descendants_range_in')
+         apply clarsimp
+         apply (clarsimp simp:conj_comms)
+         apply (strengthen invs_mdb invs_valid_objs
                 invs_valid_pspace invs_arch_state invs_psp_aligned
                 invs_distinct)
-      apply (clarsimp simp:conj_comms)
-      apply (wp get_cap_wp)[1]
-         apply (clarsimp simp:conj_comms and_distrib)
-         apply (strengthen invs_pspace_aligned' invs_valid_pspace'
-           invs_pspace_distinct' invs_arch_state invs_psp_aligned)
-     apply (clarsimp simp:conj_comms isCap_simps
-           shiftL_nat field_simps range_cover.unat_of_nat_shift[OF cover le_refl,simplified])
-     apply (wp get_cap_wp)
-        apply (rule_tac Q'="\<lambda>_ s. valid_etcbs s \<and> valid_list s \<and> invs s \<and> ct_active s
+         apply (clarsimp simp:conj_comms ball_conj_distrib ex_in_conv)
+         apply (rule_tac Q'="\<lambda>_ s. valid_etcbs s \<and> valid_list s \<and> invs s \<and> ct_active s
           \<and> valid_untyped_inv_wcap ui
             (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
           " in hoare_post_imp_R)
-         apply (simp add: whenE_def split del: split_if, wp)
-          apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc, auto)[1]
-         apply wp
-        apply (clarsimp simp: ui cte_wp_at_caps_of_state
-                              bits_of_def untyped_range.simps)
-        apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
-        apply (cut_tac cref="cref" and reset=reset
-        in invoke_untyped_proofs.intro,
-        simp_all add: cte_wp_at_caps_of_state)[1]
-         apply (rule conjI, (assumption | rule refl))+
-         apply (simp split: split_if)
+          apply (simp add: whenE_def split del: split_if, wp)
+           apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc, auto)[1]
+          apply wp
+         apply (clarsimp simp: ui cte_wp_at_caps_of_state
+                               bits_of_def untyped_range.simps)
+         apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
+         apply (cut_tac cref="cref" and reset=reset
+           in invoke_untyped_proofs.intro,
+           simp_all add: cte_wp_at_caps_of_state)[1]
+          apply (rule conjI, (assumption | rule refl))+
+          apply (simp split: split_if)
 
-        apply (simp add: invoke_untyped_proofs.simps)
-        apply (simp add: arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
-                         field_simps invoke_untyped_proofs.idx_le_new_offs
+         apply (simp add: invoke_untyped_proofs.simps)
+         apply (strengthen split_if[where P="\<lambda>v. v \<le> unat x" for x, THEN iffD2])
+         apply (simp add: arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
+                          field_simps invoke_untyped_proofs.idx_le_new_offs idx_compare')
                          split_if[where P="\<lambda>v. v \<le> unat x" for x])
         apply (frule range_cover.sz(1), fold word_bits_def)
-        apply (frule cte_wp_at_pspace_no_overlapI,
-          simp add: cte_wp_at_caps_of_state, simp split: split_if, simp)
-        apply (simp add: field_simps conj_comms ex_in_conv
-                         cte_wp_at_caps_of_state)
-        apply (intro conjI impI)
+         apply (frule cte_wp_at_pspace_no_overlapI,
+           simp add: cte_wp_at_caps_of_state, simp split: split_if, metis misc sz_simp,
+           simp add: invoke_untyped_proofs.szw)
+         apply (simp add: field_simps conj_comms ex_in_conv
+                          cte_wp_at_caps_of_state
+                          in_get_cap_cte_wp_at)
+         apply (intro conjI impI)
 
              (* kernel window *)
              apply (drule cap_refs_in_kernel_windowD, clarify+)
@@ -5439,7 +5585,7 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
 
             (* offs *)
             apply (drule(1) invoke_untyped_proofs.idx_le_new_offs)
-            apply (simp add: shiftl_t2n field_simps)
+            apply simp
 
            (* new offs within ut range *)
            apply (clarsimp simp: getFreeIndex_def field_simps range_cover_unat[OF cover]
@@ -5448,51 +5594,52 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
            apply (rule range_cover.range_cover_compare_bound[OF cover])
 
           (* usable untyped range witness *)
-          apply (rule_tac x=cref in exI, simp add: shiftL_nat shiftl_t2n overlap_ranges)
+           apply (rule_tac x=cref in exI, simp add: shiftL_nat shiftl_t2n overlap_ranges)
 
-         apply (rule order_trans, erule invoke_untyped_proofs.subset_stuff)
-         apply (simp add: blah word_and_le2)
+          apply (rule order_trans, erule invoke_untyped_proofs.subset_stuff)
+          apply (simp add: blah word_and_le2)
 
-        apply (drule invoke_untyped_proofs.usable_range_disjoint)
-        apply (clarsimp simp: field_simps mask_out_sub_mask shiftl_t2n)
+         apply (drule invoke_untyped_proofs.usable_range_disjoint)
+         apply (clarsimp simp: field_simps mask_out_sub_mask shiftl_t2n)
 
-       apply wp
-       apply (rule validE_validE_R, rule hoare_post_impErr,
-              rule whenE_reset_resetUntypedCap_invs_etc[where ptr="ptr && ~~ mask sz"
-                  and ptr'=ptr and sz=sz and idx=idx and ui=ui' and dev=dev])
+        apply wp
+        apply (rule validE_validE_R, rule hoare_post_impErr,
+               rule whenE_reset_resetUntypedCap_invs_etc[where ptr="ptr && ~~ mask sz"
+                   and ptr'=ptr and sz=sz and idx=idx and ui=ui'])
 
-        prefer 2
-        apply simp
-       apply clarsimp
-       apply (simp only: ui ui')
-       apply (frule(2) invokeUntyped_proofs.intro)
-       apply (strengthen imp_consequent[where Q="\<not> cNodeOverlap A B" for A B])
-       apply (clarsimp simp: cte_wp_at_ctes_of
-                             invokeUntyped_proofs.caps_no_overlap'
-                             invokeUntyped_proofs.ps_no_overlap'
-                             invokeUntyped_proofs.descendants_range
-                             split_if[where P="\<lambda>v. v \<le> getFreeIndex x y" for x y]
-                             empty_descendants_range_in'
-                             invs_pspace_aligned' invs_pspace_distinct'
-                             invs_ksCurDomain_maxDomain'
-                       cong: if_cong)
-       apply (frule invokeUntyped_proofs.idx_le_new_offs)
-       apply (frule invokeUntyped_proofs.szw)
-       apply (frule invokeUntyped_proofs.descendants_range(2), simp)
-       apply (clarsimp simp: getFreeIndex_def conj_comms
-                             is_aligned_weaken[OF range_cover.funky_aligned])
+         prefer 2
+         apply simp
+        apply clarsimp
+        apply (simp only: ui)
+        apply (frule(2) invokeUntyped_proofs.intro)
+        apply (clarsimp simp: cte_wp_at_ctes_of
+                              invokeUntyped_proofs.caps_no_overlap'
+                              invokeUntyped_proofs.ps_no_overlap'
+                              invokeUntyped_proofs.descendants_range
+                              split_if[where P="\<lambda>v. v \<le> getFreeIndex x y" for x y]
+                              empty_descendants_range_in'
+                              invs_pspace_aligned' invs_pspace_distinct'
+                              invs_ksCurDomain_maxDomain'
+                        cong: if_cong)
+        apply (strengthen refl)
+        apply (frule invokeUntyped_proofs.idx_le_new_offs)
+        apply (frule invokeUntyped_proofs.szw)
+        apply (frule invokeUntyped_proofs.descendants_range(2), simp)
+        apply (clarsimp simp: getFreeIndex_def conj_comms shiftL_nat
+                              is_aligned_weaken[OF range_cover.funky_aligned]
+                              invs_valid_pspace' isCap_simps
+                              arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
+                              field_simps)
 
-       apply (intro conjI)
-           (* pspace_no_overlap' *)
-           apply (cases reset, simp_all)[1]
-           apply (clarsimp simp: invokeUntyped_proofs.ps_no_overlap')
-          (* slot not in slots *)
-          apply (auto split: split_if)[1]
-         apply (rule order_trans[rotated],
-                erule invokeUntyped_proofs.idx_compare')
-         apply (simp add: shiftl_t2n mult.commute)
-        apply (drule invokeUntyped_proofs.subset_stuff, simp,
-            erule order_trans, simp add: blah word_and_le2)
+        apply (intro conjI)
+            (* pspace_no_overlap' *)
+            apply (cases reset, simp_all)[1]
+           apply (rule order_trans[rotated],
+                  erule invokeUntyped_proofs.idx_compare')
+          apply (simp add: shiftl_t2n mult.commute)
+         apply (drule invokeUntyped_proofs.subset_stuff, simp,
+             erule order_trans, simp add: blah word_and_le2)
+        apply (auto split: split_if)[1]
        apply (drule invokeUntyped_proofs.usableRange_disjoint, simp)
       apply (clarsimp simp only: pred_conj_def invs ui)
       apply (strengthen vui)
@@ -5777,12 +5924,14 @@ lemma insertNewCap_invs':
              insertNewCap_valid_global_refs'
              valid_arch_state_lift'
              valid_irq_node_lift insertNewCap_valid_irq_handlers)
+  sorry (* what is all this? is insertNewCap an old variant of cteInsert? 
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (frule ctes_of_valid[rotated, where p=parent, OF valid_pspace_valid_objs'])
    apply (fastforce simp: cte_wp_at_ctes_of)
   apply (auto simp: isCap_simps sameRegionAs_def3 intro!: capRange_subset_capBits
               elim: valid_capAligned)
   done
+*)
 
 lemma insertNewCap_irq_issued'[wp]:
   "\<lbrace>\<lambda>s. P (irq_issued' irq s)\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>rv s. P (irq_issued' irq s)\<rbrace>"
@@ -5964,6 +6113,12 @@ lemma createNewCaps_ct_active':
 crunch gsMaxObjectSize[wp]: deleteObjects "\<lambda>s. P (gsMaxObjectSize s)"
   (simp: unless_def wp: crunch_wps)
 
+crunch gsMaxObjectSize[wp]: updateFreeIndex "\<lambda>s. P (gsMaxObjectSize s)"
+  (simp: fiddle_gsUntypedZeroRanges_update)
+
+crunch ksIdleThread[wp]: updateFreeIndex "\<lambda>s. P (ksIdleThread s)"
+  (simp: fiddle_gsUntypedZeroRanges_update)
+
 lemma invokeUntyped_invs'':
  assumes insertNew_Q[wp]: "\<And>p cref cap.
     \<lbrace>Q\<rbrace> insertNewCap p cref cap \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -5972,7 +6127,7 @@ lemma invokeUntyped_invs'':
      \<and> (tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> 0 < us)
      \<and> 0 < n \<and> valid_pspace' s \<and> pspace_no_overlap' ptr sz s\<rbrace>
     createNewCaps tp ptr n us dev \<lbrace>\<lambda>_. Q\<rbrace>"
- assumes set_cap_Q[wp]: "\<And>cap dest. \<lbrace>invs' and Q\<rbrace> updateCap dest cap \<lbrace>\<lambda>_.Q\<rbrace>"
+ assumes set_free_Q[wp]: "\<And>slot idx. \<lbrace>invs' and Q\<rbrace> updateFreeIndex slot idx \<lbrace>\<lambda>_.Q\<rbrace>"
  assumes reset_Q: "\<lbrace>Q'\<rbrace> resetUntypedCap (case ui of Invocations_H.Retype src_slot _ _ _ _ _ _ _ \<Rightarrow> src_slot) \<lbrace>\<lambda>_. Q\<rbrace>"
  shows "\<lbrace>invs' and valid_untyped_inv' ui
           and (\<lambda>s. (case ui of Invocations_H.Retype _ reset _ _ _ _ _ _ \<Rightarrow> reset) \<longrightarrow> Q' s)
@@ -6109,11 +6264,12 @@ lemma invokeUntyped_invs'':
                 invs_valid_pspace' invs_arch_state'
                 imp_consequent[where Q = "(\<exists>x. x \<in> set slots)"]
               | clarsimp simp: conj_comms simp del: capFreeIndex_update.simps)+
-       apply (wp updateFreeIndex_invs' updateFreeIndex_caps_overlap_reserved'
+       apply (wp updateFreeIndex_forward_invs' updateFreeIndex_caps_overlap_reserved
            updateFreeIndex_caps_no_overlap'' updateFreeIndex_pspace_no_overlap'
-           hoare_vcg_const_Ball_lift updateCap_weak_cte_wp_at updateCap_ct_active'
+           hoare_vcg_const_Ball_lift updateCap_weak_cte_wp_at
+           updateFreeIndex_cte_wp_at
            updateCap_cte_cap_wp_to')
-       apply (wp updateFreeIndex_caps_overlap_reserved'
+       apply (wp updateFreeIndex_caps_overlap_reserved
                  updateFreeIndex_descendants_range_in' getCTE_wp | simp)+
     apply (clarsimp simp only: ui)
     apply (frule(2) invokeUntyped_proofs.intro)
@@ -6131,14 +6287,16 @@ lemma invokeUntyped_invs'':
     apply (strengthen refl)
     apply simp
     apply (intro conjI; assumption?)
-         apply (erule is_aligned_weaken[OF range_cover.funky_aligned])
-         apply (simp add: APIType_capBits_def objBits_simps
-                   split: object_type.split apiobject_type.split)[1]
-        apply (cases reset)
-         apply clarsimp
-        apply (clarsimp simp: invokeUntyped_proofs.ps_no_overlap')
-       apply (drule invs_valid_global')
-       apply (clarsimp simp: valid_global_refs'_def cte_at_valid_cap_sizes_0)
+           apply (erule is_aligned_weaken[OF range_cover.funky_aligned])
+           apply (simp add: APIType_capBits_def objBits_simps
+                     split: object_type.split apiobject_type.split)[1]
+          apply (cases reset)
+           apply clarsimp
+          apply (clarsimp simp: invokeUntyped_proofs.ps_no_overlap')
+         apply (drule invs_valid_global')
+         apply (clarsimp simp: valid_global_refs'_def cte_at_valid_cap_sizes_0)
+        apply simp
+       apply auto[1]
       apply (frule valid_global_refsD', clarsimp)
       apply (clarsimp simp: Int_commute)
       apply (erule disjoint_subset2[rotated])
@@ -6158,6 +6316,9 @@ lemma invokeUntyped_invs'[wp]:
   apply (wp invokeUntyped_invs''[where Q=\<top>, simplified hoare_post_taut, simplified])
   apply auto
   done
+
+crunch pred_tcb_at'[wp]: updateFreeIndex "pred_tcb_at' pr P p"
+  (simp: fiddle_gsUntypedZeroRanges_update)
 
 lemma resetUntypedCap_st_tcb_at':
   "\<lbrace>invs' and st_tcb_at' (P and (op \<noteq> Inactive) and (op \<noteq> IdleThreadState)) t
@@ -6208,12 +6369,13 @@ lemma inv_untyp_tcb'[wp]:
 
 crunch ksInterruptState_eq[wp]: invokeUntyped "\<lambda>s. P (ksInterruptState s)"
   (wp: crunch_wps mapME_x_inv_wp preemptionPoint_inv
-    simp: crunch_simps unless_def
+    simp: crunch_simps unless_def fiddle_gsUntypedZeroRanges_update
       ignore: forME_x)
 
-crunch valid_irq_states'[wp]: deleteObjects "valid_irq_states'"
+crunch valid_irq_states'[wp]: deleteObjects, updateFreeIndex "valid_irq_states'"
   (wp: doMachineOp_irq_states' crunch_wps
-    simp: freeMemory_def no_irq_storeWord unless_def)
+    simp: freeMemory_def no_irq_storeWord unless_def
+          fiddle_gsUntypedZeroRanges_update)
 
 lemma resetUntypedCap_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace>

@@ -435,8 +435,9 @@ lemma threadSet_tcbDomain_update_invs':
                threadSet_valid_dom_schedule'
                threadSet_tcbDomain_update_sch_act_wf
                threadSet_tcbDomain_update_ct_idle_or_in_cur_domain'
-             | clarsimp simp: tcb_cte_cases_def)+
-  apply (auto simp: inQ_def obj_at'_def)
+               untyped_ranges_zero_lift
+             | clarsimp simp: tcb_cte_cases_def cteCaps_of_def)+
+  apply (auto simp: inQ_def obj_at'_def o_def)
   done
 
 lemma set_domain_setDomain_corres:
@@ -1057,9 +1058,10 @@ abbreviation (input) "all_invs_but_sch_extra \<equiv>
     irqs_masked' s \<and>
     valid_machine_state' s \<and> 
     cur_tcb' s \<and>
+    untyped_ranges_zero' s \<and>
     valid_queues' s \<and>
     valid_pde_mappings' s \<and> pspace_domain_valid s \<and>
-    ksCurDomain s \<le> maxDomain \<and> valid_dom_schedule' s \<and> 
+    ksCurDomain s \<le> maxDomain \<and> valid_dom_schedule' s \<and>
     (\<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s)"
 
 
@@ -1103,13 +1105,12 @@ lemma threadSet_all_invs_but_sch_extra:
      threadSet_tcbDomain_update_ct_idle_or_in_cur_domain'
      threadSet_valid_queues
      threadSet_valid_dom_schedule'
-     
      threadSet_iflive'T
      threadSet_ifunsafe'T
-     
-     | simp add:tcb_cte_cases_def)+
+     untyped_ranges_zero_lift
+     | simp add:tcb_cte_cases_def cteCaps_of_def o_def)+
    apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift threadSet_pred_tcb_no_state | simp)+
-  apply (clarsimp simp:sch_act_simple_def)
+  apply (clarsimp simp:sch_act_simple_def o_def cteCaps_of_def)
   apply (intro conjI)
    apply fastforce+
   done

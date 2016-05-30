@@ -978,6 +978,11 @@ definition
   | ArchObjectCap (PageDirectoryCap _ (Some asid)) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
+lemma untyped_derived_eq_from_sameObjectAs:
+  "sameObjectAs cap cap2
+    \<Longrightarrow> untyped_derived_eq cap cap2"
+  by (clarsimp simp: untyped_derived_eq_def sameObjectAs_def2 isCap_Master)
+
 lemmas pt_pd_asid'_simps [simp] =
   pt_pd_asid'_def [split_simps capability.split arch_capability.split option.split prod.split]
 
@@ -986,7 +991,7 @@ lemma checked_insert_tcb_invs'[wp]:
          and valid_cap' new_cap
          and K (capBadge new_cap = None)
          and K (slot \<in> cte_refs' (ThreadCap target) 0)
-         and K (\<not> isReplyCap new_cap \<and> \<not>isIRQControlCap new_cap)\<rbrace>
+         and K (\<not> isReplyCap new_cap \<and> \<not> isIRQControlCap new_cap)\<rbrace>
      checkCapAt new_cap src_slot
       (checkCapAt (ThreadCap target) slot'
        (assertDerived src_slot new_cap (cteInsert new_cap src_slot slot))) \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -999,7 +1004,7 @@ lemma checked_insert_tcb_invs'[wp]:
   apply (rule conjI)
    apply (clarsimp simp: sameObjectAs_def3)
   apply (clarsimp simp: tree_cte_cteCap_eq
-                        is_derived'_def
+                        is_derived'_def untyped_derived_eq_from_sameObjectAs
                         ex_cte_cap_to'_cteCap)
   apply (erule sameObjectAsE)+
   apply (clarsimp simp: badge_derived'_def)
@@ -1640,35 +1645,31 @@ lemma bindNotification_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: bindNotification_def invs'_def valid_state'_def)
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
-  apply (wp set_ntfn_valid_pspace' sbn_sch_act' sbn_valid_queues valid_irq_node_lift 
-            setBoundNotification_ct_not_inQ valid_bound_ntfn_lift
-         | clarsimp dest!: global'_no_ex_cap)+
-            apply simp_all
-      apply (clarsimp simp: valid_pspace'_def)
-      apply (frule_tac P="\<lambda>k. k=ntfn" in obj_at_valid_objs', simp)
-      apply (clarsimp simp: valid_obj'_def projectKOs valid_ntfn'_def obj_at'_def
-                     dest!: pred_tcb_at'
-                     split: ntfn.splits)
-     apply (rule conjI, rule impI, clarsimp dest!: pred_tcb_at' simp: obj_at'_def projectKOs)
-     apply (clarsimp, erule delta_sym_refs)
-      apply (fastforce simp: ntfn_q_refs_of'_def obj_at'_def projectKOs  
-                      dest!: symreftype_inverse'
-                      split: ntfn.splits split_if_asm)
-     apply (clarsimp split: split_if_asm)
-      apply (fastforce simp: tcb_st_refs_of'_def 
-                      dest!: bound_tcb_at_state_refs_ofD' 
-                      split: split_if_asm thread_state.splits)
-     apply (fastforce simp: obj_at'_def projectKOs state_refs_of'_def
-                     dest!: symreftype_inverse')
-    apply (clarsimp simp: obj_at'_def projectKOs)
-   apply (clarsimp dest!: pred_tcb_at')
+  apply (rule hoare_pre)
+   apply (wp set_ntfn_valid_pspace' sbn_sch_act' sbn_valid_queues valid_irq_node_lift 
+             setBoundNotification_ct_not_inQ valid_bound_ntfn_lift
+             untyped_ranges_zero_lift
+          | clarsimp dest!: global'_no_ex_cap simp: cteCaps_of_def)+
+  apply (clarsimp simp: valid_pspace'_def)
+  apply (cases "tcbptr = ntfnptr")
+   apply (clarsimp dest!: pred_tcb_at' simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: pred_tcb_at' conj_comms o_def)
+  apply (subst delta_sym_refs, assumption)
+    apply (fastforce simp: ntfn_q_refs_of'_def obj_at'_def projectKOs  
+                    dest!: symreftype_inverse'
+                    split: ntfn.splits split_if_asm)
+   apply (clarsimp split: split_if_asm)
+    apply (fastforce simp: tcb_st_refs_of'_def 
+                    dest!: bound_tcb_at_state_refs_ofD' 
+                    split: split_if_asm thread_state.splits)
+   apply (fastforce simp: obj_at'_def projectKOs state_refs_of'_def
+                   dest!: symreftype_inverse')
   apply (clarsimp simp: valid_pspace'_def)
   apply (frule_tac P="\<lambda>k. k=ntfn" in obj_at_valid_objs', simp)
   apply (clarsimp simp: valid_obj'_def projectKOs valid_ntfn'_def obj_at'_def
                     dest!: pred_tcb_at'
                     split: ntfn.splits)
   done
-     
 
 lemma tcbntfn_invs':
   "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.NotificationControl tcb ntfnptr)\<rbrace>

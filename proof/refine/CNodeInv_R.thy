@@ -25,6 +25,7 @@ where
   "valid_cnode_inv' (Insert cap ptr ptr') =
    (valid_cap' cap and
     (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) ptr cap \<circ> cteCap) ptr s) and
+    cte_wp_at' (untyped_derived_eq cap \<circ> cteCap) ptr and
     cte_wp_at' (\<lambda>c. cteCap c = NullCap) ptr' and (\<lambda>s. ptr \<noteq> ptr') and
     ex_cte_cap_to' ptr')"
 | "valid_cnode_inv' (Move cap ptr ptr') =
@@ -454,6 +455,31 @@ lemma hasRecycleRights_not_Null:
 declare split_if [split del]
 declare updateCapData_Zombie' [simp]
 
+lemma untyped_derived_eq_maskCapRights:
+  "untyped_derived_eq (RetypeDecls_H.maskCapRights m cap) cap'
+    = untyped_derived_eq cap cap'"
+  apply (simp add: untyped_derived_eq_def)
+  apply (rule imp_cong)
+   apply (rule capMaster_isUntyped, simp)
+  apply (clarsimp simp: isCap_simps)
+  done
+
+lemma untyped_derived_eq_updateCapData:
+  "RetypeDecls_H.updateCapData x y cap \<noteq> NullCap
+    \<Longrightarrow> untyped_derived_eq (RetypeDecls_H.updateCapData x y cap) cap'
+        = untyped_derived_eq cap cap'"
+  apply (simp add: untyped_derived_eq_def)
+  apply (rule imp_cong)
+   apply (rule capMaster_isUntyped)
+   apply (erule updateCapData_Master)
+  apply (clarsimp simp: isCap_simps)
+  apply (clarsimp simp: updateCapData_def isCap_simps)
+  done
+
+lemma untyped_derived_eq_refl:
+  "untyped_derived_eq c c"
+  by (simp add: untyped_derived_eq_def)
+
 lemma decodeCNodeInv_wf[wp]:
   "\<lbrace>invs' and valid_cap' (CNodeCap w n w2 n2)
           and (\<lambda>s. \<forall>r\<in>cte_refs' (CNodeCap w n w2 n2) (irq_node' s).
@@ -472,7 +498,8 @@ lemma decodeCNodeInv_wf[wp]:
          apply (wp whenE_throwError_wp)
                apply (rule deriveCap_Null_helper)
                apply (simp add: imp_conjR)
-               apply ((wp deriveCap_derived | wp_once hoare_drop_imps)+)[1]
+               apply ((wp deriveCap_derived deriveCap_untyped_derived
+                 | wp_once hoare_drop_imps)+)[1]
               apply (wp whenE_throwError_wp getCTE_wp | wpc | simp(no_asm))+
            apply (rule_tac Q'="\<lambda>rv. invs' and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) destSlot
                                           and ex_cte_cap_to' destSlot"
@@ -482,7 +509,9 @@ lemma decodeCNodeInv_wf[wp]:
            apply (simp add: ctes_of_valid' valid_updateCapDataI
                             weak_derived_updateCapData capBadge_updateCapData_True
                             weak_derived_maskCapRights badge_derived_updateCapData
-                            badge_derived_mask)
+                            badge_derived_mask untyped_derived_eq_maskCapRights
+                            untyped_derived_eq_updateCapData
+                            untyped_derived_eq_refl)
            apply (auto simp:isCap_simps updateCapData_def)[1]
           apply (wp ensureEmptySlot_stronger | simp | wp_once hoare_drop_imps)+
        -- "Revoke"
@@ -5218,6 +5247,42 @@ lemma cteSwap_valid_irq_handlers[wp]:
      apply (auto simp add: weak_derived'_def isCap_simps)
   done
 
+lemma insert_is_absorb:
+  "(insert x S = S) = (x \<in> S)"
+  "(S = insert x S) = (x \<in> S)"
+  by auto
+
+lemma weak_derived_untypedZeroRange:
+  "\<lbrakk> weak_derived' c c'; isUntypedCap c' \<longrightarrow> c' = c \<rbrakk>
+    \<Longrightarrow> untypedZeroRange c = untypedZeroRange c'"
+  apply (clarsimp simp: untypedZeroRange_def isCap_simps)
+  apply (clarsimp simp: weak_derived'_def)
+  done
+
+lemma cteSwap_urz[wp]:
+  "\<lbrace>untyped_ranges_zero' and valid_pspace'
+    and cte_wp_at' (\<lambda>cc. isUntypedCap (cteCap cc) \<longrightarrow> (cteCap cc) = c) c1
+    and cte_wp_at' (weak_derived' c' o cteCap) c2 
+    and cte_wp_at' (\<lambda>cc. isUntypedCap (cteCap cc) \<longrightarrow> (cteCap cc) = c') c2
+    and cte_wp_at' (weak_derived' c \<circ> cteCap) c1
+    and K (c1 \<noteq> c2)\<rbrace> 
+  cteSwap c c1 c' c2 
+  \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
+  apply (simp add: cteSwap_def)
+  apply (rule hoare_pre)
+   apply (rule untyped_ranges_zero_lift)
+    apply wp
+  apply clarsimp
+  apply (erule untyped_ranges_zero_delta[where xs="[c1, c2]"])
+     apply (simp add: modify_map_def)
+    apply clarsimp
+   apply clarsimp
+  apply (clarsimp simp: ran_restrict_map_insert cte_wp_at_ctes_of
+                        cteCaps_of_def modify_map_def)
+  apply (drule(1) weak_derived_untypedZeroRange)+
+  apply auto
+  done
+
 crunch valid_arch_state'[wp]: cteSwap "valid_arch_state'"
 
 crunch irq_states'[wp]: cteSwap "valid_irq_states'"
@@ -5254,7 +5319,8 @@ lemma cteSwap_invs'[wp]:
   apply (rule hoare_pre)
    apply (wp hoare_vcg_conj_lift sch_act_wf_lift
              valid_queues_lift cur_tcb_lift
-             valid_irq_node_lift irqs_masked_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift2)
+             valid_irq_node_lift irqs_masked_lift tcb_in_cur_domain'_lift
+             ct_idle_or_in_cur_domain'_lift2)
   apply (clarsimp simp: cte_wp_at_ctes_of weak_derived_zobj weak_derived_cte_refs
                         weak_derived_capRange_capBits)
   done
@@ -5335,8 +5401,7 @@ lemma caps_contained_subrange:
   apply (erule_tac x=sl in allE)
   apply simp
   apply blast
-  done
-  
+  done  
 lemma ex_cte_cap_to'_cteCap:
   "ex_cte_cap_to' p = (\<lambda>s. \<exists>p' c. cteCaps_of s p' = Some c \<and> p \<in> cte_refs' c (irq_node' s))"
   apply (simp add: ex_cte_cap_to'_def cte_wp_at_ctes_of cteCaps_of_def)
@@ -5719,6 +5784,17 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
 
 qed   
 
+lemma updateCap_untyped_ranges_zero_simple:
+  "\<lbrace>cte_wp_at' ((\<lambda>cp. untypedZeroRange cp = untypedZeroRange cap) o cteCap) sl and untyped_ranges_zero'\<rbrace>
+    updateCap sl cap
+  \<lbrace>\<lambda>_. untyped_ranges_zero'\<rbrace>"
+  apply (rule hoare_pre, rule untyped_ranges_zero_lift, wp)
+  apply (clarsimp simp: modify_map_def cteCaps_of_def cte_wp_at_ctes_of)
+  apply (simp add: untyped_ranges_zero_inv_def)
+  apply (rule arg_cong[where f=ran])
+  apply (simp add: fun_eq_iff map_comp_def)
+  done
+
 crunch tcb_in_cur_domain'[wp]: updateCap "tcb_in_cur_domain' t"
   (wp: crunch_wps simp: crunch_simps rule: tcb_in_cur_domain'_lift)
 
@@ -5746,8 +5822,11 @@ lemma make_zombie_invs':
   apply (wp updateCap_ctes_of_wp sch_act_wf_lift valid_queues_lift cur_tcb_lift
             updateCap_iflive' updateCap_ifunsafe' updateCap_idle'
             valid_arch_state_lift' valid_irq_node_lift ct_idle_or_in_cur_domain'_lift2
+            updateCap_untyped_ranges_zero_simple
        | simp)+
   apply simp_all
+        apply (clarsimp simp: cte_wp_at_ctes_of)
+        apply (auto simp: untypedZeroRange_def isCap_simps)[1]
        apply clarsimp
       apply (clarsimp simp: modify_map_def ran_def split del: split_if
                      split: split_if_asm)
@@ -9042,6 +9121,27 @@ lemma cteMove_global_refs' [wp]:
   apply auto?
   done
 
+lemma cteMove_urz [wp]:
+  "\<lbrace>\<lambda>s. untyped_ranges_zero' s
+      \<and> valid_pspace' s
+      \<and> cte_wp_at' (\<lambda>c. weak_derived' (cteCap c) cap) src s
+      \<and> cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c) \<longrightarrow> cap = cteCap c) src s
+      \<and> cte_wp_at' (\<lambda>c. cteCap c = NullCap) dest s\<rbrace>
+     cteMove cap src dest
+   \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
+  apply (clarsimp simp: cteMove_def)
+  apply (rule hoare_pre)
+   apply (wp untyped_ranges_zero_lift getCTE_wp' | simp)+
+  apply (clarsimp simp: cte_wp_at_ctes_of
+             split del: split_if)
+  apply (erule untyped_ranges_zero_delta[where xs="[src, dest]"],
+    (clarsimp simp: modify_map_def)+)
+  apply (clarsimp simp: ran_restrict_map_insert modify_map_def
+                        cteCaps_of_def untypedZeroRange_def[where ?x0.0=NullCap])
+  apply (drule weak_derived_untypedZeroRange[OF weak_derived_sym'], clarsimp)
+  apply auto
+  done
+
 lemma cteMove_invs' [wp]:
   "\<lbrace>\<lambda>x. invs' x \<and> ex_cte_cap_to' word2 x \<and>
             cte_wp_at' (\<lambda>c. weak_derived' (cteCap c) capability) word1 x \<and>
@@ -9057,9 +9157,11 @@ lemma cteMove_invs' [wp]:
                   | rule hoare_vcg_conj_lift[rotated])+
       apply (unfold cteMove_def)
       apply (wp cur_tcb_lift valid_queues_lift
-                sch_act_wf_lift ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift)
+                sch_act_wf_lift ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift
+                )
   apply clarsimp
   done
+
 lemma cteMove_cte_wp_at:
   "\<lbrace>\<lambda>s. cte_at' ptr s \<and> (if p = ptr  then (Q capability.NullCap) else (if p' = ptr then Q cap else cte_wp_at' (Q \<circ> cteCap) ptr s))\<rbrace>
   cteMove cap p p'
@@ -9492,10 +9594,13 @@ lemma updateCap_noop_invs:
    apply (wp updateCap_ctes_of_wp updateCap_iflive'
              updateCap_ifunsafe' updateCap_idle'
              valid_arch_state_lift' valid_irq_node_lift
-             updateCap_noop_irq_handlers sch_act_wf_lift)
+             updateCap_noop_irq_handlers sch_act_wf_lift
+             untyped_ranges_zero_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of modify_map_apply)
+  apply (strengthen untyped_ranges_zero_delta[where xs=Nil, mk_strg I E])
   apply (case_tac cte)
-  apply (clarsimp simp: fun_upd_idem)
+  apply (clarsimp simp: fun_upd_idem cteCaps_of_def modify_map_apply
+                        valid_mdb'_def)
   apply (frule(1) ctes_of_valid')
   apply (frule(1) valid_global_refsD_with_objSize)
   apply clarsimp

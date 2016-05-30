@@ -624,6 +624,23 @@ lemma valid_ep_remove:
   apply (auto simp add: valid_ep'_def dest: subsetD [OF set_remove1_subset])
   done
 
+lemma setNotification_utr[wp]:
+  "\<lbrace>untyped_ranges_zero'\<rbrace> setNotification ntfn nobj \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
+  apply (simp add: cteCaps_of_def)
+  apply (rule hoare_pre, wp untyped_ranges_zero_lift)
+  apply (simp add: o_def)
+  done
+
+crunch gsUntypedZeroRanges[wp]: setEndpoint "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (ignore: setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+
+lemma setEndpoint_utr[wp]:
+  "\<lbrace>untyped_ranges_zero'\<rbrace> setEndpoint p ep \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
+  apply (simp add: cteCaps_of_def)
+  apply (rule hoare_pre, wp untyped_ranges_zero_lift)
+  apply (simp add: o_def)
+  done
+
 declare cart_singleton_empty [simp]
 declare cart_singleton_empty2[simp]
 
@@ -1655,6 +1672,7 @@ lemma sts_invs_minor'_no_valid_queues:
          pspace_domain_valid s \<and>
          ksCurDomain s \<le> maxDomain \<and>
          valid_dom_schedule' s \<and>
+         untyped_ranges_zero' s \<and>
          cur_tcb' s \<and>
          tcb_at' t s\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_queues_def)
@@ -1697,17 +1715,6 @@ lemma sts_invs_minor'_no_valid_queues:
 
 crunch ct_idle_or_in_cur_domain'[wp]: tcbSchedDequeue ct_idle_or_in_cur_domain'
 
-lemma
-"((\<forall>t' d p.
-            (t' \<in> set(ksReadyQueues s (d, p)) \<longrightarrow>
-             (obj_at' (\<lambda>tcb. tcbQueued tcb \<and> tcbDomain tcb = d \<and> tcbPriority tcb = p) t' s
-              \<and> (t' \<noteq> t \<longrightarrow> st_tcb_at' runnable' t' s)))
-            \<and> distinct (ksReadyQueues s (d, p)) \<and> (maxDomain < d \<or> maxPriority < p \<longrightarrow> ksReadyQueues s (d, p) = [])))
-  \<Longrightarrow>
-  valid_queues_no_bitmap_except t s"
-  unfolding valid_queues_no_bitmap_except_def
-  by (fastforce simp: obj_at'_def inQ_def st_tcb_at'_def)
-
 lemma tcbSchedDequeue_invs'_no_valid_queues:
    "\<lbrace>\<lambda>s. (\<forall>t' d p.
             (t' \<in> set(ksReadyQueues s (d, p)) \<longrightarrow>
@@ -1737,21 +1744,23 @@ lemma tcbSchedDequeue_invs'_no_valid_queues:
          pspace_domain_valid s \<and>
          ksCurDomain s \<le> maxDomain \<and>
          valid_dom_schedule' s \<and>
+         untyped_ranges_zero' s \<and>
          cur_tcb' s \<and>
          tcb_at' t s\<rbrace>
     tcbSchedDequeue t
    \<lbrace>\<lambda>_. invs' \<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wp tcbSchedDequeue_valid_queues_weak valid_irq_handlers_lift
-            valid_irq_node_lift valid_irq_handlers_lift'
-            tcbSchedDequeue_irq_states irqs_masked_lift cur_tcb_lift
-        | clarsimp simp add: cteCaps_of_def valid_queues_def)+
-    apply (rule conjI)
-     apply (fastforce simp: obj_at'_def inQ_def st_tcb_at'_def valid_queues_no_bitmap_except_def)
-    apply (rule conjI, clarsimp simp: correct_queue_def)
-    apply (fastforce simp: valid_pspace'_def intro: obj_at'_conjI
-                     elim: valid_objs'_maxDomain valid_objs'_maxPriority)
-   apply simp_all
+  apply (rule hoare_pre)
+   apply (wp tcbSchedDequeue_valid_queues_weak valid_irq_handlers_lift
+             valid_irq_node_lift valid_irq_handlers_lift'
+             tcbSchedDequeue_irq_states irqs_masked_lift cur_tcb_lift
+             untyped_ranges_zero_lift
+         | clarsimp simp add: cteCaps_of_def valid_queues_def o_def)+
+  apply (rule conjI)
+   apply (fastforce simp: obj_at'_def inQ_def st_tcb_at'_def valid_queues_no_bitmap_except_def)
+  apply (rule conjI, clarsimp simp: correct_queue_def)
+  apply (fastforce simp: valid_pspace'_def intro: obj_at'_conjI
+                   elim: valid_objs'_maxDomain valid_objs'_maxPriority)
   done
 
 lemmas sts_tcbSchedDequeue_invs' =
@@ -2155,9 +2164,9 @@ lemma cancel_all_invs'_helper:
    apply clarsimp
   apply (rule hoare_pre)
    apply (wp valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
-             hoare_vcg_const_Ball_lift
+             hoare_vcg_const_Ball_lift untyped_ranges_zero_lift
              sts_valid_queues sts_st_tcb' setThreadState_not_st
-        | simp)+
+        | simp add: cteCaps_of_def o_def)+
   apply (unfold fun_upd_apply Invariants_H.tcb_st_refs_of'_simps)
   apply clarsimp
   apply (intro conjI)
@@ -2320,10 +2329,12 @@ lemma rescheduleRequired_all_invs_but_ct_not_inQ:
   "\<lbrace>all_invs_but_ct_not_inQ'\<rbrace> rescheduleRequired \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
-  apply (wp_trace rescheduleRequired_ct_not_inQ
-            valid_irq_node_lift valid_irq_handlers_lift''
-            irqs_masked_lift cur_tcb_lift)
-                   apply (auto simp: sch_act_wf_weak)
+   apply (wp rescheduleRequired_ct_not_inQ
+             valid_irq_node_lift valid_irq_handlers_lift''
+             irqs_masked_lift cur_tcb_lift
+             untyped_ranges_zero_lift
+             | simp add: cteCaps_of_def o_def)+
+  apply (auto simp: sch_act_wf_weak)
   done
 
 lemma cancelAllIPC_invs'[wp]:
@@ -2622,7 +2633,8 @@ lemma cancelBadgedSends_filterM_helper':
              sch_act_wf_lift valid_irq_handlers_lift'' cur_tcb_lift irqs_masked_lift
              sts_st_tcb' sts_valid_queues setThreadState_not_st
              tcbSchedEnqueue_not_st
-        | clarsimp)+
+             untyped_ranges_zero_lift
+        | clarsimp simp: cteCaps_of_def o_def)+
   apply (frule insert_eqD, frule state_refs_of'_elemD)
   apply (clarsimp simp: valid_tcb_state'_def st_tcb_at_refs_of_rev')
   apply (frule pred_tcb_at')

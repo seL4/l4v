@@ -1431,9 +1431,13 @@ lemma deleteObjects_valid_duplicates'[wp]:
   done
 
 crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp mapME_x_inv_wp
-      preemptionPoint_inv
+  (simp: crunch_simps fiddle_gsUntypedZeroRanges_update
+     wp: hoare_drop_imps hoare_unless_wp mapME_x_inv_wp
+         preemptionPoint_inv
     ignore:freeMemory forME_x)
+
+crunch valid_duplicates[wp]: updateFreeIndex "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+    (simp: fiddle_gsUntypedZeroRanges_update)
 
 lemma resetUntypedCap_valid_duplicates'[wp]:
   "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s))
@@ -1477,7 +1481,7 @@ lemma invokeUntyped_valid_duplicates[wp]:
   apply (frule(2) invokeUntyped_proofs.intro)
   apply (rule hoare_pre)
    apply simp
-   apply (wp setCTE_pspace_no_overlap')
+   apply (wp updateFreeIndex_pspace_no_overlap')
    apply (rule hoare_post_impErr)
      apply (rule combine_validE)
       apply (rule_tac ui=ui in whenE_reset_resetUntypedCap_invs_etc)
@@ -2374,22 +2378,23 @@ lemma performArchInvocation_valid_duplicates':
    apply (clarsimp simp:cte_wp_at_ctes_of)
    apply (case_tac ctea,clarsimp)
    apply (frule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
-   apply (wp static_imp_wp|simp)+
-      apply (simp add:placeNewObject_def)
-      apply (wp |simp add:alignError_def unless_def|wpc)+
-     apply (wp updateFreeIndex_pspace_no_overlap' hoare_drop_imp
-       getSlotCap_cte_wp_at deleteObject_no_overlap
-       deleteObjects_invs_derivatives deleteObject_no_overlap)
-        apply (clarsimp simp:cte_wp_at_ctes_of)
-        apply (intro conjI)
-          apply fastforce
-         apply (simp add:descendants_range'_def2 empty_descendants_range_in')
-        apply (fastforce simp:valid_cap'_def capAligned_def)+
-     apply (clarsimp simp:cte_wp_at_ctes_of)
-     apply (intro conjI)
-       apply fastforce
-      apply (simp add:descendants_range'_def2 empty_descendants_range_in')
-     apply (fastforce simp:valid_cap'_def capAligned_def)+
+   apply (rule hoare_pre)
+    apply (wp static_imp_wp|simp)+
+       apply (simp add:placeNewObject_def)
+       apply (wp |simp add:alignError_def unless_def|wpc)+
+      apply (wp updateFreeIndex_pspace_no_overlap' hoare_drop_imp
+        getSlotCap_cte_wp_at deleteObject_no_overlap
+        deleteObjects_invs_derivatives[where p="makePoolParent (case ai of InvokeASIDControl i \<Rightarrow> i)"]
+        deleteObject_no_overlap
+        deleteObjects_cte_wp_at')
+   apply (clarsimp simp:cte_wp_at_ctes_of)
+   apply (strengthen refl ctes_of_valid_cap'[mk_strg I E])
+   apply (clarsimp simp: conj_comms valid_cap_simps' capAligned_def
+                         descendants_range'_def2 empty_descendants_range_in')
+   apply (intro conjI; clarsimp)
+   apply (drule(1) cte_cap_in_untyped_range, fastforce simp:cte_wp_at_ctes_of, simp_all)[1]
+    apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
+   apply clarsimp
   apply (rename_tac asidpool_invocation)
   apply (case_tac asidpool_invocation)
   apply (clarsimp simp:performASIDPoolInvocation_def)
