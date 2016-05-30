@@ -26,18 +26,11 @@ This module defines the behavior of untyped objects.
 > import SEL4.Object.Structures
 > import SEL4.Object.Instances()
 > import {-# SOURCE #-} SEL4.Object.CNode
-
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 
 > import Data.Bits
 
 \end{impdetails}
-
-> getFreeRef :: PPtr () -> Int -> PPtr ()
-> getFreeRef base freeIndex = base + (fromIntegral freeIndex)
-
-> getFreeIndex :: PPtr () -> PPtr () -> Int
-> getFreeIndex base free = fromIntegral $ fromPPtr (free - base)
 
 \subsection{Invocation}
 
@@ -180,27 +173,27 @@ A Retype operation may begin with a reset of an Untyped cap. This returns the fr
 > resetUntypedCap slot = do
 >     cap <- withoutPreemption $ getSlotCap slot
 >     let sz = capBlockSize cap
+>     unless (capFreeIndex cap == 0) $ do
 
 \begin{impdetails}
 The objects in the Haskell model are removed at this time. This operation is specific to the Haskell physical memory model, in which memory objects are typed; it is not necessary (or possible) when running on real hardware.
  
->     withoutPreemption $ deleteObjects (capPtr cap) sz
+>         withoutPreemption $ deleteObjects (capPtr cap) sz
 
 \end{impdetails}
 
->     if (capIsDevice cap || sz < resetChunkBits)
->         then withoutPreemption $ do
->             unless (capIsDevice cap) $ doMachineOp $
->                 clearMemory (PPtr (fromPPtr (capPtr cap))) (1 `shiftL` sz)
->             updateCap slot (cap {capFreeIndex = 0})
->         else do
->             forM_ (reverse [capPtr cap, capPtr cap + (1 `shiftL` resetChunkBits) ..
->                         getFreeRef (capPtr cap) (capFreeIndex cap) - 1])
+>         if (capIsDevice cap || sz < resetChunkBits)
+>             then withoutPreemption $ do
+>                 unless (capIsDevice cap) $ doMachineOp $
+>                     clearMemory (PPtr (fromPPtr (capPtr cap))) (1 `shiftL` sz)
+>                 updateFreeIndex slot 0
+>             else forM_ (reverse [capPtr cap, capPtr cap + (1 `shiftL` resetChunkBits) ..
+>                             getFreeRef (capPtr cap) (capFreeIndex cap) - 1])
 >                 $ \addr -> do
 >                     withoutPreemption $ doMachineOp $ clearMemory
 >                         (PPtr (fromPPtr addr)) (1 `shiftL` resetChunkBits)
->                     withoutPreemption $ updateCap slot (cap {capFreeIndex
->                         = getFreeIndex (capPtr cap) addr})
+>                     withoutPreemption $ updateFreeIndex slot
+>                         (getFreeIndex (capPtr cap) addr)
 >                     preemptionPoint
 
 > invokeUntyped :: UntypedInvocation -> KernelP ()
@@ -208,7 +201,6 @@ The objects in the Haskell model are removed at this time. This operation is spe
 
 >     when reset $ resetUntypedCap srcSlot
 >     withoutPreemption $ do
->         cap <- getSlotCap srcSlot
 
 For verification purposes a check is made that the region the objects are created in does not overlap with any existing CNodes.
 
@@ -218,8 +210,7 @@ For verification purposes a check is made that the region the objects are create
 >                     && x <= fromPPtr retypeBase + fromIntegral totalObjectSize - 1)))
 >             "CNodes present in region to be retyped."
 >         let freeRef = retypeBase + PPtr (fromIntegral totalObjectSize)
->         updateCap srcSlot
->             (cap {capFreeIndex = getFreeIndex base freeRef})
+>         updateFreeIndex srcSlot (getFreeIndex base freeRef)
 
 Create the new objects and insert caps to these objects into the destination slots.
  
@@ -229,4 +220,5 @@ This function performs the check that CNodes do not overlap with the retyping re
 
 > cNodeOverlap :: (Word -> Maybe Int) -> (Word -> Bool) -> Bool
 > cNodeOverlap _ _ = False
+
 

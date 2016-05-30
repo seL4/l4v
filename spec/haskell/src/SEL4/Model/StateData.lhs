@@ -39,6 +39,7 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 > import SEL4.Machine.Hardware.TARGET (VMPageSize)
 
 > import Data.Array
+> import qualified Data.Set
 > import Data.Helpers
 > import Control.Monad
 > import Control.Monad.State
@@ -62,6 +63,7 @@ The top-level kernel state structure is called "KernelState". It contains:
 
 >         gsUserPages :: Word -> (Maybe VMPageSize),
 >         gsCNodes :: Word -> (Maybe Int),
+>         gsUntypedZeroRanges :: Data.Set.Set (Word, Word),
 
 \item the cyclic domain schedule;
 
@@ -219,6 +221,7 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         ksPSpace = newPSpace,
 >         gsUserPages = (\_ -> Nothing),
 >         gsCNodes = (\_ -> Nothing),
+>         gsUntypedZeroRanges = Data.Set.empty,
 >         ksDomScheduleIdx = 0,
 >         ksDomSchedule = [(0, 15), (2, 42), (1, 73)],
 >         ksCurDomain = 0,

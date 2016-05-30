@@ -465,9 +465,26 @@ This type is used to represent a frame in the user's address space.
 
 > data UserDataDevice = UserDataDevice
 
-\subsubsection{The max free index of a UntypedCap}
+\subsubsection{The Untyped free index}
+
+Various operations on the free index of an Untyped cap.
 
 > maxFreeIndex :: Int -> Int
 > maxFreeIndex sizeBits = bit sizeBits
+
+> getFreeRef :: PPtr () -> Int -> PPtr ()
+> getFreeRef base freeIndex = base + (fromIntegral freeIndex)
+
+> getFreeIndex :: PPtr () -> PPtr () -> Int
+> getFreeIndex base free = fromIntegral $ fromPPtr (free - base)
+
+> untypedZeroRange :: Capability -> Maybe (Word, Word)
+> untypedZeroRange (cap@UntypedCap {}) = if empty then Nothing
+>         else Just (fromPPtr startPtr, fromPPtr endPtr)
+>     where
+>         empty = capFreeIndex cap == maxFreeIndex (capBlockSize cap)
+>         startPtr = getFreeRef (capPtr cap) (capFreeIndex cap)
+>         endPtr = capPtr cap + PPtr (2 ^ capBlockSize cap) - 1
+> untypedZeroRange _ = Nothing
 
 

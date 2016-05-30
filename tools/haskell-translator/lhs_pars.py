@@ -2137,6 +2137,7 @@ regexes = [
     (re.compile(r"\.\|\."), '||'),
     (re.compile(r"Data\.Word\.Word"), r"word"),
     (re.compile(r"Data\.Map\."), r"data_map_"),
+    (re.compile(r"Data\.Set\."), r"data_set_"),
     (re.compile(r"BinaryTree\."), 'bt_'),
     (re.compile("mapM_"), "mapM_x"),
     (re.compile("forM_"), "forM_x"),

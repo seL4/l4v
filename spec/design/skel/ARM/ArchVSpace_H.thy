@@ -15,6 +15,7 @@
 theory ArchVSpace_H
 imports
   "../CNode_H"
+  "../Untyped_H"
   "../KI_Decls_H"
   ArchVSpaceDecls_H
 begin

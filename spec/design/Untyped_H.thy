@@ -112,6 +112,40 @@ where
   )"
 
 definition
+untypedZeroRange :: "capability \<Rightarrow> (machine_word * machine_word) option"
+where
+"untypedZeroRange x0\<equiv> (let cap = x0 in
+  if isUntypedCap cap
+  then 
+    let
+        empty = capFreeIndex cap = maxFreeIndex (capBlockSize cap);
+        startPtr = getFreeRef (capPtr cap) (capFreeIndex cap);
+        endPtr = capPtr cap + PPtr (2 ^ capBlockSize cap) - 1
+    in
+    if empty then Nothing
+        else Just (fromPPtr startPtr, fromPPtr endPtr)
+  else   Nothing
+  )"
+
+definition
+updateFreeIndex :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
+where
+"updateFreeIndex slot idx\<equiv> (do
+    cap \<leftarrow> getSlotCap slot;
+    modify (\<lambda> ks. (case untypedZeroRange (cap \<lparr>capFreeIndex := idx\<rparr>) of
+          None \<Rightarrow>   ks
+        | Some r \<Rightarrow>   ks \<lparr>gsUntypedZeroRanges := data_set_insert
+            r (gsUntypedZeroRanges ks)\<rparr>)
+        );
+    updateCap slot (cap \<lparr>capFreeIndex := idx\<rparr>);
+    modify (\<lambda> ks. (case untypedZeroRange cap of
+          None \<Rightarrow>   ks
+        | Some r \<Rightarrow>   ks \<lparr>gsUntypedZeroRanges := data_set_delete
+            r (gsUntypedZeroRanges ks)\<rparr>)
+        )
+od)"
+
+definition
 resetUntypedCap :: "machine_word \<Rightarrow> unit kernel_p"
 where
 "resetUntypedCap slot\<equiv> (doE
@@ -122,7 +156,7 @@ where
         then withoutPreemption $ (do
             unless (capIsDevice cap) $ doMachineOp $
                 clearMemory (PPtr (fromPPtr (capPtr cap))) (1 `~shiftL~` sz);
-            updateCap slot (cap \<lparr>capFreeIndex := 0\<rparr>)
+            updateFreeIndex slot 0
         od)
         else (
             forME_x (reverse [capPtr cap, capPtr cap + (1 `~shiftL~` resetChunkBits)  .e.
@@ -130,8 +164,8 @@ where
                 (\<lambda> addr. (doE
                     withoutPreemption $ doMachineOp $ clearMemory
                         (PPtr (fromPPtr addr)) (1 `~shiftL~` resetChunkBits);
-                    withoutPreemption $ updateCap slot (cap \<lparr>capFreeIndex
-                        := getFreeIndex (capPtr cap) addr\<rparr>);
+                    withoutPreemption $ updateFreeIndex slot
+                        (getFreeIndex (capPtr cap) addr);
                     preemptionPoint
                 odE))
         )
@@ -144,15 +178,13 @@ where
     (Retype srcSlot reset base retypeBase newType userSize destSlots isDev) \<Rightarrow>    (doE
     whenE reset $ resetUntypedCap srcSlot;
     withoutPreemption $ (do
-        cap \<leftarrow> getSlotCap srcSlot;
         totalObjectSize \<leftarrow> return ( (length destSlots) `~shiftL~` (getObjectSize newType userSize));
         stateAssert (\<lambda> x. Not (cNodeOverlap (gsCNodes x)
                 (\<lambda> x. fromPPtr retypeBase \<le> x
                     \<and> x \<le> fromPPtr retypeBase + fromIntegral totalObjectSize - 1)))
             [];
         freeRef \<leftarrow> return ( retypeBase + PPtr (fromIntegral totalObjectSize));
-        updateCap srcSlot
-            (cap \<lparr>capFreeIndex := getFreeIndex base freeRef\<rparr>);
+        updateFreeIndex srcSlot (getFreeIndex base freeRef);
         createNewObjects newType srcSlot destSlots retypeBase userSize isDev
     od)
     odE)

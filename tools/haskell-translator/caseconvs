@@ -1612,3 +1612,8 @@ case \x of (ArchInvocationLabel X64PDPTMap, vaddr':attr:_, (vspaceCap,_):_) -> (
 
 case \x of ArchObjectCap (frame@PageCap {capVPIsDevice = False}) -> _ ->  ---X>
 
+case \x of (cap@UntypedCap {}) -> _ ->  ---> let cap = \x in
+  if isUntypedCap cap
+  then ->1
+  else ->2
+

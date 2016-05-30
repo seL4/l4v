@@ -63,6 +63,7 @@ newKernelState_def:
         ksPSpace= newPSpace,
         gsUserPages= (\<lambda>x. None),
         gsCNodes= (\<lambda>x. None),
+        gsUntypedZeroRanges= {},
         gsMaxObjectSize = card (UNIV :: machine_word set),
         ksDomScheduleIdx = newKSDomScheduleIdx,
         ksDomSchedule = newKSDomSchedule,

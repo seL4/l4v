@@ -1447,7 +1447,7 @@ the PT/PD is consistent.
 > performASIDControlInvocation (MakePool frame slot parent base) = do
 >     deleteObjects frame pageBits
 >     pcap <- getSlotCap parent
->     updateCap parent (pcap {capFreeIndex = maxFreeIndex (capBlockSize pcap) })
+>     updateFreeIndex parent (maxFreeIndex (capBlockSize pcap))
 >     placeNewObject frame (makeObject :: ASIDPool) 0
 >     let poolPtr = PPtr $ fromPPtr frame
 >     cteInsert (ArchObjectCap $ ASIDPoolCap poolPtr base) parent slot

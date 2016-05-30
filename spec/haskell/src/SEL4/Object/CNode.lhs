@@ -20,13 +20,14 @@ creating the "Capability" objects used at higher levels of the kernel.
 >         getSlotCap, locateSlotTCB, locateSlotCNode, locateSlotCap,
 >         locateSlotBasic, getReceiveSlots, getCTE, setupReplyMaster,
 >         insertInitCap, decodeCNodeInvocation, invokeCNode,
->         updateCap, isFinalCapability, createNewObjects
+>         updateCap, isFinalCapability, createNewObjects,
+>         updateFreeIndex
 >     ) where
 
 \begin{impdetails}
 
 > {-# BOOT-IMPORTS: SEL4.Machine SEL4.API.Types SEL4.API.Failures SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-> {-# BOOT-EXPORTS: ensureNoChildren getSlotCap locateSlotTCB locateSlotCNode locateSlotCap locateSlotBasic ensureEmptySlot insertInitCap cteInsert cteDelete cteDeleteOne decodeCNodeInvocation invokeCNode getCTE updateCap isFinalCapability createNewObjects #-}
+> {-# BOOT-EXPORTS: ensureNoChildren getSlotCap locateSlotTCB locateSlotCNode locateSlotCap locateSlotBasic ensureEmptySlot insertInitCap cteInsert cteDelete cteDeleteOne decodeCNodeInvocation invokeCNode getCTE updateCap isFinalCapability createNewObjects updateFreeIndex #-}
 
 > import SEL4.API.Types
 > import SEL4.API.Failures
@@ -42,6 +43,7 @@ creating the "Capability" objects used at higher levels of the kernel.
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 
 > import Data.Bits
+> import qualified Data.Set
 
 \end{impdetails}
 
@@ -391,6 +393,7 @@ the bitmask bit that will allow the reissue of an IRQHandlerCap to this IRQ.
 
 > emptySlot :: PPtr CTE -> Maybe IRQ -> Kernel ()
 > emptySlot slot irq = do
+>     clearUntypedFreeIndex slot
 >     newCTE <- getCTE slot
 >     let mdbNode = cteMDBNode newCTE
 >     let prev = mdbPrev mdbNode
@@ -580,6 +583,7 @@ The following function inserts a new revocable cap as a child of another.
 >     setCTE slot $ CTE cap (MDB next parent True True)
 >     updateMDB next   $ (\m -> m { mdbPrev = slot })
 >     updateMDB parent $ (\m -> m { mdbNext = slot })
+>     updateNewFreeIndex slot
 
 The following function is used by the bootstrap code to create the initial set of capabilities.
 
@@ -613,6 +617,43 @@ This function is used in the assertion above; it returns "True" if no reply capa
 
 > noReplyCapsFor :: PPtr TCB -> KernelState -> Bool
 > noReplyCapsFor _ _ = True
+
+These functions concern the free indices of untyped caps. For verification reasons we also track the free ranges in a ghost variable, which must be updated appropriately when untyped caps might be changed.
+
+> updateTrackedFreeIndex :: PPtr CTE -> Int -> Kernel ()
+> updateTrackedFreeIndex slot idx = do
+>     cap <- getSlotCap slot
+>     modify (\ks -> ks {gsUntypedZeroRanges =
+>         case untypedZeroRange cap of
+>             Nothing -> gsUntypedZeroRanges ks
+>             Just r -> Data.Set.delete r (gsUntypedZeroRanges ks)
+>         })
+>     modify (\ks -> ks {gsUntypedZeroRanges =
+>         case untypedZeroRange (cap {capFreeIndex = idx}) of
+>             Nothing -> gsUntypedZeroRanges ks
+>             Just r -> Data.Set.insert r (gsUntypedZeroRanges ks)
+>         })
+
+> updateFreeIndex :: PPtr CTE -> Int -> Kernel ()
+> updateFreeIndex slot idx = do
+>     updateTrackedFreeIndex slot idx
+>     cap <- getSlotCap slot
+>     updateCap slot (cap {capFreeIndex = idx})
+
+> clearUntypedFreeIndex :: PPtr CTE -> Kernel ()
+> clearUntypedFreeIndex slot = do
+>     cap <- getSlotCap slot
+>     case cap of
+>         UntypedCap {} -> updateTrackedFreeIndex slot
+>             (maxFreeIndex (capBlockSize cap))
+>         _ -> return ()
+
+> updateNewFreeIndex :: PPtr CTE -> Kernel ()
+> updateNewFreeIndex slot = do
+>     cap <- getSlotCap slot
+>     case cap of
+>         UntypedCap {} -> updateTrackedFreeIndex slot (capFreeIndex cap)
+>         _ -> return ()
 
 \subsection{MDB Operations}
 \label{sec:object.cnode.mdb}

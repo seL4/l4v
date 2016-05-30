@@ -17,6 +17,7 @@
 theory ArchVSpace_H
 imports
   "../CNode_H"
+  "../Untyped_H"
   "../KI_Decls_H"
   ArchVSpaceDecls_H
 begin
@@ -1396,7 +1397,7 @@ defs performASIDControlInvocation_def:
     (MakePool frame slot parent base) \<Rightarrow>    (do
     deleteObjects frame pageBits;
     pcap \<leftarrow> getSlotCap parent;
-    updateCap parent (pcap \<lparr>capFreeIndex := maxFreeIndex (capBlockSize pcap) \<rparr>);
+    updateFreeIndex parent (maxFreeIndex (capBlockSize pcap));
     placeNewObject frame (makeObject ::asidpool) 0;
     poolPtr \<leftarrow> return ( PPtr $ fromPPtr frame);
     cteInsert (ArchObjectCap $ ASIDPoolCap poolPtr base) parent slot;
