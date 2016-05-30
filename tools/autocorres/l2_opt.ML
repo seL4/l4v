@@ -135,7 +135,7 @@ let
       (no_tac t)
 
   (* Fetch theorms used in the simplification process. *)
-  val thms = L2FlowThms.get ctxt
+  val thms = Utils.get_rules ctxt @{named_theorems L2flow}
 
   (* Tactic to blindly apply simplification rules. *)
   fun solve_goal_tac _ =
@@ -247,7 +247,7 @@ let
   (* Setup basic simplifier. *)
   fun basic_ss ctxt =
       put_simpset AUTOCORRES_SIMPSET ctxt
-      |> (fn ctxt => if fast_mode < 2 then ctxt addsimps (L2PeepholeThms.get ctxt) else ctxt)
+      |> (fn ctxt => if fast_mode < 2 then ctxt addsimps (Utils.get_rules ctxt @{named_theorems L2opt}) else ctxt)
       |> (fn ctxt => if fast_mode < 2 then ctxt addsimprocs [l2_gets_bind_simproc] else ctxt)
       |> (fn ctxt => ctxt addsimprocs [l2_guard_simproc (simpset_of ctxt)])
       |> map_opt_simpset false

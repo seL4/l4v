@@ -45,6 +45,12 @@ definition "struct_rewrite_expr     P A C \<equiv> \<forall>s. P s \<longrightar
 definition "struct_rewrite_modifies P A C \<equiv> \<forall>s. P s \<longrightarrow> C s = A s"
 
 
+(* Standard heap abstraction rules. *)
+named_theorems heap_abs
+(* Rules that require first-order matching. *)
+named_theorems heap_abs_fo
+
+
 (* fun_app2 is like fun_app, but it skips an abstraction.
  * We use this for terms like "\<lambda>s a. Array.update a k (f s)".
  * FIXME: ideally, the first order conversion code can skip abstractions. *)
@@ -1122,12 +1128,7 @@ lemma abs_spec_modify_global[heap_abs]:
    abs_spec st \<top> {(a, b). mex (\<lambda>x. C (new_setter (\<lambda>_. x) a) b)} {(a, b). mex (\<lambda>x. C' (old_setter (\<lambda>_. x) a) b)}"
   apply (fastforce simp: abs_spec_def mex_def valid_globals_field_def)
   done
-
-(* Remove the Hoare modifies constants after we're finished,
- * as they have very buggy print translations.
- * In particular, applying abs_spec_modify_global replaces the bound variable by "x"
- * and confuses the print translation into producing "may_only_modify_globals [x]". *)
-lemmas [polish] = mex_def meq_def
+(* NB: meq and mex are unfolded in Polish. *)
 
 
 (* Signed words are stored on the heap as unsigned words. *)

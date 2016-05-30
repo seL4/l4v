@@ -13,8 +13,27 @@
  *)
 
 theory Polish
-imports TypeStrengthen
+imports WordAbstract TypeStrengthen
 begin
+
+(* Final simplification after type strengthening. *)
+named_theorems polish
+
+(* Remove the Hoare modifies constants after heap abstraction, as they have
+ * very buggy print translations.
+ * In particular, applying abs_spec_modify_global replaces the bound variable by "x"
+ * and confuses the print translation into producing "may_only_modify_globals [x]". *)
+lemmas [polish] = mex_def meq_def
+
+(* Clean up "WORD_MAX TYPE(32)", etc. after word abstraction. *)
+lemmas [polish] =
+  WORD_MAX_simps
+  WORD_MIN_simps
+  UWORD_MAX_simps
+  WORD_signed_to_unsigned
+  INT_MIN_MAX_lemmas
+
+declare singleton_iff [polish]
 
 lemma L2polish [polish]:
   "L2_seq = bindE"

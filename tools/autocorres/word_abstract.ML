@@ -229,7 +229,8 @@ let
     (*
      * Fetch rules from the theory.
      *)
-    val rules = WordAbsThms.get lthy @ List.concat (map #rules wa_rules)
+    val rules = Utils.get_rules lthy @{named_theorems word_abs}
+                @ List.concat (map #rules wa_rules)
                 @ @{thms word_abs_default}
     val fo_rules = [@{thm abstract_val_fun_app}]
 

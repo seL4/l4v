@@ -19,6 +19,7 @@ begin
 (*
  * Lemmas to unfold prior to L1 conversion.
  *)
+named_theorems L1unfold
 declare creturn_def [L1unfold]
 declare creturn_void_def [L1unfold]
 declare cbreak_def [L1unfold]

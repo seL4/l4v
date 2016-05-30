@@ -998,6 +998,10 @@ fun mk_simproc' ctxt (name : string, pats : string list, proc : Proof.context ->
        {lhss = map (Proof_Context.read_term_pattern ctxt) pats,
         proc = K proc, identifier = []} end
 
+(* Get named_theorems in reverse order. We use this for translation rulesets
+ * so that user-added rules can override the built-in ones. *)
+fun get_rules ctxt = Named_Theorems.get ctxt #> rev
+
 end
 
 (* Insist the the given tactic solves a subgoal. *)

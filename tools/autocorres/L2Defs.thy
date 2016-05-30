@@ -617,6 +617,9 @@ lemmas L2_split_fixups =
 lemmas L2_split_fixups_congs =
   prod.case_cong
 
+(* Peephole simplification rules for L2 programs (including HeapLift and WordAbstract). *)
+named_theorems L2opt
+
 (* L2 monad_mono rules *)
 lemma L2_seq_monad_mono_step:
   "\<lbrakk> monad_mono_step f m; \<And>x. monad_mono_step (\<lambda>m. g m x) m \<rbrakk>

@@ -13,7 +13,7 @@
  *)
 
 theory L1Defs
-imports CCorresE AutoCorresAttributes MonadMono
+imports CCorresE MonadMono
 begin
 
 (* Definitions of constants used in the SimplConv output. *)
@@ -492,5 +492,11 @@ lemmas L1_monad_mono_step_rules =
 lemma monad_mono_step_L1_recguard_0:
   "monad_mono_step (\<lambda>m. L1_recguard m (x m)) 0"
   by (monad_eq simp: monad_mono_step_def L1_recguard_def)
+
+
+(* Unfolding rules to run prior to L1 translation. *)
+named_theorems L1unfold
+(* L1 postprocessing rules, used by ExceptionRewrite and SimplConv. *)
+named_theorems L1except
 
 end

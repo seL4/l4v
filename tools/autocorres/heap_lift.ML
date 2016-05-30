@@ -582,7 +582,7 @@ let
    * "valid_globals_field", "valid_typ_heap" etc with the predicates generated
    * above.
    *)
-  val base_rules = HeapAbsThms.get lthy
+  val base_rules = Utils.get_rules lthy @{named_theorems heap_abs}
   (* FIXME: make an attribute for these rules? *)
   val base_nolift_rules = @{thms struct_rewrite_expr_id}
   val [rules, nolift_rules] =
@@ -631,7 +631,7 @@ let
     val rules = rules @ (map (snd #> #3) (Symtab.dest callee_terms)) @ callee_mono_thms
     val rules = if Symset.contains unliftable_functions fn_name
                 then rules @ nolift_rules else rules
-    val fo_rules = HeapAbsFOThms.get ctxt
+    val fo_rules = Utils.get_rules ctxt @{named_theorems heap_abs_fo}
 
     (* Apply a conversion to the concrete side of the given L2T term.
      * By convention, the concrete side is the last argument (index ~1). *)
