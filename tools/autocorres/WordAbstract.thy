@@ -798,7 +798,7 @@ lemma abstract_val_abs_var [consumes 1]:
   "\<lbrakk> abs_var a f a' \<rbrakk> \<Longrightarrow> abstract_val True a f a'"
   by (clarsimp simp: fun_upd_def split: if_splits)
 
-lemma abstract_val_abs_var_concretise  [consumes 1]:
+lemma abstract_val_abs_var_concretise [consumes 1]:
   "\<lbrakk> abs_var a A a'; introduce_typ_abs_fn A; valid_typ_abs_fn PA PC A (C :: 'a \<Rightarrow> 'c)  \<rbrakk>
       \<Longrightarrow> abstract_val (PC a) (C a) id a'"
   by (clarsimp simp: fun_upd_def split: if_splits)

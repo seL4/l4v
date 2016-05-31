@@ -32,7 +32,8 @@ val apply_tac = Utils.apply_tac
 val the' = Utils.the'
 
 (* Simpset we use for automated tactics. *)
-fun setup_l2_ss ctxt = ctxt addsimps [@{thm ucast_id}, @{thm pred_conj_def}]
+fun setup_l2_ss ctxt = put_simpset AUTOCORRES_SIMPSET ctxt
+                         addsimps [@{thm ucast_id}, @{thm pred_conj_def}]
 
 (* Convert a set of variable names into an Isabelle list of strings. *)
 fun var_set_to_isa_list s =

@@ -32,32 +32,20 @@ lemma switch_alt_defs [L1unfold]:
   "switch v ((a, b) # vs) \<equiv> Cond {s. v s \<in> a} b (switch v vs)"
   by auto
 
-lemma not_msb_from_less:
-  "(v :: 'a word) < 2 ^ (len_of TYPE('a :: len) - 1) \<Longrightarrow> \<not> msb v"
-  apply (clarsimp simp add: msb_nth)
-  apply (drule less_mask_eq)
-  apply (drule word_eqD, drule(1) iffD2)
-  apply simp
-  done
-
 lemma sless_positive [simp]:
   "\<lbrakk> a < n; n \<le> (2 ^ (len_of TYPE('a) - 1)) - 1 \<rbrakk> \<Longrightarrow> (a :: ('a::{len}) word) <s n"
   apply (subst signed.less_le)
   apply safe
   apply (subst word_sle_msb_le)
   apply safe
-    apply clarsimp
-    apply (metis One_nat_def msb_shift not_msb_from_less word_not_simps(1))
+    apply (force simp: not_msb_from_less)
    apply simp
   apply simp
   done
 
 lemma sle_positive [simp]:
   "\<lbrakk> a \<le> n; n \<le> (2 ^ (len_of TYPE('a) - 1)) - 1 \<rbrakk> \<Longrightarrow> (a :: ('a::{len}) word) <=s n"
-  apply (subst signed.le_less)
-  apply (case_tac "n=0")
-   apply clarsimp
-  apply (clarsimp simp: sless_positive)
+  apply (clarsimp simp: signed.le_less)
   done
 
 (* An induction rule that matches our recursive definitions. *)
@@ -74,6 +62,6 @@ lemma recguard_induct: "\<lbrakk> P 0; \<And>n. P (recguard_dec n) \<Longrightar
  *)
 lemmas [L1except] =
   L1_set_to_pred_def in_set_to_pred in_set_if_then (* rewrite SIMPL set notation *)
-  L1_seq_assoc (* not strictly required, but useful *)
+  L1_seq_assoc (* Normalise seqs. Not strictly required, but useful *)
 
 end

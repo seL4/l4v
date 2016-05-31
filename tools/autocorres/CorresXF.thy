@@ -830,11 +830,6 @@ lemma corresXF_spec:
   apply metis
   done
 
-lemma globals_surj [simp]: "surj globals"
-  apply (rule surjI [where f="\<lambda>x. undefined\<lparr> globals := x\<rparr>"])
-  apply simp
-  done
-
 lemma corresXF_throw:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> E B s = A \<rbrakk> \<Longrightarrow> corresXF st V E P (throwError A) (throwError B)"
   apply (monad_eq simp: corresXF_def split: sum.splits)
