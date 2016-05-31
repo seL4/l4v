@@ -1,3 +1,13 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
 text \<open>
   In addition to named theorems, AutoCorres also stores definitions,
   theorems and other data in ML data structures.

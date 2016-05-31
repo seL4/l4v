@@ -1,3 +1,15 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
+(* License: BSD, terms see file ./LICENSE *)
+
 theory ArrayAssertion
 
 imports
@@ -6,9 +18,9 @@ imports
 
 begin
 
-lemma array_tag_n_eq: 
-  "(array_tag_n n :: ('a :: c_type['b :: finite]) field_desc typ_desc) = 
-  TypDesc (TypAggregate 
+lemma array_tag_n_eq:
+  "(array_tag_n n :: ('a :: c_type['b :: finite]) field_desc typ_desc) =
+  TypDesc (TypAggregate
     (map (\<lambda>n. DTPair (adjust_ti (typ_info_t TYPE('a)) (\<lambda>x. index x n)
             (\<lambda>x f. Arrays.update f n x)) (replicate n CHR ''1'')) [0..<n]))
   (typ_name (typ_uinfo_t TYPE('a)) @ ''_array_'' @ nat_to_bin_string (card (UNIV :: 'b :: finite set)))"
@@ -18,9 +30,9 @@ lemma array_tag_n_eq:
    apply (simp add: ti_typ_combine_def Let_def)
    done
 
-lemma typ_info_array':  
-  "typ_info_t TYPE ('a :: c_type['b :: finite]) = 
-  TypDesc (TypAggregate 
+lemma typ_info_array':
+  "typ_info_t TYPE ('a :: c_type['b :: finite]) =
+  TypDesc (TypAggregate
     (map (\<lambda>n. DTPair (adjust_ti (typ_info_t TYPE('a)) (\<lambda>x. index x n)
             (\<lambda>x f. Arrays.update f n x)) (replicate n CHR ''1'')) [0..<(card (UNIV :: 'b :: finite set))]))
   (typ_name (typ_uinfo_t TYPE('a)) @ ''_array_'' @ nat_to_bin_string (card (UNIV :: 'b :: finite set)))"
@@ -183,4 +195,3 @@ lemma ptr_arr_retyps_to_retyp:
   done
 
 end
-
