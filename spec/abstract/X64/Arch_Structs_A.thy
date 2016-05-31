@@ -43,9 +43,8 @@ datatype vm_map_type = VMNoMap | VMVSpaceMap | VMIOSpaceMap
 datatype arch_cap =
    ASIDPoolCap (cap_asid_pool : obj_ref) (cap_asid_base : asid)
  | ASIDControlCap
-(* FIXME x64-vtd *)
-(*
  | IOPortCap (cap_io_port_first_port : io_port) (cap_io_port_last_port : io_port)
+(* FIXME x64-vtd:
  | IOSpaceCap (cap_io_domain_id : "16 word") (cap_io_pci_device : "io_asid option")
  | IOPageTableCap (cap_iopt_base_ptr : obj_ref) (cap_io_pt_level : nat) (cap_iopt_mapped_address : "(io_asid * vspace_ref) option")
 *)
