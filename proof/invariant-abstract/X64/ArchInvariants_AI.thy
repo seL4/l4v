@@ -213,7 +213,7 @@ where
 | "acap_class (IOPortCap x y)         = IOPortClass"
 
 definition
-  valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> word32 \<Rightarrow> bool"
+  valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> machine_word \<Rightarrow> bool"
 where
   "valid_ipc_buffer_cap_arch ac bufptr \<equiv>
          case ac of
@@ -697,9 +697,9 @@ definition
   "valid_pml4_kernel_mappings uses = (\<lambda>s. arch_obj_fun_lift (valid_pml4_kernel_mappings_arch uses s) False)"
   
 definition
-  valid_global_pml4_mappings :: "'z::state_ext state \<Rightarrow> bool"
+  valid_global_vspace_mappings :: "'z::state_ext state \<Rightarrow> bool"
 where
- "valid_global_pml4_mappings \<equiv> \<lambda>s.
+ "valid_global_vspace_mappings \<equiv> \<lambda>s.
   obj_at (valid_pml4_kernel_mappings (x64_kernel_vspace (arch_state s)) s)
     (x64_global_pml4 (arch_state s)) s"
 
@@ -1026,22 +1026,20 @@ where
   | APageMapL4 \<Rightarrow> arch_kobj_size (PageMapL4 undefined))"
 
 definition
-  pm_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  vspace_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "pm_at_asid asid pm \<equiv> \<lambda>s.
+  "vspace_at_asid asid pm \<equiv> \<lambda>s.
          ([VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> pm) s"
 
-(* FIXME x64: do we need this? *)
-(*
+
 definition
   valid_asid_map :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_asid_map \<equiv>
-   \<lambda>s. dom (arm_asid_map (arch_state s)) \<subseteq> {0 .. mask asid_bits} \<and>
-       (\<forall>(asid, hwasid, pd) \<in> graph_of (arm_asid_map (arch_state s)).
-            pd_at_asid asid pd s \<and> asid \<noteq> 0)"
-*)
+   \<lambda>s. dom (x64_asid_map (arch_state s)) \<subseteq> {0 .. mask asid_bits} \<and>
+       (\<forall>(asid, pd) \<in> graph_of (x64_asid_map (arch_state s)).
+            vspace_at_asid asid pd s \<and> asid \<noteq> 0)"
 
 
 section "Lemmas"
@@ -1317,6 +1315,16 @@ lemma valid_global_pts_update [iff]:
   "x64_global_pts (arch_state (f s)) = x64_global_pts (arch_state s) \<Longrightarrow>
    valid_global_pts (f s) = valid_global_pts s"
   by (simp add: valid_global_pts_def)
+  
+lemma valid_global_pds_update [iff]:
+  "x64_global_pds (arch_state (f s)) = x64_global_pds (arch_state s) \<Longrightarrow>
+   valid_global_pds (f s) = valid_global_pds s"
+  by (simp add: valid_global_pds_def)
+  
+lemma valid_global_pdpts_update [iff]:
+  "x64_global_pdpts (arch_state (f s)) = x64_global_pdpts (arch_state s) \<Longrightarrow>
+   valid_global_pdpts (f s) = valid_global_pdpts s"
+  by (simp add: valid_global_pdpts_def)
 
 lemma valid_pte_update [iff]:
   "valid_pte pte (f s) = valid_pte pte s"

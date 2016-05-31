@@ -262,6 +262,7 @@ record arch_state =
   x64_global_pdpts          :: "obj_ref list"
   x64_global_pds            :: "obj_ref list"
   x64_globals_frame         :: obj_ref
+  x64_asid_map              :: "X64_A.asid \<rightharpoonup> obj_ref" (* FIXME x64: do we need this? *)
   
 (* FIXME x64-vtd:
   x64_num_io_domain_bits    :: "16 word"

@@ -517,9 +517,9 @@ definition
   "valid_pd_kernel_mappings uses = (\<lambda>s. arch_obj_fun_lift (valid_pd_kernel_mappings_arch uses s) False)"
 
 definition
-  valid_global_pd_mappings :: "'z::state_ext state \<Rightarrow> bool"
+  valid_global_vspace_mappings :: "'z::state_ext state \<Rightarrow> bool"
 where
- "valid_global_pd_mappings \<equiv> \<lambda>s.
+ "valid_global_vspace_mappings \<equiv> \<lambda>s.
   obj_at (valid_pd_kernel_mappings (arm_kernel_vspace (arch_state s)) s)
     (arm_global_pd (arch_state s)) s"
 
@@ -780,9 +780,9 @@ where
   | APageTable \<Rightarrow> arch_kobj_size (PageTable undefined))"
 
 definition
-  pd_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  vspace_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "pd_at_asid asid pd \<equiv> \<lambda>s.
+  "vspace_at_asid asid pd \<equiv> \<lambda>s.
          ([VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> pd) s"
 
@@ -792,7 +792,7 @@ where
   "valid_asid_map \<equiv>
    \<lambda>s. dom (arm_asid_map (arch_state s)) \<subseteq> {0 .. mask asid_bits} \<and>
        (\<forall>(asid, hwasid, pd) \<in> graph_of (arm_asid_map (arch_state s)).
-            pd_at_asid asid pd s \<and> asid \<noteq> 0)"
+            vspace_at_asid asid pd s \<and> asid \<noteq> 0)"
 
 
 
