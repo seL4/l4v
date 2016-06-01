@@ -140,6 +140,14 @@ Ensure that sufficient space is available in the region of memory.
 >     when (fromIntegral maxCount < nodeWindow) $
 >         throw $ NotEnoughMemory $ fromIntegral untypedFreeBytes
 
+Check that if the user is trying to retype a device untyped cap, they are only creating
+device frames, or other device untypeds
+
+>     let notFrame = not $ isFrameType newType
+>     let isDevice = capIsDevice cap
+>     when (isDevice && notFrame && newType /= fromAPIType Untyped) $
+>            throw $ InvalidArgument 1
+
 Align up the free region pointer to ensure that created objects are aligned to their size.
 
 >     let alignedFreeRef = PPtr $ alignUp (fromPPtr freeRef) objectSize
@@ -150,7 +158,8 @@ Align up the free region pointer to ensure that created objects are aligned to t
 >         retypeFreeRegionBase = alignedFreeRef,
 >         retypeNewType = newType,
 >         retypeNewSizeBits = userObjSize,
->         retypeSlots = slots }
+>         retypeSlots = slots,
+>         retypeIsDevice = isDevice }
 
 > decodeUntypedInvocation label _ _ _ _ = throw $
 >     if invocationType label == UntypedRetype
@@ -158,7 +167,7 @@ Align up the free region pointer to ensure that created objects are aligned to t
 >         else IllegalOperation
 
 > invokeUntyped :: UntypedInvocation -> Kernel ()
-> invokeUntyped (Retype srcSlot base freeRegionBase newType userSize destSlots) = do
+> invokeUntyped (Retype srcSlot base freeRegionBase newType userSize destSlots isDevice) = do
 
 >     cap <- getSlotCap srcSlot
 
@@ -184,7 +193,7 @@ For verification purposes a check is made that the region the objects are create
 
 Create the new objects and insert caps to these objects into the destination slots.
 
->     createNewObjects newType srcSlot destSlots freeRegionBase userSize
+>     createNewObjects newType srcSlot destSlots freeRegionBase userSize isDevice
 
 This function performs the check that CNodes do not overlap with the retyping region. Its actual definition is provided in the Isabelle translation.
 

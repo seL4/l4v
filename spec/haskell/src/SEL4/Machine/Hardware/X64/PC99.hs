@@ -1,0 +1,172 @@
+--
+-- Copyright 2014, General Dynamics C4 Systems
+--
+-- This software may be distributed and modified according to the terms of
+-- the GNU General Public License version 2. Note that NO WARRANTY is provided.
+-- See "LICENSE_GPLv2.txt" for details.
+--
+-- @TAG(GD_GPL)
+--
+
+{-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, GeneralizedNewtypeDeriving #-}
+
+module SEL4.Machine.Hardware.X64.PC99 where
+
+import SEL4.Machine.RegisterSet
+import Foreign.Ptr
+import Data.Bits
+import Data.Word(Word8, Word16)
+import Data.Ix
+
+data CallbackData
+
+newtype IRQ = IRQ Word8
+    deriving (Enum, Ord, Ix, Eq, Show)
+
+instance Bounded IRQ where
+    minBound = IRQ 0
+    maxBound = IRQ 31
+
+newtype PAddr = PAddr { fromPAddr :: Word }
+    deriving (Integral, Real, Show, Eq, Num, Bits, FiniteBits, Ord, Enum, Bounded)
+
+
+-- FIXME: The following kernelBase and physBase are not correct
+kernelBase :: VPtr
+kernelBase = VPtr 0xe0000000
+
+physBase = 0x10000000
+physMappingOffset = 0xe0000000 - physBase
+
+
+ptrFromPAddr :: PAddr -> PPtr a
+ptrFromPAddr (PAddr addr) = PPtr $ addr + physMappingOffset
+
+addrFromPPtr :: PPtr a -> PAddr
+addrFromPPtr (PPtr ptr) = PAddr $ ptr - physMappingOffset
+
+pageColourBits :: Int
+pageColourBits = 0 -- qemu has no cache
+
+getMemoryRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
+getMemoryRegions _ = return [(0, 0x8 `shiftL` 24)]
+
+getDeviceRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
+getDeviceRegions _ = return devices
+    where devices = [
+            (0x53f98000, 0x53f99000) -- second SP804; kernel uses first
+            ]
+
+timerPPtr = PPtr 0xfff00000
+timerAddr = PAddr 0x53f94000
+timerIRQ = IRQ 28
+
+avicPPtr = PPtr 0xfff01000
+avicAddr = PAddr 0x68000000
+
+getKernelDevices :: Ptr CallbackData -> IO [(PAddr, PPtr Word)]
+getKernelDevices _ = return devices
+    where devices = [
+            (timerAddr, timerPPtr), -- kernel timer
+            (avicAddr, avicPPtr) -- interrupt controller
+            ]
+
+maskInterrupt :: Ptr CallbackData -> Bool -> IRQ -> IO ()
+maskInterrupt env mask (IRQ irq) = do
+    let value = fromIntegral irq
+    offset <- return $ if (mask == True) then 0xc else 0x8
+    storeWordCallback env (avicAddr + offset) value
+
+-- We don't need to acknowledge interrupts explicitly because we don't use
+-- the vectored interrupt controller.
+ackInterrupt :: Ptr CallbackData -> IRQ -> IO ()
+ackInterrupt _ _ = return ()
+
+foreign import ccall unsafe "qemu_run_devices"
+    runDevicesCallback :: IO ()
+
+interruptCallback :: Ptr CallbackData -> IO (Maybe IRQ)
+interruptCallback env = do
+    -- No need to call back to the simulator here; we just check the PIC's
+    -- active interrupt register. This will probably work for real ARMs too,
+    -- as long as we're not using vectored interrupts
+    active <- loadWordCallback env (avicAddr + 64)
+    return $ if active == 0xFFFF0000
+        then Nothing
+        else (Just $ IRQ $ fromIntegral (active `shiftR` 16))
+
+getActiveIRQ :: Ptr CallbackData -> IO (Maybe IRQ)
+getActiveIRQ env = do
+    runDevicesCallback
+    interruptCallback env
+
+-- 1kHz tick; qemu's SP804s always run at 1MHz 
+timerFreq :: Word
+timerFreq = 100
+
+timerLimit :: Word
+timerLimit = 1000000 `div` timerFreq
+
+configureTimer :: Ptr CallbackData -> IO IRQ
+configureTimer env = do
+    -- enabled, periodic, interrupts enabled
+    storeWordCallback env timerAddr 0
+    let timerCtrl = bit 24 .|. bit 17 .|. bit 3 .|. bit 2 .|. bit 1
+    storeWordCallback env timerAddr timerCtrl
+    storeWordCallback env (timerAddr+0x8) (100 * 1000 * 1000) 
+    storeWordCallback env (timerAddr+0xc) 0
+    storeWordCallback env (timerAddr+0x4) 1
+    let timerCtrl2 = timerCtrl .|. 1
+    storeWordCallback env timerAddr timerCtrl2
+    return timerIRQ
+
+resetTimer :: Ptr CallbackData -> IO ()
+resetTimer env = storeWordCallback env (timerAddr+0x4) 1 
+
+foreign import ccall unsafe "qemu_load_word_phys"
+    loadWordCallback :: Ptr CallbackData -> PAddr -> IO Word
+
+foreign import ccall unsafe "qemu_store_word_phys"
+    storeWordCallback :: Ptr CallbackData -> PAddr -> Word -> IO ()
+
+-- PC99 stubs
+
+data CR3 = X64CR3 { cr3BaseAddress :: PAddr, cr3pcid :: Word }
+writeCR3 = error "Unimplemented"
+readCR3 = error "Unimplemented"
+
+invalidateTLB = error "Unimplemented"
+mfence = error "Unimplemented"
+addrFromKPPtr = error "Unimplemented" -- FIXME two kernel windows
+pptrBase = error "Unimplemented" -- FIXME two kernel windows
+hwASIDInvalidate = error "Unimplemented"
+
+
+getFaultAddress :: Ptr CallbackData -> IO VPtr
+getFaultAddress _ = error "Unimplemented" -- FIXME: should read CR2
+
+firstValidIODomain :: Word16
+firstValidIODomain = error "Unimplemented"
+
+numIODomainIDBits :: Int
+numIODomainIDBits = error "Unimplemented"
+
+irqIntOffset :: Word
+irqIntOffset = 0x20 -- IRQ_INT_OFFSET in C
+
+maxPCIBus :: Word
+maxPCIBus = 255 -- PCI_BUS_MAX
+
+maxPCIDev :: Word
+maxPCIDev = 31 -- PCI_DEV_MAX
+
+maxPCIFunc :: Word
+maxPCIFunc = 7 -- PCI_FUNC_MAX
+
+ioapicIRQLines :: Word
+ioapicIRQLines = 24 -- IOAPIC_IRQ_LINES
+
+-- error checks this performs moved out to x64 decodeIRQControl
+ioapicMapPinToVector :: Ptr CallbackData -> Word -> Word -> Word -> Word -> Word -> IO ()
+ioapicMapPinToVector = error "Unimplemented"
+

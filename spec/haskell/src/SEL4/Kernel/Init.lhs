@@ -338,7 +338,7 @@ Specific allocRegion for convenience, since most allocations are frame-sized.
 >       let levelBits = rootCNodeSize
 >       frame <- liftM ptrFromPAddr $ allocRegion (levelBits + slotBits)
 
->       rootCNCap <- doKernelOp $ createObject (fromAPIType CapTableObject) frame levelBits
+>       rootCNCap <- doKernelOp $ createObject (fromAPIType CapTableObject) frame levelBits False
 >       rootCNCap <- return $ rootCNCap {capCNodeGuardSize = 32 - levelBits}
 >       slot <- doKernelOp $ locateSlotCap rootCNCap biCapITCNode
 >       doKernelOp $ insertInitCap slot rootCNCap
@@ -368,6 +368,7 @@ Specific allocRegion for convenience, since most allocations are frame-sized.
 >     noInitFailure $ modify (\st -> st { initBootInfo = bootInfo' })
 >     provideCap rootCNodeCap $ UntypedCap {
 >                                   capPtr = ptrFromPAddr pptr,
+>                                   capIsDevice = False,
 >                                   capBlockSize = fromIntegral sizeBits,
 >                                   capFreeIndex = 0 }
  

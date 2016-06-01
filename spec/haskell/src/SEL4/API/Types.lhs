@@ -57,6 +57,9 @@ The following functions are used to convert between the above two types.
 > toAPIType :: ObjectType -> Maybe APIObjectType
 > toAPIType = Arch.toAPIType
 
+> isFrameType :: ObjectType -> Bool
+> isFrameType = Arch.isFrameType
+
 The following constant defines the default page type for the architecture, used by the kernel's initialisation code to map the root task's pages. It must have the size defined by "pageBits".
 
 > pageType :: ObjectType
