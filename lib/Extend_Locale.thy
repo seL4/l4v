@@ -18,6 +18,28 @@ keywords "extend_locale" :: thy_decl
 begin
 
 ML \<open>
+fun note_new_facts prev_lthy (lthy : local_theory) =
+let
+  val facts = Proof_Context.facts_of lthy;
+
+  val local_facts = Facts.dest_static false [Proof_Context.facts_of prev_lthy] facts;
+
+  val space = Facts.space_of (Proof_Context.facts_of lthy);
+
+  fun add_entry (nm, thms) lthy =
+   case Long_Name.dest_local nm of
+    SOME nm' =>
+     let
+       val {pos, ...} = Name_Space.the_entry space nm;
+       val b = Binding.make (nm', pos);
+       val (_, lthy') =  Local_Theory.note ((b,[]),thms) lthy;
+     in lthy' end
+  | NONE => lthy;
+      
+in fold add_entry local_facts lthy end;
+\<close>
+
+ML \<open>
 
 val _ =
   Outer_Syntax.command @{command_keyword extend_locale} "extend current locale"
