@@ -63,14 +63,14 @@ end
 context Arch begin global_naming ARM
 
 end
-qualify ARM (in Arch)
+qualify ARM (in Arch) 
 (* register instance proofs *)
 (*<*)
 instantiation register :: enum begin
 interpretation Arch .
 definition
-  enum_register: "enum_class.enum \<equiv>
-    [
+  enum_register: "enum_class.enum \<equiv> 
+    [ 
       R0,
       R1,
       R2,
@@ -110,7 +110,7 @@ instantiation register :: enum_alt
 begin
 interpretation Arch .
 definition
-  enum_alt_register: "enum_alt \<equiv>
+  enum_alt_register: "enum_alt \<equiv> 
     alt_from_ord (enum :: register list)"
 instance ..
 end
@@ -310,14 +310,14 @@ end
 context Arch begin global_naming ARM
 
 end
-qualify ARM (in Arch)
+qualify ARM (in Arch) 
 (* vmpage_size instance proofs *)
 (*<*)
 instantiation vmpage_size :: enum begin
 interpretation Arch .
 definition
-  enum_vmpage_size: "enum_class.enum \<equiv>
-    [
+  enum_vmpage_size: "enum_class.enum \<equiv> 
+    [ 
       ARMSmallPage,
       ARMLargePage,
       ARMSection,
@@ -343,7 +343,7 @@ instantiation vmpage_size :: enum_alt
 begin
 interpretation Arch .
 definition
-  enum_alt_vmpage_size: "enum_alt \<equiv>
+  enum_alt_vmpage_size: "enum_alt \<equiv> 
     alt_from_ord (enum :: vmpage_size list)"
 instance ..
 end

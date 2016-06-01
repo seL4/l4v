@@ -1,5 +1,8 @@
-Built from git repo at /Users/kleing/verification/seL4/haskell by kleing
+Built from git repo at ../../spec/haskell by agomezl
 
 Generated from changeset:
-2f34d63 manual: Corrected introduction of cnode radix
+03d0803 arch_split: Schedule_AI [VER-565]
 
+
+Warning - uncomitted changes used:
+ M ../design/version
