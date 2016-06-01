@@ -59,7 +59,8 @@ datatype register =
   | RSP
   | SS
 
-type_synonym machine_word = "word64"
+type_synonym machine_word_size = 64
+type_synonym machine_word = "machine_word_size word"
 
 datatype gdtslot =
     GDT_NULL

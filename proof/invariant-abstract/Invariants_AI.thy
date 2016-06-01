@@ -1836,7 +1836,7 @@ proof -
     unfolding pspace_aligned_def ..
 
   thus ?thesis
-    proof (rule is_aligned_replicate[where w=x, folded word_bits_def])
+    proof (rule is_aligned_replicate[where 'a=machine_word_size, folded word_bits_def])
   show "obj_bits (the (kheap s x)) \<le> word_bits"
     by (rule order_less_imp_le, rule valid_obj_sizes [OF _ dom_ran]) fact+
   qed
@@ -3296,6 +3296,5 @@ lemma sym_refs_bound_tcb_atD:
   apply (drule (1)sym_refs_obj_atD)
   apply auto
   done
-
 
 end

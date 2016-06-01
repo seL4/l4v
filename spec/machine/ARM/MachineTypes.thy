@@ -47,7 +47,8 @@ datatype register =
   | FaultInstruction
   | CPSR
 
-type_synonym machine_word = "word32"
+type_synonym machine_word_size = 32
+type_synonym machine_word = "machine_word_size word"
 
 consts'
 initContext :: "(register * machine_word) list"
