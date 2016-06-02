@@ -16,18 +16,18 @@ context Arch begin
 
 named_theorems IpcCancel_AI_asms
 
-definition "IpcCancel_AI_dummy_const \<equiv> (1 :: nat)"
+crunch v_ker_map[wp,IpcCancel_AI_asms]: set_endpoint "valid_kernel_mappings"
+  (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
-lemma IpcCancel_AI_trivial_result[IpcCancel_AI_asms]:
-  "IpcCancel_AI_dummy_const > 0"
-  by (simp add: IpcCancel_AI_dummy_const_def)
+crunch eq_ker_map[wp,IpcCancel_AI_asms]: set_endpoint "equal_kernel_mappings"
+  (ignore: set_object wp: set_object_equal_mappings crunch_wps)
 
 end
 
-interpretation IpcCancel_AI: IpcCancel_AI
-  where IpcCancel_AI_dummy_const = Arch.IpcCancel_AI_dummy_const  proof goal_cases
+interpretation IpcCancel_AI?: IpcCancel_AI
+  proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales, fact IpcCancel_AI_asms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact IpcCancel_AI_asms)?) 
   qed
 
 end
