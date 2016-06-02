@@ -938,7 +938,9 @@ definition
             (is_pd_cap cap \<or> is_pt_cap cap \<or> is_pdpt_cap cap \<or> is_pml4_cap cap) \<longrightarrow>
             cap_asid cap = None \<longrightarrow>
             r \<in> obj_refs cap \<longrightarrow>
-            obj_at (empty_table (set (x64_global_pts (arch_state s)))) r s"
+            obj_at (empty_table (set (x64_global_pts (arch_state s)) 
+                          \<union> set (x64_global_pds (arch_state s)) 
+                          \<union> set (x64_global_pdpts (arch_state s)))) r s"
 
   (* needed to preserve valid_table_caps in map *)
 definition
@@ -2360,7 +2362,9 @@ lemma valid_global_ptsD:
 lemma valid_table_caps_pdD:
   "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageDirectoryCap pd None));
      valid_table_caps s \<rbrakk> \<Longrightarrow>
-    obj_at (empty_table (set (x64_global_pts (arch_state s)))) pd s"
+    obj_at (empty_table (set (x64_global_pts (arch_state s)) 
+                   \<union> set (x64_global_pds (arch_state s)) 
+                   \<union> set (x64_global_pdpts (arch_state s)))) pd s"
   apply (clarsimp simp: valid_table_caps_def simp del: split_paired_All)
   apply (erule allE)+
   apply (erule (1) impE)
