@@ -26,15 +26,17 @@ let
 
   val space = Facts.space_of (Proof_Context.facts_of lthy);
 
+  fun make_binding (long_name, pos) =
+    let val (qualifier, name) = split_last (Long_Name.explode long_name)
+    in fold (Binding.qualify true) qualifier (Binding.make (name, pos)) end;
+
   fun add_entry (nm, thms) lthy =
-   case Long_Name.dest_local nm of
-    SOME nm' =>
      let
+       val extern_nm = Name_Space.extern_shortest lthy space nm;
        val {pos, ...} = Name_Space.the_entry space nm;
-       val b = Binding.make (nm', pos);
+       val b = make_binding (extern_nm, pos);
        val (_, lthy') =  Local_Theory.note ((b,[]),thms) lthy;
      in lthy' end
-  | NONE => lthy;
       
 in fold add_entry local_facts lthy end;
 \<close>
