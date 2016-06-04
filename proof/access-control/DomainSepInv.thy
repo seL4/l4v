@@ -1185,7 +1185,12 @@ lemma checked_cap_insert_domain_sep_inv:
   apply(erule (1) same_object_as_domain_sep_inv_cap)
   done
 
-crunch domain_sep_inv[wp]: bind_notification "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: bind_notification,reschedule_required "domain_sep_inv irqs st"
+
+lemma dxo_domain_sep_inv[wp]:
+  "\<lbrace>domain_sep_inv irqs st\<rbrace> do_extended_op eop  \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
+  by (simp | wp dxo_wp_weak)+
+
 
 lemma set_mcpriority_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace> set_mcpriority tcb_ref mcp \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"

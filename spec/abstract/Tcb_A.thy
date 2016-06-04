@@ -185,7 +185,9 @@ where
        | Some (new_cap, src_slot) \<Rightarrow>
             check_cap_at new_cap src_slot
           $ check_cap_at (ThreadCap target) slot
-          $ cap_insert new_cap src_slot (target, tcb_cnode_index 4)
+          $ cap_insert new_cap src_slot (target, tcb_cnode_index 4);
+      cur \<leftarrow> liftE $ gets cur_thread;
+      liftE $ when (target = cur) (do_extended_op reschedule_required)
     odE);
     returnOk []
   odE"
@@ -207,6 +209,8 @@ where
                 v \<leftarrow> as_user src $ getRegister r;
                 as_user dest $ setRegister r v
         od) gpRegisters;
+    cur \<leftarrow> gets cur_thread;
+    when (dest = cur) (do_extended_op reschedule_required);
     return []
   od)"
 
@@ -229,6 +233,7 @@ where
         setNextPC pc
     od;
     when resume_target $ restart dest;
+    when (dest = self) (do_extended_op reschedule_required);
     return []
   od)"
 

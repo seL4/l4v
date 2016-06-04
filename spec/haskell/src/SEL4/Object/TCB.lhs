@@ -409,7 +409,9 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >                             $ checkCapAt tCap slot
 >                             $ assertDerived srcSlot newCap
 >                             $ cteInsert newCap srcSlot bufferSlot
->                     Nothing -> return ())
+>                     Nothing -> return ()
+>                 thread <- withoutPreemption $ getCurThread
+>                 withoutPreemption $ when (target == thread) $ rescheduleRequired)
 >             buffer
 >         return []
 
@@ -448,6 +450,11 @@ Transfer the other integer registers.
 >                 asUser dest $ setRegister r v)
 >             gpRegisters
 
+Modifying the current thread may require rescheduling because modified registers are only reloaded in Arch\_switchToThread
+
+>     thread <- getCurThread
+>     when (dest == thread) $ rescheduleRequired
+
 At this point, implementations may copy any registers indicated by the two implementation-defined transfer flags.
 
 >     Arch.performTransfer transferArch src dest
@@ -474,6 +481,10 @@ The "ReadRegisters" and "WriteRegisters" functions are similar to "CopyRegisters
 >         pc <- getRestartPC
 >         setNextPC pc
 >     when resumeTarget $ restart dest
+
+Modifying the current thread may require rescheduling because modified registers are only reloaded in Arch\_switchToThread
+
+>     when (dest == self) $ rescheduleRequired
 >     return []
 
 \subsubsection{Invoking Notication Control}

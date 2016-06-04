@@ -180,12 +180,6 @@ lemma almost_no_orphans_disj:
 
 (****************************************************************************************************)
 
-lemma invs_valid_queues':
-  "invs' s \<longrightarrow> valid_queues' s" 
-  by (clarsimp simp:invs'_def valid_state'_def)
-
-declare invs_valid_queues'[rule_format, elim!]
-
 crunch ksCurThread [wp]: setVMRoot "\<lambda> s. P (ksCurThread s)"
 (wp: crunch_wps simp: crunch_simps)
 
@@ -1741,21 +1735,31 @@ lemma readreg_no_orphans:
   done
 
 lemma writereg_no_orphans:
-  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' dest s \<rbrace>
+  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s
+       \<and> tcb_at' dest s \<and> ex_nonz_cap_to' dest s\<rbrace>
      invokeTCB (tcbinvocation.WriteRegisters dest resume values arch)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding invokeTCB_def performTransfer_def
-  apply (wp | clarsimp | rule conjI)+
-  done
+  apply simp
+  apply (rule hoare_pre)
+  by (wp hoare_vcg_if_lift hoare_vcg_conj_lift restart_invs' static_imp_wp
+       | strengthen invs_valid_queues'  | clarsimp  simp: invs'_def valid_state'_def dest!: global'_no_ex_cap )+
+
 
 lemma copyreg_no_orphans:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' src s
-         \<and> tcb_at' dest s \<and> ex_nonz_cap_to' src s \<rbrace>
+         \<and> tcb_at' dest s \<and> ex_nonz_cap_to' src s \<and> ex_nonz_cap_to' dest s \<rbrace>
      invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding invokeTCB_def performTransfer_def
-  apply (wp mapM_x_wp' | clarsimp | rule conjI)+
-  apply (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
+  apply simp
+  apply (wp hoare_vcg_imp_lift mapM_x_wp' asUser_no_orphans asUser_vq'
+         | wpc | clarsimp)+
+     apply (case_tac "dest = ksCurThread s"; simp)
+    apply (wp static_imp_wp hoare_vcg_conj_lift hoare_drop_imp mapM_x_wp' restart_invs'
+              restart_no_orphans asUser_no_orphans suspend_nonz_cap_to_tcb
+         | strengthen invs_valid_queues' | wpc | simp add: if_apply_def2)+
+  apply  (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
   done
 
 lemma almost_no_orphans_no_orphans:
@@ -1785,6 +1789,12 @@ lemma setMCPriority_no_orphans[wp]:
    apply (wp threadSet_no_orphans)
    by clarsimp+
 
+lemma threadSet_ipcbuffer_invs:
+  "is_aligned a msg_align_bits \<Longrightarrow>
+  \<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbIPCBuffer_update (\<lambda>_. a)) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp threadSet_invs_trivial, simp_all add: inQ_def cong: conj_cong)
+  done
+
 lemma tc_no_orphans:
   "\<lbrace> no_orphans and invs' and sch_act_simple and tcb_at' a and ex_nonz_cap_to' a and
     case_option \<top> (valid_cap' o fst) e' and 
@@ -1792,11 +1802,15 @@ lemma tc_no_orphans:
     case_option \<top> (valid_cap' o fst) f' and
     K (case_option True (isValidVTableRoot o fst) f') and
     case_option \<top> (valid_cap') (case_option None (case_option None (Some o fst) o snd) g) and
-    K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g))
-    and K (case_option True (swp is_aligned 2 o fst) g) and
+    K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g)) and
+    K (case_option True (swp is_aligned 2 o fst) g) and
+    K (case_option True (swp is_aligned msg_align_bits o fst) g) and
+    K (case g of None \<Rightarrow> True | Some x \<Rightarrow> (case_option True (isArchObjectCap \<circ> fst) \<circ> snd) x) and
     K (valid_option_prio d \<and> valid_option_prio mcp) \<rbrace>
-      invokeTCB (tcbinvocation.ThreadControl a sl b' mcp d e' f' g)
+      invokeTCB (tcbinvocation.ThreadControl a sl b' d mcp e' f' g)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (rule hoare_gen_asm)
   apply (rule hoare_gen_asm)
   apply (simp add: invokeTCB_def getThreadCSpaceRoot getThreadVSpaceRoot
                    getThreadBufferSlot_def split_def)
@@ -1812,17 +1826,24 @@ lemma tc_no_orphans:
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp hoare_vcg_all_lift static_imp_wp setP_invs' | clarsimp)+)[2]
-  apply (rule hoare_pre)
-   apply (simp only: simp_thms cong: conj_cong
+   apply (rule hoare_pre)
+    apply ((simp only: simp_thms cong: conj_cong
           | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
                checkCap_inv[where P="valid_cap' c" for c]
                checkCap_inv[where P=sch_act_simple]
                checkCap_inv[where P=no_orphans]
+               checkCap_inv[where P="tcb_at' a"]
+               threadSet_cte_wp_at'
                hoare_vcg_all_lift_R hoare_vcg_all_lift
                threadSet_no_orphans hoare_vcg_const_imp_lift_R
-               static_imp_wp
-          | wpc | clarsimp)+
-  by (auto simp: isCap_simps dest!: isValidVTableRootD)
+               static_imp_wp hoare_drop_imp threadSet_ipcbuffer_invs
+          | strengthen invs_valid_queues'
+          | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
+                       objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
+              wp hoare_return_sp)
+          | wpc | clarsimp)+)
+  apply (fastforce simp: isCap_simps dest!: isValidVTableRootD)
+  done
 
 lemma bindNotification_no_orphans[wp]:
   "\<lbrace>no_orphans\<rbrace> bindNotification t ntfn \<lbrace>\<lambda>_. no_orphans\<rbrace>"

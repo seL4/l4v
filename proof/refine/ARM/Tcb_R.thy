@@ -222,7 +222,7 @@ lemma restart_corres:
         apply (rule corres_split_nor [OF _ setup_reply_master_corres])
           apply (rule corres_split_nor [OF _ sts_corres])
              apply (rule corres_split [OF switchIfRequiredTo_corres tcbSchedEnqueue_corres])
-              apply (wp_trace set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_valid_queues sts_st_tcb'  | clarsimp simp: valid_tcb_state'_def)+
+              apply (wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_valid_queues sts_st_tcb'  | clarsimp simp: valid_tcb_state'_def)+
        apply (rule_tac Q="\<lambda>rv. valid_sched and cur_tcb" in hoare_strengthen_post)
         apply wp
        apply (simp add: valid_sched_def valid_sched_action_def)
@@ -320,6 +320,15 @@ lemma readreg_corres:
 crunch sch_act_simple [wp]: asUser "sch_act_simple"
   (rule: sch_act_simple_lift)
 
+lemma invs_valid_queues':
+  "invs' s \<longrightarrow> valid_queues' s"
+  by (clarsimp simp:invs'_def valid_state'_def)
+
+declare invs_valid_queues'[rule_format, elim!]
+
+lemma einvs_valid_etcbs: "einvs s \<longrightarrow> valid_etcbs s"
+  by (clarsimp simp: valid_sched_def)
+
 lemma writereg_corres:
   "corres (intr \<oplus> op =) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
         (invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest)
@@ -330,21 +339,31 @@ lemma writereg_corres:
                    sanitiseRegister_def sanitise_register_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gct_corres])
-         apply (rule corres_split_nor)
-            prefer 2
-            apply (rule corres_as_user)
-            apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def)
-            apply (rule corres_Id, simp+)
-            apply (rule no_fail_pre, wp no_fail_mapM)
-               apply clarsimp
-               apply (wp no_fail_setRegister | simp)+
-           apply (rule corres_split_nor)
+      apply (rule corres_split_nor)
+         prefer 2
+           apply (rule corres_as_user)
+           apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def)
+           apply (rule corres_Id, simp+)
+           apply (rule no_fail_pre, wp no_fail_mapM)
+              apply clarsimp
+              apply (wp no_fail_setRegister | simp)+
+          apply clarsimp
+          apply (rule corres_split_nor[OF _ corres_when[OF refl restart_corres]])
+            apply (rule corres_split_nor[OF _ corres_when[OF refl rescheduleRequired_corres]])
               apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
               apply simp
-             apply (rule corres_when [OF refl])
-             apply (rule restart_corres)
-            apply (wp static_imp_wp | clarsimp simp: invs'_def valid_state'_def
-                                               dest!: global'_no_ex_cap)+
+             apply (wp+)[2]
+           apply ((wp static_imp_wp restart_invs'
+                 | strengthen valid_sched_weak_strg einvs_valid_etcbs
+                              invs_valid_queues' invs_queues invs_weak_sch_act_wf
+                 | clarsimp simp: invs_def valid_state_def valid_sched_def invs'_def valid_state'_def
+                            dest!: global'_no_ex_cap idle_no_ex_cap)+)[2]
+         apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest and ex_nonz_cap_to dest" in hoare_strengthen_post[rotated])
+          apply (fastforce simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def dest!: idle_no_ex_cap)
+         prefer 2
+         apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest and ex_nonz_cap_to' dest" in hoare_strengthen_post[rotated])
+          apply (fastforce simp: sch_act_wf_weak invs'_def valid_state'_def dest!: global'_no_ex_cap)
+         apply (wp | clarsimp)+
   done
 
 crunch it[wp]: suspend "\<lambda>s. P (ksIdleThread s)"
@@ -419,29 +438,38 @@ proof -
   show ?thesis
     apply (simp add: invokeTCB_def performTransfer_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_nor)
-         apply (rule corres_split_nor)
-            apply (rule corres_split_nor)
-               apply (simp add: liftM_def[symmetric] o_def dc_def[symmetric])
+      apply (rule corres_split [OF _ corres_when [OF refl suspend_corres]], simp)
+        apply (rule corres_split [OF _ corres_when [OF refl restart_corres]], simp)
+          apply (rule corres_split_nor)
+             apply (rule corres_split_nor)
+                apply (rule corres_split_eqr [OF _ gct_corres])
+                  apply (rule corres_split [OF _ corres_when[OF refl rescheduleRequired_corres]])
+                    apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
+                    apply simp
+                   apply (wp static_imp_wp)+
                apply (rule corres_when[OF refl])
                apply (rule R[unfolded S, OF refl refl])
                apply (simp add: gpRegisters_def)
-              apply (rule corres_when[OF refl])
-              apply (rule corres_split_nor)
-                 apply (simp add: getRestartPC_def setNextPC_def)
-                 apply (rule Q[unfolded S, OF refl refl])
-                apply (rule R[unfolded S, OF refl refl])
-                apply (simp add: frame_registers_def frameRegisters_def)
-               apply (wp mapM_x_wp' static_imp_wp | simp)+
-           apply (rule corres_when [OF refl])
-           apply (rule restart_corres)
-          apply (wp restart_invs' static_imp_wp | simp add: if_apply_def2)+
-        apply (rule corres_when [OF refl])
-        apply (rule suspend_corres)
+              apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest" in hoare_strengthen_post[rotated])
+               apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def)
+              prefer 2
+              apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest" in hoare_strengthen_post[rotated])
+               apply (clarsimp simp: invs'_def valid_state'_def invs_weak_sch_act_wf)
+              apply (wp mapM_x_wp' | simp)+
+            apply (rule corres_when[OF refl])
+            apply (rule corres_split_nor)
+               apply (simp add: getRestartPC_def setNextPC_def dc_def[symmetric])
+               apply (rule Q[unfolded S, OF refl refl])
+              apply (rule R[unfolded S, OF refl refl])
+              apply (simp add: frame_registers_def frameRegisters_def)
+             apply ((wp mapM_x_wp' static_imp_wp, simp+)+)[2]
+            apply (wp mapM_x_wp' static_imp_wp, simp+)
+           apply ((wp mapM_x_wp' static_imp_wp | simp)+)[4]
+         apply ((wp static_imp_wp restart_invs' | wpc | clarsimp simp add: if_apply_def2)+)[2]
        apply (wp suspend_nonz_cap_to_tcb static_imp_wp | simp add: if_apply_def2)+
-   apply (fastforce simp: invs_def valid_state_def valid_pspace_def
-                  dest!: idle_no_ex_cap)
-  apply (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
+     apply (fastforce simp: invs_def valid_state_def valid_pspace_def
+                      dest!: idle_no_ex_cap)
+    apply (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
   done
 qed
 
@@ -1086,6 +1114,56 @@ lemma arch_tcb_set_ipc_buffer_corres:
   apply (rule user_setreg_corres)
   done
 
+lemma threadcontrol_corres_helper1:
+  "\<lbrace> tcb_at a and einvs and simple_sched_action\<rbrace>
+     thread_set (tcb_ipc_buffer_update f) a
+           \<lbrace>\<lambda>x. tcb_at a and (weak_valid_sched_action and valid_etcbs)\<rbrace>"
+  apply (rule hoare_pre)
+   apply (simp add: thread_set_def set_object_def)
+   apply wp
+  apply (simp add: not_None_eq | intro impI | elim exE conjE)+
+  apply (frule get_tcb_SomeD)
+  apply (erule ssubst)
+  apply (clarsimp simp add: weak_valid_sched_action_def valid_etcbs_2_def st_tcb_at_kh_def
+              get_tcb_def obj_at_kh_def obj_at_def is_etcb_at'_def valid_sched_def valid_sched_action_def)
+  apply (erule_tac x=a in allE)+
+  apply (clarsimp simp: is_tcb_def)
+  done
+
+lemma threadcontrol_corres_helper2:
+  "is_aligned a msg_align_bits \<Longrightarrow> \<lbrace>invs' and tcb_at' t\<rbrace>
+      threadSet (tcbIPCBuffer_update (\<lambda>_. a)) t
+           \<lbrace>\<lambda>x s. Invariants_H.valid_queues s \<and> valid_queues' s \<and> weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  by (wp threadSet_invs_trivial
+      | strengthen  invs_valid_queues' invs_queues invs_weak_sch_act_wf
+      | clarsimp simp: inQ_def )+
+
+lemma threadcontrol_corres_helper3:
+  "\<lbrace> einvs and simple_sched_action\<rbrace>
+           check_cap_at aaa (ab, ba) (check_cap_at (cap.ThreadCap a) slot (cap_insert aaa (ab, ba) (a, tcb_cnode_index 4)))
+           \<lbrace>\<lambda>x. weak_valid_sched_action and valid_etcbs \<rbrace>"
+  apply (rule hoare_pre)
+   apply (wp check_cap_inv | simp add:)+
+  by (clarsimp simp add: weak_valid_sched_action_def valid_etcbs_2_def st_tcb_at_kh_def
+               get_tcb_def obj_at_kh_def obj_at_def is_etcb_at'_def valid_sched_def valid_sched_action_def)
+
+lemma threadcontrol_corres_helper4:
+  "isArchObjectCap ac \<Longrightarrow>
+  \<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) (cte_map (a, tcb_cnode_index 4)) and valid_cap' ac \<rbrace>
+    checkCapAt ac (cte_map (ab, ba))
+      (checkCapAt (capability.ThreadCap a) (cte_map slot)
+         (assertDerived (cte_map (ab, ba)) ac (cteInsert ac (cte_map (ab, ba)) (cte_map (a, tcb_cnode_index 4)))))
+  \<lbrace>\<lambda>x. Invariants_H.valid_queues and valid_queues' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)\<rbrace>"
+  apply (wp
+       | strengthen  invs_valid_queues' invs_queues invs_weak_sch_act_wf
+       | clarsimp simp: )+
+  by (case_tac ac;
+      fastforce simp: capBadge_def isArchObjectCap_def isNotificationCap_def isEndpointCap_def
+                      isReplyCap_def isIRQControlCap_def tcb_cnode_index_def cte_map_def cte_wp_at'_def )+
+
+crunch valid_etcbs[wp]: arch_tcb_set_ipc_buffer valid_etcbs
+crunch weak_valid_sched_action[wp]: arch_tcb_set_ipc_buffer weak_valid_sched_action
+
 lemma tc_corres:
   assumes x: "newroot_rel e e'" and y: "newroot_rel f f'" and p: "p = p'" and mcp: "mcp = mcp'"
       and z: "(case g of None \<Rightarrow> g' = None
@@ -1117,6 +1195,8 @@ lemma tc_corres:
      K (case_option True (isCNodeCap o fst) e') and
      case_option \<top> (valid_cap' o fst) f' and
      K (case_option True (isValidVTableRoot o fst) f') and
+     K (case_option True ((\<lambda>v. is_aligned v msg_align_bits) o fst) g') and
+     K (case_option True (case_option True (isArchObjectCap o fst) o snd) g') and
      case_option \<top> (case_option \<top> (valid_cap' o fst) o snd) g' and
      tcb_at' a and ex_nonz_cap_to' a and K (valid_option_prio p' \<and> valid_option_prio mcp') and
      (\<lambda>s. case_option True (\<lambda>pr. mcpriority_tcb_at' (op \<le> pr) (ksCurThread s) s) p') and
@@ -1215,21 +1295,24 @@ proof -
                                                    \<and> is_aligned x msg_align_bits)))
      (invs' and sch_act_simple and tcb_at' a and
        (\<lambda>s. \<forall>cp \<in> (case g' of None \<Rightarrow> {} | Some (x, v) \<Rightarrow> (case v of
-                              None \<Rightarrow> {} | Some (c, sl) \<Rightarrow> {c})). s \<turnstile>' cp))
+                              None \<Rightarrow> {} | Some (c, sl) \<Rightarrow> {c})). s \<turnstile>' cp) and
+       K (case g' of None \<Rightarrow> True | Some (x, v) \<Rightarrow> is_aligned x msg_align_bits
+       \<and> (case v of None \<Rightarrow> True | Some (ac, _) \<Rightarrow> isArchObjectCap ac)) )
      (case_option (returnOk ())
        (case_prod
          (\<lambda>ptr frame.
              doE cap_delete (a, tcb_cnode_index 4);
                  do y \<leftarrow> thread_set (tcb_ipc_buffer_update (\<lambda>_. ptr)) a;
                     y \<leftarrow> arch_tcb_set_ipc_buffer a ptr;
-                   liftE $
-                   case_option (return ())
-                   (case_prod
-                      (\<lambda>new_cap src_slot.
-                          check_cap_at new_cap src_slot $
-                          check_cap_at (cap.ThreadCap a) slot $
-                          cap_insert new_cap src_slot (a, tcb_cnode_index 4)))
-                    frame
+                    y \<leftarrow> case_option (return ())
+                          (case_prod
+                          (\<lambda>new_cap src_slot.
+                            check_cap_at new_cap src_slot $
+                            check_cap_at (cap.ThreadCap a) slot $
+                            cap_insert new_cap src_slot (a, tcb_cnode_index 4)))
+                          frame;
+                    cur \<leftarrow> gets cur_thread;
+                    liftE $ when (a = cur) (reschedule_required)
                  od
              odE))
        g)
@@ -1239,8 +1322,7 @@ proof -
             doE y \<leftarrow> cteDelete bufferSlot True;
             do y \<leftarrow> threadSet (tcbIPCBuffer_update (\<lambda>_. ptr)) a;
                y \<leftarrow> asUser a $ setTCBIPCBuffer ptr;
-               liftE
-                    (case_option (return ())
+               y \<leftarrow> (case_option (return ())
                       (case_prod
                         (\<lambda>newCap srcSlot.
                             checkCapAt newCap srcSlot $
@@ -1249,7 +1331,9 @@ proof -
                              sl' $
                             assertDerived srcSlot newCap $
                             cteInsert newCap srcSlot bufferSlot))
-                      frame)
+                      frame);
+               cur \<leftarrow> getCurThread;
+               liftE $ when (a = cur) rescheduleRequired
             od odE od)
         g')"
     using z sl
@@ -1263,31 +1347,44 @@ proof -
       apply (case_tac b, simp_all add: newroot_rel_def)
        apply (rule corres_guard_imp)
          apply (rule corres_split_norE)
+            apply (rule_tac F="is_aligned aa msg_align_bits" in corres_gen_asm2)
             apply (rule corres_split_nor)
-               apply (rule corres_split')
+               apply (rule corres_split)
+                  apply (rule corres_split [OF _ gct_corres], clarsimp)
+                    apply (rule corres_when[OF refl rescheduleRequired_corres])
+                   apply (wpsimp wp: gct_wp)+
                   apply (rule arch_tcb_set_ipc_buffer_corres[simplified])
-                 apply (rule corres_trivial)
                 apply simp
-               apply wp+
+               apply (wp hoare_drop_imp)+
               apply (rule threadset_corres,
                       (simp add: tcb_relation_def), (simp add: exst_same_def)+)[1]
-             apply wp+
+             apply (subst pred_conj_def)
+             apply (rule threadcontrol_corres_helper1[unfolded pred_conj_def])
+            apply simp
+            apply (wp threadcontrol_corres_helper2 | wpc | simp)+
            apply (rule cap_delete_corres)
-          apply wp+
+          apply wp
+         apply (wp cteDelete_invs' hoare_vcg_conj_lift)
         apply (fastforce simp: emptyable_def)
        apply fastforce
       apply clarsimp
       apply (rule corres_guard_imp)
         apply (rule corres_split_norE [OF _ cap_delete_corres])
-          apply (rule_tac F="is_aligned aa msg_align_bits"
-                        in corres_gen_asm)
+          apply (rule_tac F="is_aligned aa msg_align_bits" in corres_gen_asm)
+          apply (rule_tac F="isArchObjectCap ac" in corres_gen_asm2)
           apply (rule corres_split_nor)
              apply (rule corres_split[rotated])
                 apply (rule arch_tcb_set_ipc_buffer_corres[simplified])
                prefer 3
                apply simp
-               apply (erule checked_insert_corres)
-              apply (wp | simp add: arch_tcb_set_ipc_buffer_def)+
+               apply (rule corres_split_nor)
+                   apply (rule corres_split [OF _ gct_corres], clarsimp)
+                     apply (rule corres_when[OF refl rescheduleRequired_corres])
+                    apply (wp gct_wp)+
+                  apply (erule checked_insert_corres)
+                 apply (wp hoare_drop_imp threadcontrol_corres_helper3)[1]
+                apply (wp hoare_drop_imp threadcontrol_corres_helper4)[1]
+             apply (wp | simp add: arch_tcb_set_ipc_buffer_def)+
             apply (rule threadset_corres,
                    simp add: tcb_relation_def, (simp add: exst_same_def)+)
            apply (wp thread_set_tcb_ipc_buffer_cap_cleared_invs
@@ -1302,7 +1399,7 @@ proof -
                    | clarsimp simp: inQ_def inQ_tc_corres_helper)+
        apply (clarsimp simp: cte_wp_at_caps_of_state
                       dest!: is_cnode_or_valid_arch_cap_asid)
-       apply (fastforce simp: emptyable_def)
+       apply (clarsimp simp: emptyable_def)
       apply (clarsimp simp: inQ_def)
      apply (clarsimp simp: obj_at_def is_tcb)
      apply (rule cte_wp_at_tcbI, simp, fastforce, simp)

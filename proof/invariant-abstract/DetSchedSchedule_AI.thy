@@ -1654,6 +1654,32 @@ lemma set_mcpriority_valid_sched[wp]:
 
 crunch simple_sched_action[wp]: set_priority,set_mcpriority simple_sched_action
 
+lemma set_nonmember_if_cong: "(a \<notin> set (if P then x else y)) = (if P then a \<notin> set x else a \<notin> set y)"
+  by auto
+
+lemma reschedule_preserves_valid_shed: "\<lbrace> valid_sched \<rbrace> reschedule_required \<lbrace> \<lambda>rv. valid_sched \<rbrace>"
+  unfolding reschedule_required_def set_scheduler_action_def tcb_sched_action_def
+  apply (rule hoare_pre)
+  apply (wp|wpc)+
+  apply clarsimp
+  apply (rule conjI)
+   apply (clarsimp simp: valid_sched_2_def ct_not_in_q_2_def valid_blocked_2_def)
+  apply (rule conjI)
+   defer
+   apply (clarsimp simp: valid_sched_2_def ct_not_in_q_2_def valid_blocked_2_def)
+  apply (clarsimp simp only: etcb_at_def)
+  apply (case_tac "ekheap s x"; simp)
+  apply (clarsimp simp: valid_sched_2_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_queues_2_def valid_sched_action_2_def tcb_sched_enqueue_def
+     weak_valid_sched_action_2_def etcb_at_conj_is_etcb_at)
+  apply (rule conjI)
+   apply (clarsimp simp: ct_not_in_q_2_def)
+  apply (clarsimp simp:  valid_blocked_2_def)
+  apply (clarsimp simp:  not_queued_def)
+  apply (erule_tac x=t in allE; simp)
+  by (clarsimp simp:  set_nonmember_if_cong tcb_sched_enqueue_def split: if_split_asm; blast)
+
 context DetSchedSchedule_AI begin
 
 crunch valid_sched[wp]: arch_tcb_set_ipc_buffer valid_sched
@@ -1666,7 +1692,8 @@ lemma tc_valid_sched[wp]:
   apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    by (wp check_cap_inv thread_set_not_state_valid_sched hoare_vcg_all_lift gts_wp static_imp_wp
-         | wpc | simp add: option_update_thread_def)+
+         | wpc | simp add: option_update_thread_def | rule reschedule_preserves_valid_shed
+         | wp_once hoare_drop_imps )+
 
 end
 
@@ -1776,7 +1803,7 @@ context DetSchedSchedule_AI begin
 lemma invoke_tcb_valid_sched[wp]:
   "\<lbrace>invs and valid_sched and simple_sched_action and tcb_inv_wf ti\<rbrace> invoke_tcb ti \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (cases ti, simp_all only:)
-        apply (wp mapM_x_wp | simp | rule subset_refl | clarsimp simp:invs_valid_objs invs_valid_global_refs idle_no_ex_cap | intro impI conjI)+
+        apply (wp mapM_x_wp | simp | rule subset_refl | rule reschedule_preserves_valid_shed | clarsimp simp:invs_valid_objs invs_valid_global_refs idle_no_ex_cap | intro impI conjI)+
    apply (rename_tac option)
    apply (case_tac option)
     apply (wp mapM_x_wp | simp | rule subset_refl | clarsimp simp:invs_valid_objs invs_valid_global_refs idle_no_ex_cap | intro impI conjI)+
