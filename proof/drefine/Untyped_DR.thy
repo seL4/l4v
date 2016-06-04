@@ -1352,6 +1352,13 @@ lemma invoke_untyped_corres:
     apply (clarsimp elim!:ex_cte_cap_wp_to_weakenE)
     done
 
+  have pf_arch: "invoke_untyped_proofs_arch s (cref,oref) ptr tp us slots sz idx"
+    using cte_wp_at desc_range misc cover vslot
+    apply (clarsimp simp:invoke_untyped_proofs_arch_def invoke_untyped_proofs_def cte_wp_at_caps_of_state)
+    apply (drule(1) bspec)
+    apply (clarsimp elim!:ex_cte_cap_wp_to_weakenE)
+    done
+
   note cte_wp_at_machine_state[simp del]
   note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap (ptr && ~~ mask sz) sz idx"
       ,unfolded free_index_update_def free_index_of_def,simplified]
@@ -1361,7 +1368,7 @@ lemma invoke_untyped_corres:
   note ps_no_overlap[simp] = invoke_untyped_proofs.ps_no_overlap[OF pf]
   note caps_no_overlap[simp] = invoke_untyped_proofs.caps_no_overlap[OF pf]
   note slots_invD = invoke_untyped_proofs.slots_invD[OF pf]
-  note kernel_window_inv = invoke_untyped_proofs.kernel_window_inv[OF pf]
+  note kernel_window_inv = invoke_untyped_proofs_arch.kernel_window_inv[OF pf_arch]
   note ptr_0[simp] = invoke_untyped_proofs.not_0_ptr
 
   have nidx[simp]: "\<And>m. ptr + m - (ptr && ~~ mask sz)

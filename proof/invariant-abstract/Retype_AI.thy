@@ -1550,7 +1550,7 @@ done
 
 
 lemma retype_region_st_tcb_at:
-  "\<lbrace>\<lambda>s. pspace_no_overlap ptr' sz s \<and> pred_tcb_at proj P t s \<and> range_cover ptr' sz (obj_bits_api ty us) n
+  "\<lbrace>\<lambda>(s::'state_ext::state_ext state). pspace_no_overlap ptr' sz s \<and> pred_tcb_at proj P t s \<and> range_cover ptr' sz (obj_bits_api ty us) n
           \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
      retype_region ptr' n us ty \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   by (simp add: retype_region_obj_at_other3 pred_tcb_at_def)

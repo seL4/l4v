@@ -1031,6 +1031,13 @@ lemma invoke_untyped_valid_pdpt[wp]:
       apply (clarsimp elim!:ex_cte_cap_wp_to_weakenE)
       done
 
+    have pf_arch : "invoke_untyped_proofs_arch s (cref,oref) ptr tp us slots sz idx"
+      using  cte_wp_at desc_range misc cover vslot
+      apply (clarsimp simp: invoke_untyped_proofs_arch_def invoke_untyped_proofs_def cte_wp_at_caps_of_state)
+      apply (drule(1) bspec)
+      apply (clarsimp elim!:ex_cte_cap_wp_to_weakenE)
+      done
+
     have of_nat_length: "(of_nat (length slots)::word32) - (1::word32) < (of_nat (length slots)::word32)"
        using vslot
        using range_cover.range_cover_le_n_less(1)[OF cover,where p = "length slots"]
@@ -1091,7 +1098,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
        apply simp
       done
 
-    note kernel_window_inv[simp] = invoke_untyped_proofs.kernel_window_inv[OF pf]
+    note kernel_window_inv[simp] = invoke_untyped_proofs_arch.kernel_window_inv[OF pf_arch]
 
     have nidx[simp]: "\<And>m. ptr + m - (ptr && ~~ mask sz)
       = (ptr && mask sz) + m"

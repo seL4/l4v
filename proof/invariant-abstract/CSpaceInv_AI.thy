@@ -549,7 +549,7 @@ lemma set_cap_cte_at:
 
 
 lemma set_cap_valid_objs:
-  "\<lbrace>valid_objs and valid_cap x
+  "\<lbrace>(valid_objs::'state_ext::state_ext state \<Rightarrow> bool) and valid_cap x
         and tcb_cap_valid x p\<rbrace>
       set_cap x p \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: set_cap_def split_def)
