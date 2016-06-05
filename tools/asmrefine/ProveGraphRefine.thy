@@ -98,6 +98,7 @@ lemma drop_sign_isomorphism_ariths:
   "drop_sign (x * y) = drop_sign x * drop_sign y"
   "drop_sign (- y) = - drop_sign y"
   "drop_sign (if P then x else y) = (if P then drop_sign x else drop_sign y)"
+  "drop_sign (w ^ n) = drop_sign w ^ n"
   by (simp_all add: drop_sign_def word_less_def
                     word_le_def word_sless_def word_sle_def
                     sint_drop_sign_isomorphism[unfolded drop_sign_def]
@@ -105,6 +106,8 @@ lemma drop_sign_isomorphism_ariths:
                     uint_up_ucast is_up_def source_size_def
                     target_size_def word_size
                     uint_word_arith_bintrs
+                    word_arith_power_alt
+                    uint_word_of_int
                del: word_uint.Rep_inject)
 
 lemma drop_sign_isomorphism_bitwise:
