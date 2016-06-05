@@ -2795,6 +2795,23 @@ lemma ct_in_state_trans_state[simp]:
   "ct_in_state P (trans_state a s) = ct_in_state P s"
   by (simp add: ct_in_state_def)
 
+lemma caps_of_state_pspace_no_overlapD:
+  "\<lbrakk> caps_of_state s cref = Some (cap.UntypedCap ptr sz idx); invs s;
+    idx < 2 ^ sz \<rbrakk>
+   \<Longrightarrow> pspace_no_overlap_range_cover (ptr + of_nat idx) sz s"
+  apply (frule(1) caps_of_state_valid)
+  apply (clarsimp simp: valid_cap_simps cap_aligned_def)
+  apply (cut_tac neg_mask_add_aligned[where p=ptr and q="of_nat idx" and n=sz])
+    apply (rule cte_wp_at_pspace_no_overlapI[where idx=idx and cref=cref], simp_all)
+    apply (simp add: cte_wp_at_caps_of_state is_aligned_neg_mask_eq)
+   apply (simp add: is_aligned_neg_mask_eq)
+   apply (simp add: mask_out_sub_mask)
+   apply (subst unat_of_nat32, erule order_less_le_trans, simp_all)
+  apply (rule word_of_nat_less)
+  apply (erule order_less_le_trans)
+  apply simp
+  done
+
 lemma set_untyped_cap_invs_simple:
   "\<lbrace>\<lambda>s. descendants_range_in {ptr .. ptr+2^sz - 1} cref s
   \<and> pspace_no_overlap_range_cover ptr sz s \<and> invs s 
@@ -2849,6 +2866,13 @@ lemma reset_untyped_cap_invs_etc:
    prefer 2
    apply (frule caps_of_state_valid_cap, clarsimp+)
    apply (clarsimp simp: valid_cap_def cap_aligned_def)
+  apply (cases "idx = 0")
+   apply (clarsimp simp: free_index_of_def)
+   apply wp
+   apply clarsimp
+   apply (frule(1) caps_of_state_pspace_no_overlapD, simp+)
+   apply (simp add: word_bw_assocs field_simps)
+  apply (clarsimp simp: free_index_of_def split del: split_if)
   apply (rule_tac B="\<lambda>_. invs and valid_untyped_inv_wcap ?ui (Some ?cap)
         and ct_active and ?psp" in hoare_vcg_seqE[rotated])
    apply clarsimp
@@ -2861,11 +2885,11 @@ lemma reset_untyped_cap_invs_etc:
    apply (drule(1) ex_cte_cap_protects[OF _ caps_of_state_cteD _ _ order_refl])
       apply (simp add: empty_descendants_range_in)
      apply clarsimp+
-   apply (strengthen ballEI[mk_strg I E])
+   apply (strengthen ballEI[mk_strg I E] refl)
    apply (strengthen exI[where x="fst slot"], strengthen exI[where x="snd slot"])
    apply (strengthen ex_cte_cap_protects[OF _ caps_of_state_cteD _ _ order_refl, mk_strg D E])
    apply (simp add: empty_descendants_range_in invs_untyped_children
-                    invs_valid_global_refs descendants_range_def)
+                    invs_valid_global_refs descendants_range_def bits_of_def)
    apply (strengthen refl)
    apply (drule st_tcb_ex_cap, clarsimp, fastforce)
    apply (drule ex_nonz_cap_to_overlap[where p=slot],
@@ -2873,6 +2897,7 @@ lemma reset_untyped_cap_invs_etc:
    apply (drule caps_of_state_valid_cap | clarify)+
    apply (intro conjI; clarify?; blast)[1]
   apply (cases "dev \<or> sz < reset_chunk_bits")
+   apply (simp add: bits_of_def)
    apply (simp add: unless_def)
    apply (rule hoare_pre)
     apply (wp set_untyped_cap_invs_simple set_cap_cte_wp_at set_cap_no_overlap
@@ -2913,7 +2938,7 @@ lemma reset_untyped_cap_invs_etc:
      apply (clarsimp split: split_if_asm)
       apply auto[1]
      apply (auto elim: order_trans[rotated])[1]
-    apply (clarsimp simp: cte_wp_at_caps_of_state)
+    apply (clarsimp simp: cte_wp_at_caps_of_state split: split_if_asm)
    apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
@@ -2934,7 +2959,7 @@ lemma reset_untyped_cap_st_tcb_at:
     apply (simp add: delete_objects_def)
     apply (wp get_cap_wp hoare_vcg_const_imp_lift | simp)+
   apply (auto simp: cte_wp_at_caps_of_state cap_range_def
-                    bits_of_def split: cap.split_asm)
+                        bits_of_def is_cap_simps)
   done
 
 lemma create_cap_iflive[wp]:

@@ -1301,6 +1301,12 @@ lemma no_orphans_irq_state_independent[intro!, simp]:
   by (simp add: no_orphans_def all_active_tcb_ptrs_def 
                 all_queued_tcb_ptrs_def is_active_tcb_ptr_def)
 
+add_upd_simps "no_orphans (gsUntypedZeroRanges_update f s)"
+declare upd_simps[simp]
+
+crunch no_orphans[wp]: updateFreeIndex "no_orphans"
+  (simp: fiddle_gsUntypedZeroRanges_update)
+
 lemma resetUntypedCap_no_orphans [wp]:
   "\<lbrace> (\<lambda>s. no_orphans s \<and> pspace_distinct' s \<and> valid_objs' s)
       and cte_wp_at' (isUntypedCap o cteCap) slot\<rbrace>
@@ -1309,9 +1315,8 @@ lemma resetUntypedCap_no_orphans [wp]:
   apply (simp add: resetUntypedCap_def)
   apply (rule hoare_pre)
    apply (wp mapME_x_inv_wp preemptionPoint_inv getSlotCap_wp
-         | simp add: getSlotCap_def unless_def
-         | wp_once hoare_drop_imps)+
-  apply (clarsimp simp: cte_wp_at_ctes_of)
+     | simp add: split del: split_if)+
+  apply (clarsimp simp: cte_wp_at_ctes_of split del: split_if)
   apply (frule(1) cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD])
   apply (clarsimp simp: isCap_simps valid_cap_simps' capAligned_def)
   done

@@ -4645,6 +4645,9 @@ lemma cNodeNoOverlap_empty:
    apply wp
   done
 
+   apply (wp getSlotCap_wp)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  done
 lemma mapME_x_corres_same_xs:
   assumes x: "\<And>x. x \<in> set xs
       \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> dc) (P x) (P' x) (m x) (m' x)"
@@ -4820,7 +4823,11 @@ lemma reset_untyped_cap_corres:
     apply (rule corres_split[OF _ getSlotCap_corres])
        apply (rule_tac F="cap = cap.UntypedCap dev ptr sz idx
                \<and> (\<exists>s. s \<turnstile> cap)" in corres_gen_asm)
-       apply (clarsimp simp: bits_of_def split del: split_if)
+       apply (clarsimp simp: bits_of_def free_index_of_def unlessE_def
+                  split del: split_if)
+       apply (rule corres_if[OF refl])
+        apply (rule corres_returnOk[where P=\<top> and P'=\<top>], simp)
+       apply (simp add: liftE_bindE bits_of_def split del: split_if)
        apply (rule corres_split[OF _ detype_corres])
            apply (rule corres_if)
              apply (simp add: reset_chunk_bits_def resetChunkBits_def)
@@ -4936,13 +4943,12 @@ lemma reset_untyped_cap_corres:
    apply (strengthen empty_descendants_range_in
                      ex_tupI[where x=slot])+
    apply (frule(1) caps_of_state_valid)
-   apply (subst exI, assumption)
    apply (clarsimp simp: valid_cap_simps cap_aligned_def)
+   apply (frule(1) caps_of_state_valid)
    apply (frule if_unsafe_then_capD[OF caps_of_state_cteD], clarsimp+)
    apply (drule(1) ex_cte_cap_protects[OF _ caps_of_state_cteD
        empty_descendants_range_in _ order_refl], clarsimp+)
-
-   apply (intro conjI impI; clarify; blast)
+   apply (intro conjI impI; auto)[1]
 
   apply (clarsimp simp: cte_wp_at_ctes_of descendants_range'_def2
                         empty_descendants_range_in')
@@ -5065,12 +5071,19 @@ lemma resetUntypedCap_invs_etc:
    apply simp
    apply (rule getCTE_sp)
   apply (rule hoare_name_pre_stateE)
-  apply (clarsimp simp: cte_wp_at_ctes_of
-             split del: split_if)
+  apply (clarsimp split del: split_if)
   apply (subgoal_tac "capAligned ?cap")
    prefer 2
-   apply (frule ctes_of_valid[OF ctes_of_cte_wpD], clarsimp+)
+   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
+   apply (clarsimp simp: cte_wp_at_ctes_of capAligned_def valid_cap_simps')
+  apply (cases "idx = 0")
+   apply (clarsimp simp: cte_wp_at_ctes_of unlessE_def split del: split_if)
+   apply wp
    apply (clarsimp simp: valid_cap_simps' capAligned_def)
+   apply (rule cte_wp_at_pspace_no_overlapI'[where cref=slot],
+       (simp_all add: cte_wp_at_ctes_of)+)[1]
+  apply (clarsimp simp: unlessE_def cte_wp_at_ctes_of
+             split del: split_if)
   apply (rule_tac B="\<lambda>_. invs' and valid_untyped_inv_wcap' ?ui (Some ?cap)
         and ct_active' and ?psp" in hoare_vcg_seqE[rotated])
    apply clarsimp
@@ -6338,7 +6351,8 @@ lemma resetUntypedCap_st_tcb_at':
   apply (strengthen refl)
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
   apply (clarsimp simp: valid_cap_simps' capAligned_def empty_descendants_range_in'
-                        descendants_range'_def2)
+                        descendants_range'_def2
+                 elim!: pred_tcb'_weakenE)
   done
 
 lemma inv_untyp_st_tcb_at'[wp]:
@@ -6386,7 +6400,7 @@ lemma resetUntypedCap_IRQInactive:
   apply (rule hoare_pre)
    apply (wp mapME_x_inv_wp[where P=valid_irq_states' and E="?E", THEN hoare_post_impErr]
              doMachineOp_irq_states' preemptionPoint_inv hoare_drop_imps
-     | simp add: no_irq_clearMemory)+
+     | simp add: no_irq_clearMemory if_apply_def2)+
   done
 
 lemma inv_untyped_IRQInactive:

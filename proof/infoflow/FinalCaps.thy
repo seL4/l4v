@@ -2114,16 +2114,19 @@ lemma reset_untyped_cap_silc_inv:
     reset_untyped_cap slot 
   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (simp add: reset_untyped_cap_def)
-  apply (wp set_cap_silc_inv_simple | simp add: unless_def)+
-    apply (rule valid_validE, rule_tac Q="\<lambda>_. cte_wp_at is_untyped_cap slot
-          and silc_inv aag st" in hoare_strengthen_post)
-     apply (rule validE_valid, rule mapME_x_inv_wp, rule hoare_pre)
-      apply (wp mapME_x_inv_wp preemption_point_inv set_cap_cte_wp_at
-                set_cap_silc_inv_simple | simp)+
-     apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
-    apply simp
-   apply (wp hoare_vcg_const_imp_lift delete_objects_silc_inv get_cap_wp | simp)+
+  apply (simp add: reset_untyped_cap_def cong: if_cong)
+  apply (rule validE_valid, rule hoare_pre)
+   apply (wp set_cap_silc_inv_simple | simp)+
+     apply (rule valid_validE, rule_tac Q="\<lambda>_. cte_wp_at is_untyped_cap slot
+           and silc_inv aag st" in hoare_strengthen_post)
+      apply (rule validE_valid, rule mapME_x_inv_wp, rule hoare_pre)
+       apply (wp mapME_x_inv_wp preemption_point_inv set_cap_cte_wp_at
+                 set_cap_silc_inv_simple | simp)+
+      apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
+     apply simp
+    apply (wp hoare_vcg_const_imp_lift delete_objects_silc_inv get_cap_wp
+              set_cap_silc_inv_simple
+       | simp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
   apply (frule(1) cap_auth_caps_of_state)
   apply (clarsimp simp: aag_cap_auth_def aag_has_Control_iff_owns
@@ -2140,7 +2143,7 @@ lemma reset_untyped_cap_untyped_cap:
       and (\<lambda>s. descendants_of slot (cdt s) = {})\<rbrace>
     reset_untyped_cap slot 
   \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>cp. P (is_untyped_cap cp) (untyped_range cp)) slot\<rbrace>"
-  apply (simp add: reset_untyped_cap_def)
+  apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule hoare_pre)
    apply (wp set_cap_cte_wp_at | simp add: unless_def)+
      apply (rule valid_validE, rule_tac Q="\<lambda>rv. cte_wp_at (\<lambda>cp. is_untyped_cap cp

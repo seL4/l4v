@@ -1450,7 +1450,7 @@ lemma resetUntypedCap_valid_duplicates'[wp]:
    apply (wp | simp add: unless_def)+
    apply (wp mapME_x_inv_wp preemptionPoint_inv | simp | wp_once hoare_drop_imps)+
    apply (wp getSlotCap_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: cte_wp_at_ctes_of split del: split_if)
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
   apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def)
   done

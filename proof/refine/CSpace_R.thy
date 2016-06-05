@@ -1078,7 +1078,9 @@ lemma cap_move_corres:
    apply clarsimp
    apply (subgoal_tac "null_filter (caps_of_state a) (aa,bb) \<noteq> None")
     prefer 2
-    subgoal by (clarsimp simp: null_filter_def split: if_splits)
+    subgoal by (clarsimp simp only: null_filter_def cap.simps option.simps
+                               fun_upd_def simp_thms
+          split: if_splits)
    apply clarsimp
    apply (subgoal_tac "cte_at (aa,bb) a")
     prefer 2
@@ -4729,8 +4731,13 @@ lemma arch_update_setCTE_invs:
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def fun_upd_def[symmetric]
                         cte_wp_at_ctes_of isCap_simps untyped_ranges_zero_fun_upd)
   apply (frule capMaster_eq_capBits_eq)
+  apply (frule capMaster_isUntyped)
   apply (drule capMaster_capRange)
   apply (clarsimp simp: valid_refs'_def valid_cap_sizes'_def)
+  apply (subst untyped_ranges_zero_delta[where xs="[p]"], assumption, simp_all)
+   apply (clarsimp simp: ran_restrict_map_insert cteCaps_of_def
+                         untypedZeroRange_def Let_def
+                         isCap_simps(1-11)[where v="ArchObjectCap ac" for ac])
   apply fastforce
   done
 

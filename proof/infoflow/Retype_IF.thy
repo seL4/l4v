@@ -1107,6 +1107,7 @@ lemma reset_untyped_cap_reads_respects_g:
         apply (clarsimp simp: valid_cap_simps cap_aligned_def
                               is_aligned_neg_mask_eq field_simps
                               free_index_of_def)
+       apply (wp | simp)+
        apply (wp delete_objects_reads_respects_g)
        apply (strengthen invs_valid_global_objs)
        apply (wp add: delete_objects_invs_ex
@@ -1339,7 +1340,7 @@ lemma reset_untyped_cap_globals_equiv:
       and ct_active and (\<lambda>s. descendants_of slot (cdt s) = {})\<rbrace>
     reset_untyped_cap slot
   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (simp add: reset_untyped_cap_def)
+  apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule hoare_pre)
    apply (wp set_cap_globals_equiv dmo_clearMemory_globals_equiv
              preemption_point_inv | simp add: unless_def)+

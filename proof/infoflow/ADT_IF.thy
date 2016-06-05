@@ -3059,6 +3059,7 @@ lemma reset_untyped_cap_irq_state_inv:
    apply (wp no_irq_clearMemory mapME_x_wp'
              hoare_vcg_const_imp_lift
              preemption_point_irq_state_inv'[where irq=irq]
+             get_cap_wp
      | rule irq_state_inv_triv
      | simp
      | wp_once dmo_wp)+

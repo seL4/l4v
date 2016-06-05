@@ -160,22 +160,26 @@ where
   cap \<leftarrow> liftE $ get_cap src_slot;
   sz \<leftarrow> returnOk $ bits_of cap;
   base \<leftarrow> returnOk $ obj_ref_of cap;
-  liftE $ delete_objects base sz;
+  if free_index_of cap = 0
+    then returnOk ()
+  else doE
+    liftE $ delete_objects base sz;
   dev \<leftarrow> returnOk $ is_device_untyped_cap cap;
 
   if dev \<or> sz < reset_chunk_bits
-    then liftE $ do
+      then liftE $ do
         unless dev $ do_machine_op $ clearMemory base (2 ^ sz);
         set_cap (UntypedCap dev base sz 0) src_slot
-    od
+      od
     else mapME_x (\<lambda>i. doE
-        liftE $ do_machine_op $ clearMemory (base + (of_nat i << reset_chunk_bits))
-            (2 ^ reset_chunk_bits);
-        liftE $ set_cap (UntypedCap dev base sz
-            (i * 2 ^ reset_chunk_bits)) src_slot;
-        preemption_point
-      odE) (rev [i \<leftarrow> [0 ..< 2 ^ (sz - reset_chunk_bits)].
-          i * 2 ^ reset_chunk_bits < free_index_of cap])
+          liftE $ do_machine_op $ clearMemory (base + (of_nat i << reset_chunk_bits))
+              (2 ^ reset_chunk_bits);
+          liftE $ set_cap (UntypedCap dev base sz
+              (i * 2 ^ reset_chunk_bits)) src_slot;
+          preemption_point
+        odE) (rev [i \<leftarrow> [0 ..< 2 ^ (sz - reset_chunk_bits)].
+            i * 2 ^ reset_chunk_bits < free_index_of cap])
+    odE
   odE"
 
 text {* Untyped capabilities confer authority to the Retype method. This

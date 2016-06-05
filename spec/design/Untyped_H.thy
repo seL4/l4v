@@ -151,16 +151,16 @@ where
 "resetUntypedCap slot\<equiv> (doE
     cap \<leftarrow> withoutPreemption $ getSlotCap slot;
     sz \<leftarrow> returnOk ( capBlockSize cap);
-    withoutPreemption $ deleteObjects (capPtr cap) sz;
+    unlessE (capFreeIndex cap = 0) $ (doE
+        withoutPreemption $ deleteObjects (capPtr cap) sz;
     if (capIsDevice cap \<or> sz < resetChunkBits)
-        then withoutPreemption $ (do
-            unless (capIsDevice cap) $ doMachineOp $
-                clearMemory (PPtr (fromPPtr (capPtr cap))) (1 `~shiftL~` sz);
-            updateFreeIndex slot 0
-        od)
-        else (
-            forME_x (reverse [capPtr cap, capPtr cap + (1 `~shiftL~` resetChunkBits)  .e.
-                        getFreeRef (capPtr cap) (capFreeIndex cap) - 1])
+            then withoutPreemption $ (do
+                unless (capIsDevice cap) $ doMachineOp $
+                    clearMemory (PPtr (fromPPtr (capPtr cap))) (1 `~shiftL~` sz);
+                updateFreeIndex slot 0
+            od)
+            else forME_x (reverse [capPtr cap, capPtr cap + (1 `~shiftL~` resetChunkBits)  .e.
+                            getFreeRef (capPtr cap) (capFreeIndex cap) - 1])
                 (\<lambda> addr. (doE
                     withoutPreemption $ doMachineOp $ clearMemory
                         (PPtr (fromPPtr addr)) (1 `~shiftL~` resetChunkBits);
@@ -168,7 +168,7 @@ where
                         (getFreeIndex (capPtr cap) addr);
                     preemptionPoint
                 odE))
-        )
+    odE)
 odE)"
 
 definition
