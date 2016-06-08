@@ -11,8 +11,11 @@
 (* Peep-hole L1 optimisations. *)
 
 theory L1Peephole
-imports L1Defs AutoCorresAttributes
+imports L1Defs
 begin
+
+(* Simplification rules run after L1. *)
+named_theorems L1opt
 
 lemma L1_seq_assoc [L1opt]: "(L1_seq (L1_seq X Y) Z) = (L1_seq X (L1_seq Y Z))"
   apply (clarsimp simp: L1_seq_def bindE_assoc)

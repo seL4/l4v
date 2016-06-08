@@ -9,12 +9,9 @@
  *)
 
 (*
- * Construct necessary infrastructure to allow heap lifting to take
- * place.
- *
- * This includes things like:
- *
- *   * Creating new global records;
+ * Construct necessary infrastructure to allow heap lifting to take place.
+ * This creates the new globals record; the proofs relating it with the old
+ * globals will be performed in HeapLift.
  *)
 
 structure HeapLiftBase =
@@ -134,7 +131,7 @@ let
   (* Process a function. *)
   fun process fn_name =
       (* Fetch body of "fn_name". *)
-      FunctionInfo.get_function_def fn_info fn_name
+      FunctionInfo.get_phase_info fn_info FunctionInfo.CP fn_name
       |> #definition
       |> Thm.prop_of
       |> Utils.rhs_of_eq
@@ -153,7 +150,7 @@ let
   val word_typs = if not gen_word_heaps then Typset.empty else
                       Typset.make [@{typ word8}, @{typ word16}, @{typ word32}, @{typ word64}]
 in
-  Typset.union_sets (word_typs :: AutoCorresUtil.map_all lthy fn_info process)
+  Typset.union_sets (word_typs :: AutoCorresUtil.map_all lthy fn_info (fn n => K (process n)))
 end
 
 (* Get fields from the globals type that should be copied from the

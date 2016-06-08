@@ -25,7 +25,7 @@ val apply_tac = Utils.apply_tac
 
 fun get_hl_state_typ ctxt prog_info fn_info fn_name =
   let
-    val term = FunctionInfo.get_function_def fn_info fn_name |> #const
+    val term = FunctionInfo.get_phase_info fn_info FunctionInfo.WA fn_name |> #const
   in
     LocalVarExtract.dest_l2monad_T (fastype_of term) |> snd |> #1
   end
@@ -51,7 +51,7 @@ let
   val thy = Proof_Context.theory_of ctxt
 
   (* Fetch function variables. *)
-  val fn_def = FunctionInfo.get_function_def fn_info fn_name
+  val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.WA fn_name
   val inputs = #args fn_def
   val input_vars = map (fn (x, y) => Var ((x, 0), y)) inputs
 
@@ -107,7 +107,7 @@ end
 fun assume_rec_lifted ctxt prog_info fn_info rule_set fn_thm fn_name =
 let
   val thy = Proof_Context.theory_of ctxt
-  val fn_def = FunctionInfo.get_function_def fn_info fn_name
+  val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.WA fn_name
 
   (* Find recursive calls. *)
   val recursive_calls = FunctionInfo.get_recursive_group fn_info fn_name
@@ -126,7 +126,7 @@ let
    * the type/monad of "rule_set". *)
   val dest_fn_thms = map (fn (n, var) =>
     let
-      val fn_def' = FunctionInfo.get_function_def fn_info n
+      val fn_def' = FunctionInfo.get_phase_info fn_info FunctionInfo.WA n
       val inputs = #args fn_def'
       val T = (@{typ nat} :: map snd inputs)
           ---> (fastype_of (#const fn_def') |> get_typ_from_L2 rule_set)
@@ -280,7 +280,7 @@ let
   (* Add monad_mono theorems. *)
   val mono_thms = map (FunctionInfo.get_function_callees fn_info) fn_names
                   |> flat
-                  |> map (#mono_thm o FunctionInfo.get_function_def fn_info)
+                  |> List.mapPartial (#mono_thm o FunctionInfo.get_phase_info fn_info FunctionInfo.WA)
 
   (* When lifting, also lift our callees. *)
   val rule_set' = Monad_Types.update_mt_lift_rules
@@ -320,7 +320,7 @@ let
     val measure_param = if is_recursive then [("rec_measure'", @{typ nat})] else []
 
     (* Fetch function parameters. *)
-    val fn_def = FunctionInfo.get_function_def fn_info fn_name
+    val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.WA fn_name
     val fn_params = #args fn_def
 
     (* Extract the term from the function theorem. *)
@@ -504,20 +504,19 @@ let
    * final fn_info. As a workaround, we define them in the theory here
    * and then retrieve them later. *)
   fun try_mono_thm (fn_name, rewrite_thm) lthy =
-    let
-      val mono_thm = #mono_thm (FunctionInfo.get_function_def fn_info fn_name)
-    in (* We need to be permissive because we call user-supplied provers. *)
-       case try (#prove_mono rule_set' rewrite_thm) mono_thm of
-           NONE => (Utils.ac_warning ("Failed to prove monad_mono for function: " ^ fn_name);
-                    lthy)
-         | SOME mono_thm' => let
-              val name = mono_thm_name make_function_name fn_name
-              val _ = tracing ("Defining monad_mono theorem: " ^ name)
-              val (_, lthy) = Utils.define_lemma name mono_thm' lthy
-              (* Also add to the simpset. (Does this actually help?) *)
-              val lthy = Utils.simp_add [mono_thm'] lthy
-              in lthy end
-    end
+    case #mono_thm (FunctionInfo.get_phase_info fn_info FunctionInfo.WA fn_name) of
+        NONE => lthy
+      | SOME mono_thm =>
+          case try (#prove_mono rule_set' rewrite_thm) mono_thm of
+              NONE => (Utils.ac_warning ("Failed to prove monad_mono for function: " ^ fn_name);
+                       lthy)
+            | SOME mono_thm' => let
+                 val name = mono_thm_name make_function_name fn_name
+                 val _ = tracing ("Defining monad_mono theorem: " ^ name)
+                 val (_, lthy) = Utils.define_lemma name mono_thm' lthy
+                 (* Also add to the simpset. (Does this actually help?) *)
+                 val lthy = Utils.simp_add [mono_thm'] lthy
+                 in lthy end
   val lthy = if is_recursive then fold try_mono_thm (fn_names ~~ new_thms) lthy else lthy
 in
   (lthy, fn_names ~~ new_thms, #name rule_set')
@@ -595,7 +594,7 @@ let
   fun convert lthy fn_name =
   let
     (* Fetch definition. *)
-    val fn_def = FunctionInfo.get_function_def fn_info fn_name
+    val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.WA fn_name
     val def = #definition fn_def
 
     (* Prettify bound variable names in definition. *)
@@ -610,6 +609,7 @@ let
   fun define lthy _ (all_callee_proofs, callee_stats) functions =
   let
     val _ = writeln ("Translating (type strengthen) " ^ (Utils.commas (map fst functions)))
+    val _ = @{trace} ("callees", Symtab.dest all_callee_proofs)
     val start_time = Timer.startRealTimer ()
     val (lthy, new_rewrites, monad_name) =
         lift_function rules force_lift filename prog_info fn_info
@@ -628,28 +628,35 @@ let
   fun retrieve_mono_thm lthy fn_def = let
     val fn_name = #name fn_def
     val thm_name = mono_thm_name make_function_name fn_name
-    val mono_thm = Proof_Context.get_thm lthy thm_name handle ERROR _ => @{thm TrueI}
-    in mono_thm end
+    in try (Proof_Context.get_thm lthy) thm_name
+       |> Option.map (fn thm => (#name fn_def, thm)) end
 
   (* Update function information. *)
-  fun update_function_def lthy _ fn_def =
-    FunctionInfo.fn_def_update_const (Utils.get_term lthy (make_function_name (#name fn_def))) fn_def
-    |> FunctionInfo.fn_def_update_definition (
-        (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
-            filename "TSdef" (#name fn_def))))
+  fun update_function_def lthy _ fn_def = let
+    val wa_info = FunctionInfo.get_1_phase_info fn_def FunctionInfo.WA
+    in wa_info
+       |> FunctionInfo.phase_info_upd_const (Utils.get_term lthy (make_function_name (#name fn_def)))
+       |> FunctionInfo.phase_info_upd_definition (
+            (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
+                    filename "TSdef" (#name fn_def))))
+       |> FunctionInfo.phase_info_upd_phase FunctionInfo.TS
+    end
 
-  val initial_callees = Symtab.dest (FunctionInfo.get_functions fn_info)
+  val initial_callees =
+        Symtab.dest (FunctionInfo.get_all_functions fn_info)
         |> List.mapPartial (fn (fn_name, fn_def) =>
-             if not (#finished fn_def) then NONE else
-               AutoCorresData.get_thm (Proof_Context.theory_of lthy)
-                                      filename ("TScorres") fn_name
-               |> Option.map (fn thm => (fn_name, thm)))
+             case FunctionInfo.Phasetab.lookup (#phases fn_def) FunctionInfo.TS of
+                 SOME _ => AutoCorresData.get_thm (Proof_Context.theory_of lthy)
+                                                  filename "TScorres" fn_name
+                           |> Option.map (fn thm => (fn_name, thm))
+               | NONE => NONE)
         |> Symtab.make
+  val _ = @{trace} ("initial callees", Symtab.dest initial_callees)
   val (lthy, fn_info, (_, results)) =
       AutoCorresUtil.translate
-        lthy fn_info Symtab.empty convert define
-        (fn defs => fn lthy => map (retrieve_mono_thm lthy) defs)
+        lthy FunctionInfo.TS fn_info Symtab.empty convert define
         update_function_def
+        (fn lthy => fn defs => List.mapPartial (retrieve_mono_thm lthy) defs |> Symtab.make)
         (initial_callees, [])
 
   (* Print some statistics for curiosity's sake. *)

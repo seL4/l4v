@@ -28,6 +28,7 @@ imports
   "../../lib/Monad_WP/OptionMonadWP"
   "../../lib/Apply_Trace"
   AutoCorresSimpset
+  "../../lib/ml-helpers/TermPatternAntiquote"
   keywords "autocorres" :: thy_decl
 begin
 

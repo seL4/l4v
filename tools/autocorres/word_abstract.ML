@@ -82,7 +82,7 @@ fun get_wa_conc_args rules fn_info fn_name fn_args =
 let
   (* Construct arguments for the concrete body. We use the abstract names
    * with a prime ('), but with the concrete types. *)
-  val conc_types = FunctionInfo.get_function_def fn_info fn_name |> #args |> map snd
+  val conc_types = FunctionInfo.get_phase_info fn_info FunctionInfo.HL fn_name |> #args |> map snd
   val conc_args = map (fn (Free (x, Tc), Ta) => Free (x ^ "'", Ta))
       (fn_args ~~ conc_types)
   val arg_pairs = (conc_args ~~ fn_args)
@@ -100,7 +100,7 @@ end
 (* Get the expected type of a function from its name. *)
 fun get_expected_fn_type rules fn_info fn_name =
 let
-  val fn_def = FunctionInfo.get_function_def fn_info fn_name
+  val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.HL fn_name
   val fn_params_typ = map ((get_abs_type rules) o snd) (#args fn_def)
   val fn_ret_typ = get_abs_type rules (#return_type fn_def)
   val globals_typ = LocalVarExtract.dest_l2monad_T (fastype_of (#const fn_def)) |> snd |> #1
@@ -114,7 +114,7 @@ end
 fun get_expected_fn_thm rules fn_info ctxt fn_name
                         function_free fn_args _ measure_var =
 let
-  val old_def = FunctionInfo.get_function_def fn_info fn_name
+  val old_def = FunctionInfo.get_phase_info fn_info FunctionInfo.HL fn_name
   val (old_arg_types, old_args, precond, arg_pairs)
       = get_wa_conc_args rules fn_info fn_name fn_args
 
@@ -128,7 +128,7 @@ end
 
 (* Get arguments passed into the function. *)
 fun get_expected_fn_args rules fn_info fn_name =
-  map (apsnd (get_abs_type rules)) (#args (FunctionInfo.get_function_def fn_info fn_name))
+  map (apsnd (get_abs_type rules)) (#args (FunctionInfo.get_phase_info fn_info FunctionInfo.HL fn_name))
 
 (*
  * Convert a theorem of the form:
@@ -176,7 +176,7 @@ let
   fun convert ctxt fn_name callee_terms measure_var fn_args =
   let
     val thy = Proof_Context.theory_of ctxt
-    val old_fn = FunctionInfo.get_function_def fn_info fn_name
+    val old_fn = FunctionInfo.get_phase_info fn_info FunctionInfo.HL fn_name
 
     val wa_rules = rules_for fn_name
 
@@ -201,7 +201,7 @@ let
     val callee_mono_thms = Symtab.dest callee_terms |> map fst
         |> List.mapPartial (fn callee =>
                if FunctionInfo.is_function_recursive fn_info callee
-               then SOME (FunctionInfo.get_function_def fn_info callee |> #mono_thm)
+               then FunctionInfo.get_phase_info fn_info FunctionInfo.HL callee |> #mono_thm
                else NONE)
 
     (*
@@ -229,7 +229,8 @@ let
     (*
      * Fetch rules from the theory.
      *)
-    val rules = WordAbsThms.get lthy @ List.concat (map #rules wa_rules)
+    val rules = Utils.get_rules lthy @{named_theorems word_abs}
+                @ List.concat (map #rules wa_rules)
                 @ @{thms word_abs_default}
     val fo_rules = [@{thm abstract_val_fun_app}]
 
@@ -388,23 +389,28 @@ let
   end
 
   (* Update function information. *)
-  fun update_function_defs lthy fn_def =
-    FunctionInfo.fn_def_update_const (Utils.get_term lthy (wa_function_name (#name fn_def))) fn_def
-    |> FunctionInfo.fn_def_update_definition (
-        (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
-            filename "WAdef" (#name fn_def))))
-    |> FunctionInfo.fn_def_update_return_type (get_abs_type (rules_for (#name fn_def)) (#return_type fn_def))
-    |> FunctionInfo.fn_def_update_args (map (apsnd (get_abs_type (rules_for (#name fn_def)))) (#args fn_def))
+  fun update_function_defs lthy fn_def = let
+    val hl_info = FunctionInfo.get_1_phase_info fn_def FunctionInfo.HL
+    val term = Utils.get_term lthy (wa_function_name (#name fn_def))
+    val def = the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
+                     filename "WAdef" (#name fn_def))
+    in hl_info
+       |> FunctionInfo.phase_info_upd_const term
+       |> FunctionInfo.phase_info_upd_definition def
+       |> FunctionInfo.phase_info_upd_return_type (get_abs_type (rules_for (#name fn_def)) (#return_type hl_info))
+       |> FunctionInfo.phase_info_upd_args (map (apsnd (get_abs_type (rules_for (#name fn_def)))) (#args hl_info))
+       |> FunctionInfo.phase_info_upd_phase FunctionInfo.WA
+    end
 in
   AutoCorresUtil.do_translation_phase
-    "WA"  filename prog_info fn_info
+    FunctionInfo.WA filename prog_info fn_info
     (fn fn_name => get_expected_fn_type (rules_for fn_name) fn_info fn_name)
     (fn ctxt => fn fn_name => get_expected_fn_thm (rules_for fn_name) fn_info ctxt fn_name)
     (fn fn_name => get_expected_fn_args (rules_for fn_name) fn_info fn_name)
     wa_function_name
     convert
-    LocalVarExtract.l2_monad_mono
     update_function_defs
+    (LocalVarExtract.l2_monad_mono FunctionInfo.WA)
     @{thm corresTA_recguard_0}
     lthy
 end

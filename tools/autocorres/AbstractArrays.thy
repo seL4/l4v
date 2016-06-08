@@ -97,4 +97,3 @@ lemma set_array_addrs:
   done
 
 end
-

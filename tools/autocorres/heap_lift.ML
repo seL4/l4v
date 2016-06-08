@@ -69,7 +69,7 @@ fun get_expected_st heap_info unliftable_functions fn_name =
 fun get_expected_hl_fn_type prog_info fn_info (heap_info : HeapLiftBase.heap_info)
     unliftable_functions fn_name =
 let
-  val fn_def = FunctionInfo.get_function_def fn_info fn_name
+  val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.L2 fn_name
   val fn_params_typ = map snd (#args fn_def)
   (* Fill in the measure argument and return type *)
   val globals_typ = get_expected_fn_state_type heap_info unliftable_functions fn_name
@@ -86,7 +86,7 @@ fun get_expected_hl_fn_thm prog_info fn_info (heap_info : HeapLiftBase.heap_info
     unliftable_functions ctxt fn_name function_free fn_args _ measure_var =
 let
   (* Get L2 const *)
-  val l2_def = FunctionInfo.get_function_def fn_info fn_name
+  val l2_def = FunctionInfo.get_phase_info fn_info FunctionInfo.L2 fn_name
   val l2_term = betapplys (#const l2_def, measure_var :: fn_args)
 
   (* Get expected HL const. *)
@@ -98,7 +98,7 @@ end
 
 (* Get arguments passed into the function. *)
 fun get_expected_hl_fn_args prog_info fn_info fn_name =
-  #args (FunctionInfo.get_function_def fn_info fn_name)
+  #args (FunctionInfo.get_phase_info fn_info FunctionInfo.L2 fn_name)
 
 (*
  * Use some heuristics to determine which functions cannot be lifted.
@@ -120,9 +120,9 @@ let
 
   (* Find all functions that are directly unliftable. *)
   val raw_unliftable_functions =
-    AutoCorresUtil.map_all lthy fn_info (fn fn_name =>
+    AutoCorresUtil.map_all lthy fn_info (fn fn_name => fn info =>
         (fn_name,
-            FunctionInfo.get_function_def fn_info fn_name
+            FunctionInfo.get_1_phase_info info FunctionInfo.L2
             |> #definition
             |> Thm.prop_of
             |> Utils.rhs_of
@@ -582,7 +582,7 @@ let
    * "valid_globals_field", "valid_typ_heap" etc with the predicates generated
    * above.
    *)
-  val base_rules = HeapAbsThms.get lthy
+  val base_rules = Utils.get_rules lthy @{named_theorems heap_abs}
   (* FIXME: make an attribute for these rules? *)
   val base_nolift_rules = @{thms struct_rewrite_expr_id}
   val [rules, nolift_rules] =
@@ -603,7 +603,8 @@ let
   fun convert ctxt fn_name callee_terms measure_var fn_args =
   let
     (* Fetch the function definition. *)
-    val fn_def = FunctionInfo.get_function_def fn_info fn_name
+    val fn_phases = FunctionInfo.get_function_info fn_info fn_name
+    val fn_def = FunctionInfo.get_1_phase_info fn_phases FunctionInfo.L2
     val l2_body_def =
         #definition fn_def
         (* Instantiate the arguments. *)
@@ -625,12 +626,12 @@ let
     val callee_mono_thms = Symtab.dest callee_terms |> map fst
         |> List.mapPartial (fn callee =>
                if FunctionInfo.is_function_recursive fn_info callee
-               then SOME (FunctionInfo.get_function_def fn_info callee |> #mono_thm)
+               then FunctionInfo.get_phase_info fn_info FunctionInfo.L2 callee |> #mono_thm
                else NONE)
     val rules = rules @ (map (snd #> #3) (Symtab.dest callee_terms)) @ callee_mono_thms
     val rules = if Symset.contains unliftable_functions fn_name
                 then rules @ nolift_rules else rules
-    val fo_rules = HeapAbsFOThms.get ctxt
+    val fo_rules = Utils.get_rules ctxt @{named_theorems heap_abs_fo}
 
     (* Apply a conversion to the concrete side of the given L2T term.
      * By convention, the concrete side is the last argument (index ~1). *)
@@ -680,7 +681,7 @@ let
             ORELSE (print_n_tac error_printed THEN no_tac))
 
     val tactics =
-        if #is_simpl_wrapper fn_def
+        if #is_simpl_wrapper fn_phases
         then (* Solver for trivial simpl wrappers. *)
              [(@{thm L2Tcorres_id}, resolve_tac ctxt [@{thm L2Tcorres_id}] 1)]
         else map (fn rule => (rule, resolve_tac ctxt [rule] 1)) rules
@@ -744,21 +745,26 @@ let
   end
 
   (* Update function information. *)
-  fun update_function_defs lthy fn_def =
-    FunctionInfo.fn_def_update_const (Utils.get_term lthy (hl_function_name (#name fn_def))) fn_def
-    |> FunctionInfo.fn_def_update_definition (
-        (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
-            filename "HLdef" (#name fn_def))))
+  fun update_function_defs lthy info = let
+    val l1_info = FunctionInfo.get_1_phase_info info FunctionInfo.L2
+    val def = the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
+                     filename "HLdef" (#name info))
+    val term = Utils.get_term lthy (hl_function_name (#name info))
+    in l1_info
+       |> FunctionInfo.phase_info_upd_const term
+       |> FunctionInfo.phase_info_upd_definition def
+       |> FunctionInfo.phase_info_upd_phase FunctionInfo.HL
+    end
 in
   AutoCorresUtil.do_translation_phase
-    "HL" filename prog_info fn_info
+    FunctionInfo.HL filename prog_info fn_info
     (get_expected_hl_fn_type prog_info fn_info heap_info unliftable_functions)
     (get_expected_hl_fn_thm prog_info fn_info heap_info unliftable_functions)
     (get_expected_hl_fn_args prog_info fn_info)
     hl_function_name
     convert
-    LocalVarExtract.l2_monad_mono
     update_function_defs
+    (LocalVarExtract.l2_monad_mono FunctionInfo.HL)
     @{thm L2Tcorres_recguard_0}
     lthy
 end

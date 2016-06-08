@@ -26,5 +26,4 @@ lemma Collect_prod_union:
   "{(s, t). P s t} \<union> {(s, t). Q s t} = {(s, t). P s t \<or> Q s t}"
   by (fastforce intro: set_eqI)
 
-
 end

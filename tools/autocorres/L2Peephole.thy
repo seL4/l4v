@@ -233,7 +233,7 @@ declare ucast_id [L2opt]
 declare scast_id [L2opt]
 
 (* Other misc lemmas. *)
-declare singleton_iff [L2opt, polish]
+declare singleton_iff [L2opt]
 
 (* Optimising "if" structres. *)
 

@@ -90,12 +90,12 @@ lemma valid_simple_footprintD2:
   "\<lbrakk> valid_simple_footprint d x t; y \<in> {x + 1..+(size_td t) - Suc 0} \<rbrakk> \<Longrightarrow> heap_type_tag d y = HeapFootprint"
   by (simp add: valid_simple_footprint_def)
 
-lemma typ_slices_not_empty [simp]:
+lemma typ_slices_not_empty:
     "typ_slices (x::('a::{mem_type} itself)) \<noteq> []"
   apply (clarsimp simp: typ_slices_def)
   done
 
-lemma last_typ_slice_t [simp]:
+lemma last_typ_slice_t:
     "(last (typ_slice_t t 0)) = (t, True)"
   apply (case_tac t)
   apply clarsimp
@@ -117,7 +117,7 @@ lemma heap_type_tag_ptr_retyp:
     apply clarsimp
    apply (erule_tac x="length (typ_slice_t (typ_uinfo_t TYPE('a)) 0)" in allE)
    apply (clarsimp simp: list_map_eq)
-  apply (clarsimp simp: list_map_eq last_conv_nth [simplified, symmetric]
+  apply (clarsimp simp: list_map_eq last_conv_nth [simplified, symmetric] last_typ_slice_t
             split: option.splits split_if_asm prod.splits)
   done
 
@@ -177,15 +177,14 @@ lemma valid_simple_footprint_ptr_retyp:
   apply (clarsimp simp: intvl_def)
   apply (erule_tac x="k + 1" in allE)
   apply (erule impE)
-   apply (metis One_nat_def less_diff_conv size_of_def)
+   apply (metis One_nat_def less_diff_conv)
   apply (subst add.assoc, subst heap_type_tag_ptr_retyp_rest)
      apply clarsimp
     apply (case_tac "1 + of_nat k = (0 :: word32)")
-     apply (metis Suc_le_D diff_Suc_1 less_imp_diff_less less_trans_Suc nat_less_le one_plus_x_zero)
+     apply (metis add.left_neutral intvlI intvl_Suc_nmem size_of_def)
     apply unat_arith
    apply clarsimp
-   apply (metis (hide_lams, no_types) One_nat_def Suc_eq_plus1 le_eq_less_or_eq
-     le_unat_uoi less_Suc_eq_le less_diff_conv not_less_eq of_nat_Suc)
+   apply (metis lt_size_of_unat_simps size_of_def Suc_eq_plus1 One_nat_def less_diff_conv of_nat_Suc)
   apply simp
   done
 
@@ -795,27 +794,6 @@ lemma heap_ptr_valid_intersect_array:
   apply (clarsimp simp: field_simps Int_Un_distrib2)
   apply (metis IntI emptyE intvl_empty intvl_inter intvl_self neq0_conv)
   done
-
-(*
-lemma simple_lift_heap_update_array_in_domain:
-  "\<lbrakk> \<forall>j < CARD('b). simple_lift h ((ptr_coerce p :: 'a ptr)  +\<^sub>p int j) \<noteq> None;
-            n < CARD('b) \<rbrakk> \<Longrightarrow>
-      simple_lift (hrs_mem_update (
-        heap_update p (Arrays.update (h_val (hrs_mem h) p :: ('a::oneMB_size)['b::fourthousand_count]) n val)) h)
-        = ((simple_lift h)((ptr_coerce p :: 'a ptr) +\<^sub>p int n := Some val))"
-  apply (rule ext)
-  apply (clarsimp simp: simple_lift_def hrs_mem_update if_Some_None_eq_None)
-  apply safe
-   apply (simp add: heap_access_Array_element[symmetric] h_val_heap_update)
-  apply (frule(1) heap_ptr_valid_intersect_array)
-  apply (erule disjE)
-   apply (clarsimp simp: heap_access_Array_element[symmetric] h_val_heap_update)
-   apply (rule index_update2, simp)
-   apply fastforce
-  apply (rule h_val_heap_update_disjoint)
-  apply (simp add: field_simps Int_commute)
-  done
-*)
 
 (* Simplification rules for dealing with "lift_simple". *)
 

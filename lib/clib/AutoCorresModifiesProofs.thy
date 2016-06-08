@@ -312,7 +312,7 @@ fun modifies_simp_term ctxt =
  * The returned vars are Free in the prop; the measure var is NONE for non-recursive functions.
  *)
 fun gen_modifies_prop ctxt fn_info (prog_info: ProgramInfo.prog_info) f_name c_prop = let
-  val f_info = FunctionInfo.get_function_def fn_info f_name;
+  val f_info = FunctionInfo.get_phase_info fn_info FunctionInfo.TS f_name;
   val globals_type = #globals_type prog_info;
   val globals_term = #globals_getter prog_info;
   val ac_ret_type = #return_type f_info;
@@ -328,8 +328,7 @@ fun gen_modifies_prop ctxt fn_info (prog_info: ProgramInfo.prog_info) f_name c_p
   val measure_var = if FunctionInfo.is_function_recursive fn_info f_name
                     (* will not clash with arg_vars as C identifiers do not contain primes *)
                     then SOME (Free ("measure'", @{typ nat})) else NONE;
-  val f_const = #const f_info (* FIXME: autocorres bug! Doesn't store the final const *)
-  val f_const = Syntax.read_term ctxt (f_name ^ "'"); (* guess the name instead *)
+  val f_const = #const f_info
   val f_call = betapplys (f_const, (case measure_var of SOME v => [v] | NONE => []) @ arg_vars);
   val modifies_prop = @{mk_term "Trueprop (\<lbrace>\<lambda>s. s = ?state\<rbrace> ?call \<lbrace>?postcond\<rbrace>)" (state, call, postcond)}
                          (state0_var, f_call, modifies_postcond);
@@ -443,7 +442,7 @@ fun do_modifies_one ctxt fn_info (prog_info: ProgramInfo.prog_info) callee_modif
   val (state0_var, arg_vars, measure_var, ac_modifies_prop) =
         gen_modifies_prop ctxt fn_info prog_info f_name c_modifies_prop;
   val _ = if isSome measure_var then error ("do_modifies_one bug: got recursive function " ^ f_name) else ();
-  val f_def = Proof_Context.get_thm ctxt (f_name ^ "'_def");
+  val f_def = FunctionInfo.get_phase_info fn_info FunctionInfo.TS f_name |> #definition;
   fun leaf_tac ctxt n = FIRST [modifies_call_tac callee_modifies ctxt n, modifies_invariant_tac true ctxt n,
                                print_tac ctxt ("do_modifies_one failed (goal " ^ string_of_int n ^ ")")];
   val thm = Goal.prove ctxt (map (fn (Free (v, _)) => v) (state0_var :: arg_vars)) [] ac_modifies_prop
@@ -464,7 +463,7 @@ fun do_modifies_recursive ctxt fn_info (prog_info: ProgramInfo.prog_info) (calle
   val c_modifies_props = map (fn f_name => Thm.prop_of (Proof_Context.get_thm ctxt (f_name ^ "_modifies"))) f_names;
   val modifies_props =
     map2 (gen_modifies_prop ctxt fn_info prog_info) f_names c_modifies_props;
-  val f_defs = map (fn f_name => Proof_Context.get_thm ctxt (f_name ^ "'.simps")) f_names;
+  val f_defs = map (fn f_name => FunctionInfo.get_phase_info fn_info FunctionInfo.TS f_name |> #definition) f_names;
 
   fun free_name (Free (v, _)) = v;
 
@@ -602,13 +601,13 @@ fun prove_modifies
       (thm_names: string list)
       ctxt
       : (thm list * Proof.context) option = let
-    val f_infos = map (FunctionInfo.get_function_def fn_info) f_names;
+    val f_infos = map (FunctionInfo.get_function_info fn_info) f_names;
     val maybe_thms =
         if length f_names = 1 andalso #is_simpl_wrapper (hd f_infos)
         then let
           val f_name = hd f_names;
           val _ = tracing (f_name ^ " is un-translated; transferring C-parser's modifies rule directly")
-          val f_def = Proof_Context.get_thm ctxt (f_name ^ "'_def");
+          val f_def = FunctionInfo.get_phase_info fn_info FunctionInfo.TS f_name |> #definition;
           val orig_modifies = Proof_Context.get_thm ctxt (f_name ^ "_modifies");
           val transfer_thm = @{thm autocorres_modifies_transfer};
           val thm = transfer_thm OF [f_def, orig_modifies];
@@ -658,15 +657,18 @@ fun new_modifies_rules filename ctxt = let
     (* Assume that the user has already generated and named modifies rules
      * for previously-translated callees. *)
     val existing_modifies =
-          Symtab.dest (FunctionInfo.get_functions fn_info)
+          Symtab.dest (FunctionInfo.get_all_functions fn_info)
           |> List.mapPartial (fn (fn_name, fn_def) =>
-               if not (#finished fn_def) then NONE else
-                 SOME (fn_name, Proof_Context.get_thm ctxt (fn_name ^ "'_modifies")))
-    val all_function_groups = FunctionInfo.get_topo_sorted_functions fn_info;
+               try (fn _ => (fn_name, Proof_Context.get_thm ctxt (fn_name ^ "'_modifies"))) ())
+          |> Symtab.make;
+    val all_function_groups =
+          FunctionInfo.map_fn_info (fn info =>
+              if Symtab.defined existing_modifies (#name info) then NONE else SOME info) fn_info
+          |> FunctionInfo.get_topo_sorted_functions;
     val (callee_modifies, results, ctxt') =
           fold (define_modifies_group fn_info prog_info)
-               all_function_groups (build_incr_net (map snd existing_modifies),
-                                    Symtab.make existing_modifies, ctxt)
+               all_function_groups (build_incr_net (Symtab.dest existing_modifies |> map snd),
+                                    existing_modifies, ctxt)
 in ctxt' end
 
 end;

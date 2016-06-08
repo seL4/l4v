@@ -23,16 +23,28 @@ ML \<open>
   val fn_info: FunctionInfo.fn_info =
       the (Symtab.lookup (AutoCorresFunctionInfo.get @{theory}) "function_info.c")
 \<close>
-  
+
 text \<open>
   One FunctionInfo.fn_info structure is generated for each translated file.
   See the FunctionInfo structure for details about the stored data.
   As a start, we can show all function definitions:
 \<close>
 ML \<open>
-  FunctionInfo.get_functions fn_info |> Symtab.dest |> map snd
+  FunctionInfo.get_all_functions fn_info |> Symtab.dest |> map snd
   |> app (fn f => writeln ("Definition of " ^ #name f ^ ":\n" ^
-                    Syntax.string_of_term @{context} (Thm.prop_of (#definition f))))
+                    Syntax.string_of_term @{context}
+                      (Thm.prop_of (#definition (FunctionInfo.get_1_phase_info f FunctionInfo.TS)))))
+\<close>
+
+text \<open>
+  AutoCorres also records intermediate function definitions:
+\<close>
+ML \<open>
+  FunctionInfo.get_all_functions fn_info |> Symtab.dest |> map snd
+  |> app (fn f => writeln ("Intermediate definitions of " ^ #name f ^ ":\n" ^
+                    String.concat ([FunctionInfo.CP, FunctionInfo.L1, FunctionInfo.L2, FunctionInfo.HL, FunctionInfo.WA]
+                      |> map (fn phase => Syntax.string_of_term @{context}
+                                (Thm.prop_of (#definition (FunctionInfo.get_1_phase_info f phase))) ^ "\n"))))
 \<close>
 
 section \<open>Heap info\<close>

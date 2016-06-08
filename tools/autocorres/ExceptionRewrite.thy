@@ -18,11 +18,6 @@ definition "always_fail P A \<equiv> \<forall>s. P s \<longrightarrow> (A s = ({
 lemma always_fail_fail [simp]: "always_fail P fail"
   by (clarsimp simp: always_fail_def fail_def)
 
-lemma no_return_throwError [simp]: "no_return P (throwError x)"
-  apply (clarsimp simp: no_return_def)
-  apply wp
-  done
-
 lemma bindE_alwaysfail_lhs: "\<lbrakk> always_fail \<top> L \<rbrakk> \<Longrightarrow> always_fail \<top> (L >>=E R)"
   apply (clarsimp simp: always_fail_def bindE_def bind_def throwError_def)
   done
