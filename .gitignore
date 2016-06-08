@@ -14,6 +14,14 @@ spec/cspec/c/plat/
 spec/cspec/c/sources_list_updated
 spec/cspec/c/autoconf.h
 
+spec/haskell/doc/**/*.aux
+spec/haskell/doc/**/*.bbl
+spec/haskell/doc/**/*.blg
+spec/haskell/doc/**/*.log
+spec/haskell/doc/**/*.mpx
+spec/haskell/doc/**/*.out
+spec/haskell/doc/**/*.toc
+
 **/CFunDump.txt
 **/umm_types.txt
 
