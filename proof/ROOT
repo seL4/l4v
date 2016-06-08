@@ -41,10 +41,6 @@ session BaseRefine = AInvs +
   theories
     "refine/Include"
 
-session AInvs_AutoLevity = AInvs +
-  theories
-    "../lib/AutoLevity_Run"
-
 session AInvs = ASpec +
   theories
     "invariant-abstract/AInvs"
