@@ -22,6 +22,59 @@ install_C_file "type_strengthen.c"
    For example, suppose that we do not want to lift loops to the option monad: *)
 declare gets_theE_L2_while [ts_rule option del]
 
+context type_strengthen begin
+ML \<open>
+let val fn_info = FunctionInfo.init_fn_info @{context} "type_strengthen.c"
+    val prog_info = ProgramInfo.get_prog_info @{context} "type_strengthen.c"
+    val (corres1, frees1) = SimplConv2.convert @{context} prog_info fn_info true true false (fn f => "l1_" ^ f) "opt_j";
+    val (corres2, frees2) = SimplConv2.convert @{context} prog_info fn_info true true false (fn f => "l1_" ^ f) "st_i";
+    (*val thm' = Thm.generalize ([], map fst frees) (Thm.maxidx_of thm + 1) thm*)
+    val lthy0 = @{context};
+    val (l1_infos1, lthy1) =
+          SimplConv2.define lthy0 "type_strengthen.c" prog_info fn_info true
+              Symtab.empty
+              (fn f => "l1_" ^ f)
+              [("opt_j", corres1, frees1)]
+    val (l1_infos2, lthy2) =
+          SimplConv2.define lthy1 "type_strengthen.c" prog_info fn_info true
+              l1_infos1
+              (fn f => "l1_" ^ f)
+              [("st_i", corres2, frees2)]
+    in (frees1, corres1, Symtab.dest l1_infos2) end
+\<close>
+
+ML \<open>
+let val filename = "type_strengthen.c";
+    val fn_info = FunctionInfo.init_fn_info @{context} filename;
+    val prog_info = ProgramInfo.get_prog_info @{context} filename;
+    val l1_results =
+      SimplConv2.translate filename prog_info fn_info
+        true true false (fn f => "l1_" ^ f ^ "'") @{context};
+(*
+    val l2_results =
+      LocalVarExtract2.translate filename prog_info fn_info l1_results
+        true false (fn f => "l2_" ^ f ^ "'");
+*)
+in l1_results |> map (snd #> Future.join) |> map (snd #> Symtab.dest) end
+\<close>
+
+ML \<open>
+FunctionInfo.is_function_recursive (FunctionInfo.init_fn_info @{context} "type_strengthen.c") "opt_a"
+\<close>
+
+ML \<open>
+FunctionInfo.get_topo_sorted_functions (FunctionInfo.init_fn_info @{context} "type_strengthen.c")
+\<close>
+end
+
+declare [[ML_print_depth=99]]
+autocorres [
+  ts_rules = nondet,
+  scope = st_i,
+  skip_heap_abs, skip_word_abs
+  ] "type_strengthen.c"
+
+
 (* We can also specify which monads are used for type strengthening.
    Here, we exclude the read-only monad completely, and specify
    rules for some individual functions. *)
@@ -32,6 +85,7 @@ autocorres [
   ] "type_strengthen.c"
 
 context type_strengthen begin
+
 (* pure_f (and indirectly, pure_f2) are now lifted to the option monad. *)
 thm pure_f'_def pure_f2'_def
 thm pure_g'_def pure_h'_def

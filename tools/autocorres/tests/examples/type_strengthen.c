@@ -149,6 +149,10 @@ unsigned opt_a(unsigned m, unsigned n) {
   return opt_a(m - 1, opt_a(m, n - 1));
 }
 
+/* Test for measure_call */
+unsigned opt_a2(unsigned n) {
+  return opt_a(n, n);
+}
 
 
 /*********************

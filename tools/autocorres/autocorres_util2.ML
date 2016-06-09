@@ -9,87 +9,10 @@
  *)
 
 (*
- * High-level use of AutoCorres
+ * Common code for all translation phases: defining funcs, calculating dependencies, variable fixes, etc.
  *)
-signature AUTOCORRES_UTIL =
-sig
-  val translate :
-        local_theory
-        -> FunctionInfo.phase
-        -> FunctionInfo.fn_info
-        (* initial callee data *)
-        -> 'b Symtab.table
-        (* convert *)
-        -> (local_theory -> string -> 'a)
-        (* define *)
-        -> (local_theory -> 'b Symtab.table -> 'c -> (string * 'a) list -> ('b list * 'c * local_theory))
-        (* update function info *)
-        -> (local_theory -> 'c -> FunctionInfo.function_info -> FunctionInfo.phase_info)
-        (* prove_mono : ctxt -> function info (after updates) -> mono_thms *)
-        -> (local_theory -> FunctionInfo.function_info list -> thm Symtab.table)
-        -> 'c -> (local_theory * FunctionInfo.fn_info * 'c)
 
-  val do_translation_phase :
-        FunctionInfo.phase
-        (* source file name *)
-        -> string
-        -> ProgramInfo.prog_info -> FunctionInfo.fn_info
-        (* generate fn type *)
-        -> (string -> typ)
-        (* generate fn assumption : ctxt -> fn_name -> free -> args -> recursive ->
-                                    measure -> assm *)
-        -> (local_theory -> string -> term -> term list -> bool -> term -> term)
-        (* generate fn args *)
-        -> (string -> (string * typ) list)
-        (* generate fn name *)
-        -> (string -> string)
-        (* convert : ctxt -> fn_name -> callee_terms -> measure -> args -> (tracing setting, fn, corres_thm)
-           [ callee_terms : (recursive, callee, corres_thm) table ] *)
-        -> (local_theory -> string -> ((bool * term * thm) Symtab.table)
-            -> term -> term list -> (term * thm * (string * AutoCorresData.Trace) list))
-        (* update function info *)
-        -> (local_theory -> FunctionInfo.function_info -> FunctionInfo.phase_info)
-        (* prove_mono *)
-        -> (local_theory -> FunctionInfo.function_info list -> thm Symtab.table)
-        (* recursion basecase *)
-        -> thm
-        -> Proof.context
-        (* result *)
-        -> (Proof.context * FunctionInfo.fn_info)
-
-  val define_funcs:
-        FunctionInfo.phase ->
-        string ->
-        FunctionInfo.fn_info ->
-        (string -> string) ->
-        (string -> typ) ->
-        (Proof.context -> string -> term -> term list -> bool -> term -> term) ->
-        (string -> (string * typ) list) ->
-        thm ->
-        Proof.context ->
-        thm Symtab.table ->
-        'a ->
-        (string * (thm * term * (string * AutoCorresData.Trace) list)) list ->
-        thm list * 'a * Proof.context
-
-  val map_all : Proof.context -> FunctionInfo.fn_info -> (string -> FunctionInfo.function_info -> 'a) -> 'a list
-  val concurrent : bool Unsynchronized.ref
-  val has_simpl_body_def : local_theory -> string -> bool
-  val max_run_time : Time.time option Unsynchronized.ref
-
-  val assume_called_functions_corres :
-        Proof.context ->
-        (string * bool) list ->
-        (string -> typ) ->
-        (Proof.context -> string -> term -> term list -> bool -> term -> term) ->
-        (string -> (string * typ) list) ->
-        (string -> string) ->
-        term ->
-        Proof.context * morphism * (string * (bool * term * thm)) list
-  val get_callees : FunctionInfo.fn_info -> string -> string list * string list (* (nonrecs, recs) *)
-end;
-
-structure AutoCorresUtil : AUTOCORRES_UTIL =
+structure AutoCorresUtil2 =
 struct
 
 (*
@@ -97,6 +20,7 @@ struct
  *
  * Note that this is wall time, and not CPU time, so it is a very rough
  * tool.
+ * FIXME: convert to proper option
  *)
 val max_run_time = Unsynchronized.ref NONE
 (*
@@ -508,8 +432,8 @@ fun define_funcs
 
     val _ = writeln ("Defining (" ^ FunctionInfo.string_of_phase phase ^ ") " ^
                      (Utils.commas (map get_const_name fn_names)))
-    val _ = @{trace} ("define_funcs function(s)", functions)
-    val _ = @{trace} ("define_funcs callee(s)", Symtab.dest callee_thms)
+    val _ = @{trace} ("function(s)", functions)
+    val _ = @{trace} ("callee(s)", Symtab.dest callee_thms)
 
     (*
      * Determine if we are in a recursive case by checking to see if the
@@ -619,7 +543,7 @@ fun define_funcs
     (* Prove each of the predicates above, leaving any assumptions about called
      * functions unsolved. *)
     val pred_thms = map (
-        fn (pred, thm, body_def) => (@{trace} ("define_funcs applying rule", thm);
+        fn (pred, thm, body_def) => (@{trace} thm;
           Thm.trivial (Thm.cterm_of ctxt' pred)
           |> Utils.apply_tac "unfold body" (Hypsubst.stac ctxt' body_def 1)
           |> Utils.apply_tac "apply rule" (resolve_tac ctxt' [thm] 1)

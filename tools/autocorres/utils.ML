@@ -85,6 +85,13 @@ fun enumerate xs = let
 fun nubBy _ [] = []
   | nubBy f (x::xs) = x :: filter (fn y => f x <> f y) (nubBy f xs)
 
+fun accumulate f acc xs = let
+  fun walk results acc [] = (results [], acc)
+    | walk results acc (x::xs) = let
+        val acc' = f x acc;
+        in walk (results o cons acc') acc' xs end;
+  in walk I acc xs end;
+
 (* Define a constant "name" of type "term" into the local theory "lthy". *)
 fun define_const name term lthy =
   let

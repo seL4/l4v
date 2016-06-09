@@ -25,21 +25,29 @@ sig
 
   (* Function info for a single phase. *)
   type phase_info = {
+    phase : phase,
     args : (string * typ) list,
     return_type : typ,
     const : term,
     raw_const : term,
+(*
+    callees : string list,
+    rec_callees : string list,
+*)
     definition : thm,
-    mono_thm : thm option,
-    phase : phase
+    mono_thm : thm option
   };
+  val phase_info_upd_phase       : phase               -> phase_info -> phase_info;
   val phase_info_upd_args        : (string * typ) list -> phase_info -> phase_info;
   val phase_info_upd_return_type : typ                 -> phase_info -> phase_info;
   (* also updates raw_const *)
   val phase_info_upd_const       : term                -> phase_info -> phase_info;
+(*
+  val phase_info_upd_callees     : string list         -> phase_info -> phase_info;
+  val phase_info_upd_rec_callees : string list         -> phase_info -> phase_info;
+*)
   val phase_info_upd_definition  : thm                 -> phase_info -> phase_info;
   val phase_info_upd_mono_thm    : thm option          -> phase_info -> phase_info;
-  val phase_info_upd_phase       : phase               -> phase_info -> phase_info;
 
   (* Function info for a single function. *)
   type function_info = {
@@ -101,6 +109,9 @@ structure Phasetab = Table(
   val ord = phase_ord);
 
 type phase_info = {
+    (* The translation phase for this definition. *)
+    phase : phase,
+
     (* Arguments of the function, in order, excluding measure variables. *)
     args : (string * typ) list,
 
@@ -120,10 +131,7 @@ type phase_info = {
     definition : thm,
 
     (* monad_mono theorem for the function, if it is recursive. *)
-    mono_thm : thm option,
-
-    (* The translation phase for this definition. *)
-    phase : phase
+    mono_thm : thm option
 };
 
 type function_info = {
