@@ -34,6 +34,12 @@ in
   ../complit.ML
   ../program_analysis.ML
   ../syntax_transforms.ML
+  ann
+    "sequenceNonUnit ignore"
+  in
+    GetOpt.sig
+    GetOpt.sml
+  end
   main.sml
   mlton-cparser.sml
 end
