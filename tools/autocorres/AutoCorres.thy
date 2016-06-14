@@ -146,6 +146,7 @@ ML_file "type_strengthen.ML"
 ML_file "autocorres.ML"
 
 declare [[ML_print_depth=42]]
+ML_file "function_info2.ML"
 ML_file "autocorres_util2.ML"
 ML_file "simpl_conv2.ML"
 ML_file "local_var_extract2.ML"
