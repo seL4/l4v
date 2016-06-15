@@ -50,6 +50,8 @@ requalify_consts
   vs_lookup_pages_trans
   vs_refs_pages
 
+  valid_vs_lookup
+
 requalify_facts
   valid_arch_sizes
   aobj_bits_T

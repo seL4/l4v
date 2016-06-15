@@ -12,7 +12,7 @@ theory ArchSchedule_AI
 imports "../Schedule_AI"
 begin
 
-context Arch begin
+context Arch begin global_naming ARM
 
 named_theorems Schedule_AI_asms
 

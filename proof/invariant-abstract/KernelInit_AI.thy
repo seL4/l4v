@@ -12,7 +12,7 @@
 *)
 
 theory KernelInit_AI
-imports ADT_AI Tcb_AI Arch_AI
+imports ADT_AI Tcb_AI Arch_AI "../../lib/NICTATools"
 begin
 
 context Arch begin global_naming ARM (*FIXME: arch_split*)
@@ -229,6 +229,8 @@ lemma caps_of_state_init_A_st_Null:
 lemmas cte_wp_at_caps_of_state_eq
     = cte_wp_at_caps_of_state[where P="op = cap" for cap]
 
+declare ptrFormPAddr_addFromPPtr[simp]
+
 lemma invs_A:
   "invs init_A_st"
 
@@ -276,7 +278,7 @@ lemma invs_A:
    apply (simp add: valid_ioc_def init_A_st_def init_ioc_def cte_wp_at_cases2)
    apply (intro allI impI, elim exE conjE)
    apply (case_tac obj, simp_all add: cap_of_def)
-   apply (clarsimp simp: init_kheap_def wf_empty split: split_if_asm)
+   apply (clarsimp simp: init_kheap_def split: split_if_asm)
   apply (rule conjI)
    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs)
   apply (rule conjI)

@@ -794,6 +794,13 @@ global_interpretation Retype_AI_valid_untyped_helper?: Retype_AI_valid_untyped_h
   qed
 
 
+locale retype_region_proofs_arch
+  = retype_region_proofs s ty us ptr sz n ps s'
+  + Arch
+  for s :: "'state_ext :: state_ext state"
+  and ty us ptr sz n ps s'
+
+
 context retype_region_proofs begin
 
 interpretation Arch .

@@ -1207,8 +1207,8 @@ lemma invoke_untyped_valid_pdpt[wp]:
       apply (frule detype_invariants)
          apply simp
         apply (clarsimp simp:blah descendants_range_def2)
-       apply ((simp add: invs_untyped_children blah
-               invs_valid_reply_caps invs_valid_reply_masters)+)[6]
+       apply (simp add: invs_untyped_children blah
+               invs_valid_reply_caps invs_valid_reply_masters)+
       done
 
       have delete_objects_rewrite:

@@ -15,9 +15,9 @@ begin
 locale IpcCancel_AI = 
   fixes state_ext_type :: "('a :: state_ext) itself" 
   assumes set_endpoint_eq_ker_map: 
-    "\<lbrace>equal_kernel_mappings\<rbrace> (set_endpoint a b :: (unit, 'a) s_monad) \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
+    "\<And>a b. \<lbrace>equal_kernel_mappings\<rbrace> (set_endpoint a b :: (unit, 'a) s_monad) \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
   assumes set_endpoint_v_ker_map: 
-    "\<lbrace>valid_kernel_mappings\<rbrace> (set_endpoint a b :: (unit, 'a) s_monad) \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
+    "\<And>a b. \<lbrace>valid_kernel_mappings\<rbrace> (set_endpoint a b :: (unit, 'a) s_monad) \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
 
 lemma blocked_cancel_ipc_simple:
   "\<lbrace>tcb_at t\<rbrace> blocked_cancel_ipc ts t \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"

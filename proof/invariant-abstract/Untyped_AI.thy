@@ -2667,8 +2667,8 @@ lemma ps_no_overlap[simp]: "ptr && ~~ mask sz \<noteq> ptr \<Longrightarrow> psp
     apply (frule detype_invariants)
     apply (simp)
     apply (clarsimp simp:blah descendants_range_def2)
-    apply ((simp add: invs_untyped_children blah
-      invs_valid_reply_caps invs_valid_reply_masters)+)[6]
+    apply (simp add: invs_untyped_children blah
+                     invs_valid_reply_caps invs_valid_reply_masters)+
     done
 
 end
@@ -4056,8 +4056,8 @@ lemma invoke_untyp_invs':
       apply (frule detype_invariants)
          apply simp
         apply (clarsimp simp:blah descendants_range_def2)
-       apply ((simp add: invs_untyped_children blah
-               invs_valid_reply_caps invs_valid_reply_masters)+)[6]
+       apply (simp add: invs_untyped_children blah
+                        invs_valid_reply_caps invs_valid_reply_masters)+
       done
     have detype_Q:
        "ptr && ~~ mask sz = ptr \<Longrightarrow> Q (detype ?usable_range (clear_um ?usable_range s))"

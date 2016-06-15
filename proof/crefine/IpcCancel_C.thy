@@ -1013,7 +1013,7 @@ lemma bool_protectI:
   one manually, but want to indicate that any fresh emerging goals are solved by a more
   brutal method.
   E.g. apply (solves_emerging \<open>frule x=... in my_rule\<close>\<open>fastforce simp: ... intro!: ... \<close>  *)
-method solves_emerging methods m1 m2 = (rule bool_protectD, (m1 ; (rule bool_protectI | solves \<open>m2\<close>)))
+method solves_emerging methods m1 m2 = (rule bool_protectD, (m1 ; (rule bool_protectI | (m2; fail))))
 
 end
 

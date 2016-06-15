@@ -1809,13 +1809,6 @@ locale retype_region_proofs =
       and "s' \<equiv> kheap_update (\<lambda>y. ps) s"
 
 
-locale retype_region_proofs_arch
-  = retype_region_proofs s ty us ptr sz n ps s'
-  + Arch
-  for s :: "'state_ext :: state_ext state"
-  and ty us ptr sz n ps s'
-
-
 locale retype_region_proofs_gen
   = retype_region_proofs s ty us ptr sz n ps s'
   + Retype_AI_slot_bits
