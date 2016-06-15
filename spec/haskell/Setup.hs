@@ -21,7 +21,6 @@ main = do
     }
     defaultMainWithHooksArgs hooks args
 
-
 buildLibQEmu :: Args -> BuildFlags -> IO HookedBuildInfo
 buildLibQEmu args flags = do
     putStrLn "Building haskell sel4 ..."
@@ -33,40 +32,40 @@ printKnownTargets = do
     mapM_ (putStrLn.('\t':).fst) targets
 
 targets =
-    [ ("arm-exynos",    ("ARM", "Exynos4210"))
-    , ("arm-kzm",       ("ARM", "KZM"))
-    , ("arm-sabre",     ("ARM", "Sabre"))
-    , ("x64-pc99",      ("X64", "PC99"))
-    , ("arm-tk1",       ("ARM_HYP", "TK1"))
+    [ ("arm-exynos",    ("ARM",     "Exynos4210",   []))
+    , ("arm-kzm",       ("ARM",     "KZM",          []))
+    , ("arm-sabre",     ("ARM",     "Sabre",        []))
+    , ("x64-pc99",      ("X64",     "PC99",         []))
+    , ("arm-tk1",       ("ARM_HYP", "TK1",          ["CONFIG_ARM_HYPERVISOR_SUPPORT"]))
     ]
 
-getPlatform :: Maybe String -> IO (Maybe (String, String))
+getPlatform :: Maybe String -> IO (Maybe (String, String, [String]))
 getPlatform targetName =
       return $ do
         targetName <- targetName
-        (_, target) <- find ((==targetName).fst) targets
-        return target
+        snd <$> find ((==targetName).fst) targets
 
 readDescHook :: Maybe String -> IO (Maybe GenericPackageDescription)
 readDescHook targetName = do
     platform <- getPlatform targetName
-    (arch, plat) <- case platform of
+    (arch, plat, extraopts) <- case platform of
        Just p -> return p
        Nothing -> do
          putStrLn "Please specify a target: --configure-option=\"<target>\""
          printKnownTargets
          fail "No target"
     dscp <- readPackageDescription normal "SEL4.cabal"
-    let pkg_lib = condLibrary dscp
-    pkg_lib_upd <- case pkg_lib of
+    pkg_lib_upd <- case condLibrary dscp of
       Just CondNode {condTreeData = lib,condTreeConstraints = cons,condTreeComponents=comp} -> do
         bi_upd <- do
           let bi = libBuildInfo lib
           let opts = cppOptions bi ++ ["-DPLATFORM=" ++ plat] ++ ["-DTARGET=" ++ arch]
-                                           ++ ["-DPLATFORM_" ++ plat] ++ ["-DTARGET_" ++ arch]
+                                   ++ ["-DPLATFORM_" ++ plat] ++ ["-DTARGET_" ++ arch]
+                                   ++ ["-D" ++ opt | opt <- extraopts ]
           return $ bi { cppOptions = opts }
-        return $ Just CondNode {condTreeData = lib { libBuildInfo = bi_upd},
-                 condTreeConstraints = cons, condTreeComponents = comp}
+        return $ Just CondNode {condTreeData = lib { libBuildInfo = bi_upd}
+                               ,condTreeConstraints = cons
+                               ,condTreeComponents = comp}
       Nothing -> return Nothing
     let dscp_upd = dscp { condLibrary = pkg_lib_upd}
     print dscp_upd
