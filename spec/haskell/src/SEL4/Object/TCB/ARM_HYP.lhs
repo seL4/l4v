@@ -12,7 +12,7 @@ This module contains ARM-specific TCB management functions. Specifically, these 
 
 There are presently no ARM-specific register subsets defined, but in future this may be extended to transfer floating point registers and other coprocessor state.
 
-> module SEL4.Object.TCB.ARM where
+> module SEL4.Object.TCB.ARM_HYP where
 
 \begin{impdetails}
 
@@ -20,7 +20,7 @@ There are presently no ARM-specific register subsets defined, but in future this
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
-> import SEL4.API.Invocation.ARM
+> import SEL4.API.Invocation.ARM_HYP
 
 > import Data.Word(Word8)
 

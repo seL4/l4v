@@ -11,7 +11,7 @@
 This module defines the machine-specific interrupt handling routines for the ARM.
 Apparently ARM does not have any.
 
-> module SEL4.Object.Interrupt.ARM where
+> module SEL4.Object.Interrupt.ARM_HYP where
 
 \begin{impdetails}
 
@@ -19,7 +19,7 @@ Apparently ARM does not have any.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
-> import SEL4.API.Invocation.ARM as ArchInv
+> import SEL4.API.Invocation.ARM_HYP as ArchInv
 
 \end{impdetails}
 

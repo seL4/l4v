@@ -10,14 +10,14 @@
 
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, GeneralizedNewtypeDeriving #-}
 
-module SEL4.Machine.Hardware.ARM.KZM where
+module SEL4.Machine.Hardware.ARM_HYP.TK1 where -- FIXME this is just a copy of KZM
 
 import SEL4.Machine.RegisterSet
 import Foreign.Ptr
 import Data.Bits
 import Data.Word(Word8)
 import Data.Ix
-import SEL4.Machine.Hardware.ARM.Callbacks
+import SEL4.Machine.Hardware.ARM_HYP.Callbacks
 
 
 newtype IRQ = IRQ Word8

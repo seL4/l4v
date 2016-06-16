@@ -8,7 +8,6 @@
 # @TAG(GD_GPL)
 #
 
-
 BOOT_MODULES = Kernel/CSpace Kernel/Thread Kernel/FaultHandler \
     Kernel/VSpace Kernel/Init Model/PSpace Object/TCB Object/CNode \
     Object/ObjectType Object/Endpoint Object/Interrupt
@@ -67,4 +66,4 @@ clean:
 realclean:
 	rm -rf $(BOOT_FILES) dist .stack-work .cabal-sandbox cabal.sandbox.config
 
-.PHONY: all build pdf clean realclean
+.PHONY: all build build-arm-hyp pdf clean realclean

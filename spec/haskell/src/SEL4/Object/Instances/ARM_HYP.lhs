@@ -10,11 +10,11 @@
 
 This module defines instances of "PSpaceStorable" for ARM-specific kernel objects. This includes page table and page directory entries, and ASID pools.
 
-> module SEL4.Object.Instances.ARM where
+> module SEL4.Object.Instances.ARM_HYP where
 
 \begin{impdetails}
 
-> import SEL4.Machine.Hardware.ARM(PTE(..), PDE(..))
+> import SEL4.Machine.Hardware.ARM_HYP(PTE(..), PDE(..))
 > import SEL4.Object.Structures
 > import SEL4.Model
 > import Data.Helpers
@@ -42,4 +42,6 @@ This module defines instances of "PSpaceStorable" for ARM-specific kernel object
 >     projectKO o = case o of
 >         KOArch (KOASIDPool e) -> return e
 >         _ -> typeError "ASID pool" o
+
+FIXME ARMHYP not looked at these at all, assuming type error will happen when we try store/load an object type we haven't indicated is PSpaceStorable
 

@@ -16,7 +16,7 @@
 
 This module defines the low-level ARM hardware interface.
 
-> module SEL4.Machine.Hardware.ARM where
+> module SEL4.Machine.Hardware.ARM_HYP where
 
 \begin{impdetails}
 
@@ -31,9 +31,9 @@ This module defines the low-level ARM hardware interface.
 
 The ARM-specific register set definitions are qualified with the "ARM" prefix, and the platform-specific hardware access functions are qualified with the "Platform" prefix. The latter module is outside the scope of the reference manual; for the executable model, it is specific to the external simulator used for user-level code.
 
-> import qualified SEL4.Machine.RegisterSet.ARM as ARM
-> import qualified SEL4.Machine.Hardware.ARM.Callbacks as Platform
-> import qualified SEL4.Machine.Hardware.ARM.PLATFORM as Platform
+> import qualified SEL4.Machine.RegisterSet.ARM_HYP as ARM
+> import qualified SEL4.Machine.Hardware.ARM_HYP.Callbacks as Platform
+> import qualified SEL4.Machine.Hardware.ARM_HYP.PLATFORM as Platform
 
 \subsection{Data Types}
 
@@ -49,6 +49,10 @@ The machine monad contains a platform-specific opaque pointer, used by the exter
 >     deriving (Num, Enum, Bounded, Ord, Ix, Eq, Show)
 
 > toPAddr = Platform.PAddr
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> type VCPU = PAddr -- FIXME ARMHYP PAddr, VAddr, or what?
+#endif
 
 \subsubsection{Virtual Memory}
 
@@ -66,6 +70,10 @@ ARM virtual memory faults are handled by one of two trap handlers: one for data 
 > data VMFaultType
 >     = ARMDataAbort
 >     | ARMPrefetchAbort
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     | ARMVCPUFault Word -- FIXME ARMHYP do we care about hsr for VCPU fault? hsr gets passed in from the asm code in the exception handler, there's no way to get it after
+>     | ARMVGICMaintenanceFault -- FIXME ARMHYP do we want any parameters?
+#endif
 >     deriving Show
 
 \subsubsection{Physical Memory}
@@ -93,8 +101,13 @@ The following functions define the ARM-specific interface between the kernel and
 > pageBitsForSize :: VMPageSize -> Int
 > pageBitsForSize ARMSmallPage = 12
 > pageBitsForSize ARMLargePage = 16
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 > pageBitsForSize ARMSection = 20
 > pageBitsForSize ARMSuperSection = 24
+#else
+> pageBitsForSize ARMSection = 21
+> pageBitsForSize ARMSuperSection = 25
+#endif
 
 > getMemoryRegions :: MachineMonad [(PAddr, PAddr)]
 > getMemoryRegions = do
@@ -151,7 +164,6 @@ The following functions define the ARM-specific interface between the kernel and
 > initIRQController = do
 >     cbptr <- ask
 >     liftIO $ Platform.initIRQController cbptr
-
 
 > resetTimer :: MachineMonad ()
 > resetTimer = do
@@ -219,6 +231,8 @@ caches must be done separately.
 >     cbptr <- ask
 >     liftIO $ Platform.writeTTBR0 cbptr pd
 
+FIXME ARMHYP this uses ARM\_HYP config option in C, in which case it calls setCurrentPDPL2(addr) instead of what is currently here
+
 > setCurrentPD :: PAddr -> MachineMonad ()
 > setCurrentPD pd = do
 >     dsb
@@ -229,6 +243,9 @@ caches must be done separately.
 > setHardwareASID (HardwareASID hw_asid) = do
 >     cbptr <- ask
 >     liftIO $ Platform.setHardwareASID cbptr hw_asid
+
+> writeContextIDAndPD :: HardwareASID -> PAddr -> MachineMonad ()
+> writeContextIDAndPD = error "FIXME ARMHYP  machine callback unimplemented"
 
 \subsubsection{Memory Barriers}
 
@@ -418,14 +435,25 @@ implementation assumes the monitor is not modelled in our simulator.
 >     cbptr <- ask
 >     liftIO $ Platform.getDFSR cbptr
 
+> getHSR :: MachineMonad Word
+> getHSR = error "FIXME ARMHYP machine callback unimplemented"
+
 > getFAR :: MachineMonad VPtr
 > getFAR = do
 >     cbptr <- ask
 >     liftIO $ Platform.getFAR cbptr
 
+> getHDFAR :: MachineMonad VPtr
+> getHDFAR = error "FIXME ARMHYP machine callback unimplemented"
+
+> addressTranslateS1CPR :: VPtr -> MachineMonad VPtr
+> addressTranslateS1CPR = error "FIXME ARMHYP machine callback unimplemented"
+
 \subsubsection{Page Table Structure}
 
 The ARM architecture defines a two-level hardware-walked page table. The kernel must write entries to this table in the defined format to construct address spaces for user-level tasks.
+
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 
 The following types are Haskell representations of an entry in an ARMv6 page table. The "PDE" (page directory entry) type is an entry in the first level, and the "PTE" (page table entry) type is an entry in the second level. Note that "SuperSectionPDE" is an extension provided by some ARMv6 cores.
 
@@ -506,6 +534,97 @@ The following types are Haskell representations of an entry in an ARMv6 page tab
 >     (if global then 0 else bit 11) .|.
 >     (fromIntegral $ fromEnum rights `shiftL` 4)
 
+#else /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
+Hypervisor extensions use long page table descriptors (64-bit) for the stage 2
+translation (host-to-hypervisor). This is a three-level table system, but the
+hardware can be configured to omit the first level entirely if all second
+levels are stored contiguously. We use this configuration to preserve the usual
+page table/directory nomenclature.
+
+> -- FIXME ARMHYP what about stored_hw_asid? XN? AF? SH? HAP? MemAttr? TEX? etc?
+> -- FIXME ARMHYP global (SH) is never used so I don't know what a global page's SH would look like
+> -- FIXME ARMHYP what happened to parity and domain?
+
+> data PDE
+>     = InvalidPDE -- FIXME ARMHYP where is stored_hw_asid?
+>     | PageTablePDE {
+>         pdeTable :: PAddr }
+>     | SectionPDE {
+>         pdeFrame :: PAddr,
+>         pdeCacheable :: Bool,
+>         pdeExecuteNever :: Bool,
+>         pdeRights :: VMRights }
+>     | SuperSectionPDE {
+>         pdeFrame :: PAddr,
+>         pdeCacheable :: Bool,
+>         pdeExecuteNever :: Bool,
+>         pdeRights :: VMRights }
+>     deriving (Show, Eq)
+
+> hapFromVMRights :: VMRights -> Word
+> hapFromVMRights r =
+>     case r of VMKernelOnly -> 0
+>               VMNoAccess -> 0
+>               VMReadOnly -> 1
+>               VMReadWrite -> 3
+
+FIXME ARMHYP want refactor on both sides write a list to either word list or a structure!
+FIXME ARMHYP ask somebody what the most convenient refinement would be
+
+> wordsFromPDE :: PDE -> [Word]
+> wordsFromPDE InvalidPDE = [0, 0]
+> wordsFromPDE (PageTablePDE table) = [w0, 0]
+>     where w0 = 3 .|.
+>                (fromIntegral table .&. 0xfffff000)
+> wordsFromPDE (SectionPDE frame cacheable xn rights) = [w0, w1]
+>     where w1 = 0 .|. (if xn then bit 22 else 0) -- no contig. hint
+>           w0 = 1 .|.
+>                (fromIntegral frame .&. 0xfffff000) .|.
+>                bit 10 .|. -- AF
+>                (hapFromVMRights rights `shiftL` 6) .|.
+>                (if cacheable then 0xf `shiftL` 2 else 0)
+> wordsFromPDE (SuperSectionPDE frame cacheable xn rights) = [w0, w1]
+>     where w1 = 0 .|. (if xn then bit 22 else 0) .|. bit 20 -- contig. hint
+>           w0 = 1 .|.
+>                (fromIntegral frame .&. 0xfffff000) .|.
+>                bit 10 .|. -- AF
+>                (hapFromVMRights rights `shiftL` 6) .|.
+>                (if cacheable then 0xf `shiftL` 2 else 0)
+
+> data PTE
+>     = InvalidPTE
+>     | LargePagePTE {
+>         pteFrame :: PAddr,
+>         pteCacheable :: Bool,
+>         pteExecuteNever :: Bool,
+>         pteRights :: VMRights }
+>     | SmallPagePTE {
+>         pteFrame :: PAddr,
+>         pteCacheable :: Bool,
+>         pteExecuteNever :: Bool,
+>         pteRights :: VMRights }
+>     deriving (Show, Eq)
+
+> wordsFromPTE :: PTE -> [Word]
+> wordsFromPTE InvalidPTE = [0, 0]
+> wordsFromPTE (SmallPagePTE frame cacheable xn rights) = [w0, w1]
+>     where w1 = 0 .|. (if xn then bit 22 else 0) .|. bit 20 -- contig. hint
+>           w0 = 3 .|.
+>                (fromIntegral frame .&. 0xfffff000) .|.
+>                bit 10 .|. -- AF
+>                (hapFromVMRights rights `shiftL` 6) .|.
+>                (if cacheable then 0xf `shiftL` 2 else 0)
+> wordsFromPTE (LargePagePTE frame cacheable xn rights) = [w0, w1]
+>     where w1 = 0 .|. (if xn then bit 22 else 0) -- no contig. hint
+>           w0 = 3 .|.
+>                (fromIntegral frame .&. 0xfffff000) .|.
+>                bit 10 .|. -- AF
+>                (hapFromVMRights rights `shiftL` 6) .|.
+>                (if cacheable then 0xf `shiftL` 2 else 0)
+
+#endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
 > data VMRights
 >     = VMNoAccess
 >     | VMKernelOnly
@@ -516,16 +635,87 @@ The following types are Haskell representations of an entry in an ARMv6 page tab
 > data VMAttributes = VMAttributes {
 >     armPageCacheable, armParityEnabled, armExecuteNever :: Bool }
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+With hypervisor extensions enabled, page table and page directory entries occupy
+8 bytes. Page directories occupy four frames, and page tables occupy a frame.
+
+> pteBits = (3 :: Int)
+> pdeBits = (3 :: Int)
+> pdBits = (11 :: Int) + pdeBits
+> ptBits = (9 :: Int) + pteBits
+> vcpuBits = (pageBits :: Int)
+
+#else /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
 ARM page directories and page tables occupy four frames and one quarter of a frame, respectively.
 
-> pdBits :: Int
-> pdBits = pageBits + 2
+> pteBits = (2 :: Int)
+> pdeBits = (2 :: Int)
+> pdBits = (12 :: Int) `shiftL` pdeBits
+> ptBits = (8 :: Int) `shiftL` pteBits
 
-> ptBits :: Int
-> ptBits = pageBits - 2
+FIXME ARMHYP this is a bit silly: in the C code we have pdBits be 12 and ptBits 8,
+not the size of the whole thing. In fact, in the haskell we often have to shift pdBits right by the size of the PDE, which get by calling objBits on a new PDE...
+FIXME ARMHYP therefore pdeBits and pteBits are not used much outside of here
+
+#endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
 > cacheLineBits = Platform.cacheLineBits
 > cacheLine = Platform.cacheLine
+
+#ifdef CONFIG_ARM_SMMU
+
+\subsubsection{IO Page Table Structure}
+
+> ioptBits :: Int
+> ioptBits = pageBits
+
+FIXME ARMHYP this is really platform code (TK1), move there
+FIXME ARMHYP this is so very very verbose, but there is no way to know if we will care about the differences between a page table IOPDE entry and a 4M section one.
+
+> data IOPDE -- FIXME ARMHYP where is InvalidIOPDE?
+>     = PageTableIOPDE {
+>         iopdeFrame :: PAddr,
+>         iopdeRead :: Bool,
+>         iopdeWrite :: Bool,
+>         iopdeNonsecure :: Bool }
+>     | SectionIOPDE {
+>         iopdeFrame :: PAddr,
+>         iopdeRead :: Bool,
+>         iopdeWrite :: Bool,
+>         iopdeNonsecure :: Bool }
+>     deriving (Show, Eq)
+
+> wordFromIOPDE :: IOPDE -> Word
+> wordFromIOPDE (PageTableIOPDE addr r w ns) = bit 28 .|.
+>         ((fromIntegral addr .&. 0xfffffc00) `shiftR` 10) .|.
+>         (if r then bit 31 else 0) .|.
+>         (if w then bit 30 else 0) .|.
+>         (if ns then bit 29 else 0)
+> wordFromIOPDE (SectionIOPDE addr r w ns) = 0 .|.
+>         ((fromIntegral addr .&. 0xffc00000) `shiftR` 12) .|.
+>         (if r then bit 31 else 0) .|.
+>         (if w then bit 30 else 0) .|.
+>         (if ns then bit 29 else 0)
+
+> data IOPTE -- FIXME ARMHYP where is InvalidIOPTE
+>     = PageIOPTE {
+>         iopteFrame :: PAddr,
+>         iopteRead :: Bool,
+>         iopteWrite :: Bool,
+>         iopteNonsecure :: Bool }
+>     deriving (Show, Eq)
+
+> wordFromIOPTE :: IOPTE -> Word
+> wordFromIOPTE (PageIOPTE addr r w ns) = 0 .|.
+>         ((fromIntegral addr .&. 0xfffff000) `shiftR` 12) .|.
+>         (if r then bit 31 else 0) .|.
+>         (if w then bit 30 else 0) .|.
+>         (if ns then bit 29 else 0)
+
+#endif /* CONFIG_ARM_SMMU */
+
 
 \subsection{Constants}
 
@@ -534,4 +724,7 @@ ARM page directories and page tables occupy four frames and one quarter of a fra
 
 > kernelBase :: VPtr
 > kernelBase = Platform.kernelBase
+
+FIXME ARMHYP MOVE extra machine ops
+
 

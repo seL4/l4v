@@ -10,18 +10,18 @@
 
 This module contains the architecture-specific thread switch code for the ARM.
 
-> module SEL4.Kernel.Thread.ARM where
+> module SEL4.Kernel.Thread.ARM_HYP where
 
 \begin{impdetails}
 
 > import SEL4.Machine
-> import SEL4.Machine.RegisterSet.ARM
+> import SEL4.Machine.RegisterSet.ARM_HYP
 > import SEL4.Model.StateData
-> import SEL4.Model.StateData.ARM
+> import SEL4.Model.StateData.ARM_HYP
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB
-> import SEL4.Kernel.VSpace.ARM
-> import qualified SEL4.Machine.Hardware.ARM as ARMHardware
+> import SEL4.Kernel.VSpace.ARM_HYP
+> import qualified SEL4.Machine.Hardware.ARM_HYP as ARMHardware
 > import {-# SOURCE #-} SEL4.Kernel.Init
 > import SEL4.Model.PSpace
 

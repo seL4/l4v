@@ -8,14 +8,22 @@
 % @TAG(GD_GPL)
 %
 
-This module contains an instance of the machine-specific kernel API for the ARM architecture.
+This module contains an instance of the machine-specific kernel API for the ARM architecture with hypervisor extensions.
 
-> module SEL4.API.Types.ARM where
+> {-# LANGUAGE CPP #-}
+
+> module SEL4.API.Types.ARM_HYP where
 
 > import SEL4.API.Types.Universal(APIObjectType, apiGetObjectSize)
-> import SEL4.Machine.Hardware.ARM
+> import SEL4.Machine.Hardware.ARM_HYP
+> import Data.List (elemIndex)
+> import Data.Maybe (fromJust)
 
 There are three ARM-specific object types: virtual pages, page tables, and page directories.
+
+Hypervisor additions add VCPUs.
+
+I/O MMU additions add IO page table objects. Note that there is only one IO page directory created at kernel boot, which cannot be created or deleted. Hence IO page directories are not considered kernel objects.
 
 > data ObjectType
 >     = APIObjectType APIObjectType
@@ -25,6 +33,12 @@ There are three ARM-specific object types: virtual pages, page tables, and page 
 >     | SuperSectionObject
 >     | PageTableObject
 >     | PageDirectoryObject
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     | VCPUObject
+#endif
+#ifdef CONFIG_ARM_SMMU
+>     | IOPageTableObject
+#endif
 >     deriving (Show, Eq)
 
 > instance Bounded ObjectType where
@@ -32,23 +46,39 @@ There are three ARM-specific object types: virtual pages, page tables, and page 
 >     maxBound = PageDirectoryObject
 
 > instance Enum ObjectType where
->     fromEnum e = case e of
->         APIObjectType a -> fromEnum a
->         SmallPageObject -> apiMax + 1
->         LargePageObject -> apiMax + 2
->         SectionObject -> apiMax + 3
->         SuperSectionObject -> apiMax + 4
->         PageTableObject -> apiMax + 5
->         PageDirectoryObject -> apiMax + 6
->         where apiMax = fromEnum (maxBound :: APIObjectType)
+>     fromEnum e =
+>       case e of
+>           APIObjectType a -> fromEnum a
+>           _ -> apiMax + 1 + archToIndex e
+>           where apiMax = fromEnum (maxBound :: APIObjectType)
+>                 archToIndex c = fromJust $ elemIndex c
+>                     [SmallPageObject
+>                     ,LargePageObject
+>                     ,SectionObject
+>                     ,SuperSectionObject
+>                     ,PageTableObject
+>                     ,PageDirectoryObject
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>                     ,VCPUObject
+#endif
+#ifdef CONFIG_ARM_SMMU
+>                     ,IOPageTableObject
+#endif
+>                     ]
 >     toEnum n
 >         | n <= apiMax = APIObjectType $ toEnum n
->         | n == apiMax + 1 = SmallPageObject
->         | n == apiMax + 2 = LargePageObject
->         | n == apiMax + 3 = SectionObject
->         | n == apiMax + 4 = SuperSectionObject
->         | n == apiMax + 5 = PageTableObject
->         | n == apiMax + 6 = PageDirectoryObject
+>         | n == fromEnum SmallPageObject = SmallPageObject
+>         | n == fromEnum LargePageObject = LargePageObject
+>         | n == fromEnum SectionObject = SectionObject
+>         | n == fromEnum SuperSectionObject = SuperSectionObject
+>         | n == fromEnum PageTableObject = PageTableObject
+>         | n == fromEnum PageDirectoryObject = PageDirectoryObject
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         | n == fromEnum VCPUObject = VCPUObject
+#endif
+#ifdef CONFIG_ARM_SMMU
+>         | n == fromEnum IOPageTableObject = IOPageTableObject
+#endif
 >         | otherwise = error "toEnum out of range for ARM.ObjectType"
 >         where apiMax = fromEnum (maxBound :: APIObjectType)
 
@@ -66,6 +96,11 @@ There are three ARM-specific object types: virtual pages, page tables, and page 
 > getObjectSize SuperSectionObject _ = pageBitsForSize ARMSuperSection
 > getObjectSize PageTableObject _ = ptBits
 > getObjectSize PageDirectoryObject _ = pdBits
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> getObjectSize VCPUObject _ = vcpuBits
+#endif
+#ifdef CONFIG_ARM_SMMU
+> getObjectSize IOPageTableObject _ = ioptBits
+#endif
 > getObjectSize (APIObjectType apiObjectType) size = apiGetObjectSize apiObjectType size
-
 

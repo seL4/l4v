@@ -10,19 +10,19 @@
 
 This module contains operations on machine-specific object types for the ARM.
 
-> module SEL4.Object.ObjectType.ARM where
+> module SEL4.Object.ObjectType.ARM_HYP where
 
 \begin{impdetails}
 
 > import SEL4.Machine.RegisterSet
-> import SEL4.Machine.Hardware.ARM
+> import SEL4.Machine.Hardware.ARM_HYP
 > import SEL4.Model
-> import SEL4.Model.StateData.ARM
+> import SEL4.Model.StateData.ARM_HYP
 > import SEL4.API.Types
 > import SEL4.API.Failures
-> import SEL4.API.Invocation.ARM as ArchInv
+> import SEL4.API.Invocation.ARM_HYP as ArchInv
 > import SEL4.Object.Structures
-> import SEL4.Kernel.VSpace.ARM
+> import SEL4.Kernel.VSpace.ARM_HYP
 
 > import Data.Bits
 > import Data.Array
@@ -31,7 +31,7 @@ This module contains operations on machine-specific object types for the ARM.
 
 The ARM-specific types and structures are qualified with the "Arch.Types" and "Arch.Structures" prefixes, respectively. This is to avoid namespace conflicts with the platform-independent modules.
 
-> import qualified SEL4.API.Types.ARM as Arch.Types
+> import qualified SEL4.API.Types.ARM_HYP as Arch.Types
 
 \subsection{Copying and Mutating Capabilities}
 
@@ -121,7 +121,6 @@ All other capabilities need no finalisation action.
 >       return $ resetMemMapping cap
 >
 > recycleCap is_final (cap@PageTableCap { capPTBasePtr = ptr }) = do
->     let pteBits = objBits InvalidPTE
 >     let slots = [ptr, ptr + bit pteBits .. ptr + bit ptBits - 1]
 >     mapM_ (flip storePTE InvalidPTE) slots
 >     doMachineOp $

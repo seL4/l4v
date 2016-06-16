@@ -120,7 +120,8 @@ Library
     -- TODO consolidate later
     if flag(ArchArmHyp)
         other-modules:
-                            SEL4.Machine.Hardware.ARM.TK1
+                            SEL4.Machine.Hardware.ARM_HYP.TK1
+                            SEL4.Machine.Hardware.ARM_HYP.Callbacks
 
                             SEL4.API.Types.ARM_HYP
                             SEL4.API.InvocationLabels.ARM_HYP

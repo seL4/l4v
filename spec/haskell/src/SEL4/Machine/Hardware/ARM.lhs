@@ -31,9 +31,9 @@ This module defines the low-level ARM hardware interface.
 
 The ARM-specific register set definitions are qualified with the "ARM" prefix, and the platform-specific hardware access functions are qualified with the "Platform" prefix. The latter module is outside the scope of the reference manual; for the executable model, it is specific to the external simulator used for user-level code.
 
-> import qualified SEL4.Machine.RegisterSet.ARM as ARM
-> import qualified SEL4.Machine.Hardware.ARM.Callbacks as Platform 
-> import qualified SEL4.Machine.Hardware.ARM.PLATFORM as Platform
+> import qualified SEL4.Machine.RegisterSet.ARM_HYP as ARM
+> import qualified SEL4.Machine.Hardware.TARGET.Callbacks as Platform
+> import qualified SEL4.Machine.Hardware.TARGET.PLATFORM as Platform
 
 \subsection{Data Types}
 

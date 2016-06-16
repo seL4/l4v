@@ -14,19 +14,21 @@ This module defines the machine-specific invocations for the ARM.
 
 This module makes use of the GHC extension allowing data types with no constructors.
 
-> {-# LANGUAGE EmptyDataDecls #-}
+> {-# LANGUAGE EmptyDataDecls, CPP #-}
 
 \end{impdetails}
 
-> module SEL4.API.Invocation.ARM where
+> module SEL4.API.Invocation.ARM_HYP where
 
 \begin{impdetails}
 
 > import SEL4.Machine
-> import SEL4.Machine.Hardware.ARM hiding (PAddr)
+> import SEL4.Machine.Hardware.ARM_HYP hiding (PAddr)
 > import SEL4.Object.Structures
 > import SEL4.API.InvocationLabels
-> import SEL4.API.InvocationLabels.ARM
+> import SEL4.API.InvocationLabels.ARM_HYP
+
+> import Data.Word(Word8,Word16,Word32)
 
 \end{impdetails}
 
@@ -34,12 +36,22 @@ This module makes use of the GHC extension allowing data types with no construct
 
 There are five ARM-specific object types; however, only four of them may be invoked. These are the page table, page, ASID control, and ASID pool objects.
 
+XXX ARMHYP The distinction between the non-SMMU invocations (internally grouped as ARMMMUInvocation!) and IOPT invocations is arbitrary, mostly to do with the ability to turn these on/off on different architectures. IOSpace can't be invoked on this architecture.
+
 > data Invocation
 >     = InvokePageTable PageTableInvocation
 >     | InvokePageDirectory PageDirectoryInvocation
 >     | InvokePage PageInvocation
 >     | InvokeASIDControl ASIDControlInvocation
 >     | InvokeASIDPool ASIDPoolInvocation
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     | InvokeVCPU VCPUInvocation
+#endif
+#ifdef CONFIG_ARM_SMMU
+>     | InvokeIOSpace IOSpaceInvocation
+>     | InvokeIOPageTable IOPageTableInvocation
+>     | InvokePageIO PageInvocationIO
+#endif
 >     deriving Show
 
 > data PageTableInvocation
@@ -105,6 +117,63 @@ There are five ARM-specific object types; however, only four of them may be invo
 >         assignASIDPool :: PPtr ASIDPool,
 >         assignASIDCTSlot :: PPtr CTE }
 >     deriving Show
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+\subsection{VCPUs}
+
+FIXME ARMHYP move HyperReg definition (to Hardware?)
+
+> type HyperReg = Word32 -- FIXME ARMHYP can abstract
+> type HyperRegVal = Word32 -- FIXME ARMHYP can abstract
+
+> data VCPUInvocation
+>     = VCPUSetTCB (PPtr VCPU) (PPtr TCB)
+>     -- XXX ARMHYP vcpu index group priority virq
+>     | VCPUInjectIRQ (PPtr VCPU) Word8 Word8 Word8 Word8 Word16
+>     | VCPUReadRegister (PPtr VCPU) HyperReg
+>     | VCPUWriteRegister (PPtr VCPU) HyperReg HyperRegVal
+>     deriving (Show, Eq)
+
+#endif
+
+#ifdef CONFIG_ARM_SMMU
+
+\subsection{IO Page Tables}
+
+FIXME ARMHYP there is an assymetry here compared to how we deal with normal
+pages: IOPageTableMap handles IOPDEs, PageMapIO handles IOPTEs, but on
+the normal MMU side PageMap handles both
+
+> data IOPageTableInvocation
+>     = IOPageTableUnmap {
+>         ioptUnmapCap :: ArchCapability,
+>         ioptUnmapCapSlot :: PPtr CTE }
+>     | IOPageTableMap {
+>         ioptMapASID :: ASID,
+>         ioptMapCap :: ArchCapability,
+>         ioptMapSlot :: PPtr CTE,
+>         ioptMapEntry :: (IOPDE, PPtr IOPDE),
+>         ioptMapAddress :: PAddr}
+>     deriving Show
+
+> data PageInvocationIO
+>     = PageMapIO {
+>         pageMapIOASID :: ASID,
+>         pageMapIOCap :: Capability,
+>         pageMapIOCTSlot :: PPtr CTE,
+>         pageMapIOEntry :: IOPTE,
+>         pageMapIOAddress :: PAddr}
+>     deriving Show
+
+\subsection{IO Spaces}
+
+The ARM platform presently does not support an IO space invocations.
+
+> data IOSpaceInvocation = ARMNoArchIOSpace
+>     deriving Show
+
+#endif
 
 \subsection{Interrupt Control}
 

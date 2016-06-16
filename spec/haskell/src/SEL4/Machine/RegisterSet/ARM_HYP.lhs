@@ -8,9 +8,15 @@
 % @TAG(GD_GPL)
 %
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
+
+\end{impdetails}
+
 This module defines the ARM register set.
 
-> module SEL4.Machine.RegisterSet.ARM where
+> module SEL4.Machine.RegisterSet.ARM_HYP where
 
 \begin{impdetails}
 
@@ -36,11 +42,19 @@ This module defines the ARM register set.
 > exceptionMessage = [FaultInstruction, SP, CPSR]
 > syscallMessage = [R0 .. R7] ++ [FaultInstruction, SP, LR, CPSR]
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> elr_hyp = LR_svc
+#endif
+
 > initContext :: [(Register, Word)]
 > initContext = [(CPSR,0x150)] -- User mode
 
 > sanitiseRegister :: Register -> Word -> Word
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 > sanitiseRegister CPSR v = (v .&. 0xf8000000) .|. 0x150
+#else
+> sanitiseRegister CPSR v =
+>     if v .&. 0x1f == 0x1f then v else (v .&. 0xf8000000) .|. 0x150
+#endif
 > sanitiseRegister _ v = v
-
 
