@@ -19,6 +19,10 @@ install_C_file "simple.c"
 
 (* Abstract the input file. *)
 autocorres [ ts_force pure = max, ts_force nondet = gcd, unsigned_word_abs = gcd ] "simple.c"
+(*
+autocorres [ ts_force nondet = gcd, unsigned_word_abs = gcd, scope_depth=0, scope=gcd ] "simple.c"
+autocorres [ ts_force pure = max, scope_depth=0, scope=max ] "simple.c"
+*)
 
 (* Generated theorems and proofs. *)
 thm simple.max'_def simple.max'_ac_corres

@@ -20,6 +20,10 @@ begin
 (* Parse the input file. *)
 install_C_file "factorial.c"
 
+(*
+autocorres [scope_depth=0, scope=factorial] "factorial.c"
+autocorres [scope_depth=0, scope=call_factorial] "factorial.c"
+*)
 autocorres "factorial.c"
 
 context factorial begin

@@ -1584,6 +1584,7 @@ fun define
 
   fun prepare_fn_body (fn_name, corres_thm, arg_frees) = let
     val _ = @{trace} ("prepare_fn_body", fn_name, corres_thm);
+    (* FIXME: move this to convert *)
     val @{term_pat "Trueprop (L2corres _ _ _ _ ?body _)"} = Thm.concl_of corres_thm;
     val (callees, recursive_callees) = AutoCorresUtil2.get_callees l1_infos fn_name;
     val calls = map (fn c => Var (guess_callee_var corres_thm c)) callees;
@@ -1622,7 +1623,6 @@ fun define
             @{thm L2corres_recguard_0}
             lthy (Symtab.map (K #corres_thm) l2_callees) ()
             funcs';
-  val f_names = map (fn (name, _, _) => name) funcs;
   val new_infos = Symtab.map (fn f_name => fn (const, def, corres_thm) => let
         val old_info = the (Symtab.lookup l1_infos f_name);
         in old_info
@@ -1631,11 +1631,15 @@ fun define
            |> FunctionInfo2.function_info_upd_definition def
            |> FunctionInfo2.function_info_upd_corres_thm corres_thm
            |> FunctionInfo2.function_info_upd_mono_thm NONE (* added later *)
+           (* Update arg names to match our newly converted functions *)
+           |> FunctionInfo2.function_info_upd_args
+                (map (apfst (to_free_var_name lthy' o ProgramInfo.demangle_name)) (#args old_info))
         end) new_thms;
   (* FIXME: return traces *)
   in (new_infos, lthy') end;
 
 
+(* FIXME: move *)
 fun symtab_merge allow_dups tabs =
       maps Symtab.dest tabs
       |> (if allow_dups then sort_distinct (fast_string_ord o apply2 fst) else I)
@@ -1648,7 +1652,7 @@ fun translate filename prog_info
       (* lazy results from L1 *)
       (l1_results: (symset * (local_theory * FunctionInfo2.function_info Symtab.table) future) list)
       do_opt trace_opt l2_function_name =
-(* if there's nothing to translate, we won't have a lthy *)
+(* if there's nothing to translate, we won't have a lthy to use *)
 if null l1_results then [] else
 let
   (* TODO: we should recalculate this from l1_results to take dead-code elim

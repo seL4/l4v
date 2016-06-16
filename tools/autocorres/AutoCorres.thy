@@ -145,11 +145,13 @@ ML_file "monad_convert.ML"
 ML_file "type_strengthen.ML"
 ML_file "autocorres.ML"
 
-declare [[ML_print_depth=42]]
+declare [[ML_print_depth=27]]
 ML_file "function_info2.ML"
 ML_file "autocorres_util2.ML"
 ML_file "simpl_conv2.ML"
 ML_file "local_var_extract2.ML"
+ML_file "word_abstract2.ML"
+ML_file "type_strengthen2.ML"
 
 (* Setup "autocorres" keyword. *)
 ML {*
@@ -158,83 +160,5 @@ ML {*
     (AutoCorres.autocorres_parser >>
       (Toplevel.theory o (fn (opt, filename) => AutoCorres.do_autocorres opt filename)))
 *}
-
-ML \<open>
-
-fun assume_called_functions_corres ctxt fn_info callees
-    get_fn_type get_fn_assumption get_fn_args get_const_name callers_measure_var =
-let
-  (* Assume the existence of a function, along with a theorem about its
-   * behaviour. *)
-  fun assume_func ctxt fn_name is_recursive_call =
-  let
-    val fn_args = get_fn_args fn_name
-
-    (* Fix a variable for the function. *)
-    val ([fixed_fn_name], ctxt') = Variable.variant_fixes [get_const_name fn_name] ctxt
-    val fn_free = Free (fixed_fn_name, get_fn_type fn_name)
-
-    (* Fix a variable for the measure and function arguments. *)
-    val (measure_var_name :: arg_names, ctxt'')
-        = Variable.variant_fixes ("rec_measure'" :: (map fst fn_args)) ctxt'
-    val fn_arg_terms = map (fn (n, T) => Free (n, T)) (arg_names ~~ (map snd fn_args))
-    val my_measure_var = Free (measure_var_name, @{typ nat})
-
-    (*
-     * A measure variable is needed to handle recursion: for recursive calls,
-     * we need to decrement the caller's input measure value (and our
-     * assumption will need to assume this to). This is so we can later prove
-     * termination of our function definition: the measure always reaches zero.
-     *
-     * Non-recursive calls can have a fresh value.
-     *)
-    val measure_var =
-      if is_recursive_call then
-        @{const "recguard_dec"} $ callers_measure_var
-      else
-        my_measure_var
-
-    (* Create our assumption. *)
-    val assumption =
-        get_fn_assumption ctxt'' fn_name fn_free fn_arg_terms
-            is_recursive_call measure_var
-        |> fold Logic.all (rev ((if is_recursive_call then [] else [my_measure_var]) @ fn_arg_terms))
-        |> Sign.no_vars ctxt'
-        |> Thm.cterm_of ctxt'
-    val ([thm], ctxt''') = Assumption.add_assumes [assumption] ctxt'
-
-    (* Generate a morphism for escaping this context. *)
-    val m = (Assumption.export_morphism ctxt''' ctxt')
-        $> (Variable.export_morphism ctxt' ctxt)
-  in
-    (fn_free, thm, ctxt''', m)
-  end
-
-  (* Apply each assumption. *)
-  val (res, (ctxt', m)) = fold_map (
-    fn (fn_name, is_recursive_call) =>
-      fn (ctxt, m) =>
-        let
-          val (free, thm, ctxt', m') =
-              assume_func ctxt fn_name is_recursive_call
-        in
-          ((fn_name, (is_recursive_call, free, thm)), (ctxt', m' $> m))
-        end)
-    callees (ctxt, Morphism.identity)
-in
-  (ctxt', m, res)
-end;
-
-(*
-fun assume_called_functions_corres ctxt fn_info callees
-    get_fn_type get_fn_assumption get_fn_args get_const_name callers_measure_var
-*)
-assume_called_functions_corres @{context} () [("a", false), ("r", true)]
-  (K @{typ "nat \<Rightarrow> nat \<Rightarrow> string \<Rightarrow> string"})
-  (fn ctxt => fn name => fn term => fn args => fn is_rec => fn meas =>
-    HOLogic.mk_Trueprop (@{term "my_corres :: (string \<Rightarrow> string) \<Rightarrow> bool"} $ betapplys (term, meas :: args)))
-  (fn f => if f = "a" then [("arg_a", @{typ nat})] else [("arg_r", @{typ nat})])
-  I @{term "rec_measure :: nat"}
-\<close>
 
 end

@@ -397,8 +397,7 @@ fun dest_conj_list (Const (@{const_name "HOL.conj"}, _) $ l $ r)
  *)
 fun apply_tac (step : string) tac (thm : thm) =
   (tac thm |> Seq.hd) handle Option =>
-    error ("Failed to apply tactic during '" ^ step ^ "': " ^ (
-        (PolyML.makestring (cprems_of thm))))
+    raise TERM ("Failed to apply tactic during " ^ quote step, Thm.prems_of thm)
 
 (*
  * A "the" operator that explains what is going wrong.

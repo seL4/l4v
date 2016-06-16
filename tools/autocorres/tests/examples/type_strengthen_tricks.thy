@@ -49,28 +49,35 @@ let val simpl_infos = FunctionInfo2.init_function_info @{context} "type_strength
     in (frees1, corres1, Symtab.dest l1_infos2) end
 \<close>
 
-ML \<open>
+local_setup \<open>
+fn lthy =>
 let val filename = "type_strengthen.c";
-    val simpl_info = FunctionInfo2.init_function_info @{context} filename;
-    val prog_info = ProgramInfo.get_prog_info @{context} filename;
+    val simpl_info = FunctionInfo2.init_function_info lthy filename;
+    val prog_info = ProgramInfo.get_prog_info lthy filename;
     val l1_results =
       SimplConv2.translate filename prog_info simpl_info
-        true true false (fn f => "l1_" ^ f ^ "'") @{context};
+        true true false (fn f => "l1_" ^ f ^ "'") lthy;
     val l2_results =
       LocalVarExtract2.translate filename prog_info l1_results
         true false (fn f => "l2_" ^ f ^ "'");
-in l2_results |> map (snd #> Future.join) |> map (snd #> Symtab.dest) end
+
+    val wa_results =
+      WordAbstract2.translate filename prog_info l2_results Symset.empty Symset.empty []
+        true false (fn f => "wa_" ^ f ^ "'");
+
+    val ts_rules = Monad_Types.get_ordered_rules [] (Context.Proof lthy);
+    val ts_results =
+      TypeStrengthen2.translate ts_rules Symtab.empty filename prog_info
+        wa_results (fn f => f ^ "'") true true;
+in ts_results |> rev |> hd |> fst end
+\<close>
+
+ML \<open>
+FunctionInfo2.init_function_info @{context} "type_strengthen.c"
+|> Symtab.dest
 \<close>
 
 end
-
-declare [[ML_print_depth=99]]
-autocorres [
-  ts_rules = nondet,
-  scope = st_i,
-  skip_heap_abs, skip_word_abs
-  ] "type_strengthen.c"
-
 
 (* We can also specify which monads are used for type strengthening.
    Here, we exclude the read-only monad completely, and specify
@@ -78,7 +85,7 @@ autocorres [
 autocorres [
   ts_rules = pure option nondet,
   ts_force option = pure_f,
-  statistics
+  skip_heap_abs
   ] "type_strengthen.c"
 
 context type_strengthen begin
