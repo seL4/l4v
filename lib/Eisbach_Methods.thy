@@ -60,6 +60,15 @@ method_setup determ =
 
    in SIMPLE_METHOD (DETERM tac) facts end)
 \<close>
+
+method_setup changed =
+ \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
+   let
+     fun tac st' = method_evaluate m ctxt facts st'
+
+   in SIMPLE_METHOD (CHANGED tac) facts end)
+\<close>
+
  
 method_setup timeit =
  \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
