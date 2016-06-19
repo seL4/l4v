@@ -15,7 +15,6 @@
 theory CCorres_Rewrite
 imports 
   "Corres_UL_C"
-  "../Eisbach_Methods"
 begin
 
 named_theorems C_simp

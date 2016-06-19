@@ -16,7 +16,7 @@ chapter "Library"
 
 theory Lib
 imports
-  "~~/src/HOL/Eisbach/Eisbach"
+  Eisbach_Methods
   "~~/src/HOL/Library/Prefix_Order"
 begin
 

@@ -9,7 +9,7 @@
  *)
 
 theory CCorresLemmas
-imports Corres_UL_C
+imports CCorres_Rewrite
 begin
 
 lemma ccorres_rel_imp2:
