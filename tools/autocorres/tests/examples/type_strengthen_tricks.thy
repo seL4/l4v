@@ -54,23 +54,47 @@ fn lthy =>
 let val filename = "type_strengthen.c";
     val simpl_info = FunctionInfo2.init_function_info lthy filename;
     val prog_info = ProgramInfo.get_prog_info lthy filename;
+
+    val do_opt = true;
+    val trace_opt = false;
+    val keep_going = false;
+
     val l1_results =
       SimplConv2.translate filename prog_info simpl_info
         true true false (fn f => "l1_" ^ f ^ "'") lthy;
     val l2_results =
       LocalVarExtract2.translate filename prog_info l1_results
-        true false (fn f => "l2_" ^ f ^ "'");
+        do_opt trace_opt (fn f => "l2_" ^ f ^ "'");
+
+    val gen_word_heaps = false;
+    val heap_abs_syntax = true;
+    val (l2_results', HL_setup) =
+      HeapLift2.prepare_heap_lift filename prog_info l2_results lthy
+        (fn fld => fld ^ "'") gen_word_heaps heap_abs_syntax;
+
+    val hl_results =
+      HeapLift2.system_heap_lift filename prog_info l2_results' HL_setup
+        Symset.empty Symset.empty heap_abs_syntax keep_going
+        [] do_opt trace_opt (fn f => "hl_" ^ f  ^ "'");
 
     val wa_results =
-      WordAbstract2.translate filename prog_info l2_results Symset.empty Symset.empty []
-        true false (fn f => "wa_" ^ f ^ "'");
+      WordAbstract2.translate filename prog_info hl_results (Symset.make ["opt_a"]) Symset.empty []
+        do_opt trace_opt (fn f => "wa_" ^ f ^ "'");
 
     val ts_rules = Monad_Types.get_ordered_rules [] (Context.Proof lthy);
     val ts_results =
       TypeStrengthen2.translate ts_rules Symtab.empty filename prog_info
-        wa_results (fn f => f ^ "'") true true;
+        wa_results (fn f => f ^ "'") keep_going do_opt;
 in ts_results |> rev |> hd |> fst end
 \<close>
+
+thm opt_a'.simps opt_a2'_def
+(* heap_abs_syntax test *)
+thm st_i'.simps
+thm exc_f'_def
+
+(* gen_word_heaps test *)
+term is_valid_w64
 
 ML \<open>
 FunctionInfo2.init_function_info @{context} "type_strengthen.c"

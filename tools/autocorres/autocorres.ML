@@ -586,14 +586,17 @@ let
                   (* Use basic_fn_info so that our generated heap will work for all functions,
                    * even if the user selected a subset for this run *)
                   NONE => let val (heap_info, lthy) =
-                                HeapLiftBase.setup prog_info basic_fn_info
+                                HeapLiftBase.setup prog_info (FunctionInfo2.init_function_info lthy filename)
                                     make_lifted_globals_field_name gen_word_heaps lthy
                               (* Save the heap info to the theory data. *)
                               val lthy = Local_Theory.background_theory (
                                 HeapInfo.map (fn tbl =>
-                                  Symtab.update (filename, heap_info) tbl)) lthy
+                                  let val HL_setup = {heap_info = heap_info,
+                                                      lifted_heap_lemmas = [],
+                                                      heap_syntax_rewrs = []};
+                                  in Symtab.update (filename, HL_setup) tbl end)) lthy
                           in (heap_info, lthy) end
-                | SOME heap_info => (heap_info, lthy)
+                | SOME HL_setup => (#heap_info HL_setup, lthy)
           in HeapLift.system_heap_lift filename prog_info fn_info heap_info
                no_heap_abs force_heap_abs
                heap_abs_syntax keep_going

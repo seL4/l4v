@@ -185,10 +185,10 @@ let
   fun convert f =
   let
     (* Info for f and its callees *)
-    val (lthy, f_l2_info) = Future.join (get_l2_result f);
-    val callee_l1_infos = Symset.dest (FunctionInfo2.all_callees (the (Symtab.lookup f_l2_info f)))
+    val (lthy, f_l2_infos) = Future.join (get_l2_result f);
+    val callee_l2_infos = Symset.dest (FunctionInfo2.all_callees (the (Symtab.lookup f_l2_infos f)))
                           |> map (fn callee => snd (Future.join (get_l2_result callee)));
-    val l2_infos = LocalVarExtract2.symtab_merge true (f_l2_info :: callee_l1_infos);
+    val l2_infos = LocalVarExtract2.symtab_merge true (f_l2_infos :: callee_l2_infos);
     val old_fn_info = the (Symtab.lookup l2_infos f);
 
     val wa_rules = rules_for f
@@ -260,6 +260,7 @@ let
 
     (*
      * Fetch rules from the theory.
+     * FIXME: move this out of convert?
      *)
     val rules = Utils.get_rules lthy @{named_theorems word_abs}
                 @ List.concat (map #rules wa_rules)
