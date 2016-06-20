@@ -85,6 +85,11 @@ lemma com_eq_While:
   by (subst com_eq_def)
      (auto intro: com_eq_While' com_eq_While' [OF com_eq_sym [THEN iffD1]])
 
+(* the actual form of WHILE b DO c OD *)
+lemma com_eq_whileAnno:
+  "c \<sim> c' \<Longrightarrow> (whileAnno b I V c) \<sim> (whileAnno b I V c')"
+  by (clarsimp simp: whileAnno_def elim!: com_eq_While)
+
 lemma com_eq_Guard:
   "c \<sim> c' \<Longrightarrow> Guard f b c \<sim> Guard f b c'"
   unfolding com_eq_def
@@ -96,8 +101,7 @@ lemma com_eq_Catch:
   by (auto intro: exec.CatchMiss exec.CatchMatch elim!: exec_elim_cases)
 
 lemmas ccorres_rewrite_splits =
-  com_eq_Seq com_eq_Cond com_eq_While com_eq_Guard com_eq_Catch
-
+  com_eq_Seq com_eq_Cond com_eq_While com_eq_whileAnno com_eq_Guard com_eq_Catch
 
 (* Actual simplification rules *)
 
@@ -209,6 +213,13 @@ lemma
   apply (ccorres_rewrite C_simp: c3) (* c;; c;; c2;; c *)
   apply (ccorres_rewrite C_simp: c)  (* c;; c2;; c *)
   apply ccorres_rewrite?             (* fails if nothing changes *)
+  oops
+
+(* Test for WHILE (whileAnno) case *)
+lemma
+  shows "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H
+         (WHILE b DO Guard f g c;; IF False THEN c2 FI OD;; SKIP)"
+  apply ccorres_rewrite
   oops
 
 end
