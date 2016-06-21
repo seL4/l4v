@@ -64,8 +64,11 @@ lemma maskVMRights_spec:
   apply vcg
   apply clarsimp
   apply (rule conjI) 
-   apply (auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
-              split: bool.split)[1]
+   apply ((auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs 
+                      cap_rights_to_H_def to_bool_def
+               split: bool.split 
+         | simp add: mask_def
+         | word_bitwise)+)[1]
   apply clarsimp
   apply (subgoal_tac "vm_rights = 0 \<or> vm_rights = 1 \<or> vm_rights = 2 \<or> vm_rights = 3")
    apply (auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
