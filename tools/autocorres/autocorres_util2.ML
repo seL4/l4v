@@ -45,144 +45,7 @@ val concurrent = Unsynchronized.ref true;
  * Conditionally fork a group of tasks, depending on the value
  * of "concurrent".
  *)
-datatype 'a maybe_fork = Future of 'a future | Boring of 'a
-
-(* Fork a group of tasks. *)
-fun maybe_fork ctxt vals =
-  if ((!concurrent) andalso not (Config.get ctxt ML_Options.exception_trace)) then
-    map Future (Future.forks {
-        name = "", group = NONE, deps = [], pri = ~1, interrupts = true}
-      vals)
-  else
-    map (fn x => Boring (x ())) vals
-
-(* Ensure a forked task has completed. *)
-fun maybe_join v =
-  case v of
-    Boring x => x
-  | Future x => Future.join x
-
-(* Functional map. *)
-fun par_map ctxt f a =
-  if ((!concurrent) andalso not (Config.get ctxt ML_Options.exception_trace)) then
-    Par_List.map f a
-  else
-    map f a
-
-(* Does a SIMPL body exist for the given function name? *)
-fun has_simpl_body_def lthy name =
-  try (fn name => Proof_Context.get_thm lthy (name ^ "_body_def")) name
-  |> is_some
-
-
-(*
- * A translation step transforms the program from one form to another;
- * such as from SIMPL to a monadic type, or from one type of monad to
- * another.
- *
- * "filename" is the name of the file we are translating: this is required as a
- * key to fetch data stashed away by the C parser.
- *
- * "lthy" is the local theory.
- *
- * "convert" performs any proof work required for this translation step. All
- * conversions are performed in parallel, so must be able to be completed
- * without results from previous steps.
- *
- * "define" actually sets up any definitions required by the translation;
- * definition steps occur serially, but may be in parallel with conversion
- * steps whose results are not yet required.
- *
- * "prove_mono" should prove the monad_mono property for recursive functions.
- * (* It is run in parallel over all recursive groups. *)
- *
- * Because functions handed to us by the C parser may be mutually recursive and
- * such mutually recursive functions must typically be defined simultaneously,
- * "define" is handed a list of functions which must all be defined in one
- * step.
- *)
-fun translate lthy phase fn_info initial_callees convert define gen_new_info prove_mono v =
-  let
-    (* Get list of functions we need to translate.
-     * This is a bit complicated because we need to skip over functions that
-     * have already been translated, and hence we need to recalculate the
-     * function call graph. *)
-    val functions_to_translate =
-          Symtab.dest (FunctionInfo.get_all_functions fn_info)
-          |> map_filter (fn (name, info) =>
-                case FunctionInfo.Phasetab.lookup (#phases info) phase of
-                    NONE => SOME name
-                  | SOME _ => NONE)
-          |> Symset.make
-    val fn_info_restricted = FunctionInfo.map_fn_info (fn info =>
-          if Symset.contains functions_to_translate (#name info) then SOME info else NONE) fn_info
-    val function_groups = FunctionInfo.get_topo_sorted_functions fn_info_restricted
-    val all_functions = List.concat function_groups
-
-    (*
-     * Convert every function.
-     *
-     * We perform the conversions using futures, which are run in parallel.
-     * This allows us to perform conversions while we start defining functions,
-     * hopefully speeding everything up on multicore systems.
-     *)
-    val converted_body_thms =
-        map (fn name => fn _ =>
-                time_limit (fn _ => convert lthy name) [name]) all_functions
-        |> maybe_fork lthy
-    val converted_bodies = Symtab.make (all_functions ~~ converted_body_thms)
-
-    (* In sorted order, define constants and proofs for the functions. *)
-    fun translate fn_names (callee_thms, new_phase_infos, v, lthy) =
-      let
-        val defs = map (fn fn_name =>
-            Symtab.lookup converted_bodies fn_name |> the |> maybe_join) fn_names
-        val (proofs, v, lthy)
-            = time_limit (fn _ =>
-                define lthy callee_thms v (fn_names ~~ defs)) fn_names
-        val new_callee_thms = fold Symtab.update_new
-            (fn_names ~~ proofs) callee_thms
-        val new_phase_infos = fold (fn n =>
-            Symtab.update_new (n, gen_new_info lthy v (FunctionInfo.get_function_info fn_info n)))
-            fn_names new_phase_infos
-      in
-        (new_callee_thms, new_phase_infos, v, lthy)
-      end
-
-    val (proof_table, new_phase_infos, v, lthy)
-        = fold translate function_groups (initial_callees, Symtab.empty, v, lthy)
-
-    val mono_thms =
-        function_groups
-        |> map (fn funcs => if not (FunctionInfo.is_function_recursive fn_info (hd funcs))
-                  then K Symtab.empty else (fn _ => time_limit (fn _ =>
-                      (List.mapPartial (fn f =>
-                         case Symtab.lookup new_phase_infos f of
-                             SOME phase_info =>
-                                 SOME (FunctionInfo.function_info_add_phase phase_info
-                                         (FunctionInfo.get_function_info fn_info f))
-                           | _ => NONE) funcs
-                       |> prove_mono lthy)) funcs))
-        |> maybe_fork lthy |> map maybe_join
-        |> maps Symtab.dest |> Symtab.make
-
-    val new_phase_infos = new_phase_infos |>
-        Symtab.map (fn func => FunctionInfo.phase_info_upd_mono_thm (Symtab.lookup mono_thms func))
-  in
-    (lthy, FunctionInfo.add_phases (fn name => K (Symtab.lookup new_phase_infos name)) fn_info, v)
-  end
-
-(*
- * A translation step that maps over every function in the program.
- *
- * "convert" performs any proof work required for this translation step. All
- * conversions are performed in parallel, so must be able to be completed
- * without results from previous steps.
- *
- * We return a list of all results.
- *)
-fun map_all ctxt fn_info convert =
-  par_map ctxt (uncurry convert) (FunctionInfo.get_all_functions fn_info |> Symtab.dest)
+fun maybe_fork f = if !concurrent then Future.fork f else Future.value (f ());
 
 (*
  * Get functions called by a particular function.
@@ -196,10 +59,6 @@ let
 in
   (Symset.dest (#callees fn_info), Symset.dest (#rec_callees fn_info))
 end
-
-(* Is the given term a Trueprop? *)
-fun is_Trueprop (Const (@{const_name "Trueprop"}, _) $ _) = true
-  | is_Trueprop _ = false
 
 (*
  * Assume theorems for called functions.
@@ -336,10 +195,6 @@ fun define_funcs
 
     val _ = writeln ("Defining (" ^ FunctionInfo2.string_of_phase phase ^ ") " ^
                      (Utils.commas (map get_const_name fn_names)))
-(*
-    val _ = @{trace} ("function(s)", functions)
-    val _ = @{trace} ("callee(s)", Symtab.dest callee_thms)
-*)
 
     (*
      * Determine if we are in a recursive case by checking to see if the
@@ -389,14 +244,6 @@ fun define_funcs
                 fill_body fn_name fn_body) end)
         (fn_names ~~ fn_bodies)
     val (fn_def_thms, ctxt) = Utils.define_functions defs true is_recursive ctxt
-
-(*
-    (* Record the constant in our theory data. *)
-    val ctxt = fold (fn (fn_name, def) =>
-        Local_Theory.background_theory (
-            AutoCorresData.add_def filename (FunctionInfo.string_of_phase phase ^ "def") fn_name def))
-        (Utils.zip fn_names fn_def_thms) ctxt
-*)
 
     (*
      * Instantiate schematic function calls in our theorems with their
@@ -504,19 +351,6 @@ fun define_funcs
         |> (Variable.export ctxt' ctxt)
         |> map (Goal.norm_result ctxt)
 
-(*
-    (* Record the theorems in our theory data. *)
-    val ctxt = fold (fn (fn_name, thm) =>
-        Local_Theory.background_theory
-          (AutoCorresData.add_thm filename (FunctionInfo.string_of_phase phase ^ "corres") fn_name thm))
-        (fn_names ~~ new_thms) ctxt
-
-    (* Add the theorems to the context. *)
-    val ctxt = fold (fn (fn_name, thm) =>
-        Utils.define_lemma (fn_name ^ "_" ^ FunctionInfo.string_of_phase phase ^ "corres") thm #> snd)
-        (fn_names ~~ new_thms) ctxt
-*)
-
     val results =
           fn_names ~~ (new_thms ~~ fn_def_thms)
           |> map (fn (fn_name, (corres_thm, def_thm)) =>
@@ -526,52 +360,5 @@ fun define_funcs
   in
     (results, accum, ctxt)
   end
-
-(*
- * Do a translation phase, converting every function from one form to another.
- *)
-(*
-fun do_translation_phase
-    (phase : FunctionInfo.phase)
-    (filename : string)
-    (prog_info : ProgramInfo.prog_info)
-    (fn_info : FunctionInfo.fn_info)
-    (get_fn_type : string -> typ)
-    (get_fn_assumption : local_theory -> string -> term -> term list -> bool -> term -> term)
-    (get_fn_args : string -> (string * typ) list)
-    (get_const_name : string -> string)
-    (convert : local_theory -> string -> ((bool * term * thm) Symtab.table) ->
-               term -> term list -> (term * thm * (string * AutoCorresData.Trace) list))
-    (gen_new_info : local_theory -> FunctionInfo.function_info -> FunctionInfo.phase_info)
-    (prove_mono : local_theory -> FunctionInfo.function_info list -> thm Symtab.table)
-    (rec_base_case : thm)
-    (ctxt : Proof.context) =
-let
-  val do_gen_corres =
-    gen_corres_for_function phase fn_info get_fn_type get_fn_assumption
-        get_fn_args get_const_name convert;
-  val do_define_funcs =
-    define_funcs phase filename fn_info get_const_name get_fn_type
-        get_fn_assumption get_fn_args rec_base_case
-  (* Lookup functions that have already been translated (i.e. phase exists) *)
-  val initial_callees = Symtab.dest (FunctionInfo.get_all_functions fn_info)
-        |> List.mapPartial (fn (fn_name, info) =>
-             FunctionInfo.Phasetab.lookup (#phases info) phase
-             |> Option.mapPartial (fn phase_info =>
-                  AutoCorresData.get_thm (Proof_Context.theory_of ctxt) filename
-                                         (FunctionInfo.string_of_phase phase ^ "corres") fn_name)
-                  |> Option.map (fn thm => (fn_name, thm)))
-        |> Symtab.make
-
-  (* Do the translation. *)
-  val (ctxt', new_fn_info, _) =
-      translate ctxt phase fn_info initial_callees do_gen_corres do_define_funcs
-      (fn lthy => K (gen_new_info lthy)) prove_mono ()
-
-  (* Map function information. *)
-in
-  (ctxt', new_fn_info)
-end
-*)
 
 end
