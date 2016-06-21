@@ -198,7 +198,7 @@ end
 *)
 method ccorres_rewrite declares C_simp =
   (changed \<open>rule ccorres_com_eqI, 
-            repeat_new \<open>rule C_simp ccorres_rewrite_splits com_eq_refl\<close>\<close>)+
+            determ \<open>repeat_new \<open>determ \<open>rule C_simp ccorres_rewrite_splits com_eq_refl\<close>\<close>\<close>\<close>)+
 
 
 (* Example *)
