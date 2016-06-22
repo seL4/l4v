@@ -942,4 +942,14 @@ lemma ccorres_add_returnOk:
 lemmas ccorres_when
     = ccorres_cond2[OF _ _ ccorres_return_Skip[where a="()"], folded when_def]
 
+lemma ccorres_Guard_True:
+  "ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a c
+   \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F \<lbrace>True\<rbrace> c)"
+   by (simp, ccorres_rewrite, assumption)
+
+lemma ccorres_Guard_True_Seq:
+  "ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (c ;; d)
+   \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F \<lbrace>True\<rbrace> c ;; d)"
+   by (simp, ccorres_rewrite, assumption)
+
 end

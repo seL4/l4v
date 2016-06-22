@@ -1954,7 +1954,13 @@ lemma performPageInvocationRemapPDE_ccorres:
   apply (rule ccorres_gen_asm2)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (clarsimp simp: isRight_def)
-  apply (cinit lift: pde_entries_' pde_' asid_')
+  apply (cinit lift: asid_')
+   apply ccorres_rewrite (* FIXME make part of cinit in future for automatic lifting *)
+   apply (rule_tac xf'=pde_' in ccorres_abstract, ceqv, rename_tac pde')
+   apply (rule_tac P="cpde_relation (fst (theRight mapping)) pde'" in ccorres_gen_asm2)
+   apply (rule_tac xf'=pde_entries_' in ccorres_abstract, ceqv, rename_tac pde_entries')
+   apply (rule_tac P="pde_range_relation (snd (theRight mapping)) pde_entries'" in ccorres_gen_asm2)
+
    apply (rule_tac P="\<exists>s. valid_pde_slots'2 mapping s" in ccorres_gen_asm)
    apply (rule_tac P="b\<noteq>[]" in ccorres_gen_asm)
    apply (clarsimp simp: isRight_def simp del: Collect_const)
@@ -1970,6 +1976,7 @@ lemma performPageInvocationRemapPDE_ccorres:
           apply (rule_tac F="\<lambda>_. valid_pde_slots'2 mapping" in ccorres_mapM_x_while' [where i=0])
             apply clarsimp
             apply (rule ccorres_guard_imp2)
+
              apply (rule ccorres_move_array_assertion_pde_16_2
                   | (rule ccorres_flip_Guard, rule ccorres_move_array_assertion_pde_16_2))+
              apply (rule storePDE_Basic_ccorres', simp)
@@ -2072,7 +2079,13 @@ lemma performPageInvocationRemapPTE_ccorres:
   apply (rule ccorres_gen_asm)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (clarsimp simp: isLeft_def)
-  apply (cinit lift: pte_entries_' pte_' asid_')
+  apply (cinit lift: asid_')
+   apply ccorres_rewrite (* FIXME make part of cinit in future for automatic lifting *)
+   apply (rule_tac xf'=pte_' in ccorres_abstract, ceqv, rename_tac pte')
+   apply (rule_tac P="cpte_relation (fst (theLeft mapping)) pte'" in ccorres_gen_asm2)
+   apply (rule_tac xf'=pte_entries_' in ccorres_abstract, ceqv, rename_tac pte_entries')
+   apply (rule_tac P="pte_range_relation (snd (theLeft mapping)) pte_entries'" in ccorres_gen_asm2)
+
    apply (rule_tac P="b \<noteq> []" in ccorres_gen_asm)
    apply (rule_tac P="\<exists>s. valid_pte_slots'2 mapping s" in ccorres_gen_asm)
    apply (clarsimp simp: isLeft_def simp del: Collect_const)
@@ -2171,7 +2184,7 @@ lemma performPageInvocationRemapPTE_ccorres:
                         valid_pte_slots'2_def isLeft_def last_map hd_map
                         ptr_add_def
                         word_le_nat_alt power_increasing[where a="2 :: nat" and N=4, simplified])
-  apply (auto simp: unat_arith_simps unat_word_ariths)
+  apply (simp only: unat_word_ariths unat_arith_simps, auto)
   done
 
 lemma vmsz_aligned_addrFromPPtr':

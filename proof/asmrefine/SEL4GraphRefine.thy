@@ -80,10 +80,17 @@ ML {*
 ML {*
     val v = ProveSimplToGraphGoals.test_graph_refine_proof funs (csenv ()) ctxt nm
 *}
+
+schematic_goal "PROP ?P"
+  apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
+  apply (tactic {* ALLGOALS (TRY o ProveSimplToGraphGoals.graph_refine_proof_full_goal_tac
+        (csenv ()) @{context}) *})
+  done
+
 *)
 
 ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
-    funs (csenv ()) @{context} *} 
+    funs (csenv ()) @{context} *}
 
 end
 
