@@ -261,31 +261,28 @@ lemma set_object_valid_kernel_mappings:
 lemma valid_vs_lookup_lift:
   assumes lookup: "\<And>P. \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
   assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (x64_global_pts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (x64_global_pts (arch_state s))\<rbrace>"
   shows "\<lbrace>valid_vs_lookup\<rbrace> f \<lbrace>\<lambda>_. valid_vs_lookup\<rbrace>"
   unfolding valid_vs_lookup_def
   apply (rule hoare_lift_Pf [where f=vs_lookup_pages])
    apply (rule hoare_lift_Pf [where f="\<lambda>s. (caps_of_state s)"])
-    apply (rule hoare_lift_Pf [where f="\<lambda>s. x64_global_pts (arch_state s)"])
-     apply (wp lookup cap pts)
+     apply (wp lookup cap)
   done
-
 
 lemma valid_table_caps_lift:
   assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (x64_global_pts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (x64_global_pts (arch_state s))\<rbrace>"
+  assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (x64_global_pdpts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (x64_global_pdpts (arch_state s))\<rbrace>"
   assumes obj: "\<And>S p. \<lbrace>obj_at (empty_table S) p\<rbrace> f \<lbrace>\<lambda>rv. obj_at (empty_table S) p\<rbrace>"
   shows "\<lbrace>valid_table_caps\<rbrace> f \<lbrace>\<lambda>_. valid_table_caps\<rbrace>"
   unfolding valid_table_caps_def
    apply (rule hoare_lift_Pf [where f="\<lambda>s. (caps_of_state s)"])
-    apply (rule hoare_lift_Pf [where f="\<lambda>s. x64_global_pts (arch_state s)"])
+    apply (rule hoare_lift_Pf [where f="\<lambda>s. x64_global_pdpts (arch_state s)"])
      apply (wp cap pts hoare_vcg_all_lift hoare_vcg_const_imp_lift obj)
   done
 
 lemma valid_arch_caps_lift:
   assumes lookup: "\<And>P. \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
   assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (x64_global_pts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (x64_global_pts (arch_state s))\<rbrace>"
+  assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (x64_global_pdpts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (x64_global_pdpts (arch_state s))\<rbrace>"
   assumes obj: "\<And>S p. \<lbrace>obj_at (empty_table S) p\<rbrace> f \<lbrace>\<lambda>rv. obj_at (empty_table S) p\<rbrace>"
   shows "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
   unfolding valid_arch_caps_def
@@ -294,20 +291,21 @@ lemma valid_arch_caps_lift:
   apply simp
   done
 
+ 
 lemma valid_global_objs_lift':
-  assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (x64_global_pts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (x64_global_pts (arch_state s))\<rbrace>"
-  assumes pd: "\<And>P. \<lbrace>\<lambda>s. P (x64_global_pds (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (x64_global_pds (arch_state s))\<rbrace>"
+  assumes pml4: "\<And>P. \<lbrace>\<lambda>s. P (x64_global_pml4 (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (x64_global_pml4 (arch_state s))\<rbrace>"
+  assumes pdpts: "\<And>P. \<lbrace>\<lambda>s. P (x64_global_pdpts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (x64_global_pdpts (arch_state s))\<rbrace>"
   assumes obj: "\<And>p. \<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_ao_at p\<rbrace>"
   assumes ko: "\<And>ako p. \<lbrace>ko_at (ArchObj ako) p\<rbrace> f \<lbrace>\<lambda>_. ko_at (ArchObj ako) p\<rbrace>"
   assumes emp: "\<And>pd S. 
-       \<lbrace>\<lambda>s. (v \<longrightarrow> pd = x64_global_pds (arch_state s) \<and> S = set (x64_global_pts (arch_state s)) \<and> P s)
+       \<lbrace>\<lambda>s. (v \<longrightarrow> pd = x64_global_pml4 (arch_state s) \<and> S = set (x64_global_pdpts (arch_state s)) \<and> P s)
             \<and> obj_at (empty_table S) pd s\<rbrace>
                  f \<lbrace>\<lambda>rv. obj_at (empty_table S) pd\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_global_objs s \<and> (v \<longrightarrow> P s)\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   unfolding valid_global_objs_def
   apply (rule hoare_pre)
-   apply (rule hoare_use_eq [where f="\<lambda>s. x64_global_pts (arch_state s)", OF pts])
-   apply (rule hoare_use_eq [where f="\<lambda>s. x64_global_pd (arch_state s)", OF pd])
+   apply (rule hoare_use_eq [where f="\<lambda>s. x64_global_pdpts (arch_state s)", OF pdpts])
+   apply (rule hoare_use_eq [where f="\<lambda>s. x64_global_pml4 (arch_state s)", OF pml4])
    apply (wp obj ko emp hoare_vcg_const_Ball_lift hoare_ex_wp)
   apply clarsimp
   done
@@ -334,23 +332,27 @@ lemma arch_lifts:
     "\<lbrace>valid_kernel_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_kernel_mappings\<rbrace>" and
   valid_global_pts_lift:
     "\<lbrace>valid_global_pts\<rbrace> f \<lbrace>\<lambda>rv. valid_global_pts\<rbrace>" and
+  valid_global_pds_lift:
+    "\<lbrace>valid_global_pds\<rbrace> f \<lbrace>\<lambda>rv. valid_global_pds\<rbrace>" and
+  valid_global_pdpts_lift:
+    "\<lbrace>valid_global_pdpts\<rbrace> f \<lbrace>\<lambda>rv. valid_global_pdpts\<rbrace>" and
   valid_arch_state_lift_aobj_at:
     "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   apply -
 
   subgoal
-  apply (simp add: valid_global_vspace_mappings_def valid_pd_kernel_mappings_def
-              del: valid_pd_kernel_mappings_arch_def)
+  apply (simp add: valid_global_vspace_mappings_def valid_pml4_kernel_mappings_def
+              del: valid_pml4_kernel_mappings_arch_def)
   apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])
-  apply (rule_tac f="valid_pd_kernel_mappings_arch (x64_kernel_vspace x)" in hoare_lift_Pf)
-   apply (rule aobj_at; simp)
-  apply (subst valid_pd_kernel_mappings_arch_def valid_pde_kernel_mappings_def)+
+  apply (rule_tac f="valid_pml4_kernel_mappings_arch (x64_kernel_vspace x)" in hoare_lift_Pf)
+   apply (rule aobj_at, simp)
+  apply (subst valid_pml4_kernel_mappings_arch_def valid_pml4e_kernel_mappings_def)+
   apply (clarsimp simp add: valid_def)
   apply (erule_tac P=P in rsubst)
   apply (rule ext)
-  apply (clarsimp intro!: iff_allI split: arch_kernel_obj.splits pde.splits)
-  apply (safe; clarsimp simp add: valid_pt_kernel_mappings_def
-                        simp del: valid_pt_kernel_mappings_arch_def)
+  apply (clarsimp intro!: iff_allI split: arch_kernel_obj.splits pml4e.splits)
+  apply (safe; clarsimp simp add: valid_pdpt_kernel_mappings_def
+                        simp del: valid_pdpt_kernel_mappings_arch_def)
      apply (erule use_valid[OF _ aobj_at[where P="\<lambda>x. x"]]; simp)+
    by (rule classical,
           drule use_valid[OF _ aobj_at[where P="\<lambda>x. \<not>x", OF arch_obj_pred_fun_lift_id]],

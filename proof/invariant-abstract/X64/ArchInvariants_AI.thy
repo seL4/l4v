@@ -267,7 +267,7 @@ where
    of addressible virtual memory mean we need to mask *)
 definition
   kernel_mapping_slots :: "9 word set" where
- "kernel_mapping_slots \<equiv> {x. x \<ge> ucast (pptr_base >> 39) && mask 9 }"
+ "kernel_mapping_slots \<equiv> {x. x \<ge> ucast (pptr_base >> 39)}"
 
 primrec
   valid_arch_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -444,7 +444,7 @@ abbreviation
   ("_ \<rhd> _" [80,80] 81) where
   "rs \<rhd> p \<equiv> \<lambda>s. (rs,p) \<in> vs_lookup s"
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 abbreviation
   is_reachable_abbr :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" ("\<exists>\<rhd> _" [80] 81) where
@@ -502,7 +502,7 @@ definition
       graph_of (pde_ref_pages \<circ> pd)
   | (PageTable pt) \<Rightarrow>
       (\<lambda>(r,p). (VSRef (ucast r) (Some APageTable), p)) `
-      graph_of (pte_ref_pages o pt)
+      graph_of (pte_ref_pages \<circ> pt)
   | _ \<Rightarrow> {}"
 
 declare vs_refs_pages_arch_def[simp]
@@ -574,6 +574,8 @@ definition
 where
   "pml4e_mapping_bits \<equiv> pageBitsForSize X64HugePage + ptTranslationBits"
   
+  
+(* FIXME x64: do we need all these things? *)
 definition
   valid_pte_kernel_mappings :: "pte \<Rightarrow> vspace_ref
                                    \<Rightarrow> x64_vspace_region_uses \<Rightarrow> bool"
@@ -763,7 +765,16 @@ definition
 
 lemmas aligned_pdpte_simps[simp] =
        aligned_pdpte_def[split_simps pdpte.split]
-       
+
+(* FIXME x64: this is correct, but do we need the final bit? *)
+definition 
+  valid_global_pdpt :: "(9 word \<Rightarrow> pdpte) (*\<Rightarrow> 'z::state_ext state*) \<Rightarrow> bool"
+where
+  "valid_global_pdpt m \<equiv> (\<forall>x\<in>{0 .. 0x1FE}. \<exists>ptr attr R. m x =  HugePagePDPTE ptr attr R) 
+                             \<and> (\<exists>t attr R. m 0x1FF = PageDirectoryPDPTE t attr R 
+                                 (* \<and> t \<in> set (x64_global_pds (arch_state s))*))"
+                                 
+(* FIXME x64: needs some element of tracing down global tables *)
 definition
   valid_global_objs :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -771,12 +782,9 @@ where
   \<lambda>s. valid_ao_at (x64_global_pml4 (arch_state s)) s \<and>
            obj_at (empty_table (set (x64_global_pdpts (arch_state s))))
                   (x64_global_pml4 (arch_state s)) s \<and>
-      (\<forall>p\<in>set (x64_global_pts (arch_state s)).
-          \<exists>pt. ko_at (ArchObj (PageTable pt)) p s \<and> (\<forall>x. aligned_pte (pt x))) \<and>
-      (\<forall>p\<in>set (x64_global_pds (arch_state s)). 
-          \<exists>pd. ko_at (ArchObj (PageDirectory pd)) p s \<and> (\<forall>x. aligned_pde (pd x))) \<and>
       (\<forall>p\<in>set (x64_global_pdpts (arch_state s)).
-          \<exists>pdpt. ko_at (ArchObj (PDPointerTable pdpt)) p s \<and> (\<forall>x. aligned_pdpte (pdpt x)))"
+          \<exists>pdpt. ko_at (ArchObj (PDPointerTable pdpt)) p s \<and> (\<forall>x. aligned_pdpte (pdpt x)) 
+                  \<and> valid_global_pdpt pdpt)"
 
 definition
   valid_asid_table :: "(3 word \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -938,11 +946,10 @@ definition
             (is_pd_cap cap \<or> is_pt_cap cap \<or> is_pdpt_cap cap \<or> is_pml4_cap cap) \<longrightarrow>
             cap_asid cap = None \<longrightarrow>
             r \<in> obj_refs cap \<longrightarrow>
-            obj_at (empty_table (set (x64_global_pts (arch_state s)) 
-                          \<union> set (x64_global_pds (arch_state s)) 
-                          \<union> set (x64_global_pdpts (arch_state s)))) r s"
+            obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) r s"
 
-  (* needed to preserve valid_table_caps in map *)
+  (* needed to preserve valid_table_caps in map
+     enforces no sharing of tables *)
 definition
   "unique_table_caps \<equiv> \<lambda>cs. \<forall>p p' cap cap'.
   cs p = Some cap \<longrightarrow> cs p' = Some cap' \<longrightarrow>
@@ -2354,17 +2361,10 @@ lemma empty_table_pml4e_refD:
   r \<in> S"
   by (simp add: empty_table_def)
 
-lemma valid_global_ptsD:
-  "\<lbrakk>r \<in> set (x64_global_pts (arch_state s)); valid_global_objs s\<rbrakk>
-   \<Longrightarrow> \<exists>pt. ko_at (ArchObj (PageTable pt)) r s \<and> (\<forall>x. aligned_pte (pt x))"
-  by (clarsimp simp: valid_global_objs_def)
-
 lemma valid_table_caps_pdD:
   "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageDirectoryCap pd None));
      valid_table_caps s \<rbrakk> \<Longrightarrow>
-    obj_at (empty_table (set (x64_global_pts (arch_state s)) 
-                   \<union> set (x64_global_pds (arch_state s)) 
-                   \<union> set (x64_global_pdpts (arch_state s)))) pd s"
+    obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) pd s"
   apply (clarsimp simp: valid_table_caps_def simp del: split_paired_All)
   apply (erule allE)+
   apply (erule (1) impE)
@@ -2691,7 +2691,18 @@ lemma valid_arch_obj_default':
   unfolding default_arch_object_def
   by (cases aobject_type; simp)
 
+end 
+
+(* 
+context p_arch_update_eq begin
+
+interpretation Arch_p_arch_update_eq f by unfold_locales
+
+lemma valid_global_pdpt_update [iff]:
+  "valid_global_pdpt mp (f s) = valid_global_pdpt mp s"
+  by (simp add: valid_global_pdpt_def arch)
 
 end
+*)
 
 end
