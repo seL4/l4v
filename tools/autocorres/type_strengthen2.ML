@@ -277,7 +277,8 @@ let
   val callee_infos = map (Symtab.lookup ts_infos #> the) callees
 
   (* Add monad_mono theorems. *)
-  val mono_thms = List.mapPartial #mono_thm callee_infos
+  val callee_l2_infos = map (Symtab.lookup l2_infos #> the) callees
+  val mono_thms = List.mapPartial #mono_thm callee_l2_infos
 
   (* When lifting, also lift our callees. *)
   val rule_set' = Monad_Types.update_mt_lift_rules
@@ -326,7 +327,6 @@ let
         |> (fn term =>
              foldr (fn (v, t) => Utils.abs_over "" v t)
                term (map Free (measure_param @ fn_params)))
-    val fn_type = fastype_of term
 
     (* Replace place-holder function names with our generated constant name. *)
     val term = map_aterms (fn t => case t of
@@ -340,14 +340,6 @@ let
   end
   val input_defs = map gen_fun_def_term (Utils.zip3 fn_names dicts thms)
   val (ts_defs, lthy) = Utils.define_functions input_defs false is_recursive lthy
-
-(*
-  (* Record the definitions in our theory data. *)
-  val lthy = fold (fn (fn_name, def) =>
-      Local_Theory.background_theory (
-          AutoCorresData.add_def filename ("TS" ^ "def") fn_name def))
-      (Utils.zip fn_names defs) lthy
-*)
 
   (* Instantiate variables in our equivalence theorem to their newly-defined values. *)
   fun do_inst_thm thm =
@@ -450,14 +442,6 @@ let
   val new_thms = map (fn t => #polymorphic_thm rule_set' OF [t]) new_thms
                  |> map (fn t => Drule.generalize ([], ["rec_measure'"]) t)
 
-(*
-  (* Record correctness theorem(s) for what we just did. *)
-  val lthy = fold (fn (fn_name, thm) =>
-                      Local_Theory.background_theory
-                      (AutoCorresData.add_thm filename "TScorres" fn_name thm))
-             (fn_names ~~ new_thms) lthy
-*)
-
 (* FIXME: resurrect in a better place
   (* Output final corres rule. *)
   fun output_rule fn_name lthy =
@@ -517,7 +501,8 @@ let
                     |> FunctionInfo2.function_info_upd_phase FunctionInfo2.TS
                     |> FunctionInfo2.function_info_upd_definition ts_def
                     |> FunctionInfo2.function_info_upd_corres_thm ts_corres
-                    |> FunctionInfo2.function_info_upd_const const;
+                    |> FunctionInfo2.function_info_upd_const const
+                    |> FunctionInfo2.function_info_upd_mono_thm mono_thm;
               in (f, ts_info) end)
             ((fn_names ~~ these_l2_infos) ~~ (ts_defs ~~ new_thms))
 in
@@ -585,23 +570,30 @@ in
   writeln ("Type Strengthening Statistics: \n" ^ data)
 end
 
-(* Run through every function, attempting to strengthen its type. *)
+fun symtab_merge allow_dups tabs =
+      maps Symtab.dest tabs
+      |> (if allow_dups then sort_distinct (fast_string_ord o apply2 fst) else I)
+      |> Symtab.make;
+
+(* Run through every function, attempting to strengthen its type.
+ * FIXME: this stage is currently completely sequential. Conversions
+ *        that do not depend on each other should be in parallel;
+ *        this requires splitting the convert and define stages as usual. *)
 fun translate
       (rules : Monad_Types.monad_type list)
       (force_lift : Monad_Types.monad_type Symtab.table)
       (filename : string)
       (prog_info : ProgramInfo.prog_info)
-      (* lazy results from L2 (we currently pre-force them, though) *)
-      (l2_results: (symset * (local_theory * FunctionInfo2.function_info Symtab.table) future) list)
+      (l2_results: (local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq)
       (make_function_name : string -> string)
       (keep_going : bool)
       (do_opt : bool) =
-if null l2_results then [] else
+if FSeq.null l2_results then FSeq.empty () else
 let
   (* Wait for previous stage to finish first. *)
-  val lthy = fst (Future.join (snd (hd (rev l2_results))));
-  val l2_results = map (snd #> Future.join #> snd) l2_results;
-  val l2_infos = LocalVarExtract2.symtab_merge false l2_results;
+  val l2_results = FSeq.list_of l2_results;
+  val lthy = List.last l2_results |> fst;
+  val l2_infos = symtab_merge false (map snd l2_results);
 
   (* Prettify bound variable names in definitions. *)
   val l2_infos = Symtab.map (fn f_name => fn info => let
@@ -630,11 +622,11 @@ let
 
   val ts_results =
         Utils.accumulate translate_group (lthy, Symtab.empty, Symtab.empty)
-                         (map (map fst o Symtab.dest) l2_results)
+                         (map (map fst o Symtab.dest o snd) l2_results)
         |> fst
         |> map (fn (lthy, ts_infos, _) => (lthy, ts_infos));
 in
-  ts_results
+  FSeq.of_list ts_results
 end
 
 end

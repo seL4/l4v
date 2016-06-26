@@ -357,10 +357,6 @@ in thm' end
 
 (* Extract the abstract term out of a L2Tcorres thm. *)
 fun dest_L2Tcorres_term_abs @{term_pat "L2Tcorres _ ?t _"} = t
-fun get_body_of_thm ctxt thm =
-    Thm.concl_of (Variable.gen_all ctxt thm)
-    |> HOLogic.dest_Trueprop
-    |> dest_L2Tcorres_term_abs
 
 (* Generate lifted_globals lemmas and instantiate them into the heap lifting rules. *)
 fun lifted_globals_lemmas prog_info heap_info lthy = let
@@ -528,7 +524,7 @@ end;
 fun prepare_heap_lift
     (filename : string)
     (prog_info : ProgramInfo.prog_info)
-    (l2_results : (symset * (local_theory * FunctionInfo2.function_info Symtab.table) future) list)
+    (l2_results : (local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq)
     (* An initial lthy, used to check for an existing heap_lift_setup.
      * Also used as fallback target in the unlikely case where l2_results = [] *)
     (lthy0 : local_theory)
@@ -536,17 +532,17 @@ fun prepare_heap_lift
     (make_lifted_globals_field_name : string -> string)
     (gen_word_heaps : bool)
     (heap_abs_syntax : bool)
-    : ((symset * (local_theory * FunctionInfo2.function_info Symtab.table) future) list
+    : ((local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq
         * HeapLiftBase.heap_lift_setup) =
 let
   (* Get target lthy for adding new definitions.
    * This is the most recent l2_results lthy, except if there are no results,
    * in which case the fallback lthy is used. *)
-  fun get_target_lthy [] NONE = lthy0
-    | get_target_lthy [] (SOME target_lthy) = target_lthy
-    | get_target_lthy l2_results _ = fst (Future.join (snd (hd (rev l2_results))));
+  fun get_target_lthy l2_results fallback_lthy =
+        if FSeq.null l2_results then Option.getOpt (fallback_lthy, lthy0)
+        else fst (List.last (FSeq.list_of l2_results));
 
-  fun update_results lthy = map (apsnd (Future.map (fn (_, f_infos) => (lthy, f_infos))));
+  fun update_results lthy = FSeq.map (apfst (K lthy));
 
   (* Set up heap_info and associated lemmas *)
   val (l2_results, HL_setup, fallback_lthy) =
@@ -620,7 +616,7 @@ let
 fun system_heap_lift
     (filename : string)
     (prog_info : ProgramInfo.prog_info)
-    (l2_results: (symset * (local_theory * FunctionInfo2.function_info Symtab.table) future) list)
+    (l2_results: (local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq)
     (HL_setup : HeapLiftBase.heap_lift_setup)
     (no_heap_abs : Symset.key Symset.set)
     (force_heap_abs : Symset.key Symset.set)
@@ -631,10 +627,11 @@ fun system_heap_lift
     (trace_opt : bool)
     (hl_function_name : string -> string)
     =
+if FSeq.null l2_results then FSeq.empty () else
 let
   (* lthy for conversion rules. This needs to be (at latest) the earliest lthy
    * result so that the rules can be used in all conversions *)
-  val lthy0 = fst (Future.join (snd (hd l2_results)));
+  val lthy0 = fst (FSeq.hd l2_results);
   val heap_info = #heap_info HL_setup;
 
   (*
@@ -654,23 +651,17 @@ let
                    | _ => false));
 
   (* We only use this blanket rule for non-lifted functions;
-   * liftable functions can be handled by struct_rewrite rules *)
+   * liftable expressions can be handled by specific struct_rewrite rules *)
   val nolift_rules = @{thms struct_rewrite_expr_id}
 
-  (* Results for individual functions *)
-  val l2_results' = maps (fn (f_names, r) =>
-                      Symset.dest f_names ~~ replicate (Symset.card f_names) r) l2_results;
-
-  val get_l2_result = let
-    val table = Symtab.make l2_results';
-    in fn f => the' ("HL: missing lazy result for function: " ^ f) (Symtab.lookup table f) end;
-
-  (* Cache answers for which functions we are lifting. *)
-  val all_functions = maps (Symset.dest o fst) l2_results;
-  val is_function_lifted = all_functions |> map (fn f_name => Future.fork (fn () => let
-        val (lthy, f_infos) = Future.join (get_l2_result f_name);
+  (* This does a linear search. We will only need it in is_function_lifted, though *)
+  fun lookup_l2_results f_name =
+        FSeq.find (fn (_, l2_infos) => Symtab.defined l2_infos f_name) l2_results
+        |> the' ("HL: missing L2 results for " ^ f_name);
+  fun is_function_lifted f_name = let
+        val (lthy, l2_infos) = lookup_l2_results f_name;
         val can_lift =
-              if can_lift_function lthy prog_info (the (Symtab.lookup f_infos f_name))
+              if can_lift_function lthy prog_info (the (Symtab.lookup l2_infos f_name))
               then not (Symset.contains no_heap_abs f_name)
               else if Symset.contains force_heap_abs f_name
                    then true
@@ -680,20 +671,14 @@ let
                            writeln ("HL: disabling heap lift for: " ^ f_name ^
                                     " (use force_heap_abs to enable)");
                          false);
-        in can_lift end));
-  val is_function_lifted = let
-        val cached = Symtab.make (all_functions ~~ is_function_lifted);
-        in fn f => Future.join (the (Symtab.lookup cached f)) end;
+        in can_lift end;
+  (* Cache answers for which functions we are lifting. *)
+  val is_function_lifted = String_Memo.memo is_function_lifted;
 
   (* Convert to new heap format. *)
-  fun convert f =
+  fun convert lthy l2_infos f =
   let
-    (* Info for f and its callees *)
-    val (lthy, f_l2_infos) = Future.join (get_l2_result f);
-    val callee_l2_infos = Symset.dest (FunctionInfo2.all_callees (the (Symtab.lookup f_l2_infos f)))
-                          |> map (fn callee => snd (Future.join (get_l2_result callee)));
-    val l2_infos = LocalVarExtract2.symtab_merge true (f_l2_infos :: callee_l2_infos);
-    val old_f_info = the (Symtab.lookup l2_infos f);
+    val f_l2_info = the (Symtab.lookup l2_infos f);
 
     (* Fix measure variable. *)
     val ([measure_var_name], lthy) = Variable.variant_fixes ["rec_measure'"] lthy;
@@ -706,7 +691,7 @@ let
 
     val (lthy, export_thm, callee_terms) =
       AutoCorresUtil2.assume_called_functions_corres lthy
-        (#callees old_f_info) (#rec_callees old_f_info)
+        (#callees f_l2_info) (#rec_callees f_l2_info)
         (get_expected_hl_fn_type prog_info l2_infos heap_info is_function_lifted)
         (get_expected_hl_fn_thm prog_info l2_infos heap_info is_function_lifted)
         (get_expected_hl_fn_args prog_info l2_infos)
@@ -715,12 +700,12 @@ let
 
     (* Fetch the function definition. *)
     val l2_body_def =
-        #definition old_f_info
+        #definition f_l2_info
         (* Instantiate the arguments. *)
         |> Utils.inst_args lthy (map (Thm.cterm_of lthy) (measure_var :: arg_frees))
 
     (* Get L2 body definition with function arguments. *)
-    val l2_term = betapplys (#const old_f_info, measure_var :: arg_frees)
+    val l2_term = betapplys (#const f_l2_info, measure_var :: arg_frees)
 
     (* Get our state translation function. *)
     val st = get_expected_st heap_info is_function_lifted f
@@ -754,24 +739,10 @@ let
                             (if print_debug then @{trace} thm else ();
                             Seq.succeed x))) r))
 
-    fun print1_tac label t =
-      (@{trace} (
-         label ^ ": subgoal 1 of " ^ Int.toString (Logic.count_prems (term_of_thm t)),
-         Logic.get_goal (term_of_thm t) 1 |> Thm.cterm_of lthy);
-       all_tac t)
-
     (* Convert the concrete side of the given L2T term to/from first-order form. *)
     val l2t_to_fo_tac = CONVERSION (Drule.beta_eta_conversion then_conv l2t_conc_body_conv (mk_first_order lthy) lthy)
     val l2t_from_fo_tac = CONVERSION (l2t_conc_body_conv (dest_first_order lthy then_conv Drule.beta_eta_conversion) lthy)
     val fo_tac = ((l2t_to_fo_tac THEN' rtac_all fo_rules) THEN_ALL_NEW l2t_from_fo_tac) 1
-
-    (* If debugging enabled, print goal states when we backtrack. *)
-    val error_printed = ref 0
-    fun print_n_tac printed_ref t =
-      (if false orelse (!printed_ref >= ML_Options.get_print_depth ()) then
-        all_tac
-      else
-        (printed_ref := (!printed_ref) + 1; print_tac lthy "Error solving subgoal")) t
 
     (*
      * Recursively solve subgoals.
@@ -783,20 +754,13 @@ let
      * leading to exponential explosion (of many different combinations of
      * "good solutions") once we hit an unsolvable subgoal.
      *)
-    fun solve_tac n =
-      (if print_debug then print1_tac f else all_tac) THEN
-      DETERM ((SOLVES (
-          ((K (CHANGED ((rtac_all rules 1) APPEND (fo_tac)))) THEN_ALL_NEW solve_tac) 1))
-            ORELSE (print_n_tac error_printed THEN no_tac))
-
     val tactics =
-        if #is_simpl_wrapper old_f_info
+        if #is_simpl_wrapper f_l2_info
         then (* Solver for trivial simpl wrappers. *)
              [(@{thm L2Tcorres_id}, resolve_tac lthy [@{thm L2Tcorres_id}] 1)]
         else map (fn rule => (rule, resolve_tac lthy [rule] 1)) rules
              @ [(@{thm fun_app_def}, fo_tac)]
 
-    val _ = @{trace} ("HL checkpoint 1", f)
     val replay_failure_start = 1
     val replay_failures = Unsynchronized.ref replay_failure_start
     val (thm, trace) =
@@ -809,7 +773,6 @@ let
     val _ = if !replay_failures < replay_failure_start then
               warning ("HL: " ^ f ^ ": reverted to slow replay " ^
                         Int.toString(replay_failure_start - !replay_failures) ^ " time(s)") else ()
-    val _ = @{trace} ("HL checkpoint 2", f)
 
     (* DEBUG: make sure that all uses of field_lvalue and c_guard are rewritten.
      *        Also make sure that we cleaned up internal constants. *)
@@ -846,34 +809,50 @@ let
     (* Gather post-simplification statistics. *)
     val _ = Statistics.gather lthy "HLsimp" f
         (Thm.prop_of thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 1))
+
+    (* Get actual recursive callees *)
+    val rec_consts =
+          callee_terms |> List.mapPartial (fn (callee, (is_rec, const, _)) =>
+              if is_rec then SOME (const, callee) else NONE)
+          |> Termtab.make;
+    val rec_callees =
+          Term.fold_aterms (fn t => fn a =>
+              (Termtab.lookup rec_consts t
+                  |> Option.map single
+                  |> the_default []) @ a)
+              (dest_L2Tcorres_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm))) []
+            |> Symset.make;
+
+    (* Generalize the arguments, but not assumed callees *)
+    val thm = Variable.gen_all lthy thm;
+    val fn_body = dest_L2Tcorres_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm));
+    (* Return the constants that we fixed. This will be used to process the returned body. *)
+    val callee_consts =
+          callee_terms |> map (fn (callee, (_, const, _)) => (callee, const)) |> Symtab.make;
   in
-    (get_body_of_thm lthy thm, Morphism.thm export_thm (Variable.gen_all lthy thm),
+    (fn_body,
+     Morphism.thm export_thm thm, (* Also generalizes callees *)
+     rec_callees,
+     callee_consts,
      dest_Free measure_var :: new_fn_args,
      (if member (op =) trace_funcs f then [("HL", AutoCorresData.RuleTrace trace)] else []) @ opt_traces)
   end
 
   (* Define a previously-converted function (or recursive function group).
-   * lthy must include all definitions from l2_callees. *)
+   * lthy must include all definitions from hl_callees. *)
   fun define
         (lthy: local_theory)
         (l2_infos: FunctionInfo2.function_info Symtab.table)
         (hl_callees: FunctionInfo2.function_info Symtab.table)
-        (funcs: (string * thm * (string * typ) list) list) (* name, corres, arg frees *)
+        (* name, raw body, callee consts, corres thm, arg frees *)
+        (funcs: (string * (term * term Symtab.table * thm * (string * typ) list)) list)
         : FunctionInfo2.function_info Symtab.table * local_theory = let
     (* FIXME: dedup with convert, LocalVarExtract *)
-
-    (* FIXME: pass this from assume_called_functions_corres, etc. *)
-    fun guess_callee_var thm callee = let
-      val base_name = hl_function_name callee;
-      val mentioned_vars = Term.add_vars (Thm.prop_of thm) [];
-      in hd (filter (fn ((v, _), _) => v = base_name) mentioned_vars) end;
-
-    fun prepare_fn_body (fn_name, corres_thm, arg_frees) = let
+    fun prepare_fn_body (fn_name, (body, callee_consts, corres_thm, arg_frees)) = let
       val _ = @{trace} ("HL prepare_fn_body", fn_name, corres_thm);
-      val @{term_pat "Trueprop (L2Tcorres _ ?body _)"} = Thm.concl_of corres_thm;
-      val (callees, recursive_callees) = AutoCorresUtil2.get_callees l2_infos fn_name;
-      val calls = map (fn c => Var (guess_callee_var corres_thm c)) callees;
-      val recursive_calls = map (fn c => Var (guess_callee_var corres_thm c)) recursive_callees;
+      val (callees, rec_callees) = AutoCorresUtil2.get_callees l2_infos fn_name;
+      val calls = map (the o Symtab.lookup callee_consts) callees;
+      val rec_calls = map (the o Symtab.lookup callee_consts) rec_callees;
 
       (*
        * The returned body will have free variables as placeholders for the function's
@@ -889,15 +868,14 @@ let
        *)
       val abs_body = body
         |> fold lambda (rev (map Free arg_frees))
-        |> fold lambda (rev recursive_calls)
+        |> fold lambda (rev rec_calls)
         |> fold lambda (rev calls);
       in abs_body end;
 
     val funcs' = funcs |>
-          map (fn (name, thm, frees) =>
-                     (name, (* FIXME: define_funcs needs this currently *)
-                            (Thm.generalize ([], map fst frees) (Thm.maxidx_of thm + 1) thm,
-                            prepare_fn_body (name, thm, frees))));
+          map (fn (name, def as (body, callee_consts, thm, frees)) =>
+                     (name, (Thm.generalize ([], map fst frees) (Thm.maxidx_of thm + 1) thm,
+                            prepare_fn_body (name, def))));
     val _ = @{trace} ("HL.define", map (fn (name, (thm, body)) => (name, thm, Thm.cterm_of lthy body)) funcs');
     val (new_thms, (), lthy') =
           AutoCorresUtil2.define_funcs FunctionInfo2.HL filename l2_infos
@@ -919,48 +897,87 @@ let
           end) new_thms;
     in (new_infos, lthy') end;
 
-  val function_groups = map fst l2_results;
-
   (* All conversions can run in parallel.
-   * Each conversion depends only on the previous define phase
-   * (which necessarily also includes definitions of callees). *)
-  val converted_funcs =
-        maps Symset.dest function_groups
-        |> map (fn f => (f, Future.value (convert f)))
-        |> Symtab.make;
+   * Each conversion depends only on the corresponding L2 define phase
+   * (which necessarily also includes L2 callees). *)
+  val converted_groups =
+        FSeq.fold_map (fn l2_infos_accum => fn (lthy, l2_infos) => let
+               val l2_infos_accum' = Symtab.merge (K false) (l2_infos_accum, l2_infos);
+               (* Convert l2_infos in parallel, but join the results right away.
+                * This is fine because we will define them together. *)
+               val conv_results =
+                     Symtab.dest l2_infos
+                     |> Par_List.map (fn (f, _) => (f, convert lthy l2_infos_accum' f))
+                     |> Symtab.make;
+               in ((l2_infos, conv_results), l2_infos_accum') end)
+            Symtab.empty l2_results;
 
-  val _ = Symtab.dest converted_funcs |> map snd |> map Future.join
-
-  (* Definitions update lthy sequentially.
-   * We use the arbitrary (but deterministic) ordering defined by get_topo_sorted_functions.
+  (* Definitions update lthy sequentially. 
    * Each definition step produces a lthy that has a prefix of the update sequence,
-   * and can be used subsequently to convert a function that depends only on that prefix.
-   * Hence we produce the intermediate lthys lazily for maximum parallelism. *)
-  fun add_def f_names accum = Future.fork (fn _ => let
-    (* Wait for previous definition to finish *)
-    val (lthy, _, defined_so_far) = Future.join accum;
-    (* Wait for conversions to finish *)
-    val f_convs = map (fn f => let
-          val conv = the' ("didn't convert function: " ^ quote f ^ "??") (Symtab.lookup converted_funcs f);
-          val (hl_body, corres_thm, arg_frees, traces) = Future.join conv;
-          in (f, corres_thm, arg_frees) end) f_names;
-    (* Get L2 phase results (should be a no-op at this point) *)
-    val (_, l2_infos) = Future.join (get_l2_result (hd f_names));
-    val (new_defs, lthy') = define lthy l2_infos defined_so_far f_convs;
-    in (lthy', new_defs, Symtab.merge (K false) (defined_so_far, new_defs)) end);
+   * and can be used in an L2 translation that depends only on that prefix.
+   * Hence we return the intermediate lthys as futures. *)
+  fun add_defs lthy defined_so_far converted_groups = FSeq.mk (fn () =>
+      case FSeq.uncons converted_groups of
+          NONE => NONE
+        | SOME ((l2_infos, conv_group), remaining_groups) => SOME let
+          val (call_graph, f_convs) =
+                Symtab.dest conv_group
+                |> map (fn (f, (hl_body, corres_thm, rec_callees, callee_consts, arg_frees, traces)) =>
+                          (* FIXME: return traces *)
+                          ((f, rec_callees), (f, (hl_body, callee_consts, corres_thm, arg_frees))))
+                |> split_list;
+          val f_convs = Symtab.make f_convs;
 
-  (* Get initial lthy from end of L2 defs *)
-  val l2_def_context = Future.map (fn (lthy, _) => (lthy, Symtab.empty, Symtab.empty))
-                                  (snd (hd (rev l2_results)));
-  (* Chain of intermediate states: (lthy, new_defs, accumulator) *)
-  val (def_results, _) = Utils.accumulate add_def l2_def_context
-                                          (map Symset.dest function_groups);
+          (* Split this recursive group prior to defining the functions.
+           * Function calls can be removed by dead code elimination and other
+           * transformations, which could cause the group to split. *)
+          val f_callees = Symtab.make (map (apsnd Symset.dest) call_graph);
+          (* Add each function to its own callees to get a complete inverse *)
+          val f_callers = flip_symtab (Symtab.map cons f_callees);
+
+          val topo_sorted_functions =
+                Topo_Sort.topo_sort {
+                  cmp = String.compare,
+                  graph = Symtab.lookup f_callees #> the,
+                  converse = Symtab.lookup f_callers #> the
+                } (Symtab.keys f_callees |> sort String.compare)
+                |> map Symset.make;
+
+          val f_convss =
+                topo_sorted_functions |> map (fn group =>
+                    map (fn f => (f, the (Symtab.lookup f_convs f)))
+                        (Symset.dest group)
+                    |> Symtab.make);
+
+          (* Define each function group and append it to the result sequence. *)
+          fun add_subgroup_defs lthy defined_so_far [] =
+                add_defs lthy defined_so_far remaining_groups
+            | add_subgroup_defs lthy defined_so_far (f_convs :: f_convss) =
+                FSeq.fcons (fn () => let
+                  val (new_defs, lthy') =
+                      define lthy l2_infos defined_so_far (Symtab.dest f_convs);
+                  (* Update (non-recursive) callees *)
+                  val new_defs = FunctionInfo2.recalc_base_callees defined_so_far new_defs;
+                  val defined_so_far' = Symtab.merge (K false) (defined_so_far, new_defs);
+                  in ((lthy', new_defs),
+                      add_subgroup_defs lthy' defined_so_far' f_convss)
+                  end);
+          in (* a bit ugly -- may need to tweak the FSeq interface *)
+             the (FSeq.uncons (add_subgroup_defs lthy defined_so_far f_convss)) end);
+
+  (* Sequence of intermediate states: (lthy, new_defs) *)
+  val def_results = FSeq.mk (fn _ =>
+        (* If there's nothing to translate, we won't have a lthy to use *)
+        if FSeq.null l2_results then NONE else
+          let (* Get initial lthy from end of L2 defs *)
+              val (l2_lthy, _) = FSeq.list_of l2_results |> List.last;
+          in FSeq.uncons (add_defs l2_lthy Symtab.empty converted_groups) end);
 
   (* Produce a mapping from each function group to its L1 phase_infos and the
    * earliest intermediate lthy where it is defined. *)
   val results =
         def_results
-        |> map (Future.map (fn (lthy, f_defs, _ (* discard accum here *)) => let
+        |> FSeq.map (fn (lthy, f_defs) => let
               (* Add monad_mono proofs. These are done in parallel as well
                * (though in practice, they already run pretty quickly). *)
               val mono_thms = if FunctionInfo2.is_function_recursive (snd (hd (Symtab.dest f_defs)))
@@ -968,7 +985,7 @@ let
                               else Symtab.empty;
               val f_defs' = f_defs |> Symtab.map (fn f =>
                     FunctionInfo2.function_info_upd_mono_thm (Symtab.lookup mono_thms f));
-              in (lthy, f_defs') end));
-in function_groups ~~ results end
+              in (lthy, f_defs') end);
+in results end
 
 end

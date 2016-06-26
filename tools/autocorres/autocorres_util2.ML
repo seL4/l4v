@@ -80,11 +80,11 @@ end
  * get_const_name generates names for the free function placeholders.
  * FIXME: probably unnecessary and/or broken.
  *
- * We return two morphisms:
- *  - the first one makes the assumptions visible again
- *  - the second one automatically generalizes the assumed constants
- *    (this exists for backwards compat; all new code should explicitly use the
- *     returned free variable set)
+ * We return a morphism that exposes the assumptions and generalises over the
+ * assumed constants.
+ * FIXME: automatically generalising over the assumed free variables is
+ * probably broken. Instead, the caller should manually generalise and
+ * instantiate the frees to avoid clashes.
  *)
 fun assume_called_functions_corres ctxt callees rec_callees
     get_fn_type get_fn_assumption get_fn_args get_const_name callers_measure_var =

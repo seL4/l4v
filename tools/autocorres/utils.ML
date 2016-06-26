@@ -1025,6 +1025,108 @@ val _ = assert (apply2 Substring.string (positionr "xx" (Substring.full "abracad
 
 end
 
+
+(*
+ * Future sequence.
+ * This is similar to seq except that values are computed eagerly and then cached.
+ *)
+signature FSEQ = sig
+  type 'a fseq;
+
+  (* Standard list operations *)
+  val empty: unit -> 'a fseq;
+  val mk: (unit -> ('a * 'a fseq) option) -> 'a fseq;
+  val cons: 'a -> 'a fseq -> 'a fseq;
+  val fcons: (unit -> 'a * 'a fseq) -> 'a fseq;
+  val uncons: 'a fseq -> ('a * 'a fseq) option;
+  val null: 'a fseq -> bool;
+  val hd: 'a fseq -> 'a;
+  val tl: 'a fseq -> 'a fseq;
+
+  val append: 'a fseq -> 'a fseq -> 'a fseq;
+  val map: ('a -> 'b) -> 'a fseq -> 'b fseq;
+  val fold_map: ('acc -> 'a -> 'b * 'acc) -> 'acc -> 'a fseq -> 'b fseq;
+
+  val of_list: 'a list -> 'a fseq;
+  val list_of: 'a fseq -> 'a list;
+
+  (* Only waits on the shortest prefix of the sequence that contains
+   * a matching value. We rely on this to maximise parallelism
+   * between conversions. *)
+  val find: ('a -> bool) -> 'a fseq -> 'a option;
+end;
+
+structure FSeq : FSEQ = struct
+  datatype 'a fseq_base = fseqNil
+                        | fseqCons of 'a * 'a fseq_base future;
+  type 'a fseq = 'a fseq_base future;
+
+  fun empty () = Future.value fseqNil;
+  fun mk f =
+        Future.fork (fn _ =>
+            case f () of NONE => fseqNil
+                       | SOME x => fseqCons x);
+  fun fcons f = mk (fn _ => SOME (f ()));
+  fun cons x xs = Future.value (fseqCons (x, xs));
+  fun uncons xs =
+      case Future.join xs of
+          fseqNil => NONE
+        | fseqCons p => SOME p;
+  fun null xs = not (isSome (uncons xs));
+  fun hd xs = fst (the (uncons xs));
+  fun tl xs = snd (the (uncons xs));
+
+  fun append xs ys =
+      xs |> Future.map (fn x =>
+              case x of fseqNil => Future.join ys
+                      | fseqCons (x, xs') => fseqCons (x, append xs' ys));
+  fun map f xs =
+      Future.fork (fn () =>
+          case Future.join xs of
+              fseqNil => fseqNil
+            | fseqCons (x, xs') => fseqCons (f x, map f xs'));
+  fun fold_map f acc xs =
+      Future.fork (fn () =>
+          case Future.join xs of
+              fseqNil => fseqNil
+            | fseqCons (x, xs') =>
+                let val (x', acc') = f acc x;
+                in fseqCons (x', fold_map f acc' xs') end);
+
+  fun of_list [] = empty ()
+    | of_list (x::xs) = cons x (of_list xs);
+  fun list_of xs =
+        case Future.join xs of
+            fseqNil => []
+          | fseqCons (x, xs') => x :: list_of xs';
+
+  fun find P xs =
+        case Future.join xs of
+            fseqNil => NONE
+          | fseqCons (x, xs') => if P x then SOME x else find P xs';
+end;
+
+(* Memoization using a serialized cache. *)
+signature Memo = sig
+  type arg;
+  val memo: (arg -> 'a) -> (arg -> 'a);
+end;
+
+functor Memo(Table: TABLE) = struct
+  type arg = Table.key;
+  fun memo f = let
+    val table = Synchronized.var "" Table.empty;
+    in fn a =>
+         Synchronized.change_result table (fn tab =>
+             case Table.lookup tab a of
+                 SOME r => (r, tab)
+               | NONE => let
+                   val r = f a;
+                   in (r, Table.update (a, r) tab) end)
+    end;
+end;
+structure String_Memo = Memo(Symtab);
+
 (* Insist the the given tactic solves a subgoal. *)
 fun SOLVES tac = (((K tac) THEN_ALL_NEW (K no_tac)) 1)
 

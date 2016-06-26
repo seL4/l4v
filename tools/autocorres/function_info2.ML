@@ -27,7 +27,7 @@ sig
                  | TS (* TypeStrengthen *);
   val string_of_phase : phase -> string;
   val phase_ord : phase * phase -> order;
-  structure Phasetab : TABLE;
+  structure Phasetab : TABLE; (* currently unused *)
 
   (* Function info for a single phase. *)
   type function_info = {
@@ -115,6 +115,28 @@ sig
    * Ideally, we'd also have a pre_function_info type that doesn't have
    * outdated callees, but dealing with ML records is annoying. *)
   val calc_call_graph : function_info Symtab.table -> call_graph_info * function_info Symtab.table;
+
+  (* Split a recursive function group prior to defining the functions.
+   * Function calls can be removed by dead code elimination and other
+   * transformations, which could cause the group to split.
+   *
+   * Returns the new group(s) in a valid topological order. *)
+  (* FIXME: unused, because each function may get different callee frees in practice. *)
+  val split_recursive_group :
+    ('a -> string) -> (* function name *)
+    ('a -> term) -> (* function const (most likely a Free, since it hasn't been defined yet) *)
+    ('a -> term) -> (* function body *)
+    'a list -> (* recursive group *)
+    'a list list; (* minimal subgroup(s) *)
+
+  (* Update callees and rec_callees for the given recursive function group,
+   * relative to a set of background functions (that must not contain the
+   * given group). The group should already be a minimal group produced
+   * by split_recursive_group. *)
+  val recalc_base_callees :
+    function_info Symtab.table -> (* background *)
+    function_info Symtab.table -> (* group *)
+    function_info Symtab.table;
 end;
 
 structure FunctionInfo2 : FUNCTION_INFO2 =
@@ -296,6 +318,78 @@ fun calc_call_graph fn_infos = let
       }, fn_infos')
   end;
 
+fun split_recursive_group get_name get_const get_body funcs = let
+  val funcs_tab = map (fn func => (get_name func, func)) funcs |> Symtab.make;
+
+  val const_to_function =
+    Symtab.dest funcs_tab
+    |> map (fn (name, func) => (get_const func, name))
+    |> Termtab.make;
+
+  (* Get a function's direct callees, based on the list of constants that appear
+   * in its definition. *)
+  fun get_direct_callees func =
+      Term.fold_aterms (fn t => fn a =>
+          (Termtab.lookup const_to_function t
+          |> Option.map single
+          |> the_default []) @ a) (get_body func) []
+      |> distinct (op =);
+
+  (* Call graph of all functions. *)
+  val fn_callees = funcs_tab |> Symtab.map (K get_direct_callees);
+  (* Add each function to its own callees to get a complete inverse *)
+  val fn_callers = flip_symtab (Symtab.map cons fn_callees);
+
+  val topo_sorted_functions =
+        Topo_Sort.topo_sort {
+          cmp = String.compare,
+          graph = Symtab.lookup fn_callees #> the,
+          converse = Symtab.lookup fn_callers #> the
+        } (Symtab.keys fn_callees |> sort String.compare)
+        |> map (sort String.compare);
+
+  in topo_sorted_functions
+     |> map (map (the o Symtab.lookup funcs_tab))
+  end;
+
+fun recalc_base_callees base_infos fn_infos = let
+  val base_consts =
+        Symtab.dest base_infos
+        |> map (fn (f, info) => (#raw_const info, f))
+        |> Termtab.make;
+  (* restrict_fn_infos has the correct call graph,
+   * but omits functions outside fn_infos *)
+  val (call_graph, restrict_fn_infos) = calc_call_graph fn_infos;
+
+  (* Assume that fn_info is already a minimal recursive group
+   * (e.g. obtained via recalc_recursive_group) *)
+  val _ = assert (length (#topo_sorted_functions call_graph) = 1)
+                 "FunctionInfo.recalc_base_callees.1";
+
+  fun update_info f info = let
+        val restrict_info = the (Symtab.lookup restrict_fn_infos f);
+        (* Update calls into base_info *)
+        val f_body = Thm.prop_of (#definition info) |> Utils.rhs_of_eq;
+        val base_callees' =
+              if #is_simpl_wrapper info then Symset.empty else
+                Term.fold_aterms (fn t => fn a =>
+                    (Termtab.lookup base_consts t
+                     |> Option.map single
+                     |> the_default []) @ a)
+                    f_body []
+                |> Symset.make;
+        (* base_infos should not include fn_infos, otherwise this weird call would exist *)
+        val () = assert (not (Symset.contains base_callees' f)) "FunctionInfo.recalc_base_callees.2";
+        (* rec_callees has been recalculated *)
+        val rec_callees' = #rec_callees restrict_info;
+        (* Some rec_callees may have become callees due to breaking recursive loops *)
+        val callees' = Symset.union base_callees' (#callees restrict_info);
+        in info
+           |> function_info_upd_rec_callees rec_callees'
+           |> function_info_upd_callees callees'
+        end;
+
+  in Symtab.map update_info fn_infos end;
 
 fun init_function_info ctxt filename = let
   val thy = Proof_Context.theory_of ctxt;

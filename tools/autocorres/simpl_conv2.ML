@@ -444,7 +444,7 @@ fun convert
       (trace_opt: bool)
       (l1_function_name: string -> string)
       (f_name: string)
-      : thm * (string * typ) list = let
+      : thm * symset * (string * typ) list = let
   (* FIXME: refactor? *)
   val (simpl_calls, simpl_defs) = FunctionInfo2.calc_call_graph simpl_defs;
 
@@ -469,7 +469,6 @@ fun convert
   val measure_var = Free (measure_var_name, measureT);
 
   (* Add callee assumptions. Note that our define code has to use the same assumption order. *)
-  val group = Option.getOpt (Symtab.lookup (#recursive_group_of simpl_calls) f_name, Symset.empty);
   val (lthy'', export_thm, callee_terms) =
     AutoCorresUtil2.assume_called_functions_corres lthy'
       (#callees f_info) (#rec_callees f_info)
@@ -484,7 +483,24 @@ fun convert
       then (mk_l1corres_call_simpl_thm check_termination lthy'' f_info, [])
       else get_l1corres_thm prog_info simpl_defs simpl_calls check_termination lthy'' do_opt trace_opt f_name
                             (Symtab.make callee_terms) measure_var;
+
+  (* Get actual recursive callees *)
+  val callee_consts =
+        callee_terms |> List.mapPartial (fn (callee, (is_rec, const, _)) =>
+            if is_rec then SOME (const, callee) else NONE)
+        |> Termtab.make;
+  val rec_callees =
+        Term.fold_aterms (fn t => fn a =>
+            (Termtab.lookup callee_consts t
+                |> Option.map single
+                |> the_default []) @ a)
+            (get_L1corres_monad (HOLogic.dest_Trueprop (Thm.concl_of thm))) []
+          |> Symset.make;
+
+  (* FIXME: return traces *)
   in (Morphism.thm export_thm thm,
+      (* Used for recalculating the recursive call graph *)
+      rec_callees,
       (* Provide the fixed vars so the user can generalize/instantiate them *)
       [dest_Free measure_var])
   end
@@ -556,7 +572,6 @@ fun define
             l1_function_name (K l1_fn_type) get_l1_fn_assumption (K []) @{thm L1corres_recguard_0}
             lthy (Symtab.map (K #corres_thm) l1_callees) ()
             funcs';
-  val f_names = map (fn (name, _, _) => name) funcs;
   val new_defs = Symtab.map (fn f_name => fn (const, def, corres_thm) => let
         val f_info = the (Symtab.lookup simpl_defs f_name);
         in f_info
@@ -566,7 +581,6 @@ fun define
            |> FunctionInfo2.function_info_upd_const const
            |> FunctionInfo2.function_info_upd_mono_thm NONE (* done in translate *)
         end) new_thms;
-  (* FIXME: return traces *)
   in (new_defs, lthy') end;
 
 
@@ -583,7 +597,16 @@ fun define
  * code).
  *)
 (* FIXME: use AutoCorresUtil.Future instead of default *)
-fun translate filename prog_info simpl_infos check_termination do_opt trace_opt l1_function_name lthy =
+fun translate
+      (filename: string)
+      (prog_info: ProgramInfo.prog_info)
+      (simpl_infos: FunctionInfo2.function_info Symtab.table)
+      (check_termination: bool)
+      (do_opt: bool)
+      (trace_opt: bool)
+      (l1_function_name: string -> string)
+      (lthy: local_theory)
+      : (local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq =
 let
   val funcs_to_translate = Symtab.keys simpl_infos;
 
@@ -599,31 +622,71 @@ let
    * Each definition step produces a lthy that has a prefix of the update sequence,
    * and can be used in an L2 translation that depends only on that prefix.
    * Hence we return the intermediate lthys as futures. *)
-  fun add_def f_names accum = Future.fork (fn _ => let
-    (* Get output from previous definition.
-     * Technically we don't need all of defined_so_far, but we're guaranteed
-     * to have them at this point already. *)
-    val (lthy, _, defined_so_far) = Future.join accum;
-    (* Wait for conversions to finish *)
-    val f_convs = map (fn f => let
-          val conv = the' ("didn't convert function: " ^ quote f ^ "??") (Symtab.lookup converted_funcs f);
-          val (corres_thm, arg_frees) = Future.join conv;
-          in (f, corres_thm, arg_frees) end) f_names;
-    val (new_defs, lthy') = define lthy filename prog_info simpl_infos check_termination
-                                   defined_so_far l1_function_name f_convs;
-    in (lthy', new_defs, Symtab.merge (K false) (defined_so_far, new_defs)) end);
+  fun add_defs _ _ [] = FSeq.empty ()
+    | add_defs lthy defined_so_far (f_names :: next_names) =
+        FSeq.fcons (fn () => let
+          (* Wait for conversions to finish *)
+          val (call_graph, f_convs) =
+                map (fn f => let
+                      val conv = the' ("didn't convert function: " ^ quote f ^ "??")
+                                      (Symtab.lookup converted_funcs f);
+                      val (corres_thm, rec_callees, arg_frees) = Future.join conv;
+                      in ((f, rec_callees), (f, (corres_thm, arg_frees))) end)
+                    f_names
+                |> split_list;
+          val f_convs = Symtab.make f_convs;
+
+          (* Split this recursive group prior to defining the functions.
+           * Function calls can be removed by dead code elimination and other
+           * transformations, which could cause the group to split. *)
+          val f_callees = Symtab.make (map (apsnd Symset.dest) call_graph);
+          (* Add each function to its own callees to get a complete inverse *)
+          val f_callers = flip_symtab (Symtab.map cons f_callees);
+
+          val topo_sorted_functions =
+                Topo_Sort.topo_sort {
+                  cmp = String.compare,
+                  graph = Symtab.lookup f_callees #> the,
+                  converse = Symtab.lookup f_callers #> the
+                } (Symtab.keys f_callees |> sort String.compare)
+                |> map Symset.make;
+
+          val f_convss =
+                topo_sorted_functions |> map (fn group =>
+                    map (fn f => (f, the (Symtab.lookup f_convs f)))
+                        (Symset.dest group)
+                    |> Symtab.make);
+
+          (* Define each function group and append it to the result sequence. *)
+          fun add_subgroup_defs lthy defined_so_far [] =
+                add_defs lthy defined_so_far next_names
+            | add_subgroup_defs lthy defined_so_far (f_convs :: f_convss) =
+                FSeq.fcons (fn () => let
+                  val f_convs_list =
+                        Symtab.dest f_convs
+                        |> map (fn (f, (corres_thm, arg_frees)) => (f, corres_thm, arg_frees));
+                  val (new_defs, lthy') =
+                      define lthy filename prog_info simpl_infos check_termination
+                             defined_so_far l1_function_name f_convs_list;
+                  (* Update (non-recursive) callees *)
+                  val new_defs = FunctionInfo2.recalc_base_callees defined_so_far new_defs;
+                  val defined_so_far' = Symtab.merge (K false) (defined_so_far, new_defs);
+                  in ((lthy', new_defs),
+                      add_subgroup_defs lthy' defined_so_far' f_convss)
+                  end);
+          in (* a bit ugly -- may need to tweak the FSeq interface *)
+             the (FSeq.uncons (add_subgroup_defs lthy defined_so_far f_convss)) end);
 
   val (simpl_calls, _) = FunctionInfo2.calc_call_graph simpl_infos;
   val function_groups = #topo_sorted_functions simpl_calls;
-  (* Chain of intermediate states: (lthy, new_defs, accumulator) *)
-  val (def_results, _) = Utils.accumulate add_def (Future.value (lthy, Symtab.empty, Symtab.empty))
-                                          (map Symset.dest function_groups);
+  (* Sequence of intermediate results: (lthy, new_defs) *)
+  val def_results = add_defs lthy Symtab.empty (map Symset.dest function_groups);
 
   (* Produce a mapping from each function group to its L1 phase_infos and the
    * earliest intermediate lthy where it is defined. *)
   val results =
         def_results
-        |> map (Future.map (fn (lthy, f_defs, _ (* discard accum here *)) => let
+        |> FSeq.map (fn (lthy, f_defs) => let
               (* Add monad_mono proofs. These are done in parallel as well
                * (though in practice, they already run pretty quickly). *)
               val mono_thms = if FunctionInfo2.is_function_recursive (snd (hd (Symtab.dest f_defs)))
@@ -631,9 +694,9 @@ let
                               else Symtab.empty;
               val f_defs' = f_defs |> Symtab.map (fn f =>
                               FunctionInfo2.function_info_upd_mono_thm (Symtab.lookup mono_thms f));
-              in (lthy, f_defs') end));
+              in (lthy, f_defs') end);
 in
-  function_groups ~~ results
+  results
 end
 
 end
