@@ -194,6 +194,11 @@ lemma of_int_sint_scast:
   "of_int (sint x) = scast x"
   by (simp add: scast_def word_of_int)
 
+lemma(in comm_semiring_1) add_mult_comms:
+  "a + b + c = a + c + b"
+  "a * b * c = a * c * b"
+  by (rule semiring_normalization_rules)+
+
 lemma array_index_update_If:
   "i < CARD ('b :: finite)
     \<Longrightarrow> Arrays.index (Arrays.update arr j x) i
@@ -282,6 +287,8 @@ fun eqsubst_asm_wrap_tac ctxt thms = wrap_tac (EqSubst.eqsubst_asm_tac ctxt [0] 
 fun eqsubst_either_wrap_tac ctxt thms = (eqsubst_asm_wrap_tac ctxt thms
     ORELSE' eqsubst_wrap_tac ctxt thms)
 *}
+
+
 
 ML {*
 structure ProveSimplToGraphGoals = struct
@@ -480,9 +487,10 @@ fun prove_mem_equality ctxt = DETERM o let
     THEN_ALL_NEW normalise_mem_accs ctxt
     THEN_ALL_NEW simp_tac unpack_simpset
     THEN_ALL_NEW simp_tac (ctxt addsimps @{thms store_word32s_equality_fold
-        store_word32s_equality_final add.commute})
+        store_word32s_equality_final add.commute mult.commute add_mult_comms ucast_id})
     THEN_ALL_NEW simp_tac (ctxt addsimprocs [store_word32s_equality_simproc]
-        addsimps @{thms store_word32s_equality_final add.commute})
+        addsimps @{thms store_word32s_equality_final add.commute
+            mult.commute add_mult_comms ucast_id})
     THEN_ALL_NEW SUBGOAL (fn (t, i) => if exists_Const
             (fn (s, _) => s = @{const_name store_word32}
                 orelse s = @{const_name heap_update}

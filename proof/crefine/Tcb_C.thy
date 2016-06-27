@@ -2796,7 +2796,6 @@ lemma decodeTCBConfigure_ccorres:
                             apply (rule allI, rule conseqPre, vcg)
                             apply (clarsimp simp: returnOk_def return_def)
                            apply (rule ccorres_rhs_assoc)+
-                           apply csymbr
                            apply (rule ccorres_split_nothrowE)
                                 apply (simp add: numeral_eqs)
                                 apply (ctac add: ccorres_injection_handler_csum1[OF deriveCap_ccorres])

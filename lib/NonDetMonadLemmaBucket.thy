@@ -15,6 +15,7 @@ imports
   "Monad_WP/WhileLoopRulesCompleteness"
   Distinct_Prop
 begin
+setup \<open>AutoLevity_Base.add_attribute_test "wp" WeakestPre.is_wp_rule\<close>
 
 lemma no_fail_assume_pre:
   "(\<And>s. P s \<Longrightarrow> no_fail P f) \<Longrightarrow> no_fail P f"

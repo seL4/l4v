@@ -1,4 +1,5 @@
 *.pyc
+*.lev
 *.o
 *~
 .*.attrib_trace

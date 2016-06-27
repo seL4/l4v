@@ -119,6 +119,17 @@ structure WPData = Generic_Data
     val merge = rules_merge;
 end);
 
+fun is_wp_rule ctxt thm = 
+let
+  val ({rules, trips, ...}) = WPData.get (Context.Proof ctxt);
+  val (triples, _, others) = rules;
+  val trip_conv = (snd trips);
+  val results = case get_key trip_conv thm of
+    SOME k => Net.lookup triples (Net.key_of_term k) 
+  | NONE => others
+
+in exists (fn (_, thm') => Thm.eq_thm_prop (thm, thm')) results end
+
 fun derived_rule rule combinator =
   [rule RSN (1, combinator)] handle THM _ => [];
 

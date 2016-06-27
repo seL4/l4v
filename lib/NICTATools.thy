@@ -12,13 +12,12 @@
 theory NICTATools
 imports 
   Apply_Trace_Cmd
-  Solves_Tac
-  "subgoal_focus/Subgoal_Methods"
+  (* Solves_Tac *)
   Rule_By_Method
   Eisbach_Methods
-  "~~/src/HOL/Eisbach/Eisbach_Tools"
   Insulin
   ShowTypes
+  AutoLevity_Hooks
 begin
 
 section "Detect unused meta-forall"
@@ -80,32 +79,5 @@ val _ = Try.tool_setup ("unused_meta_forall",
 
 lemma test_unused_meta_forall: "\<And>x. y \<or> \<not> y"
   oops
-
-(*
- * Tactic that succeeds if and only if there are no subgoals left.
- *
- * Useful for writing tactics of the form:
- *
- *    apply ((rule foo.intros, fastforce+, solved)[1])+
- *
- * which ensures that the entire statement is atomic (and the "fastforce+"
- * doesn't leave anything behind).
- *)
-
-ML {*
-fun solved_tac thm =
-  if Thm.nprems_of thm = 0 then Seq.single thm else Seq.empty
-*}
-
-method_setup solved = {*
-  Scan.succeed (K (SIMPLE_METHOD solved_tac))
-*} "Ensure that all subgoals have been solved."
-
-lemma
-  "(True \<or> (X \<longrightarrow> False))"
-  "((X \<longrightarrow> False) \<or> True)"
-  apply -
-  apply ((rule disjI1 disjI2, simp, solved)[1])+
-  done
 
 end
