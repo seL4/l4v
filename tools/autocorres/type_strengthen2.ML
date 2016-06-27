@@ -64,7 +64,7 @@ let
    * recursive.
    *)
   val is_recursive = FunctionInfo2.is_function_recursive fn_def
-  val default_measure_var = @{term "rec_measure' :: nat"}
+  val default_measure_var = @{term "rec_measure' :: nat"} (* FIXME: Free *)
   val measure_term = Option.getOpt (measure, default_measure_var)
 
   (*
@@ -105,10 +105,11 @@ end
  *    <generated assumptions>,
  *    <table mapping free term names back to their function names>,
  *    <morphism to escape the context>)
+ *
+ * FIXME: refactor with AutoCorresUtil.assume_called_functions_corres
  *)
 fun assume_rec_lifted ctxt prog_info l2_infos rule_set fn_name =
 let
-  val thy = Proof_Context.theory_of ctxt
   val fn_def = the (Symtab.lookup l2_infos fn_name)
 
   (* Find recursive calls. *)
@@ -196,7 +197,7 @@ let
 
   (* Extract the term from our function definition. *)
   val fn_thm' = Utils.named_cterm_instantiate ctxt
-                    [("rec_measure'", Thm.cterm_of ctxt' measure_var)] fn_def
+                    [("rec_measure'" (* FIXME *), Thm.cterm_of ctxt' measure_var)] fn_def
                 handle THM _ => fn_def
   val ct = Thm.prop_of fn_thm' |> Utils.rhs_of |> Thm.cterm_of ctxt'
 
@@ -208,17 +209,19 @@ let
 
   (* Convert "def == old_body" and "old_body == new_body" into "def == new_body". *)
   val thm_ml = Thm.transitive fn_thm' thm
-  val thm_ml = Morphism.thm m thm_ml
 
   (* Get the newly rewritten term. *)
   val new_term = Thm.concl_of thm_ml |> Utils.rhs_of
+
+  (* Export assumptions. *)
+  val thm_ml = Morphism.thm m thm_ml
 
   (*val _ = @{trace} (fn_name, #name rule_set, cterm_of (Proof_Context.theory_of ctxt) new_term)*)
 
   (* Determine if the conversion was successful. *)
   val success = #valid_term rule_set ctxt new_term
 in
-  (* Determine if we were a success. *)
+  (* Determine if the lifting succeeded. *)
   if success then
     SOME (thm_ml, dict)
   else
@@ -309,24 +312,52 @@ let
    * Generate terms necessary for defining the function, and define the
    * functions.
    *)
-  fun gen_fun_def_term (fn_name, dict, thm) =
+  fun gen_fun_def_term (fn_name, dict, thm) lthy =
   let
-    (* If this function is recursive, it has a measure parameter. *)
-    val measure_param = if is_recursive then [("rec_measure'", @{typ nat})] else []
-
-    (* Fetch function parameters. *)
+    (* Fix function parameters. *)
     val fn_info = the (Symtab.lookup l2_infos fn_name)
-    val fn_params = #args fn_info
+    (* Only produce measure parameters for recursive functions.
+     * FIXME: recalculate call graph prior to this *)
+    val all_arg_names = (if is_recursive then ["rec_measure'"] else []) @
+                        map fst (#args fn_info)
+    val all_arg_types = (if is_recursive then [LocalVarExtract2.measureT] else []) @
+                        map snd (#args fn_info)
+    val (all_arg_names, lthy') = Variable.variant_fixes all_arg_names lthy
+    val (measure_param, fn_args) =
+          if is_recursive
+          then chop 1 (all_arg_names ~~ all_arg_types)
+          else ([], all_arg_names ~~ all_arg_types)
 
-    (* Extract the term from the function theorem. *)
+    (* Extract function body and abstract over the function arguments.
+     * FIXME: this is an ugly way to do it. It's probably better if perform_lift
+     *        doesn't convert to schematic vars to begin with *)
+
+    (* First, convert schematic argument variables (of unknown names) to known free variables. *)
+    val inst_args = map (Free #> Thm.cterm_of lthy' #> SOME) fn_args
+    (* L2 function always takes a measure variable, so reserve a slot *)
+    val inst_measure = if is_recursive
+                       then map (Free #> Thm.cterm_of lthy' #> SOME) measure_param else [NONE]
+    (* thm also has a schematic const for each recursive assumption,
+     * which we need to skip. (The measure var appears first, because it
+     * is also used in each recursive call.) *)
+    val skip_callees = replicate (Symset.card (#rec_callees fn_info)) NONE
+    val inst_thm = Drule.infer_instantiate' lthy' (inst_measure @ skip_callees @ inst_args) thm
+    val _ = @{trace} ("inst_thm", thm, inst_thm)
+
+    (* Extract the body from the conversion theorem.
+     * E.g. for "L2_call foo = liftE body" we extract "body". *)
     fun tail_of (_ $ x) = x
-    val term = Thm.concl_of thm
-        |> Utils.rhs_of
-        |> tail_of
-        |> Utils.unsafe_unvarify
-        |> (fn term =>
-             foldr (fn (v, t) => Utils.abs_over "" v t)
-               term (map Free (measure_param @ fn_params)))
+    val body =
+          Thm.concl_of inst_thm
+          |> Utils.rhs_of_eq
+          |> tail_of
+          (* This converts callee Vars in assumptions to Frees. Won't be
+           * necessary if we generate Frees (see previous FIXME). *)
+          |> Utils.unsafe_unvarify
+    (* Abstract over args, which are now known arg frees *)
+    val term = foldr (fn (v, t) => Utils.abs_over "" v t)
+                     body (map Free (measure_param @ fn_args))
+    val _ = @{trace} ("body", Thm.cterm_of lthy' term);
 
     (* Replace place-holder function names with our generated constant name. *)
     val term = map_aterms (fn t => case t of
@@ -336,9 +367,10 @@ let
              | SOME a => Free (make_function_name a, T))
      | x => x) term
   in
-    (make_function_name fn_name, measure_param @ fn_params, term)
+    ((make_function_name fn_name, measure_param @ fn_args, term), lthy')
   end
-  val input_defs = map gen_fun_def_term (Utils.zip3 fn_names dicts thms)
+  (* NB: discard lthy because the same argument vars will be fixed in define_funcs *)
+  val (input_defs, _) = fold_map gen_fun_def_term (Utils.zip3 fn_names dicts thms) lthy
   val (ts_defs, lthy) = Utils.define_functions input_defs false is_recursive lthy
 
   (* Instantiate variables in our equivalence theorem to their newly-defined values. *)
@@ -346,6 +378,7 @@ let
     Utils.instantiate_thm_vars lthy (
       fn ((name, _), t) =>
         try (unprefix "rec'") name
+        (* FIXME: lookup from ts_infos *)
         |> Option.map make_function_name
         |> Option.map (Utils.get_term lthy)
         |> Option.map (Thm.cterm_of lthy)) thm

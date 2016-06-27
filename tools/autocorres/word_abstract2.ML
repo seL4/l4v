@@ -183,11 +183,7 @@ let
     val ([measure_var_name], lthy) = Variable.variant_fixes ["rec_measure'"] lthy;
     val measure_var = Free (measure_var_name, LocalVarExtract2.measureT);
 
-    (* Fix argument variables. *)
-    val new_fn_args = get_expected_fn_args wa_rules l2_infos f;
-    val (arg_names, lthy) = Variable.variant_fixes (map fst new_fn_args) lthy;
-    val arg_frees = map Free (arg_names ~~ map snd new_fn_args);
-
+    (* Add callee assumptions. *)
     val (lthy, export_thm, callee_terms) =
       AutoCorresUtil2.assume_called_functions_corres lthy
         (#callees old_fn_info) (#rec_callees old_fn_info)
@@ -196,6 +192,11 @@ let
         (fn f => get_expected_fn_args (rules_for f) l2_infos f)
         wa_function_name
         measure_var;
+
+    (* Fix argument variables. *)
+    val new_fn_args = get_expected_fn_args wa_rules l2_infos f;
+    val (arg_names, lthy) = Variable.variant_fixes (map fst new_fn_args) lthy;
+    val arg_frees = map Free (arg_names ~~ map snd new_fn_args);
 
     (* Construct free variables to represent our concrete arguments. *)
     val (conc_types, conc_args, precond, arg_pairs, lthy)
@@ -415,7 +416,7 @@ let
      Morphism.thm export_thm thm, (* Also generalizes callees *)
      rec_callees,
      callee_consts,
-     dest_Free measure_var :: new_fn_args,
+     map dest_Free (measure_var :: arg_frees),
      (if member (op =) trace_funcs f then [("WA", AutoCorresData.RuleTrace trace)] else []) @ opt_traces)
   end
 
