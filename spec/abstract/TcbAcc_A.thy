@@ -55,4 +55,13 @@ definition
      od
    od"
 
+
+(* Needed for page invocations. *)
+definition
+  set_message_info :: "obj_ref \<Rightarrow> message_info \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_message_info thread info \<equiv>
+     as_user thread $ set_register msg_info_register $
+                      message_info_to_data info"
+
 end

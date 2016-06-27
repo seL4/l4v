@@ -3385,9 +3385,6 @@ lemma store_pde_no_lookup_pages:
 crunch vs_lookup_pages[wp]:
   get_hw_asid,find_pd_for_asid,set_vm_root_for_flush "\<lambda>s. P (vs_lookup_pages s)"
 
-(* FIXME: move *)
-lemmas mapM_UNIV_wp = mapM_wp[where S="UNIV", simplified]
-
 lemma flush_table_vs_lookup_pages[wp]:
   "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace>
    flush_table a b c d
