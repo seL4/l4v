@@ -444,7 +444,9 @@ fun convert
       (trace_opt: bool)
       (l1_function_name: string -> string)
       (f_name: string)
-      : thm * symset * (string * typ) list = let
+      : term * thm * symset * term Symtab.table *
+        (string * typ) list * (string * AutoCorresData.Trace) list =
+let
   (* FIXME: refactor? *)
   val (simpl_calls, simpl_defs) = FunctionInfo2.calc_call_graph simpl_defs;
 
@@ -485,24 +487,31 @@ fun convert
                             (Symtab.make callee_terms) measure_var;
 
   (* Get actual recursive callees *)
-  val callee_consts =
+  val rec_consts =
         callee_terms |> List.mapPartial (fn (callee, (is_rec, const, _)) =>
             if is_rec then SOME (const, callee) else NONE)
         |> Termtab.make;
   val rec_callees =
         Term.fold_aterms (fn t => fn a =>
-            (Termtab.lookup callee_consts t
+            (Termtab.lookup rec_consts t
                 |> Option.map single
                 |> the_default []) @ a)
             (get_L1corres_monad (HOLogic.dest_Trueprop (Thm.concl_of thm))) []
           |> Symset.make;
 
-  (* FIXME: return traces *)
-  in (Morphism.thm export_thm thm,
-      (* Used for recalculating the recursive call graph *)
+  (* Generalize the arguments, but not assumed callees *)
+  val thm = Variable.gen_all lthy thm;
+  val fn_body = get_L1corres_monad (HOLogic.dest_Trueprop (Thm.concl_of thm));
+  (* Return the constants that we fixed. This will be used to process the returned body. *)
+  val callee_consts =
+        callee_terms |> map (fn (callee, (_, const, _)) => (callee, const)) |> Symtab.make;
+  in
+     (fn_body,
+      Morphism.thm export_thm thm, (* Also generalizes callees *)
       rec_callees,
-      (* Provide the fixed vars so the user can generalize/instantiate them *)
-      [dest_Free measure_var])
+      callee_consts,
+      [dest_Free measure_var],
+      opt_traces)
   end
 
 
@@ -517,7 +526,8 @@ fun define
       (check_termination: bool)
       (l1_callees: FunctionInfo2.function_info Symtab.table)
       (l1_function_name: string -> string)
-      (funcs: (string * thm * (string * typ) list) list) (* name, corres, arg frees *)
+      (* name, raw body, callee consts, corres thm, arg frees *)
+      (funcs: (string * (term * term Symtab.table * thm * (string * typ) list)) list)
       : FunctionInfo2.function_info Symtab.table * local_theory = let
   (* FIXME: dedup with convert *)
 
@@ -530,19 +540,12 @@ fun define
       mk_L1corres_call_prop ctxt prog_info check_termination
           (the (Symtab.lookup simpl_defs fn_name)) (betapply (free, measure_var));
 
-  (* FIXME: pass this from assume_called_functions_corres, etc. *)
-  fun guess_callee_var thm callee = let
-    val base_name = l1_function_name callee;
-    val mentioned_vars = Term.add_vars (Thm.prop_of thm) [];
-    in hd (filter (fn ((v, _), _) => v = base_name) mentioned_vars) end;
+  fun prepare_fn_body (fn_name, (body, callee_consts, corres_thm, [measure_free])) = let
+    val _ = @{trace} ("L1 prepare_fn_body", fn_name, corres_thm);
+    val (callees, rec_callees) = AutoCorresUtil2.get_callees simpl_defs fn_name;
+    val calls = map (the o Symtab.lookup callee_consts) callees;
+    val rec_calls = map (the o Symtab.lookup callee_consts) rec_callees;
 
-  fun prepare_fn_body (fn_name, corres_thm, measure_free) = let
-    val @{term_pat "Trueprop (L1corres _ _ ?body _)"} = Thm.concl_of corres_thm;
-    val fn_info = the (Symtab.lookup simpl_defs fn_name);
-    val calls = map (fn c => Var (guess_callee_var corres_thm c))
-                  (Symset.dest (#callees fn_info));
-    val recursive_calls = map (fn c => Var (guess_callee_var corres_thm c))
-                            (Symset.dest (#rec_callees fn_info));
     (*
      * The returned body will have free variables as placeholders for the function's
      * measure parameter and other arguments, and schematic variables for the functions it calls.
@@ -556,16 +559,16 @@ fun define
      * arguments (none for L1). This is the format expected by define_funcs.
      *)
     val abs_body = body
-      |> fold lambda (rev (map Free measure_free))
-      |> fold lambda (rev recursive_calls)
+      |> lambda (Free measure_free)
+      |> fold lambda (rev rec_calls)
       |> fold lambda (rev calls);
     in abs_body end;
 
   val funcs' = funcs |>
-        map (fn (name, thm, frees) =>
+        map (fn (name, def as (body, callee_consts, thm, frees)) =>
                    (name, (* FIXME: define_funcs needs this currently *)
                           (Thm.generalize ([], map fst frees) (Thm.maxidx_of thm + 1) thm,
-                          prepare_fn_body (name, thm, frees))));
+                          prepare_fn_body (name, def))));
   val _ = @{trace} ("L1.define", map (fn (name, (thm, body)) => (name, thm, Thm.cterm_of lthy body)) funcs');
   val (new_thms, (), lthy') =
         AutoCorresUtil2.define_funcs FunctionInfo2.L1 filename simpl_defs
@@ -630,8 +633,10 @@ let
                 map (fn f => let
                       val conv = the' ("didn't convert function: " ^ quote f ^ "??")
                                       (Symtab.lookup converted_funcs f);
-                      val (corres_thm, rec_callees, arg_frees) = Future.join conv;
-                      in ((f, rec_callees), (f, (corres_thm, arg_frees))) end)
+                      val (l1_body, corres_thm, rec_callees, callee_consts, arg_frees, traces) =
+                            Future.join conv
+                      (* FIXME: return traces *)
+                      in ((f, rec_callees), (f, (l1_body, callee_consts, corres_thm, arg_frees))) end)
                     f_names
                 |> split_list;
           val f_convs = Symtab.make f_convs;
@@ -662,12 +667,9 @@ let
                 add_defs lthy defined_so_far next_names
             | add_subgroup_defs lthy defined_so_far (f_convs :: f_convss) =
                 FSeq.fcons (fn () => let
-                  val f_convs_list =
-                        Symtab.dest f_convs
-                        |> map (fn (f, (corres_thm, arg_frees)) => (f, corres_thm, arg_frees));
                   val (new_defs, lthy') =
                       define lthy filename prog_info simpl_infos check_termination
-                             defined_so_far l1_function_name f_convs_list;
+                             defined_so_far l1_function_name (Symtab.dest f_convs);
                   (* Update (non-recursive) callees *)
                   val new_defs = FunctionInfo2.recalc_base_callees defined_so_far new_defs;
                   val defined_so_far' = Symtab.merge (K false) (defined_so_far, new_defs);

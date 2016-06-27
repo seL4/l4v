@@ -1691,9 +1691,9 @@ let
         | SOME ((l1_infos, conv_group), remaining_groups) => SOME let
           val (call_graph, f_convs) =
                 Symtab.dest conv_group
-                |> map (fn (f, (hl_body, corres_thm, rec_callees, callee_consts, arg_frees, traces)) =>
+                |> map (fn (f, (l2_body, corres_thm, rec_callees, callee_consts, arg_frees, traces)) =>
                           (* FIXME: return traces *)
-                          ((f, rec_callees), (f, (hl_body, callee_consts, corres_thm, arg_frees))))
+                          ((f, rec_callees), (f, (l2_body, callee_consts, corres_thm, arg_frees))))
                 |> split_list;
           val f_convs = Symtab.make f_convs;
 
