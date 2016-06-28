@@ -633,8 +633,7 @@ let
         in FunctionInfo2.function_info_upd_definition pretty_def info end)
         l2_infos;
 
-  (* For now, just works sequentially like the old TypeStrengthen.
-     TODO: parallelise conversion and (especially) polishing *)
+  (* For now, just works sequentially like the old TypeStrengthen. *)
   fun translate_group fn_names (lthy, _, ts_infos) =
   let
     val _ = writeln ("Translating (type strengthen) " ^ Utils.commas fn_names);

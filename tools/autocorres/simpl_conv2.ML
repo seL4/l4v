@@ -428,6 +428,15 @@ fun mk_l1corres_call_simpl_thm check_termination ctxt simpl_def = let
         @{thm L1corres_call_simpl}
   in thm end
 
+(* All L1 functions have the same signature: measure \<Rightarrow> L1_monad *)
+fun l1_fn_type prog_info = AutoCorresUtil2.measureT --> mk_l1monadT (#state_type prog_info);
+
+(* L1corres for f's callees. *)
+fun get_l1_fn_assumption prog_info check_termination simpl_infos ctxt fn_name free _ _ measure_var =
+    mk_L1corres_call_prop ctxt prog_info check_termination
+        (Utils.the' ("SimplConv: missing callee def for " ^ fn_name)
+                    (Symtab.lookup simpl_infos fn_name)) (betapply (free, measure_var));
+
 
 (*
  * Convert a single function. Returns a thm that looks like
@@ -438,7 +447,8 @@ fun mk_l1corres_call_simpl_thm check_termination ctxt simpl_def = let
 fun convert
       (lthy: local_theory)
       (prog_info: ProgramInfo.prog_info)
-      (simpl_defs: FunctionInfo2.function_info Symtab.table)
+      (simpl_infos: FunctionInfo2.function_info Symtab.table)
+      (simpl_call_graph: FunctionInfo2.call_graph_info)
       (check_termination: bool)
       (do_opt: bool)
       (trace_opt: bool)
@@ -446,22 +456,7 @@ fun convert
       (f_name: string)
       : AutoCorresUtil2.convert_result =
 let
-  (* FIXME: refactor? *)
-  val (simpl_calls, simpl_defs) = FunctionInfo2.calc_call_graph simpl_defs;
-
-  val f_info = Utils.the' ("SimplConv: missing SIMPL def for " ^ f_name) (Symtab.lookup simpl_defs f_name);
-  val callee_names = FunctionInfo2.all_callees f_info;
-  (* TODO sanity check:
-     - all SIMPL defs exist *)
-
-  (* All L1 functions have the same signature: measure \<Rightarrow> L1_monad *)
-  val l1_fn_type = AutoCorresUtil2.measureT --> mk_l1monadT (#state_type prog_info);
-
-  (* L1corres for f's callees. *)
-  fun get_l1_fn_assumption ctxt fn_name free _ _ measure_var =
-      mk_L1corres_call_prop ctxt prog_info check_termination
-          (Utils.the' ("SimplConv: missing callee def for " ^ fn_name)
-                      (Symtab.lookup simpl_defs fn_name)) (betapply (free, measure_var));
+  val f_info = Utils.the' ("SimplConv: missing SIMPL def for " ^ f_name) (Symtab.lookup simpl_infos f_name);
 
   (* Fix measure variable. *)
   val ([measure_var_name], lthy') = Variable.variant_fixes ["rec_measure'"] lthy;
@@ -471,8 +466,8 @@ let
   val (lthy'', export_thm, callee_terms) =
     AutoCorresUtil2.assume_called_functions_corres lthy'
       (#callees f_info) (#rec_callees f_info)
-      (K l1_fn_type)
-      get_l1_fn_assumption
+      (K (l1_fn_type prog_info))
+      (get_l1_fn_assumption prog_info check_termination simpl_infos)
       (K [])
       l1_function_name
       measure_var;
@@ -480,8 +475,8 @@ let
   val (thm, opt_traces) =
       if #is_simpl_wrapper f_info
       then (mk_l1corres_call_simpl_thm check_termination lthy'' f_info, [])
-      else get_l1corres_thm prog_info simpl_defs simpl_calls check_termination lthy'' do_opt trace_opt f_name
-                            (Symtab.make callee_terms) measure_var;
+      else get_l1corres_thm prog_info simpl_infos simpl_call_graph check_termination lthy''
+                            do_opt trace_opt f_name (Symtab.make callee_terms) measure_var;
 
   val f_body = get_L1corres_monad (HOLogic.dest_Trueprop (Thm.concl_of thm));
   (* Get actual recursive callees *)
@@ -515,23 +510,21 @@ fun define
       (l1_callees: FunctionInfo2.function_info Symtab.table)
       (funcs: AutoCorresUtil2.convert_result Symtab.table)
       : FunctionInfo2.function_info Symtab.table * local_theory = let
-  (* All L1 functions have the same signature: measure \<Rightarrow> L1_monad *)
-  val l1_fn_type = AutoCorresUtil2.measureT --> mk_l1monadT (#state_type prog_info);
-
-  (* L1corres for f's callees. *)
-  fun get_l1_fn_assumption ctxt fn_name free _ _ measure_var =
-      mk_L1corres_call_prop ctxt prog_info check_termination
-          (the (Symtab.lookup simpl_infos fn_name)) (betapply (free, measure_var));
-
   val funcs' = Symtab.dest funcs |>
         map (fn (name, {body, proof, callee_consts, arg_frees, ...}) =>
                    (name, ((AutoCorresUtil2.abstract_fn_body simpl_infos
                               (name, (body, callee_consts, proof, arg_frees))),
                            proof, arg_frees)));
   val (new_thms, (), lthy') =
-        AutoCorresUtil2.define_funcs FunctionInfo2.L1 filename simpl_infos
-            l1_function_name (K l1_fn_type) get_l1_fn_assumption (K []) @{thm L1corres_recguard_0}
-            lthy (Symtab.map (K #corres_thm) l1_callees) ()
+        AutoCorresUtil2.define_funcs
+            FunctionInfo2.L1 filename simpl_infos l1_function_name
+            (K (l1_fn_type prog_info))
+            (get_l1_fn_assumption prog_info check_termination simpl_infos)
+            (K [])
+            @{thm L1corres_recguard_0}
+            lthy
+            (Symtab.map (K #corres_thm) l1_callees)
+            ()
             funcs';
   val new_defs = Symtab.map (fn f_name => fn (const, def, corres_thm) => let
         val f_info = the (Symtab.lookup simpl_infos f_name);
@@ -569,10 +562,10 @@ fun translate
       (lthy: local_theory)
       : FunctionInfo2.phase_results =
 let
-  val (l1_call_graph, simpl_infos) = FunctionInfo2.calc_call_graph simpl_infos;
+  val (simpl_call_graph, simpl_infos) = FunctionInfo2.calc_call_graph simpl_infos;
   (* Initial function groups, in topological order *)
   val initial_results =
-        #topo_sorted_functions l1_call_graph
+        #topo_sorted_functions simpl_call_graph
         |> map (fn f_names => let
              val f_infos =
                Symset.dest f_names
@@ -581,13 +574,11 @@ let
              in (lthy, f_infos) end)
         |> FSeq.of_list;
 
-  val funcs_to_translate = Symtab.keys simpl_infos;
-
   (* Do conversions in parallel. *)
   val converted_groups =
         AutoCorresUtil2.par_convert
           (fn lthy => fn l1_infos =>
-             convert lthy prog_info simpl_infos check_termination
+             convert lthy prog_info simpl_infos simpl_call_graph check_termination
                      do_opt trace_opt l1_function_name)
           initial_results;
 

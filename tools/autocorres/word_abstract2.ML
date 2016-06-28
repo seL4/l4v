@@ -383,7 +383,7 @@ let
           |> HOLogic.dest_Trueprop
           |> (fn t => Utils.term_nth_arg t 3))
 
-    (* Convert All-quantified vars in the concrete body to schematics. *)
+    (* Convert all-quantified vars in the concrete body to schematics. *)
     val thm = Variable.gen_all lthy thm
 
     (* Extract the abstract term out of a corresTA thm. *)
