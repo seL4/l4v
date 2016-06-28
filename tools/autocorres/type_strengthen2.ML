@@ -603,11 +603,6 @@ in
   writeln ("Type Strengthening Statistics: \n" ^ data)
 end
 
-fun symtab_merge allow_dups tabs =
-      maps Symtab.dest tabs
-      |> (if allow_dups then sort_distinct (fast_string_ord o apply2 fst) else I)
-      |> Symtab.make;
-
 (* Run through every function, attempting to strengthen its type.
  * FIXME: this stage is currently completely sequential. Conversions
  *        that do not depend on each other should be in parallel;
@@ -627,7 +622,7 @@ let
   (* Wait for previous stage to finish first. *)
   val l2_results = FSeq.list_of l2_results;
   val lthy = List.last l2_results |> fst;
-  val l2_infos = symtab_merge false (map snd l2_results);
+  val l2_infos = Utils.symtab_merge false (map snd l2_results);
 
   (* Prettify bound variable names in definitions. *)
   val l2_infos = Symtab.map (fn f_name => fn info => let

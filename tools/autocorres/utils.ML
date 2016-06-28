@@ -1023,6 +1023,12 @@ val _ = assert (apply2 Substring.string (positionr "br" (Substring.full "abracad
 val _ = assert (apply2 Substring.string (positionr "xx" (Substring.full "abracadabra"))
                  = ("abracadabra", "")) ""
 
+(* Merge a list of Symtabs. *)
+fun symtab_merge allow_dups tabs =
+      maps Symtab.dest tabs
+      |> (if allow_dups then sort_distinct (fast_string_ord o apply2 fst) else I)
+      |> Symtab.make;
+
 end
 
 

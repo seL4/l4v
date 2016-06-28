@@ -59,10 +59,7 @@ let val filename = "type_strengthen.c";
 
     val no_heap_abs = ["opt_j"];
     val force_heap_abs = [];
-(*
-    val hl_results = l2_results;
-*)
-    val hl_results =
+    val hl_results = if false then l2_results else
       HeapLift2.translate filename prog_info l2_results' HL_setup
         (Symset.make no_heap_abs) (Symset.make force_heap_abs)
         heap_abs_syntax keep_going
@@ -70,10 +67,7 @@ let val filename = "type_strengthen.c";
 
     val unsigned_abs = ["opt_a"];
     val no_signed_abs = [];
-(*
-    val wa_results = hl_results;
-*)
-    val wa_results =
+    val wa_results = if false then hl_results else
       WordAbstract2.translate filename prog_info hl_results
         (Symset.make unsigned_abs) (Symset.make no_signed_abs) []
         do_opt trace_opt (fn f => "wa_" ^ f ^ "'");
@@ -83,11 +77,11 @@ let val filename = "type_strengthen.c";
       TypeStrengthen2.translate ts_rules Symtab.empty filename prog_info
         wa_results (fn f => f ^ "'") keep_going do_opt;
 
-    val l1_results' = FSeq.list_of l1_results |> map snd |> TypeStrengthen2.symtab_merge false;
-    val l2_results' = FSeq.list_of l2_results |> map snd |> TypeStrengthen2.symtab_merge false;
-    val hl_results' = FSeq.list_of hl_results |> map snd |> TypeStrengthen2.symtab_merge false;
-    val wa_results' = FSeq.list_of wa_results |> map snd |> TypeStrengthen2.symtab_merge false;
-    val ts_results' = FSeq.list_of ts_results |> map snd |> TypeStrengthen2.symtab_merge false;
+    val l1_results' = FSeq.list_of l1_results |> map snd |> Utils.symtab_merge false;
+    val l2_results' = FSeq.list_of l2_results |> map snd |> Utils.symtab_merge false;
+    val hl_results' = FSeq.list_of hl_results |> map snd |> Utils.symtab_merge false;
+    val wa_results' = FSeq.list_of wa_results |> map snd |> Utils.symtab_merge false;
+    val ts_results' = FSeq.list_of ts_results |> map snd |> Utils.symtab_merge false;
     val _ = result_infos := FunctionInfo2.Phasetab.make
               [(FunctionInfo2.CP, simpl_info),
                (FunctionInfo2.L1, l1_results'),
