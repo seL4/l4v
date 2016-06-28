@@ -455,10 +455,8 @@ let
   (* TODO sanity check:
      - all SIMPL defs exist *)
 
-  val measureT = @{typ nat};
-
   (* All L1 functions have the same signature: measure \<Rightarrow> L1_monad *)
-  val l1_fn_type = measureT --> mk_l1monadT (#state_type prog_info);
+  val l1_fn_type = AutoCorresUtil2.measureT --> mk_l1monadT (#state_type prog_info);
 
   (* L1corres for f's callees. *)
   fun get_l1_fn_assumption ctxt fn_name free _ _ measure_var =
@@ -468,7 +466,7 @@ let
 
   (* Fix measure variable. *)
   val ([measure_var_name], lthy') = Variable.variant_fixes ["rec_measure'"] lthy;
-  val measure_var = Free (measure_var_name, measureT);
+  val measure_var = Free (measure_var_name, AutoCorresUtil2.measureT);
 
   (* Add callee assumptions. Note that our define code has to use the same assumption order. *)
   val (lthy'', export_thm, callee_terms) =
@@ -517,11 +515,8 @@ fun define
       (* name, raw body, callee consts, corres thm, arg frees *)
       (funcs: (string * (term * term Symtab.table * thm * (string * typ) list)) list)
       : FunctionInfo2.function_info Symtab.table * local_theory = let
-  (* FIXME: dedup with convert *)
-
   (* All L1 functions have the same signature: measure \<Rightarrow> L1_monad *)
-  val measureT = @{typ nat};
-  val l1_fn_type = measureT --> mk_l1monadT (#state_type prog_info);
+  val l1_fn_type = AutoCorresUtil2.measureT --> mk_l1monadT (#state_type prog_info);
 
   (* L1corres for f's callees. *)
   fun get_l1_fn_assumption ctxt fn_name free _ _ measure_var =

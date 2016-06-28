@@ -320,7 +320,7 @@ let
      * FIXME: recalculate call graph prior to this *)
     val all_arg_names = (if is_recursive then ["rec_measure'"] else []) @
                         map fst (#args fn_info)
-    val all_arg_types = (if is_recursive then [LocalVarExtract2.measureT] else []) @
+    val all_arg_types = (if is_recursive then [AutoCorresUtil2.measureT] else []) @
                         map snd (#args fn_info)
     val (all_arg_names, lthy') = Variable.variant_fixes all_arg_names lthy
     val (measure_param, fn_args) =

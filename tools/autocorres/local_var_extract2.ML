@@ -1210,13 +1210,11 @@ in
         (l1_term |> head_of |> PolyML.makestring)
 end
 
-val measureT = @{typ nat};
-
 (* Get the expected type of a function from its name. *)
 fun get_expected_l2_fn_type prog_info l1_infos fn_name =
 let
   val fn_info = the (Symtab.lookup l1_infos fn_name)
-  val fn_params_typ = measureT :: map snd (#args fn_info)
+  val fn_params_typ = AutoCorresUtil2.measureT :: map snd (#args fn_info)
 in
   fn_params_typ ---> mk_l2monadT (#globals_type prog_info) (#return_type fn_info) @{typ unit}
 end
@@ -1408,7 +1406,8 @@ let
    * and this gets annoying pretty quickly. But it is probably unavoidable.
    *)
   val (fn_names, fn_defs) = split_list (Symtab.dest l2_infos);
-  val measure = Free ("rec_measure'", measureT)
+  val ([measure_var_name], lthy) = Variable.variant_fixes ["rec_measure'"] lthy;
+  val measure = Free (measure_var_name, AutoCorresUtil2.measureT)
   fun make_mono_step_stmt current_def =
       let
           (* def should be of the form "func ?locale_args... ?measure ?args... = ..." *)
@@ -1526,7 +1525,7 @@ fun convert
 
   (* Fix measure variable. *)
   val ([measure_var_name], lthy') = Variable.variant_fixes ["rec_measure'"] lthy;
-  val measure_var = Free (measure_var_name, measureT);
+  val measure_var = Free (measure_var_name, AutoCorresUtil2.measureT);
 
   (* Add callee assumptions. Note that our define code has to use the same assumption order. *)
   val (lthy'', export_thm, callee_terms) =
@@ -1590,7 +1589,6 @@ fun define
       : FunctionInfo2.function_info Symtab.table * local_theory = let
   val funcs' = funcs |>
         map (fn (name, def as (body, callee_consts, thm, frees)) =>
-                   (* FIXME: abstract_fn_body should really be moved into define_funcs *)
                    (name, ((AutoCorresUtil2.abstract_fn_body l1_infos (name, def), thm, frees))));
   val (new_thms, (), lthy') =
         AutoCorresUtil2.define_funcs FunctionInfo2.L2 filename l1_infos

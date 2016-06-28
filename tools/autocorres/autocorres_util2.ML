@@ -60,6 +60,9 @@ in
   (Symset.dest (#callees fn_info), Symset.dest (#rec_callees fn_info))
 end
 
+(* Measure variables are currently hardcoded as nats. *)
+val measureT = @{typ nat};
+
 (*
  * Assume theorems for called functions.
  *

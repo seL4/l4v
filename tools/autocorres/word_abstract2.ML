@@ -181,7 +181,7 @@ let
 
     (* Fix measure variable. *)
     val ([measure_var_name], lthy) = Variable.variant_fixes ["rec_measure'"] lthy;
-    val measure_var = Free (measure_var_name, LocalVarExtract2.measureT);
+    val measure_var = Free (measure_var_name, AutoCorresUtil2.measureT);
 
     (* Add callee assumptions. *)
     val (lthy, export_thm, callee_terms) =
