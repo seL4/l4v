@@ -181,6 +181,35 @@ fun get_rec_callees
           |> Termtab.make;
     in get_body_callees callee_lookup body end;
 
+
+(* Given a function body containing arguments and assumed function calls,
+ * abstract the code over those parameters.
+ *
+ * The returned body will have free variables as placeholders for the function's
+ * measure parameter and other arguments, as well as for the functions it calls.
+ *
+ * We modify the body to be of the form:
+ *
+ *     %fun1 fun2 rec1 rec2 measure arg1 arg2. f <...>
+ *
+ * That is, all non-recursive calls are abstracted out the front, followed by
+ * recursive calls, followed by the measure variable, followed by function
+ * arguments. This is the format expected by define_funcs.
+ *)
+fun abstract_fn_body
+      (prev_fn_infos: FunctionInfo2.function_info Symtab.table)
+      (fn_name, (body, callee_consts, corres_thm, arg_frees)) = let
+  val _ = @{trace} ("L2 prepare_fn_body", fn_name, corres_thm);
+  val (callees, rec_callees) = get_callees prev_fn_infos fn_name;
+  val calls = map (the o Symtab.lookup callee_consts) callees;
+  val rec_calls = map (the o Symtab.lookup callee_consts) rec_callees;
+
+  val abs_body = body
+        |> fold lambda (rev (map Free arg_frees))
+        |> fold lambda (rev rec_calls)
+        |> fold lambda (rev calls);
+  in abs_body end;
+
 (*
  * Given one or more function specs, define them and instantiate corres proofs.
  *

@@ -528,35 +528,11 @@ fun define
       mk_L1corres_call_prop ctxt prog_info check_termination
           (the (Symtab.lookup simpl_defs fn_name)) (betapply (free, measure_var));
 
-  fun prepare_fn_body (fn_name, (body, callee_consts, corres_thm, [measure_free])) = let
-    val _ = @{trace} ("L1 prepare_fn_body", fn_name, corres_thm);
-    val (callees, rec_callees) = AutoCorresUtil2.get_callees simpl_defs fn_name;
-    val calls = map (the o Symtab.lookup callee_consts) callees;
-    val rec_calls = map (the o Symtab.lookup callee_consts) rec_callees;
-
-    (*
-     * The returned body will have free variables as placeholders for the function's
-     * measure parameter and other arguments, and schematic variables for the functions it calls.
-     *
-     * We modify the body to be of the form:
-     *
-     *     %fun1 fun2 rec1 rec2 measure arg1 arg2. f <...>
-     *
-     * That is, all non-recursive calls are abstracted out the front, followed by
-     * recursive calls, followed by the measure variable, followed by function
-     * arguments (none for L1). This is the format expected by define_funcs.
-     *)
-    val abs_body = body
-      |> lambda (Free measure_free)
-      |> fold lambda (rev rec_calls)
-      |> fold lambda (rev calls);
-    in abs_body end;
-
   val funcs' = funcs |>
         map (fn (name, def as (body, callee_consts, thm, frees)) =>
                    (name, (* FIXME: define_funcs needs this currently *)
                           (Thm.generalize ([], map fst frees) (Thm.maxidx_of thm + 1) thm,
-                          prepare_fn_body (name, def))));
+                          AutoCorresUtil2.abstract_fn_body simpl_defs (name, def))));
   val _ = @{trace} ("L1.define", map (fn (name, (thm, body)) => (name, thm, Thm.cterm_of lthy body)) funcs');
   val (new_thms, (), lthy') =
         AutoCorresUtil2.define_funcs FunctionInfo2.L1 filename simpl_defs
