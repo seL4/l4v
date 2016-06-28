@@ -676,7 +676,7 @@ let
   val is_function_lifted = String_Memo.memo is_function_lifted;
 
   (* Convert to new heap format. *)
-  fun convert lthy l2_infos f =
+  fun convert lthy l2_infos f: AutoCorresUtil2.convert_result =
   let
     val f_l2_info = the (Symtab.lookup l2_infos f);
 
@@ -819,12 +819,14 @@ let
     val callee_consts =
           callee_terms |> map (fn (callee, (_, const, _)) => (callee, const)) |> Symtab.make;
   in
-    (f_body,
-     Morphism.thm export_thm thm,
-     rec_callees,
-     callee_consts,
-     map dest_Free (measure_var :: arg_frees),
-     (if member (op =) trace_funcs f then [("HL", AutoCorresData.RuleTrace trace)] else []) @ opt_traces)
+    { body = f_body,
+      proof = Morphism.thm export_thm thm,
+      rec_callees = rec_callees,
+      callee_consts = callee_consts,
+      arg_frees = map dest_Free (measure_var :: arg_frees),
+      traces = (if member (op =) trace_funcs f
+                then [("HL", AutoCorresData.RuleTrace trace)] else []) @ opt_traces
+    }
   end
 
   (* Define a previously-converted function (or recursive function group).
@@ -833,13 +835,13 @@ let
         (lthy: local_theory)
         (l2_infos: FunctionInfo2.function_info Symtab.table)
         (hl_callees: FunctionInfo2.function_info Symtab.table)
-        (* name, raw body, callee consts, corres thm, arg frees *)
-        (funcs: (string * (term * term Symtab.table * thm * (string * typ) list)) list)
+        (funcs: AutoCorresUtil2.convert_result Symtab.table)
         : FunctionInfo2.function_info Symtab.table * local_theory = let
-    val funcs' = funcs |>
-          map (fn (name, def as (body, callee_consts, thm, frees)) =>
-                     (* FIXME: abstract_fn_body should really be moved into define_funcs *)
-                     (name, ((AutoCorresUtil2.abstract_fn_body l2_infos (name, def), thm, frees))));
+    val funcs' = Symtab.dest funcs |>
+          map (fn (name, {body, proof, callee_consts, arg_frees, ...}) =>
+                     (name, ((AutoCorresUtil2.abstract_fn_body l2_infos
+                                (name, (body, callee_consts, proof, arg_frees))),
+                             proof, arg_frees)));
     val (new_thms, (), lthy') =
           AutoCorresUtil2.define_funcs FunctionInfo2.HL filename l2_infos
               hl_function_name
@@ -860,81 +862,18 @@ let
           end) new_thms;
     in (new_infos, lthy') end;
 
-  (* All conversions can run in parallel.
-   * Each conversion depends only on the corresponding L2 define phase
-   * (which necessarily also includes L2 callees). *)
-  val converted_groups =
-        FSeq.fold_map (fn l2_infos_accum => fn (lthy, l2_infos) => let
-               val l2_infos_accum' = Symtab.merge (K false) (l2_infos_accum, l2_infos);
-               (* Convert l2_infos in parallel, but join the results right away.
-                * This is fine because we will define them together. *)
-               val conv_results =
-                     Symtab.dest l2_infos
-                     |> Par_List.map (fn (f, _) => (f, convert lthy l2_infos_accum' f))
-                     |> Symtab.make;
-               in ((l2_infos, conv_results), l2_infos_accum') end)
-            Symtab.empty l2_results;
+  (* Do conversions in parallel. *)
+  val converted_groups = AutoCorresUtil2.par_convert convert l2_results;
 
-  (* Definitions update lthy sequentially. 
-   * Each definition step produces a lthy that has a prefix of the update sequence,
-   * and can be used in an L2 translation that depends only on that prefix.
-   * Hence we return the intermediate lthys as futures. *)
-  fun add_defs lthy defined_so_far converted_groups = FSeq.mk (fn () =>
-      case FSeq.uncons converted_groups of
-          NONE => NONE
-        | SOME ((l2_infos, conv_group), remaining_groups) => SOME let
-          val (call_graph, f_convs) =
-                Symtab.dest conv_group
-                |> map (fn (f, (hl_body, corres_thm, rec_callees, callee_consts, arg_frees, traces)) =>
-                          (* FIXME: return traces *)
-                          ((f, rec_callees), (f, (hl_body, callee_consts, corres_thm, arg_frees))))
-                |> split_list;
-          val f_convs = Symtab.make f_convs;
-
-          (* Split this recursive group prior to defining the functions.
-           * Function calls can be removed by dead code elimination and other
-           * transformations, which could cause the group to split. *)
-          val f_callees = Symtab.make (map (apsnd Symset.dest) call_graph);
-          (* Add each function to its own callees to get a complete inverse *)
-          val f_callers = flip_symtab (Symtab.map cons f_callees);
-
-          val topo_sorted_functions =
-                Topo_Sort.topo_sort {
-                  cmp = String.compare,
-                  graph = Symtab.lookup f_callees #> the,
-                  converse = Symtab.lookup f_callers #> the
-                } (Symtab.keys f_callees |> sort String.compare)
-                |> map Symset.make;
-
-          val f_convss =
-                topo_sorted_functions |> map (fn group =>
-                    map (fn f => (f, the (Symtab.lookup f_convs f)))
-                        (Symset.dest group)
-                    |> Symtab.make);
-
-          (* Define each function group and append it to the result sequence. *)
-          fun add_subgroup_defs lthy defined_so_far [] =
-                add_defs lthy defined_so_far remaining_groups
-            | add_subgroup_defs lthy defined_so_far (f_convs :: f_convss) =
-                FSeq.fcons (fn () => let
-                  val (new_defs, lthy') =
-                      define lthy l2_infos defined_so_far (Symtab.dest f_convs);
-                  (* Update (non-recursive) callees *)
-                  val new_defs = FunctionInfo2.recalc_base_callees defined_so_far new_defs;
-                  val defined_so_far' = Symtab.merge (K false) (defined_so_far, new_defs);
-                  in ((lthy', new_defs),
-                      add_subgroup_defs lthy' defined_so_far' f_convss)
-                  end);
-          in (* a bit ugly -- may need to tweak the FSeq interface *)
-             the (FSeq.uncons (add_subgroup_defs lthy defined_so_far f_convss)) end);
-
-  (* Sequence of intermediate states: (lthy, new_defs) *)
+  (* Sequence of new function_infos and intermediate lthys *)
   val def_results = FSeq.mk (fn _ =>
         (* If there's nothing to translate, we won't have a lthy to use *)
         if FSeq.null l2_results then NONE else
           let (* Get initial lthy from end of L2 defs *)
               val (l2_lthy, _) = FSeq.list_of l2_results |> List.last;
-          in FSeq.uncons (add_defs l2_lthy Symtab.empty converted_groups) end);
+              val results = AutoCorresUtil2.define_funcs_sequence
+                              l2_lthy define Symtab.empty converted_groups;
+          in FSeq.uncons results end);
 
   (* Produce a mapping from each function group to its L1 phase_infos and the
    * earliest intermediate lthy where it is defined. *)

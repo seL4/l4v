@@ -430,4 +430,117 @@ fun define_funcs
     (results, accum, ctxt)
   end
 
+(* Utility for doing conversions in parallel.
+ * The conversion of each function f should depend only on the previous
+ * define phase for f (which necessarily also includes f's callees). *)
+type convert_result = {
+       body: term, (* new body *)
+       proof: thm, (* corres thm *)
+       rec_callees: symset, (* minimal rec_callees after translation *)
+       callee_consts: term Symtab.table, (* assumed frees for other callees *)
+       arg_frees: (string * typ) list, (* fixed argument frees, including measure *)
+       traces: (string * AutoCorresData.Trace) list (* traces *)
+     }
+fun par_convert
+      (* Worker: lthy -> function_infos for func and callees -> fn_name -> results *)
+      (convert: local_theory -> FunctionInfo2.function_info Symtab.table ->
+                string -> convert_result)
+      (prev_results: FunctionInfo2.phase_results)
+      (* Return converted functions in recursive groups.
+       * The groups are tagged with fn_infos from prev_results to identify them. *)
+      : (FunctionInfo2.function_info Symtab.table * convert_result Symtab.table) FSeq.fseq =
+    (* Knowing that prev_results is in topological order,
+     * we accumulate its function_infos, which will be a superset
+     * of the callee infos that each conversion requires. *)
+    FSeq.fold_map (fn fn_infos_accum => fn (lthy, fn_infos) => let
+           val fn_infos_accum = Symtab.merge (K false) (fn_infos_accum, fn_infos);
+           (* Convert fn_infos in parallel, but join the results right away.
+            * This is fine because we will define them together. *)
+           val conv_results =
+                 Symtab.dest fn_infos
+                 |> Par_List.map (fn (f, _) =>
+                      (f, convert lthy fn_infos_accum f))
+                 |> Symtab.make;
+           in ((fn_infos, conv_results), fn_infos_accum) end)
+        Symtab.empty prev_results;
+
+
+(* Utility for defining functions.
+ *
+ * Definitions update the theory sequentially.
+ * Each definition step produces a lthy that contains the current function
+ * group, and can immediately be used in the next conversion phase for
+ * those functions. Hence we return the intermediate lthys as futures.
+ *
+ * The actual recursive function groups may be finer-grained than in
+ * converted_groups, as function calls can be removed by dead code
+ * elimination and other transformations. Hence we detect the actual
+ * function groups before defining them.
+ *
+ * FIXME: this currently discards traces *)
+fun define_funcs_sequence
+      (lthy: local_theory)
+      (define_worker: local_theory ->
+                      (* previous infos for functions *)
+                      FunctionInfo2.function_info Symtab.table ->
+                      (* new infos for callees *)
+                      FunctionInfo2.function_info Symtab.table ->
+                      (* data for functions *)
+                      convert_result Symtab.table ->
+                      (* new infos for functions *)
+                      FunctionInfo2.function_info Symtab.table * local_theory)
+      (* accumulator, initially empty *)
+      (defined_so_far: FunctionInfo2.function_info Symtab.table)
+      (converted_groups: (FunctionInfo2.function_info Symtab.table *
+                          convert_result Symtab.table) FSeq.fseq)
+      : FunctionInfo2.phase_results =
+  FSeq.mk (fn () =>
+    case FSeq.uncons converted_groups of
+        NONE => NONE
+      | SOME ((prev_infos, conv_group), remaining_groups) => SOME let
+        val (call_graph, f_convs) =
+              Symtab.dest conv_group
+              |> map (fn (f, result) =>
+                        ((f, #rec_callees result), (f, result)))
+              |> split_list;
+        val f_convs = Symtab.make f_convs;
+
+        (* Split this recursive group prior to defining the functions.
+         * Function calls can be removed by dead code elimination and other
+         * transformations, which could cause the group to split. *)
+        val f_callees = Symtab.make (map (apsnd Symset.dest) call_graph);
+        (* Add each function to its own callees to get a complete inverse *)
+        val f_callers = flip_symtab (Symtab.map cons f_callees);
+
+        val topo_sorted_functions =
+              Topo_Sort.topo_sort {
+                cmp = String.compare,
+                graph = Symtab.lookup f_callees #> the,
+                converse = Symtab.lookup f_callers #> the
+              } (Symtab.keys f_callees |> sort String.compare)
+              |> map Symset.make;
+
+        val f_convss =
+              topo_sorted_functions |> map (fn group =>
+                  map (fn f => (f, the (Symtab.lookup f_convs f)))
+                      (Symset.dest group)
+                  |> Symtab.make);
+
+        (* Define each function group and append it to the result sequence. *)
+        fun add_subgroup_defs lthy defined_so_far [] =
+              define_funcs_sequence lthy define_worker defined_so_far remaining_groups
+          | add_subgroup_defs lthy defined_so_far (f_convs :: f_convss) =
+              FSeq.fcons (fn () => let
+                val (new_defs, lthy') =
+                    define_worker lthy prev_infos defined_so_far f_convs;
+                (* Update (non-recursive) callees *)
+                val new_defs = FunctionInfo2.recalc_base_callees defined_so_far new_defs;
+                val defined_so_far' = Symtab.merge (K false) (defined_so_far, new_defs);
+                in ((lthy', new_defs),
+                    add_subgroup_defs lthy' defined_so_far' f_convss)
+                end);
+        in (* a bit ugly -- may need to tweak the FSeq interface *)
+           the (FSeq.uncons (add_subgroup_defs lthy defined_so_far f_convss)) end);
+
+
 end

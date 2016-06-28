@@ -444,8 +444,7 @@ fun convert
       (trace_opt: bool)
       (l1_function_name: string -> string)
       (f_name: string)
-      : term * thm * symset * term Symtab.table *
-        (string * typ) list * (string * AutoCorresData.Trace) list =
+      : AutoCorresUtil2.convert_result =
 let
   (* FIXME: refactor? *)
   val (simpl_calls, simpl_defs) = FunctionInfo2.calc_call_graph simpl_defs;
@@ -492,12 +491,14 @@ let
   val callee_consts =
         callee_terms |> map (fn (callee, (_, const, _)) => (callee, const)) |> Symtab.make;
   in
-     (f_body,
-      Morphism.thm export_thm thm, (* Also generalizes callees *)
-      rec_callees,
-      callee_consts,
-      [dest_Free measure_var],
-      opt_traces)
+    { body = f_body,
+      (* Expose callee assumptions and generalizes calle vars *)
+      proof = Morphism.thm export_thm thm,
+      rec_callees = rec_callees,
+      callee_consts = callee_consts,
+      arg_frees = [dest_Free measure_var],
+      traces = opt_traces
+    }
   end
 
 
@@ -505,15 +506,14 @@ let
  * lthy must include all definitions from l1_callees.
  * simpl_defs must include current function set and its immediate callees.  *)
 fun define
-      (lthy: local_theory)
       (filename: string)
       (prog_info: ProgramInfo.prog_info)
-      (simpl_defs: FunctionInfo2.function_info Symtab.table)
       (check_termination: bool)
-      (l1_callees: FunctionInfo2.function_info Symtab.table)
       (l1_function_name: string -> string)
-      (* name, raw body, callee consts, corres thm, arg frees *)
-      (funcs: (string * (term * term Symtab.table * thm * (string * typ) list)) list)
+      (lthy: local_theory)
+      (simpl_infos: FunctionInfo2.function_info Symtab.table)
+      (l1_callees: FunctionInfo2.function_info Symtab.table)
+      (funcs: AutoCorresUtil2.convert_result Symtab.table)
       : FunctionInfo2.function_info Symtab.table * local_theory = let
   (* All L1 functions have the same signature: measure \<Rightarrow> L1_monad *)
   val l1_fn_type = AutoCorresUtil2.measureT --> mk_l1monadT (#state_type prog_info);
@@ -521,19 +521,20 @@ fun define
   (* L1corres for f's callees. *)
   fun get_l1_fn_assumption ctxt fn_name free _ _ measure_var =
       mk_L1corres_call_prop ctxt prog_info check_termination
-          (the (Symtab.lookup simpl_defs fn_name)) (betapply (free, measure_var));
+          (the (Symtab.lookup simpl_infos fn_name)) (betapply (free, measure_var));
 
-  val funcs' = funcs |>
-        map (fn (name, def as (body, callee_consts, thm, frees)) =>
-                   (* FIXME: abstract_fn_body should really be moved into define_funcs *)
-                   (name, ((AutoCorresUtil2.abstract_fn_body simpl_defs (name, def), thm, frees))));
+  val funcs' = Symtab.dest funcs |>
+        map (fn (name, {body, proof, callee_consts, arg_frees, ...}) =>
+                   (name, ((AutoCorresUtil2.abstract_fn_body simpl_infos
+                              (name, (body, callee_consts, proof, arg_frees))),
+                           proof, arg_frees)));
   val (new_thms, (), lthy') =
-        AutoCorresUtil2.define_funcs FunctionInfo2.L1 filename simpl_defs
+        AutoCorresUtil2.define_funcs FunctionInfo2.L1 filename simpl_infos
             l1_function_name (K l1_fn_type) get_l1_fn_assumption (K []) @{thm L1corres_recguard_0}
             lthy (Symtab.map (K #corres_thm) l1_callees) ()
             funcs';
   val new_defs = Symtab.map (fn f_name => fn (const, def, corres_thm) => let
-        val f_info = the (Symtab.lookup simpl_defs f_name);
+        val f_info = the (Symtab.lookup simpl_infos f_name);
         in f_info
            |> FunctionInfo2.function_info_upd_phase FunctionInfo2.L1
            |> FunctionInfo2.function_info_upd_definition def
@@ -568,78 +569,32 @@ fun translate
       (lthy: local_theory)
       : FunctionInfo2.phase_results =
 let
+  val (l1_call_graph, simpl_infos) = FunctionInfo2.calc_call_graph simpl_infos;
+  (* Initial function groups, in topological order *)
+  val initial_results =
+        #topo_sorted_functions l1_call_graph
+        |> map (fn f_names => let
+             val f_infos =
+               Symset.dest f_names
+               |> List.mapPartial (fn f => Option.map (pair f) (Symtab.lookup simpl_infos f))
+               |> Symtab.make;
+             in (lthy, f_infos) end)
+        |> FSeq.of_list;
+
   val funcs_to_translate = Symtab.keys simpl_infos;
 
-  (* All conversions can run in parallel. *)
-  val converted_funcs =
-        funcs_to_translate |> map (fn f =>
-          (f, Future.fork (fn _ =>
-                convert lthy prog_info simpl_infos check_termination do_opt trace_opt l1_function_name f)))
-        |> Symtab.make;
+  (* Do conversions in parallel. *)
+  val converted_groups =
+        AutoCorresUtil2.par_convert
+          (fn lthy => fn l1_infos =>
+             convert lthy prog_info simpl_infos check_termination
+                     do_opt trace_opt l1_function_name)
+          initial_results;
 
-  (* Definitions update lthy sequentially.
-   * We use the arbitrary (but deterministic) ordering defined by get_topo_sorted_functions.
-   * Each definition step produces a lthy that has a prefix of the update sequence,
-   * and can be used in an L2 translation that depends only on that prefix.
-   * Hence we return the intermediate lthys as futures. *)
-  fun add_defs _ _ [] = FSeq.empty ()
-    | add_defs lthy defined_so_far (f_names :: next_names) =
-        FSeq.fcons (fn () => let
-          (* Wait for conversions to finish *)
-          val (call_graph, f_convs) =
-                map (fn f => let
-                      val conv = the' ("didn't convert function: " ^ quote f ^ "??")
-                                      (Symtab.lookup converted_funcs f);
-                      val (l1_body, corres_thm, rec_callees, callee_consts, arg_frees, traces) =
-                            Future.join conv
-                      (* FIXME: return traces *)
-                      in ((f, rec_callees), (f, (l1_body, callee_consts, corres_thm, arg_frees))) end)
-                    f_names
-                |> split_list;
-          val f_convs = Symtab.make f_convs;
-
-          (* Split this recursive group prior to defining the functions.
-           * Function calls can be removed by dead code elimination and other
-           * transformations, which could cause the group to split. *)
-          val f_callees = Symtab.make (map (apsnd Symset.dest) call_graph);
-          (* Add each function to its own callees to get a complete inverse *)
-          val f_callers = flip_symtab (Symtab.map cons f_callees);
-
-          val topo_sorted_functions =
-                Topo_Sort.topo_sort {
-                  cmp = String.compare,
-                  graph = Symtab.lookup f_callees #> the,
-                  converse = Symtab.lookup f_callers #> the
-                } (Symtab.keys f_callees |> sort String.compare)
-                |> map Symset.make;
-
-          val f_convss =
-                topo_sorted_functions |> map (fn group =>
-                    map (fn f => (f, the (Symtab.lookup f_convs f)))
-                        (Symset.dest group)
-                    |> Symtab.make);
-
-          (* Define each function group and append it to the result sequence. *)
-          fun add_subgroup_defs lthy defined_so_far [] =
-                add_defs lthy defined_so_far next_names
-            | add_subgroup_defs lthy defined_so_far (f_convs :: f_convss) =
-                FSeq.fcons (fn () => let
-                  val (new_defs, lthy') =
-                      define lthy filename prog_info simpl_infos check_termination
-                             defined_so_far l1_function_name (Symtab.dest f_convs);
-                  (* Update (non-recursive) callees *)
-                  val new_defs = FunctionInfo2.recalc_base_callees defined_so_far new_defs;
-                  val defined_so_far' = Symtab.merge (K false) (defined_so_far, new_defs);
-                  in ((lthy', new_defs),
-                      add_subgroup_defs lthy' defined_so_far' f_convss)
-                  end);
-          in (* a bit ugly -- may need to tweak the FSeq interface *)
-             the (FSeq.uncons (add_subgroup_defs lthy defined_so_far f_convss)) end);
-
-  val (simpl_calls, _) = FunctionInfo2.calc_call_graph simpl_infos;
-  val function_groups = #topo_sorted_functions simpl_calls;
-  (* Sequence of intermediate results: (lthy, new_defs) *)
-  val def_results = add_defs lthy Symtab.empty (map Symset.dest function_groups);
+  (* Sequence of new function_infos and intermediate lthys *)
+  val def_results = AutoCorresUtil2.define_funcs_sequence
+                      lthy (define filename prog_info check_termination l1_function_name)
+                      Symtab.empty converted_groups;
 
   (* Produce a mapping from each function group to its L1 phase_infos and the
    * earliest intermediate lthy where it is defined. *)
