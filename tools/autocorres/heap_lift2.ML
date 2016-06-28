@@ -613,10 +613,10 @@ let
   in (l2_results, HL_setup) end;
 
 (* Convert a program to use a lifted heap. *)
-fun system_heap_lift
+fun translate
     (filename : string)
     (prog_info : ProgramInfo.prog_info)
-    (l2_results: (local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq)
+    (l2_results: FunctionInfo2.phase_results)
     (HL_setup : HeapLiftBase.heap_lift_setup)
     (no_heap_abs : Symset.key Symset.set)
     (force_heap_abs : Symset.key Symset.set)
@@ -626,7 +626,7 @@ fun system_heap_lift
     (do_opt : bool)
     (trace_opt : bool)
     (hl_function_name : string -> string)
-    =
+    : FunctionInfo2.phase_results =
 if FSeq.null l2_results then FSeq.empty () else
 let
   (* lthy for conversion rules. This needs to be (at latest) the earliest lthy

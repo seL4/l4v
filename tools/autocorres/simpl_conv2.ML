@@ -566,7 +566,7 @@ fun translate
       (trace_opt: bool)
       (l1_function_name: string -> string)
       (lthy: local_theory)
-      : (local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq =
+      : FunctionInfo2.phase_results =
 let
   val funcs_to_translate = Symtab.keys simpl_infos;
 

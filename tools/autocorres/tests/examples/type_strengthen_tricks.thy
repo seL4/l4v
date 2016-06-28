@@ -28,26 +28,6 @@ FunctionInfo2.init_function_info @{context} "type_strengthen.c"
 |> Symtab.dest
 |> map (fn (f, info) => (f, Symset.dest (#callees info), Symset.dest (#rec_callees info)))
 \<close>
-ML \<open>
-let val simpl_infos = FunctionInfo2.init_function_info @{context} "type_strengthen.c"
-    val prog_info = ProgramInfo.get_prog_info @{context} "type_strengthen.c"
-    val (corres1, callees1, frees1) = SimplConv2.convert @{context} prog_info simpl_infos true true false (fn f => "l1_" ^ f) "opt_j";
-    val (corres2, callees2, frees2) = SimplConv2.convert @{context} prog_info simpl_infos true true false (fn f => "l1_" ^ f) "st_i";
-    (*val thm' = Thm.generalize ([], map fst frees) (Thm.maxidx_of thm + 1) thm*)
-    val lthy0 = @{context};
-    val (l1_infos1, lthy1) =
-          SimplConv2.define lthy0 "type_strengthen.c" prog_info simpl_infos true
-              Symtab.empty
-              (fn f => "l1_" ^ f)
-              [("opt_j", corres1, frees1)];
-    val _ = @{trace} ("l1_infos1", Symtab.dest l1_infos1);
-    val (l1_infos2, lthy2) =
-          SimplConv2.define lthy1 "type_strengthen.c" prog_info simpl_infos true
-              l1_infos1
-              (fn f => "l1_" ^ f)
-              [("st_i", corres2, frees2)];
-    in (frees1, corres1, Symtab.dest l1_infos2) end
-\<close>
 
 ML \<open>
 val result_infos: FunctionInfo2.function_info Symtab.table FunctionInfo2.Phasetab.table Unsynchronized.ref
@@ -77,13 +57,22 @@ let val filename = "type_strengthen.c";
       HeapLift2.prepare_heap_lift filename prog_info l2_results lthy
         (fn fld => fld ^ "'") gen_word_heaps heap_abs_syntax;
 
+    val no_heap_abs = ["opt_j"];
+    val force_heap_abs = [];
+(*
+    val hl_results = l2_results;
+*)
     val hl_results =
-      HeapLift2.system_heap_lift filename prog_info l2_results' HL_setup
-        Symset.empty Symset.empty heap_abs_syntax keep_going
-        [] do_opt trace_opt (fn f => "hl_" ^ f  ^ "'");
+      HeapLift2.translate filename prog_info l2_results' HL_setup
+        (Symset.make no_heap_abs) (Symset.make force_heap_abs)
+        heap_abs_syntax keep_going
+        [] do_opt trace_opt (fn f => "hl_" ^ f ^ "'");
 
     val unsigned_abs = ["opt_a"];
     val no_signed_abs = [];
+(*
+    val wa_results = hl_results;
+*)
     val wa_results =
       WordAbstract2.translate filename prog_info hl_results
         (Symset.make unsigned_abs) (Symset.make no_signed_abs) []

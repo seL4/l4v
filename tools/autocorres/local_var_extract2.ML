@@ -1513,7 +1513,6 @@ fun convert
       (* FIXME: name type *)
       : term * thm * symset * term Symtab.table *
         (string * typ) list * (string * AutoCorresData.Trace) list = let
-  (* FIXME: refactor? *)
   val (l1_call_info, l1_infos) = FunctionInfo2.calc_call_graph l1_infos;
 
   val f_info = Utils.the' ("L2 conversion missing info for " ^ f_name)
@@ -1559,8 +1558,6 @@ fun convert
   val f_body = dest_L2corres_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm));
   (* Get actual recursive callees *)
   val rec_callees = AutoCorresUtil2.get_rec_callees callee_terms f_body;
-
-  val _ = @{trace} ("L2 convert thms", Morphism.thm export_thm thm, Morphism.thm export_thm (Variable.gen_all lthy thm));
 
   (* Return the constants that we fixed. This will be used to process the returned body. *)
   val callee_consts =
@@ -1620,11 +1617,11 @@ fun define
 fun translate
       (filename: string)
       (prog_info: ProgramInfo.prog_info)
-      (l1_results: (local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq)
+      (l1_results: FunctionInfo2.phase_results)
       (do_opt: bool)
       (trace_opt: bool)
       (l2_function_name: string -> string)
-      : (local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq =
+      : FunctionInfo2.phase_results =
 let
   (* All conversions can run in parallel.
    * Each conversion depends only on the corresponding L1 define phase

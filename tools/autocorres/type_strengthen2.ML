@@ -617,10 +617,11 @@ fun translate
       (force_lift : Monad_Types.monad_type Symtab.table)
       (filename : string)
       (prog_info : ProgramInfo.prog_info)
-      (l2_results: (local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq)
+      (l2_results: FunctionInfo2.phase_results)
       (make_function_name : string -> string)
       (keep_going : bool)
-      (do_opt : bool) =
+      (do_opt : bool)
+      : FunctionInfo2.phase_results =
 if FSeq.null l2_results then FSeq.empty () else
 let
   (* Wait for previous stage to finish first. *)

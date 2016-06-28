@@ -157,13 +157,14 @@ end
 fun translate
       (filename: string)
       (prog_info: ProgramInfo.prog_info)
-      (l2_results: (local_theory * FunctionInfo2.function_info Symtab.table) FSeq.fseq)
+      (l2_results: FunctionInfo2.phase_results)
       (unsigned_abs: Symset.key Symset.set)
       (no_signed_abs: Symset.key Symset.set)
       (trace_funcs: string list)
       (do_opt: bool)
       (trace_opt: bool)
-      (wa_function_name: string -> string) =
+      (wa_function_name: string -> string)
+      : FunctionInfo2.phase_results =
 if FSeq.null l2_results then FSeq.empty () else
 let
   (*

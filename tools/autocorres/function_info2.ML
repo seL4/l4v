@@ -74,6 +74,9 @@ sig
       invented_body : bool
   };
 
+  (* Standard result sequence that is passed between stages *)
+  type phase_results = (local_theory * function_info Symtab.table) FSeq.fseq;
+
   val function_info_upd_name             : string              -> function_info -> function_info;
   val function_info_upd_phase            : phase               -> function_info -> function_info;
   (* Also updates raw_const. *)
@@ -175,6 +178,8 @@ type function_info = {
   invented_body    : bool,
   is_simpl_wrapper : bool
 };
+
+type phase_results = (local_theory * function_info Symtab.table) FSeq.fseq;
 
 (* We use FunctionalRecordUpdate internally to define the setters *)
 open FunctionalRecordUpdate;
