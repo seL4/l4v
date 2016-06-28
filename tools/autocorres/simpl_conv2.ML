@@ -530,10 +530,8 @@ fun define
 
   val funcs' = funcs |>
         map (fn (name, def as (body, callee_consts, thm, frees)) =>
-                   (name, (* FIXME: define_funcs needs this currently *)
-                          (Thm.generalize ([], map fst frees) (Thm.maxidx_of thm + 1) thm,
-                          AutoCorresUtil2.abstract_fn_body simpl_defs (name, def))));
-  val _ = @{trace} ("L1.define", map (fn (name, (thm, body)) => (name, thm, Thm.cterm_of lthy body)) funcs');
+                   (* FIXME: abstract_fn_body should really be moved into define_funcs *)
+                   (name, ((AutoCorresUtil2.abstract_fn_body simpl_defs (name, def), thm, frees))));
   val (new_thms, (), lthy') =
         AutoCorresUtil2.define_funcs FunctionInfo2.L1 filename simpl_defs
             l1_function_name (K l1_fn_type) get_l1_fn_assumption (K []) @{thm L1corres_recguard_0}

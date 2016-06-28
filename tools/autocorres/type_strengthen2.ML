@@ -213,7 +213,7 @@ let
   (* Get the newly rewritten term. *)
   val new_term = Thm.concl_of thm_ml |> Utils.rhs_of
 
-  (* Export assumptions. *)
+  (* Export assumptions, converting callees to schematics. *)
   val thm_ml = Morphism.thm m thm_ml
 
   (*val _ = @{trace} (fn_name, #name rule_set, cterm_of (Proof_Context.theory_of ctxt) new_term)*)
@@ -369,7 +369,7 @@ let
   in
     ((make_function_name fn_name, measure_param @ fn_args, term), lthy')
   end
-  (* NB: discard lthy because the same argument vars will be fixed in define_funcs *)
+  (* NB: discard lthy because we don't want the placeholders to be fixed during define_functions *)
   val (input_defs, _) = fold_map gen_fun_def_term (Utils.zip3 fn_names dicts thms) lthy
   val (ts_defs, lthy) = Utils.define_functions input_defs false is_recursive lthy
 
