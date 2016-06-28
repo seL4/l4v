@@ -486,27 +486,15 @@ let
       else get_l1corres_thm prog_info simpl_defs simpl_calls check_termination lthy'' do_opt trace_opt f_name
                             (Symtab.make callee_terms) measure_var;
 
+  val f_body = get_L1corres_monad (HOLogic.dest_Trueprop (Thm.concl_of thm));
   (* Get actual recursive callees *)
-  val rec_consts =
-        callee_terms |> List.mapPartial (fn (callee, (is_rec, const, _)) =>
-            if is_rec then SOME (const, callee) else NONE)
-        |> Termtab.make;
-  val rec_callees =
-        Term.fold_aterms (fn t => fn a =>
-            (Termtab.lookup rec_consts t
-                |> Option.map single
-                |> the_default []) @ a)
-            (get_L1corres_monad (HOLogic.dest_Trueprop (Thm.concl_of thm))) []
-          |> Symset.make;
+  val rec_callees = AutoCorresUtil2.get_rec_callees callee_terms f_body;
 
-  (* Generalize the arguments, but not assumed callees *)
-  val thm = Variable.gen_all lthy thm;
-  val fn_body = get_L1corres_monad (HOLogic.dest_Trueprop (Thm.concl_of thm));
   (* Return the constants that we fixed. This will be used to process the returned body. *)
   val callee_consts =
         callee_terms |> map (fn (callee, (_, const, _)) => (callee, const)) |> Symtab.make;
   in
-     (fn_body,
+     (f_body,
       Morphism.thm export_thm thm, (* Also generalizes callees *)
       rec_callees,
       callee_consts,

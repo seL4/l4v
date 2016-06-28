@@ -152,6 +152,35 @@ in
   (ctxt', m, res)
 end
 
+(* Determine which functions are called by a code fragment.
+ * Only function terms in callee_consts are used. *)
+fun get_body_callees
+      (callee_consts: string Termtab.table)
+      (body: term)
+      : symset =
+  Term.fold_aterms (fn t => fn a =>
+      (Termtab.lookup callee_consts t
+          |> Option.map single
+          |> the_default []) @ a)
+      body []
+  |> Symset.make;
+
+(* Determine which recursive calls are actually used by a code fragment.
+ * This is used to make adjustments to recursive function groups
+ * between conversion and definition steps.
+ *
+ * callee_terms is a list of (is_recursive, func const, thm)
+ * as provided by assume_called_functions_corres *)
+fun get_rec_callees
+      (callee_terms: (string * (bool * term * thm)) list)
+      (body: term)
+      : symset = let
+    val callee_lookup =
+          callee_terms |> List.mapPartial (fn (callee, (is_rec, const, _)) =>
+              if is_rec then SOME (const, callee) else NONE)
+          |> Termtab.make;
+    in get_body_callees callee_lookup body end;
+
 (*
  * Given one or more function specs, define them and instantiate corres proofs.
  *

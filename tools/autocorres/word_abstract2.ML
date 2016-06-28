@@ -382,38 +382,25 @@ let
           |> HOLogic.dest_Trueprop
           |> (fn t => Utils.term_nth_arg t 3))
 
-    (* Generalize the arguments, but not assumed callees *)
-    val thm = Variable.gen_all lthy thm;
+    (* Convert All-quantified vars in the concrete body to schematics. *)
+    val thm = Variable.gen_all lthy thm
 
     (* Extract the abstract term out of a corresTA thm. *)
-    fun dest_corresWA_term_abs @{term_pat "corresTA _ _ _ ?t _"} = t
-    fun get_body_of_thm thm =
+    fun dest_corresTA_term_abs @{term_pat "corresTA _ _ _ ?t _"} = t
+    val f_body =
         Thm.concl_of thm
         |> HOLogic.dest_Trueprop
-        |> dest_corresWA_term_abs
-    val fn_body = dest_corresWA_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm));
+        |> dest_corresTA_term_abs;
 
     (* Get actual recursive callees *)
-    val rec_consts =
-          callee_terms |> List.mapPartial (fn (callee, (is_rec, const, _)) =>
-              if is_rec then SOME (const, callee) else NONE)
-          |> Termtab.make;
-    val rec_callees =
-          Term.fold_aterms (fn t => fn a =>
-              (Termtab.lookup rec_consts t
-                  |> Option.map single
-                  |> the_default []) @ a)
-              (dest_corresWA_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm))) []
-            |> Symset.make;
+    val rec_callees = AutoCorresUtil2.get_rec_callees callee_terms f_body;
 
     (* Return the constants that we fixed. This will be used to process the returned body. *)
     val callee_consts =
           callee_terms |> map (fn (callee, (_, const, _)) => (callee, const)) |> Symtab.make;
-
-    val _ = @{trace} ("WA convert", f, Thm.cterm_of lthy fn_body, thm, Morphism.thm export_thm thm);
   in
-    (fn_body,
-     Morphism.thm export_thm thm, (* Also generalizes callees *)
+    (f_body,
+     Morphism.thm export_thm thm,
      rec_callees,
      callee_consts,
      map dest_Free (measure_var :: arg_frees),

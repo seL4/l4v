@@ -1557,28 +1557,18 @@ fun convert
              (betapply (#const f_info, measure_var))
              f_l1_def;
 
-    (* Get actual recursive callees *)
-    val rec_consts =
-          callee_terms |> List.mapPartial (fn (callee, (is_rec, const, _)) =>
-              if is_rec then SOME (const, callee) else NONE)
-          |> Termtab.make;
-    val rec_callees =
-          Term.fold_aterms (fn t => fn a =>
-              (Termtab.lookup rec_consts t
-                  |> Option.map single
-                  |> the_default []) @ a)
-              (dest_L2corres_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm))) []
-            |> Symset.make;
+  val f_body = dest_L2corres_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm));
+  (* Get actual recursive callees *)
+  val rec_callees = AutoCorresUtil2.get_rec_callees callee_terms f_body;
 
-  (* Generalize the arguments, but not assumed callees *)
-  val thm = Variable.gen_all lthy thm;
-  val fn_body = dest_L2corres_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm));
+  val _ = @{trace} ("L2 convert thms", Morphism.thm export_thm thm, Morphism.thm export_thm (Variable.gen_all lthy thm));
+
   (* Return the constants that we fixed. This will be used to process the returned body. *)
   val callee_consts =
         callee_terms |> map (fn (callee, (_, const, _)) => (callee, const)) |> Symtab.make;
   in
-    (fn_body,
-     Morphism.thm export_thm thm, (* Also generalizes callees *)
+    (f_body,
+     Morphism.thm export_thm thm, (* Expose callee assumptions *)
      rec_callees,
      callee_consts,
      dest_Free measure_var :: arg_frees,
