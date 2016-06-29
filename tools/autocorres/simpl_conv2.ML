@@ -465,8 +465,6 @@ let
   val ([measure_var_name], lthy') = Variable.variant_fixes ["rec_measure'"] lthy;
   val measure_var = Free (measure_var_name, AutoCorresUtil2.measureT);
 
-  val _ = @{trace} ("convert", f_name, Symtab.keys simpl_infos, Symset.dest (#callees f_info), Symset.dest (#rec_callees f_info))
-
   (* Add callee assumptions. Note that our define code has to use the same assumption order. *)
   val (lthy'', export_thm, callee_terms) =
     AutoCorresUtil2.assume_called_functions_corres lthy'

@@ -342,7 +342,6 @@ let
      * is also used in each recursive call.) *)
     val skip_callees = replicate (Symset.card (#rec_callees fn_info)) NONE
     val inst_thm = Drule.infer_instantiate' lthy' (inst_measure @ skip_callees @ inst_args) thm
-    val _ = @{trace} ("inst_thm", thm, inst_thm)
 
     (* Extract the body from the conversion theorem.
      * E.g. for "L2_call foo = liftE body" we extract "body". *)
@@ -357,7 +356,6 @@ let
     (* Abstract over args, which are now known arg frees *)
     val term = foldr (fn (v, t) => Utils.abs_over "" v t)
                      body (map Free (measure_param @ fn_args))
-    val _ = @{trace} ("body", Thm.cterm_of lthy' term);
 
     (* Replace place-holder function names with our generated constant name. *)
     val term = map_aterms (fn t => case t of
@@ -611,8 +609,8 @@ let
                             fn_names make_function_name keep_going do_opt lthy;
 
     val _ = writeln ("  --> " ^ monad_name);
-    val _ = @{trace} ("Converted (TS) " ^ Utils.commas fn_names ^ " in " ^
-                      Time.toString (Timer.checkRealTimer start_time) ^ " s");
+    val _ = tracing ("Converted (TS) " ^ Utils.commas fn_names ^ " in " ^
+                     Time.toString (Timer.checkRealTimer start_time) ^ " s");
   in (lthy, new_ts_infos, Symtab.merge (K false) (ts_infos, new_ts_infos)) end;
 
   val ts_results =
