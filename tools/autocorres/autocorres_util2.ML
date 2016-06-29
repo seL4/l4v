@@ -498,49 +498,21 @@ fun define_funcs_sequence
     case FSeq.uncons converted_groups of
         NONE => NONE
       | SOME ((prev_infos, conv_group), remaining_groups) => SOME let
-        val (call_graph, f_convs) =
-              Symtab.dest conv_group
-              |> map (fn (f, result) =>
-                        ((f, #rec_callees result), (f, result)))
-              |> split_list;
-        val f_convs = Symtab.make f_convs;
-
-        (* Split this recursive group prior to defining the functions.
-         * Function calls can be removed by dead code elimination and other
-         * transformations, which could cause the group to split. *)
-        val f_callees = Symtab.make (map (apsnd Symset.dest) call_graph);
-        (* Add each function to its own callees to get a complete inverse *)
-        val f_callers = flip_symtab (Symtab.map cons f_callees);
-
-        val topo_sorted_functions =
-              Topo_Sort.topo_sort {
-                cmp = String.compare,
-                graph = Symtab.lookup f_callees #> the,
-                converse = Symtab.lookup f_callers #> the
-              } (Symtab.keys f_callees |> sort String.compare)
-              |> map Symset.make;
-
-        val f_convss =
-              topo_sorted_functions |> map (fn group =>
-                  map (fn f => (f, the (Symtab.lookup f_convs f)))
-                      (Symset.dest group)
-                  |> Symtab.make);
-
-        (* Define each function group and append it to the result sequence. *)
-        fun add_subgroup_defs lthy defined_so_far [] =
-              define_funcs_sequence lthy define_worker defined_so_far remaining_groups
-          | add_subgroup_defs lthy defined_so_far (f_convs :: f_convss) =
-              FSeq.fcons (fn () => let
-                val (new_defs, lthy') =
-                    define_worker lthy prev_infos defined_so_far f_convs;
-                (* Update (non-recursive) callees *)
-                val new_defs = FunctionInfo2.recalc_base_callees defined_so_far new_defs;
-                val defined_so_far' = Symtab.merge (K false) (defined_so_far, new_defs);
-                in ((lthy', new_defs),
-                    add_subgroup_defs lthy' defined_so_far' f_convss)
-                end);
-        in (* a bit ugly -- may need to tweak the FSeq interface *)
-           the (FSeq.uncons (add_subgroup_defs lthy defined_so_far f_convss)) end);
-
+        (* Define the function group, then split into minimal recursive groups. *)
+        val (new_infos, lthy') = define_worker lthy prev_infos defined_so_far conv_group;
+        val new_infoss = FunctionInfo2.recalc_callees defined_so_far new_infos;
+        val defined_so_far = Symtab.merge (K false) (defined_so_far, new_infos);
+        (* We can't wrap the first result because we're already in FSeq.mk.
+         * Fortunately, one is guaranteed to exist *)
+        val new_infos1 :: new_infoss = new_infoss;
+       (* Output new group(s) in the result sequence. *)
+        val remaining_results =
+              define_funcs_sequence lthy' define_worker defined_so_far remaining_groups;
+        in
+           ((lthy', new_infos1),
+            FSeq.append
+              (FSeq.of_list (map (fn defs => (lthy', defs)) new_infoss))
+              remaining_results)
+         end);
 
 end
