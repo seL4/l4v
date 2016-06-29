@@ -675,13 +675,14 @@ let
                      Utils.define_lemma (make_function_name f ^ "_ac_corres") thm #> snd)
                   ac_corres_thms lthy
 
-  (* Name final mono theorems. *)
+  (* Name final mono theorems and add them to the simpset. *)
   val lthy =
         fold (fn (f, info) => fn lthy =>
                 case #mono_thm info of
                     NONE => lthy
-                  | SOME thm =>
-                      Utils.define_lemma (make_function_name f ^ "_mono") thm lthy |> snd)
+                  | SOME mono_thm =>
+                      Utils.define_lemma (make_function_name f ^ "_mono") mono_thm lthy |> snd
+                      |> Utils.simp_add [mono_thm])
               (Symtab.dest ts_info) lthy
 
   (* Save function info for future reference. *)
