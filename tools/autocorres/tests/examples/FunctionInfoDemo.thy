@@ -18,34 +18,65 @@ section \<open>Function info\<close>
 text \<open>
   Information about all AutoCorres-processed functions is stored in the
   AutoCorresFunctionInfo structure.
+
+  This structure stores information for all files that have been translated.
+  It consists of three levels:
+
+  1. Filename of the translation unit.
+  2. Phase: the initial phase stores the C parser's output, and each
+       subsequent translation phase that AutoCorres performs is recorded as well.
+  3. Function: Each function that is processed in a given phase.
 \<close>
 ML \<open>
-  val fn_info: FunctionInfo.fn_info =
-      the (Symtab.lookup (AutoCorresFunctionInfo.get @{theory}) "function_info.c")
+  val file_info: FunctionInfo2.function_info Symtab.table FunctionInfo2.Phasetab.table =
+      the (Symtab.lookup (AutoCorresFunctionInfo2.get @{theory}) "function_info.c")
 \<close>
 
 text \<open>
-  One FunctionInfo.fn_info structure is generated for each translated file.
-  See the FunctionInfo structure for details about the stored data.
-  As a start, we can show all function definitions:
+  The final stage is FunctionInfo.TS (type strengthening).
+  This shows the final definition of each function in file_info:
 \<close>
 ML \<open>
-  FunctionInfo.get_all_functions fn_info |> Symtab.dest |> map snd
-  |> app (fn f => writeln ("Definition of " ^ #name f ^ ":\n" ^
-                    Syntax.string_of_term @{context}
-                      (Thm.prop_of (#definition (FunctionInfo.get_1_phase_info f FunctionInfo.TS)))))
+  the (FunctionInfo2.Phasetab.lookup file_info FunctionInfo2.TS) |> Symtab.dest |> map snd
+  |> app (fn f_info => writeln ("Definition of " ^ #name f_info ^ ":\n" ^
+                         Syntax.string_of_term @{context}
+                           (Thm.prop_of (#definition f_info))))
+\<close>
+text \<open>
+  The function_info record also contains other data, such as function calls
+  and intermediate correctness theorems.
+  See the FunctionInfo structure for a full description.
 \<close>
 
 text \<open>
-  AutoCorres also records intermediate function definitions:
+  We can also retrieve all intermediate phases.
+  Besides being informative, these are also used by AutoCorres
+  to resume partial translations; see Incremental.thy.
 \<close>
 ML \<open>
-  FunctionInfo.get_all_functions fn_info |> Symtab.dest |> map snd
-  |> app (fn f => writeln ("Intermediate definitions of " ^ #name f ^ ":\n" ^
-                    String.concat ([FunctionInfo.CP, FunctionInfo.L1, FunctionInfo.L2, FunctionInfo.HL, FunctionInfo.WA]
-                      |> map (fn phase => Syntax.string_of_term @{context}
-                                (Thm.prop_of (#definition (FunctionInfo.get_1_phase_info f phase))) ^ "\n"))))
+let
+  val other_phases = [FunctionInfo2.CP, FunctionInfo2.L1, FunctionInfo2.L2, FunctionInfo2.HL, FunctionInfo2.WA];
+  fun get_def_at f phase =
+        the (FunctionInfo2.Phasetab.lookup file_info phase)
+        |> (fn phase_info => #definition (the (Symtab.lookup phase_info f)));
+in
+  the (FunctionInfo2.Phasetab.lookup file_info FunctionInfo2.TS) |> Symtab.dest |> map fst
+  |> app (fn f_name =>
+       writeln ("Intermediate definitions of " ^ f_name ^ ":\n" ^
+                String.concat (map (fn phase =>
+                  Syntax.string_of_term @{context} (Thm.prop_of (get_def_at f_name phase)) ^ "\n")
+                  other_phases)))
+end
 \<close>
+
+text \<open>
+  Note that the final @{term ac_corres} theorems are currently not stored
+  in AutoCorresFunctionInfo; they are defined only as named theorems.
+  (This is an oversight; there isn't any room in the current data structures
+   for these theorems.)
+\<close>
+thm f'_ac_corres
+
 
 section \<open>Heap info\<close>
 text \<open>
@@ -54,39 +85,14 @@ text \<open>
   See heap_lift_base.ML for which fields are contained in the structure.
 \<close>
 ML \<open>
-  the (Symtab.lookup (HeapInfo.get @{theory}) "function_info.c")
+  #heap_info (the (Symtab.lookup (HeapInfo.get @{theory}) "function_info.c"))
 \<close>
 
-section \<open>Intermediate function info\<close>
 text \<open>
-  AutoCorres performs a translation in multiple stages; the intermediate definitions
-  and correspondence theorems are also stored in AutoCorresData.
-  Definitions are tagged with the name (phase ^ "def") and corres theorems with
-  the name (phase ^ "corres").
-
-  This data is probably not useful outside of debugging AutoCorres itself.
+  HeapInfo also caches internal lemmas about the abstracted heap.
 \<close>
 ML \<open>
-  let val fn_name = "rec"
-      val phases = [
-        "L1", (* translation from SIMPL syntax *)
-        "L2", (* lift local variables *)
-        "HL", (* heap abstraction *)
-        "WA", (* word abstraction *)
-        "TS"  (* type lifting *)
-       ]
-  in (
-      (* defs *)
-      map (fn phase =>
-        AutoCorresData.get_def @{theory} "function_info.c" (phase ^ "def") fn_name)
-        phases,
-    
-      (* corres *)
-      map (fn phase =>
-        AutoCorresData.get_thm @{theory} "function_info.c" (phase ^ "corres") fn_name)
-        phases
-    )
-  end
+  #lifted_heap_lemmas (the (Symtab.lookup (HeapInfo.get @{theory}) "function_info.c"))
 \<close>
 
 end
