@@ -62,7 +62,7 @@ term "opt_h' :: nat \<Rightarrow> ure_C ptr \<Rightarrow> lifted_globals \<Right
 term "opt_i' :: (lifted_globals, int) nondet_monad"
 term "opt_j' :: ure_C ptr \<Rightarrow> ure_C ptr \<Rightarrow> lifted_globals \<Rightarrow> int option"
 term "opt_a' :: nat \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> lifted_globals \<Rightarrow> word32 option"
-term "opt_a2' :: word32 \<Rightarrow> lifted_globals \<Rightarrow> word32 option"
+term "opt_a2' :: word32 \<Rightarrow> (lifted_globals, word32) nondet_monad"
 term "opt_l' :: word32 \<Rightarrow> (lifted_globals, word32) nondet_monad"
 term "st_f' :: ure_C ptr \<Rightarrow> ure_C ptr \<Rightarrow> (lifted_globals, unit) nondet_monad"
 term "st_g' :: word32 ptr \<Rightarrow> (lifted_globals, word32) nondet_monad"

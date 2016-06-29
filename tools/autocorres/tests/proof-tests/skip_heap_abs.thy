@@ -18,8 +18,8 @@ autocorres [skip_heap_abs] "skip_heap_abs.c"
 
 (* There should be no heap lift phase. *)
 ML {*
-val fn_infos = the (Symtab.lookup (AutoCorresFunctionInfo2.get @{theory}) "skip_heap_abs.c");
-assert (is_none (FunctionInfo2.Phasetab.lookup fn_infos FunctionInfo2.HL)) "skip_heap_abs failed";
+val fn_infos = the (Symtab.lookup (AutoCorresFunctionInfo.get @{theory}) "skip_heap_abs.c");
+assert (is_none (FunctionInfo.Phasetab.lookup fn_infos FunctionInfo.HL)) "skip_heap_abs failed";
 *}
 
 end

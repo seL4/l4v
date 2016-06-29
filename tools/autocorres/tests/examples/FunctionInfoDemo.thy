@@ -28,8 +28,8 @@ text \<open>
   3. Function: Each function that is processed in a given phase.
 \<close>
 ML \<open>
-  val file_info: FunctionInfo2.function_info Symtab.table FunctionInfo2.Phasetab.table =
-      the (Symtab.lookup (AutoCorresFunctionInfo2.get @{theory}) "function_info.c")
+  val file_info: FunctionInfo.function_info Symtab.table FunctionInfo.Phasetab.table =
+      the (Symtab.lookup (AutoCorresFunctionInfo.get @{theory}) "function_info.c")
 \<close>
 
 text \<open>
@@ -37,7 +37,7 @@ text \<open>
   This shows the final definition of each function in file_info:
 \<close>
 ML \<open>
-  the (FunctionInfo2.Phasetab.lookup file_info FunctionInfo2.TS) |> Symtab.dest |> map snd
+  the (FunctionInfo.Phasetab.lookup file_info FunctionInfo.TS) |> Symtab.dest |> map snd
   |> app (fn f_info => writeln ("Definition of " ^ #name f_info ^ ":\n" ^
                          Syntax.string_of_term @{context}
                            (Thm.prop_of (#definition f_info))))
@@ -55,12 +55,12 @@ text \<open>
 \<close>
 ML \<open>
 let
-  val other_phases = [FunctionInfo2.CP, FunctionInfo2.L1, FunctionInfo2.L2, FunctionInfo2.HL, FunctionInfo2.WA];
+  val other_phases = [FunctionInfo.CP, FunctionInfo.L1, FunctionInfo.L2, FunctionInfo.HL, FunctionInfo.WA];
   fun get_def_at f phase =
-        the (FunctionInfo2.Phasetab.lookup file_info phase)
+        the (FunctionInfo.Phasetab.lookup file_info phase)
         |> (fn phase_info => #definition (the (Symtab.lookup phase_info f)));
 in
-  the (FunctionInfo2.Phasetab.lookup file_info FunctionInfo2.TS) |> Symtab.dest |> map fst
+  the (FunctionInfo.Phasetab.lookup file_info FunctionInfo.TS) |> Symtab.dest |> map fst
   |> app (fn f_name =>
        writeln ("Intermediate definitions of " ^ f_name ^ ":\n" ^
                 String.concat (map (fn phase =>
