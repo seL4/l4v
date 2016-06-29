@@ -21,7 +21,6 @@ install_C_file "type_strengthen.c"
 
 (* Translate only opt_j *)
 autocorres [
-  ts_rules = nondet,
   scope_depth = 0,
   scope = opt_j
   ] "type_strengthen.c"

@@ -1618,16 +1618,18 @@ fun translate
       (filename: string)
       (prog_info: ProgramInfo.prog_info)
       (l1_results: FunctionInfo2.phase_results)
+      (existing_l1_infos: FunctionInfo2.function_info Symtab.table)
+      (existing_l2_infos: FunctionInfo2.function_info Symtab.table)
       (do_opt: bool)
       (trace_opt: bool)
       (l2_function_name: string -> string)
       : FunctionInfo2.phase_results =
-let
+let;
   (* Do conversions in parallel. *)
   val converted_groups =
         AutoCorresUtil2.par_convert
           (fn lthy => fn l1_infos => convert lthy prog_info l1_infos do_opt trace_opt l2_function_name)
-          l1_results;
+          existing_l1_infos l1_results;
 
   (* Sequence of new function_infos and intermediate lthys *)
   val def_results = FSeq.mk (fn _ =>
@@ -1638,7 +1640,7 @@ let
               fun define_worker lthy l2_callee_infos l1_infos f_convs =
                     define lthy filename prog_info l2_callee_infos l1_infos l2_function_name f_convs;
               val results = AutoCorresUtil2.define_funcs_sequence
-                              l1_lthy define_worker Symtab.empty converted_groups;
+                              l1_lthy define_worker existing_l1_infos existing_l2_infos converted_groups;
           in FSeq.uncons results end);
 
   (* Produce a mapping from each function group to its L1 phase_infos and the

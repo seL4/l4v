@@ -401,6 +401,24 @@ fun define_funcs
     (results, accum, ctxt)
   end
 
+(* Support function for incremental translation.
+ * This updates #callees of the functions we are translating, to include
+ * background functions that have already been translated.
+ * (We don't need to handle #rec_callees because recursive groups
+ * cannot be translated piecemeal.) *)
+fun add_background_callees
+      (background: FunctionInfo2.function_info Symtab.table)
+      : FunctionInfo2.function_info Symtab.table ->
+        FunctionInfo2.function_info Symtab.table = let
+  val bg_consts =
+        Symtab.dest background
+        |> map (fn (f, bg_info) => (#raw_const bg_info, f))
+        |> Termtab.make;
+  in Symtab.map (K (fn fn_info => let
+       val bg_callees = get_body_callees bg_consts (Thm.prop_of (#definition fn_info));
+       in FunctionInfo2.function_info_upd_callees (Symset.union (#callees fn_info) bg_callees) fn_info end))
+  end;
+
 (* Utility for doing conversions in parallel.
  * The conversion of each function f should depend only on the previous
  * define phase for f (which necessarily also includes f's callees). *)
@@ -413,9 +431,12 @@ type convert_result = {
        traces: (string * AutoCorresData.Trace) list (* traces *)
      }
 fun par_convert
-      (* Worker: lthy -> function_infos for func and callees -> fn_name -> results *)
+      (* Worker: lthy -> function_infos for func and callees -> func name -> results *)
       (convert: local_theory -> FunctionInfo2.function_info Symtab.table ->
                 string -> convert_result)
+      (* Functions from prior incremental translation *)
+      (existing_infos: FunctionInfo2.function_info Symtab.table)
+      (* Functions from previous phase *)
       (prev_results: FunctionInfo2.phase_results)
       (* Return converted functions in recursive groups.
        * The groups are tagged with fn_infos from prev_results to identify them. *)
@@ -424,6 +445,7 @@ fun par_convert
      * we accumulate its function_infos, which will be a superset
      * of the callee infos that each conversion requires. *)
     FSeq.fold_map (fn fn_infos_accum => fn (lthy, fn_infos) => let
+           val fn_infos = add_background_callees existing_infos fn_infos;
            val fn_infos_accum = Symtab.merge (K false) (fn_infos_accum, fn_infos);
            (* Convert fn_infos in parallel, but join the results right away.
             * This is fine because we will define them together. *)
@@ -433,7 +455,7 @@ fun par_convert
                       (f, convert lthy fn_infos_accum f))
                  |> Symtab.make;
            in ((fn_infos, conv_results), fn_infos_accum) end)
-        Symtab.empty prev_results;
+        existing_infos prev_results;
 
 (* Given a function body containing arguments and assumed function calls,
  * abstract the code over those parameters.
@@ -451,13 +473,10 @@ fun par_convert
  *)
 fun abstract_fn_body
       (prev_fn_infos: FunctionInfo2.function_info Symtab.table)
-      (fn_name, {body, rec_callees, callee_consts, arg_frees, ...} : convert_result) = let
-  (* Omit rec_callees if our function become non-recursive *)
-  val is_recursive = true (*not (Symset.is_empty rec_callees)*)
+      (fn_name, {body, callee_consts, arg_frees, ...} : convert_result) = let
   val (callees, rec_callees) = get_callees prev_fn_infos fn_name;
   val calls = map (the o Symtab.lookup callee_consts) callees;
-  val rec_calls =
-        if is_recursive then map (the o Symtab.lookup callee_consts) rec_callees else [];
+  val rec_calls = map (the o Symtab.lookup callee_consts) rec_callees;
 
   val abs_body = body
         |> fold lambda (rev (map Free arg_frees))
@@ -489,17 +508,22 @@ fun define_funcs_sequence
                       convert_result Symtab.table ->
                       (* new infos for functions *)
                       FunctionInfo2.function_info Symtab.table * local_theory)
-      (* accumulator, initially empty *)
+      (* previous infos from prior translation (in incremental mode) *)
+      (existing_infos: FunctionInfo2.function_info Symtab.table)
+      (* functions defined so far, initially populated from prior translation *)
       (defined_so_far: FunctionInfo2.function_info Symtab.table)
       (converted_groups: (FunctionInfo2.function_info Symtab.table *
                           convert_result Symtab.table) FSeq.fseq)
-      : FunctionInfo2.phase_results =
-  FSeq.mk (fn () =>
+      : FunctionInfo2.phase_results = FSeq.mk (fn () =>
     case FSeq.uncons converted_groups of
         NONE => NONE
       | SOME ((prev_infos, conv_group), remaining_groups) => SOME let
+        (* NB: we don't need to add_background_callees to prev_infos because
+         *     par_convert already does that *)
         (* Define the function group, then split into minimal recursive groups. *)
-        val (new_infos, lthy') = define_worker lthy prev_infos defined_so_far conv_group;
+        val (new_infos, lthy') =
+               define_worker lthy (Symtab.merge (K false) (prev_infos, existing_infos))
+                             defined_so_far conv_group;
         val new_infoss = FunctionInfo2.recalc_callees defined_so_far new_infos;
         val defined_so_far = Symtab.merge (K false) (defined_so_far, new_infos);
         (* We can't wrap the first result because we're already in FSeq.mk.
@@ -507,12 +531,13 @@ fun define_funcs_sequence
         val new_infos1 :: new_infoss = new_infoss;
        (* Output new group(s) in the result sequence. *)
         val remaining_results =
-              define_funcs_sequence lthy' define_worker defined_so_far remaining_groups;
+              define_funcs_sequence lthy' define_worker
+                                    existing_infos defined_so_far remaining_groups;
         in
            ((lthy', new_infos1),
             FSeq.append
               (FSeq.of_list (map (fn defs => (lthy', defs)) new_infoss))
               remaining_results)
-         end);
+        end);
 
 end

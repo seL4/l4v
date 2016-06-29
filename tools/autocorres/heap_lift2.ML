@@ -616,7 +616,9 @@ let
 fun translate
     (filename : string)
     (prog_info : ProgramInfo.prog_info)
-    (l2_results: FunctionInfo2.phase_results)
+    (l2_results : FunctionInfo2.phase_results)
+    (existing_l2_infos : FunctionInfo2.function_info Symtab.table)
+    (existing_hl_infos : FunctionInfo2.function_info Symtab.table)
     (HL_setup : HeapLiftBase.heap_lift_setup)
     (no_heap_abs : Symset.key Symset.set)
     (force_heap_abs : Symset.key Symset.set)
@@ -658,20 +660,27 @@ let
   fun lookup_l2_results f_name =
         FSeq.find (fn (_, l2_infos) => Symtab.defined l2_infos f_name) l2_results
         |> the' ("HL: missing L2 results for " ^ f_name);
-  fun is_function_lifted f_name = let
-        val (lthy, l2_infos) = lookup_l2_results f_name;
-        val can_lift =
-              if can_lift_function lthy prog_info (the (Symtab.lookup l2_infos f_name))
-              then not (Symset.contains no_heap_abs f_name)
-              else if Symset.contains force_heap_abs f_name
-                   then true
-                   else (* Report functions that we're not lifting,
-                         * but not if the user has overridden explicitly *)
-                        (if Symset.contains no_heap_abs f_name then () else
-                           writeln ("HL: disabling heap lift for: " ^ f_name ^
-                                    " (use force_heap_abs to enable)");
-                         false);
-        in can_lift end;
+  fun is_function_lifted f_name =
+        case Symtab.lookup existing_hl_infos f_name of
+            SOME info => let
+              (* We heap-lifted this function earlier. Check its state type. *)
+              val body = #definition info |> Thm.prop_of |> Utils.rhs_of_eq;
+              val stT = LocalVarExtract2.l2monad_state_type body;
+              in stT = #globals_type heap_info end
+          | NONE => let
+              val (lthy, l2_infos) = lookup_l2_results f_name;
+              val can_lift =
+                    if can_lift_function lthy prog_info (the (Symtab.lookup l2_infos f_name))
+                    then not (Symset.contains no_heap_abs f_name)
+                    else if Symset.contains force_heap_abs f_name
+                         then true
+                         else (* Report functions that we're not lifting,
+                               * but not if the user has overridden explicitly *)
+                              (if Symset.contains no_heap_abs f_name then () else
+                                 writeln ("HL: disabling heap lift for: " ^ f_name ^
+                                          " (use force_heap_abs to enable)");
+                               false);
+              in can_lift end;
   (* Cache answers for which functions we are lifting. *)
   val is_function_lifted = String_Memo.memo is_function_lifted;
 
@@ -862,7 +871,7 @@ let
     in (new_infos, lthy') end;
 
   (* Do conversions in parallel. *)
-  val converted_groups = AutoCorresUtil2.par_convert convert l2_results;
+  val converted_groups = AutoCorresUtil2.par_convert convert existing_l2_infos l2_results;
 
   (* Sequence of new function_infos and intermediate lthys *)
   val def_results = FSeq.mk (fn _ =>
@@ -871,7 +880,7 @@ let
           let (* Get initial lthy from end of L2 defs *)
               val (l2_lthy, _) = FSeq.list_of l2_results |> List.last;
               val results = AutoCorresUtil2.define_funcs_sequence
-                              l2_lthy define Symtab.empty converted_groups;
+                              l2_lthy define existing_l2_infos existing_hl_infos converted_groups;
           in FSeq.uncons results end);
 
   (* Produce a mapping from each function group to its L1 phase_infos and the

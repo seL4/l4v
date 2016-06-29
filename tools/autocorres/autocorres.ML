@@ -380,13 +380,17 @@ let
   val _ = if not (isSome existing_phases) then () else
             tracing ("Attempting to restart from previous translation of " ^ filename)
 
-  fun get_existing_phase phase =
+  fun get_existing_optional_phase phase =
         case existing_phases of
-            NONE => Symtab.empty
-          | SOME phases =>
-              case FunctionInfo2.Phasetab.lookup phases phase of
-                  NONE => Symtab.empty
-                | SOME infos => infos
+            NONE => SOME Symtab.empty
+          | SOME phases => FunctionInfo2.Phasetab.lookup phases phase
+  fun get_existing_phase phase =
+        Option.getOpt (get_existing_optional_phase phase, Symtab.empty)
+  (* FIXME: if skip_heap_abs or skip_word_abs are used for some parts of
+   *        an incremental translation, some functions will be missing.
+   *        We ought to either handle this nicely (by carrying the
+   *        L2/HL versions forward), or detect it early and
+   *        produce an error report. *)
   val [existing_simpl_info,
        existing_l1_info,
        existing_l2_info,
@@ -581,11 +585,14 @@ let
   (* FIXME: collect from existing_phases *)
   val l1_results =
         SimplConv2.translate
-            filename prog_info simpl_info (!(#no_c_termination opt) <> SOME true)
+            filename prog_info simpl_info existing_simpl_info existing_l1_info
+            (!(#no_c_termination opt) <> SOME true)
             do_opt trace_opt (prefix "l1_" o make_function_name) lthy
 
   val l2_results =
-        LocalVarExtract2.translate filename prog_info l1_results do_opt trace_opt (prefix "l2_" o make_function_name)
+        LocalVarExtract2.translate
+            filename prog_info l1_results existing_l1_info existing_l2_info
+            do_opt trace_opt (prefix "l2_" o make_function_name)
 
   val skip_heap_abs = !(#skip_heap_abs opt) = SOME true
   val hl_results =
@@ -595,10 +602,10 @@ let
           val (l2_results', HL_setup) =
                 HeapLift2.prepare_heap_lift
                     filename prog_info l2_results lthy all_simpl_info
-                    make_lifted_globals_field_name gen_word_heaps heap_abs_syntax
+                    make_lifted_globals_field_name gen_word_heaps heap_abs_syntax;
           in HeapLift2.translate
-                filename prog_info l2_results' HL_setup
-                no_heap_abs force_heap_abs
+                filename prog_info l2_results' existing_l2_info existing_hl_info
+                HL_setup no_heap_abs force_heap_abs
                 heap_abs_syntax keep_going
                 (these (!(#trace_heap_lift opt))) do_opt trace_opt
                (prefix "hl_" o make_function_name)
@@ -608,15 +615,16 @@ let
         if skip_word_abs
         then hl_results
         else WordAbstract2.translate
-               filename prog_info hl_results
+               filename prog_info hl_results existing_hl_info existing_wa_info
                unsigned_word_abs no_signed_word_abs
                (these (!(#trace_word_abs opt))) do_opt trace_opt
                (prefix "wa_" o make_function_name)
 
   val ts_results =
         TypeStrengthen2.translate
-            ts_rules ts_force filename prog_info wa_results make_function_name
-            keep_going do_opt
+            ts_rules ts_force filename prog_info
+            wa_results existing_wa_info existing_ts_info
+            make_function_name keep_going do_opt
 
   (* Collect final translation results. *)
   val l1_info = FSeq.list_of l1_results |> map snd |> Utils.symtab_merge false;
@@ -665,14 +673,22 @@ let
   (* FIXME: merge with existing_phases *)
 
   (* Save function info for future reference. *)
+  val simpl_info' = Symtab.merge (K false) (existing_simpl_info, simpl_info);
+  val l1_info' = Symtab.merge (K false) (existing_l1_info, l1_info);
+  val l2_info' = Symtab.merge (K false) (existing_l2_info, l2_info);
+  val hl_info' = Symtab.merge (K false) (existing_hl_info, hl_info);
+  val wa_info' = Symtab.merge (K false) (existing_wa_info, wa_info);
+  val ts_info' = Symtab.merge (K false) (existing_ts_info, ts_info);
   val new_results =
         FunctionInfo2.Phasetab.make
-          ([(FunctionInfo2.CP, simpl_info),
-            (FunctionInfo2.L1, l1_info),
-            (FunctionInfo2.L2, l2_info),
-            (FunctionInfo2.TS, ts_info)]
-           @ (if skip_heap_abs then [] else [(FunctionInfo2.HL, hl_info)])
-           @ (if skip_word_abs then [] else [(FunctionInfo2.WA, wa_info)])
+          ([(FunctionInfo2.CP, simpl_info'),
+            (FunctionInfo2.L1, l1_info'),
+            (FunctionInfo2.L2, l2_info'),
+            (FunctionInfo2.TS, ts_info')]
+           @ (if skip_heap_abs andalso Symtab.is_empty existing_hl_info
+              then [] else [(FunctionInfo2.HL, hl_info')])
+           @ (if skip_word_abs andalso Symtab.is_empty existing_wa_info
+              then [] else [(FunctionInfo2.WA, wa_info')])
           )
 
   val _ = tracing "Saving function info to AutoCorresFunctionInfo."

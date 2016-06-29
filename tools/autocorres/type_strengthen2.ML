@@ -573,7 +573,9 @@ fun translate
       (force_lift : Monad_Types.monad_type Symtab.table)
       (filename : string)
       (prog_info : ProgramInfo.prog_info)
-      (l2_results: FunctionInfo2.phase_results)
+      (l2_results : FunctionInfo2.phase_results)
+      (existing_l2_infos : FunctionInfo2.function_info Symtab.table)
+      (existing_ts_infos : FunctionInfo2.function_info Symtab.table)
       (make_function_name : string -> string)
       (keep_going : bool)
       (do_opt : bool)
@@ -594,6 +596,10 @@ let
         in FunctionInfo2.function_info_upd_definition pretty_def info end)
         l2_infos;
 
+  (* Add prior L2 translations to round out L2 callees. *)
+  val l2_infos = AutoCorresUtil2.add_background_callees existing_l2_infos l2_infos;
+  val l2_infos = Symtab.merge (K false) (l2_infos, existing_l2_infos);
+
   (* For now, just works sequentially like the old TypeStrengthen. *)
   fun translate_group fn_names (lthy, _, ts_infos) =
   let
@@ -610,7 +616,7 @@ let
   in (lthy, new_ts_infos, Symtab.merge (K false) (ts_infos, new_ts_infos)) end;
 
   val ts_results =
-        Utils.accumulate translate_group (lthy, Symtab.empty, Symtab.empty)
+        Utils.accumulate translate_group (lthy, Symtab.empty, existing_ts_infos)
                          (map (map fst o Symtab.dest o snd) l2_results)
         |> fst
         |> map (fn (lthy, ts_infos, _) => (lthy, ts_infos));

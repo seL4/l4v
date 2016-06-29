@@ -157,7 +157,11 @@ end
 fun translate
       (filename: string)
       (prog_info: ProgramInfo.prog_info)
+      (* Note that we refer to the previous phase as "l2"; it may be
+       * from the L2 or HL phase. *)
       (l2_results: FunctionInfo2.phase_results)
+      (existing_l2_infos: FunctionInfo2.function_info Symtab.table)
+      (existing_wa_infos: FunctionInfo2.function_info Symtab.table)
       (unsigned_abs: Symset.key Symset.set)
       (no_signed_abs: Symset.key Symset.set)
       (trace_funcs: string list)
@@ -411,7 +415,7 @@ let
   end
 
   (* Define a previously-converted function (or recursive function group).
-   * lthy must include all definitions from l2_callees. *)
+   * lthy must include all definitions from wa_callees. *)
   fun define
         (lthy: local_theory)
         (l2_infos: FunctionInfo2.function_info Symtab.table)
@@ -447,7 +451,7 @@ let
     in (new_infos, lthy') end;
 
   (* Do conversions in parallel. *)
-  val converted_groups = AutoCorresUtil2.par_convert convert l2_results;
+  val converted_groups = AutoCorresUtil2.par_convert convert existing_l2_infos l2_results;
 
   (* Sequence of intermediate states: (lthy, new_defs) *)
   val def_results = FSeq.mk (fn _ =>
@@ -456,7 +460,7 @@ let
           let (* Get initial lthy from end of L2 defs *)
               val (l2_lthy, _) = FSeq.list_of l2_results |> List.last;
               val results = AutoCorresUtil2.define_funcs_sequence
-                              l2_lthy define Symtab.empty converted_groups;
+                              l2_lthy define existing_l2_infos existing_wa_infos converted_groups;
           in FSeq.uncons results end);
 
   (* Produce a mapping from each function group to its L1 phase_infos and the
