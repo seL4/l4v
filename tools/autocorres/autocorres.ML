@@ -629,8 +629,10 @@ let
   (* Collect final translation results. *)
   val l1_info = FSeq.list_of l1_results |> map snd |> Utils.symtab_merge false;
   val l2_info = FSeq.list_of l2_results |> map snd |> Utils.symtab_merge false;
-  val hl_info = FSeq.list_of hl_results |> map snd |> Utils.symtab_merge false;
-  val wa_info = FSeq.list_of wa_results |> map snd |> Utils.symtab_merge false;
+  val hl_info = if skip_heap_abs then Symtab.empty else
+                  FSeq.list_of hl_results |> map snd |> Utils.symtab_merge false;
+  val wa_info = if skip_word_abs then Symtab.empty else
+                  FSeq.list_of wa_results |> map snd |> Utils.symtab_merge false;
   val ts_results' = FSeq.list_of ts_results;
   val ts_info = ts_results' |> map snd |> Utils.symtab_merge false;
 
