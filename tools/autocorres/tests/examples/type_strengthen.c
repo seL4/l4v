@@ -210,12 +210,3 @@ int exc_f(char *s, int *n) {
     return 0;
   }
 }
-
-void name_test(int, int);
-void name_test2(int symbol_table, int l2_hax, int l2_name_test, int l2_name_test2) {
-  hax();
-  name_test(l2_name_test, l2_name_test2);
-}
-void name_test(int l2_name_test, int l2_name_test2) {
-  name_test2(42, 1337, l2_name_test, l2_name_test2);
-}

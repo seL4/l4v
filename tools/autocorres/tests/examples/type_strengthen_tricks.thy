@@ -39,7 +39,7 @@ thm pure_g'_def pure_h'_def
 (* gets_f and gets_g are now lifted to the option monad. *)
 thm gets_f'_def gets_g'_def
 thm opt_f'_def opt_g'_def opt_h'.simps opt_i'_def
-    opt_j'_def opt_a'.simps
+    opt_j'_def opt_a'.simps opt_a2'_def
 (* opt_l is now lifted to the state monad. *)
 thm opt_l'_def
 thm st_f'_def st_g'_def st_h'_def st_i'.simps (* hax'_def *)
@@ -62,6 +62,7 @@ term "opt_h' :: nat \<Rightarrow> ure_C ptr \<Rightarrow> lifted_globals \<Right
 term "opt_i' :: (lifted_globals, int) nondet_monad"
 term "opt_j' :: ure_C ptr \<Rightarrow> ure_C ptr \<Rightarrow> lifted_globals \<Rightarrow> int option"
 term "opt_a' :: nat \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> lifted_globals \<Rightarrow> word32 option"
+term "opt_a2' :: word32 \<Rightarrow> lifted_globals \<Rightarrow> word32 option"
 term "opt_l' :: word32 \<Rightarrow> (lifted_globals, word32) nondet_monad"
 term "st_f' :: ure_C ptr \<Rightarrow> ure_C ptr \<Rightarrow> (lifted_globals, unit) nondet_monad"
 term "st_g' :: word32 ptr \<Rightarrow> (lifted_globals, word32) nondet_monad"
