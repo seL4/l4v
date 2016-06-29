@@ -9,87 +9,10 @@
  *)
 
 (*
- * High-level use of AutoCorres
+ * Common code for all translation phases: defining funcs, calculating dependencies, variable fixes, etc.
  *)
-signature AUTOCORRES_UTIL =
-sig
-  val translate :
-        local_theory
-        -> FunctionInfo.phase
-        -> FunctionInfo.fn_info
-        (* initial callee data *)
-        -> 'b Symtab.table
-        (* convert *)
-        -> (local_theory -> string -> 'a)
-        (* define *)
-        -> (local_theory -> 'b Symtab.table -> 'c -> (string * 'a) list -> ('b list * 'c * local_theory))
-        (* update function info *)
-        -> (local_theory -> 'c -> FunctionInfo.function_info -> FunctionInfo.phase_info)
-        (* prove_mono : ctxt -> function info (after updates) -> mono_thms *)
-        -> (local_theory -> FunctionInfo.function_info list -> thm Symtab.table)
-        -> 'c -> (local_theory * FunctionInfo.fn_info * 'c)
 
-  val do_translation_phase :
-        FunctionInfo.phase
-        (* source file name *)
-        -> string
-        -> ProgramInfo.prog_info -> FunctionInfo.fn_info
-        (* generate fn type *)
-        -> (string -> typ)
-        (* generate fn assumption : ctxt -> fn_name -> free -> args -> recursive ->
-                                    measure -> assm *)
-        -> (local_theory -> string -> term -> term list -> bool -> term -> term)
-        (* generate fn args *)
-        -> (string -> (string * typ) list)
-        (* generate fn name *)
-        -> (string -> string)
-        (* convert : ctxt -> fn_name -> callee_terms -> measure -> args -> (tracing setting, fn, corres_thm)
-           [ callee_terms : (recursive, callee, corres_thm) table ] *)
-        -> (local_theory -> string -> ((bool * term * thm) Symtab.table)
-            -> term -> term list -> (term * thm * (string * AutoCorresData.Trace) list))
-        (* update function info *)
-        -> (local_theory -> FunctionInfo.function_info -> FunctionInfo.phase_info)
-        (* prove_mono *)
-        -> (local_theory -> FunctionInfo.function_info list -> thm Symtab.table)
-        (* recursion basecase *)
-        -> thm
-        -> Proof.context
-        (* result *)
-        -> (Proof.context * FunctionInfo.fn_info)
-
-  val define_funcs:
-        FunctionInfo.phase ->
-        string ->
-        FunctionInfo.fn_info ->
-        (string -> string) ->
-        (string -> typ) ->
-        (Proof.context -> string -> term -> term list -> bool -> term -> term) ->
-        (string -> (string * typ) list) ->
-        thm ->
-        Proof.context ->
-        thm Symtab.table ->
-        'a ->
-        (string * (thm * term * (string * AutoCorresData.Trace) list)) list ->
-        thm list * 'a * Proof.context
-
-  val map_all : Proof.context -> FunctionInfo.fn_info -> (string -> FunctionInfo.function_info -> 'a) -> 'a list
-  val concurrent : bool Unsynchronized.ref
-  val has_simpl_body_def : local_theory -> string -> bool
-  val max_run_time : Time.time option Unsynchronized.ref
-
-  val assume_called_functions_corres :
-        Proof.context ->
-        (string * bool) list ->
-        (string -> typ) ->
-        (Proof.context -> string -> term -> term list -> bool -> term -> term) ->
-        (string -> (string * typ) list) ->
-        (string -> string) ->
-        term ->
-        Proof.context * morphism * (string * (bool * term * thm)) list
-  val get_callees : FunctionInfo.fn_info -> string -> string list * string list (* (nonrecs, recs) *)
-end;
-
-structure AutoCorresUtil : AUTOCORRES_UTIL =
+structure AutoCorresUtil =
 struct
 
 (*
@@ -97,6 +20,7 @@ struct
  *
  * Note that this is wall time, and not CPU time, so it is a very rough
  * tool.
+ * FIXME: convert to proper option
  *)
 val max_run_time = Unsynchronized.ref NONE
 (*
@@ -121,144 +45,7 @@ val concurrent = Unsynchronized.ref true;
  * Conditionally fork a group of tasks, depending on the value
  * of "concurrent".
  *)
-datatype 'a maybe_fork = Future of 'a future | Boring of 'a
-
-(* Fork a group of tasks. *)
-fun maybe_fork ctxt vals =
-  if ((!concurrent) andalso not (Config.get ctxt ML_Options.exception_trace)) then
-    map Future (Future.forks {
-        name = "", group = NONE, deps = [], pri = ~1, interrupts = true}
-      vals)
-  else
-    map (fn x => Boring (x ())) vals
-
-(* Ensure a forked task has completed. *)
-fun maybe_join v =
-  case v of
-    Boring x => x
-  | Future x => Future.join x
-
-(* Functional map. *)
-fun par_map ctxt f a =
-  if ((!concurrent) andalso not (Config.get ctxt ML_Options.exception_trace)) then
-    Par_List.map f a
-  else
-    map f a
-
-(* Does a SIMPL body exist for the given function name? *)
-fun has_simpl_body_def lthy name =
-  try (fn name => Proof_Context.get_thm lthy (name ^ "_body_def")) name
-  |> is_some
-
-
-(*
- * A translation step transforms the program from one form to another;
- * such as from SIMPL to a monadic type, or from one type of monad to
- * another.
- *
- * "filename" is the name of the file we are translating: this is required as a
- * key to fetch data stashed away by the C parser.
- *
- * "lthy" is the local theory.
- *
- * "convert" performs any proof work required for this translation step. All
- * conversions are performed in parallel, so must be able to be completed
- * without results from previous steps.
- *
- * "define" actually sets up any definitions required by the translation;
- * definition steps occur serially, but may be in parallel with conversion
- * steps whose results are not yet required.
- *
- * "prove_mono" should prove the monad_mono property for recursive functions.
- * (* It is run in parallel over all recursive groups. *)
- *
- * Because functions handed to us by the C parser may be mutually recursive and
- * such mutually recursive functions must typically be defined simultaneously,
- * "define" is handed a list of functions which must all be defined in one
- * step.
- *)
-fun translate lthy phase fn_info initial_callees convert define gen_new_info prove_mono v =
-  let
-    (* Get list of functions we need to translate.
-     * This is a bit complicated because we need to skip over functions that
-     * have already been translated, and hence we need to recalculate the
-     * function call graph. *)
-    val functions_to_translate =
-          Symtab.dest (FunctionInfo.get_all_functions fn_info)
-          |> map_filter (fn (name, info) =>
-                case FunctionInfo.Phasetab.lookup (#phases info) phase of
-                    NONE => SOME name
-                  | SOME _ => NONE)
-          |> Symset.make
-    val fn_info_restricted = FunctionInfo.map_fn_info (fn info =>
-          if Symset.contains functions_to_translate (#name info) then SOME info else NONE) fn_info
-    val function_groups = FunctionInfo.get_topo_sorted_functions fn_info_restricted
-    val all_functions = List.concat function_groups
-
-    (*
-     * Convert every function.
-     *
-     * We perform the conversions using futures, which are run in parallel.
-     * This allows us to perform conversions while we start defining functions,
-     * hopefully speeding everything up on multicore systems.
-     *)
-    val converted_body_thms =
-        map (fn name => fn _ =>
-                time_limit (fn _ => convert lthy name) [name]) all_functions
-        |> maybe_fork lthy
-    val converted_bodies = Symtab.make (all_functions ~~ converted_body_thms)
-
-    (* In sorted order, define constants and proofs for the functions. *)
-    fun translate fn_names (callee_thms, new_phase_infos, v, lthy) =
-      let
-        val defs = map (fn fn_name =>
-            Symtab.lookup converted_bodies fn_name |> the |> maybe_join) fn_names
-        val (proofs, v, lthy)
-            = time_limit (fn _ =>
-                define lthy callee_thms v (fn_names ~~ defs)) fn_names
-        val new_callee_thms = fold Symtab.update_new
-            (fn_names ~~ proofs) callee_thms
-        val new_phase_infos = fold (fn n =>
-            Symtab.update_new (n, gen_new_info lthy v (FunctionInfo.get_function_info fn_info n)))
-            fn_names new_phase_infos
-      in
-        (new_callee_thms, new_phase_infos, v, lthy)
-      end
-
-    val (proof_table, new_phase_infos, v, lthy)
-        = fold translate function_groups (initial_callees, Symtab.empty, v, lthy)
-
-    val mono_thms =
-        function_groups
-        |> map (fn funcs => if not (FunctionInfo.is_function_recursive fn_info (hd funcs))
-                  then K Symtab.empty else (fn _ => time_limit (fn _ =>
-                      (List.mapPartial (fn f =>
-                         case Symtab.lookup new_phase_infos f of
-                             SOME phase_info =>
-                                 SOME (FunctionInfo.function_info_add_phase phase_info
-                                         (FunctionInfo.get_function_info fn_info f))
-                           | _ => NONE) funcs
-                       |> prove_mono lthy)) funcs))
-        |> maybe_fork lthy |> map maybe_join
-        |> maps Symtab.dest |> Symtab.make
-
-    val new_phase_infos = new_phase_infos |>
-        Symtab.map (fn func => FunctionInfo.phase_info_upd_mono_thm (Symtab.lookup mono_thms func))
-  in
-    (lthy, FunctionInfo.add_phases (fn name => K (Symtab.lookup new_phase_infos name)) fn_info, v)
-  end
-
-(*
- * A translation step that maps over every function in the program.
- *
- * "convert" performs any proof work required for this translation step. All
- * conversions are performed in parallel, so must be able to be completed
- * without results from previous steps.
- *
- * We return a list of all results.
- *)
-fun map_all ctxt fn_info convert =
-  par_map ctxt (uncurry convert) (FunctionInfo.get_all_functions fn_info |> Symtab.dest)
+fun maybe_fork f = if !concurrent then Future.fork f else Future.value (f ());
 
 (*
  * Get functions called by a particular function.
@@ -266,26 +53,15 @@ fun map_all ctxt fn_info convert =
  * We split the result into standard calls and recursive calls (i.e., calls
  * which may recursively call back into us).
  *)
-fun get_callees fn_info fn_name =
+fun get_callees fn_infos fn_name =
 let
-  (* Get a list of functions we call. *)
-  val all_callees = FunctionInfo.get_function_callees fn_info fn_name
-
-  (* Fetch calls that may recursively call back to us. *)
-  val recursive_calls = FunctionInfo.get_recursive_group fn_info fn_name
-
-  (* Remove "recursive_calls" from the standard callee set. *)
-  val callees =
-      Symset.make all_callees
-      |> Symset.subtract (Symset.make recursive_calls)
-      |> Symset.dest
+  val fn_info = the (Symtab.lookup fn_infos fn_name)
 in
-  (callees, recursive_calls)
+  (Symset.dest (#callees fn_info), Symset.dest (#rec_callees fn_info))
 end
 
-(* Is the given term a Trueprop? *)
-fun is_Trueprop (Const (@{const_name "Trueprop"}, _) $ _) = true
-  | is_Trueprop _ = false
+(* Measure variables are currently hardcoded as nats. *)
+val measureT = @{typ nat};
 
 (*
  * Assume theorems for called functions.
@@ -307,13 +83,13 @@ fun is_Trueprop (Const (@{const_name "Trueprop"}, _) $ _) = true
  * get_const_name generates names for the free function placeholders.
  * FIXME: probably unnecessary and/or broken.
  *
- * We return two morphisms:
- *  - the first one makes the assumptions visible again
- *  - the second one automatically generalizes the assumed constants
- *    (this exists for backwards compat; all new code should explicitly use the
- *     returned free variable set)
+ * We return a morphism that exposes the assumptions and generalises over the
+ * assumed constants.
+ * FIXME: automatically generalising over the assumed free variables is
+ * probably broken. Instead, the caller should manually generalise and
+ * instantiate the frees to avoid clashes.
  *)
-fun assume_called_functions_corres ctxt callees
+fun assume_called_functions_corres ctxt callees rec_callees
     get_fn_type get_fn_assumption get_fn_args get_const_name callers_measure_var =
 let
   (* Assume the existence of a function, along with a theorem about its
@@ -362,7 +138,7 @@ let
     (fn_free, thm, ctxt''', m)
   end
 
-  (* Apply each assumption. *)
+  (* Add assumptions: recursive calls first, matching the order in define_functions *)
   val (res, (ctxt', m)) = fold_map (
     fn (fn_name, is_recursive_call) =>
       fn (ctxt, m) =>
@@ -372,124 +148,72 @@ let
         in
           ((fn_name, (is_recursive_call, free, thm)), (ctxt', m' $> m))
         end)
-    callees (ctxt, Morphism.identity)
+    (map (fn f => (f, false)) (Symset.dest callees) @
+     map (fn f => (f, true)) (Symset.dest rec_callees))
+    (ctxt, Morphism.identity)
 in
   (ctxt', m, res)
 end
 
-(*
- * Convert a single function.
+(* Determine which functions are called by a code fragment.
+ * Only function terms in callee_consts are used. *)
+fun get_body_callees
+      (callee_consts: string Termtab.table)
+      (body: term)
+      : symset =
+  Term.fold_aterms (fn t => fn a =>
+      (Termtab.lookup callee_consts t
+          |> Option.map single
+          |> the_default []) @ a)
+      body []
+  |> Symset.make;
+
+(* Determine which recursive calls are actually used by a code fragment.
+ * This is used to make adjustments to recursive function groups
+ * between conversion and definition steps.
  *
- * Given a single concrete function, abstract that function and
- * return a theorem that shows the correspondence.
- *
- * A theorem is returned which has assumptions that called functions
- * correspond, giving a goal that this given function corresponds.
- *)
-fun gen_corres_for_function
-    (phase : FunctionInfo.phase)
-    (fn_info : FunctionInfo.fn_info)
-    (get_fn_type : string -> typ)
-    (get_fn_assumption : Proof.context -> string -> term -> term list -> bool -> term -> term)
-    (get_fn_args : string -> (string * typ) list)
-    (get_const_name : string -> string)
-    (convert : Proof.context -> string -> ((bool * term * thm) Symtab.table) ->
-               term -> term list -> (term * thm * (string * AutoCorresData.Trace) list))
-    (ctxt : Proof.context)
-    (fn_name : string) =
-let
-  val _ = writeln ("Converting (" ^ FunctionInfo.string_of_phase phase ^ ") " ^ fn_name)
-  val start_time = Timer.startRealTimer ()
-
-  (* Get a list of functions we call. *)
-  val (normal_calls, recursive_calls)
-      = get_callees fn_info fn_name
-  val callees =
-      (map (fn x => (x, false)) normal_calls)
-      @ (map (fn x => (x, true)) recursive_calls)
-
-  (* Make sure the desired function name is available. *)
-  val fn_target_name = get_const_name fn_name
-  val ([fn_free], ctxt') = Variable.variant_fixes [fn_target_name] ctxt
-  val _ = if fn_free = fn_target_name then () else
-            warning ("Variable clobbered: " ^ fn_target_name ^ " -> " ^ fn_free ^ ". Translating " ^
-                     fn_name ^ " may fail.")
-  val fn_var_morph = Variable.export_morphism ctxt' ctxt
-
-  (* Fix a measure variable that will be used to track recursion progress. *)
-  val ([measure_var_name], ctxt'') = Variable.variant_fixes ["rec_measure'"] ctxt'
-  val measure_var = Free (measure_var_name, @{typ nat})
-  val measure_var_morph = Variable.export_morphism ctxt'' ctxt'
-
-  (* Fix variables for function arguments. *)
-  val fn_args = get_fn_args fn_name
-  val (arg_names, ctxt''')
-      = Variable.variant_fixes (map (fn (a, _) => a ^ "'arg") fn_args) ctxt''
-  val fn_arg_terms = map (fn (n, T) => Free (n, T)) (arg_names ~~ (map snd fn_args))
-  val fn_args_morph = Variable.export_morphism ctxt''' ctxt''
-
-  val _ = @{trace} ("Vars", fn_free, measure_var_name, arg_names)
-  (* Enter a context where we assume our callees exist. *)
-  val (ctxt'''', m, callee_info_and_proofs)
-      = assume_called_functions_corres ctxt''' callees
-            get_fn_type get_fn_assumption get_fn_args get_const_name
-            measure_var
-
-  (*
-   * Do the conversion.  We receive a new monadic version of the SIMPL
-   * term and a tactic for proving correspondence.
-   *)
-  val callee_tab = Symtab.make callee_info_and_proofs
-  val (body, thm, trace) = convert ctxt'''' fn_name callee_tab measure_var fn_arg_terms
-
-  (*
-   * The returned body will have free variables as placeholders for the function's
-   * input parameters, for the functions it calls, and for its measure variable.
-   *
-   * We modify the body to be of the form:
-   *
-   *     %fun1 fun2 rec1 rec2 measure arg1 arg2. f <...>
-   *
-   * That is, all non-recursive calls are abstracted out the front, followed by
-   * recursive calls, followed by the measure variable, followed by function
-   * arguments.
-   *)
-  val body =
-    fold lambda (rev fn_arg_terms) body
-    |> lambda measure_var
-    |> fold lambda (rev (map (fn x => Symtab.lookup callee_tab x |> the |> #2) recursive_calls))
-    |> fold lambda (rev (map (fn x => Symtab.lookup callee_tab x |> the |> #2) normal_calls))
- 
-  (* Export the theorem out of our context. *)
-  val exported_thm = Morphism.thm (m $> fn_args_morph $> measure_var_morph $> fn_var_morph) thm
-
-  (* TODO: allow this message to be configured *)
-  val _ = @{trace} ("Converted (" ^ FunctionInfo.string_of_phase phase ^ ") " ^ fn_name ^ " in " ^
-                    Time.toString (Timer.checkRealTimer start_time) ^ " s")
-in
-  (exported_thm, body, trace)
-end
+ * callee_terms is a list of (is_recursive, func const, thm)
+ * as provided by assume_called_functions_corres *)
+fun get_rec_callees
+      (callee_terms: (string * (bool * term * thm)) list)
+      (body: term)
+      : symset = let
+    val callee_lookup =
+          callee_terms |> List.mapPartial (fn (callee, (is_rec, const, _)) =>
+              if is_rec then SOME (const, callee) else NONE)
+          |> Termtab.make;
+    in get_body_callees callee_lookup body end;
 
 (*
- * Given a SIMPL function, define a constant and a proof for it.
+ * Given one or more function specs, define them and instantiate corres proofs.
  *
- *   "callee_thms" contains a table mapping function names to complete
- *   corres proofs for those functions.
+ *   "callee_thms" contains corres theorems for already-defined functions.
  *
- *   "functions" contains a list of (fn_name, (proof, body, proof traces)).
- *   The body should be of the form generated by gen_corres_for_function,
+ *   "fn_infos" is used to look up function callees. It is expected
+ *   to consist of the previous translation output for the functions
+ *   being defined, but may of course contain other entries.
+ *
+ *   "functions" contains a list of (fn_name, (body, corres proof, arg_frees)).
+ *   The body should be of the form generated by abstract_fn_body,
  *   with lambda abstractions for all callees and arguments.
+ *
+ *   The given corres proof is expected to use the free variables in
+ *   arg_frees for the function's arguments (including the measure variable,
+ *   if there if there is one). It is also expected to use schematic
+ *   variables for assumed callees.
+ *   (FIXME: this interface should be simplified a bit.)
  *
  *   We assume that all functions in this list are mutually recursive.
  *   (If not, you should call "define_funcs" multiple times, each
  *   time with a single function.)
  *
- *   The proof traces are stored into the theory. (This should probably be moved.)
+ * Returns the new function constants, definitions, final corres proofs,
+ * and local theory.
  *)
 fun define_funcs
     (phase : FunctionInfo.phase)
     (filename : string)
-    (fn_info : FunctionInfo.fn_info)
+    (fn_infos : FunctionInfo.function_info Symtab.table)
     (get_const_name : string -> string)
     (get_fn_type : string -> typ)
     (get_fn_assumption : Proof.context -> string -> term -> term list -> bool -> term -> term)
@@ -497,19 +221,19 @@ fun define_funcs
     (rec_base_case : thm)
     (ctxt : Proof.context)
     (callee_thms : thm Symtab.table)
-    accum (* translate allows an accumulator, but we don't use it here *)
-    (functions : (string * (thm * term * (string * AutoCorresData.Trace) list)) list)
-    =
+    (accum : 'a) (* translate allows an accumulator, but we don't use it here *)
+    (functions : (string * (term * thm * (string * typ) list)) list)
+  : (term * thm * thm) Symtab.table * 'a * Proof.context =
   let
     val fn_names = map fst functions
-    val fn_thms = map (snd #> #1) functions
-    val fn_bodies = map (snd #> #2) functions
-    val fn_traces = map (fn (fn_name, (_, _, traces)) => map (fn (module, trace) => (module, fn_name, trace)) traces) functions |> List.concat
+    val fn_bodies = map (snd #> #1) functions
+    (* Generalise over the function arguments *)
+    val fn_thms = map (snd #> (fn (_, thm, frees) =>
+                        (Thm.generalize ([], map fst frees) (Thm.maxidx_of thm + 1) thm)))
+                      functions
 
     val _ = writeln ("Defining (" ^ FunctionInfo.string_of_phase phase ^ ") " ^
                      (Utils.commas (map get_const_name fn_names)))
-    val _ = @{trace} ("define_funcs function(s)", functions)
-    val _ = @{trace} ("define_funcs callee(s)", Symtab.dest callee_thms)
 
     (*
      * Determine if we are in a recursive case by checking to see if the
@@ -518,7 +242,7 @@ fun define_funcs
      * recursion, but may be a different function if we are mutually
      * recursive.)
      *)
-    val is_recursive = FunctionInfo.is_function_recursive fn_info (hd fn_names)
+    val is_recursive = FunctionInfo.is_function_recursive (the (Symtab.lookup fn_infos (hd fn_names)))
     val _ = assert (length fn_names = 1 orelse is_recursive)
             "define_funcs passed multiple functions, but they don't appear to be recursive."
 
@@ -530,10 +254,9 @@ fun define_funcs
      *)
     fun fill_body fn_name body =
     let
-      val (normal_calls, recursive_calls)
-          = get_callees fn_info fn_name
-      val non_rec_calls = map (fn x => Utils.get_term ctxt (get_const_name x)) normal_calls
-      val rec_calls = map (fn x => Free (get_const_name x, get_fn_type x)) recursive_calls
+      val fn_info = the (Symtab.lookup fn_infos fn_name)
+      val non_rec_calls = map (fn x => Utils.get_term ctxt (get_const_name x)) (Symset.dest (#callees fn_info))
+      val rec_calls = map (fn x => Free (get_const_name x, get_fn_type x)) (Symset.dest (#rec_callees fn_info))
     in
       body
       |> (fn t => betapplys (t, non_rec_calls))
@@ -561,17 +284,11 @@ fun define_funcs
         (fn_names ~~ fn_bodies)
     val (fn_def_thms, ctxt) = Utils.define_functions defs true is_recursive ctxt
 
-    (* Record the constant in our theory data. *)
-    val ctxt = fold (fn (fn_name, def) =>
-        Local_Theory.background_theory (
-            AutoCorresData.add_def filename (FunctionInfo.string_of_phase phase ^ "def") fn_name def))
-        (Utils.zip fn_names fn_def_thms) ctxt
-
     (*
      * Instantiate schematic function calls in our theorems with their
      * concrete definitions.
      *)
-    val combined_callees = map (get_callees fn_info) (map fst functions)
+    val combined_callees = map (get_callees fn_infos) (map fst functions)
     val combined_normal_calls =
         map fst combined_callees |> flat |> sort_distinct fast_string_ord
     val combined_recursive_calls =
@@ -619,12 +336,12 @@ fun define_funcs
     (* Prove each of the predicates above, leaving any assumptions about called
      * functions unsolved. *)
     val pred_thms = map (
-        fn (pred, thm, body_def) => (@{trace} ("define_funcs applying rule", thm);
+        fn (pred, thm, body_def) =>
           Thm.trivial (Thm.cterm_of ctxt' pred)
           |> Utils.apply_tac "unfold body" (Hypsubst.stac ctxt' body_def 1)
           |> Utils.apply_tac "apply rule" (resolve_tac ctxt' [thm] 1)
           |> Goal.norm_result ctxt
-          |> singleton (Variable.export ctxt' ctxt))
+          |> singleton (Variable.export ctxt' ctxt)
         )
         (Utils.zip3 preds fn_thms fn_def_thms)
 
@@ -649,10 +366,10 @@ fun define_funcs
               (EVERY (map (fn x => (EqSubst.eqsubst_tac ctxt' [1] [x] 1)) (rev fn_def_thms)))
           |> Utils.apply_tac "solve induction base cases"
               (SOLVES ((simp_tac (put_simpset HOL_ss ctxt' addsimps [rec_base_case]) 1)))
-          |> Utils.apply_tac "solve remaing goals"
+          |> Utils.apply_tac "solve remaining goals"
               (Utils.metis_insert_tac ctxt helper_thms 1)
         ) else (
-          Utils.apply_tac "solve remaing goals"
+          Utils.apply_tac "solve remaining goals"
                     (Utils.metis_insert_tac ctxt helper_thms 1) thm
         ))
       |> Goal.finish ctxt'
@@ -661,7 +378,7 @@ fun define_funcs
      * The proof above is of the form (L1corres a & L1corres b & ...).
      * Split it up into several proofs.
      *)
-    fun prove_partial_l1_corres thm pred =
+    fun prove_partial_corres thm pred =
       Thm.cterm_of ctxt' pred
       |> Goal.init
       |> Utils.apply_tac "solving using metis" (Utils.metis_tac ctxt [thm] 1)
@@ -669,72 +386,162 @@ fun define_funcs
 
     (* Generate the final theorems. *)
     val new_thms =
-        map (prove_partial_l1_corres new_thm) preds
+        map (prove_partial_corres new_thm) preds
         |> (Variable.export ctxt' ctxt)
         |> map (Goal.norm_result ctxt)
 
-    (* Record the theorems in our theory data. *)
-    val ctxt = fold (fn (fn_name, thm) =>
-        Local_Theory.background_theory
-          (AutoCorresData.add_thm filename (FunctionInfo.string_of_phase phase ^ "corres") fn_name thm))
-        (fn_names ~~ new_thms) ctxt
-
-    (* Add the theorems to the context. *)
-    val ctxt = fold (fn (fn_name, thm) =>
-        Utils.define_lemma (fn_name ^ "_" ^ FunctionInfo.string_of_phase phase ^ "corres") thm #> snd)
-        (fn_names ~~ new_thms) ctxt
-
-    (* Add the traces to the context. *)
-    val ctxt = Local_Theory.background_theory
-                 (fold (fn (phase, fn_name, trace) =>
-                          AutoCorresData.add_trace filename phase fn_name trace) fn_traces) ctxt
+    val results =
+          fn_names ~~ (new_thms ~~ fn_def_thms)
+          |> map (fn (fn_name, (corres_thm, def_thm)) =>
+                    (* FIXME: ugly way to get the function constant *)
+                    (fn_name, (Utils.get_term ctxt (get_const_name fn_name), def_thm, corres_thm)))
+          |> Symtab.make;
   in
-    (new_thms, accum, ctxt)
+    (results, accum, ctxt)
   end
 
-(*
- * Do a translation phase, converting every function from one form to another.
+(* Support function for incremental translation.
+ * This updates #callees of the functions we are translating, to include
+ * background functions that have already been translated.
+ * (We don't need to handle #rec_callees because recursive groups
+ * cannot be translated piecemeal.) *)
+fun add_background_callees
+      (background: FunctionInfo.function_info Symtab.table)
+      : FunctionInfo.function_info Symtab.table ->
+        FunctionInfo.function_info Symtab.table = let
+  val bg_consts =
+        Symtab.dest background
+        |> map (fn (f, bg_info) => (#raw_const bg_info, f))
+        |> Termtab.make;
+  in Symtab.map (K (fn fn_info => let
+       val bg_callees = get_body_callees bg_consts (Thm.prop_of (#definition fn_info));
+       in FunctionInfo.function_info_upd_callees (Symset.union (#callees fn_info) bg_callees) fn_info end))
+  end;
+
+(* Utility for doing conversions in parallel.
+ * The conversion of each function f should depend only on the previous
+ * define phase for f (which necessarily also includes f's callees). *)
+type convert_result = {
+       body: term, (* new body *)
+       proof: thm, (* corres thm *)
+       rec_callees: symset, (* minimal rec_callees after translation *)
+       callee_consts: term Symtab.table, (* assumed frees for other callees *)
+       arg_frees: (string * typ) list, (* fixed argument frees, including measure *)
+       traces: (string * AutoCorresData.Trace) list (* traces *)
+     }
+fun par_convert
+      (* Worker: lthy -> function_infos for func and callees -> func name -> results *)
+      (convert: local_theory -> FunctionInfo.function_info Symtab.table ->
+                string -> convert_result)
+      (* Functions from prior incremental translation *)
+      (existing_infos: FunctionInfo.function_info Symtab.table)
+      (* Functions from previous phase *)
+      (prev_results: FunctionInfo.phase_results)
+      (* Add traces from the conversion result. *)
+      (add_trace: string -> string -> AutoCorresData.Trace -> unit)
+      (* Return converted functions in recursive groups.
+       * The groups are tagged with fn_infos from prev_results to identify them. *)
+      : (FunctionInfo.function_info Symtab.table * convert_result Symtab.table) FSeq.fseq =
+    (* Knowing that prev_results is in topological order,
+     * we accumulate its function_infos, which will be a superset
+     * of the callee infos that each conversion requires. *)
+    FSeq.fold_map (fn fn_infos_accum => fn (lthy, fn_infos) => let
+           val fn_infos = add_background_callees existing_infos fn_infos;
+           val fn_infos_accum = Symtab.merge (K false) (fn_infos_accum, fn_infos);
+           (* Convert fn_infos in parallel, but join the results right away.
+            * This is fine because we will define them together. *)
+           val conv_results =
+                 Symtab.dest fn_infos
+                 |> Par_List.map (fn (f, _) =>
+                      (f, convert lthy fn_infos_accum f))
+                 |> Symtab.make;
+           val _ = app (fn (f, result) => app (fn (typ, trace) =>
+                                add_trace f typ trace) (#traces result))
+                       (Symtab.dest conv_results);
+           in ((fn_infos, conv_results), fn_infos_accum) end)
+        existing_infos prev_results;
+
+(* Given a function body containing arguments and assumed function calls,
+ * abstract the code over those parameters.
+ *
+ * The returned body will have free variables as placeholders for the function's
+ * measure parameter and other arguments, as well as for the functions it calls.
+ *
+ * We modify the body to be of the form:
+ *
+ *     %fun1 fun2 rec1 rec2 measure arg1 arg2. f <...>
+ *
+ * That is, all non-recursive calls are abstracted out the front, followed by
+ * recursive calls, followed by the measure variable, followed by function
+ * arguments. This is the format expected by define_funcs.
  *)
-fun do_translation_phase
-    (phase : FunctionInfo.phase)
-    (filename : string)
-    (prog_info : ProgramInfo.prog_info)
-    (fn_info : FunctionInfo.fn_info)
-    (get_fn_type : string -> typ)
-    (get_fn_assumption : local_theory -> string -> term -> term list -> bool -> term -> term)
-    (get_fn_args : string -> (string * typ) list)
-    (get_const_name : string -> string)
-    (convert : local_theory -> string -> ((bool * term * thm) Symtab.table) ->
-               term -> term list -> (term * thm * (string * AutoCorresData.Trace) list))
-    (gen_new_info : local_theory -> FunctionInfo.function_info -> FunctionInfo.phase_info)
-    (prove_mono : local_theory -> FunctionInfo.function_info list -> thm Symtab.table)
-    (rec_base_case : thm)
-    (ctxt : Proof.context) =
-let
-  val do_gen_corres =
-    gen_corres_for_function phase fn_info get_fn_type get_fn_assumption
-        get_fn_args get_const_name convert;
-  val do_define_funcs =
-    define_funcs phase filename fn_info get_const_name get_fn_type
-        get_fn_assumption get_fn_args rec_base_case
-  (* Lookup functions that have already been translated (i.e. phase exists) *)
-  val initial_callees = Symtab.dest (FunctionInfo.get_all_functions fn_info)
-        |> List.mapPartial (fn (fn_name, info) =>
-             FunctionInfo.Phasetab.lookup (#phases info) phase
-             |> Option.mapPartial (fn phase_info =>
-                  AutoCorresData.get_thm (Proof_Context.theory_of ctxt) filename
-                                         (FunctionInfo.string_of_phase phase ^ "corres") fn_name)
-                  |> Option.map (fn thm => (fn_name, thm)))
-        |> Symtab.make
+fun abstract_fn_body
+      (prev_fn_infos: FunctionInfo.function_info Symtab.table)
+      (fn_name, {body, callee_consts, arg_frees, ...} : convert_result) = let
+  val (callees, rec_callees) = get_callees prev_fn_infos fn_name;
+  val calls = map (the o Symtab.lookup callee_consts) callees;
+  val rec_calls = map (the o Symtab.lookup callee_consts) rec_callees;
 
-  (* Do the translation. *)
-  val (ctxt', new_fn_info, _) =
-      translate ctxt phase fn_info initial_callees do_gen_corres do_define_funcs
-      (fn lthy => K (gen_new_info lthy)) prove_mono ()
+  val abs_body = body
+        |> fold lambda (rev (map Free arg_frees))
+        |> fold lambda (rev rec_calls)
+        |> fold lambda (rev calls);
+  in abs_body end;
 
-  (* Map function information. *)
-in
-  (ctxt', new_fn_info)
-end
+(* Utility for defining functions.
+ *
+ * Definitions update the theory sequentially.
+ * Each definition step produces a lthy that contains the current function
+ * group, and can immediately be used in the next conversion phase for
+ * those functions. Hence we return the intermediate lthys as futures.
+ *
+ * The actual recursive function groups may be finer-grained than in
+ * converted_groups, as function calls can be removed by dead code
+ * elimination and other transformations. Hence we detect the actual
+ * function groups before defining them.
+ *
+ * FIXME: this currently discards traces *)
+fun define_funcs_sequence
+      (lthy: local_theory)
+      (define_worker: local_theory ->
+                      (* previous infos for functions *)
+                      FunctionInfo.function_info Symtab.table ->
+                      (* new infos for callees *)
+                      FunctionInfo.function_info Symtab.table ->
+                      (* data for functions *)
+                      convert_result Symtab.table ->
+                      (* new infos for functions *)
+                      FunctionInfo.function_info Symtab.table * local_theory)
+      (* previous infos from prior translation (in incremental mode) *)
+      (existing_infos: FunctionInfo.function_info Symtab.table)
+      (* functions defined so far, initially populated from prior translation *)
+      (defined_so_far: FunctionInfo.function_info Symtab.table)
+      (converted_groups: (FunctionInfo.function_info Symtab.table *
+                          convert_result Symtab.table) FSeq.fseq)
+      : FunctionInfo.phase_results = FSeq.mk (fn () =>
+    case FSeq.uncons converted_groups of
+        NONE => NONE
+      | SOME ((prev_infos, conv_group), remaining_groups) => SOME let
+        (* NB: we don't need to add_background_callees to prev_infos because
+         *     par_convert already does that *)
+        (* Define the function group, then split into minimal recursive groups. *)
+        val (new_infos, lthy') =
+               define_worker lthy (Symtab.merge (K false) (prev_infos, existing_infos))
+                             defined_so_far conv_group;
+        val new_infoss = FunctionInfo.recalc_callees defined_so_far new_infos;
+        val defined_so_far = Symtab.merge (K false) (defined_so_far, new_infos);
+        (* We can't wrap the first result because we're already in FSeq.mk.
+         * Fortunately, one is guaranteed to exist *)
+        val new_infos1 :: new_infoss = new_infoss;
+       (* Output new group(s) in the result sequence. *)
+        val remaining_results =
+              define_funcs_sequence lthy' define_worker
+                                    existing_infos defined_so_far remaining_groups;
+        in
+           ((lthy', new_infos1),
+            FSeq.append
+              (FSeq.of_list (map (fn defs => (lthy', defs)) new_infoss))
+              remaining_results)
+        end);
 
 end

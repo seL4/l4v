@@ -121,36 +121,40 @@ lemmas ac_statistics_rewrites =
     (* Convert L2 to standard exception monads. *)
     L2_defs'
 
+(* Utils *)
 ML_file "../../lib/set.ML"
 ML_file "trace_antiquote.ML"
 ML_file "mkterm_antiquote.ML"
 ML_file "utils.ML"
 ML_file "statistics.ML"
+
+(* Common data structures *)
 ML_file "program_info.ML"
 ML_file "function_info.ML"
-ML_file "function_info2.ML"
 ML_file "autocorres_trace.ML"
 ML_file "autocorres_data.ML"
-ML_file "prog.ML"
+
+(* Common control code *)
 ML_file "autocorres_util.ML"
+
+(* L1 *)
 ML_file "exception_rewrite.ML"
 ML_file "simpl_conv.ML"
+(* L2 *)
+ML_file "prog.ML"
 ML_file "l2_opt.ML"
 ML_file "local_var_extract.ML"
+(* HL *)
 ML_file "record_utils.ML"
 ML_file "heap_lift_base.ML"
 ML_file "heap_lift.ML"
+(* WA *)
 ML_file "word_abstract.ML"
 ML_file "pretty_bound_var_names.ML"
 ML_file "monad_convert.ML"
+(* TS *)
 ML_file "type_strengthen.ML"
 
-ML_file "autocorres_util2.ML"
-ML_file "simpl_conv2.ML"
-ML_file "local_var_extract2.ML"
-ML_file "heap_lift2.ML"
-ML_file "word_abstract2.ML"
-ML_file "type_strengthen2.ML"
 ML_file "autocorres.ML"
 
 (* Setup "autocorres" keyword. *)

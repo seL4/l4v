@@ -75,10 +75,10 @@ fun convert_local_vars name_map term [] = ([], term)
         convert_local_vars name_map term vars
 
 (* Get the set of variables a function accepts and returns. *)
-fun get_fn_input_output_vars prog_info fn_info fn_name =
+fun get_fn_input_output_vars prog_info l1_infos fn_name =
 let
-  val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.L1 fn_name
-  val inputs = #args fn_def |> Varset.make
+  val fn_info = the (Symtab.lookup l1_infos fn_name);
+  val inputs = #args fn_info |> Varset.make;
 
   (* Get the return type of a function. *)
   val return_ctype =
@@ -90,15 +90,15 @@ let
       empty_set
     else
       make_set [(NameGeneration.return_var_name return_ctype |> MString.dest,
-          #return_type fn_def)]
+                 #return_type fn_info)]
 in
   (inputs, outputs)
 end
 
 (* Get the return variable of a particular function. *)
-fun get_ret_var prog_info fn_info fn_name =
+fun get_ret_var prog_info l1_infos fn_name =
 let
-  val (_, outputs) = get_fn_input_output_vars prog_info fn_info fn_name
+  val (_, outputs) = get_fn_input_output_vars prog_info l1_infos fn_name
 in
   hd ((Varset.dest outputs) @ [("void", @{typ unit})])
 end
@@ -131,8 +131,8 @@ fun l2monad_ret_type monad = #2 (l2monad_type monad)
 fun l2monad_ex_type monad = #3 (l2monad_type monad)
 
 (* Get the abstract/concrete term from a "L2corres" predicate. *)
-fun dest_L2corres_term_abs (_ $ _ $ _ $ _ $ _ $ t $ _ ) = t
-fun dest_L2corres_term_conc (_ $ _ $ _ $ _ $ _ $ _ $ t ) = t
+fun dest_L2corres_term_abs @{term_pat "L2corres _ _ _ _ ?t _"} = t
+fun dest_L2corres_term_conc @{term_pat "L2corres _ _ _ _ _ ?t"} = t
 
 (* Make an L2 monad. *)
 fun mk_l2monadT stateT retT exT =
@@ -427,7 +427,7 @@ fun l1call_function_const t = case strip_comb t |> apsnd rev of
  * In particular, we break down the structure of the program and parse the
  * usage of local variables in all expressions and modifies clauses.
  *)
-fun parse_l1 ctxt prog_info fn_info name_map term =
+fun parse_l1 ctxt prog_info l1_infos l1_call_info name_map term =
   case term of
       (Const (@{const_name "L1_skip"}, _)) =>
         Modify (term,
@@ -445,12 +445,12 @@ fun parse_l1 ctxt prog_info fn_info name_map term =
         end
 
     | (Const (@{const_name "L1_seq"}, _) $ lhs $ rhs) =>
-        Seq (term, parse_l1 ctxt prog_info fn_info name_map lhs,
-                   parse_l1 ctxt prog_info fn_info name_map rhs)
+        Seq (term, parse_l1 ctxt prog_info l1_infos l1_call_info name_map lhs,
+                   parse_l1 ctxt prog_info l1_infos l1_call_info name_map rhs)
 
     | (Const (@{const_name "L1_catch"}, _) $ lhs $ rhs) =>
-        Catch (term, parse_l1 ctxt prog_info fn_info name_map lhs,
-                     parse_l1 ctxt prog_info fn_info name_map rhs)
+        Catch (term, parse_l1 ctxt prog_info l1_infos l1_call_info name_map lhs,
+                     parse_l1 ctxt prog_info l1_infos l1_call_info name_map rhs)
 
     | (Const (@{const_name "L1_guard"}, _) $ c) =>
         let
@@ -468,8 +468,8 @@ fun parse_l1 ctxt prog_info fn_info name_map term =
           val (read_vars, is_globals_reader, parsed_expr) = parse_expr ctxt prog_info name_map cond
         in
           Condition (term, (parsed_expr, make_set read_vars, is_globals_reader),
-              parse_l1 ctxt prog_info fn_info name_map lhs,
-              parse_l1 ctxt prog_info fn_info name_map rhs)
+              parse_l1 ctxt prog_info l1_infos l1_call_info name_map lhs,
+              parse_l1 ctxt prog_info l1_infos l1_call_info name_map rhs)
         end
 
     | (Const (@{const_name "L1_call"}, L1_call_type)
@@ -488,13 +488,12 @@ fun parse_l1 ctxt prog_info fn_info name_map term =
 
           (* Get the name of the variable the return value of the function will
            * be placed into. *)
-          val dest_fn = FunctionInfo.get_function_from_const fn_info
-                  (l1call_function_const dest_fn_term)
+          val dest_fn = Termtab.lookup (#const_to_function l1_call_info) (l1call_function_const dest_fn_term)
               |> Utils.the' ("Unknown function " ^ quote (@{make_string} dest_fn_term))
-          val dest_fn_name = #name dest_fn
+              |> Symtab.lookup l1_infos |> the
 
           (* Parse the return arguments. *)
-          val ret_var = get_ret_var prog_info fn_info (#name dest_fn)
+          val ret_var = get_ret_var prog_info l1_infos (#name dest_fn)
           val parsed_clause =
                 parse_modify ctxt prog_info name_map (betapply (ret_extract, Free ("_dummy_state", #state_type prog_info)))
                 |> map (fn (target_var, read_vars, globals_read, expr) =>
@@ -517,7 +516,7 @@ fun parse_l1 ctxt prog_info fn_info name_map term =
           val (read_vars, is_globals_reader, parsed_expr) = parse_expr ctxt prog_info name_map cond;
         in
           While (term, (parsed_expr, make_set read_vars, is_globals_reader),
-                 parse_l1 ctxt prog_info fn_info name_map body)
+                 parse_l1 ctxt prog_info l1_infos l1_call_info name_map body)
         end
 
     | (Const (@{const_name "L1_init"}, _) $ setter) =>
@@ -538,7 +537,7 @@ fun parse_l1 ctxt prog_info fn_info name_map term =
         Fail term
 
     | (Const (@{const_name "L1_recguard"}, _) $ var $ body) =>
-        RecGuard (term, parse_l1 ctxt prog_info fn_info name_map body)
+        RecGuard (term, parse_l1 ctxt prog_info l1_infos l1_call_info name_map body)
 
     | other => Utils.invalid_term "a L1 term" other
 
@@ -633,9 +632,8 @@ let
   val proofs = map (fn x =>
         mk_preservation_proof ctxt prog_info name_map x term)
       (dest_set var_set)
-  val result = fold (fn x => fn y =>
-          @{thm combine_validE} OF [x,y])
-      proofs  @{thm hoareE_TrueI}
+  val result = fold (fn x => fn y => @{thm combine_validE} OF [x,y])
+                    proofs @{thm hoareE_TrueI}
 in
   result
 end
@@ -688,7 +686,7 @@ let
     case x of
         Free (a, t) => Var ((a, 0), t)
       | x => x
-  val (head $ st $ ret_xf $ ex_xf $ precond $ l2_term $ l1_term) =
+  val @{term_pat "?head (* L2corres *) ?st ?ret_xf ?ex_xf ?precond ?l2_term ?l1_term"} =
     map_aterms convert_var_to_free (Thm.concl_of thm) |> HOLogic.dest_Trueprop
   val new_l2_term = (abs_over_tuple_vars name_map vars l2_term
       $ Free ("r'", HOLogic.mk_tupleT (dest_set vars |> map snd)))
@@ -767,8 +765,6 @@ fun inject_return_vals ctxt prog_info name_map needed_returns allow_excess throw
  *
  *      ctxt: Isabelle context
  *
- *      l1_measure_defs: definitions for L1 measure constants
- *
  *      needed_vars:
  *
  *          Variables that are read in later executions.
@@ -805,7 +801,8 @@ fun inject_return_vals ctxt prog_info name_map needed_returns allow_excess throw
 fun do_conv
     (ctxt : Proof.context)
     prog_info
-    fn_info
+    (l1_infos : FunctionInfo.function_info Symtab.table)
+    (l1_call_info : FunctionInfo.call_graph_info)
     name_map
     (fn_vars : varset)
     (callee_proofs : (bool * term * thm) Symtab.table)
@@ -932,9 +929,11 @@ in
           (* Convert LHS and RHS. *)
           val ret_vars = rhs_live INTER lhs_modified
           val (lhs_reads, lhs_rets, new_lhs, lhs_thm)
-              = do_conv ctxt prog_info fn_info name_map fn_vars callee_proofs ret_vars true throw_vars lhs
+              = do_conv ctxt prog_info l1_infos l1_call_info name_map
+                        fn_vars callee_proofs ret_vars true throw_vars lhs
           val (rhs_reads, rhs_rets, new_rhs, rhs_thm)
-              = do_conv ctxt prog_info fn_info name_map fn_vars callee_proofs needed_vars allow_excess throw_vars rhs
+              = do_conv ctxt prog_info l1_infos l1_call_info name_map
+                        fn_vars callee_proofs needed_vars allow_excess throw_vars rhs
           val block_reads = lhs_reads UNION (rhs_reads MINUS lhs_modified)
 
           (* Reconstruct body to support our input tuple. *)
@@ -967,9 +966,11 @@ in
           (* Convert LHS and RHS. *)
           val lhs_throws = rhs_live INTER lhs_modified
           val (lhs_reads, lhs_rets, new_lhs, lhs_thm)
-              = do_conv ctxt prog_info fn_info name_map fn_vars callee_proofs (needed_vars) false lhs_throws lhs
+              = do_conv ctxt prog_info l1_infos l1_call_info name_map
+                        fn_vars callee_proofs (needed_vars) false lhs_throws lhs
           val (rhs_reads, _, new_rhs, rhs_thm)
-              = do_conv ctxt prog_info fn_info name_map fn_vars callee_proofs (needed_vars) false throw_vars rhs
+              = do_conv ctxt prog_info l1_infos l1_call_info name_map
+                        fn_vars callee_proofs (needed_vars) false throw_vars rhs
           val block_reads = lhs_reads UNION (rhs_reads MINUS lhs_throws)
 
           (* Reconstruct body to support our input tuple. *)
@@ -997,7 +998,8 @@ in
         let
           (* Convert body. *)
           val (body_reads, vars_returned, new_body, body_thm) =
-              do_conv ctxt prog_info fn_info name_map fn_vars callee_proofs needed_vars false throw_vars body
+              do_conv ctxt prog_info l1_infos l1_call_info name_map
+                      fn_vars callee_proofs needed_vars false throw_vars body
 
           (* Get recguard variable. *)
           val (_ $ var $ _) = l1_term
@@ -1017,9 +1019,11 @@ in
           (* Convert LHS and RHS. *)
           val requested_vars = needed_vars INTER modified_vars
           val (lhs_reads, _, new_lhs, lhs_thm)
-              = do_conv ctxt prog_info fn_info name_map fn_vars callee_proofs requested_vars false throw_vars lhs
+              = do_conv ctxt prog_info l1_infos l1_call_info name_map
+                        fn_vars callee_proofs requested_vars false throw_vars lhs
           val (rhs_reads, _, new_rhs, rhs_thm)
-              = do_conv ctxt prog_info fn_info name_map fn_vars callee_proofs requested_vars false throw_vars rhs
+              = do_conv ctxt prog_info l1_infos l1_call_info name_map
+                        fn_vars callee_proofs requested_vars false throw_vars rhs
           val block_reads = lhs_reads UNION rhs_reads UNION read_vars
 
           (* Generate the final term. *)
@@ -1036,7 +1040,8 @@ in
           (* Convert body. *)
           val loop_iterators = (needed_vars UNION live_vars) INTER modified_vars
           val (body_reads, _, new_body, body_thm) =
-              do_conv ctxt prog_info fn_info name_map fn_vars callee_proofs loop_iterators false throw_vars body
+              do_conv ctxt prog_info l1_infos l1_call_info name_map
+                      fn_vars callee_proofs loop_iterators false throw_vars body
           val (body_term, _, body_modifies) = get_node_data body
 
           (* Reconstruct body to support our input tuple. *)
@@ -1076,7 +1081,7 @@ in
 
     | Call (_, expr_list, (ret_expr, ret_read_vars, _), ret_var, measure_term) =>
         let
-          val (_ $ arg_setup $ dest_fn $ globals_extract $ ret_extract) = l1_term
+          val @{term_pat "_ ?arg_setup ?dest_fn ?globals_extract ?ret_extract"} = l1_term
 
           val (measure_term, dest_fn) = case dest_fn of
               (c as Const (@{const_name "measure_call"}, _)) $ f     => (c, f)
@@ -1085,8 +1090,8 @@ in
             | _ => raise TERM ("local_var_extract: strange function call", [dest_fn])
 
           (* Get destination function. *)
-          val dest_fn = FunctionInfo.get_function_from_const fn_info
-              (l1call_function_const dest_fn)
+          val dest_fn = Termtab.lookup (#const_to_function l1_call_info) (l1call_function_const dest_fn)
+                        |> Option.mapPartial (Symtab.lookup l1_infos)
 
           (* Lookup the callee proof, if it exists. *)
           val callee_proof = Option.mapPartial
@@ -1105,7 +1110,7 @@ in
         | SOME (is_recursive, callee_free, callee_thm) =>
         (let
           (* Get information about the function. *)
-          val dest_fn = FunctionInfo.get_1_phase_info (the dest_fn) FunctionInfo.L1
+          val dest_fn = the (dest_fn)
           val args = #args dest_fn
 
           (* Parse argument setup. *)
@@ -1206,42 +1211,38 @@ in
 end
 
 (* Get the expected type of a function from its name. *)
-fun get_expected_l2_fn_type prog_info fn_info fn_name =
+fun get_expected_l2_fn_type prog_info l1_infos fn_name =
 let
-  val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.L1 fn_name
-  val fn_params_typ = @{typ nat} :: map snd (#args fn_def)
+  val fn_info = the (Symtab.lookup l1_infos fn_name)
+  val fn_params_typ = AutoCorresUtil.measureT :: map snd (#args fn_info)
 in
-  fn_params_typ ---> mk_l2monadT (#globals_type prog_info) (#return_type fn_def) @{typ unit}
+  fn_params_typ ---> mk_l2monadT (#globals_type prog_info) (#return_type fn_info) @{typ unit}
 end
-
-(* Avoid clashes with fixed free variables such as C-parser's "symbol_table".
- * TODO: our hardcoding of "rec_measure'" may also lead to problems. Check later. *)
-fun to_free_var_name lthy x = if Variable.is_fixed lthy x then to_free_var_name lthy (x ^ "'") else x
 
 (* Get arguments passed into the function. *)
-fun get_expected_l2_fn_args lthy prog_info fn_info fn_name =
+fun get_expected_l2_fn_args lthy prog_info l1_infos fn_name =
 let
-  val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.L1 fn_name
+  val fn_def = the (Symtab.lookup l1_infos fn_name)
 in
-  map (apfst (to_free_var_name lthy o ProgramInfo.demangle_name)) (#args fn_def)
+  map (apfst (ProgramInfo.demangle_name)) (#args fn_def)
 end
 
-fun get_expected_l2_fn_thm prog_info fn_info ctxt fn_name fn_free fn_args _ measure_var =
+fun get_expected_l2_fn_thm prog_info l1_infos ctxt fn_name fn_free fn_args _ measure_var =
 let
   (* Fetch input/output params for monad type. *)
-  val (input_params, output_params) = get_fn_input_output_vars prog_info fn_info fn_name
+  val (input_params, output_params) = get_fn_input_output_vars prog_info l1_infos fn_name
 
   (* Get mapping from internal variable names that we use to the names passed
    * in "fn_args". *)
-  val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.L1 fn_name
-  val args = map fst (#args fn_def)
+  val fn_info = the (Symtab.lookup l1_infos fn_name)
+  val args = map fst (#args fn_info)
   val m = Symtab.make (args ~~ fn_args)
   fun name_map (n, _) = Symtab.lookup m n |> the
 in
     mk_corresXF_prop (Proof_Context.theory_of ctxt) prog_info name_map
       output_params empty_set input_params
       (betapplys (fn_free, measure_var :: fn_args))
-      (betapply (#const fn_def, measure_var))
+      (betapply (#const fn_info, measure_var))
 end
 
 (* Extract the abstract body of a L2corres theorem. *)
@@ -1250,17 +1251,17 @@ fun get_body_of_thm ctxt thm =
   |> HOLogic.dest_Trueprop
   |> dest_L2corres_term_abs
 
-fun get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt fn_name
+fun get_l2corres_thm ctxt prog_info l1_infos l1_call_info do_opt trace_opt fn_name
     callee_terms fn_args l1_term init_unfold = let
 
   (* Get information about the return variable. *)
-  val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.L1 fn_name
+  val fn_info = the (Symtab.lookup l1_infos fn_name)
 
   (* Get return variables. *)
-  val (fn_input_vars, fn_ret_vars) = get_fn_input_output_vars prog_info fn_info fn_name
+  val (fn_input_vars, fn_ret_vars) = get_fn_input_output_vars prog_info l1_infos fn_name
 
   (* Get mapping from internal variable names to external arguments. *)
-  val m = Symtab.make (map fst (#args fn_def) ~~ fn_args)
+  val m = Symtab.make (map fst (#args fn_info) ~~ fn_args)
   fun name_map_ext (n, T) = Symtab.lookup m n |> the
   fun name_map_internal (n, T) = Free ("lvar'" ^ n, T)
 
@@ -1282,11 +1283,10 @@ fun get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt fn_name
     |> Conv.rewr_conv (safe_mk_meta_eq init_unfold)
 
   (* Extract the term we will be working with. *)
-  val source_term = Thm.concl_of init_rule |> Logic.dest_equals |> snd
-    |> Utils.unsafe_unvarify
+  val source_term = Thm.concl_of init_rule |> Utils.rhs_of_eq
 
   (* Do basic parsing. *)
-  val parsed_term = parse_l1 ctxt prog_info fn_info name_map_internal source_term
+  val parsed_term = parse_l1 ctxt prog_info l1_infos l1_call_info name_map_internal source_term
 
   (* Get a list of all variables either read from or written to. *)
   val all_vars = Prog.fold_prog
@@ -1319,7 +1319,7 @@ fun get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt fn_name
   (* Ensure that the only live variables at the beginning of the function are
    * those that are function inputs. *)
   val fn_inputs = get_node_data liveness_data
-  val fn_params = #args fn_def
+  val fn_params = #args fn_info
   val excess_inputs = fn_inputs MINUS (make_set fn_params)
   val _ =
     if excess_inputs <> empty_set then
@@ -1330,8 +1330,9 @@ fun get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt fn_name
       ()
 
   (* Do the conversion. *)
-  val (vars_read, _, term, thm) = do_conv ctxt prog_info fn_info name_map_internal fn_input_vars
-                                          callee_terms fn_ret_vars false empty_set input_term
+  val (vars_read, _, term, thm) =
+        do_conv ctxt prog_info l1_infos l1_call_info name_map_internal fn_input_vars
+                callee_terms fn_ret_vars false empty_set input_term
 
   (* Replace our internal terms with external terms. *)
   val replacements = (map name_map_internal fn_params) ~~ (map name_map_ext fn_params)
@@ -1394,18 +1395,19 @@ end
 
 (*
  * Prove monad_mono property for recursive functions.
- * This takes a phase argument so that it can be used by subsequent L2-based phases.
+ * Note that this is also used for subsequent L2-based phases.
  *)
 
-fun l2_monad_mono phase lthy fn_defs =
+fun l2_monad_mono lthy (l2_infos: FunctionInfo.function_info Symtab.table) =
 let
   (*
    * For the induction, we need to have the form
    *   "\<And> m. (ALL a b... f m a b...) /\ (ALL a b... g m a b...) /\ ..."
    * and this gets annoying pretty quickly. But it is probably unavoidable.
    *)
-  val current_defs = map (fn def => FunctionInfo.get_1_phase_info def phase) fn_defs
-  val measure = Free ("rec_measure'", @{typ nat})
+  val (fn_names, fn_defs) = split_list (Symtab.dest l2_infos);
+  val ([measure_var_name], lthy) = Variable.variant_fixes ["rec_measure'"] lthy;
+  val measure = Free (measure_var_name, AutoCorresUtil.measureT)
   fun make_mono_step_stmt current_def =
       let
           (* def should be of the form "func ?locale_args... ?measure ?args... = ..." *)
@@ -1420,8 +1422,8 @@ let
       end
   val mk_conj_list = foldr1 (fn (a, b) => @{term "conj"} $ a $ b)
 
-  val func_expand = map (fn L2_def => EqSubst.eqsubst_tac lthy [0]
-                                        [Utils.abs_def lthy (#definition L2_def)]) current_defs
+  val func_expand = map (fn fn_def => EqSubst.eqsubst_tac lthy [0]
+                                        [Utils.abs_def lthy (#definition fn_def)]) fn_defs
   val tac = 
     resolve_tac lthy @{thms nat.induct} 1
       THEN EVERY (map (fn expand =>
@@ -1443,7 +1445,7 @@ let
                                addsimps @{thms split_conv split_tupled_all}) 1)])))
                 func_expand)
 
-  val mono_thm = map make_mono_step_stmt current_defs
+  val mono_thm = map make_mono_step_stmt fn_defs
                  |> mk_conj_list
                  |> (fn t => Logic.all measure (@{term "Trueprop"} $ t))
                  |> (fn t => Goal.prove lthy [] [] t (K tac))
@@ -1460,23 +1462,23 @@ let
                (@{mk_term "Trueprop (monad_mono ?f)" f}
                     (lambda measure (betapplys (#const L2_def, measure :: args))))
       end
-  val final_thms = current_defs
-        |> map (fn current_def => Goal.prove lthy [] [] (make_mono_stmt current_def)
+  val final_thms = fn_defs
+        |> map (fn fn_def => Goal.prove lthy [] [] (make_mono_stmt fn_def)
                      (K (asm_full_simp_tac (lthy addsimps [@{thm monad_mono_alt_def}, mono_thm]) 1)))
 in
   final_thms
-  |> (fn thms => map #name fn_defs ~~ thms)
+  |> (fn thms => fn_names ~~ thms)
   |> Symtab.make
 end
 
 (* For functions that are not translated, just generate a trivial wrapper. *)
-fun mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args = let
-    val fn_def = FunctionInfo.get_phase_info fn_info FunctionInfo.L1 fn_name
+fun mk_l2corres_call_simpl_thm prog_info l1_infos ctxt fn_name fn_args = let
+    val fn_def = the (Symtab.lookup l1_infos fn_name)
     val const = #const fn_def
     val args = #args fn_def
 
     (* Get return variables. *)
-    val (fn_input_vars, fn_ret_vars) = get_fn_input_output_vars prog_info fn_info fn_name
+    val (fn_input_vars, fn_ret_vars) = get_fn_input_output_vars prog_info l1_infos fn_name
     (* Get mapping from internal variable names to external arguments. *)
     val m = Symtab.make (map fst args ~~ fn_args)
     fun name_map_ext (n, T) = Symtab.lookup m n |> the
@@ -1495,51 +1497,168 @@ fun mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args = let
   in thm end
 
 (*
+ * Convert a single function. Returns a thm that looks like
+ *   \<lbrakk> L2corres ?callee1 l1_callee1; ... \<rbrakk> \<Longrightarrow>
+ *   L2corres (conversion result...) l1_f
+ * i.e. with assumptions for called functions, which are parameterised as Vars.
+ *)
+fun convert
+      (lthy: local_theory) (* must contain at least L1 callee defs, but no other requirements *)
+      (prog_info: ProgramInfo.prog_info)
+      (l1_infos: FunctionInfo.function_info Symtab.table)
+      (do_opt: bool)
+      (trace_opt: bool)
+      (l2_function_name: string -> string)
+      (f_name: string)
+      : AutoCorresUtil.convert_result = let
+  val (l1_call_info, l1_infos) = FunctionInfo.calc_call_graph l1_infos;
+
+  val f_info = Utils.the' ("L2 conversion missing info for " ^ f_name)
+                          (Symtab.lookup l1_infos f_name);
+  val callee_names = FunctionInfo.all_callees f_info;
+  val _ = filter (fn f => not (isSome (Symtab.lookup l1_infos f))) (Symset.dest callee_names)
+          |> (fn bad => if null bad then () else
+                          error ("L2 conversion missing callees for " ^ f_name ^ ": " ^ commas bad));
+
+  (* Fix measure variable. *)
+  val ([measure_var_name], lthy') = Variable.variant_fixes ["rec_measure'"] lthy;
+  val measure_var = Free (measure_var_name, AutoCorresUtil.measureT);
+
+  (* Add callee assumptions. Note that our define code has to use the same assumption order. *)
+  val (lthy'', export_thm, callee_terms) =
+    AutoCorresUtil.assume_called_functions_corres lthy'
+      (#callees f_info) (#rec_callees f_info)
+      (get_expected_l2_fn_type prog_info l1_infos)
+      (get_expected_l2_fn_thm prog_info l1_infos)
+      (get_expected_l2_fn_args lthy prog_info l1_infos)
+      l2_function_name
+      measure_var;
+
+  (* Fix argument variables.
+   * We do this after fixing the callees, because there is still some broken code
+   * (e.g. in define_funcs) that requires callee var to exactly match the
+   * names generated by l2_function_name. *)
+  val f_args = map (apfst ProgramInfo.demangle_name) (#args f_info);
+  val (arg_names, lthy''') = Variable.variant_fixes (map fst f_args) lthy'';
+  val arg_frees = arg_names ~~ map snd f_args;
+
+  val f_l1_def = Utils.named_cterm_instantiate lthy'''
+                   [("rec_measure'" (* FIXME *), Thm.cterm_of lthy''' measure_var)]
+                   (#definition f_info)
+  val (thm, opt_traces) =
+      if #is_simpl_wrapper f_info
+      then (mk_l2corres_call_simpl_thm prog_info l1_infos lthy''' f_name (map Free arg_frees), [])
+      else get_l2corres_thm lthy''' prog_info l1_infos l1_call_info do_opt trace_opt f_name
+             (Symtab.make callee_terms) (map Free arg_frees)
+             (betapply (#const f_info, measure_var))
+             f_l1_def;
+
+  val f_body = dest_L2corres_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm));
+  (* Get actual recursive callees *)
+  val rec_callees = AutoCorresUtil.get_rec_callees callee_terms f_body;
+
+  (* Return the constants that we fixed. This will be used to process the returned body. *)
+  val callee_consts =
+        callee_terms |> map (fn (callee, (_, const, _)) => (callee, const)) |> Symtab.make;
+  in
+    { body = f_body,
+      proof = Morphism.thm export_thm thm, (* Expose callee assumptions *)
+      rec_callees = rec_callees,
+      callee_consts = callee_consts,
+      arg_frees = dest_Free measure_var :: arg_frees,
+      traces = opt_traces
+    }
+  end
+
+
+(* Define a previously-converted function (or recursive function group).
+ * lthy must include all definitions from l2_callees. *)
+fun define
+      (lthy: local_theory)
+      (filename: string)
+      (prog_info: ProgramInfo.prog_info)
+      (l1_infos: FunctionInfo.function_info Symtab.table)
+      (l2_callees: FunctionInfo.function_info Symtab.table)
+      (l2_function_name: string -> string)
+      (funcs: AutoCorresUtil.convert_result Symtab.table)
+      : FunctionInfo.function_info Symtab.table * local_theory = let
+  (* FIXME: the abstract_fn_body step should be moved into define_funcs *)
+  val funcs' = Symtab.dest funcs |>
+        map (fn result as (name, {proof, arg_frees, ...}) =>
+                   (name, (AutoCorresUtil.abstract_fn_body l1_infos result,
+                           proof, arg_frees)));
+  val (new_thms, (), lthy') =
+        AutoCorresUtil.define_funcs
+            FunctionInfo.L2 filename l1_infos l2_function_name
+            (get_expected_l2_fn_type prog_info l1_infos)
+            (get_expected_l2_fn_thm prog_info l1_infos)
+            (get_expected_l2_fn_args lthy prog_info l1_infos)
+            @{thm L2corres_recguard_0}
+            lthy (Symtab.map (K #corres_thm) l2_callees) ()
+            funcs';
+  val new_infos = Symtab.map (fn f_name => fn (const, def, corres_thm) => let
+        val old_info = the (Symtab.lookup l1_infos f_name);
+        in old_info
+           |> FunctionInfo.function_info_upd_phase FunctionInfo.L2
+           |> FunctionInfo.function_info_upd_const const
+           |> FunctionInfo.function_info_upd_definition def
+           |> FunctionInfo.function_info_upd_corres_thm corres_thm
+           |> FunctionInfo.function_info_upd_mono_thm NONE (* added later *)
+           (* Update arg names to match our newly converted functions *)
+           |> FunctionInfo.function_info_upd_args
+                (map (apfst (ProgramInfo.demangle_name)) (#args old_info))
+        end) new_thms;
+  in (new_infos, lthy') end;
+
+
+(*
  * Translate all functions from L1 to L2 format.
  *)
-fun translate_l2 filename prog_info fn_info do_opt trace_opt l2_function_name lthy =
-let
-  (* Abstract the function, returning a corres theorem. *)
-  fun convert ctxt fn_name callee_terms measure_var fn_args = let
-    (* Fetch the function body from L1. *)
-    val l1_def = FunctionInfo.get_phase_info fn_info FunctionInfo.L1 fn_name
-    in
-      if #is_simpl_wrapper (FunctionInfo.get_function_info fn_info fn_name)
-      then let
-        val thm = mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args
-        in (get_body_of_thm ctxt thm, thm, []) end
-      else let
-        val l1_body_def = Utils.named_cterm_instantiate ctxt
-                          [("rec_measure'", Thm.cterm_of ctxt measure_var)] (#definition l1_def)
-        val (thm, traces) = get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt
-            fn_name callee_terms fn_args
-            (betapply (#const l1_def, measure_var)) l1_body_def
-      in (get_body_of_thm ctxt thm, thm, traces) end
-    end
+fun translate
+      (filename: string)
+      (prog_info: ProgramInfo.prog_info)
+      (l1_results: FunctionInfo.phase_results)
+      (existing_l1_infos: FunctionInfo.function_info Symtab.table)
+      (existing_l2_infos: FunctionInfo.function_info Symtab.table)
+      (do_opt: bool)
+      (trace_opt: bool)
+      (add_trace: string -> string -> AutoCorresData.Trace -> unit)
+      (l2_function_name: string -> string)
+      : FunctionInfo.phase_results =
+let;
+  (* Do conversions in parallel. *)
+  val converted_groups =
+        AutoCorresUtil.par_convert
+          (fn lthy => fn l1_infos => convert lthy prog_info l1_infos do_opt trace_opt l2_function_name)
+          existing_l1_infos l1_results add_trace;
 
-  (* Update function information. *)
-  fun update_function_defs lthy fn_def = let
-    val phase_info = FunctionInfo.get_1_phase_info fn_def FunctionInfo.L1
-    val l2_args = map (apfst (to_free_var_name lthy o ProgramInfo.demangle_name)) (#args phase_info)
-    val l2_term = Utils.get_term lthy (l2_function_name (#name fn_def))
-    val l2_def = the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
-                        filename "L2def" (#name fn_def))
-    in phase_info
-       |> FunctionInfo.phase_info_upd_phase FunctionInfo.L2
-       |> FunctionInfo.phase_info_upd_const l2_term
-       |> FunctionInfo.phase_info_upd_args l2_args
-       |> FunctionInfo.phase_info_upd_definition l2_def end
+  (* Sequence of new function_infos and intermediate lthys *)
+  val def_results = FSeq.mk (fn _ =>
+        (* If there's nothing to translate, we won't have a lthy to use *)
+        if FSeq.null l1_results then NONE else
+          let (* Get initial lthy from end of L1 defs *)
+              val (l1_lthy, _) = FSeq.list_of l1_results |> List.last;
+              fun define_worker lthy l2_callee_infos l1_infos f_convs =
+                    define lthy filename prog_info l2_callee_infos l1_infos l2_function_name f_convs;
+              val results = AutoCorresUtil.define_funcs_sequence
+                              l1_lthy define_worker existing_l1_infos existing_l2_infos converted_groups;
+          in FSeq.uncons results end);
+
+  (* Produce a mapping from each function group to its L1 phase_infos and the
+   * earliest intermediate lthy where it is defined. *)
+  val results =
+        def_results
+        |> FSeq.map (fn (lthy, l2_defs) => let
+              (* Add monad_mono proofs. These are done in parallel as well
+               * (though in practice, they already run pretty quickly). *)
+              val mono_thms = if FunctionInfo.is_function_recursive (snd (hd (Symtab.dest l2_defs)))
+                              then l2_monad_mono lthy l2_defs
+                              else Symtab.empty;
+              val l2_defs' = l2_defs |> Symtab.map (fn f =>
+                    FunctionInfo.function_info_upd_mono_thm (Symtab.lookup mono_thms f));
+              in (lthy, l2_defs') end);
 in
-  AutoCorresUtil.do_translation_phase FunctionInfo.L2 filename prog_info fn_info
-    (get_expected_l2_fn_type prog_info fn_info)
-    (get_expected_l2_fn_thm prog_info fn_info)
-    (get_expected_l2_fn_args lthy prog_info fn_info)
-    l2_function_name
-    convert
-    update_function_defs
-    (l2_monad_mono FunctionInfo.L2)
-    @{thm L2corres_recguard_0}
-    lthy
+  results
 end
 
 end

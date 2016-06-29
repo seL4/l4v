@@ -421,7 +421,7 @@ end
 
 fun setup
       prog_info
-      (fn_infos: FunctionInfo2.function_info Symtab.table)
+      (fn_infos: FunctionInfo.function_info Symtab.table)
       make_lifted_globals_field_name gen_word_heaps lthy =
 let
   val old_globalsT = #globals_type prog_info

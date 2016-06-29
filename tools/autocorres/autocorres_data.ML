@@ -136,9 +136,9 @@ end (* structure AutoCorresData *)
 
 (* Function translation information.
  * This is needed for resuming incremental translations. *)
-structure AutoCorresFunctionInfo2 = Theory_Data(
-  type T = FunctionInfo2.function_info Symtab.table
-             FunctionInfo2.Phasetab.table Symtab.table;
+structure AutoCorresFunctionInfo = Theory_Data(
+  type T = FunctionInfo.function_info Symtab.table
+             FunctionInfo.Phasetab.table Symtab.table;
   val empty = Symtab.empty;
   val extend = I;
   val merge = Symtab.merge (K true);
