@@ -475,45 +475,6 @@ let
   val new_thms = map (fn t => #polymorphic_thm rule_set' OF [t]) new_thms
                  |> map (fn t => Drule.generalize ([], ["rec_measure'"]) t)
 
-(* FIXME: resurrect in a better place
-  (* Output final corres rule. *)
-  fun output_rule fn_name lthy =
-  let
-    val thy = Proof_Context.theory_of lthy
-    val l1_thm = the (AutoCorresData.get_thm thy filename "L1corres" fn_name)
-          handle Option => raise SimplConv.FunctionNotFound fn_name
-    val l2_thm = the (AutoCorresData.get_thm thy filename "L2corres" fn_name)
-          handle Option => raise SimplConv.FunctionNotFound fn_name
-    val hl_thm = the (AutoCorresData.get_thm thy filename "HLcorres" fn_name)
-          handle Option => (@{thm L2Tcorres_trivial_from_local_var_extract} OF [l2_thm]
-                            handle THM _ => l2_thm) (* catch this failure below *)
-    val wa_thm = the (AutoCorresData.get_thm thy filename "WAcorres" fn_name)
-          (* If there is no WAcorres thm, it is probably because word_abstract
-           * was disabled using no_word_abs.
-           * In that case we just carry the hl_thm through. *)
-          handle Option => (@{thm corresTA_trivial_from_heap_lift} OF [hl_thm]
-                            handle THM _ => hl_thm) (* catch this failure below *)
-    val ts_thm = the (AutoCorresData.get_thm thy filename "TScorres" fn_name)
-          handle Option => raise SimplConv.FunctionNotFound fn_name
-    val lthy = let
-        val final_thm = @{thm ac_corres_chain} OF [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm]
-        val final_thm' = Simplifier.simplify lthy final_thm
-        val (_, lthy) = Utils.define_lemma (make_function_name fn_name ^ "_ac_corres") final_thm' lthy
-    in
-        lthy
-    end
-    handle THM _ =>
-           (Utils.THM_non_critical keep_going
-                ("autocorres: failed to prove ac_corres theorem for " ^ fn_name)
-                0 [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm];
-            lthy)
-  in
-    lthy
-  end
-
-  val lthy = fold output_rule fn_names lthy
-*)
-
   (* Final mono rules for recursive functions. *)
   fun try_mono_thm (fn_name, rewrite_thm) =
     case #mono_thm (the (Symtab.lookup l2_infos fn_name)) of

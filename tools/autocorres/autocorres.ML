@@ -628,6 +628,40 @@ let
 
   val lthy = if null ts_results' then lthy else fst (List.last ts_results');
 
+  (* Put together final ac_corres theorems.
+   * TODO: we should also store these as theory data. *)
+  fun prove_ac_corres fn_name lthy =
+  let
+    val l1_thm = #corres_thm (the (Symtab.lookup l1_info fn_name))
+          handle Option => raise SimplConv.FunctionNotFound fn_name
+    val l2_thm = #corres_thm (the (Symtab.lookup l2_info fn_name))
+          handle Option => raise SimplConv.FunctionNotFound fn_name
+    val hl_thm = #corres_thm (the (Symtab.lookup hl_info fn_name))
+          (* If heap lifting was disabled, we use a placeholder *)
+          handle Option => @{thm L2Tcorres_trivial_from_local_var_extract} OF [l2_thm]
+    val wa_thm = #corres_thm (the (Symtab.lookup wa_info fn_name))
+          (* Placeholder for when word abstraction is disabled *)
+          handle Option => @{thm corresTA_trivial_from_heap_lift} OF [hl_thm]
+    val ts_thm = #corres_thm (the (Symtab.lookup ts_info fn_name))
+          handle Option => raise SimplConv.FunctionNotFound fn_name
+
+    val lthy = let
+        val final_thm = @{thm ac_corres_chain} OF [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm]
+        (* Remove fluff, like "f o id", that gets introduced by the HL and WA placeholders *)
+        val final_thm' = Simplifier.simplify (put_simpset AUTOCORRES_SIMPSET lthy) final_thm 
+        val (_, lthy) = Utils.define_lemma (make_function_name fn_name ^ "_ac_corres") final_thm' lthy
+        in lthy end
+        handle THM _ =>
+           (Utils.THM_non_critical keep_going
+                ("autocorres: failed to prove ac_corres theorem for " ^ fn_name)
+                0 [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm];
+            lthy)
+  in
+    lthy
+  end
+
+  val lthy = fold prove_ac_corres (Symtab.keys ts_info) lthy
+
   (* FIXME: merge with existing_phases *)
 
   (* Save function info for future reference. *)
