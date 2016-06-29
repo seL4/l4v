@@ -234,7 +234,6 @@ fun define_funcs
 
     val _ = writeln ("Defining (" ^ FunctionInfo2.string_of_phase phase ^ ") " ^
                      (Utils.commas (map get_const_name fn_names)))
-    val _ = @{trace} (Symtab.dest callee_thms, map (fn (_, (t, p, a)) => (Thm.cterm_of ctxt t, p, a)) functions)
 
     (*
      * Determine if we are in a recursive case by checking to see if the
