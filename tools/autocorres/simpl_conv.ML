@@ -222,12 +222,6 @@ fun simpl_conv'
 (* Perform post-processing on a theorem. *)
 fun cleanup_thm ctxt do_opt trace_opt prog_info fn_name thm =
 let
-  (* Measure the term. *)
-  fun gather_stats phase thm =
-    Statistics.gather ctxt phase fn_name
-        (Thm.concl_of thm |> HOLogic.dest_Trueprop |> get_L1corres_monad)
-  val _ = gather_stats "L1" thm
-
   (* For each function, we want to prepend a statement that sets its return
    * value undefined. It is actually always defined, but our analysis isn't
    * sophisticated enough to realise. *)
@@ -279,12 +273,10 @@ let
           (l1conv (Simplifier.rewrite (put_simpset HOL_basic_ss ctxt addsimps
                      (if do_opt then Utils.get_rules ctxt @{named_theorems L1opt} else []))))
           thm trace_opt
-  val _ = gather_stats "L1peep" thm
 
   (* Rewrite exceptions. *)
   val (thm, exn_opt_trace) = AutoCorresTrace.fconv_rule_maybe_traced ctxt
                                  (l1conv (ExceptionRewrite.except_rewrite_conv ctxt do_opt)) thm trace_opt
-  val _ = gather_stats "L1except" thm
 in
   (thm,
    [("L1 guard opt", guard_opt_trace), ("L1 peephole opt", peephole_opt_trace), ("L1 exception opt", exn_opt_trace)]
@@ -334,9 +326,6 @@ fun get_l1corres_thm prog_info simpl_defs const_to_function
                  (Symtab.lookup simpl_defs fn_name);
   val thy = Proof_Context.theory_of ctxt
   val (simpl_term, simpl_thm, impl_thm) = get_simpl_body ctxt simpl_defs fn_name
-
-  (* Fetch stats on pre-converted term. *)
-  val _ = Statistics.gather ctxt "CParser" fn_name simpl_term
 
   (*
    * Do the conversion.  We receive a new monadic version of the SIMPL

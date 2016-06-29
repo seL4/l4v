@@ -1369,10 +1369,6 @@ fun get_l2corres_thm ctxt prog_info l1_infos l1_call_info do_opt trace_opt fn_na
           then_conv
           Raw_Simplifier.rewrite ctxt false @{thms L2_remove_scaffolding_2})) ctxt) new_thm
 
-  (* Gather statistics. *)
-  val _ = Statistics.gather ctxt "L2" fn_name
-      (Thm.prop_of new_thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 4))
-
   (* Cleanup. *)
   val _ = writeln ("Simplifying (L2) " ^ fn_name)
   val new_thm = Simplifier.simplify (put_simpset HOL_basic_ss ctxt addsimps
@@ -1385,10 +1381,6 @@ fun get_l2corres_thm ctxt prog_info l1_infos l1_call_info do_opt trace_opt fn_na
   val cleanup_del = @{thms ptr_coerce.simps ptr_add_0_id}
   val (new_thm, traces) = L2Opt.cleanup_thm_tagged (ctxt delsimps cleanup_del) new_thm
                                                    (if do_opt then 0 else 2) 5 trace_opt "L2"
-
-  (* Gather post-simplification statistics. *)
-  val _ = Statistics.gather ctxt "L2simp" fn_name
-      (Thm.prop_of new_thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 4))
 in
   (new_thm, traces)
 end

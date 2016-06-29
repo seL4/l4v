@@ -82,8 +82,6 @@ type autocorres_options = {
   (* Define word{8,16,32,64} heaps even if the program does not use them. *)
   gen_word_heaps : bool option ref,
 
-  print_stats : bool option ref,
-
   keep_going : bool option ref,
 
   (* Change generated names for lifted_globals fields *)
@@ -214,10 +212,6 @@ val gen_word_heaps_parser =
   Parse.reserved "gen_word_heaps" >>
   (fn _ => none_to_some (#gen_word_heaps) true "autocorres: gen_word_heaps option specified multiple times")
 
-val print_stats_parser =
-  Parse.reserved "statistics" >>
-  (fn _ => none_to_some (#print_stats) true "autocorres: statistics option specified multiple times")
-
 val keep_going_parser =
   Parse.reserved "keep_going" >>
   (fn _ => none_to_some (#keep_going) true "autocorres: keep_going option specified multiple times")
@@ -267,7 +261,6 @@ fun default_opts _ = {
     no_opt = ref NONE,
     trace_opt = ref NONE,
     gen_word_heaps = ref NONE,
-    print_stats = ref NONE,
     keep_going = ref NONE,
     lifted_globals_field_prefix = ref NONE,
     lifted_globals_field_suffix = ref NONE,
@@ -297,7 +290,6 @@ let
      no_opt_parser ||
      trace_opt_parser ||
      gen_word_heaps_parser ||
-     print_stats_parser ||
      keep_going_parser ||
      lifted_globals_field_prefix_parser ||
      lifted_globals_field_suffix_parser ||

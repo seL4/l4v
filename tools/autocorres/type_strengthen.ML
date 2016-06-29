@@ -235,16 +235,8 @@ fun perform_lift_and_polish ctxt prog_info fn_info rule_set do_opt fn_name =
   of NONE => NONE
   | SOME (thm, dict) => SOME let
 
-  (* Measure the size of the new theorem. *)
-  val _ = Statistics.gather ctxt "TS" fn_name
-    (Thm.concl_of thm |> Utils.rhs_of)
-
   (* Apply any polishing rules. *)
   val polish_thm = Monad_Convert.polish ctxt rule_set do_opt thm
-
-  (* Measure the term. *)
-  val _ = Statistics.gather ctxt "polish" fn_name
-    (Thm.concl_of polish_thm |> Utils.rhs_of)
 
 in (polish_thm, dict) end
 

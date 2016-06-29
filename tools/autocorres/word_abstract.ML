@@ -352,13 +352,6 @@ let
     (* Ensure no schematics remain in the goal. *)
     val _ = Sign.no_vars lthy (Thm.prop_of thm)
 
-    (* Gather statistics. *)
-    val _ = Statistics.gather lthy "WA" f
-        (Variable.gen_all lthy thm
-          |> Thm.prop_of
-          |> HOLogic.dest_Trueprop
-          |> (fn t => Utils.term_nth_arg t 3))
-
     (*
      * Instantiate abstract function's meta-forall variables with their actual values.
      *
@@ -380,13 +373,6 @@ let
      * L2Opt should simplify the condition to (%_. True) even if (not do_opt),
      * so we match the guard and get rid of it here. *)
     val thm = Simplifier.rewrite_rule lthy @{thms corresTA_simp_trivial_guard} thm
-
-    (* Gather post-optimisation statistics. *)
-    val _ = Statistics.gather lthy "WAsimp" f
-        (Variable.gen_all lthy thm
-          |> Thm.prop_of
-          |> HOLogic.dest_Trueprop
-          |> (fn t => Utils.term_nth_arg t 3))
 
     (* Convert all-quantified vars in the concrete body to schematics. *)
     val thm = Variable.gen_all lthy thm

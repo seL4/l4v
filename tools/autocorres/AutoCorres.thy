@@ -126,7 +126,6 @@ ML_file "../../lib/set.ML"
 ML_file "trace_antiquote.ML"
 ML_file "mkterm_antiquote.ML"
 ML_file "utils.ML"
-ML_file "statistics.ML"
 
 (* Common data structures *)
 ML_file "program_info.ML"

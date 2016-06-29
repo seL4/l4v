@@ -803,10 +803,6 @@ let
                       [@{const_name "field_lvalue"}, @{const_name "c_guard"}]
                  )
 
-    (* Gather statistics. *)
-    val _ = Statistics.gather lthy "HL" f
-        (Thm.prop_of thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 1))
-
     (* Apply peephole optimisations to the theorem. *)
     val _ = writeln ("Simplifying (HL) " ^ f)
     val (thm, opt_traces) = L2Opt.cleanup_thm_tagged lthy thm (if do_opt then 0 else 2) 2 trace_opt "HL"
@@ -816,10 +812,6 @@ let
      * so we cannot change the program before that. *)
     val thm = if not heap_abs_syntax then thm else
                 Raw_Simplifier.rewrite_rule lthy (#heap_syntax_rewrs HL_setup) thm
-
-    (* Gather post-simplification statistics. *)
-    val _ = Statistics.gather lthy "HLsimp" f
-        (Thm.prop_of thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 1))
 
     val f_body = dest_L2Tcorres_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm));
     (* Get actual recursive callees *)
