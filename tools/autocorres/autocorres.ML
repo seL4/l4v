@@ -582,7 +582,6 @@ let
   in fn f => prefix ^ f ^ suffix end
 
   (* Do the translation. *)
-  (* FIXME: collect from existing_phases *)
   val l1_results =
         SimplConv2.translate
             filename prog_info simpl_info existing_simpl_info existing_l1_info
@@ -640,7 +639,7 @@ let
 
   (* Put together final ac_corres theorems.
    * TODO: we should also store these as theory data. *)
-  fun prove_ac_corres fn_name lthy =
+  fun prove_ac_corres fn_name =
   let
     val l1_thm = #corres_thm (the (Symtab.lookup l1_info fn_name))
           handle Option => raise SimplConv.FunctionNotFound fn_name
@@ -655,24 +654,35 @@ let
     val ts_thm = #corres_thm (the (Symtab.lookup ts_info fn_name))
           handle Option => raise SimplConv.FunctionNotFound fn_name
 
-    val lthy = let
-        val final_thm = @{thm ac_corres_chain} OF [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm]
-        (* Remove fluff, like "f o id", that gets introduced by the HL and WA placeholders *)
-        val final_thm' = Simplifier.simplify (put_simpset AUTOCORRES_SIMPSET lthy) final_thm 
-        val (_, lthy) = Utils.define_lemma (make_function_name fn_name ^ "_ac_corres") final_thm' lthy
-        in lthy end
-        handle THM _ =>
-           (Utils.THM_non_critical keep_going
-                ("autocorres: failed to prove ac_corres theorem for " ^ fn_name)
-                0 [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm];
-            lthy)
-  in
-    lthy
+  in let
+       val final_thm = @{thm ac_corres_chain} OF [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm]
+       (* Remove fluff, like "f o id", that gets introduced by the HL and WA placeholders *)
+       val final_thm' = Simplifier.simplify (put_simpset AUTOCORRES_SIMPSET lthy) final_thm
+     in SOME final_thm' end
+     handle THM _ =>
+         (Utils.THM_non_critical keep_going
+              ("autocorres: failed to prove ac_corres theorem for " ^ fn_name)
+              0 [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm];
+          NONE)
   end
 
-  val lthy = fold prove_ac_corres (Symtab.keys ts_info) lthy
+  val ac_corres_thms =
+        Symtab.keys ts_info
+        |> Par_List.map (fn f => Option.map (pair f) (prove_ac_corres f))
+        |> List.mapPartial I
 
-  (* FIXME: merge with existing_phases *)
+  val lthy = fold (fn (f, thm) =>
+                     Utils.define_lemma (make_function_name f ^ "_ac_corres") thm #> snd)
+                  ac_corres_thms lthy
+
+  (* Name final mono theorems. *)
+  val lthy =
+        fold (fn (f, info) => fn lthy =>
+                case #mono_thm info of
+                    NONE => lthy
+                  | SOME thm =>
+                      Utils.define_lemma (make_function_name f ^ "_mono") thm lthy |> snd)
+              (Symtab.dest ts_info) lthy
 
   (* Save function info for future reference. *)
   val simpl_info' = Symtab.merge (K false) (existing_simpl_info, simpl_info);
