@@ -205,7 +205,7 @@ lemma checked_insert_irq_masks[wp]:
           goals *)
 lemma invoke_tcb_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and
-    tcb_inv_wf tinv\<rbrace>
+    Tcb_AI.tcb_inv_wf tinv\<rbrace>
    invoke_tcb tinv
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply(case_tac tinv)

@@ -3013,7 +3013,7 @@ lemma invoke_tcb_silc_inv:
         static_imp_conj_wp [wp]
   shows
   "\<lbrace>silc_inv aag st and einvs and simple_sched_action and pas_refined aag and 
-    tcb_inv_wf tinv and K (authorised_tcb_inv aag tinv)\<rbrace>
+    Tcb_AI.tcb_inv_wf tinv and K (authorised_tcb_inv aag tinv)\<rbrace>
    invoke_tcb tinv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply(case_tac tinv)

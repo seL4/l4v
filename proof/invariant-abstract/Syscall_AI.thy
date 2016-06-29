@@ -76,7 +76,7 @@ where
   "valid_invocation (Invocations_A.InvokeUntyped i) = valid_untyped_inv i" 
 | "valid_invocation (Invocations_A.InvokeEndpoint w w2 b) = (ep_at w and ex_nonz_cap_to w)"
 | "valid_invocation (Invocations_A.InvokeNotification w w2) = (ntfn_at w and ex_nonz_cap_to w)"
-| "valid_invocation (Invocations_A.InvokeTCB i) = tcb_inv_wf i"
+| "valid_invocation (Invocations_A.InvokeTCB i) = Tcb_AI.tcb_inv_wf i"
 | "valid_invocation (Invocations_A.InvokeDomain thread domain) = (tcb_at thread and (\<lambda>s. thread \<noteq> idle_thread s))"
 | "valid_invocation (Invocations_A.InvokeReply thread slot) =
        (tcb_at thread and cte_wp_at (op = (cap.ReplyCap thread False)) slot)"
@@ -521,7 +521,7 @@ lemma decode_inv_wf[wp]:
              cong: cap.case_cong if_cong
                 split del: split_if)
   apply (rule hoare_pre)
-   apply (wp decode_tcb_inv_wf decode_domain_inv_wf[simplified split_def] | wpc |
+   apply (wp Tcb_AI.decode_tcb_inv_wf decode_domain_inv_wf[simplified split_def] | wpc |
           simp add: o_def uncurry_def split_def del: is_cnode_cap.simps cte_refs.simps)+
   apply (strengthen cnode_diminished_strg)
   apply (clarsimp simp: valid_cap_def cte_wp_at_eq_simp is_cap_simps

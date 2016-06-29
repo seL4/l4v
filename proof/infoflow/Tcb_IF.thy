@@ -331,7 +331,7 @@ lemma invoke_tcb_thread_preservation:
   assumes thread_set_P': "\<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_fault_handler_update f) ptr \<lbrace>\<lambda>_.P\<rbrace>"
   assumes P_trans[simp]: "\<And>f s. P (trans_state f s) = P s"
 shows "
-   \<lbrace>P and invs and tcb_inv_wf (tcb_invocation.ThreadControl t sl ep prio croot vroot buf)\<rbrace>
+   \<lbrace>P and invs and Tcb_AI.tcb_inv_wf (tcb_invocation.ThreadControl t sl ep prio croot vroot buf)\<rbrace>
      invoke_tcb (tcb_invocation.ThreadControl t sl ep prio croot vroot buf)
    \<lbrace>\<lambda>rv. P\<rbrace>"
   
@@ -431,17 +431,17 @@ lemma invoke_tcb_NotificationControl_globals_equiv:
   done
 
 lemma invoke_tcb_globals_equiv:
-  "\<lbrace> invs and globals_equiv st and tcb_inv_wf ti\<rbrace>
+  "\<lbrace> invs and globals_equiv st and Tcb_AI.tcb_inv_wf ti\<rbrace>
    invoke_tcb ti
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply(case_tac ti)
        prefer 4
-       apply (simp del: invoke_tcb.simps tcb_inv_wf.simps)
+       apply (simp del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps)
        
        apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv 
                  cap_insert_globals_equiv'' thread_set_globals_equiv 
               | clarsimp simp add: invs_valid_ko_at_arm split del: split_if)+
-       apply (simp_all del: tcb_inv_wf.simps split del: split_if)
+       apply (simp_all del: Tcb_AI.tcb_inv_wf.simps split del: split_if)
        apply (wp | clarsimp simp: invs_valid_ko_at_arm no_cap_to_idle_thread | intro conjI impI)+
        apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arm_copy_register_sets)
        apply (rule_tac Q="\<lambda>_. valid_ko_at_arm and globals_equiv st and (\<lambda>s. word1 \<noteq> idle_thread s) 
@@ -650,7 +650,7 @@ lemma invoke_tcb_reads_respects_f:
   notes validE_valid[wp del]
         static_imp_wp [wp]
   shows
-  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and pas_cur_domain aag and tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti)) (invoke_tcb ti)"
+  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and pas_cur_domain aag and Tcb_AI.tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti)) (invoke_tcb ti)"
   apply(case_tac ti)
         apply(wp when_ev restart_reads_respects_f as_user_reads_respects_f static_imp_wp | simp)+
         apply(auto intro: requiv_cur_thread_eq intro!: det_zipWithM simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def simp: reads_equiv_f_def)[1]
@@ -707,7 +707,7 @@ lemma invoke_tcb_reads_respects_f:
 
 
 lemma invoke_tcb_reads_respects_f_g:
-"reads_respects_f_g aag l (silc_inv aag st and only_timer_irq_inv irq st' and pas_refined aag and pas_cur_domain aag and einvs and simple_sched_action and tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
+"reads_respects_f_g aag l (silc_inv aag st and only_timer_irq_inv irq st' and pas_refined aag and pas_cur_domain aag and einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
     (invoke_tcb ti)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_f_g)

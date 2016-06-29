@@ -29,7 +29,7 @@ where
              \<and> aag_has_auth_to aag SyncSend epptr
    | Invocations_A.InvokeNotification ep badge \<Rightarrow> aag_has_auth_to aag Notify ep
    | Invocations_A.InvokeReply thread slot \<Rightarrow> is_subject aag thread \<and> is_subject aag (fst slot)
-   | Invocations_A.InvokeTCB i' \<Rightarrow> tcb_inv_wf i' s \<and> authorised_tcb_inv aag i'
+   | Invocations_A.InvokeTCB i' \<Rightarrow> Tcb_AI.tcb_inv_wf i' s \<and> authorised_tcb_inv aag i'
    | Invocations_A.InvokeDomain thread slot \<Rightarrow> False
    | Invocations_A.InvokeCNode i' \<Rightarrow> authorised_cnode_inv aag i' s \<and> is_subject aag (cur_thread s)
            \<and> cnode_inv_auth_derivations i' s

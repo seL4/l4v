@@ -2905,7 +2905,7 @@ lemmas bind_notification_irq_state_inv[wp] =
 
 lemma invoke_tcb_irq_state_inv:
   "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False sta and
-    tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>
+    Tcb_AI.tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>
    invoke_tcb tinv
    \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>,\<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply(case_tac tinv)

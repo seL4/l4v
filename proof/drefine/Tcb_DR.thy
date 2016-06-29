@@ -1501,7 +1501,7 @@ lemma invoke_tcb_corres_thread_control:
   "\<lbrakk> t' = tcb_invocation.ThreadControl obj_id' a' fault_ep' prio' croot' vroot' ipc_buffer';
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> dc) \<top> (\<lambda>s. invs s \<and> valid_etcbs s \<and> not_idle_thread obj_id' s
-                   \<and> valid_pdpt_objs s \<and> tcb_inv_wf t' s)
+                   \<and> valid_pdpt_objs s \<and> Tcb_AI.tcb_inv_wf t' s)
        (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   apply (rule corres_guard_imp[OF dcorres_thread_control])
      apply fastforce
@@ -1606,7 +1606,7 @@ lemmas invoke_tcb_rules = ex_nonz_cap_implies_normal_tcb
 
 lemma invoke_tcb_corres:
   "\<lbrakk> t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
-   dcorres (dc \<oplus> dc) \<top> (invs and valid_pdpt_objs and tcb_inv_wf t' and valid_etcbs)
+   dcorres (dc \<oplus> dc) \<top> (invs and valid_pdpt_objs and Tcb_AI.tcb_inv_wf t' and valid_etcbs)
      (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   apply (clarsimp)
   apply (case_tac t')
