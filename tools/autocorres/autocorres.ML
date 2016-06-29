@@ -98,7 +98,7 @@ type autocorres_options = {
 (* Get all that the given function depends on, up to "depth" functions deep. *)
 fun get_function_deps get_callees roots depth =
 let
-  fun get_calleess fns = Symset.union_sets (fns :: map (Symset.make o get_callees) (Symset.dest fns))
+  fun get_calleess fns = Symset.union_sets (fns :: map get_callees (Symset.dest fns))
 in
   funpow depth get_calleess (Symset.make roots)
 end
@@ -334,10 +334,10 @@ let
                  SOME lthy => lthy
                | NONE => error ("autocorres: no such locale: " ^ locale_name)
 
-  (* Fetch basic program information. *)
+  (* Fetch program information from the C-parser output. *)
   val prog_info = ProgramInfo.get_prog_info lthy filename
-  val basic_fn_info = FunctionInfo.init_fn_info lthy filename
-  val all_simpl_functions = Symset.make (Symtab.keys (FunctionInfo.get_all_functions basic_fn_info))
+  val all_simpl_info = FunctionInfo2.init_function_info lthy filename
+  val all_simpl_functions = Symset.make (Symtab.keys all_simpl_info)
 
   (* Process autocorres options. *)
   val keep_going = !(#keep_going opt) = SOME true
@@ -376,13 +376,33 @@ let
 
   (* (Finished processing options.) *)
 
-  val old_fn_info = Symtab.lookup (AutoCorresFunctionInfo.get thy) filename
-  val _ = if not (isSome old_fn_info) then () else
+  val existing_phases = Symtab.lookup (AutoCorresFunctionInfo2.get thy) filename
+  val _ = if not (isSome existing_phases) then () else
             tracing ("Attempting to restart from previous translation of " ^ filename)
 
+  fun get_existing_phase phase =
+        case existing_phases of
+            NONE => Symtab.empty
+          | SOME phases =>
+              case FunctionInfo2.Phasetab.lookup phases phase of
+                  NONE => Symtab.empty
+                | SOME infos => infos
+  val [existing_simpl_info,
+       existing_l1_info,
+       existing_l2_info,
+       existing_hl_info,
+       existing_wa_info,
+       existing_ts_info] =
+      map get_existing_phase
+        [FunctionInfo2.CP,
+         FunctionInfo2.L1,
+         FunctionInfo2.L2,
+         FunctionInfo2.HL,
+         FunctionInfo2.WA,
+         FunctionInfo2.TS]
+
   (* Skip functions that have already been translated. *)
-  val old_translations = Option.getOpt (Option.map FunctionInfo.get_all_functions old_fn_info, Symtab.empty)
-                         |> Symtab.dest |> map fst |> Symset.make
+  val already_translated = Symset.make (Symtab.keys existing_ts_info)
 
   (* Determine which functions should be translated.
    * If "scope" is not specified, we translate all functions.
@@ -394,12 +414,13 @@ let
       | SOME x =>
         let
           val scope_depth = the_default 2 (!(#scope_depth opt))
-          val get_deps = get_function_deps (FunctionInfo.get_function_callees basic_fn_info)
+          val get_deps = get_function_deps (fn f =>
+                           FunctionInfo2.all_callees (the (Symtab.lookup all_simpl_info f)))
           val funcs = get_deps x scope_depth
           val _ = tracing ("autocorres scope: selected " ^ Int.toString (Symset.card funcs) ^ " function(s):")
           val _ = app (fn f => tracing ("  " ^ f)) (Symset.dest funcs)
           val funcs_callees =
-            Symset.subtract (Symset.union old_translations funcs) (get_deps (Symset.dest funcs) 1)
+            Symset.subtract (Symset.union already_translated funcs) (get_deps (Symset.dest funcs) 1)
           val _ = if Symset.is_empty funcs_callees then () else
                     (tracing ("autocorres scope: wrapping " ^
                        Int.toString (Symset.card funcs_callees) ^ " function(s):");
@@ -407,7 +428,7 @@ let
         in (funcs, funcs_callees) end
 
   (* Functions that have already been translated cannot be translated again. *)
-  val already_translated = Symset.inter old_translations functions_to_translate
+  val already_translated = Symset.inter already_translated functions_to_translate
   val _ = if Symset.is_empty already_translated then () else
             error ("autocorres scope: these functions have already been translated: " ^
                    commas (Symset.dest already_translated))
@@ -415,7 +436,7 @@ let
   (* If a function has no SIMPL body, we will not wrap its body;
    * instead we create a dummy definition and translate it via the usual process. *)
   val undefined_functions =
-        Symset.filter (fn f => #invented_body (FunctionInfo.get_function_info basic_fn_info f)) functions_to_wrap
+        Symset.filter (fn f => #invented_body (the (Symtab.lookup all_simpl_info f))) functions_to_wrap
   val functions_to_wrap = Symset.subtract undefined_functions functions_to_wrap
   val functions_to_translate = Symset.union undefined_functions functions_to_translate
 
@@ -423,18 +444,6 @@ let
   val functions_to_process = Symset.union functions_to_translate functions_to_wrap
   (* ... and ignore these functions. *)
   val functions_to_ignore = Symset.subtract functions_to_process all_simpl_functions
-
-  (* Only translate "scope" functions and their direct callees. *)
-  val fn_info = FunctionInfo.map_fn_info (fn def =>
-                  if Symset.contains functions_to_translate (#name def) then
-                    SOME (FunctionInfo.function_info_upd_is_simpl_wrapper false def)
-                  else if Symset.contains functions_to_wrap (#name def) then
-                    SOME (FunctionInfo.function_info_upd_is_simpl_wrapper true def)
-                  else
-                    (* Pull in function data from previous translations. *)
-                    Option.mapPartial (fn x => Symtab.lookup (FunctionInfo.get_all_functions x) (#name def))
-                                      old_fn_info)
-                  basic_fn_info
 
   (* Disallow referring to functions that don't exist or are excluded from processing. *)
   val funcs_in_options =
@@ -460,9 +469,24 @@ let
     else
       ()
 
+  (* Only translate "scope" functions and their direct callees. *)
+  val simpl_info =
+        Symtab.dest all_simpl_info
+        |> List.mapPartial (fn (name, info) =>
+             if Symset.contains functions_to_translate name then
+               SOME (name, FunctionInfo2.function_info_upd_is_simpl_wrapper false info)
+             else if Symset.contains functions_to_wrap name then
+               SOME (name, FunctionInfo2.function_info_upd_is_simpl_wrapper true info)
+             else
+               NONE)
+        |> Symtab.make
+
+  (* Recalculate callees after "scope" restriction. *)
+  val (simpl_call_graph, simpl_info) = FunctionInfo2.calc_call_graph simpl_info
+
   (* Check that recursive function groups are all lifted to the same monad. *)
-  val _ = FunctionInfo.get_topo_sorted_functions fn_info
-          |> map (TypeStrengthen.compute_lift_rules ts_rules ts_force)
+  val _ = #topo_sorted_functions simpl_call_graph
+          |> map (TypeStrengthen.compute_lift_rules ts_rules ts_force o Symset.dest)
 
   (* Disable heap lifting for all un-translated functions. *)
   val force_heap_abs = Symset.make (these (!(#force_heap_abs opt)))
@@ -491,21 +515,21 @@ let
    * to sort constraints on constants. This doesn't violate the Isabelle
    * kernel's soundness, but does wreck havoc on us.
    *)
-  val sanity_errors = AutoCorresUtil.map_all lthy fn_info (fn fn_name => fn info =>
-    case FunctionInfo.Phasetab.lookup (#phases info) FunctionInfo.L1 of
-        SOME _ => NONE (* already translated; ignore *)
-      | _ => let
-      val info = FunctionInfo.get_1_phase_info info FunctionInfo.CP
-      val def =
-        info
-        |> #definition
-        |> Thm.prop_of
-        |> Utils.rhs_of
-    in
-      (Syntax.check_term lthy def; NONE)
-      handle (ERROR str) => SOME (fn_name, str)
-    end)
-    |> map_filter I
+  val sanity_errors =
+        Symtab.dest simpl_info
+        |> List.mapPartial (fn (fn_name, info) =>
+            case Symtab.lookup existing_l1_info fn_name of
+                SOME _ => NONE (* already translated; ignore *)
+              | _ => let
+                       val def =
+                         info
+                         |> #definition
+                         |> Thm.prop_of
+                         |> Utils.rhs_of
+                     in
+                       (Syntax.check_term lthy def; NONE)
+                       handle (ERROR str) => SOME (fn_name, str)
+                     end)
   val _ =
     if length sanity_errors > 0 then
       error ("C parser failed sanity checks. Erroneous functions: "
@@ -524,7 +548,7 @@ let
     val invented_functions =
       functions_to_process
       (* Select functions with an invented body. *)
-      |> Symset.filter (FunctionInfo.get_function_info fn_info #> #invented_body)
+      |> Symset.filter (Symtab.lookup simpl_info #> the #> #invented_body)
       (* Ignore functions which already have a "ts_force" rule applied to them. *)
       |> Symset.subtract (Symset.make (Symtab.keys ts_force))
       |> Symset.dest
@@ -554,76 +578,73 @@ let
   in fn f => prefix ^ f ^ suffix end
 
   (* Do the translation. *)
-  val _ = @{trace} ("debug: initial fn_info", FunctionInfo.get_all_functions fn_info |> Symtab.dest |> map (apsnd (#phases #> FunctionInfo.Phasetab.dest)))
-  val (lthy, fn_info) =
-        SimplConv.translate_simpl
-            filename prog_info fn_info (!(#no_c_termination opt) <> SOME true)
+  (* FIXME: collect from existing_phases *)
+  val l1_results =
+        SimplConv2.translate
+            filename prog_info simpl_info (!(#no_c_termination opt) <> SOME true)
             do_opt trace_opt (prefix "l1_" o make_function_name) lthy
 
-  val _ = @{trace} ("debug: L1 fn_info", FunctionInfo.get_all_functions fn_info |> Symtab.dest |> map (apsnd (#phases #> FunctionInfo.Phasetab.dest)))
-  val (lthy, fn_info) =
-        LocalVarExtract.translate_l2 filename prog_info fn_info do_opt trace_opt (prefix "l2_" o make_function_name) lthy
+  val l2_results =
+        LocalVarExtract2.translate filename prog_info l1_results do_opt trace_opt (prefix "l2_" o make_function_name)
 
-  fun copy_fn_info from to =
-    FunctionInfo.map_fn_info (fn fn_def =>
-      case FunctionInfo.Phasetab.lookup (#phases fn_def) to of
-          SOME _ => SOME fn_def
-        | NONE =>
-            case FunctionInfo.Phasetab.lookup (#phases fn_def) from of
-                NONE => SOME fn_def
-              | SOME old => let
-                  val new = FunctionInfo.phase_info_upd_phase to old
-                  in SOME (FunctionInfo.function_info_add_phase new fn_def) end)
-
-  val _ = @{trace} ("debug: L2 fn_info", FunctionInfo.get_all_functions fn_info |> Symtab.dest |> map (apsnd (#phases #> FunctionInfo.Phasetab.dest)))
-  val (lthy, fn_info) =
-        if !(#skip_heap_abs opt) = SOME true
-        then (lthy, copy_fn_info FunctionInfo.L2 FunctionInfo.HL fn_info)
+  val skip_heap_abs = !(#skip_heap_abs opt) = SOME true
+  val hl_results =
+        if skip_heap_abs
+        then l2_results
         else let
-          (* Create base definitions for the new program, including a new
-           * "globals" record with a lifted heap. *)
-          val (heap_info, lthy) = case Symtab.lookup (HeapInfo.get thy) filename of
-                  (* Use basic_fn_info so that our generated heap will work for all functions,
-                   * even if the user selected a subset for this run *)
-                  NONE => let val (heap_info, lthy) =
-                                HeapLiftBase.setup prog_info (FunctionInfo2.init_function_info lthy filename)
-                                    make_lifted_globals_field_name gen_word_heaps lthy
-                              (* Save the heap info to the theory data. *)
-                              val lthy = Local_Theory.background_theory (
-                                HeapInfo.map (fn tbl =>
-                                  let val HL_setup = {heap_info = heap_info,
-                                                      lifted_heap_lemmas = [],
-                                                      heap_syntax_rewrs = []};
-                                  in Symtab.update (filename, HL_setup) tbl end)) lthy
-                          in (heap_info, lthy) end
-                | SOME HL_setup => (#heap_info HL_setup, lthy)
-          in HeapLift.system_heap_lift filename prog_info fn_info heap_info
-               no_heap_abs force_heap_abs
-               heap_abs_syntax keep_going
-               (these (!(#trace_heap_lift opt))) do_opt trace_opt
-               (prefix "hl_" o make_function_name) lthy end
+          val (l2_results', HL_setup) =
+                HeapLift2.prepare_heap_lift
+                    filename prog_info l2_results lthy all_simpl_info
+                    make_lifted_globals_field_name gen_word_heaps heap_abs_syntax
+          in HeapLift2.translate
+                filename prog_info l2_results' HL_setup
+                no_heap_abs force_heap_abs
+                heap_abs_syntax keep_going
+                (these (!(#trace_heap_lift opt))) do_opt trace_opt
+               (prefix "hl_" o make_function_name)
+          end
 
-  val _ = @{trace} ("debug: HL fn_info", FunctionInfo.get_all_functions fn_info |> Symtab.dest |> map (apsnd (#phases #> FunctionInfo.Phasetab.dest)))
-  val (lthy, fn_info) =
+  val wa_results =
         if skip_word_abs
-        then (lthy, copy_fn_info FunctionInfo.HL FunctionInfo.WA fn_info)
-        else WordAbstract.word_abstract
-               filename prog_info fn_info
+        then hl_results
+        else WordAbstract2.translate
+               filename prog_info hl_results
                unsigned_word_abs no_signed_word_abs
                (these (!(#trace_word_abs opt))) do_opt trace_opt
-               (prefix "wa_" o make_function_name) lthy
+               (prefix "wa_" o make_function_name)
 
-  val _ = @{trace} ("debug: WA fn_info", FunctionInfo.get_all_functions fn_info |> Symtab.dest |> map (apsnd (#phases #> FunctionInfo.Phasetab.dest)))
-  val (lthy, fn_info) =
-        TypeStrengthen.type_strengthen
-            ts_rules ts_force filename prog_info fn_info make_function_name
-            keep_going do_opt lthy
+  val ts_results =
+        TypeStrengthen2.translate
+            ts_rules ts_force filename prog_info wa_results make_function_name
+            keep_going do_opt
 
-  (* Save fn_info for future reference. *)
+  (* Collect final translation results. *)
+  val l1_info = FSeq.list_of l1_results |> map snd |> Utils.symtab_merge false;
+  val l2_info = FSeq.list_of l2_results |> map snd |> Utils.symtab_merge false;
+  val hl_info = FSeq.list_of hl_results |> map snd |> Utils.symtab_merge false;
+  val wa_info = FSeq.list_of wa_results |> map snd |> Utils.symtab_merge false;
+  val ts_results' = FSeq.list_of ts_results;
+  val ts_info = ts_results' |> map snd |> Utils.symtab_merge false;
+
+  val lthy = if null ts_results' then lthy else fst (List.last ts_results');
+
+  (* FIXME: merge with existing_phases *)
+
+  (* Save function info for future reference. *)
+  val new_results =
+        FunctionInfo2.Phasetab.make
+          ([(FunctionInfo2.CP, simpl_info),
+            (FunctionInfo2.L1, l1_info),
+            (FunctionInfo2.L2, l2_info),
+            (FunctionInfo2.TS, ts_info)]
+           @ (if skip_heap_abs then [] else [(FunctionInfo2.HL, hl_info)])
+           @ (if skip_word_abs then [] else [(FunctionInfo2.WA, wa_info)])
+          )
+
   val _ = tracing "Saving function info to AutoCorresFunctionInfo."
   val lthy = Local_Theory.background_theory (
-	  AutoCorresFunctionInfo.map (fn tbl =>
-	    Symtab.update (filename, fn_info) tbl)) lthy
+	  AutoCorresFunctionInfo2.map (fn tbl =>
+	    Symtab.update (filename, new_results) tbl)) lthy
 in
   (* Exit context. *)
   Named_Target.exit lthy

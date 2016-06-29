@@ -24,12 +24,6 @@ declare gets_theE_L2_while [ts_rule option del]
 
 context type_strengthen begin
 ML \<open>
-FunctionInfo2.init_function_info @{context} "type_strengthen.c"
-|> Symtab.dest
-|> map (fn (f, info) => (f, Symset.dest (#callees info), Symset.dest (#rec_callees info)))
-\<close>
-
-ML \<open>
 val result_infos: FunctionInfo2.function_info Symtab.table FunctionInfo2.Phasetab.table Unsynchronized.ref
      = Unsynchronized.ref FunctionInfo2.Phasetab.empty;
 \<close>
@@ -46,15 +40,15 @@ let val filename = "type_strengthen.c";
 
     val l1_results =
       SimplConv2.translate filename prog_info simpl_info
-        true true false (fn f => "l1_" ^ f ^ "'") lthy;
+        true true false (fn f => "l1_" ^ f ^ "''") lthy;
     val l2_results =
       LocalVarExtract2.translate filename prog_info l1_results
-        do_opt trace_opt (fn f => "l2_" ^ f ^ "'");
+        do_opt trace_opt (fn f => "l2_" ^ f ^ "''");
 
     val gen_word_heaps = true;
     val heap_abs_syntax = true;
     val (l2_results', HL_setup) =
-      HeapLift2.prepare_heap_lift filename prog_info l2_results lthy
+      HeapLift2.prepare_heap_lift filename prog_info l2_results lthy simpl_info
         (fn fld => fld ^ "'") gen_word_heaps heap_abs_syntax;
 
     val no_heap_abs = ["opt_j"];
@@ -63,19 +57,19 @@ let val filename = "type_strengthen.c";
       HeapLift2.translate filename prog_info l2_results' HL_setup
         (Symset.make no_heap_abs) (Symset.make force_heap_abs)
         heap_abs_syntax keep_going
-        [] do_opt trace_opt (fn f => "hl_" ^ f ^ "'");
+        [] do_opt trace_opt (fn f => "hl_" ^ f ^ "''");
 
     val unsigned_abs = ["opt_a"];
     val no_signed_abs = [];
     val wa_results = if false then hl_results else
       WordAbstract2.translate filename prog_info hl_results
         (Symset.make unsigned_abs) (Symset.make no_signed_abs) []
-        do_opt trace_opt (fn f => "wa_" ^ f ^ "'");
+        do_opt trace_opt (fn f => "wa_" ^ f ^ "''");
 
     val ts_rules = Monad_Types.get_ordered_rules [] (Context.Proof lthy);
     val ts_results =
       TypeStrengthen2.translate ts_rules Symtab.empty filename prog_info
-        wa_results (fn f => f ^ "'") keep_going do_opt;
+        wa_results (fn f => f ^ "''") keep_going do_opt;
 
     val l1_results' = FSeq.list_of l1_results |> map snd |> Utils.symtab_merge false;
     val l2_results' = FSeq.list_of l2_results |> map snd |> Utils.symtab_merge false;
@@ -92,10 +86,10 @@ let val filename = "type_strengthen.c";
 in FSeq.list_of ts_results |> List.last |> fst end
 \<close>
 
-thm opt_a'.simps opt_a2'_def
+thm opt_a''.simps opt_a2''_def
 (* heap_abs_syntax test *)
-thm st_i'.simps
-thm exc_f'_def
+thm st_i''.simps
+thm exc_f''_def
 
 (* gen_word_heaps test *)
 term is_valid_w64
@@ -114,8 +108,7 @@ end
    rules for some individual functions. *)
 autocorres [
   ts_rules = pure option nondet,
-  ts_force option = pure_f,
-  skip_heap_abs
+  ts_force option = pure_f
   ] "type_strengthen.c"
 
 context type_strengthen begin

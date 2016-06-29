@@ -528,6 +528,10 @@ fun prepare_heap_lift
     (* An initial lthy, used to check for an existing heap_lift_setup.
      * Also used as fallback target in the unlikely case where l2_results = [] *)
     (lthy0 : local_theory)
+    (* We define the lifted heap for all functions in the program, even if they are
+     * not included in this translation. This allows heap lifting to work with
+     * incremental translations. *)
+    (all_simpl_infos : FunctionInfo2.function_info Symtab.table)
     (* Settings *)
     (make_lifted_globals_field_name : string -> string)
     (gen_word_heaps : bool)
@@ -550,11 +554,7 @@ let
           SOME HL_setup => (l2_results, HL_setup, NONE)
         | NONE => let
             val lthy = get_target_lthy l2_results NONE;
-            (* We define the lifted heap for all functions in the program, even if they are
-             * not included in this translation. This allows heap lifting to work with
-             * incremental translations. *)
-            val fn_infos0 = (FunctionInfo2.init_function_info lthy filename);
-            val (heap_info, lthy) = HeapLiftBase.setup prog_info fn_infos0
+            val (heap_info, lthy) = HeapLiftBase.setup prog_info all_simpl_infos
                                         make_lifted_globals_field_name gen_word_heaps lthy;
             val lifted_heap_lemmas = lifted_globals_lemmas prog_info heap_info lthy;
             val HL_setup = { heap_info = heap_info,
@@ -838,13 +838,12 @@ let
         (funcs: AutoCorresUtil2.convert_result Symtab.table)
         : FunctionInfo2.function_info Symtab.table * local_theory = let
     val funcs' = Symtab.dest funcs |>
-          map (fn (name, {body, proof, callee_consts, arg_frees, ...}) =>
-                     (name, ((AutoCorresUtil2.abstract_fn_body l2_infos
-                                (name, (body, callee_consts, proof, arg_frees))),
+          map (fn result as (name, {proof, arg_frees, ...}) =>
+                     (name, (AutoCorresUtil2.abstract_fn_body l2_infos result,
                              proof, arg_frees)));
     val (new_thms, (), lthy') =
-          AutoCorresUtil2.define_funcs FunctionInfo2.HL filename l2_infos
-              hl_function_name
+          AutoCorresUtil2.define_funcs
+              FunctionInfo2.HL filename l2_infos hl_function_name
               (get_expected_hl_fn_type prog_info l2_infos heap_info is_function_lifted)
               (get_expected_hl_fn_thm prog_info l2_infos heap_info is_function_lifted)
               (get_expected_hl_fn_args prog_info l2_infos)

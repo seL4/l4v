@@ -461,12 +461,3 @@ fun init_function_info ctxt filename = let
   end;
 
 end; (* structure FunctionInfo *)
-
-(* Save function information into the theory. *)
-structure AutoCorresFunctionInfo = Theory_Data(
-  type T = FunctionInfo.fn_info Symtab.table;
-  val empty = Symtab.empty;
-  val extend = I;
-  fun merge (l, r) =
-    Symtab.merge (fn _ => true) (l, r);
-)

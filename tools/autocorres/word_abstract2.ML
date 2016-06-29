@@ -419,13 +419,12 @@ let
         (funcs: AutoCorresUtil2.convert_result Symtab.table)
         : FunctionInfo2.function_info Symtab.table * local_theory = let
     val funcs' = Symtab.dest funcs |>
-          map (fn (name, {body, proof, callee_consts, arg_frees, ...}) =>
-                     (name, ((AutoCorresUtil2.abstract_fn_body l2_infos
-                                (name, (body, callee_consts, proof, arg_frees))),
+          map (fn result as (name, {proof, arg_frees, ...}) =>
+                     (name, (AutoCorresUtil2.abstract_fn_body l2_infos result,
                              proof, arg_frees)));
     val (new_thms, (), lthy') =
-          AutoCorresUtil2.define_funcs FunctionInfo2.WA filename l2_infos
-              wa_function_name
+          AutoCorresUtil2.define_funcs
+              FunctionInfo2.WA filename l2_infos wa_function_name
               (fn f => get_expected_fn_type (rules_for f) l2_infos f)
               (fn lthy => fn f => get_expected_fn_thm (rules_for f) l2_infos lthy f)
               (fn f => get_expected_fn_args (rules_for f) l2_infos f)

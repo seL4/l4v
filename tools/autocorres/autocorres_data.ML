@@ -117,4 +117,16 @@ fun add_def filename module fn_name =
 (* Dump everything. *)
 fun debug thy = Terms.get thy |> dest_ac_data |> (fn x => (Symtab3.dest (#proofs x), Symtab3.dest (#traces x)))
 
-end
+end (* structure AutoCorresData *)
+
+
+(* Function translation information.
+ * This is needed for resuming incremental translations. *)
+structure AutoCorresFunctionInfo2 = Theory_Data(
+  type T = FunctionInfo2.function_info Symtab.table
+             FunctionInfo2.Phasetab.table Symtab.table;
+  val empty = Symtab.empty;
+  val extend = I;
+  fun merge (l, r) =
+    Symtab.merge (fn _ => true) (l, r);
+)

@@ -184,35 +184,6 @@ fun get_rec_callees
           |> Termtab.make;
     in get_body_callees callee_lookup body end;
 
-
-(* Given a function body containing arguments and assumed function calls,
- * abstract the code over those parameters.
- *
- * The returned body will have free variables as placeholders for the function's
- * measure parameter and other arguments, as well as for the functions it calls.
- *
- * We modify the body to be of the form:
- *
- *     %fun1 fun2 rec1 rec2 measure arg1 arg2. f <...>
- *
- * That is, all non-recursive calls are abstracted out the front, followed by
- * recursive calls, followed by the measure variable, followed by function
- * arguments. This is the format expected by define_funcs.
- *)
-fun abstract_fn_body
-      (prev_fn_infos: FunctionInfo2.function_info Symtab.table)
-      (fn_name, (body, callee_consts, corres_thm, arg_frees)) = let
-  val _ = @{trace} ("L2 prepare_fn_body", fn_name, corres_thm);
-  val (callees, rec_callees) = get_callees prev_fn_infos fn_name;
-  val calls = map (the o Symtab.lookup callee_consts) callees;
-  val rec_calls = map (the o Symtab.lookup callee_consts) rec_callees;
-
-  val abs_body = body
-        |> fold lambda (rev (map Free arg_frees))
-        |> fold lambda (rev rec_calls)
-        |> fold lambda (rev calls);
-  in abs_body end;
-
 (*
  * Given one or more function specs, define them and instantiate corres proofs.
  *
@@ -263,7 +234,7 @@ fun define_funcs
 
     val _ = writeln ("Defining (" ^ FunctionInfo2.string_of_phase phase ^ ") " ^
                      (Utils.commas (map get_const_name fn_names)))
-    val _ = @{trace} (Symtab.dest callee_thms, map (apsnd #1) functions)
+    val _ = @{trace} (Symtab.dest callee_thms, map (fn (_, (t, p, a)) => (Thm.cterm_of ctxt t, p, a)) functions)
 
     (*
      * Determine if we are in a recursive case by checking to see if the
@@ -396,10 +367,10 @@ fun define_funcs
               (EVERY (map (fn x => (EqSubst.eqsubst_tac ctxt' [1] [x] 1)) (rev fn_def_thms)))
           |> Utils.apply_tac "solve induction base cases"
               (SOLVES ((simp_tac (put_simpset HOL_ss ctxt' addsimps [rec_base_case]) 1)))
-          |> Utils.apply_tac "solve remaing goals"
+          |> Utils.apply_tac "solve remaining goals"
               (Utils.metis_insert_tac ctxt helper_thms 1)
         ) else (
-          Utils.apply_tac "solve remaing goals"
+          Utils.apply_tac "solve remaining goals"
                     (Utils.metis_insert_tac ctxt helper_thms 1) thm
         ))
       |> Goal.finish ctxt'
@@ -464,6 +435,35 @@ fun par_convert
            in ((fn_infos, conv_results), fn_infos_accum) end)
         Symtab.empty prev_results;
 
+(* Given a function body containing arguments and assumed function calls,
+ * abstract the code over those parameters.
+ *
+ * The returned body will have free variables as placeholders for the function's
+ * measure parameter and other arguments, as well as for the functions it calls.
+ *
+ * We modify the body to be of the form:
+ *
+ *     %fun1 fun2 rec1 rec2 measure arg1 arg2. f <...>
+ *
+ * That is, all non-recursive calls are abstracted out the front, followed by
+ * recursive calls, followed by the measure variable, followed by function
+ * arguments. This is the format expected by define_funcs.
+ *)
+fun abstract_fn_body
+      (prev_fn_infos: FunctionInfo2.function_info Symtab.table)
+      (fn_name, {body, rec_callees, callee_consts, arg_frees, ...} : convert_result) = let
+  (* Omit rec_callees if our function become non-recursive *)
+  val is_recursive = true (*not (Symset.is_empty rec_callees)*)
+  val (callees, rec_callees) = get_callees prev_fn_infos fn_name;
+  val calls = map (the o Symtab.lookup callee_consts) callees;
+  val rec_calls =
+        if is_recursive then map (the o Symtab.lookup callee_consts) rec_callees else [];
+
+  val abs_body = body
+        |> fold lambda (rev (map Free arg_frees))
+        |> fold lambda (rev rec_calls)
+        |> fold lambda (rev calls);
+  in abs_body end;
 
 (* Utility for defining functions.
  *
