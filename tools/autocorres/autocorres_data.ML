@@ -22,6 +22,8 @@ sig
       RuleTrace of thm AutoCorresTrace.RuleTrace
     | SimpTrace of AutoCorresTrace.SimpTrace
 
+  structure Traces: THEORY_DATA
+
   val add_trace: string -> string -> string -> Trace -> theory -> theory
   val get_trace: theory -> string -> string -> string -> Trace option
 
@@ -74,6 +76,19 @@ structure Terms = Theory_Data(
     }
 )
 
+(* Function translation traces.
+ * These are for informational or debugging usage. *)
+structure Traces = Theory_Data (
+  type T = Trace Symtab.table (* trace type *)
+                 Symtab.table (* func name *)
+                 Symtab.table (* file *);
+  val empty = Symtab.empty;
+  val extend = I;
+  (* We need a deep merge due to incremental translations (which can span
+   * multiple theories). snd is arbitrary. *)
+  val merge = Utils.symtab_merge_with (Utils.symtab_merge_with (Utils.symtab_merge_with snd));
+)
+
 (* Fetch a trace. *)
 fun get_trace thy filename module fn_name =
   Terms.get thy
@@ -119,7 +134,6 @@ fun debug thy = Terms.get thy |> dest_ac_data |> (fn x => (Symtab3.dest (#proofs
 
 end (* structure AutoCorresData *)
 
-
 (* Function translation information.
  * This is needed for resuming incremental translations. *)
 structure AutoCorresFunctionInfo2 = Theory_Data(
@@ -127,6 +141,5 @@ structure AutoCorresFunctionInfo2 = Theory_Data(
              FunctionInfo2.Phasetab.table Symtab.table;
   val empty = Symtab.empty;
   val extend = I;
-  fun merge (l, r) =
-    Symtab.merge (fn _ => true) (l, r);
+  val merge = Symtab.merge (K true);
 )

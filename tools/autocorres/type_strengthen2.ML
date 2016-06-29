@@ -577,6 +577,7 @@ fun translate
       (make_function_name : string -> string)
       (keep_going : bool)
       (do_opt : bool)
+      (add_trace: string -> string -> AutoCorresData.Trace -> unit)
       : FunctionInfo2.phase_results =
 if FSeq.null l2_results then FSeq.empty () else
 let

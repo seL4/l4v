@@ -25,26 +25,31 @@ autocorres [
  * These tend to be very large and detailed.
  *)
 
+(* All traces are stored in the AutoCorresData.Traces theory data. *)
+ML {*
+val all_traces = the (Symtab.lookup (AutoCorresData.Traces.get @{theory}) "trace_demo.c")
+*}
+
 (* Heap lifting trace. *)
 ML {*
-AutoCorresData.get_trace @{theory} "trace_demo.c" "HL" "incr"
-|> the |> (fn AutoCorresData.RuleTrace x => x)
+the (Symtab.lookup (the (Symtab.lookup all_traces "incr")) "HL")
+|> (fn AutoCorresData.RuleTrace x => x)
 |> AutoCorresTrace.print_ac_trace
 |> writeln
 *}
 
 (* Word abstraction trace. *)
 ML {*
-AutoCorresData.get_trace @{theory} "trace_demo.c" "WA" "incr"
-|> the |> (fn AutoCorresData.RuleTrace x => x)
+the (Symtab.lookup (the (Symtab.lookup all_traces "incr")) "WA")
+|> (fn AutoCorresData.RuleTrace x => x)
 |> AutoCorresTrace.print_ac_trace
 |> writeln
 *}
 
 (* To navigate a trace in jEdit, write it to a file: *)
 ML {*
-AutoCorresData.get_trace @{theory} "trace_demo.c" "HL" "incr"
-|> the |> (fn AutoCorresData.RuleTrace x => x)
+the (Symtab.lookup (the (Symtab.lookup all_traces "incr")) "HL")
+|> (fn AutoCorresData.RuleTrace x => x)
 |> AutoCorresTrace.print_ac_trace
 |> AutoCorresTrace.writeFile
        (Path.append (Resources.master_directory @{theory}) (Path.make ["trace_demo_incr.trace"]) |> Path.implode)
@@ -59,30 +64,30 @@ AutoCorresData.get_trace @{theory} "trace_demo.c" "HL" "incr"
 
 (* Peephole optimisations (ie. rewrite rules). *)
 ML {*
-AutoCorresData.get_trace @{theory} "trace_demo.c" "L2 peephole opt" "incr"
-|> the |> (fn AutoCorresData.SimpTrace x => x)
+the (Symtab.lookup (the (Symtab.lookup all_traces "incr")) "L2 peephole opt")
+|> (fn AutoCorresData.SimpTrace x => x)
 *}
 (* Flow-sensitive optimisations. If you use the no_opt option, they will be disabled and there will be no trace. *)
 ML {*
-AutoCorresData.get_trace @{theory} "trace_demo.c" "L2 flow opt" "incr"
+Symtab.lookup (the (Symtab.lookup all_traces "incr")) "L2 flow opt"
 |> Option.map (fn AutoCorresData.SimpTrace x => x)
 *}
 
 ML {*
-AutoCorresData.get_trace @{theory} "trace_demo.c" "HL peephole opt" "incr"
-|> the |> (fn AutoCorresData.SimpTrace x => x)
+the (Symtab.lookup (the (Symtab.lookup all_traces "incr")) "HL peephole opt")
+|> (fn AutoCorresData.SimpTrace x => x)
 *}
 ML {*
-AutoCorresData.get_trace @{theory} "trace_demo.c" "HL flow opt" "incr"
+Symtab.lookup (the (Symtab.lookup all_traces "incr")) "HL flow opt"
 |> Option.map (fn AutoCorresData.SimpTrace x => x)
 *}
 
 ML {*
-AutoCorresData.get_trace @{theory} "trace_demo.c" "WA peephole opt" "incr"
-|> the |> (fn AutoCorresData.SimpTrace x => x)
+the (Symtab.lookup (the (Symtab.lookup all_traces "incr")) "WA peephole opt")
+|> (fn AutoCorresData.SimpTrace x => x)
 *}
 ML {*
-AutoCorresData.get_trace @{theory} "trace_demo.c" "WA flow opt" "incr"
+Symtab.lookup (the (Symtab.lookup all_traces "incr")) "WA flow opt"
 |> Option.map (fn AutoCorresData.SimpTrace x => x)
 *}
 

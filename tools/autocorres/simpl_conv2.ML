@@ -561,6 +561,7 @@ fun translate
       (check_termination: bool)
       (do_opt: bool)
       (trace_opt: bool)
+      (add_trace: string -> string -> AutoCorresData.Trace -> unit)
       (l1_function_name: string -> string)
       (lthy: local_theory)
       : FunctionInfo2.phase_results =
@@ -591,7 +592,7 @@ let
           (fn lthy => fn simpl_infos =>
              convert lthy prog_info simpl_infos const_to_function check_termination
                      do_opt trace_opt l1_function_name)
-          existing_simpl_infos initial_results;
+          existing_simpl_infos initial_results add_trace;
 
   (* Sequence of new function_infos and intermediate lthys *)
   val def_results = AutoCorresUtil2.define_funcs_sequence

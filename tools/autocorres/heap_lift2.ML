@@ -627,6 +627,7 @@ fun translate
     (trace_funcs : string list)
     (do_opt : bool)
     (trace_opt : bool)
+    (add_trace: string -> string -> AutoCorresData.Trace -> unit)
     (hl_function_name : string -> string)
     : FunctionInfo2.phase_results =
 if FSeq.null l2_results then FSeq.empty () else
@@ -871,7 +872,7 @@ let
     in (new_infos, lthy') end;
 
   (* Do conversions in parallel. *)
-  val converted_groups = AutoCorresUtil2.par_convert convert existing_l2_infos l2_results;
+  val converted_groups = AutoCorresUtil2.par_convert convert existing_l2_infos l2_results add_trace;
 
   (* Sequence of new function_infos and intermediate lthys *)
   val def_results = FSeq.mk (fn _ =>

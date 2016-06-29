@@ -1029,6 +1029,16 @@ fun symtab_merge allow_dups tabs =
       |> (if allow_dups then sort_distinct (fast_string_ord o apply2 fst) else I)
       |> Symtab.make;
 
+(* Merge with custom merge operation. *)
+fun symtab_merge_with merge (tab1, tab2) =
+  sort_distinct fast_string_ord (Symtab.keys tab1 @ Symtab.keys tab2)
+  |> map (fn k => (k, case (Symtab.lookup tab1 k, Symtab.lookup tab2 k) of
+                          (SOME x1, SOME x2) => merge (x1, x2)
+                        | (SOME x1, NONE) => x1
+                        | (NONE, SOME x2) => x2
+                        (* (NONE, NONE) impossible *)))
+  |> Symtab.make
+
 end
 
 

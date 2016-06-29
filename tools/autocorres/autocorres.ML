@@ -581,17 +581,27 @@ let
                    | SOME s => s
   in fn f => prefix ^ f ^ suffix end
 
+  (* Initialise database for traces.
+   * Currently, this is implemented by mutating a global table.
+   * While slightly ugly, it does simplify adding more tracing to AutoCorres
+   * without cluttering the return types of existing code. *)
+  val trace_db: AutoCorresData.Trace Symtab.table (* type *) Symtab.table (* func *) Synchronized.var =
+        Synchronized.var "AutoCorres traces" Symtab.empty
+  fun add_trace f_name trace_name trace =
+        Synchronized.change trace_db
+          (Symtab.map_default (f_name, Symtab.empty) (Symtab.update_new (trace_name, trace)))
+
   (* Do the translation. *)
   val l1_results =
         SimplConv2.translate
             filename prog_info simpl_info existing_simpl_info existing_l1_info
             (!(#no_c_termination opt) <> SOME true)
-            do_opt trace_opt (prefix "l1_" o make_function_name) lthy
+            do_opt trace_opt add_trace (prefix "l1_" o make_function_name) lthy
 
   val l2_results =
         LocalVarExtract2.translate
             filename prog_info l1_results existing_l1_info existing_l2_info
-            do_opt trace_opt (prefix "l2_" o make_function_name)
+            do_opt trace_opt add_trace (prefix "l2_" o make_function_name)
 
   val skip_heap_abs = !(#skip_heap_abs opt) = SOME true
   val hl_results =
@@ -606,7 +616,7 @@ let
                 filename prog_info l2_results' existing_l2_info existing_hl_info
                 HL_setup no_heap_abs force_heap_abs
                 heap_abs_syntax keep_going
-                (these (!(#trace_heap_lift opt))) do_opt trace_opt
+                (these (!(#trace_heap_lift opt))) do_opt trace_opt add_trace
                (prefix "hl_" o make_function_name)
           end
 
@@ -616,14 +626,14 @@ let
         else WordAbstract2.translate
                filename prog_info hl_results existing_hl_info existing_wa_info
                unsigned_word_abs no_signed_word_abs
-               (these (!(#trace_word_abs opt))) do_opt trace_opt
+               (these (!(#trace_word_abs opt))) do_opt trace_opt add_trace
                (prefix "wa_" o make_function_name)
 
   val ts_results =
         TypeStrengthen2.translate
             ts_rules ts_force filename prog_info
             wa_results existing_wa_info existing_ts_info
-            make_function_name keep_going do_opt
+            make_function_name keep_going do_opt add_trace
 
   (* Collect final translation results. *)
   val l1_info = FSeq.list_of l1_results |> map snd |> Utils.symtab_merge false;
@@ -708,6 +718,16 @@ let
   val lthy = Local_Theory.background_theory (
 	  AutoCorresFunctionInfo2.map (fn tbl =>
 	    Symtab.update (filename, new_results) tbl)) lthy
+  (* All traces should be available at this point. Archive them. *)
+
+  val traces = Synchronized.value trace_db;
+  val _ = if Symtab.is_empty traces then () else
+            tracing "Saving translation traces to AutoCorresData.Traces."
+  val lthy = lthy |> Local_Theory.background_theory (
+	  AutoCorresData.Traces.map
+	    (Symtab.map_default (filename, Symtab.empty)
+	       (fn old_traces => Utils.symtab_merge_with snd (old_traces, traces))));
+
 in
   (* Exit context. *)
   Named_Target.exit lthy

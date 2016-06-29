@@ -437,6 +437,8 @@ fun par_convert
       (existing_infos: FunctionInfo2.function_info Symtab.table)
       (* Functions from previous phase *)
       (prev_results: FunctionInfo2.phase_results)
+      (* Add traces from the conversion result. *)
+      (add_trace: string -> string -> AutoCorresData.Trace -> unit)
       (* Return converted functions in recursive groups.
        * The groups are tagged with fn_infos from prev_results to identify them. *)
       : (FunctionInfo2.function_info Symtab.table * convert_result Symtab.table) FSeq.fseq =
@@ -453,6 +455,9 @@ fun par_convert
                  |> Par_List.map (fn (f, _) =>
                       (f, convert lthy fn_infos_accum f))
                  |> Symtab.make;
+           val _ = app (fn (f, result) => app (fn (typ, trace) =>
+                                add_trace f typ trace) (#traces result))
+                       (Symtab.dest conv_results);
            in ((fn_infos, conv_results), fn_infos_accum) end)
         existing_infos prev_results;
 
