@@ -38,7 +38,7 @@ bundle unfold_objects_asm =
   arch_kernel_obj.split_asm[split]  
 
 definition
-  "valid_asid asid s \<equiv> arm_asid_map (arch_state s) asid \<noteq> None"
+  "valid_asid asid s \<equiv> x64_asid_map (arch_state s) asid \<noteq> None"
 
 
 lemma get_asid_pool_wp [wp]:
@@ -72,10 +72,10 @@ lemma get_pd_wp [wp]:
 
 lemma get_pde_wp:
   "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s \<longrightarrow>
-        Q (pd (ucast (p && mask pd_bits >> 2))) s\<rbrace>
+        Q (pd (ucast (p && mask pd_bits >> 3))) s\<rbrace>
   get_pde p
   \<lbrace>Q\<rbrace>"
-  by (simp add: get_pde_def) wp
+  (* by (simp add: get_pde_def) wp *) sorry
 
 
 lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<rbrace>"

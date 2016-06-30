@@ -27,7 +27,7 @@ requalify_facts
   valid_asid_map_lift
   valid_kernel_mappings_lift
   equal_kernel_mappings_lift
-  valid_global_pd_mappings_lift
+  valid_global_vspace_mappings_lift
   valid_machine_state_lift
   valid_ao_at_lift_aobj_at
   valid_arch_state_lift_aobj_at
@@ -577,7 +577,8 @@ lemma set_object_pspace_in_kernel_window:
   apply (rule hoare_pre)
    apply (rule pspace_in_kernel_window_atyp_lift)
     apply (wp; clarsimp simp add: obj_at_def)+
-  by simp
+  (*by simp*)
+  sorry
 
 lemma set_ntfn_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
@@ -1221,7 +1222,7 @@ lemma set_object_arch_objs_non_arch:
   apply (rule hoare_pre)
   apply (rule valid_arch_objs_lift_weak)
   apply (wp set_object_non_arch | clarsimp)+
-  done
+  sorry
 
 lemma set_object_memory[wp]:
   "\<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> 
@@ -1239,37 +1240,47 @@ locale non_arch_op = fixes f
 begin
 
 lemma valid_arch_obj[wp]:"\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-by (rule valid_arch_objs_lift_weak; wp aobj_at; simp)
+(* by (rule valid_arch_objs_lift_weak; wp aobj_at; simp)*)
+sorry
 
 lemma vs_lookup[wp]: "\<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
-by (rule vs_lookup_arch_obj_at_lift; wp aobj_at; simp)
+(*by (rule vs_lookup_arch_obj_at_lift; wp aobj_at; simp)*)
+sorry
 
 lemma vs_lookup_pages[wp]: "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
-by (rule vs_lookup_pages_arch_obj_at_lift; wp aobj_at; simp)
+(*by (rule vs_lookup_pages_arch_obj_at_lift; wp aobj_at; simp)*)
+sorry
 
 lemma valid_global_objs[wp]: "\<lbrace>valid_global_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-by (rule valid_global_objs_lift_weak, wp aobj_at)
+(*by (rule valid_global_objs_lift_weak, wp aobj_at)*)
+sorry
 
 lemma valid_asid_map[wp]: "\<lbrace>valid_asid_map\<rbrace> f \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-by (rule valid_asid_map_lift, wp aobj_at)
+(*by (rule valid_asid_map_lift, wp aobj_at)*)
+sorry
 
 lemma valid_kernel_mappings[wp]: "\<lbrace>valid_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
-by (rule valid_kernel_mappings_lift, wp aobj_at)
+(*by (rule valid_kernel_mappings_lift, wp aobj_at)*)
+sorry
 
 lemma equal_kernel_mappings[wp]: "\<lbrace>equal_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
-by (rule equal_kernel_mappings_lift, wp aobj_at)
+(*by (rule equal_kernel_mappings_lift, wp aobj_at)*)
+sorry
 
 lemma valid_global_pd_mappings[wp]: "\<lbrace>valid_global_pd_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
-by (rule valid_global_pd_mappings_lift, wp aobj_at)
+(*by (rule valid_global_pd_mappings_lift, wp aobj_at)*)
+sorry
 
 lemma valid_ao_at[wp]:"\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>_. valid_ao_at p\<rbrace>"
-by (rule valid_ao_at_lift_aobj_at; wp aobj_at; simp)
+(*by (rule valid_ao_at_lift_aobj_at; wp aobj_at; simp)*)
+sorry
 
 lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
 by (rule valid_arch_state_lift; wp aobj_at; simp)
 
 lemma in_user_frame[wp]:"\<lbrace>in_user_frame p\<rbrace> f \<lbrace>\<lambda>_. in_user_frame p\<rbrace>"
-by (rule in_user_frame_lift; wp aobj_at; simp)
+(*by (rule in_user_frame_lift; wp aobj_at; simp)*)
+sorry
 
 end
 
@@ -1279,7 +1290,8 @@ locale non_arch_non_mem_op = non_arch_op f for f +
 begin
 
 lemma valid_machine_state[wp]: "\<lbrace>valid_machine_state\<rbrace> f \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
-by (rule valid_machine_state_lift[OF memory aobj_at])
+(*by (rule valid_machine_state_lift[OF memory aobj_at])*)
+sorry
 
 end
 
@@ -1288,7 +1300,8 @@ locale non_arch_non_cap_op = non_arch_op f for f +
 begin
 
 lemma valid_arch_caps[wp]: "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
-  by (rule valid_arch_caps_lift_weak[OF arch_state aobj_at caps])
+  (*by (rule valid_arch_caps_lift_weak[OF arch_state aobj_at caps])*)
+sorry
 
 end
 
@@ -1637,7 +1650,7 @@ lemma do_machine_op_vs_lookup [wp]:
   apply (rule vs_lookup_arch_obj_at_lift)
   apply (simp add: do_machine_op_def split_def)
   apply (wp | simp)+
-  done
+  sorry
 
 
 lemma dmo_inv:
