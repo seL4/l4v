@@ -11,6 +11,9 @@
 (*
  * Automatically convert SIMPL code fragments into a monadic form, with proofs
  * of correspondence between the two.
+ *
+ * The main interface to this module is translate (and helper functions
+ * convert and define). See AutoCorresUtil for a conceptual overview.
  *)
 structure SimplConv =
 struct
@@ -429,7 +432,6 @@ fun get_l1_fn_assumption prog_info check_termination simpl_infos ctxt fn_name fr
         (Utils.the' ("SimplConv: missing callee def for " ^ fn_name)
                     (Symtab.lookup simpl_infos fn_name)) (betapply (free, measure_var));
 
-
 (*
  * Convert a single function. Returns a thm that looks like
  *   \<lbrakk> L1corres ?callee1 (Call callee1_'proc); ... \<rbrakk> \<Longrightarrow>
@@ -506,7 +508,7 @@ fun define
         map (fn result as (name, {proof, arg_frees, ...}) =>
                    (name, (AutoCorresUtil.abstract_fn_body simpl_infos result,
                            proof, arg_frees)));
-  val (new_thms, (), lthy') =
+  val (new_thms, lthy') =
         AutoCorresUtil.define_funcs
             FunctionInfo.L1 filename simpl_infos l1_function_name
             (K (l1_fn_type prog_info))
@@ -515,7 +517,6 @@ fun define
             @{thm L1corres_recguard_0}
             lthy
             (Symtab.map (K #corres_thm) l1_callees)
-            ()
             funcs';
   val new_defs = Symtab.map (fn f_name => fn (const, def, corres_thm) => let
         val f_info = the (Symtab.lookup simpl_infos f_name);

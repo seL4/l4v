@@ -10,6 +10,8 @@
 
 (*
  * Miscellaneous functions and utilities.
+ *
+ * TODO: many of these are no longer used and should be cleaned.
  *)
 structure Utils =
 struct
@@ -1039,12 +1041,13 @@ fun symtab_merge_with merge (tab1, tab2) =
                         (* (NONE, NONE) impossible *)))
   |> Symtab.make
 
-end
+end (* structure Utils *)
 
 
 (*
  * Future sequence.
  * This is similar to seq except that values are computed eagerly and then cached.
+ * See AutoCorresUtil for an overview of how this is used in AutoCorres.
  *)
 signature FSEQ = sig
   type 'a fseq;

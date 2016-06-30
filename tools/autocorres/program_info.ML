@@ -229,6 +229,4 @@ fun is_t_hrs_const (prog_info : prog_info) t =
 fun is_t_hrs_update_const (prog_info : prog_info) t =
   (t = #t_hrs_setter prog_info)
 
-
 end
-

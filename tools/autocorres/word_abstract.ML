@@ -11,6 +11,9 @@
 (*
  * Rewrite L2 specifications to use "nat" and "int" data-types instead of
  * "word" data types. The former tend to be easier to reason about.
+ *
+ * The main interface to this module is translate (and inner functions
+ * convert and define). See AutoCorresUtil for a conceptual overview.
  *)
 
 structure WordAbstract =
@@ -152,6 +155,7 @@ let
 in
   r (thm RS @{thm corresTA_extract_preconds_of_call_init})
 end
+
 
 (* Convert a program by abstracting words. *)
 fun translate
@@ -413,14 +417,14 @@ let
           map (fn result as (name, {proof, arg_frees, ...}) =>
                      (name, (AutoCorresUtil.abstract_fn_body l2_infos result,
                              proof, arg_frees)));
-    val (new_thms, (), lthy') =
+    val (new_thms, lthy') =
           AutoCorresUtil.define_funcs
               FunctionInfo.WA filename l2_infos wa_function_name
               (fn f => get_expected_fn_type (rules_for f) l2_infos f)
               (fn lthy => fn f => get_expected_fn_thm (rules_for f) l2_infos lthy f)
               (fn f => get_expected_fn_args (rules_for f) l2_infos f)
               @{thm corresTA_recguard_0}
-              lthy (Symtab.map (K #corres_thm) wa_callees) ()
+              lthy (Symtab.map (K #corres_thm) wa_callees)
               funcs';
     val new_infos = Symtab.map (fn f_name => fn (const, def, corres_thm) => let
           val old_info = the (Symtab.lookup l2_infos f_name);

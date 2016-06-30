@@ -1,4 +1,74 @@
-structure AutoCorresTrace = struct
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
+(*
+ * Functions to perform tracing of AutoCorres's proof steps.
+ * Also includes some utilities for printing the traces.
+ * The theory data for recording traces is defined in AutoCorresData.
+ * See tests/examples/TraceDemo.thy for an output example.
+ *)
+signature AUTOCORRES_TRACE = sig
+  datatype 'a RuleTrace = RuleTrace of {
+      input: cterm,
+      step: 'a * tactic,
+      output: thm,
+      trace: 'a RuleTrace list
+      }
+  datatype SimpTrace = SimpTrace of {
+      equation : thm,
+      thms : (string * cterm) list
+      }
+  exception TRACE_SOLVE_TAC_FAIL of (thm * thm) list
+
+  (* Documented in structure *)
+  val trace_solve_tac:
+        Proof.context ->
+        bool ->
+        bool ->
+        (term -> (thm * tactic) list) ->
+        thm ->
+        int option ->
+        int Unsynchronized.ref ->
+        (thm * thm RuleTrace list) option
+
+  val fast_solve_tac:
+        Proof.context ->
+        bool ->
+        bool ->
+        (term -> (thm * tactic) list) ->
+        thm ->
+        int option ->
+        int ->
+        thm option
+
+  val maybe_trace_solve_tac:
+        Proof.context ->
+        bool ->
+        bool ->
+        bool ->
+        (term -> (thm * tactic) list) ->
+        thm ->
+        int option ->
+        int Unsynchronized.ref ->
+        (thm * thm RuleTrace list) option
+
+  val fconv_rule_traced:
+        Proof.context -> (cterm -> thm) -> thm -> thm * SimpTrace
+  val fconv_rule_maybe_traced:
+        Proof.context -> (cterm -> thm) -> thm -> bool -> thm * SimpTrace option
+
+  val print_ac_trace: thm RuleTrace -> string
+  val writeFile: string -> string -> unit
+end;
+
+structure AutoCorresTrace: AUTOCORRES_TRACE = struct
 
 (*
  * Custom unifier for trace_solve_tac.
@@ -126,8 +196,12 @@ fun my_unify_fact_tac ctxt subproof n state =
   end
 
 
-
-datatype 'a RuleTrace = RuleTrace of { input: cterm, step: 'a * tactic, output: thm, trace: 'a RuleTrace list }
+datatype 'a RuleTrace = RuleTrace of {
+    input: cterm,
+    step: 'a * tactic,
+    output: thm,
+    trace: 'a RuleTrace list
+    }
 
 fun trace_steps (RuleTrace tr) = #step tr :: List.concat (map trace_steps (#trace tr))
 
@@ -254,7 +328,8 @@ fun maybe_trace_solve_tac (ctxt : Proof.context)
                                                     step = (@{thm TrueI}, all_tac), trace = [] } ]))
 
 
-
+(* Tracing simplification eg. L2Opt.
+ * For now, we just use Apply_Trace to get the list of rewrite rules. *)
 datatype SimpTrace = SimpTrace of { equation : thm, thms : (string * cterm) list }
 
 fun fconv_rule_traced ctxt conv thm =
@@ -269,7 +344,7 @@ fun fconv_rule_maybe_traced ctxt conv thm do_trace =
               else (Conv.fconv_rule conv thm, NONE)
 
 
-(* Utilities *)
+(* Display and debugging utils *)
 local
 fun dropQuotes s = if String.isPrefix "\"" s andalso String.isSuffix "\"" s
                        then String.substring (s, 1, String.size s - 2) else s

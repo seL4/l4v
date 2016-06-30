@@ -9,7 +9,91 @@
  *)
 
 (*
- * Common code for all translation phases: defining funcs, calculating dependencies, variable fixes, etc.
+ * Common code for all translation phases: defining funcs, calculating dependencies,
+ * variable fixes, etc.
+ *)
+
+(*
+ * Here is a brief explanation of how most AutoCorres phases work
+ * with each other.
+ *
+ * AutoCorres's phases are L1, L2, HL, WA and TS. (TS doesn't share these
+ * utils for historical reasons; fixing that is another story.)
+ * Basically, each of L1, L2, HL and WA:
+ *   1. takes a list of input function specs;
+ *   2. converts each function individually;
+ *   3. defines each new function (or recursive function group).
+ *      This updates the local theory sequentially;
+ *   4. proves monad_mono theorems and places them into the
+ *      output list of functions;
+ *   5. outputs a list of new function specs in the original format.
+ *
+ * === Concurrency ===
+ * To support concurrent processing better, we do not use lists.
+ * Instead, we use a future-chained sequence (FSeq, below) so that
+ * define and convert steps can be done in parallel (up to the
+ * dependencies between them, of course).
+ *
+ * (We do not use a plain list of futures because a define
+ * step may produce one or more function groups, so we can't
+ * know how many groups there will be in advance. See the
+ * recursive group splitting comment for define_funcs_sequence.)
+ *
+ * Additionally, AutoCorres is structured so that conversions
+ * do not require the most up-to-date local theory, so we also
+ * output a stream of intermediate local theories. This allows
+ * conversions of phase N+1 to be pipelined with define steps of
+ * phase N.
+ *
+ * FunctionInfo.phase_results is the uniform sequence type that
+ * most AutoCorres translation phases adhere to.
+ *
+ * === (2) Conversion ===
+ * Converting a function starts by assuming correspondence theorems
+ * for all the functions that it calls (including itself, if
+ * recursive). We invent free variables to stand for those functions;
+ * see assume_called_functions_corres.
+ *
+ * Because it's fiddly to have these assumptions everywhere,
+ * we use Assumption to hide them in the thm hyps during conversion.
+ * When done, we export the assumptions using Morphism.thm.
+ *
+ * After performing these conversions, we get a corres theorem
+ * with corres assumptions for called functions (along with other
+ * auxillary info). These are generally packaged into a
+ * convert_result record.
+ *
+ * The conversions are all independent, so we launch them in
+ * topological order; see par_convert. This is the most convenient
+ * because each conversion takes place between the previous and next
+ * define step, which already require topological order.
+ *
+ * === (3) Definition ===
+ * We take the sequence of conversion results and define each
+ * function (or recursive group) in the theory.
+ *
+ * Each function group and its convert_results are processed by
+ * define_funcs. Conventionally, AutoCorres phases provide a
+ * "define" wrapper that sets up the required inputs to define_funcs
+ * and constructs function_infos for the newly defined functions.
+ *
+ * There is also a high-level wrapper, define_funcs_sequence, that
+ * calls these "define" wrappers in the correct order.
+ * It also splits recursive groups after defining them; see its
+ * documentation for details.
+ *
+ * === (4) Corollaries ===
+ * Currently, each phase only proves one type of corollary,
+ * monad_mono theorems. These proofs are duplicated in the source
+ * of the individual phases (this should be fixed) and do not make
+ * use of the utils here.
+ *
+ * === Incremental mode support ===
+ * AutoCorres supports incremental translation, which means that
+ * we need to insert previously-translated function data at the
+ * appropriate places. The par_convert and define_funcs_sequence
+ * wrappers take "existing_foo" arguments and ensure that these
+ * are available to the per-phase convert and define steps.
  *)
 
 structure AutoCorresUtil =
@@ -221,9 +305,8 @@ fun define_funcs
     (rec_base_case : thm)
     (ctxt : Proof.context)
     (callee_thms : thm Symtab.table)
-    (accum : 'a) (* translate allows an accumulator, but we don't use it here *)
     (functions : (string * (term * thm * (string * typ) list)) list)
-  : (term * thm * thm) Symtab.table * 'a * Proof.context =
+  : (term * thm * thm) Symtab.table * Proof.context =
   let
     val fn_names = map fst functions
     val fn_bodies = map (snd #> #1) functions
@@ -397,7 +480,7 @@ fun define_funcs
                     (fn_name, (Utils.get_term ctxt (get_const_name fn_name), def_thm, corres_thm)))
           |> Symtab.make;
   in
-    (results, accum, ctxt)
+    (results, ctxt)
   end
 
 (* Support function for incremental translation.
@@ -498,9 +581,7 @@ fun abstract_fn_body
  * The actual recursive function groups may be finer-grained than in
  * converted_groups, as function calls can be removed by dead code
  * elimination and other transformations. Hence we detect the actual
- * function groups before defining them.
- *
- * FIXME: this currently discards traces *)
+ * function groups after defining them. *)
 fun define_funcs_sequence
       (lthy: local_theory)
       (define_worker: local_theory ->
@@ -528,6 +609,7 @@ fun define_funcs_sequence
         val (new_infos, lthy') =
                define_worker lthy (Symtab.merge (K false) (prev_infos, existing_infos))
                              defined_so_far conv_group;
+        (* Minimise callees and split recursive group if needed. *)
         val new_infoss = FunctionInfo.recalc_callees defined_so_far new_infos;
         val defined_so_far = Symtab.merge (K false) (defined_so_far, new_infos);
         (* We can't wrap the first result because we're already in FSeq.mk.

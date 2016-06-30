@@ -10,6 +10,9 @@
 
 (*
  * Rewrite L2 specifications to use a higher-level ("lifted") heap representation.
+ *
+ * The main interface to this module is translate (and inner functions
+ * convert and define). See AutoCorresUtil for a conceptual overview.
  *)
 
 structure HeapLift =
@@ -843,14 +846,14 @@ let
           map (fn result as (name, {proof, arg_frees, ...}) =>
                      (name, (AutoCorresUtil.abstract_fn_body l2_infos result,
                              proof, arg_frees)));
-    val (new_thms, (), lthy') =
+    val (new_thms, lthy') =
           AutoCorresUtil.define_funcs
               FunctionInfo.HL filename l2_infos hl_function_name
               (get_expected_hl_fn_type prog_info l2_infos heap_info is_function_lifted)
               (get_expected_hl_fn_thm prog_info l2_infos heap_info is_function_lifted)
               (get_expected_hl_fn_args prog_info l2_infos)
               @{thm L2Tcorres_recguard_0}
-              lthy (Symtab.map (K #corres_thm) hl_callees) ()
+              lthy (Symtab.map (K #corres_thm) hl_callees)
               funcs';
     val new_infos = Symtab.map (fn f_name => fn (const, def, corres_thm) => let
           val old_info = the (Symtab.lookup l2_infos f_name);
