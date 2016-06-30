@@ -372,17 +372,13 @@ let
   val _ = if not (isSome existing_phases) then () else
             tracing ("Attempting to restart from previous translation of " ^ filename)
 
+  (* Fetch any existing translations, when being run in incremental mode. *)
   fun get_existing_optional_phase phase =
         case existing_phases of
             NONE => SOME Symtab.empty
           | SOME phases => FunctionInfo.Phasetab.lookup phases phase
   fun get_existing_phase phase =
         Option.getOpt (get_existing_optional_phase phase, Symtab.empty)
-  (* FIXME: if skip_heap_abs or skip_word_abs are used for some parts of
-   *        an incremental translation, some functions will be missing.
-   *        We ought to either handle this nicely (by carrying the
-   *        L2/HL versions forward), or detect it early and
-   *        produce an error report. *)
   val [existing_simpl_info,
        existing_l1_info,
        existing_l2_info,
@@ -396,6 +392,12 @@ let
          FunctionInfo.HL,
          FunctionInfo.WA,
          FunctionInfo.TS]
+  (* HL and WA functions may be missing if skip_heap_abs and skip_word_abs
+   * are set. In that case, we carry forward the L2 or HL functions and
+   * cross our fingers. (Should work fine if skip_foo is used consistently
+   * for all functions, might not work if they are mixed.) *)
+  val existing_hl_info = Utils.symtab_merge_with snd (existing_l2_info, existing_hl_info);
+  val existing_wa_info = Utils.symtab_merge_with snd (existing_hl_info, existing_wa_info);
 
   (* Skip functions that have already been translated. *)
   val already_translated = Symset.make (Symtab.keys existing_ts_info)

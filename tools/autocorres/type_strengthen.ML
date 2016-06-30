@@ -308,8 +308,7 @@ let
   let
     (* Fix function parameters. *)
     val fn_info = the (Symtab.lookup l2_infos fn_name)
-    (* Only produce measure parameters for recursive functions.
-     * FIXME: recalculate call graph prior to this *)
+    (* Only produce measure parameters for recursive functions. *)
     val all_arg_names = (if is_recursive then ["rec_measure'"] else []) @
                         map fst (#args fn_info)
     val all_arg_types = (if is_recursive then [AutoCorresUtil.measureT] else []) @
@@ -362,6 +361,9 @@ let
   (* NB: discard lthy because we don't want the placeholders to be fixed during define_functions *)
   val (input_defs, _) = fold_map gen_fun_def_term (Utils.zip3 fn_names dicts thms) lthy
   val (ts_defs, lthy) = Utils.define_functions input_defs false is_recursive lthy
+  (* TODO: we may want to cleanup callees and rec_callees here, like we do
+   *       in other phases. It's not crucial, however, since this is the
+   *       final phase. *)
 
   (* Instantiate variables in our equivalence theorem to their newly-defined values. *)
   fun do_inst_thm thm =

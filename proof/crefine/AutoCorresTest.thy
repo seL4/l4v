@@ -377,79 +377,58 @@ lemma clzl'_ac_corres: "ac_corres globals ct \<Gamma> ret__long_' (\<lambda>s. x
 end
 
 text \<open>Add our manual translation of clzl into the AutoCorres function info.\<close>
+ML \<open>
+fun phasetab_merge_with merge (tab1, tab2) =
+  sort_distinct FunctionInfo.phase_ord
+      (FunctionInfo.Phasetab.keys tab1 @ FunctionInfo.Phasetab.keys tab2)
+  |> map (fn k => (k, case (FunctionInfo.Phasetab.lookup tab1 k, FunctionInfo.Phasetab.lookup tab2 k) of
+                          (SOME x1, SOME x2) => merge (x1, x2)
+                        | (SOME x1, NONE) => x1
+                        | (NONE, SOME x2) => x2
+                        (* (NONE, NONE) impossible *)))
+  |> FunctionInfo.Phasetab.make;
+\<close>
 setup {*
 fn thy =>
 let val clzl_cp = {
+      name = "clzl",
+      invented_body = false,
+      is_simpl_wrapper = false,
+      callees = Symset.empty,
+      rec_callees = Symset.empty,
       phase = FunctionInfo.CP,
       args = [("x", @{typ "32 word"})],
       return_type = @{typ "32 signed word"},
       const = @{term "clzl_'proc"},
       raw_const = @{term "clzl_'proc"},
       definition = @{thm kernel_all_substitute.clzl_body_def},
-      mono_thm = NONE
-    }: FunctionInfo.phase_info;
-    val clzl_l1 = {
-      phase = FunctionInfo.L1,
-      args = [("x", @{typ "32 word"})],
-      return_type = @{typ "32 signed word"},
-      const = @{term "kernel_all_substitute.l1_clzl'"},
-      raw_const = @{term "kernel_all_substitute.l1_clzl'"},
-      definition = @{thm kernel_all_substitute.l1_clzl'_def},
-      mono_thm = NONE
-    }: FunctionInfo.phase_info;
-    val clzl_l2 = {
-      phase = FunctionInfo.L2,
-      args = [("x", @{typ "32 word"})],
-      return_type = @{typ "32 signed word"},
-      const = @{term "kernel_all_substitute.l2_clzl'"},
-      raw_const = @{term "kernel_all_substitute.l2_clzl'"},
-      definition = @{thm kernel_all_substitute.l2_clzl'_def},
-      mono_thm = NONE
-    }: FunctionInfo.phase_info;
-    val clzl_ts = {
-      phase = FunctionInfo.TS,
-      args = [("x", @{typ "32 word"})],
-      return_type = @{typ "32 signed word"},
-      const = @{term "kernel_all_substitute.clzl'"},
-      raw_const = @{term "kernel_all_substitute.clzl'"},
-      definition = @{thm kernel_all_substitute.clzl'_def},
-      mono_thm = NONE
-    }: FunctionInfo.phase_info;
-    val clzl_info = {
-      name = "clzl",
-      invented_body = false,
-      is_simpl_wrapper = false,
-      phases = FunctionInfo.Phasetab.make
-                 [(FunctionInfo.CP, clzl_cp),
-                  (FunctionInfo.L1, clzl_l1),
-                  (FunctionInfo.L2, clzl_l2),
-                  (FunctionInfo.HL, FunctionInfo.phase_info_upd_phase FunctionInfo.HL clzl_l2),
-                  (FunctionInfo.WA, FunctionInfo.phase_info_upd_phase FunctionInfo.WA clzl_l2),
-                  (FunctionInfo.TS, clzl_ts)]
+      mono_thm = NONE,
+      corres_thm = @{thm TrueI}
     }: FunctionInfo.function_info;
+    val clzl_l1 = clzl_cp
+      |> FunctionInfo.function_info_upd_phase FunctionInfo.L1
+      |> FunctionInfo.function_info_upd_const @{term "kernel_all_substitute.l1_clzl'"}
+      |> FunctionInfo.function_info_upd_definition @{thm kernel_all_substitute.l1_clzl'_def}
+      |> FunctionInfo.function_info_upd_corres_thm @{thm "kernel_all_substitute.l1_clzl'_corres"};
+    val clzl_l2 = clzl_l1
+      |> FunctionInfo.function_info_upd_phase FunctionInfo.L2
+      |> FunctionInfo.function_info_upd_const @{term "kernel_all_substitute.l2_clzl'"}
+      |> FunctionInfo.function_info_upd_definition @{thm kernel_all_substitute.l2_clzl'_def}
+      |> FunctionInfo.function_info_upd_corres_thm @{thm "kernel_all_substitute.l2_clzl'_corres"};
+    val clzl_ts = clzl_l2
+      |> FunctionInfo.function_info_upd_phase FunctionInfo.TS
+      |> FunctionInfo.function_info_upd_const @{term "kernel_all_substitute.clzl'"}
+      |> FunctionInfo.function_info_upd_definition @{thm kernel_all_substitute.clzl'_def}
+      |> FunctionInfo.function_info_upd_corres_thm @{thm "kernel_all_substitute.clzl'_TScorres"};
+    val clzl_info = FunctionInfo.Phasetab.make
+          (map (fn info => (#phase info, Symtab.make [("clzl", info)]))
+               [clzl_cp, clzl_l1, clzl_l2, clzl_ts]);
     val file = "c/kernel_all.c_pp";
-    val fn_info = the (Symtab.lookup (AutoCorresFunctionInfo.get @{theory}) file);
-    (* hack to work around opacity of fn_info *)
-    fun add_fn_info fn_info new_infos = let
-      val fn_infos = FunctionInfo.get_all_functions fn_info;
-      val {base = locale_name,...} = OS.Path.splitBaseExt (OS.Path.file file);
-      val SOME ctxt = try (Named_Target.begin (locale_name, Position.none)) thy;
-      in FunctionInfo.init_fn_info ctxt file
-         |> FunctionInfo.map_fn_info (fn info =>
-              case Symtab.lookup new_infos (#name info) of
-                  NONE => Symtab.lookup fn_infos (#name info)
-                | SOME ni => SOME ni) end;
-
-    val fn_info' = add_fn_info fn_info (Symtab.make [("clzl", clzl_info)]);
+    val fn_info = the (Symtab.lookup (AutoCorresFunctionInfo.get thy) file);
+    val fn_info' = phasetab_merge_with (Symtab.merge (K false)) (fn_info, clzl_info);
 in
   thy
   |> AutoCorresFunctionInfo.map (Symtab.update (file, fn_info'))
-  |> AutoCorresData.add_def file "L1def" "clzl" @{thm kernel_all_substitute.l1_clzl'_def}
-  |> AutoCorresData.add_def file "L2def" "clzl" @{thm kernel_all_substitute.l2_clzl'_def}
-  |> AutoCorresData.add_def file "TSdef" "clzl" @{thm kernel_all_substitute.clzl'_def}
-  |> AutoCorresData.add_thm file "L1corres" "clzl" @{thm kernel_all_substitute.l1_clzl'_corres}
-  |> AutoCorresData.add_thm file "L2corres" "clzl" @{thm kernel_all_substitute.l2_clzl'_corres}
-  |> AutoCorresData.add_thm file "TScorres" "clzl" @{thm kernel_all_substitute.clzl'_TScorres}
 end
 *}
 
