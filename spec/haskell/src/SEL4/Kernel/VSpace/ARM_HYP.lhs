@@ -922,7 +922,9 @@ FIXME ARMHYP capVPMappedAddress is not what we want for ARM\_HYP? C code has cap
 >                 pageMapCTSlot = cte,
 >                 pageMapEntries = entries }
 >         (ArchInvocationLabel ARMPageMap, _, _) -> throw TruncatedMessage
+#ifdef CONFIG_ARM_SMMU
 >         (ArchInvocationLabel ARMPageMapIO, _, _) -> error "FIXME ARMHYP TODO IO"
+#endif
 >         (ArchInvocationLabel ARMPageRemap, rightsMask:attr:_, (pdCap, _):_) -> do
 >             when (isIOSpaceFrame cap) $ throw IllegalOperation
 >             (pd,asid) <- case pdCap of
@@ -947,9 +949,13 @@ FIXME ARMHYP capVPMappedAddress is not what we want for ARM\_HYP? C code has cap
 >                 pageRemapEntries = entries }
 >         (ArchInvocationLabel ARMPageRemap, _, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel ARMPageUnmap, _, _) ->
->                 return $ if (isIOSpaceFrame cap)
+>                 return $
+#ifdef CONFIG_ARM_SMMU
+>                          if (isIOSpaceFrame cap)
 >                          then error "FIXME ARMHYP TODO IO"
->                          else InvokePage $ PageUnmap {
+>                          else
+#endif
+>                               InvokePage $ PageUnmap {
 >                                              pageUnmapCap = cap,
 >                                              pageUnmapCapSlot = cte }
 >         (ArchInvocationLabel ARMPageClean_Data, _, _) -> decodeARMPageFlush label args cap
@@ -1016,9 +1022,11 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 FIXME ARMHYP MOVE THESE, they are dispatched via ObjectType/ decodeInvocation and should be dispatched to appropriate places, which are TBD as of now. likely that IOPD and IOPT will stay here, while VCPU and IOSpace will get moved to their own files when implemented
 
 > decodeARMMMUInvocation label _ _ _ cap@(VCPUCap {}) extraCaps = error "FIXME ARMHYP TODO VCPU"
+#ifdef CONFIG_ARM_SMMU
 > decodeARMMMUInvocation label _ _ _ cap@(IOSpaceCap {}) extraCaps = error "FIXME ARMHYP TODO IOSpace"
 > decodeARMMMUInvocation label _ _ _ cap@(IOPageDirectoryCap {}) extraCaps = error "FIXME ARMHYP IO"
 > decodeARMMMUInvocation label _ _ _ cap@(IOPageTableCap {}) extraCaps = error "FIXME ARMHYP IO"
+#endif
 
 > decodeARMPageFlush :: Word -> [Word] -> ArchCapability ->
 >                       KernelF SyscallError ArchInv.Invocation
@@ -1071,9 +1079,11 @@ notion of the largest permitted object size, and checks it appropriately.
 >         InvokeASIDControl oper -> performASIDControlInvocation oper
 >         InvokeASIDPool oper -> performASIDPoolInvocation oper
 >         InvokeVCPU _ -> error "FIXME ARMHYP TODO VCPU"
+#ifdef CONFIG_ARM_SMMU
 >         InvokeIOSpace _ -> error "FIXME ARMHYP TODO IOSpace"
 >         InvokeIOPageTable _ -> error "FIXME ARMHYP TODO IO"
 >         InvokePageIO _ -> error "FIXME ARMHYP TODO IO"
+#endif
 >     return $ []
 
 > performPageDirectoryInvocation :: PageDirectoryInvocation -> Kernel ()

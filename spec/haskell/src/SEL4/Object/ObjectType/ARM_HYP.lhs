@@ -112,14 +112,14 @@ Deletion of a final capability to a page table that has been mapped requires tha
 Deletion of any mapped frame capability requires the page table slot to be located and cleared, and the unmapped address to be flushed from the caches.
 
 > finaliseCap (cap@PageCap { capVPMappedAddress = Just (a, v),
->                        capVPSize = s, capVPBasePtr = ptr }) _
+>                        capVPSize = s, capVPBasePtr = ptr }) _ =
 #ifdef CONFIG_ARM_SMMU
->     = if isIOSpaceFrame(cap)
->         then error "FIXME ARMHYP TODO IO"
->         else
+>     if isIOSpaceFrame(cap)
+>       then error "FIXME ARMHYP TODO IO"
+>       else
 #endif
->              do unmapPage s a v ptr
->                 return NullCap
+>            do unmapPage s a v ptr
+>               return NullCap
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > finaliseCap (VCPUCap {}) _ = error "FIXME ARMHYP TODO VCPU vcpu_finalise"
@@ -353,7 +353,7 @@ Create an architecture-specific object.
 >                  ArchInv.InvokeVCPU _ ->
 >                      withoutPreemption $ error "FIXME ARMHYP TODO VCPU"
 #endif
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+#ifdef CONFIG_ARM_SMMU
 >                  ArchInv.InvokeIOSpace _ ->
 >                      withoutPreemption $ error "FIXME ARMHYP TODO IOSpace"
 >                  ArchInv.InvokeIOPageTable _ ->

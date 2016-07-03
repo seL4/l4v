@@ -36,6 +36,7 @@ targets =
     , ("arm-kzm",       ("ARM",     "KZM",          []))
     , ("arm-sabre",     ("ARM",     "Sabre",        []))
     , ("x64-pc99",      ("X64",     "PC99",         []))
+    , ("arm-tk1-nosmmu",("ARM_HYP", "TK1",          ["CONFIG_ARM_HYPERVISOR_SUPPORT"]))
     , ("arm-tk1",       ("ARM_HYP", "TK1",          ["CONFIG_ARM_HYPERVISOR_SUPPORT",
                                                      "CONFIG_ARM_SMMU"]))
     ]

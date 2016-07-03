@@ -42,6 +42,13 @@ build-arm-hyp: .stack_work $(BOOT_FILES)
 	    --flags="ArchArmHyp -FFI" $(GHC_FIXME_OPTS)
 	$(CABAL) build
 
+build-arm-hyp-nosmmu: $(BOOT_FILES)
+	cabal sandbox init
+	cabal install --dependencies-only -w "$(GHC)"
+	cabal configure --configure-option="arm-tk1-nosmmu" -w "$(GHC)" \
+	    --flags="ArchArmHyp -FFI" $(GHC_FIXME_OPTS)
+	cabal build
+
 pdf:
 	cd doc && make
 
