@@ -668,6 +668,8 @@ FIXME ARMHYP therefore pdeBits and pteBits are not used much outside of here
 
 \subsubsection{IO Page Table Structure}
 
+FIXME ARMHYP ptBits is not the total size of a page table, so this is at best confusing, at worst wrong
+
 > ioptBits :: Int
 > ioptBits = pageBits
 

@@ -75,6 +75,8 @@ The ARM kernel stores one ARM-specific type of object in the PSpace: ASID pools,
 
 FIXME ARMHYP how does the above comment possibly relate to the ArchKernelObject datatype?
 
+FIXME ARMHYP TODO IOPT needs to go here for sure, but what about VCPU? if it was clear what these did, one could decide
+
 > data ArchKernelObject
 >     = KOASIDPool ASIDPool
 >     | KOPTE PTE

@@ -791,8 +791,10 @@ XXX ARMHYP no changes in this subsection
 FIXME ARMHYP implement after decision re PageCap contents and MOVE
 FIXME ARMHYP this is not a helpful name, but it's the same as C
 
+#ifdef CONFIG_ARM_SMMU
 > isIOSpaceFrame (PageCap {}) = error "FIXME ARMHYP undecided on PageCap contents"
-> isIOSpaceFrame _ = error "FIXME ARMHYP undecided on PageCap contents"
+#endif
+> isIOSpaceFrame _ = False
 
 > decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -1010,6 +1012,8 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 >                 _ -> throw $ InvalidCapability 1
 >         (ArchInvocationLabel ARMASIDPoolAssign, _) -> throw TruncatedMessage
 >         _ -> throw IllegalOperation
+
+FIXME ARMHYP MOVE THESE, they are dispatched via ObjectType/ decodeInvocation and should be dispatched to appropriate places, which are TBD as of now. likely that IOPD and IOPT will stay here, while VCPU and IOSpace will get moved to their own files when implemented
 
 > decodeARMMMUInvocation label _ _ _ cap@(VCPUCap {}) extraCaps = error "FIXME ARMHYP TODO VCPU"
 > decodeARMMMUInvocation label _ _ _ cap@(IOSpaceCap {}) extraCaps = error "FIXME ARMHYP TODO IOSpace"

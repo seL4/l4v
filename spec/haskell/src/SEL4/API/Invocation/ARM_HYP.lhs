@@ -38,6 +38,8 @@ There are five ARM-specific object types; however, only four of them may be invo
 
 XXX ARMHYP The distinction between the non-SMMU invocations (internally grouped as ARMMMUInvocation!) and IOPT invocations is arbitrary, mostly to do with the ability to turn these on/off on different architectures. IOSpace can't be invoked on this architecture.
 
+FIXME ARMHYP do we even want InvokePageIO? There is mapPageIO, IO pages can't be remapped, honestly they are frames to begin with (but then aren't the pages in InvokePage?), and they are unmapped in C going through normal unmap ... still want a split? see confusion with the caps and the isIOSpace flag
+
 > data Invocation
 >     = InvokePageTable PageTableInvocation
 >     | InvokePageDirectory PageDirectoryInvocation
