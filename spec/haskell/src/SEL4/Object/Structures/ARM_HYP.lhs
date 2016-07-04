@@ -62,7 +62,7 @@ FIXME ARMHYP frame caps in C have an isIOSpace property - add this here, or add 
 >         capIOSpaceClientID :: Word16 }
 >     | IOPageDirectoryCap {
 >         capIOPDBasePtr :: PPtr IOPDE,
->         capIOPDMappedAddress :: Maybe (ASID) } -- FIXME ARMHYP where is mapped address?
+>         capIOPDMappedAddress :: Maybe (ASID) } -- FIXME ARMHYP where is mapped address? note that this ASID is in a different namespace (IOMMU not MMU) - stable, deviceID by convention
 >     | IOPageTableCap {
 >         capIOPTBasePtr :: PPtr IOPTE,
 >         capIOPTMappedAddress :: Maybe (ASID, VPtr) } -- FIXME ARMHYP Vptr or PAddr?
@@ -73,9 +73,9 @@ FIXME ARMHYP frame caps in C have an isIOSpace property - add this here, or add 
 
 The ARM kernel stores one ARM-specific type of object in the PSpace: ASID pools, which are second level nodes in the global ASID table.
 
-FIXME ARMHYP how does the above comment possibly relate to the ArchKernelObject datatype?
+FIXME ARMHYP how does the above comment possibly relate to the ArchKernelObject datatype? fix comment
 
-FIXME ARMHYP TODO IOPT needs to go here for sure, but what about VCPU? if it was clear what these did, one could decide
+FIXME ARMHYP TODO IOPTE needs to go here for sure, but what about VCPU? if it was clear what these did, one could decide
 
 > data ArchKernelObject
 >     = KOASIDPool ASIDPool
@@ -83,7 +83,7 @@ FIXME ARMHYP TODO IOPT needs to go here for sure, but what about VCPU? if it was
 >     | KOPDE PDE
 >     deriving Show
 
-FIXME ARMHYP add IOPTE and IOPDE to ArchKernelObject?
+FIXME ARMHYP add IOPTE and IOPDE to ArchKernelObject? - YES VCPU - MAYBE
 
 > archObjSize ::  ArchKernelObject -> Int
 > archObjSize a = case a of
@@ -110,7 +110,7 @@ An ASID is an unsigned word. Note that it is a \emph{virtual} address space iden
 
 ASIDs are mapped to address space roots by a global two-level table. The actual ASID values are opaque to the user, as are the sizes of the levels of the tables; ASID allocation calls will simply return an error once the available ASIDs are exhausted.
 
-FIXME ARMHYP unclear if bit manipulation still correct
+FIXME ARMHYP unclear if bit manipulation still correct - we lose one bit down to 7 for isIOSpace, and then 6 after deviceUntyped patch - make it 7/6 (with/without IOMMU)
 
 > asidHighBits :: Int
 > asidHighBits = 8

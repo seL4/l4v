@@ -649,11 +649,13 @@ With hypervisor extensions enabled, page table and page directory entries occupy
 #else /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
 ARM page directories and page tables occupy four frames and one quarter of a frame, respectively.
+FIXME ARMHYP define pteBits and pdeBits in terms of objBits of the right kind of object
+FIXME ARMHYP in C, we might want to call them PD\_INDEX\_BITS instead of PD\_BITS - tell Adrian
 
 > pteBits = (2 :: Int)
 > pdeBits = (2 :: Int)
-> pdBits = (12 :: Int) `shiftL` pdeBits
-> ptBits = (8 :: Int) `shiftL` pteBits
+> pdBits = (12 :: Int) + pdeBits
+> ptBits = (8 :: Int) + pteBits
 
 FIXME ARMHYP this is a bit silly: in the C code we have pdBits be 12 and ptBits 8,
 not the size of the whole thing. In fact, in the haskell we often have to shift pdBits right by the size of the PDE, which get by calling objBits on a new PDE...
@@ -668,13 +670,13 @@ FIXME ARMHYP therefore pdeBits and pteBits are not used much outside of here
 
 \subsubsection{IO Page Table Structure}
 
-FIXME ARMHYP ptBits is not the total size of a page table, so this is at best confusing, at worst wrong
-
 > ioptBits :: Int
 > ioptBits = pageBits
 
 FIXME ARMHYP this is really platform code (TK1), move there
 FIXME ARMHYP this is so very very verbose, but there is no way to know if we will care about the differences between a page table IOPDE entry and a 4M section one.
+
+FIXME ARMHYP TODO we want to have invalid PDE and PTEs
 
 > data IOPDE -- FIXME ARMHYP where is InvalidIOPDE?
 >     = PageTableIOPDE {
@@ -726,7 +728,4 @@ FIXME ARMHYP this is so very very verbose, but there is no way to know if we wil
 
 > kernelBase :: VPtr
 > kernelBase = Platform.kernelBase
-
-FIXME ARMHYP MOVE extra machine ops
-
 

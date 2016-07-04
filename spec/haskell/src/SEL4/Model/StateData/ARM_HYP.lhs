@@ -49,6 +49,8 @@ There are three ARM-specific global data elements:
 \end{itemize}
 
 FIXME ARMHYP there is no sign of armKSASIDMap - what is it??
+    it is the representation in ghost state of storing hwasids into the last invalid entry of a PD
+
 FIXME ARMHYP there is no sign of armKSKernelVSpace - ghost state
 
 FIXME ARMHYP has no global PD and PTs, but the more complicated stage 1 translation for its own address space set up at boot time and then never used again ... it is unclear if we should model this at this time... see arm/32/model/statedata.c ... it is only set up during kernel boot. ARM_HYP doesn't really have a global PD that gets copied everywhere

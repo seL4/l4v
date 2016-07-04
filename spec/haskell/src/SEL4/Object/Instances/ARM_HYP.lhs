@@ -45,3 +45,5 @@ This module defines instances of "PSpaceStorable" for ARM-specific kernel object
 
 FIXME ARMHYP not looked at these at all, assuming type error will happen when we try store/load an object type we haven't indicated is PSpaceStorable
 
+FIXME ARMHYP we want these for IOPTE IOPDE and maybe VCPU
+

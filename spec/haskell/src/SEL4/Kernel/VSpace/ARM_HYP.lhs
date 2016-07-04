@@ -154,8 +154,8 @@ With hypervisor extensions, kernel and user MMUs are completely independent. How
 > copyGlobalMappings newPD = do
 >     globalPT <- gets (armUSGlobalPT . ksArchState)
 >     let pde = PageTablePDE (addrFromPPtr globalPT)
->     let pdSize = bit (pdBits - pdeBits)
->     let offset = (pdSize - 1) `shiftL` pdeBits -- FIXME ARMHYP yuck
+>     let pdSize = bit (pdBits)
+>     let offset = pdSize - bit pdeBits
 >     storePDE (newPD + offset) pde
 
 \subsection{Creating and Updating Mappings}
@@ -862,8 +862,8 @@ Note that these capabilities cannot be copied until they have been mapped, so an
 >                 throw $ InvalidArgument 0
 >             pdCheck <- lookupErrorOnFailure False $ findPDForASID asid
 >             when (pdCheck /= pd) $ throw $ InvalidCapability 1
->             let pdIndex = vaddr `shiftR` (ptBits - pdeBits + ptBits - pteBits) -- FIXME ARMHYP is this right? replacing magic numbers
->             let vaddr' = pdIndex `shiftL` (ptBits - pdeBits + ptBits - pteBits)
+>             let pdIndex = vaddr `shiftR` (pageBits + ptBits - pteBits)
+>             let vaddr' = pdIndex `shiftL` (pageBits + ptBits - pteBits)
 >             let pdSlot = pd + (PPtr $ pdIndex `shiftL` pdeBits)
 >             oldpde <- withoutFailure $ getObject pdSlot
 >             unless (oldpde == InvalidPDE) $ throw DeleteFirst
