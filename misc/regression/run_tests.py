@@ -361,7 +361,8 @@ def rglob(base_dir, pattern):
             matches.append(os.path.join(root, filename))
         for filename in fnmatch.filter(filenames, 'extra_tests'):
             f = os.path.join(root, filename)
-            extras.extend([l.strip() for l in open(f)])
+            extras.extend([os.path.join(root, l.strip())
+                for l in open(f) if l.strip()])
     matches.extend([f for e in extras for f in rglob(e, pattern)])
     return sorted(set(matches))
 
