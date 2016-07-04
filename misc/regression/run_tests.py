@@ -355,10 +355,15 @@ def print_test_line(test_name, color, status, real_time=None, cpu_time=None, mem
 #
 def rglob(base_dir, pattern):
     matches = []
+    extras = []
     for root, dirnames, filenames in os.walk(base_dir):
         for filename in fnmatch.filter(filenames, pattern):
             matches.append(os.path.join(root, filename))
-    return matches
+        for filename in fnmatch.filter(filenames, 'extra_tests'):
+            f = os.path.join(root, filename)
+            extras.extend([l.strip() for l in open(f)])
+    matches.extend([f for e in extras for f in rglob(e, pattern)])
+    return sorted(set(matches))
 
 #
 # Run tests.
@@ -380,8 +385,6 @@ def main():
             help="Number of tests to run in parallel")
     parser.add_argument("-l", "--list", action="store_true",
             help="list known tests")
-    parser.add_argument("--no-dependencies", action="store_true",
-            help="don't check for dependencies when running specific tests")
     parser.add_argument("--legacy", action="store_true",
             help="use legacy 'IsaMakefile' specs")
     # --legacy-status used by top-level regression-v2 script
@@ -428,18 +431,7 @@ def main():
         bad_names = desired_names - set([t.name for t in tests])
         if len(bad_names) > 0:
             parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
-        # Given a list of names return the corresponding set of Test objects.
-        get_tests = lambda x: {t for t in tests if t.name in x}
-        # Given a list/set of Tests return a superset that includes all dependencies.
-        def get_deps(x):
-            x.update({t for w in x for t in get_deps(get_tests(w.depends))})
-            return x
-        tests_to_run_set = get_tests(desired_names)
-        # Are we skipping dependencies? if not, add them.
-        if not args.no_dependencies:
-            tests_to_run_set = get_deps(tests_to_run_set)
-        # Preserve the order of the original set of Tests.
-        tests_to_run = [t for t in tests if t in tests_to_run_set]
+        tests_to_run = [t for t in tests if t.name in desired_names]
 
     args.exclude = set(args.exclude)
     bad_names = args.exclude - set(t.name for t in tests)
