@@ -62,7 +62,7 @@ perform_asid_control_invocation :: "asid_control_invocation \<Rightarrow> (unit,
     delete_objects frame page_bits;
     pcap \<leftarrow> get_cap parent;
     set_cap (max_free_index_update pcap) parent;
-    retype_region frame 1 0 (ArchObject ASIDPoolObj);
+    retype_region frame 1 0 (ArchObject ASIDPoolObj) False;
     cap_insert (ArchObjectCap $ ASIDPoolCap frame base) parent slot;
     assert (base && mask asid_low_bits = 0);
     asid_table \<leftarrow> gets (arm_asid_table \<circ> arch_state);

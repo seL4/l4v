@@ -9,7 +9,7 @@
  *)
 
 theory Ipc_C
-imports Finalise_C CSpace_All
+imports Finalise_C CSpace_All SyscallArgs_C
 begin
 
 definition
@@ -1150,45 +1150,11 @@ lemma lookupIPCBuffer_aligned_option_to_0:
   apply (simp add: option_to_0_def valid_ipc_buffer_ptr'_def split: option.split_asm)
   done
 
-lemma replyFromKernel_error_ccorres [corres]:
-  "ccorres dc xfdc (valid_pspace' and tcb_at' thread)
-     (UNIV \<inter> \<lbrace>syscall_error_to_H \<acute>current_syscall_error
-                          (lookup_fault_lift \<acute>current_lookup_fault)
-                       = Some err\<rbrace>
-           \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
-     (replyFromKernel thread (msgFromSyscallError err))
-     (Call replyFromKernel_error_'proc)"
-  apply (cinit lift: thread_')
-   apply clarsimp
-   apply wpc
-   apply (ctac add: lookupIPCBuffer_ccorres)
-     apply simp
-     apply ctac
-       apply (ctac add: setMRs_syscall_error_ccorres[where err=err])
-         apply ((rule ccorres_Guard_Seq)+)?
-         apply csymbr
-         apply (rule ccorres_abstract_cleanup)
-         apply (fold dc_def)[1]
-         apply (rule setMessageInfo_ccorres)
-        apply wp
-       apply (simp add: Collect_const_mem)
-       apply (vcg exspec=setMRs_syscall_error_modifies)
-      apply (wp hoare_case_option_wp)
-     apply (vcg exspec=setRegister_modifies)
-    apply simp
-    apply (wp lookupIPCBuffer_aligned_option_to_0)
-   apply (simp del: Collect_const)
-   apply (vcg exspec=lookupIPCBuffer_modifies)
-  apply (simp add: State_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
-                   Kernel_C.msgInfoRegister_def Kernel_C.R1_def
-                   State_H.badgeRegister_def MachineTypes.badgeRegister_def
-                   Kernel_C.badgeRegister_def Kernel_C.R0_def
-                   message_info_to_H_def valid_pspace_valid_objs')
-  apply (clarsimp simp: msgLengthBits_def msgFromSyscallError_def
-                        syscall_error_to_H_def syscall_error_type_defs
-                        mask_def
-                 split: split_if_asm)
-  done
+lemma Cond_if_mem:
+   "(Cond (if P then UNIV else {})) = (Cond {s. P})"
+   by simp
+
+
 
 lemma copyMRs_register_loop_helper:
   fixes n
@@ -3322,7 +3288,9 @@ qed
 lemma lookupIPCBuffer_not_Some_0:
   "\<lbrace>\<top>\<rbrace> lookupIPCBuffer r t \<lbrace>\<lambda>rv. K (rv \<noteq> Some 0)\<rbrace>"
   apply (simp add: lookupIPCBuffer_def ArchVSpace_H.lookupIPCBuffer_def)
-  apply (wp hoare_post_taut | simp add: Let_def | intro conjI impI)+
+  apply (wp hoare_post_taut haskell_assert_wp 
+    | simp add: Let_def getThreadBufferSlot_def locateSlotTCB_def
+    | intro conjI impI | wpc)+
   done
 
 lemma pageBitsForSize_2 [simp]:
@@ -3338,7 +3306,8 @@ lemma lookupIPCBuffer_aligned:
   apply (simp add: lookupIPCBuffer_def ArchVSpace_H.lookupIPCBuffer_def 
                    getThreadBufferSlot_def locateSlot_conv
                    Let_def getSlotCap_def cong: if_cong)
-  apply (rule hoare_pre, wp getCTE_wp' threadGet_wp)
+  apply (rule hoare_pre)
+  apply (wp getCTE_wp' threadGet_wp | wpc)+
   apply clarsimp
   apply (drule (1) ctes_of_valid)
   apply (drule (1) ko_at_valid_objs', simp add: projectKOs)
@@ -3346,157 +3315,50 @@ lemma lookupIPCBuffer_aligned:
   apply (auto elim: aligned_add_aligned intro: is_aligned_andI1)
   done
 
-lemma capFVMRights_range:
-  "\<And>cap. cap_get_tag cap = scast cap_frame_cap \<Longrightarrow>
-   cap_frame_cap_CL.capFVMRights_CL (cap_frame_cap_lift cap) \<le> 3"
-  "\<And>cap. cap_get_tag cap = scast cap_small_frame_cap \<Longrightarrow>
-   cap_small_frame_cap_CL.capFVMRights_CL (cap_small_frame_cap_lift cap) \<le> 3"
-  by (simp add: cap_frame_cap_lift_def cap_small_frame_cap_lift_def
-                cap_lift_def cap_tag_defs word_and_le1)+
 
 lemma isArchPageCap_def2:
   "\<And>cap. isArchPageCap cap = (isArchObjectCap cap \<and> isPageCap (capCap cap))"
   by (fastforce simp: isCap_simps)
 
-lemma lookupIPCBuffer_ccorres [corres]:
-  "ccorres (\<lambda>rv rv'. rv' = Ptr (option_to_0 rv))
-     ret__ptr_to_unsigned_long_' (tcb_at' thread)
-     (UNIV \<inter> \<lbrace>recv = to_bool \<acute>isReceiver\<rbrace>
+
+lemma replyFromKernel_error_ccorres [corres]:
+  "ccorres dc xfdc (valid_pspace' and tcb_at' thread)
+     (UNIV \<inter> \<lbrace>syscall_error_to_H \<acute>current_syscall_error
+                          (lookup_fault_lift \<acute>current_lookup_fault)
+                       = Some err\<rbrace>
            \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
-     (lookupIPCBuffer recv thread)
-     (Call lookupIPCBuffer_'proc)"
-  apply (cinit lift: isReceiver_' thread_'
-               simp: ArchVSpace_H.lookupIPCBuffer_def)
-   apply (rule_tac P="thread = ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00"
-                in ccorres_gen_asm)
-   apply (rule ccorres_move_c_guard_tcb)
-   apply (rule ccorres_pre_threadGet)
-   apply (rule_tac val=rv
-               and xf'="w_bufferPtr_'"
-               and R="\<lambda>s. \<exists>t. ko_at' t thread s \<and> tcbIPCBuffer t = rv"
-                in ccorres_symb_exec_r_known_rv_UNIV [where R'=UNIV])
-      apply (vcg, clarsimp)
-      apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
-      apply (clarsimp simp: ctcb_relation_def typ_heap_simps)
-     apply ceqv
-    apply (clarsimp simp: word_sle_def
-                  intro!: ccorres_Guard_Seq [where S=UNIV, simplified]
-                simp del: Collect_const)
-    apply (simp add: getThreadBufferSlot_def locateSlot_conv
-                     tcb_cnode_index_defs[THEN ptr_add_assertion_positive[OF ptr_add_assertion_positive_helper]]
-                     Collect_True
-                del: Collect_const)
-    apply ccorres_remove_UNIV_guard
-    apply (rule ccorres_move_array_assertion_tcb_ctes
-                ccorres_move_c_guard_cte)+
-    apply (ctac(no_vcg))
-      apply csymbr
-      apply csymbr
-      apply (rule ccorres_if_lhs)
-       apply (clarsimp simp add: cap_get_tag_isCap
-                       simp del: Collect_const
-                      split del: split_if)
-       apply (rule ccorres_Cond_rhs_Seq)
-        (* large frame case *)
-        apply (intro ccorres_rhs_assoc)
-        apply csymbr
-        apply (clarsimp split del: split_if)
-        apply csymbr
-        apply (rule ccorres_cond_false_seq)
-        apply (clarsimp simp: Let_def split del: split_if)
-        apply csymbr
-        apply (rule ccorres_guard_imp[where A=\<top> and A'=UNIV],
-               rule ccorres_cond [where R=\<top>])
-            apply (clarsimp simp: pageSize_def option_to_0_def isCap_simps
-                           split: split_if_asm split del: split_if)
-            apply (frule(1) cap_get_tag_isCap_unfolded_H_cap(17))
-            apply (frule capFVMRights_range)
-            apply (clarsimp simp: ccap_relation_def map_option_case
-                           split: split_if option.splits)
-            apply (simp add: cap_frame_cap_lift
-                             generic_frame_cap_get_capFVMRights_CL_def)
-            apply (fastforce simp: cap_to_H_def vmrights_to_H_def to_bool_def
-                                  word_le_make_less Kernel_C.VMNoAccess_def
-                                  Kernel_C.VMReadWrite_def Kernel_C.VMReadOnly_def
-                                  Kernel_C.VMKernelOnly_def
-                            dest: word_less_cases)
-           apply (intro ccorres_rhs_assoc)
-           apply clarsimp
-           apply csymbr+
-           apply (rule ccorres_Guard)
-           apply (intro ccorres_assert)
-           apply (ctac add: ccorres_return_C)
-          apply (ctac add: ccorres_return_C)
-         apply simp
-        apply (clarsimp simp: pageSize_def option_to_0_def isCap_simps
-                       split: split_if split_if_asm)
-        apply (frule(1) cap_get_tag_isCap_unfolded_H_cap(17))
-        apply (clarsimp simp: ccap_relation_def map_option_case
-                       split: option.splits)
-        apply (simp add: cap_frame_cap_lift
-                         generic_frame_cap_get_capFSize_CL_def
-                         generic_frame_cap_get_capFBasePtr_CL_def)
-        apply (clarsimp simp: cap_to_H_def mask_def c_valid_cap_def
-                              cl_valid_cap_def Kernel_C.ARMSmallPage_def
-                              gen_framesize_to_H_def framesize_to_H_def
-                       split: split_if bool.split vmpage_size.split_asm)
-       (* small frame case *)
-       apply clarsimp
-       apply (rule ccorres_cond_false_seq)
-       apply (clarsimp simp: Let_def split del: split_if)
-       apply csymbr
-       apply (rule ccorres_guard_imp[where A=\<top> and A'=UNIV],
-              rule ccorres_cond [where R=\<top>])
-           apply (clarsimp simp: pageSize_def option_to_0_def isCap_simps
-                          split: split_if_asm split del: split_if)
-           apply (frule cap_get_tag_isCap_unfolded_H_cap(16), simp)
-           apply (frule capFVMRights_range)
-           apply (clarsimp simp: ccap_relation_def map_option_case
-                          split: option.splits)
-           apply (simp add: cap_small_frame_cap_lift
-                            generic_frame_cap_get_capFVMRights_CL_def)
-           apply (fastforce simp: cap_to_H_def vmrights_to_H_def to_bool_def
-                                 word_le_make_less Kernel_C.VMNoAccess_def
-                                 Kernel_C.VMReadWrite_def Kernel_C.VMReadOnly_def
-                                 Kernel_C.VMKernelOnly_def
-                           dest: word_less_cases)
-          apply (intro ccorres_rhs_assoc)
-          apply clarsimp
-          apply csymbr+
-          apply (rule ccorres_Guard)
-          apply (intro ccorres_assert)
-          apply (ctac add: ccorres_return_C)
-         apply (ctac add: ccorres_return_C)
-        apply simp
-       apply (clarsimp simp: pageSize_def option_to_0_def isCap_simps
-                      split: split_if split_if_asm)
-       apply (frule cap_get_tag_isCap_unfolded_H_cap(16), simp)
-       apply (clarsimp simp: ccap_relation_def map_option_case
-                      split: option.splits)
-       apply (simp add: cap_small_frame_cap_lift
-                        generic_frame_cap_get_capFSize_CL_def
-                        generic_frame_cap_get_capFBasePtr_CL_def)
-       apply (clarsimp simp: cap_to_H_def mask_def c_valid_cap_def
-                             cl_valid_cap_def Kernel_C.ARMSmallPage_def
-                             gen_framesize_to_H_def framesize_to_H_def
-                      split: split_if bool.split vmpage_size.split_asm)
-      (* non-frame-cap case *)
-      apply (rule ccorres_cond_true_seq, rule ccorres_rhs_assoc)
-      apply csymbr
-      apply csymbr
-      apply (rule ccorres_cond_true_seq)
-      apply (clarsimp)
-      apply (rule ccorres_split_throws, ctac add: ccorres_return_C)
-      apply vcg
-     apply (wp hoare_drop_imps)
-    apply (clarsimp simp: cap_get_tag_isCap option_to_0_def
-                          isArchPageCap_def2 Collect_const_mem if_1_0_0)
-   apply (clarsimp simp: guard_is_UNIV_def tcbIPCBufferSlot_def
-                         cte_level_bits_def size_of_def Collect_const_mem
-                         tcb_cnode_index_defs)
-  apply (clarsimp simp: obj_at'_def size_of_def projectKOs tcbBuffer_def
-                        objBits_simps)
-  apply (auto intro: cte_wp_at_tcbI')
+     (replyFromKernel thread (msgFromSyscallError err))
+     (Call replyFromKernel_error_'proc)"
+  apply (cinit lift: thread_')
+   apply clarsimp
+   apply wpc
+   apply (ctac add: lookupIPCBuffer_ccorres)
+     apply simp
+     apply ctac
+       apply (ctac add: setMRs_syscall_error_ccorres[where err=err])
+         apply ((rule ccorres_Guard_Seq)+)?
+         apply csymbr
+         apply (rule ccorres_abstract_cleanup)
+         apply (fold dc_def)[1]
+         apply (rule setMessageInfo_ccorres)
+        apply wp
+       apply (simp add: Collect_const_mem)
+       apply (vcg exspec=setMRs_syscall_error_modifies)
+      apply (wp hoare_case_option_wp)
+     apply (vcg exspec=setRegister_modifies)
+    apply simp
+    apply (wp lookupIPCBuffer_aligned_option_to_0)
+   apply (simp del: Collect_const)
+   apply (vcg exspec=lookupIPCBuffer_modifies)
+  apply (simp add: State_H.msgInfoRegister_def MachineTypes.msgInfoRegister_def
+                   Kernel_C.msgInfoRegister_def Kernel_C.R1_def
+                   State_H.badgeRegister_def MachineTypes.badgeRegister_def
+                   Kernel_C.badgeRegister_def Kernel_C.R0_def
+                   message_info_to_H_def valid_pspace_valid_objs')
+  apply (clarsimp simp: msgLengthBits_def msgFromSyscallError_def
+                        syscall_error_to_H_def syscall_error_type_defs
+                        mask_def true_def option_to_ptr_def
+                 split: split_if_asm)
   done
 
 lemma fault_to_fault_tag_nonzero:
@@ -3547,7 +3409,7 @@ lemma doIPCTransfer_ccorres [corres]:
                            fault_to_fault_tag_nonzero)
      apply (fold dc_def)[1]
      apply ctac
-    apply (clarsimp simp: guard_is_UNIV_def false_def split: option.splits)
+    apply (clarsimp simp: guard_is_UNIV_def false_def option_to_ptr_def split: option.splits)
    apply (rule_tac Q="\<lambda>rv. valid_pspace' and cur_tcb' and tcb_at' sender
                        and tcb_at' receiver and K (rv \<noteq> Some 0)
                        and (case_option \<top> valid_ipc_buffer_ptr' rv)
@@ -3569,6 +3431,7 @@ lemma length_exceptionMessage:
   "length State_H.exceptionMessage = unat n_exceptionMessage"
   by (simp add: State_H.exceptionMessage_def MachineTypes.exceptionMessage_def n_exceptionMessage_def)
 
+declare[[goals_limit = 1]]
 lemma handleFaultReply_ccorres [corres]:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
            (valid_pspace' and tcb_at' s and
@@ -3747,12 +3610,15 @@ lemma handleFaultReply_ccorres [corres]:
            apply (rule ccorres_stateAssert)
            apply (rule ccorres_split_nothrow_novcg)
                apply wpc
-                apply (simp add: option_to_0_def ccorres_cond_iffs)
+                apply (simp add: option_to_0_def ccorres_cond_iffs option_to_ptr_def)
                 apply (rule ccorres_return_Skip)
                apply (rule_tac P="sb \<noteq> Some 0" in ccorres_gen_asm)
                apply (rule_tac P="case_option True (\<lambda>x. is_aligned x msg_align_bits) sb"
                             in ccorres_gen_asm)
-               apply (simp add: option_to_0_def ccorres_cond_iffs)
+               apply (simp add: option_to_0_def option_to_ptr_def)
+               apply (subgoal_tac "sb'\<noteq> NULL") prefer 2
+                apply clarsimp
+               apply (simp add: ccorres_cond_iffs)
                apply (subst ccorres_seq_skip' [symmetric])
                apply (rule ccorres_split_nothrow_novcg)
                    apply (drule_tac s="sb" in sym)
@@ -3802,7 +3668,7 @@ lemma handleFaultReply_ccorres [corres]:
                                             length_syscallMessage length_msgRegisters
                                             message_info_to_H_def min_def
                                      split: split_if)
-                      apply (intro conjI impI, unat_arith+)[1]
+                      apply (elim disjE,unat_arith+)[1]
                      apply (vcg spec=TrueI)
                      apply clarsimp
                     apply (simp add: split_def)

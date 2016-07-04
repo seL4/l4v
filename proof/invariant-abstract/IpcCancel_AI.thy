@@ -359,7 +359,7 @@ lemma set_endpoint_valid_ioc[wp]:
 
 lemma set_endpoint_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_endpoint p q \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
-  apply (simp add: valid_machine_state_def in_user_frame_def)
+  apply (simp add: valid_machine_state_def in_user_frame_def in_device_frame_def)
   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift hoare_vcg_ex_lift)
   apply (simp add: set_endpoint_def)
   apply (wp hoare_drop_imps)

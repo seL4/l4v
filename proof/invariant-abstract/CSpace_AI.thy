@@ -1036,7 +1036,7 @@ lemma caps_of_state_obj_refs:
     apply (erule caps_of_state_cteD)
    apply assumption
   apply (cases cap, auto simp: valid_cap_def obj_at_def
-                         split: option.splits arch_cap.splits)
+                         split: option.splits arch_cap.splits if_splits)
   done
 
 locale mdb_insert_abs =
@@ -4847,7 +4847,7 @@ definition
 
 definition
   "ups_of_heap h \<equiv> \<lambda>p.
-   case h p of Some (ArchObj (DataPage sz)) \<Rightarrow> Some sz | _ \<Rightarrow> None"
+   case h p of Some (ArchObj (DataPage _ sz)) \<Rightarrow> Some sz | _ \<Rightarrow> None"
 
 
 crunch irq_node[wp]: setup_reply_master "\<lambda>s. P (interrupt_irq_node s)"
@@ -4857,10 +4857,10 @@ crunch irq_states[wp]: setup_reply_master "\<lambda>s. P (interrupt_states s)"
 
 
 lemma ups_of_heap_typ_at:
-  "ups_of_heap (kheap s) p = Some sz \<longleftrightarrow> typ_at (AArch (AIntData sz)) p s"
-  by (simp add: typ_at_eq_kheap_obj ups_of_heap_def
+  "ups_of_heap (kheap s) p = Some sz \<longleftrightarrow> data_at (sz) p s"
+  by (auto simp add: typ_at_eq_kheap_obj data_at_def ups_of_heap_def
       split: option.splits Structures_A.kernel_object.splits
-             arch_kernel_obj.splits)
+             arch_kernel_obj.splits if_splits)
 
 lemma cns_of_heap_typ_at:
   "cns_of_heap (kheap s) p = Some n \<longleftrightarrow> typ_at (ACapTable n) p s"
@@ -4871,8 +4871,8 @@ lemma cns_of_heap_typ_at:
 
 lemma ups_of_heap_typ_at_def:
   "ups_of_heap (kheap s) \<equiv> \<lambda>p.
-   if \<exists>!sz. typ_at (AArch (AIntData sz)) p s
-     then Some (THE sz. typ_at (AArch (AIntData sz)) p s)
+   if \<exists>!sz. data_at sz p s
+     then Some (THE sz. data_at sz p s)
    else None"
   apply (rule eq_reflection)
   apply (rule ext)
@@ -4881,7 +4881,7 @@ lemma ups_of_heap_typ_at_def:
    apply (frule (1) theI')
   apply safe
    apply (fastforce simp: ups_of_heap_typ_at)
-  apply (clarsimp simp add: obj_at_def)
+  apply (auto simp add: obj_at_def data_at_def)
   done
 
 lemma ups_of_heap_TCB_upd[simp]:
@@ -5043,7 +5043,7 @@ lemma ex_nonz_tcb_cte_caps:
    apply (clarsimp simp: valid_cap_def obj_at_def is_tcb
                          is_obj_defs dom_def
                          appropriate_cte_cap_def
-                  split: cap.splits arch_cap.split_asm)
+                  split: cap.splits arch_cap.split_asm if_splits)
   apply (clarsimp simp: caps_of_state_valid_cap)
   done
 

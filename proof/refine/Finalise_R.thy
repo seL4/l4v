@@ -1363,7 +1363,7 @@ crunch umm[wp]: emptySlot "\<lambda>s. P (underlying_memory (ksMachineState s))"
 
 lemma emptySlot_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> emptySlot slot irq \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  by (simp add: valid_machine_state'_def pointerInUserData_def)
+  by (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
      (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
 
 crunch pspace_domain_valid[wp]: emptySlot "pspace_domain_valid"
@@ -1567,6 +1567,8 @@ lemma empty_slot_corres:
    subgoal by simp
   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
   apply (simp add: pspace_relations_def)
+  apply (rule conjI)
+   apply (clarsimp simp:data_at_def ghost_relation_typ_at set_cap_a_type_inv)
   apply (rule conjI)
    prefer 2
    apply (rule conjI)

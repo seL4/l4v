@@ -1839,13 +1839,13 @@ lemma check_valid_ipc_corres:
                    checkValidIPCBuffer_def
                    ArchVSpace_H.checkValidIPCBuffer_def
                    unlessE_def Let_def
-            split: cap_relation_split_asm arch_cap.split_asm)
+            split: cap_relation_split_asm arch_cap.split_asm bool.splits)
   apply (simp add: capTransferDataSize_def msgMaxLength_def
                    msg_max_length_def msgMaxExtraCaps_def
                    cap_transfer_data_size_def word_size
                    msgLengthBits_def msgExtraCapBits_def msg_align_bits msgAlignBits_def
-                   msg_max_extra_caps_def is_aligned_mask whenE_def)
-  apply (simp add: returnOk_def )
+                   msg_max_extra_caps_def is_aligned_mask whenE_def split:vmpage_size.splits)
+  apply (auto simp add: returnOk_def )
   done
 
 lemma checkValidIPCBuffer_ArchObject_wp:
@@ -1859,8 +1859,8 @@ lemma checkValidIPCBuffer_ArchObject_wp:
                    arch_capability.case_cong
             split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | wpc)+
-  apply (clarsimp simp: isCap_simps is_aligned_mask msg_align_bits msgAlignBits_def)
+  apply (wp whenE_throwError_wp 
+    | wpc | clarsimp simp: isCap_simps is_aligned_mask msg_align_bits msgAlignBits_def)+
   done
 
 lemma decode_set_ipc_corres:

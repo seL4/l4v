@@ -135,11 +135,11 @@ lemma valid_arch_obj_same_type:
     apply clarsimp
     apply (erule_tac x=x in allE)
     apply (rename_tac "fun" x)
-    apply (case_tac "fun x", (clarsimp simp: obj_at_def a_type_def)+)[1]
+    apply (case_tac "fun x", (clarsimp simp: obj_at_def a_type_def data_at_def)+)[1]
    apply clarsimp
    apply (erule_tac x=x in ballE)
     apply (rename_tac "fun" x)
-    apply (case_tac "fun x", (clarsimp simp:obj_at_def a_type_def)+)[1]
+    apply (case_tac "fun x", (clarsimp simp:obj_at_def a_type_def data_at_def)+)[1]
    apply simp
   apply clarsimp
   done
@@ -949,17 +949,25 @@ lemma valid_irq_statesE:
 
 lemma dmo_invs:
   "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). (\<forall>p.
-       in_user_frame p s \<or> underlying_memory m' p = underlying_memory m p) \<and>
+       in_user_frame p s \<or> in_device_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
          (m = machine_state s \<longrightarrow> (\<forall>irq. (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or> (irq_masks m' irq = irq_masks m irq))))
     and invs\<rbrace>
    do_machine_op f
    \<lbrace>\<lambda>_. invs\<rbrace>"
    apply (simp add: do_machine_op_def split_def)
    apply wp
+   apply (clarsimp simp: invs_def cur_tcb_def valid_state_def
+                          valid_machine_state_def
+                    intro: valid_irq_states_machine_state_updateI
+                    elim:  valid_irq_statesE)
+   apply (intro conjI)
    apply (fastforce simp: invs_def cur_tcb_def valid_state_def
                           valid_machine_state_def
                     intro: valid_irq_states_machine_state_updateI
                     elim:  valid_irq_statesE)
+   apply (drule_tac x = "machine_state s" in spec)
+   apply (drule(1) bspec)
+   apply fastforce
    done
 
 
@@ -1825,14 +1833,20 @@ lemma set_object_machine_state[wp]:
 
 lemma set_notification_valid_machine_state[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_notification ptr val \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  apply (simp add: valid_machine_state_def in_user_frame_def obj_at_def
+  apply (simp add: valid_machine_state_def in_user_frame_def obj_at_def in_device_frame_def
                    set_notification_def set_object_def pred_conj_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def  split: Structures_A.kernel_object.splits)
+  apply (wp get_object_wp,clarsimp)
   apply (drule_tac x=p in spec)
+  apply (elim disjE)
+    apply (clarsimp simp: a_type_simps obj_at_def  split: Structures_A.kernel_object.splits)
+    apply (rule_tac x=sz in exI)
+    apply (drule_tac x = sz in spec)
+    apply (clarsimp simp:a_type_simps)
+   apply (clarsimp simp: a_type_simps obj_at_def  split: Structures_A.kernel_object.splits)
+   apply (rule_tac x=sz in exI)
+   apply (drule_tac x = sz in spec)
+   apply (clarsimp simp:a_type_simps)
   apply clarsimp
-  apply (rule_tac x=sz in exI)
-  apply (clarsimp simp: a_type_simps)
   done
 
 lemma valid_irq_states_triv:

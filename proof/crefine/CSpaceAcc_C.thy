@@ -54,7 +54,7 @@ lemma ccorres_pre_getCTE:
        defer
        apply wp[1]
       apply (rule getCTE_sp)
-     apply simp
+     apply simp        
     apply assumption      
    apply clarsimp
    defer

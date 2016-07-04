@@ -135,8 +135,6 @@ instance
 end
 
 
-
-
 instantiation tcb :: pre_storable
 begin
 
@@ -356,6 +354,7 @@ end
 
 instantiation user_data_device :: pspace_storable
 begin
+
 (* user_data_device extra instance defs *)
 
 
@@ -381,6 +380,7 @@ instance
   done
 
 end
+
 
 instantiation tcb :: pspace_storable
 begin

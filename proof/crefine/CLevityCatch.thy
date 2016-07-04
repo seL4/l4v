@@ -162,6 +162,18 @@ lemma is_aligned_neg_mask2 [simp]:
   apply (simp add: not_less NOT_mask power_overflow)
   done
 
+lemma projectKO_user_data_device:
+  "(projectKO_opt ko = Some (t :: user_data_device)) = (ko = KOUserDataDevice)"
+  by (cases ko)
+     (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
+
+lemma device_data_at_ko:
+  "typ_at' UserDataDeviceT p s \<Longrightarrow> ko_at' UserDataDevice p s"
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def
+    projectKO_user_data_device projectKO_eq projectKO_eq2)
+  apply (case_tac ko, auto)
+  done
+
 (* FIXME: move *)
 lemma user_data_at_ko:
   "typ_at' UserDataT p s \<Longrightarrow> ko_at' UserData p s"

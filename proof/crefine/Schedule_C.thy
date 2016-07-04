@@ -190,11 +190,11 @@ lemma h_t_valid_armKSGlobalsFrame:
   apply (clarsimp simp:rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
   apply (clarsimp simp:cmap_relation_def)
   apply (subgoal_tac "symbol_table ''armKSGlobalsFrame'' \<in> 
-    dom (heap_to_page_data (ksPSpace s) (underlying_memory (ksMachineState s)))")
+    dom (heap_to_user_data (ksPSpace s) (underlying_memory (ksMachineState s)))")
   prefer 2
     apply (clarsimp simp:obj_at'_def typ_at'_def ko_wp_at'_def
       carch_state_relation_def carch_globals_def)
-   apply (simp add:heap_to_page_data_def map_comp_def)
+   apply (simp add:heap_to_user_data_def map_comp_def)
    apply (case_tac ko,simp_all add:projectKO_opt_user_data)[1]
   apply (erule domE)
   apply (drule_tac x = " (Ptr :: (32 word \<Rightarrow> user_data_C ptr))

@@ -509,6 +509,7 @@ lemma fst_setCTE:
            (map_to_ptes (ksPSpace s) = map_to_ptes (ksPSpace s'));
            (map_to_asidpools (ksPSpace s) = map_to_asidpools (ksPSpace s'));
            (map_to_user_data (ksPSpace s) = map_to_user_data (ksPSpace s'));
+           (map_to_user_data_device (ksPSpace s) = map_to_user_data_device (ksPSpace s'));
            (option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s) 
               = option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s'));
            \<forall>T p. typ_at' T p s = typ_at' T p s'\<rbrakk> \<Longrightarrow> P"
@@ -599,6 +600,19 @@ proof -
 	      by simp
     qed fact
     
+    show "map_to_user_data_device (ksPSpace s) = map_to_user_data_device (ksPSpace s')"
+    proof (rule map_comp_eqI)
+      fix x
+      assume xin: "x \<in> dom (ksPSpace s')"
+      then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
+      moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
+      ultimately have "(projectKO_opt ko' :: user_data_device option) = projectKO_opt ko" using xin thms(4) ceq
+             by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_user_data_device)
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: user_data_device option) = projectKO_opt (the (ksPSpace s x))" using ko ko' 
+             by simp
+    qed fact
+
+
     note sta = setCTE_typ_at'[where P="\<lambda>x. x = y" for y]
     show typ_at: "\<forall>T p. typ_at' T p s = typ_at' T p s'"
       using use_valid[OF _ sta, OF thms(1), OF refl]
@@ -1550,6 +1564,7 @@ lemma update_ntfn_map_tos:
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_ptes (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_asidpools (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits split_if_asm)+
@@ -1564,6 +1579,7 @@ lemma update_ep_map_tos:
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ptes (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_asidpools (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits split_if_asm)+
@@ -1577,6 +1593,7 @@ lemma update_tcb_map_tos:
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ptes (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_asidpools (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits split_if_asm)+
@@ -1591,6 +1608,8 @@ lemma update_asidpool_map_tos:
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ptes (ksPSpace s)"
   and     "map_to_eps  (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_eps (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data_device (ksPSpace s)"
+
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
       simp: projectKOs projectKO_opts_defs
@@ -1617,6 +1636,7 @@ lemma update_pte_map_tos:
   and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_eps (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_asidpools (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
            split: split_if_asm split_if
@@ -1638,6 +1658,7 @@ lemma update_pde_map_tos:
   and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_eps (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_asidpools (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
            split: split_if_asm split_if
@@ -1647,8 +1668,13 @@ lemma update_pde_map_tos:
 
 lemma heap_to_page_data_cong [cong]:
   "\<lbrakk> map_to_user_data ks = map_to_user_data ks'; bhp = bhp' \<rbrakk>
-  \<Longrightarrow> heap_to_page_data ks bhp = heap_to_page_data ks' bhp'"
-  unfolding heap_to_page_data_def by simp
+  \<Longrightarrow> heap_to_user_data ks bhp = heap_to_user_data ks' bhp'"
+  unfolding heap_to_user_data_def by simp
+
+lemma heap_to_device_data_cong [cong]:
+  "\<lbrakk> map_to_user_data_device ks = map_to_user_data_device ks'; bhp = bhp' \<rbrakk>
+  \<Longrightarrow> heap_to_device_data ks bhp = heap_to_device_data ks' bhp'"
+  unfolding heap_to_device_data_def by simp 
 
 lemma inj_tcb_ptr_to_ctcb_ptr [simp]:
   "inj tcb_ptr_to_ctcb_ptr"
@@ -1785,13 +1811,31 @@ where
        \<and> x = word_rcat (map (underlying_memory (ksMachineState s))
                                 [p + 3, p + 2, p + 1, p])"
 
-lemma rf_sr_heap_relation:
+definition
+  device_word_at :: "word32 \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+ "device_word_at x p \<equiv> \<lambda>s. is_aligned p 2
+       \<and> pointerInDeviceData p s
+       \<and> x = word_rcat (map (underlying_memory (ksMachineState s))
+                                [p + 3, p + 2, p + 1, p])"
+
+lemma rf_sr_heap_user_data_relation:
   "(s, s') \<in> rf_sr \<Longrightarrow> cmap_relation
-      (heap_to_page_data (ksPSpace s) (underlying_memory (ksMachineState s)))
-      (cslift s') Ptr cuser_data_relation"
+      (heap_to_user_data (ksPSpace s) (underlying_memory (ksMachineState s)))
+      (cslift s') Ptr cuser_user_data_relation"
   by (clarsimp simp: user_word_at_def rf_sr_def
                      cstate_relation_def Let_def
                      cpspace_relation_def)
+
+lemma rf_sr_heap_device_data_relation:
+  "(s, s') \<in> rf_sr \<Longrightarrow> cmap_relation
+      (heap_to_device_data (ksPSpace s) (underlying_memory (ksMachineState s)))
+      (cslift s') Ptr cuser_user_data_device_relation"
+  by (clarsimp simp: user_word_at_def rf_sr_def
+                     cstate_relation_def Let_def
+                     cpspace_relation_def)
+
+
 
 lemma ko_at_projectKO_opt:
   "ko_at' ko p s \<Longrightarrow> (projectKO_opt \<circ>\<^sub>m ksPSpace s) p = Some ko"
@@ -1809,15 +1853,15 @@ lemma user_word_at_cross_over:
   "\<lbrakk> user_word_at x p s; (s, s') \<in> rf_sr; p' = Ptr p \<rbrakk>
    \<Longrightarrow> c_guard p' \<and> hrs_htd (t_hrs_' (globals s')) \<Turnstile>\<^sub>t p'
          \<and> h_val (hrs_mem (t_hrs_' (globals s'))) p' = x"
-  apply (drule rf_sr_heap_relation)
+  apply (drule rf_sr_heap_user_data_relation)
   apply (erule cmap_relationE1)
-   apply (clarsimp simp: heap_to_page_data_def Let_def
+   apply (clarsimp simp: heap_to_user_data_def Let_def
                          user_word_at_def pointerInUserData_def
                          typ_at_to_obj_at'[where 'a=user_data, simplified])
    apply (drule obj_at_ko_at', clarsimp)
    apply (rule conjI, rule exI, erule ko_at_projectKO_opt)
    apply (rule refl)
-  apply (thin_tac "heap_to_page_data a b c = d" for a b c d)
+  apply (thin_tac "heap_to_user_data a b c = d" for a b c d)
   apply (cut_tac x=p and w="~~ mask pageBits" in word_plus_and_or_coroll2)
   apply (rule conjI)
    apply (clarsimp simp: user_word_at_def pointerInUserData_def)
@@ -1834,7 +1878,7 @@ lemma user_word_at_cross_over:
            erule is_aligned_andI1)
     apply (simp add: word_le_nat_alt mask_def pageBits_def)
    apply simp
-  apply (clarsimp simp: cuser_data_relation_def user_word_at_def)
+  apply (clarsimp simp: cuser_user_data_relation_def user_word_at_def)
   apply (frule_tac f="[''words_C'']" in h_t_valid_field[OF h_t_valid_clift],
          simp+)
   apply (drule_tac n="uint (p && mask pageBits >> 2)" in h_t_valid_Array_element)
@@ -1866,17 +1910,84 @@ lemma user_word_at_cross_over:
   apply (simp add: aligned_shiftr_mask_shiftl)
   done
 
+(* FIXME: untyped_device
+lemma device_word_at_cross_over:
+  "\<lbrakk> device_word_at x p s; (s, s') \<in> rf_sr; p' = Ptr p \<rbrakk>
+   \<Longrightarrow> c_guard p' \<and> hrs_htd (t_hrs_' (globals s')) \<Turnstile>\<^sub>t p'
+         \<and> h_val (hrs_mem (t_hrs_' (globals s'))) p' = x"
+  apply (drule rf_sr_heap_device_data_relation)
+  apply (erule cmap_relationE1)
+   apply (clarsimp simp: heap_to_device_data_def Let_def
+                         device_word_at_def pointerInDeviceData_def
+                         typ_at_to_obj_at'[where 'a=user_data_device, simplified])
+   apply (drule obj_at_ko_at', clarsimp)
+   apply (rule conjI, rule exI, erule ko_at_projectKO_opt)
+   apply (rule refl)
+  apply (thin_tac "heap_to_device_data a b c = d" for a b c d)
+  apply (cut_tac x=p and w="~~ mask pageBits" in word_plus_and_or_coroll2)
+  apply (rule conjI)
+   apply (clarsimp simp: device_word_at_def pointerInDeviceData_def)
+   apply (simp add: c_guard_def c_null_guard_def ptr_aligned_def)
+   apply (drule lift_t_g)
+   apply (clarsimp simp: )
+   apply (simp add: align_of_def size_of_def)
+   apply (fold is_aligned_def[where n=2, simplified], simp)
+   apply (erule contra_subsetD[rotated])
+   apply (rule order_trans[rotated])
+    apply (rule_tac x="p && mask pageBits" and y=4 in intvl_sub_offset)
+    apply (cut_tac y=p and a="mask pageBits && (~~ mask 2)" in word_and_le1)
+    apply (subst(asm) word_bw_assocs[symmetric], subst(asm) aligned_neg_mask,
+           erule is_aligned_andI1)
+    apply (simp add: word_le_nat_alt mask_def pageBits_def)
+   apply simp
+  apply (clarsimp simp: cuser_user_data_device_relation_def device_word_at_def)
+  apply (frule_tac f="[''words_C'']" in h_t_valid_field[OF h_t_valid_clift],
+         simp+)
+  apply (drule_tac n="uint (p && mask pageBits >> 2)" in h_t_valid_Array_element)
+    apply simp
+   apply (simp add: shiftr_over_and_dist mask_def pageBits_def uint_and)
+   apply (insert int_and_leR [where a="uint (p >> 2)" and b=1023], clarsimp)[1]
+  apply (simp add: field_lvalue_def
+            field_lookup_offset_eq[OF trans, OF _ arg_cong[where f=Some, symmetric], OF _ prod.collapse]
+            word32_shift_by_2 shiftr_shiftl1 is_aligned_andI1)
+  apply (drule_tac x="ucast (p >> 2)" in spec)
+  apply (simp add: byte_to_word_heap_def Let_def ucast_ucast_mask)
+  apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
+  apply (simp add: aligned_shiftr_mask_shiftl pageBits_def)
+  apply (rule trans[rotated], rule_tac hp="hrs_mem (t_hrs_' (globals s'))"
+                                   and x="Ptr &(Ptr (p && ~~ mask 12) \<rightarrow> [''words_C''])"
+                                    in access_in_array)
+     apply (rule trans)
+      apply (erule typ_heap_simps)
+       apply simp+
+    apply (rule order_less_le_trans, rule unat_lt2p)
+    apply simp
+   apply (fastforce simp add: typ_info_word)
+  apply simp
+  apply (rule_tac f="h_val hp" for hp in arg_cong)
+  apply simp
+  apply (simp add: field_lvalue_def)
+  apply (simp add: ucast_nat_def ucast_ucast_mask)
+  apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
+  apply (simp add: aligned_shiftr_mask_shiftl)
+  done
+*)
+
 (* FIXME: move to GenericLib *)
 lemmas unat32_eq_of_nat = unat_eq_of_nat[where 'a=32, folded word_bits_def]
 
-lemma user_memory_cross_over:
+lemma memory_cross_over:
   "\<lbrakk>(\<sigma>, s) \<in> rf_sr; pspace_aligned' \<sigma>; pspace_distinct' \<sigma>;
     pointerInUserData ptr \<sigma>\<rbrakk>
    \<Longrightarrow> fst (t_hrs_' (globals s)) ptr = underlying_memory (ksMachineState \<sigma>) ptr"
-  apply (drule_tac p="ptr && ~~ mask 2" in user_word_at_cross_over[rotated])
-    apply simp
-   apply (simp add: user_word_at_def Aligned.is_aligned_neg_mask
-                    pointerInUserData_def pageBits_def mask_lower_twice)
+  apply (subgoal_tac " c_guard (Ptr (ptr && ~~ mask 2)::32 word ptr) \<and>
+    s \<Turnstile>\<^sub>c (Ptr (ptr && ~~ mask 2)::32 word ptr) \<and> h_val (hrs_mem (t_hrs_' (globals s))) (Ptr (ptr && ~~ mask 2)) = x" for x)
+  prefer 2
+   apply (drule_tac p="ptr && ~~ mask 2" in user_word_at_cross_over[rotated])
+     apply simp
+    apply (simp add: user_word_at_def Aligned.is_aligned_neg_mask
+                   pointerInUserData_def pageBits_def mask_lower_twice)
+    apply assumption
   apply (clarsimp simp: h_val_def from_bytes_def typ_info_word)
   apply (drule_tac f="word_rsplit :: word32 \<Rightarrow> word8 list" in arg_cong)
   apply (simp add: word_rsplit_rcat_size word_size)

@@ -94,6 +94,7 @@ lemma createObject_typ_at':
 lemma retype_region2_ext_retype_region_ArchObject:
   "retype_region ptr n us (ArchObject x)=
   retype_region2 ptr n us (ArchObject x)"
+  apply (rule ext)
   apply (simp add:retype_region_def retype_region2_def bind_assoc
     retype_region2_ext_def retype_region_ext_def default_ext_def)
   apply (rule ext)
@@ -101,7 +102,7 @@ lemma retype_region2_ext_retype_region_ArchObject:
      apply simp
     apply simp
    apply (simp add:gets_def get_def bind_def return_def simpler_modify_def )
-   apply (rule_tac x = xb in fun_cong)
+   apply (rule_tac x = xc in fun_cong)
    apply (rule_tac f = do_extended_op in arg_cong)
    apply (rule ext)
    apply simp
@@ -769,7 +770,8 @@ lemma resolve_vaddr_valid_mapping_size:
     apply (clarsimp simp: vs_cap_ref_def split: cap.split_asm arch_cap.split_asm
            option.split_asm vmpage_size.split_asm)
     apply (frule(1) caps_of_state_valid_cap)
-    apply (clarsimp simp: valid_cap_def obj_at_def)
+    apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
+      split:split_if_asm)
    apply (clarsimp simp: vaddr_segment_nonsense4)
    apply (drule_tac x="ucast (pt_slot' && mask pt_bits >> 2)" in spec)
    apply (drule vs_lookup_pages_step)
@@ -782,7 +784,8 @@ lemma resolve_vaddr_valid_mapping_size:
    apply (clarsimp simp: vs_cap_ref_def split: cap.split_asm arch_cap.split_asm
           option.split_asm vmpage_size.split_asm)
    apply (frule(1) caps_of_state_valid_cap)
-   apply (clarsimp simp: valid_cap_def obj_at_def)
+   apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
+     split:split_if_asm)
   apply (drule vs_lookup_pages_vs_lookupI)
   apply (rule conjI)
    apply clarsimp
@@ -796,10 +799,11 @@ lemma resolve_vaddr_valid_mapping_size:
    apply (clarsimp simp: vs_cap_ref_def split: cap.split_asm arch_cap.split_asm
           option.split_asm vmpage_size.split_asm)
     apply (frule(1) caps_of_state_valid_cap)
-    apply (clarsimp simp: valid_cap_def obj_at_def)
+    apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
+      split:split_if_asm)
    apply (frule(1) caps_of_state_valid_cap)
-   apply (clarsimp simp: valid_cap_def obj_at_def)
-  
+   apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps 
+     split:split_if_asm)
   apply clarsimp
   apply (drule vs_lookup_pages_step)
    apply (rule vs_lookup_pages1I, simp add: obj_at_def)
@@ -811,9 +815,11 @@ lemma resolve_vaddr_valid_mapping_size:
   apply (clarsimp simp: vs_cap_ref_def split: cap.split_asm arch_cap.split_asm
          option.split_asm vmpage_size.split_asm)
    apply (frule(1) caps_of_state_valid_cap)
-   apply (clarsimp simp: valid_cap_def obj_at_def)
+   apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
+     split:split_if_asm)
   apply (frule(1) caps_of_state_valid_cap)
-  apply (clarsimp simp: valid_cap_def obj_at_def)
+  apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
+    split:split_if_asm)
   done
 
 lemma dec_arch_inv_corres:

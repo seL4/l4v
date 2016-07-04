@@ -17,7 +17,7 @@ definition
   authorised_untyped_inv :: "'a PAS \<Rightarrow> Invocations_A.untyped_invocation \<Rightarrow> bool"
 where
  "authorised_untyped_inv aag ui \<equiv> case ui of
-     Invocations_A.untyped_invocation.Retype src_slot base aligned_free_ref new_type obj_sz slots \<Rightarrow>
+     Invocations_A.untyped_invocation.Retype src_slot base aligned_free_ref new_type obj_sz slots dev \<Rightarrow>
        is_subject aag (fst src_slot) \<and> (0::word32) < of_nat (length slots) \<and>
        (\<forall>x\<in>{aligned_free_ref..aligned_free_ref + of_nat (length slots)*2^(obj_bits_api new_type obj_sz) - 1}. is_subject aag x) \<and>
        new_type \<noteq> ArchObject ASIDPoolObj \<and>
@@ -27,7 +27,7 @@ definition
   authorised_untyped_inv_state :: "'a PAS \<Rightarrow> Invocations_A.untyped_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
  "authorised_untyped_inv_state aag ui s \<equiv> case ui of
-     Invocations_A.untyped_invocation.Retype src_slot base aligned_free_ref new_type obj_sz slots \<Rightarrow>
+     Invocations_A.untyped_invocation.Retype src_slot base aligned_free_ref new_type obj_sz slots dev \<Rightarrow>
        (\<forall> cap. cte_wp_at (op = cap) src_slot s \<longrightarrow>
          (\<forall> x\<in>ptr_range base (bits_of cap). is_subject aag x))"
 
@@ -37,7 +37,7 @@ subsection{* invoke *}
 
 lemma create_cap_integrity:
   "\<lbrace>integrity aag X st and K (is_subject aag (fst (fst ref)))\<rbrace>
-     create_cap tp sz p ref
+     create_cap tp sz p dev ref 
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: create_cap_def split_def)
   apply (wp set_cap_integrity_autarch[unfolded pred_conj_def K_def]
@@ -137,10 +137,11 @@ lemma create_word_objects_integrity:
     K (range_cover ptr sz bits numObjects \<and>
        of_nat numObjects > (0::word32) \<and> bits \<ge> 2 \<and>
        (\<forall>y\<in>{ptr..ptr + (of_nat numObjects)*(2^bits) - 1}. is_subject aag y)) \<rbrace>
-     create_word_objects ptr numObjects bits
+     create_word_objects ptr numObjects bits dev
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply(simp add: create_word_objects_def do_machine_op_def)
-  apply (wp, simp add: split_def, wp modify_wp)
+  apply (wp hoare_unless_wp, simp add: split_def, wp modify_wp)
+  apply simp
   apply clarify
   apply (erule use_valid)
   apply (wp mapM_x_wp' clearMemory_respects | simp)+
@@ -287,7 +288,7 @@ lemma init_arch_objects_integrity:
     K (\<forall> x\<in>set refs. new_type = ArchObject PageDirectoryObj \<longrightarrow> is_aligned x pd_bits) and
     K (word_object_range_cover_auth aag new_type ptr sz num_objects \<and>
        of_nat num_objects > (0::word32))\<rbrace>
-     init_arch_objects new_type ptr num_objects obj_sz refs
+     init_arch_objects new_type ptr num_objects obj_sz refs dev
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply(rule hoare_gen_asm)+
   apply(cases new_type)
@@ -313,7 +314,7 @@ lemma retype_region_integrity:
   "\<lbrace>integrity aag X st and
     K (range_cover ptr sz (obj_bits_api type o_bits) num_objects \<and>
        (\<forall>x\<in>{ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}. is_subject aag x))\<rbrace>
-   retype_region ptr num_objects o_bits type
+   retype_region ptr num_objects o_bits type dev
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply(rule hoare_gen_asm)+
   apply(simp only: retype_region_def retype_region_ext_extended.dxo_eq)
@@ -331,7 +332,7 @@ lemma retype_region_integrity:
 lemma retype_region_ret_is_subject:
   "\<lbrace>K (range_cover ptr sz (obj_bits_api tp us) num_objects \<and>
        (\<forall>x\<in>{ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}. is_subject aag x))\<rbrace>
-   retype_region ptr num_objects us tp
+   retype_region ptr num_objects us tp dev
    \<lbrace>\<lambda>rv. K (\<forall> ref \<in> set rv. is_subject aag ref)\<rbrace>"
   apply(rule hoare_gen_asm2 | rule hoare_gen_asm)+
   apply(rule hoare_strengthen_post)
@@ -348,7 +349,7 @@ lemma retype_region_ret_is_subject:
 
 lemma retype_region_ret_pd_aligned:
   "\<lbrace>K (range_cover ptr sz (obj_bits_api tp us) num_objects)\<rbrace>
-   retype_region ptr num_objects us tp
+   retype_region ptr num_objects us tp dev
    \<lbrace>\<lambda>rv. K (\<forall> ref \<in> set rv. tp = ArchObject PageDirectoryObj \<longrightarrow> is_aligned ref pd_bits)\<rbrace>"
   apply(rule hoare_strengthen_post)
   apply(rule hoare_weaken_pre)

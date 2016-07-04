@@ -2221,7 +2221,7 @@ crunch machine_state[wp]: cap_swap "\<lambda>s. P(machine_state s)"
 
 lemma cap_swap_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace>  cap_swap c a c' b \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
-  apply (simp add: valid_machine_state_def in_user_frame_def)
+  apply (simp add: valid_machine_state_def in_user_frame_def in_device_frame_def)
   apply (wp cap_swap_typ_at
             hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_disj_lift)
   done
@@ -4054,6 +4054,9 @@ lemma cap_move_valid_ioc[wp]:
   apply clarsimp
   done
 
+lemma set_cap_in_device_frame[wp]:
+  "\<lbrace>in_device_frame buffer\<rbrace> set_cap cap ref \<lbrace>\<lambda>_. in_device_frame buffer\<rbrace>"
+  by (simp add: in_device_frame_def) (wp hoare_vcg_ex_lift set_cap_typ_at)
 
 lemma cap_move_invs[wp]:
   "\<lbrace>invs and valid_cap cap and cte_wp_at (op = cap.NullCap) ptr'

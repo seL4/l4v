@@ -452,7 +452,8 @@ lemma ccorres_updateCap [corres]:
     apply (erule (3) cpspace_cte_relation_upd_capI)
    apply (frule_tac f="ksPSpace" in arg_cong)
    apply (erule_tac t = s' in ssubst)
-   apply (simp add: heap_to_page_data_def)
+    apply simp
+   apply (simp add: heap_to_user_data_def heap_to_device_data_def)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
@@ -490,7 +491,7 @@ lemma ccorres_updateMDB_const [corres]:
    apply (rule conjI)
     apply (erule (3) cspace_cte_relation_upd_mdbI)
    apply (erule_tac t = s' in ssubst)
-   apply (simp add: heap_to_page_data_def)
+   apply (simp add: heap_to_user_data_def)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
@@ -633,7 +634,7 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
     apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
     apply (erule bexI [rotated])
     apply (clarsimp simp add: rf_sr_def cstate_relation_def 
-      Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_page_data_def
+      Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_user_data_def
      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
     apply (rule conjI)
      apply (erule (2) cspace_cte_relation_upd_mdbI)
@@ -680,16 +681,16 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
    apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
    apply (erule bexI [rotated])
    apply (clarsimp simp add: rf_sr_def cstate_relation_def 
-     Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_page_data_def
+     Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_user_data_def
      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
    apply (rule conjI)   
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)   
 
     subgoal for _ s' by (cases "v_' s' = 0"; simp)
-   
    apply (erule_tac t = s'a in ssubst)
-   apply (simp add: carch_state_relation_def cmachine_state_relation_def h_t_valid_clift_Some_iff)
+   apply (simp add: carch_state_relation_def cmachine_state_relation_def
+     h_t_valid_clift_Some_iff)
 
    apply (erule (1) setCTE_tcb_case)
    apply clarsimp

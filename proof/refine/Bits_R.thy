@@ -126,7 +126,7 @@ lemma projectKO_user_data_device:
 
 lemmas projectKOs =
   projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb
-  projectKO_ASID projectKO_PTE projectKO_PDE projectKO_user_data
+  projectKO_ASID projectKO_PTE projectKO_PDE projectKO_user_data projectKO_user_data_device
   projectKO_eq projectKO_eq2
 
 lemma capAligned_epI:

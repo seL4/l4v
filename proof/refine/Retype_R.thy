@@ -196,25 +196,25 @@ lemma loadObject_cte_same:
 text {* On the abstract side *}
 
 lemma obj_bits_default_TCBObject:
-  "obj_bits (default_object  Structures_A.apiobject_type.TCBObject us) 
+  "obj_bits (default_object  Structures_A.apiobject_type.TCBObject dev us) 
   = objBits (makeObject :: tcb)"
   unfolding other_obj_relation_def default_object_def 
   by (simp add: objBits_simps pageBits_def)
 
 lemma other_obj_relation_default_EndpointObject:
-  "other_obj_relation (default_object Structures_A.apiobject_type.EndpointObject us)
+  "other_obj_relation (default_object Structures_A.apiobject_type.EndpointObject dev us)
   (injectKO (makeObject :: endpoint))"
   unfolding other_obj_relation_def ep_relation_def default_ep_def default_object_def  
   by (simp add: makeObject_endpoint)
 
 lemma obj_bits_default_EndpointObject:
-  "obj_bits (default_object  Structures_A.apiobject_type.EndpointObject us) 
+  "obj_bits (default_object  Structures_A.apiobject_type.EndpointObject dev us) 
   = objBits (makeObject :: endpoint)"
   unfolding other_obj_relation_def default_object_def 
   by (simp add: objBits_simps pageBits_def)
 
 lemma other_obj_relation_default_NotificationObject:
-  "other_obj_relation (default_object Structures_A.apiobject_type.NotificationObject us)
+  "other_obj_relation (default_object Structures_A.apiobject_type.NotificationObject dev us)
   (injectKO (makeObject :: Structures_H.notification))"
   unfolding other_obj_relation_def ntfn_relation_def default_notification_def 
             default_object_def default_ntfn_def
@@ -223,7 +223,7 @@ lemma other_obj_relation_default_NotificationObject:
 
 
 lemma obj_bits_default_NotificationObject:
-  "obj_bits (default_object  Structures_A.apiobject_type.NotificationObject us) 
+  "obj_bits (default_object  Structures_A.apiobject_type.NotificationObject dev us) 
   = objBits (makeObject :: Structures_H.notification)"
   unfolding other_obj_relation_def default_object_def 
   by (simp add: objBits_simps pageBits_def)
@@ -923,10 +923,10 @@ lemma obj_relation_retype_leD:
   by (simp add: obj_relation_retype_def)
 
 lemma obj_relation_retype_default_leD:
-  "\<lbrakk> obj_relation_retype (default_object (APIType_map2 ty) us) ko;
+  "\<lbrakk> obj_relation_retype (default_object (APIType_map2 ty) dev us) ko;
        ty \<noteq> Inr (APIObjectType ArchTypes_H.Untyped) \<rbrakk>
       \<Longrightarrow> objBitsKO ko \<le> obj_bits_api (APIType_map2 ty) us"
-  by (simp add: obj_relation_retype_def objBits_def obj_bits_api_def3)
+  by (simp add: obj_relation_retype_def objBits_def obj_bits_dev_irr)
 
 lemma makeObjectKO_Untyped:
   "makeObjectKO dev ty = Some v \<Longrightarrow> ty \<noteq> Inr (APIObjectType ArchTypes_H.Untyped)"
@@ -953,10 +953,10 @@ lemma obj_relation_cuts_trivial:
 lemma obj_relation_retype_addrs_eq:
   assumes not_unt:"ty \<noteq> Inr (APIObjectType ArchTypes_H.Untyped)"
   assumes  amp: "m = 2^ ((obj_bits_api (APIType_map2 ty) us) - (objBitsKO ko)) * n"
-  assumes  orr: "obj_relation_retype (default_object (APIType_map2 ty) us) ko"
+  assumes  orr: "obj_relation_retype (default_object (APIType_map2 ty) dev us) ko"
   shows  "\<lbrakk> range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n \<rbrakk> \<Longrightarrow>
    (\<Union>x \<in> set (retype_addrs ptr (APIType_map2 ty) n us).
-            fst ` obj_relation_cuts (default_object (APIType_map2 ty) us) x)
+            fst ` obj_relation_cuts (default_object (APIType_map2 ty) dev us) x)
       = set (new_cap_addrs m ptr ko)"
   apply (rule set_eqI, rule iffI)
    apply (clarsimp simp: retype_addrs_def)
@@ -966,7 +966,7 @@ lemma obj_relation_retype_addrs_eq:
                   dest!: less_two_pow_divD)
    apply (rule_tac x="xa * 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) + unat y"
                  in rev_bexI)
-    apply (simp add:amp obj_bits_api_default_object not_unt)
+    apply (simp add:amp obj_bits_api_default_object not_unt obj_bits_dev_irr)
     apply (rule less_le_trans[OF nat_add_left_cancel_less[THEN iffD2]])
     apply (erule unat_mono)
       apply (subst unat_power_lower)
@@ -1009,7 +1009,7 @@ lemma obj_relation_retype_addrs_eq:
   apply (rule of_nat_mono_maybe)
    apply (rule power_strict_increasing)
    apply (rule le_less_trans[OF diff_le_self])
-  apply (clarsimp simp: range_cover_def obj_bits_api_default_object 
+  apply (clarsimp simp: range_cover_def obj_bits_api_default_object obj_bits_dev_irr
         not_unt word_bits_def)+
 done
 
@@ -1045,10 +1045,10 @@ lemma retype_pspace_relation:
       and pn': "pspace_no_overlap' ptr sz s'"
       and  ko: "makeObjectKO dev ty = Some ko"
       and cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
-      and orr: "obj_relation_retype (default_object (APIType_map2 ty) us) ko"
+      and orr: "obj_relation_retype (default_object (APIType_map2 ty) dev us) ko"
       and num_r: "m = 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) * n"
   shows
-  "pspace_relation (foldr (\<lambda>p ps. ps(p \<mapsto> default_object (APIType_map2 ty) us))
+  "pspace_relation (foldr (\<lambda>p ps. ps(p \<mapsto> default_object (APIType_map2 ty) dev us))
                               (retype_addrs ptr (APIType_map2 ty) n us) (kheap s))
             (foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs m ptr ko) (ksPSpace s'))"
   (is "pspace_relation ?ps ?ps'")
@@ -1067,7 +1067,7 @@ proof
     "set (retype_addrs ptr (APIType_map2 ty) n us) \<inter> dom (kheap s) = {}"
     by auto
 
-  note pdom = pspace_dom_upd [OF dom_Int_ra, where ko="default_object (APIType_map2 ty) us"]
+  note pdom = pspace_dom_upd [OF dom_Int_ra, where ko="default_object (APIType_map2 ty) dev us"]
 
   have pdom': "dom ?ps' = dom (ksPSpace s') \<union> set (new_cap_addrs m ptr ko)"
     by (clarsimp simp add: foldr_upd_app_if[folded data_map_insert_def]
@@ -1167,7 +1167,7 @@ lemma retype_ekheap_relation:
       and pn': "pspace_no_overlap' ptr sz s'"
       and  ko: "makeObjectKO dev ty = Some ko"
       and cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
-      and orr: "obj_relation_retype (default_object (APIType_map2 ty) us) ko"
+      and orr: "obj_relation_retype (default_object (APIType_map2 ty) dev us) ko"
       and num_r: "m = 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) * n"
   shows
   "ekheap_relation (foldr (\<lambda>p ps. ps(p := default_ext (APIType_map2 ty) default_domain))
@@ -1187,8 +1187,9 @@ lemma retype_ekheap_relation:
      apply (clarsimp simp add: ekheap_relation_def 
                       pspace_relation_def default_ext_def cong: if_cong
                       split: split_if_asm)
-      subgoal by (clarsimp simp add: makeObjectKO_def APIType_map2_def cong: if_cong split: sum.splits Structures_H.kernel_object.splits
-             arch_kernel_object.splits ArchTypes_H.object_type.splits ArchTypes_H.apiobject_type.splits)
+      subgoal by (clarsimp simp add: makeObjectKO_def APIType_map2_def cong: if_cong 
+             split: sum.splits Structures_H.kernel_object.splits
+                    arch_kernel_object.splits ArchTypes_H.object_type.splits ArchTypes_H.apiobject_type.splits)
      apply (frule ekh_at_tcb_at[OF et])
      apply (intro impI conjI)
       apply clarsimp
@@ -1404,7 +1405,7 @@ lemma retype_state_relation:
       and cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
       and  ko:   "makeObjectKO dev ty = Some ko"
       and api:   "obj_bits_api (APIType_map2 ty) us \<le> sz"
-      and orr:   "obj_relation_retype (default_object (APIType_map2 ty) us) ko"
+      and orr:   "obj_relation_retype (default_object (APIType_map2 ty) dev us) ko"
       and num_r: "m = 2 ^ (obj_bits_api (APIType_map2 ty) us - objBitsKO ko) * n"
   shows
   "(ekheap_update
@@ -1412,7 +1413,7 @@ lemma retype_state_relation:
                     (retype_addrs ptr (APIType_map2 ty) n us) (ekheap s))
             s
            \<lparr>kheap :=
-              foldr (\<lambda>p. data_map_insert p (default_object (APIType_map2 ty) us))
+              foldr (\<lambda>p. data_map_insert p (default_object (APIType_map2 ty) dev us))
                (retype_addrs ptr (APIType_map2 ty) n us) (kheap s)\<rparr>,
            update_gs (APIType_map2 ty) us (set (retype_addrs ptr (APIType_map2 ty) n us))
             (s'\<lparr>ksPSpace :=
@@ -1684,14 +1685,14 @@ interpretation retype_region2_extra_ext_extended: is_extended "retype_region2_ex
   done
 
 definition
-  retype_region2 :: "obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> Structures_A.apiobject_type \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
+  retype_region2 :: "obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> Structures_A.apiobject_type \<Rightarrow> bool \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
 where
-  "retype_region2 ptr numObjects o_bits type \<equiv> do
+  "retype_region2 ptr numObjects o_bits type dev \<equiv> do
     obj_size \<leftarrow> return $ 2 ^ obj_bits_api type o_bits;
     ptrs \<leftarrow> return $ map (\<lambda>p. ptr_add ptr (p * obj_size)) [0..< numObjects];
     when (type \<noteq> Structures_A.Untyped) (do
       kh \<leftarrow> gets kheap;
-      kh' \<leftarrow> return $ foldr (\<lambda>p kh. kh(p \<mapsto> default_object type o_bits)) ptrs kh;
+      kh' \<leftarrow> return $ foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits)) ptrs kh;
       do_extended_op (retype_region2_ext ptrs type);
       modify $ kheap_update (K kh')
     od);
@@ -1813,8 +1814,8 @@ qed (auto simp: fun_eq_iff retype_region_ext_def retype_region2_ext_def retype_r
                 put_def gets_def get_def bind_def return_def mk_ef_def modify_def foldr_upd_app_if' when_def default_ext_def)
 
 lemma retype_region2_ext_retype_region:
-  "(retype_region ptr numObjects o_bits type :: (obj_ref list, det_ext) s_monad)
- = (do ptrs \<leftarrow> retype_region2 ptr numObjects o_bits type;
+  "(retype_region ptr numObjects o_bits type dev :: (obj_ref list, det_ext) s_monad)
+ = (do ptrs \<leftarrow> retype_region2 ptr numObjects o_bits type dev;
        retype_region2_extra_ext ptrs type;
        return ptrs
     od)"
@@ -1888,18 +1889,18 @@ lemma corres_retype':
   and         aligned: "is_aligned ptr (objBitsKO ko + gbits)"
   and    obj_bits_api: "obj_bits_api (APIType_map2 ty) us =
                         objBitsKO ko + gbits"
-  and           check: "(sz < obj_bits_api (APIType_map2 ty) us)
+  and           check: "(sz < obj_bits_api (APIType_map2 ty)  us)
                            = (sz < objBitsKO ko + gbits)"
   and             usv: "APIType_map2 ty = Structures_A.CapTableObject \<Longrightarrow> 0 < us"
   and              ko: "makeObjectKO dev ty = Some ko" 
   and             orr: "obj_bits_api (APIType_map2 ty) us \<le> sz \<Longrightarrow>
                         obj_relation_retype
-                          (default_object (APIType_map2 ty) us) ko"
+                          (default_object (APIType_map2 ty) dev us) ko"
   and           cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
   shows "corres (op=)
   (\<lambda>s. valid_pspace s \<and> pspace_no_overlap ptr sz s \<and> valid_mdb s \<and> valid_etcbs s \<and> valid_list s)
   (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' ptr sz s)
-  (retype_region2 ptr n us (APIType_map2 ty))
+  (retype_region2 ptr n us (APIType_map2 ty) dev)
   (do addrs \<leftarrow> createObjects ptr n ko gbits;
       _ \<leftarrow> modify (update_gs (APIType_map2 ty) us (set addrs));
       return addrs od)"
@@ -2007,7 +2008,7 @@ proof -
          apply (rule_tac P="\<lambda>s. x = kheap s \<and> eps = ekheap (s) \<and> ?P s" and
                          P'="\<lambda>s. ps = ksPSpace s \<and> ?P' s" in corres_modify)
          apply (simp add: set_retype_addrs_fold new_caps_adds_fold)
-         apply (erule retype_state_relation[OF _ _ _ _ _ _ _ _ _ cover _ _ orr,where dev = dev],
+         apply (erule retype_state_relation[OF _ _ _ _ _ _ _ _ _ cover _ _ orr],
                 simp_all add: ko not_zero obj_bits_api
                               bound[simplified obj_bits_api ko])[1]
         apply wp
@@ -2655,7 +2656,7 @@ lemma other_objs_default_relation:
              | Structures_A.NotificationObject \<Rightarrow> ko = injectKO (makeObject :: Structures_H.notification)
              | Structures_A.TCBObject \<Rightarrow> ko = injectKO (makeObject :: tcb) 
              | _ \<Rightarrow> False \<rbrakk> \<Longrightarrow>
-    obj_relation_retype (default_object ty n) ko"
+    obj_relation_retype (default_object ty dev n) ko"
   apply (rule obj_relation_retype_other_obj)
    apply (clarsimp simp: default_object_def a_type_def
                          is_other_obj_relation_type_def
@@ -2673,7 +2674,7 @@ lemma other_objs_default_relation:
 
 lemma captable_relation_retype:
   "n < word_bits \<Longrightarrow>
-   obj_relation_retype (default_object Structures_A.CapTableObject n) (KOCTE makeObject)"
+   obj_relation_retype (default_object Structures_A.CapTableObject dev n) (KOCTE makeObject)"
   apply (clarsimp simp: obj_relation_retype_def default_object_def 
                         wf_empty_bits objBits_simps obj_bits.simps
                         dom_empty_cnode ex_with_length cte_level_bits_def)
@@ -2692,7 +2693,7 @@ lemma captable_relation_retype:
   done
 
 lemma pagetable_relation_retype:
-  "obj_relation_retype (default_object (ArchObject PageTableObj) n)
+  "obj_relation_retype (default_object (ArchObject PageTableObj) dev n)
                        (KOArch (KOPTE makeObject))"
   apply (simp add: default_object_def default_arch_object_def
                    makeObject_pte obj_relation_retype_def
@@ -2706,7 +2707,7 @@ lemma pagetable_relation_retype:
   done
 
 lemma pagedirectory_relation_retype:
-  "obj_relation_retype (default_object (ArchObject PageDirectoryObj) n)
+  "obj_relation_retype (default_object (ArchObject PageDirectoryObj) dev n)
                        (KOArch (KOPDE makeObject))"
   apply (simp add: default_object_def default_arch_object_def
                    makeObject_pde obj_relation_retype_def
@@ -2729,13 +2730,13 @@ lemma corres_retype:
   and              tp: "APIType_map2 ty \<in> no_gs_types"
   and              ko: "makeObjectKO dev ty = Some ko"
   and             orr: "obj_bits_api (APIType_map2 ty) us \<le> sz \<Longrightarrow>
-                        obj_relation_retype (default_object (APIType_map2 ty) us) ko"
+                        obj_relation_retype (default_object (APIType_map2 ty) dev us) ko"
   and           cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
   shows "corres (op =)
   (\<lambda>s. valid_pspace s \<and> pspace_no_overlap ptr sz s \<and> valid_mdb s \<and> valid_etcbs s \<and> valid_list s)
   (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' ptr sz s 
        \<and> (\<exists>val. ko = injectKO val))
-  (retype_region2 ptr n us (APIType_map2 ty)) (createObjects ptr n ko gbits)"
+  (retype_region2 ptr n us (APIType_map2 ty) dev) (createObjects ptr n ko gbits)"
   apply (rule corres_guard_imp)
     apply (rule_tac F = "(\<exists>val. ko = injectKO val)" in corres_gen_asm2)
     apply (erule exE)
@@ -2867,8 +2868,6 @@ lemma doMachineOp_update_gs_swap:
                    simpler_gets_def select_f_def split_def bind_assoc bind_def
                    return_def update_gs_ksMachineState_update_swap unless_def when_def)
 
-thm createWordObjects_def
-
 lemma createWordObjects_update_gs:
   "do addrs \<leftarrow> createWordObjects y n b dev;
        _ \<leftarrow> modify (update_gs tp us (set addrs));
@@ -2898,7 +2897,7 @@ declare result_in_set_wp[wp del]
 
 lemma  makeObjectKO_user_data:
   "makeObjectKO False (Inr ty) = Some KOUserData
-    \<Longrightarrow> obj_relation_retype (default_object (APIType_map2 (Inr ty)) us) KOUserData"
+    \<Longrightarrow> obj_relation_retype (default_object (APIType_map2 (Inr ty)) False us) KOUserData"
     apply (case_tac ty)
      apply (simp_all add:makeObjectKO_simps)
        apply (case_tac x1)
@@ -2912,11 +2911,15 @@ lemma  makeObjectKO_user_data:
 
 lemma  makeObjectKO_user_data_device:
   "makeObjectKO True (Inr ty) = Some KOUserDataDevice
-    \<Longrightarrow> obj_relation_retype (default_object (APIType_map2 (Inr ty)) us) KOUserDataDevice"
+    \<Longrightarrow> obj_relation_retype (default_object (APIType_map2 (Inr ty)) True us) KOUserDataDevice"
     apply (case_tac ty)
-     apply (simp_all add:makeObjectKO_simps)
+     apply (simp_all add:makeObjectKO_simps split:split_if_asm)
        apply (case_tac x1)
-sorry (* change needs to be made in abstract for this *)
+     apply (simp_all add:makeObjectKO_simps default_object_def APIType_map2_def 
+       obj_relation_retype_def objBits_simps arch_kobj_size_def
+       default_arch_object_def pageBits_def)
+     apply (auto simp:image_def)
+  done
 
 lemma corres_create_word_objectsI:
   shows "\<lbrakk>tp = APIType_map2 (Inr ty); range_cover y sz (obj_bits_api tp us) n;
@@ -2927,7 +2930,7 @@ lemma corres_create_word_objectsI:
         (\<lambda>s. valid_pspace s \<and> pspace_no_overlap y sz s \<and> valid_mdb s \<and> valid_etcbs s \<and> valid_list s)
         (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and>
              pspace_no_overlap' y sz s)
-        (do x \<leftarrow> retype_region2 y n us tp;
+        (do x \<leftarrow> retype_region2 y n us tp dev;
             _ \<leftarrow> create_word_objects y n (obj_bits_api tp us) dev;
             return x
          od)
@@ -2979,7 +2982,7 @@ lemma corres_create_word_objectsI:
                apply (simp add:range_cover_def objBitsKO_simps)+
          apply (clarsimp simp add:obj_bits_api_def slot_bits_def pageBits_def)
         apply (simp add:makeObjectKO_user_data_device)+
-      apply (rule corres_retype'[where dev = dev and sz = sz])
+      apply (rule corres_retype'[where sz = sz])
               apply (simp add:range_cover_def objBitsKO_simps)+
         apply (clarsimp simp add:obj_bits_api_def slot_bits_def pageBits_def)
        apply (simp add:makeObjectKO_user_data)+
@@ -4602,9 +4605,7 @@ apply (rule mapM_x_inv_wp[where P="?PRE"])
       | wp_once threadSet_ko_wp_at2'_futz[where Q="\<lambda>tcb. \<not>tcbQueued tcb \<and> tcbState tcb = Inactive"]
       | simp)+
 done
-thm createObjects_ko_at_strg
-thm objBitsKO_simps
-term objBitsKO
+
 lemma createObjects_makeObject_not_tcbQueued:
   assumes "range_cover ptr sz (objBitsKO tcb) n"
   assumes "n \<noteq> 0" "tcb = injectKO (makeObject::tcb)"
@@ -5187,7 +5188,7 @@ lemma createNewCaps_vms:
     valid_machine_state'\<rbrace>
    createNewCaps ty ptr n us dev
    \<lbrace>\<lambda>archCaps. valid_machine_state'\<rbrace>"
-  apply (clarsimp simp: Arch_createNewCaps_def valid_machine_state'_def
+  apply (clarsimp simp: Arch_createNewCaps_def valid_machine_state'_def pointerInDeviceData_def
                         Arch_createNewCaps_def createNewCaps_def pointerInUserData_def
                         typ_at'_def createObjects_def doMachineOp_return_foo)
   apply (rule hoare_pre)
@@ -5775,7 +5776,8 @@ lemma createObjects_vms'[wp]:
      pspace_distinct' and pspace_no_overlap' ptr sz and valid_machine_state'\<rbrace>
       createObjects ptr n val gbits
    \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def typ_at'_def)
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+    typ_at'_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift createObjects_orig_ko_wp_at2'
        | simp add:createObjects_def)+
   apply auto
@@ -5880,14 +5882,14 @@ lemma corres_retype_update_gsI:
   and           ko: "makeObjectKO dev ty = Some ko"
   and          orr: "obj_bits_api (APIType_map2 ty) us \<le> sz \<Longrightarrow>
                      obj_relation_retype
-                       (default_object (APIType_map2 ty) us) ko"
+                       (default_object (APIType_map2 ty) dev us) ko"
   and        cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
   and            f: "f = update_gs (APIType_map2 ty) us"
   shows "corres (op=)
          (\<lambda>s. valid_pspace s \<and> pspace_no_overlap ptr sz s \<and> valid_mdb s \<and> valid_etcbs s \<and> valid_list s)
          (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and>
               pspace_no_overlap' ptr sz s)
-         (retype_region2 ptr n us (APIType_map2 ty))
+         (retype_region2 ptr n us (APIType_map2 ty) dev)
          (do addrs \<leftarrow> createObjects ptr n ko gbits;
              _ \<leftarrow> modify (f (set addrs));
              return addrs
@@ -5958,10 +5960,11 @@ lemma retype_region2_extra_ext_trivial:
 by (simp add: retype_region2_extra_ext_def when_def APIType_map2_def)
 
 lemma retype_region2_ext_retype_region_ArchObject_PageDirectoryObj:
-  "retype_region ptr n us (APIType_map2 (Inr PageDirectoryObject)) = (retype_region2 ptr n us (APIType_map2 (Inr PageDirectoryObject)) :: obj_ref list det_ext_monad)"
+  "retype_region ptr n us (APIType_map2 (Inr PageDirectoryObject)) dev = 
+  (retype_region2 ptr n us (APIType_map2 (Inr PageDirectoryObject)) dev :: obj_ref list det_ext_monad)"
 by (simp add: retype_region2_ext_retype_region retype_region2_extra_ext_def when_def APIType_map2_def)
 
-lemma retype_region2_valid_etcbs[wp]:"\<lbrace>valid_etcbs\<rbrace> retype_region2 a b c d \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
+lemma retype_region2_valid_etcbs[wp]:"\<lbrace>valid_etcbs\<rbrace> retype_region2 a b c d dev \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   apply (simp add: retype_region2_def)
   apply (simp add: retype_region2_ext_def bind_assoc)
   apply wp
@@ -5971,7 +5974,7 @@ lemma retype_region2_valid_etcbs[wp]:"\<lbrace>valid_etcbs\<rbrace> retype_regio
 
 lemma retype_region2_obj_at:
   assumes tytcb: "ty = Structures_A.apiobject_type.TCBObject"
-  shows "\<lbrace>\<top>\<rbrace> retype_region2 ptr n us ty \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. tcb_at x s\<rbrace>"
+  shows "\<lbrace>\<top>\<rbrace> retype_region2 ptr n us ty dev \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. tcb_at x s\<rbrace>"
   using tytcb unfolding retype_region2_def
   apply (simp only: return_bind bind_return foldr_upd_app_if fun_app_def K_bind_def)
   apply (wp dxo_wp_weak | simp)+
@@ -5996,7 +5999,7 @@ lemma corres_retype_region_createNewCaps:
             (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' y sz s
                   \<and> valid_pspace' s \<and> valid_arch_state' s
                   \<and> range_cover y sz (obj_bits_api (APIType_map2 (Inr ty)) us) n \<and> n\<noteq> 0)
-            (do x \<leftarrow> retype_region y n us (APIType_map2 (Inr ty)) :: obj_ref list det_ext_monad;
+            (do x \<leftarrow> retype_region y n us (APIType_map2 (Inr ty)) dev :: obj_ref list det_ext_monad;
                 init_arch_objects (APIType_map2 (Inr ty)) y n us x dev;
                 return x od)
             (createNewCaps ty y n us dev)"

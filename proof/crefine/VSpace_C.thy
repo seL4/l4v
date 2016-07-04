@@ -2686,7 +2686,7 @@ lemma updateCap_frame_mapped_addr_ccorres:
     apply (erule (3) cmap_relation_updI)
     subgoal by simp
    apply (erule_tac t = s' in ssubst)
-   apply (simp add: heap_to_page_data_def)
+   apply (simp add: heap_to_user_data_def)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
@@ -3250,7 +3250,7 @@ lemma performASIDPoolInvocation_ccorres:
                 apply (erule (1) cap_lift_PDCap_Base)
                apply simp
               apply (erule_tac t = s' in ssubst)
-              apply (simp add: heap_to_page_data_def)
+              apply (simp add: heap_to_user_data_def)
               apply (rule conjI)
                apply (erule (1) setCTE_tcb_case)
               apply (simp add: carch_state_relation_def cmachine_state_relation_def

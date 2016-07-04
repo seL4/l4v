@@ -240,7 +240,7 @@ where
  "cap_auth_conferred cap \<equiv>
     case cap of
       Structures_A.NullCap \<Rightarrow> {}
-    | Structures_A.UntypedCap oref bits freeIndex \<Rightarrow> {Control}
+    | Structures_A.UntypedCap isdev oref bits freeIndex \<Rightarrow> {Control}
     | Structures_A.EndpointCap oref badge r \<Rightarrow>
          cap_rights_to_auth r True
     | Structures_A.NotificationCap oref badge r \<Rightarrow>
@@ -332,7 +332,7 @@ primrec
 where
   "aobj_ref' (arch_cap.ASIDPoolCap p as) = {p}"
 | "aobj_ref' arch_cap.ASIDControlCap = {}"
-| "aobj_ref' (arch_cap.PageCap x rs sz as4) = ptr_range x (pageBitsForSize sz)"
+| "aobj_ref' (arch_cap.PageCap isdev x rs sz as4) = ptr_range x (pageBitsForSize sz)"
 | "aobj_ref' (arch_cap.PageDirectoryCap x as2) = {x}"
 | "aobj_ref' (arch_cap.PageTableCap x as3) = {x}"
 
@@ -343,7 +343,7 @@ where
 | "obj_refs (cap.ReplyCap r m) = {r}"
 | "obj_refs cap.IRQControlCap = {}"
 | "obj_refs (cap.IRQHandlerCap irq) = {}"
-| "obj_refs (cap.UntypedCap r s f) = {}"
+| "obj_refs (cap.UntypedCap d r s f) = {}"
 | "obj_refs (cap.CNodeCap r bits guard) = {r}"
 | "obj_refs (cap.EndpointCap r b cr) = {r}"
 | "obj_refs (cap.NotificationCap r b cr) = {r}"
@@ -372,7 +372,7 @@ where
 fun
   cap_asid' :: "cap \<Rightarrow> asid set"
 where
-  "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.PageCap _ _ _ mapping))
+  "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.PageCap _ _ _ _ mapping))
       = fst ` set_option mapping"
   | "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.PageTableCap _ mapping))
       = fst ` set_option mapping"
@@ -820,7 +820,7 @@ where
   "auth_ipc_buffers s \<equiv> \<lambda>p. case (get_tcb p s) of
                                  None \<Rightarrow> {}
                                | Some tcb \<Rightarrow> case tcb_ipcframe tcb of
-                                                  cap.ArchObjectCap (arch_cap.PageCap p' R vms _) \<Rightarrow>
+                                                  cap.ArchObjectCap (arch_cap.PageCap False p' R vms _) \<Rightarrow>
                                                        if AllowWrite \<in> R then (ptr_range (p' + (tcb_ipc_buffer tcb && mask (pageBitsForSize vms))) msg_align_bits) else {}
                                                  | _ \<Rightarrow> {}"
 
@@ -844,12 +844,12 @@ lemma caps_of_state_tcb_cap_cases:
 
 lemma auth_ipc_buffers_member_def:
   "x \<in> auth_ipc_buffers s p = (\<exists>tcb p' R vms xx. get_tcb p s = Some tcb
-                                              \<and> tcb_ipcframe tcb = (cap.ArchObjectCap (arch_cap.PageCap p' R vms xx))
-                                              \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (cap.ArchObjectCap (arch_cap.PageCap p' R vms xx))
+                                              \<and> tcb_ipcframe tcb = (cap.ArchObjectCap (arch_cap.PageCap False p' R vms xx))
+                                              \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (cap.ArchObjectCap (arch_cap.PageCap False p' R vms xx))
                                               \<and> AllowWrite \<in> R
                                               \<and> x \<in> ptr_range (p' + (tcb_ipc_buffer tcb && mask (pageBitsForSize vms))) msg_align_bits)"
   unfolding auth_ipc_buffers_def
-  by (clarsimp simp: caps_of_state_tcb split: option.splits cap.splits arch_cap.splits )
+  by (clarsimp simp: caps_of_state_tcb split: option.splits cap.splits arch_cap.splits bool.splits)
 
 text {*
   Inductive for now, we should add something about user memory/transitions.
@@ -1059,7 +1059,8 @@ lemma auth_ipc_buffers_tro:
           pasObjectAbs aag p \<notin> subjects \<rbrakk>
   \<Longrightarrow> x \<in> auth_ipc_buffers s p "
   apply (drule_tac x = p in spec)
-  apply (erule integrity_obj.cases, simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def split: cap.split_asm arch_cap.split_asm split_if_asm)
+  apply (erule integrity_obj.cases, simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def 
+    split: cap.split_asm arch_cap.split_asm split_if_asm bool.splits)
   apply fastforce
   done
 
@@ -1068,7 +1069,8 @@ lemma auth_ipc_buffers_tro_fwd:
           pasObjectAbs aag p \<notin> subjects \<rbrakk>
   \<Longrightarrow> x \<in> auth_ipc_buffers s' p "
   apply (drule_tac x = p in spec)
-  apply (erule integrity_obj.cases, simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def split: cap.split_asm arch_cap.split_asm split_if_asm)
+  apply (erule integrity_obj.cases, simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def
+    split: cap.split_asm arch_cap.split_asm split_if_asm bool.splits)
   apply fastforce
   done
 
@@ -1570,7 +1572,7 @@ lemma pbfs_less_wb:
   by (cases x, simp_all add: word_bits_def)
 
 lemma ipcframe_subset_page:
-  "\<lbrakk>valid_objs s; get_tcb p s = Some tcb; tcb_ipcframe tcb = cap.ArchObjectCap (arch_cap.PageCap p' R vms xx);
+  "\<lbrakk>valid_objs s; get_tcb p s = Some tcb; tcb_ipcframe tcb = cap.ArchObjectCap (arch_cap.PageCap d p' R vms xx);
     x \<in> ptr_range (p' + (tcb_ipc_buffer tcb && mask (pageBitsForSize vms))) msg_align_bits \<rbrakk>
   \<Longrightarrow> x \<in> ptr_range p' (pageBitsForSize vms)"
    apply (frule (1) valid_tcb_objs)
@@ -1578,7 +1580,7 @@ lemma ipcframe_subset_page:
    apply (erule set_mp[rotated])
    apply (rule ptr_range_subset)
      apply (simp add: valid_cap_def cap_aligned_def)
-    apply (simp add: valid_tcb_def valid_ipc_buffer_cap_def is_aligned_andI1)
+    apply (simp add: valid_tcb_def valid_ipc_buffer_cap_def is_aligned_andI1 split:bool.splits)
    apply (rule order_trans [OF _ pbfs_atleast_pageBits])
    apply (simp add: msg_align_bits pageBits_def)
   apply (rule and_mask_less')

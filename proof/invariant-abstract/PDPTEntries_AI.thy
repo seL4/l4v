@@ -790,7 +790,7 @@ lemma valid_pdpt_objs_trans_state[simp]: "valid_pdpt_objs (trans_state f s) = va
   done
 
 lemma retype_region_valid_pdpt[wp]:
-  "\<lbrace>valid_pdpt_objs\<rbrace> retype_region ptr bits o_bits type \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+  "\<lbrace>valid_pdpt_objs\<rbrace> retype_region ptr bits o_bits type dev \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (simp add: retype_region_def split del: split_if)
   apply (wp | simp only: valid_pdpt_objs_trans_state trans_state_update[symmetric])+
   apply (clarsimp simp: retype_addrs_fold foldr_upd_app_if ranI

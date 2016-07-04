@@ -20,6 +20,10 @@ lemma UserData_singleton [simp]:
   "(v = UserData) = True" "(UserData = v) = True" 
   by (cases v, simp)+
 
+lemma UserDataDevice_singleton [simp]:
+  "(v = UserDataDevice) = True" "(UserDataDevice = v) = True" 
+  by (cases v, simp)+
+
 datatype 
   kernel_object_type = 
     EndpointT

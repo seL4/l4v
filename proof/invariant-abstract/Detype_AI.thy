@@ -163,7 +163,8 @@ lemma caps_of_state_ko:
     apply (clarsimp simp:cap_range_def valid_cap_def obj_at_def is_cap_simps split:option.splits)+
   apply (rename_tac arch_cap ptr)
   apply (case_tac arch_cap)
-    apply (fastforce simp:cap_range_def obj_at_def is_cap_simps split:option.splits)+
+    apply (fastforce simp:cap_range_def obj_at_def is_cap_simps 
+      split:option.splits if_splits)+
   done
 
 
@@ -365,8 +366,9 @@ lemma drange:"descendants_range_in (cap_range cap) ptr s"
 lemma valid_cap:
     "\<And>cap'. \<lbrakk> s \<turnstile> cap'; obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap) \<rbrakk>
     \<Longrightarrow> detype (untyped_range cap) s \<turnstile> cap'"
-  by (clarsimp simp: valid_cap_def valid_untyped_def obj_reply_refs_def
-              split: cap.split_asm option.splits arch_cap.split_asm bool.split_asm)
+  by (auto simp: valid_cap_def valid_untyped_def obj_reply_refs_def
+              split: cap.split_asm option.splits if_splits
+              arch_cap.split_asm bool.split_asm )
 
 lemma iflive: "if_live_then_nonz_cap s"
     using invs by (simp add: invs_def valid_state_def valid_pspace_def)
@@ -815,7 +817,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
         apply (rule_tac x="(x, (Platform.ptrFromPAddr word))" in image_eqI)
          apply (simp add: split_def) 
         apply simp
-       apply (force dest!: vs_lookup_pages_preserved)
+       apply (force dest!: vs_lookup_pages_preserved simp:data_at_def)
       apply (rename_tac word attr rights)
       apply (drule_tac p'="(Platform.ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
        apply (clarsimp simp: vs_lookup_pages1_def)
@@ -826,7 +828,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
        apply (rule_tac x="(x, (Platform.ptrFromPAddr word))" in image_eqI)
         apply (simp add: split_def) 
        apply simp
-      apply (force dest!: vs_lookup_pages_preserved)
+      apply (force dest!: vs_lookup_pages_preserved simp:data_at_def)
      apply (rename_tac "fun")
      apply clarsimp
      apply (case_tac "fun x", simp_all)[1]
@@ -853,7 +855,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
        apply (rule_tac x="(x, (Platform.ptrFromPAddr word1))" in image_eqI)
         apply (simp add: split_def) 
        apply (simp add: pde_ref_pages_def)
-      apply (force dest!: vs_lookup_pages_preserved)
+      apply (force dest!: vs_lookup_pages_preserved simp:data_at_def)
      apply (rename_tac word attr rights)
      apply (drule_tac p'="(Platform.ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
       apply (clarsimp simp: vs_lookup_pages1_def)
@@ -864,7 +866,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
       apply (rule_tac x="(x, (Platform.ptrFromPAddr word))" in image_eqI)
        apply (simp add: split_def) 
       apply (simp add: pde_ref_pages_def)
-     apply (force dest!: vs_lookup_pages_preserved)
+     apply (force dest!: vs_lookup_pages_preserved simp:data_at_def)
     apply clarsimp
     done
 
@@ -1005,25 +1007,84 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
 
   from invs have valid_pspace: "valid_pspace s"
     by (simp add: invs_def valid_state_def)
+  
+  note blah[simp del] =  atLeastAtMost_iff
+          atLeastatMost_subset_iff atLeastLessThan_iff
+          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+          order_class.Icc_eq_Icc
+
+  (* FIXME: move to other place *)
+  have not_emptyI: "\<And>x A B. \<lbrakk>x\<in>A; x\<in>B\<rbrakk> \<Longrightarrow> A \<inter> B\<noteq> {}"
+    by auto
+
+  have in_user_frame_eq: "\<And>p. p \<notin> untyped_range cap
+       \<Longrightarrow> in_user_frame p
+          (s\<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x,
+                   exst := detype_ext (untyped_range cap) (exst s)\<rparr>)
+         = in_user_frame p s"
+    using untyped cap_is_valid
+    apply (clarsimp simp:in_user_frame_def)
+    apply (case_tac cap,simp_all)
+    subgoal for p dev ptr n f
+      apply (clarsimp simp:valid_untyped_def valid_cap_def)
+      apply (rule iffI)
+       apply (clarsimp simp:obj_at_def)
+       apply (elim allE, erule impE)
+        apply (fastforce split:if_splits)
+       apply (intro exI conjI,(fastforce simp:a_type_simps split:if_splits)+)[1]
+      apply (clarsimp simp:obj_at_def)
+      apply (elim allE, erule impE)
+       apply (fastforce split:if_splits)
+      apply (rule_tac x = sz in exI)
+      apply (frule valid_pspace_aligned[OF valid_pspace])
+      apply (clarsimp simp:a_type_simps obj_range_def cap_aligned_def)
+      apply (erule impE)
+       apply (erule not_emptyI[rotated])
+       apply (rule mask_in_range[THEN iffD1,simplified])
+        apply (simp add: is_aligned_neg_mask)
+       apply (simp add:mask_lower_twice)
+      apply (cut_tac mask_in_range[THEN iffD1,simplified,OF is_aligned_neg_mask[OF le_refl] refl])
+      apply fastforce
+      done
+    done
+
+  have in_device_frame_eq: "\<And>p. p \<notin> untyped_range cap
+       \<Longrightarrow> in_device_frame p
+          (s\<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x,
+                   exst := detype_ext (untyped_range cap) (exst s)\<rparr>)
+         = in_device_frame p s"
+    using untyped cap_is_valid
+    apply (clarsimp simp:in_device_frame_def)
+    apply (case_tac cap,simp_all)
+    subgoal for p dev ptr n f
+      apply (clarsimp simp:valid_untyped_def valid_cap_def)
+      apply (rule iffI)
+       apply (clarsimp simp:obj_at_def)
+       apply (elim allE, erule impE)
+        apply (fastforce split:if_splits)
+       apply (intro exI conjI,(fastforce simp:a_type_simps split:if_splits)+)[1]
+      apply (clarsimp simp:obj_at_def)
+      apply (elim allE, erule impE)
+       apply (fastforce split:if_splits)
+      apply (rule_tac x = sz in exI)
+      apply (frule valid_pspace_aligned[OF valid_pspace])
+      apply (clarsimp simp:a_type_simps obj_range_def cap_aligned_def)
+      apply (erule impE)
+       apply (erule not_emptyI[rotated])
+       apply (rule mask_in_range[THEN iffD1,simplified])
+        apply (simp add: is_aligned_neg_mask)
+       apply (simp add:mask_lower_twice)
+      apply (cut_tac mask_in_range[THEN iffD1,simplified,OF is_aligned_neg_mask[OF le_refl] refl])
+      apply fastforce
+      done
+    done
 
   from invs have "valid_machine_state s" by (simp add: invs_def valid_state_def)
   thus "valid_machine_state
           (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
-    apply (clarsimp simp: valid_machine_state_def clear_um_def detype_def)
-    apply (drule_tac x=p in spec, simp add: in_user_frame_def obj_at_def)
-    apply (elim exEI exE conjE, simp)
-    apply (frule valid_pspace_aligned[OF valid_pspace])
-    apply (drule_tac ptr'=p in mask_in_range)
-    apply (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
-    apply (rename_tac arch_kernel_obj)
-    apply (case_tac arch_kernel_obj, simp_all add: a_type_simps)
-    apply clarsimp
     using untyped cap_is_valid
-    apply (case_tac cap, simp_all)
-    apply (clarsimp simp add: valid_cap_def cap_aligned_def valid_untyped_def)
-    apply (drule_tac x="p && ~~ mask (pageBitsForSize x)" in spec)
-    apply (auto simp add: obj_range_def)
-    done
+    by (clarsimp simp: valid_machine_state_def clear_um_def
+      detype_def in_user_frame_eq in_device_frame_eq)
 
   from invs have "valid_irq_states s" by (simp add: invs_def valid_state_def)
   thus "valid_irq_states

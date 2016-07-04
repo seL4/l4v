@@ -167,12 +167,23 @@ lemma is_aligned_ptrFromPAddrD:
   apply simp
   done
 
+schematic_goal obj_bits_data_at: 
+  "data_at sz (ptrFromPAddr b) s
+  \<Longrightarrow> obj_bits (the (kheap s (ptrFromPAddr b))) = pageBitsForSize sz"
+  apply (clarsimp simp add:obj_at_def a_type_def data_at_def
+    split:kernel_object.splits arch_kernel_obj.split_asm if_splits)
+  apply (case_tac ko,simp_all)
+   apply fastforce
+  subgoal for ko archko
+   by (case_tac archko,fastforce+)
+  done
+
 lemma some_get_page_info_umapsD:
   "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
     (\<exists>\<rhd> pd_ref) s; p \<notin> kernel_mappings; valid_arch_objs s; pspace_aligned s;
     valid_asid_table (arm_asid_table (arch_state s)) s; valid_objs s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and>
-             typ_at (AArch (AIntData sz)) (Platform.ptrFromPAddr b) s)"
+             data_at sz (Platform.ptrFromPAddr b) s)"
   apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
                         kernel_mappings_slots_eq
                  split: option.splits Structures_A.kernel_object.splits
@@ -182,8 +193,8 @@ lemma some_get_page_info_umapsD:
   apply (simp add: valid_arch_obj_def)
   apply (drule bspec, simp)
   apply (simp split: Arch_Structs_A.pde.splits)
-     apply (rename_tac rs pd pt_ref rights w)
-     apply (subgoal_tac
+    apply (rename_tac rs pd pt_ref rights w)
+    apply (subgoal_tac
         "((rs, pd_ref) \<rhd>1
           (VSRef (ucast (ucast (p >> 20))) (Some APageDirectory) # rs,
            Platform.ptrFromPAddr pt_ref)) s")
@@ -196,38 +207,45 @@ lemma some_get_page_info_umapsD:
     apply (drule (2) stronger_arch_objsD[where ref="x # xs" for x xs])
     apply clarsimp
     apply (case_tac ao, simp_all add: a_type_simps obj_at_def)[1]
+     apply (simp add: get_pt_info_def get_pt_entry_def)
+     apply (drule_tac x="(ucast ((p >> 12) && mask 8))" in spec)
+     apply (clarsimp simp: obj_at_def valid_arch_obj_def
+      split: Arch_Structs_A.pte.splits,intro exI conjI,simp_all)[1]
+      apply (frule obj_bits_data_at)
+      apply (clarsimp simp: pspace_aligned_def data_at_def)
+      apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec )
+       apply (fastforce simp:obj_at_def)
+      apply (clarsimp dest!:is_aligned_ptrFromPAddrD)
+     apply (intro exI conjI, simp_all add:pageBits_def)[1]
     apply (simp add: get_pt_info_def get_pt_entry_def)
-    apply (drule_tac x="(ucast ((p >> 12) && mask 8))" in spec)
-    apply (clarsimp simp: obj_at_def valid_arch_obj_def
-      split: Arch_Structs_A.pte.splits)
-     apply (clarsimp simp: pspace_aligned_def)
-     apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec, fastforce)
-     apply (drule is_aligned_ptrFromPAddrD)
-      apply simp
-     apply (clarsimp simp:a_type_simps)
-    apply (clarsimp simp: pspace_aligned_def)
-    apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec, fastforce)
-    apply (drule is_aligned_ptrFromPAddrD)
-     apply simp
-    apply (clarsimp simp:a_type_simps)
-   apply (clarsimp simp: pspace_aligned_def obj_at_def)
-   apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec, fastforce)
-   apply (drule is_aligned_ptrFromPAddrD)
-    apply simp
-   apply (clarsimp simp:a_type_simps)
-  apply (clarsimp simp: pspace_aligned_def obj_at_def)
-  apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec, fastforce)
-  apply (drule is_aligned_ptrFromPAddrD)
-   apply simp
-   apply (clarsimp simp:a_type_simps)
-  done
+   apply clarsimp
+   apply (frule obj_bits_data_at)
+   apply (intro exI conjI, simp_all add:pageBits_def)[1]
+   apply (clarsimp simp: pspace_aligned_def data_at_def)
+    apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec)
+    apply (fastforce simp: obj_at_def)
+   apply (clarsimp dest!: is_aligned_ptrFromPAddrD)
+  apply clarsimp
+  apply (frule obj_bits_data_at)
+  apply (intro exI conjI, simp_all add:pageBits_def)[1]
+  apply (clarsimp simp: pspace_aligned_def data_at_def)
+   apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec)
+   apply (fastforce simp: obj_at_def)
+  apply (clarsimp dest!: is_aligned_ptrFromPAddrD)
+  done (*FIXME: ugly proof by Xin,Gao. needs general lemmas *)
 
-lemma ptable_rights_imp_user_frame:
+lemma is_aligned_physMappingOffset:
+"is_aligned physMappingOffset (pageBitsForSize sz)"
+  by (case_tac sz, simp_all add: physMappingOffset_def
+                   kernelBase_addr_def physBase_def is_aligned_def)[1]
+
+lemma ptable_rights_imp_frame:
   assumes "valid_state s"
   shows "ptable_rights t s x \<noteq> {} \<Longrightarrow>
          ptable_lift t s x = Some (Platform.addrFromPPtr y) \<Longrightarrow>
-         in_user_frame y s"
+         in_user_frame y s \<or> in_device_frame y s"
   apply (clarsimp simp: ptable_rights_def ptable_lift_def in_user_frame_def
+                        in_device_frame_def data_at_def
                  split: option.splits)
   apply (rename_tac b a r)
   apply (case_tac "x \<in> kernel_mappings")
@@ -251,26 +269,39 @@ lemma ptable_rights_imp_user_frame:
   apply (clarsimp simp: Platform.ptrFromPAddr_def Platform.addrFromPPtr_def
                         field_simps)
   apply (rule_tac x=sz in exI)
+  apply (drule_tac x = sz in spec)
   apply (subst add.assoc[symmetric])
-  apply (subst is_aligned_add_helper)
-    apply (erule aligned_add_aligned)
-      apply (case_tac sz, simp_all add: physMappingOffset_def
-                            kernelBase_addr_def physBase_def is_aligned_def)[1]
-     apply (case_tac sz, simp_all add: word_bits_conv)[1]
-   apply (rule and_mask_less')
-   apply (case_tac sz, simp_all add: word_bits_conv)[1]
-  apply simp
+  apply (frule is_aligned_add_helper[OF aligned_add_aligned[OF _ is_aligned_physMappingOffset]])
+    apply (rule le_refl)
+   apply (rule_tac w = x in and_mask_less')
+    apply (case_tac sz, simp_all add: word_bits_conv)[1]
+  apply (clarsimp simp:field_simps simp: data_at_def)
   done
+
+lemma device_update_invs:
+  "\<lbrace>invs\<rbrace>do_machine_op (device_update ds)
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+   apply (simp add:do_machine_op_def device_update_def simpler_modify_def select_f_def
+     gets_def get_def bind_def valid_def return_def)
+   by (clarsimp simp:invs_def valid_state_def valid_irq_states_def valid_machine_state_def
+     cur_tcb_def)
+
+lemma device_update_ct_in_state:
+  "\<lbrace>ct_in_state P\<rbrace>do_machine_op (device_update ds)
+   \<lbrace>\<lambda>_. ct_in_state P\<rbrace>"
+   apply (simp add:do_machine_op_def device_update_def simpler_modify_def select_f_def
+     gets_def get_def bind_def valid_def return_def)
+   by (clarsimp simp:ct_in_state_def )
 
 lemma do_user_op_invs:
   "\<lbrace>invs and ct_running\<rbrace>
    do_user_op f tc
    \<lbrace>\<lambda>_. invs and ct_running\<rbrace>"
   apply (simp add: do_user_op_def split_def)
+  apply (wp device_update_invs device_update_ct_in_state)
   apply (wp ct_running_machine_op select_wp dmo_invs)
-  apply (auto simp: user_mem_def user_memory_update_def simpler_modify_def
+  apply (clarsimp simp: user_mem_def user_memory_update_def simpler_modify_def
                     restrict_map_def invs_def cur_tcb_def
-             elim!: ptable_rights_imp_user_frame
              split: option.splits split_if_asm)
   done
 

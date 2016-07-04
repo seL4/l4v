@@ -1056,7 +1056,7 @@ lemma cap_move_corres:
    apply fastforce
   apply (clarsimp simp: pspace_relations_def)
   apply (rule conjI)
-   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
+   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
   apply (subst conj_assoc[symmetric])
   apply (rule conjI)
    defer
@@ -3265,7 +3265,8 @@ crunch ksMachine[wp]: cteInsert "\<lambda>s. P (ksMachineState s)"
 
 lemma cteInsert_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> cteInsert cap src dest \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
-  apply (simp add: cteInsert_def valid_machine_state'_def pointerInUserData_def)
+  apply (simp add: cteInsert_def valid_machine_state'_def pointerInDeviceData_def 
+    pointerInUserData_def)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
    apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv |
           intro hoare_drop_imp)+
@@ -3597,9 +3598,11 @@ lemma ghost_relation_of_heap:
     apply (rule ext)
     apply (clarsimp simp add: ghost_relation_def ups_of_heap_def)
     apply (drule_tac x=x in spec)
-    apply (auto simp add: ghost_relation_def ups_of_heap_def
+    apply (auto simp: ghost_relation_def ups_of_heap_def
                 split: option.splits Structures_A.kernel_object.splits
                        arch_kernel_obj.splits)[1]
+    subgoal for x dev sz  
+     by (drule_tac x = sz in spec,simp)
    apply (rule ext)
    apply (clarsimp simp add: ghost_relation_def cns_of_heap_def)
    apply (drule_tac x=x in spec)+
@@ -4203,7 +4206,7 @@ crunch ksMachine[wp]: setupReplyMaster "\<lambda>s. P (ksMachineState s)"
 
 lemma setupReplyMaster_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setupReplyMaster t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def )
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def )
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
   apply wp
   done
@@ -4478,7 +4481,7 @@ lemma setCTE_cur_tcb[wp]:
 
 lemma setCTE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setCTE ptr val \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def )
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def )
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
   apply wp
   done
@@ -4817,7 +4820,7 @@ lemma cins_corres_simple:
         apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
         apply (clarsimp simp: pspace_relations_def)
         apply (rule conjI)
-         apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
+         apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
         apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def prev_update_modify_mdb_relation)
         apply (subgoal_tac "cte_map dest \<noteq> 0")
          prefer 2
@@ -4836,10 +4839,7 @@ lemma cins_corres_simple:
          prefer 2
          apply (subst should_be_parent_of_masked_as_full[symmetric])
          apply (subst safe_parent_is_parent)
-            apply (simp add: cte_wp_at_caps_of_state)
-           apply (simp add: cte_wp_at_caps_of_state)
-          apply simp
-         apply simp
+            apply ((simp add: cte_wp_at_caps_of_state)+)[4]
         apply (subst conj_assoc[symmetric])
         apply (rule conjI)
          defer
@@ -6126,7 +6126,7 @@ lemma updateCap_same_master:
         apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
                          split: split_if_asm Structures_A.kernel_object.splits)
        apply (rule conjI)
-        apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
+        apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
         apply (intro allI conjI)
          apply (frule use_valid[OF _ setCTE_gsUserPages])
           prefer 2

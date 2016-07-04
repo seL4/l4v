@@ -201,8 +201,8 @@ lemma st_tcb_at_coerce_abstract:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: st_tcb_at_def obj_at_def other_obj_relation_def
                         tcb_relation_def
-                 split: Structures_A.kernel_object.split_asm
-                        Arch_Structs_A.arch_kernel_obj.split_asm)
+                 split: Structures_A.kernel_object.split_asm split_if_asm
+                        Arch_Structs_A.arch_kernel_obj.split_asm)+
   apply fastforce
   done
 
@@ -679,7 +679,7 @@ crunch pde_mappings'[wp]: tcbSchedDequeue "valid_pde_mappings'"
 
 lemma tcbSchedEnqueue_vms'[wp]: 
   "\<lbrace>valid_machine_state'\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def)
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift tcbSchedEnqueue_ksMachine)
   done
 
@@ -769,7 +769,7 @@ crunch ksMachine[wp]: tcbSchedAppend "\<lambda>s. P (ksMachineState s)"
 
 lemma tcbSchedAppend_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def)
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift tcbSchedAppend_ksMachine)
   done
 
@@ -862,7 +862,7 @@ crunch ksMachine[wp]: tcbSchedDequeue "\<lambda>s. P (ksMachineState s)"
 
 lemma tcbSchedDequeue_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def)
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift tcbSchedDequeue_ksMachine)
   done
 

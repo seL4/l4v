@@ -48,10 +48,13 @@ text {*
 *}
 type_synonym user_mem = "word32 \<Rightarrow> word8 option"
 
+(* This is a temperary solution to model the user device memory *)
+type_synonym device_state = "word32 \<Rightarrow> word8 option"
+
 text {*
   A user state consists of a register context and (physical) user memory.
 *}
-type_synonym user_state = "user_context \<times> user_mem"
+type_synonym user_state = "user_context \<times> user_mem \<times> device_state"
 
 text {* Virtual-memory mapping: translates virtual to physical addresses *}
 type_synonym vm_mapping = "word32 \<rightharpoonup> word32"
@@ -158,15 +161,27 @@ text {*
 *}
 definition
   "user_mem s \<equiv> \<lambda>p.
-  if in_user_frame p s
+  if (in_user_frame p s)
   then Some (underlying_memory (machine_state s) p)
   else None"
+
+definition
+  "device_mem s \<equiv> \<lambda>p.
+  if (in_device_frame p s)
+  then Some p
+  else None"
+
 
 definition
   "user_memory_update um \<equiv> modify (\<lambda>ms.
    ms\<lparr>underlying_memory := (\<lambda>a. case um a of Some x \<Rightarrow> x
                                  | None \<Rightarrow> underlying_memory ms a)\<rparr>)"
 
+definition 
+  "option_to_0 x \<equiv> case x of None \<Rightarrow> 0 | Some y \<Rightarrow> y"
+
+definition                                          
+  "device_update dm \<equiv> modify (\<lambda>ms. ms\<lparr>device_state := dm\<rparr>)"
 subsection {* Constructing a virtual-memory view *}
 
 text {*
@@ -621,13 +636,13 @@ lemma get_page_info_section:
      ({(Arch_Structs_A.SectionPDE base attrs X rights, s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
      Some (base, 20, attrs, rights)"
-apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
-apply (intro conjI impI allI)
- apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
- apply (simp split: option.splits)
-apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
-apply clarsimp
-done
+ apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
+ apply (intro conjI impI allI)
+  apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
+  apply (simp split: option.splits)
+ apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
+ apply clarsimp
+ done
 
 lemma get_page_info_super_section:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
@@ -635,13 +650,13 @@ lemma get_page_info_super_section:
      ({(Arch_Structs_A.SuperSectionPDE base attrs rights,s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
      Some (base, 24, attrs, rights)"
-apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
-apply (intro conjI impI allI)
- apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
- apply (simp split: option.splits)
-apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
-apply clarsimp
-done
+ apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
+ apply (intro conjI impI allI)
+  apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
+  apply (simp split: option.splits)
+ apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
+ apply clarsimp
+ done
 
 text {*
   Both functions, @{text ptable_lift} and @{text vm_rights},
@@ -691,6 +706,7 @@ text {*
   NOTE: An unpermitted write access would generate a page fault on the machine.
     The global transitions, however, model page faults non-deterministically.
 *}
+
 definition
   do_user_op :: "user_transition \<Rightarrow> user_context \<Rightarrow> (event option \<times> user_context,'z::state_ext) s_monad"
   where
@@ -698,13 +714,16 @@ definition
    do t \<leftarrow> gets cur_thread;
       conv \<leftarrow> gets (ptable_lift t);
       rights \<leftarrow> gets (ptable_rights t);
-      um \<leftarrow> gets (\<lambda>s. user_mem s \<circ> ptrFromPAddr);
-      (e,tc',um') \<leftarrow> select (fst
+      um \<leftarrow> gets (\<lambda>s. (user_mem s) \<circ> ptrFromPAddr);
+      dm \<leftarrow> gets device_mem;
+      ds \<leftarrow> gets (device_state \<circ> machine_state);
+      (e,tc',um',ds') \<leftarrow> select (fst
                      (uop t (restrict_map conv {pa. rights pa \<noteq> {}}) rights
-                       (tc, restrict_map um {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va})));
+                       (tc, restrict_map um {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va},ds)));
       do_machine_op (user_memory_update
-                       (restrict_map um' {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
+                       (restrict_map (um'|` dom um) {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
                       \<circ> Platform.addrFromPPtr));
+      do_machine_op (device_update (ds ++ (ds'|` dom dm)));
       return (e, tc')
    od" 
 
@@ -757,11 +776,18 @@ text {* Putting together the final abstract datatype *}
      used for refinement between the deterministic specification and C.  The
      latter is used for refinement between the non-deterministic specification
      and C. *)
+
+definition
+  "observable_memory ms fs \<equiv> ms \<lparr>underlying_memory := option_to_0 \<circ> fs\<rparr>"
+
+definition
+  "abs_state s \<equiv> s\<lparr>machine_state:= observable_memory (machine_state s) (user_mem s)\<rparr>"
+
 definition
   ADT_A :: "user_transition \<Rightarrow> (('a::state_ext_sched state) global_state, 'a observable, unit) data_type"
 where
  "ADT_A uop \<equiv> 
-  \<lparr> Init = \<lambda>s. Init_A, Fin = id,
+  \<lparr> Init = \<lambda>s. Init_A, Fin =  \<lambda>((tc,s),m,e). ((tc, abs_state s),m,e),
     Step = (\<lambda>u. global_automaton check_active_irq_A (do_user_op_A uop) kernel_call_A) \<rparr>"
 
 

@@ -420,6 +420,13 @@ where
                                | Some a \<Rightarrow> ntfn_at' a s"
 
 definition
+  is_device_page_cap' :: "capability \<Rightarrow> bool"
+where
+  "is_device_page_cap' cap \<equiv> case cap of 
+    capability.ArchObjectCap (arch_capability.PageCap dev _ _ _ _) \<Rightarrow> dev
+   | _ \<Rightarrow> False"
+
+definition
   valid_tcb' :: "Structures_H.tcb \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_tcb' t s \<equiv> (\<forall>(getF, setF) \<in> ran tcb_cte_cases. s \<turnstile>' cteCap (getF t))
@@ -1055,12 +1062,16 @@ abbreviation
   valid_irq_masks' (intStateIRQTable (ksInterruptState s)) (irq_masks (ksMachineState s))"
 
 defs pointerInUserData_def:
-  "pointerInUserData p \<equiv> \<lambda>s. (typ_at' UserDataT (p && ~~ mask pageBits) s
-    \<or> typ_at' UserDataDeviceT (p && ~~ mask pageBits) s)"
+  "pointerInUserData p \<equiv> \<lambda>s. (typ_at' UserDataT (p && ~~ mask pageBits) s)"
+
+(* pointerInDeviceData is not defined in spec but is necessary for valid_machine_state' *)
+definition pointerInDeviceData :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "pointerInDeviceData p \<equiv> \<lambda>s. (typ_at' UserDataDeviceT (p && ~~ mask pageBits) s)"
 
 definition
   "valid_machine_state' \<equiv>
-   \<lambda>s. \<forall>p. pointerInUserData p s \<or> underlying_memory (ksMachineState s) p = 0"
+   \<lambda>s. \<forall>p. pointerInUserData p s \<or> pointerInDeviceData p s \<or> underlying_memory (ksMachineState s) p = 0"
 
 (* FIXME: this really should be a definition like the above. *)
 (* The schedule is invariant. *)
@@ -2735,6 +2746,10 @@ lemma valid_pde_mappings'_update [iff]:
 lemma pointerInUserData_update[iff]:
   "pointerInUserData p (f s) = pointerInUserData p s"
   by (simp add: pointerInUserData_def)
+
+lemma pointerInDeviceData_update[iff]:
+  "pointerInDeviceData p (f s) = pointerInDeviceData p s"
+  by (simp add: pointerInDeviceData_def)
 
 lemma pspace_domain_valid_update [iff]:
   "pspace_domain_valid (f s) = pspace_domain_valid s"

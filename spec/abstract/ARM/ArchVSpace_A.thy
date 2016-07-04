@@ -750,6 +750,6 @@ definition
   in_user_frame :: "word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "in_user_frame p s \<equiv>
    \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) =
-        Some (ArchObj (DataPage sz))"           
+        Some (ArchObj (DataPage False sz))"           
 
 end

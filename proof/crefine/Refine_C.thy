@@ -736,10 +736,15 @@ lemma dom_eq:
    apply auto
 done
 
-(* FIXME:move *)
+
 lemma dom_user_mem':
   "dom (user_mem' s) = {p. typ_at' UserDataT (p && ~~ mask pageBits) s}"
   by (clarsimp simp:user_mem'_def dom_def pointerInUserData_def split:if_splits)
+
+(* FIXME:move *)
+lemma dom_device_mem':
+  "dom (device_mem' s) = {p. typ_at' UserDataDeviceT (p && ~~ mask pageBits) s}"
+  by (clarsimp simp:device_mem'_def dom_def pointerInDeviceData_def split:if_splits)
 
 context kernel_m
 begin
@@ -773,39 +778,128 @@ apply (frule_tac ptr=x and b="the (um x)" in storeByteUser_rf_sr_upd)
 apply (simp add: o_def hrs_mem_update_def)
 done
 
-lemma user_memory_update_corres_C:
+lemma memory_update_corres_C:
   "corres_underlying rf_sr True (%_ _. True)
-     (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> dom um \<subseteq> dom (user_mem' s))
+     (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s 
+          \<and> (dom um \<subseteq> dom (user_mem' s) ))
      \<top>
      (doMachineOp (user_memory_update um)) (setUserMem_C um)"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
-   prefer 2
+   prefer 2 
    apply (clarsimp simp add: setUserMem_C_def simpler_modify_def)
-  apply clarsimp
-  apply (cut_tac s'=a and s="globals b" in user_mem_C_relation[symmetric])
-    apply (simp add: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
-   apply simp+
-  apply (simp add: setUserMem_C_def_foldl)
   apply (subgoal_tac
-      "doMachineOp (user_memory_update um) a =
-       modify (ksMachineState_update (underlying_memory_update
-                (\<lambda>m. foldl (\<lambda>f p. f(p := the (um p))) m [p\<leftarrow>enum. p \<in> dom um])))
-              a")
-   prefer 2
+       "doMachineOp (user_memory_update um) a =
+        modify (ksMachineState_update (underlying_memory_update
+                 (\<lambda>m. foldl (\<lambda>f p. f(p := the (um p))) m [p\<leftarrow>enum. p \<in> dom um])))
+               a")
+  prefer 2
    apply (clarsimp simp add: doMachineOp_def user_memory_update_def
-                     simpler_modify_def simpler_gets_def select_f_def
-                     NonDetMonad.bind_def return_def)
+                      simpler_modify_def simpler_gets_def select_f_def
+                      NonDetMonad.bind_def return_def)
    apply (thin_tac P for P)+
    apply (case_tac a, clarsimp)
    apply (case_tac ksMachineStatea, clarsimp)
    apply (rule ext)
    apply (simp add: foldl_fun_upd_value dom_def split: option.splits)
+  apply clarsimp
+  apply (cut_tac s'=a and s="globals b" in user_mem_C_relation[symmetric])
+    apply (simp add: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
+   apply simp+
+  apply (simp add: setUserMem_C_def_foldl)
   apply (clarsimp simp add: simpler_modify_def)
   apply (thin_tac "doMachineOp p s = x" for p s x)
   apply (drule sym, simp)
-  apply (rule user_memory_update_corres_C_helper, auto)
+  apply (rule user_memory_update_corres_C_helper,auto)[1]
   done
+
+lemma device_update_corres_C:
+ "corres_underlying rf_sr True op = (\<lambda>_. True) (\<lambda>_. True)
+   (doMachineOp (device_update ms))
+   (setDeviceState_C ms)"
+  apply (clarsimp simp: corres_underlying_def)
+  apply (rule conjI)
+   prefer 2 
+   apply (clarsimp simp add: setDeviceState_C_def simpler_modify_def)
+  apply (rule ballI)
+  apply (clarsimp simp: simpler_modify_def setDeviceState_C_def)
+  apply (clarsimp simp: doMachineOp_def device_update_def NonDetMonad.bind_def in_monad 
+    gets_def get_def return_def simpler_modify_def select_f_def)
+  apply (clarsimp simp:rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+    cmachine_state_relation_def)
+  done
+
+lemma doMachineOp_map_split:
+  "(doMachineOp (user_memory_update (um ++ dm))) = (do 
+  (doMachineOp (user_memory_update um));(doMachineOp (user_memory_update dm)) od)"
+  apply (rule ext)
+  apply (clarsimp simp:NonDetMonad.bind_def doMachineOp_def 
+    select_f_def user_memory_update_def simpler_modify_def
+    gets_def get_def return_def)
+  apply (case_tac x,simp)
+  apply (case_tac ksMachineStatea,simp)
+  apply (rule ext)
+  apply (case_tac "dm a")
+   apply (case_tac "um a")
+    apply (clarsimp split:option.splits)+
+  done
+
+lemma setUserMem_C_map_split:
+  "(setUserMem_C (um ++ dm)) = (do 
+  (setUserMem_C um);(setUserMem_C dm) od)"
+  apply (rule ext)
+  apply (simp add:setUserMem_C_def NonDetMonad.bind_def doMachineOp_def 
+    select_f_def user_memory_update_def simpler_modify_def
+    gets_def get_def return_def)
+  apply (case_tac x,simp)
+  apply (case_tac globalsa,simp)
+  apply (rule ext)
+  apply (case_tac "dm p")
+   apply (case_tac "um p")
+    apply (clarsimp split:option.splits)+
+  done
+
+lemma mem_dom_split:
+ "(dom um \<subseteq> dom (user_mem' s) \<union> dom (device_mem' s))
+ \<Longrightarrow> um = restrict_map um (dom (user_mem' s)) ++ restrict_map um (dom (device_mem' s))"
+ apply (rule ext)
+ apply (auto simp:map_add_def restrict_map_def split:if_splits option.splits)
+ done
+
+lemma dom_if_rewrite:
+  "dom (\<lambda>x. if P x then Some (f x) else None) = dom (\<lambda>x. if P x then Some () else None)"
+  by (auto split:if_splits)
+
+crunch dmo_typ_at_pre_dom[wp]: doMachineOp "\<lambda>s. P (dom (\<lambda>x. if typ_at' T (x && ~~ mask pageBits) s then Some () else None))"
+  (wp: crunch_wps simp: crunch_simps device_mem'_def)
+
+lemma dmo_domain_device_mem'[wp]:
+  "\<lbrace>\<lambda>s. P (dom (device_mem' s))\<rbrace> doMachineOp opfun \<lbrace>\<lambda>rv sa. P (dom (device_mem' sa))\<rbrace>"
+  apply (simp add:device_mem'_def pointerInDeviceData_def)
+  apply (rule hoare_pre)
+  apply (subst dom_if_rewrite)
+  apply (wp doMachineOp_typ_at')
+  apply (erule arg_cong[where f = P,THEN iffD1,rotated])
+  apply (auto split:if_splits)
+  done
+
+lemma dmo_domain_user_mem'[wp]:
+  "\<lbrace>\<lambda>s. P (dom (user_mem' s))\<rbrace> doMachineOp opfun \<lbrace>\<lambda>rv sa. P (dom (user_mem' sa))\<rbrace>"
+  apply (simp add:user_mem'_def pointerInUserData_def)
+  apply (rule hoare_pre)
+  apply (subst dom_if_rewrite)
+  apply (wp doMachineOp_typ_at')
+  apply (erule arg_cong[where f = P,THEN iffD1,rotated])
+  apply (auto split:if_splits)
+  done
+
+(* FIXME: move or create a more general one *)
+lemma corres_expand_pfx:
+assumes "\<And> s s'. \<lbrakk>(s,s')\<in> rf_sr; P s; P' s'\<rbrakk> \<Longrightarrow> corres_underlying rf_sr True 
+  rel (op = s) (op = s') f f' "
+shows "corres_underlying rf_sr True rel P P' f f'"
+ using assms
+ by (fastforce simp:corres_underlying_def no_fail_def)
 
 lemma do_user_op_corres_C:
   "corres_underlying rf_sr True (op =) (invs' and ex_abs einvs) \<top>
@@ -819,11 +913,11 @@ lemma do_user_op_corres_C:
       apply (rule_tac P=valid_state' and P'=\<top> and r'="op=" in corres_split)
          prefer 2
          apply (clarsimp simp: cstate_to_A_def absKState_def
-                               rf_sr_def cstate_to_H_correct)
+                               rf_sr_def cstate_to_H_correct ptable_lift_def)
         apply (rule_tac P=valid_state' and P'=\<top> and r'="op=" in corres_split)
            prefer 2
            apply (clarsimp simp: cstate_to_A_def absKState_def
-                                 rf_sr_def cstate_to_H_correct)
+                                 rf_sr_def cstate_to_H_correct ptable_rights_def)
           apply (rule_tac P=pspace_distinct' and P'=\<top> and r'="op="
                  in corres_split)
              prefer 2
@@ -834,21 +928,31 @@ lemma do_user_op_corres_C:
               apply (simp add: rf_sr_def cstate_relation_def Let_def
                                cpspace_relation_def)
              apply assumption
-            apply (rule_tac r'="op=" in corres_split[OF _ corres_select])
+            apply (rule_tac P=pspace_distinct' and P'=\<top> and r'="op="
+                 in corres_split)
                prefer 2
                apply clarsimp
-              apply (simp add: addrFromPPtr_def)
-              apply (rule corres_split[OF _ user_memory_update_corres_C,
+               apply (rule device_mem_C_relation[symmetric])
+                apply (simp add: rf_sr_def cstate_relation_def Let_def
+                               cpspace_relation_def)
+               apply assumption
+              apply (rule_tac P=valid_state' and P'=\<top> and r'="op=" in corres_split)
+                 prefer 2
+                 apply (clarsimp simp: cstate_relation_def rf_sr_def
+                   Let_def cmachine_state_relation_def)
+                apply (rule_tac r'="op=" in corres_split[OF _ corres_select])
+                   prefer 2
+                   apply clarsimp
+                  apply (simp add: addrFromPPtr_def)
+                  apply (rule corres_split[OF _ memory_update_corres_C])
+                    apply (rule corres_split[OF _ device_update_corres_C,
                                        where R="\<top>\<top>" and R'="\<top>\<top>"])
-                apply (wp select_wp | simp)+
-   apply (clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def)
-   apply (thin_tac "(a,b) \<in> fst (f c d e g)" for a b c d e g)
-   apply (clarsimp simp: user_mem'_def ex_abs_def restrict_map_def
+                    apply (wp select_wp | simp)+
+   apply (intro conjI allI ballI)
+     apply ((clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def)+)[5]
+    apply (clarsimp simp: user_mem'_def ex_abs_def restrict_map_def
                   split: if_splits)
-   apply (erule ptable_rights_imp_UserData[rotated -1])
-      apply fastforce
-     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-    apply clarsimp+
+   apply clarsimp
   done
 
 lemma checkActiveIRQ_ex_abs_einvs:
@@ -896,6 +1000,7 @@ lemma check_active_irq_corres_C:
      apply (wp|simp)+
   done
 
+
 lemma refinement2_both:
   "\<lparr> Init = Init_C, Fin = Fin_C,
      Step = (\<lambda>u. global_automaton check_active_irq_C (do_user_op_C uop) (kernel_call_C fp)) \<rparr>
@@ -914,10 +1019,13 @@ lemma refinement2_both:
    apply (clarsimp simp: Fin_C_def)
    apply (drule lift_state_relationD)
    apply (clarsimp simp: cstate_to_A_def)
-   apply (rule arg_cong[where f=absKState])
-   apply (rule cstate_to_H_correct)
-    apply (simp add: full_invs'_def invs'_def)
-   apply (clarsimp simp: rf_sr_def)
+    apply (subst cstate_to_H_correct)
+     apply (fastforce simp: full_invs'_def invs'_def)
+    apply (clarsimp simp: rf_sr_def)
+   apply (simp add:absKState_def observable_memory_def absExst_def)
+   apply (rule MachineTypes.machine_state.equality,simp_all)[1]
+   apply (rule ext)
+   apply (clarsimp simp: user_mem'_def option_to_0_def split:if_splits)
   apply (simp add: ADT_H_def)
   apply (clarsimp simp: rel_semi_def global_automaton_def relcomp_unfold
                         in_lift_state_relation_eq)

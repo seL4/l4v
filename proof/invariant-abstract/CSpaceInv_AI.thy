@@ -21,7 +21,7 @@ lemma remove_rights_cap_valid[simp]:
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   by (cases c, simp_all add: remove_rights_def cap_rights_update_def
                    valid_cap_def cap_aligned_def acap_rights_update_def
-                 split: arch_cap.splits)
+                 split: arch_cap.splits if_splits)
 
 
 lemma get_thread_state_inv [simp]:
@@ -250,11 +250,11 @@ lemma valid_arch_obj_tcb_update':
     apply clarsimp
     apply (rename_tac "fun" x)
     apply (erule_tac x=x in allE)
-    apply (case_tac "fun x", (clarsimp simp: obj_at_def)+)[1]
+    apply (case_tac "fun x", (clarsimp simp: obj_at_def data_at_def )+)[1]
    apply clarsimp
    apply (rename_tac "fun" x)
    apply (erule_tac x=x in ballE)
-   apply (case_tac "fun x", (clarsimp simp: obj_at_def)+)[1]
+   apply (case_tac "fun x", (clarsimp simp: obj_at_def data_at_def)+)[1]
    apply (fastforce elim: typ_at_same_type [rotated -1])
   apply simp
   done
@@ -2084,10 +2084,10 @@ lemma set_cap_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_cap cap p \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
   apply (wp get_object_wp | wpc)+
-  apply (intro allI impI conjI,
-         simp_all add: valid_machine_state_def in_user_frame_def obj_at_def)
-       apply (clarsimp simp: a_type_simps | drule_tac x=pa in spec |
-              rule_tac x=sz in exI)+
+  apply (intro allI impI conjI valid_machine_state_heap_updI)
+    apply (auto simp:obj_at_def a_type_simps fun_upd_def[symmetric] 
+      well_formed_cnode_n_def 
+      split:arch_kernel_obj.splits kernel_object.splits)+
   done
 
 

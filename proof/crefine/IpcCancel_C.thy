@@ -2745,7 +2745,7 @@ lemma cancelIPC_ccorres_helper:
           apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
            subgoal by simp
           apply (erule (1) map_to_ko_atI')
-         apply (simp add: heap_to_page_data_def Let_def)
+         apply (simp add: heap_to_user_data_def Let_def)
  -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          subgoal by (clarsimp simp: comp_def)

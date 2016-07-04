@@ -248,7 +248,6 @@ lemma load_word_offs_word_corres:
   apply -
   apply (rule corres_stateAssert_assume [rotated])
    apply (simp add: pointerInUserData_def)
-   apply (rule disjI1)
    apply (erule valid_ipc_buffer_ptr'D2)
     apply (subst word_mult_less_iff)
        apply simp

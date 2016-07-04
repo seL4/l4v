@@ -491,6 +491,7 @@ lemma cap_rights_update_NullCap[simp]:
 
 
 crunch in_user_frame[wp]: set_extra_badge "in_user_frame buffer"
+crunch in_device_frame[wp]: set_extra_badge "in_device_frame buffer"
 
 
 lemma cap_insert_cte_wp_at:
@@ -1230,12 +1231,11 @@ proof -
     apply (erule disjE, simp_all)
     apply (erule conjE)
     apply (erule disjE, simp)
-    apply (simp add: in_user_frame_def word_size_def)
-    apply (erule exEI)
-    apply (subgoal_tac "(ptr + of_nat offs * 4) && ~~ mask (pageBitsForSize x) =
-                        p && ~~ mask (pageBitsForSize x)", simp)
+    apply (clarsimp simp: in_user_frame_def word_size_def)
+    apply (subgoal_tac "(ptr + of_nat offs * 4) && ~~ mask (pageBitsForSize sz) =
+                        p && ~~ mask (pageBitsForSize sz)")
     apply (simp only: is_aligned_mask[of _ 2])
-    apply (elim disjE, simp_all)
+    apply (elim disjE, simp_all add:is_aligned_mask)
     apply (rule aligned_offset_ignore[symmetric], simp+)+
     done
 qed
@@ -1694,15 +1694,17 @@ lemma lookup_ipc_buffer_in_user_frame[wp]:
   apply (rename_tac dev p R sz m)
   apply (subgoal_tac "in_user_frame (p + (tcb_ipc_buffer tcb &&
                                            mask (pageBitsForSize sz))) s", simp)
-  apply (drule (1) cte_wp_valid_cap)
+  apply (frule (1) cte_wp_valid_cap)
   apply (clarsimp simp add: valid_cap_def cap_aligned_def in_user_frame_def)
   apply (thin_tac "case_option a b c" for a b c)
   apply (rule_tac x=sz in exI)
-  apply (subgoal_tac "(p + (tcb_ipc_buffer tcb && mask (pageBitsForSize sz)) &&
-            ~~ mask (pageBitsForSize sz)) = p", simp)
-  apply (rule is_aligned_add_helper[THEN conjunct2], assumption)
-  apply (rule and_mask_less')
-  apply (case_tac sz, simp_all)
+  apply (subst is_aligned_add_helper[THEN conjunct2])
+   apply simp
+  apply (simp add: and_mask_less' word_bits_def)
+  apply (clarsimp simp:caps_of_state_cteD'[where P = "\<lambda>x. True",simplified,symmetric])
+  apply (drule(1) CSpace_AI.tcb_cap_slot_regular)
+   apply simp
+  apply (simp add:is_nondevice_page_cap_def case_bool_If split:if_splits)
   done
 
 
@@ -3469,7 +3471,6 @@ lemma sfi_makes_simple:
             thread_set_no_change_tcb_state
        | simp)+
   done
-
 
 lemma hf_makes_simple:
   "\<lbrace>st_tcb_at simple t' and K (t \<noteq> t')\<rbrace>

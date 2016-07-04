@@ -55,7 +55,7 @@ lemma valid_etcb_fold_update: "valid_etcbs_2 ekh kh \<Longrightarrow> type \<not
           (foldr (\<lambda>p ekh. ekh(p := default_ext type cdom))
             ptrs
             ekh)
-          (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type o_bits))
+          (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits))
             ptrs
             kh)"
   apply (induct ptrs)
@@ -114,7 +114,7 @@ lemma valid_sched_fold_update: "\<forall>ptr \<in> set ptrs. ptr \<noteq> ct \<a
   done*)
 
 lemma retype_etcb_at_helper: "\<lbrakk>etcb_at' P t ekh; valid_etcbs_2 ekh kh; d \<noteq> apiobject_type.Untyped;
-        foldr (\<lambda>p kh. kh(p \<mapsto> default_object d c))
+        foldr (\<lambda>p kh. kh(p \<mapsto> default_object d dev c))
          ptrs
          kh t =
         Some (TCB tcb);
@@ -129,7 +129,7 @@ lemma retype_etcb_at_helper: "\<lbrakk>etcb_at' P t ekh; valid_etcbs_2 ekh kh; d
   apply (clarsimp split: split_if_asm simp: default_tcb_def default_object_def default_ext_def etcb_at'_def)+
   done
 
-lemma retype_region_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcbs\<rbrace> retype_region a b c d \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
+lemma retype_region_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcbs\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
   apply (simp add: retype_region_def)
   apply (simp add: retype_region_ext_def bind_assoc)
   apply wp
@@ -137,7 +137,7 @@ lemma retype_region_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcb
   apply (blast intro: retype_etcb_at_helper)
   done
 
-lemma retype_region_valid_etcbs[wp]:"\<lbrace>valid_etcbs\<rbrace> retype_region a b c d \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
+lemma retype_region_valid_etcbs[wp]:"\<lbrace>valid_etcbs\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   apply (simp add: retype_region_def)
   apply (simp add: retype_region_ext_def bind_assoc)
   apply wp
@@ -224,7 +224,7 @@ crunch valid_blocked[wp]: create_cap,cap_insert,init_arch_objects,set_cap valid_
 
 lemma valid_blocked_fold_update: "valid_blocked_2 queues kh sa ct \<Longrightarrow> type \<noteq> apiobject_type.Untyped \<Longrightarrow> valid_blocked_2
           queues
-          (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type o_bits))
+          (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits))
             ptrs
             kh) sa ct"
   apply (induct ptrs)
@@ -237,7 +237,7 @@ lemma valid_blocked_fold_update: "valid_blocked_2 queues kh sa ct \<Longrightarr
       done
 
 lemma retype_region_valid_blocked[wp]:
-  "\<lbrace>valid_blocked\<rbrace> retype_region a b c d \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
+  "\<lbrace>valid_blocked\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: retype_region_def)
   apply (simp add: retype_region_ext_def bind_assoc)
   apply wp

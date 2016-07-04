@@ -58,16 +58,18 @@ definition
   empty_cnode :: "nat \<Rightarrow> cnode_contents" where
   "empty_cnode bits \<equiv> \<lambda>x. if length x = bits then Some NullCap else None"
 
+thm default_arch_object_def
+
 text {* The initial state objects of various types are in when created. *}
 definition
-  default_object :: "apiobject_type \<Rightarrow> nat \<Rightarrow> kernel_object" where
-  "default_object api n \<equiv> case api of
+  default_object :: "apiobject_type \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> kernel_object" where
+  "default_object api dev n \<equiv> case api of
            Untyped \<Rightarrow> undefined
          | CapTableObject \<Rightarrow> CNode n (empty_cnode n)
          | TCBObject \<Rightarrow> TCB default_tcb
          | EndpointObject \<Rightarrow> Endpoint default_ep
          | NotificationObject \<Rightarrow> Notification default_notification
-         | ArchObject aobj \<Rightarrow> ArchObj (default_arch_object aobj n)"
+         | ArchObject aobj \<Rightarrow> ArchObj (default_arch_object aobj dev n)"
 
 text {* The size in bits of the objects that will be created when a given type
 and size is requested. *}
@@ -79,7 +81,7 @@ definition
          | TCBObject \<Rightarrow> obj_bits (TCB default_tcb)
          | EndpointObject \<Rightarrow> obj_bits (Endpoint undefined)
          | NotificationObject \<Rightarrow> obj_bits (Notification undefined)
-         | ArchObject aobj \<Rightarrow> obj_bits $ ArchObj $ default_arch_object aobj obj_size_bits"
+         | ArchObject aobj \<Rightarrow> obj_bits $ ArchObj $ default_arch_object aobj False obj_size_bits"
 
 section "Main Retype Implementation"
 
@@ -90,14 +92,14 @@ returned pointer points to a group of objects.
 *}
  
 definition
-  retype_region :: "obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> apiobject_type \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
+  retype_region :: "obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> apiobject_type \<Rightarrow> bool \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
 where
-  "retype_region ptr numObjects o_bits type \<equiv> do
+  "retype_region ptr numObjects o_bits type dev \<equiv> do
     obj_size \<leftarrow> return $ 2 ^ obj_bits_api type o_bits;
     ptrs \<leftarrow> return $ map (\<lambda>p. ptr_add ptr (p * obj_size)) [0..< numObjects];
     when (type \<noteq> Untyped) (do
       kh \<leftarrow> gets kheap;
-      kh' \<leftarrow> return $ foldr (\<lambda>p kh. kh(p \<mapsto> default_object type o_bits)) ptrs kh;
+      kh' \<leftarrow> return $ foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits)) ptrs kh;
       do_extended_op (retype_region_ext ptrs type);
       modify $ kheap_update (K kh')
     od);
@@ -140,7 +142,7 @@ do
   set_cap (UntypedCap is_device base (bits_of cap) (unat (free_ref - base))) src_slot;
 
   (* Create new objects. *)
-  orefs \<leftarrow> retype_region free_region_base (length slots) obj_sz new_type;
+  orefs \<leftarrow> retype_region free_region_base (length slots) obj_sz new_type is_device;
   init_arch_objects new_type free_region_base (length slots) obj_sz orefs is_device;
   sequence_x (map (create_cap new_type obj_sz src_slot is_device) (zip slots orefs))
 od"

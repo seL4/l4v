@@ -537,7 +537,7 @@ declare detype_arch_state [simp]
 
 lemma retype_region_ap:
   "\<lbrace>\<top>\<rbrace>
-  retype_region ap 1 0 (ArchObject ASIDPoolObj) 
+  retype_region ap 1 0 (ArchObject ASIDPoolObj) dev
   \<lbrace>\<lambda>_. ko_at (ArchObj (arch_kernel_obj.ASIDPool empty)) ap\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
@@ -549,7 +549,7 @@ lemma retype_region_ap:
   done
 
 lemma retype_region_ap':
-  "\<lbrace>\<top>\<rbrace> retype_region ap 1 0 (ArchObject ASIDPoolObj) \<lbrace>\<lambda>rv. asid_pool_at ap\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> retype_region ap 1 0 (ArchObject ASIDPoolObj) dev \<lbrace>\<lambda>rv. asid_pool_at ap\<rbrace>"
   apply (rule hoare_strengthen_post, rule retype_region_ap)
   apply (clarsimp simp: a_type_def elim!: obj_at_weakenE)
   done
@@ -576,7 +576,7 @@ lemma retype_region_no_cap_to_obj:
              and no_cap_to_obj_with_diff_ref cap S
              and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
              and K (range_cover ptr sz (obj_bits_api ty us) 1) \<rbrace>
-     retype_region ptr 1 us ty
+     retype_region ptr 1 us ty dev
    \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (simp add: no_cap_to_obj_with_diff_ref_null_filter)
@@ -885,7 +885,7 @@ lemma aci_invs':
   assumes cap_insert_Q: "\<And>cap src dest. \<lbrace>Q and invs and K (src \<noteq> dest)\<rbrace> 
                             cap_insert cap src dest
                            \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes retype_region_Q[wp]:"\<And>a b c d. \<lbrace>Q\<rbrace> retype_region a b c d \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes retype_region_Q[wp]:"\<And>a b c d dev. \<lbrace>Q\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes set_cap_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_cap a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
   "\<lbrace>invs and Q and ct_active and valid_aci aci\<rbrace> perform_asid_control_invocation aci \<lbrace>\<lambda>y s. invs s \<and> Q s\<rbrace>"
@@ -1191,7 +1191,7 @@ lemma create_mapping_entries_parent_for_refs:
    apply (clarsimp simp: vs_cap_ref_def
                   split: cap.split_asm arch_cap.split_asm option.split_asm)
      apply (auto simp: valid_cap_def obj_at_def is_cap_simps cap_asid_def
-                dest!: caps_of_state_valid_cap)[3]
+                dest!: caps_of_state_valid_cap split:if_splits)[3]
      apply (frule(1) caps_of_state_valid)
      apply (clarsimp simp:valid_cap_def obj_at_def)
    apply (simp add:is_cap_simps)
@@ -1212,7 +1212,7 @@ lemma create_mapping_entries_parent_for_refs:
   apply (clarsimp simp: vs_cap_ref_def
                  split: cap.split_asm arch_cap.split_asm option.split_asm)
        apply (auto simp: valid_cap_def obj_at_def is_cap_simps cap_asid_def
-             dest!: caps_of_state_valid_cap)[3]
+             dest!: caps_of_state_valid_cap split:if_splits)[3]
    apply (frule(1) caps_of_state_valid)
    apply (clarsimp simp:valid_cap_def obj_at_def)
   apply (simp add:is_cap_simps)
@@ -1581,10 +1581,11 @@ lemma arch_decode_inv_wf[wp]:
                              valid_cap_simps is_arch_update_def
                              is_arch_cap_def cap_master_cap_simps
                              vmsz_aligned_def vs_cap_ref_def
-                             cap_aligned_def
+                             cap_aligned_def data_at_def
                              le_mask_iff_lt_2n[where 'a=32, folded word_bits_def, THEN iffD1]
                              ord_eq_le_trans[OF pd_bits_14]
                        elim: is_aligned_weaken split: vmpage_size.split
+                      split: if_splits
                      intro!: is_aligned_addrFromPPtr pbfs_atleast_pageBits,
             (fastforce intro: diminished_pd_self)+)[1]
     apply (cases "invocation_type label = ArchInvocationLabel ARMPageRemap")
@@ -1606,9 +1607,10 @@ lemma arch_decode_inv_wf[wp]:
                     split: cap.splits arch_cap.splits)
      apply (cases slot, auto simp: vmsz_aligned_def mask_def
                        valid_arch_caps_def cte_wp_at_caps_of_state
-                       neq_Nil_conv invs_def valid_state_def
+                       neq_Nil_conv invs_def valid_state_def data_at_def
                        valid_cap_def cap_aligned_def ord_eq_le_trans[OF pd_bits_14]
                  elim: is_aligned_weaken 
+                split: if_splits
                intro!: is_aligned_addrFromPPtr pbfs_atleast_pageBits,
             fastforce+)[1]
     apply (cases "invocation_type label = ArchInvocationLabel ARMPageUnmap")

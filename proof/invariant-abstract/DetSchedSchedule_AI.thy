@@ -3000,5 +3000,4 @@ lemma call_kernel_valid_sched:
     apply (wp handle_event_valid_sched)
      apply (force intro: active_from_running)+
   done
-
 end

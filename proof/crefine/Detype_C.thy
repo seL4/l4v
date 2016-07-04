@@ -760,7 +760,7 @@ lemma cmap_relation_disjoint_user_data:
   fixes x :: "user_data_C ptr"
   assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
   and    invs: "invs' s"
-  and      cm: "cmap_relation (heap_to_page_data (ksPSpace s) (underlying_memory (ksMachineState s))) (cslift s') Ptr cuser_data_relation"
+  and      cm: "cmap_relation (heap_to_user_data (ksPSpace s) (underlying_memory (ksMachineState s))) (cslift s') Ptr cuser_user_data_relation"
   and      ht: "s' \<Turnstile>\<^sub>c x"
   and      xv: "x \<notin> Ptr ` {ptr..+2 ^ bits}"
   shows  "{ptr_val x..+size_of TYPE(user_data_C)} \<inter> {ptr..+2 ^ bits} = {}"
@@ -776,7 +776,7 @@ proof -
   let ?s = "(s\<lparr>ksPSpace := (ksPSpace s) |` (- ?ran)\<rparr>)"
   from cm ht have ks: "ksPSpace s (ptr_val x) = Some KOUserData" 
     apply (rule cmap_relation_h_t_valid)
-    apply (clarsimp simp: map_comp_Some_iff heap_to_page_data_def Let_def projectKO_opts_defs)
+    apply (clarsimp simp: map_comp_Some_iff heap_to_user_data_def Let_def projectKO_opts_defs)
     apply (case_tac k')
         apply simp_all
     done
@@ -818,6 +818,70 @@ proof -
       done
   qed
 qed
+
+lemma cmap_relation_disjoint_device_data:
+  fixes x :: "user_data_device_C ptr"
+  assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
+  and    invs: "invs' s"
+  and      cm: "cmap_relation (heap_to_device_data (ksPSpace s) (underlying_memory (ksMachineState s))) (cslift s') Ptr cuser_user_data_device_relation"
+  and      ht: "s' \<Turnstile>\<^sub>c x"
+  and      xv: "x \<notin> Ptr ` {ptr..+2 ^ bits}"
+  shows  "{ptr_val x..+size_of TYPE(user_data_device_C)} \<inter> {ptr..+2 ^ bits} = {}"
+proof -
+  from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
+    and wb: "bits < word_bits" and [simp]:"ptr && ~~ mask bits = ptr"
+    by (auto elim!: valid_untyped_capE)
+
+  note blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  
+  let ?ran = "{ptr..ptr + 2 ^ bits - 1}"
+  let ?s = "(s\<lparr>ksPSpace := (ksPSpace s) |` (- ?ran)\<rparr>)"
+  from cm ht have ks: "ksPSpace s (ptr_val x) = Some KOUserDataDevice" 
+    apply (rule cmap_relation_h_t_valid)
+    apply (clarsimp simp: map_comp_Some_iff heap_to_device_data_def Let_def projectKO_opts_defs)
+    apply (case_tac k')
+        apply simp_all
+    done
+
+  let ?oran = "{ptr_val x .. ptr_val x + 2 ^ objBitsKO KOUserDataDevice - 1}"
+  
+  let ?ran' = "{ptr..+2 ^ bits}"
+  let ?oran' = "{ptr_val x..+2 ^ objBitsKO KOUserDataDevice}"
+  
+  have ran' [simp]: "?ran' = ?ran" using al wb upto_intvl_eq by auto
+  
+  have oran' [simp]: "?oran' = ?oran" 
+  proof (rule upto_intvl_eq)
+    from invs have "pspace_aligned' s" ..
+    with ks show "is_aligned (ptr_val x) (objBitsKO KOUserDataDevice)"  ..
+  qed
+  
+  from xv have "ptr_val x \<in> (- ?ran)" 
+    apply (simp only: ran' Compl_iff)
+    apply (erule contrapos_nn)
+    apply (erule image_eqI [rotated])
+    apply simp
+    done
+  
+  hence "ksPSpace ?s (ptr_val x) = Some KOUserDataDevice" using ks by simp
+  hence "?oran \<inter> ?ran = {}" 
+  proof (rule pspace_no_overlapD'[where p = ptr and bits = bits,simplified])
+    from invs have "valid_pspace' s" ..
+    with vu al show "pspace_no_overlap' ptr bits ?s" by (rule valid_untyped_no_overlap)
+  qed
+    
+  hence "?oran' \<inter> ?ran' = {}" by simp
+  thus "{ptr_val x..+size_of TYPE(user_data_device_C)} \<inter> ?ran' = {}"  
+  proof (rule disjoint_subset [rotated])    
+    show "{ptr_val x..+size_of TYPE(user_data_device_C)} \<subseteq> ?oran'" 
+      apply -
+      apply (rule intvl_start_le)
+      apply (simp add: size_of_def objBits_simps pageBits_def)
+      done
+  qed
+qed
+
 
 lemma tcb_queue_relation_live_restrict:
   assumes vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
@@ -1235,9 +1299,17 @@ proof (rule cmap_relation_cong)
   qed
 qed (clarsimp simp: map_comp_Some_iff restrict_map_Some_iff)
 
-lemma heap_to_page_data_restrict:
-  "heap_to_page_data (mp |` S) bhp = (heap_to_page_data mp bhp |` S)"
-  unfolding heap_to_page_data_def
+lemma heap_to_user_data_restrict:
+  "heap_to_user_data (mp |` S) bhp = (heap_to_user_data mp bhp |` S)"
+  unfolding heap_to_user_data_def
+  apply (rule ext)
+  apply (case_tac "p \<in> S")
+  apply (simp_all add: Let_def map_comp_def split: option.splits)
+  done
+
+lemma heap_to_device_data_restrict:
+  "heap_to_device_data (mp |` S) bhp = (heap_to_device_data mp bhp |` S)"
+  unfolding heap_to_device_data_def
   apply (rule ext)
   apply (case_tac "p \<in> S")
   apply (simp_all add: Let_def map_comp_def split: option.splits)
@@ -1278,15 +1350,15 @@ lemma aligned_range_offset_mem_helper:
   apply simp
   done
 
-lemma heap_to_page_data_update_region:
+lemma heap_to_user_data_update_region:
   assumes foo: "\<And>x y v. \<lbrakk> map_to_user_data psp x = Some y;
                            v < 2 ^ pageBits \<rbrakk> \<Longrightarrow> (x + v \<in> S) = (x \<in> S)"
   shows
-  "heap_to_page_data psp (\<lambda>x. if x \<in> S then v else f x)
+  "heap_to_user_data psp (\<lambda>x. if x \<in> S then v else f x)
      = (\<lambda>x. if x \<in> S \<inter> dom (map_to_user_data psp) then Some (K (word_rcat [v, v, v, v]))
-             else heap_to_page_data psp f x)"
+             else heap_to_user_data psp f x)"
   apply (rule ext)
-  apply (simp add: heap_to_page_data_def Let_def
+  apply (simp add: heap_to_user_data_def Let_def
             split: split_if)
   apply (rule conjI)
    apply (clarsimp simp: byte_to_word_heap_def Let_def add.assoc
@@ -1300,6 +1372,40 @@ lemma heap_to_page_data_update_region:
    apply simp
   apply clarsimp
   apply (case_tac "map_to_user_data psp x")
+   apply simp
+  apply (clarsimp simp: dom_def byte_to_word_heap_def Let_def add.assoc
+                intro!: ext)
+  apply (subst foo, assumption,
+         (rule word_add_offset_less[where n=2, simplified]
+               word_add_offset_less[where n=2 and y=0, simplified],
+          simp_all, rule ucast_less,
+          simp_all add: word_bits_def pageBits_def
+                        order_less_le_trans[OF ucast_less])[1])+
+  apply (simp add: field_simps)
+  done
+
+lemma heap_to_device_data_update_region:
+  assumes foo: "\<And>x y v. \<lbrakk> map_to_user_data_device psp x = Some y;
+                           v < 2 ^ pageBits \<rbrakk> \<Longrightarrow> (x + v \<in> S) = (x \<in> S)"
+  shows
+  "heap_to_device_data psp (\<lambda>x. if x \<in> S then v else f x)
+     = (\<lambda>x. if x \<in> S \<inter> dom (map_to_user_data_device psp) then Some (K (word_rcat [v, v, v, v]))
+             else heap_to_device_data psp f x)"
+  apply (rule ext)
+  apply (simp add: heap_to_device_data_def Let_def
+            split: split_if)
+  apply (rule conjI)
+   apply (clarsimp simp: byte_to_word_heap_def Let_def add.assoc
+                 intro!: ext)
+   apply (subst foo, assumption+,
+          (rule word_add_offset_less[where n=2, simplified]
+                word_add_offset_less[where n=2 and y=0, simplified],
+           simp_all, rule ucast_less,
+           simp_all add: word_bits_def pageBits_def
+                         order_less_le_trans[OF ucast_less])[1])+
+   apply simp
+  apply clarsimp
+  apply (case_tac "map_to_user_data_device psp x")
    apply simp
   apply (clarsimp simp: dom_def byte_to_word_heap_def Let_def add.assoc
                 intro!: ext)
@@ -1620,6 +1726,7 @@ proof -
   note cm_disj_tcb = cmap_relation_disjoint_tcb [OF D.valid_untyped invs]
   note cm_disj_cte = cmap_relation_disjoint_cte [OF D.valid_untyped invs]
   note cm_disj_user = cmap_relation_disjoint_user_data [OF D.valid_untyped invs]
+  note cm_disj_device = cmap_relation_disjoint_device_data [OF D.valid_untyped invs]
 
   have rl: "\<forall>(p :: word32) P. ko_wp_at' P p s \<and>
             (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
@@ -1665,20 +1772,21 @@ proof -
     apply -
     apply (elim conjE)
     apply ((subst lift_t_typ_region_bytes,
-            rule cm_disj cm_disj_tcb cm_disj_cte cm_disj_user, assumption+, 
+            rule cm_disj cm_disj_tcb cm_disj_cte cm_disj_user cm_disj_device
+            , assumption +, 
             simp_all add: objBits_simps archObjSize_def pageBits_def projectKOs
-                          heap_to_page_data_restrict)[1])+ -- "waiting ..."
+                          heap_to_user_data_restrict heap_to_device_data_restrict)[1])+ -- "waiting ..."
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj
                      cmap_relation_restrict_both cmap_array_helper hrs_htd_update
                      ptBits_def pdBits_def pageBits_def cmap_array)
     apply (intro conjI)
        apply (frule cmap_relation_restrict_both_proj
-                     [where f = tcb_ptr_to_ctcb_ptr])
+                      [where f = tcb_ptr_to_ctcb_ptr])
         apply simp
        apply (erule iffD1[OF cpspace_tcb_relation_address_subset,
-                          OF D.valid_untyped invs cmaptcb])
+                           OF D.valid_untyped invs cmaptcb])
       apply (subst cmap_relation_cong [OF refl refl,
-                     where rel' = "cendpoint_relation (cslift s')"])
+                      where rel' = "cendpoint_relation (cslift s')"])
        apply (clarsimp simp: restrict_map_Some_iff image_iff
                              map_comp_restrict_map_Some_iff)
       apply (simp add: cmap_relation_restrict_both_proj)
@@ -1687,7 +1795,7 @@ proof -
       apply (clarsimp simp: restrict_map_Some_iff image_iff
                             map_comp_restrict_map_Some_iff)
      apply (simp add: cmap_relation_restrict_both_proj)
-     done
+    done
 
   moreover
   from invs have "valid_queues s" ..
@@ -1799,12 +1907,65 @@ proof -
   }
 
   moreover
-  have h2pd_eq:
-       "heap_to_page_data (?psu (ksPSpace s))
+  have h2ud_eq:
+       "heap_to_user_data (?psu (ksPSpace s))
                           (?mmu (underlying_memory (ksMachineState s))) =
-        heap_to_page_data (?psu (ksPSpace s))
+        heap_to_user_data (?psu (ksPSpace s))
                           (underlying_memory (ksMachineState s))"
-    apply (subst heap_to_page_data_update_region
+    apply (subst heap_to_user_data_update_region
+                 [where S="{ptr..ptr + 2 ^ bits - 1}", simplified])
+     prefer 2
+     apply (rule ext)
+     apply clarsimp
+    apply (simp add: map_option_def map_comp_def
+              split: split_if_asm option.splits)
+    apply (frule pspace_alignedD'[OF _ pspace_aligned'])
+    apply (case_tac "pageBits \<le> bits")
+     apply (simp add: objBitsKO_def projectKOs  split: kernel_object.splits)
+     apply clarsimp
+     apply (rule aligned_range_offset_mem_helper
+       [where 'a=32, folded word_bits_def, simplified, OF _ _ al _ wb])
+       apply assumption+
+    apply (rule iffI[rotated], simp)
+    apply (simp add: objBits_simps projectKOs)
+    apply (rule FalseE)
+    apply (case_tac "ptr \<le> x", simp)
+     apply clarsimp
+     apply (frule_tac y="ptr + 2 ^ bits - 1" in le_less_trans)
+      apply (simp only: not_le)
+     apply (drule (1) is_aligned_no_wrap')
+     apply simp
+    apply (cut_tac cte[simplified cte_wp_at_ctes_of])
+    apply clarsimp
+    apply (frule ctes_of_valid'[OF _ valid_objs'])
+    apply (frule pspace_distinctD'[OF _ pspace_distinct'])
+    apply (clarsimp simp add: valid_cap'_def valid_untyped'_def2 capAligned_def)
+    apply (drule_tac x=x in spec)
+    apply (simp add: obj_range'_def objBitsKO_def)
+    apply (simp only: not_le)
+    apply (cut_tac is_aligned_no_overflow[OF al])
+    apply (case_tac "ptr \<le> x + 2 ^ pageBits - 1",
+           simp_all only: simp_thms not_le)
+    apply clarsimp
+    apply (thin_tac "psp = Some ko" for psp ko)+
+    apply (thin_tac "ps_clear x y z" for x y z)
+    apply (thin_tac "cteCap x = y" for x y)+
+    apply (frule is_aligned_no_overflow)
+    apply (simp only: x_power_minus_1)
+    apply (frule_tac x=x in word_plus_strict_mono_right[of _ "2^pageBits"])
+     apply (rule ccontr)
+     apply (simp only: not_le)
+     apply (frule_tac y="x" in less_le_trans, assumption)
+     apply (simp add: field_simps word_sub_less_iff)
+    apply simp
+    done
+  moreover
+  have h2dd_eq:
+       "heap_to_device_data (?psu (ksPSpace s))
+                          (?mmu (underlying_memory (ksMachineState s))) =
+        heap_to_device_data (?psu (ksPSpace s))
+                          (underlying_memory (ksMachineState s))"
+    apply (subst heap_to_device_data_update_region
                  [where S="{ptr..ptr + 2 ^ bits - 1}", simplified])
      prefer 2
      apply (rule ext)
@@ -1928,7 +2089,7 @@ proof -
                       (t_hrs_'_update ?th x)) s') \<in> rf_sr"
     using sr untyped_cap_rf_sr_ptr_bits_domain[OF cte invs sr]
     by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                       psu_restrict h2pd_eq[simplified ks'] cpspace_relation_def
+                       psu_restrict cpspace_relation_def
                        carch_state_relation_def cmachine_state_relation_def
                        hrs_htd_update htd_safe_typ_region_bytes)
 qed

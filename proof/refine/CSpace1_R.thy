@@ -1920,7 +1920,7 @@ lemma cte_map_pulls_tcb_to_abstract:
      \<Longrightarrow> \<exists>tcb'. kheap s x = Some (TCB tcb') \<and> tcb_relation tcb' tcb
                   \<and> (z = (x, tcb_cnode_index (unat ((y - x) >> 4))))"
   apply (rule pspace_dom_relatedE, assumption+)
-  apply (erule(1) obj_relation_cutsE, simp_all)
+  apply (erule(1) obj_relation_cutsE, simp_all split:split_if_asm)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
                         Arch_Structs_A.arch_kernel_obj.split_asm)
@@ -1943,7 +1943,7 @@ lemma pspace_relation_update_tcbs:
   apply (clarsimp split: Structures_A.kernel_object.split_asm)
   apply (drule bspec, fastforce)
   apply clarsimp
-  apply (erule(1) obj_relation_cutsE, simp_all)
+  apply (erule(1) obj_relation_cutsE, simp_all split:split_if_asm)
   done
 
 lemma cte_map_pulls_cte_to_abstract:
@@ -1956,7 +1956,7 @@ lemma cte_map_pulls_cte_to_abstract:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply clarsimp
   apply (frule(1) cte_map_inj_eq[OF sym], simp_all)
-  apply (rule cte_wp_at_cteI, fastforce+)
+  apply (rule cte_wp_at_cteI, (fastforce split:split_if_asm)+)
   done
 
 lemma pspace_relation_update_ctes:
@@ -2013,7 +2013,7 @@ proof -
     apply clarsimp
     apply (intro conjI impI)
      apply (simp add: s'')
-     apply (rule obj_relation_cutsE, assumption+, simp_all)[1]
+     apply (rule obj_relation_cutsE, assumption+, simp_all split: split_if_asm)[1]
      apply (clarsimp simp: cte_relation_def rel)
     apply (rule obj_relation_cutsE, assumption+, simp_all add: s'')
      apply (clarsimp simp: cte_relation_def)
@@ -2194,12 +2194,12 @@ lemma pspace_relation_cte_wp_atI':
   apply (simp add: cte_wp_at_cases')
   apply (elim disjE conjE exE)
    apply (erule(1) pspace_dom_relatedE)
-   apply (erule(1) obj_relation_cutsE, simp_all)[1]
+   apply (erule(1) obj_relation_cutsE, simp_all split:split_if_asm)[1]
    apply (intro exI, rule conjI[OF _ conjI [OF _ refl]])
     apply (simp add: cte_wp_at_cases domI well_formed_cnode_invsI)
-   apply simp
+   apply (simp split:split_if_asm)
   apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE, simp_all)
+  apply (erule(1) obj_relation_cutsE, simp_all split:split_if_asm)
   apply (simp add: other_obj_relation_def
             split: Structures_A.kernel_object.split_asm
                    Arch_Structs_A.arch_kernel_obj.split_asm)
@@ -2841,7 +2841,7 @@ lemma cap_update_corres:
   apply (drule updateCap_stuff)
   apply simp
   apply (rule conjI)
-   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
+   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
   apply (rule conjI)
    prefer 2
    apply (rule conjI)
@@ -2932,7 +2932,7 @@ lemma updateMDB_pspace_relation:
     apply (clarsimp simp: tcb_ctes_clear)
    apply clarsimp
    apply (rule pspace_dom_relatedE, assumption+)
-   apply (rule obj_relation_cutsE, assumption+, simp_all)[1]
+   apply (rule obj_relation_cutsE, assumption+, simp_all split:split_if_asm)[1]
    apply (clarsimp split: Structures_A.kernel_object.split_asm
                           Arch_Structs_A.arch_kernel_obj.split_asm
                     simp: other_obj_relation_def)
@@ -2947,7 +2947,7 @@ lemma updateMDB_pspace_relation:
   apply (clarsimp simp: cte_wp_at_cases')
   apply (erule disjE)
    apply (rule pspace_dom_relatedE, assumption+)
-   apply (rule obj_relation_cutsE, assumption+, simp_all)[1]
+   apply (rule obj_relation_cutsE, assumption+, simp_all split:split_if_asm)[1]
    apply (clarsimp simp: cte_relation_def)
    apply (simp add: pspace_relation_def dom_fun_upd2
                del: dom_fun_upd)
@@ -2955,7 +2955,7 @@ lemma updateMDB_pspace_relation:
    apply (rule ballI, drule(1) bspec)
    apply (rule ballI, drule(1) bspec)
    apply clarsimp
-   apply (rule obj_relation_cutsE, assumption+, simp_all)[1]
+   apply (rule obj_relation_cutsE, assumption+, simp_all split:split_if_asm)[1]
    apply (clarsimp simp: cte_relation_def)
   apply clarsimp
   apply (drule_tac y=p in tcb_ctes_clear[rotated], assumption+)
@@ -3583,7 +3583,7 @@ lemma set_cap_same_master:
                        split: split_if_asm Structures_A.kernel_object.splits)
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
-   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
+   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
   apply (rule conjI)
    prefer 2
    apply (rule conjI)
@@ -4441,7 +4441,7 @@ lemma set_untyped_cap_corres:
                     split: split_if_asm Structures_A.kernel_object.splits)
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
-   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
+   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
   apply (rule conjI)
    prefer 2
    apply (rule conjI)
@@ -5910,7 +5910,7 @@ lemma cins_corres:
              apply (clarsimp simp: pspace_relations_def)
 
              apply (rule conjI)
-              apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
+              apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
              apply (rule conjI)
               defer
               apply(rule conjI)
@@ -7455,7 +7455,7 @@ lemma cap_swap_corres:
    apply assumption
   apply (clarsimp simp: pspace_relations_def)
   apply (rule conjI)
-   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
+   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
   apply(subst conj_assoc[symmetric])
   apply (rule conjI)
    prefer 2

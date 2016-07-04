@@ -577,7 +577,10 @@ lemma cap_table_at_gsCNodes_eq:
     \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
   apply (clarsimp simp: state_relation_def ghost_relation_def
                         obj_at_def is_cap_table)
-  by blast
+  apply (drule_tac x = ptr in spec)+
+  apply (drule_tac x = bits in spec)+
+  apply fastforce
+  done
 
 lemma cNodeNoPartialOverlap:
   "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (op = (cap.UntypedCap d base magnitude idx)) cref s
@@ -1456,7 +1459,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
   thus "valid_machine_state' ?state''"
     apply (clarsimp simp: valid_machine_state'_def)
     apply (drule_tac x=p in spec)
-    apply (simp add: pointerInUserData_def typ_at'_def)
+    apply (simp add: pointerInUserData_def pointerInDeviceData_def typ_at'_def)
     apply (simp add: ko_wp_at'_def exists_disj)
     apply (elim exE conjE)
     apply (cut_tac ptr'=p in mask_in_range)

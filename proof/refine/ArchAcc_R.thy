@@ -794,8 +794,8 @@ lemma set_pd_corres:
       apply (drule test_bit_size)
       apply (clarsimp simp: word_size pd_bits_def pageBits_def)
       apply arith
-     apply simp
-    apply simp
+     apply (simp split:split_if_asm)
+    apply (simp split:split_if_asm)
    apply (simp add: other_obj_relation_def 
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule conjI)
@@ -870,8 +870,8 @@ lemma set_pt_corres:
        apply (clarsimp simp: word_size pt_bits_def pageBits_def)
        apply arith
       apply simp
-     apply simp
-    apply simp
+     apply (simp split:split_if_asm)
+    apply (simp split:split_if_asm)
    apply (simp add: other_obj_relation_def 
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule conjI)

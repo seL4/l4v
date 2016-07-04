@@ -3657,7 +3657,7 @@ lemma retype_region_caps_overlap_reserved:
     K (range_cover ptr sz (obj_bits_api (APIType_map2 (Inr ao')) us) n) and
     K (S \<subseteq> {ptr..ptr + of_nat n *
                   2 ^ obj_bits_api (APIType_map2 (Inr ao')) us - 1})\<rbrace>
-   retype_region ptr n us (APIType_map2 (Inr ao'))
+   retype_region ptr n us (APIType_map2 (Inr ao')) dev
    \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (simp (no_asm) add:caps_overlap_reserved_def2)
@@ -3679,7 +3679,7 @@ lemma retype_region_caps_overlap_reserved_ret:
       {ptr..ptr + of_nat n * 2^obj_bits_api (APIType_map2 (Inr ao')) us - 1} and
     K (APIType_map2 (Inr ao') = Invariants_AI.CapTableObject \<longrightarrow> 0 < us) and
     K (range_cover ptr sz (obj_bits_api (APIType_map2 (Inr ao')) us) n)\<rbrace>
-   retype_region ptr n us (APIType_map2 (Inr ao'))
+   retype_region ptr n us (APIType_map2 (Inr ao')) dev
    \<lbrace>\<lambda>rv s. \<forall>y\<in>set rv. caps_overlap_reserved (untyped_range (default_cap
                             (APIType_map2 (Inr ao')) y us d)) s\<rbrace>"
   apply (rule hoare_name_pre_state)

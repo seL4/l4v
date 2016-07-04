@@ -463,10 +463,11 @@ lemma thread_set_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> thread_set f t \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp add: valid_machine_state_def in_user_frame_def)
-  apply (drule_tac x=p in spec, clarsimp, rule_tac x=sz in exI)
-  by (clarsimp simp: get_tcb_def obj_at_def
-              split: Structures_A.kernel_object.splits)
+  apply clarify
+  apply (rule valid_machine_state_heap_updI,simp_all)
+  apply (fastforce simp: get_tcb_def obj_at_def a_type_def
+              split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+  done
 
 lemma thread_set_invs_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
@@ -947,12 +948,21 @@ lemma store_word_offs_in_user_frame[wp]:
   unfolding in_user_frame_def
   by (wp hoare_vcg_ex_lift)
 
+lemma store_word_offs_in_device_frame[wp]:
+  "\<lbrace>\<lambda>s. in_device_frame p s\<rbrace> store_word_offs a x w \<lbrace>\<lambda>_ s. in_device_frame p s\<rbrace>"
+  unfolding in_device_frame_def
+  by (wp hoare_vcg_ex_lift)
+
 
 lemma as_user_in_user_frame[wp]:
   "\<lbrace>\<lambda>s. in_user_frame p s\<rbrace> as_user t m \<lbrace>\<lambda>_ s. in_user_frame p s\<rbrace>"
   unfolding in_user_frame_def
   by (wp hoare_vcg_ex_lift)
 
+lemma as_user_in_device_frame[wp]:
+  "\<lbrace>\<lambda>s. in_device_frame p s\<rbrace> as_user t m \<lbrace>\<lambda>_ s. in_device_frame p s\<rbrace>"
+  unfolding in_device_frame_def
+  by (wp hoare_vcg_ex_lift)
 
 crunch obj_at[wp]: load_word_offs "\<lambda>s. P (obj_at Q p s)"
 
@@ -962,6 +972,10 @@ lemma load_word_offs_in_user_frame[wp]:
   unfolding in_user_frame_def
   by (wp hoare_vcg_ex_lift)
 
+lemma load_word_offs_in_device_frame[wp]:
+  "\<lbrace>\<lambda>s. in_device_frame p s\<rbrace> load_word_offs a x \<lbrace>\<lambda>_ s. in_device_frame p s\<rbrace>"
+  unfolding in_device_frame_def
+  by (wp hoare_vcg_ex_lift)
 
 lemma valid_tcb_objs:
   assumes vs: "valid_objs s"
@@ -1604,11 +1618,11 @@ lemma set_thread_state_valid_ioc[wp]:
 lemma set_thread_state_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_thread_state t st \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def)
-  apply (wp, simp, wp)
-  apply (clarsimp simp add: valid_machine_state_def in_user_frame_def)
-  apply (drule_tac x=p in spec, clarsimp, rule_tac x=sz in exI)
-  apply (clarsimp simp: get_tcb_def obj_at_def
-              split: Structures_A.kernel_object.splits)
+  apply (wp,simp,wp)
+  apply clarify
+  apply (rule valid_machine_state_heap_updI,simp_all)
+  apply (fastforce simp: get_tcb_def obj_at_def a_type_def 
+              split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   done
 
 lemma set_bound_notification_valid_ioc[wp]:
@@ -1628,11 +1642,10 @@ lemma set_bound_notification_valid_ioc[wp]:
 lemma set_bound_notification_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: set_bound_notification_def set_object_def)
-  apply (wp, simp)
-  apply (clarsimp simp add: valid_machine_state_def in_user_frame_def)
-  apply (drule_tac x=p in spec, clarsimp, rule_tac x=sz in exI)
-  apply (clarsimp simp: get_tcb_def obj_at_def
-              split: Structures_A.kernel_object.splits)
+  apply (wp, clarify)
+  apply (rule valid_machine_state_heap_updI,simp_all)
+  apply (fastforce simp: get_tcb_def obj_at_def a_type_def 
+              split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   done
 
 lemma sts_invs_minor:

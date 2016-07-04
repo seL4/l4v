@@ -492,23 +492,19 @@ defs lookupIPCBuffer_def:
     bufferPtr \<leftarrow> threadGet tcbIPCBuffer thread;
     bufferFrameSlot \<leftarrow> getThreadBufferSlot thread;
     bufferCap \<leftarrow> getSlotCap bufferFrameSlot;
-    (let v3 = bufferCap in
-        if isArchObjectCap v3 \<and> isPageCap (capCap v3)
-        then let frame = capCap v3
-        in  (do
-            rights \<leftarrow> return ( capVPRights frame);
-            pBits \<leftarrow> return ( pageBitsForSize $ capVPSize frame);
+    (case bufferCap of
+          ArchObjectCap (PageCap False baseptr rights sz _) \<Rightarrow>   (do
+            pBits \<leftarrow> return ( pageBitsForSize sz);
             if (rights = VMReadWrite \<or> Not isReceiver \<and> rights = VMReadOnly)
               then (do
-                 ptr \<leftarrow> return ( capVPBasePtr frame +
-                           PPtr (fromVPtr bufferPtr && mask pBits));
+                 ptr \<leftarrow> return ( baseptr + PPtr (fromVPtr bufferPtr && mask pBits));
                  haskell_assert (ptr \<noteq> 0)
                             [];
                  return $ Just ptr
               od)
               else return Nothing
-        od)
-        else  return Nothing
+          od)
+        | _ \<Rightarrow>   return Nothing
         )
 od)"
 
@@ -780,8 +776,8 @@ defs setVMRootForFlush_def:
     tcb \<leftarrow> getCurThread;
     threadRootSlot \<leftarrow> getThreadVSpaceRoot tcb;
     threadRoot \<leftarrow> getSlotCap threadRootSlot;
-    (let v7 = threadRoot in
-        if isArchObjectCap v7 \<and> isPageDirectoryCap (capCap v7) \<and> capPDMappedASID (capCap v7) \<noteq> None \<and> capPDBasePtr (capCap v7) = pd
+    (let v6 = threadRoot in
+        if isArchObjectCap v6 \<and> isPageDirectoryCap (capCap v6) \<and> capPDMappedASID (capCap v6) \<noteq> None \<and> capPDBasePtr (capCap v6) = pd
         then let cur_pd = pd in  return False
         else  (do
             armv_contextSwitch pd asid;
@@ -798,8 +794,7 @@ defs isValidVTableRoot_def:
 
 defs checkValidIPCBuffer_def:
 "checkValidIPCBuffer vptr x1\<equiv> (case x1 of
-    (ArchObjectCap (PageCap isDevice _ _ _ _)) \<Rightarrow>    (doE
-    whenE isDevice $ throw IllegalOperation;
+    (ArchObjectCap (PageCap False _ _ _ _)) \<Rightarrow>    (doE
     whenE (vptr && mask msgAlignBits \<noteq> 0) $ throw AlignmentError;
     returnOk ()
     odE)
@@ -1002,15 +997,15 @@ defs resolveVAddr_def:
     pdSlot \<leftarrow> return ( lookupPDSlot pd vaddr);
     pde \<leftarrow> getObject pdSlot;
     (case pde of
-          SectionPDE frame v17 v18 v19 v20 v21 v22 \<Rightarrow>   return $ Just (ARMSection, frame)
-        | SuperSectionPDE frame v23 v24 v25 v26 v27 \<Rightarrow>   return $ Just (ARMSuperSection, frame)
-        | PageTablePDE table v28 v29 \<Rightarrow>   (do
+          SectionPDE frame v16 v17 v18 v19 v20 v21 \<Rightarrow>   return $ Just (ARMSection, frame)
+        | SuperSectionPDE frame v22 v23 v24 v25 v26 \<Rightarrow>   return $ Just (ARMSuperSection, frame)
+        | PageTablePDE table v27 v28 \<Rightarrow>   (do
             pt \<leftarrow> return ( ptrFromPAddr table);
             pteSlot \<leftarrow> lookupPTSlotFromPT pt vaddr;
             pte \<leftarrow> getObject pteSlot;
             (case pte of
-                  LargePagePTE frame v9 v10 v11 v12 \<Rightarrow>   return $ Just (ARMLargePage, frame)
-                | SmallPagePTE frame v13 v14 v15 v16 \<Rightarrow>   return $ Just (ARMSmallPage, frame)
+                  LargePagePTE frame v8 v9 v10 v11 \<Rightarrow>   return $ Just (ARMLargePage, frame)
+                | SmallPagePTE frame v12 v13 v14 v15 \<Rightarrow>   return $ Just (ARMSmallPage, frame)
                 | _ \<Rightarrow>   return Nothing
                 )
         od)
@@ -1174,8 +1169,8 @@ defs decodeARMMMUInvocation_def:
             whenE (null free) $ throw DeleteFirst;
             base \<leftarrow> returnOk ( (fst $ head free) `~shiftL~` asidLowBits);
             pool \<leftarrow> returnOk ( makeObject ::asidpool);
-            frame \<leftarrow> (let v30 = untyped in
-                if isUntypedCap v30 \<and> capBlockSize v30 = objBits pool \<and> \<not> capIsDevice v30
+            frame \<leftarrow> (let v29 = untyped in
+                if isUntypedCap v29 \<and> capBlockSize v29 = objBits pool \<and> \<not> capIsDevice v29
                 then  (doE
                     ensureNoChildren parentSlot;
                     returnOk $ capPtr untyped

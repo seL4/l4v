@@ -18,9 +18,6 @@ definition
 definition
   "array_relation r n a c \<equiv> \<forall>i \<le> n. r (a i) (index c (unat i))"
 
-definition 
-  "option_to_0 x \<equiv> case x of None \<Rightarrow> 0 | Some y \<Rightarrow> y"
-
 definition
   "option_to_ptr \<equiv> Ptr o option_to_0"
 
@@ -36,13 +33,18 @@ definition
                                        word_rcat [m (ptr + 3), m (ptr + 2), m (ptr + 1), m ptr]"
 
 definition
-  heap_to_page_data :: "(word32 \<Rightarrow> kernel_object option) \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> (word32 \<Rightarrow> (10 word \<Rightarrow> word32) option)"
+  heap_to_user_data :: "(word32 \<Rightarrow> kernel_object option) \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> (word32 \<Rightarrow> (10 word \<Rightarrow> word32) option)"
   where
-  "heap_to_page_data hp bhp \<equiv> \<lambda>p. let (uhp :: word32 \<Rightarrow> user_data option) = (projectKO_opt \<circ>\<^sub>m hp) in
+  "heap_to_user_data hp bhp \<equiv> \<lambda>p. let (uhp :: word32 \<Rightarrow> user_data option) = (projectKO_opt \<circ>\<^sub>m hp) in
                                       option_map (\<lambda>_. byte_to_word_heap bhp p) (uhp p)"
 
-(* FIXME SELFOUR-421: need new heap relation for devices, use user_data_device type *)
-BLOW UP
+definition
+  heap_to_device_data :: "(word32 \<Rightarrow> kernel_object option) \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> (word32 \<Rightarrow> (10 word \<Rightarrow> word32) option)"
+  where
+  "heap_to_device_data hp bhp \<equiv> \<lambda>p. let (uhp :: word32 \<Rightarrow> user_data_device option) = (projectKO_opt \<circ>\<^sub>m hp) in
+                                      option_map (\<lambda>_. byte_to_word_heap bhp p) (uhp p)"
+
+
 definition
   cmap_relation :: "(word32 \<rightharpoonup> 'a) \<Rightarrow> 'b typ_heap \<Rightarrow> (word32 \<Rightarrow> 'b ptr) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> bool"
   where
@@ -133,8 +135,10 @@ where
   "cmachine_state_relation s s' \<equiv> 
   irq_masks s = irq_masks (phantom_machine_state_' s') \<and>
   irq_state s = irq_state (phantom_machine_state_' s') \<and>
+  device_state s = device_state (phantom_machine_state_' s') \<and>
   exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and>
   machine_state_rest s = machine_state_rest (phantom_machine_state_' s')"
+
 
 definition
   "globals_list_id_fudge = id"
@@ -175,6 +179,12 @@ abbreviation
   map_to_user_data :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> user_data"
   where
   "map_to_user_data hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
+
+abbreviation
+  map_to_user_data_device :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> user_data_device"
+  where
+  "map_to_user_data_device hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
+
 
 definition
   cmdbnode_relation :: "Structures_H.mdbnode \<Rightarrow> mdb_node_C \<Rightarrow> bool"
@@ -495,9 +505,16 @@ where
   array_relation (op = \<circ> option_to_ptr) (2^asid_low_bits - 1) pool cpool"
 
 definition
-  cuser_data_relation :: "(10 word \<Rightarrow> word32) \<Rightarrow> user_data_C \<Rightarrow> bool"
+  cuser_user_data_relation :: "(10 word \<Rightarrow> word32) \<Rightarrow> user_data_C \<Rightarrow> bool"
 where
-  "cuser_data_relation f ud \<equiv> \<forall>off. f off = index (user_data_C.words_C ud) (unat off)"
+  "cuser_user_data_relation f ud \<equiv> \<forall>off. f off = index (user_data_C.words_C ud) (unat off)"
+
+definition
+  cuser_user_data_device_relation :: "(10 word \<Rightarrow> word32) \<Rightarrow> user_data_device_C \<Rightarrow> bool"
+where
+  "cuser_user_data_device_relation f ud \<equiv> True"
+  (*"cuser_user_data_device_relation f ud \<equiv> \<forall>off. f off = index (user_data_device_C.words_C ud) (unat off)" *)
+
 
 abbreviation
   "cpspace_cte_relation ah ch \<equiv> cmap_relation (map_to_ctes ah) (clift ch) Ptr ccte_relation"
@@ -521,7 +538,11 @@ abbreviation
   "cpspace_asidpool_relation ah ch \<equiv> cmap_relation (map_to_asidpools ah) (clift ch) Ptr casid_pool_relation"
 
 abbreviation
-  "cpspace_user_data_relation ah bh ch \<equiv> cmap_relation (heap_to_page_data ah bh) (clift ch) Ptr cuser_data_relation"
+  "cpspace_user_data_relation ah bh ch \<equiv> cmap_relation (heap_to_user_data ah bh) (clift ch) Ptr cuser_user_data_relation"
+
+abbreviation
+  "cpspace_device_data_relation ah bh ch \<equiv> cmap_relation (heap_to_device_data ah bh) (clift ch) Ptr cuser_user_data_device_relation"
+
 
 abbreviation
   pd_Ptr :: "32 word \<Rightarrow> (pde_C[4096]) ptr" where "pd_Ptr == Ptr"
@@ -541,7 +562,8 @@ definition
 where
   "cpspace_relation ah bh ch \<equiv>  
   cpspace_cte_relation ah ch \<and> cpspace_tcb_relation ah ch \<and> cpspace_ep_relation ah ch \<and> cpspace_ntfn_relation ah ch \<and>
-  cpspace_pde_relation ah ch \<and> cpspace_pte_relation ah ch \<and> cpspace_asidpool_relation ah ch \<and> cpspace_user_data_relation ah bh ch \<and>
+  cpspace_pde_relation ah ch \<and> cpspace_pte_relation ah ch \<and> cpspace_asidpool_relation ah ch \<and> 
+  cpspace_user_data_relation ah bh ch \<and> cpspace_device_data_relation ah bh ch \<and>
   cpspace_pde_array_relation ah ch \<and> cpspace_pte_array_relation ah ch"
 
 abbreviation

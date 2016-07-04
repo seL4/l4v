@@ -87,7 +87,7 @@ datatype arch_kernel_obj =
    ASIDPool "10 word \<rightharpoonup> obj_ref"
  | PageTable "word8 \<Rightarrow> pte"
  | PageDirectory "12 word \<Rightarrow> pde"
- | DataPage vmpage_size
+ | DataPage bool vmpage_size
 
 primrec
   arch_obj_size :: "arch_cap \<Rightarrow> nat"
@@ -113,7 +113,7 @@ where
   "arch_kobj_size (ASIDPool p) = pageBits"
 | "arch_kobj_size (PageTable pte) = 10"
 | "arch_kobj_size (PageDirectory pde) = 14"
-| "arch_kobj_size (DataPage sz) = pageBitsForSize sz"
+| "arch_kobj_size (DataPage dev sz) = pageBitsForSize sz"
 
 primrec
   aobj_ref :: "arch_cap \<rightharpoonup> obj_ref"
@@ -169,12 +169,12 @@ definition
   | ASIDPoolObj \<Rightarrow> ASIDPoolCap r 0" (* unused *)
 
 definition
-  default_arch_object :: "aobject_type \<Rightarrow> nat \<Rightarrow> arch_kernel_obj" where
- "default_arch_object tp n \<equiv> case tp of
-    SmallPageObj \<Rightarrow> DataPage ARMSmallPage 
-  | LargePageObj \<Rightarrow> DataPage ARMLargePage
-  | SectionObj \<Rightarrow> DataPage ARMSection
-  | SuperSectionObj \<Rightarrow> DataPage ARMSuperSection
+  default_arch_object :: "aobject_type \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> arch_kernel_obj" where
+ "default_arch_object tp dev n \<equiv> case tp of
+    SmallPageObj \<Rightarrow> DataPage dev ARMSmallPage 
+  | LargePageObj \<Rightarrow> DataPage dev ARMLargePage
+  | SectionObj \<Rightarrow> DataPage dev ARMSection
+  | SuperSectionObj \<Rightarrow> DataPage dev ARMSuperSection
   | PageTableObj \<Rightarrow> PageTable (\<lambda>x. InvalidPTE)
   | PageDirectoryObj \<Rightarrow> PageDirectory (\<lambda>x. InvalidPDE)
   | ASIDPoolObj \<Rightarrow> ASIDPool (\<lambda>_. None)"
