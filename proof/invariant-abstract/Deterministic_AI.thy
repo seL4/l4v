@@ -3960,7 +3960,7 @@ lemma irq_state_independent_A_valid_list[simp]: "irq_state_independent_A valid_l
   done
 
 lemma cap_revoke_valid_list[wp]:"\<lbrace>valid_list\<rbrace> cap_revoke a \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  apply (rule CNodeInv_AI.cap_revoke_preservation2)
+  apply (rule cap_revoke_preservation2)
   apply (wp preemption_point_inv'|simp)+
   done
 

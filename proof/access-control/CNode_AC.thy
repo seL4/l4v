@@ -1208,7 +1208,7 @@ crunch cur_domain[wp]: cap_delete  "\<lambda>s. P (cur_domain s)"
 
 lemma cap_revoke_cur_domain[wp]:
   "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> cap_revoke slot \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
-  apply (rule CNodeInv_AI.cap_revoke_preservation2)
+  apply (rule cap_revoke_preservation2)
    apply wp
    done
 

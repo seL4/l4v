@@ -674,15 +674,15 @@ lemma preemption_point_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> preemption_point \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   by (wp preemption_point_inv | simp)+
 
-lemmas cap_revoke_preservation2 = cap_revoke_preservation[OF _,
+lemmas cap_revoke_preservation_valid_pdpt_objs = cap_revoke_preservation[OF _,
                                                           where E=valid_pdpt_objs,
                                                           simplified, THEN validE_valid]
 
-lemmas rec_del_preservation2 = rec_del_preservation[OF _ _ _ _,
+lemmas rec_del_preservation_valid_pdpt_objs = rec_del_preservation[OF _ _ _ _,
                                                     where P=valid_pdpt_objs, simplified]
 
 crunch valid_pdpt_objs[wp]: cap_delete, cap_revoke "valid_pdpt_objs"
-  (wp: rec_del_preservation2 cap_revoke_preservation2)
+  (wp: rec_del_preservation_valid_pdpt_objs cap_revoke_preservation_valid_pdpt_objs)
 
 crunch valid_pdpt_objs[wp]: invalidate_tlb_by_asid, page_table_mapped
    "valid_pdpt_objs"

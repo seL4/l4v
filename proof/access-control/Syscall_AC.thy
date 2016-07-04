@@ -1033,10 +1033,10 @@ lemma rec_del_cur_thread[wp]:"\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> rec
   apply (wp preemption_point_inv|simp)+
   done
 
-crunch cur_thread[wp]: cap_delete,cap_move "\<lambda>s. P (cur_thread s)" (wp: CNodeInv_AI.cap_revoke_preservation2 mapM_wp mapM_x_wp crunch_wps dxo_wp_weak simp: filterM_mapM unless_def ignore: without_preemption filterM)
+crunch cur_thread[wp]: cap_delete,cap_move "\<lambda>s. P (cur_thread s)" (wp: cap_revoke_preservation2 mapM_wp mapM_x_wp crunch_wps dxo_wp_weak simp: filterM_mapM unless_def ignore: without_preemption filterM)
 
 lemma cap_revoke_cur_thread[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
-  apply (rule CNodeInv_AI.cap_revoke_preservation2)
+  apply (rule cap_revoke_preservation2)
   apply (wp preemption_point_inv|simp)+
   done
 
@@ -1070,7 +1070,7 @@ crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread 
 crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cap_recycle "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
  
 lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
-  apply (rule CNodeInv_AI.cap_revoke_preservation2)
+  apply (rule cap_revoke_preservation2)
    apply wp
   done
 
