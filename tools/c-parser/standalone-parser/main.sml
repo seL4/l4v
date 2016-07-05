@@ -388,8 +388,9 @@ fun print_ast cse ast = let
         list_serial fnspec_serial specs,
         list_serial bi_serial (node body)])
     | serial_defn (Decl dw) = decl_serial (node dw)
+  fun print_lines ss = app print (map (fn s => s ^ "\n") ss)
 in
-  app (print_serial 0 o serial_defn) ast
+  app (print_lines o lines_serial o serial_defn) ast
 end
 
 val analyses = ref ([] : (ProgramAnalysis.csenv -> Absyn.ext_decl list -> unit) list)

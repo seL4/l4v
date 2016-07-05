@@ -161,13 +161,15 @@ end
 and bi_serial (Absyn.BI_Decl d) = decl_serial (node d)
   | bi_serial (Absyn.BI_Stmt s) = stmt_serial s
 
-fun print_ind 0 s = print (s ^ "\n")
-  | print_ind i s = (print "  "; print_ind (i - 1) s)
-fun print_serial i (Nm ("", [])) = print_ind i "[],"
-  | print_serial i (Nm (s, [])) = print_ind i (s ^ ",")
-  | print_serial i (Nm (s, ts)) = (print_ind i (s ^ " [");
-    app (print_serial (i + 1)) ts; print_ind i ("],"))
-  | print_serial i (Q s) = print_ind i ("\"" ^ s ^ "\"")
+fun line_ind 0 s = s
+  | line_ind i s = "  " ^ line_ind (i - 1) s
+fun lines_serial_ind i (Nm ("", [])) = [line_ind i "[],"]
+  | lines_serial_ind i (Nm (s, [])) = [line_ind i (s ^ ",")]
+  | lines_serial_ind i (Nm (s, ts)) = [line_ind i (s ^ " [")]
+    @ List.concat (map (lines_serial_ind (i + 1)) ts) @ [line_ind i ("],")]
+  | lines_serial_ind i (Q s) = [line_ind i ("\"" ^ s ^ "\"")]
+
+fun lines_serial ser = lines_serial_ind 0 ser
 
 end;
 
