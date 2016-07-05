@@ -379,101 +379,17 @@ in
   recurse ast
 end
 
-datatype thing = Nm of string * thing list | Q of string
-
-fun opt_thing f (SOME v) = Nm ("SOME", [f v])
-  | opt_thing f NONE = Nm ("NONE", [])
-
-fun expr_thing e = let
-    open Absyn
-in
-    Nm (expr_string e,
-    case enode e of
-      BinOp (t, e, e2) => [Q (binopname t), expr_thing e, expr_thing e2]
-    | UnOp (t, e) => [Q (unopname t), expr_thing e]
-    | CondExp (e1, e2, e3) => map expr_thing [e1, e2, e3]
-    | Constant nc => [Q "FIXME: consts"]
-    | Var _ => [Q "FIXME: var info"]
-    | StructDot (e, s) => [expr_thing e, Q s]
-    | ArrayDeref (e1, e2) => map expr_thing [e1, e2]
-    | Deref e => [expr_thing e]
-    | TypeCast (t, e) => [Q (tyname0 expr_string (node t)), expr_thing e]
-    | Sizeof e => [expr_thing e]
-    | SizeofTy t => [Q (tyname0 expr_string (node t))]
-    | EFnCall (e, es) => map expr_thing (e :: es)
-    | CompLiteral _ => [Q "FIXME: too hard"]
-    | Arbitrary t => [Q (tyname0 expr_string t)]
-    | MKBOOL e => [expr_thing e]
-    | _ => [Q "[whoa! Unknown expr type]"]
-    )
-end
-
-fun stmt_thing s = let
-    open Absyn
-    fun b2s true = "true"
-      | b2s false = "false"
-    fun os2s (SOME s) = "Some (" ^ s ^ ")"
-      | os2s NONE = "None"
-    fun asm_thing1 (so, s, e) = Nm ("A1", [opt_thing Q so, Q s, expr_thing e])
-    fun asm_thing2 (b : asmblock) = Nm ("A2", [Q (#head b),
-        Nm ("M1", map asm_thing1 (#mod1 b)),
-        Nm ("M2", map asm_thing1 (#mod2 b)),
-        Nm ("M3", map Q (#mod3 b))])
-    fun sw_thing (eos, bis) = Nm ("Sw", [Nm ("",
-        map (opt_thing expr_thing) eos), Nm ("", map bi_thing bis)])
-in
-    Nm (stmt_type s,
-    case snode s of
-      Assign (e, e2) => map expr_thing [e, e2]
-    | AssignFnCall (lv, fnm, args) => opt_thing expr_thing lv
-        :: map expr_thing (fnm :: args)
-    | EmbFnCall (lv, fnm, args) => map expr_thing (lv :: fnm :: args)
-    | Block bis => map bi_thing bis
-    | Chaos e => [expr_thing e]
-    | While (e, s, stmt) => [expr_thing e, opt_thing Q (Option.map node s),
-        stmt_thing stmt]
-    | Trap (BreakT, stmt) => [Q "Break", stmt_thing stmt]
-    | Trap (ContinueT, stmt) => [Q "Continue", stmt_thing stmt]
-    | Return e => [opt_thing expr_thing e]
-    | ReturnFnCall (e, args) => map expr_thing (e :: args)
-    | Break => []
-    | Continue => []
-    | IfStmt (e, lhs, rhs) => [expr_thing e, stmt_thing lhs, stmt_thing rhs]
-    | Switch (e, sws) => expr_thing e :: map sw_thing sws
-    | EmptyStmt => []
-    | Auxupd s => [Q s]
-    | Spec ((a, b), stmts, c) => [Q a, Q b, Q c] @  map stmt_thing stmts
-    | AsmStmt dets => [Q (b2s (#volatilep dets)), asm_thing2 (#asmblock dets)]
-    | LocalInit e => [expr_thing e]
-    | _ => [Q "[whoa!  Unknown stmt type]"]
-    )
-end
-and bi_thing (Absyn.BI_Decl d) = Nm ("Decl", [])
-  | bi_thing (Absyn.BI_Stmt s) = stmt_thing s
-
-fun print_ind 0 s = print (s ^ "\n")
-  | print_ind i s = (print "  "; print_ind (i - 1) s)
-fun print_thing i (Nm ("", [])) = print_ind i "[],"
-  | print_thing i (Nm (s, [])) = print_ind i (s ^ ",")
-  | print_thing i (Nm (s, ts)) = (print_ind i (s ^ "[");
-    app (print_thing (i + 1)) ts; print_ind i ("],"))
-  | print_thing i (Q s) = print_ind i (quote s)
-
 fun print_ast cse ast = let
-  open Absyn
-  fun str_decl (typ, nm) = "(" ^ quote (node nm) ^ ", " ^
-    tyname0 expr_string typ ^ ")"
-  fun str_spec s = quote (fnspec2string s)
+  open Absyn_Serial
 
-  fun println s = (print s; print "\n")
-  fun proc (FnDefn ((retty,fnm),params,specs,body)) =
-    print_thing 0 (Nm ("Function", [Q (str_decl (retty, fnm)),
-        Nm ("", map (Q o str_decl) params),
-        Nm ("", map (Q o str_spec) specs),
-        Nm ("", map bi_thing (node body))]))
-    | proc (Decl dw) = print_thing 0 (bi_thing (BI_Decl dw))
+  fun serial_defn (FnDefn ((retty,fnm),params,specs,body))
+    = Nm ("Function", [varspec_serial (retty,fnm),
+        list_serial varspec_serial params,
+        list_serial fnspec_serial specs,
+        list_serial bi_serial (node body)])
+    | serial_defn (Decl dw) = decl_serial (node dw)
 in
-  app proc ast
+  app (print_serial 0 o serial_defn) ast
 end
 
 val analyses = ref ([] : (ProgramAnalysis.csenv -> Absyn.ext_decl list -> unit) list)

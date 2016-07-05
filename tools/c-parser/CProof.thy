@@ -36,6 +36,7 @@ ML_file "Absyn-CType.ML"
 ML_file "Absyn-Expr.ML"
 ML_file "Absyn-StmtDecl.ML"
 ML_file "Absyn.ML"
+ML_file "Absyn-Serial.ML"
 ML_file "name_generation.ML"
 
 

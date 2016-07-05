@@ -17,6 +17,9 @@ Absyn-CType.ML, Absyn-Expr.ML, Absyn-StmtDecl.ML, Absyn.ML
   expression will turn into a number, and the value will be of type
   int ctype.
 
+Absyn-Serial.ML
+  Serialisation for all of the AST types from the other Absyn*.
+
 basics.ML
   Some declarations of useful functions, mostly bound up in the
   L4Basics structure.  Some of these depend on the standard Isabelle
