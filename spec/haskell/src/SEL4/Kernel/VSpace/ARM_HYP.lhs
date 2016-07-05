@@ -468,7 +468,7 @@ FIXME ARMHYP checks contiguous hint here, but that should be built into the getO
 >                 mapM (flip storePTE InvalidPTE) slots
 >                 doMachineOp $
 >                     cleanCacheRange_PoU (VPtr $ fromPPtr $ (head slots))
->                                         (VPtr $ (fromPPtr (last slots)) + (bit (objBits (undefined :: PTE)) - 1 ))
+>                                         (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
 >                                         (addrFromPPtr (head slots))
 >         ARMSection -> do
 >             let p = lookupPDSlot pd vptr
@@ -484,7 +484,7 @@ FIXME ARMHYP checks contiguous hint here, but that should be built into the getO
 >                 mapM (flip storePDE InvalidPDE) slots
 >                 doMachineOp $
 >                     cleanCacheRange_PoU (VPtr $ fromPPtr $ (head slots))
->                                         (VPtr $ (fromPPtr  (last slots)) + (bit (objBits (undefined :: PDE)) - 1))
+>                                         (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
 >                                         (addrFromPPtr (head slots))
 >     withoutFailure $ flushPage size pd asid vptr
 
@@ -1024,7 +1024,6 @@ FIXME ARMHYP MOVE THESE, they are dispatched via ObjectType/ decodeInvocation an
 > decodeARMMMUInvocation label _ _ _ cap@(VCPUCap {}) extraCaps = error "FIXME ARMHYP TODO VCPU"
 #ifdef CONFIG_ARM_SMMU
 > decodeARMMMUInvocation label _ _ _ cap@(IOSpaceCap {}) extraCaps = error "FIXME ARMHYP TODO IOSpace"
-> decodeARMMMUInvocation label _ _ _ cap@(IOPageDirectoryCap {}) extraCaps = error "FIXME ARMHYP IO"
 > decodeARMMMUInvocation label _ _ _ cap@(IOPageTableCap {}) extraCaps = error "FIXME ARMHYP IO"
 #endif
 
@@ -1082,7 +1081,6 @@ notion of the largest permitted object size, and checks it appropriately.
 #ifdef CONFIG_ARM_SMMU
 >         InvokeIOSpace _ -> error "FIXME ARMHYP TODO IOSpace"
 >         InvokeIOPageTable _ -> error "FIXME ARMHYP TODO IO"
->         InvokePageIO _ -> error "FIXME ARMHYP TODO IO"
 #endif
 >     return $ []
 
@@ -1147,7 +1145,7 @@ the PT/PD is consistent.
 >             mapM (flip storePTE pte) slots
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
->                                     (VPtr $ (fromPPtr (last slots)) + (bit (objBits (undefined::PTE)) - 1))
+>                                     (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
 >                                     (addrFromPPtr (head slots))
 >             when tlbFlush $ invalidateTLBByASID asid
 >         Right (pde, slots) -> do
@@ -1155,7 +1153,7 @@ the PT/PD is consistent.
 >             mapM (flip storePDE pde) slots
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
->                                     (VPtr $ (fromPPtr (last slots)) + (bit (objBits (undefined::PDE)) - 1))
+>                                     (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
 >                                     (addrFromPPtr (head slots))
 >             when tlbFlush $ invalidateTLBByASID asid
 >
@@ -1164,7 +1162,7 @@ the PT/PD is consistent.
 >     mapM (flip storePTE pte) slots
 >     doMachineOp $
 >         cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
->                             (VPtr $ (fromPPtr (last slots)) + (bit (objBits (undefined::PTE)) - 1))
+>                             (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
 >                             (addrFromPPtr (head slots))
 >     when tlbFlush $ invalidateTLBByASID asid
 >
@@ -1173,7 +1171,7 @@ the PT/PD is consistent.
 >     mapM (flip storePDE pde) slots
 >     doMachineOp $
 >         cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
->                             (VPtr $ (fromPPtr (last slots)) + (bit (objBits (undefined::PDE)) - 1))
+>                             (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
 >                             (addrFromPPtr (head slots))
 >     when tlbFlush $ invalidateTLBByASID asid
 >

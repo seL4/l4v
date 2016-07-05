@@ -36,9 +36,7 @@ This module makes use of the GHC extension allowing data types with no construct
 
 There are five ARM-specific object types; however, only four of them may be invoked. These are the page table, page, ASID control, and ASID pool objects.
 
-XXX ARMHYP The distinction between the non-SMMU invocations (internally grouped as ARMMMUInvocation!) and IOPT invocations is arbitrary, mostly to do with the ability to turn these on/off on different architectures. IOSpace can't be invoked on this architecture.
-
-FIXME ARMHYP do we even want InvokePageIO? There is mapPageIO, IO pages can't be remapped, honestly they are frames to begin with (but then aren't the pages in InvokePage?), and they are unmapped in C going through normal unmap ... still want a split? see confusion with the caps and the isIOSpace flag
+IO pages are invoked using InvokePage (cap contains a bit indicating it is an IO page).
 
 > data Invocation
 >     = InvokePageTable PageTableInvocation
@@ -52,7 +50,6 @@ FIXME ARMHYP do we even want InvokePageIO? There is mapPageIO, IO pages can't be
 #ifdef CONFIG_ARM_SMMU
 >     | InvokeIOSpace IOSpaceInvocation
 >     | InvokeIOPageTable IOPageTableInvocation
->     | InvokePageIO PageInvocationIO
 #endif
 >     deriving Show
 

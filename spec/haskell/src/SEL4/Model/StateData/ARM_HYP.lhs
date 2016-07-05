@@ -48,14 +48,16 @@ There are three ARM-specific global data elements:
 \item the global page directory, which is copied to initialise new page directories, and also as the hardware page table root when the current thread has no valid root.
 \end{itemize}
 
-FIXME ARMHYP there is no sign of armKSASIDMap - what is it??
-    it is the representation in ghost state of storing hwasids into the last invalid entry of a PD
+seL4 stores the hardware ASID into the last (invalid) entry of a page
+directory, which the user cannot map. This allows fast changes to hardware
+ASIDs for a given address space.  To represent this, we use a ghost state
+armKSASIDMap to map from page directories to hardware ASIDs.
 
 FIXME ARMHYP there is no sign of armKSKernelVSpace - ghost state
 
-FIXME ARMHYP has no global PD and PTs, but the more complicated stage 1 translation for its own address space set up at boot time and then never used again ... it is unclear if we should model this at this time... see arm/32/model/statedata.c ... it is only set up during kernel boot. ARM_HYP doesn't really have a global PD that gets copied everywhere
+FIXME ARMHYP missing IO ASID to PD map for SMMU (not yet in C)
 
-FIXME ARMHYP where are SMMU globals if any?
+FIXME ARMHYP ksCurCPU will be renamed
 
 > data KernelState = ARMKernelState {
 >     armKSGlobalsFrame :: PPtr Word,

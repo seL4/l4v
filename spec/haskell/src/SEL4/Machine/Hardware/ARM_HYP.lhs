@@ -71,7 +71,7 @@ ARM virtual memory faults are handled by one of two trap handlers: one for data 
 >     = ARMDataAbort
 >     | ARMPrefetchAbort
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->     | ARMVCPUFault Word -- FIXME ARMHYP do we care about hsr for VCPU fault? hsr gets passed in from the asm code in the exception handler, there's no way to get it after
+>     | ARMVCPUFault { vcpuFaultHSR :: Word }
 >     | ARMVGICMaintenanceFault -- FIXME ARMHYP do we want any parameters?
 #endif
 >     deriving Show
@@ -542,12 +542,12 @@ hardware can be configured to omit the first level entirely if all second
 levels are stored contiguously. We use this configuration to preserve the usual
 page table/directory nomenclature.
 
-> -- FIXME ARMHYP what about stored_hw_asid? XN? AF? SH? HAP? MemAttr? TEX? etc?
 > -- FIXME ARMHYP global (SH) is never used so I don't know what a global page's SH would look like
-> -- FIXME ARMHYP what happened to parity and domain?
+
+seL4 does not use hardware domains or parity on ARM hypervisor systems.
 
 > data PDE
->     = InvalidPDE -- FIXME ARMHYP where is stored_hw_asid?
+>     = InvalidPDE
 >     | PageTablePDE {
 >         pdeTable :: PAddr }
 >     | SectionPDE {
@@ -635,6 +635,8 @@ FIXME ARMHYP ask somebody what the most convenient refinement would be
 > data VMAttributes = VMAttributes {
 >     armPageCacheable, armParityEnabled, armExecuteNever :: Bool }
 
+Convenient references to size and log of size of PDEs and PTEs.
+
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
 With hypervisor extensions enabled, page table and page directory entries occupy
@@ -649,19 +651,20 @@ With hypervisor extensions enabled, page table and page directory entries occupy
 #else /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
 ARM page directories and page tables occupy four frames and one quarter of a frame, respectively.
-FIXME ARMHYP define pteBits and pdeBits in terms of objBits of the right kind of object
-FIXME ARMHYP in C, we might want to call them PD\_INDEX\_BITS instead of PD\_BITS - tell Adrian
+
+FIXME ARMHYP in C, rename in progress such that PD\_INDEX\_BITS is used instead of PD\_BITS
 
 > pteBits = (2 :: Int)
 > pdeBits = (2 :: Int)
 > pdBits = (12 :: Int) + pdeBits
 > ptBits = (8 :: Int) + pteBits
 
-FIXME ARMHYP this is a bit silly: in the C code we have pdBits be 12 and ptBits 8,
-not the size of the whole thing. In fact, in the haskell we often have to shift pdBits right by the size of the PDE, which get by calling objBits on a new PDE...
-FIXME ARMHYP therefore pdeBits and pteBits are not used much outside of here
-
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
+> pteSize :: Int
+> pteSize = bit pteBits
+> pdeSize :: Int
+> pdeSize = bit pdeBits
 
 > cacheLineBits = Platform.cacheLineBits
 > cacheLine = Platform.cacheLine
@@ -674,12 +677,12 @@ FIXME ARMHYP therefore pdeBits and pteBits are not used much outside of here
 > ioptBits = pageBits
 
 FIXME ARMHYP this is really platform code (TK1), move there
-FIXME ARMHYP this is so very very verbose, but there is no way to know if we will care about the differences between a page table IOPDE entry and a 4M section one.
 
-FIXME ARMHYP TODO we want to have invalid PDE and PTEs
+Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bit. What actually happens is that a non-read, non-write entry is considered invalid. In pracice, the kernel writes an IOPTE/IOPDE of all zeros here.
 
-> data IOPDE -- FIXME ARMHYP where is InvalidIOPDE?
->     = PageTableIOPDE {
+> data IOPDE
+>     = InvalidIOPDE
+>     | PageTableIOPDE {
 >         iopdeFrame :: PAddr,
 >         iopdeRead :: Bool,
 >         iopdeWrite :: Bool,
@@ -691,7 +694,13 @@ FIXME ARMHYP TODO we want to have invalid PDE and PTEs
 >         iopdeNonsecure :: Bool }
 >     deriving (Show, Eq)
 
+> iopteBits = 2 :: Int
+> iopdeBits = 2 :: Int
+> iopteSize = bit iopteBits :: Int
+> iopdeSize = bit iopdeBits :: Int
+
 > wordFromIOPDE :: IOPDE -> Word
+> wordFromIOPDE InvalidIOPDE = 0
 > wordFromIOPDE (PageTableIOPDE addr r w ns) = bit 28 .|.
 >         ((fromIntegral addr .&. 0xfffffc00) `shiftR` 10) .|.
 >         (if r then bit 31 else 0) .|.
@@ -703,8 +712,9 @@ FIXME ARMHYP TODO we want to have invalid PDE and PTEs
 >         (if w then bit 30 else 0) .|.
 >         (if ns then bit 29 else 0)
 
-> data IOPTE -- FIXME ARMHYP where is InvalidIOPTE
->     = PageIOPTE {
+> data IOPTE
+>     = InvalidIOPTE
+>     | PageIOPTE {
 >         iopteFrame :: PAddr,
 >         iopteRead :: Bool,
 >         iopteWrite :: Bool,
@@ -712,6 +722,7 @@ FIXME ARMHYP TODO we want to have invalid PDE and PTEs
 >     deriving (Show, Eq)
 
 > wordFromIOPTE :: IOPTE -> Word
+> wordFromIOPTE InvalidIOPTE = 0
 > wordFromIOPTE (PageIOPTE addr r w ns) = 0 .|.
 >         ((fromIntegral addr .&. 0xfffff000) `shiftR` 12) .|.
 >         (if r then bit 31 else 0) .|.

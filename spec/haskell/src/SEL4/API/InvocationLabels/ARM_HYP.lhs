@@ -22,7 +22,6 @@ This module makes use of the GHC extension allowing data types with no construct
 
 \subsection{ARM-Specific Invocation Labels}
 
-FIXME ARMHYP remind me why IO page tables do not have remap
 FIXME ARMHYP ARMPageMapIO is an inconsistant name (but coined by kernel team)
 
 > data ArchInvocationLabel

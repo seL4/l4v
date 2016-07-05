@@ -68,7 +68,6 @@ ASID capabilities can be copied without modification.
 #ifdef CONFIG_ARM_SMMU
 > deriveCap _ (c@IOSpaceCap {}) = return c
 > deriveCap _ (c@IOPageTableCap {}) = error "FIXME ARMHYP TODO IO"
-> deriveCap _ (c@IOPageDirectoryCap {}) = throw IllegalOperation -- FIXME ARMHYP missing in C
 #endif /* CONFIG_ARM_SMMU */
 
 None of the ARM-specific capabilities have a user writeable data word.
@@ -114,7 +113,7 @@ Deletion of any mapped frame capability requires the page table slot to be locat
 > finaliseCap (cap@PageCap { capVPMappedAddress = Just (a, v),
 >                        capVPSize = s, capVPBasePtr = ptr }) _ =
 #ifdef CONFIG_ARM_SMMU
->     if isIOSpaceFrame(cap)
+>     if capVPisIOSpace cap
 >       then error "FIXME ARMHYP TODO IO"
 >       else
 #endif
@@ -137,7 +136,11 @@ All other capabilities need no finalisation action.
 \subsection{Recycling Capabilities}
 
 > resetMemMapping :: ArchCapability -> ArchCapability
+#ifdef CONFIG_ARM_SMMU
+> resetMemMapping (PageCap p rts sz io _) = PageCap p rts sz io Nothing
+#else
 > resetMemMapping (PageCap p rts sz _) = PageCap p rts sz Nothing
+#endif
 > resetMemMapping (PageTableCap ptr _) = PageTableCap ptr Nothing
 > resetMemMapping (PageDirectoryCap ptr _) = PageDirectoryCap ptr Nothing
 #ifdef CONFIG_ARM_SMMU
@@ -207,7 +210,6 @@ All other capabilities need no finalisation action.
 #ifdef CONFIG_ARM_SMMU
 > recycleCap _ (IOSpaceCap {}) = error "FIXME ARMHYP TODO IOSpace"
 > recycleCap _ (IOPageTableCap {}) = error "FIXME ARMHYP TODO IOSpace"
-> recycleCap _ (IOPageDirectoryCap {}) = error "FIXME ARMHYP IOPageDirectoryCap can't be recycled" -- but reachable in C in this function
 #endif
 
 > hasRecycleRights :: ArchCapability -> Bool
@@ -268,7 +270,12 @@ Create an architecture-specific object.
 > createObject :: ObjectType -> PPtr () -> Int -> Kernel ArchCapability
 > createObject t regionBase _ =
 >     let funupd = (\f x v y -> if y == x then v else f y) in
->     let pointerCast = PPtr . fromPPtr
+>     let pointerCast = PPtr . fromPPtr in
+#ifndef CONFIG_ARM_SMMU
+>     let mkPageCap = \sz -> PageCap (pointerCast regionBase) VMReadWrite sz Nothing
+#else
+>     let mkPageCap = \sz -> PageCap (pointerCast regionBase) VMReadWrite sz False Nothing
+#endif
 >     in case t of
 >         Arch.Types.APIObjectType _ ->
 >             fail "Arch.createObject got an API type"
@@ -277,29 +284,25 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSmallPage)})
->             return $! PageCap (pointerCast regionBase)
->                   VMReadWrite ARMSmallPage Nothing
+>             return $! mkPageCap ARMSmallPage
 >         Arch.Types.LargePageObject -> do
 >             createPageObject regionBase 4
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMLargePage)})
->             return $! PageCap (pointerCast regionBase)
->                   VMReadWrite ARMLargePage Nothing
+>             return $! mkPageCap ARMLargePage
 >         Arch.Types.SectionObject -> do
 >             createPageObject regionBase 8
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSection)})
->             return $! PageCap (pointerCast regionBase)
->                   VMReadWrite ARMSection Nothing
+>             return $! mkPageCap ARMSection
 >         Arch.Types.SuperSectionObject -> do
 >             createPageObject regionBase 12
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSuperSection)})
->             return $! PageCap (pointerCast regionBase)
->                   VMReadWrite ARMSuperSection Nothing
+>             return $! mkPageCap ARMSuperSection
 >         Arch.Types.PageTableObject -> do
 >             let ptSize = ptBits - objBits (makeObject :: PTE)
 >             let regionSize = (1 `shiftL` ptBits)
@@ -342,7 +345,6 @@ Create an architecture-specific object.
 #ifdef CONFIG_ARM_SMMU
 >        IOSpaceCap {} -> error "FIXME ARMHYP TODO IOSpace"
 >        IOPageTableCap {} -> error "FIXME ARMHYP TODO IO"
->        IOPageDirectoryCap {} -> error "FIXME ARMHYP TODO IO"
 #endif
 >        _ -> decodeARMMMUInvocation label args capIndex slot cap extraCaps
 
@@ -357,8 +359,6 @@ Create an architecture-specific object.
 >                  ArchInv.InvokeIOSpace _ ->
 >                      withoutPreemption $ error "FIXME ARMHYP TODO IOSpace"
 >                  ArchInv.InvokeIOPageTable _ ->
->                      withoutPreemption $ error "FIXME ARMHYP TODO IO"
->                  ArchInv.InvokePageIO _ ->
 >                      withoutPreemption $ error "FIXME ARMHYP TODO IO"
 #endif
 >                  _ -> performARMMMUInvocation i
@@ -377,7 +377,6 @@ Create an architecture-specific object.
 #ifdef CONFIG_ARM_SMMU
 > capUntypedPtr (IOSpaceCap {}) = error "FIXME ARMHYP TODO IOSpace"
 > capUntypedPtr (IOPageTableCap { capIOPTBasePtr = PPtr p }) = PPtr p
-> capUntypedPtr (IOPageDirectoryCap { capIOPDBasePtr = PPtr p }) = PPtr p
 #endif
 
 
@@ -395,6 +394,5 @@ FIXME ARMHYP if none of the IO or VCPU caps are physical, then capUntypedSize ne
 #ifdef CONFIG_ARM_SMMU
 > capUntypedSize (IOSpaceCap {}) = 0 -- invalid, use C default
 > capUntypedSize (IOPageTableCap {}) = bit ioptBits
-> capUntypedSize (IOPageDirectoryCap {}) = 0 -- invalid, use C default
 #endif
 
