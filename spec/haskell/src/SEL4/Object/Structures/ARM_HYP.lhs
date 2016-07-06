@@ -27,6 +27,7 @@ This module makes use of the GHC extension allowing declaration of types with no
 > import Data.Array
 > import Data.Word(Word32,Word16)
 > import Data.Bits
+> import {-# SOURCE #-} SEL4.Object.VCPU.ARM_HYP (VCPU())
 
 \end{impdetails}
 
@@ -53,7 +54,7 @@ There are six ARM-specific capability types: the global ASID control capability,
 >         capPDMappedASID :: Maybe ASID }
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >     | VCPUCap {
->         capVCPUPtr :: VCPU }
+>         capVCPUPtr :: PPtr VCPU }
 #endif
 #ifdef CONFIG_ARM_SMMU
 >     | IOSpaceCap {

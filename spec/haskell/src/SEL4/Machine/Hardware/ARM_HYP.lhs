@@ -50,10 +50,6 @@ The machine monad contains a platform-specific opaque pointer, used by the exter
 
 > toPAddr = Platform.PAddr
 
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> type VCPU = PAddr -- FIXME ARMHYP PAddr, VAddr, or what?
-#endif
-
 \subsubsection{Virtual Memory}
 
 ARM hardware-defined pages come in four sizes: 4k, 64k, 1M and 16M. The 16M page size only has hardware support on some ARMv6 CPUs, such as the ARM1136; the kernel will simulate them using 16 1M mappings on other CPUs.

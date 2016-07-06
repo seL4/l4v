@@ -1019,12 +1019,10 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 >         (ArchInvocationLabel ARMASIDPoolAssign, _) -> throw TruncatedMessage
 >         _ -> throw IllegalOperation
 
-FIXME ARMHYP MOVE THESE, they are dispatched via ObjectType/ decodeInvocation and should be dispatched to appropriate places, which are TBD as of now. likely that IOPD and IOPT will stay here, while VCPU and IOSpace will get moved to their own files when implemented
-
-> decodeARMMMUInvocation label _ _ _ cap@(VCPUCap {}) extraCaps = error "FIXME ARMHYP TODO VCPU"
+> decodeARMMMUInvocation _ _ _ _ (VCPUCap _) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
 #ifdef CONFIG_ARM_SMMU
-> decodeARMMMUInvocation label _ _ _ cap@(IOSpaceCap {}) extraCaps = error "FIXME ARMHYP TODO IOSpace"
-> decodeARMMMUInvocation label _ _ _ cap@(IOPageTableCap {}) extraCaps = error "FIXME ARMHYP IO"
+> decodeARMMMUInvocation label _ _ _ (IOSpaceCap _) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
+> decodeARMMMUInvocation label _ _ _ (IOPageTableCap _) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
 #endif
 
 > decodeARMPageFlush :: Word -> [Word] -> ArchCapability ->
@@ -1077,10 +1075,10 @@ notion of the largest permitted object size, and checks it appropriately.
 >         InvokePage oper -> performPageInvocation oper
 >         InvokeASIDControl oper -> performASIDControlInvocation oper
 >         InvokeASIDPool oper -> performASIDPoolInvocation oper
->         InvokeVCPU _ -> error "FIXME ARMHYP TODO VCPU"
+>         InvokeVCPU _ -> fail "performARMMMUInvocation: not an MMU invocation"
 #ifdef CONFIG_ARM_SMMU
->         InvokeIOSpace _ -> error "FIXME ARMHYP TODO IOSpace"
->         InvokeIOPageTable _ -> error "FIXME ARMHYP TODO IO"
+>         InvokeIOSpace _ -> fail "performARMMMUInvocation: not an MMU invocation"
+>         InvokeIOPageTable _ -> fail "performARMMMUInvocation: not an MMU invocation"
 #endif
 >     return $ []
 

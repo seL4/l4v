@@ -22,7 +22,7 @@ This module contains the architecture-specific kernel global data for the ARM ar
 
 > import SEL4.Machine
 > import SEL4.Machine.Hardware.ARM_HYP
->     (HardwareASID(..), PTE(..), PDE(..), ptBits, pdBits, VCPU)
+>     (HardwareASID(..), PTE(..), PDE(..), ptBits, pdBits)
 > import SEL4.Object.Structures.ARM_HYP
 
 > import Data.Array
@@ -70,7 +70,7 @@ FIXME ARMHYP ksCurCPU will be renamed
 >     armKSGlobalPTs :: [PPtr PTE],
 #else
 >     armUSGlobalPT :: PPtr PTE,
->     armKSCurCPU :: VCPU,
+>     armKSCurVCPU :: VCPU,
 #endif
 >     armKSKernelVSpace :: PPtr Word -> ArmVSpaceRegionUse}
 

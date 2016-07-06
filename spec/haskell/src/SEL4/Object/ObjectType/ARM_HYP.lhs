@@ -340,7 +340,7 @@ Create an architecture-specific object.
 > decodeInvocation label args capIndex slot cap extraCaps =
 >     case cap of
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->        VCPUCap {} -> error "FIXME ARMHYP TODO VCPU"
+>        VCPUCap {} -> decodeARMVCPUInvocation label args caPIndex slot cap extraCaps
 #endif
 #ifdef CONFIG_ARM_SMMU
 >        IOSpaceCap {} -> error "FIXME ARMHYP TODO IOSpace"
@@ -352,8 +352,8 @@ Create an architecture-specific object.
 > performInvocation i =
 >     case i of
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->                  ArchInv.InvokeVCPU _ ->
->                      withoutPreemption $ error "FIXME ARMHYP TODO VCPU"
+>                  ArchInv.InvokeVCPU iv ->
+>                      withoutPreemption $ performARMVCPUInvocation iv
 #endif
 #ifdef CONFIG_ARM_SMMU
 >                  ArchInv.InvokeIOSpace _ ->
@@ -372,7 +372,7 @@ Create an architecture-specific object.
 > capUntypedPtr ASIDControlCap = error "ASID control has no pointer"
 > capUntypedPtr (ASIDPoolCap { capASIDPool = PPtr p }) = PPtr p
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> capUntypedPtr (VCPUCap p) = error "FIXME ARMHYP TODO VCPU"
+> capUntypedPtr (VCPUCap { vcpuTCBPtr = p }) = PPtr p
 #endif
 #ifdef CONFIG_ARM_SMMU
 > capUntypedPtr (IOSpaceCap {}) = error "FIXME ARMHYP TODO IOSpace"
