@@ -29,6 +29,7 @@ This module contains operations on machine-specific object types for the ARM.
 > import SEL4.API.Invocation.ARM_HYP as ArchInv
 > import SEL4.Object.Structures
 > import SEL4.Kernel.VSpace.ARM_HYP
+> import {-# SOURCE #-} SEL4.Object.VCPU.ARM_HYP
 
 > import Data.Bits
 > import Data.Array
@@ -340,7 +341,7 @@ Create an architecture-specific object.
 > decodeInvocation label args capIndex slot cap extraCaps =
 >     case cap of
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->        VCPUCap {} -> decodeARMVCPUInvocation label args caPIndex slot cap extraCaps
+>        VCPUCap {} -> decodeARMVCPUInvocation label args capIndex slot cap extraCaps
 #endif
 #ifdef CONFIG_ARM_SMMU
 >        IOSpaceCap {} -> error "FIXME ARMHYP TODO IOSpace"

@@ -24,6 +24,7 @@ This module contains the architecture-specific kernel global data for the ARM ar
 > import SEL4.Machine.Hardware.ARM_HYP
 >     (HardwareASID(..), PTE(..), PDE(..), ptBits, pdBits)
 > import SEL4.Object.Structures.ARM_HYP
+> import {-# SOURCE #-} SEL4.Object.VCPU.ARM_HYP
 
 > import Data.Array
 > import Data.Bits
@@ -127,7 +128,7 @@ FIXME ARMHYP ok, someone needs to explain how this actually works before it gets
 >                 (\vref -> if vref < mask 20 then ArmVSpaceKernelWindow
 >                                             else ArmVSpaceInvalidRegion),
 >             armUSGlobalPT = error "FIXME ARMHYP TODO",
->             armKSCurCPU = error "FIXME ARMHYP TODO"
+>             armKSCurVCPU = error "FIXME ARMHYP TODO"
 >             }
 
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */

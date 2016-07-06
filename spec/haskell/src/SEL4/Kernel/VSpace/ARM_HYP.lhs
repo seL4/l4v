@@ -1019,10 +1019,10 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 >         (ArchInvocationLabel ARMASIDPoolAssign, _) -> throw TruncatedMessage
 >         _ -> throw IllegalOperation
 
-> decodeARMMMUInvocation _ _ _ _ (VCPUCap _) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
+> decodeARMMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
 #ifdef CONFIG_ARM_SMMU
-> decodeARMMMUInvocation label _ _ _ (IOSpaceCap _) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
-> decodeARMMMUInvocation label _ _ _ (IOPageTableCap _) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
+> decodeARMMMUInvocation label _ _ _ (IOSpaceCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
+> decodeARMMMUInvocation label _ _ _ (IOPageTableCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
 #endif
 
 > decodeARMPageFlush :: Word -> [Word] -> ArchCapability ->

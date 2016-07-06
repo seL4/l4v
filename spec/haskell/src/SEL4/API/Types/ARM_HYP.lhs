@@ -18,6 +18,7 @@ This module contains an instance of the machine-specific kernel API for the ARM 
 > import SEL4.Machine.Hardware.ARM_HYP
 > import Data.List (elemIndex)
 > import Data.Maybe (fromJust)
+> import {-# SOURCE #-} SEL4.Object.VCPU.ARM_HYP(vcpuBits)
 
 There are three ARM-specific object types: virtual pages, page tables, and page directories.
 

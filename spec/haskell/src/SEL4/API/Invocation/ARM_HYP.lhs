@@ -27,6 +27,7 @@ This module makes use of the GHC extension allowing data types with no construct
 > import SEL4.Object.Structures
 > import SEL4.API.InvocationLabels
 > import SEL4.API.InvocationLabels.ARM_HYP
+> import {-# SOURCE #-} SEL4.Object.VCPU.ARM_HYP (VCPU())
 
 > import Data.Word(Word8,Word16,Word32)
 

@@ -17,7 +17,7 @@ hypervisor extensions on ARM.
 
 \end{impdetails}
 
-> module SEL4.Object.VCPU.ARM_HYP(VCPU(), vcpuBits) where
+> module SEL4.Object.VCPU.ARM_HYP(VCPU(..), vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation) where
 
 \begin{impdetails}
 
@@ -25,7 +25,16 @@ hypervisor extensions on ARM.
 % {-# BOOT-EXPORTS: vcpuBits VCPU() #-}
 
 > import SEL4.Machine
+> import SEL4.Model
+> import SEL4.Object.Structures
+> import SEL4.API.Failures
 > import {-# SOURCE #-} SEL4.Object.TCB
+> import SEL4.API.InvocationLabels.ARM_HYP
+> import SEL4.API.Invocation.ARM_HYP as ArchInv
+> import SEL4.API.Types
+> import SEL4.API.InvocationLabels
+
+> import Data.Bits
 
 %> import SEL4.API.Failures
 
@@ -45,37 +54,33 @@ FIXME ARMHYP the VCPU also contains gic interface info and cpXRegs, time will te
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError ArchInv.Invocation
 > decodeARMVCPUInvocation label args capIndex slot cap@(VCPUCap {}) extraCaps =
->     case args of
->         [mr0, mr1] -> do
->             let vid = mr0 .&. 0xffff
->             let prio = (mr0 `shiftR` 16) .&. 0xff
->             let group = (mr0 `shiftR` 24) .&. 0xff
->             let index = mr1 .&. 0xff
->             FIXME TODO
->         _ -> throw TruncatedMessage
+>     case invocationType label of
+>         ArchInvocationLabel ARMVCPUSetTCB -> error "FIXME ARMHYP TODO"
+>         ArchInvocationLabel ARMVCPUInjectIRQ -> error "FIXME ARMHYP TODO"
+>         ArchInvocationLabel ARMVCPUReadReg -> error "FIXME ARMHYP TODO"
+>         ArchInvocationLabel ARMVCPUWriteReg -> error "FIXME ARMHYP TODO"
+>         _ -> throw IllegalOperation
+> decodeARMVCPUInvocation _ _ _ _ _ _ = throw IllegalOperation
 
-> decodeARMVCPUInvocation ARMVCPUSetTCB args capIndex slot cap@(VCPUCap {}) extraCaps =
+%     case args of
+%         [mr0, mr1] -> do
+%             let vid = mr0 .&. 0xffff
+%             let prio = (mr0 `shiftR` 16) .&. 0xff
+%             let group = (mr0 `shiftR` 24) .&. 0xff
+%             let index = mr1 .&. 0xff
+%             error "ARMHYP FIXME TODO"
+%         _ -> throw TruncatedMessage
 
-> decodeARMVCPUInvocation ARMVCPUInjectIRQ args capIndex slot cap@(VCPUCap {}) _ =
+% performARMVCPUInvocation i [_ from InvokeVCPU _]
 
-> decodeARMVCPUInvocation ARMVCPUReadReg args capIndex slot cap@(VCPUCap {}) _ =
+> performARMVCPUInvocation :: ArchInv.Invocation -> KernelP [Word]
+> performARMVCPUInvocation = error "FIXME ARMHYP TODO"
 
-> decodeARMVCPUInvocation ARMVCPUWriteReg args capIndex slot cap@(VCPUCap {}) _ =
-
-> decodeARMVCPUInvocation _ = throw IllegalOperation
-
-
-
-
-> performARMVCPUInvocation i [_ from InvokeVCPU _]
->
-
-> vcpuSetTCB
-> vcpuInjectIRQ
-> vcpuReadRegister
-> vcpuFinalise?
-> vcpuInit?
->
+% vcpuSetTCB
+% vcpuInjectIRQ
+% vcpuReadRegister
+% vcpuFinalise?
+% vcpuInit?
 
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
