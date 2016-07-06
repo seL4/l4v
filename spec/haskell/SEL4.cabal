@@ -132,6 +132,7 @@ Library
                             SEL4.Object.Structures.ARM_HYP
                             SEL4.Object.Interrupt.ARM_HYP
                             SEL4.Object.Instances.ARM_HYP
+                            SEL4.Object.VCPU.ARM_HYP
                             SEL4.Object.TCB.ARM_HYP
                             SEL4.Model.StateData.ARM_HYP
                             SEL4.Machine.RegisterSet.ARM_HYP
