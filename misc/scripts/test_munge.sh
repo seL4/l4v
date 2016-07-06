@@ -11,7 +11,8 @@
 function usage () {
     cat <<EOF 1>&2
 USAGE: test_munge.sh [-h|-d|-v] <git-ref> [git-ref]
-  -d    Preserve both munge files
+  -d    Preserve files
+  -a    AST check
   -v    Verbose
   -h    Print help
 EOF
@@ -24,7 +25,7 @@ GRE='\033[0;32m'
 NC='\033[0m'
 
 # Argument parsing
-while getopts ":hdv" opts
+while getopts ":hadv" opts
 do
     case $opts in
         h)
@@ -37,6 +38,9 @@ do
         v)
             VERBOSE=true
             ;;
+        a)  AST=true
+            AST_OPTS="--ast"
+            ;;
         *)
             echo "Invalid option: -${OPTARG}" >&2
             ;;
@@ -47,7 +51,7 @@ shift $((OPTIND - 1))
 REF1=$1
 REF2=$2
 
-[ -z $DUMP ] && trap "rm -f ckernel_munge_*.txt" EXIT
+[ -z ${DUMP+x} ] && trap "rm -f ckernel_*.txt" EXIT
 
 set -e
 [ -z ${REF1} ] && (echo "At least 1 ref is required" >&2 ; exit 1)
@@ -67,23 +71,22 @@ MAKE_MUNGE=${CPARSER_DIR}/make_munge.sh
 echo -e "${YEL}WORKING...${NC}"
 
 if [ -z ${VERBOSE} ]
-then ${MAKE_MUNGE} $REF1  > /dev/null 2>&1
-else ${MAKE_MUNGE} $REF1
+then ${MAKE_MUNGE} ${AST_OPTS} ${REF1}  > /dev/null 2>&1
+else ${MAKE_MUNGE} ${AST_OPTS} ${REF1}
 fi
-
-mv ckernel_munge.txt ckernel_munge_1.txt
+mv ckernel_names.txt ckernel_names_1.txt
+[ -z ${AST+x} ] || mv ckernel_ast.txt ckernel_ast_1.txt
 
 if [ -z ${VERBOSE} ]
-then ${MAKE_MUNGE} $REF2 > /dev/null 2>&1
-else ${MAKE_MUNGE} $REF2
+then ${MAKE_MUNGE} ${AST_OPTS} ${REF2} > /dev/null 2>&1
+else ${MAKE_MUNGE} ${AST_OPTS} ${REF2}
 fi
-mv ckernel_munge.txt ckernel_munge_2.txt
+mv ckernel_names.txt ckernel_names_2.txt
+[ -z ${AST+x} ] || mv ckernel_ast.txt ckernel_ast_2.txt
 
-set +e
-
-# Check for differences
-echo -e "${RED}"
-if ! diff -q ckernel_munge_1.txt ckernel_munge_2.txt
+# Check for differences in
+echo -en "${RED}"
+if ! diff ckernel_names_1.txt ckernel_names_2.txt &> /dev/null
 then
     echo -e "${RED}"
     echo "#################################"
@@ -93,8 +96,28 @@ then
     echo "and run make_muge.sh afterwards."
     echo -e "${NC}${YEL}"
     echo "Running this might help:"
-    echo "$ diff -uw ckernel_munge_1.txt ckernel_munge_2.txt"
-    exit 1
-else
-    echo -e "${GRE}Everything seems fine${NC}"
+    echo "$ diff -uw ckernel_names_1.txt ckernel_names_2.txt"
+    ERRORS=true
+fi
+
+echo -en "${RED}"
+if ! ([ -z ${AST+x} ] || diff ckernel_ast_1.txt ckernel_ast_2.txt &> /dev/null)
+then
+    echo -e "${RED}"
+    echo "#################################"
+    echo "#   The ASTs differs            #"
+    echo -e "#################################\n"
+    echo "please address this issue appropriately"
+    echo "and run make_muge.sh afterwards."
+    echo -e "${NC}${YEL}"
+    echo "Running this might help:"
+    echo "$ diff -uw ckernel_ast_1.txt ckernel_ast_2.txt"
+    ERRORS=true
+fi
+
+echo -en "${NC}"
+
+if [ -z ${ERRORS+x} ]
+then echo -e "${GRE}Everything seems fine${NC}"
+else exit 1
 fi
