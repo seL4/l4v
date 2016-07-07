@@ -9,8 +9,9 @@
  *)
 
 theory ArchTcbAcc_AI
-imports "../CSpace_AI"
+imports ArchCSpace_AI
 begin
+
 context Arch begin global_naming ARM
 
 lemmas cap_master_cap_simps = 
