@@ -11,7 +11,6 @@
 BOOT_MODULES = Kernel/CSpace Kernel/Thread Kernel/FaultHandler \
     Kernel/VSpace Kernel/Init Model/PSpace Object/TCB Object/CNode \
     Object/ObjectType Object/Endpoint Object/Interrupt
-# FIXME ^ VCPUs go above?
 
 BOOT_FILES=$(BOOT_MODULES:%=src/SEL4/%.lhs-boot)
 
@@ -42,12 +41,12 @@ build-arm-hyp: .stack_work $(BOOT_FILES)
 	    --flags="ArchArmHyp -FFI" $(GHC_FIXME_OPTS)
 	$(CABAL) build
 
-build-arm-hyp-nosmmu: $(BOOT_FILES)
-	cabal sandbox init
-	cabal install --dependencies-only -w "$(GHC)"
-	cabal configure --configure-option="arm-tk1-nosmmu" -w "$(GHC)" \
+build-arm-hyp-nosmmu: .stack_work $(BOOT_FILES) src/SEL4/Object/Structures.lhs-boot
+	$(CABAL) sandbox init
+	$(CABAL) install --dependencies-only
+	$(CABAL) configure --configure-option="arm-tk1-nosmmu" \
 	    --flags="ArchArmHyp -FFI" $(GHC_FIXME_OPTS)
-	cabal build
+	$(CABAL) build
 
 pdf:
 	cd doc && make

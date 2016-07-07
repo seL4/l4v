@@ -12,6 +12,9 @@ This module defines the structures which represent kernel objects in the modelle
 
 \begin{impdetails}
 
+% {-# BOOT-IMPORTS: #-}
+% {-# BOOT-EXPORTS: TCB #-}
+
 This module uses the C preprocessor to select a target architecture.
 
 > {-# LANGUAGE CPP #-}

@@ -17,22 +17,19 @@ hypervisor extensions on ARM.
 
 \end{impdetails}
 
-> module SEL4.Object.VCPU.ARM_HYP(VCPU(..), vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation) where
+> module SEL4.Object.VCPU.ARM_HYP(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation) where
 
 \begin{impdetails}
-
-% {-# BOOT-IMPORTS: SEL4.Machine SEL4.Object.TCB #-}
-% {-# BOOT-EXPORTS: vcpuBits VCPU() #-}
 
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
-> import {-# SOURCE #-} SEL4.Object.TCB
 > import SEL4.API.InvocationLabels.ARM_HYP
 > import SEL4.API.Invocation.ARM_HYP as ArchInv
 > import SEL4.API.Types
 > import SEL4.API.InvocationLabels
+> import SEL4.Machine.Hardware.ARM_HYP
 
 > import Data.Bits
 
@@ -43,12 +40,6 @@ hypervisor extensions on ARM.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
 FIXME ARMHYP the VCPU also contains gic interface info and cpXRegs, time will tell what is actually needed for verification. The one thing we definitely need is the thread the VCPU is associated with
-
-> data VCPU = VCPUObj {
->                 vcpuTCBPtr :: PPtr TCB
->             }
-
-> vcpuBits = pageBits :: Int
 
 > decodeARMVCPUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -73,7 +64,7 @@ FIXME ARMHYP the VCPU also contains gic interface info and cpXRegs, time will te
 
 % performARMVCPUInvocation i [_ from InvokeVCPU _]
 
-> performARMVCPUInvocation :: ArchInv.Invocation -> KernelP [Word]
+> performARMVCPUInvocation :: VCPUInvocation -> Kernel [Word]
 > performARMVCPUInvocation = error "FIXME ARMHYP TODO"
 
 % vcpuSetTCB

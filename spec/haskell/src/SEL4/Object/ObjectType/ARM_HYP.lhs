@@ -29,7 +29,7 @@ This module contains operations on machine-specific object types for the ARM.
 > import SEL4.API.Invocation.ARM_HYP as ArchInv
 > import SEL4.Object.Structures
 > import SEL4.Kernel.VSpace.ARM_HYP
-> import {-# SOURCE #-} SEL4.Object.VCPU.ARM_HYP
+> import SEL4.Object.VCPU.ARM_HYP
 
 > import Data.Bits
 > import Data.Array
@@ -373,7 +373,7 @@ Create an architecture-specific object.
 > capUntypedPtr ASIDControlCap = error "ASID control has no pointer"
 > capUntypedPtr (ASIDPoolCap { capASIDPool = PPtr p }) = PPtr p
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> capUntypedPtr (VCPUCap { vcpuTCBPtr = p }) = PPtr p
+> capUntypedPtr (VCPUCap { capVCPUPtr = PPtr p }) = PPtr p
 #endif
 #ifdef CONFIG_ARM_SMMU
 > capUntypedPtr (IOSpaceCap {}) = error "FIXME ARMHYP TODO IOSpace"

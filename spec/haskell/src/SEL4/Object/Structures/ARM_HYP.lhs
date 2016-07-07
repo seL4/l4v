@@ -27,7 +27,7 @@ This module makes use of the GHC extension allowing declaration of types with no
 > import Data.Array
 > import Data.Word(Word32,Word16)
 > import Data.Bits
-> import {-# SOURCE #-} SEL4.Object.VCPU.ARM_HYP (VCPU())
+> import {-# SOURCE #-} SEL4.Object.Structures
 
 \end{impdetails}
 
@@ -126,4 +126,8 @@ FIXME ARMHYP after device untyped patch this will be 6 and 7 respectively
 
 > asidHighBitsOf :: ASID -> ASID
 > asidHighBitsOf asid = (asid `shiftR` asidLowBits) .&. mask asidHighBits
+
+> data VCPU = VCPUObj {
+>                 vcpuTCBPtr :: PPtr TCB
+>             }
 
