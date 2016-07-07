@@ -2474,11 +2474,11 @@ lemma pspace_no_overlap_typ_at_lift:
   apply (clarsimp simp: pspace_no_overlap_typ_at_def)
   apply (wp hoare_vcg_all_lift f)
   done
-context begin interpretation Arch . (*FIXME: arch_split*)
+
+
 lemma swp_clearMemoryVM [simp]:
   "swp clearMemoryVM x = (\<lambda>_. return ())"
   by (rule ext,simp)
-end
 
 
 (* FIXME: move *)

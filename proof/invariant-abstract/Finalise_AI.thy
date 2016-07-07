@@ -11,7 +11,7 @@
 theory Finalise_AI
 imports
   "./$L4V_ARCH/ArchIpcCancel_AI"
-  InterruptAcc_AI
+  "./$L4V_ARCH/ArchInterruptAcc_AI"
   "./$L4V_ARCH/ArchRetype_AI"
 begin
 

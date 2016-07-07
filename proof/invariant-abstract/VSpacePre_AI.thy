@@ -247,7 +247,4 @@ lemma set_mrs_ntfn_at[wp]:
   "\<lbrace> ntfn_at p \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. ntfn_at p \<rbrace>"
   by (simp add: ntfn_at_typ, wp)
 
-
-
-
 end
