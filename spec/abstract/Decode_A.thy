@@ -156,13 +156,6 @@ between the second and third.
 *}
 
 definition
-  range_check :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) se_monad"
-where
-  "range_check v min_v max_v \<equiv>
-    unlessE (v \<ge> min_v \<and> v \<le> max_v) $
-        throwError $ RangeError min_v max_v"
-
-definition
   decode_read_registers :: "data list \<Rightarrow> cap \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
 "decode_read_registers data cap \<equiv> case data of

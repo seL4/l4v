@@ -369,8 +369,5 @@ end
 
 (*>*)
 end_qualify
-context Arch begin global_naming ARM
 
-
-end
 end

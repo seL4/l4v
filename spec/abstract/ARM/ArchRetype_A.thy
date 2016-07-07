@@ -40,6 +40,14 @@ where
                                                       (addrFromPPtr x)) refs
     od) else return ()"
 
+definition
+  empty_context :: user_context where
+  "empty_context \<equiv> \<lambda>_. 0"
+
+definition init_arch_tcb :: arch_tcb where
+  "init_arch_tcb \<equiv> \<lparr> tcb_context = empty_context \<rparr>"
+
+
 end
 
 end

@@ -22,6 +22,7 @@ context begin interpretation Arch .
 
 requalify_consts
   in_user_frame
+  as_user
 
 end
 
@@ -34,17 +35,26 @@ definition
        do_machine_op $ storeWord (ptr + of_nat (offs * word_size)) v
     od"
 
-text {* Set the message registers of a thread. *}
+
+(* Needed for page invocations. *)
+definition
+  set_message_info :: "obj_ref \<Rightarrow> message_info \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_message_info thread info \<equiv>
+     as_user thread $ set_register msg_info_register $
+                      message_info_to_data info"
+
+
 definition
   set_mrs :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> message list \<Rightarrow> (length_type,'z::state_ext) s_monad" where
   "set_mrs thread buf msgs \<equiv>
    do
      tcb \<leftarrow> gets_the $ get_tcb thread;
-     context \<leftarrow> return (tcb_context tcb);
+     context \<leftarrow> return (arch_tcb_context_get (tcb_arch tcb));
      new_regs \<leftarrow> return (\<lambda>reg. if reg \<in> set (take (length msgs) msg_registers)
                               then msgs ! (the_index msg_registers reg)
                               else context reg);
-     set_object thread (TCB (tcb \<lparr> tcb_context := new_regs \<rparr>));
+     set_object thread (TCB (tcb \<lparr> tcb_arch := arch_tcb_context_set new_regs (tcb_arch tcb) \<rparr>));
      remaining_msgs \<leftarrow> return (drop (length msg_registers) msgs);
      case buf of
      None      \<Rightarrow> return $ nat_to_len (min (length msg_registers) (length msgs))
@@ -54,14 +64,5 @@ definition
        return $ nat_to_len $ min (length msgs) msg_max_length
      od
    od"
-
-
-(* Needed for page invocations. *)
-definition
-  set_message_info :: "obj_ref \<Rightarrow> message_info \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_message_info thread info \<equiv>
-     as_user thread $ set_register msg_info_register $
-                      message_info_to_data info"
 
 end

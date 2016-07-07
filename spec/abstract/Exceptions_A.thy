@@ -98,4 +98,12 @@ definition
   const_on_failure :: "'a \<Rightarrow> ('f + 'a,'z::state_ext) s_monad \<Rightarrow> ('a,'z::state_ext) s_monad" where
  "const_on_failure c m \<equiv> m <catch> (\<lambda>x. return c)"
 
+text {* Checks whether first argument is between second and third (inclusive). *}
+
+definition
+  range_check :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) se_monad"
+where
+  "range_check v min_v max_v \<equiv>
+    unlessE (v \<ge> min_v \<and> v \<le> max_v) $ throwError $ RangeError min_v max_v"
+
 end

@@ -168,13 +168,13 @@ where
 "handle_vm_fault thread ARMDataAbort = doE
     addr \<leftarrow> liftE $ do_machine_op getFAR;
     fault \<leftarrow> liftE $ do_machine_op getDFSR;
-    throwError $ VMFault addr [0, fault && mask 14]
+    throwError $ ArchFault $ VMFault addr [0, fault && mask 14]
 odE"
 |
 "handle_vm_fault thread ARMPrefetchAbort = doE
     pc \<leftarrow> liftE $ as_user thread $ getRestartPC;
     fault \<leftarrow> liftE $ do_machine_op getIFSR;
-    throwError $ VMFault pc [1, fault && mask 14]
+    throwError $ ArchFault $ VMFault pc [1, fault && mask 14]
 odE"
 
 text {* Load the optional hardware ASID currently associated with this virtual

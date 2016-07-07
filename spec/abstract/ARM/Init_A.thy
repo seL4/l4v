@@ -59,10 +59,6 @@ definition
   \<rparr>"
 
 definition
-  empty_context :: user_context where
-  "empty_context \<equiv> \<lambda>_. 0"
-
-definition
   [simp]:
   "global_pd \<equiv> (\<lambda>_. InvalidPDE)( ucast (kernel_base >> 20) := SectionPDE (addrFromPPtr kernel_base) {} 0 {})"
 
@@ -79,10 +75,10 @@ definition
     tcb_state = IdleThreadState,
     tcb_fault_handler = replicate word_bits False,
     tcb_ipc_buffer = 0,
-    tcb_context = empty_context,
     tcb_fault = None,
     tcb_bound_notification = None,
-    tcb_mcpriority = minBound
+    tcb_mcpriority = minBound,
+    tcb_arch = init_arch_tcb
   \<rparr>, 
   init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), (* FIXME: same reason as why we kept the definition of init_globals_frame *)
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd)
