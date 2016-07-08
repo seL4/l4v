@@ -60,6 +60,7 @@ The following data type defines the set of possible TCB invocation operations. T
 >             tcThread :: PPtr TCB,
 >             tcThreadCapSlot :: PPtr CTE,
 >             tcNewFaultEP :: Maybe CPtr,
+>             tcNewMCPriority :: Maybe Priority,
 >             tcNewPriority :: Maybe Priority,
 >             tcNewCRoot, tcNewVRoot :: Maybe (Capability, PPtr CTE),
 >             tcNewIPCBuffer :: Maybe (VPtr, Maybe (Capability, PPtr CTE)) }

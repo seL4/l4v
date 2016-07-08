@@ -78,6 +78,9 @@ consts'
 setDomain :: "machine_word \<Rightarrow> domain \<Rightarrow> unit kernel"
 
 consts'
+setMCPriority :: "machine_word \<Rightarrow> priority \<Rightarrow> unit kernel"
+
+consts'
 setPriority :: "machine_word \<Rightarrow> priority \<Rightarrow> unit kernel"
 
 consts'

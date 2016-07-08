@@ -134,6 +134,7 @@ By default, new threads are unable to change the security domains of other threa
 >         tcbIPCBufferFrame = makeObject,
 >         tcbDomain = minBound,
 >         tcbState = Inactive,
+>         tcbMCP = minBound,
 >         tcbPriority = minBound,
 >         tcbQueued = False,
 >         tcbFault = Nothing,

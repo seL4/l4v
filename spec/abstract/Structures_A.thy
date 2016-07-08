@@ -360,7 +360,7 @@ datatype thread_state
   | BlockedOnReply
   | BlockedOnNotification obj_ref
   | IdleThreadState
-
+type_synonym priority = word8
 record tcb =
  tcb_ctable        :: cap
  tcb_vtable        :: cap
@@ -373,6 +373,7 @@ record tcb =
  tcb_context       :: user_context
  tcb_fault         :: "fault option"
  tcb_bound_notification     :: "obj_ref option"
+ tcb_mcpriority :: "priority"
 
 
 text {* Determines whether a thread in a given state may be scheduled. *}
@@ -402,7 +403,8 @@ definition
       tcb_ipc_buffer = 0,
       tcb_context    = new_context,
       tcb_fault      = None, 
-      tcb_bound_notification  = None \<rparr>"
+      tcb_bound_notification  = None,
+      tcb_mcpriority = minBound\<rparr>"
 
 text {*
 All kernel objects are CNodes, TCBs, Endpoints, Notifications or architecture

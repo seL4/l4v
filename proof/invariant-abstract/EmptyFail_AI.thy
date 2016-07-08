@@ -145,7 +145,7 @@ crunch_ignore (empty_fail)
         mapM mapM_x sequence_x catch handleE do_extended_op
         cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
         reschedule_required switch_if_required_to attempt_switch_to set_thread_state_ext
-        OR_choice OR_choiceE set_priority timer_tick)
+        OR_choice OR_choiceE timer_tick)
 
 
 crunch (empty_fail) empty_fail[wp]: set_object, gets_the, get_register, get_cap
@@ -295,6 +295,9 @@ lemma alternative_empty_fail[wp]:
 lemma OR_choice_empty_fail[wp]:
   "\<lbrakk>empty_fail f; empty_fail g\<rbrakk> \<Longrightarrow> empty_fail (OR_choice c f g)"
   by (simp add: OR_choice_def mk_ef_def split_def | wp)+
+lemma OR_choiceE_empty_fail[wp]:
+  "\<lbrakk>empty_fail f; empty_fail g\<rbrakk> \<Longrightarrow> empty_fail (OR_choiceE c f g)"
+  by (simp add: OR_choiceE_def mk_ef_def split_def | wp)+
 
 lemmas empty_fail_return[wp]
 

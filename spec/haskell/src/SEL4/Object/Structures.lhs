@@ -243,6 +243,7 @@ The TCB is used to store various data about the thread's current state:
 \item the thread's scheduler state and priority;
 
 >         tcbState :: ThreadState,
+>         tcbMCP :: Priority,
 >         tcbPriority :: Priority,
 >         tcbQueued :: Bool,
 
@@ -289,6 +290,9 @@ Each TCB contains four CTE entries. The following constants define the slot numb
 
 > tcbIPCBufferSlot :: Word
 > tcbIPCBufferSlot = 4
+
+> minPriority :: Priority
+> minPriority = 0
 
 The maximum priority is derived from the configuration parameter "numPriorities".
 

@@ -23,7 +23,7 @@ requalify_types (in Arch)
 datatype tcbinvocation =
     Suspend machine_word
   | Resume machine_word
-  | ThreadControl machine_word machine_word "cptr option" "priority option" "(capability * machine_word) option" "(capability * machine_word) option" "(vptr * (capability * machine_word) option) option"
+  | ThreadControl machine_word machine_word "cptr option" "priority option" "priority option" "(capability * machine_word) option" "(capability * machine_word) option" "(vptr * (capability * machine_word) option) option"
   | NotificationControl machine_word "(machine_word) option"
   | WriteRegisters machine_word bool "machine_word list" Arch.copy_register_sets
   | ReadRegisters machine_word bool machine_word Arch.copy_register_sets
@@ -47,7 +47,7 @@ where
 primrec
   tcThreadCapSlot :: "tcbinvocation \<Rightarrow> machine_word"
 where
-  "tcThreadCapSlot (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v1"
+  "tcThreadCapSlot (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = v1"
 
 primrec
   copyRegsSource :: "tcbinvocation \<Rightarrow> machine_word"
@@ -57,7 +57,7 @@ where
 primrec
   tcNewCRoot :: "tcbinvocation \<Rightarrow> (capability * machine_word) option"
 where
-  "tcNewCRoot (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v4"
+  "tcNewCRoot (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = v5"
 
 primrec
   copyRegsTarget :: "tcbinvocation \<Rightarrow> machine_word"
@@ -75,9 +75,9 @@ where
   "writeRegsResume (WriteRegisters v0 v1 v2 v3) = v1"
 
 primrec
-  resumeThread :: "tcbinvocation \<Rightarrow> machine_word"
+  readRegsArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
 where
-  "resumeThread (Resume v0) = v0"
+  "readRegsArch (ReadRegisters v0 v1 v2 v3) = v3"
 
 primrec
   suspendThread :: "tcbinvocation \<Rightarrow> machine_word"
@@ -87,12 +87,12 @@ where
 primrec
   tcNewIPCBuffer :: "tcbinvocation \<Rightarrow> (vptr * (capability * machine_word) option) option"
 where
-  "tcNewIPCBuffer (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v6"
+  "tcNewIPCBuffer (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = v7"
 
 primrec
   tcThread :: "tcbinvocation \<Rightarrow> machine_word"
 where
-  "tcThread (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v0"
+  "tcThread (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = v0"
 
 primrec
   copyRegsResumeTarget :: "tcbinvocation \<Rightarrow> bool"
@@ -105,9 +105,14 @@ where
   "copyRegsTransferArch (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v6"
 
 primrec
-  readRegsArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
+  tcNewMCPriority :: "tcbinvocation \<Rightarrow> priority option"
 where
-  "readRegsArch (ReadRegisters v0 v1 v2 v3) = v3"
+  "tcNewMCPriority (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = v3"
+
+primrec
+  resumeThread :: "tcbinvocation \<Rightarrow> machine_word"
+where
+  "resumeThread (Resume v0) = v0"
 
 primrec
   readRegsThread :: "tcbinvocation \<Rightarrow> machine_word"
@@ -122,7 +127,7 @@ where
 primrec
   tcNewPriority :: "tcbinvocation \<Rightarrow> priority option"
 where
-  "tcNewPriority (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v3"
+  "tcNewPriority (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = v4"
 
 primrec
   copyRegsTransferFrame :: "tcbinvocation \<Rightarrow> bool"
@@ -142,7 +147,7 @@ where
 primrec
   tcNewFaultEP :: "tcbinvocation \<Rightarrow> cptr option"
 where
-  "tcNewFaultEP (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v2"
+  "tcNewFaultEP (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = v2"
 
 primrec
   copyRegsTransferInteger :: "tcbinvocation \<Rightarrow> bool"
@@ -152,7 +157,7 @@ where
 primrec
   tcNewVRoot :: "tcbinvocation \<Rightarrow> (capability * machine_word) option"
 where
-  "tcNewVRoot (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v5"
+  "tcNewVRoot (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = v6"
 
 primrec
   readRegsLength :: "tcbinvocation \<Rightarrow> machine_word"
@@ -177,7 +182,7 @@ where
 primrec
   tcThreadCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "tcThreadCapSlot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 (f v1) v2 v3 v4 v5 v6"
+  "tcThreadCapSlot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = ThreadControl v0 (f v1) v2 v3 v4 v5 v6 v7"
 
 primrec
   copyRegsSource_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
@@ -187,7 +192,7 @@ where
 primrec
   tcNewCRoot_update :: "(((capability * machine_word) option) \<Rightarrow> ((capability * machine_word) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "tcNewCRoot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 v3 (f v4) v5 v6"
+  "tcNewCRoot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = ThreadControl v0 v1 v2 v3 v4 (f v5) v6 v7"
 
 primrec
   copyRegsTarget_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
@@ -205,9 +210,9 @@ where
   "writeRegsResume_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters v0 (f v1) v2 v3"
 
 primrec
-  resumeThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  readRegsArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "resumeThread_update f (Resume v0) = Resume (f v0)"
+  "readRegsArch_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters v0 v1 v2 (f v3)"
 
 primrec
   suspendThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
@@ -217,12 +222,12 @@ where
 primrec
   tcNewIPCBuffer_update :: "(((vptr * (capability * machine_word) option) option) \<Rightarrow> ((vptr * (capability * machine_word) option) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "tcNewIPCBuffer_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 v3 v4 v5 (f v6)"
+  "tcNewIPCBuffer_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = ThreadControl v0 v1 v2 v3 v4 v5 v6 (f v7)"
 
 primrec
   tcThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "tcThread_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl (f v0) v1 v2 v3 v4 v5 v6"
+  "tcThread_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = ThreadControl (f v0) v1 v2 v3 v4 v5 v6 v7"
 
 primrec
   copyRegsResumeTarget_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
@@ -235,9 +240,14 @@ where
   "copyRegsTransferArch_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 v3 v4 v5 (f v6)"
 
 primrec
-  readRegsArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  tcNewMCPriority_update :: "((priority option) \<Rightarrow> (priority option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "readRegsArch_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters v0 v1 v2 (f v3)"
+  "tcNewMCPriority_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = ThreadControl v0 v1 v2 (f v3) v4 v5 v6 v7"
+
+primrec
+  resumeThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "resumeThread_update f (Resume v0) = Resume (f v0)"
 
 primrec
   readRegsThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
@@ -252,7 +262,7 @@ where
 primrec
   tcNewPriority_update :: "((priority option) \<Rightarrow> (priority option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "tcNewPriority_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 (f v3) v4 v5 v6"
+  "tcNewPriority_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = ThreadControl v0 v1 v2 v3 (f v4) v5 v6 v7"
 
 primrec
   copyRegsTransferFrame_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
@@ -272,7 +282,7 @@ where
 primrec
   tcNewFaultEP_update :: "((cptr option) \<Rightarrow> (cptr option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "tcNewFaultEP_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 (f v2) v3 v4 v5 v6"
+  "tcNewFaultEP_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = ThreadControl v0 v1 (f v2) v3 v4 v5 v6 v7"
 
 primrec
   copyRegsTransferInteger_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
@@ -282,7 +292,7 @@ where
 primrec
   tcNewVRoot_update :: "(((capability * machine_word) option) \<Rightarrow> ((capability * machine_word) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "tcNewVRoot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 v3 v4 (f v5) v6"
+  "tcNewVRoot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6 v7) = ThreadControl v0 v1 v2 v3 v4 v5 (f v6) v7"
 
 primrec
   readRegsLength_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
@@ -300,9 +310,9 @@ where
   "Resume_ \<lparr> resumeThread= v0 \<rparr> == Resume v0"
 
 abbreviation (input)
-  ThreadControl_trans :: "(machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (cptr option) \<Rightarrow> (priority option) \<Rightarrow> ((capability * machine_word) option) \<Rightarrow> ((capability * machine_word) option) \<Rightarrow> ((vptr * (capability * machine_word) option) option) \<Rightarrow> tcbinvocation" ("ThreadControl'_ \<lparr> tcThread= _, tcThreadCapSlot= _, tcNewFaultEP= _, tcNewPriority= _, tcNewCRoot= _, tcNewVRoot= _, tcNewIPCBuffer= _ \<rparr>")
+  ThreadControl_trans :: "(machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (cptr option) \<Rightarrow> (priority option) \<Rightarrow> (priority option) \<Rightarrow> ((capability * machine_word) option) \<Rightarrow> ((capability * machine_word) option) \<Rightarrow> ((vptr * (capability * machine_word) option) option) \<Rightarrow> tcbinvocation" ("ThreadControl'_ \<lparr> tcThread= _, tcThreadCapSlot= _, tcNewFaultEP= _, tcNewMCPriority= _, tcNewPriority= _, tcNewCRoot= _, tcNewVRoot= _, tcNewIPCBuffer= _ \<rparr>")
 where
-  "ThreadControl_ \<lparr> tcThread= v0, tcThreadCapSlot= v1, tcNewFaultEP= v2, tcNewPriority= v3, tcNewCRoot= v4, tcNewVRoot= v5, tcNewIPCBuffer= v6 \<rparr> == ThreadControl v0 v1 v2 v3 v4 v5 v6"
+  "ThreadControl_ \<lparr> tcThread= v0, tcThreadCapSlot= v1, tcNewFaultEP= v2, tcNewMCPriority= v3, tcNewPriority= v4, tcNewCRoot= v5, tcNewVRoot= v6, tcNewIPCBuffer= v7 \<rparr> == ThreadControl v0 v1 v2 v3 v4 v5 v6 v7"
 
 abbreviation (input)
   NotificationControl_trans :: "(machine_word) \<Rightarrow> ((machine_word) option) \<Rightarrow> tcbinvocation" ("NotificationControl'_ \<lparr> notificationTCB= _, notificationPtr= _ \<rparr>")
@@ -342,7 +352,7 @@ definition
   isThreadControl :: "tcbinvocation \<Rightarrow> bool"
 where
  "isThreadControl v \<equiv> case v of
-    ThreadControl v0 v1 v2 v3 v4 v5 v6 \<Rightarrow> True
+    ThreadControl v0 v1 v2 v3 v4 v5 v6 v7 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition

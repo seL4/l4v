@@ -37,7 +37,16 @@ consts'
 decodeTCBConfigure :: "machine_word list \<Rightarrow> capability \<Rightarrow> machine_word \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
 consts'
+checkMCP :: "machine_word \<Rightarrow> ( syscall_error , unit ) kernel_f"
+
+consts'
+checkPrio :: "machine_word \<Rightarrow> ( syscall_error , unit ) kernel_f"
+
+consts'
 decodeSetPriority :: "machine_word list \<Rightarrow> capability \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
+
+consts'
+decodeSetMCPriority :: "machine_word list \<Rightarrow> capability \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
 consts'
 decodeSetIPCBuffer :: "machine_word list \<Rightarrow> capability \<Rightarrow> machine_word \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"

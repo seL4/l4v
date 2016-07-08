@@ -4028,7 +4028,7 @@ global_interpretation switch_if_required_to_extended: is_extended "switch_if_req
   apply wp
   done
 
-crunch all_but_exst[wp]: set_priority "all_but_exst P" (simp: ethread_get_def)
+crunch all_but_exst[wp]: set_priority  "all_but_exst P" (simp: ethread_get_def)
 
 crunch (empty_fail)empty_fail[wp]: set_priority
 

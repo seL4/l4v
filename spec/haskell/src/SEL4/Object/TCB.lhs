@@ -78,6 +78,7 @@ There are eleven types of invocation for a thread control block. All require wri
 >         TCBResume -> return $! Resume (capTCBPtr cap)
 >         TCBConfigure -> decodeTCBConfigure args cap slot extraCaps
 >         TCBSetPriority -> decodeSetPriority args cap
+>         TCBSetMCPriority -> decodeSetMCPriority args cap
 >         TCBSetIPCBuffer -> decodeSetIPCBuffer args cap slot extraCaps
 >         TCBSetSpace -> decodeSetSpace args cap slot extraCaps
 >         TCBBindNotification -> decodeBindNotification cap extraCaps
@@ -170,10 +171,12 @@ The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "Set
 > decodeTCBConfigure :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
 > decodeTCBConfigure
->     (faultEP:prio:cRootData:vRootData:buffer:_)
+>     (faultEP:packedPrioProps:cRootData:vRootData:buffer:_)
 >     cap slot (cRoot:vRoot:bufferFrame:_)
 >   = do
->     setPriority <- decodeSetPriority [prio] cap
+>     let prioProps = prioPropsFromWord packedPrioProps
+>     setPriority <- decodeSetPriority [fromIntegral $ ppPriority prioProps] cap
+>     setMCP <- decodeSetMCPriority [fromIntegral $ ppMCP prioProps] cap
 >     setIPCParams <- decodeSetIPCBuffer [buffer] cap slot [bufferFrame]
 >     setSpace <- decodeSetSpace [faultEP, cRootData, vRootData]
 >         cap slot [cRoot, vRoot]
@@ -181,11 +184,28 @@ The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "Set
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = tcThreadCapSlot setSpace,
 >         tcNewFaultEP = tcNewFaultEP setSpace,
->         tcNewPriority = tcNewPriority setPriority,
+>         tcNewMCPriority = tcNewPriority setPriority,
+>         tcNewPriority = tcNewMCPriority setMCP,
 >         tcNewCRoot = tcNewCRoot setSpace,
 >         tcNewVRoot = tcNewVRoot setSpace,
 >         tcNewIPCBuffer = tcNewIPCBuffer setIPCParams }
 > decodeTCBConfigure _ _ _ _ = throw TruncatedMessage
+
+
+\subsubsection{Check priorities}
+
+> checkMCP :: Word -> KernelF SyscallError ()
+> checkMCP new_mcp = do
+>     checkPrio new_mcp
+>     when (new_mcp > fromIntegral maxPriority) $ throw (RangeError (fromIntegral minPriority) (fromIntegral maxPriority))
+      
+
+> checkPrio :: Word -> KernelF SyscallError ()
+> checkPrio prio = do
+>     curThread <- withoutFailure $ getCurThread
+>     mcp <- withoutFailure $ threadGet tcbMCP curThread
+>     when (prio > fromIntegral mcp) $ throw (RangeError (fromIntegral minPriority) (fromIntegral mcp))
+     
 
 \subsubsection{The Set Priority Call}
 
@@ -194,20 +214,34 @@ Setting the thread's priority is only allowed if the new priority is lower than 
 > decodeSetPriority :: [Word] -> Capability ->
 >         KernelF SyscallError TCBInvocation
 > decodeSetPriority (newPrio:_) cap = do
->     curThread <- withoutFailure $ getCurThread
->     curPriority <- withoutFailure $ threadGet tcbPriority curThread
->     when (fromIntegral newPrio > curPriority) $
->         throw IllegalOperation
+>     checkPrio newPrio
 >     return $! ThreadControl {
 >         tcThread = capTCBPtr cap,
 >--       tcThreadCapSlot = error "tcThreadCapSlot unused", In theory tcThreadCapSlot should never been evaluated by lazy evaluation. However, it was evaluated when running sel4 haskell kernel. So it is wired. Thus I change this to 0. I hope this can be changed back once we find out why this is evaluated. (by Xin)
 >         tcThreadCapSlot = 0,
 >         tcNewFaultEP = Nothing,
+>         tcNewMCPriority = Nothing,
 >         tcNewPriority = Just $ fromIntegral newPrio,
 >         tcNewCRoot = Nothing,
 >         tcNewVRoot = Nothing,
 >         tcNewIPCBuffer = Nothing }
 > decodeSetPriority _ _ = throw TruncatedMessage
+
+> decodeSetMCPriority :: [Word] -> Capability ->
+>         KernelF SyscallError TCBInvocation
+> decodeSetMCPriority (newMCP:_) cap = do
+>     checkMCP newMCP
+>     return $! ThreadControl {
+>         tcThread = capTCBPtr cap,
+>         tcThreadCapSlot = 0,
+>         tcNewFaultEP = Nothing,
+>         tcNewMCPriority = Just $ fromIntegral newMCP,
+>         tcNewPriority = Nothing,
+>         tcNewCRoot = Nothing,
+>         tcNewVRoot = Nothing,
+>         tcNewIPCBuffer = Nothing }
+> decodeSetMCPriority _ _ = throw TruncatedMessage
+
 
 \subsubsection{The Set IPC Buffer Call}
 
@@ -227,6 +261,7 @@ The two thread parameters related to IPC and system call handling are the IPC bu
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = slot,
 >         tcNewFaultEP = Nothing,
+>         tcNewMCPriority = Nothing,
 >         tcNewPriority = Nothing,
 >         tcNewCRoot = Nothing,
 >         tcNewVRoot = Nothing,
@@ -271,6 +306,7 @@ This is to ensure that the source capability is not made invalid by the deletion
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = slot,
 >         tcNewFaultEP = Just $ CPtr faultEP,
+>         tcNewMCPriority = Nothing,
 >         tcNewPriority = Nothing,
 >         tcNewCRoot = Just cRoot,
 >         tcNewVRoot = Just vRoot,
@@ -341,12 +377,13 @@ The "ThreadControl" operation is used to implement the "SetSpace", "SetPriority"
 
 The use of "checkCapAt" addresses a corner case in which the only capability to a certain thread is in its own CSpace, which is otherwise unreachable. Replacement of the CSpace root results in "cteDelete" cleaning up both CSpace and thread, after which "cteInsert" should not be called. Error reporting in this case is unimportant, as the requesting thread cannot continue to execute. 
 
-> invokeTCB (ThreadControl target slot faultep priority cRoot vRoot buffer)
+> invokeTCB (ThreadControl target slot faultep mcp priority cRoot vRoot buffer)
 >   = do
 >         let tCap = ThreadCap { capTCBPtr = target }
 >         withoutPreemption $ maybe (return ())
 >             (\ep -> threadSet (\t -> t {tcbFaultHandler = ep}) target)
 >             faultep
+>         withoutPreemption $ maybe (return ()) (setMCPriority target) mcp
 >         withoutPreemption $ maybe (return ()) (setPriority target) priority
 >         maybe (return ()) (\(newCap, srcSlot) -> do
 >             rootSlot <- withoutPreemption $ getThreadCSpaceRoot target

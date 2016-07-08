@@ -405,6 +405,7 @@ definition
         tcbIPCBufferFrame= makeObject,
         tcbDomain= minBound,
         tcbState= Inactive,
+        tcbMCP= minBound,
         tcbPriority= minBound,
         tcbQueued= False,
         tcbFault= Nothing,

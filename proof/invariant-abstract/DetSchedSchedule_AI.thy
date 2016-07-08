@@ -1513,7 +1513,7 @@ lemma ethread_set_not_queued_valid_sched:
      ethread_set f tptr \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (simp add: valid_sched_def valid_sched_action_def | wp ethread_set_not_queued_valid_queues ethread_set_not_domain_switch_in_cur_domain ethread_set_not_domain_ct_in_cur_domain ethread_set_not_domain_valid_blocked ethread_set_valid_idle_etcb)+
   done
-
+  
 lemma tcb_dequeue_not_queued:
   "\<lbrace>valid_queues\<rbrace> tcb_sched_action tcb_sched_dequeue tptr \<lbrace>\<lambda>_. not_queued tptr\<rbrace>"
   apply (simp add: tcb_sched_action_def | wp)+
@@ -1557,17 +1557,21 @@ lemma set_priority_valid_sched[wp]:
                 not_cur_thread_def ct_in_state_def not_pred_tcb st_tcb_at_def obj_at_def)
   done
 
+  
+
+
+ 
 crunch simple_sched_action[wp]: set_priority simple_sched_action
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma tc_valid_sched[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
-      invoke_tcb (ThreadControl a sl b pr e f g)
+      invoke_tcb (ThreadControl a sl b mcp pr e f g)
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: split_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    apply (wp check_cap_inv thread_set_not_state_valid_sched hoare_vcg_all_lift gts_wp static_imp_wp
-         | wpc | simp add: option_update_thread_def | wp_once hoare_drop_imps)+
+         | wpc | simp add: option_update_thread_def)+
    done
 end
 

@@ -140,13 +140,15 @@ record itcb =
   itcb_ipc_buffer    :: vspace_ref
   itcb_fault         :: "fault option"
   itcb_bound_notification     :: "obj_ref option"
+  itcb_mcpriority    :: priority
 
 
 definition "tcb_to_itcb tcb \<equiv> \<lparr> itcb_state              = tcb_state tcb,
                                 itcb_fault_handler      = tcb_fault_handler tcb,
                                 itcb_ipc_buffer         = tcb_ipc_buffer tcb,
                                 itcb_fault              = tcb_fault tcb,
-                                itcb_bound_notification = tcb_bound_notification tcb \<rparr>"
+                                itcb_bound_notification = tcb_bound_notification tcb,
+                                itcb_mcpriority         = tcb_mcpriority tcb\<rparr>"
 
 (* sseefried: The simplification rules below are used to help produce
  * lemmas that talk about fields of the 'tcb' data structure rather than
@@ -180,6 +182,9 @@ lemma [simp]: "itcb_fault (tcb_to_itcb tcb) = tcb_fault tcb"
 lemma [simp]: "itcb_bound_notification (tcb_to_itcb tcb) = tcb_bound_notification tcb"
   by (auto simp: tcb_to_itcb_def)
 
+lemma [simp]: "itcb_mcpriority (tcb_to_itcb tcb) = tcb_mcpriority tcb"
+ by (auto simp: tcb_to_itcb_def)
+
 definition
   pred_tcb_at :: "(itcb \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> machine_word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -187,6 +192,7 @@ where
 
 abbreviation "st_tcb_at \<equiv> pred_tcb_at itcb_state"
 abbreviation "bound_tcb_at \<equiv> pred_tcb_at itcb_bound_notification"
+abbreviation "mcpriority_tcb_at \<equiv> pred_tcb_at itcb_mcpriority"
 
 (* sseefried: 'st_tcb_at_def' only exists to make existing proofs go through. Use 'pred_tcb_at_def' from now on. *)
 lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
@@ -3123,6 +3129,7 @@ lemma invs_valid_reply_masters [elim!]:
 lemma invs_vobjs_strgs:
   "invs s \<longrightarrow> valid_objs s"
   by auto
+
 
 lemma invs_valid_global_refs [elim!]:
   "invs s \<Longrightarrow> valid_global_refs s"

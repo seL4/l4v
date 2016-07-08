@@ -188,9 +188,11 @@ where
   "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)" 
 | "invoke_tcb (Resume thread) = liftE (do restart thread; return [] od)"
 
-| "invoke_tcb (ThreadControl target slot faultep priority croot vroot buffer)
+| "invoke_tcb (ThreadControl target slot faultep mcp priority croot vroot buffer)
    = doE
     liftE $ option_update_thread target (tcb_fault_handler_update o K) faultep;
+    liftE $  case mcp of None \<Rightarrow> return()
+     | Some newmcp \<Rightarrow> set_mcpriority target newmcp;
     liftE $ case priority of None \<Rightarrow> return()
      | Some prio \<Rightarrow> do_extended_op (set_priority target prio);
     (case croot of None \<Rightarrow> returnOk ()

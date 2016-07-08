@@ -50,7 +50,7 @@ datatype tcb_invocation =
   | ReadRegisters machine_word bool machine_word arch_copy_register_sets
   | CopyRegisters machine_word machine_word bool bool bool bool arch_copy_register_sets
   | ThreadControl machine_word cslot_ptr
-                  (tc_new_fault_ep: "cap_ref option") (tc_new_priority: "word8 option")
+                  (tc_new_fault_ep: "cap_ref option") (tc_new_mcpriority: "word8 option") (tc_new_priority: "word8 option")
                   (tc_new_croot: "(cap * cslot_ptr) option") (tc_new_vroot: "(cap * cslot_ptr) option")
                   (tc_new_buffer: "(vspace_ref * (cap * cslot_ptr) option) option")
   | Suspend "obj_ref"

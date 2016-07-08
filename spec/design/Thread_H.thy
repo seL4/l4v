@@ -217,6 +217,11 @@ defs setDomain_def:
         when (tptr = curThread) $ rescheduleRequired
 od)"
 
+defs setMCPriority_def:
+"setMCPriority tptr prio\<equiv> (
+        threadSet (\<lambda> t. t \<lparr> tcbMCP := prio \<rparr>) tptr
+)"
+
 defs setPriority_def:
 "setPriority tptr prio\<equiv> (do
         tcbSchedDequeue tptr;

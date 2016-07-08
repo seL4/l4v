@@ -742,7 +742,13 @@ def named_newtype_transform(line, header, d):
             l = '    %s' % name
         else:
             l = '  | %s' % name
+        oname = name
         for name, type in map:
+            if type is None:
+                print("ERR: None snuck into constructor list for %s" % name)
+                print(line, header, oname)
+                assert False
+
             if len(type.split()) == 1 and '(' not in type:
                 l = l + ' ' + type
             else:

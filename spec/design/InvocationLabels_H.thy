@@ -33,6 +33,7 @@ datatype invocation_label =
   | TCBCopyRegisters
   | TCBConfigure
   | TCBSetPriority
+  | TCBSetMCPriority
   | TCBSetIPCBuffer
   | TCBSetSpace
   | TCBSuspend
@@ -68,6 +69,7 @@ definition
       TCBCopyRegisters,
       TCBConfigure,
       TCBSetPriority,
+      TCBSetMCPriority,
       TCBSetIPCBuffer,
       TCBSetSpace,
       TCBSuspend,
