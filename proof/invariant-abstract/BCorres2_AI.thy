@@ -10,7 +10,7 @@
 
 theory BCorres2_AI
 imports
-  EmptyFail_AI
+  "./$L4V_ARCH/ArchEmptyFail_AI"
   "../../lib/BCorres_UL"
   "./$L4V_ARCH/ArchCNodeInv_AI"
 begin
