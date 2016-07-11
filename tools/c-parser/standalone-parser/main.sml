@@ -403,6 +403,7 @@ fun add_cse_analysis f = analyses := (fn cse => fn ast => f cse) :: !analyses
 
 val cpp = ref (SOME "/usr/bin/cpp")
 val parse_only = ref false
+val underscore_idents = ref false
 val show_help = ref false
 val bad_option = ref false
 val munge_info_fname = ref (NONE : string option)
@@ -447,6 +448,8 @@ in
    cse_analysis "protoes"             print_protoes,
    {short = "", long = ["rawsyntaxonly"], help = "Don't perform any analyses",
     desc = NoArg (fn () => parse_only := true)},
+   {short = "", long = ["underscore_idents"], help = "Allow identifiers starting with underscores",
+    desc = NoArg (fn () => underscore_idents := true)},
    cse_analysis "reads" print_reads,
    cse_analysis "toposort" produce_toposort,
    cse_analysis "produce dotfile" produce_dotfile,
@@ -509,7 +512,7 @@ fun doit args =
                 ProgramAnalysis.process_decls
                   {anon_vars = false, owners = [],
                    munge_info_fname = !munge_info_fname,
-                   allow_underscore_idents = false}
+                   allow_underscore_idents = !underscore_idents}
                   (SyntaxTransforms.remove_typedefs ast)
             val _ = ProgramAnalysis.export_mungedb cse
             val _ = filename := fname
