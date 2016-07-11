@@ -1,5 +1,5 @@
 theory AInvsPre
-imports PDPTEntries_AI ADT_AI
+imports "./$L4V_ARCH/ArchVSpaceEntries_AI" ADT_AI
 begin
 
 locale AInvsPre =

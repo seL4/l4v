@@ -227,7 +227,6 @@ lemma copy_global_mappings_hoare_lift:(*FIXME: arch_split  \<rightarrow> these d
   apply (wp mapM_x_wp' wp)
   done
 
-declare [[show_types=true]]
 lemma init_arch_objects_hoare_lift:
   assumes wp: "\<And>oper. \<lbrace>(P::'state_ext::state_ext state\<Rightarrow>bool)\<rbrace> do_machine_op oper \<lbrace>\<lambda>rv :: unit. Q\<rbrace>"
               "\<And>ptr val. \<lbrace>P\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv. P\<rbrace>"

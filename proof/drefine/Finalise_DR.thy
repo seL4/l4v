@@ -11,7 +11,7 @@
 theory Finalise_DR
 imports
   KHeap_DR
-  "../invariant-abstract/PDPTEntries_AI"
+  "../invariant-abstract/VSpaceEntries_AI"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
