@@ -14,7 +14,7 @@ Refinement for handleEvent and syscalls
 
 theory Syscall_AI
 imports
-  BCorres2_AI
+  "./$L4V_ARCH/ArchBCorres2_AI"
   "./$L4V_ARCH/ArchTcb_AI"
   "./$L4V_ARCH/ArchArch_AI"
   "./$L4V_ARCH/ArchInterrupt_AI"

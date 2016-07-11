@@ -9,7 +9,7 @@
  *)
 
 theory EmptyFail_AI
-imports Tcb_AI
+imports "./$L4V_ARCH/ArchTcb_AI"
 begin
 
 context begin interpretation Arch .
