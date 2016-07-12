@@ -20,6 +20,20 @@ imports
   "./$L4V_ARCH/ArchInterrupt_AI"
 begin
 
+context begin interpretation Arch .
+requalify_facts
+  arch_decode_invocation_inv
+  lookup_cap_and_slot_inv
+  data_to_cptr_def
+end
+
+lemmas [wp] =
+  arch_decode_invocation_inv
+  lookup_cap_and_slot_inv
+
+lemmas [simp] =
+  data_to_cptr_def
+
 lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
   apply (wp dmo_invs thread_get_inv gts_wp
@@ -27,6 +41,7 @@ lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,d
           | wpc | clarsimp simp: guarded_switch_to_def get_tcb_def choose_thread_def
           | wp_once hoare_drop_imps)+
   done
+
 
 lemma schedule_ct_activateable[wp]:
   "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
@@ -63,6 +78,7 @@ lemma syscall_valid:
      apply (wp x|simp)+
   done
 
+
 (* In order to assert conditions that must hold for the appropriate 
    handleInvocation and handle_invocation calls to succeed, we must have 
    some notion of what a valid invocation is.
@@ -73,17 +89,17 @@ lemma syscall_valid:
 primrec
   valid_invocation :: "Invocations_A.invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_invocation (Invocations_A.InvokeUntyped i) = valid_untyped_inv i" 
-| "valid_invocation (Invocations_A.InvokeEndpoint w w2 b) = (ep_at w and ex_nonz_cap_to w)"
-| "valid_invocation (Invocations_A.InvokeNotification w w2) = (ntfn_at w and ex_nonz_cap_to w)"
-| "valid_invocation (Invocations_A.InvokeTCB i) = Tcb_AI.tcb_inv_wf i"
-| "valid_invocation (Invocations_A.InvokeDomain thread domain) = (tcb_at thread and (\<lambda>s. thread \<noteq> idle_thread s))"
-| "valid_invocation (Invocations_A.InvokeReply thread slot) =
+  "valid_invocation (InvokeUntyped i) = valid_untyped_inv i" 
+| "valid_invocation (InvokeEndpoint w w2 b) = (ep_at w and ex_nonz_cap_to w)"
+| "valid_invocation (InvokeNotification w w2) = (ntfn_at w and ex_nonz_cap_to w)"
+| "valid_invocation (InvokeTCB i) = Tcb_AI.tcb_inv_wf i"
+| "valid_invocation (InvokeDomain thread domain) = (tcb_at thread and (\<lambda>s. thread \<noteq> idle_thread s))"
+| "valid_invocation (InvokeReply thread slot) =
        (tcb_at thread and cte_wp_at (op = (cap.ReplyCap thread False)) slot)"
-| "valid_invocation (Invocations_A.InvokeIRQControl i) = irq_control_inv_valid i"
-| "valid_invocation (Invocations_A.InvokeIRQHandler i) = irq_handler_inv_valid i"
-| "valid_invocation (Invocations_A.InvokeCNode i) = valid_cnode_inv i" 
-| "valid_invocation (Invocations_A.InvokeArchObject i) = valid_arch_inv i"
+| "valid_invocation (InvokeIRQControl i) = irq_control_inv_valid i"
+| "valid_invocation (InvokeIRQHandler i) = irq_handler_inv_valid i"
+| "valid_invocation (InvokeCNode i) = valid_cnode_inv i" 
+| "valid_invocation (InvokeArchObject i) = valid_arch_inv i"
 
 
 crunch inv [wp]: lookup_cap_and_slot P
@@ -98,6 +114,7 @@ lemma sts_Restart_invs[wp]:
            notE [rotated, OF _ idle_no_ex_cap]
            simp: invs_def valid_state_def valid_pspace_def)
   done
+
 
 lemma invoke_tcb_tcb[wp]:
   "\<lbrace>tcb_at tptr\<rbrace> invoke_tcb i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
@@ -116,16 +133,14 @@ lemma simple_from_running:
   by (fastforce simp: ct_in_state_def
                elim!: pred_tcb_weakenE)
 
+
 crunch pred_tcb_at[wp]: handle_fault_reply "pred_tcb_at proj P t"
 crunch invs[wp]: handle_fault_reply "invs"
 crunch cap_to[wp]: handle_fault_reply "ex_nonz_cap_to c"
 crunch it[wp]: handle_fault_reply "\<lambda>s. P (idle_thread s)"
 crunch caps[wp]: handle_fault_reply "\<lambda>s. P (caps_of_state s)"
-
 crunch cap_to[wp]: handle_fault_reply "ex_nonz_cap_to c"
-
 crunch it[wp]: handle_fault_reply "\<lambda>s. P (idle_thread s)"
-
 crunch caps[wp]: handle_fault_reply "\<lambda>s. P (caps_of_state s)"
 
 
@@ -144,6 +159,7 @@ lemma do_ipc_transfer_emptyable[wp]:
   done
 
 crunch emptyable[wp]: do_ipc_transfer "emptyable sl"
+
 
 lemma do_ipc_transfer_non_null_cte_wp_at2:
   fixes P
@@ -164,6 +180,7 @@ lemma do_ipc_transfer_non_null_cte_wp_at2:
       done
   qed
 
+
 lemma thread_set_cap_to:
   "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb)
   \<Longrightarrow> \<lbrace>ex_nonz_cap_to p\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
@@ -171,6 +188,7 @@ lemma thread_set_cap_to:
   apply (wp hoare_ex_wp thread_set_cte_wp_at_trivial)
   apply (clarsimp)
   done
+
 
 lemma thread_set_has_no_reply_cap:
   "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb)
@@ -180,11 +198,13 @@ lemma thread_set_has_no_reply_cap:
   apply (clarsimp)
   done
 
+
 lemma set_object_cte_wp_at2:
   "\<lbrace>\<lambda>s. P (cte_wp_at P' p (s\<lparr>kheap := kheap s(ptr \<mapsto> ko)\<rparr>))\<rbrace> set_object ptr ko \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
   unfolding set_object_def
   apply (wp)
   done
+
 
 lemma handle_fault_reply_cte_wp_at:
   "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace> handle_fault_reply f t d dl \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
@@ -219,6 +239,7 @@ lemma handle_fault_reply_cte_wp_at:
       done
   qed
 
+
 lemma handle_fault_reply_has_no_reply_cap:
   "\<lbrace>\<lambda>s. \<not>has_reply_cap t s\<rbrace> handle_fault_reply f t d dl \<lbrace>\<lambda>_ s. \<not>has_reply_cap t s\<rbrace>"
   apply (clarsimp simp add: has_reply_cap_def)
@@ -226,7 +247,7 @@ lemma handle_fault_reply_has_no_reply_cap:
   apply (clarsimp)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma do_reply_invs[wp]:
   "\<lbrace>tcb_at t and tcb_at t' and cte_wp_at (op = (cap.ReplyCap t False)) slot and
     invs\<rbrace>
@@ -312,9 +333,10 @@ lemma do_reply_invs[wp]:
    apply (erule emptyable_cte_wp_atD)
     apply (clarsimp simp add: invs_def valid_state_def is_master_reply_cap_def)+
   done
-end
+
 
 lemmas si_invs[wp] = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI hoare_TrueI,simplified]
+
 
 lemma pinv_invs[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i\<rbrace>
@@ -330,16 +352,44 @@ lemma pinv_invs[wp]:
 crunch typ_at[wp]: do_reply_transfer "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch typ_at[wp]: invoke_irq_control "\<lambda>s. P (typ_at T p s)"
-end
-
 crunch typ_at[wp]: invoke_irq_handler "\<lambda>s. P (typ_at T p s)"
 
+
+locale Syscall_AI =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes invoke_irq_control_typ_at[wp]:
+    "\<And>P T p irq_inv.
+      \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> invoke_irq_control irq_inv \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  assumes obj_refs_cap_rights_update[simp]:
+    "\<And>rs cap. obj_refs (cap_rights_update rs cap) = obj_refs cap"
+  assumes table_cap_ref_mask_cap:
+    "\<And>R cap. table_cap_ref (mask_cap R cap) = table_cap_ref cap"
+  assumes diminished_no_cap_to_obj_with_diff_ref:
+    "\<And>cap p (s::'state_ext state) S.
+      \<lbrakk> cte_wp_at (diminished cap) p s; valid_arch_caps s \<rbrakk>
+        \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
+  assumes hv_invs[wp]:
+    "\<And>t' flt. \<lbrace>invs :: 'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
+  assumes hv_inv_ex:
+    "\<And>P t vp. \<lbrace>P :: 'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes handle_vm_fault_valid_fault[wp]:
+    "\<And>thread ft.
+      \<lbrace>\<top>::'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
+  assumes hvmf_active:
+    "\<And>t w.
+      \<lbrace>st_tcb_at active t::'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
+  assumes hvmf_ex_cap[wp]:
+    "\<And>p t b.
+      \<lbrace>ex_nonz_cap_to p::'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t b \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+
+
+context Syscall_AI begin
+
 lemma pinv_tcb[wp]:
-  "\<lbrace>invs and st_tcb_at active tptr and ct_active and
-    valid_invocation i\<rbrace> 
- perform_invocation blocking call i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
+  "\<And>tptr blocking call i.
+    \<lbrace>invs and st_tcb_at active tptr and ct_active and valid_invocation i\<rbrace> 
+      perform_invocation blocking call i
+    \<lbrace>\<lambda>rv. tcb_at tptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (case_tac i, simp_all split:option.splits)
            apply (wp | simp)+
           apply (clarsimp simp: st_tcb_at_tcb_at)
@@ -361,6 +411,9 @@ lemma pinv_tcb[wp]:
   apply (wp invoke_arch_tcb)
   apply (clarsimp simp: st_tcb_at_tcb_at)
   done
+
+end
+
 
 lemmas sts_typ_at = set_thread_state_typ_at [where P="\<lambda>x. x"]
 
@@ -428,6 +481,7 @@ lemma sts_valid_inv[wp]:
   apply (wp ex_cte_cap_to_pres hoare_vcg_ex_lift set_thread_state_valid_cap)
   done
 
+
 lemma sts_Restart_stay_simple:
   "\<lbrace>st_tcb_at simple t\<rbrace>
      set_thread_state t' Structures_A.Restart
@@ -438,14 +492,12 @@ lemma sts_Restart_stay_simple:
   done
 
 
-context begin interpretation Arch . (*FIXME: arch_split*)
 lemma decode_inv_inv[wp]:
   "\<lbrace>P\<rbrace> decode_invocation label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (case_tac cap, simp_all add: decode_invocation_def)
           apply (wp decode_tcb_inv_inv decode_domain_inv_inv | rule conjI | clarsimp
                       | simp split: bool.split)+
   done
-end
 
 lemma diminished_Untyped [simp]:
   "diminished (cap.UntypedCap x xa idx) = (\<lambda>c. c = cap.UntypedCap x xa idx)"
@@ -477,36 +529,18 @@ lemma cnode_diminished_strg:
   apply (clarsimp simp: diminished_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma obj_refs_cap_rights_update[simp]:
-  "obj_refs (cap_rights_update rs cap) = obj_refs cap"
-  by (simp add: cap_rights_update_def acap_rights_update_def
-         split: cap.split arch_cap.split)
-
-(* FIXME: move to TCB *)
-lemma table_cap_ref_mask_cap:
-  "table_cap_ref (mask_cap R cap) = table_cap_ref cap"
-  by (clarsimp simp add:mask_cap_def table_cap_ref_def acap_rights_update_def
-    cap_rights_update_def split:cap.splits arch_cap.splits)
-
-lemma diminished_no_cap_to_obj_with_diff_ref:
-  "\<lbrakk> cte_wp_at (diminished cap) p s; valid_arch_caps s \<rbrakk>
-      \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
-  apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def)
-  apply (frule(1) unique_table_refs_no_cap_asidD)
-  apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def 
-    table_cap_ref_mask_cap diminished_def Ball_def)
-  done
-end
 
 lemma invs_valid_arch_caps[elim!]:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (clarsimp simp: invs_def valid_state_def)
 
+
+context Syscall_AI begin
+
 lemma decode_inv_wf[wp]:
   "\<lbrace>valid_cap cap and invs and cte_wp_at (diminished cap) slot
            and ex_cte_cap_to slot
-           and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
+           and (\<lambda>s::'state_ext state. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
            and (\<lambda>s. \<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_to r s)
            and (\<lambda>s. \<forall>cap \<in> set excaps. \<forall>r\<in>cte_refs (fst cap) (interrupt_irq_node s). ex_cte_cap_to r s) 
            and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))
@@ -554,6 +588,8 @@ lemma decode_inv_wf[wp]:
   apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
   apply (subst split_paired_Ex[symmetric], rule exI, simp)
   done
+
+end
 
 lemma lcs_valid [wp]:
   "\<lbrace>invs\<rbrace> lookup_cap_and_slot t xs \<lbrace>\<lambda>x s. s \<turnstile> fst x\<rbrace>, -"
@@ -806,10 +842,6 @@ lemma lookup_extra_caps_diminished [wp]:
   apply (wp mapME_set|simp)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch tcb_at[wp]: reply_from_kernel "tcb_at t"
-  (simp: crunch_simps)
-end
 
 (*FIXME: move to NonDetMonadVCG.valid_validE_R *)
 lemma valid_validE_R_gen:
@@ -820,24 +852,28 @@ lemma valid_validE_R_eq:
   "\<lbrakk>Q = Q'\<circ>Inr; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -"
   by (fastforce simp: validE_R_def validE_def valid_def split_def)
 
+
 crunch tcb_at[wp]: reply_from_kernel "tcb_at t"
   (simp: crunch_simps)
+
+crunch pred_tcb_at[wp]: reply_from_kernel "pred_tcb_at proj P t"
+  (simp: crunch_simps)
+
+crunch cap_to[wp]: reply_from_kernel "ex_nonz_cap_to p"
+  (simp: crunch_simps)
+
+crunch it[wp]: reply_from_kernel "\<lambda>s. P (idle_thread s)"
+  (simp: crunch_simps)
+
+crunch cte_wp_at[wp]: reply_from_kernel "cte_wp_at P p"
+  (simp: crunch_simps)
+
 
 lemma ts_Restart_case_helper:
   "(case ts of Structures_A.Restart \<Rightarrow> A | _ \<Rightarrow> B)
  = (if ts = Structures_A.Restart then A else B)"
   by (case_tac ts, simp_all)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch pred_tcb_at[wp]: reply_from_kernel "pred_tcb_at proj P t"
-  (simp: crunch_simps)
-crunch cap_to[wp]: reply_from_kernel "ex_nonz_cap_to p"
-  (simp: crunch_simps)
-crunch it[wp]: reply_from_kernel "\<lambda>s. P (idle_thread s)"
-  (simp: crunch_simps)
-crunch cte_wp_at[wp]: reply_from_kernel "cte_wp_at P p"
-  (simp: crunch_simps)
-end
 
 lemma lcs_ex_cap_to2[wp]:
   "\<lbrace>invs and K (\<forall>cap. is_cnode_cap cap \<longrightarrow> P cap)\<rbrace>
@@ -859,20 +895,27 @@ lemmas validE_E_combs[wp_comb] =
     valid_validE_E
     hoare_vcg_E_conj[where Q'="\<top>\<top>", folded validE_E_def, OF valid_validE_E]
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+
+context Syscall_AI begin
+
 lemma hinv_invs':
+  fixes Q :: "'state_ext state \<Rightarrow> bool" and calling blocking
   assumes perform_invocation_Q[wp]:
-           "\<And>block class i. \<lbrace>invs and Q and ct_active and valid_invocation i\<rbrace> perform_invocation block class i \<lbrace>\<lambda>_.Q\<rbrace>"
+    "\<And>block class i.
+      \<lbrace>invs and Q and ct_active and valid_invocation i\<rbrace>
+        perform_invocation block class i
+      \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes handle_fault_Q[wp]:
-           "\<And>t f. \<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t and (\<lambda>_. valid_fault f)\<rbrace>
-              handle_fault t f
-             \<lbrace>\<lambda>r. Q\<rbrace>"
+    "\<And>t f.
+      \<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t and (\<lambda>_. valid_fault f)\<rbrace>
+        handle_fault t f
+      \<lbrace>\<lambda>r. Q\<rbrace>"
   assumes reply_from_kernel_Q[wp]:
-            "\<And>a b. \<lbrace>invs and Q\<rbrace> reply_from_kernel a b \<lbrace>\<lambda>_.Q\<rbrace>"
+    "\<And>a b. \<lbrace>invs and Q\<rbrace> reply_from_kernel a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes sts_Q[wp]: 
-            "\<And>a b. \<lbrace>invs and Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
+    "\<And>a b. \<lbrace>invs and Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
-  "\<lbrace>invs and Q and ct_active\<rbrace> handle_invocation calling blocking \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
+    "\<lbrace>invs and Q and ct_active\<rbrace> handle_invocation calling blocking \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc)
 
@@ -897,13 +940,15 @@ lemma hinv_invs':
   apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
   done
 
-lemmas hinv_invs[wp] = hinv_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI,simplified]
+lemmas hinv_invs[wp] = hinv_invs'
+  [where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI,simplified]
 
 (* FIXME: move *)
 lemma hinv_tcb[wp]:
-  "\<lbrace>st_tcb_at active t and invs and ct_active\<rbrace>
+  "\<And>t calling blocking.
+    \<lbrace>st_tcb_at active t and invs and ct_active\<rbrace>
       handle_invocation calling blocking
-   \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
+    \<lbrace>\<lambda>rv. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: handle_invocation_def split_def
                    ts_Restart_case_helper
                    liftE_liftM_liftME liftME_def bindE_assoc)
@@ -914,22 +959,24 @@ lemma hinv_tcb[wp]:
                         ct_in_state_def)
   apply (fastforce elim!: st_tcb_ex_cap)
   done
-end
 
 lemma hs_tcb_on_err:
   "\<lbrace>st_tcb_at active t and invs and ct_active\<rbrace>
      handle_send blocking
-   -,\<lbrace>\<lambda>e. tcb_at t\<rbrace>"
+   -,\<lbrace>\<lambda>e. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (unfold handle_send_def whenE_def fun_app_def validE_E_def validE_def)
   apply (rule hoare_strengthen_post [OF hinv_tcb])
   apply (clarsimp split: sum.split)
   done
 
-lemma hs_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_send blocking \<lbrace>\<lambda>r. invs\<rbrace>"
+lemma hs_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_send blocking \<lbrace>\<lambda>r. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (rule validE_valid)
   apply (simp add: handle_send_def whenE_def)
   apply (wp | simp add: ct_in_state_def tcb_at_invs)+
   done
+
+end
+
 
 lemma tcb_cnode_index_3_reply_or_null:
   "\<lbrakk> tcb_at t s; tcb_cap_valid cap (t, tcb_cnode_index 3) s \<rbrakk> \<Longrightarrow> is_reply_cap cap \<or> cap = cap.NullCap"
@@ -1055,35 +1102,6 @@ lemma hy_inv: "(\<And>s f. P (trans_state f s) = P s) \<Longrightarrow> \<lbrace
   apply (wp | simp)+
   done
 
-context Arch begin global_naming ARM (*FIXME: arch_split*)
-lemma getDFSR_invs[wp]:
-  "valid invs (do_machine_op getDFSR) (\<lambda>_. invs)"
-  by (simp add: getDFSR_def do_machine_op_def split_def select_f_returns | wp)+
-
-lemma getFAR_invs[wp]:
-  "valid invs (do_machine_op getFAR) (\<lambda>_. invs)"
-  by (simp add: getFAR_def do_machine_op_def split_def select_f_returns | wp)+
-
-lemma getIFSR_invs[wp]:
-  "valid invs (do_machine_op getIFSR) (\<lambda>_. invs)"
-  by (simp add: getIFSR_def do_machine_op_def split_def select_f_returns | wp)+
-end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma hv_invs[wp]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
-  apply (cases flt, simp_all)
-  apply (wp|simp)+
-  done
-
-lemma hv_inv_ex:
-  "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (cases vp, simp_all)
-  apply (wp dmo_inv getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv 
-            det_getRestartPC as_user_inv
-         | wpcw | simp)+
-  done
-end
-
 declare hoare_seq_ext[wp] hoare_vcg_precond_imp [wp_comb]
 
 lemma ct_active_simple [elim!]:
@@ -1117,12 +1135,10 @@ lemma hr_invs[wp]:
 
 crunch cur_thread[wp]: set_extra_badge "\<lambda>s. P (cur_thread s)"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch cur_thread[wp]: handle_reply "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps transfer_caps_loop_pres
         simp: unless_def crunch_simps
       ignore: transfer_caps_loop)
-end
 
 lemmas cap_delete_one_st_tcb_at_simple[wp] =
     cap_delete_one_st_tcb_at[where P=simple, simplified]
@@ -1221,9 +1237,13 @@ lemma do_reply_transfer_st_tcb_at_active:
   apply (fastforce simp add: st_tcb_def2)
   done
 
+context Syscall_AI begin
+
 lemma hc_invs[wp]:
-  "\<lbrace>invs and ct_active\<rbrace> handle_call \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs and ct_active\<rbrace> handle_call \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   by (simp add: handle_call_def) wp
+
+end
 
 lemma hr_ct_active[wp]:
   "\<lbrace>invs and ct_active\<rbrace> handle_reply \<lbrace>\<lambda>rv. ct_active\<rbrace>"
@@ -1243,30 +1263,14 @@ lemma select_insert:
   "select (insert x X) = (return x \<sqinter> select X)"
   by (simp add: alternative_def select_def return_def)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma handle_vm_fault_valid_fault[wp]:
-  "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
-  apply (cases ft, simp_all)
-   apply (wp no_irq_getDFSR no_irq_getIFSR| simp add: valid_fault_def)+
-  done
 
-lemma hvmf_active:
-  "\<lbrace>st_tcb_at active t\<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
-  apply (cases w, simp_all)
-   apply (wp | simp)+
-  done
-
-lemma hvmf_ex_cap[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> handle_vm_fault t b \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  apply (cases b, simp_all)
-   apply (wp | simp)+
-  done
-end
+context Syscall_AI begin
 
 lemma he_invs[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace> 
-  handle_event e 
-  \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<And>e.
+    \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace> 
+      handle_event e 
+    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (case_tac e, simp_all)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all)
@@ -1275,5 +1279,7 @@ lemma he_invs[wp]:
                  fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
                          elim!: st_tcb_ex_cap)+
   done
+
+end
 
 end
