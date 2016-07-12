@@ -11,7 +11,7 @@
 theory ProveGraphRefine
 
 imports GraphRefine
-  GlobalsSwap FieldAccessors
+  GlobalsSwap FieldAccessors AsmSemanticsRespects
 
 begin
 
@@ -52,6 +52,9 @@ lemma disjoint_heap_update_globals_swap_rearranged:
   apply (simp add: global_acc_valid_def hrs_mem_update)
   done
 
+lemma hrs_mem_update_triv:
+  "hrs_mem_update (\<lambda>_. hrs_mem x) x = x"
+  by (cases x, simp_all add: hrs_mem_update_def hrs_mem_def)
 
 lemma h_t_valid_orig_and_ptr_safe:
   "h_t_valid d g p \<Longrightarrow> h_t_valid d g p \<and> ptr_safe p d"
@@ -151,6 +154,47 @@ lemmas drop_sign_isomorphism
     = drop_sign_isomorphism_ariths drop_sign_projections
         drop_sign_isomorphism_bitwise
         ucast_id
+
+lemma drop_sign_h_val[simp]:
+  "drop_sign (h_val hp p :: ('a :: len8) signed word) = h_val hp (ptr_coerce p)"
+  using len8_dv8[where 'a='a]
+  apply (simp add: h_val_def drop_sign_def)
+  apply (simp add: from_bytes_ucast_isom word_size size_of_def typ_info_word)
+  done
+
+lemma drop_sign_heap_update[simp]:
+  "heap_update p v = heap_update (ptr_coerce p) (drop_sign v)"
+  using len8_dv8[where 'a='a]
+  apply (simp add: heap_update_def drop_sign_def fun_eq_iff)
+  apply (simp add: to_bytes_ucast_isom word_size size_of_def typ_info_word)
+  done
+
+lemma typ_uinfo_t_signed_word:
+  "typ_uinfo_t TYPE (('a :: len8) signed word) = typ_uinfo_t TYPE ('a word)"
+  using len8_dv8[where 'a='a]
+  apply (simp add: typ_uinfo_t_def typ_info_word)
+  apply (clarsimp simp: field_norm_def fun_eq_iff)
+  apply (simp add: word_rsplit_rcat_size word_size)
+  done
+
+lemma align_td_signed_word:
+  "align_td (typ_info_t TYPE (('a :: len8) signed word))
+    = align_td (typ_info_t TYPE (('a :: len8) word))"
+  using arg_cong[where f=align_td, OF typ_uinfo_t_signed_word[where 'a='a]]
+  by (simp add: typ_uinfo_t_def)
+
+lemma size_td_signed_word:
+  "size_td (typ_info_t TYPE (('a :: len8) signed word))
+    = size_td (typ_info_t TYPE (('a :: len8) word))"
+  by (simp add: typ_info_word)
+
+lemma pointer_inverse_safe_sign:
+  "ptr_inverse_safe (ptr :: (('a :: len8) signed word ptr))
+    = ptr_inverse_safe (ptr_coerce ptr :: 'a word ptr)"
+  by (simp add: fun_eq_iff ptr_inverse_safe_def s_footprint_def
+                c_guard_def ptr_aligned_def c_null_guard_def
+                typ_uinfo_t_signed_word align_td_signed_word align_of_def
+                size_of_def size_td_signed_word)
 
 lemma ptr_equalities_to_ptr_val:
   "(Ptr addr = p) = (addr = ptr_val p)"
@@ -337,10 +381,14 @@ fun get_c_type_size ctxt (Type (@{type_name array}, [elT, nT])) =
   | get_c_type_size _ @{typ word32} = 4
   | get_c_type_size _ @{typ word64} = 8
   | get_c_type_size _ (Type (@{type_name ptr}, [_])) = 4
+  | get_c_type_size ctxt (Type (@{type_name word}, [Type (@{type_name signed}, [t])]))
+    = get_c_type_size ctxt (Type (@{type_name word}, [t]))
   | get_c_type_size ctxt (T as Type (s, _)) = let
     val thm = Proof_Context.get_thm ctxt (s ^ "_size")
       handle ERROR _ => raise TYPE ("get_c_type_size: couldn't get size", [T], [])
-  in Thm.rhs_of thm |> Thm.term_of |> HOLogic.dest_number |> snd end
+  in (Thm.rhs_of thm |> Thm.term_of |> HOLogic.dest_number |> snd)
+    handle TERM (s, ts) => raise TYPE ("get_c_type_size: " ^ s, [T], ts)
+  end
   | get_c_type_size _ T = raise TYPE ("get_c_type_size:", [T], [])
 
 fun enum_simps csenv ctxt = let
@@ -405,7 +453,9 @@ fun get_globals_rewrites ctxt = let
     val gsr = Proof_Context.get_thms ctxt "globals_swap_rewrites"
     val cgr = Proof_Context.get_thms ctxt "const_globals_rewrites_with_swap"
     val pinv = Proof_Context.get_thms ctxt "pointer_inverse_safe_global_rules"
-  in (gsr, cgr, pinv) end
+    val pinv2 = map (simplify (put_simpset HOL_basic_ss ctxt
+        addsimps @{thms pointer_inverse_safe_sign ptr_coerce.simps})) pinv
+  in (gsr, cgr, pinv @ pinv2) end
         handle ERROR _ => raise THM
             ("run add_globals_swap_rewrites on ctxt", 1, [])
 
@@ -433,6 +483,7 @@ fun normalise_mem_accs ctxt = DETERM o let
     val init_simps = @{thms hrs_mem_update
                        heap_access_Array_element'
                        o_def fupdate_def
+                       pointer_inverse_safe_sign
             } @ get_field_h_val_rewrites ctxt
         @ #1 gr @ #2 gr
     val h_val = get_disjoint_h_val_globals_swap ctxt
@@ -649,9 +700,11 @@ fun graph_refine_proof_tacs csenv ctxt = let
                     var_htd_def var_acc_var_upd
                     var_ms_def init_vars_def
                     return_vars_def upd_vars_def save_vals_def
+                    asm_args_to_list_def asm_rets_to_list_def
                     mem_upd_def mem_acc_def hrs_mem_update
                     hrs_htd_update
                     fupdate_def
+                    hrs_mem_update_triv
 
                     (* this includes wrappers for word arithmetic
                        and other simpl actions*)
@@ -672,10 +725,13 @@ fun graph_refine_proof_tacs csenv ctxt = let
             ) i)),
         (["step 3: split into goals with safe steps",
             "also derive ptr_safe assumptions from h_t_valid",
-            "and adjust ptr_add_assertion facts"],
+            "and adjust ptr_add_assertion facts",
+            "also work on some asm_semantics problems"],
         (TRY o safe_goal_tac ctxt)
             THEN_ALL_NEW (TRY o DETERM
                 o REPEAT_ALL_NEW (dresolve_tac ctxt [@{thm h_t_valid_orig_and_ptr_safe}]))
+            THEN_ALL_NEW (TRY o DETERM o (eresolve_tac ctxt [@{thm asm_semantics_protects_globs_revD[rule_format]}]
+                THEN_ALL_NEW asm_full_simp_tac ctxt))
             THEN_ALL_NEW (TRY o safe_goal_tac ctxt)),
         (["step 4: split up memory write problems",
           "and expand ptr_add_assertion if needed."],
@@ -725,6 +781,14 @@ fun graph_refine_proof_full_goal_tac csenv ctxt i t
     = (foldr1 (op THEN_ALL_NEW)
         (map snd (graph_refine_proof_tacs csenv ctxt)) i t)
         |> try Seq.hd |> (fn NONE => Seq.empty | SOME t => Seq.single t)
+
+fun debug_tac csenv ctxt = let
+    val tacs = graph_refine_proof_tacs csenv ctxt
+    fun wrap_tacs [] _ t = all_tac t
+      | wrap_tacs ((nms, tac) :: tacs) i t = case try (tac i #> Seq.hd) t
+        of NONE => (warning ("step failed: " ^ commas nms); all_tac t)
+         | SOME t' => ((fn _ => fn _ => all_tac t') THEN_ALL_NEW wrap_tacs tacs) i t
+  in wrap_tacs tacs end
 
 fun simpl_to_graph_thm funs csenv ctxt nm = let
     val hints = SimplToGraphProof.mk_hints funs ctxt nm

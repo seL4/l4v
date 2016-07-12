@@ -86,6 +86,9 @@ sig
   val field_name_ty : typ
   val qualified_field_name_ty : typ
 
+  val mk_asm_spec : typ list -> typ -> term -> bool -> string
+    -> term -> term list -> term
+
   datatype 'varinfo termbuilder =
            TB of {var_updator : bool -> 'varinfo -> term -> term -> term,
                   var_accessor : 'varinfo -> term -> term,

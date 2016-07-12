@@ -1,41 +1,24 @@
 (*
- * Copyright 2014, NICTA
+ * Copyright 2016, Data61
  *
  * This software may be distributed and modified according to the terms of
- * the GNU General Public License version 2. Note that NO WARRANTY is provided.
- * See "LICENSE_GPLv2.txt" for details.
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
  *
- * @TAG(NICTA_GPL)
+ * @TAG(NICTA_BSD)
  *)
 
-theory SEL4GlobalsSwap
+theory global_asm_stmt_gref
 
-imports "../../tools/asmrefine/GlobalsSwap"
-  "../../tools/asmrefine/AsmSemanticsRespects"
-  "../../tools/asmrefine/FieldAccessors"
-  "../../spec/cspec/Substitute"
+imports global_asm_stmt
+  "../SimplExport"
+  "../ProveGraphRefine"
 
 begin
 
-lemma globals_update_id:
-  "globals_update id = id"
-  by (rule ext, simp)
-
-lemma globals_update_eq_iff:
-  "(globals_update f s = globals_update g s)
-        = (f (globals s) = g (globals s))"
-  apply (rule iffI)
-   apply (drule_tac f=globals in arg_cong)
-   apply simp
-  apply (rule state.fold_congs, simp+)
-  done
-
-instance ptr :: (c_type)oneMB_packed ..
-instance tcb_queue_C :: oneMB_packed ..
-instance region_C :: oneMB_packed ..
-
-locale graph_refine_locale = kernel_all_substitute
-    + assumes globals_list_distinct:
+locale g_asm_graph_refine = g_asm_target
+    + fixes domain
+      assumes globals_list_distinct:
         "globals_list_distinct domain symbol_table globals_list"
       assumes globals_list_ok:
         "\<forall>g \<in> set globals_list. global_data_ok symbol_table g"
@@ -46,9 +29,14 @@ locale graph_refine_locale = kernel_all_substitute
 
 begin
 
-lemmas globals_list_def = kernel_all_global_addresses.global_data_list_def
-lemmas global_data_defs = kernel_all_global_addresses.global_data_defs
+lemmas globals_list_def = global_asm_stmt_global_addresses.global_data_list_def
 declare asm_semantics_respects[unfolded Let_def, simp]
+
+ML {*
+emit_C_everything_relative @{context}
+  (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
+  "global_asm_stmt_Cfuns.txt"
+*}
 
 lemma globals_list_valid:
   "globals_list_valid symbol_table t_hrs_' t_hrs_'_update globals_list"
@@ -57,7 +45,7 @@ lemma globals_list_valid:
                        global_data_defs
                   del: distinct_prop.simps split del: split_if)
    apply (simp add: global_data_swappable_def global_data_def)
-  apply (simp_all add: global_data_valid)
+  apply (simp_all add: global_data_valid)?
   apply (simp_all add: global_data_valid_def addressed_global_data_def
                    const_global_data_def global_data_ok_def global_data_def
                    to_bytes_p_from_bytes)
@@ -95,8 +83,7 @@ lemma ghost'state_update_globals_swap:
   apply (rule globals_swap_ex_swap)
    apply (simp only: globals_list_def global_data_defs list.simps ball_simps
                      is_global_data_simps simp_thms)
-   apply (simp add: global_data_def)
-  apply simp
+   apply (simp_all add: global_data_def)
   done
 
 lemma phantom_machine_state_'_update_globals_swap[simp]:
@@ -105,8 +92,7 @@ lemma phantom_machine_state_'_update_globals_swap[simp]:
   apply (rule globals_swap_ex_swap)
    apply (simp only: globals_list_def global_data_defs list.simps ball_simps
                      is_global_data_simps simp_thms)
-   apply (simp add: global_data_def)
-  apply simp
+   apply (simp_all add: global_data_def)
   done
 
 (* FIXME: this has to be done and should be standardised *)
@@ -130,5 +116,83 @@ lemma t_hrs_'_update_hmu_triv[simp]:
 
 end
 
+consts
+  encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
+
+ML {*
+val funs = ParseGraph.funs @{theory} "global_asm_stmt_Cfuns.txt"
+*}
+
+local_setup {* add_field_h_val_rewrites #> add_field_to_bytes_rewrites *}
+
+context g_asm_graph_refine begin
+
+ML {* SimplToGraphProof.globals_swap
+ := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
+*}
+
+local_setup {* add_globals_swap_rewrites @{thms global_asm_stmt_global_addresses.global_data_mems} *}
+
+definition
+  simpl_invariant :: "globals myvars set"
+where
+  "simpl_invariant = {s. const_globals_in_memory symbol_table globals_list
+            (hrs_mem (t_hrs_' (globals s)))
+        \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
+
+abbreviation(input) "ghost_assns_from_globals
+    \<equiv> (K (K 0 :: word64 \<Rightarrow> word32) o ghost'state_' :: globals \<Rightarrow> _)"
+
+
+
+text {* Test everything. *}
+ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
+    funs
+    (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
+    @{context} *}
+
+
+
+
+
+
+text {* The remainder is debug code for when things fail. *}
+
+ML {* val nm = "global_asm_stmt.g" *}
+
+local_setup {* define_graph_fun_short funs nm *}
+
+ML {*
+val hints = SimplToGraphProof.mk_hints funs @{context} nm
+*}
+
+ML {*
+val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
+    @{context}
+*}
+
+ML {*
+ProveSimplToGraphGoals.simpl_to_graph_thm funs
+  (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
+  @{context} nm;
+*}
+ML {*
+val tacs = ProveSimplToGraphGoals.graph_refine_proof_tacs
+  (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
+    #> map snd
+val full_tac = ProveSimplToGraphGoals.graph_refine_proof_full_tac
+  (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
+val full_goal_tac = ProveSimplToGraphGoals.graph_refine_proof_full_goal_tac
+  (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
+val debug_tac = ProveSimplToGraphGoals.debug_tac
+  (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
+*}
+
+schematic_goal "PROP ?P"
+  apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
+  apply (tactic {* ALLGOALS (TRY o (debug_tac @{context} THEN_ALL_NEW K no_tac)) *})
+  oops
+
 end
 
+end

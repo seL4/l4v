@@ -735,6 +735,7 @@ fun parse_fun (["Function" :: ss]) = let
 
 fun fun_groups gp ((fs as ("Function" :: _)) :: sss) =
     (if null gp then [] else [rev gp]) @ fun_groups [fs] sss
+  | fun_groups gp ([] :: sss) = fun_groups gp sss
   | fun_groups gp (ss :: sss) = fun_groups (ss :: gp) sss
   | fun_groups gp [] = [rev gp]
 

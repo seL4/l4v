@@ -39,6 +39,9 @@ sig
 
   val gen_modify_goalstring : csenv -> string -> string list -> string
 
+  val modifies_vcg_tactic : local_theory -> int -> tactic
+  val modifies_tactic : local_theory -> tactic
+
   val prove_all_modifies_goals_local : csenv -> (string -> bool) -> typ list ->
                                        local_theory -> local_theory
 
@@ -187,6 +190,32 @@ in
   Goal.prove_future ctxt [] [] (TermsTypes.mk_prop goal) tacticfn
 end
 
+fun modifies_vcg_tactic ctxt i t = let
+  val timer = Timer.startCPUTimer ()
+  val tac = HoarePackage.vcg_tac "_modifies" "false" [] ctxt i
+  val res = Seq.list_of (DETERM tac t)
+  val {usr, sys} = Timer.checkCPUTimer timer
+in
+  tracing ("modifies vcg-time:" ^ Time.fmt 2 (Time.+ (usr, sys)));
+  Seq.of_list res
+end
+
+fun modifies_tactic ctxt = let
+  val gsurj = Proof_Context.get_thm ctxt "globals.surjective"
+  val geqs = map (fn t => [gsurj, gsurj] MRS t)
+    @{thms asm_store_eq_helper}
+  val gsp = Proof_Context.get_thms ctxt "globals.splits"
+in
+  modifies_vcg_tactic ctxt 1 THEN
+  ALLGOALS (clarsimp_tac ctxt) THEN
+  ALLGOALS (TRY o resolve_tac ctxt @{thms asm_spec_enabled}) THEN
+  ALLGOALS (clarsimp_tac (ctxt addSEs @{thms asm_specE state_eqE}
+      addsimps (gsp @ @{thms state.splits}))) THEN
+  ALLGOALS (clarsimp_tac (ctxt addsimps geqs)) THEN
+  ALLGOALS (TRY o REPEAT_ALL_NEW (resolve_tac ctxt [exI])) THEN
+  ALLGOALS (asm_full_simp_tac ctxt)
+end
+
 fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
   open ProgramAnalysis
   val _ = tracing "Proving automatically calculated modifies proofs"
@@ -207,8 +236,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
           val {usr, sys} = Timer.checkCPUTimer timer
         in
           tracing ("modifies:" ^ fname ^ ":" ^
-                   Int.toString (Time.toSeconds usr + Time.toSeconds sys) ^
-                   "s:" ^ msg)
+                   Time.fmt 2 (Time.+ (usr, sys)) ^ "s:" ^ msg)
         end;
     in
       case get_modifies csenv fname of
@@ -228,14 +256,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
           if Binaryset.isEmpty i then let
               val thy = Proof_Context.theory_of lthy
               val goal = gen_modify_goal thy tyargs gamma_t fname mvlist
-              fun tac ctxt = let
-                val geq = Proof_Context.get_thm ctxt "globals.equality"
-              in
-                HoarePackage.vcg_tac "_modifies" "false" [] ctxt 1 THEN
-                ALLGOALS (REPEAT_ALL_NEW (resolve_tac ctxt [exI, geq])) THEN
-                ALLGOALS (asm_full_simp_tac ctxt)
-              end
-              val th = munge_tactic lthy goal tac
+              val th = munge_tactic lthy goal modifies_tactic
               val (_, lthy) =
                       Local_Theory.note
                           ((Binding.name (fname ^ "_modifies"), []), [th])

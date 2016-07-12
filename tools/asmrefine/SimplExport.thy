@@ -837,6 +837,12 @@ ML {*
 
 val all_c_params = ["Mem Mem", "HTD HTD", "PMS PMS", "GhostAssertions WordArray 64 32"]
 val all_c_in_params = map (prefix "Var ") all_c_params
+val all_asm_params = ["Mem Mem", "PMS PMS"]
+val all_asm_in_params = map (prefix "Var ") all_asm_params
+
+fun asm_spec_name_to_fn_name _ specname = let
+    val name = space_implode "_" (space_explode " " specname)
+  in "asm_instruction'" ^ name end
 
 fun mk_safe f ctxt params s = (
     Proof_Context.get_thm ctxt (s ^ "_body_def");
@@ -994,6 +1000,21 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
     emit outfile (string_of_int n ^ " Basic " ^ c ^ " " ^ space_pad_list upds);
     add_global_valid_assertion outfile ctxt params f n
   end
+  | emit_body ctxt outfile params (Const (@{const_name Spec}, _)
+        $ (Const (@{const_name asm_spec}, _) $ _ $ _ $ vol $ spec $ lhs $ vs))
+    n c _ = let
+    val spec = HOLogic.dest_string spec
+    val lhss = convert_param_upds ctxt params
+      (betapplys (lhs, [@{term "0 :: word32"}, s_st ctxt]))
+    val args = HOLogic.dest_list (betapply (vs, s_st ctxt))
+      |> map (convert_fetch ctxt params)
+    val args = args @ all_asm_in_params
+    val outs = map fst lhss @ all_asm_params
+    val _ = HOLogic.mk_prod
+  in emit outfile (string_of_int n ^ " Call " ^ c ^ " " ^ asm_spec_name_to_fn_name vol spec
+    ^ " " ^ space_pad_list args ^ " " ^ space_pad_list outs);
+     add_global_valid_assertion outfile ctxt params (HOLogic.mk_prod (lhs, vs)) n
+  end
   | emit_body ctxt outfile params (Const (@{const_name call}, _) $ f $ Const (p, _)
         $ _ $ r2) n c e = let
     val proc_info = Hoare.get_data ctxt |> #proc_info
@@ -1099,12 +1120,37 @@ fun emit_struct ctxt outfile csenv (nm, flds) = let
   in emit outfile (space_pad ["Struct", full_nm, string_of_int sz,
     string_of_int algn]); app emit_fld (flds ~~ offs) end
 
+fun scan_func_body_asm_instructions ctxt name = let
+    val body = Proof_Context.get_thm ctxt (name ^ "_body_def")
+    fun has_lhs lhs = betapplys (lhs, [Bound 0, Bound 1]) <> Bound 1
+    fun nm_args vs = betapply (vs, s_st ctxt) |> HOLogic.dest_list |> length
+    fun gather (Const (@{const_name asm_spec}, _) $ _ $ _ $ vol $ nm $ lhs $ vs) xs
+        = (asm_spec_name_to_fn_name vol (HOLogic.dest_string nm),
+            has_lhs lhs, nm_args vs) :: xs
+      | gather (f $ x) xs = gather f (gather x xs)
+      | gather _ xs = xs
+  in gather (Thm.concl_of body) [] end
+        handle ERROR _ => []
+
+fun emit_asm_protoes ctxt outfile fs = let
+    val asm_info = maps (scan_func_body_asm_instructions ctxt) fs
+      |> sort_distinct (fn ((s, _, _), (t, _, _)) => fast_string_ord (s, t))
+    fun mk_args n = (map (fn i => "arg" ^ string_of_int i ^ " Word 32") (1 upto n))
+    fun mk_rets has_lhs = (if has_lhs then ["ret1 Word 32"] else [])
+    fun emit_it (nm, has_lhs, nm_args) = emit outfile
+      ("Function " ^ nm
+              ^ " " ^ space_pad_list (mk_args nm_args @ all_asm_params)
+              ^ " " ^ space_pad_list (mk_rets has_lhs @ all_asm_params)
+    )
+  in app emit_it asm_info end
+
 fun emit_C_everything ctxt csenv outfile = let
     val fs = ProgramAnalysis.get_functions csenv
     val structs = ProgramAnalysis.get_senv csenv
     val params = get_all_export_params ctxt csenv
   in app (emit_struct ctxt outfile csenv) structs;
-     app (emit_func_body ctxt outfile params) fs end
+     app (emit_func_body ctxt outfile params) fs;
+     emit_asm_protoes ctxt outfile fs end
 *}
 
 ML {*

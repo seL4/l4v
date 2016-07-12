@@ -63,6 +63,13 @@ sig
   val store_mungedb : string * mungedb -> theory -> theory
   val get_mungedb : theory -> string -> mungedb option
 
+  val get_globals_data : typ -> typ -> theory -> {acc : term, upd : term,
+    fields : (string * typ) list}
+  val get_standard_globals : typ -> typ -> theory
+    -> {hp: ((term * term) * (term * term)),
+        phantom: ((term * term) * (term * term)),
+        ghost: ((term * term) * (term * term))}
+
 (*
    The isa_decl type corresponds to a program variable in a form that will be
    easy for Isabelle to process.
@@ -715,6 +722,33 @@ structure mungeDBs = Theory_Data(
 
 fun store_mungedb (s, ty) = mungeDBs.map (Symtab.update (s,ty))
 val get_mungedb = Symtab.lookup o mungeDBs.get
+
+fun get_globals_data statety globty thy = let
+    val acc = Sign.intern_const thy "globals"
+    val upd = Sign.intern_const thy (suffix Record.updateN "globals")
+    val acc = Const (acc, statety --> globty)
+    val upd = Const (upd, (globty --> globty) --> statety --> statety)
+    val (flds, _) = Record.get_recT_fields thy globty
+  in {acc = acc, upd = upd, fields = flds} end
+
+fun get_standard_globals statety globty thy = let
+    val data = get_globals_data statety globty thy
+    fun fld nm = let
+        val flds = filter (fn (fnm, ty) => Long_Name.base_name fnm = nm)
+          (#fields data)
+        val (fldnm, ty) = case flds of [v] => v
+          | [] => error ("could not find " ^ nm ^ " in global fields.")
+          | _ => error ("multiple match for " ^ nm ^ " in global fields.")
+        val acc = Const (fldnm, globty --> ty)
+        val upd = Const (fldnm ^ Record.updateN,
+            (ty --> ty) --> globty --> globty)
+        val acc' = Abs ("s", statety, acc $ (#acc data $ Bound 0))
+        val upd' = Abs ("u", ty --> ty, #upd data $ (upd $ Bound 0))
+      in ((acc, upd), (acc', upd')) end
+  in {hp = fld global_heap_var,
+    phantom = fld (global_var phantom_state_name),
+    ghost = fld (global_var ghost_state_name)}
+  end
 
 end (* struct *)
 

@@ -48,8 +48,7 @@ in
   | NSGlobal => let
       val glob_update =
           Sign.intern_const sg (suffix Record.updateN "globals")
-      val globupd_t = Const(glob_update, (globty --> globty) -->
-                                         (statety --> statety))
+      val globupd_t = #upd (get_globals_data statety globty sg)
       val fldupd = Const(fullname, (ty --> ty) --> (globty --> globty))
     in
       globupd_t $ (fldupd $ newvalue') $ state
@@ -65,8 +64,7 @@ in
     Local _ => Const(Sign.intern_const sg (local_rcd_name ^ "." ^ name),
                      type_of state --> ty) $ state
   | NSGlobal => let
-      val glob_acc = Sign.intern_const sg "globals"
-      val glob_t = Const(glob_acc, type_of state --> globty)
+      val glob_t = #acc (get_globals_data (type_of state) globty sg)
     in
       Const(Sign.intern_const sg (global_rcd_name ^ "." ^ name),
             globty --> ty) $
@@ -130,8 +128,19 @@ fun bilist2stmts [] = []
   | bilist2stmts (BI_Stmt st :: rest) = st :: bilist2stmts rest
   | bilist2stmts (BI_Decl _ :: rest) = bilist2stmts rest
 
-
-
+fun calc_asm_spec styargs statety globty thy vol spec lval rvals = let
+  open CalculateState
+  val gs = get_standard_globals statety globty thy
+  val ((ghost_acc, _), _) = #ghost gs
+  val ((ms_acc, _), _) = #phantom gs
+  val ((hp_acc, _), _) = #hp gs
+  val gdata_acc = Abs ("s", domain_type (fastype_of ghost_acc),
+    HOLogic.mk_prod (ghost_acc $ Bound 0,
+        @{term "hrs_htd"} $ (hp_acc $ Bound 0)))
+  val msT = range_type (fastype_of ms_acc)
+in
+  mk_asm_spec styargs msT gdata_acc vol spec lval rvals
+end
 
 fun stmt_term (ctxt : Proof.context)
               (cse : ProgramAnalysis.csenv)
@@ -613,6 +622,29 @@ in
     in
       noparse (Const(@{const_name "cchaos"}, type_of f --> mk_com_ty styargs) $ f)
     end
+  | AsmStmt st =>
+    (let
+      val (nm, vol, ret, args) = ProgramAnalysis.split_asm_stmt (AsmStmt st)
+      val sty = hd styargs
+      val ret = case ret of NONE => (fn x => (fn s => s))
+        | SOME r => valOf (lval_of (expr_term r))
+            handle Option => error ("Value (" ^ expr_string r
+                ^ ") without l-value used as asm stmt lval specifier.")
+      val x = Free ("x", addr_ty)
+      val ret = mk_abs (x, mk_abs (svar, ret x svar))
+      val reg_ty = Unsigned Int (* FIXME: not true in 64-bit world. *)
+      fun conv_arg arg = mk_abs (svar, rval_of (typecast
+            (sg, reg_ty, expr_term arg)) svar)
+        handle Option => error ("Value (" ^ expr_string arg
+                ^ ") without r-value used as asm stmt rval specifier.")
+      val args = map conv_arg args
+    in
+      noparse (calc_asm_spec styargs statetype globty sg
+            (#volatilep st) nm ret args)
+    end handle Fail str => let
+      val err = unspecified_syntax_error2 str
+      val guard = mk_collect_t statetype $ mk_abs (svar, err)
+    in noparse (mk_guard guard unspecified_syntax_error1 emptystmt) end)
   | _ => error ("Can not yet handle "^stmt_type stmt^" statement forms")
 end
 

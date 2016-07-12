@@ -1279,6 +1279,88 @@ lemma simpl_to_graph_impossible:
   apply (drule(1) eq_implD, simp+)
   done
 
+definition
+  "asm_args_to_list enc xs m_ms
+    = map VarWord32 xs @ [VarMem (fst m_ms), VarMS (enc (snd m_ms))]"
+
+definition
+  "asm_rets_to_list ret enc v mem_vs
+    = (if ret then [VarWord32 v] else []) @ [VarMem (fst mem_vs), VarMS (enc (snd mem_vs))]"
+
+definition
+  asm_fun_refines
+where
+  "asm_fun_refines specname ret enc len GGamma fname
+    = (\<exists>gf. GGamma fname = Some gf
+        \<and> distinct (function_inputs gf)
+        \<and> length (function_inputs gf) = len
+        \<and> (\<forall>tr \<in> exec_trace GGamma fname. \<forall>inp_vs inp_mem_ms.
+                exec_trace_inputs gf tr = asm_args_to_list enc inp_vs inp_mem_ms
+                \<longrightarrow> (\<exists>r gst.
+                          r \<in> asm_semantics specname inp_vs inp_mem_ms
+                        \<and> trace_end tr = Some [(Ret, gst, fname)]
+                        \<and> acc_vars (function_outputs gf) gst = split (asm_rets_to_list ret enc) r)))"
+
+lemma asm_args_to_list_inj:
+  "(asm_args_to_list enc vs mem_ms = asm_args_to_list enc vs' mem_ms')
+    = (vs = vs' \<and> fst mem_ms = fst mem_ms' \<and> enc (snd mem_ms) = enc (snd mem_ms'))"
+  apply (simp add: asm_args_to_list_def)
+  apply (subst inj_map_eq_map)
+   apply (rule inj_onI, simp)
+  apply simp
+  done
+
+lemma simpl_to_graph_call_asm_fun:
+  assumes graph: "nn = NextNode m" "GGamma p = Some gfc"
+      "function_graph gfc m = Some (node.Call nn' p' args rets)"
+  and rel: "asm_fun_refines specname ret enc len GGamma p'"
+  and init: "eq_impl nn eqs (\<lambda>gst sst. sst \<in> I
+            \<and> map (\<lambda>i. i gst) args = asm_args_to_list enc (asm_args sst)
+                (asm_fetch (globals sst))
+            \<and> length args = len) (I \<inter> P)"
+  and ret: "eq_impl nn eqs (\<lambda>gst sst. (\<forall>m' v' (ms' :: 'a).
+            gdata (asm_store gdata (m', ms') (globals sst)) = gdata (globals sst)
+            \<and> (v', (m', ms')) \<in> asm_semantics specname (asm_args sst) (asm_fetch (globals sst))
+            \<longrightarrow> eqs2 (save_vals rets (asm_rets_to_list ret enc v' (m', ms')) gst)
+                 (asm_ret v' (globals_update (asm_store gdata (m', ms')) sst))
+                \<and> asm_ret v' (globals_update (asm_store gdata (m', ms')) sst) \<in> I)) I"
+  and cont: "simpl_to_graph SGamma GGamma p nn' (add_cont com.Skip con) n tS UNIV I eqs2 out_eqs"
+  shows "simpl_to_graph SGamma GGamma p nn
+        (add_cont (Spec (asm_spec (ti :: 'a itself) gdata vol specname asm_ret asm_args)) con)
+        n tS P I eqs out_eqs"
+  apply (rule simpl_to_graph_name_simpl_state)
+  apply (clarsimp simp: graph intro!: simpl_to_graphI)
+  apply (frule init[THEN eq_implD], simp+)
+  apply (cut_tac rel, clarsimp simp: asm_fun_refines_def)
+  apply (frule exec_trace_drop_n, (rule graph | assumption)+)
+  apply (drule(1) bspec)
+  apply (clarsimp simp: exec_trace_inputs_def graph)
+  apply (subst(asm) trace_drop_n_init, (assumption | rule graph)+)
+  apply (clarsimp simp: init_vars_def)
+  apply (subst(asm) fetch_returned, simp_all)
+   apply (drule arg_cong[where f=length])+
+   apply simp
+  apply (simp add: asm_args_to_list_inj)
+  apply (drule spec, drule mp, rule refl)
+  apply clarsimp
+  apply (frule trace_drop_n_end, (assumption | rule graph)+)
+  apply clarsimp
+  apply (frule(1) c_trace_may_extend_steps)
+    apply (rule add_cont_steps)
+    apply (rule exec_impl_steps_Normal)
+    apply (rule exec.Spec)
+    apply (simp add: asm_spec_def)
+    apply (erule rev_bexI)
+    apply simp
+   apply simp
+  apply clarsimp
+  apply (frule ret[THEN eq_implD], simp)
+  apply (cut_tac tr=tr and tr'=trace' and n''="n'' + ja"
+      and sst="asm_ret a b" for a b in simpl_to_graphD[OF cont])
+   apply (auto simp: return_vars_def asm_store_eq)[1]
+  apply (metis restrict_map_eq_mono[OF le_add1])
+  done
+
 lemma take_1_drop:
   "n < length xs \<Longrightarrow> take (Suc 0) (drop n xs) = [xs ! n]"
   apply (cases "drop n xs")
@@ -1592,6 +1674,8 @@ lemma store_word32s_equality_final:
   apply (simp_all add: apply_store_word32_def del: word_neq_0_conv)
   done
 
+
+
 ML {*
 
 val dest_word = HOLogic.dest_number
@@ -1807,12 +1891,40 @@ fun mk_graph_refines (funs : ParseGraph.funs) ctxt s = let
     $ HOLogic.mk_string s)
   end
 
+fun asm_spec_name_to_fn_name _ specname = let
+    val name = space_implode "_" (space_explode " " specname)
+  in "asm_instruction'" ^ name end
+
+fun mk_asm_refines (funs : ParseGraph.funs) ctxt specname = let
+    val s = asm_spec_name_to_fn_name true specname
+    val (xs, ys, _) = Symtab.lookup funs s |> the
+    val enc = Syntax.read_term ctxt "encode_machine_state"
+    val _ = case enc of Const _ => ()
+      | _ => raise TERM ("mk_simpl_acc: requires `encode_machine_state :: machine_state => unit \<times> nat'", [])
+  in HOLogic.mk_Trueprop (Const (@{const_name asm_fun_refines},
+        [@{typ string}, @{typ bool}, fastype_of enc, @{typ nat},
+            fastype_of standard_GG, @{typ string}] ---> @{typ bool})
+    $ HOLogic.mk_string specname
+    $ (if (length ys > 2) then @{term True} else @{term False})
+    $ enc
+    $ HOLogic.mk_number @{typ nat} (length xs)
+    $ standard_GG $ HOLogic.mk_string s)
+  end
+
 fun apply_graph_refines_ex_tac funs ctxt = SUBGOAL (fn (t, i) => case
     (Logic.strip_assums_concl (Envir.beta_eta_contract t)) of
     @{term Trueprop} $ (Const (@{const_name graph_fun_refines}, _)
         $ _ $ _ $ _ $ _ $ _ $ _ $ s)
         => (resolve0_tac [Thm.assume (Thm.cterm_of ctxt
             (mk_graph_refines funs ctxt (HOLogic.dest_string s)))] i)
+        | _ => raise TERM ("apply_graph_refines_ex_tac", [t]))
+
+fun apply_asm_refines_ex_tac funs ctxt = SUBGOAL (fn (t, i) => case
+    (Logic.strip_assums_concl (Envir.beta_eta_contract t)) of
+    @{term Trueprop} $ (Const (@{const_name asm_fun_refines}, _)
+        $ specname $ _ $ _ $ _ $ _ $ _)
+        => (resolve0_tac [Thm.assume (Thm.cterm_of ctxt
+            (mk_asm_refines funs ctxt (HOLogic.dest_string specname)))] i)
         | _ => raise TERM ("apply_graph_refines_ex_tac", [t]))
 
 fun apply_impl_thm ctxt = SUBGOAL (fn (t, i) => case
@@ -1926,6 +2038,9 @@ fun apply_simpl_to_graph_tac funs hints ctxt =
             THEN' inst_graph_tac ctxt
             THEN' apply_graph_refines_ex_tac funs ctxt
             THEN' apply_modifies_thm ctxt,
+        resolve0_tac [@{thm simpl_to_graph_call_asm_fun[OF refl]}]
+            THEN' inst_graph_tac ctxt
+            THEN' apply_asm_refines_ex_tac funs ctxt,
         resolve0_tac [@{thm simpl_to_graph_nearly_done}]
             THEN' inst_graph_tac ctxt
     ] THEN_ALL_NEW (TRY o REPEAT_ALL_NEW
