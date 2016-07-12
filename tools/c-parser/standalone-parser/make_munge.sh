@@ -107,7 +107,7 @@ ${CPARSER} --munge_info_fname=${NAMES_FILE} ${CKERNEL}
 # move back kernel_all.c_pp
 if [ -f ${CKERNEL}.orig ]
 then
-    rm ${CKERNEL}
+    mv ${CKERNEL} ${OUT_DIR}/kernel_all.txt
     mv ${CKERNEL}.orig ${CKERNEL}
 fi
 

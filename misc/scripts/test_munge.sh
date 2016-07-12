@@ -14,18 +14,14 @@ USAGE: test_munge.sh [-h|-d|-v] <git-ref> [git-ref]
   -d    Preserve files
   -a    AST check
   -v    Verbose
+  -c    Colorized output
   -h    Print help
 EOF
 }
 
-#color
-RED='\033[0;31m'
-YEL='\033[0;33m'
-GRE='\033[0;32m'
-NC='\033[0m'
 
 # Argument parsing
-while getopts ":hadv" opts
+while getopts ":hadvc" opts
 do
     case $opts in
         h)
@@ -39,13 +35,21 @@ do
             VERBOSE=true
             ;;
         a)  AST=true
-            AST_OPTS="--ast"
+            AST_OPTS="-a"
+            ;;
+        c)  COLOR=''
             ;;
         *)
             echo "Invalid option: -${OPTARG}" >&2
             ;;
     esac
 done
+
+#color
+RED=${COLOR+'\033[0;31m'}
+YEL=${COLOR+'\033[0;33m'}
+GRE=${COLOR+'\033[0;32m'}
+NC=${COLOR+'\033[0m'}
 
 shift $((OPTIND - 1))
 REF1=$1
@@ -75,6 +79,7 @@ then ${MAKE_MUNGE} ${AST_OPTS} ${REF1}  > /dev/null 2>&1
 else ${MAKE_MUNGE} ${AST_OPTS} ${REF1}
 fi
 mv ckernel_names.txt ckernel_names_1.txt
+mv kernel_all.txt kernel_all_1.txt
 [ -z ${AST+x} ] || mv ckernel_ast.txt ckernel_ast_1.txt
 
 if [ -z ${VERBOSE} ]
@@ -82,8 +87,10 @@ then ${MAKE_MUNGE} ${AST_OPTS} ${REF2} > /dev/null 2>&1
 else ${MAKE_MUNGE} ${AST_OPTS} ${REF2}
 fi
 mv ckernel_names.txt ckernel_names_2.txt
+mv kernel_all.txt kernel_all_2.txt
 [ -z ${AST+x} ] || mv ckernel_ast.txt ckernel_ast_2.txt
 
+set +e
 # Check for differences in
 echo -en "${RED}"
 if ! diff ckernel_names_1.txt ckernel_names_2.txt &> /dev/null
@@ -94,9 +101,10 @@ then
     echo -e "#################################\n"
     echo "please address this issue appropriately"
     echo "and run make_muge.sh afterwards."
-    echo -e "${NC}${YEL}"
-    echo "Running this might help:"
-    echo "$ diff -uw ckernel_names_1.txt ckernel_names_2.txt"
+    echo -e "\n${NC}${YEL}kernel_all diff:${NC}"
+    diff -uw kernel_all_1.txt kernel_all_2.txt
+    echo -e "\n${YEL}Symbols diff:${NC}"
+    diff -uw ckernel_names_1.txt ckernel_names_2.txt
     ERRORS=true
 fi
 
@@ -105,13 +113,11 @@ if ! ([ -z ${AST+x} ] || diff ckernel_ast_1.txt ckernel_ast_2.txt &> /dev/null)
 then
     echo -e "${RED}"
     echo "#################################"
-    echo "#   The ASTs differs            #"
+    echo "#   The ASTs differ             #"
     echo -e "#################################\n"
     echo "please address this issue appropriately"
     echo "and run make_muge.sh afterwards."
     echo -e "${NC}${YEL}"
-    echo "Running this might help:"
-    echo "$ diff -uw ckernel_ast_1.txt ckernel_ast_2.txt"
     ERRORS=true
 fi
 
