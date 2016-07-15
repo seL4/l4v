@@ -86,6 +86,8 @@ Library
                             SEL4.API.Types.ARM
                             SEL4.API.InvocationLabels.ARM
                             SEL4.API.Invocation.ARM
+                            SEL4.API.Faults.ARM
+                            SEL4.API.Failures.ARM
                             SEL4.Kernel.VSpace.ARM
                             SEL4.Kernel.Thread.ARM
                             SEL4.Object.ObjectType.ARM

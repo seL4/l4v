@@ -154,6 +154,7 @@ This function is called during bootstrap to set up the initial state of the inte
 >         setInterruptState $ InterruptState (ptrFromPAddr frame) irqTable
 >         timerIRQ <- doMachineOp configureTimer
 >         setIRQState IRQTimer timerIRQ
+>         Arch.initInterruptController
 >         slot <- locateSlotCap rootCNCap biCapIRQC
 >         insertInitCap slot IRQControlCap
 >     return IRQControlCap
@@ -188,6 +189,7 @@ is set to an incorrect value.
 >           IRQTimer -> do
 >               timerTick
 >               doMachineOp resetTimer
+>           IRQReserved -> Arch.handleReservedIRQ irq
 >           IRQInactive -> fail $ "Received disabled IRQ " ++ show irq
 >       doMachineOp $ ackInterrupt irq
 

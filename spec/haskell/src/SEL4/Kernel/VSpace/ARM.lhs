@@ -16,6 +16,7 @@ This module defines the handling of the ARM hardware-defined page tables.
 
 > import SEL4.API.Types
 > import SEL4.API.Failures
+> import SEL4.API.Failures.ARM
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.ARM
 > import SEL4.Model
@@ -627,12 +628,12 @@ If the kernel receives a VM fault from the CPU, it must determine the address an
 > handleVMFault _ ARMDataAbort = do
 >     addr <- withoutFailure $ doMachineOp getFAR
 >     fault <- withoutFailure $ doMachineOp getDFSR
->     throw $ VMFault addr [0, fault .&. mask 14]
+>     throw $ ArchFault $ VMFault addr [0, fault .&. mask 14]
 >
 > handleVMFault thread ARMPrefetchAbort = do
 >     pc <- withoutFailure $ asUser thread $ getRestartPC
 >     fault <- withoutFailure $ doMachineOp getIFSR
->     throw $ VMFault (VPtr pc) [1, fault .&. mask 14]
+>     throw $ ArchFault $ VMFault (VPtr pc) [1, fault .&. mask 14]
 
 \subsection{Unmapping and Deletion}
 

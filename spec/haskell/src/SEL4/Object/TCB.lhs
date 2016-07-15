@@ -726,6 +726,16 @@ TCB, using a pointer to the TCB.
 >         tcb <- getObject tptr
 >         setObject tptr $ f tcb
 
+For convenience, we create analogous functions for a TCBs arch component.
+
+> archThreadGet :: (ArchTCB -> a) -> PPtr TCB -> Kernel a
+> archThreadGet f tptr = liftM (f . tcbArch) $ getObject tptr
+
+> archThreadSet :: (ArchTCB -> ArchTCB) -> PPtr TCB -> Kernel ()
+> archThreadSet f tptr = do
+>         tcb <- getObject tptr
+>         setObject tptr $ tcb { tcbArch = f (tcbArch tcb) }
+
 \subsection{User-level Context}
 
 Actions performed by user-level code, or by the kernel when modifying
@@ -736,15 +746,14 @@ The following function performs an operation in the user-level context of a spec
 thread. The operation is represented by a function in the
 "State" monad operating on the thread's "UserContext" structure.
 
-A typical use of this function is "asUser tcbPtr $ setRegister R0 1",
+A typical use of this function is "asUser tcbPtr \$ setRegister R0 1",
 which stores the value "1" in the register "R0" of to the thread
 identified by "tcbPtr".
 
 > asUser :: PPtr TCB -> UserMonad a -> Kernel a
 > asUser tptr f = do
->         uc <- threadGet tcbContext tptr
->         let (a, uc') = runState f uc
->         threadSet (\tcb -> tcb { tcbContext = uc' }) tptr
+>         atcb <- threadGet tcbArch tptr
+>         let (a, uc') = runState f $ atcbContext atcb
+>         threadSet (\tcb -> tcb { tcbArch = atcb { atcbContext = uc' } }) tptr
 >         return a
-
 
