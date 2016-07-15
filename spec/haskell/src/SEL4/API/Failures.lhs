@@ -35,8 +35,6 @@ When user-level code causes a kernel event, processing of that event may fail in
 
 The procedure for handling faults is defined in \autoref{sec:kernel.faulthandler}; the fault messages sent and received by the kernel are defined in \autoref{sec:api.faults}.
 
-FIXME ARMHYP VCPU and VGIC faults should be handled here, but of course they are not VM faults, and they are very arch specific! where are they supposed to go?
-
 > data Fault
 >         = UserException {
 >             userExceptionNumber :: Word,
