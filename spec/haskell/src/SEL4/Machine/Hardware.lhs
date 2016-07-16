@@ -75,11 +75,13 @@ The maximum and minimum IRQ are given explicit constant names here. In Haskell, 
 > maxIRQ :: IRQ
 > maxIRQ = maxBound
 
-\subsubsection{Virtual Memory Faults}
+\subsubsection{Virtual Memory and Hypervisor Faults}
 
-Most architectures provide some information about virtual memory faults in hardware registers, and other information is implied by the hardware's choice between a set of different trap handlers. The latter is represented in this model by the following data type.
+Most architectures provide some information about virtual memory and hypervisor faults in hardware registers. Other information is implied by the hardware's choice between a set of different trap handlers. The latter is represented in this model by the following data types.
 
 > type VMFaultType = Arch.VMFaultType
+
+> type HypFaultType = Arch.HypFaultType
 
 \subsection{Hardware Operations}
 
