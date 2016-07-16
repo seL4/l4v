@@ -21,10 +21,10 @@ BOOT_FILES=$(BOOT_MODULES:%=src/SEL4/%.lhs-boot)
 # GHC_PACKAGE_PATH first.
 CABAL=stack exec -- ./stack-path cabal
 
-#all: build pdf FIXME original
+#all: build-arm pdf FIXME original
 all: build-arm-hyp
 
-build: .stack-work $(BOOT_FILES)
+build-arm: .stack-work $(BOOT_FILES)
 	$(CABAL) sandbox init
 	$(CABAL) install --dependencies-only
 	$(CABAL) configure --configure-option="arm-kzm" \
