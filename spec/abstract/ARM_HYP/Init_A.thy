@@ -45,8 +45,8 @@ definition
   "init_globals_frame = kernel_base + 0x5000"
 
 definition
-  init_global_pd :: word32 where
-  "init_global_pd = kernel_base + 0x60000"
+  init_global_pt :: word32 where (* FIXME : update *)
+  "init_global_pt = kernel_base + 0x60000"
 
 definition
   "init_arch_state \<equiv> \<lparr>
@@ -55,8 +55,8 @@ definition
     arm_hwasid_table = empty,
     arm_next_asid = 0,
     arm_asid_map = empty,
-    arm_global_pd = init_global_pd,
-    arm_global_pts = [],
+    arm_global_pt = init_global_pt,
+    arm_current_vcpu = undefined,
     arm_kernel_vspace = \<lambda>ref.
       if ref \<in> {kernel_base .. kernel_base + mask 20}
       then ArmVSpaceKernelWindow
@@ -65,7 +65,7 @@ definition
 
 definition
   [simp]:
-  "global_pd \<equiv> (\<lambda>_. InvalidPDE)( ucast (kernel_base >> 20) := SectionPDE (addrFromPPtr kernel_base) {} 0 {})"
+  "global_pd \<equiv> (\<lambda>_. InvalidPDE)( ucast (kernel_base >> 20) := SectionPDE (addrFromPPtr kernel_base) {} {})"
 
 definition
   "init_kheap \<equiv>
@@ -85,7 +85,7 @@ definition
     tcb_arch = init_arch_tcb
   \<rparr>,
   init_globals_frame \<mapsto> ArchObj (DataPage ARMSmallPage),
-  init_global_pd \<mapsto> ArchObj (PageDirectory global_pd)
+  init_global_pt \<mapsto> ArchObj (PageDirectory global_pd)
   )"
 
 definition

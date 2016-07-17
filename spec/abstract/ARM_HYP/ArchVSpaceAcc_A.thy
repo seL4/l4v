@@ -157,14 +157,10 @@ create the kernel window into a new page directory object. *}
 definition
 copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "copy_global_mappings new_pd \<equiv> do
-    global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-    pde_bits \<leftarrow> return 2;
-    pd_size \<leftarrow> return (1 << (pd_bits - pde_bits));
-    mapM_x (\<lambda>index. do
-        offset \<leftarrow> return (index << pde_bits);
-        pde \<leftarrow> get_pde (global_pd + offset);
-        store_pde (new_pd + offset) pde
-    od) [kernel_base >> 20  .e.  pd_size - 1]
+    global_pt \<leftarrow> gets (arm_global_pt \<circ> arch_state);
+    pd_size \<leftarrow> return (1 << pd_bits);
+    offset \<leftarrow> return (pd_size - (1 << pde_bits));
+    store_pde (new_pd + offset) (PageTablePDE (addrFromPPtr global_pt))
 od"
 
 text {* Walk the page directories and tables in software. *}

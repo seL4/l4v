@@ -66,7 +66,7 @@ definition
 
 definition
   asid_high_bits :: nat where
-  "asid_high_bits \<equiv> 8"
+  "asid_high_bits \<equiv> 7"
 definition
   asid_low_bits :: nat where
   "asid_low_bits \<equiv> 10 :: nat"
@@ -93,12 +93,11 @@ hardware can be configured to omit the first level entirely if all second
 levels are stored contiguously. We use this configuration to preserve the usual
 page table/directory nomenclature.
 seL4 does not use hardware domains or parity on ARM hypervisor systems.
-
 *}
 datatype pde =
    InvalidPDE
  | PageTablePDE obj_ref
- | SectionPDE obj_ref vm_attributes machine_word cap_rights
+ | SectionPDE obj_ref vm_attributes cap_rights
  | SuperSectionPDE obj_ref vm_attributes cap_rights
 
 datatype pte =
@@ -107,6 +106,30 @@ datatype pte =
  | SmallPagePTE obj_ref vm_attributes cap_rights
 
 type_synonym hyper_reg_context = "hyper_reg \<Rightarrow> 32 word"
+
+
+text {*With hypervisor extensions enabled, page table and page directory entries occupy
+8 bytes. Page directories occupy four frames, and page tables occupy a frame. *}
+
+definition
+  pde_bits :: "nat" where
+  "pde_bits \<equiv> 3"
+
+definition
+  pte_bits :: "nat" where
+  "pte_bits \<equiv> 3"
+
+definition
+  pd_bits :: "nat" where
+  "pd_bits \<equiv> 11 + pde_bits"
+
+definition
+  pt_bits :: "nat" where
+  "pt_bits \<equiv> 9 + pte_bits"
+
+definition
+  vcpu_bits :: "nat" where
+  "vcpu_bits \<equiv> pageBits"
 
 (* FIXME ARMHYP: C code has these. Do we want to model these, or just have DONT_TRANSLATE on
 accessor functions that get to these? In particular vgic.lr manages virtual IRQs; do we ever want
@@ -130,8 +153,13 @@ struct vcpu {
     struct cpXRegs cpx;
     struct gicVCpuIface vgic;
 };
-
 *)
+
+text {*  vcpu *}
+
+datatype vcpu = vcpu_tcb_ptr obj_ref
+
+
 text {*
   ASID pools translate 10 bits, VCPUs store a potential association to a TCB as well as
   an extended register context. Page tables have 512 entries (cf B3.6.5, pg 1348). For data pages,
@@ -166,8 +194,8 @@ primrec
   arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat"
 where
   "arch_kobj_size (ASIDPool p) = pageBits"
-| "arch_kobj_size (PageTable pte) = 10"
-| "arch_kobj_size (PageDirectory pde) = 14"
+| "arch_kobj_size (PageTable pte) = pte_bits"
+| "arch_kobj_size (PageDirectory pde) = pde_bits"
 | "arch_kobj_size (DataPage sz) = pageBitsForSize sz"
 | "arch_kobj_size (VCPU _ _) = 12"
 (* FIXME ARMHYP: vcpu_bits? *)
@@ -262,22 +290,13 @@ record arch_state =
   arm_hwasid_table  :: "ARM_A.hw_asid \<rightharpoonup> ARM_A.asid"
   arm_next_asid     :: ARM_A.hw_asid
   arm_asid_map      :: "ARM_A.asid \<rightharpoonup> (ARM_A.hw_asid \<times> obj_ref)"
-  arm_global_pd     :: obj_ref
-  arm_global_pts    :: "obj_ref list"
+  arm_global_pt     :: obj_ref
+  arm_current_vcpu    :: obj_ref
   arm_kernel_vspace :: ARM_A.arm_vspace_region_uses
 
 end_qualify
 
 context Arch begin global_naming ARM_A
-
-definition
-  pd_bits :: "nat" where
-  "pd_bits \<equiv> pageBits + 2"
-
-definition
-  pt_bits :: "nat" where
-  "pt_bits \<equiv> pageBits - 2"
-
 
 section "Type declarations for invariant definitions"
 

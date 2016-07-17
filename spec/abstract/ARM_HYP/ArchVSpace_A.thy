@@ -44,7 +44,7 @@ where
 | "create_mapping_entries base vptr ARMSection vm_rights attrib pd =
   doE
     p \<leftarrow> returnOk (lookup_pd_slot pd vptr);
-    returnOk $ Inr (SectionPDE base (attrib - {Global}) 0 vm_rights, [p])
+    returnOk $ Inr (SectionPDE base (attrib - {Global}) vm_rights, [p])
   odE"
 
 | "create_mapping_entries base vptr ARMSuperSection vm_rights attrib pd =
@@ -98,12 +98,12 @@ where
 |
 "ensure_safe_mapping (Inr (PageTablePDE _, _)) = fail"
 |
-"ensure_safe_mapping (Inr (SectionPDE _ _ _ _, pd_slots)) =
+"ensure_safe_mapping (Inr (SectionPDE _ _ _, pd_slots)) =
     mapME_x (\<lambda> slot. (doE
         pde \<leftarrow> liftE $ get_master_pde slot;
         (case pde of
               InvalidPDE \<Rightarrow> returnOk ()
-            | SectionPDE _ _ _ _ \<Rightarrow> returnOk ()
+            | SectionPDE _ _ _ \<Rightarrow> returnOk ()
             | _ \<Rightarrow> throwError DeleteFirst
             )
     odE)) pd_slots"
@@ -314,10 +314,7 @@ definition
            liftE $ arm_context_switch pd asid
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
-    (\<lambda>_. do
-       global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-       do_machine_op $ setCurrentPD $ addrFromPPtr global_pd
-    od)
+    (\<lambda>_. do_machine_op $ setCurrentPD $ addrFromPPtr 0)
 od"
 
 text {* Before deleting an ASID pool object we must deactivate all page
@@ -470,7 +467,7 @@ check_mapping_pptr :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> (obj_ref 
  | Inr pdePtr \<Rightarrow> do
      pde \<leftarrow> get_pde pdePtr;
      return $ case pde of
-       SectionPDE x _ _ _ \<Rightarrow> x = addrFromPPtr pptr \<and> pgsz = ARMSection
+       SectionPDE x _ _ \<Rightarrow> x = addrFromPPtr pptr \<and> pgsz = ARMSection
      | SuperSectionPDE x _ _ \<Rightarrow> x = addrFromPPtr pptr \<and> pgsz = ARMSuperSection
      | _ \<Rightarrow> False
    od"
@@ -770,7 +767,7 @@ where
      pd_slot \<leftarrow> return $ lookup_pd_slot pd vaddr;
      pde \<leftarrow> get_master_pde pd_slot;
      case pde of
-         SectionPDE f _ _ _ \<Rightarrow> return $ Some (ARMSection, f)
+         SectionPDE f _ _ \<Rightarrow> return $ Some (ARMSection, f)
        | SuperSectionPDE f _ _ \<Rightarrow> return $ Some (ARMSuperSection, f)
        | PageTablePDE t \<Rightarrow> (do
            pt \<leftarrow> return $ ptrFromPAddr t;
