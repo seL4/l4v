@@ -353,8 +353,9 @@ Create an architecture-specific object.
 > performInvocation i =
 >     case i of
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->                  ArchInv.InvokeVCPU iv ->
+>                  ArchInv.InvokeVCPU iv -> do
 >                      withoutPreemption $ performARMVCPUInvocation iv
+>                      return []
 #endif
 #ifdef CONFIG_ARM_SMMU
 >                  ArchInv.InvokeIOSpace _ ->
