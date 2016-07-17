@@ -29,6 +29,7 @@ FIXME ARMHYP this is so that disabling SMMU results in successful compile
 
 > import SEL4.API.Types
 > import SEL4.API.Failures
+> import SEL4.API.Failures.ARM_HYP
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.ARM_HYP
 > import SEL4.Model
@@ -369,7 +370,7 @@ Hypervisor mode requires extra translation here.
 >     let faddr = (uaddr .&. complement (mask pageBits)) .|.
 >                 (addr .&. mask pageBits)
 >     fault <- withoutFailure $ doMachineOp getHSR
->     throw $ VMFault faddr [0, fault .&. 0x3ffffff] -- FIXME ARMHYP is mask right here?
+>     throw $ ArchFault $ VMFault faddr [0, fault .&. 0x3ffffff]
 >
 > handleVMFault thread ARMPrefetchAbort = do
 >     pc <- withoutFailure $ asUser thread $ getRestartPC
@@ -377,9 +378,7 @@ Hypervisor mode requires extra translation here.
 >     let faddr = (upc .&. complement (mask pageBits)) .|.
 >                 (VPtr pc .&. mask pageBits)
 >     fault <- withoutFailure $ doMachineOp getHSR
->     throw $ VMFault (VPtr pc) [1, fault .&. 0x3ffffff] -- FIXME ARMHYP is mask right here?
-> handleVMFault _ (ARMVCPUFault _) = error "FIXME ARMHYP no way to add arch-specific non-VM faults yet, discuss with Adrian"
-> handleVMFault _ ARMVGICMaintenanceFault = error "FIXME ARMHYP no way to add arch-specific non-VM faults yet, discuss with Adrian"
+>     throw $ ArchFault $ VMFault faddr [1, fault .&. 0x3ffffff]
 
 \subsection{Unmapping and Deletion}
 

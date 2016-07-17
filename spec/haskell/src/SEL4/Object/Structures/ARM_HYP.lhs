@@ -92,6 +92,21 @@ FIXME ARMHYP add VCPU to ArchKernelObject? MAYBE
 >                 KOIOPDE _ -> iopdeBits
 #endif
 
+\subsection{Threads}
+
+TCBs contain state that is arch-specific. ``ArchTCB'' represents a wrapper for
+this state. The thread's saved user-level context, which is expected to be
+present on all platforms is stored here.
+
+FIXME ARMHYP add VCPU ptr here
+
+> data ArchTCB = ArchThread {
+>         atcbContext :: UserContext }
+>     deriving Show
+
+> newArchTCB = ArchThread {
+>     atcbContext = newContext }
+
 \subsection{ASID Pools}
 
 An ASID pool is an array of pointers to page directories. This is used to implement virtual ASIDs on ARM; it is not accessed by the hardware.

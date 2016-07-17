@@ -8,8 +8,13 @@
 % @TAG(GD_GPL)
 %
 
-This module defines the machine-specific interrupt handling routines for the ARM.
-Apparently ARM does not have any.
+This module defines the machine-specific interrupt handling routines.
+
+\begin{impdetails}
+
+> {-# LANGUAGE CPP #-}
+
+\end{impdetails}
 
 > module SEL4.Object.Interrupt.ARM_HYP where
 
@@ -20,8 +25,11 @@ Apparently ARM does not have any.
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.ARM_HYP as ArchInv
+> import {-# SOURCE #-} SEL4.Object.Interrupt (setIRQState)
 
 \end{impdetails}
+
+> import SEL4.Machine.Hardware.ARM_HYP.PLATFORM (irqVGICMaintenance, irqSMMU)
 
 > decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
 >     KernelF SyscallError ArchInv.IRQControlInvocation
@@ -32,4 +40,19 @@ Apparently ARM does not have any.
 
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
+
+FIXME ARMHYP INTERRUPT_VGIC_MAINTENANCE and INTERRUPT_SMMU
+
+> handleReservedIRQ :: IRQ -> Kernel ()
+> handleReservedIRQ _irq = fail "FIXME ARMHYP handleReservedIRQ"
+
+> initInterruptController :: Kernel ()
+> initInterruptController = do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     setIRQState IRQReserved $ IRQ irqVGICMaintenance
+#endif
+#ifdef CONFIG_SMMU
+>     setIRQState IRQReserved $ IRQ irqSMMU
+#endif
+>     return ()
 

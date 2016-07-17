@@ -10,6 +10,12 @@
 
 This module defines the encoding of arch-specific faults.
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP #-}
+
+\end{impdetails}
+
 > module SEL4.API.Failures.ARM_HYP where
 
 \begin{impdetails}
@@ -24,5 +30,10 @@ FIXME ARMHYP VCPU and VGIC faults should be handled here
 >     = VMFault {
 >             vmFaultAddress :: VPtr,
 >             vmFaultArchData :: [Word] }
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     | VCPUFault {
+>             vcpuHSR :: Word }
+>     | VGICMaintenance [Word]
+#endif
 >     deriving Show
 

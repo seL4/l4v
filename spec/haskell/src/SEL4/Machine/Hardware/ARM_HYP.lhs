@@ -66,10 +66,14 @@ ARM virtual memory faults are handled by one of two trap handlers: one for data 
 > data VMFaultType
 >     = ARMDataAbort
 >     | ARMPrefetchAbort
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->     | ARMVCPUFault { vcpuFaultHSR :: Word }
->     | ARMVGICMaintenanceFault -- FIXME ARMHYP do we want any parameters?
-#endif
+>     deriving Show
+
+\subsection{Hypervisor}
+
+FIXME ARMHYP TODO VCPUFault
+
+> data HypFaultType
+>     = ARMNoHypFaults
 >     deriving Show
 
 \subsubsection{Physical Memory}
