@@ -44,6 +44,15 @@ This module defines instances of "PSpaceStorable" for ARM-specific kernel object
 >                 KOArch (KOPTE p) -> return p
 >                 _ -> typeError "PTE" o
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> instance PSpaceStorable VCPU where
+>     makeObject = newVCPU
+>     injectKO = KOArch . KOVCPU
+>     projectKO o = case o of
+>                 KOArch (KOVCPU p) -> return p
+>                 _ -> typeError "VCPU" o
+#endif
+
 #ifdef CONFIG_ARM_SMMU
 > instance PSpaceStorable IOPDE where
 >     makeObject = InvalidIOPDE
@@ -67,6 +76,4 @@ This module defines instances of "PSpaceStorable" for ARM-specific kernel object
 >     projectKO o = case o of
 >         KOArch (KOASIDPool e) -> return e
 >         _ -> typeError "ASID pool" o
-
-FIXME ARMHYP maybe add VCPU
 

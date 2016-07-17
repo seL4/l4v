@@ -74,6 +74,9 @@ The ARM kernel stores some ARM-specific types of objects in the PSpace, such as 
 >     = KOASIDPool ASIDPool
 >     | KOPTE PTE
 >     | KOPDE PDE
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     | KOVCPU VCPU
+#endif
 #ifdef CONFIG_ARM_SMMU
 >     | KOIOPTE IOPTE
 >     | KOIOPDE IOPDE
@@ -87,6 +90,9 @@ FIXME ARMHYP add VCPU to ArchKernelObject? MAYBE
 >                 KOASIDPool _ -> pageBits
 >                 KOPTE _ -> pteBits
 >                 KOPDE _ -> pdeBits
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>                 KOVCPU _ -> vcpuBits
+#endif
 #ifdef CONFIG_ARM_SMMU
 >                 KOIOPTE _ -> iopteBits
 >                 KOIOPDE _ -> iopdeBits
@@ -101,11 +107,19 @@ present on all platforms is stored here.
 FIXME ARMHYP add VCPU ptr here
 
 > data ArchTCB = ArchThread {
->         atcbContext :: UserContext }
+>         atcbContext :: UserContext
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         ,atcbVCPUPtr :: Maybe (PPtr VCPU)
+#endif
+>         }
 >     deriving Show
 
 > newArchTCB = ArchThread {
->     atcbContext = newContext }
+>     atcbContext = newContext
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     ,atcbVCPUPtr = Nothing
+#endif
+>     }
 
 \subsection{ASID Pools}
 
@@ -142,7 +156,15 @@ FIXME ARMHYP after device untyped patch this will be 6 and 7 respectively
 > asidHighBitsOf :: ASID -> ASID
 > asidHighBitsOf asid = (asid `shiftR` asidLowBits) .&. mask asidHighBits
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+\subsection {VCPU}
+
 > data VCPU = VCPUObj {
->                 vcpuTCBPtr :: PPtr TCB
->             }
+>                 vcpuTCBPtr :: Maybe (PPtr TCB) }
+>     deriving Show
+
+> newVCPU :: VCPU
+> newVCPU = error "FIXME ARMHYP TODO init code"
+
+#endif
 
