@@ -12,8 +12,7 @@ This module defines the structures which represent kernel objects in the modelle
 
 \begin{impdetails}
 
-% {-# BOOT-IMPORTS: #-}
-% {-# BOOT-EXPORTS: TCB #-}
+% Uses hand-crafted .lhs-boot file
 
 This module uses the C preprocessor to select a target architecture.
 

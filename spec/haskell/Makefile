@@ -62,6 +62,10 @@ pdf:
 	stack --install-ghc build cabal-install
 	$(CABAL) update
 
+src/SEL4/Object/Structures.lhs-boot:
+	# never run mkhsboot for hand-crafted lhs-boot files
+	touch $@
+
 %.lhs-boot: %.lhs mkhsboot.pl
 	perl mkhsboot.pl -l < $< > $@
 
