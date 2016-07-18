@@ -22,7 +22,7 @@ BOOT_FILES=$(BOOT_MODULES:%=src/SEL4/%.lhs-boot)
 CABAL=stack exec -- ./stack-path cabal
 
 #all: build-arm pdf FIXME original
-all: build-arm-hyp
+all: build-arm-hyp-nosmmu
 
 build-arm: .stack-work $(BOOT_FILES)
 	$(CABAL) sandbox init
