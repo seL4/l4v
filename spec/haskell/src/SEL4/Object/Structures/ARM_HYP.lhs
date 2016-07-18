@@ -44,7 +44,9 @@ There are six ARM-specific capability types: the global ASID control capability,
 >         capVPBasePtr :: PPtr Word,
 >         capVPRights :: VMRights,
 >         capVPSize :: VMPageSize,
+#ifdef CONFIG_ARM_SMMU
 >         capVPisIOSpace :: Bool,
+#endif
 >         capVPMappedAddress :: Maybe (ASID, VPtr) }
 >     | PageTableCap {
 >         capPTBasePtr :: PPtr PTE,
