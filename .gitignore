@@ -29,6 +29,7 @@
 /spec/design/version
 /spec/design/*.thy
 /spec/design/ARM/*.thy
+/spec/design/ARM_HYP/*.thy
 
 /spec/machine/ARM/MachineTypes.thy
 

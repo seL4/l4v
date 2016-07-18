@@ -74,7 +74,17 @@ then
     (cd $L4CAP && git status --short) >> $SPEC/version
 fi
 
+# which architectures to process
 ARCHES=("ARM" "X64" "ARM_HYP")
+
+# Match the CPP configuration used by SEL4.cabal and Setup.hs for Haskell build
+# Note: these should be in sync with both the Haskell .cabal and Setup.hs,
+#       If these are not in sync, expect the unexpected.
+#       spec_check.sh has a copy of these, which should be updated in tandem.
+#       FIXME: move to a common location in haskell-translator (D.R.Y.)
+declare -A cpp_opts
+cpp_opts[ARM]="-DPLATFORM=QEmu -DPLATFORM_QEmu -DTARGET=ARM -DTARGET_ARM"
+cpp_opts[ARM_HYP]="-DPLATFORM=TK1 -DPLATFORM_TK1 -DTARGET=ARM_HYP -DTARGET_ARM_HYP -DCONFIG_ARM_HYPERVISOR_SUPPORT"
 
 NAMES=`cd $SKEL; ls *.thy`
 
@@ -110,7 +120,7 @@ function send_filenames () {
 for ARCH in ${ARCHES[@]}
 do
     send_filenames $ARCH > $TMPFILE
-    L4CPP="-DTARGET=$ARCH -DTARGET_$ARCH -DPLATFORM=QEmu -DPLATFORM_QEmu"
+    L4CPP=${cpp_opts[$ARCH]}
     export L4CPP
     cd $TRANSLATOR
     python pars_skl.py $TMPFILE
