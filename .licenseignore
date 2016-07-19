@@ -20,6 +20,8 @@
 *.pyc
 *.mp
 *.dot
+*.toc
+*.mpx
 *.mlb
 *.o
 *~
@@ -49,6 +51,7 @@ spec/haskell/cabal.sandbox.config
 spec/haskell/.cabal-sandbox/*
 spec/haskell/Setup.hs
 spec/haskell/configure
+spec/haskell/dist/*
 spec/haskell/src/SEL4/Model/PSpace.lhs-boot
 spec/haskell/src/SEL4/Kernel/FaultHandler.lhs-boot
 spec/haskell/src/SEL4/Kernel/Init.lhs-boot
