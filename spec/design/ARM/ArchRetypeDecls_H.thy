@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file l4v/spec/design/skel/ARM/ArchRetypeDecls_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -26,19 +28,9 @@ datatype page_table_invocation =
   | PageTableMap capability machine_word pde machine_word
 
 primrec
-  ptMapPDSlot :: "page_table_invocation \<Rightarrow> machine_word"
+  ptMapCap :: "page_table_invocation \<Rightarrow> capability"
 where
-  "ptMapPDSlot (PageTableMap v0 v1 v2 v3) = v3"
-
-primrec
-  ptUnmapCapSlot :: "page_table_invocation \<Rightarrow> machine_word"
-where
-  "ptUnmapCapSlot (PageTableUnmap v0 v1) = v1"
-
-primrec
-  ptMapCTSlot :: "page_table_invocation \<Rightarrow> machine_word"
-where
-  "ptMapCTSlot (PageTableMap v0 v1 v2 v3) = v1"
+  "ptMapCap (PageTableMap v0 v1 v2 v3) = v0"
 
 primrec
   ptUnmapCap :: "page_table_invocation \<Rightarrow> arch_capability"
@@ -46,29 +38,29 @@ where
   "ptUnmapCap (PageTableUnmap v0 v1) = v0"
 
 primrec
+  ptUnmapCapSlot :: "page_table_invocation \<Rightarrow> machine_word"
+where
+  "ptUnmapCapSlot (PageTableUnmap v0 v1) = v1"
+
+primrec
   ptMapPDE :: "page_table_invocation \<Rightarrow> pde"
 where
   "ptMapPDE (PageTableMap v0 v1 v2 v3) = v2"
 
 primrec
-  ptMapCap :: "page_table_invocation \<Rightarrow> capability"
+  ptMapPDSlot :: "page_table_invocation \<Rightarrow> machine_word"
 where
-  "ptMapCap (PageTableMap v0 v1 v2 v3) = v0"
+  "ptMapPDSlot (PageTableMap v0 v1 v2 v3) = v3"
 
 primrec
-  ptMapPDSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
+  ptMapCTSlot :: "page_table_invocation \<Rightarrow> machine_word"
 where
-  "ptMapPDSlot_update f (PageTableMap v0 v1 v2 v3) = PageTableMap v0 v1 v2 (f v3)"
+  "ptMapCTSlot (PageTableMap v0 v1 v2 v3) = v1"
 
 primrec
-  ptUnmapCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
+  ptMapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
 where
-  "ptUnmapCapSlot_update f (PageTableUnmap v0 v1) = PageTableUnmap v0 (f v1)"
-
-primrec
-  ptMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
-where
-  "ptMapCTSlot_update f (PageTableMap v0 v1 v2 v3) = PageTableMap v0 (f v1) v2 v3"
+  "ptMapCap_update f (PageTableMap v0 v1 v2 v3) = PageTableMap (f v0) v1 v2 v3"
 
 primrec
   ptUnmapCap_update :: "(arch_capability \<Rightarrow> arch_capability) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
@@ -76,14 +68,24 @@ where
   "ptUnmapCap_update f (PageTableUnmap v0 v1) = PageTableUnmap (f v0) v1"
 
 primrec
+  ptUnmapCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
+where
+  "ptUnmapCapSlot_update f (PageTableUnmap v0 v1) = PageTableUnmap v0 (f v1)"
+
+primrec
   ptMapPDE_update :: "(pde \<Rightarrow> pde) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
 where
   "ptMapPDE_update f (PageTableMap v0 v1 v2 v3) = PageTableMap v0 v1 (f v2) v3"
 
 primrec
-  ptMapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
+  ptMapPDSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
 where
-  "ptMapCap_update f (PageTableMap v0 v1 v2 v3) = PageTableMap (f v0) v1 v2 v3"
+  "ptMapPDSlot_update f (PageTableMap v0 v1 v2 v3) = PageTableMap v0 v1 v2 (f v3)"
+
+primrec
+  ptMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
+where
+  "ptMapCTSlot_update f (PageTableMap v0 v1 v2 v3) = PageTableMap v0 (f v1) v2 v3"
 
 abbreviation (input)
   PageTableUnmap_trans :: "(arch_capability) \<Rightarrow> (machine_word) \<Rightarrow> page_table_invocation" ("PageTableUnmap'_ \<lparr> ptUnmapCap= _, ptUnmapCapSlot= _ \<rparr>")
@@ -120,14 +122,9 @@ datatype page_directory_invocation =
   | PageDirectoryFlush flush_type vptr vptr paddr machine_word asid
 
 primrec
-  pdFlushEnd :: "page_directory_invocation \<Rightarrow> vptr"
+  pdFlushASID :: "page_directory_invocation \<Rightarrow> asid"
 where
-  "pdFlushEnd (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = v2"
-
-primrec
-  pdFlushType :: "page_directory_invocation \<Rightarrow> flush_type"
-where
-  "pdFlushType (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = v0"
+  "pdFlushASID (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = v5"
 
 primrec
   pdFlushStart :: "page_directory_invocation \<Rightarrow> vptr"
@@ -135,9 +132,9 @@ where
   "pdFlushStart (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = v1"
 
 primrec
-  pdFlushASID :: "page_directory_invocation \<Rightarrow> asid"
+  pdFlushType :: "page_directory_invocation \<Rightarrow> flush_type"
 where
-  "pdFlushASID (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = v5"
+  "pdFlushType (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = v0"
 
 primrec
   pdFlushPD :: "page_directory_invocation \<Rightarrow> machine_word"
@@ -145,24 +142,14 @@ where
   "pdFlushPD (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = v4"
 
 primrec
+  pdFlushEnd :: "page_directory_invocation \<Rightarrow> vptr"
+where
+  "pdFlushEnd (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = v2"
+
+primrec
   pdFlushPStart :: "page_directory_invocation \<Rightarrow> paddr"
 where
   "pdFlushPStart (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = v3"
-
-primrec
-  pdFlushEnd_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
-where
-  "pdFlushEnd_update f (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = PageDirectoryFlush v0 v1 (f v2) v3 v4 v5"
-
-primrec
-  pdFlushType_update :: "(flush_type \<Rightarrow> flush_type) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
-where
-  "pdFlushType_update f (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = PageDirectoryFlush (f v0) v1 v2 v3 v4 v5"
-
-primrec
-  pdFlushStart_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
-where
-  "pdFlushStart_update f (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = PageDirectoryFlush v0 (f v1) v2 v3 v4 v5"
 
 primrec
   pdFlushASID_update :: "(asid \<Rightarrow> asid) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
@@ -170,9 +157,24 @@ where
   "pdFlushASID_update f (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = PageDirectoryFlush v0 v1 v2 v3 v4 (f v5)"
 
 primrec
+  pdFlushStart_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
+where
+  "pdFlushStart_update f (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = PageDirectoryFlush v0 (f v1) v2 v3 v4 v5"
+
+primrec
+  pdFlushType_update :: "(flush_type \<Rightarrow> flush_type) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
+where
+  "pdFlushType_update f (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = PageDirectoryFlush (f v0) v1 v2 v3 v4 v5"
+
+primrec
   pdFlushPD_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
 where
   "pdFlushPD_update f (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = PageDirectoryFlush v0 v1 v2 v3 (f v4) v5"
+
+primrec
+  pdFlushEnd_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
+where
+  "pdFlushEnd_update f (PageDirectoryFlush v0 v1 v2 v3 v4 v5) = PageDirectoryFlush v0 v1 (f v2) v3 v4 v5"
 
 primrec
   pdFlushPStart_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
@@ -206,54 +208,9 @@ datatype page_invocation =
   | PageUnmap arch_capability machine_word
 
 primrec
-  pageMapCap :: "page_invocation \<Rightarrow> capability"
-where
-  "pageMapCap (PageMap v0 v1 v2 v3) = v1"
-
-primrec
-  pageUnmapCapSlot :: "page_invocation \<Rightarrow> machine_word"
-where
-  "pageUnmapCapSlot (PageUnmap v0 v1) = v1"
-
-primrec
-  pageFlushStart :: "page_invocation \<Rightarrow> vptr"
-where
-  "pageFlushStart (PageFlush v0 v1 v2 v3 v4 v5) = v1"
-
-primrec
-  pageUnmapCap :: "page_invocation \<Rightarrow> arch_capability"
-where
-  "pageUnmapCap (PageUnmap v0 v1) = v0"
-
-primrec
-  pageFlushPD :: "page_invocation \<Rightarrow> machine_word"
-where
-  "pageFlushPD (PageFlush v0 v1 v2 v3 v4 v5) = v4"
-
-primrec
-  pageFlushASID :: "page_invocation \<Rightarrow> asid"
-where
-  "pageFlushASID (PageFlush v0 v1 v2 v3 v4 v5) = v5"
-
-primrec
   pageFlushType :: "page_invocation \<Rightarrow> flush_type"
 where
   "pageFlushType (PageFlush v0 v1 v2 v3 v4 v5) = v0"
-
-primrec
-  pageFlushEnd :: "page_invocation \<Rightarrow> vptr"
-where
-  "pageFlushEnd (PageFlush v0 v1 v2 v3 v4 v5) = v2"
-
-primrec
-  pageFlushPStart :: "page_invocation \<Rightarrow> paddr"
-where
-  "pageFlushPStart (PageFlush v0 v1 v2 v3 v4 v5) = v3"
-
-primrec
-  pageRemapEntries :: "page_invocation \<Rightarrow> (pte * machine_word list) + (pde * machine_word list)"
-where
-  "pageRemapEntries (PageRemap v0 v1) = v1"
 
 primrec
   pageMapASID :: "page_invocation \<Rightarrow> asid"
@@ -261,9 +218,29 @@ where
   "pageMapASID (PageMap v0 v1 v2 v3) = v0"
 
 primrec
+  pageFlushPD :: "page_invocation \<Rightarrow> machine_word"
+where
+  "pageFlushPD (PageFlush v0 v1 v2 v3 v4 v5) = v4"
+
+primrec
+  pageFlushPStart :: "page_invocation \<Rightarrow> paddr"
+where
+  "pageFlushPStart (PageFlush v0 v1 v2 v3 v4 v5) = v3"
+
+primrec
+  pageMapCap :: "page_invocation \<Rightarrow> capability"
+where
+  "pageMapCap (PageMap v0 v1 v2 v3) = v1"
+
+primrec
   pageGetBasePtr :: "page_invocation \<Rightarrow> machine_word"
 where
   "pageGetBasePtr (PageGetAddr v0) = v0"
+
+primrec
+  pageFlushEnd :: "page_invocation \<Rightarrow> vptr"
+where
+  "pageFlushEnd (PageFlush v0 v1 v2 v3 v4 v5) = v2"
 
 primrec
   pageMapEntries :: "page_invocation \<Rightarrow> (pte * machine_word list) + (pde * machine_word list)"
@@ -271,9 +248,14 @@ where
   "pageMapEntries (PageMap v0 v1 v2 v3) = v3"
 
 primrec
-  pageRemapASID :: "page_invocation \<Rightarrow> asid"
+  pageUnmapCap :: "page_invocation \<Rightarrow> arch_capability"
 where
-  "pageRemapASID (PageRemap v0 v1) = v0"
+  "pageUnmapCap (PageUnmap v0 v1) = v0"
+
+primrec
+  pageRemapEntries :: "page_invocation \<Rightarrow> (pte * machine_word list) + (pde * machine_word list)"
+where
+  "pageRemapEntries (PageRemap v0 v1) = v1"
 
 primrec
   pageMapCTSlot :: "page_invocation \<Rightarrow> machine_word"
@@ -281,34 +263,24 @@ where
   "pageMapCTSlot (PageMap v0 v1 v2 v3) = v2"
 
 primrec
-  pageMapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+  pageFlushStart :: "page_invocation \<Rightarrow> vptr"
 where
-  "pageMapCap_update f (PageMap v0 v1 v2 v3) = PageMap v0 (f v1) v2 v3"
+  "pageFlushStart (PageFlush v0 v1 v2 v3 v4 v5) = v1"
 
 primrec
-  pageUnmapCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+  pageRemapASID :: "page_invocation \<Rightarrow> asid"
 where
-  "pageUnmapCapSlot_update f (PageUnmap v0 v1) = PageUnmap v0 (f v1)"
+  "pageRemapASID (PageRemap v0 v1) = v0"
 
 primrec
-  pageFlushStart_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+  pageFlushASID :: "page_invocation \<Rightarrow> asid"
 where
-  "pageFlushStart_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 (f v1) v2 v3 v4 v5"
+  "pageFlushASID (PageFlush v0 v1 v2 v3 v4 v5) = v5"
 
 primrec
-  pageUnmapCap_update :: "(arch_capability \<Rightarrow> arch_capability) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+  pageUnmapCapSlot :: "page_invocation \<Rightarrow> machine_word"
 where
-  "pageUnmapCap_update f (PageUnmap v0 v1) = PageUnmap (f v0) v1"
-
-primrec
-  pageFlushPD_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
-where
-  "pageFlushPD_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 v1 v2 v3 (f v4) v5"
-
-primrec
-  pageFlushASID_update :: "(asid \<Rightarrow> asid) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
-where
-  "pageFlushASID_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 v1 v2 v3 v4 (f v5)"
+  "pageUnmapCapSlot (PageUnmap v0 v1) = v1"
 
 primrec
   pageFlushType_update :: "(flush_type \<Rightarrow> flush_type) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
@@ -316,9 +288,14 @@ where
   "pageFlushType_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush (f v0) v1 v2 v3 v4 v5"
 
 primrec
-  pageFlushEnd_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+  pageMapASID_update :: "(asid \<Rightarrow> asid) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
-  "pageFlushEnd_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 v1 (f v2) v3 v4 v5"
+  "pageMapASID_update f (PageMap v0 v1 v2 v3) = PageMap (f v0) v1 v2 v3"
+
+primrec
+  pageFlushPD_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+where
+  "pageFlushPD_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 v1 v2 v3 (f v4) v5"
 
 primrec
   pageFlushPStart_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
@@ -326,14 +303,9 @@ where
   "pageFlushPStart_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 v1 v2 (f v3) v4 v5"
 
 primrec
-  pageRemapEntries_update :: "(((pte * machine_word list) + (pde * machine_word list)) \<Rightarrow> ((pte * machine_word list) + (pde * machine_word list))) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+  pageMapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
-  "pageRemapEntries_update f (PageRemap v0 v1) = PageRemap v0 (f v1)"
-
-primrec
-  pageMapASID_update :: "(asid \<Rightarrow> asid) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
-where
-  "pageMapASID_update f (PageMap v0 v1 v2 v3) = PageMap (f v0) v1 v2 v3"
+  "pageMapCap_update f (PageMap v0 v1 v2 v3) = PageMap v0 (f v1) v2 v3"
 
 primrec
   pageGetBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
@@ -341,9 +313,34 @@ where
   "pageGetBasePtr_update f (PageGetAddr v0) = PageGetAddr (f v0)"
 
 primrec
+  pageFlushEnd_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+where
+  "pageFlushEnd_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 v1 (f v2) v3 v4 v5"
+
+primrec
   pageMapEntries_update :: "(((pte * machine_word list) + (pde * machine_word list)) \<Rightarrow> ((pte * machine_word list) + (pde * machine_word list))) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
   "pageMapEntries_update f (PageMap v0 v1 v2 v3) = PageMap v0 v1 v2 (f v3)"
+
+primrec
+  pageUnmapCap_update :: "(arch_capability \<Rightarrow> arch_capability) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+where
+  "pageUnmapCap_update f (PageUnmap v0 v1) = PageUnmap (f v0) v1"
+
+primrec
+  pageRemapEntries_update :: "(((pte * machine_word list) + (pde * machine_word list)) \<Rightarrow> ((pte * machine_word list) + (pde * machine_word list))) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+where
+  "pageRemapEntries_update f (PageRemap v0 v1) = PageRemap v0 (f v1)"
+
+primrec
+  pageMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+where
+  "pageMapCTSlot_update f (PageMap v0 v1 v2 v3) = PageMap v0 v1 (f v2) v3"
+
+primrec
+  pageFlushStart_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+where
+  "pageFlushStart_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 (f v1) v2 v3 v4 v5"
 
 primrec
   pageRemapASID_update :: "(asid \<Rightarrow> asid) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
@@ -351,9 +348,14 @@ where
   "pageRemapASID_update f (PageRemap v0 v1) = PageRemap (f v0) v1"
 
 primrec
-  pageMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+  pageFlushASID_update :: "(asid \<Rightarrow> asid) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
-  "pageMapCTSlot_update f (PageMap v0 v1 v2 v3) = PageMap v0 v1 (f v2) v3"
+  "pageFlushASID_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 v1 v2 v3 v4 (f v5)"
+
+primrec
+  pageUnmapCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+where
+  "pageUnmapCapSlot_update f (PageUnmap v0 v1) = PageUnmap v0 (f v1)"
 
 abbreviation (input)
   PageGetAddr_trans :: "(machine_word) \<Rightarrow> page_invocation" ("PageGetAddr'_ \<lparr> pageGetBasePtr= _ \<rparr>")
@@ -419,11 +421,6 @@ datatype asidcontrol_invocation =
     MakePool machine_word machine_word machine_word asid
 
 primrec
-  makePoolSlot :: "asidcontrol_invocation \<Rightarrow> machine_word"
-where
-  "makePoolSlot (MakePool v0 v1 v2 v3) = v1"
-
-primrec
   makePoolFrame :: "asidcontrol_invocation \<Rightarrow> machine_word"
 where
   "makePoolFrame (MakePool v0 v1 v2 v3) = v0"
@@ -439,9 +436,9 @@ where
   "makePoolParent (MakePool v0 v1 v2 v3) = v2"
 
 primrec
-  makePoolSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> asidcontrol_invocation \<Rightarrow> asidcontrol_invocation"
+  makePoolSlot :: "asidcontrol_invocation \<Rightarrow> machine_word"
 where
-  "makePoolSlot_update f (MakePool v0 v1 v2 v3) = MakePool v0 (f v1) v2 v3"
+  "makePoolSlot (MakePool v0 v1 v2 v3) = v1"
 
 primrec
   makePoolFrame_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> asidcontrol_invocation \<Rightarrow> asidcontrol_invocation"
@@ -458,30 +455,15 @@ primrec
 where
   "makePoolParent_update f (MakePool v0 v1 v2 v3) = MakePool v0 v1 (f v2) v3"
 
+primrec
+  makePoolSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> asidcontrol_invocation \<Rightarrow> asidcontrol_invocation"
+where
+  "makePoolSlot_update f (MakePool v0 v1 v2 v3) = MakePool v0 (f v1) v2 v3"
+
 abbreviation (input)
   MakePool_trans :: "(machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (asid) \<Rightarrow> asidcontrol_invocation" ("MakePool'_ \<lparr> makePoolFrame= _, makePoolSlot= _, makePoolParent= _, makePoolBase= _ \<rparr>")
 where
   "MakePool_ \<lparr> makePoolFrame= v0, makePoolSlot= v1, makePoolParent= v2, makePoolBase= v3 \<rparr> == MakePool v0 v1 v2 v3"
-
-lemma makePoolSlot_makePoolSlot_update [simp]:
-  "makePoolSlot (makePoolSlot_update f v) = f (makePoolSlot v)"
-  by (cases v) simp
-
-lemma makePoolSlot_makePoolFrame_update [simp]:
-  "makePoolSlot (makePoolFrame_update f v) = makePoolSlot v"
-  by (cases v) simp
-
-lemma makePoolSlot_makePoolBase_update [simp]:
-  "makePoolSlot (makePoolBase_update f v) = makePoolSlot v"
-  by (cases v) simp
-
-lemma makePoolSlot_makePoolParent_update [simp]:
-  "makePoolSlot (makePoolParent_update f v) = makePoolSlot v"
-  by (cases v) simp
-
-lemma makePoolFrame_makePoolSlot_update [simp]:
-  "makePoolFrame (makePoolSlot_update f v) = makePoolFrame v"
-  by (cases v) simp
 
 lemma makePoolFrame_makePoolFrame_update [simp]:
   "makePoolFrame (makePoolFrame_update f v) = f (makePoolFrame v)"
@@ -495,8 +477,8 @@ lemma makePoolFrame_makePoolParent_update [simp]:
   "makePoolFrame (makePoolParent_update f v) = makePoolFrame v"
   by (cases v) simp
 
-lemma makePoolBase_makePoolSlot_update [simp]:
-  "makePoolBase (makePoolSlot_update f v) = makePoolBase v"
+lemma makePoolFrame_makePoolSlot_update [simp]:
+  "makePoolFrame (makePoolSlot_update f v) = makePoolFrame v"
   by (cases v) simp
 
 lemma makePoolBase_makePoolFrame_update [simp]:
@@ -511,8 +493,8 @@ lemma makePoolBase_makePoolParent_update [simp]:
   "makePoolBase (makePoolParent_update f v) = makePoolBase v"
   by (cases v) simp
 
-lemma makePoolParent_makePoolSlot_update [simp]:
-  "makePoolParent (makePoolSlot_update f v) = makePoolParent v"
+lemma makePoolBase_makePoolSlot_update [simp]:
+  "makePoolBase (makePoolSlot_update f v) = makePoolBase v"
   by (cases v) simp
 
 lemma makePoolParent_makePoolFrame_update [simp]:
@@ -525,6 +507,26 @@ lemma makePoolParent_makePoolBase_update [simp]:
 
 lemma makePoolParent_makePoolParent_update [simp]:
   "makePoolParent (makePoolParent_update f v) = f (makePoolParent v)"
+  by (cases v) simp
+
+lemma makePoolParent_makePoolSlot_update [simp]:
+  "makePoolParent (makePoolSlot_update f v) = makePoolParent v"
+  by (cases v) simp
+
+lemma makePoolSlot_makePoolFrame_update [simp]:
+  "makePoolSlot (makePoolFrame_update f v) = makePoolSlot v"
+  by (cases v) simp
+
+lemma makePoolSlot_makePoolBase_update [simp]:
+  "makePoolSlot (makePoolBase_update f v) = makePoolSlot v"
+  by (cases v) simp
+
+lemma makePoolSlot_makePoolParent_update [simp]:
+  "makePoolSlot (makePoolParent_update f v) = makePoolSlot v"
+  by (cases v) simp
+
+lemma makePoolSlot_makePoolSlot_update [simp]:
+  "makePoolSlot (makePoolSlot_update f v) = f (makePoolSlot v)"
   by (cases v) simp
 
 datatype asidpool_invocation =

@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file l4v/spec/design/skel/ARM/Arch_Structs_B.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
