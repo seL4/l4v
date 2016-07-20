@@ -23,6 +23,7 @@ context Arch begin global_naming ARM_HYP_H
 datatype arch_kernel_object_type =
     PDET
   | PTET
+  | VCPUT
   | ASIDPoolT
 
 primrec
@@ -30,7 +31,15 @@ primrec
 where
   "archTypeOf (KOPDE e) = PDET"
 | "archTypeOf (KOPTE e) = PTET"
+| "archTypeOf (KOVCPU e) = VCPUT"
 | "archTypeOf (KOASIDPool e) = ASIDPoolT"
+
+end
+
+context begin interpretation Arch .
+
+requalify_types
+  vcpu
 
 end
 end

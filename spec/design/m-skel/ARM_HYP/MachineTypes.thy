@@ -129,7 +129,7 @@ definition
 
 
 (* Machine/Hardware/ARM.lhs - hardware_asid, vmfault_type and vmpage_size *)
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM_HYP.lhs CONTEXT ARM_HYP ONLY HardwareASID VMFaultType VMPageSize pageBits pageBitsForSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM_HYP.lhs CONTEXT ARM_HYP ONLY HardwareASID VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize
 
 end
 
@@ -139,7 +139,7 @@ end
 
 context Arch begin global_naming ARM_HYP
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM_HYP.lhs CONTEXT ARM_HYP instanceproofs ONLY HardwareASID VMFaultType VMPageSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM_HYP.lhs CONTEXT ARM_HYP instanceproofs ONLY HardwareASID VMFaultType HypFaultType VMPageSize
 
 end
 end

@@ -8,15 +8,17 @@
  * @TAG(GD_GPL)
  *)
 
-theory ArchTCB_H
-imports "../TCBDecls_H"
+chapter "VCPU"
+
+theory VCPU_H
+imports Hardware_H "../Structures_H"
+  "../Invocations_H"
+  "../TCB_H"
 begin
 context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Object/TCB/ARM_HYP.lhs CONTEXT ARM_HYP_H
-
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= ONLY archThreadGet archThreadSet asUser
-
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs CONTEXT ARM_HYP_H
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H ArchInv=
 
 end
 end

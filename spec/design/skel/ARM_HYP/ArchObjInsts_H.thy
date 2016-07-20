@@ -68,6 +68,28 @@ instance
 
 end
 
+instantiation ARM_HYP_H.vcpu :: pre_storable
+begin
+interpretation Arch .
+
+definition
+  projectKO_opt_vcpu:
+  "projectKO_opt e \<equiv> case e of KOArch (KOVCPU e) \<Rightarrow> Some e | _ \<Rightarrow> None"
+
+definition
+  injectKO_vcpu:
+  "injectKO e \<equiv> KOArch (KOVCPU e)"
+
+definition
+  koType_vcpu:
+  "koType (t::vcpu itself) \<equiv> ArchT VCPUT"
+
+instance
+  by (intro_classes,
+      auto simp: projectKO_opt_vcpu injectKO_vcpu koType_vcpu
+          split: kernel_object.splits arch_kernel_object.splits)
+
+end
 
 instantiation ARM_HYP_H.asidpool :: pre_storable
 begin
@@ -93,18 +115,20 @@ instance
 end
 
 lemmas (in Arch) projectKO_opts_defs =
-  projectKO_opt_pde projectKO_opt_pte projectKO_opt_asidpool
+  projectKO_opt_pde projectKO_opt_pte projectKO_opt_vcpu projectKO_opt_asidpool
   ObjectInstances_H.projectKO_opts_defs
 
 lemmas (in Arch) [simp] =
   injectKO_pde koType_pde
   injectKO_pte koType_pte
+  injectKO_vcpu koType_vcpu
   injectKO_asidpool koType_asidpool
 
 -- --------------------------------------
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM_HYP.lhs
 #INCLUDE_HASKELL_PREPARSE SEL4/Machine/Hardware/ARM_HYP.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/ARM_HYP.lhs
 
 
 instantiation ARM_HYP_H.pde :: pspace_storable
@@ -126,7 +150,26 @@ instantiation ARM_HYP_H.pte :: pspace_storable
 begin
 interpretation Arch .
 
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM_HYP.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/ARM_HYP.lhs
 #INCLUDE_HASKELL SEL4/Object/Instances/ARM_HYP.lhs instanceproofs bodies_only ONLY PTE
+
+instance
+  apply (intro_classes)
+  apply (clarsimp simp add: updateObject_default_def in_monad projectKO_opts_defs
+                            projectKO_eq2
+                     split: kernel_object.splits arch_kernel_object.splits)
+  done
+
+end
+
+instantiation ARM_HYP_H.vcpu :: pspace_storable
+begin
+interpretation Arch .
+
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM_HYP.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/ARM_HYP.lhs
+#INCLUDE_HASKELL SEL4/Object/Instances/ARM_HYP.lhs instanceproofs bodies_only ONLY VCPU
 
 instance
   apply (intro_classes)

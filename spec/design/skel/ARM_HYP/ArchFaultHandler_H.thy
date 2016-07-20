@@ -8,15 +8,21 @@
  * @TAG(GD_GPL)
  *)
 
-theory ArchTCB_H
-imports "../TCBDecls_H"
+chapter "Fault Handlers"
+
+theory ArchFaultHandler_H
+imports "../TCB_H" "../Structures_H"
 begin
+
 context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Object/TCB/ARM_HYP.lhs CONTEXT ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= ONLY archThreadGet archThreadSet asUser
+#INCLUDE_HASKELL_PREPARSE SEL4/API/Failures/ARM_HYP.lhs
 
+#INCLUDE_HASKELL SEL4/API/Faults/ARM_HYP.lhs decls_only
+#INCLUDE_HASKELL SEL4/API/Faults/ARM_HYP.lhs bodies_only
 
 end
+
+
 end

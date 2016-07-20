@@ -43,7 +43,8 @@ definition
       SectionObject,
       SuperSectionObject,
       PageTableObject,
-      PageDirectoryObject
+      PageDirectoryObject,
+      VCPUObject
     ]"
 
 definition

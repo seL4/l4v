@@ -15,6 +15,7 @@ imports
   ArchRetypeDecls_H
   ArchVSpaceDecls_H
   Hardware_H
+  VCPU_H
   "../KI_Decls_H"
 begin
 context Arch begin global_naming ARM_HYP_H
