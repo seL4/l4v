@@ -16,7 +16,11 @@ DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 # Add repo version of Isabelle to our path.
 export PATH="${DIR}/isabelle/bin:$PATH"
 
+# Export L4V_ARCH variable as ARM_HYP
+export L4V_ARCH="${L4V_ARCH:-ARM_HYP}"
+echo "Testing for L4V_ARCH=${L4V_ARCH}:"
+
 # Run the tests from the script directory.
 cd ${DIR}
-python ./misc/regression/run_tests.py "$@"
+python ./misc/regression/run_tests.py -x AInvs -x BaseRefine -x Refine -x AutoCorresSEL4 -x CamkesAdlSpec -x CamkesGlueSpec -x SimpleSystem -x RelyGuarantee -x SepTactics -x SepTacticsExamples ASpec ExecSpec ASpec_ARM ExecSpec_ARM AInvs BaseRefine Refine SpecCheck -x Access -x InfoFlow -x ArmConfidentiality -x WholeSys -x WholeSysExamples -x DSpec -x DBaseRefine -x DRefine -x DPolicy -x CamkesCdlRefine -x SepDSpec -x DSpecProofs -x TakeGrant -x ASepSpec -x Bisim -x SysInit -x SysInitExamples -x InfoFlowC -x WholeSysExamplesC -x SimplExportAndRefine -x CParserTest -x CParserTools -x AutoCorres -x CamkesGlueProofs -x CamkesDarpaReport -x AutoCorresDoc -x AutoCorresTest -x CParser -x CKernel -x CSpec -x CBaseRefine -x CRefine "$@"
 
