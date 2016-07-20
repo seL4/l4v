@@ -31,11 +31,13 @@ requalify_types
   user_context
   arch_kernel_object
   asid
+  arch_tcb
 
 requalify_consts
   archObjSize
   pageBits
   nullPointer
+  newArchTCB
   fromPPtr
   PPtr
 

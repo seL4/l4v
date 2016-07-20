@@ -17,8 +17,14 @@
 chapter "Fault Structures"
 
 theory Fault_H
-imports Types_H
+imports "$L4V_ARCH/ArchFault_H"
 begin
+
+context begin interpretation Arch .
+
+requalify_types
+  arch_fault
+end
 
 datatype lookup_failure =
     MissingCapability nat
@@ -131,19 +137,14 @@ where
 
 datatype fault =
     UserException machine_word machine_word
-  | VMFault vptr "machine_word list"
   | CapFault cptr bool lookup_failure
   | UnknownSyscallException machine_word
+  | ArchFault arch_fault
 
 primrec
   userExceptionErrorCode :: "fault \<Rightarrow> machine_word"
 where
   "userExceptionErrorCode (UserException v0 v1) = v1"
-
-primrec
-  vmFaultAddress :: "fault \<Rightarrow> vptr"
-where
-  "vmFaultAddress (VMFault v0 v1) = v0"
 
 primrec
   capFaultInReceivePhase :: "fault \<Rightarrow> bool"
@@ -156,9 +157,9 @@ where
   "capFaultFailure (CapFault v0 v1 v2) = v2"
 
 primrec
-  vmFaultArchData :: "fault \<Rightarrow> machine_word list"
+  archFault :: "fault \<Rightarrow> arch_fault"
 where
-  "vmFaultArchData (VMFault v0 v1) = v1"
+  "archFault (ArchFault v0) = v0"
 
 primrec
   capFaultAddress :: "fault \<Rightarrow> cptr"
@@ -181,11 +182,6 @@ where
   "userExceptionErrorCode_update f (UserException v0 v1) = UserException v0 (f v1)"
 
 primrec
-  vmFaultAddress_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> fault \<Rightarrow> fault"
-where
-  "vmFaultAddress_update f (VMFault v0 v1) = VMFault (f v0) v1"
-
-primrec
   capFaultInReceivePhase_update :: "(bool \<Rightarrow> bool) \<Rightarrow> fault \<Rightarrow> fault"
 where
   "capFaultInReceivePhase_update f (CapFault v0 v1 v2) = CapFault v0 (f v1) v2"
@@ -196,9 +192,9 @@ where
   "capFaultFailure_update f (CapFault v0 v1 v2) = CapFault v0 v1 (f v2)"
 
 primrec
-  vmFaultArchData_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> fault \<Rightarrow> fault"
+  archFault_update :: "(arch_fault \<Rightarrow> arch_fault) \<Rightarrow> fault \<Rightarrow> fault"
 where
-  "vmFaultArchData_update f (VMFault v0 v1) = VMFault v0 (f v1)"
+  "archFault_update f (ArchFault v0) = ArchFault (f v0)"
 
 primrec
   capFaultAddress_update :: "(cptr \<Rightarrow> cptr) \<Rightarrow> fault \<Rightarrow> fault"
@@ -221,11 +217,6 @@ where
   "UserException_ \<lparr> userExceptionNumber= v0, userExceptionErrorCode= v1 \<rparr> == UserException v0 v1"
 
 abbreviation (input)
-  VMFault_trans :: "(vptr) \<Rightarrow> (machine_word list) \<Rightarrow> fault" ("VMFault'_ \<lparr> vmFaultAddress= _, vmFaultArchData= _ \<rparr>")
-where
-  "VMFault_ \<lparr> vmFaultAddress= v0, vmFaultArchData= v1 \<rparr> == VMFault v0 v1"
-
-abbreviation (input)
   CapFault_trans :: "(cptr) \<Rightarrow> (bool) \<Rightarrow> (lookup_failure) \<Rightarrow> fault" ("CapFault'_ \<lparr> capFaultAddress= _, capFaultInReceivePhase= _, capFaultFailure= _ \<rparr>")
 where
   "CapFault_ \<lparr> capFaultAddress= v0, capFaultInReceivePhase= v1, capFaultFailure= v2 \<rparr> == CapFault v0 v1 v2"
@@ -235,18 +226,16 @@ abbreviation (input)
 where
   "UnknownSyscallException_ \<lparr> unknownSyscallNumber= v0 \<rparr> == UnknownSyscallException v0"
 
+abbreviation (input)
+  ArchFault_trans :: "(arch_fault) \<Rightarrow> fault" ("ArchFault'_ \<lparr> archFault= _ \<rparr>")
+where
+  "ArchFault_ \<lparr> archFault= v0 \<rparr> == ArchFault v0"
+
 definition
   isUserException :: "fault \<Rightarrow> bool"
 where
  "isUserException v \<equiv> case v of
     UserException v0 v1 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
-  isVMFault :: "fault \<Rightarrow> bool"
-where
- "isVMFault v \<equiv> case v of
-    VMFault v0 v1 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition
@@ -261,6 +250,13 @@ definition
 where
  "isUnknownSyscallException v \<equiv> case v of
     UnknownSyscallException v0 \<Rightarrow> True
+  | _ \<Rightarrow> False"
+
+definition
+  isArchFault :: "fault \<Rightarrow> bool"
+where
+ "isArchFault v \<equiv> case v of
+    ArchFault v0 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 datatype init_failure =

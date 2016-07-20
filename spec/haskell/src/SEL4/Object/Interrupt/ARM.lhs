@@ -34,7 +34,7 @@ Apparently ARM does not have any.
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
 
 > handleReservedIRQ :: IRQ -> Kernel ()
-> handleReservedIRQ _irq = return () -- handleReservedIRQ does nothing on ARM
+> handleReservedIRQ _ = return () -- handleReservedIRQ does nothing on ARM
 
 > initInterruptController :: Kernel ()
 > initInterruptController = return ()

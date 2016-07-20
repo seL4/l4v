@@ -26,5 +26,30 @@ where
 "performTransfer arg1 arg2 arg3 \<equiv> return ()"
 
 
+
+definition
+archThreadGet :: "(arch_tcb \<Rightarrow> 'a) \<Rightarrow> machine_word \<Rightarrow> 'a kernel"
+where
+"archThreadGet f tptr\<equiv> liftM (f \<circ> tcbArch) $ getObject tptr"
+
+definition
+archThreadSet :: "(arch_tcb \<Rightarrow> arch_tcb) \<Rightarrow> machine_word \<Rightarrow> unit kernel"
+where
+"archThreadSet f tptr\<equiv> (do
+        tcb \<leftarrow> getObject tptr;
+        setObject tptr $ tcb \<lparr> tcbArch := f (tcbArch tcb) \<rparr>
+od)"
+
+definition
+asUser :: "machine_word \<Rightarrow> 'a user_monad \<Rightarrow> 'a kernel"
+where
+"asUser tptr f\<equiv> (do
+        atcb \<leftarrow> threadGet tcbArch tptr;
+        (a, uc') \<leftarrow> return ( runState f $ atcbContext atcb);
+        threadSet (\<lambda> tcb. tcb \<lparr> tcbArch := atcb \<lparr> atcbContext := uc' \<rparr> \<rparr>) tptr;
+        return a
+od)"
+
+
 end
 end

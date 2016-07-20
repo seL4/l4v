@@ -1,8 +1,31 @@
-Built from git repo at /Users/xgao/verification/l4v/spec/haskell by xgao
+Built from git repo at /home/agomezl/NICTA/verification/l4v/spec/haskell by agomezl
 
 Generated from changeset:
-fdb52c7 SELFOUR-553: rebase and regenerate haskell spec
+969d745 execspec: checking in current generated files
 
 
 Warning - uncomitted changes used:
  M ../design/version
+?? ../../.tramp_history
+?? ../../diff_sel4
+?? ../../kernel_all_1.txt
+?? ../../kernel_all_2.txt
+?? ../../olf_kernel_all.c_pp
+?? ../../proof/access-control/Syscall_AC.thy.bkp
+?? ../../proof/crefine/.Fastpath_C.thy.marks
+?? ../../proof/crefine/.Ipc_C.thy.marks
+?? ../../proof/crefine/.IsolatedThreadAction.thy.marks
+?? ../../proof/crefine/Fastpath_C2.thy
+?? ../../proof/crefine/IsolatedThreadAction.thy.bkp
+?? ../../proof/drefine/Tcb_DR.thy.bkp
+?? ../../proof/infoflow/ADT_IF_Refine.thy.bkp
+?? ../../proof/infoflow/ADT_IF_Refine_C.thy.bkp
+?? ../../proof/infoflow/Example_Valid_StateH.thy.bkp
+?? ../../proof/invariant-abstract/DetSchedDomainTime_AI.thy.bkp
+?? ../../proof/refine/DomainTime_R.thy.bkp
+?? ../cspec/c/32/
+?? ../design/skel/ARM/ArchFault_H.thy.bkp
+?? ../../test-images/
+?? ../../tools/c-parser/testfiles/test_foo.c
+?? ../../tools/c-parser/testfiles/test_foo.thy
+?? ../../tws_rm.sh

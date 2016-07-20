@@ -8,15 +8,19 @@
  * @TAG(GD_GPL)
  *)
 
-theory ArchTCB_H
-imports "../TCBDecls_H"
+(*
+  VSpace lookup code.
+*)
+
+theory ArchFault_H
+imports "../Types_H"
 begin
 context Arch begin global_naming ARM_H
 
-#INCLUDE_HASKELL SEL4/Object/TCB/ARM.lhs CONTEXT ARM_H
 
+#INCLUDE_HASKELL SEL4/API/Failures/ARM.lhs CONTEXT ARM_H decls_only
+#INCLUDE_HASKELL SEL4/API/Failures/ARM.lhs CONTEXT ARM_H bodies_only
 
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= ONLY archThreadGet archThreadSet asUser
 
 end
 end

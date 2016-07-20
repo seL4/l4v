@@ -206,6 +206,29 @@ datatype arch_kernel_object =
   | KOPTE pte
   | KOPDE pde
 
+type_synonym arch_tcb = "user_context"
+
+definition
+  ArchThread :: "arch_tcb \<Rightarrow> arch_tcb"
+where ArchThread_def[simp]:
+ "ArchThread \<equiv> id"
+
+definition
+  atcbContext :: "arch_tcb \<Rightarrow> arch_tcb"
+where
+  atcbContext_def[simp]:
+ "atcbContext \<equiv> id"
+
+definition  atcbContext_update :: "(arch_tcb \<Rightarrow> arch_tcb) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+where
+  atcbContext_update_def[simp]:
+ "atcbContext_update f y \<equiv> f y"
+
+abbreviation (input)
+  ArchThread_trans :: "(user_context) \<Rightarrow> arch_tcb" ("ArchThread'_ \<lparr> atcbContext= _ \<rparr>")
+where
+  "ArchThread_ \<lparr> atcbContext= v0 \<rparr> == ArchThread v0"
+
 consts'
 archObjSize :: "arch_kernel_object \<Rightarrow> nat"
 
@@ -230,6 +253,10 @@ defs archObjSize_def:
                 | KOPTE v11 \<Rightarrow>   2
                 | KOPDE v12 \<Rightarrow>   2
                 )"
+
+definition
+"newArchTCB \<equiv> ArchThread_ \<lparr>
+    atcbContext= newContext \<rparr>"
 
 defs asidHighBits_def:
 "asidHighBits \<equiv> 7"
