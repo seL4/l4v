@@ -1,5 +1,5 @@
 (* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
-(* instead, see the skeleton file l4v/spec/design/skel/ARM/ArchThreadDecls_H.thy *)
+(* instead, see the skeleton file ArchThreadDecls_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *

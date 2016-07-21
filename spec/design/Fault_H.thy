@@ -1,5 +1,5 @@
 (* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
-(* instead, see the skeleton file l4v/spec/design/skel/Fault_H.thy *)
+(* instead, see the skeleton file Fault_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -32,9 +32,9 @@ where
   "missingCapBitsLeft (MissingCapability v0) = v0"
 
 primrec
-  guardMismatchGuardFound :: "lookup_failure \<Rightarrow> machine_word"
+  depthMismatchBitsFound :: "lookup_failure \<Rightarrow> nat"
 where
-  "guardMismatchGuardFound (GuardMismatch v0 v1 v2) = v1"
+  "depthMismatchBitsFound (DepthMismatch v0 v1) = v1"
 
 primrec
   guardMismatchGuardSize :: "lookup_failure \<Rightarrow> nat"
@@ -42,19 +42,19 @@ where
   "guardMismatchGuardSize (GuardMismatch v0 v1 v2) = v2"
 
 primrec
-  guardMismatchBitsLeft :: "lookup_failure \<Rightarrow> nat"
-where
-  "guardMismatchBitsLeft (GuardMismatch v0 v1 v2) = v0"
-
-primrec
   depthMismatchBitsLeft :: "lookup_failure \<Rightarrow> nat"
 where
   "depthMismatchBitsLeft (DepthMismatch v0 v1) = v0"
 
 primrec
-  depthMismatchBitsFound :: "lookup_failure \<Rightarrow> nat"
+  guardMismatchGuardFound :: "lookup_failure \<Rightarrow> machine_word"
 where
-  "depthMismatchBitsFound (DepthMismatch v0 v1) = v1"
+  "guardMismatchGuardFound (GuardMismatch v0 v1 v2) = v1"
+
+primrec
+  guardMismatchBitsLeft :: "lookup_failure \<Rightarrow> nat"
+where
+  "guardMismatchBitsLeft (GuardMismatch v0 v1 v2) = v0"
 
 primrec
   missingCapBitsLeft_update :: "(nat \<Rightarrow> nat) \<Rightarrow> lookup_failure \<Rightarrow> lookup_failure"
@@ -62,9 +62,9 @@ where
   "missingCapBitsLeft_update f (MissingCapability v0) = MissingCapability (f v0)"
 
 primrec
-  guardMismatchGuardFound_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> lookup_failure \<Rightarrow> lookup_failure"
+  depthMismatchBitsFound_update :: "(nat \<Rightarrow> nat) \<Rightarrow> lookup_failure \<Rightarrow> lookup_failure"
 where
-  "guardMismatchGuardFound_update f (GuardMismatch v0 v1 v2) = GuardMismatch v0 (f v1) v2"
+  "depthMismatchBitsFound_update f (DepthMismatch v0 v1) = DepthMismatch v0 (f v1)"
 
 primrec
   guardMismatchGuardSize_update :: "(nat \<Rightarrow> nat) \<Rightarrow> lookup_failure \<Rightarrow> lookup_failure"
@@ -72,19 +72,19 @@ where
   "guardMismatchGuardSize_update f (GuardMismatch v0 v1 v2) = GuardMismatch v0 v1 (f v2)"
 
 primrec
-  guardMismatchBitsLeft_update :: "(nat \<Rightarrow> nat) \<Rightarrow> lookup_failure \<Rightarrow> lookup_failure"
-where
-  "guardMismatchBitsLeft_update f (GuardMismatch v0 v1 v2) = GuardMismatch (f v0) v1 v2"
-
-primrec
   depthMismatchBitsLeft_update :: "(nat \<Rightarrow> nat) \<Rightarrow> lookup_failure \<Rightarrow> lookup_failure"
 where
   "depthMismatchBitsLeft_update f (DepthMismatch v0 v1) = DepthMismatch (f v0) v1"
 
 primrec
-  depthMismatchBitsFound_update :: "(nat \<Rightarrow> nat) \<Rightarrow> lookup_failure \<Rightarrow> lookup_failure"
+  guardMismatchGuardFound_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> lookup_failure \<Rightarrow> lookup_failure"
 where
-  "depthMismatchBitsFound_update f (DepthMismatch v0 v1) = DepthMismatch v0 (f v1)"
+  "guardMismatchGuardFound_update f (GuardMismatch v0 v1 v2) = GuardMismatch v0 (f v1) v2"
+
+primrec
+  guardMismatchBitsLeft_update :: "(nat \<Rightarrow> nat) \<Rightarrow> lookup_failure \<Rightarrow> lookup_failure"
+where
+  "guardMismatchBitsLeft_update f (GuardMismatch v0 v1 v2) = GuardMismatch (f v0) v1 v2"
 
 abbreviation (input)
   MissingCapability_trans :: "(nat) \<Rightarrow> lookup_failure" ("MissingCapability'_ \<lparr> missingCapBitsLeft= _ \<rparr>")
@@ -136,29 +136,14 @@ datatype fault =
   | UnknownSyscallException machine_word
 
 primrec
+  userExceptionNumber :: "fault \<Rightarrow> machine_word"
+where
+  "userExceptionNumber (UserException v0 v1) = v0"
+
+primrec
   vmFaultAddress :: "fault \<Rightarrow> vptr"
 where
   "vmFaultAddress (VMFault v0 v1) = v0"
-
-primrec
-  vmFaultArchData :: "fault \<Rightarrow> machine_word list"
-where
-  "vmFaultArchData (VMFault v0 v1) = v1"
-
-primrec
-  capFaultFailure :: "fault \<Rightarrow> lookup_failure"
-where
-  "capFaultFailure (CapFault v0 v1 v2) = v2"
-
-primrec
-  unknownSyscallNumber :: "fault \<Rightarrow> machine_word"
-where
-  "unknownSyscallNumber (UnknownSyscallException v0) = v0"
-
-primrec
-  capFaultInReceivePhase :: "fault \<Rightarrow> bool"
-where
-  "capFaultInReceivePhase (CapFault v0 v1 v2) = v1"
 
 primrec
   capFaultAddress :: "fault \<Rightarrow> cptr"
@@ -166,14 +151,34 @@ where
   "capFaultAddress (CapFault v0 v1 v2) = v0"
 
 primrec
+  capFaultFailure :: "fault \<Rightarrow> lookup_failure"
+where
+  "capFaultFailure (CapFault v0 v1 v2) = v2"
+
+primrec
+  vmFaultArchData :: "fault \<Rightarrow> machine_word list"
+where
+  "vmFaultArchData (VMFault v0 v1) = v1"
+
+primrec
   userExceptionErrorCode :: "fault \<Rightarrow> machine_word"
 where
   "userExceptionErrorCode (UserException v0 v1) = v1"
 
 primrec
-  userExceptionNumber :: "fault \<Rightarrow> machine_word"
+  capFaultInReceivePhase :: "fault \<Rightarrow> bool"
 where
-  "userExceptionNumber (UserException v0 v1) = v0"
+  "capFaultInReceivePhase (CapFault v0 v1 v2) = v1"
+
+primrec
+  unknownSyscallNumber :: "fault \<Rightarrow> machine_word"
+where
+  "unknownSyscallNumber (UnknownSyscallException v0) = v0"
+
+primrec
+  userExceptionNumber_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> fault \<Rightarrow> fault"
+where
+  "userExceptionNumber_update f (UserException v0 v1) = UserException (f v0) v1"
 
 primrec
   vmFaultAddress_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> fault \<Rightarrow> fault"
@@ -181,9 +186,9 @@ where
   "vmFaultAddress_update f (VMFault v0 v1) = VMFault (f v0) v1"
 
 primrec
-  vmFaultArchData_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> fault \<Rightarrow> fault"
+  capFaultAddress_update :: "(cptr \<Rightarrow> cptr) \<Rightarrow> fault \<Rightarrow> fault"
 where
-  "vmFaultArchData_update f (VMFault v0 v1) = VMFault v0 (f v1)"
+  "capFaultAddress_update f (CapFault v0 v1 v2) = CapFault (f v0) v1 v2"
 
 primrec
   capFaultFailure_update :: "(lookup_failure \<Rightarrow> lookup_failure) \<Rightarrow> fault \<Rightarrow> fault"
@@ -191,19 +196,9 @@ where
   "capFaultFailure_update f (CapFault v0 v1 v2) = CapFault v0 v1 (f v2)"
 
 primrec
-  unknownSyscallNumber_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> fault \<Rightarrow> fault"
+  vmFaultArchData_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> fault \<Rightarrow> fault"
 where
-  "unknownSyscallNumber_update f (UnknownSyscallException v0) = UnknownSyscallException (f v0)"
-
-primrec
-  capFaultInReceivePhase_update :: "(bool \<Rightarrow> bool) \<Rightarrow> fault \<Rightarrow> fault"
-where
-  "capFaultInReceivePhase_update f (CapFault v0 v1 v2) = CapFault v0 (f v1) v2"
-
-primrec
-  capFaultAddress_update :: "(cptr \<Rightarrow> cptr) \<Rightarrow> fault \<Rightarrow> fault"
-where
-  "capFaultAddress_update f (CapFault v0 v1 v2) = CapFault (f v0) v1 v2"
+  "vmFaultArchData_update f (VMFault v0 v1) = VMFault v0 (f v1)"
 
 primrec
   userExceptionErrorCode_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> fault \<Rightarrow> fault"
@@ -211,9 +206,14 @@ where
   "userExceptionErrorCode_update f (UserException v0 v1) = UserException v0 (f v1)"
 
 primrec
-  userExceptionNumber_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> fault \<Rightarrow> fault"
+  capFaultInReceivePhase_update :: "(bool \<Rightarrow> bool) \<Rightarrow> fault \<Rightarrow> fault"
 where
-  "userExceptionNumber_update f (UserException v0 v1) = UserException (f v0) v1"
+  "capFaultInReceivePhase_update f (CapFault v0 v1 v2) = CapFault v0 (f v1) v2"
+
+primrec
+  unknownSyscallNumber_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> fault \<Rightarrow> fault"
+where
+  "unknownSyscallNumber_update f (UnknownSyscallException v0) = UnknownSyscallException (f v0)"
 
 abbreviation (input)
   UserException_trans :: "(machine_word) \<Rightarrow> (machine_word) \<Rightarrow> fault" ("UserException'_ \<lparr> userExceptionNumber= _, userExceptionErrorCode= _ \<rparr>")
@@ -279,19 +279,9 @@ datatype syscall_error =
   | AlignmentError
 
 primrec
-  failedLookupDescription :: "syscall_error \<Rightarrow> lookup_failure"
+  failedLookupWasSource :: "syscall_error \<Rightarrow> bool"
 where
-  "failedLookupDescription (FailedLookup v0 v1) = v1"
-
-primrec
-  invalidArgumentNumber :: "syscall_error \<Rightarrow> nat"
-where
-  "invalidArgumentNumber (InvalidArgument v0) = v0"
-
-primrec
-  memoryLeft :: "syscall_error \<Rightarrow> machine_word"
-where
-  "memoryLeft (NotEnoughMemory v0) = v0"
+  "failedLookupWasSource (FailedLookup v0 v1) = v0"
 
 primrec
   invalidCapNumber :: "syscall_error \<Rightarrow> nat"
@@ -299,14 +289,14 @@ where
   "invalidCapNumber (InvalidCapability v0) = v0"
 
 primrec
-  failedLookupWasSource :: "syscall_error \<Rightarrow> bool"
-where
-  "failedLookupWasSource (FailedLookup v0 v1) = v0"
-
-primrec
   rangeErrorMax :: "syscall_error \<Rightarrow> machine_word"
 where
   "rangeErrorMax (RangeError v0 v1) = v1"
+
+primrec
+  failedLookupDescription :: "syscall_error \<Rightarrow> lookup_failure"
+where
+  "failedLookupDescription (FailedLookup v0 v1) = v1"
 
 primrec
   rangeErrorMin :: "syscall_error \<Rightarrow> machine_word"
@@ -314,24 +304,14 @@ where
   "rangeErrorMin (RangeError v0 v1) = v0"
 
 primrec
-  failedLookupDescription_update :: "(lookup_failure \<Rightarrow> lookup_failure) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
+  memoryLeft :: "syscall_error \<Rightarrow> machine_word"
 where
-  "failedLookupDescription_update f (FailedLookup v0 v1) = FailedLookup v0 (f v1)"
+  "memoryLeft (NotEnoughMemory v0) = v0"
 
 primrec
-  invalidArgumentNumber_update :: "(nat \<Rightarrow> nat) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
+  invalidArgumentNumber :: "syscall_error \<Rightarrow> nat"
 where
-  "invalidArgumentNumber_update f (InvalidArgument v0) = InvalidArgument (f v0)"
-
-primrec
-  memoryLeft_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
-where
-  "memoryLeft_update f (NotEnoughMemory v0) = NotEnoughMemory (f v0)"
-
-primrec
-  invalidCapNumber_update :: "(nat \<Rightarrow> nat) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
-where
-  "invalidCapNumber_update f (InvalidCapability v0) = InvalidCapability (f v0)"
+  "invalidArgumentNumber (InvalidArgument v0) = v0"
 
 primrec
   failedLookupWasSource_update :: "(bool \<Rightarrow> bool) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
@@ -339,14 +319,34 @@ where
   "failedLookupWasSource_update f (FailedLookup v0 v1) = FailedLookup (f v0) v1"
 
 primrec
+  invalidCapNumber_update :: "(nat \<Rightarrow> nat) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
+where
+  "invalidCapNumber_update f (InvalidCapability v0) = InvalidCapability (f v0)"
+
+primrec
   rangeErrorMax_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
 where
   "rangeErrorMax_update f (RangeError v0 v1) = RangeError v0 (f v1)"
 
 primrec
+  failedLookupDescription_update :: "(lookup_failure \<Rightarrow> lookup_failure) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
+where
+  "failedLookupDescription_update f (FailedLookup v0 v1) = FailedLookup v0 (f v1)"
+
+primrec
   rangeErrorMin_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
 where
   "rangeErrorMin_update f (RangeError v0 v1) = RangeError (f v0) v1"
+
+primrec
+  memoryLeft_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
+where
+  "memoryLeft_update f (NotEnoughMemory v0) = NotEnoughMemory (f v0)"
+
+primrec
+  invalidArgumentNumber_update :: "(nat \<Rightarrow> nat) \<Rightarrow> syscall_error \<Rightarrow> syscall_error"
+where
+  "invalidArgumentNumber_update f (InvalidArgument v0) = InvalidArgument (f v0)"
 
 abbreviation (input)
   InvalidArgument_trans :: "(nat) \<Rightarrow> syscall_error" ("InvalidArgument'_ \<lparr> invalidArgumentNumber= _ \<rparr>")
