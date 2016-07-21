@@ -138,16 +138,16 @@ abbreviation
   "page_map_l4_at \<equiv> typ_at (AArch APageMapL4)"
 
 definition
-  "pde_at p \<equiv> page_directory_at (p && ~~ mask pd_bits)
+  "pde_at p \<equiv> page_directory_at (p && ~~ mask pd_shift_bits)
                   and K (is_aligned p 3)"
 definition
-  "pte_at p \<equiv> page_table_at (p && ~~ mask pt_bits)
+  "pte_at p \<equiv> page_table_at (p && ~~ mask pt_shift_bits)
                   and K (is_aligned p 3)"        
 definition
-  "pdpte_at p \<equiv> pd_pointer_table_at (p && ~~ mask pdpt_bits)
+  "pdpte_at p \<equiv> pd_pointer_table_at (p && ~~ mask pdpt_shift_bits)
                    and K (is_aligned p 3)"
 definition
-  "pml4e_at p \<equiv> page_map_l4_at (p && ~~ mask pml4_bits)
+  "pml4e_at p \<equiv> page_map_l4_at (p && ~~ mask pml4_shift_bits)
                    and K (is_aligned p 3)"
 
 definition

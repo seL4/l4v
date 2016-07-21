@@ -24,7 +24,7 @@ method spec for x :: "_ :: type" = (erule allE[of _ x])
 method bspec for x :: "_ :: type" = (erule ballE[of _ _ x])
 method prove for x :: "prop" = (rule revcut_rl[of "PROP x"])
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 
 bundle unfold_objects = 
@@ -61,6 +61,44 @@ lemma set_asid_pool_typ_at [wp]:
 
 lemmas set_asid_pool_typ_ats [wp] = abs_typ_at_lifts [OF set_asid_pool_typ_at]
 
+lemma get_pml4_wp [wp]:
+  "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageMapL4 pd)) p s \<longrightarrow> Q pd s\<rbrace> get_pml4 p \<lbrace>Q\<rbrace>"
+  apply (simp add: get_pml4_def get_object_def)
+  apply (wp|wpc)+
+  apply (clarsimp simp: obj_at_def)
+  done
+
+
+lemma get_pml4e_wp:
+  "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageMapL4 pd)) (p && ~~ mask pml4_shift_bits) s \<longrightarrow>
+        Q (pd (ucast (p && mask pml4_shift_bits >> 3))) s\<rbrace>
+  get_pml4e p
+  \<lbrace>Q\<rbrace>"  
+  by (simp add: get_pml4e_def) wp
+
+
+lemma get_pml4e_inv [wp]: "\<lbrace>P\<rbrace> get_pml4e p \<lbrace>\<lambda>_. P\<rbrace>"
+  by (wp get_pml4e_wp) simp
+
+lemma get_pdpt_wp [wp]:
+  "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PDPointerTable pd)) p s \<longrightarrow> Q pd s\<rbrace> get_pdpt p \<lbrace>Q\<rbrace>"
+  apply (simp add: get_pdpt_def get_object_def)
+  apply (wp|wpc)+
+  apply (clarsimp simp: obj_at_def)
+  done
+
+
+lemma get_pdpte_wp:
+  "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PDPointerTable pd)) (p && ~~ mask pdpt_shift_bits) s \<longrightarrow>
+        Q (pd (ucast (p && mask pdpt_shift_bits >> 3))) s\<rbrace>
+  get_pdpte p
+  \<lbrace>Q\<rbrace>"  
+  by (simp add: get_pdpte_def) wp
+
+
+lemma get_pdpte_inv [wp]: "\<lbrace>P\<rbrace> get_pdpte p \<lbrace>\<lambda>_. P\<rbrace>"
+  by (wp get_pdpte_wp) simp
+
 
 lemma get_pd_wp [wp]:
   "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) p s \<longrightarrow> Q pd s\<rbrace> get_pd p \<lbrace>Q\<rbrace>"
@@ -71,23 +109,28 @@ lemma get_pd_wp [wp]:
 
 
 lemma get_pde_wp:
-  "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s \<longrightarrow>
-        Q (pd (ucast (p && mask pd_bits >> 3))) s\<rbrace>
+  "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_shift_bits) s \<longrightarrow>
+        Q (pd (ucast (p && mask pd_shift_bits >> 3))) s\<rbrace>
   get_pde p
-  \<lbrace>Q\<rbrace>"
-  (* by (simp add: get_pde_def) wp *) sorry
+  \<lbrace>Q\<rbrace>"  
+  by (simp add: get_pde_def) wp
 
 
 lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<rbrace>"
   by (wp get_pde_wp) simp
 
 bundle pagebits = 
-  pd_bits_def[simp] pt_bits_def[simp]
+  pd_bits_def[simp] pd_shift_bits_def [simp]
+  pt_bits_def[simp] pt_shift_bits_def[simp]
+  pdpt_bits_def[simp] pdpt_shift_bits_def[simp]
+  pml4_bits_def[simp] pml4_shift_bits_def[simp]
+  table_size_def[simp]
   pageBits_def[simp] mask_lower_twice[simp]
   word_bool_alg.conj_assoc[symmetric,simp] obj_at_def[simp]
-  pde.splits[split]
+  pde.splits[split] pdpte.splits[split] pml4e.splits[split]
   pte.splits[split]
   
+(* FIXME x64:
 lemma get_master_pde_wp:
   "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s
         \<longrightarrow> Q (case (pd (ucast (p && ~~ mask 6 && mask pd_bits >> 2))) of
@@ -98,7 +141,22 @@ lemma get_master_pde_wp:
   apply (simp add: get_master_pde_def)
   apply (wp get_pde_wp | wpc)+
   including pagebits
-  by auto
+  sorry
+*)
+ 
+lemma store_pml4e_typ_at [wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pml4e ptr pde \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  apply (simp add: store_pml4e_def set_pml4_def set_object_def get_object_def)
+  apply wp
+  apply (clarsimp simp: obj_at_def a_type_def)
+  done
+
+lemma store_pdpte_typ_at [wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pdpte ptr pde \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  apply (simp add: store_pdpte_def set_pdpt_def set_object_def get_object_def)
+  apply wp
+  apply (clarsimp simp: obj_at_def a_type_def)
+  done
 
 lemma store_pde_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pde ptr pde \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
@@ -107,7 +165,8 @@ lemma store_pde_typ_at [wp]:
   apply (clarsimp simp: obj_at_def a_type_def)
   done
 
-
+lemmas store_pml4e_typ_ats [wp] = abs_typ_at_lifts [OF store_pml4e_typ_at]
+lemmas store_pdpte_typ_ats [wp] = abs_typ_at_lifts [OF store_pdpte_typ_at]
 lemmas store_pde_typ_ats [wp] = abs_typ_at_lifts [OF store_pde_typ_at]
 
 
@@ -120,8 +179,8 @@ lemma get_pt_wp [wp]:
 
 
 lemma get_pte_wp:
-  "\<lbrace>\<lambda>s. \<forall>pt. ko_at (ArchObj (PageTable pt)) (p && ~~mask pt_bits) s \<longrightarrow>
-        Q (pt (ucast (p && mask pt_bits >> 2))) s\<rbrace>
+  "\<lbrace>\<lambda>s. \<forall>pt. ko_at (ArchObj (PageTable pt)) (p && ~~mask pt_shift_bits) s \<longrightarrow>
+        Q (pt (ucast (p && mask pt_shift_bits >> 3))) s\<rbrace>
   get_pte p
   \<lbrace>Q\<rbrace>"
   by (simp add: get_pte_def) wp
@@ -131,7 +190,7 @@ lemma get_pte_inv [wp]:
   "\<lbrace>P\<rbrace> get_pte p \<lbrace>\<lambda>_. P\<rbrace>"
   by (wp get_pte_wp) simp
 
-
+(* FIXME x64:
 lemma get_master_pte_wp:
   "\<lbrace>\<lambda>s. \<forall>pt. ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits) s \<longrightarrow>
           Q (case pt (ucast (p && ~~ mask 6 && mask pt_bits >> 2)) of
@@ -144,6 +203,7 @@ lemma get_master_pte_wp:
   apply (wp get_pte_wp | wpc)+
   including pagebits
   by auto
+*)
 
 lemma store_pte_typ_at:
     "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pte ptr pte \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
@@ -155,20 +215,55 @@ lemma store_pte_typ_at:
 
 lemmas store_pte_typ_ats [wp] = abs_typ_at_lifts [OF store_pte_typ_at]
 
+lemma lookup_pdpt_slot_inv:
+  "\<lbrace>P\<rbrace> lookup_pdpt_slot pdpt vptr \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (simp add: lookup_pdpt_slot_def)
+  apply (wp get_pml4e_wp | wpc)+
+  apply clarsimp
+  done
+
+thm lookup_pdpt_slot_inv[THEN valid_validE_R]
+  
+lemma lookup_pd_slot_inv:
+  "\<lbrace>P\<rbrace> lookup_pd_slot pd vptr \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (simp add: lookup_pd_slot_def)
+  apply (rule hoare_pre)
+  apply (wp get_pdpte_wp lookup_pdpt_slot_inv hoare_vcg_all_lift_R hoare_drop_imps| wpc)+
+  apply clarsimp
+  done
 
 lemma lookup_pt_slot_inv:
   "\<lbrace>P\<rbrace> lookup_pt_slot pd vptr \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: lookup_pt_slot_def)
-  apply (wp get_pde_wp|wpc)+
+  apply (rule hoare_pre)
+  apply (wp get_pde_wp lookup_pd_slot_inv hoare_vcg_all_lift_R hoare_drop_imps| wpc)+
   apply clarsimp
   done
 
+lemma lookup_pdpt_slot_inv_any:
+  "\<lbrace>\<lambda>s. \<forall>x. Q x s\<rbrace> lookup_pdpt_slot pd vptr \<lbrace>Q\<rbrace>,-"
+  "\<lbrace>E\<rbrace> lookup_pdpt_slot pd vptr -, \<lbrace>\<lambda>ft. E\<rbrace>"
+  apply (simp_all add: lookup_pdpt_slot_def)
+  apply (wp get_pml4e_wp | simp | wpc)+
+  done
+
+lemma lookup_pd_slot_inv_any:
+  "\<lbrace>\<lambda>s. \<forall>x. Q x s\<rbrace> lookup_pd_slot pd vptr \<lbrace>Q\<rbrace>,-"
+  "\<lbrace>E\<rbrace> lookup_pd_slot pd vptr -, \<lbrace>\<lambda>ft. E\<rbrace>"
+  apply (simp_all add: lookup_pd_slot_def)
+  by (rule hoare_pre, 
+            (wp get_pdpte_wp lookup_pdpt_slot_inv_any 
+                hoare_drop_imps hoare_vcg_all_lift 
+           | simp | wpc)+)+
+  
 lemma lookup_pt_slot_inv_any:
   "\<lbrace>\<lambda>s. \<forall>x. Q x s\<rbrace> lookup_pt_slot pd vptr \<lbrace>Q\<rbrace>,-"
   "\<lbrace>E\<rbrace> lookup_pt_slot pd vptr -, \<lbrace>\<lambda>ft. E\<rbrace>"
   apply (simp_all add: lookup_pt_slot_def)
-  apply (wp get_pde_wp | simp | wpc)+
-  done
+  by (rule hoare_pre, 
+            (wp get_pde_wp lookup_pd_slot_inv_any 
+                hoare_drop_imps hoare_vcg_all_lift 
+           | simp | wpc)+)+
 
 crunch cte_wp_at[wp]: set_irq_state "\<lambda>s. P (cte_wp_at P' p s)"
 
@@ -184,7 +279,26 @@ lemma set_pt_cte_wp_at:
   by (clarsimp elim!: rsubst[where P=P]
                simp: cte_wp_at_after_update)
 
-
+lemma set_pml4_cte_wp_at:
+  "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>
+     set_pml4 ptr val
+   \<lbrace>\<lambda>rv s. P (cte_wp_at P' p s)\<rbrace>"
+  apply (simp add: set_pml4_def set_object_def get_object_def)
+  apply wp
+  including unfold_objects_asm
+  by (clarsimp elim!: rsubst[where P=P]
+             simp: cte_wp_at_after_update)
+  
+lemma set_pdpt_cte_wp_at:
+  "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>
+     set_pdpt ptr val
+   \<lbrace>\<lambda>rv s. P (cte_wp_at P' p s)\<rbrace>"
+  apply (simp add: set_pdpt_def set_object_def get_object_def)
+  apply wp
+  including unfold_objects_asm
+  by (clarsimp elim!: rsubst[where P=P]
+             simp: cte_wp_at_after_update)
+  
 lemma set_pd_cte_wp_at:
   "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>
      set_pd ptr val
@@ -223,7 +337,22 @@ lemma set_pd_pred_tcb_at[wp]:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
-
+lemma set_pdpt_pred_tcb_at[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pdpt ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  apply (simp add: set_pdpt_def set_object_def)
+  apply wp
+  apply (rule hoare_strengthen_post [OF get_object_sp])
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+  
+lemma set_pml4_pred_tcb_at[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pml4 ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  apply (simp add: set_pml4_def set_object_def)
+  apply wp
+  apply (rule hoare_strengthen_post [OF get_object_sp])
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+  
 lemma set_asid_pool_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
@@ -236,9 +365,12 @@ lemmas word_simps =
   word_size word_ops_nth_size nth_ucast nth_shiftr nth_shiftl
   pd_bits_def pageBits_def
   
+lemma SucSucSucMinus: "3 \<le> n \<Longrightarrow> Suc (Suc (Suc (n - 3))) = n" by arith
+
+(*FIXME x64:
 lemma mask_pd_bits_inner_beauty:
-  "is_aligned p 2 \<Longrightarrow>
-  (p && ~~ mask pd_bits) + (ucast ((ucast (p && mask pd_bits >> 2))::12 word) << 2) = (p::word32)"
+  "is_aligned p 3 \<Longrightarrow>
+  (p && ~~ mask pd_shift_bits) + (ucast ((ucast (p && mask pd_shift_bits >> 3))::12 word) << 3) = (p::word64)"
   apply (simp add: is_aligned_nth)
   apply (subst word_plus_and_or_coroll; rule word_eqI)
   subgoal
@@ -246,13 +378,14 @@ lemma mask_pd_bits_inner_beauty:
   subgoal for n
     apply (clarsimp simp: word_simps)
     apply (rule iffI, (erule disjE;clarsimp))
-    subgoal by (clarsimp simp: SucSucMinus)
+    subgoal by (clarsimp simp: SucSucSucMinus)
     apply (spec n)
     apply (clarsimp simp: SucSucMinus)
     by arith
   done
+*)
 
-
+(* FIXME x64:
 lemma more_pd_inner_beauty:
   fixes x :: "12 word"
   fixes p :: word32
@@ -272,6 +405,7 @@ lemma more_pd_inner_beauty:
     apply (spec "n+2")
     by (clarsimp simp: word_ops_nth_size word_size)
   done
+*)
 
 lemma mask_alignment_ugliness:
   "\<lbrakk> x \<noteq> x + z && ~~ mask m;
@@ -291,10 +425,10 @@ lemma mask_alignment_ugliness:
     by simp
   by auto
 
-
+(* FIXME x64:
 lemma mask_pt_bits_inner_beauty:
-  "is_aligned p 2 \<Longrightarrow>
-  (p && ~~ mask pt_bits) + (ucast ((ucast (p && mask pt_bits >> 2))::word8) << 2) = (p::word32)"
+  "is_aligned p 3 \<Longrightarrow>
+  (p && ~~ mask pt_shift_bits) + (ucast ((ucast (p && mask pt_shift_bits >> 3))::word8) << 3) = (p::word64)"
   apply (simp add: is_aligned_nth)
   apply (subst word_plus_and_or_coroll; rule word_eqI)
   subgoal by (clarsimp simp: word_simps)
@@ -310,8 +444,9 @@ lemma mask_pt_bits_inner_beauty:
    apply (prove "Suc (Suc (n - 2)) = n") subgoal by arith
    by (simp add: pt_bits_def pageBits_def)
   done
+*)
 
-
+(*FIXME x64:
 lemma more_pt_inner_beauty:
   fixes x :: "word8"
   fixes p :: word32
@@ -331,7 +466,21 @@ lemma more_pt_inner_beauty:
     apply (clarsimp simp: word_ops_nth_size word_size)
     by (clarsimp simp: pt_bits_def pageBits_def)
   done
+*)
 
+lemma set_pml4_aligned [wp]:
+  "\<lbrace>pspace_aligned\<rbrace> set_pml4 base pd \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
+  apply (simp add: set_pml4_def)
+  apply (wp set_object_aligned get_object_wp)
+  including unfold_objects_asm
+  by (clarsimp simp: a_type_def)
+
+lemma set_pdpt_aligned [wp]:
+  "\<lbrace>pspace_aligned\<rbrace> set_pdpt base pd \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
+  apply (simp add: set_pdpt_def)
+  apply (wp set_object_aligned get_object_wp)
+  including unfold_objects_asm
+  by (clarsimp simp: a_type_def)
 
 lemma set_pd_aligned [wp]:
   "\<lbrace>pspace_aligned\<rbrace> set_pd base pd \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
@@ -365,53 +514,66 @@ lemma arch_derive_cap_inv:
       apply(rule hoare_pre, wpc?, wp, simp)+
   done
 
+(* FIXME x64: *)
 definition
   "valid_mapping_entries m \<equiv> case m of
-    Inl (InvalidPTE, _) \<Rightarrow> \<top>
-  | Inl (LargePagePTE _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pte_at p s
-  | Inl (SmallPagePTE _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pte_at p s
-  | Inr (InvalidPDE, _) \<Rightarrow> \<top>
-  | Inr (PageTablePDE _ _ _, _) \<Rightarrow> \<bottom>
-  | Inr (SectionPDE _ _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pde_at p s
-  | Inr (SuperSectionPDE _ _ _, xs) \<Rightarrow> \<lambda>s. \<forall>p \<in> set xs. pde_at p s"
+    (VMPTE (InvalidPTE), _) \<Rightarrow> \<top>
+  | (VMPTE (SmallPagePTE _ _ _), p) \<Rightarrow> pte_at p
+  | (VMPDE (InvalidPDE), _) \<Rightarrow> \<top>
+  | (VMPDE (PageTablePDE _ _ _), _) \<Rightarrow> \<bottom>
+  | (VMPDE (LargePagePDE _ _ _), p) \<Rightarrow> pde_at p
+  | (VMPDPTE (InvalidPDPTE), _) \<Rightarrow> \<top>
+  | (VMPDPTE (HugePagePDPTE _ _ _), p) \<Rightarrow> pdpte_at p
+  | (VMPDPTE (PageDirectoryPDPTE _ _ _), _) \<Rightarrow> \<bottom>"
 
 definition "invalid_pte_at p \<equiv> obj_at (\<lambda>ko. \<exists>pt. ko = (ArchObj (PageTable pt))
-  \<and> pt (ucast (p && mask pt_bits) >> 2) = pte.InvalidPTE) (p && ~~ mask pt_bits)"
+  \<and> pt (ucast (p && mask pt_shift_bits) >> 3) = pte.InvalidPTE) (p && ~~ mask pt_shift_bits)"
 
 definition "invalid_pde_at p \<equiv> obj_at (\<lambda>ko. \<exists>pd. ko = (ArchObj (PageDirectory pd))
-  \<and> pd (ucast (p && mask pd_bits) >> 2) = pde.InvalidPDE) (p && ~~ mask pd_bits)"
+  \<and> pd (ucast (p && mask pd_shift_bits) >> 3) = pde.InvalidPDE) (p && ~~ mask pd_shift_bits)"
 
+definition "invalid_pdpte_at p \<equiv> obj_at (\<lambda>ko. \<exists>pd. ko = (ArchObj (PDPointerTable pd))
+  \<and> pd (ucast (p && mask pdpt_shift_bits) >> 3) = pdpte.InvalidPDPTE) (p && ~~ mask pdpt_shift_bits)"
+  
+definition "invalid_pml4e_at p \<equiv> obj_at (\<lambda>ko. \<exists>pd. ko = (ArchObj (PageMapL4 pd))
+  \<and> pd (ucast (p && mask pml4_shift_bits) >> 3) = pml4e.InvalidPML4E) (p && ~~ mask pml4_shift_bits)"
+  
+(* FIXME x64: check
+   Note that this doesnt need kernel_mapping_slots shenanigans because
+   PML4's don't have pages in them *)
 definition
   "valid_slots m \<equiv> case m of
-    Inl (pte, xs) \<Rightarrow>
-      \<lambda>s. xs \<noteq> [] \<and>
-          (\<forall>p \<in> set xs. (\<exists>\<rhd> (p && ~~ mask pt_bits) and pte_at p) s) \<and>
+    (VMPTE pte, p) \<Rightarrow>
+      \<lambda>s. (\<exists>\<rhd> (p && ~~ mask pt_shift_bits) and pte_at p) s \<and>
           wellformed_pte pte \<and> valid_pte pte s
-  | Inr (pde, xs) \<Rightarrow>
-      \<lambda>s. xs \<noteq> [] \<and>
-          (\<forall>p \<in> set xs. (\<exists>\<rhd> (p && ~~ mask pd_bits) and pde_at p) s \<and>
-             ucast (p && mask pd_bits >> 2) \<notin> kernel_mapping_slots) \<and>
-          wellformed_pde pde \<and> valid_pde pde s"
+  | (VMPDE pde, p) \<Rightarrow>
+      \<lambda>s. (\<exists>\<rhd> (p && ~~ mask pd_shift_bits) and pde_at p) s \<and>
+          wellformed_pde pde \<and> valid_pde pde s
+  | (VMPDPTE pdpte, p) \<Rightarrow>
+      \<lambda>s. (\<exists>\<rhd> (p && ~~ mask pdpt_shift_bits) and pdpte_at p) s \<and>
+          wellformed_pdpte pdpte \<and> valid_pdpte pdpte s"
 
+(* FIXME x64:
 crunch inv[wp]: get_master_pte P
 crunch inv[wp]: get_master_pde P
+*)
 
 lemma ucast_mask_asid_low_bits [simp]:
-  "ucast ((asid::word32) && mask asid_low_bits) = (ucast asid :: 10 word)"
+  "ucast ((asid::word64) && mask asid_low_bits) = (ucast asid :: 9 word)"
   apply (rule word_eqI)
   apply (simp add: word_size nth_ucast asid_low_bits_def)
   done
 
 
 lemma ucast_ucast_asid_high_bits [simp]:
-  "ucast (ucast (asid_high_bits_of asid)::word32) = asid_high_bits_of asid"
+  "ucast (ucast (asid_high_bits_of asid)::word64) = asid_high_bits_of asid"
   apply (rule word_eqI)
   apply (simp add: word_size nth_ucast asid_low_bits_def)
   done
 
 
 lemma mask_asid_low_bits_ucast_ucast:
-  "((asid::word32) && mask asid_low_bits) = ucast (ucast asid :: 10 word)"
+  "((asid::word64) && mask asid_low_bits) = ucast (ucast asid :: 9 word)"
   apply (rule word_eqI)
   apply (simp add: word_size nth_ucast asid_low_bits_def)
   done
