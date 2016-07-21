@@ -34,52 +34,58 @@ datatype pde =
   | SuperSectionPDE paddr bool bool bool bool vmrights
 
 primrec
+  pdeCacheable :: "pde \<Rightarrow> bool"
+where
+  "pdeCacheable (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v2"
+| "pdeCacheable (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v3"
+
+primrec
   pdeTable :: "pde \<Rightarrow> paddr"
 where
   "pdeTable (PageTablePDE v0 v1 v2) = v0"
 
 primrec
-  pdeRights :: "pde \<Rightarrow> vmrights"
-where
-  "pdeRights (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v6"
-| "pdeRights (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v5"
-
-primrec
   pdeFrame :: "pde \<Rightarrow> paddr"
 where
-  "pdeFrame (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v0"
-| "pdeFrame (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v0"
-
-primrec
-  pdeDomain :: "pde \<Rightarrow> machine_word"
-where
-  "pdeDomain (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v2"
-| "pdeDomain (PageTablePDE v0 v1 v2) = v2"
-
-primrec
-  pdeGlobal :: "pde \<Rightarrow> bool"
-where
-  "pdeGlobal (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v4"
-| "pdeGlobal (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v3"
+  "pdeFrame (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v0"
+| "pdeFrame (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v0"
 
 primrec
   pdeExecuteNever :: "pde \<Rightarrow> bool"
 where
-  "pdeExecuteNever (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v5"
-| "pdeExecuteNever (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v4"
+  "pdeExecuteNever (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v4"
+| "pdeExecuteNever (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v5"
+
+primrec
+  pdeGlobal :: "pde \<Rightarrow> bool"
+where
+  "pdeGlobal (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v3"
+| "pdeGlobal (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v4"
 
 primrec
   pdeParity :: "pde \<Rightarrow> bool"
 where
-  "pdeParity (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v1"
-| "pdeParity (PageTablePDE v0 v1 v2) = v1"
+  "pdeParity (PageTablePDE v0 v1 v2) = v1"
 | "pdeParity (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v1"
+| "pdeParity (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v1"
 
 primrec
-  pdeCacheable :: "pde \<Rightarrow> bool"
+  pdeDomain :: "pde \<Rightarrow> machine_word"
 where
-  "pdeCacheable (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v3"
-| "pdeCacheable (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v2"
+  "pdeDomain (PageTablePDE v0 v1 v2) = v2"
+| "pdeDomain (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v2"
+
+primrec
+  pdeRights :: "pde \<Rightarrow> vmrights"
+where
+  "pdeRights (SuperSectionPDE v0 v1 v2 v3 v4 v5) = v5"
+| "pdeRights (SectionPDE v0 v1 v2 v3 v4 v5 v6) = v6"
+
+primrec
+  pdeCacheable_update :: "(bool \<Rightarrow> bool) \<Rightarrow> pde \<Rightarrow> pde"
+where
+  "pdeCacheable_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE v0 v1 (f v2) v3 v4 v5"
+| "pdeCacheable_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 v1 v2 (f v3) v4 v5 v6"
 
 primrec
   pdeTable_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> pde \<Rightarrow> pde"
@@ -87,47 +93,41 @@ where
   "pdeTable_update f (PageTablePDE v0 v1 v2) = PageTablePDE (f v0) v1 v2"
 
 primrec
-  pdeRights_update :: "(vmrights \<Rightarrow> vmrights) \<Rightarrow> pde \<Rightarrow> pde"
-where
-  "pdeRights_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 v1 v2 v3 v4 v5 (f v6)"
-| "pdeRights_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE v0 v1 v2 v3 v4 (f v5)"
-
-primrec
   pdeFrame_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> pde \<Rightarrow> pde"
 where
-  "pdeFrame_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE (f v0) v1 v2 v3 v4 v5 v6"
-| "pdeFrame_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE (f v0) v1 v2 v3 v4 v5"
-
-primrec
-  pdeDomain_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> pde \<Rightarrow> pde"
-where
-  "pdeDomain_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 v1 (f v2) v3 v4 v5 v6"
-| "pdeDomain_update f (PageTablePDE v0 v1 v2) = PageTablePDE v0 v1 (f v2)"
-
-primrec
-  pdeGlobal_update :: "(bool \<Rightarrow> bool) \<Rightarrow> pde \<Rightarrow> pde"
-where
-  "pdeGlobal_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 v1 v2 v3 (f v4) v5 v6"
-| "pdeGlobal_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE v0 v1 v2 (f v3) v4 v5"
+  "pdeFrame_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE (f v0) v1 v2 v3 v4 v5"
+| "pdeFrame_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE (f v0) v1 v2 v3 v4 v5 v6"
 
 primrec
   pdeExecuteNever_update :: "(bool \<Rightarrow> bool) \<Rightarrow> pde \<Rightarrow> pde"
 where
-  "pdeExecuteNever_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 v1 v2 v3 v4 (f v5) v6"
-| "pdeExecuteNever_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE v0 v1 v2 v3 (f v4) v5"
+  "pdeExecuteNever_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE v0 v1 v2 v3 (f v4) v5"
+| "pdeExecuteNever_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 v1 v2 v3 v4 (f v5) v6"
+
+primrec
+  pdeGlobal_update :: "(bool \<Rightarrow> bool) \<Rightarrow> pde \<Rightarrow> pde"
+where
+  "pdeGlobal_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE v0 v1 v2 (f v3) v4 v5"
+| "pdeGlobal_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 v1 v2 v3 (f v4) v5 v6"
 
 primrec
   pdeParity_update :: "(bool \<Rightarrow> bool) \<Rightarrow> pde \<Rightarrow> pde"
 where
-  "pdeParity_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 (f v1) v2 v3 v4 v5 v6"
-| "pdeParity_update f (PageTablePDE v0 v1 v2) = PageTablePDE v0 (f v1) v2"
+  "pdeParity_update f (PageTablePDE v0 v1 v2) = PageTablePDE v0 (f v1) v2"
 | "pdeParity_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE v0 (f v1) v2 v3 v4 v5"
+| "pdeParity_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 (f v1) v2 v3 v4 v5 v6"
 
 primrec
-  pdeCacheable_update :: "(bool \<Rightarrow> bool) \<Rightarrow> pde \<Rightarrow> pde"
+  pdeDomain_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> pde \<Rightarrow> pde"
 where
-  "pdeCacheable_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 v1 v2 (f v3) v4 v5 v6"
-| "pdeCacheable_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE v0 v1 (f v2) v3 v4 v5"
+  "pdeDomain_update f (PageTablePDE v0 v1 v2) = PageTablePDE v0 v1 (f v2)"
+| "pdeDomain_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 v1 (f v2) v3 v4 v5 v6"
+
+primrec
+  pdeRights_update :: "(vmrights \<Rightarrow> vmrights) \<Rightarrow> pde \<Rightarrow> pde"
+where
+  "pdeRights_update f (SuperSectionPDE v0 v1 v2 v3 v4 v5) = SuperSectionPDE v0 v1 v2 v3 v4 (f v5)"
+| "pdeRights_update f (SectionPDE v0 v1 v2 v3 v4 v5 v6) = SectionPDE v0 v1 v2 v3 v4 v5 (f v6)"
 
 abbreviation (input)
   PageTablePDE_trans :: "(paddr) \<Rightarrow> (bool) \<Rightarrow> (machine_word) \<Rightarrow> pde" ("PageTablePDE'_ \<lparr> pdeTable= _, pdeParity= _, pdeDomain= _ \<rparr>")
@@ -184,12 +184,6 @@ where
 | "pteFrame (SmallPagePTE v0 v1 v2 v3 v4) = v0"
 
 primrec
-  pteExecuteNever :: "pte \<Rightarrow> bool"
-where
-  "pteExecuteNever (LargePagePTE v0 v1 v2 v3 v4) = v3"
-| "pteExecuteNever (SmallPagePTE v0 v1 v2 v3 v4) = v3"
-
-primrec
   pteGlobal :: "pte \<Rightarrow> bool"
 where
   "pteGlobal (LargePagePTE v0 v1 v2 v3 v4) = v2"
@@ -208,16 +202,16 @@ where
 | "pteCacheable (SmallPagePTE v0 v1 v2 v3 v4) = v1"
 
 primrec
+  pteExecuteNever :: "pte \<Rightarrow> bool"
+where
+  "pteExecuteNever (LargePagePTE v0 v1 v2 v3 v4) = v3"
+| "pteExecuteNever (SmallPagePTE v0 v1 v2 v3 v4) = v3"
+
+primrec
   pteFrame_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> pte \<Rightarrow> pte"
 where
   "pteFrame_update f (LargePagePTE v0 v1 v2 v3 v4) = LargePagePTE (f v0) v1 v2 v3 v4"
 | "pteFrame_update f (SmallPagePTE v0 v1 v2 v3 v4) = SmallPagePTE (f v0) v1 v2 v3 v4"
-
-primrec
-  pteExecuteNever_update :: "(bool \<Rightarrow> bool) \<Rightarrow> pte \<Rightarrow> pte"
-where
-  "pteExecuteNever_update f (LargePagePTE v0 v1 v2 v3 v4) = LargePagePTE v0 v1 v2 (f v3) v4"
-| "pteExecuteNever_update f (SmallPagePTE v0 v1 v2 v3 v4) = SmallPagePTE v0 v1 v2 (f v3) v4"
 
 primrec
   pteGlobal_update :: "(bool \<Rightarrow> bool) \<Rightarrow> pte \<Rightarrow> pte"
@@ -236,6 +230,12 @@ primrec
 where
   "pteCacheable_update f (LargePagePTE v0 v1 v2 v3 v4) = LargePagePTE v0 (f v1) v2 v3 v4"
 | "pteCacheable_update f (SmallPagePTE v0 v1 v2 v3 v4) = SmallPagePTE v0 (f v1) v2 v3 v4"
+
+primrec
+  pteExecuteNever_update :: "(bool \<Rightarrow> bool) \<Rightarrow> pte \<Rightarrow> pte"
+where
+  "pteExecuteNever_update f (LargePagePTE v0 v1 v2 v3 v4) = LargePagePTE v0 v1 v2 (f v3) v4"
+| "pteExecuteNever_update f (SmallPagePTE v0 v1 v2 v3 v4) = SmallPagePTE v0 v1 v2 (f v3) v4"
 
 abbreviation (input)
   LargePagePTE_trans :: "(paddr) \<Rightarrow> (bool) \<Rightarrow> (bool) \<Rightarrow> (bool) \<Rightarrow> (vmrights) \<Rightarrow> pte" ("LargePagePTE'_ \<lparr> pteFrame= _, pteCacheable= _, pteGlobal= _, pteExecuteNever= _, pteRights= _ \<rparr>")
@@ -272,14 +272,14 @@ datatype vmattributes =
     VMAttributes bool bool bool
 
 primrec
-  armExecuteNever :: "vmattributes \<Rightarrow> bool"
-where
-  "armExecuteNever (VMAttributes v0 v1 v2) = v2"
-
-primrec
   armParityEnabled :: "vmattributes \<Rightarrow> bool"
 where
   "armParityEnabled (VMAttributes v0 v1 v2) = v1"
+
+primrec
+  armExecuteNever :: "vmattributes \<Rightarrow> bool"
+where
+  "armExecuteNever (VMAttributes v0 v1 v2) = v2"
 
 primrec
   armPageCacheable :: "vmattributes \<Rightarrow> bool"
@@ -287,14 +287,14 @@ where
   "armPageCacheable (VMAttributes v0 v1 v2) = v0"
 
 primrec
-  armExecuteNever_update :: "(bool \<Rightarrow> bool) \<Rightarrow> vmattributes \<Rightarrow> vmattributes"
-where
-  "armExecuteNever_update f (VMAttributes v0 v1 v2) = VMAttributes v0 v1 (f v2)"
-
-primrec
   armParityEnabled_update :: "(bool \<Rightarrow> bool) \<Rightarrow> vmattributes \<Rightarrow> vmattributes"
 where
   "armParityEnabled_update f (VMAttributes v0 v1 v2) = VMAttributes v0 (f v1) v2"
+
+primrec
+  armExecuteNever_update :: "(bool \<Rightarrow> bool) \<Rightarrow> vmattributes \<Rightarrow> vmattributes"
+where
+  "armExecuteNever_update f (VMAttributes v0 v1 v2) = VMAttributes v0 v1 (f v2)"
 
 primrec
   armPageCacheable_update :: "(bool \<Rightarrow> bool) \<Rightarrow> vmattributes \<Rightarrow> vmattributes"
@@ -306,36 +306,36 @@ abbreviation (input)
 where
   "VMAttributes_ \<lparr> armPageCacheable= v0, armParityEnabled= v1, armExecuteNever= v2 \<rparr> == VMAttributes v0 v1 v2"
 
-lemma armExecuteNever_armExecuteNever_update [simp]:
-  "armExecuteNever (armExecuteNever_update f v) = f (armExecuteNever v)"
-  by (cases v) simp
-
-lemma armExecuteNever_armParityEnabled_update [simp]:
-  "armExecuteNever (armParityEnabled_update f v) = armExecuteNever v"
-  by (cases v) simp
-
-lemma armExecuteNever_armPageCacheable_update [simp]:
-  "armExecuteNever (armPageCacheable_update f v) = armExecuteNever v"
+lemma armParityEnabled_armParityEnabled_update [simp]:
+  "armParityEnabled (armParityEnabled_update f v) = f (armParityEnabled v)"
   by (cases v) simp
 
 lemma armParityEnabled_armExecuteNever_update [simp]:
   "armParityEnabled (armExecuteNever_update f v) = armParityEnabled v"
   by (cases v) simp
 
-lemma armParityEnabled_armParityEnabled_update [simp]:
-  "armParityEnabled (armParityEnabled_update f v) = f (armParityEnabled v)"
-  by (cases v) simp
-
 lemma armParityEnabled_armPageCacheable_update [simp]:
   "armParityEnabled (armPageCacheable_update f v) = armParityEnabled v"
   by (cases v) simp
 
-lemma armPageCacheable_armExecuteNever_update [simp]:
-  "armPageCacheable (armExecuteNever_update f v) = armPageCacheable v"
+lemma armExecuteNever_armParityEnabled_update [simp]:
+  "armExecuteNever (armParityEnabled_update f v) = armExecuteNever v"
+  by (cases v) simp
+
+lemma armExecuteNever_armExecuteNever_update [simp]:
+  "armExecuteNever (armExecuteNever_update f v) = f (armExecuteNever v)"
+  by (cases v) simp
+
+lemma armExecuteNever_armPageCacheable_update [simp]:
+  "armExecuteNever (armPageCacheable_update f v) = armExecuteNever v"
   by (cases v) simp
 
 lemma armPageCacheable_armParityEnabled_update [simp]:
   "armPageCacheable (armParityEnabled_update f v) = armPageCacheable v"
+  by (cases v) simp
+
+lemma armPageCacheable_armExecuteNever_update [simp]:
+  "armPageCacheable (armExecuteNever_update f v) = armPageCacheable v"
   by (cases v) simp
 
 lemma armPageCacheable_armPageCacheable_update [simp]:

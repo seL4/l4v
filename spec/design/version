@@ -1,9 +1,8 @@
-Built from git repo at /home/cmr/proj/l4v2/l4v/spec/haskell by cmr
+Built from git repo at /home/x/repos/v/l4v/spec/haskell by x
 
 Generated from changeset:
-83e4ad1 Use only basename in generated-file notice
+dd73a2c run haskell translator
 
 
 Warning - uncomitted changes used:
  M ../design/version
- M ../../tools/haskell-translator/pars_skl.py

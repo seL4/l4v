@@ -30,59 +30,9 @@ datatype tcbinvocation =
   | CopyRegisters machine_word machine_word bool bool bool bool Arch.copy_register_sets
 
 primrec
-  suspendThread :: "tcbinvocation \<Rightarrow> machine_word"
+  notificationPtr :: "tcbinvocation \<Rightarrow> (machine_word) option"
 where
-  "suspendThread (Suspend v0) = v0"
-
-primrec
-  tcThreadCapSlot :: "tcbinvocation \<Rightarrow> machine_word"
-where
-  "tcThreadCapSlot (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v1"
-
-primrec
-  resumeThread :: "tcbinvocation \<Rightarrow> machine_word"
-where
-  "resumeThread (Resume v0) = v0"
-
-primrec
-  copyRegsResumeTarget :: "tcbinvocation \<Rightarrow> bool"
-where
-  "copyRegsResumeTarget (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v3"
-
-primrec
-  tcNewFaultEP :: "tcbinvocation \<Rightarrow> cptr option"
-where
-  "tcNewFaultEP (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v2"
-
-primrec
-  readRegsThread :: "tcbinvocation \<Rightarrow> machine_word"
-where
-  "readRegsThread (ReadRegisters v0 v1 v2 v3) = v0"
-
-primrec
-  tcNewCRoot :: "tcbinvocation \<Rightarrow> (capability * machine_word) option"
-where
-  "tcNewCRoot (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v4"
-
-primrec
-  copyRegsTransferFrame :: "tcbinvocation \<Rightarrow> bool"
-where
-  "copyRegsTransferFrame (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v4"
-
-primrec
-  tcNewVRoot :: "tcbinvocation \<Rightarrow> (capability * machine_word) option"
-where
-  "tcNewVRoot (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v5"
-
-primrec
-  writeRegsValues :: "tcbinvocation \<Rightarrow> machine_word list"
-where
-  "writeRegsValues (WriteRegisters v0 v1 v2 v3) = v2"
-
-primrec
-  copyRegsTransferArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
-where
-  "copyRegsTransferArch (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v6"
+  "notificationPtr (NotificationControl v0 v1) = v1"
 
 primrec
   readRegsSuspend :: "tcbinvocation \<Rightarrow> bool"
@@ -90,24 +40,14 @@ where
   "readRegsSuspend (ReadRegisters v0 v1 v2 v3) = v1"
 
 primrec
-  readRegsLength :: "tcbinvocation \<Rightarrow> machine_word"
+  writeRegsValues :: "tcbinvocation \<Rightarrow> machine_word list"
 where
-  "readRegsLength (ReadRegisters v0 v1 v2 v3) = v2"
+  "writeRegsValues (WriteRegisters v0 v1 v2 v3) = v2"
 
 primrec
-  copyRegsTransferInteger :: "tcbinvocation \<Rightarrow> bool"
+  tcThreadCapSlot :: "tcbinvocation \<Rightarrow> machine_word"
 where
-  "copyRegsTransferInteger (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v5"
-
-primrec
-  writeRegsThread :: "tcbinvocation \<Rightarrow> machine_word"
-where
-  "writeRegsThread (WriteRegisters v0 v1 v2 v3) = v0"
-
-primrec
-  tcThread :: "tcbinvocation \<Rightarrow> machine_word"
-where
-  "tcThread (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v0"
+  "tcThreadCapSlot (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v1"
 
 primrec
   copyRegsSource :: "tcbinvocation \<Rightarrow> machine_word"
@@ -115,39 +55,9 @@ where
   "copyRegsSource (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v1"
 
 primrec
-  tcNewIPCBuffer :: "tcbinvocation \<Rightarrow> (vptr * (capability * machine_word) option) option"
+  tcNewCRoot :: "tcbinvocation \<Rightarrow> (capability * machine_word) option"
 where
-  "tcNewIPCBuffer (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v6"
-
-primrec
-  readRegsArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
-where
-  "readRegsArch (ReadRegisters v0 v1 v2 v3) = v3"
-
-primrec
-  writeRegsArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
-where
-  "writeRegsArch (WriteRegisters v0 v1 v2 v3) = v3"
-
-primrec
-  copyRegsSuspendSource :: "tcbinvocation \<Rightarrow> bool"
-where
-  "copyRegsSuspendSource (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v2"
-
-primrec
-  notificationPtr :: "tcbinvocation \<Rightarrow> (machine_word) option"
-where
-  "notificationPtr (NotificationControl v0 v1) = v1"
-
-primrec
-  writeRegsResume :: "tcbinvocation \<Rightarrow> bool"
-where
-  "writeRegsResume (WriteRegisters v0 v1 v2 v3) = v1"
-
-primrec
-  tcNewPriority :: "tcbinvocation \<Rightarrow> priority option"
-where
-  "tcNewPriority (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v3"
+  "tcNewCRoot (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v4"
 
 primrec
   copyRegsTarget :: "tcbinvocation \<Rightarrow> machine_word"
@@ -160,109 +70,94 @@ where
   "notificationTCB (NotificationControl v0 v1) = v0"
 
 primrec
-  suspendThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  writeRegsResume :: "tcbinvocation \<Rightarrow> bool"
 where
-  "suspendThread_update f (Suspend v0) = Suspend (f v0)"
+  "writeRegsResume (WriteRegisters v0 v1 v2 v3) = v1"
 
 primrec
-  tcThreadCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  resumeThread :: "tcbinvocation \<Rightarrow> machine_word"
 where
-  "tcThreadCapSlot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 (f v1) v2 v3 v4 v5 v6"
+  "resumeThread (Resume v0) = v0"
 
 primrec
-  resumeThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  suspendThread :: "tcbinvocation \<Rightarrow> machine_word"
 where
-  "resumeThread_update f (Resume v0) = Resume (f v0)"
+  "suspendThread (Suspend v0) = v0"
 
 primrec
-  copyRegsResumeTarget_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  tcNewIPCBuffer :: "tcbinvocation \<Rightarrow> (vptr * (capability * machine_word) option) option"
 where
-  "copyRegsResumeTarget_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 (f v3) v4 v5 v6"
+  "tcNewIPCBuffer (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v6"
 
 primrec
-  tcNewFaultEP_update :: "((cptr option) \<Rightarrow> (cptr option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  tcThread :: "tcbinvocation \<Rightarrow> machine_word"
 where
-  "tcNewFaultEP_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 (f v2) v3 v4 v5 v6"
+  "tcThread (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v0"
 
 primrec
-  readRegsThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  copyRegsResumeTarget :: "tcbinvocation \<Rightarrow> bool"
 where
-  "readRegsThread_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters (f v0) v1 v2 v3"
+  "copyRegsResumeTarget (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v3"
 
 primrec
-  tcNewCRoot_update :: "(((capability * machine_word) option) \<Rightarrow> ((capability * machine_word) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  copyRegsTransferArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
 where
-  "tcNewCRoot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 v3 (f v4) v5 v6"
+  "copyRegsTransferArch (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v6"
 
 primrec
-  copyRegsTransferFrame_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  readRegsArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
 where
-  "copyRegsTransferFrame_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 v3 (f v4) v5 v6"
+  "readRegsArch (ReadRegisters v0 v1 v2 v3) = v3"
 
 primrec
-  tcNewVRoot_update :: "(((capability * machine_word) option) \<Rightarrow> ((capability * machine_word) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  readRegsThread :: "tcbinvocation \<Rightarrow> machine_word"
 where
-  "tcNewVRoot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 v3 v4 (f v5) v6"
+  "readRegsThread (ReadRegisters v0 v1 v2 v3) = v0"
 
 primrec
-  writeRegsValues_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  copyRegsSuspendSource :: "tcbinvocation \<Rightarrow> bool"
 where
-  "writeRegsValues_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters v0 v1 (f v2) v3"
+  "copyRegsSuspendSource (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v2"
 
 primrec
-  copyRegsTransferArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  tcNewPriority :: "tcbinvocation \<Rightarrow> priority option"
 where
-  "copyRegsTransferArch_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 v3 v4 v5 (f v6)"
+  "tcNewPriority (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v3"
 
 primrec
-  readRegsSuspend_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  copyRegsTransferFrame :: "tcbinvocation \<Rightarrow> bool"
 where
-  "readRegsSuspend_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters v0 (f v1) v2 v3"
+  "copyRegsTransferFrame (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v4"
 
 primrec
-  readRegsLength_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  writeRegsThread :: "tcbinvocation \<Rightarrow> machine_word"
 where
-  "readRegsLength_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters v0 v1 (f v2) v3"
+  "writeRegsThread (WriteRegisters v0 v1 v2 v3) = v0"
 
 primrec
-  copyRegsTransferInteger_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  writeRegsArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
 where
-  "copyRegsTransferInteger_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 v3 v4 (f v5) v6"
+  "writeRegsArch (WriteRegisters v0 v1 v2 v3) = v3"
 
 primrec
-  writeRegsThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  tcNewFaultEP :: "tcbinvocation \<Rightarrow> cptr option"
 where
-  "writeRegsThread_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters (f v0) v1 v2 v3"
+  "tcNewFaultEP (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v2"
 
 primrec
-  tcThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  copyRegsTransferInteger :: "tcbinvocation \<Rightarrow> bool"
 where
-  "tcThread_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl (f v0) v1 v2 v3 v4 v5 v6"
+  "copyRegsTransferInteger (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v5"
 
 primrec
-  copyRegsSource_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  tcNewVRoot :: "tcbinvocation \<Rightarrow> (capability * machine_word) option"
 where
-  "copyRegsSource_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 (f v1) v2 v3 v4 v5 v6"
+  "tcNewVRoot (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v5"
 
 primrec
-  tcNewIPCBuffer_update :: "(((vptr * (capability * machine_word) option) option) \<Rightarrow> ((vptr * (capability * machine_word) option) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  readRegsLength :: "tcbinvocation \<Rightarrow> machine_word"
 where
-  "tcNewIPCBuffer_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 v3 v4 v5 (f v6)"
-
-primrec
-  readRegsArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
-where
-  "readRegsArch_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters v0 v1 v2 (f v3)"
-
-primrec
-  writeRegsArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
-where
-  "writeRegsArch_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters v0 v1 v2 (f v3)"
-
-primrec
-  copyRegsSuspendSource_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
-where
-  "copyRegsSuspendSource_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 (f v2) v3 v4 v5 v6"
+  "readRegsLength (ReadRegisters v0 v1 v2 v3) = v2"
 
 primrec
   notificationPtr_update :: "(((machine_word) option) \<Rightarrow> ((machine_word) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
@@ -270,14 +165,29 @@ where
   "notificationPtr_update f (NotificationControl v0 v1) = NotificationControl v0 (f v1)"
 
 primrec
-  writeRegsResume_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  readRegsSuspend_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "writeRegsResume_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters v0 (f v1) v2 v3"
+  "readRegsSuspend_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters v0 (f v1) v2 v3"
 
 primrec
-  tcNewPriority_update :: "((priority option) \<Rightarrow> (priority option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  writeRegsValues_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
-  "tcNewPriority_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 (f v3) v4 v5 v6"
+  "writeRegsValues_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters v0 v1 (f v2) v3"
+
+primrec
+  tcThreadCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "tcThreadCapSlot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 (f v1) v2 v3 v4 v5 v6"
+
+primrec
+  copyRegsSource_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "copyRegsSource_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 (f v1) v2 v3 v4 v5 v6"
+
+primrec
+  tcNewCRoot_update :: "(((capability * machine_word) option) \<Rightarrow> ((capability * machine_word) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "tcNewCRoot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 v3 (f v4) v5 v6"
 
 primrec
   copyRegsTarget_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
@@ -288,6 +198,96 @@ primrec
   notificationTCB_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
   "notificationTCB_update f (NotificationControl v0 v1) = NotificationControl (f v0) v1"
+
+primrec
+  writeRegsResume_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "writeRegsResume_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters v0 (f v1) v2 v3"
+
+primrec
+  resumeThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "resumeThread_update f (Resume v0) = Resume (f v0)"
+
+primrec
+  suspendThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "suspendThread_update f (Suspend v0) = Suspend (f v0)"
+
+primrec
+  tcNewIPCBuffer_update :: "(((vptr * (capability * machine_word) option) option) \<Rightarrow> ((vptr * (capability * machine_word) option) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "tcNewIPCBuffer_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 v3 v4 v5 (f v6)"
+
+primrec
+  tcThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "tcThread_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl (f v0) v1 v2 v3 v4 v5 v6"
+
+primrec
+  copyRegsResumeTarget_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "copyRegsResumeTarget_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 (f v3) v4 v5 v6"
+
+primrec
+  copyRegsTransferArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "copyRegsTransferArch_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 v3 v4 v5 (f v6)"
+
+primrec
+  readRegsArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "readRegsArch_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters v0 v1 v2 (f v3)"
+
+primrec
+  readRegsThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "readRegsThread_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters (f v0) v1 v2 v3"
+
+primrec
+  copyRegsSuspendSource_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "copyRegsSuspendSource_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 (f v2) v3 v4 v5 v6"
+
+primrec
+  tcNewPriority_update :: "((priority option) \<Rightarrow> (priority option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "tcNewPriority_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 (f v3) v4 v5 v6"
+
+primrec
+  copyRegsTransferFrame_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "copyRegsTransferFrame_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 v3 (f v4) v5 v6"
+
+primrec
+  writeRegsThread_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "writeRegsThread_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters (f v0) v1 v2 v3"
+
+primrec
+  writeRegsArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "writeRegsArch_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters v0 v1 v2 (f v3)"
+
+primrec
+  tcNewFaultEP_update :: "((cptr option) \<Rightarrow> (cptr option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "tcNewFaultEP_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 (f v2) v3 v4 v5 v6"
+
+primrec
+  copyRegsTransferInteger_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "copyRegsTransferInteger_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 v3 v4 (f v5) v6"
+
+primrec
+  tcNewVRoot_update :: "(((capability * machine_word) option) \<Rightarrow> ((capability * machine_word) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "tcNewVRoot_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl v0 v1 v2 v3 v4 (f v5) v6"
+
+primrec
+  readRegsLength_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "readRegsLength_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters v0 v1 (f v2) v3"
 
 abbreviation (input)
   Suspend_trans :: "(machine_word) \<Rightarrow> tcbinvocation" ("Suspend'_ \<lparr> suspendThread= _ \<rparr>")
@@ -383,14 +383,15 @@ datatype cnode_invocation =
   | Delete machine_word
 
 primrec
-  insertCap :: "cnode_invocation \<Rightarrow> capability"
+  targetSlot :: "cnode_invocation \<Rightarrow> machine_word"
 where
-  "insertCap (Insert v0 v1 v2) = v0"
-
-primrec
-  moveCap1 :: "cnode_invocation \<Rightarrow> capability"
-where
-  "moveCap1 (Rotate v0 v1 v2 v3 v4) = v0"
+  "targetSlot (Insert v0 v1 v2) = v2"
+| "targetSlot (Rotate v0 v1 v2 v3 v4) = v4"
+| "targetSlot (SaveCaller v0) = v0"
+| "targetSlot (Move v0 v1 v2) = v2"
+| "targetSlot (Recycle v0) = v0"
+| "targetSlot (Revoke v0) = v0"
+| "targetSlot (Delete v0) = v0"
 
 primrec
   pivotSlot :: "cnode_invocation \<Rightarrow> machine_word"
@@ -398,10 +399,25 @@ where
   "pivotSlot (Rotate v0 v1 v2 v3 v4) = v3"
 
 primrec
+  moveCap2 :: "cnode_invocation \<Rightarrow> capability"
+where
+  "moveCap2 (Rotate v0 v1 v2 v3 v4) = v1"
+
+primrec
+  moveCap1 :: "cnode_invocation \<Rightarrow> capability"
+where
+  "moveCap1 (Rotate v0 v1 v2 v3 v4) = v0"
+
+primrec
+  insertCap :: "cnode_invocation \<Rightarrow> capability"
+where
+  "insertCap (Insert v0 v1 v2) = v0"
+
+primrec
   sourceSlot :: "cnode_invocation \<Rightarrow> machine_word"
 where
-  "sourceSlot (Rotate v0 v1 v2 v3 v4) = v2"
-| "sourceSlot (Insert v0 v1 v2) = v1"
+  "sourceSlot (Insert v0 v1 v2) = v1"
+| "sourceSlot (Rotate v0 v1 v2 v3 v4) = v2"
 | "sourceSlot (Move v0 v1 v2) = v1"
 
 primrec
@@ -410,30 +426,15 @@ where
   "moveCap (Move v0 v1 v2) = v0"
 
 primrec
-  moveCap2 :: "cnode_invocation \<Rightarrow> capability"
+  targetSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
 where
-  "moveCap2 (Rotate v0 v1 v2 v3 v4) = v1"
-
-primrec
-  targetSlot :: "cnode_invocation \<Rightarrow> machine_word"
-where
-  "targetSlot (Rotate v0 v1 v2 v3 v4) = v4"
-| "targetSlot (Revoke v0) = v0"
-| "targetSlot (Insert v0 v1 v2) = v2"
-| "targetSlot (Move v0 v1 v2) = v2"
-| "targetSlot (Recycle v0) = v0"
-| "targetSlot (Delete v0) = v0"
-| "targetSlot (SaveCaller v0) = v0"
-
-primrec
-  insertCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
-where
-  "insertCap_update f (Insert v0 v1 v2) = Insert (f v0) v1 v2"
-
-primrec
-  moveCap1_update :: "(capability \<Rightarrow> capability) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
-where
-  "moveCap1_update f (Rotate v0 v1 v2 v3 v4) = Rotate (f v0) v1 v2 v3 v4"
+  "targetSlot_update f (Insert v0 v1 v2) = Insert v0 v1 (f v2)"
+| "targetSlot_update f (Rotate v0 v1 v2 v3 v4) = Rotate v0 v1 v2 v3 (f v4)"
+| "targetSlot_update f (SaveCaller v0) = SaveCaller (f v0)"
+| "targetSlot_update f (Move v0 v1 v2) = Move v0 v1 (f v2)"
+| "targetSlot_update f (Recycle v0) = Recycle (f v0)"
+| "targetSlot_update f (Revoke v0) = Revoke (f v0)"
+| "targetSlot_update f (Delete v0) = Delete (f v0)"
 
 primrec
   pivotSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
@@ -441,32 +442,31 @@ where
   "pivotSlot_update f (Rotate v0 v1 v2 v3 v4) = Rotate v0 v1 v2 (f v3) v4"
 
 primrec
+  moveCap2_update :: "(capability \<Rightarrow> capability) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
+where
+  "moveCap2_update f (Rotate v0 v1 v2 v3 v4) = Rotate v0 (f v1) v2 v3 v4"
+
+primrec
+  moveCap1_update :: "(capability \<Rightarrow> capability) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
+where
+  "moveCap1_update f (Rotate v0 v1 v2 v3 v4) = Rotate (f v0) v1 v2 v3 v4"
+
+primrec
+  insertCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
+where
+  "insertCap_update f (Insert v0 v1 v2) = Insert (f v0) v1 v2"
+
+primrec
   sourceSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
 where
-  "sourceSlot_update f (Rotate v0 v1 v2 v3 v4) = Rotate v0 v1 (f v2) v3 v4"
-| "sourceSlot_update f (Insert v0 v1 v2) = Insert v0 (f v1) v2"
+  "sourceSlot_update f (Insert v0 v1 v2) = Insert v0 (f v1) v2"
+| "sourceSlot_update f (Rotate v0 v1 v2 v3 v4) = Rotate v0 v1 (f v2) v3 v4"
 | "sourceSlot_update f (Move v0 v1 v2) = Move v0 (f v1) v2"
 
 primrec
   moveCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
 where
   "moveCap_update f (Move v0 v1 v2) = Move (f v0) v1 v2"
-
-primrec
-  moveCap2_update :: "(capability \<Rightarrow> capability) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
-where
-  "moveCap2_update f (Rotate v0 v1 v2 v3 v4) = Rotate v0 (f v1) v2 v3 v4"
-
-primrec
-  targetSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
-where
-  "targetSlot_update f (Rotate v0 v1 v2 v3 v4) = Rotate v0 v1 v2 v3 (f v4)"
-| "targetSlot_update f (Revoke v0) = Revoke (f v0)"
-| "targetSlot_update f (Insert v0 v1 v2) = Insert v0 v1 (f v2)"
-| "targetSlot_update f (Move v0 v1 v2) = Move v0 v1 (f v2)"
-| "targetSlot_update f (Recycle v0) = Recycle (f v0)"
-| "targetSlot_update f (Delete v0) = Delete (f v0)"
-| "targetSlot_update f (SaveCaller v0) = SaveCaller (f v0)"
 
 abbreviation (input)
   Insert_trans :: "(capability) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> cnode_invocation" ("Insert'_ \<lparr> insertCap= _, sourceSlot= _, targetSlot= _ \<rparr>")
@@ -566,24 +566,24 @@ where
   "retypeNewType (Retype v0 v1 v2 v3 v4 v5) = v3"
 
 primrec
-  retypeSlots :: "untyped_invocation \<Rightarrow> machine_word list"
-where
-  "retypeSlots (Retype v0 v1 v2 v3 v4 v5) = v5"
-
-primrec
   retypeRegionBase :: "untyped_invocation \<Rightarrow> machine_word"
 where
   "retypeRegionBase (Retype v0 v1 v2 v3 v4 v5) = v1"
 
 primrec
-  retypeNewSizeBits :: "untyped_invocation \<Rightarrow> nat"
+  retypeSlots :: "untyped_invocation \<Rightarrow> machine_word list"
 where
-  "retypeNewSizeBits (Retype v0 v1 v2 v3 v4 v5) = v4"
+  "retypeSlots (Retype v0 v1 v2 v3 v4 v5) = v5"
 
 primrec
   retypeFreeRegionBase :: "untyped_invocation \<Rightarrow> machine_word"
 where
   "retypeFreeRegionBase (Retype v0 v1 v2 v3 v4 v5) = v2"
+
+primrec
+  retypeNewSizeBits :: "untyped_invocation \<Rightarrow> nat"
+where
+  "retypeNewSizeBits (Retype v0 v1 v2 v3 v4 v5) = v4"
 
 primrec
   retypeSource_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
@@ -596,24 +596,24 @@ where
   "retypeNewType_update f (Retype v0 v1 v2 v3 v4 v5) = Retype v0 v1 v2 (f v3) v4 v5"
 
 primrec
-  retypeSlots_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
-where
-  "retypeSlots_update f (Retype v0 v1 v2 v3 v4 v5) = Retype v0 v1 v2 v3 v4 (f v5)"
-
-primrec
   retypeRegionBase_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
 where
   "retypeRegionBase_update f (Retype v0 v1 v2 v3 v4 v5) = Retype v0 (f v1) v2 v3 v4 v5"
 
 primrec
-  retypeNewSizeBits_update :: "(nat \<Rightarrow> nat) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
+  retypeSlots_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
 where
-  "retypeNewSizeBits_update f (Retype v0 v1 v2 v3 v4 v5) = Retype v0 v1 v2 v3 (f v4) v5"
+  "retypeSlots_update f (Retype v0 v1 v2 v3 v4 v5) = Retype v0 v1 v2 v3 v4 (f v5)"
 
 primrec
   retypeFreeRegionBase_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
 where
   "retypeFreeRegionBase_update f (Retype v0 v1 v2 v3 v4 v5) = Retype v0 v1 (f v2) v3 v4 v5"
+
+primrec
+  retypeNewSizeBits_update :: "(nat \<Rightarrow> nat) \<Rightarrow> untyped_invocation \<Rightarrow> untyped_invocation"
+where
+  "retypeNewSizeBits_update f (Retype v0 v1 v2 v3 v4 v5) = Retype v0 v1 v2 v3 (f v4) v5"
 
 abbreviation (input)
   Retype_trans :: "(machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (object_type) \<Rightarrow> (nat) \<Rightarrow> (machine_word list) \<Rightarrow> untyped_invocation" ("Retype'_ \<lparr> retypeSource= _, retypeRegionBase= _, retypeFreeRegionBase= _, retypeNewType= _, retypeNewSizeBits= _, retypeSlots= _ \<rparr>")
@@ -628,20 +628,20 @@ lemma retypeSource_retypeNewType_update [simp]:
   "retypeSource (retypeNewType_update f v) = retypeSource v"
   by (cases v) simp
 
-lemma retypeSource_retypeSlots_update [simp]:
-  "retypeSource (retypeSlots_update f v) = retypeSource v"
-  by (cases v) simp
-
 lemma retypeSource_retypeRegionBase_update [simp]:
   "retypeSource (retypeRegionBase_update f v) = retypeSource v"
   by (cases v) simp
 
-lemma retypeSource_retypeNewSizeBits_update [simp]:
-  "retypeSource (retypeNewSizeBits_update f v) = retypeSource v"
+lemma retypeSource_retypeSlots_update [simp]:
+  "retypeSource (retypeSlots_update f v) = retypeSource v"
   by (cases v) simp
 
 lemma retypeSource_retypeFreeRegionBase_update [simp]:
   "retypeSource (retypeFreeRegionBase_update f v) = retypeSource v"
+  by (cases v) simp
+
+lemma retypeSource_retypeNewSizeBits_update [simp]:
+  "retypeSource (retypeNewSizeBits_update f v) = retypeSource v"
   by (cases v) simp
 
 lemma retypeNewType_retypeSource_update [simp]:
@@ -652,44 +652,20 @@ lemma retypeNewType_retypeNewType_update [simp]:
   "retypeNewType (retypeNewType_update f v) = f (retypeNewType v)"
   by (cases v) simp
 
-lemma retypeNewType_retypeSlots_update [simp]:
-  "retypeNewType (retypeSlots_update f v) = retypeNewType v"
-  by (cases v) simp
-
 lemma retypeNewType_retypeRegionBase_update [simp]:
   "retypeNewType (retypeRegionBase_update f v) = retypeNewType v"
   by (cases v) simp
 
-lemma retypeNewType_retypeNewSizeBits_update [simp]:
-  "retypeNewType (retypeNewSizeBits_update f v) = retypeNewType v"
+lemma retypeNewType_retypeSlots_update [simp]:
+  "retypeNewType (retypeSlots_update f v) = retypeNewType v"
   by (cases v) simp
 
 lemma retypeNewType_retypeFreeRegionBase_update [simp]:
   "retypeNewType (retypeFreeRegionBase_update f v) = retypeNewType v"
   by (cases v) simp
 
-lemma retypeSlots_retypeSource_update [simp]:
-  "retypeSlots (retypeSource_update f v) = retypeSlots v"
-  by (cases v) simp
-
-lemma retypeSlots_retypeNewType_update [simp]:
-  "retypeSlots (retypeNewType_update f v) = retypeSlots v"
-  by (cases v) simp
-
-lemma retypeSlots_retypeSlots_update [simp]:
-  "retypeSlots (retypeSlots_update f v) = f (retypeSlots v)"
-  by (cases v) simp
-
-lemma retypeSlots_retypeRegionBase_update [simp]:
-  "retypeSlots (retypeRegionBase_update f v) = retypeSlots v"
-  by (cases v) simp
-
-lemma retypeSlots_retypeNewSizeBits_update [simp]:
-  "retypeSlots (retypeNewSizeBits_update f v) = retypeSlots v"
-  by (cases v) simp
-
-lemma retypeSlots_retypeFreeRegionBase_update [simp]:
-  "retypeSlots (retypeFreeRegionBase_update f v) = retypeSlots v"
+lemma retypeNewType_retypeNewSizeBits_update [simp]:
+  "retypeNewType (retypeNewSizeBits_update f v) = retypeNewType v"
   by (cases v) simp
 
 lemma retypeRegionBase_retypeSource_update [simp]:
@@ -700,44 +676,44 @@ lemma retypeRegionBase_retypeNewType_update [simp]:
   "retypeRegionBase (retypeNewType_update f v) = retypeRegionBase v"
   by (cases v) simp
 
-lemma retypeRegionBase_retypeSlots_update [simp]:
-  "retypeRegionBase (retypeSlots_update f v) = retypeRegionBase v"
-  by (cases v) simp
-
 lemma retypeRegionBase_retypeRegionBase_update [simp]:
   "retypeRegionBase (retypeRegionBase_update f v) = f (retypeRegionBase v)"
   by (cases v) simp
 
-lemma retypeRegionBase_retypeNewSizeBits_update [simp]:
-  "retypeRegionBase (retypeNewSizeBits_update f v) = retypeRegionBase v"
+lemma retypeRegionBase_retypeSlots_update [simp]:
+  "retypeRegionBase (retypeSlots_update f v) = retypeRegionBase v"
   by (cases v) simp
 
 lemma retypeRegionBase_retypeFreeRegionBase_update [simp]:
   "retypeRegionBase (retypeFreeRegionBase_update f v) = retypeRegionBase v"
   by (cases v) simp
 
-lemma retypeNewSizeBits_retypeSource_update [simp]:
-  "retypeNewSizeBits (retypeSource_update f v) = retypeNewSizeBits v"
+lemma retypeRegionBase_retypeNewSizeBits_update [simp]:
+  "retypeRegionBase (retypeNewSizeBits_update f v) = retypeRegionBase v"
   by (cases v) simp
 
-lemma retypeNewSizeBits_retypeNewType_update [simp]:
-  "retypeNewSizeBits (retypeNewType_update f v) = retypeNewSizeBits v"
+lemma retypeSlots_retypeSource_update [simp]:
+  "retypeSlots (retypeSource_update f v) = retypeSlots v"
   by (cases v) simp
 
-lemma retypeNewSizeBits_retypeSlots_update [simp]:
-  "retypeNewSizeBits (retypeSlots_update f v) = retypeNewSizeBits v"
+lemma retypeSlots_retypeNewType_update [simp]:
+  "retypeSlots (retypeNewType_update f v) = retypeSlots v"
   by (cases v) simp
 
-lemma retypeNewSizeBits_retypeRegionBase_update [simp]:
-  "retypeNewSizeBits (retypeRegionBase_update f v) = retypeNewSizeBits v"
+lemma retypeSlots_retypeRegionBase_update [simp]:
+  "retypeSlots (retypeRegionBase_update f v) = retypeSlots v"
   by (cases v) simp
 
-lemma retypeNewSizeBits_retypeNewSizeBits_update [simp]:
-  "retypeNewSizeBits (retypeNewSizeBits_update f v) = f (retypeNewSizeBits v)"
+lemma retypeSlots_retypeSlots_update [simp]:
+  "retypeSlots (retypeSlots_update f v) = f (retypeSlots v)"
   by (cases v) simp
 
-lemma retypeNewSizeBits_retypeFreeRegionBase_update [simp]:
-  "retypeNewSizeBits (retypeFreeRegionBase_update f v) = retypeNewSizeBits v"
+lemma retypeSlots_retypeFreeRegionBase_update [simp]:
+  "retypeSlots (retypeFreeRegionBase_update f v) = retypeSlots v"
+  by (cases v) simp
+
+lemma retypeSlots_retypeNewSizeBits_update [simp]:
+  "retypeSlots (retypeNewSizeBits_update f v) = retypeSlots v"
   by (cases v) simp
 
 lemma retypeFreeRegionBase_retypeSource_update [simp]:
@@ -748,20 +724,44 @@ lemma retypeFreeRegionBase_retypeNewType_update [simp]:
   "retypeFreeRegionBase (retypeNewType_update f v) = retypeFreeRegionBase v"
   by (cases v) simp
 
+lemma retypeFreeRegionBase_retypeRegionBase_update [simp]:
+  "retypeFreeRegionBase (retypeRegionBase_update f v) = retypeFreeRegionBase v"
+  by (cases v) simp
+
 lemma retypeFreeRegionBase_retypeSlots_update [simp]:
   "retypeFreeRegionBase (retypeSlots_update f v) = retypeFreeRegionBase v"
   by (cases v) simp
 
-lemma retypeFreeRegionBase_retypeRegionBase_update [simp]:
-  "retypeFreeRegionBase (retypeRegionBase_update f v) = retypeFreeRegionBase v"
+lemma retypeFreeRegionBase_retypeFreeRegionBase_update [simp]:
+  "retypeFreeRegionBase (retypeFreeRegionBase_update f v) = f (retypeFreeRegionBase v)"
   by (cases v) simp
 
 lemma retypeFreeRegionBase_retypeNewSizeBits_update [simp]:
   "retypeFreeRegionBase (retypeNewSizeBits_update f v) = retypeFreeRegionBase v"
   by (cases v) simp
 
-lemma retypeFreeRegionBase_retypeFreeRegionBase_update [simp]:
-  "retypeFreeRegionBase (retypeFreeRegionBase_update f v) = f (retypeFreeRegionBase v)"
+lemma retypeNewSizeBits_retypeSource_update [simp]:
+  "retypeNewSizeBits (retypeSource_update f v) = retypeNewSizeBits v"
+  by (cases v) simp
+
+lemma retypeNewSizeBits_retypeNewType_update [simp]:
+  "retypeNewSizeBits (retypeNewType_update f v) = retypeNewSizeBits v"
+  by (cases v) simp
+
+lemma retypeNewSizeBits_retypeRegionBase_update [simp]:
+  "retypeNewSizeBits (retypeRegionBase_update f v) = retypeNewSizeBits v"
+  by (cases v) simp
+
+lemma retypeNewSizeBits_retypeSlots_update [simp]:
+  "retypeNewSizeBits (retypeSlots_update f v) = retypeNewSizeBits v"
+  by (cases v) simp
+
+lemma retypeNewSizeBits_retypeFreeRegionBase_update [simp]:
+  "retypeNewSizeBits (retypeFreeRegionBase_update f v) = retypeNewSizeBits v"
+  by (cases v) simp
+
+lemma retypeNewSizeBits_retypeNewSizeBits_update [simp]:
+  "retypeNewSizeBits (retypeNewSizeBits_update f v) = f (retypeNewSizeBits v)"
   by (cases v) simp
 
 datatype irqcontrol_invocation =
@@ -769,9 +769,9 @@ datatype irqcontrol_invocation =
   | IssueIRQHandler irq machine_word machine_word
 
 primrec
-  issueHandlerControllerSlot :: "irqcontrol_invocation \<Rightarrow> machine_word"
+  issueHandlerSlot :: "irqcontrol_invocation \<Rightarrow> machine_word"
 where
-  "issueHandlerControllerSlot (IssueIRQHandler v0 v1 v2) = v2"
+  "issueHandlerSlot (IssueIRQHandler v0 v1 v2) = v1"
 
 primrec
   issueHandlerIRQ :: "irqcontrol_invocation \<Rightarrow> irq"
@@ -779,19 +779,19 @@ where
   "issueHandlerIRQ (IssueIRQHandler v0 v1 v2) = v0"
 
 primrec
+  issueHandlerControllerSlot :: "irqcontrol_invocation \<Rightarrow> machine_word"
+where
+  "issueHandlerControllerSlot (IssueIRQHandler v0 v1 v2) = v2"
+
+primrec
   archIRQControl :: "irqcontrol_invocation \<Rightarrow> Arch.irqcontrol_invocation"
 where
   "archIRQControl (ArchIRQControl v0) = v0"
 
 primrec
-  issueHandlerSlot :: "irqcontrol_invocation \<Rightarrow> machine_word"
+  issueHandlerSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
 where
-  "issueHandlerSlot (IssueIRQHandler v0 v1 v2) = v1"
-
-primrec
-  issueHandlerControllerSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
-where
-  "issueHandlerControllerSlot_update f (IssueIRQHandler v0 v1 v2) = IssueIRQHandler v0 v1 (f v2)"
+  "issueHandlerSlot_update f (IssueIRQHandler v0 v1 v2) = IssueIRQHandler v0 (f v1) v2"
 
 primrec
   issueHandlerIRQ_update :: "(irq \<Rightarrow> irq) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
@@ -799,14 +799,14 @@ where
   "issueHandlerIRQ_update f (IssueIRQHandler v0 v1 v2) = IssueIRQHandler (f v0) v1 v2"
 
 primrec
+  issueHandlerControllerSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
+where
+  "issueHandlerControllerSlot_update f (IssueIRQHandler v0 v1 v2) = IssueIRQHandler v0 v1 (f v2)"
+
+primrec
   archIRQControl_update :: "(Arch.irqcontrol_invocation \<Rightarrow> Arch.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
 where
   "archIRQControl_update f (ArchIRQControl v0) = ArchIRQControl (f v0)"
-
-primrec
-  issueHandlerSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
-where
-  "issueHandlerSlot_update f (IssueIRQHandler v0 v1 v2) = IssueIRQHandler v0 (f v1) v2"
 
 abbreviation (input)
   ArchIRQControl_trans :: "(Arch.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation" ("ArchIRQControl'_ \<lparr> archIRQControl= _ \<rparr>")
@@ -838,6 +838,13 @@ datatype irqhandler_invocation =
   | SetIRQHandler irq capability machine_word
 
 primrec
+  irqHandlerIRQ :: "irqhandler_invocation \<Rightarrow> irq"
+where
+  "irqHandlerIRQ (AckIRQ v0) = v0"
+| "irqHandlerIRQ (ClearIRQHandler v0) = v0"
+| "irqHandlerIRQ (SetIRQHandler v0 v1 v2) = v0"
+
+primrec
   setIRQHandlerCap :: "irqhandler_invocation \<Rightarrow> capability"
 where
   "setIRQHandlerCap (SetIRQHandler v0 v1 v2) = v1"
@@ -848,11 +855,11 @@ where
   "setIRQHandlerSlot (SetIRQHandler v0 v1 v2) = v2"
 
 primrec
-  irqHandlerIRQ :: "irqhandler_invocation \<Rightarrow> irq"
+  irqHandlerIRQ_update :: "(irq \<Rightarrow> irq) \<Rightarrow> irqhandler_invocation \<Rightarrow> irqhandler_invocation"
 where
-  "irqHandlerIRQ (SetIRQHandler v0 v1 v2) = v0"
-| "irqHandlerIRQ (ClearIRQHandler v0) = v0"
-| "irqHandlerIRQ (AckIRQ v0) = v0"
+  "irqHandlerIRQ_update f (AckIRQ v0) = AckIRQ (f v0)"
+| "irqHandlerIRQ_update f (ClearIRQHandler v0) = ClearIRQHandler (f v0)"
+| "irqHandlerIRQ_update f (SetIRQHandler v0 v1 v2) = SetIRQHandler (f v0) v1 v2"
 
 primrec
   setIRQHandlerCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> irqhandler_invocation \<Rightarrow> irqhandler_invocation"
@@ -863,13 +870,6 @@ primrec
   setIRQHandlerSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> irqhandler_invocation \<Rightarrow> irqhandler_invocation"
 where
   "setIRQHandlerSlot_update f (SetIRQHandler v0 v1 v2) = SetIRQHandler v0 v1 (f v2)"
-
-primrec
-  irqHandlerIRQ_update :: "(irq \<Rightarrow> irq) \<Rightarrow> irqhandler_invocation \<Rightarrow> irqhandler_invocation"
-where
-  "irqHandlerIRQ_update f (SetIRQHandler v0 v1 v2) = SetIRQHandler (f v0) v1 v2"
-| "irqHandlerIRQ_update f (ClearIRQHandler v0) = ClearIRQHandler (f v0)"
-| "irqHandlerIRQ_update f (AckIRQ v0) = AckIRQ (f v0)"
 
 abbreviation (input)
   AckIRQ_trans :: "(irq) \<Rightarrow> irqhandler_invocation" ("AckIRQ'_ \<lparr> irqHandlerIRQ= _ \<rparr>")
