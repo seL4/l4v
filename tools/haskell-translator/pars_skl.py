@@ -46,7 +46,7 @@ for line in instructions:
     output_f = open(output_tmp, 'w')
     output_f.write('(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)\n')
     output_f.write('(* instead, see the skeleton file %s *)\n' %
-            input[input.rindex('l4v'):])
+            os.path.basename(input))
 
     input_f = open(input)
     for line in input_f:
