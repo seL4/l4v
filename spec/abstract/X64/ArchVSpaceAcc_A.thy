@@ -77,7 +77,7 @@ definition
   get_pde :: "obj_ref \<Rightarrow> (pde,'z::state_ext) s_monad" where
   "get_pde ptr \<equiv> do
      base \<leftarrow> return (ptr && ~~mask pd_shift_bits);
-     offset \<leftarrow> return ((ptr && mask pd_shift_bits) >> 2);
+     offset \<leftarrow> return ((ptr && mask pd_shift_bits) >> 3);
      pd \<leftarrow> get_pd base;
      return $ pd (ucast offset)
    od"
@@ -86,7 +86,7 @@ definition
   store_pde :: "obj_ref \<Rightarrow> pde \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pde p pde \<equiv> do
     base \<leftarrow> return (p && ~~mask pd_shift_bits);
-    offset \<leftarrow> return ((p && mask pd_shift_bits) >> 2);
+    offset \<leftarrow> return ((p && mask pd_shift_bits) >> 3);
     pd \<leftarrow> get_pd base;
     pd' \<leftarrow> return $ pd (ucast offset := pde);
     set_pd base pd'
@@ -115,7 +115,7 @@ definition
   get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
   "get_pte ptr \<equiv> do
      base \<leftarrow> return (ptr && ~~mask pt_shift_bits);
-     offset \<leftarrow> return ((ptr && mask pt_shift_bits) >> 2);
+     offset \<leftarrow> return ((ptr && mask pt_shift_bits) >> 3);
      pt \<leftarrow> get_pt base;
      return $ pt (ucast offset)
    od"
@@ -124,7 +124,7 @@ definition
   store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pte p pte \<equiv> do
     base \<leftarrow> return (p && ~~mask pt_shift_bits);
-    offset \<leftarrow> return ((p && mask pt_shift_bits) >> 2);
+    offset \<leftarrow> return ((p && mask pt_shift_bits) >> 3);
     pt \<leftarrow> get_pt base;
     pt' \<leftarrow> return $ pt (ucast offset := pte);
     set_pt base pt'
@@ -152,7 +152,7 @@ definition
   get_pdpte :: "obj_ref \<Rightarrow> (pdpte,'z::state_ext) s_monad" where
   "get_pdpte ptr \<equiv> do
      base \<leftarrow> return (ptr && ~~mask pdpt_shift_bits);
-     offset \<leftarrow> return ((ptr && mask pdpt_shift_bits) >> 2);
+     offset \<leftarrow> return ((ptr && mask pdpt_shift_bits) >> 3);
      pt \<leftarrow> get_pdpt base;
      return $ pt (ucast offset)
    od"
@@ -161,7 +161,7 @@ definition
   store_pdpte :: "obj_ref \<Rightarrow> pdpte \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pdpte p pte \<equiv> do
     base \<leftarrow> return (p && ~~mask pdpt_shift_bits);
-    offset \<leftarrow> return ((p && mask pdpt_shift_bits) >> 2);
+    offset \<leftarrow> return ((p && mask pdpt_shift_bits) >> 3);
     pt \<leftarrow> get_pdpt base;
     pt' \<leftarrow> return $ pt (ucast offset := pte);
     set_pdpt base pt'
@@ -189,7 +189,7 @@ definition
   get_pml4e :: "obj_ref \<Rightarrow> (pml4e,'z::state_ext) s_monad" where
   "get_pml4e ptr \<equiv> do
      base \<leftarrow> return (ptr && ~~mask pml4_shift_bits);
-     offset \<leftarrow> return ((ptr && mask pml4_shift_bits) >> 2);
+     offset \<leftarrow> return ((ptr && mask pml4_shift_bits) >> 3);
      pt \<leftarrow> get_pml4 base;
      return $ pt (ucast offset)
    od"
@@ -198,7 +198,7 @@ definition
   store_pml4e :: "obj_ref \<Rightarrow> pml4e \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pml4e p pte \<equiv> do
     base \<leftarrow> return (p && ~~mask pml4_bits);
-    offset \<leftarrow> return ((p && mask pml4_bits) >> 2);
+    offset \<leftarrow> return ((p && mask pml4_bits) >> 3);
     pt \<leftarrow> get_pml4 base;
     pt' \<leftarrow> return $ pt (ucast offset := pte);
     set_pml4 base pt'
