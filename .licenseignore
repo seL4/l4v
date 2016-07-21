@@ -125,8 +125,6 @@ tools/c-parser/Simpl/ex/Quicksort.thy
 tools/c-parser/Simpl/ex/ClosureEx.thy
 tools/c-parser/Simpl/ex/VcgExTotal.thy
 
-tools/c-parser/testfiles/jiraver473.minfo
-
 tools/proofcount/etc/settings
 
 **/CFunDump.txt
@@ -145,11 +143,13 @@ tools/autocorres/tools/release_files/CONTRIBUTORS
 
 tools/c-parser/standalone-parser/table.ML
 tools/c-parser/StrictC.grm.desc
+tools/c-parser/StrictC.grm.sig
 tools/c-parser/standalone-parser/c-parser
 tools/c-parser/standalone-parser/tokenizer
 tools/c-parser/tools/mllex/mllex
 tools/c-parser/tools/mlyacc/mlyacc
 tools/c-parser/tools/mlyacc/src/yacc.lex.sml
+tools/c-parser/testfiles/jiraver473.minfo
 tools/c-parser/testfiles/ROOT
 tools/c-parser/testfiles/umm_types.txt
 
