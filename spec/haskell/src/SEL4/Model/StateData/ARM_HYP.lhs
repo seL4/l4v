@@ -123,11 +123,11 @@ FIXME ARMHYP ok, someone needs to explain how this actually works before it gets
 >             armKSHWASIDTable = funArray (const Nothing),
 >             armKSNextASID = minBound,
 >             armKSASIDMap = funPartialArray (const Nothing) asidRange,
+>             armUSGlobalPT = error "FIXME ARMHYP TODO",
+>             armKSCurVCPU = error "FIXME ARMHYP TODO",
 >             armKSKernelVSpace =
 >                 (\vref -> if vref < mask 20 then ArmVSpaceKernelWindow
->                                             else ArmVSpaceInvalidRegion),
->             armUSGlobalPT = error "FIXME ARMHYP TODO",
->             armKSCurVCPU = error "FIXME ARMHYP TODO"
+>                                             else ArmVSpaceInvalidRegion)
 >             }
 
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */

@@ -163,9 +163,11 @@ With hypervisor extensions, kernel and user MMUs are completely independent. How
 
 When a frame is being mapped, or an existing mapping updated, the following function is used to locate the page table or page directory slots that will be updated and to construct the entry that will be written into them.
 
-> largePagePTEOffsets = [0, PPtr pts .. PPtr (15 `shiftL` pteBits)] :: [PPtr PTE]
+> largePagePTEOffsets :: [PPtr PTE]
+> largePagePTEOffsets = [0, PPtr pts .. PPtr (15 `shiftL` pteBits)]
 >     where pts = fromIntegral pteBits
-> superSectionPDEOffsets = [0, PPtr pds .. PPtr (15 `shiftL` pdeBits)] :: [PPtr PDE]
+> superSectionPDEOffsets :: [PPtr PDE]
+> superSectionPDEOffsets = [0, PPtr pds .. PPtr (15 `shiftL` pdeBits)]
 >     where pds = fromIntegral pdeBits
 
 > createMappingEntries :: PAddr -> VPtr ->

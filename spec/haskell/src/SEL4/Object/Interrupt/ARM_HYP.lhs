@@ -44,7 +44,7 @@ This module defines the machine-specific interrupt handling routines.
 FIXME ARMHYP INTERRUPT_VGIC_MAINTENANCE and INTERRUPT_SMMU
 
 > handleReservedIRQ :: IRQ -> Kernel ()
-> handleReservedIRQ _irq = fail "FIXME ARMHYP handleReservedIRQ"
+> handleReservedIRQ irq = fail "FIXME ARMHYP handleReservedIRQ"
 
 > initInterruptController :: Kernel ()
 > initInterruptController = do

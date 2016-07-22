@@ -35,6 +35,7 @@ hypervisor extensions on ARM.
 > import SEL4.API.InvocationLabels
 > import SEL4.Machine.Hardware.ARM_HYP
 > import {-# SOURCE #-} SEL4.Object.TCB
+> import {-# SOURCE #-} SEL4.Kernel.Thread
 
 > import Data.Bits
 
@@ -43,6 +44,8 @@ hypervisor extensions on ARM.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
 FIXME ARMHYP the VCPU also contains gic interface info and cpXRegs, time will tell what is actually needed for verification. The one thing we definitely need is the thread the VCPU is associated with
+
+\subsection{VCPU: Set TCB}
 
 > decodeVCPUSetTCB :: ArchCapability -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError ArchInv.Invocation
@@ -55,31 +58,7 @@ FIXME ARMHYP the VCPU also contains gic interface info and cpXRegs, time will te
 >     return $ InvokeVCPU $ VCPUSetTCB (capVCPUPtr cap) tcbPtr
 > decodeVCPUSetTCB _ _ = throw IllegalOperation
 
-> decodeARMVCPUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
->         ArchCapability -> [(Capability, PPtr CTE)] ->
->         KernelF SyscallError ArchInv.Invocation
-> decodeARMVCPUInvocation label args capIndex slot cap@(VCPUCap {}) extraCaps =
->     case invocationType label of
->         ArchInvocationLabel ARMVCPUSetTCB ->
->             decodeVCPUSetTCB cap extraCaps
->         ArchInvocationLabel ARMVCPUInjectIRQ -> error "FIXME ARMHYP TODO"
->         ArchInvocationLabel ARMVCPUReadReg -> error "FIXME ARMHYP TODO"
->         ArchInvocationLabel ARMVCPUWriteReg -> error "FIXME ARMHYP TODO"
->         _ -> throw IllegalOperation
-> decodeARMVCPUInvocation _ _ _ _ _ _ = throw IllegalOperation
-
-%     case args of
-%         [mr0, mr1] -> do
-%             let vid = mr0 .&. 0xffff
-%             let prio = (mr0 `shiftR` 16) .&. 0xff
-%             let group = (mr0 `shiftR` 24) .&. 0xff
-%             let index = mr1 .&. 0xff
-%             error "ARMHYP FIXME TODO"
-%         _ -> throw TruncatedMessage
-
-% performARMVCPUInvocation i [_ from InvokeVCPU _]
-
-FIXME ARMHYP is it possible to dissociate by using VCPUSetTCB? because then I have to change the decode to set a Nothing if ptr is null, plus a bunch of signatures
+It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome has to be an associated TCB and VCPU. The only way to get lasting dissociation is to delete the TCB or the VCPU.
 
 > dissociateVCPUTCB :: PPtr TCB -> PPtr VCPU -> Kernel ()
 > dissociateVCPUTCB tcbPtr vcpuPtr = do
@@ -94,8 +73,9 @@ FIXME ARMHYP is it possible to dissociate by using VCPUSetTCB? because then I ha
 > associateVCPUTCB :: PPtr TCB -> PPtr VCPU -> Kernel ()
 > associateVCPUTCB tcbPtr vcpuPtr = do
 >     tcbVCPU <- archThreadGet atcbVCPUPtr tcbPtr
->     case tcbVCPU of Just ptr -> dissociateVCPUTCB tcbPtr ptr
->                     _ -> return ()
+>     case tcbVCPU of
+>       Just ptr -> dissociateVCPUTCB tcbPtr ptr
+>       _ -> return ()
 >     vcpu <- getObject vcpuPtr
 >     case (vcpuTCBPtr vcpu) of
 >         Just ptr -> dissociateVCPUTCB ptr vcpuPtr
@@ -103,10 +83,85 @@ FIXME ARMHYP is it possible to dissociate by using VCPUSetTCB? because then I ha
 >     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Just vcpuPtr }) tcbPtr
 >     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Just tcbPtr }
 
+\subsection{VCPU: Read/Write Registers}
+
+Currently, there is only one VCPU register available for reading/writing by the user: cpx.sctlr.
+
+> decodeVCPUReadReg :: [Word] -> ArchCapability ->
+>         KernelF SyscallError ArchInv.Invocation
+> decodeVCPUReadReg (field:_) cap@(VCPUCap {}) = do
+>     when (field /= 0) $ throw (InvalidArgument 1)
+>     return $ InvokeVCPU $
+>         VCPUReadRegister (capVCPUPtr cap) (fromIntegral field)
+> decodeVCPUReadReg _ _ = throw TruncatedMessage
+
+> decodeVCPUWriteReg :: [Word] -> ArchCapability ->
+>         KernelF SyscallError ArchInv.Invocation
+> decodeVCPUWriteReg (field:val:_) cap@(VCPUCap {}) = do
+>     when (field /= 0) $ throw (InvalidArgument 1)
+>     return $ InvokeVCPU $ VCPUWriteRegister (capVCPUPtr cap)
+>                 (fromIntegral field) (fromIntegral val)
+> decodeVCPUWriteReg _ _ = throw TruncatedMessage
+
+> readVCPUReg :: PPtr VCPU -> HyperReg -> Kernel HyperRegVal
+> readVCPUReg vcpuPtr reg = do
+>     if reg == 0
+>         then do
+>             vcpu <- getObject vcpuPtr
+>             return $ vcpuSCTLR vcpu
+>         else fail "VCPU register out of range"
+
+> writeVCPUReg :: PPtr VCPU -> HyperReg -> HyperRegVal -> Kernel ()
+> writeVCPUReg vcpuPtr reg val =
+>     if reg == 0
+>         then do
+>             vcpu <- getObject vcpuPtr
+>             setObject vcpuPtr $ vcpu { vcpuSCTLR = val }
+>         else fail "VCPU register out of range"
+
+> invokeVCPUReadReg :: PPtr VCPU -> HyperReg -> Kernel ()
+> invokeVCPUReadReg vcpuPtr reg = do
+>     ct <- getCurThread
+>     val <- readVCPUReg vcpuPtr reg
+>     asUser ct $ setRegister (msgRegisters !! 0) $ fromIntegral val
+>     let msgInfo = MI {
+>             msgLabel = 0,
+>             msgCapsUnwrapped = 0,
+>             msgExtraCaps = 0,
+>             msgLength = 1 }
+>     setMessageInfo ct msgInfo
+>     -- prevent kernel from generating a reply to ct as we already did
+>     setThreadState Running ct
+
+> invokeVCPUWriteReg :: PPtr VCPU -> HyperReg -> HyperRegVal -> Kernel ()
+> invokeVCPUWriteReg vcpuPtr reg val = writeVCPUReg vcpuPtr reg val
+
+\subsection{VCPU: perform and decode main functions}
+
 > performARMVCPUInvocation :: VCPUInvocation -> Kernel ()
 > performARMVCPUInvocation (VCPUSetTCB vcpuPtr tcbPtr) =
 >     associateVCPUTCB tcbPtr vcpuPtr
-> performARMVCPUInvocation _ = error "FIXME ARMHYP TODO"
+> performARMVCPUInvocation (VCPUReadRegister vcpuPtr reg) =
+>     invokeVCPUReadReg vcpuPtr reg
+> performARMVCPUInvocation (VCPUWriteRegister vcpuPtr reg val) =
+>     invokeVCPUWriteReg vcpuPtr reg val
+> performARMVCPUInvocation (VCPUInjectIRQ vcpuPtr _ _ _ _ _)  = error "FIXME ARMHYP TODO"
+
+> decodeARMVCPUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
+>         ArchCapability -> [(Capability, PPtr CTE)] ->
+>         KernelF SyscallError ArchInv.Invocation
+> decodeARMVCPUInvocation label args capIndex slot cap@(VCPUCap {}) extraCaps =
+>     case invocationType label of
+>         ArchInvocationLabel ARMVCPUSetTCB ->
+>             decodeVCPUSetTCB cap extraCaps
+>         ArchInvocationLabel ARMVCPUInjectIRQ -> error "FIXME ARMHYP TODO"
+>         ArchInvocationLabel ARMVCPUReadReg ->
+>             decodeVCPUReadReg args cap
+>         ArchInvocationLabel ARMVCPUWriteReg ->
+>             decodeVCPUWriteReg args cap
+>         _ -> throw IllegalOperation
+> decodeARMVCPUInvocation _ _ _ _ _ _ = throw IllegalOperation
+
 
 % vcpuInjectIRQ
 % vcpuReadRegister

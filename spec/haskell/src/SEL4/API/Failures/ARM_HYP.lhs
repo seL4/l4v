@@ -33,7 +33,7 @@ FIXME ARMHYP VCPU and VGIC faults should be handled here
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >     | VCPUFault {
 >             vcpuHSR :: Word }
->     | VGICMaintenance [Word]
+>     | VGICMaintenance { vgicMaintenanceData :: [Word] }
 #endif
 >     deriving Show
 

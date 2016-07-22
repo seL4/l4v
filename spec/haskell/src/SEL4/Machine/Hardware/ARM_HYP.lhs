@@ -563,11 +563,10 @@ seL4 does not use hardware domains or parity on ARM hypervisor systems.
 >     deriving (Show, Eq)
 
 > hapFromVMRights :: VMRights -> Word
-> hapFromVMRights r =
->     case r of VMKernelOnly -> 0
->               VMNoAccess -> 0
->               VMReadOnly -> 1
->               VMReadWrite -> 3
+> hapFromVMRights VMKernelOnly = 0
+> hapFromVMRights VMNoAccess = 0
+> hapFromVMRights VMReadOnly = 1
+> hapFromVMRights VMReadWrite = 3
 
 FIXME ARMHYP want refactor on both sides write a list to either word list or a structure!
 FIXME ARMHYP ask somebody what the most convenient refinement would be
@@ -575,8 +574,7 @@ FIXME ARMHYP ask somebody what the most convenient refinement would be
 > wordsFromPDE :: PDE -> [Word]
 > wordsFromPDE InvalidPDE = [0, 0]
 > wordsFromPDE (PageTablePDE table) = [w0, 0]
->     where w0 = 3 .|.
->                (fromIntegral table .&. 0xfffff000)
+>     where w0 = 3 .|. (fromIntegral table .&. 0xfffff000)
 > wordsFromPDE (SectionPDE frame cacheable xn rights) = [w0, w1]
 >     where w1 = 0 .|. (if xn then bit 22 else 0) -- no contig. hint
 >           w0 = 1 .|.
@@ -646,7 +644,7 @@ With hypervisor extensions enabled, page table and page directory entries occupy
 > pdeBits = (3 :: Int)
 > pdBits = (11 :: Int) + pdeBits
 > ptBits = (9 :: Int) + pteBits
-> vcpuBits = pageBits :: Int
+> vcpuBits = pageBits
 
 #else /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 

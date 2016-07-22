@@ -161,8 +161,14 @@ FIXME ARMHYP after device untyped patch this will be 6 and 7 respectively
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 \subsection {VCPU}
 
+The SCTLR and ACTLR are contained in a structure of their own in the C code,
+but this structure is never manipulated as a whole.
+
 > data VCPU = VCPUObj {
->                 vcpuTCBPtr :: Maybe (PPtr TCB) }
+>                 vcpuTCBPtr :: Maybe (PPtr TCB)
+>                 ,vcpuSCTLR :: Word32
+>                 ,vcpuACTLR :: Word32
+>                 }
 >     deriving Show
 
 > newVCPU :: VCPU
