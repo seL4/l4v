@@ -1,8 +1,11 @@
-Built from git repo at /home/mikit/temprepo/l4v/spec/haskell by mikit
+Built from git repo at /Users/miki/repo3/l4v/spec/haskell by miki
 
 Generated from changeset:
-6330a0a update invariants for prepare_thread_delete
+84dc702 InfoFlowC: updates for Hypervisor stub
 
 
 Warning - uncomitted changes used:
+ M ../design/ARM/ArchHypervisor_H.thy
  M ../design/version
+ M src/SEL4/Kernel/Hypervisor/ARM.lhs
+ M ../../tools/haskell-translator/caseconvs

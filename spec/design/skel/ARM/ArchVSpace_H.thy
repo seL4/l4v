@@ -18,6 +18,7 @@ imports
   "../Untyped_H"
   "../KI_Decls_H"
   ArchVSpaceDecls_H
+  ArchHypervisor_H
 begin
 context Arch begin global_naming ARM_H
 

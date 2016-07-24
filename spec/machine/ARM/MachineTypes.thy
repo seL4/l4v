@@ -296,6 +296,9 @@ datatype vmfault_type =
     ARMDataAbort
   | ARMPrefetchAbort
 
+datatype hyp_fault_type =
+    ARMNoHypFaults
+
 definition
 pageBits :: "nat"
 where

@@ -22,6 +22,7 @@ requalify_types
   machine_word 
   machine_word_len
   vmfault_type
+  hyp_fault_type
   irq
 
 requalify_consts
