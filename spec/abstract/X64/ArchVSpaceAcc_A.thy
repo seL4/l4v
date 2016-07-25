@@ -76,8 +76,8 @@ text {* The following function takes a pointer to a PDE in kernel memory
 definition
   get_pde :: "obj_ref \<Rightarrow> (pde,'z::state_ext) s_monad" where
   "get_pde ptr \<equiv> do
-     base \<leftarrow> return (ptr && ~~mask pd_shift_bits);
-     offset \<leftarrow> return ((ptr && mask pd_shift_bits) >> 3);
+     base \<leftarrow> return (ptr && ~~mask pd_bits);
+     offset \<leftarrow> return ((ptr && mask pd_bits) >> 3);
      pd \<leftarrow> get_pd base;
      return $ pd (ucast offset)
    od"
@@ -85,8 +85,8 @@ definition
 definition
   store_pde :: "obj_ref \<Rightarrow> pde \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pde p pde \<equiv> do
-    base \<leftarrow> return (p && ~~mask pd_shift_bits);
-    offset \<leftarrow> return ((p && mask pd_shift_bits) >> 3);
+    base \<leftarrow> return (p && ~~mask pd_bits);
+    offset \<leftarrow> return ((p && mask pd_bits) >> 3);
     pd \<leftarrow> get_pd base;
     pd' \<leftarrow> return $ pd (ucast offset := pde);
     set_pd base pd'
@@ -114,8 +114,8 @@ text {* The following function takes a pointer to a PTE in kernel memory
 definition
   get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
   "get_pte ptr \<equiv> do
-     base \<leftarrow> return (ptr && ~~mask pt_shift_bits);
-     offset \<leftarrow> return ((ptr && mask pt_shift_bits) >> 3);
+     base \<leftarrow> return (ptr && ~~mask pt_bits);
+     offset \<leftarrow> return ((ptr && mask pt_bits) >> 3);
      pt \<leftarrow> get_pt base;
      return $ pt (ucast offset)
    od"
@@ -123,8 +123,8 @@ definition
 definition
   store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pte p pte \<equiv> do
-    base \<leftarrow> return (p && ~~mask pt_shift_bits);
-    offset \<leftarrow> return ((p && mask pt_shift_bits) >> 3);
+    base \<leftarrow> return (p && ~~mask pt_bits);
+    offset \<leftarrow> return ((p && mask pt_bits) >> 3);
     pt \<leftarrow> get_pt base;
     pt' \<leftarrow> return $ pt (ucast offset := pte);
     set_pt base pt'
@@ -151,8 +151,8 @@ text {* The following function takes a pointer to a PDPTE in kernel memory
 definition
   get_pdpte :: "obj_ref \<Rightarrow> (pdpte,'z::state_ext) s_monad" where
   "get_pdpte ptr \<equiv> do
-     base \<leftarrow> return (ptr && ~~mask pdpt_shift_bits);
-     offset \<leftarrow> return ((ptr && mask pdpt_shift_bits) >> 3);
+     base \<leftarrow> return (ptr && ~~mask pdpt_bits);
+     offset \<leftarrow> return ((ptr && mask pdpt_bits) >> 3);
      pt \<leftarrow> get_pdpt base;
      return $ pt (ucast offset)
    od"
@@ -160,8 +160,8 @@ definition
 definition
   store_pdpte :: "obj_ref \<Rightarrow> pdpte \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pdpte p pte \<equiv> do
-    base \<leftarrow> return (p && ~~mask pdpt_shift_bits);
-    offset \<leftarrow> return ((p && mask pdpt_shift_bits) >> 3);
+    base \<leftarrow> return (p && ~~mask pdpt_bits);
+    offset \<leftarrow> return ((p && mask pdpt_bits) >> 3);
     pt \<leftarrow> get_pdpt base;
     pt' \<leftarrow> return $ pt (ucast offset := pte);
     set_pdpt base pt'
@@ -188,8 +188,8 @@ text {* The following function takes a pointer to a PML4E in kernel memory
 definition
   get_pml4e :: "obj_ref \<Rightarrow> (pml4e,'z::state_ext) s_monad" where
   "get_pml4e ptr \<equiv> do
-     base \<leftarrow> return (ptr && ~~mask pml4_shift_bits);
-     offset \<leftarrow> return ((ptr && mask pml4_shift_bits) >> 3);
+     base \<leftarrow> return (ptr && ~~mask pml4_bits);
+     offset \<leftarrow> return ((ptr && mask pml4_bits) >> 3);
      pt \<leftarrow> get_pml4 base;
      return $ pt (ucast offset)
    od"
@@ -246,7 +246,7 @@ text {* Walk the page directories and tables in software. *}
 definition
 lookup_pml4_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref" where
 "lookup_pml4_slot pm vptr \<equiv> let pm_index = get_pml4_index vptr
-                             in pm + (pm_index << 3)"
+                             in pm + (pm_index << word_size_bits)"
 
 definition
 lookup_pdpt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::state_ext) lf_monad" where
@@ -262,6 +262,13 @@ lookup_pdpt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z:
           odE)
         | _ \<Rightarrow> throwError $ MissingCapability pdpt_bits)
  odE"
+ 
+text {* A non-failing version of @{const lookup_pdpt_slot} when the pml4 is already known *}
+definition 
+  lookup_pdpt_slot_no_fail :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
+where
+  "lookup_pdpt_slot_no_fail pdpt vptr \<equiv> 
+     pdpt + (get_pdpt_index vptr << word_size_bits)"
 
 text {* The following function takes a page-directory reference as well as
   a virtual address and then computes a pointer to the PDE in kernel memory *}
@@ -280,6 +287,13 @@ lookup_pd_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::s
         | _ \<Rightarrow> throwError $ MissingCapability pdpt_bits)
  odE"
 
+text {* A non-failing version of @{const lookup_pd_slot} when the pdpt is already known *}
+definition 
+  lookup_pd_slot_no_fail :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
+where
+  "lookup_pd_slot_no_fail pd vptr \<equiv> 
+     pd + (get_pd_index vptr << word_size_bits)"
+ 
 text {* The following function takes a page-directory reference as well as
   a virtual address and then computes a pointer to the PTE in kernel memory.
   Note that the function fails if the virtual address is mapped on a section or
@@ -298,6 +312,13 @@ lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::s
           odE)
         | _ \<Rightarrow> throwError $ MissingCapability 20)
    odE"
+
+text {* A non-failing version of @{const lookup_pt_slot} when the pd is already known *}
+definition 
+  lookup_pt_slot_no_fail :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
+where
+  "lookup_pt_slot_no_fail pt vptr \<equiv> 
+     pt + (get_pt_index vptr << word_size_bits)"
 
 (* FIXME x64-vtd:
 text {* The following functions helped us locating the actual iopte *}
