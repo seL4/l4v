@@ -138,16 +138,16 @@ abbreviation
   "page_map_l4_at \<equiv> typ_at (AArch APageMapL4)"
 
 definition
-  "pde_at p \<equiv> page_directory_at (p && ~~ mask pd_shift_bits)
+  "pde_at p \<equiv> page_directory_at (p && ~~ mask pd_bits)
                   and K (is_aligned p 3)"
 definition
-  "pte_at p \<equiv> page_table_at (p && ~~ mask pt_shift_bits)
+  "pte_at p \<equiv> page_table_at (p && ~~ mask pt_bits)
                   and K (is_aligned p 3)"        
 definition
-  "pdpte_at p \<equiv> pd_pointer_table_at (p && ~~ mask pdpt_shift_bits)
+  "pdpte_at p \<equiv> pd_pointer_table_at (p && ~~ mask pdpt_bits)
                    and K (is_aligned p 3)"
 definition
-  "pml4e_at p \<equiv> page_map_l4_at (p && ~~ mask pml4_shift_bits)
+  "pml4e_at p \<equiv> page_map_l4_at (p && ~~ mask pml4_bits)
                    and K (is_aligned p 3)"
 
 definition
@@ -267,7 +267,7 @@ where
    of addressible virtual memory mean we need to mask *)
 definition
   kernel_mapping_slots :: "9 word set" where
- "kernel_mapping_slots \<equiv> {x. x \<ge> ucast (pptr_base >> 39)}"
+ "kernel_mapping_slots \<equiv> {x. x \<ge> ucast (pptr_base >> pml4_shift_bits)}"
 
 primrec
   valid_arch_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -1505,6 +1505,16 @@ lemma aobj_ref_default:
   "aobj_ref (arch_default_cap x6 x us) = Some x"
   by (auto simp add: arch_default_cap_def split: aobject_type.splits)
 
+lemma valid_pml4e_lift:
+  assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_pml4e pml4e s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pml4e pml4e s\<rbrace>"
+  by (cases pml4e) (simp | wp x)+
+  
+lemma valid_pdpte_lift:
+  assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_pdpte pdpte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pdpte pdpte s\<rbrace>"
+  by (cases pdpte) (simp | wp x)+
+  
 lemma valid_pde_lift:
   assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_pde pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde pde s\<rbrace>"
@@ -1515,6 +1525,16 @@ lemma valid_pte_lift:
   shows "\<lbrace>\<lambda>s. valid_pte pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte pte s\<rbrace>"
   by (cases pte) (simp | wp x)+
 
+lemma pdpte_at_atyp:
+  assumes x: "\<And>p T. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
+  shows      "\<lbrace>pdpte_at p\<rbrace> f \<lbrace>\<lambda>rv. pdpte_at p\<rbrace>"
+  by (simp add: pdpte_at_def | wp x)+
+
+lemma pml4e_at_atyp:
+  assumes x: "\<And>p T. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
+  shows      "\<lbrace>pml4e_at p\<rbrace> f \<lbrace>\<lambda>rv. pml4e_at p\<rbrace>"
+  by (simp add: pml4e_at_def | wp x)+
+  
 lemma pde_at_atyp:
   assumes x: "\<And>p T. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows      "\<lbrace>pde_at p\<rbrace> f \<lbrace>\<lambda>rv. pde_at p\<rbrace>"
@@ -1532,82 +1552,92 @@ lemmas abs_atyp_at_lifts =
 lemma table_size:
   "table_size = 12"
   by (simp add: table_size_def ptTranslationBits_def word_size_bits_def)
+
+bundle bitsimps =
+  table_size_def[simp] word_size_bits_def[simp]
+  ptTranslationBits_def[simp] pageBits_def[simp]
+  
+context includes bitsimps begin
+  lemmas simple_bit_simps       = table_size word_size_bits_def ptTranslationBits_def pageBits_def
+  lemmas table_bits_simps       = pml4_bits_def[simplified] pdpt_bits_def[simplified] 
+                                  pd_bits_def[simplified] pt_bits_def[simplified] 
+  lemmas table_shift_bits_simps = pml4_shift_bits_def[simplified] pdpt_shift_bits_def[simplified]
+                                  pd_shift_bits_def[simplified] pt_shift_bits_def[simplified] 
+                                  
+  lemmas bit_simps              = table_bits_simps table_shift_bits_simps simple_bit_simps
+end
   
 lemma page_directory_pde_atI:
   "\<lbrakk> page_directory_at p s; x < 2 ^ ptTranslationBits;
-         pspace_aligned s \<rbrakk> \<Longrightarrow> pde_at (p + (x << 3)) s"
+         pspace_aligned s \<rbrakk> \<Longrightarrow> pde_at (p + (x << word_size_bits)) s"
   apply (clarsimp simp: obj_at_def pde_at_def)
   apply (drule (1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def table_size
+  apply (clarsimp simp: a_type_def bit_simps
                  split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
-  apply (subgoal_tac "p = (p + (x << 3) && ~~ mask pd_bits)")
-   subgoal by auto
+  apply (subgoal_tac "p = (p + (x << word_size_bits) && ~~ mask pd_bits)")
+   subgoal by (auto simp: bit_simps)
   apply (rule sym, rule add_mask_lower_bits)
    apply (simp add: pd_bits_def pageBits_def table_size)
   apply (simp)
   apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
    apply (simp add: pd_bits_def pageBits_def table_size)
   apply (rule shiftl_less_t2n)
-   apply (simp add: pd_bits_def ptTranslationBits_def table_size)
-  apply (simp add: pd_bits_def table_size)
+   apply (simp add: bit_simps)+
   done
 
 lemma page_table_pte_atI:
-  "\<lbrakk> page_table_at p s; x < 2^ptTranslationBits; pspace_aligned s \<rbrakk> \<Longrightarrow> pte_at (p + (x << 3)) s"
+  "\<lbrakk> page_table_at p s; x < 2^ptTranslationBits; pspace_aligned s \<rbrakk> \<Longrightarrow> pte_at (p + (x << word_size_bits)) s"
   apply (clarsimp simp: obj_at_def pte_at_def)
   apply (drule (1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def table_size
+  apply (clarsimp simp: a_type_def bit_simps
                  split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
-  apply (subgoal_tac "p = (p + (x << 3) && ~~ mask pt_bits)")
-   subgoal by auto
+  apply (subgoal_tac "p = (p + (x << word_size_bits) && ~~ mask pt_bits)")
+   subgoal by (auto simp: bit_simps)
   apply (rule sym, rule add_mask_lower_bits)
-   apply (simp add: pt_bits_def pageBits_def table_size)
+   apply (simp add: bit_simps)
   apply simp
   apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
-   apply (simp add: pt_bits_def pageBits_def table_size)
+   apply (simp add: bit_simps)
   apply (rule shiftl_less_t2n)
-   apply (simp add: pt_bits_def ptTranslationBits_def table_size)
-  apply (simp add: pt_bits_def table_size)
+   apply (simp add: bit_simps)+
   done
 
 lemma pd_pointer_table_pdpte_atI:
-  "\<lbrakk> pd_pointer_table_at p s; x < 2^ptTranslationBits; pspace_aligned s \<rbrakk> \<Longrightarrow> pdpte_at (p + (x << 3)) s"
+  "\<lbrakk> pd_pointer_table_at p s; x < 2^ptTranslationBits; pspace_aligned s \<rbrakk> \<Longrightarrow> pdpte_at (p + (x << word_size_bits)) s"
   apply (clarsimp simp: obj_at_def pdpte_at_def)
   apply (drule (1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def table_size
+  apply (clarsimp simp: a_type_def bit_simps
                  split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
-  apply (subgoal_tac "p = (p + (x << 3) && ~~ mask pdpt_bits)")
-   subgoal by auto
+  apply (subgoal_tac "p = (p + (x << word_size_bits) && ~~ mask pdpt_bits)")
+   subgoal by (auto simp: bit_simps)
   apply (rule sym, rule add_mask_lower_bits)
-   apply (simp add: pdpt_bits_def pageBits_def table_size)
+   apply (simp add: bit_simps)
   apply simp
   apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
-   apply (simp add: pdpt_bits_def pageBits_def table_size)
+   apply (simp add: bit_simps)
   apply (rule shiftl_less_t2n)
-   apply (simp add: pdpt_bits_def ptTranslationBits_def table_size)
-  apply (simp add: pdpt_bits_def table_size)
+   apply (simp add: bit_simps)+
   done
   
 lemma page_map_l4_pml4e_atI:
-  "\<lbrakk> page_map_l4_at p s; x < 2^ptTranslationBits; pspace_aligned s \<rbrakk> \<Longrightarrow> pml4e_at (p + (x << 3)) s"
+  "\<lbrakk> page_map_l4_at p s; x < 2^ptTranslationBits; pspace_aligned s \<rbrakk> \<Longrightarrow> pml4e_at (p + (x << word_size_bits)) s"
   apply (clarsimp simp: obj_at_def pml4e_at_def)
   apply (drule (1) pspace_alignedD[rotated])
-  apply (clarsimp simp: a_type_def table_size
+  apply (clarsimp simp: a_type_def bit_simps
                  split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
-  apply (subgoal_tac "p = (p + (x << 3) && ~~ mask pml4_bits)")
-   subgoal by auto
+  apply (subgoal_tac "p = (p + (x << word_size_bits) && ~~ mask pml4_bits)")
+   subgoal by (auto simp: bit_simps)
   apply (rule sym, rule add_mask_lower_bits)
-   apply (simp add: pml4_bits_def pageBits_def table_size)
+   apply (simp add: bit_simps)
   apply simp
   apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
-   apply (simp add: pml4_bits_def pageBits_def table_size)
+   apply (simp add: bit_simps)
   apply (rule shiftl_less_t2n)
-   apply (simp add: pml4_bits_def ptTranslationBits_def table_size)
-  apply (simp add: pml4_bits_def table_size)
+   apply (simp add: bit_simps)+
   done
   
 lemma physical_arch_cap_has_ref: 
@@ -2325,6 +2355,22 @@ lemma pml4e_graph_ofI:
                               else pml4e_ref (pm x))"
   by (rule graph_ofI, simp)
   
+lemma vs_refs_pml4I:
+  "\<lbrakk>pm ((ucast (r :: machine_word)) :: 9 word) = PDPointerTablePML4E x a b;
+     ucast r \<notin> kernel_mapping_slots; \<forall>n \<ge> 9. n < 64 \<longrightarrow> \<not> r !! n\<rbrakk>
+   \<Longrightarrow> (VSRef r (Some APageMapL4), ptrFromPAddr x)
+       \<in> vs_refs (ArchObj (PageMapL4 pm))"
+  apply (simp add: vs_refs_def)
+  apply (rule image_eqI[rotated])
+   apply (rule pml4e_graph_ofI)
+     apply (simp add: pml4e_ref_def)+
+  apply (simp add: ucast_ucast_mask)
+  apply (rule word_eqI)
+  apply (simp add: word_size)
+  apply (rule ccontr, auto)
+  done
+
+
 lemma pde_graph_ofI:
   "\<lbrakk>pd x = pde; pde_ref pde = Some v\<rbrakk> \<Longrightarrow> (x,v) \<in> graph_of (pde_ref \<circ> pd)"
   by (rule graph_ofI) simp
@@ -2351,7 +2397,7 @@ lemma aa_type_pdD:
                split: arch_kernel_obj.splits split_if_asm)
 
 lemma empty_table_is_valid:
-  "\<lbrakk>empty_table (set (x64_global_pts (arch_state s))) (ArchObj ao);
+  "\<lbrakk>empty_table (set (x64_global_pdpts (arch_state s))) (ArchObj ao);
     valid_arch_state s\<rbrakk>
    \<Longrightarrow> valid_arch_obj ao s"
   by (cases ao, simp_all add: empty_table_def)

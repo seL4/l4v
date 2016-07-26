@@ -496,8 +496,8 @@ lemma set_object_asid_map:
 
 lemma set_object_equal_mappings:
   "\<lbrace>\<lambda>s. equal_kernel_mappings s
-          \<and> (\<forall>pd. ko = ArchObj (PageDirectory pd)
-                \<longrightarrow> (\<forall>x pd'. ko_at (ArchObj (PageDirectory pd')) x s
+          \<and> (\<forall>pd. ko = ArchObj (PageMapL4 pd)
+                \<longrightarrow> (\<forall>x pd'. ko_at (ArchObj (PageMapL4 pd')) x s
                          \<longrightarrow> (\<forall>w \<in> kernel_mapping_slots. pd w = pd' w)))\<rbrace>
      set_object p ko
    \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
@@ -505,7 +505,7 @@ lemma set_object_equal_mappings:
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def
              split del: split_if)
   apply (simp split: split_if_asm)
-  sorry
+  done
 
 lemma valid_global_vspace_mappings_pres:
   "\<lbrakk> valid_global_vspace_mappings s;
@@ -556,7 +556,7 @@ lemma valid_global_pd_mappings_arch_update[simp]:
      \<Longrightarrow> valid_global_vspace_mappings (arch_state_update f s) = valid_global_vspace_mappings s"
   by (simp add: valid_global_vspace_mappings_def)
 
-lemma set_object_global_pd_mappings:
+lemma set_object_global_vspace_mappings:
   "\<lbrace>valid_global_vspace_mappings
             and (\<lambda>s. (page_map_l4_at p s \<or> pd_pointer_table_at p s \<or> page_directory_at p s \<or> page_table_at p s)
                        \<longrightarrow> valid_global_objs s \<and> p \<notin> global_refs s)\<rbrace>
