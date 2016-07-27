@@ -573,8 +573,8 @@ definition
   pml4e_mapping_bits :: "nat"
 where
   "pml4e_mapping_bits \<equiv> pageBitsForSize X64HugePage + ptTranslationBits"
-  
-  
+
+
 (* FIXME x64: do we need all these things? *)
 definition
   valid_pte_kernel_mappings :: "pte \<Rightarrow> vspace_ref
@@ -690,7 +690,7 @@ where
   case obj of
     PageMapL4 pm \<Rightarrow>
       (\<forall>x. valid_pml4e_kernel_mappings
-             (pm x) ((ucast x << pml4e_mapping_bits)) uses s)
+             (pm x) (ucast x << pml4e_mapping_bits) uses s)
   | _ \<Rightarrow> False"
 
 declare valid_pml4_kernel_mappings_arch_def[simp]
@@ -773,7 +773,7 @@ where
   "valid_global_pdpt m \<equiv> (\<forall>x\<in>{0 .. 0x1FE}. \<exists>ptr attr R. m x =  HugePagePDPTE ptr attr R) 
                              \<and> (\<exists>t attr R. m 0x1FF = PageDirectoryPDPTE t attr R 
                                  (* \<and> t \<in> set (x64_global_pds (arch_state s))*))"
-                                 
+
 (* FIXME x64: needs some element of tracing down global tables *)
 definition
   valid_global_objs :: "'z::state_ext state \<Rightarrow> bool"
@@ -1955,6 +1955,21 @@ lemma stronger_arch_objsD:
   apply (clarsimp simp: obj_at_def)
   done
 
+lemma all_valid_pml4e_pdpt_at:
+  "\<lbrakk> \<forall>i. valid_pml4e (pm i) s; pm i = PDPointerTablePML4E pdpt_ref attr rights \<rbrakk>
+    \<Longrightarrow> typ_at (AArch APDPointerTable) (ptrFromPAddr pdpt_ref) s"
+  by (drule spec[where x=i]; simp)
+
+lemma all_valid_pdpte_pd_at:
+  "\<lbrakk> \<forall>i. valid_pdpte (pdpt i) s; pdpt i = PageDirectoryPDPTE pd_ref attr rights \<rbrakk>
+    \<Longrightarrow> typ_at (AArch APageDirectory) (ptrFromPAddr pd_ref) s"
+  by (drule spec[where x=i]; simp)
+
+lemma all_valid_pde_pt_at:
+  "\<lbrakk> \<forall>i. valid_pde (pd i) s; pd i = PageTablePDE pt_ref attr rights \<rbrakk>
+    \<Longrightarrow> typ_at (AArch APageTable) (ptrFromPAddr pt_ref) s"
+  by (drule spec[where x=i]; simp)
+
 (* An alternative definition for valid_arch_objs.
 
    The predicates valid_asid_table and valid_arch_objs are very compact
@@ -1968,84 +1983,84 @@ lemma valid_arch_objs_alt:
           typ_at (AArch AASIDPool) p s) \<and>
    (\<forall>a p\<^sub>1 ap b p.
           x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
-          kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
+          kheap s p\<^sub>1 = Some (ArchObj (ASIDPool ap)) \<longrightarrow>
           ap b = Some p \<longrightarrow> page_map_l4_at p s) \<and>
    (\<forall>a p\<^sub>1 ap b p\<^sub>2 pm c.
           x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
-          kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
+          kheap s p\<^sub>1 = Some (ArchObj (ASIDPool ap)) \<longrightarrow>
           ap b = Some p\<^sub>2 \<longrightarrow>
           kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm)) \<longrightarrow>
           c \<notin> kernel_mapping_slots \<longrightarrow> valid_pml4e (pm c) s) \<and>
    (\<forall>a p\<^sub>1 ap b p\<^sub>2 pm c addr f w pdpt.
           x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
-          kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
+          kheap s p\<^sub>1 = Some (ArchObj (ASIDPool ap)) \<longrightarrow>
           ap b = Some p\<^sub>2 \<longrightarrow>
           kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm)) \<longrightarrow>
           c \<notin> kernel_mapping_slots \<longrightarrow>
-          pm c = pml4e.PDPointerTablePML4E addr f w \<longrightarrow>
+          pm c = PDPointerTablePML4E addr f w \<longrightarrow>
           kheap s (ptrFromPAddr addr) =
             Some (ArchObj (PDPointerTable pdpt)) \<longrightarrow>
           (\<forall>d. valid_pdpte (pdpt d) s)) \<and>
     (\<forall>a p\<^sub>1 ap b p\<^sub>2 pm c addr f w pdpt d addr' f' w' pd.
           x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
-          kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
+          kheap s p\<^sub>1 = Some (ArchObj (ASIDPool ap)) \<longrightarrow>
           ap b = Some p\<^sub>2 \<longrightarrow>
           kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm)) \<longrightarrow>
           c \<notin> kernel_mapping_slots \<longrightarrow>
-          pm c = pml4e.PDPointerTablePML4E addr f w \<longrightarrow>
+          pm c = PDPointerTablePML4E addr f w \<longrightarrow>
           kheap s (ptrFromPAddr addr) =
             Some (ArchObj (PDPointerTable pdpt)) \<longrightarrow>
-          pdpt d = pdpte.PageDirectoryPDPTE addr' f' w' \<longrightarrow>
+          pdpt d = PageDirectoryPDPTE addr' f' w' \<longrightarrow>
           kheap s (ptrFromPAddr addr') =
             Some (ArchObj (PageDirectory pd)) \<longrightarrow>
           (\<forall>e. valid_pde (pd e) s)) \<and>
      (\<forall>a p\<^sub>1 ap b p\<^sub>2 pm c addr f w pdpt d addr' f' w' pd e addr'' f'' w'' pt.
           x64_asid_table (arch_state s) a = Some p\<^sub>1 \<longrightarrow>
-          kheap s p\<^sub>1 = Some (ArchObj (arch_kernel_obj.ASIDPool ap)) \<longrightarrow>
+          kheap s p\<^sub>1 = Some (ArchObj (ASIDPool ap)) \<longrightarrow>
           ap b = Some p\<^sub>2 \<longrightarrow>
           kheap s p\<^sub>2 = Some (ArchObj (PageMapL4 pm)) \<longrightarrow>
           c \<notin> kernel_mapping_slots \<longrightarrow>
-          pm c = pml4e.PDPointerTablePML4E addr f w \<longrightarrow>
+          pm c = PDPointerTablePML4E addr f w \<longrightarrow>
           kheap s (ptrFromPAddr addr) =
             Some (ArchObj (PDPointerTable pdpt)) \<longrightarrow>
-          pdpt d = pdpte.PageDirectoryPDPTE addr' f' w' \<longrightarrow>
+          pdpt d = PageDirectoryPDPTE addr' f' w' \<longrightarrow>
           kheap s (ptrFromPAddr addr') =
             Some (ArchObj (PageDirectory pd)) \<longrightarrow>
-          pd e = pde.PageTablePDE addr'' f'' w'' \<longrightarrow>
+          pd e = PageTablePDE addr'' f'' w'' \<longrightarrow>
           kheap s (ptrFromPAddr addr'') =
             Some (ArchObj (PageTable pt)) \<longrightarrow>
           (\<forall>f. valid_pte (pt f) s))"
   apply (intro iffI conjI)
+         apply fastforce
+        apply (clarsimp simp: obj_at_def)
+        apply (thin_tac "Ball S P" for S P)
+        apply (frule vs_lookup_atI)
+        apply (drule valid_arch_objsD)
+          apply (simp add: obj_at_def)
+         apply assumption
+        apply (simp add: obj_at_def ranI)
+       apply (clarsimp simp: obj_at_def)
+       apply (thin_tac "Ball S P" for S P)
+       apply (frule (2) vs_lookup_apI)
+       apply (drule valid_arch_objsD)
+         apply (simp add: obj_at_def)
+        apply assumption
        apply fastforce
       apply (clarsimp simp: obj_at_def)
       apply (thin_tac "Ball S P" for S P)
-      apply (frule vs_lookup_atI)
+      apply (frule (5) vs_lookup_pml4I)
       apply (drule valid_arch_objsD)
         apply (simp add: obj_at_def)
        apply assumption
-      apply (clarsimp simp: obj_at_def ranI)
+      apply fastforce
      apply (clarsimp simp: obj_at_def)
      apply (thin_tac "Ball S P" for S P)
-     apply (frule (2) vs_lookup_apI)
+     apply (frule (7) vs_lookup_pdptI)
      apply (drule valid_arch_objsD)
        apply (simp add: obj_at_def)
       apply assumption
      apply fastforce
     apply (clarsimp simp: obj_at_def)
-    apply (thin_tac "Ball S P" for S P)
-    apply (frule (5) vs_lookup_pml4I)
-    apply (drule valid_arch_objsD)
-      apply (simp add: obj_at_def)
-     apply assumption
-    apply fastforce
-    apply (clarsimp simp: obj_at_def)
-    apply (thin_tac "Ball S P" for S P)
-    apply (frule (7) vs_lookup_pdptI)
-    apply (drule valid_arch_objsD)
-      apply (simp add: obj_at_def)
-     apply assumption
-    apply fastforce
-        apply (clarsimp simp: obj_at_def)
     apply (thin_tac "Ball S P" for S P)
     apply (frule (9) vs_lookup_pdI)
     apply (drule valid_arch_objsD)
@@ -2053,77 +2068,37 @@ lemma valid_arch_objs_alt:
      apply assumption
     apply fastforce
    apply (clarsimp simp: ran_def)
-  apply (clarsimp simp: valid_arch_objs_def vs_lookup_def)
+  apply (clarsimp simp: valid_arch_objs_def vs_lookup_def vs_asid_refs_def graph_of_def)
+  apply (drule spec, drule spec, erule impE, assumption)+
+  apply (clarsimp simp: obj_at_def)
   apply (erule converse_rtranclE)
-   apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-   apply (drule spec, drule spec, erule impE, assumption)
    apply (clarsimp simp: obj_at_def ran_def)
+  apply (drule vs_lookup1D)
+  apply (clarsimp simp: obj_at_def vs_refs_def graph_of_def)
+  apply (drule spec, drule spec, erule impE, assumption)+
   apply (erule converse_rtranclE)
-   apply (drule vs_lookup1D)
-   apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (clarsimp simp: obj_at_def)
-   apply (clarsimp simp: vs_refs_def graph_of_def image_def)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply fastforce
+   apply (clarsimp simp: obj_at_def ran_def)
+  apply (drule vs_lookup1D)
+  apply (clarsimp simp: obj_at_def vs_refs_def graph_of_def split: split_if_asm)
+  apply (drule spec, erule impE, assumption)+
+  apply (clarsimp simp: pml4e_ref_def split: pml4e.splits)
   apply (erule converse_rtranclE)
-   apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (clarsimp simp: obj_at_def)
-   apply (clarsimp simp: vs_refs_def graph_of_def image_def)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (clarsimp simp: graph_of_def  split: split_if_asm)
-   apply (drule_tac x=ab in spec)
-   apply (clarsimp simp: pml4e_ref_def obj_at_def
-                  split: pml4e.splits)
-apply (erule converse_rtranclE)
-  apply (clarsimp dest!: vs_lookup1D)
-  apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: vs_refs_def graph_of_def image_def)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (drule spec, drule spec, erule impE, assumption)
-  apply (clarsimp simp: graph_of_def  split: split_if_asm)
-  apply (drule_tac x=ab in spec)
-  apply (clarsimp simp: pml4e_ref_def obj_at_def
-                 split: pml4e.splits)
-  apply (clarsimp simp: graph_of_def split: split_if_asm)
-  apply (drule_tac x=ab in spec)
-  apply (clarsimp simp: pdpte_ref_def obj_at_def
-                 split: pdpte.splits)
-  apply (drule_tac x=ac in spec)
-  apply (clarsimp simp: obj_at_def)
-  apply (drule_tac x=ab in spec)
-  apply (clarsimp simp: pde_ref_def obj_at_def split: pde.splits)
-    apply (drule spec, drule spec, erule impE, assumption)
-  apply clarsimp
-  sorry
+   apply (clarsimp simp: obj_at_def ran_def)
+  apply (drule vs_lookup1D)
+  apply (clarsimp simp: obj_at_def vs_refs_def graph_of_def pdpte_ref_def split: pdpte.splits)
+  apply (drule spec, drule spec, erule impE, rule exI, rule exI, assumption)+
+  apply (drule (1) all_valid_pdpte_pd_at)
+  apply (erule converse_rtranclE)
+   apply (clarsimp simp: obj_at_def ran_def)
+  apply (drule vs_lookup1D)
+  apply (clarsimp simp: obj_at_def vs_refs_def graph_of_def pde_ref_def split: pde.splits)
+  apply (drule spec, drule spec, erule impE, rule exI, rule exI, assumption)
+  apply (drule (1) all_valid_pde_pt_at)
+  apply (erule converse_rtranclE)
+   apply (clarsimp simp: obj_at_def ran_def)
+  apply (drule vs_lookup1D)
+  apply (clarsimp simp: obj_at_def vs_refs_def)
+  done
 
 lemma vs_lookupE:
   "\<lbrakk> (ref \<rhd> p) s;
