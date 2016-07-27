@@ -377,16 +377,12 @@ where
   | X64HugePage \<Rightarrow>    pageBits + ptTranslationBits + ptTranslationBits
   )"
 
-
 end
 
 context begin interpretation Arch .
 requalify_types vmpage_size
 end
 
-context Arch begin global_naming X64
-
-end
 qualify X64 (in Arch) 
 (* vmpage_size instance proofs *)
 (*<*)

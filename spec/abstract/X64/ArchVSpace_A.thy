@@ -241,6 +241,7 @@ flush_table :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightar
              | _ \<Rightarrow> do_machine_op $ invalidateTLBEntry (vptr + (ucast index << pageBits))
            od)
          od
+       | _ \<Rightarrow> return ()
 od"
 
 
@@ -259,7 +260,8 @@ unmap_pdpt :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow>
   pml4e \<leftarrow> liftE $ get_pml4e pm_slot;
   case pml4e of
     PDPointerTablePML4E pt' _ _ \<Rightarrow> 
-      if pt' = addrFromPPtr pdpt then returnOk () else throwError InvalidRoot;
+      if pt' = addrFromPPtr pdpt then returnOk () else throwError InvalidRoot
+    | _ \<Rightarrow> throwError InvalidRoot;
   liftE $ do
     flush_pdpt;
     store_pml4e pm_slot InvalidPML4E
@@ -275,7 +277,8 @@ unmap_pd :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (
   pdpte \<leftarrow> liftE $ get_pdpte pdpt_slot;
   case pdpte of
     PageDirectoryPDPTE pd' _ _ \<Rightarrow> 
-      if pd' = addrFromPPtr pd then returnOk () else throwError InvalidRoot;
+      if pd' = addrFromPPtr pd then returnOk () else throwError InvalidRoot
+    | _ \<Rightarrow> throwError InvalidRoot;
   liftE $ do
     store_pdpte pdpt_slot InvalidPDPTE;
     do_machine_op invalidatePageStructureCache
@@ -291,14 +294,14 @@ unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Right
     pde \<leftarrow> liftE $ get_pde pd_slot;
     case pde of
       PageTablePDE addr _ _ \<Rightarrow> 
-        if addrFromPPtr pt = addr then returnOk () else throwError InvalidRoot;
+        if addrFromPPtr pt = addr then returnOk () else throwError InvalidRoot
+      | _ \<Rightarrow> throwError InvalidRoot;
     liftE $ do 
       flush_table vspace vaddr pt;
       store_pde pd_slot InvalidPDE;
       do_machine_op $ invalidatePageStructureCache
     od
 odE <catch> (K $ return ())"
-
 
 text {* Check that a given frame is mapped by a given mapping entry. *}
 definition
@@ -347,6 +350,7 @@ unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightar
       case thread_root of
         ArchObjectCap (PML4Cap vspace' (Some _ )) \<Rightarrow> 
           when (vspace' = vspace) $ do_machine_op $ invalidateTLBEntry vptr
+        | _ \<Rightarrow> return ()
     od
 odE <catch> (K $ return ())"
 
