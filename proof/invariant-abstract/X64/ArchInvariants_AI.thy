@@ -783,8 +783,19 @@ where
            obj_at (empty_table (set (x64_global_pdpts (arch_state s))))
                   (x64_global_pml4 (arch_state s)) s \<and>
       (\<forall>p\<in>set (x64_global_pdpts (arch_state s)).
-          \<exists>pdpt. ko_at (ArchObj (PDPointerTable pdpt)) p s \<and> (\<forall>x. aligned_pdpte (pdpt x)) 
-                  \<and> valid_global_pdpt pdpt)"
+          \<exists>pdpt. ko_at (ArchObj (PDPointerTable pdpt)) p s \<and>
+                  (\<forall>x. aligned_pdpte (pdpt x) \<and>
+                       (\<forall>r. pdpte_ref (pdpt x) = Some r
+                            \<longrightarrow> r \<in> set (x64_global_pds (arch_state s))))
+                  \<and> valid_global_pdpt pdpt) \<and>
+      (\<forall>p\<in>set (x64_global_pds (arch_state s)).
+          \<exists>pd. ko_at (ArchObj (PageDirectory pd)) p s \<and>
+                  (\<forall>x. aligned_pde (pd x) \<and>
+                       (\<forall>r. pde_ref (pd x) = Some r
+                            \<longrightarrow> r \<in> set (x64_global_pts (arch_state s))))) \<and>
+      (\<forall>p\<in>set (x64_global_pts (arch_state s)).
+          \<exists>pt. ko_at (ArchObj (PageTable pt)) p s \<and>
+                  (\<forall>x. aligned_pte (pt x)))"
 
 definition
   valid_asid_table :: "(3 word \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
