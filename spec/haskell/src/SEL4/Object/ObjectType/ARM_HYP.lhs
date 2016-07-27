@@ -117,7 +117,8 @@ Deletion of any mapped frame capability requires the page table slot to be locat
 >       then error "FIXME ARMHYP TODO IO"
 >       else
 #endif
->            do unmapPage s a v ptr
+>            do
+>               unmapPage s a v ptr
 >               return NullCap
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT

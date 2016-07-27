@@ -132,10 +132,10 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >     val <- readVCPUReg vcpuPtr reg
 >     asUser ct $ setRegister (msgRegisters !! 0) $ fromIntegral val
 >     let msgInfo = MI {
->             msgLabel = 0,
->             msgCapsUnwrapped = 0,
+>             msgLength = 1,
 >             msgExtraCaps = 0,
->             msgLength = 1 }
+>             msgCapsUnwrapped = 0,
+>             msgLabel = 0 }
 >     setMessageInfo ct msgInfo
 >     -- prevent kernel from generating a reply to ct since we already did
 >     setThreadState Running ct

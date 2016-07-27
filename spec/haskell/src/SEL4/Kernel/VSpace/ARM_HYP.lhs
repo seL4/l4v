@@ -848,7 +848,7 @@ Note that these capabilities cannot be copied until they have been mapped, so an
 
 > decodeARMMMUInvocation label args _ cte cap@(PageTableCap {}) extraCaps =
 >     case (invocationType label, args, extraCaps) of
->         (ArchInvocationLabel ARMPageTableMap, vaddr:_attr:_, (pdCap,_):_) -> do
+>         (ArchInvocationLabel ARMPageTableMap, vaddr:attr:_, (pdCap,_):_) -> do
 >             when (isJust $ capPTMappedAddress cap) $
 >                 throw $ InvalidCapability 0
 >             (pd,asid) <- case pdCap of
