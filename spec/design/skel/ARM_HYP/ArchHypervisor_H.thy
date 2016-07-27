@@ -26,6 +26,8 @@ context Arch begin global_naming ARM_HYP_H
 defs handleHypervisorFault_def:
 "handleHypervisorFault arg1 hyp \<equiv> case hyp of ARMNoHypFaults \<Rightarrow> haskell_fail []"
 
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H ArchInv=Arch ONLY vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive
+
 
 end
 end

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-chapter "ARM_HYP Machine Types"
+chapter {* ARM\_HYP Machine Types *}
 
 theory MachineTypes
 imports

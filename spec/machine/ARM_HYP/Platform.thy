@@ -78,6 +78,9 @@ definition
   maxIRQ :: "irq" where
   "maxIRQ \<equiv> 0x9F"
 
+definition irqVGICMaintenance :: "irq"
+  where "irqVGICMaintenance \<equiv> 25"
+
 end
 
 end
