@@ -2650,8 +2650,7 @@ lemma set_asid_pool_global_objs [wp]:
   apply (rule conjI)
    subgoal by (clarsimp simp: obj_at_def valid_arch_state_def a_type_def)
   apply (clarsimp simp: obj_at_def)
-  apply (drule (1) bspec)
-  by clarsimp
+  by (intro conjI; clarsimp; drule (1) bspec; clarsimp)
 
 
 crunch v_ker_map[wp]: set_asid_pool "valid_kernel_mappings"
@@ -3569,11 +3568,7 @@ lemma set_pml4_global_objs[wp]:
    apply (clarsimp simp: obj_at_def)
    apply (drule (1) valid_global_refsD2)
    apply (simp add: cap_range_def global_refs_def)
-  apply clarsimp
-  apply (clarsimp simp: obj_at_def
-              simp del: valid_arch_obj.simps)
-  apply (drule(1) bspec, clarsimp)
-  done
+  by (clarsimp; drule (1) bspec; clarsimp simp: obj_at_def)+
 
 
 lemma eq_ucast_word9[simp]:
