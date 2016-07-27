@@ -105,6 +105,8 @@ the "CopyRegisters" operation. This may be changed in future to support a floati
 
 datatype arch_copy_register_sets = ARMNoExtraRegisters
 
+definition "ArchDefaultExtraRegisters \<equiv> ARMNoExtraRegisters"
+
 -- "There are no additional interrupt control operations on ARM."
 typedecl arch_irq_control_invocation
 
