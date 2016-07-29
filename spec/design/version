@@ -1,7 +1,7 @@
-Built from git repo at /home/x/repos/v/l4v/spec/haskell by x
+Built from git repo at /home/matthewb/verification/mainline/l4v/spec/haskell by matthewb
 
 Generated from changeset:
-dd73a2c run haskell translator
+17b8956 arch_split: give some vspace concepts more generic names
 
 
 Warning - uncomitted changes used:

@@ -18,9 +18,8 @@ imports
   "../Setup_Locale"
   Platform
 begin
-context Arch begin global_naming ARM
 
-(* !!! Generated File !!! Skeleton in ../../design/skel-m/ARM/MachineTypes.thy *)
+context Arch begin global_naming ARM
 
 text {*
   An implementation of the machine's types, defining register set
@@ -58,10 +57,15 @@ consts'
 sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 
 (*<*)
+
+type_synonym machine_word_len = 32
+
 end
+
 context begin interpretation Arch .
 requalify_types register
 end
+
 context Arch begin global_naming ARM
 
 end

@@ -175,7 +175,7 @@ lemma [simp]: "itcb_bound_notification (tcb_to_itcb tcb) = tcb_bound_notificatio
   by (auto simp: tcb_to_itcb_def)
 
 definition
-  pred_tcb_at :: "(itcb \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  pred_tcb_at :: "(itcb \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> machine_word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "pred_tcb_at proj test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (proj (tcb_to_itcb tcb)))"
 
@@ -204,7 +204,7 @@ where
 subsection "Valid caps and objects"
 
 primrec
-  untyped_range :: "cap \<Rightarrow> word32 set"
+  untyped_range :: "cap \<Rightarrow> machine_word set"
 where
   "untyped_range (UntypedCap p n f)                 = {p..p + (1 << n) - 1}"
 | "untyped_range (NullCap)                          = {}"
@@ -220,7 +220,7 @@ where
 | "untyped_range (ArchObjectCap cap)                = {}"
 
 primrec (nonexhaustive)
-  usable_untyped_range :: "cap \<Rightarrow> word32 set"
+  usable_untyped_range :: "cap \<Rightarrow> machine_word set"
 where
  "usable_untyped_range (UntypedCap p n f) =
   (if f < 2^n  then {p+of_nat f .. p + 2 ^ n - 1} else {})"
@@ -409,14 +409,14 @@ where
                      (ExceptionTypes_A.GuardMismatch n g)) \<longrightarrow> length g\<le>32"
 
 definition
-  valid_bound_ntfn :: "32 word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_bound_ntfn :: "machine_word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_bound_ntfn ntfn_opt s \<equiv> case ntfn_opt of
                                  None \<Rightarrow> True
                                | Some a \<Rightarrow> ntfn_at a s"
 
 definition
-  valid_bound_tcb :: "32 word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_bound_tcb :: "machine_word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_bound_tcb tcb_opt s \<equiv> case tcb_opt of
                                  None \<Rightarrow> True
@@ -812,7 +812,7 @@ definition
 where
   "valid_irq_handlers \<equiv> \<lambda>s. \<forall>cap \<in> ran (caps_of_state s). \<forall>irq \<in> cap_irqs cap. irq_issued irq s"
 
-definition valid_irq_masks :: "(10 word \<Rightarrow> irq_state) \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarrow> bool" where
+definition valid_irq_masks :: "(irq \<Rightarrow> irq_state) \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> bool" where
   "valid_irq_masks table masked \<equiv> \<forall>irq. table irq = IRQInactive \<longrightarrow> masked irq"
 
 definition valid_irq_states :: "'z::state_ext state \<Rightarrow> bool" where
@@ -880,7 +880,7 @@ definition
   obj_ref_of c' + obj_size c' - 1 \<in> untyped_range c"
 
 definition
-  obj_irq_refs :: "cap \<Rightarrow> (word32 + irq) set"
+  obj_irq_refs :: "cap \<Rightarrow> (machine_word + irq) set"
 where
  "obj_irq_refs cap \<equiv> (Inl ` obj_refs cap) \<union> (Inr ` cap_irqs cap)"
 
@@ -1839,7 +1839,7 @@ proof -
     unfolding pspace_aligned_def ..
 
   thus ?thesis
-    proof (rule is_aligned_replicate[where 'a=32, folded word_bits_def])
+    proof (rule is_aligned_replicate[where 'a=machine_word_len, folded word_bits_def])
   show "obj_bits (the (kheap s x)) \<le> word_bits"
     by (rule order_less_imp_le, rule valid_obj_sizes [OF _ dom_ran]) fact+
   qed

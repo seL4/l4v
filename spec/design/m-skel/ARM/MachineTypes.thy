@@ -16,9 +16,8 @@ imports
   "../Setup_Locale"
   Platform
 begin
-context Arch begin global_naming ARM
 
-(* !!! Generated File !!! Skeleton in ../../design/skel-m/ARM/MachineTypes.thy *)
+context Arch begin global_naming ARM
 
 text {*
   An implementation of the machine's types, defining register set
@@ -29,10 +28,15 @@ section "Types"
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM decls_only
 (*<*)
+
+type_synonym machine_word_len = 32
+
 end
+
 context begin interpretation Arch .
 requalify_types register
 end
+
 context Arch begin global_naming ARM
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM instanceproofs
