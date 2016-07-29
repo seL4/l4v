@@ -543,17 +543,6 @@ definition work_units_limit_reached where
      return (work_units_limit \<le> work_units)
    od"
 
-(* FIXME: Should this move to Machine_A? *)
-text {* The lowest virtual address in the kernel window. The kernel reserves the
-virtual addresses from here up in every virtual address space. *}
-definition
-  kernel_base :: "vspace_ref" where
-  "kernel_base \<equiv> 0xe0000000"
-
-definition
-  idle_thread_ptr :: vspace_ref where
-  "idle_thread_ptr = kernel_base + 0x1000"
-
 text {*
   A type class for all instantiations of the abstract specification. In
   practice, this is restricted to basically allow only two sensible
