@@ -10,6 +10,7 @@
 
 theory BCorres_AI
 imports
+  Include_AI
   "../../lib/BCorres_UL"
   "../../spec/abstract/Syscall_A"
 begin

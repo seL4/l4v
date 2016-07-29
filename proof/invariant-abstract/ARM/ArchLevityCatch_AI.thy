@@ -10,7 +10,7 @@
 
 theory ArchLevityCatch_AI
 imports
-  "../Include_AI"
+  "../BCorres_AI"
   "../../../lib/LemmaBucket"
   "../../../lib/SplitRule"
 begin
