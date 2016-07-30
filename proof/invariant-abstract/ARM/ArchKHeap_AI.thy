@@ -321,8 +321,8 @@ lemma arch_lifts:
     \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
   notes arch_obj_fun_lift_expand[simp del]
   shows
-  valid_global_pd_mappings_lift: 
-    "\<lbrace>valid_global_pd_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>" and
+  valid_global_vspace_mappings_lift: 
+    "\<lbrace>valid_global_vspace_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>" and
   valid_arch_caps_lift_weak: 
     "(\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>) \<Longrightarrow> 
       \<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>" and
@@ -339,7 +339,7 @@ lemma arch_lifts:
   apply -
 
   subgoal
-  apply (simp add: valid_global_pd_mappings_def valid_pd_kernel_mappings_def
+  apply (simp add: valid_global_vspace_mappings_def valid_pd_kernel_mappings_def
               del: valid_pd_kernel_mappings_arch_def)
   apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])
   apply (rule_tac f="valid_pd_kernel_mappings_arch (arm_kernel_vspace x)" in hoare_lift_Pf)
@@ -374,7 +374,7 @@ lemma arch_lifts:
   subgoal
   apply (simp add: valid_asid_map_def)
   apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])
-  apply (simp add: pd_at_asid_def)
+  apply (simp add: vspace_at_asid_def)
   by (rule vs_lookup_arch_obj_at_lift[OF aobj_at arch])
 
   subgoal
@@ -480,7 +480,7 @@ lemma set_object_asid_map:
   \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
   apply (simp add: valid_asid_map_def set_object_def)
   apply wp
-  apply (clarsimp simp: pd_at_asid_def simp del: fun_upd_apply)
+  apply (clarsimp simp: vspace_at_asid_def simp del: fun_upd_apply)
   apply (drule bspec, blast)
   apply clarsimp
   apply (rule vs_lookup_stateI, assumption)
@@ -502,8 +502,8 @@ lemma set_object_equal_mappings:
   apply (simp split: split_if_asm)
   done
 
-lemma valid_global_pd_mappings_pres:
-  "\<lbrakk> valid_global_pd_mappings s;
+lemma valid_global_vspace_mappings_pres:
+  "\<lbrakk> valid_global_vspace_mappings s;
      \<And>pd. ko_at (ArchObj (PageDirectory pd)) (arm_global_pd (arch_state s)) s
             \<Longrightarrow> ko_at (ArchObj (PageDirectory pd)) (arm_global_pd (arch_state s)) s';
      \<And>pt p. \<lbrakk> ko_at (ArchObj (PageTable pt)) p s;
@@ -511,9 +511,9 @@ lemma valid_global_pd_mappings_pres:
             \<Longrightarrow> ko_at (ArchObj (PageTable pt)) p s';
      arm_global_pd (arch_state s') = arm_global_pd (arch_state s);
      arm_kernel_vspace (arch_state s') = arm_kernel_vspace (arch_state s) \<rbrakk>
-        \<Longrightarrow> valid_global_pd_mappings s'"
+        \<Longrightarrow> valid_global_vspace_mappings s'"
   apply atomize
-  apply (clarsimp simp: valid_global_pd_mappings_def obj_at_def)
+  apply (clarsimp simp: valid_global_vspace_mappings_def obj_at_def)
   apply (clarsimp simp: valid_pd_kernel_mappings_def
                  split: kernel_object.split_asm arch_kernel_obj.split_asm)
   apply (drule_tac x=x in spec)
@@ -530,21 +530,21 @@ lemma valid_global_pd_mappings_pres:
   apply clarsimp
   done
 
-lemma valid_global_pd_mappings_arch_update[simp]:
+lemma valid_global_vspace_mappings_arch_update[simp]:
   "arm_global_pd (f (arch_state s)) = arm_global_pd (arch_state s)
    \<and> arm_kernel_vspace (f (arch_state s)) = arm_kernel_vspace (arch_state s)
-     \<Longrightarrow> valid_global_pd_mappings (arch_state_update f s) = valid_global_pd_mappings s"
-  by (simp add: valid_global_pd_mappings_def)
+     \<Longrightarrow> valid_global_vspace_mappings (arch_state_update f s) = valid_global_vspace_mappings s"
+  by (simp add: valid_global_vspace_mappings_def)
 
-lemma set_object_global_pd_mappings:
-  "\<lbrace>valid_global_pd_mappings
+lemma set_object_global_vspace_mappings:
+  "\<lbrace>valid_global_vspace_mappings
             and (\<lambda>s. (page_directory_at p s \<or> page_table_at p s)
                        \<longrightarrow> valid_global_objs s \<and> p \<notin> global_refs s)\<rbrace>
      set_object p ko
-   \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
+   \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_object_def, wp)
   apply clarsimp
-  apply (erule valid_global_pd_mappings_pres)
+  apply (erule valid_global_vspace_mappings_pres)
      apply (clarsimp simp: obj_at_def a_type_def global_refs_def)+
   done
 

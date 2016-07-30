@@ -54,7 +54,7 @@ definition all_invs_but_valid_irq_states_for where
   valid_kernel_mappings and
   equal_kernel_mappings and
   valid_asid_map and
-  valid_global_pd_mappings and
+  valid_global_vspace_mappings and
   pspace_in_kernel_window and
   cap_refs_in_kernel_window and cur_tcb"
 

@@ -159,7 +159,7 @@ lemma equal_kernel_mappings[wp]: "I equal_kernel_mappings" by (rule lift_inv,sim
 
 lemma valid_asid_map[wp]: "I valid_asid_map" by (rule lift_inv,simp)
 
-lemma valid_global_pd_mappings[wp]: "I valid_global_pd_mappings" by (rule lift_inv,simp)
+lemma valid_global_vspace_mappings[wp]: "I valid_global_vspace_mappings" by (rule lift_inv,simp)
 
 lemma pspace_in_kernel_window[wp]: "I pspace_in_kernel_window" by (rule lift_inv,simp)
 

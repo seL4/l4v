@@ -28,12 +28,12 @@ lemma kernel_mappings_slots_eq:
   done
 
 lemma valid_global_pd_mappingsE:
-  "\<lbrakk>valid_global_pd_mappings s;
+  "\<lbrakk>valid_global_vspace_mappings s;
     \<And>pd. \<lbrakk>kheap s (arm_global_pd (arch_state s)) =
              Some (ArchObj (PageDirectory pd));
            \<forall>x. valid_pd_kernel_mappings (arm_kernel_vspace (arch_state s)) s
                  (ArchObj (PageDirectory pd))\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
-  apply (clarsimp simp add: valid_global_pd_mappings_def obj_at_def)
+  apply (clarsimp simp add: valid_global_vspace_mappings_def obj_at_def)
   apply (case_tac ko, simp_all add: valid_pd_kernel_mappings_def
                              split: arch_kernel_obj.splits)
   done
@@ -42,7 +42,7 @@ lemma valid_global_pd_mappingsE:
          if we assumed "valid_global_objs s", additionally. *)
 lemma some_get_page_info_kmapsD:
   "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
-    p \<in> kernel_mappings; valid_global_pd_mappings s; equal_kernel_mappings s\<rbrakk>
+    p \<in> kernel_mappings; valid_global_vspace_mappings s; equal_kernel_mappings s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a) \<and> r = {}"
    apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
                          kernel_mappings_slots_eq

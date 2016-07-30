@@ -1842,7 +1842,7 @@ lemma not_in_global_refs_vs_lookup:
 lemma get_page_info_arm_globals_frame:
   "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) (get_pd_of_thread (kheap s) (arch_state s) t) p = Some (base, sz, attr, r);
     get_pd_of_thread (kheap s) (arch_state s) t \<noteq> arm_global_pd (arch_state s);
-    valid_arch_state s; valid_arch_objs s; valid_global_pd_mappings s; 
+    valid_arch_state s; valid_arch_objs s; valid_global_vspace_mappings s; 
     equal_kernel_mappings s; valid_vs_lookup s; valid_global_objs s;
     valid_global_refs s;
     base = addrFromPPtr (arm_globals_frame (arch_state s))\<rbrakk> \<Longrightarrow> r = {}"

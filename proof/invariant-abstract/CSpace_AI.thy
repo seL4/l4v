@@ -3972,7 +3972,7 @@ crunch equal_ker_map[wp]: cap_insert "equal_kernel_mappings"
   (wp: crunch_wps)
 
 
-crunch global_pd_mappings[wp]: cap_insert "valid_global_pd_mappings"
+crunch global_pd_mappings[wp]: cap_insert "valid_global_vspace_mappings"
   (wp: crunch_wps)
 
 
@@ -4639,7 +4639,7 @@ crunch only_idle[wp]: setup_reply_master only_idle
 
 crunch valid_global_objs[wp]: setup_reply_master "valid_global_objs"
 
-crunch global_pd_mappings[wp]: setup_reply_master "valid_global_pd_mappings"
+crunch global_pd_mappings[wp]: setup_reply_master "valid_global_vspace_mappings"
   (simp: crunch_simps wp: crunch_wps)
 
 crunch pspace_in_kernel_window[wp]: setup_reply_master "pspace_in_kernel_window"

@@ -471,7 +471,7 @@ locale detype_locale_gen_2 = detype_locale_gen_1 cap ptr s
     "valid_kernel_mappings (detype (untyped_range cap) s)"
     "valid_asid_map (detype (untyped_range cap) s)"
     "equal_kernel_mappings (detype (untyped_range cap) s)"  
-    "valid_global_pd_mappings (detype (untyped_range cap) s)"
+    "valid_global_vspace_mappings (detype (untyped_range cap) s)"
     "pspace_in_kernel_window (detype (untyped_range cap) s)"
     "valid_machine_state (clear_um (untyped_range cap) (detype (untyped_range cap) s))"  
 

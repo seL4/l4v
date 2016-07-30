@@ -38,7 +38,7 @@ requalify_consts
   valid_global_objs
   valid_kernel_mappings
   equal_kernel_mappings
-  valid_global_pd_mappings
+  valid_global_vspace_mappings
   pspace_in_kernel_window
 
   ASIDPoolObj
@@ -846,7 +846,7 @@ where
                   and valid_kernel_mappings
                   and equal_kernel_mappings
                   and valid_asid_map
-                  and valid_global_pd_mappings
+                  and valid_global_vspace_mappings
                   and pspace_in_kernel_window
                   and cap_refs_in_kernel_window"
 
@@ -924,7 +924,7 @@ abbreviation(input)
        and valid_irq_node and valid_irq_handlers and valid_arch_objs
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings
        and equal_kernel_mappings and valid_asid_map
-       and valid_global_pd_mappings
+       and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and cur_tcb"
 
@@ -2504,9 +2504,9 @@ lemma valid_global_objs_update [iff]:
   "valid_global_objs (f s) = valid_global_objs s"
   by (simp add: valid_global_objs_def arch)
 
-lemma valid_global_pd_mappings_update [iff]:
-  "valid_global_pd_mappings (f s) = valid_global_pd_mappings s"
-  by (simp add: valid_global_pd_mappings_def
+lemma valid_global_vspace_mappings_update [iff]:
+  "valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
+  by (simp add: valid_global_vspace_mappings_def
                 arch)
 
 lemma pspace_in_kernel_window_update [iff]:
@@ -2534,7 +2534,7 @@ lemma valid_global_refs_update [iff]:
 
 lemma valid_asid_map_update [iff]:
   "valid_asid_map (f s) = valid_asid_map s"
-  by (simp add: valid_asid_map_def pd_at_asid_def arch)
+  by (simp add: valid_asid_map_def vspace_at_asid_def arch)
 
 lemma valid_arch_state_update [iff]:
   "valid_arch_state (f s) = valid_arch_state s"

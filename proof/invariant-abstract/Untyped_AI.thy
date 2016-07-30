@@ -2780,7 +2780,7 @@ lemma create_cap_asid_map[wp]:
 crunch only_idle[wp]: create_cap only_idle
   (simp: crunch_simps)
 
-crunch global_pd_mappings[wp]: create_cap "valid_global_pd_mappings"
+crunch global_pd_mappings[wp]: create_cap "valid_global_vspace_mappings"
   (simp: crunch_simps)
 
 crunch pspace_in_kernel_window[wp]: create_cap "pspace_in_kernel_window"

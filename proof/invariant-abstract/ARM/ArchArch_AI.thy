@@ -390,7 +390,7 @@ lemma valid_asid_map':
   using empty
   apply (clarsimp simp: valid_asid_map_def s'_def)
   apply (drule bspec, blast)
-  apply (clarsimp simp: pd_at_asid_def)
+  apply (clarsimp simp: vspace_at_asid_def)
   apply (drule vs_lookup_2ConsD)
   apply clarsimp
   apply (erule vs_lookup_atE)
@@ -868,8 +868,8 @@ lemma sts_empty_pde [wp]:
 
 
 lemma sts_pd_at_asid [wp]:
-  "\<lbrace>pd_at_asid asid pd\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. pd_at_asid asid pd\<rbrace>"
-  apply (simp add: pd_at_asid_def)
+  "\<lbrace>vspace_at_asid asid pd\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. vspace_at_asid asid pd\<rbrace>"
+  apply (simp add: vspace_at_asid_def)
   apply wp
   done
 
@@ -1264,7 +1264,7 @@ lemma cte_wp_at_page_cap_weaken:
 
 
 lemma find_pd_for_asid_lookup_pd_wp:
-  "\<lbrace> \<lambda>s. valid_arch_objs s \<and> (\<forall>pd. pd_at_asid asid pd s \<and> page_directory_at pd s
+  "\<lbrace> \<lambda>s. valid_arch_objs s \<and> (\<forall>pd. vspace_at_asid asid pd s \<and> page_directory_at pd s
     \<and> (\<exists>\<rhd> pd) s \<longrightarrow> Q pd s) \<rbrace> find_pd_for_asid asid \<lbrace> Q \<rbrace>, -"
   apply (rule hoare_post_imp_R)
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_page_directory])
@@ -1548,7 +1548,7 @@ lemma arch_decode_inv_wf[wp]:
           apply (simp add: resolve_vaddr_def)
           apply (wp get_master_pte_wp get_master_pde_wp whenE_throwError_wp | wpc | simp)+
         apply (clarsimp simp: valid_arch_inv_def valid_pdi_def)+
-        apply (rule_tac Q'="\<lambda>pd' s. pd_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0" in hoare_post_imp_R)
+        apply (rule_tac Q'="\<lambda>pd' s. vspace_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0" in hoare_post_imp_R)
          apply wp
         apply clarsimp
        apply (wp | wpc)+

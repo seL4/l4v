@@ -1624,8 +1624,8 @@ lemma valid_asid_map_s0[simp]:
   done
 
 lemma valid_global_pd_mappings_s0[simp]:
-  "valid_global_pd_mappings s0_internal"
-  apply (clarsimp simp: valid_global_pd_mappings_def s0_internal_def arch_state0_def
+  "valid_global_vspace_mappings s0_internal"
+  apply (clarsimp simp: valid_global_vspace_mappings_def s0_internal_def arch_state0_def
                         obj_at_def kh0_def kh0_obj_def s0_ptr_defs valid_pd_kernel_mappings_def
                         valid_pde_kernel_mappings_def pde_mapping_bits_def mask_def)
   apply (rule conjI)

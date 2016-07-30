@@ -1909,7 +1909,7 @@ crunch eq_ker_map[wp]: cap_swap "equal_kernel_mappings"
 
 crunch only_idle [wp]: cap_swap only_idle
 
-crunch global_pd_mappings[wp]: cap_swap "valid_global_pd_mappings"
+crunch global_pd_mappings[wp]: cap_swap "valid_global_vspace_mappings"
 
 crunch pspace_in_kernel_window[wp]: cap_swap "pspace_in_kernel_window"
 

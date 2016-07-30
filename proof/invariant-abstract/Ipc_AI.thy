@@ -916,14 +916,14 @@ lemma transfer_caps_loop_only_idle[wp]:
   by (wp transfer_caps_loop_pres | simp)+
 
 
-crunch valid_global_pd_mappings [wp]: set_extra_badge valid_global_pd_mappings
+crunch valid_global_vspace_mappings [wp]: set_extra_badge valid_global_vspace_mappings
 
 
 lemma transfer_caps_loop_valid_global_pd_mappings[wp]:
   "\<And>ep buffer n caps slots mi.
-    \<lbrace>valid_global_pd_mappings :: 'state_ext state \<Rightarrow> bool\<rbrace>
+    \<lbrace>valid_global_vspace_mappings :: 'state_ext state \<Rightarrow> bool\<rbrace>
       transfer_caps_loop ep buffer n caps slots mi
-    \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
+    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
 
@@ -1608,7 +1608,7 @@ context Ipc_AI begin
 crunch only_idle [wp]: do_ipc_transfer "only_idle :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch global_pd_mappings [wp]: do_ipc_transfer "valid_global_pd_mappings :: 'state_ext state \<Rightarrow> bool"
+crunch global_pd_mappings [wp]: do_ipc_transfer "valid_global_vspace_mappings :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch pspace_in_kernel_window[wp]: do_ipc_transfer "pspace_in_kernel_window :: 'state_ext state \<Rightarrow> bool"
@@ -2344,7 +2344,7 @@ crunch eq_ker_map[wp]: setup_caller_cap "equal_kernel_mappings"
 
 crunch asid_map [wp]: setup_caller_cap "valid_asid_map"
 
-crunch global_pd_mappings[wp]: setup_caller_cap "valid_global_pd_mappings"
+crunch global_pd_mappings[wp]: setup_caller_cap "valid_global_vspace_mappings"
 
 crunch pspace_in_kernel_window[wp]: setup_caller_cap "pspace_in_kernel_window"
 

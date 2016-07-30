@@ -1389,7 +1389,7 @@ lemma asidHighBitsOf [simp]:
   done  
 
 lemma find_pd_for_asid_corres'':
-  "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> pd_at_asid asid pd s)
+  "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
                            and valid_arch_objs and pspace_aligned
                            and K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
@@ -1438,7 +1438,7 @@ lemma find_pd_for_asid_corres'':
     apply (erule disjE)
      apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
      apply fastforce
-    apply (clarsimp simp: pd_at_asid_def valid_arch_objs_def)
+    apply (clarsimp simp: vspace_at_asid_def valid_arch_objs_def)
     apply (clarsimp simp: vs_asid_refs_def graph_of_def elim!: vs_lookupE)
     apply (erule rtranclE)
      apply simp
@@ -1464,7 +1464,7 @@ lemma find_pd_for_asid_corres'':
   done
 
 lemma find_pd_for_asid_corres:
-  "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> pd_at_asid asid pd s) and valid_arch_objs
+  "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s) and valid_arch_objs
                            and pspace_aligned and K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid)"
@@ -1472,7 +1472,7 @@ lemma find_pd_for_asid_corres:
   done
 
 lemma find_pd_for_asid_corres':
-  "corres (lfr \<oplus> op =) (pd_at_asid asid pd and valid_arch_objs
+  "corres (lfr \<oplus> op =) (vspace_at_asid asid pd and valid_arch_objs
                            and pspace_aligned and  K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid)"

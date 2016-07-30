@@ -1209,7 +1209,7 @@ abbreviation(input)
        and valid_irq_node and valid_irq_handlers and valid_arch_objs
        and valid_irq_states
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings 
-       and valid_asid_map and valid_global_pd_mappings
+       and valid_asid_map and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and cur_tcb and valid_ioc and valid_machine_state"
 
@@ -1234,7 +1234,7 @@ locale Retype_AI_dmo_eq_kernel_restricted =
 crunch only_idle[wp]: do_machine_op "only_idle"
 crunch valid_global_refs[wp]: do_machine_op "valid_global_refs"
 crunch valid_kernel_mappings[wp]: do_machine_op "valid_kernel_mappings"
-crunch global_pd_mappings[wp]: do_machine_op "valid_global_pd_mappings"
+crunch global_pd_mappings[wp]: do_machine_op "valid_global_vspace_mappings"
 crunch cap_refs_in_kernel_window[wp]: do_machine_op "cap_refs_in_kernel_window"
 
 

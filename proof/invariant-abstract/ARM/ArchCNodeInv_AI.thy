@@ -263,9 +263,9 @@ lemma invs_irq_state_independent[intro!, simp, CNodeInv_AI_assms]:
       valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
       valid_arch_objs_def valid_arch_caps_def valid_global_objs_def
       valid_kernel_mappings_def equal_kernel_mappings_def
-      valid_asid_map_def valid_global_pd_mappings_def
+      valid_asid_map_def valid_global_vspace_mappings_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def
-      cur_tcb_def sym_refs_def state_refs_of_def pd_at_asid_def 
+      cur_tcb_def sym_refs_def state_refs_of_def vspace_at_asid_def 
       swp_def valid_irq_states_def)
 
 
@@ -426,7 +426,7 @@ lemma cap_swap_asid_map[wp, CNodeInv_AI_assms]:
     cte_wp_at (weak_derived c) a and
     cte_wp_at (weak_derived c') b\<rbrace> 
      cap_swap c a c' b \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
-  apply (simp add: cap_swap_def set_cdt_def valid_asid_map_def pd_at_asid_def)
+  apply (simp add: cap_swap_def set_cdt_def valid_asid_map_def vspace_at_asid_def)
   apply (rule hoare_pre)
    apply (wp set_cap.vs_lookup|simp
           |rule hoare_lift_Pf [where f=arch_state])+

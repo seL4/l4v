@@ -3203,12 +3203,6 @@ lemma no_parent_not_next_slot:
   done
 
 
-
-
-
-
-
-
 definition descendants_prop where
  "descendants_prop P t \<equiv> (\<forall>p. \<forall>c \<in> set (t p). P c)"
 

@@ -351,7 +351,7 @@ lemma invs_A:
   apply (rule conjI)
    apply (clarsimp simp: valid_asid_map_def state_defs)
   apply (rule conjI)
-   apply (clarsimp simp: valid_global_pd_mappings_def obj_at_def state_defs
+   apply (clarsimp simp: valid_global_vspace_mappings_def obj_at_def state_defs
                          valid_pd_kernel_mappings_def mask_pde_mapping_bits)
    apply (simp add: valid_pde_kernel_mappings_def kernel_base_def)
    apply (rule conjI)

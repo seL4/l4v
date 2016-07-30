@@ -35,7 +35,7 @@ lemma pd_of_thread_same_agent:
   done
 
 lemma invs_valid_global_pd_mappings:
-  "invs s \<Longrightarrow> valid_global_pd_mappings s"
+  "invs s \<Longrightarrow> valid_global_vspace_mappings s"
   apply (simp add: invs_def valid_state_def)
   done
 

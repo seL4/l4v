@@ -1599,7 +1599,7 @@ crunch v_ker_map[wp]: set_pt "valid_kernel_mappings"
 
 lemma set_pt_asid_map [wp]:
   "\<lbrace>valid_asid_map\<rbrace> set_pt p pt \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-  apply (simp add: valid_asid_map_def pd_at_asid_def)
+  apply (simp add: valid_asid_map_def vspace_at_asid_def)
   apply (rule hoare_lift_Pf2 [where f="arch_state"])
    apply wp
   done
@@ -1615,12 +1615,12 @@ lemma set_pt_equal_mappings [wp]:
   by (simp add: set_pt_def | wp set_object_equal_mappings get_object_wp)+
 
 
-lemma set_pt_valid_global_pd_mappings:
-  "\<lbrace>\<lambda>s. valid_global_pd_mappings s \<and> valid_global_objs s \<and> p \<notin> global_refs s\<rbrace>
+lemma set_pt_valid_global_vspace_mappings:
+  "\<lbrace>\<lambda>s. valid_global_vspace_mappings s \<and> valid_global_objs s \<and> p \<notin> global_refs s\<rbrace>
       set_pt p pt
-   \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
+   \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_pt_def)
-  apply (wp set_object_global_pd_mappings get_object_wp)
+  apply (wp set_object_global_vspace_mappings get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: kernel_object.split_asm
                         arch_kernel_obj.split_asm)
@@ -1696,7 +1696,7 @@ lemma set_pt_invs:
              set_pt_valid_arch_state set_pt_valid_global set_pt_cur
              set_pt_reply_masters valid_irq_node_typ
              valid_irq_handlers_lift
-             set_pt_valid_global_pd_mappings)
+             set_pt_valid_global_vspace_mappings)
   apply (clarsimp dest!: valid_objs_caps)
   apply (rule conjI[rotated])
   apply (subgoal_tac "p \<notin> global_refs s", simp add: global_refs_def)
@@ -2070,7 +2070,7 @@ lemma set_asid_pool_restrict_asid_map:
   apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits
                   simp del: fun_upd_apply)
   apply (drule(1) bspec)
-  apply (clarsimp simp: pd_at_asid_def obj_at_def graph_of_def)
+  apply (clarsimp simp: vspace_at_asid_def obj_at_def graph_of_def)
   apply (drule subsetD, erule domI)
   apply simp
   apply (drule spec, drule(1) mp)
@@ -2131,11 +2131,11 @@ lemma set_asid_pool_equal_mappings [wp]:
   "\<lbrace>equal_kernel_mappings\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
   by (simp add: set_asid_pool_def | wp set_object_equal_mappings get_object_wp)+
   
-lemma set_asid_pool_valid_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_pd_mappings\<rbrace>
-      set_asid_pool p ap \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
+lemma set_asid_pool_valid_global_vspace_mappings[wp]:
+  "\<lbrace>valid_global_vspace_mappings\<rbrace>
+      set_asid_pool p ap \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_asid_pool_def)
-  apply (wp set_object_global_pd_mappings get_object_wp)
+  apply (wp set_object_global_vspace_mappings get_object_wp)
   including unfold_objects
   by (clarsimp simp: a_type_def)
 
@@ -3175,7 +3175,7 @@ lemma set_pd_asid_map [wp]:
                          arch_kernel_obj.splits)
   apply (clarsimp simp: valid_asid_map_def)
   apply (drule bspec, blast)
-  apply (clarsimp simp: pd_at_asid_def obj_at_def)
+  apply (clarsimp simp: vspace_at_asid_def obj_at_def)
   apply (erule vs_lookupE)
   apply (rule vs_lookupI, simp)
   apply (clarsimp simp: vs_asid_refs_def dest!: graph_ofD)
@@ -3232,12 +3232,12 @@ lemma set_pd_equal_kernel_mappings_triv:
 
 
 lemma set_pd_global_mappings[wp]:
-  "\<lbrace>\<lambda>s. valid_global_pd_mappings s \<and> valid_global_objs s
+  "\<lbrace>\<lambda>s. valid_global_vspace_mappings s \<and> valid_global_objs s
                \<and> p \<notin> global_refs s\<rbrace>
      set_pd p pd
-   \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
+   \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_pd_def)
-  apply (wp set_object_global_pd_mappings get_object_wp)
+  apply (wp set_object_global_vspace_mappings get_object_wp)
   apply simp
   done
 
@@ -3387,7 +3387,7 @@ lemma store_pde_state_refs_of:
 lemma valid_asid_map_next_asid [iff]:
   "valid_asid_map (s\<lparr>arch_state := arm_next_asid_update f (arch_state s)\<rparr>) =
   valid_asid_map s"
-  by (simp add: valid_asid_map_def pd_at_asid_def)
+  by (simp add: valid_asid_map_def vspace_at_asid_def)
 
 end
 

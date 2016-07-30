@@ -27,7 +27,7 @@ requalify_facts
   valid_asid_map_lift
   valid_kernel_mappings_lift
   equal_kernel_mappings_lift
-  valid_global_pd_mappings_lift
+  valid_global_vspace_mappings_lift
   valid_machine_state_lift
   valid_ao_at_lift_aobj_at
   valid_arch_state_lift_aobj_at
@@ -1259,8 +1259,8 @@ by (rule valid_kernel_mappings_lift, wp aobj_at)
 lemma equal_kernel_mappings[wp]: "\<lbrace>equal_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
 by (rule equal_kernel_mappings_lift, wp aobj_at)
 
-lemma valid_global_pd_mappings[wp]: "\<lbrace>valid_global_pd_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
-by (rule valid_global_pd_mappings_lift, wp aobj_at)
+lemma valid_global_vspace_mappings[wp]: "\<lbrace>valid_global_vspace_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
+by (rule valid_global_vspace_mappings_lift, wp aobj_at)
 
 lemma valid_ao_at[wp]:"\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>_. valid_ao_at p\<rbrace>"
 by (rule valid_ao_at_lift_aobj_at; wp aobj_at; simp)
