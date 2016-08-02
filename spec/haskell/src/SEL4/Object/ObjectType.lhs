@@ -384,8 +384,8 @@ objects such as frames or CNodes.
 
 New threads are placed in the current security domain, which must be the domain of the creating thread.
 
-> createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel Capability
-> createObject t regionBase userSize isDevice =
+> createObject :: ObjectType -> PPtr () -> Int -> Kernel Capability
+> createObject t regionBase userSize =
 >     let funupd = (\f x v y -> if y == x then v else f y) in
 >     case toAPIType t of
 >         Just TCBObject -> do
@@ -406,9 +406,9 @@ New threads are placed in the current security domain, which must be the domain 
 >               funupd (gsCNodes ks) (fromPPtr regionBase) (Just userSize)})
 >             return $! CNodeCap (PPtr $ fromPPtr regionBase) userSize 0 0
 >         Just Untyped ->
->             return $! UntypedCap (PPtr $ fromPPtr regionBase) isDevice userSize 0
+>             return $! UntypedCap (PPtr $ fromPPtr regionBase) userSize 0
 >         Nothing -> do
->             archCap <- Arch.createObject t regionBase userSize isDevice
+>             archCap <- Arch.createObject t regionBase userSize
 >             return $! ArchObjectCap archCap
 
 \subsection{Invoking Objects}

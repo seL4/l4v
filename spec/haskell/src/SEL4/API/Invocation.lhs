@@ -116,8 +116,7 @@ The following data type defines the parameters expected for invocations of Untyp
 >             retypeFreeRegionBase :: PPtr (),
 >             retypeNewType :: ObjectType,
 >             retypeNewSizeBits :: Int,
->             retypeSlots :: [PPtr CTE],
->             retypeIsDevice :: Bool }
+>             retypeSlots :: [PPtr CTE] }
 >         deriving Show
 
 \subsubsection{Interrupt Controller Invocations}

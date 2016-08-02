@@ -261,7 +261,7 @@ defs makeRootCNode_def:
       slotBits \<leftarrow> returnOk ( objBits (undefined::cte));
       levelBits \<leftarrow> returnOk ( rootCNodeSize);
       frame \<leftarrow> liftME ptrFromPAddr $ allocRegion (levelBits + slotBits);
-      rootCNCap \<leftarrow> doKernelOp $ createObject (fromAPIType CapTableObject) frame levelBits False;
+      rootCNCap \<leftarrow> doKernelOp $ createObject (fromAPIType CapTableObject) frame levelBits;
       rootCNCap \<leftarrow> returnOk $ rootCNCap \<lparr>capCNodeGuardSize := 32 - levelBits\<rparr>;
       slot \<leftarrow> doKernelOp $ locateSlotCap rootCNCap biCapITCNode;
       doKernelOp $ insertInitCap slot rootCNCap;
@@ -292,7 +292,6 @@ defs provideUntypedCap_def:
     noInitFailure $ modify (\<lambda> st. st \<lparr> initBootInfo := bootInfo' \<rparr>);
     provideCap rootCNodeCap $ UntypedCap_ \<lparr>
                                   capPtr= ptrFromPAddr pptr,
-                                  capIsDevice= False,
                                   capBlockSize= fromIntegral magnitudeBits,
                                   capFreeIndex= 0 \<rparr>
 odE)"

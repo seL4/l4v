@@ -68,7 +68,6 @@ This is the type used to represent a capability.
 >             capReplyMaster :: Bool }
 >         | UntypedCap {
 >             capPtr :: PPtr (), 
->             capIsDevice :: Bool,
 >             capBlockSize :: Int,
 >             capFreeIndex :: Int }
 >         | CNodeCap {

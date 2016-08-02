@@ -558,12 +558,12 @@ a pointer to the source capability's slot; a list of pointers to empty slots;
 the region of memory where the objects will be created; and an integer
 representing the size of the objects to be created.
 
-> createNewObjects :: ObjectType -> PPtr CTE -> [PPtr CTE] -> PPtr () -> Int -> Bool -> Kernel ()
-> createNewObjects newType srcSlot destSlots regionBase userSizeBits isDevice = do
+> createNewObjects :: ObjectType -> PPtr CTE -> [PPtr CTE] -> PPtr () -> Int -> Kernel ()
+> createNewObjects newType srcSlot destSlots regionBase userSizeBits = do
 >     let objectSizeBits = getObjectSize newType userSizeBits
 >     zipWithM_ (\num slot -> do
 >       cap <- createObject newType
->               (PPtr (num `shiftL` objectSizeBits) + regionBase) userSizeBits isDevice
+>               (PPtr (num `shiftL` objectSizeBits) + regionBase) userSizeBits
 >       insertNewCap srcSlot slot cap)
 >       [0 .. fromIntegral (length destSlots - 1)] destSlots
 
