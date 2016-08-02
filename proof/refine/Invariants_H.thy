@@ -90,6 +90,7 @@ record itcb' =
   itcbPriority       :: priority
   itcbFault          :: "fault option"
   itcbTimeSlice      :: nat
+  itcbMCP            :: priority
 
 definition "tcb_to_itcb' tcb \<equiv> \<lparr> itcbState        = tcbState tcb,
                                  itcbFaultHandler = tcbFaultHandler tcb,
@@ -97,7 +98,8 @@ definition "tcb_to_itcb' tcb \<equiv> \<lparr> itcbState        = tcbState tcb,
                                  itcbBoundNotification     = tcbBoundNotification tcb,
                                  itcbPriority     = tcbPriority tcb,
                                  itcbFault        = tcbFault tcb,
-                                 itcbTimeSlice    = tcbTimeSlice tcb \<rparr>"
+                                 itcbTimeSlice    = tcbTimeSlice tcb,
+                                 itcbMCP          = tcbMCP tcb\<rparr>"
 
 lemma [simp]: "itcbState (tcb_to_itcb' tcb) = tcbState tcb"
   by (auto simp: tcb_to_itcb'_def)
@@ -120,6 +122,9 @@ lemma [simp]: "itcbFault (tcb_to_itcb' tcb) = tcbFault tcb"
 lemma [simp]: "itcbTimeSlice (tcb_to_itcb' tcb) = tcbTimeSlice tcb"
   by (auto simp: tcb_to_itcb'_def)
 
+lemma [simp]: "itcbMCP (tcb_to_itcb' tcb) = tcbMCP tcb"
+  by (auto simp: tcb_to_itcb'_def)
+  
 definition
   pred_tcb_at' :: "(itcb' \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
@@ -127,6 +132,7 @@ where
 
 abbreviation "st_tcb_at' \<equiv> pred_tcb_at' itcbState"
 abbreviation "bound_tcb_at' \<equiv> pred_tcb_at' itcbBoundNotification"
+abbreviation "mcpriority_tcb_at' \<equiv> pred_tcb_at' itcbMCP"
 
 lemma st_tcb_at'_def:
   "st_tcb_at' test \<equiv> obj_at' (test \<circ> tcbState)"
@@ -465,7 +471,8 @@ where
                   \<and> is_aligned (tcbIPCBuffer t) msg_align_bits
                   \<and> valid_bound_ntfn' (tcbBoundNotification t) s
                   \<and> tcbDomain t \<le> maxDomain
-                  \<and> tcbPriority t \<le> maxPriority"
+                  \<and> tcbPriority t \<le> maxPriority
+                  \<and> tcbMCP t \<le> maxPriority"
 
 definition
   valid_ep' :: "Structures_H.endpoint \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -558,7 +565,7 @@ definition
   valid_objs' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_objs' s \<equiv> \<forall>obj \<in> ran (ksPSpace s). valid_obj' obj s"
-
+                                                   
 type_synonym cte_heap = "word32 \<Rightarrow> cte option"
 
 definition

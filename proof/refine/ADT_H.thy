@@ -441,7 +441,8 @@ definition
       tcb_ipc_buffer = tcbIPCBuffer tcb,
       tcb_context = tcbContext tcb,
       tcb_fault = map_option FaultMap (tcbFault tcb),
-      tcb_bound_notification = tcbBoundNotification tcb\<rparr>"
+      tcb_bound_notification = tcbBoundNotification tcb,
+      tcb_mcpriority = tcbMCP tcb\<rparr>"
 
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.

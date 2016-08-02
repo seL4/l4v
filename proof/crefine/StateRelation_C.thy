@@ -336,6 +336,7 @@ where
      \<and> tcbQueued atcb       = to_bool (tcbQueued_CL (thread_state_lift (tcbState_C ctcb)))
      \<and> ucast (tcbDomain atcb) = tcbDomain_C ctcb
      \<and> ucast (tcbPriority atcb) = tcbPriority_C ctcb
+     \<and> ucast (tcbMCP atcb) = tcbMCP_C ctcb
      \<and> tcbTimeSlice atcb    = unat (tcbTimeSlice_C ctcb)
      \<and> cfault_rel (tcbFault atcb) (fault_lift (tcbFault_C ctcb))
                   (lookup_fault_lift (tcbLookupFailure_C ctcb))

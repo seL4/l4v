@@ -140,8 +140,8 @@ The priority of a thread is represented by an 8-bit unsigned integer.
 
 > prioPropsFromWord :: Word -> PrioProps
 > prioPropsFromWord w = PrioProps {
->         ppPriority = fromIntegral $ toInteger $ w .&. (bit priorityBits - 1),
->         ppMCP = fromIntegral $ toInteger $ (w `shiftR` priorityBits) .&. (bit mcpBits - 1)}
+>         ppPriority =  fromIntegral $ w .&. mask priorityBits,
+>         ppMCP = fromIntegral $ (w `shiftR` priorityBits) .&. (mask mcpBits)}
 
 \subsection{Capability References}
 

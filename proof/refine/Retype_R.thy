@@ -3588,7 +3588,7 @@ proof (intro conjI impI)
        apply (rule_tac ptr="x + xa" in cte_wp_at_tcbI', assumption+)
         apply fastforce
        apply simp
-      apply (rename_tac thread_state priority bool option nat cptr vptr bound user_context)
+      apply (rename_tac thread_state mcp priority bool option nat cptr vptr bound user_context)
       apply (case_tac thread_state, simp_all add: valid_tcb_state'_def 
                                                   valid_bound_ntfn'_def obj_at_disj' 
                                            split: option.splits)[2]

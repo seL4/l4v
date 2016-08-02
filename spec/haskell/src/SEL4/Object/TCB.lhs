@@ -55,6 +55,7 @@ This module uses the C preprocessor to select a target architecture.
 > import Data.Bits
 > import Data.List(genericTake, genericLength)
 > import Data.Maybe()
+> import Data.Word(Word8)
 > import Control.Monad.State(runState)
 
 \end{impdetails}
@@ -184,8 +185,8 @@ The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "Set
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = tcThreadCapSlot setSpace,
 >         tcNewFaultEP = tcNewFaultEP setSpace,
->         tcNewMCPriority = tcNewPriority setPriority,
->         tcNewPriority = tcNewMCPriority setMCP,
+>         tcNewMCPriority = tcNewMCPriority setMCP,
+>         tcNewPriority = tcNewPriority setPriority,
 >         tcNewCRoot = tcNewCRoot setSpace,
 >         tcNewVRoot = tcNewVRoot setSpace,
 >         tcNewIPCBuffer = tcNewIPCBuffer setIPCParams }
@@ -194,17 +195,17 @@ The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "Set
 
 \subsubsection{Check priorities}
 
-> checkMCP :: Word -> KernelF SyscallError ()
+> checkMCP :: Word8 -> KernelF SyscallError ()
 > checkMCP new_mcp = do
 >     checkPrio new_mcp
->     when (new_mcp > fromIntegral maxPriority) $ throw (RangeError (fromIntegral minPriority) (fromIntegral maxPriority))
+>     when (new_mcp > maxPriority) $ throw (RangeError (fromIntegral minPriority) (fromIntegral maxPriority))
       
 
-> checkPrio :: Word -> KernelF SyscallError ()
+> checkPrio :: Word8 -> KernelF SyscallError ()
 > checkPrio prio = do
->     curThread <- withoutFailure $ getCurThread
->     mcp <- withoutFailure $ threadGet tcbMCP curThread
->     when (prio > fromIntegral mcp) $ throw (RangeError (fromIntegral minPriority) (fromIntegral mcp))
+>     ct <- withoutFailure $ getCurThread
+>     mcp <- withoutFailure $ threadGet tcbMCP ct
+>     when (prio > mcp) $ throw (RangeError (fromIntegral minPriority) (fromIntegral mcp))
      
 
 \subsubsection{The Set Priority Call}
@@ -214,7 +215,7 @@ Setting the thread's priority is only allowed if the new priority is lower than 
 > decodeSetPriority :: [Word] -> Capability ->
 >         KernelF SyscallError TCBInvocation
 > decodeSetPriority (newPrio:_) cap = do
->     checkPrio newPrio
+>     checkPrio (fromIntegral newPrio) 
 >     return $! ThreadControl {
 >         tcThread = capTCBPtr cap,
 >--       tcThreadCapSlot = error "tcThreadCapSlot unused", In theory tcThreadCapSlot should never been evaluated by lazy evaluation. However, it was evaluated when running sel4 haskell kernel. So it is wired. Thus I change this to 0. I hope this can be changed back once we find out why this is evaluated. (by Xin)
@@ -230,7 +231,7 @@ Setting the thread's priority is only allowed if the new priority is lower than 
 > decodeSetMCPriority :: [Word] -> Capability ->
 >         KernelF SyscallError TCBInvocation
 > decodeSetMCPriority (newMCP:_) cap = do
->     checkMCP newMCP
+>     checkMCP (fromIntegral newMCP)
 >     return $! ThreadControl {
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = 0,

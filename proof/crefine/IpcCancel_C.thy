@@ -2065,7 +2065,6 @@ lemma possibleSwitchTo_ccorres:
               apply ceqv
              apply (rule_tac R=\<top> in ccorres_cond)
                apply clarsimp
-               apply (simp add: word_less_nat_alt unat_ucast_8_32 up_ucast_inj_eq)
               apply (ctac add: tcbSchedEnqueue_ccorres)
              apply (rule ccorres_split_nothrow_novcg_dc)
                 apply (rule_tac R="weak_sch_act_wf rve" in ccorres_cond)

@@ -1922,6 +1922,13 @@ lemma setPriority_no_orphans [wp]:
    apply (clarsimp simp: obj_at'_def)
   apply (wp tcbSchedDequeue_not_queued | clarsimp)+
   done
+  
+lemma setMCPriority_no_orphans[wp]:
+  "\<lbrace>no_orphans\<rbrace> setMCPriority t prio \<lbrace>\<lambda>rv. no_orphans\<rbrace>"
+  unfolding setMCPriority_def
+  apply (rule hoare_pre)
+   apply (wp threadSet_no_orphans)
+   by clarsimp+
 
 lemma tc_no_orphans:
   "\<lbrace> no_orphans and invs' and sch_act_simple and tcb_at' a and ex_nonz_cap_to' a and
@@ -1932,8 +1939,8 @@ lemma tc_no_orphans:
     case_option \<top> (valid_cap') (case_option None (case_option None (Some o fst) o snd) g) and
     K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g))
     and K (case_option True (swp is_aligned 2 o fst) g) and
-    K (valid_option_prio d) \<rbrace>
-      invokeTCB (tcbinvocation.ThreadControl a sl b' d e' f' g)
+    K (valid_option_prio d \<and> valid_option_prio mcp) \<rbrace>
+      invokeTCB (tcbinvocation.ThreadControl a sl b' mcp d e' f' g)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: invokeTCB_def getThreadCSpaceRoot getThreadVSpaceRoot
@@ -1941,6 +1948,11 @@ lemma tc_no_orphans:
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial
+               threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[2]
+  apply (rule hoare_walk_assmsE)
+    apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
+    apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial setMCPriority_invs'
+              typ_at_lifts[OF setMCPriority_typ_at']
                threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])

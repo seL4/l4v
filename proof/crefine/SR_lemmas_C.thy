@@ -356,10 +356,10 @@ lemma updateObject_cte_tcb:
   done
 
 definition
-  tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> word32 \<times> word32 \<times> (MachineTypes.register \<Rightarrow> word32) \<times> bool \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> word32 option"
+  tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> word32 \<times> word32 \<times> (MachineTypes.register \<Rightarrow> word32) \<times> bool \<times> word8 \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> word32 option"
   where
   "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbContext t, tcbQueued t,
-                            tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t)"
+                            tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow> 

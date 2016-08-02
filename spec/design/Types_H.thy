@@ -1928,8 +1928,8 @@ definition
 prioPropsFromWord :: "machine_word \<Rightarrow> prio_props"
 where
 "prioPropsFromWord w \<equiv> PrioProps_ \<lparr>
-        ppPriority= fromIntegral $ toInteger $ w && (bit priorityBits - 1),
-        ppMCP= fromIntegral $ toInteger $ (w `~shiftR~` priorityBits) && (bit mcpBits - 1)\<rparr>"
+        ppPriority=  fromIntegral $ w && mask priorityBits,
+        ppMCP= fromIntegral $ (w `~shiftR~` priorityBits) && (mask mcpBits)\<rparr>"
 
 definition
 msgLengthBits :: "nat"

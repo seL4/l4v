@@ -180,7 +180,8 @@ where
   \<and> cap_relation (tcb_reply tcb) (cteCap (tcbReply tcb'))
   \<and> cap_relation (tcb_caller tcb) (cteCap (tcbCaller tcb'))
   \<and> cap_relation (tcb_ipcframe tcb) (cteCap (tcbIPCBufferFrame tcb'))
-  \<and> tcb_bound_notification tcb = tcbBoundNotification tcb'"
+  \<and> tcb_bound_notification tcb = tcbBoundNotification tcb'
+  \<and> tcb_mcpriority tcb = tcbMCP tcb'"
 
 definition
   other_obj_relation :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
@@ -375,8 +376,9 @@ where
   "sched_act_relation choose_new_thread a' = (a' = ChooseNewThread)" |
   "sched_act_relation (switch_thread x) a' = (a' = SwitchToThread x)"
 
+typ priority
 definition
-  ready_queues_relation :: "(Deterministic_A.domain \<Rightarrow> Deterministic_A.priority \<Rightarrow> Deterministic_A.ready_queue)
+  ready_queues_relation :: "(Deterministic_A.domain \<Rightarrow> Structures_A.priority \<Rightarrow> Deterministic_A.ready_queue)
                          \<Rightarrow> (domain \<times> priority \<Rightarrow> KernelStateData_H.ready_queue) \<Rightarrow> bool"
 where
   "ready_queues_relation qs qs' \<equiv> \<forall>d p. (qs d p = qs' (d, p))"

@@ -315,7 +315,7 @@ lemma ball_tcb_cte_casesI:
   by (simp add: tcb_cte_cases_def)
 
 lemma all_tcbI:
-  "\<lbrakk> \<And>a b c d e f g h i j k l m n p. P (Thread a b c d e f g h i j k l m n p) \<rbrakk> \<Longrightarrow> \<forall>tcb. P tcb"
+  "\<lbrakk> \<And>a b c d e f g h i j k l m n p q. P (Thread a b c d e f g h i j k l m n p q) \<rbrakk> \<Longrightarrow> \<forall>tcb. P tcb"
   by (rule allI, case_tac tcb, simp)
 
 lemma threadset_corresT:
@@ -685,6 +685,7 @@ lemma threadSet_valid_pspace'T_P:
                       \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
   assumes u: "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
   assumes w: "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
+  assumes w': "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
   shows
   "\<lbrace>valid_pspace' and (\<lambda>s. P \<longrightarrow> st_tcb_at' Q t s \<and> bound_tcb_at' Q' t s)\<rbrace>
      threadSet F t
@@ -696,7 +697,7 @@ lemma threadSet_valid_pspace'T_P:
   apply (erule(1) valid_objsE')
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
                             bspec_split [OF spec [OF x]] z
-                            split_paired_Ball y u w v)
+                            split_paired_Ball y u w v w')
   done
 
 lemmas threadSet_valid_pspace'T =
@@ -1303,6 +1304,7 @@ lemma threadSet_invs_trivialT:
   assumes w: "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
   assumes v: "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
   assumes u: "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
+  assumes b: "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
   shows
   "\<lbrace>\<lambda>s. invs' s \<and>
        tcb_at' t s \<and>
@@ -1321,7 +1323,7 @@ proof -
   show ?thesis
     apply (simp add: invs'_def valid_state'_def split del: split_if)
     apply (rule hoare_pre)
-     apply (wp x w v u
+     apply (wp x w v u b
               threadSet_valid_pspace'T
               threadSet_sch_actT_P[where P=False, simplified]
               threadSet_valid_queues

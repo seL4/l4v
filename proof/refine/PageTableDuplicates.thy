@@ -2396,7 +2396,7 @@ lemma performArchInvocation_valid_duplicates':
 crunch valid_duplicates' [wp]: restart "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (wp: crunch_wps)
 
-crunch valid_duplicates' [wp]: setPriority "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunch valid_duplicates' [wp]: setPriority, setMCPriority "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: getObject threadSet wp: setObject_ksInterrupt updateObject_default_inv
     simp:crunch_simps)
 
@@ -2411,9 +2411,10 @@ lemma tc_valid_duplicates':
     K (case_option True (isValidVTableRoot o fst) f') and
     case_option \<top> (valid_cap') (case_option None (case_option None (Some o fst) o snd) g) and
     K (case_option True (\<lambda>x. x \<le> maxPriority) d) and 
+    K (case_option True (\<lambda>x. x \<le> maxPriority) mcp) and
     K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g))
     and K (case_option True (swp is_aligned msg_align_bits o fst) g)\<rbrace>
-      invokeTCB (tcbinvocation.ThreadControl a sl b' d e' f' g)
+      invokeTCB (tcbinvocation.ThreadControl a sl b' mcp d e' f' g)
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: split_def invokeTCB_def getThreadCSpaceRoot getThreadVSpaceRoot
@@ -2423,6 +2424,11 @@ lemma tc_valid_duplicates':
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_invs_trivial
                hoare_vcg_all_lift threadSet_cap_to' static_imp_wp | simp add: inQ_def | fastforce)+)[2]
+  apply (rule hoare_walk_assmsE)
+    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
+    apply ((wp case_option_wp  setMCPriority_invs' static_imp_wp
+               typ_at_lifts[OF setMCPriority_typ_at']
+               hoare_vcg_all_lift threadSet_cap_to' | simp add: inQ_def  | fastforce)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_invs_trivial setP_invs' static_imp_wp

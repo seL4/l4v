@@ -4,21 +4,7 @@ Generated from changeset:
 75c159b untypeddevice-proof: fix drefine
 
 
+ M ../../proof/crefine/StateRelation_C.thy
+ M ../../proof/crefine/Tcb_C.thy
  M ../abstract/Decode_A.thy
- M ../abstract/Schedule_A.thy
- M src/SEL4/Object/Instances.lhs
  M src/SEL4/Object/TCB.lhs
-?? doc/figures/clientkernel.log
-?? doc/figures/clientserver.log
-?? doc/figures/derive.log
-?? doc/figures/ipctransfer.log
-?? doc/figures/truncation.log
-?? doc/figures/truncation.mpx
-?? doc/functions.aux
-?? doc/refman.aux
-?? doc/refman.bbl
-?? doc/refman.blg
-?? doc/refman.log
-?? doc/refman.out
-?? doc/refman.toc
-?? ../../tools/haskell-translator/blah.diff

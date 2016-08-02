@@ -125,8 +125,8 @@ defs decodeTCBConfigure_def:
         tcThread= capTCBPtr cap,
         tcThreadCapSlot= tcThreadCapSlot setSpace,
         tcNewFaultEP= tcNewFaultEP setSpace,
-        tcNewMCPriority= tcNewPriority setPriority,
-        tcNewPriority= tcNewMCPriority setMCP,
+        tcNewMCPriority= tcNewMCPriority setMCP,
+        tcNewPriority= tcNewPriority setPriority,
         tcNewCRoot= tcNewCRoot setSpace,
         tcNewVRoot= tcNewVRoot setSpace,
         tcNewIPCBuffer= tcNewIPCBuffer setIPCParams \<rparr>
@@ -137,20 +137,20 @@ defs decodeTCBConfigure_def:
 defs checkMCP_def:
 "checkMCP new_mcp \<equiv> (doE
     checkPrio new_mcp;
-    whenE (new_mcp > fromIntegral maxPriority) $ throw (RangeError (fromIntegral minPriority) (fromIntegral maxPriority))
+    whenE (new_mcp > maxPriority) $ throw (RangeError (fromIntegral minPriority) (fromIntegral maxPriority))
 odE)"
 
 defs checkPrio_def:
 "checkPrio prio\<equiv> (doE
-    curThread \<leftarrow> withoutFailure $ getCurThread;
-    mcp \<leftarrow> withoutFailure $ threadGet tcbMCP curThread;
-    whenE (prio > fromIntegral mcp) $ throw (RangeError (fromIntegral minPriority) (fromIntegral mcp))
+    ct \<leftarrow> withoutFailure $ getCurThread;
+    mcp \<leftarrow> withoutFailure $ threadGet tcbMCP ct;
+    whenE (prio > mcp) $ throw (RangeError (fromIntegral minPriority) (fromIntegral mcp))
 odE)"
 
 defs decodeSetPriority_def:
 "decodeSetPriority x0 cap\<equiv> (case x0 of
     (newPrio#_) \<Rightarrow>    (doE
-    checkPrio newPrio;
+    checkPrio (fromIntegral newPrio);
     returnOk $ ThreadControl_ \<lparr>
         tcThread= capTCBPtr cap,
         tcThreadCapSlot= 0,
@@ -167,7 +167,7 @@ defs decodeSetPriority_def:
 defs decodeSetMCPriority_def:
 "decodeSetMCPriority x0 cap\<equiv> (case x0 of
     (newMCP#_) \<Rightarrow>    (doE
-    checkMCP newMCP;
+    checkMCP (fromIntegral newMCP);
     returnOk $ ThreadControl_ \<lparr>
         tcThread= capTCBPtr cap,
         tcThreadCapSlot= 0,
