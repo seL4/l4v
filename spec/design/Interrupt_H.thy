@@ -139,28 +139,35 @@ defs initInterruptController_def:
 odE)"
 
 defs handleInterrupt_def:
-"handleInterrupt irq\<equiv> (do
-    st \<leftarrow> getIRQState irq;
-    (case st of
-          IRQSignal \<Rightarrow>   (do
-            slot \<leftarrow> getIRQSlot irq;
-            cap \<leftarrow> getSlotCap slot;
-            (case cap of
-                  NotificationCap _ _ True _ \<Rightarrow>  
-                    sendSignal (capNtfnPtr cap) (capNtfnBadge cap)
-                | _ \<Rightarrow>   doMachineOp $ debugPrint $
-                    [] @ show irq
-                );
-            doMachineOp $ maskInterrupt True irq
+"handleInterrupt irq\<equiv> (
+    if (irq > maxIRQ) then doMachineOp $ ((do
+         maskInterrupt True irq;
+         ackInterrupt irq
+    od)
+                         )
+     else (do
+      st \<leftarrow> getIRQState irq;
+      (case st of
+            IRQSignal \<Rightarrow>   (do
+              slot \<leftarrow> getIRQSlot irq;
+              cap \<leftarrow> getSlotCap slot;
+              (case cap of
+                    NotificationCap _ _ True _ \<Rightarrow>  
+                      sendSignal (capNtfnPtr cap) (capNtfnBadge cap)
+                  | _ \<Rightarrow>   doMachineOp $ debugPrint $
+                      [] @ show irq
+                  );
+              doMachineOp $ maskInterrupt True irq
+            od)
+          | IRQTimer \<Rightarrow>   (do
+              timerTick;
+              doMachineOp resetTimer
           od)
-        | IRQTimer \<Rightarrow>   (do
-            timerTick;
-            doMachineOp resetTimer
-        od)
-        | IRQInactive \<Rightarrow>   haskell_fail $ [] @ show irq
-        );
-    doMachineOp $ ackInterrupt irq
-od)"
+          | IRQInactive \<Rightarrow>   haskell_fail $ [] @ show irq
+          );
+      doMachineOp $ ackInterrupt irq
+     od)
+)"
 
 defs isIRQActive_def:
 "isIRQActive irq\<equiv> liftM (\<lambda>x. x \<noteq>IRQInactive) $ getIRQState irq"
