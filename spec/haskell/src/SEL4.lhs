@@ -44,12 +44,14 @@ faults, and system calls; the set of possible events is defined in
 
 > callKernel :: Event -> Kernel ()
 > callKernel ev = do
+>     if (callHook ev) then cEntryHook else return ()
 >     runErrorT $ handleEvent ev
 >         `catchError` (\_ -> withoutPreemption $ do 
 >                       irq <- doMachineOp getActiveIRQ
 >                       when (isJust irq) $ handleInterrupt (fromJust irq))
 >     schedule
 >     activateThread
+>     if (callHook ev) then cExitHook else return ()
 
 \subsection{Saving and Restoring User State}
 

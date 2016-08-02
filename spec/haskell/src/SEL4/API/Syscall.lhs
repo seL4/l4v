@@ -68,6 +68,15 @@ the enumerated type "Syscall":
 >         | SysNBRecv
 >         deriving (Show, Enum, Bounded, Eq)
 
+\subsection{Flag for Calling Entry/Exit Hook}
+
+> callHook :: Event -> Bool
+> callHook (SyscallEvent _) = False
+> callHook (UnknownSyscall _) = False
+> callHook (UserLevelFault _ _) = True
+> callHook (Interrupt) = True
+> callHook (VMFaultEvent _) = True
+
 \subsection{Handling Events}
 
 The "handleEvent" function determines the type of event, checks that
