@@ -25,6 +25,7 @@ This module makes use of the GHC extension allowing declaration of types with no
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.ARM_HYP
 > import Data.Array
+> import Data.Helpers
 > import Data.Word(Word32,Word16)
 > import Data.Bits
 > import {-# SOURCE #-} SEL4.Object.Structures
@@ -106,8 +107,6 @@ TCBs contain state that is arch-specific. ``ArchTCB'' represents a wrapper for
 this state. The thread's saved user-level context, which is expected to be
 present on all platforms is stored here.
 
-FIXME ARMHYP add VCPU ptr here
-
 > data ArchTCB = ArchThread {
 >         atcbContext :: UserContext
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
@@ -164,15 +163,30 @@ FIXME ARMHYP after device untyped patch this will be 6 and 7 respectively
 The SCTLR and ACTLR are contained in a structure of their own in the C code,
 but this structure is never manipulated as a whole.
 
+FIXME ARMHYP move to platform
+
+> gicVCPUMaxNumLR = (64 :: Int)
+
+> data GICVCPUInterface = VGICInterface {
+>                        vgicHCR :: Word32,
+>                        vgicVMCR :: Word32,
+>                        vgicAPR :: Word32,
+>                        vgicLR :: Array Int Word32
+>                        }
+>     deriving Show
+
 > data VCPU = VCPUObj {
 >                 vcpuTCBPtr :: Maybe (PPtr TCB)
 >                 ,vcpuSCTLR :: Word32
 >                 ,vcpuACTLR :: Word32
+>                 ,vcpuVGIC :: GICVCPUInterface
 >                 }
 >     deriving Show
 
 > newVCPU :: VCPU
-> newVCPU = error "FIXME ARMHYP TODO init code"
+> newVCPU =
+>     let vgic = funPartialArray (const (0 :: Int)) (0, gicVCPUMaxNumLR) in
+>     error "FIXME ARMHYP TODO init code"
 
 #endif
 

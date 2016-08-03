@@ -1245,3 +1245,4 @@ The kernel model's ARM targets use an external simulation of the physical addres
 >     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot + fromIntegral wordSize) w1
 
 FIXME ARMHYP IOPTE IOPDE - here or in IOSpace?
+

@@ -24,7 +24,7 @@ This module defines the low-level ARM hardware interface.
 
 > import Control.Monad.Reader
 > import Data.Bits
-> import Data.Word(Word8)
+> import Data.Word(Word8, Word32)
 > import Data.Ix
 
 \end{impdetails}
@@ -729,6 +729,55 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 #endif /* CONFIG_ARM_SMMU */
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+\subsection{GIC VCPU interface}
+
+FIXME ARMHYP consider moving to platform code?
+
+> vgicIRQActive :: Word32
+> vgicIRQActive = 2 `shiftL` 28
+
+> vgicIRQMask :: Word32
+> vgicIRQMask = 3 `shiftL` 28
+
+> get_gic_vcpu_ctrl_hcr :: MachineMonad Word32
+> get_gic_vcpu_ctrl_hcr = error "FIXME ARMHYP Unimplemented callback"
+
+> set_gic_vcpu_ctrl_hcr :: Word32 -> MachineMonad ()
+> set_gic_vcpu_ctrl_hcr = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_vmcr :: MachineMonad Word32
+> get_gic_vcpu_ctrl_vmcr = error "FIXME ARMHYP Unimplemented callback"
+
+> set_gic_vcpu_ctrl_vmcr :: Word32 -> MachineMonad ()
+> set_gic_vcpu_ctrl_vmcr = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_apr :: MachineMonad Word32
+> get_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
+
+> set_gic_vcpu_ctrl_apr :: Word32 -> MachineMonad ()
+> set_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_vtr :: Word32
+> get_gic_vcpu_ctrl_vtr = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_eisr0 :: Word32
+> get_gic_vcpu_ctrl_eisr0 = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_eisr1 :: Word32
+> get_gic_vcpu_ctrl_eisr1 = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_misr :: Word32
+> get_gic_vcpu_ctrl_misr = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_lr :: Int -> Word32
+> get_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
+
+> set_gic_vcpu_ctrl_lr :: Int -> Word32 -> MachineMonad ()
+> set_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
+
+#endif
 
 \subsection{Constants}
 

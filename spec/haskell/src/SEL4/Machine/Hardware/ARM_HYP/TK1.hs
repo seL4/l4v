@@ -10,7 +10,9 @@
 
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, GeneralizedNewtypeDeriving #-}
 
-module SEL4.Machine.Hardware.ARM_HYP.TK1 where -- FIXME this is just a copy of KZM
+-- this is mostly a copy of KZM with extra info for virtualisation thrown in
+-- FIXME ARMHYP TODO review other constants against C!
+module SEL4.Machine.Hardware.ARM_HYP.TK1 where
 
 import SEL4.Machine.RegisterSet
 import Foreign.Ptr

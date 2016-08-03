@@ -129,7 +129,7 @@ FIXME ARMHYP move HyperReg definition (to Hardware?)
 > data VCPUInvocation
 >     = VCPUSetTCB (PPtr VCPU) (PPtr TCB)
 >     -- XXX ARMHYP vcpu index group priority virq
->     | VCPUInjectIRQ (PPtr VCPU) Word8 Word8 Word8 Word8 Word16
+>     | VCPUInjectIRQ (PPtr VCPU) Word8 Word8 Word8 Word16
 >     | VCPUReadRegister (PPtr VCPU) HyperReg
 >     | VCPUWriteRegister (PPtr VCPU) HyperReg HyperRegVal
 >     deriving (Show, Eq)

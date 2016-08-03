@@ -26,6 +26,8 @@ hypervisor extensions on ARM.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.Object.Structures.TARGET
+> import SEL4.Machine.Hardware.ARM_HYP
+> import SEL4.Model.StateData.TARGET
 > import SEL4.API.Failures
 > import SEL4.Object.Instances()
 > import SEL4.API.InvocationLabels.ARM_HYP
@@ -33,11 +35,12 @@ hypervisor extensions on ARM.
 > import SEL4.API.Invocation.ARM_HYP as ArchInv
 > import SEL4.API.Types
 > import SEL4.API.InvocationLabels
-> import SEL4.Machine.Hardware.ARM_HYP
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 
 > import Data.Bits
+> import Data.Word(Word8, Word16, Word32)
+> import Data.Array
 
 \end{impdetails}
 
@@ -136,6 +139,31 @@ Currently, there is only one VCPU register available for reading/writing by the 
 > invokeVCPUWriteReg :: PPtr VCPU -> HyperReg -> HyperRegVal -> Kernel ()
 > invokeVCPUWriteReg vcpuPtr reg val = writeVCPUReg vcpuPtr reg val
 
+\subsection{VCPU: inject IRQ}
+
+> decodeVCPUInjectIRQ :: [Word] -> ArchCapability ->
+>         KernelF SyscallError ArchInv.Invocation
+> decodeVCPUInjectIRQ (mr0:mr1:_) cap@(VCPUCap {}) =
+>   do
+>     let vcpuPtr = capVCPUPtr cap
+>     let vid = (fromIntegral (mr0 .&. 0xffff) :: Word16)
+>     let priority = fromIntegral $ (mr0 `shiftR` 16) .&. 0xff
+>     let group = fromIntegral $ (mr0 `shiftR` 24) .&. 0xff
+>     let index = ((fromIntegral $ mr1 .&. 0xff) :: Word8)
+>
+>     rangeCheck vid (0::Int) ((1 `shiftL` 10) - 1)
+>     rangeCheck priority (0::Int) 31
+>     rangeCheck group (0::Int) 1
+>     gic_vcpu_num_list_regs <- withoutFailure $
+>         gets (armKSGICVCPUNumListRegs . ksArchState)
+>     rangeCheck index 0 gic_vcpu_num_list_regs
+>     vcpu <- withoutFailure $ getObject vcpuPtr
+>     let x = addressTranslateS1CPR
+>     let vcpuLR = vgicLR $ vcpuVGIC vcpu
+>     when (vcpuLR ! (fromIntegral index) .&. vgicIRQMask == vgicIRQActive) $ throw DeleteFirst
+>     return $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) group priority vid
+> decodeVCPUInjectIRQ _ _ = throw TruncatedMessage
+
 \subsection{VCPU: perform and decode main functions}
 
 > performARMVCPUInvocation :: VCPUInvocation -> Kernel ()
@@ -145,7 +173,7 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >     invokeVCPUReadReg vcpuPtr reg
 > performARMVCPUInvocation (VCPUWriteRegister vcpuPtr reg val) =
 >     invokeVCPUWriteReg vcpuPtr reg val
-> performARMVCPUInvocation (VCPUInjectIRQ vcpuPtr _ _ _ _ _)  = error "FIXME ARMHYP TODO"
+> performARMVCPUInvocation (VCPUInjectIRQ vcpuPtr _ _ _ _)  = error "FIXME ARMHYP TODO"
 
 > decodeARMVCPUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -154,19 +182,20 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >     case invocationType label of
 >         ArchInvocationLabel ARMVCPUSetTCB ->
 >             decodeVCPUSetTCB cap extraCaps
->         ArchInvocationLabel ARMVCPUInjectIRQ -> error "FIXME ARMHYP TODO"
 >         ArchInvocationLabel ARMVCPUReadReg ->
 >             decodeVCPUReadReg args cap
 >         ArchInvocationLabel ARMVCPUWriteReg ->
 >             decodeVCPUWriteReg args cap
+>         ArchInvocationLabel ARMVCPUInjectIRQ ->
+>             decodeVCPUInjectIRQ args cap
 >         _ -> throw IllegalOperation
 > decodeARMVCPUInvocation _ _ _ _ _ _ = throw IllegalOperation
 
-
 % vcpuInjectIRQ
-% vcpuReadRegister
 % vcpuFinalise?
 % vcpuInit?
+% vcpuSwitch? vcpuRestore?
+% vcpuSave/Restore?
 
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
