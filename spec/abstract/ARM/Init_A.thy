@@ -26,12 +26,6 @@ text {*
   show that the invariants and refinement relation are consistent. 
 *}
 
-(* Moved to Deterministic_A
-definition
-  idle_thread_ptr :: word32 where
-  "idle_thread_ptr = kernel_base + 0x1000"
-*)
-
 definition
   init_tcb_ptr :: word32 where
   "init_tcb_ptr = kernel_base + 0x2000"

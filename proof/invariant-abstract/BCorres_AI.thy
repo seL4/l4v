@@ -10,6 +10,7 @@
 
 theory BCorres_AI
 imports
+  Include_AI
   "../../lib/BCorres_UL"
   "../../spec/abstract/Syscall_A"
 begin
@@ -203,8 +204,7 @@ lemma throw_on_false_bcorres[wp]: "bcorres f f' \<Longrightarrow>  bcorres (thro
   done
 
 context Arch begin
-crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state
-  (simp: swp_def ignore:forM_x)
+  crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state (simp: swp_def)
 end
 
 requalify_facts Arch.arch_finalise_cap_bcorres

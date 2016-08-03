@@ -1480,6 +1480,7 @@ lemma setVMRoot_ccorres:
      apply (rule ccorres_Cond_rhs_Seq)
       apply (simp add: cap_case_isPageDirectoryCap cong: if_cong)
       apply (rule ccorres_cond_true_seq)
+      apply (rule ccorres_rhs_assoc)
       apply (simp add: throwError_def catch_def dc_def[symmetric])
       apply (rule ccorres_rhs_assoc)+
       apply (rule ccorres_h_t_valid_armKSGlobalPD)
@@ -1501,6 +1502,8 @@ lemma setVMRoot_ccorres:
      apply (rule ccorres_Cond_rhs_Seq)
       apply (simp add: cap_case_isPageDirectoryCap cong: if_cong)
       apply (simp add: throwError_def catch_def)
+      apply (rule ccorres_rhs_assoc)+
+      apply simp
       apply (rule ccorres_rhs_assoc)+
       apply (rule ccorres_h_t_valid_armKSGlobalPD)
       apply csymbr
@@ -1534,6 +1537,8 @@ lemma setVMRoot_ccorres:
          apply (rule ccorres_stateAssert)
          apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState[unfolded o_def])
          apply (rule ccorres_rhs_assoc)+
+         apply simp
+         apply (rule ccorres_rhs_assoc)+
          apply (rule ccorres_h_t_valid_armKSGlobalPD)
          apply csymbr
          apply (rule ccorres_add_return2)
@@ -1543,11 +1548,18 @@ lemma setVMRoot_ccorres:
           apply vcg
          apply wp
         apply (simp add: whenE_def returnOk_def)
-        apply (ctac add: armv_contextSwitch_ccorres[unfolded dc_def])
+        apply (rule ccorres_add_return2)
+        apply (ctac (no_vcg) add: armv_contextSwitch_ccorres[unfolded dc_def])
+          apply simp
+          apply (rule ccorres_cond_empty)
+          apply (rule ccorres_return_Skip[simplified dc_def])
+         apply wp[1]
        apply (simp add: checkPDNotInASIDMap_def checkPDASIDMapMembership_def)
        apply (rule ccorres_stateAssert)
        apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState[unfolded o_def])
+       apply simp
+       apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_h_t_valid_armKSGlobalPD)
        apply csymbr
        apply (rule ccorres_add_return2)
@@ -1703,15 +1715,26 @@ definition
   | ARM_H.flush_type.CleanInvalidate \<Rightarrow> (label = Kernel_C.ARMPageCleanInvalidate_Data \<or> label = Kernel_C.ARMPDCleanInvalidate_Data)
   | ARM_H.flush_type.Unify \<Rightarrow> (label = Kernel_C.ARMPageUnify_Instruction \<or> label = Kernel_C.ARMPDUnify_Instruction)"
 
+lemma ccorres_seq_IF_False:
+  "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
+  by simp
+
 lemma doFlush_ccorres:
   "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
         \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
      (\<lbrace>flushtype_relation t \<acute>invLabel___int\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
      (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)" 
-  apply (cinit' lift: invLabel___int_' start_' end_' pstart_')
+  apply (cinit' lift: pstart_')
    apply (unfold doMachineOp_bind doFlush_def)
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_basic_srnoop)
+     apply (simp only: ccorres_seq_IF_False ccorres_seq_skip)
+     apply (rule_tac xf'=invLabel___int_' in ccorres_abstract, ceqv, rename_tac invlabel)
+     apply (rule_tac P="flushtype_relation t invlabel" in ccorres_gen_asm2)
+     apply (rule_tac xf'=start_' in ccorres_abstract, ceqv, rename_tac start')
+     apply (rule_tac P="start' = vs" in ccorres_gen_asm2)
+     apply (rule_tac xf'=end_' in ccorres_abstract, ceqv, rename_tac end')
+     apply (rule_tac P="end' = ve" in ccorres_gen_asm2)
      apply (simp only: dmo_flushtype_case)
      apply wpc
         apply (rule ccorres_cond_true)
@@ -1723,7 +1746,7 @@ lemma doFlush_ccorres:
       apply (rule ccorres_cond_false)
       apply (rule ccorres_cond_true)
       apply (ctac (no_vcg) add: cleanInvalidateCacheRange_RAM_ccorres)
-      apply (rule ccorres_cond_false)
+     apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_true)
@@ -1738,14 +1761,14 @@ lemma doFlush_ccorres:
         apply wp
     apply simp
    apply (clarsimp simp: Collect_const_mem)
-  by (auto simp: flushtype_relation_def o_def
+  apply (auto simp: flushtype_relation_def o_def
                         Kernel_C.ARMPageClean_Data_def Kernel_C.ARMPDClean_Data_def
                         Kernel_C.ARMPageInvalidate_Data_def Kernel_C.ARMPDInvalidate_Data_def
                         Kernel_C.ARMPageCleanInvalidate_Data_def Kernel_C.ARMPDCleanInvalidate_Data_def
                         Kernel_C.ARMPageUnify_Instruction_def Kernel_C.ARMPDUnify_Instruction_def
                   dest: ghost_assertion_size_logic[rotated]
                  split: ARM_H.flush_type.splits)
-
+  done
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)

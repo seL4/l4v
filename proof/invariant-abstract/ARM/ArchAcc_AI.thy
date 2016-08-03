@@ -1620,7 +1620,7 @@ lemma set_pt_valid_global_vspace_mappings:
       set_pt p pt
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_pt_def)
-  apply (wp set_object_global_pd_mappings get_object_wp)
+  apply (wp set_object_global_vspace_mappings get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: kernel_object.split_asm
                         arch_kernel_obj.split_asm)
@@ -2135,7 +2135,7 @@ lemma set_asid_pool_valid_global_vspace_mappings[wp]:
   "\<lbrace>valid_global_vspace_mappings\<rbrace>
       set_asid_pool p ap \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_asid_pool_def)
-  apply (wp set_object_global_pd_mappings get_object_wp)
+  apply (wp set_object_global_vspace_mappings get_object_wp)
   including unfold_objects
   by (clarsimp simp: a_type_def)
 
@@ -2679,7 +2679,7 @@ lemma create_mapping_entries_valid_slots [wp]:
   \<lbrace>\<lambda>m. valid_slots m\<rbrace>, -"
   apply (cases sz)
   apply (rule hoare_pre)
-  apply (wp_trace lookup_pt_slot_inv | simp add: valid_slots_def)+
+  apply (wp lookup_pt_slot_inv | simp add: valid_slots_def)+
   apply (clarsimp simp: pd_aligned)
     apply (rule hoare_pre)
      apply (wp lookup_pt_slot_inv |simp add: valid_slots_def ball_conj_distrib)+
@@ -3237,7 +3237,7 @@ lemma set_pd_global_mappings[wp]:
      set_pd p pd
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_pd_def)
-  apply (wp set_object_global_pd_mappings get_object_wp)
+  apply (wp set_object_global_vspace_mappings get_object_wp)
   apply simp
   done
 

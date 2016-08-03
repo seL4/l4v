@@ -16,7 +16,7 @@ chapter "Library"
 
 theory Lib
 imports
-  "~~/src/HOL/Eisbach/Eisbach"
+  NICTATools
   "~~/src/HOL/Library/Prefix_Order"
 begin
 

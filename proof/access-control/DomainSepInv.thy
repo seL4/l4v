@@ -1212,7 +1212,7 @@ crunch domain_sep_inv[wp]: bind_notification "domain_sep_inv irqs st"
 
 lemma invoke_tcb_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and
-    tcb_inv_wf tinv\<rbrace>
+    Tcb_AI.tcb_inv_wf tinv\<rbrace>
    invoke_tcb tinv
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(case_tac tinv)

@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file ArchInvocationLabels_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -11,7 +13,9 @@
 chapter "Architecture-specific Invocation Labels"
 
 theory ArchInvocationLabels_H
-imports "../../../lib/Enumeration" "../../machine/X64/Setup_Locale"
+imports
+  "../../../lib/Word_Lib/Enumeration"
+  "../../machine/Setup_Locale"
 begin
 context Arch begin global_naming X64_H
 

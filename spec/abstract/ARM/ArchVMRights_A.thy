@@ -11,7 +11,7 @@
 chapter "ARM-Specific Virtual-Memory Rights"
 
 theory ArchVMRights_A
-imports "../CapRights_A" "../../machine/ARM/Setup_Locale"
+imports "../CapRights_A" "../../machine/Setup_Locale"
 begin
 
 context Arch begin global_naming ARM_A

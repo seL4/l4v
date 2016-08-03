@@ -103,3 +103,4 @@ This module defines the machine-specific interrupt handling routines for x64.
 
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
+

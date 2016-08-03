@@ -51,7 +51,6 @@ lemma all_eq_trans: "\<lbrakk> \<forall>x. P x = Q x; \<forall>x. Q x = R x \<rb
   by simp
 
 
-
 declare liftE_wp[wp]
 declare case_sum_True[simp]
 declare select_singleton[simp]
@@ -71,5 +70,8 @@ lemma select_ext_wp[wp]:"\<lbrace>\<lambda>s. a s \<in> S \<longrightarrow> Q (a
   apply (wp select_wp)
   apply (simp add: unwrap_ext_det_ext_ext_def select_switch_det_ext_ext_def)
   done
+
+(* FIXME: move *)
+lemmas mapM_UNIV_wp = mapM_wp[where S="UNIV", simplified]
 
 end

@@ -64,8 +64,11 @@ lemma maskVMRights_spec:
   apply vcg
   apply clarsimp
   apply (rule conjI) 
-   apply (auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
-              split: bool.split)[1]
+   apply ((auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs 
+                      cap_rights_to_H_def to_bool_def
+               split: bool.split 
+         | simp add: mask_def
+         | word_bitwise)+)[1]
   apply clarsimp
   apply (subgoal_tac "vm_rights = 0 \<or> vm_rights = 1 \<or> vm_rights = 2 \<or> vm_rights = 3")
    apply (auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
@@ -3212,11 +3215,66 @@ lemma cap_get_capPtr_spec:
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
                   Let_def cap_untyped_cap_lift_def  split: split_if_asm)
 
+definition get_capIsPhysical_CL :: "cap_CL option \<Rightarrow> bool"
+where
+  "get_capIsPhysical_CL \<equiv> \<lambda>cap. (case cap of
+  Some (Cap_untyped_cap c) \<Rightarrow> True
+    | Some (Cap_endpoint_cap c) \<Rightarrow> True
+    | Some (Cap_notification_cap c) \<Rightarrow> True
+    | Some (Cap_cnode_cap c) \<Rightarrow> True
+    | Some (Cap_thread_cap c) \<Rightarrow> True
+    | Some (Cap_small_frame_cap c) \<Rightarrow> True
+    | Some (Cap_frame_cap c) \<Rightarrow> True
+    | Some (Cap_page_table_cap c) \<Rightarrow> True
+    | Some (Cap_page_directory_cap c) \<Rightarrow> True
+    | Some (Cap_asid_pool_cap c) \<Rightarrow> True
+    | Some (Cap_zombie_cap c) \<Rightarrow> True
+    | _ \<Rightarrow> False)"
+    
+lemma cap_get_capIsPhysical_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+       Call cap_get_capIsPhysical_'proc
+       \<lbrace>\<acute>ret__unsigned_long = from_bool (get_capIsPhysical_CL (cap_lift \<^bsup>s\<^esup>cap))\<rbrace>"
+  apply vcg
+  apply (clarsimp simp: get_capIsPhysical_CL_def)
+  apply (intro impI conjI)
+                    apply (clarsimp simp: cap_lifts pageBitsForSize_def 
+                                          cap_lift_asid_control_cap word_sle_def
+                                          cap_lift_irq_control_cap cap_lift_null_cap
+                                          mask_def objBits_simps cap_lift_domain_cap
+                                          ptr_add_assertion_positive from_bool_def
+                                          true_def false_def
+                                   dest!: sym [where t = "cap_get_tag cap" for cap]
+                                   split: vmpage_size.splits)+
+  (* XXX: slow. there should be a rule for this *)
+  by (case_tac "cap_lift cap", simp_all, case_tac a, auto simp: cap_lift_def cap_tag_defs Let_def
+                  cap_small_frame_cap_lift_def cap_frame_cap_lift_def
+                  cap_endpoint_cap_lift_def cap_notification_cap_lift_def
+                  cap_cnode_cap_lift_def cap_thread_cap_lift_def
+                  cap_zombie_cap_lift_def cap_page_table_cap_lift_def
+                  cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
+                  Let_def cap_untyped_cap_lift_def  split: split_if_asm)
+
 lemma ccap_relation_get_capPtr_not_physical:
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap \<noteq> PhysicalClass \<rbrakk> \<Longrightarrow>
    get_capPtr_CL (cap_lift ccap) = Ptr 0"
   by (clarsimp simp: ccap_relation_def get_capPtr_CL_def cap_to_H_def Let_def
               split: option.split cap_CL.split_asm split_if_asm)
+  
+lemma ccap_relation_get_capIsPhysical:
+  "ccap_relation hcap ccap \<Longrightarrow> isPhysicalCap hcap = get_capIsPhysical_CL (cap_lift ccap)"
+  apply (case_tac hcap; clarsimp simp: cap_lifts cap_lift_domain_cap cap_lift_null_cap 
+                                       cap_lift_irq_control_cap cap_to_H_def 
+                                       get_capIsPhysical_CL_def 
+                       dest!: cap_get_tag_isCap_unfolded_H_cap)
+  apply (rename_tac arch_cap)
+  apply (case_tac arch_cap; clarsimp simp: cap_lifts cap_lift_asid_control_cap                                        
+                      dest!: cap_get_tag_isCap_unfolded_H_cap)
+  apply (rename_tac p R sz asid)
+  apply (case_tac sz)
+  apply (drule (1) cap_get_tag_isCap_unfolded_H_cap(16), clarsimp simp: cap_lifts)
+  apply (drule cap_get_tag_isCap_unfolded_H_cap(17), simp, clarsimp simp: cap_lifts)+
+  done
 
 lemma ctcb_ptr_to_tcb_ptr_mask':
   "is_aligned (ctcb_ptr_to_tcb_ptr (tcb_Ptr x)) (objBits (undefined :: tcb)) \<Longrightarrow>
@@ -3401,38 +3459,33 @@ lemma sameRegionAs_spec:
     -- "capa is an UntypedCap"
     apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(9))
     apply (intro conjI)
-       apply (rule impI, drule(1) cap_get_tag_to_H)+
-       apply (clarsimp simp: capAligned_def word_bits_conv
-                             objBits_simps get_capZombieBits_CL_def
-                             Let_def word_less_nat_alt
-                             less_mask_eq
-                      split: split_if_asm)
-      apply (subgoal_tac "capBlockSize_CL (cap_untyped_cap_lift cap_a) \<le> 0x1F")
-       apply (simp add: word_le_make_less)
-      apply (simp add: cap_untyped_cap_lift_def cap_lift_def
-                       cap_tag_defs word_and_le1)
-     apply (clarsimp simp: get_capSizeBits_valid_shift_word)
-    apply (clarsimp simp: from_bool_def Let_def split: split_if bool.splits)
-    apply (subst unat_of_nat32,
-           clarsimp simp: unat_of_nat32 word_bits_def
-                   dest!: get_capSizeBits_valid_shift)+
-    apply (clarsimp simp: ccap_relation_get_capPtr_physical
-                          ccap_relation_get_capPtr_untyped
-                          ccap_relation_get_capSizeBits_physical
-                          ccap_relation_get_capSizeBits_untyped)
-    apply (intro conjI impI)
-       apply ((clarsimp simp: ccap_relation_def map_option_case
-                              cap_untyped_cap_lift cap_to_H_def
-                              field_simps valid_cap'_def)+)[4]
-    apply (case_tac "capClass capb = PhysicalClass")
+     apply (rule impI, intro conjI)
+        apply (rule impI, drule(1) cap_get_tag_to_H)+
+        apply (clarsimp simp: capAligned_def word_bits_conv
+                              objBits_simps get_capZombieBits_CL_def
+                              Let_def word_less_nat_alt
+                              less_mask_eq true_def
+                       split: split_if_asm)
+       apply (subgoal_tac "capBlockSize_CL (cap_untyped_cap_lift cap_a) \<le> 0x1F")
+        apply (simp add: word_le_make_less)
+       apply (simp add: cap_untyped_cap_lift_def cap_lift_def
+                        cap_tag_defs word_and_le1)
+      apply (clarsimp simp: get_capSizeBits_valid_shift_word)
+     apply (clarsimp simp: from_bool_def Let_def split: split_if bool.splits)
+     apply (subst unat_of_nat32,
+              clarsimp simp: unat_of_nat32 word_bits_def
+                      dest!: get_capSizeBits_valid_shift)+
      apply (clarsimp simp: ccap_relation_get_capPtr_physical
-                           ccap_relation_get_capSizeBits_physical
-                           ccap_relation_get_capPtr_not_physical
                            ccap_relation_get_capPtr_untyped
-                           ccap_relation_get_capSizeBits_untyped
-                           field_simps ccap_relation_def
-                           cap_untyped_cap_lift cap_to_H_def)
-    apply (clarsimp simp: ccap_relation_get_capPtr_not_physical)
+                           ccap_relation_get_capIsPhysical[symmetric]
+                           ccap_relation_get_capSizeBits_physical
+                           ccap_relation_get_capSizeBits_untyped)
+     apply (intro conjI impI)
+        apply ((clarsimp simp: ccap_relation_def map_option_case
+                               cap_untyped_cap_lift cap_to_H_def
+                               field_simps valid_cap'_def)+)[4]
+    apply (rule impI, simp add: from_bool_0 ccap_relation_get_capIsPhysical[symmetric])
+    apply (simp add: from_bool_def false_def)
    -- "capa is a CNodeCap"
    apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
                 isCap_simps cap_tag_defs from_bool_def false_def)[1]

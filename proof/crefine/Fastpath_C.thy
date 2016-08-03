@@ -1101,6 +1101,7 @@ lemma switchToThread_fp_ccorres:
         apply (rule monadic_rewrite_bind_head)
         apply (rule_tac pd=pd and v=v
                      in armv_contextSwitch_HWASID_fp_rewrite)
+       apply (simp only: ccorres_seq_IF_False ccorres_seq_skip)
        apply (ctac(no_vcg) add: armv_contextSwitch_HWASID_ccorres)
         apply (simp add: storeWordUser_def bind_assoc case_option_If2
                          split_def
@@ -2264,7 +2265,6 @@ lemma threadSet_st_tcb_at_state:
   apply (clarsimp split: if_splits simp: st_tcb_at'_def o_def)
   done
 
-
 lemma fastpath_call_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
@@ -2460,8 +2460,9 @@ lemma fastpath_call_ccorres:
              apply (simp add: ccap_relation_pd_helper ptr_add_assertion_positive
                          del: Collect_const cong: call_ignore_cong)
              apply (rule ccorres_move_array_assertion_pd
-               | (rule ccorres_flip_Guard ccorres_flip_Guard2,
-                   rule ccorres_move_array_assertion_pd))+
+                    | (rule ccorres_flip_Guard ccorres_flip_Guard2,
+                       rule ccorres_move_array_assertion_pd)
+                    |  rule ccorres_flip_Guard2, rule ccorres_Guard_True_Seq)+
              apply (rule stored_hw_asid_get_ccorres_split[where P=\<top>], ceqv)
              apply (rule ccorres_abstract_ksCurThread, ceqv)
              apply (rename_tac ksCurThread_x)
@@ -3219,8 +3220,9 @@ lemma fastpath_reply_recv_ccorres:
                                     ptr_add_assertion_positive
                            del: Collect_const Word_Lib.ptr_add_def cong: call_ignore_cong)
                    apply (rule ccorres_move_array_assertion_pd
-                        | (rule ccorres_flip_Guard ccorres_flip_Guard2,
-                            rule ccorres_move_array_assertion_pd))+
+                          | (rule ccorres_flip_Guard ccorres_flip_Guard2,
+                             rule ccorres_move_array_assertion_pd)
+                          |  rule ccorres_flip_Guard2, rule ccorres_Guard_True_Seq)+
                    apply (rule stored_hw_asid_get_ccorres_split[where P=\<top>], ceqv)
                    apply (rule ccorres_abstract_ksCurThread, ceqv)
                    apply (rename_tac ksCurThread_x)

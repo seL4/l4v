@@ -9,7 +9,7 @@
  *)
 
 theory DetSchedInvs_AI
-imports Deterministic_AI
+imports "$L4V_ARCH/ArchDeterministic_AI"
 begin
 
 lemma get_etcb_rev:

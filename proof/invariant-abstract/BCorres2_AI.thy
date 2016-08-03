@@ -10,9 +10,8 @@
 
 theory BCorres2_AI
 imports
-  EmptyFail_AI
   "../../lib/BCorres_UL"
-  CNodeInv_AI
+  "./$L4V_ARCH/ArchEmptyFail_AI"
 begin
 
 definition all_but_exst where
@@ -28,7 +27,6 @@ lemma ef_mk_ef: "empty_fail f \<Longrightarrow> mk_ef (f s) = f s"
   apply force
   done
 
-
 lemma all_but_obvious: "all_but_exst (\<lambda>a b c d e f g h i. 
                     x = \<lparr>kheap = a, cdt = b, is_original_cap = c,
                      cur_thread = d, idle_thread = e,
@@ -36,7 +34,6 @@ lemma all_but_obvious: "all_but_exst (\<lambda>a b c d e f g h i.
                      interrupt_states = h, arch_state = i, exst = (exst x)\<rparr>) x"
   apply (simp add: all_but_exst_def)
   done
-
 
 lemma bluh: assumes a: "x =
         \<lparr>kheap = kheap ba, cdt = cdt ba,
@@ -54,9 +51,7 @@ lemma bluh: assumes a: "x =
 lemma valid_cs_trans_state[simp]: "valid_cs a b (trans_state g s) = valid_cs a b s"
   by(simp add: valid_cs_def)
 
-lemma obj_at[simp]: "obj_at a b (trans_state g s) = obj_at a b s"
-  apply (simp add: obj_at_def)
-  done
+lemmas obj_at[simp] = more_update.obj_at_update[of a b g s for a b g s]
 
 lemma valid_tcb_state[simp]: "valid_tcb_state a (trans_state g s) = valid_tcb_state a s"
   by (simp add: valid_tcb_state_def split: thread_state.splits)
@@ -68,8 +63,7 @@ lemma valid_tcb_trans_state[simp]: "valid_tcb a b (trans_state g s) = valid_tcb 
   apply (simp add: valid_tcb_def)
   done
 
-lemma valid_bound_tcb[simp]: "valid_bound_tcb a (trans_state g s) = valid_bound_tcb a s"
-  by (simp add: valid_bound_tcb_def split: option.splits)
+lemmas valid_bound_tcb[simp] = valid_bound_tcb_exst[of a g s for a g s]
 
 lemma valid_ep_trans_state[simp]: "valid_ep a (trans_state g s) = valid_ep a s"
   apply (simp add: valid_ep_def split: endpoint.splits)
@@ -93,12 +87,12 @@ lemma dxo_ex: "((),x :: det_ext state) \<in> fst (do_extended_op f s) \<Longrigh
   apply force
   done
 
-locale is_extended' =
-fixes f :: "'a det_ext_monad"
-assumes a: "(\<And>P. \<lbrace>all_but_exst P\<rbrace> f \<lbrace>\<lambda>_. all_but_exst P\<rbrace>)"
-begin
 
-interpretation Arch . (*FIXME: arch_split*)
+locale is_extended' =
+  fixes f :: "'a det_ext_monad"
+  assumes a: "\<And>P. \<lbrace>all_but_exst P\<rbrace> f \<lbrace>\<lambda>_. all_but_exst P\<rbrace>"
+
+context is_extended' begin
 
 lemmas v = use_valid[OF _ a, OF _ all_but_obvious,simplified all_but_exst_def, THEN bluh]
 
@@ -165,7 +159,7 @@ lemma equal_kernel_mappings[wp]: "I equal_kernel_mappings" by (rule lift_inv,sim
 
 lemma valid_asid_map[wp]: "I valid_asid_map" by (rule lift_inv,simp)
 
-lemma valid_global_pd_mappings[wp]: "I valid_global_pd_mappings" by (rule lift_inv,simp)
+lemma valid_global_vspace_mappings[wp]: "I valid_global_vspace_mappings" by (rule lift_inv,simp)
 
 lemma pspace_in_kernel_window[wp]: "I pspace_in_kernel_window" by (rule lift_inv,simp)
 
@@ -181,13 +175,17 @@ lemma pspace_aligned[wp]: "I (pspace_aligned)" by (rule lift_inv,simp)
 
 lemma pspace_distinct[wp]: "I (pspace_distinct)" by (rule lift_inv,simp)
 
-lemma valid_vs_lookup[wp]: "I (valid_vs_lookup)" by (rule lift_inv,simp)
-
 lemma caps_of_state[wp]: "I (\<lambda>s. P (caps_of_state s))" by (rule lift_inv,simp)
 
 lemma cte_wp_at[wp]: "I (\<lambda>s. P (cte_wp_at P' p s))" by (rule lift_inv,simp)
 
 lemma no_cap_to_obj_dr_emp[wp]: "I (no_cap_to_obj_dr_emp x)" by (rule lift_inv,simp)
+
+lemma valid_vs_lookup[wp]: "I (valid_vs_lookup)"
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (rule lift_inv, simp)
+  qed
 
 lemma typ_at[wp]: "I (\<lambda>s. P (typ_at T p s))" by (rule lift_inv,simp)
 
@@ -195,10 +193,12 @@ lemmas typ_ats[wp] = abs_typ_at_lifts [OF typ_at]
 
 end
 
-locale is_extended = is_extended' + constrains f :: "unit det_ext_monad"
-assumes b: "empty_fail f"
-begin
 
+locale is_extended = is_extended' +
+  constrains f :: "unit det_ext_monad"
+  assumes b: "empty_fail f"
+
+context is_extended begin
 
 lemma dxo_eq[simp]: 
   "do_extended_op f = f"
@@ -215,6 +215,7 @@ lemma dxo_eq[simp]:
 
 end
 
+
 lemma all_but_exst_update[simp]:
   "all_but_exst P (trans_state f s) = all_but_exst P s"
   apply (simp add: all_but_exst_def)
@@ -226,28 +227,29 @@ crunch all_but_exst[wp]: set_scheduler_action,tcb_sched_action,next_domain,
 
 crunch (empty_fail) empty_fail[wp]: cap_move_ext
 
-interpretation set_scheduler_action_extended: is_extended "set_scheduler_action a"
+global_interpretation set_scheduler_action_extended: is_extended "set_scheduler_action a"
   apply (unfold_locales)
   apply wp
   done
 
-interpretation tcb_sched_action_extended: is_extended "tcb_sched_action a b"
+global_interpretation tcb_sched_action_extended: is_extended "tcb_sched_action a b"
   apply (unfold_locales)
   apply wp
   done
 
-interpretation next_domain_extended: is_extended "next_domain"
+global_interpretation next_domain_extended: is_extended "next_domain"
   apply (unfold_locales)
   apply wp
   done
 
-interpretation cap_move_ext: is_extended "cap_move_ext a b c d"
+global_interpretation cap_move_ext: is_extended "cap_move_ext a b c d"
   apply (unfold_locales)
   apply wp
   done
 
 lemmas rec_del_simps_ext =
     rec_del.simps [THEN ext[where f="rec_del args" for args]]
+
 
 lemma rec_del_s_bcorres: 
 notes rec_del.simps[simp del]
@@ -285,11 +287,9 @@ shows
   qed
 
 
-
 lemmas rec_del_bcorres = use_sbcorres_underlying[OF rec_del_s_bcorres]
 
 crunch (bcorres)bcorres[wp]: cap_delete truncate_state
-
    
 lemma cap_revoke_s_bcorres: 
   shows
@@ -310,10 +310,6 @@ qed
 
 lemmas cap_revoke_bcorres = use_sbcorres_underlying[OF cap_revoke_s_bcorres]
 
-context Arch begin global_naming ARM (*FIXME: arch_split*)
-crunch (bcorres)bcorres[wp]: invoke_cnode truncate_state (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set recycle_cap_ext)
-end
-
 crunch (bcorres)bcorres[wp]: "Tcb_A.restart",as_user,option_update_thread truncate_state (simp: gets_the_def ignore: clearMemory check_cap_at gets_the getRegister setRegister getRestartPC setNextPC)
 
 lemma check_cap_at_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (check_cap_at a b f) (check_cap_at a b f')"
@@ -321,32 +317,12 @@ lemma check_cap_at_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (check_c
   apply (wp | simp)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma invoke_tcb_bcorres[wp]: "bcorres (invoke_tcb a) (invoke_tcb a)"
-  apply (cases a)
-  apply (wp | wpc | simp)+
-  apply (rename_tac option)
-  apply (case_tac option)
-  apply (wp | wpc | simp)+
-  done
-end
-
 lemma invoke_domain_bcorres[wp]: "bcorres (invoke_domain t d) (invoke_domain t d)"
   by (simp add: invoke_domain_def, wp)
 
 lemma truncate_state_detype[simp]: "truncate_state (detype x s) = detype x (truncate_state s)"
   apply (simp add: detype_def trans_state_def)
   done
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch (bcorres)bcorres[wp]: create_cap,init_arch_objects,retype_region,delete_objects truncate_state (ignore: freeMemory clearMemory retype_region_ext)
-end
-
-lemma invoke_untyped_bcorres[wp]:" bcorres (invoke_untyped a) (invoke_untyped a)"
-  apply (cases a)
-  apply (wp | simp)+
-  done
-
 
 lemma resolve_address_bits'_sbcorres:
   shows
@@ -365,7 +341,6 @@ lemma resolve_address_bits_bcorres[wp]: "bcorres (resolve_address_bits a) (resol
     apply (rule use_sbcorres_underlying)
     apply (rule resolve_address_bits'_sbcorres)
   done
-
 
 lemma bcorres_cap_fault_on_failure[wp]: "bcorres f f' \<Longrightarrow> bcorres (cap_fault_on_failure a b f) (cap_fault_on_failure a b f')"
   apply (simp add: cap_fault_on_failure_def)
@@ -401,68 +376,19 @@ lemma get_receive_slots_bcorres[wp]: "bcorres (get_receive_slots a b) (get_recei
   apply (wp | simp)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch (bcorres)bcorres[wp]: set_extra_badge,derive_cap truncate_state (ignore: storeWord)
-
-lemma transfer_caps_loop_bcorres[wp]:
- "bcorres (transfer_caps_loop ep buffer n caps slots mi) (transfer_caps_loop ep buffer n caps slots mi)"
-  apply (induct caps arbitrary: slots n mi ep)
-   apply simp
-   apply wp
-  apply (case_tac a)
-  apply simp
-  apply (intro impI conjI)
-             apply (wp | simp)+
-  done
-end
-
 lemma make_fault_msg_bcorres[wp]: "bcorres (make_fault_msg a b) (make_fault_msg a b)"
   apply (cases a)
   apply (wp | wpc | simp | intro impI conjI allI)+
   done
-
-
-
 
 lemma handle_fault_reply_bcorres[wp]: "bcorres (handle_fault_reply a b c d) (handle_fault_reply a b c d)"
   apply (cases a)
   apply (wp | simp)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma invoke_irq_control_bcorres[wp]: "bcorres (invoke_irq_control a) (invoke_irq_control a)"
-  apply (cases a)
-  apply (wp | simp add: arch_invoke_irq_control_def)+
-  done
-
-lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_irq_handler a)"
-  apply (cases a)
-  apply (wp | simp)+
-  done
-end
-
-context Arch begin global_naming ARM (*FIXME: arch_split*)
-crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
-  (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
-         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME)
-end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma perform_invocation_bcorres[wp]: "bcorres (perform_invocation a b c) (perform_invocation a b c)"
-  apply (cases c)
-  apply (wp | wpc | simp)+
-  done
-end
-
 crunch (bcorres)bcorres[wp]: lookup_source_slot,ensure_empty,lookup_pivot_slot truncate_state
 
-
 declare option.case_cong[cong]
-
-lemma decode_cnode_invocation[wp]: "bcorres (decode_cnode_invocation a b c d) (decode_cnode_invocation a b c d)"
-  apply (simp add: decode_cnode_invocation_def)
-  apply (wp | wpc | simp add: split_def | intro impI conjI)+
-  done
 
 crunch (bcorres)bcorres[wp]: range_check truncate_state
 
@@ -481,58 +407,11 @@ lemma decode_copy_registers_bcorres[wp]: "bcorres (decode_copy_registers a (cap.
   apply (wp | wpc | simp)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch (bcorres)bcorres[wp]: decode_set_ipc_buffer,decode_set_space,decode_set_priority,decode_bind_notification,decode_unbind_notification truncate_state
-end
-
-lemma decode_tcb_configure_bcorres[wp]: "bcorres (decode_tcb_configure b (cap.ThreadCap c) d e)
-     (decode_tcb_configure b (cap.ThreadCap c) d e)"
-  apply (simp add: decode_tcb_configure_def | wp)+
-  done
-
-lemma decode_tcb_invocation_bcorres[wp]:"bcorres (decode_tcb_invocation a b (cap.ThreadCap c) d e) (decode_tcb_invocation a b (cap.ThreadCap c) d e)"
-  apply (simp add: decode_tcb_invocation_def)
-  apply (wp | wpc | simp)+
-  done
-
-context Arch begin global_naming ARM (*FIXME: arch_split*)
-lemma create_mapping_entries_bcorres[wp]: "bcorres (create_mapping_entries a b c d e f) (create_mapping_entries a b c d e f)"
-  apply (cases c)
-  apply (wp | simp)+
-  done
-
-lemma ensure_safe_mapping_bcorres[wp]: "bcorres (ensure_safe_mapping a) (ensure_safe_mapping a)"
-  apply (induct rule: ensure_safe_mapping.induct)
-  apply (wp | wpc | simp)+
-  done
-end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunch (bcorres)bcorres[wp]: handle_invocation truncate_state (simp:  Syscall_A.syscall_def Let_def gets_the_def ignore: get_register Syscall_A.syscall cap_fault_on_failure set_register without_preemption const_on_failure)
-
-crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
-
-lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fault a b)"
-  apply (cases b)
-  apply (simp | wp)+
-  done
-
-lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
-  apply (cases e)
-  apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def handle_interrupt_def Let_def | intro impI conjI allI | wp | wpc)+
-  done
-
-crunch (bcorres)bcorres[wp]: guarded_switch_to,switch_to_idle_thread truncate_state (ignore: storeWord clearExMonitor)
-
-end
-
 lemma alternative_first:"x \<in> fst (f s) \<Longrightarrow> x \<in> fst ((f \<sqinter> g) s)"
   by (simp add: alternative_def)
 
 lemma alternative_second:"x \<in> fst (g s) \<Longrightarrow> x \<in> fst ((f \<sqinter> g) s)"
   by (simp add: alternative_def)
-
 
 lemma bcorres_underlying_dest: "bcorres_underlying l f k \<Longrightarrow> ((),s') \<in> fst (f s) \<Longrightarrow>
        ((),l s') \<in> fst (k (l s))"
@@ -541,8 +420,7 @@ lemma bcorres_underlying_dest: "bcorres_underlying l f k \<Longrightarrow> ((),s
   done
 
 lemma trans_state_twice[simp]: "trans_state (\<lambda>_. e) (trans_state f s) = trans_state (\<lambda>_. e) s"
-  apply simp
-  done
+  by (rule trans_state_update'')
   
 lemma guarded_sub_switch: "((),x) \<in> fst (guarded_switch_to word s) \<Longrightarrow>
        ((),x) \<in> fst (switch_to_thread word s)
@@ -553,26 +431,10 @@ lemma guarded_sub_switch: "((),x) \<in> fst (guarded_switch_to word s) \<Longrig
                             in_monad)
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma choose_switch_or_idle:
-  "((), s') \<in> fst (choose_thread s) \<Longrightarrow>
-       (\<exists>word. ((),s') \<in> fst (guarded_switch_to word s)) \<or>
-       ((),s') \<in> fst (switch_to_idle_thread s)"
-  apply (simp add: choose_thread_def)
-  apply (clarsimp simp add: switch_to_idle_thread_def bind_def gets_def
-                   arch_switch_to_idle_thread_def in_monad
-                   return_def get_def modify_def put_def
-                    get_thread_state_def
-                   thread_get_def
-                   split: split_if_asm)
-  apply force
-  done
-end
-
-lemma truncate_state_updates[simp]:"truncate_state (scheduler_action_update f s) = truncate_state s"
-      "truncate_state (ready_queues_update g s) = truncate_state s"
-  apply (simp add: trans_state_def)+
-  done
+lemma truncate_state_updates[simp]:
+  "truncate_state (scheduler_action_update f s) = truncate_state s"
+  "truncate_state (ready_queues_update g s) = truncate_state s"
+  by (rule trans_state_update'')+
 
 (* the old schedule unit def no longer is a refinement of the det_ext def.
 

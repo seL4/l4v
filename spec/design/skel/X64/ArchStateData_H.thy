@@ -23,7 +23,7 @@ begin
 
 context X64 begin
 
-#INCLUDE_HASKELL SEL4/Model/StateData/X64.lhs CONTEXT X64
+#INCLUDE_HASKELL SEL4/Model/StateData/X64.lhs CONTEXT X64 NOT X64VSpaceRegionUse
 
 end
 end

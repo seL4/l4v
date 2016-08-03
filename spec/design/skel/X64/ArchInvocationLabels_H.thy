@@ -11,7 +11,9 @@
 chapter "Architecture-specific Invocation Labels"
 
 theory ArchInvocationLabels_H
-imports "../../../lib/Enumeration" "../../machine/X64/Setup_Locale"
+imports
+  "../../../lib/Word_Lib/Enumeration"
+  "../../machine/Setup_Locale"
 begin
 context Arch begin global_naming X64_H
 

@@ -222,7 +222,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma invoke_tcb_tc_respects_aag:
 
   "\<lbrace> integrity aag X st and pas_refined aag
-         and einvs and simple_sched_action and tcb_inv_wf (tcb_invocation.ThreadControl t sl ep priority croot vroot buf)
+         and einvs and simple_sched_action and Tcb_AI.tcb_inv_wf (tcb_invocation.ThreadControl t sl ep priority croot vroot buf)
          and K (authorised_tcb_inv aag (tcb_invocation.ThreadControl t sl ep priority croot vroot buf))\<rbrace>
      invoke_tcb (tcb_invocation.ThreadControl t sl ep priority croot vroot buf)
    \<lbrace>\<lambda>rv. integrity aag X st and pas_refined aag\<rbrace>"
@@ -294,7 +294,7 @@ lemma invoke_tcb_tc_respects_aag:
 
 lemma invoke_tcb_unbind_notification_respects:
   "\<lbrace>integrity aag X st and pas_refined aag
-       and einvs and tcb_inv_wf (tcb_invocation.NotificationControl t None) 
+       and einvs and Tcb_AI.tcb_inv_wf (tcb_invocation.NotificationControl t None) 
        and simple_sched_action and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t None))\<rbrace>
      invoke_tcb (tcb_invocation.NotificationControl t None)
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>" 
@@ -331,7 +331,7 @@ lemma bind_notification_respects:
 
 lemma invoke_tcb_bind_notification_respects:
   "\<lbrace>integrity aag X st and pas_refined aag
-      and einvs and tcb_inv_wf (tcb_invocation.NotificationControl t (Some ntfn))
+      and einvs and Tcb_AI.tcb_inv_wf (tcb_invocation.NotificationControl t (Some ntfn))
       and simple_sched_action and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t (Some ntfn)))\<rbrace>
      invoke_tcb (tcb_invocation.NotificationControl t (Some ntfn))
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
@@ -343,21 +343,21 @@ lemma invoke_tcb_bind_notification_respects:
 
 lemma invoke_tcb_ntfn_control_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag
-      and einvs and tcb_inv_wf (tcb_invocation.NotificationControl t ntfn)
+      and einvs and Tcb_AI.tcb_inv_wf (tcb_invocation.NotificationControl t ntfn)
       and simple_sched_action and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t ntfn))\<rbrace>
      invoke_tcb (tcb_invocation.NotificationControl t ntfn)
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (case_tac ntfn, simp_all del: invoke_tcb.simps tcb_inv_wf.simps K_def)
+  apply (case_tac ntfn, simp_all del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps K_def)
   apply (wp invoke_tcb_bind_notification_respects invoke_tcb_unbind_notification_respects)
   done
   
 lemma invoke_tcb_respects:
   "\<lbrace>integrity aag X st and pas_refined aag
-         and einvs and simple_sched_action and tcb_inv_wf ti and K (authorised_tcb_inv aag ti)\<rbrace>
+         and einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti and K (authorised_tcb_inv aag ti)\<rbrace>
      invoke_tcb ti
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (cases ti, simp_all add: hoare_conjD1 [OF invoke_tcb_tc_respects_aag [simplified simp_thms]]
-                            del: invoke_tcb.simps tcb_inv_wf.simps K_def)
+                            del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps K_def)
   apply (safe intro!: hoare_gen_asm)
   apply ((wp itr_wps mapM_x_wp' | simp add: if_apply_def2 split del: split_if
             | wpc | clarsimp simp: authorised_tcb_inv_def
@@ -383,7 +383,7 @@ lemma bind_notification_pas_refined[wp]:
   done    
 
 lemma invoke_tcb_ntfn_control_pas_refined[wp]:
-  "\<lbrace>pas_refined aag and tcb_inv_wf (tcb_invocation.NotificationControl t ntfn) and einvs and simple_sched_action 
+  "\<lbrace>pas_refined aag and Tcb_AI.tcb_inv_wf (tcb_invocation.NotificationControl t ntfn) and einvs and simple_sched_action 
      and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t ntfn))\<rbrace> 
      invoke_tcb (tcb_invocation.NotificationControl t ntfn) 
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
@@ -393,7 +393,7 @@ lemma invoke_tcb_ntfn_control_pas_refined[wp]:
   done
 
 lemma invoke_tcb_pas_refined:
-  "\<lbrace>pas_refined aag and tcb_inv_wf ti and einvs and simple_sched_action and K (authorised_tcb_inv aag ti)\<rbrace>
+  "\<lbrace>pas_refined aag and Tcb_AI.tcb_inv_wf ti and einvs and simple_sched_action and K (authorised_tcb_inv aag ti)\<rbrace>
      invoke_tcb ti
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (cases "\<exists>t sl ep priority croot vroot buf.

@@ -15,7 +15,7 @@ imports
   "../../../lib/Lib"
   "../../../lib/Word_Lib/Word_Enum"
   "../../../lib/Defs"
-  Setup_Locale
+  "../Setup_Locale"
 begin
 (* FIXME X64: Missing lots of stuff *)
 

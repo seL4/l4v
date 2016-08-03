@@ -1103,6 +1103,13 @@ lemma vs_lookup1_stateI:
   shows "(r \<rhd>1 r') s'" using 1 ko
   by (fastforce simp: obj_at_def vs_lookup1_def)
 
+lemma vs_lookup_pages1_stateI2:
+  assumes 1: "(r \<unrhd>1 r') s"
+  assumes ko: "\<And>ko. \<lbrakk> ko_at ko (snd r) s; vs_refs_pages ko \<noteq> {} \<rbrakk> 
+               \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') (snd r) s'"
+  shows "(r \<unrhd>1 r') s'" using 1 ko
+  by (fastforce simp: obj_at_def vs_lookup_pages1_def)
+
 lemma vs_lookup_trans_sub:
   assumes ko: "\<And>ko p. ko_at ko p s \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"
   shows "vs_lookup_trans s \<subseteq> vs_lookup_trans s'"

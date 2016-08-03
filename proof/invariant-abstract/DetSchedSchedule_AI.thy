@@ -9,7 +9,7 @@
  *)
 
 theory DetSchedSchedule_AI
-imports DetSchedAux_AI
+imports "$L4V_ARCH/ArchDetSchedAux_AI"
 begin
 
 lemma ethread_get_wp[wp]: "\<lbrace>\<lambda>s. etcb_at (\<lambda>t. P (f t) s) ptr s\<rbrace> ethread_get f ptr \<lbrace>P\<rbrace>"

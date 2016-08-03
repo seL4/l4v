@@ -9,13 +9,31 @@
  *)
 
 theory Detype_AI
-imports Retype_AI
+imports "./$L4V_ARCH/ArchRetype_AI"
 begin
 
+locale Detype_AI = 
+  fixes state_ext_type :: "'a :: state_ext itself"
+  assumes valid_globals_irq_node:
+    "\<And>s cap ptr irq. \<lbrakk> valid_global_refs (s :: 'a state); cte_wp_at (op = cap) ptr s \<rbrakk>
+          \<Longrightarrow> interrupt_irq_node s irq \<notin> cap_range cap"
+  assumes caps_of_state_ko:
+    "\<And>cap s. valid_cap cap (s :: 'a state) 
+     \<Longrightarrow> is_untyped_cap cap \<or> 
+         cap_range cap = {} \<or> 
+         (\<forall>ptr \<in> cap_range cap. \<exists>ko. kheap s ptr = Some ko)"
+  assumes mapM_x_storeWord:
+   "\<And>ptr. is_aligned ptr 2 
+     \<Longrightarrow> mapM_x (\<lambda>x. storeWord (ptr + of_nat x * 4) 0) [0..<n]
+         = modify (underlying_memory_update
+                (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * 4 then 0 else m x))"
+  assumes empty_fail_freeMemory:
+    "empty_fail (freeMemory ptr bits)"
+
+                
 lemma obj_at_detype[simp]:
   "obj_at P p (detype S s) = (p \<notin> S \<and> obj_at P p s)"
   by (clarsimp simp: obj_at_def detype_def)
-
 
 lemma pspace_detype[simp]:
   "(kheap (detype S s) ptr = Some x)
@@ -72,19 +90,10 @@ lemma ex_cte_cap_to_obj_ref_disj:
   apply clarsimp
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma valid_globals_irq_node:
-  "\<lbrakk> valid_global_refs s; cte_wp_at (op = cap) ptr s \<rbrakk>
-        \<Longrightarrow> interrupt_irq_node s irq \<notin> cap_range cap"
-  apply (erule(1) valid_global_refsD)
-  apply (simp add: global_refs_def)
-  done
-end
 
 definition
   "descendants_range_in S p \<equiv> 
   \<lambda>s. \<forall>p' \<in> descendants_of p (cdt s). cte_wp_at (\<lambda>c. cap_range c \<inter> S = {}) p' s"
-
 
 lemma descendants_range_in_lift:
   assumes st: "\<And>P. \<lbrace>\<lambda>s. P (cdt s)\<rbrace> f \<lbrace>\<lambda>r s. P (cdt s)\<rbrace>"
@@ -136,7 +145,6 @@ definition
   "descendants_range cap p \<equiv>
   \<lambda>s. \<forall>p' \<in> descendants_of p (cdt s). cte_wp_at (\<lambda>c. cap_range c \<inter> cap_range cap = {}) p' s"
 
-
 lemma descendants_rangeD:
   "\<lbrakk> descendants_range cap p s; cdt s \<Turnstile> p \<rightarrow> p' \<rbrakk> \<Longrightarrow> 
   \<exists>c. caps_of_state s p' = Some c \<and> cap_range c \<inter> cap_range cap = {}"
@@ -155,17 +163,7 @@ lemma subset_splitE:
 lemma cap_range_untyped_range_eq[simp]:
   "is_untyped_cap a \<Longrightarrow> cap_range a = untyped_range a"
   by (clarsimp simp:is_cap_simps cap_range_def)
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma caps_of_state_ko: 
-  "valid_cap cap s \<Longrightarrow> is_untyped_cap cap \<or> cap_range cap = {} \<or> (\<forall>ptr \<in> cap_range cap. \<exists>ko. kheap s ptr = Some ko)"
-  apply (case_tac cap)
-    apply (clarsimp simp:cap_range_def valid_cap_def obj_at_def is_cap_simps split:option.splits)+
-  apply (rename_tac arch_cap ptr)
-  apply (case_tac arch_cap)
-    apply (fastforce simp:cap_range_def obj_at_def is_cap_simps split:option.splits)+
-  done
-end
+  
 
 lemma p_in_obj_range:
   "\<lbrakk> kheap s p = Some ko; pspace_aligned s; valid_objs s \<rbrakk> \<Longrightarrow> p \<in> obj_range p ko"
@@ -178,8 +176,8 @@ lemma p_in_obj_range:
   done
 
 
-lemma untyped_cap_descendants_range:
-  "\<lbrakk>valid_pspace s; caps_of_state s p = Some cap; is_untyped_cap cap;valid_mdb s;
+lemma (in Detype_AI) untyped_cap_descendants_range:
+  "\<lbrakk>valid_pspace (s :: 'a state); caps_of_state s p = Some cap; is_untyped_cap cap;valid_mdb s;
    q\<in> descendants_of p (cdt s) \<rbrakk>
    \<Longrightarrow>  cte_wp_at (\<lambda>c. (cap_range c \<inter> usable_untyped_range cap = {})) q s"
    apply (clarsimp simp: valid_pspace_def)
@@ -255,22 +253,6 @@ lemma untyped_children_in_mdbEE:
    apply (clarsimp simp:cte_wp_at_caps_of_state)+
   done
 
-
-locale detype_locale =
-  fixes cap and ptr and s
-  assumes cap: "cte_wp_at (op = cap) ptr s"
-  and untyped: "is_untyped_cap cap"
-  and  nodesc: "descendants_range cap ptr s"
-  and    invs: "invs s"
-  and   child: "untyped_children_in_mdb s"
-
-
-lemma descendants_range_inD:
-  "\<lbrakk>descendants_range_in S p s;p'\<in>descendants_of p (cdt s);caps_of_state s p' = Some cap\<rbrakk>
- \<Longrightarrow> cap_range cap \<inter> S = {}"
-  by (auto simp:descendants_range_in_def cte_wp_at_caps_of_state dest!:bspec)
-
-
 definition
   "clear_um S \<equiv> (machine_state_update \<circ> underlying_memory_update)
                 (\<lambda>m p. if p\<in>S then 0 else m p)"
@@ -278,6 +260,11 @@ definition
 interpretation clear_um: 
   p_arch_idle_update_int_eq "clear_um S"
   by unfold_locales (simp_all add: clear_um_def)
+ 
+lemma descendants_range_inD:
+  "\<lbrakk>descendants_range_in S p s;p'\<in>descendants_of p (cdt s);caps_of_state s p' = Some cap\<rbrakk>
+ \<Longrightarrow> cap_range cap \<inter> S = {}"
+  by (auto simp:descendants_range_in_def cte_wp_at_caps_of_state dest!:bspec)
 
 lemma descendants_range_def2:
   "descendants_range cap p = descendants_range_in (cap_range cap) p"
@@ -353,24 +340,23 @@ lemma descendants_range_imply_no_descendants:
    apply simp
   apply auto
   done
-  
 
-context detype_locale
-begin
-lemma drange:"descendants_range_in (cap_range cap) ptr s"
-   using nodesc
+locale detype_locale =   
+  fixes cap and ptr and s 
+  assumes cap: "cte_wp_at (op = cap) ptr s"
+  and untyped: "is_untyped_cap cap"
+  and  nodesc: "descendants_range cap ptr s"
+  and    invs: "invs s"
+  and   child: "untyped_children_in_mdb s"
+
+context detype_locale begin
+
+lemma drange:"descendants_range_in (cap_range cap) ptr (s :: 'a state)"
+   using nodesc 
    by (simp add:descendants_range_def2)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma valid_cap:
-    "\<And>cap'. \<lbrakk> s \<turnstile> cap'; obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap) \<rbrakk>
-    \<Longrightarrow> detype (untyped_range cap) s \<turnstile> cap'"
-  by (clarsimp simp: valid_cap_def valid_untyped_def obj_reply_refs_def
-              split: cap.split_asm option.splits arch_cap.split_asm bool.split_asm)
-end
 lemma iflive: "if_live_then_nonz_cap s"
     using invs by (simp add: invs_def valid_state_def valid_pspace_def)
-
 
 lemma live_okE:
     "\<And>P p. \<lbrakk> obj_at P p s; \<And>obj. P obj \<Longrightarrow> live obj \<rbrakk>
@@ -387,19 +373,117 @@ lemma live_okE:
     apply (simp add:untyped)
     done
 
-
 lemma ifunsafe: "if_unsafe_then_cap s"
   using invs by (simp add: invs_def valid_state_def valid_pspace_def)
 
-
 lemma globals: "valid_global_refs s"
   using invs by (simp add: invs_def valid_state_def)
+  
+lemma state_refs: "state_refs_of (detype (untyped_range cap) s) = state_refs_of s"
+  apply (rule ext, clarsimp simp add: state_refs_of_detype)
+  apply (rule sym, rule equals0I, drule state_refs_of_elemD)
+  apply (drule live_okE, rule refs_of_live, clarsimp)
+  apply simp
+  done
+
+lemma idle: "idle_thread (detype (untyped_range cap) s) = idle_thread s"
+  by (simp add: detype_def)
+
+lemma valid_arch_caps: "valid_arch_caps s"
+  using invs by (simp add: invs_def valid_state_def)
+    
+  (* moreover *)
+lemma valid_arch_state: "valid_arch_state s" using invs
+  by clarsimp
+  (* moreover *)
+lemma ut_mdb: "untyped_mdb (cdt s) (caps_of_state s)"
+  using invs
+  by (clarsimp dest!: invs_mdb simp add: valid_mdb_def)
+  
+lemma arch_state_det: "\<And>r. arch_state (detype r s) = arch_state s" (* SIMP DUP*)
+  by (simp add: detype_def)
+  
+lemma no_obj_refs:
+  "\<And>slot cap' x. \<lbrakk> caps_of_state s slot = Some cap'; 
+                   x \<in> obj_refs cap'; x \<in> untyped_range cap \<rbrakk> \<Longrightarrow> False" 
+  using cap untyped
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (drule (2) untyped_mdbD)
+    apply blast
+   apply (rule ut_mdb)
+  apply (drule descendants_range_inD[OF drange])
+    apply (simp add:cte_wp_at_caps_of_state)
+  apply (simp add:cap_range_def)
+  apply blast
+  done
+  
+lemma unique_table_refs:
+    "\<And>cps P. unique_table_refs cps
+             \<Longrightarrow> unique_table_refs (\<lambda>x. if P x then None else cps x)"
+    apply (simp only: unique_table_refs_def option.simps
+                      simp_thms
+               split: split_if)
+    apply blast
+    done
+    
+lemma valid_global_objs: "valid_global_objs s"
+  using invs by (clarsimp simp: invs_def valid_state_def)
+  
+lemma valid_pspace: "valid_pspace s" using invs
+  by (simp add: invs_def valid_state_def)
+  
+lemma cap_is_valid: "valid_cap cap s"
+  by (rule cte_wp_valid_cap[OF cap invs_valid_objs[OF invs]])
+  
+end
 
 
-lemma irq_node: "interrupt_irq_node s irq \<notin> untyped_range cap"
+locale Detype_AI_2 =
+  fixes cap ptr s 
+  assumes detype_invariants:
+    "\<lbrakk> cte_wp_at (op = cap) ptr s
+     ; is_untyped_cap cap
+     ; descendants_range cap ptr s
+     ; invs s
+     ; untyped_children_in_mdb s
+     ; ct_active s
+      \<rbrakk>
+     \<Longrightarrow> (invs and untyped_children_in_mdb)
+               (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
+
+locale detype_locale_gen_1 = Detype_AI "TYPE('a)" + detype_locale cap ptr s
+  for cap ptr
+  and s :: "('a :: state_ext) state" +
+  assumes valid_cap:
+    "\<And>cap'. \<lbrakk> s \<turnstile> cap'; obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap) \<rbrakk>
+      \<Longrightarrow> detype (untyped_range cap) s \<turnstile> cap'"
+  assumes glob_det: "\<And>r. global_refs (detype r s) = global_refs s"
+
+locale detype_locale_gen_2 = detype_locale_gen_1 cap ptr s
+  for cap ptr
+  and s :: "('a :: state_ext) state" +
+  assumes detype_invs_assms:
+    "valid_idle (detype (untyped_range cap) s)"
+    "valid_arch_state (detype (untyped_range cap) s)"
+    "valid_arch_objs (detype (untyped_range cap) s)"
+    "valid_arch_caps (detype (untyped_range cap) s)"
+    "valid_global_objs (detype (untyped_range cap) s)"
+    "valid_kernel_mappings (detype (untyped_range cap) s)"
+    "valid_asid_map (detype (untyped_range cap) s)"
+    "equal_kernel_mappings (detype (untyped_range cap) s)"  
+    "valid_global_vspace_mappings (detype (untyped_range cap) s)"
+    "pspace_in_kernel_window (detype (untyped_range cap) s)"
+    "valid_machine_state (clear_um (untyped_range cap) (detype (untyped_range cap) s))"  
+
+locale detype_locale_arch = detype_locale + Arch        
+
+context detype_locale_gen_1 
+begin
+
+lemma irq_node: 
+  "interrupt_irq_node (s :: 'a state) irq \<notin> untyped_range cap"
   using valid_globals_irq_node [OF globals cap]
   by (simp add: cap_range_def)
-
 
 lemma non_null_present:
     "\<And>p. cte_wp_at (op \<noteq> cap.NullCap) p s \<Longrightarrow> fst p \<notin> untyped_range cap"
@@ -414,7 +498,6 @@ lemma non_null_present:
     apply (clarsimp simp: irq_node)
     done
 
-
 lemma non_filter_detype:
   "null_filter (caps_of_state s) = null_filter (caps_of_state (detype (untyped_range cap) s))"
   apply (intro iffI ext)
@@ -426,20 +509,16 @@ lemma non_filter_detype:
   apply simp
   done
 
-
 lemma non_null_caps:
     "\<And>p c. \<lbrakk> caps_of_state s p = Some c; c \<noteq> cap.NullCap \<rbrakk>
      \<Longrightarrow> fst p \<notin> untyped_range cap"
     by (clarsimp simp: cte_wp_at_caps_of_state non_null_present)
 
-
 lemma vreply: "valid_reply_caps s"
   using invs by (simp add: invs_def valid_state_def)
 
-
 lemma vmaster: "valid_reply_masters s"
   using invs by (simp add: invs_def valid_state_def)
-
 
 lemma valid_cap2:
     "\<And>cap'. \<lbrakk> \<exists>p. cte_wp_at (op = cap') p s \<rbrakk>
@@ -461,22 +540,22 @@ lemma valid_cap2:
     apply (simp add: pred_tcb_at_def)
     apply (fastforce dest: live_okE)
     done
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma invariants:
-  assumes ct_act: "ct_active s"
-  shows "(invs and untyped_children_in_mdb)
-         (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
-proof (simp add: invs_def valid_state_def valid_pspace_def
-                 detype_clear_um_independent clear_um.state_refs_update, safe)
+  
+(* invariants BEGIN *)
 
-  have refsym: "sym_refs (state_refs_of s)"
-    using invs by (simp add: invs_def valid_state_def valid_pspace_def)
-  have refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
-    by (fastforce intro: refs_of_live dest!: sym_refs_ko_atD[OF _ refsym] live_okE)
-  have refs_of2: "\<And>obj p. kheap s p = Some obj
-                       \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
-    by (simp add: refs_of obj_at_def)
-  have valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbrakk>
+named_theorems detype_invs_lemmas
+
+lemma refsym : "sym_refs (state_refs_of s)"
+  using invs by (simp add: invs_def valid_state_def valid_pspace_def)
+  
+lemma refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
+  by (fastforce intro: refs_of_live dest!: sym_refs_ko_atD[OF _ refsym] live_okE)
+  
+lemma refs_of2: "\<And>obj p. kheap s p = Some obj 
+                     \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
+  by (simp add: refs_of obj_at_def)  
+  
+lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbrakk>
                              \<Longrightarrow> valid_obj p obj (detype (untyped_range cap) s)"
     apply (clarsimp simp: valid_obj_def
                    split: Structures_A.kernel_object.split_asm)
@@ -503,37 +582,34 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
      apply (rename_tac notification ntfn_ext)
      apply (case_tac "ntfn_obj ntfn_ext")
        apply (auto simp: valid_ntfn_def ntfn_bound_refs_def split: option.splits)
-    done
+    done 
+  
+lemma valid_objs_detype[detype_invs_lemmas] : "valid_objs (detype (untyped_range cap) s)"
+  using invs_valid_objs[OF invs]
+  apply (clarsimp simp add: valid_objs_def dom_def)
+  apply (erule allE, erule impE, erule exI)
+  apply (clarsimp elim!: valid_obj)
+  apply (simp add: obj_at_def)
+  done
+  
+lemma pspace_aligned_detype[detype_invs_lemmas] :  "pspace_aligned (detype (untyped_range cap) s)"
+  using invs_psp_aligned[OF invs]
+  apply (clarsimp simp: pspace_aligned_def)
+  apply (drule bspec, erule domI)
+  apply (clarsimp simp: detype_def)
+  done
 
-  show "valid_objs (detype (untyped_range cap) s)"
-    using invs_valid_objs[OF invs]
-    apply (clarsimp simp add: valid_objs_def dom_def)
-    apply (erule allE, erule impE, erule exI)
-    apply (clarsimp elim!: valid_obj)
-    apply (simp add: obj_at_def)
-    done
+lemma sym_refs_detype[detype_invs_lemmas] : "sym_refs (state_refs_of (detype (untyped_range cap) s))"
+  using refsym by (simp add: state_refs)
+  
+lemma pspace_distinct_detype[detype_invs_lemmas]: "pspace_distinct (detype (untyped_range cap) s)"
+  apply (insert invs, drule invs_distinct)
+  apply (auto simp: pspace_distinct_def)
+  done  
 
-  show "pspace_aligned (detype (untyped_range cap) s)"
-    using invs_psp_aligned[OF invs]
-    apply (clarsimp simp: pspace_aligned_def)
-    apply (drule bspec, erule domI)
-    apply (clarsimp simp: detype_def)
-    done
-
-  have state_refs: "state_refs_of (detype (untyped_range cap) s)
-                      = state_refs_of s"
-    apply (rule ext, clarsimp simp add: state_refs_of_detype)
-    apply (rule sym, rule equals0I, drule state_refs_of_elemD)
-    apply (drule live_okE, rule refs_of_live, clarsimp)
-    apply simp
-    done
-  show "sym_refs (state_refs_of (detype (untyped_range cap) s))"
-    using refsym by (simp add: state_refs)
-  show "pspace_distinct (detype (untyped_range cap) s)"
-    apply (insert invs, drule invs_distinct)
-    apply (auto simp: pspace_distinct_def)
-    done
-  show "cur_tcb (detype (untyped_range cap) s)"
+lemma cut_tcb_detype[detype_invs_lemmas]: 
+  assumes ct_act: "ct_active s" 
+  shows "cur_tcb (detype (untyped_range cap) s)" (* CT_ACT *)
     apply (insert ct_act invs)
     apply (drule tcb_at_invs)
     apply (simp add: cur_tcb_def ct_in_state_def)
@@ -542,142 +618,115 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
      apply fastforce
     apply simp
     done
-  have live_okE2: "\<And>obj p. \<lbrakk> kheap s p = Some obj; live obj \<rbrakk>
-                        \<Longrightarrow> p \<notin> untyped_range cap"
-    by (simp add: live_okE[where P=live] obj_at_def)
-  have untyped_mdb : "\<And>m. untyped_mdb m (caps_of_state s)
-                      \<Longrightarrow> untyped_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
-    apply (simp only: untyped_mdb_def)
-    apply (elim allEI)
-    apply clarsimp
-    done
-  have untyped_inc : "\<And>m. untyped_inc m (caps_of_state s)
-                      \<Longrightarrow> untyped_inc m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
-    apply (simp only: untyped_inc_def)
-    apply (elim allEI)
-    apply clarsimp
-    done
-  have reply_caps_mdb : "\<And>m. reply_caps_mdb m (caps_of_state s)
-                         \<Longrightarrow> reply_caps_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
-    apply (simp only: reply_caps_mdb_def)
-    apply (elim allEI)
-    apply (clarsimp elim!: exEI)
-    apply (fastforce dest: non_null_caps)
-    done
-  have reply_masters_mdb : "\<And>m. reply_masters_mdb m (caps_of_state s)
-                            \<Longrightarrow> reply_masters_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
-    apply (simp only: reply_masters_mdb_def)
-    apply (elim allEI)
-    apply clarsimp
-    apply (drule(1) bspec)
-    apply (fastforce dest: non_null_caps)
-    done
-  have reply_mdb : "\<And>m. reply_mdb m (caps_of_state s)
-                    \<Longrightarrow> reply_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
-    by (simp add: reply_mdb_def reply_caps_mdb reply_masters_mdb)
-  show "valid_mdb (detype (untyped_range cap) s)"
-    apply (insert invs, drule invs_mdb)
-    apply (simp add: valid_mdb_def)
-    apply (rule context_conjI)
-     apply (safe intro!: mdb_cte_atI elim!: untyped_mdb untyped_inc reply_mdb)
-         apply (drule(1) mdb_cte_atD)
-         apply (clarsimp dest!: non_null_present)
-        apply (drule(1) mdb_cte_atD)
-        apply (clarsimp dest!: non_null_present)
-       apply (erule descendants_inc_empty_slot)
-        apply (clarsimp simp:cte_wp_at_caps_of_state swp_def)
-       apply clarsimp
-      apply (simp add: ut_revocable_def detype_def del: split_paired_All)
-     apply (simp add: irq_revocable_def detype_def del: split_paired_All)
-    apply (simp add: reply_master_revocable_def detype_def del: split_paired_All)
-    done
-  show "untyped_children_in_mdb (detype (untyped_range cap) s)"
-    apply (insert child)
-    apply (simp add: untyped_children_in_mdb_def)
-    apply (erule allEI)+
-    apply (clarsimp simp: detype_def)
-    done
-  show "if_live_then_nonz_cap (detype (untyped_range cap) s)"
-    apply (insert iflive)
-    apply (simp add: if_live_then_nonz_cap_def ex_nonz_cap_to_def)
-    apply (erule allEI)
-    apply (rule impI, erule conjE, drule(1) mp)
-    apply (erule exEI)
-    apply clarsimp
-    apply (frule non_null_present [OF cte_wp_at_weakenE])
-     apply clarsimp+
-    done
-  have irq_node_detype[simp]:
-    "\<And>r. interrupt_irq_node (detype r s) = interrupt_irq_node s"
-    by (simp add: detype_def)
-  show "if_unsafe_then_cap (detype (untyped_range cap) s)"
-    apply (insert ifunsafe)
-    apply (simp add: if_unsafe_then_cap_def ex_cte_cap_wp_to_def)
-    apply (erule allEI, rule impI)
-    apply (erule allEI)
-    apply (clarsimp del: exE)
-    apply (erule exEI)
-    apply clarsimp
-    apply (frule(1) non_null_caps)
-    apply (frule non_null_present [OF cte_wp_at_weakenE])
-     apply clarsimp+
-    done
-  have zombies_final: "zombies_final s"
-    using invs by (simp add: invs_def valid_state_def valid_pspace_def)
-  show "zombies_final (detype (untyped_range cap) s)"
-    apply (insert zombies_final)
-    apply (simp add: zombies_final_def final_cap_at_eq)
-    apply (elim allEI)
-    apply (rule impI, erule conjE, drule(1) mp)
-    apply (elim exEI conjE conjI allEI)
-    apply (rule impI, elim conjE)
-    apply simp
-    done
-  have idle: "idle_thread (detype (untyped_range cap) s) = idle_thread s"
-    by (simp add: detype_def)
-  have "valid_idle s" using invs by (simp add: invs_def valid_state_def)
-  thus "valid_idle (detype (untyped_range cap) s)"
-    using valid_global_refsD [OF globals cap]
-    by (fastforce simp add: valid_idle_def state_refs idle cap_range_def
-                            global_refs_def)
-  have glob_det[simp]: "\<And>r. global_refs (detype r s) = global_refs s"
-    by (simp add: global_refs_def detype_def)
-  show "valid_global_refs (detype (untyped_range cap) s)"
-    using globals
-    by (simp add: valid_global_refs_def valid_refs_def)
-  have arch_state_det[simp]: "\<And>r. arch_state (detype r s) = arch_state s"
-    by (simp add: detype_def)
-  have valid_arch_caps: "valid_arch_caps s"
-    using invs by (simp add: invs_def valid_state_def)
-  have valid_vs_lookup: "valid_vs_lookup s"
-    using valid_arch_caps by (simp add: valid_arch_caps_def)
-  moreover
-  have valid_arch_state: "valid_arch_state s" using invs
-    by clarsimp
-  moreover
-  have ut_mdb: "untyped_mdb (cdt s) (caps_of_state s)"
-    using invs
-    by (clarsimp dest!: invs_mdb simp add: valid_mdb_def)
-  ultimately
-  show "valid_arch_state (detype (untyped_range cap) s)"
-    using valid_global_refsD [OF globals cap] cap
-    apply (simp add: valid_arch_state_def valid_asid_table_def
-                  valid_global_pts_def global_refs_def
-                  cap_range_def)
-    apply (clarsimp simp: ran_def)
-    apply (drule vs_lookup_atI)
-    apply (drule (1) valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI])
-    apply (clarsimp simp: cte_wp_at_caps_of_state)
-    apply (drule untyped_mdbD, rule untyped, assumption)
-      apply blast
-     apply assumption
-    apply (drule descendants_range_inD[OF drange])
-      apply (simp add:cte_wp_at_caps_of_state)
-    apply (simp add:cap_range_def)
-    apply blast
-    done
 
-  show "valid_reply_caps (detype (untyped_range cap) s)"
+lemma live_okE2: "\<And>obj p. \<lbrakk> kheap s p = Some obj; live obj \<rbrakk>
+                      \<Longrightarrow> p \<notin> untyped_range cap"
+  by (simp add: live_okE[where P=live] obj_at_def)
+  
+lemma untyped_mdb : "\<And>m. untyped_mdb m (caps_of_state s)
+                    \<Longrightarrow> untyped_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
+  apply (simp only: untyped_mdb_def)
+  apply (elim allEI)
+  apply clarsimp
+  done
+  
+lemma untyped_inc : "\<And>m. untyped_inc m (caps_of_state s)
+                    \<Longrightarrow> untyped_inc m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
+  apply (simp only: untyped_inc_def)
+  apply (elim allEI)
+  apply clarsimp
+  done
+  
+lemma reply_caps_mdb : "\<And>m. reply_caps_mdb m (caps_of_state s)
+                       \<Longrightarrow> reply_caps_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
+  apply (simp only: reply_caps_mdb_def)
+  apply (elim allEI)
+  apply (clarsimp elim!: exEI)
+  apply (fastforce dest: non_null_caps)
+  done
+  
+lemma reply_masters_mdb : "\<And>m. reply_masters_mdb m (caps_of_state s)
+                          \<Longrightarrow> reply_masters_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
+  apply (simp only: reply_masters_mdb_def)
+  apply (elim allEI)
+  apply clarsimp
+  apply (drule(1) bspec)
+  apply (fastforce dest: non_null_caps)
+  done
+  
+lemma reply_mdb : "\<And>m. reply_mdb m (caps_of_state s)
+                  \<Longrightarrow> reply_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
+  by (simp add: reply_mdb_def reply_caps_mdb reply_masters_mdb)
+  
+lemma valid_mdb_detype[detype_invs_lemmas]: "valid_mdb (detype (untyped_range cap) s)"
+  apply (insert invs, drule invs_mdb)
+  apply (simp add: valid_mdb_def)
+  apply (rule context_conjI)
+   apply (safe intro!: mdb_cte_atI elim!: untyped_mdb untyped_inc reply_mdb)
+       apply (drule(1) mdb_cte_atD)
+       apply (clarsimp dest!: non_null_present)
+      apply (drule(1) mdb_cte_atD)
+      apply (clarsimp dest!: non_null_present)
+     apply (erule descendants_inc_empty_slot)
+      apply (clarsimp simp:cte_wp_at_caps_of_state swp_def)
+     apply clarsimp
+    apply (simp add: ut_revocable_def detype_def del: split_paired_All)
+   apply (simp add: irq_revocable_def detype_def del: split_paired_All)
+  apply (simp add: reply_master_revocable_def detype_def del: split_paired_All)
+  done 
+
+lemma untype_children_detype[detype_invs_lemmas]: "untyped_children_in_mdb (detype (untyped_range cap) s)"
+  apply (insert child)
+  apply (simp add: untyped_children_in_mdb_def)
+  apply (erule allEI)+
+  apply (clarsimp simp: detype_def)
+  done
+ 
+lemma live_nonz_detype[detype_invs_lemmas]: "if_live_then_nonz_cap (detype (untyped_range cap) s)"
+  apply (insert iflive)
+  apply (simp add: if_live_then_nonz_cap_def ex_nonz_cap_to_def)
+  apply (erule allEI)
+  apply (rule impI, erule conjE, drule(1) mp)
+  apply (erule exEI)
+  apply clarsimp
+  apply (frule non_null_present [OF cte_wp_at_weakenE])
+   apply clarsimp+
+  done
+
+lemma irq_node_detype[simp]: (* duplicated lemma *)
+  "\<And>r. interrupt_irq_node (detype r s) = interrupt_irq_node s"
+  by (simp add: detype_def)
+lemma INV_9[detype_invs_lemmas]: "if_unsafe_then_cap (detype (untyped_range cap) s)"
+  apply (insert ifunsafe)
+  apply (simp add: if_unsafe_then_cap_def ex_cte_cap_wp_to_def)
+  apply (erule allEI, rule impI)
+  apply (erule allEI)
+  apply (clarsimp del: exE)
+  apply (erule exEI)
+  apply clarsimp
+  apply (frule(1) non_null_caps)
+  apply (frule non_null_present [OF cte_wp_at_weakenE])
+   apply clarsimp+
+  done
+
+lemma zombies_final: "zombies_final s"
+  using invs by (simp add: invs_def valid_state_def valid_pspace_def)
+
+lemma zombies_final_detype[detype_invs_lemmas]: "zombies_final (detype (untyped_range cap) s)"
+  apply (insert zombies_final)
+  apply (simp add: zombies_final_def final_cap_at_eq)
+  apply (elim allEI)
+  apply (rule impI, erule conjE, drule(1) mp)
+  apply (elim exEI conjE conjI allEI)
+  apply (rule impI, elim conjE)
+  apply simp
+  done
+  
+lemma valid_refs_detype[detype_invs_lemmas]: "valid_global_refs (detype (untyped_range cap) s)"
+  using globals
+  by (simp add: valid_global_refs_def valid_refs_def glob_det)
+    
+lemma valid_reply_caps_detype[detype_invs_lemmas]: "valid_reply_caps (detype (untyped_range cap) s)"
     using vreply
     apply (clarsimp simp: valid_reply_caps_def has_reply_cap_def)
     apply (rule conjI)
@@ -688,423 +737,82 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
      apply (fastforce dest: live_okE)
     apply (clarsimp simp: unique_reply_caps_def)
     done
-  show "valid_irq_node (detype (untyped_range cap) s)"
-    using invs valid_globals_irq_node [OF globals cap]
-    by (simp add: valid_irq_node_def invs_def valid_state_def cap_range_def)
-  show "valid_reply_masters (detype (untyped_range cap) s)"
-    using vmaster by (clarsimp simp: valid_reply_masters_def)
-  show "valid_irq_handlers (detype (untyped_range cap) s)"
-    using invs
-    apply (simp add: valid_irq_handlers_def ran_def irq_issued_def
-                     invs_def valid_state_def)
-    apply (force simp: detype_def)
-    done
+  
+lemma valid_irq_detype[detype_invs_lemmas]: "valid_irq_node (detype (untyped_range cap) s)"
+  using invs valid_globals_irq_node [OF globals cap]
+  by (simp add: valid_irq_node_def invs_def valid_state_def cap_range_def)
 
-  from valid_global_refsD [OF globals cap]
-  have global_pts:
-    "\<And>p. \<lbrakk> p \<in> set (arm_global_pts (arch_state s)); p \<in> untyped_range cap \<rbrakk> \<Longrightarrow> False"
-    by (simp add: cap_range_def global_refs_def)
+lemma valid_reply_masters_detype[detype_invs_lemmas]:
+  "valid_reply_masters (detype (untyped_range cap) s)"
+  using vmaster by (clarsimp simp: valid_reply_masters_def)
 
-  have vs_lookup [simp]: 
-    "vs_lookup (detype (untyped_range cap) s) = vs_lookup s"
-    apply (rule set_eqI)
-    apply clarsimp
-    apply (rule iffI)
-     apply (erule vs_lookup_induct)
-      apply simp
-      apply (erule vs_lookup_atI)
-     apply (erule vs_lookup_step)
-     apply (clarsimp simp: vs_lookup1_def)
-    apply (erule vs_lookup_induct)
-     apply (rule vs_lookup_atI)
-     apply simp
-    apply (erule vs_lookup_step)
-    apply (clarsimp simp: vs_lookup1_def)
-    apply (drule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], rule valid_vs_lookup)
-    apply (elim conjE exE)
-    apply (insert cap)
-    apply (simp add: cte_wp_at_caps_of_state)
-    apply (drule untyped_mdbD, rule untyped, assumption)
-      apply blast
-     apply (rule ut_mdb)
-    apply (drule descendants_range_inD[OF drange])
-      apply (simp add:cte_wp_at_caps_of_state)
-    apply (simp add:cap_range_def)
-    apply blast
-    done
+lemma valid_irq_handlers_detype[detype_invs_lemmas]:
+  "valid_irq_handlers (detype (untyped_range cap) s)"
+  using invs
+  apply (simp add: valid_irq_handlers_def ran_def irq_issued_def
+                   invs_def valid_state_def)
+  apply (force simp: detype_def)
+  done
 
-  have vs_lookup_pages [simp]: 
-    "vs_lookup_pages (detype (untyped_range cap) s) = vs_lookup_pages s"
-    apply (rule set_eqI)
-    apply clarsimp
-    apply (rule iffI)
-     apply (erule vs_lookup_pages_induct)
-      apply simp
-      apply (erule vs_lookup_pages_atI)
-     apply (erule vs_lookup_pages_step)
-     apply (clarsimp simp: vs_lookup_pages1_def)
-    apply (erule vs_lookup_pages_induct)
-     apply (rule vs_lookup_pages_atI)
-     apply simp
-    apply (erule vs_lookup_pages_step)
-    apply (clarsimp simp: vs_lookup_pages1_def)
-    apply (drule valid_vs_lookupD, rule valid_vs_lookup)
-    apply (elim conjE exE)
-    apply (insert cap)
-    apply (simp add: cte_wp_at_caps_of_state)
-    apply (drule untyped_mdbD, rule untyped, assumption)
-      apply blast
-     apply (rule ut_mdb)
-    apply (drule descendants_range_inD[OF drange])
-      apply (simp add:cte_wp_at_caps_of_state)
-    apply (simp add:cap_range_def)
-    apply blast
-    done
-
-  from cap untyped
-  have no_obj_refs:
-    "\<And>slot cap' x. \<lbrakk> caps_of_state s slot = Some cap'; 
-                     x \<in> obj_refs cap'; x \<in> untyped_range cap \<rbrakk> \<Longrightarrow> False"
-    apply (clarsimp simp: cte_wp_at_caps_of_state)
-    apply (drule (2) untyped_mdbD)
-      apply blast
-     apply (rule ut_mdb)
-    apply (drule descendants_range_inD[OF drange])
-      apply (simp add:cte_wp_at_caps_of_state)
-    apply (simp add:cap_range_def)
-    apply blast
-    done
-
-  have vs_lookup_preserved:
-    "\<And>x rf. \<lbrakk> x \<in> untyped_range cap; (rf \<rhd> x) s \<rbrakk> \<Longrightarrow> False"
-    apply (drule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI valid_vs_lookup])
-    apply (fastforce intro: global_pts no_obj_refs)
-    done
-
-  have vs_lookup_pages_preserved:
-    "\<And>x rf. \<lbrakk> x \<in> untyped_range cap; (rf \<unrhd> x) s \<rbrakk> \<Longrightarrow> False"
-    apply (drule valid_vs_lookupD[OF _ valid_vs_lookup])
-    apply (fastforce intro: global_pts no_obj_refs)
-    done
-
-  (* FIXME: This is really horrible but I can't get the automated methods
-            to "get it". *)
-  have valid_arch_obj:
-    "\<And>ao p. \<lbrakk> valid_arch_obj ao s; ko_at (ArchObj ao) p s; (\<exists>\<rhd>p) s \<rbrakk> \<Longrightarrow>
-         valid_arch_obj ao (detype (untyped_range cap) s)"
-    apply (case_tac ao)
-       apply (clarsimp simp: ran_def)
-       apply (erule vs_lookup_preserved)
-       apply (erule vs_lookup_step)
-       apply (erule vs_lookup1I[OF _ _ refl])
-       apply (simp add: vs_refs_def)
-       apply (rule image_eqI[rotated])
-        apply (erule graph_ofI)
-       apply fastforce
-      apply (rename_tac "fun")
-      apply clarsimp
-      apply (erule_tac x=x in allE)
-      apply (case_tac "fun x", simp_all)[1]
-       apply (rename_tac word attr rights)
-       apply (drule_tac p'="(ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-        apply (clarsimp simp: vs_lookup_pages1_def)
-        apply (rule exI, erule conjI)
-        apply (rule_tac x="VSRef (ucast x) (Some APageTable)" in exI)
-        apply (rule conjI[OF refl])
-        apply (clarsimp simp: vs_refs_pages_def graph_of_def pte_ref_pages_def)
-        apply (rule_tac x="(x, (ptrFromPAddr word))" in image_eqI)
-         apply (simp add: split_def) 
-        apply simp
-       apply (force dest!: vs_lookup_pages_preserved)
-      apply (rename_tac word attr rights)
-      apply (drule_tac p'="(ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-       apply (clarsimp simp: vs_lookup_pages1_def)
-       apply (rule exI, erule conjI)
-       apply (rule_tac x="VSRef (ucast x) (Some APageTable)" in exI)
-       apply (rule conjI[OF refl])
-       apply (clarsimp simp: vs_refs_pages_def graph_of_def pte_ref_pages_def)
-       apply (rule_tac x="(x, (ptrFromPAddr word))" in image_eqI)
-        apply (simp add: split_def) 
-       apply simp
-      apply (force dest!: vs_lookup_pages_preserved)
-     apply (rename_tac "fun")
-     apply clarsimp
-     apply (case_tac "fun x", simp_all)[1]
-       apply (rename_tac word1 attr word2)
-       apply (drule bspec, simp)
-       apply (clarsimp simp: valid_pde_def)
-       apply (drule_tac p'="(ptrFromPAddr word1)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-       apply (clarsimp simp: vs_lookup_pages1_def)
-        apply (rule exI, erule conjI)
-        apply (rule_tac x="VSRef (ucast x) (Some APageDirectory)" in exI)
-        apply (rule conjI[OF refl])
-        apply (clarsimp simp: vs_refs_pages_def graph_of_def pde_ref_pages_def)
-        apply (rule_tac x="(x, (ptrFromPAddr word1))" in image_eqI)
-         apply (simp add: split_def) 
-        apply (simp add: pde_ref_pages_def)
-       apply (force dest!: vs_lookup_pages_preserved)
-      apply (rename_tac word1 attr word2 rights)
-      apply (drule_tac p'="(ptrFromPAddr word1)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-       apply (clarsimp simp: vs_lookup_pages1_def)
-       apply (rule exI, erule conjI)
-       apply (rule_tac x="VSRef (ucast x) (Some APageDirectory)" in exI)
-       apply (rule conjI[OF refl])
-       apply (clarsimp simp: vs_refs_pages_def graph_of_def pde_ref_pages_def)
-       apply (rule_tac x="(x, (ptrFromPAddr word1))" in image_eqI)
-        apply (simp add: split_def) 
-       apply (simp add: pde_ref_pages_def)
-      apply (force dest!: vs_lookup_pages_preserved)
-     apply (rename_tac word attr rights)
-     apply (drule_tac p'="(ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-      apply (clarsimp simp: vs_lookup_pages1_def)
-      apply (rule exI, erule conjI)
-      apply (rule_tac x="VSRef (ucast x) (Some APageDirectory)" in exI)
-      apply (rule conjI[OF refl])
-      apply (clarsimp simp: vs_refs_pages_def graph_of_def pde_ref_pages_def)
-      apply (rule_tac x="(x, (ptrFromPAddr word))" in image_eqI)
-       apply (simp add: split_def) 
-      apply (simp add: pde_ref_pages_def)
-     apply (force dest!: vs_lookup_pages_preserved)
-    apply clarsimp
-    done
-
-  have "valid_arch_objs s"
-    using invs by fastforce 
-  thus "valid_arch_objs (detype (untyped_range cap) s)"
-    unfolding valid_arch_objs_def
-    apply (simp add: vs_lookup)
-    apply (auto intro: valid_arch_obj)
-    done
-
-  have unique_table_caps:
-    "\<And>cps P. unique_table_caps cps
-             \<Longrightarrow> unique_table_caps (\<lambda>x. if P x then None else cps x)"
-    by (simp add: unique_table_caps_def)
-
-  have unique_table_refs:
-    "\<And>cps P. unique_table_refs cps
-             \<Longrightarrow> unique_table_refs (\<lambda>x. if P x then None else cps x)"
-    apply (simp only: unique_table_refs_def option.simps
-                      simp_thms
-               split: split_if)
-    apply blast
-    done
-
-  have valid_vs_lookup:
-    "valid_vs_lookup s \<Longrightarrow> valid_vs_lookup (detype (untyped_range cap) s)"
-    apply (simp add: valid_vs_lookup_def del: split_paired_Ex)
-    apply (elim allEI)
-    apply (intro disjCI2 impI)
-    apply (drule(1) mp)+
-    apply (elim conjE)
-    apply (erule exEI)
-    apply clarsimp
-    apply (drule non_null_caps)
-     apply clarsimp+
-    done
-
-  have valid_table_caps:
-    "valid_table_caps s \<Longrightarrow> valid_table_caps (detype (untyped_range cap) s)"
-    apply (simp add: valid_table_caps_def del: imp_disjL)
-    apply (elim allEI | rule impI)+
-    apply clarsimp 
-    apply (erule(2) no_obj_refs)
-    done
-
-  have valid_arch_caps: "valid_arch_caps s"
-    using invs by (clarsimp simp: invs_def valid_state_def)
-  thus "valid_arch_caps (detype (untyped_range cap) s)"
-    by (simp add: valid_arch_caps_def
-                  unique_table_caps valid_vs_lookup
-                  unique_table_refs
-                  valid_table_caps)
-
-  have pd_at_global_pd: "page_directory_at (arm_global_pd (arch_state s)) s"
-    using valid_arch_state by (simp add: valid_arch_state_def)
-
-  have valid_global_objs: "valid_global_objs s"
-    using invs by (clarsimp simp: invs_def valid_state_def)
-  thus "valid_global_objs (detype (untyped_range cap) s)"
-    using valid_global_refsD [OF globals cap]
-    apply (simp add: valid_global_objs_def valid_ao_at_def)
-    apply (elim conjE, intro conjI)
-       apply (simp add: global_refs_def cap_range_def)
-      apply (erule exEI)
-      apply (insert pd_at_global_pd)[1]
-      subgoal by (clarsimp simp: obj_at_def a_type_simps empty_table_def)
-     apply (simp add: global_refs_def cap_range_def)
-    apply (clarsimp elim!: global_pts)
-    done
-
-  have "valid_kernel_mappings s"
-    using invs by (simp add: invs_def valid_state_def)
-  thus "valid_kernel_mappings (detype (untyped_range cap) s)"
-    by (simp add: valid_kernel_mappings_def detype_def
-                  ball_ran_eq)
-
-  have "valid_asid_map s"
-    using invs by (simp add: invs_def valid_state_def)
-  thus "valid_asid_map (detype (untyped_range cap) s)"
-    apply (clarsimp simp: valid_asid_map_def)
-    apply (drule bspec, blast)
-    apply (clarsimp simp: pd_at_asid_def)
-    done
-
-  have "only_idle s"
-    using invs by (simp add: invs_def valid_state_def)
-  thus "only_idle (detype (untyped_range cap) s)"
+lemma only_idle_detype[detype_invs_lemmas]: "only_idle (detype (untyped_range cap) s)"
+  proof -
+    have "only_idle s"
+      using invs by (simp add: invs_def valid_state_def)
+    thus ?thesis 
     apply (clarsimp simp: only_idle_def)
     apply (simp add: detype_def)
     done
-
-  have "equal_kernel_mappings s"
-    using invs by (simp add: invs_def valid_state_def)
-  thus "equal_kernel_mappings (detype (untyped_range cap) s)"
-    apply (simp add: equal_kernel_mappings_def)
-    apply blast
-    done
-
-  have "valid_global_pd_mappings s"
-    using invs by (simp add: invs_def valid_state_def)
-  thus "valid_global_pd_mappings (detype (untyped_range cap) s)"
-    using valid_global_refsD [OF globals cap] valid_global_objs
-    apply -
-    apply (erule valid_global_pd_mappings_pres, simp_all)
-     apply (simp add: cap_range_def global_refs_def)+
-    done
-
-  have "pspace_in_kernel_window s"
-    using invs by (simp add: invs_def valid_state_def)
-  thus "pspace_in_kernel_window (detype (untyped_range cap) s)"
-    apply (simp add: pspace_in_kernel_window_def)
-    apply fastforce
-    done
-    
-  have "cap_refs_in_kernel_window s"
-    using invs by (simp add: invs_def valid_state_def)
-  thus "cap_refs_in_kernel_window (detype (untyped_range cap) s)"
-    apply (simp add: cap_refs_in_kernel_window_def
-                     valid_refs_def)
-    done
-
-  have "valid_ioc s" using invs by (simp add: invs_def valid_state_def)
-  thus "valid_ioc (detype (untyped_range cap) s)"
-    apply (simp add: valid_ioc_def)
-    apply (clarsimp simp: detype_def neq_commute)
-    apply (drule spec, drule spec, erule impE, assumption)
-    apply (frule_tac p="(a,b)" in non_null_present[simplified neq_commute])
-    apply simp
-    done
-
-  have cap_is_valid: "valid_cap cap s"
-    by (rule cte_wp_valid_cap[OF local.cap invs_valid_objs[OF invs]])
-
-  (* FIXME: consider to source out. *)
-  have p2pm1_to_mask[simp]: "\<And>p n. p + 2 ^ n - 1 = p + mask n"
-    by (simp add: mask_2pm1 field_simps)
-
-  from invs have valid_pspace: "valid_pspace s"
-    by (simp add: invs_def valid_state_def)
-
-  from invs have "valid_machine_state s" by (simp add: invs_def valid_state_def)
-  thus "valid_machine_state
-          (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
-    apply (clarsimp simp: valid_machine_state_def clear_um_def detype_def)
-    apply (drule_tac x=p in spec, simp add: in_user_frame_def obj_at_def)
-    apply (elim exEI exE conjE, simp)
-    apply (frule valid_pspace_aligned[OF valid_pspace])
-    apply (drule_tac ptr'=p in mask_in_range)
-    apply (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
-    apply (rename_tac arch_kernel_obj)
-    apply (case_tac arch_kernel_obj, simp_all add: a_type_simps)
-    apply clarsimp
-    using untyped cap_is_valid
-    apply (case_tac cap, simp_all)
-    apply (clarsimp simp add: valid_cap_def cap_aligned_def valid_untyped_def)
-    apply (drule_tac x="p && ~~ mask (pageBitsForSize x)" in spec)
-    apply (auto simp add: obj_range_def)
-    done
-
-  from invs have "valid_irq_states s" by (simp add: invs_def valid_state_def)
-  thus "valid_irq_states
-          (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
-    apply(clarsimp simp: clear_um_def detype_def valid_irq_states_def)
-    done
-qed
-end
-
-end
-
-
-lemma detype_invariants:
-  assumes cap: "cte_wp_at (op = cap) ptr s"
-  and untyped: "is_untyped_cap cap"
-  and  drange: "descendants_range cap ptr s"
-  and    invs: "invs s"
-  and   child: "untyped_children_in_mdb s"
-  and  ct_act: "ct_active s"
-  and  vreply: "valid_reply_caps s"
-  and vmaster: "valid_reply_masters s"
-  shows        "(invs and untyped_children_in_mdb)
-                  (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
-  apply (rule_tac ptr=ptr in detype_locale.invariants)
-   apply (unfold detype_locale_def, simp_all add: assms)
-  done
-context begin interpretation Arch . (*FIXME: arch_split*)
-(* FIXME: taken from Retype_C.thy and adapted wrt. the missing intvl syntax. *)
-lemma mapM_x_storeWord:
-  assumes al: "is_aligned ptr 2"
-  shows "mapM_x (\<lambda>x. storeWord (ptr + of_nat x * 4) 0) [0..<n]
-  = modify (underlying_memory_update
-             (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * 4 then 0 else m x))"
-proof (induct n)
-  case 0
-  thus ?case
-    apply (rule ext)
-    apply (simp add: mapM_x_mapM mapM_def sequence_def 
-      modify_def get_def put_def bind_def return_def)
-    done
-next
-  case (Suc n')
-
-  have funs_eq:
-    "\<And>m x. (if \<exists>k. x = ptr + of_nat k \<and> k < 4 + n' * 4 then 0
-             else (m x :: word8)) =
-           ((\<lambda>xa. if \<exists>k. xa = ptr + of_nat k \<and> k < n' * 4 then 0 else m xa)
-           (ptr + of_nat n' * 4 := word_rsplit (0 :: word32) ! 3,
-            ptr + of_nat n' * 4 + 1 := word_rsplit (0 :: word32) ! 2,
-            ptr + of_nat n' * 4 + 2 := word_rsplit (0 :: word32) ! Suc 0,
-            ptr + of_nat n' * 4 + 3 := word_rsplit (0 :: word32) ! 0)) x"
-  proof -
-    fix m x
-    
-    have xin': "\<And>x. (x < 4 + n' * 4) = (x < n' * 4 \<or> x = n' * 4
-                     \<or> x = (n' * 4) + 1 \<or> x = (n' * 4) + 2 \<or> x = (n' * 4) + 3)"
-      by (safe, simp_all)
-
-    have xin: "(EX k. x = ptr + of_nat k \<and> k < 4 + n' * 4) =
-               ((\<exists>k. x = ptr + of_nat k \<and> k < n' * 4) \<or>
-                x = ptr + of_nat n' * 4 \<or> x = ptr + of_nat n' * 4 + 1 \<or>
-                x = ptr + of_nat n' * 4 + 2 \<or> x = ptr + of_nat n' * 4 + 3)"
-      by (simp add: xin' conj_disj_distribL ex_disj_distrib field_simps)
-  
-    show "?thesis m x" by (simp add: xin word_rsplit_0 cong: if_cong)
   qed
 
-  from al have "is_aligned (ptr + of_nat n' * 4) 2"
-    apply (rule aligned_add_aligned)
-    apply (rule is_aligned_mult_triv2 [where n = 2, simplified])
-    apply (simp add: word_bits_conv)+
-    done
-
-  thus ?case
-    apply (simp add: mapM_x_append bind_assoc Suc.hyps mapM_x_singleton)
-    apply (simp add: storeWord_def assert_def is_aligned_mask modify_modify
-                     comp_def)
-    apply (simp only: funs_eq)
+lemma cap_refs_in_kernel_detype[detype_invs_lemmas]:
+  "cap_refs_in_kernel_window (detype (untyped_range cap) s)"
+proof - 
+  have "cap_refs_in_kernel_window s"
+    using invs by (simp add: invs_def valid_state_def)
+  thus ?thesis 
+    apply (simp add: cap_refs_in_kernel_window_def
+                     valid_refs_def arch_state_det)
     done
 qed
+
+lemma valid_ioc_detype[detype_invs_lemmas]: "valid_ioc (detype (untyped_range cap) s)"
+  proof -
+    have "valid_ioc s" using invs by (simp add: invs_def valid_state_def)
+    thus ?thesis
+      apply (simp add: valid_ioc_def)
+      apply (clarsimp simp: detype_def neq_commute)
+      apply (drule spec, drule spec, erule impE, assumption)
+      apply (frule_tac p="(a,b)" in non_null_present[simplified neq_commute])
+      apply simp
+      done
+  qed
+
+(* FIXME: consider to source out. *)
+lemma p2pm1_to_mask: "\<And>p n. p + 2 ^ n - 1 = p + mask n" (* SIMP *)
+  by (simp add: mask_2pm1 field_simps)
+
+lemma valid_irq_states_detype[detype_invs_lemmas]: "valid_irq_states
+          (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
+  proof -
+    have "valid_irq_states s" using invs by (simp add: invs_def valid_state_def)
+    thus ?thesis
+      apply(clarsimp simp: clear_um_def detype_def valid_irq_states_def)
+      done
+  qed
 end
+
+context detype_locale_gen_2 begin  
+lemma invariants:
+  assumes ct_act: "ct_active s"
+  shows "(invs and untyped_children_in_mdb)                    
+         (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
+using detype_invs_lemmas detype_invs_assms ct_act   
+by (simp add: invs_def valid_state_def valid_pspace_def
+                 detype_clear_um_independent clear_um.state_refs_update)    
+end
+
+
+(* detype_locale_gen_2 cap ptr s  *)
 (* FIXME: move *)
 lemma gets_modify_comm2:
   "\<forall>s. g (f s) = g s \<Longrightarrow>
@@ -1134,13 +842,8 @@ proof -
                      modify_modify detype_msu_independent)
     done
 qed
-context begin interpretation Arch . (*FIXME: arch_split*)
-(* FIXME: move *)
-lemma empty_fail_freeMemory: "empty_fail (freeMemory ptr bits)"
-  by (simp add: freeMemory_def mapM_x_mapM ef_storeWord)
-end
 
-lemma delete_objects_def2:
+lemma (in Detype_AI) delete_objects_def2:
   "delete_objects ptr bits \<equiv>
    do modify (detype {ptr..ptr + 2 ^ bits - 1});
       do_machine_op (freeMemory ptr bits)
@@ -1161,25 +864,6 @@ lemma dmo_untyped_children_in_mdb[wp]:
    \<lbrace>\<lambda>rv s. untyped_children_in_mdb s\<rbrace>"
   by (wp | simp add: untyped_mdb_alt[symmetric] do_machine_op_def split_def)+
 
-context Arch begin global_naming ARM
-lemma region_in_kernel_window_detype[simp]:
-  "region_in_kernel_window S (detype S' s)
-      = region_in_kernel_window S s"
-  by (simp add: region_in_kernel_window_def detype_def)
-
-
-lemma region_in_kernel_window_machine_state_update[simp]:
-  "region_in_kernel_window S (machine_state_update f s) =
-   region_in_kernel_window S s"
-  by (simp add: region_in_kernel_window_def)
-
-
-lemma region_in_kernel_window_delete_objects[wp]:
-  "\<lbrace>region_in_kernel_window S\<rbrace>
-   delete_objects ptr bits
-   \<lbrace>\<lambda>_. region_in_kernel_window S\<rbrace>"
-  by (wp | simp add: delete_objects_def do_machine_op_def split_def)+
-end
 
 lemma detype_machine_state_update_comm:
   "detype S (machine_state_update f s) =
@@ -1225,7 +909,7 @@ lemma of_nat_le_pow:
 lemma maxword_32_conv: "(x::32 word) + 0xFFFFFFFF = x - 1" by simp
 
 (* FIXME: copied from Retype_C and slightly adapted. *)
-lemma mapM_x_storeWord_step:
+lemma (in Detype_AI) mapM_x_storeWord_step:
   assumes al: "is_aligned ptr sz"
   and    sz2: "2 \<le> sz"
   and     sz: "sz <= word_bits"
@@ -1249,7 +933,7 @@ lemma mapM_x_storeWord_step:
   done
 
 
-lemma mapM_storeWord_clear_um:
+lemma (in Detype_AI) mapM_storeWord_clear_um:
   "is_aligned p n \<Longrightarrow> 2\<le>n \<Longrightarrow> n<=word_bits \<Longrightarrow>
    do_machine_op (mapM_x (\<lambda>p. storeWord p 0) [p, p + 4 .e. p + 2 ^ n - 1]) =
    modify (clear_um {x.  \<exists>k. x = p + of_nat k \<and> k < 2 ^ n})"
@@ -1338,8 +1022,9 @@ lemma of_bl_length2:
   done
 
 
-lemma cte_map_not_null_outside:
-  "\<lbrakk> cte_wp_at (op \<noteq> cap.NullCap) p s; cte_wp_at (op = cap) p' s;is_untyped_cap cap;
+lemma (in Detype_AI) cte_map_not_null_outside: (*FIXME: arch_split*)
+  "\<lbrakk> cte_wp_at (op \<noteq> cap.NullCap) p (s :: 'a state); 
+     cte_wp_at (op = cap) p' s;is_untyped_cap cap;
      descendants_range cap p' s; untyped_children_in_mdb s;
      if_unsafe_then_cap s; valid_global_refs s \<rbrakk>
      \<Longrightarrow> fst p \<notin> untyped_range cap"
@@ -1425,28 +1110,6 @@ lemma invs_untyped_children[elim!]:
   "invs s \<Longrightarrow> untyped_children_in_mdb s"
   by (clarsimp simp: invs_def valid_state_def valid_mdb_def
                      untyped_mdb_alt)
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma delete_objects_invs[wp]:
-  "\<lbrace>(\<lambda>s. \<exists>slot. cte_wp_at (op = (cap.UntypedCap ptr bits f)) slot s
-    \<and> descendants_range (cap.UntypedCap ptr bits f) slot s) and
-    invs and ct_active\<rbrace>
-    delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: delete_objects_def)
-  apply (simp add: freeMemory_def word_size_def bind_assoc
-                   empty_fail_mapM_x ef_storeWord)
-   apply (rule hoare_pre)
-   apply (rule_tac G="is_aligned ptr bits \<and> 2 \<le> bits \<and> bits \<le> word_bits"
-                in hoare_grab_asm)
-   apply (simp add:mapM_storeWord_clear_um intvl_range_conv[where 'a=32, folded word_bits_def])
-   apply wp
-  apply clarsimp
-  apply (frule invs_untyped_children)
-  apply (frule detype_invariants, clarsimp+)
-  apply (drule invs_valid_objs)
-  apply (drule (1) cte_wp_valid_cap)
-  apply (simp add: valid_cap_def cap_aligned_def)
-  done
-end
 
 lemma dmo_valid_cap[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap.UntypedCap base magnitude idx\<rbrace>
@@ -1454,9 +1117,8 @@ lemma dmo_valid_cap[wp]:
    \<lbrace>\<lambda>rv s. s \<turnstile> cap.UntypedCap base magnitude idx\<rbrace>"
   by (simp add: do_machine_op_def split_def | wp)+
 
-
-lemma cte_map_not_null_outside':
-  "\<lbrakk>cte_wp_at (op = (cap.UntypedCap q n m)) p' s;
+lemma (in Detype_AI)cte_map_not_null_outside':
+  "\<lbrakk>cte_wp_at (op = (cap.UntypedCap q n m)) p' (s :: 'a state);
     descendants_range (cap.UntypedCap q n m) p' s; untyped_children_in_mdb s;
     if_unsafe_then_cap s; valid_global_refs s;
     cte_wp_at (op \<noteq> cap.NullCap) p s\<rbrakk>
@@ -1486,7 +1148,6 @@ lemma pre_helper:
     apply (simp add: word_bits_def)
     apply (drule power_strict_increasing[where a="2 :: nat"], simp_all)
     done
-
 
 lemma pre_helper2:
     "\<And>base x n. \<lbrakk> is_aligned (base :: word32) n; n < word_bits; 2 \<le> n; x < 2 ^ (n - 2) \<rbrakk>

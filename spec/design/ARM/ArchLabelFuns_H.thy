@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file ArchLabelFuns_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *

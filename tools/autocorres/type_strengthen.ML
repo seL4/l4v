@@ -17,18 +17,19 @@ struct
 exception AllLiftingFailed of (string * thm) list
 exception LiftingFailed of unit
 
+(* FIXME: use AUTOCORRES_SIMPSET (need to fix unknown deps of the corres prover) *)
 val ts_simpset = simpset_of @{context}
 
 (* Misc util functions. *)
 val the' = Utils.the'
 val apply_tac = Utils.apply_tac
 
-fun get_hl_state_typ ctxt prog_info fn_info fn_name =
+fun get_l2_state_typ ctxt prog_info l2_infos fn_name =
   let
-    val term = FunctionInfo.get_function_def fn_info fn_name |> #const
+    val term = #const (the (Symtab.lookup l2_infos fn_name));
   in
     LocalVarExtract.dest_l2monad_T (fastype_of term) |> snd |> #1
-  end
+  end;
 
 fun get_typ_from_L2 (rule_set : Monad_Types.monad_type) L2_typ =
   LocalVarExtract.dest_l2monad_T L2_typ |> snd |> #typ_from_L2 rule_set
@@ -45,13 +46,13 @@ fun get_typ_from_L2 (rule_set : Monad_Types.monad_type) L2_typ =
  * If "state_typ" is non-NONE, then "measure" is assumed to also take a
  * state parameter of the given type.
  *)
-fun make_lift_equality ctxt prog_info fn_info fn_name
+fun make_lift_equality ctxt prog_info l2_infos fn_name
     (rule_set : Monad_Types.monad_type) state_typ measure rhs_term =
 let
   val thy = Proof_Context.theory_of ctxt
 
   (* Fetch function variables. *)
-  val fn_def = FunctionInfo.get_function_def fn_info fn_name
+  val fn_def = the (Symtab.lookup l2_infos fn_name)
   val inputs = #args fn_def
   val input_vars = map (fn (x, y) => Var ((x, 0), y)) inputs
 
@@ -62,8 +63,8 @@ let
    * right-hand-side will only include a measure if the function is actually
    * recursive.
    *)
-  val is_recursive = FunctionInfo.is_function_recursive fn_info fn_name
-  val default_measure_var = @{term "rec_measure' :: nat"}
+  val is_recursive = FunctionInfo.is_function_recursive fn_def
+  val default_measure_var = @{term "rec_measure' :: nat"} (* FIXME: Free *)
   val measure_term = Option.getOpt (measure, default_measure_var)
 
   (*
@@ -78,12 +79,13 @@ let
    * same names ("'s" for state, "'a" for return type) that we use
    * below.
    *)
+  (* FIXME: use @{mk_term} *)
   val base_term = @{term "%L a b. (L2_call :: ('s, 'a, unit) L2_monad => ('s, 'a, unit) L2_monad) a = L b"}
   val a = betapplys (#const fn_def, measure_term :: input_vars)
   val b = if not is_recursive then betapplys (rhs_term, input_vars) else
             case state_typ of
                 NONE => betapplys (rhs_term, measure_term :: input_vars)
-              | SOME s => betapplys (rhs_term, [measure_term] @ input_vars @ [Free ("s'", s)])
+              | SOME s => betapplys (rhs_term, [measure_term] @ input_vars @ [Free ("s'", s)]) (* FIXME: Free *)
                           |> lambda (Free ("s'", s))
   val term = Utils.mk_term thy (betapply (base_term, #L2_call_lift rule_set)) [a, b]
              |> HOLogic.mk_Trueprop
@@ -103,14 +105,15 @@ end
  *    <generated assumptions>,
  *    <table mapping free term names back to their function names>,
  *    <morphism to escape the context>)
+ *
+ * FIXME: refactor with AutoCorresUtil.assume_called_functions_corres
  *)
-fun assume_rec_lifted ctxt prog_info fn_info rule_set fn_thm fn_name =
+fun assume_rec_lifted ctxt prog_info l2_infos rule_set fn_name =
 let
-  val thy = Proof_Context.theory_of ctxt
-  val fn_def = FunctionInfo.get_function_def fn_info fn_name
+  val fn_def = the (Symtab.lookup l2_infos fn_name)
 
   (* Find recursive calls. *)
-  val recursive_calls = FunctionInfo.get_recursive_group fn_info fn_name
+  val recursive_calls = Symset.dest (#rec_callees fn_def)
 
   (* Fix a variable for each such call, plus another for our measure variable. *)
   val (measure_fix :: dest_fn_fixes, ctxt')
@@ -124,9 +127,9 @@ let
 
   (* For each recursive call, generate a theorem assuming that it lifts into
    * the type/monad of "rule_set". *)
-  val dest_fn_thms = map (fn (n, var) =>
+  val dest_fn_thms = map (fn (callee, var) =>
     let
-      val fn_def' = FunctionInfo.get_function_def fn_info n
+      val fn_def' = the (Symtab.lookup l2_infos callee)
       val inputs = #args fn_def'
       val T = (@{typ nat} :: map snd inputs)
           ---> (fastype_of (#const fn_def') |> get_typ_from_L2 rule_set)
@@ -134,8 +137,8 @@ let
       (* NB: pure functions would not use state, but recursive functions cannot
        * be lifted to pure (because we trigger failure when the measure hits
        * 0). So we can always assume there is state. *)
-      val state_typ = get_hl_state_typ ctxt prog_info fn_info fn_name
-      val x = make_lift_equality ctxt prog_info fn_info n rule_set
+      val state_typ = get_l2_state_typ ctxt prog_info l2_infos fn_name
+      val x = make_lift_equality ctxt prog_info l2_infos callee rule_set
                 (SOME state_typ) (SOME dec_measure_var) (Free (var, T))
     in
       Thm.cterm_of ctxt' x
@@ -184,16 +187,18 @@ end
  * We return a theorem of the form "foo x y == <lift> $ <term>", along with the
  * new term "<term>". If the lift was unsuccessful, we return "NONE".
  *)
-fun perform_lift ctxt prog_info fn_info rule_set fn_thm fn_name =
+fun perform_lift ctxt prog_info l2_infos rule_set fn_name =
 let
   (* Assume recursive calls can be successfully lifted into this type. *)
   val (ctxt', measure_var, thms, dict, m)
-      = assume_rec_lifted ctxt prog_info fn_info rule_set fn_thm fn_name
+      = assume_rec_lifted ctxt prog_info l2_infos rule_set fn_name
+
+  val fn_def = #definition (the (Symtab.lookup l2_infos fn_name))
 
   (* Extract the term from our function definition. *)
   val fn_thm' = Utils.named_cterm_instantiate ctxt
-                    [("rec_measure'", Thm.cterm_of ctxt' measure_var)] fn_thm
-                handle THM _ => fn_thm
+                    [("rec_measure'" (* FIXME *), Thm.cterm_of ctxt' measure_var)] fn_def
+                handle THM _ => fn_def
   val ct = Thm.prop_of fn_thm' |> Utils.rhs_of |> Thm.cterm_of ctxt'
 
   (* Rewrite the term using the given rewrite rules. *)
@@ -204,45 +209,34 @@ let
 
   (* Convert "def == old_body" and "old_body == new_body" into "def == new_body". *)
   val thm_ml = Thm.transitive fn_thm' thm
-  val thm_ml = Morphism.thm m thm_ml
 
   (* Get the newly rewritten term. *)
   val new_term = Thm.concl_of thm_ml |> Utils.rhs_of
+
+  (* Export assumptions, converting callees to schematics. *)
+  val thm_ml = Morphism.thm m thm_ml
 
   (*val _ = @{trace} (fn_name, #name rule_set, cterm_of (Proof_Context.theory_of ctxt) new_term)*)
 
   (* Determine if the conversion was successful. *)
   val success = #valid_term rule_set ctxt new_term
 in
-  (* Determine if we were a success. *)
+  (* Determine if the lifting succeeded. *)
   if success then
     SOME (thm_ml, dict)
   else
     NONE
 end
 
-(* See comment for try_mono_thm *)
-fun mono_thm_name make_function_name fn_name = make_function_name fn_name ^ "_mono"
-
 (* Like perform_lift, but also applies the polishing rules, hopefully yielding
  * an even nicer definition. *)
-fun perform_lift_and_polish ctxt prog_info fn_info rule_set do_opt
-    fn_thm fn_name =
-  case (perform_lift ctxt prog_info fn_info rule_set
-        fn_thm fn_name)
+fun perform_lift_and_polish ctxt prog_info fn_info rule_set do_opt fn_name =
+  case (perform_lift ctxt prog_info fn_info rule_set fn_name)
   of NONE => NONE
   | SOME (thm, dict) => SOME let
 
-  (* Measure the size of the new theorem. *)
-  val _ = Statistics.gather ctxt "TS" fn_name
-    (Thm.concl_of thm |> Utils.rhs_of)
-
   (* Apply any polishing rules. *)
   val polish_thm = Monad_Convert.polish ctxt rule_set do_opt thm
-
-  (* Measure the term. *)
-  val _ = Statistics.gather ctxt "polish" fn_name
-    (Thm.concl_of polish_thm |> Utils.rhs_of)
 
 in (polish_thm, dict) end
 
@@ -258,33 +252,32 @@ in (polish_thm, dict) end
  * where "lift" is a lifting function, such as "returnOk" or "gets", etc.
  *
  * If the lift does not succeed, the function returns NONE.
+ *
+ * The callees of this function need to be already translated in ts_infos
+ * and also defined in lthy.
  *)
-fun lift_function_rewrite rule_set filename prog_info fn_info
-    all_callee_proofs functions make_function_name keep_going do_opt lthy =
+fun lift_function_rewrite rule_set filename prog_info l2_infos ts_infos
+    fn_names make_function_name keep_going do_opt lthy =
 let
-  val fn_names = map fst functions
-  val fn_defs = map snd functions
+  val these_l2_infos = map (the o Symtab.lookup l2_infos) fn_names
 
   (* Determine if this function is recursive. *)
-  val is_recursive = FunctionInfo.is_function_recursive fn_info (hd fn_names)
+  val is_recursive = FunctionInfo.is_function_recursive (hd these_l2_infos)
 
-  (* Fetch relevant callee proofs, deleting recursive callees and duplicates. *)
-  val callee_proofs =
-      map (FunctionInfo.get_function_callees fn_info) fn_names
-      |> flat
-      |> Symset.make
-      |> Symset.subtract (Symset.make fn_names)
+  (* Fetch relevant callees. *)
+  val callees =
+      map #callees these_l2_infos
+      |> Symset.union_sets
       |> Symset.dest
-      |> map (Symtab.lookup all_callee_proofs #> the)
+  val callee_infos = map (Symtab.lookup ts_infos #> the) callees
 
   (* Add monad_mono theorems. *)
-  val mono_thms = map (FunctionInfo.get_function_callees fn_info) fn_names
-                  |> flat
-                  |> map (#mono_thm o FunctionInfo.get_function_def fn_info)
+  val callee_l2_infos = map (Symtab.lookup l2_infos #> the) callees
+  val mono_thms = List.mapPartial #mono_thm callee_l2_infos
 
   (* When lifting, also lift our callees. *)
   val rule_set' = Monad_Types.update_mt_lift_rules
-      (fn thms => Monad_Types.thmset_adds thms (callee_proofs @ mono_thms))
+      (fn thms => Monad_Types.thmset_adds thms (map #corres_thm callee_infos @ mono_thms))
       rule_set
 
   (*
@@ -297,10 +290,7 @@ let
    * couldn't be lifted to this type.
    *)
   val lifted_functions =
-    map (fn (fn_name, fn_thm) =>
-        perform_lift_and_polish lthy prog_info fn_info
-            rule_set' do_opt fn_thm fn_name)
-        (fn_names ~~ fn_defs)
+    map (perform_lift_and_polish lthy prog_info l2_infos rule_set' do_opt) fn_names
 
   val lifted_functions = map (fn x =>
       case x of
@@ -314,25 +304,49 @@ let
    * Generate terms necessary for defining the function, and define the
    * functions.
    *)
-  fun gen_fun_def_term (fn_name, dict, thm) =
+  fun gen_fun_def_term (fn_name, dict, thm) lthy =
   let
-    (* If this function is recursive, it has a measure parameter. *)
-    val measure_param = if is_recursive then [("rec_measure'", @{typ nat})] else []
+    (* Fix function parameters. *)
+    val fn_info = the (Symtab.lookup l2_infos fn_name)
+    (* Only produce measure parameters for recursive functions. *)
+    val all_arg_names = (if is_recursive then ["rec_measure'"] else []) @
+                        map fst (#args fn_info)
+    val all_arg_types = (if is_recursive then [AutoCorresUtil.measureT] else []) @
+                        map snd (#args fn_info)
+    val (all_arg_names, lthy') = Variable.variant_fixes all_arg_names lthy
+    val (measure_param, fn_args) =
+          if is_recursive
+          then chop 1 (all_arg_names ~~ all_arg_types)
+          else ([], all_arg_names ~~ all_arg_types)
 
-    (* Fetch function parameters. *)
-    val fn_def = FunctionInfo.get_function_def fn_info fn_name
-    val fn_params = #args fn_def
+    (* Extract function body and abstract over the function arguments.
+     * FIXME: this is an ugly way to do it. It's probably better if perform_lift
+     *        doesn't convert to schematic vars to begin with *)
 
-    (* Extract the term from the function theorem. *)
+    (* First, convert schematic argument variables (of unknown names) to known free variables. *)
+    val inst_args = map (Free #> Thm.cterm_of lthy' #> SOME) fn_args
+    (* L2 function always takes a measure variable, so reserve a slot *)
+    val inst_measure = if is_recursive
+                       then map (Free #> Thm.cterm_of lthy' #> SOME) measure_param else [NONE]
+    (* thm also has a schematic const for each recursive assumption,
+     * which we need to skip. (The measure var appears first, because it
+     * is also used in each recursive call.) *)
+    val skip_callees = replicate (Symset.card (#rec_callees fn_info)) NONE
+    val inst_thm = Drule.infer_instantiate' lthy' (inst_measure @ skip_callees @ inst_args) thm
+
+    (* Extract the body from the conversion theorem.
+     * E.g. for "L2_call foo = liftE body" we extract "body". *)
     fun tail_of (_ $ x) = x
-    val term = Thm.concl_of thm
-        |> Utils.rhs_of
-        |> tail_of
-        |> Utils.unsafe_unvarify
-        |> (fn term =>
-             foldr (fn (v, t) => Utils.abs_over "" v t)
-               term (map Free (measure_param @ fn_params)))
-    val fn_type = fastype_of term
+    val body =
+          Thm.concl_of inst_thm
+          |> Utils.rhs_of_eq
+          |> tail_of
+          (* This converts callee Vars in assumptions to Frees. Won't be
+           * necessary if we generate Frees (see previous FIXME). *)
+          |> Utils.unsafe_unvarify
+    (* Abstract over args, which are now known arg frees *)
+    val term = foldr (fn (v, t) => Utils.abs_over "" v t)
+                     body (map Free (measure_param @ fn_args))
 
     (* Replace place-holder function names with our generated constant name. *)
     val term = map_aterms (fn t => case t of
@@ -342,37 +356,36 @@ let
              | SOME a => Free (make_function_name a, T))
      | x => x) term
   in
-    (make_function_name fn_name, measure_param @ fn_params, term)
+    ((make_function_name fn_name, measure_param @ fn_args, term), lthy')
   end
-  val input_defs = map gen_fun_def_term (Utils.zip3 fn_names dicts thms)
-  val (defs, lthy) = Utils.define_functions input_defs false is_recursive lthy
-
-  (* Record the definitions in our theory data. *)
-  val lthy = fold (fn (fn_name, def) =>
-      Local_Theory.background_theory (
-          AutoCorresData.add_def filename ("TS" ^ "def") fn_name def))
-      (Utils.zip fn_names defs) lthy
+  (* NB: discard lthy because we don't want the placeholders to be fixed during define_functions *)
+  val (input_defs, _) = fold_map gen_fun_def_term (Utils.zip3 fn_names dicts thms) lthy
+  val (ts_defs, lthy) = Utils.define_functions input_defs false is_recursive lthy
+  (* TODO: we may want to cleanup callees and rec_callees here, like we do
+   *       in other phases. It's not crucial, however, since this is the
+   *       final phase. *)
 
   (* Instantiate variables in our equivalence theorem to their newly-defined values. *)
   fun do_inst_thm thm =
     Utils.instantiate_thm_vars lthy (
       fn ((name, _), t) =>
         try (unprefix "rec'") name
+        (* FIXME: lookup from ts_infos *)
         |> Option.map make_function_name
         |> Option.map (Utils.get_term lthy)
         |> Option.map (Thm.cterm_of lthy)) thm
   val inst_thms = map do_inst_thm thms
 
-  (* HACK: If a heap-lifted function takes no parameters, its measure gets
-           eta contracted away, preventing eqsubst_tac from unifying the rec_measure's
-           schematic variable. So we get rid of the schematic var pre-emptively. *)
+  (* HACK: If an L2 function takes no parameters, its measure gets eta-contracted
+           away, preventing eqsubst_tac from unifying the rec_measure's schematic
+           variable. So we get rid of the schematic var pre-emptively. *)
   val inst_thms =
       map (fn inst_thm => Drule.abs_def inst_thm handle TERM _ => inst_thm) inst_thms
 
   (* Generate a theorem converting "L2_call <func>" into its new form,
    * such as L2_call <func> = liftE $ <new_func_def> *)
   val final_props = map (fn fn_name =>
-      make_lift_equality lthy prog_info fn_info fn_name rule_set'
+      make_lift_equality lthy prog_info l2_infos fn_name rule_set'
           NONE NONE (Utils.get_term lthy (make_function_name fn_name))) fn_names
 
   (* Convert meta-logic into HOL statements, conjunct them together and setup
@@ -395,11 +408,11 @@ let
       |> apply_tac "(base case) split subgoals"
           (TRY (REPEAT_ALL_NEW (Tactic.match_tac lthy [@{thm conjI}]) 1))
       |> apply_tac "(base case) solve base cases"
-          (EVERY (map (fn (def, fn_def) =>
+          (EVERY (map (fn (ts_def, l2_info) =>
             SOLVES (
-            (EqSubst.eqsubst_tac lthy [0] [fn_def] 1)
-            THEN (EqSubst.eqsubst_tac lthy [0] [def] 1)
-            THEN (simp_tac (put_simpset ts_simpset lthy) 1))) (defs ~~ fn_defs)))
+            (EqSubst.eqsubst_tac lthy [0] [#definition l2_info] 1)
+            THEN (EqSubst.eqsubst_tac lthy [0] [ts_def] 1)
+            THEN (simp_tac (put_simpset ts_simpset lthy) 1))) (ts_defs ~~ these_l2_infos)))
       |> apply_tac "(rec case) spliting induct case prems"
           (TRY (REPEAT_ALL_NEW (Tactic.ematch_tac lthy [@{thm conjE}]) 1))
       |> apply_tac "(rec case) split inductive case subgoals"
@@ -408,11 +421,12 @@ let
           (EVERY (map (fn (def, inst_thm) =>
               ((EqSubst.eqsubst_tac lthy [0] [def] 1)
                THEN (EqSubst.eqsubst_tac lthy [0] [inst_thm] 1)
-               THEN (REPEAT (CHANGED (asm_full_simp_tac (put_simpset ts_simpset lthy) 1))))) (defs ~~ inst_thms)))
+               THEN (REPEAT (CHANGED (asm_full_simp_tac (put_simpset ts_simpset lthy) 1)))))
+              (ts_defs ~~ inst_thms)))
     else
       goal_state
       |> apply_tac "unfolding strengthen function definition"
-             (EqSubst.eqsubst_tac lthy [0] [hd defs] 1)
+             (EqSubst.eqsubst_tac lthy [0] [hd ts_defs] 1)
       |> apply_tac "unfolding L2 rewritten theorem"
              (EqSubst.eqsubst_tac lthy [0] [hd inst_thms] 1)
       |> apply_tac "simplifying remainder"
@@ -451,76 +465,34 @@ let
    *   ('s, 'e + 'a) nondet_monad
    *)
   val new_thms = map (fn t => #polymorphic_thm rule_set' OF [t]) new_thms
-    |> map (fn t => Drule.generalize ([], ["rec_measure'"]) t)
+                 |> map (fn t => Drule.generalize ([], ["rec_measure'"]) t)
 
-  (* Record correctness theorem(s) for what we just did. *)
-  val lthy = fold (fn (fn_name, thm) =>
-                      Local_Theory.background_theory
-                      (AutoCorresData.add_thm filename "TScorres" fn_name thm))
-             (fn_names ~~ new_thms) lthy
+  (* Final mono rules for recursive functions. *)
+  fun try_mono_thm (fn_name, rewrite_thm) =
+    case #mono_thm (the (Symtab.lookup l2_infos fn_name)) of
+        NONE => NONE
+      | SOME l2_mono_thm =>
+          case try (#prove_mono rule_set' rewrite_thm) l2_mono_thm of
+              NONE => (Utils.ac_warning ("Failed to prove monad_mono for function: " ^ fn_name);
+                       NONE)
+            | SOME ts_mono_thm => SOME (fn_name, ts_mono_thm);
+  val mono_thms = (if is_recursive then List.mapPartial try_mono_thm (fn_names ~~ new_thms) else [])
+                  |> Symtab.make;
 
-  (* Output final corres rule. *)
-  (* FIXME: Move to better location. *)
-  fun output_rule fn_name lthy =
-  let
-    val thy = Proof_Context.theory_of lthy
-    val l1_thm = the (AutoCorresData.get_thm thy filename "L1corres" fn_name)
-          handle Option => raise SimplConv.FunctionNotFound fn_name
-    val l2_thm = the (AutoCorresData.get_thm thy filename "L2corres" fn_name)
-          handle Option => raise SimplConv.FunctionNotFound fn_name
-    val hl_thm = the (AutoCorresData.get_thm thy filename "HLcorres" fn_name)
-          handle Option => (@{thm L2Tcorres_trivial_from_local_var_extract} OF [l2_thm]
-                            handle THM _ => l2_thm) (* catch this failure below *)
-    val wa_thm = the (AutoCorresData.get_thm thy filename "WAcorres" fn_name)
-          (* If there is no WAcorres thm, it is probably because word_abstract
-           * was disabled using no_word_abs.
-           * In that case we just carry the hl_thm through. *)
-          handle Option => (@{thm corresTA_trivial_from_heap_lift} OF [hl_thm]
-                            handle THM _ => hl_thm) (* catch this failure below *)
-    val ts_thm = the (AutoCorresData.get_thm thy filename "TScorres" fn_name)
-          handle Option => raise SimplConv.FunctionNotFound fn_name
-    val lthy = let
-        val final_thm = @{thm ac_corres_chain} OF [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm]
-        val final_thm' = Simplifier.simplify lthy final_thm
-        val (_, lthy) = Utils.define_lemma (make_function_name fn_name ^ "_ac_corres") final_thm' lthy
-    in
-        lthy
-    end
-    handle THM _ =>
-           (Utils.THM_non_critical keep_going
-                ("autocorres: failed to prove ac_corres theorem for " ^ fn_name)
-                0 [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm];
-            lthy)
-  in
-    lthy
-  end
-
-  val lthy = fold output_rule fn_names lthy
-
-  (* Provide final mono rules for recursive functions.
-   * It's inconvenient to do this at AutoCorresUtil.translate because
-   * the prover depends on the rule set being used.
-   * However, we still want "translate" to store the resulting thms into the
-   * final fn_info. As a workaround, we define them in the theory here
-   * and then retrieve them later. *)
-  fun try_mono_thm (fn_name, rewrite_thm) lthy =
-    let
-      val mono_thm = #mono_thm (FunctionInfo.get_function_def fn_info fn_name)
-    in (* We need to be permissive because we call user-supplied provers. *)
-       case try (#prove_mono rule_set' rewrite_thm) mono_thm of
-           NONE => (Utils.ac_warning ("Failed to prove monad_mono for function: " ^ fn_name);
-                    lthy)
-         | SOME mono_thm' => let
-              val name = mono_thm_name make_function_name fn_name
-              val _ = tracing ("Defining monad_mono theorem: " ^ name)
-              val (_, lthy) = Utils.define_lemma name mono_thm' lthy
-              (* Also add to the simpset. (Does this actually help?) *)
-              val lthy = Utils.simp_add [mono_thm'] lthy
-              in lthy end
-    end
-  val lthy = if is_recursive then fold try_mono_thm (fn_names ~~ new_thms) lthy else lthy
+  val ts_infos =
+        map (fn ((f, l2_info), (ts_def, ts_corres)) => let
+              val mono_thm = Symtab.lookup mono_thms f;
+              val const = Utils.get_term lthy (make_function_name f);
+              val ts_info = l2_info
+                    |> FunctionInfo.function_info_upd_phase FunctionInfo.TS
+                    |> FunctionInfo.function_info_upd_definition ts_def
+                    |> FunctionInfo.function_info_upd_corres_thm ts_corres
+                    |> FunctionInfo.function_info_upd_const const
+                    |> FunctionInfo.function_info_upd_mono_thm mono_thm;
+              in (f, ts_info) end)
+            ((fn_names ~~ these_l2_infos) ~~ (ts_defs ~~ new_thms))
 in
-  (lthy, fn_names ~~ new_thms, #name rule_set')
+  (lthy, Symtab.make ts_infos, #name rule_set')
 end
 
 
@@ -550,17 +522,18 @@ end
 
 
 (* Lift the given function set, trying each rule until one succeeds. *)
-fun lift_function rules force_lift filename prog_info fn_info
-    all_callee_proofs functions make_function_name keep_going do_opt lthy =
+fun lift_function rules force_lift filename prog_info l2_infos ts_infos
+                  fn_names make_function_name keep_going do_opt lthy =
 let
-  val rules' = compute_lift_rules rules force_lift (map fst functions)
+  val rules' = compute_lift_rules rules force_lift fn_names
 
   (* Find the first lift that works. *)
   fun first (rule::xs) =
-      (lift_function_rewrite rule filename prog_info fn_info
-           all_callee_proofs functions make_function_name keep_going do_opt lthy
+      (lift_function_rewrite rule filename prog_info l2_infos ts_infos
+                             fn_names make_function_name keep_going do_opt lthy
        handle LiftingFailed _ => first xs)
-    | first [] = raise AllLiftingFailed functions
+    | first [] = raise AllLiftingFailed (map (fn f =>
+                         (f, #definition (the (Symtab.lookup l2_infos f)))) fn_names)
 in
   first rules'
 end
@@ -583,81 +556,65 @@ in
   writeln ("Type Strengthening Statistics: \n" ^ data)
 end
 
-(* Run through every function, attempting to strengthen its type. *)
-fun type_strengthen (rules : Monad_Types.monad_type list)
-                    (force_lift : Monad_Types.monad_type Symtab.table)
-                    filename prog_info fn_info (make_function_name : string -> string)
-                    (keep_going : bool) (do_opt : bool) lthy =
+(* Run through every function, attempting to strengthen its type.
+ * FIXME: this stage is currently completely sequential. Conversions
+ *        that do not depend on each other should be in parallel;
+ *        this requires splitting the convert and define stages as usual. *)
+fun translate
+      (rules : Monad_Types.monad_type list)
+      (force_lift : Monad_Types.monad_type Symtab.table)
+      (filename : string)
+      (prog_info : ProgramInfo.prog_info)
+      (l2_results : FunctionInfo.phase_results)
+      (existing_l2_infos : FunctionInfo.function_info Symtab.table)
+      (existing_ts_infos : FunctionInfo.function_info Symtab.table)
+      (make_function_name : string -> string)
+      (keep_going : bool)
+      (do_opt : bool)
+      (add_trace: string -> string -> AutoCorresData.Trace -> unit)
+      : FunctionInfo.phase_results =
+if FSeq.null l2_results then FSeq.empty () else
 let
-  fun optcat xs = List.concat (map the_list xs)
+  (* Wait for previous stage to finish first. *)
+  val l2_results = FSeq.list_of l2_results;
+  val lthy = List.last l2_results |> fst;
+  val l2_infos = Utils.symtab_merge false (map snd l2_results);
 
-  (* Fetch the body of every function. *)
-  fun convert lthy fn_name =
+  (* Prettify bound variable names in definitions. *)
+  val l2_infos = Symtab.map (fn f_name => fn info => let
+        val def = #definition (the (Symtab.lookup l2_infos f_name));
+        val pretty_def = PrettyBoundVarNames.pretty_bound_vars_thm
+                             lthy (Utils.crhs_of (Thm.cprop_of def)) keep_going
+                         |> Thm.transitive def;
+        in FunctionInfo.function_info_upd_definition pretty_def info end)
+        l2_infos;
+
+  (* Add prior L2 translations to round out L2 callees. *)
+  val l2_infos = AutoCorresUtil.add_background_callees existing_l2_infos l2_infos;
+  val l2_infos = Symtab.merge (K false) (l2_infos, existing_l2_infos);
+
+  (* For now, just works sequentially like the old TypeStrengthen. *)
+  fun translate_group fn_names (lthy, _, ts_infos) =
   let
-    (* Fetch definition. *)
-    val fn_def = FunctionInfo.get_function_def fn_info fn_name
-    val def = #definition fn_def
+    val _ = writeln ("Translating (type strengthen) " ^ Utils.commas fn_names);
+    val start_time = Timer.startRealTimer ();
 
-    (* Prettify bound variable names in definition. *)
-    val state_typ = get_hl_state_typ lthy prog_info fn_info fn_name
-    val new_def = PrettyBoundVarNames.pretty_bound_vars_thm
-                      lthy (Utils.crhs_of (Thm.cprop_of def)) keep_going
-  in
-    Thm.transitive def new_def
-  end
+    val (lthy, new_ts_infos, monad_name) =
+        lift_function rules force_lift filename prog_info l2_infos ts_infos
+                            fn_names make_function_name keep_going do_opt lthy;
 
-  (* Definition function. *)
-  fun define lthy _ (all_callee_proofs, callee_stats) functions =
-  let
-    val _ = writeln ("Translating (type strengthen) " ^ (Utils.commas (map fst functions)))
-    val start_time = Timer.startRealTimer ()
-    val (lthy, new_rewrites, monad_name) =
-        lift_function rules force_lift filename prog_info fn_info
-                      all_callee_proofs functions make_function_name keep_going do_opt lthy
-    val _ = writeln ("  --> " ^ monad_name)
-    val _ = @{trace} ("Converted (TS) " ^ Utils.commas (map fst functions) ^ " in " ^
-                      Time.toString (Timer.checkRealTimer start_time) ^ " s")
-    val all_callee_proofs' = fold Symtab.update_new new_rewrites all_callee_proofs
-  in
-      (map (K ()) functions,
-       (all_callee_proofs', monad_name :: callee_stats),
-       lthy)
-  end
+    val _ = writeln ("  --> " ^ monad_name);
+    val _ = tracing ("Converted (TS) " ^ Utils.commas fn_names ^ " in " ^
+                     Time.toString (Timer.checkRealTimer start_time) ^ " s");
+  in (lthy, new_ts_infos, Symtab.merge (K false) (ts_infos, new_ts_infos)) end;
 
-  (* Retrieve monad_mono thms defined by try_monad_mono *)
-  fun retrieve_mono_thm lthy fn_def = let
-    val fn_name = #name fn_def
-    val thm_name = mono_thm_name make_function_name fn_name
-    val mono_thm = Proof_Context.get_thm lthy thm_name handle ERROR _ => @{thm TrueI}
-    in mono_thm end
-
-  (* Update function information. *)
-  fun update_function_def lthy _ fn_def =
-    FunctionInfo.fn_def_update_const (Utils.get_term lthy (make_function_name (#name fn_def))) fn_def
-    |> FunctionInfo.fn_def_update_definition (
-        (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
-            filename "TSdef" (#name fn_def))))
-
-  val initial_callees = Symtab.dest (FunctionInfo.get_functions fn_info)
-        |> List.mapPartial (fn (fn_name, fn_def) =>
-             if not (#finished fn_def) then NONE else
-               AutoCorresData.get_thm (Proof_Context.theory_of lthy)
-                                      filename ("TScorres") fn_name
-               |> Option.map (fn thm => (fn_name, thm)))
-        |> Symtab.make
-  val (lthy, fn_info, (_, results)) =
-      AutoCorresUtil.translate
-        lthy fn_info Symtab.empty convert define
-        (fn defs => fn lthy => map (retrieve_mono_thm lthy) defs)
-        update_function_def
-        (initial_callees, [])
-
-  (* Print some statistics for curiosity's sake. *)
-  (*
-  val _ = if print_stats then print_statistics results else ()
-  *)
+  val ts_results =
+        Utils.accumulate translate_group (lthy, Symtab.empty, existing_ts_infos)
+                         (map (map fst o Symtab.dest o snd) l2_results)
+        |> fst
+        |> map (fn (lthy, ts_infos, _) => (lthy, ts_infos));
 in
-  (lthy, fn_info)
+  FSeq.of_list ts_results
 end
 
 end

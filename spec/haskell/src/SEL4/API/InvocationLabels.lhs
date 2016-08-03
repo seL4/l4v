@@ -136,3 +136,4 @@ Decode the invocation type requested by a particular message label.
 >     | x' <= fromEnum (maxBound :: InvocationLabel) = toEnum x'
 >     | otherwise = InvalidInvocation
 >     where x' = fromIntegral x
+

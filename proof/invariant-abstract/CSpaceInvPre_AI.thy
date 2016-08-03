@@ -136,7 +136,7 @@ lemma empty_table_caps_of:
   "empty_table S ko \<Longrightarrow> caps_of ko = {}"
   by (cases ko, simp_all add: empty_table_def caps_of_def cap_of_def)
 
-context begin interpretation Arch . (*FIXME arch_split *) 
+context begin interpretation Arch . 
 lemma free_index_update_test_function_stuff[simp]:
   "cap_asid (src_cap\<lparr>free_index := a\<rparr>) = cap_asid src_cap"
   "obj_irq_refs (src_cap\<lparr>free_index := a\<rparr>) = obj_irq_refs src_cap"
@@ -144,8 +144,9 @@ lemma free_index_update_test_function_stuff[simp]:
   "untyped_range (cap \<lparr>free_index :=a \<rparr>) = untyped_range cap"
   "zobj_refs (c\<lparr>free_index:=a\<rparr>) =  zobj_refs c"
   "obj_refs (c\<lparr>free_index:=a\<rparr>) = obj_refs c"
-  by (auto simp:cap_asid_def free_index_update_def  vs_cap_ref_def
-    is_cap_simps obj_irq_refs_def split:cap.splits arch_cap.splits)
+  by (auto simp: cap_asid_def free_index_update_def vs_cap_ref_def
+                 is_cap_simps obj_irq_refs_def
+          split: cap.splits arch_cap.splits)
 end
 
 end

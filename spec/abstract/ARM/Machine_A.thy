@@ -119,15 +119,14 @@ definition
   idle_thread_ptr :: vspace_ref where
   "idle_thread_ptr = kernel_base + 0x1000"
 
-end 
+end
 
 context begin interpretation Arch .
-  requalify_consts idle_thread_ptr
+  requalify_consts kernel_base idle_thread_ptr
 end
 
 context Arch begin global_naming ARM_A
 
-  
 text {* Miscellaneous definitions of constants used in modelling machine
 operations. *}
 

@@ -534,7 +534,7 @@ lemma valid_global_vspace_mappings_arch_update[simp]:
      \<Longrightarrow> valid_global_vspace_mappings (arch_state_update f s) = valid_global_vspace_mappings s"
   by (simp add: valid_global_vspace_mappings_def)
 
-lemma set_object_global_pd_mappings:
+lemma set_object_global_vspace_mappings:
   "\<lbrace>valid_global_vspace_mappings
             and (\<lambda>s. (page_directory_at p s \<or> page_table_at p s)
                        \<longrightarrow> valid_global_objs s \<and> p \<notin> global_refs s)\<rbrace>

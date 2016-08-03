@@ -697,8 +697,10 @@ lemma setCurrentPD_ccorres:
            (doMachineOp (setCurrentPD pd))
            (Call setCurrentPD_'proc)"
   apply cinit'
-   apply (simp add: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
-                    writeTTBR0_empty_fail)
+   apply (clarsimp simp: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
+                    writeTTBR0_empty_fail
+                   intro!: ccorres_cond_empty)
+   apply (rule ccorres_rhs_assoc)
    apply (ctac (no_vcg) add: dsb_ccorres)
     apply (ctac (no_vcg) add: writeTTBR0_ccorres)
      apply (ctac (no_vcg) add: isb_ccorres)

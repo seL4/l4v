@@ -816,7 +816,7 @@ lemma handle_recv_reads_respects_f:
         apply (wp get_ntfn_wp get_cap_wp | wpc)+
        apply simp
        apply(rule hoare_pre)
-        apply(rule PDPTEntries_AI.hoare_vcg_all_liftE)
+        apply(rule VSpaceEntries_AI.hoare_vcg_all_liftE)
            apply (rule_tac Q="\<lambda>r s. silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and>
                                      tcb_at rv s \<and> pas_cur_domain aag s \<and>                                     
                                      is_subject aag rv \<and> is_subject aag (cur_thread s) \<and>

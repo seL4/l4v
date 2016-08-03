@@ -95,21 +95,6 @@ lemma uint_ucast:
    apply simp_all
   done
 
-lemma kernel_base_shift_cast_le:
-  fixes x :: "12 word"
-  shows
-  "(kernel_base >> 20 \<le> ucast x) =
-        (ucast (kernel_base >> 20) \<le> x)"
-  apply (simp add: word_le_def)
-  apply (subst uint_ucast, simp,
-         simp add: kernel_base_def)
-  apply (simp add: ucast_def)
-  apply (subst word_uint.Abs_inverse)
-   apply (cut_tac x=x in word_uint.Rep)
-   apply (simp add: uints_num)
-  apply simp
-  done
-
 (* FIXME: move *)
 lemma inj_on_domD: "\<lbrakk>inj_on f (dom f); f x = Some z; f y = Some z\<rbrakk> \<Longrightarrow> x = y"
   by (erule inj_onD) clarsimp+
@@ -246,8 +231,5 @@ lemma set_mrs_tcb[wp]:
 lemma set_mrs_ntfn_at[wp]:
   "\<lbrace> ntfn_at p \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. ntfn_at p \<rbrace>"
   by (simp add: ntfn_at_typ, wp)
-
-
-
 
 end

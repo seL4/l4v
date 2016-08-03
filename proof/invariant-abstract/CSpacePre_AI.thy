@@ -13,7 +13,7 @@ CSpace invariants preamble
 *)
 
 theory CSpacePre_AI
-imports CSpaceInv_AI
+imports "./$L4V_ARCH/ArchCSpaceInv_AI"
 begin
 
 context begin interpretation Arch .
@@ -77,7 +77,6 @@ lemma masked_as_full_simps[simp]:
   "masked_as_full cap cap.NullCap = cap"
   "masked_as_full cap cap.DomainCap = cap"
   "masked_as_full cap (cap.ThreadCap r) = cap"
-
   by (simp add:masked_as_full_def)+
 
 lemma maksed_as_full_test_function_stuff[simp]:

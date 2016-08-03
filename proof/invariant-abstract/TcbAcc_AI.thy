@@ -1445,8 +1445,8 @@ lemma sbn_only_idle[wp]:
   done
 
 lemma set_thread_state_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_pd_mappings\<rbrace>
-      set_thread_state p st \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
+  "\<lbrace>valid_global_vspace_mappings\<rbrace>
+      set_thread_state p st \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   by (simp add: set_thread_state_thread_set, wp, simp, wp)
 
 lemma set_thread_state_pspace_in_kernel_window[wp]:
@@ -1462,8 +1462,8 @@ lemma set_thread_state_cap_refs_in_kernel_window[wp]:
                 ball_tcb_cap_casesI)+
 
 lemma set_bound_notification_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_pd_mappings\<rbrace>
-      set_bound_notification p ntfn \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
+  "\<lbrace>valid_global_vspace_mappings\<rbrace>
+      set_bound_notification p ntfn \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   by (simp add: set_bound_notification_thread_set, wp)
 
 lemma set_bound_notification_pspace_in_kernel_window[wp]:

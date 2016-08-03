@@ -76,3 +76,4 @@ This module defines instances of "PSpaceStorable" for X64-specific kernel object
 >     projectKO o = case o of 
 >                 KOArch (KOIOCTE p) -> return p
 >                 _ -> typeError "IOCTE" o
+

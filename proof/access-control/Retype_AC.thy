@@ -780,7 +780,7 @@ lemma use_retype_region_proofs_ext':
                         foldr_upd_app_if fun_upd_def[symmetric])
   apply safe
   apply (rule x)
-   apply (rule retype_region_proofs.intro, rule retype_region_proofs_gen.intro, simp_all)[1]
+   apply (rule retype_region_proofs.intro, simp_all)[1]
    apply (simp add: range_cover_def obj_bits_api_def z
      slot_bits_def word_bits_def cte_level_bits_def)+
    done

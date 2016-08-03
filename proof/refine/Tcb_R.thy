@@ -1485,7 +1485,7 @@ where
 lemma tcbinv_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
   corres (intr \<oplus> op =)
-         (einvs and simple_sched_action and tcb_inv_wf ti)
+         (einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti)
          (invs' and sch_act_simple and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)

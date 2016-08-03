@@ -1601,6 +1601,8 @@ proof -
                          mapM_Cons mapM_Nil
                     del: Collect_const)
         apply (rule ccorres_rhs_assoc)+
+        apply simp
+        apply (rule ccorres_rhs_assoc)+
         apply (ctac(no_vcg))
          apply (rule ccorres_stateAssert)
          apply (ctac(no_vcg) add: setMR_ccorres_dc)

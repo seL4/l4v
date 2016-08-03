@@ -12,15 +12,14 @@ chapter "x86-64bit Machine Types"
 
 theory MachineTypes
 imports
-  "../../../lib/Enumeration"
+  "../../../lib/Word_Lib/Enumeration"
   "../../../lib/$L4V_ARCH/WordSetup"
-  "../../../lib/wp/NonDetMonad"
+  "../../../lib/Monad_WP/NonDetMonad"
   "../../../lib/HaskellLib_H"
   Platform
 begin
-context Arch begin global_naming X64
 
-(* !!! Generated File !!! Skeleton in ../spec/design/m-skel *)
+context Arch begin global_naming X64
 
 text {*
   An implementation of the machine's types, defining register set 
@@ -31,10 +30,15 @@ section "Types"
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 decls_only
 (*<*)
+
+type_synonym machine_word_len = 64
+
 end
+
 context begin interpretation Arch .
 requalify_types register gdtslot
 end
+
 context Arch begin global_naming X64
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 instanceproofs
@@ -57,7 +61,7 @@ qualify X64 (in Arch)
 
 record
   machine_state =
-  irq_masks :: "irq \<Rightarrow> bool"
+  irq_masks :: "X64.irq \<Rightarrow> bool"
   irq_state :: nat
   underlying_memory :: "word64 \<Rightarrow> word8"
   machine_state_rest :: X64.machine_state_rest  

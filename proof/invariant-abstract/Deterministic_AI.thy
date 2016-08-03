@@ -12,6 +12,24 @@ theory Deterministic_AI
 imports AInvs
 begin
 
+context begin interpretation Arch .
+requalify_facts
+  update_work_units_empty_fail
+  reset_work_units_empty_fail
+  recycle_cap_ext_empty_fail
+  get_cap_kheap
+  set_domain_empty_fail
+  thread_set_domain_empty_fail
+end
+
+lemmas [wp] =
+  update_work_units_empty_fail
+  reset_work_units_empty_fail
+  recycle_cap_ext_empty_fail
+  get_cap_kheap
+  set_domain_empty_fail
+  thread_set_domain_empty_fail
+
 declare dxo_wp_weak[wp del]
 
 (** This theory shows that the cdt_list operations
@@ -29,19 +47,6 @@ declare dxo_wp_weak[wp del]
         (from the mdb) exactly once *)
 
  (*Some nasty hackery to get around lack of polymorphic type class operations*)
-
-lemma select_ext_weak_wp[wp]: "\<lbrace>\<lambda>s. \<forall>x\<in>S. Q x s\<rbrace> select_ext a S \<lbrace>Q\<rbrace>"
-  apply (simp add: select_ext_def)
-  apply (wp select_wp)
-  apply simp
-  done
-
-
-lemma select_ext_wp[wp]:"\<lbrace>\<lambda>s. a s \<in> S \<longrightarrow> Q (a s) s\<rbrace> select_ext a S \<lbrace>Q\<rbrace>"
-  apply (simp add: select_ext_def unwrap_ext_det_ext_ext_def)
-  apply (wp select_wp)
-  apply (simp add: unwrap_ext_det_ext_ext_def select_switch_det_ext_ext_def)
-  done
 
 lemma and_assoc: "(A and (B and C)) = (A and B and C)"
   apply (rule ext)
@@ -797,7 +802,6 @@ lemma empty_list_empty_desc:
   done
 
 
-
 lemma after_in_list_not_self_helper:
   "\<lbrakk>distinct list;
         after_in_list list c = Some c;
@@ -878,6 +882,7 @@ lemma next_not_child_eq_next_sib_None:
 lemma remove_collect: "{y. P y} - {x} = {y. P y \<and> y \<noteq> x}"
   apply blast
   done
+
 
 locale mdb_insert_abs_simple =
 fixes m :: cdt
@@ -3198,12 +3203,6 @@ lemma no_parent_not_next_slot:
   done
 
 
-
-
-
-
-
-
 definition descendants_prop where
  "descendants_prop P t \<equiv> (\<forall>p. \<forall>c \<in> set (t p). P c)"
 
@@ -3892,12 +3891,6 @@ interpretation set_thread_state_ext_extended: is_extended "set_thread_state_ext 
   apply wp
   done
 
-lemma reschedule_required_empty_fail[wp]:
-  "empty_fail reschedule_required"
-  apply (simp add: reschedule_required_def)
-  apply (wp | clarsimp split: scheduler_action.splits)+
-  done
-
 crunch all_but_exst[wp]: reschedule_required "all_but_exst P"
 
 interpretation reschedule_required_ext_extended: is_extended "reschedule_required"
@@ -3920,57 +3913,70 @@ lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cance
   apply (wp select_wp hoare_drop_imps thread_set_mdb | simp)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch valid_list[wp]: cap_swap_for_delete,set_cap,finalise_cap valid_list (wp: crunch_wps simp: unless_def crunch_simps)
-end
-
-lemmas rec_del_valid_list[wp] =  rec_del_preservation[OF cap_swap_for_delete_valid_list set_cap_valid_list empty_slot_valid_list finalise_cap_valid_list]
-
-
 crunch all_but_exst[wp]: update_work_units "all_but_exst P"
-
-(*FIXME: arch_split*)
-sublocale Arch < update_work_units_ext_extended: is_extended "update_work_units"
-  apply (unfold_locales)
-  apply wp
-  done
 
 crunch all_but_exst[wp]: reset_work_units "all_but_exst P"
 
-(*FIXME: arch_split*)
-sublocale Arch < reset_work_units_ext_extended: is_extended "reset_work_units"
+global_interpretation update_work_units_ext_extended: is_extended "update_work_units"
   apply (unfold_locales)
   apply wp
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
+global_interpretation reset_work_units_ext_extended: is_extended "reset_work_units"
+  apply (unfold_locales)
+  apply wp
+  done
+
 lemma preemption_point_inv':
   "\<lbrakk>irq_state_independent_A P; \<And>f s. P (work_units_completed_update f s) = P s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   apply (intro impI conjI | simp add: preemption_point_def o_def
        | wp hoare_post_imp[OF _ getActiveIRQ_wp] OR_choiceE_weak_wp alternative_wp[where P=P]
        | wpc | simp add: update_work_units_def reset_work_units_def)+
   done
-end
+
+
+locale Deterministic_AI_1 =
+  assumes cap_swap_for_delete_valid_list[wp]:
+    "\<And>param_a param_b. \<lbrace>valid_list\<rbrace> cap_swap_for_delete param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes finalise_cap_valid_list:
+    "\<And>param_a param_b. \<lbrace>valid_list\<rbrace> finalise_cap param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes get_cap_valid_list[wp]:
+    "\<And>param_a. \<lbrace>valid_list\<rbrace> get_cap param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
+
+
+context Deterministic_AI_1 begin
+
+lemmas rec_del_valid_list[wp] = rec_del_preservation
+  [OF cap_swap_for_delete_valid_list
+      set_cap_valid_list
+      empty_slot_valid_list
+      finalise_cap_valid_list]
 
 crunch valid_list[wp]: cap_delete valid_list
   (wp: preemption_point_inv')
+
+end
 
 lemma irq_state_independent_A_valid_list[simp]: "irq_state_independent_A valid_list"
   apply (simp add: irq_state_independent_A_def)
   done
 
+context Deterministic_AI_1 begin
+
 lemma cap_revoke_valid_list[wp]:"\<lbrace>valid_list\<rbrace> cap_revoke a \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  apply (rule CNodeInv_AI.cap_revoke_preservation2)
+  apply (rule cap_revoke_preservation2)
   apply (wp preemption_point_inv'|simp)+
   done
 
 crunch valid_list[wp]: ethread_set "valid_list"
 
+end
+
 crunch all_but_exst[wp]: ethread_set "all_but_exst P"
 
 crunch (empty_fail) empty_fail[wp]: ethread_set
 
-interpretation ethread_set_extended: is_extended "ethread_set a b"
+global_interpretation ethread_set_extended: is_extended "ethread_set a b"
   apply (unfold_locales)
   apply wp
   done
@@ -3979,15 +3985,18 @@ crunch valid_list[wp]: recycle_cap_ext "valid_list"
 
 crunch all_but_exst[wp]: recycle_cap_ext "all_but_exst P"
 
-(*FIXME: arch_split*)
-sublocale Arch < recycle_cap_ext_extended: is_extended "recycle_cap_ext a"
+global_interpretation recycle_cap_ext_extended: is_extended "recycle_cap_ext a"
   apply (unfold_locales)
   apply wp
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch valid_list[wp]: cap_recycle valid_list (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM unless_def ignore: without_preemption filterM recycle_cap_ext)
-end
+
+locale Deterministic_AI_2 = Deterministic_AI_1 +
+  assumes cap_recycle_valid_list[wp]:
+    "\<And>param_a. \<lbrace>valid_list\<rbrace> cap_recycle param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
+
+
+context Deterministic_AI_2 begin
 
 lemma invoke_cnode_valid_list[wp]: "\<lbrace>valid_list\<rbrace>
            invoke_cnode ci
@@ -3996,6 +4005,7 @@ lemma invoke_cnode_valid_list[wp]: "\<lbrace>valid_list\<rbrace>
    apply (wp crunch_wps cap_move_src_slot_Null hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: invoke_cnode_def crunch_simps split del: split_if)+
   done
 
+end
 
 crunch valid_list[wp]: switch_if_required_to,set_priority "valid_list" (wp: crunch_wps)
 
@@ -4008,12 +4018,12 @@ lemma empty_fail_possible_switch_to[wp]: "empty_fail (possible_switch_to a b)"
 
 crunch (empty_fail)empty_fail[wp]: switch_if_required_to
 
-interpretation possible_switch_to_extended: is_extended "possible_switch_to a b"
+global_interpretation possible_switch_to_extended: is_extended "possible_switch_to a b"
   apply (unfold_locales)
   apply wp
   done
 
-interpretation switch_if_required_to_extended: is_extended "switch_if_required_to a"
+global_interpretation switch_if_required_to_extended: is_extended "switch_if_required_to a"
   apply (unfold_locales)
   apply wp
   done
@@ -4022,21 +4032,19 @@ crunch all_but_exst[wp]: set_priority "all_but_exst P" (simp: ethread_get_def)
 
 crunch (empty_fail)empty_fail[wp]: set_priority
 
-interpretation set_priority_extended: is_extended "set_priority a b"
+global_interpretation set_priority_extended: is_extended "set_priority a b"
   apply (unfold_locales)
   apply wp
   done
 
 crunch all_but_exst[wp]: set_domain "all_but_exst P" (simp: ethread_get_def)
 
-(*FIXME: arch_split*)
-sublocale Arch < set_domain_extended: is_extended "set_domain a b"
+global_interpretation set_domain_extended: is_extended "set_domain a b"
   apply (unfold_locales)
   apply wp
   done
 
-(*FIXME: arch_split*)
-sublocale Arch < thread_set_domain_extended: is_extended "thread_set_domain a b"
+global_interpretation thread_set_domain_extended: is_extended "thread_set_domain a b"
   apply (unfold_locales)
   apply wp
   done
@@ -4045,20 +4053,20 @@ crunch all_but_exst[wp]: dec_domain_time "all_but_exst P" (simp: ethread_get_def
 
 crunch (empty_fail) empty_fail[wp]: dec_domain_time
 
-interpretation dec_domain_time_extended: is_extended "dec_domain_time"
+global_interpretation dec_domain_time_extended: is_extended "dec_domain_time"
   apply (unfold_locales)
   apply wp
   done
 
-
-crunch valid_list[wp]: invoke_tcb valid_list (wp: mapM_x_wp' ignore: check_cap_at simp: check_cap_at_def)
-
+context Deterministic_AI_1 begin
+crunch valid_list[wp]: invoke_tcb valid_list
+  (wp: mapM_x_wp' ignore: check_cap_at simp: check_cap_at_def)
+end
 
 lemma delete_objects_valid_list[wp]: "\<lbrace>valid_list\<rbrace> delete_objects ptr bits \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding delete_objects_def
   apply (wp | simp add: detype_def detype_ext_def wrap_ext_det_ext_ext_def)+
   done
-
 
 lemmas mapM_x_def_bak = mapM_x_def[symmetric]
 
@@ -4071,56 +4079,19 @@ crunch all_but_exst[wp]: retype_region_ext "all_but_exst P" (simp: ethread_get_d
 
 crunch (empty_fail)empty_fail[wp]: retype_region_ext
 
-interpretation retype_region_ext_extended: is_extended "retype_region_ext a b"
+global_interpretation retype_region_ext_extended: is_extended "retype_region_ext a b"
   apply (unfold_locales)
   apply wp
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunch valid_list[wp]: invoke_untyped valid_list (wp: crunch_wps simp: mapM_x_def_bak)
-
-crunch valid_list[wp]: invoke_irq_control valid_list
 crunch valid_list[wp]: invoke_irq_handler valid_list
-
-lemma perform_page_table_invocation_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> perform_page_table_invocation a \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  apply (simp add: perform_page_table_invocation_def)
-  apply (cases a,simp_all)
-  apply (wp mapM_x_wp' | intro impI conjI allI | wpc | simp split: cap.splits arch_cap.splits option.splits)+
-  done
-
-lemma perform_page_invocation_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> perform_page_invocation a \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  apply (simp add: perform_page_invocation_def)
-  apply (cases a,simp_all)
-  apply (wp mapM_x_wp' mapM_wp' crunch_wps | intro impI conjI allI | wpc | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits option.splits sum.splits)+
-  done
-
-end
 
 crunch valid_list[wp]: attempt_switch_to "valid_list"
 
-interpretation attempt_switch_to_extended: is_extended "attempt_switch_to a"
+global_interpretation attempt_switch_to_extended: is_extended "attempt_switch_to a"
   apply (simp add: attempt_switch_to_def)
   apply (unfold_locales)
   done
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunch valid_list[wp]: perform_invocation valid_list (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
-
-crunch valid_list[wp]: handle_invocation valid_list (wp: crunch_wps syscall_valid simp: crunch_simps ignore: without_preemption)
-
-crunch valid_list[wp]: handle_recv, handle_yield, handle_call valid_list (wp: crunch_wps simp: crunch_simps)
-
-lemma handle_vm_fault_valid_list[wp]:
-"\<lbrace>valid_list\<rbrace> handle_vm_fault thread fault \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  apply (cases fault,simp_all)
-  apply (wp|simp)+
-  done
-
-end
 
 crunch valid_list[wp]: thread_set_time_slice,timer_tick "valid_list" (simp: Let_def)
 
@@ -4129,20 +4100,32 @@ crunch all_but_exst[wp]: timer_tick "all_but_exst P" (simp: ethread_get_def crun
 crunch (empty_fail)empty_fail[wp]: timer_tick
   (simp: thread_state.splits)
 
-interpretation timer_tick_extended: is_extended "timer_tick"
+global_interpretation timer_tick_extended: is_extended "timer_tick"
   apply (unfold_locales)
   apply wp
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma handle_interrupt_valid_list[wp]:
-  "\<lbrace>valid_list \<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  unfolding handle_interrupt_def ackInterrupt_def
-  apply (rule hoare_pre)
-   by (wp get_cap_wp  do_machine_op_valid_list | wpc | simp add: get_irq_slot_def | wp_once hoare_drop_imps)+
-end
 
-crunch valid_list[wp]: handle_send,handle_reply valid_list
+locale Deterministic_AI_3 = Deterministic_AI_2 +
+  assumes handle_interrupt_valid_list[wp]:
+    "\<And>irq. \<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  assumes handle_call_valid_list[wp]:
+    "\<lbrace>valid_list\<rbrace> handle_call \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes handle_fault_valid_list[wp]:
+    "\<And>param_a param_b. \<lbrace>valid_list\<rbrace> handle_fault param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes handle_recv_valid_list[wp]:
+    "\<And>param_a. \<lbrace>valid_list\<rbrace> handle_recv param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes handle_reply_valid_list[wp]:
+    "\<lbrace>valid_list\<rbrace> handle_reply \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes handle_send_valid_list[wp]:
+    "\<And>param_a. \<lbrace>valid_list\<rbrace> handle_send param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes handle_vm_fault_valid_list[wp]:
+    "\<And>thread fault. \<lbrace>valid_list\<rbrace> handle_vm_fault thread fault \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes handle_yield_valid_list[wp]:
+    "\<lbrace>valid_list\<rbrace> handle_yield \<lbrace>\<lambda>_. valid_list\<rbrace>"
+
+
+context Deterministic_AI_3 begin
 
 lemma handle_event_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace>
@@ -4155,9 +4138,11 @@ lemma handle_event_valid_list[wp]:
                  wpc | wp hoare_drop_imps hoare_vcg_all_lift | simp)+
   done
 
+end
 
-(*Recovering cdt_list operations that only consider sane cases. This is to recover the current refinement proofs.*)
 
+(* Recovering cdt_list operations that only consider sane cases.
+   This is to recover the current refinement proofs.*)
 
 lemma (in mdb_move_abs') dest_empty_list:
   notes split_paired_All[simp del] split_paired_Ex[simp del]

@@ -4932,8 +4932,8 @@ lemma inv_untyped_corres':
           apply (simp add:isCap_simps)
          using descendants_range
          apply (clarsimp simp:blah descendants_range_def2)
-         apply ((simp add:isCap_simps invs_untyped_children blah
-               invs_valid_reply_caps invs_valid_reply_masters)+)[5]
+         apply (simp add:isCap_simps invs_untyped_children blah
+               invs_valid_reply_caps invs_valid_reply_masters)+
       apply (subst valid_mdb_descendants_range_in)
        apply (clarsimp dest!: invs_mdb simp: untyped_range.simps)
       apply (frule detype_locale)
@@ -5245,7 +5245,7 @@ lemma inv_untyped_corres':
            apply (simp add:isCap_simps)
           apply (clarsimp simp:blah descendants_range_def2)
          apply ((simp add:isCap_simps invs_untyped_children blah
-                          invs_valid_reply_caps invs_valid_reply_masters)+)[6]
+                          invs_valid_reply_caps invs_valid_reply_masters)+)[4]
    apply (clarsimp simp: detype_clear_um_independent)
    apply (intro conjI impI)
                      apply (insert misc cte_at cref_inv)

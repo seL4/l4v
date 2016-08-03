@@ -1259,7 +1259,7 @@ by (rule valid_kernel_mappings_lift, wp aobj_at)
 lemma equal_kernel_mappings[wp]: "\<lbrace>equal_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
 by (rule equal_kernel_mappings_lift, wp aobj_at)
 
-lemma valid_global_pd_mappings[wp]: "\<lbrace>valid_global_vspace_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
+lemma valid_global_vspace_mappings[wp]: "\<lbrace>valid_global_vspace_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
 by (rule valid_global_vspace_mappings_lift, wp aobj_at)
 
 lemma valid_ao_at[wp]:"\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>_. valid_ao_at p\<rbrace>"

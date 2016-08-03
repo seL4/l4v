@@ -245,7 +245,7 @@ definition
   | PML4Obj \<Rightarrow> PageMapL4 (\<lambda>x. InvalidPML4E)
   | ASIDPoolObj \<Rightarrow> ASIDPool (\<lambda>_. None)"
 
-type_synonym x64_vspace_region_uses = "vspace_ref \<Rightarrow> x64_vspace_region_use"
+type_synonym x64_vspace_region_uses = "vspace_ref \<Rightarrow> x64vspace_region_use"
 
 end
 

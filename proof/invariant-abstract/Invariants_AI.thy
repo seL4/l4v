@@ -43,6 +43,14 @@ requalify_consts
 
   ASIDPoolObj
 
+  vs_lookup1
+  vs_lookup_trans
+  vs_refs
+  vs_lookup_pages1
+  vs_lookup_pages_trans
+  vs_refs_pages
+
+  valid_vs_lookup
 
 requalify_facts
   valid_arch_sizes
@@ -62,6 +70,8 @@ requalify_facts
   physical_arch_cap_has_ref
   wellformed_arch_default
   valid_arch_obj_default'
+  vs_lookup1_stateI2
+  vs_lookup_pages1_stateI2
 
 end
 
@@ -209,7 +219,7 @@ where
 | "untyped_range (Zombie r b n)                     = {}"
 | "untyped_range (ArchObjectCap cap)                = {}"
 
-primrec
+primrec (nonexhaustive)
   usable_untyped_range :: "cap \<Rightarrow> machine_word set"
 where
  "usable_untyped_range (UntypedCap p n f) =
@@ -480,9 +490,6 @@ where
   "valid_objs s \<equiv> \<forall>ptr \<in> dom $ kheap s. \<exists>obj. kheap s ptr = Some obj \<and> valid_obj ptr obj s"
 
 
-
-
-
 datatype reftype
   = TCBWaitingSend | TCBWaitingRecv | TCBBlockedSend | TCBBlockedRecv
      | TCBSignal | TCBBound | EPSend | EPRecv | NTFNSignal | NTFNBound
@@ -564,7 +571,6 @@ definition
   sym_refs :: "(obj_ref \<Rightarrow> (obj_ref \<times> reftype) set) \<Rightarrow> bool"
 where
  "sym_refs st \<equiv> \<forall>x. \<forall>(y, tp) \<in> st x. (x, symreftype tp) \<in> st y"
-
 
 
 primrec
@@ -1126,7 +1132,6 @@ lemma obj_at_ko_at:
   by (auto simp add: obj_at_def)
 
 
-
 lemma symreftype_inverse[simp]:
   "symreftype (symreftype t) = t"
   by (cases t, simp+)
@@ -1491,7 +1496,7 @@ lemma idle_no_ex_cap:
   apply (simp add: ex_nonz_cap_to_def valid_global_refs_def valid_refs_def2 cte_wp_at_caps_of_state
               del: split_paired_Ex split_paired_All)
   apply (intro allI notI impI)
-  apply (drule bspec, blast intro: ranI)
+  apply (drule bspec, blast)
   apply (clarsimp simp: cap_range_def zobj_refs_to_obj_refs)
   by blast
 
@@ -1553,18 +1558,16 @@ lemma cte_wp_at_pspaceI:
   by (simp add: cte_wp_at_cases)
 
 context Arch begin
-
 lemma valid_arch_cap_pspaceI:
   "\<lbrakk> valid_arch_cap acap s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_cap acap s'"
   unfolding valid_arch_cap_def
   by (auto intro: obj_at_pspaceI split: arch_cap.split)
-
 end
 
 context begin interpretation Arch .
-
-requalify_facts valid_arch_cap_pspaceI valid_arch_obj_pspaceI
-
+requalify_facts
+  valid_arch_cap_pspaceI
+  valid_arch_obj_pspaceI
 end
 
 lemma valid_cap_pspaceI:
@@ -1836,7 +1839,7 @@ proof -
     unfolding pspace_aligned_def ..
 
   thus ?thesis
-    proof (rule is_aligned_replicate[where 'a=machine_word_size, folded word_bits_def])
+    proof (rule is_aligned_replicate[where 'a=machine_word_len, folded word_bits_def])
   show "obj_bits (the (kheap s x)) \<le> word_bits"
     by (rule order_less_imp_le, rule valid_obj_sizes [OF _ dom_ran]) fact+
   qed
@@ -2424,13 +2427,13 @@ lemma cte_wp_cte_at:
 
 context pspace_update_eq begin
 
+interpretation Arch_pspace_update_eq ..
+
 lemma valid_space_update [iff]:
   "valid_pspace (f s) = valid_pspace s"
   by (fastforce intro: valid_pspace_eqI simp: pspace)
 
-lemma obj_at_update [iff]:
-  "obj_at P p (f s) = obj_at P p s"
-  by (fastforce intro: obj_at_pspaceI simp: pspace)
+lemmas obj_at_update [iff] = obj_at_update
 
 lemma cte_wp_at_update [iff]:
   "cte_wp_at P p (f s) = cte_wp_at P p s"
@@ -2460,23 +2463,12 @@ lemma valid_cap_update [iff]:
   "(f s) \<turnstile> c = s \<turnstile> c"
   by (auto intro: valid_cap_pspaceI simp: pspace)
 
-lemma get_cap_update [iff]:
-  "(fst (get_cap p (f s)) = {(cap, f s)}) = (fst (get_cap p s) = {(cap, s)})"
-  apply (simp add: get_cap_def get_object_def bind_assoc
-                   exec_gets split_def assert_def pspace)
-  apply (clarsimp simp: fail_def)
-  apply (case_tac y, simp_all add: assert_opt_def split: option.splits)
-      apply (simp_all add: return_def fail_def assert_def bind_def)
-  done
-
-lemma caps_of_state_update [iff]:
-  "caps_of_state (f s) = caps_of_state s"
-  by (rule ext) (auto simp: caps_of_state_def)
+lemmas get_cap_update [iff] = get_cap_update
+lemmas caps_of_state_update [iff] = caps_of_state_update
 
 lemma valid_refs_update [iff]:
   "valid_refs R (f s) = valid_refs R s"
   by (simp add: valid_refs_def)
-
 
 lemma has_reply_cap_update [iff]:
   "has_reply_cap t (f s) = has_reply_cap t s"
@@ -2490,20 +2482,15 @@ lemma valid_reply_masters_update [iff]:
   "valid_reply_masters (f s) = valid_reply_masters s"
   by (simp add: valid_reply_masters_def)
 
-interpretation Arch_pspace_update_eq by unfold_locales
-
 lemmas in_user_frame_update[iff] = in_user_frame_update
 lemmas equal_kernel_mappings_update[iff] = equal_kernel_mappings_update
 
 end
 
 
-
 context p_arch_update_eq begin
 
-
-interpretation Arch_p_arch_update_eq f by unfold_locales
-
+interpretation Arch_p_arch_update_eq f ..
 
 lemma valid_arch_objs_update [iff]:
   "valid_arch_objs (f s) = valid_arch_objs s"
@@ -2517,7 +2504,7 @@ lemma valid_global_objs_update [iff]:
   "valid_global_objs (f s) = valid_global_objs s"
   by (simp add: valid_global_objs_def arch)
 
-lemma valid_global_pd_mappings_update [iff]:
+lemma valid_global_vspace_mappings_update [iff]:
   "valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
   by (simp add: valid_global_vspace_mappings_def
                 arch)
@@ -2535,7 +2522,7 @@ end
 
 context p_arch_idle_update_eq begin
 
-interpretation Arch_p_arch_idle_update_eq f by unfold_locales
+interpretation Arch_p_arch_idle_update_eq f ..
 
 lemma ifunsafe_update [iff]:
   "if_unsafe_then_cap (f s) = if_unsafe_then_cap s"
@@ -2572,84 +2559,72 @@ lemma valid_irq_node_update[iff]:
 
 end
 
-locale irq_states_update_eq =
-  fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
-  assumes int: "interrupt_states (f s) = interrupt_states s"
-begin
-
-lemma irq_issued_update [iff]:
+lemma (in irq_states_update_eq) irq_issued_update [iff]:
   "irq_issued irq (f s) = irq_issued irq s"
   by (simp add: irq_issued_def int)
 
-end
-
-locale pspace_int_update_eq = pspace_update_eq + irq_states_update_eq
-begin
-
-lemma valid_irq_handlers_update [iff]:
+lemma (in pspace_int_update_eq) valid_irq_handlers_update [iff]:
   "valid_irq_handlers (f s) = valid_irq_handlers s"
   by (simp add: valid_irq_handlers_def)
 
-end
-
 context arch_idle_update_eq begin
-
-interpretation Arch_arch_idle_update_eq f by unfold_locales
-
+interpretation Arch_arch_idle_update_eq f ..
 lemmas global_refs_update[iff] = global_refs_update
-
 end
-
-locale p_arch_idle_update_int_eq = p_arch_idle_update_eq + pspace_int_update_eq
 
 interpretation revokable_update:
   p_arch_idle_update_int_eq "is_original_cap_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> revokable_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" by unfold_locales
 
+sublocale Arch \<subseteq> revokable_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" ..
 
 interpretation machine_state_update:
   p_arch_idle_update_int_eq "machine_state_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> machine_state_update: Arch_p_arch_idle_update_int_eq "machine_state_update f" by unfold_locales
+
+sublocale Arch \<subseteq> machine_state_update: Arch_p_arch_idle_update_int_eq "machine_state_update f" ..
 
 interpretation cdt_update:
   p_arch_idle_update_int_eq "cdt_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> cdt_update: Arch_p_arch_idle_update_int_eq "cdt_update f" by unfold_locales
 
+sublocale Arch \<subseteq> cdt_update: Arch_p_arch_idle_update_int_eq "cdt_update f" ..
 
 interpretation cur_thread_update:
   p_arch_idle_update_int_eq "cur_thread_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> cur_thread_update: Arch_p_arch_idle_update_int_eq "cur_thread_update f" by unfold_locales
+
+sublocale Arch \<subseteq> cur_thread_update: Arch_p_arch_idle_update_int_eq "cur_thread_update f" ..
 
 interpretation more_update:
   p_arch_idle_update_int_eq "trans_state f"
   by unfold_locales auto
-sublocale Arch \<subseteq> more_update: Arch_p_arch_idle_update_int_eq "trans_state f" by unfold_locales
 
+sublocale Arch \<subseteq> more_update: Arch_p_arch_idle_update_int_eq "trans_state f" ..
 
 interpretation interrupt_update:
   p_arch_idle_update_eq "interrupt_states_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> interrupt_update: Arch_p_arch_idle_update_eq "interrupt_states_update f" by unfold_locales
+
+sublocale Arch \<subseteq> interrupt_update: Arch_p_arch_idle_update_eq "interrupt_states_update f" ..
 
 interpretation irq_node_update:
   pspace_int_update_eq "interrupt_irq_node_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> irq_node_update: Arch_pspace_update_eq "interrupt_irq_node_update f" by unfold_locales
+
+sublocale Arch \<subseteq> irq_node_update: Arch_pspace_update_eq "interrupt_irq_node_update f" ..
 
 interpretation arch_update:
   pspace_int_update_eq "arch_state_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> arch_update: Arch_pspace_update_eq "arch_state_update f" by unfold_locales
+
+sublocale Arch \<subseteq> arch_update: Arch_pspace_update_eq "arch_state_update f" ..
 
 interpretation irq_node_update_arch:
   p_arch_update_eq "interrupt_irq_node_update f"
   by unfold_locales auto
-sublocale Arch \<subseteq> irq_node_update_arch: Arch_p_arch_update_eq "interrupt_irq_node_update f" by unfold_locales
 
+sublocale Arch \<subseteq> irq_node_update_arch: Arch_p_arch_update_eq "interrupt_irq_node_update f" ..
 
 lemma obj_ref_in_untyped_range:
   "\<lbrakk> is_untyped_cap c; cap_aligned c \<rbrakk> \<Longrightarrow> obj_ref_of c \<in> untyped_range c"
@@ -3296,5 +3271,24 @@ lemma sym_refs_bound_tcb_atD:
   apply (drule (1)sym_refs_obj_atD)
   apply auto
   done
+
+
+lemma vs_lookup_trans_sub2:
+  assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"
+  shows "vs_lookup_trans s \<subseteq> vs_lookup_trans s'" 
+proof -
+  have "vs_lookup1 s \<subseteq> vs_lookup1 s'"
+    by (fastforce dest: ko elim: vs_lookup1_stateI2)
+  thus ?thesis by (rule rtrancl_mono)
+qed
+
+lemma vs_lookup_pages_trans_sub2:
+  assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs_pages ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') p s'"
+  shows "vs_lookup_pages_trans s \<subseteq> vs_lookup_pages_trans s'" 
+proof -
+  have "vs_lookup_pages1 s \<subseteq> vs_lookup_pages1 s'"
+    by (fastforce dest: ko elim: vs_lookup_pages1_stateI2)
+  thus ?thesis by (rule rtrancl_mono)
+qed
 
 end

@@ -1960,7 +1960,7 @@ fun get_while_body_guard C c = case c of
     val G = case try build_guard last of SOME G => G
       | NONE => Const (fst (dest_Const @{term "UNIV"}), setT)
   in G end
-  | _ => Const (fst (dest_Const @{term "UNIV"}, fastype_of C))
+  | _ => Const (fst (dest_Const @{term "UNIV"}), fastype_of C)
 
 fun simpl_to_graph_While_tac hints nm ctxt =
     simp_tac (simpl_ss ctxt)

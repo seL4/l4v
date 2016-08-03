@@ -682,7 +682,7 @@ lemma dcorres_select_select_ext:
   by (clarsimp simp: select_def select_ext_def get_def bind_def return_def assert_def fail_def corres_underlying_def)
 
 crunch valid_etcbs[wp]: cap_delete "valid_etcbs"
-  (wp: rec_del_preservation2 cap_revoke_preservation2)
+  (wp: rec_del_preservation_valid_pdpt_objs cap_revoke_preservation_valid_pdpt_objs)
 
 lemma cap_revoke_corres_helper:
   "dcorres boolean_exception (\<lambda>_. True)

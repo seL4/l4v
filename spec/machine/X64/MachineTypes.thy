@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file MachineTypes.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -12,15 +14,14 @@ chapter "x86-64bit Machine Types"
 
 theory MachineTypes
 imports
-  "../../../lib/Enumeration"
+  "../../../lib/Word_Lib/Enumeration"
   "../../../lib/$L4V_ARCH/WordSetup"
   "../../../lib/Monad_WP/NonDetMonad"
   "../../../lib/HaskellLib_H"
   Platform
 begin
-context Arch begin global_naming X64
 
-(* !!! Generated File !!! Skeleton in ../spec/design/m-skel *)
+context Arch begin global_naming X64
 
 text {*
   An implementation of the machine's types, defining register set 
@@ -59,8 +60,7 @@ datatype register =
   | RSP
   | SS
 
-type_synonym machine_word_size = 64
-type_synonym machine_word = "machine_word_size word"
+type_synonym machine_word = "word64"
 
 datatype gdtslot =
     GDT_NULL
@@ -87,10 +87,15 @@ consts'
 sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 
 (*<*)
+
+type_synonym machine_word_len = 64
+
 end
+
 context begin interpretation Arch .
 requalify_types register gdtslot
 end
+
 context Arch begin global_naming X64
 
 end
@@ -377,12 +382,16 @@ where
   | X64HugePage \<Rightarrow>    pageBits + ptTranslationBits + ptTranslationBits
   )"
 
+
 end
 
 context begin interpretation Arch .
 requalify_types vmpage_size
 end
 
+context Arch begin global_naming X64
+
+end
 qualify X64 (in Arch) 
 (* vmpage_size instance proofs *)
 (*<*)

@@ -15,7 +15,7 @@ imports
   "../../../lib/Defs"
   "../../../lib/Lib"
   "../../../lib/$L4V_ARCH/WordSetup"
-  Setup_Locale
+  "../Setup_Locale"
 begin
 
 context Arch begin global_naming ARM

@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Arch_Structs_B.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -13,17 +15,19 @@
 chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
-imports "~~/src/HOL/Main" "../../../spec/machine/$L4V_ARCH/Setup_Locale"
+imports "~~/src/HOL/Main" "../../../spec/machine/Setup_Locale"
 begin
 (* FIXME: Clagged from ARM version *)
 
 context Arch begin global_naming X64_H
 
-datatype x64_vspace_region_use = 
-  X64VSpaceUserRegion
-| X64VSpaceInvalidRegion
-| X64VSpaceKernelWindow
-| X64VSpaceDeviceWindow
+(* FIXME: add an underscore after translation of X64 prefix? *)
+datatype x64vspace_region_use =
+    X64VSpaceUserRegion
+  | X64VSpaceInvalidRegion
+  | X64VSpaceKernelWindow
+  | X64VSpaceDeviceWindow
+
 
 end (* context X64 *)
 

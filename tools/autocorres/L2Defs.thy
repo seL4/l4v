@@ -52,6 +52,7 @@ lemma L2_folded_gets_bind:
   apply (monad_eq simp: L2_folded_gets_def L2_seq_def L2_gets_def)
   done
 
+(* FIXME: we can merge these *)
 lemmas L2_remove_scaffolding_1 =
   L2_folded_gets_bind [THEN eq_reflection]
   L2_returncall_def
@@ -119,10 +120,11 @@ lemma L2corres_L2_call_simpl:
      (L2_call_L1 arg_xf gs ret_xf simpl_f) l1_f"
   by (simp add: L2corres_L2_call_L1)
 
-
-lemma empty_set_exists [simp]: "(\<forall>a. a \<noteq> {}) = False"
+(* shouldn't be needed
+lemma empty_set_exists: "(\<forall>a. a \<noteq> {}) = False"
   apply blast
   done
+*)
 
 lemma L2corres_modify_global:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> M (st s) = st (M' s) \<rbrakk> \<Longrightarrow>
@@ -173,13 +175,8 @@ lemma spec_alt_def: "spec r = (\<lambda>s. (Pair () ` {s'. (s, s') \<in> r}, \<n
 lemma L2corres_spec:
   "\<lbrakk> \<And>s s'. ((s, s') \<in> A') = ((st s, st s') \<in> A); surj st \<rbrakk>
     \<Longrightarrow>  L2corres st return_xf exception_xf P (L2_spec A) (L1_spec A')"
-  apply (clarsimp simp: L2corres_def L2_defs)
-  apply (clarsimp simp: L2_spec_def L1_spec_def liftE_def spec_alt_def)
-  apply (clarsimp simp: return_def bind_def select_def)
-  apply (clarsimp simp: split_def)
-  apply (clarsimp simp: L2corres_def corresXF_def)
-  apply (atomize)
-  apply (frule_tac y=s'a in surjD)
+  apply (clarsimp simp: L2corres_def L2_defs L1_spec_def corresXF_def
+                        liftE_def spec_alt_def return_def bind_def select_def)
   apply (clarsimp simp: image_def)
   apply (subst (asm) set_eq_UNIV)
   apply metis
@@ -616,6 +613,9 @@ lemmas L2_split_fixups =
 
 lemmas L2_split_fixups_congs =
   prod.case_cong
+
+(* Peephole simplification rules for L2 programs (including HeapLift and WordAbstract). *)
+named_theorems L2opt
 
 (* L2 monad_mono rules *)
 lemma L2_seq_monad_mono_step:
