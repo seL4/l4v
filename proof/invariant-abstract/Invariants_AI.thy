@@ -78,6 +78,8 @@ requalify_facts
   vs_lookup1_stateI2
   vs_lookup_pages1_stateI2
   typ_at_pg
+  c_entry_hook_invs
+  c_exit_hook_invs
 
 end
 

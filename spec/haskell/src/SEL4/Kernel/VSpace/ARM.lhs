@@ -113,7 +113,6 @@ However we assume that the result of getMemoryRegions is actually [0,1<<24] and 
 >     placeNewObject (PPtr $ fromPPtr $ head globalPTs) (makeObject :: PTE) ptSize
 >     storePDE slot pde
 
->     mapGlobalsFrame
 >     kernelDevices <- doMachineOp getKernelDevices
 >     mapM_ mapKernelDevice kernelDevices
 
@@ -361,27 +360,6 @@ Function "createBIFrame" will create the biframe cap for the initial thread
 >     bootInfo <- noInitFailure $ gets initBootInfo
 >     let bootInfo' = bootInfo { bifUIFrameCaps = [curSlotPos .. slotPosAfter - 1] }
 >     noInitFailure $ modify (\s -> s { initBootInfo = bootInfo' })
-
-
-Function "mapGlobalsFrame" inserts an entry into the global PD for the globals frame.
-
-> mapGlobalsFrame :: Kernel ()
-> mapGlobalsFrame = do
->     globalsFrame <- gets $ armKSGlobalsFrame . ksArchState
->     mapKernelFrame (addrFromPPtr globalsFrame) globalsBase VMReadOnly $
->         VMAttributes True True True
-
-we also need to put the code of idlethread into memory
-
->     writeIdleCode
-
-> writeIdleCode :: Kernel ()
-> writeIdleCode = do
->     globalsFrame <- gets $ armKSGlobalsFrame . ksArchState
->     let offset = fromVPtr $ idleThreadStart - globalsBase
->     doMachineOp $ zipWithM_ storeWord
->         [globalsFrame + PPtr offset, globalsFrame + PPtr offset + 4 ..]
->         idleThreadCode
 
 
 The "mapKernelFrame" helper function is used when mapping the globals frame, kernel IO devices, and the trap frame. We simply store pte into our globalPT 

@@ -14,6 +14,12 @@ theory API_H
 imports Syscall_H Delete_H
 begin
 
+context begin interpretation Arch .
+requalify_consts
+  cEntryHook
+  cExitHook
+end
+
 text {* collects all API modules *}
 
 #INCLUDE_HASKELL SEL4.lhs

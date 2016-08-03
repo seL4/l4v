@@ -314,9 +314,6 @@ lemma invs_A:
   apply (rule conjI)
    apply (clarsimp simp: valid_arch_state_def)
    apply (rule conjI)
-    apply (clarsimp simp: valid_arch_state_def obj_at_def state_defs 
-                          a_type_def)
-   apply (rule conjI)
     apply (clarsimp simp: valid_asid_table_def state_defs)
    apply (rule conjI)
     apply (clarsimp simp: valid_arch_state_def obj_at_def state_defs 

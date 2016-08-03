@@ -433,8 +433,7 @@ definition
   arch_state_relation :: "(arch_state \<times> ARM_H.kernel_state) set"
 where
   "arch_state_relation \<equiv> {(s, s') .
-         arm_globals_frame s = armKSGlobalsFrame s'
-       \<and> arm_asid_table s = armKSASIDTable s' o ucast
+         arm_asid_table s = armKSASIDTable s' o ucast
        \<and> arm_global_pd s = armKSGlobalPD s'
        \<and> arm_hwasid_table s = armKSHWASIDTable s'
        \<and> arm_global_pts s = armKSGlobalPTs s'

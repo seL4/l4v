@@ -222,7 +222,6 @@ end
 qualify ARM_A (in Arch)
 
 record arch_state =
-  arm_globals_frame :: obj_ref
   arm_asid_table    :: "7 word \<rightharpoonup> obj_ref"
   arm_hwasid_table  :: "ARM_A.hw_asid \<rightharpoonup> ARM_A.asid"
   arm_next_asid     :: ARM_A.hw_asid

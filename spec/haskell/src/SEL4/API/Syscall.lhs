@@ -18,9 +18,14 @@ interface to any specific type of kernel object; the operations that
 may be performed on those objects are defined in their respective
 modules.
 
-> module SEL4.API.Syscall(Event(..), Syscall(..), handleEvent) where
+> module SEL4.API.Syscall(Event(..), Syscall(..), handleEvent,
+>                         callHook, cEntryHook, cExitHook) where
 
 \begin{impdetails}
+
+We use the C preprocessor to select a target architecture.
+
+> {-# LANGUAGE CPP #-}
 
 > import SEL4.API.Types
 > import SEL4.API.Failures
@@ -33,6 +38,7 @@ modules.
 > import SEL4.Model
 > import SEL4.Machine
 > import Data.Bits
+> import qualified SEL4.API.Syscall.ARM as Arch
 
 
 \end{impdetails}
@@ -68,7 +74,7 @@ the enumerated type "Syscall":
 >         | SysNBRecv
 >         deriving (Show, Enum, Bounded, Eq)
 
-\subsection{Flag for Calling Entry/Exit Hook}
+\subsection{Flags for Calling Entry/Exit Hook}
 
 > callHook :: Event -> Bool
 > callHook (SyscallEvent _) = False
@@ -271,4 +277,18 @@ While the system call is running, the thread's state is set to "Restart", so any
 >                         setThreadState Running thread
 >                     _ -> return ())
 
+
+
+
+
+\subsection{Hooks}
+
+Kernel Entry/Exit Hooks are defined using their arch-specific definitions.
+
+
+> cEntryHook :: Kernel ()
+> cEntryHook = Arch.cEntryHook
+>
+> cExitHook :: Kernel ()
+> cExitHook = Arch.cExitHook
 

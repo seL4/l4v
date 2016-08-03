@@ -34,7 +34,7 @@ lemma akernel_invs:
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   apply wp
    apply (simp add: call_kernel_def)
-   apply (wp activate_invs | simp)+
+   apply (case_tac "call_hook e"; (wp c_exit_hook_invs c_entry_hook_invs activate_invs | simp)+)
    apply (auto simp: active_from_running)
   done
 
@@ -44,7 +44,7 @@ lemma akernel_invs_det_ext:
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   apply wp
    apply (simp add: call_kernel_def)
-   apply (wp activate_invs | simp)+
+   apply (case_tac "call_hook e"; (wp c_exit_hook_invs c_entry_hook_invs activate_invs | simp)+)
    apply (auto simp: active_from_running)
   done
 

@@ -34,7 +34,7 @@ definition
   init_irq_node_ptr :: word32 where
   "init_irq_node_ptr = kernel_base + 0x8000"
 
-definition
+definition (* FIXME do we need this? *)
   init_globals_frame :: word32 where
   "init_globals_frame = kernel_base + 0x5000"
 
@@ -44,7 +44,6 @@ definition
 
 definition
   "init_arch_state \<equiv> \<lparr>
-    arm_globals_frame = init_globals_frame,
     arm_asid_table = empty,
     arm_hwasid_table = empty,
     arm_next_asid = 0,
@@ -83,7 +82,7 @@ definition
     tcb_bound_notification = None,
     tcb_mcpriority = minBound
   \<rparr>, 
-  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage),
+  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), (* FIXME do we need this? *)
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd)
   )"
 

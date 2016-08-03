@@ -213,21 +213,6 @@ lemma runnable_coerce_abstract:
     \<Longrightarrow> runnable st"
   by (case_tac st, simp_all)
 
-lemma is_aligned_globals_2_strg:
-  "valid_arch_state' s \<and> pspace_aligned' s \<longrightarrow> is_aligned (armKSGlobalsFrame (ksArchState s)) 2"
-  unfolding valid_arch_state'_def
-  apply (clarsimp simp: typ_at'_def ko_wp_at'_def pspace_aligned'_def)
-  apply (drule (1) bspec [OF _ domI])
-  apply (simp add: objBits_simps split: kernel_object.split_asm)
-  apply (erule is_aligned_weaken)
-  apply (simp add: pageBits_def)
-  done
-
-lemmas is_aligned_globals_2 =  is_aligned_globals_2_strg[THEN mp, OF conjI]
-
-crunch armKSGlobalsFrame [wp]: setVMRoot "\<lambda>s. P (armKSGlobalsFrame (ksArchState s))"
-  (simp: crunch_simps)
-
 (* Levity: added (20090721 10:56:29) *)
 declare objBitsT_koTypeOf [simp]
 
@@ -242,31 +227,21 @@ lemma arch_switch_thread_corres:
   apply (simp add: arch_switch_to_thread_def ARM_H.switchToThread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split' [OF set_vm_root_corres])
-      apply (rule corres_split_eqr)
-	 apply (rule corres_split_eqr [OF _ threadget_corres])
-	    apply (rule corres_rel_imp)
-             apply (rule corres_split_nor [OF _ store_word_corres])
-               apply (rule corres_machine_op)
-               apply (rule corres_Id[where r=dc], simp+)
-               apply (simp add: ARM.clearExMonitor_def)
-              apply wp
-	    apply simp
-	   apply (simp add: tcb_relation_def)
+      apply (rule corres_split_eqr [OF _ threadget_corres])
+	       apply (rule corres_split' [OF user_setreg_corres])
+           apply (rule corres_machine_op)
+           apply (rule corres_Id[where r=dc], simp+)
+           apply (simp add: ARM.clearExMonitor_def)
           apply wp
-        apply (rule corres_trivial)
-        apply (simp add: state_relation_def arch_state_relation_def)
-       apply (wp | simp)+
-      apply (strengthen split_state_strg [where P = "typ_at' UserDataT"])
-      apply (wp hoare_vcg_ex_lift)
-       apply (rule mp [OF is_aligned_globals_2_strg])
-       apply clarsimp+
-      apply (simp add: valid_arch_state'_def)
-      apply (subst is_aligned_neg_mask_eq)
-       apply (clarsimp dest!: typ_at_aligned' simp: objBitsT_simps)
-      apply (clarsimp | rule TrueI)+
+	      apply simp
+	      apply (simp add: tcb_relation_def)
+       apply wp
+     apply clarsimp
+    apply (wp; clarsimp)
+   apply clarsimp
    apply (erule st_tcb_at_tcb_at)
   apply (clarsimp simp: valid_pspace'_def)
-  done
+done
 
 lemma tcbSchedAppend_corres:
   notes trans_state_update'[symmetric, simp del]
@@ -962,8 +937,13 @@ lemma Arch_switchToThread_pred_tcb'[wp]:
    Arch.switchToThread t \<lbrace>\<lambda>rv s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
 proof -
   have pos: "\<And>P t t'. \<lbrace>pred_tcb_at' proj P t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. pred_tcb_at' proj P t'\<rbrace>"
-    apply (simp add: ARM_H.switchToThread_def storeWordUser_def pred_tcb_at'_def)
-    apply (wp doMachineOp_obj_at hoare_drop_imps)+
+    apply (simp add:  pred_tcb_at'_def ARM_H.switchToThread_def)
+    apply (rule hoare_seq_ext)+
+       apply (rule doMachineOp_obj_at)
+      apply (rule_tac asUser_pred_tcb_at'[simplified pred_tcb_at'_def])
+     defer
+     apply (rule setVMRoot_obj_at)
+    apply wp
     done
   show ?thesis
     apply (rule P_bool_lift [OF pos])
@@ -974,6 +954,10 @@ crunch ksQ[wp]: storeWordUser "\<lambda>s. P (ksReadyQueues s p)"
 crunch ksQ[wp]: setVMRoot "\<lambda>s. P (ksReadyQueues s)"
 (wp: crunch_wps simp: crunch_simps)
 crunch ksIdleThread[wp]: storeWordUser "\<lambda>s. P (ksIdleThread s)"
+crunch ksIdleThread[wp]: asUser "\<lambda>s. P (ksIdleThread s)"
+(wp: crunch_wps simp: crunch_simps)
+crunch ksQ[wp]: asUser "\<lambda>s. P (ksReadyQueues s p)"
+(wp: crunch_wps simp: crunch_simps)
 
 lemma arch_switch_thread_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
@@ -1033,10 +1017,6 @@ lemma allActiveTCBs_corres:
   apply force
   done
 
-lemma corres_gets_arch_globals:
-  "corres (op =) \<top> \<top> (gets (arm_globals_frame \<circ> arch_state)) (gets (armKSGlobalsFrame \<circ> ksArchState))"
-  by (simp add: state_relation_def arch_state_relation_def)
-
 lemma typ_at'_typ_at'_mask: "\<And>s. \<lbrakk> typ_at' t (P s) s \<rbrakk> \<Longrightarrow>  typ_at' t (P s && ~~mask (objBitsT t)) s"
   apply (rule split_state_strg [where P = "typ_at' t", THEN mp])
   apply (frule typ_at_aligned')
@@ -1047,13 +1027,6 @@ lemma arch_switch_idle_thread_corres:
   "corres dc \<top> (valid_arch_state' and pspace_aligned') arch_switch_to_idle_thread Arch.switchToIdleThread"
   apply (simp add: arch_switch_to_idle_thread_def
                 ARM_H.switchToIdleThread_def)
-  apply (rule corres_guard_imp, rule corres_split[OF _ corres_gets_arch_globals])
-      apply (simp, rule store_word_corres)
-     apply (wp | clarsimp)+
-  apply (clarsimp simp: is_aligned_globals_2)
-  apply (fold objBitsT_simps)
-  apply (rule typ_at'_typ_at'_mask)
-  apply (clarsimp simp: valid_arch_state'_def)
   done
 
 lemma switch_idle_thread_corres:
@@ -1290,15 +1263,16 @@ lemma clearExMonitor_invs'[wp]:
                         in_monad select_f_def)
   done
 
-lemma Arch_switchToThread_invs:
-  "\<lbrace>invs'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: ARM_H.switchToThread_def)
-  apply wp
-  done
 
-lemma Arch_switchToThread_tcb':
+lemma Arch_switchToThread_invs[wp]:  (* **** *)
+  "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: ARM_H.switchToThread_def)
+  apply (wp; auto)
+done
+
+lemma Arch_switchToThread_tcb'[wp]:
   "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
-  apply (simp add: ARM_H.switchToThread_def storeWordUser_def)
+  apply (simp add: ARM_H.switchToThread_def)
   apply (wp doMachineOp_obj_at hoare_drop_imps)+
   done
 
@@ -1333,13 +1307,25 @@ lemma tcbSchedDequeue_not_tcbQueued:
   apply (simp)
   done
 
+lemma asUser_obj_at[wp]:  "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>
+   asUser t' f
+   \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t\<rbrace>"
+   apply (simp add: asUser_def threadGet_stateAssert_gets_asUser)
+   apply (wp|wpc)+
+   apply (simp add: asUser_fetch_def obj_at'_def)
+done
 
-lemma Arch_switchToThread_obj_at:
+lemma Arch_switchToThread_obj_at[wp]:
   "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>
    Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t\<rbrace>"
-  apply (simp add: ARM_H.switchToThread_def storeWordUser_def)
-  apply (wp doMachineOp_obj_at setVMRoot_obj_at hoare_drop_imps)
+  apply (simp add: ARM_H.switchToThread_def )
+  apply (rule hoare_seq_ext)+
+     apply (rule doMachineOp_obj_at)
+    prefer 3
+    apply (rule setVMRoot_obj_at)
+   apply (rule asUser_obj_at)
+  apply wp
   done
 
 declare doMachineOp_obj_at[wp]
@@ -1352,11 +1338,88 @@ lemma clearExMonitor_invs_no_cicd'[wp]:
                         in_monad select_f_def)
   done
 
+(**)
+
+crunch valid_arch_state'[wp]: asUser "valid_arch_state'"
+(wp: crunch_wps simp: crunch_simps)
+(*
+crunch valid_irq_node': asUser "valid_irq_node' (irq_node' s)"
+(wp: crunch_wps simp: crunch_simps)
+
+crunch ct_not_inQ: asUser "ct_not_inQ"
+(wp: crunch_wps simp: crunch_simps)
+
+*)
+crunch valid_irq_states'[wp]: asUser "valid_irq_states'"
+(wp: crunch_wps simp: crunch_simps)
+
+crunch valid_machine_state'[wp]: asUser "valid_machine_state'"
+(wp: crunch_wps simp: crunch_simps)
+
+crunch valid_queues'[wp]: asUser "valid_queues'"
+(wp: crunch_wps simp: crunch_simps)
+
+
+lemma asUser_valid_irq_node'[wp]: 
+  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace> asUser t (setRegister f r) 
+          \<lbrace>\<lambda>_ s. valid_irq_node' (irq_node' s) s\<rbrace>"
+  apply (rule_tac valid_irq_node_lift)
+   apply (simp add: asUser_def)
+  apply (rule hoare_seq_ext)
+    defer
+    apply (wp threadGet_irq_node'|wpc)+
+  apply clarsimp
+done
+
+crunch irq_masked'_helper: asUser "\<lambda>s. P (intStateIRQTable (ksInterruptState s))"
+(wp: crunch_wps simp: crunch_simps)
+
+lemma asUser_irq_masked'[wp]: 
+  "\<lbrace>irqs_masked'\<rbrace> asUser t (setRegister f r) 
+          \<lbrace>\<lambda>_ . irqs_masked'\<rbrace>"
+  apply (rule irqs_masked_lift)
+  apply (rule asUser_irq_masked'_helper)
+done
+
+lemma asUser_ct_not_inQ[wp]: 
+  "\<lbrace>ct_not_inQ\<rbrace> asUser t (setRegister f r) 
+          \<lbrace>\<lambda>_ . ct_not_inQ\<rbrace>"
+  apply (clarsimp simp: submonad_asUser.fn_is_sm submonad_fn_def)
+  apply (rule hoare_seq_ext)+
+     prefer 4
+     apply (rule stateAssert_sp)
+    prefer 3
+    apply (rule gets_inv)
+   defer
+   apply (rule select_f_inv)
+   apply (case_tac x; simp)
+  apply (clarsimp simp: projectKOs asUser_replace_def obj_at'_def fun_upd_def 
+          split: option.split kernel_object.split)
+  apply (clarsimp simp: ct_not_inQ_def obj_at'_def projectKOs objBitsKO_def  ps_clear_def dom_def)
+  apply (rule conjI; clarsimp; blast)
+done
+
+crunch valid_pde_mappings'[wp]: asUser "valid_pde_mappings'"
+(wp: crunch_wps simp: crunch_simps)
+
+crunch pspace_domain_valid[wp]: asUser "pspace_domain_valid"
+(wp: crunch_wps simp: crunch_simps)
+
+crunch valid_dom_schedule'[wp]: asUser "valid_dom_schedule'"
+(wp: crunch_wps simp: crunch_simps)
+
+
+lemma asUser_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> asUser t (setRegister f r) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (simp add: invs_no_cicd'_def)
+by (wpc|wp asUser_global_refs' asUser_irq_handlers')+
+
+
 lemma Arch_switchToThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: ARM_H.switchToThread_def)
-  apply (wp setVMRoot_invs_no_cicd')
-  done
+by (wp|rule setVMRoot_invs_no_cicd')+
+
 
 lemma tcbSchedDequeue_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd' and tcb_at' t\<rbrace>

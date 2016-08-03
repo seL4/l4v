@@ -4041,7 +4041,13 @@ lemma setupCallerCap_ct_not_inQ[wp]:
   apply (wp hoare_drop_imp setThreadState_ct_not_inQ)
   done
 
-crunch ksQ[wp]: copyMRs "\<lambda>s. P (ksReadyQueues s)"
+lemma copyMRs_ksQ[wp]: 
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> copyMRs a b c d e 
+        \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
+  apply (simp add: copyMRs_def msgRegisters_def)
+by (case_tac b; case_tac d; simp; wp mapM_wp')
+
+crunch ksQ'[wp]: copyMRs "\<lambda>s. P (ksReadyQueues s)"
   (wp: mapM_wp' hoare_drop_imps simp: crunch_simps)
 
 crunch ksQ[wp]: doIPCTransfer "\<lambda>s. P (ksReadyQueues s)"

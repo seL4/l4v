@@ -19,6 +19,7 @@ imports
   "../design/Event_H"
   Decode_A
   "./$L4V_ARCH/Init_A"
+  "./$L4V_ARCH/ArchHook_A"
 begin
 
 context begin interpretation Arch .
@@ -26,7 +27,8 @@ context begin interpretation Arch .
 requalify_consts
   arch_perform_invocation
   handle_vm_fault
-
+  c_entry_hook
+  c_exit_hook
 end
 
 
@@ -364,8 +366,22 @@ where
     return ()
   od)"
 
+text {* This function specifies when kernely entry/exit hooks should be called. *}
+(* check if it is correct *)
+(* should this be separately defined for entry and exit? *)
+definition call_hook :: "event \<Rightarrow> bool"
+where "call_hook ev \<equiv> (case ev of
+    (SyscallEvent _) \<Rightarrow>    False
+  | (UnknownSyscall _) \<Rightarrow>    False
+  | (UserLevelFault _ _) \<Rightarrow>    True
+  | (Interrupt) \<Rightarrow>    True
+  | (VMFaultEvent _) \<Rightarrow>    True
+  )"
+
+
 
 section {* Kernel entry point  *}
+
 
 text {*
   This function is the main kernel entry point. The main event loop of the
@@ -376,13 +392,15 @@ text {*
 definition
   call_kernel :: "event \<Rightarrow> (unit,'z::state_ext_sched) s_monad" where
   "call_kernel ev \<equiv> do
+    if (call_hook ev) then c_entry_hook else return ();
        handle_event ev <handle>
            (\<lambda>_. without_preemption $ do
                   irq \<leftarrow> do_machine_op getActiveIRQ;
                   when (irq \<noteq> None) $ handle_interrupt (the irq)
                 od);
        schedule;
-       activate_thread
+       activate_thread;
+       if (call_hook ev) then c_exit_hook else return ()
    od"
 
 end

@@ -72,12 +72,6 @@ consts'
 createFramesOfRegion :: "capability \<Rightarrow> region \<Rightarrow> bool \<Rightarrow> unit kernel_init"
 
 consts'
-mapGlobalsFrame :: "unit kernel"
-
-consts'
-writeIdleCode :: "unit kernel"
-
-consts'
 mapKernelFrame :: "paddr \<Rightarrow> vptr \<Rightarrow> vmrights \<Rightarrow> vmattributes \<Rightarrow> unit kernel"
 
 consts'

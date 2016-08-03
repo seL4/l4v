@@ -1828,8 +1828,8 @@ done
 
 definition
   "absArchState s' \<equiv>
-   case s' of ARMKernelState gframe at hwat anext am gpd gpts kvspace \<Rightarrow>
-     \<lparr>arm_globals_frame = gframe, arm_asid_table = at \<circ> ucast,
+   case s' of ARMKernelState at hwat anext am gpd gpts kvspace \<Rightarrow>
+     \<lparr>arm_asid_table = at \<circ> ucast,
       arm_hwasid_table = hwat, arm_next_asid = anext,
       arm_asid_map = am, arm_global_pd = gpd, arm_global_pts = gpts,
       arm_kernel_vspace = kvspace\<rparr>"

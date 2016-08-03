@@ -34,9 +34,8 @@ definition
   arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_switch_to_thread t \<equiv> do
      set_vm_root t;
-     globals \<leftarrow> gets (arm_globals_frame \<circ> arch_state);
      buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer t;
-     do_machine_op $ storeWord globals buffer_ptr;
+     as_user t $ set_register TPIDRURW buffer_ptr;
      do_machine_op $ clearExMonitor
    od"
 
@@ -45,10 +44,7 @@ text {* The idle thread does not need to be handled specially on ARM. *}
     specificially to ease infoflow reasoning VER-207 *)
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
-   "arch_switch_to_idle_thread \<equiv> do
-      globals \<leftarrow> gets (arm_globals_frame \<circ> arch_state);
-      do_machine_op $ storeWord globals 0
-    od"
+   "arch_switch_to_idle_thread \<equiv> return ()"
 
 definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where

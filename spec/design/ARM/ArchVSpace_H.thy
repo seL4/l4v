@@ -69,7 +69,6 @@ defs mapKernelWindow_def:
     deleteObjects (PPtr $ fromPPtr $ head globalPTs) ptBits;
     placeNewObject (PPtr $ fromPPtr $ head globalPTs) (makeObject ::pte) ptSize;
     storePDE slot pde;
-    mapGlobalsFrame;
     kernelDevices \<leftarrow> doMachineOp getKernelDevices;
     mapM_x mapKernelDevice kernelDevices
 od)"
@@ -320,24 +319,6 @@ defs createFramesOfRegion_def:
     bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr> bifUIFrameCaps := [curSlotPos  .e.  slotPosAfter - 1] \<rparr>);
     noInitFailure $ modify (\<lambda> s. s \<lparr> initBootInfo := bootInfo' \<rparr>)
 odE)"
-
-defs mapGlobalsFrame_def:
-"mapGlobalsFrame\<equiv> (do
-    globalsFrame \<leftarrow> gets $ armKSGlobalsFrame \<circ> ksArchState;
-    mapKernelFrame (addrFromPPtr globalsFrame) globalsBase VMReadOnly $
-        VMAttributes True True True;
-    writeIdleCode
-od)"
-
-defs writeIdleCode_def:
-"writeIdleCode\<equiv> (do
-    globalsFrame \<leftarrow> gets $ armKSGlobalsFrame \<circ> ksArchState;
-    offset \<leftarrow> return ( fromVPtr $ idleThreadStart - globalsBase);
-    doMachineOp $ mapM_x
-        (split  storeWord
-        )
-        (zipE2 (globalsFrame + PPtr offset) ( globalsFrame + PPtr offset + 4) (idleThreadCode))
-od)"
 
 defs mapKernelFrame_def:
 "mapKernelFrame paddr vaddr vmrights attributes\<equiv> (do

@@ -22,7 +22,7 @@ This module defines the ARM register set.
 
 > data Register =
 >     R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | SL | FP | IP | SP |
->     LR | LR_svc | FaultInstruction | CPSR
+>     LR | LR_svc | FaultInstruction | CPSR | TPIDRURW
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 > type Word = Data.Word.Word32

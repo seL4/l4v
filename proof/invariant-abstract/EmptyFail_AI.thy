@@ -447,6 +447,7 @@ end
 
 locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +
+  fixes schedule_t :: "'state_ext_sched :: state_ext_sched itself"
   assumes activate_thread_empty_fail[wp]:
     "empty_fail (activate_thread :: (unit, 'state_ext) s_monad)"
   assumes getActiveIRQ_empty_fail[wp]:
@@ -455,29 +456,35 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
     "\<And>event. empty_fail (handle_event event :: (unit, 'state_ext) p_monad)"
   assumes handle_interrupt_empty_fail[wp]:
     "\<And>interrupt. empty_fail (handle_interrupt interrupt :: (unit, 'state_ext) s_monad)"
+  assumes c_entry_hook_empty_fail[wp]:
+    "empty_fail (c_entry_hook :: (unit, 'state_ext_sched) s_monad)"
+  assumes c_exit_hook_empty_fail[wp]:
+    "empty_fail (c_exit_hook :: (unit, 'state_ext_sched) s_monad)"
+
+
 
 locale EmptyFail_AI_call_kernel_unit
   = EmptyFail_AI_schedule_unit
-  + EmptyFail_AI_call_kernel "TYPE(unit)"
+  + EmptyFail_AI_call_kernel "TYPE(unit)" "TYPE(unit)"
+
 
 context EmptyFail_AI_call_kernel_unit begin
 
 lemma call_kernel_empty_fail': "empty_fail (call_kernel a :: (unit,unit) s_monad)"
   apply (simp add: call_kernel_def)
-  apply (wp | simp)+
-  done
+by (case_tac "call_hook a"; (wp|simp)+ )
 
 end
 
 locale EmptyFail_AI_call_kernel_det
   = EmptyFail_AI_schedule_det
-  + EmptyFail_AI_call_kernel "TYPE(det_ext)"
+  + EmptyFail_AI_call_kernel "TYPE(det_ext)" "TYPE(det_ext)"
 
 context EmptyFail_AI_call_kernel_det begin
 
 lemma call_kernel_empty_fail: "empty_fail (call_kernel a :: (unit,det_ext) s_monad)"
   apply (simp add: call_kernel_def)
-  apply (wp | simp)+
+  apply  (case_tac "call_hook a"; (wp|simp)+ )
   done
 
 end

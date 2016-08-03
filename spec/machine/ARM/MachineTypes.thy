@@ -47,6 +47,7 @@ datatype register =
   | LR_svc
   | FaultInstruction
   | CPSR
+  | TPIDRURW
 
 type_synonym machine_word = "word32"
 
@@ -94,7 +95,8 @@ definition
       LR,
       LR_svc,
       FaultInstruction,
-      CPSR
+      CPSR,
+      TPIDRURW
     ]"
 
 

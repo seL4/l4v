@@ -994,7 +994,7 @@ definition
   global_refs' :: "kernel_state \<Rightarrow> obj_ref set"
 where
   "global_refs' \<equiv> \<lambda>s.
-  {ksIdleThread s, armKSGlobalsFrame (ksArchState s)} \<union>
+  {ksIdleThread s} \<union>
    page_directory_refs' (armKSGlobalPD (ksArchState s)) \<union>
    (\<Union>pt \<in> set (armKSGlobalPTs (ksArchState s)). page_table_refs' pt) \<union>
    range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"
@@ -1038,7 +1038,6 @@ definition
   valid_arch_state' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_arch_state' \<equiv> \<lambda>s.
-  typ_at' UserDataT (armKSGlobalsFrame (ksArchState s)) s \<and>
   valid_asid_table' (armKSASIDTable (ksArchState s)) s \<and>
   page_directory_at' (armKSGlobalPD (ksArchState s)) s \<and>
   valid_global_pts' (armKSGlobalPTs (ksArchState s)) s \<and>
