@@ -141,15 +141,27 @@ Currently, there is only one VCPU register available for reading/writing by the 
 
 \subsection{VCPU: inject IRQ}
 
+FIXME ARMHYP: this does not at this instance correspond to exactly what the C
+    does, but it is the value that is stored inside of lr in the vgic
+
+> makeVIRQ :: Word32 -> Word32 -> Word32 -> VIRQ
+> makeVIRQ group prio irq =
+>     (group `shiftL` groupShift) .|. (prio `shiftL` prioShift) .|. irq .|.
+>         irqPending .|. eoiirqen
+>     where groupShift = 30
+>           prioShift = 23
+>           irqPending = bit 28
+>           eoiirqen = bit 19
+
 > decodeVCPUInjectIRQ :: [Word] -> ArchCapability ->
 >         KernelF SyscallError ArchInv.Invocation
 > decodeVCPUInjectIRQ (mr0:mr1:_) cap@(VCPUCap {}) =
 >   do
 >     let vcpuPtr = capVCPUPtr cap
->     let vid = (fromIntegral (mr0 .&. 0xffff) :: Word16)
->     let priority = fromIntegral $ (mr0 `shiftR` 16) .&. 0xff
->     let group = fromIntegral $ (mr0 `shiftR` 24) .&. 0xff
->     let index = ((fromIntegral $ mr1 .&. 0xff) :: Word8)
+>     let vid = mr0 .&. 0xffff
+>     let priority = (mr0 `shiftR` 16) .&. 0xff
+>     let group = (mr0 `shiftR` 24) .&. 0xff
+>     let index = mr1 .&. 0xff
 >
 >     rangeCheck vid (0::Int) ((1 `shiftL` 10) - 1)
 >     rangeCheck priority (0::Int) 31
@@ -157,11 +169,11 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >     gic_vcpu_num_list_regs <- withoutFailure $
 >         gets (armKSGICVCPUNumListRegs . ksArchState)
 >     rangeCheck index 0 gic_vcpu_num_list_regs
->     vcpu <- withoutFailure $ getObject vcpuPtr
->     let x = addressTranslateS1CPR
->     let vcpuLR = vgicLR $ vcpuVGIC vcpu
->     when (vcpuLR ! (fromIntegral index) .&. vgicIRQMask == vgicIRQActive) $ throw DeleteFirst
->     return $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) group priority vid
+>     vcpuLR <- withoutFailure $ liftM (vgicLR . vcpuVGIC) $ getObject vcpuPtr
+>     when (vcpuLR ! (fromIntegral index) .&. vgicIRQMask == vgicIRQActive) $
+>         throw DeleteFirst
+>     let virq = makeVIRQ (fromIntegral group) (fromIntegral priority) (fromIntegral vid)
+>     return $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) virq
 > decodeVCPUInjectIRQ _ _ = throw TruncatedMessage
 
 \subsection{VCPU: perform and decode main functions}
@@ -173,7 +185,7 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >     invokeVCPUReadReg vcpuPtr reg
 > performARMVCPUInvocation (VCPUWriteRegister vcpuPtr reg val) =
 >     invokeVCPUWriteReg vcpuPtr reg val
-> performARMVCPUInvocation (VCPUInjectIRQ vcpuPtr _ _ _ _)  = error "FIXME ARMHYP TODO"
+> performARMVCPUInvocation (VCPUInjectIRQ vcpuPtr _ _)  = error "FIXME ARMHYP TODO"
 
 > decodeARMVCPUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->

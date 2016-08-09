@@ -165,13 +165,15 @@ but this structure is never manipulated as a whole.
 
 FIXME ARMHYP move to platform
 
+> type VIRQ = Word32
+
 > gicVCPUMaxNumLR = (64 :: Int)
 
 > data GICVCPUInterface = VGICInterface {
 >                        vgicHCR :: Word32,
 >                        vgicVMCR :: Word32,
 >                        vgicAPR :: Word32,
->                        vgicLR :: Array Int Word32
+>                        vgicLR :: Array Int VIRQ
 >                        }
 >     deriving Show
 

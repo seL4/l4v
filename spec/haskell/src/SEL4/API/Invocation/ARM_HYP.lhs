@@ -123,13 +123,13 @@ IO pages are invoked using InvokePage (cap contains a bit indicating it is an IO
 
 FIXME ARMHYP move HyperReg definition (to Hardware?)
 
-> type HyperReg = Word32 -- FIXME ARMHYP can abstract
+> type HyperReg = Int -- FIXME ARMHYP can abstract
 > type HyperRegVal = Word32 -- FIXME ARMHYP can abstract
 
 > data VCPUInvocation
 >     = VCPUSetTCB (PPtr VCPU) (PPtr TCB)
->     -- XXX ARMHYP vcpu index group priority virq
->     | VCPUInjectIRQ (PPtr VCPU) Word8 Word8 Word8 Word16
+>     -- XXX ARMHYP vcpu index virq
+>     | VCPUInjectIRQ (PPtr VCPU) Int VIRQ
 >     | VCPUReadRegister (PPtr VCPU) HyperReg
 >     | VCPUWriteRegister (PPtr VCPU) HyperReg HyperRegVal
 >     deriving (Show, Eq)
