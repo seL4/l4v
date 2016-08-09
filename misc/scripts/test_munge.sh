@@ -78,7 +78,8 @@ if [ -z ${VERBOSE} ]
 then ${MAKE_MUNGE} ${AST_OPTS} ${REF1}  > /dev/null 2>&1
 else ${MAKE_MUNGE} ${AST_OPTS} ${REF1}
 fi
-mv ckernel_names.txt ckernel_names_1.txt
+sort -o ckernel_names_1.txt ckernel_names.txt
+rm ckernel_names.txt
 mv kernel_all.txt kernel_all_1.txt
 [ -z ${AST+x} ] || mv ckernel_ast.txt ckernel_ast_1.txt
 
@@ -86,7 +87,8 @@ if [ -z ${VERBOSE} ]
 then ${MAKE_MUNGE} ${AST_OPTS} ${REF2} > /dev/null 2>&1
 else ${MAKE_MUNGE} ${AST_OPTS} ${REF2}
 fi
-mv ckernel_names.txt ckernel_names_2.txt
+sort -o ckernel_names_2.txt ckernel_names.txt
+rm ckernel_names.txt
 mv kernel_all.txt kernel_all_2.txt
 [ -z ${AST+x} ] || mv ckernel_ast.txt ckernel_ast_2.txt
 
