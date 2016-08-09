@@ -450,7 +450,8 @@ fun normalise_mem_accs ctxt = DETERM o let
             | @{term Trueprop} $ (Const (@{const_name ptr_safe}, _) $ _ $ _)
               => prove_ptr_safe "normalise_mem_accs" ctxt i
             | _ => all_tac)
-    THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_ptr h_val_word32 h_val_word8})
+    THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_ptr h_val_word32 h_val_word8
+        h_val_sword32 h_val_sword8})
   end
 
 val heap_update_id_nonsense
@@ -466,10 +467,10 @@ fun prove_mem_equality ctxt = DETERM o let
     val unpack_simpset = ctxt
         addsimps @{thms heap_update_def to_bytes_array
                heap_update_list_append heap_list_update_ptr heap_list_update_word32
-               h_val_word8 heap_list_update_word8
+               h_val_word8 h_val_sword8 heap_list_update_word8 to_bytes_sword
                field_lvalue_offset_eq ptr_add_def
                array_ptr_index_def
-               h_val_word32 h_val_ptr
+               h_val_word32 h_val_ptr h_val_sword32
                take_heap_list_min drop_heap_list_general
                ucast_nat_def of_int_sint_scast
         } @ Proof_Context.get_thms ctxt "field_to_bytes_rewrites"
