@@ -787,7 +787,7 @@ lemma arch_recycle_cap_respects:
              hoare_vcg_all_lift hoare_vcg_const_imp_lift
              clearMemory_invs
              | wpc | simp add: swp_def cap_aligned_def if_apply_def2
-             | wp_once hoare_drop_imps
+             | wp_once hoare_drop_imps hoare_unless_wp
              | elim conjE
              | (erule is_aligned_weaken, simp add: pd_bits_def pageBits_def))+
   apply (clarsimp simp: conj_comms cases_simp_options valid_cap_def cap_aligned_def)
@@ -944,7 +944,7 @@ lemma arch_recycle_cap_pas_refined:
              mapM_x_swp_store_pde_invs_unmap[unfolded swp_def]
              mapM_x_and_const_wp[OF store_pte_pas_refined]
              mapM_x_and_const_wp[OF store_pde_pas_refined]
-             hoare_vcg_if_lift_ER
+             hoare_vcg_if_lift_ER hoare_unless_wp
              | wpc
              | simp add: fun_upd_def[symmetric] cases_simp_options
                          pte_ref_simps pde_ref_simps

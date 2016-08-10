@@ -56,7 +56,9 @@ definition all_invs_but_valid_irq_states_for where
   valid_asid_map and
   valid_global_pd_mappings and
   pspace_in_kernel_window and
-  cap_refs_in_kernel_window and cur_tcb"
+  cap_refs_in_kernel_window and
+  pspace_respects_device_region and
+  cap_refs_respects_device_region and cur_tcb"
 
 lemma dmo_maskInterrupt_invs:
   "\<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace> 

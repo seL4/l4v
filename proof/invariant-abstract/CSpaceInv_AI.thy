@@ -1261,7 +1261,7 @@ where
       \<and> \<not> is_untyped_cap newcap \<and> \<not> is_master_reply_cap newcap
       \<and> \<not> is_reply_cap newcap
       \<and> newcap \<noteq> cap.IRQControlCap
-      \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> cap_class newcap = cap_class cap)
+      \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> (cap_class newcap = cap_class cap \<and> cap_is_device newcap = cap_is_device cap))
       \<and> (\<forall>vref. vs_cap_ref cap = Some vref
                 \<longrightarrow> (vs_cap_ref newcap = Some vref
                        \<and> obj_refs newcap = obj_refs cap)
@@ -1999,6 +1999,16 @@ lemma set_cap_kernel_window[wp]:
                         a_type_def wf_cs_upd)
   done
 
+lemma set_cap_pspace_respects_device[wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> set_cap cap p \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_cap_def split_def)
+  apply (wp set_object_pspace_respect_device_region get_object_wp | wpc)+
+  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: fun_upd_def[symmetric]
+                        a_type_def wf_cs_upd)
+  done
+
+
 lemma set_cap_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window
          and (\<lambda>s. \<forall>ref \<in> cap_range cap. arm_kernel_vspace (arch_state s) ref
@@ -2011,6 +2021,76 @@ lemma set_cap_cap_refs_in_kernel_window[wp]:
    apply wp
    apply (fastforce elim!: ranE split: split_if_asm)
   apply wp
+  done
+
+lemma set_cap_cap_refs_respects_device_region:
+  "\<lbrace>cap_refs_respects_device_region 
+     and (\<lambda>s. \<exists>ptr. cte_wp_at (\<lambda>c. cap_range cap \<subseteq> cap_range c \<and>((cap_range cap \<noteq> {}) \<longrightarrow> cap_is_device cap = cap_is_device c)) ptr s)\<rbrace>
+     set_cap cap p
+   \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: cap_refs_respects_device_region_def cap_range_respects_device_region_def)
+  apply (rule hoare_pre)
+  apply wps
+  apply (simp add: cte_wp_at_caps_of_state)
+  apply (wp hoare_vcg_all_lift)
+  apply clarsimp
+  apply (rule conjI)
+   apply (rule impI)
+   apply (drule_tac x = a in spec)
+   apply (drule_tac x = b in spec)
+   apply (clarsimp simp:cte_wp_at_caps_of_state)
+   apply fastforce
+  apply (clarsimp simp:cte_wp_at_caps_of_state)
+  done
+
+lemma set_cap_cap_refs_respects_device_region_spec:
+  "\<lbrace>cap_refs_respects_device_region 
+     and (\<lambda>s. cte_wp_at (\<lambda>c. cap_range cap \<subseteq> cap_range c \<and> ((cap_range cap \<noteq> {}) \<longrightarrow> cap_is_device cap = cap_is_device c)) ptr s)\<rbrace>
+     set_cap cap p
+   \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (wp set_cap_cap_refs_respects_device_region)
+  apply fastforce
+  done
+
+lemma set_cap_cap_refs_respects_device_region_NullCap:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace>
+     set_cap NullCap p
+   \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: cap_refs_respects_device_region_def cap_range_respects_device_region_def)
+  apply (rule hoare_pre)
+  apply wps
+  apply (simp add: cte_wp_at_caps_of_state )
+  apply (wp hoare_vcg_all_lift)
+  apply (clarsimp simp:cap_range_def)
+  apply (drule_tac x = x in spec)
+  apply (drule_tac x = xa in spec)
+  apply (clarsimp simp:cte_wp_at_caps_of_state)
+  done
+
+lemma replaceable_cap_range:
+ "replaceable s p cap c \<Longrightarrow> cap_range cap \<subseteq> cap_range c"
+ apply (simp add:replaceable_def)
+ apply (elim disjE,simp_all)
+  apply (clarsimp simp:cap_range_def)
+ apply (case_tac cap,simp_all add:is_cap_simps cap_range_def)
+ done
+
+lemma replaceable_cap_is_device_cap:
+ "\<lbrakk>replaceable s p cap c; cap \<noteq> NullCap\<rbrakk>\<Longrightarrow> cap_is_device cap = cap_is_device c"
+ apply (simp add:replaceable_def is_cap_simps is_final_cap'_def)
+ apply (elim disjE,simp_all add:is_cap_simps)
+ done
+
+lemma set_cap_cap_refs_respects_device_region_replaceable:
+  "\<lbrace>cap_refs_respects_device_region and (\<lambda>s. cte_wp_at (replaceable s p cap) p s)\<rbrace>
+     set_cap cap p
+   \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (case_tac "cap = NullCap")
+   apply (wp set_cap_cap_refs_respects_device_region_NullCap | simp)+
+  apply (wp set_cap_cap_refs_respects_device_region_spec[where ptr = p])
+  apply clarsimp
+  apply (erule cte_wp_at_weakenE)
+  apply (simp add: replaceable_cap_is_device_cap replaceable_cap_range)
   done
 
 (* FIXME: SELFOUR-421 - how does this change? *)
@@ -2110,6 +2190,9 @@ lemma descendants_inc_minor:
   apply simp
   done
 
+
+ 
+
 lemma replace_cap_invs:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s p cap) p s
         \<and> cap \<noteq> cap.NullCap
@@ -2123,9 +2206,9 @@ lemma replace_cap_invs:
              set_cap_caps_of_state2 set_cap_idle
              replace_cap_ifunsafe valid_irq_node_typ
              set_cap_typ_at set_cap_irq_handlers
-             set_cap_valid_arch_caps set_cap_valid_arch_objs)
-  apply (clarsimp simp: valid_pspace_def cte_wp_at_caps_of_state
-                        replaceable_def)
+             set_cap_valid_arch_caps set_cap_valid_arch_objs
+             set_cap_cap_refs_respects_device_region_replaceable)
+  apply (clarsimp simp: valid_pspace_def cte_wp_at_caps_of_state replaceable_def)
   apply (rule conjI)
    apply (fastforce simp: tcb_cap_valid_def 
                   dest!: cte_wp_tcb_cap_valid [OF caps_of_state_cteD])

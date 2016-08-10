@@ -168,15 +168,7 @@ lemma caps_of_state_ko:
   done
 
 
-lemma p_in_obj_range:
-  "\<lbrakk> kheap s p = Some ko; pspace_aligned s; valid_objs s \<rbrakk> \<Longrightarrow> p \<in> obj_range p ko"
-  apply (simp add: pspace_aligned_def)
-  apply (drule bspec, erule domI)
-  apply (drule valid_obj_sizes, erule ranI)
-  apply (simp add: obj_range_def add_diff_eq[symmetric])
-  apply (erule is_aligned_no_wrap')
-  apply (erule word_power_less_1[where 'a=32, folded word_bits_def])
-  done
+
 
 
 lemma untyped_cap_descendants_range:
@@ -507,7 +499,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
        apply (auto simp: valid_ntfn_def ntfn_bound_refs_def split: option.splits)
     done
 
-  show "valid_objs (detype (untyped_range cap) s)"
+  show vobjs: "valid_objs (detype (untyped_range cap) s)"
     using invs_valid_objs[OF invs]
     apply (clarsimp simp add: valid_objs_def dom_def)
     apply (erule allE, erule impE, erule exI)
@@ -515,7 +507,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
     apply (simp add: obj_at_def)
     done
 
-  show "pspace_aligned (detype (untyped_range cap) s)"
+  show psp_aligned: "pspace_aligned (detype (untyped_range cap) s)"
     using invs_psp_aligned[OF invs]
     apply (clarsimp simp: pspace_aligned_def)
     apply (drule bspec, erule domI)
@@ -943,6 +935,25 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
   thus "valid_kernel_mappings (detype (untyped_range cap) s)"
     by (simp add: valid_kernel_mappings_def detype_def
                   ball_ran_eq)
+
+  have "pspace_respects_device_region s"
+    using invs by (simp add: invs_def valid_state_def)
+  thus "pspace_respects_device_region (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
+    apply (intro pspace_respects_device_regionI)
+    using psp_aligned vobjs invs
+    apply (simp_all add:clear_um.pspace detype_def dom_def clear_um_def
+      split:split_if_asm )
+       apply (drule pspace_respects_device_regionD[rotated -1],auto)+
+    done
+
+  have "cap_refs_respects_device_region s"
+    using invs by (simp add:invs_def valid_state_def)
+  thus "cap_refs_respects_device_region (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
+    apply (clarsimp simp:clear_um_def cap_refs_respects_device_region_def cte_wp_at_detype
+      simp del:split_paired_All split_paired_Ex)
+    apply (drule_tac x = "(a,b)" in spec)
+    apply (clarsimp simp:cte_wp_at_caps_of_state cap_range_respects_device_region_def detype_def)
+    done
 
   have "valid_asid_map s"
     using invs by (simp add: invs_def valid_state_def)

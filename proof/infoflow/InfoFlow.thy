@@ -161,7 +161,7 @@ lemma equiv_forD:
 
 
 abbreviation equiv_machine_state :: "(word32 \<Rightarrow> bool) \<Rightarrow> (word32 set) \<Rightarrow> 'a machine_state_scheme \<Rightarrow> 'a machine_state_scheme \<Rightarrow> bool" where
-  "equiv_machine_state P X s s' \<equiv> equiv_for (\<lambda> x. P x \<and> x \<notin> X) underlying_memory s s'"
+  "equiv_machine_state P X s s' \<equiv> equiv_for (\<lambda> x. P x \<and> x \<notin> X) underlying_memory s s' \<and> equiv_for (\<lambda> x. P x \<and> x \<notin> X) device_state s s'"
 
 definition equiv_asid :: "asid \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool"
 where
@@ -410,8 +410,14 @@ lemma states_equiv_forE_kheap:
   by(auto simp: states_equiv_for_def elim: equiv_forE)
 
 lemma states_equiv_forE_mem:
-  "\<lbrakk>states_equiv_for P Q R S X s s'; (\<And> x. \<lbrakk>P x; x \<notin> X (arm_globals_frame (arch_state s))\<rbrakk> \<Longrightarrow> (underlying_memory (machine_state s)) x = (underlying_memory (machine_state s')) x) \<Longrightarrow> Z\<rbrakk> \<Longrightarrow> Z"
-  by(auto simp: states_equiv_for_def elim: equiv_forE)
+  "\<lbrakk>states_equiv_for P Q R S X s s'; 
+  (\<And> x. \<lbrakk>P x; x \<notin> X (arm_globals_frame (arch_state s))\<rbrakk> 
+  \<Longrightarrow> (underlying_memory (machine_state s)) x = (underlying_memory (machine_state s')) x
+  \<and> (device_state (machine_state s)) x = (device_state (machine_state s')) x) \<Longrightarrow> Z\<rbrakk> \<Longrightarrow> Z"
+  apply (clarsimp simp: states_equiv_for_def elim: equiv_forE)
+  apply (elim equiv_forE)
+  apply fastforce
+  done
 
 lemma states_equiv_forE_cdt:
   "\<lbrakk>states_equiv_for P Q R S X s s'; (\<And> x. P (fst x) \<Longrightarrow> cdt s x = cdt s' x) \<Longrightarrow> Z\<rbrakk> \<Longrightarrow> Z"
@@ -527,7 +533,7 @@ definition globals_equiv :: "('z :: state_ext) state \<Rightarrow> ('z :: state_
      (\<forall>x\<in>range_of_arm_globals_frame s. underlying_memory (machine_state s) x = underlying_memory (machine_state s') x) \<and> 
      arm_global_pd (arch_state s) = arm_global_pd (arch_state s') \<and>
      kheap s (arm_global_pd (arch_state s)) = kheap s' (arm_global_pd (arch_state s)) \<and>
-      idle_equiv s s' \<and>
+      idle_equiv s s' \<and> dom (device_state (machine_state s)) = dom (device_state (machine_state s')) \<and>
       cur_thread s = cur_thread s' \<and>
       (cur_thread s \<noteq> idle_thread s \<longrightarrow> exclusive_state_equiv s s')
       "
@@ -565,10 +571,10 @@ lemma reads_equivE:
      equiv_for ((aag_can_read aag) \<circ> fst) cdt s s';
      equiv_for ((aag_can_read aag) \<circ> fst) cdt_list s s';
      equiv_for (aag_can_read aag) ekheap s s';
-equiv_for ((aag_can_read aag) \<circ> fst) is_original_cap s s'; equiv_for (aag_can_read_irq aag) interrupt_states s s';
-equiv_for (aag_can_read_irq aag) interrupt_irq_node s s'; 
-equiv_asids (aag_can_read_asid aag) s s'; 
-equiv_for (aag_can_read_domain aag) ready_queues s s'; cur_thread s = cur_thread s'; cur_domain s = cur_domain s'; scheduler_action s = scheduler_action s'; work_units_completed s = work_units_completed s'; irq_state (machine_state s) = irq_state (machine_state s')\<rbrakk> \<Longrightarrow> R"
+     equiv_for ((aag_can_read aag) \<circ> fst) is_original_cap s s'; equiv_for (aag_can_read_irq aag) interrupt_states s s';
+     equiv_for (aag_can_read_irq aag) interrupt_irq_node s s'; 
+     equiv_asids (aag_can_read_asid aag) s s'; 
+     equiv_for (aag_can_read_domain aag) ready_queues s s'; cur_thread s = cur_thread s'; cur_domain s = cur_domain s'; scheduler_action s = scheduler_action s'; work_units_completed s = work_units_completed s'; irq_state (machine_state s) = irq_state (machine_state s')\<rbrakk> \<Longrightarrow> R"
   shows "R"
   apply(rule e)
   apply(insert sef)
@@ -1305,14 +1311,19 @@ lemma syscall_reads_respects_g:
   
 
 lemma do_machine_op_spec_reads_respects':
-  assumes equiv_dmo:
+  assumes equiv_dmo:               
    "equiv_valid_inv (equiv_machine_state (aag_can_read aag) (range_of_arm_globals_frame st) And equiv_irq_state)  (equiv_machine_state (aag_can_affect aag l) (range_of_arm_globals_frame st)) \<top> f"
   shows
   "spec_reads_respects st aag l \<top> (do_machine_op f)"
   unfolding do_machine_op_def spec_equiv_valid_def
   apply(rule equiv_valid_2_guard_imp)
-   apply(rule_tac  R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag or aag_can_affect aag l) (range_of_arm_globals_frame st) rv rv' \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="op = st" and P'="\<top>" in equiv_valid_2_bind)
-       apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag) (range_of_arm_globals_frame st) ms' ms'' \<and> equiv_machine_state (aag_can_affect aag l) (range_of_arm_globals_frame st) ms' ms'' \<and> equiv_irq_state ms' ms''" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
+   apply(rule_tac  R'="\<lambda> rv rv'.
+     equiv_machine_state (aag_can_read aag or aag_can_affect aag l) (range_of_arm_globals_frame st) rv rv'
+     \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="op = st" and P'="\<top>" in equiv_valid_2_bind)
+       apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r'
+         \<and> equiv_machine_state (aag_can_read aag) (range_of_arm_globals_frame st) ms' ms'' 
+         \<and> equiv_machine_state (aag_can_affect aag l) (range_of_arm_globals_frame st) ms' ms'' 
+         \<and> equiv_irq_state ms' ms''" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
             apply(clarsimp simp: modify_def get_def put_def bind_def return_def equiv_valid_2_def)
             apply(fastforce intro: reads_equiv_machine_state_update affects_equiv_machine_state_update)
             apply(insert equiv_dmo)[1]

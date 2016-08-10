@@ -229,6 +229,7 @@ lemma user_op_access:
        apply simp+
   done
 
+
 lemma user_op_access':
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb;
      ptable_lift tcb s x = Some (addrFromPPtr ptr);
@@ -265,17 +266,68 @@ lemma dmo_user_memory_update_respects_Write:
   apply (simp add: dom_def)+
   done
 
+lemma integrity_device_state_update:
+  "\<lbrakk>integrity aag X st s;
+    \<forall>x\<in>xs. (pasSubject aag, Write, pasObjectAbs aag x) \<in> pasPolicy aag;
+    \<forall>x\<in>-xs. um' x = None
+    \<rbrakk> \<Longrightarrow>  integrity aag X st (machine_state_update (\<lambda>v. v\<lparr>device_state := device_state v ++ um'\<rparr>) s)"
+  apply (clarsimp simp: integrity_def)
+  apply (case_tac "x \<in> xs")
+   apply (erule_tac x=x in ballE)
+    apply (rule trd_write)
+    apply simp+
+  apply (erule_tac x = x in allE, erule integrity_device.cases)
+    apply (erule trd_lrefl)
+   apply (rule trd_orefl)
+   apply (clarsimp simp:map_add_def)
+  apply (erule trd_write)
+  done
+
+lemma dmo_device_update_respects_Write:
+  "\<lbrace>integrity aag X st and (\<lambda>s. device_state (machine_state s) = um)
+  and K (\<forall>p \<in> dom um'. aag_has_auth_to aag Write p)\<rbrace>
+  do_machine_op (device_memory_update um')
+  \<lbrace>\<lambda>a. integrity aag X st\<rbrace>"
+  apply (simp add: device_memory_update_def)
+  apply (rule hoare_pre)
+   apply (wp dmo_wp)
+  apply clarsimp
+  apply (simp cong: abstract_state.fold_congs)
+  apply (rule integrity_device_state_update)
+    apply simp
+   apply clarify
+   apply (drule(1) bspec)
+   apply simp
+  apply fastforce
+  done
+
+lemma dmo_um_upd_machine_state:
+  "\<lbrace>\<lambda>s. P (device_state (machine_state s))\<rbrace>
+       do_machine_op (user_memory_update ms)
+    \<lbrace>\<lambda>_ s. P (device_state (machine_state s))\<rbrace>"
+    apply (wp dmo_wp)
+    by (simp add:user_memory_update_def simpler_modify_def valid_def)
+
 lemma do_user_op_respects:
  "\<lbrace> invs and integrity aag X st and is_subject aag \<circ> cur_thread and pas_refined aag \<rbrace>
     do_user_op uop tc
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: do_user_op_def)
-   apply (wp dmo_user_memory_update_respects_Write hoare_vcg_all_lift hoare_vcg_imp_lift
+  apply (wp | simp | wpc)+
+   apply (rule dmo_device_update_respects_Write)
+   apply (wp dmo_um_upd_machine_state
+             dmo_user_memory_update_respects_Write hoare_vcg_all_lift hoare_vcg_imp_lift
         | wpc | clarsimp)+
        apply (rule hoare_pre_cont)
       apply (wp   select_wp | wpc | clarsimp)+
   apply (simp add: restrict_map_def split:if_splits)
-  apply (drule_tac auth=Write in user_op_access')
+  apply (rule conjI)
+   apply (clarsimp split:if_splits)
+   apply (drule_tac auth=Write in user_op_access')
+      apply (simp add: vspace_cap_rights_to_auth_def)+
+  apply (rule conjI,simp)
+  apply (clarsimp split:if_splits)
+   apply (drule_tac auth=Write in user_op_access')
       apply (simp add: vspace_cap_rights_to_auth_def)+
   done
 

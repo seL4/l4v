@@ -5995,6 +5995,7 @@ lemma corres_retype_region_createNewCaps:
             (\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> valid_etcbs s \<and> valid_list s \<and> valid_arch_state s 
                    \<and> caps_no_overlap y sz s \<and> pspace_no_overlap y sz s
                    \<and> caps_overlap_reserved {y..y + of_nat n * 2 ^ (obj_bits_api (APIType_map2 (Inr ty)) us) - 1} s
+                   \<and> (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area y sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
                    \<and> (APIType_map2 (Inr ty) = Structures_A.CapTableObject \<longrightarrow> 0 < us))
             (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' y sz s
                   \<and> valid_pspace' s \<and> valid_arch_state' s

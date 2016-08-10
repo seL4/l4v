@@ -151,31 +151,17 @@ definition
 where
   "Init_A \<equiv> {((empty_context, init_A_st), UserMode, None)}"
 
-text {*
-  The content of user memory is stored in the machine state.
-  The definition below constructs a map
-  from all kernel addresses pointing inside a user frame
-  to the respective memory content.
 
-  NOTE: There is an offset from kernel addresses to physical memory addresses.
-*}
-definition
-  "user_mem s \<equiv> \<lambda>p.
-  if (in_user_frame p s)
-  then Some (underlying_memory (machine_state s) p)
-  else None"
-
-definition
-  "device_mem s \<equiv> \<lambda>p.
-  if (in_device_frame p s)
-  then Some p
-  else None"
 
 
 definition
   "user_memory_update um \<equiv> modify (\<lambda>ms.
    ms\<lparr>underlying_memory := (\<lambda>a. case um a of Some x \<Rightarrow> x
                                  | None \<Rightarrow> underlying_memory ms a)\<rparr>)"
+
+definition
+  "device_memory_update um \<equiv> modify (\<lambda>ms.
+   ms\<lparr>device_state := (device_state ms ++ um ) \<rparr>)"
 
 definition 
   "option_to_0 x \<equiv> case x of None \<Rightarrow> 0 | Some y \<Rightarrow> y"
@@ -713,17 +699,26 @@ definition
   "do_user_op uop tc \<equiv> 
    do t \<leftarrow> gets cur_thread;
       conv \<leftarrow> gets (ptable_lift t);
+
       rights \<leftarrow> gets (ptable_rights t);
+
       um \<leftarrow> gets (\<lambda>s. (user_mem s) \<circ> ptrFromPAddr);
-      dm \<leftarrow> gets device_mem;
+
+      dm \<leftarrow> gets (\<lambda>s. (device_mem s) \<circ> ptrFromPAddr);
+
       ds \<leftarrow> gets (device_state \<circ> machine_state);
+
       (e,tc',um',ds') \<leftarrow> select (fst
                      (uop t (restrict_map conv {pa. rights pa \<noteq> {}}) rights
-                       (tc, restrict_map um {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va},ds)));
+                       (tc, restrict_map um {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va}
+                       ,(ds \<circ> ptrFromPAddr) |`  {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va} ) 
+                     ));
       do_machine_op (user_memory_update
-                       (restrict_map (um'|` dom um) {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
-                      \<circ> Platform.addrFromPPtr));
-      do_machine_op (device_update (ds ++ (ds'|` dom dm)));
+                       ((um' |` {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
+                      \<circ> Platform.addrFromPPtr) |` (- dom ds)));
+      do_machine_op (device_memory_update
+                       ((ds' |` {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
+                      \<circ> Platform.addrFromPPtr) |` (dom ds)));
       return (e, tc')
    od" 
 

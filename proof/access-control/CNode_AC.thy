@@ -379,14 +379,20 @@ lemma cap_swap_for_delete_respects[wp]:
 
 lemma dmo_no_mem_respects:
   assumes p: "\<And>P. \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace> mop \<lbrace>\<lambda>_ ms. P (underlying_memory ms)\<rbrace>"
+  assumes q: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> mop \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
   shows "\<lbrace>integrity aag X st\<rbrace> do_machine_op mop \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding do_machine_op_def
   apply (rule hoare_pre)
   apply (simp add: split_def)
   apply (wp )
   apply (clarsimp simp: integrity_def)
+  apply (rule conjI)
+   apply clarsimp
+   apply (drule_tac x = x in spec)+
+   apply (erule (1) use_valid [OF _ p])
+  apply clarsimp
   apply (drule_tac x = x in spec)+
-  apply (erule (1) use_valid [OF _ p])
+  apply (erule (1) use_valid [OF _ q])
   done
 
 (* MOVE *)

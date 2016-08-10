@@ -801,6 +801,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
              thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
              thread_set_valid_ioc_trivial
+             thread_set_cap_refs_respects_device_region
               | simp add: ran_tcb_cap_cases
               | rule conjI | erule disjE)+
   apply (clarsimp simp: valid_tcb_def dest!: get_tcb_SomeD)

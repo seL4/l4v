@@ -425,6 +425,9 @@ lemma thread_set_pspace_in_kernel_window[wp]:
   apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
   done
 
+crunch pspace_respects_device_region[wp]: thread_set "pspace_respects_device_region"
+  (wp: set_object_pspace_respect_device_region)
+
 lemma thread_set_cap_refs_in_kernel_window:
   assumes y: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
@@ -432,6 +435,20 @@ lemma thread_set_cap_refs_in_kernel_window:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> thread_set f t \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: thread_set_def)
   apply (wp set_object_cap_refs_in_kernel_window)
+  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (drule bspec[OF y])
+  apply simp
+  apply (erule sym)
+  done
+
+lemma thread_set_cap_refs_respects_device_region:
+  assumes y: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
+                  getF (f tcb) = getF tcb"
+  shows
+  "\<lbrace>cap_refs_respects_device_region\<rbrace> thread_set f t \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: thread_set_def)
+  apply (wp set_object_cap_refs_respects_device_region)
   apply (clarsimp simp: obj_at_def)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (drule bspec[OF y])
@@ -500,6 +517,7 @@ lemma thread_set_invs_trivial:
              thread_set_caps_of_state_trivial
              thread_set_arch_caps_trivial thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
+             thread_set_cap_refs_respects_device_region
              thread_set_aligned
              | rule x z z' w y a | erule bspec_split [OF x] | simp add: z')+
   apply (simp add: z)
@@ -1577,11 +1595,21 @@ lemma set_thread_state_pspace_in_kernel_window[wp]:
       set_thread_state p st \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   by (simp add: set_thread_state_thread_set, wp, simp, wp)
 
+crunch pspace_respects_device_region[wp]: set_thread_state pspace_respects_device_region
+(wp: set_object_pspace_respect_device_region)
+
 lemma set_thread_state_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace>
       set_thread_state p st \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   by (simp add: set_thread_state_thread_set
            | wp thread_set_cap_refs_in_kernel_window
+                ball_tcb_cap_casesI)+
+
+lemma set_thread_state_cap_refs_respects_device_regionw[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace>
+      set_thread_state p st \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  by (simp add: set_thread_state_thread_set
+           | wp thread_set_cap_refs_respects_device_region
                 ball_tcb_cap_casesI)+
 
 lemma set_bound_notification_global_pd_mappings[wp]:
@@ -1594,11 +1622,21 @@ lemma set_bound_notification_pspace_in_kernel_window[wp]:
       set_bound_notification p ntfn \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   by (simp add: set_bound_notification_thread_set, wp)
 
+crunch pspace_respects_device_region[wp]: set_bound_notification pspace_respects_device_region
+  (wp: set_object_pspace_respect_device_region)
+
 lemma set_bound_notification_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace>
       set_bound_notification p ntfn \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   by (simp add: set_bound_notification_thread_set
            | wp thread_set_cap_refs_in_kernel_window
+                ball_tcb_cap_casesI)+
+
+lemma set_bound_notification_cap_refs_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace>
+      set_bound_notification p ntfn \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  by (simp add: set_bound_notification_thread_set
+           | wp thread_set_cap_refs_respects_device_region
                 ball_tcb_cap_casesI)+
 
 lemma set_thread_state_valid_ioc[wp]:

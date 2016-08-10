@@ -498,9 +498,9 @@ definition
   "ex_abs G \<equiv> \<lambda>s'. \<exists>s. ((s :: (det_ext) state),s') \<in> state_relation \<and> G s"
 
 lemma device_update_invs':
-  "\<lbrace>invs'\<rbrace>doMachineOp (device_update ds)
+  "\<lbrace>invs'\<rbrace>doMachineOp (device_memory_update ds)
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-   apply (simp add:doMachineOp_def device_update_def simpler_modify_def select_f_def
+   apply (simp add:doMachineOp_def device_memory_update_def simpler_modify_def select_f_def
      gets_def get_def bind_def valid_def return_def)
    by (clarsimp simp:invs'_def valid_state'_def valid_irq_states'_def valid_machine_state'_def)
 
@@ -519,8 +519,9 @@ lemma doUserOp_invs':
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
   apply (wp device_update_invs' device_update_ct_in_state')
-  apply (wp dmo_invs')
-        apply (clarsimp simp add: no_irq_modify user_memory_update_def)
+  apply (wp dmo_invs' doMachineOp_ct_running')
+        apply (clarsimp simp add: no_irq_modify device_memory_update_def
+          user_memory_update_def)
        apply (wp doMachineOp_ct_running' doMachineOp_sch_act select_wp)
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
@@ -664,6 +665,9 @@ lemma do_user_op_corres:
               apply (rule_tac r'="op=" in corres_split)
                  prefer 2
                  apply (rule corres_gets_machine_state)
+                apply (rule_tac F = "dom (rvb \<circ> addrFromPPtr)  \<subseteq> - dom rvd" in corres_gen_asm)
+                apply (rule_tac F = "dom (rvc \<circ> addrFromPPtr)  \<subseteq> dom rvd" in corres_gen_asm)
+                apply simp
                 apply (rule_tac r'="op=" in corres_split[OF _ corres_select])
                    apply (rule corres_split'[OF corres_machine_op])
                       apply simp
@@ -672,7 +676,9 @@ lemma do_user_op_corres:
                       apply (wp | simp)+
                      apply (rule corres_split'[OF corres_machine_op,where Q = dc and Q'=dc])
                         apply (rule corres_underlying_trivial)
-                       apply (wp | simp add:dc_def)+
+                       apply (wp | simp add:dc_def device_memory_update_def)+
+   apply (clarsimp simp:invs_def valid_state_def pspace_respects_device_region_def)
+  apply fastforce
   done
 
 lemma ct_running_related:

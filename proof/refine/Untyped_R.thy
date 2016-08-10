@@ -3642,9 +3642,11 @@ lemma createNewCaps_ranges':
   apply (rule map_snd_zip_prefix [unfolded less_eq_list_def])
   done
 
+declare split_paired_Ex[simp del]
 lemmas corres_split_retype_createNewCaps
    = corres_split [OF _ corres_retype_region_createNewCaps,
-                   simplified bind_assoc, simplified]
+                   simplified bind_assoc, simplified ]
+declare split_paired_Ex[simp add]
 
 crunch cte_wp_at[wp]: do_machine_op "\<lambda>s. P (cte_wp_at P' p s)"
 
@@ -3653,6 +3655,7 @@ lemma retype_region_caps_overlap_reserved:
     pspace_no_overlap ptr sz and caps_no_overlap ptr sz and
     caps_overlap_reserved
       {ptr..ptr + of_nat n * 2^obj_bits_api (APIType_map2 (Inr ao')) us - 1} and
+    (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) and
     K (APIType_map2 (Inr ao') = Invariants_AI.CapTableObject \<longrightarrow> 0 < us) and
     K (range_cover ptr sz (obj_bits_api (APIType_map2 (Inr ao')) us) n) and
     K (S \<subseteq> {ptr..ptr + of_nat n *
@@ -3677,6 +3680,7 @@ lemma retype_region_caps_overlap_reserved_ret:
     pspace_no_overlap ptr sz and
     caps_overlap_reserved
       {ptr..ptr + of_nat n * 2^obj_bits_api (APIType_map2 (Inr ao')) us - 1} and
+    (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) and
     K (APIType_map2 (Inr ao') = Invariants_AI.CapTableObject \<longrightarrow> 0 < us) and
     K (range_cover ptr sz (obj_bits_api (APIType_map2 (Inr ao')) us) n)\<rbrace>
    retype_region ptr n us (APIType_map2 (Inr ao')) dev
@@ -3689,13 +3693,14 @@ lemma retype_region_caps_overlap_reserved_ret:
   apply (erule use_valid[OF _ retype_region_caps_overlap_reserved])
   apply clarsimp
   apply (intro conjI,simp_all)
+   apply fastforce
   apply (case_tac ao')
         apply (simp_all add:APIType_map2_def)
   apply (rename_tac apiobject_type)
   apply (case_tac apiobject_type)
       apply (simp_all add:obj_bits_api_def ptr_add_def)
   apply (drule(1) range_cover_subset)
-   apply clarsimp+
+   apply (clarsimp)+
   done
 
 lemma getObjectSize_def_eq:
@@ -5010,6 +5015,13 @@ lemma inv_untyped_corres':
       apply (simp add: add.commute word_plus_and_or_coroll2)
       done
 
+    have set_cap_device_and_range_aligned:
+     "\<And>aref idx. \<lbrace>\<lambda>s. (ptr && ~~ mask sz = ptr)\<rbrace> set_cap (cap.UntypedCap d ptr sz idx) aref
+      \<lbrace>\<lambda>rv s. (\<exists>slot. cte_wp_at (\<lambda>c. cap_is_device c = d \<and> {ptr..ptr + (2 ^ sz - 1)} \<subseteq> cap_range c) slot s)\<rbrace>"
+      apply (rule hoare_gen_asm[where P'="\<top>",simplified])
+      using set_cap_device_and_range[where ptr = ptr and sz = sz]
+      by auto
+
     note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap d (ptr && ~~ mask sz) sz idx"
       ,unfolded free_index_update_def free_index_of_def,simplified]
 
@@ -5084,7 +5096,7 @@ lemma inv_untyped_corres':
               apply (rule hoare_strengthen_post[OF set_cap_sets])
               apply (clarsimp simp:cte_wp_at_caps_of_state invs)
              apply (wp set_cap_no_overlap hoare_vcg_ball_lift
-              set_cap_free_index_invs_spec
+              set_cap_free_index_invs_spec set_cap_device_and_range
               set_cap_cte_wp_at set_cap_descendants_range_in
               set_untyped_cap_caps_overlap_reserved)
            apply (clarsimp simp:conj_comms ball_conj_distrib simp del:capFreeIndex_update.simps)
@@ -5223,6 +5235,7 @@ lemma inv_untyped_corres':
                         set_untyped_cap_invs_simple
                         set_cap_cte_wp_at
                         set_cap_descendants_range_in
+                        set_cap_device_and_range_aligned
                         set_untyped_cap_caps_overlap_reserved)
               apply (clarsimp simp:conj_comms ball_conj_distrib simp del:capFreeIndex_update.simps)
               apply (strengthen invs_pspace_aligned' invs_pspace_distinct'

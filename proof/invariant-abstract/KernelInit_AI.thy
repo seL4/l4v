@@ -227,6 +227,23 @@ lemma caps_of_state_init_A_st_Null:
 lemmas cte_wp_at_caps_of_state_eq
     = cte_wp_at_caps_of_state[where P="op = cap" for cap]
 
+lemma pspace_respects_device_region_init[simp]:
+  "pspace_respects_device_region init_A_st"
+   apply (clarsimp simp:pspace_respects_device_region_def init_A_st_def init_machine_state_def device_mem_def
+     in_device_frame_def obj_at_def init_kheap_def a_type_def)
+   apply (rule ext)
+   apply clarsimp
+   done
+
+lemma cap_refs_respects_device_region_init[simp]:
+  "cap_refs_respects_device_region init_A_st"
+   apply (clarsimp simp:cap_refs_respects_device_region_def)
+   apply (frule cte_wp_at_caps_of_state[THEN iffD1])
+   apply clarsimp
+   apply (subst(asm) caps_of_state_init_A_st_Null)
+   apply (clarsimp simp:cte_wp_at_caps_of_state cap_range_respects_device_region_def)
+   done
+
 lemma invs_A:
   "invs init_A_st"
 
@@ -369,8 +386,9 @@ lemma invs_A:
           apply (rule less_imp_le)
           apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
      apply (rule in_kernel_base|simp)+
-  apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
+   apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
                   valid_refs_def[unfolded cte_wp_at_caps_of_state])
+
   apply word_bitwise
   done
 

@@ -779,7 +779,7 @@ apply (simp add: o_def hrs_mem_update_def)
 done
 
 lemma memory_update_corres_C:
-  "corres_underlying rf_sr True (%_ _. True)
+  "corres_underlying rf_sr nf (%_ _. True)
      (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s 
           \<and> (dom um \<subseteq> dom (user_mem' s) ))
      \<top>
@@ -814,8 +814,8 @@ lemma memory_update_corres_C:
   done
 
 lemma device_update_corres_C:
- "corres_underlying rf_sr True op = (\<lambda>_. True) (\<lambda>_. True)
-   (doMachineOp (device_update ms))
+ "corres_underlying rf_sr nf op = (\<lambda>_. True) (\<lambda>_. True)
+   (doMachineOp (device_memory_update ms))
    (setDeviceState_C ms)"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
@@ -823,40 +823,10 @@ lemma device_update_corres_C:
    apply (clarsimp simp add: setDeviceState_C_def simpler_modify_def)
   apply (rule ballI)
   apply (clarsimp simp: simpler_modify_def setDeviceState_C_def)
-  apply (clarsimp simp: doMachineOp_def device_update_def NonDetMonad.bind_def in_monad 
+  apply (clarsimp simp: doMachineOp_def device_memory_update_def NonDetMonad.bind_def in_monad 
     gets_def get_def return_def simpler_modify_def select_f_def)
   apply (clarsimp simp:rf_sr_def cstate_relation_def Let_def carch_state_relation_def
     cmachine_state_relation_def)
-  done
-
-lemma doMachineOp_map_split:
-  "(doMachineOp (user_memory_update (um ++ dm))) = (do 
-  (doMachineOp (user_memory_update um));(doMachineOp (user_memory_update dm)) od)"
-  apply (rule ext)
-  apply (clarsimp simp:NonDetMonad.bind_def doMachineOp_def 
-    select_f_def user_memory_update_def simpler_modify_def
-    gets_def get_def return_def)
-  apply (case_tac x,simp)
-  apply (case_tac ksMachineStatea,simp)
-  apply (rule ext)
-  apply (case_tac "dm a")
-   apply (case_tac "um a")
-    apply (clarsimp split:option.splits)+
-  done
-
-lemma setUserMem_C_map_split:
-  "(setUserMem_C (um ++ dm)) = (do 
-  (setUserMem_C um);(setUserMem_C dm) od)"
-  apply (rule ext)
-  apply (simp add:setUserMem_C_def NonDetMonad.bind_def doMachineOp_def 
-    select_f_def user_memory_update_def simpler_modify_def
-    gets_def get_def return_def)
-  apply (case_tac x,simp)
-  apply (case_tac globalsa,simp)
-  apply (rule ext)
-  apply (case_tac "dm p")
-   apply (case_tac "um p")
-    apply (clarsimp split:option.splits)+
   done
 
 lemma mem_dom_split:
@@ -902,7 +872,7 @@ shows "corres_underlying rf_sr True rel P P' f f'"
  by (fastforce simp:corres_underlying_def no_fail_def)
 
 lemma do_user_op_corres_C:
-  "corres_underlying rf_sr True (op =) (invs' and ex_abs einvs) \<top>
+  "corres_underlying rf_sr False (op =) (invs' and ex_abs einvs) \<top>
                      (doUserOp f tc) (doUserOp_C f tc)"
   apply (simp only: doUserOp_C_def doUserOp_def split_def)
   apply (rule corres_guard_imp)
@@ -931,27 +901,45 @@ lemma do_user_op_corres_C:
             apply (rule_tac P=pspace_distinct' and P'=\<top> and r'="op="
                  in corres_split)
                prefer 2
-               apply clarsimp
-               apply (rule device_mem_C_relation[symmetric])
-                apply (simp add: rf_sr_def cstate_relation_def Let_def
+               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                cpspace_relation_def)
-               apply assumption
+               apply (drule(1) device_mem_C_relation[symmetric])
+               apply (simp add: comp_def)
               apply (rule_tac P=valid_state' and P'=\<top> and r'="op=" in corres_split)
                  prefer 2
                  apply (clarsimp simp: cstate_relation_def rf_sr_def
                    Let_def cmachine_state_relation_def)
-                apply (rule_tac r'="op=" in corres_split[OF _ corres_select])
+                apply (rule_tac P=\<top> and P'=\<top> and r'="op=" in corres_split)
                    prefer 2
-                   apply clarsimp
-                  apply (simp add: addrFromPPtr_def)
-                  apply (rule corres_split[OF _ memory_update_corres_C])
-                    apply (rule corres_split[OF _ device_update_corres_C,
-                                       where R="\<top>\<top>" and R'="\<top>\<top>"])
-                    apply (wp select_wp | simp)+
-   apply (intro conjI allI ballI)
+                   apply (clarsimp simp add: corres_underlying_def fail_def
+                        assert_def return_def
+                        split:if_splits)
+                  apply simp
+                  apply (rule_tac P=\<top> and P'=\<top> and r'="op=" in corres_split)
+                    prefer 2
+                    apply (clarsimp simp add: corres_underlying_def fail_def
+                         assert_def return_def
+                         split:if_splits)
+                   apply simp
+                   apply (rule_tac r'="op=" in corres_split[OF _ corres_select])
+                      prefer 2
+                      apply clarsimp
+                     apply simp
+                     apply (rule corres_split[OF _ memory_update_corres_C])
+                         apply (rule corres_split[OF _ device_update_corres_C,
+                                         where R="\<top>\<top>" and R'="\<top>\<top>"])
+                        apply (wp select_wp | simp)+
+   apply (intro conjI allI ballI impI)
      apply ((clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def)+)[5]
-    apply (clarsimp simp: user_mem'_def ex_abs_def restrict_map_def
+    apply (clarsimp simp:  ex_abs_def restrict_map_def
                   split: if_splits)
+    apply (drule ptable_rights_imp_UserData[rotated -1])
+     apply fastforce+
+    apply (clarsimp simp:invs'_def valid_state'_def user_mem'_def device_mem'_def
+      split:if_splits)
+    apply (drule_tac c = x in subsetD[where B = "dom S" for S])
+     apply (simp add:dom_def)
+    apply fastforce
    apply clarsimp
   done
 

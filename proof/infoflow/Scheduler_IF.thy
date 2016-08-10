@@ -24,12 +24,15 @@ abbreviation scheduler_affects_globals_frame where
 definition globals_equiv_scheduler :: "'z::state_ext state \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
 "globals_equiv_scheduler s s' \<equiv> arm_globals_frame (arch_state s) = arm_globals_frame (arch_state s') \<and> 
      arm_global_pd (arch_state s) = arm_global_pd (arch_state s') \<and>
-     (\<forall>x\<in>range_of_arm_globals_frame s - scheduler_affects_globals_frame s. underlying_memory (machine_state s) x = underlying_memory (machine_state s') x) \<and>
+     (\<forall>x\<in>range_of_arm_globals_frame s - scheduler_affects_globals_frame s.
+     underlying_memory (machine_state s) x = underlying_memory (machine_state s') x) \<and>
      kheap s (arm_global_pd (arch_state s)) = kheap s' (arm_global_pd (arch_state s))
-     \<and> idle_equiv s s'"
+     \<and> idle_equiv s s' \<and> device_region s = device_region s'"
 
 definition scheduler_globals_frame_equiv :: "'z::state_ext state \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-"scheduler_globals_frame_equiv s s' \<equiv> arm_globals_frame (arch_state s) = arm_globals_frame (arch_state s') \<and> (\<forall>x\<in>scheduler_affects_globals_frame s. underlying_memory (machine_state s) x = underlying_memory (machine_state s') x)"
+"scheduler_globals_frame_equiv s s' \<equiv> arm_globals_frame (arch_state s) = arm_globals_frame (arch_state s') 
+  \<and> (\<forall>x\<in>scheduler_affects_globals_frame s. underlying_memory (machine_state s) x = underlying_memory (machine_state s') x
+  \<and> device_state (machine_state s) x = device_state (machine_state s') x)"
 
 definition domain_fields_equiv :: "det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool"
 where
@@ -275,7 +278,7 @@ lemma idle_equiv_cur_thread_update'[simp]: "idle_equiv (st\<lparr>cur_thread := 
   done
 
 lemma globals_equiv_scheduler_inv':
-  "(\<And>st. \<lbrace> P and globals_equiv st\<rbrace> f \<lbrace>\<lambda>_. globals_equiv st\<rbrace>) \<Longrightarrow>
+  "\<lbrakk>(\<And>st. \<lbrace> P and globals_equiv st\<rbrace> f \<lbrace>\<lambda>_. globals_equiv st\<rbrace>)\<rbrakk> \<Longrightarrow>
     \<lbrace> P and globals_equiv_scheduler s\<rbrace> f \<lbrace>\<lambda>_. globals_equiv_scheduler s\<rbrace>"
   apply atomize
   apply (rule use_spec)
@@ -513,17 +516,25 @@ lemma globals_equiv_scheduler_update:
 done
 
 lemma dmo_no_mem_globals_equiv_scheduler:
-  "(\<And>P. invariant f (\<lambda>ms. P (underlying_memory ms))) \<Longrightarrow>
-  invariant (do_machine_op f) (globals_equiv_scheduler s)"
+  assumes a: "(\<And>P. invariant f (\<lambda>ms. P (underlying_memory ms)))"
+       and b: "(\<And>P. invariant f (\<lambda>ms. P (device_state ms)))"
+  shows "invariant (do_machine_op f) (globals_equiv_scheduler s)"
   unfolding do_machine_op_def
-  apply(wp | simp add: split_def)+
-  apply(fastforce simp: valid_def globals_equiv_scheduler_def idle_equiv_def)
+  apply (rule hoare_pre)
+  apply (wp | simp add: split_def)+
+  apply clarsimp
+  apply (frule_tac P1 = "\<lambda>um. um = underlying_memory (machine_state sa)" in use_valid[OF _ a])
+   apply simp
+  apply (frule_tac P1 = "\<lambda>um. um = device_state (machine_state sa)" in use_valid[OF _ b])
+   apply simp
+  apply (fastforce simp: valid_def globals_equiv_scheduler_def idle_equiv_def)
   done
 
 lemma clearExMonitor_globals_equiv_scheduler[wp]: "\<lbrace> globals_equiv_scheduler sta \<rbrace> do_machine_op clearExMonitor \<lbrace> \<lambda>_. globals_equiv_scheduler sta \<rbrace>"
   unfolding clearExMonitor_def
   apply (wp dmo_no_mem_globals_equiv_scheduler)
-  apply simp
+   apply simp
+  apply (simp add:simpler_modify_def valid_def)
   done
 
 lemma arch_switch_to_thread_globals_equiv_scheduler:
@@ -597,6 +608,36 @@ lemma range_is_globals_frame': "\<lbrakk>valid_arch_state s; pspace_aligned s\<r
   apply uint_arith
   done
 
+lemma scheduler_equiv_invs_device_state_equiv:  
+  "\<lbrakk>scheduler_equiv aag s t; invs s; invs t\<rbrakk> \<Longrightarrow>\<forall>x\<in> range_of_arm_globals_frame s.
+   device_state (machine_state s) x = device_state (machine_state t) x"
+   apply (clarsimp simp:scheduler_equiv_def globals_equiv_scheduler_def)
+   apply (drule(1) globals_frame_not_device[rotated])
+   apply (drule globals_frame_not_device[rotated])
+   apply fastforce
+   apply simp
+   done
+
+lemma scheduler_affects_in_globals_frame:
+  "\<lbrakk>valid_arch_state s;pspace_aligned s\<rbrakk> \<Longrightarrow> scheduler_affects_globals_frame s \<subseteq> range_of_arm_globals_frame s"
+  apply (clarsimp simp:ptr_range_def)
+  apply (drule(1) arm_globals_frame_aligned)
+  apply (clarsimp simp:field_simps)
+  apply (rule word_plus_mono_right)
+   apply simp
+  apply (simp add:is_aligned_no_wrap')
+  done
+
+lemma scheduler_equiv_scheduler_affects_globals_frame_equiv:
+    "\<lbrakk>scheduler_equiv aag s t; invs s; invs t\<rbrakk> \<Longrightarrow>\<forall>x\<in> scheduler_affects_globals_frame s.
+   device_state (machine_state s) x = device_state (machine_state t) x"
+   apply clarsimp
+   apply (drule subsetD[rotated,OF _ scheduler_affects_in_globals_frame])
+     apply fastforce
+    apply fastforce
+   apply (clarsimp simp:scheduler_equiv_invs_device_state_equiv)
+   done
+
 lemma store_cur_thread_midstrength_reads_respects: "equiv_valid (scheduler_equiv aag) (midstrength_scheduler_affects_equiv aag l)
            (scheduler_affects_equiv aag l) (invs and (\<lambda>s. rva = arm_globals_frame (arch_state s)) and (\<lambda>s. t = idle_thread s))
            (do y \<leftarrow> do_machine_op (storeWord rva rvb);
@@ -610,6 +651,7 @@ lemma store_cur_thread_midstrength_reads_respects: "equiv_valid (scheduler_equiv
   apply (fold simpler_modify_def)
   apply (intro impI conjI)
    apply (rule ev_modify)
+   apply (frule scheduler_equiv_scheduler_affects_globals_frame_equiv,simp+)
    apply (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def
                          globals_equiv_scheduler_def)
    apply (clarsimp simp add: scheduler_affects_equiv_def states_equiv_for_def
@@ -617,7 +659,8 @@ lemma store_cur_thread_midstrength_reads_respects: "equiv_valid (scheduler_equiv
                     scheduler_globals_frame_equiv_def silc_dom_equiv_def
                     weak_scheduler_affects_equiv_def midstrength_scheduler_affects_equiv_def
                     idle_equiv_def)
-   apply (drule range_is_globals_frame'[rotated -1], clarsimp+)
+   apply (frule range_is_globals_frame'[rotated -1])
+    apply fastforce+
    apply (simp add: equiv_valid_def2 equiv_valid_2_def)
    done
 
@@ -918,6 +961,7 @@ lemma ev_midstrength_to_asahi_dmo_storeWord: "equiv_valid (scheduler_equiv aag) 
   apply (fold simpler_modify_def)
   apply (intro impI conjI)
    apply (rule ev_modify)
+   apply (frule scheduler_equiv_scheduler_affects_globals_frame_equiv,simp+)
    apply (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def
                          globals_equiv_scheduler_def)
    apply (clarsimp simp add: scheduler_affects_equiv_def states_equiv_for_def
@@ -927,7 +971,8 @@ lemma ev_midstrength_to_asahi_dmo_storeWord: "equiv_valid (scheduler_equiv aag) 
                     asahi_scheduler_affects_equiv_def idle_equiv_def)
    apply (subgoal_tac "pspace_aligned t" "valid_arch_state t")
    apply (frule(2) range_is_globals_frame')
-   apply simp
+    apply fastforce
+   apply clarsimp
    apply ((simp add: invs_def valid_state_def valid_pspace_def)+)[2]
    apply (simp add: equiv_valid_def2 equiv_valid_2_def)
    done
@@ -2103,6 +2148,10 @@ lemma dmo_resetTimer_arch_state[wp]: "\<lbrace>\<lambda>s. P(arch_state s)\<rbra
   apply (wp dmo_wp | simp)+
   done
 
+lemma dmo_resetTimer_device_state[wp]: "\<lbrace>\<lambda>s. P( device_state (machine_state s))\<rbrace> do_machine_op resetTimer \<lbrace>\<lambda>r s. P (device_state (machine_state s))\<rbrace>"
+  apply (wp dmo_wp | simp)+
+  done
+
 lemma dmo_resetTimer_exclusive_state[wp]: "\<lbrace>\<lambda>s. P (exclusive_state (machine_state s))\<rbrace> do_machine_op resetTimer \<lbrace>\<lambda>r s. P (exclusive_state (machine_state s))\<rbrace>"
   apply (wp dmo_mol_exclusive_state | simp add: resetTimer_def)+
   done
@@ -2121,8 +2170,7 @@ lemma dmo_resetTimer_reads_respects_scheduler:
      apply (simp add: states_equiv_for_def[abs_def] equiv_for_def equiv_asids_def
                       equiv_asid_def)
      apply (rule hoare_pre)
-      apply wps
-  apply (wp | simp)+
+  apply (wp | simp | wp dmo_wp)+
   done
 
 lemma irq_inactive_or_timer: "\<lbrace>domain_sep_inv False st and Q IRQTimer and Q IRQInactive\<rbrace> get_irq_state irq \<lbrace>Q\<rbrace>"

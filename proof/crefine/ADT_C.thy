@@ -227,7 +227,7 @@ definition
 
 definition
   "setDeviceState_C um \<equiv>
-   modify (\<lambda>s. s\<lparr>globals := globals s\<lparr>phantom_machine_state_' := (phantom_machine_state_' (globals s))\<lparr>device_state := um\<rparr>\<rparr>\<rparr>)"
+   modify (\<lambda>s. s\<lparr>globals := globals s\<lparr>phantom_machine_state_' := (phantom_machine_state_' (globals s))\<lparr>device_state := ((device_state (phantom_machine_state_' (globals s))) ++ um)\<rparr>\<rparr>\<rparr>)"
 
 lemma setUserMem_C_def_foldl:
   "setUserMem_C um \<equiv>
@@ -1580,15 +1580,20 @@ definition (in state_rel)
       conv \<leftarrow> gets (ptable_lift t \<circ> cstate_to_A);
       rights \<leftarrow> gets (ptable_rights t \<circ> cstate_to_A);
       um \<leftarrow> gets (\<lambda>s. user_mem_C (globals s) \<circ> ptrFromPAddr);
-      dm \<leftarrow> gets (\<lambda>s. device_mem_C (globals s));
+      dm \<leftarrow> gets (\<lambda>s. device_mem_C (globals s) \<circ> ptrFromPAddr);
       ds \<leftarrow> gets (\<lambda>s. (device_state (phantom_machine_state_' (globals s))));
+
+      assert (dom (um \<circ> addrFromPPtr) \<subseteq> - dom ds);
+      assert (dom (dm \<circ> addrFromPPtr) \<subseteq> dom ds);
+
       (e,tc',um',ds') \<leftarrow> select (fst (uop t (restrict_map conv {pa. rights pa \<noteq> {}}) rights
                      (tc, restrict_map um
-                          {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va},ds)));
-      setUserMem_C (restrict_map (um'|` (dom um))
-                        {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
-                      \<circ> Platform.addrFromPPtr);
-      setDeviceState_C (ds ++ (ds' |` (dom dm)));
+                          {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va},
+                     (ds \<circ> ptrFromPAddr) |`  {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va} )));
+      setUserMem_C ((um' |` {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
+                      \<circ> addrFromPPtr) |` (- dom ds));
+      setDeviceState_C ((ds' |` {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
+                      \<circ> addrFromPPtr) |` (dom ds));
       return (e,tc')
    od"
 

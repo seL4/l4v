@@ -1462,36 +1462,42 @@ lemma retype_region_invs_extras:
   "\<lbrace>invs and pspace_no_overlap ptr sz and caps_no_overlap ptr sz
      and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
+     and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
      retype_region ptr n us ty dev\<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap ptr sz and caps_no_overlap ptr sz
      and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
+     and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev\<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap ptr sz and caps_no_overlap ptr sz 
      and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
+     and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap ptr sz and caps_no_overlap ptr sz 
      and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
+     and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap ptr sz and caps_no_overlap ptr sz
      and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
+     and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev\<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap ptr sz and caps_no_overlap ptr sz 
      and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
+     and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
@@ -2157,6 +2163,16 @@ lemma set_free_index_valid_pspace_simple:
   apply (clarsimp simp:is_master_reply_cap_def)
   done
 
+lemma set_untyped_cap_refs_respects_device_simple:
+"\<lbrace>K (is_untyped_cap cap) and cte_wp_at (op = cap) cref and cap_refs_respects_device_region \<rbrace> set_cap (UntypedCap (cap_is_device cap) (obj_ref_of cap) (cap_bits cap) idx) cref 
+           \<lbrace>\<lambda>rv s. cap_refs_respects_device_region s\<rbrace>"
+  apply (wp set_cap_cap_refs_respects_device_region)
+  apply (clarsimp simp del:split_paired_Ex)
+  apply (rule_tac x = cref in exI)
+  apply (erule cte_wp_at_weakenE)
+  apply (case_tac cap,auto)
+  done
+
 lemma set_untyped_cap_invs_simple:
   "\<lbrace>\<lambda>s. descendants_range_in {ptr .. ptr+2^sz - 1} cref s \<and> pspace_no_overlap ptr sz s \<and> invs s 
   \<and> cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_bits c = sz \<and> obj_ref_of c = ptr \<and> cap_is_device c = dev) cref s \<and> idx \<le> 2^ sz\<rbrace>
@@ -2170,7 +2186,8 @@ lemma set_untyped_cap_invs_simple:
   apply (simp add:valid_irq_node_def)
   apply wps
   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_arch_objs set_cap_valid_arch_caps
-    set_cap_valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at )
+    set_cap_valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at 
+    set_untyped_cap_refs_respects_device_simple)
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps)
   apply (intro conjI,clarsimp)
         apply (rule ext,clarsimp simp:is_cap_simps)
@@ -3248,11 +3265,30 @@ lemma create_cap_vms[wp]:
   done
 
 crunch valid_irq_states[wp]: create_cap "valid_irq_states"
+crunch pspace_respects_device_region[wp]: create_cap pspace_respects_device_region
+
+lemma cap_range_subseteq_weaken: 
+ "\<lbrakk>obj_refs c \<subseteq> untyped_range cap; untyped_range c \<subseteq> untyped_range cap\<rbrakk>
+ \<Longrightarrow> cap_range c \<subseteq> cap_range cap"
+ by (fastforce simp add:cap_range_def)
+
+lemma create_cap_refs_respects_device:
+  "\<lbrace>cap_refs_respects_device_region and cte_wp_at (\<lambda>c. cap_is_device (default_cap tp oref sz dev)  = cap_is_device c \<and>is_untyped_cap c \<and> cap_range (default_cap tp oref sz dev) \<subseteq> cap_range c) p\<rbrace>
+  create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv s. cap_refs_respects_device_region s\<rbrace>"
+  apply (simp add:create_cap_def)
+  apply (rule hoare_pre)
+   apply (wp set_cap_cap_refs_respects_device_region hoare_vcg_ex_lift 
+     set_cdt_cte_wp_at | simp del:split_paired_Ex)+
+  apply (rule_tac x = p in exI)
+  apply clarsimp
+  apply (erule cte_wp_at_weakenE)
+  apply (fastforce simp:is_cap_simps)
+  done
 
 lemma create_cap_invs[wp]:
   "\<lbrace>invs 
-      and cte_wp_at (\<lambda>c. is_untyped_cap c \<and> 
-                         obj_refs (default_cap tp oref sz dev) \<subseteq> untyped_range c \<and>
+      and cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_is_device (default_cap tp oref sz dev)  = cap_is_device c
+                         \<and> obj_refs (default_cap tp oref sz dev) \<subseteq> untyped_range c \<and>
                          untyped_range (default_cap tp oref sz dev) \<subseteq> untyped_range c
                          \<and> untyped_range (default_cap tp oref sz dev) \<inter> usable_untyped_range c = {}) p
       and descendants_range (default_cap tp oref sz dev) p
@@ -3267,7 +3303,7 @@ lemma create_cap_invs[wp]:
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add: invs_def valid_state_def valid_pspace_def)
-   apply (wp | simp add: valid_cap_def)+
+   apply (wp create_cap_refs_respects_device | simp add: valid_cap_def)+
   apply clarsimp
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_pspace_def)
   apply (frule_tac p1 = p in valid_cap_aligned[OF caps_of_state_valid])
@@ -3324,13 +3360,24 @@ lemma cap_range_inter_emptyI:
    apply (simp_all add:cap_range_not_untyped)
   done
 
+definition "obj_is_device tp dev \<equiv>
+  case tp of Invariants_AI.Untyped \<Rightarrow> dev
+    | _ \<Rightarrow>(case (default_object tp dev 0) of (ArchObj (DataPage dev _)) \<Rightarrow> dev
+          | _ \<Rightarrow> False)"
+
+lemma cap_is_device_obj_is_device[simp]:
+  "cap_is_device (default_cap tp a sz dev) = obj_is_device tp dev"
+  by (simp add:default_cap_def arch_default_cap_def obj_is_device_def
+                  default_object_def  default_arch_object_def
+        split:apiobject_type.splits aobject_type.splits)
+
 lemma create_caps_invs_inv:
   assumes create_cap_Q[wp]: "\<lbrace>invs and Q and cte_wp_at (\<lambda>c. is_untyped_cap c) p and cte_wp_at (op = NullCap) cref\<rbrace>
          create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>_. Q \<rbrace>"
   shows
   "\<lbrace>(\<lambda>s. invs s \<and> Q s 
-       \<and> cte_wp_at is_untyped_cap p s
-       \<and> (\<forall>tup \<in> set ((cref,oref)#list). 
+       \<and> cte_wp_at (\<lambda>c. is_untyped_cap c \<and> obj_is_device tp dev = cap_is_device c)  p s
+       \<and> (\<forall>tup \<in> set ((cref,oref)#list).   
            cte_wp_at (\<lambda>c. cap_range (default_cap tp (snd tup) sz dev) \<subseteq> untyped_range c
            \<and> (untyped_range (default_cap tp (snd tup) sz dev) \<inter> usable_untyped_range c = {})) p s)
        \<and> (\<forall>tup \<in> set ((cref,oref)#list).
@@ -3351,11 +3398,11 @@ lemma create_caps_invs_inv:
        \<and> tp \<noteq> ArchObject ASIDPoolObj) \<rbrace>
      create_cap tp sz p dev (cref,oref)
    \<lbrace>(\<lambda>r s. 
-
          invs s \<and> Q s 
-       \<and> cte_wp_at is_untyped_cap p s
+       \<and> cte_wp_at (\<lambda>c. is_untyped_cap c \<and> obj_is_device tp dev = cap_is_device c)  p s
        \<and> (\<forall>tup \<in> set list. 
-           cte_wp_at (\<lambda>c. cap_range (default_cap tp (snd tup) sz dev) \<subseteq> untyped_range c
+           cte_wp_at (\<lambda>c.
+           cap_range (default_cap tp (snd tup) sz dev) \<subseteq> untyped_range c
            \<and> (untyped_range (default_cap tp (snd tup) sz dev) \<inter> usable_untyped_range c = {})) p s)
        \<and> (\<forall>tup \<in> set list.
            descendants_range (default_cap tp (snd tup) sz dev) p s)    
@@ -3377,15 +3424,15 @@ lemma create_caps_invs_inv:
   apply (wp hoare_vcg_const_Ball_lift | clarsimp)+
   apply (clarsimp simp: conj_comms invs_mdb distinct_sets_prop distinct_prop_map
                         ex_cte_cap_to_cnode_always_appropriate_strg)
-  apply (simp add: cte_wp_at_caps_of_state[where p=p])
+  apply (clarsimp simp: cte_wp_at_caps_of_state[where p=p])
   apply (intro conjI)
-     apply (clarsimp simp:image_def)
-     apply (drule(1) bspec)+
-     apply simp
-    apply (fastforce simp:cap_range_def)
-   apply (clarsimp simp:is_cap_simps)
-   apply fastforce
-  apply (clarsimp simp: cap_range_def)
+      apply (clarsimp simp:image_def)
+      apply (drule(1) bspec)+
+      apply simp
+     apply (fastforce simp:cap_range_def)
+    apply (clarsimp simp:is_cap_simps)
+    apply fastforce
+   apply (clarsimp simp: cap_range_def)+
   done
 
 
@@ -3403,7 +3450,7 @@ lemma create_caps_invs:
      "*)
   shows
   "\<lbrace>\<lambda>s. invs s \<and> Q s
-       \<and> cte_wp_at is_untyped_cap p s
+       \<and> cte_wp_at (\<lambda>c. is_untyped_cap c \<and> obj_is_device tp dev = cap_is_device c) p s
        \<and> (\<forall>tup \<in> set (zip crefs orefs). 
            cte_wp_at (\<lambda>c. cap_range (default_cap tp (snd tup) sz dev) \<subseteq> untyped_range c
            \<and> (untyped_range (default_cap tp (snd tup) sz dev) \<inter> usable_untyped_range c = {})) p s)
@@ -3434,17 +3481,18 @@ lemma create_caps_invs:
    apply assumption
   apply (thin_tac "valid a b c" for a b c)
   apply (rule hoare_pre)
-  apply (rule hoare_strengthen_post)
-  apply (rule_tac list=list in create_caps_invs_inv[OF create_cap_Q],clarsimp+)
+   apply (rule hoare_strengthen_post)
+    apply (rule_tac list=list in create_caps_invs_inv[OF create_cap_Q],clarsimp+)
   done
 
 lemma create_caps_invs_empty_descendants:
-  assumes create_cap_Q[wp]: "\<And>tp sz p cref oref.\<lbrace>invs and Q and cte_wp_at (\<lambda>c. is_untyped_cap c) p and cte_wp_at (op = NullCap) cref\<rbrace>
+  assumes create_cap_Q[wp]: "\<And>tp sz p cref oref.
+         \<lbrace>invs and Q and cte_wp_at (\<lambda>c. is_untyped_cap c) p and cte_wp_at (op = NullCap) cref\<rbrace>
          create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>_. Q \<rbrace>"
   shows
   "\<lbrace>\<lambda>s. invs s \<and> Q s
        \<and> descendants_of p (cdt s) = {}
-       \<and> cte_wp_at is_untyped_cap p s
+       \<and> cte_wp_at (\<lambda>c. is_untyped_cap c \<and> obj_is_device tp dev = cap_is_device c) p s
        \<and> (\<forall>tup \<in> set (zip crefs orefs). 
            cte_wp_at (\<lambda>c. cap_range (default_cap tp (snd tup) sz dev) \<subseteq> untyped_range c
            \<and> (untyped_range (default_cap tp (snd tup) sz dev) \<inter> usable_untyped_range c = {})) p s)
@@ -3513,6 +3561,7 @@ lemma retype_region_not_cte_wp_at:
   "\<lbrace>(\<lambda>s. \<not> cte_wp_at P p s) and valid_pspace and 
      caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api tp us - 1} and
      valid_mdb and pspace_no_overlap ptr sz and caps_no_overlap ptr sz and
+     (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) cref s) and
      K (\<not> P cap.NullCap \<and> (tp = CapTableObject \<longrightarrow> 0 < us) \<and> range_cover ptr sz (obj_bits_api tp us) n)\<rbrace>
      retype_region ptr n us tp dev
    \<lbrace>\<lambda>rv s. \<not> cte_wp_at P p s\<rbrace>"
@@ -3908,6 +3957,16 @@ lemma init_arch_objects_ex_cte_cap_wp_to[wp]:
    \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
   by (simp add: ex_cte_cap_wp_to_def) (wp hoare_vcg_ex_lift)
 
+lemma set_cap_device_and_range:
+  "\<lbrace>\<top>\<rbrace> set_cap (UntypedCap dev (ptr && ~~ mask sz) sz idx) aref 
+   \<lbrace>\<lambda>rv s. (\<exists>slot. cte_wp_at (\<lambda>c. cap_is_device c = dev \<and> up_aligned_area ptr sz \<subseteq> cap_range c) slot s)\<rbrace>"
+   apply (rule hoare_pre)
+   apply (clarsimp simp:cte_wp_at_caps_of_state simp del:split_paired_All split_paired_Ex)
+   apply (wp set_cap_cte_wp_at' hoare_vcg_ex_lift)
+   apply (rule_tac x = "aref" in exI)
+   apply (auto intro:word_and_le2 simp:p_assoc_help)
+   done
+
 lemma invoke_untyp_invs':
  assumes create_cap_Q[wp]: "\<And>tp sz p cref oref dev.\<lbrace>invs and Q and cte_wp_at (\<lambda>c. is_untyped_cap c) p and cte_wp_at (op = NullCap) cref\<rbrace>
          create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>_. Q \<rbrace>"
@@ -3921,7 +3980,7 @@ lemma invoke_untyp_invs':
   apply (cases ui, simp split del: split_if del:invoke_untyped.simps)
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp del:split_paired_All split_paired_Ex split_paired_Ball invoke_untyped.simps)
-  apply (rename_tac cref oref ptr tp us slots s sz idx)
+  apply (rename_tac cref oref ptr tp us slots dev s sz idx)
   proof -
     fix cref oref ptr tp us slots s sz idx dev
     assume cte_wp_at : "cte_wp_at (\<lambda>c. c = cap.UntypedCap dev (ptr && ~~ mask sz) sz idx) (cref,oref) (s::'a::state_ext state)"
@@ -3936,6 +3995,7 @@ lemma invoke_untyp_invs':
       " ct_active s"
     assume cover     : "range_cover ptr sz (obj_bits_api tp us) (length slots)"
     assume vslot : "slots\<noteq> []"
+    assume dev_check: "dev \<longrightarrow> tp = Invariants_AI.Untyped \<or> is_frame_type tp"
 
     have pf : "invoke_untyped_proofs s (cref,oref) ptr tp us slots sz idx dev"
       using  cte_wp_at desc_range misc cover vslot 
@@ -3943,7 +4003,12 @@ lemma invoke_untyp_invs':
       apply (drule(1) bspec)
       apply (clarsimp elim!:ex_cte_cap_wp_to_weakenE)
       done
-      
+    have obj_is_dev[simp]: "obj_is_device tp dev = dev"
+      using dev_check
+      apply (case_tac dev)
+       apply (clarsimp simp: obj_is_device_def default_object_def default_arch_object_def is_frame_type_def arch_is_frame_type_def
+                      split: aobject_type.split_asm apiobject_type.split_asm)+
+      done
     have of_nat_length: "(of_nat (length slots)::word32) - (1::word32) < (of_nat (length slots)::word32)"
        using vslot
        using range_cover.range_cover_le_n_less(1)[OF cover,where p = "length slots"]
@@ -4121,6 +4186,12 @@ lemma invoke_untyp_invs':
       apply (frule_tac cap="(UntypedCap dev ptr sz idx)" in detype_Q)
       apply (simp add: blah)+
       done
+    have set_cap_device_and_range_aligned:
+     "\<And>aref idx. \<lbrace>\<lambda>s. (ptr && ~~ mask sz = ptr)\<rbrace> set_cap (UntypedCap dev ptr sz idx) aref 
+      \<lbrace>\<lambda>rv s. (\<exists>slot. cte_wp_at (\<lambda>c. cap_is_device c = dev \<and> {ptr..ptr + (2 ^ sz - 1)} \<subseteq> cap_range c) slot s)\<rbrace>"
+      apply (rule hoare_gen_asm[where P'="\<top>",simplified])
+      using set_cap_device_and_range[where ptr = ptr and sz = sz]
+      by auto
 
     note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap dev (ptr && ~~ mask sz) sz idx"
       ,unfolded free_index_update_def free_index_of_def,simplified]
@@ -4182,6 +4253,7 @@ lemma invoke_untyp_invs':
                   set_cap_free_index_invs_spec
                   set_cap_cte_wp_at set_cap_descendants_range_in
                   set_cap_caps_no_overlap
+                  set_cap_device_and_range
                   set_untyped_cap_caps_overlap_reserved set_cap_cte_cap_wp_to)
         apply (wp set_cap_cte_wp_at_neg hoare_vcg_all_lift get_cap_wp)
        apply (insert cte_wp_at)
@@ -4255,7 +4327,8 @@ lemma invoke_untyp_invs':
                   set_untyped_cap_invs_simple
                   set_cap_cte_wp_at set_cap_descendants_range_in
                   set_cap_caps_no_overlap set_untyped_cap_caps_overlap_reserved
-                  set_cap_cte_cap_wp_to)
+                  set_cap_cte_cap_wp_to
+                  set_cap_device_and_range_aligned)
         apply (wp set_cap_cte_wp_at_neg hoare_vcg_all_lift)
        apply (rule_tac P = "cap = cap.UntypedCap dev ptr sz idx \<and> sz \<le> word_bits 
                             \<and> 2 \<le> sz" in hoare_gen_asm)

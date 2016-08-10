@@ -109,6 +109,22 @@ lemma retype_region2_ext_retype_region_ArchObject:
   apply simp
   done
 
+lemma set_cap_device_and_range_aligned:
+  "is_aligned ptr sz \<Longrightarrow> \<lbrace>\<lambda>_. True\<rbrace>
+    set_cap
+     (cap.UntypedCap dev ptr sz idx)
+     aref 
+    \<lbrace>\<lambda>rv s.
+        \<exists>slot.
+           cte_wp_at
+            (\<lambda>c. cap_is_device c = dev \<and>
+                 up_aligned_area ptr sz \<subseteq> cap_range c)
+            slot s\<rbrace>"
+  apply (subst is_aligned_neg_mask_eq[symmetric])
+   apply simp
+  apply (wp set_cap_device_and_range)
+  done
+
 lemma pac_corres:
   "asid_ci_map i = i' \<Longrightarrow> 
   corres dc 
@@ -205,7 +221,8 @@ lemma pac_corres:
                     set_cap_cte_wp_at
                     set_cap_caps_no_overlap[where sz = pageBits]
                     set_cap_no_overlap[where sz = pageBits]
-                    set_untyped_cap_caps_overlap_reserved[where sz = pageBits])
+                    set_cap_device_and_range_aligned[where dev = False,simplified]
+                    set_untyped_cap_caps_overlap_reserved[where sz = pageBits] | assumption)+
          apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
                                objBits_simps archObjSize_def default_arch_object_def
                                makeObjectKO_def range_cover_full

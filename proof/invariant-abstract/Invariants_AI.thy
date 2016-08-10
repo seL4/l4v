@@ -1041,6 +1041,32 @@ where
        (\<forall>y \<in> {x .. x + (2 ^ obj_bits ko) - 1}.
              arm_kernel_vspace (arch_state s) y = ArmVSpaceKernelWindow)"
 
+text "objects live in device_region or non_device_region"
+
+definition
+  "in_device_frame p \<equiv> \<lambda>s.
+   \<exists>sz. typ_at (AArch (ADeviceData sz)) (p && ~~ mask (pageBitsForSize sz)) s"
+
+definition
+  "user_mem s \<equiv> \<lambda>p.
+  if (in_user_frame p s)
+  then Some (underlying_memory (machine_state s) p)
+  else None"
+
+definition
+  "device_mem s \<equiv> \<lambda>p.
+  if (in_device_frame p s)
+  then Some p
+  else None"
+
+abbreviation "device_region s \<equiv> dom (device_state (machine_state s))"
+
+definition
+  pspace_respects_device_region:: "'z::state_ext state \<Rightarrow> bool"
+where
+ "pspace_respects_device_region \<equiv> \<lambda>s. (dom (user_mem s)) \<subseteq> - (device_region s)
+ \<and> (dom (device_mem s)) \<subseteq> (device_region s)"
+
 primrec
   live :: "Structures_A.kernel_object \<Rightarrow> bool"
 where
@@ -1302,6 +1328,16 @@ where
  "cap_refs_in_kernel_window \<equiv> \<lambda>s. valid_refs
          {x. arm_kernel_vspace (arch_state s) x \<noteq> ArmVSpaceKernelWindow} s"
 
+definition "cap_range_respects_device_region c s \<equiv> 
+  if (cap_is_device c) then cap_range c \<subseteq> device_region s
+  else cap_range c \<subseteq> - device_region s"
+
+definition
+  cap_refs_respects_device_region :: "'z::state_ext state \<Rightarrow> bool"
+where
+ "cap_refs_respects_device_region \<equiv> \<lambda>s. \<forall>cref.
+   \<not> cte_wp_at (\<lambda>c. \<not> cap_range_respects_device_region  c s) cref s"
+
 definition
   vs_cap_ref :: "cap \<Rightarrow> vs_ref list option"
 where
@@ -1417,13 +1453,11 @@ definition
                      (\<lambda>s. unique_table_caps (caps_of_state s)
                         \<and> unique_table_refs (caps_of_state s))"
 
-definition
-  "in_device_frame p \<equiv> \<lambda>s.
-   \<exists>sz. typ_at (AArch (ADeviceData sz)) (p && ~~ mask (pageBitsForSize sz)) s"
-
+(* FIXME: this is a bit cheating as we assume that if in_device_frame p (s::'z::state_ext state) 
+then um p = 0 *)
 definition
   "valid_machine_state \<equiv>
-   \<lambda>s. \<forall>p. in_user_frame p (s::'z::state_ext state) \<or> in_device_frame p (s::'z::state_ext state) \<or> underlying_memory (machine_state s) p = 0"
+   \<lambda>s. \<forall>p. in_user_frame p (s::'z::state_ext state) \<or> underlying_memory (machine_state s) p = 0"
 
 definition
   valid_state :: "'z::state_ext state \<Rightarrow> bool"
@@ -1450,7 +1484,9 @@ where
                   and valid_asid_map
                   and valid_global_pd_mappings
                   and pspace_in_kernel_window
-                  and cap_refs_in_kernel_window"
+                  and cap_refs_in_kernel_window
+                  and pspace_respects_device_region
+                  and cap_refs_respects_device_region"
 
 definition
  "ct_in_state test \<equiv> \<lambda>s. st_tcb_at test (cur_thread s) s"
@@ -1540,6 +1576,7 @@ abbreviation(input)
        and equal_kernel_mappings and valid_asid_map
        and valid_global_pd_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
+       and pspace_respects_device_region and cap_refs_respects_device_region
        and cur_tcb"
 
 

@@ -4197,14 +4197,17 @@ lemma set_thread_all_corres:
   apply (clarsimp simp add: state_relation_def z)
   apply (simp add: trans_state_update'[symmetric] trans_state_update[symmetric]
          del: trans_state_update)
-  apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
-                            swp_def fun_upd_def obj_at_def is_etcb_at_def)
+  apply (clarsimp simp add: swp_def fun_upd_def obj_at_def is_etcb_at_def)
+  apply (subst cte_wp_at_after_update,fastforce simp add:obj_at_def)
+  apply (subst caps_of_state_after_update,fastforce simp add:obj_at_def)
+  apply clarsimp
   apply (subst conj_assoc[symmetric])
   apply (rule conjI[rotated])
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x=ptr in allE)+
    apply (clarsimp simp: obj_at_def a_type_def 
                    split: Structures_A.kernel_object.splits split_if_asm)
+    
   apply (fold fun_upd_def)
   apply (simp only: pspace_relation_def dom_fun_upd2 simp_thms)
   apply (subst pspace_dom_update)

@@ -2226,6 +2226,56 @@ lemma cap_swap_vms[wp]:
             hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_disj_lift)
   done
 
+crunch pspace_respects_device_region[wp]: cap_swap pspace_respects_device_region
+
+lemma cap_refs_respects_device_region_original_cap[wp]:
+  "cap_refs_respects_device_region
+                (s\<lparr>is_original_cap := ocp\<rparr>) = cap_refs_respects_device_region s"
+  by (simp add:cap_refs_respects_device_region_def)
+
+lemma weak_derived_cap_is_device: 
+   "\<lbrakk>weak_derived c' c\<rbrakk> \<Longrightarrow>  cap_is_device c = cap_is_device c'"
+    apply (auto simp: weak_derived_def copy_of_def is_cap_simps
+                 same_object_as_def2 
+          split: split_if_asm
+          dest!: master_cap_eq_is_device_cap_eq)
+   done
+            
+lemma cap_swap_cap_refs_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>  
+    cap_swap c a c' b \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (rule hoare_pre)
+  apply (simp add:cap_swap_def)
+  apply wp
+        apply (simp add:cap_refs_respects_device_region_def)
+       apply (rule hoare_strengthen_post[OF CSpace_AI.set_cdt_cap_refs_respects_device_region])
+       apply simp
+      apply wp
+   apply (clarsimp simp add: cap_refs_respects_device_region_def cte_wp_at_caps_of_state
+                    cap_range_respects_device_region_def
+                   simp del: split_paired_All split_paired_Ex split_paired_all
+                  | wp hoare_vcg_all_lift hoare_vcg_imp_lift)+
+  apply (frule_tac x = a in spec)
+  apply (frule_tac x = b in spec)
+  apply (clarsimp simp: weak_derived_cap_range)
+  apply (intro conjI impI allI)
+       apply (simp add:weak_derived_cap_range weak_derived_cap_is_device)+
+      apply (rule ccontr)
+      apply simp
+     apply (rule disjI2)
+     apply (intro conjI impI)
+      apply (simp add:weak_derived_cap_range weak_derived_cap_is_device)+
+     apply (rule ccontr)
+     apply simp
+    apply (simp add:weak_derived_cap_range weak_derived_cap_is_device)+
+   apply (rule ccontr)
+   apply simp
+  apply (rule disjI2)
+  apply (rule ccontr)
+  apply (clarsimp simp add:weak_derived_cap_range weak_derived_cap_is_device)+
+  apply fastforce
+  done
+
 crunch valid_irq_states[wp]: cap_swap "valid_irq_states"
 
 lemma cap_swap_invs[wp]:
@@ -4101,6 +4151,8 @@ lemma cap_move_invs[wp]:
     apply (wp set_cap_valid_objs set_cap_idle set_cap_typ_at
               cap_table_at_lift_irq tcb_at_typ_at
               hoare_vcg_disj_lift hoare_vcg_all_lift
+              set_cap_cap_refs_respects_device_region_NullCap
+            | wp set_cap_cap_refs_respects_device_region_spec[where ptr = ptr]
             | simp del: split_paired_Ex split_paired_All
             | simp add: valid_irq_node_def valid_machine_state_def
                    del: split_paired_All split_paired_Ex)+
@@ -4109,10 +4161,11 @@ lemma cap_move_invs[wp]:
    apply (frule(1) cap_refs_in_kernel_windowD[where ptr=ptr])
    apply (frule weak_derived_cap_range)
    apply (frule weak_derived_is_reply_master)
+   apply (frule weak_derived_cap_is_device)
    apply (simp add: cap_range_NullCap valid_ipc_buffer_cap_def[where c=cap.NullCap])
    apply (simp add: is_cap_simps)
    apply (subgoal_tac "tcb_cap_valid cap.NullCap ptr s")
-    apply (simp add: tcb_cap_valid_def)
+     apply (simp add: tcb_cap_valid_def)
    apply (rule tcb_cap_valid_NullCapD)
     apply (erule(1) tcb_cap_valid_caps_of_stateD)
    apply (simp add: is_cap_simps)

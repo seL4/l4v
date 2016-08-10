@@ -3653,7 +3653,8 @@ lemma set_free_index_invs:
   apply wps
   
   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_arch_objs set_cap_valid_arch_caps
-    set_cap_valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at )
+    set_cap_valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at 
+    set_cap_cap_refs_respects_device_region_spec[where ptr = cref])
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (rule conjI,simp add:valid_pspace_def)
   apply (rule conjI,clarsimp simp:is_cap_simps)
@@ -4410,8 +4411,13 @@ crunch global_pd_mappings[wp]: cap_insert "valid_global_pd_mappings"
 crunch pspace_in_kernel_window[wp]: cap_insert "pspace_in_kernel_window"
   (wp: crunch_wps)
 
+crunch pspace_respects_device_region[wp]: cap_insert "pspace_respects_device_region"
+  (wp: crunch_wps)
+
 
 crunch cap_refs_in_kernel_window[wp]: update_cdt "cap_refs_in_kernel_window"
+
+crunch cap_refs_respects_device_region[wp]: update_cdt "cap_refs_respects_device_region"
 
 lemma cap_insert_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window
@@ -4425,12 +4431,34 @@ lemma cap_insert_cap_refs_in_kernel_window[wp]:
   apply auto
   done
 
+lemma cap_is_device_free_index_update_simp[simp]:
+ "is_untyped_cap c \<Longrightarrow> cap_is_device (max_free_index_update c) = cap_is_device c"
+ by (case_tac c,simp_all add:is_cap_simps)
+
+lemma cap_insert_cap_refs_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region
+          and cte_wp_at (\<lambda>c. cap_range cap \<subseteq> cap_range c \<and> ((cap_range cap \<noteq> {}) \<longrightarrow> cap_is_device cap = cap_is_device c)) src\<rbrace>
+     cap_insert cap src dest                                            
+   \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: cap_insert_def set_untyped_cap_as_full_def)
+  apply (wp get_cap_wp set_cap_cte_wp_at' set_cap_cap_refs_respects_device_region_spec[where ptr = src]
+    | simp split del: split_if)+
+  apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def)
+  done
+
 lemma is_derived_cap_range:
   "is_derived m srcptr cap cap'
     \<Longrightarrow> cap_range cap' = cap_range cap"
   by (clarsimp simp: is_derived_def cap_range_def is_cap_simps dest!: master_cap_cap_range
               split: split_if_asm)
 
+lemma is_derived_cap_is_device:
+  "\<lbrakk>is_derived m srcptr cap cap'\<rbrakk>
+    \<Longrightarrow> cap_is_device cap' = cap_is_device cap"
+  apply (case_tac cap)
+  apply (clarsimp simp: is_derived_def cap_range_def is_cap_simps cap_master_cap_def
+              split: split_if_asm cap.splits arch_cap.splits)+
+  done
 
 lemma set_cdt_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_cdt t \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
@@ -4508,7 +4536,7 @@ lemma cap_insert_invs[wp]:
   apply (rule hoare_pre)
    apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle
              valid_irq_node_typ cap_insert_valid_arch_caps)
-  apply (clarsimp simp: cte_wp_at_caps_of_state
+  apply (auto simp: cte_wp_at_caps_of_state is_derived_cap_is_device
                         is_derived_cap_range valid_pspace_def)
   done
 
@@ -5169,6 +5197,7 @@ crunch global_pd_mappings[wp]: setup_reply_master "valid_global_pd_mappings"
 
 
 crunch pspace_in_kernel_window[wp]: setup_reply_master "pspace_in_kernel_window"
+crunch pspace_respects_device_region[wp]: setup_reply_master "pspace_respects_device_region"
 
 lemma setup_reply_master_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window and tcb_at t and pspace_in_kernel_window\<rbrace>
@@ -5180,7 +5209,19 @@ lemma setup_reply_master_cap_refs_in_kernel_window[wp]:
                         cap_range_def)
   done
 
+lemma setup_reply_master_cap_refs_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region and tcb_at t and pspace_in_kernel_window\<rbrace>
+      setup_reply_master t
+   \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: setup_reply_master_def)
+  apply (wp get_cap_wp set_cap_cap_refs_respects_device_region)
+  apply (clarsimp simp: pspace_in_kernel_window_def obj_at_def
+                        cap_range_def)
+  apply (auto simp:cte_wp_at_caps_of_state)
+  done
+
 crunch cap_refs_in_kernel_window[wp]: setup_reply_master "cap_refs_in_kernel_window"
+
 
 lemma set_original_set_cap_comm:
   "(set_original slot val >>= (\<lambda>_. set_cap cap slot)) =
@@ -5224,13 +5265,13 @@ definition
     \<not>is_pt_cap cap \<and> \<not> is_pd_cap cap"
 
 
-(* FIXME: SELFOUR-421: add conditions for device caps? *)
 definition
   "safe_parent_for m p cap parent \<equiv> 
+   cap_is_device cap = cap_is_device parent \<and>
    same_region_as parent cap \<and> 
    ((\<exists>irq. cap = cap.IRQHandlerCap irq) \<and> parent = cap.IRQControlCap \<or> 
-    is_untyped_cap parent \<and> descendants_of p m = {} (*\<and>
-    (\<exists>frame base. cap = cap.ArchObjectCap (ASIDPoolCap frame base) \<longrightarrow> cap_is_device parent)*))"
+   is_untyped_cap parent \<and> descendants_of p m = {} (*\<and>
+   (\<exists>frame base. cap = cap.ArchObjectCap (ASIDPoolCap frame base) \<longrightarrow> cap_is_device parent)*))"
 
 
 (* FIXME: prove same_region_as_def2 instead or change def *)
@@ -5511,11 +5552,11 @@ lemma cap_insert_simple_invs:
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_no_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state)
-  apply (drule safe_parent_cap_range)
+  apply (frule safe_parent_cap_range)
   apply simp
   apply (rule conjI)
    prefer 2
-   apply (clarsimp simp: is_cap_simps)
+   apply (clarsimp simp: is_cap_simps safe_parent_for_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
   apply (clarsimp dest!: is_cap_simps' [THEN iffD1])

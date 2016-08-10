@@ -873,9 +873,18 @@ where
 abbreviation
   "memory_integrity X aag x t1 t2 ipc == integrity_mem (aag :: 'a PAS) {pasSubject aag} x t1 t2 ipc X"
 
+inductive
+  integrity_device for aag subjects p ts ts'  w w'
+where
+  trd_lrefl: "\<lbrakk> pasObjectAbs aag p \<in> subjects \<rbrakk>
+     \<Longrightarrow> integrity_device aag subjects p ts ts' w w'" (* implied by wf and write *)
+  | trd_orefl: "\<lbrakk> w = w' \<rbrakk> \<Longrightarrow> integrity_device aag subjects p ts ts' w w'"
+  | trd_write: "\<lbrakk> aag_subjects_have_auth_to subjects aag Write p \<rbrakk> \<Longrightarrow> integrity_device aag subjects p ts ts' w w'"
+
 lemmas integrity_obj_simps [simp] = tro_orefl[OF refl]
     tro_lrefl[OF singletonI]
     trm_orefl[OF refl]
+    trd_orefl[OF refl]
     tre_lrefl[OF singletonI]
     tre_orefl[OF refl]
 
@@ -937,7 +946,7 @@ The other half involves showing that @{term "aag"} concords with the
 policy. See @{term "state_objs_to_policy s"}.
 
 *}
-
+term device_state
 definition
   integrity_subjects :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> bool \<Rightarrow> obj_ref set \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool"
 where
@@ -948,6 +957,9 @@ where
                        (auth_ipc_buffers s) X
                        (underlying_memory (machine_state s) x)
                        (underlying_memory (machine_state s') x)) \<and>
+         (\<forall>x. integrity_device aag subjects x (tcb_states_of_state s) (tcb_states_of_state s')
+                       (device_state (machine_state s) x)
+                       (device_state (machine_state s') x)) \<and>
          (\<forall>x. integrity_cdt aag subjects x (cdt s x, is_original_cap s x) (cdt s' x, is_original_cap s' x)) \<and>
          (\<forall>x. integrity_cdt_list aag subjects x (cdt_list s x) (cdt_list s' x)) \<and>
          (\<forall>x. integrity_interrupts aag subjects x (interrupt_irq_node s x, interrupt_states s x) (interrupt_irq_node s' x, interrupt_states s' x)) \<and>
@@ -1093,7 +1105,7 @@ proof -
   from t2 have tro2: "\<forall>x. integrity_obj aag activate subjects (pasObjectAbs aag x) (kheap s' x) (kheap s'' x)"
     unfolding integrity_subjects_def by simp
 
-  have "\<forall>x. integrity_mem aag subjects x
+  have intm: "\<forall>x. integrity_mem aag subjects x
                   (tcb_states_of_state s) (tcb_states_of_state s'') (auth_ipc_buffers s) X
                   (underlying_memory (machine_state s) x)
                   (underlying_memory (machine_state s'') x)" (is "\<forall>x. ?P x s s''")
@@ -1147,7 +1159,33 @@ proof -
     qed
   qed
 
-  thus ?thesis using tro_trans[OF tro1 tro2] t1 t2
+  moreover have "\<forall>x. integrity_device aag subjects x
+                  (tcb_states_of_state s) (tcb_states_of_state s'')
+                  (device_state (machine_state s) x)
+                  (device_state (machine_state s'') x)" (is "\<forall>x. ?P x s s''")
+  proof
+    fix x
+    from t1 t2 have m1: "?P x s s'" and m2: "?P x s' s''" unfolding integrity_subjects_def by auto
+
+    from m1 show "?P x s s''"
+    proof cases
+      case trd_lrefl thus ?thesis by (rule integrity_device.intros)
+    next
+      case torel1: trd_orefl
+      from m2 show ?thesis
+      proof cases
+        case (trd_lrefl) thus ?thesis by (rule integrity_device.trd_lrefl)
+      next
+        case trd_orefl thus ?thesis
+          by (simp add:torel1)
+      next
+        case trd_write thus ?thesis by (rule integrity_device.trd_write)
+      qed
+    next
+      case trd_write thus ?thesis by (rule integrity_device.intros)
+    qed
+  qed
+  thus ?thesis using tro_trans[OF tro1 tro2] t1 t2 intm
     apply (clarsimp simp add: integrity_subjects_def)
     apply (drule(1) trcdt_trans[simplified])
     apply (drule(1) trcdtlist_trans[simplified])
@@ -1171,13 +1209,17 @@ subsection{* Generic stuff *}
 lemma integrity_update_autarch:
   "\<lbrakk> integrity aag X st s; is_subject aag ptr \<rbrakk> \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)"
   unfolding integrity_subjects_def
-  apply (rule conjI)
+  apply (intro conjI,simp_all)
    apply clarsimp
-  apply clarsimp
-  apply (drule_tac x = x in spec, erule integrity_mem.cases)
+   apply (drule_tac x = x in spec, erule integrity_mem.cases)
    apply ((auto intro: integrity_mem.intros)+)[4]
-  apply (erule trm_ipc, simp_all)
-  apply (clarsimp simp: restrict_map_Some_iff tcb_states_of_state_def get_tcb_def)
+   apply (erule trm_ipc, simp_all)
+   apply (clarsimp simp: restrict_map_Some_iff tcb_states_of_state_def get_tcb_def)
+  apply clarsimp
+  apply (drule_tac x = x in spec, erule integrity_device.cases)
+    apply (erule integrity_device.trd_lrefl)
+   apply (erule integrity_device.trd_orefl)
+  apply (erule integrity_device.trd_write)
   done
 
 lemma set_object_integrity_autarch:
@@ -1627,6 +1669,10 @@ lemma integrity_mono:
    apply clarsimp
    apply (drule_tac x=x in spec, erule integrity_mem.cases,
            (blast intro: integrity_mem.intros trm_ipc')+)[1]
+  apply (rule conjI)
+   apply clarsimp
+   apply (drule_tac x=x in spec, erule integrity_device.cases,
+           (blast intro: integrity_device.intros)+)[1]
   apply (simp add: integrity_cdt_list_def)
   apply (rule conjI)
    apply (fastforce simp: integrity_cdt_def)

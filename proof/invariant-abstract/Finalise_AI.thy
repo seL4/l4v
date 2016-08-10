@@ -326,7 +326,9 @@ lemma empty_slot_invs:
         apply (wp replace_cap_valid_pspace set_cap_caps_of_state2
                   replace_cap_ifunsafe get_cap_wp
                   set_cap_idle valid_irq_node_typ set_cap_typ_at
-                  set_cap_irq_handlers set_cap_valid_arch_caps | simp add: trans_state_update[symmetric] del: trans_state_update fun_upd_apply split del: split_if )+
+                  set_cap_irq_handlers set_cap_valid_arch_caps
+                  set_cap_cap_refs_respects_device_region_NullCap
+                  | simp add: trans_state_update[symmetric] del: trans_state_update fun_upd_apply split del: split_if )+
   apply (clarsimp simp: is_final_cap'_def2 simp del: fun_upd_apply)
   apply (clarsimp simp: conj_comms invs_def valid_state_def valid_mdb_def2)
   apply (subgoal_tac "mdb_empty_abs s")
@@ -2998,6 +3000,9 @@ lemma clearMemory_invs[wp]:
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply (clarsimp simp: invs_def valid_state_def clearMemory_vms cur_tcb_def)
+  apply (frule use_valid)
+    apply (rule_tac P = "\<lambda>ms. ms = device_state (machine_state s)" in clearMemory_device_state_inv)
+   apply clarsimp+
   apply(erule use_valid[OF _ clearMemory_valid_irq_states], simp)
   done
 

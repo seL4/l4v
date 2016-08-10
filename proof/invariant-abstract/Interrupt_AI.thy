@@ -331,6 +331,8 @@ lemma invoke_irq_control_invs[wp]:
                         ex_cte_cap_to_cnode_always_appropriate_strg)
   done
 
+crunch device_state_inv[wp]: resetTimer "\<lambda>ms. P (device_state ms)"
+
 lemma resetTimer_invs[wp]:
   "\<lbrace>invs\<rbrace> do_machine_op resetTimer \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wp dmo_invs)

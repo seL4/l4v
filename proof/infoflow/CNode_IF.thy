@@ -434,7 +434,7 @@ lemma aag_cap_auth_ASIDPoolCap_asid:
 done
 
 lemma aag_cap_auth_PageCap_asid:
-  "pas_cap_cur_auth aag (ArchObjectCap (PageCap word fun vmpage_size (Some (a, b)))) 
+  "pas_cap_cur_auth aag (ArchObjectCap (PageCap dev word fun vmpage_size (Some (a, b)))) 
   \<Longrightarrow> pas_refined aag s
   \<Longrightarrow> is_subject_asid aag a"
   apply (auto simp add: aag_cap_auth_def cap_auth_conferred_def 
@@ -511,11 +511,11 @@ lemma valid_arch_state_ko_at_arm:
 lemma invs_valid_ko_at_arm: 
   "invs s \<Longrightarrow> valid_ko_at_arm s" by (simp add: invs_def valid_state_def valid_arch_state_ko_at_arm)
 
-lemmas invs_imps = invs_valid_vs_lookup invs_sym_refs invs_distinct invs_valid_ko_at_arm invs_valid_global_objs invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs invs_cur invs_kernel_mappings
+lemmas invs_imps = invs_valid_vs_lookup invs_sym_refs invs_psp_aligned invs_distinct invs_valid_ko_at_arm invs_valid_global_objs invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs invs_cur invs_kernel_mappings
 
 lemma cte_wp_at_page_cap_aligned : 
   "\<lbrakk>cte_wp_at
-           (op = (ArchObjectCap (PageCap word fun vmpage_size option))) slot s ; valid_objs s \<rbrakk>\<Longrightarrow>
+           (op = (ArchObjectCap (PageCap dev word fun vmpage_size option))) slot s ; valid_objs s \<rbrakk>\<Longrightarrow>
   is_aligned word (pageBitsForSize vmpage_size)"
   apply (simp add: cte_wp_at_caps_of_state)
   apply (case_tac slot)
@@ -836,7 +836,7 @@ lemma gets_irq_masks_equiv_valid:
   apply(auto)
   done
 
-lemma irq_state_increment_reads_respects:
+lemma irq_state_increment_reads_respects_memory:
   "equiv_valid_inv
           (equiv_machine_state (\<lambda>x. aag_can_read_label aag (pasObjectAbs aag x))
             (range_of_arm_globals_frame st) And
@@ -851,6 +851,42 @@ lemma irq_state_increment_reads_respects:
   apply(fastforce intro: equiv_forI elim: equiv_forE)
   done
 
+lemma irq_state_increment_reads_respects_device:
+  "equiv_valid_inv
+          (equiv_machine_state (\<lambda>x. aag_can_read_label aag (pasObjectAbs aag x))
+            (range_of_arm_globals_frame st) And
+           equiv_irq_state)
+          (equiv_for
+            (\<lambda>x. aag_can_affect_label aag l \<and>
+                 pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l \<and>
+                 x \<notin> range_of_arm_globals_frame st)
+            device_state)  \<top> (modify (\<lambda>s. s\<lparr>irq_state := Suc (irq_state s)\<rparr>))"
+  apply(simp add: equiv_valid_def2)
+  apply(rule modify_ev2)
+  apply(fastforce intro: equiv_forI elim: equiv_forE)
+  done
+
+lemma use_equiv_valid_inv:
+  "\<lbrakk>x\<in>fst (f st); y\<in> fst (f s); g s; g st;I s st;P s st; equiv_valid_inv I P g f \<rbrakk>
+  \<Longrightarrow> fst x = fst y \<and> P (snd y) (snd x) \<and> I (snd y) (snd x)"
+ apply (clarsimp simp add:equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
+ apply (drule spec)+
+ apply (erule impE)
+ apply fastforce
+ apply (drule(1) bspec | clarsimp)+
+ done
+
+lemma equiv_valid_inv_conj_lift: 
+ assumes P: "equiv_valid_inv I (\<lambda>s s'. P s s') g f"
+     and P': "equiv_valid_inv I (\<lambda>s s'. P' s s') g f"
+ shows "equiv_valid_inv I (\<lambda>s s'. P s s' \<and> P' s s') g f"
+ apply (clarsimp simp add:equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
+ apply (frule_tac st = t and s = st in use_equiv_valid_inv[OF _ _ _ _ _ _ P])
+  apply fastforce+
+ apply (frule_tac st = t and s = st in use_equiv_valid_inv[OF _ _ _ _ _ _ P'])
+  apply fastforce+
+ done
+
 lemma dmo_getActiveIRQ_reads_respects:
   notes gets_ev[wp del]
   shows
@@ -858,9 +894,9 @@ lemma dmo_getActiveIRQ_reads_respects:
   apply(rule use_spec_ev)
   apply(rule do_machine_op_spec_reads_respects')
    apply(simp add: getActiveIRQ_def)
-   apply (wp irq_state_increment_reads_respects modify_wp 
-             gets_ev[where f="irq_oracle \<circ> irq_state"]
-             gets_irq_masks_equiv_valid
+   apply (wp irq_state_increment_reads_respects_memory irq_state_increment_reads_respects_device 
+             gets_ev[where f="irq_oracle \<circ> irq_state"] equiv_valid_inv_conj_lift
+             gets_irq_masks_equiv_valid modify_wp
          | simp add: no_irq_def)+
   apply(rule only_timer_irq_inv_determines_irq_masks, blast+)
   done

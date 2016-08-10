@@ -1917,17 +1917,25 @@ definition
    do t \<leftarrow> getCurThread;
       trans \<leftarrow> gets (ptable_lift t \<circ> absKState);
       perms \<leftarrow> gets (ptable_rights t \<circ> absKState);
+
       um \<leftarrow> gets (\<lambda>s. user_mem' s \<circ> ptrFromPAddr);
-      dm \<leftarrow> gets device_mem';
+      dm \<leftarrow> gets (\<lambda>s. device_mem' s \<circ> ptrFromPAddr);
+
       ds \<leftarrow> gets (device_state \<circ> ksMachineState);
+      assert (dom (um \<circ> addrFromPPtr) \<subseteq> - dom ds);
+      assert (dom (dm \<circ> addrFromPPtr) \<subseteq> dom ds);
+
       (e, tc',um',ds') \<leftarrow> select (fst (uop t (restrict_map trans {pa. perms pa \<noteq> {}}) perms
                    (tc, restrict_map um
-                        {pa. \<exists>va. trans va = Some pa \<and> AllowRead \<in> perms va},ds)));
+                        {pa. \<exists>va. trans va = Some pa \<and> AllowRead \<in> perms va}
+                       ,(ds \<circ> ptrFromPAddr) |`  {pa. \<exists>va. trans va = Some pa \<and> AllowRead \<in> perms va} ) 
+                       ));
       doMachineOp (user_memory_update
-                     (restrict_map (um'|` dom um)
-                        {pa. \<exists>va. trans va = Some pa \<and> AllowWrite \<in> perms va} \<circ>
-                   addrFromPPtr));
-      doMachineOp (device_update (ds ++ ds'|` (dom dm)));
+                       ((um' |` {pa. \<exists>va. trans va = Some pa \<and> AllowWrite \<in> perms va}
+                      \<circ> Platform.addrFromPPtr) |` (- dom ds)));
+      doMachineOp (device_memory_update 
+                       ((ds' |` {pa. \<exists>va. trans va = Some pa \<and> AllowWrite \<in> perms va}
+                      \<circ> Platform.addrFromPPtr )|` (dom ds)));
       return (e, tc')
    od"
 

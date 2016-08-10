@@ -452,8 +452,8 @@ lemma kernel_base_aligned_20:
   done
 
 lemma diminished_PageCapD:
-  "diminished (ArchObjectCap (PageCap p R sz m)) cap
-  \<Longrightarrow> \<exists>R'. cap = ArchObjectCap (PageCap p R' sz m)"
+  "diminished (ArchObjectCap (PageCap dev p R sz m)) cap
+  \<Longrightarrow> \<exists>R'. cap = ArchObjectCap (PageCap dev p R' sz m)"
   apply (cases cap, auto simp add: diminished_def mask_cap_def cap_rights_update_def)
   apply (auto simp: acap_rights_update_def split:  arch_cap.splits)
   done
@@ -470,6 +470,10 @@ lemma ef_machine_op_lift [simp]:
 
 lemma mol_mem[wp]:
   "\<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace> machine_op_lift mop \<lbrace>\<lambda>rv ms. P (underlying_memory ms)\<rbrace>"
+  by (simp add: machine_op_lift_def machine_rest_lift_def split_def | wp)+
+
+lemma mol_dvs[wp]:
+  "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift mop \<lbrace>\<lambda>rv ms. P (device_state ms)\<rbrace>"
   by (simp add: machine_op_lift_def machine_rest_lift_def split_def | wp)+
 
 lemmas do_flush_defs = cleanCacheRange_RAM_def cleanCacheRange_PoC_def cleanCacheRange_PoU_def invalidateCacheRange_RAM_def cleanInvalidateCacheRange_RAM_def branchFlushRange_def invalidateCacheRange_I_def
@@ -826,7 +830,7 @@ lemma delete_objects_pas_refined[wp]:
 
 lemma delete_objects_pspace_no_overlap:
   "\<lbrace> pspace_aligned and valid_objs and
-     (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap ptr sz idx)) slot s)\<rbrace>
+     (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap dev ptr sz idx)) slot s)\<rbrace>
     delete_objects ptr sz
    \<lbrace>\<lambda>rv. pspace_no_overlap ptr sz\<rbrace>"
   unfolding delete_objects_def do_machine_op_def
@@ -839,8 +843,8 @@ lemma delete_objects_pspace_no_overlap:
 
 lemma delete_objects_invs_ex:
   "\<lbrace>(\<lambda>s. \<exists>slot f.
-         cte_wp_at (op = (UntypedCap ptr bits f)) slot s \<and>
-         descendants_range (UntypedCap ptr bits f) slot s) and
+         cte_wp_at (op = (UntypedCap dev ptr bits f)) slot s \<and>
+         descendants_range (UntypedCap dev ptr bits f) slot s) and
    invs and
    ct_active\<rbrace>
   delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -871,8 +875,8 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
              set_cap_descendants_range_in set_cap_no_overlap get_cap_wp
              hoare_vcg_all_lift static_imp_wp
             | simp add: do_machine_op_def split_def)+
-   apply(rename_tac word1 prod1 prod2 word2 cap)
-   apply(rule_tac Q="\<lambda> rv s. (\<exists> idx. cte_wp_at (op = (UntypedCap word1 pageBits idx)) prod2 s) \<and>
+   apply(rename_tac word1 prod1 prod2 word2 cap )
+   apply(rule_tac Q="\<lambda> rv s. (\<exists> idx. cte_wp_at (op = (UntypedCap False word1 pageBits idx)) prod2 s) \<and>
                      (\<forall> x\<in>ptr_range word1 pageBits. is_subject aag x) \<and>
                      pas_refined aag s \<and>
                      pas_cur_domain aag s \<and>
@@ -910,6 +914,8 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
    apply(rule conjI, fastforce)
    apply(rule conjI)
     apply(fastforce simp: descendants_range_def2 elim!: empty_descendants_range_in)
+   apply(rule conjI)
+    apply fastforce
    apply(rule conjI)
     apply(fastforce simp: descendants_range_def2 elim!: empty_descendants_range_in)
    apply(rule conjI)

@@ -35,10 +35,99 @@ lemma throw_on_false_wp[wp]:
   apply simp
   done
 
-crunch_ignore (add: throw_on_false)
+lemma pspace_respects_device_region_dmo:
+  assumes valid_f: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms. P (device_state ms)\<rbrace>"
+  shows "\<lbrace>pspace_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
+  apply (clarsimp simp:do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
+    get_def return_def)
+  apply (drule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_f])
+  apply auto
+  done
+
+lemma cap_refs_respects_device_region_dmo:
+  assumes valid_f: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms. P (device_state ms)\<rbrace>"
+  shows "\<lbrace>cap_refs_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. cap_refs_respects_device_region\<rbrace>"
+  apply (clarsimp simp:do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
+    get_def return_def)
+  apply (drule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_f])
+  apply auto
+  done
+
+lemma machine_op_lift_device_state[wp]:
+  "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
+  by (clarsimp simp:machine_op_lift_def NonDetMonad.valid_def bind_def
+    machine_rest_lift_def gets_def simpler_modify_def get_def return_def
+    select_def ignore_failure_def select_f_def split:if_splits)
+
+crunch device_state_inv[wp]: invalidateTLB_ASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: invalidateTLB_VAASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: setHardwareASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: isb "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: dsb "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: setCurrentPD "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: storeWord "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: cleanByVA_PoU "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: cleanL2Range "\<lambda>ms. P (device_state ms)"
+
+
+lemma cleanCacheRange_PoU_respects_device_region[wp]:
+  "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> cleanCacheRange_PoU a b c \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
+  apply (clarsimp simp:cleanCacheRange_PoU_def cacheRangeOp_def)
+  apply (wp mapM_x_wp |  wpc | clarsimp)+
+  apply fastforce
+  done
+
+lemma cacheRangeOp_respects_device_region[wp]:
+  assumes valid_f: "\<And>a b P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f a b \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
+  shows "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> cacheRangeOp f a b c\<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
+  apply (clarsimp simp:do_flush_def cacheRangeOp_def)
+  apply (rule hoare_pre)
+  apply (wp mapM_x_wp valid_f |  wpc | clarsimp | assumption)+
+  done
+
+crunch device_state_inv[wp]: cleanByVA "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: cleanCacheRange_PoC "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: cleanCacheRange_RAM "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: cleanInvalByVA "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: invalidateByVA "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: invalidateL2Range "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: invalidateCacheRange_RAM "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region simp:crunch_simps)
+
+crunch device_state_inv[wp]: branchFlush "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: branchFlushRange "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: invalidateByVA_I "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: cleanInvalidateL2Range "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: do_flush "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region)
+
+crunch device_state_inv[wp]: storeWord "\<lambda>ms. P (device_state ms)"
 
 crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps)
+
+crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
+  (simp: crunch_simps wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
 
 
 definition
@@ -602,6 +691,10 @@ lemma clean_D_PoU_underlying_memory[wp]:
    \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
   by (clarsimp simp: clean_D_PoU_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
+
+crunch device_state_inv[wp]: invalidate_I_PoU "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: clean_D_PoU "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: cleanCaches_PoU "\<lambda>ms. P (device_state ms)"
 
 lemma dmo_cleanCaches_PoU_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op cleanCaches_PoU \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
@@ -1671,6 +1764,10 @@ lemma find_free_hw_asid_invs [wp]:
                         pd_at_asid_arch_up')
   apply (rule conjI, blast)
   apply (clarsimp simp: pd_at_asid_def)
+  apply (drule_tac P1 = "op = (device_state (machine_state s))" in
+    use_valid[OF _ VSpace_AI.invalidateTLB_ASID_device_state_inv])
+   apply simp
+  apply clarsimp
   done
 
 lemma get_hw_asid_invs [wp]:
@@ -1719,6 +1816,7 @@ lemma dmo_setCurrentPD_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setCurre
   apply(erule (1) use_valid[OF _ setCurrentPD_irq_masks])
   done
 
+crunch device_state_inv[wp]: ackInterrupt "\<lambda>ms. P (device_state ms)"
 lemma dmo_ackInterrupt[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ackInterrupt irq) \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
   apply safe
@@ -3085,6 +3183,12 @@ lemma master_cap_eq_is_pg_cap_eq:
          split: cap.splits arch_cap.splits)
 
 (* FIXME: move *)
+lemma master_cap_eq_is_device_cap_eq:
+  "cap_master_cap c = cap_master_cap d \<Longrightarrow> cap_is_device c = cap_is_device d"
+  by (simp add: cap_master_cap_def
+         split: cap.splits arch_cap.splits)
+
+(* FIXME: move *)
 lemmas vs_cap_ref_eq_imp_table_cap_ref_eq' =
        vs_cap_ref_eq_imp_table_cap_ref_eq[OF master_cap_eq_is_pg_cap_eq]
 
@@ -3098,7 +3202,8 @@ lemma arch_update_cap_invs_map:
   apply (rule hoare_pre)
    apply (wp arch_update_cap_pspace arch_update_cap_valid_mdb set_cap_idle 
              update_cap_ifunsafe valid_irq_node_typ set_cap_typ_at
-             set_cap_irq_handlers set_cap_valid_arch_caps)
+             set_cap_irq_handlers set_cap_valid_arch_caps
+             set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (clarsimp simp: cte_wp_at_caps_of_state
               simp del: imp_disjL)
   apply (frule(1) valid_global_refsD2)
@@ -3164,10 +3269,11 @@ lemma arch_update_cap_invs_map:
     apply (simp add: cap_asid_def)
    apply simp
   apply (clarsimp simp: is_cap_simps is_pt_cap_def cap_master_cap_simps
-                        cap_asid_def vs_cap_ref_def ranI
+                        cap_asid_def vs_cap_ref_def ranI 
                  dest!: cap_master_cap_eqDs split: option.split_asm split_if_asm
-                 elim!: ranE
+                 elim!: ranE cong:master_cap_eq_is_device_cap_eq
              | rule conjI)+
+  apply (clarsimp dest!: master_cap_eq_is_device_cap_eq)
   done
 
     (* Want something like 
@@ -3186,7 +3292,8 @@ lemma arch_update_cap_invs_unmap_page:
   apply (rule hoare_pre)
    apply (wp arch_update_cap_pspace arch_update_cap_valid_mdb set_cap_idle 
              update_cap_ifunsafe valid_irq_node_typ set_cap_typ_at
-             set_cap_irq_handlers set_cap_valid_arch_caps)
+             set_cap_irq_handlers set_cap_valid_arch_caps
+             set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply clarsimp
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
                         is_cap_simps cap_master_cap_simps
@@ -3224,7 +3331,8 @@ lemma arch_update_cap_invs_unmap_page_table:
   apply (rule hoare_pre)
    apply (wp arch_update_cap_pspace arch_update_cap_valid_mdb set_cap_idle 
              update_cap_ifunsafe valid_irq_node_typ set_cap_typ_at
-             set_cap_irq_handlers set_cap_valid_arch_caps)
+             set_cap_irq_handlers set_cap_valid_arch_caps
+             set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (simp add: final_cap_at_eq)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
                         is_cap_simps cap_master_cap_simps

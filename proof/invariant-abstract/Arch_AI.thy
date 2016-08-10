@@ -574,6 +574,7 @@ lemma retype_region_no_cap_to_obj:
              and caps_no_overlap ptr sz
              and pspace_no_overlap ptr sz
              and no_cap_to_obj_with_diff_ref cap S
+             and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
              and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
              and K (range_cover ptr sz (obj_bits_api ty us) 1) \<rbrace>
      retype_region ptr 1 us ty dev
@@ -737,6 +738,9 @@ lemma valid_kernel_mappings_asid_upd [iff]:
   = valid_kernel_mappings s"
   by (simp add: valid_kernel_mappings_def)
 
+lemma safe_parent_cap_is_device:
+  "safe_parent_for m p cap pcap \<Longrightarrow> cap_is_device cap = cap_is_device pcap"
+  by (simp add: safe_parent_for_def)
 
 lemma cap_insert_ap_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and
@@ -762,8 +766,9 @@ lemma cap_insert_ap_invs:
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state is_cap_simps)
+  apply (frule safe_parent_cap_is_device)
   apply (drule safe_parent_cap_range)
-  apply simp
+  apply (simp add:cap_range_def)
   apply (rule conjI)
    prefer 2
    apply (clarsimp simp: obj_at_def a_type_def)
@@ -878,6 +883,21 @@ lemma perform_asid_control_invocation_st_tcb_at:
   done
 
 
+lemma set_cap_idx_up_aligned_area:
+  "\<lbrace>K (pcap = UntypedCap dev ptr pageBits idx) and cte_wp_at (op = pcap) slot and valid_objs\<rbrace> set_cap (max_free_index_update pcap) slot
+  \<lbrace>\<lambda>rv s. (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr pageBits \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)\<rbrace>"
+  apply (rule hoare_pre)
+  apply (wp hoare_vcg_ex_lift set_cap_cte_wp_at)
+  apply (rule_tac x = slot in exI)
+  apply clarsimp
+  apply (frule(1) cte_wp_valid_cap)
+  apply (clarsimp simp:cte_wp_at_caps_of_state is_aligned_neg_mask_eq
+    p_assoc_help valid_cap_def valid_untyped_def cap_aligned_def)
+  done
+
+primrec  get_untyped_cap_idx :: "cap \<Rightarrow> nat"
+where "get_untyped_cap_idx (UntypedCap dev ref sz idx) = idx"
+
 lemma aci_invs':
   assumes Q_ignores_arch[simp]: "\<And>f s. Q (arch_state_update f s) = Q s"
   assumes Q_ignore_machine_state[simp]: "\<And>f s. Q (machine_state_update f s) = Q s"
@@ -946,7 +966,9 @@ lemma aci_invs':
                   cong: conj_cong)
     apply (wp set_cap_caps_no_overlap set_cap_no_overlap get_cap_wp
       max_index_upd_caps_overlap_reserved max_index_upd_invs_simple
-      set_cap_cte_cap_wp_to set_cap_cte_wp_at max_index_upd_no_cap_to)
+      set_cap_cte_cap_wp_to set_cap_cte_wp_at max_index_upd_no_cap_to
+      set_cap_idx_up_aligned_area[where dev = False,simplified]
+      )
     apply (rule_tac P = "is_aligned word1 page_bits" in hoare_gen_asm)
     apply (subst delete_objects_rewrite)
        apply (simp add:page_bits_def pageBits_def)
@@ -998,6 +1020,8 @@ lemma aci_invs':
              apply (clarsimp simp:region_in_kernel_window_def valid_cap_def
                    cap_aligned_def is_aligned_neg_mask_eq)
             apply clarsimp
+            apply (rule get_untyped_cap_idx.simps[symmetric])
+            apply (clarsimp dest!: invs_valid_objs)
            apply (clarsimp simp:obj_bits_api_def page_bits_def
                   default_arch_object_def arch_kobj_size_def)+
        apply (erule(1) cap_to_protected)

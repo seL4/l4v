@@ -16,6 +16,10 @@ imports
     IRQMasks_IF FinalCaps Scheduler_IF UserOp_IF
 begin
 
+definition
+  raw_execution :: "('a,'b,'j) data_type \<Rightarrow> 'b \<Rightarrow> 'j list \<Rightarrow> 'a set" where
+  "raw_execution A s js \<equiv>  steps (Step A) (Init A s) js"
+
 inductive_set sub_big_steps :: "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool)  \<Rightarrow>  'a  \<Rightarrow> ('a \<times> 'c list) set" for A :: "('a,'b,'c) data_type" and R :: "('a \<Rightarrow> 'a \<Rightarrow> bool)" and s :: "'a" where
   nil: "\<lbrakk>evlist = []; t = s; \<not> R s s\<rbrakk> \<Longrightarrow>  (t,evlist) \<in> sub_big_steps A R s" |
   step: "\<lbrakk>evlist = evlist' @ [e]; (s',evlist') \<in> sub_big_steps A R s;
@@ -737,7 +741,7 @@ definition
      { ( (s, InIdleMode),
          (s', InIdleMode) ) |s s'. (s, None, s') \<in> get_active_irqf}"
 
-type_synonym user_state_if = "user_context \<times> user_mem \<times> exclusive_monitors"
+type_synonym user_state_if = "user_context \<times> user_mem \<times> device_state \<times> exclusive_monitors"
 
 text {*
   A user transition gives back a possible event that is the next
@@ -794,12 +798,14 @@ lemma do_user_op_if_invs:
    do_user_op_if f tc
    \<lbrace>\<lambda>_. invs and ct_running\<rbrace>"
   apply (simp add: do_user_op_if_def split_def)
-  apply (wp ct_running_machine_op select_wp | wp_once dmo_invs | simp)+
-  apply (auto simp: user_mem_def user_memory_update_def simpler_modify_def
+  apply (wp ct_running_machine_op select_wp device_update_invs | wp_once dmo_invs | simp)+
+  apply (clarsimp simp: user_mem_def user_memory_update_def simpler_modify_def
                     restrict_map_def invs_def cur_tcb_def ptable_rights_s_def
-                    ptable_lift_s_def
-             elim!: ptable_rights_imp_user_frame 
-             split: option.splits split_if_asm)
+                    ptable_lift_s_def)
+  apply (frule ptable_rights_imp_frame)
+    apply fastforce
+   apply simp
+  apply (clarsimp simp:valid_state_def device_frame_in_device_region)
   done
 
 crunch domain_sep_inv[wp]: do_user_op_if "domain_sep_inv irqs st"
@@ -811,6 +817,11 @@ crunch valid_sched[wp]: do_user_op_if "valid_sched"
 lemma no_irq_user_memory_update[simp]:
   "no_irq (user_memory_update a)"
   apply(clarsimp simp: no_irq_def user_memory_update_def)
+  done
+
+lemma no_irq_device_memory_update[simp]:
+  "no_irq (device_memory_update a)"
+  apply(clarsimp simp: no_irq_def device_memory_update_def)
   done
 
 crunch irq_masks[wp]: do_user_op_if "\<lambda>s. P (irq_masks_of_state s)"
@@ -1351,6 +1362,18 @@ abbreviation internal_state_if :: "((MachineTypes.register \<Rightarrow> 32 word
     \<Rightarrow> 'a" where
   "internal_state_if \<equiv> \<lambda>s. (snd (fst s))"
 
+lemma valid_device_abs_state_eq:
+  "\<lbrakk>valid_machine_state s\<rbrakk> \<Longrightarrow> abs_state s = s"
+  apply (simp add:abs_state_def observable_memory_def)
+  apply (case_tac s)
+   apply clarsimp
+  apply (case_tac machine_state)
+   apply clarsimp
+  apply (rule ext)
+  apply (fastforce simp:user_mem_def option_to_0_def valid_machine_state_def)
+  done
+
+
 
 (*Weakened invs_if to properties only necessary for refinement*)
 definition full_invs_if :: "observable_if set" where
@@ -1494,6 +1517,9 @@ locale invariant_over_ADT_if =
   fixes det_inv :: "sys_mode \<Rightarrow> user_context \<Rightarrow> det_state \<Rightarrow> bool"
   fixes utf :: "user_transition_if"
 
+  assumes det_inv_abs_state:
+     "\<And>e tc s. det_inv e tc s \<Longrightarrow> det_inv e tc (abs_state s)"
+
   assumes kernel_entry_if_det_inv:
      "\<And>e tc. \<lbrace>einvs and det_inv (KernelEntry e) tc and ct_running and K (e \<noteq> Interrupt)\<rbrace>
         kernel_entry_if e tc
@@ -1563,7 +1589,7 @@ locale valid_initial_state_noenabled = invariant_over_ADT_if +
                                pas_refined (current_aag s) s \<and>
                                guarded_pas_domain (current_aag s) s \<and> 
                                idle_equiv s0_internal s \<and>
-                               valid_domain_list s"
+                               valid_domain_list s \<and> valid_pdpt_objs s"
   assumes Invs_s0_internal: "Invs s0_internal"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
 
@@ -1571,10 +1597,10 @@ locale valid_initial_state_noenabled = invariant_over_ADT_if +
   assumes ct_running_or_ct_idle_s0_internal: "ct_running s0_internal \<or> ct_idle s0_internal"
   assumes domain_time_s0_internal: "domain_time s0_internal > 0"
   assumes num_domains_sanity: "num_domains > 1"
-  assumes utf_det: "\<forall>pl pr pxn tc um es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um es s \<and> ct_running s
-                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, es) = {x})"
-  assumes utf_non_empty: "\<forall>t pl pr pxn tc um es. utf t pl pr pxn (tc, um, es) \<noteq> {}"
-  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, es) \<longrightarrow> e \<noteq> Some Interrupt"
+  assumes utf_det: "\<forall>pl pr pxn tc um ds es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um ds es s \<and> ct_running s
+                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, ds, es) = {x})"
+  assumes utf_non_empty: "\<forall>t pl pr pxn tc um ds es. utf t pl pr pxn (tc, um, ds, es) \<noteq> {}"
+  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um ds es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, ds, es) \<longrightarrow> e \<noteq> Some Interrupt"
   assumes extras_s0: "step_restrict s0"
   assumes pasMaySendIrqs_initial_aag[simp]: "pasMaySendIrqs initial_aag = False"
 
@@ -1914,7 +1940,7 @@ lemma get_page_info_is_arm_globals_frame:
         apply (clarsimp simp: get_pd_of_thread_reachable invs_arch_objs
                               invs_psp_aligned invs_valid_asid_table invs_valid_objs)+
   apply(rename_tac sz)
-  apply(subgoal_tac "typ_at (AArch (AIntData ARMSmallPage)) (arm_globals_frame (arch_state s)) s")
+  apply(subgoal_tac "typ_at (AArch (AUserData ARMSmallPage)) (arm_globals_frame (arch_state s)) s")
    apply(clarsimp simp: obj_at_def)  
    prefer 2
    apply(fastforce dest: invs_arch_state simp: valid_arch_state_def)
@@ -1926,11 +1952,12 @@ lemma get_page_info_is_arm_globals_frame:
    apply assumption
   apply(frule ptr_offset_in_ptr_range)
      apply (simp+)
-  apply(simp add: ptr_range_def)
+  apply(simp add: ptr_range_def ups_of_heap_typ_at[symmetric] ups_of_heap_def
+     split:option.split_asm kernel_object.split_asm arch_kernel_obj.split_asm)
   apply(subgoal_tac "ptrFromPAddr base + (x' && mask (pageBitsForSize sz)) \<in> {arm_globals_frame
             (arch_state s)..arm_globals_frame (arch_state s) + 0xFFF}")
    apply(simp only: p_assoc_help)
-   apply blast
+   apply fastforce
   apply(drule_tac y="addrFromPPtr x" and f=ptrFromPAddr in arg_cong)
   apply(simp only: ptrFromPAddr_add_helper)
   apply(simp add: add.commute)
@@ -1975,12 +2002,23 @@ lemma dmo_user_memory_update_idle_equiv:
   apply(wp modify_wp)
   done
 
+lemma dmo_device_memory_update_idle_equiv:
+  "\<lbrace>idle_equiv st\<rbrace>
+          do_machine_op
+           (device_memory_update um) 
+   \<lbrace>\<lambda>y. idle_equiv st\<rbrace>"
+  apply(wp dmo_wp)
+  apply(simp add: device_memory_update_def)
+  apply(wp modify_wp)
+  done
+
 lemma do_user_op_if_idle_equiv[wp]:
   "\<lbrace>idle_equiv st and invs\<rbrace>
    do_user_op_if tc uop
    \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
   apply (simp add: do_user_op_if_def)
-  apply (wp dmo_user_memory_update_idle_equiv select_wp | wpc | simp)+
+  apply (wp dmo_user_memory_update_idle_equiv dmo_device_memory_update_idle_equiv
+    select_wp | wpc | simp)+
   done
 
 lemma ct_active_not_idle': "ct_active s \<Longrightarrow> \<not> ct_idle s"
@@ -2165,6 +2203,13 @@ lemma idle_equiv_context_equiv: "idle_equiv s s' \<Longrightarrow> invs s' \<Lon
   apply (clarsimp simp add: tcb_at_def2 get_tcb_def)
   done
 
+lemma kernel_entry_if_valid_pdpt_objs[wp]:
+ "\<lbrace>valid_pdpt_objs and invs and  (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>kernel_entry_if e tc \<lbrace>\<lambda>s. valid_pdpt_objs\<rbrace>"
+  apply (case_tac "e = Interrupt")
+   apply (simp add:kernel_entry_if_def)
+   apply (wp|wpc|simp)+
+  apply (simp add: kernel_entry_if_def tcb_cap_cases_def | wp static_imp_wp thread_set_invs_trivial)+
+  done
 
 lemma kernel_entry_if_det_inv':
   "\<And>e tc. \<lbrace>einvs and det_inv (KernelEntry e) tc and (\<lambda>s. ct_running s \<or> ct_idle s) and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
@@ -2184,6 +2229,18 @@ lemma pasMaySendIrqs_current_aag[simp]:
   "pasMaySendIrqs (current_aag s) = False"
   apply(simp add: current_aag_def)
   done
+
+lemma handle_preemption_if_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> handle_preemption_if a \<lbrace>\<lambda>rv s. valid_pdpt_objs s\<rbrace>"
+  by (simp add:handle_preemption_if_def|wp)+
+
+lemma schedule_if_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> schedule_if a \<lbrace>\<lambda>rv s. valid_pdpt_objs s\<rbrace>"
+  by (simp add:schedule_if_def |wp)+
+
+lemma do_user_op_if_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> do_user_op_if a b \<lbrace>\<lambda>rv s. valid_pdpt_objs s\<rbrace>"
+  by (simp add:do_user_op_if_def |wp do_machine_op_valid_pdpt select_wp | wpc)+
 
 lemma invs_if_Step_ADT_A_if:
   notes active_from_running[simp]
@@ -2280,6 +2337,7 @@ lemma invs_if_Step_ADT_A_if:
       apply simp
       apply(erule use_valid, erule use_valid[OF _ check_active_irq_if_wp])
        apply(rule_tac Q="\<lambda>a. (invs and ct_running) and (\<lambda>b. 
+                 valid_pdpt_objs b \<and>
                  valid_list b \<and>
                  valid_sched b \<and>
                  only_timer_irq_inv timer_irq s0_internal b \<and>
@@ -2305,6 +2363,7 @@ lemma invs_if_Step_ADT_A_if:
      apply simp
      apply(erule use_valid, erule use_valid[OF _ check_active_irq_if_wp])
       apply(rule_tac Q="\<lambda>a. (invs and ct_running) and (\<lambda>b. 
+                 valid_pdpt_objs b \<and>
                  valid_list b \<and>
                  valid_sched b \<and>
                  only_timer_irq_inv timer_irq s0_internal b \<and>
@@ -2341,10 +2400,12 @@ lemma invs_if_Step_ADT_A_if:
   apply (simp add: idle_context_def)
   done
 
+
 lemma Fin_ADT_if:
   "Fin (ADT_A_if utf) = id"
   apply (simp add: ADT_A_if_def)
   done
+
 
 lemma Init_ADT_if:
   "Init (ADT_A_if utf) = (\<lambda>s. {s} \<inter> full_invs_if \<inter> {s. step_restrict s})"
@@ -2356,9 +2417,20 @@ lemma execution_invs:
  shows "invs_if s"
   apply (insert e)
   apply (induct js arbitrary: s rule: rev_induct)
-  apply (simp add: execution_def ADT_A_if_def steps_def)
-  apply (simp add: execution_def Fin_ADT_if Init_ADT_if steps_def)
-  apply (fastforce simp: invs_if_Step_ADT_A_if)
+   apply (clarsimp simp add: execution_def Fin_ADT_if Init_ADT_if 
+     image_def)
+   apply (simp add: execution_def Fin_ADT_if Init_ADT_if steps_def)
+  apply (simp add: execution_def steps_def image_def)
+  apply (erule bexE)
+  unfolding Image_def 
+  apply (drule CollectD)
+  apply (erule bexE)
+   apply simp
+  apply (rule invs_if_Step_ADT_A_if)
+   apply (drule_tac meta_spec)
+   apply (fastforce)
+  apply simp
+  apply (clarsimp simp:Fin_ADT_if ADT_A_if_def)
   done
 
 lemma execution_restrict:
@@ -2452,6 +2524,10 @@ definition measuref_if :: "det_state global_sys_state \<Rightarrow> det_state gl
         )
      )"
 
+crunch irq_state_of_state_inv[wp]: device_memory_update "\<lambda>ms. P (irq_state ms)"
+crunch irq_masks_inv[wp]: device_memory_update "\<lambda>ms. P (irq_masks ms)"
+  (wp: crunch_wps simp:crunch_simps no_irq_device_memory_update  no_irq_def)
+
 lemma do_user_op_if_irq_state_of_state:
   "\<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace> do_user_op_if utf uc
    \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
@@ -2470,7 +2546,8 @@ lemma do_user_op_if_irq_measure_if:
   "\<lbrace>\<lambda>s. P (irq_measure_if s)\<rbrace> do_user_op_if utf uc
    \<lbrace>\<lambda>_ s. P (irq_measure_if s)\<rbrace>"
   apply(rule hoare_pre)
-  apply(simp add: do_user_op_if_def user_memory_update_def irq_measure_if_def | wp dmo_wp select_wp | wpc)+
+  apply(simp add: do_user_op_if_def user_memory_update_def irq_measure_if_def 
+    | wps |wp dmo_wp select_wp | wpc)+
   done
 
 lemma next_irq_state_Suc:
@@ -3184,7 +3261,6 @@ lemma ADT_A_if_sub_big_steps_measuref_if:
   apply(clarsimp simp: big_step_R_def measuref_if_def split: if_splits)
    apply(case_tac ba, simp_all, case_tac bc, simp_all add: Step_ADT_A_if')
        apply(simp_all add: ADT_A_if_def global_automaton_if_def)
-  apply blast
   done
 
 lemma rah_simp:

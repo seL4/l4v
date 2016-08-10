@@ -1639,11 +1639,28 @@ lemma set_pt_kernel_window[wp]:
                         arch_kernel_obj.split_asm)
   done
 
+lemma set_pt_respects_device_region[wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_pt_def)
+  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def
+                 split: Structures_A.kernel_object.split_asm
+                        arch_kernel_obj.split_asm)
+  done
 
-lemma set_pt_caps_kernel_window[wp]:
+lemma set_pt_caps_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wp set_object_cap_refs_in_kernel_window get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def
+                 split: Structures_A.kernel_object.split_asm
+                        arch_kernel_obj.split_asm)
+  done
+
+lemma set_pt_caps_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: set_pt_def)
+  apply (wp set_object_cap_refs_respects_device_region get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm)
@@ -1661,7 +1678,7 @@ lemma set_pt_valid_ioc[wp]:
 
 lemma valid_machine_stateE:
 assumes vm: "valid_machine_state s"
-assumes e: "\<lbrakk>in_user_frame p s \<or> in_device_frame p s 
+assumes e: "\<lbrakk>in_user_frame p s 
   \<or> underlying_memory (machine_state s) p = 0 \<rbrakk> \<Longrightarrow> E "
 shows E
   using vm
@@ -1698,8 +1715,6 @@ shows
    apply (elim disjE,simp_all)
    apply (drule(1) in_user_frame_same_type_upd[OF tyat])
     apply simp+
-   apply (drule(1) in_device_frame_same_type_upd[OF tyat])
-   apply simp
    done
   done
 
@@ -2194,11 +2209,25 @@ lemma set_asid_pool_kernel_window[wp]:
   including unfold_objects_asm
   by (clarsimp simp: a_type_def)
 
+lemma set_asid_pool_pspace_respects_device_region[wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  including unfold_objects_asm
+  by (clarsimp simp: a_type_def)
+
 
 lemma set_asid_pool_caps_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: set_asid_pool_def)
   apply (wp set_object_cap_refs_in_kernel_window get_object_wp)
+  including unfold_objects_asm
+  by clarsimp
+
+lemma set_asid_pool_caps_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_cap_refs_respects_device_region get_object_wp)
   including unfold_objects_asm
   by clarsimp
 
@@ -3323,6 +3352,15 @@ lemma set_pd_kernel_window[wp]:
                         arch_kernel_obj.split_asm)
   done
 
+lemma set_pd_device_region[wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> set_pd p pd \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_pd_def)
+  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def
+                 split: Structures_A.kernel_object.split_asm
+                        arch_kernel_obj.split_asm)
+  done
+
 
 lemma set_pd_caps_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_pd p pd \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
@@ -3333,6 +3371,14 @@ lemma set_pd_caps_kernel_window[wp]:
                         arch_kernel_obj.split_asm)
   done
 
+lemma set_pd_caps_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_pd p pd \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: set_pd_def)
+  apply (wp set_object_cap_refs_respects_device_region get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def
+                 split: Structures_A.kernel_object.split_asm
+                        arch_kernel_obj.split_asm)
+  done
 
 lemma set_pd_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_pd p pt \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
