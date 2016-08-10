@@ -13,7 +13,7 @@ VSpace refinement
 *)
 
 theory VSpacePre_AI
-imports TcbAcc_AI
+imports "$L4V_ARCH/ArchTcbAcc_AI"
 begin
 
 context begin interpretation Arch .

@@ -9,16 +9,18 @@
  *)
 
 theory TcbAcc_AI
-imports "./$L4V_ARCH/ArchTcbAcc_AI"
+imports "$L4V_ARCH/ArchCSpace_AI"
 begin
-context begin interpretation Arch .
 
-requalify_facts
-  storeWord_invs
 
-end
+locale TcbAcc_AI_storeWord_invs =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes storeWord_invs[wp]:
+    "\<And> p w.
+      \<lbrace>in_user_frame p and invs :: 'state_ext state \<Rightarrow> bool\<rbrace>
+        do_machine_op (storeWord p w)
+      \<lbrace>\<lambda>rv. invs\<rbrace>"
 
-declare storeWord_invs[wp]
 
 lemmas gts_inv[wp] = get_thread_state_inv
 
@@ -150,7 +152,6 @@ proof -
   with v show Q by (auto elim: obj_at_valid_objsE simp: Q)
 qed
 
-
 lemma thread_set_split_out_set_thread_state:
   assumes f: "\<forall>tcb. (tcb_state_update (\<lambda>_. tcb_state (f undefined)) (f tcb))
                         = f tcb"
@@ -189,11 +190,13 @@ schematic_goal tcb_ipcframe_in_cases:
   "(tcb_ipcframe, ?x) \<in> ran tcb_cap_cases"
   by (fastforce simp add: ran_tcb_cap_cases)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma valid_ipc_buffer_cap_0[simp]:
-  "valid_ipc_buffer_cap cap 0"
-  by (simp add: valid_ipc_buffer_cap_def split: cap.split arch_cap.split)
-end
+
+locale TcbAcc_AI_valid_ipc_buffer_cap_0 =
+  assumes valid_ipc_buffer_cap_0[simp]:
+    "\<And>cap. valid_ipc_buffer_cap cap 0"
+
+
+context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
 (* FIXME-NTFN: needs assumption for tcb_bound_notification *)
 lemma thread_set_valid_objs_triv:
@@ -230,6 +233,8 @@ lemma thread_set_valid_objs_triv:
   apply (cut_tac tcb=y in b)
   apply auto[1]
   done
+
+end
 
 
 lemma thread_set_aligned [wp]:
@@ -291,6 +296,7 @@ lemma thread_set_zombies_trivial:
   apply wp
   apply (clarsimp simp: x)
   done
+
 
 (* FIXME-NTFN: possible need for assumption on tcb_bound_notification *)
 lemma thread_set_refs_trivial:
@@ -439,6 +445,8 @@ lemma thread_set_valid_ioc_trivial:
   done
 
 
+context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
+
 lemma thread_set_invs_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
@@ -474,6 +482,9 @@ lemma thread_set_invs_trivial:
              | rule x z z' w y a | erule bspec_split [OF x] | simp add: z')+
   apply (simp add: z)
   done
+
+end
+
 
 lemma thread_set_cte_wp_at_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
@@ -566,10 +577,16 @@ proof -
     done
 qed
 
+
+context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
+
 lemma as_user_invs[wp]: "\<lbrace>invs\<rbrace> as_user t m \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule as_user_wp_thread_set_helper)
   apply (wp thread_set_invs_trivial ball_tcb_cap_casesI | simp)+
   done
+
+end
+
 
 lemma as_user_psp_distinct[wp]:
   "\<lbrace>pspace_distinct\<rbrace> as_user t m \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
@@ -581,6 +598,8 @@ lemma as_user_psp_aligned[wp]:
   by (wp as_user_wp_thread_set_helper) simp
 
 
+context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
+
 lemma as_user_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> as_user a f \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (wp as_user_wp_thread_set_helper
@@ -588,6 +607,8 @@ lemma as_user_objs [wp]:
      apply (fastforce simp add: tcb_cap_cases_def)
   apply (wp | simp)+
   done
+
+end
 
 
 lemma as_user_idle[wp]:
@@ -858,16 +879,6 @@ lemma as_user_tcb [wp]: "\<lbrace>tcb_at t'\<rbrace> as_user t m \<lbrace>\<lamb
   apply simp
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma mab_pb [simp]:
-  "msg_align_bits \<le> pageBits"
-  unfolding msg_align_bits pageBits_def by simp
-
-lemma mab_wb [simp]:
-  "msg_align_bits < word_bits"
-  unfolding msg_align_bits word_bits_conv by simp
-end
-
 
 lemma fold_fun_upd:
   "distinct keys \<Longrightarrow>
@@ -906,20 +917,15 @@ proof -
   thus ?thesis by (simp add: valid_tcb_def valid_obj_def)
 qed
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma get_cap_valid_ipc:
-  "\<lbrace>valid_objs and obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_ipc_buffer tcb = v) t\<rbrace>
-     get_cap (t, tcb_cnode_index 4)
-   \<lbrace>\<lambda>rv s. valid_ipc_buffer_cap rv v\<rbrace>"
-  apply (wp get_cap_wp)
-  apply clarsimp
-  apply (drule(1) cte_wp_tcb_cap_valid)
-  apply (clarsimp simp add: tcb_cap_valid_def obj_at_def)
-  apply (simp add: valid_ipc_buffer_cap_def mask_cap_def cap_rights_update_def
-                   acap_rights_update_def is_tcb
-            split: cap.split_asm arch_cap.split_asm)
-  done
-end
+
+locale TcbAcc_AI_get_cap_valid_ipc =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes get_cap_valid_ipc:
+    "\<And>v t.
+      \<lbrace>valid_objs and obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_ipc_buffer tcb = v) t\<rbrace>
+        get_cap (t, tcb_cnode_index 4)
+      \<lbrace>\<lambda>rv (s::'state_ext state). valid_ipc_buffer_cap rv v\<rbrace>"
+
 
 lemma get_cap_aligned:
   "\<lbrace>valid_objs\<rbrace> get_cap slot \<lbrace>\<lambda>rv s. cap_aligned rv\<rbrace>"
@@ -983,9 +989,6 @@ lemma wf_cs_0:
   apply (rule_tac x = "replicate sz False" in exI)
   apply (simp add: bl_to_bin_rep_False)
   done
-
-
-
 
 
 lemma ct_active_st_tcb_at_weaken:
@@ -1155,6 +1158,7 @@ lemma sts_refs_of_helper: "
           tcb_bound_refs ntfnptr"
   by (auto simp add: tcb_st_refs_of_def tcb_bound_refs_def split: thread_state.splits option.splits)
 
+
 lemma sts_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s) (t := tcb_st_refs_of st
                          \<union> {r. r \<in> state_refs_of s t \<and> snd r = TCBBound}))\<rbrace>
@@ -1299,8 +1303,6 @@ lemma sbn_reply_masters [wp]:
   done
 
 
-
-
 lemma set_thread_state_mdb [wp]:
   "\<lbrace>valid_mdb\<rbrace> set_thread_state p st \<lbrace>\<lambda>_. valid_mdb\<rbrace>"
   apply (simp add: set_thread_state_thread_set)
@@ -1355,35 +1357,38 @@ lemma bound_tcb_ex_cap:
   unfolding pred_tcb_at_def
   by (erule (1) if_live_then_nonz_capD, fastforce)
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma pred_tcb_cap_wp_at:
-  "\<lbrakk>pred_tcb_at proj P t s; valid_objs s;
-    ref \<in> dom tcb_cap_cases;
-    \<forall>cap. (pred_tcb_at proj P t s \<and> tcb_cap_valid cap (t, ref) s) \<longrightarrow> Q cap\<rbrakk> \<Longrightarrow>
-   cte_wp_at Q (t, ref) s"
-  apply (clarsimp simp: cte_wp_at_cases tcb_at_def dest!: get_tcb_SomeD)
-  apply (rename_tac getF setF restr)
-  apply (clarsimp simp: tcb_cap_valid_def pred_tcb_at_def obj_at_def)
-  apply (erule(1) valid_objsE)
-  apply (clarsimp simp add: valid_obj_def valid_tcb_def)
-  apply (erule_tac x="(getF, setF, restr)" in ballE)
-   apply fastforce+
-  done
-end
+
+locale TcbAcc_AI_pred_tcb_cap_wp_at =
+  fixes proj :: "itcb \<Rightarrow> 'proj"
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes pred_tcb_cap_wp_at:
+    "\<And>P t (s::'state_ext state) ref Q.
+      \<lbrakk> pred_tcb_at proj P t s; valid_objs s;
+        ref \<in> dom tcb_cap_cases;
+        \<forall>cap. (pred_tcb_at proj P t s \<and> tcb_cap_valid cap (t, ref) s) \<longrightarrow> Q cap\<rbrakk>
+      \<Longrightarrow> cte_wp_at Q (t, ref) s"
+
+
+locale TcbAcc_AI_st_tcb_at_cap_wp_at = TcbAcc_AI_pred_tcb_cap_wp_at itcb_state state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself"
+
+
+context TcbAcc_AI_st_tcb_at_cap_wp_at begin
 
 lemma st_tcb_reply_cap_valid:
-  "\<And>P. \<not> P (Structures_A.Inactive) \<and> \<not> P (Structures_A.IdleThreadState) \<Longrightarrow>
-   \<forall>cap. (st_tcb_at P t s \<and> tcb_cap_valid cap (t, tcb_cnode_index 2) s) \<longrightarrow>
+  "\<And>P t (s::'state_ext state).
+    \<not> P (Structures_A.Inactive) \<and> \<not> P (Structures_A.IdleThreadState) \<Longrightarrow>
+    \<forall>cap. (st_tcb_at P t s \<and> tcb_cap_valid cap (t, tcb_cnode_index 2) s) \<longrightarrow>
             is_master_reply_cap cap \<and> obj_ref_of cap = t"
   by (clarsimp simp: tcb_cap_valid_def st_tcb_at_tcb_at st_tcb_def2
                   split: Structures_A.thread_state.split_asm)
 
 lemma st_tcb_caller_cap_null:
-  "\<And>ep. \<forall>cap. (st_tcb_at (\<lambda>st. st = Structures_A.BlockedOnReceive ep) t s \<and>
+  "\<And>ep t (s::'state_ext state).
+    \<forall>cap. (st_tcb_at (\<lambda>st. st = Structures_A.BlockedOnReceive ep) t s \<and>
             tcb_cap_valid cap (t, tcb_cnode_index 3) s) \<longrightarrow>
             cap = cap.NullCap"
   by (clarsimp simp: tcb_cap_valid_def st_tcb_at_tcb_at st_tcb_def2)
-
 
 lemma dom_tcb_cap_cases:
   "tcb_cnode_index 0 \<in> dom tcb_cap_cases"
@@ -1393,7 +1398,6 @@ lemma dom_tcb_cap_cases:
   "tcb_cnode_index 4 \<in> dom tcb_cap_cases"
   by clarsimp+
 
-
 lemmas st_tcb_at_reply_cap_valid =
        pred_tcb_cap_wp_at [OF _ _ _ st_tcb_reply_cap_valid,
                          simplified dom_tcb_cap_cases] 
@@ -1401,6 +1405,8 @@ lemmas st_tcb_at_reply_cap_valid =
 lemmas st_tcb_at_caller_cap_null =
        pred_tcb_cap_wp_at [OF _ _ _ st_tcb_caller_cap_null,
                          simplified dom_tcb_cap_cases]
+
+end
 
 
 crunch irq_node[wp]: set_thread_state, set_bound_notification "\<lambda>s. P (interrupt_irq_node s)"
@@ -1505,6 +1511,7 @@ lemma set_bound_notification_valid_ioc[wp]:
                         split_if_asm)
   done
 
+
 lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t
      and (\<lambda>s. \<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
@@ -1570,6 +1577,7 @@ lemma sts_invs_minor2:
   apply (drule(1) valid_reply_capsD)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done (* FIXME tidy *)
+
 
 lemma sbn_invs_minor:
   "\<lbrace>bound_tcb_at (\<lambda>ntfn'. tcb_bound_refs ntfn' = tcb_bound_refs ntfn) t 
@@ -1741,13 +1749,7 @@ lemma thread_set_ct_running:
 lemmas thread_set_caps_of_state_trivial2
   = thread_set_caps_of_state_trivial [OF ball_tcb_cap_casesI]
 
-
 lemmas sts_typ_ats = abs_typ_at_lifts [OF set_thread_state_typ_at]
-
-(*FIXME: arch_split*)
-context Arch begin
-lemmas sts_typ_ats = sts_typ_ats abs_atyp_at_lifts [OF set_thread_state_typ_at]
-end
 
 
 lemma sts_tcb_ko_at:
@@ -1786,8 +1788,22 @@ lemmas set_mrs_redux =
    set_mrs_def bind_assoc[symmetric]
    thread_set_def[simplified, symmetric]
 
+
+locale TcbAcc_AI
+  = TcbAcc_AI_storeWord_invs state_ext_t
+  + TcbAcc_AI_valid_ipc_buffer_cap_0
+  + TcbAcc_AI_get_cap_valid_ipc state_ext_t
+  + TcbAcc_AI_st_tcb_at_cap_wp_at state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself"
+
+
+context TcbAcc_AI begin
+
 lemma set_mrs_invs[wp]:
-  "\<lbrace> invs and tcb_at receiver \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs \<rbrace>"
+  "\<And>receiver recv_buf mrs.
+    \<lbrace> invs and tcb_at receiver :: 'state_ext state \<Rightarrow> bool \<rbrace>
+      set_mrs receiver recv_buf mrs
+    \<lbrace>\<lambda>rv. invs \<rbrace>"
   apply (simp add: set_mrs_redux)
   apply wp
    apply (rule_tac P="invs" in hoare_triv)
@@ -1803,6 +1819,9 @@ lemma set_mrs_invs[wp]:
   apply (wp thread_set_invs_trivial)
   apply (auto simp: tcb_cap_cases_def)
   done
+
+end
+
 
 lemma set_mrs_thread_set_dmo:
   assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := c tcb\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
