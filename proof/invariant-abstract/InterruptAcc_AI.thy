@@ -10,7 +10,7 @@
 
 
 theory InterruptAcc_AI
-imports TcbAcc_AI
+imports "$L4V_ARCH/ArchTcbAcc_AI"
 begin
 
 lemma get_irq_slot_real_cte[wp]:
