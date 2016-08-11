@@ -33,6 +33,7 @@ in
   ../expression_typing.ML
   ../FunctionalRecordUpdate.ML
   ../complit.ML
+  ../Listsort.ML
   ../program_analysis.ML
   ../syntax_transforms.ML
   ann
