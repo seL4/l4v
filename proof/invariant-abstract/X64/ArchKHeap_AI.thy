@@ -546,18 +546,20 @@ lemma set_object_equal_mappings:
   apply (simp split: split_if_asm)
   done
 
+context begin
+
 (* The first premise is intended to match conjuncts within valid_global_objs.
    In that case, c will be a composition of kernel object constructors,
    so that the injectivity assumption can be discharged automatically by clarsimp.
    Peels of the quantifiers, exposing P for a known VM table t. *)
-lemma global_table_atE:
+private lemma global_table_atE:
   "\<lbrakk> \<forall>p \<in> ps. \<exists>t. h p = c t \<and> P t; p \<in> ps; h p = c t; \<forall>t t'. c t = c t' \<longrightarrow> t = t';
       P t \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by (drule bspec[where x=p]; clarsimp; blast)
 
 (* The property exposed by global_table_atE includes a component quantified over
    all table entries. Look for a known entry in the assumptions, and specialise. *)
-method valid_global_objs_specialise_entry =
+private method valid_global_objs_specialise_entry =
   (erule (2) global_table_atE; clarsimp?;
    match premises in E: "t i = e" for t and i::"9 word" and e \<Rightarrow>
     \<open>match premises in H[thin]: "\<forall>i. P (t i)" for P \<Rightarrow> \<open>insert spec[where x=i, OF H]\<close>\<close>;
@@ -565,18 +567,18 @@ method valid_global_objs_specialise_entry =
 
 (* The PML4 part of valid_global_objs is a bit different,
    so handle that separately. *)
-lemma pml4e_ref_all_impE:
+private lemma pml4e_ref_all_impE:
   "\<lbrakk> \<forall>i. (\<forall>p. pml4e_ref (pm i) = Some p \<longrightarrow> P p) \<and> Q i; pm i = PDPointerTablePML4E p a r;
       P (ptrFromPAddr p) \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by (drule spec[where x=i]; simp add: pml4e_ref_def)
 
-method valid_global_obs_try_specialise_entries =
+private method valid_global_obs_try_specialise_entries =
   (erule (1) pml4e_ref_all_impE; valid_global_objs_specialise_entry+; fail)?
 
 lemma ko_at_def2: "ko_at ko p s \<equiv> (kheap s p = Some ko)"
   by (simp add: obj_at_def)
 
-method valid_global_vspace_mappings uses maps pres =
+private method valid_global_vspace_mappings uses maps pres =
   (simp only: maps[simplified] split: kernel_object.split_asm arch_kernel_obj.split_asm;
    rule conjI[OF pres[simplified ko_at_def2]];
    clarsimp simp: valid_global_objs_def obj_at_def empty_table_def pdpte_ref_def pde_ref_def;
@@ -630,6 +632,8 @@ lemma valid_global_vspace_mappings_pres:
   apply (rule_tac x=pt_ko in exI)
   apply (valid_global_vspace_mappings maps: valid_pt_kernel_mappings_def pres: global_pts_pres)
   done
+
+end
 
 lemma valid_global_vspace_mappings_arch_update[simp]:
   "x64_global_pml4 (f (arch_state s)) = x64_global_pml4 (arch_state s)
