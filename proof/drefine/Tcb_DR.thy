@@ -66,8 +66,7 @@ lemma decode_set_ipc_buffer_translate_tcb_invocation:
    apply (wp , clarsimp simp:translate_tcb_invocation_thread_ctrl_buffer_def)
   apply (wp | clarsimp | rule conjI)+
    apply (simp add:check_valid_ipc_buffer_def)
-   apply (wpc,wp)
-   apply wpc
+   apply (wpc|wp)+
        apply (wp hoare_whenE_wp)
   apply (case_tac a)
              apply (simp_all add:derive_cap_def split del:split_if)
@@ -882,7 +881,7 @@ lemma arch_same_obj_as_lift:
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
       apply (fastforce simp:cdl_same_arch_obj_as_def cap_aligned_def)+
-  done
+  done 
 
 lemma thread_set_valid_irq_node:
   "(\<And>t getF v. (getF, v) \<in> ran tcb_cap_cases \<Longrightarrow> getF (f t) = getF t)
@@ -906,7 +905,7 @@ lemma update_ipc_buffer_valid_objs:
   apply (clarsimp simp:valid_tcb_def)
   apply (intro conjI allI)
    apply (clarsimp simp:tcb_cap_cases_def)
-  apply (auto simp:valid_ipc_buffer_cap_def split:cap.splits arch_cap.splits)
+  apply (auto simp:valid_ipc_buffer_cap_def split:cap.splits arch_cap.splits bool.splits)
   done
 
 lemma dcorres_tcb_empty_slot:
@@ -1020,11 +1019,12 @@ lemma dcorres_tcb_update_ipc_buffer:
                 apply clarsimp
                apply (rule arch_same_obj_as_lift)
                   apply (simp add:valid_ipc_buffer_cap_def is_arch_cap_def split:cap.splits)
-                 apply (clarsimp simp:valid_cap_def is_arch_cap_def)+
+                 apply (clarsimp simp:valid_cap_def is_arch_cap_def valid_ipc_buffer_cap_def
+                   split:cap.split_asm arch_cap.split_asm)+
               apply (rule corres_split[OF _ get_cap_corres])
                  apply (rule corres_when)
                   apply (rule sym)
-                  apply (case_tac rv')
+                  apply (case_tac cap')
                              apply (clarsimp simp:same_object_as_def)+
                   apply (simp add:transform_cap_def split:arch_cap.splits)
                  apply (rule dcorres_insert_cap_combine)
@@ -1042,7 +1042,7 @@ lemma dcorres_tcb_update_ipc_buffer:
               apply (drule ex_cte_cap_to_not_idle, auto simp: not_idle_thread_def)[1]
              apply (wp hoare_when_wp)
             apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]],clarsimp+)
-         apply (rule hoare_drop_imp,wp)
+         apply (wp hoare_drop_imp get_cap_weak_wp)
        apply (clarsimp simp:conj_comms)
        apply (wp thread_set_global_refs_triv thread_set_valid_idle)
         apply (clarsimp simp:tcb_cap_cases_def)
@@ -1057,7 +1057,7 @@ lemma dcorres_tcb_update_ipc_buffer:
      apply (rule hoare_post_impErr[OF validE_R_validE[OF hoare_True_E_R]])
       apply simp+
     apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread (fst a') s \<and> tcb_at obj_id' s
-      \<and> not_idle_thread obj_id' s \<and> not_idle_thread ab s \<and> cte_wp_at (\<lambda>_. True) (ab,ba) s
+      \<and> not_idle_thread obj_id' s \<and> not_idle_thread ab s \<and> cte_wp_at (\<lambda>a. True) (ab,ba) s
       \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) (obj_id', tcb_cnode_index 4) s \<and> is_aligned a msg_align_bits"
       in hoare_post_impErr[where E="\<lambda>x. \<top>"])
       apply (simp add:not_idle_thread_def)
@@ -1100,41 +1100,41 @@ lemma dcorres_tcb_update_vspace_root:
   apply (rule dcorres_expand_pfx)
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE[OF _ dcorres_tcb_empty_slot])
-    apply (clarsimp simp:check_cap_at_def liftE_bindE)
-    apply (clarsimp simp:whenE_liftE bind_assoc)
-    apply (clarsimp simp:liftE_def bind_assoc)
-    apply (clarsimp simp: is_valid_vtable_root_def )
-    apply (rule corres_split[OF _ get_cap_corres])
-      apply (rule corres_split[OF _ corres_when])
-      apply (rule corres_trivial)
-        apply clarsimp
-      apply (rule arch_same_obj_as_lift)
-        apply (clarsimp simp:valid_cap_def is_arch_cap_def)+
-      apply (rule corres_split[OF _ get_cap_corres])
-        apply (rule corres_when)
-          apply (rule sym)
-          apply (case_tac cap')
-          apply (clarsimp simp:same_object_as_def)+
-          apply (simp add:transform_cap_def split:arch_cap.splits)
-        apply (simp add: transform_tcb_slot_1[symmetric])
-        apply (rule dcorres_insert_cap_combine[folded alternative_com])
-        apply (simp add:transform_cap_def,simp)
-        apply wp
-      apply (simp add:same_object_as_def)
-      apply (rule_tac Q = "\<lambda>r s. cte_wp_at (op = cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
-        \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
-        \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index (Suc 0)) s)"
-        in hoare_strengthen_post)
-      apply (wp get_cap_ex_cte_cap_wp_to,clarsimp)
-      apply clarsimp
-      apply (drule (3) ex_cte_cap_to_not_idle, simp add: not_idle_thread_def)
-      apply (wp hoare_when_wp)
-    apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
-    apply (clarsimp+)[2]
-    apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
-    apply clarsimp+
-    apply (rule hoare_drop_imp)
-    apply (wp | simp add: transform_tcb_slot_1[symmetric])+
+       apply (clarsimp simp:check_cap_at_def liftE_bindE)
+       apply (clarsimp simp:whenE_liftE bind_assoc)
+       apply (clarsimp simp:liftE_def bind_assoc)
+       apply (clarsimp simp: is_valid_vtable_root_def )
+       apply (rule corres_split[OF _ get_cap_corres])
+          apply (rule corres_split[OF _ corres_when])
+              apply (rule corres_trivial)
+              apply clarsimp
+              apply (rule arch_same_obj_as_lift)
+              apply (clarsimp simp:valid_cap_def is_arch_cap_def)+
+            apply (rule corres_split[OF _ get_cap_corres])
+               apply (rule corres_when)
+                apply (rule sym)
+                apply (case_tac cap')
+                 apply (clarsimp simp:same_object_as_def)+
+                apply (simp add:transform_cap_def split:arch_cap.splits)
+               apply (simp add: transform_tcb_slot_1[symmetric])
+               apply (rule dcorres_insert_cap_combine[folded alternative_com])
+               apply (simp add:transform_cap_def,simp)
+             apply wp
+            apply (simp add:same_object_as_def)
+            apply (rule_tac Q = "\<lambda>r s. cte_wp_at (op = cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
+              \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
+              \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index (Suc 0)) s)"
+              in hoare_strengthen_post)
+             apply (wp get_cap_ex_cte_cap_wp_to,clarsimp)
+            apply clarsimp
+            apply (drule (3) ex_cte_cap_to_not_idle, simp add: not_idle_thread_def)
+           apply (wp hoare_when_wp)
+          apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
+          apply (clarsimp+)[2]
+        apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
+        apply clarsimp+
+       apply (rule hoare_drop_imp)
+       apply (wp | simp add: transform_tcb_slot_1[symmetric])+
     apply (rule validE_validE_R)
     apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread ba s \<and>
                  not_idle_thread (fst a') s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s \<and>

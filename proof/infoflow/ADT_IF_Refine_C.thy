@@ -545,12 +545,15 @@ lemma do_user_op_if_C_corres:
                  apply (rule corres_split[OF _ corres_dmo_setExMonitor_C,
                                where R="\<top>\<top>" and R'="\<top>\<top>"])
                         apply (wp select_wp | simp)+
-
+    apply (clarsimp simp:  ex_abs_def restrict_map_def invs_pspace_aligned'
+                           invs_pspace_distinct' ptable_lift_s'_def ptable_rights_s'_def
+                   split: if_splits)
+    apply (drule ptable_rights_imp_UserData[rotated -1])
+     apply ((fastforce | intro conjI)+)[4]
+    apply (clarsimp simp:user_mem'_def device_mem'_def dom_def split:if_splits)
+    apply fastforce
    apply (clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def ex_abs_def)
-   apply (clarsimp simp: user_mem'_def ex_abs_def restrict_map_def invs_def
-                         ptable_lift_s'_def
-                  split: if_splits)
-   sorry
+   done
 
 definition 
   checkActiveIRQ_C_if :: "user_context \<Rightarrow> (cstate, irq option \<times> user_context) nondet_monad"

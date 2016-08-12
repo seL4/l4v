@@ -936,7 +936,7 @@ where "pt_page_relation pt page offset S s \<equiv>
 lemma slot_with_pt_frame_relation:
   "\<lbrakk>valid_idle s;pt_page_relation a oid y S s\<rbrakk>\<Longrightarrow>
     (a, nat (uint (y && mask pt_bits >> 2))) \<in>
-    ((slots_with (\<lambda>x. \<exists>rights sz asid. x = FrameCap oid rights sz Fake asid)) (transform s))"
+    ((slots_with (\<lambda>x. \<exists>rights sz asid. x = FrameCap False oid rights sz Fake asid)) (transform s))"
   apply (clarsimp simp:pt_page_relation_def)
   apply (frule page_table_at_rev)
   apply (frule(1) page_table_not_idle)
@@ -985,7 +985,7 @@ lemma slot_with_pd_section_relation:
   "\<lbrakk>valid_idle s; pd_super_section_relation a b y s \<or> pd_section_relation a b y s;
     ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
   (a, unat (y && mask pd_bits >> 2)) \<in>
-    (slots_with (\<lambda>x. \<exists>rights sz asid. x = cdl_cap.FrameCap b rights sz Fake asid)) (transform s)"
+    (slots_with (\<lambda>x. \<exists>rights sz asid. x = cdl_cap.FrameCap False b rights sz Fake asid)) (transform s)"
   apply (erule disjE)
     apply (clarsimp simp :pd_super_section_relation_def)
     apply (frule page_directory_at_rev)
@@ -1027,7 +1027,7 @@ done
 
 lemma opt_cap_page:"\<lbrakk>valid_idle s;pt_page_relation a pg x S s \<rbrakk>\<Longrightarrow>
 \<exists>f sz. (opt_cap (a, unat (x && mask pt_bits >> 2) ) (transform s))
-  = Some (cdl_cap.FrameCap pg f sz Fake None)"
+  = Some (cdl_cap.FrameCap False pg f sz Fake None)"
   apply (clarsimp simp:pt_page_relation_def unat_def opt_cap_def transform_def slots_of_def opt_object_def)
   apply (frule page_table_at_rev)
   apply (frule(1) page_table_not_idle)
@@ -1043,7 +1043,7 @@ lemma opt_cap_section:
   "\<lbrakk>valid_idle s;pd_section_relation a pg x s \<or> pd_super_section_relation a pg x s;
     ucast (x && mask pd_bits >> 2) \<notin> kernel_mapping_slots\<rbrakk>\<Longrightarrow>
   \<exists>f sz. (opt_cap (a, unat (x && mask pd_bits >> 2) ) (transform s))
-    = Some (cdl_cap.FrameCap pg f sz Fake None)"
+    = Some (cdl_cap.FrameCap False pg f sz Fake None)"
   unfolding unat_def
   apply (erule disjE)
 
@@ -2404,7 +2404,7 @@ lemma corres_dummy_returnOk_l:
 lemma dcorres_unmap_page:
   notes swp_apply[simp del]
   shows "dcorres dc \<top> (invs and valid_pdpt_objs and
-                  valid_cap (cap.ArchObjectCap (arch_cap.PageCap pg fun vmpage_size (Some (a, v)))))
+                  valid_cap (cap.ArchObjectCap (arch_cap.PageCap dev pg fun vmpage_size (Some (a, v)))))
               (PageTableUnmap_D.unmap_page (transform_asid a,v) pg (pageBitsForSize vmpage_size))
               (ArchVSpace_A.unmap_page vmpage_size a v pg)"
   apply (rule dcorres_expand_pfx)
@@ -3087,7 +3087,7 @@ lemma swap_for_delete_corres:
 
 definition
   "arch_page_vmpage_size cap \<equiv>
-   case cap of cap.ArchObjectCap (arch_cap.PageCap _ _ sz _) \<Rightarrow> sz
+   case cap of cap.ArchObjectCap (arch_cap.PageCap dev _ _ sz _) \<Rightarrow> sz
          | _ \<Rightarrow> undefined"
 
 lemma set_cap_noop_dcorres3:

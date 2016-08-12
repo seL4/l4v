@@ -564,15 +564,14 @@ where
 
 definition "free_range_of_untyped \<equiv> (\<lambda>idx size_bits ptr.
   (if (idx \<le> 2^size_bits - 1) then {ptr + of_nat idx .. ptr + 2^size_bits - 1} else {}))"
-
 definition
   transform_cap :: "cap \<Rightarrow> cdl_cap"
 where
   "transform_cap c \<equiv> case c of
       Structures_A.NullCap \<Rightarrow>
         Types_D.NullCap
-    | Structures_A.UntypedCap ptr size_bits idx \<Rightarrow>
-        Types_D.UntypedCap {ptr .. ptr + 2^ size_bits - 1}
+    | Structures_A.UntypedCap dev ptr size_bits idx \<Rightarrow>
+        Types_D.UntypedCap dev {ptr .. ptr + 2^ size_bits - 1}
         (free_range_of_untyped idx size_bits ptr)
     | Structures_A.EndpointCap ptr badge cap_rights_ \<Rightarrow>
         Types_D.EndpointCap ptr badge cap_rights_
@@ -597,8 +596,8 @@ where
             Types_D.AsidControlCap
         | Arch_Structs_A.ASIDPoolCap ptr asid \<Rightarrow>
             Types_D.AsidPoolCap ptr (fst $ (transform_asid asid))
-        | Arch_Structs_A.PageCap ptr cap_rights_ sz mp \<Rightarrow>
-            Types_D.FrameCap ptr cap_rights_ (pageBitsForSize sz) Real (transform_mapping mp)
+        | Arch_Structs_A.PageCap dev ptr cap_rights_ sz mp \<Rightarrow>
+            Types_D.FrameCap dev ptr cap_rights_ (pageBitsForSize sz) Real (transform_mapping mp)
         | Arch_Structs_A.PageTableCap ptr mp \<Rightarrow>
             Types_D.PageTableCap ptr Real (transform_mapping mp)
         | Arch_Structs_A.PageDirectoryCap ptr mp \<Rightarrow>
@@ -708,7 +707,7 @@ where
       p = tcb_ipc_buffer tcb;
       cap = tcb_ipcframe tcb;
       wordsM = case cap of
-               cap.ArchObjectCap (arch_cap.PageCap buf rights sz mapdata) \<Rightarrow> if AllowRead \<in> rights then
+               cap.ArchObjectCap (arch_cap.PageCap dev buf rights sz mapdata) \<Rightarrow> if AllowRead \<in> rights then
                    mapM loadWord (map (\<lambda>n. buf + (p && mask(pageBitsForSize sz)) + (of_nat (n * word_size))) ns)
                    else return []
               | _ \<Rightarrow> return []
@@ -818,10 +817,10 @@ where
   "transform_pte pte \<equiv> case pte of
            Arch_Structs_A.InvalidPTE \<Rightarrow> cdl_cap.NullCap
          | Arch_Structs_A.LargePagePTE ref _ rights_ \<Rightarrow>
-             Types_D.FrameCap (transform_paddr ref) rights_
+             Types_D.FrameCap False (transform_paddr ref) rights_
                               (pageBitsForSize ARMLargePage) Fake None
          | Arch_Structs_A.SmallPagePTE ref _ rights_ \<Rightarrow>
-             Types_D.FrameCap (transform_paddr ref) rights_
+             Types_D.FrameCap False (transform_paddr ref) rights_
                               (pageBitsForSize ARMSmallPage) Fake None"
 
 definition
@@ -842,10 +841,10 @@ where
          | Arch_Structs_A.PageTablePDE ref _ _ \<Rightarrow>
              Types_D.PageTableCap (transform_paddr ref) Fake None
          | Arch_Structs_A.SectionPDE ref _ _ rights_ \<Rightarrow>
-             Types_D.FrameCap (transform_paddr ref) rights_
+             Types_D.FrameCap False (transform_paddr ref) rights_
                               (pageBitsForSize ARMSection) Fake None
          | Arch_Structs_A.SuperSectionPDE ref _ rights_ \<Rightarrow>
-             Types_D.FrameCap (transform_paddr ref) rights_
+             Types_D.FrameCap False (transform_paddr ref) rights_
                               (pageBitsForSize ARMSuperSection) Fake None"
 
 definition
@@ -882,7 +881,7 @@ definition
                 Types_D.PageTable \<lparr>cdl_page_table_caps = (transform_page_table_contents ptx)\<rparr>
          | Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd) \<Rightarrow>
                 Types_D.PageDirectory \<lparr>cdl_page_directory_caps = (transform_page_directory_contents pd)\<rparr>
-         | Structures_A.ArchObj (Arch_Structs_A.DataPage sz) \<Rightarrow>
+         | Structures_A.ArchObj (Arch_Structs_A.DataPage dev sz) \<Rightarrow>
                 Types_D.Frame \<lparr>cdl_frame_size_bits = pageBitsForSize sz\<rparr>"
 
 lemmas transform_object_simps [simp] =

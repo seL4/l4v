@@ -22,7 +22,7 @@ definition
      NullCap \<Rightarrow> False
    | EndpointCap _ _ R \<Rightarrow> R = UNIV
    | NotificationCap _ _ R \<Rightarrow> {Read,Write} \<subseteq> R
-   | FrameCap _ R _ _ _ \<Rightarrow> {Read,Write} \<subseteq> R
+   | FrameCap _ _ R _ _ _ \<Rightarrow> {Read,Write} \<subseteq> R
    | DomainCap \<Rightarrow> False
    | _ \<Rightarrow> True"
 

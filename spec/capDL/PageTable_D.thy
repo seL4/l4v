@@ -109,7 +109,7 @@ where
               | _ \<Rightarrow> throw;
 
           (* Collect mapping from target cap. *)
-          (frame, sz) \<leftarrow> returnOk $ (case target of FrameCap p R sz m mp \<Rightarrow> (p,sz));
+          (frame, sz,dev) \<leftarrow> returnOk $ (case target of FrameCap dev p R sz m mp \<Rightarrow> (p,sz,dev));
 
           target_slots \<leftarrow> cdl_page_mapping_entries vaddr sz pd_object_id;
 
@@ -117,14 +117,14 @@ where
           new_rights \<leftarrow> returnOk $ validate_vm_rights $ cap_rights target \<inter> rights;
 
           (* Return the map intent. *)
-          returnOk $ PageMap (FrameCap frame (cap_rights target) sz Real (Some (asid,vaddr)))
-            (FrameCap frame new_rights sz Fake None) target_ref target_slots
+          returnOk $ PageMap (FrameCap dev frame (cap_rights target) sz Real (Some (asid,vaddr)))
+            (FrameCap False frame new_rights sz Fake None) target_ref target_slots
         odE \<sqinter> throw
 
     (* Unmap this PageTable. *)
     | PageUnmapIntent \<Rightarrow> doE
         (frame, asid, sz) \<leftarrow> (case target of 
-           FrameCap p R sz m mp \<Rightarrow> returnOk (p, mp , sz)
+           FrameCap _ p R sz m mp \<Rightarrow> returnOk (p, mp , sz)
         | _ \<Rightarrow> throw);
       (returnOk $ PageUnmap asid frame target_ref sz) \<sqinter> throw
       odE
@@ -149,9 +149,9 @@ where
           new_rights \<leftarrow> returnOk $ validate_vm_rights $ cap_rights target \<inter> rights;
 
           (* Collect mapping from target cap. *)
-          (frame, sz) \<leftarrow> returnOk $ (case target of FrameCap p R sz m mp \<Rightarrow> (p,sz));
+          (frame, sz, dev) \<leftarrow> returnOk $ (case target of FrameCap dev p R sz m mp \<Rightarrow> (p,sz,dev));
 
-          returnOk $ PageRemap (FrameCap frame new_rights sz Fake None) target_slots
+          returnOk $ PageRemap (FrameCap False frame new_rights sz Fake None) target_slots
         odE \<sqinter> throw
 
     (* Flush the caches associated with this page. *)

@@ -127,7 +127,7 @@ definition
                        | DomainCap \<Rightarrow> True
                        | PageDirectoryCap _ x _ \<Rightarrow> \<not>(x = Real)
                        | PageTableCap _ x _ \<Rightarrow> \<not>(x = Real)
-                       | FrameCap _ _ _ x _ \<Rightarrow> \<not>(x = Real)
+                       | FrameCap _ _ _ _ x _ \<Rightarrow> \<not>(x = Real)
                        | _ \<Rightarrow> False"
 
 context 
@@ -155,7 +155,7 @@ where
 | "fast_finalise DomainCap final = return ()"
 | "fast_finalise (PageDirectoryCap _ x _) _ = (if x = Real then fail else return())"
 | "fast_finalise (PageTableCap _ x _) _ = (if x = Real then fail else return())"
-| "fast_finalise (FrameCap _ _ _ x _) _ = (if x = Real then fail else return())"
+| "fast_finalise (FrameCap _ _ _ _ x _) _ = (if x = Real then fail else return())"
 | "fast_finalise _ _ = fail"
 
 end
@@ -165,7 +165,7 @@ definition
   cap_counts :: "cdl_cap \<Rightarrow> bool" where
  "cap_counts cap \<equiv> (case cap of
     cdl_cap.NullCap \<Rightarrow> False
-  | UntypedCap _ _ \<Rightarrow> False
+  | UntypedCap _ _ _ \<Rightarrow> False
   | ReplyCap _ \<Rightarrow> False
   | MasterReplyCap _ \<Rightarrow> False
   | RestartCap \<Rightarrow> False
@@ -178,7 +178,7 @@ definition
   | IrqControlCap  \<Rightarrow> False
   | AsidControlCap \<Rightarrow> False
   | IOSpaceMasterCap \<Rightarrow> False
-  | FrameCap _ _ _ c _ \<Rightarrow> c = Real
+  | FrameCap _ _ _ _ c _ \<Rightarrow> c = Real
   | PageTableCap _ c _ \<Rightarrow> c = Real
   | PageDirectoryCap _ c _ \<Rightarrow> c = Real
   | _ \<Rightarrow> True)"

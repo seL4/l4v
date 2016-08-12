@@ -214,7 +214,7 @@ lemma ptable_attrs_abs_state[simp]:
 lemma corres_gets_same:
   assumes equiv: "\<And>s s'. \<lbrakk>P s; Q s'; (s, s') \<in> sr\<rbrakk>\<Longrightarrow> f s = g s'"
      and rimp : "\<And>s. P s \<Longrightarrow> R (f s) s"
-     and corres: "\<And>r.  corres_underlying sr b rr (P and (R r)) Q (n r) (m r)"
+     and corres: "\<And>r.  corres_underlying sr b rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
   shows "corres_underlying sr b rr P Q 
   (do r \<leftarrow> gets f; n r od)
   (do r \<leftarrow> gets g; m r od)"
@@ -279,9 +279,9 @@ lemma do_user_op_if_corres:
     apply (clarsimp simp:state_relation_def)
    apply simp
   apply (rule corres_assert_imp_r)
-   apply clarsimp
+   apply fastforce
   apply (rule corres_assert_imp_r)
-   apply clarsimp
+   apply fastforce
   apply (rule corres_guard_imp)
        apply (rule corres_split[OF _ corres_machine_op,where r'="op="])
          apply clarsimp
@@ -463,9 +463,9 @@ lemma do_user_op_if_corres':
     apply (clarsimp simp:state_relation_def)
    apply simp
   apply (rule corres_assert_imp_r)
-   apply clarsimp
+   apply fastforce
   apply (rule corres_assert_imp_r)
-   apply clarsimp
+   apply fastforce
   apply (rule corres_guard_imp)
        apply (rule corres_split[OF _ corres_machine_op',where r'="op="])
          apply simp
