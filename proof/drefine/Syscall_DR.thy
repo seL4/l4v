@@ -90,7 +90,7 @@ lemma decode_invocation_untypedcap_corres:
      invoked_cap_ref = transform_cslot_ptr invoked_cap_ref';
      invoked_cap = transform_cap invoked_cap';
      excaps = transform_cap_list excaps';
-     invoked_cap' = cap.UntypedCap a b idx \<rbrakk> \<Longrightarrow>
+     invoked_cap' = cap.UntypedCap dev a b idx \<rbrakk> \<Longrightarrow>
     dcorres (dc \<oplus> cdl_invocation_relation) \<top>
         (invs and cte_wp_at (op = invoked_cap') invoked_cap_ref'
                  and (\<lambda>s. \<forall>x \<in> set (map fst excaps'). s \<turnstile> x)
@@ -348,7 +348,7 @@ lemma transform_type_eq_None:
   done
 
 lemma transform_intent_untyped_cap_None:
-  "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.UntypedCap w n idx\<rbrakk>
+  "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.UntypedCap dev w n idx\<rbrakk>
          \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp
@@ -1201,7 +1201,7 @@ lemma cap_recycle_idle:
       apply (rule hoare_pre)
       apply (wpc|wp|clarsimp)+
         apply (rule_tac Q = "\<lambda>rv s. P (idle_thread s)" in hoare_strengthen_post)
-      apply (wp mapM_x_wp|clarsimp)+
+      apply (wp mapM_x_wp hoare_unless_wp | clarsimp | wpc)+
     apply assumption
     apply (wpc | wp mapM_x_wp' | clarsimp)+
     apply (simp add:validE_def finalise_slot_def)
