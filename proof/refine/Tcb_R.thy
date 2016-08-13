@@ -12,6 +12,8 @@ theory Tcb_R
 imports CNodeInv_R
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma setNextPCs_corres:
   "corres dc (tcb_at t and invs) (tcb_at' t and invs')
              (as_user t (setNextPC v)) (asUser t (setNextPC v))"
@@ -847,7 +849,7 @@ lemma sameObject_corres2:
   apply clarsimp
   apply (case_tac d, (simp_all split: arch_cap.split)[11])
   apply (rename_tac arch_capa)
-  apply (clarsimp simp add: ArchRetype_H.sameObjectAs_def Let_def)
+  apply (clarsimp simp add: ARM_H.sameObjectAs_def Let_def)
   apply (intro conjI impI)
    apply (case_tac arch_cap; simp add: isCap_simps)
    apply (case_tac arch_capa; simp)
@@ -1012,7 +1014,7 @@ lemma isValidVTableRootD:
      \<Longrightarrow> isArchObjectCap cap \<and> isPageDirectoryCap (capCap cap)
              \<and> capPDMappedASID (capCap cap) \<noteq> None"
   by (simp add: isValidVTableRoot_def
-                ArchVSpace_H.isValidVTableRoot_def
+                ARM_H.isValidVTableRoot_def
                 isCap_simps
          split: capability.split_asm arch_capability.split_asm
                 option.split_asm)
@@ -1413,8 +1415,12 @@ lemma setSchedulerAction_invs'[wp]:
   apply (simp add:ct_idle_or_in_cur_domain'_def)
   done
 
+end
+
 consts
-  copyregsets_map :: "arch_copy_register_sets \<Rightarrow> copy_register_sets"
+  copyregsets_map :: "arch_copy_register_sets \<Rightarrow> Arch.copy_register_sets"
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 primrec
   tcbinv_relation :: "tcb_invocation \<Rightarrow> tcbinvocation \<Rightarrow> bool"
@@ -1479,7 +1485,7 @@ where
 lemma tcbinv_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
   corres (intr \<oplus> op =)
-         (einvs and simple_sched_action and tcb_inv_wf ti)
+         (einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti)
          (invs' and sch_act_simple and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)
@@ -1836,7 +1842,7 @@ lemma check_valid_ipc_corres:
      (checkValidIPCBuffer vptr cap')"
   apply (simp add: check_valid_ipc_buffer_def
                    checkValidIPCBuffer_def
-                   ArchVSpace_H.checkValidIPCBuffer_def
+                   ARM_H.checkValidIPCBuffer_def
                    unlessE_def Let_def
             split: cap_relation_split_asm arch_cap.split_asm)
   apply (simp add: capTransferDataSize_def msgMaxLength_def
@@ -1852,7 +1858,7 @@ lemma checkValidIPCBuffer_ArchObject_wp:
      checkValidIPCBuffer x cap
    \<lbrace>\<lambda>rv s. P s\<rbrace>,-"
   apply (simp add: checkValidIPCBuffer_def
-                   ArchVSpace_H.checkValidIPCBuffer_def
+                   ARM_H.checkValidIPCBuffer_def
                    whenE_def unlessE_def
              cong: capability.case_cong
                    arch_capability.case_cong
@@ -1997,7 +2003,7 @@ lemma decode_set_space_corres:
                            apply (rule corres_whenE)
                              apply (case_tac vroot_cap', simp_all add:
                                               is_valid_vtable_root_def isValidVTableRoot_def
-                                              ArchVSpace_H.isValidVTableRoot_def)[1]
+                                              ARM_H.isValidVTableRoot_def)[1]
                              apply (rename_tac arch_cap)
                              apply (clarsimp, case_tac arch_cap, simp_all)[1]
                              apply (simp split: option.split)
@@ -2209,17 +2215,17 @@ lemma tcb_real_cte_16:
 
 lemma isValidVTableRoot:
   "isValidVTableRoot c = (\<exists>p asid. c = ArchObjectCap (PageDirectoryCap p (Some asid)))"
-  by (simp add: isValidVTableRoot_def ArchVSpace_H.isValidVTableRoot_def isCap_simps
+  by (simp add: isValidVTableRoot_def ARM_H.isValidVTableRoot_def isCap_simps
          split: capability.splits arch_capability.splits option.splits)
 
 
 
 lemma corres_splitEE':
   assumes y: "\<And>x y x' y'. r' (x, y) (x', y')
-              \<Longrightarrow> corres_underlying sr nf (f \<oplus> r) (R x y) (R' x' y') (b x y) (d x' y')"
-  assumes    "corres_underlying sr nf (f \<oplus> r') P P' a c"
+              \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (R x y) (R' x' y') (b x y) (d x' y')"
+  assumes    "corres_underlying sr nf nf' (f \<oplus> r') P P' a c"
   assumes x: "\<lbrace>Q\<rbrace> a \<lbrace>%(x, y). R x y \<rbrace>,\<lbrace>\<top>\<top>\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>%(x, y). R' x y\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
-  shows      "corres_underlying sr nf (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>(x, y). b x y)) (c >>=E (\<lambda>(x, y). d x y))"
+  shows      "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>(x, y). b x y)) (c >>=E (\<lambda>(x, y). d x y))"
   using assms
   apply (unfold bindE_def validE_def split_def)
   apply (rule corres_split)
@@ -2438,5 +2444,7 @@ lemma inv_tcb_IRQInactive:
              hoare_vcg_const_imp_lift |
           simp add: split_def)+
   done
+
+end
 
 end

@@ -15,7 +15,7 @@
 theory Monads_D
 imports
   Types_D
-  "../../lib/wp/NonDetMonad"
+  "../../lib/Monad_WP/NonDetMonadVCG"
 begin
 
 (* Kernel state monad *)

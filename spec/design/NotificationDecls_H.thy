@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file NotificationDecls_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -13,43 +15,43 @@ header "Function Declarations for Notifications"
 theory NotificationDecls_H imports    "FaultMonad_H"
  begin
 
-consts
+consts'
 receiveBlocked :: "thread_state \<Rightarrow> bool"
 
-consts
+consts'
 sendSignal :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 doNBRecvFailedTransfer :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 receiveSignal :: "machine_word \<Rightarrow> capability \<Rightarrow> bool \<Rightarrow> unit kernel"
 
-consts
+consts'
 cancelAllSignals :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 cancelSignal :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 completeSignal :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 getNotification :: "machine_word \<Rightarrow> notification kernel"
 
-consts
+consts'
 setNotification :: "machine_word \<Rightarrow> notification \<Rightarrow> unit kernel"
 
-consts
+consts'
 bindNotification :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 doUnbindNotification :: "machine_word \<Rightarrow> notification \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 unbindNotification :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 unbindMaybeNotification :: "machine_word \<Rightarrow> unit kernel"
 
 

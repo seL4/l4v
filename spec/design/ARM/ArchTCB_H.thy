@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file ArchTCB_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -11,6 +13,7 @@
 theory ArchTCB_H
 imports "../TCBDecls_H"
 begin
+context Arch begin global_naming ARM_H
 
 definition
 decodeTransfer :: "word8 \<Rightarrow> ( syscall_error , copy_register_sets ) kernel_f"
@@ -23,4 +26,5 @@ where
 "performTransfer arg1 arg2 arg3 \<equiv> return ()"
 
 
+end
 end

@@ -12,19 +12,8 @@ theory L2Opt
 imports L2Defs L2Peephole
 begin
 
-ML {*
-structure L2FlowThms =
-  Named_Thms (
-    val name = Binding.name "L2flow"
-    val description = "Flow-sensitive optimisations carried out after L2 monadic conversion."
-    )
-*}
-
-attribute_setup L2flow = {*
-  Attrib.add_del
-    (Thm.declaration_attribute L2FlowThms.add_thm)
-    (Thm.declaration_attribute L2FlowThms.del_thm) *}
-  "Peephole optimisations carried out after L2 monadic conversion."
+(* Flow-sensitive simplification rules for L2 programs. *)
+named_theorems L2flow
 
 (*
  * The monads "A" and "B" are equivalent under precondition "P".

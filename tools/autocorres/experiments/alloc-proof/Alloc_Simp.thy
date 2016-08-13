@@ -10,10 +10,11 @@
 
 theory Alloc_Simp
 
-imports "../../AutoCorres"
-"../../../lib/sep_algebra/Separation_Algebra"
-"../../../lib/sep_algebra/Sep_Algebra_L4v"
-"../../../lib/Hoare_Sep_Tactics/Hoare_Sep_Tactics"
+imports
+  "../../AutoCorres"
+  "../../../../lib/sep_algebra/Separation_Algebra"
+  "../../../../lib/sep_algebra/Sep_Algebra_L4v"
+  "../../../../lib/Hoare_Sep_Tactics/Hoare_Sep_Tactics"
 begin
 
 (* Parse the input file. *)
@@ -99,7 +100,6 @@ lemma get_val_wp: "\<lbrace>\<lambda>s. ((\<lambda>s. heap_w32 s a = Some x) \<a
   apply(rule_tac x=xa in exI)  
   apply(rule_tac x=y in exI)  
   apply(simp)
-  apply(rule handy_lemma)
   apply(clarsimp simp: plus_my_state_ext_def)
 done
 

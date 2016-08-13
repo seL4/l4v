@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Structures_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -22,6 +24,22 @@ imports
   Types_H
   "./$L4V_ARCH/ArchStructures_H"
 begin
+
+context begin interpretation Arch .
+
+requalify_types
+  irq
+  arch_capability
+  user_context
+  arch_kernel_object
+  asid
+
+requalify_consts
+  archObjSize
+  pageBits
+  nullPointer
+
+end
 
 datatype zombie_type =
     ZombieTCB
@@ -1992,64 +2010,64 @@ lemma intStateIRQTable_intStateIRQTable_update [simp]:
 datatype user_data =
     UserData
 
-consts
+consts'
 kernelObjectTypeName :: "kernel_object \<Rightarrow> unit list"
 
-consts
+consts'
 objBitsKO :: "kernel_object \<Rightarrow> nat"
 
-consts
+consts'
 tcbCTableSlot :: "machine_word"
 
-consts
+consts'
 tcbVTableSlot :: "machine_word"
 
-consts
+consts'
 tcbReplySlot :: "machine_word"
 
-consts
+consts'
 tcbCallerSlot :: "machine_word"
 
-consts
+consts'
 tcbIPCBufferSlot :: "machine_word"
 
-consts
+consts'
 maxPriority :: "priority"
 
-consts
+consts'
 maxDomain :: "priority"
 
-consts
+consts'
 nullMDBNode :: "mdbnode"
 
-consts
+consts'
 dschDomain :: "(domain * machine_word) \<Rightarrow> domain"
 
-consts
+consts'
 dschLength :: "(domain * machine_word) \<Rightarrow> machine_word"
 
-consts
+consts'
 wordBits :: "nat"
 
-consts
+consts'
 wordRadix :: "nat"
 
-consts
+consts'
 wordSize :: "nat"
 
-consts
+consts'
 wordSizeCase :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
 
-consts
+consts'
 isReceive :: "thread_state \<Rightarrow> bool"
 
-consts
+consts'
 isSend :: "thread_state \<Rightarrow> bool"
 
-consts
+consts'
 isReply :: "thread_state \<Rightarrow> bool"
 
-consts
+consts'
 maxFreeIndex :: "nat \<Rightarrow> nat"
 
 defs objBitsKO_def:

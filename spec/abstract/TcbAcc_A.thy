@@ -18,6 +18,13 @@ theory TcbAcc_A
 imports CSpace_A
 begin
 
+context begin interpretation Arch .
+
+requalify_consts
+  in_user_frame
+
+end
+
 text {* Store or load a word at an offset from an IPC buffer. *}
 definition
   store_word_offs :: "obj_ref \<Rightarrow> nat \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad" where
@@ -47,5 +54,14 @@ definition
        return $ nat_to_len $ min (length msgs) msg_max_length
      od
    od"
+
+
+(* Needed for page invocations. *)
+definition
+  set_message_info :: "obj_ref \<Rightarrow> message_info \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_message_info thread info \<equiv>
+     as_user thread $ set_register msg_info_register $
+                      message_info_to_data info"
 
 end

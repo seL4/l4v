@@ -12,6 +12,8 @@ theory UserOp_IF
 imports Syscall_IF "../access-control/ADT_AC"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 text {*
   This theory defines an enhanced @{term do_user_op} function for the
   automaton used for the information flow proofs. This enhanced model of
@@ -508,5 +510,7 @@ lemma do_user_op_reads_respects_g:
   apply (simp add: context_matches_state_def reads_equiv_sym globals_equiv_sym affects_equiv_sym comp_def)
   apply (simp add: globals_equiv_def)
   done
+
+end
 
 end

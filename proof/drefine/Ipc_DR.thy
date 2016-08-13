@@ -12,6 +12,8 @@ theory Ipc_DR
 imports CNode_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 abbreviation
 "thread_is_running y s \<equiv> st_tcb_at (op=Structures_A.thread_state.Running) y s"
 
@@ -357,17 +359,17 @@ lemma dcorres_when_l:
 
 lemma corres_name_pre:
   "\<lbrakk> \<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk>
-                 \<Longrightarrow> corres_underlying sr nf r (op = s) (op = s') f g \<rbrakk>
-        \<Longrightarrow> corres_underlying sr nf r P P' f g"
+                 \<Longrightarrow> corres_underlying sr nf nf' r (op = s) (op = s') f g \<rbrakk>
+        \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
   apply (simp add: corres_underlying_def split_def
                    Ball_def)
   apply blast
   done
 
 lemma corres_guard_from_wp_r:
-  assumes ac: "corres_underlying sr False r G G' a c"
+  assumes ac: "corres_underlying sr False False r G G' a c"
   and     rl: "\<lbrace>\<lambda>s. \<not> P s\<rbrace> c \<lbrace>\<lambda>_ _. False\<rbrace>"
-  shows "corres_underlying sr False r G (\<lambda>s. P s \<longrightarrow> G' s) a c"
+  shows "corres_underlying sr False False r G (\<lambda>s. P s \<longrightarrow> G' s) a c"
   apply (rule corres_name_pre)
   apply (case_tac "P s'")
    apply simp
@@ -383,9 +385,9 @@ lemma corres_guard_from_wp_r:
   done
 
 lemma corres_guard_from_wp_bind_r:
-  assumes ac: "corres_underlying sr False r G G' a (c >>= d)"
+  assumes ac: "corres_underlying sr False False r G G' a (c >>= d)"
   and     rl: "\<lbrace>\<lambda>s. \<not> P s\<rbrace> c \<lbrace>\<lambda>_ _. False\<rbrace>"
-  shows "corres_underlying sr False r G (\<lambda>s. P s \<longrightarrow> G' s) a (c >>= d)"
+  shows "corres_underlying sr False False r G (\<lambda>s. P s \<longrightarrow> G' s) a (c >>= d)"
   apply (rule corres_guard_from_wp_r)
   apply (rule ac)
   apply (wp rl)
@@ -706,10 +708,10 @@ lemma receive_blocked_waiting_syncs:
    apply (frule (3) ntfn_bound_tcb_at[where P="\<lambda>a. a = Some ntfnptr"], simp)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
    apply (clarsimp simp: transform_def transform_objects_def restrict_map_def map_add_def split: option.splits)
-    apply (subst (asm) handy_enum_lemma3)+
+    apply (subst (asm) handy_if_lemma)+
     apply clarsimp
    apply (case_tac "x \<noteq> idle_thread s")
-    apply (clarsimp simp: transform_object_def split: Structures_A.kernel_object.splits Arch_Structs_A.arch_kernel_obj.splits option.splits nat.splits)
+    apply (clarsimp simp: transform_object_def split: Structures_A.kernel_object.splits ARM_A.arch_kernel_obj.splits option.splits nat.splits)
      apply (frule_tac ptr=x in valid_etcbs_tcb_etcb, simp+)
     apply (clarsimp simp add: transform_tcb_def tcb_pending_op_slot_def tcb_boundntfn_slot_def infer_tcb_bound_notification_def split: option.splits)
     apply (frule_tac tcb="x2a" in  bound_tcb_fold, simp)
@@ -1638,7 +1640,7 @@ lemma get_receive_slot_dcorres:
            apply (wp lsfco_not_idle)
     apply (clarsimp simp:handleE'_def Monads_D.unify_failure_def Exceptions_A.unify_failure_def)
          apply (rule corres_split_bind_case_sum [OF lookup_cap_corres])
-        apply (clarsimp simp:word_bl.Rep_inverse word_size Types_D.word_bits_def)+
+        apply (clarsimp simp:word_bl.Rep_inverse word_size word_bits_def)+
        apply (rule hoareE_TrueI)+
       apply clarsimp
      apply (rule hoare_post_impErr[OF hoareE_TrueI])
@@ -1758,7 +1760,7 @@ lemma dcorres_lookup_extra_caps:
   apply (rule corres_symb_exec_r)
     apply (rule_tac F = "evalMonad (get_extra_cptrs buffer (data_to_message_info (tcb_context t msg_info_register))) s = Some rv"
       in corres_gen_asm2)
-  apply (rule corres_mapME[where S = "{(x,y). x = of_bl y \<and> length y = Types_D.word_bits}"])
+  apply (rule corres_mapME[where S = "{(x,y). x = of_bl y \<and> length y = word_bits}"])
     prefer 3
            apply simp
            apply (erule conjE)
@@ -1783,7 +1785,7 @@ lemma dcorres_lookup_extra_caps:
       apply (drule evalMonad_get_extra_cptrs)
       apply (simp del:get_extra_cptrs.simps
         add: zip_map_eqv[where g = "\<lambda>x. x",simplified])+
-      apply (simp add: Types_D.word_bits_def del:get_extra_cptrs.simps)
+      apply (simp add: word_bits_def del:get_extra_cptrs.simps)
    apply (wp evalMonad_wp)
    apply (case_tac buffer)
      apply (simp add:get_extra_cptrs_def empty_when_fail_simps)+
@@ -1824,7 +1826,7 @@ lemma dcorres_copy_mrs':
            apply (rule corres_split[OF _ set_registers_corres])
              apply (rule corres_symb_exec_r)+
           apply (rule corres_trivial[OF corres_free_return])
-        apply (wp|clarsimp split:option.splits)+
+        apply (wp no_fail_getRegister | clarsimp split:option.splits)+
       apply (clarsimp simp:get_ipc_buffer_def gets_the_def exs_valid_def gets_def
         get_def bind_def return_def assert_opt_def fail_def split:option.splits | rule conjI)+
       apply (frule(1) tcb_at_is_etcb_at, clarsimp simp: is_etcb_at_def, fold get_etcb_def)
@@ -2381,9 +2383,9 @@ lemma set_endpoint_valid_irq_node[wp]:
 done
 
 lemma dcorres_if_rhs:
-  assumes G: "G \<Longrightarrow> corres_underlying sr nf rvr P Q a b"
-  and nG: "\<not> G \<Longrightarrow> corres_underlying sr nf rvr P Q' a c"
-  shows "corres_underlying sr nf rvr P
+  assumes G: "G \<Longrightarrow> corres_underlying sr nf nf' rvr P Q a b"
+  and nG: "\<not> G \<Longrightarrow> corres_underlying sr nf nf' rvr P Q' a c"
+  shows "corres_underlying sr nf nf' rvr P
     (\<lambda>s. (G \<longrightarrow> Q s) \<and> (\<not> G \<longrightarrow> Q' s)) a (if G then b else c)"
   apply (clarsimp)
   apply (safe)
@@ -2613,15 +2615,15 @@ lemma dcorres_splits:
 done
 
 lemma dcorres_alternate_seq1:
-  "corres_underlying t rl r P Q (do y \<leftarrow> f; g y od) rh
-    \<Longrightarrow> corres_underlying t rl r P Q (do y \<leftarrow> f; g y \<sqinter> h y od) rh"
+  "corres_underlying t nf nf' r P Q (do y \<leftarrow> f; g y od) rh
+    \<Longrightarrow> corres_underlying t nf nf' r P Q (do y \<leftarrow> f; g y \<sqinter> h y od) rh"
   apply (simp add:alternative_distrib2)
   apply (erule corres_alternate1)
   done
 
 lemma dcorres_alternate_seq2:
-  "corres_underlying t rl r P Q (do y \<leftarrow> f; h y od) rh
-    \<Longrightarrow> corres_underlying t rl r P Q (do y \<leftarrow> f; g y \<sqinter> h y od) rh"
+  "corres_underlying t nf nf' r P Q (do y \<leftarrow> f; h y od) rh
+    \<Longrightarrow> corres_underlying t nf nf' r P Q (do y \<leftarrow> f; g y \<sqinter> h y od) rh"
   apply (simp add:alternative_distrib2)
   apply (erule corres_alternate2)
   done
@@ -2836,9 +2838,7 @@ lemma tcb_fault_update_valid_state[wp]:
      apply (erule disjE,clarsimp)+
      apply simp+
    apply (clarsimp simp:irq_issued_def)
-  apply (wp thread_set_arch_objs thread_set_arch_caps_trivial
-            thread_set_valid_globals thread_set_v_ker_map thread_set_eq_ker_map
-            thread_set_asid_map thread_set_global_pd_mappings
+  apply (wp thread_set_arch_caps_trivial
             thread_set_pspace_in_kernel_window
             thread_set_cap_refs_in_kernel_window
          | simp_all | clarsimp simp:tcb_cap_cases_def)+
@@ -2867,11 +2867,11 @@ done
 
 lemma tcb_fault_handler_length:
   "\<lbrakk>valid_state s;ko_at (TCB tcb) thread s\<rbrakk>
-           \<Longrightarrow> length (tcb_fault_handler tcb) = Types_D.word_bits"
+           \<Longrightarrow> length (tcb_fault_handler tcb) = word_bits"
   apply (clarsimp simp:valid_state_def valid_pspace_def)
   apply (drule valid_tcb_objs)
     apply (simp add:obj_at_def,erule get_tcb_rev)
-  apply (simp add:valid_tcb_def WordSetup.word_bits_def Types_D.word_bits_def)
+  apply (simp add:valid_tcb_def word_bits_def)
   done
 
 
@@ -2962,5 +2962,7 @@ lemma send_fault_ipc_corres:
        apply (rule lookup_cap_valid[THEN validE_R_validE])
       apply (clarsimp simp:valid_cap_def valid_state_def valid_pspace_def)+
   done
+
+end
 
 end

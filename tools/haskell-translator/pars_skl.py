@@ -44,6 +44,9 @@ for line in instructions:
     output_tmp = os.path.join(os.path.dirname(output), 'pars_skel.tmp')
 
     output_f = open(output_tmp, 'w')
+    output_f.write('(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)\n')
+    output_f.write('(* instead, see the skeleton file %s *)\n' %
+            os.path.basename(input))
 
     input_f = open(input)
     for line in input_f:
@@ -59,6 +62,10 @@ for line in instructions:
             call.bodies_only = 'bodies_only' in bits
             call.moduletranslations = dict([bit.split('=')
                                             for bit in bits if '=' in bit])
+            
+            if 'CONTEXT' in bits:
+                n = bits.index('CONTEXT')
+                call.current_context.append(bits[n + 1])
 
             if 'ONLY' in bits:
                 n = bits.index('ONLY')

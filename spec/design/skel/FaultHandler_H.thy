@@ -14,6 +14,14 @@ theory FaultHandler_H
 imports FaultHandlerDecls_H TCB_H
 begin
 
+context begin interpretation Arch .
+requalify_consts
+  syscallMessage
+  fromVPtr
+  exceptionMessage
+  debugPrint
+end
+
 #INCLUDE_HASKELL_PREPARSE SEL4/API/Failures.lhs
 
 #INCLUDE_HASKELL SEL4/Kernel/FaultHandler.lhs bodies_only

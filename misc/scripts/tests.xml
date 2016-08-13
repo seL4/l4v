@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!--
+     Copyright 2016, NICTA
+
+     This software may be distributed and modified according to the terms of
+     the BSD 2-Clause license. Note that NO WARRANTY is provided.
+     See "LICENSE_BSD2.txt" for details.
+
+     @TAG(NICTA_BSD)
+  -->
+
+<!--
+
+     Regression Specification File
+
+     See "misc/regression/tests.xml" for a description of the file
+     format.
+
+-->
+<testsuite cpu-timeout="60">
+    <!-- Check theory import paths. Depends on kernel theories to be generated. -->
+    <test name="theory_imports" depends="CSpec">bash check_theory_imports</test>
+</testsuite>

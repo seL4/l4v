@@ -30,21 +30,22 @@ chapter "Specifications"
  * Abstract Specification
  *)
 
-session ASpec in "abstract" = Word +
+session ASpec in "abstract" = Word_Lib +
   options [document=pdf]
   theories [document = false]
-    "../../lib/NICTACompat"
     "../../lib/Lib"
-    "../../lib/DistinctProp"
+    "../../lib/Defs"
     "../../lib/List_Lib"
+    "../../lib/$L4V_ARCH/WordSetup"
   theories
     "Intro_Doc"
-    "../../lib/wp/NonDetMonad"
+    "../../lib/Monad_WP/NonDetMonad"
   theories [document = false]
-    "../../lib/wp/NonDetMonadLemmas"
+    "../../lib/Monad_WP/NonDetMonadLemmas"
   theories
     "Syscall_A"
     "Glossary_Doc"
+	(* "KernelInit_A" *)
   document_files
     "VERSION"
     "root.tex"
@@ -62,7 +63,7 @@ session ASpec in "abstract" = Word +
  * Executable/Design Specification
  *)
 
-session ExecSpec = Word +
+session ExecSpec = Word_Lib +
   options [document = false]
   theories
     "design/API_H"
@@ -96,7 +97,7 @@ session SimplExport = CSpec +
  * CapDL
  *)
 
-session DSpec = Word +
+session DSpec = Word_Lib +
   theories
     "capDL/Syscall_D"
 
@@ -122,11 +123,3 @@ session ASepSpec = ASpec +
   theories
     "sep-abstract/Syscall_SA"
 
-
-(*
- * Libraries
- *)
-
-session Word = "HOL-Word" +
-  theories
-    "../lib/NICTACompat"

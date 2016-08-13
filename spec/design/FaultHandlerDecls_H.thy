@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file FaultHandlerDecls_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -18,13 +20,13 @@ theory FaultHandlerDecls_H
 imports Structures_H FaultMonad_H
 begin
 
-consts
+consts'
 handleFault :: "machine_word \<Rightarrow> fault \<Rightarrow> unit kernel"
 
-consts
+consts'
 sendFaultIPC :: "machine_word \<Rightarrow> fault \<Rightarrow> ( fault , unit ) kernel_f"
 
-consts
+consts'
 handleDoubleFault :: "machine_word \<Rightarrow> fault \<Rightarrow> fault \<Rightarrow> unit kernel"
 
 

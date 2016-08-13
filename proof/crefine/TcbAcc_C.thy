@@ -212,8 +212,8 @@ lemma sanitiseRegister_spec:
                 Call sanitiseRegister_'proc
                 \<lbrace>\<acute>ret__unsigned_long = sanitiseRegister r v\<rbrace>"
   apply vcg
-  apply (auto simp: C_register_defs State_H.sanitiseRegister_def
-                    MachineTypes.sanitiseRegister_def word_0_sle_from_less
+  apply (auto simp: C_register_defs ARM_H.sanitiseRegister_def
+                    ARM.sanitiseRegister_def word_0_sle_from_less
                  split: register.split)
   done
 

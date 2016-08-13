@@ -11,8 +11,10 @@
 chapter "ARM-Specific Virtual-Memory Rights"
 
 theory ArchVMRights_A
-imports "../CapRights_A"
+imports "../CapRights_A" "../../machine/Setup_Locale"
 begin
+
+context Arch begin global_naming ARM_A
 
 text {*
 This theory provides architecture-specific definitions and datatypes
@@ -51,5 +53,6 @@ definition
      then (if AllowWrite \<in> rs then vm_read_write else vm_read_only)
    else vm_kernel_only)"
 
+end
 
 end

@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Event_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -11,7 +13,7 @@
 chapter "Kernel Events"
 
 theory Event_H
-imports "../machine/$L4V_ARCH/MachineTypes"
+imports "../machine/MachineExports"
 begin
 
 text {*

@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Notification_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -18,9 +20,14 @@ theory Notification_H imports    "NotificationDecls_H"
   ObjectInstances_H
 begin
 
+context begin interpretation Arch .
+requalify_consts
+  badgeRegister
+end
+
 defs receiveBlocked_def:
 "receiveBlocked st\<equiv> (case st of
-      BlockedOnReceive v1 \<Rightarrow>   True
+      BlockedOnReceive v2 \<Rightarrow>   True
     | _ \<Rightarrow>   False
     )"
 

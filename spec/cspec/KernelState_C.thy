@@ -10,8 +10,7 @@
 
 theory KernelState_C
 imports
-  "../../lib/WordLib"
-  "../../lib/TypHeapLib"
+  "../../lib/$L4V_ARCH/WordSetup"
   "../../lib/BitFieldProofsLib"
   Kernel_C
   Substitute

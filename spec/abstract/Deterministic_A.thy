@@ -446,19 +446,19 @@ definition cap_swap_ext where
        update_cdt_list
         (\<lambda>list. case if slot2_op = Some slot1 then Some slot2
                      else if slot2_op = Some slot2 then Some slot1 else slot2_op of
-                None \<Rightarrow> case if slot1_op = Some slot1 then Some slot2
+                None \<Rightarrow> (case if slot1_op = Some slot1 then Some slot2
                             else if slot1_op = Some slot2 then Some slot1 else slot1_op of
                        None \<Rightarrow> list
-                       | Some slot2_p \<Rightarrow> list(slot2_p := list_replace (list slot2_p) slot1 slot2)
+                       | Some slot2_p \<Rightarrow> list(slot2_p := list_replace (list slot2_p) slot1 slot2))
                 | Some slot1_p \<Rightarrow>
-                    case if slot1_op = Some slot1 then Some slot2
+                    (case if slot1_op = Some slot1 then Some slot2
                          else if slot1_op = Some slot2 then Some slot1 else slot1_op of
                     None \<Rightarrow> list(slot1_p := list_replace (list slot1_p) slot2 slot1)
                     | Some slot2_p \<Rightarrow>
                         if slot1_p = slot2_p
                         then list(slot1_p := list_swap (list slot1_p) slot1 slot2)
                         else list(slot1_p := list_replace (list slot1_p) slot2 slot1,
-                                  slot2_p := list_replace (list slot2_p) slot1 slot2))
+                                  slot2_p := list_replace (list slot2_p) slot1 slot2)))
     od)"
 
 definition cap_move_ext where
@@ -542,17 +542,6 @@ definition work_units_limit_reached where
      work_units \<leftarrow> gets work_units_completed;
      return (work_units_limit \<le> work_units)
    od"
-
-(* FIXME: Should this move to Machine_A? *)
-text {* The lowest virtual address in the kernel window. The kernel reserves the
-virtual addresses from here up in every virtual address space. *}
-definition
-  kernel_base :: "vspace_ref" where
-  "kernel_base \<equiv> 0xe0000000"
-
-definition
-  idle_thread_ptr :: vspace_ref where
-  "idle_thread_ptr = kernel_base + 0x1000"
 
 text {*
   A type class for all instantiations of the abstract specification. In

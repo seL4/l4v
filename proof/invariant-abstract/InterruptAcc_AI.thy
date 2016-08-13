@@ -10,7 +10,7 @@
 
 
 theory InterruptAcc_AI
-imports TcbAcc_AI
+imports "$L4V_ARCH/ArchTcbAcc_AI"
 begin
 
 lemma get_irq_slot_real_cte[wp]:
@@ -54,23 +54,27 @@ definition all_invs_but_valid_irq_states_for where
   valid_kernel_mappings and
   equal_kernel_mappings and
   valid_asid_map and
-  valid_global_pd_mappings and
+  valid_global_vspace_mappings and
   pspace_in_kernel_window and
   cap_refs_in_kernel_window and cur_tcb"
 
-lemma dmo_maskInterrupt_invs:
-  "\<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace> 
-   do_machine_op (maskInterrupt (state = IRQInactive) irq) 
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
-   apply (simp add: do_machine_op_def split_def maskInterrupt_def)
-   apply wp
-   apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
-  done
+
+locale InterruptAcc_AI =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes dmo_maskInterrupt_invs:
+    "\<And>irq state.
+      \<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace> 
+        do_machine_op (maskInterrupt (state = IRQInactive) irq) 
+      \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+
+context InterruptAcc_AI begin
 
 lemma set_irq_state_invs[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> (state \<noteq> irq_state.IRQSignal \<longrightarrow> cap.IRQHandlerCap irq \<notin> ran (caps_of_state s))\<rbrace>
+  "\<And>state irq.
+    \<lbrace>\<lambda>s::'state_ext state. invs s
+          \<and> (state \<noteq> irq_state.IRQSignal \<longrightarrow> cap.IRQHandlerCap irq \<notin> ran (caps_of_state s))\<rbrace>
       set_irq_state state irq
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: set_irq_state_def)
   apply (wp dmo_maskInterrupt_invs)
   apply (clarsimp simp: invs_def valid_state_def cur_tcb_def valid_mdb_def all_invs_but_valid_irq_states_for_def)
@@ -81,6 +85,8 @@ lemma set_irq_state_invs[wp]:
               split: cap.split_asm)
   apply(clarsimp simp: valid_machine_state_def valid_irq_states_but_def valid_irq_masks_but_def, blast elim: valid_irq_statesE)
   done
+
+end
 
 lemmas ucast_ucast_mask8 = ucast_ucast_mask[where 'a=8, simplified, symmetric]
 

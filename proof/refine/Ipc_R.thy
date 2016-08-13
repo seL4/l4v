@@ -12,6 +12,8 @@ theory Ipc_R
 imports Finalise_R
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemmas lookup_slot_wrapper_defs'[simp] =
    lookupSourceSlot_def lookupTargetSlot_def lookupPivotSlot_def
 
@@ -20,8 +22,8 @@ lemma get_mi_corres: "corres (op = \<circ> message_info_map)
                       (get_message_info t) (getMessageInfo t)"
   apply (rule corres_guard_imp)
     apply (unfold get_message_info_def getMessageInfo_def fun_app_def)
-    apply (simp add: State_H.msgInfoRegister_def
-             MachineTypes.msgInfoRegister_def msg_info_register_def)
+    apply (simp add: ARM_H.msgInfoRegister_def
+             ARM.msgInfoRegister_def ARM_A.msg_info_register_def)
     apply (rule corres_split_eqr [OF _ user_getreg_corres])
        apply (rule corres_trivial, simp add: message_info_from_data_eqv)
       apply (wp | simp)+
@@ -225,7 +227,7 @@ lemma deriveCap_valid [wp]:
    apply (rename_tac arch_capability)
    apply (case_tac arch_capability;
           simp add: liftME_def bindE_def returnOk_def lift_def
-                    return_def bind_def ArchRetype_H.deriveCap_def
+                    return_def bind_def ARM_H.deriveCap_def
                     isCap_simps Let_def valid_cap'_def capAligned_def
                     throwError_def)
   apply (clarsimp simp: lift_def throwError_def return_def split: sum.splits)
@@ -318,7 +320,7 @@ lemma deriveCap_derived:
                      )+)[11]
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: ArchRetype_H.deriveCap_def Let_def isCap_simps
+         simp add: ARM_H.deriveCap_def Let_def isCap_simps
               split: split_if,
          safe)
         apply ((wp throwError_validE_R undefined_validE_R
@@ -326,7 +328,7 @@ lemma deriveCap_derived:
                   | drule valid_capAligned
                   | drule(1) bits_low_high_eq
                   | simp add: capBadge_def sameObjectAs_def
-                              ArchRetype_H.sameObjectAs_def
+                              ARM_H.sameObjectAs_def
                               is_derived'_def isCap_simps up_ucast_inj_eq
                               is_aligned_no_overflow badge_derived'_def
                               capAligned_def capASID_def vsCapRef_def
@@ -345,7 +347,7 @@ lemma maskCapRights_vsCapRef[simp]:
   apply (cases cap, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: maskCapRights_def ArchRetype_H.maskCapRights_def isCap_simps Let_def)
+         simp add: maskCapRights_def ARM_H.maskCapRights_def isCap_simps Let_def)
   done
 
 lemma corres_set_extra_badge:
@@ -491,7 +493,7 @@ lemma maskCapRights_eq_null:
   apply (cases xa; simp add: maskCapRights_def isCap_simps)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability)
-      apply (simp_all add: ArchRetype_H.maskCapRights_def isCap_simps)
+      apply (simp_all add: ARM_H.maskCapRights_def isCap_simps)
   done
 
 lemma capMasterCap_maskedAsFull[simp]:
@@ -970,7 +972,7 @@ lemma deriveCap_not_idle [wp]:
             apply (wp ensureNoChildren_wp | clarsimp simp: capRange_def)+
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
-         simp_all add: ArchRetype_H.deriveCap_def Let_def isCap_simps
+         simp_all add: ARM_H.deriveCap_def Let_def isCap_simps
                 split: split_if,
          safe)
         apply (wp throwError_validE_R | clarsimp simp: capRange_def)+
@@ -980,7 +982,7 @@ lemma maskCapRights_capRange[simp]:
   "capRange (maskCapRights r c) = capRange c"
   apply (case_tac c)
   apply (simp_all add: maskCapRights_def isCap_defs capRange_def Let_def
-                       ArchRetype_H.maskCapRights_def
+                       ARM_H.maskCapRights_def
                 split: arch_capability.split)
   done
 
@@ -1074,7 +1076,7 @@ lemma setExtraBadge_irq_states'[wp]:
   "\<lbrace>valid_irq_states'\<rbrace> setExtraBadge buffer b n \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (wp valid_irq_states_lift')
   apply (simp add: setExtraBadge_def storeWordUser_def)
-  apply (wp dmo_lift' no_irq_storeWord)
+  apply (wp no_irq dmo_lift' no_irq_storeWord)
   done
   
 lemma transferCapsToSlots_irq_states' [wp]: 
@@ -1277,7 +1279,7 @@ lemma capRights_Null_eq [simp]:
   "(maskCapRights R cap = NullCap) = (cap = NullCap)"
   apply (cases cap)
   apply (simp_all add: Let_def maskCapRights_def isCap_simps)
-  apply (simp add: ArchRetype_H.maskCapRights_def
+  apply (simp add: ARM_H.maskCapRights_def
             split: arch_capability.split)
   done
 
@@ -1299,7 +1301,7 @@ lemma isIRQControlCap_mask [simp]:
             apply (clarsimp simp: isCap_simps maskCapRights_def Let_def)+
       apply (rename_tac arch_capability)
       apply (case_tac arch_capability)
-          apply (clarsimp simp: isCap_simps ArchRetype_H.maskCapRights_def
+          apply (clarsimp simp: isCap_simps ARM_H.maskCapRights_def
                                 maskCapRights_def Let_def)+
   done
 
@@ -1307,7 +1309,7 @@ lemma isPageCap_maskCapRights[simp]:
 " isArchCap isPageCap (RetypeDecls_H.maskCapRights R c) = isArchCap isPageCap c"
   apply (case_tac c; simp add: isCap_simps isArchCap_def maskCapRights_def)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability; simp add: isCap_simps ArchRetype_H.maskCapRights_def)
+  apply (case_tac arch_capability; simp add: isCap_simps ARM_H.maskCapRights_def)
   done
    
 lemma capReplyMaster_mask[simp]:
@@ -1329,7 +1331,7 @@ lemma updateCapData_ordering:
   "\<lbrakk> (x, capBadge cap) \<in> capBadge_ordering P; updateCapData p d cap \<noteq> NullCap \<rbrakk>
     \<Longrightarrow> (x, capBadge (updateCapData p d cap)) \<in> capBadge_ordering P"
   apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
-                                  capBadge_def ArchRetype_H.updateCapData_def
+                                  capBadge_def ARM_H.updateCapData_def
                            split: split_if_asm)
    apply fastforce+
   done
@@ -1342,7 +1344,7 @@ lemma updateCapData_is_Reply[simp]:
   "(updateCapData p d cap = ReplyCap x y) = (cap = ReplyCap x y)"
   by (rule ccontr,
       clarsimp simp: isCap_simps updateCapData_def Let_def
-                     ArchRetype_H.updateCapData_def
+                     ARM_H.updateCapData_def
           split del: split_if
               split: split_if_asm)
 
@@ -1350,7 +1352,7 @@ lemma updateCapDataIRQ:
   "updateCapData p d cap \<noteq> NullCap \<Longrightarrow> 
   isIRQControlCap (updateCapData p d cap) = isIRQControlCap cap"
   apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
-                                  ArchRetype_H.updateCapData_def
+                                  ARM_H.updateCapData_def
                            split: split_if_asm)
   done
 
@@ -1358,7 +1360,7 @@ lemma updateCapData_vsCapRef[simp]:
   "vsCapRef (updateCapData pr D c) = vsCapRef c"
   by (rule ccontr,
       clarsimp simp: isCap_simps updateCapData_def Let_def
-                     ArchRetype_H.updateCapData_def
+                     ARM_H.updateCapData_def
                      vsCapRef_def
           split del: split_if
               split: split_if_asm)
@@ -1367,7 +1369,7 @@ lemma isPageCap_updateCapData[simp]:
 "isArchCap isPageCap (updateCapData pr D c) = isArchCap isPageCap c"
   apply (case_tac c; simp add:updateCapData_def isCap_simps isArchCap_def)
    apply (rename_tac arch_capability)
-   apply (case_tac arch_capability; simp add: ArchRetype_H.updateCapData_def isCap_simps isArchCap_def)
+   apply (case_tac arch_capability; simp add: ARM_H.updateCapData_def isCap_simps isArchCap_def)
   apply (clarsimp split:capability.splits simp:Let_def)
   done
 
@@ -1764,12 +1766,12 @@ lemma mk_ft_msg_corres:
       apply (rule corres_split_eqr [OF _ getRestartPCs_corres])
         apply (rule corres_trivial, simp)
        apply (wp | simp)+
-   apply (simp add: State_H.syscallMessage_def)
+   apply (simp add: ARM_H.syscallMessage_def)
    apply (rule corres_guard_imp)
      apply (rule corres_split_eqr [OF _ user_mapM_getRegister_corres])
        apply (rule corres_trivial, simp)
       apply (wp | simp)+
-  apply (simp add: State_H.exceptionMessage_def)
+  apply (simp add: ARM_H.exceptionMessage_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ user_mapM_getRegister_corres])
       apply (rule corres_trivial, simp)
@@ -1798,7 +1800,7 @@ lemma do_fault_transfer_corres:
     (do_fault_transfer badge sender receiver recv_buf)
     (doFaultTransfer badge sender receiver recv_buf)"
   apply (clarsimp simp: do_fault_transfer_def doFaultTransfer_def split_def
-                        State_H.badgeRegister_def badge_register_def)
+                        ARM_H.badgeRegister_def badge_register_def)
   apply (rule_tac Q="\<lambda>fault. K (\<exists>f. fault = Some f) and
                              tcb_at sender and tcb_at receiver and
                              case_option \<top> in_user_frame recv_buf"
@@ -1857,7 +1859,7 @@ lemma invs_mdb_absorb'_ac [simp]:
 
 lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   "\<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
-  unfolding lookupIPCBuffer_def ArchVSpace_H.lookupIPCBuffer_def
+  unfolding lookupIPCBuffer_def ARM_H.lookupIPCBuffer_def
   apply (simp add: Let_def getSlotCap_def getThreadBufferSlot_def
                    locateSlot_conv threadGet_def comp_def)
   apply (wp getCTE_wp getObject_tcb_wp)
@@ -2007,7 +2009,7 @@ crunch irq_handlers'[wp]: doIPCTransfer "valid_irq_handlers'"
        simp: zipWithM_x_mapM ball_conj_distrib )
 
 crunch irq_states'[wp]: doIPCTransfer "valid_irq_states'"
-  (wp: crunch_wps no_irq_mapM no_irq_storeWord no_irq_loadWord
+  (wp: crunch_wps no_irq no_irq_mapM no_irq_storeWord no_irq_loadWord
        no_irq_case_option simp: crunch_simps zipWithM_x_mapM)
 
 crunch pde_mappings'[wp]: doIPCTransfer "valid_pde_mappings'"
@@ -2038,13 +2040,13 @@ lemma handle_fault_reply_registers_corres:
            (do y \<leftarrow> as_user t
                 (zipWithM_x
                   (\<lambda>r v. set_register r
-                          (MachineTypes.sanitiseRegister r v))
+                          (ARM.sanitiseRegister r v))
                   msg_template msg);
                return (label = 0)
             od)
            (do y \<leftarrow> asUser t
                 (zipWithM_x
-                  (\<lambda>r v. setRegister r (State_H.sanitiseRegister r v))
+                  (\<lambda>r v. setRegister r (ARM_H.sanitiseRegister r v))
                   msg_template msg);
                return (label = 0)
             od)"
@@ -3436,7 +3438,7 @@ lemma sai_invs'[wp]:
      apply (clarsimp | wp cancelIPC_ct')+
     apply (wp set_ntfn_minor_invs' gts_wp' | clarsimp)+
    apply (frule pred_tcb_at')
-   apply (wp set_ntfn_minor_invs'
+   by (wp set_ntfn_minor_invs'
         | rule conjI
         | clarsimp elim!: st_tcb_ex_cap''
         | fastforce simp: invs'_def valid_state'_def receiveBlocked_def projectKOs
@@ -3446,7 +3448,6 @@ lemma sai_invs'[wp]:
         | fastforce simp: receiveBlocked_def projectKOs pred_tcb_at'_def obj_at'_def
                    dest!: invs_rct_ct_activatable'
                    split: thread_state.splits)+
-  done
 
 lemma ncof_invs' [wp]:
   "\<lbrace>invs'\<rbrace> nullCapOnFailure (lookupCap t ref) \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -4351,7 +4352,7 @@ lemma zobj_refs_maskCapRights[simp]:
   by (cases cap;
       clarsimp
           simp add: maskCapRights_def isCap_simps
-                    Let_def ArchRetype_H.maskCapRights_def
+                    Let_def ARM_H.maskCapRights_def
              split: arch_capability.split)
 
 lemma getCTE_cap_to_refs[wp]:
@@ -4369,14 +4370,15 @@ lemma lookupCap_cap_to_refs[wp]:
   done
 
 lemma arch_stt_objs' [wp]:
-  "\<lbrace>valid_objs'\<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: ArchThread_H.switchToThread_def)
+  "\<lbrace>valid_objs'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
+  apply (simp add: ARM_H.switchToThread_def)
   apply wp
   done
 
+(* FIXME: arch_split: is there a better way to refer to the Thread_H.switchToThread_def? *)
 lemma stt_objs' [wp]:
   "\<lbrace>valid_objs'\<rbrace> switchToThread t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: switchToThread_def setCurThread_def)
+  apply (simp add: Thread_H.switchToThread_def setCurThread_def)
   apply (wp threadSet_valid_objs' | simp)+
   done
 
@@ -4822,7 +4824,9 @@ lemma sai_st_tcb':
   apply (rule hoare_gen_asm)
   apply (subgoal_tac "\<exists>Q. P = (\<lambda>st. st = Running \<or> Q st)")
    apply (clarsimp intro!: sendSignal_st_tcb'_Running)
-  apply (fastforce intro!: exI[where x=P] ext)
+  apply (fastforce intro!: exI[where x=P])
   done
+
+end
 
 end

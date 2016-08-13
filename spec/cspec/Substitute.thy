@@ -10,9 +10,9 @@
 
 theory Substitute
 
-imports    "Kernel_C"
-    "../../tools/asmrefine/GlobalsSwap"
-
+imports
+  "Kernel_C"
+  "../../tools/asmrefine/GlobalsSwap"
 begin
 
 ML {*

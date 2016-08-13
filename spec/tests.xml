@@ -17,16 +17,23 @@
      format.
 
 -->
-<testsuite cpu-timeout="3600" depends="isabelle">
+<testsuite cpu-timeout="3600">
 
-    <!-- Various seL4 specifications. -->
-    <test name="ASpec">make ASpec</test>
-    <test name="ExecSpec">make ExecSpec</test>
-    <test name="DSpec">make DSpec</test>
-    <test name="TakeGrant">make TakeGrant</test>
-    <test name="ASepSpec" depends="ASpec">make ASepSpec</test>
+    <set depends="isabelle">
+        <!-- Various seL4 specifications. -->
+        <test name="ASpec">make ASpec</test>
+        <test name="ExecSpec">make ExecSpec</test>
+        <test name="DSpec">make DSpec</test>
+        <test name="TakeGrant">make TakeGrant</test>
+        <test name="ASepSpec" depends="ASpec">make ASepSpec</test>
 
-    <!-- Ensure Haskell spec and generated Isabelle theories match. -->
-    <test name="SpecCheck">make spec-check</test>
+        <!-- Ensure Haskell spec and generated Isabelle theories match. -->
+        <test name="SpecCheck">make spec-check</test>
+    </set>
+
+    <set>
+        <!-- Build Haskell kernel code. -->
+        <test name="HaskellKernel" cwd="haskell" cpu-timeout="600">./check-newlines.sh &amp;&amp; make</test>
+    </set>
 
 </testsuite>

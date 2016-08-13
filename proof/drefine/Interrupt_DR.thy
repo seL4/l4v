@@ -12,6 +12,8 @@ theory Interrupt_DR
 imports Ipc_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma decode_irq_control_error_corres:
   "\<not> (\<exists> ui. (Some (IrqControlIntent ui)) = (transform_intent (invocation_type label) args)) \<Longrightarrow>
      dcorres (dc \<oplus> anyrel) \<top> \<top>
@@ -515,5 +517,7 @@ lemma dcorres_invoke_irq_handler:
      apply (wp get_irq_slot_not_idle_wp,clarsimp)+
   apply (clarsimp simp:invs_def valid_state_def)
   done
+
+end
 
 end

@@ -12,6 +12,8 @@ theory Ipc_IF
 imports Finalise_IF
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 section "reads_respects"
 subsection "Notifications"
 
@@ -1715,7 +1717,7 @@ lemma lookup_ipc_buffer_disjoint_from_globals_frame:
    apply (simp add: msg_align_bits pageBits_def)
   (* CLAGged from here onwards from auth_ipc_buffers_do_not_overlap_globals_frame *)
   apply(rule ccontr)
-  apply(drule WordLemmaBucket.int_not_emptyD)
+  apply(drule int_not_emptyD)
   apply(clarsimp)
   apply(frule caps_of_state_cteD)
   apply(frule cte_wp_at_valid_objs_valid_cap)
@@ -2348,7 +2350,7 @@ lemma lookup_ipc_buffer_aligned':
 lemma auth_ipc_buffers_do_not_overlap_arm_globals_frame:
   "\<lbrakk>valid_arch_state s; valid_global_refs s; valid_objs s; pspace_distinct s\<rbrakk> \<Longrightarrow> auth_ipc_buffers s thread \<inter> range_of_arm_globals_frame s = {}"
   apply(rule ccontr)
-  apply(drule WordLemmaBucket.int_not_emptyD)
+  apply(drule int_not_emptyD)
   apply(clarsimp simp: auth_ipc_buffers_member_def)
   apply(frule caps_of_state_cteD)
   apply(frule cte_wp_at_valid_objs_valid_cap)
@@ -2419,7 +2421,7 @@ lemma do_ipc_transfer_globals_equiv:
     apply(rule word_less_sub_1)
     apply(subgoal_tac "of_nat x < (2::word32) ^ 7")
      apply(simp)
-    apply(rule of_nat_less_pow)
+    apply(rule of_nat_less_pow_32)
      apply(simp)
     apply(simp add: word_bits_def)
    apply(clarsimp)
@@ -2441,7 +2443,7 @@ lemma do_ipc_transfer_globals_equiv:
    apply(rule word_less_sub_1)
    apply(subgoal_tac "of_nat xa < (2::word32) ^ 7")
     apply(simp)
-   apply(rule of_nat_less_pow)
+   apply(rule of_nat_less_pow_32)
     apply(simp)
     apply(fastforce simp: msg_max_length_def length_msg_registers)
    apply(simp add: word_bits_def)
@@ -2887,5 +2889,7 @@ lemma reply_from_kernel_reads_respects_g:
    apply(rule doesnt_touch_globalsI)
    apply(wp reply_from_kernel_globals_equiv | simp)+
   done
+
+end
 
 end

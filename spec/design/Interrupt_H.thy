@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Interrupt_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -18,27 +20,38 @@ imports
   InterruptDecls_H
 begin
 
-abbreviation (input)
-  performIRQControl :: "Invocations_H.irqcontrol_invocation \<Rightarrow> unit kernel_p"
-where
- "performIRQControl \<equiv> InterruptDecls_H.performIRQControl"
+context Arch begin
 
-abbreviation (input)
-  "decodeIRQControlInvocation"
-  :: "32 word
-      \<Rightarrow> 32 word list
-         \<Rightarrow> 32 word
-            \<Rightarrow> capability list
-               \<Rightarrow> KernelStateData_H.kernel_state
-                  \<Rightarrow> ((syscall_error + Invocations_H.irqcontrol_invocation) \<times> KernelStateData_H.kernel_state) set \<times> bool"
-where
-  "decodeIRQControlInvocation \<equiv> InterruptDecls_H.decodeIRQControlInvocation"
+requalify_consts
+  checkIRQ
+  decodeIRQControlInvocation
+  performIRQControl
+
+context begin global_naming global
+requalify_consts
+  InterruptDecls_H.decodeIRQControlInvocation
+  InterruptDecls_H.performIRQControl
+end
+
+end
+
+context begin interpretation Arch .
+
+requalify_consts
+  maxIRQ
+  minIRQ
+  maskInterrupt
+  ackInterrupt
+  resetTimer
+  debugPrint
+
+end
 
 defs decodeIRQControlInvocation_def:
 "decodeIRQControlInvocation label args srcSlot extraCaps \<equiv>
     (case (invocationType label, args, extraCaps) of
           (IRQIssueIRQHandler, irqW#index#depth#_, cnode#_) \<Rightarrow>   (doE
-            ArchInterruptDecls_H.checkIRQ (irqW && mask 16);
+            Arch.checkIRQ (irqW && mask 16);
             irq \<leftarrow> returnOk ( toEnum (fromIntegral (irqW && mask 16)) ::irq);
             irqActive \<leftarrow> withoutFailure $ isIRQActive irq;
             whenE irqActive $ throw RevokeFirst;
@@ -48,7 +61,7 @@ defs decodeIRQControlInvocation_def:
             returnOk $ IssueIRQHandler irq destSlot srcSlot
           odE)
         | (IRQIssueIRQHandler,_,_) \<Rightarrow>   throw TruncatedMessage
-        | _ \<Rightarrow>   liftME ArchIRQControl $ ArchInterruptDecls_H.decodeIRQControlInvocation label args srcSlot extraCaps
+        | _ \<Rightarrow>   liftME ArchIRQControl $ Arch.decodeIRQControlInvocation label args srcSlot extraCaps
         )"
 
 defs performIRQControl_def:
@@ -59,7 +72,7 @@ defs performIRQControl_def:
     cteInsert (IRQHandlerCap irq) controlSlot handlerSlot
   od)
   | (ArchIRQControl invok) \<Rightarrow>   
-    ArchInterruptDecls_H.performIRQControl invok
+    Arch.performIRQControl invok
   )"
 
 defs decodeIRQHandlerInvocation_def:

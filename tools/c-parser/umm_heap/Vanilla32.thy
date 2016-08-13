@@ -11,11 +11,11 @@
 (* License: BSD, terms see file ./LICENSE *)
 
 theory Vanilla32
-imports "./$L4V_ARCH/Word_Mem_Encoding"
+imports "./$L4V_ARCH/Word_Mem_Encoding" "../../../lib/Word_Lib/Word_Lib" CTypes
 begin
 
-  
-  
+
+
 overloading typ_info_word \<equiv> typ_info_t begin
 definition
   typ_info_word: "typ_info_word (w::'a::len8 word itself) \<equiv> word_tag w"
@@ -116,7 +116,7 @@ done
 instance num1 :: len_lg03
 by (intro_classes, simp)
 
-class len_lg04 = len + 
+class len_lg04 = len +
   assumes len_lg04: "len_of TYPE('a::len) \<in> {1,2,4,8,16}"
 instance bit0 :: (len_lg03) len_lg04
 apply intro_classes
@@ -136,7 +136,7 @@ done
 
 class len_lg26 = len +
   assumes len_lg26: "len_of TYPE('a::len) \<in> {4,8,16,32,64}"
-  
+
 instance bit0 :: (len_lg15) len_lg26
 apply intro_classes
 apply (insert len_lg15[where 'a = 'a])
@@ -239,7 +239,7 @@ overloading typ_info_ptr \<equiv> typ_info_t begin
 definition typ_info_ptr :: "'a::c_type ptr itself \<Rightarrow> 'a::c_type ptr field_desc typ_desc" where
   typ_info_ptr:
   "typ_info_ptr (p::'a::c_type ptr itself) \<equiv> TypDesc
-    (TypScalar (addr_bitsize div 8) addr_align \<lparr> 
+    (TypScalar (addr_bitsize div 8) addr_align \<lparr>
         field_access = \<lambda>p bs. rev (word_rsplit (ptr_val p)),
         field_update = \<lambda>bs v. Ptr (word_rcat (rev bs)::addr) \<rparr> )
     (typ_name_itself TYPE('a) @ ''+ptr'')"
@@ -251,7 +251,7 @@ definition typ_name_itself_ptr:
     typ_name_itself TYPE('b) @ ''+ptr''"
 end
 
-overloading typ_name_itself_unit \<equiv> typ_name_itself begin 
+overloading typ_name_itself_unit \<equiv> typ_name_itself begin
 definition
   typ_name_itself_unit [simp]:
   "typ_name_itself_unit (p::unit itself) \<equiv> ''void''"
@@ -299,10 +299,10 @@ lemma align_td_ptr [simp]: "align_td (typ_info_t TYPE('a::c_type ptr)) = addr_al
 lemma ptr_add_word32_signed [simp]:
   fixes a :: "32 word ptr"
   shows "ptr_val (a +\<^sub>p x) = ptr_val a + 4 * of_int x"
-  by (cases a) (simp add: ptr_add_def scast_id)
+  by (cases a) (simp add: CTypesDefs.ptr_add_def scast_id)
 
 lemma ptr_add_word32 [simp]:
-  fixes a :: "32 word ptr" 
+  fixes a :: "32 word ptr"
   shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 4 * x"
   by (cases a) (simp add: ptr_add_def scast_id)
 (*
@@ -311,8 +311,9 @@ lemma ptr_add_word64 [simp]:
   shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 8 * x"
   by (cases a) (simp add: ptr_add_def scast_id)
 *)
+
 lemma ptr_add_0_id[simp]:"x +\<^sub>p 0 = x"
-  by (clarsimp simp:ptr_add_def)
+  by (simp add:CTypesDefs.ptr_add_def)
 
 lemma from_bytes_ptr_to_bytes_ptr:
   "from_bytes (to_bytes (v::addr_bitsize word) bs) = (Ptr v :: 'a::c_type ptr)"
@@ -367,11 +368,10 @@ lemma typ_name_swords [simp]:
 
 lemma ptr_arith[simp]:
   "(x +\<^sub>p a = y +\<^sub>p a) = ((x::('a::c_type) ptr) = (y::'a ptr))"
-  by (clarsimp simp:ptr_add_def)
+  by (clarsimp simp:CTypesDefs.ptr_add_def)
 
 lemma ptr_arith'[simp]:
   "(ptr_coerce (x +\<^sub>p a) = ptr_coerce (y +\<^sub>p a)) = ((x::('a::c_type) ptr) = (y::'a ptr))"
-  by (clarsimp simp:ptr_add_def)
+  by (clarsimp simp:CTypesDefs.ptr_add_def)
 
 end
-

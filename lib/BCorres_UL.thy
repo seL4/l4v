@@ -9,7 +9,9 @@
  *)
 
 theory BCorres_UL
-imports "wp/NonDetMonadVCG" Crunch
+imports
+  "Monad_WP/NonDetMonadVCG"
+  Crunch
 begin
 
 definition s_bcorres_underlying where

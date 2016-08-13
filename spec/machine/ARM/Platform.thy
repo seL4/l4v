@@ -14,8 +14,11 @@ theory Platform
 imports
   "../../../lib/Defs"
   "../../../lib/Lib"
-  "../../../lib/WordEnum"
+  "../../../lib/$L4V_ARCH/WordSetup"
+  "../Setup_Locale"
 begin
+
+context Arch begin global_naming ARM
 
 text {*
   This theory lists platform-specific types and basic constants, in particular
@@ -74,5 +77,7 @@ definition
 definition
   maxIRQ :: "irq" where
   "maxIRQ \<equiv> 0x9F"
+
+end
 
 end

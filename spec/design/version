@@ -1,4 +1,8 @@
-Built from git repo at /home/spacekitteh/verification/seL4/haskell by spacekitteh
+Built from git repo at /home/matthewb/verification/mainline/l4v/spec/haskell by matthewb
 
 Generated from changeset:
-0d0cf20 Fixed comments due to buggy haskell translator
+17b8956 arch_split: give some vspace concepts more generic names
+
+
+Warning - uncomitted changes used:
+ M ../design/version

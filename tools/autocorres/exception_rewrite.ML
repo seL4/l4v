@@ -307,8 +307,8 @@ end
 fun except_rewrite_conv ctxt do_opt =
   Simplifier.asm_full_rewrite (
     put_simpset HOL_basic_ss (Utils.set_hidden_ctxt ctxt)
-        addsimps (L1ExceptionThms.get ctxt)
-        addsimps (if do_opt then L1PeepholeThms.get ctxt else [])
+        addsimps (Utils.get_rules ctxt @{named_theorems L1except})
+        addsimps (if do_opt then Utils.get_rules ctxt @{named_theorems L1opt} else [])
         addsimprocs simprocs)
 
 end

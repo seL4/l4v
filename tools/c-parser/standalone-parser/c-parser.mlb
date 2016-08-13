@@ -24,6 +24,7 @@ in
   ../Absyn-Expr.ML
   ../Absyn-StmtDecl.ML
   ../Absyn.ML
+  ../Absyn-Serial.ML
   ../name_generation.ML
   ../StrictC.grm.sig
   ../StrictC.grm.sml
@@ -32,8 +33,15 @@ in
   ../expression_typing.ML
   ../FunctionalRecordUpdate.ML
   ../complit.ML
+  ../Listsort.ML
   ../program_analysis.ML
   ../syntax_transforms.ML
+  ann
+    "sequenceNonUnit ignore"
+  in
+    GetOpt.sig
+    GetOpt.sml
+  end
   main.sml
   mlton-cparser.sml
 end

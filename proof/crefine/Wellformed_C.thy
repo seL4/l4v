@@ -18,6 +18,8 @@ imports
   "../../spec/cspec/Substitute"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 abbreviation
   cte_Ptr :: "word32 \<Rightarrow> cte_C ptr" where "cte_Ptr == Ptr"
 abbreviation
@@ -201,16 +203,16 @@ vmrights_to_H :: "word32 \<Rightarrow> vmrights" where
 (* Force clarity over name collisions *)
 abbreviation
   ARMSmallPage :: "vmpage_size" where
- "ARMSmallPage == MachineTypes.ARMSmallPage"
+ "ARMSmallPage == ARM.ARMSmallPage"
 abbreviation
   ARMLargePage :: "vmpage_size" where
- "ARMLargePage == MachineTypes.ARMLargePage"
+ "ARMLargePage == ARM.ARMLargePage"
 abbreviation
   ARMSection :: "vmpage_size" where
- "ARMSection == MachineTypes.ARMSection"
+ "ARMSection == ARM.ARMSection"
 abbreviation
   ARMSuperSection :: "vmpage_size" where
- "ARMSuperSection == MachineTypes.ARMSuperSection"
+ "ARMSuperSection == ARM.ARMSuperSection"
 
 -- "ARMSmallFrame is treated in a separate cap in C,
     so needs special treatment in ccap_relation"
@@ -230,9 +232,13 @@ gen_framesize_to_H:: "word32 \<Rightarrow> vmpage_size" where
   else if c = scast Kernel_C.ARMSection then ARMSection
   else ARMSuperSection"
 
+end
+
 record cte_CL =
   cap_CL :: cap_CL
   cteMDBNode_CL :: mdb_node_CL
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   cte_lift :: "cte_C \<rightharpoonup> cte_CL"
@@ -276,11 +282,7 @@ lemma to_bool_to_bool_bf:
 
 lemma to_bool_bf_mask_1 [simp]:
   "to_bool_bf (w && mask (Suc 0)) = to_bool_bf w"
-  apply (simp add: to_bool_bf_def)
-  apply (rule eq_eqI)
-  apply (rule word_eqI)
-  apply simp
-  done
+  by (simp add: to_bool_bf_def)
 
 lemma to_bool_bf_and [simp]:
   "to_bool_bf (a && b) = (to_bool_bf a \<and> to_bool_bf (b::word32))"
@@ -519,6 +521,6 @@ abbreviation(input)
 where
   "prioInvalid == seL4_InvalidPrio"
 
-
+end
 
 end

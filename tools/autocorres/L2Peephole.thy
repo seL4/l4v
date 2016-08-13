@@ -46,6 +46,12 @@ lemma L2_guard_false [L2opt]: "\<lbrakk> \<And>s. \<not> P s \<rbrakk> \<Longrig
   apply (monad_eq simp: L2_defs)
   done
 
+lemma L2_spec_empty [L2opt]:
+  (* FIXME: do we need both? *)
+  "L2_spec {} = L2_fail"
+  "\<lbrakk> \<And>s t. \<not> C s t \<rbrakk> \<Longrightarrow> L2_spec {(s, t). C s t} = L2_fail"
+  by (monad_eq simp: L2_defs)+
+
 lemma L2_unknown_bind [L2opt]:
   "(\<And>a b. f a = f b) \<Longrightarrow> (L2_seq (L2_unknown name) f) = f undefined"
   apply (atomize)
@@ -227,7 +233,7 @@ declare ucast_id [L2opt]
 declare scast_id [L2opt]
 
 (* Other misc lemmas. *)
-declare singleton_iff [L2opt, polish]
+declare singleton_iff [L2opt]
 
 (* Optimising "if" structres. *)
 

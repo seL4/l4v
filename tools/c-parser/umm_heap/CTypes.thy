@@ -13,7 +13,6 @@
 theory CTypes
 imports
   CTypesDefs
-  "~~/src/HOL/Library/Prefix_Order"
 begin
 
 

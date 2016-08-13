@@ -575,26 +575,25 @@ next
       apply (frule(2) gm)
       apply (simp add: word_less_nat_alt word_le_nat_alt less_mask_eq)
       apply (intro impI conjI allI, simp_all)
-             apply (simp add: cap_simps)
-            apply (frule iffD1 [OF cap_get_tag_CNodeCap])
-             apply (simp add: cap_get_tag_isCap)
-            apply (erule ssubst [where t = cap])
-            apply simp
-           apply (simp add: mask_def)
-          apply (subgoal_tac "capCNodeBits cap \<noteq> 0")
-           apply (clarsimp simp: linorder_not_less cap_simps)
-          apply (clarsimp simp: isCap_simps valid_cap'_def)
-         apply (clarsimp simp: linorder_not_less cap_simps)
+            apply (simp add: cap_simps)
+           apply (frule iffD1 [OF cap_get_tag_CNodeCap])
+            apply (simp add: cap_get_tag_isCap)
+           apply (erule ssubst [where t = cap])
+           apply simp
+          apply (simp add: mask_def)
+         apply (subgoal_tac "capCNodeBits cap \<noteq> 0")
+          apply (clarsimp simp: linorder_not_less cap_simps)
          apply (clarsimp simp: isCap_simps valid_cap'_def)
         apply (clarsimp simp: linorder_not_less cap_simps)
         apply (clarsimp simp: isCap_simps valid_cap'_def)
-        apply arith
-       apply (simp add: word_sle_def)
+       apply (clarsimp simp: linorder_not_less cap_simps)
+       apply (clarsimp simp: isCap_simps valid_cap'_def)
+       apply arith
       apply (subgoal_tac "(0x1F :: word32) = mask 5")
-      apply (erule ssubst [where t = "0x1F"])
-      apply (subst word_mod_2p_is_mask [symmetric])
-       apply simp
-      apply (simp add: unat_word_ariths)
+       apply (erule ssubst [where t = "0x1F"])
+       apply (subst word_mod_2p_is_mask [symmetric])
+        apply simp
+       apply (simp add: unat_word_ariths)
       apply (simp add: mask_def)
       done
   qed

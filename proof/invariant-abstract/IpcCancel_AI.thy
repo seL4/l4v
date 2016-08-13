@@ -9,21 +9,25 @@
  *)
 
 theory IpcCancel_AI
-imports Schedule_AI
+imports "./$L4V_ARCH/ArchSchedule_AI"
 begin
+
+locale IpcCancel_AI = 
+  fixes state_ext_type :: "('a :: state_ext) itself" 
+  assumes set_endpoint_eq_ker_map: 
+    "\<And>a b. \<lbrace>equal_kernel_mappings\<rbrace> (set_endpoint a b :: (unit, 'a) s_monad) \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
+  assumes set_endpoint_v_ker_map: 
+    "\<And>a b. \<lbrace>valid_kernel_mappings\<rbrace> (set_endpoint a b :: (unit, 'a) s_monad) \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
 
 lemma blocked_cancel_ipc_simple:
   "\<lbrace>tcb_at t\<rbrace> blocked_cancel_ipc ts t \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   by (simp add: blocked_cancel_ipc_def | wp sts_st_tcb_at')+
 
-
 lemma cancel_signal_simple:
   "\<lbrace>\<top>\<rbrace> cancel_signal t ntfn \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   by (simp add: cancel_signal_def | wp sts_st_tcb_at')+
 
-
 crunch  typ_at: cancel_all_ipc "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
-
 
 lemma cancel_all_helper:
   " \<lbrace>valid_objs and
@@ -239,18 +243,18 @@ definition
  "emptyable \<equiv> \<lambda>p s. (tcb_at (fst p) s \<and> snd p = tcb_cnode_index 2) \<longrightarrow>
                           st_tcb_at halted (fst p) s"
 
-
 locale delete_one_abs =
+  fixes state_ext_type :: "('a :: state_ext) itself"
   assumes delete_one_invs:
-    "\<And>p. \<lbrace>invs and emptyable p\<rbrace> (cap_delete_one p :: (unit,'a::state_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
+    "\<And>p. \<lbrace>invs and emptyable p\<rbrace> (cap_delete_one p :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
 
   assumes delete_one_deletes:
-    "\<lbrace>\<top>\<rbrace> (cap_delete_one sl :: (unit,'a::state_ext) s_monad) \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) sl\<rbrace>"
+    "\<lbrace>\<top>\<rbrace> (cap_delete_one sl :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) sl\<rbrace>"
 
   assumes delete_one_caps_of_state:
     "\<And>P p. \<lbrace>\<lambda>s. cte_wp_at can_fast_finalise p s
                   \<longrightarrow> P ((caps_of_state s) (p \<mapsto> cap.NullCap))\<rbrace>
-             (cap_delete_one p :: (unit,'a::state_ext) s_monad)
+             (cap_delete_one p :: (unit,'a) s_monad)
             \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>" 
 
 
@@ -317,26 +321,6 @@ lemma get_epq_sp:
   apply (wp|simp)+
   done
 
-
-crunch v_ker_map[wp]: set_endpoint "valid_kernel_mappings"
-  (ignore: set_object wp: set_object_v_ker_map crunch_wps)
-
-crunch eq_ker_map[wp]: set_endpoint "equal_kernel_mappings"
-  (ignore: set_object wp: set_object_equal_mappings crunch_wps)
-
-
-lemma set_endpoint_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_pd_mappings\<rbrace>
-      set_endpoint p val
-   \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
-  apply (simp add: set_endpoint_def)
-  apply (wp get_object_wp set_object_global_pd_mappings)
-  apply (clarsimp simp: obj_at_def a_type_def
-                 split: Structures_A.kernel_object.split_asm
-                        arch_kernel_obj.splits)
-  done  
-
-
 lemma set_ep_cap_refs_in_kernel_window [wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_endpoint ep p \<lbrace>\<lambda>_. cap_refs_in_kernel_window\<rbrace>"
   unfolding set_endpoint_def
@@ -345,6 +329,7 @@ lemma set_ep_cap_refs_in_kernel_window [wp]:
                   split: Structures_A.kernel_object.splits)
   done
 
+  
 
 lemma set_endpoint_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. valid_ioc\<rbrace>"
@@ -356,14 +341,6 @@ lemma set_endpoint_valid_ioc[wp]:
            split: Structures_A.kernel_object.splits)
   done
 
-
-lemma set_endpoint_vms[wp]:
-  "\<lbrace>valid_machine_state\<rbrace> set_endpoint p q \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
-  apply (simp add: valid_machine_state_def in_user_frame_def)
-  apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift hoare_vcg_ex_lift)
-  apply (simp add: set_endpoint_def)
-  apply (wp hoare_drop_imps)
-  done
 
 lemma refs_in_tcb_bound_refs:
   "(x, ref) \<in> tcb_bound_refs ntfn \<Longrightarrow> ref = TCBBound"
@@ -686,11 +663,11 @@ crunch cte_wp_at[wp]: blocked_cancel_ipc "cte_wp_at P p"
 crunch cte_wp_at[wp]: cancel_signal "cte_wp_at P p"
   (wp: crunch_wps)
 
-
 locale delete_one_pre =
+  fixes state_ext_type :: "('a :: state_ext) itself"
   assumes delete_one_cte_wp_at_preserved:
     "(\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap) \<Longrightarrow>
-     \<lbrace>cte_wp_at P sl\<rbrace> (cap_delete_one sl' :: (unit,'a::state_ext) s_monad) \<lbrace>\<lambda>rv. cte_wp_at P sl\<rbrace>"
+     \<lbrace>cte_wp_at P sl\<rbrace> (cap_delete_one sl' :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. cte_wp_at P sl\<rbrace>"
 
 
 lemma (in delete_one_pre) reply_cancel_ipc_cte_wp_at_preserved:
@@ -1273,6 +1250,5 @@ lemma cancel_badged_sends_invs[wp]:
 lemma real_cte_emptyable_strg:
   "real_cte_at p s \<longrightarrow> emptyable p s"
   by (clarsimp simp: emptyable_def obj_at_def is_tcb is_cap_table)
-
 
 end

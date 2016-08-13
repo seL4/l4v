@@ -9,9 +9,12 @@
  *)
 
 theory DomainSepInv
-imports    "Ipc_AC" (* for transfer_caps_loop_pres_dest lec_valid_cap' set_endpoint_get_tcb thread_set_tcb_fault_update_valid_mdb *)
-  "../../lib/wp/WPBang"
+imports
+  "Ipc_AC" (* for transfer_caps_loop_pres_dest lec_valid_cap' set_endpoint_get_tcb thread_set_tcb_fault_update_valid_mdb *)
+  "../../lib/Monad_WP/wp/WPBang"
 begin
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 text {*
   We define and prove an invariant that is necessary to achieve domain
@@ -1209,7 +1212,7 @@ crunch domain_sep_inv[wp]: bind_notification "domain_sep_inv irqs st"
 
 lemma invoke_tcb_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and
-    tcb_inv_wf tinv\<rbrace>
+    Tcb_AI.tcb_inv_wf tinv\<rbrace>
    invoke_tcb tinv
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(case_tac tinv)
@@ -1389,9 +1392,13 @@ lemma domain_sep_inv_cur_thread_update[simp]:
   done
 
 crunch domain_sep_inv[wp]: choose_thread "domain_sep_inv irqs st"
-  (wp: crunch_wps dxo_wp_weak ignore: tcb_sched_action MachineOps.clearExMonitor)
+  (wp: crunch_wps dxo_wp_weak ignore: tcb_sched_action ARM.clearExMonitor)
+
+end
 
 lemma (in is_extended') domain_sep_inv[wp]: "I (domain_sep_inv irqs st)" by (rule lift_inv, simp)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma schedule_domain_sep_inv: "\<lbrace>domain_sep_inv irqs st\<rbrace> (schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
@@ -1408,5 +1415,7 @@ apply (simp add: call_kernel_def getActiveIRQ_def)
 apply (wp handle_interrupt_domain_sep_inv handle_event_domain_sep_inv schedule_domain_sep_inv
      | simp)+
 done
+
+end
 
 end

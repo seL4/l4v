@@ -18,9 +18,21 @@ theory Decode_A
 imports
   Interrupt_A
   "./$L4V_ARCH/ArchDecode_A"
-  "../../lib/WordLib"
   "../design/InvocationLabels_H"
 begin
+
+context begin interpretation Arch .
+
+requalify_consts
+ ArchDefaultExtraRegisters
+ check_valid_ipc_buffer
+ is_valid_vtable_root
+ arch_decode_irq_control_invocation 
+ arch_data_to_obj_type
+ arch_decode_invocation
+
+end
+          
 
 text {*
   This theory includes definitions describing how user arguments are 

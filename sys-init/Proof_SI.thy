@@ -44,7 +44,7 @@ lemma parse_bootinfo_sep:
   apply (clarsimp simp: parse_bootinfo_def)
   apply (cases bootinfo, clarsimp)
   apply wp
-  apply (clarsimp simp: zip_map comp_def split_beta')
+  apply (clarsimp simp: zip_map1 comp_def split_beta')
   done
 
 lemma parse_spec_inv:

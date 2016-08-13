@@ -8,9 +8,10 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory TailrecPre imports    "../../lib/WordLib"
-    "../../lib/Lib"
-
+theory TailrecPre
+imports
+  "../../lib/$L4V_ARCH/WordSetup"
+  "../../lib/Lib"
 begin
 
 definition

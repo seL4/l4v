@@ -9,7 +9,9 @@
  *)
 
 theory SubMonadLib
-imports EmptyFailLib Corres_UL
+imports
+  EmptyFailLib
+  Corres_UL
 begin
 
 locale submonad_args =
@@ -312,23 +314,23 @@ proof (induct l)
 qed
 
 lemma corres_select:
-  "(\<forall>s' \<in> S'. \<exists>s \<in> S. rvr s s') \<Longrightarrow> corres_underlying sr nf rvr \<top> \<top> (select S) (select S')"
+  "(\<forall>s' \<in> S'. \<exists>s \<in> S. rvr s s') \<Longrightarrow> corres_underlying sr nf nf' rvr \<top> \<top> (select S) (select S')"
   by (clarsimp simp: select_def corres_underlying_def)
 
 lemma corres_select_f:
-  "\<lbrakk> \<forall>s' \<in> fst S'. \<exists>s \<in> fst S. rvr s s'; nf \<Longrightarrow> \<not> snd S' \<rbrakk>
-      \<Longrightarrow> corres_underlying sr nf rvr \<top> \<top> (select_f S) (select_f S')"
+  "\<lbrakk> \<forall>s' \<in> fst S'. \<exists>s \<in> fst S. rvr s s'; nf' \<Longrightarrow> \<not> snd S' \<rbrakk>
+      \<Longrightarrow> corres_underlying sr nf nf' rvr \<top> \<top> (select_f S) (select_f S')"
   by (clarsimp simp: select_f_def corres_underlying_def)
 
 lemma corres_modify':
   "\<lbrakk> (\<forall>s s'. (s, s') \<in> sr \<longrightarrow> (f s, f' s') \<in> sr); r () () \<rbrakk>
-      \<Longrightarrow> corres_underlying sr nf r \<top> \<top> (modify f) (modify f')"
+      \<Longrightarrow> corres_underlying sr nf nf' r \<top> \<top> (modify f) (modify f')"
   by (clarsimp simp: modify_def corres_underlying_def bind_def get_def put_def)
 
 (* FIXME: this should only be used for the lemma below *)
 lemma corres_select_f_stronger:
-  "\<lbrakk> \<forall>s' \<in> fst S'. \<exists>s \<in> fst S. rvr s s'; nf \<Longrightarrow> \<not> snd S' \<rbrakk>
-      \<Longrightarrow> corres_underlying sr nf rvr \<top> \<top> (select_f S) (select_f S')"
+  "\<lbrakk> \<forall>s' \<in> fst S'. \<exists>s \<in> fst S. rvr s s'; nf' \<Longrightarrow> \<not> snd S' \<rbrakk>
+      \<Longrightarrow> corres_underlying sr nf nf' rvr \<top> \<top> (select_f S) (select_f S')"
   by (clarsimp simp: select_f_def corres_underlying_def)
 
 lemma stateAssert_sp:
@@ -339,8 +341,8 @@ lemma corres_submonad:
   "\<lbrakk> submonad f r g fn; submonad f' r' g' fn';
      \<forall>s s'. (s, s') \<in> sr \<and> g s \<and> g' s' \<longrightarrow> (f s, f' s') \<in> ssr;
      \<forall>s s' ss ss'. ((s, s') \<in> sr \<and> (ss, ss') \<in> ssr) \<longrightarrow> (r ss s, r' ss' s') \<in> sr;
-     corres_underlying ssr nf rvr \<top> \<top> x x'\<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf rvr g g' (fn x) (fn' x')"
+     corres_underlying ssr False nf' rvr \<top> \<top> x x'\<rbrakk>
+   \<Longrightarrow> corres_underlying sr False nf' rvr g g' (fn x) (fn' x')"
   apply (subst submonad.fn_is_sm, assumption)+
   apply (clarsimp simp: submonad_fn_def)
   apply (rule corres_split' [OF _ _ stateAssert_sp stateAssert_sp])

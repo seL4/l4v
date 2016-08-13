@@ -75,11 +75,13 @@ lemma doMachineOp_sched:
   apply fastforce
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch queues[wp]: setupReplyMaster "valid_queues"
   (simp: crunch_simps wp: crunch_wps)
 
 crunch curThread [wp]: restart "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps simp: crunch_simps)
+end
 
 context kernel_m
 begin
@@ -993,17 +995,23 @@ lemma Arch_performTransfer_ccorres:
      apply simp+
   done
 
+(*FIXME: arch_split: C kernel names hidden by Haskell names *)
+abbreviation "frameRegistersC \<equiv> kernel_all_substitute.frameRegisters"
+lemmas frameRegistersC_def = kernel_all_substitute.frameRegisters_def
+abbreviation "gpRegistersC \<equiv> kernel_all_substitute.gpRegisters"
+lemmas gpRegistersC_def = kernel_all_substitute.gpRegisters_def
+
 lemma frame_gp_registers_convs:
-  "length State_H.frameRegisters = unat n_frameRegisters"
-  "length State_H.gpRegisters = unat n_gpRegisters"
-  "n < length State_H.frameRegisters \<Longrightarrow>
-     index frameRegisters n = register_from_H (State_H.frameRegisters ! n)"
-  "n < length State_H.gpRegisters \<Longrightarrow>
-     index gpRegisters n = register_from_H (State_H.gpRegisters ! n)"
-  apply (simp_all add: State_H.gpRegisters_def State_H.frameRegisters_def
-                       MachineTypes.gpRegisters_def n_gpRegisters_def
-                       MachineTypes.frameRegisters_def n_frameRegisters_def
-                       frameRegisters_def gpRegisters_def msgRegisters_unfold
+  "length ARM_H.frameRegisters = unat n_frameRegisters"
+  "length ARM_H.gpRegisters = unat n_gpRegisters"
+  "n < length ARM_H.frameRegisters \<Longrightarrow>
+     index frameRegistersC n = register_from_H (ARM_H.frameRegisters ! n)"
+  "n < length ARM_H.gpRegisters \<Longrightarrow>
+     index gpRegistersC n = register_from_H (ARM_H.gpRegisters ! n)"
+  apply (simp_all add: ARM_H.gpRegisters_def ARM_H.frameRegisters_def
+                       ARM.gpRegisters_def n_gpRegisters_def
+                       ARM.frameRegisters_def n_frameRegisters_def
+                       frameRegistersC_def gpRegistersC_def msgRegisters_unfold
                        fupdate_def Arrays.update_def toEnum_def
                        upto_enum_def fromEnum_def enum_register)
   apply (auto simp: less_Suc_eq fcp_beta Kernel_C.LR_def R14_def)
@@ -1430,7 +1438,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
           apply (rule ccorres_stateAssert)
           apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg) 
               apply (rule_tac F="\<lambda>n. sysargs_rel args buffer 
-                                     and sysargs_rel_n args buffer (n + length State_H.frameRegisters + 2)
+                                     and sysargs_rel_n args buffer (n + length ARM_H.frameRegisters + 2)
                                      and (\<lambda>s. dst \<noteq> ksCurThread s)"
                           and Q=UNIV
                            in ccorres_mapM_x_whileQ)
@@ -1454,8 +1462,8 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                 apply (clarsimp simp: n_msgRegisters_def frame_gp_registers_convs
                                       n_frameRegisters_def)
                 apply arith
-               apply (simp add: State_H.gpRegisters_def word_bits_def
-                                MachineTypes.gpRegisters_def)
+               apply (simp add: ARM_H.gpRegisters_def word_bits_def
+                                ARM.gpRegisters_def)
               apply simp
              apply (rule ceqv_refl)
             apply (ctac(no_vcg) add: getRestartPC_ccorres)
@@ -1546,12 +1554,12 @@ lemmas getRegister_ccorres_defer
     = ccorres_defer[OF getRegister_ccorres, OF no_fail_asUser [OF no_fail_getRegister]]
 
 lemma msg_registers_convs:
-  "length State_H.msgRegisters = unat n_msgRegisters"
-  "n < length State_H.msgRegisters \<Longrightarrow>
-     index msgRegisters n = register_from_H (State_H.msgRegisters ! n)"
+  "length ARM_H.msgRegisters = unat n_msgRegisters"
+  "n < length ARM_H.msgRegisters \<Longrightarrow>
+     index msgRegistersC n = register_from_H (ARM_H.msgRegisters ! n)"
   apply (simp_all add: msgRegisters_unfold
-                       MachineTypes.msgRegisters_def n_msgRegisters_def
-                       msgRegisters_def fupdate_def Arrays.update_def)
+                       ARM.msgRegisters_def n_msgRegisters_def
+                       msgRegistersC_def fupdate_def Arrays.update_def)
   apply (auto simp: less_Suc_eq fcp_beta)
   done
 
@@ -1578,7 +1586,7 @@ lemma valid_ipc_buffer_ptr_the_strengthen:
 lemma lookupIPCBuffer_Some_0:
   "\<lbrace>\<top>\<rbrace> lookupIPCBuffer w t \<lbrace>\<lambda>rv s. rv \<noteq> Some 0\<rbrace>"
   apply (simp add: lookupIPCBuffer_def
-                   ArchVSpace_H.lookupIPCBuffer_def
+                   ARM_H.lookupIPCBuffer_def
                    Let_def getThreadBufferSlot_def
                    locateSlot_conv
              cong: if_cong)
@@ -1593,7 +1601,7 @@ lemma asUser_valid_ipc_buffer_ptr':
 
 lemma invokeTCB_ReadRegisters_ccorres:
 notes
-  min_simps [simp del]
+  nat_min_simps [simp del]
   wordSize_def' [simp]
 shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -1645,7 +1653,7 @@ shows
                                 in ccorres_gen_asm)
                     apply (rule ccorres_split_nothrow_novcg)
                         apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
-                                                     (State_H.frameRegisters @ State_H.gpRegisters))
+                                                     (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                               = reply) target s"
                                    in ccorres_mapM_x_while)
                             apply clarsimp
@@ -1712,7 +1720,7 @@ shows
                            apply (simp del: Collect_const)
                            apply (rule ccorres_rel_imp,
                                   rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
-                                                      (State_H.frameRegisters @ State_H.gpRegisters))
+                                                      (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                                = reply) target s
                                                  \<and> valid_ipc_buffer_ptr' (the rva) s
                                                  \<and> valid_pspace' s"
@@ -1826,7 +1834,7 @@ shows
                             apply (rule ccorres_Cond_rhs)
                              apply (simp del: Collect_const)
                              apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
-                                                       (State_H.frameRegisters @ State_H.gpRegisters))
+                                                       (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                                 = reply) target s
                                                   \<and> valid_ipc_buffer_ptr' (the rva) s \<and> valid_pspace' s"
                                         and i="0" in ccorres_mapM_x_while')
@@ -1962,8 +1970,8 @@ shows
                  apply (strengthen valid_ipc_buffer_ptr_the_strengthen)
                  apply simp
                  apply (wp lookupIPCBuffer_Some_0 | wp_once hoare_drop_imps)+
-                apply (simp add: Collect_const_mem State_H.badgeRegister_def
-                                 MachineTypes.badgeRegister_def
+                apply (simp add: Collect_const_mem ARM_H.badgeRegister_def
+                                 ARM.badgeRegister_def
                                  "StrictC'_register_defs")
                 apply (vcg exspec=lookupIPCBuffer_modifies)
                apply (simp add: false_def)
@@ -2396,7 +2404,7 @@ lemma ccap_relation_gen_framesize_to_H:
        \<Longrightarrow> gen_framesize_to_H (generic_frame_cap_get_capFSize_CL (cap_lift cap'))
                  = capVPSize (capCap cap)"
   apply (clarsimp simp: isCap_simps)
-  apply (case_tac "sz = MachineTypes.ARMSmallPage")
+  apply (case_tac "sz = ARM.ARMSmallPage")
    apply (frule cap_get_tag_PageCap_small_frame)
    apply (simp add: cap_get_tag_isCap isCap_simps
                     pageSize_def cap_lift_small_frame_cap
@@ -2420,7 +2428,7 @@ lemma checkValidIPCBuffer_ccorres:
   apply (cases "isArchPageCap cp")
    apply (simp only: isCap_simps, safe)[1]
    apply (cinit lift: vptr_' cap_')
-    apply (simp add: ArchVSpace_H.checkValidIPCBuffer_def del: Collect_const)
+    apply (simp add: ARM_H.checkValidIPCBuffer_def del: Collect_const)
     apply (csymbr, csymbr)
     apply (simp add: cap_get_tag_isCap if_1_0_0 isCap_simps del: Collect_const)
     apply (rule ccorres_add_return,
@@ -2455,7 +2463,7 @@ lemma checkValidIPCBuffer_ccorres:
    apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
   apply (cinit lift: vptr_' cap_')
    apply csymbr
-   apply (simp add: ArchVSpace_H.checkValidIPCBuffer_def
+   apply (simp add: ARM_H.checkValidIPCBuffer_def
                     cap_get_tag_isCap)
    apply csymbr
    apply simp
@@ -2516,8 +2524,9 @@ lemma slotCapLongRunningDelete_ccorres:
                  split: capability.split)[1]
       apply simp
       apply (wp hoare_drop_imps isFinalCapability_inv)
-     apply (clarsimp simp: Collect_const_mem guard_is_UNIV_def
-                           from_bool_0 false_def true_def)
+     apply (clarsimp simp: Collect_const_mem guard_is_UNIV_def)
+     apply (rename_tac rv')
+     apply (case_tac rv'; clarsimp simp: false_def true_def)
     apply vcg
    apply (rule conseqPre, vcg, clarsimp)
   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -2554,12 +2563,12 @@ lemma isValidVTableRoot_conv:
       \<Longrightarrow> isValidVTableRoot_C cap' = isValidVTableRoot cap"
   apply (clarsimp simp: isValidVTableRoot_C_def
                         if_1_0_0 from_bool_0 isValidVTableRoot_def
-                        ArchVSpace_H.isValidVTableRoot_def)
+                        ARM_H.isValidVTableRoot_def)
   apply (case_tac "isArchCap_tag (cap_get_tag cap')")
    apply (clarsimp simp: cap_get_tag_isCap cap_get_tag_isCap_ArchObject)
    apply (case_tac "cap_get_tag cap' = scast cap_page_directory_cap")
     apply (clarsimp split: arch_capability.split simp: isCap_simps)
-    apply (clarsimp simp: ccap_relation_def option_map_Some_eq2
+    apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                           cap_page_directory_cap_lift cap_to_H_def
                           from_bool_def)
     apply (clarsimp simp: to_bool_def split: split_if)
@@ -2766,7 +2775,7 @@ lemma decodeTCBConfigure_ccorres:
                          apply (drule obj_at_ko_at', clarsimp+)
                          apply (erule cmap_relationE1 [OF cmap_relation_tcb], erule ko_at_projectKO_opt)
                          apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-                         apply (simp add: word32_FF_is_mask ucast_ucast_mask8)
+                         apply (simp add: word_FF_is_mask ucast_ucast_mask8)
                          apply (drule sym, simp, fastforce simp: unat_ucast_8_32 word_less_nat_alt)
                         apply (simp add: injection_handler_throwError)
                         apply (rule syscall_error_throwError_ccorres_n)
@@ -2787,7 +2796,6 @@ lemma decodeTCBConfigure_ccorres:
                             apply (rule allI, rule conseqPre, vcg)
                             apply (clarsimp simp: returnOk_def return_def)
                            apply (rule ccorres_rhs_assoc)+
-                           apply csymbr
                            apply (rule ccorres_split_nothrowE)
                                 apply (simp add: numeral_eqs)
                                 apply (ctac add: ccorres_injection_handler_csum1[OF deriveCap_ccorres])
@@ -2993,7 +3001,7 @@ lemma decodeTCBConfigure_ccorres:
                        apply (subgoal_tac "args \<noteq> [] \<and> extraCaps \<noteq> []")
                         apply (simp add: word_sle_def cap_get_tag_isCap numeral_eqs
                                          hd_conv_nth hd_drop_conv_nth2 ucast_ucast_mask8
-                                         word32_FF_is_mask split_def
+                                         word_FF_is_mask split_def
                                          thread_control_update_priority_def
                                          thread_control_update_space_def
                                          thread_control_update_ipc_buffer_def
@@ -3108,7 +3116,7 @@ lemma decodeSetPriority_ccorres:
             apply (frule rf_sr_ksCurThread)
             apply (erule cmap_relationE1 [OF cmap_relation_tcb], erule ko_at_projectKO_opt)
             apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-            apply (simp add: ucast_ucast_mask8 word32_FF_is_mask)
+            apply (simp add: ucast_ucast_mask8 word_FF_is_mask)
             apply (drule sym, simp, fastforce simp: unat_ucast_8_32 word_less_nat_alt)
            apply (simp add: invocationCatch_def
                       cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -3153,14 +3161,13 @@ lemma decodeSetPriority_ccorres:
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (clarsimp simp: valid_cap'_def capAligned_def)
   apply (intro conjI impI allI)
-      apply (clarsimp simp: unat_eq_0)
-     apply (clarsimp simp: word32_FF_is_mask ucast_ucast_mask)
-    apply (thin_tac "tcb_at' p s" for p s)+
-    apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
-    apply (drule obj_at_ko_at', clarsimp)
-    apply (erule cmap_relationE1 [OF cmap_relation_tcb], erule ko_at_projectKO_opt)
-    apply (fastforce intro: typ_heap_simps)
-   apply (simp add: word_sle_def)
+     apply (clarsimp simp: unat_eq_0)
+    apply (clarsimp simp: word_FF_is_mask ucast_ucast_mask)
+   apply (thin_tac "tcb_at' p s" for p s)+
+   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
+   apply (drule obj_at_ko_at', clarsimp)
+   apply (erule cmap_relationE1 [OF cmap_relation_tcb], erule ko_at_projectKO_opt)
+   apply (fastforce intro: typ_heap_simps)
   apply clarsimp
   done
 

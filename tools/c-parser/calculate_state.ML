@@ -364,10 +364,10 @@ let
       | isa_to_string (recd (s, _)) = s
       | isa_to_string (array (ty, n, _)) = "Array " ^ (isa_to_string ty) ^
                                            " " ^ (Int.toString n)
-      | isa_to_string (existing (Type("Word.word",
-                                  [Type ("SignedWords.signed", [n])]), _)) =
-            "SignedWord " ^ num_ty_string n
-      | isa_to_string (existing (Type("Word.word",
+      | isa_to_string (existing (Type(@{type_name "word"},
+                                  [Type (@{type_name "Signed_Words.signed"}, [n])]), _)) =
+            "Signed_Word " ^ num_ty_string n
+      | isa_to_string (existing (Type(@{type_name "word"},
                                       [n]), _)) = "Word " ^ num_ty_string n
       | isa_to_string _ = error "Unexpected type in isa_to_string"
 

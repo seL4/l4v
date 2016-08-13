@@ -9,8 +9,13 @@
  *)
 
 theory EmptyFail_AI
-imports Tcb_AI
+imports "./$L4V_ARCH/ArchTcb_AI"
 begin
+
+context begin interpretation Arch .
+requalify_facts
+  ef_machine_op_lift
+end
 
 lemmas [wp] = empty_fail_bind empty_fail_bindE empty_fail_get empty_fail_modify
               empty_fail_whenEs empty_fail_when empty_fail_gets empty_fail_assertE
@@ -137,13 +142,11 @@ lemma put_empty_fail[wp]:
 
 crunch_ignore (empty_fail)
   (add: bind bindE lift liftE liftM "when" whenE unless unlessE return fail assert_opt
-        mapM mapM_x sequence_x catch handleE invalidateTLB_ASID_impl
-        invalidateTLB_VAASID_impl cleanByVA_impl cleanByVA_PoU_impl invalidateByVA_impl
-        invalidateByVA_I_impl invalidate_I_PoU_impl cleanInvalByVA_impl branchFlush_impl
-        clean_D_PoU_impl cleanInvalidate_D_PoC_impl cleanInvalidateL2Range_impl
-        invalidateL2Range_impl cleanL2Range_impl flushBTAC_impl writeContextID_impl
-        isb_impl dsb_impl dmb_impl setHardwareASID_impl writeTTBR0_impl do_extended_op
-        cacheRangeOp)
+        mapM mapM_x sequence_x catch handleE do_extended_op
+        cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
+        reschedule_required switch_if_required_to attempt_switch_to set_thread_state_ext
+        OR_choice OR_choiceE set_priority timer_tick)
+
 
 crunch (empty_fail) empty_fail[wp]: set_object, gets_the, get_register, get_cap
   (simp: split_def kernel_object.splits)
@@ -214,54 +217,64 @@ lemma spec_empty_whenE: "spec_empty_fail f s \<Longrightarrow> spec_empty_fail (
   apply (clarsimp simp: spec_empty_returnOk)
   done
 
-
 lemma use_spec_empty_fail: "(\<And>s. spec_empty_fail f s) \<Longrightarrow> empty_fail f"
   apply (simp add: empty_fail_def spec_empty_fail_def)
   done
 
-
 lemma resolve_address_bits_spec_empty_fail:
   notes spec_empty_fail_bindE'[wp_split]        
-  shows
-  "spec_empty_fail (resolve_address_bits slot) s"
-unfolding resolve_address_bits_def
-proof (induct arbitrary: s rule: resolve_address_bits'.induct)
-  case (1 z cap cref s')
-  show ?case
-    apply (simp add: resolve_address_bits'.simps)
-    apply (case_tac cap,(wp | simp del: resolve_address_bits'.simps | intro impI conjI | rule "1.hyps" | rule drop_spec_empty_fail | simp add: whenE_def in_monad | force)+)
-    done
- qed
+  shows "spec_empty_fail (resolve_address_bits slot) s"
+  unfolding resolve_address_bits_def
+  proof (induct arbitrary: s rule: resolve_address_bits'.induct)
+    case (1 z cap cref s')
+    show ?case
+      apply (simp add: resolve_address_bits'.simps)
+      apply (case_tac cap,
+              (wp | simp | intro impI conjI | rule "1.hyps" | rule drop_spec_empty_fail
+                  | simp add: whenE_def in_monad | force)+)
+      done
+  qed
 
 lemmas resolve_address_bits_empty_fail[wp] =
        resolve_address_bits_spec_empty_fail[THEN use_spec_empty_fail]
 
-crunch (empty_fail) empty_fail[wp]: loadWord, load_word_offs
+crunch (empty_fail) empty_fail[wp]:
+  set_register, lookup_slot_for_cnode_op, decode_untyped_invocation, range_check,
+  lookup_source_slot, lookup_pivot_slot, cap_swap_for_delete, is_final_cap, set_cap,
+  allActiveTCBs
+
+
+locale EmptyFail_AI_load_word =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes loadWord_empty_fail[wp]: "\<And>p. empty_fail (loadWord p)"
+  assumes load_word_offs_empty_fail[wp]:
+    "\<And>p offset. empty_fail (load_word_offs p offset :: (machine_word, 'state_ext) s_monad)"
+
+
+context EmptyFail_AI_load_word begin
 
 lemma get_extra_cptrs_empty_fail[wp]:
-  "empty_fail (get_extra_cptrs a b)"
+  fixes a b
+  shows "empty_fail (get_extra_cptrs a b :: (cap_ref list, 'state_ext) s_monad)"
   apply (simp add: get_extra_cptrs_def)
   apply (cases a)
-   apply (simp | wp)+
+   apply (simp | wp loadWord_empty_fail load_word_offs_empty_fail)+
    done
 
-crunch_ignore (empty_fail)
-  (add: cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
-        reschedule_required switch_if_required_to attempt_switch_to set_thread_state_ext
-        OR_choice OR_choiceE set_priority timer_tick)
+end
 
-crunch (empty_fail) empty_fail[wp]: storeWord, set_register, lookup_slot_for_cnode_op,
-                   getRestartPC, decode_untyped_invocation, get_mrs, range_check,
-                   handle_fault
-  (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
-         bool.splits list.splits thread_state.splits split_def catch_def sum.splits
-         Let_def wp: zipWithM_x_empty_fail)
+locale EmptyFail_AI_derive_cap = EmptyFail_AI_load_word state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself" +
+  assumes derive_cap_empty_fail[wp]:
+    "\<And>slot cap. empty_fail (derive_cap slot cap :: (cap, 'state_ext) se_monad)"
 
-crunch (empty_fail)empty_fail[wp]: lookup_source_slot,lookup_pivot_slot
+context EmptyFail_AI_derive_cap begin
 
 lemma decode_cnode_invocation_empty_fail[wp]:
-  "empty_fail (decode_cnode_invocation a b c d)"
+  "\<And>a b c d. empty_fail (decode_cnode_invocation a b c d :: (cnode_invocation, 'state_ext) se_monad)"
   by (simp add: decode_cnode_invocation_def split: invocation_label.splits list.splits | wp | intro impI conjI allI)+
+
+end
 
 lemma decode_read_registers_empty_fail[wp]:
   "empty_fail (decode_read_registers data (ThreadCap p))"
@@ -276,82 +289,29 @@ lemma decode_copy_registers_empty_fail[wp]:
   by (simp add: decode_copy_registers_def split: list.splits cap.splits | wp | intro allI impI conjI)+
 
 lemma alternative_empty_fail[wp]:
-  "empty_fail f \<or> empty_fail g \<Longrightarrow> empty_fail (f OR g)"
+  "empty_fail f \<or> empty_fail g \<Longrightarrow> empty_fail (f \<sqinter> g)"
   by (auto simp: alternative_def empty_fail_def)
 
 lemma OR_choice_empty_fail[wp]:
   "\<lbrakk>empty_fail f; empty_fail g\<rbrakk> \<Longrightarrow> empty_fail (OR_choice c f g)"
   by (simp add: OR_choice_def mk_ef_def split_def | wp)+
 
-crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification
-  (simp: cap.splits arch_cap.splits split_def)
-
-lemma decode_tcb_invocation_empty_fail[wp]:
-  "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
-  apply (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
-  done
-
-crunch (empty_fail) empty_fail[wp]: find_pd_for_asid, get_master_pde, check_vp_alignment,
-                   create_mapping_entries, ensure_safe_mapping, get_asid_pool, resolve_vaddr
-  (simp: kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits)
-
 lemmas empty_fail_return[wp]
 
-lemma arch_decode_ARMASIDControlMakePool_empty_fail:
-  "invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
-    \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
-  apply (simp add: arch_decode_invocation_def Let_def)
-  apply (intro impI conjI allI)
-   apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
-   apply (rule impI)
-   apply (simp add: split_def)
-   apply wp
-    apply simp
-   apply (subst bindE_assoc[symmetric])
-   apply (rule empty_fail_bindE)
-    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: split_if_asm)
-   by (simp add: Let_def split: cap.splits arch_cap.splits option.splits | wp | intro conjI impI allI)+
+locale EmptyFail_AI_rec_del = EmptyFail_AI_derive_cap state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself" +
+  assumes empty_slot_empty_fail[wp]:
+    "\<And>slot irq. empty_fail (empty_slot slot irq :: (unit, 'state_ext) s_monad)"
+  assumes finalise_cap_empty_fail[wp]:
+    "\<And>cap final. empty_fail (finalise_cap cap final :: (cap \<times> irq option, 'state_ext) s_monad)"
+  assumes preemption_point_empty_fail[wp]:
+    "empty_fail (preemption_point :: (unit, 'state_ext) p_monad)"
 
-lemma arch_decode_ARMASIDPoolAssign_empty_fail:
-  "invocation_type label = ArchInvocationLabel ARMASIDPoolAssign
-    \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
-  apply (simp add: arch_decode_invocation_def split_def Let_def isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits cap.splits option.splits | intro impI allI)+
-  apply (rule empty_fail_bindE)
-   apply simp
-  apply (rule empty_fail_bindE)
-   apply ((simp | wp)+)[1]
-  apply (rule empty_fail_bindE)
-   apply ((simp | wp)+)[1]
-  apply (rule empty_fail_bindE)
-   apply ((simp | wp)+)[1]
-  apply (subst bindE_assoc[symmetric])
-  apply (rule empty_fail_bindE)
-   subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def bind_def return_def returnOk_def lift_def liftE_def select_ext_def select_def gets_def get_def assert_def fail_def)
-  apply wp
-  done
-
-lemma arch_decode_invocation_empty_fail[wp]:
-  "empty_fail (arch_decode_invocation label b c d e f)"
-  apply (case_tac "invocation_type label")
-  apply (find_goal \<open>match premises in "_ = ArchInvocationLabel _" \<Rightarrow> \<open>-\<close>\<close>)
-  apply (rename_tac alabel)
-  apply (case_tac alabel; simp)
-  apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDControlMakePool_empty_fail\<close>\<close>)
-  apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
-  apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]  
-  by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
-
-crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot,
-    setHardwareASID, setCurrentPD, finalise_cap, preemption_point,
-    cap_swap_for_delete, decode_invocation
-  (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
-         notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
-         kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits)
-
-crunch (empty_fail) empty_fail[wp]: setRegister, setNextPC
+context EmptyFail_AI_rec_del begin
 
 lemma rec_del_spec_empty_fail:
-  "spec_empty_fail (rec_del call) s"
+  fixes call and s :: "'state_ext state"
+  shows "spec_empty_fail (rec_del call) s"
 proof (induct rule: rec_del.induct, simp_all only: drop_spec_empty_fail[OF empty_fail] rec_del_fails)
   case (1 slot exposed s)
   show ?case
@@ -401,16 +361,24 @@ next
 qed
 
 lemma rec_del_empty_fail[wp]:
-  "empty_fail (rec_del call)"
+  "empty_fail (rec_del call :: (bool * irq option, 'state_ext) p_monad)"
   apply (simp add: empty_fail_def)
   apply (rule allI)
   apply (rule rec_del_spec_empty_fail[simplified spec_empty_fail_def])
   done
 
-crunch (empty_fail) empty_fail[wp]: cap_delete
+end
+
+locale EmptyFail_AI_cap_revoke = EmptyFail_AI_rec_del state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself" +
+  assumes cap_delete_empty_fail[wp]:
+    "\<And>cap. empty_fail (cap_delete cap :: (unit, 'state_ext) p_monad)"
+
+context EmptyFail_AI_cap_revoke begin
 
 lemma cap_revoke_spec_empty_fail:
-  "spec_empty_fail (cap_revoke slot) s"
+  fixes slot and s :: "'state_ext state"
+  shows "spec_empty_fail (cap_revoke slot) s"
 proof (induct rule: cap_revoke.induct)
   case (1 slot)
   show ?case
@@ -425,19 +393,26 @@ proof (induct rule: cap_revoke.induct)
 qed
 
 lemma cap_revoke_empty_fail[wp]:
-  "empty_fail (cap_revoke slot)"
+  "\<And>slot. empty_fail (cap_revoke slot :: (unit, 'state_ext) p_monad)"
   apply (simp add: empty_fail_def)
   apply (rule allI)
   apply (rule cap_revoke_spec_empty_fail[simplified spec_empty_fail_def])
   done
 
-lemma clearExMonitor_empty_fail[wp]:
-  "empty_fail clearExMonitor"
-  by (simp add: clearExMonitor_def)
+end
 
-crunch (empty_fail) empty_fail[wp]: choose_thread
+locale EmptyFail_AI_schedule = EmptyFail_AI_cap_revoke state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself" +
+  assumes switch_to_idle_thread_empty_fail[wp]:
+    "empty_fail (switch_to_idle_thread :: (unit, 'state_ext) s_monad)"
+  assumes get_thread_state_empty_fail[wp]:
+    "empty_fail (get_thread_state ref :: (thread_state, 'state_ext) s_monad)"
+  assumes guarded_switch_to_empty_fail[wp]:
+    "empty_fail (guarded_switch_to thread :: (unit, 'state_ext) s_monad)"
 
-crunch (empty_fail) empty_fail: allActiveTCBs
+locale EmptyFail_AI_schedule_unit = EmptyFail_AI_schedule "TYPE(unit)"
+
+context EmptyFail_AI_schedule_unit begin
 
 lemma schedule_empty_fail[wp]:
   "empty_fail (schedule :: (unit,unit) s_monad)"
@@ -447,8 +422,15 @@ lemma schedule_empty_fail[wp]:
    apply wp
   done
 
+end
+
 crunch (empty_fail) empty_fail[wp]: set_scheduler_action, next_domain, reschedule_required
   (simp: scheduler_action.split)
+
+locale EmptyFail_AI_schedule_det = EmptyFail_AI_schedule "TYPE(det_ext)" +
+  assumes choose_thread_empty_fail[wp]: "empty_fail choose_thread"
+
+context EmptyFail_AI_schedule_det begin
 
 lemma schedule_empty_fail'[wp]:
   "empty_fail (schedule :: (unit,det_ext) s_monad)"
@@ -457,24 +439,43 @@ lemma schedule_empty_fail'[wp]:
             intro impI conjI)+
   done
 
-crunch (empty_fail) empty_fail[wp]: handle_event,activate_thread
-  (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
-         kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
-         bool.splits apiobject_type.splits aobject_type.splits notification.splits
-         thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
-         page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
-         asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
-         flush_type.splits page_directory_invocation.splits
-   ignore: resetTimer_impl ackInterrupt_impl)
+end
 
-lemma call_kernel_empty_fail: "empty_fail ((call_kernel a) :: (unit,det_ext) s_monad)"
+locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself" +
+  assumes activate_thread_empty_fail[wp]:
+    "empty_fail (activate_thread :: (unit, 'state_ext) s_monad)"
+  assumes getActiveIRQ_empty_fail[wp]:
+    "empty_fail getActiveIRQ"
+  assumes handle_event_empty_fail[wp]:
+    "\<And>event. empty_fail (handle_event event :: (unit, 'state_ext) p_monad)"
+  assumes handle_interrupt_empty_fail[wp]:
+    "\<And>interrupt. empty_fail (handle_interrupt interrupt :: (unit, 'state_ext) s_monad)"
+
+locale EmptyFail_AI_call_kernel_unit
+  = EmptyFail_AI_schedule_unit
+  + EmptyFail_AI_call_kernel "TYPE(unit)"
+
+context EmptyFail_AI_call_kernel_unit begin
+
+lemma call_kernel_empty_fail': "empty_fail (call_kernel a :: (unit,unit) s_monad)"
   apply (simp add: call_kernel_def)
-  apply (wp schedule_empty_fail | simp add: empty_fail_error_bits)+
+  apply (wp | simp)+
   done
 
-lemma call_kernel_empty_fail': "empty_fail ((call_kernel a) :: (unit,unit) s_monad)"
+end
+
+locale EmptyFail_AI_call_kernel_det
+  = EmptyFail_AI_schedule_det
+  + EmptyFail_AI_call_kernel "TYPE(det_ext)"
+
+context EmptyFail_AI_call_kernel_det begin
+
+lemma call_kernel_empty_fail: "empty_fail (call_kernel a :: (unit,det_ext) s_monad)"
   apply (simp add: call_kernel_def)
-  apply (wp schedule_empty_fail | simp add: empty_fail_error_bits)+
+  apply (wp | simp)+
   done
+
+end
 
 end

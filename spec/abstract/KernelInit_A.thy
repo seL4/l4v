@@ -8,14 +8,10 @@
  * @TAG(GD_GPL)
  *)
 
-theory KernelInit_A
+theory KernelInit_A (* FIXME: unused, out of date *)
 imports
-  "../../lib/WordEnum"
-  "../../lib/Lib"
-  Structures_A
-  Exceptions_A
   Tcb_A
-  ArchVSpace_A
+  "./$L4V_ARCH/ArchVSpace_A"
 begin
 
 section {* Generic stuff *}

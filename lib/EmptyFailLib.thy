@@ -9,7 +9,9 @@
  *)
 
 theory EmptyFailLib
-imports "wp/NonDetMonad" HaskellLib_H
+imports
+  "Monad_WP/NonDetMonad"
+  HaskellLib_H
 begin
 
 (* Collect generic empty_fail lemmas here. naming convention is emtpy_fail_NAME. 

@@ -11,7 +11,7 @@
 theory CTranslationNICTA
 imports
   "../tools/c-parser/CTranslation"
-  WordLib
+  "Word_Lib/Word_Lib"
 begin
 
 declare len_of_numeral_defs [simp del]
@@ -25,8 +25,8 @@ definition
 
 fun
   ptr_retyps :: "nat \<Rightarrow> 'a :: c_type ptr \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"
-  where
+where
   "ptr_retyps 0 p d = d"
-  | "ptr_retyps (Suc n) p d = ptr_retyp p (ptr_retyps n (CTypesDefs.ptr_add p 1) d)"
+| "ptr_retyps (Suc n) p d = ptr_retyp p (ptr_retyps n (CTypesDefs.ptr_add p 1) d)"
 
 end

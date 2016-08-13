@@ -10,7 +10,6 @@
 
 theory many_local_vars
 imports
-  "../../../spec/machine/ARM/MachineTypes"
   "../CTranslation"
 begin
 
@@ -18,7 +17,7 @@ begin
  * containing local variables. *)
 declare [[record_codegen = false]]
 
-install_C_file "many_local_vars.c" [machinety=machine_state]
+install_C_file "many_local_vars.c"
 
 context "many_local_vars_global_addresses" begin
 lemma "\<forall>\<sigma>. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call test_'proc

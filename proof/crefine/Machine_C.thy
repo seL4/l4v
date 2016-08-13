@@ -126,7 +126,7 @@ assumes cleanL2Range_ccorres:
 
 assumes clearExMonitor_ccorres:
   "ccorres dc xfdc \<top> UNIV []
-           (doMachineOp MachineOps.clearExMonitor)
+           (doMachineOp ARM.clearExMonitor)
            (Call clearExMonitor_'proc)"
 
 assumes getIFSR_ccorres:
@@ -181,7 +181,7 @@ assumes cleanCacheRange_PoU_spec:
 
 (*  clearExMonitor_fp is an inline-friendly version of clearExMonitor *)
 assumes clearExMonitor_fp_ccorres:
-  "ccorres dc xfdc (\<lambda>_. True) UNIV [] (doMachineOp MachineOps.clearExMonitor)
+  "ccorres dc xfdc (\<lambda>_. True) UNIV [] (doMachineOp ARM.clearExMonitor)
    (Call clearExMonitor_fp_'proc)"
 
 (*
@@ -215,7 +215,7 @@ assumes fastpath_restore_ccorres:
            \<inter> {s. cur_thread_' s = tcb_ptr_to_ctcb_ptr t})
      [SKIP]
      (asUser t (zipWithM_x setRegister
-               [State_H.badgeRegister, State_H.msgInfoRegister]
+               [ARM_H.badgeRegister, ARM_H.msgInfoRegister]
                [bdg, msginfo]))
      (Call fastpath_restore_'proc)"
 
@@ -697,8 +697,10 @@ lemma setCurrentPD_ccorres:
            (doMachineOp (setCurrentPD pd))
            (Call setCurrentPD_'proc)"
   apply cinit'
-   apply (simp add: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
-                    writeTTBR0_empty_fail)
+   apply (clarsimp simp: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
+                    writeTTBR0_empty_fail
+                   intro!: ccorres_cond_empty)
+   apply (rule ccorres_rhs_assoc)
    apply (ctac (no_vcg) add: dsb_ccorres)
     apply (ctac (no_vcg) add: writeTTBR0_ccorres)
      apply (ctac (no_vcg) add: isb_ccorres)

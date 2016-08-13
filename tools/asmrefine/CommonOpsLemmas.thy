@@ -1,23 +1,33 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
 theory CommonOpsLemmas
 
 imports
   "CommonOps"
-	"../../lib/WordLemmaBucket"
+        "../../lib/$L4V_ARCH/WordSetup"
 begin
 
 lemma fold_all_htd_updates':
   "ptr_retyp (p :: ('a :: c_type) ptr)
-    = all_htd_updates TYPE('a) 1 (ptr_val p) 1" 
+    = all_htd_updates TYPE('a) 1 (ptr_val p) 1"
   "(if P then (f :: heap_typ_desc \<Rightarrow> heap_typ_desc) else g) s
     = (if P then f s else g s)"
   "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
-    ptr_retyps n p = all_htd_updates TYPE('a) 1 (ptr_val p) (of_nat n)" 
+    ptr_retyps n p = all_htd_updates TYPE('a) 1 (ptr_val p) (of_nat n)"
   "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
     ptr_retyps (2 ^ n) p = all_htd_updates TYPE('a) 3 (ptr_val p) (of_nat n)"
   "n < 2 ^ 32 \<Longrightarrow> typ_clear_region x n = all_htd_updates TYPE(word32) 0 x (of_nat n)"
   "n < 2 ^ 32 \<Longrightarrow> typ_region_bytes x n = all_htd_updates TYPE(word32) 2 x (of_nat n)"
   "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
-    ptr_arr_retyps n p = all_htd_updates TYPE('a) 4 (ptr_val p) (of_nat n)" 
+    ptr_arr_retyps n p = all_htd_updates TYPE('a) 4 (ptr_val p) (of_nat n)"
   "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
     ptr_arr_retyps (2 ^ n) p = all_htd_updates TYPE('a) 5 (ptr_val p) (of_nat n)"
   by (simp_all add: all_htd_updates_def unat_of_nat fun_eq_iff of_nat_neq_0)
@@ -109,4 +119,3 @@ lemma ptr_add_assertion_sintD:
   done
 
 end
-

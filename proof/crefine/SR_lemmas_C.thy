@@ -14,6 +14,8 @@ imports
   "../refine/Invariants_H"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 section "ctes"
 
 subsection "capabilities"
@@ -41,7 +43,7 @@ lemma cap_CL_lift [simp]:
 
 lemma cteCap_update_cte_to_H [simp]:
   "\<lbrakk> cte_lift cte' = Some z; cap_lift cap' = Some capl\<rbrakk>
-  \<Longrightarrow> option_map cte_to_H (cte_lift (cte_C.cap_C_update (\<lambda>_. cap') cte')) =
+  \<Longrightarrow> map_option cte_to_H (cte_lift (cte_C.cap_C_update (\<lambda>_. cap') cte')) =
   Some (cteCap_update (\<lambda>_. cap_to_H capl) (cte_to_H z))"
   unfolding cte_lift_def
   by (clarsimp simp: cte_to_H_def split: option.splits)
@@ -508,8 +510,8 @@ lemma fst_setCTE:
            (map_to_ptes (ksPSpace s) = map_to_ptes (ksPSpace s'));
            (map_to_asidpools (ksPSpace s) = map_to_asidpools (ksPSpace s'));
            (map_to_user_data (ksPSpace s) = map_to_user_data (ksPSpace s'));
-           (option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s) 
-              = option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s'));
+           (map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s) 
+              = map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s'));
            \<forall>T p. typ_at' T p s = typ_at' T p s'\<rbrakk> \<Longrightarrow> P"
   shows   "P"
 proof -
@@ -603,8 +605,8 @@ proof -
       using use_valid[OF _ sta, OF thms(1), OF refl]
       by auto
 
-    show "option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s) =
-      option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s')"
+    show "map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s) =
+      map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s')"
     proof (rule ext)
       fix x
   
@@ -625,8 +627,8 @@ proof -
 
       {
 	assume "x \<in> dom (map_to_tcbs (ksPSpace s))"
-	hence "option_map tcb_no_ctes_proj (map_to_tcbs (ksPSpace s) x)
-	  = option_map tcb_no_ctes_proj (map_to_tcbs (ksPSpace s') x)"
+	hence "map_option tcb_no_ctes_proj (map_to_tcbs (ksPSpace s) x)
+	  = map_option tcb_no_ctes_proj (map_to_tcbs (ksPSpace s') x)"
  	  using thms(3) thms(4)
 	  apply -
 	  apply (frule map_comp_subset_domD)
@@ -640,14 +642,14 @@ proof -
       } moreover
       {
 	assume "x \<notin> dom (map_to_tcbs (ksPSpace s))"
-	hence "option_map tcb_no_ctes_proj (map_to_tcbs (ksPSpace s) x)
-	  = option_map tcb_no_ctes_proj (map_to_tcbs (ksPSpace s') x)"
+	hence "map_option tcb_no_ctes_proj (map_to_tcbs (ksPSpace s) x)
+	  = map_option tcb_no_ctes_proj (map_to_tcbs (ksPSpace s') x)"
 	  apply -
 	  apply (frule subst [OF dm])
 	  apply (simp add: dom_def)
 	  done
-      } ultimately show "(option_map tcb_no_ctes_proj \<circ> (map_to_tcbs (ksPSpace s))) x
-	  = (option_map tcb_no_ctes_proj \<circ> (map_to_tcbs (ksPSpace s'))) x"
+      } ultimately show "(map_option tcb_no_ctes_proj \<circ> (map_to_tcbs (ksPSpace s))) x
+	  = (map_option tcb_no_ctes_proj \<circ> (map_to_tcbs (ksPSpace s'))) x"
 	by auto
     qed
   qed fact+
@@ -677,12 +679,12 @@ lemma cor_map_relI:
   done
 
 lemma setCTE_tcb_case:
-  assumes om: "option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s) =
-  option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s')"
+  assumes om: "map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s) =
+  map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s')"
   and    rel: "cmap_relation (map_to_tcbs (ksPSpace s)) (clift (t_hrs_' (globals x))) tcb_ptr_to_ctcb_ptr ctcb_relation"
   shows "cmap_relation (map_to_tcbs (ksPSpace s')) (clift (t_hrs_' (globals x))) tcb_ptr_to_ctcb_ptr ctcb_relation"
   using om
-proof (rule cor_map_relI [OF option_map_eq_dom_eq])
+proof (rule cor_map_relI [OF map_option_eq_dom_eq])
   fix x tcb tcb' z
   assume y: "map_to_tcbs (ksPSpace s) x = Some tcb"
     and y': "map_to_tcbs (ksPSpace s') x = Some tcb'" and rel: "ctcb_relation tcb z"
@@ -723,7 +725,7 @@ lemma cmap_domE2:
   apply (drule equalityD2)
   apply (drule subsetD)
   apply (erule domI)
-  apply (clarsimp elim: imageE simp: dom_def)
+  apply (clarsimp simp: dom_def)
   done
 
 lemma cmap_relationE1:
@@ -776,7 +778,7 @@ lemma cspace_cte_relationE:
   \<And>z k'. \<lbrakk>cm (Ptr x) = Some k'; cte_lift k' = Some z; cte_to_H z = y; c_valid_cte k' \<rbrakk> \<Longrightarrow> P
   \<rbrakk> \<Longrightarrow> P"
   apply (erule (1) cmap_relationE1)
-  apply (clarsimp simp: ccte_relation_def option_map_Some_eq2) 
+  apply (clarsimp simp: ccte_relation_def map_option_Some_eq2) 
   done
 
 lemma cmdbnode_relationE:
@@ -838,7 +840,7 @@ lemma cpspace_cte_relation_upd_capI:
   apply (frule (2) cmap_relation_relI)
   apply (erule (2) cmap_relation_updI)
    apply (clarsimp elim!: ccap_relationE simp: map_comp_Some_iff ccte_relation_def) 
-    apply (subst (asm) option_map_Some_eq2)
+    apply (subst (asm) map_option_Some_eq2)
     apply clarsimp
     apply (simp add: c_valid_cte_def cl_valid_cte_def)
   apply simp
@@ -862,7 +864,7 @@ lemma cspace_cte_relation_upd_mdbI:
   apply (frule (2) cmap_relation_relI)
   apply (erule (2) cmap_relation_updI)
    apply (clarsimp elim!: cmdbnode_relationE
-           simp: map_comp_Some_iff ccte_relation_def c_valid_cte_def cl_valid_cte_def option_map_Some_eq2)
+           simp: map_comp_Some_iff ccte_relation_def c_valid_cte_def cl_valid_cte_def map_option_Some_eq2)
   apply simp
 done
 
@@ -908,19 +910,7 @@ lemma mdbPrev_to_H [simp]:
   unfolding mdb_node_to_H_def
   by simp
 
-declare word_neq_0_conv [simp del]
-
-lemma ctes_of_not_0 [simp]:
-  assumes vm: "valid_mdb' s"
-  and    cof: "ctes_of s p = Some cte"
-  shows  "p \<noteq> 0"
-proof -
-  from vm have "no_0 (ctes_of s)" 
-    unfolding valid_mdb'_def by auto
-  thus ?thesis using cof 
-    by auto
-qed
-
+lemmas ctes_of_not_0 [simp] = valid_mdbD3' [of s, rotated] for s
 
 (* For getting rid of the generated guards -- will probably break with c_guard*)
 lemma ctes_of_aligned_3 [simp]:
@@ -980,6 +970,8 @@ lemma valid_mdb_ctes_of_prev:
   apply (simp add: cte_wp_at_ctes_of)
   done
 
+end
+
 context kernel
 begin
 
@@ -1034,12 +1026,12 @@ lemma rf_sr_cte_relation:
 lemma ccte_relation_ccap_relation:
   "ccte_relation cte cte' \<Longrightarrow> ccap_relation (cteCap cte) (cte_C.cap_C cte')"
   unfolding ccte_relation_def ccap_relation_def c_valid_cte_def cl_valid_cte_def c_valid_cap_def cl_valid_cap_def
-  by (clarsimp simp: option_map_Some_eq2 if_bool_eq_conj)
+  by (clarsimp simp: map_option_Some_eq2 if_bool_eq_conj)
 
 lemma ccte_relation_cmdbnode_relation:
   "ccte_relation cte cte' \<Longrightarrow> cmdbnode_relation (cteMDBNode cte) (cte_C.cteMDBNode_C cte')"
   unfolding ccte_relation_def ccap_relation_def
-  by (clarsimp simp: option_map_Some_eq2)
+  by (clarsimp simp: map_option_Some_eq2)
 
 lemma rf_sr_ctes_of_clift:
   assumes sr: "(s, s') \<in> rf_sr"
@@ -1205,7 +1197,7 @@ lemma rf_sr_cte_at_validD:
 lemma ccap_relation_NullCap_iff:
   "(ccap_relation NullCap cap') = (cap_get_tag cap' = scast cap_null_cap)"
   unfolding ccap_relation_def
-  apply (clarsimp simp: option_map_Some_eq2 c_valid_cap_def cl_valid_cap_def 
+  apply (clarsimp simp: map_option_Some_eq2 c_valid_cap_def cl_valid_cap_def 
             cap_to_H_def cap_lift_def Let_def cap_tag_defs split: split_if)
   done
 
@@ -1398,57 +1390,57 @@ definition
   "tcb_null_queue_ptrs a \<equiv> a \<lparr> tcbSchedNext_C := NULL, tcbSchedPrev_C := NULL, tcbEPNext_C := NULL, tcbEPPrev_C := NULL\<rparr>"
 
 lemma null_sched_queue:
-  "option_map tcb_null_sched_ptrs \<circ> mp = option_map tcb_null_sched_ptrs \<circ> mp'
-  \<Longrightarrow> option_map tcb_null_queue_ptrs \<circ> mp = option_map tcb_null_queue_ptrs \<circ> mp'"
+  "map_option tcb_null_sched_ptrs \<circ> mp = map_option tcb_null_sched_ptrs \<circ> mp'
+  \<Longrightarrow> map_option tcb_null_queue_ptrs \<circ> mp = map_option tcb_null_queue_ptrs \<circ> mp'"
   apply (rule ext)  
-  apply (erule_tac x = x in option_map_comp_eqE)
+  apply (erule_tac x = x in map_option_comp_eqE)
    apply simp
   apply (clarsimp simp: tcb_null_queue_ptrs_def tcb_null_sched_ptrs_def)
   done
   
 lemma null_ep_queue:
-  "option_map tcb_null_ep_ptrs \<circ> mp = option_map tcb_null_ep_ptrs \<circ> mp'
-  \<Longrightarrow> option_map tcb_null_queue_ptrs \<circ> mp = option_map tcb_null_queue_ptrs \<circ> mp'"
+  "map_option tcb_null_ep_ptrs \<circ> mp = map_option tcb_null_ep_ptrs \<circ> mp'
+  \<Longrightarrow> map_option tcb_null_queue_ptrs \<circ> mp = map_option tcb_null_queue_ptrs \<circ> mp'"
   apply (rule ext)  
-  apply (erule_tac x = x in option_map_comp_eqE)
+  apply (erule_tac x = x in map_option_comp_eqE)
    apply simp
   apply (case_tac v, case_tac v')
   apply (clarsimp simp: tcb_null_queue_ptrs_def tcb_null_ep_ptrs_def)
   done
 
 lemma null_sched_epD:
-  assumes om: "option_map tcb_null_sched_ptrs \<circ> mp = option_map tcb_null_sched_ptrs \<circ> mp'"
-  shows "option_map tcbEPNext_C \<circ> mp = option_map tcbEPNext_C \<circ> mp' \<and>
-         option_map tcbEPPrev_C \<circ> mp = option_map tcbEPPrev_C \<circ> mp'"
+  assumes om: "map_option tcb_null_sched_ptrs \<circ> mp = map_option tcb_null_sched_ptrs \<circ> mp'"
+  shows "map_option tcbEPNext_C \<circ> mp = map_option tcbEPNext_C \<circ> mp' \<and>
+         map_option tcbEPPrev_C \<circ> mp = map_option tcbEPPrev_C \<circ> mp'"
   using om
   apply -
   apply (rule conjI)
    apply (rule ext)  
-   apply (erule_tac x = x in option_map_comp_eqE )
+   apply (erule_tac x = x in map_option_comp_eqE )
     apply simp
    apply (case_tac v, case_tac v')
    apply (clarsimp simp: tcb_null_sched_ptrs_def)
   apply (rule ext)  
-  apply (erule_tac x = x in option_map_comp_eqE )
+  apply (erule_tac x = x in map_option_comp_eqE )
    apply simp
   apply (case_tac v, case_tac v')
   apply (clarsimp simp: tcb_null_sched_ptrs_def)  
   done
 
 lemma null_ep_schedD:
-  assumes om: "option_map tcb_null_ep_ptrs \<circ> mp = option_map tcb_null_ep_ptrs \<circ> mp'"
-  shows "option_map tcbSchedNext_C \<circ> mp = option_map tcbSchedNext_C \<circ> mp' \<and>
-         option_map tcbSchedPrev_C \<circ> mp = option_map tcbSchedPrev_C \<circ> mp'"
+  assumes om: "map_option tcb_null_ep_ptrs \<circ> mp = map_option tcb_null_ep_ptrs \<circ> mp'"
+  shows "map_option tcbSchedNext_C \<circ> mp = map_option tcbSchedNext_C \<circ> mp' \<and>
+         map_option tcbSchedPrev_C \<circ> mp = map_option tcbSchedPrev_C \<circ> mp'"
   using om
   apply -
   apply (rule conjI)
    apply (rule ext)  
-   apply (erule_tac x = x in option_map_comp_eqE )
+   apply (erule_tac x = x in map_option_comp_eqE )
     apply simp
    apply (case_tac v, case_tac v')
    apply (clarsimp simp: tcb_null_ep_ptrs_def)
   apply (rule ext)  
-  apply (erule_tac x = x in option_map_comp_eqE )
+  apply (erule_tac x = x in map_option_comp_eqE )
    apply simp
   apply (case_tac v, case_tac v')
   apply (clarsimp simp: tcb_null_ep_ptrs_def)  
@@ -1498,10 +1490,10 @@ lemma cmap_relation_cong:
 
 lemma ctcb_relation_null_queue_ptrs:
   assumes rel: "cmap_relation mp mp' tcb_ptr_to_ctcb_ptr ctcb_relation"
-  and same: "option_map tcb_null_queue_ptrs \<circ> mp'' = option_map tcb_null_queue_ptrs \<circ> mp'"
+  and same: "map_option tcb_null_queue_ptrs \<circ> mp'' = map_option tcb_null_queue_ptrs \<circ> mp'"
   shows "cmap_relation mp mp'' tcb_ptr_to_ctcb_ptr ctcb_relation"
   using rel 
-  apply (rule iffD1 [OF cmap_relation_cong, OF _ option_map_eq_dom_eq, rotated -1])
+  apply (rule iffD1 [OF cmap_relation_cong, OF _ map_option_eq_dom_eq, rotated -1])
     apply simp
    apply (rule same [symmetric])
   apply (drule compD [OF same])
@@ -1842,7 +1834,7 @@ lemma user_word_at_cross_over:
    apply (insert int_and_leR [where a="uint (p >> 2)" and b=1023], clarsimp)[1]
   apply (simp add: field_lvalue_def
             field_lookup_offset_eq[OF trans, OF _ arg_cong[where f=Some, symmetric], OF _ prod.collapse]
-            word32_shift_by_2 shiftr_shiftl1 is_aligned_andI1)
+            word_shift_by_2 shiftr_shiftl1 is_aligned_andI1)
   apply (drule_tac x="ucast (p >> 2)" in spec)
   apply (simp add: byte_to_word_heap_def Let_def ucast_ucast_mask)
   apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])

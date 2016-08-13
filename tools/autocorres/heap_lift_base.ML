@@ -9,12 +9,9 @@
  *)
 
 (*
- * Construct necessary infrastructure to allow heap lifting to take
- * place.
- *
- * This includes things like:
- *
- *   * Creating new global records;
+ * Construct necessary infrastructure to allow heap lifting to take place.
+ * This creates the new globals record; the proofs relating it with the old
+ * globals will be performed in HeapLift.
  *)
 
 structure HeapLiftBase =
@@ -51,7 +48,17 @@ type heap_info =
   lift_fn_simp_thms : thm list,
   structs : struct_info Symtab.table,
   struct_types : struct_info Typtab.table
-}
+};
+ 
+type heap_lift_setup =
+{
+  heap_info : heap_info,
+  (* Thms that depend only on heap types and can be pre-generated. *)
+  (* Groups of instantiation lemmas. FIXME: does cross_instantiate really need grouping? *)
+  lifted_heap_lemmas : thm list list,
+  (* Empty if no syntax consts have been defined yet *)
+  heap_syntax_rewrs : thm list
+};
 
 (*
  * Attempt to generate a pleasant name for the record
@@ -110,7 +117,7 @@ in
 end
 
 (* Determine what heap types the given program accesses. *)
-fun get_program_heap_types prog_info fn_info gen_word_heaps lthy =
+fun get_program_heap_types prog_info fn_infos gen_word_heaps lthy =
 let
   (* Map the type "T" into a (possibly different) type that should appear in
    * our new heap. *)
@@ -118,7 +125,7 @@ let
     case T of
       (* Signed words are converted to standard words on the heap. *)
         Type (@{type_name "Word.word"},
-          [Type (@{type_name "SignedWords.signed"}, x)]) =>
+          [Type (@{type_name "Signed_Words.signed"}, x)]) =>
             Type (@{type_name "Word.word"}, x)
 
       (* Pointers are valid if their inner type is valid. *)
@@ -134,7 +141,7 @@ let
   (* Process a function. *)
   fun process fn_name =
       (* Fetch body of "fn_name". *)
-      FunctionInfo.get_function_def fn_info fn_name
+      the (Symtab.lookup fn_infos fn_name)
       |> #definition
       |> Thm.prop_of
       |> Utils.rhs_of_eq
@@ -153,7 +160,7 @@ let
   val word_typs = if not gen_word_heaps then Typset.empty else
                       Typset.make [@{typ word8}, @{typ word16}, @{typ word32}, @{typ word64}]
 in
-  Typset.union_sets (word_typs :: AutoCorresUtil.map_all lthy fn_info process)
+  Typset.union_sets (word_typs :: map process (Symtab.keys fn_infos))
 end
 
 (* Get fields from the globals type that should be copied from the
@@ -412,12 +419,15 @@ in
   } : heap_info
 end
 
-fun setup prog_info fn_info make_lifted_globals_field_name gen_word_heaps lthy =
+fun setup
+      prog_info
+      (fn_infos: FunctionInfo.function_info Symtab.table)
+      make_lifted_globals_field_name gen_word_heaps lthy =
 let
   val old_globalsT = #globals_type prog_info
 
   (* Generate a new globals structure. *)
-  val heapTs = get_program_heap_types prog_info fn_info gen_word_heaps lthy
+  val heapTs = get_program_heap_types prog_info fn_infos gen_word_heaps lthy
   val ((lifted_globalsT, heap_getters_setters, global_fields), lthy)
       = Local_Theory.raw_theory_result (
           gen_new_heap make_lifted_globals_field_name old_globalsT (Typset.dest heapTs)) lthy
@@ -440,15 +450,13 @@ in
   (heap_info, lthy)
 end
 
-
 end
 
 (* Save heap information into the theory. *)
 structure HeapInfo = Theory_Data(
-  type T = HeapLiftBase.heap_info Symtab.table;
+  type T = HeapLiftBase.heap_lift_setup Symtab.table;
   val empty = Symtab.empty;
   val extend = I;
   fun merge (l, r) =
     Symtab.merge (fn _ => true) (l, r);
 )
-

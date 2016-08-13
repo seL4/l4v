@@ -11,10 +11,17 @@
 theory PSpaceStorable_H
 imports
   Structures_H
-  "../../lib/wp/NonDetMonad"
   KernelStateData_H
   "../../lib/DataMap"
 begin
+
+context begin interpretation Arch .
+requalify_types
+  arch_kernel_object_type
+
+requalify_consts
+  archTypeOf
+end
 
 lemma UserData_singleton [simp]:
   "(v = UserData) = True" "(UserData = v) = True" 

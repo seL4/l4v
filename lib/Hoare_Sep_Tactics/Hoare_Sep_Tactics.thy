@@ -10,7 +10,7 @@
 
 theory Hoare_Sep_Tactics
 imports
-  "../wp/NonDetMonadVCG"
+  "../Monad_WP/NonDetMonadVCG"
   "../sep_algebra/Sep_Algebra_L4v"
 begin
 

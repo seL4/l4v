@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory ExpandAll
+theory ExpandAll (* FIXME: bitrotted *)
 imports "~~/src/HOL/Main"
 begin
 

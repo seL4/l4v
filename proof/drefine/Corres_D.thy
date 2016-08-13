@@ -57,12 +57,12 @@ dcorres ::
                 bool)
              \<Rightarrow> bool"
 where
-  "dcorres\<equiv> corres_underlying {ss'. transform (snd ss') = fst ss'} False"
+  "dcorres \<equiv> corres_underlying {ss'. transform (snd ss') = fst ss'} False False"
 
 (* Some obvious corres lemmas *)
 lemma corres_group_bind_rhs:
-  "corres_underlying sr nf rvr P P' a (do y\<leftarrow>(do f; g od); h y od)
-    \<Longrightarrow> corres_underlying sr nf rvr P P' a (do x \<leftarrow> f; y \<leftarrow> g; h y od)"
+  "corres_underlying sr nf nf' rvr P P' a (do y\<leftarrow>(do f; g od); h y od)
+    \<Longrightarrow> corres_underlying sr nf nf' rvr P P' a (do x \<leftarrow> f; y \<leftarrow> g; h y od)"
   by (simp add: bind_assoc)
 
 lemma corres_expand_bind_rhs:
@@ -71,8 +71,8 @@ lemma corres_expand_bind_rhs:
   by (simp add: bind_assoc)
 
 lemma corres_bind_ignore_ret_rhs:
-  "corres_underlying sr nf rvr P P' a (do f; g od)
-    \<Longrightarrow> corres_underlying sr nf rvr P P' a (do y\<leftarrow> f;g od)"
+  "corres_underlying sr nf nf' rvr P P' a (do f; g od)
+    \<Longrightarrow> corres_underlying sr nf nf' rvr P P' a (do y\<leftarrow> f;g od)"
   by (simp add: bind_def)
 
 lemma corres_free_fail:
@@ -137,10 +137,10 @@ lemma absorb_imp:"B \<and> A \<Longrightarrow>  (a\<longrightarrow>A) \<and> B "
 (* This lemma is convienent if you want keep the prefix while split *)
 
 lemma  corres_split_keep_pfx:
-  assumes x: "corres_underlying sr nf r' P P' a c"
-  assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlying sr nf r (P and (Q rv)) (P' and (Q' rv')) (b rv) (d rv')"
+  assumes x: "corres_underlying sr nf nf' r' P P' a c"
+  assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlying sr nf nf' r (P and (Q rv)) (P' and (Q' rv')) (b rv) (d rv')"
   assumes    "\<lbrace>P\<rbrace> a \<lbrace>\<lambda>x. P and (Q x)\<rbrace>" "\<lbrace>P'\<rbrace> c \<lbrace>\<lambda>x. P' and (Q' x)\<rbrace>"
-  shows      "corres_underlying sr nf r P P' (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
+  shows      "corres_underlying sr nf nf' r P P' (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
   using assms by (rule corres_split')
 
 (* Following 2 lemmas allows you to get rid of the get function and move the prefix outside *)
@@ -306,9 +306,9 @@ lemma dcorres_returnOk:
 
 lemma split_return_throw_thingy:
   "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>rv s'. s' = s \<and> rvP rv\<rbrace>,\<lbrace>\<lambda>ft. op = s\<rbrace>;
-     \<And>rv. rvP rv \<Longrightarrow> corres_underlying sr nf (dc \<oplus> r) P P' (f \<sqinter> throwError e) (h rv);
-        nf \<Longrightarrow> no_fail P' g \<rbrakk>
-     \<Longrightarrow> corres_underlying sr nf (dc \<oplus> r) P P'
+     \<And>rv. rvP rv \<Longrightarrow> corres_underlying sr nf nf' (dc \<oplus> r) P P' (f \<sqinter> throwError e) (h rv);
+        nf' \<Longrightarrow> no_fail P' g \<rbrakk>
+     \<Longrightarrow> corres_underlying sr nf nf' (dc \<oplus> r) P P'
              (f \<sqinter> throwError e) (g >>=E h)"
   apply (simp add: bindE_def)
   apply (rule corres_guard_imp)
@@ -340,8 +340,8 @@ lemma lift_returnOk_bind_triv:
 
 lemma corres_return_throw_thingy:
   "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>rv s'. s' = s \<and> Q rv\<rbrace>,\<lbrace>\<lambda>ft. op = s\<rbrace>;
-        nf \<Longrightarrow> no_fail P' g; \<forall>rv. Q rv \<longrightarrow> r v rv \<rbrakk>
-     \<Longrightarrow> corres_underlying sr nf (dc \<oplus> r) P P'
+        nf' \<Longrightarrow> no_fail P' g; \<forall>rv. Q rv \<longrightarrow> r v rv \<rbrakk>
+     \<Longrightarrow> corres_underlying sr nf nf' (dc \<oplus> r) P P'
              (returnOk v \<sqinter> throwError e) (g)"
   apply (subst lift_returnOk_bind_triv[where g=g, symmetric])
   apply (fold bindE_def, rule split_return_throw_thingy)
@@ -475,8 +475,8 @@ lemma throw_handle:
   by (simp add: handleE'_def throwError_def)
 
 lemma corres_handle2:
-  "corres_underlying R f (dc \<oplus> r) P P' m m' \<Longrightarrow>
-   corres_underlying R f (dc \<oplus> r) P P' (m <handle2> (\<lambda>x. Monads_D.throw)) m'"
+  "corres_underlying R False nf' (dc \<oplus> r) P P' m m' \<Longrightarrow>
+   corres_underlying R False nf' (dc \<oplus> r) P P' (m <handle2> (\<lambda>x. Monads_D.throw)) m'"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    prefer 2
@@ -494,8 +494,8 @@ lemma corres_handle2:
   done
 
 lemma corres_handle2':
-  "corres_underlying R f (dc \<oplus> r) P P' m m' \<Longrightarrow>
-   corres_underlying R f (dc \<oplus> r) P P' m (m' <handle2> (throwError \<circ> e))"
+  "corres_underlying R False nf' (dc \<oplus> r) P P' m m' \<Longrightarrow>
+   corres_underlying R False nf' (dc \<oplus> r) P P' m (m' <handle2> (throwError \<circ> e))"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    prefer 2
@@ -511,32 +511,35 @@ lemma corres_handle2':
   done 
 
 lemma corres_alternative_throw_splitE:
-  assumes a: "corres_underlying R z (dc \<oplus> r') P P' (f \<sqinter> Monads_D.throw) f'"
-  assumes b:  "\<And>x x'. r' x x' \<Longrightarrow> corres_underlying R z (dc \<oplus> r) (Q x) (Q' x') (g x \<sqinter> Monads_D.throw) (g' x')"
+  assumes a: "corres_underlying R False z (dc \<oplus> r') P P' (f \<sqinter> Monads_D.throw) f'"
+  assumes b:  "\<And>x x'. r' x x' \<Longrightarrow> corres_underlying R False z (dc \<oplus> r) (Q x) (Q' x') (g x \<sqinter> Monads_D.throw) (g' x')"
   assumes f: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   assumes f': "\<lbrace>P'\<rbrace> f' \<lbrace>Q'\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   assumes f'_eq: "\<And>s. \<lbrace>op = s\<rbrace> f' \<lbrace>\<lambda>_. op = s\<rbrace>"
   assumes g'_eq: "\<And>s x. \<lbrace>\<lambda>s'. s' = s \<and> Q' x s'\<rbrace> g' x \<lbrace>\<lambda>_. \<top>\<rbrace>, \<lbrace>\<lambda>_. op = s\<rbrace>"
-  shows "corres_underlying R z (dc \<oplus> r) P P' ((f >>=E g) \<sqinter> Monads_D.throw) (f' >>=E g')"
+  shows "corres_underlying R False z (dc \<oplus> r) P P' ((f >>=E g) \<sqinter> Monads_D.throw) (f' >>=E g')"
   apply (clarsimp simp: bindE_def corres_underlying_def)
   apply (rule conjI)
    prefer 2
-   apply (frule (2) corres_underlyingD [OF a]) 
+   apply (frule (2) corres_underlyingD [OF a])
+    apply simp
    apply (clarsimp simp: bind_def split_def lift_def)
    apply (clarsimp simp: throwError_def return_def split: sum.splits)
    apply (drule (1) bspec, clarsimp simp: alternative_def)
    apply (drule b)
    apply (thin_tac "(a,b) \<in> R")
-   apply (drule (1) corres_underlyingD) 
-     apply (drule use_valid, rule f[unfolded validE_def]) 
+   apply (drule (1) corres_underlyingD)
+      apply (drule use_valid, rule f[unfolded validE_def])
+       apply assumption
+      apply simp
+     apply (drule use_valid, rule f'[unfolded validE_def])
       apply assumption
      apply simp
-    apply (drule use_valid, rule f'[unfolded validE_def]) 
-     apply assumption
     apply simp
    apply simp
-  apply (clarsimp simp: in_bind)  
+  apply (clarsimp simp: in_bind)
   apply (frule (3) corres_underlyingD2 [OF a])
+   apply simp
   apply (clarsimp simp: in_alternative in_throwError)
   apply (erule disjE)
    prefer 2
@@ -552,15 +555,16 @@ lemma corres_alternative_throw_splitE:
     apply assumption
    apply (simp add: lift_def throwError_def return_def)
   apply clarsimp
-  apply (drule b) 
-  apply (drule_tac s'=s'' in corres_underlyingD2, assumption) 
-     apply (drule use_valid, rule f[unfolded validE_def]) 
+  apply (drule b)
+  apply (drule_tac s'=s'' in corres_underlyingD2, assumption)
+      apply (drule use_valid, rule f[unfolded validE_def])
+       apply assumption
+      apply simp
+     apply (drule use_valid, rule f'[unfolded validE_def]) 
       apply assumption
      apply simp
-    apply (drule use_valid, rule f'[unfolded validE_def]) 
-     apply assumption
-    apply simp
-   apply assumption
+    apply assumption
+   apply simp
   apply (clarsimp simp: in_alternative in_throwError)
   apply (erule disjE)
    apply (rule bexI, fastforce)
@@ -581,10 +585,10 @@ lemma corres_alternative_throw_splitE:
   done
 
 lemma corres_throw_skip_r:
-  assumes c: "corres_underlying R z (dc \<oplus> r) P P' (f \<sqinter> Monads_D.throw) g'"
+  assumes c: "corres_underlying R False z (dc \<oplus> r) P P' (f \<sqinter> Monads_D.throw) g'"
   assumes eq: "\<And>s. \<lbrace>op = s\<rbrace> f' \<lbrace>\<lambda>_. op = s\<rbrace>"
   assumes nf: "z \<longrightarrow> no_fail P' f'"
-  shows "corres_underlying R z (dc \<oplus> r) P P' (f \<sqinter> Monads_D.throw) (f' >>=E (\<lambda>_. g'))"
+  shows "corres_underlying R nf z (dc \<oplus> r) P P' (f \<sqinter> Monads_D.throw) (f' >>=E (\<lambda>_. g'))"
   using c
   apply (clarsimp simp: corres_underlying_def alternative_def bindE_def)
   apply (drule (1) bspec)

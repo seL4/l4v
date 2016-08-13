@@ -36,6 +36,7 @@ The translation tool builds on various open source projects by others.
 2. Code from SML/NJ:
    - an implementation of binary sets (Binaryset.ML)
    - the mllex and mlyacc tools (tools/{mllex,mlyacc})
+   - command-line option parsing (standalone-parser/GetOpt)
 
    This code is covered by SML/NJ's BSD-ish licence.
 

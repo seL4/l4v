@@ -1,9 +1,18 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
 theory Generator_CAMKES_CDL imports
   "../adl-spec/Types_CAMKES"
   "../adl-spec/Library_CAMKES"
   "../../spec/capDL/Syscall_D"
   Types_CAMKES_CDL
-  "../../lib/WordLemmaBucket"
   "../../proof/access-control/Dpolicy"
 begin
 
@@ -220,7 +229,7 @@ lemma helper7:
       apply (rule bexI) (* sorry for schematics *)
        apply (rule word_unat.Rep_inverse')
        apply force
-      apply clarsimp 
+      apply clarsimp
       apply (subst (asm) card_word)
       apply clarsimp
       apply (metis (erased, hide_lams) Divides.mod_less_eq_dividend order_less_le_trans unat_of_nat word_less_nat_alt)
@@ -414,7 +423,7 @@ where
                         cdl_tcb_fault_endpoint = 0,
                         cdl_tcb_intent = undefined,
                         cdl_tcb_has_fault = False,
-                        cdl_tcb_domain = 0\<rparr>) # 
+                        cdl_tcb_domain = 0\<rparr>) #
 
      (* The interface TCBs *)
      map (\<lambda>(i, inf). (n @ ''_tcb_'' @ inf, Types_D.Tcb \<lparr>cdl_tcb_caps = [
@@ -669,7 +678,7 @@ lemma cnode_objs_only_cnodes:
 
 lemma tcb_objs_only_tcbs: "\<forall>(_, i) \<in> set (tcb_objs spec). case i of Types_D.Tcb _ \<Rightarrow> True | _ \<Rightarrow> False"
   apply (clarsimp simp:tcb_objs_def)
-  apply (erule disjE)                                       
+  apply (erule disjE)
    by clarsimp+
 
 lemma ep_objs_only_eps:

@@ -9,9 +9,11 @@
  *)
 
 theory Crunch
-imports "wp/NonDetMonadVCG"
+imports "Monad_WP/NonDetMonadVCG"
 keywords "crunch" "crunch_ignore" :: thy_decl
 begin
+
+named_theorems "crunch_def"
 
 ML_file "crunch-cmd.ML"
 ML_file "Crunch.ML"

@@ -18,11 +18,6 @@ imports
   MapExtraTrans
 begin
 
-(* FIXME: move to word *)
-lemma minus_one_word:
-  "(-1 :: 'a :: len word) = 2 ^ len_of TYPE('a) - 1"
-  by (simp add: word_pow_0)
-
 declare map_add_assoc [simp del]
 
 definition wf_heap_val :: "heap_state \<Rightarrow> bool" where

@@ -1,0 +1,46 @@
+#!/bin/bash
+# Copyright 2016, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+
+# Check theory import paths in all theory files in the repository.
+# Isabelle doesn't always ensure that theories are imported with the correct
+# directory paths, so we do a separate consistency check here.
+
+set -e
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ROOT="$SCRIPT_DIR/../.."
+
+# Get all theory files in the repo
+# TODO: this doesn't include any theories in internal/
+cd "$ROOT"
+THYS=$(git ls-files '*.thy')
+if [ $? != 0 ]; then
+    echo "Failed to list theory files" >&2
+    exit 1
+fi
+
+# Whitelist: bare names are ok for Isabelle theory imports
+BUILTINS='-i Pure -i List -i HOL -i Main -i GCD'
+# Exclude design skeleton, which is stashed in inner directories
+EXCLUDE_THYS='design/(m-)?skel'
+
+# Run thydeps tool. We ignore the usual dependency output (>/dev/null),
+# instead using the theory import errors that are printed on stderr.
+
+ERRORS=$(
+    echo "$THYS" |
+    grep -Ev "$EXCLUDE_THYS" |
+    # TODO: hardcoded L4V_ARCH    
+    L4V_ARCH=ARM xargs '-d\n' misc/scripts/thydeps $BUILTINS -o /dev/null 2>&1 |
+    grep -Fv '~~/' || # ignore imports from Isabelle distribution
+      true) # discard grep's return code
+
+if [ -n "$ERRORS" ]; then
+    echo "$ERRORS"
+    exit 1
+fi

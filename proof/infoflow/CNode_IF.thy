@@ -12,6 +12,8 @@ theory CNode_IF
 imports FinalCaps
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma cap_fault_on_failure_rev:
   "reads_equiv_valid_inv A aag P m \<Longrightarrow> reads_equiv_valid_inv A aag P (cap_fault_on_failure cptr rp m)"
   unfolding cap_fault_on_failure_def handleE'_def
@@ -378,7 +380,11 @@ lemma globals_equiv_exst_update[simp]:
    globals_equiv st s"
   by (simp add: globals_equiv_def idle_equiv_def)
 
+end
+
 lemma (in is_extended') globals_equiv: "I (globals_equiv st)" by (rule lift_inv,simp)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma cap_insert_globals_equiv:
   "\<lbrace>globals_equiv s and valid_global_objs\<rbrace>
@@ -1085,5 +1091,7 @@ lemma select_ext_ev:
   done
 
 crunch cur_domain[wp]: possible_switch_to, attempt_switch_to, switch_if_required_to "\<lambda>s. P (cur_domain s)"
+
+end
 
 end

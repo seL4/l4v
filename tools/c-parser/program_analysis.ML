@@ -2042,27 +2042,27 @@ in
     [(adglob_rcd_tyname, map (fn vi => (srcname vi, get_vi_type vi)) advis)]
 end
 
-fun export_mungedb (c as CSE cse) = 
-  case #munge_info_fname cse of 
+fun export_mungedb (c as CSE cse) =
+  case #munge_info_fname cse of
     NONE => ()
-  | SOME fname => 
-    let 
+  | SOME fname =>
+    let
       val outstrm = TextIO.openOut fname
-      fun appthis vinfo = 
+      fun tab_foldthis (vinfo,acc) =
         let
           val srcnm = srcname vinfo
           val mnm = get_mname vinfo
           val fopt = get_vi_fname vinfo
         in
-          TextIO.output(outstrm, 
-              (case fopt of NONE => "" | SOME f => f) ^ "::" ^ srcnm ^ " -> " ^ 
-              MString.dest mnm ^ "\n")
+          ((case fopt of NONE => "" | SOME f => f) ^ "::" ^ srcnm ^ " -> " ^
+           MString.dest mnm ^ "\n") :: acc
         end
-      fun foldthis (_, vinfos) () = List.app appthis vinfos
-      fun recurse tab = 
-        Symtab.fold foldthis tab ()
+      fun foldthis (_, vinfos) acc = List.foldl tab_foldthis acc vinfos
+      fun recurse tab = Symtab.fold foldthis tab []
+      val data0 = recurse (get_vars c)
+      val data = Listsort.sort String.compare data0
     in
-      recurse (get_vars c); 
+      List.app (fn s => TextIO.output(outstrm, s)) data;
       TextIO.closeOut outstrm
     end
 

@@ -17,6 +17,6 @@ begin
 (*
  * Test to see if we can parse all of seL4.
  *)
-autocorres [keep_going] "c/kernel_all.c_pp"
+autocorres [skip_heap_abs, ts_rules = nondet] "c/kernel_all.c_pp"
 
 end

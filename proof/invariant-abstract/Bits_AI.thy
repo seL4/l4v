@@ -9,7 +9,7 @@
  *)
 
 theory Bits_AI
-imports Invariants_AI
+imports "./$L4V_ARCH/ArchBits_AI"
 begin
 
 lemmas crunch_wps = hoare_drop_imps mapM_wp' mapM_x_wp'
@@ -42,6 +42,8 @@ lemma lookup_error_injection:
   apply (simp add: lookup_error_on_failure_def injection_handler_def o_def)
   done
 
+
+ML \<open>Thm.join_proofs @{thms lookup_error_injection}\<close>
 
 lemmas cap_fault_wp[wp] = injection_wp[OF cap_fault_injection]
 
@@ -106,9 +108,5 @@ lemma empty_on_failure_wp[wp]:
   apply wp
   apply assumption
   done
-
-lemma pbfs_atleast_pageBits:
-  "pageBits \<le> pageBitsForSize sz"
-  by (cases sz) (auto simp: pageBits_def)
 
 end

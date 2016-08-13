@@ -1187,10 +1187,49 @@ lemma h_val_word8:
   by (simp add: h_val_def load_word8_def from_bytes_def typ_info_word
                 word_rcat_bl)
 
+lemma from_bytes_ucast_isom[OF refl refl]:
+  "x = from_bytes xs \<Longrightarrow> y = from_bytes xs
+    \<Longrightarrow> size x = size y
+    \<Longrightarrow> size x = length xs * 8
+    \<Longrightarrow> ucast x = y"
+  apply (clarsimp simp: word_size from_bytes_def typ_info_word)
+  apply (rule word_eqI)
+  apply (simp add: nth_ucast word_size test_bit_rcat[OF refl refl])
+  done
+
+lemma h_val_sword8:
+  "(h_val hp p :: 8 signed word) = ucast (h_val hp (ptr_coerce p) :: 8 word)"
+  by (simp add: h_val_def from_bytes_ucast_isom word_size)
+
+lemma h_val_sword32:
+  "(h_val hp p :: 32 signed word) = ucast (h_val hp (ptr_coerce p) :: 32 word)"
+  by (simp add: h_val_def from_bytes_ucast_isom word_size)
+
 lemma heap_update_word8:
   "heap_update p w hp = store_word8 (ptr_val p) w hp"
   by (simp add: heap_update_def store_word8_def to_bytes_def typ_info_word
                 word_rsplit_same)
+
+lemma to_bytes_ucast_isom[OF refl]:
+  "y = ucast x
+    \<Longrightarrow> size x = size y
+    \<Longrightarrow> 8 dvd size x
+    \<Longrightarrow> to_bytes y = to_bytes x"
+  apply (rule ext)
+  apply (clarsimp simp: word_size to_bytes_def typ_info_word)
+  apply (rule nth_equalityI)
+   apply (simp add: word_size length_word_rsplit_exp_size')
+  apply (clarsimp simp: dvd_def)
+  apply (rule word_eqI)
+  apply (simp add: test_bit_rsplit_alt length_word_rsplit_exp_size' word_size
+                   nth_ucast)
+  apply auto
+  done
+
+lemma to_bytes_sword:
+  "to_bytes (w :: ('a :: len8) signed word)
+    = to_bytes (ucast w :: 'a word)"
+  by (simp add: to_bytes_ucast_isom word_size len8_dv8)
 
 lemma heap_list_update_word32:
   "heap_update_list addr (to_bytes w (heap_list hp' 4 addr')) hp
@@ -1960,7 +1999,7 @@ fun get_while_body_guard C c = case c of
     val G = case try build_guard last of SOME G => G
       | NONE => Const (fst (dest_Const @{term "UNIV"}), setT)
   in G end
-  | _ => Const (fst (dest_Const @{term "UNIV"}, fastype_of C))
+  | _ => Const (fst (dest_Const @{term "UNIV"}), fastype_of C)
 
 fun simpl_to_graph_While_tac hints nm ctxt =
     simp_tac (simpl_ss ctxt)

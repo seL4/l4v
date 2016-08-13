@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file TCBDecls_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -14,106 +16,111 @@ theory TCBDecls_H
 imports FaultMonad_H Invocations_H
 begin
 
-consts
+context begin interpretation Arch .
+requalify_types
+  user_monad
+end
+
+consts'
 decodeTCBInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> capability \<Rightarrow> machine_word \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
-consts
+consts'
 decodeCopyRegisters :: "machine_word list \<Rightarrow> capability \<Rightarrow> capability list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
-consts
+consts'
 decodeReadRegisters :: "machine_word list \<Rightarrow> capability \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
-consts
+consts'
 decodeWriteRegisters :: "machine_word list \<Rightarrow> capability \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
-consts
+consts'
 decodeTCBConfigure :: "machine_word list \<Rightarrow> capability \<Rightarrow> machine_word \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
-consts
+consts'
 decodeSetPriority :: "machine_word list \<Rightarrow> capability \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
-consts
+consts'
 decodeSetIPCBuffer :: "machine_word list \<Rightarrow> capability \<Rightarrow> machine_word \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
-consts
+consts'
 decodeSetSpace :: "machine_word list \<Rightarrow> capability \<Rightarrow> machine_word \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
-consts
+consts'
 decodeBindNotification :: "capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
-consts
+consts'
 decodeUnbindNotification :: "capability \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
-consts
+consts'
 invokeTCB :: "tcbinvocation \<Rightarrow> machine_word list kernel_p"
 
-consts
+consts'
 decodeDomainInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , (machine_word * domain) ) kernel_f"
 
-consts
+consts'
 checkCapAt :: "capability \<Rightarrow> machine_word \<Rightarrow> unit kernel \<Rightarrow> unit kernel"
 
-consts
+consts'
 assertDerived :: "machine_word \<Rightarrow> capability \<Rightarrow> 'a kernel \<Rightarrow> 'a kernel"
 
-consts
+consts'
 setMessageInfo :: "machine_word \<Rightarrow> message_info \<Rightarrow> unit kernel"
 
-consts
+consts'
 getMessageInfo :: "machine_word \<Rightarrow> message_info kernel"
 
-consts
+consts'
 setMRs :: "machine_word \<Rightarrow> (machine_word) option \<Rightarrow> machine_word list \<Rightarrow> machine_word kernel"
 
-consts
+consts'
 getMRs :: "machine_word \<Rightarrow> (machine_word) option \<Rightarrow> message_info \<Rightarrow> machine_word list kernel"
 
-consts
+consts'
 copyMRs :: "machine_word \<Rightarrow> (machine_word) option \<Rightarrow> machine_word \<Rightarrow> (machine_word) option \<Rightarrow> machine_word \<Rightarrow> machine_word kernel"
 
-consts
+consts'
 getExtraCPtrs :: "(machine_word) option \<Rightarrow> message_info \<Rightarrow> cptr list kernel"
 
-consts
+consts'
 lookupExtraCaps :: "machine_word \<Rightarrow> (machine_word) option \<Rightarrow> message_info \<Rightarrow> ( fault , ((capability * machine_word) list) ) kernel_f"
 
-consts
+consts'
 getExtraCPtr :: "machine_word \<Rightarrow> nat \<Rightarrow> cptr kernel"
 
-consts
+consts'
 setExtraBadge :: "machine_word \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
 
-consts
+consts'
 bufferCPtrOffset :: "machine_word"
 
-consts
+consts'
 setupCallerCap :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 deleteCallerCap :: "machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 getThreadCSpaceRoot :: "machine_word \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 getThreadVSpaceRoot :: "machine_word \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 getThreadReplySlot :: "machine_word \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 getThreadCallerSlot :: "machine_word \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 getThreadBufferSlot :: "machine_word \<Rightarrow> (machine_word) kernel"
 
-consts
+consts'
 threadGet :: "(tcb \<Rightarrow> 'a) \<Rightarrow> machine_word \<Rightarrow> 'a kernel"
 
-consts
+consts'
 threadSet :: "(tcb \<Rightarrow> tcb) \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
-consts
+consts'
 asUser :: "machine_word \<Rightarrow> 'a user_monad \<Rightarrow> 'a kernel"
 
 

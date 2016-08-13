@@ -17,7 +17,9 @@ imports
   Arch_C
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch sch_act_wf [wp]: replyFromKernel "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+end
 
 context kernel_m begin
 
@@ -418,7 +420,7 @@ lemma getCurThread_ccorres:
 lemma getMessageInfo_ccorres:
   "ccorres (\<lambda>rv rv'. rv = messageInfoFromWord rv') ret__unsigned_long_' \<top>
        (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}
-             \<inter> {s. reg_' s = register_from_H State_H.msgInfoRegister}) []
+             \<inter> {s. reg_' s = register_from_H ARM_H.msgInfoRegister}) []
        (getMessageInfo thread) (Call getRegister_'proc)"
   apply (simp add: getMessageInfo_def liftM_def[symmetric]
                    ccorres_liftM_simp)
@@ -469,7 +471,7 @@ lemma handleInvocation_def2:
   "handleInvocation isCall isBlocking =
    do thread \<leftarrow> getCurThread;
       info \<leftarrow> getMessageInfo thread;
-      ptr \<leftarrow> asUser thread (getRegister State_H.capRegister);
+      ptr \<leftarrow> asUser thread (getRegister ARM_H.capRegister);
       v \<leftarrow> (doE (cap, slot) \<leftarrow> capFaultOnFailure ptr False (lookupCapAndSlot thread ptr);
           buffer \<leftarrow> withoutFailure (VSpace_H.lookupIPCBuffer False thread);
           extracaps \<leftarrow> lookupExtraCaps thread buffer info;
@@ -1013,10 +1015,10 @@ lemma handleInvocation_ccorres:
     apply simp
     apply wp
    apply (clarsimp simp: Collect_const_mem)
-   apply (simp add: Kernel_C.msgInfoRegister_def State_H.msgInfoRegister_def
-                    MachineTypes.msgInfoRegister_def Kernel_C.R1_def
-                    Kernel_C.capRegister_def State_H.capRegister_def
-                    MachineTypes.capRegister_def Kernel_C.R0_def)
+   apply (simp add: Kernel_C.msgInfoRegister_def ARM_H.msgInfoRegister_def
+                    ARM.msgInfoRegister_def Kernel_C.R1_def
+                    Kernel_C.capRegister_def ARM_H.capRegister_def
+                    ARM.capRegister_def Kernel_C.R0_def)
    apply (clarsimp simp: cfault_rel_def option_to_ptr_def)
    apply (simp add: fault_cap_fault_lift is_cap_fault_def)
    apply (frule lookup_failure_rel_fault_lift, assumption)
@@ -1483,8 +1485,8 @@ lemma handleRecv_ccorres:
   
   apply (clarsimp simp add: sch_act_sane_def)
   apply (simp add: cap_get_tag_isCap[symmetric] del: rf_sr_upd_safe)
-  apply (simp add: Kernel_C.capRegister_def State_H.capRegister_def ct_in_state'_def
-                   MachineTypes.capRegister_def Kernel_C.R0_def
+  apply (simp add: Kernel_C.capRegister_def ARM_H.capRegister_def ct_in_state'_def
+                   ARM.capRegister_def Kernel_C.R0_def
                    tcb_at_invs')
   apply (frule invs_valid_objs')
   apply (frule tcb_aligned'[OF tcb_at_invs'])
@@ -1540,7 +1542,7 @@ lemma getIRQState_sp:
 lemma ccorres_pre_getIRQState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf 
-                  (\<lambda>s. irq \<le> ucast maxIRQ \<and> P (intStateIRQTable (ksInterruptState s) irq) s)
+                  (\<lambda>s. irq \<le> ucast Kernel_C.maxIRQ \<and> P (intStateIRQTable (ksInterruptState s) irq) s)
                   {s. \<forall>rv. index (intStateIRQTable_' (globals s)) (unat irq) = irqstate_to_C rv \<longrightarrow> s \<in> P' rv }
                           hs (getIRQState irq >>= (\<lambda>rv. f rv)) c" 
   apply (rule ccorres_guard_imp)
@@ -1626,7 +1628,7 @@ lemma ucast_eq_0[OF refl]:
   done
 
  
- lemma is_up_compose': 
+lemma is_up_compose': 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   shows
@@ -1634,12 +1636,12 @@ lemma ucast_eq_0[OF refl]:
   unfolding is_up_def by (simp add: Word.target_size Word.source_size)
 
  
- lemma is_up_compose: 
+lemma is_up_compose: 
   shows
   "\<lbrakk>is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> is_up (uc' \<circ> uc)"
   unfolding is_up_def by (simp add: Word.target_size Word.source_size)
  
- lemma uint_is_up_compose: 
+lemma uint_is_up_compose: 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   assumes "uc = ucast"
@@ -1651,10 +1653,10 @@ lemma ucast_eq_0[OF refl]:
   apply (frule is_up_compose)
    apply (simp_all )
   apply (simp only: Word.uint_up_ucast)
- done
+  done
 
  
- lemma uint_is_up_compose_pred: 
+lemma uint_is_up_compose_pred: 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   assumes "uc = ucast"
@@ -1668,12 +1670,12 @@ lemma ucast_eq_0[OF refl]:
   apply (simp only: Word.uint_up_ucast)
  done
  
- lemma is_down_up_sword: 
+lemma is_down_up_sword: 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) sword"
   shows "\<lbrakk>uc = ucast; len_of TYPE('a) < len_of TYPE('b) \<rbrakk> \<Longrightarrow> is_up uc = (\<not> is_down uc)"
   by (simp add: target_size source_size  is_up_def is_down_def )
  
- lemma is_not_down_compose: 
+lemma is_not_down_compose: 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   shows
@@ -1682,9 +1684,7 @@ lemma ucast_eq_0[OF refl]:
   by (simp add: Word.target_size Word.source_size)
  
  
- 
- 
- lemma sint_ucast_uint: 
+lemma sint_ucast_uint: 
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   assumes "uc = ucast" and " uc' = ucast" and "uuc=uc' \<circ> uc " and "len_of TYPE('a) < len_of TYPE('c signed)"
@@ -1693,13 +1693,13 @@ lemma ucast_eq_0[OF refl]:
   apply (simp add: assms)
   apply (frule is_up_compose')
    apply simp_all
-  apply (simp add: ucast_ucast_b )
-  apply (rule WordLemmaBucket.sint_ucast_eq_uint )
+  apply (simp add: ucast_ucast_b)
+  apply (rule sint_ucast_eq_uint)
   apply (insert assms)
-  apply (simp add: is_down_def target_size source_size )
- done
+  apply (simp add: is_down_def target_size source_size)
+  done
  
- lemma sint_ucast_uint_pred:
+lemma sint_ucast_uint_pred:
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
   and uuc :: "'a word \<Rightarrow> 'c sword"
@@ -1709,6 +1709,7 @@ lemma ucast_eq_0[OF refl]:
   apply (insert sint_ucast_uint[where uc=uc and uc'=uc' and uuc=uuc and b = b])
   apply (simp add: assms)
  done
+
 lemma sint_uucast_uint_uucast_pred:
   fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
   and uc' :: "'b word \<Rightarrow> ('c::len) sword"
@@ -1726,7 +1727,7 @@ lemma scast_maxIRQ_is_less:
   and b :: irq
   shows
   "(Kernel_C.maxIRQ) <s (ucast \<circ> (ucast :: irq \<Rightarrow> 16 word)) b \<Longrightarrow> scast Kernel_C.maxIRQ < b"
-  apply (simp add: maxIRQ_def word_sless_def word_sle_def, uint_arith, clarify,simp)
+  apply (simp add: Kernel_C.maxIRQ_def word_sless_def word_sle_def, uint_arith, clarify,simp)
   apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 32 sword) \<le> uint b"; (simp only: Kernel_C.maxIRQ_def)?)
    apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 32 sword) \<noteq> uint b"; (simp only: Kernel_C.maxIRQ_def)?)
     apply (simp )
@@ -1738,7 +1739,7 @@ lemma scast_maxIRQ_is_less:
   apply fastforce
 done
 
- lemma validIRQcastingLess: "Kernel_C.maxIRQ <s (ucast((ucast (b :: irq))::word16)) \<Longrightarrow> Platform.maxIRQ < b" 
+ lemma validIRQcastingLess: "Kernel_C.maxIRQ <s (ucast((ucast (b :: irq))::word16)) \<Longrightarrow> ARM.maxIRQ < b" 
  by (simp add: Platform_maxIRQ scast_maxIRQ_is_less is_up_def target_size source_size)
  
 
@@ -1857,9 +1858,10 @@ lemma handleInterrupt_ccorres:
      apply (ctac add: ackInterrupt_ccorres )
     apply wp
   apply (simp add: sint_ucast_eq_uint is_down uint_up_ucast is_up )
-  apply (clarsimp simp: word_sless_alt word_less_alt word_le_def maxIRQ_def uint_up_ucast is_up_def
-        source_size_def target_size_def word_size
-        sint_ucast_eq_uint is_down is_up word_0_sle_from_less)
+  apply (clarsimp simp: word_sless_alt word_less_alt word_le_def Kernel_C.maxIRQ_def
+                        uint_up_ucast is_up_def
+                        source_size_def target_size_def word_size
+                        sint_ucast_eq_uint is_down is_up word_0_sle_from_less)
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of )
   apply (clarsimp simp add: if_1_0_0 Collect_const_mem )

@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory TSubst
+theory TSubst (* FIXME: bitrotted *)
 imports Main
 begin
 
@@ -40,7 +40,7 @@ method_setup tsubst =
       |> Seq.map (singleton (Variable.export ctxt3 ctxt'))
      end)) ctxt 1))) *}
 
-schematic_lemma
+schematic_goal
   assumes a: "\<And>x y. P x \<Longrightarrow> P y"
   fixes x :: 'b
   shows "\<And>x ::'a :: type. ?Q x \<Longrightarrow> P x \<and> ?Q x"

@@ -18,6 +18,13 @@ theory Ipc_A
 imports Tcb_A
 begin
 
+context begin interpretation Arch .
+
+requalify_consts
+  lookup_ipc_buffer
+
+end
+
 section {* Getting and setting the message info register. *}
 
 definition
@@ -380,18 +387,18 @@ where
        complete_signal (the ntfnptr) thread
      else 
        case ep
-         of IdleEP \<Rightarrow> case is_blocking of
+         of IdleEP \<Rightarrow> (case is_blocking of
               True \<Rightarrow> do
                   set_thread_state thread (BlockedOnReceive epptr);
                   set_endpoint epptr (RecvEP [thread])
                 od
-              | False \<Rightarrow> do_nbrecv_failed_transfer thread
-            | RecvEP queue \<Rightarrow> case is_blocking of
+              | False \<Rightarrow> do_nbrecv_failed_transfer thread)
+            | RecvEP queue \<Rightarrow> (case is_blocking of
               True \<Rightarrow> do
                   set_thread_state thread (BlockedOnReceive epptr);
                   set_endpoint epptr (RecvEP (queue @ [thread]))
                 od
-              | False \<Rightarrow> do_nbrecv_failed_transfer thread
+              | False \<Rightarrow> do_nbrecv_failed_transfer thread)
           | SendEP q \<Rightarrow> do
               assert (q \<noteq> []);
               queue \<leftarrow> return $ tl q;
@@ -489,19 +496,19 @@ where
     ntfn \<leftarrow> get_notification ntfnptr;
     case ntfn_obj ntfn
       of IdleNtfn \<Rightarrow>
-                   case is_blocking of 
+                   (case is_blocking of 
                      True \<Rightarrow> do
                           set_thread_state thread (BlockedOnNotification ntfnptr);
-                          set_notification ntfnptr $ ntfn_set_obj ntfn $ WaitingNtfn ([thread])
+                          set_notification ntfnptr $ ntfn_set_obj ntfn $ WaitingNtfn [thread]
                         od
-                   | False \<Rightarrow> do_nbrecv_failed_transfer thread 
+                   | False \<Rightarrow> do_nbrecv_failed_transfer thread)
        | WaitingNtfn queue \<Rightarrow> 
-                   case is_blocking of 
+                   (case is_blocking of 
                      True \<Rightarrow> do
                           set_thread_state thread (BlockedOnNotification ntfnptr);
                           set_notification ntfnptr $ ntfn_set_obj ntfn $ WaitingNtfn (queue @ [thread])
                         od
-                   | False \<Rightarrow> do_nbrecv_failed_transfer thread 
+                   | False \<Rightarrow> do_nbrecv_failed_transfer thread)
        | ActiveNtfn badge \<Rightarrow> do
                      as_user thread $ set_register badge_register badge;
                      set_notification ntfnptr $ ntfn_set_obj ntfn IdleNtfn 
@@ -550,7 +557,5 @@ where
           <catch> handle_double_fault thread ex;
      return ()
    od"
-
-
 
 end

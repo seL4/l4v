@@ -18,9 +18,16 @@
 theory TypeStrengthen
 imports
   L2Defs
-  "../../lib/OptionMonadND"
+  "../../lib/Monad_WP/OptionMonadND"
   ExecConcrete
 begin
+
+(* Set up the database and ts_rule attribute. *)
+ML_file "monad_types.ML"
+setup {*
+ Attrib.setup (Binding.name "ts_rule") Monad_Types.ts_attrib
+              "AutoCorres type strengthening rule"
+*}
 
 (*
  * Helpers for exception polymorphism lemmas (L2_call_Foo_polymorphic).

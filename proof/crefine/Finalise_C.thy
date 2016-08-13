@@ -956,7 +956,9 @@ lemma offset_xf_for_sequence:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch pde_mappings'[wp]: invalidateHWASIDEntry "valid_pde_mappings'"
+end
 
 context kernel_m begin
 
@@ -997,12 +999,14 @@ lemma invalidateASIDEntry_ccorres:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch obj_at'[wp]: invalidateASIDEntry "obj_at' P p"
 crunch obj_at'[wp]: flushSpace "obj_at' P p"
 crunch valid_objs'[wp]: invalidateASIDEntry "valid_objs'"
 crunch valid_objs'[wp]: flushSpace "valid_objs'"
 crunch pde_mappings'[wp]: invalidateASIDEntry "valid_pde_mappings'"
 crunch pde_mappings'[wp]: flushSpace "valid_pde_mappings'"
+end
 
 context kernel_m begin
 
@@ -1087,7 +1091,7 @@ lemma deleteASIDPool_ccorres:
               apply (subst(asm) Suc_unat_diff_1)
                apply (simp add: asid_low_bits_def)
               apply (simp add: unat_power_lower asid_low_bits_word_bits)
-              apply (erule of_nat_less_pow [OF _ asid_low_bits_word_bits])
+              apply (erule of_nat_less_pow_32 [OF _ asid_low_bits_word_bits])
              apply (simp add: asid_low_bits_def asid_bits_def)
             apply (simp add: asid_bits_def)
            apply (simp add: upto_enum_word )
@@ -1365,7 +1369,7 @@ lemma pageTableMapped_ccorres:
             apply (rule conjI)
              apply (simp add: pde_lift_def Let_def split: split_if_asm)
             apply (clarsimp simp: option_to_0_def option_to_ptr_def split: split_if)
-            apply (clarsimp simp: Platform.addrFromPPtr_def Platform.ptrFromPAddr_def)
+            apply (clarsimp simp: ARM.addrFromPPtr_def ARM.ptrFromPAddr_def)
            apply ((rule ccorres_cond_false_seq ccorres_cond_false
                           ccorres_return_C | simp)+)[3]
         apply (simp only: simp_thms)
@@ -1460,10 +1464,10 @@ lemma Arch_finaliseCap_ccorres:
        and (\<lambda>s. 2 ^ acapBits cap \<le> gsMaxObjectSize s))
    (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}
                         \<inter> {s. final_' s = from_bool final}) []
-   (ArchRetypeDecls_H.finaliseCap cap final) (Call Arch_finaliseCap_'proc)"
+   (Arch.finaliseCap cap final) (Call Arch_finaliseCap_'proc)"
   apply (cinit lift: cap_' final_' cong: call_ignore_cong)
    apply csymbr
-   apply (simp add: ArchRetype_H.finaliseCap_def cap_get_tag_isCap_ArchObject
+   apply (simp add: ARM_H.finaliseCap_def cap_get_tag_isCap_ArchObject
                del: Collect_const)
    apply (wpc, simp_all add: isCap_simps Collect_False Collect_True
                              case_bool_If
@@ -1626,7 +1630,7 @@ lemma Arch_finaliseCap_ccorres:
 lemma ccte_relation_ccap_relation:
   "ccte_relation cte cte' \<Longrightarrow> ccap_relation (cteCap cte) (cte_C.cap_C cte')"
   by (clarsimp simp: ccte_relation_def ccap_relation_def
-                     cte_to_H_def option_map_Some_eq2
+                     cte_to_H_def map_option_Some_eq2
                      c_valid_cte_def)
 
 lemma isFinalCapability_ccorres:
@@ -1700,7 +1704,7 @@ lemma isFinalCapability_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
   apply (simp add: typ_heap_simps)
-  apply (clarsimp simp add: ccte_relation_def option_map_Some_eq2)
+  apply (clarsimp simp add: ccte_relation_def map_option_Some_eq2)
   by (auto,
          auto dest!: ctes_of_valid' [OF _ invs_valid_objs']
               elim!: valid_capAligned)
@@ -1809,7 +1813,7 @@ lemma deletingIRQHandler_ccorres:
                         ghost_assertion_data_set_def)
   apply (simp add: cap_tag_defs)
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
-                        irq_opt_relation_def maxIRQ_def)
+                        irq_opt_relation_def Kernel_C.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
   apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
   done
@@ -2015,7 +2019,7 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def true_def
                 del: Collect_const)
-    apply (rule_tac P="(capIRQ cap) \<le>  Platform.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="(capIRQ cap) \<le>  ARM.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
     apply (rule ccorres_symb_exec_r)
       apply (rule_tac xf'=irq_' in ccorres_abstract,ceqv)
@@ -2028,7 +2032,7 @@ lemma finaliseCap_ccorres:
        apply (simp add: ccap_relation_NullCap_iff split: split_if)
        apply (frule(1) ccap_relation_IRQHandler_mask)
        apply (erule irq_opt_relation_Some_ucast)
-       apply (simp add: Platform.maxIRQ_def Kernel_C.maxIRQ_def)
+       apply (simp add: ARM.maxIRQ_def Kernel_C.maxIRQ_def)
       apply wp
      apply vcg
     apply (rule conseqPre,vcg)
@@ -2078,12 +2082,12 @@ lemma finaliseCap_ccorres:
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
    apply (frule(1) ccap_relation_IRQHandler_mask)
    apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def Platform.maxIRQ_def
-                      maxIRQ_def)
+                      valid_cap'_def ARM.maxIRQ_def
+                      Kernel_C.maxIRQ_def)
     apply (rule irq_opt_relation_Some_ucast', simp)
     apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def Platform.maxIRQ_def
-                      maxIRQ_def)
+                      valid_cap'_def ARM.maxIRQ_def
+                      Kernel_C.maxIRQ_def)
    apply fastforce
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])

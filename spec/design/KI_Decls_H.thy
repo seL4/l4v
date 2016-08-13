@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file KI_Decls_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -16,55 +18,55 @@ imports
   KernelInitMonad_H
 begin
 
-consts
+consts'
 noInitFailure :: "'a kernel_init_state \<Rightarrow> 'a kernel_init"
 
-consts
+consts'
 minNum4kUntypedObj :: "nat"
 
-consts
+consts'
 maxNumFreememRegions :: "nat"
 
-consts
+consts'
 getAPRegion :: "paddr \<Rightarrow> region list kernel_init"
 
-consts
+consts'
 initFreemem :: "paddr \<Rightarrow> region \<Rightarrow> unit kernel_init"
 
-consts
+consts'
 allocRegion :: "nat \<Rightarrow> paddr kernel_init"
 
-consts
+consts'
 initKernel :: "vptr \<Rightarrow> vptr \<Rightarrow> paddr list \<Rightarrow> paddr list \<Rightarrow> paddr list \<Rightarrow> unit kernel"
 
-consts
+consts'
 finaliseBIFrame :: "unit kernel_init"
 
-consts
+consts'
 createInitialThread :: "capability \<Rightarrow> capability \<Rightarrow> capability \<Rightarrow> vptr \<Rightarrow> vptr \<Rightarrow> vptr \<Rightarrow> unit kernel_init"
 
-consts
+consts'
 createIdleThread :: "unit kernel_init"
 
-consts
+consts'
 createUntypedObject :: "capability \<Rightarrow> region \<Rightarrow> unit kernel_init"
 
-consts
+consts'
 mapTaskRegions :: "(paddr * vptr) list \<Rightarrow> ((vptr * machine_word) * (vptr * machine_word)) kernel_init"
 
-consts
+consts'
 allocFrame :: "paddr kernel_init"
 
-consts
+consts'
 makeRootCNode :: "capability kernel_init"
 
-consts
+consts'
 provideCap :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel_init"
 
-consts
+consts'
 provideUntypedCap :: "capability \<Rightarrow> paddr \<Rightarrow> word8 \<Rightarrow> machine_word \<Rightarrow> unit kernel_init"
 
-consts
+consts'
 coverOf :: "region list \<Rightarrow> region"
 
 

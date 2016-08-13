@@ -25,9 +25,10 @@ imports
   TypHeapSimple
   HeapLift
   WordAbstract
-  "../../lib/OptionMonadWP"
+  "../../lib/Monad_WP/OptionMonadWP"
   "../../lib/Apply_Trace"
   AutoCorresSimpset
+  "../../lib/ml-helpers/TermPatternAntiquote"
   keywords "autocorres" :: thy_decl
 begin
 
@@ -69,13 +70,13 @@ lemma corresXF_from_L2_call:
 
 (* The final ac_corres theorem. *)
 lemma ac_corres_chain:
-"\<lbrakk> L1corres Gamma c_L1 c;
+"\<lbrakk> L1corres check_termination Gamma c_L1 c;
    L2corres st_L2 rx_L2 (\<lambda>_. ()) P_L2 c_L2 c_L1;
    L2Tcorres st_HL c_HL c_L2;
    corresTA P_WA rx_WA ex_WA c_WA c_HL;
    L2_call c_WA = A
  \<rbrakk> \<Longrightarrow>
-  ac_corres (st_HL o st_L2) Gamma (rx_WA o rx_L2) (P_L2 and (P_WA o st_HL o st_L2)) A c"
+  ac_corres (st_HL o st_L2) check_termination Gamma (rx_WA o rx_L2) (P_L2 and (P_WA o st_HL o st_L2)) A c"
   apply (rule ccorresE_corresXF_merge)
        apply (unfold L1corres_alt_def)
        apply assumption
@@ -120,28 +121,39 @@ lemmas ac_statistics_rewrites =
     (* Convert L2 to standard exception monads. *)
     L2_defs'
 
+(* Utils *)
 ML_file "../../lib/set.ML"
 ML_file "trace_antiquote.ML"
 ML_file "mkterm_antiquote.ML"
 ML_file "utils.ML"
-ML_file "autocorres_trace.ML"
-ML_file "autocorres_data.ML"
-ML_file "statistics.ML"
+
+(* Common data structures *)
 ML_file "program_info.ML"
 ML_file "function_info.ML"
-ML_file "prog.ML"
+ML_file "autocorres_trace.ML"
+ML_file "autocorres_data.ML"
+
+(* Common control code *)
 ML_file "autocorres_util.ML"
+
+(* L1 *)
 ML_file "exception_rewrite.ML"
 ML_file "simpl_conv.ML"
+(* L2 *)
+ML_file "prog.ML"
 ML_file "l2_opt.ML"
 ML_file "local_var_extract.ML"
+(* HL *)
 ML_file "record_utils.ML"
 ML_file "heap_lift_base.ML"
 ML_file "heap_lift.ML"
+(* WA *)
 ML_file "word_abstract.ML"
 ML_file "pretty_bound_var_names.ML"
 ML_file "monad_convert.ML"
+(* TS *)
 ML_file "type_strengthen.ML"
+
 ML_file "autocorres.ML"
 
 (* Setup "autocorres" keyword. *)

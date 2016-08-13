@@ -999,16 +999,16 @@ lemma ccorres_zipWithM_x_while_gen:
               (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s))))"
   unfolding zipWithM_x_def
   apply (rule ccorres_rel_imp [OF ccorres_sequence_x_while_gen[OF _ _ _ _ _ xf]])
-        apply (simp add: length_zipWith zipWith_nth)
+        apply (simp add: zipWith_nth)
         apply (rule rl)
-       apply (simp add: length_zipWith)
+       apply simp
        apply (rule guard)
       apply (rule bodyi)
-     apply (simp add: length_zipWith zipWith_nth hi[simplified])
-    apply (simp add: length_zipWith)
+     apply (simp add: zipWith_nth hi[simplified])
+    apply simp
     apply (rule wb)
    apply (rule j)
-  apply (simp add: length_zipWith)
+  apply simp
   done
 
 lemmas ccorres_zipWithM_x_while
@@ -1285,4 +1285,5 @@ lemma ccorres_split_nothrow_case_sum:
   done
 
 end
+
 end

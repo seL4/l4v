@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file RegisterSet_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -15,10 +17,12 @@ imports
   "../../../lib/HaskellLib_H"
   "../../machine/ARM/MachineTypes"
 begin
+context Arch begin global_naming ARM_H
 
 definition
   newContext :: "register => machine_word"
 where
  "newContext \<equiv> (K 0) aLU initContext"
 
+end
 end

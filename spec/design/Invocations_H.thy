@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Invocations_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -14,15 +16,18 @@ imports
   "./$L4V_ARCH/ArchRetypeDecls_H"
   "./$L4V_ARCH/ArchLabelFuns_H"
 begin
+requalify_types (in Arch)
+  copy_register_sets irqcontrol_invocation
+  invocation
 
 datatype tcbinvocation =
     Suspend machine_word
   | Resume machine_word
   | ThreadControl machine_word machine_word "cptr option" "priority option" "(capability * machine_word) option" "(capability * machine_word) option" "(vptr * (capability * machine_word) option) option"
   | NotificationControl machine_word "(machine_word) option"
-  | WriteRegisters machine_word bool "machine_word list" ArchRetypeDecls_H.copy_register_sets
-  | ReadRegisters machine_word bool machine_word ArchRetypeDecls_H.copy_register_sets
-  | CopyRegisters machine_word machine_word bool bool bool bool ArchRetypeDecls_H.copy_register_sets
+  | WriteRegisters machine_word bool "machine_word list" Arch.copy_register_sets
+  | ReadRegisters machine_word bool machine_word Arch.copy_register_sets
+  | CopyRegisters machine_word machine_word bool bool bool bool Arch.copy_register_sets
 
 primrec
   notificationPtr :: "tcbinvocation \<Rightarrow> (machine_word) option"
@@ -95,12 +100,12 @@ where
   "copyRegsResumeTarget (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v3"
 
 primrec
-  copyRegsTransferArch :: "tcbinvocation \<Rightarrow> ArchRetypeDecls_H.copy_register_sets"
+  copyRegsTransferArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
 where
   "copyRegsTransferArch (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = v6"
 
 primrec
-  readRegsArch :: "tcbinvocation \<Rightarrow> ArchRetypeDecls_H.copy_register_sets"
+  readRegsArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
 where
   "readRegsArch (ReadRegisters v0 v1 v2 v3) = v3"
 
@@ -130,7 +135,7 @@ where
   "writeRegsThread (WriteRegisters v0 v1 v2 v3) = v0"
 
 primrec
-  writeRegsArch :: "tcbinvocation \<Rightarrow> ArchRetypeDecls_H.copy_register_sets"
+  writeRegsArch :: "tcbinvocation \<Rightarrow> Arch.copy_register_sets"
 where
   "writeRegsArch (WriteRegisters v0 v1 v2 v3) = v3"
 
@@ -225,12 +230,12 @@ where
   "copyRegsResumeTarget_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 (f v3) v4 v5 v6"
 
 primrec
-  copyRegsTransferArch_update :: "(ArchRetypeDecls_H.copy_register_sets \<Rightarrow> ArchRetypeDecls_H.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  copyRegsTransferArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
   "copyRegsTransferArch_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 v3 v4 v5 (f v6)"
 
 primrec
-  readRegsArch_update :: "(ArchRetypeDecls_H.copy_register_sets \<Rightarrow> ArchRetypeDecls_H.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  readRegsArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
   "readRegsArch_update f (ReadRegisters v0 v1 v2 v3) = ReadRegisters v0 v1 v2 (f v3)"
 
@@ -260,7 +265,7 @@ where
   "writeRegsThread_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters (f v0) v1 v2 v3"
 
 primrec
-  writeRegsArch_update :: "(ArchRetypeDecls_H.copy_register_sets \<Rightarrow> ArchRetypeDecls_H.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+  writeRegsArch_update :: "(Arch.copy_register_sets \<Rightarrow> Arch.copy_register_sets) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
   "writeRegsArch_update f (WriteRegisters v0 v1 v2 v3) = WriteRegisters v0 v1 v2 (f v3)"
 
@@ -305,17 +310,17 @@ where
   "NotificationControl_ \<lparr> notificationTCB= v0, notificationPtr= v1 \<rparr> == NotificationControl v0 v1"
 
 abbreviation (input)
-  WriteRegisters_trans :: "(machine_word) \<Rightarrow> (bool) \<Rightarrow> (machine_word list) \<Rightarrow> (ArchRetypeDecls_H.copy_register_sets) \<Rightarrow> tcbinvocation" ("WriteRegisters'_ \<lparr> writeRegsThread= _, writeRegsResume= _, writeRegsValues= _, writeRegsArch= _ \<rparr>")
+  WriteRegisters_trans :: "(machine_word) \<Rightarrow> (bool) \<Rightarrow> (machine_word list) \<Rightarrow> (Arch.copy_register_sets) \<Rightarrow> tcbinvocation" ("WriteRegisters'_ \<lparr> writeRegsThread= _, writeRegsResume= _, writeRegsValues= _, writeRegsArch= _ \<rparr>")
 where
   "WriteRegisters_ \<lparr> writeRegsThread= v0, writeRegsResume= v1, writeRegsValues= v2, writeRegsArch= v3 \<rparr> == WriteRegisters v0 v1 v2 v3"
 
 abbreviation (input)
-  ReadRegisters_trans :: "(machine_word) \<Rightarrow> (bool) \<Rightarrow> (machine_word) \<Rightarrow> (ArchRetypeDecls_H.copy_register_sets) \<Rightarrow> tcbinvocation" ("ReadRegisters'_ \<lparr> readRegsThread= _, readRegsSuspend= _, readRegsLength= _, readRegsArch= _ \<rparr>")
+  ReadRegisters_trans :: "(machine_word) \<Rightarrow> (bool) \<Rightarrow> (machine_word) \<Rightarrow> (Arch.copy_register_sets) \<Rightarrow> tcbinvocation" ("ReadRegisters'_ \<lparr> readRegsThread= _, readRegsSuspend= _, readRegsLength= _, readRegsArch= _ \<rparr>")
 where
   "ReadRegisters_ \<lparr> readRegsThread= v0, readRegsSuspend= v1, readRegsLength= v2, readRegsArch= v3 \<rparr> == ReadRegisters v0 v1 v2 v3"
 
 abbreviation (input)
-  CopyRegisters_trans :: "(machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (bool) \<Rightarrow> (bool) \<Rightarrow> (bool) \<Rightarrow> (bool) \<Rightarrow> (ArchRetypeDecls_H.copy_register_sets) \<Rightarrow> tcbinvocation" ("CopyRegisters'_ \<lparr> copyRegsTarget= _, copyRegsSource= _, copyRegsSuspendSource= _, copyRegsResumeTarget= _, copyRegsTransferFrame= _, copyRegsTransferInteger= _, copyRegsTransferArch= _ \<rparr>")
+  CopyRegisters_trans :: "(machine_word) \<Rightarrow> (machine_word) \<Rightarrow> (bool) \<Rightarrow> (bool) \<Rightarrow> (bool) \<Rightarrow> (bool) \<Rightarrow> (Arch.copy_register_sets) \<Rightarrow> tcbinvocation" ("CopyRegisters'_ \<lparr> copyRegsTarget= _, copyRegsSource= _, copyRegsSuspendSource= _, copyRegsResumeTarget= _, copyRegsTransferFrame= _, copyRegsTransferInteger= _, copyRegsTransferArch= _ \<rparr>")
 where
   "CopyRegisters_ \<lparr> copyRegsTarget= v0, copyRegsSource= v1, copyRegsSuspendSource= v2, copyRegsResumeTarget= v3, copyRegsTransferFrame= v4, copyRegsTransferInteger= v5, copyRegsTransferArch= v6 \<rparr> == CopyRegisters v0 v1 v2 v3 v4 v5 v6"
 
@@ -760,7 +765,7 @@ lemma retypeNewSizeBits_retypeNewSizeBits_update [simp]:
   by (cases v) simp
 
 datatype irqcontrol_invocation =
-    ArchIRQControl ArchRetypeDecls_H.irqcontrol_invocation
+    ArchIRQControl Arch.irqcontrol_invocation
   | IssueIRQHandler irq machine_word machine_word
 
 primrec
@@ -779,7 +784,7 @@ where
   "issueHandlerControllerSlot (IssueIRQHandler v0 v1 v2) = v2"
 
 primrec
-  archIRQControl :: "irqcontrol_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation"
+  archIRQControl :: "irqcontrol_invocation \<Rightarrow> Arch.irqcontrol_invocation"
 where
   "archIRQControl (ArchIRQControl v0) = v0"
 
@@ -799,12 +804,12 @@ where
   "issueHandlerControllerSlot_update f (IssueIRQHandler v0 v1 v2) = IssueIRQHandler v0 v1 (f v2)"
 
 primrec
-  archIRQControl_update :: "(ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
+  archIRQControl_update :: "(Arch.irqcontrol_invocation \<Rightarrow> Arch.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
 where
   "archIRQControl_update f (ArchIRQControl v0) = ArchIRQControl (f v0)"
 
 abbreviation (input)
-  ArchIRQControl_trans :: "(ArchRetypeDecls_H.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation" ("ArchIRQControl'_ \<lparr> archIRQControl= _ \<rparr>")
+  ArchIRQControl_trans :: "(Arch.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation" ("ArchIRQControl'_ \<lparr> archIRQControl= _ \<rparr>")
 where
   "ArchIRQControl_ \<lparr> archIRQControl= v0 \<rparr> == ArchIRQControl v0"
 
@@ -912,7 +917,7 @@ datatype invocation =
   | InvokeCNode cnode_invocation
   | InvokeIRQControl irqcontrol_invocation
   | InvokeIRQHandler irqhandler_invocation
-  | InvokeArchObject ArchRetypeDecls_H.invocation
+  | InvokeArchObject Arch.invocation
 
 definition
 invocationType :: "machine_word \<Rightarrow> invocation_label"
@@ -927,5 +932,12 @@ where
     True      then InvalidInvocation
     else undefined"
 
+
+context Arch begin
+context begin global_naming global
+requalify_types
+  Invocations_H.invocation
+end
+end
 
 end

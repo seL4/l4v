@@ -139,7 +139,7 @@ fun polish ctxt (mt : Monad_Types.monad_type) do_opt thm =
 let
   (* Apply any polishing rules. *)
   val ctxt = Utils.set_hidden_ctxt ctxt
-  val simps = if do_opt then PolishSimps.get ctxt else []
+  val simps = if do_opt then Utils.get_rules ctxt @{named_theorems polish} else []
 
   (* Simplify using polish rules. *)
   val rules = Monad_Types.monad_type_rules mt

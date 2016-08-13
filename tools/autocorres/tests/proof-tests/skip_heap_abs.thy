@@ -16,9 +16,10 @@ theory skip_heap_abs imports "../../AutoCorres" begin
 install_C_file "skip_heap_abs.c"
 autocorres [skip_heap_abs] "skip_heap_abs.c"
 
-(* There should be no heap lift theorem. *)
+(* There should be no heap lift phase. *)
 ML {*
-assert (is_none (AutoCorresData.get_thm @{theory} "skip_heap_abs.c" "HL" "f")) "skip_heap_abs failed"
+val fn_infos = the (Symtab.lookup (AutoCorresFunctionInfo.get @{theory}) "skip_heap_abs.c");
+assert (is_none (FunctionInfo.Phasetab.lookup fn_infos FunctionInfo.HL)) "skip_heap_abs failed";
 *}
 
 end

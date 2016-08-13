@@ -12,6 +12,8 @@ theory ExampleSystem
 imports Access
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
   nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list option"
 where
@@ -178,77 +180,77 @@ by (simp add: asid1_3063_def asid_high_bits_of_def asid1_3065_def asid_low_bits_
 text {* UT1's CSpace *}
 
 definition 
-  caps1_6 :: Structures_A.cnode_contents 
+  caps1_6 :: cnode_contents 
 where
   "caps1_6 \<equiv> 
    (empty_cnode 10)
       ( (the_nat_to_bl_10 1)  
-            \<mapsto> Structures_A.ThreadCap 3079, 
+            \<mapsto> ThreadCap 3079, 
         (the_nat_to_bl_10 2)
-            \<mapsto> Structures_A.CNodeCap 6 undefined undefined, 
+            \<mapsto> CNodeCap 6 undefined undefined, 
         (the_nat_to_bl_10 3)
-            \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 
+            \<mapsto> ArchObjectCap (PageDirectoryCap 3063 
                                              (Some asid1_3063)),
         (the_nat_to_bl_10 318) 
-            \<mapsto> Structures_A.EndpointCap  9 0 {AllowSend} )"
+            \<mapsto> EndpointCap  9 0 {AllowSend} )"
 
 
 definition
-  obj1_6 :: Structures_A.kernel_object 
+  obj1_6 :: kernel_object 
 where
-  "obj1_6 \<equiv> Structures_A.CNode 10 caps1_6"
+  "obj1_6 \<equiv> CNode 10 caps1_6"
 
 text {* T1's Cspace *}
 
 definition
-  caps1_7 :: Structures_A.cnode_contents 
+  caps1_7 :: cnode_contents 
 where
   "caps1_7 \<equiv> 
    (empty_cnode 10)
       ( (the_nat_to_bl_10 1)  
-            \<mapsto> Structures_A.ThreadCap 3080, 
+            \<mapsto> ThreadCap 3080, 
         (the_nat_to_bl_10 2)
-            \<mapsto> Structures_A.CNodeCap 7 undefined undefined,
+            \<mapsto> CNodeCap 7 undefined undefined,
         (the_nat_to_bl_10 3)
-           \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 
+           \<mapsto> ArchObjectCap (PageDirectoryCap 3065 
                                             (Some asid1_3065)),
         (the_nat_to_bl_10 318)
-           \<mapsto> Structures_A.EndpointCap  9 0 {AllowRecv}) "
+           \<mapsto> EndpointCap  9 0 {AllowRecv}) "
 
 definition 
-  obj1_7 :: Structures_A.kernel_object
+  obj1_7 :: kernel_object
 where
-  "obj1_7 \<equiv> Structures_A.CNode 10 caps1_7"
+  "obj1_7 \<equiv> CNode 10 caps1_7"
 
 
 text {* endpoint between UT1 and T1 *}
 
 definition
-  obj1_9 :: Structures_A.kernel_object 
+  obj1_9 :: kernel_object 
 where
-  "obj1_9 \<equiv> Structures_A.Endpoint Structures_A.IdleEP"
+  "obj1_9 \<equiv> Endpoint IdleEP"
 
 
 text {* UT1's VSpace (PageDirectory)*}
 
 definition
-  pt1_3072 :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
+  pt1_3072 :: "word8 \<Rightarrow> pte " 
 where
-  "pt1_3072 \<equiv> (\<lambda>_. Arch_Structs_A.InvalidPTE)" 
+  "pt1_3072 \<equiv> (\<lambda>_. InvalidPTE)" 
 
 definition 
-  obj1_3072 :: Structures_A.kernel_object 
+  obj1_3072 :: kernel_object 
 where
-  "obj1_3072 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable pt1_3072)"
+  "obj1_3072 \<equiv> ArchObj (PageTable pt1_3072)"
 
 
 definition
-  pd1_3063 :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
+  pd1_3063 :: "12 word \<Rightarrow> pde " 
 where
   "pd1_3063 \<equiv> 
-    (\<lambda>_. Arch_Structs_A.InvalidPDE)
-     (0 := Arch_Structs_A.PageTablePDE 
-              (Platform.addrFromPPtr 3072) 
+    (\<lambda>_. InvalidPDE)
+     (0 := PageTablePDE 
+              (addrFromPPtr 3072) 
               undefined
               undefined )"
 
@@ -256,34 +258,34 @@ where
 if it's right *)
 
 definition
-  obj1_3063 :: Structures_A.kernel_object 
+  obj1_3063 :: kernel_object 
 where
-  "obj1_3063 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd1_3063)"
+  "obj1_3063 \<equiv> ArchObj (PageDirectory pd1_3063)"
 
 
 text {* T1's VSpace (PageDirectory)*}
 
 
 definition
-  pt1_3077 :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
+  pt1_3077 :: "word8 \<Rightarrow> pte " 
 where
   "pt1_3077 \<equiv> 
-    (\<lambda>_. Arch_Structs_A.InvalidPTE)"
+    (\<lambda>_. InvalidPTE)"
 
 
 definition
-  obj1_3077 :: Structures_A.kernel_object 
+  obj1_3077 :: kernel_object 
 where
-  "obj1_3077 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable pt1_3077)"
+  "obj1_3077 \<equiv> ArchObj (PageTable pt1_3077)"
 
 
 definition
-  pd1_3065 :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
+  pd1_3065 :: "12 word \<Rightarrow> pde " 
 where
   "pd1_3065 \<equiv>
-    (\<lambda>_. Arch_Structs_A.InvalidPDE)
-     (0 := Arch_Structs_A.PageTablePDE  
-             (Platform.addrFromPPtr 3077) 
+    (\<lambda>_. InvalidPDE)
+     (0 := PageTablePDE  
+             (addrFromPPtr 3077) 
              undefined
              undefined )" 
 
@@ -291,25 +293,25 @@ where
 if it's right *)
 
 definition
-  obj1_3065 :: Structures_A.kernel_object 
+  obj1_3065 :: kernel_object 
 where
-  "obj1_3065 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd1_3065)"
+  "obj1_3065 \<equiv> ArchObj (PageDirectory pd1_3065)"
 
 
 text {* UT1's tcb *}
 
 definition
-  obj1_3079 :: Structures_A.kernel_object 
+  obj1_3079 :: kernel_object 
 where
   "obj1_3079 \<equiv> 
-   Structures_A.TCB \<lparr> 
-     tcb_ctable        = Structures_A.CNodeCap 6 undefined undefined ,
-     tcb_vtable        = Structures_A.ArchObjectCap 
-                           (Arch_Structs_A.PageDirectoryCap 3063 (Some asid1_3063)),
-     tcb_reply         = Structures_A.ReplyCap 3079 True, (* master reply cap to itself *)
-     tcb_caller        = Structures_A.NullCap,
-     tcb_ipcframe      = Structures_A.NullCap,
-     tcb_state         = Structures_A.Running, 
+   TCB \<lparr> 
+     tcb_ctable        = CNodeCap 6 undefined undefined ,
+     tcb_vtable        = ArchObjectCap 
+                           (PageDirectoryCap 3063 (Some asid1_3063)),
+     tcb_reply         = ReplyCap 3079 True, (* master reply cap to itself *)
+     tcb_caller        = NullCap,
+     tcb_ipcframe      = NullCap,
+     tcb_state         = Running, 
      tcb_fault_handler = undefined, 
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
@@ -320,17 +322,17 @@ where
 text {* T1's tcb *}
 
 definition
-  obj1_3080 :: Structures_A.kernel_object 
+  obj1_3080 :: kernel_object 
 where
   "obj1_3080 \<equiv> 
-   Structures_A.TCB \<lparr> 
-     tcb_ctable        = Structures_A.CNodeCap 7 undefined undefined ,
-     tcb_vtable        = Structures_A.ArchObjectCap 
-                           (Arch_Structs_A.PageDirectoryCap 3065 (Some asid1_3065)),
-     tcb_reply         = Structures_A.ReplyCap 3080 True, (* master reply cap to itself *)
-     tcb_caller        = Structures_A.NullCap,
-     tcb_ipcframe      = Structures_A.NullCap,
-     tcb_state         = Structures_A.BlockedOnReceive 9,
+   TCB \<lparr> 
+     tcb_ctable        = CNodeCap 7 undefined undefined ,
+     tcb_vtable        = ArchObjectCap 
+                           (PageDirectoryCap 3065 (Some asid1_3065)),
+     tcb_reply         = ReplyCap 3080 True, (* master reply cap to itself *)
+     tcb_caller        = NullCap,
+     tcb_ipcframe      = NullCap,
+     tcb_state         = BlockedOnReceive 9,
      tcb_fault_handler = undefined, 
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
@@ -338,7 +340,7 @@ where
      tcb_bound_notification     = None \<rparr>"
 
 definition
- "obj1_10 \<equiv> Structures_A.CNode 10 (Map.empty([] \<mapsto> cap.NullCap))"
+ "obj1_10 \<equiv> CNode 10 (Map.empty([] \<mapsto> cap.NullCap))"
 
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.
@@ -486,32 +488,32 @@ done
 
 (* clagged from KernelInit_R *)
 lemma empty_cnode_apply[simp]:
-  "(empty_cnode n xs = Some cap) = (length xs = n \<and> cap = Structures_A.NullCap)"
+  "(empty_cnode n xs = Some cap) = (length xs = n \<and> cap = NullCap)"
   by (auto simp add: empty_cnode_def)
 
 
 lemma s1_caps_of_state : 
   "caps_of_state s1 p = Some cap \<Longrightarrow>
-     cap = Structures_A.NullCap \<or>
+     cap = NullCap \<or>
      (p,cap) \<in>  
-       { ((6::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap 3079),
-         ((6::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap 6 undefined undefined),
-         ((6::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 (Some asid1_3063))), 
-         ((6::obj_ref,(the_nat_to_bl_10 318)),Structures_A.EndpointCap  9 0 {AllowSend}),
-         ((7::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap 3080), 
-         ((7::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap 7 undefined undefined),
-         ((7::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 (Some asid1_3065))), 
-         ((7::obj_ref,(the_nat_to_bl_10 318)),Structures_A.EndpointCap  9 0 {AllowRecv}) ,
-         ((3079::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap 6 undefined undefined ),
-         ((3079::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 (Some asid1_3063))),
-         ((3079::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap 3079 True), 
-         ((3079::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
-         ((3079::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap),
-         ((3080::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap 7 undefined undefined ),
-         ((3080::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 (Some asid1_3065))),
-         ((3080::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap 3080 True),
-         ((3080::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
-         ((3080::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap)} "
+       { ((6::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3079),
+         ((6::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 6 undefined undefined),
+         ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063))), 
+         ((6::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowSend}),
+         ((7::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3080), 
+         ((7::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 7 undefined undefined),
+         ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065))), 
+         ((7::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowRecv}) ,
+         ((3079::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
+         ((3079::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063))),
+         ((3079::obj_ref, (tcb_cnode_index 2)), ReplyCap 3079 True), 
+         ((3079::obj_ref, (tcb_cnode_index 3)), NullCap),
+         ((3079::obj_ref, (tcb_cnode_index 4)), NullCap),
+         ((3080::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
+         ((3080::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065))),
+         ((3080::obj_ref, (tcb_cnode_index 2)), ReplyCap 3080 True),
+         ((3080::obj_ref, (tcb_cnode_index 3)), NullCap),
+         ((3080::obj_ref, (tcb_cnode_index 4)), NullCap)} "
   apply (insert caps1_7_well_formed)
   apply (insert caps1_6_well_formed) 
   apply (simp add: caps_of_state_cte_wp_at cte_wp_at_cases s1_def kh1_def kh1_obj_def)
@@ -534,7 +536,7 @@ lemma Sys1_wellformed: "pas_wellformed Sys1PAS"
  done
 
 lemma tcb_states_of_state_1:
-  "tcb_states_of_state s1 = [0xC08 \<mapsto> Structures_A.thread_state.BlockedOnReceive 9,  0xC07 \<mapsto> Structures_A.thread_state.Running ]"
+  "tcb_states_of_state s1 = [0xC08 \<mapsto> thread_state.BlockedOnReceive 9,  0xC07 \<mapsto> thread_state.Running ]"
   unfolding s1_def tcb_states_of_state_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
@@ -703,92 +705,92 @@ by (simp add: asid2_3063_def asid_high_bits_of_def asid2_3065_def asid_low_bits_
 text {* the intermediaite CSpace *}
 
 definition 
-  caps2_5 :: Structures_A.cnode_contents 
+  caps2_5 :: cnode_contents 
 where
   "caps2_5 \<equiv> 
    (empty_cnode 10)"
 
 definition
-  obj2_5 :: Structures_A.kernel_object 
+  obj2_5 :: kernel_object 
 where
-  "obj2_5 \<equiv> Structures_A.CNode 10 caps2_5"
+  "obj2_5 \<equiv> CNode 10 caps2_5"
 
 
 
 text {* UT2's CSpace *}
 
 definition 
-  caps2_6 :: Structures_A.cnode_contents 
+  caps2_6 :: cnode_contents 
 where
   "caps2_6 \<equiv> 
    (empty_cnode 10)
       ( (the_nat_to_bl_10 1)  
-            \<mapsto> Structures_A.ThreadCap 3079, 
+            \<mapsto> ThreadCap 3079, 
         (the_nat_to_bl_10 2)
-            \<mapsto> Structures_A.CNodeCap 6 undefined undefined, 
+            \<mapsto> CNodeCap 6 undefined undefined, 
         (the_nat_to_bl_10 3)
-            \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 
+            \<mapsto> ArchObjectCap (PageDirectoryCap 3063 
                                              (Some asid2_3063)),
         (the_nat_to_bl_10 4)
-            \<mapsto> Structures_A.CNodeCap 5 undefined undefined )"
+            \<mapsto> CNodeCap 5 undefined undefined )"
 
 
 definition
-  obj2_6 :: Structures_A.kernel_object 
+  obj2_6 :: kernel_object 
 where
-  "obj2_6 \<equiv> Structures_A.CNode 10 caps2_6"
+  "obj2_6 \<equiv> CNode 10 caps2_6"
 
 text {* T2's Cspace *}
 
 definition
-  caps2_7 :: Structures_A.cnode_contents 
+  caps2_7 :: cnode_contents 
 where
   "caps2_7 \<equiv> 
    (empty_cnode 10)
       ( (the_nat_to_bl_10 1)  
-            \<mapsto> Structures_A.ThreadCap 3080, 
+            \<mapsto> ThreadCap 3080, 
         (the_nat_to_bl_10 2)
-            \<mapsto> Structures_A.CNodeCap 7 undefined undefined,
+            \<mapsto> CNodeCap 7 undefined undefined,
         (the_nat_to_bl_10 3)
-           \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 
+           \<mapsto> ArchObjectCap (PageDirectoryCap 3065 
                                             (Some asid2_3065)),
         (the_nat_to_bl_10 4)
-            \<mapsto> Structures_A.CNodeCap 5 undefined undefined) "
+            \<mapsto> CNodeCap 5 undefined undefined) "
 
 definition 
-  obj2_7 :: Structures_A.kernel_object
+  obj2_7 :: kernel_object
 where
-  "obj2_7 \<equiv> Structures_A.CNode 10 caps2_7"
+  "obj2_7 \<equiv> CNode 10 caps2_7"
 
 
 text {* endpoint between UT2 and T2 *}
 
 definition
-  obj2_9 :: Structures_A.kernel_object 
+  obj2_9 :: kernel_object 
 where
-  "obj2_9 \<equiv> Structures_A.Endpoint Structures_A.IdleEP"
+  "obj2_9 \<equiv> Endpoint IdleEP"
 
 
 text {* UT2's VSpace (PageDirectory)*}
 
 definition
-  pt2_3072 :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
+  pt2_3072 :: "word8 \<Rightarrow> pte " 
 where
-  "pt2_3072 \<equiv> (\<lambda>_. Arch_Structs_A.InvalidPTE)"
+  "pt2_3072 \<equiv> (\<lambda>_. InvalidPTE)"
 
 definition 
-  obj2_3072 :: Structures_A.kernel_object 
+  obj2_3072 :: kernel_object 
 where
-  "obj2_3072 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable pt2_3072)"
+  "obj2_3072 \<equiv> ArchObj (PageTable pt2_3072)"
 
 
 definition
-  pd2_3063 :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
+  pd2_3063 :: "12 word \<Rightarrow> pde " 
 where
   "pd2_3063 \<equiv> 
-    (\<lambda>_. Arch_Structs_A.InvalidPDE)
-     (0 := Arch_Structs_A.PageTablePDE 
-              (Platform.addrFromPPtr 3072) 
+    (\<lambda>_. InvalidPDE)
+     (0 := PageTablePDE 
+              (addrFromPPtr 3072) 
               undefined
               undefined )"
 
@@ -796,33 +798,33 @@ where
 if it's right *)
 
 definition
-  obj2_3063 :: Structures_A.kernel_object 
+  obj2_3063 :: kernel_object 
 where
-  "obj2_3063 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd2_3063)"
+  "obj2_3063 \<equiv> ArchObj (PageDirectory pd2_3063)"
 
 
 text {* T1's VSpace (PageDirectory)*}
 
 
 definition
-  pt2_3077 :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
+  pt2_3077 :: "word8 \<Rightarrow> pte " 
 where
   "pt2_3077 \<equiv> 
-    (\<lambda>_. Arch_Structs_A.InvalidPTE)"
+    (\<lambda>_. InvalidPTE)"
 
 definition
-  obj2_3077 :: Structures_A.kernel_object 
+  obj2_3077 :: kernel_object 
 where
-  "obj2_3077 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable pt2_3077)"
+  "obj2_3077 \<equiv> ArchObj (PageTable pt2_3077)"
 
 
 definition
-  pd2_3065 :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
+  pd2_3065 :: "12 word \<Rightarrow> pde " 
 where
   "pd2_3065 \<equiv>
-    (\<lambda>_. Arch_Structs_A.InvalidPDE)
-     (0 := Arch_Structs_A.PageTablePDE  
-             (Platform.addrFromPPtr 3077) 
+    (\<lambda>_. InvalidPDE)
+     (0 := PageTablePDE  
+             (addrFromPPtr 3077) 
              undefined
              undefined )" 
 
@@ -830,25 +832,25 @@ where
 if it's right *)
 
 definition
-  obj2_3065 :: Structures_A.kernel_object 
+  obj2_3065 :: kernel_object 
 where
-  "obj2_3065 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd2_3065)"
+  "obj2_3065 \<equiv> ArchObj (PageDirectory pd2_3065)"
 
 
 text {* UT1's tcb *}
 
 definition
-  obj2_3079 :: Structures_A.kernel_object 
+  obj2_3079 :: kernel_object 
 where
   "obj2_3079 \<equiv> 
-   Structures_A.TCB \<lparr> 
-     tcb_ctable        = Structures_A.CNodeCap 6 undefined undefined ,
-     tcb_vtable        = Structures_A.ArchObjectCap 
-                           (Arch_Structs_A.PageDirectoryCap 3063 (Some asid2_3063)),
-     tcb_reply         = Structures_A.ReplyCap 3079 True, (* master reply cap to itself *)
-     tcb_caller        = Structures_A.NullCap,
-     tcb_ipcframe      = Structures_A.NullCap,
-     tcb_state         = Structures_A.Running, 
+   TCB \<lparr> 
+     tcb_ctable        = CNodeCap 6 undefined undefined ,
+     tcb_vtable        = ArchObjectCap 
+                           (PageDirectoryCap 3063 (Some asid2_3063)),
+     tcb_reply         = ReplyCap 3079 True, (* master reply cap to itself *)
+     tcb_caller        = NullCap,
+     tcb_ipcframe      = NullCap,
+     tcb_state         = Running, 
      tcb_fault_handler = undefined, 
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
@@ -859,17 +861,17 @@ where
 text {* T1's tcb *}
 
 definition
-  obj2_3080 :: Structures_A.kernel_object 
+  obj2_3080 :: kernel_object 
 where
   "obj2_3080 \<equiv> 
-   Structures_A.TCB \<lparr> 
-     tcb_ctable        = Structures_A.CNodeCap 7 undefined undefined ,
-     tcb_vtable        = Structures_A.ArchObjectCap 
-                           (Arch_Structs_A.PageDirectoryCap 3065 (Some asid2_3065)),
-     tcb_reply         = Structures_A.ReplyCap 3080 True, (* master reply cap to itself *)
-     tcb_caller        = Structures_A.NullCap,
-     tcb_ipcframe      = Structures_A.NullCap,
-     tcb_state         = Structures_A.BlockedOnReceive 9,
+   TCB \<lparr> 
+     tcb_ctable        = CNodeCap 7 undefined undefined ,
+     tcb_vtable        = ArchObjectCap 
+                           (PageDirectoryCap 3065 (Some asid2_3065)),
+     tcb_reply         = ReplyCap 3080 True, (* master reply cap to itself *)
+     tcb_caller        = NullCap,
+     tcb_ipcframe      = NullCap,
+     tcb_state         = BlockedOnReceive 9,
      tcb_fault_handler = undefined, 
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
@@ -1004,26 +1006,26 @@ done
 
 lemma s2_caps_of_state : 
   "caps_of_state s2 p = Some cap \<Longrightarrow>
-     cap = Structures_A.NullCap \<or>
+     cap = NullCap \<or>
      (p,cap) \<in>  
-       { ((6::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap 3079),
-         ((6::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap 6 undefined undefined),
-         ((6::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 (Some asid2_3063))), 
-         ((6::obj_ref,(the_nat_to_bl_10 4)),  Structures_A.CNodeCap 5 undefined undefined),
-         ((7::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap 3080), 
-         ((7::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap 7 undefined undefined),
-         ((7::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 (Some asid2_3065))), 
-         ((7::obj_ref,(the_nat_to_bl_10 4)),  Structures_A.CNodeCap 5 undefined undefined),
-         ((3079::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap 6 undefined undefined ),
-         ((3079::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 (Some asid2_3063))),
-         ((3079::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap 3079 True),
-         ((3079::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
-         ((3079::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap),
-         ((3080::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap 7 undefined undefined ),
-         ((3080::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 (Some asid2_3065))),
-         ((3080::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap 3080 True),
-         ((3080::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
-         ((3080::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap)} "
+       { ((6::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3079),
+         ((6::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 6 undefined undefined),
+         ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063))), 
+         ((6::obj_ref,(the_nat_to_bl_10 4)),  CNodeCap 5 undefined undefined),
+         ((7::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3080), 
+         ((7::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 7 undefined undefined),
+         ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065))), 
+         ((7::obj_ref,(the_nat_to_bl_10 4)),  CNodeCap 5 undefined undefined),
+         ((3079::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
+         ((3079::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063))),
+         ((3079::obj_ref, (tcb_cnode_index 2)), ReplyCap 3079 True),
+         ((3079::obj_ref, (tcb_cnode_index 3)), NullCap),
+         ((3079::obj_ref, (tcb_cnode_index 4)), NullCap),
+         ((3080::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
+         ((3080::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065))),
+         ((3080::obj_ref, (tcb_cnode_index 2)), ReplyCap 3080 True),
+         ((3080::obj_ref, (tcb_cnode_index 3)), NullCap),
+         ((3080::obj_ref, (tcb_cnode_index 4)), NullCap)} "
   apply (insert caps2_7_well_formed)
   apply (insert caps2_6_well_formed)
   apply (simp add: caps_of_state_cte_wp_at cte_wp_at_cases s2_def kh2_def kh2_obj_def)
@@ -1133,5 +1135,7 @@ lemma "pas_refined Sys2PAS s2"
                     Sys2ASIDMap_def asid2_3063_def asid2_3065_def
              dest!: s2_caps_of_state)[1]
   done
+
+end
 
 end

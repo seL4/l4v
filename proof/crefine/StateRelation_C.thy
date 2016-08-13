@@ -12,6 +12,8 @@ theory StateRelation_C
 imports Wellformed_C
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
   "lifth p s \<equiv> the (clift (t_hrs_' s) p)"
 
@@ -81,6 +83,8 @@ where
                         then Some (ucast (stored_hw_asid_CL (pde_pde_invalid_lift pde)))
                         else None"
 
+end
+
 text {*
   Conceptually, the constant armKSKernelVSpace_C resembles ghost state.
   The constant specifies the use of certain address ranges, or ``windows''.
@@ -96,7 +100,7 @@ text {*
   which can subsequently be instantiated for
   @{text kernel_all_global_addresses} as well as @{text kernel_all_substitute}.
 *}
-locale state_rel = substitute_pre +
+locale state_rel = Arch + substitute_pre + (*FIXME: arch_split*)
   fixes armKSKernelVSpace_C :: "machine_word \<Rightarrow> arm_vspace_region_use"
 
 locale kernel = kernel_all_substitute + state_rel
@@ -112,7 +116,7 @@ definition
   (armKSGlobalsFrame s = symbol_table ''armKSGlobalsFrame'')"
 
 definition
-  carch_state_relation :: "ArchStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
+  carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
   "carch_state_relation astate cstate \<equiv>
   armKSNextASID_' cstate = armKSNextASID astate \<and>
@@ -124,6 +128,8 @@ where
   carch_globals astate"
 
 end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   cmachine_state_relation :: "machine_state \<Rightarrow> globals \<Rightarrow> bool"
@@ -199,24 +205,24 @@ definition
 fun
   register_from_H :: "register \<Rightarrow> word32"
   where
-  "register_from_H MachineTypes.R0 = scast Kernel_C.R0"
-  | "register_from_H MachineTypes.R1 = scast Kernel_C.R1"
-  | "register_from_H MachineTypes.R2 = scast Kernel_C.R2"
-  | "register_from_H MachineTypes.R3 = scast Kernel_C.R3"
-  | "register_from_H MachineTypes.R4 = scast Kernel_C.R4"
-  | "register_from_H MachineTypes.R5 = scast Kernel_C.R5"
-  | "register_from_H MachineTypes.R6 = scast Kernel_C.R6"
-  | "register_from_H MachineTypes.R7 = scast Kernel_C.R7"
-  | "register_from_H MachineTypes.R8 = scast Kernel_C.R8"
-  | "register_from_H MachineTypes.R9 = scast Kernel_C.R9"
-  | "register_from_H MachineTypes.SL = scast Kernel_C.R10" 
-  | "register_from_H MachineTypes.FP = scast Kernel_C.R11" 
-  | "register_from_H MachineTypes.IP = scast Kernel_C.R12" 
-  | "register_from_H MachineTypes.SP = scast Kernel_C.SP"
-  | "register_from_H MachineTypes.LR = scast Kernel_C.LR"
-  | "register_from_H MachineTypes.LR_svc = scast Kernel_C.LR_svc"
-  | "register_from_H MachineTypes.CPSR = scast Kernel_C.CPSR" 
-  | "register_from_H MachineTypes.FaultInstruction = scast Kernel_C.FaultInstruction"
+    "register_from_H ARM.R0 = scast Kernel_C.R0"
+  | "register_from_H ARM.R1 = scast Kernel_C.R1"
+  | "register_from_H ARM.R2 = scast Kernel_C.R2"
+  | "register_from_H ARM.R3 = scast Kernel_C.R3"
+  | "register_from_H ARM.R4 = scast Kernel_C.R4"
+  | "register_from_H ARM.R5 = scast Kernel_C.R5"
+  | "register_from_H ARM.R6 = scast Kernel_C.R6"
+  | "register_from_H ARM.R7 = scast Kernel_C.R7"
+  | "register_from_H ARM.R8 = scast Kernel_C.R8"
+  | "register_from_H ARM.R9 = scast Kernel_C.R9"
+  | "register_from_H ARM.SL = scast Kernel_C.R10" 
+  | "register_from_H ARM.FP = scast Kernel_C.R11" 
+  | "register_from_H ARM.IP = scast Kernel_C.R12" 
+  | "register_from_H ARM.SP = scast Kernel_C.SP"
+  | "register_from_H ARM.LR = scast Kernel_C.LR"
+  | "register_from_H ARM.LR_svc = scast Kernel_C.LR_svc"
+  | "register_from_H ARM.CPSR = scast Kernel_C.CPSR" 
+  | "register_from_H ARM.FaultInstruction = scast Kernel_C.FaultInstruction"
 
 definition
   ccontext_relation :: "(MachineTypes.register \<Rightarrow> word32) \<Rightarrow> user_context_C \<Rightarrow> bool"
@@ -590,7 +596,8 @@ definition
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>
-     (\<forall>irq \<le> (ucast maxIRQ). irqstate_to_C (intStateIRQTable airqs irq) = index cirqs (unat irq))"
+     (\<forall>irq \<le> (ucast Kernel_C.maxIRQ).
+       irqstate_to_C (intStateIRQTable airqs irq) = index cirqs (unat irq))"
 
 definition
   cscheduler_action_relation :: "Structures_H.scheduler_action \<Rightarrow> tcb_C ptr \<Rightarrow> bool"
@@ -637,6 +644,8 @@ where
             \<longrightarrow> cbitmap2.[unat d].[i] = abitmap2 (d, i)) \<and>
            ((\<not> (d \<le> maxDomain \<and> i \<le> numPriorities div wordBits))
             \<longrightarrow>  abitmap2 (d, i) = 0)"
+
+end
 
 definition (in state_rel)
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"

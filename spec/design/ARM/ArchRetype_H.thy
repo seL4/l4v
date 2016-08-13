@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file ArchRetype_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -17,6 +19,7 @@ imports
   Hardware_H
   "../KI_Decls_H"
 begin
+context Arch begin global_naming ARM_H
 
 defs deriveCap_def:
 "deriveCap x0 x1\<equiv> (let c = x1 in
@@ -212,9 +215,9 @@ defs createObject_def:
     let funupd = (\<lambda> f x v y. if y = x then v else f y) in
     let pointerCast = PPtr \<circ> fromPPtr
     in (case t of 
-        ArchTypes_H.APIObjectType v1 \<Rightarrow> 
+        APIObjectType v2 \<Rightarrow> 
             haskell_fail []
-        | ArchTypes_H.SmallPageObject \<Rightarrow>  (do
+        | SmallPageObject \<Rightarrow>  (do
             createPageObject regionBase 0;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
@@ -222,7 +225,7 @@ defs createObject_def:
             return $ PageCap (pointerCast regionBase)
                   VMReadWrite ARMSmallPage Nothing
         od)
-        | ArchTypes_H.LargePageObject \<Rightarrow>  (do
+        | LargePageObject \<Rightarrow>  (do
             createPageObject regionBase 4;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
@@ -230,7 +233,7 @@ defs createObject_def:
             return $ PageCap (pointerCast regionBase)
                   VMReadWrite ARMLargePage Nothing
         od)
-        | ArchTypes_H.SectionObject \<Rightarrow>  (do
+        | SectionObject \<Rightarrow>  (do
             createPageObject regionBase 8;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
@@ -238,7 +241,7 @@ defs createObject_def:
             return $ PageCap (pointerCast regionBase)
                   VMReadWrite ARMSection Nothing
         od)
-        | ArchTypes_H.SuperSectionObject \<Rightarrow>  (do
+        | SuperSectionObject \<Rightarrow>  (do
             createPageObject regionBase 12;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
@@ -246,7 +249,7 @@ defs createObject_def:
             return $ PageCap (pointerCast regionBase)
                   VMReadWrite ARMSuperSection Nothing
         od)
-        | ArchTypes_H.PageTableObject \<Rightarrow>  (do
+        | PageTableObject \<Rightarrow>  (do
             ptSize \<leftarrow> return ( ptBits - objBits (makeObject ::pte));
             regionSize \<leftarrow> return ( (1 `~shiftL~` ptBits));
             placeNewObject regionBase (makeObject ::pte) ptSize;
@@ -256,7 +259,7 @@ defs createObject_def:
                       (addrFromPPtr regionBase);
             return $ PageTableCap (pointerCast regionBase) Nothing
         od)
-        | ArchTypes_H.PageDirectoryObject \<Rightarrow>  (do
+        | PageDirectoryObject \<Rightarrow>  (do
             pdSize \<leftarrow> return ( pdBits - objBits (makeObject ::pde));
             regionSize \<leftarrow> return ( (1 `~shiftL~` pdBits));
             placeNewObject regionBase (makeObject ::pde) pdSize;
@@ -294,4 +297,5 @@ defs capUntypedSize_def:
   )"
 
 
+end
 end

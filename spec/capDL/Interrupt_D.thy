@@ -16,6 +16,14 @@ theory Interrupt_D
 imports Endpoint_D "../machine/$L4V_ARCH/Platform"
 begin
 
+context begin interpretation Arch .
+requalify_types
+  irq
+
+requalify_consts
+  maxIRQ
+end
+
 (* Return the currently pending IRQ. *)
 definition
   get_active_irq :: "(cdl_irq option) k_monad"

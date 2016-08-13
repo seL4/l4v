@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file KernelStateData_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -21,6 +23,16 @@ imports
   "../machine/$L4V_ARCH/MachineOps"
   "./$L4V_ARCH/ArchStateData_H"
 begin
+
+context begin interpretation Arch .
+
+requalify_types
+  vmpage_size
+
+end
+
+requalify_types (in Arch)
+  kernel_state
 
 subsection "The Kernel State"
 
@@ -50,8 +62,14 @@ record kernel_state =
   ksSchedulerAction    :: scheduler_action
   ksInterruptState     :: interrupt_state
   ksWorkUnitsCompleted :: machine_word
-  ksArchState          :: ArchStateData_H.kernel_state
+  ksArchState          :: Arch.kernel_state
   ksMachineState       :: machine_state
+
+context Arch begin
+context begin global_naming global
+requalify_types KernelStateData_H.kernel_state
+end
+end
 
 type_synonym 'a kernel = "(kernel_state, 'a) nondet_monad"
 
@@ -164,7 +182,7 @@ decDomainTime :: "unit kernel"
 where
 "decDomainTime\<equiv> modify (\<lambda> ks. ks \<lparr> ksDomainTime := ksDomainTime ks - 1 \<rparr>)"
 
-consts
+consts'
 capHasProperty :: "machine_word \<Rightarrow> (capability \<Rightarrow> bool) \<Rightarrow> kernel_state \<Rightarrow> bool"
 
 
