@@ -20,16 +20,18 @@ ifndef STP_INCLUDED
 STP_INCLUDED=true
 
 STPARSER=$(STP_PFX)/c-parser
+STPARSER_ARM=$(STP_PFX)/c-parser-arm32
+STPARSER_F64=$(STP_PFX)/c-parser-fake64
 
 .PHONY: stp_all standalone-cparser standalone-tokenizer
-standalone-cparser stp_all: $(STPARSER)
+standalone-cparser stp_all: $(STPARSER_ARM) $(STPARSER_F64)
 standalone-tokenizer: $(STP_PFX)/tokenizer
 
 all: stp_all
 
 include $(STP_PFX)/../Makefile
 
-STP_CLEAN_TARGETS := $(STP_PFX)/c-parser $(STP_PFX)/c-parser.o $(STP_PFX)/table.ML $(STP_PFX)/tokenizer
+STP_CLEAN_TARGETS := $(STPARSER_ARM) $(STPARSER_F64) $(STP_PFX)/c-parser.o $(STP_PFX)/table.ML $(STP_PFX)/tokenizer
 
 $(STP_PFX)/table.ML: $(ISABELLE_HOME)/src/Pure/General/table.ML
 	sed -e '/ML.pretty-printing/,/final.declarations/d' < $< > $@
@@ -39,12 +41,18 @@ ifeq ($(SML_COMPILER),mlton)
 #
 # compilation if the compiler is mlton
 #
-PARSER_DEPS := $(shell mlton -stop f $(STP_PFX)/c-parser.mlb)
+ARM_MLB_PATH := -mlb-path-var 'L4V_ARCH ARM'
+F64_MLB_PATH := -mlb-path-var 'L4V_ARCH FAKE64'
+PARSER_DEPS_ARM := $(shell mlton $(ARM_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
+PARSER_DEPS_F64 := $(shell mlton $(F64_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
 TOKENIZER_DEPS := $(shell mlton -stop f $(STP_PFX)/tokenizer.mlb)
 
 
-$(STPARSER): $(PARSER_DEPS)
-	mlton $<
+$(STPARSER_ARM): $(PARSER_DEPS_ARM)
+	mlton $(ARM_MLB_PATH) -output $@ $<
+
+$(STPARSER_F64): $(PARSER_DEPS_F64)
+	mlton $(F64_MLB_PATH) -output $@ $<
 
 $(STP_PFX)/tokenizer: $(TOKENIZER_DEPS)
 	mlton $<

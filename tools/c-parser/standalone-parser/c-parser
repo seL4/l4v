@@ -1,0 +1,28 @@
+#!/bin/bash
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+if [ $# -eq 0 ]
+then
+        available=$(ls $DIR/c-parser-*)
+        echo "Available architectures are:"
+        for i in $available
+        do
+            echo "  ${i#$DIR/c-parser}"
+        done
+        exit
+fi
+
+executable=$DIR/c-parser$1
+echo "Looking for $executable"
+
+if [ -x $executable ]
+then
+    :
+else
+    echo "Unknown architecture $1" >&2
+    exit 1
+fi
+shift
+
+exec $executable "$@"
