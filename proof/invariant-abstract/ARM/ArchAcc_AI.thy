@@ -602,7 +602,7 @@ lemma kernel_mapping_slots_empty_pdeI:
   apply (erule_tac x=p in allE, erule_tac x="arm_global_pd (arch_state s)" in allE)
   including unfold_objects
   apply clarsimp
-by (simp add: empty_table_def valid_arch_state_def a_type_def)
+  by (simp add: empty_table_def valid_arch_state_def a_type_def)
 
 lemma invs_valid_global_pts:
   "invs s \<Longrightarrow> valid_global_pts s"

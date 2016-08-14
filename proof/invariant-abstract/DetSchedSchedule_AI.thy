@@ -665,7 +665,7 @@ lemma switch_to_idle_thread_valid_sched_action[wp]:
 
 lemma switch_to_idle_thread_ct_in_cur_domain[wp]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
-by (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def split_def ct_in_cur_domain_def | wp)+
+  by (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def split_def ct_in_cur_domain_def | wp)+
 
 end
 
@@ -700,9 +700,17 @@ crunch is_activatable[wp]: arch_switch_to_thread "is_activatable t"
 
 crunch valid_sched_action[wp]: arch_switch_to_thread valid_sched_action
   (simp: whenE_def ignore: clearExMonitor)
-
-lemma as_user_valid_sched[wp]: "\<lbrace>valid_sched\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-by (simp add: valid_sched_def | wpc | wp)+
+  
+lemma as_user_valid_sched[wp]:
+  "\<lbrace>valid_sched\<rbrace> as_user tptr f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  apply (simp add: as_user_def set_object_def)
+  apply (wp | wpc)+
+  apply clarsimp
+  apply (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def
+                         valid_sched_action_def is_activatable_def
+                         weak_valid_sched_action_def st_tcb_at_kh_split_if
+                         st_tcb_def2 valid_blocked_def)
+  done
 
 crunch valid_sched[wp]: arch_switch_to_thread valid_sched
   (simp: whenE_def ignore: clearExMonitor)
@@ -727,7 +735,7 @@ lemma switch_to_thread_ct_not_queued[wp]:
                    tcb_sched_dequeue_def | wp)+
   apply (clarsimp simp add: valid_queues_def etcb_at_def not_queued_def
                        split: option.splits)
-done
+  done
 end
 
 lemma ct_not_in_q_def2:
@@ -788,7 +796,7 @@ lemma switch_to_thread_ct_in_cur_domain[wp]:
    prefer 2
    apply (rule arch_switch_to_thread_ct_in_cur_domain_2)
   apply (wp tcb_sched_action_dequeue_ct_in_cur_domain')
-done
+  done
 
 end
 
@@ -866,10 +874,7 @@ lemma arch_switch_to_thread_valid_blocked[wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>" 
   apply (simp add: arch_switch_to_thread_def)
   apply (rule hoare_seq_ext)+
-     prefer 4
-     apply (rule set_vm_root_valid_blocked)
-    apply (rule do_machine_op_valid_blocked)
-   apply (rule as_user_valid_blocked)
+   apply (rule do_machine_op_valid_blocked)
   apply wp
 done
 
@@ -883,7 +888,7 @@ lemma switch_to_thread_valid_blocked[wp]:
     apply (rule assert_inv)
    prefer 2
    apply (rule arch_switch_to_thread_valid_blocked)
-by (wp tcb_sched_action_dequeue_ct_in_cur_domain' tcb_sched_action_dequeue_valid_blocked')
+  by (wp tcb_sched_action_dequeue_ct_in_cur_domain' tcb_sched_action_dequeue_valid_blocked')
 
 crunch etcb_at[wp]: switch_to_thread "etcb_at P t"
 
@@ -3142,38 +3147,17 @@ lemma schedule_valid_list[wp]: "\<lbrace>valid_list\<rbrace> Schedule_A.schedule
   apply (wp tcb_sched_action_valid_list alternative_wp select_wp gts_wp | wpc | simp)+
   done
 
-context begin interpretation Arch . (* FIXME: arch_split *)
-
-lemma c_entry_hook_valid_list[wp]: "\<lbrace>valid_list\<rbrace> c_entry_hook \<lbrace>\<lambda>_. valid_list\<rbrace>"
-by (clarsimp simp: c_entry_hook_def)
-
-lemma c_exit_hook_valid_list[wp]: "\<lbrace>valid_list\<rbrace> c_exit_hook \<lbrace>\<lambda>_. valid_list\<rbrace>"
-by (clarsimp simp: c_exit_hook_def)
-end
-
-context begin interpretation Arch . 
-
-requalify_facts
-c_entry_hook_valid_list
-c_exit_hook_valid_list
-
-end
-
 lemma call_kernel_valid_list[wp]: "\<lbrace>valid_list\<rbrace> call_kernel e \<lbrace>\<lambda>_. valid_list\<rbrace>"
   apply (simp add: call_kernel_def)
-  apply (case_tac "call_hook e" ; (wp | simp)+)
-  done
+  by (wp | simp)+
 
 lemma call_kernel_valid_sched:
   "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_active or ct_idle)
       and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      call_kernel e
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (simp only: call_kernel_def)
-  apply (rule hoare_seq_ext)
-   defer
-   apply (case_tac "call_hook e"; simp; rule c_entry_hook_invs return_wp)
-  apply (wp schedule_valid_sched activate_thread_valid_sched | simp | rule c_exit_hook_invs return_wp)+
+  apply (simp add: call_kernel_def)
+  apply (wp schedule_valid_sched activate_thread_valid_sched | simp)+
     apply (rule_tac Q="\<lambda>rv. invs" in hoare_strengthen_post)
      apply wp
     apply (erule invs_valid_idle)

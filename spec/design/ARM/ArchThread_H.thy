@@ -23,8 +23,6 @@ context Arch begin global_naming ARM_H
 defs switchToThread_def:
 "switchToThread tcb\<equiv> (do
     setVMRoot tcb;
-    bufferPtr \<leftarrow> threadGet tcbIPCBuffer tcb;
-    asUser tcb $ setRegister (Register TPIDRURW) $ fromVPtr bufferPtr;
     doMachineOp $ ARM.clearExMonitor
 od)"
 

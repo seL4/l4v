@@ -615,7 +615,7 @@ lemma kernel_corres:
       apply (rule corres_split [OF _ schedule_corres])
         apply (rule activate_corres)
        apply (wp schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps |simp)+
-     apply (rule_tac Q="\<lambda>_. valid_sched and invs" and E="\<lambda>_. valid_sched and invs"
+     apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and E="\<lambda>_. valid_sched and invs and valid_list"
             in hoare_post_impErr)
        apply (wp handle_event_valid_sched |simp)+
    apply (clarsimp simp: active_from_running)

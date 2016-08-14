@@ -22,7 +22,6 @@ definition
 callKernel :: "event \<Rightarrow> unit kernel"
 where
 "callKernel ev\<equiv> (do
-    if (callHook ev) then cEntryHook else return ();
     runErrorT $ handleEvent ev
         `~catchError~` (\<lambda> _. withoutPreemption $ (do
                       irq \<leftarrow> doMachineOp getActiveIRQ;
@@ -30,8 +29,7 @@ where
         od)
                                                                         );
     schedule;
-    activateThread;
-    if (callHook ev) then cExitHook else return ()
+    activateThread
 od)"
 
 definition

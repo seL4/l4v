@@ -99,11 +99,11 @@ lemma set_object_modifies_at_most:
 
 
 (*Not currently considered*)
-lemma scheduler_action_states_equiv[simp]: "states_equiv_for P Q R S X st (scheduler_action_update f s) = states_equiv_for P Q R S X st s"
+lemma scheduler_action_states_equiv[simp]: "states_equiv_for P Q R S st (scheduler_action_update f s) = states_equiv_for P Q R S st s"
   apply (simp add: states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
   done
 
-crunch states_equiv[wp]: set_thread_state_ext "states_equiv_for P Q R S X st"
+crunch states_equiv[wp]: set_thread_state_ext "states_equiv_for P Q R S st"
 
 lemma set_scheduler_action_reads_respects[wp]:
   "reads_respects aag l \<top> (set_scheduler_action action)"

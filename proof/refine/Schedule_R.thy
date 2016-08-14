@@ -227,17 +227,9 @@ lemma arch_switch_thread_corres:
   apply (simp add: arch_switch_to_thread_def ARM_H.switchToThread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split' [OF set_vm_root_corres])
-      apply (rule corres_split_eqr [OF _ threadget_corres])
-	       apply (rule corres_split' [OF user_setreg_corres])
-           apply (rule corres_machine_op)
-           apply (rule corres_Id[where r=dc], simp+)
-           apply (simp add: ARM.clearExMonitor_def)
-          apply wp
-	      apply simp
-	      apply (simp add: tcb_relation_def)
-       apply wp
-     apply clarsimp
-    apply (wp; clarsimp)
+      apply (rule corres_machine_op[OF corres_rel_imp])
+      apply (rule corres_underlying_trivial)
+       apply (simp add: ARM.clearExMonitor_def | wp)+
    apply clarsimp
    apply (erule st_tcb_at_tcb_at)
   apply (clarsimp simp: valid_pspace'_def)
@@ -940,15 +932,13 @@ proof -
     apply (simp add:  pred_tcb_at'_def ARM_H.switchToThread_def)
     apply (rule hoare_seq_ext)+
        apply (rule doMachineOp_obj_at)
-      apply (rule_tac asUser_pred_tcb_at'[simplified pred_tcb_at'_def])
-     defer
      apply (rule setVMRoot_obj_at)
-    apply wp
     done
   show ?thesis
     apply (rule P_bool_lift [OF pos])
     by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_ARM_H_switchToThread_typ_at' pos])
 qed
+
 
 crunch ksQ[wp]: storeWordUser "\<lambda>s. P (ksReadyQueues s p)"
 crunch ksQ[wp]: setVMRoot "\<lambda>s. P (ksReadyQueues s)"
@@ -1268,7 +1258,7 @@ lemma Arch_switchToThread_invs[wp]:  (* **** *)
   "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: ARM_H.switchToThread_def)
   apply (wp; auto)
-done
+  done
 
 lemma Arch_switchToThread_tcb'[wp]:
   "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
@@ -1321,11 +1311,8 @@ lemma Arch_switchToThread_obj_at[wp]:
    \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t\<rbrace>"
   apply (simp add: ARM_H.switchToThread_def )
   apply (rule hoare_seq_ext)+
-     apply (rule doMachineOp_obj_at)
-    prefer 3
-    apply (rule setVMRoot_obj_at)
-   apply (rule asUser_obj_at)
-  apply wp
+   apply (rule doMachineOp_obj_at)
+  apply (rule setVMRoot_obj_at)
   done
 
 declare doMachineOp_obj_at[wp]
@@ -1342,14 +1329,7 @@ lemma clearExMonitor_invs_no_cicd'[wp]:
 
 crunch valid_arch_state'[wp]: asUser "valid_arch_state'"
 (wp: crunch_wps simp: crunch_simps)
-(*
-crunch valid_irq_node': asUser "valid_irq_node' (irq_node' s)"
-(wp: crunch_wps simp: crunch_simps)
 
-crunch ct_not_inQ: asUser "ct_not_inQ"
-(wp: crunch_wps simp: crunch_simps)
-
-*)
 crunch valid_irq_states'[wp]: asUser "valid_irq_states'"
 (wp: crunch_wps simp: crunch_simps)
 
@@ -1369,7 +1349,7 @@ lemma asUser_valid_irq_node'[wp]:
     defer
     apply (wp threadGet_irq_node'|wpc)+
   apply clarsimp
-done
+  done
 
 crunch irq_masked'_helper: asUser "\<lambda>s. P (intStateIRQTable (ksInterruptState s))"
 (wp: crunch_wps simp: crunch_simps)
@@ -1379,7 +1359,7 @@ lemma asUser_irq_masked'[wp]:
           \<lbrace>\<lambda>_ . irqs_masked'\<rbrace>"
   apply (rule irqs_masked_lift)
   apply (rule asUser_irq_masked'_helper)
-done
+  done
 
 lemma asUser_ct_not_inQ[wp]: 
   "\<lbrace>ct_not_inQ\<rbrace> asUser t (setRegister f r) 
@@ -1397,7 +1377,7 @@ lemma asUser_ct_not_inQ[wp]:
           split: option.split kernel_object.split)
   apply (clarsimp simp: ct_not_inQ_def obj_at'_def projectKOs objBitsKO_def  ps_clear_def dom_def)
   apply (rule conjI; clarsimp; blast)
-done
+  done
 
 crunch valid_pde_mappings'[wp]: asUser "valid_pde_mappings'"
 (wp: crunch_wps simp: crunch_simps)
@@ -1408,17 +1388,39 @@ crunch pspace_domain_valid[wp]: asUser "pspace_domain_valid"
 crunch valid_dom_schedule'[wp]: asUser "valid_dom_schedule'"
 (wp: crunch_wps simp: crunch_simps)
 
+crunch gsUntypedZeroRanges[wp]: asUser "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: crunch_wps simp: unless_def)
+
+crunch ctes_of[wp]: asUser "\<lambda>s. P (ctes_of s)"
+  (wp: crunch_wps simp: unless_def)
+
+lemmas asUser_cteCaps_of[wp] = cteCaps_of_ctes_of_lift[OF asUser_ctes_of]
+
+lemma asUser_utr[wp]:
+  "\<lbrace>untyped_ranges_zero'\<rbrace> asUser f t \<lbrace>\<lambda>_. untyped_ranges_zero'\<rbrace>"
+  apply (simp add: cteCaps_of_def)
+  apply (rule hoare_pre, wp untyped_ranges_zero_lift)
+  apply (simp add: o_def)
+  done
 
 lemma asUser_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> asUser t (setRegister f r) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: invs_no_cicd'_def)
-by (wpc|wp asUser_global_refs' asUser_irq_handlers')+
+  apply (rule hoare_pre)
+  apply  (wpc | wp asUser_global_refs' asUser_irq_handlers')+
+  apply (rule hoare_post_imp[rotated])
+   apply (rule hoare_vcg_conj_lift)
+     apply (rule asUser_valid_dom_schedule')
+    apply (rule asUser_utr)
+   apply clarsimp
+  apply clarsimp
+  done
 
 
 lemma Arch_switchToThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: ARM_H.switchToThread_def)
-by (wp|rule setVMRoot_invs_no_cicd')+
+  by (wp|rule setVMRoot_invs_no_cicd')+
 
 
 lemma tcbSchedDequeue_invs_no_cicd'[wp]:
@@ -1674,10 +1676,6 @@ lemma tcb_at_typ_at':
   apply (clarsimp simp add: obj_at'_def ko_wp_at'_def projectKOs)
   apply (case_tac ko, simp_all)
   done
-
-
-
-
 
 
 lemma invs'_not_runnable_not_queued:
@@ -2636,7 +2634,7 @@ lemma schedule_ChooseNewThread_fragment_corres:
   done
 
 lemma schedule_corres:
-  "corres dc (invs and valid_sched) invs' (Schedule_A.schedule) ThreadDecls_H.schedule"
+  "corres dc (invs and valid_sched and valid_list) invs' (Schedule_A.schedule) ThreadDecls_H.schedule"
   apply (clarsimp simp: Schedule_A.schedule_def Thread_H.schedule_def)
   apply (subst thread_get_test)
   apply (subst thread_get_comm)

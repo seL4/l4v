@@ -884,8 +884,6 @@ lemma requiv_user_mem_eq:
      apply (rule reads_read)
      apply (fastforce simp: ptrFromPAddr_mask_simp)
     apply clarsimp
-    apply (rule_tac P="(ptrFromPAddr y) \<in> range_of_arm_globals_frame s" in case_split)
-     apply (clarsimp simp: globals_equiv_def)
     apply (subgoal_tac "aag_can_read aag (ptrFromPAddr y)")
      apply (erule reads_equivE)
      apply clarsimp
@@ -925,16 +923,6 @@ lemma ptable_rights_imp_frameD:
              dest!: spec typ_at_user_data_at typ_at_device_data_at)
   done
 
-lemma globals_equiv_invs_device_state_equiv:  
-  "\<lbrakk>globals_equiv s t; invs s; invs t\<rbrakk> \<Longrightarrow>\<forall>x\<in> range_of_arm_globals_frame s.
-   device_state (machine_state s) x = device_state (machine_state t) x"
-   apply (clarsimp simp: globals_equiv_def)
-   apply (drule(1) globals_frame_not_device[rotated])
-   apply (drule globals_frame_not_device[rotated])
-   apply fastforce
-   apply simp
-   done
-
 lemma requiv_user_device_eq:
   "\<lbrakk> reads_equiv aag s s'; globals_equiv s s'; invs s;
      invs s'; valid_pdpt_objs s; valid_pdpt_objs s';
@@ -948,11 +936,7 @@ lemma requiv_user_device_eq:
    apply (fastforce simp: ptable_rights_s_def)
   apply (erule reads_equivE)
   apply clarsimp
-  apply (rule_tac P="(ptrFromPAddr y) \<in> range_of_arm_globals_frame s" in case_split)
-   apply (drule globals_equiv_invs_device_state_equiv)
-    apply simp+
   apply (erule_tac f="device_state" in equiv_forD)
-  apply simp
   apply (frule_tac auth=Read in user_op_access_data_at[where s = s])
         apply ((fastforce simp: ptable_lift_s_def ptable_rights_s_def
            vspace_cap_rights_to_auth_def | intro typ_at_user_data_at)+)[6] 

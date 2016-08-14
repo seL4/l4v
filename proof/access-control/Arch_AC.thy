@@ -829,7 +829,7 @@ lemma delete_objects_pspace_no_overlap:
 
 
 lemma delete_objects_invs_ex:
-  "\<lbrace>(\<lambda>s. \<exists>slot f.
+  "\<lbrace>(\<lambda>s. \<exists>slot dev f.
          cte_wp_at (op = (UntypedCap dev ptr bits f)) slot s \<and>
          descendants_range (UntypedCap dev ptr bits f) slot s) and
    invs and

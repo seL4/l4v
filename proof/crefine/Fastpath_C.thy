@@ -189,13 +189,26 @@ lemma tcbSchedEnqueue_obj_at_unchangedT:
   apply (wp | simp add: y)+
   done
 
+lemma asUser_obj_at_notQ:
+  "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
+   asUser t (setRegister r v)
+   \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
+  apply (simp add: asUser_def)
+  apply (rule hoare_seq_ext)+
+    apply (simp add: split_def)
+    apply (rule threadSet_obj_at'_really_strongest)
+   apply (wp threadGet_wp |rule gets_inv|wpc|clarsimp)+
+  apply (simp add: setRegister_def simpler_modify_def)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
 (* FIXME: Move to Schedule_R.thy. Make Arch_switchToThread_obj_at a specialisation of this *)
 lemma Arch_switchToThread_obj_at_pre:
-  "\<lbrace>obj_at' P t\<rbrace>
+  "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
    Arch.switchToThread t
-   \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: ARM_H.switchToThread_def storeWordUser_def)
-  apply (wp doMachineOp_obj_at setVMRoot_obj_at hoare_drop_imps)
+   \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
+  apply (simp add: ARM_H.switchToThread_def)
+  apply (wp asUser_obj_at_notQ doMachineOp_obj_at setVMRoot_obj_at hoare_drop_imps|wpc)+
   done
 
 lemma rescheduleRequired_obj_at_unchangedT:
@@ -1106,36 +1119,19 @@ lemma switchToThread_fp_ccorres:
         apply (simp add: storeWordUser_def bind_assoc case_option_If2
                          split_def
                     del: Collect_const)
-        apply (rule ccorres_symb_exec_l[OF _ gets_inv _ empty_fail_gets])
-         apply (rename_tac "gf")
-         apply (rule ccorres_pre_threadGet)
-         apply (rule ccorres_stateAssert)
-         apply (rule_tac P="pointerInUserData gf and no_0_obj'
-                               and K (is_aligned gf 2)
-                               and (\<lambda>s. gf = armKSGlobalsFrame (ksArchState s))
-                               and valid_arch_state'"
-                in ccorres_cross_over_guard)
-         apply (rule ccorres_Guard_Seq)
-         apply (rule ccorres_Guard_Seq)
-         apply (rule ccorres_move_c_guard_tcb)
-         apply (ctac add: storeWord_ccorres'[unfolded fun_app_def])
-           apply (simp only: dmo_clearExMonitor_setCurThread_swap
+        apply (simp only: dmo_clearExMonitor_setCurThread_swap
                              dc_def[symmetric])
-           apply (rule ccorres_split_nothrow_novcg_dc)
-              apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-              apply (rule allI, rule conseqPre, vcg)
-              apply (clarsimp simp del: rf_sr_upd_safe)
-              apply (clarsimp simp: setCurThread_def simpler_modify_def
+        apply (rule ccorres_split_nothrow_novcg_dc)
+           apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+           apply (rule allI, rule conseqPre, vcg)
+           apply (clarsimp simp del: rf_sr_upd_safe)
+           apply (clarsimp simp: setCurThread_def simpler_modify_def
                                     rf_sr_def cstate_relation_def Let_def
                                     carch_state_relation_def cmachine_state_relation_def)
-             apply (ctac add: clearExMonitor_fp_ccorres)
-            apply wp
-           apply (simp add: guard_is_UNIV_def)
-          apply wp
-         apply vcg
-        apply wp
-        apply (simp add: obj_at'_weakenE[OF _ TrueI])
-        apply (wp hoare_drop_imps)[1]
+          apply (ctac add: clearExMonitor_fp_ccorres)
+         apply wp
+        apply (simp add: guard_is_UNIV_def)
+       apply wp
       apply (simp add: bind_assoc checkPDNotInASIDMap_def
                        checkPDASIDMapMembership_def)
       apply (rule ccorres_stateAssert)
@@ -1158,31 +1154,8 @@ lemma switchToThread_fp_ccorres:
    apply clarsimp
    apply (fastforce simp: ran_def)
   apply (frule ctes_of_valid', clarsimp, clarsimp simp: valid_cap'_def)
-  apply (cut_tac s=s in is_aligned_globals_2_strg[rule_format])
-   apply auto[1]
-  apply (intro conjI impI)
-      apply simp
-     apply (clarsimp simp: singleton_eq_o2s projectKOs obj_at'_def)
-    apply (clarsimp simp: singleton_eq_o2s projectKOs obj_at'_def
-                          pde_stored_asid_def split: split_if_asm)
-   apply (clarsimp simp: singleton_eq_o2s pde_stored_asid_def
-                  split: if_splits)
-  apply (clarsimp simp del: rf_sr_upd_safe
-    dest!: isValidVTableRootD
-    simp: cap_get_tag_isCap_ArchObject2 pde_stored_asid_Some
-    rf_sr_asid_map_pd_to_hwasids option_set_singleton_eq
-    map_comp_Some_iff)
-  apply (clarsimp simp: typ_heap_simps' ctcb_relation_def
-                        trans[OF eq_commute option_set_singleton_eq]
-                        pde_stored_asid_Some
-              simp del: rf_sr_upd_safe)
-  apply (clarsimp simp: pde_stored_asid_def typ_heap_simps'
-                        pointerInUserData_h_t_valid2
-              simp del: rf_sr_upd_safe)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                        carch_globals_def pointerInUserData_c_guard'
-                        pointerInUserData_h_t_valid2 cpspace_relation_def
-                        c_guard_abs_word32_armKSGlobalsFrame)
+  apply (auto simp: singleton_eq_o2s projectKOs obj_at'_def
+                    pde_stored_asid_def split: split_if_asm)
   done
 
 lemma thread_state_ptr_set_tsType_np_spec:
@@ -4008,7 +3981,7 @@ lemma getObject_isolatable:
   done
 
 lemma gets_isolatable:
-  "\<lbrakk> \<And>g h s. \<forall>x. tcb_at' (idx x) s \<Longrightarrow>
+  "\<lbrakk>\<And>g s. \<forall>x. tcb_at' (idx x) s \<Longrightarrow>
         f (ksSchedulerAction_update g
              (ksPSpace_update (partial_overwrite idx (\<lambda>_. undefined)) s)) = f s \<rbrakk> \<Longrightarrow>
    thread_actions_isolatable idx (gets f)"
@@ -4501,8 +4474,8 @@ lemma oblivious_switchToThread_schact:
   "oblivious (ksSchedulerAction_update f) (ThreadDecls_H.switchToThread t)"
   apply (simp add: switchToThread_def ARM_H.switchToThread_def bind_assoc
                    getCurThread_def setCurThread_def threadGet_def liftM_def
-                   threadSet_def tcbSchedEnqueue_def unless_when
-                   getQueue_def setQueue_def storeWordUser_def
+                   threadSet_def tcbSchedEnqueue_def unless_when asUser_def
+                   getQueue_def setQueue_def storeWordUser_def setRegister_def
                    pointerInUserData_def isRunnable_def isBlocked_def
                    getThreadState_def tcbSchedDequeue_def bitmap_fun_defs)
   by (safe intro!: oblivious_bind
@@ -4919,24 +4892,12 @@ lemma threadGet_isolatable:
   apply (simp add: projectKO_opt_tcb v split: split_if)
   done
 
-lemma switchToThread_isolatable:
-  "thread_actions_isolatable idx (Arch.switchToThread t)"
-  apply (simp add: ARM_H.switchToThread_def
-                   storeWordUser_def stateAssert_def2)
-  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
-               gets_isolatable setVMRoot_isolatable
-               thread_actions_isolatable_if
-               doMachineOp_isolatable
-               threadGet_isolatable [OF all_tcbI]
-               thread_actions_isolatable_returns
-               thread_actions_isolatable_fail)
-  apply (wp |
-           simp add: pointerInUserData_def
-                       typ_at_to_obj_at_arches
-                       obj_at_partial_overwrite_id2
-                       put_tcb_state_regs_tcb_def
-                split: tcb_state_regs.split)+
-  done
+
+lemma monadic_rewrite_trans_dup:
+  "\<lbrakk> monadic_rewrite F E P f g; monadic_rewrite F E P g h \<rbrakk>
+      \<Longrightarrow> monadic_rewrite F E P f h"
+  by (auto simp add: monadic_rewrite_def)
+
 
 lemma setCurThread_isolatable:
   "thread_actions_isolatable idx (setCurThread t)"
@@ -5001,6 +4962,42 @@ lemma tcb_at_KOTCB_upd:
   apply (simp add: ps_clear_def)
   done
 
+definition
+ "set_register_tsrs dest r v tsrs
+     = tsrs (dest := TCBStateRegs (tsrState (tsrs dest))
+                       ((tsrContext (tsrs dest)) (r := v)))"
+
+
+lemma set_register_isolate:
+  "\<lbrakk> inj idx; idx y = dest \<rbrakk> \<Longrightarrow>
+  monadic_rewrite False True
+      (\<lambda>s. \<forall>x. tcb_at' (idx x) s)
+           (asUser dest (setRegister r v))
+           (isolate_thread_actions idx (return ())
+                 (set_register_tsrs y r v) id)"
+  apply (simp add: asUser_def split_def bind_assoc
+                   getRegister_def setRegister_def
+                   select_f_returns isolate_thread_actions_def
+                   getSchedulerAction_def)
+  apply (simp add: threadGet_def liftM_def getObject_get_assert
+                   bind_assoc threadSet_def
+                   setObject_modify_assert)
+  apply (clarsimp simp: monadic_rewrite_def exec_gets
+                        exec_modify tcb_at_KOTCB_upd)
+  apply (clarsimp simp: simpler_modify_def
+                intro!: kernel_state.fold_congs[OF refl refl])
+  apply (clarsimp simp: set_register_tsrs_def o_def
+                        partial_overwrite_fun_upd
+                        partial_overwrite_get_tcb_state_regs)
+  apply (drule_tac x=y in spec)
+  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
+                  cong: if_cong)
+  apply (case_tac obj)
+  apply (simp add: projectKO_opt_tcb put_tcb_state_regs_def
+                   put_tcb_state_regs_tcb_def get_tcb_state_regs_def
+             cong: if_cong)
+  done
+
 lemma copy_register_isolate:
   "\<lbrakk> inj idx; idx x = src; idx y = dest \<rbrakk> \<Longrightarrow>
   monadic_rewrite False True
@@ -5032,6 +5029,10 @@ lemma copy_register_isolate:
              cong: if_cong)
   apply (auto simp: fun_eq_iff split: split_if)
   done
+
+lemmas monadic_rewrite_bind_alt
+    = monadic_rewrite_trans[OF monadic_rewrite_bind_tail monadic_rewrite_bind_head, rotated -1]
+
 
 lemma monadic_rewrite_isolate_final2:
   assumes  mr: "monadic_rewrite F E Q f g"
@@ -5139,7 +5140,7 @@ lemma emptySlot_isolatable:
 lemmas fastpath_isolatables
     = setEndpoint_isolatable getCTE_isolatable
       assert_isolatable cteInsert_isolatable
-      switchToThread_isolatable setCurThread_isolatable
+      setCurThread_isolatable
       emptySlot_isolatable updateMDB_isolatable
       thread_actions_isolatable_returns
 
@@ -5178,7 +5179,62 @@ lemma foldr_copy_register_tsrs:
             split: split_if)
   done
 
+lemma monadic_rewrite_add_lookup_both_sides:
+  assumes inv: "\<And>P. \<lbrace>P\<rbrace> lu \<lbrace>\<lambda>r. P\<rbrace>"
+       and ef: "empty_fail lu"
+       and nf: "no_fail Q lu"
+  shows
+  "monadic_rewrite E F P (do lu; f od) (do lu; g od)
+    \<Longrightarrow> monadic_rewrite E F (P and Q) f g"
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans[rotated])
+    apply (rule monadic_rewrite_symb_exec_l'[where m=lu], wp inv ef nf impI)
+    apply (rule monadic_rewrite_refl, wp)
+    apply (simp; erule monadic_rewrite_trans[rotated])
+
+apply (rule 
+ monadic_rewrite_transverse[OF _ monadic_rewrite_refl])
+        apply (rule monadic_rewrite_symb_exec_l'[where m=lu], wp inv ef nf impI)
+apply (rule monadic_rewrite_refl)
+apply wp
+apply simp
+done
+
 lemmas cteInsert_obj_at'_not_queued =  cteInsert_obj_at'_queued[of "\<lambda>a. \<not> a"]
+
+lemma monadic_rewrite_exists_v:
+  "[| !! v. monadic_rewrite E F (Q v) f g |]
+    ==> monadic_rewrite E F (%x. (EX v. P v x) & (ALL v. P v x --> Q v x)) f g"
+  apply (rule monadic_rewrite_name_pre)
+  apply clarsimp
+  apply (erule_tac x=v in meta_allE)
+  apply (erule monadic_rewrite_imp)
+  apply clarsimp
+  done
+
+lemma monadic_rewrite_threadGet_tcbIPCBuffer:
+"monadic_rewrite E F (obj_at' (%tcb. tcbIPCBuffer tcb = v) t)
+    (threadGet tcbIPCBuffer t) (return v)"
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans[rotated])
+    apply (rule monadic_rewrite_gets_known)
+   apply (unfold threadGet_def liftM_def fun_app_def)
+   apply (rule monadic_rewrite_symb_exec_l' | wp | rule empty_fail_getObject getObject_inv)+
+     apply (clarsimp; rule no_fail_getObject_tcb)
+    apply (simp only: exec_gets)
+    apply (rule_tac P = "(\<lambda>s. (tcbIPCBuffer rv)=v) and tcb_at' t" in monadic_rewrite_refl3)
+    apply (simp add:)
+   apply (wp OMG_getObject_tcb | wpc)+
+  apply (auto intro: obj_tcb_at')
+done
+
+lemma setCTE_obj_at'_tcbIPCBuffer:
+  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t\<rbrace> setCTE p v \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t\<rbrace>"
+  unfolding setCTE_def
+  by (rule setObject_cte_obj_at_tcb', simp+)
+
+crunch obj_at'_tcbIPCBuffer[wp]: cteInsert, asUser "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+  (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest)
 
 lemma fastpath_callKernel_SysCall_corres:
   "monadic_rewrite True False
@@ -5186,7 +5242,7 @@ lemma fastpath_callKernel_SysCall_corres:
                 and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
      (callKernel (SyscallEvent SysCall)) (fastpaths SysCall)"
   apply (rule monadic_rewrite_introduce_alternative)
-   apply (simp add: callKernel_def)
+   apply (simp add: callKernel_def )
   apply (rule monadic_rewrite_imp)
    apply (simp add: handleEvent_def handleCall_def
                     handleInvocation_def liftE_bindE_handle
@@ -5205,7 +5261,7 @@ lemma fastpath_callKernel_SysCall_corres:
      apply (rule monadic_rewrite_bind_tail)
       apply (rule monadic_rewrite_symb_exec_r
                      [OF threadGet_inv no_fail_threadGet])
-       apply (rename_tac tcbFault)
+       apply (rename_tac thread msgInfo ptr tcbFault)
        apply (rule monadic_rewrite_alternative_rhs[rotated])
         apply (rule monadic_rewrite_alternative_l)
        apply (rule monadic_rewrite_if_rhs[rotated])
@@ -5257,122 +5313,142 @@ lemma fastpath_callKernel_SysCall_corres:
               apply (rule monadic_rewrite_if_rhs[rotated])
                apply (rule monadic_rewrite_alternative_l)
               apply (simp add: isRight_case_sum)
-               apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
-                apply (rule monadic_rewrite_if_rhs[rotated])
-                 apply (rule monadic_rewrite_alternative_l)
-                apply (rule monadic_rewrite_symb_exec_r[OF curDomain_inv],
+              apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
+               apply (rule monadic_rewrite_if_rhs[rotated])
+                apply (rule monadic_rewrite_alternative_l)
+               apply (rule monadic_rewrite_symb_exec_r[OF curDomain_inv],
                         simp only: curDomain_def, rule non_fail_gets)
-                 apply (rename_tac "curDom")
-                 apply (rule monadic_rewrite_symb_exec_r[OF threadGet_inv no_fail_threadGet])
-                  apply (rename_tac "destDom")
-                  apply (rule monadic_rewrite_if_rhs[rotated])
-                   apply (rule monadic_rewrite_alternative_l)
-                  apply (rule monadic_rewrite_trans,
+                apply (rename_tac "curDom")
+                apply (rule monadic_rewrite_symb_exec_r[OF threadGet_inv no_fail_threadGet])
+                 apply (rename_tac "destDom")
+                 apply (rule monadic_rewrite_if_rhs[rotated])
+                  apply (rule monadic_rewrite_alternative_l)
+                 apply (rule monadic_rewrite_trans,
                          rule monadic_rewrite_pick_alternative_1)
-                  apply (rule monadic_rewrite_symb_exec_l[OF get_mrs_inv' empty_fail_getMRs])
-                   apply (rule monadic_rewrite_trans)
-                    apply (rule_tac F=True and E=True in monadic_rewrite_weaken)
-                    apply simp
-                    apply (rule monadic_rewrite_bind_tail)
-                     apply (rule_tac x=thread in monadic_rewrite_symb_exec,
+                 apply (rule monadic_rewrite_symb_exec_l[OF get_mrs_inv' empty_fail_getMRs])
+                  apply (rule monadic_rewrite_trans)
+                   apply (rule_tac F=True and E=True in monadic_rewrite_weaken)
+                   apply simp
+                   apply (rule monadic_rewrite_bind_tail)
+                    apply (rule_tac x=thread in monadic_rewrite_symb_exec,
                             wp empty_fail_getCurThread)
-                     apply (simp add: sendIPC_def bind_assoc)
-                     apply (rule_tac x=send_ep in monadic_rewrite_symb_exec,
+                    apply (simp add: sendIPC_def bind_assoc)
+                    apply (rule_tac x=send_ep in monadic_rewrite_symb_exec,
                             wp empty_fail_getEndpoint getEndpoint_obj_at')
-                     apply (rule_tac P="epQueue send_ep \<noteq> []" in monadic_rewrite_gen_asm)
-                     apply (simp add: isRecvEP_endpoint_case list_case_helper bind_assoc)
-                     apply (rule monadic_rewrite_bind_tail)
-                     apply (elim conjE)
+                    apply (rule_tac P="epQueue send_ep \<noteq> []" in monadic_rewrite_gen_asm)
+                    apply (simp add: isRecvEP_endpoint_case list_case_helper bind_assoc)
+                    apply (rule monadic_rewrite_bind_tail)
+                    apply (elim conjE)
                      apply (match premises in "isEndpointCap ep" for ep \<Rightarrow> 
                        \<open>rule monadic_rewrite_symb_exec[where x="BlockedOnReceive (capEPPtr ep)"]\<close>,
                         wp empty_fail_getThreadState)
                      apply (rule monadic_rewrite_symb_exec2, (wp | simp)+)
-                      apply (rule monadic_rewrite_bind)
-                        apply (rule_tac msgInfo=msgInfo in doIPCTransfer_simple_rewrite)
-                       apply (rule monadic_rewrite_bind_tail)
-                        apply (rule monadic_rewrite_bind)
-                          apply (rule_tac curPrio=curPrio and destPrio=destPrio
+                     apply (rule monadic_rewrite_bind)
+                       apply (rule_tac msgInfo=msgInfo in doIPCTransfer_simple_rewrite)
+                      apply (rule monadic_rewrite_bind_tail)
+                       apply (rule monadic_rewrite_bind)
+                         apply (rule_tac curPrio=curPrio and destPrio=destPrio
                                       and curDom=curDom and destDom=destDom and thread=thread
                                       in attemptSwitchTo_rewrite)
-                         apply (rule monadic_rewrite_symb_exec2, wp empty_fail_threadGet)
-                         apply (rule monadic_rewrite_bind)
-                           apply (rule monadic_rewrite_trans)
-                            apply (rule setupCallerCap_rewrite)
-                           apply (rule monadic_rewrite_bind_head)
-                           apply (rule setThreadState_blocked_rewrite, simp)
+                        apply (rule monadic_rewrite_symb_exec2, wp empty_fail_threadGet)
+                        apply (rule monadic_rewrite_bind)
                           apply (rule monadic_rewrite_trans)
-                           apply (rule_tac x=BlockedOnReply in monadic_rewrite_symb_exec,
+                           apply (rule setupCallerCap_rewrite)
+                          apply (rule monadic_rewrite_bind_head)
+                          apply (rule setThreadState_blocked_rewrite, simp)
+                         apply (rule monadic_rewrite_trans)
+                          apply (rule_tac x=BlockedOnReply in monadic_rewrite_symb_exec,
                                   wp empty_fail_getThreadState)
-                           apply simp
-                           apply (rule monadic_rewrite_refl)
-                          apply (rule monadic_rewrite_trans)
-                           apply (rule monadic_rewrite_bind_head)
-                           apply (rule_tac t="hd (epQueue send_ep)" in schedule_rewrite_ct_not_runnable')
-                          apply (simp add: bind_assoc)
-                          apply (rule monadic_rewrite_bind_tail)
-                           apply (rule monadic_rewrite_bind)
-                             apply (rule switchToThread_rewrite)
-                            apply (rule activateThread_simple_rewrite)
-
-                         apply ((wp setCurThread_ct_in_state Arch_switchToThread_pred_tcb'
+                          apply simp
+                          apply (rule monadic_rewrite_refl)
+                         apply (rule monadic_rewrite_trans)
+                          apply (rule monadic_rewrite_bind_head)
+                          apply (rule_tac t="hd (epQueue send_ep)" in schedule_rewrite_ct_not_runnable')
+                         apply (simp add: bind_assoc)
+                         apply (rule monadic_rewrite_bind_tail)
+                          apply (rule monadic_rewrite_bind)
+                            apply (rule switchToThread_rewrite)
+                           apply (rule activateThread_simple_rewrite)
+                          apply wp_once
+                           apply wp_once
+                           apply (wp_once setCurThread_ct_in_state)
+                          apply ((rule Arch_switchToThread_pred_tcb'
                                      | simp only: st_tcb_at'_def[symmetric])+)[1]
-                          apply (wp, clarsimp simp: cur_tcb'_def ct_in_state'_def)
-                         apply (simp add: getThreadCallerSlot_def getThreadReplySlot_def
+                         apply (wp, clarsimp simp: cur_tcb'_def ct_in_state'_def)
+                        apply (simp add: getThreadCallerSlot_def getThreadReplySlot_def
                                           locateSlot_conv ct_in_state'_def cur_tcb'_def)
-                       apply ((wp assert_inv threadSet_pred_tcb_at_state cteInsert_obj_at'_not_queued | wps)+)[1]
-                        apply (simp add: setSchedulerAction_def)
-                        apply wp[1]
-                       apply (simp cong: if_cong conj_cong add: if_bool_simps)
-                       apply (simp_all only:)[5]
-                       apply ((wp setThreadState_oa_queued[of _ "\<lambda>a _ _. \<not> a"]
+                        apply ((wp assert_inv threadSet_pred_tcb_at_state cteInsert_obj_at'_not_queued | wps)+)[1]
+                       apply (simp add: setSchedulerAction_def)
+                       apply wp[1]
+                      apply (simp cong: if_cong conj_cong add: if_bool_simps)
+                      apply (simp_all only:)[5]
+                      apply ((wp setThreadState_oa_queued[of _ "\<lambda>a _ _. \<not> a"]
                                  setThreadState_obj_at_unchanged
                                  asUser_obj_at_unchanged mapM_x_wp'
                                  sts_st_tcb_at'_cases
                                  setThreadState_no_sch_change
                                  setEndpoint_obj_at_tcb'
                                     | simp add: setMessageInfo_def)+)
-                   apply (simp add: setThreadState_runnable_simp
+                  apply (simp add: setThreadState_runnable_simp
                                     getThreadCallerSlot_def getThreadReplySlot_def
                                     locateSlot_conv bind_assoc)
-                   apply (rule_tac P="inj (case_bool thread (hd (epQueue send_ep)))"
-                                in monadic_rewrite_gen_asm)
-                   apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
-                     apply (rule monadic_rewrite_weaken[where F=False and E=True], simp)
-                     apply (rule isolate_thread_actions_rewrite_bind
-                                 fastpath_isolate_rewrites fastpath_isolatables
-                                 bool.simps setRegister_simple
-                                 zipWithM_setRegister_simple
-                                 thread_actions_isolatable_bind
-                             | assumption
-                             | wp assert_inv)+
-                   apply (rule_tac P="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
+
+                  apply (rule_tac P="\<lambda>v.  obj_at' (%tcb. tcbIPCBuffer tcb = v) (hd (epQueue send_ep))"
+                          in monadic_rewrite_exists_v)
+                  apply (rename_tac ipcBuffer)
+
+                  apply (simp add: ARM_H.switchToThread_def bind_assoc)
+                  apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse]) 
+
+                    apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                    apply (wp mapM_x_wp' getObject_inv | wpc | simp add:
+                         | wp_once hoare_drop_imps )+
+
+                   apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                              apply (wp mapM_x_wp' getObject_inv | wpc | simp add:
+                                   | wp_once hoare_drop_imps )+
+
+                  apply (rule_tac P="inj (case_bool thread (hd (epQueue send_ep)))"
+                                 in monadic_rewrite_gen_asm)
+                  apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
+                    apply (rule monadic_rewrite_weaken[where F=False and E=True], simp)
+                    apply (rule isolate_thread_actions_rewrite_bind
+                                  fastpath_isolate_rewrites fastpath_isolatables
+                                  bool.simps setRegister_simple 
+                                  setVMRoot_isolatable[THEN thread_actions_isolatableD] setVMRoot_isolatable
+                                  doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable 
+                                  zipWithM_setRegister_simple
+                                  thread_actions_isolatable_bind
+                              | assumption
+                              | wp assert_inv)+
+                  apply (rule_tac P="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
                                       \<and> tcb_at' thread s"
                              and F=True and E=False in monadic_rewrite_weaken)
                   apply simp
-                 apply (rule monadic_rewrite_isolate_final)
-                   apply (simp add: isRight_case_sum cong: list.case_cong)
-                  apply (clarsimp simp: fun_eq_iff if_flip
+                  apply (rule monadic_rewrite_isolate_final)
+                    apply (simp add: isRight_case_sum cong: list.case_cong)
+                   apply (clarsimp simp: fun_eq_iff if_flip
                                   cong: if_cong)
-                  apply (drule obj_at_ko_at', clarsimp)
-                  apply (frule get_tcb_state_regs_ko_at')
-                  apply (clarsimp simp: zip_map2 zip_same_conv_map foldl_map
+                   apply (drule obj_at_ko_at', clarsimp)
+                   apply (frule get_tcb_state_regs_ko_at')
+                   apply (clarsimp simp: zip_map2 zip_same_conv_map foldl_map
                                         foldl_fun_upd
                                         foldr_copy_register_tsrs
                                         isRight_case_sum
                                   cong: if_cong)
-                  apply (simp add: upto_enum_def fromEnum_def
+                   apply (simp add: upto_enum_def fromEnum_def
                                    enum_register  toEnum_def
                                    msgRegisters_unfold
-                             cong: if_cong)
-                  apply (clarsimp split: split_if)
-                  apply (rule ext)
-                  apply (simp add: badgeRegister_def msgInfoRegister_def
+                              cong: if_cong)
+                   apply (clarsimp split: split_if)
+                   apply (rule ext)
+                   apply (simp add: badgeRegister_def msgInfoRegister_def
                                    ARM.badgeRegister_def
                                    ARM.msgInfoRegister_def
                             split: split_if)
-                 apply simp
-                apply (wp | simp cong: if_cong bool.case_cong
-                          | rule getCTE_wp' gts_wp' threadGet_wp
+                  apply simp
+                 apply (wp | simp cong: if_cong bool.case_cong
+                           | rule getCTE_wp' gts_wp' threadGet_wp
                                  getEndpoint_wp)+
         apply (rule validE_cases_valid)
         apply (simp add: isRight_def getSlotCap_def)
@@ -6100,13 +6176,44 @@ lemma active_ntfn_check_wp:
   apply (auto simp: pred_tcb_at'_def obj_at'_def projectKOs)
   done
 
+lemma tcbSchedEnqueue_tcbIPCBuffer:
+  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t\<rbrace>
+  tcbSchedEnqueue t'
+  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t\<rbrace>"
+  apply (simp add: tcbSchedEnqueue_def unless_when)
+  apply (wp threadSet_obj_at' hoare_drop_imps threadGet_wp
+        |simp split: split_if)+
+  done
+
+crunch obj_at'_tcbIPCBuffer[wp]: rescheduleRequired "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+  (wp: crunch_wps tcbSchedEnqueue_tcbIPCBuffer simp: rescheduleRequired_def)
+
+crunch obj_at'_tcbIPCBuffer[wp]: setThreadState "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+  (wp: crunch_wps threadSet_obj_at'_really_strongest)
+
+crunch obj_at'_tcbIPCBuffer[wp]: getCTE "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+  (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest)
+
+crunch obj_at'_tcbIPCBuffer[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+  (wp: crunch_wps)
+
+crunch obj_at'_tcbIPCBuffer[wp]: transferCapsToSlots "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+  (wp: crunch_wps transferCapsToSlots_pres1 simp: crunch_simps ignore: constOnFailure)
+
+crunch obj_at'_tcbIPCBuffer[wp]: asUser "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+  (wp: crunch_wps)
+
+crunch obj_at'_tcbIPCBuffer[wp]: handleFault "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+  (wp: crunch_wps constOnFailure_wp tcbSchedEnqueue_tcbIPCBuffer threadSet_obj_at'_really_strongest 
+    simp: zipWithM_x_mapM ignore: sequenceE mapME getObject setObject)
+
 lemma fastpath_callKernel_SysReplyRecv_corres:
   "monadic_rewrite True False
      (invs' and ct_in_state' (op = Running) and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
          and cnode_caps_gsCNodes')
      (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
   apply (rule monadic_rewrite_introduce_alternative)
-   apply (simp add: callKernel_def)
+   apply ( simp add: callKernel_def)
   apply (rule monadic_rewrite_imp)
    apply (simp add: handleEvent_def handleReply_def
                     handleRecv_def liftE_bindE_handle liftE_handle
@@ -6121,7 +6228,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
    apply (rule monadic_rewrite_rdonly_bind_l, wp)
    apply (rule monadic_rewrite_bind_tail)
     apply (rule monadic_rewrite_symb_exec_r, wp)
-     apply (rename_tac msgInfo)
+     apply (rename_tac thread msgInfo)
      apply (rule monadic_rewrite_symb_exec_r, wp)
       apply (rename_tac cptr)
       apply (rule monadic_rewrite_symb_exec_r[OF threadGet_inv no_fail_threadGet])
@@ -6205,6 +6312,23 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                     apply (rule monadic_rewrite_alternative_l)
                    apply (rule monadic_rewrite_trans,
                               rule monadic_rewrite_pick_alternative_1)
+
+
+                    apply (rule_tac P="\<lambda>v.  obj_at' (%tcb. tcbIPCBuffer tcb = v) (capTCBPtr (cteCap replyCTE))"
+                          in monadic_rewrite_exists_v)
+                    apply (rename_tac ipcBuffer)
+
+                    apply (simp add: ARM_H.switchToThread_def bind_assoc)
+                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse]) 
+
+                      apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                      apply (wp mapM_x_wp' getObject_inv | wpc | simp add:
+                        | wp_once hoare_drop_imps )+
+
+                      apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                      apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv getCTE_obj_at'_tcbIPCBuffer mapM_x_wp' getObject_inv | wpc | simp add:
+                        | wp_once hoare_drop_imps )+
+
                    apply (rule monadic_rewrite_trans)
                     apply (rule monadic_rewrite_trans)
                      apply (rule monadic_rewrite_bind_head)
@@ -6288,11 +6412,24 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                              | simp
                              | clarsimp simp: obj_at'_weakenE[OF _ TrueI])+)
                         apply (wp getCTE_wp' gts_imp')
+
+                    apply (simp add: ARM_H.switchToThread_def bind_assoc)
+                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse]) 
+
+                      apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                      apply (wp mapM_x_wp' handleFault_obj_at'_tcbIPCBuffer getObject_inv | wpc | simp add:
+                        | wp_once hoare_drop_imps )+
+
+                      apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                      apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv getCTE_obj_at'_tcbIPCBuffer mapM_x_wp' getObject_inv | wpc | simp add:
+                        | wp_once hoare_drop_imps )+
+
                    apply (simp add: bind_assoc catch_liftE
                                     receiveIPC_def Let_def liftM_def
                                     setThreadState_runnable_simp)
                    apply (rule monadic_rewrite_symb_exec_l, wp empty_fail_getThreadState)
                     apply (rule monadic_rewrite_assert)
+
                     apply (rule_tac P="inj (case_bool thread (capTCBPtr (cteCap replyCTE)))"
                                     in monadic_rewrite_gen_asm)
                     apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
@@ -6304,6 +6441,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                   thread_actions_isolatable_bind
                                   thread_actions_isolatableD[OF setCTE_isolatable]
                                   setCTE_isolatable
+                                  setVMRoot_isolatable[THEN thread_actions_isolatableD] setVMRoot_isolatable
+                                  doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable 
                            | assumption
                            | wp assert_inv)+
                     apply (simp only: )
@@ -6352,6 +6491,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                       apply (simp add: badgeRegister_def msgInfoRegister_def
                                        ARM.msgInfoRegister_def
                                        ARM.badgeRegister_def
+                                cong: if_cong
                                 split: split_if)
                      apply simp
                     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps

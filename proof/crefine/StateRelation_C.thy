@@ -116,8 +116,7 @@ begin
 definition 
   "carch_globals s \<equiv> 
   (armKSGlobalPD s = symbol_table ''armKSGlobalPD'') \<and>
-  (armKSGlobalPTs s  = [symbol_table ''armKSGlobalPT'']) \<and>
-  (armKSGlobalsFrame s = symbol_table ''armKSGlobalsFrame'')"
+  (armKSGlobalPTs s  = [symbol_table ''armKSGlobalPT''])"
 
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
@@ -234,6 +233,7 @@ fun
   | "register_from_H ARM.LR = scast Kernel_C.LR"
   | "register_from_H ARM.LR_svc = scast Kernel_C.LR_svc"
   | "register_from_H ARM.CPSR = scast Kernel_C.CPSR" 
+  | "register_from_H ARM.TPIDRURW = scast Kernel_C.TPIDRURW" 
   | "register_from_H ARM.FaultInstruction = scast Kernel_C.FaultInstruction"
 
 definition

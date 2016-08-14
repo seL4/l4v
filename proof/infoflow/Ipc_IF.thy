@@ -101,12 +101,10 @@ lemma storeWord_equiv_but_for_labels:
            apply (simp add: states_equiv_for_def)
           apply (rule conjI)
            apply(rule equiv_forI)
-           apply(erule states_equiv_forE)
-           apply clarsimp
+           apply clarsimp      
            apply(drule_tac f=underlying_memory in equiv_forD,fastforce)
            apply(fastforce intro: is_aligned_no_wrap' word_plus_mono_right simp: is_aligned_mask for_each_byte_of_word_def)
            apply(rule equiv_forI)
-          apply(erule states_equiv_forE)
           apply clarsimp
           apply(drule_tac f=device_state in equiv_forD,fastforce)
           apply clarsimp 
@@ -246,9 +244,8 @@ lemma tcb_sched_action_equiv_but_for_labels:
   apply (simp add: tcb_sched_action_def, wp)
   apply (clarsimp simp: etcb_at_def equiv_but_for_labels_def split: option.splits)
   apply (rule states_equiv_forI)
-            apply(fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD[where f=kheap])
-           apply (simp add: states_equiv_for_def)
-          apply(fastforce elim: states_equiv_forE)
+           apply(fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD[where f=kheap])
+          apply (simp add: states_equiv_for_def)
          apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
         apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ekheap])
        apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt_list])
@@ -928,14 +925,8 @@ lemma aag_has_auth_to_read_cptrs:
   apply assumption
   done
 
-definition
-  ipc_buffer_disjoint_from :: "word32 set \<Rightarrow> word32 option \<Rightarrow> bool"
-where
-"ipc_buffer_disjoint_from X  \<equiv>
-    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (ptr_range buf' msg_align_bits) \<inter> X = {})"
-
 lemma get_extra_cptrs_rev:
-  "reads_equiv_valid_inv A aag ((\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) buffer) and K (ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> (buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2))))
+  "reads_equiv_valid_inv A aag (K (ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> (buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2))))
       (get_extra_cptrs buffer mi)"
   unfolding get_extra_cptrs_def
   apply (rule gen_asm_ev)
@@ -943,17 +934,10 @@ lemma get_extra_cptrs_rev:
   apply(case_tac buffer, simp_all add: return_ev_pre)
   apply (wp mapM_ev equiv_valid_guard_imp[OF load_word_offs_rev]
        | erule (2) aag_has_auth_to_read_cptrs)+
-   apply(simp add: ipc_buffer_disjoint_from_def, clarify)
-   apply(erule disjoint_subset[rotated])
-   apply(rule cptrs_in_ipc_buffer)
-     apply fastforce
-    apply assumption
-   apply assumption
-  apply wp
   done
 
 lemma lookup_extra_caps_rev:
-  shows "reads_equiv_valid_inv A aag (pas_refined aag and (K (is_subject aag thread)) and (\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) buffer) and (\<lambda> s. ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2)))
+  shows "reads_equiv_valid_inv A aag (pas_refined aag and (K (is_subject aag thread))  and (\<lambda> s. ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2)))
      (lookup_extra_caps thread buffer mi)"
   apply(rule gen_asm_ev)
   unfolding lookup_extra_caps_def fun_app_def
@@ -1007,17 +991,13 @@ lemma aag_has_auth_to_read_msg:
 (* only called within do_reply_transfer for which access assumes sender
    and receiver in same domain *)
 lemma get_mrs_rev:
-  shows "reads_equiv_valid_inv A aag ((\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) buf) and (K (is_subject aag thread \<and> ipc_buffer_has_read_auth aag (pasSubject aag) buf \<and> unat (mi_length mi) < 2 ^ (msg_align_bits - 2)))) (get_mrs thread buf mi)"
+  shows "reads_equiv_valid_inv A aag ((K (is_subject aag thread \<and> ipc_buffer_has_read_auth aag (pasSubject aag) buf \<and> unat (mi_length mi) < 2 ^ (msg_align_bits - 2)))) (get_mrs thread buf mi)"
   apply (rule gen_asm_ev)
   unfolding get_mrs_def
   apply (wp mapM_ev'' load_word_offs_rev thread_get_rev
        | wpc
        | rule aag_has_auth_to_read_msg[where mi=mi]
        | clarsimp split: split_if_asm)+
-  apply(simp add: ipc_buffer_disjoint_from_def)
-  apply(clarify) 
-  apply(rule disjoint_subset[OF msg_in_ipc_buffer])
-     apply fastforce+
   done
 
 lemmas get_mrs_reads_respects_g = reads_respects_g_from_inv[OF get_mrs_rev get_mrs_inv]
@@ -1230,22 +1210,13 @@ lemma aag_has_auth_to_read_captransfer:
   done
 
 lemma load_cap_transfer_rev:
-  "reads_equiv_valid_inv A aag ((\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) (Some buffer)) and K (ipc_buffer_has_read_auth aag (pasSubject aag) (Some buffer)))
+  "reads_equiv_valid_inv A aag (K (ipc_buffer_has_read_auth aag (pasSubject aag) (Some buffer)))
     (load_cap_transfer buffer)"
   unfolding load_cap_transfer_def fun_app_def captransfer_from_words_def
   apply(wp dmo_loadWord_rev | simp)+
   apply safe
-       apply(simp add: ipc_buffer_disjoint_from_def, clarify)
-       apply(drule captransfer_in_ipc_buffer[where x=0, simplified])
-       apply blast
       apply(erule aag_has_auth_to_read_captransfer[where x=0, simplified])
-     apply(simp add: ipc_buffer_disjoint_from_def, clarify)
-     apply(drule captransfer_in_ipc_buffer[where x=1, simplified])
-     apply blast
     apply(erule aag_has_auth_to_read_captransfer[where x=1, simplified])
-   apply(simp add: ipc_buffer_disjoint_from_def, clarify)
-   apply(drule captransfer_in_ipc_buffer[where x=2, simplified])
-   apply blast
   apply(erule aag_has_auth_to_read_captransfer[where x=2, simplified])
   done
 
@@ -1394,7 +1365,7 @@ lemma get_cap_ret_is_subject':
 
 
 lemma get_receive_slots_rev:
-  "reads_equiv_valid_inv A aag (pas_refined aag and (\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) buf) and (K (is_subject aag thread \<and> 
+  "reads_equiv_valid_inv A aag (pas_refined aag and (K (is_subject aag thread \<and> 
          ipc_buffer_has_read_auth aag (pasSubject aag) buf)))
    (get_receive_slots thread buf)"
   apply(case_tac buf)
@@ -1407,9 +1378,8 @@ lemma get_receive_slots_rev:
   done
 
 lemma transfer_caps_reads_respects:
-  "reads_respects aag l (pas_refined aag and 
-   (\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) receive_buffer) and
-     K (is_subject aag receiver \<and> 
+  "reads_respects aag l (pas_refined aag
+     and K (is_subject aag receiver \<and> 
         ipc_buffer_has_read_auth aag (pasSubject aag) receive_buffer \<and> 
         (\<forall>cap\<in>set caps.
             is_subject aag (fst (snd cap)) \<and> pas_cap_cur_auth aag (fst cap)))) 
@@ -1467,7 +1437,7 @@ abbreviation aag_can_read_or_affect where
     aag_can_read aag x \<or> aag_can_affect aag l x"
 
 lemma dmo_loadWord_reads_respects:
-  "reads_respects aag l ((\<lambda> s. ptr_range p 2 \<inter> range_of_arm_globals_frame s = {}) and K (for_each_byte_of_word (\<lambda> x. aag_can_read_or_affect aag l x) p))
+  "reads_respects aag l (K (for_each_byte_of_word (\<lambda> x. aag_can_read_or_affect aag l x) p))
      (do_machine_op (loadWord p))"
   apply(rule gen_asm_ev)
   apply(rule use_spec_ev)
@@ -1489,7 +1459,7 @@ lemma dmo_loadWord_reads_respects:
   done
 
 lemma load_word_offs_reads_respects:
-  "reads_respects aag l (\<lambda> s. ptr_range (a + of_nat x * of_nat word_size) 2 \<inter> range_of_arm_globals_frame s = {} \<and> for_each_byte_of_word (\<lambda> x. aag_can_read_or_affect aag l x) (a + of_nat x * of_nat word_size)) (load_word_offs a x)"
+  "reads_respects aag l (\<lambda> s. for_each_byte_of_word (\<lambda> x. aag_can_read_or_affect aag l x) (a + of_nat x * of_nat word_size)) (load_word_offs a x)"
   unfolding load_word_offs_def fun_app_def
   apply(rule equiv_valid_guard_imp[OF dmo_loadWord_reads_respects])
   apply(clarsimp)
@@ -1504,7 +1474,7 @@ lemma as_user_reads_respects:
   done
 
 lemma copy_mrs_reads_respects:
-  "reads_respects aag l ((\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) sbuf) and K (aag_can_read_or_affect aag l sender \<and> aag_can_read_or_affect_ipc_buffer aag l sbuf \<and> unat n < 2 ^ (msg_align_bits - 2))) (copy_mrs sender sbuf receiver rbuf n)"
+  "reads_respects aag l (K (aag_can_read_or_affect aag l sender \<and> aag_can_read_or_affect_ipc_buffer aag l sbuf \<and> unat n < 2 ^ (msg_align_bits - 2))) (copy_mrs sender sbuf receiver rbuf n)"
   unfolding copy_mrs_def fun_app_def
   apply(rule gen_asm_ev)
   apply(wp mapM_ev'' store_word_offs_reads_respects 
@@ -1512,34 +1482,24 @@ lemma copy_mrs_reads_respects:
            as_user_reads_respects 
        | wpc 
        | simp add: set_register_det get_register_det split del: split_if)+
-     apply(rule_tac Q="\<lambda> r s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) sbuf \<and> aag_can_read_or_affect aag l sender \<and> aag_can_read_or_affect_ipc_buffer aag l sbuf \<and> unat n < 2 ^ (msg_align_bits - 2)" in hoare_strengthen_post)
-      apply (wp mapM_wp')
-     apply clarsimp 
-     apply(rename_tac n')
-     apply(subgoal_tac " ptr_range (x + of_nat n' * of_nat word_size) 2
-             \<subseteq> ptr_range x msg_align_bits")
-      apply(rule conjI)
-       apply(simp add: ipc_buffer_disjoint_from_def, erule conjE)
-       apply(erule (1) disjoint_subset[rotated])
-      apply(simp add: for_each_byte_of_word_def2)
-      apply(simp add: aag_can_read_or_affect_ipc_buffer_def)
-      apply(erule conjE)
-      apply(rule ballI)
-      apply(erule bspec)
-      apply(erule (1) subsetD[rotated])     
-     apply(rule ptr_range_subset)
-        apply(simp add: ipc_buffer_disjoint_from_def)
-       apply(simp add: msg_align_bits)
-      apply(simp add: msg_align_bits word_bits_def)
-     apply(simp add: word_size_def)
-     apply(subst upto_enum_step_shift_red[where us=2, simplified])
-        apply (simp add: msg_align_bits word_bits_def ipc_buffer_disjoint_from_def)+
-     apply(simp add: image_def)
-     apply(rule_tac x="n'" in bexI)
-      apply simp
-     apply fastforce
-    apply wp
-  apply (clarsimp simp: get_register_det)
+  apply clarsimp 
+  apply(rename_tac n')
+  apply(subgoal_tac " ptr_range (x + of_nat n' * of_nat word_size) 2
+          \<subseteq> ptr_range x msg_align_bits")
+   apply(simp add: for_each_byte_of_word_def2)
+   apply(simp add: aag_can_read_or_affect_ipc_buffer_def)
+   apply(erule conjE)
+   apply(rule ballI)
+   apply(erule bspec)
+   apply(erule (1) subsetD[rotated])
+  apply(rule ptr_range_subset)
+     apply(simp add: aag_can_read_or_affect_ipc_buffer_def)
+    apply(simp add: msg_align_bits)
+    apply(simp add: msg_align_bits word_bits_def)
+   apply(simp add: word_size_def)
+  apply(subst upto_enum_step_shift_red[where us=2, simplified])
+     apply (simp add: msg_align_bits word_bits_def aag_can_read_or_affect_ipc_buffer_def )+
+  apply(fastforce simp: image_def)
   done
 
 lemma get_mi_length':
@@ -1583,8 +1543,6 @@ lemma get_message_info_reads_respects:
 
 lemma do_normal_transfer_reads_respects:
   "reads_respects aag l (pas_refined aag and 
-         (\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) rbuf) and
-         (\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) sbuf) and
           K (aag_can_read_or_affect aag l sender \<and> 
              ipc_buffer_has_read_auth aag (pasObjectAbs aag sender) sbuf \<and> 
              ipc_buffer_has_read_auth aag (pasObjectAbs aag receiver) rbuf \<and> 
@@ -1689,11 +1647,6 @@ lemma tl_tl_in_set:
   apply(case_tac xs, auto)
   done
 
-lemma ipc_buffer_disjoint_from_None[simp]:
-  "ipc_buffer_disjoint_from X None = True"
-  apply(simp add: ipc_buffer_disjoint_from_def)
-  done
-
 (* GENERALIZE the following is possible *)
 lemma ptr_in_obj_range:
   "\<lbrakk>valid_objs s; pspace_aligned s; kheap s ptr = Some obj\<rbrakk> 
@@ -1715,96 +1668,7 @@ lemma ptr_in_obj_range:
   apply (rule is_aligned_no_overflow')
   apply (erule(1) pspace_alignedD)
   done
-
-(* GENERALIZE the following is possible but the generalized version might not easy to use*)
-lemma ptr_not_in_globals_frame:
-  "\<lbrakk> arm_globals_frame (arch_state s) \<noteq> ptr; valid_arch_state s;valid_objs s;
-     pspace_distinct s;pspace_aligned s; kheap s ptr = Some obj\<rbrakk> \<Longrightarrow> 
-     ptr + (a && mask (obj_bits obj)) \<notin> range_of_arm_globals_frame s"
-  apply (clarsimp simp: valid_arch_state_def pspace_distinct_def')
-  apply (erule_tac x= ptr in allE)
-  apply (erule_tac x="arm_globals_frame (arch_state s)" in allE)
-  apply (clarsimp simp: obj_at_def obj_range_page_as_ptr_range_pageBitsForSize pageBits_def)
-  apply (drule(2) ptr_in_obj_range[where ptr = ptr])
-  apply (drule(1) IntI)
-  apply fastforce
-  done
-
-lemma pagecap_range:
-  "cap_range (ArchObjectCap (PageCap dev ptr rights sz asid)) = ptr_range ptr (pageBitsForSize sz)"
-  apply (simp add: cap_range_def)
-  oops
-
-lemma tcb_buffer_orth_globals_frame:
-  "\<lbrakk>valid_objs s; valid_global_refs s; pspace_aligned s; pspace_distinct s; valid_arch_state s;
-        get_tcb sender s = Some tcb;
-        caps_of_state s (sender, tcb_cnode_index 4) = Some (ArchObjectCap (PageCap xa xb xc xd xe))\<rbrakk>
-     \<Longrightarrow> range_of_arm_globals_frame s \<inter>
-           ptr_range (xb + (tcb_ipc_buffer tcb && mask (pageBitsForSize xd))) msg_align_bits =
-           {}"
-  apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
-   apply (simp add: dom_tcb_cap_cases)
-  apply (frule (1) caps_of_state_valid_cap)
-  apply (clarsimp simp: valid_cap_simps cap_aligned_def)
-  apply (rule ptr_range_disjoint_strong)
-  (* CLAGged from here onwards from auth_ipc_buffers_do_not_overlap_globals_frame *)
-      apply (rule ccontr)
-      apply clarsimp
-      apply (frule caps_of_state_cteD)
-      apply (frule cte_wp_at_valid_objs_valid_cap)
-       apply(simp)
-      apply (clarsimp simp: valid_cap_def)
-      apply (simp add: valid_global_refs_def valid_refs_def)
-      apply (erule_tac x=sender in allE)
-      apply (erule_tac x="tcb_cnode_index 4" in allE)
-      apply (erule notE)
-      apply (erule cte_wp_at_weakenE)
-      apply (clarsimp simp: global_refs_def cap_range_def)
-      apply (drule_tac t = "tcb_ipcframe tcb" in sym,simp)
-      apply (clarsimp simp: obj_at_def split: if_splits)
-       apply (drule(5) ptr_not_in_globals_frame)
-         apply (fastforce simp: obj_bits_def)
-      apply (drule(5) ptr_not_in_globals_frame)
-        apply (fastforce simp: obj_bits_def)
-     apply (clarsimp simp: valid_arch_state_def obj_at_def dest!: pspace_alignedD)
-    apply (erule aligned_add_aligned)
-     apply (rule is_aligned_andI1)
-     apply (drule (1) valid_tcb_objs)
-     apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
-                    split: if_splits)
-    apply (rule order_trans [OF _ pbfs_atleast_pageBits])
-    apply (simp add: msg_align_bits pageBits_def)
-   apply simp
-  apply (simp add: msg_align_bits)
-  done
-
-lemma lookup_ipc_buffer_disjoint_from_globals_frame:
-  "\<lbrace>valid_objs and valid_global_refs and pspace_aligned and pspace_distinct and valid_arch_state\<rbrace> lookup_ipc_buffer b sender 
-       \<lbrace>\<lambda>rva s.
-           ipc_buffer_disjoint_from (range_of_arm_globals_frame s) rva\<rbrace>"
-  unfolding lookup_ipc_buffer_def
-  apply(rule hoare_pre)
-   apply (wp get_cap_wp thread_get_wp' | wpc | simp)+
-  apply (clarsimp simp: cte_wp_at_caps_of_state ipc_buffer_has_read_auth_def get_tcb_ko_at [symmetric])
-  apply (rule drop_imp)
-  apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
-   apply (simp add: dom_tcb_cap_cases)
-  apply (frule (1) caps_of_state_valid_cap)
-  apply (clarsimp simp: valid_cap_simps cap_aligned_def)
-  apply (simp add: ipc_buffer_disjoint_from_def)
-  apply (rule context_conjI)
-   apply (erule aligned_add_aligned)
-    apply (rule is_aligned_andI1)
-    apply (drule (1) valid_tcb_objs)
-    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
-                   split: if_splits)
-   apply (rule order_trans [OF _ pbfs_atleast_pageBits])
-   apply (simp add: msg_align_bits pageBits_def)
-  apply (subst Int_commute)
-  apply (rule tcb_buffer_orth_globals_frame)
-   apply simp+
-  done
-
+  
 lemma do_ipc_transfer_reads_respects:
   "reads_respects aag l (valid_objs and valid_global_refs and pspace_distinct and pspace_aligned
                          and valid_arch_state and pas_refined aag and
@@ -1818,13 +1682,11 @@ lemma do_ipc_transfer_reads_respects:
   apply (wp do_normal_transfer_reads_respects lookup_ipc_buffer_reads_respects
             lookup_ipc_buffer_has_read_auth do_fault_transfer_reads_respects
             thread_get_reads_respects lookup_ipc_buffer_has_auth
-            lookup_ipc_buffer_aligned lookup_ipc_buffer_disjoint_from_globals_frame
+            lookup_ipc_buffer_aligned
         | wpc
         | simp
         | wp_once hoare_drop_imps)+
   done
-
-
 
 crunch pas_cur_domain[wp]: set_extra_badge, do_ipc_transfer "pas_cur_domain aag"
   (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure simp: crunch_simps)
@@ -2150,7 +2012,7 @@ lemma do_reply_transfer_reads_respects_f:
             thread_set_reads_respects handle_fault_reply_reads_respects
             get_mrs_rev lookup_ipc_buffer_reads_respects
             lookup_ipc_buffer_has_read_auth' get_message_info_rev
-            get_mi_length lookup_ipc_buffer_disjoint_from_globals_frame 
+            get_mi_length
             cap_delete_one_silc_inv do_ipc_transfer_silc_inv
             set_thread_state_pas_refined thread_set_fault_pas_refined'
             attempt_switch_to_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]] when_ev
@@ -2216,16 +2078,15 @@ lemma setup_caller_cap_globals_equiv:
    done
 
 lemma set_extra_badge_globals_equiv:
-  "\<lbrace>globals_equiv s and (\<lambda>sa. ptr_range (buffer + (of_nat buffer_cptr_index
-      + of_nat n) * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})\<rbrace>
+  "\<lbrace>globals_equiv s \<rbrace>
     set_extra_badge buffer badge n
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_extra_badge_def
-  apply(wp store_word_offs_globals_equiv, simp)
+  apply(wp store_word_offs_globals_equiv)
   done
 
 lemma transfer_caps_loop_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs and (\<lambda>sa. \<forall>x<length caps. ptr_range (rcv_buffer + (of_nat buffer_cptr_index + of_nat (x + n)) * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})\<rbrace>
+  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs\<rbrace>
     transfer_caps_loop ep rcv_buffer n caps slots mi
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
 proof (induct caps arbitrary: slots n mi)
@@ -2244,35 +2105,19 @@ next
          apply(rule Cons.hyps)
         apply(simp)
         apply(wp cap_insert_globals_equiv'')
-       apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs and
-  (\<lambda>sa. \<forall>x<length caps'. ptr_range (rcv_buffer + (of_nat buffer_cptr_index + (of_nat (1 + x + n))) * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})"
+       apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs"
  and
-  E="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs and (\<lambda>sa. \<forall>x<length caps'.
-  ptr_range (rcv_buffer + (of_nat buffer_cptr_index + (of_nat (1 + x + n))) * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})" in hoare_post_impErr)
+  E="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs" in hoare_post_impErr)
          apply(simp add: whenE_def, rule conjI)
           apply(rule impI, wp)+
          apply(simp)+
        apply wp
-    apply(rule conjI)
-     apply(clarsimp)
-     apply(rule conjI)
-      apply(fastforce)
-     apply(clarsimp)
-     apply(simp add: add.assoc[symmetric])
-     apply(subst add.assoc) 
-     apply(subst of_nat_Suc[symmetric])
-     apply(fastforce)
-    apply(clarsimp)
-    apply(simp add: add.assoc[symmetric])
-    apply(subst add.assoc)
-    apply(subst of_nat_Suc[symmetric])
     apply(fastforce)
     done
 qed
 
 lemma transfer_caps_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs and (\<lambda>sa. \<forall>rb. recv_buffer = Some rb     \<longrightarrow> (\<forall>x<length caps.
-    ptr_range (rb + (of_nat buffer_cptr_index + of_nat x) * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {}))\<rbrace>
+  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs\<rbrace>
     transfer_caps info caps endpoint receiver recv_buffer
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding transfer_caps_def
@@ -2280,18 +2125,18 @@ lemma transfer_caps_globals_equiv:
   done
 
 lemma copy_mrs_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arm and (\<lambda>s. receiver \<noteq> idle_thread s) and (\<lambda>sa. \<forall>rb x. (rbuf = Some rb \<and> x\<in>set [length msg_registers + 1..<Suc (unat n)]) \<longrightarrow> ptr_range (rb + of_nat x * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})\<rbrace>
+  "\<lbrace>globals_equiv s and valid_ko_at_arm and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
     copy_mrs sender sbuf receiver rbuf n
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding copy_mrs_def
   apply(wp | wpc)+
-    apply(rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda>sa. \<forall>rb x. (rbuf = Some rb \<and> x\<in>set [length msg_registers + 1..<Suc (unat n)]) \<longrightarrow> ptr_range (rb + of_nat x * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})"
+    apply(rule_tac Q="\<lambda>_. globals_equiv s"
          in hoare_strengthen_post)
      apply(wp mapM_wp' | wpc)+
       apply(wp store_word_offs_globals_equiv)
      apply fastforce
     apply simp
-   apply(rule_tac Q="\<lambda>_. globals_equiv s and valid_ko_at_arm and (\<lambda>sa. receiver \<noteq> idle_thread sa) and (\<lambda>sa. \<forall>rb x. (rbuf = Some rb \<and> x\<in>set [length msg_registers + 1..<Suc (unat n)]) \<longrightarrow> ptr_range (rb + of_nat x * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})"
+   apply(rule_tac Q="\<lambda>_. globals_equiv s and valid_ko_at_arm and (\<lambda>sa. receiver \<noteq> idle_thread sa)"
           in hoare_strengthen_post)
     apply(wp mapM_wp' as_user_globals_equiv)
     apply(simp)
@@ -2309,49 +2154,15 @@ lemma validE_to_valid:
 
 lemma do_normal_transfer_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs and 
-    (\<lambda>sa. receiver \<noteq> idle_thread sa) and
-    (\<lambda>sa. \<forall>rb x. (rbuf = Some rb \<and>
-    (x\<in>set [length msg_registers + 1..< (2 ^ (msg_align_bits - 2))]) \<longrightarrow>
-    ptr_range (rb + of_nat x * of_nat word_size) 2 \<inter>
-      range_of_arm_globals_frame sa = {}))\<rbrace>
+    (\<lambda>sa. receiver \<noteq> idle_thread sa)\<rbrace>
     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding do_normal_transfer_def
   apply(wp as_user_globals_equiv set_message_info_globals_equiv transfer_caps_globals_equiv)
     apply(wp copy_mrs_globals_equiv)
      apply(subst K_def)
-      apply(wp | rule impI)+
-     apply(rule_tac Q'="\<lambda>rv s. length rv < 6 \<and> (\<forall>rb. rbuf = Some rb \<and> length rv < 6 \<longrightarrow>
-                    (\<forall>x<length rv.
-                        ptr_range
-                         (rb +
-                          (of_nat buffer_cptr_index + of_nat x) * of_nat word_size)
-                         2 \<inter>
-                        range_of_arm_globals_frame s =
-                        {})) \<and>
-              valid_ko_at_arm s \<and> valid_global_objs s \<and> (receiver \<noteq> idle_thread s)" in hoare_post_imp_R)
-      apply(wp lookup_extra_caps_length)
-      apply(rule validE_to_valid)
-      apply(wp hoare_vcg_all_lift)
-      apply(rule hoare_drop_imps)
-      apply(wp)
-     apply(clarsimp)
-   apply(wp)
-  apply(rule_tac Q="\<lambda>mi. globals_equiv st and valid_ko_at_arm and valid_global_objs and
-                  (\<lambda>sa. receiver \<noteq> idle_thread sa) and
-                  (\<lambda>sa. \<forall>rb x. rbuf = Some rb \<and>
-                  x \<in> set [length msg_registers + 1..<2 ^ (msg_align_bits - 2)] \<longrightarrow>
-                  ptr_range (rb + of_nat x * of_nat word_size) 2 \<inter>
-                  range_of_arm_globals_frame sa = {}) and
-                  K (unat (mi_length mi) < 2 ^ (msg_align_bits - 2) \<and> valid_message_info mi)" in hoare_strengthen_post)
-   apply(wp, simp, wp get_mi_length get_mi_valid', simp)
+     apply(wp | rule impI)+
   apply(clarsimp)
-  apply(rule conjI | clarsimp)+
-    apply(fastforce)
-   apply(clarsimp)
-   apply(erule_tac x="buffer_cptr_index + xa" in allE)
-   apply(fastforce simp: buffer_cptr_index_def msg_max_length_def msg_align_bits length_msg_registers)
-  apply(fastforce)
   done
 
 
@@ -2360,11 +2171,7 @@ lemma do_normal_transfer_globals_equiv:
 
 lemma do_fault_transfer_globals_equiv:
   "\<lbrace>globals_equiv s and valid_ko_at_arm and 
-    (\<lambda>sa. receiver \<noteq> idle_thread sa) and
-    (\<lambda>sa. \<forall>x pptr. buf=Some pptr \<and>
-    x\<in>set [Suc (length msg_registers)..< Suc msg_max_length] \<longrightarrow>
-    ptr_range (pptr + of_nat x * of_nat word_size) 2 \<inter>
-    range_of_arm_globals_frame sa = {})\<rbrace>
+    (\<lambda>sa. receiver \<noteq> idle_thread sa)\<rbrace>
       do_fault_transfer badge sender receiver buf
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding do_fault_transfer_def
@@ -2403,17 +2210,6 @@ lemma lookup_ipc_buffer_aligned':
 lemma set_collection: "a = {x. x\<in>a}"
   by simp
 
-lemma auth_ipc_buffers_do_not_overlap_arm_globals_frame:
-  "\<lbrakk>valid_arch_state s; valid_global_refs s; valid_objs s; pspace_distinct s; pspace_aligned  s\<rbrakk>
-  \<Longrightarrow> auth_ipc_buffers s thread \<inter> range_of_arm_globals_frame s = {}"
-  apply (rule ccontr)
-  apply (drule int_not_emptyD)
-  apply (clarsimp simp: auth_ipc_buffers_member_def)
-  apply (erule(1) in_empty_interE[rotated])
-  apply (rule tcb_buffer_orth_globals_frame)
-  apply auto
-  done
-
 lemma do_ipc_transfer_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_objs and valid_arch_state and valid_global_refs 
     and pspace_distinct and pspace_aligned and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
@@ -2425,61 +2221,11 @@ lemma do_ipc_transfer_globals_equiv:
            (\<lambda>sa. receiver \<noteq> idle_thread sa) and
            (\<lambda>sa. (\<forall>rb. recv_buffer = Some rb \<longrightarrow>
            auth_ipc_buffers sa receiver = ptr_range rb msg_align_bits) \<and>
-           (\<forall>rb. recv_buffer = Some rb \<longrightarrow> is_aligned rb msg_align_bits) \<and>
-           auth_ipc_buffers sa receiver \<inter> range_of_arm_globals_frame sa = {})"
+           (\<forall>rb. recv_buffer = Some rb \<longrightarrow> is_aligned rb msg_align_bits))"
            in hoare_strengthen_post)
     apply(wp)
    apply(clarsimp | rule conjI)+
-    apply(subgoal_tac "ptr_range (rb + of_nat x * of_nat word_size) 2 \<subseteq> ptr_range rb msg_align_bits")
-     apply(fastforce)
-    apply(rule ptr_range_subset)
-       apply(assumption)
-      apply(simp add: msg_align_bits)
-     apply(simp add: msg_align_bits word_bits_def)
-    apply(simp add: msg_align_bits word_size_def)
-    apply(simp add: upto_enum_step_def)
-    apply(rule conjI)
-     apply(drule is_aligned_no_overflow)
-     apply(simp)
-    apply(clarsimp)
-    apply(simp add: image_def)
-    apply(rule_tac x="of_nat x" in exI)
-    apply(simp)
-    apply(subgoal_tac "of_nat x \<le> 0x80 - (1::word32)")
-     apply(simp)
-    apply(rule word_less_sub_1)
-    apply(subgoal_tac "of_nat x < (2::word32) ^ 7")
-     apply(simp)
-    apply(rule of_nat_less_pow_32)
-     apply(simp)
-    apply(simp add: word_bits_def)
-   apply(clarsimp)
-   apply(subgoal_tac "ptr_range (pptr + of_nat xa * of_nat word_size) 2 \<subseteq> ptr_range pptr msg_align_bits")
-    apply(fastforce)
-   apply(rule ptr_range_subset)
-      apply(assumption)
-     apply(simp add: msg_align_bits)
-    apply(simp add: msg_align_bits word_bits_def)
-   apply(simp add: upto_enum_step_def)
-   apply(rule conjI)
-    apply(drule is_aligned_no_overflow)
-    apply(simp add: msg_align_bits)
-   apply(clarsimp simp: image_def)
-   apply(rule_tac x="of_nat xa" in exI)
-   apply(simp add: msg_align_bits word_size_def)
-   apply(subgoal_tac "of_nat xa \<le> 0x80 - (1::word32)")
-    apply(simp)
-   apply(rule word_less_sub_1)
-   apply(subgoal_tac "of_nat xa < (2::word32) ^ 7")
-    apply(simp)
-   apply(rule of_nat_less_pow_32)
-    apply(simp)
-    apply(fastforce simp: msg_max_length_def length_msg_registers)
-   apply(simp add: word_bits_def)
-
   apply(wp hoare_vcg_all_lift lookup_ipc_buffer_ptr_range' lookup_ipc_buffer_aligned' | fastforce)+
-     apply(rule auth_ipc_buffers_do_not_overlap_arm_globals_frame)
-        apply(simp)+
   done
 
 crunch valid_ko_at_arm[wp]: do_ipc_transfer "valid_ko_at_arm"
@@ -2794,36 +2540,8 @@ lemma reply_from_kernel_globals_equiv:
   unfolding reply_from_kernel_def
   apply(wp set_message_info_globals_equiv set_mrs_globals_equiv
            as_user_globals_equiv | simp add: split_def)+
-   apply(insert length_msg_lt_msg_max)
-   apply(simp)
-   apply(rule_tac Q="\<lambda>rv sa. (\<forall>rb. rv = Some rb \<longrightarrow>
-                  auth_ipc_buffers sa thread = ptr_range rb msg_align_bits) \<and>
-                 (\<forall>rb. rv = Some rb \<longrightarrow> is_aligned rb msg_align_bits) \<and>
-           auth_ipc_buffers sa thread \<inter> range_of_arm_globals_frame sa = {} \<and>
-           valid_ko_at_arm sa \<and> thread \<noteq> idle_thread sa" in hoare_strengthen_post)
-    apply(wp hoare_vcg_all_lift lookup_ipc_buffer_ptr_range' lookup_ipc_buffer_aligned')
-   apply(rule conjI)
-    apply(clarsimp)
-    apply(subgoal_tac "ptr_range (pptr + of_nat x * of_nat word_size) 2 \<subseteq>
-               ptr_range pptr msg_align_bits")
-     apply(fastforce)
-    apply(rule ptr_range_subset)
-       apply(simp add: msg_align_bits word_bits_def upto_enum_step_def)+
-    apply(rule conjI)
-     apply(drule is_aligned_no_overflow)
-     apply(simp)
-    apply(clarsimp simp: image_def)
-    apply(rule_tac x="of_nat x" in exI)
-    apply(simp add: msg_align_bits msg_max_length_def word_size_def)
-    apply(case_tac "x=120")
-     apply(simp)
-    apply(clarsimp)
-    apply(rule word_of_nat_le)
-    apply(simp)+
-  apply(wp)
+  apply(insert length_msg_lt_msg_max)
   apply(simp add: valid_arch_state_ko_at_arm)
-  apply(rule auth_ipc_buffers_do_not_overlap_arm_globals_frame)
-   apply(simp)+
   done
 
 section "reads_respects_g"

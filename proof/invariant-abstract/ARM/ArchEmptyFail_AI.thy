@@ -101,13 +101,6 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]  
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 
-
-lemma c_entry_hook_empty_fail[wp, EmptyFail_AI_assms]:
-  "empty_fail (c_entry_hook)" by (simp add: c_entry_hook_def)
-
-lemma c_exit_hook_empty_fail[wp, EmptyFail_AI_assms]:
-  "empty_fail (c_exit_hook)" by (simp add: c_exit_hook_def)
-
 end
 
 global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap

@@ -34,8 +34,6 @@ definition
   arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_switch_to_thread t \<equiv> do
      set_vm_root t;
-     buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer t;
-     as_user t $ set_register TPIDRURW buffer_ptr;
      do_machine_op $ clearExMonitor
    od"
 

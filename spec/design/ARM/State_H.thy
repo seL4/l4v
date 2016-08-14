@@ -101,6 +101,11 @@ where
 "syscallMessage \<equiv> map Register ARM.syscallMessage"
 
 definition
+tpidrurwRegister :: "register"
+where
+"tpidrurwRegister \<equiv> Register ARM.tpidrurwRegister"
+
+definition
 sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 where
 "sanitiseRegister x0 x1\<equiv> (case (x0, x1) of

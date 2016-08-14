@@ -53,7 +53,7 @@ lemma handleInterruptEntry_ccorres:
       by simp
   show ?thesis
   apply (cinit')
-   apply (simp add: callKernel_def handleEvent_def minus_one_norm )
+   apply (simp add: callKernel_def handleEvent_def minus_one_norm)
    apply (simp add: liftE_bind bind_assoc)
     apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
     apply (rule ccorres_Guard_Seq)?
@@ -106,7 +106,7 @@ lemma handleUnknownSyscall_ccorres:
        apply (rule ccorres_add_return2)
        apply (ctac (no_vcg) add: activateThread_ccorres)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-        apply (rule allI, rule conseqPre, vcg)
+         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: return_def)
        apply (wp schedule_sch_act_wf schedule_invs'
               | strengthen invs_queues_imp invs_valid_objs_strengthen)+
@@ -169,10 +169,10 @@ lemma handleVMFaultEvent_ccorres:
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: simple_sane_strg[unfolded sch_act_sane_not])
-  apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
+  by (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread')
-  done
+
 
 lemma handleUserLevelFault_ccorres:
   "ccorres dc xfdc 

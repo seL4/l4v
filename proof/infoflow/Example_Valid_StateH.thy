@@ -1084,7 +1084,6 @@ lemma kh0H_SomeD:
 
 definition arch_state0H :: Arch.kernel_state where
   "arch_state0H \<equiv> ARMKernelState
-             (* armKSGlobalsFrame = *) init_globals_frame
              (* armKSASIDTable    = *) Map.empty
              (* armKSHWASIDTable  = *) Map.empty
              (* armKSNextASID     = *) 0
@@ -2933,12 +2932,8 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: valid_arch_state'_def)
    apply (intro conjI)
-        apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
         apply (clarsimp simp: s0H_internal_def arch_state0H_def objBitsKO_def pageBits_def)
-        apply (rule conjI)
          apply (clarsimp simp: s0_ptr_defs is_aligned_def)
-        apply (rule pspace_distinctD'')
-         apply (simp add: objBitsKO_def pageBits_def)
         apply (cut_tac s0H_pspace_distinct')[1]
         apply (simp add: s0H_internal_def arch_state0H_def)
        apply (clarsimp simp: valid_asid_table'_def s0H_internal_def arch_state0H_def)

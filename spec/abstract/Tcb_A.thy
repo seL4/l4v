@@ -213,6 +213,7 @@ where
      | Some (ptr, frame) \<Rightarrow> doE
       cap_delete (target, tcb_cnode_index 4);
       liftE $ thread_set (\<lambda>t. t \<lparr> tcb_ipc_buffer := ptr \<rparr>) target;
+      liftE $ as_user target $ set_register ARM.TPIDRURW ptr;
       liftE $ case frame of None \<Rightarrow> return ()
        | Some (new_cap, src_slot) \<Rightarrow>
             check_cap_at new_cap src_slot

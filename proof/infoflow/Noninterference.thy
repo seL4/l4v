@@ -36,7 +36,7 @@ definition sameFor_subject :: "'a subject_label auth_graph \<Rightarrow> 'a subj
 where
   "sameFor_subject g ab irqab asidab domainab l \<equiv> 
     {(os,os')|os os' s s' . s = internal_state_if os \<and> s' = internal_state_if os' \<and>
-             states_equiv_for (\<lambda>x. ab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. irqab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. asidab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. domainab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda> x. ptr_range x 12) s s' \<and> 
+             states_equiv_for (\<lambda>x. ab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. irqab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. asidab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. domainab x \<in> subjectReads g (OrdinaryLabel l)) s s' \<and> 
              ((domainab (cur_domain s) \<in> subjectReads g (OrdinaryLabel l) \<or> domainab (cur_domain s') \<in> subjectReads g (OrdinaryLabel l)) \<longrightarrow>
               (cur_domain s = cur_domain s' \<and> globals_equiv s s' \<and> scheduler_action s = scheduler_action s' \<and> work_units_completed s = work_units_completed s' \<and> irq_state (machine_state s) = irq_state (machine_state s') \<and>
               (user_modes (sys_mode_of os) \<longrightarrow> 
@@ -205,18 +205,7 @@ lemma schedule_reads_affects_equiv_sameFor:
 
 lemma globals_equiv_to_scheduler_globals_frame_equiv:
   "globals_equiv s t \<Longrightarrow> invs s \<Longrightarrow> invs t\<Longrightarrow> scheduler_globals_frame_equiv s t"
-  apply(simp add: globals_equiv_def scheduler_globals_frame_equiv_def)
-  apply(rule ballI)
-  apply clarify
-  apply (drule sym)
-  apply clarsimp
-  apply(frule subsetD[OF Access.ptr_range_subset[where x="0" and sz = 12, simplified],rotated -1])
-    apply(rule arm_globals_frame_aligned)
-     apply(erule invs_arch_state)
-    apply(erule invs_psp_aligned)
-   apply simp+
-  apply (simp add: globals_frame_not_device)
-  done
+  by (simp add: globals_equiv_def scheduler_globals_frame_equiv_def)
 
 lemma globals_equiv_to_cur_thread_eq:
   "globals_equiv s t \<Longrightarrow> cur_thread s = cur_thread t"
@@ -545,10 +534,6 @@ lemma check_active_irq_if_partitionIntegrity:
   done
 
 
-
-
-
-
 lemma do_machine_op_globals_equiv_scheduler:
    "(\<And> s sa. \<lbrakk>P sa; globals_equiv_scheduler s sa\<rbrakk> \<Longrightarrow>
          \<forall>x\<in>fst (f (machine_state sa)).
@@ -576,8 +561,6 @@ lemma dmo_user_memory_update_globals_equiv_scheduler:
    apply(simp add: user_memory_update_def)
    apply(wp modify_wp)
   apply(clarsimp simp: globals_equiv_scheduler_def split: option.splits)
-  apply(clarsimp simp: restrict_map_def split: if_splits)
-  apply(blast dest: empty_rights_in_arm_globals_frame)
   done
 
 lemma dmo_device_memory_update_globals_equiv_scheduler:
@@ -755,10 +738,6 @@ lemmas integrity_subjects_asids =
 lemmas integrity_subjects_ready_queues = 
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2]
 
-
-lemma partitionIntegrity_arm_globals_frame:
-  "partitionIntegrity aag s s' \<Longrightarrow> arm_globals_frame (arch_state s') = arm_globals_frame (arch_state s)"
-  by(fastforce simp: partitionIntegrity_def globals_equiv_scheduler_def)
   
 (* FIXME: cleanup this wonderful proof *)
 lemma partitionIntegrity_subjectAffects_mem:
@@ -768,7 +747,6 @@ lemma partitionIntegrity_subjectAffects_mem:
     underlying_memory (machine_state s') x; x \<notin> range_of_arm_globals_frame s \<or> x \<notin> range_of_arm_globals_frame s'\<rbrakk> \<Longrightarrow> 
    pasObjectAbs aag x
      \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
-  apply(frule partitionIntegrity_arm_globals_frame)
   apply(drule partitionIntegrity_integrity)
   apply(frule integrity_subjects_mem)
   apply(drule_tac x=x in spec)
@@ -776,9 +754,7 @@ lemma partitionIntegrity_subjectAffects_mem:
       apply(fastforce intro: affects_lrefl)
      apply blast
     apply(fastforce intro: affects_write)
-   apply(drule subsetD[rotated, OF _ Access.ptr_range_subset[where x="0", simplified]])
-      apply(blast intro: arm_globals_frame_aligned[OF invs_arch_state invs_psp_aligned])
-     apply simp+
+   apply simp+
   apply(erule case_optionE)
    apply blast
   (* need to appeal to object_integrity to reason about the tcb state change *)
@@ -1205,7 +1181,7 @@ lemma partitionIntegrity_subjectAffects_asid:
 lemma sameFor_subject_def2:
   "sameFor_subject g ab irqab asidab domainab l =
     {(os,os')|os os' s s'. s = internal_state_if os \<and> s' = internal_state_if os' \<and>
-              (\<forall> d \<in> subjectReads g (OrdinaryLabel l). states_equiv_for (\<lambda>x. ab x = d) (\<lambda>x. irqab x  = d) (\<lambda>x. asidab x = d) (\<lambda>x. domainab x = d) (\<lambda> x. ptr_range x 12) s s') \<and> 
+              (\<forall> d \<in> subjectReads g (OrdinaryLabel l). states_equiv_for (\<lambda>x. ab x = d) (\<lambda>x. irqab x  = d) (\<lambda>x. asidab x = d) (\<lambda>x. domainab x = d) s s') \<and> 
              ((domainab (cur_domain s) \<in> subjectReads g (OrdinaryLabel l) \<or> 
                domainab (cur_domain s') \<in> subjectReads g (OrdinaryLabel l)) \<longrightarrow>
               (cur_domain s = cur_domain s' \<and> globals_equiv s s' \<and> scheduler_action s = scheduler_action s' \<and> work_units_completed s = work_units_completed s' \<and> irq_state (machine_state s) = irq_state (machine_state s') \<and>
@@ -1233,8 +1209,6 @@ lemma sameFor_subject_def2:
   apply(rule conjI, rule refl)
   apply(rule conjI)
    apply(rule states_equiv_forI)
-             apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)
-            apply(fastforce intro: reads_lrefl simp: states_equiv_for_def)
            apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
        apply(fastforce intro: equiv_forI elim: states_equiv_forE_is_original_cap)     
       apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
@@ -1264,7 +1238,6 @@ lemma partitionIntegrity_subjectAffects_device:
     device_state (machine_state s') x; x \<notin> range_of_arm_globals_frame s \<or> x \<notin> range_of_arm_globals_frame s'\<rbrakk> \<Longrightarrow> 
    pasObjectAbs aag x
      \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
-  apply(frule partitionIntegrity_arm_globals_frame)
   apply(drule partitionIntegrity_integrity)
   apply(frule integrity_subjects_device)
   apply(drule_tac x=x in spec)
@@ -1294,7 +1267,6 @@ lemma partsSubjectAffects_bounds_subjects_affects:
    apply simp
   apply(clarsimp simp: sameFor_def sameFor_subject_def2 states_equiv_for_def equiv_for_def  partsSubjectAffects_def image_def label_can_affect_partition_def)
   apply (safe del: iffI notI)
-              apply(fastforce simp: partitionIntegrity_def globals_equiv_scheduler_def)
              apply(fastforce dest: partitionIntegrity_subjectAffects_obj)
              apply ((auto dest: partitionIntegrity_subjectAffects_obj 
                                 partitionIntegrity_subjectAffects_eobj 
@@ -1309,14 +1281,6 @@ lemma partsSubjectAffects_bounds_subjects_affects:
                                  partitionIntegrity_subjectAffects_ready_queues[folded guarded_is_subject_cur_thread_def]
                            | fastforce simp: partitionIntegrity_def silc_dom_equiv_def equiv_for_def)+)[11]
                 apply((fastforce intro: affects_lrefl simp: partitionIntegrity_def domain_fields_equiv_def)+)[16]
-  done
-
-crunch arm_globals_frame[wp]: choose_thread,activate_thread "\<lambda>s. P (arm_globals_frame (arch_state s))" (wp: crunch_wps dxo_wp_weak)
-
-lemma schedule_arm_globals_frame[wp]:"\<lbrace>\<lambda>s:: det_ext state. P (arm_globals_frame (arch_state s))\<rbrace> schedule
-       \<lbrace>\<lambda>r s. P (arm_globals_frame (arch_state s))\<rbrace>"
-  apply (simp add: schedule_def)
-  apply (wp gts_wp | wpc | simp)+
   done
 
 lemma cur_thread_not_SilcLabel:
@@ -1460,7 +1424,7 @@ lemma pasDomainAbs_not_SilcLabel[simp]:
 lemma uwr_partition_if:
   "\<lbrakk>(os,os') \<in> uwr (Partition (partition_if os));
     s = internal_state_if os; s' = internal_state_if os'\<rbrakk> \<Longrightarrow>
-             states_equiv_for (\<lambda>x. pasObjectAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasIRQAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasASIDAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasDomainAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda> x. ptr_range x 12) s s' \<and> 
+             states_equiv_for (\<lambda>x. pasObjectAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasIRQAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasASIDAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasDomainAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) s s' \<and> 
               ((cur_thread s = cur_thread s' \<and> cur_domain s = cur_domain s') \<and> globals_equiv s s' \<and> scheduler_action s = scheduler_action s' \<and> work_units_completed s = work_units_completed s' \<and> irq_state (machine_state s) = irq_state (machine_state s') \<and>
               (user_modes (sys_mode_of os) \<longrightarrow> user_context_of os = user_context_of os') \<and>
               sys_mode_of os = sys_mode_of os' \<and>
@@ -1535,7 +1499,6 @@ lemma partitionIntegrity_refl:
 
 lemma partitionIntegrity_trans:
   "partitionIntegrity aag s t \<Longrightarrow> partitionIntegrity aag t u \<Longrightarrow> partitionIntegrity aag s u"
-  apply(frule partitionIntegrity_arm_globals_frame)
   apply(clarsimp simp: partitionIntegrity_def)
   apply(rule conjI)
    apply(blast intro: integrity_trans)
@@ -2028,7 +1991,6 @@ lemma arch_switch_to_thread_reads_respects_g':
   apply(simp add: arch_switch_to_thread_def)
   apply (rule equiv_valid_guard_imp)
    apply (wp bind_ev_general dmo_clearExMonitor_reads_respects_g' thread_get_reads_respects_g | simp)+
-  apply(fastforce simp: reads_equiv_g_def globals_equiv_def)
   done
 
 lemmas tcb_sched_action_reads_respects_g =
@@ -2153,7 +2115,6 @@ lemma arch_switch_to_idle_thread_reads_respects_g[wp]:
   "reads_respects_g aag l \<top> (arch_switch_to_idle_thread)"
   apply(simp add: arch_switch_to_idle_thread_def)
   apply wp
-  apply(fastforce simp: reads_equiv_g_def globals_equiv_def)
   done
 
 lemma cur_thread_update_idle_reads_respects_g':

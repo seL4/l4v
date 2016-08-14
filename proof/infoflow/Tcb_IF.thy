@@ -321,14 +321,31 @@ lemma cap_delete_globals_equiv : "\<lbrace>globals_equiv st and invs and emptyab
   apply simp
 done
 
-(* FIXME: Pretty general. Probably belongs somewhere else *)
+lemma no_cap_to_idle_thread': "valid_global_refs s \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
+  apply (clarsimp simp add: ex_nonz_cap_to_def valid_global_refs_def valid_refs_def)
+  apply (drule_tac x=a in spec)
+  apply (drule_tac x=b in spec)
+  apply (clarsimp simp: cte_wp_at_def global_refs_def cap_range_def)
+  apply (case_tac cap,simp_all)
+  done
 
+lemma no_cap_to_idle_thread: "invs s \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
+  apply (rule no_cap_to_idle_thread')
+  apply clarsimp
+  done
+
+crunch idle_thread_inv [wp]: set_mcpriority "\<lambda>s. P (idle_thread s)" 
+  (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation)
+
+
+(* FIXME: Pretty general. Probably belongs somewhere else *)
 lemma invoke_tcb_thread_preservation:
   assumes cap_delete_P: "\<And>slot. \<lbrace>invs and P and emptyable slot \<rbrace> cap_delete slot \<lbrace>\<lambda>_.P\<rbrace>"
   assumes cap_insert_P: "\<And>new_cap src dest. \<lbrace>invs and P\<rbrace> cap_insert new_cap src dest \<lbrace>\<lambda>_.P\<rbrace>"
   assumes thread_set_P: "\<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_ipc_buffer_update f) ptr \<lbrace>\<lambda>_.P\<rbrace>"
   assumes thread_set_P': "\<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_fault_handler_update f) ptr \<lbrace>\<lambda>_.P\<rbrace>"
   assumes set_mcpriority_P: "\<And>mcp ptr. \<lbrace>invs and P\<rbrace> set_mcpriority ptr mcp \<lbrace>\<lambda>_.P\<rbrace>"
+  assumes set_register_P[wp]: "\<And>d. \<lbrace>P and invs and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace> as_user t (set_register TPIDRURW d) \<lbrace>\<lambda>_. P\<rbrace>"
   assumes P_trans[simp]: "\<And>f s. P (trans_state f s) = P s"
 shows "
    \<lbrace>P and invs and Tcb_AI.tcb_inv_wf (tcb_invocation.ThreadControl t sl ep mcp prio croot vroot buf)\<rbrace>
@@ -347,8 +364,8 @@ shows "
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
                    hoare_vcg_R_conj 
         | (wp 
-             
              check_cap_inv2[where Q="\<lambda>_. pas_refined aag"]
+             check_cap_inv2[where Q="\<lambda>_ s. t \<noteq> idle_thread s"]
              out_invs_trivial case_option_wpE cap_delete_deletes
              cap_delete_valid_cap cap_insert_valid_cap out_cte_at
              cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
@@ -373,6 +390,7 @@ shows "
              set_mcpriority_P
              dxo_wp_weak
              static_imp_wp
+             set_mcpriority_idle_thread
             )
         | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                     emptyable_def
@@ -382,29 +400,17 @@ shows "
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
               apply (unfold option_update_thread_def)
-      apply (wp itr_wps thread_set_P thread_set_P' | simp add: emptyable_def | wpc)+ (*slow*)
+      apply (wp itr_wps thread_set_P thread_set_P' 
+              | simp add: emptyable_def | wpc)+ (*slow*)
   apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
                         is_cap_simps is_valid_vtable_root_def
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         tcb_at_st_tcb_at[symmetric] invs_valid_objs
                         cap_asid_def vs_cap_ref_def
-                        clas_no_asid cli_no_irqs
+                        clas_no_asid cli_no_irqs no_cap_to_idle_thread 
                  split: option.split_asm
        | rule conjI)+ (* also slow *)
 done
-
-lemma no_cap_to_idle_thread': "valid_global_refs s \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
-  apply (clarsimp simp add: ex_nonz_cap_to_def valid_global_refs_def valid_refs_def)
-  apply (drule_tac x=a in spec)
-  apply (drule_tac x=b in spec)
-  apply (clarsimp simp: cte_wp_at_def global_refs_def cap_range_def)
-  apply (case_tac cap,simp_all)
-  done
-
-lemma no_cap_to_idle_thread: "invs s \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
-  apply (rule no_cap_to_idle_thread')
-  apply clarsimp
-  done
 
 crunch idle_thread'[wp]: restart "\<lambda>s. P (idle_thread s)" (wp: dxo_wp_weak)
 
@@ -434,14 +440,13 @@ lemma invoke_tcb_NotificationControl_globals_equiv:
 crunch globals_equiv: set_mcpriority "globals_equiv st"
 
 lemma invoke_tcb_globals_equiv:
-  "\<lbrace> invs and globals_equiv st and Tcb_AI.tcb_inv_wf ti\<rbrace>
+  "\<lbrace> invs and globals_equiv st and Tcb_AI.tcb_inv_wf ti \<rbrace>
    invoke_tcb ti
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply(case_tac ti)
        prefer 4
        apply (simp del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps)
-       
-       apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
+       apply (wp_trace invoke_tcb_thread_preservation cap_delete_globals_equiv
                  cap_insert_globals_equiv'' thread_set_globals_equiv 
                  set_mcpriority_globals_equiv
               | clarsimp simp add: invs_valid_ko_at_arm split del: split_if)+
@@ -616,7 +621,7 @@ lemma checked_cap_insert_only_timer_irq_inv:
   check_cap_at a b (check_cap_at c d (cap_insert a b e)) 
    \<lbrace>\<lambda>rv. only_timer_irq_inv irq st\<rbrace>"
   apply (simp add: only_timer_irq_inv_def)
-  apply (wp only_timer_irq_pres checked_cap_insert_domain_sep_inv | force)+
+  apply (wp only_timer_irq_pres checked_cap_insert_domain_sep_inv | clarsimp | simp)+
   done
 
 lemma cap_delete_only_timer_irq_inv:
@@ -706,6 +711,7 @@ lemma invoke_tcb_reads_respects_f:
             cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
             cap_delete_pas_refined itr_wps(12) itr_wps(14) cap_insert_cte_at
             checked_insert_no_cap_to hoare_vcg_const_imp_lift_R
+            as_user_reads_respects_f
        |wpc 
        |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                   tcb_at_st_tcb_at
@@ -721,7 +727,10 @@ lemma invoke_tcb_reads_respects_f:
             thread_set_tcb_fault_handler_update_only_timer_irq_inv
         | simp add: tcb_cap_cases_def | wpc)+
   apply (clarsimp simp: authorised_tcb_inv_def authorised_tcb_inv_extra_def emptyable_def)
-  by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def | intro impI | rule conjI)+
+  by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
+                     set_register_det 
+                   | intro impI 
+                   | rule conjI)+
   (*Extra slow*)
 
 

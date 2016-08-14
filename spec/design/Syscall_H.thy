@@ -14,14 +14,7 @@ chapter "System Calls"
 
 theory Syscall_H
 imports Kernel_H Event_H
-  "./$L4V_ARCH/ArchHook_H"
 begin
-
-context begin interpretation Arch .
-requalify_consts
-  cEntryHook
-  cExitHook
-end
 
 definition
 syscall :: "( fault , 'a ) kernel_f \<Rightarrow> (fault \<Rightarrow> 'c kernel) \<Rightarrow> ('a \<Rightarrow> ( syscall_error , 'b ) kernel_f) \<Rightarrow> (syscall_error \<Rightarrow> 'c kernel) \<Rightarrow> ('b \<Rightarrow> 'c kernel_p) \<Rightarrow> 'c kernel_p"
@@ -39,9 +32,6 @@ where
         odE)
         )
 odE)"
-
-consts'
-callHook :: "event \<Rightarrow> bool"
 
 consts'
 handleEvent :: "event \<Rightarrow> unit kernel_p"
@@ -63,21 +53,6 @@ handleYield :: "unit kernel"
 
 consts'
 handleInvocation :: "bool \<Rightarrow> bool \<Rightarrow> unit kernel_p"
-
-consts'
-cEntryHook :: "unit kernel"
-
-consts'
-cExitHook :: "unit kernel"
-
-defs callHook_def:
-"callHook x0\<equiv> (case x0 of
-    (SyscallEvent _) \<Rightarrow>    False
-  | (UnknownSyscall _) \<Rightarrow>    False
-  | (UserLevelFault _ _) \<Rightarrow>    True
-  | (Interrupt) \<Rightarrow>    True
-  | (VMFaultEvent _) \<Rightarrow>    True
-  )"
 
 defs handleEvent_def:
 "handleEvent x0\<equiv> (case x0 of

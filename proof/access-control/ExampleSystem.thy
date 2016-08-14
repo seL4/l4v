@@ -388,7 +388,6 @@ where
     interrupt_irq_node = (\<lambda>_. 10),
     interrupt_states = undefined,
     arch_state = \<lparr> 
-        arm_globals_frame = undefined,
         arm_asid_table = (\<lambda> x. None),
         arm_hwasid_table = undefined,
         arm_next_asid = undefined,
@@ -912,7 +911,6 @@ where
     interrupt_irq_node = (\<lambda>_. 9001),
     interrupt_states = undefined,
     arch_state = \<lparr> 
-        arm_globals_frame = undefined,
         arm_asid_table = (\<lambda> x. None),
         arm_hwasid_table = undefined,
         arm_next_asid = undefined,

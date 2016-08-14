@@ -153,6 +153,9 @@ definition
 "gpRegisters \<equiv> [R2, R3, R4, R5, R6, R7, LR]"
 
 definition
+"tpidrurwRegister \<equiv> TPIDRURW"
+
+definition
 "exceptionMessage \<equiv> [FaultInstruction, SP, CPSR]"
 
 definition

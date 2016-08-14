@@ -667,7 +667,6 @@ lemma (in kernel_m)
 definition (in state_rel)
   "carch_state_to_H cstate \<equiv>
    ARMKernelState
-     (symbol_table ''armKSGlobalsFrame'')
      (array_map_conv (\<lambda>x. if x=NULL then None else Some (ptr_val x))
                      (2^asid_high_bits - 1) (armKSASIDTable_' cstate))
      (array_map_conv (\<lambda>x. if x=0 then None else Some x) 0xFF
@@ -693,7 +692,7 @@ lemma (in kernel_m)  carch_state_to_H_correct:
                    [symbol_table ''armKSGlobalPT'']"
   shows           "carch_state_to_H cstate = ksArchState astate"
   apply (case_tac "ksArchState astate", simp)
-  apply (rename_tac v0 v1 v2 v3 v4 v5 v6 v7)
+  apply (rename_tac v1 v2 v3 v4 v5 v6 v7)
   using gpts rel[simplified carch_state_relation_def carch_globals_def]
   apply (clarsimp simp: carch_state_to_H_def
                         casid_map_to_H_correct[OF valid rel])

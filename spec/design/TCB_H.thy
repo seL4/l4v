@@ -34,6 +34,8 @@ requalify_consts
   performTransfer
   msgInfoRegister
   msgRegisters
+  tpidrurwRegister
+  fromVPtr
 end
 
 defs decodeTCBInvocation_def:
@@ -322,6 +324,7 @@ defs invokeTCB_def:
                 cteDelete bufferSlot True;
                 withoutPreemption $ threadSet
                     (\<lambda> t. t \<lparr>tcbIPCBuffer := ptr\<rparr>) target;
+                withoutPreemption $ asUser target $ setRegister tpidrurwRegister $ fromVPtr ptr;
                 withoutPreemption $ (case frame of
                       Some (newCap, srcSlot) \<Rightarrow>  
                         checkCapAt newCap srcSlot

@@ -51,43 +51,8 @@ lemma allActiveTCBs_corres:
 
 crunch idle_thread[wp]: switch_to_idle_thread "\<lambda>s. P (idle_thread s)"
 
-lemma dcorres_storeWord_globals:
-  "dcorres dc \<top>
-     (invs and (\<lambda>s. globals = arm_globals_frame (arch_state s)) and valid_etcbs)
-     (return ()) (do_machine_op (storeWord globals buffer_ptr))"
-  apply (rule dcorres_expand_pfx)
-  apply (rule corres_guard_imp[OF dcorres_store_word_safe[where sz = ARMSmallPage]])
-  apply (simp add:within_page_def)+
-  apply (rule conjI)
-    apply (clarsimp simp:invs_def valid_state_def valid_arch_state_def)
-    apply (clarsimp simp:obj_at_def a_type_def)
-    apply (clarsimp split:Structures_A.kernel_object.split_asm split_if_asm arch_kernel_obj.split_asm)
-    apply (clarsimp simp:valid_pspace_def pspace_aligned_def)
-    apply (drule_tac x = "(arm_globals_frame (arch_state sa))" in bspec)
-      apply (clarsimp)
-    apply (simp add:obj_bits_def is_aligned_mask mask_out_sub_mask)
-    apply force
-  apply (clarsimp simp:invs_def valid_state_def valid_pspace_def)
-  apply (simp add:valid_global_refs_def valid_refs_def)
-  apply (frule ipc_frame_wp_at_cte_at,clarsimp)
-  apply (drule_tac x = thread in spec)
-  apply (drule_tac x = "tcb_cnode_index 4" in spec)
-  apply (clarsimp simp:cte_wp_at_cases ipc_frame_wp_at_def obj_at_def cap_range_def global_refs_def)
-  apply (clarsimp split:cap.split_asm)
-  apply (clarsimp simp:valid_arch_state_def obj_at_def a_type_def)
-  apply (clarsimp split:Structures_A.kernel_object.split_asm split_if_asm arch_kernel_obj.split_asm)
-  apply (clarsimp simp:valid_pspace_def pspace_aligned_def)
-  apply (drule_tac x = "(arm_globals_frame (arch_state sa))" in bspec)
-    apply (clarsimp)
-  apply (simp add:obj_bits_def is_aligned_mask mask_out_sub_mask)
-done
-
 lemma dcorres_arch_switch_to_idle_thread_return: "dcorres dc \<top> (invs and valid_etcbs) (return ()) arch_switch_to_idle_thread"
-  apply (clarsimp simp: arch_switch_to_idle_thread_def)
-  apply (rule dcorres_symb_exec_r)
-  apply (rule dcorres_storeWord_globals)
-  apply (wp | simp)+
-  done
+  by (clarsimp simp: arch_switch_to_idle_thread_def)
 
 lemma change_current_domain_same: "\<lbrace>op = s\<rbrace> change_current_domain \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   apply (clarsimp simp: change_current_domain_def exs_valid_def bind_def return_def gets_def modify_def put_def fst_def snd_def get_def select_def)
@@ -136,13 +101,10 @@ lemma arch_switch_to_thread_dcorres:
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ dcorres_set_vm_root])
-      apply (rule corres_symb_exec_r)
-         apply (rule corres_symb_exec_r)
-            apply simp
-            apply (rule corres_split_noop_rhs[OF _ dcorres_storeWord_globals])
-             apply (rule dcorres_machine_op_noop)
-             apply (simp add: ARM.clearExMonitor_def, wp)[1]
-            apply (wp|simp)+
+      apply simp
+      apply (rule dcorres_machine_op_noop)
+      apply (simp add: ARM.clearExMonitor_def, wp)[1]
+      apply (wp|simp)+
   done
 
 crunch idle_thread [wp]: arch_switch_to_thread "\<lambda>s. P (idle_thread s)"

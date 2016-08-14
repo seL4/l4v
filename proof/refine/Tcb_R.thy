@@ -1236,6 +1236,7 @@ proof -
          (\<lambda>ptr frame.
              doE cap_delete (a, tcb_cnode_index 4);
                  do y \<leftarrow> thread_set (tcb_ipc_buffer_update (\<lambda>_. ptr)) a;
+                    y \<leftarrow> as_user a (set_register TPIDRURW ptr);
                    liftE $
                    case_option (return ())
                    (case_prod
@@ -1252,6 +1253,7 @@ proof -
             do bufferSlot \<leftarrow> getThreadBufferSlot a;
             doE y \<leftarrow> cteDelete bufferSlot True;
             do y \<leftarrow> threadSet (tcbIPCBuffer_update (\<lambda>_. ptr)) a;
+               y \<leftarrow> asUser a (setRegister ARM_H.tpidrurwRegister ptr);
                liftE
                     (case_option (return ())
                       (case_prod
@@ -1277,7 +1279,12 @@ proof -
        apply (rule corres_guard_imp)
          apply (rule corres_split_norE)
             apply (rule corres_split_nor)
-               apply (rule corres_trivial, simp)
+               apply (rule corres_split')
+                  apply (simp add: ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def)
+                 apply (rule user_setreg_corres)
+                 apply (rule corres_trivial)
+                apply simp
+               apply wp
               apply (rule threadset_corres,
                       (simp add: tcb_relation_def), (simp add: exst_same_def)+)[1]
              apply wp
@@ -1291,8 +1298,13 @@ proof -
           apply (rule_tac F="is_aligned aa msg_align_bits"
                         in corres_gen_asm)
           apply (rule corres_split_nor)
-             apply simp
-             apply (erule checked_insert_corres)
+             apply (rule corres_split[rotated])
+                apply (simp add: ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def)
+                apply (rule user_setreg_corres)
+               prefer 3
+               apply simp
+               apply (erule checked_insert_corres)
+              apply wp
             apply (rule threadset_corres,
                    simp add: tcb_relation_def, (simp add: exst_same_def)+)
            apply (wp thread_set_tcb_ipc_buffer_cap_cleared_invs

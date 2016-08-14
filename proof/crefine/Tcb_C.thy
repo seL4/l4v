@@ -656,62 +656,62 @@ lemma invokeTCB_ThreadControl_ccorres:
                     apply (rule ball_tcb_cte_casesI, simp+)
                    apply (clarsimp simp: ctcb_relation_def option_to_0_def)
                   apply (rule ceqv_refl)
-                 apply csymbr
-                 apply (simp add: ccorres_cond_iffs Collect_False split_def
-                             del: Collect_const)
-                 apply (simp only: if_1_0_0 simp_thms)
-                 apply (rule ccorres_Cond_rhs_Seq)
-                  apply (rule ccorres_rhs_assoc)+
-                  apply (simp add: case_option_If2 if_n_0_0 split_def
-                              del: Collect_const)
-                  apply (rule checkCapAt_ccorres)
-                     apply ceqv
-                    apply csymbr
-                    apply (simp add: if_1_0_0 true_def Collect_True
-                                del: Collect_const)
+                 apply (ctac)
+                   apply csymbr
+                   apply (simp add: ccorres_cond_iffs Collect_False split_def
+                               del: Collect_const)
+                   apply (simp only: if_1_0_0 simp_thms)
+                   apply (rule ccorres_Cond_rhs_Seq)
                     apply (rule ccorres_rhs_assoc)+
+                    apply (simp add: case_option_If2 if_n_0_0 split_def
+                                del: Collect_const)
                     apply (rule checkCapAt_ccorres)
                        apply ceqv
                       apply csymbr
                       apply (simp add: if_1_0_0 true_def Collect_True
                                   del: Collect_const)
-                      apply (simp add: assertDerived_def bind_assoc del: Collect_const)
-                      apply (rule ccorres_symb_exec_l)
-                         apply (ctac(no_vcg) add: cteInsert_ccorres)
-                          apply (rule ccorres_return_CE, simp+)[1]
-                         apply (wp empty_fail_stateAssert | simp)+
+                      apply (rule ccorres_rhs_assoc)+
+                      apply (rule checkCapAt_ccorres)
+                         apply ceqv
+                        apply csymbr
+                        apply (simp add: if_1_0_0 true_def Collect_True
+                                    del: Collect_const)
+                        apply (simp add: assertDerived_def bind_assoc del: Collect_const)
+                        apply (rule ccorres_symb_exec_l)
+                           apply (ctac(no_vcg) add: cteInsert_ccorres)
+                            apply (rule ccorres_return_CE, simp+)[1]
+                           apply (wp empty_fail_stateAssert | simp)+
+                       apply csymbr
+                       apply (simp add: if_1_0_0 Collect_False false_def
+                                   del: Collect_const)
+                       apply (rule ccorres_return_CE, simp+)[1]
+                      apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
+                                            tcb_ptr_to_ctcb_ptr_mask tcbBuffer_def
+                                            size_of_def cte_level_bits_def
+                                            tcbIPCBufferSlot_def)
                      apply csymbr
-                     apply (simp add: if_1_0_0 Collect_False false_def
-                                 del: Collect_const)
+                     apply (simp add: if_1_0_0 false_def)
+                     apply (rule ccorres_cond_false_seq, simp)
                      apply (rule ccorres_return_CE, simp+)[1]
-                    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
-                                          tcb_ptr_to_ctcb_ptr_mask tcbBuffer_def
-                                          size_of_def cte_level_bits_def
-                                          tcbIPCBufferSlot_def)
-                   apply csymbr
-                   apply (simp add: if_1_0_0 false_def)
-                   apply (rule ccorres_cond_false_seq, simp)
+                    apply (simp add: guard_is_UNIV_def if_1_0_0 false_def
+                                     Collect_const_mem)
+                    apply (clarsimp simp: ccap_relation_def cap_thread_cap_lift
+                                          cap_to_H_def)
+                   apply (rule ccorres_cond_false_seq | simp)+
+                   apply (simp split: option.split_asm)
                    apply (rule ccorres_return_CE, simp+)[1]
-                  apply (simp add: guard_is_UNIV_def if_1_0_0 false_def
-                                   Collect_const_mem)
-                  apply (clarsimp simp: ccap_relation_def cap_thread_cap_lift
-                                        cap_to_H_def)
-                 apply (rule ccorres_cond_false_seq | simp)+
-                 apply (simp split: option.split_asm)
-                 apply (rule ccorres_return_CE, simp+)[1]
-                apply simp
+                  apply simp
+                  apply (strengthen cte_is_derived_capMasterCap_strg
+                             invs_valid_objs' invs_mdb' invs_pspace_aligned',
+                         simp add: o_def)
+                  apply (wp static_imp_wp )
+                  apply (wp hoare_drop_imp)
+                 apply vcg
                 apply (rule_tac P="is_aligned (fst (the buf)) msg_align_bits"
                                in hoare_gen_asm)
-                apply (strengthen cte_is_derived_capMasterCap_strg
-                           invs_valid_objs' invs_mdb' invs_pspace_aligned',
-                           simp add: o_def)
-                apply (wp threadSet_ipcbuffer_trivial static_imp_wp | simp )+
-                apply (wp hoare_drop_imp)
-                apply (wp threadSet_ipcbuffer_trivial | simp)+
-             apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
-                                   word_sle_def tcbBuffer_def size_of_def
-                                   tcbIPCBufferSlot_def from_bool_def true_def
-                                   cte_level_bits_def
+               apply (wp threadSet_ipcbuffer_trivial static_imp_wp | simp )+
+             apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem 
+                                   option_to_0_def ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def
                             split: option.split_asm)
             apply simp
             apply (rule ccorres_split_throws)
@@ -2753,7 +2753,7 @@ lemma mcpriority_tcb_at'_prio_bounded':
 
 lemmas mcpriority_tcb_at'_prio_bounded
   = mcpriority_tcb_at'_prio_bounded'[simplified priorityBits_def]
-
+  
 lemma decodeTCBConfigure_ccorres:
   notes tl_drop_1[simp] scast_mask_8 [simp]
   shows

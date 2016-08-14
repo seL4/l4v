@@ -784,7 +784,9 @@ where
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_activate: "\<lbrakk> ko  = Some (TCB tcb);
                        ko' = Some (TCB tcb');
-                       tcb' = tcb \<lparr>tcb_context := (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction), tcb_state := Structures_A.Running, tcb_bound_notification := ntfn'\<rparr>;
+                       tcb' = tcb \<lparr>tcb_context := (tcb_context tcb)
+                                                         (LR_svc := tcb_context tcb FaultInstruction),
+                                          tcb_state := Structures_A.Running, tcb_bound_notification := ntfn'\<rparr>;
                        tcb_state tcb = Structures_A.Restart;
                        (* to handle unbind *)
                        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;

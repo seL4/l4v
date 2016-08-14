@@ -790,17 +790,17 @@ lemma only_timer_irq_inv_domain_sep_inv[intro]:
 (* FIXME: repalce Infoflow.do_machine_op_spec_reads_respects' with this *)
 lemma do_machine_op_spec_reads_respects':
   assumes equiv_dmo:
-   "equiv_valid_inv (equiv_machine_state (aag_can_read aag) (range_of_arm_globals_frame st) And equiv_irq_state)  (equiv_machine_state (aag_can_affect aag l) (range_of_arm_globals_frame st)) Q f"
+   "equiv_valid_inv (equiv_machine_state (aag_can_read aag) And equiv_irq_state)  (equiv_machine_state (aag_can_affect aag l)) Q f"
   assumes guard:
     "\<And> s. P s \<Longrightarrow> Q (machine_state s)"
   shows
   "spec_reads_respects st aag l P (do_machine_op f)"
   unfolding do_machine_op_def spec_equiv_valid_def
   apply(rule equiv_valid_2_guard_imp)
-   apply(rule_tac  R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag or aag_can_affect aag l) (range_of_arm_globals_frame st) rv rv' \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s \<and> Q r" and Q'="\<lambda> r s. Q r" and P="op = st" and P'="\<top>" in equiv_valid_2_bind)
+   apply(rule_tac  R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag or aag_can_affect aag l) rv rv' \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s \<and> Q r" and Q'="\<lambda> r s. Q r" and P="op = st" and P'="\<top>" in equiv_valid_2_bind)
        apply(rule gen_asm_ev2_l[simplified K_def pred_conj_def])
        apply(rule gen_asm_ev2_r')
-       apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag) (range_of_arm_globals_frame st) ms' ms'' \<and> equiv_machine_state (aag_can_affect aag l) (range_of_arm_globals_frame st) ms' ms'' \<and> equiv_irq_state ms' ms''" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
+       apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag)  ms' ms'' \<and> equiv_machine_state (aag_can_affect aag l) ms' ms'' \<and> equiv_irq_state ms' ms''" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
             apply(clarsimp simp: modify_def get_def put_def bind_def return_def equiv_valid_2_def)
             apply(fastforce intro: reads_equiv_machine_state_update affects_equiv_machine_state_update)
             apply(insert equiv_dmo)[1]
@@ -849,12 +849,11 @@ lemma gets_irq_masks_equiv_valid:
 lemma irq_state_increment_reads_respects_memory:
   "equiv_valid_inv
           (equiv_machine_state (\<lambda>x. aag_can_read_label aag (pasObjectAbs aag x))
-            (range_of_arm_globals_frame st) And
+            And
            equiv_irq_state)
           (equiv_for
             (\<lambda>x. aag_can_affect_label aag l \<and>
-                 pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l \<and>
-                 x \<notin> range_of_arm_globals_frame st)
+                 pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l)
             underlying_memory)  \<top> (modify (\<lambda>s. s\<lparr>irq_state := Suc (irq_state s)\<rparr>))"
   apply(simp add: equiv_valid_def2)
   apply(rule modify_ev2)
@@ -864,12 +863,11 @@ lemma irq_state_increment_reads_respects_memory:
 lemma irq_state_increment_reads_respects_device:
   "equiv_valid_inv
           (equiv_machine_state (\<lambda>x. aag_can_read_label aag (pasObjectAbs aag x))
-            (range_of_arm_globals_frame st) And
+            And
            equiv_irq_state)
           (equiv_for
             (\<lambda>x. aag_can_affect_label aag l \<and>
-                 pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l \<and>
-                 x \<notin> range_of_arm_globals_frame st)
+                 pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l)
             device_state)  \<top> (modify (\<lambda>s. s\<lparr>irq_state := Suc (irq_state s)\<rparr>))"
   apply(simp add: equiv_valid_def2)
   apply(rule modify_ev2)

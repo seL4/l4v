@@ -763,8 +763,6 @@ lemma overlapping_slots_have_labelled_overlapping_caps:
 crunch silc_inv[wp]: set_original "silc_inv aag st"
   (wp: silc_inv_triv)
 
-
-
 (*
 crunch silc_inv[wp]: set_cdt "silc_inv aag st"
   (wp: silc_inv_triv)
@@ -1311,7 +1309,6 @@ lemma finalise_cap_silc_inv:
     apply (fastforce simp: aag_cap_auth_def cap_links_irq_def elim: aag_Control_into_owns_irq)
    apply(wp | simp split del: split_if)+
   done
-
 
 lemma validE_validE_R':
   "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>,\<lbrace> R \<rbrace> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>,-"

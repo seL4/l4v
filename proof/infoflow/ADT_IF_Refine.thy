@@ -707,7 +707,7 @@ crunch (empty_fail) empty_fail: schedule'_if
 
 
 lemma schedule_if_corres:
- "corres op = (invs and valid_sched)
+ "corres op = (invs and valid_sched and valid_list)
    (invs')
    (schedule_if tc) (schedule'_if tc)"
   apply (simp add: schedule_if_def schedule'_if_def)

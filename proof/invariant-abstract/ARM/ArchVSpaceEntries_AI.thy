@@ -1581,10 +1581,10 @@ lemma call_kernel_valid_pdpt[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs\<rbrace>
       (call_kernel e) :: (unit,unit) s_monad
    \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
-  apply (cases e, simp_all add: call_kernel_def call_hook_def)
+  apply (cases e, simp_all add: call_kernel_def)
       apply (rule hoare_pre)
        apply (wp | simp | wpc
-                 | rule conjI | clarsimp simp: ct_in_state_def c_exit_hook_def c_entry_hook_def
+                 | rule conjI | clarsimp simp: ct_in_state_def
                  | erule pred_tcb_weakenE
                  | wp_once hoare_drop_imps)+
   done

@@ -32,6 +32,8 @@ requalify_consts
   performTransfer
   msgInfoRegister
   msgRegisters
+  tpidrurwRegister
+  fromVPtr
 end
 
 #INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived asUser

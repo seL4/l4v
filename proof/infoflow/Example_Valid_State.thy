@@ -837,7 +837,7 @@ definition machine_state0 :: "machine_state" where
                      machine_state_rest = undefined \<rparr>"
 
 definition arch_state0 :: "arch_state" where
-  "arch_state0 \<equiv> \<lparr>arm_globals_frame = init_globals_frame, arm_asid_table = Map.empty,
+  "arch_state0 \<equiv> \<lparr>arm_asid_table = Map.empty,
                   arm_hwasid_table = Map.empty, arm_next_asid = 0, arm_asid_map = Map.empty,
                   arm_global_pd = init_global_pd, arm_global_pts = [],
                   arm_kernel_vspace =

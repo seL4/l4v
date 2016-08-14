@@ -956,6 +956,58 @@ lemma dcorres_tcb_empty_slot:
 
 crunch valid_etcbs[wp]: cap_delete "valid_etcbs"
 
+lemma dcorres_idempotent_as_user_strong:
+  assumes prem: "\<And>tcb r ms ref etcb P. 
+                 \<lbrace> \<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context:=cxt\<rparr>) etcb)\<rbrace>
+                 x 
+                 \<lbrace> \<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context:=cxt\<rparr>) etcb)\<rbrace>"
+  shows "dcorres dc \<top> (tcb_at u) (return q) (as_user u x)"
+  apply (clarsimp simp: as_user_def)
+  apply (clarsimp simp: corres_underlying_def bind_def split_def set_object_def return_def get_def put_def
+         get_tcb_def gets_the_def gets_def assert_opt_def tcb_at_def select_f_def valid_def
+         split: option.split Structures_A.kernel_object.split)
+  apply (clarsimp simp: transform_def transform_current_thread_def transform_objects_def restrict_map_def)
+  apply (rule ext)
+   apply (clarsimp simp: map_add_def split:option.splits)
+  apply (drule use_valid[OF _ prem])
+   prefer 2
+   apply force
+  apply simp
+  done
+
+lemma TPIDRURW_notin_msg_registers[simp]:
+ "TPIDRURW \<notin> set msg_registers"
+  apply (auto simp: msgRegisters_def frameRegisters_def gpRegisters_def ARM.msgRegisters_def
+                    syscallMessage_def exceptionMessage_def msg_registers_def)
+  apply (rule ccontr)
+  apply clarsimp
+  apply (simp_all add: upto_enum_red image_def)
+  apply (auto simp add: toEnum_eq_to_fromEnum_eq fromEnum_def enum_register maxBound_def
+              dest!: toEnum_eq_to_fromEnum_eq[THEN iffD1,rotated,OF sym])
+  done
+
+lemma transform_full_intent_update_tpidrurw[simp]:
+  "transform_full_intent ms ref (tcb\<lparr>tcb_context := s(TPIDRURW := a)\<rparr>)
+   = transform_full_intent ms ref (tcb\<lparr>tcb_context := s\<rparr>)"
+   apply (clarsimp simp: transform_full_intent_def cap_register_def ARM.capRegister_def)
+   by (fastforce simp: get_tcb_message_info_def msg_info_register_def ARM.msgInfoRegister_def
+                       get_tcb_mrs_def get_ipc_buffer_words_def Suc_le_eq Let_def)
+
+lemma as_user_valid_irq_node[wp]:
+  "\<lbrace>valid_irq_node\<rbrace>
+    as_user y (set_register a v) 
+  \<lbrace>\<lambda>rv. valid_irq_node\<rbrace>"
+  apply (simp add: valid_irq_node_def cap_table_at_typ)
+  apply (rule hoare_pre)
+  apply (wp hoare_vcg_all_lift | wps )+
+  apply auto
+  done
+  
+lemma set_register_TPIDRURW_tcb_abstract_inv[wp]:
+  "\<lbrace>\<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context := cxt\<rparr>) etcb)\<rbrace> set_register TPIDRURW a 
+  \<lbrace>\<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context := cxt\<rparr>) etcb)\<rbrace>"
+  by (simp add: set_register_def simpler_modify_def valid_def transform_tcb_def)
+
 lemma dcorres_tcb_update_ipc_buffer:
   "dcorres (dc \<oplus> dc) (\<top>) (invs and valid_etcbs and tcb_at obj_id' and not_idle_thread obj_id'
          and valid_pdpt_objs
@@ -978,6 +1030,7 @@ lemma dcorres_tcb_update_ipc_buffer:
                          (\<lambda>ptr frame.
                              doE cap_delete (obj_id', tcb_cnode_index 4);
                                  liftE $ thread_set (tcb_ipc_buffer_update (\<lambda>_. ptr)) obj_id';
+                                 liftE $ as_user obj_id' $ set_register TPIDRURW ptr;
                                  liftE $
                                  case_option (return ())
                                   (case_prod
@@ -1001,10 +1054,13 @@ lemma dcorres_tcb_update_ipc_buffer:
         apply (clarsimp simp:liftE_bindE)
         apply (simp add:liftE_def)
         apply (rule corres_split[OF _ dcorres_corrupt_tcb_intent_ipcbuffer_upd])
-          apply (rule corres_trivial,clarsimp simp:returnOk_def)
-         apply (wp|simp add:transform_tcb_slot_4)+
+          apply (rule corres_dummy_return_pl)
+          apply (rule corres_split[OF _ dcorres_idempotent_as_user_strong])
+             apply (rule corres_trivial,clarsimp simp:returnOk_def)
+       apply (wp|simp add:transform_tcb_slot_4)+
      apply (rule validE_validE_R)
-     apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread obj_id' s" in hoare_post_impErr[where E="\<lambda>x. \<top>"])
+     apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread obj_id' s  \<and> tcb_at obj_id' s"
+        in hoare_post_impErr[where E="\<lambda>x. \<top>"])
        apply (simp add:not_idle_thread_def)
        apply (wp cap_delete_cte_at cap_delete_deletes)
       apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def)
@@ -1023,6 +1079,9 @@ lemma dcorres_tcb_update_ipc_buffer:
        apply (clarsimp simp:liftE_bindE)
        apply (rule corres_split[OF _ dcorres_corrupt_tcb_intent_ipcbuffer_upd])
          apply (clarsimp simp:bind_assoc)
+         apply (rule corres_dummy_return_pl)
+         apply (rule corres_split[OF _ dcorres_idempotent_as_user_strong])
+            apply simp
          apply (rule corres_split[OF _ get_cap_corres])
             apply (clarsimp simp:liftE_def returnOk_def)
             apply (rule corres_split[OF _ corres_when])

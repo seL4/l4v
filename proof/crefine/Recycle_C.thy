@@ -1263,6 +1263,510 @@ lemma isArchObjectCap_capBits:
   by (clarsimp simp: isCap_simps)
 
 declare Kernel_C.tcb_C_size [simp del]
+<<<<<<< HEAD
+||||||| merged common ancestors
+lemma recycleCap_ccorres':
+  "ccorres ccap_relation ret__struct_cap_C_'
+     (invs' and valid_cap' cp and (\<lambda>s. 2 ^ capBits cp \<le> gsMaxObjectSize s)
+         and (\<lambda>s. capRange cp \<inter> kernel_data_refs = {}))
+     (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation cp (cap_' s)}) []
+     (recycleCap is_final cp) (Call recycleCap_'proc)"
+  apply (rule ccorres_gen_asm)
+  apply (cinit lift: cap_')
+   apply ccorres_rewrite
+   apply csymbr
+   apply (simp only: cap_get_tag_isCap)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (simp add: from_bool_neq_0)
+    apply (subst if_not_P, fastforce simp: isCap_simps)+
+    apply (simp add: isArchCap_T_isArchObjectCap Let_def liftM_def)
+    apply (rule ccorres_rhs_assoc)
+    apply (ctac(no_vcg) add: arch_recycleCap_ccorres)
+     apply (rule ccorres_rhs_assoc2, rule ccorres_split_throws)
+      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: return_def)
+     apply vcg
+    apply wp
+   apply (simp del: Collect_const)
+   apply csymbr
+   apply (simp only: cap_get_tag_isCap)
+   apply (rule ccorres_cond2[where R=\<top>], simp del: Collect_const)
+    apply (rule ccorres_fail)
+   apply (rule ccorres_Cond_rhs)
+    apply (subst if_not_P, fastforce simp: isCap_simps)+
+    apply ((rule ccorres_return_C | simp)+)[1]
+   apply (rule ccorres_Cond_rhs)
+    apply (subst if_not_P, fastforce simp: isCap_simps)+
+    apply ((rule ccorres_return_C | simp)+)[1]
+   apply (rule ccorres_Cond_rhs)
+    apply (subst if_not_P, fastforce simp: isCap_simps)+
+    apply ((rule ccorres_return_C | simp)+)[1]
+   apply (rule ccorres_Cond_rhs)
+    apply (thin_tac "\<not> _ cp")+
+    apply (rule_tac P="capAligned cp \<and> capZombieType cp \<noteq> ZombieCNode 0"
+               in ccorres_gen_asm)
+    apply (rule ccorres_rhs_assoc)
+    apply csymbr
+    apply csymbr
+    apply (clarsimp simp: Let_def simp del: Collect_const)
+    apply (frule (1) cap_get_tag_isCap[symmetric, THEN iffD1];
+           frule (1) cap_get_tag_to_H[rotated])
+    apply (rule ccorres_Cond_rhs)
+     apply (simp add: isZombieTCB_C_def ZombieTCB_C_def)
+     apply (rule ccorres_rhs_assoc | csymbr)+
+     apply (simp del: Collect_const)
+     apply (rule ccorres_move_c_guard_tcb)
+     apply (rule ccorres_symb_exec_r)
+       apply (simp del: Collect_const)
+       apply (rule ccorres_pre_threadGet)
+       apply (rule ccorres_assert)+
+       apply (rule ccorres_pre_curDomain)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_split_nothrow_novcg_dc)
+          apply clarsimp
+          apply (rename_tac cap tcb dom)
+          apply (rule_tac P="op = tcb" and P'="\<lambda>s. invs' s \<and> dom = ksCurDomain s
+                            \<and> size_of TYPE(tcb_C) \<le> gsMaxObjectSize s"
+                     in threadSet_ccorres_lemma3, vcg)
+          apply (simp only: replicateHider_def[symmetric])
+          apply clarsimp
+          apply (clarsimp simp: get_capZombiePtr_CL_def get_capZombieBits_CL_def
+                                isZombieTCB_C_def ZombieTCB_C_def word_bits_conv
+                                is_aligned_no_wrap' capAligned_def)
+          apply (subst ghost_assertion_size_logic[unfolded o_def, rotated])
+            apply assumption
+           apply (simp add: tcb_C_size)
+          apply (subst h_t_valid_dom_s, erule h_t_valid_clift)
+            apply (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+           apply (simp add: tcb_C_size)
+          apply (frule tcb_at_not_NULL[OF obj_at'_weakenE, OF _ TrueI],
+                 simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+          apply (rule conjI)
+           apply (simp add: size_of_def)
+           apply (drule is_aligned_no_wrap'[OF is_aligned_tcb_ptr_to_ctcb_ptr, where off="0x8F"])
+            subgoal by simp
+           apply (simp add: field_simps tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+          apply (rule conjI)
+           apply (erule aligned_add_aligned)
+             apply (clarsimp simp: is_aligned_def)
+            subgoal by simp
+          apply (rule conjI)
+           subgoal by (clarsimp simp: is_aligned_def size_of_def)
+          apply (clarsimp simp: typ_heap_simps' CPSR_def)
+          apply (simp add: word_of_nat[symmetric] word_unat.Abs_inverse
+                           unats_def max_size[simplified addr_card, simplified]
+                           coerce_memset_to_heap_update word_sle_def)
+          apply (clarsimp simp: typ_heap_simps' packed_heap_update_collapse_hrs)
+          apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
+          apply (rule rf_sr_tcb_update_not_in_queue2,
+                 (simp add: typ_heap_simps' tcb_ptr_to_ctcb_ptr_def ctcb_offset_def
+                      cong: if_weak_cong)+)
+           subgoal by (rule ball_tcb_cte_casesI, simp_all)
+          apply (clarsimp simp: ctcb_relation_def makeObject_tcb minBound_word
+                                fault_lift_null_fault fault_null_fault_def
+                                fault_get_tag_def fcp_beta cfault_rel_def
+                                lookup_fault_lift_def lookup_fault_tag_defs
+                                lookup_fault_get_tag_def Let_def
+                                thread_state_lift_def cthread_state_relation_def
+                                "StrictC'_thread_state_defs" ccontext_relation_def
+                                newContext_def2 option_to_ptr_def option_to_0_def
+                                rf_sr_ksCurDomain)
+          apply (clarsimp simp add: timeSlice_def is_cap_fault_def)
+          subgoal for \<dots> r by (cases r, simp_all add: "StrictC'_register_defs")
+         apply csymbr
+         apply (rule ccorres_return_C, simp+)[1]
+        apply wp
+       apply (clarsimp simp add: guard_is_UNIV_def ccap_relation_def
+                                 cap_thread_cap_lift cap_to_H_def
+                                 to_bool_def true_def
+                                 mask_def[where n="Suc 0"])
+       apply (rule iffD1 [OF tcb_ptr_to_ctcb_ptr_eq], simp)
+       apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def
+                             capAligned_def is_aligned_neg_mask)
+       apply (clarsimp simp: get_capZombiePtr_CL_def get_capZombieBits_CL_def Let_def
+                             isZombieTCB_C_def ZombieTCB_C_def)
+       apply (rule sym, rule is_aligned_neg_mask)
+        apply (erule aligned_add_aligned[where m=8], simp_all)[1]
+        subgoal by (simp add: is_aligned_def)
+       subgoal by simp
+      apply vcg
+     apply (rule conseqPre, vcg)
+     subgoal by clarsimp
+    apply (clarsimp simp add: isZombieTCB_C_def ZombieTCB_C_def Let_def
+                    simp del: Collect_const)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: return_def ccap_zombie_radix_less4
+                          isCap_simps)
+    apply (subst ccap_relation_def)
+    apply (clarsimp simp: cap_to_H_def cap_cnode_cap_lift[THEN iffD1]
+                          get_capZombiePtr_CL_def Let_def
+                          get_capZombieBits_CL_def
+                          isZombieTCB_C_def ZombieTCB_C_def
+                          less_mask_eq[where n=5]
+                          ccap_zombie_radix_less2
+                          c_valid_cap_def cl_valid_cap_def)
+    apply (rule sym, rule is_aligned_neg_mask)
+     apply (clarsimp simp: capAligned_def, assumption)
+    apply (clarsimp simp: capAligned_def objBits_simps)
+   apply (simp del: Collect_const)
+   apply (rule ccorres_if_lhs,
+          simp_all add: Let_def ccorres_cond_iffs Collect_True
+                        when_def
+                   del: Collect_const)[1]
+    apply (rule ccorres_rhs_assoc | csymbr)+
+    apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+        apply (rule_tac R=\<top> in ccorres_cond2)
+          apply (clarsimp simp: cap_get_tag_isCap[symmetric] isDomainCap[symmetric]
+                      simp del: Collect_const isDomainCap dest!: cap_get_tag_to_H)
+         apply (rule ccorres_rhs_assoc | csymbr)+
+         apply (ctac add: cancelBadgedSends_ccorres)
+        apply (rule ccorres_return_Skip)
+       apply (rule ceqv_refl)
+      apply (rule ccorres_return_C, simp+)[1]
+     apply wp
+    apply (simp add: guard_is_UNIV_def)
+   apply (simp add: ccorres_cond_iffs isArchCap_T_isArchObjectCap from_bool_0)
+   apply (rule ccorres_return_C, simp+)[1]
+  apply (clarsimp simp: Collect_const_mem)
+  apply (simp add: eq_commute[where 'a=tcb])
+  apply (frule valid_capAligned)
+  apply (simp add: ccap_zombie_radix_less4 isArchObjectCap_Cap_capCap cap_get_tag_isCap
+                   isArchCap_T_isArchObjectCap from_bool_neq_0 from_bool_0)
+  apply (intro conjI impI, simp_all add: cap_get_tag_isCap[symmetric])
+     by (clarsimp simp: isZombieTCB_C_def ZombieTCB_C_def
+                           valid_cap'_def ctcb_ptr_to_tcb_ptr_def
+                           ctcb_offset_def get_capZombiePtr_CL_def
+                           get_capZombieBits_CL_def valid_cap'_def
+                           Let_def isDomainCap[symmetric] isArchObjectCap_Cap_capCap
+                           isArchObjectCap_capBits tcb_C_size
+                 simp del: isDomainCap
+                    dest!: cap_get_tag_to_H
+                    split: split_if_asm)+
+
+lemma recycleCap_ccorres:
+  "ccorres ccap_relation ret__struct_cap_C_'
+     (invs' and (\<lambda>s. \<exists>p. cte_wp_at' (\<lambda>cte. cteCap cte = cp) p s))
+     (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation cp (cap_' s)}) []
+     (recycleCap is_final cp) (Call recycleCap_'proc)"
+  apply (rule ccorres_guard_imp2, rule recycleCap_ccorres')
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (auto dest: valid_global_refsD_with_objSize)
+  done
+
+lemma cteRecycle_ccorres:
+  "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and sch_act_simple) (UNIV \<inter> {s. slot_' s = cte_Ptr slot}) []
+     (cteRecycle slot) (Call cteRecycle_'proc)"
+  apply (cinit lift: slot_')
+   apply (ctac(no_vcg) add: cteRevoke_ccorres)
+     apply (simp add: Collect_False del: Collect_const)
+     apply (ctac(no_vcg) add: ccorres_use_cutMon [OF finaliseSlot_ccorres])
+       apply (simp add: Collect_False liftE_def bind_assoc unless_def when_def
+                        dc_def[symmetric]
+                   del: Collect_const)
+       apply (rule ccorres_pre_getCTE)
+       apply (rule ccorres_move_c_guard_cte)
+       apply (rule_tac xf'=ret__unsigned_'
+                     and F="\<lambda>v. (v = scast cap_null_cap) = (cteCap x = NullCap)"
+                     and R="cte_wp_at' (op = x) slot"
+                  in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
+          apply vcg
+          apply (clarsimp simp: cte_wp_at_ctes_of)
+          apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
+          apply (clarsimp simp: cap_get_tag_isCap typ_heap_simps
+                         dest!: ccte_relation_ccap_relation)
+         apply ceqv
+        apply (simp del: Collect_const)
+        apply (rule_tac P="cte_wp_at' (op = x) slot" in ccorres_cross_over_guard)
+        apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+            apply (rule ccorres_cond[where R=\<top>])
+              apply (simp del: Collect_const)
+             apply (rule ccorres_rhs_assoc)+
+             apply (csymbr, csymbr)
+             apply (ctac add: isFinalCapability_ccorres [where slot = slot])
+               apply (rule ccorres_move_c_guard_cte)
+               apply (ctac(no_vcg) add: recycleCap_ccorres)
+                apply (rule ccorres_move_c_guard_cte)
+                apply (rule ccorres_updateCap)
+               apply (wp isFinalCapability_inv)
+             apply (vcg exspec=isFinalCapability_modifies)
+            apply (rule ccorres_return_Skip)
+           apply (rule ceqv_refl)
+          apply (rule ccorres_return_CE[unfolded returnOk_def o_def], simp+)[1]
+         apply wp
+        apply (simp add: guard_is_UNIV_def)
+       apply (simp add: guard_is_UNIV_def del: Collect_const)
+       apply (clarsimp simp: cte_wp_at_ctes_of)
+       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+       apply (clarsimp simp: typ_heap_simps dest!: ccte_relation_ccap_relation)
+      apply simp
+      apply (rule ccorres_split_throws, rule ccorres_return_C_errorE, simp+)
+      apply vcg
+     apply (simp add: cte_wp_at_ctes_of exI[where x=slot] imp_conjL[symmetric])
+     apply (wp finaliseSlot_invs hoare_drop_imps)
+    apply simp
+    apply (rule ccorres_split_throws, rule ccorres_return_C_errorE, simp+)
+    apply vcg
+   apply simp
+   apply (wp cteRevoke_invs' cteRevoke_sch_act_simple)
+  apply (clarsimp simp: from_bool_def true_def exception_defs cintr_def)
+  done
+=======
+lemma recycleCap_ccorres':
+  "ccorres ccap_relation ret__struct_cap_C_'
+     (invs' and valid_cap' cp and (\<lambda>s. 2 ^ capBits cp \<le> gsMaxObjectSize s)
+         and (\<lambda>s. capRange cp \<inter> kernel_data_refs = {}))
+     (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation cp (cap_' s)}) []
+     (recycleCap is_final cp) (Call recycleCap_'proc)"
+  apply (rule ccorres_gen_asm)
+  apply (cinit lift: cap_')
+   apply ccorres_rewrite
+   apply csymbr
+   apply (simp only: cap_get_tag_isCap)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (simp add: from_bool_neq_0)
+    apply (subst if_not_P, fastforce simp: isCap_simps)+
+    apply (simp add: isArchCap_T_isArchObjectCap Let_def liftM_def)
+    apply (rule ccorres_rhs_assoc)
+    apply (ctac(no_vcg) add: arch_recycleCap_ccorres)
+     apply (rule ccorres_rhs_assoc2, rule ccorres_split_throws)
+      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: return_def)
+     apply vcg
+    apply wp
+   apply (simp del: Collect_const)
+   apply csymbr
+   apply (simp only: cap_get_tag_isCap)
+   apply (rule ccorres_cond2[where R=\<top>], simp del: Collect_const)
+    apply (rule ccorres_fail)
+   apply (rule ccorres_Cond_rhs)
+    apply (subst if_not_P, fastforce simp: isCap_simps)+
+    apply ((rule ccorres_return_C | simp)+)[1]
+   apply (rule ccorres_Cond_rhs)
+    apply (subst if_not_P, fastforce simp: isCap_simps)+
+    apply ((rule ccorres_return_C | simp)+)[1]
+   apply (rule ccorres_Cond_rhs)
+    apply (subst if_not_P, fastforce simp: isCap_simps)+
+    apply ((rule ccorres_return_C | simp)+)[1]
+   apply (rule ccorres_Cond_rhs)
+    apply (thin_tac "\<not> _ cp")+
+    apply (rule_tac P="capAligned cp \<and> capZombieType cp \<noteq> ZombieCNode 0"
+               in ccorres_gen_asm)
+    apply (rule ccorres_rhs_assoc)
+    apply csymbr
+    apply csymbr
+    apply (clarsimp simp: Let_def simp del: Collect_const)
+    apply (frule (1) cap_get_tag_isCap[symmetric, THEN iffD1];
+           frule (1) cap_get_tag_to_H[rotated])
+    apply (rule ccorres_Cond_rhs)
+     apply (simp add: isZombieTCB_C_def ZombieTCB_C_def)
+     apply (rule ccorres_rhs_assoc | csymbr)+
+     apply (simp del: Collect_const)
+     apply (rule ccorres_move_c_guard_tcb)
+     apply (rule ccorres_symb_exec_r)
+       apply (simp del: Collect_const)
+       apply (rule ccorres_pre_threadGet)
+       apply (rule ccorres_assert)+
+       apply (rule ccorres_pre_curDomain)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_split_nothrow_novcg_dc)
+          apply clarsimp
+          apply (rename_tac cap tcb dom)
+          apply (rule_tac P="op = tcb" and P'="\<lambda>s. invs' s \<and> dom = ksCurDomain s
+                            \<and> size_of TYPE(tcb_C) \<le> gsMaxObjectSize s"
+                     in threadSet_ccorres_lemma3, vcg)
+          apply (simp only: replicateHider_def[symmetric])
+          apply clarsimp
+          apply (clarsimp simp: get_capZombiePtr_CL_def get_capZombieBits_CL_def
+                                isZombieTCB_C_def ZombieTCB_C_def word_bits_conv
+                                is_aligned_no_wrap' capAligned_def)
+          apply (subst ghost_assertion_size_logic[unfolded o_def, rotated])
+            apply assumption
+           apply (simp add: tcb_C_size)
+          apply (subst h_t_valid_dom_s, erule h_t_valid_clift)
+            apply (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+           apply (simp add: tcb_C_size)
+          apply (frule tcb_at_not_NULL[OF obj_at'_weakenE, OF _ TrueI],
+                 simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+          apply (rule conjI)
+           apply (simp add: size_of_def)
+           apply (drule is_aligned_no_wrap'[OF is_aligned_tcb_ptr_to_ctcb_ptr, where off="0x93"])
+            subgoal by simp
+           apply (simp add: field_simps tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+          apply (rule conjI)
+           apply (erule aligned_add_aligned)
+             apply (clarsimp simp: is_aligned_def)
+            subgoal by simp
+          apply (rule conjI)
+           subgoal by (clarsimp simp: is_aligned_def size_of_def)
+          apply (clarsimp simp: typ_heap_simps' CPSR_def)
+          apply (simp add: word_of_nat[symmetric] word_unat.Abs_inverse
+                           unats_def max_size[simplified addr_card, simplified]
+                           coerce_memset_to_heap_update word_sle_def)
+          apply (clarsimp simp: typ_heap_simps' packed_heap_update_collapse_hrs)
+          apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
+          apply (rule rf_sr_tcb_update_not_in_queue2,
+                 (simp add: typ_heap_simps' tcb_ptr_to_ctcb_ptr_def ctcb_offset_def
+                      cong: if_weak_cong)+)
+           subgoal by (rule ball_tcb_cte_casesI, simp_all)
+          apply (clarsimp simp: ctcb_relation_def makeObject_tcb minBound_word
+                                fault_lift_null_fault fault_null_fault_def
+                                fault_get_tag_def fcp_beta cfault_rel_def
+                                lookup_fault_lift_def lookup_fault_tag_defs
+                                lookup_fault_get_tag_def Let_def
+                                thread_state_lift_def cthread_state_relation_def
+                                "StrictC'_thread_state_defs" ccontext_relation_def
+                                newContext_def2 option_to_ptr_def option_to_0_def
+                                rf_sr_ksCurDomain)
+          apply (clarsimp simp add: timeSlice_def is_cap_fault_def)
+          subgoal for \<dots> r by (cases r, simp_all add: "StrictC'_register_defs")
+         apply csymbr
+         apply (rule ccorres_return_C, simp+)[1]
+        apply wp
+       apply (clarsimp simp add: guard_is_UNIV_def ccap_relation_def
+                                 cap_thread_cap_lift cap_to_H_def
+                                 to_bool_def true_def
+                                 mask_def[where n="Suc 0"])
+       apply (rule iffD1 [OF tcb_ptr_to_ctcb_ptr_eq], simp)
+       apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def
+                             capAligned_def is_aligned_neg_mask)
+       apply (clarsimp simp: get_capZombiePtr_CL_def get_capZombieBits_CL_def Let_def
+                             isZombieTCB_C_def ZombieTCB_C_def)
+       apply (rule sym, rule is_aligned_neg_mask)
+        apply (erule aligned_add_aligned[where m=8], simp_all)[1]
+        subgoal by (simp add: is_aligned_def)
+       subgoal by simp
+      apply vcg
+     apply (rule conseqPre, vcg)
+     subgoal by clarsimp
+    apply (clarsimp simp add: isZombieTCB_C_def ZombieTCB_C_def Let_def
+                    simp del: Collect_const)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: return_def ccap_zombie_radix_less4
+                          isCap_simps)
+    apply (subst ccap_relation_def)
+    apply (clarsimp simp: cap_to_H_def cap_cnode_cap_lift[THEN iffD1]
+                          get_capZombiePtr_CL_def Let_def
+                          get_capZombieBits_CL_def
+                          isZombieTCB_C_def ZombieTCB_C_def
+                          less_mask_eq[where n=5]
+                          ccap_zombie_radix_less2
+                          c_valid_cap_def cl_valid_cap_def)
+    apply (rule sym, rule is_aligned_neg_mask)
+     apply (clarsimp simp: capAligned_def, assumption)
+    apply (clarsimp simp: capAligned_def objBits_simps)
+   apply (simp del: Collect_const)
+   apply (rule ccorres_if_lhs,
+          simp_all add: Let_def ccorres_cond_iffs Collect_True
+                        when_def
+                   del: Collect_const)[1]
+    apply (rule ccorres_rhs_assoc | csymbr)+
+    apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+        apply (rule_tac R=\<top> in ccorres_cond2)
+          apply (clarsimp simp: cap_get_tag_isCap[symmetric] isDomainCap[symmetric]
+                      simp del: Collect_const isDomainCap dest!: cap_get_tag_to_H)
+         apply (rule ccorres_rhs_assoc | csymbr)+
+         apply (ctac add: cancelBadgedSends_ccorres)
+        apply (rule ccorres_return_Skip)
+       apply (rule ceqv_refl)
+      apply (rule ccorres_return_C, simp+)[1]
+     apply wp
+    apply (simp add: guard_is_UNIV_def)
+   apply (simp add: ccorres_cond_iffs isArchCap_T_isArchObjectCap from_bool_0)
+   apply (rule ccorres_return_C, simp+)[1]
+  apply (clarsimp simp: Collect_const_mem)
+  apply (simp add: eq_commute[where 'a=tcb])
+  apply (frule valid_capAligned)
+  apply (simp add: ccap_zombie_radix_less4 isArchObjectCap_Cap_capCap cap_get_tag_isCap
+                   isArchCap_T_isArchObjectCap from_bool_neq_0 from_bool_0)
+  apply (intro conjI impI, simp_all add: cap_get_tag_isCap[symmetric])
+     by (clarsimp simp: isZombieTCB_C_def ZombieTCB_C_def
+                           valid_cap'_def ctcb_ptr_to_tcb_ptr_def
+                           ctcb_offset_def get_capZombiePtr_CL_def
+                           get_capZombieBits_CL_def valid_cap'_def
+                           Let_def isDomainCap[symmetric] isArchObjectCap_Cap_capCap
+                           isArchObjectCap_capBits tcb_C_size
+                 simp del: isDomainCap
+                    dest!: cap_get_tag_to_H
+                    split: split_if_asm)+
+
+lemma recycleCap_ccorres:
+  "ccorres ccap_relation ret__struct_cap_C_'
+     (invs' and (\<lambda>s. \<exists>p. cte_wp_at' (\<lambda>cte. cteCap cte = cp) p s))
+     (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation cp (cap_' s)}) []
+     (recycleCap is_final cp) (Call recycleCap_'proc)"
+  apply (rule ccorres_guard_imp2, rule recycleCap_ccorres')
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (auto dest: valid_global_refsD_with_objSize)
+  done
+
+lemma cteRecycle_ccorres:
+  "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and sch_act_simple) (UNIV \<inter> {s. slot_' s = cte_Ptr slot}) []
+     (cteRecycle slot) (Call cteRecycle_'proc)"
+  apply (cinit lift: slot_')
+   apply (ctac(no_vcg) add: cteRevoke_ccorres)
+     apply (simp add: Collect_False del: Collect_const)
+     apply (ctac(no_vcg) add: ccorres_use_cutMon [OF finaliseSlot_ccorres])
+       apply (simp add: Collect_False liftE_def bind_assoc unless_def when_def
+                        dc_def[symmetric]
+                   del: Collect_const)
+       apply (rule ccorres_pre_getCTE)
+       apply (rule ccorres_move_c_guard_cte)
+       apply (rule_tac xf'=ret__unsigned_'
+                     and F="\<lambda>v. (v = scast cap_null_cap) = (cteCap x = NullCap)"
+                     and R="cte_wp_at' (op = x) slot"
+                  in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
+          apply vcg
+          apply (clarsimp simp: cte_wp_at_ctes_of)
+          apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
+          apply (clarsimp simp: cap_get_tag_isCap typ_heap_simps
+                         dest!: ccte_relation_ccap_relation)
+         apply ceqv
+        apply (simp del: Collect_const)
+        apply (rule_tac P="cte_wp_at' (op = x) slot" in ccorres_cross_over_guard)
+        apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+            apply (rule ccorres_cond[where R=\<top>])
+              apply (simp del: Collect_const)
+             apply (rule ccorres_rhs_assoc)+
+             apply (csymbr, csymbr)
+             apply (ctac add: isFinalCapability_ccorres [where slot = slot])
+               apply (rule ccorres_move_c_guard_cte)
+               apply (ctac(no_vcg) add: recycleCap_ccorres)
+                apply (rule ccorres_move_c_guard_cte)
+                apply (rule ccorres_updateCap)
+               apply (wp isFinalCapability_inv)
+             apply (vcg exspec=isFinalCapability_modifies)
+            apply (rule ccorres_return_Skip)
+           apply (rule ceqv_refl)
+          apply (rule ccorres_return_CE[unfolded returnOk_def o_def], simp+)[1]
+         apply wp
+        apply (simp add: guard_is_UNIV_def)
+       apply (simp add: guard_is_UNIV_def del: Collect_const)
+       apply (clarsimp simp: cte_wp_at_ctes_of)
+       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+       apply (clarsimp simp: typ_heap_simps dest!: ccte_relation_ccap_relation)
+      apply simp
+      apply (rule ccorres_split_throws, rule ccorres_return_C_errorE, simp+)
+      apply vcg
+     apply (simp add: cte_wp_at_ctes_of exI[where x=slot] imp_conjL[symmetric])
+     apply (wp finaliseSlot_invs hoare_drop_imps)
+    apply simp
+    apply (rule ccorres_split_throws, rule ccorres_return_C_errorE, simp+)
+    apply vcg
+   apply simp
+   apply (wp cteRevoke_invs' cteRevoke_sch_act_simple)
+  apply (clarsimp simp: from_bool_def true_def exception_defs cintr_def)
+  done
+>>>>>>> SELFOUR-553: update rpidrurw in TCBConfigure for simpler Infoflow proofs.
 
 lemma cte_lift_ccte_relation:
   "cte_lift cte' = Some ctel'

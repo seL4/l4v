@@ -1694,7 +1694,6 @@ lemma transferCaps_urz[wp]:
 crunch gsUntypedZeroRanges[wp]: doNormalTransfer "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: crunch_wps transferCapsToSlots_pres1 ignore: constOnFailure)
 
-lemmas asUser_cteCaps_of[wp] = cteCaps_of_ctes_of_lift[OF asUser_ctes_of]
 lemmas asUser_urz = untyped_ranges_zero_lift[OF asUser_gsUntypedZeroRanges]
 
 crunch urz[wp]: doNormalTransfer "untyped_ranges_zero'"

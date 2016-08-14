@@ -21,15 +21,6 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch_ignore (add: OR_choice set_scheduler_action)
 
-(* FIXME: move *)
-lemma globals_frame_not_device:
-  "\<lbrakk>x\<in>range_of_arm_globals_frame s;invs s\<rbrakk> \<Longrightarrow> device_state (machine_state s) x = None"
-  apply (clarsimp simp: invs_def valid_state_def valid_arch_state_def obj_at_def)
-  apply (drule pspace_respects_device_regionD[rotated -1])
-   apply fastforce+
-  apply (clarsimp simp: obj_range_page_as_ptr_range_pageBitsForSize)
-  apply fastforce
-  done
 (* The contents of the delete_globals_equiv locale *)
 
 lemma globals_equiv_irq_state_update[simp]:
@@ -547,7 +538,7 @@ lemma handle_invocation_reads_respects_g:
             sts_first_restart
             set_thread_state_ct_st
             lookup_extra_caps_authorised
-            lookup_extra_caps_auth lookup_ipc_buffer_disjoint_from_globals_frame
+            lookup_extra_caps_auth
 
             handle_fault_globals_equiv
             set_thread_state_globals_equiv
@@ -578,8 +569,7 @@ lemma handle_invocation_reads_respects_g:
                        lookup_extra_caps_authorised
                        lookup_extra_caps_auth
                        lookup_ipc_buffer_has_read_auth'
-                       lookup_ipc_buffer_disjoint_from_globals_frame |
-                    (rule hoare_vcg_conj_liftE_R, rule hoare_drop_impE_R)
+                    |  (rule hoare_vcg_conj_liftE_R, rule hoare_drop_impE_R)
                    )+
          apply (rule hoare_pre) (*Weird schematic in precondition necessary*)
           apply (simp add: o_def|
