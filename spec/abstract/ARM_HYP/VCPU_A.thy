@@ -139,7 +139,7 @@ perform_vcpu_invocation :: "vcpu_invocation \<Rightarrow> (unit,'z::state_ext) s
     VCPUSetTCB vcpu tcb \<Rightarrow> associate_vcpu_tcb tcb vcpu
   | VCPUReadRegister vcpu reg \<Rightarrow> invoke_vcpu_read_register vcpu reg
   | VCPUWriteRegister vcpu reg val \<Rightarrow> invoke_vcpu_write_register vcpu reg val
-  | VCPUInjectIRQ vcpu _ _ _ _ \<Rightarrow> fail" (* FIXME ARMHYP: TODO *)
+  | VCPUInjectIRQ vcpu _ _ \<Rightarrow> fail" (* FIXME ARMHYP: TODO *)
 
 
 definition decode_vcpu_invocation ::

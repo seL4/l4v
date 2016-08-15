@@ -232,6 +232,39 @@ type_synonym hw_asid = word8
 
 type_synonym arm_vspace_region_uses = "vspace_ref \<Rightarrow> arm_vspace_region_use"
 
+
+
+text {*  vcpu *}
+
+type_synonym virq = "word32"
+
+definition gicVCPUMaxNumLR :: int where "gicVCPUMaxNumLR \<equiv> 64"
+
+end
+
+qualify ARM_A (in Arch)
+
+record  GICVCPUInterface =
+  vgicHCR  :: word32
+  vgicVMCR :: word32
+  vgicAPR  :: word32
+  vgicLR   :: "nat \<rightharpoonup> ARM_A.virq"
+
+
+record vcpu =
+  vcpu_tcb :: "obj_ref option"
+  vcpu_sctlr   :: word32
+  vcpu_actlr   :: word32
+  vcpu_VGIC :: GICVCPUInterface
+
+end_qualify
+
+context Arch begin global_naming ARM_A
+
+definition new_vcpu :: vcpu where
+  "new_vcpu \<equiv> undefined"
+
+
 section {* Architecture-specific state *}
 
 text {* The architecture-specific state for the ARM model
@@ -254,38 +287,7 @@ end
 
 qualify ARM_A (in Arch)
 
-(* FIXME ARMHYP: C code has these. Do we want to model these, or just have DONT_TRANSLATE on
-accessor functions that get to these? In particular vgic.lr manages virtual IRQs; do we ever want
-to prove anything about those?
-
-struct cpXRegs {
-    uint32_t sctlr;
-    uint32_t actlr;
-};
-
-struct gicVCpuIface {
-    uint32_t hcr;
-    uint32_t vmcr;
-    uint32_t apr;
-    uint32_t lr[64];
-};
-
-struct vcpu {
-    /* TCB associated with this VCPU. */
-    struct tcb *tcb;
-    struct cpXRegs cpx;
-    struct gicVCpuIface vgic;
-};
-*)
-
-text {*  vcpu *}
-
-record vcpu =
-  vcpu_tcb :: "obj_ref option"
-  vcpu_sctlr   :: word32
-  vcpu_actlr   :: word32
-
-
+text {* arch_state *}
 
 record arch_state =
   arm_globals_frame :: obj_ref
@@ -295,6 +297,7 @@ record arch_state =
   arm_asid_map      :: "ARM_A.asid \<rightharpoonup> (ARM_A.hw_asid \<times> obj_ref)"
   arm_global_pt     :: obj_ref
   arm_current_vcpu    :: obj_ref
+  arm_gicvcpu_numlistregs :: nat
   arm_kernel_vspace :: ARM_A.arm_vspace_region_uses
 
 end_qualify

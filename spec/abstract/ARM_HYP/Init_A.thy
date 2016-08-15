@@ -57,6 +57,7 @@ definition
     arm_asid_map = empty,
     arm_global_pt = init_global_pt,
     arm_current_vcpu = undefined,
+    arm_gicvcpu_numlistregs = undefined,
     arm_kernel_vspace = \<lambda>ref.
       if ref \<in> {kernel_base .. kernel_base + mask 20}
       then ArmVSpaceKernelWindow
