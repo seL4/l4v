@@ -377,7 +377,7 @@ local
          defined_functions = defined_functions, allow_underscore_idents = aui,
          recursive_functions = recursive_functions, caller_info = caller_info,
          modify_locs = modify_locs, typedefs = typedefs, fnspecs = fnspecs,
-         read_globals = read_globals, globinits = globinits, owners = owners, 
+         read_globals = read_globals, globinits = globinits, owners = owners,
          munge_info_fname = munge_info_fname}
     (* fields in reverse order to above *)
     fun from' munge_info_fname owners globinits read_globals fnspecs typedefs modify_locs caller_info
@@ -2060,7 +2060,7 @@ fun export_mungedb (c as CSE cse) =
       fun foldthis (_, vinfos) acc = List.foldl tab_foldthis acc vinfos
       fun recurse tab = Symtab.fold foldthis tab []
       val data0 = recurse (get_vars c)
-      val data = Listsort.sort String.compare data0
+      val data = Library.sort String.compare data0
     in
       List.app (fn s => TextIO.output(outstrm, s)) data;
       TextIO.closeOut outstrm
