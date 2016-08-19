@@ -38,6 +38,7 @@ requalify_facts
   arch_derive_cap_inv
   loadWord_inv
   valid_global_refsD2
+  valid_ao_at_lift
 
 end
 
@@ -105,7 +106,7 @@ lemma gets_machine_state_modify:
   by (simp add: bind_def split_def simpler_gets_def simpler_modify_def)
 
 
-locale CSpace_AI =
+locale CSpace_AI_getActiveIRQ_wp =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes getActiveIRQ_wp[wp]:
     "\<And>P :: 'state_ext state \<Rightarrow> bool.
@@ -119,7 +120,7 @@ lemma OR_choiceE_weak_wp:
           split: option.splits split_if_asm)
   done
 
-context CSpace_AI begin
+context CSpace_AI_getActiveIRQ_wp begin
 
 lemma preemption_point_inv:
   fixes P :: "'state_ext state \<Rightarrow> bool"
@@ -910,7 +911,7 @@ lemma null_no_mdb:
 
 end
 
-
+(* True if cap' is derived from cap. *)
 definition
   is_derived :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
 where
@@ -2728,16 +2729,6 @@ lemma weak_derived_Null:
   done
 
 
-locale CSpace_AI_2 = CSpace_AI state_ext_t
-  for state_ext_t :: "'state_ext::state_ext itself" +
-  assumes weak_derived_valid_cap:
-    "\<And>(s::'state_ext state) c c'.
-      \<lbrakk> s \<turnstile> c; wellformed_cap c'; weak_derived c' c\<rbrakk> \<Longrightarrow> s \<turnstile> c'"
-  assumes weak_derived_tcb_cap_valid:
-    "\<And>(s::'state_ext state) cap p cap'.
-      \<lbrakk> tcb_cap_valid cap p s; weak_derived cap cap' \<rbrakk> \<Longrightarrow> tcb_cap_valid cap' p s"
-
-
 lemma weak_derived_refl [intro!, simp]:
   "weak_derived c c"
   by (simp add: weak_derived_def)
@@ -3086,8 +3077,10 @@ lemma copy_of_Null2 [simp]:
   by (auto simp add: copy_of_def same_object_as_def is_cap_simps)
 
 
-locale CSpace_AI_3 = CSpace_AI_2 state_ext_t
-  for state_ext_t :: "'state_ext::state_ext itself" +
+locale CSpace_AI_weak_derived =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes weak_derived_valid_cap:
+    "\<And>(s:: 'state_ext state) c c'. \<lbrakk> s \<turnstile> c; wellformed_cap c'; weak_derived c' c\<rbrakk> \<Longrightarrow> s \<turnstile> c'"
   assumes copy_obj_refs:
     "\<And>cap cap'. copy_of cap cap' \<Longrightarrow> obj_refs cap' = obj_refs cap"
   assumes weak_derived_cap_class[simp]: 
@@ -3105,7 +3098,7 @@ lemma weak_derived_untyped_range:
                        split: split_if_asm cap.splits)
 
 
-context CSpace_AI_3 begin
+context CSpace_AI_weak_derived begin
 
 lemma weak_derived_cap_range:
   "\<And>dcap cap. weak_derived dcap cap \<Longrightarrow> cap_range dcap = cap_range cap"
@@ -3116,7 +3109,7 @@ end
 
 locale mdb_move_abs_gen
   = mdb_move_abs src dest m s' s m'' m'
-  + CSpace_AI_3 state_ext_t
+  + CSpace_AI_weak_derived state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself"
   and src dest m
   and s' :: "'state_ext state"
@@ -3205,12 +3198,12 @@ lemma weak_derived_untyped2:
 
 
 lemma weak_derived_Null_eq [simp]:
-  "(weak_derived cap.NullCap cap) = (cap = cap.NullCap)"
+  "(weak_derived NullCap cap) = (cap = NullCap)"
   by (auto simp: weak_derived_def)
 
 
 lemma weak_derived_eq_Null [simp]:
-  "(weak_derived cap cap.NullCap) = (cap = cap.NullCap)"
+  "(weak_derived cap NullCap) = (cap = NullCap)"
   by (auto simp: weak_derived_def)
 
 
@@ -3222,12 +3215,12 @@ lemma weak_derived_is_untyped:
 
 
 lemma weak_derived_irq [simp]:
-  "weak_derived cap.IRQControlCap cap = (cap = cap.IRQControlCap)"
+  "weak_derived IRQControlCap cap = (cap = IRQControlCap)"
   by (auto simp add: weak_derived_def copy_of_def same_object_as_def 
            split: cap.splits)
 
 
-lemmas (in CSpace_AI_3) weak_derived_ranges = 
+lemmas (in CSpace_AI_weak_derived) weak_derived_ranges = 
   weak_derived_is_untyped 
   weak_derived_untyped_range 
   weak_derived_obj_refs
@@ -3255,7 +3248,7 @@ lemma weak_derived_Reply:
           split: split_if_asm cap.split_asm)
 
 
-lemmas (in CSpace_AI_3) weak_derived_replies =
+lemmas (in CSpace_AI_weak_derived) weak_derived_replies =
   weak_derived_is_reply
   weak_derived_is_reply_master
   weak_derived_obj_ref_of
@@ -3361,7 +3354,7 @@ end
 declare is_master_reply_cap_NullCap [simp]
 
 
-context CSpace_AI_3 begin
+context CSpace_AI_weak_derived begin
 
 lemma mdb_move_abs_gen:
   "\<And>src dest m (s::'state_ext state).
@@ -3549,8 +3542,8 @@ lemma set_free_index_valid_pspace:
   done
 
 
-locale CSpace_AI_4 = CSpace_AI_3 state_ext_t
-  for state_ext_t :: "'state_ext::state_ext itself" +
+locale CSpace_AI_set_free_index_invs =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes set_free_index_invs:
     "\<And>cap idx.
       \<lbrace>\<lambda>s::'state_ext state. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap)
@@ -3857,8 +3850,8 @@ lemma unique_table_refs_upd_eqD:
   done
 
 
-locale CSpace_AI_5 = CSpace_AI_4 state_ext_t
-  for state_ext_t :: "'state_ext::state_ext itself" +
+locale CSpace_AI_set_untyped_cap_as_full =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes set_untyped_cap_as_full_valid_arch_caps:
     "\<And>src_cap src cap.
       \<lbrace>valid_arch_caps and cte_wp_at (op = src_cap) src\<rbrace>
@@ -3925,8 +3918,8 @@ lemma derived_cap_master_cap_eq: "is_derived m n b c \<Longrightarrow> cap_maste
   by (clarsimp simp:is_derived_def split:if_splits)
 
 
-locale CSpace_AI_6 = CSpace_AI_5 state_ext_t
-  for state_ext_t :: "'state_ext::state_ext itself" +
+locale CSpace_AI_cap_insert =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes cap_insert_valid_arch_caps:
     "\<And>src cap dest.
       \<lbrace>valid_arch_caps and (\<lambda>s::'state_ext state. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
@@ -4053,7 +4046,7 @@ crunch valid_irq_states[wp]: cap_insert "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
 
-context CSpace_AI_6 begin
+context CSpace_AI_cap_insert begin
 
 interpretation cap_insert_crunches .
 
@@ -4183,7 +4176,12 @@ lemma cap_swap_valid_objs:
   done
 
 
-locale CSpace_AI_7 = CSpace_AI_6 state_ext_t
+locale CSpace_AI
+  = CSpace_AI_getActiveIRQ_wp state_ext_t
+  + CSpace_AI_weak_derived state_ext_t
+  + CSpace_AI_set_free_index_invs state_ext_t
+  + CSpace_AI_set_untyped_cap_as_full state_ext_t
+  + CSpace_AI_cap_insert state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +
   assumes mask_cap_valid[simp]:
     "\<And>(s::'state_ext state) c R. s \<turnstile> c \<Longrightarrow> s \<turnstile> mask_cap R c"
@@ -4552,7 +4550,7 @@ lemma appropriate_cte_cap_def2:
   by (clarsimp simp: appropriate_cte_cap_def cap_irqs_def cap_irq_opt_def split: cap.split)
 
 
-context CSpace_AI_7 begin
+context CSpace_AI begin
 
 lemma setup_reply_master_ifunsafe[wp]:
   "\<And>t.
@@ -4624,10 +4622,8 @@ crunch empty_table_at[wp]: setup_reply_master "obj_at (empty_table S) p"
   (ignore: set_cap wp: set_cap_obj_at_impossible crunch_wps
      simp: if_apply_def2 empty_table_caps_of)
 
-
 lemmas setup_reply_master_valid_ao_at[wp]
-    = ARM.valid_ao_at_lift [OF setup_reply_master_typ_at setup_reply_master_arch_ko_at]
-
+    = valid_ao_at_lift [OF setup_reply_master_typ_at setup_reply_master_arch_ko_at]
 
 crunch v_ker_map[wp]: setup_reply_master "valid_kernel_mappings"
 
@@ -4644,7 +4640,7 @@ crunch global_pd_mappings[wp]: setup_reply_master "valid_global_vspace_mappings"
 
 crunch pspace_in_kernel_window[wp]: setup_reply_master "pspace_in_kernel_window"
 
-context CSpace_AI_7 begin
+context CSpace_AI begin
 crunch cap_refs_in_kernel_window[wp]: setup_reply_master "cap_refs_in_kernel_window"
 end
 
@@ -4675,7 +4671,7 @@ lemma setup_reply_master_vms[wp]:
 crunch valid_irq_states[wp]: setup_reply_master "valid_irq_states"
 
 
-context CSpace_AI_7 begin
+context CSpace_AI begin
 
 lemma setup_reply_master_invs[wp]:
   "\<And>t.
@@ -4706,7 +4702,7 @@ definition
     is_untyped_cap parent \<and> descendants_of p m = {})"
 
 
-context CSpace_AI_7 begin
+context CSpace_AI begin
 
 lemma safe_parent_cap_range:
   "\<And> m p cap pcap. safe_parent_for m p cap pcap \<Longrightarrow> cap_range cap \<subseteq> cap_range pcap"
@@ -4740,7 +4736,7 @@ lemma safe_parent_is_parent:
   done
 
 
-context CSpace_AI_7 begin
+context CSpace_AI begin
 
 lemma safe_parent_ut_descendants:
   "\<And>m p cap pcap.
@@ -4878,7 +4874,7 @@ lemma (in mdb_insert_abs) reply_mdb_simple:
   by (simp add: reply_caps_mdb_simple reply_masters_mdb_simple)
 
 
-context CSpace_AI_7 begin
+context CSpace_AI begin
 
 lemma cap_insert_simple_mdb:
   fixes dest src cap

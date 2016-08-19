@@ -390,12 +390,9 @@ where
     IOPortCap first_port_old last_port_old \<Rightarrow>
       let first_port = undefined data; (* ioPortGetFirstPort *)
           last_port = undefined data (* ioPortGetLastPort *) in
-        if (first_port_old \<le> last_port_old)
-        then
-          if (first_port \<le> last_port \<and> first_port \<ge> first_port_old \<and> last_port \<le> last_port_old)
+        if (first_port \<le> last_port \<and> first_port \<ge> first_port_old \<and> last_port \<le> last_port_old)
           then ArchObjectCap $ IOPortCap first_port last_port
           else NullCap
-        else undefined
   | _ \<Rightarrow> ArchObjectCap c"
 
 

@@ -156,6 +156,7 @@ where
   "valid_arch_cap_ref ac s \<equiv> (case ac of
     ASIDPoolCap r as \<Rightarrow> typ_at (AArch AASIDPool) r s
   | ASIDControlCap \<Rightarrow> True
+  | IOPortCap first_port last_port \<Rightarrow> True
   | PageCap r rghts maptyp sz mapdata \<Rightarrow> typ_at (AArch (AIntData sz)) r s
   | PageTableCap r mapdata \<Rightarrow> typ_at (AArch APageTable) r s
   | PageDirectoryCap r mapdata\<Rightarrow> typ_at (AArch APageDirectory) r s
@@ -173,6 +174,7 @@ where
          typ_at (AArch AASIDPool) r s \<and> is_aligned as asid_low_bits
            \<and> as \<le> 2^asid_bits - 1
   | ASIDControlCap \<Rightarrow> True
+  | IOPortCap first_port last_port \<Rightarrow> True
   | PageCap r rghts maptyp sz mapdata \<Rightarrow>
     typ_at (AArch (AIntData sz)) r s \<and> rghts \<in> valid_vm_rights \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits - 1
@@ -218,7 +220,7 @@ where
   "valid_ipc_buffer_cap_arch ac bufptr \<equiv>
          case ac of
               (PageCap ref rghts maptyp sz mapdata) \<Rightarrow>
-                   is_aligned bufptr msg_align_bits \<and> maptyp = VMVSpaceMap
+                   is_aligned bufptr msg_align_bits
             | _ \<Rightarrow> True"
 
 declare valid_ipc_buffer_cap_arch_def[simp]
@@ -883,6 +885,9 @@ definition
   "is_pg_cap cap \<equiv> \<exists>p R tp sz m. cap = ArchObjectCap (PageCap p R tp sz m)"
 
 definition
+  "is_page_cap cap \<equiv> \<exists>p R tp sz m. cap = PageCap p R tp sz m"
+
+definition
   "is_pml4_cap c \<equiv>
    \<exists>p asid. c = ArchObjectCap (PML4Cap p asid)"
   
@@ -896,6 +901,11 @@ definition
 
 definition
   "is_pt_cap c \<equiv> \<exists>p asid. c = ArchObjectCap (PageTableCap p asid)"
+
+lemmas is_vspace_table_cap_defs = is_pt_cap_def is_pd_cap_def is_pdpt_cap_def is_pml4_cap_def
+
+abbreviation
+  "is_vspace_table_cap c \<equiv> is_pt_cap c \<or> is_pd_cap c \<or> is_pdpt_cap c \<or> is_pml4_cap c"
 
 lemma is_arch_cap_simps:
   "is_pg_cap cap   = (\<exists>p R ty sz m. cap = (ArchObjectCap (PageCap p R ty sz m)))"

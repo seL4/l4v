@@ -339,7 +339,7 @@ lemma update_cap_valid[Tcb_AI_asms]:
             split del: split_if)
      apply (simp add: badge_update_def cap_rights_update_def)
     apply (simp add: badge_update_def)
-   apply simp
+   apply (simp add: word_bits_def)
   apply (rename_tac arch_cap)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (case_tac arch_cap, simp_all add: acap_rights_update_def

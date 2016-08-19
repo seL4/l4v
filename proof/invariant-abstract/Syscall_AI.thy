@@ -712,7 +712,7 @@ proof (induct param rule: resolve_address_bits'.induct)
     apply (elim conjE exE disjE)
         apply ((clarsimp simp: whenE_def bindE_def bind_def lift_def liftE_def
                     throwError_def returnOk_def return_def valid_fault_def
-                    valid_cap_def2 wellformed_cap_def
+                    valid_cap_def2 wellformed_cap_def word_bits_def
                   split: split_if_asm cap.splits)+)[4]
     apply (split split_if_asm)
      apply (clarsimp simp: whenE_def bindE_def bind_def lift_def liftE_def

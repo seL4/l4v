@@ -281,7 +281,7 @@ where
   case c of
     UntypedCap p sz idx \<Rightarrow> sz \<ge> 4
   | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
-  | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> 32
+  | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5
                                           | Some b \<Rightarrow> n \<le> 2 ^ b \<and> b \<noteq> 0)
@@ -317,7 +317,7 @@ where
   | NotificationCap r badge rights \<Rightarrow>
          ntfn_at r s \<and> AllowGrant \<notin> rights
   | CNodeCap r bits guard \<Rightarrow>
-         cap_table_at bits r s \<and> bits \<noteq> 0 \<and> length guard \<le> 32
+         cap_table_at bits r s \<and> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
   | ReplyCap r m \<Rightarrow> tcb_at r s

@@ -338,7 +338,7 @@ lemma cap_relation_imp_CapabilityMap:
       apply (rule set_eqI, clarsimp)
       apply (case_tac "x", simp_all)
      apply (rule set_eqI, clarsimp)
-     apply (case_tac "x", simp_all)
+     apply (case_tac "x", simp_all add: word_bits_def)
     apply (simp add: uint_of_bl_is_bl_to_bin bl_bin_bl[simplified])
    apply (simp add: zbits_map_def split: option.splits)
   apply (rename_tac arch_cap)

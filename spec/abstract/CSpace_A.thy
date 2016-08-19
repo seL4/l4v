@@ -98,7 +98,7 @@ where
   "max_free_index_update cap \<equiv> cap \<lparr> free_index:= max_free_index (untyped_sz_bits cap) \<rparr>"
 
 definition
-  set_untyped_cap_as_full :: "cap \<Rightarrow> cap \<Rightarrow> obj_ref \<times> bool list\<Rightarrow> (unit,'z::state_ext) s_monad"
+  set_untyped_cap_as_full :: "cap \<Rightarrow> cap \<Rightarrow> obj_ref \<times> bool list \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_untyped_cap_as_full src_cap new_cap src_slot \<equiv>
    if (is_untyped_cap src_cap \<and> is_untyped_cap new_cap
