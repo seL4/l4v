@@ -61,6 +61,24 @@ lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_ir
   apply (wp | simp)+
   done
 
+lemma make_arch_fault_msg_bcorres[wp,BCorres2_AI_assms]:
+  "bcorres (make_arch_fault_msg a b) (make_arch_fault_msg a b)"
+  by (cases a; simp ; wp)
+
+lemma  handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
+  "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
+  by (cases a; simp add: handle_arch_fault_reply_def; wp)
+
+end
+
+interpretation BCorres2_AI?: BCorres2_AI
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact BCorres2_AI_assms)?)
+  qed
+
+context Arch begin global_naming ARM
+
 crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
   (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
          set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME)
@@ -109,6 +127,9 @@ lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fau
   apply (cases b)
   apply (simp | wp)+
   done
+
+lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
+  by (simp add: handle_reserved_irq_def; wp)
 
 lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
   apply (cases e)

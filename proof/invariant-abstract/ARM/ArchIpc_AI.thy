@@ -258,6 +258,20 @@ lemma copy_mrs_in_user_frame[wp, Ipc_AI_assms]:
   "\<lbrace>in_user_frame p\<rbrace> copy_mrs t buf t' buf' n \<lbrace>\<lambda>rv. in_user_frame p\<rbrace>"
   by (simp add: in_user_frame_def) (wp hoare_vcg_ex_lift)
 
+lemma get_register_eq : "getRegister r = get_register r"
+  apply (simp add: getRegister_def get_register_def)
+  done
+
+lemma as_user_getRestart_invs[wp]: "\<lbrace>P\<rbrace> as_user t getRestartPC \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (simp add: get_register_eq getRestartPC_def ; rule user_getreg_inv)
+  done
+
+lemma make_arch_fault_msg_invs[wp]: "\<lbrace>P\<rbrace> make_arch_fault_msg f t \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (cases f)
+  apply simp
+  apply wp
+  done
+
 lemma make_fault_message_inv[wp, Ipc_AI_assms]:
   "\<lbrace>P\<rbrace> make_fault_msg ft t \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (cases ft, simp_all split del: split_if)
@@ -374,6 +388,8 @@ lemma transfer_caps_non_null_cte_wp_at:
   apply (auto simp: cte_wp_at_caps_of_state)
   done
 
+crunch cte_wp_at[wp,Ipc_AI_assms]: do_fault_transfer "cte_wp_at P p"
+
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows  "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>
@@ -425,7 +441,7 @@ lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
    apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
   done
 
-
+crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply "P (typ_at T p s)"
 
 end
 
