@@ -3015,22 +3015,22 @@ crunch ct_sched_act_not[wp]: set_thread_state "\<lambda>s. scheduler_act_not (cu
    simp: crunch_simps
    ignore: set_scheduler_action)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch not_queued[wp]: handle_fault_reply "not_queued t"
 
 crunch sched_act_not[wp]: handle_fault_reply "scheduler_act_not t"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
 crunch valid_etcbs[wp]: set_extra_badge, do_ipc_transfer valid_etcbs
   (wp: transfer_caps_loop_pres crunch_wps const_on_failure_wp simp: crunch_simps)
+
+crunch cur[wp]: handle_fault_reply cur_tcb
+  (wp: crunch_wps simp: cur_tcb_def unless_def)
 end
 
 crunch weak_valid_sched_action[wp]: empty_slot_ext, cap_delete_one weak_valid_sched_action
   (wp: crunch_wps set_thread_state_runnable_weak_valid_sched_action
        set_bound_notification_weak_valid_sched_action 
    simp: cur_tcb_def unless_def)
-
-crunch cur[wp]: handle_fault_reply cur_tcb
-  (wp: crunch_wps simp: cur_tcb_def unless_def)
 
 lemma do_reply_transfer_not_queued[wp]:
   "\<lbrace>not_queued t and invs and st_tcb_at active t and scheduler_act_not t and

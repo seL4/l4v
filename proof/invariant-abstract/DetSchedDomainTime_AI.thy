@@ -71,10 +71,12 @@ crunch domain_list_inv[wp]: copy_mrs "\<lambda>s. P (domain_list s)"
 crunch domain_list_inv[wp]: handle_fault "\<lambda>s. P (domain_list s)"
   (wp: mapM_wp hoare_drop_imps simp: crunch_simps ignore:copy_mrs)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch domain_list_inv[wp]:
   reply_from_kernel, create_cap, retype_region, do_reply_transfer
   "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps)
+end
 
 crunch domain_list_inv[wp]: delete_objects "\<lambda>s :: det_ext state. P (domain_list s)"
   (wp: crunch_wps
@@ -219,8 +221,10 @@ crunch domain_time_inv[wp]:
   reply_from_kernel, create_cap, retype_region
   "\<lambda>s. P (domain_time s)"
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch domain_time_inv[wp]: do_reply_transfer "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps)
+end
 
 crunch domain_time_inv[wp]: delete_objects "\<lambda>s :: det_ext state. P (domain_time s)"
   (wp: crunch_wps
@@ -351,7 +355,10 @@ lemma handle_interrupt_valid_domain_time:
       apply wp
      apply simp (* dxo_eq *)
      apply (clarsimp simp: timer_tick_def num_domains_def)
-     apply (wp reschedule_required_valid_domain_time | simp | wp_once hoare_drop_imp)+
+     apply (wp reschedule_required_valid_domain_time
+           | simp add: handle_reserved_irq_def
+           | wp_once hoare_drop_imp)+
+    apply clarsimp
    done
 
 end

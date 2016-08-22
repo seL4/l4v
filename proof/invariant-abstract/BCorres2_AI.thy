@@ -14,6 +14,17 @@ imports
   "./$L4V_ARCH/ArchEmptyFail_AI"
 begin
 
+locale BCorres2_AI =
+  fixes state  :: "'a::state_ext itself"
+  assumes handle_arch_fault_reply_bcorres[wp]:
+    "\<And>a b c d.
+      bcorres (handle_arch_fault_reply a b c d :: 'a state \<Rightarrow> _)
+              (handle_arch_fault_reply a b c d)"
+  assumes make_arch_fault_msg_bcorres[wp]:
+    "\<And> a b.
+      bcorres (make_arch_fault_msg a b :: 'a state \<Rightarrow> _)
+              (make_arch_fault_msg a b)"
+
 definition all_but_exst where
 "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
                       (cur_thread s) (idle_thread s)
@@ -376,12 +387,14 @@ lemma get_receive_slots_bcorres[wp]: "bcorres (get_receive_slots a b) (get_recei
   apply (wp | simp)+
   done
 
-lemma make_fault_msg_bcorres[wp]: "bcorres (make_fault_msg a b) (make_fault_msg a b)"
+lemma (in BCorres2_AI) make_fault_msg_bcorres[wp]:
+  "bcorres (make_fault_msg a b :: 'a state \<Rightarrow> _) (make_fault_msg a b)"
   apply (cases a)
   apply (wp | wpc | simp | intro impI conjI allI)+
   done
 
-lemma handle_fault_reply_bcorres[wp]: "bcorres (handle_fault_reply a b c d) (handle_fault_reply a b c d)"
+lemma (in BCorres2_AI) handle_fault_reply_bcorres[wp]:
+  "bcorres (handle_fault_reply a b c d :: 'a state \<Rightarrow> _) (handle_fault_reply a b c d)"
   apply (cases a)
   apply (wp | simp)+
   done
