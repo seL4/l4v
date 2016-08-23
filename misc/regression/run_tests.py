@@ -365,7 +365,8 @@ def rglob(base_dir, pattern):
 #
 def main():
     # Parse arguments
-    parser = argparse.ArgumentParser(description="Parallel Regression Framework")
+    parser = argparse.ArgumentParser(description="Parallel Regression Framework",
+                                     epilog="RUN_TESTS_DEFAULT can be used to overwrite the default set of tests")
     parser.add_argument("-s", "--strict", action="store_true",
             help="be strict when parsing test XML files")
     parser.add_argument("-d", "--directory", action="store",
@@ -420,10 +421,10 @@ def main():
 
     # Calculate which tests should be run.
     tests_to_run = []
-    if len(args.tests) == 0:
+    if len(args.tests) == 0 and not os.environ.get('RUN_TESTS_DEFAULT'):
         tests_to_run = tests
     else:
-        desired_names = set(args.tests)
+        desired_names = set(args.tests) or set(os.environ.get('RUN_TESTS_DEFAULT').split())
         bad_names = desired_names - set([t.name for t in tests])
         if len(bad_names) > 0:
             parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
