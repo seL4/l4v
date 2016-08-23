@@ -34,11 +34,11 @@ requalify_consts
   same_aobject_as
   arch_has_recycle_rights
   arch_recycle_cap
-
   msg_max_length
   cap_transfer_data_size
   msg_max_extra_caps
   msg_align_bits
+  update_cnode_cap_data
 
 end
 
@@ -138,11 +138,7 @@ definition
   else if is_cnode_cap cap then
     let
         (oref, bits, guard) = the_cnode_cap cap;
-        rights_bits = 3;
-        guard_bits = 18;
-        guard_size_bits = 5;
-        guard_size' = unat ((w >> rights_bits) && mask guard_size_bits);
-        guard'' = (w >> (rights_bits + guard_size_bits)) && mask guard_bits;
+        (guard_size', guard'') = update_cnode_cap_data w;
         guard' = drop (size guard'' - guard_size') (to_bl guard'')
     in
         if guard_size' + bits > word_bits

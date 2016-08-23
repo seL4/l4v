@@ -21,6 +21,18 @@ begin
 
 context Arch begin global_naming X64_A
 
+text {* On a user request to modify a cnode capability, extract new guard bits and guard. *}
+definition
+  update_cnode_cap_data :: "data \<Rightarrow> nat \<times> data" where
+ "update_cnode_cap_data w \<equiv>
+    let
+      pad_bits = 2;
+      guard_bits = 18;
+      guard_size_bits = 6;
+      guard_size' = unat ((w >> pad_bits) && mask guard_size_bits);
+      guard'' = (w >> (pad_bits + guard_size_bits)) && mask guard_bits
+    in (guard_size', guard'')"
+
 text {* For some purposes capabilities to physical objects are treated
 differently to others. *}
 definition

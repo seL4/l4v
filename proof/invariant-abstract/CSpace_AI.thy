@@ -39,9 +39,12 @@ requalify_facts
   loadWord_inv
   valid_global_refsD2
   valid_ao_at_lift
+  update_cnode_cap_data_def
 
 end
 
+(* Proofs don't want to see these details. *)
+declare update_cnode_cap_data_def [simp]
 
 definition
   capBadge_ordering :: "bool \<Rightarrow> (badge option \<times> badge option) set"
