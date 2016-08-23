@@ -1075,20 +1075,13 @@ next
     done
 qed (auto simp: rec_del_dom rec_del_fails)
 
-lemmas rec_del_preservation =
+lemmas rec_del_preservation[crunch_rules] =
        validE_valid [OF use_spec(2) [OF rec_del_preservation']]
 
 end
 
 
-
-lemma cap_swap_fd_typ_at:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> cap_swap_for_delete src dst \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  apply(simp add: cap_swap_for_delete_def)
-  apply(wp cap_swap_typ_at)
-  apply(simp)
-  done
-
+crunch typ_at: cap_swap_for_delete "\<lambda>s. P (typ_at T p s)"
 
 lemma cap_swap_valid_cap:
   "\<lbrace>valid_cap c\<rbrace> cap_swap_for_delete x y \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
@@ -1108,12 +1101,8 @@ lemma cap_swap_cte_at:
 
 context CNodeInv_AI begin
 
-lemma rec_del_typ_at:
-  "\<And>P T p call. \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> rec_del call \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wp rec_del_preservation cancel_all_ipc_typ_at cancel_all_signals_typ_at
-           cap_swap_fd_typ_at empty_slot_typ_at set_cap_typ_at
-           irq_state_independent_AI preemption_point_inv
-       | simp)+
+crunch typ_at: rec_del "\<lambda>s::'state_ext state. P (typ_at T p s)"
+  (ignore: preemption_point wp: preemption_point_inv)
 
 lemma rec_del_cte_at:
   "\<And>c call. \<lbrace>cte_at c :: 'state_ext state \<Rightarrow> bool\<rbrace> rec_del call \<lbrace>\<lambda>_. cte_at c\<rbrace>"
@@ -2429,10 +2418,10 @@ lemma suspend_emptyable[wp]:
 
 
 crunch emptyable[wp]: do_machine_op "emptyable sl"
-  (lift: emptyable_lift)
+  (rule: emptyable_lift)
 
 crunch emptyable[wp]: set_irq_state "emptyable sl"
-  (lift: emptyable_lift)
+  (rule: emptyable_lift)
 
 
 declare get_irq_slot_real_cte [wp]

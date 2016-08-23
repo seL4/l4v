@@ -29,15 +29,17 @@ crunch_ignore (add:
   liftE whenE unlessE throw_opt 
   assertE liftM liftME sequence_x 
   zipWithM_x mapM_x sequence mapM sequenceE_x
-  mapME_x catch select_f
+  sequenceE mapME mapME_x catch select_f
   handleE' handleE handle_elseE forM forM_x
-  zipWithM)
+  zipWithM filterM forME_x)
 
-crunch_ignore (add: cap_fault_on_failure lookup_error_on_failure)
+crunch_ignore (add: cap_fault_on_failure lookup_error_on_failure
+  without_preemption const_on_failure ignore_failure
+  empty_on_failure unify_failure throw_on_false)
 
 crunch_ignore (add:
   storeWord storeWordVM loadWord setRegister getRegister getRestartPC
-  set_register get_register setNextPC maskInterrupt  throw_on_false)
+  set_register get_register setNextPC maskInterrupt)
 
 crunch_ignore (add:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action

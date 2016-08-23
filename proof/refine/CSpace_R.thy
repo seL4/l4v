@@ -4196,7 +4196,7 @@ lemma setupReplyMaster_irq_handlers'[wp]:
 
 crunch irq_states' [wp]: setupReplyMaster valid_irq_states'
 crunch irqs_makes' [wp]: setupReplyMaster irqs_masked'
-  (lift: irqs_masked_lift)
+  (rule: irqs_masked_lift)
 crunch pde_mappings' [wp]: setupReplyMaster valid_pde_mappings'
 
 crunch pred_tcb_at' [wp]: setupReplyMaster "pred_tcb_at' proj P t"
