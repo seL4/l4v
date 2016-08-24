@@ -341,58 +341,59 @@ lemmas is_cap_defs = is_arch_cap_def is_zombie_def
 
 
 lemma guard_mask_shift:
-  fixes cref' :: word32
+  fixes cref' :: "'a::len word"
   assumes postfix: "to_bl cref' = xs @ cref" 
   shows
   "(length guard \<le> length cref \<and> 
-    (cref' >> length cref - length guard) && mask (length guard) = of_bl guard)
-  =
-  (guard \<le> cref)" (is "(_ \<and> ?l = ?r) = _ " is "(?len \<and> ?shift) = ?prefix") 
+    (cref' >> (length cref - length guard)) && mask (length guard) = of_bl guard)
+  = (guard \<le> cref)" (is "(_ \<and> ?l = ?r) = _ " is "(?len \<and> ?shift) = ?prefix") 
 proof
+  let ?w_len = "len_of TYPE('a)"
   from postfix
   have "length (to_bl cref') = length xs + length cref" by simp
-  hence 32: "32 = \<dots>" by simp
+  hence w_len: "?w_len = \<dots>" by simp
   
   assume "?len \<and> ?shift"
   hence shift: ?shift and c_len: ?len by auto
 
-  from 32 c_len have "length guard \<le> 32" by simp
+  from w_len c_len have "length guard \<le> ?w_len" by simp
   with shift
-  have "(replicate (32 - length guard) False) @ guard = to_bl ?l" 
+  have "(replicate (?w_len - length guard) False) @ guard = to_bl ?l" 
     by (simp add: word_rep_drop)
   also
-  have "\<dots> = replicate (32 - length guard) False @ 
-        drop (32 - length guard) (to_bl (cref' >> length cref - length guard))"
+  have "\<dots> = replicate (?w_len - length guard) False @ 
+        drop (?w_len - length guard) (to_bl (cref' >> (length cref - length guard)))"
     by (simp add: bl_and_mask)
   also 
   from c_len
-  have "\<dots> = replicate (32 - length guard) False @ take (length guard) cref"
-    by (simp add: bl_shiftr 32 word_size postfix)
+  have "\<dots> = replicate (?w_len - length guard) False @ take (length guard) cref"
+    by (simp add: bl_shiftr w_len word_size postfix)
   finally
   have "take (length guard) cref = guard" by simp
   thus ?prefix by (simp add: take_prefix)
 next
+  let ?w_len = "len_of TYPE('a)"
   assume ?prefix
   then obtain zs where cref: "cref = guard @ zs" 
     by (auto simp: prefixeq_def less_eq_list_def)
   with postfix
   have to_bl_c: "to_bl cref' = xs @ guard @ zs" by simp
   hence "length (to_bl cref') = length \<dots>" by simp
-  hence 32: "32 = \<dots>" by simp
+  hence w_len: "?w_len = \<dots>" by simp
 
   from cref have c_len: "length guard \<le> length cref" by simp
 
   from cref
   have "length cref - length guard = length zs" by simp
-  hence "to_bl ?l = replicate (32-length guard) False @ 
-                   drop (32-length guard) (to_bl (cref' >> length zs))"
+  hence "to_bl ?l = replicate (?w_len - length guard) False @ 
+                   drop (?w_len - length guard) (to_bl (cref' >> (length zs)))"
     by (simp add: bl_and_mask)
-  also 
-  have "drop (32-length guard) (to_bl (cref' >> length zs)) = guard"
-    by (simp add: bl_shiftr word_size 32 to_bl_c)
+  also
+  have "drop (?w_len - length guard) (to_bl (cref' >> (length zs))) = guard"
+    by (simp add: bl_shiftr word_size w_len to_bl_c)
   finally
   have "to_bl ?l = to_bl ?r"
-    by (simp add: word_rep_drop 32)
+    by (simp add: word_rep_drop w_len)
   with c_len
   show "?len \<and> ?shift" by simp
 qed

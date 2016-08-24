@@ -3068,11 +3068,11 @@ lemma branch_map_simp1:
   apply (rule iffI)
    apply (subst(asm) shiftr_bl_of)
     apply simp
-   apply (rule_tac cref1=ref and cref'1="of_bl ref" in iffD1[OF guard_mask_shift])
-    apply (simp add: word_rep_drop)+
+   apply (rule_tac cref1=ref and cref'1="of_bl ref::word32" in iffD1[OF guard_mask_shift])
+    apply (simp add: word_rep_drop)
    apply (subst shiftr_bl_of)
     apply simp+
-  apply (drule_tac cref1=ref and cref'1="of_bl ref" in iffD2[OF guard_mask_shift,rotated])
+  apply (drule_tac cref1=ref and cref'1="of_bl ref::word32" in iffD2[OF guard_mask_shift,rotated])
    apply (simp add: word_rep_drop)+
   done
 
@@ -3084,7 +3084,7 @@ lemma branch_map_simp2:
   " \<lbrakk>length cref \<le> 32; 0 < nata;nata + length list < length cref; list \<le> cref\<rbrakk>
   \<Longrightarrow> unat ((((of_bl cref)::word32) >> length cref - (nata + length list)) && mask nata) = nat (bl_to_bin (take nata (drop (length list) cref)))"
   apply (subgoal_tac "take nata (drop (length list) cref) \<le> drop (length list) cref")
-   apply (frule_tac iffD2[OF guard_mask_shift,rotated,where cref1="drop (length list) cref" and cref'1="of_bl cref"])
+   apply (frule_tac iffD2[OF guard_mask_shift,rotated,where cref1="drop (length list) cref" and cref'1="of_bl cref::word32"])
     defer
     apply clarsimp
     apply (subgoal_tac "nata\<le> length cref - length list")
@@ -3187,7 +3187,7 @@ lemma resolve_address_bits_terminate_corres:
                               opt_object_def transform_def
                        split: nat.splits)+)[3]
     apply fastforce
-   apply (frule_tac cref1=ref and cref'1="of_bl ref" in iffD2[OF guard_mask_shift,rotated])
+   apply (frule_tac cref1=ref and cref'1="of_bl ref::word32" in iffD2[OF guard_mask_shift,rotated])
     apply (simp add: word_rep_drop)+
   done
 
