@@ -315,6 +315,18 @@ lemma thread_set_refs_trivial:
                 intro!: ext)
   done
 
+lemma thread_set_hyp_refs_trivial:
+  assumes x: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
+  assumes y: "\<And>tcb. ARM_A.tcb_vcpu (tcb_arch (f tcb)) = ARM_A.tcb_vcpu (tcb_arch tcb)"
+  shows      "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: thread_set_def set_object_def)
+  apply wp
+  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (clarsimp elim!: rsubst[where P=P])
+  apply (rule all_ext;
+         clarsimp simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_def ARM.tcb_hyp_refs_def get_tcb_def x y)
+  done
+
 
 lemma thread_set_valid_idle_trivial:
   assumes "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
@@ -465,6 +477,7 @@ context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 lemma thread_set_invs_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
+  assumes r:  "\<And>tcb. ARM_A.tcb_vcpu (tcb_arch (f tcb)) = ARM_A.tcb_vcpu (tcb_arch tcb)" (* ARMHYP *)
   assumes z:  "\<And>tcb. tcb_state     (f tcb) = tcb_state tcb"
   assumes z': "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (f tcb) = tcb_ipc_buffer tcb
@@ -479,6 +492,7 @@ lemma thread_set_invs_trivial:
   apply (rule hoare_weaken_pre)
    apply (wp thread_set_valid_objs_triv
              thread_set_refs_trivial
+             thread_set_hyp_refs_trivial
              thread_set_iflive_trivial
              thread_set_mdb
              thread_set_ifunsafe_trivial
@@ -495,7 +509,7 @@ lemma thread_set_invs_trivial:
              thread_set_cap_refs_in_kernel_window
              thread_set_cap_refs_respects_device_region
              thread_set_aligned
-             | rule x z z' w y a | erule bspec_split [OF x] | simp add: z')+
+             | rule x r z z' w y a | erule bspec_split [OF x] | simp add: z')+
   apply (simp add: z)
   done
 
@@ -598,8 +612,7 @@ context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
 lemma as_user_invs[wp]: "\<lbrace>invs\<rbrace> as_user t m \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule as_user_wp_thread_set_helper)
-  apply (rule hoare_pre)
-  apply (wp thread_set_invs_trivial ball_tcb_cap_casesI | simp)+
+  apply (wp thread_set_invs_trivial ball_tcb_cap_casesI | simp add: ARM_A.arch_tcb_context_set_def)+
   done
 
 end
@@ -1171,6 +1184,18 @@ lemma sts_refs_of[wp]:
   apply (simp add: get_tcb_def sts_refs_of_helper)
   done
 
+lemma sts_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+    set_thread_state t st
+   \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_thread_state_def set_object_def)
+  apply (wp, simp add: ARM.state_hyp_refs_of_def, wp)
+  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD
+                   simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_def
+                 intro!: ext)
+  apply (simp add: get_tcb_def)
+  done
+
 lemma sbn_refs_of_helper: "
           {r. (r \<in> tcb_st_refs_of ts \<or>
                r \<in> tcb_bound_refs ntfnptr) \<and>
@@ -1189,6 +1214,19 @@ lemma sbn_refs_of[wp]:
                    simp: state_refs_of_def
                  intro!: ext)
   apply (auto simp: get_tcb_def sbn_refs_of_helper)
+  done
+
+
+lemma sbn_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+    set_bound_notification t ntfn
+   \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_bound_notification_def set_object_def)
+  apply (wp, simp)
+  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD
+                   simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_def
+                 intro!: ext)
+  apply (auto simp: get_tcb_def)
   done
 
 lemma set_thread_state_thread_set:
@@ -1598,7 +1636,7 @@ lemma sbn_invs_minor:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
-   apply (wp valid_irq_node_typ sbn_only_idle | simp)+
+   apply (wp_trace valid_irq_node_typ sbn_only_idle | simp)+
   apply clarsimp
   apply (rule conjI)
    apply (simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)

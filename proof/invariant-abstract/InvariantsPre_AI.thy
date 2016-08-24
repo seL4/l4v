@@ -206,4 +206,69 @@ lemma
   "\<forall>ako. cap \<noteq> ArchObjectCap ako \<Longrightarrow> arch_cap_fun_lift f F cap = F"
   by (cases cap; fastforce)
 
+(* reftype definitions: moved from Invariants_AI so that arch_refs can be defined *)
+
+datatype reftype
+  = TCBBlockedSend | TCBBlockedRecv
+     | TCBSignal | TCBBound | EPSend | EPRecv | NTFNSignal | NTFNBound
+     | TCBHypRef | HypTCBRef
+
+primrec
+ symreftype :: "reftype \<Rightarrow> reftype"
+where
+  "symreftype TCBBlockedSend = EPSend"
+| "symreftype TCBBlockedRecv = EPRecv"
+| "symreftype TCBSignal       = NTFNSignal"
+| "symreftype TCBBound       = NTFNBound"
+| "symreftype EPSend         = TCBBlockedSend"
+| "symreftype EPRecv         = TCBBlockedRecv"
+| "symreftype NTFNSignal       = TCBSignal"
+| "symreftype NTFNBound       = TCBBound"
+| "symreftype TCBHypRef = HypTCBRef"
+| "symreftype HypTCBRef = TCBHypRef"
+
+
+definition
+  sym_refs :: "(obj_ref \<Rightarrow> (obj_ref \<times> reftype) set) \<Rightarrow> bool"
+where
+ "sym_refs st \<equiv> \<forall>x. \<forall>(y, tp) \<in> st x. (x, symreftype tp) \<in> st y"
+
+
+lemma symreftype_inverse[simp]:
+  "symreftype (symreftype t) = t"
+  by (cases t, simp+)
+
+lemma sym_refsD:
+  "\<lbrakk> (y, tp) \<in> st x; sym_refs st \<rbrakk> \<Longrightarrow> (x, symreftype tp) \<in> st y"
+  apply (simp add: sym_refs_def)
+  apply (drule spec, drule(1) bspec)
+  apply simp
+  done
+
+lemma sym_refsE:
+  "\<lbrakk> sym_refs st; (y, symreftype tp) \<in> st x \<rbrakk> \<Longrightarrow> (x, tp) \<in> st y"
+  by (drule(1) sym_refsD, simp)
+
+lemma sym_refs_simp:
+  "\<lbrakk> sym_refs S \<rbrakk> \<Longrightarrow> ((y, symreftype tp) \<in> S x) = ((x, tp) \<in> S y)"
+  apply safe
+   apply (erule(1) sym_refsE)
+  apply (erule(1) sym_refsD)
+  done
+
+lemma delta_sym_refs:
+  assumes x: "sym_refs rfs'"
+      and y: "\<And>x y tp. \<lbrakk> (y, tp) \<in> rfs x; (y, tp) \<notin> rfs' x \<rbrakk> \<Longrightarrow> (x, symreftype tp) \<in> rfs y"
+      and z: "\<And>x y tp. \<lbrakk> (y, tp) \<in> rfs' x; (y, tp) \<notin> rfs x \<rbrakk> \<Longrightarrow> (x, symreftype tp) \<notin> rfs y"
+  shows      "sym_refs rfs"
+  unfolding sym_refs_def
+  apply clarsimp
+  apply (case_tac "(a, b) \<in> rfs' x")
+   apply (drule sym_refsD [OF _ x])
+   apply (rule ccontr)
+   apply (frule(1) z)
+   apply simp
+  apply (erule(1) y)
+  done
+
 end

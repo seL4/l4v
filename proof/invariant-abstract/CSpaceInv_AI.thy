@@ -592,6 +592,22 @@ lemma set_cap_refs_of [wp]:
              split: if_split_asm)
   done
 
+lemma set_cap_hyp_refs_of [wp]:
+ "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+  set_cap cp p
+  \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (case_tac obj, simp_all split del: split_if)
+   apply wp
+   apply (rule hoare_pre, wp)
+   apply (clarsimp elim!: rsubst[where P=P])
+   apply (rule all_ext; clarsimp simp: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
+  apply (rule hoare_pre, wp)
+  apply (clarsimp simp: ARM.state_hyp_refs_of_def obj_at_def)
+  apply (clarsimp elim!: rsubst[where P=P] | rule all_ext | rule conjI |
+         clarsimp simp: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)+
+  done
 
 lemma set_cap_distinct [wp]:
  "\<lbrace>pspace_distinct\<rbrace> set_cap c p \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
@@ -1973,14 +1989,31 @@ lemma update_cdt_refs_of[wp]:
   done
 
 
+lemma update_cdt_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace> update_cdt f \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: update_cdt_def set_cdt_def)
+  apply wp
+  apply (clarsimp elim!: state_hyp_refs_of_pspaceI)
+  done
+
+
 lemma state_refs_of_revokable[simp]:
   "state_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_refs_of s"
   by (simp add: state_refs_of_def)
+
+lemma state_hyp_refs_of_revokable[simp]:
+  "ARM.state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = ARM.state_hyp_refs_of s"
+  by (simp add: ARM.state_hyp_refs_of_def)
 
 
 crunch state_refs_of[wp]: cap_insert "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps)
 
+crunch state_hyp_refs_of[wp]: set_untyped_cap_as_full "\<lambda>s. P (ARM.state_hyp_refs_of s)"
+  (wp: crunch_wps)
+
+crunch state_hyp_refs_of[wp]: cap_insert "\<lambda>s. P (ARM.state_hyp_refs_of s)"
+  (wp: crunch_wps)
 
 crunch aligned[wp]: cap_insert pspace_aligned
   (wp: hoare_drop_imps)

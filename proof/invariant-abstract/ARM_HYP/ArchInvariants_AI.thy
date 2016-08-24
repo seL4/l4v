@@ -975,8 +975,9 @@ lemma valid_arch_obj_typ: (* ARMHYP: does this hold for vcpu? *)
   apply wp
 done
 
-lemma valid_arch_obj_typ_gen: (* ARMHYP: does this hold for vcpu? *)
-  assumes P: "\<And>p T. \<lbrace>\<lambda>s. (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s.  (typ_at T p s)\<rbrace>"
+lemma valid_arch_obj_typ_gen: (* ARMHYP *)
+  assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
+      and t: "\<And>P p. \<lbrace>\<lambda>s. P (typ_at ATCB p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at ATCB p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_arch_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_obj ob s\<rbrace>"
   apply (cases ob, simp_all)
      apply (rule hoare_vcg_ball_lift [OF P])
@@ -2115,6 +2116,145 @@ lemma valid_arch_obj_default':
   "valid_arch_obj (default_arch_object aobject_type us) s"
   unfolding default_arch_object_def
   by (cases aobject_type; simp)
+
+
+text {* arch specific symrefs *}
+
+definition
+  tcb_vcpu_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "tcb_vcpu_refs at \<equiv> case at of
+     Some vc \<Rightarrow> {(vc, TCBHypRef)}
+   | None \<Rightarrow> {}"
+
+definition
+  tcb_hyp_refs :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "tcb_hyp_refs at \<equiv> tcb_vcpu_refs (tcb_vcpu at)"
+
+definition vcpu_tcb_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "vcpu_tcb_refs t \<equiv> case t of
+    None \<Rightarrow> {}
+  | Some tcb \<Rightarrow> {(tcb, HypTCBRef)}"
+
+lemma tcb_hyp_refs_of_simps[simp]:
+  "tcb_hyp_refs at = tcb_vcpu_refs (tcb_vcpu at)"
+  by (auto simp: tcb_hyp_refs_def)
+
+lemma tcb_vcpu_refs_of_simps[simp]:
+  "tcb_vcpu_refs (Some vc) = {(vc, TCBHypRef)}"
+  "tcb_vcpu_refs None = {}"
+  by (auto simp: tcb_vcpu_refs_def)
+
+lemma vcpu_tcb_refs_of_simps[simp]:
+  "vcpu_tcb_refs (Some tcb) = {(tcb, HypTCBRef)}"
+  "vcpu_tcb_refs None = {}"
+  by (auto simp: vcpu_tcb_refs_def)
+
+
+definition refs_of_a :: "arch_kernel_obj \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "refs_of_a x \<equiv> case x of
+   ASIDPool p \<Rightarrow> {}
+ | PageTable pt \<Rightarrow> {}
+ | PageDirectory pd \<Rightarrow> {}
+ | DataPage sz \<Rightarrow> {}
+ | VCPU t h  \<Rightarrow> vcpu_tcb_refs t " (* likely to be changed *)
+
+
+lemma refs_of_a_simps[simp]:
+  "refs_of_a (ASIDPool p) = {}"
+  "refs_of_a (PageTable pt) = {}"
+  "refs_of_a (PageDirectory pd) = {}"
+  "refs_of_a (DataPage sz) = {}"
+  "refs_of_a (VCPU t h) = vcpu_tcb_refs t"
+ by (auto simp: refs_of_a_def)
+
+lemma refs_of_a_rev:
+ "(x, HypTCBRef) \<in> refs_of_a ao =
+    (\<exists>t h. ao = VCPU t h \<and> t = Some x)"
+  by (auto simp: refs_of_a_def vcpu_tcb_refs_def split: arch_kernel_obj.splits option.split)
+
+
+definition (* refs to arch objects from a kernel object: move to generic? *)
+  hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "hyp_refs_of x \<equiv> case x of
+     CNode sz fun      => {}
+   | TCB tcb           => tcb_hyp_refs (tcb_arch tcb)
+   | Endpoint ep       => {}
+   | Notification ntfn => {}
+   | ArchObj ao        => refs_of_a ao"
+term vcpu_tcb
+lemma hyp_refs_of_simps[simp]:
+  "hyp_refs_of (CNode sz fun) = {}"
+  "hyp_refs_of (TCB tcb) = tcb_hyp_refs (tcb_arch tcb)"
+  "hyp_refs_of (Endpoint ep) = {}"
+  "hyp_refs_of (Notification ntfn) = {}"
+  "hyp_refs_of (ArchObj ao) = refs_of_a ao"
+  by (auto simp: hyp_refs_of_def)
+
+lemma hyp_refs_of_rev:
+ "(x, TCBHypRef) \<in> hyp_refs_of ko =
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_vcpu (tcb_arch tcb) = Some x))"
+ "(x, HypTCBRef) \<in> hyp_refs_of ko =
+    (\<exists>t h. ko = ArchObj (VCPU t h) \<and> (t = Some x))"
+  by (auto simp: hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
+                    vcpu_tcb_refs_def refs_of_a_def
+              split: kernel_object.splits arch_kernel_obj.splits option.split)
+
+
+definition
+  state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+ "state_hyp_refs_of s \<equiv> \<lambda>x. case (kheap s x) of Some ko \<Rightarrow> hyp_refs_of ko | None \<Rightarrow> {}"
+
+
+definition
+  state_refs_of_a :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+ "state_refs_of_a s \<equiv> \<lambda>x. case (kheap s x) of
+                            Some ko \<Rightarrow> (case ko of ArchObj ao \<Rightarrow> refs_of_a ao | _ \<Rightarrow> {})
+                          | None \<Rightarrow> {}"
+
+
+lemma state_hyp_refs_of_elemD:
+  "\<lbrakk> ref \<in> state_hyp_refs_of s x \<rbrakk> \<Longrightarrow> obj_at (\<lambda>obj. ref \<in> hyp_refs_of obj) x s"
+  by (clarsimp simp add: state_hyp_refs_of_def obj_at_def
+                  split: option.splits)
+
+lemma state_hyp_refs_of_eqD:
+  "\<lbrakk> state_hyp_refs_of s x = S; S \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>obj. hyp_refs_of obj = S) x s"
+  by (clarsimp simp add: state_hyp_refs_of_def obj_at_def
+                  split: option.splits)
+
+lemma obj_at_state_hyp_refs_ofD:
+  "obj_at P p s \<Longrightarrow> \<exists>ko. P ko \<and> state_hyp_refs_of s p = hyp_refs_of ko"
+  apply (clarsimp simp: obj_at_def state_hyp_refs_of_def)
+  apply fastforce
+  done
+
+lemma ko_at_state_hyp_refs_ofD:
+  "ko_at ko p s \<Longrightarrow> state_hyp_refs_of s p = hyp_refs_of ko"
+  by (clarsimp dest!: obj_at_state_hyp_refs_ofD)
+
+lemma hyp_sym_refs_obj_atD:
+  "\<lbrakk> obj_at P p s; sym_refs (state_hyp_refs_of s) \<rbrakk> \<Longrightarrow>
+     \<exists>ko. P ko \<and> state_hyp_refs_of s p = hyp_refs_of ko \<and>
+        (\<forall>(x, tp)\<in>hyp_refs_of ko. obj_at (\<lambda>ko. (p, symreftype tp) \<in> hyp_refs_of ko) x s)"
+  apply (drule obj_at_state_hyp_refs_ofD)
+  apply (erule exEI, clarsimp)
+  apply (drule sym, simp)
+  apply (drule(1) sym_refsD)
+  apply (erule state_hyp_refs_of_elemD)
+  done
+
+lemma hyp_sym_refs_ko_atD:
+  "\<lbrakk> ko_at ko p s; sym_refs (state_hyp_refs_of s) \<rbrakk> \<Longrightarrow>
+     state_hyp_refs_of s p = hyp_refs_of ko \<and>
+     (\<forall>(x, tp)\<in>hyp_refs_of ko.  obj_at (\<lambda>ko. (p, symreftype tp) \<in> hyp_refs_of ko) x s)"
+  by (drule(1) hyp_sym_refs_obj_atD, simp)
 
 
 end

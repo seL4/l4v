@@ -510,6 +510,20 @@ lemma set_ep_refs_of[wp]:
   done
 
 
+lemma set_ep_hyp_refs_of[wp]:
+ "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+    set_endpoint ep val
+  \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_endpoint_def set_object_def)
+  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply wp
+  apply clarsimp
+  apply (drule_tac ARM.ko_at_state_hyp_refs_ofD)
+  apply (case_tac obj; clarsimp elim!: rsubst[where P=P])
+  apply (rule all_ext; clarsimp simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_simps ARM.hyp_refs_of_def)
+  done
+
+
 lemma pspace_distinct_same_type:
   "\<lbrakk> kheap s t = Some ko; a_type ko = a_type ko';  pspace_distinct s\<rbrakk>
     \<Longrightarrow> pspace_distinct (s\<lparr>kheap := kheap s(t \<mapsto> ko')\<rparr>)"
@@ -766,6 +780,19 @@ lemma set_ntfn_refs_of[wp]:
   apply (clarsimp simp: state_refs_of_def
                  elim!: rsubst [where P=P]
                 intro!: ext)
+  done
+
+lemma set_ntfn_hyp_refs_of[wp]: (* ARMHYP *)
+  "\<lbrace>\<lambda>s. P ((ARM.state_hyp_refs_of s))\<rbrace>
+     set_notification ntfnptr ntfn
+   \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_notification_def set_object_def)
+  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply wp
+  apply clarsimp
+  apply (drule_tac ARM.ko_at_state_hyp_refs_ofD)
+  apply (case_tac obj; clarsimp elim!: rsubst[where P=P])
+  apply (rule all_ext; clarsimp simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_simps ARM.hyp_refs_of_def)
   done
 
 lemma set_ntfn_cur_tcb[wp]:
@@ -1610,6 +1637,15 @@ lemma dmo_refs_of[wp]:
   apply (clarsimp elim!: state_refs_of_pspaceI)
   done
 
+
+lemma dmo_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+     do_machine_op oper
+   \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: do_machine_op_def split_def)
+  apply wp
+  apply (clarsimp elim!: state_hyp_refs_of_pspaceI)
+  done
 
 crunch it[wp]: do_machine_op "\<lambda>s. P (idle_thread s)" 
 

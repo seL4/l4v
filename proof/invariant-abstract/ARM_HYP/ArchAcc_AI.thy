@@ -998,6 +998,19 @@ lemma set_pd_zombies_state_refs:
   by (clarsimp simp: state_refs_of_def split: option.splits)
 
 
+lemma set_pd_zombies_state_hyp_refs:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+  set_pd p pd
+  \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (clarsimp simp: set_pd_def set_object_def)
+  apply (wp get_object_wp)
+  including unfold_objects
+  apply clarsimp
+  apply (erule rsubst [where P=P])
+  apply (rule ext)
+  by (clarsimp simp: state_hyp_refs_of_def split: option.splits)
+
+
 lemma set_pd_cdt:
   "\<lbrace>\<lambda>s. P (cdt s)\<rbrace>
   set_pd p pd
@@ -1175,6 +1188,18 @@ lemma set_pt_zombies_state_refs:
   apply (erule rsubst [where P=P])
   apply (rule ext)
   apply (clarsimp simp: obj_at_def state_refs_of_def split: option.splits)
+  done
+
+lemma set_pt_zombies_state_hyp_refs:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+  set_pt p pt
+  \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (clarsimp simp: set_pt_def set_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
+  apply (erule rsubst [where P=P])
+  apply (rule ext)
+  apply (clarsimp simp: obj_at_def state_hyp_refs_of_def split: option.splits)
   done
 
 
@@ -1676,7 +1701,7 @@ crunch valid_irq_states[wp]: set_pd "valid_irq_states"
 
 lemma set_pt_invs:
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pte (pt i)) and
-    (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (PageTable pt) s) and
+    (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_vspace_obj (PageTable pt) s) and
     (\<lambda>s. \<exists>slot asid. caps_of_state s slot =
          Some (cap.ArchObjectCap (arch_cap.PageTableCap p asid)) \<and>
          (pt = (\<lambda>x. InvalidPTE) \<or> asid \<noteq> None)) and
@@ -1691,7 +1716,7 @@ lemma set_pt_invs:
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
    apply (wp set_pt_valid_objs set_pt_iflive set_pt_zombies
-             set_pt_zombies_state_refs set_pt_valid_mdb
+             set_pt_zombies_state_refs set_pt_zombies_state_hyp_refs set_pt_valid_mdb
              set_pt_valid_idle set_pt_ifunsafe set_pt_reply_caps
              set_pt_valid_arch_state set_pt_valid_global set_pt_cur
              set_pt_reply_masters valid_irq_node_typ
@@ -1847,6 +1872,18 @@ lemma set_asid_pool_zombies_state_refs [wp]:
   apply (erule rsubst [where P=P])
   apply (rule ext)
   apply (clarsimp simp: obj_at_def state_refs_of_def split: option.splits)
+  done
+
+lemma set_asid_pool_zombies_state_hyp_refs [wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+  set_asid_pool p ap
+  \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (clarsimp simp: set_asid_pool_def set_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
+  apply (erule rsubst [where P=P])
+  apply (rule ext)
+  apply (clarsimp simp: obj_at_def state_hyp_refs_of_def split: option.splits)
   done
 
 
@@ -2193,7 +2230,7 @@ lemma set_asid_pool_invs_restrict:
                    valid_arch_caps_def)
   apply (rule hoare_pre,
          wp valid_irq_node_typ set_asid_pool_typ_at
-            set_asid_pool_arch_objs_unmap  valid_irq_handlers_lift
+            set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
             set_asid_pool_vs_lookup_unmap set_asid_pool_restrict_asid_map)
   apply simp
   done
@@ -3337,7 +3374,7 @@ lemma set_pd_invs_unmap:
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def)
   apply (rule hoare_pre)
    apply (wp set_pd_valid_objs set_pd_iflive set_pd_zombies
-             set_pd_zombies_state_refs set_pd_valid_mdb
+             set_pd_zombies_state_refs set_pd_zombies_state_hyp_refs set_pd_valid_mdb
              set_pd_valid_idle set_pd_ifunsafe set_pd_reply_caps
              set_pd_valid_arch set_pd_valid_global set_pd_cur
              set_pd_reply_masters valid_irq_node_typ
@@ -3383,6 +3420,13 @@ lemma store_pde_state_refs_of:
   apply (clarsimp simp: state_refs_of_def obj_at_def)
   done
 
+lemma store_pde_state_hyp_refs_of:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: store_pde_def set_pd_def set_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp elim!: rsubst[where P=P] intro!: ext)
+  apply (clarsimp simp: state_hyp_refs_of_def obj_at_def)
+  done
 
 lemma valid_asid_map_next_asid [iff]:
   "valid_asid_map (s\<lparr>arch_state := arm_next_asid_update f (arch_state s)\<rparr>) =

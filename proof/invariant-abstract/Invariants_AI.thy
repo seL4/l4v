@@ -508,15 +508,14 @@ where
   "valid_objs s \<equiv> \<forall>ptr \<in> dom $ kheap s. \<exists>obj. kheap s ptr = Some obj \<and> valid_obj ptr obj s"
 
 datatype reftype
-  = TCBWaitingSend | TCBWaitingRecv | TCBBlockedSend | TCBBlockedRecv
+  = TCBBlockedSend | TCBBlockedRecv
      | TCBSignal | TCBBound | EPSend | EPRecv | NTFNSignal | NTFNBound
+     | TCBHypRef | HypTCBRef
 
 primrec
  symreftype :: "reftype \<Rightarrow> reftype"
 where
-  "symreftype TCBWaitingSend = TCBWaitingRecv"
-| "symreftype TCBWaitingRecv = TCBWaitingSend"
-| "symreftype TCBBlockedSend = EPSend"
+  "symreftype TCBBlockedSend = EPSend"
 | "symreftype TCBBlockedRecv = EPRecv"
 | "symreftype TCBSignal       = NTFNSignal"
 | "symreftype TCBBound       = NTFNBound"
@@ -524,6 +523,8 @@ where
 | "symreftype EPRecv         = TCBBlockedRecv"
 | "symreftype NTFNSignal       = TCBSignal"
 | "symreftype NTFNBound       = TCBBound"
+| "symreftype TCBHypRef = HypTCBRef"
+| "symreftype HypTCBRef = TCBHypRef"
 
 definition
   tcb_st_refs_of :: "thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -569,7 +570,7 @@ where
      Some ntfn \<Rightarrow> {(ntfn, TCBBound)}
    | None \<Rightarrow> {}"
 
-definition
+definition (* ARMHYP *)
   refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set"
 where
   "refs_of x \<equiv> case x of
@@ -578,6 +579,8 @@ where
    | Endpoint ep       => ep_q_refs_of ep
    | Notification ntfn => ntfn_q_refs_of (ntfn_obj ntfn) \<union> ntfn_bound_refs (ntfn_bound_tcb ntfn)
    | ArchObj ao        => {}"
+
+
 
 definition
   state_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -691,7 +694,8 @@ where
   "valid_pspace \<equiv> valid_objs and pspace_aligned and
                   pspace_distinct and if_live_then_nonz_cap
                   and zombies_final
-                  and (\<lambda>s. sym_refs (state_refs_of s))"
+                  and (\<lambda>s. sym_refs (state_refs_of s))
+                  and (\<lambda>s. sym_refs (ARM.state_hyp_refs_of s))" (* ARMHYP *)
 
 definition
   null_filter :: "('a \<Rightarrow> cap option) \<Rightarrow> ('a \<Rightarrow> cap option)"
@@ -1174,7 +1178,7 @@ lemma symreftype_inverse[simp]:
   "symreftype (symreftype t) = t"
   by (cases t, simp+)
 
-lemma tcb_st_refs_of_simps[simp]:
+lemma tcb_st_refs_of_simps[simp]: (* ARMHYP add TCBHypRef? *)
  "tcb_st_refs_of (Running)               = {}"
  "tcb_st_refs_of (Inactive)              = {}"
  "tcb_st_refs_of (Restart)               = {}"
@@ -1268,17 +1272,6 @@ lemma state_refs_of_eqD:
   by (clarsimp simp add: state_refs_of_def obj_at_def
                   split: option.splits)
 
-lemma sym_refsD:
-  "\<lbrakk> (y, tp) \<in> st x; sym_refs st \<rbrakk> \<Longrightarrow> (x, symreftype tp) \<in> st y"
-  apply (simp add: sym_refs_def)
-  apply (drule spec, drule(1) bspec)
-  apply simp
-  done
-
-lemma sym_refsE:
-  "\<lbrakk> sym_refs st; (y, symreftype tp) \<in> st x \<rbrakk> \<Longrightarrow> (x, tp) \<in> st y"
-  by (drule(1) sym_refsD, simp)
-
 lemma obj_at_state_refs_ofD:
   "obj_at P p s \<Longrightarrow> \<exists>ko. P ko \<and> state_refs_of s p = refs_of ko"
   apply (clarsimp simp: obj_at_def state_refs_of_def)
@@ -1336,28 +1329,6 @@ lemma sym_refs_st_tcb_atD:
   apply auto
   done 
 
-lemma sym_refs_simp:
-  "\<lbrakk> sym_refs S \<rbrakk> \<Longrightarrow> ((y, symreftype tp) \<in> S x) = ((x, tp) \<in> S y)"
-  apply safe
-   apply (erule(1) sym_refsE)
-  apply (erule(1) sym_refsD)
-  done
-
-lemma delta_sym_refs:
-  assumes x: "sym_refs rfs'"
-      and y: "\<And>x y tp. \<lbrakk> (y, tp) \<in> rfs x; (y, tp) \<notin> rfs' x \<rbrakk> \<Longrightarrow> (x, symreftype tp) \<in> rfs y"
-      and z: "\<And>x y tp. \<lbrakk> (y, tp) \<in> rfs' x; (y, tp) \<notin> rfs x \<rbrakk> \<Longrightarrow> (x, symreftype tp) \<notin> rfs y"
-  shows      "sym_refs rfs"
-  unfolding sym_refs_def
-  apply clarsimp
-  apply (case_tac "(a, b) \<in> rfs' x")
-   apply (drule sym_refsD [OF _ x])
-   apply (rule ccontr)
-   apply (frule(1) z)
-   apply simp
-  apply (erule(1) y)
-  done
-
 lemma pspace_alignedE [elim]:
   "\<lbrakk> pspace_aligned s;
    x \<in> dom (kheap s); is_aligned x (obj_bits (the (kheap s x))) \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
@@ -1382,6 +1353,23 @@ lemma refs_of_live:
 lemma refs_of_live_obj:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at live p s"
   by (fastforce simp: obj_at_def intro!: refs_of_live)
+
+(* ARMHYP *)
+lemma hyp_refs_of_live:
+  "ARM.hyp_refs_of ko \<noteq> {} \<Longrightarrow> live ko"
+  apply (cases ko, simp_all add: ARM.hyp_refs_of_def)
+    apply (rename_tac tcb_ext)
+     apply (case_tac "tcb_state tcb_ext", simp_all)
+    apply (fastforce simp: tcb_bound_refs_def)+
+  apply (rename_tac notification)
+  apply (case_tac "ntfn_obj notification", simp_all)
+   apply (fastforce simp: ntfn_bound_refs_def)+
+  sorry
+
+lemma hyp_refs_of_live_obj:
+  "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; ARM.hyp_refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at live p s"
+  by (fastforce simp: obj_at_def intro!: hyp_refs_of_live)
+(**)
 
 lemma if_live_then_nonz_capD:
   assumes x: "if_live_then_nonz_cap s" "obj_at P p s"
@@ -1496,13 +1484,13 @@ lemma idle_no_refs:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_ntfn_is_bound_def state_refs_of_def)
   done
 
-lemma idle_not_queued:
+lemma idle_not_queued: (* ARMHYP? *)
   "\<lbrakk>valid_idle s; sym_refs (state_refs_of s);
    state_refs_of s ptr = queue \<times> {rt}\<rbrakk> \<Longrightarrow>
    idle_thread s \<notin> queue"
   by (frule idle_no_refs, fastforce simp: valid_idle_def sym_refs_def)
 
-lemma idle_not_queued':
+lemma idle_not_queued': (* ARMHYP? *)
   "\<lbrakk>valid_idle s; sym_refs (state_refs_of s);
    state_refs_of s ptr = insert t queue \<times> {rt}\<rbrakk> \<Longrightarrow>
    idle_thread s \<notin> queue"
@@ -1626,7 +1614,13 @@ lemma valid_obj_pspaceI:
                  split: ntfn.splits endpoint.splits
                         thread_state.splits option.split
           | auto split: kernel_object.split)+
-  done
+  apply (rename_tac ao)
+  apply (rule ARM_A.arch_kernel_obj_cases; clarsimp simp add: ARM.wellformed_arch_obj_def)
+  apply (simp add: ARM.wellformed_arch_obj_def ARM.valid_vcpu_def obj_at_def)
+
+
+  (* ARMHYP need more info re vcpu *)
+sorry
 
 lemma valid_objs_pspaceI:
   "\<lbrakk> valid_objs s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_objs s'"
@@ -1636,6 +1630,11 @@ lemma valid_objs_pspaceI:
 lemma state_refs_of_pspaceI:
   "\<lbrakk> P (state_refs_of s); kheap s = kheap s' \<rbrakk> \<Longrightarrow> P (state_refs_of s')"
   unfolding state_refs_of_def
+  by simp
+
+lemma state_hyp_refs_of_pspaceI: (* ARMHYP move to ArchInvariants, requalify *)
+  "\<lbrakk> P (ARM.state_hyp_refs_of s); kheap s = kheap s' \<rbrakk> \<Longrightarrow> P (ARM.state_hyp_refs_of s')"
+  unfolding ARM.state_hyp_refs_of_def
   by simp
 
 lemma distinct_pspaceI:
@@ -1699,7 +1698,7 @@ lemma valid_pspace_eqI:
   "\<lbrakk> valid_pspace s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_pspace s'"
   unfolding valid_pspace_def
   by (auto simp: pspace_aligned_def
-           intro: valid_objs_pspaceI state_refs_of_pspaceI
+           intro: valid_objs_pspaceI state_refs_of_pspaceI state_hyp_refs_of_pspaceI
                   distinct_pspaceI iflive_pspaceI
                   ifunsafe_pspaceI zombies_final_pspaceI)
 
@@ -1757,14 +1756,15 @@ lemma test:
 text {* Lemmas about well-formed states *}
 
 lemma valid_pspaceI [intro]:
-  "\<lbrakk> valid_objs s; pspace_aligned s; sym_refs (state_refs_of s);
+  "\<lbrakk> valid_objs s; pspace_aligned s; sym_refs (state_refs_of s); sym_refs (ARM.state_hyp_refs_of s);
      pspace_distinct s; if_live_then_nonz_cap s; zombies_final s \<rbrakk>
      \<Longrightarrow> valid_pspace s"
   unfolding valid_pspace_def by simp
 
 lemma valid_pspaceE [elim?]:
   assumes vp: "valid_pspace s"
-  and     rl: "\<lbrakk> valid_objs s; pspace_aligned s; sym_refs (state_refs_of s);
+  and     rl: "\<lbrakk> valid_objs s; pspace_aligned s;
+                 sym_refs (state_refs_of s);  sym_refs (ARM.state_hyp_refs_of s);
                  pspace_distinct s; if_live_then_nonz_cap s;
                  zombies_final s \<rbrakk> \<Longrightarrow> R"
   shows    R
@@ -2244,9 +2244,13 @@ lemma valid_obj_typ:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_obj p ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj p ob s\<rbrace>"
   apply (case_tac ob, simp_all add: valid_obj_def P P [where P=id, simplified]
-         valid_cs_typ valid_tcb_typ valid_ep_typ valid_ntfn_typ valid_arch_obj_typ)
-  apply wp
-  done
+         valid_cs_typ valid_tcb_typ valid_ep_typ valid_ntfn_typ valid_arch_obj_typ_gen)
+  apply (rename_tac ao)
+  apply (case_tac "ao=ARM_A.VCPU v"; clarsimp simp add: "ARM.wellformed_arch_obj_def")
+
+(*  apply wp *)
+  (* ARMHYP need lemma for wellformed vcpu or valid_vcpu*)
+sorry
 
 lemma valid_irq_node_typ:
   assumes P: "\<And>p. \<lbrace>\<lambda>s. typ_at (ACapTable 0) p s\<rbrace> f \<lbrace>\<lambda>rv s. typ_at (ACapTable 0) p s\<rbrace>"
@@ -2987,6 +2991,11 @@ lemma (in pspace_update_eq) state_refs_update:
   "state_refs_of (f s) = state_refs_of s"
   by (simp add: state_refs_of_def pspace cong: option.case_cong)
 
+lemma (in pspace_update_eq) state_hyp_refs_update:
+  "ARM.state_hyp_refs_of (f s) = ARM.state_hyp_refs_of s"
+  by (simp add: ARM.state_hyp_refs_of_def pspace cong: option.case_cong)
+
+
 declare more_update.state_refs_update[iff]
 
 lemma zombies_final_arch_update [iff]:
@@ -2998,6 +3007,8 @@ lemma zombies_final_more_update [iff]:
   by (simp add: zombies_final_def is_final_cap'_def)
 
 lemmas state_refs_arch_update [iff] = arch_update.state_refs_update
+
+lemmas state_hyp_refs_arch_update [iff] = arch_update.state_hyp_refs_update
 
 lemma valid_ioc_arch_state_update[iff]:
   "valid_ioc (arch_state_update f s) = valid_ioc s"
@@ -3130,6 +3141,10 @@ lemma invs_sym_refs [elim!]:
   "invs s \<Longrightarrow> sym_refs (state_refs_of s)"
   by (simp add: invs_def valid_state_def valid_pspace_def)
 
+lemma invs_hyp_sym_refs [elim!]: (* ARMHYP move and requalify *)
+  "invs s \<Longrightarrow> sym_refs (ARM.state_hyp_refs_of s)"
+  by (simp add: invs_def valid_state_def valid_pspace_def)
+
 lemma invs_valid_reply_caps [elim!]:
   "invs s \<Longrightarrow> valid_reply_caps s"
   by (simp add: invs_def valid_state_def)
@@ -3205,7 +3220,7 @@ lemma get_irq_slot_real_cte:
   done
 
 lemma all_invs_but_sym_refs_check:
-  "(all_invs_but_sym_refs and sym_refs \<circ> state_refs_of) = invs"
+  "(all_invs_but_sym_refs and sym_refs \<circ> state_refs_of and sym_refs o ARM.state_hyp_refs_of) = invs"
   by (simp add: invs_def valid_state_def valid_pspace_def
                 o_def pred_conj_def conj_comms)
 

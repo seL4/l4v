@@ -106,7 +106,22 @@ lemma valid_arch_objs_lift_weak:
   assumes arch_state: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
   shows "\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
   apply (rule valid_arch_objs_lift)
-    apply (rule vs_lookup_arch_obj_at_lift)
+   apply (rule valid_vspace_objs_lift)
+     apply (rule vs_lookup_arch_obj_at_lift)
+      apply (rule obj_at arch_state; simp)+
+
+  apply (rule valid_arch_objs_typ_at_lift)
+  apply (simp add: obj_at_def)
+  apply (wp hoare_vcg_all_lift)
+   sorry *)
+
+lemma valid_vspace_objs_lift_weak:
+  assumes obj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow>
+                             \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>"
+  assumes arch_state: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
+  shows "\<lbrace>valid_vspace_objs\<rbrace> f \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
+  apply (rule valid_vspace_objs_lift)
+    apply (rule vs_lookup_vspace_obj_at_lift)
      apply (rule obj_at arch_state; simp)+
   done
 

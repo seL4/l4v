@@ -1887,6 +1887,10 @@ lemma valid_objs: "valid_objs s'"
   apply (fastforce simp: valid_ntfn_def valid_bound_tcb_def
                   elim!: obj_at_pres[unfolded s'_def ps_def]
                  split: Structures_A.ntfn.splits option.splits)
+  apply (rename_tac ao)
+  apply (clarsimp simp: ARM.wellformed_arch_obj_def ARM_A.arch_kernel_obj.distinct ARM_A.arch_kernel_obj.inject ARM.valid_vcpu_def
+                  elim!: obj_at_pres[unfolded s'_def ps_def]
+                  split: ARM_A.arch_kernel_obj.splits option.splits)
   done
 
 end
@@ -1903,6 +1907,22 @@ lemma refs_eq:
   apply (cases ty, simp_all add: tyunt default_object_def
                                  default_tcb_def default_ep_def
                                  default_notification_def default_ntfn_def)
+  done
+
+(* ARMHYP move *)
+lemma hyp_refs_eq:
+  "ARM.state_hyp_refs_of s' = ARM.state_hyp_refs_of s"
+  unfolding s'_def ps_def
+  apply (clarsimp intro!: ext simp: ARM.state_hyp_refs_of_def
+                    simp: orthr
+                   split: option.splits)
+  apply (cases ty, simp_all add: tyunt default_object_def default_tcb_def
+                                 ARM.hyp_refs_of_def ARM.tcb_hyp_refs_def ARM.tcb_vcpu_refs_def
+                                 ARM_A.default_arch_tcb_def)
+  apply (rename_tac ao)
+  apply (clarsimp simp: ARM.refs_of_a_def ARM.vcpu_tcb_refs_def ARM_A.default_arch_object_def
+                        ARM_A.arch_kernel_obj.case ARM_A.default_vcpu_def
+                  split: ARM_A.aobject_type.splits)
   done
 
 
@@ -1958,7 +1978,7 @@ end
 
 lemma (in retype_region_proofs_gen) valid_pspace: "valid_pspace s'"
   using vp by (simp add: valid_pspace_def valid_objs psp_al psp_dist
-                         iflive zombies refs_eq)
+                         iflive zombies refs_eq hyp_refs_eq)
 
 
 (* I have the feeling I'm making this unnecessarily hard,

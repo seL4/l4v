@@ -545,7 +545,19 @@ lemma refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow>
 lemma refs_of2: "\<And>obj p. kheap s p = Some obj 
                      \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
   by (simp add: refs_of obj_at_def)  
+
+(* ARMHYP *)
+lemma hyp_refsym : "sym_refs (ARM.state_hyp_refs_of s)"
+  using invs by (simp add: invs_def valid_state_def valid_pspace_def)
   
+lemma hyp_refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow> ARM.hyp_refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
+  by (fastforce intro: hyp_refs_of_live dest!: sym_hyp_refs_ko_atD[OF _ refsym] live_okE)
+
+lemma hyp_refs_of2: "\<And>obj p. kheap s p = Some obj
+                     \<Longrightarrow> ARM.hyp_refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
+  by (simp add: hyp_refs_of obj_at_def)
+(**)
+
 lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbrakk>
                              \<Longrightarrow> valid_obj p obj (detype (untyped_range cap) s)"
     apply (clarsimp simp: valid_obj_def
@@ -573,8 +585,15 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
      apply (rename_tac notification ntfn_ext)
      apply (case_tac "ntfn_obj ntfn_ext")
        apply (auto simp: valid_ntfn_def ntfn_bound_refs_def split: option.splits)
+    apply (frule refs_of)
+    apply (simp add: ARM.vcpu_tcb_refs_def)
+    apply (auto simp: ARM.wellformed_arch_obj_def ARM.vcpu_tcb_refs_def ARM_A.arch_kernel_obj.distinct ARM_A.arch_kernel_obj.inject
+                split: ARM_A.arch_kernel_obj.splits option.splits)
+
+(* add vcpu case *)
     done
-  
+sorry
+
 lemma valid_objs_detype[detype_invs_lemmas] : "valid_objs (detype (untyped_range cap) s)"
   using invs_valid_objs[OF invs]
   apply (clarsimp simp add: valid_objs_def dom_def)

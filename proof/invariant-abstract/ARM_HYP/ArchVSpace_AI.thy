@@ -2112,7 +2112,7 @@ lemma set_pd_invs_map:
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
    apply (wp set_pd_valid_objs set_pd_iflive set_pd_zombies
-             set_pd_zombies_state_refs set_pd_valid_mdb
+             set_pd_zombies_state_refs set_pd_zombies_state_hyp_refs set_pd_valid_mdb
              set_pd_valid_idle set_pd_ifunsafe set_pd_reply_caps
              set_pd_valid_arch set_pd_valid_global set_pd_cur
              set_pd_reply_masters valid_irq_node_typ
@@ -2663,7 +2663,7 @@ lemma set_pd_invs_unmap':
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def)
   apply (rule hoare_pre)
    apply (wp set_pd_valid_objs set_pd_iflive set_pd_zombies
-             set_pd_zombies_state_refs set_pd_valid_mdb
+             set_pd_zombies_state_refs set_pd_zombies_state_hyp_refs set_pd_valid_mdb
              set_pd_valid_idle set_pd_ifunsafe set_pd_reply_caps
              set_pd_valid_arch set_pd_valid_global set_pd_cur
              set_pd_reply_masters valid_irq_node_typ
