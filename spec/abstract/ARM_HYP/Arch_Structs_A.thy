@@ -21,10 +21,6 @@ imports
   ArchVMRights_A
 begin
 
-typedecl hyper_reg -- "enumeration of additional hyper call registers"
-axiomatization where hyper_reg_enum_class: "OFCLASS(hyper_reg, enum_class)"
-instance hyper_reg :: enum by (rule hyper_reg_enum_class)
-
 context Arch begin global_naming ARM_A
 
 text {*
@@ -105,7 +101,7 @@ datatype pte =
  | LargePagePTE obj_ref vm_attributes cap_rights
  | SmallPagePTE obj_ref vm_attributes cap_rights
 
-type_synonym hyper_reg_context = "hyper_reg \<Rightarrow> 32 word"
+type_synonym hyper_reg_context = "32 word"
 
 
 text {*With hypervisor extensions enabled, page table and page directory entries occupy
@@ -225,7 +221,7 @@ definition
   | SuperSectionObj \<Rightarrow> DataPage ARMSuperSection
   | PageTableObj \<Rightarrow> PageTable (\<lambda>x. InvalidPTE)
   | PageDirectoryObj \<Rightarrow> PageDirectory (\<lambda>x. InvalidPDE)
-  | VCPUObj \<Rightarrow> VCPU None (\<lambda>x. 0)
+  | VCPUObj \<Rightarrow> VCPU None 0
   | ASIDPoolObj \<Rightarrow> ASIDPool (\<lambda>_. None)"
 
 type_synonym hw_asid = word8
@@ -287,7 +283,7 @@ end
 
 qualify ARM_A (in Arch)
 
-text {* arch_state *}
+text {* arch\_state *}
 
 record arch_state =
   arm_globals_frame :: obj_ref

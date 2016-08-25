@@ -25,18 +25,14 @@ text {*
   Bits set in the mask will be preserved (used in vcpu\_write\_register).
 *}
 consts
-  register_mask :: "hyper_reg \<Rightarrow> machine_word option"
+  register_mask :: "machine_word option" (* no need for option? *)
 
 
 context Arch begin global_naming ARM_A
 
 section "VCPU"
 
-definition max_hyper_reg :: machine_word where
-  "max_hyper_reg \<equiv> of_nat (fromEnum (maxBound::hyper_reg))"
-
-
-section "VCPU: Set TCB"
+subsection "VCPU: Set TCB"
 
 definition decode_vcpu_set_tcb :: "arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where "decode_vcpu_set_tcb cap extras \<equiv> case (cap, extras) of
@@ -46,8 +42,10 @@ where "decode_vcpu_set_tcb cap extras \<equiv> case (cap, extras) of
  |(VCPUCap v, _) \<Rightarrow> throwError TruncatedMessage
  | _ \<Rightarrow> throwError IllegalOperation"
 
-
-text {*It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome has to be an associated TCB and VCPU. The only way to get lasting dissociation is to delete the TCB or the VCPU. *}
+text {* VCPU objects can be associated with and dissociated from TCBs. *}
+text {*It is not possible to dissociate a VCPU and a TCB by using SetTCB.
+Final outcome has to be an associated TCB and VCPU.
+The only way to get lasting dissociation is to delete the TCB or the VCPU. *}
 
 definition dissociate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where "dissociate_vcpu_tcb t v \<equiv> do
@@ -74,71 +72,62 @@ where "associate_vcpu_tcb t v \<equiv> do
   od"
 
 
-text {* VCPU objects can be associated with and dissociated from TCBs. *}
-definition
-  read_vcpu_register :: "obj_ref \<Rightarrow> hyper_reg \<Rightarrow> (machine_word,'z::state_ext) s_monad"
-where
-  "read_vcpu_register vcpu reg \<equiv>
-  if (fromEnum reg) \<noteq> 0 then
-  do
-    (_,regs) \<leftarrow> get_vcpu vcpu;
-    return $ regs reg
-  od
-  else fail"
+subsection "VCPU: Read/Write Registers"
 
 definition
-  write_vcpu_register :: "obj_ref \<Rightarrow> hyper_reg \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
+  read_vcpu_register :: "obj_ref \<Rightarrow> (machine_word,'z::state_ext) s_monad"
 where
-  "write_vcpu_register vcpu reg val \<equiv>
-    if (fromEnum reg) \<noteq> 0 then
+  "read_vcpu_register vcpu \<equiv>
   do
-    (tcb_opt,regs) \<leftarrow> get_vcpu vcpu;
-    val' \<leftarrow> return (case register_mask reg of
+    (_,val) \<leftarrow> get_vcpu vcpu;
+    return $ val
+  od"
+
+definition
+  write_vcpu_register :: "obj_ref \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "write_vcpu_register vcpu val \<equiv>
+  do
+    (tcb_opt,oldval) \<leftarrow> get_vcpu vcpu;
+    val' \<leftarrow> return (case register_mask of
               None \<Rightarrow> val
-            | Some m \<Rightarrow> regs reg && m || val && ~~m);
-    set_vcpu vcpu (tcb_opt,regs(reg := val'))
-  od
-  else fail"
-
-section "VCPU: Read/Write Registers"
+            | Some m \<Rightarrow> oldval && m || val && ~~m);
+    set_vcpu vcpu (tcb_opt,val')
+  od"
 
 text {*Currently, there is only one VCPU register available for reading/writing by the user: cpx.sctlr. *}
 
 definition decode_vcpu_read_register :: "obj_ref list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
   "decode_vcpu_read_register ptrs cap \<equiv> case (ptrs, cap) of
-      (field # _, VCPUCap p) \<Rightarrow> doE
-        whenE (field \<noteq> 0) $ throwError $ InvalidArgument 1;
-        returnOk $ InvokeVCPU $ VCPUReadRegister p (toEnum (unat field)) odE
+      (_, VCPUCap p) \<Rightarrow> returnOk $ InvokeVCPU $ VCPUReadRegister p
     | (_, _) \<Rightarrow> throwError TruncatedMessage"
 
 definition decode_vcpu_write_register :: "obj_ref list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
   "decode_vcpu_write_register ptrs cap \<equiv> case (ptrs, cap) of
-    (field # val # _, VCPUCap p) \<Rightarrow> do
-      whenE (field \<noteq> 0) $ throwError $ InvalidArgument 1;
-      returnOk $ InvokeVCPU $ VCPUWriteRegister p (toEnum (unat field)) val od
+    (val # _, VCPUCap p) \<Rightarrow> returnOk $ InvokeVCPU $ VCPUWriteRegister p val
   | (_, _) \<Rightarrow> throwError TruncatedMessage"
 
-definition invoke_vcpu_read_register :: "obj_ref \<Rightarrow> hyper_reg \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where "invoke_vcpu_read_register v reg \<equiv> do
+definition invoke_vcpu_read_register :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where "invoke_vcpu_read_register v \<equiv> do
    ct \<leftarrow> gets cur_thread;
-   val \<leftarrow> read_vcpu_register v reg;
+   val \<leftarrow> read_vcpu_register v;
    as_user ct $ set_register (hd msg_registers) $ val;
    let msg = MI 1 0 0 0 (* FIXME ARMHYP: is this correct? *)
    in do set_message_info ct msg;
          set_thread_state ct Running od
 od"
 
-definition invoke_vcpu_write_register :: "obj_ref \<Rightarrow> hyper_reg \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
-where "invoke_vcpu_write_register v reg val \<equiv> write_vcpu_register v reg val"
+definition invoke_vcpu_write_register :: "obj_ref \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
+where "invoke_vcpu_write_register v val \<equiv> write_vcpu_register v val"
 
 definition
 perform_vcpu_invocation :: "vcpu_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "perform_vcpu_invocation iv \<equiv> case iv of
     VCPUSetTCB vcpu tcb \<Rightarrow> associate_vcpu_tcb tcb vcpu
-  | VCPUReadRegister vcpu reg \<Rightarrow> invoke_vcpu_read_register vcpu reg
-  | VCPUWriteRegister vcpu reg val \<Rightarrow> invoke_vcpu_write_register vcpu reg val
+  | VCPUReadRegister vcpu \<Rightarrow> invoke_vcpu_read_register vcpu
+  | VCPUWriteRegister vcpu val \<Rightarrow> invoke_vcpu_write_register vcpu val
   | VCPUInjectIRQ vcpu _ _ \<Rightarrow> fail" (* FIXME ARMHYP: TODO *)
 
 
