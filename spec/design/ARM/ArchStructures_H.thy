@@ -18,6 +18,7 @@ imports
 begin
 context Arch begin global_naming ARM_H
 
+
 type_synonym asid = "word32"
 
 definition

@@ -16,6 +16,8 @@ imports
 begin
 context Arch begin global_naming ARM_H
 
+#INCLUDE_SETTINGS keep_constructor=asidpool
+
 #INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_H decls_only
 #INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_H instanceproofs
 #INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_H bodies_only
