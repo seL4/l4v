@@ -509,7 +509,7 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
 
 
 crunch emptyable[wp, CNodeInv_AI_assms]: finalise_cap "emptyable sl"
-  (simp: crunch_simps lift: emptyable_lift
+  (simp: crunch_simps rule: emptyable_lift
      wp: crunch_wps suspend_emptyable unbind_notification_invs unbind_maybe_notification_invs)
 
 

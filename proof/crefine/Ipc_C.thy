@@ -33,7 +33,7 @@ crunch valid_queues'[wp]: handleFaultReply valid_queues'
 crunch sch_act_wf: handleFaultReply "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   
 crunch valid_ipc_buffer_ptr' [wp]: copyMRs "valid_ipc_buffer_ptr' p"
-  (lift: hoare_valid_ipc_buffer_ptr_typ_at' wp: crunch_wps)
+  (rule: hoare_valid_ipc_buffer_ptr_typ_at' wp: crunch_wps)
 
 lemma threadSet_obj_at'_nontcb:
   "koType TYPE('a::pspace_storable) \<noteq> koType TYPE(Structures_H.tcb) \<Longrightarrow>
@@ -2364,7 +2364,7 @@ lemma maskedAsFull_again:
   apply (simp_all add:maskedAsFull_def isCap_simps split: split_if)+
   done
 
-lemma ccap_relation_lift: 
+lemma ccap_relation_lift:
   "ccap_relation cap cap'
    \<Longrightarrow> (cap_to_H (the (cap_lift cap'))) = cap"
   apply (case_tac "cap_lift cap'")

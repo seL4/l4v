@@ -27,6 +27,7 @@ fun add_crunch_instance name instance lthy  =
 structure CrunchValidInstance : CrunchInstance =
 struct
   type extra = term;
+  val eq_extra = ae_conv;
   val name = "valid";
   val has_preconds = true;
   fun mk_term pre body post =
@@ -36,6 +37,9 @@ struct
   fun put_precond pre ((v as Const (@{const_name "valid"}, _)) $ _ $ body $ post)
         = v $ pre $ body $ post
     | put_precond _ _ = error "put_precond: not a hoare triple";
+  fun dest_term ((Const (@{const_name "valid"}, _)) $ pre $ body $ post)
+        = SOME (pre, body, betapply (post, Bound 0))
+    | dest_term _ = NONE
   val pre_thms = @{thms "hoare_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
   fun parse_extra ctxt extra
@@ -51,6 +55,7 @@ structure CrunchValid : CRUNCH = Crunch(CrunchValidInstance);
 structure CrunchNoFailInstance : CrunchInstance =
 struct
   type extra = unit;
+  val eq_extra = op =;
   val name = "no_fail";
   val has_preconds = true;
   fun mk_term pre body _ =
@@ -60,6 +65,9 @@ struct
   fun put_precond pre ((v as Const (@{const_name "no_fail"}, _)) $ _ $ body)
         = v $ pre $ body
     | put_precond _ _ = error "put_precond: not a no_fail term";
+  fun dest_term ((Const (@{const_name "no_fail"}, _)) $ pre $ body)
+        = SOME (pre, body, ())
+    | dest_term _ = NONE
   val pre_thms = @{thms "no_fail_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
   fun parse_extra ctxt extra
@@ -75,12 +83,16 @@ structure CrunchNoFail : CRUNCH = Crunch(CrunchNoFailInstance);
 structure CrunchEmptyFailInstance : CrunchInstance =
 struct
   type extra = unit;
+  val eq_extra = op =;
   val name = "empty_fail";
   val has_preconds = false;
   fun mk_term _ body _ =
     (Syntax.parse_term @{context} "empty_fail") $ body;
   fun get_precond _ = error "crunch empty_fail should not be calling get_precond";
   fun put_precond _ _ = error "crunch empty_fail should not be calling put_precond";
+  fun dest_term (Const (@{const_name empty_fail}, _) $ b)
+    = SOME (Term.dummy, b, ())
+    | dest_term _ = NONE
   val pre_thms = [];
   val wpc_tactic = wp_cases_tactic_weak;
   fun parse_extra ctxt extra
@@ -96,6 +108,7 @@ structure CrunchEmptyFail : CRUNCH = Crunch(CrunchEmptyFailInstance);
 structure CrunchValidEInstance : CrunchInstance =
 struct
   type extra = term * term;
+  fun eq_extra ((a, b), (c, d)) = (ae_conv (a, c) andalso ae_conv (b, d));
   val name = "valid_E";
   val has_preconds = true;
   fun mk_term pre body extra =
@@ -106,6 +119,9 @@ struct
   fun put_precond pre ((v as Const (@{const_name "validE"}, _)) $ _ $ body $ post $ post')
         = v $ pre $ body $ post $ post'
     | put_precond _ _ = error "put_precond: not a validE term";
+  fun dest_term (Const (@{const_name "validE"}, _) $ pre $ body $ p1 $ p2)
+    = SOME (pre, body, (betapply (p1, Bound 0), betapply (p2, Bound 0)))
+    | dest_term _ = NONE
   val pre_thms = @{thms "hoare_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
   fun parse_extra ctxt extra
@@ -162,7 +178,7 @@ val crunchP =
         (((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
          -- Parse.opt_attribs --| P.$$$ ":") -- P.list1 P.name -- Scan.optional P.term ""
          -- Scan.optional
-           (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,ignore_sect,simp_sect,simp_del_sect,lift_sect,ignore_del_sect,unfold_sect] --| P.$$$ ")")
+           (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,ignore_sect,simp_sect,simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect] --| P.$$$ ")")
            []
         )
         >> (fn (((((crunch_instance, prp_name), att_srcs), consts), extra), wpigs) =>
