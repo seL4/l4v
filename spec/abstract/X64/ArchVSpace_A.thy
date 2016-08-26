@@ -146,10 +146,13 @@ where
       | X64InstructionFault \<Rightarrow> throwError $ VMFault addr [1, fault && mask 5]
 odE"
 
+
 (* FIXME x64: should be a machine interface op/imported from Haskell *)
+consts'
+  setCurrentVSpaceRoot_impl :: "machine_word \<Rightarrow> asid \<Rightarrow> unit machine_rest_monad"
 definition
   setCurrentVSpaceRoot :: "machine_word \<Rightarrow> asid \<Rightarrow> unit machine_monad" where 
-  "setCurrentVSpaceRoot pml4 asid = undefined"
+  "setCurrentVSpaceRoot pml4 asid = machine_op_lift (setCurrentVSpaceRoot_impl pml4 asid)"
 
 
 text {* Switch into the address space of a given thread or the global address
@@ -225,15 +228,15 @@ definition
 text {* Flush mappings associated with a page table. *}
 definition
 flush_table :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"flush_table vspace vptr pt \<equiv> do
+"flush_table pml4_ref vptr pt_ref \<equiv> do
     assert (vptr && mask (ptTranslationBits + pageBits) = 0);
     tcb \<leftarrow> gets cur_thread;
     thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
     thread_root \<leftarrow> get_cap thread_root_slot;
     case thread_root of
-       ArchObjectCap (PML4Cap vspace' (Some _)) \<Rightarrow>
-         when (vspace = vspace') $ do
-           pt \<leftarrow> get_pt pt;
+       ArchObjectCap (PML4Cap pml4_ref' (Some _)) \<Rightarrow>
+         when (pml4_ref = pml4_ref') $ do
+           pt \<leftarrow> get_pt pt_ref;
            forM_x [0 .e. (-1::9 word)] (\<lambda>index. do
              pte \<leftarrow> return $ pt index;
              case pte of
