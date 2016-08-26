@@ -14,8 +14,6 @@ imports
   "../../lib/Distinct_Cmd"
 begin
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-
 section {* Example *}
 
 (* This example is a classic 'one way information flow'
@@ -25,9 +23,19 @@ section {* Example *}
    implement a ring-buffer. We consider the NTFN to be in the domain of High,
    and the shared memory to be in the domain of Low. *)
 
+(* basic machine-level declarations that need to happen outside the locale *)
+
+consts s0_context :: user_context
+
+(* define the irqs to come regularly every 10 *)
+
+axiomatization where
+  irq_oracle_def: "ARM.irq_oracle \<equiv> \<lambda>pos. if pos mod 10 = 0 then 10 else 0"
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 subsection {* We show that the authority graph does not let
               information flow from High to Low *}
-
 
 datatype auth_graph_label = High | Low | IRQ0
 
@@ -1142,10 +1150,6 @@ lemma silc_inv_s0:
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
   done
 
-
-text {* define the irq's to come regularly every 10 *}
-
-defs irq_oracle_def: "irq_oracle \<equiv> \<lambda>pos. if pos mod 10 = 0 then 10 else 0"
   
 lemma only_timer_irq_s0:
   "only_timer_irq timer_irq s0_internal"
@@ -1174,11 +1178,6 @@ lemma s0_valid_domain_list:
   "valid_domain_list s0_internal"
   by (clarsimp simp: valid_domain_list_2_def s0_internal_def exst0_def)
 
-end
-
-consts s0_context :: user_context
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   "s0 \<equiv> ((if ct_idle s0_internal then idle_context s0_internal else s0_context,s0_internal),KernelExit)"
