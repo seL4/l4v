@@ -348,13 +348,6 @@ lemma arch_objs':
   done
 
 
-lemma global_objs':
-  "valid_global_objs s \<Longrightarrow> valid_global_objs s'"
-  apply (clarsimp simp: valid_global_objs_def valid_ao_at_def)
-  apply (auto simp: s'_def)
-  done
-
-
 lemma caps_of_state_s':
   "caps_of_state s' = caps_of_state s"
   by (rule caps_of_state_pspace, simp add: s'_def)
@@ -579,13 +572,6 @@ lemma valid_arch_objs_asid_upd_strg:
     apply assumption+
   apply (erule (1) asid_update.arch_objs')
   done
-
-lemma valid_global_objs_asid_upd_strg:
-  "valid_global_objs s \<and>
-   ko_at (ArchObj (arch_kernel_obj.ASIDPool empty)) ap s \<and>
-   arm_asid_table (arch_state s) asid = None \<longrightarrow>
-   valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
-  by clarsimp
 
 lemma cap_insert_ap_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and
@@ -1106,15 +1092,6 @@ lemma vs_lookup_and_unique_refs:
   done
 
 
-lemma valid_global_ptsD2:
-  "\<lbrakk>r \<in> set (arm_global_pts (arch_state s)); valid_global_pts s\<rbrakk>
-   \<Longrightarrow> \<exists>pt. ko_at (ArchObj (PageTable pt)) r s"
-  apply (clarsimp simp: valid_global_pts_def)
-  apply (drule (1) bspec)
-  apply (clarsimp simp: obj_at_def)
-  done
-
-
 lemma create_mapping_entries_same_refs:
   "\<lbrace>valid_arch_state and valid_arch_objs and valid_vs_lookup and (\<lambda>s. unique_table_refs (caps_of_state s))
     and pspace_aligned and valid_objs and valid_kernel_mappings and \<exists>\<rhd> pd and
@@ -1207,7 +1184,7 @@ lemma create_mapping_entries_same_refs:
    apply (frule (1) vs_lookup_and_unique_refs)
        apply (simp_all add: table_cap_ref_def obj_refs_def)[4]
    apply (drule (1) ref_is_unique)
-         apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:valid_global_ptsD2)
+         apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:)
         apply (simp_all add: valid_arch_state_def valid_objs_caps)[6]
    apply (wp returnOKE_R_wp | wpc)+
    apply (clarsimp simp: lookup_pd_slot_def)
@@ -1221,7 +1198,7 @@ lemma create_mapping_entries_same_refs:
    apply (frule (1) vs_lookup_and_unique_refs)
        apply (simp_all add: table_cap_ref_def obj_refs_def)[4]
    apply (drule (1) ref_is_unique)
-         apply (clarsimp dest!: valid_global_ptsD2 simp: obj_at_def a_type_def valid_arch_state_def)
+         apply (clarsimp dest!: simp: obj_at_def a_type_def valid_arch_state_def)
         apply (simp_all add: valid_arch_state_def valid_objs_caps)
   done
 

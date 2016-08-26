@@ -152,9 +152,9 @@ lemma set_cap_orth:
 
 
 lemma set_cap_empty_tables[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) p s)\<rbrace>
      set_cap cap cref
-   \<lbrace>\<lambda>rv s. P (obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (obj_at (empty_table {}) p s)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=arch_state, OF set_cap_arch])
    apply (wp set_cap_obj_at_impossible)

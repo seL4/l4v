@@ -415,8 +415,6 @@ lemma unique_table_refs:
     apply blast
     done
     
-lemma valid_global_objs: "valid_global_objs s"
-  using invs by (clarsimp simp: invs_def valid_state_def)
   
 lemma valid_pspace: "valid_pspace s" using invs
   by (simp add: invs_def valid_state_def)
@@ -454,13 +452,11 @@ locale detype_locale_gen_2 = detype_locale_gen_1 cap ptr s
   assumes detype_invs_assms:
     "valid_idle (detype (untyped_range cap) s)"
     "valid_arch_state (detype (untyped_range cap) s)"
-    "valid_arch_objs (detype (untyped_range cap) s)"
+    "valid_vspace_objs (detype (untyped_range cap) s)"
     "valid_arch_caps (detype (untyped_range cap) s)"
-    "valid_global_objs (detype (untyped_range cap) s)"
     "valid_kernel_mappings (detype (untyped_range cap) s)"
     "valid_asid_map (detype (untyped_range cap) s)"
     "equal_kernel_mappings (detype (untyped_range cap) s)"  
-    "valid_global_vspace_mappings (detype (untyped_range cap) s)"
     "pspace_in_kernel_window (detype (untyped_range cap) s)"
     "valid_machine_state (clear_um (untyped_range cap) (detype (untyped_range cap) s))"  
     "pspace_respects_device_region (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
@@ -815,10 +811,10 @@ end
 context detype_locale_gen_2 begin  
 lemma invariants:
   assumes ct_act: "ct_active s"
-  shows "(invs and untyped_children_in_mdb)                    
+  shows "(invs and untyped_children_in_mdb)
          (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
-using detype_invs_lemmas detype_invs_assms ct_act   
-by (simp add: invs_def valid_state_def valid_pspace_def
+using detype_invs_lemmas detype_invs_assms ct_act
+by (simp add: invs_def valid_state_def valid_pspace_def valid_arch_imp_valid_vspace_objs
                  detype_clear_um_independent clear_um.state_refs_update)    
 end
 

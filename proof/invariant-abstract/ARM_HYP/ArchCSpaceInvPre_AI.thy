@@ -85,7 +85,7 @@ where
   \<and> no_cap_to_obj_with_diff_ref newcap {sl} s
   \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap) \<longrightarrow> cap_asid newcap = None
       \<longrightarrow> (\<forall> r \<in> obj_refs newcap.
-            obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
+            obj_at (empty_table {}) r s))
   \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap)
          \<longrightarrow> ((is_pt_cap newcap \<and> is_pt_cap cap \<or> is_pd_cap newcap \<and> is_pd_cap cap)
                   \<longrightarrow> (cap_asid newcap = None \<longrightarrow> cap_asid cap = None)
@@ -160,7 +160,7 @@ crunch arch[wp]: set_cap "\<lambda>s. P (arch_state s)" (simp: split_def)
 lemma set_cap_valid_table_caps:
   "\<lbrace>\<lambda>s. valid_table_caps s
          \<and> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))\<rbrace>
+            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table {}) r s))\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
   apply (simp add: valid_table_caps_def)
@@ -230,7 +230,7 @@ lemma set_cap_valid_arch_caps:
                  \<or> (\<forall>oref \<in> obj_refs cap'. \<not> (vref \<unrhd> oref) s))
       \<and> no_cap_to_obj_with_diff_ref cap {ptr} s
       \<and> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
+            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table {}) r s))
       \<and> ((is_pt_cap cap \<or> is_pd_cap cap)
              \<longrightarrow> (\<forall>oldcap. caps_of_state s ptr = Some oldcap \<longrightarrow>
                   (is_pt_cap cap \<and> is_pt_cap oldcap \<or> is_pd_cap cap \<and> is_pd_cap oldcap)
@@ -249,7 +249,7 @@ lemma set_cap_valid_arch_caps:
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at (op = cap) ptr s; valid_table_caps s;
         is_pt_cap cap | is_pd_cap cap; cap_asid cap = None \<rbrakk>
-        \<Longrightarrow> \<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s"
+        \<Longrightarrow> \<forall>r \<in> obj_refs cap. obj_at (empty_table {}) r s"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_table_caps_def)
   apply (cases ptr, fastforce)
   done

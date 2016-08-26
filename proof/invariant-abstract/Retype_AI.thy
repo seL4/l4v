@@ -22,6 +22,7 @@ abbreviation "down_aligned_area ptr sz \<equiv> {(ptr && ~~ mask sz) + (2 ^ sz -
 context begin interpretation Arch .
 requalify_facts
   global_refs_kheap
+  valid_vspace_obj_default' (* move to invariants_AI? *)
 requalify_consts
   clearMemory
   clearMemoryVM
@@ -1121,10 +1122,10 @@ abbreviation(input)
        and valid_pspace and valid_mdb and valid_idle and only_idle
        and if_unsafe_then_cap and valid_reply_caps
        and valid_reply_masters and valid_global_refs and valid_arch_state
-       and valid_irq_node and valid_irq_handlers and valid_arch_objs
+       and valid_irq_node and valid_irq_handlers and valid_vspace_objs
        and valid_irq_states
-       and valid_arch_caps and valid_global_objs and valid_kernel_mappings 
-       and valid_asid_map and valid_global_vspace_mappings
+       and valid_arch_caps and valid_kernel_mappings
+       and valid_asid_map
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
        and cur_tcb and valid_ioc and valid_machine_state"
@@ -1150,7 +1151,6 @@ locale Retype_AI_dmo_eq_kernel_restricted =
 crunch only_idle[wp]: do_machine_op "only_idle"
 crunch valid_global_refs[wp]: do_machine_op "valid_global_refs"
 crunch valid_kernel_mappings[wp]: do_machine_op "valid_kernel_mappings"
-crunch global_pd_mappings[wp]: do_machine_op "valid_global_vspace_mappings"
 crunch cap_refs_in_kernel_window[wp]: do_machine_op "cap_refs_in_kernel_window"
 
 
@@ -1627,6 +1627,13 @@ lemma valid_obj_default_object:
   done
 
 
+lemma valid_vspace_obj_default:
+  assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
+  shows "ArchObj ao = default_object ty us \<Longrightarrow> valid_vspace_obj ao s'"
+  apply (cases ty, simp_all add: default_object_def tyunt)
+  apply (simp add: valid_vspace_obj_default')
+  done
+
 lemma valid_arch_obj_default:
   assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
   shows "ArchObj ao = default_object ty dev us \<Longrightarrow> valid_arch_obj ao s'"
@@ -1892,7 +1899,7 @@ lemma valid_objs: "valid_objs s'"
                   elim!: obj_at_pres[unfolded s'_def ps_def]
                   split: ARM_A.arch_kernel_obj.splits option.splits)
   done
-
+sorry
 end
 
 
@@ -2159,7 +2166,8 @@ locale retype_region_proofs_invs
   fixes region_in_kernel_window :: "machine_word set \<Rightarrow> 'state_ext state \<Rightarrow> bool"
   assumes valid_global_refs: "valid_global_refs s \<Longrightarrow> valid_global_refs s'"
   assumes valid_arch_state: "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
-  assumes valid_arch_objs': "valid_arch_objs s \<Longrightarrow> valid_arch_objs s'"
+  assumes valid_vspace_objs': "valid_vspace_objs s \<Longrightarrow> valid_vspace_objs s'"
+(*  assumes valid_arch_objs': "valid_arch_objs s \<Longrightarrow> valid_arch_objs s'" *)
   assumes valid_cap:
     "(s::'state_ext state) \<turnstile> cap \<and>
         untyped_range cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} = {}
@@ -2307,8 +2315,8 @@ lemmas retype_region_valid_reply_masters = use_retype_region_proofs
 
 
 lemmas retype_region_arch_objs = use_retype_region_proofs
-  [where Q=valid_arch_objs,
-         OF retype_region_proofs_invs.valid_arch_objs'[OF retype_region_proofs_assms],
+  [where Q=valid_vspace_objs,
+         OF retype_region_proofs_invs.valid_vspace_objs'[OF retype_region_proofs_assms],
          simplified]
 
 

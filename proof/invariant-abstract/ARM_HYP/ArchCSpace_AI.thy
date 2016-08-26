@@ -97,8 +97,8 @@ lemma set_free_index_invs [CSpace_AI_assms]:
     set_cap_idle update_cap_ifunsafe)
   apply (simp add:valid_irq_node_def)
   apply wps
-  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap.valid_arch_obj set_cap_valid_arch_caps
-            set_cap.valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at )
+  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap.valid_vspace_obj set_cap_valid_arch_caps
+            set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at )
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (rule conjI,simp add:valid_pspace_def)
   apply (rule conjI,clarsimp simp:is_cap_simps)

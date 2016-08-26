@@ -105,7 +105,8 @@ lemma aobj_ref_cases:
   | arch_cap.ASIDControlCap \<Rightarrow> None
   | arch_cap.PageCap _ w s sz opt \<Rightarrow> Some w
   | arch_cap.PageTableCap w opt \<Rightarrow> Some w
-  | arch_cap.PageDirectoryCap w opt \<Rightarrow> Some w)"
+  | arch_cap.PageDirectoryCap w opt \<Rightarrow> Some w
+  | arch_cap.VCPUCap v \<Rightarrow> Some v)"
   apply (subst aobj_ref_cases')
   apply (clarsimp cong: arch_cap.case_cong)
   done

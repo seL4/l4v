@@ -1860,8 +1860,6 @@ crunch arch_objs [wp]: cap_move "valid_arch_objs"
 
 crunch arch_objs [wp]: empty_slot "valid_arch_objs"
 
-crunch valid_global_objs [wp]: cap_swap "valid_global_objs"
-
 
 context CNodeInv_AI begin
 
@@ -1886,8 +1884,6 @@ crunch v_ker_map[wp]: cap_swap "valid_kernel_mappings"
 crunch eq_ker_map[wp]: cap_swap "equal_kernel_mappings"
 
 crunch only_idle [wp]: cap_swap only_idle
-
-crunch global_pd_mappings[wp]: cap_swap "valid_global_vspace_mappings"
 
 crunch pspace_in_kernel_window[wp]: cap_swap "pspace_in_kernel_window"
 
@@ -3401,8 +3397,6 @@ lemma cap_move_valid_arch_caps[wp]:
 
 end
 
-
-crunch valid_global_objs[wp]: cap_move "valid_global_objs"
 
 
 lemma cap_move_valid_ioc[wp]:

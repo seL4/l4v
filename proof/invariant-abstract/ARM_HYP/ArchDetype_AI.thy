@@ -155,7 +155,7 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap
   apply (simp add: valid_arch_state_def valid_asid_table_def
-                valid_global_pts_def global_refs_def
+                global_refs_def
                 cap_range_def)
   apply (clarsimp simp: ran_def arch_state_det)
   apply (drule vs_lookup_atI)
@@ -170,8 +170,8 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   apply blast
   done
 
-lemma global_pts: (* ARCH SPECIFIC STATEMENT*)
-  "\<And>p. \<lbrakk> p \<in> set (arm_global_pts (arch_state s)); p \<in> untyped_range cap \<rbrakk>  \<Longrightarrow> False"
+lemma global_pts: (* ARCH SPECIFIC STATEMENT*) (* ARMHYP remove? *)
+  "\<And>p. \<lbrakk> p \<in> {}; p \<in> untyped_range cap \<rbrakk>  \<Longrightarrow> False"
   using valid_global_refsD [OF globals cap] by (simp add: cap_range_def global_refs_def)
 
 lemma vs_lookup: (* SIMP *)
@@ -234,20 +234,23 @@ lemma vs_lookup_pages: (* SIMP *)
 lemma vs_lookup_preserved:
   "\<And>x rf. \<lbrakk> x \<in> untyped_range cap; (rf \<rhd> x) s \<rbrakk> \<Longrightarrow> False"
   apply (drule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI valid_vs_lookup])
-  apply (fastforce intro: global_pts no_obj_refs)
+  apply (auto intro: global_pts no_obj_refs)
   done
 
 lemma vs_lookup_pages_preserved:
   "\<And>x rf. \<lbrakk> x \<in> untyped_range cap; (rf \<unrhd> x) s \<rbrakk> \<Longrightarrow> False"
   apply (drule valid_vs_lookupD[OF _ valid_vs_lookup])
-  apply (fastforce intro: global_pts no_obj_refs)
+  apply (auto intro: global_pts no_obj_refs)
   done
 
 (* FIXME: This is really horrible but I can't get the automated methods
           to "get it". *)
-lemma valid_arch_obj:
+(* lemma valid_arch_obj:
   "\<And>ao p. \<lbrakk> valid_arch_obj ao s; ko_at (ArchObj ao) p s; (\<exists>\<rhd>p) s \<rbrakk> \<Longrightarrow>
-       valid_arch_obj ao (detype (untyped_range cap) s)"
+       valid_arch_obj ao (detype (untyped_range cap) s)" *)
+lemma valid_vspace_obj:
+  "\<And>ao p. \<lbrakk> valid_vspace_obj ao s; ko_at (ArchObj ao) p s; (\<exists>\<rhd>p) s \<rbrakk> \<Longrightarrow>
+       valid_vspace_obj ao (detype (untyped_range cap) s)"
   apply (case_tac ao)
      apply (clarsimp simp: ran_def)
      apply (erule vs_lookup_preserved)
@@ -286,8 +289,8 @@ lemma valid_arch_obj:
    apply (rename_tac "fun")
    apply clarsimp
    apply (case_tac "fun x", simp_all)[1]
-     apply (rename_tac word1 attr word2)
-     apply (drule bspec, simp)
+     apply (rename_tac word1)
+     apply (drule_tac x=x in spec)
      apply (clarsimp simp: valid_pde_def)
      apply (drule_tac p'="(ptrFromPAddr word1)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
      apply (clarsimp simp: vs_lookup_pages1_def)
@@ -299,7 +302,7 @@ lemma valid_arch_obj:
        apply (simp add: split_def)
       apply (simp add: pde_ref_pages_def)
      apply (force dest!: vs_lookup_pages_preserved)
-    apply (rename_tac word1 attr word2 rights)
+    apply (rename_tac word1 attr rights)
     apply (drule_tac p'="(ptrFromPAddr word1)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
      apply (clarsimp simp: vs_lookup_pages1_def)
      apply (rule exI, erule conjI)
@@ -309,7 +312,8 @@ lemma valid_arch_obj:
      apply (rule_tac x="(x, (ptrFromPAddr word1))" in image_eqI)
       apply (simp add: split_def)
      apply (simp add: pde_ref_pages_def)
-    apply (force dest!: vs_lookup_pages_preserved)
+     apply (drule_tac x=x in spec)
+    apply (fastforce dest!: vs_lookup_pages_preserved)
    apply (rename_tac word attr rights)
    apply (drule_tac p'="(ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
     apply (clarsimp simp: vs_lookup_pages1_def)
@@ -320,18 +324,20 @@ lemma valid_arch_obj:
     apply (rule_tac x="(x, (ptrFromPAddr word))" in image_eqI)
      apply (simp add: split_def)
     apply (simp add: pde_ref_pages_def)
+    apply (drule_tac x=x in spec)
    apply (force dest!: vs_lookup_pages_preserved)
+  apply clarsimp
   apply clarsimp
   done
 
-lemma valid_arch_obj_detype[detype_invs_proofs]: "valid_arch_objs (detype (untyped_range cap) s)"
+lemma valid_vspace_obj_detype[detype_invs_proofs]: "valid_vspace_objs (detype (untyped_range cap) s)"
   proof -
-    have "valid_arch_objs s"
+    have "valid_vspace_objs s"
     using invs by fastforce
     thus ?thesis
-    unfolding valid_arch_objs_def
+    unfolding valid_vspace_objs_def
     apply (simp add: vs_lookup)
-    apply (auto intro: valid_arch_obj)
+    apply (auto intro: valid_vspace_obj)
     done
   qed
 
@@ -383,22 +389,10 @@ lemma valid_arch_caps_detype[detype_invs_proofs]: "valid_arch_caps (detype (unty
                                        valid_table_caps)
 
 
-
+(* (* ARMHYP restate? *)
 lemma pd_at_global_pd: "page_directory_at (arm_global_pd (arch_state s)) s"
   using valid_arch_state by (simp add: valid_arch_state_def)
-
-
-lemma valid_global_objs_detype[detype_invs_proofs]: "valid_global_objs (detype (untyped_range cap) s)"
-  using valid_global_objs valid_global_refsD [OF globals cap]
-  apply (simp add: valid_global_objs_def valid_ao_at_def arch_state_det)
-  apply (elim conjE, intro conjI)
-     apply (simp add: global_refs_def cap_range_def arch_state_det)
-    apply (erule exEI)
-    apply (insert pd_at_global_pd)[1]
-    subgoal by (clarsimp simp: obj_at_def a_type_simps empty_table_def arch_state_det)
-   apply (simp add: global_refs_def cap_range_def)
-  apply (clarsimp elim!: global_pts)
-  done
+*)
 
 lemma valid_kernel_mappings_detype[detype_invs_proofs]: "valid_kernel_mappings (detype (untyped_range cap) s)"
   proof -
@@ -427,22 +421,8 @@ lemma equal_kernel_mappings_detype[detype_invs_proofs]:
       using invs by (simp add: invs_def valid_state_def)
     thus ?thesis
       apply (simp add: equal_kernel_mappings_def)
-      apply blast
       done
   qed
-
-lemma valid_global_mappings_detype[detype_invs_proofs]:
-  "valid_global_vspace_mappings (detype (untyped_range cap) s)"
-proof -
-  have "valid_global_vspace_mappings s"
-    using invs by (simp add: invs_def valid_state_def)
-  thus ?thesis
-  using valid_global_refsD [OF globals cap] valid_global_objs
-  apply -
-  apply (erule valid_global_vspace_mappings_pres, simp_all)
-   apply (simp add: cap_range_def global_refs_def arch_state_det)+
-  done
-qed
 
 lemma pspace_in_kernel_window_detype[detype_invs_proofs]:
   "pspace_in_kernel_window (detype (untyped_range cap) s)"

@@ -26,7 +26,7 @@ lemma kernel_mappings_slots_eq:
   apply (simp add: kernel_base_def)
   apply word_bitwise
   done
-
+(*
 lemma valid_global_pd_mappingsE:
   "\<lbrakk>valid_global_vspace_mappings s;
     \<And>pd. \<lbrakk>kheap s (arm_global_pd (arch_state s)) =
@@ -36,13 +36,13 @@ lemma valid_global_pd_mappingsE:
   apply (clarsimp simp add: valid_global_vspace_mappings_def obj_at_def)
   apply (case_tac ko, simp_all add: valid_pd_kernel_mappings_def
                              split: arch_kernel_obj.splits)
-  done
+  done*)
 
 (* NOTE: we could probably add "is_aligned b (pageBitsForSize sz)"
          if we assumed "valid_global_objs s", additionally. *)
 lemma some_get_page_info_kmapsD:
   "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
-    p \<in> kernel_mappings; valid_global_vspace_mappings s; equal_kernel_mappings s\<rbrakk>
+    p \<in> kernel_mappings; qual_kernel_mappings s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a) \<and> r = {}"
    apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
                          kernel_mappings_slots_eq
@@ -77,23 +77,9 @@ lemma some_get_page_info_kmapsD:
    apply (simp add: valid_pde_kernel_mappings_def)
    done
 
-lemma get_page_info_gpd_kmaps:
-  "\<lbrakk>valid_global_objs s; valid_arch_state s;
-    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
-                  (arm_global_pd (arch_state s)) p = Some (b, a, attr, r)\<rbrakk>
-   \<Longrightarrow> p \<in> kernel_mappings"
-   apply (clarsimp simp: valid_global_objs_def valid_arch_state_def)
-   apply (thin_tac "Ball x y" for x y)
-   apply (clarsimp simp add: obj_at_def valid_ao_at_def)
-   apply (clarsimp simp: empty_table_def kernel_mappings_slots_eq)
-   apply (drule_tac x="ucast (p >> 20)" in spec)
-   apply (rule ccontr, simp)
-   apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
-                  split: option.splits arch_kernel_obj.splits)
-   done
 
-lemma get_pd_of_thread_reachable:
-  "get_pd_of_thread (kheap s) (arch_state s) t \<noteq> arm_global_pd (arch_state s)
+lemma get_pd_of_thread_reachable: (* ARMHYP change? *)
+  "get_pd_of_thread (kheap s) (arch_state s) t \<noteq> None (* arm_global_pd (arch_state s) *)
    \<Longrightarrow> (\<exists>\<rhd> get_pd_of_thread (kheap s) (arch_state s) t) s"
   by (auto simp: get_pd_of_thread_vs_lookup
           split: Structures_A.kernel_object.splits split_if_asm option.splits

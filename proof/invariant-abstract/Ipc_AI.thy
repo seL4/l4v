@@ -202,26 +202,11 @@ locale Ipc_AI =
         \<lbrace>valid_objs and cte_wp_at P (t, ref) and tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>
           do_ipc_transfer st ep b gr rt
         \<lbrace>\<lambda>rv. cte_wp_at P (t, ref)\<rbrace>"
-  assumes setup_caller_cap_valid_global_objs[wp]:
-    "\<And>send recv.
-      \<lbrace>valid_global_objs :: 'state_ext state \<Rightarrow> bool\<rbrace>
-        setup_caller_cap send recv
-      \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-  assumes handle_arch_fault_reply_typ_at[wp]:
-    "\<And> P T p x4 t label msg.
-      \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
-        handle_arch_fault_reply x4 t label msg
-      \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   assumes arch_get_sanitise_register_info_typ_at[wp]:
     "\<And> P T p t.
       \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
         arch_get_sanitise_register_info t
       \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  assumes do_fault_transfer_cte_wp_at[wp]:
-  "\<And> P p x t label msg.
-      \<lbrace>cte_wp_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>
-        do_fault_transfer x t label msg
-      \<lbrace> \<lambda>rv. cte_wp_at P p \<rbrace>"
 
 context Ipc_AI begin
 
@@ -882,16 +867,6 @@ lemma transfer_caps_loop_valid_arch_caps[wp]:
   apply clarsimp
   done
 
-crunch valid_global_objs [wp]: set_extra_badge valid_global_objs
-
-
-lemma transfer_caps_loop_valid_global_objs[wp]:
-  "\<And>ep buffer n caps slots mi.
-    \<lbrace>valid_global_objs :: 'state_ext state \<Rightarrow> bool\<rbrace>
-      transfer_caps_loop ep buffer n caps slots mi
-    \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-  by (wp transfer_caps_loop_pres cap_insert_valid_global_objs)
-
 
 
 crunch valid_kernel_mappings [wp]: set_extra_badge valid_kernel_mappings
@@ -936,17 +911,6 @@ lemma transfer_caps_loop_only_idle[wp]:
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv. only_idle\<rbrace>"
   by (wp transfer_caps_loop_pres | simp)+
-
-
-crunch valid_global_vspace_mappings [wp]: set_extra_badge valid_global_vspace_mappings
-
-
-lemma transfer_caps_loop_valid_global_pd_mappings[wp]:
-  "\<And>ep buffer n caps slots mi.
-    \<lbrace>valid_global_vspace_mappings :: 'state_ext state \<Rightarrow> bool\<rbrace>
-      transfer_caps_loop ep buffer n caps slots mi
-    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
-  by (wp transfer_caps_loop_pres)
 
 
 crunch pspace_in_kernel_window [wp]: set_extra_badge pspace_in_kernel_window
@@ -1598,9 +1562,6 @@ crunch irq_handlers[wp]: do_ipc_transfer "valid_irq_handlers :: 'state_ext state
 crunch arch_objs[wp]: do_ipc_transfer "valid_arch_objs :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
 
-crunch valid_global_objs[wp]: do_ipc_transfer "valid_global_objs :: 'state_ext state \<Rightarrow> bool"
-  (wp: crunch_wps simp: zipWithM_x_mapM)
-
 crunch arch_caps[wp]: do_ipc_transfer "valid_arch_caps :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_valid_arch_caps
    simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
@@ -1637,9 +1598,6 @@ lemma set_mrs_only_idle [wp]:
 context Ipc_AI begin
 
 crunch only_idle [wp]: do_ipc_transfer "only_idle :: 'state_ext state \<Rightarrow> bool"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch global_pd_mappings [wp]: do_ipc_transfer "valid_global_vspace_mappings :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch pspace_in_kernel_window[wp]: do_ipc_transfer "pspace_in_kernel_window :: 'state_ext state \<Rightarrow> bool"
@@ -2371,8 +2329,6 @@ crunch v_ker_map[wp]: setup_caller_cap "valid_kernel_mappings"
 crunch eq_ker_map[wp]: setup_caller_cap "equal_kernel_mappings"
 
 crunch asid_map [wp]: setup_caller_cap "valid_asid_map"
-
-crunch global_pd_mappings[wp]: setup_caller_cap "valid_global_vspace_mappings"
 
 crunch pspace_in_kernel_window[wp]: setup_caller_cap "pspace_in_kernel_window"
 

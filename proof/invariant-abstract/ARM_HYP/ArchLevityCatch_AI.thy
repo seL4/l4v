@@ -25,8 +25,8 @@ lemma asid_high_bits_of_shift :
   done
 
 lemma  ptrFormPAddr_addFromPPtr :
-  "ptrFromPAddr (Platform.ARM.addrFromPPtr x) = x"
-  by (simp add: ptrFromPAddr_def Platform.ARM.addrFromPPtr_def)
+  "ptrFromPAddr (Platform.ARM_HYP.addrFromPPtr x) = x"
+  by (simp add: ptrFromPAddr_def Platform.ARM_HYP.addrFromPPtr_def)
 
 (****** From GeneralLib *******)
 

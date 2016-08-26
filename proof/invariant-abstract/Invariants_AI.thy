@@ -30,18 +30,18 @@ requalify_consts
   valid_arch_cap_ref
   acap_class
   valid_ipc_buffer_cap
+  wellformed_vspace_obj
   wellformed_arch_obj
   valid_asid_map
   valid_arch_obj
+  valid_vspace_obj
 
   valid_arch_state
   valid_arch_objs
+  valid_vspace_objs
   valid_arch_caps
-  valid_global_objs
   valid_kernel_mappings
   equal_kernel_mappings
-  valid_global_vspace_mappings
-  valid_global_pt_mappings
   pspace_in_kernel_window
 
   ASIDPoolObj
@@ -66,12 +66,17 @@ requalify_facts
   valid_ipc_buffer_cap_null
   valid_arch_cap_typ
   valid_arch_obj_typ
+  valid_vspace_obj_typ
+  valid_arch_obj_typ_gen
+  valid_arch_imp_valid_vspace_obj
+  valid_arch_imp_valid_vspace_objs
   arch_kobj_size_bounded
   global_refs_lift
   valid_arch_state_lift
   aobj_at_default_arch_cap_valid
   aobj_ref_default
   valid_arch_objs_def
+  valid_vspace_objs_def
   acap_rights_update_id
   physical_arch_cap_has_ref
   wellformed_arch_default
@@ -500,7 +505,7 @@ where
   | Notification p \<Rightarrow> valid_ntfn p s
   | TCB t \<Rightarrow> valid_tcb ptr t s
   | CNode sz cs \<Rightarrow> valid_cs sz cs s
-  | ArchObj ao \<Rightarrow> wellformed_arch_obj ao"
+  | ArchObj ao \<Rightarrow> wellformed_arch_obj ao s"
 
 definition
   valid_objs :: "'z::state_ext state \<Rightarrow> bool"
@@ -879,14 +884,12 @@ where
                   and valid_irq_handlers
                   and valid_irq_states
                   and valid_machine_state
-                  and valid_arch_objs
+(*                  and valid_arch_objs *)
+                  and valid_vspace_objs
                   and valid_arch_caps
-                  and valid_global_objs
                   and valid_kernel_mappings
                   and equal_kernel_mappings
                   and valid_asid_map
-                  and valid_global_vspace_mappings
-                  and valid_global_pd_mappings
                   and pspace_in_kernel_window
                   and cap_refs_in_kernel_window
                   and pspace_respects_device_region
@@ -963,11 +966,9 @@ abbreviation(input)
        and valid_mdb and valid_idle and only_idle and if_unsafe_then_cap
        and valid_reply_caps and valid_reply_masters and valid_global_refs
        and valid_arch_state and valid_machine_state and valid_irq_states
-       and valid_irq_node and valid_irq_handlers and valid_arch_objs
-       and valid_arch_caps and valid_global_objs and valid_kernel_mappings
+       and valid_irq_node and valid_irq_handlers and valid_vspace_objs (* and valid_arch_objs *)
+       and valid_arch_caps and valid_kernel_mappings
        and equal_kernel_mappings and valid_asid_map
-       and valid_global_vspace_mappings
-       and valid_global_pd_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
        and cur_tcb"
@@ -975,6 +976,17 @@ abbreviation(input)
 
 -- ---------------------------------------------------------------------------
 section "Lemmas"
+
+lemma valid_pandvspace_imp_valid_arch_objs:
+        "(valid_pspace and valid_vspace_objs) s ==> valid_arch_objs s"
+  apply (simp add: valid_pspace_def valid_arch_objs_def)
+  apply clarsimp
+  apply (simp add: valid_objs_def split: ARM_A.arch_kernel_obj.splits)
+  apply (clarsimp simp: obj_at_def dom_def)
+  apply (erule_tac x=p in allE)
+  apply (clarsimp simp: valid_obj_def ARM.wellformed_arch_obj_def
+                        ARM_A.arch_kernel_obj.case)
+done (* ARMHYP *)
 
 lemma valid_bound_ntfn_None[simp]:
   "valid_bound_ntfn None = \<top>"
@@ -2540,24 +2552,15 @@ interpretation Arch_p_arch_update_eq f ..
 
 lemma valid_arch_objs_update [iff]:
   "valid_arch_objs (f s) = valid_arch_objs s"
-  by (simp add: valid_arch_objs_def)
+  by (simp add: valid_arch_objs_def valid_vspace_objs_def)
+
+lemma valid_vspace_objs_update [iff]:
+  "valid_vspace_objs (f s) = valid_vspace_objs s"
+  by (simp add: valid_vspace_objs_def)
 
 lemma valid_arch_cap_update [iff]:
   "valid_arch_caps (f s) = valid_arch_caps s"
   by (simp add: valid_arch_caps_def)
-
-lemma valid_global_objs_update [iff]:
-  "valid_global_objs (f s) = valid_global_objs s"
-  by (simp add: valid_global_objs_def arch)
-
-lemma valid_global_vspace_mappings_update [iff]:
-  "valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
-  by (simp add: valid_global_vspace_mappings_def
-
-lemma valid_global_pd_mappings_update [iff]: (* ARM_HYP *)
-  "valid_global_pt_mappings r (f s) = valid_global_pt_mappings r s"
-  by (simp add: valid_global_pt_mappings_def
-                arch)
 
 lemma pspace_in_kernel_window_update [iff]:
   "pspace_in_kernel_window (f s) = pspace_in_kernel_window s"
@@ -2828,7 +2831,7 @@ lemmas abs_typ_at_lifts  =
   cap_table_at_typ_at
   valid_tcb_state_typ valid_cte_at_typ valid_ntfn_typ
   valid_ep_typ valid_cs_typ valid_arch_obj_typ valid_untyped_typ
-  valid_tcb_typ valid_obj_typ valid_cap_typ
+  valid_tcb_typ valid_obj_typ valid_cap_typ valid_vspace_obj_typ
 
 lemma valid_idle_lift:
   assumes "\<And>P t. \<lbrace>idle_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. idle_tcb_at P t\<rbrace>"
@@ -3181,7 +3184,11 @@ lemma invs_valid_tcb_ctable:
 
 lemma invs_arch_objs [elim!]:
   "invs s \<Longrightarrow> valid_arch_objs s"
-  by (simp add: invs_def valid_state_def)
+  by (simp add: invs_def valid_state_def valid_pandvspace_imp_valid_arch_objs)
+
+lemma invs_vspace_objs [elim!]:
+  "invs s \<Longrightarrow> valid_vspace_objs s"
+  by (simp add: invs_def valid_state_def valid_arch_imp_valid_vspace_objs)
 
 lemma invs_valid_idle[elim!]:
   "invs s \<Longrightarrow> valid_idle s"
@@ -3204,12 +3211,6 @@ lemma cur_tcb_revokable [iff]:
 lemma cur_tcb_arch [iff]:
   "cur_tcb (arch_state_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
-
-
-
-lemma invs_valid_global_objs[elim!]:
-  "invs s \<Longrightarrow> valid_global_objs s "
-  by (clarsimp simp: invs_def valid_state_def)
 
 lemma get_irq_slot_real_cte:
   "\<lbrace>invs\<rbrace> get_irq_slot irq \<lbrace>real_cte_at\<rbrace>"

@@ -202,7 +202,18 @@ lemma throw_on_false_bcorres[wp]: "bcorres f f' \<Longrightarrow>  bcorres (thro
   done
 
 context Arch begin
-  crunch (bcorres)bcorres[wp]: arch_finalise_cap,prepare_thread_delete truncate_state (simp: swp_def ignore: forM_x)
+
+lemma gets_the_get_tcb_bcorres[wp]: "bcorres (gets_the (get_tcb a)) (gets_the (get_tcb a)) "
+  apply (simp add: gets_the_def bcorres_underlying_def assert_opt_def| wp | wpc| clarsimp)+
+  apply (case_tac r; simp add: fail_s_bcorres_underlying return_s_bcorres_underlying)
+  apply (simp add: gets_s_bcorres_underlying)
+done
+
+crunch (bcorres)bcorres[wp]:thread_set
+truncate_state ( simp: swp_def ignore: maskInterrupt)
+
+crunch (bcorres)bcorres[wp]: arch_finalise_cap,prepare_thread_delete truncate_state (simp: swp_def ignore: forM_x)
+
 end
 
 requalify_facts Arch.arch_finalise_cap_bcorres Arch.prepare_thread_delete_bcorres

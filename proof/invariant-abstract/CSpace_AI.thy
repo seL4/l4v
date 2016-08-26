@@ -3798,8 +3798,11 @@ lemma cap_insert_valid_global_refs[wp]:
 
 crunch irq_node[wp]: cap_insert "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
-
+(*
 crunch arch_objs [wp]: cap_insert "valid_arch_objs"
+  (wp: crunch_wps simp: crunch_simps)
+*)
+crunch vspace_objs [wp]: cap_insert "valid_vspace_objs"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch arch_caps[wp]: update_cdt "valid_arch_caps"
@@ -3954,10 +3957,6 @@ crunch empty_table_at[wp]: cap_insert "obj_at (empty_table S) p"
      simp: empty_table_caps_of)
 
 
-crunch valid_global_objs[wp]: cap_insert "valid_global_objs"
-  (wp: crunch_wps)
-
-
 crunch v_ker_map[wp]: cap_insert "valid_kernel_mappings"
   (wp: crunch_wps)
 
@@ -3971,10 +3970,6 @@ crunch only_idle[wp]: cap_insert only_idle
 
 
 crunch equal_ker_map[wp]: cap_insert "equal_kernel_mappings"
-  (wp: crunch_wps)
-
-
-crunch global_pd_mappings[wp]: cap_insert "valid_global_vspace_mappings"
   (wp: crunch_wps)
 
 
@@ -4101,7 +4096,7 @@ lemma cap_insert_invs[wp]:
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: invs_def valid_state_def)
   apply (rule hoare_pre)
-   apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle
+   apply (wp_trace cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle
              valid_irq_node_typ cap_insert_valid_arch_caps)
   apply (auto simp: cte_wp_at_caps_of_state is_derived_cap_is_device
                         is_derived_cap_range valid_pspace_def)
@@ -4612,8 +4607,10 @@ lemma setup_reply_master_globals[wp]:
 
 crunch arch[wp]: setup_reply_master "valid_arch_state"
   (simp: crunch_simps)
-
+(*
 crunch arch_objs[wp]: setup_reply_master "valid_arch_objs"
+*)
+crunch vspace_objs[wp]: setup_reply_master "valid_vspace_objs"
 
 
 lemma setup_reply_master_irq_handlers[wp]:
@@ -4640,8 +4637,10 @@ crunch empty_table_at[wp]: setup_reply_master "obj_at (empty_table S) p"
   (ignore: set_cap wp: set_cap_obj_at_impossible crunch_wps
      simp: if_apply_def2 empty_table_caps_of)
 
-lemmas setup_reply_master_valid_ao_at[wp]
-    = valid_ao_at_lift [OF setup_reply_master_typ_at setup_reply_master_arch_ko_at]
+
+lemmas setup_reply_master_valid_vso_at[wp]
+    = ARM.valid_vso_at_lift [OF setup_reply_master_typ_at setup_reply_master_arch_ko_at]
+
 
 crunch v_ker_map[wp]: setup_reply_master "valid_kernel_mappings"
 
@@ -4650,11 +4649,6 @@ crunch eq_ker_map[wp]: setup_reply_master "equal_kernel_mappings"
 crunch asid_map[wp]: setup_reply_master valid_asid_map
 
 crunch only_idle[wp]: setup_reply_master only_idle
-
-crunch valid_global_objs[wp]: setup_reply_master "valid_global_objs"
-
-crunch global_pd_mappings[wp]: setup_reply_master "valid_global_vspace_mappings"
-  (simp: crunch_simps wp: crunch_wps)
 
 crunch pspace_in_kernel_window[wp]: setup_reply_master "pspace_in_kernel_window"
 crunch pspace_respects_device_region[wp]: setup_reply_master "pspace_respects_device_region"

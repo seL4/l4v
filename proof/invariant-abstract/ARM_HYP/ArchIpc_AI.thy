@@ -408,14 +408,6 @@ lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
        | wpc | simp add:imp)+
   done
 
-lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
-  "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-  apply (wp valid_global_objs_lift valid_ao_at_lift)
-  apply (simp_all add: setup_caller_cap_def)
-   apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
-  done
-
-
 
 end
 

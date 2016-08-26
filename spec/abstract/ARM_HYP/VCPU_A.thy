@@ -116,13 +116,13 @@ text {* VCPU : inject IRQ *}
 
 (* ARMHYP FIXME see comment in VCPU_H *)
 definition make_virq :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> virq" where
-  "make_virq group prio irq \<equiv>
+  "make_virq grp prio irq \<equiv>
   let
     groupShift = 30;
     prioShift = 23;
     irqPending = 1 << (28 - 1);
     eoiirqen = 1 << (19 - 1)
-  in (group << groupShift) || (prio << prioShift) || irq || irqPending || eoiirqen"
+  in (grp << groupShift) || (prio << prioShift) || irq || irqPending || eoiirqen"
 
 
 definition decode_vcpu_inject_irq :: "obj_ref list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"

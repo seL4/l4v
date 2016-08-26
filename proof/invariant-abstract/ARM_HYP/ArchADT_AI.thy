@@ -17,6 +17,16 @@ imports
 begin
 context Arch begin global_naming ARM
 
+(* FIXME copied from ArchAcc_AI; should be moved to ArchInvariants_AI *)
+
+lemmas vspace_bits_defs = pd_bits_def pde_bits_def pt_bits_def pte_bits_def pageBits_def
+
+lemma word_1FF_is_mask:
+  "0x1FF = mask 9"
+  by (simp add: mask_def)
+
+(*** FIXME end ***)
+
 subsection {* Constructing a virtual-memory view *}
 
 text {*
@@ -41,24 +51,24 @@ text {*
 *}
 definition
   get_pd_of_thread :: "kheap \<Rightarrow> arch_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref"
-where
+where (* ARMHYP *) (* change to return an option instead of global kernel mapping? *)
   get_pd_of_thread_def:
   "get_pd_of_thread khp astate tcb_ref \<equiv>
    case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
      (case tcb_vtable tcb of
         ArchObjectCap (PageDirectoryCap pd_ref (Some asid))
           \<Rightarrow> (case arm_asid_table astate (asid_high_bits_of asid) of
-                None \<Rightarrow> arm_global_pd astate
+                None \<Rightarrow> undefined
               | Some p \<Rightarrow> (case khp p of
                             Some (ArchObj ako) \<Rightarrow>
                                if (VSRef (asid && mask asid_low_bits)
                                          (Some AASIDPool), pd_ref)
                                   \<in> vs_refs_arch ako
                                  then pd_ref
-                               else arm_global_pd astate
-                             | _ \<Rightarrow> arm_global_pd astate))
-      | _ \<Rightarrow>  arm_global_pd astate)
-   | _ \<Rightarrow>  arm_global_pd astate"
+                               else undefined
+                             | _ \<Rightarrow> undefined))
+      | _ \<Rightarrow>  undefined)
+   | _ \<Rightarrow>  undefined"
 
 
 lemma VSRef_AASIDPool_in_vs_refs:
@@ -81,7 +91,7 @@ context
 notes vs_refs_arch_def[simp del]
 begin
 
-lemma get_pd_of_thread_def2:
+lemma get_pd_of_thread_def2: (* ARMHYP *) (* change to return an option instead of global kernel mapping? *)
   "get_pd_of_thread khp astate tcb_ref \<equiv>
         case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
           (case tcb_vtable tcb of
@@ -91,9 +101,9 @@ lemma get_pd_of_thread_def2:
                         khp p = Some (ArchObj (ASIDPool apool)) \<and>
                         apool (ucast (asid && mask asid_low_bits)) = Some pd_ref)
                     then pd_ref
-                    else arm_global_pd astate
-           | _ \<Rightarrow>  arm_global_pd astate)
-        | _ \<Rightarrow>  arm_global_pd astate"
+                    else undefined
+           | _ \<Rightarrow>  undefined)
+        | _ \<Rightarrow>  undefined"
   apply (rule eq_reflection)
   apply (clarsimp simp: get_pd_of_thread_def
                  split: kernel_object.splits option.splits)
@@ -107,16 +117,16 @@ lemma get_pd_of_thread_def2:
 lemma the_arch_cap_simp[simp]: "the_arch_cap (ArchObjectCap x) = x"
   by (simp add: the_arch_cap_def)
 
-lemma get_pd_of_thread_vs_lookup:
+lemma get_pd_of_thread_vs_lookup: (* ARMHYP *)
   "get_pd_of_thread (kheap s) (arch_state s) tcb_ref =
    (case kheap s tcb_ref of
       Some (TCB tcb) \<Rightarrow>
         (case tcb_vtable tcb of
            ArchObjectCap (PageDirectoryCap pd_ref (Some asid)) \<Rightarrow>
              if (the (vs_cap_ref (tcb_vtable tcb)) \<rhd> pd_ref) s then pd_ref
-             else arm_global_pd (arch_state s)
-         | _ \<Rightarrow> arm_global_pd (arch_state s))
-    | _ \<Rightarrow> arm_global_pd (arch_state s))"
+             else undefined
+         | _ \<Rightarrow> undefined)
+    | _ \<Rightarrow> undefined)"
   apply (clarsimp simp: get_pd_of_thread_def split: option.splits)
   apply (case_tac "the (kheap s tcb_ref)", simp_all, clarsimp)
   apply (rename_tac tcb)
@@ -154,8 +164,8 @@ end
 
 (* NOTE: This statement would clearly be nicer for a partial function
          but later on, we really want the function to be total. *)
-lemma get_pd_of_thread_eq:
-  "pd_ref \<noteq> arm_global_pd (arch_state s) \<Longrightarrow>
+lemma get_pd_of_thread_eq: (* ARMHYP *)
+  "pd_ref \<noteq> undefined \<Longrightarrow>
    get_pd_of_thread (kheap s) (arch_state s) tcb_ref = pd_ref \<longleftrightarrow>
    (\<exists>tcb. kheap s tcb_ref = Some (TCB tcb) \<and>
           (\<exists>asid. tcb_vtable tcb =
@@ -176,16 +186,18 @@ text {* Non-monad versions of @{term get_pte} and @{term get_pde}.
   \item[@{term vptr}] a virtual address.
   \end{description}
 *}
+
 definition
   "get_pt_entry ahp pt_ref vptr \<equiv>
    case ahp pt_ref of
      Some (PageTable pt) \<Rightarrow>
-       Some (pt (ucast ((vptr >> 12) && mask 8)))
+       Some (pt (ucast ((vptr >> 12) && mask 9)))
    | _ \<Rightarrow> None"
+
 definition
   "get_pd_entry ahp pd_ref vptr \<equiv>
    case ahp pd_ref of
-     Some (PageDirectory pd) \<Rightarrow> Some (pd (ucast (vptr >> 20)))
+     Some (PageDirectory pd) \<Rightarrow> Some (pd (ucast (vptr >> pageBits + pt_bits - pte_bits)))
    | _ \<Rightarrow> None"
 
 text {* The following function is used to extract the
@@ -197,22 +209,22 @@ definition
 lemma get_pd_entry_None_iff_get_pde_fail:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
    get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr = None \<longleftrightarrow>
-   get_pde (pd_ref + (vptr >> 20 << 2)) s = ({}, True)"
-apply (subgoal_tac "(vptr >> 20 << 2) && ~~ mask pd_bits = 0")
+   get_pde (pd_ref + (vptr >> 21 << 3)) s = ({}, True)"
+apply (subgoal_tac "(vptr >> 21 << 3) && ~~ mask pd_bits = 0")
  apply (clarsimp simp add: get_pd_entry_def get_arch_obj_def
             split: option.splits Structures_A.kernel_object.splits
                    arch_kernel_obj.splits)
  apply (clarsimp simp add: get_pde_def get_pd_def bind_def return_def assert_def
   get_object_def simpler_gets_def fail_def split_def mask_out_sub_mask mask_eqs)
- apply (subgoal_tac "pd_ref + (vptr >> 20 << 2) -
-                    (pd_ref + (vptr >> 20 << 2) && mask pd_bits) = pd_ref")
+ apply (subgoal_tac "pd_ref + (vptr >> 21 << 3) -
+                    (pd_ref + (vptr >> 21 << 3) && mask pd_bits) = pd_ref")
   apply (simp (no_asm_simp) add: fail_def return_def)
   apply clarsimp
  apply (simp add: mask_add_aligned pd_bits_def pageBits_def)
 apply (simp add: pd_bits_def pageBits_def)
 apply (simp add: and_not_mask)
 apply (simp add: shiftl_shiftr3 word_size shiftr_shiftr)
-apply (subgoal_tac "vptr >> 32 = 0", simp)
+apply (subgoal_tac "vptr >> 32 = 0", simp add: pde_bits_def)
 apply (cut_tac shiftr_less_t2n'[of vptr 32 0], simp)
  apply (simp add: mask_eq_iff)
  apply (cut_tac lt2p_lem[of 32 vptr])
@@ -222,21 +234,21 @@ done
 lemma get_pd_entry_Some_eq_get_pde:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
    get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr = Some x \<longleftrightarrow>
-   get_pde (pd_ref + (vptr >> 20 << 2)) s = ({(x,s)}, False)"
-apply (subgoal_tac "(vptr >> 20 << 2) && ~~ mask pd_bits = 0")
+   get_pde (pd_ref + (vptr >> 21 << 3)) s = ({(x,s)}, False)"
+apply (subgoal_tac "(vptr >> 21 << 3) && ~~ mask pd_bits = 0")
  apply (clarsimp simp add: get_pd_entry_def get_arch_obj_def
             split: option.splits Structures_A.kernel_object.splits
                    arch_kernel_obj.splits)
  apply (clarsimp simp add: get_pde_def get_pd_def bind_def return_def assert_def
             get_object_def simpler_gets_def fail_def split_def mask_out_sub_mask
             mask_eqs)
- apply (subgoal_tac "pd_ref + (vptr >> 20 << 2) -
-                    (pd_ref + (vptr >> 20 << 2) && mask pd_bits) = pd_ref")
+ apply (subgoal_tac "pd_ref + (vptr >> 21 << 3) -
+                    (pd_ref + (vptr >> 21 << 3) && mask pd_bits) = pd_ref")
   apply (simp (no_asm_simp) add: fail_def return_def)
   apply (clarsimp simp add: mask_add_aligned pd_bits_def pageBits_def)
-  apply (cut_tac shiftl_shiftr_id[of 2 "vptr >> 20"])
-    apply (simp add: word_bits_def)+
-  apply (cut_tac shiftr_less_t2n'[of vptr 20 30])
+  apply (cut_tac shiftl_shiftr_id[of 3 "vptr >> 21"])
+    apply (simp add: vspace_bits_defs)+
+  apply (cut_tac shiftr_less_t2n'[of vptr 21 29])
     apply (simp add: word_bits_def)
    apply (simp add: mask_eq_iff)
    apply (cut_tac lt2p_lem[of 50 vptr])
@@ -245,7 +257,7 @@ apply (subgoal_tac "(vptr >> 20 << 2) && ~~ mask pd_bits = 0")
 apply (simp add: pd_bits_def pageBits_def)
 apply (simp add: and_not_mask)
 apply (simp add: shiftl_shiftr3 word_size shiftr_shiftr)
-apply (subgoal_tac "vptr >> 32 = 0", simp)
+apply (subgoal_tac "vptr >> 32 = 0", simp add: pde_bits_def)
 apply (cut_tac shiftr_less_t2n'[of vptr 32 0], simp)
  apply (simp add: mask_eq_iff)
  apply (cut_tac lt2p_lem[of 32 vptr])
@@ -255,47 +267,47 @@ done
 lemma get_pt_entry_None_iff_get_pte_fail:
   "is_aligned pt_ref pt_bits \<Longrightarrow>
    get_pt_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pt_ref vptr = None \<longleftrightarrow>
-   get_pte (pt_ref + ((vptr >> 12) && 0xFF << 2)) s = ({}, True)"
+   get_pte (pt_ref + ((vptr >> 12) && 0x1FF << 3)) s = ({}, True)"
 apply (clarsimp simp add: get_pt_entry_def get_arch_obj_def
              split: option.splits Structures_A.kernel_object.splits
                     arch_kernel_obj.splits)
 apply (clarsimp simp add: get_pte_def get_pt_def bind_def return_def assert_def
   get_object_def simpler_gets_def fail_def split_def mask_out_sub_mask mask_eqs)
-apply (subgoal_tac "pt_ref + ((vptr >> 12) && 0xFF << 2) -
-                    (pt_ref + ((vptr >> 12) && 0xFF << 2) && mask pt_bits) =
+apply (subgoal_tac "pt_ref + ((vptr >> 12) && 0x1FF << 3) -
+                    (pt_ref + ((vptr >> 12) && 0x1FF << 3) && mask pt_bits) =
                     pt_ref")
  apply (simp (no_asm_simp) add: fail_def return_def)
  apply clarsimp
-apply (simp add: mask_add_aligned pt_bits_def pageBits_def)
-apply (cut_tac and_mask_shiftl_comm[of 8 2 "vptr >> 12"])
+apply (simp add: mask_add_aligned pt_bits_def pageBits_def pte_bits_def)
+apply (cut_tac and_mask_shiftl_comm[of 9 3 "vptr >> 12"])
  apply (simp_all add: word_size mask_def AND_twice)
 done
-
+term pt_bits
 lemma get_pt_entry_Some_eq_get_pte:
   "is_aligned pt_ref pt_bits \<Longrightarrow>
    get_pt_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pt_ref vptr = Some x \<longleftrightarrow>
-   get_pte (pt_ref + ((vptr >> 12) && mask 8 << 2)) s = ({(x,s)}, False)"
+   get_pte (pt_ref + ((vptr >> 12) && mask 9 << 3)) s = ({(x,s)}, False)"
   apply (clarsimp simp add: get_pt_entry_def get_arch_obj_def
              split: option.splits Structures_A.kernel_object.splits
                     arch_kernel_obj.splits)
-  apply (clarsimp simp add: get_pte_def get_pt_def bind_def return_def
+  apply_trace (clarsimp simp add: get_pte_def get_pt_def bind_def return_def
             assert_def get_object_def simpler_gets_def fail_def split_def
             mask_out_sub_mask mask_eqs)
-  apply (subgoal_tac "pt_ref + ((vptr >> 12) && mask 8 << 2) -
-                      (pt_ref + ((vptr >> 12) && mask 8 << 2) && mask pt_bits) =
+  apply (subgoal_tac "pt_ref + ((vptr >> 12) && mask 9 << 3) -
+                      (pt_ref + ((vptr >> 12) && mask 9 << 3) && mask pt_bits) =
                       pt_ref")
    apply (simp (no_asm_simp) add: fail_def return_def)
-   apply (clarsimp simp add: mask_add_aligned pt_bits_def pageBits_def
+   apply (clarsimp simp add: mask_add_aligned vspace_bits_defs
               word_size
               and_mask_shiftr_comm and_mask_shiftl_comm shiftr_shiftr AND_twice)
-   apply (cut_tac shiftl_shiftr_id[of 2 "(vptr >> 12)"])
-     apply (simp add: word_bits_def)+
-   apply (cut_tac shiftr_less_t2n'[of vptr 12 30])
-     apply (simp add: word_bits_def)
+   apply (cut_tac shiftl_shiftr_id[of 3 "(vptr >> 12)"])
+     apply (simp add: vspace_bits_defs)+
+   apply (cut_tac shiftr_less_t2n'[of vptr 12 29])
+     apply (simp add: vspace_bits_defs)
     apply (simp add: mask_eq_iff)
     apply (cut_tac lt2p_lem[of 32 vptr])
      apply (cut_tac word_bits_len_of, simp+)
-  apply (simp add: mask_add_aligned pt_bits_def pageBits_def
+  apply (simp add: mask_add_aligned vspace_bits_defs
                    word_size and_mask_shiftl_comm  AND_twice)
 done
 
@@ -322,10 +334,10 @@ where
   get_page_info_def:
   "get_page_info ahp pd_ref vptr \<equiv>
    case get_pd_entry ahp pd_ref vptr of
-     Some (PageTablePDE p _ _) \<Rightarrow>
+     Some (PageTablePDE p) \<Rightarrow>
        get_pt_info ahp (ptrFromPAddr p) vptr
-   | Some (SectionPDE base attrs _ rights) \<Rightarrow> Some (base, 20, attrs, rights)
-   | Some (SuperSectionPDE base attrs rights) \<Rightarrow> Some (base,24, attrs, rights)
+   | Some (SectionPDE base attrs rights) \<Rightarrow> Some (base, 21, attrs, rights)
+   | Some (SuperSectionPDE base attrs rights) \<Rightarrow> Some (base,25, attrs, rights)
    | _ \<Rightarrow> None"
 
 
@@ -333,8 +345,8 @@ where
    proof mostly copied from ArchAcc_R.pd_shifting *)
 lemma pd_shifting':
    "is_aligned pd pd_bits \<Longrightarrow>
-    (pd + (vptr >> 20 << 2) && ~~ mask pd_bits) = (pd::word32)"
-  apply (simp add: pd_bits_def pageBits_def)
+    (pd + (vptr >> 21 << 3) && ~~ mask pd_bits) = (pd::word32)"
+  apply (simp add: pd_bits_def pageBits_def pde_bits_def)
   apply (rule word_eqI)
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
@@ -358,22 +370,22 @@ lemma lookup_pt_slot_fail:
   "is_aligned pd pd_bits \<Longrightarrow>
    lookup_pt_slot pd vptr s = ({},True) \<longleftrightarrow>
    (\<forall>pdo. kheap s pd \<noteq> Some (ArchObj (PageDirectory pdo)))"
-apply (frule pd_shifting'[of _ vptr])
+  apply (frule pd_shifting'[of _ vptr])
 by (auto simp add: lookup_pt_slot_def lookup_pd_slot_def liftE_def bindE_def
         returnOk_def lift_def bind_def split_def throwError_def return_def
         get_pde_def get_pd_def Union_eq get_object_def simpler_gets_def
-        assert_def fail_def mask_eqs
+        assert_def fail_def mask_eqs vspace_bits_defs
       split: sum.splits split_if_asm Structures_A.kernel_object.splits
              arch_kernel_obj.splits pde.splits)
 
 (* FIXME: Lemma can be found in ArchAcc_R *)
 lemma shiftr_shiftl_mask_pd_bits:
-  "(((vptr :: word32) >> 20) << 2) && mask pd_bits = (vptr >> 20) << 2"
+  "(((vptr :: word32) >> 21) << 3) && mask pd_bits = (vptr >> 21) << 3"
   apply (rule iffD2 [OF mask_eq_iff_w2p])
-   apply (simp add: pd_bits_def pageBits_def word_size)
+   apply (simp add: vspace_bits_defs word_size)
   apply (rule shiftl_less_t2n)
-   apply (simp_all add: pd_bits_def word_bits_def pageBits_def word_size)
-  apply (cut_tac shiftr_less_t2n'[of vptr 20 12])
+   apply (simp_all add: vspace_bits_defs word_bits_def word_size)
+  apply (cut_tac shiftr_less_t2n'[of vptr 21 11])
     apply simp
    apply (simp add: mask_eq_iff)
    apply (cut_tac lt2p_lem[of 32 vptr], simp)
@@ -385,76 +397,77 @@ lemma lookup_pt_slot_no_fail:
   "is_aligned pd pd_bits \<Longrightarrow>
    kheap s pd = Some (ArchObj (PageDirectory pdo)) \<Longrightarrow>
    lookup_pt_slot pd vptr s =
-   (case pdo (ucast (vptr >> 20)) of
+   (case pdo (ucast (vptr >> 21)) of
       InvalidPDE \<Rightarrow>
         ({(Inl (ExceptionTypes_A.MissingCapability 20),s)},False)
-    | PageTablePDE p _ _ \<Rightarrow>
-        ({(Inr (ptrFromPAddr p + ((vptr >> 12) && 0xFF << 2)),s)},
+    | PageTablePDE p \<Rightarrow>
+        ({(Inr (ptrFromPAddr p + ((vptr >> 12) && 0x1FF << 3)),s)},
          False)
-    | SectionPDE _ _ _ _ \<Rightarrow>
+    | SectionPDE _ _ _ \<Rightarrow>
         ({(Inl (ExceptionTypes_A.MissingCapability 20),s)},False)
     | SuperSectionPDE _ _ _ \<Rightarrow>
         ({(Inl (ExceptionTypes_A.MissingCapability 20),s)},False)  )"
-apply (frule pd_shifting'[of _ vptr])
-apply (cut_tac shiftr_shiftl_mask_pd_bits[of vptr])
-apply (subgoal_tac "vptr >> 20 << 2 >> 2 = vptr >> 20")
-defer
- apply (rule shiftl_shiftr_id)
-  apply (simp_all add: word_bits_def)
-  apply (cut_tac shiftr_less_t2n'[of vptr 20 30])
-    apply (simp add: word_bits_def)
-   apply (simp add: mask_eq_iff)
-   apply (cut_tac lt2p_lem[of 32 vptr])
-    apply (cut_tac word_bits_len_of, simp_all)
+  apply (frule pd_shifting'[of _ vptr])
+  apply (cut_tac shiftr_shiftl_mask_pd_bits[of vptr])
+  apply (subgoal_tac "vptr >> 21 << 3 >> 3 = vptr >> 21")
+  defer
+   apply (rule shiftl_shiftr_id)
+    apply (simp_all add: word_bits_def)
+    apply (cut_tac shiftr_less_t2n'[of vptr 21 29])
+      apply (simp add: word_bits_def)
+     apply (simp add: mask_eq_iff)
+     apply (cut_tac lt2p_lem[of 32 vptr])
+      apply (cut_tac word_bits_len_of, simp_all)
 by (clarsimp simp add: lookup_pt_slot_def lookup_pd_slot_def liftE_def bindE_def
         returnOk_def lift_def bind_def split_def throwError_def return_def
         get_pde_def get_pd_def Union_eq get_object_def simpler_gets_def
-        assert_def fail_def mask_add_aligned
+        assert_def fail_def mask_add_aligned vspace_bits_defs word_1FF_is_mask
       split: sum.splits split_if_asm kernel_object.splits arch_kernel_obj.splits
              pde.splits)
 
 lemma get_page_info_pte:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
    lookup_pt_slot pd_ref vptr s = ({(Inr x,s)},False) \<Longrightarrow>
-   is_aligned (x - ((vptr >> 12) && 0xFF << 2)) pt_bits \<Longrightarrow>
+   is_aligned (x - ((vptr >> 12) && 0x1FF << 3)) pt_bits \<Longrightarrow>
    get_pte x s = ({(pte,s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
    (case pte of
      SmallPagePTE base attrs rights \<Rightarrow> Some (base, 12, attrs, rights)
    | LargePagePTE base attrs rights \<Rightarrow> Some (base, 16, attrs, rights)
    | _ \<Rightarrow> None)"
-apply (clarsimp simp add: get_page_info_def get_pd_entry_def
+  apply (clarsimp simp add: get_page_info_def get_pd_entry_def
                 split: option.splits)
-apply (intro conjI impI allI)
-  apply (frule lookup_pt_slot_fail[of _ vptr s],
+  apply (intro conjI impI allI)
+    apply (frule lookup_pt_slot_fail[of _ vptr s],
          clarsimp simp add: get_arch_obj_def)
- apply (frule lookup_pt_slot_fail[of _ vptr s],
+   apply (frule lookup_pt_slot_fail[of _ vptr s],
         clarsimp simp add: get_arch_obj_def)
-apply (frule lookup_pt_slot_fail[of _ vptr s],
+  apply (frule lookup_pt_slot_fail[of _ vptr s],
        clarsimp simp add: get_arch_obj_def)
-apply (frule (1) lookup_pt_slot_no_fail[where vptr=vptr])
-apply (clarsimp split: pde.splits option.splits)
-apply (clarsimp simp add: get_pt_info_def split: option.splits)
-apply (intro conjI impI)
- apply (drule get_pt_entry_None_iff_get_pte_fail[where s=s and vptr=vptr])
- apply (simp add: pt_bits_def pageBits_def mask_def)
-apply clarsimp
-apply (drule_tac x=x2 in get_pt_entry_Some_eq_get_pte[where s=s and vptr=vptr])
-apply (simp add: pt_bits_def pageBits_def mask_def)
+  apply (frule (1) lookup_pt_slot_no_fail[where vptr=vptr])
+  apply (clarsimp simp: vspace_bits_defs split: pde.splits option.splits)
+  apply (clarsimp simp add: get_pt_info_def split: option.splits)
+  apply (intro conjI impI)
+   apply (drule get_pt_entry_None_iff_get_pte_fail[simplified vspace_bits_defs, simplified, where s=s and vptr=vptr])
+   apply (simp add: pt_bits_def pageBits_def mask_def)
+  apply clarsimp
+  apply (rename_tac z)
+  apply (drule_tac x=z in get_pt_entry_Some_eq_get_pte[simplified vspace_bits_defs, simplified, where s=s and vptr=vptr])
+  apply (simp add: pt_bits_def pageBits_def mask_def)
 done
 
 lemma get_page_info_section:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
    get_pde (lookup_pd_slot pd_ref vptr) s =
-     ({(SectionPDE base attrs X rights, s)},False) \<Longrightarrow>
+     ({(SectionPDE base attrs rights, s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
-     Some (base, 20, attrs, rights)"
-apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
-apply (intro conjI impI allI)
- apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
- apply (simp split: option.splits)
-apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
-apply clarsimp
+     Some (base, 21, attrs, rights)"
+  apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
+  apply (intro conjI impI allI)
+   apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
+   apply (simp add: vspace_bits_defs split: option.splits)
+  apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
+  apply (clarsimp simp: vspace_bits_defs)
 done
 
 lemma get_page_info_super_section:
@@ -462,13 +475,13 @@ lemma get_page_info_super_section:
    get_pde (lookup_pd_slot pd_ref vptr) s =
      ({(SuperSectionPDE base attrs rights,s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
-     Some (base, 24, attrs, rights)"
-apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
-apply (intro conjI impI allI)
- apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
- apply (simp split: option.splits)
-apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
-apply clarsimp
+     Some (base, 25, attrs, rights)"
+  apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
+  apply (intro conjI impI allI)
+   apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
+   apply (simp add: vspace_bits_defs split: option.splits)
+  apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
+  apply (clarsimp simp: vspace_bits_defs)
 done
 
 text {*

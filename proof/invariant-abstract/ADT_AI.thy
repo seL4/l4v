@@ -249,12 +249,13 @@ text {*
   The mode after a kernel call is either user or idle
   (see also thm in Refine.thy).
 *}
+
 definition
   kernel_entry :: "event \<Rightarrow> user_context \<Rightarrow> (user_context,'z::state_ext_sched) s_monad"
   where
   "kernel_entry e tc \<equiv> do
     t \<leftarrow> gets cur_thread;
-    thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_context_set tc (tcb_arch tcb)\<rparr>) t;
+    thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_context_set tc (tcb_arch tcb) \<rparr>) t;
     call_kernel e;
     t' \<leftarrow> gets cur_thread;
     thread_get (arch_tcb_context_get o tcb_arch) t'

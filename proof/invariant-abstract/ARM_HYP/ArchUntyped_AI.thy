@@ -224,7 +224,6 @@ lemma copy_global_mappings_hoare_lift:(*FIXME: arch_split  \<rightarrow> these d
   assumes wp: "\<And>ptr val. \<lbrace>Q\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows       "\<lbrace>Q\<rbrace> copy_global_mappings pd \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (simp add: copy_global_mappings_def)
-  apply (wp mapM_x_wp' wp)
   done
 
 lemma init_arch_objects_hoare_lift:
@@ -310,8 +309,8 @@ lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
     set_cap_idle update_cap_ifunsafe)
   apply (simp add:valid_irq_node_def)
   apply wps
-  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_arch_objs set_cap_valid_arch_caps
-    set_cap.valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at )
+  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_vspace_objs set_cap_valid_arch_caps
+    set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at )
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps)
   apply (intro conjI,clarsimp)
         apply (rule ext,clarsimp simp:is_cap_simps)
@@ -475,7 +474,7 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
       and valid_cap (default_cap tp oref sz)
       and (\<lambda>(s::'state_ext::state_ext state). \<forall>r\<in>obj_refs (default_cap tp oref sz).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table {}) r s)
       and cte_wp_at (op = cap.NullCap) cref
       and K (tp \<noteq> ArchObject ASIDPoolObj)\<rbrace>
      create_cap tp sz p (cref, oref) \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
@@ -529,7 +528,7 @@ lemma init_arch_objects_excap[wp]:
 (**)
 
 crunch nonempty_table[wp]: do_machine_op
-  "\<lambda>s. P' (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)"
+  "\<lambda>s. P' (obj_at (nonempty_table {}) r s)"
 
 lemma store_pde_weaken:
   "\<lbrace>\<lambda>s. page_directory_at (p && ~~ mask pd_bits) s \<longrightarrow> P s\<rbrace> store_pde p e \<lbrace>Q\<rbrace> =
@@ -544,76 +543,28 @@ lemma store_pde_weaken:
   apply (rule use_valid, assumption)
    apply (simp add: store_pde_def set_pd_def set_object_def)
    apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def a_type_simps)
+  apply (clarsimp simp: obj_at_def a_type_simps vspace_bits_defs)
   apply (drule bspec, assumption)
-  apply (simp add: simpler_store_pde_def obj_at_def fun_upd_def
+  apply (simp add: simpler_store_pde_def obj_at_def fun_upd_def vspace_bits_defs
             split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   done
 
+(* ARMHYP not needed anymore?
 lemma store_pde_nonempty_table:
-  "\<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)
+  "\<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table {}) r s)
            \<and> (\<forall>rf. pde_ref pde = Some rf \<longrightarrow>
-                   rf \<in> set (arm_global_pts (arch_state s)))
-           \<and> ucast (pde_ptr && mask pd_bits >> 2) \<in> kernel_mapping_slots
+                   rf \<in> {})
            \<and> valid_pde_mappings pde\<rbrace>
      store_pde pde_ptr pde
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table {}) r s)\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def nonempty_table_def a_type_def)
-  apply (clarsimp simp add: empty_table_def)
+  apply (clarsimp simp add: empty_table_def vspace_bits_defs)
   done
-
-lemma store_pde_global_global_objs:
-  "\<lbrace>\<lambda>s. valid_global_objs s
-           \<and> (\<forall>rf. pde_ref pde = Some rf \<longrightarrow>
-                   rf \<in> set (arm_global_pts (arch_state s)))
-           \<and> ucast (pde_ptr && mask pd_bits >> 2) \<in> kernel_mapping_slots
-           \<and> valid_pde_mappings pde\<rbrace>
-   store_pde pde_ptr pde
-   \<lbrace>\<lambda>rv s. valid_global_objs s\<rbrace>"
-  apply (simp add: store_pde_def set_pd_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def fun_upd_def[symmetric])
-proof -
-  fix s pd
-  assume vg: "valid_global_objs s"
-     and gr: "\<forall>rf. pde_ref pde = Some rf \<longrightarrow>
-                   rf \<in> set (arm_global_pts (arch_state s))"
-     and uc: "ucast (pde_ptr && mask pd_bits >> 2) \<in> kernel_mapping_slots"
-     and vp: "valid_pde_mappings pde"
-     and pd: "kheap s (pde_ptr && ~~ mask pd_bits) =
-              Some (ArchObj (PageDirectory pd))"
-  let ?ko' = "ArchObj (PageDirectory
-                         (pd(ucast (pde_ptr && mask pd_bits >> 2) := pde)))"
-  let ?s' = "s\<lparr>kheap := kheap s(pde_ptr && ~~ mask pd_bits \<mapsto> ?ko')\<rparr>"
-  have typ_at: "\<And>T p. typ_at T p s \<Longrightarrow> typ_at T p ?s'"
-    using pd
-    by (clarsimp simp: obj_at_def a_type_def)
-  have valid_pde: "\<And>pde. valid_pde pde s \<Longrightarrow> valid_pde pde ?s'"
-    by (case_tac pdea, simp_all add: typ_at)
-  have valid_pte: "\<And>pte. valid_pte pte s \<Longrightarrow> valid_pte pte ?s'"
-    by (case_tac pte, simp_all add: typ_at)
-  have valid_ao_at: "\<And>p. valid_ao_at p s \<Longrightarrow> valid_ao_at p ?s'"
-    using pd uc
-    apply (clarsimp simp: valid_ao_at_def obj_at_def)
-    apply (intro conjI impI allI)
-      apply (clarsimp simp: valid_pde vp)
-    apply (case_tac ao, simp_all add: typ_at valid_pde valid_pte)
-    done
-  have empty:
-    "\<And>p. obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s
-          \<Longrightarrow> obj_at (empty_table (set (arm_global_pts (arch_state s)))) p ?s'"
-    using pd gr vp uc
-    by (clarsimp simp: obj_at_def empty_table_def)
-  show "valid_global_objs ?s'"
-    using vg pd
-    apply (clarsimp simp add: valid_global_objs_def valid_ao_at empty)
-    apply (fastforce simp add: obj_at_def)
-    done
-qed
-
-lemma valid_arch_state_global_pd:
+*)
+(*
+lemma valid_arch_state_global_pd: (* ARMHYP restate? *)
   "\<lbrakk> valid_arch_state s; pspace_aligned s \<rbrakk>
     \<Longrightarrow> obj_at (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd)) (arm_global_pd (arch_state s)) s
            \<and> is_aligned (arm_global_pd (arch_state s)) pd_bits"
@@ -623,61 +574,29 @@ lemma valid_arch_state_global_pd:
   apply (clarsimp split: Structures_A.kernel_object.split_asm
                          arch_kernel_obj.split_asm split_if_asm)
   done
-
+*)
 lemma pd_shifting':
-  "is_aligned (pd :: word32) pd_bits \<Longrightarrow> pd + (vptr >> 20 << 2) && ~~ mask pd_bits = pd"
-  by (rule pd_shifting, simp add: pd_bits_def pageBits_def)
+  "is_aligned (pd :: word32) pd_bits \<Longrightarrow> pd + (vptr >> pageBits + pt_bits - pte_bits << pde_bits) && ~~ mask pd_bits = pd"
+  by (rule pd_shifting, simp add: vspace_bits_defs)
 
-lemma copy_global_mappings_nonempty_table:
+lemma copy_global_mappings_nonempty_table: (* ARMHYP need change *)
   "is_aligned pd pd_bits \<Longrightarrow>
-   \<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s) \<and>
-        valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s\<rbrace>
+   \<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table {}) r s) \<and>
+        valid_arch_state s \<and> pspace_aligned s\<rbrace>
    copy_global_mappings pd
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table
-                        (set (arm_global_pts (arch_state s)))) r s) \<and>
-           valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s\<rbrace>"
+                        {}) r s) \<and>
+           valid_arch_state s \<and> pspace_aligned s\<rbrace>"
   apply (simp add: copy_global_mappings_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
-  apply (rule hoare_strengthen_post)
-   apply (rule mapM_x_wp[where S="{x. kernel_base >> 20 \<le> x \<and>
-                                      x < 2 ^ (pd_bits - 2)}"])
-    apply (wp get_pde_wp hoare_vcg_ball_lift
-              store_pde_weaken[THEN iffD2,OF store_pde_nonempty_table]
-              store_pde_weaken[THEN iffD2,OF store_pde_global_global_objs]
-           | simp)+
-    apply clarsimp
-    apply (subst (asm) is_aligned_add_helper[THEN conjunct2])
-      apply (clarsimp simp: valid_arch_state_def pspace_aligned_def dom_def
-                            obj_at_def)
-      apply (drule_tac x="arm_global_pd (arch_state s)" in spec, erule impE,
-             fastforce)
-      apply (simp add: pd_bits_def pageBits_def)
-     apply (erule shiftl_less_t2n)
-     apply (simp add: pd_bits_def pageBits_def)
-    apply (clarsimp simp: valid_arch_state_def valid_global_objs_def obj_at_def
-                          empty_table_def)
-    apply (simp add: kernel_mapping_slots_def)
-    apply (subst is_aligned_add_helper[THEN conjunct1], assumption)
-     apply (erule shiftl_less_t2n)
-     apply (simp add: pd_bits_def pageBits_def)
-    apply (simp add: kernel_base_shift_cast_le[symmetric] ucast_ucast_mask)
-    apply (subst shiftl_shiftr_id)
-      apply simp
-     apply (simp add: word_less_nat_alt pd_bits_def pageBits_def)
-    apply (subst less_mask_eq)
-     apply (simp add: pd_bits_def pageBits_def)
-    apply assumption
-   apply (clarsimp simp: pd_bits_def)
-  apply simp
   done
 
 
 lemma mapM_copy_global_mappings_nonempty_table[wp]:
-  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)
-        \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
+  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table {}) r s)
+        \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>pd\<in>set pds. is_aligned pd pd_bits)\<rbrace>
    mapM_x copy_global_mappings pds
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table {}) r s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp', rule copy_global_mappings_nonempty_table)
@@ -686,12 +605,12 @@ lemma mapM_copy_global_mappings_nonempty_table[wp]:
 
 (**)
 lemma init_arch_objects_nonempty_table[wp]:
-  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)
-         \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
+  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table {}) r s)
+         \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (tp = ArchObject PageDirectoryObj \<longrightarrow>
          (\<forall>pd\<in>set refs. is_aligned pd pd_bits))\<rbrace>
         init_arch_objects tp ptr bits us refs
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table {}) r s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: init_arch_objects_def)
   apply (rule hoare_pre)

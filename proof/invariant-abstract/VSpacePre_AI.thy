@@ -51,7 +51,7 @@ lemma dmo_asid_map [wp]:
 
 crunch caps_of_state[wp]: do_machine_op "\<lambda>s. P (caps_of_state s)"
 
-interpretation dmo: non_arch_non_cap_op "do_machine_op f"
+interpretation dmo: non_vspace_non_cap_op "do_machine_op f"
   by (unfold_locales; wp)
 
 declare not_Some_eq_tuple[simp]
@@ -103,8 +103,8 @@ lemma hoare_name_pre_state2:
   by (auto simp: valid_def intro: hoare_name_pre_state)
 
 lemma pd_casting_shifting:
-  "size x + 2 < len_of TYPE('a) \<Longrightarrow>
-     ucast (ucast x << 2 >> 2 :: ('a :: len) word) = x"
+  "size x + 3 < len_of TYPE('a) \<Longrightarrow>
+     ucast (ucast x << 3 >> 3 :: ('a :: len) word) = x"
   apply (rule word_eqI)
   apply (simp add: nth_ucast nth_shiftr nth_shiftl word_size)
   done
@@ -119,6 +119,12 @@ lemma aligned_already_mask:
 lemma set_upto_enum_step_4:
   "set [0, 4 .e. x :: word32]
        = (\<lambda>x. x << 2) ` {.. x >> 2}"
+  by (auto simp: upto_enum_step_def shiftl_t2n shiftr_div_2n_w
+                 word_size mult.commute)
+
+lemma set_upto_enum_step_8:
+  "set [0, 8 .e. x :: word32]
+       = (\<lambda>x. x << 3) ` {.. x >> 3}"
   by (auto simp: upto_enum_step_def shiftl_t2n shiftr_div_2n_w
                  word_size mult.commute)
 

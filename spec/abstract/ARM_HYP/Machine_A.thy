@@ -132,7 +132,7 @@ operations. *}
 
 definition
   nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref" where
-  "nat_to_cref ln n \<equiv> drop (word_bits - ln)
+  "nat_to_cref len n \<equiv> drop (word_bits - len)
                            (to_bl (of_nat n :: machine_word))"
 
 definition

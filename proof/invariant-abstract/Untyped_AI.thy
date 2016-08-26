@@ -1303,13 +1303,6 @@ lemma retype_region_invs_extras:
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
-  "\<lbrace>invs and pspace_no_overlap_range_cover ptr sz and caps_no_overlap ptr sz
-     and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
-     and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
-     and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
-     and K (ty = CapTableObject \<longrightarrow> 0 < us)
-     and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
-      retype_region ptr n us ty dev\<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   "\<lbrace>invs and pspace_no_overlap_range_cover ptr sz and caps_no_overlap ptr sz 
      and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
@@ -3091,7 +3084,7 @@ lemma create_cap_irq_handlers[wp]:
   done
 
 
-crunch valid_arch_objs[wp]: create_cap "valid_arch_objs"
+crunch valid_vspace_objs[wp]: create_cap "valid_vspace_objs"
   (simp: crunch_simps)
 
 locale Untyped_AI_nonempty_table = 
@@ -3102,7 +3095,7 @@ locale Untyped_AI_nonempty_table =
       and valid_cap (default_cap tp oref sz dev)
       and (\<lambda>(s::'state_ext state). \<forall>r\<in>obj_refs (default_cap tp oref sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table {}) r s)
       and cte_wp_at (op = cap.NullCap) cref
       and K (tp \<noteq> ArchObject ASIDPoolObj)\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
@@ -3120,9 +3113,6 @@ locale Untyped_AI_nonempty_table =
         init_arch_objects tp ptr bits us refs
    \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
 
-crunch valid_global_objs[wp]: create_cap "valid_global_objs"
-  (simp: crunch_simps)
-
 
 crunch v_ker_map[wp]: create_cap "valid_kernel_mappings"
   (simp: crunch_simps)
@@ -3138,9 +3128,6 @@ lemma create_cap_asid_map[wp]:
 crunch only_idle[wp]: create_cap only_idle
   (simp: crunch_simps)
 
-crunch global_pd_mappings[wp]: create_cap "valid_global_vspace_mappings"
-  (simp: crunch_simps)
-
 crunch pspace_in_kernel_window[wp]: create_cap "pspace_in_kernel_window"
   (simp: crunch_simps)
 
@@ -3152,12 +3139,14 @@ lemma set_original_valid_ioc[wp]:
   apply (cases tp; simp)
   done
 
-interpretation create_cap: non_arch_non_mem_op "create_cap tp sz p slot dev"
+interpretation create_cap: non_vspace_non_mem_op "create_cap tp sz p slot dev"
   apply (cases slot)
   apply (simp add: create_cap_def set_cdt_def)
   apply unfold_locales
   apply (rule hoare_pre, (wp set_cap.aobj_at | wpc |simp add: create_cap_def set_cdt_def bind_assoc)+)+
   done
+
+(*  by (wp set_cap.vsobj_at | simp)+ *) (* ARMHYP might need this *)
 
 crunch valid_irq_states[wp]: create_cap "valid_irq_states"
 crunch pspace_respects_device_region[wp]: create_cap pspace_respects_device_region
@@ -3194,7 +3183,7 @@ lemma (in Untyped_AI_nonempty_table) create_cap_invs[wp]:
       and real_cte_at cref
       and (\<lambda>(s::'state_ext state). \<forall>r\<in>obj_refs (default_cap tp oref sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table {}) r s)
       and K (p \<noteq> cref \<and> tp \<noteq> ArchObject ASIDPoolObj)\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_pre)
@@ -3230,9 +3219,9 @@ lemma create_cap_no_cap[wp]:
   unfolding create_cap_def cte_wp_at_caps_of_state by wpsimp
 
 lemma (in Untyped_AI_nonempty_table) create_cap_nonempty_tables[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) p s)\<rbrace>
-     create_cap tp sz p' dev (cref, oref)
-   \<lbrace>\<lambda>rv s. P (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) p s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (obj_at (nonempty_table {}) p s)\<rbrace>
+     create_cap tp sz p' (cref, oref)
+   \<lbrace>\<lambda>rv s. P (obj_at (nonempty_table {}) p s)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=arch_state, OF create_cap_arch_state])
    apply (simp add: create_cap_def set_cdt_def)
@@ -3282,7 +3271,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs_inv:
               real_cte_at (fst tup) s)
        \<and> (\<forall>tup \<in> set ((cref,oref)#list). \<forall>r \<in> obj_refs (default_cap tp (snd tup) sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> Structures_A.obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table {}) r s)
        \<and> distinct (p # (map fst ((cref,oref)#list)))
        \<and> tp \<noteq> ArchObject ASIDPoolObj) \<rbrace>
      create_cap tp sz p dev (cref,oref)
@@ -3307,7 +3296,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs_inv:
               real_cte_at (fst tup) s)
        \<and> (\<forall>tup \<in> set list. \<forall>r \<in> obj_refs (default_cap tp (snd tup) sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> Structures_A.obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table {}) r s)
        \<and> distinct (p # (map fst list))
        \<and> tp \<noteq> ArchObject ASIDPoolObj) \<rbrace>"
   apply (rule hoare_pre)
@@ -3359,7 +3348,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs:
               real_cte_at (fst tup) s)
        \<and> (\<forall>tup \<in> set (zip crefs orefs). \<forall>r \<in> obj_refs (default_cap tp (snd tup) sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> Structures_A.obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table {}) r s)
        \<and> distinct (p # (map fst (zip crefs orefs)))
        \<and> tp \<noteq> ArchObject ASIDPoolObj)
        and K (set orefs \<subseteq> set (retype_addrs ptr tp (length slots) us))\<rbrace>
@@ -3503,8 +3492,6 @@ crunch irq_node[wp]: do_machine_op "\<lambda>s. P (interrupt_irq_node s)"
 lemma ge_mask_eq: "len_of TYPE('a) \<le> n \<Longrightarrow> (x::'a::len word) && mask n = x"
   by (simp add: mask_def p2_eq_0[THEN iffD2])
 
-crunch valid_global_objs[wp]: do_machine_op "valid_global_objs"
-
 (* FIXME: replace do_machine_op_obj_at in KHeap_R by the lemma below *)
 lemma do_machine_op_obj_at_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (Q (arch_state s)) p s)\<rbrace>
@@ -3513,20 +3500,16 @@ lemma do_machine_op_obj_at_arch_state[wp]:
   by (clarsimp simp: do_machine_op_def split_def | wp)+
 
 lemma (in Untyped_AI_nonempty_table) retype_nonempty_table[wp]:
-  "\<lbrace>\<lambda>(s::('state_ext::state_ext) state). \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>
+  "\<lbrace>\<lambda>(s::('state_ext::state_ext) state). \<not> (obj_at (nonempty_table {}) r s)\<rbrace>
      retype_region ptr sz us tp dev
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
-  apply (simp add: retype_region_def split del: if_split)
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table {}) r s)\<rbrace>"
+  apply (simp add: retype_region_def split del: split_if)
   apply (rule hoare_pre)
    apply (wp|simp del: fun_upd_apply)+
   apply (clarsimp simp del: fun_upd_apply)
   apply (simp add: foldr_upd_app_if)
   apply (clarsimp simp: obj_at_def split: if_split_asm)
   done
-
-lemma invs_valid_global_objs_strg:
-  "invs s \<longrightarrow> valid_global_objs s"
-  by (clarsimp simp: invs_def valid_state_def)
 
 
 lemma invs_arch_state_strg:
@@ -3545,9 +3528,9 @@ lemma invs_cap_refs_in_kernel_window[elim!]:
   by (simp add: invs_def valid_state_def)
 
 lemma (in Untyped_AI_nonempty_table) set_cap_nonempty_tables[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) p s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (obj_at (nonempty_table {}) p s)\<rbrace>
      set_cap cap cref
-   \<lbrace>\<lambda>rv s. P (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) p s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (obj_at (nonempty_table {}) p s)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=arch_state, OF set_cap_arch])
    apply (wp set_cap_obj_at_impossible)

@@ -69,7 +69,6 @@ lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
   apply (clarsimp simp: map_upd_triv select_f_def image_def)
   done
 
-
 lemma thread_set_as_user:
   "thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_context_set (f $ arch_tcb_context_get (tcb_arch tcb)) (tcb_arch tcb) \<rparr>) t
     = as_user t (modify f)"
@@ -398,9 +397,12 @@ lemma thread_set_obj_at_impossible:
 lemma tcb_not_empty_table:
   "\<not> empty_table S (TCB tcb)"
   by (simp add: empty_table_def)
-
+(*
 lemmas thread_set_arch_caps_trivial
   = valid_arch_caps_lift_weak[OF thread_set_arch thread_set.aobj_at 
+                                 thread_set_caps_of_state_trivial, simplified] *)
+lemmas thread_set_arch_caps_trivial
+  = valid_arch_caps_lift_weak[OF thread_set_arch thread_set.vsobj_at
                                  thread_set_caps_of_state_trivial, simplified]
 
 lemma thread_set_only_idle:
@@ -490,7 +492,7 @@ lemma thread_set_invs_trivial:
   shows      "\<lbrace>invs\<rbrace> thread_set f t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_weaken_pre)
-   apply (wp thread_set_valid_objs_triv
+   apply (wp_trace thread_set_valid_objs_triv
              thread_set_refs_trivial
              thread_set_hyp_refs_trivial
              thread_set_iflive_trivial
@@ -1480,11 +1482,6 @@ lemma sbn_only_idle[wp]:
                   split:option.splits kernel_object.splits)
   done
 
-lemma set_thread_state_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_vspace_mappings\<rbrace>
-      set_thread_state p st \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
-  by (simp add: set_thread_state_thread_set, wp, simp, wp)
-
 lemma set_thread_state_pspace_in_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace>
       set_thread_state p st \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
@@ -1506,11 +1503,6 @@ lemma set_thread_state_cap_refs_respects_device_regionw[wp]:
   by (simp add: set_thread_state_thread_set
            | wp thread_set_cap_refs_respects_device_region
                 ball_tcb_cap_casesI)+
-
-lemma set_bound_notification_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_vspace_mappings\<rbrace>
-      set_bound_notification p ntfn \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
-  by (simp add: set_bound_notification_thread_set, wp)
 
 lemma set_bound_notification_pspace_in_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace>
