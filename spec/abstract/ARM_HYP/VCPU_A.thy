@@ -48,27 +48,27 @@ Final outcome has to be an associated TCB and VCPU.
 The only way to get lasting dissociation is to delete the TCB or the VCPU. *}
 
 definition dissociate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where "dissociate_vcpu_tcb t v \<equiv> do
+where "dissociate_vcpu_tcb t vr \<equiv> do
   t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
-  (v_tcb, reg) \<leftarrow> get_vcpu v;
-  when (t_vcpu \<noteq> Some v \<or> v_tcb \<noteq> Some t) $ fail; (* TCB and VCPU not associated *)
-  set_vcpu v (None, reg);
+  v \<leftarrow> get_vcpu vr;
+  when (t_vcpu \<noteq> Some vr \<or> vcpu_tcb v \<noteq> Some t) $ fail; (* TCB and VCPU not associated *)
+  set_vcpu vr (v\<lparr> vcpu_tcb := None \<rparr>);
   arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t
 od"
 
 
 definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where "associate_vcpu_tcb t v \<equiv> do
+where "associate_vcpu_tcb t vr \<equiv> do
   t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
   case t_vcpu of
     Some p \<Rightarrow> dissociate_vcpu_tcb t p
   | _ \<Rightarrow> return ();
-  (v_tcb, reg) \<leftarrow> get_vcpu v;
-  case v_tcb of
-    Some p \<Rightarrow> dissociate_vcpu_tcb p v
+  v \<leftarrow> get_vcpu vr;
+  case vcpu_tcb v of
+    Some p \<Rightarrow> dissociate_vcpu_tcb p vr
   | _ \<Rightarrow> return ();
-  arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := Some v \<rparr>) t;
-  set_vcpu v (Some t, reg)
+  arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := Some vr \<rparr>) t;
+  set_vcpu vr (v\<lparr> vcpu_tcb := Some t \<rparr>)
   od"
 
 
@@ -79,8 +79,8 @@ definition
 where
   "read_vcpu_register vcpu \<equiv>
   do
-    (_,val) \<leftarrow> get_vcpu vcpu;
-    return $ val
+    v \<leftarrow> get_vcpu vcpu;
+    return $ vcpu_sctlr v
   od"
 
 definition
@@ -88,11 +88,11 @@ definition
 where
   "write_vcpu_register vcpu val \<equiv>
   do
-    (tcb_opt,oldval) \<leftarrow> get_vcpu vcpu;
+    v \<leftarrow> get_vcpu vcpu;
     val' \<leftarrow> return (case register_mask of
               None \<Rightarrow> val
-            | Some m \<Rightarrow> oldval && m || val && ~~m);
-    set_vcpu vcpu (tcb_opt,val')
+            | Some m \<Rightarrow> (vcpu_sctlr v) && m || val && ~~m);
+    set_vcpu vcpu (v\<lparr> vcpu_sctlr := val' \<rparr> )
   od"
 
 text {*Currently, there is only one VCPU register available for reading/writing by the user: cpx.sctlr. *}

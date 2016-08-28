@@ -56,25 +56,24 @@ definition
   od"
 
 definition
-  get_vcpu :: "obj_ref \<Rightarrow> (obj_ref option \<times> hyper_reg_context,'z::state_ext) s_monad" where
+  get_vcpu :: "obj_ref \<Rightarrow> (vcpu,'z::state_ext) s_monad" where
   "get_vcpu ptr \<equiv> do
      kobj \<leftarrow> get_object ptr;
-     (case kobj of ArchObj (VCPU t r) \<Rightarrow> return (t,r)
+     (case kobj of ArchObj (VCPU v) \<Rightarrow> return v
                  | _ \<Rightarrow> fail)
    od"
 
 definition
-  set_vcpu :: "obj_ref \<Rightarrow> (obj_ref option \<times> hyper_reg_context) \<Rightarrow> (unit,'z::state_ext) s_monad"
+  set_vcpu :: "obj_ref \<Rightarrow> vcpu \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_vcpu ptr vcpu \<equiv> do
-     (t,r) \<leftarrow> return vcpu;
      kobj \<leftarrow> get_object ptr;
-     assert (case kobj of ArchObj (VCPU _ _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (VCPU t r))
+     assert (case kobj of ArchObj (VCPU _) \<Rightarrow> True | _ \<Rightarrow> False);
+     set_object ptr (ArchObj (VCPU vcpu))
    od"
 
 definition
-  get_pd :: "obj_ref \<Rightarrow> (12 word \<Rightarrow> pde,'z::state_ext) s_monad" where
+  get_pd :: "obj_ref \<Rightarrow> (11 word \<Rightarrow> pde,'z::state_ext) s_monad" where
   "get_pd ptr \<equiv> do
      kobj \<leftarrow> get_object ptr;
      (case kobj of ArchObj (PageDirectory pd) \<Rightarrow> return pd
@@ -82,7 +81,7 @@ definition
    od"
 
 definition
-  set_pd :: "obj_ref \<Rightarrow> (12 word \<Rightarrow> pde) \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  set_pd :: "obj_ref \<Rightarrow> (11 word \<Rightarrow> pde) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_pd ptr pd \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (PageDirectory pd) \<Rightarrow> True | _ \<Rightarrow> False);
@@ -95,7 +94,7 @@ definition
   get_pde :: "obj_ref \<Rightarrow> (pde,'z::state_ext) s_monad" where
   "get_pde ptr \<equiv> do
      base \<leftarrow> return (ptr && ~~mask pd_bits);
-     offset \<leftarrow> return ((ptr && mask pd_bits) >> 2);
+     offset \<leftarrow> return ((ptr && mask pd_bits) >> pde_bits);
      pd \<leftarrow> get_pd base;
      return $ pd (ucast offset)
    od"
@@ -104,7 +103,7 @@ definition
   store_pde :: "obj_ref \<Rightarrow> pde \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pde p pde \<equiv> do
     base \<leftarrow> return (p && ~~mask pd_bits);
-    offset \<leftarrow> return ((p && mask pd_bits) >> 2);
+    offset \<leftarrow> return ((p && mask pd_bits) >> pde_bits);
     pd \<leftarrow> get_pd base;
     pd' \<leftarrow> return $ pd (ucast offset := pde);
     set_pd base pd'
@@ -112,7 +111,7 @@ definition
 
 
 definition
-  get_pt :: "obj_ref \<Rightarrow> (word8 \<Rightarrow> pte,'z::state_ext) s_monad" where
+  get_pt :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pte,'z::state_ext) s_monad" where
   "get_pt ptr \<equiv> do
      kobj \<leftarrow> get_object ptr;
      (case kobj of ArchObj (PageTable pt) \<Rightarrow> return pt
@@ -120,7 +119,7 @@ definition
    od"
 
 definition
-  set_pt :: "obj_ref \<Rightarrow> (word8 \<Rightarrow> pte) \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  set_pt :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pte) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_pt ptr pt \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (PageTable _) \<Rightarrow> True | _ \<Rightarrow> False);
@@ -133,7 +132,7 @@ definition
   get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
   "get_pte ptr \<equiv> do
      base \<leftarrow> return (ptr && ~~mask pt_bits);
-     offset \<leftarrow> return ((ptr && mask pt_bits) >> 2);
+     offset \<leftarrow> return ((ptr && mask pt_bits) >> pte_bits);
      pt \<leftarrow> get_pt base;
      return $ pt (ucast offset)
    od"
@@ -142,7 +141,7 @@ definition
   store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pte p pte \<equiv> do
     base \<leftarrow> return (p && ~~mask pt_bits);
-    offset \<leftarrow> return ((p && mask pt_bits) >> 2);
+    offset \<leftarrow> return ((p && mask pt_bits) >> pte_bits);
     pt \<leftarrow> get_pt base;
     pt' \<leftarrow> return $ pt (ucast offset := pte);
     set_pt base pt'
@@ -170,7 +169,7 @@ text {* The following function takes a page-directory reference as well as
 definition
 lookup_pd_slot :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> word32" where
 "lookup_pd_slot pd vptr \<equiv>
-    let pd_index = vptr >> (pageBits + pt_bits - pte_bits)
+    let pd_index = vptr >> (pageBits + pt_bits - pte_bits) (* ARMHYP *)
     in pd + (pd_index << pde_bits)"
 
 text {* The following function takes a page-directory reference as well as
@@ -198,8 +197,8 @@ definition
   lookup_pt_slot_no_fail :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> word32"
 where
   "lookup_pt_slot_no_fail pt vptr \<equiv>
-     let pt_index = ((vptr >> 12) && 0xff)
-     in pt + (pt_index << 2)"
+     let pt_index = ((vptr >> pageBits) && mask (pt_bits - pte_bits))
+     in pt + (pt_index << pte_bits)"
 
 end
 

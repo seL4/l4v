@@ -127,6 +127,53 @@ definition
   vcpu_bits :: "nat" where
   "vcpu_bits \<equiv> pageBits"
 
+
+text {*  vcpu *}
+
+type_synonym virq = "word32"
+
+definition gicVCPUMaxNumLR :: int where "gicVCPUMaxNumLR \<equiv> 64"
+
+end
+
+qualify ARM_A (in Arch)
+
+record  GICVCPUInterface =
+  vgicHCR  :: word32
+  vgicVMCR :: word32
+  vgicAPR  :: word32
+  vgicLR   :: "nat \<rightharpoonup> ARM_A.virq"
+
+
+record vcpu =
+  vcpu_tcb   :: "obj_ref option"
+  vcpu_sctlr :: word32
+  vcpu_actlr :: word32
+  vcpu_VGIC  :: GICVCPUInterface
+
+end_qualify
+
+
+context Arch begin global_naming ARM_A
+
+definition
+  default_gic_vcpu_interface :: GICVCPUInterface
+where
+  "default_gic_vcpu_interface \<equiv> \<lparr>
+      vgicHCR  = 0,
+      vgicVMCR = 0,
+      vgicAPR  = 0,
+      vgicLR   = Map.empty \<rparr>"
+
+definition
+  default_vcpu :: vcpu where
+  "default_vcpu \<equiv> \<lparr>
+      vcpu_tcb    = None,
+      vcpu_sctlr  = 0,
+      vcpu_actlr  = 0,
+      vcpu_VGIC   = default_gic_vcpu_interface \<rparr>"
+
+
 text {*
   ASID pools translate 10 bits, VCPUs store a potential association to a TCB as well as
   an extended register context. Page tables have 512 entries (cf B3.6.5, pg 1348). For data pages,
@@ -135,10 +182,10 @@ text {*
 
 datatype arch_kernel_obj =
    ASIDPool "10 word \<rightharpoonup> obj_ref"
- | PageTable "word8 \<Rightarrow> pte"
- | PageDirectory "12 word \<Rightarrow> pde"
- | DataPage vmpage_size
- | VCPU "obj_ref option" hyper_reg_context
+ | PageTable "9 word \<Rightarrow> pte"  (* ARMHYP *)
+ | PageDirectory "11 word \<Rightarrow> pde"  (* ARMHYP *)
+ | DataPage bool vmpage_size
+ | VCPU vcpu
 
 lemmas arch_kernel_obj_cases =
   arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
@@ -163,8 +210,8 @@ where
   "arch_kobj_size (ASIDPool p) = pageBits"
 | "arch_kobj_size (PageTable pte) = pt_bits"
 | "arch_kobj_size (PageDirectory pde) = pd_bits"
-| "arch_kobj_size (DataPage sz) = pageBitsForSize sz"
-| "arch_kobj_size (VCPU _ _) = vcpu_bits"
+| "arch_kobj_size (DataPage dev sz) = pageBitsForSize sz"
+| "arch_kobj_size (VCPU _) = vcpu_bits"
 
 primrec
   aobj_ref :: "arch_cap \<rightharpoonup> obj_ref"
@@ -221,41 +268,13 @@ definition
   | SuperSectionObj \<Rightarrow> DataPage ARMSuperSection
   | PageTableObj \<Rightarrow> PageTable (\<lambda>x. InvalidPTE)
   | PageDirectoryObj \<Rightarrow> PageDirectory (\<lambda>x. InvalidPDE)
-  | VCPUObj \<Rightarrow> VCPU None 0
+  | VCPUObj \<Rightarrow> VCPU default_vcpu
   | ASIDPoolObj \<Rightarrow> ASIDPool (\<lambda>_. None)"
 
 type_synonym hw_asid = word8
 
 type_synonym arm_vspace_region_uses = "vspace_ref \<Rightarrow> arm_vspace_region_use"
 
-
-
-text {*  vcpu *}
-
-type_synonym virq = "word32"
-
-definition gicVCPUMaxNumLR :: int where "gicVCPUMaxNumLR \<equiv> 64"
-
-end
-
-qualify ARM_A (in Arch)
-
-record  GICVCPUInterface =
-  vgicHCR  :: word32
-  vgicVMCR :: word32
-  vgicAPR  :: word32
-  vgicLR   :: "nat \<rightharpoonup> ARM_A.virq"
-
-
-record vcpu =
-  vcpu_tcb :: "obj_ref option"
-  vcpu_sctlr   :: word32
-  vcpu_actlr   :: word32
-  vcpu_VGIC :: GICVCPUInterface
-
-end_qualify
-
-context Arch begin global_naming ARM_A
 
 definition new_vcpu :: vcpu where
   "new_vcpu \<equiv> undefined"
@@ -316,7 +335,7 @@ where
          | PageDirectory pd         \<Rightarrow> APageDirectory
          | DataPage sz              \<Rightarrow> AIntData sz
          | ASIDPool f               \<Rightarrow> AASIDPool
-         | VCPU v h                  \<Rightarrow> AVCPU)"
+         | VCPU v                   \<Rightarrow> AVCPU)"
 
 end
 

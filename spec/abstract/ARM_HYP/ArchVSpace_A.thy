@@ -28,13 +28,13 @@ definition largePagePTE_offsets :: "obj_ref list"
   where
   "largePagePTE_offsets \<equiv>
     let pts = of_nat pte_bits
-    in [0, pts  .e.  (15 << pte_bits)]"
+    in [0, 2 ^ pts  .e.  (15 << pte_bits)]"
 
 definition superSectionPDE_offsets :: "obj_ref list"
   where
   "superSectionPDE_offsets \<equiv>
     let pts = of_nat pde_bits
-    in [0, pts  .e.  (15 << pde_bits)]"
+    in [0, 2 ^ pts  .e.  (15 << pde_bits)]"
 
 fun create_mapping_entries ::
   "paddr \<Rightarrow> vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vm_rights \<Rightarrow> vm_attributes \<Rightarrow> word32 \<Rightarrow>
@@ -539,7 +539,7 @@ unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightar
                 check_mapping_pptr pptr pgsz (Inr p);
             liftE $ do
                 assert $ p && mask 6 = 0;
-                slots \<leftarrow> return (map (\<lambda>x. x + p) [0, 4  .e.  60]);
+                slots \<leftarrow> return (map (\<lambda>x. x + p) superSectionPDE_offsets);
                 mapM (swp store_pde InvalidPDE) slots;
                 do_machine_op $ cleanCacheRange_PoU (hd slots) (last_byte_pde (last slots))
                                                     (addrFromPPtr (hd slots))
@@ -576,13 +576,13 @@ text {* Dissociate a VCPU from a TCB *}
 definition
   dissociate_vcpu :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "dissociate_vcpu vcpu \<equiv> do
-    (tcb_opt, r) \<leftarrow> get_vcpu vcpu;
-    case tcb_opt of
+  "dissociate_vcpu vcpu_ref \<equiv> do
+    v \<leftarrow> get_vcpu vcpu_ref;
+    case vcpu_tcb v of
       None \<Rightarrow> return ()
     | Some tcb \<Rightarrow> do
         thread_set (\<lambda>t. t \<lparr> tcb_arch := (tcb_arch t)\<lparr> tcb_vcpu := None \<rparr> \<rparr>) tcb;
-        set_vcpu vcpu (None, r)
+        set_vcpu vcpu_ref (v\<lparr> vcpu_tcb := None \<rparr>)
       od
   od"
 
@@ -604,9 +604,9 @@ where
   "associate vcpu_ref tcb_ref \<equiv> do
     vcpu_opt \<leftarrow> thread_get (tcb_vcpu o tcb_arch) tcb_ref;
     when (vcpu_opt \<noteq> None) (dissociate_tcb tcb_ref);
-    (old_tcb,r) \<leftarrow> get_vcpu vcpu_ref;
-    when (old_tcb \<noteq> None) (dissociate_tcb tcb_ref);
-    set_vcpu vcpu_ref (Some tcb_ref, r);
+    v \<leftarrow> get_vcpu vcpu_ref;
+    when (vcpu_tcb v \<noteq> None) (dissociate_tcb tcb_ref);
+    set_vcpu vcpu_ref (v\<lparr> vcpu_tcb :=  Some tcb_ref \<rparr>);
     thread_set (tcb_arch_update $ tcb_vcpu_update $ K $ Some vcpu_ref) tcb_ref
   od"
 
