@@ -209,6 +209,7 @@ lemma (in specs) factorial_spec:
    prefer 2
    apply (simp add: whileAnno_def factorial_invs_body_def)
   apply(subst factorial_invs_body_def)
+  apply (simp only: ucast_id)
   apply(unfold sep_app_def)
   apply (vcg exspec=alloc_spec' exspec=free_spec')
     apply (fold lift_def)
