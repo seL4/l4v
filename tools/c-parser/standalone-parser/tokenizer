@@ -8,30 +8,41 @@
 #
 # @TAG(DATA61_BSD)
 
+# Bash 'strict' mode
+set -euo pipefail
+IFS=$'\n\t'
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-if [ $# -eq 0 ]
-then
-        available=$(ls $DIR/tokenizer-*)
-        echo "Available architectures are:"
-        for i in $available
-        do
-            echo "  ${i#$DIR/tokenizer}"
-        done
-        exit
+function show_architectures () {
+  (
+    cd "$DIR"
+    ARCHES=
+    shopt -s nullglob
+    for EXE in */tokenizer; do
+      ARCHES="$ARCHES ${EXE%/tokenizer}"
+    done
+    if [ -z "$ARCHES" ]; then
+      echo "There are no standalone C-parser architectures currently built."
+      echo "Try running 'make' in $DIR"
+    else
+      echo "Available architectures are:$ARCHES"
+      echo "Please supply an architecture name as the first argument."
+    fi
+  )
+  exit 1
+}
+
+if [ $# -eq 0 ]; then
+  show_architectures
 fi
 
-executable=$DIR/tokenizer$1
-echo "Looking for $executable"
+ARCH="$1"; shift
+EXE="$DIR/$ARCH/tokenizer"
 
-if [ -x $executable ]
-then
-    :
-else
-    echo "Unknown architecture $1" >&2
-    exit 1
+if [ ! -x "$EXE" ]; then
+    echo "Unknown architecture $ARCH" >&2
+    show_architectures
 fi
-shift
 
-exec $executable "$@"
+exec "$EXE" "$@"
