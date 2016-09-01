@@ -206,31 +206,36 @@ datatype arch_kernel_object =
   | KOPTE pte
   | KOPDE pde
 
-type_synonym arch_tcb = "user_context"
+datatype arch_tcb =
+    ArchThread user_context
 
-definition
-  ArchThread :: "arch_tcb \<Rightarrow> arch_tcb"
-where ArchThread_def[simp]:
- "ArchThread \<equiv> id"
-
-definition
-  atcbContext :: "arch_tcb \<Rightarrow> arch_tcb"
+primrec
+  atcbContext :: "arch_tcb \<Rightarrow> user_context"
 where
-  atcbContext_def[simp]:
- "atcbContext \<equiv> id"
+  "atcbContext (ArchThread v0) = v0"
 
-definition  atcbContext_update :: "(arch_tcb \<Rightarrow> arch_tcb) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+primrec
+  atcbContext_update :: "(user_context \<Rightarrow> user_context) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
 where
-  atcbContext_update_def[simp]:
- "atcbContext_update f y \<equiv> f y"
+  "atcbContext_update f (ArchThread v0) = ArchThread (f v0)"
 
 abbreviation (input)
   ArchThread_trans :: "(user_context) \<Rightarrow> arch_tcb" ("ArchThread'_ \<lparr> atcbContext= _ \<rparr>")
 where
   "ArchThread_ \<lparr> atcbContext= v0 \<rparr> == ArchThread v0"
 
+lemma atcbContext_atcbContext_update [simp]:
+  "atcbContext (atcbContext_update f v) = f (atcbContext v)"
+  by (cases v) simp
+
 consts'
 archObjSize :: "arch_kernel_object \<Rightarrow> nat"
+
+consts'
+atcbContextSet :: "user_context \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+
+consts'
+atcbContextGet :: "arch_tcb \<Rightarrow> user_context"
 
 consts'
 asidHighBits :: "nat"
@@ -257,6 +262,12 @@ defs archObjSize_def:
 definition
 "newArchTCB \<equiv> ArchThread_ \<lparr>
     atcbContext= newContext \<rparr>"
+
+defs atcbContextSet_def:
+"atcbContextSet uc at \<equiv> at \<lparr> atcbContext := uc \<rparr>"
+
+defs atcbContextGet_def:
+"atcbContextGet \<equiv> atcbContext"
 
 defs asidHighBits_def:
 "asidHighBits \<equiv> 7"

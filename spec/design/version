@@ -1,10 +1,11 @@
 Built from git repo at /home/agomezl/NICTA/verification/l4v/spec/haskell by agomezl
 
 Generated from changeset:
-969d745 execspec: checking in current generated files
+55a331c ExecSpec: Changes to the haskell to better reflect ASpec
 
 
 Warning - uncomitted changes used:
+M  ../design/skel/TCBDecls_H.thy
  M ../design/version
 ?? ../../.tramp_history
 ?? ../../diff_sel4

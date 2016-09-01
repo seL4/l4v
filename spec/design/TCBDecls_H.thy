@@ -127,12 +127,6 @@ consts'
 threadSet :: "(tcb \<Rightarrow> tcb) \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts'
-archThreadGet :: "(arch_tcb \<Rightarrow> 'a) \<Rightarrow> machine_word \<Rightarrow> 'a kernel"
-
-consts'
-archThreadSet :: "(arch_tcb \<Rightarrow> arch_tcb) \<Rightarrow> machine_word \<Rightarrow> unit kernel"
-
-consts'
 asUser :: "machine_word \<Rightarrow> 'a user_monad \<Rightarrow> 'a kernel"
 
 

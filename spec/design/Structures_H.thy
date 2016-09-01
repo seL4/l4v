@@ -42,6 +42,8 @@ requalify_consts
   newArchTCB
   fromPPtr
   PPtr
+  atcbContextGet
+  atcbContextSet
 
 end
 

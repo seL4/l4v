@@ -40,16 +40,6 @@ where
         setObject tptr $ tcb \<lparr> tcbArch := f (tcbArch tcb) \<rparr>
 od)"
 
-definition
-asUser :: "machine_word \<Rightarrow> 'a user_monad \<Rightarrow> 'a kernel"
-where
-"asUser tptr f\<equiv> (do
-        atcb \<leftarrow> threadGet tcbArch tptr;
-        (a, uc') \<leftarrow> return ( runState f $ atcbContext atcb);
-        threadSet (\<lambda> tcb. tcb \<lparr> tcbArch := atcb \<lparr> atcbContext := uc' \<rparr> \<rparr>) tptr;
-        return a
-od)"
-
 
 end
 end

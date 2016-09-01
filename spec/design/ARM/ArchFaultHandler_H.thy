@@ -30,7 +30,7 @@ defs makeArchFaultMessage_def:
 "makeArchFaultMessage x0 thread\<equiv> (case x0 of
     (VMFault vptr archData) \<Rightarrow>    (do
     pc \<leftarrow> asUser thread getRestartPC;
-    return (4, pc#fromVPtr vptr#archData)
+    return (5, pc#fromVPtr vptr#archData)
     od)
   )"
 

@@ -34,9 +34,16 @@ requalify_consts
   msgRegisters
   tpidrurwRegister
   fromVPtr
-  asUser
 end
 
 #INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser
+
+defs asUser_def:
+"asUser tptr f\<equiv> (do
+        uc \<leftarrow> threadGet  (atcbContextGet o tcbArch) tptr;
+        (a, uc') \<leftarrow> select_f (f uc);
+        threadSet (\<lambda> tcb. tcb \<lparr> tcbArch := atcbContextSet uc' (tcbArch tcb)\<rparr>) tptr;
+        return a
+od)"
 
 end
