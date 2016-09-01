@@ -26,7 +26,7 @@ This module defines the encoding of arch-specific faults.
 > makeArchFaultMessage :: ArchFault -> PPtr TCB -> Kernel (Word, [Word])
 > makeArchFaultMessage (VMFault vptr archData) thread = do
 >     pc <- asUser thread getRestartPC
->     return (4, pc:fromVPtr vptr:archData)
+>     return (5, pc:fromVPtr vptr:archData)
 
 > handleArchFaultReply :: ArchFault -> PPtr TCB -> Word -> [Word] -> Kernel Bool
 > handleArchFaultReply (VMFault {}) _ _ _ = return True

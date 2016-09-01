@@ -752,8 +752,8 @@ identified by "tcbPtr".
 
 > asUser :: PPtr TCB -> UserMonad a -> Kernel a
 > asUser tptr f = do
->         atcb <- threadGet tcbArch tptr
->         let (a, uc') = runState f $ atcbContext atcb
->         threadSet (\tcb -> tcb { tcbArch = atcb { atcbContext = uc' } }) tptr
+>         uc <- threadGet (atcbContextGet . tcbArch) tptr
+>         let (a, uc') = runState f $ uc
+>         threadSet (\tcb -> tcb { tcbArch = atcbContextSet uc' (tcbArch tcb) }) tptr
 >         return a
 

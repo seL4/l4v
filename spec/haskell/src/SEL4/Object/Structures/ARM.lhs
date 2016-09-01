@@ -82,6 +82,12 @@ present on all platforms is stored here.
 > newArchTCB = ArchThread {
 >     atcbContext = newContext }
 
+> atcbContextSet :: UserContext -> ArchTCB -> ArchTCB
+> atcbContextSet uc at = at { atcbContext = uc }
+>
+> atcbContextGet :: ArchTCB -> UserContext
+> atcbContextGet = atcbContext
+
 \subsection{ASID Pools}
 
 An ASID pool is an array of pointers to page directories. This is used to implement virtual ASIDs on ARM; it is not accessed by the hardware.
