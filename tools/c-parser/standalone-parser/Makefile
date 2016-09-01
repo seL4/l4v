@@ -1,11 +1,11 @@
 #
-# Copyright 2014, NICTA
+# Copyright 2016, Data61, CSIRO
 #
 # This software may be distributed and modified according to the terms of
 # the BSD 2-Clause license. Note that NO WARRANTY is provided.
 # See "LICENSE_BSD2.txt" for details.
 #
-# @TAG(NICTA_BSD)
+# @TAG(DATA61_BSD)
 #
 
 # note this makefile will not work entirely correctly if invoked in the local
@@ -23,15 +23,19 @@ STPARSER=$(STP_PFX)/c-parser
 STPARSER_ARM=$(STP_PFX)/c-parser-arm32
 STPARSER_F64=$(STP_PFX)/c-parser-fake64
 
-.PHONY: stp_all standalone-cparser standalone-tokenizer
+TOKENIZER_ARM=$(STP_PFX)/tokenizer-arm32
+TOKENIZER_F64=$(STP_PFX)/tokenizer-fake64
+TOKENIZER=$(TOKENIZER_ARM) $(TOKENIZER_F64)
+
+.PHONY: cparser_tools stp_all standalone-cparser standalone-tokenizer
 standalone-cparser stp_all: $(STPARSER_ARM) $(STPARSER_F64)
-standalone-tokenizer: $(STP_PFX)/tokenizer
+standalone-tokenizer stp_all: $(TOKENIZER)
 
 all: stp_all
 
 include $(STP_PFX)/../Makefile
 
-STP_CLEAN_TARGETS := $(STPARSER_ARM) $(STPARSER_F64) $(STP_PFX)/c-parser.o $(STP_PFX)/table.ML $(STP_PFX)/tokenizer
+STP_CLEAN_TARGETS := $(STPARSER_ARM) $(STPARSER_F64) $(STP_PFX)/c-parser.o $(STP_PFX)/table.ML $(TOKENIZER)
 
 $(STP_PFX)/table.ML: $(ISABELLE_HOME)/src/Pure/General/table.ML
 	sed -e '/ML.pretty-printing/,/final.declarations/d' < $< > $@
@@ -45,7 +49,8 @@ ARM_MLB_PATH := -mlb-path-var 'L4V_ARCH ARM'
 F64_MLB_PATH := -mlb-path-var 'L4V_ARCH FAKE64'
 PARSER_DEPS_ARM := $(shell mlton $(ARM_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
 PARSER_DEPS_F64 := $(shell mlton $(F64_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
-TOKENIZER_DEPS := $(shell mlton -stop f $(STP_PFX)/tokenizer.mlb)
+TOKENIZER_DEPS_ARM := $(shell mlton $(ARM_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
+TOKENIZER_DEPS_F64 := $(shell mlton $(F64_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
 
 
 $(STPARSER_ARM): $(PARSER_DEPS_ARM)
@@ -54,8 +59,11 @@ $(STPARSER_ARM): $(PARSER_DEPS_ARM)
 $(STPARSER_F64): $(PARSER_DEPS_F64)
 	mlton $(F64_MLB_PATH) -output $@ $<
 
-$(STP_PFX)/tokenizer: $(TOKENIZER_DEPS)
-	mlton $<
+$(TOKENIZER_ARM): $(TOKENIZER_DEPS_ARM)
+	mlton $(ARM_MLB_PATH) -output $@ $<
+
+$(TOKENIZER_F64): $(TOKENIZER_DEPS_F64)
+	mlton $(F64_MLB_PATH) -output $@ $<
 
 else ifeq ($(SML_COMPILER),poly)
 

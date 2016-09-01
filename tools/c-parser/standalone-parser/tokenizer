@@ -13,16 +13,16 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 if [ $# -eq 0 ]
 then
-        available=$(ls $DIR/c-parser-*)
+        available=$(ls $DIR/tokenizer-*)
         echo "Available architectures are:"
         for i in $available
         do
-            echo "  ${i#$DIR/c-parser}"
+            echo "  ${i#$DIR/tokenizer}"
         done
         exit
 fi
 
-executable=$DIR/c-parser$1
+executable=$DIR/tokenizer$1
 echo "Looking for $executable"
 
 if [ -x $executable ]

@@ -144,8 +144,8 @@ tools/autocorres/tools/release_files/CONTRIBUTORS
 tools/c-parser/standalone-parser/table.ML
 tools/c-parser/StrictC.grm.desc
 tools/c-parser/StrictC.grm.sig
-tools/c-parser/standalone-parser/c-parser
-tools/c-parser/standalone-parser/tokenizer
+tools/c-parser/standalone-parser/c-parser-*
+tools/c-parser/standalone-parser/tokenizer-*
 tools/c-parser/tools/mllex/mllex
 tools/c-parser/tools/mlyacc/mlyacc
 tools/c-parser/tools/mlyacc/src/yacc.lex.sml
