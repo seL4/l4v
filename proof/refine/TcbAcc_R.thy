@@ -1400,25 +1400,29 @@ lemma corres_as_user':
                        (tcb_at' t)
                        (as_user t f) (asUser t g)"
   proof -
-  have L1: "corres (\<lambda>tcb con. tcb_context tcb = con)
+  note arch_tcb_context_get_def[simp]
+  note atcbContextGet_def[simp]
+  note arch_tcb_context_set_def[simp]
+  note atcbContextSet_def[simp]
+  have L1: "corres (\<lambda>tcb con. (arch_tcb_context_get o tcb_arch) tcb = con)
              (tcb_at t) (tcb_at' t)
-             (gets_the (get_tcb t)) (threadGet tcbContext t)"
+             (gets_the (get_tcb t)) (threadGet (atcbContextGet o tcbArch) t)"
     apply (rule corres_guard_imp)
       apply (rule corres_gets_the)
       apply (simp add: threadGet_def)
       apply (rule corres_rel_imp [OF corres_get_tcb])
-      apply (simp add: tcb_relation_def)
+      apply (simp add: tcb_relation_def arch_tcb_relation_def)
      apply (simp add: tcb_at_def)+
     done
   have L2: "\<And>tcb tcb' con con'. \<lbrakk> tcb_relation tcb tcb'; con = con'\<rbrakk>
-              \<Longrightarrow> tcb_relation (tcb \<lparr> tcb_context := con \<rparr>)
-                               (tcb' \<lparr> tcbContext := con' \<rparr>)"
-    by (case_tac tcb', simp add: tcb_relation_def)
+              \<Longrightarrow> tcb_relation (tcb \<lparr> tcb_arch := arch_tcb_context_set con (tcb_arch tcb) \<rparr>)
+                               (tcb' \<lparr> tcbArch := atcbContextSet con' (tcbArch tcb') \<rparr>)"
+    by (simp add: tcb_relation_def arch_tcb_relation_def)
   have L3: "\<And>r add tcb tcb' con con'. \<lbrakk> r () (); con = con'\<rbrakk> \<Longrightarrow>
             corres r (\<lambda>s. get_tcb add s = Some tcb)
                      (\<lambda>s'. (tcb', s') \<in> fst (getObject add s'))
-                     (set_object add (TCB (tcb \<lparr>tcb_context := con\<rparr>)))
-                     (setObject add (tcb' \<lparr> tcbContext := con' \<rparr>))"
+                     (set_object add (TCB (tcb \<lparr> tcb_arch := arch_tcb_context_set con (tcb_arch tcb) \<rparr>)))
+                     (setObject add (tcb' \<lparr> tcbArch := atcbContextSet con' (tcbArch tcb') \<rparr>))"
     by (rule tcb_update_corres [OF L2],
         (simp add: tcb_cte_cases_def tcb_cap_cases_def exst_same_def)+)
   have L4: "\<And>con con'. con = con' \<Longrightarrow>
@@ -1429,7 +1433,7 @@ lemma corres_as_user':
   show ?thesis
   apply (simp add: as_user_def asUser_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="\<lambda>tcb con. tcb_context tcb = con" in corres_split)
+    apply (rule_tac r'="\<lambda>tcb con. (arch_tcb_context_get o tcb_arch) tcb = con" in corres_split)
        apply (rule corres_split [OF _ L4])
           apply clarsimp
           apply (rule corres_split_nor)
@@ -1438,11 +1442,11 @@ lemma corres_as_user':
             apply (rule corres_symb_exec_r)
                prefer 4
                apply (rule no_fail_pre_and, wp)
-              apply (rule L3)
+              apply (rule L3[simplified])
                 apply simp
                apply simp
               apply (wp select_f_inv | simp)+
-      apply (rule L1)
+      apply (rule L1[simplified])
      apply wp
    apply auto
   done
@@ -1463,7 +1467,7 @@ lemma asUser_inv:
 proof -
   have P: "\<And>a b input. (a, b) \<in> fst (f input) \<Longrightarrow> b = input"
     by (rule use_valid [OF _ x], assumption, rule refl)
-  have R: "\<And>x. tcbContext_update (\<lambda>_. tcbContext x) x = x"
+  have R: "\<And>x. tcbArch_update (\<lambda>_. tcbArch x) x = x"
     by (case_tac x, simp)
   show ?thesis
     apply (simp add: asUser_def split_def threadGet_def threadSet_def
@@ -1497,7 +1501,7 @@ lemma asUser_typ_at' [wp]:
 lemmas asUser_typ_ats[wp] = typ_at_lifts [OF asUser_typ_at']
 
 lemma inQ_context[simp]:
-  "inQ d p (tcbContext_update f tcb) = inQ d p tcb"
+  "inQ d p (tcbArch_update f tcb) = inQ d p tcb"
   by (cases tcb, simp add: inQ_def)
 
 lemma asUser_invs[wp]:
@@ -3649,7 +3653,7 @@ lemma get_mrs_corres:
   have S: "get = gets id"
     by (simp add: gets_def)
   have T: "corres (\<lambda>con regs. regs = map con msg_registers) (tcb_at t) (tcb_at' t)
-     (thread_get tcb_context t) (asUser t (mapM getRegister ARM_H.msgRegisters))"
+     (thread_get (arch_tcb_context_get o tcb_arch) t) (asUser t (mapM getRegister ARM_H.msgRegisters))"
     apply (subst thread_get_as_user)
     apply (rule corres_as_user')
     apply (subst mapM_gets)
@@ -3773,7 +3777,7 @@ proof -
     apply (fold thread_set_def[simplified])
     apply (subst thread_set_as_user[where f="\<lambda>context. \<lambda>reg.
                       if reg \<in> set (take (length mrs) msg_registers)
-                      then mrs ! (the_index msg_registers reg) else context reg"])
+                      then mrs ! (the_index msg_registers reg) else context reg",simplified])
     apply (cases buf)
      apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify
                            take_min_len zip_take_triv2 min.commute)
@@ -5148,6 +5152,12 @@ lemma non_exst_same_prio_upd[simp]:
 lemma non_exst_same_timeSlice_upd[simp]:
   "non_exst_same tcb (tcbTimeSlice_update f tcb)"
   by (cases tcb, simp add: non_exst_same_def)
+
+lemma archTcbUpdate_aux: "tcb\<lparr> tcbArch := f (tcbArch tcb)\<rparr> = tcbArch_update f tcb"
+  by (cases tcb, simp)
+
+lemma archTcbUpdate_aux2: "(\<lambda>tcb. tcb\<lparr> tcbArch := f (tcbArch tcb)\<rparr>) = tcbArch_update f"
+  by (rule ext, case_tac tcb, simp)
 
 end
 end

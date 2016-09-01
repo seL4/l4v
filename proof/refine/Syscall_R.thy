@@ -795,7 +795,8 @@ lemma handleFaultReply_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> handleFaultReply x t label msg \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: handleFaultReply_def)
   apply (case_tac x, simp_all)
-     apply (wp | simp)+
+     apply (wp | clarsimp simp: handleArchFaultReply_def
+                          split: arch_fault.split)+
   done 
 
 crunch sch_act_simple[wp]: handleFaultReply sch_act_simple

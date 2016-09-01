@@ -1477,7 +1477,9 @@ lemma handleInterrupt_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding handleInterrupt_def
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv | wpc | clarsimp simp: invs'_def valid_state'_def)+
+   apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv
+         | wpc | clarsimp simp: invs'_def valid_state'_def
+                                handleReservedIRQ_def)+
   done
 
 lemma suspend_no_orphans [wp]:

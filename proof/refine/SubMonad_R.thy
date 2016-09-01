@@ -52,35 +52,34 @@ lemma submonad_args_ksPSpace:
   "submonad_args ksPSpace (ksPSpace_update o (\<lambda>x _. x)) \<top>"
   by (simp add: submonad_args_def)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 definition
   "asUser_fetch \<equiv> \<lambda>t s. case (ksPSpace s t) of
-      Some (KOTCB tcb) \<Rightarrow> tcbContext tcb
+      Some (KOTCB tcb) \<Rightarrow> (atcbContextGet o tcbArch) tcb
     | None \<Rightarrow> undefined"
 
 definition
   "asUser_replace \<equiv> \<lambda>t uc s. 
       let obj = case (ksPSpace s t) of
-                   Some (KOTCB tcb) \<Rightarrow> Some (KOTCB (tcb \<lparr>tcbContext := uc\<rparr>))
+                   Some (KOTCB tcb) \<Rightarrow> Some (KOTCB (tcb \<lparr>tcbArch := atcbContextSet uc (tcbArch tcb)\<rparr>))
                  | obj \<Rightarrow> obj
       in s \<lparr> ksPSpace := (ksPSpace s) (t := obj) \<rparr>" 
 
 
 lemma threadGet_stateAssert_gets_asUser:
-  "threadGet tcbContext t = do stateAssert (tcb_at' t) []; gets (asUser_fetch t) od"
+  "threadGet (atcbContextGet o tcbArch) t = do stateAssert (tcb_at' t) []; gets (asUser_fetch t) od"
   apply (rule is_stateAssert_gets [OF _ _ empty_fail_threadGet no_fail_threadGet])
     apply (clarsimp simp: threadGet_def liftM_def, wp)
    apply (simp add: threadGet_def liftM_def, wp getObject_tcb_at')
   apply (simp add: threadGet_def liftM_def, wp)
   apply (rule hoare_strengthen_post, wp getObject_obj_at')
      apply (simp add: objBits_def objBitsKO_def)+
-  apply (clarsimp simp: obj_at'_def asUser_fetch_def projectKOs)
+  apply (clarsimp simp: obj_at'_def asUser_fetch_def projectKOs atcbContextGet_def)
   done
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma threadSet_modify_asUser:
   "tcb_at' t st \<Longrightarrow>
-   threadSet (tcbContext_update (\<lambda>_. uc)) t st = modify (asUser_replace t uc) st"
+   threadSet (\<lambda>tcb. tcb\<lparr> tcbArch := atcbContextSet uc (tcbArch tcb)\<rparr>) t st = modify (asUser_replace t uc) st"
   apply (rule is_modify [OF _ empty_fail_threadSet no_fail_threadSet])
    apply (clarsimp simp: threadSet_def setObject_def split_def
                          updateObject_default_def)
@@ -89,8 +88,18 @@ lemma threadSet_modify_asUser:
     apply (clarsimp simp: asUser_replace_def Let_def obj_at'_def
                           projectKOs fun_upd_def
                    split: option.split kernel_object.split)
-   apply (wp getObject_obj_at' | clarsimp simp: objBits_def objBitsKO_def)+
+   apply (wp getObject_obj_at' | clarsimp simp: objBits_def objBitsKO_def atcbContextSet_def)+
   done
+
+lemma atcbContext_get_eq[simp] : "atcbContextGet (atcbContextSet x at) = x"
+  by(simp add: atcbContextGet_def atcbContextSet_def)
+
+lemma atcbContext_set_eq[simp] : "atcbContextSet (atcbContextGet t) t = t"
+  by (cases t, simp add: atcbContextGet_def atcbContextSet_def)
+
+
+lemma atcbContext_set_set[simp] : "atcbContextSet x (atcbContextSet y at) = atcbContextSet x at"
+  by (cases at,simp add: atcbContextSet_def)
 
 lemma submonad_asUser:
   "submonad (asUser_fetch t) (asUser_replace t) (tcb_at' t) (asUser t)"
@@ -106,8 +115,9 @@ lemma submonad_asUser:
                           fun_upd_idem
                    split: kernel_object.splits option.splits)
     apply (rename_tac tcb)
-    apply (case_tac tcb, simp add: map_upd_triv)
-   apply (clarsimp simp: obj_at'_def asUser_replace_def Let_def projectKOs
+    apply (case_tac tcb, simp add: map_upd_triv atcbContextSet_def)
+   apply (clarsimp simp: obj_at'_def asUser_replace_def
+                         Let_def projectKOs atcbContextSet_def
                   split: kernel_object.splits option.splits)
    apply (rename_tac tcb)
    apply (case_tac tcb, simp add: objBitsKO_def ps_clear_def)

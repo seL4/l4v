@@ -531,7 +531,7 @@ lemma hv_corres:
           apply (rule corres_machine_op [where r="op ="])
           apply (rule corres_Id, rule refl, simp)
           apply (rule no_fail_getDFSR)
-         apply (rule corres_trivial, simp)
+         apply (rule corres_trivial, simp add: arch_fault_map_def)
         apply wp
     apply simp+
   apply (rule corres_guard_imp)
@@ -548,7 +548,7 @@ lemma hv_corres:
          apply (rule corres_machine_op [where r="op ="])
          apply (rule corres_Id, rule refl, simp) 
          apply (rule no_fail_getIFSR)
-        apply (rule corres_trivial, simp)
+        apply (rule corres_trivial, simp add: arch_fault_map_def)
        apply wp
    apply simp+
   done

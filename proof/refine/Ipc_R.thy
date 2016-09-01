@@ -1722,6 +1722,17 @@ lemma user_mapM_getRegister_corres:
   apply (simp add: getRegister_def)
   done
 
+lemma make_arch_fault_msg_corres:
+  "corres op = (tcb_at t) (tcb_at' t)
+  (make_arch_fault_msg f t)
+  (makeArchFaultMessage (arch_fault_map f) t)"
+  apply (cases f, clarsimp simp: makeArchFaultMessage_def split: arch_fault.split)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_eqr[OF _ getRestartPCs_corres])
+      apply (rule corres_trivial, simp add: arch_fault_map_def)
+     apply (wp, auto)
+  done
+
 lemma mk_ft_msg_corres:
   "corres op = (tcb_at t) (tcb_at' t)
      (make_fault_msg ft t)
@@ -1731,20 +1742,17 @@ lemma mk_ft_msg_corres:
        apply (rule corres_split_eqr [OF _ getRestartPCs_corres])
          apply (rule corres_trivial, simp add: fromEnum_def enum_bool)
         apply (wp | simp)+
+    apply (simp add: ARM_H.syscallMessage_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ getRestartPCs_corres])
+      apply (rule corres_split_eqr [OF _ user_mapM_getRegister_corres])
         apply (rule corres_trivial, simp)
        apply (wp | simp)+
-   apply (simp add: ARM_H.syscallMessage_def)
+   apply (simp add: ARM_H.exceptionMessage_def)
    apply (rule corres_guard_imp)
      apply (rule corres_split_eqr [OF _ user_mapM_getRegister_corres])
        apply (rule corres_trivial, simp)
       apply (wp | simp)+
-  apply (simp add: ARM_H.exceptionMessage_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ user_mapM_getRegister_corres])
-      apply (rule corres_trivial, simp)
-     apply (wp | simp)+
+  apply (rule make_arch_fault_msg_corres)
   done
 
 lemma makeFaultMessage_inv[wp]:
@@ -1752,7 +1760,8 @@ lemma makeFaultMessage_inv[wp]:
   apply (cases ft, simp_all add: makeFaultMessage_def)
      apply (wp asUser_inv mapM_wp' det_mapM[where S=UNIV]
                det_getRestartPC getRestartPC_inv
-             | simp add: getRegister_def)+
+             | clarsimp simp: getRegister_def makeArchFaultMessage_def
+                        split: arch_fault.split)+
   done
 
 lemmas threadget_fault_corres =
@@ -2035,7 +2044,9 @@ lemma handle_fault_reply_corres:
      (handleFaultReply ft' t label msg)"
   apply (cases ft)
      apply(simp_all add: handleFaultReply_def
-                         syscallMessage_def exceptionMessage_def)
+                         handle_arch_fault_reply_def handleArchFaultReply_def
+                         syscallMessage_def exceptionMessage_def
+                    split: arch_fault.split)
    by (rule handle_fault_reply_registers_corres)+
 
 crunch typ_at'[wp]: handleFaultReply "\<lambda>s. P (typ_at' T p s)"

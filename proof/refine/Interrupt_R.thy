@@ -877,6 +877,7 @@ lemma dmo_ackInterrupt[wp]:
      apply ((clarsimp simp: ackInterrupt_def machine_op_lift_def
                            machine_rest_lift_def split_def | wp)+)[3]
   done
+
 lemma hint_invs[wp]:
   "\<lbrace>invs'\<rbrace> handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: handleInterrupt_def getSlotCap_def
@@ -888,10 +889,9 @@ lemma hint_invs[wp]:
     apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
      apply fastforce
-    apply (wp threadSet_invs_trivial | simp add: inQ_def)+
-
+    apply (wp threadSet_invs_trivial | simp add: inQ_def handleReservedIRQ_def)+
   apply (wp hoare_post_comb_imp_conj hoare_drop_imp getIRQState_inv)
-  apply (assumption)
+  apply (assumption)+
   done
   
 
@@ -904,7 +904,7 @@ lemma handleInterrupt_runnable:
   apply (rule conjI; rule impI)  
    apply (wp sai_st_tcb' hoare_vcg_all_lift hoare_drop_imps 
              threadSet_pred_tcb_no_state getIRQState_inv haskell_fail_wp
-          |wpc|simp)+
+          |wpc|simp add: handleReservedIRQ_def)+
   done
 
 end

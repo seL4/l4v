@@ -650,14 +650,16 @@ lemma entry_corres:
          prefer 2
          apply simp
          apply (rule threadset_corresT)
-            apply (simp add: tcb_relation_def)
+            apply (simp add: tcb_relation_def arch_tcb_relation_def
+                             arch_tcb_context_set_def atcbContextSet_def)
            apply (clarsimp simp: tcb_cap_cases_def)
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
         apply (rule corres_split [OF _ kernel_corres])
           apply (rule corres_split_eqr [OF _ gct_corres])
             apply (rule threadget_corres)
-            apply (simp add: tcb_relation_def)
+            apply (simp add: tcb_relation_def arch_tcb_relation_def
+                             arch_tcb_context_get_def atcbContextGet_def)
            apply wp
 
          apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, simp add: invs_def cur_tcb_def)

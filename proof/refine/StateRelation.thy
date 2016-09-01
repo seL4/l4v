@@ -32,12 +32,17 @@ where
   | ExceptionTypes_A.GuardMismatch n g      \<Rightarrow> Fault_H.GuardMismatch n (of_bl g) (length g)"
 
 primrec
+  arch_fault_map :: "Machine_A.ARM_A.arch_fault \<Rightarrow> ArchFault_H.ARM_H.arch_fault"
+where
+ "arch_fault_map (Machine_A.ARM_A.VMFault ptr msg) = ArchFault_H.ARM_H.VMFault ptr msg"
+
+primrec
   fault_map :: "ExceptionTypes_A.fault \<Rightarrow> Fault_H.fault"
 where
   "fault_map (ExceptionTypes_A.CapFault ref bool failure) =
    Fault_H.CapFault ref bool (lookup_failure_map failure)"
-| "fault_map (ExceptionTypes_A.VMFault  ptr bool) =
-   Fault_H.VMFault  ptr bool"
+| "fault_map (ExceptionTypes_A.ArchFault  arch_fault) =
+   Fault_H.ArchFault  (arch_fault_map arch_fault)"
 | "fault_map (ExceptionTypes_A.UnknownSyscallException n) =
    Fault_H.UnknownSyscallException n"
 | "fault_map (ExceptionTypes_A.UserException x y) =
@@ -167,12 +172,18 @@ where
      = (ts' = Structures_H.BlockedOnNotification oref)"
 
 definition
+  arch_tcb_relation :: "Structures_A.arch_tcb \<Rightarrow> Structures_H.arch_tcb \<Rightarrow> bool"
+where
+ "arch_tcb_relation \<equiv> \<lambda>atcb atcb'.
+   tcb_context atcb = atcbContext atcb'"
+
+definition
   tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
 where
  "tcb_relation \<equiv> \<lambda>tcb tcb'.
     tcb_fault_handler tcb = to_bl (tcbFaultHandler tcb')
   \<and> tcb_ipc_buffer tcb = tcbIPCBuffer tcb'
-  \<and> tcb_context tcb = tcbContext tcb'
+  \<and> arch_tcb_relation (tcb_arch tcb) (tcbArch tcb')
   \<and> thread_state_relation (tcb_state tcb) (tcbState tcb')
   \<and> fault_rel_optionation (tcb_fault tcb) (tcbFault tcb')
   \<and> cap_relation (tcb_ctable tcb) (cteCap (tcbCTable tcb'))

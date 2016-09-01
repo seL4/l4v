@@ -283,10 +283,12 @@ lemma handleInterrupt_valid_domain_time:
     apply (rule hoare_pre, (wp | wpc)+)
      apply (rule_tac Q="\<lambda>_ s. 0 < ksDomainTime s" in hoare_post_imp, clarsimp)
      apply wp
-   apply assumption
-   (* IRQTimer : tick occurs *)
-   subgoal by (wp timerTick_valid_domain_time | simp | wp_once hoare_vcg_imp_lift)+
-   done
+    apply assumption
+    (* IRQTimer : tick occurs *) (* IRQReserved : trivial *)
+    apply (wp timerTick_valid_domain_time
+          | clarsimp simp: handleReservedIRQ_def
+          | wp_once hoare_vcg_imp_lift)+
+  done
 
 lemma schedule_domain_time_left':
   "\<lbrace> valid_domain_list' and
