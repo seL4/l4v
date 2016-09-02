@@ -1,8 +1,23 @@
-Built from git repo at /home/matthewb/verification/mainline/l4v/spec/haskell by matthewb
+Built from git repo at /home/tsewell/dev/verification3/l4v/spec/haskell by tsewell
 
 Generated from changeset:
-17b8956 arch_split: give some vspace concepts more generic names
+ef99749 Regression: Added RUN_TESTS_DEFAULT for overwriting the default test set
 
 
 Warning - uncomitted changes used:
+ M ../design/skel/ARM/ArchObjInsts_H.thy
+ M ../design/skel/ARM/ArchStructures_H.thy
  M ../design/version
+ M ../../tools/haskell-translator/lhs_pars.py
+ M ../../tools/haskell-translator/pars_skl.py
+?? ../../Test.thy
+?? ../../proof/asmrefine/CFunDump.txt
+?? ../design/ARM/pars_skel.tmp
+?? ../../tools/asmrefine/testfiles/
+?? ../../tools/asmrefine/umm_types.txt
+?? ../../tools/c-parser/testfiles/no_ret_stmt.c
+?? ../../tools/c-parser/testfiles/shiftl_28.c
+?? ../../tools/c-parser/testfiles/shiftl_28.thy
+?? ../../tools/haskell-translator/.lhs_pars.py.swp
+?? ../../umm_types.txt
+?? ../../use-this-isabelle

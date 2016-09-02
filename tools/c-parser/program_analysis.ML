@@ -762,26 +762,28 @@ fun fndes_callinfo cse e =
 
 
 fun process_enumdecl (enameopt_w,econsts) env = let
-  fun foldthis ((ecn_w, eopt), (i, set, alist)) =
+  fun mk_ecenv (set, enum_tab) = CE {enumenv = enum_tab,
+          typing = cse_typing env, structsize = strsize env}
+  fun foldthis ((ecn_w, eopt), (i, set, enum_tab)) =
       case List.find (fn sw => node sw = node ecn_w) set of
         SOME first => (Feedback.errorStr'(left ecn_w, right ecn_w,
                                           "Re-using enum const (" ^ node ecn_w ^
                                           ") from "^
                                           Region.toString
                                               (Region.Wrap.region first));
-                       (i, set, alist))
+                       (i, set, enum_tab))
       | NONE => let
           val e_val = case eopt of
                         NONE => i
-                      | SOME e => consteval (cse2ecenv env) e
-          val tab' = Symtab.update(node ecn_w, (e_val, node enameopt_w)) alist
+                      | SOME e => consteval (mk_ecenv (set, enum_tab)) e
+          val tab' = Symtab.update(node ecn_w, (e_val, node enameopt_w)) enum_tab
         in
           (e_val + 1, ecn_w::set, tab')
         end
-  val (set0, alist0) = get_fulleenv env
-  val (_, set', alist') = List.foldl foldthis (0,set0,alist0) econsts
+  val (set0, enum_tab0) = get_fulleenv env
+  val (_, set', enum_tab') = List.foldl foldthis (0,set0,enum_tab0) econsts
 in
-  cse_fupdenumenv (K (set',alist')) env
+  cse_fupdenumenv (K (set', enum_tab')) env
 end
 
 fun process_type (posrange as (l,r)) (ty, env) =

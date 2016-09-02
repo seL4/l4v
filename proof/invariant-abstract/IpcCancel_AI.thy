@@ -216,7 +216,6 @@ crunch typ_at[wp]: cancel_ipc, reply_cancel_ipc, unbind_maybe_notification
   (wp: crunch_wps hoare_vcg_split_ifE select_wp
      simp: crunch_simps unless_def)
 
-
 lemma cancel_ipc_tcb [wp]:
   "\<lbrace>tcb_at t\<rbrace> cancel_ipc t' \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ) wp

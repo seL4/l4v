@@ -103,6 +103,8 @@ lemmas (in Arch) [simp] =
 
 -- --------------------------------------
 
+#INCLUDE_SETTINGS keep_constructor = asidpool
+
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM.lhs
 #INCLUDE_HASKELL_PREPARSE SEL4/Machine/Hardware/ARM.lhs
 

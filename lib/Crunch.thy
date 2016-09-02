@@ -14,6 +14,7 @@ keywords "crunch" "crunch_ignore" :: thy_decl
 begin
 
 named_theorems "crunch_def"
+named_theorems "crunch_rules"
 
 ML_file "crunch-cmd.ML"
 ML_file "Crunch.ML"

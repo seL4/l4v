@@ -92,6 +92,10 @@ for line in instructions:
                 pass
             else:
                 output_f.writelines(parsed)
+        elif line.startswith ("#INCLUDE_SETTINGS"):
+            (_, settings) = line.split (None, 1)
+            settings = settings.strip ()
+            lhs_pars.settings_line (settings)
         else:
             output_f.write(line)
 

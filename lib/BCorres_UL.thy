@@ -252,15 +252,19 @@ ML {*
 structure CrunchBCorresInstance : CrunchInstance =
 struct
   type extra = term;
+  val eq_extra = ae_conv;
   val name = "bcorres";
   val has_preconds = false;
   fun mk_term _ body extra =
     (Syntax.parse_term @{context} "bcorres_underlying") $ extra $ body $ body;
-  fun get_precond (Const (@{const_name "bcorres_underlying"}, _) $ _ $ _ $ _ ) = Var (("Dummy", 0), dummyT)
+  fun get_precond (Const (@{const_name "bcorres_underlying"}, _) $ _ $ _ $ _ ) = Term.dummy
     | get_precond _ = error "get_precond: not an bcorres term";
   fun put_precond _ ((v as Const (@{const_name "bcorres_underlying"}, _)) $ extra $ body $ body')
         = v $ extra $ body $ body'
     | put_precond _ _ = error "put_precond: not an bcorres term";
+  fun dest_term (Const (@{const_name "bcorres_underlying"}, _) $ extra $ body $ _)
+      = SOME (Term.dummy, body, extra)
+    | dest_term _ = NONE
   val pre_thms = [];
   val wpc_tactic = WeakestPreCases.wp_cases_tac @{thms wpc_processors};
   fun parse_extra ctxt extra

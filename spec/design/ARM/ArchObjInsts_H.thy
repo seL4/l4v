@@ -107,6 +107,7 @@ lemmas (in Arch) [simp] =
 
 
 
+
 instantiation ARM_H.pde :: pspace_storable
 begin
 interpretation Arch .

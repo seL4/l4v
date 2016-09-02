@@ -1467,7 +1467,7 @@ crunch st_tcb_at'[wp]: replyFromKernel "st_tcb_at' P t"
 crunch cap_to'[wp]: replyFromKernel "ex_nonz_cap_to' p"
 crunch it'[wp]: replyFromKernel "\<lambda>s. P (ksIdleThread s)"
 crunch sch_act_simple[wp]: replyFromKernel sch_act_simple
-  (lift: sch_act_simple_lift)
+  (rule: sch_act_simple_lift)
 
 lemma rfk_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> replyFromKernel t x1 \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
@@ -1668,7 +1668,7 @@ lemma deleteCallerCap_nonz_cap:
 crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
   (wp: crunch_wps ss_sch_act_sane_weak loadObject_default_inv getObject_inv
    simp: crunch_simps unless_def
-   lift: sch_act_sane_lift
+   rule: sch_act_sane_lift
    ignore: getObject)
 
 crunch sch_act_sane[wp]: deleteCallerCap sch_act_sane
