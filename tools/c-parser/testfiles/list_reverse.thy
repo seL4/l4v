@@ -32,7 +32,7 @@ declare sep_conj_left_com [simp del]
 install_C_file memsafe "list_reverse.c"
 
 thm list_reverse_global_addresses.reverse_body_def
-declare[[show_consts=true]]
+
 lemma (in list_reverse_global_addresses)
   shows "reverse_spec"
 apply (unfold reverse_spec_def)
