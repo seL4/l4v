@@ -14,10 +14,8 @@ imports
   Substitute
   "c/arch/object/structures_defs"
   "c/arch/object/structures_proofs"
-  "c/api/types_defs"
-  "c/api/types_proofs"
-  "c/arch/api/shared_types_defs"
-  "c/arch/api/shared_types_proofs"
+  "c/32/mode/api/shared_types_defs"
+  "c/32/mode/api/shared_types_proofs"
 begin
 
 end
