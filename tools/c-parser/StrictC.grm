@@ -862,6 +862,7 @@ external_declaration
                 ([function_definition])
 | declaration
                 (map Decl declaration)
+| YSEMI         ([])
 
 storage_class_specifier : TYPEDEF (wrap(TypeDef, TYPEDEFleft, TYPEDEFright))
                         | EXTERN (wrap(Extern, EXTERNleft, EXTERNright))
