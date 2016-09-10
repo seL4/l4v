@@ -6547,13 +6547,6 @@ lemma updateFreeIndex_pspace':
    apply simp
   done
 
-lemma usableUntypedRange_mono:
-  "capAligned (capability.UntypedCap ptr sz idx)
-    \<Longrightarrow> idx \<le> idx'
-    \<Longrightarrow> usableUntypedRange (capability.UntypedCap ptr sz idx')
-           \<subseteq> usableUntypedRange (capability.UntypedCap ptr sz idx)"
-  sorry
-
 lemma ctes_of_cte_wpD:
   "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' (op = cte) p s"
   by (simp add: cte_wp_at_ctes_of)

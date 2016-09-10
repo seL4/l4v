@@ -667,12 +667,12 @@ lemma ccorres_sequence_while_genQ':
                             (F (n * j)) ({s. xf s = of_nat (i + n * j) \<and> r' ys (xf' s)} \<inter> Q) hs
                             (xs ! n) body"
   and      pn: "\<And>n. P n = (n < of_nat (i + length xs * j))"
-  and   bodyi: "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body ({t. xf t = xf s} \<inter> Q)"
+  and   bodyi: "\<forall>s. xf s < of_nat (i + length xs * j)
+    \<longrightarrow> \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body {t. xf t = xf s \<and> xf_update (\<lambda>_. xf t + of_nat j) t \<in> Q}"
   and      hi: "\<And>n. Suc n < length xs \<Longrightarrow> \<lbrace> F (n * j) \<rbrace> (xs ! n) \<lbrace>\<lambda>_. F (Suc n * j)\<rbrace>"
   and     lxs: "i + length xs * j < 2 ^ len_of TYPE('c)"
   and      xf: "\<forall>s f. xf (xf_update f s) = f (xf s) \<and> globals (xf_update f s) = globals s"
   and     xf': "\<forall>s f. xf' (xf_update f s) = (xf' s)"
-  and     xfQ: "\<forall>s f. s \<in> Q \<longrightarrow> xf_update f s \<in> Q"
   and rf_sr_xf: "\<And>s r f. (s, r) \<in> rf_sr \<Longrightarrow> (s, xf_update f r) \<in> rf_sr"
   and       j: " j > 0"
   shows  "ccorresG rf_sr \<Gamma> (\<lambda>rv (i', rv'). r' rv rv' \<and> i' = of_nat (i + length xs * of_nat j))
@@ -772,13 +772,12 @@ proof -
         apply (rule hi''')
         apply simp
        apply (simp add: xf')
-       apply (rule HoarePartialDef.Conseq [where P = "{s. xf s + of_nat j = of_nat (i + (length init_xs - length ys) * of_nat j)} \<inter> Q"])
+       apply (rule HoarePartialDef.Conseq [where P = "{s. P (xf s) \<and> xf s + of_nat j = of_nat (i + (length init_xs - length ys) * of_nat j)} \<inter> Q"])
        apply (intro ballI exI)
-       apply (rule conjI) 
-        apply (rule_tac x = s in spec [OF bodyi])
-       apply (clarsimp simp: xf) 
-       apply (rule xfQ [rule_format])
-       apply simp
+       apply (rule conjI)
+        apply (rule_tac s=s in bodyi[rule_format])
+        apply (clarsimp simp: pn)
+       apply (clarsimp simp: xf)
       apply (clarsimp simp: ln pn')
       apply (subst of_nat_mult [symmetric])+
       apply (subst of_nat_add [symmetric])+

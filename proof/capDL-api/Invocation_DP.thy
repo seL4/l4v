@@ -623,8 +623,15 @@ lemma cdl_cur_thread_detype:
   "cdl_current_thread (detype m s) = cdl_current_thread s"
   by (simp add:detype_def)
 
+crunch cdl_current_thread[wp]: reset_untyped_cap "\<lambda>s. P (cdl_current_thread s)"
+  (wp: select_wp alternativeE_wp mapME_x_inv_wp
+    simp: cdl_cur_thread_detype)
+
+lemmas helper = valid_validE_E[OF reset_untyped_cap_cdl_current_thread]
+
 crunch cdl_current_thread[wp]: invoke_untyped "\<lambda>s. P (cdl_current_thread s)"
-(wp:select_wp mapM_x_wp' crunch_wps hoare_unless_wp
+(wp:select_wp mapM_x_wp' crunch_wps hoare_unless_wp alternativeE_wp
+    helper
   simp:cdl_cur_thread_detype crunch_simps)
 
 crunch cdl_current_thread[wp]: insert_cap_sibling "\<lambda>s. P (cdl_current_thread s)"

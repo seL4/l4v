@@ -472,7 +472,7 @@ shows
           apply (clarsimp simp:conj_comms objBits_simps archObjSize_def |
                  strengthen valid_pspace_mdb' vp_strgs' invs_valid_pspace'
                  valid_pspace_valid_objs' invs_valid_global')+
-          apply (wp updateFreeIndex_invs_simple'[where cap = "UntypedCap isdev frame pageBits idx",simplified]
+          apply (wp updateFreeIndex_forward_invs'
                     updateFreeIndex_caps_no_overlap''[where cap = "UntypedCap isdev frame pageBits idx",simplified]
                     updateFreeIndex_pspace_no_overlap'[where cap = "UntypedCap isdev frame pageBits idx",simplified]
                     updateFreeIndex_caps_overlap_reserved'[where cap = "UntypedCap isdev frame pageBits idx",simplified])
