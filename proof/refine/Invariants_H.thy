@@ -904,21 +904,6 @@ where
  "valid_queues \<equiv> \<lambda>s. valid_queues_no_bitmap s \<and> valid_bitmapQ s \<and> 
                      bitmapQ_no_L2_orphans s \<and> bitmapQ_no_L1_orphans s"
 
-ML {*
-@{term "(\<forall>d p. (\<forall>t\<in>set (ksReadyQueues y1 (d, p)).
-           obj_at' (inQ d p and runnable' \<circ> tcbState) t (gsUntypedZeroRanges_update y0 y1)) \<and>
-       distinct (ksReadyQueues y1 (d, p)) \<and>
-       (maxDomain < d \<longrightarrow> ksReadyQueues y1 (d, p) = []) \<and>
-       (maxPriority < p \<longrightarrow> ksReadyQueues y1 (d, p) = [])) =
-(\<forall>d p. (\<forall>t\<in>set (ksReadyQueues y1 (d, p)). obj_at' (inQ d p and runnable' \<circ> tcbState) t y1) \<and>
-       distinct (ksReadyQueues y1 (d, p)) \<and>
-       (maxDomain < d \<longrightarrow> ksReadyQueues y1 (d, p) = []) \<and>
-       (maxPriority < p \<longrightarrow> ksReadyQueues y1 (d, p) = [])) \<Longrightarrow>
-valid_queues_no_bitmap (gsUntypedZeroRanges_update y0 y1) = valid_queues_no_bitmap y1"}
-  |> get_upd_apps
-  |> map (Syntax.pretty_term @{context} #> Pretty.writeln)
-*}
-
 definition
   (* when a thread gets added to / removed from a queue, but before bitmap updated *)
   valid_bitmapQ_except :: "domain \<Rightarrow> priority \<Rightarrow> kernel_state \<Rightarrow> bool"

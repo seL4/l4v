@@ -1431,13 +1431,12 @@ lemma deleteObjects_valid_duplicates'[wp]:
   done
 
 crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
-  (simp: crunch_simps fiddle_gsUntypedZeroRanges_update
+  (simp: crunch_simps
      wp: hoare_drop_imps hoare_unless_wp mapME_x_inv_wp
          preemptionPoint_inv
     ignore:freeMemory forME_x)
 
 crunch valid_duplicates[wp]: updateFreeIndex "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-    (simp: fiddle_gsUntypedZeroRanges_update)
 
 lemma resetUntypedCap_valid_duplicates'[wp]:
   "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s))

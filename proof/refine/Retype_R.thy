@@ -5004,6 +5004,114 @@ crunch ksDomSchedule[wp]: createNewCaps "\<lambda>s. P (ksDomSchedule s)"
 crunch ksDomScheduleIdx[wp]: createNewCaps "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: mapM_x_wp' ignore: getObject setObject simp: crunch_simps)
 
+lemma createObjects_null_filter':
+  "\<lbrace>\<lambda>s. P (null_filter' (ctes_of s)) \<and> makeObjectKO dev ty = Some val \<and>
+        range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0 \<and>
+        pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' ptr sz s\<rbrace>
+   createObjects' ptr n val gbits
+   \<lbrace>\<lambda>addrs a. P (null_filter' (ctes_of a))\<rbrace>"
+   apply (clarsimp simp: createObjects'_def split_def)
+   apply (wp hoare_unless_wp|wpc
+          | clarsimp simp:haskell_assert_def alignError_def
+            split del: if_splits simp del:fun_upd_apply)+
+   apply (subst new_cap_addrs_fold')
+     apply (simp add:unat_1_0 unat_gt_0)
+     apply (rule range_cover_not_zero_shift)
+     apply fastforce+
+   apply (subst new_cap_addrs_fold')
+    apply (simp add:unat_1_0 unat_gt_0)
+    apply (rule range_cover_not_zero_shift)
+      apply simp
+     apply assumption
+    apply simp
+   apply (subst data_map_insert_def[symmetric])+
+   apply (frule(2) retype_aligned_distinct'[where ko = val])
+    apply (erule range_cover_rel)
+     apply simp+
+   apply (frule(2) retype_aligned_distinct'(2)[where ko = val])
+    apply (erule range_cover_rel)
+     apply simp+
+   apply (frule null_filter_ctes_retype
+     [where addrs = "(new_cap_addrs (unat (((of_nat n)::word32) << gbits)) ptr val)"])
+          apply assumption+
+     apply (clarsimp simp:field_simps foldr_upd_app_if[folded data_map_insert_def] shiftl_t2n range_cover.unat_of_nat_shift)+
+    apply (rule new_cap_addrs_aligned[THEN bspec])
+    apply (erule range_cover.aligned[OF range_cover_rel])
+     apply simp+
+   apply (clarsimp simp:shiftl_t2n field_simps range_cover.unat_of_nat_shift)
+   apply (drule subsetD[OF new_cap_addrs_subset,rotated])
+    apply (erule range_cover_rel)
+     apply simp
+    apply simp
+   apply (rule ccontr)
+   apply clarify
+   apply (frule(1) pspace_no_overlapD')
+   apply (erule_tac B = "{x..x+2^objBitsKO y - 1}" in in_empty_interE[rotated])
+    apply (drule(1) pspace_alignedD')
+    apply (clarsimp)
+    apply (erule is_aligned_no_overflow)
+    apply (simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+        Int_atLeastAtMost atLeastatMost_empty_iff add:Int_ac ptr_add_def p_assoc_help)
+  apply (simp add:field_simps foldr_upd_app_if[folded data_map_insert_def] shiftl_t2n)
+  apply auto
+  done
+
+lemma createNewCaps_null_filter':
+  "\<lbrace>(\<lambda>s. P (null_filter' (ctes_of s)))
+      and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz
+      and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0) \<rbrace>
+     createNewCaps ty ptr n us dev
+   \<lbrace>\<lambda>_ s. P (null_filter' (ctes_of s))\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (simp add: createNewCaps_def toAPIType_def
+                   Arch_createNewCaps_def
+               split del: split_if cong: option.case_cong)
+  apply (cases ty, simp_all split del: split_if)
+          apply (rename_tac apiobject_type)
+          apply (case_tac apiobject_type, simp_all split del: split_if)
+              apply (rule hoare_pre, wp,simp)
+             apply (simp add: createObjects_def makeObjectKO_def
+                              APIType_capBits_def objBits_def pageBits_def
+                              archObjSize_def ptBits_def pdBits_def curDomain_def
+                              objBits_if_dev
+                       split del: split_if
+                    | wp createObjects_null_filter'[where ty = "Inr ty" and sz = sz and dev=dev]
+                         copyGlobalMappings_ctes_of threadSet_ctes_of mapM_x_wp'
+                    | simp add: objBits_simps
+                    | fastforce)+
+  done
+
+crunch gsUntypedZeroRanges[wp]: createNewCaps "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: crunch_wps simp: crunch_simps unless_def
+      ignore: getObject setObject)
+
+lemma untyped_ranges_zero_inv_null_filter:
+  "untyped_ranges_zero_inv (option_map cteCap o null_filter' ctes)
+    = untyped_ranges_zero_inv (option_map cteCap o ctes)"
+  apply (simp add: untyped_ranges_zero_inv_def fun_eq_iff null_filter'_def)
+  apply clarsimp
+  apply (rule_tac f="\<lambda>caps. x = ran caps" for caps in arg_cong)
+  apply (clarsimp simp: fun_eq_iff map_comp_def untypedZeroRange_def)
+  done
+
+lemma untyped_ranges_zero_inv_null_filter_cteCaps_of:
+  "untyped_ranges_zero_inv (cteCaps_of s)
+    = untyped_ranges_zero_inv (option_map cteCap o null_filter' (ctes_of s))"
+  by (simp add: untyped_ranges_zero_inv_null_filter cteCaps_of_def)
+
+lemma createNewCaps_urz:
+  "\<lbrace>untyped_ranges_zero'
+      and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz
+      and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0) \<rbrace>
+   createNewCaps ty ptr n us dev
+   \<lbrace>\<lambda>archCaps. untyped_ranges_zero'\<rbrace>"
+  apply (simp add: untyped_ranges_zero_inv_null_filter_cteCaps_of)
+  apply (rule hoare_pre)
+   apply (rule untyped_ranges_zero_lift)
+    apply (wp createNewCaps_null_filter')
+  apply (auto simp: o_def)
+  done
+
 lemma createNewCaps_invs':
   "\<lbrace>(\<lambda>s. invs' s \<and> ct_active' s \<and> pspace_no_overlap' ptr sz s
         \<and> caps_no_overlap'' ptr sz s \<and> ptr \<noteq> 0 
@@ -5038,7 +5146,6 @@ proof (rule hoare_gen_asm, erule conjE)
   apply (simp add: invs'_def valid_state'_def
                    pointerInUserData_def typ_at'_def)
     apply (rule hoare_pre)
-sorry (*
      apply (wp createNewCaps_valid_pspace [OF not_0 cover]
                createNewCaps_state_refs_of' [OF cover not_0 ]
                createNewCaps_iflive' [OF cover not_0 ]
@@ -5054,13 +5161,14 @@ sorry (*
                createNewCaps_pred_tcb_at' cnc_ct_not_inQ
                createNewCaps_ct_idle_or_in_cur_domain'
                createNewCaps_sch_act_wf
+               createNewCaps_urz[where sz=sz]
            | simp)+
   using not_0
   apply (clarsimp simp: valid_pspace'_def)
   using cover
   apply (intro conjI)
    apply simp_all
-  done *)
+  done
 qed
 
 lemma createNewCaps_vp:
@@ -5413,11 +5521,11 @@ crunch gsUntypedZeroRanges[wp]: createObjects "\<lambda>s. P (gsUntypedZeroRange
   (simp: unless_def)
 
 lemma createObjects_untyped_ranges_zero':
-  assumes moKO: "makeObjectKO ty = Some (injectKOS val)"
+  assumes moKO: "makeObjectKO dev ty = Some val"
   shows
   "\<lbrace>ct_active' and valid_pspace' and pspace_no_overlap' ptr sz
        and untyped_ranges_zero'
-       and K (range_cover ptr sz (objBitsKO (injectKOS val) + gSize) n \<and> n \<noteq> 0)\<rbrace>
+       and K (range_cover ptr sz (objBitsKO val + gSize) n \<and> n \<noteq> 0)\<rbrace>
      createObjects ptr n val gSize
    \<lbrace>\<lambda>_. untyped_ranges_zero'\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -5502,7 +5610,7 @@ proof -
              createObjects_untyped_ranges_zero'[OF moKO]
          | simp)+
   apply clarsimp
-  apply (intro conjI; simp add: valid_pspace'_def objBits_def)
+  apply ((intro conjI; assumption?); simp add: valid_pspace'_def objBits_def)
   apply (fastforce simp add: no_cte no_tcb split_def split: option.splits)
   apply (clarsimp simp: invs'_def no_tcb valid_state'_def no_cte  split: option.splits)
   done

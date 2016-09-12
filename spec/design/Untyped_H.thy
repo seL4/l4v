@@ -27,16 +27,6 @@ consts
   cNodeOverlap :: "(machine_word \<Rightarrow> nat option) \<Rightarrow> (machine_word \<Rightarrow> bool) \<Rightarrow> bool"
 
 definition
-getFreeRef :: "machine_word \<Rightarrow> nat \<Rightarrow> machine_word"
-where
-"getFreeRef base freeIndex\<equiv> base + (fromIntegral freeIndex)"
-
-definition
-getFreeIndex :: "machine_word \<Rightarrow> machine_word \<Rightarrow> nat"
-where
-"getFreeIndex base free\<equiv> fromIntegral $ fromPPtr (free - base)"
-
-definition
 alignUp :: "machine_word \<Rightarrow> nat \<Rightarrow> machine_word"
 where
 "alignUp baseValue alignment \<equiv>
@@ -112,40 +102,6 @@ where
   )"
 
 definition
-untypedZeroRange :: "capability \<Rightarrow> (machine_word * machine_word) option"
-where
-"untypedZeroRange x0\<equiv> (let cap = x0 in
-  if isUntypedCap cap
-  then 
-    let
-        empty = capFreeIndex cap = maxFreeIndex (capBlockSize cap);
-        startPtr = getFreeRef (capPtr cap) (capFreeIndex cap);
-        endPtr = capPtr cap + PPtr (2 ^ capBlockSize cap) - 1
-    in
-    if empty then Nothing
-        else Just (fromPPtr startPtr, fromPPtr endPtr)
-  else   Nothing
-  )"
-
-definition
-updateFreeIndex :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
-where
-"updateFreeIndex slot idx\<equiv> (do
-    cap \<leftarrow> getSlotCap slot;
-    modify (\<lambda> ks. (case untypedZeroRange cap of
-          None \<Rightarrow>   ks
-        | Some r \<Rightarrow>   ks \<lparr>gsUntypedZeroRanges := data_set_delete
-            r (gsUntypedZeroRanges ks)\<rparr>)
-        );
-    modify (\<lambda> ks. (case untypedZeroRange (cap \<lparr>capFreeIndex := idx\<rparr>) of
-          None \<Rightarrow>   ks
-        | Some r \<Rightarrow>   ks \<lparr>gsUntypedZeroRanges := data_set_insert
-            r (gsUntypedZeroRanges ks)\<rparr>)
-        );
-    updateCap slot (cap \<lparr>capFreeIndex := idx\<rparr>)
-od)"
-
-definition
 resetUntypedCap :: "machine_word \<Rightarrow> unit kernel_p"
 where
 "resetUntypedCap slot\<equiv> (doE
@@ -153,7 +109,7 @@ where
     sz \<leftarrow> returnOk ( capBlockSize cap);
     unlessE (capFreeIndex cap = 0) $ (doE
         withoutPreemption $ deleteObjects (capPtr cap) sz;
-    if (capIsDevice cap \<or> sz < resetChunkBits)
+        if (capIsDevice cap \<or> sz < resetChunkBits)
             then withoutPreemption $ (do
                 unless (capIsDevice cap) $ doMachineOp $
                     clearMemory (PPtr (fromPPtr (capPtr cap))) (1 `~shiftL~` sz);

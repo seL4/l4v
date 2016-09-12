@@ -3658,6 +3658,158 @@ lemma valid_arch_state'_updateMDB:
   "\<lbrace>valid_arch_state' \<rbrace> updateMDB a b \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
   by (clarsimp simp:updateMDB_def valid_arch_state_def,wp)
 
+lemma fail_commute:
+  "monad_commute \<top> fail f = empty_fail f"
+  apply (simp add: monad_commute_def empty_fail_def)
+  apply (simp add: fail_def bind_def del: split_paired_Ex)
+  apply blast
+  done
+
+lemma modify_commute:
+  "monad_commute P (modify f) (modify g)
+    = (\<forall>s. P s \<longrightarrow> f (g s) = g (f s))"
+  apply (simp add: monad_commute_def exec_modify)
+  apply (simp add: return_def eq_commute)
+  done
+
+lemma createObjects_gsUntypedZeroRanges_commute':
+  "monad_commute \<top>
+     (createObjects' ptr n ko us)
+     (modify (\<lambda>s. s \<lparr> gsUntypedZeroRanges := f (gsUntypedZeroRanges s) \<rparr> ))"
+  apply (simp add: createObjects'_def unless_def when_def alignError_def
+                   fail_commute)
+  apply clarsimp
+  apply (rule commute_commute)
+  apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"], OF _ _ hoare_vcg_prop]
+     | simp add: modify_commute split: option.split prod.split)+
+  apply (simp add: monad_commute_def exec_modify exec_gets assert_def)
+  done
+
+lemma assert_commute2: "empty_fail f
+    \<Longrightarrow> monad_commute \<top> (assert G) f"
+  apply (clarsimp simp:assert_def monad_commute_def)
+  apply (simp add: fail_def bind_def empty_fail_def del: split_paired_Ex)
+  apply blast
+  done
+
+lemma threadSet_gsUntypedZeroRanges_commute':
+  "monad_commute \<top>
+     (threadSet fn ptr)
+     (modify (\<lambda>s. s \<lparr> gsUntypedZeroRanges := f (gsUntypedZeroRanges s) \<rparr> ))"
+  apply (simp add: threadSet_def getObject_def setObject_def)
+  apply (rule commute_commute)
+  apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"], OF _ _ hoare_vcg_prop]
+     | simp add: modify_commute updateObject_default_def alignCheck_assert
+                 magnitudeCheck_assert return_commute return_commute[THEN commute_commute]
+                 projectKO_def2 assert_commute2 assert_commute2[THEN commute_commute]
+                 assert_opt_def2 loadObject_default_def
+          split: option.split prod.split)+
+  apply (simp add: monad_commute_def exec_gets exec_modify)
+  done
+
+lemma doMachineOp_modify_commute:
+  "\<lbrakk> \<forall>s. P s \<longrightarrow> ksMachineState (f s) = ksMachineState s;
+      \<forall>s. P s \<longrightarrow> (\<forall>(rv, ms') \<in> fst (oper (ksMachineState s)).
+          f (ksMachineState_update (\<lambda>_. ms') s) = ksMachineState_update (\<lambda>_. ms') (f s)) \<rbrakk>
+    \<Longrightarrow> monad_commute P (doMachineOp oper) (modify (f))"
+  apply (clarsimp simp: monad_commute_def doMachineOp_def
+                        exec_gets bind_assoc exec_modify)
+  apply (simp add: bind_def[where f="select_f v" for v],
+    simp add: select_f_def split_def exec_modify cart_singleton_image)
+  done
+
+lemma copyGlobalMappings_gsUntypedZeroRanges_commute':
+  "monad_commute \<top>
+     (copyGlobalMappings ptr)
+     (modify (\<lambda>s. s \<lparr> gsUntypedZeroRanges := f (gsUntypedZeroRanges s) \<rparr> ))"
+  apply (simp add: copyGlobalMappings_def)
+  apply (rule monad_commute_guard_imp)
+   apply (rule commute_commute[OF monad_commute_split[where P="\<top>"]])
+     apply (rule mapM_x_commute[where f = id and P="\<top>\<top>"])
+      apply (simp add: storePDE_def getObject_def setObject_def cong: bind_cong)
+      apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"], OF _ _ hoare_vcg_prop]
+         | simp add: modify_commute updateObject_default_def alignCheck_assert
+                     magnitudeCheck_assert return_commute return_commute[THEN commute_commute]
+                     projectKO_def2 assert_commute2 assert_commute2[THEN commute_commute]
+                     assert_opt_def2 loadObject_default_def
+              split: option.split prod.split)+
+      apply (simp add: monad_commute_def exec_gets exec_modify)
+     apply wp
+    apply (simp add: monad_commute_def exec_gets exec_modify)
+   apply wp
+  apply simp
+  done
+
+lemma createObject_gsUntypedZeroRanges_commute:
+  "monad_commute
+     \<top>
+     (RetypeDecls_H.createObject ty ptr us dev)
+     (modify (\<lambda>s. s \<lparr> gsUntypedZeroRanges := f (gsUntypedZeroRanges s) \<rparr> ))"
+  apply (simp add: createObject_def ARM_H.createObject_def
+                   placeNewDataObject_def
+                   placeNewObject_def2 bind_assoc fail_commute
+                   return_commute toAPIType_def
+    split: option.split apiobject_type.split object_type.split)
+  apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
+          OF _ _ hoare_vcg_prop, THEN commute_commute]
+      monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
+          OF _ _ hoare_vcg_prop]
+     | simp add: modify_commute createObjects_gsUntypedZeroRanges_commute'
+                 createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
+                 return_commute return_commute[THEN commute_commute]
+                 threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
+                 doMachineOp_modify_commute[THEN commute_commute]
+                 copyGlobalMappings_gsUntypedZeroRanges_commute'[THEN commute_commute]
+          split: option.split prod.split cong: if_cong)+
+  apply (simp add: curDomain_def monad_commute_def exec_modify exec_gets)
+  done
+
+lemma monad_commute_If_rhs:
+  "monad_commute P a b \<Longrightarrow> monad_commute Q a c
+    \<Longrightarrow> monad_commute (\<lambda>s. (R \<longrightarrow> P s) \<and> (\<not> R \<longrightarrow> Q s)) a (if R then b else c)"
+  by simp
+
+lemma case_eq_if_isUntypedCap:
+  "(case c of UntypedCap _ _ _ _ \<Rightarrow> x | _ \<Rightarrow> y)
+    = (if isUntypedCap c then x else y)"
+  by (cases c, simp_all add: isCap_simps)
+
+lemma createObject_updateTrackedFreeIndex_commute:
+  "monad_commute
+     (cte_wp_at' (\<lambda>_. True) slot and pspace_aligned' and pspace_distinct' and
+      pspace_no_overlap' ptr (Types_H.getObjectSize ty us) and
+      valid_arch_state' and
+      K (ptr \<noteq> slot) and K (Types_H.getObjectSize ty us < word_bits) and
+      K (is_aligned ptr (Types_H.getObjectSize ty us)))
+     (RetypeDecls_H.createObject ty ptr us dev) (updateTrackedFreeIndex slot idx)"
+  apply (simp add: updateTrackedFreeIndex_def getSlotCap_def updateCap_def)
+  apply (rule monad_commute_guard_imp)
+   apply (rule monad_commute_split[OF _ createObject_getCTE_commute]
+               monad_commute_split[OF _ createObject_gsUntypedZeroRanges_commute]
+               createObject_gsUntypedZeroRanges_commute)+
+    apply (wp getCTE_wp')
+  apply (clarsimp simp: pspace_no_overlap'_def)
+  done
+
+lemma createObject_updateNewFreeIndex_commute:
+  "monad_commute
+     (cte_wp_at' (\<lambda>_. True) slot and pspace_aligned' and pspace_distinct' and
+      pspace_no_overlap' ptr (Types_H.getObjectSize ty us) and
+      valid_arch_state' and
+      K (ptr \<noteq> slot) and K (Types_H.getObjectSize ty us < word_bits) and
+      K (is_aligned ptr (Types_H.getObjectSize ty us)))
+     (RetypeDecls_H.createObject ty ptr us dev) (updateNewFreeIndex slot)"
+  apply (simp add: updateNewFreeIndex_def getSlotCap_def case_eq_if_isUntypedCap
+                   updateTrackedFreeIndex_def)
+  apply (rule monad_commute_guard_imp)
+   apply (rule monad_commute_split[OF _ createObject_getCTE_commute])
+    apply (rule monad_commute_If_rhs)
+     apply (rule createObject_updateTrackedFreeIndex_commute)
+    apply (rule commute_commute[OF return_commute])
+   apply (wp getCTE_wp')
+  apply clarsimp
+  done
+
 lemma new_cap_object_comm_helper:
   "monad_commute
      (pspace_aligned' and pspace_distinct' and (\<lambda>s. no_0 (ctes_of s)) and
@@ -3676,11 +3828,12 @@ lemma new_cap_object_comm_helper:
    apply (rule monad_commute_split[OF _ createObject_getCTE_commute])+
     apply (rule monad_commute_split[OF _ commute_commute[OF assert_commute]])
      apply (rule monad_commute_split[OF _ createObject_setCTE_commute])
-      apply (rule monad_commute_split[OF commute_commute[OF createObject_updateMDB_commute]])
-       apply (rule commute_commute[OF createObject_updateMDB_commute])
-      apply (wp getCTE_wp hoare_vcg_imp_lift hoare_vcg_disj_lift valid_arch_state'_updateMDB
-        updateMDB_pspace_no_overlap' setCTE_pspace_no_overlap'
-        | clarsimp simp:conj_comms)+
+      apply (rule monad_commute_split[OF _ commute_commute[OF createObject_updateMDB_commute]])
+       apply (rule monad_commute_split[OF _ commute_commute[OF createObject_updateMDB_commute]])
+        apply (rule createObject_updateNewFreeIndex_commute)
+       apply (wp getCTE_wp hoare_vcg_imp_lift hoare_vcg_disj_lift valid_arch_state'_updateMDB
+         updateMDB_pspace_no_overlap' setCTE_pspace_no_overlap'
+         | clarsimp simp:conj_comms)+
   apply (clarsimp simp:cte_wp_at_ctes_of)
   apply (frule_tac slot = slot in pspace_no_overlapD2')
    apply simp+
@@ -3700,6 +3853,21 @@ lemma new_cap_object_comm_helper:
   apply (drule_tac x = "parent " in spec)
    apply clarsimp
   done
+
+lemma pspace_no_overlap_gsUntypedZeroRanges[simp]:
+  "pspace_no_overlap' ptr n (gsUntypedZeroRanges_update f s)
+    = pspace_no_overlap' ptr n s"
+  by (simp add: pspace_no_overlap'_def)
+
+crunch pspace_aligned'[wp]: updateNewFreeIndex "pspace_aligned'"
+crunch pspace_distinct'[wp]: updateNewFreeIndex "pspace_distinct'"
+crunch valid_arch_state'[wp]: updateNewFreeIndex "valid_arch_state'"
+crunch pspace_no_overlap'[wp]: updateNewFreeIndex "pspace_no_overlap' ptr n"
+crunch ctes_of[wp]: updateNewFreeIndex "\<lambda>s. P (ctes_of s)"
+
+lemma updateNewFreeIndex_cte_wp_at[wp]:
+  "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace> updateNewFreeIndex slot \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
+  by (simp add: cte_wp_at_ctes_of, wp)
 
 lemma new_cap_object_commute:
   "monad_commute 
@@ -5673,6 +5841,10 @@ lemma createNewObjects_Cons:
       apply (simp add:field_simps)+
     done
 qed
+
+lemma updateNewFreeIndex_cteCaps_of[wp]:
+  "\<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace> updateNewFreeIndex slot \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
+  by (simp add: cteCaps_of_def, wp)
 
 lemma insertNewCap_wps[wp]:
   "\<lbrace>pspace_aligned'\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"

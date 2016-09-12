@@ -36,33 +36,47 @@ lemma updateCap_cte_wp_at_cases:
   apply (clarsimp simp: cte_wp_at_ctes_of modify_map_def)
   done
 
-crunch cte_wp_at'[wp]: deletedIRQHandler "cte_wp_at' P p"
+crunch cte_wp_at'[wp]: deletedIRQHandler, updateTrackedFreeIndex "cte_wp_at' P p"
 
-lemma emptySlot_cte_wp_cap_other:
-  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. P (cteCap c)) p s \<and> p \<noteq> p'\<rbrace>
-  emptySlot p' opt
-  \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>c. P (cteCap c)) p s\<rbrace>"
-  apply (simp add: emptySlot_def case_Null_If)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
-  apply (case_tac "cteCap newCTE = NullCap")
-   apply simp
-   apply wp
-   apply simp
-  apply simp
-  apply (wp updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases
-            opt_return_pres_lift static_imp_wp | simp add: comp_def)+
-  apply (cases "p=p'", simp)
-  apply simp
+lemma updateFreeIndex_cte_wp_at:
+  "\<lbrace>\<lambda>s. cte_at' p s \<and> P (cte_wp_at' (if p = p' then P'
+      o (cteCap_update (capFreeIndex_update (K idx))) else P') p' s)\<rbrace>
+    updateFreeIndex p idx
+  \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p' s)\<rbrace>"
+  apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def
+        split del: split_if)
+  apply (rule hoare_pre)
+   apply (wp updateCap_cte_wp_at' getSlotCap_wp)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (cases "p' = p", simp_all)
+  apply (case_tac cte, simp)
   done
 
+lemma emptySlot_cte_wp_cap_other:
+  "\<lbrace>(\<lambda>s. cte_wp_at' (\<lambda>c. P (cteCap c)) p s) and K (p \<noteq> p')\<rbrace>
+  emptySlot p' opt
+  \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>c. P (cteCap c)) p s\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (simp add: emptySlot_def clearUntypedFreeIndex_def getSlotCap_def)
+  apply (rule hoare_pre)
+   apply (wp updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases
+             updateFreeIndex_cte_wp_at getCTE_wp' hoare_vcg_all_lift
+              | simp add:  | wpc
+              | wp_once hoare_drop_imps)+
+  done
+
+crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
+lemmas clearUntypedFreeIndex_typ_ats[wp]
+    = typ_at_lifts[OF clearUntypedFreeIndex_typ_at']
+
 crunch tcb_at'[wp]: deletedIRQHandler "tcb_at' t"
-crunch ct[wp]: deletedIRQHandler "\<lambda>s. P (ksCurThread s)"
-crunch cur_tcb'[wp]: emptySlot "cur_tcb'"
+crunch ct[wp]: emptySlot "\<lambda>s. P (ksCurThread s)"
+crunch cur_tcb'[wp]: clearUntypedFreeIndex "cur_tcb'"
   (ignore: setObject wp: cur_tcb_lift)
 
-crunch ksRQ[wp]: deletedIRQHandler "\<lambda>s. P (ksReadyQueues s)"
-crunch ksRQL1[wp]: deletedIRQHandler "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-crunch ksRQL2[wp]: deletedIRQHandler "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+crunch ksRQ[wp]: emptySlot "\<lambda>s. P (ksReadyQueues s)"
+crunch ksRQL1[wp]: emptySlot "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+crunch ksRQL2[wp]: emptySlot "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
 crunch obj_at'[wp]: deletedIRQHandler "obj_at' P p"
 
 lemmas deletedIRQHandler_valid_queues[wp] =
@@ -70,13 +84,17 @@ lemmas deletedIRQHandler_valid_queues[wp] =
                           deletedIRQHandler_pred_tcb_at'
                           deletedIRQHandler_ksRQ]
 
+crunch inQ[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (inQ d p) t s)"
+crunch tcbDomain[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
+crunch tcbPriority[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
+
 lemma emptySlot_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   unfolding emptySlot_def
   by (wp opt_return_pres_lift | wpcw | wp valid_queues_lift | simp)+
 
-crunch nosch[wp]: deletedIRQHandler "\<lambda>s. P (ksSchedulerAction s)"
-crunch ksCurDomain[wp]: deletedIRQHandler "\<lambda>s. P (ksCurDomain s)"
+crunch nosch[wp]: emptySlot "\<lambda>s. P (ksSchedulerAction s)"
+crunch ksCurDomain[wp]: emptySlot "\<lambda>s. P (ksCurDomain s)"
 
 lemma emptySlot_sch_act_wf [wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -92,14 +110,13 @@ lemma updateCap_valid_objs' [wp]:
   unfolding updateCap_def
   by (wp setCTE_valid_objs getCTE_wp) (clarsimp dest!: cte_at_cte_wp_atD)
 
-crunch valid_objs'[wp]: deletedIRQHandler "valid_objs'"
+lemma updateFreeIndex_valid_objs' [wp]:
+  "\<lbrace>valid_objs'\<rbrace> clearUntypedFreeIndex ptr \<lbrace>\<lambda>r. valid_objs'\<rbrace>"
+  apply (simp add: clearUntypedFreeIndex_def getSlotCap_def)
+  apply (wp getCTE_wp' | wpc | simp add: updateTrackedFreeIndex_def)+
+  done
 
-lemma emptySlot_objs [wp]:
-  "\<lbrace>valid_objs'\<rbrace>
-  emptySlot sl opt
-  \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  unfolding emptySlot_def case_Null_If
-  by (wp updateCap_valid_objs' | simp add: valid_NullCap isArchPageCap_def | wpcw)+
+crunch valid_objs'[wp]: emptySlot "valid_objs'"
 
 crunch state_refs_of'[wp]: setInterruptState "\<lambda>s. P (state_refs_of' s)"
   (simp: state_refs_of'_pspaceI)
@@ -1073,16 +1090,16 @@ lemma vmdb_n: "valid_mdb_ctes n"
 
 end
 
-crunch ctes_of[wp]: deletedIRQHandler "\<lambda>s. P (ctes_of s)"
+crunch ctes_of[wp]: deletedIRQHandler, clearUntypedFreeIndex "\<lambda>s. P (ctes_of s)"
 
 lemma emptySlot_mdb [wp]:
   "\<lbrace>valid_mdb'\<rbrace> 
   emptySlot sl opt
   \<lbrace>\<lambda>_. valid_mdb'\<rbrace>" 
-  unfolding emptySlot_def valid_mdb'_def 
-  apply (simp only: case_Null_If)
+  unfolding emptySlot_def
+  apply (simp only: case_Null_If valid_mdb'_def)
   apply (wp updateCap_ctes_of_wp getCTE_wp'
-            opt_return_pres_lift)
+            opt_return_pres_lift | simp add: cte_wp_at_ctes_of)+
   apply (clarsimp)
   apply (case_tac cte)
   apply (rename_tac cap node)
@@ -1101,7 +1118,7 @@ lemma emptySlot_mdb [wp]:
 
 lemma if_live_then_nonz_cap'_def2:
   "if_live_then_nonz_cap' = (\<lambda>s. \<forall>ptr. ko_wp_at' live' ptr s
-                               \<longrightarrow> (\<exists>p c. cteCaps_of s p = Some c \<and> ptr \<in> zobj_refs' c))"
+                               \<longrightarrow> (\<exists>p zr. (option_map zobj_refs' o cteCaps_of s) p = Some zr \<and> ptr \<in> zr))"
   by (fastforce intro!: ext
                  simp: if_live_then_nonz_cap'_def ex_nonz_cap_to'_def
                        cte_wp_at_ctes_of cteCaps_of_def)
@@ -1176,21 +1193,33 @@ crunch ko_wp_at'[wp]: deletedIRQHandler "\<lambda>s. P (ko_wp_at' P' p s)"
 crunch cteCaps_of[wp]: deletedIRQHandler "\<lambda>s. P (cteCaps_of s)"
   (simp: cteCaps_of_def o_def)
 
+crunch ko_at_live[wp]: clearUntypedFreeIndex "\<lambda>s. P (ko_wp_at' live' ptr s)"
+
+lemma clearUntypedFreeIndex_cteCaps_of[wp]:
+  "\<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace>
+       clearUntypedFreeIndex sl \<lbrace>\<lambda>y s. P (cteCaps_of s)\<rbrace>"
+  by (simp add: cteCaps_of_def, wp)
+
 lemma emptySlot_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s\<rbrace>
      emptySlot sl opt
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: emptySlot_def case_Null_If if_live_then_nonz_cap'_def2)
+  apply (simp add: emptySlot_def case_Null_If if_live_then_nonz_cap'_def2
+              del: comp_apply)
   apply (rule hoare_pre)
-   apply (simp only: imp_conv_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-             getCTE_wp' opt_return_pres_lift)
-  apply clarsimp
+             getCTE_wp opt_return_pres_lift
+             clearUntypedFreeIndex_ctes_of
+             clearUntypedFreeIndex_cteCaps_of
+             hoare_vcg_ex_lift
+             | wp_once hoare_vcg_imp_lift
+             | simp add: cte_wp_at_ctes_of del: comp_apply)+
+  apply (clarsimp simp: modify_map_same
+    imp_conjR[symmetric])
   apply (drule spec, drule(1) mp)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: cte_wp_at_ctes_of modify_map_def split: split_if_asm)
   apply (case_tac "p \<noteq> sl")
-   apply (rule_tac x=p in exI)
-   apply (clarsimp simp: modify_map_def)
+   apply blast
   apply (simp add: removeable'_def cteCaps_of_def)
   apply (erule disjE)
    apply (clarsimp simp: cte_wp_at_ctes_of modify_map_def
@@ -1220,10 +1249,13 @@ lemma emptySlot_ifunsafe'[wp]:
   apply (rule hoare_pre, rule hoare_use_eq_irq_node'[OF emptySlot_irq_node'])
    apply (simp add: emptySlot_def case_Null_If)
    apply (wp opt_return_pres_lift | simp add: o_def)+
-   apply (wp getCTE_cteCap_wp)
+   apply (wp getCTE_cteCap_wp clearUntypedFreeIndex_cteCaps_of)
   apply (clarsimp simp: tree_cte_cteCap_eq[unfolded o_def]
+                        modify_map_same
+                        modify_map_comp[symmetric]
                  split: option.split_asm split_if_asm
                  dest!: modify_map_K_D)
+  apply (clarsimp simp: modify_map_def)
   apply (drule_tac x=cref in spec, clarsimp)
   apply (case_tac "cref' \<noteq> sl")
    apply (rule_tac x=cref' in exI)
@@ -1252,18 +1284,7 @@ crunch ksrq[wp]: deletedIRQHandler "\<lambda>s. P (ksReadyQueues s)"
 
 crunch valid_idle'[wp]: setInterruptState "valid_idle'"
   (simp: valid_idle'_def)
-crunch valid_idle'[wp]: deletedIRQHandler "valid_idle'"
-
-lemma emptySlot_idle'[wp]:
-  "\<lbrace>\<lambda>s. valid_idle' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s\<rbrace>
-     emptySlot sl opt
-   \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  apply (simp add: emptySlot_def case_Null_If ifunsafe'_def3)
-  apply (rule hoare_pre)
-   apply (wp updateCap_idle' opt_return_pres_lift
-                | simp only: o_def capRange_Null mem_simps
-                | simp)+
-  done
+crunch valid_idle'[wp]: emptySlot "valid_idle'"
 
 crunch ksArch[wp]: emptySlot "\<lambda>s. P (ksArchState s)"
 crunch ksIdle[wp]: emptySlot "\<lambda>s. P (ksIdleThread s)"
@@ -1274,12 +1295,13 @@ lemma emptySlot_cteCaps_of:
      emptySlot p opt
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: emptySlot_def case_Null_If)
-  apply (wp opt_return_pres_lift)
-  apply (rule hoare_strengthen_post [OF getCTE_sp])
+  apply (wp opt_return_pres_lift getCTE_cteCap_wp
+            clearUntypedFreeIndex_cteCaps_of)
   apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of)
   apply (auto elim!: rsubst[where P=P]
                simp: modify_map_def fun_upd_def[symmetric] o_def
-                     fun_upd_idem)
+                     fun_upd_idem cteCaps_of_def
+              split: option.splits)
   done
 
 lemma emptySlot_valid_global_refs[wp]:
@@ -1311,16 +1333,21 @@ lemma deletedIRQHandler_irq_handlers'[wp]:
   apply (clarsimp simp: valid_irq_handlers'_def irq_issued'_def ran_def cteCaps_of_def)
   done
 
+crunch ksInterruptState[wp]: clearUntypedFreeIndex "\<lambda>s. P (ksInterruptState s)"
+
 lemma emptySlot_valid_irq_handlers'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_handlers' s
           \<and> (\<forall>irq sl'. opt = Some irq \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))\<rbrace>
      emptySlot sl opt
    \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
   apply (simp add: emptySlot_def case_Null_If)
-  apply (wp | wpc)+
-       apply (unfold valid_irq_handlers'_def irq_issued'_def)
-       apply (wp getCTE_wp)
-  apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of ran_def modify_map_def)
+  apply (rule hoare_pre)
+   apply (wp | wpc)+
+        apply (unfold valid_irq_handlers'_def irq_issued'_def)
+        apply (wp getCTE_cteCap_wp clearUntypedFreeIndex_cteCaps_of
+          | wps clearUntypedFreeIndex_ksInterruptState)+
+  apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of ran_def modify_map_def
+                 split: option.split)
   apply auto
   done
 
@@ -1387,29 +1414,44 @@ lemma deletedIRQHandler_ct_not_inQ[wp]:
   apply (simp add: comp_def)
   done
 
-lemma emptySlot_ct_not_inQ[wp]:
-  "\<lbrace>ct_not_inQ\<rbrace> emptySlot sl opt \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-  apply (simp add: emptySlot_def)
-  apply (case_tac opt)
-   apply (wp, wpc)
-              apply (wp | clarsimp)+
-   apply (rule_tac Q="\<lambda>_. ct_not_inQ" in hoare_post_imp, clarsimp)
-   apply (wp, wpc)
-             apply (wp | clarsimp)+
-  apply (rule_tac Q="\<lambda>_. ct_not_inQ" in hoare_post_imp, clarsimp)
-  apply (wp)
-  done
+crunch ct_not_inQ[wp]: emptySlot "ct_not_inQ"
 
-lemma emptySlot_tcbDomain[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t\<rbrace> emptySlot sl opt \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t\<rbrace>"
-apply (simp add: emptySlot_def)
-apply (wp hoare_vcg_all_lift getCTE_wp | wpc | simp add: cte_wp_at'_def)+
-done
+crunch tcbDomain[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
 
 lemma emptySlot_ct_idle_or_in_cur_domain'[wp]:
   "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> emptySlot sl opt \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
 apply (wp ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift | simp)+
 done
+
+crunch gsUntypedZeroRanges[wp]: deletedIRQHandler "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma untypedZeroRange_modify_map_isUntypedCap:
+  "m sl = Some v \<Longrightarrow> \<not> isUntypedCap v \<Longrightarrow> \<not> isUntypedCap (f v)
+    \<Longrightarrow> (untypedZeroRange \<circ>\<^sub>m modify_map m sl f) = (untypedZeroRange \<circ>\<^sub>m m)"
+  by (simp add: modify_map_def map_comp_def fun_eq_iff untypedZeroRange_def)
+
+lemma emptySlot_untyped_ranges[wp]:
+  "\<lbrace>untyped_ranges_zero' and valid_objs' and valid_mdb'\<rbrace>
+     emptySlot sl opt \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
+  apply (simp add: emptySlot_def case_Null_If)
+  apply (rule hoare_pre)
+   apply (rule hoare_seq_ext)
+    apply (rule untyped_ranges_zero_lift)
+     apply (wp getCTE_cteCap_wp clearUntypedFreeIndex_cteCaps_of
+       | wpc | simp add: clearUntypedFreeIndex_def updateTrackedFreeIndex_def
+                         getSlotCap_def
+                  split: option.split)+
+  apply (clarsimp simp: modify_map_comp[symmetric] modify_map_same)
+  apply (case_tac "\<not> isUntypedCap (the (cteCaps_of s sl))")
+   apply (case_tac "the (cteCaps_of s sl)",
+     simp_all add: untyped_ranges_zero_inv_def
+                   untypedZeroRange_modify_map_isUntypedCap isCap_simps)[1]
+  apply (clarsimp simp: isCap_simps untypedZeroRange_def modify_map_def)
+  apply (strengthen untyped_ranges_zero_fun_upd[mk_strg I E])
+  apply simp
+  apply (simp add: untypedZeroRange_def isCap_simps)
+  done
 
 lemma emptySlot_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s
@@ -1418,10 +1460,9 @@ lemma emptySlot_invs'[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
-   apply (wp valid_arch_state_lift' valid_irq_node_lift)
-   sorry (* I think this needs a check too
+   apply (wp valid_arch_state_lift' valid_irq_node_lift cur_tcb_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  done *)
+  done
 
 lemma opt_deleted_irq_corres:
   "corres dc \<top> \<top>
@@ -1450,35 +1491,48 @@ lemma set_cap_trans_state:
   apply (auto simp add: in_monad set_object_def split: split_if_asm)
   done
 
-lemma empty_slot_corres:
-  "corres dc (einvs and cte_at slot) invs'
-             (empty_slot slot opt) (emptySlot (cte_map slot) opt)"
-  unfolding emptySlot_def empty_slot_def case_Null_If
+lemma clearUntypedFreeIndex_corres_noop:
+  "corres dc \<top> (cte_at' (cte_map slot))
+    (return ()) (clearUntypedFreeIndex (cte_map slot))"
+  apply (simp add: clearUntypedFreeIndex_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac R="\<lambda>cap. einvs and cte_wp_at (op = cap) slot" and
-                    R'="\<lambda>cte. invs' and cte_wp_at' (op = cte) (cte_map slot)" in 
-                    corres_split [OF _ get_cap_corres])
-      defer
-      apply (wp get_cap_wp getCTE_wp')
+    apply (rule corres_bind_return2)
+    apply (rule corres_symb_exec_r_conj[where P'="cte_at' (cte_map slot)"])
+       apply (rule corres_trivial, simp)
+      apply (wp getCTE_wp' | wpc
+        | simp add: updateTrackedFreeIndex_def getSlotCap_def)+
+     apply (clarsimp simp: state_relation_def)
+    apply (rule no_fail_pre)
+     apply (wp no_fail_getSlotCap getCTE_wp'
+       | wpc | simp add: updateTrackedFreeIndex_def getSlotCap_def)+
+  done
+
+lemma clearUntypedFreeIndex_valid_pspace'[wp]:
+  "\<lbrace>valid_pspace'\<rbrace> clearUntypedFreeIndex slot \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
+  apply (simp add: valid_pspace'_def)
+  apply (rule hoare_pre)
+   apply (wp | simp add: valid_mdb'_def)+
+  done
+
+lemma empty_slot_corres:
+  "corres dc (einvs and cte_at slot) (invs' and cte_at' (cte_map slot))
+             (empty_slot slot opt) (emptySlot (cte_map slot) opt)"
+  unfolding emptySlot_def empty_slot_def
+  apply (simp add: case_Null_If)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_noop_rhs[OF _ clearUntypedFreeIndex_corres_noop])
+     apply (rule_tac R="\<lambda>cap. einvs and cte_wp_at (op = cap) slot" and
+                     R'="\<lambda>cte. valid_pspace' and cte_wp_at' (op = cte) (cte_map slot)" in 
+                     corres_split [OF _ get_cap_corres])
+       defer
+       apply (wp get_cap_wp getCTE_wp')
+     apply (simp add: cte_wp_at_ctes_of)
+     apply (wp hoare_vcg_imp_lift clearUntypedFreeIndex_valid_pspace')
     apply fastforce
-   apply fastforce
-  apply (rule corres_symb_exec_r)
-     defer
-     apply (rule hoare_return_sp)
-    apply wp
-   apply (rule no_fail_pre, wp)
-  apply (rule corres_symb_exec_r)
-     defer
-     apply (rule hoare_return_sp)
-    apply wp
-   apply (rule no_fail_pre, wp)
-  apply (rule corres_symb_exec_r)
-     defer
-     apply (rule hoare_return_sp)
-    apply wp
-   apply (rule no_fail_pre, wp)
+   apply (fastforce simp: cte_wp_at_ctes_of)
   apply simp
   apply (rule conjI, clarsimp)
+   defer
   apply clarsimp
   apply (rule conjI, clarsimp)
   apply clarsimp
@@ -1488,8 +1542,7 @@ lemma empty_slot_corres:
     apply wp
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp static_imp_wp)
-   apply (clarsimp simp: cte_wp_at_ctes_of)
-   apply (drule invs_mdb')
+   apply (clarsimp simp: cte_wp_at_ctes_of valid_pspace'_def)
    apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def)
    apply (rule conjI, clarsimp)
     apply (erule (2) valid_dlistEp)
@@ -1507,7 +1560,6 @@ lemma empty_slot_corres:
   apply (simp add: mdb_empty_abs'.empty_slot_ext_det_def2 update_cdt_list_def set_cdt_list_def exec_gets set_cdt_def bind_assoc exec_get exec_put set_original_def modify_def del: fun_upd_apply | subst bind_def, simp, simp add: mdb_empty_abs'.empty_slot_ext_det_def2)+
   apply (simp add: put_def)
   apply (simp add: exec_gets exec_get exec_put del: fun_upd_apply | subst bind_def)+
- 
   apply (clarsimp simp: state_relation_def)
   apply (drule updateMDB_the_lot, fastforce simp: pspace_relations_def, fastforce, fastforce)
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def 
@@ -1599,7 +1651,7 @@ lemma empty_slot_corres:
       prefer 2
       apply(drule_tac cte="CTE s_cap s_node" in valid_mdbD2')
         subgoal by (clarsimp simp: valid_mdb_ctes_def no_0_def)
-       subgoal by (frule invs_mdb', simp)
+       subgoal by (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
       apply(clarsimp)
       apply(rule cte_map_inj_eq)
            apply(assumption)
@@ -1637,7 +1689,7 @@ lemma empty_slot_corres:
      apply(clarsimp)
      apply(drule_tac cte="CTE s_cap s_node" in valid_mdbD2')
        apply(clarsimp simp: valid_mdb_ctes_def no_0_def)
-      apply(erule invs_mdb')
+      apply clarify
      apply(clarsimp)
      apply(drule cte_map_inj_eq)
           apply(drule(3) cte_at_next_slot')
@@ -2176,6 +2228,7 @@ crunch distinct'[wp]: finaliseCap "pspace_distinct'"
 crunch typ_at'[wp]: finaliseCap "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps assertE_def ignore: getObject setObject
      wp: getObject_inv loadObject_default_inv crunch_wps)
+lemmas finaliseCap_typ_ats[wp] = typ_at_lifts[OF finaliseCap_typ_at']
 
 crunch it'[wp]: finaliseCap "\<lambda>s. P (ksIdleThread s)"
   (ignore: getObject setObject forM ignoreFailure maskInterrupt

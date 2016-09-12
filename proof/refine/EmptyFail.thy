@@ -80,6 +80,17 @@ lemma empty_fail_getObject_tcb [intro!, wp, simp]:
   shows "empty_fail (getObject x :: tcb kernel)"
   by (auto intro: empty_fail_getObject)
 
+lemma empty_fail_updateTrackedFreeIndex [intro!, wp, simp]:
+  shows "empty_fail (updateTrackedFreeIndex p idx)"
+  by (simp add: updateTrackedFreeIndex_def)
+
+lemma empty_fail_updateNewFreeIndex [intro!, wp, simp]:
+  shows "empty_fail (updateNewFreeIndex p)"
+  apply (simp add: updateNewFreeIndex_def)
+  apply (safe intro!: empty_fail_bind)
+  apply (simp split: capability.split)
+  done
+
 lemma empty_fail_insertNewCap [intro!, wp, simp]:
   "empty_fail (insertNewCap p p' cap)"
   unfolding insertNewCap_def by simp

@@ -479,7 +479,8 @@ Various operations on the free index of an Untyped cap.
 > getFreeIndex base free = fromIntegral $ fromPPtr (free - base)
 
 > untypedZeroRange :: Capability -> Maybe (Word, Word)
-> untypedZeroRange (cap@UntypedCap {}) = if empty then Nothing
+> untypedZeroRange (cap@UntypedCap {}) = if empty || capIsDevice cap
+>         then Nothing
 >         else Just (fromPPtr startPtr, fromPPtr endPtr)
 >     where
 >         empty = capFreeIndex cap == maxFreeIndex (capBlockSize cap)

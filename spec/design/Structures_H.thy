@@ -38,6 +38,8 @@ requalify_consts
   archObjSize
   pageBits
   nullPointer
+  fromPPtr
+  PPtr
 
 end
 
@@ -2221,6 +2223,15 @@ isReply :: "thread_state \<Rightarrow> bool"
 consts'
 maxFreeIndex :: "nat \<Rightarrow> nat"
 
+consts'
+getFreeRef :: "machine_word \<Rightarrow> nat \<Rightarrow> machine_word"
+
+consts'
+getFreeIndex :: "machine_word \<Rightarrow> machine_word \<Rightarrow> nat"
+
+consts'
+untypedZeroRange :: "capability \<Rightarrow> (machine_word * machine_word) option"
+
 defs objBitsKO_def:
 "objBitsKO x0\<equiv> (case x0 of
     (KOEndpoint _) \<Rightarrow>    wordSizeCase 4 5
@@ -2307,6 +2318,27 @@ defs isReply_def:
 
 defs maxFreeIndex_def:
 "maxFreeIndex magnitudeBits \<equiv> bit magnitudeBits"
+
+defs getFreeRef_def:
+"getFreeRef base freeIndex\<equiv> base + (fromIntegral freeIndex)"
+
+defs getFreeIndex_def:
+"getFreeIndex base free\<equiv> fromIntegral $ fromPPtr (free - base)"
+
+defs untypedZeroRange_def:
+"untypedZeroRange x0\<equiv> (let cap = x0 in
+  if isUntypedCap cap
+  then 
+    let
+        empty = capFreeIndex cap = maxFreeIndex (capBlockSize cap);
+        startPtr = getFreeRef (capPtr cap) (capFreeIndex cap);
+        endPtr = capPtr cap + PPtr (2 ^ capBlockSize cap) - 1
+    in
+    if empty \<or> capIsDevice cap
+        then Nothing
+        else Just (fromPPtr startPtr, fromPPtr endPtr)
+  else   Nothing
+  )"
 
 
 

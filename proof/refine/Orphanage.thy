@@ -1146,6 +1146,7 @@ lemma copyGlobalMappings_no_orphans [wp]:
 lemma no_orphans_update_simps[simp]:
   "no_orphans (gsCNodes_update f s) = no_orphans s"
   "no_orphans (gsUserPages_update g s) = no_orphans s"
+  "no_orphans (gsUntypedZeroRanges_update h s) = no_orphans s"
   by (simp_all add: no_orphans_def all_active_tcb_ptrs_def
                     is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
 
@@ -1305,7 +1306,6 @@ add_upd_simps "no_orphans (gsUntypedZeroRanges_update f s)"
 declare upd_simps[simp]
 
 crunch no_orphans[wp]: updateFreeIndex "no_orphans"
-  (simp: fiddle_gsUntypedZeroRanges_update)
 
 lemma resetUntypedCap_no_orphans [wp]:
   "\<lbrace> (\<lambda>s. no_orphans s \<and> pspace_distinct' s \<and> valid_objs' s)
@@ -1314,8 +1314,8 @@ lemma resetUntypedCap_no_orphans [wp]:
   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (simp add: resetUntypedCap_def)
   apply (rule hoare_pre)
-   apply (wp mapME_x_inv_wp preemptionPoint_inv getSlotCap_wp
-     | simp add: split del: split_if)+
+   apply (wp mapME_x_inv_wp preemptionPoint_inv getSlotCap_wp hoare_drop_imps
+     | simp add: unless_def split del: split_if)+
   apply (clarsimp simp: cte_wp_at_ctes_of split del: split_if)
   apply (frule(1) cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD])
   apply (clarsimp simp: isCap_simps valid_cap_simps' capAligned_def)

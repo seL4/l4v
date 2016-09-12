@@ -1489,7 +1489,7 @@ lemma deleteObjects_gsCNodes_at_pt:
 
 crunch gsCNodes[wp]: setThreadState, updateFreeIndex,
     preemptionPoint "\<lambda>s. P (gsCNodes s)"
-  (simp: unless_def whenE_def fiddle_gsUntypedZeroRanges_update)
+  (simp: unless_def whenE_def)
 
 lemma resetUntypedCap_gsCNodes_at_pt:
   "\<lbrace>(\<lambda>s. P (gsCNodes s ptr))

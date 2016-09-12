@@ -3547,21 +3547,14 @@ lemma valid_NullCap:
   by (rule ext, simp add: valid_cap_simps' capAligned_def word_bits_def)
 
 lemma deriveCap_valid [wp]:
-  "\<lbrace>\<lambda>s. s \<turnstile>' c\<rbrace> 
-  deriveCap slot c 
+  "\<lbrace>\<lambda>s. s \<turnstile>' c\<rbrace>
+  deriveCap slot c
   \<lbrace>\<lambda>rv s. s \<turnstile>' rv\<rbrace>,-"
-  apply (cases c)
-          apply (simp_all add: deriveCap_def validE_R_def return_def
-                               validE_def valid_def returnOk_def Let_def
-                               bindE_def bind_def isCap_simps valid_NullCap)
-   apply (rename_tac arch_capability)
-   apply (case_tac arch_capability;
-          simp add: liftME_def bindE_def returnOk_def lift_def
-                    return_def bind_def ArchRetype_H.deriveCap_def
-                    isCap_simps Let_def valid_cap'_def capAligned_def
-                    throwError_def)
-  apply (clarsimp simp: lift_def throwError_def return_def split: sum.splits)
-  apply (erule(1) use_valid [OF _ ensureNoChildren_inv])
+  apply (simp add: deriveCap_def split del: split_if)
+  apply (rule hoare_pre)
+   apply (wp arch_deriveCap_valid | simp add: o_def)+
+  apply (simp add: valid_NullCap)
+  apply (clarsimp simp: isCap_simps)
   done
 
 lemma lookup_cap_valid':
@@ -3750,19 +3743,13 @@ lemma deriveCap_derived:
   \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow>
           cte_wp_at' (is_derived' (ctes_of s) slot rv \<circ> cteCap) slot s\<rbrace>, -"
   unfolding deriveCap_def badge_derived'_def
-  apply (cases c', simp_all add: isCap_simps Let_def)
-            defer 8 (* arch *)
-            apply ((wp ensureNoChildren_wp
-                     | clarsimp simp: isCap_simps capMasterCap_def
-                                      is_derived'_def capBadge_def
-                                      sameObjectAs_def badge_derived'_def
-                                      vsCapRef_def
-                     | erule cte_wp_at_weakenE' disjE
-                     | simp split: capability.split_asm
-                     )+)[11]
+  apply (cases c'; (wp ensureNoChildren_wp | simp add: isCap_simps Let_def
+        | clarsimp simp: badge_derived'_def vsCapRef_def
+        | erule cte_wp_at_weakenE' disjE
+        | rule is_derived'_def[THEN meta_eq_to_obj_eq, THEN iffD2])+)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: ArchRetype_H.deriveCap_def Let_def isCap_simps
+         simp add: ARM_H.deriveCap_def Let_def isCap_simps
               split: split_if,
          safe)
         apply ((wp throwError_validE_R undefined_validE_R
@@ -3770,7 +3757,6 @@ lemma deriveCap_derived:
                   | drule valid_capAligned
                   | drule(1) bits_low_high_eq
                   | simp add: capBadge_def sameObjectAs_def
-                              ArchRetype_H.sameObjectAs_def
                               is_derived'_def isCap_simps up_ucast_inj_eq
                               is_aligned_no_overflow badge_derived'_def
                               capAligned_def capASID_def vsCapRef_def
@@ -6499,6 +6485,41 @@ lemma updateCapFreeIndex_valid_mdb_ctes:
     apply (clarsimp simp:cte_wp_at_ctes_of)+
 done
 
+lemma usableUntypedRange_mono1:
+  "is_aligned ptr sz \<Longrightarrow> idx \<le> 2 ^ sz \<Longrightarrow> idx' \<le> 2 ^ sz
+    \<Longrightarrow> sz < word_bits
+    \<Longrightarrow> idx \<ge> idx'
+    \<Longrightarrow> usableUntypedRange (UntypedCap dev ptr sz idx)
+      \<le> usableUntypedRange (UntypedCap dev' ptr sz idx')"
+  apply clarsimp
+  apply (rule word_plus_mono_right)
+   apply (rule of_nat_mono_maybe_le[THEN iffD1])
+     apply (subst word_bits_def[symmetric])
+     apply (erule less_le_trans[OF _  power_increasing])
+      apply simp
+     apply simp
+    apply (subst word_bits_def[symmetric])
+    apply (erule le_less_trans)
+    apply (erule less_le_trans[OF _ power_increasing])
+     apply simp+
+  apply (erule is_aligned_no_wrap')
+  apply (rule word_of_nat_less)
+  apply simp
+  done
+
+lemma usableUntypedRange_mono2:
+  "isUntypedCap cap
+    \<Longrightarrow> isUntypedCap cap'
+    \<Longrightarrow> capAligned cap \<Longrightarrow> capFreeIndex cap \<le> 2 ^ capBlockSize cap
+    \<Longrightarrow> capFreeIndex cap' \<le> 2 ^ capBlockSize cap'
+    \<Longrightarrow> capFreeIndex cap \<ge> capFreeIndex cap'
+    \<Longrightarrow> capPtr cap' = capPtr cap
+    \<Longrightarrow> capBlockSize cap' = capBlockSize cap
+    \<Longrightarrow> usableUntypedRange cap \<le> usableUntypedRange cap'"
+  apply (clarsimp simp only: isCap_simps capPtr.simps capBlockSize.simps del: subsetI)
+  apply (rule usableUntypedRange_mono1, auto simp: capAligned_def)
+  done
+
 lemma updateFreeIndex_pspace':
   "\<lbrace>\<lambda>s. (capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap \<and>
          is_aligned (of_nat idx :: word32) 4 \<and> isUntypedCap cap) \<and>
@@ -6529,32 +6550,52 @@ lemma updateFreeIndex_pspace':
           Int_atLeastAtMost atLeastatMost_empty_iff usableUntypedRange.simps
           split del:if_splits)
    apply blast
-  apply (clarsimp simp:isCap_simps valid_cap'_def capAligned_def
-                  split:if_splits)
-  apply (erule order_trans[rotated])
-  apply (rule word_plus_mono_right)
-   apply (rule of_nat_mono_maybe_le[THEN iffD1])
-    apply (subst word_bits_def[symmetric])
-    apply (erule less_le_trans[OF _  power_increasing])
-     apply simp
-    apply simp
-   apply (subst word_bits_def[symmetric])
-   apply (erule le_less_trans)
-   apply (erule less_le_trans[OF _ power_increasing])
-    apply simp+
-  apply (erule is_aligned_no_wrap')
-  apply (rule word_of_nat_less)
-   apply simp
+  apply (rule usableUntypedRange_mono2,
+    auto simp add: isCap_simps capAligned_def valid_cap_simps')
   done
 
 lemma ctes_of_cte_wpD:
   "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' (op = cte) p s"
   by (simp add: cte_wp_at_ctes_of)
 
-lemma fiddle_gsUntypedZeroRanges_update:
-  "(case v of None \<Rightarrow> s | Some x \<Rightarrow> gsUntypedZeroRanges_update (f x) s)
-    = gsUntypedZeroRanges_update (case v of None \<Rightarrow> id | Some x \<Rightarrow> f x) s"
-  by (simp split: option.split)
+lemma updateFreeIndex_forward_valid_objs':
+  "\<lbrace>\<lambda>s. valid_objs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap
+          \<and> capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap
+          \<and> is_aligned (of_nat idx :: word32) 4) o cteCap) src s\<rbrace>
+   updateFreeIndex src idx
+   \<lbrace>\<lambda>r s. valid_objs' s\<rbrace>"
+  apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def updateCap_def getSlotCap_def)
+  apply (wp getCTE_wp')
+  apply clarsimp
+  apply (frule(1) CSpace1_R.ctes_of_valid)
+  apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps capAligned_def
+                        valid_cap_simps' is_aligned_weaken[OF is_aligned_triv])
+  apply (clarsimp simp add: valid_untyped'_def
+                  simp del: usableUntypedRange.simps)
+  apply (erule allE, erule notE, erule ko_wp_at'_weakenE)
+  apply (rule disjCI2, simp only: simp_thms)
+  apply (rule notI, erule notE, erule disjoint_subset2[rotated])
+  apply (rule usableUntypedRange_mono1, simp_all)
+  done
+
+crunch pspace_aligned'[wp]: updateFreeIndex "pspace_aligned'"
+crunch pspace_distinct'[wp]: updateFreeIndex "pspace_distinct'"
+crunch no_0_obj[wp]: updateFreeIndex "no_0_obj'"
+
+lemma updateFreeIndex_forward_valid_mdb':
+  "\<lbrace>\<lambda>s. valid_mdb' s \<and> valid_objs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap
+          \<and> capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap) o cteCap) src s\<rbrace>
+   updateFreeIndex src idx
+   \<lbrace>\<lambda>r s. valid_mdb' s\<rbrace>"
+  apply (simp add: valid_mdb'_def updateFreeIndex_def
+                   updateTrackedFreeIndex_def getSlotCap_def)
+  apply (wp updateCapFreeIndex_valid_mdb_ctes getCTE_wp' | simp)+
+  apply clarsimp
+  apply (frule(1) CSpace1_R.ctes_of_valid)
+  apply (clarsimp simp: cte_wp_at_ctes_of del: subsetI)
+  apply (rule usableUntypedRange_mono2,
+    auto simp add: isCap_simps valid_cap_simps' capAligned_def)
+  done
 
 lemma updateFreeIndex_forward_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap
@@ -6562,11 +6603,14 @@ lemma updateFreeIndex_forward_invs':
           \<and> is_aligned (of_nat idx :: word32) 4) o cteCap) src s\<rbrace>
    updateFreeIndex src idx
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
-  apply (simp add: updateFreeIndex_def)
   apply (clarsimp simp:invs'_def valid_state'_def)
   apply (rule hoare_pre)
-   apply (wp updateFreeIndex_pspace' sch_act_wf_lift valid_queues_lift updateCap_iflive' tcb_in_cur_domain'_lift
-            | simp add: pred_tcb_at'_def fiddle_gsUntypedZeroRanges_update)+
+   apply (rule hoare_vcg_conj_lift)
+    apply (simp add: valid_pspace'_def, wp updateFreeIndex_forward_valid_objs'
+             updateFreeIndex_forward_valid_mdb')
+   apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
+   apply (wp sch_act_wf_lift valid_queues_lift updateCap_iflive' tcb_in_cur_domain'_lift
+            | simp add: pred_tcb_at'_def)+
       apply (rule hoare_vcg_conj_lift)
        apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def
                split del: split_if)
@@ -6583,9 +6627,8 @@ lemma updateFreeIndex_forward_invs':
                 hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
                | wp_once hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def)+
-  apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric]
-                        fiddle_gsUntypedZeroRanges_update)
-  apply (clarsimp simp: isCap_simps)
+  apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])
+  apply (clarsimp simp: isCap_simps valid_pspace'_def)
   apply (frule(1) valid_global_refsD_with_objSize)
   apply clarsimp
   apply (intro conjI allI impI)
@@ -6598,7 +6641,6 @@ lemma updateFreeIndex_forward_invs':
    apply clarsimp
    apply (rule_tac x = cref' in exI)
    apply clarsimp
-  apply (clarsimp simp: valid_pspace'_def)
   apply (erule untyped_ranges_zero_fun_upd, simp_all)
   apply (clarsimp simp: untypedZeroRange_def cteCaps_of_def isCap_simps)
   done

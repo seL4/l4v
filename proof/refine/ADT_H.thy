@@ -250,6 +250,7 @@ lemma
    apply simp
    apply (erule_tac x=y in allE)
    apply clarsimp
+   apply (rule_tac x=pte' in exI)
    apply (simp add: absPageTable_def  split: option.splits ARM_H.pte.splits)
    apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
               vm_kernel_only_def vm_read_only_def vm_read_write_def
@@ -257,7 +258,7 @@ lemma
    using pte_rights
    apply -[1]
    apply (erule_tac x="x + (ucast y << 2)" in allE)+
-   subgoal by fastforce -- "NOTE: takes quite a while."
+   subgoal by fastforce
   apply (clarsimp split: split_if_asm)
   using pdes
   apply (erule_tac x=x in allE)

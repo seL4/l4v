@@ -732,8 +732,10 @@ lemma transferCapsToSlots_presM:
                  \<and> (vo \<longrightarrow> valid_objs' s \<and> (\<forall>x \<in> set slots. real_cte_at' x s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) x s)
                            \<and> (\<forall>x \<in> set caps. s \<turnstile>' fst x ) \<and> distinct slots)
                  \<and> (pad \<longrightarrow> pspace_aligned' s \<and> pspace_distinct' s)
-                 \<and> (drv \<longrightarrow> vo \<and> pspace_aligned' s \<and> pspace_distinct' s \<and>  valid_mdb' s \<and> (\<forall>x \<in> set caps. s \<turnstile>' fst x \<and> cte_wp_at' (\<lambda>cte. fst x \<noteq> NullCap \<longrightarrow> cteCap cte \<noteq>  fst x 
-                            \<longrightarrow> cteCap cte = maskedAsFull (fst x) (fst x)) (snd x) s))\<rbrace>
+                 \<and> (drv \<longrightarrow> vo \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> valid_mdb' s
+                         \<and> length slots \<le> 1
+                         \<and> (\<forall>x \<in> set caps. s \<turnstile>' fst x \<and> (slots \<noteq> []
+                              \<longrightarrow> cte_wp_at' (\<lambda>cte. fst x \<noteq> NullCap \<longrightarrow> cteCap cte = fst x) (snd x) s)))\<rbrace>
                  transferCapsToSlots ep buffer n caps slots mi
               \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (induct caps arbitrary: slots n mi)
@@ -748,47 +750,18 @@ lemma transferCapsToSlots_presM:
        apply (rule cteInsert_weak_cte_wp_at2,clarsimp)
       apply (wp hoare_vcg_const_Ball_lift static_imp_wp)
        apply (rule cteInsert_weak_cte_wp_at2,clarsimp)
-      apply (wp hoare_vcg_const_Ball_lift cteInsert_cte_wp_at static_imp_wp)
-   apply (rule hoare_vcg_conj_liftE_R)
-    apply (rule deriveCap_derived_foo)
-   apply (rule_tac Q' ="\<lambda>cap' s. (drv \<longrightarrow> cap' \<noteq> capability.NullCap \<longrightarrow> 
-        cte_wp_at' (\<lambda>cte. is_derived' (ctes_of s) (snd a) cap' (cteCap cte)) (snd a) s)
-        \<and> (cap' \<noteq> capability.NullCap \<longrightarrow> QM s cap' (snd a))" for QM
-        in hoare_post_imp_R)
-    prefer 2
-    apply (clarsimp simp:Fun.comp_def split del: split_if)
-    apply assumption
-   apply (rule hoare_vcg_conj_liftE_R)
-    apply (rule hoare_vcg_const_imp_lift_R)
-    apply (rule deriveCap_derived[unfolded Fun.comp_def])
-   apply (wp deriveCap_derived_foo)
+      apply (wp hoare_vcg_const_Ball_lift cteInsert_cte_wp_at static_imp_wp
+          deriveCap_derived_foo)
+  apply (thin_tac "\<And>slots. PROP P slots" for P)
   apply (clarsimp simp: cte_wp_at_ctes_of remove_rights_def
                         real_cte_tcb_valid if_apply_def2
              split del: split_if)
   apply (rule conjI)
-   apply (clarsimp simp:cte_wp_at_ctes_of)
-   apply (case_tac "a = cteCap cte",clarsimp)
-   apply (clarsimp simp:maskedAsFull_def isCap_simps badge_derived'_def)
-  apply (clarsimp simp:conj_comms split del:split_if)
+   apply (clarsimp simp:cte_wp_at_ctes_of untyped_derived_eq_def)
   apply (intro conjI allI)
      apply (clarsimp simp:Fun.comp_def cte_wp_at_ctes_of)+
-sorry (*
-  the masked as full bit is there because in principle we can try to
-  send two copies of the same untyped cap? yuck.
-
-thm transferCapsToSlots.simps
-find_theorems transferCapsToSlots
-find_theorems transferCaps
-find_theorems lookupExtraCaps
   apply (clarsimp simp:valid_capAligned)
-  apply (rule conjI,clarsimp)
-  apply (rule ballI)
-  apply (drule (1) bspec)
-  apply (rule conjI | clarsimp)+
-  apply (case_tac "cteCap cteb \<noteq> aa")
-   apply (clarsimp simp:maskedAsFull_def isCap_simps )
-  by (clarsimp simp:maskedAsFull_def split:split_if_asm)
-*)
+  done
 
 lemmas transferCapsToSlots_pres2
     = transferCapsToSlots_presM[where vo=False and emx=True
@@ -827,6 +800,7 @@ abbreviation(input)
 
 lemma transferCapsToSlots_mdb[wp]:
   "\<lbrace>\<lambda>s. valid_pspace' s \<and> distinct slots
+          \<and> length slots \<le> 1
           \<and> (\<forall>x \<in> set slots. ex_cte_cap_to' x s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) x s)
           \<and> (\<forall>x \<in> set slots. real_cte_at' x s)
           \<and> transferCaps_srcs caps s\<rbrace>
@@ -838,15 +812,11 @@ lemma transferCapsToSlots_mdb[wp]:
     apply (clarsimp simp: cte_wp_at_ctes_of is_derived'_def badge_derived'_def)
    apply wp
   apply (clarsimp simp: valid_pspace'_def)
-  apply (intro conjI)
-   apply (clarsimp simp:cte_wp_at_ctes_of)
-   apply (drule(1) bspec,clarify)
-   apply (case_tac cte)
-   apply (clarsimp dest!:ctes_of_valid_cap' split:if_splits)
-   apply (fastforce simp:valid_cap'_def)
   apply (clarsimp simp:cte_wp_at_ctes_of)
   apply (drule(1) bspec,clarify)
-  apply (fastforce simp:cte_wp_at_ctes_of)
+  apply (case_tac cte)
+  apply (clarsimp dest!:ctes_of_valid_cap' split:if_splits)
+  apply (fastforce simp:valid_cap'_def)
   done
 
 crunch no_0' [wp]: setExtraBadge no_0_obj'
@@ -857,6 +827,7 @@ lemma transferCapsToSlots_no_0_obj' [wp]:
 
 lemma transferCapsToSlots_vp[wp]:
   "\<lbrace>\<lambda>s. valid_pspace' s \<and> distinct slots
+          \<and> length slots \<le> 1
           \<and> (\<forall>x \<in> set slots. ex_cte_cap_to' x s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) x s)
           \<and> (\<forall>x \<in> set slots. real_cte_at' x s)
           \<and> transferCaps_srcs caps s\<rbrace>
@@ -975,23 +946,17 @@ crunch valid_global_refs' [wp]: setExtraBadge valid_global_refs'
 
 lemma transferCapsToSlots_valid_globals [wp]:
   "\<lbrace>valid_global_refs' and valid_objs' and valid_mdb' and pspace_distinct' and pspace_aligned' and K (distinct slots)
+         and K (length slots \<le> 1)
          and (\<lambda>s. \<forall>x \<in> set slots. real_cte_at' x s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) x s)
   and transferCaps_srcs caps\<rbrace> 
   transferCapsToSlots ep buffer n caps slots mi 
   \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (wp transferCapsToSlots_presM[where vo=True and emx=False and drv=True and pad=True] | clarsimp)+
   apply (clarsimp simp:cte_wp_at_ctes_of)
-   apply (intro conjI ballI)
-     apply (drule(1) bspec,clarsimp)
-     apply (case_tac cte,clarsimp)
-     apply (frule(1) CSpace_I.ctes_of_valid_cap')
-     apply (fastforce simp:valid_cap'_def)
-    apply (drule(1) bspec,clarsimp)
-    apply (case_tac cte,clarsimp)
-    apply (frule(1) CSpace_I.ctes_of_valid_cap')
-    apply (fastforce simp:valid_cap'_def)
-  apply (drule(1) bspec)
-  apply clarsimp
+  apply (drule(1) bspec,clarsimp)
+  apply (case_tac cte,clarsimp)
+  apply (frule(1) CSpace_I.ctes_of_valid_cap')
+  apply (fastforce simp:valid_cap'_def)
   done
 
 crunch irq_node' [wp]: setExtraBadge "\<lambda>s. P (irq_node' s)"
@@ -1009,7 +974,7 @@ crunch valid_irq_handlers' [wp]: setExtraBadge valid_irq_handlers'
 
 lemma transferCapsToSlots_irq_handlers[wp]:
   "\<lbrace>valid_irq_handlers' and valid_objs' and valid_mdb' and pspace_distinct' and pspace_aligned'
-         and K(distinct slots)
+         and K(distinct slots \<and> length slots \<le> 1)
          and (\<lambda>s. \<forall>x \<in> set slots. real_cte_at' x s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) x s)
          and transferCaps_srcs caps\<rbrace>
      transferCapsToSlots ep buffer n caps slots mi 
@@ -1019,16 +984,10 @@ lemma transferCapsToSlots_irq_handlers[wp]:
      apply (erule(2) valid_irq_handlers_ctes_ofD)
     apply wp
   apply (clarsimp simp:cte_wp_at_ctes_of | intro ballI conjI)+
-     apply (drule(1) bspec,clarsimp)
-     apply (case_tac cte,clarsimp)
-     apply (frule(1) CSpace_I.ctes_of_valid_cap')
-     apply (fastforce simp:valid_cap'_def)
-    apply (drule(1) bspec,clarsimp)
-    apply (case_tac cte,clarsimp)
-    apply (frule(1) CSpace_I.ctes_of_valid_cap')
-    apply (fastforce simp:valid_cap'_def)
-  apply (drule(1) bspec)
-  apply clarsimp
+  apply (drule(1) bspec,clarsimp)
+  apply (case_tac cte,clarsimp)
+  apply (frule(1) CSpace_I.ctes_of_valid_cap')
+  apply (fastforce simp:valid_cap'_def)
   done
 
 crunch irq_state' [wp]: setExtraBadge "\<lambda>s. P (ksInterruptState s)"
@@ -1118,6 +1077,7 @@ lemma tcts_zero_ranges[wp]:
   "\<lbrace>\<lambda>s. untyped_ranges_zero' s \<and> valid_pspace' s \<and> distinct slots
           \<and> (\<forall>x \<in> set slots. ex_cte_cap_to' x s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) x s)
           \<and> (\<forall>x \<in> set slots. real_cte_at' x s)
+          \<and> length slots \<le> 1
           \<and> transferCaps_srcs caps s\<rbrace>
     transferCapsToSlots ep buffer n caps slots mi
   \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
@@ -1149,7 +1109,8 @@ lemma transferCapsToSlots_invs[wp]:
           \<and> (\<forall>x \<in> set slots. cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) x s)
           \<and> (\<forall>x \<in> set slots. ex_cte_cap_to' x s)
           \<and> (\<forall>x \<in> set slots. real_cte_at' x s)
-          \<and> transferCaps_srcs caps s\<rbrace> 
+          \<and> length slots \<le> 1
+          \<and> transferCaps_srcs caps s\<rbrace>
     transferCapsToSlots ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
@@ -1179,6 +1140,7 @@ lemma grs_distinct'[wp]:
   apply (wp | simp only: distinct.simps list.simps empty_iff)+
   apply simp
   done
+
 lemma getExtraCPtrs_length [wp]:
   "\<lbrace>\<lambda>s. msgExtraCaps msg < 6\<rbrace> 
   getExtraCPtrs send_buf msg \<lbrace>\<lambda>rv s. Suc (Suc (msg_max_length + length rv)) < unat max_ipc_words\<rbrace>"
@@ -1371,6 +1333,13 @@ lemma grs_cap_to'[wp]:
   apply (cases buf; simp add: getReceiveSlots_def split_def unlessE_def)
    apply (wp, simp)
   apply (wp nothingOnFailure_wp | simp | rule hoare_drop_imps)+
+  done
+
+lemma grs_length'[wp]:
+  "\<lbrace>\<lambda>s. 1 \<le> n\<rbrace> getReceiveSlots receiver recv_buf \<lbrace>\<lambda>rv s. length rv \<le> n\<rbrace>"
+  apply (simp add: getReceiveSlots_def split_def unlessE_def)
+  apply (rule hoare_pre)
+   apply (wp | wpc | simp)+
   done
 
 lemma sameObjectAs_maskCapRights[simp]:
@@ -2145,7 +2114,7 @@ lemma cteDeleteOne_cur' [wp]:
   "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>_ s'. cur_tcb' s'\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def when_def)
   apply (wp hoare_drop_imps finaliseCapTrue_standin_cur' isFinalCapability_cur'
-         | simp add: split_def)+
+         | simp add: split_def | wp_once cur_tcb_lift)+
   done
 
 lemma handleFaultReply_cur' [wp]:

@@ -36,6 +36,8 @@ requalify_consts
   archObjSize
   pageBits
   nullPointer
+  fromPPtr
+  PPtr
 
 end
 

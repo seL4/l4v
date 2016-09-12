@@ -203,7 +203,7 @@ lemma pac_corres:
                     safe_parent_strg'[where idx = "2^pageBits"])
              apply (simp cong: conj_cong)
              apply (wp createObjects_valid_pspace'
-                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))"])
+                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
                 apply (simp add: makeObjectKO_def)+
                apply (simp add:objBits_simps archObjSize_def range_cover_full)+
              apply (clarsimp simp:valid_cap'_def)
@@ -211,7 +211,7 @@ lemma pac_corres:
                        createObjects_orig_cte_wp_at'[where sz = pageBits])
              apply (rule descendants_of'_helper)
              apply (wp createObjects_null_filter'
-                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))"])
+                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
             apply (clarsimp simp:is_cap_simps)
            apply (simp add: free_index_of_def)
           apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
@@ -231,7 +231,8 @@ lemma pac_corres:
                                makeObjectKO_def range_cover_full
                          simp del: capFreeIndex_update.simps 
                 | strengthen invs_valid_pspace' invs_pspace_aligned'
-                             invs_pspace_distinct')+
+                             invs_pspace_distinct'
+                             exI[where x="makeObject :: asidpool"])+
          apply (wp updateFreeIndex_forward_invs'
            updateFreeIndex_pspace_no_overlap'
            updateFreeIndex_caps_no_overlap''
@@ -338,7 +339,6 @@ lemma pac_corres:
     apply (rule is_aligned_weaken)
      apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
     apply (simp add:pageBits_def)
-        apply (clarsimp simp:max_free_index_def)
    apply clarsimp
    apply (drule(1) cte_cap_in_untyped_range)
         apply (fastforce simp:cte_wp_at_ctes_of)
@@ -1355,9 +1355,9 @@ lemma performASIDControlInvocation_tcb_at':
    apply (clarsimp simp: projectKO_opts_defs)
    apply (strengthen st_tcb_strg' [where P=\<top>]) 
    apply (wp deleteObjects_invs_derivatives[where p="makePoolParent aci"]
-     hoare_vcg_ex_lift deleteObjects_cte_wp_at'
+     hoare_vcg_ex_lift deleteObjects_cte_wp_at'[where d=False]
      deleteObjects_st_tcb_at'[where p="makePoolParent aci"] static_imp_wp
-     updateFreeIndex_pspace_no_overlap')
+     updateFreeIndex_pspace_no_overlap' deleteObject_no_overlap[where d=False])
   apply (case_tac ctea)
   apply (clarsimp)
   apply (frule ctes_of_valid_cap')
@@ -1392,7 +1392,7 @@ lemma invokeArch_tcb_at':
     apply (wp, clarsimp simp: st_tcb_strg'[rule_format])
    apply (wp performASIDControlInvocation_tcb_at', clarsimp simp: valid_arch_inv'_def)
   apply (wp, clarsimp simp: pred_tcb_at')
-  done 
+  done
 
 (* FIXME random place to have these *)
 lemma pspace_no_overlap_queuesL1 [simp]:

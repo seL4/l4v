@@ -295,11 +295,12 @@ defs provideUntypedCap_def:
                                bifUntypedObjSizeBits := untypedObjs' @ [magnitudeBits],
                                bifUntypedObjIsDeviceList := untypedDevices @ [isDevice] \<rparr>);
     noInitFailure $ modify (\<lambda> st. st \<lparr> initBootInfo := bootInfo' \<rparr>);
+    magnitude \<leftarrow> returnOk ( fromIntegral magnitudeBits);
     provideCap rootCNodeCap $ UntypedCap_ \<lparr>
                                   capIsDevice= isDevice,
                                   capPtr= ptrFromPAddr pptr,
-                                  capBlockSize= fromIntegral magnitudeBits,
-                                  capFreeIndex= 0 \<rparr>
+                                  capBlockSize= magnitude,
+                                  capFreeIndex= maxFreeIndex magnitude \<rparr>
 odE)"
 
 

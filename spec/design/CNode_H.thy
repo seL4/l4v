@@ -85,6 +85,18 @@ consts'
 noReplyCapsFor :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 
 consts'
+updateTrackedFreeIndex :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
+
+consts'
+updateFreeIndex :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
+
+consts'
+clearUntypedFreeIndex :: "machine_word \<Rightarrow> unit kernel"
+
+consts'
+updateNewFreeIndex :: "machine_word \<Rightarrow> unit kernel"
+
+consts'
 isMDBParentOf :: "cte \<Rightarrow> cte \<Rightarrow> bool"
 
 consts'
@@ -361,6 +373,7 @@ odE)"
 
 defs emptySlot_def:
 "emptySlot slot irq\<equiv> (do
+    clearUntypedFreeIndex slot;
     newCTE \<leftarrow> getCTE slot;
     mdbNode \<leftarrow> return ( cteMDBNode newCTE);
     prev \<leftarrow> return ( mdbPrev mdbNode);
@@ -481,7 +494,8 @@ defs insertNewCap_def:
             [];
     setCTE slot $ CTE cap (MDB next parent True True);
     updateMDB next   $ (\<lambda> m. m \<lparr> mdbPrev := slot \<rparr>);
-    updateMDB parent $ (\<lambda> m. m \<lparr> mdbNext := slot \<rparr>)
+    updateMDB parent $ (\<lambda> m. m \<lparr> mdbNext := slot \<rparr>);
+    updateNewFreeIndex slot
 od)"
 
 defs insertInitCap_def:
@@ -509,6 +523,49 @@ defs setupReplyMaster_def:
         mdb \<leftarrow> return ( nullMDBNode \<lparr> mdbRevocable := True, mdbFirstBadged := True \<rparr>);
         setCTE slot $ CTE cap mdb
     od)
+od)"
+
+defs updateTrackedFreeIndex_def:
+"updateTrackedFreeIndex slot idx\<equiv> (do
+    cap \<leftarrow> getSlotCap slot;
+    modify (\<lambda> ks. ks \<lparr>gsUntypedZeroRanges :=
+        (case untypedZeroRange cap of
+              None \<Rightarrow>   gsUntypedZeroRanges ks
+            | Some r \<Rightarrow>   data_set_delete r (gsUntypedZeroRanges ks)
+            )
+        \<rparr>);
+    modify (\<lambda> ks. ks \<lparr>gsUntypedZeroRanges :=
+        (case untypedZeroRange (cap \<lparr>capFreeIndex := idx\<rparr>) of
+              None \<Rightarrow>   gsUntypedZeroRanges ks
+            | Some r \<Rightarrow>   data_set_insert r (gsUntypedZeroRanges ks)
+            )
+        \<rparr>)
+od)"
+
+defs updateFreeIndex_def:
+"updateFreeIndex slot idx\<equiv> (do
+    updateTrackedFreeIndex slot idx;
+    cap \<leftarrow> getSlotCap slot;
+    updateCap slot (cap \<lparr>capFreeIndex := idx\<rparr>)
+od)"
+
+defs clearUntypedFreeIndex_def:
+"clearUntypedFreeIndex slot\<equiv> (do
+    cap \<leftarrow> getSlotCap slot;
+    (case cap of
+          UntypedCap _ _ _ _ \<Rightarrow>   updateTrackedFreeIndex slot
+            (maxFreeIndex (capBlockSize cap))
+        | _ \<Rightarrow>   return ()
+        )
+od)"
+
+defs updateNewFreeIndex_def:
+"updateNewFreeIndex slot\<equiv> (do
+    cap \<leftarrow> getSlotCap slot;
+    (case cap of
+          UntypedCap _ _ _ _ \<Rightarrow>   updateTrackedFreeIndex slot (capFreeIndex cap)
+        | _ \<Rightarrow>   return ()
+        )
 od)"
 
 defs isMDBParentOf_def:

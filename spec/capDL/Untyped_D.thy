@@ -139,16 +139,16 @@ definition
 where
   "reset_untyped_cap cref \<equiv> doE
     cap \<leftarrow> liftE $ get_cap cref;
-    liftE $ modify (detype (cap_objects cap));
-    count \<leftarrow> liftE $ select UNIV;
-    mapME_x (\<lambda>_. doE
-        S \<leftarrow> liftE $ select {S. available_range cap \<subseteq> S
-            \<and> S \<subseteq> cap_objects cap};
-        liftE $ set_cap cref $ set_available_range cap S;
+    whenE (available_range cap \<noteq> cap_objects cap) $ doE
+      liftE $ modify (detype (cap_objects cap));
+      new_rans \<leftarrow> liftE $ select {xs. (\<forall>S \<in> set xs.
+              S \<subseteq> cap_objects cap \<and> available_range cap \<subset> S)
+          \<and> xs \<noteq> [] \<and> List.last xs = cap_objects cap};
+      mapME_x (\<lambda>r. doE
+        liftE $ set_cap cref $ set_available_range cap r;
         returnOk () \<sqinter> throw
-    odE) [0 ..< count];
-    liftE $ set_cap cref $ set_available_range cap (cap_objects cap);
-    returnOk ()
+      odE) new_rans
+    odE
   odE"
 
 definition

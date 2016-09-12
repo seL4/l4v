@@ -2796,7 +2796,7 @@ lemma ct_in_state_trans_state[simp]:
   by (simp add: ct_in_state_def)
 
 lemma caps_of_state_pspace_no_overlapD:
-  "\<lbrakk> caps_of_state s cref = Some (cap.UntypedCap ptr sz idx); invs s;
+  "\<lbrakk> caps_of_state s cref = Some (cap.UntypedCap dev ptr sz idx); invs s;
     idx < 2 ^ sz \<rbrakk>
    \<Longrightarrow> pspace_no_overlap_range_cover (ptr + of_nat idx) sz s"
   apply (frule(1) caps_of_state_valid)

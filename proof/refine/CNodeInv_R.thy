@@ -6036,24 +6036,6 @@ lemma cte_wp_at_cteCap_norm:
   "(cte_wp_at' (\<lambda>c. P (cteCap c)) p s) = (\<exists>cap. cte_wp_at' (\<lambda>c. cteCap c = cap) p s \<and> P cap)"
   by (auto simp add: cte_wp_at'_def)
 
-lemma emptySlot_zombie:
-  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. isFinal (cteCap c) p (cteCaps_of s)) p s \<and> p \<noteq> p'\<rbrace>
-  emptySlot p' opt
-  \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>c. isFinal (cteCap c) p (cteCaps_of s)) p s\<rbrace>"
-  apply (subst tree_cte_cteCap_eq [simplified comp_def])+
-  apply (simp only: emptySlot_def case_Null_If)
-  apply (wp getCTE_wp' opt_return_pres_lift)
-  apply clarsimp
-  apply (subgoal_tac "\<exists>c. cteCaps_of s p' = Some c \<and> c \<noteq> NullCap")
-   prefer 2
-   apply (simp add: cte_wp_at_ctes_of cteCaps_of_def)
-  apply clarsimp
-  apply (case_tac "cteCaps_of s p", simp)
-  apply (simp add: modify_map_apply)
-  apply (clarsimp simp add: isFinal_def)
-  apply (simp add: sameObjectAs_def3 isCap_simps)
-  done
-
 lemma cte_wp_at_conj_eq':
   "cte_wp_at' (\<lambda>c. P c \<and> Q c) p s = (cte_wp_at' P p s \<and> cte_wp_at' Q p s)"
   by (auto simp add: cte_wp_at'_def)
@@ -6462,6 +6444,7 @@ definition
   "finalise_prop_stuff P
     = ((\<forall>s f. P (ksWorkUnitsCompleted_update f s) = P s)
     \<and> irq_state_independent_H P
+    \<and> (\<forall>s f. P (gsUntypedZeroRanges_update f s) = P s)
     \<and> (\<forall>s f. P (ksInterruptState_update f s) = P s)
     \<and> (\<forall>s f. P (ksMachineState_update (irq_state_update f) s) = P s)
     \<and> (\<forall>s f. P (ksMachineState_update (irq_masks_update f) s) = P s))"
@@ -6480,6 +6463,14 @@ lemma dmo_maskInterrupt_no_cte_prop:
   "\<lbrace>no_cte_prop P and K (finalise_prop_stuff P)\<rbrace>
     doMachineOp (maskInterrupt m irq) \<lbrace>\<lambda>_. no_cte_prop P\<rbrace>"
   apply (wp dmo_maskInterrupt)
+  apply (clarsimp simp: no_cte_prop_def finalise_prop_stuff_def)
+  done
+
+lemma updateTrackedFreeIndex_no_cte_prop[wp]:
+  "\<lbrace>no_cte_prop P and K (finalise_prop_stuff P)\<rbrace>
+    updateTrackedFreeIndex ptr idx \<lbrace>\<lambda>_. no_cte_prop P\<rbrace>"
+  apply (simp add: updateTrackedFreeIndex_def getSlotCap_def)
+  apply (wp getCTE_wp')
   apply (clarsimp simp: no_cte_prop_def finalise_prop_stuff_def)
   done
 
@@ -7450,6 +7441,12 @@ lemma rec_del_ReduceZombie_emptyable:
 crunch sch_act_simple[wp]: cteDelete sch_act_simple
 
 lemmas preemption_point_valid_list = preemption_point_inv'[where P="valid_list", simplified]
+
+lemma finaliseSlot_typ_at'[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> finaliseSlot ptr exposed \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
+  by (rule finaliseSlot_preservation, (wp | simp)+)
+
+lemmas finaliseSlot_typ_ats[wp] = typ_at_lifts[OF finaliseSlot_typ_at']
 
 lemmas rec_del_valid_list_irq_state_independent[wp] =
   rec_del_preservation[OF cap_swap_for_delete_valid_list set_cap_valid_list empty_slot_valid_list finalise_cap_valid_list preemption_point_valid_list]
