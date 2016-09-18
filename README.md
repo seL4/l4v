@@ -147,6 +147,7 @@ but you will need at least these:
     sudo apt-get install python-pip python-dev libxml2-utils
     sudo pip install tempita
     sudo pip install psutil
+    sudo pip install six
 
 *On MacOS*: here it is harder to get a full cross-compiler setup going. For
 normal proof development, a full setup is not necessary, though. You mostly
