@@ -712,8 +712,8 @@ lemma generic_frame_cap_ptr_set_capFMappedAddress_spec:
        {t. (\<exists>cte' cap'. 
            generic_frame_cap_set_capFMappedAddress_CL (cap_lift (the (cslift s \<^bsup>s\<^esup>cap_ptr))) \<^bsup>s\<^esup>asid \<^bsup>s\<^esup>addr = Some cap' \<and>
            cte_lift cte' = option_map (cap_CL_update (K cap')) (cte_lift (the (cslift s cte_slot))) \<and>
-           cslift t = cslift s(cte_slot \<mapsto> cte')) \<and> cslift_all_but_cte_C t s
-                \<and> (hrs_htd \<^bsup>t\<^esup>t_hrs) = (hrs_htd \<^bsup>s\<^esup>t_hrs)}"
+           t_hrs_' (globals t) = hrs_mem_update (heap_update cte_slot cte')
+               (t_hrs_' (globals s)))}"
   apply vcg 
   apply (clarsimp simp: typ_heap_simps)
   apply (subgoal_tac "cap_lift ret__struct_cap_C \<noteq> None")
@@ -721,9 +721,8 @@ lemma generic_frame_cap_ptr_set_capFMappedAddress_spec:
    apply (clarsimp simp: generic_frame_cap_set_capFMappedAddress_CL_def split: cap_CL.splits)
   apply (clarsimp simp: clift_ptr_safe2 typ_heap_simps)
   apply (rule_tac x="cte_C.cap_C_update (\<lambda>_. ret__struct_cap_C) y" in exI)
-  apply simp
   apply (case_tac y)
-  apply (clarsimp simp: cte_lift_def)
+  apply (clarsimp simp: cte_lift_def typ_heap_simps')
   done
 
 lemma lookupPDSlot_spec:

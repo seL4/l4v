@@ -1598,4 +1598,23 @@ lemma ccorres_cond_seq:
   apply assumption
   done
 
+lemma ccorres_assume_pre:
+  assumes "\<And>s. P s \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf r' xf' (P and (\<lambda>s'. s' = s)) P' hs H C"
+  shows "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H C"
+  apply (clarsimp simp: ccorres_underlying_def)
+  apply (frule assms)
+  apply (simp add: ccorres_underlying_def)
+  apply blast
+  done
+
+lemma ccorres_name_pre:
+  "(\<And>s. P s \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf r' xf' (\<lambda>s'. s' = s) P' hs H C)
+    \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf r' xf'  P P' hs H C"
+   apply (rule ccorres_assume_pre)
+   apply (rule ccorres_guard_imp)
+     apply fastforce
+    apply simp
+   apply simp
+   done
+
 end

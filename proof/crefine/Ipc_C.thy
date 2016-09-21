@@ -3532,6 +3532,7 @@ lemma handleFaultReply_ccorres [corres]:
                                            message_info_to_H_def
                                     split: split_if)
                      apply unat_arith
+                    apply clarsimp
                     apply (vcg spec=TrueI)
                     apply clarsimp
                    apply wp
@@ -3616,6 +3617,7 @@ lemma handleFaultReply_ccorres [corres]:
                                  min_def message_info_to_H_def word_of_nat_less
                           split: split_if)
                 apply unat_arith
+               apply clarsimp
                apply (vcg spec=TrueI)
                apply clarsimp
               apply wp
@@ -3728,27 +3730,6 @@ lemma handleFaultReply_ccorres [corres]:
   apply (clarsimp simp: obj_at'_def n_msgRegisters_def)
   done
 
-lemma fault_null_fault_ptr_new_ccorres [corres]:
-  "ccorres dc xfdc (tcb_at' receiver) UNIV hs
-           (threadSet (tcbFault_update empty) receiver)
-           (CALL fault_null_fault_ptr_new(Ptr
-               &(tcb_ptr_to_ctcb_ptr receiver\<rightarrow>[''tcbFault_C''])))"
-  apply (rule ccorres_from_vcg)
-  apply (rule allI)
-  apply (rule conseqPre, vcg)
-  apply clarsimp
-  apply (frule(1) obj_at_cslift_tcb)
-  apply (rule conjI)
-   apply (clarsimp simp: typ_heap_simps)
-  apply clarsimp
-  apply (rule rev_bexI [OF threadSet_eq], assumption)
-  apply clarsimp
-  apply (erule(2) rf_sr_tcb_update_no_queue, simp_all add: tcb_cte_cases_def)
-  apply (clarsimp simp: ctcb_relation_def cthread_state_relation_def
-                        fault_lift_def cfault_rel_def)
-  apply (case_tac "tcbState ko", simp_all add: is_cap_fault_def)
-  done
-
 (* FIXME: move *)
 lemma cancelAllIPC_sch_act_wf:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -3795,58 +3776,20 @@ lemma setCTE_tcbFault:
   apply (rule setObject_cte_obj_at_tcb', simp_all)
   done
 
-(* FIXME: move *)
-lemma emptySlot_tcbFault:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>
-  emptySlot slot irq
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>" 
-  apply (simp add: emptySlot_def)
-  apply (wp setCTE_tcbFault getCTE_wp' hoare_drop_imps
-          | wpc
-          | simp add: updateMDB_def updateCap_def Let_def
-          | rule conjI impI)+
-  done
+crunch tcbFault: emptySlot, tcbSchedEnqueue, rescheduleRequired
+          "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
+  (wp: threadSet_obj_at'_strongish crunch_wps
+    simp: crunch_simps unless_def)
 
 (* FIXME: move *)
 lemmas threadSet_obj_at' = threadSet_obj_at'_strongish
 
-(* FIXME: move *)
-lemma tcbSchedEnqueue_tcbFault:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>
-  tcbSchedEnqueue t'
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_when)
-  apply (wp threadSet_obj_at' hoare_drop_imps threadGet_wp
-    |simp split: split_if)+
-  done
-
-lemma rescheduleRequired_tcbFault:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>
-     rescheduleRequired
-   \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
-  apply (simp add: rescheduleRequired_def)
-  apply (wp tcbSchedEnqueue_tcbFault | wpc)+
-  apply simp
-  done
+crunch tcbFault: setThreadState, cancelAllIPC, cancelAllSignals
+          "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
+  (wp: threadSet_obj_at'_strongish crunch_wps)
 
 (* FIXME: move *)
-lemma sts_tcbFault:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>
-  setThreadState st t'
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply (wp threadSet_obj_at' rescheduleRequired_tcbFault | simp)+
-  done
-
-(* FIXME: move *)
-lemma setEndpoint_tcb:
-  "\<lbrace>obj_at' (\<lambda>tcb::tcb. P tcb) t\<rbrace>
-  setEndpoint ep e
-  \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-  apply (simp add: setEndpoint_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
+lemmas setEndpoint_tcb = KHeap_R.setEndpoint_obj_at'_tcb
 
 (* FIXME: move *)
 lemma setNotification_tcb:
@@ -3856,30 +3799,6 @@ lemma setNotification_tcb:
   apply (simp add: setNotification_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp: updateObject_default_def in_monad)
-  done
-
-(* FIXME: move *)
-lemma cancelAllIPC_tcbFault:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>
-  cancelAllIPC ep
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
-  apply (simp add: cancelAllIPC_def)
-  apply (rule order_refl |
-         wp mapM_x_wp tcbSchedEnqueue_tcbFault sts_tcbFault 
-            setEndpoint_tcb getEndpoint_wp rescheduleRequired_tcbFault |
-         wpc | simp)+
-  done
-
-(* FIXME: move *)
-lemma cancelAllSignals_tcbFault:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>
-  cancelAllSignals ep
-  \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
-  apply (simp add: cancelAllSignals_def)
-  apply (rule order_refl |
-         wp mapM_x_wp tcbSchedEnqueue_tcbFault sts_tcbFault 
-            setNotification_tcb getNotification_wp rescheduleRequired_tcbFault |
-         wpc | simp)+
   done
 
 lemma sbn_tcbFault:
@@ -4061,9 +3980,19 @@ proof -
                                                   where xf'=restart_'])
                apply simp_all[3]
             apply ceqv
-           apply (rule ccorres_move_c_guard_tcb)
+           apply csymbr
            apply (rule ccorres_split_nothrow_novcg)
-               apply (rule fault_null_fault_ptr_new_ccorres)
+               apply (rule threadSet_ccorres_lemma2[where P=\<top>])
+                apply vcg
+               apply (clarsimp simp: typ_heap_simps')
+               apply (erule(1) rf_sr_tcb_update_no_queue2,
+                      (simp add: typ_heap_simps')+, simp_all?)[1]
+                apply (rule ball_tcb_cte_casesI, simp+)
+               apply (clarsimp simp: ctcb_relation_def
+                                     fault_lift_null_fault
+                                     cfault_rel_def is_cap_fault_def
+                                     cthread_state_relation_def)
+               apply (case_tac "tcbState tcb", simp_all add: is_cap_fault_def)[1]
               apply ceqv
              apply (rule_tac R=\<top> in ccorres_cond2)
                apply (clarsimp simp: to_bool_def Collect_const_mem)
@@ -4256,7 +4185,8 @@ lemma sendIPC_dequeue_ccorres_helper:
    apply (rule conjI)
     apply (rule bexI [OF _ setObject_eq])
         apply (simp add: rf_sr_def cstate_relation_def Let_def
-                         cpspace_relation_def update_ep_map_tos)
+                         cpspace_relation_def update_ep_map_tos
+                         typ_heap_simps')
         apply (elim conjE)
         apply (intro conjI)
              -- "tcb relation"
@@ -4276,7 +4206,7 @@ lemma sendIPC_dequeue_ccorres_helper:
           -- "queue relation"
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
-         apply (simp add: carch_state_relation_def)
+         apply (simp add: carch_state_relation_def typ_heap_simps')
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: h_t_valid_clift_Some_iff)
       apply (simp add: objBits_simps)
@@ -4295,7 +4225,8 @@ lemma sendIPC_dequeue_ccorres_helper:
    apply (rule bexI [OF _ setObject_eq])
        apply (frule(1) st_tcb_at_h_t_valid)
        apply (simp add: rf_sr_def cstate_relation_def Let_def
-                        cpspace_relation_def update_ep_map_tos)
+                        cpspace_relation_def update_ep_map_tos
+                        typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
              -- "tcb relation"
@@ -4323,7 +4254,7 @@ lemma sendIPC_dequeue_ccorres_helper:
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
-        apply (simp add: carch_state_relation_def)
+        apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
      apply (simp add: objBits_simps)
@@ -4331,6 +4262,18 @@ lemma sendIPC_dequeue_ccorres_helper:
    apply assumption
   apply (clarsimp simp: cendpoint_relation_def Let_def tcb_queue_relation'_def)
   done
+
+lemma rf_sr_tcb_update_twice:
+  "h_t_valid (hrs_htd hrs) c_guard ptr
+    \<Longrightarrow> ((s, s'\<lparr>globals := globals s''\<lparr>t_hrs_' := 
+        hrs_mem_update (heap_update (ptr :: tcb_C ptr) v)
+            (hrs_mem_update (heap_update ptr v') hrs)\<rparr>\<rparr>) \<in> rf_sr)
+    = ((s, s'\<lparr>globals := globals s''\<lparr>t_hrs_' := 
+        hrs_mem_update (heap_update (ptr :: tcb_C ptr) v) hrs\<rparr>\<rparr>) \<in> rf_sr)"
+  by (simp add: rf_sr_def cstate_relation_def Let_def
+                cpspace_relation_def typ_heap_simps'
+                carch_state_relation_def
+                cmachine_state_relation_def)
 
 lemma sendIPC_block_ccorres_helper:
   "ccorres dc xfdc (tcb_at' thread and valid_queues and valid_objs' and 
@@ -4377,9 +4320,10 @@ lemma sendIPC_block_ccorres_helper:
         apply clarsimp
         apply (frule(1) tcb_at_h_t_valid)
         apply (frule h_t_valid_c_guard)
-        apply (clarsimp simp: typ_heap_simps)
-        apply (erule(1) rf_sr_tcb_update_no_queue)
-               apply (simp add: typ_heap_simps')+
+        apply (clarsimp simp: typ_heap_simps'
+                              rf_sr_tcb_update_twice)
+        apply (erule(1) rf_sr_tcb_update_no_queue_gen,
+          (simp add: typ_heap_simps')+)[1]
          apply (simp add: tcb_cte_cases_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
                          ThreadState_BlockedOnSend_def mask_def
@@ -4515,7 +4459,9 @@ lemma tcbEPAppend_spec:
                           ((ctcb_ptr_to_tcb_ptr \<^bsup>s\<^esup>tcb) # queue)))
                    \<and> option_map tcb_null_ep_ptrs \<circ> (cslift t) =
                        option_map tcb_null_ep_ptrs \<circ> (cslift s)
-                   \<and> cslift_all_but_tcb_C t s  \<and> (hrs_htd \<^bsup>t\<^esup>t_hrs) = (hrs_htd \<^bsup>s\<^esup>t_hrs)}"
+                   \<and> cslift_all_but_tcb_C t s  \<and> (hrs_htd \<^bsup>t\<^esup>t_hrs) = (hrs_htd \<^bsup>s\<^esup>t_hrs)
+                   \<and> (\<forall>rs. zero_ranges_are_zero rs (\<^bsup>s\<^esup>t_hrs)
+                       \<longrightarrow> zero_ranges_are_zero rs (\<^bsup>t\<^esup>t_hrs))}"
   apply (intro allI)
   apply (rule conseqPre, vcg)
   apply (clarsimp split del: split_if)
@@ -4536,13 +4482,13 @@ lemma tcbEPAppend_spec:
       apply assumption+
    apply (drule tcb_at_not_NULL, simp)
   apply (unfold upd_unless_null_def)
-  apply (simp add: typ_heap_simps)
-  apply (intro impI conjI allI)
-      apply simp
-     apply simp
-     apply (rule ext)
-     apply (clarsimp simp add: typ_heap_simps tcb_null_ep_ptrs_def
-                        split: split_if)
+  apply (clarsimp split: split_if_asm)
+   apply (simp add: typ_heap_simps')
+   apply (rule ext)
+   apply (clarsimp simp add: typ_heap_simps tcb_null_ep_ptrs_def
+                      split: split_if)
+  apply (simp add: typ_heap_simps')
+  apply (intro conjI)
     apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
     apply (erule iffD1 [OF tcb_queue_relation'_cong, OF refl refl refl, rotated -1])
     apply (clarsimp split: split_if)
@@ -4634,7 +4580,8 @@ lemma sendIPC_enqueue_ccorres_helper:
    apply (simp add: setEndpoint_def split_def)
    apply (rule bexI [OF _ setObject_eq])
        apply (simp add: rf_sr_def cstate_relation_def init_def Let_def
-                        cpspace_relation_def update_ep_map_tos)
+                        cpspace_relation_def update_ep_map_tos
+                        typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
             -- "tcb relation"
@@ -4660,9 +4607,9 @@ lemma sendIPC_enqueue_ccorres_helper:
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
-        apply (simp add: carch_state_relation_def)
+        apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
-      apply (simp add: h_t_valid_clift_Some_iff)
+      apply (simp add: typ_heap_simps')
      apply (simp add: objBits_simps)
     apply (simp add: objBits_simps)
    apply assumption
@@ -4672,7 +4619,8 @@ lemma sendIPC_enqueue_ccorres_helper:
   apply (simp add: setEndpoint_def split_def)
   apply (rule bexI [OF _ setObject_eq])
       apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
-                       cpspace_relation_def update_ep_map_tos)
+                       cpspace_relation_def update_ep_map_tos
+                       typ_heap_simps')
       apply (elim conjE)
       apply (intro conjI)
            -- "tcb relation"
@@ -4700,7 +4648,7 @@ lemma sendIPC_enqueue_ccorres_helper:
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
-       apply (simp add: carch_state_relation_def)
+       apply (simp add: carch_state_relation_def typ_heap_simps')
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
     apply (simp add: objBits_simps)
@@ -4998,9 +4946,8 @@ lemma receiveIPC_block_ccorres_helper:
         apply clarsimp
         apply (frule(1) tcb_at_h_t_valid)
         apply (frule h_t_valid_c_guard)
-        apply (clarsimp simp: typ_heap_simps)
-        apply (erule(1) rf_sr_tcb_update_no_queue)
-               apply (simp add: typ_heap_simps)+
+        apply (clarsimp simp: typ_heap_simps' rf_sr_tcb_update_twice)
+        apply (erule(1) rf_sr_tcb_update_no_queue_gen, (simp add: typ_heap_simps)+)
          apply (simp add: tcb_cte_cases_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
                          ThreadState_BlockedOnReceive_def mask_def
@@ -5069,7 +5016,8 @@ lemma receiveIPC_enqueue_ccorres_helper:
    apply (simp add: setEndpoint_def split_def)
    apply (rule bexI [OF _ setObject_eq])
        apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
-                        cpspace_relation_def update_ep_map_tos)
+                        cpspace_relation_def update_ep_map_tos
+                        typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
              -- "tcb relation"
@@ -5097,7 +5045,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
-        apply (simp add: carch_state_relation_def)
+        apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
      apply (simp add: objBits_simps)
@@ -5109,7 +5057,8 @@ lemma receiveIPC_enqueue_ccorres_helper:
   apply (simp add: setEndpoint_def split_def)
   apply (rule bexI [OF _ setObject_eq])
       apply (simp add: rf_sr_def cstate_relation_def init_def Let_def
-                       cpspace_relation_def update_ep_map_tos)
+                       cpspace_relation_def update_ep_map_tos
+                       typ_heap_simps')
       apply (elim conjE)
       apply (intro conjI)
            -- "tcb relation"
@@ -5134,9 +5083,9 @@ lemma receiveIPC_enqueue_ccorres_helper:
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
-       apply (simp add: carch_state_relation_def)
+       apply (simp add: carch_state_relation_def typ_heap_simps')
       apply (simp add: cmachine_state_relation_def)
-     apply (simp add: h_t_valid_clift_Some_iff)
+     apply (simp add: typ_heap_simps')
     apply (simp add: objBits_simps)
    apply (simp add: objBits_simps)
   apply assumption
@@ -5198,7 +5147,8 @@ lemma receiveIPC_dequeue_ccorres_helper:
    apply (rule conjI)
     apply (rule bexI [OF _ setObject_eq])
         apply (simp add: rf_sr_def cstate_relation_def Let_def
-                         cpspace_relation_def update_ep_map_tos)
+                         cpspace_relation_def update_ep_map_tos
+                         typ_heap_simps')
         apply (elim conjE)
         apply (intro conjI)
              -- "tcb relation"
@@ -5218,9 +5168,9 @@ lemma receiveIPC_dequeue_ccorres_helper:
           -- "queue relation"
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
-         apply (simp add: carch_state_relation_def)
+         apply (simp add: carch_state_relation_def typ_heap_simps')
         apply (simp add: cmachine_state_relation_def)
-       apply (simp add: h_t_valid_clift_Some_iff)
+       apply (simp add: typ_heap_simps')
       apply (simp add: objBits_simps)
      apply (simp add: objBits_simps)
     apply assumption
@@ -5237,7 +5187,8 @@ lemma receiveIPC_dequeue_ccorres_helper:
    apply (rule bexI [OF _ setObject_eq])
        apply (frule(1) st_tcb_at_h_t_valid)
        apply (simp add: rf_sr_def cstate_relation_def Let_def
-                        cpspace_relation_def update_ep_map_tos)
+                        cpspace_relation_def update_ep_map_tos
+                        typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
             -- "tcb relation"
@@ -5265,9 +5216,9 @@ lemma receiveIPC_dequeue_ccorres_helper:
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
-        apply (simp add: carch_state_relation_def)
+        apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
-      apply (simp add: h_t_valid_clift_Some_iff)
+      apply (simp add: typ_heap_simps')
      apply (simp add: objBits_simps)
     apply (simp add: objBits_simps)
    apply assumption
@@ -5335,13 +5286,13 @@ lemma completeSignal_ccorres:
        apply (clarsimp simp: typ_heap_simps setNotification_def)
        apply (rule bexI [OF _ setObject_eq])
            apply (simp add: rf_sr_def cstate_relation_def Let_def update_ntfn_map_tos 
-                            cpspace_relation_def)
+                            cpspace_relation_def typ_heap_simps')
            apply (elim conjE)
            apply (intro conjI)
              apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
               apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def mask_def)
              apply simp
-            apply (simp add: carch_state_relation_def)
+            apply (simp add: carch_state_relation_def typ_heap_simps')
            apply (simp add: cmachine_state_relation_def)
           apply (simp add: h_t_valid_clift_Some_iff)
          apply (simp add: objBits_simps)
@@ -5772,7 +5723,8 @@ lemma sendSignal_dequeue_ccorres_helper:
    apply (rule conjI)
     apply (rule bexI [OF _ setObject_eq])
         apply (simp add: rf_sr_def cstate_relation_def Let_def
-                         cpspace_relation_def update_ntfn_map_tos)
+                         cpspace_relation_def update_ntfn_map_tos
+                         typ_heap_simps')
         apply (elim conjE)
         apply (intro conjI)
              -- "tcb relation"
@@ -5792,7 +5744,7 @@ lemma sendSignal_dequeue_ccorres_helper:
           -- "queue relation"
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
-         apply (simp add: carch_state_relation_def)
+         apply (simp add: carch_state_relation_def typ_heap_simps')
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: h_t_valid_clift_Some_iff)
       apply (simp add: objBits_simps)
@@ -5813,7 +5765,8 @@ lemma sendSignal_dequeue_ccorres_helper:
    apply (rule bexI [OF _ setObject_eq])
        apply (frule(1) st_tcb_at_h_t_valid)
        apply (simp add: rf_sr_def cstate_relation_def Let_def
-                        cpspace_relation_def update_ntfn_map_tos)
+                        cpspace_relation_def update_ntfn_map_tos
+                        typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
             -- "tcb relation"
@@ -5841,7 +5794,7 @@ lemma sendSignal_dequeue_ccorres_helper:
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
-        apply (simp add: carch_state_relation_def)
+        apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
      apply (simp add: objBits_simps)
@@ -5868,7 +5821,7 @@ lemma ntfn_set_active_ccorres:
    apply (rule cmap_relation_ko_atE [OF cmap_relation_ntfn], assumption+)
    apply (clarsimp simp: typ_heap_simps)
    apply (rule bexI[OF _ setObject_eq], simp_all)
-    apply (clarsimp simp: typ_heap_simps rf_sr_def cstate_relation_def Let_def
+    apply (clarsimp simp: typ_heap_simps' rf_sr_def cstate_relation_def Let_def
                           cpspace_relation_def update_ntfn_map_tos
                           carch_state_relation_def cmachine_state_relation_def)
     apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
@@ -5977,14 +5930,15 @@ lemma sendSignal_ccorres [corres]:
      apply (clarsimp simp: typ_heap_simps)
      apply (rule bexI [OF _ setObject_eq])
          apply (simp add: rf_sr_def cstate_relation_def Let_def
-                          cpspace_relation_def update_ntfn_map_tos)
+                          cpspace_relation_def update_ntfn_map_tos
+                          typ_heap_simps')
          apply (elim conjE)
          apply (intro conjI)
            apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
             apply (simp add: cnotification_relation_def Let_def
                              NtfnState_Active_def mask_def word_bw_comms)
            apply simp
-          apply (simp add: carch_state_relation_def)
+          apply (simp add: carch_state_relation_def typ_heap_simps')
          apply (simp add: cmachine_state_relation_def)
         apply (simp add: h_t_valid_clift_Some_iff)
        apply (simp add: objBits_simps)
@@ -6067,9 +6021,9 @@ lemma receiveSignal_block_ccorres_helper:
         apply clarsimp
         apply (frule(1) tcb_at_h_t_valid)
         apply (frule h_t_valid_c_guard)
-        apply (clarsimp simp: typ_heap_simps)
-        apply (erule(1) rf_sr_tcb_update_no_queue)
-               apply (simp add: typ_heap_simps)+
+        apply (clarsimp simp: typ_heap_simps' rf_sr_tcb_update_twice)
+        apply (erule(1) rf_sr_tcb_update_no_queue_gen,
+          (simp add: typ_heap_simps')+)
          apply (simp add: tcb_cte_cases_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def
                          ThreadState_BlockedOnNotification_def mask_def
@@ -6191,7 +6145,8 @@ lemma receiveSignal_enqueue_ccorres_helper:
    apply (simp add: setNotification_def split_def)
    apply (rule bexI [OF _ setObject_eq])
        apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
-                        cpspace_relation_def update_ntfn_map_tos)
+                        cpspace_relation_def update_ntfn_map_tos
+                        typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
             -- "tcb relation"
@@ -6219,7 +6174,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          subgoal by (clarsimp simp: comp_def)
-        apply (simp add: carch_state_relation_def)
+        apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
      apply (simp add: objBits_simps)
@@ -6231,7 +6186,8 @@ lemma receiveSignal_enqueue_ccorres_helper:
   apply (simp add: setNotification_def split_def)
   apply (rule bexI [OF _ setObject_eq])
       apply (simp add: rf_sr_def cstate_relation_def init_def Let_def
-                       cpspace_relation_def update_ntfn_map_tos)
+                       cpspace_relation_def update_ntfn_map_tos
+                       typ_heap_simps')
       apply (elim conjE)
       apply (intro conjI)
            -- "tcb relation"
@@ -6258,7 +6214,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
-       apply (simp add: carch_state_relation_def)
+       apply (simp add: carch_state_relation_def typ_heap_simps')
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
     apply (simp add: objBits_simps)
@@ -6352,14 +6308,15 @@ lemma receiveSignal_ccorres [corres]:
         apply (clarsimp simp: typ_heap_simps setNotification_def)
         apply (rule bexI [OF _ setObject_eq])
             apply (simp add: rf_sr_def cstate_relation_def Let_def
-                             cpspace_relation_def update_ntfn_map_tos)
+                             cpspace_relation_def update_ntfn_map_tos
+                             typ_heap_simps')
             apply (elim conjE)
             apply (intro conjI)
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (simp add: cnotification_relation_def Let_def
                                 NtfnState_Idle_def mask_def)
               apply simp
-             apply (simp add: carch_state_relation_def)
+             apply (simp add: carch_state_relation_def typ_heap_simps')
             apply (simp add: cmachine_state_relation_def)
            apply (simp add: h_t_valid_clift_Some_iff)
           apply (simp add: objBits_simps)

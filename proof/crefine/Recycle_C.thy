@@ -194,6 +194,31 @@ lemma flex_user_data_at_rf_sr_dom_s:
   apply simp
   done
 
+lemma hrs_mem_update_fold_eq:
+  "hrs_mem_update (fold f xs)
+    = fold (hrs_mem_update o f) xs"
+  apply (rule sym, induct xs)
+   apply (simp add: hrs_mem_update_def)
+  apply (simp add: hrs_mem_update_def fun_eq_iff)
+  done
+
+lemma power_user_page_foldl_zero_ranges:
+  " \<forall>p<2 ^ (pageBitsForSize sz - pageBits).
+      hrs_htd hrs \<Turnstile>\<^sub>t (Ptr (ptr + of_nat p * 0x1000) :: user_data_C ptr)
+    \<Longrightarrow> zero_ranges_are_zero rngs hrs
+    \<Longrightarrow> zero_ranges_are_zero rngs
+        (hrs_mem_update (\<lambda>s. foldl (\<lambda>s x. heap_update (Ptr x) (user_data_C (arr x)) s) s
+            (map (\<lambda>n. ptr + of_nat n * 0x1000) [0..<2 ^ (pageBitsForSize sz - pageBits)]))
+            hrs)"
+  apply (simp add: foldl_conv_fold hrs_mem_update_fold_eq)
+  apply (rule conjunct1)
+  apply (rule fold_invariant[where P="\<lambda>hrs'. zero_ranges_are_zero rngs hrs'
+          \<and> hrs_htd hrs' = hrs_htd hrs"
+      and xs=xs and Q="\<lambda>x. x \<in> set xs" for xs], simp_all)
+  apply (subst zero_ranges_are_zero_update, simp_all)
+  apply clarsimp
+  done
+
 lemma heap_to_device_data_disj_mdf':
   "\<lbrakk>is_aligned ptr (pageBitsForSize sz); ksPSpace \<sigma> a = Some obj; objBitsKO obj = pageBits; pspace_aligned' \<sigma>;
   pspace_distinct' \<sigma>; pspace_no_overlap' ptr (pageBitsForSize sz) \<sigma>\<rbrakk>
@@ -291,6 +316,7 @@ lemma clearMemory_PageCap_ccorres:
                             carch_state_relation_def        
                             cmachine_state_relation_def
                             foldl_fun_upd_const[unfolded fun_upd_def]
+                            power_user_page_foldl_zero_ranges
                             dom_heap_to_device_data)
       apply (rule conjI[rotated])
        apply (simp add:pageBitsForSize_mess_multi)
@@ -1409,7 +1435,8 @@ lemma cancelBadgedSends_ccorres:
                                cmachine_state_relation_def
                                )
          apply (clarsimp simp: cpspace_relation_def
-                               update_ep_map_tos)
+                               update_ep_map_tos
+                               typ_heap_simps')
          apply (erule(1) cpspace_relation_ep_update_ep2)
           apply (simp add: cendpoint_relation_def endpoint_state_defs)
          subgoal by simp
@@ -1447,7 +1474,7 @@ lemma cancelBadgedSends_ccorres:
                apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                  carch_state_relation_def
                  cmachine_state_relation_def
-                 cpspace_relation_def
+                 cpspace_relation_def typ_heap_simps'
                  update_ep_map_tos)
                apply (erule(1) cpspace_relation_ep_update_ep2)
                 subgoal by (simp add: cendpoint_relation_def Let_def)
@@ -1459,7 +1486,7 @@ lemma cancelBadgedSends_ccorres:
               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                      carch_state_relation_def
                                      cmachine_state_relation_def
-                                     cpspace_relation_def
+                                     cpspace_relation_def typ_heap_simps'
                                      update_ep_map_tos)
               apply (erule(1) cpspace_relation_ep_update_ep2)
                apply (simp add: cendpoint_relation_def Let_def)
@@ -1934,6 +1961,91 @@ lemma cteRecycle_ccorres:
    apply simp
    apply (wp cteRevoke_invs' cteRevoke_sch_act_simple)
   apply (clarsimp simp: from_bool_def true_def exception_defs cintr_def)
+  done
+
+lemma cte_lift_ccte_relation:
+  "cte_lift cte' = Some ctel'
+    \<Longrightarrow> c_valid_cte cte'
+    \<Longrightarrow> ccte_relation (cte_to_H ctel') cte'"
+  by (simp add: ccte_relation_def)
+
+lemma updateFreeIndex_ccorres:
+  "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. \<exists>cte cte'. cslift s (cte_Ptr srcSlot) = Some cte'
+               \<and> cteCap cte = cap' \<and> ccte_relation cte cte'})
+          c 
+        {t. \<exists>cap. cap_untyped_cap_lift cap = (cap_untyped_cap_lift
+                    (cte_C.cap_C (the (cslift s (cte_Ptr srcSlot)))))
+                        \<lparr> cap_untyped_cap_CL.capFreeIndex_CL := ((of_nat idx') >> 4) \<rparr>
+                \<and> cap_get_tag cap = scast cap_untyped_cap
+                \<and> t_hrs_' (globals t) = hrs_mem_update (heap_update (cte_Ptr srcSlot)
+                    (cte_C.cap_C_update (\<lambda>_. cap) (the (cslift s (cte_Ptr srcSlot)))))
+                    (t_hrs_' (globals s))
+                \<and> t may_only_modify_globals s in [t_hrs]
+        }
+    \<Longrightarrow> ccorres dc xfdc
+           (valid_objs' and cte_wp_at' (\<lambda>cte. isUntypedCap (cteCap cte)
+               \<and> cap' = (cteCap cte)) srcSlot
+           and untyped_ranges_zero'
+           and (\<lambda>_. is_aligned (of_nat idx' :: word32) 4 \<and> idx' \<le> 2 ^ (capBlockSize cap')))
+           {s. \<not> capIsDevice cap'
+               \<longrightarrow> region_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
+           (updateFreeIndex srcSlot idx') c"
+  (is "_ \<Longrightarrow> ccorres dc xfdc (valid_objs' and ?cte_wp_at' and _ and _) ?P' hs ?a c")
+  apply (rule ccorres_gen_asm)
+  apply (simp add: updateFreeIndex_def getSlotCap_def updateCap_def)
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_split_noop_lhs, rule_tac cap'=cap' in updateTrackedFreeIndex_noop_ccorres)
+    apply (rule ccorres_pre_getCTE)+
+    apply (rename_tac cte cte2)
+    apply (rule_tac P = "\<lambda>s. ?cte_wp_at' s \<and> cte2 = cte \<and> cte_wp_at' (op = cte) srcSlot s"
+              and P'="{s. \<exists>cte cte'. cslift s (cte_Ptr srcSlot) = Some cte'
+               \<and> cteCap cte = cap' \<and> ccte_relation cte cte'} \<inter> ?P'" in ccorres_from_vcg)
+    apply (rule allI, rule HoarePartial.conseq_exploit_pre, clarify)
+    apply (drule_tac x=s in spec, rule conseqPre, erule conseqPost)
+      defer
+      apply clarsimp
+     apply clarsimp
+    apply (simp add: cte_wp_at_ctes_of)
+    apply wp
+   apply (clarsimp simp: isCap_simps cte_wp_at_ctes_of)
+   apply (frule(1) rf_sr_ctes_of_clift)
+   apply clarsimp
+   apply (frule(1) cte_lift_ccte_relation)
+   apply (rule exI, intro conjI[rotated], assumption, simp_all)[1]
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (erule(1) rf_sr_ctes_of_cliftE)
+  apply (frule(1) rf_sr_ctes_of_clift)
+  apply clarsimp
+  apply (subgoal_tac "ccap_relation (capFreeIndex_update (\<lambda>_. idx')
+        (cteCap (the (ctes_of \<sigma> srcSlot)))) cap")
+   apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
+   apply (erule bexI [rotated])
+   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
+      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
+      isCap_simps)
+   apply (simp add:cpspace_relation_def)
+   apply (clarsimp simp:typ_heap_simps' modify_map_def mex_def meq_def)
+   apply (rule conjI)
+    apply (rule cpspace_cte_relation_upd_capI, assumption+)
+   apply (rule conjI)
+    apply (rule setCTE_tcb_case, assumption+)
+   apply (case_tac s', clarsimp)
+   subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
+                   typ_heap_simps')
+
+  apply (clarsimp simp: isCap_simps)
+  apply (drule(1) cte_lift_ccte_relation,
+    drule ccte_relation_ccap_relation)
+  apply (simp add: cte_to_H_def)
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (clarsimp simp: ccap_relation_def cap_lift_untyped_cap
+                        cap_to_H_simps cap_untyped_cap_lift_def
+                        is_aligned_shiftr_shiftl
+                 dest!: ccte_relation_ccap_relation)
+  apply (rule unat_of_nat_eq unat_of_nat_eq[symmetric],
+    erule order_le_less_trans,
+    rule power_strict_increasing, simp_all)
+  apply (rule unat_less_helper, rule order_le_less_trans[OF word_and_le1], simp)
   done
 
 end

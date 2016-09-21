@@ -574,7 +574,22 @@ lemma threadGet_tcbFaultHandler_ccorres [corres]:
   apply (clarsimp simp: obj_at'_def ctcb_relation_def)
 done
 
+lemma rf_sr_tcb_update_twice:
+  "h_t_valid (hrs_htd (hrs2 (globals s') (t_hrs_' (gs2 (globals s'))))) c_guard
+      (ptr (t_hrs_' (gs2 (globals s'))) (globals s'))
+    \<Longrightarrow> ((s, globals_update (\<lambda>gs. t_hrs_'_update (\<lambda>ths. 
+        hrs_mem_update (heap_update (ptr ths gs :: tcb_C ptr) (v ths gs))
+            (hrs_mem_update (heap_update (ptr ths gs) (v' ths gs)) (hrs2 gs ths))) (gs2 gs)) s') \<in> rf_sr)
+    = ((s, globals_update (\<lambda>gs. t_hrs_'_update (\<lambda>ths. 
+        hrs_mem_update (heap_update (ptr ths gs) (v ths gs)) (hrs2 gs ths)) (gs2 gs)) s') \<in> rf_sr)"
+  by (simp add: rf_sr_def cstate_relation_def Let_def
+                cpspace_relation_def typ_heap_simps'
+                carch_state_relation_def
+                cmachine_state_relation_def)
 
+lemma hrs_mem_update_use_hrs_mem:
+  "hrs_mem_update f = (\<lambda>hrs. (hrs_mem_update $ (\<lambda>_. f (hrs_mem hrs))) hrs)"
+  by (simp add: hrs_mem_update_def hrs_mem_def fun_eq_iff)
 
 lemma sendFaultIPC_ccorres:
   "ccorres  (cfault_rel2 \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -635,21 +650,21 @@ lemma sendFaultIPC_ccorres:
                          (lookup_fault_lift(original_lookup_fault_'  s)))}"
                           in threadSet_ccorres_lemma4) 
                   apply vcg
-                 apply (clarsimp simp: typ_heap_simps')
+                 apply (clarsimp simp: typ_heap_simps' rf_sr_tcb_update_twice)
+
                  apply (intro conjI allI impI)
-                  apply (simp add: typ_heap_simps rf_sr_def)
+                  apply (simp add: typ_heap_simps' rf_sr_def)
                   apply (rule rf_sr_tcb_update_no_queue2[unfolded rf_sr_def, simplified], 
-                              assumption+)
-                         apply (simp add: typ_heap_simps)+
+                              assumption+, (simp add: typ_heap_simps')+)
                    apply (rule ball_tcb_cte_casesI, simp+)
                   apply (simp add: ctcb_relation_def cthread_state_relation_def )
                   apply (case_tac "tcbState tcb", simp+)
                  apply (simp add: rf_sr_def)
                  apply (rule rf_sr_tcb_update_no_queue2[unfolded rf_sr_def, simplified], 
-                        assumption+)
-                        apply (simp add: typ_heap_simps)+
+                        assumption+, (simp add: typ_heap_simps' | simp only: hrs_mem_update_use_hrs_mem)+)
                   apply (rule ball_tcb_cte_casesI, simp+)
-                 apply (simp add: ctcb_relation_def cthread_state_relation_def )
+                 apply (clarsimp simp: typ_heap_simps')
+                 apply (simp add: ctcb_relation_def cthread_state_relation_def)
                  apply (rule conjI)
                   apply (case_tac "tcbState tcb", simp+)
                  apply (simp add: cfault_rel_def)

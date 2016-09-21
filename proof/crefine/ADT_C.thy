@@ -1440,12 +1440,45 @@ lemma cbitmap_L2_to_H_correct:
    apply clarsimp
    done
 
+definition
+  mk_gsUntypedZeroRanges
+where
+  "mk_gsUntypedZeroRanges s
+      = ran (untypedZeroRange \<circ>\<^sub>m (option_map cteCap o map_to_ctes (cstate_to_pspace_H s)))"
+
+lemma cpspace_user_data_relation_user_mem'[simp]:
+  "\<lbrakk>pspace_aligned' as;pspace_distinct' as\<rbrakk> \<Longrightarrow> cpspace_user_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
+  = cpspace_user_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
+  by (simp add: cmap_relation_def)
+
+lemma cpspace_device_data_relation_user_mem'[simp]:
+  "cpspace_device_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
+  = cpspace_device_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
+  apply (clarsimp simp: cmap_relation_def cuser_user_data_device_relation_def heap_to_device_data_def)
+  apply (rule_tac arg_cong[where  f = "%x. x = y" for y])
+  by auto
+
+lemma (in kernel)  mk_gsUntypedZeroRanges_correct:
+  assumes valid: "valid_state' as"
+  assumes cstate_rel: "cstate_relation as cs"
+  shows "mk_gsUntypedZeroRanges cs = gsUntypedZeroRanges as"
+  using assms
+  apply (clarsimp simp: valid_state'_def untyped_ranges_zero_inv_def
+                        mk_gsUntypedZeroRanges_def cteCaps_of_def)
+  apply (subst cstate_to_pspace_H_correct[where c=cs], simp_all)
+  apply (clarsimp simp: cstate_relation_def Let_def)
+  apply (subst cstate_to_machine_H_correct, assumption, simp_all)
+   apply (clarsimp simp: cpspace_relation_def)+
+  apply (clarsimp simp: observable_memory_def valid_pspace'_def)
+  done
+
 definition (in state_rel)
   cstate_to_H :: "globals \<Rightarrow> kernel_state"
 where
   "cstate_to_H s \<equiv>
    \<lparr>ksPSpace = cstate_to_pspace_H s,
     gsUserPages = fst (ghost'state_' s), gsCNodes = fst (snd (ghost'state_' s)),
+    gsUntypedZeroRanges = mk_gsUntypedZeroRanges s,
     gsMaxObjectSize = (let v = unat (gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' s))
         in if v = 0 then card (UNIV :: word32 set) else v),
     ksDomScheduleIdx = unat (ksDomScheduleIdx_' s),
@@ -1468,36 +1501,25 @@ where
 lemma trivial_eq_conj: "B = C \<Longrightarrow> (A \<and> B) = (A \<and> C)"
   by simp
 
-lemma cpspace_user_data_relation_user_mem'[simp]:
-  "\<lbrakk>pspace_aligned' as;pspace_distinct' as\<rbrakk> \<Longrightarrow> cpspace_user_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
-  = cpspace_user_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
-  by (simp add: cmap_relation_def)
-
-lemma cpspace_device_data_relation_user_mem'[simp]:
-  "cpspace_device_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
-  = cpspace_device_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
-  apply (clarsimp simp: cmap_relation_def cuser_user_data_device_relation_def heap_to_device_data_def)
-  apply (rule_tac arg_cong[where  f = "%x. x = y" for y])
-  by auto
-
-
 lemma (in kernel_m) cstate_to_H_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
   shows "cstate_to_H cs = as \<lparr>ksMachineState:=  observable_memory (ksMachineState as) (user_mem' as)\<rparr>"
   apply (subgoal_tac "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)")
    apply (rule kernel_state.equality, simp_all add: cstate_to_H_def)
-                   apply (rule cstate_to_pspace_H_correct)
-                    using valid
-                    apply (simp add: valid_state'_def)
-                   using cstate_rel valid
-                   apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def 
-                     observable_memory_def valid_state'_def
-                  valid_pspace'_def)
+                      apply (rule cstate_to_pspace_H_correct)
+                     using valid
+                     apply (simp add: valid_state'_def)
+                    using cstate_rel valid
+                    apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def 
+                      observable_memory_def valid_state'_def
+                      valid_pspace'_def)
+                   using cstate_rel
+                   apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def prod_eq_iff)
                   using cstate_rel
-                  apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def prod_eq_iff)
-                 using cstate_rel
-                 apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def prod_eq_iff)
+                  apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def prod_eq_iff)
+                 using valid cstate_rel
+                 apply (rule mk_gsUntypedZeroRanges_correct)
                 using cstate_rel 
                 apply (fastforce simp: cstate_relation_def cpspace_relation_def 
                   Let_def ghost_size_rel_def unat_eq_0

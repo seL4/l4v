@@ -1668,6 +1668,35 @@ lemma heap_to_device_data_cong [cong]:
   \<Longrightarrow> heap_to_device_data ks bhp = heap_to_device_data ks' bhp'"
   unfolding heap_to_device_data_def by simp 
 
+lemma map_leD:
+  "\<lbrakk> map_le m m'; m x = Some y \<rbrakk> \<Longrightarrow> m' x = Some y"
+  by (simp add: map_le_def dom_def)
+
+lemma region_is_bytes_disjoint:
+  assumes cleared: "region_is_bytes' p n (hrs_htd hrs)"
+    and not_byte: "typ_uinfo_t TYPE('a :: wf_type) \<noteq> typ_uinfo_t TYPE(word8)"
+  shows "hrs_htd hrs \<Turnstile>\<^sub>t (p' :: 'a ptr)
+    \<Longrightarrow> {p ..+ n} \<inter> {ptr_val p' ..+ size_of TYPE('a)} = {}"
+  apply (clarsimp simp: h_t_valid_def valid_footprint_def Let_def)
+  apply (clarsimp simp: set_eq_iff dest!: intvlD[where p="ptr_val p'"])
+  apply (drule_tac x="of_nat k" in spec, clarsimp simp: size_of_def)
+  apply (cut_tac m=k in typ_slice_t_self[where td="typ_uinfo_t TYPE('a)"])
+  apply (clarsimp simp: in_set_conv_nth)
+  apply (drule_tac x=i in map_leD, simp)
+  apply (simp add: cleared[unfolded region_is_bytes'_def] not_byte size_of_def)
+  done
+
+lemma zero_ranges_are_zero_update[simp]:
+  "h_t_valid (hrs_htd hrs) c_guard (ptr :: 'a ptr)
+    \<Longrightarrow> typ_uinfo_t TYPE('a :: wf_type) \<noteq> typ_uinfo_t TYPE(word8)
+    \<Longrightarrow> zero_ranges_are_zero rs (hrs_mem_update (heap_update ptr v) hrs)
+        = zero_ranges_are_zero rs hrs"
+  apply (clarsimp simp: zero_ranges_are_zero_def hrs_mem_update
+        intro!: ball_cong[OF refl] conj_cong[OF refl])
+  apply (drule(2) region_is_bytes_disjoint)
+  apply (simp add: heap_update_def heap_list_update_disjoint_same Int_commute)
+  done
+
 lemma inj_tcb_ptr_to_ctcb_ptr [simp]:
   "inj tcb_ptr_to_ctcb_ptr"
   apply (rule injI)
@@ -2196,6 +2225,58 @@ lemma page_table_at_rf_sr:
     \<Longrightarrow> cslift s' (Ptr pd :: (pte_C[256]) ptr) \<noteq> None"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                      cpspace_relation_def page_table_at_carray_map_relation)
+
+lemma gsUntypedZeroRanges_rf_sr:
+  "\<lbrakk> (start, end) \<in> gsUntypedZeroRanges s; (s, s') \<in> rf_sr \<rbrakk>
+    \<Longrightarrow> region_is_zero_bytes start (unat ((end + 1) - start)) s'"
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                        zero_ranges_are_zero_def)
+  apply (drule(1) bspec)
+  apply clarsimp
+  done
+
+lemma ctes_of_untyped_zero_rf_sr:
+  "\<lbrakk> ctes_of s p = Some cte; (s, s') \<in> rf_sr;
+      untyped_ranges_zero' s;
+      untypedZeroRange (cteCap cte) = Some (start, end) \<rbrakk>
+    \<Longrightarrow> region_is_zero_bytes start (unat ((end + 1) - start)) s'"
+  apply (erule gsUntypedZeroRanges_rf_sr[rotated])
+  apply (clarsimp simp: untyped_ranges_zero_inv_def)
+  apply (rule_tac a=p in ranI)
+  apply (simp add: map_comp_def cteCaps_of_def)
+  done
+
+lemma heap_list_is_zero_mono:
+  "heap_list_is_zero hmem p n \<Longrightarrow> n' \<le> n
+    \<Longrightarrow> heap_list_is_zero hmem p n'"
+  apply (induct n arbitrary: n' p)
+   apply simp
+  apply clarsimp
+  apply (case_tac n', simp_all)
+  done
+
+lemma heap_list_h_eq_better:
+  "\<And>p. \<lbrakk> x \<in> {p..+q}; heap_list h q p = heap_list h' q p \<rbrakk>
+      \<Longrightarrow> h x = h' x"
+proof (induct q)
+  case 0 thus ?case by simp
+next
+  case (Suc n) thus ?case by (force dest: intvl_neq_start)
+qed
+
+lemma heap_list_is_zero_mono2:
+  "heap_list_is_zero hmem p n
+    \<Longrightarrow> {p' ..+ n'} \<le> {p ..+ n}
+    \<Longrightarrow> heap_list_is_zero hmem p' n'"
+  using heap_list_h_eq2[where h'="\<lambda>_. 0"]
+      heap_list_h_eq_better[where h'="\<lambda>_. 0"]
+  apply (simp(no_asm_use) add: heap_list_rpbs)
+  apply blast
+  done
+
+lemma invs_urz[elim!]:
+  "invs' s \<Longrightarrow> untyped_ranges_zero' s"
+  by (clarsimp simp: invs'_def valid_state'_def)
 
 end
 end

@@ -428,8 +428,7 @@ lemma setPriority_ccorres:
         apply vcg
        apply clarsimp
        apply (erule(1) rf_sr_tcb_update_no_queue2,
-              (simp add: typ_heap_simps)+, simp_all)[1]
-         apply (subst heap_update_field_hrs | fastforce intro: typ_heap_simps)+
+              (simp add: typ_heap_simps')+, simp_all?)[1]
         apply (rule ball_tcb_cte_casesI, simp+)
        apply (simp add: ctcb_relation_def cast_simps)
        apply (clarsimp simp: down_cast_same [symmetric] ucast_up_ucast is_up is_down)
@@ -484,14 +483,12 @@ lemma setMCPriority_ccorres:
     apply vcg
    apply clarsimp
    apply (erule(1) rf_sr_tcb_update_no_queue2,
-              (simp add: typ_heap_simps)+, simp_all)[1]
-     apply (subst heap_update_field_hrs | fastforce intro: typ_heap_simps)+
+              (simp add: typ_heap_simps')+)[1]
     apply (rule ball_tcb_cte_casesI, simp+)
    apply (simp add: ctcb_relation_def cast_simps)
   apply (clarsimp simp: down_cast_same [symmetric] ucast_up_ucast is_up is_down)
-   
   done
-  
+
 lemma ccorres_subgoal_tailE:
   "\<lbrakk> ccorres rvr xf Q Q' hs (b ()) d;
       ccorres rvr xf Q Q' hs (b ()) d \<Longrightarrow> ccorres rvr xf P P' hs (a >>=E b) (c ;; d) \<rbrakk>
@@ -655,10 +652,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                     apply vcg
                    apply clarsimp
                    apply (erule(1) rf_sr_tcb_update_no_queue2,
-                     (simp add: typ_heap_simps)+, simp_all)[1]
-                     apply (subst heap_update_field_hrs
-                             | simp add: typ_heap_simps
-                             | fastforce intro: typ_heap_simps)+
+                        (simp add: typ_heap_simps')+, simp_all?)[1]
                     apply (rule ball_tcb_cte_casesI, simp+)
                    apply (clarsimp simp: ctcb_relation_def option_to_0_def)
                   apply (rule ceqv_refl)
@@ -943,7 +937,8 @@ lemma setupReplyMaster_ccorres:
         apply (rule fst_setCTE[OF ctes_of_cte_at], assumption)
         apply (rule rev_bexI, assumption)
         apply (clarsimp simp: rf_sr_def cstate_relation_def
-                              cpspace_relation_def Let_def)
+                              cpspace_relation_def Let_def
+                              typ_heap_simps')
         apply (subst setCTE_tcb_case, assumption+)
         apply (rule_tac r="s'" in KernelStateData_H.kernel_state.cases)
         apply clarsimp
@@ -960,7 +955,7 @@ lemma setupReplyMaster_ccorres:
           apply (simp add: true_def mask_def to_bool_def)
          apply simp
         apply (simp add: cmachine_state_relation_def 
-                         h_t_valid_clift_Some_iff
+                         typ_heap_simps'
                          carch_state_relation_def carch_globals_def
                          cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
        apply (wp | simp)+
@@ -1392,7 +1387,6 @@ lemma asUser_sysargs_rel:
    apply (wp asUser_getMRs_rel hoare_valid_ipc_buffer_ptr_typ_at'|simp)+
 done
 
-
 lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
   notes static_imp_wp [wp]
   shows
@@ -1455,6 +1449,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                                  frame_gp_registers_convs word_less_nat_alt)
                 apply (simp add: unat_of_nat32 word_bits_def)
                 apply arith
+               apply clarsimp
                apply (vcg exspec=setRegister_modifies exspec=getSyscallArg_modifies
                           exspec=sanitiseRegister_modifies)
                apply clarsimp
@@ -1484,6 +1479,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                                    word_less_nat_alt word_bits_def
                                    less_diff_conv)
                   apply (simp add: unat_word_ariths cong: conj_cong)
+                 apply clarsimp
                  apply (vcg exspec=setRegister_modifies exspec=getSyscallArg_modifies
                             exspec=sanitiseRegister_modifies)
                  apply clarsimp
@@ -3545,7 +3541,8 @@ lemma bindNotification_ccorres:
         apply (clarsimp simp: setNotification_def split_def)
         apply (rule bexI [OF _ setObject_eq])
             apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
-                                    cpspace_relation_def update_ntfn_map_tos)
+                                    cpspace_relation_def update_ntfn_map_tos
+                                    typ_heap_simps')
             apply (elim conjE)
             apply (intro conjI)
             -- "tcb relation"
@@ -3556,7 +3553,7 @@ lemma bindNotification_ccorres:
                  apply ((clarsimp simp: option_to_ctcb_ptr_def  
                                   tcb_ptr_to_ctcb_ptr_def ctcb_offset_def obj_at'_def projectKOs
                                   objBitsKO_def bindNTFN_alignment_junk)+)[4]
-             apply (simp add: carch_state_relation_def)
+             apply (simp add: carch_state_relation_def typ_heap_simps')
             apply (simp add: cmachine_state_relation_def)
            apply (simp add: h_t_valid_clift_Some_iff)
           apply (simp add: objBits_simps)
@@ -3568,8 +3565,8 @@ lemma bindNotification_ccorres:
       apply (rule_tac P'=\<top> and P=\<top> in threadSet_ccorres_lemma3[unfolded dc_def])
        apply vcg
       apply simp
-      apply (erule (1) rf_sr_tcb_update_no_queue2)
-              apply (simp add: typ_heap_simps)+
+      apply (erule (1) rf_sr_tcb_update_no_queue2,
+        (simp add: typ_heap_simps')+, simp_all?)[1]
       apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
      apply simp
      apply (wp get_ntfn_ko'| simp add: guard_is_UNIV_def)+

@@ -672,6 +672,31 @@ where
 
 end
 
+definition
+   region_is_bytes' :: "word32 \<Rightarrow> nat \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
+where
+  "region_is_bytes' ptr sz htd \<equiv> \<forall>z\<in>{ptr ..+ sz}. \<forall> td. td \<noteq> typ_uinfo_t TYPE (word8) \<longrightarrow>
+    (\<forall>n b. snd (htd z) n \<noteq> Some (td, b))"
+
+abbreviation
+  region_is_bytes :: "word32 \<Rightarrow> nat \<Rightarrow> globals myvars \<Rightarrow> bool"
+where
+  "region_is_bytes ptr sz s \<equiv> region_is_bytes' ptr sz (hrs_htd (t_hrs_' (globals s)))"
+
+abbreviation(input)
+  "heap_list_is_zero hp ptr n \<equiv> heap_list hp n ptr = replicate n 0"
+
+abbreviation
+  "region_is_zero_bytes ptr n x \<equiv> region_is_bytes ptr n x
+      \<and> heap_list_is_zero (hrs_mem (t_hrs_' (globals x))) ptr n"
+
+definition
+  zero_ranges_are_zero
+where
+  "zero_ranges_are_zero rs hrs
+    = (\<forall>(start, end) \<in> rs. region_is_bytes' start (unat ((end + 1) - start)) (hrs_htd hrs)
+        \<and> heap_list_is_zero (hrs_mem hrs) start (unat ((end + 1) - start)))"
+
 definition (in state_rel)
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -682,6 +707,7 @@ where
        cready_queues_relation (clift cheap)
                              (ksReadyQueues_' cstate)
                              (ksReadyQueues astate) \<and>
+       zero_ranges_are_zero (gsUntypedZeroRanges astate) cheap \<and>
        cbitmap_L1_relation (ksReadyQueuesL1Bitmap_' cstate) (ksReadyQueuesL1Bitmap astate) \<and>
        cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' cstate) (ksReadyQueuesL2Bitmap astate) \<and>
        ksCurThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksCurThread astate)) \<and>

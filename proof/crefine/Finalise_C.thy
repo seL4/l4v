@@ -340,7 +340,7 @@ lemma cancelAllIPC_ccorres:
                                   Let_def carch_state_relation_def carch_globals_def
                                   cmachine_state_relation_def)
             apply (clarsimp simp: cpspace_relation_def
-                                  update_ep_map_tos)
+                                  update_ep_map_tos typ_heap_simps')
             apply (erule(2) cpspace_relation_ep_update_ep)
              subgoal by (simp add: cendpoint_relation_def endpoint_state_defs)
             subgoal by simp
@@ -389,7 +389,7 @@ lemma cancelAllIPC_ccorres:
           apply (clarsimp simp: rf_sr_def cstate_relation_def
                                 Let_def carch_state_relation_def carch_globals_def
                                 cmachine_state_relation_def)
-          apply (clarsimp simp: cpspace_relation_def
+          apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
                                 update_ep_map_tos)
           apply (erule(2) cpspace_relation_ep_update_ep)
            subgoal by (simp add: cendpoint_relation_def endpoint_state_defs)
@@ -476,7 +476,7 @@ lemma cancelAllSignals_ccorres:
           apply (clarsimp simp: rf_sr_def cstate_relation_def
                                 Let_def carch_state_relation_def carch_globals_def
                                 cmachine_state_relation_def)
-          apply (clarsimp simp: cpspace_relation_def
+          apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
                                 update_ntfn_map_tos)
           apply (erule(2) cpspace_relation_ntfn_update_ntfn)
            subgoal by (simp add: cnotification_relation_def notification_state_defs Let_def)
@@ -668,7 +668,8 @@ lemma doUnbindNotification_ccorres:
         apply (clarsimp simp: setNotification_def split_def)
         apply (rule bexI [OF _ setObject_eq])
             apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
-                                    cpspace_relation_def update_ntfn_map_tos)
+                             typ_heap_simps'
+                             cpspace_relation_def update_ntfn_map_tos)
             apply (elim conjE)
             apply (intro conjI)
             -- "tcb relation"
@@ -676,7 +677,7 @@ lemma doUnbindNotification_ccorres:
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
                apply (case_tac "ntfnObj rv", ((simp add: option_to_ctcb_ptr_def)+)[4])
-             subgoal by (simp add: carch_state_relation_def)
+             subgoal by (simp add: carch_state_relation_def typ_heap_simps')
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
           subgoal by (simp add: objBits_simps)
@@ -690,7 +691,7 @@ lemma doUnbindNotification_ccorres:
        apply vcg
       apply simp
       apply (erule(1) rf_sr_tcb_update_no_queue2)
-              apply (simp add: typ_heap_simps)+
+              apply (simp add: typ_heap_simps')+
        apply (simp add: tcb_cte_cases_def)
       apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
      apply (simp add: invs'_def valid_state'_def)
@@ -715,7 +716,8 @@ lemma doUnbindNotification_ccorres':
         apply (clarsimp simp: setNotification_def split_def)
         apply (rule bexI [OF _ setObject_eq])
             apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
-                                    cpspace_relation_def update_ntfn_map_tos)
+                             typ_heap_simps'
+                             cpspace_relation_def update_ntfn_map_tos)
             apply (elim conjE)
             apply (intro conjI)
             -- "tcb relation"
@@ -725,7 +727,7 @@ lemma doUnbindNotification_ccorres':
                apply (fold_subgoals (prefix))[2]
                subgoal premises prems using prems
                        by (case_tac "ntfnObj ntfn", (simp add: option_to_ctcb_ptr_def)+)
-             subgoal by (simp add: carch_state_relation_def)
+             subgoal by (simp add: carch_state_relation_def typ_heap_simps')
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
           subgoal by (simp add: objBits_simps)
@@ -739,7 +741,7 @@ lemma doUnbindNotification_ccorres':
        apply vcg
       apply simp
       apply (erule(1) rf_sr_tcb_update_no_queue2)
-              apply (simp add: typ_heap_simps)+
+              apply (simp add: typ_heap_simps')+
        apply (simp add: tcb_cte_cases_def)
       apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
      apply (simp add: invs'_def valid_state'_def)
@@ -1221,7 +1223,7 @@ lemma deleteASID_ccorres:
                    simp_all add: objBits_simps archObjSize_def pageBits_def)[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def typ_heap_simps)
             apply (rule conjI)
-             apply (clarsimp simp: cpspace_relation_def typ_heap_simps
+             apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
                                    update_asidpool_map_tos
                                    update_asidpool_map_to_asidpools)
              apply (rule cmap_relation_updI, simp_all)[1]
@@ -1234,7 +1236,7 @@ lemma deleteASID_ccorres:
              subgoal by (simp add: asid_low_bits_def)
             subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def 
                              carch_globals_def update_asidpool_map_tos
-                             typ_heap_simps)
+                             typ_heap_simps')
            apply (rule ccorres_pre_getCurThread)
            apply (ctac add: setVMRoot_ccorres)
           apply (simp add: cur_tcb'_def[symmetric])
@@ -1746,8 +1748,9 @@ lemma cteDeleteOne_ccorres:
          apply (simp add: dc_def[symmetric])
          apply (ctac add: emptySlot_ccorres)
         apply (simp add: pred_conj_def finaliseCapTrue_standin_simple_def)
-        apply (strengthen invs_mdb_strengthen') 
-        apply (wp typ_at_lifts isFinalCapability_inv)
+        apply (strengthen invs_mdb_strengthen' invs_urz) 
+        apply (wp typ_at_lifts isFinalCapability_inv
+            | strengthen invs_valid_objs')+
        apply (clarsimp simp: from_bool_def true_def irq_opt_relation_def
                              invs_pspace_aligned' cte_wp_at_ctes_of)
        apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])

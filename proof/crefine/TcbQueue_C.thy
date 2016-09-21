@@ -1108,9 +1108,8 @@ lemma cvariable_relation_upd_const:
 
 lemma rf_sr_tcb_update_no_queue: 
   "\<lbrakk> (s, s') \<in> rf_sr; ko_at' tcb thread s; 
-  (cslift t :: tcb_C typ_heap) = (cslift s')(tcb_ptr_to_ctcb_ptr thread \<mapsto> ctcb);
-  cslift_all_but_tcb_C t s';
-  hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s'));
+  t_hrs_' (globals t) = hrs_mem_update (heap_update
+    (tcb_ptr_to_ctcb_ptr thread) ctcb) (t_hrs_' (globals s'));
   tcbEPNext_C ctcb = tcbEPNext_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
   tcbEPPrev_C ctcb = tcbEPPrev_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
   tcbSchedNext_C ctcb = tcbSchedNext_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
@@ -1125,7 +1124,8 @@ lemma rf_sr_tcb_update_no_queue:
   apply (frule (1) cmap_relation_ko_atD) 
   apply (erule obj_atE')
   apply (clarsimp simp: projectKOs)
-  apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const)
+  apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const
+                        typ_heap_simps')
   apply (intro conjI)
        subgoal by (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
       apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
@@ -1141,7 +1141,7 @@ lemma rf_sr_tcb_update_no_queue:
     apply (erule cready_queues_relation_not_queue_ptrs)
      subgoal by (clarsimp intro!: ext)
     subgoal by (clarsimp intro!: ext)
-   subgoal by (simp add: carch_state_relation_def)
+   subgoal by (simp add: carch_state_relation_def typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
 lemma rf_sr_tcb_update_no_queue_helper:
@@ -1161,9 +1161,8 @@ lemma tcb_queue_relation_not_in_q:
 
 lemma rf_sr_tcb_update_not_in_queue:
   "\<lbrakk> (s, s') \<in> rf_sr; ko_at' tcb thread s;
-    (cslift t :: tcb_C typ_heap) = (cslift s')(tcb_ptr_to_ctcb_ptr thread \<mapsto> ctcb);
-    cslift_all_but_tcb_C t s';
-    hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s'));
+    t_hrs_' (globals t) = hrs_mem_update (heap_update
+      (tcb_ptr_to_ctcb_ptr thread) ctcb) (t_hrs_' (globals s'));
     \<not> live' (KOTCB tcb); invs' s;
     (\<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x);
     ctcb_relation tcb' ctcb \<rbrakk>
@@ -1175,7 +1174,8 @@ lemma rf_sr_tcb_update_not_in_queue:
   apply (frule (1) cmap_relation_ko_atD)
   apply (erule obj_atE')
   apply (clarsimp simp: projectKOs)
-  apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const)
+  apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const
+                        typ_heap_simps')
   apply (subgoal_tac "\<forall>rf. \<not> ko_wp_at' (\<lambda>ko. rf \<in> refs_of' ko) thread s")
   prefer 2
    apply (auto simp: obj_at'_def ko_wp_at'_def)[1]
@@ -1205,7 +1205,8 @@ lemma rf_sr_tcb_update_not_in_queue:
      apply (drule valid_queues_obj_at'D, clarsimp)
      apply (clarsimp simp: obj_at'_def projectKOs inQ_def)
     subgoal by simp
-   subgoal by (simp add: carch_state_relation_def carch_globals_def)
+   subgoal by (simp add: carch_state_relation_def carch_globals_def
+                         typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
 lemmas rf_sr_tcb_update_not_in_queue2

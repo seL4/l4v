@@ -818,11 +818,7 @@ proof -
      apply (frule_tac t=t in valid_queues_no_bitmap_objD)
       apply (blast intro: cons_set_intro)
      apply (simp add: lookupBitmapPriority_def)
-     apply normalise_obj_at'
-     apply (rule valid_queues_queued_runnable[simplified valid_queues_def])
-       apply simp
-      apply (simp add: invs_no_cicd'_def)
-     apply (clarsimp simp add: inQ_def obj_at'_def)
+     apply (clarsimp simp: obj_at'_def st_tcb_at'_def)
 
     apply (fold lookupBitmapPriority_def)
     apply (drule invs_no_cicd'_queues)

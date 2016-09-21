@@ -1256,6 +1256,33 @@ lemma mapME_x_append:
   apply (simp add: mapME_x_Cons bindE_assoc)
   done
 
+lemma hd_filter_eq:
+  "P (hd xs) \<Longrightarrow> hd (filter P xs) = hd xs"
+  by (cases xs, simp_all)
+
+lemma free_range_of_untyped_subset'[rule_format]:
+  assumes al: "is_aligned ptr sz"
+    and sz: "sz < size (ptr)"
+  shows "a < a' \<longrightarrow> a < 2 ^ sz \<longrightarrow> free_range_of_untyped a' sz ptr \<subset> free_range_of_untyped a sz ptr"
+proof -
+  note no_ov = is_aligned_no_overflow'[OF al]
+  note mono = word_plus_mono_right[OF _ no_ov, simplified field_simps]
+  note sz_len = sz[unfolded word_size]
+(*
+  note sz_simp[simp] = unat_2p_sub_1[OF sz_len] unat_power_lower[OF sz_len]
+*)
+  show ?thesis using sz
+    apply (intro impI psubsetI)
+     apply (rule free_range_of_untyped_subseteq', simp_all add: al)
+    apply (clarsimp simp:free_range_of_untyped_def)
+    apply (strengthen mono word_of_nat_le)+
+    apply (simp add: sz_len unat_2p_sub_1)
+    apply (intro conjI impI; (clarsimp dest!: le_p2_minus_1)?)
+     apply (drule word_unat.Abs_eqD, simp_all add: unats_def word_size
+           less_trans[OF _ power_strict_increasing[OF sz_len]])
+    done
+qed
+
 lemma reset_untyped_cap_corres:
   "dcorres (dc \<oplus> dc) \<top> (invs and valid_etcbs and ct_active
           and cte_wp_at (\<lambda>cap. is_untyped_cap cap \<and> free_index_of cap = idx) cref
@@ -1271,14 +1298,28 @@ lemma reset_untyped_cap_corres:
        apply (rule_tac F="is_untyped_cap capa \<and> cap_aligned capa
                  \<and> bits_of capa > 2 \<and> free_index_of capa \<le> 2 ^ bits_of capa"
              in corres_gen_asm2)
+       apply (simp add: whenE_def if_flip split del: split_if)
+       apply (rule corres_if)
+         apply (clarsimp simp: is_cap_simps free_range_of_untyped_def
+                               cap_aligned_def free_index_of_def)
+         apply (simp add: word_unat.Rep_inject[symmetric])
+         apply (subst unat_of_nat_eq, erule order_le_less_trans,
+           rule power_strict_increasing, simp_all add: word_bits_def bits_of_def)[1]
+        apply (rule corres_trivial, rule corres_returnOk, simp)
+       apply (rule_tac F="free_index_of capa \<noteq> 0" in corres_gen_asm2)
        apply (rule corres_split_nor)
           prefer 2
           apply (rule delete_objects_dcorres)
           apply (clarsimp simp: is_cap_simps bits_of_def)
          apply (rule corres_if_rhs)
-          apply (rule_tac x=0 in select_pick_corres_asm)
-           apply simp
-          apply (simp add: mapME_x_Nil)
+          apply (rule_tac x="[cap_objects (transform_cap capa)]" in select_pick_corres_asm)
+           apply (clarsimp simp: is_cap_simps cap_aligned_def free_index_of_def)
+           apply (rule order_less_le_trans, rule free_range_of_untyped_subset'[where a=0],
+             simp_all)[1]
+            apply (simp add: word_size word_bits_def)
+           apply (simp add: free_range_of_untyped_def)
+
+          apply (simp add: mapME_x_Nil mapME_x_Cons liftE_def bind_assoc)
           apply (rule corres_add_noop_lhs)
           apply (rule corres_split_nor)
              prefer 2
@@ -1288,96 +1329,80 @@ lemma reset_untyped_cap_corres:
                apply (clarsimp simp: is_cap_simps bits_of_def free_range_of_untyped_def)
               apply (clarsimp simp: is_cap_simps cap_aligned_def bits_of_def)
              apply (rule corres_trivial, simp)
-            apply (rule set_cap_corres)
-             apply (clarsimp simp: is_cap_simps bits_of_def free_range_of_untyped_def)
-            apply simp
-           apply (wp | simp add: unless_def)+
-         apply (rule_tac x="length xs" for xs in select_pick_corres_asm)
-          apply simp
-         apply (simp add: mapME_x_upt_length_ys)
-         apply (rule corres_dummy_returnOk_r)
-         apply (rule corres_splitEE)
-            prefer 2
-            apply (rule_tac P="\<top>\<top>" and P'="\<lambda>_. valid_objs
+            apply (rule corres_split_nor)
+               apply (rule corres_alternate1)
+               apply (rule corres_trivial, simp add: returnOk_def)
+              apply (rule set_cap_corres)
+               apply (clarsimp simp: is_cap_simps bits_of_def free_range_of_untyped_def)
+              apply simp
+             apply (wp | simp add: unless_def)+
+         apply (rule_tac F="\<not> (is_device_untyped_cap capa \<or> bits_of capa < reset_chunk_bits)
+                   \<and> (\<exists>s. s \<turnstile> capa)"
+               in corres_gen_asm2)
+         apply (rule_tac x="map (\<lambda>i. free_range_of_untyped (i * 2 ^ reset_chunk_bits)
+                   (bits_of capa) (obj_ref_of capa)) xs" for xs
+           in select_pick_corres_asm)
+          prefer 2
+          apply (simp add: mapME_x_map_simp o_def)
+          apply (rule_tac P="\<top>\<top>" and P'="\<lambda>_. valid_objs
                   and valid_etcbs and pspace_no_overlap (untyped_range capa)
                   and valid_idle and (\<lambda>s. idle_thread s \<noteq> fst cref)
                   and cte_wp_at (\<lambda>cp. \<exists>idx. cp = free_index_update (\<lambda>_. idx) capa) cref"
                   in mapME_x_corres_same_xs[OF _ _ _ refl])
-              apply (rule corres_guard_imp)
-                apply (rule corres_add_noop_lhs)
-                apply (rule corres_split_nor[OF _ clearMemory_corres_noop[OF refl]])
-                     apply (rule_tac x="available_range (transform_cap
-                         (free_index_update (\<lambda>_. x * 2 ^ reset_chunk_bits) capa))"
-                       in select_pick_corres_asm)
-                      apply (clarsimp simp: is_cap_simps bits_of_def free_index_of_def)
-                      apply (strengthen free_range_of_untyped_subseteq')
-                      apply (strengthen order_trans[OF free_range_of_untyped_subseteq'[where a=0]])
-                      apply (simp add: cap_aligned_def free_range_of_untyped_def
-                                       word_bits_def word_size)
-                     apply (rule corres_split[OF _ set_cap_corres])
-                         apply (subst alternative_com)
-                         apply (rule throw_or_return_preemption_corres[where P=\<top> and P'=\<top>])
-                        apply (clarsimp simp: is_cap_simps bits_of_def)
-                       apply simp
-                      apply wp
-                    apply (clarsimp simp add: is_cap_simps cap_aligned_def bits_of_def
-                                              aligned_add_aligned is_aligned_shiftl)
-                   apply (simp add: reset_chunk_bits_def)
-                  apply (simp add: reset_chunk_bits_def word_bits_def)
-                 apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                           preemption_point_inv' set_cap_no_overlap
-                           update_untyped_cap_valid_objs set_cap_idle
-                            | simp)+
-              apply (clarsimp simp: is_cap_simps bits_of_def cap_aligned_def)
-              apply (erule pspace_no_overlap_subset)
-              apply (rule aligned_range_offset_subset, simp_all add: is_aligned_shiftl)[1]
-              apply (rule shiftl_less_t2n[OF word_of_nat_less])
-               apply simp
-              apply (simp add: word_bits_def)
-             apply (rule hoare_pre, wp)
+            apply (rule corres_guard_imp)
+              apply (rule corres_add_noop_lhs)
+              apply (rule corres_split_nor[OF _ clearMemory_corres_noop[OF refl]])
+                   apply (rule corres_split[OF _ set_cap_corres])
+                       apply (subst alternative_com)
+                       apply (rule throw_or_return_preemption_corres[where P=\<top> and P'=\<top>])
+                      apply (clarsimp simp: is_cap_simps bits_of_def)
+                     apply simp
+                    apply wp
+                  apply (clarsimp simp add: is_cap_simps cap_aligned_def bits_of_def
+                                            aligned_add_aligned is_aligned_shiftl)
+                 apply (simp add: reset_chunk_bits_def)
+                apply (simp add: reset_chunk_bits_def word_bits_def)
+               apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                         preemption_point_inv' set_cap_no_overlap
+                         update_untyped_cap_valid_objs set_cap_idle
+                          | simp)+
+            apply (clarsimp simp: is_cap_simps bits_of_def cap_aligned_def)
+            apply (erule pspace_no_overlap_subset)
+            apply (rule aligned_range_offset_subset, simp_all add: is_aligned_shiftl)[1]
+            apply (rule shiftl_less_t2n[OF word_of_nat_less])
              apply simp
-            apply (rule hoare_pre)
-             apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                       update_untyped_cap_valid_objs set_cap_no_overlap
-                       set_cap_idle preemption_point_inv'
-                       set_cap_cte_wp_at
-               | simp)+
-            apply (clarsimp simp: cte_wp_at_caps_of_state exI
-                                  is_cap_simps bits_of_def)
-            apply (frule(1) cte_wp_at_valid_objs_valid_cap[OF caps_of_state_cteD])
-            apply (clarsimp simp: valid_cap_simps cap_aligned_def
-                                  valid_untyped_pspace_no_overlap
-                                  free_index_of_def)
-           apply (simp add: returnOk_liftE)
-           apply (rule monadic_rewrite_corres_rhs,
-             rule_tac cap="free_index_update (\<lambda>_. 0) capa"
-                 and p=cref in monadic_set_cap_id2)
-           apply (rule set_cap_corres[unfolded dc_def])
-            apply (clarsimp simp: is_cap_simps free_range_of_untyped_def)
+            apply (simp add: word_bits_def)
+           apply (rule hoare_pre, wp)
            apply simp
-          apply wp
-         apply (rule_tac P="valid_etcbs
-                  and valid_idle and (\<lambda>s. idle_thread s \<noteq> fst cref)
-                  and cte_wp_at (op = capa) cref"
-               in hoare_trivE_R)
-         apply (case_tac "free_index_of capa = 0")
-          apply (simp add: mapME_x_Nil)
-          apply wp
-          apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps
+          apply (rule hoare_pre)
+           apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                     update_untyped_cap_valid_objs set_cap_no_overlap
+                     set_cap_idle preemption_point_inv'
+                     set_cap_cte_wp_at
+             | simp)+
+          apply (clarsimp simp: cte_wp_at_caps_of_state exI
+                                is_cap_simps bits_of_def)
+          apply (frule(1) cte_wp_at_valid_objs_valid_cap[OF caps_of_state_cteD])
+          apply (clarsimp simp: valid_cap_simps cap_aligned_def
+                                valid_untyped_pspace_no_overlap
                                 free_index_of_def)
-         apply (subst upt_conv_Cons)
-          apply simp
-         apply (simp add: mapME_x_append mapME_x_Cons mapME_x_Nil bindE_assoc)
-         apply (rule hoare_pre)
-          apply (wp preemption_point_inv' set_cap_idle
-                    set_cap_cte_wp_at | simp
-                  | (wp_once mapME_x_inv_wp, rule hoare_pre))+
-         apply (clarsimp simp: is_cap_simps bits_of_def cte_wp_at_caps_of_state)
-        apply (simp del: hoare_TrueI)
+
+         apply (clarsimp simp: is_cap_simps bits_of_def)
+         apply (strengthen order_trans[OF free_range_of_untyped_subseteq'[where a=0]]
+                           free_range_of_untyped_subset')
+         apply (clarsimp simp: conj_comms)
+         apply (clarsimp simp: filter_empty_conv bexI[where x=0]
+                               last_rev hd_map hd_filter_eq
+                               is_cap_simps bits_of_def cap_aligned_def
+                               word_bits_def word_size exI
+                               rev_map[symmetric])
+         apply (clarsimp simp: free_index_of_def free_range_of_untyped_def)
         apply wp
+        apply clarsimp
        apply (wp add: hoare_vcg_const_imp_lift get_cap_wp
           | simp
-          | strengthen invs_valid_objs invs_valid_idle)+
+          | strengthen invs_valid_objs invs_valid_idle
+          | rule impI)+
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         descendants_range_def2)
   apply (cases cref, simp)

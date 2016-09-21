@@ -1196,9 +1196,10 @@ lemma thread_state_ptr_set_tsType_np_spec:
                tsType_CL (thread_state_lift thread_state) = tsType_' s \<and>
                tcbQueued_CL (thread_state_lift thread_state)
                     = tcbQueued_CL (thread_state_lift (tcbState_C (the (cslift s (ptr s))))) \<and>
-               cslift t = cslift s(ptr s \<mapsto> the (cslift s (ptr s))\<lparr>tcbState_C := thread_state\<rparr>))
-           \<and> types_proofs.cslift_all_but_tcb_C t s
-           \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
+               t_hrs_' (globals t) = hrs_mem_update (heap_update (ptr s)
+                          (the (cslift s (ptr s))\<lparr>tcbState_C := thread_state\<rparr>))
+                  (t_hrs_' (globals s))
+           )}"
   apply (intro allI, rule conseqPre, vcg)
   apply (clarsimp simp: ptr_def)
   apply (clarsimp simp: h_t_valid_clift_Some_iff)
@@ -1224,9 +1225,10 @@ lemma thread_state_ptr_mset_blockingObject_tsType_spec:
              \<and> blockingObject_CL (thread_state_lift thread_state) = ep_ref_' s
              \<and> tcbQueued_CL (thread_state_lift thread_state)
                   = tcbQueued_CL (thread_state_lift (tcbState_C (the (cslift s (ptr s)))))
-             \<and> cslift t = cslift s(ptr s \<mapsto> the (cslift s (ptr s))\<lparr>tcbState_C := thread_state\<rparr>))
-             \<and> types_proofs.cslift_all_but_tcb_C t s
-             \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
+             \<and> t_hrs_' (globals t) = hrs_mem_update (heap_update (ptr s)
+                          (the (cslift s (ptr s))\<lparr>tcbState_C := thread_state\<rparr>))
+                  (t_hrs_' (globals s))
+           )}"
   apply (intro allI, rule conseqPre, vcg)
   apply (clarsimp simp: ptr_def)
   apply (frule h_t_valid_c_guard_cparent, simp+)
@@ -1253,9 +1255,10 @@ lemma mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_spec:
                mdb_node_lift mdb_node = mdb_node_lift (cteMDBNode_C (the (cslift s (ptr s))))
                            \<lparr> mdbNext_CL := mdbNext___unsigned_long_' s, mdbRevocable_CL := mdbRevocable___unsigned_long_' s,
                              mdbFirstBadged_CL := mdbFirstBadged___unsigned_long_' s \<rparr>
-             \<and> cslift t = cslift s(ptr s \<mapsto> the (cslift s (ptr s)) \<lparr> cteMDBNode_C := mdb_node \<rparr>))
-             \<and> types_proofs.cslift_all_but_cte_C t s
-             \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
+               \<and> t_hrs_' (globals t) = hrs_mem_update (heap_update (ptr s)
+                          (the (cslift s (ptr s)) \<lparr> cteMDBNode_C := mdb_node \<rparr>))
+                  (t_hrs_' (globals s))
+           )}"
   apply (intro allI, rule conseqPre, vcg)
   apply (clarsimp simp: ptr_def)
   apply (clarsimp simp: h_t_valid_clift_Some_iff)
@@ -1280,9 +1283,10 @@ lemma mdb_node_ptr_set_mdbPrev_np_spec:
        {t. (\<exists>mdb_node.
                mdb_node_lift mdb_node = mdb_node_lift (cteMDBNode_C (the (cslift s (ptr s))))
                            \<lparr> mdbPrev_CL := mdbPrev___unsigned_long_' s \<rparr>
-             \<and> cslift t = cslift s(ptr s \<mapsto> the (cslift s (ptr s)) \<lparr> cteMDBNode_C := mdb_node \<rparr>))
-             \<and> types_proofs.cslift_all_but_cte_C t s
-             \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
+               \<and> t_hrs_' (globals t) = hrs_mem_update (heap_update (ptr s)
+                          (the (cslift s (ptr s)) \<lparr> cteMDBNode_C := mdb_node \<rparr>))
+                  (t_hrs_' (globals s))
+           )}"
   apply (intro allI, rule conseqPre, vcg)
   apply (clarsimp simp: ptr_def)
   apply (clarsimp simp: h_t_valid_clift_Some_iff)
@@ -1305,9 +1309,10 @@ lemma cap_reply_cap_ptr_new_np_spec2:
        {t. (\<exists>cap.
                cap_lift cap = Some (Cap_reply_cap \<lparr> capReplyMaster_CL = capReplyMaster___unsigned_long_' s,
                                                          capTCBPtr_CL = capTCBPtr___unsigned_long_' s \<rparr>)
-             \<and> cslift t = cslift s(ptr s \<mapsto> the (cslift s (ptr s)) \<lparr> cte_C.cap_C := cap \<rparr>))
-             \<and> types_proofs.cslift_all_but_cte_C t s
-             \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
+               \<and> t_hrs_' (globals t) = hrs_mem_update (heap_update (ptr s)
+                          (the (cslift s (ptr s)) \<lparr> cte_C.cap_C := cap \<rparr>))
+                  (t_hrs_' (globals s))
+           )}"
   apply (intro allI, rule conseqPre, vcg)
   apply (clarsimp simp: ptr_def)
   apply (clarsimp simp: h_t_valid_clift_Some_iff word_sle_def)
@@ -1331,9 +1336,10 @@ lemma endpoint_ptr_mset_epQueue_tail_state_spec:
        {t. (\<exists>endpoint.
                endpoint_lift endpoint = endpoint_lift (the (cslift s (ep_ptr_' s)))
                            \<lparr> endpoint_CL.state_CL := state_' s, epQueue_tail_CL := epQueue_tail_' s \<rparr>
-             \<and> cslift t = cslift s(ep_ptr_' s \<mapsto> endpoint))
-             \<and> types_proofs.cslift_all_but_endpoint_C t s
-             \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
+               \<and> t_hrs_' (globals t) = hrs_mem_update (heap_update (ep_ptr_' s)
+                          endpoint)
+                  (t_hrs_' (globals s))
+           )}"
   apply (intro allI, rule conseqPre, vcg)
   apply (clarsimp simp: h_t_valid_clift_Some_iff typ_heap_simps'
                         word_sle_def word_sless_def)
@@ -1350,9 +1356,10 @@ lemma endpoint_ptr_set_epQueue_head_np_spec:
        {t. (\<exists>endpoint.
                endpoint_lift endpoint = endpoint_lift (the (cslift s (ep_ptr_' s)))
                            \<lparr> epQueue_head_CL := epQueue_head_' s \<rparr>
-             \<and> cslift t = cslift s(ep_ptr_' s \<mapsto> endpoint))
-             \<and> types_proofs.cslift_all_but_endpoint_C t s
-             \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
+               \<and> t_hrs_' (globals t) = hrs_mem_update (heap_update (ep_ptr_' s)
+                          endpoint)
+                  (t_hrs_' (globals s))
+           )}"
   apply (intro allI, rule conseqPre, vcg)
   apply (clarsimp simp: h_t_valid_clift_Some_iff typ_heap_simps'
                         word_sless_def word_sle_def)
@@ -1675,19 +1682,22 @@ lemma fastpath_dequeue_ccorres:
                          typ_heap_simps' endpoint_state_defs)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
    apply (rule conjI)
-    apply (clarsimp simp: cpspace_relation_def update_ep_map_tos)
+    apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
+                          typ_heap_simps')
     apply (erule(1) cpspace_relation_ep_update_ep2)
      apply (simp add: cendpoint_relation_def endpoint_state_defs)
     apply simp
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    h_t_valid_clift_Some_iff update_ep_map_tos)
+                    h_t_valid_clift_Some_iff update_ep_map_tos
+                    typ_heap_simps')
   apply (clarsimp simp: neq_Nil_conv cendpoint_relation_def Let_def
                         isRecvEP_endpoint_case tcb_queue_relation'_def
                         typ_heap_simps' endpoint_state_defs)
   apply (clarsimp simp: is_aligned_weaken[OF is_aligned_tcb_ptr_to_ctcb_ptr]
                         tcb_at_not_NULL)
   apply (drule(1) obj_at_cslift_tcb)+
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                        typ_heap_simps' tcb_at_not_NULL[OF obj_at'_weakenE, OF _ TrueI])
   apply (rule conjI)
    apply (clarsimp simp: cpspace_relation_def update_ep_map_tos
                          update_tcb_map_tos typ_heap_simps')
@@ -1978,21 +1988,21 @@ lemma ccorres_updateCap [corres]:
   apply clarsimp
   done
 
-
 lemma setCTE_rf_sr:
   "\<lbrakk> (\<sigma>, s) \<in> rf_sr; ctes_of \<sigma> ptr = Some cte'';
-     cslift s' = ((cslift s)(cte_Ptr ptr \<mapsto> cte'));
+     t_hrs_' (globals s') = hrs_mem_update
+        (heap_update (cte_Ptr ptr) cte')
+        (t_hrs_' (globals s));
      ccte_relation cte cte';
-     types_proofs.cslift_all_but_cte_C s' s;
-     hrs_htd (t_hrs_' (globals s')) = hrs_htd (t_hrs_' (globals s));
      (globals s')\<lparr> t_hrs_' := undefined \<rparr>
           = (globals s)\<lparr> t_hrs_' := undefined \<rparr> \<rbrakk>
-
       \<Longrightarrow>
    \<exists>x\<in>fst (setCTE ptr cte \<sigma>).
              (snd x, s') \<in> rf_sr"
   apply (rule fst_setCTE[OF ctes_of_cte_at], assumption)
   apply (erule rev_bexI)
+  apply clarsimp
+  apply (frule(1) rf_sr_ctes_of_clift)
   apply (subgoal_tac "\<exists>hrs. globals s' = globals s
                           \<lparr> t_hrs_' := hrs \<rparr>")
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
@@ -2012,10 +2022,10 @@ lemma setCTE_rf_sr:
 
 lemma getCTE_setCTE_rf_sr:
   "\<lbrakk> (\<sigma>, s) \<in> rf_sr; ctes_of \<sigma> ptr = Some cte;
-     cslift s' = ((cslift s)(cte_Ptr ptr \<mapsto> cte'));
+     t_hrs_' (globals s') = hrs_mem_update
+        (heap_update (cte_Ptr ptr) cte')
+        (t_hrs_' (globals s));
      ccte_relation (f cte) cte';
-     types_proofs.cslift_all_but_cte_C s' s;
-     hrs_htd (t_hrs_' (globals s')) = hrs_htd (t_hrs_' (globals s));
      (globals s')\<lparr> t_hrs_' := undefined \<rparr>
           = (globals s)\<lparr> t_hrs_' := undefined \<rparr> \<rbrakk>
 
@@ -2310,7 +2320,6 @@ lemma fastpath_call_ccorres:
     done
 
   show ?thesis
-  using [[goals_limit = 3]] 
   apply (cinit lift: cptr_' msgInfo_')
      apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                       unifyFailure_catch_If catch_liftE
@@ -2568,10 +2577,10 @@ lemma fastpath_call_ccorres:
                             apply (simp add: ctcb_relation_def cthread_state_relation_def)
                            apply simp
                           apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                            apply (rule ext, simp split: split_if)
-                           apply (rule ext, simp split: split_if)
+                            apply (rule ext, simp split: split_if add: typ_heap_simps')
+                           apply (rule ext, simp split: split_if add: typ_heap_simps')
                           apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                                           h_t_valid_clift_Some_iff map_comp_update projectKO_opt_tcb
+                                           typ_heap_simps' map_comp_update projectKO_opt_tcb
                                            cvariable_relation_upd_const ko_at_projectKO_opt)
                          apply ceqv
                         apply (rule ccorres_abstract_ksCurThread, ceqv)
@@ -2679,7 +2688,7 @@ lemma fastpath_call_ccorres:
                                         apply (rule ext, simp split: split_if)
                                        apply (rule ext, simp split: split_if)
                                       apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                                                       h_t_valid_clift_Some_iff map_comp_update projectKO_opt_tcb
+                                                       typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                        cvariable_relation_upd_const ko_at_projectKO_opt)
                                      apply ceqv
                                     apply (simp only: bind_assoc[symmetric])
@@ -3076,7 +3085,7 @@ lemma fastpath_reply_recv_ccorres:
                      del: Collect_const cong: call_ignore_cong)
          apply (rule ccorres_Cond_rhs_Seq)
           apply simp
- apply (rule ccorres_split_throws)
+          apply (rule ccorres_split_throws)
            apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
              apply (rule slowpath_ccorres)
@@ -3324,7 +3333,7 @@ lemma fastpath_reply_recv_ccorres:
                           apply (rule ext, simp split: split_if)
                          apply (rule ext, simp split: split_if)
                         apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                                         h_t_valid_clift_Some_iff map_comp_update projectKO_opt_tcb
+                                         typ_heap_simps' map_comp_update projectKO_opt_tcb
                                          cvariable_relation_upd_const ko_at_projectKO_opt)
                        apply ceqv
                       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
@@ -3377,7 +3386,8 @@ lemma fastpath_reply_recv_ccorres:
                                apply (rule cmap_relationE1[OF cmap_relation_cte], assumption+)
                                apply (clarsimp simp: typ_heap_simps' split_def tcbCallerSlot_def
                                                      tcb_cnode_index_defs tcb_ptr_to_ctcb_ptr_mask
-                                                     cte_level_bits_def size_of_def)
+                                                     cte_level_bits_def size_of_def
+                                                     packed_heap_update_collapse_hrs)
                                apply (rule setCTE_rf_sr, simp_all add: typ_heap_simps')[1]
                                apply (clarsimp simp: ccte_relation_eq_ccap_relation makeObject_cte
                                                      mdb_node_to_H_def nullMDBNode_def
@@ -3402,7 +3412,7 @@ lemma fastpath_reply_recv_ccorres:
                                       apply (rule ext, simp split: split_if)
                                      apply (rule ext, simp split: split_if)
                                     apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                                                     h_t_valid_clift_Some_iff map_comp_update projectKO_opt_tcb
+                                                     typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                      cvariable_relation_upd_const ko_at_projectKO_opt)
                                    apply ceqv
                                   apply (simp only: bind_assoc[symmetric])
@@ -5101,11 +5111,24 @@ lemma updateMDB_isolatable:
            (wp | simp)+)
   done
 
+lemma clearUntypedFreeIndex_isolatable:
+  "thread_actions_isolatable idx (clearUntypedFreeIndex slot)"
+  apply (simp add: clearUntypedFreeIndex_def getSlotCap_def)
+  apply (rule thread_actions_isolatable_bind)
+    apply (rule getCTE_isolatable)
+   apply (simp split: capability.split, safe intro!: thread_actions_isolatable_return)
+   apply (simp add: updateTrackedFreeIndex_def getSlotCap_def)
+   apply (intro thread_actions_isolatable_bind getCTE_isolatable
+                modify_isolatable)
+      apply (wp | simp)+
+  done
+
 lemma emptySlot_isolatable:
   "thread_actions_isolatable idx (emptySlot slot None)"
-  apply (simp add: emptySlot_def updateCap_def
+  apply (simp add: emptySlot_def updateCap_def case_Null_If
              cong: if_cong)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               clearUntypedFreeIndex_isolatable
                thread_actions_isolatable_if
                getCTE_isolatable setCTE_isolatable
                thread_actions_isolatable_return
@@ -5825,6 +5848,36 @@ lemma setEndpoint_updateCap_pivot[unfolded K_bind_def]:
                      setEndpoint_getCTE_pivot
                      setEndpoint_setCTE_pivot)
 
+lemma modify_setEndpoint_pivot[unfolded K_bind_def]:
+  "\<lbrakk> \<And>ksf s. ksPSpace_update ksf (sf s) = sf (ksPSpace_update ksf s) \<rbrakk>
+    \<Longrightarrow> (do modify sf; setEndpoint p val; f od) =
+          (do setEndpoint p val; modify sf; f od)"
+  apply (subgoal_tac "\<forall>s. ep_at' p (sf s) = ep_at' p s")
+   apply (simp add: setEndpoint_def setObject_modify_assert
+                    bind_assoc fun_eq_iff
+                    exec_gets exec_modify assert_def
+             split: split_if)
+  apply atomize
+  apply clarsimp
+  apply (drule_tac x="\<lambda>_. ksPSpace s" in spec)
+  apply (drule_tac x="s" in spec)
+  apply (drule_tac f="ksPSpace" in arg_cong)
+  apply simp
+  apply (metis obj_at'_pspaceI)
+  done
+
+lemma setEndpoint_clearUntypedFreeIndex_pivot[unfolded K_bind_def]:
+  "do setEndpoint p val; v <- clearUntypedFreeIndex slot; f od
+     = do v <- clearUntypedFreeIndex slot; setEndpoint p val; f od"
+  by (simp add: clearUntypedFreeIndex_def bind_assoc
+                getSlotCap_def
+                setEndpoint_getCTE_pivot
+                updateTrackedFreeIndex_def
+                modify_setEndpoint_pivot
+         split: capability.split
+          | rule bind_cong[OF refl] allI impI
+                 bind_apply_cong[OF refl])+
+
 lemma emptySlot_setEndpoint_pivot[unfolded K_bind_def]:
   "(do emptySlot slot None; setEndpoint p val; f od) =
       (do setEndpoint p val; emptySlot slot None; f od)"
@@ -5833,6 +5886,8 @@ lemma emptySlot_setEndpoint_pivot[unfolded K_bind_def]:
                    setEndpoint_getCTE_pivot
                    setEndpoint_updateCap_pivot
                    setEndpoint_updateMDB_pivot
+                   case_Null_If
+                   setEndpoint_clearUntypedFreeIndex_pivot
             split: split_if
               | rule bind_apply_cong[OF refl])+
   done
@@ -5907,12 +5962,29 @@ lemma setCTE_updateCapMDB:
   apply (auto simp: mask_out_sub_mask)
   done
 
+lemma clearUntypedFreeIndex_simple_rewrite:
+  "monadic_rewrite True False
+    (cte_wp_at' (Not o isUntypedCap o cteCap) slot)
+        (clearUntypedFreeIndex slot) (return ())"
+  apply (simp add: clearUntypedFreeIndex_def getSlotCap_def)
+  apply (rule monadic_rewrite_name_pre)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (rule monadic_rewrite_imp)
+   apply (rule_tac rv=cte in monadic_rewrite_symb_exec_l_known, wp)
+    apply (simp split: capability.split,
+      strengthen monadic_rewrite_refl, simp)
+    apply clarsimp
+   apply (wp getCTE_wp')
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  done
+
 lemma emptySlot_replymaster_rewrite[OF refl]:
   "mdbn = cteMDBNode cte \<Longrightarrow>
    monadic_rewrite True False
      ((\<lambda>_. mdbNext mdbn = 0 \<and> mdbPrev mdbn \<noteq> 0)
            and ((\<lambda>_. cteCap cte \<noteq> NullCap)
            and (cte_wp_at' (op = cte) slot
+           and cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte)) slot
            and cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte) \<and> capReplyMaster (cteCap cte))
                     (mdbPrev mdbn)
            and (\<lambda>s. reply_masters_rvk_fb (ctes_of s))
@@ -5926,8 +5998,12 @@ lemma emptySlot_replymaster_rewrite[OF refl]:
   apply (rule monadic_rewrite_imp)
    apply (rule_tac P="slot \<noteq> 0" in monadic_rewrite_gen_asm)
    apply (clarsimp simp: emptySlot_def setCTE_updateCapMDB)
+   apply (rule monadic_rewrite_trans)
+    apply (rule monadic_rewrite_bind_head)
+    apply (rule clearUntypedFreeIndex_simple_rewrite)
+   apply simp
    apply (rule_tac rv=cte in monadic_rewrite_symb_exec_l_known, wp empty_fail_getCTE)
-    apply (simp add: updateMDB_def Let_def bind_assoc makeObject_cte)
+    apply (simp add: updateMDB_def Let_def bind_assoc makeObject_cte case_Null_If)
     apply (rule monadic_rewrite_bind_tail)
      apply (rule monadic_rewrite_bind)
        apply (rule_tac P="mdbFirstBadged (cteMDBNode ctea) \<and> mdbRevocable (cteMDBNode ctea)"
@@ -5938,7 +6014,7 @@ lemma emptySlot_replymaster_rewrite[OF refl]:
       apply (rule monadic_rewrite_refl)
      apply (wp getCTE_wp')
   apply (clarsimp simp: cte_wp_at_ctes_of reply_masters_rvk_fb_def)
-  apply fastforce
+  apply (fastforce simp: isCap_simps)
   done
 
 (* FIXME: Move *)
