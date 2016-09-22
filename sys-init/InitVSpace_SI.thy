@@ -48,7 +48,7 @@ lemma cap_has_object_simps [simp]:
   "cap_has_object (PendingSyncSendCap obj_id badge a b c)"
   "cap_has_object (PendingSyncRecvCap obj_id d)"
   "cap_has_object (PendingNtfnRecvCap obj_id)"
-  "cap_has_object (FrameCap obj_id rights sz type maddr)"
+  "cap_has_object (FrameCap dev obj_id rights sz type maddr)"
   "cap_has_object (PageTableCap obj_id cdl_frame_cap_type maddr)"
   "cap_has_object (PageDirectoryCap obj_id cdl_frame_cap_type asid)"
   "cap_has_object (AsidPoolCap obj_id as)"
@@ -169,12 +169,12 @@ lemma valid_vm_rights_rw:
 
 lemma seL4_Section_Map_object_initialised_sep:
   "\<lbrace>\<guillemotleft>object_slot_empty spec t spec_pd_ptr (unat (vaddr >> 20)) \<and>*
-    (si_cnode_id , offset sel4_section si_cnode_size) \<mapsto>c (FrameCap section_ptr {AllowRead, AllowWrite} n Real None) \<and>*
+    (si_cnode_id , offset sel4_section si_cnode_size) \<mapsto>c (FrameCap dev section_ptr {AllowRead, AllowWrite} n Real None) \<and>*
     (si_cnode_id , offset sel4_pd si_cnode_size) \<mapsto>c (PageDirectoryCap pd_ptr Real None) \<and>*
     si_objects \<and>* R\<guillemotright> and
   K(pd_at spec_pd_ptr spec \<and>
     opt_cap (spec_pd_ptr,unat (vaddr >> 20)) spec
-      = Some (FrameCap spec_section_ptr (validate_vm_rights rights) n Fake None) \<and>
+      = Some (FrameCap False spec_section_ptr (validate_vm_rights rights) n Fake None) \<and>
 
     sel4_section < 2 ^ si_cnode_size \<and>
     sel4_pd < 2 ^ si_cnode_size \<and>
@@ -185,7 +185,7 @@ lemma seL4_Section_Map_object_initialised_sep:
     t spec_section_ptr = Some section_ptr)\<rbrace>
      seL4_Page_Map sel4_section sel4_pd vaddr rights vmattribs
    \<lbrace>\<lambda>rv. \<guillemotleft>object_slot_initialised spec t spec_pd_ptr (unat (vaddr >> 20)) \<and>*
-   (si_cnode_id , offset sel4_section si_cnode_size) \<mapsto>c (FrameCap section_ptr {AllowRead, AllowWrite} n Real None) \<and>*
+   (si_cnode_id , offset sel4_section si_cnode_size) \<mapsto>c (FrameCap dev section_ptr {AllowRead, AllowWrite} n Real None) \<and>*
    (si_cnode_id , offset sel4_pd si_cnode_size) \<mapsto>c (PageDirectoryCap pd_ptr Real None) \<and>*
    si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -227,7 +227,7 @@ lemma well_formed_cap_obj_match_frame:
      opt_cap cap_ref spec = Some cap;
      cap_has_object cap;
      cap_object cap = ptr\<rbrakk>
-  \<Longrightarrow> \<exists>is_real. cap = FrameCap ptr (validate_vm_rights (cap_rights cap)) (cdl_frame_size_bits frame) is_real None"
+  \<Longrightarrow> \<exists>is_real dev. cap = FrameCap dev ptr (validate_vm_rights (cap_rights cap)) (cdl_frame_size_bits frame) is_real None"
   apply (case_tac cap_ref, clarsimp)
   apply (frule (1) well_formed_well_formed_cap', simp)
   apply (frule (3) well_formed_types_match)
@@ -251,8 +251,8 @@ lemma well_formed_cap_obj_match_pt:
   done
 
 lemma sep_caps_at_split: "a \<in> A \<Longrightarrow>
-  si_caps_at t orig_caps spec A = (
-  si_cap_at t orig_caps spec a \<and>* si_caps_at t orig_caps spec (A - {a}))"
+  si_caps_at t orig_caps spec dev A = (
+  si_cap_at t orig_caps spec dev a \<and>* si_caps_at t orig_caps spec dev (A - {a}))"
   apply (simp add:si_caps_at_def)
   apply (subst sep.setprod.union_disjoint [where A = "{a}", simplified, symmetric])
    apply simp
@@ -263,17 +263,17 @@ lemma map_page_in_pd_wp:
   "\<lbrakk>well_formed spec; pd_at spec_pd_ptr spec\<rbrakk>
     \<Longrightarrow>
     \<lbrace>\<guillemotleft>object_slot_empty spec t spec_pd_ptr (unat (shiftr vaddr 20)) \<and>*
-      si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>* R\<guillemotright> and
       K ((pt_at spec_pt_section_ptr spec \<longrightarrow>
           opt_cap (spec_pd_ptr, unat (shiftr vaddr 20)) spec = Some (PageTableCap spec_pt_section_ptr Fake None)) \<and>
          (frame_at spec_pt_section_ptr spec \<longrightarrow>
              (\<exists>n. (n = 20 \<or> n = 24) \<and>
                    opt_cap (spec_pd_ptr, unat (shiftr vaddr 20)) spec =
-                   Some (FrameCap spec_pt_section_ptr (validate_vm_rights rights) n Fake None))))\<rbrace>
+                   Some (FrameCap False spec_pt_section_ptr (validate_vm_rights rights) n Fake None))))\<rbrace>
     map_page spec orig_caps spec_pt_section_ptr spec_pd_ptr rights vaddr
     \<lbrace>\<lambda>_. \<guillemotleft>object_slot_initialised spec t spec_pd_ptr (unat (shiftr vaddr 20)) \<and>*
-          si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+          si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
           si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: map_page_def dest!:domE)
@@ -351,7 +351,7 @@ lemma well_formed_frame_in_pt:
 
 lemma well_formed_frame_in_pd:
   "\<lbrakk>well_formed spec; opt_cap (pd, pt_slot) spec = Some frame_cap; pd_at pd spec; is_frame_cap frame_cap \<rbrakk> \<Longrightarrow>
-  (\<exists>sz. cap_type frame_cap = Some (FrameType sz) \<and> (sz = 20 \<or> sz = 24)) \<and> is_fake_vm_cap frame_cap"
+  (\<exists>sz. cap_type frame_cap = Some (FrameType sz) \<and> (sz = 20 \<or> sz = 24)) \<and> is_fake_vm_cap frame_cap \<and> \<not> is_device_cap frame_cap"
   apply (clarsimp simp: well_formed_def object_at_def)
   apply (drule_tac x = pd in spec)
   apply (clarsimp simp: well_formed_vspace_def opt_cap_def slots_of_def opt_object_def
@@ -360,18 +360,23 @@ lemma well_formed_frame_in_pd:
   apply (drule_tac x = frame_cap in spec)
   apply (clarsimp simp: is_fake_pt_cap_def cap_type_def
                  split: cdl_cap.splits)
+  apply (clarsimp simp:cap_at_def opt_cap_def slots_of_def opt_object_def
+    simp del:split_paired_All)
+  apply (drule_tac x = pd in spec)
+  apply (drule_tac x = pt_slot in spec)
+  apply fastforce
   done
 
 lemma map_page_directory_slot_wp:
   "\<lbrace>\<guillemotleft>object_slot_empty spec t spec_pd_ptr slot \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and K(
      well_formed spec \<and>
     slot < 0x1000 \<and>
     pd_at spec_pd_ptr spec)\<rbrace>
     map_page_directory_slot spec orig_caps spec_pd_ptr slot
     \<lbrace>\<lambda>_. \<guillemotleft>object_slot_initialised spec t spec_pd_ptr slot \<and>*
-         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+         si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: map_page_directory_slot_def)
@@ -410,6 +415,7 @@ lemma map_page_directory_slot_wp:
       apply simp+
      apply (simp add:object_at_def)
     apply (case_tac a,simp_all)
+    apply clarsimp
    apply (clarsimp simp:is_fake_vm_cap_def split:cdl_cap.split_asm cdl_frame_cap_type.split_asm)
   apply (frule object_slot_empty_initialised_NullCap [where obj_id=spec_pd_ptr and slot=slot and t=t])
     apply (clarsimp simp: object_at_def object_type_is_object)
@@ -442,13 +448,13 @@ lemma well_formed_pt_slot_limited:
 
 lemma map_map_page_directory_slot_wp':
   "\<lbrace>\<guillemotleft>object_slots_empty spec t obj_id \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and K(
   well_formed spec \<and> pd_at obj_id spec)\<rbrace>
     mapM_x (map_page_directory_slot spec orig_caps obj_id)
            (slots_of_list spec obj_id)
     \<lbrace>\<lambda>_. \<guillemotleft>object_slots_initialised spec t obj_id \<and>*
-          si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+          si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
           si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (subst object_slots_empty_decomp, simp+)
@@ -456,7 +462,7 @@ lemma map_map_page_directory_slot_wp':
   apply (subst object_empty_slots_empty_initialised, simp)
   apply (simp add:sep_conj_assoc)
   apply (rule mapM_x_set_sep' [where I = "object_empty_slots_initialised spec t obj_id \<and>*
-                                          si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+                                          si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
                                           si_objects"
                                 and xs = "slots_of_list spec obj_id", unfolded sep_conj_assoc])
     apply clarsimp
@@ -515,14 +521,14 @@ lemma map_object_empty_initialised_frame:
 
 lemma map_map_page_directory_slot_wp:
   "\<lbrace>\<guillemotleft>object_empty spec t obj_id \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and K(
      well_formed spec \<and> pd_at obj_id spec)\<rbrace>
     mapM_x (map_page_directory_slot spec orig_caps obj_id)
            (slots_of_list spec obj_id)
    \<lbrace>\<lambda>_.
     \<guillemotleft>object_initialised spec t obj_id \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply clarsimp
@@ -541,7 +547,7 @@ lemma set_asid_rewrite:
     orig_caps obj_id = Some pd_offset;
     pd_offset < 2 ^ si_cnode_size;
     t obj_id = Some kobj_id\<rbrakk> \<Longrightarrow>
-   ((si_cnode_id, unat pd_offset) \<mapsto>c default_cap (object_type pd) {kobj_id} (object_size_bits pd) \<and>*
+   ((si_cnode_id, unat pd_offset) \<mapsto>c default_cap (object_type pd) {kobj_id} (object_size_bits pd) dev \<and>*
     si_objects \<and>* R)
     =
    ((si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
@@ -562,12 +568,12 @@ lemma set_asid_rewrite:
   done
 
 lemma set_asid_wp:
-   "\<lbrace>\<guillemotleft>si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+   "\<lbrace>\<guillemotleft>si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>* R\<guillemotright> and K(
      well_formed spec \<and>
      pd_at obj_id spec)\<rbrace>
     set_asid spec orig_caps obj_id
-    \<lbrace>\<lambda>rv. \<guillemotleft>si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+    \<lbrace>\<lambda>rv. \<guillemotleft>si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
            si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
   apply (frule (1) object_at_real_object_at)
@@ -598,16 +604,16 @@ lemma set_asid_wp:
 
 lemma map_map_page_directory_wp':
   "\<lbrace>\<guillemotleft>(\<And>* pd_id \<in> {pd_id. pd_at pd_id spec}. object_empty spec t pd_id) \<and>*
-      si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>* R\<guillemotright> and
     K(well_formed spec \<and> set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)\<rbrace>
     mapM_x (map_page_directory spec orig_caps)
            [obj\<leftarrow>obj_ids. pd_at obj spec]
     \<lbrace>\<lambda>rv. \<guillemotleft>(\<And>* pd_id \<in> {pd_id. pd_at pd_id spec}. object_initialised spec t pd_id) \<and>*
-          si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+          si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
           si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (rule mapM_x_set_sep' [where I = "si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>* si_objects",
+  apply (rule mapM_x_set_sep' [where I = "si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>* si_objects",
          simplified sep_conj_assoc])
     apply simp
    apply (fastforce simp: object_at_def)
@@ -618,7 +624,7 @@ lemma map_map_page_directory_wp':
 lemma map_map_page_directory_wp:
   "\<lbrace>\<guillemotleft>(\<And>* pt_id \<in> {pt_id. pt_at pt_id spec}. object_empty spec t pt_id) \<and>*
      (\<And>* pd_id \<in> {pd_id. pd_at pd_id spec}. object_empty spec t pd_id) \<and>*
-      si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>* R\<guillemotright> and K(
       well_formed spec \<and> set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)\<rbrace>
     mapM_x (map_page_directory spec orig_caps)
@@ -626,7 +632,7 @@ lemma map_map_page_directory_wp:
     \<lbrace>\<lambda>_.
      \<guillemotleft>(\<And>* pt_id \<in> {pt_id. pt_at pt_id spec}. object_empty spec t pt_id) \<and>*
       (\<And>* pd_id \<in> {pd_id. pd_at pd_id spec}. object_initialised spec t pd_id) \<and>*
-      si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (wp sep_wp: map_map_page_directory_wp' [where t=t], simp)
@@ -774,7 +780,7 @@ lemma cdl_lookup_pd_slot_compute:
   done
 
 lemma well_formed_frame_valid:
-  "\<lbrakk>well_formed spec; opt_cap cap_ref spec = Some (FrameCap ptr seta sz real option)\<rbrakk>
+  "\<lbrakk>well_formed spec; opt_cap cap_ref spec = Some (FrameCap dev ptr seta sz real option)\<rbrakk>
    \<Longrightarrow> validate_vm_rights seta = seta"
   apply (case_tac cap_ref, clarsimp)
   apply (frule (1) well_formed_well_formed_cap', simp)
@@ -786,13 +792,18 @@ lemma empty_cap_map_NullCap:
   "pt_slot < 2 ^n \<Longrightarrow> empty_cap_map n pt_slot = Some NullCap"
   by (simp add:empty_cap_map_def)
 
+(* FIXME: current cdl_init does not consider device caps *)
+lemma well_formed_opt_cap_nondevice:
+  "\<lbrakk>well_formed spec; opt_cap slot spec = Some cap\<rbrakk> \<Longrightarrow> \<not> is_device_cap cap"
+  by (simp add:well_formed_def cap_at_def del:split_paired_All)
+
 (***********************
  * Mapping page tables *
  ***********************)
 lemma map_page_in_pt_sep:
   "\<lbrace>\<guillemotleft>object_slot_empty spec t (cap_object pt_cap) pt_slot \<and>*
      object_slot_initialised spec t obj_id pd_slot \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and K(
     well_formed spec \<and>
     pd_at obj_id spec \<and>
@@ -808,7 +819,7 @@ lemma map_page_in_pt_sep:
                  (of_nat pt_slot << small_frame_size))
   \<lbrace>\<lambda>_. \<guillemotleft>object_slot_initialised spec t (cap_object pt_cap) pt_slot \<and>*
          object_slot_initialised spec t obj_id pd_slot \<and>*
-         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>*
          R\<guillemotright>\<rbrace>"
 
@@ -846,10 +857,11 @@ lemma map_page_in_pt_sep:
    apply (clarsimp simp: cap_type_def is_fake_vm_cap_def cap_object_simps
                          cap_transform_def is_fake_pt_cap_def
                   split: cdl_cap.split_asm cdl_frame_cap_type.split_asm)
+   apply (frule(1) well_formed_opt_cap_nondevice)
    apply (rule hoare_pre)
     apply (rule hoare_strengthen_post)
      apply (rule_tac pd_ptr = kobj_id in seL4_Page_Map_wp[where cnode_cap = si_cspace_cap
-       and root_size = si_cnode_size
+       and root_size = si_cnode_size and dev = False
        and rights = "{AllowRead, AllowWrite}"])
           apply (simp add:word_bits_def guard_equal_si_cspace_cap)+
     apply (simp add:si_objects_def sep_conj_assoc pt_slot_compute)
@@ -883,6 +895,7 @@ lemma map_page_in_pt_sep:
    apply (sep_drule sep_map_c_sep_map_s)
     apply (simp add: object_default_state_def object_type_def
                      default_object_def object_slots_def empty_cap_map_NullCap)
+   apply (simp add:fun_upd_def)
    apply sep_solve
   apply clarsimp
   apply (clarsimp simp: is_pt_def object_at_def
@@ -895,7 +908,7 @@ lemma map_page_in_pt_sep:
 lemma map_page_table_slot_wp:
   "\<lbrace>\<guillemotleft>object_slot_empty spec t (cap_object page_cap) pt_slot \<and>*
      object_slot_initialised spec t obj_id pd_slot \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and K(
     well_formed spec \<and>
     pd_at obj_id spec \<and>
@@ -910,7 +923,7 @@ lemma map_page_table_slot_wp:
                         pt_slot
     \<lbrace>\<lambda>_. \<guillemotleft>object_slot_initialised spec t (cap_object page_cap) pt_slot \<and>*
          object_slot_initialised spec t obj_id pd_slot \<and>*
-         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (clarsimp simp: map_page_table_slot_def)
   apply (wp map_page_in_pt_sep)
@@ -929,7 +942,7 @@ lemma map_page_table_slots_wp'':
     opt_cap (obj_id, pd_slot) spec = Some page_cap\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slots_empty spec t (cap_ref_object (obj_id, pd_slot) spec) \<and>*
      object_slot_initialised spec t obj_id pd_slot \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>
    mapM_x (map_page_table_slot spec orig_caps obj_id
                               (cap_object page_cap)
@@ -937,7 +950,7 @@ lemma map_page_table_slots_wp'':
           (slots_of_list spec (cap_object page_cap))
    \<lbrace>\<lambda>_. \<guillemotleft>object_slots_initialised spec t (cap_ref_object (obj_id, pd_slot) spec) \<and>*
          object_slot_initialised spec t obj_id pd_slot \<and>*
-         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (frule well_formed_distinct_slots_of_list [where obj_id="cap_ref_object (obj_id, pd_slot) spec"])
   apply (frule well_formed_finite [where obj_id="cap_ref_object (obj_id, pd_slot) spec"])
@@ -947,7 +960,7 @@ lemma map_page_table_slots_wp'':
   apply (clarsimp simp: sep_conj_assoc cap_ref_object_def cap_at_def)
   apply (rule mapM_x_set_sep' [where I = "object_empty_slots_initialised spec t (cap_object page_cap) \<and>*
                                           object_slot_initialised spec t obj_id pd_slot \<and>*
-                                          si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+                                          si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
                                           si_objects", unfolded sep_conj_assoc], simp, clarsimp)
   apply (frule is_fake_pt_cap_is_pt_cap)
   apply (frule (1) well_formed_cap_object, clarsimp)
@@ -967,7 +980,7 @@ lemma map_page_table_slots_wp'':
 lemma map_page_table_slots_wp':
   "\<lbrace>\<guillemotleft>object_empty spec t (cap_ref_object (obj_id, pd_slot) spec) \<and>*
      object_slot_initialised spec t obj_id pd_slot \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>*
      R\<guillemotright> and K(
      well_formed spec \<and>
@@ -979,7 +992,7 @@ lemma map_page_table_slots_wp':
           (slots_of_list spec (cap_object page_cap))
    \<lbrace>\<lambda>_. \<guillemotleft>object_initialised spec t (cap_ref_object (obj_id, pd_slot) spec) \<and>*
          object_slot_initialised spec t obj_id pd_slot \<and>*
-         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>*
    R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -1000,7 +1013,7 @@ lemma map_page_table_slots_wp':
 lemma map_page_table_slots_wp:
   "\<lbrace>\<guillemotleft>object_empty spec t (cap_ref_object (obj_id, pd_slot) spec) \<and>*
          object_slot_initialised spec t obj_id pd_slot \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and K(
     well_formed spec \<and>
     pd_at obj_id spec \<and>
@@ -1009,7 +1022,7 @@ lemma map_page_table_slots_wp:
    map_page_table_slots spec orig_caps obj_id pd_slot
     \<lbrace>\<lambda>_. \<guillemotleft>object_initialised spec t (cap_ref_object (obj_id, pd_slot) spec) \<and>*
          object_slot_initialised spec t obj_id pd_slot \<and>*
-         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: map_page_table_slots_def)
@@ -1031,7 +1044,7 @@ lemma map_page_directory_page_tables_wp:
                      then (object_empty spec t (cap_ref_object (obj_id, slot) spec))
                      else \<box>)  \<and>*
      object_initialised spec t obj_id \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and
     K(well_formed spec \<and> pd_at obj_id spec)\<rbrace>
    map_page_directory_page_tables spec orig_caps obj_id
@@ -1040,13 +1053,13 @@ lemma map_page_directory_page_tables_wp:
                      then (object_initialised spec t (cap_ref_object (obj_id, slot) spec))
                      else \<box>) \<and>*
      object_initialised spec t obj_id \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
   apply (frule well_formed_distinct_slots_of_list [where obj_id=obj_id])
   apply (clarsimp simp: map_page_directory_page_tables_def)
   apply (rule mapM_x_set_sep'[where I="object_initialised spec t obj_id \<and>*
-                                       si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+                                       si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
                                        si_objects",
                                     unfolded sep_conj_assoc,simplified], simp+)
   apply clarsimp
@@ -1071,7 +1084,7 @@ lemma map_map_page_directory_page_tables_wp'':
                                   obj_id = cap_object cap)}.
          object_empty spec t obj_id) \<and>*
       (\<And>* obj_id \<in> {obj_id. pd_at obj_id spec}. object_initialised spec t obj_id) \<and>*
-      si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+      si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>* R\<guillemotright> and
     K (well_formed spec \<and> set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)\<rbrace>
    mapM_x (map_page_directory_page_tables spec orig_caps)
@@ -1081,7 +1094,7 @@ lemma map_map_page_directory_page_tables_wp'':
                                   obj_id = cap_object cap)}.
          object_initialised spec t obj_id) \<and>*
          (\<And>* obj_id \<in> {obj_id. pd_at obj_id spec}. object_initialised spec t obj_id) \<and>*
-         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
   apply (subst fake_pt_cap_rewrite, assumption)+
@@ -1090,7 +1103,7 @@ lemma map_map_page_directory_page_tables_wp'':
   apply (rule mapM_x_set_sep'[where
               I = "(\<And>* obj_id \<in> {obj_id. pd_at obj_id spec}.
                         object_initialised spec t obj_id) \<and>*
-                   si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>* si_objects",
+                   si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>* si_objects",
               unfolded sep_conj_assoc,simplified])
     apply simp
    apply simp
@@ -1106,14 +1119,14 @@ lemma map_map_page_directory_page_tables_wp'':
 lemma map_map_page_directory_page_tables_wp:
   "\<lbrace>\<guillemotleft>(\<And>* obj_id \<in> {obj_id. pt_at obj_id spec}. object_empty spec t obj_id) \<and>*
      (\<And>* obj_id \<in> {obj_id. pd_at obj_id spec}. object_initialised spec t obj_id) \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and
      K(well_formed spec \<and> set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)\<rbrace>
    mapM_x (map_page_directory_page_tables spec orig_caps)
           [obj\<leftarrow>obj_ids. pd_at obj spec]
    \<lbrace>\<lambda>_. \<guillemotleft>(\<And>* obj_id \<in> {obj_id. pt_at obj_id spec}. object_initialised spec t obj_id) \<and>*
          (\<And>* obj_id \<in> {obj_id. pd_at obj_id spec}. object_initialised spec t obj_id) \<and>*
-         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
   apply (subst sep_map_set_conj_restrict [where xs="{obj_id. pt_at obj_id spec}" and
@@ -1126,12 +1139,12 @@ lemma map_map_page_directory_page_tables_wp:
 
 lemma init_vspace_sep:
   "\<lbrace>\<guillemotleft>objects_empty spec t {obj_id. table_at obj_id spec} \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and
      K(well_formed spec \<and> set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)\<rbrace>
    init_vspace spec orig_caps obj_ids
    \<lbrace>\<lambda>_. \<guillemotleft>objects_initialised spec t {obj_id. table_at obj_id spec} \<and>*
-         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
   apply (clarsimp simp: objects_empty_def objects_initialised_def)
@@ -1144,10 +1157,10 @@ lemma init_vspace_sep:
   done
 
 lemma init_pd_asids_sep:
-  "\<lbrace>\<guillemotleft>si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+  "\<lbrace>\<guillemotleft>si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and K(well_formed spec)\<rbrace>
    init_pd_asids spec orig_caps obj_ids
-   \<lbrace>\<lambda>_. \<guillemotleft>si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+   \<lbrace>\<lambda>_. \<guillemotleft>si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: init_pd_asids_def)

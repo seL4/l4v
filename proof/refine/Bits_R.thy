@@ -24,16 +24,20 @@ crunch_ignore (add:
   liftE whenE unlessE throw_opt
   assertE liftM liftME sequence_x
   zipWithM_x mapM_x sequence mapM sequenceE_x
-  mapME_x catch select_f
+  sequenceE mapME mapME_x catch select_f
   handleE' handleE handle_elseE forM forM_x
-  zipWithM)
+  zipWithM filterM forME_x)
 
 crunch_ignore (add:
   withoutFailure throw catchFailure rethrowFailure
   capFaultOnFailure lookupErrorOnFailure
   nullCapOnFailure nothingOnFailure
-  withoutPreemption preemptionPoint
-  cap_fault_on_failure lookup_error_on_failure)
+  without_preemption withoutPreemption preemptionPoint
+  cap_fault_on_failure lookup_error_on_failure
+  const_on_failure ignore_failure ignoreFailure
+  empty_on_failure emptyOnFailure unifyFailure
+  unify_failure throw_on_false
+)
 
 context Arch begin (*FIXME: arch_split*)
 

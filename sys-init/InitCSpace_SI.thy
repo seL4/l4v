@@ -74,7 +74,7 @@ lemma InitThreadCNode_guard_equal[simp]:
 
 lemma default_cap_has_type:
   "cap_type cap = Some type
-    \<Longrightarrow> cap_has_type (default_cap type ids sz)"
+    \<Longrightarrow> cap_has_type (default_cap type ids sz dev)"
   by (fastforce simp: default_cap_def cap_type_def
               split: cdl_cap.splits)
 
@@ -87,7 +87,7 @@ lemma cap_has_type_update_cap_object[simp]:
 
 lemma ep_related_cap_badge_of_default:
   "\<lbrakk>ep_related_cap spec_cap; cap_type spec_cap = Some type\<rbrakk>
-  \<Longrightarrow> cap_badge (default_cap type {client_object_id} sz) = 0"
+  \<Longrightarrow> cap_badge (default_cap type {client_object_id} sz dev) = 0"
   by (clarsimp simp: ep_related_cap_def cap_type_def
                      default_cap_def cap_badge_def safe_for_derive_def
               split: cdl_cap.splits)
@@ -165,7 +165,7 @@ lemma si_spec_irq_cap_at_empty_cap_has_object:
 (* Needed? *)
 lemma si_obj_cap_at_empty_cap_has_object:
   "irqhandler_cap_at (obj_id, slot) spec
-  \<Longrightarrow> si_obj_cap_at t orig_caps spec obj_id slot = \<box>"
+  \<Longrightarrow> si_obj_cap_at t orig_caps spec False obj_id slot = \<box>"
   by (clarsimp simp: si_obj_cap_at_def cap_at_def)
 
 (* MOVEME *)
@@ -189,7 +189,7 @@ lemma valid_src_cap_if_cnode:
   "\<lbrakk>cap_type spec_cap = Some type;
     is_cnode_cap spec_cap \<longrightarrow> sz = cnode_cap_size spec_cap;
     valid_src_cap spec_cap data\<rbrakk>
-  \<Longrightarrow> valid_src_cap (default_cap type {client_object_id} sz) data"
+  \<Longrightarrow> valid_src_cap (default_cap type {client_object_id} sz dev) data"
   apply (clarsimp simp: valid_src_cap_def)
   apply (clarsimp simp: cnode_cap_size_def cap_type_def default_cap_def)
   done
@@ -197,8 +197,8 @@ lemma valid_src_cap_if_cnode:
 lemma default_cap_data_if_cnode:
   "\<lbrakk>cap_type spec_cap = Some type;
     is_cnode_cap spec_cap \<longrightarrow> sz = cnode_cap_size spec_cap\<rbrakk>
-  \<Longrightarrow> (default_cap type m sz)
-   =  (default_cap type m (cnode_cap_size spec_cap))"
+  \<Longrightarrow> (default_cap type m sz dev)
+   =  (default_cap type m (cnode_cap_size spec_cap) dev)"
   by (case_tac spec_cap,
       (clarsimp simp: default_cap_def cap_type_def is_cnode_cap_simps)+)
 
@@ -315,13 +315,15 @@ lemma cnode_slot_half_initialised_original_slot:
   apply (clarsimp split: option.splits)
   done
 
-
 (**************************
  **************************
  * init_cspace proof  *
  **************************
  **************************)
 
+lemma default_cap_cnode_dev:
+  "default_cap CNodeType a b dev = CNodeCap (pick a) 0 0 b"
+  by (simp add:default_cap_def)
 
 lemma mint_pre:
   "\<lbrakk>well_formed spec; cnode_at obj_id spec;
@@ -330,6 +332,7 @@ lemma mint_pre:
     spec_cap \<noteq> NullCap;
     cap_has_object spec_cap;
     cap_type spec_cap = Some type;
+    is_device_cap spec_cap = dev;
     data = cap_badge spec_cap;
 
    Some dest_root = dup_caps obj_id;
@@ -344,8 +347,8 @@ lemma mint_pre:
    rights = cap_rights spec_cap;
 
    \<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
-    si_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-    si_cap_at t dup_caps spec obj_id \<and>*
+    si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
+    si_cap_at t dup_caps spec dev obj_id \<and>*
     object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s;
 
    cdl_objects spec (cap_object spec_cap) = Some spec_cap_object;
@@ -354,12 +357,12 @@ lemma mint_pre:
    cnode_cap_slot = offset src_root si_cnode_size;
    src_slot = offset src_index si_cnode_size;
    t obj_id = Some dest_id;
-   default_cap CNodeType {dest_id} dest_size  = dest_root_cap;
+   default_cap CNodeType {dest_id} dest_size False = dest_root_cap;
 
    object_size_bits spec_obj = dest_size;
    dest_slot = offset dest_index dest_size;
    t (cap_object spec_cap) = Some client_object_id;
-   default_cap type {client_object_id} (object_size_bits spec_cap_object) = src_cap\<rbrakk>
+   default_cap type {client_object_id} (object_size_bits spec_cap_object)  = src_cap\<rbrakk>
  \<Longrightarrow>
     \<guillemotleft>si_tcb_id \<mapsto>f root_tcb \<and>*
      (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
@@ -376,7 +379,7 @@ lemma mint_pre:
      (* Cap that the root task has to it's own CNode. *)
      (si_cnode_id, cnode_cap_slot) \<mapsto>c si_cnode_cap \<and>*
      (* Cap to be copied, in the root CNode. *)
-     (si_cnode_id, src_slot) \<mapsto>c src_cap \<and>*
+     (si_cnode_id, src_slot) \<mapsto>c src_cap dev \<and>*
      (* Where to copy the cap (in the client CNode). *)
      (dest_id, dest_slot) \<mapsto>c NullCap \<and>*
      (* IRQ control cap *)
@@ -426,7 +429,8 @@ lemma mint_pre:
    apply (frule (1) well_formed_object_size_bits)
    apply (cut_tac obj_id=dest_id and obj'=spec_obj in
                   sep_map_f_object_size_bits_cnode, (simp add: object_type_is_object)+)
-   apply (sep_solve add: sep_any_imp)
+   apply (simp add: default_cap_cnode_dev)
+   apply (sep_solve add: sep_any_imp )
   apply (clarsimp simp: one_lvl_lookup_def)
   apply (drule guard_equal_si_cspace_cap)
   apply (clarsimp simp: default_cap_def object_type_is_object)
@@ -441,6 +445,8 @@ lemma mint_pre:
   apply (drule (1) well_formed_object_size_bits_word_bits)
   apply (simp add: word_bits_def)
   done
+
+
 
 lemma move_pre_irq_handler:
   "\<lbrakk>well_formed spec; cnode_at obj_id spec;
@@ -461,14 +467,14 @@ lemma move_pre_irq_handler:
 
    \<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
     si_irq_cap_at irq_caps spec (cap_irq spec_cap) \<and>*
-    si_cap_at t dup_caps spec obj_id \<and>*
+    si_cap_at t dup_caps spec False obj_id \<and>*
     object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s;
 
    dest_root_slot = offset dest_root si_cnode_size;
    cnode_cap_slot = offset src_root si_cnode_size;
    src_slot = offset src_index si_cnode_size;
    t obj_id = Some dest_id;
-   default_cap CNodeType {dest_id} dest_size  = dest_root_cap;
+   default_cap CNodeType {dest_id} dest_size False = dest_root_cap;
 
    object_size_bits spec_obj = dest_size;
    dest_slot = offset dest_index dest_size\<rbrakk>
@@ -530,6 +536,7 @@ lemma move_pre_irq_handler:
       apply (fastforce simp: object_at_def object_type_is_object)
      apply assumption
     apply assumption
+   apply (simp add:default_cap_cnode_dev)
    apply (subst offset_slot, assumption, simp)
    apply (subst offset_slot', assumption)
    apply (subst offset_slot', assumption)
@@ -560,6 +567,7 @@ lemma mint_post:
     opt_cap (obj_id, slot) spec = Some spec_cap;
     cap_has_object spec_cap;
     cap_type spec_cap = Some type;
+    is_device_cap spec_cap = dev;
     dup_caps obj_id = Some dest_root;
     orig_caps (cap_object spec_cap) = Some src_index;
     cdl_objects spec (cap_object spec_cap) = Some spec_cap_object;
@@ -578,19 +586,19 @@ lemma mint_post:
     dest_id \<mapsto>f CNode (empty_cnode (object_size_bits spec_obj)) \<and>*
    (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
    (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
-   (si_cnode_id, offset dest_root si_cnode_size) \<mapsto>c default_cap CNodeType {dest_id} (object_size_bits spec_obj) \<and>*
+   (si_cnode_id, offset dest_root si_cnode_size) \<mapsto>c default_cap CNodeType {dest_id} (object_size_bits spec_obj) False \<and>*
    (si_cnode_id, offset seL4_CapInitThreadCNode si_cnode_size) \<mapsto>c si_cnode_cap \<and>*
-   (si_cnode_id, offset src_index si_cnode_size) \<mapsto>c default_cap type {client_object_id} (object_size_bits spec_cap_object) \<and>*
+   (si_cnode_id, offset src_index si_cnode_size) \<mapsto>c default_cap type {client_object_id} (object_size_bits spec_cap_object) dev \<and>*
    (dest_id, offset (of_nat slot) (object_size_bits spec_obj)) \<mapsto>c
        derived_cap (update_cap_data_det data
-                   (update_cap_rights (cap_rights (default_cap type {client_object_id} (object_size_bits spec_cap_object)) \<inter> cap_rights spec_cap)
-                   (default_cap type {client_object_id} (cnode_cap_size spec_cap)))) \<and>*
+                   (update_cap_rights (cap_rights (default_cap type {client_object_id} (object_size_bits spec_cap_object) dev) \<inter> cap_rights spec_cap)
+                   (default_cap type {client_object_id} (cnode_cap_size spec_cap) (is_device_cap spec_cap)))) \<and>*
    (si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>*
     si_asid \<and>* R\<guillemotright> s\<rbrakk>
    \<Longrightarrow>
    \<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
-    si_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-    si_cap_at t dup_caps spec obj_id \<and>*
+    si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
+    si_cap_at t dup_caps spec dev obj_id \<and>*
     object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s"
   apply (frule (3) well_formed_types_match)
   apply (frule (3) well_formed_slot_object_size_bits)
@@ -611,6 +619,7 @@ lemma mint_post:
   apply (clarsimp simp: cap_rights_inter_default_cap_rights)
   apply (subst (asm) update_cap_rights_and_data,(assumption|clarsimp)+)
   apply (subst (asm) offset_slot', assumption)+
+  apply (clarsimp simp:default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -621,6 +630,7 @@ lemma mutate_post:
     opt_cap (obj_id, slot) spec = Some spec_cap;
     cap_has_object spec_cap;
     cap_type spec_cap = Some type;
+    is_device_cap spec_cap = dev;
     dup_caps obj_id = Some dest_root;
     orig_caps (cap_object spec_cap) = Some src_index;
     cdl_objects spec (cap_object spec_cap) = Some spec_cap_object;
@@ -637,17 +647,17 @@ lemma mutate_post:
     dest_id \<mapsto>f CNode (empty_cnode (object_size_bits spec_obj)) \<and>*
    (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
    (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
-   (si_cnode_id, offset dest_root si_cnode_size) \<mapsto>c default_cap CNodeType {dest_id} (object_size_bits spec_obj) \<and>*
+   (si_cnode_id, offset dest_root si_cnode_size) \<mapsto>c default_cap CNodeType {dest_id} (object_size_bits spec_obj) False \<and>*
    (si_cnode_id, offset seL4_CapInitThreadCNode si_cnode_size) \<mapsto>c si_cnode_cap \<and>*
    (si_cnode_id, offset src_index si_cnode_size) \<mapsto>c NullCap \<and>*
    (dest_id, offset (of_nat slot) (object_size_bits spec_obj)) \<mapsto>c
-     update_cap_data_det data (default_cap type {client_object_id} (cnode_cap_size spec_cap)) \<and>*
+     update_cap_data_det data (default_cap type {client_object_id} (cnode_cap_size spec_cap) dev) \<and>*
    (si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>*
     si_asid \<and>* R\<guillemotright> s\<rbrakk>
    \<Longrightarrow>
    \<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
     si_null_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-    si_cap_at t dup_caps spec obj_id \<and>*
+    si_cap_at t dup_caps spec dev obj_id \<and>*
     object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s"
   apply (frule (3) well_formed_types_match)
   apply (frule (3) well_formed_slot_object_size_bits)
@@ -669,6 +679,7 @@ lemma mutate_post:
     apply (clarsimp simp: cap_has_object_not_irqhandler_cap)
    apply (erule well_formed_orig_caps, (simp add: slots_of_def opt_object_def)+)
   apply (subst (asm) offset_slot', assumption)+
+  apply (clarsimp simp:default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -693,7 +704,7 @@ lemma move_post:
     dest_id \<mapsto>f CNode (empty_cnode (object_size_bits spec_obj)) \<and>*
    (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
    (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
-   (si_cnode_id, offset dest_root si_cnode_size) \<mapsto>c default_cap CNodeType {dest_id} (object_size_bits spec_obj) \<and>*
+   (si_cnode_id, offset dest_root si_cnode_size) \<mapsto>c default_cap CNodeType {dest_id} (object_size_bits spec_obj) False \<and>*
    (si_cnode_id, offset seL4_CapInitThreadCNode si_cnode_size) \<mapsto>c si_cnode_cap \<and>*
    (si_cnode_id, offset src_index si_cnode_size) \<mapsto>c NullCap \<and>*
    (dest_id, offset (of_nat slot) (object_size_bits spec_obj)) \<mapsto>c
@@ -703,7 +714,7 @@ lemma move_post:
    \<Longrightarrow>
    \<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
     si_null_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-    si_cap_at t dup_caps spec obj_id \<and>*
+    si_cap_at t dup_caps spec dev obj_id \<and>*
     object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s"
   apply (frule (3) well_formed_types_match)
   apply (frule (3) well_formed_slot_object_size_bits)
@@ -718,6 +729,7 @@ lemma move_post:
   apply (subst sep_map_s_sep_map_c_eq [where cap="update_cap_object client_object_id spec_cap"])
    apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
   apply (subst (asm) offset_slot', assumption)+
+  apply (clarsimp simp:default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -738,7 +750,7 @@ lemma move_post_irq_handler:
     dest_id \<mapsto>f CNode (empty_cnode (object_size_bits spec_obj)) \<and>*
    (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
    (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
-   (si_cnode_id, offset dest_root si_cnode_size) \<mapsto>c default_cap CNodeType {dest_id} (object_size_bits spec_obj) \<and>*
+   (si_cnode_id, offset dest_root si_cnode_size) \<mapsto>c default_cap CNodeType {dest_id} (object_size_bits spec_obj) False \<and>*
    (si_cnode_id, offset seL4_CapInitThreadCNode si_cnode_size) \<mapsto>c si_cnode_cap \<and>*
    (si_cnode_id, offset src_index si_cnode_size) \<mapsto>c NullCap \<and>*
    (dest_id, offset (of_nat slot) (object_size_bits spec_obj)) \<mapsto>c spec_cap \<and>*
@@ -747,7 +759,7 @@ lemma move_post_irq_handler:
    \<Longrightarrow>
    \<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
     si_null_irq_cap_at irq_caps spec (cap_irq spec_cap) \<and>*
-    si_cap_at t dup_caps spec obj_id \<and>*
+    si_cap_at t dup_caps spec dev obj_id \<and>*
     object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s"
   apply (frule (3) well_formed_slot_object_size_bits)
   apply (frule (1) well_formed_object_slots, simp)
@@ -762,6 +774,7 @@ lemma move_post_irq_handler:
   apply (subst sep_map_s_sep_map_c_eq [where cap=spec_cap],
          (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
   apply (subst (asm) offset_slot', assumption)+
+  apply (clarsimp simp:default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -775,6 +788,7 @@ lemma seL4_CNode_Mutate_object_slot_initialised_sep_helper:
     valid_src_cap spec_cap data;
     cap_has_object spec_cap;
     cap_type spec_cap = Some type;
+    is_device_cap spec_cap = dev;
     \<not> ep_related_cap spec_cap;
     \<not> is_untyped_cap spec_cap;
     data = cap_data spec_cap;
@@ -787,44 +801,45 @@ lemma seL4_CNode_Mutate_object_slot_initialised_sep_helper:
     Some dest_root = dup_caps obj_id;
     Some src_index = orig_caps (cap_object spec_cap)\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
-     si_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> \<rbrace>
    seL4_CNode_Mutate dest_root (of_nat slot) (of_nat (object_size_bits spec_obj))
                      seL4_CapInitThreadCNode src_index 32 data
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
         si_null_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_chain)
     apply (rule_tac cnode_cap = si_cspace_cap
                 and cnode_cap' = si_cnode_cap
-                and dest_root_cap = "default_cap CNodeType {dest_id} (object_size_bits spec_obj)"
+                and dest_root_cap = "default_cap CNodeType {dest_id} (object_size_bits spec_obj) False"
                 and root_size=si_cnode_size
                 and src_root=seL4_CapInitThreadCNode
                 and src_depth=32
                 and tcb=root_tcb
-                and src_cap = "default_cap type {client_object_id} (object_size_bits spec_cap_obj)"
+                and src_cap = "default_cap type {client_object_id} (object_size_bits spec_cap_obj) dev"
                 in seL4_CNode_Mutate_sep[where
-                R = "(si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>* si_asid \<and>* R"],
-                (assumption|simp add: ep_related_cap_default_cap
+                R = "(si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>* si_asid \<and>* R"])
+    apply (assumption|simp add: ep_related_cap_default_cap
                  default_cap_has_type valid_src_cap_if_cnode
-                 get_index_def)+)
+                 get_index_def)+
    apply (frule_tac s=s and dup_caps=dup_caps and
                     t=t and orig_caps=orig_caps
                  in mint_pre,(assumption|rule refl|simp)+)
    apply (elim conjE)
+   apply clarsimp
    apply (intro conjI,
      simp_all add:has_type_default_not_non ep_related_cap_default_cap)
       apply (thin_tac "\<guillemotleft>P \<and>* Q \<guillemotright>s" for P Q)
       apply sep_solve
-    apply ((clarsimp simp: si_cnode_cap_def word_bits_def si_cspace_cap_def
-                    dest!: guard_equal_si_cspace_cap |
-            rule is_cnode_cap_si_cnode_cap)+)[2]
-      (* it works because si_cnode_cap = si_cspace_cap *)
+     apply ((clarsimp simp: si_cnode_cap_def word_bits_def si_cspace_cap_def
+                       dest!: guard_equal_si_cspace_cap |
+               rule is_cnode_cap_si_cnode_cap)+)[2]
+         (* it works because si_cnode_cap = si_cspace_cap *)
   apply (drule_tac s=s and dest_root=dest_root and src_index=src_index and R=R
-                in mutate_post, (assumption|simp)+)
-   apply (subst(asm) default_cap_data_if_cnode, simp+)
+                in mutate_post, (assumption|simp|fastforce)+)[1]
+   apply (subst(asm) default_cap_data_if_cnode, fastforce+)
   done
 
 lemma seL4_CNode_Move_object_slot_initialised_cap_has_object_sep_helper:
@@ -838,6 +853,7 @@ lemma seL4_CNode_Move_object_slot_initialised_cap_has_object_sep_helper:
     valid_src_cap spec_cap data;
     cap_has_object spec_cap;
     cap_type spec_cap = Some type;
+    is_device_cap spec_cap = dev;
     \<not> is_untyped_cap spec_cap;
     \<not> is_asidpool_cap spec_cap;
     data = cap_data spec_cap;
@@ -850,24 +866,24 @@ lemma seL4_CNode_Move_object_slot_initialised_cap_has_object_sep_helper:
     Some dest_root = dup_caps obj_id;
     Some src_index = orig_caps (cap_object spec_cap)\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
-     si_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> \<rbrace>
    seL4_CNode_Move dest_root (of_nat slot) (of_nat (object_size_bits spec_obj))
                      seL4_CapInitThreadCNode src_index 32
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
         si_null_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_chain)
    apply (rule_tac cnode_cap = si_cspace_cap
               and cnode_cap' = si_cnode_cap
-              and dest_root_cap = "default_cap CNodeType {dest_id} (object_size_bits spec_obj)"
+              and dest_root_cap = "default_cap CNodeType {dest_id} (object_size_bits spec_obj) False"
               and root_size=si_cnode_size
               and src_root=seL4_CapInitThreadCNode
               and src_depth=32
               and tcb=root_tcb
-              and src_cap = "default_cap type {client_object_id} (object_size_bits spec_cap_obj)"
+              and src_cap = "default_cap type {client_object_id} (object_size_bits spec_cap_obj) dev"
                in seL4_CNode_Move_sep[where
                 R = "(si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>* si_asid \<and>* R"],
                (assumption|simp add: ep_related_cap_default_cap
@@ -876,6 +892,7 @@ lemma seL4_CNode_Move_object_slot_initialised_cap_has_object_sep_helper:
     apply (frule_tac s=s and t=t and dup_caps=dup_caps and orig_caps=orig_caps
                  in mint_pre,(assumption|rule refl|simp)+)
    apply (elim conjE)
+   apply clarsimp
    apply (intro conjI,
      simp_all add:has_type_default_not_non ep_related_cap_default_cap)
       apply (thin_tac "\<guillemotleft>P \<and>* Q \<guillemotright>s" for P Q)
@@ -889,6 +906,7 @@ lemma seL4_CNode_Move_object_slot_initialised_cap_has_object_sep_helper:
    apply sep_cancel+
    apply (drule cap_has_object_not_irqhandler_cap)
    apply (subst(asm) default_cap_data_if_cnode,simp+)
+   apply clarsimp
    apply (subst(asm) default_cap_update_cap_object,
           (simp add: valid_src_cap_cnode_cap_size_le_32)+)
   done
@@ -906,18 +924,18 @@ lemma seL4_CNode_Move_object_slot_initialised_irqhandler_cap_sep_helper:
     Some src_index = irq_caps (cap_irq spec_cap)\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
      si_irq_cap_at irq_caps spec (cap_irq spec_cap) \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_cap_at t dup_caps spec False obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> \<rbrace>
    seL4_CNode_Move dest_root (of_nat slot) (of_nat (object_size_bits spec_obj))
                      seL4_CapInitThreadCNode src_index 32
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
         si_null_irq_cap_at irq_caps spec (cap_irq spec_cap) \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_chain)
    apply (rule_tac cnode_cap = si_cspace_cap
               and cnode_cap' = si_cnode_cap
-              and dest_root_cap = "default_cap CNodeType {dest_id} (object_size_bits spec_obj)"
+              and dest_root_cap = "default_cap CNodeType {dest_id} (object_size_bits spec_obj) False"
               and root_size=si_cnode_size
               and src_root=seL4_CapInitThreadCNode
               and src_depth=32
@@ -949,21 +967,21 @@ lemma seL4_CNode_Move_object_slot_initialised_cap_has_object_sep:
         cap_has_object spec_cap \<and>
         cnode_at obj_id spec \<and> cdl_objects spec obj_id = Some spec_obj \<and>
         opt_cap (obj_id, slot) spec = Some spec_cap \<and> spec_cap \<noteq> NullCap \<and>
-        cap_has_type spec_cap \<and> valid_src_cap spec_cap data \<and>
+        cap_has_type spec_cap \<and> valid_src_cap spec_cap data \<and> (is_device_cap spec_cap = dev) \<and>
         \<not>is_untyped_cap spec_cap \<and> is_default_cap spec_cap \<and> \<not> is_asidpool_cap spec_cap \<and>
         cdl_objects spec (cap_object spec_cap) = Some spec_cap_obj \<and>
         (is_cnode_cap spec_cap \<longrightarrow> object_size_bits spec_cap_obj = cnode_cap_size spec_cap) \<and>
         Some dest_root = dup_caps obj_id \<and>
         Some src_index = orig_caps (cap_object spec_cap) \<and>
         \<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
-         si_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-         si_cap_at t dup_caps spec obj_id \<and>*
+         si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
+         si_cap_at t dup_caps spec dev obj_id \<and>*
          object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s\<rbrace>
      seL4_CNode_Move dest_root (of_nat slot) (of_nat (object_size_bits spec_obj))
                      seL4_CapInitThreadCNode src_index 32
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
         si_null_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
@@ -974,11 +992,11 @@ lemma seL4_CNode_Move_object_slot_initialised_cap_has_object_sep:
        apply (clarsimp simp: si_cap_at_def sep_conj_exists)
       apply (clarsimp simp: si_cap_at_def sep_conj_exists)
     apply (sep_drule (direct) si_cap_at_less_si_cnode_size [where cap_ptr = src_index
-                 and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t dup_caps spec obj_id \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"])
+                 and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t dup_caps spec (is_device_cap spec_cap) obj_id \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"])
        apply (fastforce simp: sep_conj_ac)
    apply clarsimp
      apply (sep_drule (direct) si_cap_at_less_si_cnode_size [where cap_ptr = dest_root and t=t and spec=spec
-                   and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t orig_caps spec (cap_object spec_cap) \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"])
+                   and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t orig_caps spec (is_device_cap spec_cap) (cap_object spec_cap) \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"])
       apply (fastforce simp: sep_conj_ac)
      apply clarsimp+
   done
@@ -994,13 +1012,13 @@ lemma seL4_CNode_Move_object_slot_initialised_irqhandler_cap_sep:
         Some src_index = irq_caps (cap_irq spec_cap) \<and>
         \<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
          si_irq_cap_at irq_caps spec (cap_irq spec_cap) \<and>*
-         si_cap_at t dup_caps spec obj_id \<and>*
+         si_cap_at t dup_caps spec False obj_id \<and>*
          object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s\<rbrace>
      seL4_CNode_Move dest_root (of_nat slot) (of_nat (object_size_bits spec_obj))
                      seL4_CapInitThreadCNode src_index 32
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
         si_null_irq_cap_at irq_caps spec (cap_irq spec_cap) \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec False obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
@@ -1016,7 +1034,7 @@ lemma seL4_CNode_Move_object_slot_initialised_irqhandler_cap_sep:
 lemma seL4_CNode_Move_object_slot_initialised_irqhandler_cap_sep_new:
   "\<lbrace>\<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
          si_irq_cap_at irq_caps spec (cap_irq spec_cap) \<and>*
-         si_cap_at t dup_caps spec obj_id \<and>*
+         si_cap_at t dup_caps spec False obj_id \<and>*
          object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>
      and K( well_formed spec \<and>
         cnode_at obj_id spec \<and>
@@ -1029,7 +1047,7 @@ lemma seL4_CNode_Move_object_slot_initialised_irqhandler_cap_sep_new:
                      seL4_CapInitThreadCNode src_index 32
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
         si_null_irq_cap_at irq_caps spec (cap_irq spec_cap) \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec False obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (clarsimp)
@@ -1046,7 +1064,7 @@ lemma seL4_CNode_Mutate_object_slot_initialised_sep:
         data = cap_data spec_cap \<and>
         cnode_at obj_id spec \<and> cdl_objects spec obj_id = Some spec_obj \<and>
         opt_cap (obj_id, slot) spec = Some spec_cap \<and> spec_cap \<noteq> NullCap \<and>
-        cap_has_type spec_cap \<and> valid_src_cap spec_cap data \<and>
+        cap_has_type spec_cap \<and> valid_src_cap spec_cap data \<and> is_device_cap spec_cap = dev \<and>
         cap_has_object spec_cap \<and>
         \<not> is_untyped_cap spec_cap \<and> \<not> ep_related_cap spec_cap \<and>
         cdl_objects spec (cap_object spec_cap) = Some spec_cap_obj \<and>
@@ -1054,14 +1072,14 @@ lemma seL4_CNode_Mutate_object_slot_initialised_sep:
         Some dest_root = dup_caps obj_id \<and>
         Some src_index = orig_caps (cap_object spec_cap) \<and>
         \<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
-         si_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-         si_cap_at t dup_caps spec obj_id \<and>*
+         si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
+         si_cap_at t dup_caps spec dev obj_id \<and>*
          object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s \<rbrace>
       seL4_CNode_Mutate dest_root (of_nat slot) (of_nat (object_size_bits spec_obj))
                      seL4_CapInitThreadCNode src_index 32 data
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
         si_null_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
@@ -1072,28 +1090,33 @@ lemma seL4_CNode_Mutate_object_slot_initialised_sep:
        apply (clarsimp simp: si_cap_at_def sep_conj_exists)
       apply (clarsimp simp: si_cap_at_def sep_conj_exists)
     apply (sep_drule (direct) si_cap_at_less_si_cnode_size [where cap_ptr = src_index
-                 and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t dup_caps spec obj_id \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"])
+                 and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t dup_caps spec (is_device_cap spec_cap) obj_id \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"])
        apply (fastforce simp: sep_conj_ac)
    apply clarsimp
      apply (sep_drule (direct) si_cap_at_less_si_cnode_size [where cap_ptr = dest_root and t=t and spec=spec
-                   and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t orig_caps spec (cap_object spec_cap) \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"] )
+                   and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t orig_caps spec (is_device_cap spec_cap) (cap_object spec_cap) \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"] )
       apply (fastforce simp: sep_conj_ac)
      apply clarsimp+
   done
 
+lemma irq_handler_cap_not_device[simp]:
+ "is_irqhandler_cap y \<Longrightarrow> is_device_cap y = False"
+ by (auto simp:is_device_cap_def split:cdl_cap.splits)
+
 lemma init_cnode_slot_move_original_sep:
   "\<lbrakk>well_formed spec; cnode_at obj_id spec;
-    original_cap_at (obj_id, slot) spec\<rbrakk> \<Longrightarrow>
+    original_cap_at (obj_id, slot) spec;
+    cap_at (\<lambda>c. is_device_cap c = dev) (obj_id, slot)  spec\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>cnode_slot_half_initialised spec t obj_id slot \<and>*
-     si_obj_cap_at t orig_caps spec obj_id slot \<and>*
+     si_obj_cap_at t orig_caps spec dev obj_id slot \<and>*
      si_spec_irq_cap_at irq_caps spec obj_id slot \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> \<rbrace>
    init_cnode_slot spec orig_caps dup_caps irq_caps Move obj_id slot
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
         si_spec_obj_null_cap_at t orig_caps spec obj_id slot \<and>*
         si_spec_irq_null_cap_at irq_caps spec obj_id slot \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (subst cnode_slot_half_initialised_original_slot, assumption+)
   apply (frule cnode_at_not_tcb_at)
@@ -1140,7 +1163,6 @@ lemma init_cnode_slot_move_original_sep:
 
   (* Case: cap_at is_irqhandler_cap (obj_id, slot) spec *)
   apply (frule (3) well_formed_cap_no_object_irqhandler_cap)
-  apply (subst si_obj_cap_at_empty_cap_has_object, assumption)
   apply (clarsimp simp: cap_at_def)
   apply (rename_tac cap)
   apply (clarsimp simp: init_cnode_slot_def)
@@ -1166,7 +1188,7 @@ lemma init_cnode_slot_move_not_original_inv:
 
 lemma si_obj_cap_at_si_spec_obj_null_cap_at_not_original:
   "\<lbrakk>\<not> original_cap_at (obj_id, slot) spec\<rbrakk>
-  \<Longrightarrow> si_obj_cap_at t si_caps spec obj_id slot =
+  \<Longrightarrow> si_obj_cap_at t si_caps spec dev obj_id slot =
       si_spec_obj_null_cap_at t si_caps spec obj_id slot"
   by (clarsimp simp: si_obj_cap_at_def si_spec_obj_null_cap_at_def)
 
@@ -1174,15 +1196,15 @@ lemma init_cnode_slot_move_not_original_sep:
   "\<lbrakk>well_formed spec; cnode_at obj_id spec;
     \<not> original_cap_at (obj_id, slot) spec\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>cnode_slot_half_initialised spec t obj_id slot \<and>*
-     si_obj_cap_at t orig_caps spec obj_id slot \<and>*
+     si_obj_cap_at t orig_caps spec dev obj_id slot \<and>*
      si_spec_irq_cap_at irq_caps spec obj_id slot \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> \<rbrace>
    init_cnode_slot spec orig_caps dup_caps irq_caps Move obj_id slot
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
         si_spec_obj_null_cap_at t orig_caps spec obj_id slot \<and>*
         si_spec_irq_null_cap_at irq_caps spec obj_id slot \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (wp init_cnode_slot_move_not_original_inv, simp)
   apply (subst (asm) cnode_slot_half_initialised_not_original_slot, assumption+)
@@ -1191,17 +1213,17 @@ lemma init_cnode_slot_move_not_original_sep:
   done
 
 lemma init_cnode_slot_move_sep:
-  "\<lbrakk>well_formed spec; cnode_at obj_id spec\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>well_formed spec; cnode_at obj_id spec;cap_at (\<lambda>c. is_device_cap c = dev) (obj_id, slot) spec\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>cnode_slot_half_initialised spec t obj_id slot \<and>*
-     si_obj_cap_at t orig_caps spec obj_id slot \<and>*
+     si_obj_cap_at t orig_caps spec dev obj_id slot \<and>*
      si_spec_irq_cap_at irq_caps spec obj_id slot \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> \<rbrace>
    init_cnode_slot spec orig_caps dup_caps irq_caps Move obj_id slot
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
         si_spec_obj_null_cap_at t orig_caps spec obj_id slot \<and>*
         si_spec_irq_null_cap_at irq_caps spec obj_id slot \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (case_tac "original_cap_at (obj_id, slot) spec")
    apply (wp init_cnode_slot_move_original_sep, simp+)
@@ -1209,17 +1231,18 @@ lemma init_cnode_slot_move_sep:
   done
 
 lemma init_cnode_slots_move_sep:
-  "\<lbrakk>well_formed spec; cnode_at obj_id spec\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>well_formed spec; cnode_at obj_id spec;
+    \<forall>slot\<in> dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = dev) (obj_id,slot) spec\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>cnode_slots_half_initialised spec t obj_id \<and>*
-     si_obj_caps_at t orig_caps spec obj_id \<and>*
+     si_obj_caps_at t orig_caps spec dev obj_id \<and>*
      si_spec_irq_caps_at irq_caps spec obj_id \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>
    init_cnode spec orig_caps dup_caps irq_caps Move obj_id
    \<lbrace>\<lambda>_.\<guillemotleft>object_slots_initialised spec t obj_id \<and>*
         si_spec_obj_null_caps_at t orig_caps spec obj_id \<and>*
         si_spec_irq_null_caps_at irq_caps spec obj_id \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (simp add: init_cnode_def si_obj_caps_at_def si_spec_obj_null_caps_at_def
@@ -1232,17 +1255,18 @@ lemma init_cnode_slots_move_sep:
   apply (rule hoare_chain)
     apply (rule_tac mapM_x_set_sep [where
                P="\<lambda>slot. cnode_slot_half_initialised spec t obj_id slot \<and>*
-                  si_obj_cap_at t orig_caps spec obj_id slot \<and>*
+                  si_obj_cap_at t orig_caps spec dev obj_id slot \<and>*
                   si_spec_irq_cap_at irq_caps spec obj_id slot" and
                Q="\<lambda>slot. object_slot_initialised spec t obj_id slot \<and>*
                   si_spec_obj_null_cap_at t orig_caps spec obj_id slot \<and>*
                   si_spec_irq_null_cap_at irq_caps spec obj_id slot" and
-               I="si_cap_at t dup_caps spec obj_id \<and>*
+               I="si_cap_at t dup_caps spec dev obj_id \<and>*
                   object_fields_empty spec t obj_id \<and>*
                   si_objects \<and>* object_empty_slots_initialised spec t obj_id" and
                xs="slots_of_list spec obj_id",
                simplified sep_conj_assoc], clarsimp+)
      apply (wp init_cnode_slot_move_sep, simp+)
+     apply fastforce
    apply (subst sep.setprod.distrib)+
    apply (clarsimp simp: sep_conj_assoc fun_eq_iff)
    apply sep_solve
@@ -1253,17 +1277,18 @@ lemma init_cnode_slots_move_sep:
   done
 
 lemma init_cnode_move_sep:
-  "\<lbrakk>well_formed spec; cnode_at obj_id spec\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>well_formed spec; cnode_at obj_id spec;
+   \<forall>slot\<in>dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = dev) (obj_id, slot) spec\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>cnode_half_initialised spec t obj_id \<and>*
-     si_obj_caps_at t orig_caps spec obj_id \<and>*
+     si_obj_caps_at t orig_caps spec dev obj_id \<and>*
      si_spec_irq_caps_at irq_caps spec obj_id \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>
    init_cnode spec orig_caps dup_caps irq_caps Move obj_id
    \<lbrace>\<lambda>_.\<guillemotleft>object_initialised spec t obj_id \<and>*
         si_spec_obj_null_caps_at t orig_caps spec obj_id \<and>*
         si_spec_irq_null_caps_at irq_caps spec obj_id \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (subst object_initialised_decomp, subst cnode_half_initialised_decomp)
@@ -1276,18 +1301,20 @@ lemma init_cnode_move_sep:
 
 lemma init_cspace_move_sep:
   "\<lbrace>\<guillemotleft>cnodes_half_initialised spec t cnode_set \<and>*
-    si_objs_caps_at t orig_caps spec cnode_set \<and>*
+    si_objs_caps_at t orig_caps spec dev cnode_set \<and>*
     si_spec_irqs_caps_at irq_caps spec cnode_set \<and>*
-    si_caps_at t dup_caps spec cnode_set \<and>*
+    si_caps_at t dup_caps spec dev cnode_set \<and>*
     si_objects \<and>* R\<guillemotright> and K(
     well_formed spec \<and>
-    (\<forall>obj_id \<in> set cnode_list. cnode_at obj_id spec) \<and>
-    distinct cnode_list \<and> cnode_set = set cnode_list)\<rbrace>
+    (\<forall>obj_id \<in> set cnode_list. 
+     (cnode_at obj_id spec \<and> 
+     (\<forall>slot\<in>dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = dev) (obj_id, slot) spec)))
+    \<and> distinct cnode_list \<and> cnode_set = set cnode_list)\<rbrace>
      mapM_x (init_cnode spec orig_caps dup_caps irq_caps Move) cnode_list
    \<lbrace>\<lambda>_. \<guillemotleft>objects_initialised spec t cnode_set \<and>*
          si_spec_objs_null_caps_at t orig_caps spec cnode_set \<and>*
          si_spec_irqs_null_caps_at irq_caps spec cnode_set \<and>*
-         si_caps_at t dup_caps spec cnode_set \<and>*
+         si_caps_at t dup_caps spec dev cnode_set \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: cnodes_half_initialised_def objects_initialised_def si_caps_at_def
@@ -1297,13 +1324,13 @@ lemma init_cspace_move_sep:
   apply (rule hoare_chain)
     apply (rule_tac R=R in mapM_x_set_sep [where
                     P="\<lambda>obj_id. cnode_half_initialised spec t obj_id \<and>*
-                       si_obj_caps_at t orig_caps spec obj_id \<and>*
+                       si_obj_caps_at t orig_caps spec dev obj_id \<and>*
                        si_spec_irq_caps_at irq_caps spec obj_id \<and>*
-                       si_cap_at t dup_caps spec obj_id" and
+                       si_cap_at t dup_caps spec dev obj_id" and
                     Q="\<lambda>obj_id. object_initialised spec t obj_id \<and>*
                        si_spec_obj_null_caps_at t orig_caps spec obj_id \<and>*
                        si_spec_irq_null_caps_at irq_caps spec obj_id \<and>*
-                       si_cap_at t dup_caps spec obj_id" and
+                       si_cap_at t dup_caps spec dev obj_id" and
                     I="si_objects" and
                     xs="cnode_list", simplified sep_conj_assoc], simp)
      apply (wp init_cnode_move_sep, simp+)
@@ -1328,6 +1355,7 @@ lemma seL4_CNode_Mint_object_slot_initialised_sep_helper:
     valid_src_cap spec_cap data;
     cap_has_object spec_cap;
     cap_type spec_cap = Some type;
+    is_device_cap spec_cap = dev;
     data = cap_data spec_cap; rights = cap_rights spec_cap;
     well_formed spec; cnode_at obj_id spec;
     cdl_objects spec obj_id = Some spec_obj;
@@ -1341,24 +1369,24 @@ lemma seL4_CNode_Mint_object_slot_initialised_sep_helper:
     Some dest_root = dup_caps obj_id;
     Some src_index = orig_caps (cap_object spec_cap)\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
-     si_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> \<rbrace>
    seL4_CNode_Mint dest_root (of_nat slot) (of_nat (object_size_bits spec_obj))
                    seL4_CapInitThreadCNode src_index 32 rights data
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
-        si_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_chain)
    apply (cut_tac cnode_cap = si_cspace_cap
               and cnode_cap' = si_cnode_cap
-              and dest_root_cap = "default_cap CNodeType {dest_id} (object_size_bits spec_obj)"
+              and dest_root_cap = "default_cap CNodeType {dest_id} (object_size_bits spec_obj) False"
               and root_size=si_cnode_size
               and src_root=seL4_CapInitThreadCNode
               and src_depth=32
               and tcb=root_tcb
-              and src_cap = "default_cap type {client_object_id} (object_size_bits spec_cap_obj)"
+              and src_cap = "default_cap type {client_object_id} (object_size_bits spec_cap_obj) dev"
                in seL4_CNode_Mint_sep,
                (assumption|simp add: ep_related_cap_default_cap get_index_def
                  default_cap_has_type ep_related_cap_badge_of_default)+)
@@ -1386,19 +1414,20 @@ lemma seL4_CNode_Mint_object_slot_initialised_sep:
         valid_src_cap spec_cap data \<and>
         cap_has_object spec_cap \<and>
         cap_has_type spec_cap \<and>
+        is_device_cap spec_cap = dev \<and>
         cdl_objects spec (cap_object spec_cap) = Some spec_cap_obj \<and>
         (is_cnode_cap spec_cap \<longrightarrow> object_size_bits spec_cap_obj = cnode_cap_size spec_cap) \<and>
         Some dest_root = dup_caps obj_id \<and>
         Some src_index = orig_caps (cap_object spec_cap) \<and>
         \<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
-         si_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-         si_cap_at t dup_caps spec obj_id \<and>*
+         si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
+         si_cap_at t dup_caps spec dev obj_id \<and>*
          object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s \<rbrace>
      seL4_CNode_Mint dest_root (of_nat slot) (of_nat (object_size_bits spec_obj))
                      seL4_CapInitThreadCNode src_index 32 rights data
    \<lbrace>\<lambda>_ s. \<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
-           si_cap_at t orig_caps spec (cap_object spec_cap) \<and>*
-           si_cap_at t dup_caps spec obj_id \<and>*
+           si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
+           si_cap_at t dup_caps spec dev obj_id \<and>*
            object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> s\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
@@ -1410,11 +1439,11 @@ lemma seL4_CNode_Mint_object_slot_initialised_sep:
      apply (clarsimp simp: si_cap_at_def sep_conj_exists)
 (* Why doesn't sep_drule work when you don't mention s? *)
     apply (sep_drule (direct) si_cap_at_less_si_cnode_size [where cap_ptr = src_index
-                 and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t dup_caps spec obj_id \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"])
+                 and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t dup_caps spec (is_device_cap spec_cap) obj_id \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"])
        apply (fastforce simp: sep_conj_ac)
       apply clarsimp
      apply (sep_drule (direct) si_cap_at_less_si_cnode_size [where cap_ptr = dest_root and t=t and spec=spec
-                   and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t orig_caps spec (cap_object spec_cap) \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"])
+                   and R="object_slot_empty spec t obj_id slot \<and>* si_cap_at t orig_caps spec (is_device_cap spec_cap) (cap_object spec_cap) \<and>* object_fields_empty spec t obj_id \<and>* si_objects \<and>* R"])
       apply (fastforce simp: sep_conj_ac)
      apply clarsimp+
   done
@@ -1424,16 +1453,16 @@ lemma init_cnode_slot_copy_not_original_sep_helper:
     original_cap_at (orig_obj_id, orig_slot) spec;
     opt_cap (obj_id, slot) spec = Some cap; cap \<noteq> NullCap;
     opt_cap (orig_obj_id, orig_slot) spec = Some orig_cap; orig_cap \<noteq> NullCap;
-    cap_has_object cap; cap_has_object orig_cap;
+    cap_has_object cap; cap_has_object orig_cap; is_device_cap cap = dev;
     cap_object orig_cap = cap_object cap\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
-     si_obj_cap_at t orig_caps spec orig_obj_id orig_slot \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_obj_cap_at t orig_caps spec dev orig_obj_id orig_slot \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright> \<rbrace>
    init_cnode_slot spec orig_caps dup_caps irq_caps Copy obj_id slot
    \<lbrace>\<lambda>_.\<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
-        si_obj_cap_at t orig_caps spec orig_obj_id orig_slot \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_obj_cap_at t orig_caps spec dev orig_obj_id orig_slot \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (clarsimp simp: si_obj_cap_at_def si_obj_cap_at'_def)
@@ -1451,15 +1480,15 @@ lemma init_cnode_slot_copy_not_original_sep_helper:
 
 lemma init_cnode_slot_copy_not_original_sep:
   "\<lbrakk>well_formed spec; obj_id \<in> cnodes; \<not> original_cap_at (obj_id, slot) spec;
-    cnodes = {obj_id. cnode_at obj_id spec}\<rbrakk> \<Longrightarrow>
+    cnodes = {obj_id. cnode_at obj_id spec}; cap_at (\<lambda>c. is_device_cap c = dev) (obj_id, slot) spec\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
-     si_objs_caps_at t orig_caps spec cnodes \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_objs_caps_at t orig_caps spec dev cnodes \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>
      init_cnode_slot spec orig_caps dup_caps irq_caps Copy obj_id slot
    \<lbrace>\<lambda>_. \<guillemotleft>object_slot_initialised spec t obj_id slot \<and>*
-         si_objs_caps_at t orig_caps spec cnodes \<and>*
-         si_cap_at t dup_caps spec obj_id \<and>*
+         si_objs_caps_at t orig_caps spec dev cnodes \<and>*
+         si_cap_at t dup_caps spec dev obj_id \<and>*
          object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (clarsimp, rename_tac spec_obj)
@@ -1488,15 +1517,15 @@ lemma init_cnode_slot_copy_not_original_sep:
    apply (rename_tac cap)
    (* Rearrange to work with the sep_list_conj_map_singleton_wp rule. *)
    apply (rule hoare_chain [where P="\<guillemotleft>(object_slot_empty spec t obj_id slot \<and>*
-                                       si_cap_at t dup_caps spec obj_id \<and>*
+                                       si_cap_at t dup_caps spec dev obj_id \<and>*
                                        object_fields_empty spec t obj_id \<and>*
                                        si_objects) \<and>*
-                                      si_objs_caps_at t orig_caps spec {obj_id. cnode_at obj_id spec} \<and>* R\<guillemotright>"
+                                      si_objs_caps_at t orig_caps spec dev {obj_id. cnode_at obj_id spec} \<and>* R\<guillemotright>"
                           and Q="\<lambda>_. \<guillemotleft>(object_slot_initialised spec t obj_id slot \<and>*
-                                       si_cap_at t dup_caps spec obj_id \<and>*
+                                       si_cap_at t dup_caps spec dev obj_id \<and>*
                                        object_fields_empty spec t obj_id \<and>*
                                        si_objects) \<and>*
-                                      si_objs_caps_at t orig_caps spec {obj_id. cnode_at obj_id spec} \<and>* R\<guillemotright>"])
+                                      si_objs_caps_at t orig_caps spec dev {obj_id. cnode_at obj_id spec} \<and>* R\<guillemotright>"])
      apply (frule (3) well_formed_cdt)
      apply (clarsimp simp: si_objs_caps_at_def)
      apply (rule_tac x=orig_obj_id in sep_set_conj_map_singleton_wp, simp)
@@ -1514,16 +1543,16 @@ lemma init_cnode_slot_copy_not_original_sep:
   done
 
 lemma init_cnode_slot_copy_sep:
-  "\<lbrakk>well_formed spec; obj_id \<in> cnodes;
+  "\<lbrakk>well_formed spec; obj_id \<in> cnodes;cap_at (\<lambda>c. is_device_cap c = dev) (obj_id, slot) spec;
     cnodes = {obj_id. cnode_at obj_id spec}\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slot_empty spec t obj_id slot \<and>*
-     si_objs_caps_at t orig_caps spec cnodes \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_objs_caps_at t orig_caps spec dev cnodes \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>
    init_cnode_slot spec orig_caps dup_caps irq_caps Copy obj_id slot
    \<lbrace>\<lambda>_.\<guillemotleft>cnode_slot_half_initialised spec t obj_id slot \<and>*
-        si_objs_caps_at t orig_caps spec cnodes \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_objs_caps_at t orig_caps spec dev cnodes \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (case_tac "original_cap_at (obj_id, slot) spec")
    apply (wp init_cnode_slot_copy_original_sep, simp+)
@@ -1534,15 +1563,16 @@ lemma init_cnode_slot_copy_sep:
 
 lemma init_cnode_slots_copy_sep:
   "\<lbrakk>well_formed spec; obj_id \<in> cnodes;
+    \<forall>slot\<in> dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = dev) (obj_id,slot) spec;
     cnodes = {obj_id. cnode_at obj_id spec}\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slots_empty spec t obj_id \<and>*
-     si_objs_caps_at t orig_caps spec cnodes \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_objs_caps_at t orig_caps spec dev cnodes \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>
    init_cnode spec orig_caps dup_caps irq_caps Copy obj_id
    \<lbrace>\<lambda>_.\<guillemotleft>cnode_slots_half_initialised spec t obj_id \<and>*
-        si_objs_caps_at t orig_caps spec cnodes \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_objs_caps_at t orig_caps spec dev cnodes \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (simp add: init_cnode_def si_obj_caps_at_def)
@@ -1556,8 +1586,8 @@ lemma init_cnode_slots_copy_sep:
     apply (rule_tac mapM_x_set_sep [where
                P="\<lambda>slot. object_slot_empty spec t obj_id slot" and
                Q="\<lambda>slot. cnode_slot_half_initialised spec t obj_id slot" and
-               I="si_objs_caps_at t orig_caps spec cnodes \<and>*
-                  si_cap_at t dup_caps spec obj_id \<and>*
+               I="si_objs_caps_at t orig_caps spec dev cnodes \<and>*
+                  si_cap_at t dup_caps spec dev obj_id \<and>*
                   object_fields_empty spec t obj_id \<and>*
                   si_objects \<and>* object_empty_slots_initialised spec t obj_id" and
                xs="slots_of_list spec obj_id",
@@ -1567,16 +1597,17 @@ lemma init_cnode_slots_copy_sep:
   done
 
 lemma init_cnode_copy_sep:
-  "\<lbrakk>well_formed spec; obj_id \<in> cnodes;
+  "\<lbrakk>well_formed spec; obj_id \<in> cnodes; 
+    \<forall>slot\<in> dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = dev) (obj_id,slot) spec;
     cnodes = {obj_id. cnode_at obj_id spec}\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_empty spec t obj_id \<and>*
-     si_objs_caps_at t orig_caps spec cnodes \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_objs_caps_at t orig_caps spec dev cnodes \<and>*
+     si_cap_at t dup_caps spec dev obj_id \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>
    init_cnode spec orig_caps dup_caps irq_caps Copy obj_id
    \<lbrace>\<lambda>_.\<guillemotleft>cnode_half_initialised spec t obj_id \<and>*
-        si_objs_caps_at t orig_caps spec cnodes \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_objs_caps_at t orig_caps spec dev cnodes \<and>*
+        si_cap_at t dup_caps spec dev obj_id \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (subst object_empty_decomp, subst cnode_half_initialised_decomp)
@@ -1587,18 +1618,19 @@ lemma init_cnode_copy_sep:
 
 lemma init_cspace_copy_sep:
   "\<lbrace>\<guillemotleft>objects_empty spec t cnode_set \<and>*
-     si_objs_caps_at t orig_caps spec cnode_set \<and>*
+     si_objs_caps_at t orig_caps spec dev cnode_set \<and>*
      si_spec_irqs_caps_at irq_caps spec cnode_set \<and>*
-     si_caps_at t dup_caps spec cnode_set \<and>*
+     si_caps_at t dup_caps spec dev cnode_set \<and>*
      si_objects \<and>* R\<guillemotright> and K(
     well_formed spec \<and>
     distinct cnode_list \<and> cnode_set = set cnode_list \<and>
-    set cnode_list = {obj_id. cnode_at obj_id spec})\<rbrace>
+    set cnode_list = {obj_id. cnode_at obj_id spec} 
+    \<and> (\<forall>obj_id\<in>cnode_set. \<forall>slot\<in> dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = dev) (obj_id,slot) spec))\<rbrace>
    mapM_x (init_cnode spec orig_caps dup_caps irq_caps Copy) cnode_list
    \<lbrace>\<lambda>_.\<guillemotleft>cnodes_half_initialised spec t cnode_set \<and>*
-        si_objs_caps_at t orig_caps spec cnode_set \<and>*
+        si_objs_caps_at t orig_caps spec dev cnode_set \<and>*
         si_spec_irqs_caps_at irq_caps spec cnode_set \<and>*
-        si_caps_at t dup_caps spec cnode_set \<and>*
+        si_caps_at t dup_caps spec dev cnode_set \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: cnodes_half_initialised_def objects_empty_def
@@ -1608,16 +1640,16 @@ lemma init_cspace_copy_sep:
     apply (rule_tac R=R in
                mapM_x_set_sep [where
                P="\<lambda>obj_id. object_empty spec t obj_id \<and>*
-                  si_cap_at t dup_caps spec obj_id" and
+                  si_cap_at t dup_caps spec dev obj_id" and
                Q="\<lambda>obj_id. cnode_half_initialised spec t obj_id \<and>*
-                  si_cap_at t dup_caps spec obj_id" and
+                  si_cap_at t dup_caps spec dev obj_id" and
                I="si_spec_irqs_caps_at irq_caps spec (set cnode_list) \<and>*
-                  si_objs_caps_at t orig_caps spec (set cnode_list) \<and>*
-                  si_objects" and
+                  si_objs_caps_at t orig_caps spec dev (set cnode_list) \<and>*
+                  si_objects"  and
                xs="cnode_list",
                simplified sep_conj_assoc], simp+)
     apply (rule hoare_chain)
-    apply (wp init_cnode_copy_sep [where t=t and cnodes="set cnode_list"], simp+)
+    apply (wp init_cnode_copy_sep [where t=t and cnodes="set cnode_list" and dev = dev],simp+)
     apply sep_solve
    apply clarsimp
    apply sep_solve
@@ -1631,19 +1663,20 @@ lemma init_cspace_copy_sep:
 
 lemma init_cspace_sep':
   "\<lbrace>\<guillemotleft>objects_empty spec t cnodes \<and>*
-     si_objs_caps_at t orig_caps spec cnodes \<and>*
+     si_objs_caps_at t orig_caps spec dev cnodes \<and>*
      si_spec_irqs_caps_at irq_caps spec cnodes \<and>*
-     si_caps_at t dup_caps spec cnodes \<and>*
+     si_caps_at t dup_caps spec dev cnodes \<and>*
      si_objects \<and>* R\<guillemotright> and K(
      well_formed spec \<and>
      set obj_ids = dom (cdl_objects spec) \<and>
      distinct obj_ids \<and>
-     cnodes = {obj_id. cnode_at obj_id spec})\<rbrace>
+     cnodes = {obj_id. cnode_at obj_id spec} \<and>
+     (\<forall>obj_id\<in> cnodes. \<forall>slot\<in> dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = dev) (obj_id,slot) spec))\<rbrace>
    init_cspace spec orig_caps dup_caps irq_caps obj_ids
    \<lbrace>\<lambda>_.\<guillemotleft>objects_initialised spec t cnodes \<and>*
         si_spec_objs_null_caps_at t orig_caps spec cnodes \<and>*
         si_spec_irqs_null_caps_at irq_caps spec cnodes \<and>*
-        si_caps_at t dup_caps spec cnodes \<and>*
+        si_caps_at t dup_caps spec dev cnodes \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (unfold init_cspace_def)
@@ -1658,15 +1691,15 @@ lemma hoare_subst:
 
 
 lemma si_caps_at_filter:
-  "si_caps_at t si_caps spec (set xs) =
-  (si_caps_at t si_caps spec (set [x\<leftarrow>xs. P x]) \<and>* si_caps_at t si_caps spec (set [x\<leftarrow>xs. \<not>P x]))"
+  "si_caps_at t si_caps spec dev (set xs) =
+  (si_caps_at t si_caps spec dev (set [x\<leftarrow>xs. P x]) \<and>* si_caps_at t si_caps spec dev (set [x\<leftarrow>xs. \<not>P x]))"
   apply (clarsimp simp: si_caps_at_def)
   apply (subst sep.setprod.union_disjoint [symmetric], (fastforce simp: union_filter)+)
   done
 
 lemma si_caps_at_restrict:
-  "si_caps_at t si_caps spec xs =
-  (si_caps_at t si_caps spec {x \<in> xs. P x} \<and>* si_caps_at t si_caps spec {x \<in> xs. \<not>P x})"
+  "si_caps_at t si_caps spec dev xs =
+  (si_caps_at t si_caps spec dev {x \<in> xs. P x} \<and>* si_caps_at t si_caps spec dev {x \<in> xs. \<not>P x})"
   by (clarsimp simp: si_caps_at_def sep_map_set_conj_restrict)
 
 lemma length_Un_disjoint:
@@ -1684,11 +1717,19 @@ lemma sep_map_set_conj_set_cong:
   "\<lbrakk>sep_map_set_conj f xs s; xs = ys\<rbrakk> \<Longrightarrow> sep_map_set_conj f ys s"
   by simp
 
+lemma wellformed_no_dev:
+  "well_formed spec \<Longrightarrow>(\<forall>obj_id. cnode_at obj_id spec \<longrightarrow>
+                       (\<forall>slot\<in>dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = False) (obj_id, slot) spec))"
+   apply (simp add:well_formed_def cap_at_def del:split_paired_All)
+   apply (intro allI impI ballI)
+   apply  (clarsimp simp:dom_def slots_of_def opt_cap_def)
+   done
+
 lemma init_cspace_sep:
   "\<lbrace>\<guillemotleft>objects_empty spec t {obj_id. cnode_at obj_id spec} \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_irq_caps_at irq_caps spec (used_irqs spec) \<and>*
-     si_caps_at t dup_caps spec {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
+     si_caps_at t dup_caps spec False {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and K(
      well_formed spec \<and>
      set obj_ids = dom (cdl_objects spec) \<and>
@@ -1696,11 +1737,12 @@ lemma init_cspace_sep:
      distinct free_cptrs \<and>
      orig_caps = map_of (zip [obj\<leftarrow>obj_ids. real_object_at obj spec] free_cptrs) \<and>
      irq_caps = map_of (zip (used_irq_list spec) (drop (card {obj_id. real_object_at obj_id spec}) free_cptrs)) \<and>
-     length obj_ids \<le> length free_cptrs)\<rbrace>
+     length obj_ids \<le> length free_cptrs
+     )\<rbrace>
    init_cspace spec orig_caps dup_caps irq_caps obj_ids
    \<lbrace>\<lambda>_. \<guillemotleft>objects_initialised spec t {obj_id. cnode_at obj_id spec} \<and>*
         (\<And>* cptr \<in> set (take (card (dom (cdl_objects spec))) free_cptrs). (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-         si_caps_at t dup_caps spec {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
+         si_caps_at t dup_caps spec False {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
   apply (frule well_formed_inj_cdl_irq_node)
@@ -1717,8 +1759,10 @@ lemma init_cspace_sep:
                cnode_ids = "{obj_id. cnode_at obj_id spec}", symmetric], simp+)
   apply (subst si_caps_at_restrict [where P="\<lambda>ref. cnode_at ref spec" and
                                            xs="{obj_id. cnode_or_tcb_at obj_id spec}"])+
-  apply (wp sep_wp: init_cspace_sep'[where t=t and cnodes="set [obj\<leftarrow>obj_ids. cnode_at obj spec]"])
-  apply (clarsimp simp: cnode_or_tcb_at_simps)
+  apply (wp sep_wp: init_cspace_sep'[where t=t and dev=False and cnodes="set [obj\<leftarrow>obj_ids. cnode_at obj spec]"])
+  apply (clarsimp simp: cnode_or_tcb_at_simps wellformed_no_dev)
+  apply (frule wellformed_no_dev)
+   apply simp
   apply sep_cancel+
   apply (sep_drule si_null_caps_at_simplified [where
                        obj_ids = "[obj\<leftarrow>obj_ids. real_object_at obj spec]"

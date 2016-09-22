@@ -5771,7 +5771,7 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
 qed   
 
 crunch tcb_in_cur_domain'[wp]: updateCap "tcb_in_cur_domain' t"
-  (wp: crunch_wps simp: crunch_simps lift: tcb_in_cur_domain'_lift)
+  (wp: crunch_wps simp: crunch_simps rule: tcb_in_cur_domain'_lift)
 
 lemma make_zombie_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> s \<turnstile>' cap \<and>
@@ -9571,7 +9571,7 @@ lemma updateCap_noop_irq_handlers:
   done
 
 crunch ct_idle_or_in_cur_domain'[wp]: updateCap ct_idle_or_in_cur_domain'
-  (lift: ct_idle_or_in_cur_domain'_lift2)
+  (rule: ct_idle_or_in_cur_domain'_lift2)
 
 lemma updateCap_noop_invs:
   "\<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot\<rbrace>

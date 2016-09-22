@@ -65,7 +65,7 @@ definition
                    tcb_vspace_slot \<mapsto> PageDirectoryCap pd_a_id Real None,
                    tcb_replycap_slot \<mapsto> NullCap,
                    tcb_caller_slot \<mapsto> NullCap,
-                   tcb_ipcbuffer_slot \<mapsto> FrameCap frame_a1_id {AllowRead, AllowWrite} small_frame_size Real None,
+                   tcb_ipcbuffer_slot \<mapsto> FrameCap False frame_a1_id {AllowRead, AllowWrite} small_frame_size Real None,
                    tcb_pending_op_slot \<mapsto> NullCap,
                    tcb_boundntfn_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
@@ -80,7 +80,7 @@ definition
                    tcb_vspace_slot \<mapsto> PageDirectoryCap pd_b_id Real None,
                    tcb_replycap_slot \<mapsto> NullCap,
                    tcb_caller_slot \<mapsto> NullCap,
-                   tcb_ipcbuffer_slot \<mapsto> FrameCap frame_b_id {AllowRead, AllowWrite} small_section_size Real None,
+                   tcb_ipcbuffer_slot \<mapsto> FrameCap False frame_b_id {AllowRead, AllowWrite} small_section_size Real None,
                    tcb_pending_op_slot \<mapsto> NullCap,
                    tcb_boundntfn_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
@@ -110,9 +110,9 @@ definition
               2 \<mapsto> CNodeCap cnode_a1_id guard guard_size cnode_a1_size,
               3 \<mapsto> PageDirectoryCap pd_a_id Real None,
               4 \<mapsto> PageTableCap pt_a_id Real None,
-              8 \<mapsto> FrameCap frame_a1_id {AllowRead, AllowWrite} small_frame_size Real None,
+              8 \<mapsto> FrameCap False frame_a1_id {AllowRead, AllowWrite} small_frame_size Real None,
               10 \<mapsto> NotificationCap ntfn_id 0 {Read},
-              11 \<mapsto> FrameCap frame_a2_id {AllowRead, AllowWrite} small_frame_size Real None,
+              11 \<mapsto> FrameCap False frame_a2_id {AllowRead, AllowWrite} small_frame_size Real None,
               12 \<mapsto> IrqHandlerCap 4]"
 
 definition
@@ -122,7 +122,7 @@ definition
               2 \<mapsto> CNodeCap cnode_b_id guard guard_size cnode_b_size,
               4 \<mapsto> EndpointCap ep_id 0 {Read},
               7 \<mapsto> PageDirectoryCap pd_b_id Real None,
-              8 \<mapsto> FrameCap frame_b_id {AllowRead, AllowWrite} small_section_size Real None,
+              8 \<mapsto> FrameCap False frame_b_id {AllowRead, AllowWrite} small_section_size Real None,
               254 \<mapsto> IrqHandlerCap 254]"
 
 definition
@@ -137,12 +137,12 @@ definition
 
 definition
   "pd_b \<equiv> \<lparr>cdl_page_directory_caps = new_cap_map pd_size
-           [2 \<mapsto> FrameCap frame_b_id {AllowRead, AllowWrite} small_section_size Fake None]\<rparr>"
+           [2 \<mapsto> FrameCap False frame_b_id {AllowRead, AllowWrite} small_section_size Fake None]\<rparr>"
 
 definition
   "pt_a \<equiv> \<lparr>cdl_page_table_caps = new_cap_map pt_size
-           [0 \<mapsto> FrameCap frame_a1_id {AllowRead, AllowWrite} small_frame_size Fake None,
-            255 \<mapsto> FrameCap frame_a2_id {AllowRead, AllowWrite} small_frame_size Fake None]\<rparr>"
+           [0 \<mapsto> FrameCap False frame_a1_id {AllowRead, AllowWrite} small_frame_size Fake None,
+            255 \<mapsto> FrameCap False frame_a2_id {AllowRead, AllowWrite} small_frame_size Fake None]\<rparr>"
 
 definition
   "empty_frame \<equiv> \<lparr>cdl_frame_size_bits = small_frame_size\<rparr>"
@@ -265,7 +265,7 @@ lemma is_fake_pt_cap_simps:
   by (clarsimp simp: is_fake_pt_cap_def)+
 
 lemma frame_cap_not_cnode:
-  "\<not>is_cnode_cap (FrameCap a b c d e)"
+  "\<not>is_cnode_cap (FrameCap dev a b c d e)"
   by (clarsimp simp: cap_type_def)
 
 lemma empty_cap_map_NullCap [simp]:
@@ -892,8 +892,8 @@ lemma well_formed_example:
   apply (clarsimp simp: cnode_at_example_spec)
   by (auto simp: example_spec_def object_size_bits_def object_default_state_def2
                     pd_size_def word_bits_def empty_cnode_def is_cnode_def
-                    object_slots_def empty_cap_map_def tcb_slot_defs
-                    default_tcb_def obj_defs
+                    object_slots_def empty_cap_map_def tcb_slot_defs slots_of_def
+                    default_tcb_def obj_defs cap_at_def opt_cap_def opt_object_def
                     small_frame_size_def small_section_size_def pt_size_def
                     new_cnode_def new_cap_map_def empty_irq_node_def
                     new_irq_node_def

@@ -74,3 +74,4 @@ There are three ARM-specific object types: virtual pages, page tables, and page 
 > isFrameType SectionObject = True
 > isFrameType SuperSectionObject = True
 > isFrameType _ = False
+

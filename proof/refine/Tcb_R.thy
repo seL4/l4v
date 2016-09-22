@@ -337,7 +337,7 @@ lemma readreg_corres:
   done
 
 crunch sch_act_simple [wp]: asUser "sch_act_simple"
-  (lift: sch_act_simple_lift)
+  (rule: sch_act_simple_lift)
 
 lemma writereg_corres:
   "corres (intr \<oplus> op =) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
@@ -1032,7 +1032,7 @@ lemma assertDerived_wp:
   done
 
 crunch sch_act_simple[wp]: setPriority sch_act_simple
-  (wp: ssa_sch_act_simple crunch_wps lift: sch_act_simple_lift simp: crunch_simps)
+  (wp: ssa_sch_act_simple crunch_wps rule: sch_act_simple_lift simp: crunch_simps)
 
 (* For some reason, when this was embedded in a larger expression clarsimp wouldn't remove it. Adding it as a simp rule does *)
 lemma inQ_tc_corres_helper:

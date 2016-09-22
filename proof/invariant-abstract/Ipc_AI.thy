@@ -438,7 +438,7 @@ lemma valid_remove_rights_If[simp]:
 declare const_on_failure_wp [wp]
 
 crunch ex_cte_cap_wp_to [wp]: set_extra_badge "ex_cte_cap_wp_to P p"
-  (lift: ex_cte_cap_to_pres)
+  (rule: ex_cte_cap_to_pres)
 
 lemma cap_insert_assume_null:
   "\<lbrace>P\<rbrace> cap_insert cap src dest \<lbrace>Q\<rbrace> \<Longrightarrow>

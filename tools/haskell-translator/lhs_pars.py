@@ -61,6 +61,18 @@ def parse(call):
 
     return ['%s\n' % line for line in lines]
 
+def settings_line(l):
+    """Adjusts some global settings."""
+    bits = l.split (',')
+    for bit in bits:
+        bit = bit.strip ()
+        (kind, setting) = bit.split ('=')
+        kind = kind.strip ()
+        if kind == 'keep_constructor':
+            [cons] = setting.split ()
+            keep_conss[cons] = 1
+        else:
+            assert not "setting kind understood", bit
 
 def set_global(_call):
     global call
@@ -675,7 +687,7 @@ def typename_transform(line, header, d):
     return d
 
 
-dontwrap = {'asidpool': 1}
+keep_conss = {}
 
 
 def simple_newtype_transform(line, header, d):
@@ -705,7 +717,7 @@ def simple_newtype_transform(line, header, d):
 
         arities.append((str(bits[0]), len(bits[1:])))
 
-    if list((dict(arities)).values()) == [1] and header not in dontwrap:
+    if list((dict(arities)).values()) == [1] and header not in keep_conss:
         return type_wrapper_type(header, last_lhs, last_rhs, d)
 
     d.body = [('datatype %s =' % header, [(line, []) for line in lines])]
@@ -777,7 +789,7 @@ def named_newtype_transform(line, header, d):
 
     arities = [(name, len(map)) for (name, map) in constructors]
 
-    if list((dict(arities)).values()) == [1]:
+    if list((dict(arities)).values()) == [1] and header not in keep_conss:
         [(cons, map)] = constructors
         [(name, type)] = map
         return type_wrapper_type(header, cons, type, d, decons=(name, type))

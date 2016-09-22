@@ -2952,7 +2952,7 @@ crunch sch_act_simple[wp]: cteDeleteOne, unbindNotification sch_act_simple
   (wp: crunch_wps ssa_sch_act_simple sts_sch_act_simple getObject_inv
        loadObject_default_inv
    simp: crunch_simps unless_def
-   lift: sch_act_simple_lift
+   rule: sch_act_simple_lift
    ignore: getObject)
 
 crunch valid_queues[wp]: setSchedulerAction "Invariants_H.valid_queues"
@@ -3406,7 +3406,7 @@ crunch nosch[wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
 
 crunch sch_act_simple[wp]: finaliseCap sch_act_simple
   (simp: crunch_simps 
-   lift: sch_act_simple_lift
+   rule: sch_act_simple_lift
    wp: getObject_inv loadObject_default_inv crunch_wps
    ignore: getObject)
 

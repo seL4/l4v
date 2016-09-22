@@ -5741,7 +5741,7 @@ crunch vq'[wp]: insertNewCap valid_queues'
   (wp: crunch_wps)
 
 crunch irqs_masked' [wp]: insertNewCap irqs_masked'
-  (wp: crunch_wps lift: irqs_masked_lift)
+  (wp: crunch_wps rule: irqs_masked_lift)
 
 crunch valid_machine_state'[wp]: insertNewCap valid_machine_state'
   (wp: crunch_wps)
