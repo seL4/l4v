@@ -164,13 +164,11 @@ where
 
 definition
   "user_memory_update um \<equiv> modify (\<lambda>ms.
-   ms\<lparr>underlying_memory := (\<lambda>a. case um a of Some x \<Rightarrow> x
+    ms\<lparr>underlying_memory := (\<lambda>a. case um a of Some x \<Rightarrow> x
                                  | None \<Rightarrow> underlying_memory ms a)\<rparr>)"
-term underlying_memory_update
-term device_state_update
 definition
   "device_memory_update um \<equiv> modify (\<lambda>ms.
-   ms\<lparr>device_state := (device_state ms ++ um ) \<rparr>)"
+    ms\<lparr>device_state := (device_state ms ++ um ) \<rparr>)"
 
 definition 
   "option_to_0 x \<equiv> case x of None \<Rightarrow> 0 | Some y \<Rightarrow> y"
@@ -212,15 +210,10 @@ definition
   "do_user_op uop tc \<equiv> 
    do t \<leftarrow> gets cur_thread;
       conv \<leftarrow> gets (ptable_lift t);
-
       rights \<leftarrow> gets (ptable_rights t);
-
       um \<leftarrow> gets (\<lambda>s. (user_mem s) \<circ> ptrFromPAddr);
-
       dm \<leftarrow> gets (\<lambda>s. (device_mem s) \<circ> ptrFromPAddr);
-
       ds \<leftarrow> gets (device_state \<circ> machine_state);
-
       (e,tc',um',ds') \<leftarrow> select (fst
                      (uop t (restrict_map conv {pa. rights pa \<noteq> {}}) rights
                        (tc, restrict_map um {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va}
@@ -295,7 +288,7 @@ definition
   ADT_A :: "user_transition \<Rightarrow> (('a::state_ext_sched state) global_state, 'a observable, unit) data_type"
 where
  "ADT_A uop \<equiv> 
-  \<lparr> Init = \<lambda>s. Init_A, Fin =  \<lambda>((tc,s),m,e). ((tc, abs_state s),m,e),
+  \<lparr> Init = \<lambda>s. Init_A, Fin = \<lambda>((tc,s),m,e). ((tc, abs_state s),m,e),
     Step = (\<lambda>u. global_automaton check_active_irq_A (do_user_op_A uop) kernel_call_A) \<rparr>"
 
 

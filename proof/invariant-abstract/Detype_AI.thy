@@ -574,7 +574,6 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
      apply (case_tac "ntfn_obj ntfn_ext")
        apply (auto simp: valid_ntfn_def ntfn_bound_refs_def split: option.splits)
     done
-
   
 lemma valid_objs_detype[detype_invs_lemmas] : "valid_objs (detype (untyped_range cap) s)"
   using invs_valid_objs[OF invs]
@@ -590,7 +589,6 @@ lemma pspace_aligned_detype[detype_invs_lemmas] :  "pspace_aligned (detype (unty
   apply (drule bspec, erule domI)
   apply (clarsimp simp: detype_def)
   done
-
 
 lemma sym_refs_detype[detype_invs_lemmas] : "sym_refs (state_refs_of (detype (untyped_range cap) s))"
   using refsym by (simp add: state_refs)
@@ -731,7 +729,6 @@ lemma valid_reply_caps_detype[detype_invs_lemmas]: "valid_reply_caps (detype (un
     apply (clarsimp simp: unique_reply_caps_def)
     done
 
-  
 lemma valid_irq_detype[detype_invs_lemmas]: "valid_irq_node (detype (untyped_range cap) s)"
   using invs valid_globals_irq_node [OF globals cap]
   by (simp add: valid_irq_node_def invs_def valid_state_def cap_range_def)

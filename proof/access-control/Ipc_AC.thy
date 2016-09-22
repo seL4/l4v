@@ -142,12 +142,12 @@ lemma kheap_auth_ipc_buffer_same:
   unfolding auth_ipc_buffers_def get_tcb_def by simp
 
 lemma tcb_ipc_buffer_not_device:
- "\<lbrakk>kheap s thread = Some (TCB tcb);valid_objs s\<rbrakk>
+  "\<lbrakk>kheap s thread = Some (TCB tcb);valid_objs s\<rbrakk>
   \<Longrightarrow> \<not> cap_is_device (tcb_ipcframe tcb)"
-   apply (erule(1) valid_objsE)
-   apply (clarsimp simp:valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
-     split:cap.split_asm arch_cap.split_asm)
-   done
+  apply (erule(1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
+                 split: cap.split_asm arch_cap.split_asm)
+  done
 
 lemma tro_auth_ipc_buffer_idem:
   "\<lbrakk> \<forall>x. integrity_obj aag activate subjects (pasObjectAbs aag x) (kheap st x) (kheap s x);
@@ -155,8 +155,10 @@ lemma tro_auth_ipc_buffer_idem:
   apply (drule spec [where x = thread])
   apply (erule integrity_obj.cases,
          simp_all add: auth_ipc_buffers_def get_tcb_def)
-  apply (auto cong: cap.case_cong arch_cap.case_cong if_cong simp: case_bool_if
-    dest!:tcb_ipc_buffer_not_device split:arch_cap.splits cap.splits split:if_splits)
+  apply (auto cong: cap.case_cong arch_cap.case_cong if_cong 
+              simp: case_bool_if
+             dest!: tcb_ipc_buffer_not_device split:arch_cap.splits cap.splits 
+             split: if_splits)
   done
  
 lemma dmo_storeWord_respects_ipc:
@@ -255,7 +257,7 @@ lemma lookup_ipc_buffer_has_auth [wp]:
     apply (rule is_aligned_andI1)
     apply (drule (1) valid_tcb_objs)
     apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
-      split: if_splits)
+                   split: if_splits)
    apply (rule order_trans [OF _ pbfs_atleast_pageBits])
    apply (simp add: msg_align_bits pageBits_def)
   apply simp
@@ -379,8 +381,8 @@ lemma lookup_ipc_buffer_ptr_range:
   apply (drule spec [where x = thread])+
   apply (drule get_tcb_SomeD)+
   apply (erule(1) valid_objsE)
-  apply (clarsimp simp:valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def case_bool_if
-    split:split_if_asm)
+  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def case_bool_if
+                 split: split_if_asm)
   apply (erule integrity_obj.cases, simp_all add: get_tcb_def vm_read_write_def)
   apply auto
   done
@@ -1878,8 +1880,8 @@ lemma lookup_ipc_buffer_ptr_range_in_ipc:
   apply (clarsimp simp: auth_ipc_buffers_def get_tcb_ko_at [symmetric] integrity_tcb_in_ipc_def)
   apply (drule get_tcb_SomeD)
   apply (erule(1) valid_objsE)
-  apply (clarsimp simp:valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def case_bool_if
-    split:split_if_asm)
+  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def case_bool_if
+                 split: split_if_asm)
   apply (erule tcb_in_ipc.cases, simp_all)
    apply (clarsimp simp: get_tcb_def vm_read_write_def)
   apply (clarsimp simp: get_tcb_def vm_read_write_def)

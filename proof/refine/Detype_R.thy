@@ -2067,8 +2067,8 @@ lemma cte_wp_at_top:
     split:option.splits)
   apply (clarsimp simp:loadObject_cte)
   apply (case_tac b,simp_all)
-       apply ((simp add:typeError_def fail_def
-         cte_check_def split:Structures_H.kernel_object.splits)+)[5]
+       apply ((simp add: typeError_def fail_def cte_check_def
+                  split: Structures_H.kernel_object.splits)+)[5]
     apply (simp add:loadObject_cte cte_check_def 
       tcbIPCBufferSlot_def tcbCallerSlot_def 
       tcbReplySlot_def tcbCTableSlot_def
@@ -2307,13 +2307,13 @@ lemma createObject_cte_wp_at':
              createObjects_orig_cte_wp_at'[where sz = "(Types_H.getObjectSize ty us)"]
              threadSet_cte_wp_at'
         | simp add: ARM_H.createObject_def createPageObject_def
-          unless_def placeNewObject_def2 objBitsKO_simps range_cover_full 
-          createPageObject_def curDomain_def pageBits_def ptBits_def
-          pdBits_def getObjSize_simps archObjSize_def
-          apiGetObjectSize_def tcbBlockSizeBits_def 
-          epSizeBits_def ntfnSizeBits_def
-          cteSizeBits_def 
-        | intro conjI impI | clarsimp dest!:arch_toAPIType_simps)+
+                    unless_def placeNewObject_def2 objBitsKO_simps range_cover_full 
+                    createPageObject_def curDomain_def pageBits_def ptBits_def
+                    pdBits_def getObjSize_simps archObjSize_def
+                    apiGetObjectSize_def tcbBlockSizeBits_def 
+                    epSizeBits_def ntfnSizeBits_def
+                    cteSizeBits_def 
+        | intro conjI impI | clarsimp dest!: arch_toAPIType_simps)+
   done
 
 lemma createObject_getCTE_commute:
@@ -3547,7 +3547,8 @@ lemma createObject_setCTE_commute:
        apply ((rule monad_commute_guard_imp[OF commute_commute]
               , rule monad_commute_split[OF commute_commute[OF return_commute]]
               , clarsimp simp: ARM_H.createObject_def 
-                                createPageObject_def bind_assoc split del:if_splits
+                               createPageObject_def bind_assoc split
+                          del: if_splits
               ,(rule monad_commute_split return_commute[THEN commute_commute]
                      setCTE_modify_gsUserPages_commute[of \<top>]
                      modify_wp[of "%_. \<top>"]
@@ -3562,7 +3563,7 @@ lemma createObject_setCTE_commute:
                       placeNewObject_valid_arch_state placeNewObject_pd_at'
                  | erule is_aligned_weaken
                  | simp add: objBits_simps pageBits_def ptBits_def pdBits_def
-                             archObjSize_def split del:if_splits)+)+)
+                             archObjSize_def split del: if_splits)+)+)
   done
 
 
@@ -4042,10 +4043,10 @@ lemma createNewCaps_ret_len:
            [where 'a=32, folded word_bits_def] createWordObjects_def |
           erule hoare_strengthen_post[OF createObjects_ret],clarsimp+ | intro conjI impI)+
        apply (rule hoare_pre,
-          (wp|simp add:Arch_createNewCaps_def toAPIType_def
-          ARM_H.toAPIType_def unat_of_nat_minus_1 createWordObjects_def |
-          erule hoare_strengthen_post[OF createObjects_ret],clarsimp+
-          |intro conjI impI)+)+
+          (wp | simp add: Arch_createNewCaps_def toAPIType_def
+                          ARM_H.toAPIType_def unat_of_nat_minus_1 createWordObjects_def
+              | erule hoare_strengthen_post[OF createObjects_ret],clarsimp+
+              | intro conjI impI)+)+
    done
 
 lemma no_overlap_check:
@@ -5035,7 +5036,7 @@ proof -
         apply (rule arg_cong2[where f=bind, OF _ ext])
         apply (simp add: append mapM_x_append mapM_x_singleton)
         apply (subst doMachineOp_bind)
-          apply ((simp add: add.commute unless_def when_def if_bind split del:if_splits)+)[4]
+          apply ((simp add: add.commute unless_def when_def if_bind split del: if_splits)+)[4]
       -- "LargePageObject"
       apply (simp add: Arch_createNewCaps_def createWordObjects_def
                        Retype_H.createObject_def createObjects_def bind_assoc
@@ -5089,11 +5090,11 @@ proof -
                        getObjectSize_def ARM_H.getObjectSize_def
                        pageBits_def add.commute append)
       apply ((subst gsUserPages_update gsCNodes_update
-                  gsUserPages_upd_createObjects'_comm
-                  unless_dmo'_gsUserPages_upd_comm
-                  unless_dmo'_createObjects'_comm
-                  dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
-                 | simp add: modify_modify_bind o_def)+)[1]
+                    gsUserPages_upd_createObjects'_comm
+                    unless_dmo'_gsUserPages_upd_comm
+                    unless_dmo'_createObjects'_comm
+                    dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+              | simp add: modify_modify_bind o_def)+)[1]
      apply (subst monad_eq, rule createObjects_Cons)
            apply (simp_all add: field_simps shiftl_t2n pageBits_def
                       getObjectSize_def ARM_H.getObjectSize_def
@@ -5515,11 +5516,10 @@ lemma ArchCreateObject_pspace_no_overlap':
    apply wpc
           apply ((wp doMachineOp_psp_no_overlap unless_doMachineOp_psp_no_overlap[simplified] 
               createObjects'_pspace_no_overlap2 hoare_when_weak_wp
-            | simp add:createPageObject_def placeNewObject_def2 word_shiftl_add_distrib
-            field_simps  split del:if_splits
-            | clarsimp simp add:add.assoc[symmetric],wp createObjects'_pspace_no_overlap2
-            [where n =0 and sz = sz,simplified]
-            | clarsimp simp add:APIType_capBits_def objBits_simps pageBits_def )+
+            | simp add: createPageObject_def placeNewObject_def2 word_shiftl_add_distrib
+                        field_simps  split del: if_splits
+            | clarsimp simp add: add.assoc[symmetric],wp createObjects'_pspace_no_overlap2[where n =0 and sz = sz,simplified]
+            | clarsimp simp add: APIType_capBits_def objBits_simps pageBits_def)+
             ,(wp createObjects'_psp_aligned[where sz = sz]
               createObjects'_psp_distinct[where sz = sz]))+
      apply (wp doMachineOp_psp_no_overlap[where sz =sz]
@@ -5544,8 +5544,8 @@ lemma ArchCreateObject_pspace_no_overlap':
      apply (rule_tac P="pdSize = 12" in hoare_gen_asm)
      apply (wp createObjects'_pspace_no_overlap2
        [where n =0 and sz = sz,simplified])
-      apply (simp add:APIType_capBits_def objBits_simps pageBits_def 
-             archObjSize_def ptBits_def pdBits_def)
+      apply (simp add: APIType_capBits_def objBits_simps pageBits_def 
+                       archObjSize_def ptBits_def pdBits_def)
      apply (wp createObjects'_psp_aligned[where sz = sz]
                createObjects'_psp_distinct[where sz = sz])[1]
     apply wp

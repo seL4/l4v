@@ -2390,8 +2390,8 @@ lemma vs_lookup_vs_lookup_pagesI':
    apply (rule_tac x="(c, p)" in image_eqI)
     apply simp
    apply (fastforce simp: pde_ref_def pde_ref_pages_def valid_pde_def obj_at_def
-                         a_type_def data_at_def
-                   split:pde.splits if_splits arch_kernel_obj.splits)
+                          a_type_def data_at_def
+                   split: pde.splits if_splits arch_kernel_obj.splits)
   apply (rule vs_lookupI)
    apply (fastforce simp: vs_asid_refs_def graph_of_def)
   apply (rule_tac y="([VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None], p\<^sub>2)" in rtrancl_trans)
@@ -2407,7 +2407,7 @@ lemma vs_lookup_vs_lookup_pagesI':
   apply (rule rtrancl_into_rtrancl[OF rtrancl.intros(1)])
   apply (auto simp: data_at_def vs_lookup1_def obj_at_def vs_refs_def graph_of_def
                     pte_ref_pages_def a_type_def
-                    split: pte.splits if_splits arch_kernel_obj.splits)
+             split: pte.splits if_splits arch_kernel_obj.splits)
   done
 
 lemma vs_lookup_vs_lookup_pagesI:
@@ -2508,9 +2508,9 @@ lemma store_pde_map_invs:
         apply (auto dest!: valid_global_ptsD simp: obj_at_def )[1]
        apply (clarsimp simp: data_at_def)+
      apply (rule valid_objs_caps)
-     apply ((clarsimp elim!:impE)+)[2]
+     apply ((clarsimp elim!: impE)+)[2]
     apply (auto simp add: ucast_ucast_mask mask_shift_mask_helper
-      data_at_def obj_at_def)
+                          data_at_def obj_at_def)
   done
 
 lemma set_cap_empty_pde:
@@ -3012,7 +3012,7 @@ lemma arch_update_cap_invs_map:
   apply (clarsimp simp: is_cap_simps is_pt_cap_def cap_master_cap_simps
                         cap_asid_def vs_cap_ref_def ranI
                  dest!: cap_master_cap_eqDs split: option.split_asm split_if_asm
-                 elim!: ranE cong:master_cap_eq_is_device_cap_eq
+                 elim!: ranE cong: master_cap_eq_is_device_cap_eq
              | rule conjI)+
   apply (clarsimp dest!: master_cap_eq_is_device_cap_eq)
 
@@ -3551,7 +3551,7 @@ lemma no_irq_do_flush:
 
 lemma cleanCacheRange_PoU_respects_device_region[wp]:
   "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> cleanCacheRange_PoU a b c \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  apply (clarsimp simp:cleanCacheRange_PoU_def cacheRangeOp_def)
+  apply (clarsimp simp: cleanCacheRange_PoU_def cacheRangeOp_def)
   apply (wp mapM_x_wp |  wpc | clarsimp)+
   apply fastforce
   done
@@ -3559,7 +3559,7 @@ lemma cleanCacheRange_PoU_respects_device_region[wp]:
 lemma cacheRangeOp_respects_device_region[wp]:
   assumes valid_f: "\<And>a b P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f a b \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
   shows "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> cacheRangeOp f a b c\<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  apply (clarsimp simp:do_flush_def cacheRangeOp_def)
+  apply (clarsimp simp: do_flush_def cacheRangeOp_def)
   apply (rule hoare_pre)
   apply (wp mapM_x_wp valid_f |  wpc | clarsimp | assumption)+
   done
@@ -3567,8 +3567,8 @@ lemma cacheRangeOp_respects_device_region[wp]:
 lemma pspace_respects_device_region_dmo:
   assumes valid_f: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms. P (device_state ms)\<rbrace>"
   shows "\<lbrace>pspace_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
-  apply (clarsimp simp:do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
-    get_def return_def)
+  apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
+                        get_def return_def)
   apply (drule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_f])
   apply auto
   done
@@ -3576,17 +3576,17 @@ lemma pspace_respects_device_region_dmo:
 lemma cap_refs_respects_device_region_dmo:
   assumes valid_f: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms. P (device_state ms)\<rbrace>"
   shows "\<lbrace>cap_refs_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. cap_refs_respects_device_region\<rbrace>"
-  apply (clarsimp simp:do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
-    get_def return_def)
+  apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
+                        get_def return_def)
   apply (drule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_f])
   apply auto
   done
 
 lemma machine_op_lift_device_state[wp]:
   "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  by (clarsimp simp:machine_op_lift_def NonDetMonad.valid_def bind_def
-    machine_rest_lift_def gets_def simpler_modify_def get_def return_def
-    select_def ignore_failure_def select_f_def split:if_splits)
+  by (clarsimp simp: machine_op_lift_def NonDetMonad.valid_def bind_def
+                     machine_rest_lift_def gets_def simpler_modify_def get_def return_def
+                     select_def ignore_failure_def select_f_def split: if_splits)
 
 
 crunch device_state_inv[wp]: cleanByVA "\<lambda>ms. P (device_state ms)"
@@ -4638,7 +4638,7 @@ lemma data_at_orth:
   "data_at a p s \<Longrightarrow> \<not> ep_at p s
   \<and> \<not> ntfn_at p s \<and>\<not> cap_table_at sz p s \<and> \<not> tcb_at p s \<and> \<not> asid_pool_at p s
   \<and> \<not> page_table_at p s \<and> \<not> page_directory_at p s \<and> \<not> asid_pool_at p s"
-  apply (clarsimp simp:data_at_def obj_at_def a_type_def)
+  apply (clarsimp simp: data_at_def obj_at_def a_type_def)
   apply (case_tac "kheap s p",simp)
   subgoal for ko
    by (case_tac ko,auto simp add: is_ep_def is_ntfn_def is_cap_table_def is_tcb_def)
@@ -4647,9 +4647,9 @@ lemma data_at_orth:
 lemma data_at_pg_cap:
   "\<lbrakk>data_at sz p s;valid_cap cap s; p \<in> obj_refs cap\<rbrakk> \<Longrightarrow> is_pg_cap cap"
   apply (case_tac cap)
-   apply (clarsimp simp:is_pg_cap_def obj_refs.simps valid_cap_def
-     data_at_orth split option.split)+
-  apply (clarsimp split:arch_cap.split_asm simp:data_at_orth)
+   apply (clarsimp simp: is_pg_cap_def obj_refs.simps valid_cap_def
+                         data_at_orth split option.split)+
+  apply (clarsimp split: arch_cap.split_asm simp: data_at_orth)
   done
 
 lemma perform_page_invs [wp]:
@@ -4746,7 +4746,7 @@ lemma perform_page_invs [wp]:
     apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state
                           valid_slots_def empty_refs_def neq_Nil_conv
                     split: sum.splits)
-     apply (clarsimp simp: parent_for_refs_def same_refs_def is_cap_simps cap_asid_def split:option.splits)
+     apply (clarsimp simp: parent_for_refs_def same_refs_def is_cap_simps cap_asid_def split: option.splits)
      apply (rule conjI, fastforce)
      apply (rule conjI)
       apply clarsimp
@@ -4769,7 +4769,7 @@ lemma perform_page_invs [wp]:
      apply (drule valid_objs_caps)
      apply (clarsimp simp: valid_caps_def)
      apply (drule spec, drule spec, drule_tac x=capa in spec, drule (1) mp)
-     apply (case_tac aa, (clarsimp simp add:data_at_pg_cap)+)[1]
+     apply (case_tac aa, (clarsimp simp add: data_at_pg_cap)+)[1]
     apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
 
     apply (rule conjI)

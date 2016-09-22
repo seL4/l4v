@@ -1737,16 +1737,16 @@ lemma valid_sched_s0[simp]:
 lemma respects_device_trivial:
   "pspace_respects_device_region s0_internal"
   "cap_refs_respects_device_region s0_internal"
-  apply (clarsimp simp:s0_internal_def pspace_respects_device_region_def machine_state0_def device_mem_def
-    in_device_frame_def kh0_obj_def obj_at_kh_def obj_at_def kh0_def a_type_def
-    split:if_splits)[1]
+  apply (clarsimp simp: s0_internal_def pspace_respects_device_region_def machine_state0_def device_mem_def
+                        in_device_frame_def kh0_obj_def obj_at_kh_def obj_at_def kh0_def a_type_def
+                 split: if_splits)[1]
    apply fastforce
-  apply (clarsimp simp:cap_refs_respects_device_region_def Invariants_AI.cte_wp_at_caps_of_state
-   cap_range_respects_device_region_def machine_state0_def)
+  apply (clarsimp simp: cap_refs_respects_device_region_def Invariants_AI.cte_wp_at_caps_of_state
+                        cap_range_respects_device_region_def machine_state0_def)
   apply (intro conjI impI)
    apply (drule s0_caps_of_state)
-   apply (fastforce simp:cap_is_device.simps)[1]
-  apply (clarsimp simp:s0_internal_def machine_state0_def)
+   apply (fastforce simp: cap_is_device.simps)[1]
+  apply (clarsimp simp: s0_internal_def machine_state0_def)
   done
 
 lemma einvs_s0:
@@ -1756,9 +1756,9 @@ lemma einvs_s0:
 
 lemma obj_valid_pdpt_kh0:
   "x \<in> ran kh0 \<Longrightarrow> obj_valid_pdpt x"
-  by (auto simp:kh0_def valid_entries_def obj_valid_pdpt_def idle_tcb_def High_tcb_def Low_tcb_def
-    High_pt_def High_pt'_def entries_align_def Low_pt_def High_pd_def Low_pt'_def High_pd'_def
-    Low_pd_def irq_cnode_def ntfn_def Silc_cnode_def High_cnode_def Low_cnode_def Low_pd'_def)
+  by (auto simp: kh0_def valid_entries_def obj_valid_pdpt_def idle_tcb_def High_tcb_def Low_tcb_def
+                 High_pt_def High_pt'_def entries_align_def Low_pt_def High_pd_def Low_pt'_def High_pd'_def
+                 Low_pd_def irq_cnode_def ntfn_def Silc_cnode_def High_cnode_def Low_cnode_def Low_pd'_def)
 
 subsubsection {* Haskell state *}
 

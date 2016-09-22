@@ -12,7 +12,6 @@ theory ArchTcbAcc_AI
 imports "../TcbAcc_AI"
 begin
 
-
 context Arch begin global_naming ARM
 
 named_theorems TcbAcc_AI_assms
@@ -55,7 +54,6 @@ lemma cap_master_cap_tcb_cap_valid_arch:
                    is_nondevice_page_cap_simps is_nondevice_page_cap_arch_def
             split: option.splits cap.splits arch_cap.splits
                    Structures_A.thread_state.splits)
-
 
 crunch device_state_inv[wp]: invalidateTLB_ASID "\<lambda>ms. P (device_state ms)"
   (ignore: ignore_failure)

@@ -288,7 +288,7 @@ lemma cap_refs_in_kernel_windowD:
 lemma valid_cap_imp_valid_vm_rights:
   "valid_cap (cap.ArchObjectCap (PageCap dev mw rs sz m)) s \<Longrightarrow>
    rs \<in> valid_vm_rights"
- by (simp add: valid_cap_def valid_vm_rights_def)
+  by (simp add: valid_cap_def valid_vm_rights_def)
 
 lemma acap_rights_update_idem [simp]:
   "acap_rights_update R (acap_rights_update R' cap) = acap_rights_update R cap"

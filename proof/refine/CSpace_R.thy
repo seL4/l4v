@@ -3268,7 +3268,7 @@ crunch ksMachine[wp]: cteInsert "\<lambda>s. P (ksMachineState s)"
 lemma cteInsert_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> cteInsert cap src dest \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
   apply (simp add: cteInsert_def valid_machine_state'_def pointerInDeviceData_def 
-    pointerInUserData_def)
+                   pointerInUserData_def)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
    apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv |
           intro hoare_drop_imp)+

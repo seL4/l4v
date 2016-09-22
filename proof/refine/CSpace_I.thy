@@ -2146,7 +2146,7 @@ lemma setCTE_valid_objs'[wp]:
     setCTE p cte \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   unfolding setCTE_def
   apply (rule setObject_valid_objs')
-   apply (clarsimp simp:prod_eq_iff lookupAround2_char1 updateObject_cte objBits_simps)
+   apply (clarsimp simp: prod_eq_iff lookupAround2_char1 updateObject_cte objBits_simps)
    apply (clarsimp simp: prod_eq_iff lookupAround2_char1
 			updateObject_cte in_monad typeError_def
 			valid_obj'_def valid_tcb'_def valid_cte'_def

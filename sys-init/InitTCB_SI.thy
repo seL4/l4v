@@ -330,12 +330,12 @@ lemma sep_map_f_eq_tcb_fault_endpoint:
 
 lemma cnode_not_device[simp]:
   "is_cnode_cap spec_cspace_cap \<Longrightarrow> \<not> is_device_cap spec_cspace_cap"
-  by (auto simp: is_device_cap_def split:cdl_cap.splits)
+  by (auto simp: is_device_cap_def split: cdl_cap.splits)
 
 lemma well_formed_nondevice_cap_in_tcb:
   "\<lbrakk>well_formed spec;cdl_objects spec obj_id = Some (Tcb spec_tcb)\<rbrakk> \<Longrightarrow>
     \<not> cap_at (\<lambda>c. is_device_cap c) (obj_id, slot) spec"
-    by (simp add:well_formed_def)
+    by (simp add: well_formed_def)
 
 lemma tcb_configure_post:
   "\<lbrakk>well_formed spec; tcb_at obj_id spec;
@@ -455,7 +455,7 @@ lemma tcb_configure_post:
   apply (subst cap_transform_update_cap_object
          [where obj_id="cap_object spec_vspace_cap"],
          (assumption|simp)+)
-  apply (clarsimp simp:cap_at_def opt_cap_def slots_of_def opt_object_def)
+  apply (clarsimp simp: cap_at_def opt_cap_def slots_of_def opt_object_def)
   apply (subst cap_transform_update_cap_object
          [where obj_id="cap_object spec_buffer_frame_cap"],
          (assumption|simp)+)

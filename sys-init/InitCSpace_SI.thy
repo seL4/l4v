@@ -619,7 +619,7 @@ lemma mint_post:
   apply (clarsimp simp: cap_rights_inter_default_cap_rights)
   apply (subst (asm) update_cap_rights_and_data,(assumption|clarsimp)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp:default_cap_cnode_dev)
+  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -679,7 +679,7 @@ lemma mutate_post:
     apply (clarsimp simp: cap_has_object_not_irqhandler_cap)
    apply (erule well_formed_orig_caps, (simp add: slots_of_def opt_object_def)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp:default_cap_cnode_dev)
+  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -729,7 +729,7 @@ lemma move_post:
   apply (subst sep_map_s_sep_map_c_eq [where cap="update_cap_object client_object_id spec_cap"])
    apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp:default_cap_cnode_dev)
+  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -774,7 +774,7 @@ lemma move_post_irq_handler:
   apply (subst sep_map_s_sep_map_c_eq [where cap=spec_cap],
          (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp:default_cap_cnode_dev)
+  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -830,7 +830,7 @@ lemma seL4_CNode_Mutate_object_slot_initialised_sep_helper:
    apply (elim conjE)
    apply clarsimp
    apply (intro conjI,
-     simp_all add:has_type_default_not_non ep_related_cap_default_cap)
+          simp_all add: has_type_default_not_non ep_related_cap_default_cap)
       apply (thin_tac "\<guillemotleft>P \<and>* Q \<guillemotright>s" for P Q)
       apply sep_solve
      apply ((clarsimp simp: si_cnode_cap_def word_bits_def si_cspace_cap_def
@@ -1720,9 +1720,9 @@ lemma sep_map_set_conj_set_cong:
 lemma wellformed_no_dev:
   "well_formed spec \<Longrightarrow>(\<forall>obj_id. cnode_at obj_id spec \<longrightarrow>
                        (\<forall>slot\<in>dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = False) (obj_id, slot) spec))"
-   apply (simp add:well_formed_def cap_at_def del:split_paired_All)
+   apply (simp add: well_formed_def cap_at_def del:split_paired_All)
    apply (intro allI impI ballI)
-   apply  (clarsimp simp:dom_def slots_of_def opt_cap_def)
+   apply  (clarsimp simp: dom_def slots_of_def opt_cap_def)
    done
 
 lemma init_cspace_sep:

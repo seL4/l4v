@@ -67,7 +67,7 @@ lemma machine_op_lift_ev:
   apply (rule machine_op_lift_ev')
   apply clarsimp
   apply (intro conjI impI)
-  apply (drule equiv_machine_state_machine_state_rest_update,fastforce)+
+  apply (drule equiv_machine_state_machine_state_rest_update, fastforce)+
   done
 
 lemma cacheRangeOp_ev[wp]:
@@ -546,8 +546,8 @@ lemma create_word_objects_reads_respects:
   unfolding create_word_objects_def fun_app_def reserve_region_def
   apply(subst do_machine_op_mapM_x[OF empty_fail_clearMemory])
   apply(wp dmo_clearMemory_reads_respects mapM_x_ev hoare_unless_wp 
-    | simp add:unless_def when_def
-    | intro conjI impI)+
+        | simp add: unless_def when_def
+        | intro conjI impI)+
   done
 
 lemma create_word_objects_globals_equiv:
@@ -905,7 +905,7 @@ lemma untyped_caps_do_not_overlap_global_refs:
 
 lemma singleton_set_size:
   "{ptr..(ptr::'a::len word) + 2 ^ 0 - 1} = {ptr}"
-  by (simp add:field_simps)
+  by (simp add: field_simps)
 
 lemma cap_range_of_valid_capD:
   "valid_cap cap s \<Longrightarrow> (cap_range cap = {}) \<or> (\<exists>ptr sz. (cap_range cap = ptr_range ptr sz))"
@@ -989,7 +989,7 @@ lemma page_caps_do_not_overlap_arm_globals_frame:
   apply(rule ccontr)
   apply(drule_tac x=word in spec)
   apply(drule_tac x="arm_globals_frame (arch_state s)" in spec)
-  apply(clarsimp simp: valid_arch_state_def obj_at_def global_refs_def split:if_splits)
+  apply(clarsimp simp: valid_arch_state_def obj_at_def global_refs_def split: if_splits)
    apply(simp add: obj_range_small_page_as_ptr_range 
      obj_range_page_as_ptr_range_pageBitsForSize)+
   done
@@ -1222,7 +1222,7 @@ region_in_kernel_window
                  set_cap_caps_no_overlap
                  region_in_kernel_window_preserved)
        apply clarsimp
-       apply(intro conjI,(fastforce simp:cte_wp_at_caps_of_state)+)[1]
+       apply(intro conjI,(fastforce simp: cte_wp_at_caps_of_state)+)[1]
       apply(wp when_ev delete_objects_reads_respects_g hoare_vcg_disj_lift
                delete_objects_pspace_no_overlap 
                delete_objects_descendants_range_in
@@ -1466,7 +1466,7 @@ lemma invoke_untyped_globals_equiv:
                                   apply(rule ssubst[OF free_index_of_UntypedCap])
                                   apply(fastforce simp: ptr_range_def)
                                  apply(fastforce dest!: untyped_slots_not_in_untyped_range[OF _ _ _ _ _ subset_refl] simp: blah ptr_range_def)
-                                apply(fastforce intro!: disjI2 simp:ptr_range_def)
+                                apply(fastforce intro!: disjI2 simp: ptr_range_def)
                                apply(frule range_cover.range_cover_compare_bound)
                                apply(frule range_cover.unat_of_nat_n)
                                apply(simp add: shiftl_t2n)

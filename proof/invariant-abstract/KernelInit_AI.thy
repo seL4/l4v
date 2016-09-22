@@ -16,7 +16,6 @@ imports
   "./$L4V_ARCH/ArchKernelInit_AI"
 begin
 
-
 axiomatization where
   akernel_init_invs: "\<forall>((tc,s),m,e) \<in> Init_A. invs s \<and> ct_running s"
 

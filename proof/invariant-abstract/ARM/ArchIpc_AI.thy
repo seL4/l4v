@@ -53,7 +53,6 @@ lemma update_cap_data_closedform:
   apply auto
   done
 
-
 lemma cap_asid_PageCap_None [simp]:
   "cap_asid (ArchObjectCap (PageCap dev r R pgsz None)) = None"
   by (simp add: cap_asid_def)
@@ -156,9 +155,9 @@ lemma cap_rights_update_vs_cap_ref[simp, Ipc_AI_assms]:
 lemma is_derived_cap_rights2[simp, Ipc_AI_assms]:
   "is_derived m p c (cap_rights_update R c') = is_derived m p c c'"
   apply (case_tac c')
-  apply (simp_all add:cap_rights_update_def)
-  apply (clarsimp simp:is_derived_def is_cap_simps cap_master_cap_def
-    vs_cap_ref_def split:cap.splits )+
+  apply (simp_all add: cap_rights_update_def)
+  apply (clarsimp simp: is_derived_def is_cap_simps cap_master_cap_def vs_cap_ref_def
+                 split: cap.splits )+
   apply (rename_tac acap1 acap2)
   apply (case_tac acap1)
    by (auto simp: acap_rights_update_def)
@@ -289,11 +288,11 @@ lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_assms]:
   apply (subst is_aligned_add_helper[THEN conjunct2])
    apply simp
   apply (simp add: and_mask_less' word_bits_def)
-  apply (clarsimp simp:caps_of_state_cteD'[where P = "\<lambda>x. True",simplified,symmetric])
+  apply (clarsimp simp: caps_of_state_cteD'[where P = "\<lambda>x. True",simplified,symmetric])
   apply (drule(1) CSpace_AI.tcb_cap_slot_regular)
    apply simp
-  apply (simp add:is_nondevice_page_cap_def is_nondevice_page_cap_arch_def
-    case_bool_If split:if_splits)
+  apply (simp add: is_nondevice_page_cap_def is_nondevice_page_cap_arch_def case_bool_If 
+            split: if_splits)
   done
 
 lemma transfer_caps_loop_cte_wp_at:
@@ -441,7 +440,7 @@ context Arch begin global_naming ARM
 named_theorems Ipc_AI_cont_assms
 
 crunch pspace_respects_device_region[wp, Ipc_AI_cont_assms]: do_ipc_transfer "pspace_respects_device_region"
-  (wp: crunch_wps ignore:const_on_failure simp: crunch_simps)
+  (wp: crunch_wps ignore: const_on_failure simp: crunch_simps)
 
 lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
   "\<lbrace>cap_refs_respects_device_region and tcb_at t and  valid_objs and valid_mdb\<rbrace>
@@ -460,7 +459,7 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
    apply (rule hoare_strengthen_post[where Q = "\<lambda>r s. cap_refs_respects_device_region s
        \<and> valid_objs s \<and> valid_mdb s \<and> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb) t s"])
    apply wp
-    apply (clarsimp simp:obj_at_def is_tcb_def)
+    apply (clarsimp simp: obj_at_def is_tcb_def)
     apply (simp split: kernel_object.split_asm)
    apply auto
    done

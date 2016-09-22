@@ -236,19 +236,19 @@ declare ptrFormPAddr_addFromPPtr[simp]
 
 lemma pspace_respects_device_region_init[simp]:
   "pspace_respects_device_region init_A_st"
-   apply (clarsimp simp:pspace_respects_device_region_def init_A_st_def init_machine_state_def device_mem_def
-     in_device_frame_def obj_at_def init_kheap_def a_type_def)
+   apply (clarsimp simp: pspace_respects_device_region_def init_A_st_def init_machine_state_def device_mem_def
+                         in_device_frame_def obj_at_def init_kheap_def a_type_def)
    apply (rule ext)
    apply clarsimp
    done
 
 lemma cap_refs_respects_device_region_init[simp]:
   "cap_refs_respects_device_region init_A_st"
-   apply (clarsimp simp:cap_refs_respects_device_region_def)
+   apply (clarsimp simp: cap_refs_respects_device_region_def)
    apply (frule cte_wp_at_caps_of_state[THEN iffD1])
    apply clarsimp
    apply (subst(asm) caps_of_state_init_A_st_Null)
-   apply (clarsimp simp:cte_wp_at_caps_of_state cap_range_respects_device_region_def)
+   apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def)
    done
 
 lemma invs_A:

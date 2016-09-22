@@ -738,7 +738,6 @@ lemma dom_eq:
    apply auto
 done
 
-
 lemma dom_user_mem':
   "dom (user_mem' s) = {p. typ_at' UserDataT (p && ~~ mask pageBits) s}"
   by (clarsimp simp:user_mem'_def dom_def pointerInUserData_def split:if_splits)
@@ -746,7 +745,7 @@ lemma dom_user_mem':
 (* FIXME:move *)
 lemma dom_device_mem':
   "dom (device_mem' s) = {p. typ_at' UserDataDeviceT (p && ~~ mask pageBits) s}"
-  by (clarsimp simp:device_mem'_def dom_def pointerInDeviceData_def split:if_splits)
+  by (clarsimp simp: device_mem'_def dom_def pointerInDeviceData_def split: if_splits)
 
 context kernel_m
 begin
@@ -796,8 +795,8 @@ lemma user_memory_update_corres_C:
                a")
   prefer 2
    apply (clarsimp simp add: doMachineOp_def user_memory_update_def
-                      simpler_modify_def simpler_gets_def select_f_def
-                      NonDetMonad.bind_def return_def)
+                             simpler_modify_def simpler_gets_def select_f_def
+                             NonDetMonad.bind_def return_def)
    apply (thin_tac P for P)+
    apply (case_tac a, clarsimp)
    apply (case_tac ksMachineStatea, clarsimp)
@@ -815,26 +814,26 @@ lemma user_memory_update_corres_C:
   done
 
 lemma device_update_corres_C:
- "corres_underlying rf_sr False nf op = (\<lambda>_. True) (\<lambda>_. True)
+  "corres_underlying rf_sr False nf op = (\<lambda>_. True) (\<lambda>_. True)
    (doMachineOp (device_memory_update ms))
    (setDeviceState_C ms)"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
-   prefer 2 
-   apply (clarsimp simp add: setDeviceState_C_def simpler_modify_def)
+    prefer 2 
+    apply (clarsimp simp add: setDeviceState_C_def simpler_modify_def)
   apply (rule ballI)
   apply (clarsimp simp: simpler_modify_def setDeviceState_C_def)
   apply (clarsimp simp: doMachineOp_def device_memory_update_def NonDetMonad.bind_def in_monad 
-    gets_def get_def return_def simpler_modify_def select_f_def)
-  apply (clarsimp simp:rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-    cmachine_state_relation_def)
+                        gets_def get_def return_def simpler_modify_def select_f_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                        cmachine_state_relation_def)
   done
 
 lemma mem_dom_split:
  "(dom um \<subseteq> dom (user_mem' s) \<union> dom (device_mem' s))
  \<Longrightarrow> um = restrict_map um (dom (user_mem' s)) ++ restrict_map um (dom (device_mem' s))"
  apply (rule ext)
- apply (auto simp:map_add_def restrict_map_def split:if_splits option.splits)
+ apply (auto simp: map_add_def restrict_map_def split:if_splits option.splits)
  done
 
 lemma dom_if_rewrite:
@@ -928,8 +927,8 @@ lemma do_user_op_corres_C:
                   split: if_splits)
     apply (drule ptable_rights_imp_UserData[rotated -1])
      apply fastforce+
-    apply (clarsimp simp:invs'_def valid_state'_def user_mem'_def device_mem'_def
-      split:if_splits)
+    apply (clarsimp simp: invs'_def valid_state'_def user_mem'_def device_mem'_def
+                   split: if_splits)
     apply (drule_tac c = x in subsetD[where B = "dom S" for S])
      apply (simp add:dom_def)
     apply fastforce

@@ -540,7 +540,7 @@ lemma clearExMonitor_globals_equiv_scheduler[wp]: "\<lbrace> globals_equiv_sched
   unfolding clearExMonitor_def
   apply (wp dmo_no_mem_globals_equiv_scheduler)
    apply simp
-  apply (simp add:simpler_modify_def valid_def)
+  apply (simp add: simpler_modify_def valid_def)
   done
 
 lemma arch_switch_to_thread_globals_equiv_scheduler:
@@ -617,7 +617,7 @@ lemma range_is_globals_frame': "\<lbrakk>valid_arch_state s; pspace_aligned s\<r
 lemma scheduler_equiv_invs_device_state_equiv:  
   "\<lbrakk>scheduler_equiv aag s t; invs s; invs t\<rbrakk> \<Longrightarrow>\<forall>x\<in> range_of_arm_globals_frame s.
    device_state (machine_state s) x = device_state (machine_state t) x"
-   apply (clarsimp simp:scheduler_equiv_def globals_equiv_scheduler_def)
+   apply (clarsimp simp: scheduler_equiv_def globals_equiv_scheduler_def)
    apply (drule(1) globals_frame_not_device[rotated])
    apply (drule globals_frame_not_device[rotated])
    apply fastforce
@@ -626,12 +626,12 @@ lemma scheduler_equiv_invs_device_state_equiv:
 
 lemma scheduler_affects_in_globals_frame:
   "\<lbrakk>valid_arch_state s;pspace_aligned s\<rbrakk> \<Longrightarrow> scheduler_affects_globals_frame s \<subseteq> range_of_arm_globals_frame s"
-  apply (clarsimp simp:ptr_range_def)
+  apply (clarsimp simp: ptr_range_def)
   apply (drule(1) arm_globals_frame_aligned)
-  apply (clarsimp simp:field_simps)
+  apply (clarsimp simp: field_simps)
   apply (rule word_plus_mono_right)
    apply simp
-  apply (simp add:is_aligned_no_wrap')
+  apply (simp add: is_aligned_no_wrap')
   done
 
 lemma scheduler_equiv_scheduler_affects_globals_frame_equiv:
@@ -641,7 +641,7 @@ lemma scheduler_equiv_scheduler_affects_globals_frame_equiv:
    apply (drule subsetD[rotated,OF _ scheduler_affects_in_globals_frame])
      apply fastforce
     apply fastforce
-   apply (clarsimp simp:scheduler_equiv_invs_device_state_equiv)
+   apply (clarsimp simp: scheduler_equiv_invs_device_state_equiv)
    done
 
 lemma store_cur_thread_midstrength_reads_respects: "equiv_valid (scheduler_equiv aag) (midstrength_scheduler_affects_equiv aag l)
@@ -660,11 +660,11 @@ lemma store_cur_thread_midstrength_reads_respects: "equiv_valid (scheduler_equiv
    apply (frule scheduler_equiv_scheduler_affects_globals_frame_equiv,simp+)
    apply (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def
                          globals_equiv_scheduler_def)
-   apply (clarsimp simp add: scheduler_affects_equiv_def states_equiv_for_def
-                    equiv_for_def equiv_asids_def equiv_asid_def
-                    scheduler_globals_frame_equiv_def silc_dom_equiv_def
-                    weak_scheduler_affects_equiv_def midstrength_scheduler_affects_equiv_def
-                    idle_equiv_def)
+   apply (clarsimp simp: scheduler_affects_equiv_def states_equiv_for_def
+                         equiv_for_def equiv_asids_def equiv_asid_def
+                         scheduler_globals_frame_equiv_def silc_dom_equiv_def
+                         weak_scheduler_affects_equiv_def midstrength_scheduler_affects_equiv_def
+                        idle_equiv_def)
    apply (frule range_is_globals_frame'[rotated -1])
     apply fastforce+
    apply (simp add: equiv_valid_def2 equiv_valid_2_def)
@@ -1056,7 +1056,7 @@ lemma arch_switch_to_thread_reads_respects_scheduler[wp]: "reads_respects_schedu
      apply wp
     apply (clarsimp simp: scheduler_equiv_def globals_equiv_scheduler_def)
    apply (simp add: arch_switch_to_thread_def)
-   apply (simp add:bind_assoc[symmetric])
+   apply (simp add: bind_assoc[symmetric])
    apply wp_once
      apply wp_once
     apply (simp add: bind_assoc)

@@ -215,7 +215,7 @@ lemma globals_equiv_to_scheduler_globals_frame_equiv:
      apply(erule invs_arch_state)
     apply(erule invs_psp_aligned)
    apply simp+
-  apply (simp add:globals_frame_not_device)
+  apply (simp add: globals_frame_not_device)
   done
 
 lemma globals_equiv_to_cur_thread_eq:
@@ -444,11 +444,11 @@ lemma do_user_op_if_integrity:
       apply (wp   select_wp | wpc | clarsimp)+
   apply (rule conjI)
    apply clarsimp
-   apply (simp add: restrict_map_def ptable_lift_s_def ptable_rights_s_def split:if_splits)
+   apply (simp add: restrict_map_def ptable_lift_s_def ptable_rights_s_def split: if_splits)
    apply (drule_tac auth=Write in user_op_access')
      apply (simp add: vspace_cap_rights_to_auth_def)+
   apply clarsimp
-  apply (simp add: restrict_map_def ptable_lift_s_def ptable_rights_s_def split:if_splits)
+  apply (simp add: restrict_map_def ptable_lift_s_def ptable_rights_s_def split: if_splits)
   apply (drule_tac auth=Write in user_op_access')
       apply (simp add: vspace_cap_rights_to_auth_def)+
   done

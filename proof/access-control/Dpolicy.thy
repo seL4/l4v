@@ -908,36 +908,36 @@ lemma state_asids_transform:
   apply (drule state_asids_to_policy_aux.induct)
      prefer 4
      apply simp
-    apply (simp add:fst_transform_cslot_ptr)
+    apply (simp add: fst_transform_cslot_ptr)
     apply (rule_tac cap="transform_cap cap" in csata_asid)
      apply (rule caps_of_state_transform_opt_cap)
        apply simp
       apply fastforce
-     apply (clarsimp simp:idle_thread_no_asid)
+     apply (clarsimp simp: idle_thread_no_asid)
     apply (fastforce simp: cap_asid'_transform)
    apply (frule state_vrefs_asidpool_control, simp)
-   apply (simp add:state_vrefs_def, case_tac "kheap s poolptr", simp_all)
+   apply (simp add: state_vrefs_def, case_tac "kheap s poolptr", simp_all)
    apply (case_tac aa, simp_all add:vs_refs_no_global_pts_def)
    apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj, simp_all add:graph_of_def, safe)
    apply (rule_tac pdcap="cdl_cap.PageDirectoryCap b Fake None" in csata_asid_lookup)
-       apply (simp add:asid_table_entry_transform)
-      apply (simp add:is_null_cap_def transform_asid_table_entry_def)
-     apply (simp add:is_null_cap_def transform_asid_table_entry_def)
-    apply (simp add:ucast_up_ucast_id is_up_def source_size_def target_size_def word_size)
-   apply (simp add:transform_asid_table_entry_def)
+       apply (simp add: asid_table_entry_transform)
+      apply (simp add: is_null_cap_def transform_asid_table_entry_def)
+     apply (simp add: is_null_cap_def transform_asid_table_entry_def)
+    apply (simp add: ucast_up_ucast_id is_up_def source_size_def target_size_def word_size)
+   apply (simp add: transform_asid_table_entry_def)
    apply (drule_tac asid="asid" in opt_cap_asid_pool_Some[rotated])
-    apply (simp add:invs_valid_idle)
+    apply (simp add: invs_valid_idle)
    apply (subst (asm) mask_asid_low_bits_ucast_ucast)
    apply (subst (asm) up_ucast_inj_eq)
     apply simp
-   apply (simp add:transform_asid_pool_entry_def)
+   apply (simp add: transform_asid_pool_entry_def)
   apply (cut_tac aag=aag and asid=asid and asid_tab="cdl_asid_table (transform s)" in csata_asidpool)
-     apply (clarsimp simp:transform_def transform_asid_table_def unat_map_def)
+     apply (clarsimp simp: transform_def transform_asid_table_def unat_map_def)
      apply safe[1]
-      apply (simp add:transform_asid_table_entry_def transform_asid_high_bits_of)
-     apply (simp add:transform_asid_def unat_lt2p[where 'a=7, simplified])
-    apply (simp add:is_null_cap_def)
+      apply (simp add: transform_asid_table_entry_def transform_asid_high_bits_of)
+     apply (simp add: transform_asid_def unat_lt2p[where 'a=7, simplified])
+    apply (simp add: is_null_cap_def)
    apply simp
   apply simp
   done

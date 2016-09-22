@@ -7694,7 +7694,7 @@ next
         apply clarsimp
        apply (clarsimp simp: cte_wp_at_caps_of_state)
        apply (erule tcb_valid_nonspecial_cap, fastforce)
-        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps  is_nondevice_page_cap_simps
+        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps is_nondevice_page_cap_simps
                        split: Structures_A.thread_state.split)
        apply (simp add: ran_tcb_cap_cases is_cap_simps is_nondevice_page_cap_simps)
       apply fastforce
@@ -9036,7 +9036,7 @@ lemma cteMove_valid_pspace' [wp]:
   apply (rule_tac old_dest_node = "cteMDBNode cte" and src_cap = "cteCap ctea" in
     mdb_move.cteMove_valid_mdb_helper)
   prefer 2
-   apply (clarsimp simp:cte_wp_at_ctes_of weak_derived'_def isCap_simps simp del: not_ex)
+   apply (clarsimp simp: cte_wp_at_ctes_of weak_derived'_def isCap_simps simp del: not_ex)
   apply unfold_locales
          apply (simp_all add: valid_mdb'_def cte_wp_at_ctes_of nullPointer_def weak_derived'_def)
   apply clarsimp

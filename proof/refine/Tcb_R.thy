@@ -1001,7 +1001,7 @@ lemma checked_insert_tcb_invs'[wp]:
    apply fastforce
   apply (clarsimp simp: isCap_simps cteCaps_of_def)
   apply (erule(1) valid_irq_handlers_ctes_ofD)
-  apply (clarsimp simp:invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def)
   done
 
 lemma checkCap_inv:
@@ -1413,7 +1413,7 @@ lemma setSchedulerAction_invs'[wp]:
   apply (clarsimp simp add: invs'_def valid_state'_def valid_irq_node'_def
                 valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs cur_tcb'_def
                 ct_not_inQ_def)
-  apply (simp add:ct_idle_or_in_cur_domain'_def)
+  apply (simp add: ct_idle_or_in_cur_domain'_def)
   done
 
 end

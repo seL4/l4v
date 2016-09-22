@@ -22,6 +22,7 @@ requalify_facts
    cap_refs_respects_device_region_dmo
 (* Nothing to see here. *)
 end
+
 lemmas device_region_dmos = pspace_respects_device_region_dmo
 
 end

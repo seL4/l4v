@@ -545,8 +545,8 @@ lemma is_cap_simps':
   "is_master_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x True)"
   "is_nondevice_page_cap cap = (\<exists> u v w x. cap = ArchObjectCap (PageCap False u v w x))"
   by (cases cap,  (auto simp: is_zombie_def is_arch_cap_def is_nondevice_page_cap_def
-                            is_reply_cap_def is_master_reply_cap_def is_nondevice_page_cap_arch_def
-                            split:cap.splits arch_cap.splits )+)+
+                              is_reply_cap_def is_master_reply_cap_def is_nondevice_page_cap_arch_def
+                       split: cap.splits arch_cap.splits )+)+
 
 lemma cap_insert_simple_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and

@@ -1571,7 +1571,7 @@ lemma empty_slot_corres:
   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
   apply (simp add: pspace_relations_def)
   apply (rule conjI)
-   apply (clarsimp simp:data_at_def ghost_relation_typ_at set_cap_a_type_inv)
+   apply (clarsimp simp: data_at_def ghost_relation_typ_at set_cap_a_type_inv)
   apply (rule conjI)
    prefer 2
    apply (rule conjI)
@@ -4220,8 +4220,8 @@ lemma set_thread_all_corres:
   apply (simp add: trans_state_update'[symmetric] trans_state_update[symmetric]
          del: trans_state_update)
   apply (clarsimp simp add: swp_def fun_upd_def obj_at_def is_etcb_at_def)
-  apply (subst cte_wp_at_after_update,fastforce simp add:obj_at_def)
-  apply (subst caps_of_state_after_update,fastforce simp add:obj_at_def)
+  apply (subst cte_wp_at_after_update,fastforce simp add: obj_at_def)
+  apply (subst caps_of_state_after_update,fastforce simp add: obj_at_def)
   apply clarsimp
   apply (subst conj_assoc[symmetric])
   apply (rule conjI[rotated])

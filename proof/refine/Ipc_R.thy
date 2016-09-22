@@ -1853,8 +1853,6 @@ lemma invs_mdb_absorb'_ac [simp]:
   "(invs' s \<and> valid_mdb' s \<and> P s) = (invs' s \<and> P s)"
   by (simp add: invs'_def valid_state'_def valid_pspace'_def conj_comms)
 
-
-
 lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   "\<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
   unfolding lookupIPCBuffer_def ARM_H.lookupIPCBuffer_def

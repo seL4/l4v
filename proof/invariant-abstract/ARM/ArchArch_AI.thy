@@ -618,7 +618,7 @@ lemma cap_insert_ap_invs:
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state is_cap_simps)
   apply (frule safe_parent_cap_is_device)
   apply (drule safe_parent_cap_range)
-  apply (simp add:cap_range_def)
+  apply (simp add: cap_range_def)
   apply (rule conjI)
    prefer 2
    apply (clarsimp simp: obj_at_def a_type_def)
@@ -713,8 +713,8 @@ lemma set_cap_idx_up_aligned_area:
   apply (rule_tac x = slot in exI)
   apply clarsimp
   apply (frule(1) cte_wp_valid_cap)
-  apply (clarsimp simp:cte_wp_at_caps_of_state is_aligned_neg_mask_eq
-    p_assoc_help valid_cap_def valid_untyped_def cap_aligned_def)
+  apply (clarsimp simp: cte_wp_at_caps_of_state is_aligned_neg_mask_eq
+                        p_assoc_help valid_cap_def valid_untyped_def cap_aligned_def)
   done
 
 primrec  get_untyped_cap_idx :: "cap \<Rightarrow> nat"
@@ -1388,7 +1388,7 @@ lemma arch_decode_inv_wf[wp]:
               apply (simp add: asid_bits_def asid_low_bits_def)
              apply (simp add: asid_bits_def)
             apply (simp split del: split_if)
-            apply (wp ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp|wpc | simp add: K_bind_def)+
+            apply (wp ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp | wpc | simp add: K_bind_def)+
      apply clarsimp
      apply (rule conjI, fastforce)
      apply (cases excaps, simp)
@@ -1405,7 +1405,6 @@ lemma arch_decode_inv_wf[wp]:
       apply (clarsimp simp add: cte_wp_at_caps_of_state)
       apply (drule (1) caps_of_state_valid[rotated])+
       apply (drule (1) diminished_is_update)+
-
       apply (clarsimp simp: is_cap_simps cap_rights_update_def)
      apply (clarsimp simp add: cte_wp_at_caps_of_state)
      apply (drule (1) caps_of_state_valid[rotated])+

@@ -588,53 +588,53 @@ lemma in_user_frame_obj_upd:
    in_user_frame x (s\<lparr>kheap := \<lambda>a. if a = p then Some k else kheap s a\<rparr>)
    = in_user_frame x s"
   apply (rule iffI)
-  apply (clarsimp simp:in_user_frame_def obj_at_def split:split_if_asm)
+  apply (clarsimp simp: in_user_frame_def obj_at_def split: split_if_asm)
    apply (elim disjE)
     apply clarsimp
     apply (intro exI)
     apply (rule conjI,assumption)
-    apply (simp add:a_type_def)
-   apply (fastforce simp:a_type_def)
-  apply (clarsimp simp:in_user_frame_def obj_at_def split:split_if_asm)
+    apply (simp add: a_type_def)
+   apply (fastforce simp: a_type_def)
+  apply (clarsimp simp: in_user_frame_def obj_at_def split: split_if_asm)
   apply (rule_tac x = sz in exI)
   apply (intro conjI impI)
-    apply (fastforce simp:a_type_def)+
+    apply (fastforce simp: a_type_def)+
   done
 
 lemma user_mem_obj_upd_dom:
   "\<lbrakk>kheap s p = Some ko; a_type k = a_type ko\<rbrakk> \<Longrightarrow>
    dom (user_mem (s\<lparr>kheap := \<lambda>a. if a = p then Some k else kheap s a\<rparr>))
    = dom (user_mem s)"
-  by (clarsimp simp:user_mem_def in_user_frame_obj_upd dom_def)
+  by (clarsimp simp: user_mem_def in_user_frame_obj_upd dom_def)
 
 lemma in_device_frame_obj_upd:
   "\<lbrakk>kheap s p = Some ko; a_type k = a_type ko\<rbrakk> \<Longrightarrow>
    in_device_frame x (s\<lparr>kheap := \<lambda>a. if a = p then Some k else kheap s a\<rparr>)
    = in_device_frame x s"
   apply (rule iffI)
-  apply (clarsimp simp:in_device_frame_def obj_at_def split:split_if_asm)
+  apply (clarsimp simp: in_device_frame_def obj_at_def split: split_if_asm)
    apply (elim disjE)
     apply clarsimp
     apply (intro exI)
     apply (rule conjI,assumption)
-    apply (simp add:a_type_def)
-   apply (fastforce simp:a_type_def)
-  apply (clarsimp simp:in_device_frame_def obj_at_def split:split_if_asm)
+    apply (simp add: a_type_def)
+   apply (fastforce simp: a_type_def)
+  apply (clarsimp simp: in_device_frame_def obj_at_def split: split_if_asm)
   apply (rule_tac x = sz in exI)
   apply (intro conjI impI)
-    apply (fastforce simp:a_type_def)+
+    apply (fastforce simp: a_type_def)+
   done
 
 lemma device_mem_obj_upd_dom:
   "\<lbrakk>kheap s p = Some ko; a_type k = a_type ko\<rbrakk> \<Longrightarrow>
    dom (device_mem (s\<lparr>kheap := \<lambda>a. if a = p then Some k else kheap s a\<rparr>))
    = dom (device_mem s)"
-  by (clarsimp simp:device_mem_def in_device_frame_obj_upd dom_def)
+  by (clarsimp simp: device_mem_def in_device_frame_obj_upd dom_def)
 
 lemma pspace_respects_region_cong[cong]:
   "\<lbrakk>kheap a  = kheap b; device_state (machine_state a) = device_state (machine_state b)\<rbrakk>
   \<Longrightarrow> pspace_respects_device_region a = pspace_respects_device_region b"
-  by (simp add:pspace_respects_device_region_def device_mem_def user_mem_def in_device_frame_def 
+  by (simp add: pspace_respects_device_region_def device_mem_def user_mem_def in_device_frame_def 
     in_user_frame_def obj_at_def dom_def)
 
 definition "obj_is_device tp dev \<equiv>
@@ -644,9 +644,9 @@ definition "obj_is_device tp dev \<equiv>
 
 lemma cap_is_device_obj_is_device[simp]:
   "cap_is_device (default_cap tp a sz dev) = obj_is_device tp dev"
-  by (simp add:default_cap_def arch_default_cap_def obj_is_device_def
-                  default_object_def  default_arch_object_def
-        split:apiobject_type.splits aobject_type.splits)
+  by (simp add: default_cap_def arch_default_cap_def obj_is_device_def
+                default_object_def  default_arch_object_def
+         split: apiobject_type.splits aobject_type.splits)
 
 crunch device_state_inv: storeWord "\<lambda>ms. P (device_state ms)"
 end

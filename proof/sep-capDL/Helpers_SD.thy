@@ -299,7 +299,7 @@ definition
   is_device_cap :: "cdl_cap \<Rightarrow> bool"
 where  "is_device_cap cap \<equiv> case cap of
    (UntypedCap dev cover_ids available_ids) \<Rightarrow> dev
-   | (FrameCap dev a b c d e) \<Rightarrow> dev
+   | (FrameCap dev _ _ _ _ _) \<Rightarrow> dev
    | _ \<Rightarrow> False"
 
 lemmas is_device_cap_simps[simp] = is_device_cap_def[split_simps cdl_cap.split]

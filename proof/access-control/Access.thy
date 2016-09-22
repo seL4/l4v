@@ -958,7 +958,7 @@ The other half involves showing that @{term "aag"} concords with the
 policy. See @{term "state_objs_to_policy s"}.
 
 *}
-term device_state
+
 definition
   integrity_subjects :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> bool \<Rightarrow> obj_ref set \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool"
 where
@@ -1083,8 +1083,9 @@ lemma auth_ipc_buffers_tro:
           pasObjectAbs aag p \<notin> subjects \<rbrakk>
   \<Longrightarrow> x \<in> auth_ipc_buffers s p "
   apply (drule_tac x = p in spec)
-  apply (erule integrity_obj.cases, simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def 
-    split: cap.split_asm arch_cap.split_asm split_if_asm bool.splits)
+  apply (erule integrity_obj.cases, 
+        simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def 
+               split: cap.split_asm arch_cap.split_asm split_if_asm bool.splits)
   apply fastforce
   done
 
@@ -1093,8 +1094,9 @@ lemma auth_ipc_buffers_tro_fwd:
           pasObjectAbs aag p \<notin> subjects \<rbrakk>
   \<Longrightarrow> x \<in> auth_ipc_buffers s' p "
   apply (drule_tac x = p in spec)
-  apply (erule integrity_obj.cases, simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def
-    split: cap.split_asm arch_cap.split_asm split_if_asm bool.splits)
+  apply (erule integrity_obj.cases,
+        simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def
+                split: cap.split_asm arch_cap.split_asm split_if_asm bool.splits)
   apply fastforce
   done
 

@@ -89,7 +89,7 @@ lemma setDomain_ccorres:
       and (\<lambda>s. rv = ksCurThread s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p)))" in hoare_strengthen_post)
     apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_not_queued
               tcbSchedDequeue_not_in_queue hoare_vcg_imp_lift hoare_vcg_all_lift)
-   apply (clarsimp simp:invs'_def valid_pspace'_def valid_state'_def)
+   apply (clarsimp simp: invs'_def valid_pspace'_def valid_state'_def)
   apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def
                          invs'_def valid_state'_def valid_pspace'_def)
   done
@@ -559,7 +559,6 @@ lemma Arch_hasRecycleRights_spec:
          auto simp: ARM_H.hasRecycleRights_def
               dest: ccap_relation_frame_tags)[1]
   done
-
 
 lemma hasRecycleRights_spec:
   "\<forall>cap. \<Gamma> \<turnstile> \<lbrace> ccap_relation cap \<acute>cap \<rbrace> 
@@ -2484,15 +2483,14 @@ lemma Arch_isFrameType_spec:
   \<lbrace> \<acute>ret__unsigned_long = 
      from_bool (isFrameType ((toEnum (unat \<^bsup>s\<^esup> type))::ArchTypes_H.object_type))\<rbrace>"
   apply vcg
-  apply (simp add:toEnum_object_type_to_H)
+  apply (simp add: toEnum_object_type_to_H)
   apply (frule object_type_from_to_H)
-  apply (auto dest!:object_type_from_H_toAPIType_simps[THEN iffD1,OF eq_commute[THEN iffD1]])
-  apply (auto simp:object_type_to_H_def isFrameType_def isFrameType_def
-            split:if_splits object_type.splits)
-  apply (auto simp:object_type_from_H_def )
+  apply (auto dest!: object_type_from_H_toAPIType_simps[THEN iffD1,OF eq_commute[THEN iffD1]])
+  apply (auto simp: object_type_to_H_def isFrameType_def isFrameType_def
+             split: if_splits object_type.splits)
+  apply (auto simp: object_type_from_H_def )
   done
 
-declare[[goals_limit = 1]]
 lemma decodeUntypedInvocation_ccorres_helper:
 notes TripleSuc[simp]
 notes valid_untyped_inv'.simps[simp del] tl_drop_1[simp]
@@ -2911,11 +2909,11 @@ shows
                                valid_untyped_capBlockSize_misc getFreeRef_def hd_conv_nth length_ineq_not_Nil)
                               apply (rule_tac conseqPost[where A' = "{}" and Q' = UNIV])
                                 apply (vcg exspec=setThreadState_modifies)
-                               apply (clarsimp simp:object_type_from_to_H cap_get_tag_isCap
+                               apply (clarsimp simp: object_type_from_to_H cap_get_tag_isCap
                                  ccap_relation_isDeviceCap)
                                apply (frule_tac cap = rv in cap_get_tag_to_H(5))
-                                apply (simp add:cap_get_tag_isCap)
-                               apply (simp add:field_simps Suc_unat_diff_1)
+                                apply (simp add: cap_get_tag_isCap)
+                               apply (simp add: field_simps Suc_unat_diff_1)
                                apply (frule iffD2[OF olen_add_eqv])
                                apply (clarsimp simp: unat_plus_simple[THEN iffD1])
                                apply (case_tac slots,simp)
@@ -2923,9 +2921,9 @@ shows
                                 apply clarsimp
                                 apply (subst upto_enum_word)
                                 apply (subst nth_map_upt)
-                                 apply (clarsimp simp:field_simps Suc_unat_diff_1 unat_plus_simple[THEN iffD1])
-                                apply (clarsimp simp:cte_level_bits_def)
-                               apply (clarsimp simp:isFrameType_def
+                                 apply (clarsimp simp: field_simps Suc_unat_diff_1 unat_plus_simple[THEN iffD1])
+                                apply (clarsimp simp: cte_level_bits_def)
+                               apply (clarsimp simp: isFrameType_def
                                 fromAPIType_def ARM_H.fromAPIType_def)
                               apply simp
                              apply wp
@@ -2942,9 +2940,9 @@ shows
                            apply clarsimp
                           apply (rule conseqPre,vcg,clarsimp)
                          apply vcg
-                         apply (clarsimp simp:if_1_0_0 ccap_relation_isDeviceCap)
+                         apply (clarsimp simp: if_1_0_0 ccap_relation_isDeviceCap)
                         apply vcg
-                       apply (clarsimp simp:if_1_0_0 from_bool_neq_0 from_bool_0
+                       apply (clarsimp simp: if_1_0_0 from_bool_neq_0 from_bool_0
                         ccap_relation_isDeviceCap[unfolded to_bool_neq_0])
                       apply (rule conseqPre,vcg,clarsimp)
                      apply (rule ccorres_guard_imp
@@ -2959,23 +2957,24 @@ shows
                         ksCurThread_' (globals sa) = tcb_ptr_to_ctcb_ptr (ksCurThread s)}" in conseqPost[where 
                          A' = "{}"])
                      apply vcg
-                     apply (clarsimp simp:toEnum_object_type_to_H not_le word_sle_def 
-                        enum_apiobject_type enum_object_type maxBound_is_length
-                       unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
-                       not_less word_le_nat_alt split:if_splits)
-                    apply (clarsimp simp:from_bool_0 ccap_relation_isDeviceCap2)
+                     apply (clarsimp simp: toEnum_object_type_to_H not_le word_sle_def 
+                                           enum_apiobject_type enum_object_type maxBound_is_length
+                                           unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
+                                           not_less word_le_nat_alt 
+                                    split: if_splits)
+                    apply (clarsimp simp: from_bool_0 ccap_relation_isDeviceCap2)
                     apply (intro conjI allI impI)
-                     apply (clarsimp simp:shiftL_nat isCap_simps valid_cap_simps',simp add:word_bits_def)
+                     apply (clarsimp simp: shiftL_nat isCap_simps valid_cap_simps', simp add: word_bits_def)
                     apply (rule conjI allI)
                      apply (rule ccontr)
-                     apply (clarsimp simp:not_less shiftr_overflow)
+                     apply (clarsimp simp: not_less shiftr_overflow)
                     apply (intro conjI allI impI)
-                            apply ((clarsimp simp:shiftL_nat isCap_simps valid_cap_simps' isFrameType_def
+                            apply ((clarsimp simp: shiftL_nat isCap_simps valid_cap_simps' isFrameType_def
                        ThreadState_Restart_def not_less mask_def 
                        split:split_if_asm | 
                        simp add: false_def of_nat_power[where x = 5,simplified] not_less)+)[8]
                    apply (intro conjI allI impI APIType_capBits_high word_of_nat_less)
-                            apply ((clarsimp simp:shiftL_nat isCap_simps valid_cap_simps' isFrameType_def
+                            apply ((clarsimp simp: shiftL_nat isCap_simps valid_cap_simps' isFrameType_def
                        ThreadState_Restart_def not_less mask_def isFrameType_def split:split_if_asm | 
                        simp add: false_def of_nat_power[where x = 5,simplified] not_less)+)[5]
                   apply (rule_tac Q'="\<lambda>r. cte_wp_at' (\<lambda>cte. cteCap cte = cp) slot
@@ -2985,14 +2984,14 @@ shows
                             | Some n \<Rightarrow> args ! 4 + args ! 5 - 1 < 2 ^ n)
                       and sch_act_simple and ct_active'" in hoare_post_imp_R)
                    prefer 2
-                   apply (clarsimp simp:invs_valid_objs' invs_mdb'
+                   apply (clarsimp simp: invs_valid_objs' invs_mdb'
                       invs_queues ct_in_state'_def pred_tcb_at')
                    apply (subgoal_tac "ksCurThread s \<noteq> ksIdleThread sa")
                     prefer 2
                     apply clarsimp
                     apply (frule st_tcb_at_idle_thread',fastforce)
-                    apply (clarsimp simp:valid_idle'_def)
-                   apply (clarsimp simp:st_tcb_at'_def obj_at'_def
+                    apply (clarsimp simp: valid_idle'_def)
+                   apply (clarsimp simp: st_tcb_at'_def obj_at'_def
                        invs'_def valid_state'_def)
                    apply (subgoal_tac "tcbState obja \<noteq> Inactive \<and> \<not> idle' (tcbState obja)")
                     prefer 2
@@ -3001,7 +3000,7 @@ shows
                    apply (subgoal_tac "tcb_st_refs_of' (tcbState obja) = {}")
                     prefer 2
                     apply fastforce (* slow fastforce *)
-                   apply (clarsimp split:if_splits simp:not_less toEnum_object_type_to_H 
+                   apply (clarsimp split:if_splits simp: not_less toEnum_object_type_to_H 
                              word_size hd_conv_nth length_ineq_not_Nil)
                    apply (subgoal_tac "tcbQueued obja \<longrightarrow> runnable' (tcbState obja)")
                     apply (simp add: trans [OF olen_add_eqv[symmetric] unat_plus_simple])
@@ -3116,11 +3115,11 @@ shows
    apply (frule(1) h_t_valid_and_cslift_and_c_guard_field_mdbNext_CL[rotated -1])
      apply (clarsimp simp:cte_wp_at_ctes_of)
     apply fastforce
-   apply (clarsimp simp:typ_heap_simps)
+   apply (clarsimp simp: typ_heap_simps)
    apply (frule_tac p = slot in valid_mdb_ctes_of_next[rotated])
      apply simp
     apply fastforce
-   apply (clarsimp simp:cte_wp_at_ctes_of)
+   apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (frule_tac src = "(mdbNext_CL (cteMDBNode_CL ctel'))" in  rf_sr_cte_relation)
      apply simp
     apply simp
@@ -3139,13 +3138,13 @@ shows
    apply (rule conjI,assumption)
     apply (rule conjI,erule(2) rf_sr_cte_relation)
     apply (frule(1) h_t_valid_and_cslift_and_c_guard_field_mdbNext_CL[rotated -1])
-      apply (clarsimp simp:cte_wp_at_ctes_of simp del: rf_sr_upd_safe)
+      apply (clarsimp simp: cte_wp_at_ctes_of simp del: rf_sr_upd_safe)
      apply fastforce
-    apply (clarsimp simp:typ_heap_simps simp del: rf_sr_upd_safe)
+    apply (clarsimp simp: typ_heap_simps simp del: rf_sr_upd_safe)
    apply (frule_tac p = slot in valid_mdb_ctes_of_next[rotated])
      apply (simp del: rf_sr_upd_safe)
     apply fastforce
-   apply (clarsimp simp:cte_wp_at_ctes_of)
+   apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (frule_tac src = "(mdbNext_CL (cteMDBNode_CL ctel'))" in  rf_sr_cte_relation)
      apply simp
     apply simp
@@ -3187,7 +3186,7 @@ shows
            >>= invocationCatch thread isBlocking isCall InvokeUntyped) 
   (Call decodeUntypedInvocation_'proc)"
   apply (rule ccorres_name_pre)
-  apply (clarsimp simp:isCap_simps)
+  apply (clarsimp simp: isCap_simps)
   apply (rule ccorres_guard_imp2)
    apply (rule monadic_rewrite_ccorres_assemble)
     apply (rule_tac isBlocking=isBlocking and isCall=isCall and buffer=buffer
@@ -3207,7 +3206,7 @@ shows
   apply (clarsimp simp: ex_cte_cap_wp_to'_def excaps_in_mem_def)
   apply (drule(1) bspec)+
   apply (rule_tac x = b in exI)
-  apply (clarsimp simp:slotcap_in_mem_def cte_wp_at_ctes_of)
+  apply (clarsimp simp: slotcap_in_mem_def cte_wp_at_ctes_of)
   done
 
 end

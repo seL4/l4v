@@ -360,8 +360,8 @@ lemma well_formed_frame_in_pd:
   apply (drule_tac x = frame_cap in spec)
   apply (clarsimp simp: is_fake_pt_cap_def cap_type_def
                  split: cdl_cap.splits)
-  apply (clarsimp simp:cap_at_def opt_cap_def slots_of_def opt_object_def
-    simp del:split_paired_All)
+  apply (clarsimp simp: cap_at_def opt_cap_def slots_of_def opt_object_def
+              simp del: split_paired_All)
   apply (drule_tac x = pd in spec)
   apply (drule_tac x = pt_slot in spec)
   apply fastforce
@@ -795,7 +795,7 @@ lemma empty_cap_map_NullCap:
 (* FIXME: current cdl_init does not consider device caps *)
 lemma well_formed_opt_cap_nondevice:
   "\<lbrakk>well_formed spec; opt_cap slot spec = Some cap\<rbrakk> \<Longrightarrow> \<not> is_device_cap cap"
-  by (simp add:well_formed_def cap_at_def del:split_paired_All)
+  by (simp add: well_formed_def cap_at_def del: split_paired_All)
 
 (***********************
  * Mapping page tables *
@@ -895,7 +895,7 @@ lemma map_page_in_pt_sep:
    apply (sep_drule sep_map_c_sep_map_s)
     apply (simp add: object_default_state_def object_type_def
                      default_object_def object_slots_def empty_cap_map_NullCap)
-   apply (simp add:fun_upd_def)
+   apply (simp add: fun_upd_def)
    apply sep_solve
   apply clarsimp
   apply (clarsimp simp: is_pt_def object_at_def

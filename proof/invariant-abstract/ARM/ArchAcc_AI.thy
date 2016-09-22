@@ -1680,31 +1680,31 @@ lemma set_pt_valid_ioc[wp]:
 
 
 lemma valid_machine_stateE:
-assumes vm: "valid_machine_state s"
-assumes e: "\<lbrakk>in_user_frame p s 
-  \<or> underlying_memory (machine_state s) p = 0 \<rbrakk> \<Longrightarrow> E "
-shows E
+  assumes vm: "valid_machine_state s"
+  assumes e: "\<lbrakk>in_user_frame p s 
+    \<or> underlying_memory (machine_state s) p = 0 \<rbrakk> \<Longrightarrow> E "
+  shows E
   using vm
-  apply (clarsimp simp:valid_machine_state_def)
+  apply (clarsimp simp: valid_machine_state_def)
   apply (drule_tac x = p in spec)
   apply (rule e)
   apply auto
   done
 
 lemma in_user_frame_same_type_upd:
-"\<lbrakk>typ_at type p s; type = a_type obj; in_user_frame q s\<rbrakk>
+  "\<lbrakk>typ_at type p s; type = a_type obj; in_user_frame q s\<rbrakk>
     \<Longrightarrow> in_user_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
-  apply (clarsimp simp:in_user_frame_def obj_at_def)
+  apply (clarsimp simp: in_user_frame_def obj_at_def)
   apply (rule_tac x=sz in exI)
-  apply (auto simp:a_type_simps)
+  apply (auto simp: a_type_simps)
   done
 
 lemma in_device_frame_same_type_upd:
-"\<lbrakk>typ_at type p s; type = a_type obj ; in_device_frame q s\<rbrakk>
+  "\<lbrakk>typ_at type p s; type = a_type obj ; in_device_frame q s\<rbrakk>
     \<Longrightarrow> in_device_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
-  apply (clarsimp simp:in_device_frame_def obj_at_def)
+  apply (clarsimp simp: in_device_frame_def obj_at_def)
   apply (rule_tac x=sz in exI)
-  apply (auto simp:a_type_simps)
+  apply (auto simp: a_type_simps)
   done
 
 lemma store_word_offs_in_user_frame[wp]:
@@ -1740,7 +1740,7 @@ assumes vm : "valid_machine_state s"
 assumes tyat : "typ_at type p s"
 shows
   " a_type obj = type \<Longrightarrow> valid_machine_state (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
-  apply (clarsimp simp:valid_machine_state_def)
+  apply (clarsimp simp: valid_machine_state_def)
   subgoal for p
    apply (rule valid_machine_stateE[OF vm,where p = p])
    apply (elim disjE,simp_all)
@@ -1755,8 +1755,8 @@ lemma set_pt_vms[wp]:
   apply (wp get_object_wp)
   apply clarify
   apply (erule valid_machine_state_heap_updI)
-   apply (fastforce simp:obj_at_def a_type_def 
-     split:kernel_object.splits arch_kernel_obj.splits)+
+   apply (fastforce simp: obj_at_def a_type_def 
+                   split: kernel_object.splits arch_kernel_obj.splits)+
   done
 
 crunch valid_irq_states[wp]: set_pt "valid_irq_states"
@@ -2277,8 +2277,8 @@ lemma set_asid_pool_vms[wp]:
   apply (wp get_object_wp)
   apply clarify
   apply (erule valid_machine_state_heap_updI)
-  apply (fastforce simp:a_type_def obj_at_def
-    split:kernel_object.splits arch_kernel_obj.splits)+
+  apply (fastforce simp: a_type_def obj_at_def
+                  split: kernel_object.splits arch_kernel_obj.splits)+
   done
 
 
@@ -3392,7 +3392,6 @@ lemma set_pd_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_pd p pt \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: set_pd_def set_object_def)
   apply (wp get_object_wp)
-
   apply clarify
   apply (erule valid_machine_state_heap_updI)
   apply (fastforce simp: a_type_def obj_at_def
@@ -3438,9 +3437,9 @@ lemma vs_refs_pages_subset2:
         apply (clarsimp simp: pde_ref_def pde_ref_pages_def
           split: pde.splits)
          apply (drule bspec,simp)+
-         apply (simp add:valid_pde_def)
+         apply (simp add: valid_pde_def)
          apply (clarsimp simp: data_at_def obj_at_def a_type_def)
-        apply (drule bspec, simp split:if_splits)+
+        apply (drule bspec, simp split: if_splits)+
       by (clarsimp simp: obj_at_def a_type_def data_at_def)
     done
   done
@@ -3516,7 +3515,7 @@ lemma valid_asid_map_next_asid [iff]:
 lemma pspace_respects_device_region_dmo:
   assumes valid_f: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms. P (device_state ms)\<rbrace>"
   shows "\<lbrace>pspace_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
-  apply (clarsimp simp:do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
+  apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
     get_def return_def)
   apply (drule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_f])
   apply auto
@@ -3525,7 +3524,7 @@ lemma pspace_respects_device_region_dmo:
 lemma cap_refs_respects_device_region_dmo:
   assumes valid_f: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms. P (device_state ms)\<rbrace>"
   shows "\<lbrace>cap_refs_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. cap_refs_respects_device_region\<rbrace>"
-  apply (clarsimp simp:do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
+  apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
     get_def return_def)
   apply (drule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_f])
   apply auto
@@ -3533,9 +3532,10 @@ lemma cap_refs_respects_device_region_dmo:
 
 lemma machine_op_lift_device_state[wp]:
   "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  by (clarsimp simp:machine_op_lift_def NonDetMonad.valid_def bind_def
-    machine_rest_lift_def gets_def simpler_modify_def get_def return_def
-    select_def ignore_failure_def select_f_def split:if_splits)
+  by (clarsimp simp: machine_op_lift_def NonDetMonad.valid_def bind_def
+                     machine_rest_lift_def gets_def simpler_modify_def get_def return_def
+                     select_def ignore_failure_def select_f_def
+              split: if_splits)
 
 crunch device_state_inv[wp]: invalidateTLB_ASID "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: invalidateTLB_VAASID "\<lambda>ms. P (device_state ms)"

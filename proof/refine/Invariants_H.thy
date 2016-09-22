@@ -2634,7 +2634,7 @@ lemma typ_at_lift_valid_cap':
     apply (case_tac arch_capability,
            simp_all add: P [where P=id, simplified] page_table_at'_def
                          hoare_vcg_prop page_directory_at'_def All_less_Ball
-                    split del:if_splits)
+              split del: if_splits)
      apply (wp hoare_vcg_const_Ball_lift P)
    apply (wp typ_at_lift_valid_untyped' [OF P])
   apply (wp hoare_vcg_all_lift typ_at_lift_cte' P)

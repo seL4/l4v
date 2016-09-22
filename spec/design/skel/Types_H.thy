@@ -37,7 +37,7 @@ requalify_consts
   ptrFromPAddr
 end
 
-#INCLUDE_HASKELL SEL4/API/Types.lhs Arch=ARM_H all_bits NOT wordsFromBootInfo messageInfoFromWord wordFromMessageInfo ObjectType getObjectSize fromAPIType toAPIType isFrameType pageType
-#INCLUDE_HASKELL SEL4/API/Types.lhs Arch=ARM_H all_bits ONLY wordsFromBootInfo messageInfoFromWord wordFromMessageInfo
+#INCLUDE_HASKELL SEL4/API/Types.lhs all_bits NOT wordsFromBootInfo messageInfoFromWord wordFromMessageInfo ObjectType getObjectSize fromAPIType toAPIType isFrameType pageType
+#INCLUDE_HASKELL SEL4/API/Types.lhs all_bits ONLY wordsFromBootInfo messageInfoFromWord wordFromMessageInfo
 
 end

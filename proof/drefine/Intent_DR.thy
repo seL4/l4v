@@ -1001,7 +1001,7 @@ lemma lookup_ipc_buffer_SomeB_evalMonad:
    apply (clarsimp simp:evalMonad_get_cap split:option.splits)
    apply (clarsimp dest!:caps_of_state_cteD get_tcb_SomeD simp:obj_at_def split:cap.splits arch_cap.splits if_splits)
    apply (clarsimp simp:cte_wp_at_cases)
-   apply (fastforce simp:obj_at_def vm_read_only_def vm_read_write_def)
+   apply (fastforce simp: obj_at_def vm_read_only_def vm_read_write_def)
 done
 
 lemma lookup_ipc_buffer_None_evalMonad:
@@ -1277,7 +1277,7 @@ lemma underlying_memory_storeWord:
     using iffD2[OF and_mask_eq_iff_le_mask[where n = 2 and w = n]]
     apply (simp add:mask_2pm1)
   done
-thm data_at_def
+
 lemma ipc_frame_ptr_at_frame_at:
   "\<lbrakk>valid_objs s;ipc_frame_ptr_at buf thread s;ipc_frame_sz_at sz thread s\<rbrakk> \<Longrightarrow>ko_at (ArchObj (DataPage False sz)) buf s"
   apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
@@ -1285,10 +1285,10 @@ lemma ipc_frame_ptr_at_frame_at:
   apply (drule valid_tcb_objs)
     apply (erule get_tcb_rev)
   apply (simp add:valid_tcb_def)
-  apply (clarsimp simp:valid_ipc_buffer_cap_def tcb_cap_cases_def is_nondevice_page_cap_def
-    split:bool.split_asm)
-  apply (clarsimp simp:valid_cap_def obj_at_def a_type_def is_nondevice_page_cap_def)
-  apply (clarsimp split:Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
+  apply (clarsimp simp: valid_ipc_buffer_cap_def tcb_cap_cases_def is_nondevice_page_cap_def
+                 split: bool.split_asm)
+  apply (clarsimp simp: valid_cap_def obj_at_def a_type_def is_nondevice_page_cap_def)
+  apply (clarsimp split: Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
 done
 
 lemma ipc_buffer_within_frame:
@@ -1331,9 +1331,9 @@ lemma valid_tcb_obj_ipc_align_etc:
   apply (frule ipc_frame_ptr_at_frame_at)
     apply simp+
   apply (drule(1) valid_tcb_objs)
-  apply (clarsimp dest!:get_tcb_SomeD simp:valid_tcb_def valid_ipc_buffer_cap_def   
-     ipc_frame_wp_at_def obj_at_def)
-  apply (clarsimp split:cap.splits arch_cap.splits bool.split_asm)
+  apply (clarsimp dest!: get_tcb_SomeD simp:valid_tcb_def valid_ipc_buffer_cap_def   
+                         ipc_frame_wp_at_def obj_at_def)
+  apply (clarsimp split: cap.splits arch_cap.splits bool.split_asm)
   apply (rule conjI)
     apply (rule is_aligned_weaken,simp+)
       apply (simp add:msg_align_bits_def)
@@ -1707,7 +1707,7 @@ lemma dcorres_store_word_safe:
    apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def valid_ipc_buffer_cap_def
                simp del: upt.simps)
    apply (erule disjE)
-    apply (clarsimp simp:is_nondevice_page_cap_def split:cap.split_asm simp del:upt.simps)
+    apply (clarsimp simp: is_nondevice_page_cap_def split: cap.split_asm simp del: upt.simps)
     apply (rename_tac tcb arch_cap)
     apply (case_tac arch_cap)
         apply ((simp add:get_ipc_buffer_words_def)+)[2]
@@ -1720,7 +1720,7 @@ lemma dcorres_store_word_safe:
                 apply (erule get_tcb_rev)
                apply ((simp add:ipc_frame_wp_at_def obj_at_def)+)[2]
              apply (simp add:obj_at_def)
-            apply (clarsimp simp:is_aligned_mask split:bool.split_asm simp del:upt.simps)+
+            apply (clarsimp simp: is_aligned_mask split: bool.split_asm simp del: upt.simps)+
         apply (rule_tac y = thread in within_page_ipc_buf)
               apply (simp add:ipc_frame_wp_at_def obj_at_def ipc_buffer_wp_at_def)+
         apply (simp add:msg_max_length_def msg_align_bits)
@@ -2173,8 +2173,8 @@ lemma ipc_frame_ptr_at_sz_at:
   apply (frule valid_tcb_objs)
    apply (erule get_tcb_rev)
   apply (subgoal_tac "valid_cap (tcb_ipcframe tcb) s")
-   apply (clarsimp simp:valid_cap_def obj_at_def a_type_def split:if_splits arch_kernel_obj.splits)
-  apply (clarsimp simp:valid_tcb_def tcb_cap_cases_def split:if_splits)
+   apply (clarsimp simp: valid_cap_def obj_at_def a_type_def split: if_splits arch_kernel_obj.splits)
+  apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def split: if_splits)
   done
 
 lemma dcorres_store_word_conservative:

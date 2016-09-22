@@ -5052,7 +5052,7 @@ lemma set_eobject_corres':
    apply (rename_tac arch_kernel_obj obj d p ts)
    apply (case_tac arch_kernel_obj; simp)
      apply (clarsimp simp: pte_relation_def pde_relation_def is_tcb_def
-       split:split_if_asm)+
+                    split: split_if_asm)+
   apply (simp only: ekheap_relation_def dom_fun_upd2 simp_thms)
   apply (frule bspec, erule domI)
   apply (rule ballI, drule(1) bspec)

@@ -2420,14 +2420,13 @@ lemma ccap_relation_gen_framesize_to_H:
   done
 
 lemma isDevice_PageCap_ccap_relation:
- "ccap_relation (capability.ArchObjectCap (arch_capability.PageCap d ref rghts sz data)) cap
+  "ccap_relation (capability.ArchObjectCap (arch_capability.PageCap d ref rghts sz data)) cap
   \<Longrightarrow> (generic_frame_cap_get_capFIsDevice_CL (cap_lift cap) \<noteq> 0)  = d"
-   by (clarsimp elim!:ccap_relationE 
-     simp : isPageCap_def generic_frame_cap_get_capFIsDevice_CL_def cap_to_H_def
-            Let_def to_bool_def
-     split: arch_capability.split_asm cap_CL.split_asm split_if_asm)
+   by (clarsimp elim!: ccap_relationE 
+                 simp: isPageCap_def generic_frame_cap_get_capFIsDevice_CL_def cap_to_H_def
+                       Let_def to_bool_def
+                split: arch_capability.split_asm cap_CL.split_asm split_if_asm)
 
-declare[[goals_limit = 1]]
 lemma checkValidIPCBuffer_ccorres:
   "ccorres (syscall_error_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs') (UNIV \<inter> {s. vptr_' s = vptr} \<inter> {s. ccap_relation cp (cap_' s)}) []
@@ -2461,18 +2460,18 @@ apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
                               syscall_error_rel_def syscall_error_to_H_cases)
       apply (simp add: whenE_def msgAlignBits_def mask_def)
       apply (rule ccorres_return_CE, simp+)[1]
-     apply (clarsimp simp:cap_get_tag_isCap isCap_simps pageSize_def
-       isDevice_PageCap_ccap_relation Collect_const_mem if_1_0_0
-                          word_sle_def)
+     apply (clarsimp simp: cap_get_tag_isCap isCap_simps pageSize_def
+                           isDevice_PageCap_ccap_relation Collect_const_mem if_1_0_0
+                           word_sle_def)
      apply vcg
-     apply (clarsimp simp:cap_get_tag_isCap isCap_simps pageSize_def
-     isDevice_PageCap_ccap_relation Collect_const_mem)
+     apply (clarsimp simp: cap_get_tag_isCap isCap_simps pageSize_def
+                           isDevice_PageCap_ccap_relation Collect_const_mem)
     apply (rule conseqPre, vcg)
-    apply (clarsimp simp:cap_get_tag_isCap isCap_simps pageSize_def
-     isDevice_PageCap_ccap_relation Collect_const_mem if_1_0_0
+    apply (clarsimp simp: cap_get_tag_isCap isCap_simps pageSize_def
+                          isDevice_PageCap_ccap_relation Collect_const_mem if_1_0_0
                           word_sle_def)
-   apply (clarsimp simp:cap_get_tag_isCap isCap_simps pageSize_def
-    isDevice_PageCap_ccap_relation Collect_const_mem)
+   apply (clarsimp simp: cap_get_tag_isCap isCap_simps pageSize_def
+                         isDevice_PageCap_ccap_relation Collect_const_mem)
      apply (clarsimp simp: Collect_const_mem if_1_0_0
                           word_sle_def)
   apply (cases "isArchPageCap cp")
@@ -2494,18 +2493,18 @@ apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
        apply vcg
        apply (rule conseqPre, vcg)
        apply (clarsimp simp: throwError_def return_def exception_defs
-                              syscall_error_rel_def syscall_error_to_H_cases)
+                             syscall_error_rel_def syscall_error_to_H_cases)
       apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def)
       apply vcg
      apply (rule conseqPre, vcg)
      apply (case_tac cp)
      apply (clarsimp simp: syscall_error_rel_def syscall_error_to_H_cases isCap_simps
-                         exception_defs throwError_def return_def if_1_0_0
-                  split: capability.split arch_capability.split split_if_asm)+
+                           exception_defs throwError_def return_def if_1_0_0
+                    split: capability.split arch_capability.split split_if_asm)+
    apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def Cond_if_mem)
    apply (frule ccap_relation_page_is_device)
    apply (auto simp add: isCap_simps isDeviceCap.simps pageSize_def 
-     split:if_splits)[1]
+                  split: if_splits)[1]
   apply (cinit lift: vptr_' cap_')
    apply csymbr
    apply (simp add: ARM_H.checkValidIPCBuffer_def

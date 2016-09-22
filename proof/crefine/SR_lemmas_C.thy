@@ -1902,7 +1902,8 @@ lemma user_word_at_cross_over:
   apply (simp add: aligned_shiftr_mask_shiftl)
   done
 
-(* FIXME: untyped_device
+(* FIXME: Because the following lemma is correct, writing to device memory refines from c to abstract.
+          But because we ignore what are written to decice memory, read does not refine from c to abstract.
 lemma device_word_at_cross_over:
   "\<lbrakk> device_word_at x p s; (s, s') \<in> rf_sr; p' = Ptr p \<rbrakk>
    \<Longrightarrow> c_guard p' \<and> hrs_htd (t_hrs_' (globals s')) \<Turnstile>\<^sub>t p'
@@ -1978,7 +1979,7 @@ lemma memory_cross_over:
    apply (drule_tac p="ptr && ~~ mask 2" in user_word_at_cross_over[rotated])
      apply simp
     apply (simp add: user_word_at_def Aligned.is_aligned_neg_mask
-                   pointerInUserData_def pageBits_def mask_lower_twice)
+                     pointerInUserData_def pageBits_def mask_lower_twice)
     apply assumption
   apply (clarsimp simp: h_val_def from_bytes_def typ_info_word)
   apply (drule_tac f="word_rsplit :: word32 \<Rightarrow> word8 list" in arg_cong)

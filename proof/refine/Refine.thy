@@ -28,7 +28,7 @@ lemma typ_at_AUserDataI:
         \<Longrightarrow> typ_at' UserDataT (p + n * 2 ^ pageBits) s'"
   apply (clarsimp simp add: obj_at_def a_type_def )
   apply (simp split: Structures_A.kernel_object.split_asm
-                     arch_kernel_obj.split_asm split:split_if_asm)
+                     arch_kernel_obj.split_asm split: split_if_asm)
   apply (drule(1) pspace_relation_absD)
   apply (clarsimp)
   apply (drule_tac x = "p + n * 2 ^ pageBits" in spec)
@@ -51,7 +51,7 @@ lemma typ_at_ADeviceDataI:
         \<Longrightarrow> typ_at' UserDataDeviceT (p + n * 2 ^ pageBits) s'"
   apply (clarsimp simp add: obj_at_def a_type_def )
   apply (simp split: Structures_A.kernel_object.split_asm
-                     arch_kernel_obj.split_asm split:split_if_asm)
+                     arch_kernel_obj.split_asm split: split_if_asm)
   apply (drule(1) pspace_relation_absD)
   apply (clarsimp)
   apply (drule_tac x = "p + n * 2 ^ pageBits" in spec)
@@ -186,8 +186,7 @@ lemma user_mem_relation:
   "\<lbrakk>(s,s') \<in> state_relation; valid_state' s'; valid_state s\<rbrakk>
    \<Longrightarrow> user_mem' s' = user_mem s"
   apply (rule ext)
-  apply (clarsimp simp: user_mem_def user_mem'_def pointerInUserData_relation
-     pointerInDeviceData_relation)
+  apply (clarsimp simp: user_mem_def user_mem'_def pointerInUserData_relation pointerInDeviceData_relation)
   apply (simp add: state_relation_def)
   done
 
@@ -212,7 +211,7 @@ shows "absKState s' = abs_state s"
         apply (simp add: state_relation_def)
        apply (simp add: state_relation_def)
       apply (clarsimp simp:  user_mem_relation invs_def invs'_def)
-      apply (simp add:state_relation_def)
+      apply (simp add: state_relation_def)
      apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
     apply (rule absInterruptStates_correct, simp add: state_relation_def)
    apply (rule absArchState_correct, simp)
@@ -460,8 +459,8 @@ lemma absKState_correct':
          apply (rule absIsOriginalCap_correct, clarsimp+)
         apply (simp add: state_relation_def)
        apply (simp add: state_relation_def)
-      apply (clarsimp simp:  user_mem_relation invs_def invs'_def)
-      apply (simp add:state_relation_def)
+      apply (clarsimp simp: user_mem_relation invs_def invs'_def)
+      apply (simp add: state_relation_def)
      apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
     apply (rule absInterruptStates_correct, simp add: state_relation_def)
    apply (erule absArchState_correct)
@@ -470,11 +469,11 @@ lemma absKState_correct':
 
 lemma ptable_lift_abs_state[simp]:
   "ptable_lift t (abs_state s) = ptable_lift t s"
-  by (simp add:ptable_lift_def abs_state_def)
+  by (simp add: ptable_lift_def abs_state_def)
 
 lemma ptable_rights_abs_state[simp]:
   "ptable_rights t (abs_state s) = ptable_rights t s"
-  by (simp add:ptable_rights_def abs_state_def)
+  by (simp add: ptable_rights_def abs_state_def)
 
 lemma ptable_rights_imp_UserData:
   assumes invs: "einvs s" and invs': "invs' s'"
@@ -502,9 +501,9 @@ definition
 lemma device_update_invs':
   "\<lbrace>invs'\<rbrace>doMachineOp (device_memory_update ds)
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-   apply (simp add:doMachineOp_def device_memory_update_def simpler_modify_def select_f_def
-     gets_def get_def bind_def valid_def return_def)
-   by (clarsimp simp:invs'_def valid_state'_def valid_irq_states'_def valid_machine_state'_def)
+   apply (simp add: doMachineOp_def device_memory_update_def simpler_modify_def select_f_def
+                    gets_def get_def bind_def valid_def return_def)
+   by (clarsimp simp: invs'_def valid_state'_def valid_irq_states'_def valid_machine_state'_def)
 
 lemma doUserOp_invs':
   "\<lbrace>invs' and ex_abs einvs and
@@ -516,11 +515,11 @@ lemma doUserOp_invs':
   apply (wp device_update_invs')
   apply (wp dmo_invs' doMachineOp_ct_running')
         apply (clarsimp simp add: no_irq_modify device_memory_update_def
-          user_memory_update_def)
+                                  user_memory_update_def)
        apply (wp doMachineOp_ct_running' doMachineOp_sch_act select_wp)
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
-                  split: option.splits)
+                 split: option.splits)
   apply (frule ptable_rights_imp_UserData[rotated 2], auto)
   done
 
@@ -630,8 +629,8 @@ lemma entry_corres:
 
 lemma corres_gets_machine_state:
   "corres (op =) \<top> \<top> (gets (f \<circ> machine_state)) (gets (f \<circ> ksMachineState))"
-  by (clarsimp simp:gets_def corres_underlying_def 
-    in_monad bind_def get_def return_def state_relation_def)
+  by (clarsimp simp: gets_def corres_underlying_def 
+                     in_monad bind_def get_def return_def state_relation_def)
 
 lemma do_user_op_corres:
   "corres (op =) (einvs and ct_running)
@@ -667,8 +666,8 @@ lemma do_user_op_corres:
                       apply (wp | simp)+
                      apply (rule corres_split'[OF corres_machine_op,where Q = dc and Q'=dc])
                         apply (rule corres_underlying_trivial)
-                       apply (wp | simp add:dc_def device_memory_update_def)+
-   apply (clarsimp simp:invs_def valid_state_def pspace_respects_device_region_def)
+                       apply (wp | simp add: dc_def device_memory_update_def)+
+   apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
   apply fastforce
   done
 

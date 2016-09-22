@@ -158,7 +158,7 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
   "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
-  by (simp add:free_index_update_def table_cap_ref_def split:cap.splits)
+  by (simp add: free_index_update_def table_cap_ref_def split: cap.splits)
 
 
 interpretation Tcb_AI_1? : Tcb_AI_1 

@@ -283,7 +283,7 @@ lemma deviceDataSeperate:
   \<Longrightarrow> ptr \<noteq> x"
   apply (rule ccontr,clarsimp)
   apply (frule(1) pspace_alignedD')
-  apply (clarsimp simp:pointerInDeviceData_def objBits_simps typ_at'_def ko_wp_at'_def)
+  apply (clarsimp simp: pointerInDeviceData_def objBits_simps typ_at'_def ko_wp_at'_def)
   apply (frule(1) pspace_distinctD')
   apply (clarsimp simp: objBits_simps)
   done
@@ -293,7 +293,7 @@ lemma userDataSeperate:
   \<Longrightarrow> ptr \<noteq> x"
   apply (rule ccontr,clarsimp)
   apply (frule(1) pspace_alignedD')
-  apply (clarsimp simp:pointerInUserData_def objBits_simps typ_at'_def ko_wp_at'_def)
+  apply (clarsimp simp: pointerInUserData_def objBits_simps typ_at'_def ko_wp_at'_def)
   apply (frule(1) pspace_distinctD')
   apply (clarsimp simp: objBits_simps)
   done
@@ -315,7 +315,7 @@ lemma pointerInDeviceData_whole_word[simp]:
 lemma du_ptr_disjoint:
  "pointerInDeviceData ptr \<sigma> \<Longrightarrow> \<not> pointerInUserData ptr \<sigma>"
  "pointerInUserData ptr \<sigma> \<Longrightarrow> \<not> pointerInDeviceData ptr \<sigma>"
- by (auto simp:pointerInDeviceData_def pointerInUserData_def typ_at'_def ko_wp_at'_def)
+ by (auto simp: pointerInDeviceData_def pointerInUserData_def typ_at'_def ko_wp_at'_def)
 
 lemma heap_to_device_data_seperate:
   "\<lbrakk> \<not> pointerInDeviceData ptr \<sigma>; pspace_distinct' \<sigma>; pspace_aligned' \<sigma>\<rbrakk> 
@@ -325,18 +325,18 @@ lemma heap_to_device_data_seperate:
   apply (case_tac "map_to_user_data_device (ksPSpace \<sigma>) x")
    apply simp
   apply simp
-  apply (clarsimp simp add:projectKO_opt_user_data_device map_comp_def
-    split:option.split_asm kernel_object.splits)
+  apply (clarsimp simp add: projectKO_opt_user_data_device map_comp_def
+                     split: option.split_asm kernel_object.splits)
   apply (frule deviceDataSeperate)
    apply simp+
   apply (frule(1) pspace_alignedD')
-  apply (simp add:objBits_simps)
+  apply (simp add: objBits_simps)
   apply (rule ext)
   apply (subst AND_NOT_mask_plus_AND_mask_eq[symmetric,where n =2])
   apply (subst byte_to_word_heap_upd_neq[where n = "ptr && mask 2",simplified])
       apply (erule is_aligned_weaken,simp add:pageBits_def)
      apply simp+
-   apply (clarsimp simp:pointerInDeviceData_def pageBits_def)
+   apply (clarsimp simp: pointerInDeviceData_def pageBits_def)
    apply (subst(asm) and_not_mask_twice[symmetric,where m = 12 and n =2,simplified])
    apply (drule sym[where t=" ptr && ~~ mask 2"])
    apply simp
@@ -344,8 +344,8 @@ lemma heap_to_device_data_seperate:
     apply (rule word_less_power_trans2[where k = 2,simplified])
       apply (simp add: pageBits_def)
       apply (rule less_le_trans[OF ucast_less],simp+)
-    apply (clarsimp simp:typ_at'_def ko_wp_at'_def pageBits_def objBits_simps 
-      dest!:pspace_distinctD')
+    apply (clarsimp simp: typ_at'_def ko_wp_at'_def pageBits_def objBits_simps 
+                   dest!: pspace_distinctD')
     apply (rule word_and_less')
     apply (simp add:mask_def)
    apply simp
@@ -359,8 +359,8 @@ lemma heap_to_user_data_seperate:
   apply (case_tac "map_to_user_data (ksPSpace \<sigma>) x")
    apply simp
   apply simp
-  apply (clarsimp simp add:projectKO_opt_user_data map_comp_def
-    split:option.split_asm kernel_object.splits)
+  apply (clarsimp simp add: projectKO_opt_user_data map_comp_def
+                     split: option.split_asm kernel_object.splits)
   apply (frule userDataSeperate)
    apply simp+
   apply (frule(1) pspace_alignedD')
@@ -368,9 +368,9 @@ lemma heap_to_user_data_seperate:
   apply (rule ext)
   apply (subst AND_NOT_mask_plus_AND_mask_eq[symmetric,where n =2])
   apply (subst byte_to_word_heap_upd_neq[where n = "ptr && mask 2",simplified])
-      apply (erule is_aligned_weaken,simp add:pageBits_def)
+      apply (erule is_aligned_weaken, simp add: pageBits_def)
      apply simp+
-   apply (clarsimp simp:pointerInUserData_def pageBits_def)
+   apply (clarsimp simp: pointerInUserData_def pageBits_def)
    apply (subst(asm) and_not_mask_twice[symmetric,where m = 12 and n =2,simplified])
    apply (drule sym[where t=" ptr && ~~ mask 2"])
    apply simp
@@ -378,8 +378,8 @@ lemma heap_to_user_data_seperate:
     apply (rule word_less_power_trans2[where k = 2,simplified])
       apply (simp add: pageBits_def)
       apply (rule less_le_trans[OF ucast_less],simp+)
-    apply (clarsimp simp:typ_at'_def ko_wp_at'_def pageBits_def objBits_simps 
-      dest!:pspace_distinctD')
+    apply (clarsimp simp: typ_at'_def ko_wp_at'_def pageBits_def objBits_simps 
+                   dest!: pspace_distinctD')
     apply (rule word_and_less')
     apply (simp add:mask_def)
    apply simp
@@ -647,7 +647,7 @@ proof (intro allI impI)
      apply (clarsimp split: split_if)
     apply (rule cmap_relationI)
     apply (clarsimp simp: dom_heap_to_device_data cmap_relation_def dom_if_Some
-                   intro!: Un_absorb1 [symmetric])
+                  intro!: Un_absorb1 [symmetric])
     using pal
     apply (subst(asm) heap_to_device_data_seperate)
       apply (simp add:piud al du_ptr_disjoint pal pdst)+
@@ -934,13 +934,13 @@ proof (intro allI impI)
                    intro!: Un_absorb1 [symmetric])
     using pal
     apply (subst(asm) heap_to_user_data_seperate)
-      apply (simp add:piud al du_ptr_disjoint pal pdst)+
+      apply (simp add: piud al du_ptr_disjoint pal pdst)+
     apply (subst(asm) heap_to_user_data_seperate)
-      apply (simp add:piud al du_ptr_disjoint pal pdst)+
+      apply (simp add: piud al du_ptr_disjoint pal pdst)+
     apply (subst(asm) heap_to_user_data_seperate)
-      apply (simp add:piud al du_ptr_disjoint pal pdst)+
+      apply (simp add: piud al du_ptr_disjoint pal pdst)+
     apply (subst(asm) heap_to_user_data_seperate)
-      apply (simp add:piud al du_ptr_disjoint pal pdst)+
+      apply (simp add: piud al du_ptr_disjoint pal pdst)+
     apply (erule cmap_relation_relI[where rel = cuser_user_data_relation])
      apply simp+
     done

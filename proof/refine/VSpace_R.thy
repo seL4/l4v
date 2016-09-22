@@ -2371,7 +2371,7 @@ proof -
        apply (rule conjI)
         apply (rule_tac x=ad in exI, rule_tac x=bc in exI, rule_tac x=capa in exI)
         apply (clarsimp simp: same_refs_def pde_ref_def pde_ref_pages_def 
-          valid_pde_def invs_def valid_state_def valid_pspace_def)
+                              valid_pde_def invs_def valid_state_def valid_pspace_def)
         apply (drule valid_objs_caps)
         apply (clarsimp simp: valid_caps_def)
         apply (drule spec, drule spec, drule_tac x=capa in spec, drule (1) mp)
@@ -2385,15 +2385,15 @@ proof -
         apply clarsimp
         apply (drule_tac ptr="(ac,bb)" in
                valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-          apply (simp split:split_if_asm)+
+          apply (simp split: split_if_asm)+
         apply force
        apply (rule conjI[rotated], fastforce)
        apply (erule ballEI)
        apply clarsimp
        apply (drule_tac ptr="(ac,bb)" in
                valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-       apply (force split:split_if_asm)+
-      apply (auto split:split_if_asm)[1]
+       apply (force split: split_if_asm)+
+      apply (auto split: split_if_asm)[1]
      apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
                            page_invocation_map_def)
      apply (rule corres_assume_pre)
@@ -3059,7 +3059,7 @@ lemma storePDE_pde_mappings'[wp]:
 lemma storePDE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
   apply (simp add: storePDE_def valid_machine_state'_def pointerInUserData_def
-    pointerInDeviceData_def)
+                   pointerInDeviceData_def)
   apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   done
@@ -3257,7 +3257,7 @@ lemma storePTE_pde_mappings'[wp]:
 lemma storePTE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
   apply (simp add: storePTE_def valid_machine_state'_def pointerInUserData_def
-    pointerInDeviceData_def)
+                   pointerInDeviceData_def)
   apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   done

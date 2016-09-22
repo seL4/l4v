@@ -67,7 +67,7 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
    apply (subst bindE_assoc[symmetric])
    apply (rule empty_fail_bindE)
     subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: split_if_asm)
-   by (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits| wp | intro conjI impI allI)+
+   by (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
 
 lemma arch_decode_ARMASIDPoolAssign_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDPoolAssign

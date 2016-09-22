@@ -2094,23 +2094,21 @@ lemma arch_recycle_cap_globals_equiv:
     arch_recycle_cap is_final arch_cap
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding arch_recycle_cap_def
-  apply (simp |wpc | wp modify_wp set_asid_pool_globals_equiv invs_valid_ko_at_arm
-    arch_finalise_cap_globals_equiv'
-    dmo_clearMemory_globals_equiv
-    dmo_cleanCacheRange_PoU_globals_equiv
-    page_table_mapped_inv
-    mapM_x_swp_store_pte_invs'
-    mapM_x_swp_store_pte_globals_equiv
-    hoare_unless_wp
-    hoare_drop_imps
-
-    | clarsimp simp add:  valid_pspace_def pbfs_less_wb page_caps_do_not_overlap_arm_globals_frame
-    cte_wp_at_page_cap_aligned
-    invs_valid_objs
-    invs_valid_global_refs
-    invs_arch_state
-    invs_distinct
-    split: arch_cap.splits | intro impI conjI allI)+
+  apply (simp | wpc 
+    | wp modify_wp set_asid_pool_globals_equiv invs_valid_ko_at_arm
+         arch_finalise_cap_globals_equiv'
+         dmo_clearMemory_globals_equiv
+         dmo_cleanCacheRange_PoU_globals_equiv
+         page_table_mapped_inv
+         mapM_x_swp_store_pte_invs'
+         mapM_x_swp_store_pte_globals_equiv
+         hoare_unless_wp
+         hoare_drop_imps
+    | clarsimp simp: valid_pspace_def pbfs_less_wb page_caps_do_not_overlap_arm_globals_frame
+                     cte_wp_at_page_cap_aligned invs_valid_objs invs_valid_global_refs
+                     invs_arch_state invs_distinct
+              split: arch_cap.splits 
+    | intro impI conjI allI)+
    apply (rule_tac Q="\<lambda>r s. globals_equiv st s \<and> invs s" in hoare_strengthen_post)
     apply (wp mapM_x_swp_store_kernel_base_globals_equiv )
     apply clarsimp

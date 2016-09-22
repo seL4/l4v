@@ -171,8 +171,7 @@ lemma pac_corres:
                  apply (simp add: other_obj_relation_def asid_pool_relation_def)
                  apply (simp add: makeObject_asidpool const_def inv_def)
                 apply (rule range_cover_full)
-                 apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def
-                   )+
+                 apply (simp add: obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
               apply (rule corres_split)
                  prefer 2
                  apply (rule cins_corres_simple, simp, rule refl, rule refl)
@@ -789,7 +788,7 @@ lemma resolve_vaddr_valid_mapping_size:
            option.split_asm vmpage_size.split_asm)
     apply (frule(1) caps_of_state_valid_cap)
     apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
-      split:split_if_asm)
+                   split: split_if_asm)
    apply (clarsimp simp: vaddr_segment_nonsense4)
    apply (drule_tac x="ucast (pt_slot' && mask pt_bits >> 2)" in spec)
    apply (drule vs_lookup_pages_step)
@@ -803,7 +802,7 @@ lemma resolve_vaddr_valid_mapping_size:
           option.split_asm vmpage_size.split_asm)
    apply (frule(1) caps_of_state_valid_cap)
    apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
-     split:split_if_asm)
+                  split: split_if_asm)
   apply (drule vs_lookup_pages_vs_lookupI)
   apply (rule conjI)
    apply clarsimp
@@ -818,10 +817,10 @@ lemma resolve_vaddr_valid_mapping_size:
           option.split_asm vmpage_size.split_asm)
     apply (frule(1) caps_of_state_valid_cap)
     apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
-      split:split_if_asm)
+                   split: split_if_asm)
    apply (frule(1) caps_of_state_valid_cap)
    apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps 
-     split:split_if_asm)
+                  split: split_if_asm)
   apply clarsimp
   apply (drule vs_lookup_pages_step)
    apply (rule vs_lookup_pages1I, simp add: obj_at_def)
@@ -830,14 +829,15 @@ lemma resolve_vaddr_valid_mapping_size:
   apply (drule(1) valid_vs_lookupD)
   apply simp
   apply (erule exEI)+
-  apply (clarsimp simp: vs_cap_ref_def split: cap.split_asm arch_cap.split_asm
-         option.split_asm vmpage_size.split_asm)
+  apply (clarsimp simp: vs_cap_ref_def
+                 split: cap.split_asm arch_cap.split_asm
+                        option.split_asm vmpage_size.split_asm)
    apply (frule(1) caps_of_state_valid_cap)
    apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
-     split:split_if_asm)
+                  split: split_if_asm)
   apply (frule(1) caps_of_state_valid_cap)
   apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
-    split:split_if_asm)
+                 split: split_if_asm)
   done
 
 lemma dec_arch_inv_corres:
@@ -2195,7 +2195,6 @@ lemma performASIDControlInvocation_invs' [wp]:
    apply (wp hoare_vcg_const_imp_lift)
        apply (strengthen invs_asid_table_strenghten')
        apply (wp cteInsert_simple_invs)
-thm createObjects'_wp_subst
       apply (wp createObjects'_wp_subst[OF
                 createObjects_no_cte_invs [where sz = pageBits and ty="Inl (KOArch (KOASIDPool pool))"]]
                 createObjects_orig_cte_wp_at'[where sz = pageBits]  hoare_vcg_const_imp_lift

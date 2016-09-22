@@ -115,9 +115,9 @@ lemma mapM_locate_eq:
 
 lemmas is_frame_type_defs = is_frame_type_def isFrameType_def arch_is_frame_type_def
 
-lemma is_frame_type_isFrameType_eq[simp]: "(is_frame_type
-                (APIType_map2 (Inr (toEnum (unat arg0))))) =
-           (Types_H.isFrameType (toEnum (unat arg0)))"
+lemma is_frame_type_isFrameType_eq[simp]:
+  "(is_frame_type (APIType_map2 (Inr (toEnum (unat arg0))))) =
+   (Types_H.isFrameType (toEnum (unat arg0)))"
   by (simp add: APIType_map2_def is_frame_type_defs split: apiobject_type.splits object_type.splits)+
 
   
@@ -472,8 +472,8 @@ lemma ctes_of_ko:
        apply (simp add: pbfs_atleast_pageBits)+
      apply (clarsimp,drule_tac x = idx in spec,clarsimp)
      apply (intro exI conjI,assumption)
-     apply (clarsimp simp:obj_range'_def)
-     apply (case_tac ko, simp_all split:if_splits,
+     apply (clarsimp simp: obj_range'_def)
+     apply (case_tac ko, simp_all split: if_splits,
              (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
     -- "PT case"
     apply (rename_tac word option)
@@ -488,11 +488,11 @@ lemma ctes_of_ko:
     apply (drule_tac x=idx in spec)
     apply clarsimp
     apply (intro exI conjI,assumption)
-    apply (clarsimp simp:obj_range'_def)
+    apply (clarsimp simp: obj_range'_def)
     apply (case_tac ko; simp)
     apply (rename_tac arch_kernel_object)
     apply (case_tac arch_kernel_object; simp)
-    apply (simp add:objBitsKO_def archObjSize_def field_simps shiftl_t2n)
+    apply (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)
    -- "PD case"
    apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pdBits_def
                          page_directory_at'_def typ_at'_def ko_wp_at'_def)
@@ -899,9 +899,9 @@ lemma decodeUntyped_wf[wp]:
       [where ptr = w and sz = sz and idx = 0 and cref=slot and d=d])
        apply (clarsimp simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
       apply simp
-     apply (simp add:range_cover_def)
-    apply (simp add:is_aligned_neg_mask_eq)
-   apply (clarsimp simp:image_def isCap_simps)
+     apply (simp add: range_cover_def)
+    apply (simp add: is_aligned_neg_mask_eq)
+   apply (clarsimp simp: image_def isCap_simps)
    apply (drule_tac x = x in spec)+
     apply (clarsimp simp: nullPointer_def word_size isFrameType_def)+
   done
@@ -3258,19 +3258,6 @@ where
 | "isDeviceCap (ArchObjectCap (PageCap d _ _ _ _)) = d"
 | "isDeviceCap _ = False"
 
-(* FIXME: SELFOUR-421: should be able to prove this, not
-                       really necessary for refinement *)
-
-(* lemma createNewCaps_devices:
-  "\<lbrace>\<lambda>s. cap = UntypedCap d ptr sz idx \<and> 0 < n\<rbrace>
-     createNewCaps tp ptr n us d
-   \<lbrace>\<lambda>rv s. \<forall>y \<in> set rv. isDeviceCap y = d\<rbrace>"
-  apply (rule hoare_assume_pre)
-  apply (simp add: createNewCaps_def)
-  apply (rule hoare_pre)
-   apply (wp | wpc | simp add: Arch_createNewCaps_def)+
-  oops *)
-
 lemma createObjects_null_filter':
   "\<lbrace>\<lambda>s. P (null_filter' (ctes_of s)) \<and> (makeObjectKO dev ty = Some val) \<and> 
         range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0 \<and>
@@ -3343,10 +3330,10 @@ lemma createNewCaps_null_filter':
           apply (case_tac apiobject_type, simp_all split del: split_if)
               apply (rule hoare_pre, wp,simp)
               apply (simp add: createObjects_def
-                              createWordObjects_def createObjects_def
-                              objBitsKO_def makeObjectKO_def unless_def
-                              APIType_capBits_def objBits_def pageBits_def
-                              archObjSize_def ptBits_def pdBits_def curDomain_def
+                               createWordObjects_def createObjects_def
+                               objBitsKO_def makeObjectKO_def unless_def
+                               APIType_capBits_def objBits_def pageBits_def
+                               archObjSize_def ptBits_def pdBits_def curDomain_def
                     | wp createObjects_null_filter'[where sz = sz and ty = "Inr ty"]
                          copyGlobalMappings_ctes_of threadSet_ctes_of mapM_x_wp'
                     | clarsimp | intro conjI impI | rule exI[where x = "Inr ty"], fastforce)+
@@ -4331,16 +4318,16 @@ lemma update_untyped_cap_corres:
          (cte_at' (cte_map src) and pspace_distinct' and pspace_aligned')
          (set_cap cap src) (updateCap (cte_map src) cap')"
   apply (rule corres_name_pre)
-  apply (simp add:updateCap_def)
+  apply (simp add: updateCap_def)
   apply (frule state_relation_pspace_relation)
-  apply (clarsimp simp:cte_wp_at_ctes_of)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (frule pspace_relation_cte_wp_atI)
-    apply (fastforce simp:cte_wp_at_ctes_of)
+    apply (fastforce simp: cte_wp_at_ctes_of)
    apply simp
   apply clarify
   apply (frule cte_map_inj_eq)
-       apply (fastforce simp:cte_wp_at_ctes_of cte_wp_at_caps_of_state)+
-  apply (clarsimp simp:is_cap_simps isCap_simps)
+       apply (fastforce simp: cte_wp_at_ctes_of cte_wp_at_caps_of_state)+
+  apply (clarsimp simp: is_cap_simps isCap_simps)
   apply (rule corres_guard_imp)
     apply (rule corres_symb_exec_r)
       apply (rule_tac F = "cteCap_update (\<lambda>_. capability.UntypedCap dev r bits f) ctea
@@ -4349,11 +4336,11 @@ lemma update_untyped_cap_corres:
                       in corres_gen_asm)
        apply simp
        apply (rule set_untyped_cap_corres)
-         apply ((clarsimp simp:cte_wp_at_caps_of_state cte_wp_at_ctes_of)+)[3]
+         apply ((clarsimp simp: cte_wp_at_caps_of_state cte_wp_at_ctes_of)+)[3]
       apply (subst identity_eq)
       apply (wp getCTE_sp getCTE_get)
     apply (rule no_fail_pre[OF no_fail_getCTE])
-    apply (clarsimp simp:cte_wp_at_ctes_of cte_wp_at_caps_of_state)+
+    apply (clarsimp simp: cte_wp_at_ctes_of cte_wp_at_caps_of_state)+
   done
 end
 
@@ -4376,17 +4363,17 @@ abbreviation(input)
 
    lemma not_0_ptr[simp]: "ptr\<noteq> 0"
       using misc cte_wp_at'
-      apply (clarsimp simp:cte_wp_at_ctes_of)
+      apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (case_tac cte)
       apply clarsimp
       apply (drule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
-      apply (simp add:valid_cap'_def)
+      apply (simp add: valid_cap'_def)
       done
 
    lemma subset_stuff[simp]:
       "retype_range \<subseteq> usable_range"
       apply (rule range_cover_subset'[OF cover])
-      apply (simp add:misc)
+      apply (simp add: misc)
       done
 
     lemma descendants_range[simp]:
@@ -4411,11 +4398,11 @@ abbreviation(input)
 
     lemma vc'[simp] : "s \<turnstile>' capability.UntypedCap d (ptr && ~~ mask sz) sz idx"
       using misc cte_wp_at'
-      apply (clarsimp simp:cte_wp_at_ctes_of)
+      apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (case_tac cte)
       apply clarsimp
       apply (erule ctes_of_valid_cap')
-      apply (simp add:invs_valid_objs')
+      apply (simp add: invs_valid_objs')
       done
 
     lemma ps_no_overlap'[simp]: "ptr && ~~ mask sz \<noteq> ptr \<Longrightarrow> pspace_no_overlap' ptr sz s"
@@ -4438,22 +4425,22 @@ abbreviation(input)
 
     lemma idx_compare'[simp]:"unat ((ptr && mask sz) + (of_nat (length slots)<< (APIType_capBits tp us))) \<le> 2 ^ sz"
       apply (rule le_trans[OF unat_plus_gt])
-      apply (simp add:range_cover.unat_of_nat_n_shift[OF cover] range_cover_unat)
+      apply (simp add: range_cover.unat_of_nat_n_shift[OF cover] range_cover_unat)
       apply (insert range_cover.range_cover_compare_bound[OF cover])
       apply simp
       done
 
     lemma ex_cte_no_overlap': "\<And>P p. ex_cte_cap_wp_to' P p s \<Longrightarrow> p \<notin> usable_range"
       using cte_wp_at' misc
-      apply (clarsimp simp:cte_wp_at_ctes_of)
+      apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (drule_tac cte = cte in descendants_range_ex_cte'[OF descendants_range(1)])
-        apply (clarsimp simp:word_and_le2 isCap_simps)+
+        apply (clarsimp simp: word_and_le2 isCap_simps)+
       done
 
     lemma cref_inv: "cref \<notin> usable_range"
       apply (insert misc cte_wp_at')
       apply (drule if_unsafe_then_capD')
-        apply (simp add:invs'_def valid_state'_def)
+        apply (simp add: invs'_def valid_state'_def)
        apply simp
       apply (erule ex_cte_no_overlap')
       done
@@ -4466,7 +4453,7 @@ abbreviation(input)
       apply (drule(1) bspec)+
       apply (drule ex_cte_no_overlap')
        apply simp
-      apply (clarsimp simp:cte_wp_at_ctes_of)
+      apply (clarsimp simp: cte_wp_at_ctes_of)
       done
 
     lemma usableRange_disjoint:
@@ -4481,12 +4468,12 @@ abbreviation(input)
       apply (rule minus_one_helper,simp)
       apply (rule neq_0_no_wrap)
       apply (rule word32_plus_mono_right_split)
-      apply (simp add:shiftl_t2n range_cover_unat[OF cover] field_simps)
-      apply (simp add:range_cover.sz(1)
+      apply (simp add: shiftl_t2n range_cover_unat[OF cover] field_simps)
+      apply (simp add: range_cover.sz(1)
         [where 'a=32, folded word_bits_def, OF cover])+
       done
       show ?thesis
-       apply (clarsimp simp:mask_out_sub_mask)
+       apply (clarsimp simp: mask_out_sub_mask)
        apply (drule idx_compare'')
        apply simp
        done
@@ -4506,11 +4493,11 @@ lemma valid_etcbs_detype: "valid_etcbs s \<Longrightarrow> valid_etcbs (detype S
                             obj_at_def)
 
 crunch ksIdleThread[wp]: deleteObjects "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore:freeMemory)
+  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore: freeMemory)
 crunch ksCurDomain[wp]: deleteObjects "\<lambda>s. P (ksCurDomain s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore:freeMemory)
+  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore: freeMemory)
 crunch irq_node[wp]: deleteObjects "\<lambda>s. P (irq_node' s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore:freeMemory)
+  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp ignore: freeMemory)
 
 lemma deleteObjects_ksCurThread[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> deleteObjects ptr sz \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
@@ -4599,7 +4586,7 @@ lemma inv_untyped_corres':
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
   apply (rule corres_name_pre)
-  apply (clarsimp simp del:invoke_untyped.simps)
+  apply (clarsimp simp del: invoke_untyped.simps)
   proof -
     fix s s' ao' sz idx sza idxa
     assume cte_wp_at : "cte_wp_at (\<lambda>c. c = cap.UntypedCap d (ptr && ~~ mask sz) sz idx) cref (s::det_state)"
@@ -5050,8 +5037,8 @@ lemma inv_untyped_corres':
            apply (rule corres_add_noop_lhs)
            apply (rule corres_split_nor[OF _ cNodeNoOverlap return_wp stateAssert_wp])
            apply (rule corres_split[OF _ update_untyped_cap_corres,rotated])
-                apply (simp add:isCap_simps)+
-              apply (clarsimp simp:getFreeIndex_def bits_of_def shiftL_nat shiftl_t2n)
+                apply (simp add: isCap_simps)+
+              apply (clarsimp simp: getFreeIndex_def bits_of_def shiftL_nat shiftl_t2n)
              prefer 3
              apply (insert range_cover.range_cover_n_less[OF cover] vslot)
              apply (rule createNewObjects_corres_helper)
@@ -5088,25 +5075,25 @@ lemma inv_untyped_corres':
          apply (erule cte_wp_at_weakenE')
          apply (case_tac c, simp)
          apply hypsubst
-         apply (case_tac c,clarsimp simp:isCap_simps)
+         apply (case_tac c,clarsimp simp: isCap_simps)
         apply (clarsimp simp: getFreeIndex_def is_cap_simps bits_of_def shiftL_nat shiftl_t2n)
-        apply (clarsimp simp:conj_comms)
+        apply (clarsimp simp: conj_comms)
         apply (strengthen invs_mdb invs_valid_objs
               invs_valid_pspace invs_arch_state invs_psp_aligned)
-            apply (clarsimp simp:conj_comms bits_of_def region_in_kernel_window_def)
+            apply (clarsimp simp: conj_comms bits_of_def region_in_kernel_window_def)
             apply (wp set_cap_free_index_invs_spec set_cap_caps_no_overlap set_cap_no_overlap)
             apply (rule hoare_vcg_conj_lift[rotated], rule hoare_vcg_conj_lift)
               apply (rule hoare_strengthen_post[OF set_cap_sets])
-              apply (clarsimp simp:cte_wp_at_caps_of_state invs)
+              apply (clarsimp simp: cte_wp_at_caps_of_state invs)
              apply (wp set_cap_no_overlap hoare_vcg_ball_lift
               set_cap_free_index_invs_spec set_cap_device_and_range
               set_cap_cte_wp_at set_cap_descendants_range_in
               set_untyped_cap_caps_overlap_reserved)
-       apply (clarsimp simp:conj_comms ball_conj_distrib simp del:capFreeIndex_update.simps)
+       apply (clarsimp simp: conj_comms ball_conj_distrib simp del: capFreeIndex_update.simps)
        apply (strengthen invs_pspace_aligned' invs_pspace_distinct'
                invs_valid_pspace' invs_arch_state'
                imp_consequent[where Q = "(\<exists>x. x \<in> cte_map ` set slots)"]
-             | clarsimp simp:conj_comms simp del:capFreeIndex_update.simps)+
+             | clarsimp simp: conj_comms simp del: capFreeIndex_update.simps)+
        apply (wp updateFreeIndex_invs' updateFreeIndex_caps_overlap_reserved'
                  updateFreeIndex_caps_no_overlap'' updateFreeIndex_pspace_no_overlap')
        apply (rule hoare_vcg_conj_lift[OF hoare_vcg_ball_lift])
@@ -5174,7 +5161,7 @@ lemma inv_untyped_corres':
    apply simp
    apply (clarsimp simp: add.assoc[symmetric] getFreeIndex_def blah add.commute dest!:idx_compare'')
    apply simp
-  apply (clarsimp simp:invokeUntyped_def getSlotCap_def bind_assoc)
+  apply (clarsimp simp: invokeUntyped_def getSlotCap_def bind_assoc)
   apply (case_tac ui')
   apply (clarsimp simp: insertNewCaps_def split_def
                             bind_assoc
@@ -5182,13 +5169,13 @@ lemma inv_untyped_corres':
       apply (rule corres_guard_imp)
         apply (rule corres_split[OF _ get_cap_corres])
           apply (rule_tac F = "cap = cap.UntypedCap d (ptr && ~~ mask sz) sz idx" in corres_gen_asm)
-          apply (clarsimp simp:bits_of_def simp del:capFreeIndex_update.simps)
+          apply (clarsimp simp: bits_of_def simp del: capFreeIndex_update.simps)
           apply (rule corres_split[OF _ detype_corres])
               apply (rule corres_add_noop_lhs)
               apply (rule corres_split_nor[OF _ cNodeNoOverlap_empty[where ptr=ptr and bits=sz] return_wp stateAssert_wp])
               apply (rule corres_split[OF _ update_untyped_cap_corres,rotated])
-                   apply (simp add:isCap_simps)+
-                 apply (clarsimp simp:shiftl_t2n shiftL_nat getFreeIndex_def)
+                   apply (simp add: isCap_simps)+
+                 apply (clarsimp simp: shiftl_t2n shiftL_nat getFreeIndex_def)
                 prefer 3
                 apply (insert range_cover.range_cover_n_less[OF cover] vslot)
                 apply (rule createNewObjects_corres_helper)
@@ -5223,47 +5210,47 @@ lemma inv_untyped_corres':
                     createNewCaps_caps_overlap_reserved_ret'[where sz = sz])
             apply clarsimp
             apply (erule cte_wp_at_weakenE')
-            apply (case_tac c,clarsimp simp:cte_wp_at_ctes_of isCap_simps)
+            apply (case_tac c,clarsimp simp: cte_wp_at_ctes_of isCap_simps)
            apply (clarsimp simp:
                   getFreeIndex_def is_cap_simps bits_of_def shiftL_nat shiftl_t2n)
-           apply (clarsimp simp:conj_comms)
+           apply (clarsimp simp: conj_comms)
            apply (strengthen invs_mdb invs_valid_objs
                  invs_valid_pspace invs_arch_state invs_psp_aligned)
-               apply (clarsimp simp:conj_comms bits_of_def region_in_kernel_window_def)
+               apply (clarsimp simp: conj_comms bits_of_def region_in_kernel_window_def)
                apply (wp set_cap_caps_no_overlap set_untyped_cap_invs_simple set_cap_no_overlap)
                apply (rule hoare_vcg_conj_lift[rotated], rule hoare_vcg_conj_lift)
                  apply (rule hoare_strengthen_post[OF set_cap_sets])
-                 apply (clarsimp simp:cte_wp_at_caps_of_state)
+                 apply (clarsimp simp: cte_wp_at_caps_of_state)
                 apply (wp set_cap_no_overlap hoare_vcg_ball_lift
                         set_untyped_cap_invs_simple
                         set_cap_cte_wp_at
                         set_cap_descendants_range_in
                         set_cap_device_and_range_aligned
                         set_untyped_cap_caps_overlap_reserved)
-          apply (clarsimp simp:conj_comms ball_conj_distrib simp del:capFreeIndex_update.simps)
+          apply (clarsimp simp: conj_comms ball_conj_distrib simp del: capFreeIndex_update.simps)
           apply (strengthen invs_pspace_aligned' invs_pspace_distinct'
                   invs_valid_pspace' invs_arch_state'
                   imp_consequent[where Q = "(\<exists>x. x \<in> cte_map ` set slots)"]
-                | clarsimp simp:conj_comms simp del:capFreeIndex_update.simps)+
+                | clarsimp simp: conj_comms simp del: capFreeIndex_update.simps)+
           apply (wp updateFreeIndex_invs_simple' updateFreeIndex_caps_overlap_reserved'
                     updateFreeIndex_caps_no_overlap'' updateFreeIndex_pspace_no_overlap')
           apply (rule hoare_vcg_conj_lift[OF hoare_vcg_ball_lift])
-           apply (simp add:updateCap_def)
+           apply (simp add: updateCap_def)
            apply (wp setCTE_weak_cte_wp_at getCTE_wp)
           apply (rule hoare_vcg_conj_lift)
-           apply (simp add:updateCap_def)
+           apply (simp add: updateCap_def)
            apply (wp setCTE_weak_cte_wp_at getCTE_wp)
           apply (wp updateFreeIndex_caps_overlap_reserved' updateFreeIndex_descendants_range_in' )
-         apply (simp add:is_aligned_neg_mask_eq')
+         apply (simp add: is_aligned_neg_mask_eq')
         apply simp
-       apply (simp add:delete_objects_rewrite)
+       apply (simp add: delete_objects_rewrite)
        apply wp
-      apply (clarsimp simp:conj_comms split del: split_if)
+      apply (clarsimp simp: conj_comms split del: split_if)
       apply (wp_once hoare_drop_imps)
       apply (strengthen invs_pspace_aligned' invs_valid_pspace' imp_consequent
              invs_pspace_distinct' invs_arch_state invs_psp_aligned)
-          apply (clarsimp simp:conj_comms isCap_simps
-            shiftL_nat field_simps range_cover.unat_of_nat_shift[OF cover le_refl,simplified])
+          apply (clarsimp simp: conj_comms isCap_simps
+                                shiftL_nat field_simps range_cover.unat_of_nat_shift[OF cover le_refl,simplified])
           apply (wp deleteObjects_invs'[where idx = idx and p = "cte_map cref" and d=d]
                  deleteObjects_caps_no_overlap''[where idx = idx and slot = "cte_map cref" and d=d]
                  deleteObject_no_overlap[where idx = idx and d=d]
@@ -5273,89 +5260,89 @@ lemma inv_untyped_corres':
                  hoare_vcg_ball_lift hoare_drop_imp hoare_vcg_ex_lift
                  deleteObjects_ct_active'[where sz = sz and ptr = ptr and idx = idx and cref = "cte_map cref" and d=d]
                  deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz and d=d])[1]
-         apply (clarsimp simp:conj_comms ball_conj_distrib pred_conj_def)
+         apply (clarsimp simp: conj_comms ball_conj_distrib pred_conj_def)
          apply (strengthen invs_mdb invs_valid_objs imp_consequent
                   invs_valid_pspace invs_arch_state invs_psp_aligned
                   invs_distinct | clarsimp simp: conj_comms)+
          apply (wp get_cap_wp)
        using kernel_window_inv cte_at ps_no_overlap caps_no_overlap
             caps_no_overlap_detype descendants_range
-       apply (clarsimp simp:cte_wp_at_caps_of_state cap_master_cap_def descendants_range_def2
-         invs_mdb valid_state_def invs_untyped_children bits_of_def is_cap_simps untyped_range.simps)
+       apply (clarsimp simp: cte_wp_at_caps_of_state cap_master_cap_def descendants_range_def2
+                             invs_mdb valid_state_def invs_untyped_children bits_of_def is_cap_simps untyped_range.simps)
    apply (frule detype_descendants_range_in)
    apply (subgoal_tac "pspace_no_overlap ptr sz (detype {ptr..ptr + 2 ^ sz - 1} s)")
     prefer 2
     apply (cut_tac misc cte_at)
     apply (erule pspace_no_overlap_detype[OF caps_of_state_valid])
-      apply (simp add:invs_psp_aligned invs_valid_objs cte_wp_at_caps_of_state)+
+      apply (simp add: invs_psp_aligned invs_valid_objs cte_wp_at_caps_of_state)+
    apply (subgoal_tac "invs (detype {ptr..ptr + 2 ^ sz - 1} (clear_um {ptr..ptr + 2 ^ sz - 1} s))")
     prefer 2
     apply (cut_tac misc cte_at)
     apply (frule detype_invariants)
-           apply (simp add:isCap_simps)
-          apply (clarsimp simp:blah descendants_range_def2)
-         apply ((simp add:isCap_simps invs_untyped_children blah
+           apply (simp add: isCap_simps)
+          apply (clarsimp simp: blah descendants_range_def2)
+         apply ((simp add: isCap_simps invs_untyped_children blah
                           invs_valid_reply_caps invs_valid_reply_masters)+)[4]
    apply (clarsimp simp: detype_clear_um_independent)
    apply (intro conjI impI)
                      apply (insert misc cte_at cref_inv)
-                     apply ((clarsimp simp:invs_def valid_state_def)+)[2]
+                     apply ((clarsimp simp: invs_def valid_state_def)+)[2]
                    apply (erule caps_of_state_valid,simp)
                   apply simp+
-                apply (clarsimp dest!:slots_invD)
+                apply (clarsimp dest!: slots_invD)
                apply simp
                apply (rule_tac x = cref in exI,simp)
               apply simp
-             apply (clarsimp dest!:slots_invD)
-            apply (clarsimp simp:field_simps range_cover.unat_of_nat_shift[OF cover le_refl le_refl])
+             apply (clarsimp dest!: slots_invD)
+            apply (clarsimp simp: field_simps range_cover.unat_of_nat_shift[OF cover le_refl le_refl])
             apply (subst mult.commute)
             apply (rule nat_le_power_trans)
              apply (rule range_cover.range_cover_n_le(2)[OF cover])
             apply (erule range_cover.sz)
-           apply (simp add:caps_no_overlap_detype)
-          apply (simp add:range_cover.unat_of_nat_n_shift[OF cover] field_simps)
+           apply (simp add: caps_no_overlap_detype)
+          apply (simp add: range_cover.unat_of_nat_n_shift[OF cover] field_simps)
           apply (rule subset_trans[OF subset_stuff],simp)
          apply (cut_tac kernel_window_inv)
-         apply (simp add:detype_def clear_um_def)
+         apply (simp add: detype_def clear_um_def)
         apply (simp add: shiftL_nat)
         apply (rule order_trans, rule overlap_ranges1)
         apply simp
-       apply (clarsimp simp:blah field_simps dest!:idx_compare''')
+       apply (clarsimp simp: blah field_simps dest!: idx_compare''')
        apply (simp)
-      apply (simp add:clear_um_def detype_def detype_ext_def)
+      apply (simp add: clear_um_def detype_def detype_ext_def)
      apply (erule descendants_range_in_subseteq)
      apply (rule subset_trans[OF subset_stuff],simp)
     apply (simp add: clear_um_def)
     apply (rule valid_etcbs_detype[OF valid_sched_etcbs[OF misc(12)]])
    apply (clarsimp,drule slots_invD,simp)
-   apply (clarsimp simp:field_simps range_cover.unat_of_nat_shift[OF cover le_refl le_refl])
+   apply (clarsimp simp: field_simps range_cover.unat_of_nat_shift[OF cover le_refl le_refl])
    apply (subst mult.commute)
    apply (rule nat_le_power_trans)
     apply (rule range_cover.range_cover_n_le(2)[OF cover])
    apply (erule range_cover.sz)
-  apply (clarsimp simp:conj_comms invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace')
+  apply (clarsimp simp: conj_comms invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace')
   apply (insert cte_wp_at' vc' descendants_range)
   apply (intro conjI impI)
                apply (simp add: is_aligned_neg_mask_eq' range_cover.sz
                                 [where 'a=32, folded word_bits_def, OF cover])+
-             apply (clarsimp simp:cte_wp_at_ctes_of isCap_simps maxDomain)+
-         apply (clarsimp simp:descendants_range'_def2)
+             apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps maxDomain)+
+         apply (clarsimp simp: descendants_range'_def2)
         apply simp
-       apply (simp add:getFreeIndex_def)+
+       apply (simp add: getFreeIndex_def)+
       apply (rule is_aligned_weaken)
        apply (subst mult.commute)
        apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n])
       apply simp
-     apply (simp add:getFreeIndex_def)
-     apply (clarsimp simp:range_cover.unat_of_nat_shift field_simps)
+     apply (simp add: getFreeIndex_def)
+     apply (clarsimp simp: range_cover.unat_of_nat_shift field_simps)
      apply (subst mult.commute)
      apply (rule nat_le_power_trans[OF range_cover.range_cover_n_le(2)[OF cover]])
      apply (rule range_cover.sz(2)[OF cover])
     apply (rule subset_trans[OF subset_stuff],simp)
-   apply (clarsimp simp:cte_wp_at_ctes_of)
+   apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (drule slots_invD)
    apply simp
-  apply (clarsimp simp:blah getFreeIndex_def dest!:idx_compare''')
+  apply (clarsimp simp: blah getFreeIndex_def dest!: idx_compare''')
   apply simp
   done
 qed
@@ -6120,19 +6107,19 @@ lemma invokeUntyped_invs'':
                      (cap.UntypedCap d (ptr && ~~ mask sz) sz
                        (unat ((ptr && mask sz) + (of_nat (length slots) << (APIType_capBits tp us)))))
                     \<subseteq> usable_untyped_range (cap.UntypedCap d (ptr && ~~ mask sz) sz idx)"
-      apply (simp_all add:blah getFreeIndex_def field_simps nidx)
+      apply (simp_all add: blah getFreeIndex_def field_simps nidx)
       apply (clarsimp)
        apply (subst add.commute)
        apply (erule order_trans[OF idx_compare])
         apply simp
        apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
-       apply (simp add:shiftl_t2n field_simps)
-      apply (clarsimp simp:shiftl_t2n field_simps)
+       apply (simp add: shiftl_t2n field_simps)
+      apply (clarsimp simp: shiftl_t2n field_simps)
        apply (subst add.commute)
        apply (erule order_trans[OF idx_compare])
         apply simp
-       apply (clarsimp simp:shiftl_t2n add.assoc[symmetric]
-         word_plus_and_or_coroll2[where w = "mask sz"] field_simps)
+       apply (clarsimp simp: shiftl_t2n add.assoc[symmetric]
+                             word_plus_and_or_coroll2[where w = "mask sz"] field_simps)
       done
 
     have valid_global_refs': "valid_global_refs' s"
@@ -6159,7 +6146,7 @@ lemma invokeUntyped_invs'':
     show "\<lbrace>op = s\<rbrace> invokeUntyped
       (Invocations_H.untyped_invocation.Retype cref (ptr && ~~ mask sz) ptr tp us slots d)
       \<lbrace>\<lambda>rv. invs'\<rbrace>"
-    apply (clarsimp simp:invokeUntyped_def getSlotCap_def)
+    apply (clarsimp simp: invokeUntyped_def getSlotCap_def)
     apply (case_tac "ptr && ~~ mask sz \<noteq> ptr")
       apply (wp createNewObjects_wp_helper[where sz = sz])
             apply simp+
@@ -6167,7 +6154,7 @@ lemma invokeUntyped_invs'':
           apply simp
          using vslot
          apply simp
-      apply (clarsimp simp:insertNewCaps_def)
+      apply (clarsimp simp: insertNewCaps_def)
       apply (insert misc cover vslot)
       apply (wp zipWithM_x_insertNewCap_invs''
                 set_tuple_pick distinct_tuple_helper
@@ -6190,12 +6177,12 @@ lemma invokeUntyped_invs'':
        apply (erule(1) snd_set_zip_in_set)
       apply (wp hoare_strengthen_post[OF createNewCaps_range_helper[where sz = sz]])
        apply clarsimp
-     apply (clarsimp simp:conj_comms ball_conj_distrib pred_conj_def
-                 simp del:capFreeIndex_update.simps)
+     apply (clarsimp simp: conj_comms ball_conj_distrib pred_conj_def
+                 simp del: capFreeIndex_update.simps)
      apply (strengthen invs_pspace_aligned' invs_pspace_distinct'
                 invs_valid_pspace' invs_arch_state'
                 imp_consequent[where Q = "(\<exists>x. x \<in> set slots)"]
-              | clarsimp simp:conj_comms simp del:capFreeIndex_update.simps)+
+              | clarsimp simp: conj_comms simp del: capFreeIndex_update.simps)+
      apply (wp updateFreeIndex_invs' updateFreeIndex_caps_overlap_reserved'
        updateFreeIndex_caps_no_overlap'' updateFreeIndex_pspace_no_overlap'
        hoare_vcg_const_Ball_lift updateCap_weak_cte_wp_at updateCap_ct_active')
@@ -6221,7 +6208,7 @@ lemma invokeUntyped_invs'':
           apply clarsimp
          apply simp+
       apply (rule subset_trans[OF subset_stuff])
-      apply (clarsimp simp:blah word_and_le2)
+      apply (clarsimp simp: blah word_and_le2)
      apply (simp add:field_simps)
      apply (rule invokeUntyped_proofs.usableRange_disjoint[OF pf])
     apply simp

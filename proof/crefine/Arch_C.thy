@@ -397,7 +397,6 @@ lemma ghost_assertion_size_logic_flex:
             sz \<le> gs_get_assn cap_get_capSizeBits_'proc gs"
   by (metis ghost_assertion_size_logic)
 
-declare[[goals_limit=2]]
 lemma performASIDControlInvocation_ccorres:
 notes replicate_numeral[simp del]
 shows
@@ -896,7 +895,7 @@ lemma decodeARMPageTableInvocation_ccorres:
         simp)+
   apply (clarsimp simp: attribsFromWord_def split: split_if)
   apply word_bitwise
-  apply (clarsimp simp:word_size)
+  apply (clarsimp simp: word_size)
   done
 
 lemma checkVPAlignment_spec:
@@ -2574,8 +2573,6 @@ lemma unat_sub_le_strg:
   apply (simp add: field_simps)
   done
 
-
-
 lemma decodeARMFrameInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -3787,8 +3784,9 @@ lemma ccorres_symb_exec_r_known_rv:
 
 lemma cond_throw_whenE:
    "(if P then f else throwError e) =   (whenE (\<not> P) (throwError e) >>=E (\<lambda>_. f))"
-   by (auto split:if_splits simp:throwError_def bindE_def 
-     whenE_def bind_def returnOk_def return_def)
+   by (auto split: if_splits 
+             simp: throwError_def bindE_def 
+                   whenE_def bind_def returnOk_def return_def)
 
 lemma Arch_decodeInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
@@ -4007,7 +4005,7 @@ lemma Arch_decodeInvocation_ccorres:
                                 capBlockSize (fst (hd extraCaps)) = objBits (makeObject ::asidpool)
                                 \<and> \<not> capIsDevice (fst (hd extraCaps))))"
                             in ccorres_gen_asm2)
-                  apply (clarsimp simp:if_1_0_0 to_bool_if cond_throw_whenE bindE_assoc 
+                  apply (clarsimp simp: if_1_0_0 to_bool_if cond_throw_whenE bindE_assoc 
                     from_bool_neq_0)
                   apply (rule ccorres_split_when_throwError_cond[where Q = \<top> and Q' = \<top>])
                      apply clarsimp
@@ -4076,12 +4074,12 @@ lemma Arch_decodeInvocation_ccorres:
                apply vcg
               apply clarsimp
               apply (rule conseqPre,vcg,clarsimp)
-             apply (clarsimp split:list.splits 
-               simp: Kernel_C.asidHighBits_def asid_high_bits_def word_0_sle_from_less)
+             apply (clarsimp split: list.splits 
+                              simp: Kernel_C.asidHighBits_def asid_high_bits_def word_0_sle_from_less)
              apply (frule interpret_excaps_eq[rule_format, where n=0],fastforce)
              apply (simp add: interpret_excaps_test_null excaps_map_def
-                     list_case_If2 split_def
-                del: Collect_const)
+                              list_case_If2 split_def
+                         del: Collect_const)
               apply (simp add: if_1_0_0 from_bool_0 hd_conv_nth length_ineq_not_Nil
                           del: Collect_const )
               apply (clarsimp simp: eq_Nil_null[symmetric] asid_high_bits_word_bits hd_conv_nth
@@ -4124,7 +4122,7 @@ lemma Arch_decodeInvocation_ccorres:
     apply (rule ccorres_Cond_rhs_Seq)
      apply (rule ccorres_equals_throwError)
       apply (fastforce simp: throwError_bind invocationCatch_def
-                     split: invocation_label.split arch_invocation_label.split)
+                      split: invocation_label.split arch_invocation_label.split)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
     apply (simp add: interpret_excaps_test_null excaps_map_def
@@ -4396,50 +4394,50 @@ lemma Arch_decodeInvocation_ccorres:
     apply (clarsimp simp: ex_cte_cap_wp_to'_def cte_wp_at_ctes_of
                           invs_sch_act_wf' dest!: isCapDs(1))
     apply (intro conjI)
-            apply (simp add:Invariants_H.invs_queues)
+            apply (simp add: Invariants_H.invs_queues)
            apply (simp add: valid_tcb_state'_def)
-          apply (fastforce elim!:pred_tcb'_weakenE dest!:st_tcb_at_idle_thread')
-         apply (clarsimp simp:st_tcb_at'_def obj_at'_def)
+          apply (fastforce elim!: pred_tcb'_weakenE dest!:st_tcb_at_idle_thread')
+         apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
          apply (case_tac "tcbState obja", (simp add: runnable'_def)+)[1]
         apply simp
-       apply (simp add:objBits_simps archObjSize_def)
+       apply (simp add: objBits_simps archObjSize_def)
       apply fastforce
      apply (drule_tac f="\<lambda>xs. (a, bb) \<in> set xs" in arg_cong)
       apply (clarsimp simp: in_assocs_is_fun)
      apply (rule unat_less_helper)
-     apply (clarsimp simp:asid_low_bits_def)
+     apply (clarsimp simp: asid_low_bits_def)
      apply (rule shiftl_less_t2n)
-      apply (simp add:asid_bits_def minus_one_helper5)+
-    apply (simp add:is_aligned_shiftl_self)
+      apply (simp add: asid_bits_def minus_one_helper5)+
+    apply (simp add: is_aligned_shiftl_self)
    apply (intro conjI impI)
      apply clarsimp
      apply (drule obj_at_valid_objs', clarsimp)
      apply (clarsimp simp: projectKOs valid_obj'_def inv_ASIDPool
-                  split: asidpool.split_asm)
+                    split: asidpool.split_asm)
     apply clarsimp
     apply (drule obj_at_valid_objs', clarsimp)
     apply (clarsimp simp: projectKOs valid_obj'_def inv_ASIDPool
                     split: asidpool.split_asm)
     apply (clarsimp simp: isCap_simps Let_def valid_cap'_def
-                           maskCapRights_def[where ?x1.0="ArchObjectCap cp" for cp]
-                           ARM_H.maskCapRights_def
-                    split: arch_capability.split_asm)
+                          maskCapRights_def[where ?x1.0="ArchObjectCap cp" for cp]
+                          ARM_H.maskCapRights_def
+                   split: arch_capability.split_asm)
     apply (clarsimp simp: null_def neq_Nil_conv mask_def field_simps
-                         asid_low_bits_word_bits
-                  dest!: filter_eq_ConsD)
+                          asid_low_bits_word_bits
+                   dest!: filter_eq_ConsD)
     apply (subst is_aligned_add_less_t2n[rotated], assumption+)
        apply (simp add: asid_low_bits_def asid_bits_def)
       apply simp
      apply simp
     apply (auto simp: ct_in_state'_def valid_tcb_state'_def
-                dest!: st_tcb_at_idle_thread'
-                elim!: pred_tcb'_weakenE)[1]
+               dest!: st_tcb_at_idle_thread'
+               elim!: pred_tcb'_weakenE)[1]
   apply (clarsimp simp: if_1_0_0 cte_wp_at_ctes_of asidHighBits_handy_convs
                         word_sle_def word_sless_def asidLowBits_handy_convs
                         rf_sr_ksCurThread "StrictC'_thread_state_defs"
                         mask_def[where n=4]
                   cong: if_cong)
-  apply (clarsimp simp:if_1_0_0 to_bool_def ccap_relation_isDeviceCap2
+  apply (clarsimp simp: if_1_0_0 to_bool_def ccap_relation_isDeviceCap2
      objBits_simps archObjSize_def pageBits_def from_bool_def case_bool_If)
   apply (rule conjI)
    (* Is Asid Control Cap *)
@@ -4453,9 +4451,9 @@ lemma Arch_decodeInvocation_ccorres:
                          cap_to_H_def[split_simps cap_CL.split]
                          hd_conv_nth length_ineq_not_Nil
                   elim!: ccap_relationE)
-   apply (clarsimp simp:if_1_0_0 to_bool_def unat_eq_of_nat
-     objBits_simps archObjSize_def pageBits_def from_bool_def case_bool_If
-     split:if_splits)
+   apply (clarsimp simp: if_1_0_0 to_bool_def unat_eq_of_nat
+                         objBits_simps archObjSize_def pageBits_def from_bool_def case_bool_If
+                  split: if_splits)
   apply (clarsimp simp: asid_low_bits_word_bits isCap_simps neq_Nil_conv
                         excaps_map_def excaps_in_mem_def
                         p2_gt_0[where 'a=32, folded word_bits_def])

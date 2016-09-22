@@ -634,11 +634,11 @@ lemma ran_insert_new:
 
 lemma remove_free_ids_is_device[simp]:
   "is_untyped_cap a \<Longrightarrow> is_device_cap (remove_free_ids a b) = is_device_cap a"
-  by (simp add:remove_free_ids_def split:cdl_cap.splits)
+  by (simp add: remove_free_ids_def split:cdl_cap.splits)
 
 lemma list_all_conj:
   "(list_all P xs \<and> list_all Q xs) = list_all (P and Q) xs"
-  by (auto simp:pred_list_def)
+  by (auto simp: pred_list_def)
 
 lemmas list_all_conjI = list_all_conj[THEN iffD1,unfolded pred_conj_def,OF conjI]
 

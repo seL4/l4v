@@ -1507,7 +1507,7 @@ lemma dcorres_arch_recycle_cap_page_cap:
           apply simp
           apply (rule dcorres_machine_op_noop)
           apply wp
-         apply (clarsimp simp:dc_def[symmetric])
+         apply (clarsimp simp: dc_def[symmetric])
          apply (rule corres_gen_asm2, erule dcorres_storeWord_mapM_x_cvt[where sz = sz])
         apply wp
       apply (rule dcorres_dummy_corrupt_frame)
@@ -1516,7 +1516,7 @@ lemma dcorres_arch_recycle_cap_page_cap:
    apply simp
   apply clarsimp
   apply (frule(1) cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs])
-  apply (clarsimp simp: cap_aligned_def  valid_cap_def typ_at_pg split:if_splits)
+  apply (clarsimp simp: cap_aligned_def  valid_cap_def typ_at_pg split: if_splits)
   apply (rule conjI impI, fastforce)+ -- "all but Ball within_page"
   apply (clarsimp simp: within_page_def word_size_def upto_enum_step_shift_red [where us = 2,simplified])
   apply (erule is_aligned_add_helper [THEN conjunct2])

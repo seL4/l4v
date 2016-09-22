@@ -1156,8 +1156,9 @@ lemma decode_bind_notification_inv[wp]:
   "\<lbrace>P\<rbrace> decode_bind_notification cap excaps \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding decode_bind_notification_def
   by (rule hoare_pre) 
-     (wp get_ntfn_wp gbn_wp | wpc 
-    | clarsimp simp: whenE_def split del: split_if)+
+     (wp get_ntfn_wp gbn_wp 
+       | wpc 
+       | clarsimp simp: whenE_def split del: split_if)+
 
 
 lemma (in Tcb_AI) decode_tcb_inv_inv:

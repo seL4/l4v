@@ -1153,73 +1153,73 @@ lemma createObject_valid_duplicates'[wp]:
   apply (rule hoare_gen_asm)
   apply (simp add:createObject_def) 
   apply (rule hoare_pre)
-  apply (wpc | wp| simp add:ARM_H.createObject_def split del:split_if)+
-         apply (simp add:createPageObject_def placeNewObject_def
-           placeNewObject'_def split_def split del:split_if
+  apply (wpc | wp| simp add: ARM_H.createObject_def split del: split_if)+
+         apply (simp add: createPageObject_def placeNewObject_def
+                          placeNewObject'_def split_def split del: split_if
            | wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>]
-           |wpc|simp add: alignError_def split del:split_if)+
+           | wpc | simp add: alignError_def split del: split_if)+
      apply (rule copyGlobalMappings_valid_duplicates')
-    apply ((wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>] |wpc
-     |simp add:alignError_def placeNewObject_def 
-      placeNewObject'_def split_def split del:split_if)+)[2]
+    apply ((wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>] | wpc
+            | simp add: alignError_def placeNewObject_def 
+                        placeNewObject'_def split_def split del: split_if)+)[2]
   apply (intro conjI impI)
              apply clarsimp+
             apply (erule(2) valid_duplicates'_update)
              apply (clarsimp simp: vs_entry_align_def)+
             apply (erule(2) valid_duplicates'_update)
              apply (clarsimp simp: vs_entry_align_def)+
-           apply ((clarsimp simp:new_cap_addrs_fold'[where n = "0x10",simplified]
+           apply ((clarsimp simp: new_cap_addrs_fold'[where n = "0x10",simplified]
             | (erule valid_duplicates'_insert_ko[where us = 4,simplified]
               , (simp add: toAPIType_def vs_entry_align_def
-                          APIType_capBits_def objBits_simps pageBits_def)+)[1]
+                           APIType_capBits_def objBits_simps pageBits_def)+)[1]
             | rule none_in_new_cap_addrs[where us = 4,simplified,THEN bspec,rotated -1]
-            | simp add:objBits_simps pageBits_def word_bits_conv)+)[1]
-         apply ((clarsimp simp:new_cap_addrs_fold'[where n = "0x10",simplified]
+            | simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
+         apply ((clarsimp simp: new_cap_addrs_fold'[where n = "0x10",simplified]
            | (erule valid_duplicates'_insert_ko[where us = 4,simplified]
              , (simp add: toAPIType_def vs_entry_align_def
-                         APIType_capBits_def objBits_simps pageBits_def)+)[1]
+                          APIType_capBits_def objBits_simps pageBits_def)+)[1]
            | rule none_in_new_cap_addrs[where us = 4,simplified,THEN bspec,rotated -1]
-           | simp add:objBits_simps pageBits_def word_bits_conv)+)[1]
-        apply ((clarsimp simp:new_cap_addrs_fold'[where n = "0x100",simplified]
+           | simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
+        apply ((clarsimp simp: new_cap_addrs_fold'[where n = "0x100",simplified]
           | (erule valid_duplicates'_insert_ko[where us = 8,simplified]
             , (simp add: toAPIType_def vs_entry_align_def
-                        APIType_capBits_def objBits_simps pageBits_def)+)[1]
+                         APIType_capBits_def objBits_simps pageBits_def)+)[1]
           | rule none_in_new_cap_addrs[where us = 8,simplified,THEN bspec,rotated -1]
-          | simp add:objBits_simps pageBits_def word_bits_conv)+)[1]
-       apply (clarsimp simp:new_cap_addrs_fold'[where n = "0x100",simplified])
+          | simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
+       apply (clarsimp simp: new_cap_addrs_fold'[where n = "0x100",simplified])
        apply (erule valid_duplicates'_insert_ko[where us = 8,simplified])
           apply (simp add: toAPIType_def vs_entry_align_def
-                          APIType_capBits_def objBits_simps pageBits_def)+
+                           APIType_capBits_def objBits_simps pageBits_def)+
        apply (rule none_in_new_cap_addrs[where us =8,simplified]
-        ,(simp add:objBits_simps pageBits_def word_bits_conv)+)[1]
-      apply (clarsimp simp:new_cap_addrs_fold'[where n = "0x1000",simplified])
+        ,(simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
+      apply (clarsimp simp: new_cap_addrs_fold'[where n = "0x1000",simplified])
       apply (erule valid_duplicates'_insert_ko[where us = 12,simplified])
          apply (simp add: toAPIType_def vs_entry_align_def
-                         APIType_capBits_def objBits_simps pageBits_def)+
+                          APIType_capBits_def objBits_simps pageBits_def)+
       apply (rule none_in_new_cap_addrs[where us =12,simplified]
-       ,(simp add:objBits_simps pageBits_def word_bits_conv)+)[1]
-     apply (clarsimp simp:new_cap_addrs_fold'[where n = "0x1000",simplified])
+       ,(simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
+     apply (clarsimp simp: new_cap_addrs_fold'[where n = "0x1000",simplified])
      apply (erule valid_duplicates'_insert_ko[where us = 12,simplified])
        apply (simp add: ARM_H.toAPIType_def vs_entry_align_def
                         APIType_capBits_def objBits_simps pageBits_def)+
      apply (rule none_in_new_cap_addrs[where us =12,simplified]
-      ,(simp add:objBits_simps pageBits_def word_bits_conv)+)[1]
-    apply (clarsimp simp:objBits_simps ptBits_def archObjSize_def pageBits_def)
+      ,(simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
+    apply (clarsimp simp: objBits_simps ptBits_def archObjSize_def pageBits_def)
    apply (cut_tac ptr=ptr in new_cap_addrs_fold'[where n = "0x100" and ko = "(KOArch (KOPTE makeObject))"
       ,simplified objBits_simps])
     apply simp
-   apply (clarsimp simp:archObjSize_def)
+   apply (clarsimp simp: archObjSize_def)
    apply (erule valid_duplicates'_insert_ko[where us = 8,simplified])
       apply (simp add: toAPIType_def archObjSize_def vs_entry_align_def
                        APIType_capBits_def objBits_simps pageBits_def
                 split: ARM_H.pte.splits)+
     apply (rule none_in_new_cap_addrs[where us =8,simplified]
-      ,(simp add:objBits_simps pageBits_def word_bits_conv archObjSize_def)+)[1]
+      ,(simp add: objBits_simps pageBits_def word_bits_conv archObjSize_def)+)[1]
    apply clarsimp
    apply (cut_tac ptr=ptr in new_cap_addrs_fold'[where n = "0x1000" and ko = "(KOArch (KOPDE makeObject))"
      ,simplified objBits_simps])
     apply simp
-   apply (clarsimp simp:objBits_simps archObjSize_def pdBits_def pageBits_def)
+   apply (clarsimp simp: objBits_simps archObjSize_def pdBits_def pageBits_def)
    apply (frule(2) retype_aligned_distinct'[where n = 4096 and ko = "KOArch (KOPDE makeObject)"])
     apply (simp add:objBits_simps archObjSize_def)
     apply (rule range_cover_rel[OF range_cover_full])
@@ -1235,13 +1235,13 @@ lemma createObject_valid_duplicates'[wp]:
                   (map (\<lambda>n. ptr + (n << 2)) [0.e.2 ^ (pdBits - 2) - 1]) (ksPSpace s))")
     apply (simp add:APIType_capBits_def pdBits_def pageBits_def 
      data_map_insert_def[abs_def])
-   apply (clarsimp simp:archObjSize_def pdBits_def pageBits_def)
+   apply (clarsimp simp: archObjSize_def pdBits_def pageBits_def)
    apply (rule valid_duplicates'_insert_ko[where us = 12,simplified])
       apply (simp add: ARM_H.toAPIType_def archObjSize_def vs_entry_align_def
                        APIType_capBits_def objBits_simps pageBits_def 
                 split: ARM_H.pde.splits)+
    apply (rule none_in_new_cap_addrs[where us =12,simplified]
-     ,(simp add:objBits_simps pageBits_def word_bits_conv archObjSize_def)+)[1]
+     ,(simp add: objBits_simps pageBits_def word_bits_conv archObjSize_def)+)[1]
   apply (intro conjI impI allI)
       apply simp
      apply clarsimp
@@ -1260,20 +1260,20 @@ lemma createObject_valid_duplicates'[wp]:
   apply (cut_tac ptr = ptr in new_cap_addrs_fold'[where n = "2^us" 
    and ko = "(KOCTE makeObject)",simplified])
    apply (rule word_1_le_power)
-  apply (clarsimp simp:word_bits_def)
+  apply (clarsimp simp: word_bits_def)
   apply (drule_tac ptr = ptr and ko = "KOCTE makeObject" in
     valid_duplicates'_insert_ko[where us = us,simplified])
-      apply (simp add:APIType_capBits_def is_aligned_mask
-       ARM_H.toAPIType_def ARM_H.toAPIType_def
-      split:ARM_H.object_type.splits)
-     apply (simp add:vs_entry_align_def)
-   apply (simp add:objBits_simps)
+      apply (simp add: APIType_capBits_def is_aligned_mask
+                       ARM_H.toAPIType_def ARM_H.toAPIType_def
+                split: ARM_H.object_type.splits)
+     apply (simp add: vs_entry_align_def)
+   apply (simp add: objBits_simps)
    apply (rule none_in_new_cap_addrs
-     ,(simp add:objBits_simps pageBits_def APIType_capBits_def 
-     ARM_H.toAPIType_def ARM_H.toAPIType_def
-     word_bits_conv archObjSize_def is_aligned_mask
-     split:ARM_H.object_type.splits)+)[1]
-  apply (clarsimp simp:word_bits_def)
+     ,(simp add: objBits_simps pageBits_def APIType_capBits_def 
+                 ARM_H.toAPIType_def ARM_H.toAPIType_def
+                 word_bits_conv archObjSize_def is_aligned_mask
+          split: ARM_H.object_type.splits)+)[1]
+  apply (clarsimp simp: word_bits_def)
  done
 
 
@@ -2008,8 +2008,8 @@ lemma recycleCap_valid_duplicates'[wp]:
         apply (wp hoare_drop_imp|simp|wpc)+
       apply (rename_tac arch_capability)
       apply (case_tac arch_capability)
-          apply (simp add:ARM_H.recycleCap_def Let_def
-            isCap_simps split del: split_if | wp hoare_drop_imps hoare_vcg_all_lift hoare_unless_wp  |wpc | fastforce)+
+          apply (simp add: ARM_H.recycleCap_def Let_def isCap_simps
+                split del: split_if | wp hoare_drop_imps hoare_vcg_all_lift hoare_unless_wp  | wpc | fastforce)+
          apply (rename_tac word option)
          apply (rule_tac Q = "\<lambda>r s. valid_objs' s \<and>
            pspace_aligned' s \<and>
@@ -2024,9 +2024,8 @@ lemma recycleCap_valid_duplicates'[wp]:
          apply (wp mapM_x_storePTE_invalid_whole)
           apply (wp mapM_x_wp'|simp)+
          apply fastforce
-        apply (simp add:ARM_H.recycleCap_def Let_def
-          isCap_simps split del: split_if | wp hoare_drop_imps hoare_vcg_all_lift
-          |wpc)+
+        apply (simp add: ARM_H.recycleCap_def Let_def isCap_simps
+              split del: split_if | wp hoare_drop_imps hoare_vcg_all_lift | wpc)+
         apply (rename_tac word option)
         apply (clarsimp simp:conj_comms)
         apply (rule_tac Q = "\<lambda>r s. valid_objs' s \<and>

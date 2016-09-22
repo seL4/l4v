@@ -1243,11 +1243,11 @@ lemma delete_objects_pspace_no_overlap':
 (* FIXME: move *)
 lemma valid_cap_range_untyped:
   "\<lbrakk> valid_objs s; cte_wp_at (op = (UntypedCap dev (ptr && ~~ mask sz) sz idx)) slot s\<rbrakk>
-   \<Longrightarrow> cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s"
-   apply (rule cte_wp_at_weakenE)
-    apply simp
-   apply (clarsimp simp:word_and_le2 p_assoc_help)
-   done
+  \<Longrightarrow> cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s"
+  apply (rule cte_wp_at_weakenE)
+   apply simp
+  apply (clarsimp simp: word_and_le2 p_assoc_help)
+  done
 
 lemma retype_region_pas_refined':
   "\<lbrace>pas_refined aag and pas_cur_domain aag and invs and
@@ -1274,7 +1274,7 @@ lemma retype_region_pas_refined':
    apply fastforce
   apply clarsimp
   apply (frule valid_cap_range_untyped[OF invs_valid_objs])
-   apply (fastforce simp:cte_wp_at_caps_of_state)
+   apply (fastforce simp: cte_wp_at_caps_of_state)
   apply (cases slot)
   apply (auto intro: cte_wp_at_caps_no_overlapI descendants_range_caps_no_overlapI
            cte_wp_at_pspace_no_overlapI simp: cte_wp_at_sym)
@@ -1317,13 +1317,13 @@ lemma retype_region_post_retype_invs_spec:
       and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
       and K (range_cover ptr sz (obj_bits_api ty us) n) \<rbrace>
       retype_region ptr n us ty dev\<lbrace>\<lambda>rv. post_retype_invs ty rv\<rbrace>"
-   apply (rule hoare_pre)
-   apply (wp retype_region_post_retype_invs)
-   apply (clarsimp simp del:split_paired_Ex)
-   apply (frule valid_cap_range_untyped[OF invs_valid_objs],simp)
-   apply (intro conjI)
-     apply fastforce+
-   done
+  apply (rule hoare_pre)
+  apply (wp retype_region_post_retype_invs)
+  apply (clarsimp simp del: split_paired_Ex)
+  apply (frule valid_cap_range_untyped[OF invs_valid_objs],simp)
+  apply (intro conjI)
+    apply fastforce+
+  done
 
 lemma invoke_untyped_pas_refined:
   notes modify_wp[wp del]

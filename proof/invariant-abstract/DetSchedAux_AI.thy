@@ -43,8 +43,6 @@ lemma create_cap_ct[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> create_
    apply (wp dxo_wp_weak | wpc | simp)+
   done
 
-
-
 crunch valid_etcbs[wp]: create_cap,cap_insert,set_cap valid_etcbs (wp: valid_etcbs_lift set_cap_typ_at)
 
 lemma valid_etcb_fold_update: "valid_etcbs_2 ekh kh \<Longrightarrow> type \<noteq> apiobject_type.Untyped \<Longrightarrow> valid_etcbs_2

@@ -1141,8 +1141,8 @@ lemma createWordObjects_no_orphans [wp]:
    createWordObjects ptr n us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding createWordObjects_def
-  apply (wp hoare_unless_wp | clarsimp simp: projectKO_opt_tcb split del:split_if)+
-  apply (intro conjI | simp add:objBits_simps)+
+  apply (wp hoare_unless_wp | clarsimp simp: projectKO_opt_tcb split del: split_if)+
+  apply (intro conjI | simp add: objBits_simps)+
   done
 
 lemma copyGlobalMappings_no_orphans [wp]:
@@ -1189,11 +1189,11 @@ lemma createObject_no_orphans:
    RetypeDecls_H.createObject tp ptr us d
    \<lbrace>\<lambda>xa. no_orphans\<rbrace>"
   apply (case_tac tp)
-        apply (simp_all add:createObject_def ARM_H.createObject_def split del:split_if)
+        apply (simp_all add: createObject_def ARM_H.createObject_def split del: split_if)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
-            apply (simp_all add:ARM_H.createObject_def createPageObject_def placeNewObject_def2
-              toAPIType_def split del:split_if)+
+            apply (simp_all add: ARM_H.createObject_def createPageObject_def placeNewObject_def2
+              toAPIType_def split del: split_if)+
             apply (wp threadSet_no_orphans | clarsimp)+
            apply ((wp createObjects'_wp_subst
                   createObjects_no_orphans[where sz = sz] | 
@@ -1216,30 +1216,32 @@ lemma createObject_no_orphans:
         apply ((wp createObjects'_wp_subst
                    createObjects_no_orphans[where sz = sz] | 
          clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-         is_active_thread_state_def makeObject_tcb
-         projectKO_opt_tcb isRunning_def isRestart_def
-         APIType_capBits_def objBits_simps
-         split:option.splits split del:split_if)+)[1]
+                        is_active_thread_state_def makeObject_tcb
+                        projectKO_opt_tcb isRunning_def isRestart_def
+                        APIType_capBits_def objBits_simps
+                 split: option.splits split del: split_if)+)[1]
        apply ((wp createObjects'_wp_subst hoare_if
                 createObjects_no_orphans[where sz = sz] | 
         clarsimp simp: placeNewObject_def2
-        projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-        is_active_thread_state_def makeObject_tcb pageBits_def unless_def
-        projectKO_opt_tcb isRunning_def isRestart_def
-        APIType_capBits_def objBits_simps split:option.splits 
-        split del:split_if)+)[4]
+                       projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
+                       is_active_thread_state_def makeObject_tcb pageBits_def unless_def
+                       projectKO_opt_tcb isRunning_def isRestart_def
+                       APIType_capBits_def objBits_simps split: option.splits 
+            split del: split_if)+)[4]
    apply ((wp createObjects'_wp_subst
                createObjects_no_orphans[where sz = sz ] | 
        clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-       is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def
-       projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
-       APIType_capBits_def objBits_simps split:option.splits)+)[1]
+                      is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def
+                      projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
+                      APIType_capBits_def objBits_simps
+               split: option.splits)+)[1]
   apply ((wp createObjects'_wp_subst
               createObjects_no_orphans[where sz = sz] | 
       clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-      is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def pdBits_def
-      projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
-      APIType_capBits_def objBits_simps split:option.splits))+
+                     is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def pdBits_def
+                     projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
+                     APIType_capBits_def objBits_simps
+              split: option.splits))+
   done
 
 lemma createNewObjects_no_orphans :
@@ -1389,7 +1391,7 @@ lemma invokeUntyped_no_orphans' [wp]:
      deleteObjects_st_tcb_at'[where p = cref and d=d]
      deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz and d=d]
      deleteObjects_ct_active'[where idx = idx and cref = cref and d=d])
-   apply (clarsimp simp:conj_comms)
+   apply (clarsimp simp: conj_comms)
    apply (wp getSlotCap_wp)
    using invokeUntyped_proofs.usableRange_disjoint[OF ivk_pf]
      invokeUntyped_proofs.descendants_range[OF ivk_pf]

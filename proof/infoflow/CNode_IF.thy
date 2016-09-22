@@ -444,8 +444,8 @@ lemma aag_cap_auth_PageCap_asid:
   \<Longrightarrow> pas_refined aag s
   \<Longrightarrow> is_subject_asid aag a"
   apply (auto simp add: aag_cap_auth_def cap_auth_conferred_def 
-                   cap_links_asid_slot_def label_owns_asid_slot_def
-                   intro: pas_refined_Control_into_is_subject_asid)
+                        cap_links_asid_slot_def label_owns_asid_slot_def
+                 intro: pas_refined_Control_into_is_subject_asid)
 done
 
 lemma aag_cap_auth_PageTableCap:
@@ -875,7 +875,7 @@ lemma irq_state_increment_reads_respects_device:
 lemma use_equiv_valid_inv:
   "\<lbrakk>x\<in>fst (f st); y\<in> fst (f s); g s; g st;I s st;P s st; equiv_valid_inv I P g f \<rbrakk>
   \<Longrightarrow> fst x = fst y \<and> P (snd y) (snd x) \<and> I (snd y) (snd x)"
- apply (clarsimp simp add:equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
+ apply (clarsimp simp add: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
  apply (drule spec)+
  apply (erule impE)
  apply fastforce
@@ -886,7 +886,7 @@ lemma equiv_valid_inv_conj_lift:
  assumes P: "equiv_valid_inv I (\<lambda>s s'. P s s') g f"
      and P': "equiv_valid_inv I (\<lambda>s s'. P' s s') g f"
  shows "equiv_valid_inv I (\<lambda>s s'. P s s' \<and> P' s s') g f"
- apply (clarsimp simp add:equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
+ apply (clarsimp simp add: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
  apply (frule_tac st = t and s = st in use_equiv_valid_inv[OF _ _ _ _ _ _ P])
   apply fastforce+
  apply (frule_tac st = t and s = st in use_equiv_valid_inv[OF _ _ _ _ _ _ P'])
@@ -981,7 +981,7 @@ lemma all_children_descendants_equal: "equiv_for P id s t \<Longrightarrow> all_
   apply(rule_tac r'="{(p, c). t c = Some p}" and Q="P" in trancl_subset_equivalence)
     apply(clarsimp)+
    apply(frule_tac p="(aa, ba)" and q="slot" and s=t in descendants_of_all_children)
-     apply(fastforce simp:equiv_for_def descendants_of_def cdt_parent_rel_def is_cdt_parent_def)+
+     apply(fastforce simp: equiv_for_def descendants_of_def cdt_parent_rel_def is_cdt_parent_def)+
   done
 
 lemma descendants_of_eq: "\<lbrakk>reads_equiv aag s t; affects_equiv aag l s t; pas_refined aag s;

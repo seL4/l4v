@@ -1108,11 +1108,11 @@ lemma valid_global_pts_update [iff]:
 
 lemma valid_pte_update [iff]:
   "valid_pte pte (f s) = valid_pte pte s"
-  by (cases pte) (auto simp:data_at_def)
+  by (cases pte) (auto simp: data_at_def)
 
 lemma valid_pde_update [iff]:
   "valid_pde pde (f s) = valid_pde pde s"
-  by (cases pde) (auto simp:data_at_def)
+  by (cases pde) (auto simp: data_at_def)
 
 lemma valid_arch_obj_update [iff]:
   "valid_arch_obj ao (f s) = valid_arch_obj ao s"
@@ -1250,12 +1250,12 @@ lemma aobj_ref_default:
 lemma valid_pde_lift:
   assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_pde pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde pde s\<rbrace>"
-  by (cases pde) (simp add:data_at_def | wp x hoare_vcg_disj_lift)+
+  by (cases pde) (simp add: data_at_def | wp x hoare_vcg_disj_lift)+
 
 lemma valid_pte_lift:
   assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_pte pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte pte s\<rbrace>"
-  by (cases pte) (simp add:data_at_def| wp x hoare_vcg_disj_lift)+
+  by (cases pte) (simp add: data_at_def| wp x hoare_vcg_disj_lift)+
 
 lemma pde_at_atyp:
   assumes x: "\<And>p T. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
@@ -1756,7 +1756,7 @@ proof -
      apply (erule (6) 2)
     apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
                           pde_ref_pages_def data_at_def
-                   dest!: vs_lookup_pages1D elim!:disjE
+                   dest!: vs_lookup_pages1D elim!: disjE
                    split: split_if_asm pde.splits)
     apply (frule_tac d=ac in vpt, assumption+)
     apply (erule converse_rtranclE)
@@ -1904,12 +1904,12 @@ by (simp add: addrFromPPtr_def ptrFromPAddr_def)
 lemma valid_pte_lift2:
   assumes x: "\<And>T p. \<lbrace>Q and typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. Q s \<and> valid_pte pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte pte s\<rbrace>"
-  by (cases pte) (simp add:data_at_def | wp hoare_vcg_disj_lift x)+
+  by (cases pte) (simp add: data_at_def | wp hoare_vcg_disj_lift x)+
 
 lemma valid_pde_lift2:
   assumes x: "\<And>T p. \<lbrace>Q and typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. Q s \<and> valid_pde pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde pde s\<rbrace>"
-  by (cases pde) (simp add:data_at_def | wp hoare_vcg_disj_lift x)+
+  by (cases pde) (simp add: data_at_def | wp hoare_vcg_disj_lift x)+
 
 lemma valid_arch_obj_typ2:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. Q s \<and> P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"

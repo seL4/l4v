@@ -476,7 +476,7 @@ lemma is_default_cap_def2:
   is_irqhandler_cap cap)"
   apply (clarsimp simp:is_default_cap_def)
   apply (case_tac cap)
-  apply (auto simp:default_cap_def cap_type_def)
+  apply (auto simp: default_cap_def cap_type_def)
   done
 
 lemma default_cap_update_cap_object:

@@ -3505,14 +3505,14 @@ lemma tcb_cap_slot_regular:
         check (fst cref) (tcb_state tcb) cap "
   apply (case_tac cref)
   apply (clarsimp simp: caps_of_state_def gets_the_def  return_def assert_def
-    assert_opt_def tcb_at_def get_cap_def
-    bind_def get_object_def simpler_gets_def
-    dest!: get_tcb_SomeD
-    split: if_splits)
-  apply (clarsimp simp:fail_def return_def split:option.splits)
+                        assert_opt_def tcb_at_def get_cap_def
+                        bind_def get_object_def simpler_gets_def
+                 dest!: get_tcb_SomeD
+                 split: if_splits)
+  apply (clarsimp simp: fail_def return_def split: option.splits)
   apply (erule valid_objsE)
    apply assumption
-  apply (simp add:valid_obj_def valid_tcb_def)
+  apply (simp add: valid_obj_def valid_tcb_def)
   apply (clarsimp simp: tcb_cnode_map_tcb_cap_cases)
   apply (drule bspec(1))
    apply (erule ranI)
@@ -3525,11 +3525,11 @@ lemma set_free_index_valid_pspace:
         (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and>idx \<le> 2^ cap_bits cap)\<rbrace>
    set_cap (free_index_update (\<lambda>_. idx) cap) cref  
    \<lbrace>\<lambda>rv s'. valid_pspace s'\<rbrace>"
-  apply (clarsimp simp:valid_pspace_def)
+  apply (clarsimp simp: valid_pspace_def)
   apply (wp set_cap_valid_objs update_cap_iflive set_cap_zombies')
-       apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps)+
+       apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)+
   apply (frule(1) caps_of_state_valid)
-  apply (clarsimp simp:valid_cap_def cap_aligned_def
+  apply (clarsimp simp: valid_cap_def cap_aligned_def
     free_index_update_def)
   apply (intro conjI)
    apply (clarsimp simp: valid_untyped_def)
@@ -3556,7 +3556,7 @@ lemma set_free_index_valid_pspace:
                      split: option.split)
   apply (frule tcb_cap_slot_regular)
    apply simp+
-  apply (clarsimp simp:is_nondevice_page_cap_simps)
+  apply (clarsimp simp: is_nondevice_page_cap_simps)
   done
 
 
@@ -3950,8 +3950,8 @@ locale CSpace_AI_6 = CSpace_AI_5 state_ext_t
       \<lbrace>\<lambda>rv. cap_refs_in_kernel_window :: 'state_ext state \<Rightarrow> bool\<rbrace>"
 
 lemma cap_is_device_free_index_update_simp[simp]:
- "is_untyped_cap c \<Longrightarrow> cap_is_device (max_free_index_update c) = cap_is_device c"
- by (case_tac c,simp_all add:is_cap_simps)
+  "is_untyped_cap c \<Longrightarrow> cap_is_device (max_free_index_update c) = cap_is_device c"
+  by (case_tac c,simp_all add:is_cap_simps)
 
 locale cap_insert_crunches begin
 
@@ -4690,7 +4690,7 @@ lemma setup_reply_master_cap_refs_respects_device_region[wp]:
   apply (wp get_cap_wp set_cap_cap_refs_respects_device_region)
   apply (clarsimp simp: obj_at_def
                         cap_range_def)
-  apply (auto simp:cte_wp_at_caps_of_state)
+  apply (auto simp: cte_wp_at_caps_of_state)
   done
 
 context CSpace_AI_7 begin
@@ -4754,8 +4754,7 @@ definition
    cap_is_device cap = cap_is_device parent \<and>
    same_region_as parent cap \<and> 
    ((\<exists>irq. cap = cap.IRQHandlerCap irq) \<and> parent = cap.IRQControlCap \<or> 
-   is_untyped_cap parent \<and> descendants_of p m = {} (*\<and>
-   (\<exists>frame base. cap = cap.ArchObjectCap (ASIDPoolCap frame base) \<longrightarrow> cap_is_device parent)*))"
+    is_untyped_cap parent \<and> descendants_of p m = {})"
 
 
 context CSpace_AI_7 begin

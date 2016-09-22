@@ -23,7 +23,7 @@ named_theorems Retype_AI_assms
 lemma arch_kobj_size_cong[Retype_AI_assms]: 
 "\<lbrakk>a = a1; c=c1\<rbrakk> \<Longrightarrow> arch_kobj_size (default_arch_object a b c) 
   = arch_kobj_size (default_arch_object a1 b1 c1)"
-  by (simp add:default_arch_object_def split:aobject_type.splits)
+  by (simp add: default_arch_object_def split: aobject_type.splits)
 
 lemma clearMemoryVM_return[simp, Retype_AI_assms]:
   "clearMemoryVM a b = return ()"
@@ -53,7 +53,7 @@ lemma retype_region_ret_folded [Retype_AI_assms]:
   unfolding retype_region_def
   apply (simp add: pageBits_def)
   apply wp
-   apply (simp add:retype_addrs_def)
+   apply (simp add: retype_addrs_def)
   done
 
 declare store_pde_state_refs_of [wp]
@@ -84,7 +84,7 @@ lemma mdb_cte_at_store_pde[wp]:
   "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
    store_pde y pde
    \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
-  apply (clarsimp simp:mdb_cte_at_def)
+  apply (clarsimp simp: mdb_cte_at_def)
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
 done
@@ -175,7 +175,7 @@ lemma create_word_objects_vms[wp]:
   apply (rule hoare_pre)
   apply (wp hoare_unless_wp)
   apply (subst dom_mapM)
-    apply ((simp add:clearMemory_def
+    apply ((simp add: clearMemory_def
       | wp empty_fail_cleanCacheRange_PoU ef_storeWord
       empty_fail_mapM_x empty_fail_bind)+)[1]
    apply (wp mapM_wp')
@@ -193,7 +193,7 @@ lemma create_word_objects_valid_irq_states[wp]:
   apply (rule hoare_pre)
   apply (wp hoare_unless_wp)
   apply (subst dom_mapM)
-    apply ((simp add:clearMemory_def
+    apply ((simp add: clearMemory_def
       | wp empty_fail_cleanCacheRange_PoU ef_storeWord
       empty_fail_mapM_x empty_fail_bind)+)[1]
    apply (wp mapM_wp' hoare_unless_wp | simp add: do_machine_op_def | wpc)+
@@ -210,7 +210,7 @@ crunch cap_refs_respects_device_region[wp]: reserve_region cap_refs_respects_dev
 
 lemma create_word_objects_pspace_respects_device[wp]:
   "\<lbrace>pspace_respects_device_region\<rbrace> create_word_objects ptr bits sz dev \<lbrace>\<lambda>_. pspace_respects_device_region\<rbrace>"
-  apply (clarsimp simp add:create_word_objects_def when_def)
+  apply (clarsimp simp add: create_word_objects_def when_def)
    apply (rule hoare_pre,wp pspace_respects_device_region_dmo hoare_unless_wp mapM_x_wp)
      apply fastforce
     apply simp
@@ -220,7 +220,7 @@ lemma create_word_objects_pspace_respects_device[wp]:
 
 lemma create_word_objects_cap_refs_respects_device[wp]:
   "\<lbrace>cap_refs_respects_device_region\<rbrace> create_word_objects ptr bits sz dev \<lbrace>\<lambda>_. cap_refs_respects_device_region\<rbrace>"
-  apply (clarsimp simp add:create_word_objects_def unless_def when_def)
+  apply (clarsimp simp add: create_word_objects_def unless_def when_def)
   apply (intro conjI impI)
    apply (rule hoare_pre,wp cap_refs_respects_device_region_dmo)
    apply (rule hoare_pre,wp mapM_x_wp)
@@ -233,7 +233,7 @@ lemma create_word_objects_cap_refs_respects_device[wp]:
 
 lemma create_word_objects_invs[wp]:
   "\<lbrace>invs\<rbrace> create_word_objects ptr bits sz dev\<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add:invs_def valid_state_def)
+  apply (simp add: invs_def valid_state_def)
   apply (rule hoare_pre)
    apply (rule hoare_strengthen_post)
     apply (rule hoare_vcg_conj_lift[OF create_word_objects_vms])
@@ -350,7 +350,7 @@ lemma store_pde_map_global_valid_arch_caps:
   apply (simp add: store_pde_def)
   apply (wp set_pd_valid_arch_caps
             [where T="{}" and S="{}" and T'="{}" and S'="{}"])
-  apply (clarsimp simp:obj_at_def kernel_vsrefs_kernel_mapping_slots[symmetric])
+  apply (clarsimp simp: obj_at_def kernel_vsrefs_kernel_mapping_slots[symmetric])
   apply (intro conjI)
        apply (erule vs_refs_add_one'')
       apply (rule set_eqI)
@@ -398,7 +398,7 @@ lemma store_pde_map_global_valid_arch_objs:
    \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
   apply (simp add: store_pde_def)
   apply (wp set_pd_arch_objs_map[where T="{}" and S="{}"])
-  apply (clarsimp simp:obj_at_def kernel_vsrefs_kernel_mapping_slots[symmetric])
+  apply (clarsimp simp: obj_at_def kernel_vsrefs_kernel_mapping_slots[symmetric])
   apply (intro conjI)
    apply (erule vs_refs_add_one'')
   apply clarsimp
@@ -680,7 +680,7 @@ lemma dmo_mapM_x_ccr_invs[wp]:
   apply (clarsimp simp: mapM_x_mapM do_machine_op_return_foo)
   apply (rule hoare_pre)
   apply (subst dom_mapM)
-    apply ((simp add:clearMemory_def
+    apply ((simp add: clearMemory_def
       | wp empty_fail_cleanCacheRange_PoU ef_storeWord
       empty_fail_mapM_x empty_fail_bind)+)[1]
    apply (wp mapM_wp' | clarsimp)+
@@ -783,41 +783,41 @@ lemma valid_untyped_helper [Retype_AI_assms]:
     apply (fastforce elim!: obj_at_pres)
    apply (fastforce elim!: obj_at_pres)
   apply (rename_tac word nat1 nat2)
-  apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split:split_if_asm)
+  apply (clarsimp simp: valid_untyped_def is_cap_simps obj_at_def split: split_if_asm)
     apply (thin_tac "\<forall>x. Q x" for Q)
      apply (frule retype_addrs_obj_range_subset_strong[where dev = dev,OF _ _ tyunt])
-      apply (simp add:obj_bits_dev_irr tyunt)
+      apply (simp add: obj_bits_dev_irr tyunt)
      apply (frule usable_range_subseteq)
-       apply (simp add:is_cap_simps)
-     apply (clarsimp simp:cap_aligned_def split:split_if_asm)
+       apply (simp add: is_cap_simps)
+     apply (clarsimp simp: cap_aligned_def split: split_if_asm)
       apply (frule aligned_ranges_subset_or_disjoint)
       apply (erule retype_addrs_aligned[where sz = sz])
-         apply (simp add:range_cover_def)
-        apply (simp add:range_cover_def word_bits_def)
-       apply (simp add:range_cover_def)
+         apply (simp add: range_cover_def)
+        apply (simp add: range_cover_def word_bits_def)
+       apply (simp add: range_cover_def)
       apply (clarsimp simp: default_obj_range Int_ac tyunt
-        split:split_if_asm)
+                     split: split_if_asm)
      apply (elim disjE)
       apply (drule(2) subset_trans[THEN disjoint_subset2])
       apply (drule Int_absorb2)+
-       apply (simp add:is_cap_simps free_index_of_def)
+       apply (simp add: is_cap_simps free_index_of_def)
     apply simp
     apply (drule(1) disjoint_subset2[rotated])
-    apply (simp add:Int_ac)
+    apply (simp add: Int_ac)
    apply (thin_tac "\<forall>x. Q x" for Q)
    apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
-   apply (clarsimp simp:cap_aligned_def)
+   apply (clarsimp simp: cap_aligned_def)
     apply (frule aligned_ranges_subset_or_disjoint)
      apply (erule retype_addrs_aligned[where sz = sz])
-         apply (simp add:range_cover_def)
-        apply (simp add:range_cover_def word_bits_def)
-       apply (simp add:range_cover_def)
-      apply (clarsimp simp:default_obj_range Int_ac tyunt
-        split:split_if_asm)
+         apply (simp add: range_cover_def)
+        apply (simp add: range_cover_def word_bits_def)
+       apply (simp add: range_cover_def)
+      apply (clarsimp simp: default_obj_range Int_ac tyunt
+                     split: split_if_asm)
    apply (erule disjE)
-    apply (simp add:cte_wp_at_caps_of_state)
+    apply (simp add: cte_wp_at_caps_of_state)
     apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
-    apply (simp add:p_assoc_help[symmetric])
+    apply (simp add: p_assoc_help[symmetric])
     apply (erule impE)
      apply blast (* set arith *)
     apply blast (* set arith *)
@@ -854,7 +854,7 @@ lemma valid_cap:
         Int_atLeastAtMost atLeastatMost_empty_iff
   have cover':"range_cover ptr sz (obj_bits (default_object ty dev us)) n"
     using cover tyunt
-    by (clarsimp simp:obj_bits_dev_irr)
+    by (clarsimp simp: obj_bits_dev_irr)
   show ?thesis
   using cap
   apply (case_tac cap)
@@ -866,14 +866,14 @@ lemma valid_cap:
      apply (intro conjI)
        apply clarsimp
        apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
-        apply (simp add:Int_ac p_assoc_help[symmetric])
+        apply (simp add: Int_ac p_assoc_help[symmetric])
        apply simp
       apply clarsimp
      apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
-      apply (simp add:Int_ac p_assoc_help[symmetric])
+      apply (simp add: Int_ac p_assoc_help[symmetric])
      apply simp
      using cover tyunt
-     apply (simp add: obj_bits_api_def2 split:Structures_A.apiobject_type.splits)
+     apply (simp add: obj_bits_api_def2 split: Structures_A.apiobject_type.splits)
      apply clarsimp+
     apply (fastforce elim!: obj_at_pres)+
   done
@@ -933,14 +933,14 @@ context retype_region_proofs_arch begin
 lemma obj_at_valid_pte:
   "\<lbrakk>valid_pte pte s; \<And>P p. obj_at P p s \<Longrightarrow> obj_at P p s'\<rbrakk> 
    \<Longrightarrow> valid_pte pte s'"
-  apply (cases pte,simp_all add:valid_pte_def data_at_def)
+  apply (cases pte,simp_all add: valid_pte_def data_at_def)
   apply (clarsimp | elim disjE)+
   done
 
 lemma obj_at_valid_pde:
   "\<lbrakk>valid_pde pde s; \<And>P p. obj_at P p s \<Longrightarrow> obj_at P p s'\<rbrakk> 
    \<Longrightarrow> valid_pde pde s'"
-  apply (cases pde, simp_all add:valid_pte_def data_at_def)
+  apply (cases pde, simp_all add: valid_pte_def data_at_def)
   apply (clarsimp | elim disjE)+
   done
 
@@ -1044,20 +1044,20 @@ lemma pspace_respects_device_regionI:
       and inv:  "pspace_aligned s" "valid_objs s"
   shows "pspace_respects_device_region s"
 
-  apply (simp add:pspace_respects_device_region_def,intro conjI)
+  apply (simp add: pspace_respects_device_region_def,intro conjI)
   apply (rule subsetI)
-   apply (clarsimp simp:dom_def user_mem_def obj_at_def in_user_frame_def split: split_if_asm)
+   apply (clarsimp simp: dom_def user_mem_def obj_at_def in_user_frame_def split: split_if_asm)
    apply (frule uat)
    apply (cut_tac ko = "(ArchObj (DataPage False sz))" in p_in_obj_range_internal[OF _ inv])
-   prefer 2
-    apply (fastforce simp:obj_bits_def)
+    prefer 2
+    apply (fastforce simp: obj_bits_def)
    apply simp
   apply (rule subsetI)
-  apply (clarsimp simp:dom_def device_mem_def obj_at_def in_device_frame_def split: split_if_asm)
+  apply (clarsimp simp: dom_def device_mem_def obj_at_def in_device_frame_def split: split_if_asm)
   apply (frule dat)
   apply (cut_tac ko = "(ArchObj (DataPage True sz))" in p_in_obj_range_internal[OF _ inv])
   prefer 2
-   apply (fastforce simp:obj_bits_def)
+   apply (fastforce simp: obj_bits_def)
   apply simp
   done
 
@@ -1065,7 +1065,7 @@ lemma obj_range_respect_device_range:
   "\<lbrakk>kheap s ptr = Some (ArchObj (DataPage dev sz));pspace_aligned s\<rbrakk> \<Longrightarrow>
   obj_range ptr (ArchObj $ DataPage dev sz) \<subseteq> (if dev then dom (device_mem s) else dom (user_mem s))"
   apply (drule(1) pspace_alignedD[rotated])
-  apply (clarsimp simp:user_mem_def in_user_frame_def obj_at_def obj_range_def device_mem_def in_device_frame_def)
+  apply (clarsimp simp: user_mem_def in_user_frame_def obj_at_def obj_range_def device_mem_def in_device_frame_def)
   apply (intro impI conjI)
    apply clarsimp
    apply (rule exI[where x = sz])
@@ -1082,16 +1082,16 @@ lemma pspace_respects_device_regionD:
       and dat: "\<And>ptr sz. kheap s ptr = Some (ArchObj (DataPage True sz)) 
                 \<Longrightarrow> obj_range ptr (ArchObj $ DataPage True sz) \<subseteq> device_region s"
   using inv
-  apply (simp_all add:pspace_respects_device_region_def)
+  apply (simp_all add: pspace_respects_device_region_def)
   apply (rule subsetI)
    apply (drule obj_range_respect_device_range[OF _ inv(1)])
-   apply (clarsimp split:if_splits)
+   apply (clarsimp split: if_splits)
    apply (drule(1) subsetD[rotated])
    apply (drule(1) subsetD[rotated])
    apply (simp add: dom_def)
   apply (rule subsetI)
   apply (drule obj_range_respect_device_range[OF _ inv(1)])
-  apply (clarsimp split:if_splits)
+  apply (clarsimp split: if_splits)
   apply (drule(1) subsetD[rotated])
   apply (drule(1) subsetD[rotated])
    apply (simp add: dom_def)
@@ -1100,8 +1100,8 @@ lemma pspace_respects_device_regionD:
 
 lemma default_obj_dev:
   "\<lbrakk>ty \<noteq> Untyped;default_object ty dev us = ArchObj (DataPage dev' sz)\<rbrakk> \<Longrightarrow> dev = dev'"
-  by (clarsimp simp:default_object_def default_arch_object_def
-    split:apiobject_type.split_asm aobject_type.split_asm)
+  by (clarsimp simp: default_object_def default_arch_object_def
+              split: apiobject_type.split_asm aobject_type.split_asm)
 
 end
 
@@ -1110,7 +1110,7 @@ end
 lemma cap_range_respects_device_region_cong[cong]:
   "device_state (machine_state s) = device_state (machine_state s')
   \<Longrightarrow> cap_range_respects_device_region cap s = cap_range_respects_device_region cap s'"
-  by (clarsimp simp:cap_range_respects_device_region_def)
+  by (clarsimp simp: cap_range_respects_device_region_def)
 
 
 context begin interpretation Arch .
@@ -1242,29 +1242,29 @@ lemma pspace_respects_device_region:
   apply (cut_tac vp)
   apply (rule pspace_respects_device_regionI)
      apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def 
-       split:split_if_asm )
+                        split: split_if_asm )
       apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
        using cover tyunt
-       apply (simp add:obj_bits_api_def3 split:if_splits)
+       apply (simp add: obj_bits_api_def3 split: if_splits)
       apply (frule default_obj_dev[OF tyunt],simp)
       apply (drule(1) subsetD)
       apply (rule exE[OF dev])
       apply (drule cap_refs_respects_device_region_cap_range[OF _ cap_refs_resp_dev])
-      apply (fastforce split:if_splits)
+      apply (fastforce split: if_splits)
      apply (drule pspace_respects_device_regionD[OF _ _ psp_resp_dev, rotated -1])
        apply fastforce
       apply fastforce
      apply fastforce
     apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def 
-      split:split_if_asm )
+                       split: split_if_asm )
      apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
       using cover tyunt                
-      apply (simp add:obj_bits_api_def4 split:if_splits)
+      apply (simp add: obj_bits_api_def4 split: if_splits)
      apply (frule default_obj_dev[OF tyunt],simp)
       apply (drule(1) subsetD)
       apply (rule exE[OF dev])
       apply (drule cap_refs_respects_device_region_cap_range[OF _ cap_refs_resp_dev])
-      apply (fastforce split:if_splits)
+      apply (fastforce split: if_splits)
      apply (drule pspace_respects_device_regionD[OF _ _ psp_resp_dev, rotated -1])
        apply fastforce
       apply fastforce
@@ -1281,13 +1281,13 @@ lemma cap_refs_respects_device_region:
       and cap_refs_resp_dev: "cap_refs_respects_device_region s"
   shows "cap_refs_respects_device_region s'"
   using cap_refs_resp_dev
-  apply (clarsimp simp:cap_refs_respects_device_region_def
-    simp del:split_paired_All split_paired_Ex)
+  apply (clarsimp simp: cap_refs_respects_device_region_def
+              simp del: split_paired_All split_paired_Ex)
   apply (drule_tac x = "(a,b)" in spec)
   apply (erule notE)
   apply (subst(asm) cte_retype)
-   apply (simp add:cap_range_respects_device_region_def cap_range_def)
-  apply (clarsimp simp:cte_wp_at_caps_of_state s'_def dom_def)
+   apply (simp add: cap_range_respects_device_region_def cap_range_def)
+  apply (clarsimp simp: cte_wp_at_caps_of_state s'_def dom_def)
   done
 
 
@@ -1323,7 +1323,7 @@ lemma post_retype_invs:
                      pspace_in_kernel_window pspace_respects_device_region
                      cap_refs_respects_device_region
                      cap_refs_in_kernel_window valid_irq_states
-                 split: split_if_asm)
+              split: split_if_asm)
 
 (* ML \<open>val pre_ctxt_1 = @{context}\<close> *)
 

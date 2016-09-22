@@ -77,7 +77,6 @@ requalify_facts
   valid_arch_obj_default'
   vs_lookup1_stateI2
   vs_lookup_pages1_stateI2
-
   typ_at_pg
 
 end

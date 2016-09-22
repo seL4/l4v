@@ -1313,7 +1313,7 @@ lemma syscall_reads_respects_g:
   
 
 lemma do_machine_op_spec_reads_respects':
-  assumes equiv_dmo:               
+  assumes equiv_dmo:
    "equiv_valid_inv (equiv_machine_state (aag_can_read aag) (range_of_arm_globals_frame st) And equiv_irq_state)  (equiv_machine_state (aag_can_affect aag l) (range_of_arm_globals_frame st)) \<top> f"
   shows
   "spec_reads_respects st aag l \<top> (do_machine_op f)"

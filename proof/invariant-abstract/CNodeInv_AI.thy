@@ -1419,7 +1419,7 @@ lemma cap_swap_mdb [wp]:
    apply (erule mdb_swap_abs_invs.descendants_inc_n)
   apply (rule conjI)
    apply (erule mdb_swap_abs_invs.untyped_inc_n)
-     apply (clarsimp simp:cte_wp_at_caps_of_state)+
+     apply (clarsimp simp: cte_wp_at_caps_of_state)+
   apply (rule conjI)
    apply (simp add: ut_revocable_def weak_derived_ranges del: split_paired_All)
   apply (rule conjI)
@@ -1935,7 +1935,7 @@ lemma cap_swap_cap_refs_respects_device_region[wp]:
   apply (rule hoare_pre)
   apply (simp add:cap_swap_def)
   apply wp
-        apply (simp add:cap_refs_respects_device_region_def)
+        apply (simp add: cap_refs_respects_device_region_def)
        apply (rule hoare_strengthen_post[OF CSpace_AI.set_cdt_cap_refs_respects_device_region])
        apply simp
       apply wp
@@ -1947,20 +1947,20 @@ lemma cap_swap_cap_refs_respects_device_region[wp]:
   apply (frule_tac x = b in spec)
   apply (clarsimp simp: weak_derived_cap_range)
   apply (intro conjI impI allI)
-       apply (simp add:weak_derived_cap_range weak_derived_cap_is_device)+
+       apply (simp add: weak_derived_cap_range weak_derived_cap_is_device)+
       apply (rule ccontr)
       apply simp
      apply (rule disjI2)
      apply (intro conjI impI)
-      apply (simp add:weak_derived_cap_range weak_derived_cap_is_device)+
+      apply (simp add: weak_derived_cap_range weak_derived_cap_is_device)+
      apply (rule ccontr)
      apply simp
-    apply (simp add:weak_derived_cap_range weak_derived_cap_is_device)+
+    apply (simp add: weak_derived_cap_range weak_derived_cap_is_device)+
    apply (rule ccontr)
    apply simp
   apply (rule disjI2)
   apply (rule ccontr)
-  apply (clarsimp simp add:weak_derived_cap_range weak_derived_cap_is_device)+
+  apply (clarsimp simp add: weak_derived_cap_range weak_derived_cap_is_device)+
   apply fastforce
   done
 

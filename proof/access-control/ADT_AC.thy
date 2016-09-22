@@ -229,7 +229,6 @@ lemma user_op_access:
        apply simp+
   done
 
-
 lemma user_op_access':
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb;
      ptable_lift tcb s x = Some (addrFromPPtr ptr);
@@ -279,14 +278,14 @@ lemma integrity_device_state_update:
   apply (erule_tac x = x in allE, erule integrity_device.cases)
     apply (erule trd_lrefl)
    apply (rule trd_orefl)
-   apply (clarsimp simp:map_add_def)
+   apply (clarsimp simp: map_add_def)
   apply (erule trd_write)
   done
 
 lemma dmo_device_update_respects_Write:
   "\<lbrace>integrity aag X st and (\<lambda>s. device_state (machine_state s) = um)
-  and K (\<forall>p \<in> dom um'. aag_has_auth_to aag Write p)\<rbrace>
-  do_machine_op (device_memory_update um')
+    and K (\<forall>p \<in> dom um'. aag_has_auth_to aag Write p)\<rbrace>
+    do_machine_op (device_memory_update um')
   \<lbrace>\<lambda>a. integrity aag X st\<rbrace>"
   apply (simp add: device_memory_update_def)
   apply (rule hoare_pre)
@@ -304,9 +303,9 @@ lemma dmo_device_update_respects_Write:
 lemma dmo_um_upd_machine_state:
   "\<lbrace>\<lambda>s. P (device_state (machine_state s))\<rbrace>
        do_machine_op (user_memory_update ms)
-    \<lbrace>\<lambda>_ s. P (device_state (machine_state s))\<rbrace>"
-    apply (wp dmo_wp)
-    by (simp add:user_memory_update_def simpler_modify_def valid_def)
+   \<lbrace>\<lambda>_ s. P (device_state (machine_state s))\<rbrace>"
+  apply (wp dmo_wp)
+  by (simp add:user_memory_update_def simpler_modify_def valid_def)
 
 lemma do_user_op_respects:
  "\<lbrace> invs and integrity aag X st and is_subject aag \<circ> cur_thread and pas_refined aag \<rbrace>
@@ -322,11 +321,11 @@ lemma do_user_op_respects:
       apply (wp   select_wp | wpc | clarsimp)+
   apply (simp add: restrict_map_def split:if_splits)
   apply (rule conjI)
-   apply (clarsimp split:if_splits)
+   apply (clarsimp split: if_splits)
    apply (drule_tac auth=Write in user_op_access')
       apply (simp add: vspace_cap_rights_to_auth_def)+
   apply (rule conjI,simp)
-  apply (clarsimp split:if_splits)
+  apply (clarsimp split: if_splits)
    apply (drule_tac auth=Write in user_op_access')
       apply (simp add: vspace_cap_rights_to_auth_def)+
   done

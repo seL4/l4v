@@ -597,9 +597,9 @@ lemma set_object_pspace_respect_device_region:
   \<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
   apply (simp add: set_object_def, wp)
   apply (clarsimp simp: pspace_respects_device_region_def 
-    device_mem_obj_upd_dom user_mem_obj_upd_dom
-    obj_at_def  in_user_frame_obj_upd in_device_frame_obj_upd 
-    split:split_if_asm)
+                        device_mem_obj_upd_dom user_mem_obj_upd_dom
+                        obj_at_def in_user_frame_obj_upd in_device_frame_obj_upd 
+                 split: split_if_asm)
   done
 
 lemma set_ntfn_kernel_window[wp]:
@@ -1000,7 +1000,7 @@ lemma valid_irq_statesE:
 lemma cap_refs_respects_region_cong:
   "\<lbrakk>caps_of_state a  = caps_of_state b; device_state (machine_state a) = device_state (machine_state b)\<rbrakk>
   \<Longrightarrow> cap_refs_respects_device_region a = cap_refs_respects_device_region b"
-  by (simp add:cap_refs_respects_device_region_def cte_wp_at_caps_of_state dom_def cap_range_respects_device_region_def)
+  by (simp add: cap_refs_respects_device_region_def cte_wp_at_caps_of_state dom_def cap_range_respects_device_region_def)
 
 lemmas device_region_congs[cong] = pspace_respects_region_cong cap_refs_respects_region_cong
 
@@ -1024,9 +1024,9 @@ lemma dmo_invs:
    apply clarsimp
    apply (intro conjI)
     apply (fastforce simp: invs_def cur_tcb_def valid_state_def
-                          valid_machine_state_def
-                       intro: valid_irq_states_machine_state_updateI
-                       elim:  valid_irq_statesE)
+                           valid_machine_state_def
+                    intro: valid_irq_states_machine_state_updateI
+                     elim: valid_irq_statesE)
    apply (drule_tac x = "machine_state s" in spec,fastforce)
    done
 

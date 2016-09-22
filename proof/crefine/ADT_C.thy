@@ -444,7 +444,7 @@ lemma device_mem_C_relation:
                   split: if_splits option.splits)
   apply (rule conjI)
    apply (clarsimp simp: pointerInDeviceData_def)
-   apply (clarsimp simp:cmap_relation_def)
+   apply (clarsimp simp: cmap_relation_def)
    apply (subgoal_tac "(Ptr (p && ~~mask pageBits) :: user_data_device_C ptr) \<in> 
                         Ptr ` dom (heap_to_device_data (ksPSpace s') (underlying_memory (ksMachineState s')))")
     apply clarsimp
@@ -829,7 +829,7 @@ lemma ps_clear_is_aligned_ksPSpace_None:
    \<Longrightarrow> ksPSpace s (p + d) = None"
   apply (simp add: ps_clear_def add_diff_eq[symmetric] mask_2pm1[symmetric]) 
   apply (drule equals0D[where a="p + d"])
-  apply (simp add: dom_def word_gt_0 del:word_neq_0_conv)
+  apply (simp add: dom_def word_gt_0 del: word_neq_0_conv)
   apply (drule mp)
    apply (rule word_plus_mono_right)
     apply simp
@@ -1140,7 +1140,7 @@ lemma cpspace_device_data_relation_unique:
   apply (case_tac "x:dom (heap_to_device_data ah bh)")
    apply (drule bspec, assumption)+
    apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
-   apply (clarsimp simp add:  heap_to_device_data_def)
+   apply (clarsimp simp add: heap_to_device_data_def)
    apply (rule ccontr)
    apply (case_tac z, case_tac za)
    apply simp
@@ -1470,16 +1470,16 @@ lemma trivial_eq_conj: "B = C \<Longrightarrow> (A \<and> B) = (A \<and> C)"
   by simp
 
 lemma cpspace_user_data_relation_user_mem'[simp]:
- "\<lbrakk>pspace_aligned' as;pspace_distinct' as\<rbrakk> \<Longrightarrow> cpspace_user_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
- = cpspace_user_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
- by (simp add:cmap_relation_def)
+  "\<lbrakk>pspace_aligned' as;pspace_distinct' as\<rbrakk> \<Longrightarrow> cpspace_user_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
+  = cpspace_user_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
+  by (simp add: cmap_relation_def)
 
 lemma cpspace_device_data_relation_user_mem'[simp]:
- "cpspace_device_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
- = cpspace_device_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
- apply (clarsimp simp:cmap_relation_def cuser_user_data_device_relation_def heap_to_device_data_def)
- apply (rule_tac arg_cong[where  f = "%x. x = y" for y])
- by auto
+  "cpspace_device_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
+  = cpspace_device_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
+  apply (clarsimp simp: cmap_relation_def cuser_user_data_device_relation_def heap_to_device_data_def)
+  apply (rule_tac arg_cong[where  f = "%x. x = y" for y])
+  by auto
 
 
 lemma (in kernel_m) cstate_to_H_correct:

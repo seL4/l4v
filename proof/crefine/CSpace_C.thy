@@ -3556,7 +3556,7 @@ lemma capFSize_range:
   apply (simp add: cap_frame_cap_lift_def)
   apply (simp add: cap_lift_def cap_tag_defs word_and_le1)
   done
-  
+
 lemma Arch_sameObjectAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>ccap_relation (ArchObjectCap capa) \<acute>cap_a \<and>
                      ccap_relation (ArchObjectCap capb) \<acute>cap_b \<and>

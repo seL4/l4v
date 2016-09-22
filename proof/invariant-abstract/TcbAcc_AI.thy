@@ -190,7 +190,6 @@ schematic_goal tcb_ipcframe_in_cases:
   by (fastforce simp add: ran_tcb_cap_cases)
 
 
-
 lemmas valid_ipc_buffer_cap_simps= valid_ipc_buffer_cap_def[split_simps cap.split]
 locale TcbAcc_AI_valid_ipc_buffer_cap_0 =
   assumes valid_ipc_buffer_cap_0[simp]:
@@ -229,7 +228,7 @@ lemma thread_set_valid_objs_triv:
    apply auto[1]
   apply (rule conjI)
    apply (cut_tac tcb = y in w)
-   apply (auto simp:valid_ipc_buffer_cap_simps)[1]
+   apply (auto simp: valid_ipc_buffer_cap_simps)[1]
   apply (cut_tac tcb=y in y)
   apply (cut_tac tcb=y in a)
   apply (cut_tac tcb=y in b)
@@ -798,7 +797,7 @@ lemma idle_thread_idle[wp]:
   apply (clarsimp simp: valid_def get_thread_state_def thread_get_def bind_def return_def
                         gets_the_def gets_def get_def assert_opt_def get_tcb_def
                         fail_def valid_idle_def obj_at_def pred_tcb_at_def
-                  split: option.splits Structures_A.kernel_object.splits)
+                 split: option.splits Structures_A.kernel_object.splits)
   done
 
 lemma set_thread_state_valid_objs[wp]:
@@ -918,7 +917,6 @@ lemma fold_fun_upd:
   done
 
 crunch obj_at[wp]: store_word_offs "\<lambda>s. P (obj_at Q p s)"
-
 
 lemma load_word_offs_P[wp]:
   "\<lbrace>P\<rbrace> load_word_offs a x \<lbrace>\<lambda>_. P\<rbrace>"

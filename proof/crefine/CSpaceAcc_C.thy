@@ -54,7 +54,7 @@ lemma ccorres_pre_getCTE:
        defer
        apply wp[1]
       apply (rule getCTE_sp)
-     apply simp        
+     apply simp
     apply assumption      
    apply clarsimp
    defer
@@ -286,8 +286,6 @@ lemma getSlotCap_h_val_ccorres [corres]:
    apply (clarsimp simp add: typ_heap_simps ccap_relation_def cte_to_H_def cl_valid_cte_def c_valid_cap_def)
   apply simp
   done
-
-
 
 
 end

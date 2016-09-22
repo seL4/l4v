@@ -1933,7 +1933,7 @@ lemma cte_map_pulls_tcb_to_abstract:
      \<Longrightarrow> \<exists>tcb'. kheap s x = Some (TCB tcb') \<and> tcb_relation tcb' tcb
                   \<and> (z = (x, tcb_cnode_index (unat ((y - x) >> 4))))"
   apply (rule pspace_dom_relatedE, assumption+)
-  apply (erule(1) obj_relation_cutsE, simp_all split:split_if_asm)
+  apply (erule(1) obj_relation_cutsE, simp_all split: split_if_asm)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
                         ARM_A.arch_kernel_obj.split_asm)
@@ -1956,7 +1956,7 @@ lemma pspace_relation_update_tcbs:
   apply (clarsimp split: Structures_A.kernel_object.split_asm)
   apply (drule bspec, fastforce)
   apply clarsimp
-  apply (erule(1) obj_relation_cutsE, simp_all split:split_if_asm)
+  apply (erule(1) obj_relation_cutsE, simp_all split: split_if_asm)
   done
 
 lemma cte_map_pulls_cte_to_abstract:
@@ -1969,7 +1969,7 @@ lemma cte_map_pulls_cte_to_abstract:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply clarsimp
   apply (frule(1) cte_map_inj_eq[OF sym], simp_all)
-  apply (rule cte_wp_at_cteI, (fastforce split:split_if_asm)+)
+  apply (rule cte_wp_at_cteI, (fastforce split: split_if_asm)+)
   done
 
 lemma pspace_relation_update_ctes:
@@ -2207,12 +2207,12 @@ lemma pspace_relation_cte_wp_atI':
   apply (simp add: cte_wp_at_cases')
   apply (elim disjE conjE exE)
    apply (erule(1) pspace_dom_relatedE)
-   apply (erule(1) obj_relation_cutsE, simp_all split:split_if_asm)[1]
+   apply (erule(1) obj_relation_cutsE, simp_all split: split_if_asm)[1]
    apply (intro exI, rule conjI[OF _ conjI [OF _ refl]])
     apply (simp add: cte_wp_at_cases domI well_formed_cnode_invsI)
-   apply (simp split:split_if_asm)
+   apply (simp split: split_if_asm)
   apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE, simp_all split:split_if_asm)
+  apply (erule(1) obj_relation_cutsE, simp_all split: split_if_asm)
   apply (simp add: other_obj_relation_def
             split: Structures_A.kernel_object.split_asm
                    ARM_A.arch_kernel_obj.split_asm)
@@ -2945,7 +2945,7 @@ lemma updateMDB_pspace_relation:
     apply (clarsimp simp: tcb_ctes_clear)
    apply clarsimp
    apply (rule pspace_dom_relatedE, assumption+)
-   apply (rule obj_relation_cutsE, assumption+, simp_all split:split_if_asm)[1]
+   apply (rule obj_relation_cutsE, assumption+, simp_all split: split_if_asm)[1]
    apply (clarsimp split: Structures_A.kernel_object.split_asm
                           ARM_A.arch_kernel_obj.split_asm
                     simp: other_obj_relation_def)
@@ -2960,7 +2960,7 @@ lemma updateMDB_pspace_relation:
   apply (clarsimp simp: cte_wp_at_cases')
   apply (erule disjE)
    apply (rule pspace_dom_relatedE, assumption+)
-   apply (rule obj_relation_cutsE, assumption+, simp_all split:split_if_asm)[1]
+   apply (rule obj_relation_cutsE, assumption+, simp_all split: split_if_asm)[1]
    apply (clarsimp simp: cte_relation_def)
    apply (simp add: pspace_relation_def dom_fun_upd2
                del: dom_fun_upd)
@@ -2968,7 +2968,7 @@ lemma updateMDB_pspace_relation:
    apply (rule ballI, drule(1) bspec)
    apply (rule ballI, drule(1) bspec)
    apply clarsimp
-   apply (rule obj_relation_cutsE, assumption+, simp_all split:split_if_asm)[1]
+   apply (rule obj_relation_cutsE, assumption+, simp_all split: split_if_asm)[1]
    apply (clarsimp simp: cte_relation_def)
   apply clarsimp
   apply (drule_tac y=p in tcb_ctes_clear[rotated], assumption+)
@@ -3924,8 +3924,8 @@ lemma (in mdb_insert_der) dest_no_parent_n:
     apply (case_tac "capBadge cap'", simp_all)
    apply (clarsimp simp add: isCap_simps capMasterCap_def vsCapRef_def
                    simp del: not_ex
-                      split:capability.splits)
-  apply (clarsimp simp:isCap_simps)
+                      split: capability.splits)
+  apply (clarsimp simp: isCap_simps)
   done
 
 locale mdb_insert_child = mdb_insert_der +
@@ -4565,15 +4565,15 @@ lemma isUntypedCap_simps[simp]:
 lemma cap_relation_masked_as_full:
   "\<lbrakk>cap_relation src_cap src_cap';cap_relation c c'\<rbrakk> \<Longrightarrow>
     cap_relation (masked_as_full src_cap c) (maskedAsFull src_cap' c')"
-  apply (clarsimp simp:masked_as_full_def maskedAsFull_def 
-                 split:if_splits)
+  apply (clarsimp simp: masked_as_full_def maskedAsFull_def 
+                 split: if_splits)
   apply (case_tac src_cap; clarsimp)
   by (case_tac c; clarsimp)
 
 lemma setUntypedCapAsFull_pspace_distinct[wp]:
   "\<lbrace>pspace_distinct' and cte_wp_at' (op = srcCTE) slot\<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) c slot \<lbrace>\<lambda>r. pspace_distinct'\<rbrace>"
-  apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits)
+  apply (clarsimp simp: setUntypedCapAsFull_def split:if_splits)
   apply (intro conjI impI)
     apply (clarsimp simp:valid_def)
     apply (drule updateCap_stuff)

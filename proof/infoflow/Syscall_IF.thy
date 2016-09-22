@@ -24,10 +24,10 @@ crunch_ignore (add: OR_choice set_scheduler_action)
 (* FIXME: move *)
 lemma globals_frame_not_device:
   "\<lbrakk>x\<in>range_of_arm_globals_frame s;invs s\<rbrakk> \<Longrightarrow> device_state (machine_state s) x = None"
-  apply (clarsimp simp:invs_def valid_state_def valid_arch_state_def obj_at_def)
+  apply (clarsimp simp: invs_def valid_state_def valid_arch_state_def obj_at_def)
   apply (drule pspace_respects_device_regionD[rotated -1])
    apply fastforce+
-  apply (clarsimp simp:obj_range_page_as_ptr_range_pageBitsForSize)
+  apply (clarsimp simp: obj_range_page_as_ptr_range_pageBitsForSize)
   apply fastforce
   done
 (* The contents of the delete_globals_equiv locale *)

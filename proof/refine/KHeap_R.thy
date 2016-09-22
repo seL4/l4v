@@ -975,8 +975,6 @@ lemma no_fail_setObject_other [wp]:
   apply fastforce
   done
 
-thm a_type_def
-
 lemma obj_relation_cut_same_type:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; P ko z;
     (y', P') \<in> obj_relation_cuts ko' x'; P' ko' z \<rbrakk>
@@ -1066,11 +1064,12 @@ lemma set_other_obj_corres:
   apply (clarsimp simp: obj_at'_def)
   apply (erule_tac x=obj in allE)
   apply (clarsimp simp: projectKO_eq project_inject)
-  apply (case_tac ob;  simp_all add: a_type_def other_obj_relation_def etcb_relation_def 
-    is_other_obj_relation_type t exst_same_def)
-    apply (clarsimp simp:is_other_obj_relation_type t exst_same_def
-      split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits 
-    ARM_A.arch_kernel_obj.splits)+
+  apply (case_tac ob; 
+         simp_all add: a_type_def other_obj_relation_def etcb_relation_def 
+                       is_other_obj_relation_type t exst_same_def)
+    apply (clarsimp simp: is_other_obj_relation_type t exst_same_def
+                   split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits 
+                          ARM_A.arch_kernel_obj.splits)+
   done
 
 lemma set_ep_corres:
@@ -2125,7 +2124,7 @@ lemma set_ntfn_valid_pde_mappings'[wp]:
 
 lemma set_ntfn_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
-  apply (simp add:setNotification_def valid_machine_state'_def pointerInDeviceData_def pointerInUserData_def)
+  apply (simp add: setNotification_def valid_machine_state'_def pointerInDeviceData_def pointerInUserData_def)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
   by (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv |
       simp)+

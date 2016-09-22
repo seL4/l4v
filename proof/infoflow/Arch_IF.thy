@@ -2206,7 +2206,7 @@ lemma perform_asid_control_invocation_globals_equiv:
     apply(simp add: mask_neg_mask_is_zero pageBits_def)
     apply (rule conjI)
      apply (rule free_index_of_UntypedCap[symmetric])
-    apply (simp add:invs_valid_objs)
+    apply (simp add: invs_valid_objs)
    apply(wp delete_objects_invs_ex[where dev=False] delete_objects_pspace_no_overlap[where dev=False]
             delete_objects_globals_equiv delete_objects_valid_ko_at_arm
             hoare_vcg_ex_lift 

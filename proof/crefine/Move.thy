@@ -59,5 +59,5 @@ lemma suspend_st_tcb_at':
 
 lemma to_bool_if:
   "(if w \<noteq> 0 then 1 else 0) = (if to_bool w then 1 else 0)"
-  by (auto simp:to_bool_def)
+  by (auto simp: to_bool_def)
 end

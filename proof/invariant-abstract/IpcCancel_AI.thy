@@ -908,9 +908,9 @@ lemma cancel_all_ipc_invs_helper:
    apply (wp cancel_all_invs_helper hoare_vcg_const_Ball_lift valid_irq_node_typ)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_ep_def)
   apply (rule conjI)
-   apply (clarsimp elim!:obj_at_weakenE)
+   apply (clarsimp elim!: obj_at_weakenE)
   apply (rule conjI)
-   apply (clarsimp elim!:obj_at_weakenE)
+   apply (clarsimp elim!: obj_at_weakenE)
   apply (rule conjI)
    apply clarsimp
    apply (drule(1) sym_refs_obj_atD, clarsimp)

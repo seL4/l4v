@@ -468,8 +468,8 @@ lemma obj_relation_cutsE:
                    a_type_def
             split: Structures_A.kernel_object.split_asm split_if_asm
                    ARM_A.arch_kernel_obj.split_asm)
-    apply ((clarsimp split:if_splits,
-      force simp: cte_relation_def pte_relation_def pde_relation_def)+)[5]
+    apply ((clarsimp split: if_splits,
+                force simp: cte_relation_def pte_relation_def pde_relation_def)+)[5]
   done
 
 lemma eq_trans_helper:
@@ -747,7 +747,7 @@ lemma ghost_relation_typ_at:
    apply (rule eq_reflection) 
    apply (clarsimp simp: ghost_relation_def typ_at_eq_kheap_obj data_at_def)
    apply (intro conjI impI iffI allI,simp_all)
-    apply (auto elim!:allE)
+    apply (auto elim!: allE)
    done
 end
 end

@@ -858,7 +858,7 @@ lemma lookup_ipc_buffer_has_read_auth:
       apply (rule is_aligned_andI1)
       apply (drule (1) valid_tcb_objs)
       apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
-        split:if_splits)
+                     split: if_splits)
      apply (rule order_trans [OF _ pbfs_atleast_pageBits])
      apply (simp add: msg_align_bits pageBits_def)
     apply (drule (1) cap_auth_caps_of_state)
@@ -1698,20 +1698,20 @@ lemma ipc_buffer_disjoint_from_None[simp]:
 lemma ptr_in_obj_range:
   "\<lbrakk>valid_objs s; pspace_aligned s; kheap s ptr = Some obj\<rbrakk> 
   \<Longrightarrow> ptr + (a && mask (obj_bits obj)) \<in> obj_range ptr obj"
-  apply (simp add:obj_range_def)
+  apply (simp add: obj_range_def)
   apply (rule context_conjI)
   apply (frule(1) pspace_alignedD)
   apply (erule is_aligned_no_wrap')
    apply (rule and_mask_less')
     apply (drule valid_obj_sizes)
     apply fastforce
-   apply (simp add:word_bits_def)
-  apply (simp add:p_assoc_help)
+   apply (simp add: word_bits_def)
+  apply (simp add: p_assoc_help)
   apply (rule word_plus_mono_right)
    apply (rule word_less_sub_1)
     apply (drule valid_obj_sizes)
     apply fastforce
-   apply (simp add:word_bits_def and_mask_less')
+   apply (simp add: word_bits_def and_mask_less')
   apply (rule is_aligned_no_overflow')
   apply (erule(1) pspace_alignedD)
   done
@@ -1721,10 +1721,10 @@ lemma ptr_not_in_globals_frame:
   "\<lbrakk> arm_globals_frame (arch_state s) \<noteq> ptr; valid_arch_state s;valid_objs s;
      pspace_distinct s;pspace_aligned s; kheap s ptr = Some obj\<rbrakk> \<Longrightarrow> 
      ptr + (a && mask (obj_bits obj)) \<notin> range_of_arm_globals_frame s"
-  apply (clarsimp simp:valid_arch_state_def pspace_distinct_def')
+  apply (clarsimp simp: valid_arch_state_def pspace_distinct_def')
   apply (erule_tac x= ptr in allE)
   apply (erule_tac x="arm_globals_frame (arch_state s)" in allE)
-  apply (clarsimp simp:obj_at_def obj_range_page_as_ptr_range_pageBitsForSize pageBits_def)
+  apply (clarsimp simp: obj_at_def obj_range_page_as_ptr_range_pageBitsForSize pageBits_def)
   apply (drule(2) ptr_in_obj_range[where ptr = ptr])
   apply (drule(1) IntI)
   apply fastforce
@@ -1732,7 +1732,7 @@ lemma ptr_not_in_globals_frame:
 
 lemma pagecap_range:
   "cap_range (ArchObjectCap (PageCap dev ptr rights sz asid)) = ptr_range ptr (pageBitsForSize sz)"
-  apply (simp add:cap_range_def)
+  apply (simp add: cap_range_def)
   oops
 
 lemma tcb_buffer_orth_globals_frame:
@@ -1761,21 +1761,21 @@ lemma tcb_buffer_orth_globals_frame:
       apply (erule cte_wp_at_weakenE)
       apply (clarsimp simp: global_refs_def cap_range_def)
       apply (drule_tac t = "tcb_ipcframe tcb" in sym,simp)
-      apply (clarsimp simp:obj_at_def split:if_splits)
+      apply (clarsimp simp: obj_at_def split: if_splits)
        apply (drule(5) ptr_not_in_globals_frame)
          apply (fastforce simp: obj_bits_def)
       apply (drule(5) ptr_not_in_globals_frame)
-        apply (fastforce simp:obj_bits_def)
-     apply (clarsimp simp:valid_arch_state_def obj_at_def dest!:pspace_alignedD)
+        apply (fastforce simp: obj_bits_def)
+     apply (clarsimp simp: valid_arch_state_def obj_at_def dest!: pspace_alignedD)
     apply (erule aligned_add_aligned)
      apply (rule is_aligned_andI1)
      apply (drule (1) valid_tcb_objs)
      apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
-      split:if_splits)
+                    split: if_splits)
     apply (rule order_trans [OF _ pbfs_atleast_pageBits])
     apply (simp add: msg_align_bits pageBits_def)
    apply simp
-  apply (simp add:msg_align_bits)
+  apply (simp add: msg_align_bits)
   done
 
 lemma lookup_ipc_buffer_disjoint_from_globals_frame:
@@ -1797,7 +1797,7 @@ lemma lookup_ipc_buffer_disjoint_from_globals_frame:
     apply (rule is_aligned_andI1)
     apply (drule (1) valid_tcb_objs)
     apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
-      split:if_splits)
+                   split: if_splits)
    apply (rule order_trans [OF _ pbfs_atleast_pageBits])
    apply (simp add: msg_align_bits pageBits_def)
   apply (subst Int_commute)
@@ -2390,7 +2390,7 @@ lemma lookup_ipc_buffer_ptr_range':
   apply (clarsimp simp: auth_ipc_buffers_def get_tcb_ko_at [symmetric])
   apply (drule(1) valid_tcb_objs)
   apply (drule get_tcb_SomeD)+
-  apply (simp add: vm_read_write_def valid_tcb_def valid_ipc_buffer_cap_def split:bool.splits)
+  apply (simp add: vm_read_write_def valid_tcb_def valid_ipc_buffer_cap_def split: bool.splits)
   done
 
 lemma lookup_ipc_buffer_aligned':

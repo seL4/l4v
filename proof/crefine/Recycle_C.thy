@@ -195,37 +195,37 @@ lemma flex_user_data_at_rf_sr_dom_s:
   done
 
 lemma heap_to_device_data_disj_mdf':
-"\<lbrakk>is_aligned ptr (pageBitsForSize sz); ksPSpace \<sigma> a = Some obj; objBitsKO obj = pageBits; pspace_aligned' \<sigma>;
+  "\<lbrakk>is_aligned ptr (pageBitsForSize sz); ksPSpace \<sigma> a = Some obj; objBitsKO obj = pageBits; pspace_aligned' \<sigma>;
   pspace_distinct' \<sigma>; pspace_no_overlap' ptr (pageBitsForSize sz) \<sigma>\<rbrakk>
 \<Longrightarrow> heap_to_device_data (ksPSpace \<sigma>)
      (\<lambda>x. if x \<in> {ptr..+2 ^ (pageBitsForSize sz)} then 0
           else underlying_memory (ksMachineState \<sigma>) x)
      a =
     heap_to_device_data (ksPSpace \<sigma>) (underlying_memory (ksMachineState \<sigma>)) a"
- apply (cut_tac heap_to_device_data_disj_mdf[where ptr = ptr
+  apply (cut_tac heap_to_device_data_disj_mdf[where ptr = ptr
      and gbits = "pageBitsForSize sz - pageBits" and n = 1
      and sz = "pageBitsForSize sz",simplified])
   apply (simp add: pbfs_atleast_pageBits pbfs_less_wb' field_simps| intro range_cover_full )+
- done
+  done
 
 lemma range_cover_nca_neg: "\<And>x p (off :: 10 word). 
-    \<lbrakk>(x::word32) < 4; {p..+2 ^pageBits } \<inter> {ptr..ptr + (of_nat n * 2 ^ bits - 1)} = {};
-      range_cover ptr sz bits n\<rbrakk>
-     \<Longrightarrow> p + ucast off * 4 + x \<notin> {ptr..+n * 2 ^ bits}"
-    apply (case_tac "n = 0")
-     apply simp
-    apply (subst range_cover_intvl,simp)
-     apply simp
-    apply (subgoal_tac " p + ucast off * 4 + x \<in>  {p..+2 ^ pageBits}")
-     apply blast
-    apply (clarsimp simp:intvl_def)
-    apply (rule_tac x = "unat off * 4 + unat x" in exI)
-    apply (simp add: ucast_nat_def)
-    apply (rule nat_add_offset_less [where n = 2, simplified])
-      apply (simp add: word_less_nat_alt)
-     apply (rule unat_lt2p)
-    apply (simp add: pageBits_def objBits_simps)
-    done
+  \<lbrakk>(x::word32) < 4; {p..+2 ^pageBits } \<inter> {ptr..ptr + (of_nat n * 2 ^ bits - 1)} = {};
+    range_cover ptr sz bits n\<rbrakk>
+   \<Longrightarrow> p + ucast off * 4 + x \<notin> {ptr..+n * 2 ^ bits}"
+  apply (case_tac "n = 0")
+   apply simp
+  apply (subst range_cover_intvl,simp)
+   apply simp
+  apply (subgoal_tac " p + ucast off * 4 + x \<in>  {p..+2 ^ pageBits}")
+   apply blast
+  apply (clarsimp simp: intvl_def)
+  apply (rule_tac x = "unat off * 4 + unat x" in exI)
+  apply (simp add: ucast_nat_def)
+  apply (rule nat_add_offset_less [where n = 2, simplified])
+    apply (simp add: word_less_nat_alt)
+   apply (rule unat_lt2p)
+  apply (simp add: pageBits_def objBits_simps)
+  done
 
 
 
@@ -295,7 +295,7 @@ lemma clearMemory_PageCap_ccorres:
       apply (rule conjI[rotated])
        apply (simp add:pageBitsForSize_mess_multi)
        apply (rule cmap_relationI)
-        apply (clarsimp simp:dom_heap_to_device_data cmap_relation_def)
+        apply (clarsimp simp: dom_heap_to_device_data cmap_relation_def)
         apply (simp add:cuser_user_data_device_relation_def)
       apply (subst help_force_intvl_range_conv, assumption)
         subgoal by (simp add: pageBitsForSize_def split: vmpage_size.split)
@@ -538,25 +538,25 @@ lemma heap_to_user_data_in_user_mem'[simp]:
   "\<lbrakk>pspace_aligned' as;pspace_distinct' as\<rbrakk> \<Longrightarrow> heap_to_user_data (ksPSpace as) (option_to_0 \<circ> user_mem' as) =
   heap_to_user_data (ksPSpace as)(underlying_memory (ksMachineState as))"
   apply (rule ext)+
-  apply (clarsimp simp:heap_to_user_data_def
-     option_map_def split:option.splits )
+  apply (clarsimp simp: heap_to_user_data_def option_map_def
+                 split: option.splits)
   apply (subst option_to_0_user_mem')
   apply (subst map_option_byte_to_word_heap)
-   apply (clarsimp simp:projectKO_opt_user_data map_comp_def split:option.split_asm
-    kernel_object.split_asm)
+   apply (clarsimp simp: projectKO_opt_user_data map_comp_def
+                  split: option.split_asm kernel_object.split_asm)
    apply (frule(1) pspace_alignedD')
    apply (frule(1) pspace_distinctD')
    apply (subgoal_tac "x + ucast off * 4 + xa  && ~~ mask pageBits = x" )
-    apply (clarsimp simp:pointerInUserData_def typ_at'_def ko_wp_at'_def)
-   apply (simp add:ARM.pageBits_def)
+    apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def)
+   apply (simp add: ARM.pageBits_def)
    apply (subst mask_lower_twice2[where n = 2 and m = 12,simplified,symmetric])
    apply (subst is_aligned_add_helper[THEN conjunct2,where n1 = 2])
      apply (erule aligned_add_aligned)
-      apply (simp add:is_aligned_mult_triv2[where n = 2,simplified])
-     apply  (clarsimp simp:objBits_simps ARM.pageBits_def)
+      apply (simp add: is_aligned_mult_triv2[where n = 2,simplified])
+     apply  (clarsimp simp: objBits_simps ARM.pageBits_def)
     apply simp
    apply (rule is_aligned_add_helper[THEN conjunct2])
-    apply (simp add:ARM.pageBits_def objBits_simps)
+    apply (simp add: ARM.pageBits_def objBits_simps)
    apply (rule word_less_power_trans2[where k = 2,simplified])
      apply (rule less_le_trans[OF ucast_less])
       apply simp+
@@ -1168,7 +1168,6 @@ lemma arch_recycleCap_ccorres:
                         valid_arch_state'_def page_directory_at'_def
                  elim!: ccap_relationE cong: conj_cong split: split_if_asm)
    by (auto simp: page_directory_at'_def dest!: spec[where x=0])[2]
-
 
 lemma ccap_relation_get_capZombiePtr_CL:
   "\<lbrakk> ccap_relation cap cap'; isZombie cap; capAligned cap \<rbrakk>

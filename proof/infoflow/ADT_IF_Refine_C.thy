@@ -467,19 +467,20 @@ lemma dmo_getExMonitor_C_wp[wp]:
 
 lemma cur_thread_of_absKState[simp]: 
    "cur_thread (absKState s) = (ksCurThread s)"
-   by (clarsimp simp:cstate_relation_def Let_def absKState_def cstate_to_H_def)
+   by (clarsimp simp: cstate_relation_def Let_def absKState_def cstate_to_H_def)
 
 lemma absKState_crelation:
   "\<lbrakk>cstate_relation s (globals s'); invs' s\<rbrakk>\<Longrightarrow>  cstate_to_A s' = absKState s"
-  apply (clarsimp simp add:cstate_to_H_correct invs'_def cstate_to_A_def)
-  apply (clarsimp simp:absKState_def absExst_def observable_memory_def)
+  apply (clarsimp simp add: cstate_to_H_correct invs'_def cstate_to_A_def)
+  apply (clarsimp simp: absKState_def absExst_def observable_memory_def)
   apply (case_tac s)
   apply clarsimp
   apply (case_tac ksMachineState)
   apply clarsimp
   apply (rule ext)
-  by (clarsimp simp:option_to_0_def user_mem'_def pointerInUserData_def ko_wp_at'_def
-    obj_at'_def typ_at'_def ps_clear_def split:if_splits)
+  by (clarsimp simp: option_to_0_def user_mem'_def pointerInUserData_def ko_wp_at'_def
+                     obj_at'_def typ_at'_def ps_clear_def
+              split: if_splits)
 
 lemma do_user_op_if_C_corres:
    "corres_underlying rf_sr False False op = 
@@ -501,7 +502,7 @@ lemma do_user_op_if_C_corres:
    apply simp
   apply (simp add: getCurThread_def)
   apply (rule corres_gets_same)
-    apply (simp add:absKState_crelation rf_sr_def)
+    apply (simp add: absKState_crelation rf_sr_def)
    apply simp
   apply (rule corres_gets_same)
     apply (rule fun_cong[where x=ptrFromPAddr])
@@ -526,14 +527,14 @@ lemma do_user_op_if_C_corres:
     apply (rule_tac P=\<top> and P'=\<top> and r'="op=" in corres_split)
        prefer 2
        apply (clarsimp simp add: corres_underlying_def fail_def
-              assert_def return_def
-              split:if_splits)
+                                 assert_def return_def
+                          split: if_splits)
       apply simp
       apply (rule_tac P=\<top> and P'=\<top> and r'="op=" in corres_split)
          prefer 2
          apply (clarsimp simp add: corres_underlying_def fail_def
-               assert_def return_def
-               split:if_splits)
+                                   assert_def return_def
+                            split: if_splits)
         apply simp
         apply (rule corres_split[OF _ corres_dmo_getExMonitor_C])
           apply clarsimp
@@ -552,7 +553,7 @@ lemma do_user_op_if_C_corres:
                    split: if_splits)
     apply (drule ptable_rights_imp_UserData[rotated -1])
      apply ((fastforce | intro conjI)+)[4]
-    apply (clarsimp simp:user_mem'_def device_mem'_def dom_def split:if_splits)
+    apply (clarsimp simp: user_mem'_def device_mem'_def dom_def split: if_splits)
     apply fastforce
    apply (clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def ex_abs_def)
    done
@@ -735,7 +736,7 @@ definition
 
 lemma corres_underlying_nf_imp2:
   "corres_underlying rf_sr nf True a b c d e \<Longrightarrow> corres_underlying rf_sr nf nf' a b c d e"
-  by (auto simp:corres_underlying_def)
+  by (auto simp: corres_underlying_def)
 
 lemma kernel_exit_corres_C:
   "corres_underlying rf_sr False nf (op =) (invs') \<top>
@@ -791,23 +792,24 @@ lemma obs_cpspace_user_data_relation:
   "\<lbrakk>pspace_aligned' bd;pspace_distinct' bd;
     cpspace_user_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs\<rbrakk>
    \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd) (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
-   apply (clarsimp simp:cmap_relation_def dom_heap_to_user_data)
+   apply (clarsimp simp: cmap_relation_def dom_heap_to_user_data)
    apply (drule bspec,fastforce)
-   apply (clarsimp simp:cuser_user_data_relation_def observable_memory_def
-     heap_to_user_data_def  map_comp_def Let_def split:option.split_asm)
+   apply (clarsimp simp: cuser_user_data_relation_def observable_memory_def
+                         heap_to_user_data_def map_comp_def Let_def
+                  split: option.split_asm)
    apply (drule_tac x = off in spec)
    apply (subst option_to_0_user_mem')
    apply (subst map_option_byte_to_word_heap)
-    apply (clarsimp simp:projectKO_opt_user_data pointerInUserData_def field_simps
-      split:kernel_object.split_asm option.split_asm)
+    apply (clarsimp simp: projectKO_opt_user_data pointerInUserData_def field_simps
+                   split: kernel_object.split_asm option.split_asm)
     apply (frule(1) pspace_alignedD')
     apply (subst neg_mask_add_aligned)
-      apply (simp add:objBits_simps)
-     apply (simp add:word_less_nat_alt)
+      apply (simp add: objBits_simps)
+     apply (simp add: word_less_nat_alt)
      apply (rule le_less_trans[OF unat_plus_gt])
      apply (subst add.commute)
      apply (subst unat_mult_simple)
-      apply (simp add:word_bits_def)
+      apply (simp add: word_bits_def)
       apply (rule less_le_trans[OF unat_lt2p])
       apply simp
      apply simp
@@ -816,7 +818,7 @@ lemma obs_cpspace_user_data_relation:
      apply (rule unat_lt2p)
     apply (simp add: pageBits_def objBits_simps) 
    apply (frule(1) pspace_distinctD')
-   apply (clarsimp simp:obj_at'_def typ_at'_def ko_wp_at'_def objBits_simps)
+   apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def objBits_simps)
   apply simp
   done
 
@@ -824,19 +826,20 @@ lemma obs_cpspace_device_data_relation:
   "\<lbrakk>pspace_aligned' bd;pspace_distinct' bd;
     cpspace_device_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs\<rbrakk>
    \<Longrightarrow> cpspace_device_data_relation (ksPSpace bd) (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
-   apply (clarsimp simp:cmap_relation_def dom_heap_to_device_data)
+   apply (clarsimp simp: cmap_relation_def dom_heap_to_device_data)
    apply (drule bspec,fastforce)
-   apply (clarsimp simp:cuser_user_data_device_relation_def observable_memory_def
-     heap_to_user_data_def  map_comp_def Let_def split:option.split_asm)
+   apply (clarsimp simp: cuser_user_data_device_relation_def observable_memory_def
+                         heap_to_user_data_def  map_comp_def Let_def
+                  split: option.split_asm)
    done
 
 lemma cstate_relation_observable_memory:
   "\<lbrakk>invs' bs;cstate_relation bs gs\<rbrakk>
   \<Longrightarrow> cstate_relation (bs\<lparr>ksMachineState := observable_memory (ksMachineState bs) (user_mem' bs)\<rparr>) gs"
-  by (clarsimp simp:cstate_relation_def Let_def obs_cpspace_user_data_relation 
-    obs_cpspace_device_data_relation cpspace_relation_def invs'_def
-    valid_state'_def valid_pspace'_def 
-    cmachine_state_relation_def observable_memory_def)
+  by (clarsimp simp: cstate_relation_def Let_def obs_cpspace_user_data_relation 
+                     obs_cpspace_device_data_relation cpspace_relation_def invs'_def
+                     valid_state'_def valid_pspace'_def 
+                     cmachine_state_relation_def observable_memory_def)
   
 
 lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine checkActiveIRQ_H_if (doUserOp_H_if uop) kernelCall_H_if
@@ -851,7 +854,7 @@ lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine c
                         apply blast
                        apply (simp_all add: preserves_trivial preserves'_trivial)
           apply (clarsimp simp: lift_snd_rel_def ADT_C_if_def ADT_H_if_def absKState_crelation
-            rf_sr_def full_invs_if'_def)
+                                rf_sr_def full_invs_if'_def)
           apply (clarsimp simp: rf_sr_def full_invs_if'_def ex_abs_def)
          apply (simp add: ADT_H_if_def ADT_C_if_def lift_fst_rel_def lift_snd_rel_def)
          apply safe

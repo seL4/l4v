@@ -211,7 +211,7 @@ lemma doUserOp_if_empty_fail: "empty_fail (doUserOp_if uop tc)"
 
 lemma ptable_attrs_abs_state[simp]:
   "ptable_attrs thread (abs_state s) = ptable_attrs thread s"
-  by (simp add:ptable_attrs_def abs_state_def)
+  by (simp add: ptable_attrs_def abs_state_def)
 
 lemma corres_gets_same:
   assumes equiv: "\<And>s s'. \<lbrakk>P s; Q s'; (s, s') \<in> sr\<rbrakk>\<Longrightarrow> f s = g s'"
@@ -267,18 +267,18 @@ lemma do_user_op_if_corres:
    apply simp
   apply (simp add: getCurThread_def)
   apply (rule corres_gets_same)
-    apply (simp add:curthread_relation)
+    apply (simp add: curthread_relation)
    apply simp
   apply (rule corres_gets_same[where R ="\<lambda>r s. dom (r \<circ> addrFromPPtr) \<subseteq> - device_region s"])
-   apply (clarsimp simp add:user_mem_relation dest!:invs_valid_stateI invs_valid_stateI')
+   apply (clarsimp simp add: user_mem_relation dest!: invs_valid_stateI invs_valid_stateI')
    apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
    apply fastforce
   apply (rule corres_gets_same[where R ="\<lambda>r s. dom (r \<circ> addrFromPPtr) \<subseteq> device_region s"])
-   apply (clarsimp simp add:device_mem_relation dest!:invs_valid_stateI invs_valid_stateI')
+   apply (clarsimp simp add: device_mem_relation dest!: invs_valid_stateI invs_valid_stateI')
    apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
    apply fastforce
   apply (rule corres_gets_same[where R ="\<lambda>r s. dom r = device_region s"])
-    apply (clarsimp simp:state_relation_def)
+    apply (clarsimp simp: state_relation_def)
    apply simp
   apply (rule corres_assert_imp_r)
    apply fastforce
@@ -452,17 +452,17 @@ lemma do_user_op_if_corres':
    apply simp
   apply (simp add: getCurThread_def)
   apply (rule corres_gets_same)
-    apply (simp add:curthread_relation)
+    apply (simp add: curthread_relation)
    apply simp
   apply (rule corres_gets_same[where R ="\<lambda>r s. dom (r \<circ> addrFromPPtr) \<subseteq> - device_region s"])
-   apply (clarsimp simp add:user_mem_relation dest!:invs_valid_stateI invs_valid_stateI')
+   apply (clarsimp simp add: user_mem_relation dest!: invs_valid_stateI invs_valid_stateI')
    apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
    apply fastforce
   apply (rule corres_gets_same[where R ="\<lambda>r s. dom (r \<circ> addrFromPPtr) \<subseteq> device_region s"])
-   apply (clarsimp simp add:device_mem_relation dest!:invs_valid_stateI invs_valid_stateI')
+   apply (clarsimp simp add: device_mem_relation dest!: invs_valid_stateI invs_valid_stateI')
    apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def dom_def)
   apply (rule corres_gets_same[where R ="\<lambda>r s. dom r = device_region s"])
-    apply (clarsimp simp:state_relation_def)
+    apply (clarsimp simp: state_relation_def)
    apply simp
   apply (rule corres_assert_imp_r)
    apply fastforce
@@ -1459,7 +1459,7 @@ lemma ct_idle'_related: "\<lbrakk>(a, c) \<in> state_relation; invs' c; ct_idle 
 
 lemma invs_machine_state:
   "invs s \<Longrightarrow> valid_machine_state s"
-  by (clarsimp simp:invs_def valid_state_def)
+  by (clarsimp simp: invs_def valid_state_def)
 
 lemma haskell_to_abs: "uop_nonempty uop \<Longrightarrow> global_automata_refine 
                                check_active_irq_A_if (do_user_op_A_if uop)

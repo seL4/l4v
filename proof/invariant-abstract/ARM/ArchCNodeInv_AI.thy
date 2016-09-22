@@ -130,12 +130,12 @@ lemma same_object_as_cap_master [CNodeInv_AI_assms]:
   by (simp add: same_object_as_def2)
 
 lemma weak_derived_cap_is_device[CNodeInv_AI_assms]: 
-   "\<lbrakk>weak_derived c' c\<rbrakk> \<Longrightarrow>  cap_is_device c = cap_is_device c'"
-    apply (auto simp: weak_derived_def copy_of_def is_cap_simps
-                 same_object_as_def2 
-          split: split_if_asm
-          dest!: master_cap_eq_is_device_cap_eq)
-   done
+  "\<lbrakk>weak_derived c' c\<rbrakk> \<Longrightarrow>  cap_is_device c = cap_is_device c'"
+  apply (auto simp: weak_derived_def copy_of_def is_cap_simps
+                    same_object_as_def2 
+             split: split_if_asm
+             dest!: master_cap_eq_is_device_cap_eq)
+  done
 
 lemma cap_asid_update_cap_data [CNodeInv_AI_assms]:
   "update_cap_data P x c \<noteq> NullCap
@@ -796,7 +796,6 @@ next
 qed
 
 
-
 lemmas rec_del_invs'[CNodeInv_AI_assms] = rec_del_invs'' [where Q=\<top>,
   simplified hoare_post_taut pred_conj_def simp_thms, OF TrueI TrueI TrueI TrueI, simplified]
 
@@ -947,7 +946,6 @@ global_interpretation CNodeInv_AI_4?: CNodeInv_AI_4
 
 
 context Arch begin global_naming ARM
-
 
 lemma cap_move_invs[wp, CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and cte_wp_at (op = cap.NullCap) ptr'

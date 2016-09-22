@@ -16,10 +16,6 @@ imports
     IRQMasks_IF FinalCaps Scheduler_IF UserOp_IF
 begin
 
-definition
-  raw_execution :: "('a,'b,'j) data_type \<Rightarrow> 'b \<Rightarrow> 'j list \<Rightarrow> 'a set" where
-  "raw_execution A s js \<equiv>  steps (Step A) (Init A s) js"
-
 inductive_set sub_big_steps :: "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool)  \<Rightarrow>  'a  \<Rightarrow> ('a \<times> 'c list) set" for A :: "('a,'b,'c) data_type" and R :: "('a \<Rightarrow> 'a \<Rightarrow> bool)" and s :: "'a" where
   nil: "\<lbrakk>evlist = []; t = s; \<not> R s s\<rbrakk> \<Longrightarrow>  (t,evlist) \<in> sub_big_steps A R s" |
   step: "\<lbrakk>evlist = evlist' @ [e]; (s',evlist') \<in> sub_big_steps A R s;
@@ -807,7 +803,7 @@ lemma do_user_op_if_invs:
   apply (frule ptable_rights_imp_frame)
     apply fastforce
    apply simp
-  apply (clarsimp simp:valid_state_def device_frame_in_device_region)
+  apply (clarsimp simp: valid_state_def device_frame_in_device_region)
   done
 
 crunch domain_sep_inv[wp]: do_user_op_if "domain_sep_inv irqs st"
@@ -1369,13 +1365,13 @@ abbreviation internal_state_if :: "((MachineTypes.register \<Rightarrow> 32 word
 
 lemma valid_device_abs_state_eq:
   "\<lbrakk>valid_machine_state s\<rbrakk> \<Longrightarrow> abs_state s = s"
-  apply (simp add:abs_state_def observable_memory_def)
+  apply (simp add: abs_state_def observable_memory_def)
   apply (case_tac s)
    apply clarsimp
   apply (case_tac machine_state)
    apply clarsimp
   apply (rule ext)
-  apply (fastforce simp:user_mem_def option_to_0_def valid_machine_state_def)
+  apply (fastforce simp: user_mem_def option_to_0_def valid_machine_state_def)
   done
 
 
@@ -1965,7 +1961,7 @@ lemma get_page_info_is_arm_globals_frame:
   apply(frule ptr_offset_in_ptr_range)
      apply (simp+)
   apply(simp add: ptr_range_def ups_of_heap_typ_at[symmetric] ups_of_heap_def
-     split:option.split_asm kernel_object.split_asm arch_kernel_obj.split_asm)
+           split: option.split_asm kernel_object.split_asm arch_kernel_obj.split_asm)
   apply(subgoal_tac "ptrFromPAddr base + (x' && mask (pageBitsForSize sz)) \<in> {arm_globals_frame
             (arch_state s)..arm_globals_frame (arch_state s) + 0xFFF}")
    apply(simp only: p_assoc_help)
@@ -2222,7 +2218,7 @@ lemma idle_equiv_context_equiv: "idle_equiv s s' \<Longrightarrow> invs s' \<Lon
 lemma kernel_entry_if_valid_pdpt_objs[wp]:
  "\<lbrace>valid_pdpt_objs and invs and  (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>kernel_entry_if e tc \<lbrace>\<lambda>s. valid_pdpt_objs\<rbrace>"
   apply (case_tac "e = Interrupt")
-   apply (simp add:kernel_entry_if_def)
+   apply (simp add: kernel_entry_if_def)
    apply (wp|wpc|simp)+
   apply (simp add: kernel_entry_if_def tcb_cap_cases_def | wp static_imp_wp thread_set_invs_trivial)+
   done
@@ -2248,15 +2244,15 @@ lemma pasMaySendIrqs_current_aag[simp]:
 
 lemma handle_preemption_if_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> handle_preemption_if a \<lbrace>\<lambda>rv s. valid_pdpt_objs s\<rbrace>"
-  by (simp add:handle_preemption_if_def|wp)+
+  by (simp add: handle_preemption_if_def | wp)+
 
 lemma schedule_if_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> schedule_if a \<lbrace>\<lambda>rv s. valid_pdpt_objs s\<rbrace>"
-  by (simp add:schedule_if_def |wp)+
+  by (simp add: schedule_if_def | wp)+
 
 lemma do_user_op_if_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> do_user_op_if a b \<lbrace>\<lambda>rv s. valid_pdpt_objs s\<rbrace>"
-  by (simp add:do_user_op_if_def |wp do_machine_op_valid_pdpt select_wp | wpc)+
+  by (simp add: do_user_op_if_def | wp do_machine_op_valid_pdpt select_wp | wpc)+
 
 lemma invs_if_Step_ADT_A_if:
   notes active_from_running[simp]
@@ -2434,7 +2430,7 @@ lemma execution_invs:
   apply (insert e)
   apply (induct js arbitrary: s rule: rev_induct)
    apply (clarsimp simp add: execution_def Fin_ADT_if Init_ADT_if 
-     image_def)
+                             image_def)
    apply (simp add: execution_def Fin_ADT_if Init_ADT_if steps_def)
   apply (simp add: execution_def steps_def image_def)
   apply (erule bexE)
@@ -2446,7 +2442,7 @@ lemma execution_invs:
    apply (drule_tac meta_spec)
    apply (fastforce)
   apply simp
-  apply (clarsimp simp:Fin_ADT_if ADT_A_if_def)
+  apply (clarsimp simp: Fin_ADT_if ADT_A_if_def)
   done
 
 lemma execution_restrict:
@@ -2542,7 +2538,7 @@ definition measuref_if :: "det_state global_sys_state \<Rightarrow> det_state gl
 
 crunch irq_state_of_state_inv[wp]: device_memory_update "\<lambda>ms. P (irq_state ms)"
 crunch irq_masks_inv[wp]: device_memory_update "\<lambda>ms. P (irq_masks ms)"
-  (wp: crunch_wps simp:crunch_simps no_irq_device_memory_update  no_irq_def)
+  (wp: crunch_wps simp: crunch_simps no_irq_device_memory_update no_irq_def)
 
 lemma do_user_op_if_irq_state_of_state:
   "\<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace> do_user_op_if utf uc

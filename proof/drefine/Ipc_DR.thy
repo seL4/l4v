@@ -1012,7 +1012,7 @@ lemma send_signal_corres:
      apply (rule select_pick_corres)
      apply (rule corres_update_waiting_ntfn_do_notification_transfer)
     apply (drule_tac s = "insert y (set ys)" in sym)
-    apply (clarsimp simp:image_def)
+    apply (clarsimp simp: image_def)
    apply (drule_tac s = "insert y (set ys)" in sym)
    apply (drule_tac A="ntfn_waiting_set epptr s'" and x = y in eqset_imp_iff)
    apply (clarsimp simp:valid_pspace_def ntfn_waiting_set_def)
@@ -1582,7 +1582,7 @@ lemma get_receive_slot_dcorres:
    apply (rename_tac word set vm opt)
    apply (drule_tac x = word in spec)
    apply (drule_tac x = "set" in spec)
-   apply (clarsimp simp:cte_wp_at_cases dest!:get_tcb_SomeD spec)
+   apply (clarsimp simp: cte_wp_at_cases dest!: get_tcb_SomeD spec)
    apply force
   apply (simp add:get_receive_slot_def empty_on_failure_def)
   apply (rule dcorres_expand_pfx)
@@ -1613,8 +1613,9 @@ lemma get_receive_slot_dcorres:
     apply (rule dcorres_expand_pfx)
     apply clarsimp
     apply (frule get_tcb_rev,frule valid_tcb_objs,simp)
-    apply (clarsimp simp:valid_tcb_def tcb_cap_cases_def is_nondevice_page_cap_simps 
-      is_nondevice_page_cap_arch_def split:bool.split_asm)
+    apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_nondevice_page_cap_simps 
+                          is_nondevice_page_cap_arch_def
+                   split: bool.split_asm)
     apply (drule get_ipc_buffer_words_receive_slots)
        apply (clarsimp dest!:get_tcb_rev,drule valid_tcb_objs,simp)
        apply (clarsimp simp:valid_tcb_def tcb_cap_cases_def)

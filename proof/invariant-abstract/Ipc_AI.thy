@@ -120,7 +120,6 @@ definition
      mi_length mi \<le> of_nat msg_max_length \<and>
      mi_extra_caps mi \<le> of_nat msg_max_extra_caps"
 
-
 (* FIXME: can some of these assumptions be proved with lifting lemmas? *)
 locale Ipc_AI =
   fixes state_ext_t :: "'state_ext::state_ext itself"
@@ -2449,11 +2448,11 @@ lemma setup_caller_cap_refs_respects_device_region[wp]:
      valid_objs\<rbrace>
     setup_caller_cap tcb cap 
     \<lbrace>\<lambda>_. cap_refs_respects_device_region\<rbrace>"
-   apply (simp add:setup_caller_cap_def set_thread_state_def | wp)+
+   apply (simp add: setup_caller_cap_def set_thread_state_def | wp)+
    apply (wp set_object_cap_refs_respects_device_region set_object_cte_wp_at | clarsimp )+
-   apply (clarsimp dest!:get_tcb_SomeD simp:tcb_cap_cases_def obj_at_def cap_range_def)
+   apply (clarsimp dest!: get_tcb_SomeD simp: tcb_cap_cases_def obj_at_def cap_range_def)
    apply (rule tcb_at_cte_at_2)
-   apply (simp add:tcb_at_def get_tcb_def)
+   apply (simp add: tcb_at_def get_tcb_def)
    done
 
 

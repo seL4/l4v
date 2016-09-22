@@ -924,7 +924,6 @@ lemma invoke_untyped_valid_pdpt[wp]:
       using cte_at descendants_range misc
       by (simp add:detype_locale_def cte_at descendants_range_def2 blah invs_untyped_children)
 
-
     have detype_descendants_range_in:
       "ptr && ~~ mask sz = ptr \<Longrightarrow> descendants_range_in ?usable_range (cref,oref) (detype ?usable_range s)"
       using misc cte_at
@@ -1013,29 +1012,29 @@ lemma invoke_untyped_valid_pdpt[wp]:
     apply (erule subset_trans[OF range_cover_subset'])
     apply (simp add:vslot)
    apply (clarsimp simp:blah word_and_le2)
-   apply (clarsimp simp:blah field_simps add.assoc[symmetric] add.commute shiftl_t2n
-                    dest!:idx_compare'')
+   apply (clarsimp simp: blah field_simps add.assoc[symmetric] add.commute shiftl_t2n
+                  dest!: idx_compare'')
    apply simp
   apply (wp mapM_x_wp'
       init_arch_objects_valid_pdpt[where sz = sz]
       retype_region_invs_extras[where sz = sz]
       retype_region_ret_folded | simp)+
     apply (rule_tac P = "cap = cap.UntypedCap dev (ptr && ~~ mask sz) sz idx" in hoare_gen_asm)
-    apply (clarsimp simp:conj_comms bits_of_def region_in_kernel_window_def)
+    apply (clarsimp simp: conj_comms bits_of_def region_in_kernel_window_def)
     apply (wp set_cap_no_overlap set_untyped_cap_invs_simple
               set_cap_cte_wp_at set_cap_caps_no_overlap set_cap_device_and_range_aligned
               set_untyped_cap_caps_overlap_reserved get_cap_wp)
    apply (rule_tac P = "cap = cap.UntypedCap dev ptr sz idx" in hoare_gen_asm)
-   apply (clarsimp simp:bits_of_def delete_objects_rewrite)
+   apply (clarsimp simp: bits_of_def delete_objects_rewrite)
    apply (wp get_cap_wp)
-  apply (clarsimp simp:cte_wp_at_caps_of_state untyped_range.simps)
+  apply (clarsimp simp: cte_wp_at_caps_of_state untyped_range.simps)
   apply (insert misc descendants_range cref_inv cte_at subset_stuff
       detype_locale detype_descendants_range_in detype_invs kernel_window_inv)
   apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
-  apply (clarsimp simp:cte_wp_at_caps_of_state invs_valid_objs
-      untyped_range.simps bits_of_def conj_comms)
+  apply (clarsimp simp: cte_wp_at_caps_of_state invs_valid_objs
+                        untyped_range.simps bits_of_def conj_comms)
   apply (frule caps_of_state_valid_cap)
-   apply (simp add:invs_valid_objs)
+   apply (simp add: invs_valid_objs)
   apply (frule valid_cap_aligned)
   apply (clarsimp simp:cap_aligned_def)
   apply (frule intvl_range_conv)
@@ -1055,7 +1054,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
    apply (simp add:shiftl_t2n field_simps)
   apply (simp add:clear_um_def)
  apply (erule descendants_range_in_subseteq)
- apply (simp add:subset_stuff)
+ apply (simp add: subset_stuff)
  done
 qed
 

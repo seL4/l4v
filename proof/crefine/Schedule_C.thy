@@ -199,20 +199,20 @@ lemma user_word_at_armKSGlobalsFrame:
 lemma h_t_valid_armKSGlobalsFrame:
   "\<lbrakk>valid_arch_state' s; (s, s') \<in> rf_sr \<rbrakk>
        \<Longrightarrow> s' \<Turnstile>\<^sub>c (Ptr :: (32 word \<Rightarrow> user_data_C ptr)) (symbol_table ''armKSGlobalsFrame'')"
-  apply (clarsimp simp:valid_arch_state'_def)
-  apply (clarsimp simp:rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
-  apply (clarsimp simp:cmap_relation_def)
+  apply (clarsimp simp: valid_arch_state'_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
+  apply (clarsimp simp: cmap_relation_def)
   apply (subgoal_tac "symbol_table ''armKSGlobalsFrame'' \<in> 
     dom (heap_to_user_data (ksPSpace s) (underlying_memory (ksMachineState s)))")
   prefer 2
     apply (clarsimp simp:obj_at'_def typ_at'_def ko_wp_at'_def
       carch_state_relation_def carch_globals_def)
-   apply (simp add:heap_to_user_data_def map_comp_def)
+   apply (simp add: heap_to_user_data_def map_comp_def)
    apply (case_tac ko,simp_all add:projectKO_opt_user_data)[1]
   apply (erule domE)
   apply (drule_tac x = " (Ptr :: (32 word \<Rightarrow> user_data_C ptr))
     (symbol_table ''armKSGlobalsFrame'')" in  eqset_imp_iff)
-  apply (clarsimp simp add:image_def dom_def)
+  apply (clarsimp simp add: image_def dom_def)
   apply (erule h_t_valid_clift)
   done
 
@@ -1137,9 +1137,9 @@ lemma timerTick_ccorres:
         apply wp
        apply (clarsimp simp: guard_is_UNIV_def)
       apply (wp hoare_vcg_conj_lift hoare_vcg_all_lift hoare_drop_imps)
-       apply (wpc|wp threadSet_weak_sch_act_wf threadSet_valid_objs' rescheduleRequired_weak_sch_act_wf
-         tcbSchedAppend_valid_objs' weak_sch_act_wf_lift_linear threadSet_st_tcb_at2 threadGet_wp
-         |simp split del:if_splits)+
+       apply (wpc | wp threadSet_weak_sch_act_wf threadSet_valid_objs' rescheduleRequired_weak_sch_act_wf
+                       tcbSchedAppend_valid_objs' weak_sch_act_wf_lift_linear threadSet_st_tcb_at2 threadGet_wp
+                  | simp split del: if_splits)+
      apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem word_sle_def word_sless_def)
     apply (wp gts_wp')
    apply vcg

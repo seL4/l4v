@@ -919,7 +919,7 @@ lemma page_directory_at_def2:
    apply (erule exE)
    apply (case_tac ko, simp_all add: split_if_eq1)
    apply (rename_tac arch_kernel_obj)
-   apply (case_tac arch_kernel_obj, simp_all split:if_splits)
+   apply (case_tac arch_kernel_obj, simp_all split: if_splits)
   apply (erule exE)
   apply (rule_tac x="ArchObj (PageDirectory pd)" in exI)
   apply simp
@@ -1424,7 +1424,7 @@ context Arch begin global_naming ARM
 lemma typ_at_data_at_wp:
   assumes typ_wp: "\<And>a.\<lbrace>typ_at a p \<rbrace> g \<lbrace>\<lambda>s. typ_at a p\<rbrace>"
   shows "\<lbrace>data_at b p\<rbrace> g \<lbrace>\<lambda>s. data_at b p\<rbrace>"
-  apply (simp add:data_at_def)
+  apply (simp add: data_at_def)
   apply (wp typ_wp hoare_vcg_disj_lift)
   done
 
@@ -1462,7 +1462,7 @@ lemma arch_cap_recycle_replaceable:
        | simp add: replaceable_or_arch_update_same swp_def if_distrib
                    if_apply_def2 unless_def
        | wp_once hoare_drop_imps )+)[1]
-      apply (simp add:arch_finalise_cap_def)
+      apply (simp add: arch_finalise_cap_def)
       apply ((wpc | wp valid_case_option_post_wp unmap_page_unmapped typ_at_data_at_wp
                       hoare_vcg_all_lift hoare_vcg_imp_lift K_valid | simp add: unless_def)+)[2]
       -- "PagetableCap case"
@@ -1514,7 +1514,7 @@ lemma arch_cap_recycle_replaceable:
    apply (clarsimp simp: valid_cap_simps)
    apply (case_tac "\<not> is_final_cap' (cap.ArchObjectCap (arch_cap.PageTableCap word option)) s")
     apply clarsimp
-   apply (clarsimp simp:conj_comms)
+   apply (clarsimp simp: conj_comms)
    apply (intro conjI)
       apply (fastforce intro!: word_aligned_pt_slots
                        elim!: caps_of_state_aligned_page_table)
@@ -1532,11 +1532,11 @@ lemma arch_cap_recycle_replaceable:
    apply clarsimp
   apply (frule caps_of_state_valid)
    apply fastforce
-  apply (clarsimp simp:cap_aligned_def valid_cap_simps conj_comms)
+  apply (clarsimp simp: cap_aligned_def valid_cap_simps conj_comms)
   -- "pd"
   apply (frule caps_of_state_aligned_page_directory)
    apply simp
-  apply (clarsimp simp:valid_cap_simps cap_aligned_def pd_bits_def pageBits_def)
+  apply (clarsimp simp: valid_cap_simps cap_aligned_def pd_bits_def pageBits_def)
   apply (auto simp: pd_shifting_kernel_mapping_slots
                       [unfolded pd_bits_def pageBits_def,simplified]
                     pd_shifting_global_refs
@@ -1856,8 +1856,8 @@ lemma set_asid_pool_invs_table:
    apply (frule(2) unique_table_refsD,
           unfold obj_refs.simps aobj_ref.simps option.simps,
           assumption)
-   apply (clarsimp simp:vs_cap_ref_def table_cap_ref_def
-     split:cap.split_asm arch_cap.split_asm)
+   apply (clarsimp simp: vs_cap_ref_def table_cap_ref_def
+                  split: cap.split_asm arch_cap.split_asm)
   apply clarsimp
   apply (drule vs_asid_refsI)
   apply (drule vs_lookupI, rule rtrancl_refl)

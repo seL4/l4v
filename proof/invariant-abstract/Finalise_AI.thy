@@ -715,7 +715,6 @@ lemma cases_conj_strg: "A \<and> B \<longrightarrow> (P \<and> A) \<or> (\<not> 
 (* FIXME: move *)
 lemma and_not_not_or_imp: "(~ A & ~ B | C) = ((A | B) \<longrightarrow> C)" by blast
 
-
 lemmas tcb_cap_valid_imp = mp [OF mp [OF tcb_cap_valid_imp'], rotated]
 
 crunch irq_node[wp]: cancel_all_ipc "\<lambda>s. P (interrupt_irq_node s)"
@@ -1140,8 +1139,6 @@ lemma hoare_pre_disj':
   apply simp
   done
 
-
-
 (* FIXME: move *)
 lemma invs_pspace_alignedI:
   "invs s \<Longrightarrow> pspace_aligned s"
@@ -1199,7 +1196,6 @@ lemma gbn_wp:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
-
 locale Finalise_AI_4 = Finalise_AI_3 a b _ c
   for a :: "('a :: state_ext) itself"
   and b :: "('b :: state_ext) itself"
@@ -1224,7 +1220,6 @@ locale Finalise_AI_4 = Finalise_AI_3 a b _ c
 
 lemmas (in Finalise_AI_4) recycle_cap_cte_wp_at[wp] =
   hoare_cte_wp_caps_of_state_lift [OF recycle_cap_caps_of_state]
-
 
 value Finalise_AI_4
 
@@ -1296,7 +1291,6 @@ lemma dmo_bind_return:
    \<lbrace>P\<rbrace> do_machine_op (do _ \<leftarrow> f; return x od) \<lbrace>\<lambda>_. Q\<rbrace>"
   by (simp add: do_machine_op_def bind_def return_def valid_def select_f_def
                      split_def)
-
 
 lemma st_tcb_at_idle_thread:
   "\<lbrakk> st_tcb_at P (idle_thread s) s; valid_idle s \<rbrakk>
