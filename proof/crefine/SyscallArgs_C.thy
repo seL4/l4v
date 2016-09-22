@@ -15,6 +15,14 @@ imports
   StoreWord_C  DetWP
 begin
 
+(*FIXME: arch_split: C kernel names hidden by Haskell names *)
+context kernel_m begin
+abbreviation "msgRegistersC \<equiv> kernel_all_substitute.msgRegisters"
+lemmas msgRegistersC_def = kernel_all_substitute.msgRegisters_def
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 declare word_neq_0_conv[simp del]
 
 definition
@@ -94,6 +102,8 @@ lemma replyOnRestart_twice[simplified]:
    apply (erule replyOnRestart_twice')
   apply simp
   done
+
+end
 
 context kernel_m begin
 
@@ -613,16 +623,16 @@ lemma no_fail_getMRs:
 
 lemma msgRegisters_scast:
   "n < unat (scast n_msgRegisters :: word32) \<Longrightarrow> 
-  unat (scast (index msgRegisters n)::word32) = unat (index msgRegisters n)"
+  unat (scast (index msgRegistersC n)::word32) = unat (index msgRegistersC n)"
   apply (simp add: msgRegisters_def fupdate_def update_def n_msgRegisters_def fcp_beta 
                    Kernel_C.R2_def Kernel_C.R3_def Kernel_C.R4_def Kernel_C.R5_def 
                    Kernel_C.R6_def Kernel_C.R7_def)
   done
-   
+
 lemma msgRegisters_ccorres:
   "n < unat n_msgRegisters \<Longrightarrow> 
-  register_from_H (State_H.msgRegisters ! n) = (index msgRegisters n)"
-  apply (simp add: msgRegisters_def msgRegisters_unfold fupdate_def)
+  register_from_H (ARM_H.msgRegisters ! n) = (index msgRegistersC n)"
+  apply (simp add: msgRegistersC_def msgRegisters_unfold fupdate_def)
   apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: split_if)
   done
 
@@ -668,7 +678,7 @@ lemma asUser_const_rv:
 lemma getMRs_tcbContext:
   "\<lbrace>\<lambda>s. n < unat n_msgRegisters \<and> n < unat (msgLength info) \<and> thread = ksCurThread s \<and> cur_tcb' s\<rbrace>
   getMRs thread buffer info 
-  \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. tcbContext tcb (State_H.msgRegisters ! n) = rv ! n) (ksCurThread s) s\<rbrace>"
+  \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. tcbContext tcb (ARM_H.msgRegisters ! n) = rv ! n) (ksCurThread s) s\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
   apply (thin_tac "thread = t" for t)
@@ -785,7 +795,7 @@ lemma dumb_bool_split_for_vcg:
 lemma ccap_relation_page_is_device:
   "ccap_relation (capability.ArchObjectCap (arch_capability.PageCap d v0a v1 v2 v3)) c
    \<Longrightarrow> (generic_frame_cap_get_capFIsDevice_CL (cap_lift c) \<noteq> 0) = d"
-   apply (clarsimp simp:ccap_relation_def Let_def option_map_Some_eq2 cap_to_H_def)
+   apply (clarsimp simp:ccap_relation_def Let_def map_option_Some_eq2 cap_to_H_def)
    apply (case_tac z)
     apply (auto split:if_splits simp:to_bool_def generic_frame_cap_get_capFIsDevice_CL_def Let_def)
    done
@@ -797,7 +807,6 @@ lemma lookupIPCBuffer_ccorres[corres]:
                   \<inter> {s. isReceiver_' s = from_bool isReceiver}) []
       (lookupIPCBuffer isReceiver t) (Call lookupIPCBuffer_'proc)"
   apply (cinit lift: thread_' isReceiver_')
-   apply (unfold ArchVSpace_H.lookupIPCBuffer_def Let_def)
    apply (rule ccorres_split_nothrow)
        apply simp
        apply (rule threadGet_tcbIpcBuffer_ccorres)
@@ -869,7 +878,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
              apply (ctac add: ccorres_return_C)
             apply clarsimp
            apply (clarsimp simp: if_1_0_0 Collect_const_mem isCap_simps word_less_nat_alt
-              option_to_ptr_def option_to_0_def dest!:ccap_relation_frame_tags)
+              option_to_ptr_def from_bool_0 option_to_0_def dest!:ccap_relation_frame_tags)
           apply (rule ccorres_cond_false_seq)
           apply (simp(no_asm))
           apply (rule ccorres_cond_false_seq)
@@ -1116,7 +1125,7 @@ lemma getMRs_rel:
   done
 
 lemma length_msgRegisters:
-  "length State_H.msgRegisters = unat (scast n_msgRegisters :: word32)"
+  "length ARM_H.msgRegisters = unat (scast n_msgRegisters :: word32)"
   by (simp add: msgRegisters_unfold n_msgRegisters_def)
 
 lemma getMRs_len[simplified]:
@@ -1166,13 +1175,13 @@ lemma getMRs_length:
   done
 
 lemma index_msgRegisters_less':
-  "n < 4 \<Longrightarrow> index msgRegisters n < 0x12"
-  by (simp add: msgRegisters_def fupdate_def Arrays.update_def
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x12"
+  by (simp add: msgRegistersC_def fupdate_def Arrays.update_def
                 fcp_beta "StrictC'_register_defs")
 
 lemma index_msgRegisters_less:
-  "n < 4 \<Longrightarrow> index msgRegisters n <s 0x12"
-  "n < 4 \<Longrightarrow> index msgRegisters n < 0x12"
+  "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x12"
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x12"
   using index_msgRegisters_less'
   by (simp_all add: word_sless_msb_less)
 
@@ -1222,7 +1231,7 @@ lemma valid_ipc_buffer_ptr_array:
   apply (erule clift_array_assertion_imp, simp+)
   apply (simp add: field_lvalue_def msg_align_bits)
   apply (rule_tac x="unat (ptr_val p && mask pageBits >> 2)" in exI,
-    simp add: word32_shift_by_2 shiftr_shiftl1
+    simp add: word_shift_by_2 shiftr_shiftl1
               is_aligned_andI1[OF is_aligned_weaken])
   apply (simp add: add.commute word_plus_and_or_coroll2)
   apply (cut_tac x="(ptr_val p && mask pageBits ) >> 2"
@@ -1265,7 +1274,7 @@ lemma getSyscallArg_ccorres_foo:
      apply (simp add: word_less_nat_alt split: split_if)
     apply (rule ccorres_add_return2)
     apply (rule ccorres_symb_exec_l)
-       apply (rule_tac P="\<lambda>s. n < unat (scast n_msgRegisters :: word32) \<and> obj_at' (\<lambda>tcb. tcbContext tcb (State_H.msgRegisters!n) = x!n) (ksCurThread s) s" 
+       apply (rule_tac P="\<lambda>s. n < unat (scast n_msgRegisters :: word32) \<and> obj_at' (\<lambda>tcb. tcbContext tcb (ARM_H.msgRegisters!n) = x!n) (ksCurThread s) s" 
                    and P' = UNIV 
          in ccorres_from_vcg_split_throws)
         apply vcg
@@ -1327,9 +1336,9 @@ lemma getSyscallArg_ccorres_foo:
   apply (clarsimp simp: bind_def gets_def return_def split_def get_def)  
   done
 
-
-
 end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma invocation_eq_use_type:
   "\<lbrakk> value \<equiv> (value' :: 32 signed word);
@@ -1357,5 +1366,7 @@ lemma ccorres_equals_throwError:
   "\<lbrakk> f = throwError v; ccorres_underlying sr Gamm rr xf arr axf P P' hs (throwError v) c \<rbrakk>
      \<Longrightarrow> ccorres_underlying sr Gamm rr xf arr axf P P' hs f c"
   by simp
+
+end
 
 end

@@ -12,6 +12,8 @@ theory Arch_IF
 imports Retype_IF
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 abbreviation irq_state_of_state :: "det_state \<Rightarrow> nat" where
   "irq_state_of_state s \<equiv> irq_state (machine_state s)"
 
@@ -811,9 +813,9 @@ lemma unmap_page_reads_respects:
            store_pde_reads_respects[simplified] flush_page_reads_respects 
            find_pd_for_asid_reads_respects find_pd_for_asid_pd_slot_authorised
            mapM_ev''[
-                     where m = "(\<lambda>a. store_pte a Arch_Structs_A.pte.InvalidPTE)" 
+                     where m = "(\<lambda>a. store_pte a InvalidPTE)" 
                        and P = "\<lambda>x s. is_subject aag (x && ~~ mask pt_bits)"]
-           mapM_ev''[where m = "(\<lambda>a. store_pde a Arch_Structs_A.pde.InvalidPDE)" 
+           mapM_ev''[where m = "(\<lambda>a. store_pde a InvalidPDE)" 
                        and P = "\<lambda>x s. is_subject aag (x && ~~ mask pd_bits)"]
 
        | wpc 
@@ -2518,5 +2520,6 @@ lemma mapM_x_swp_store_pde_pas_refined_simple:
   apply (wp store_pde_pas_refined_simple)
   done
 
+end
 
 end

@@ -16,6 +16,8 @@ imports
   DomainSepInv
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
   authorised_invocation :: "'a PAS \<Rightarrow> Invocations_A.invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -27,7 +29,7 @@ where
              \<and> aag_has_auth_to aag SyncSend epptr
    | Invocations_A.InvokeNotification ep badge \<Rightarrow> aag_has_auth_to aag Notify ep
    | Invocations_A.InvokeReply thread slot \<Rightarrow> is_subject aag thread \<and> is_subject aag (fst slot)
-   | Invocations_A.InvokeTCB i' \<Rightarrow> tcb_inv_wf i' s \<and> authorised_tcb_inv aag i'
+   | Invocations_A.InvokeTCB i' \<Rightarrow> Tcb_AI.tcb_inv_wf i' s \<and> authorised_tcb_inv aag i'
    | Invocations_A.InvokeDomain thread slot \<Rightarrow> False
    | Invocations_A.InvokeCNode i' \<Rightarrow> authorised_cnode_inv aag i' s \<and> is_subject aag (cur_thread s)
            \<and> cnode_inv_auth_derivations i' s
@@ -491,7 +493,7 @@ lemma handle_interrupt_pas_refined:
      handle_interrupt irq
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: handle_interrupt_def)
-  apply (rule hoare_pre)
+  apply (rule conjI; rule impI;rule hoare_pre)
   apply (wp send_signal_pas_refined get_cap_wp
        | wpc
        | simp add: get_irq_slot_def get_irq_state_def)+
@@ -522,7 +524,7 @@ lemma handle_interrupt_integrity_autarch:
      handle_interrupt irq
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_interrupt_def  cong: irq_state.case_cong maskInterrupt_def ackInterrupt_def resetTimer_def )
-  apply (rule hoare_pre)
+  apply (rule conjI; rule impI; rule hoare_pre)
   apply (wp_once send_signal_respects get_cap_auth_wp [where aag = aag] dmo_mol_respects
        | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def
        | wp dmo_no_mem_respects
@@ -546,7 +548,7 @@ lemma handle_interrupt_integrity:
      handle_interrupt irq
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_interrupt_def maskInterrupt_def ackInterrupt_def resetTimer_def cong: irq_state.case_cong bind_cong)
-  apply (rule hoare_pre)
+  apply (rule conjI; rule impI; rule hoare_pre)
   apply (wp_once send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
        | wpc
        | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def)+
@@ -958,6 +960,7 @@ lemma schedule_pas_refined:
 lemma handle_interrupt_arch_state [wp]:
   "\<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   unfolding handle_interrupt_def
+  apply (rule hoare_if)
   apply (rule hoare_pre)
   apply clarsimp
   apply (wp get_cap_inv dxo_wp_weak send_signal_arch_state | wpc | simp add: get_irq_state_def)+
@@ -1003,11 +1006,15 @@ lemma cap_revoke_arm_globals_frame [wp]:
    apply simp+
   done
 
+end
+
 crunch_ignore (add:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action attempt_switch_to ethread_set
   reschedule_required set_thread_state_ext switch_if_required_to next_domain
   set_domain recycle_cap_ext
   attempt_switch_to timer_tick set_priority retype_region_ext)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch arm_globals_frame [wp]: handle_event "\<lambda>s. P (arm_globals_frame (arch_state s))"
    (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch select_wp
@@ -1026,10 +1033,10 @@ lemma rec_del_cur_thread[wp]:"\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> rec
   apply (wp preemption_point_inv|simp)+
   done
 
-crunch cur_thread[wp]: cap_delete,cap_move "\<lambda>s. P (cur_thread s)" (wp: CNodeInv_AI.cap_revoke_preservation2 mapM_wp mapM_x_wp crunch_wps dxo_wp_weak simp: filterM_mapM unless_def ignore: without_preemption filterM)
+crunch cur_thread[wp]: cap_delete,cap_move "\<lambda>s. P (cur_thread s)" (wp: cap_revoke_preservation2 mapM_wp mapM_x_wp crunch_wps dxo_wp_weak simp: filterM_mapM unless_def ignore: without_preemption filterM)
 
 lemma cap_revoke_cur_thread[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
-  apply (rule CNodeInv_AI.cap_revoke_preservation2)
+  apply (rule cap_revoke_preservation2)
   apply (wp preemption_point_inv|simp)+
   done
 
@@ -1063,7 +1070,7 @@ crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread 
 crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cap_recycle "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
  
 lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
-  apply (rule CNodeInv_AI.cap_revoke_preservation2)
+  apply (rule cap_revoke_preservation2)
    apply wp
   done
 
@@ -1155,5 +1162,7 @@ lemma call_kernel_pas_refined:
     apply (wp he_invs handle_event_pas_refined)
      apply auto
   done
+
+end
 
 end

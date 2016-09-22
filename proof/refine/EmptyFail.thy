@@ -66,6 +66,8 @@ lemma empty_fail_getSlotCap [intro!, wp, simp]:
   "empty_fail (getSlotCap a)"
   unfolding getSlotCap_def by simp
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma empty_fail_getObject:
   assumes x: "(\<And>b c d. empty_fail (loadObject x b c d::'a :: pspace_storable kernel))"
   shows "empty_fail (getObject x :: 'a :: pspace_storable kernel)"
@@ -96,10 +98,9 @@ lemma empty_fail_getNotification [intro!, wp, simp]:
 
 lemma empty_fail_lookupIPCBuffer [intro!, wp, simp]:
   "empty_fail (lookupIPCBuffer a b)"
-  by (clarsimp simp: lookupIPCBuffer_def ArchVSpace_H.lookupIPCBuffer_def
+  by (clarsimp simp: lookupIPCBuffer_def ARM_H.lookupIPCBuffer_def
                      Let_def getThreadBufferSlot_def locateSlot_conv
                      split:capability.splits arch_capability.splits | wp | wpc)+
-
 
 lemma empty_fail_updateObject_default [intro!, wp, simp]:
   "empty_fail (updateObject_default v ko a b c)"
@@ -116,4 +117,5 @@ lemma empty_fail_getThreadState[iff]:
 declare empty_fail_stateAssert [wp]
 declare setRegister_empty_fail [intro!, simp]
 
+end
 end

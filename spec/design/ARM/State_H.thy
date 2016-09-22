@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file State_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -20,6 +22,7 @@ imports
   RegisterSet_H
   "../../machine/ARM/MachineOps"
 begin
+context Arch begin global_naming ARM_H
 
 definition
   Word :: "machine_word \<Rightarrow> machine_word"
@@ -27,7 +30,7 @@ where
   Word_def[simp]:
  "Word \<equiv> id"
 
-type_synonym register = "MachineTypes.register"
+type_synonym register = "ARM.register"
 
 definition
   Register :: "register \<Rightarrow> register"
@@ -60,48 +63,48 @@ where
 definition
 msgInfoRegister :: "register"
 where
-"msgInfoRegister \<equiv> Register MachineTypes.msgInfoRegister"
+"msgInfoRegister \<equiv> Register ARM.msgInfoRegister"
 
 definition
 msgRegisters :: "register list"
 where
-"msgRegisters \<equiv> map Register MachineTypes.msgRegisters"
+"msgRegisters \<equiv> map Register ARM.msgRegisters"
 
 definition
 capRegister :: "register"
 where
-"capRegister \<equiv> Register MachineTypes.capRegister"
+"capRegister \<equiv> Register ARM.capRegister"
 
 definition
 badgeRegister :: "register"
 where
-"badgeRegister \<equiv> Register MachineTypes.badgeRegister"
+"badgeRegister \<equiv> Register ARM.badgeRegister"
 
 definition
 frameRegisters :: "register list"
 where
-"frameRegisters \<equiv> map Register MachineTypes.frameRegisters"
+"frameRegisters \<equiv> map Register ARM.frameRegisters"
 
 definition
 gpRegisters :: "register list"
 where
-"gpRegisters \<equiv> map Register MachineTypes.gpRegisters"
+"gpRegisters \<equiv> map Register ARM.gpRegisters"
 
 definition
 exceptionMessage :: "register list"
 where
-"exceptionMessage \<equiv> map Register MachineTypes.exceptionMessage"
+"exceptionMessage \<equiv> map Register ARM.exceptionMessage"
 
 definition
 syscallMessage :: "register list"
 where
-"syscallMessage \<equiv> map Register MachineTypes.syscallMessage"
+"syscallMessage \<equiv> map Register ARM.syscallMessage"
 
 definition
 sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 where
 "sanitiseRegister x0 x1\<equiv> (case (x0, x1) of
-    (((* Register *) r), ((* Word *) w)) \<Rightarrow>    Word $ MachineTypes.sanitiseRegister r w
+    (((* Register *) r), ((* Word *) w)) \<Rightarrow>    Word $ ARM.sanitiseRegister r w
   )"
 
 
@@ -122,5 +125,5 @@ definition
 where
  "nullPointer \<equiv> 0"
 
-
+end
 end

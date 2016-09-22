@@ -55,32 +55,33 @@ lemmas [L1unfold] =
   WORD_values_add1 [symmetric]
   WORD_values_minus1 [symmetric]
 
-lemma WORD_MAX_simps [polish]:
+(* These are added to the Polish simps after translation *)
+lemma WORD_MAX_simps:
    "WORD_MAX TYPE(32) = INT_MAX"
    "WORD_MAX TYPE(16) = SHORT_MAX"
    "WORD_MAX TYPE(8) = CHAR_MAX"
   by (auto simp: INT_MAX_def SHORT_MAX_def CHAR_MAX_def WORD_MAX_def)
 
-lemma WORD_MIN_simps [polish]:
+lemma WORD_MIN_simps:
    "WORD_MIN TYPE(32) = INT_MIN"
    "WORD_MIN TYPE(16) = SHORT_MIN"
    "WORD_MIN TYPE(8) = CHAR_MIN"
   by (auto simp: INT_MIN_def SHORT_MIN_def CHAR_MIN_def WORD_MIN_def)
 
-lemma UWORD_MAX_simps [polish]:
+lemma UWORD_MAX_simps:
    "UWORD_MAX TYPE(32) = UINT_MAX"
    "UWORD_MAX TYPE(16) = USHORT_MAX"
    "UWORD_MAX TYPE(8) = UCHAR_MAX"
   by (auto simp: UINT_MAX_def USHORT_MAX_def UCHAR_MAX_def UWORD_MAX_def)
 
-lemma WORD_signed_to_unsigned [polish, simp]:
+lemma WORD_signed_to_unsigned [simp]:
    "WORD_MAX TYPE('a signed) = WORD_MAX TYPE('a::len)"
    "WORD_MIN TYPE('a signed) = WORD_MIN TYPE('a::len)"
    "UWORD_MAX TYPE('a signed) = UWORD_MAX TYPE('a::len)"
   by (auto simp: WORD_MAX_def WORD_MIN_def UWORD_MAX_def)
 
 
-lemma INT_MIN_MAX_lemmas [simp, polish]:
+lemma INT_MIN_MAX_lemmas [simp]:
   "unat (u :: word32) \<le> UINT_MAX"
   "sint (s :: sword32) \<le> INT_MAX"
   "INT_MIN \<le> sint (s :: sword32)"
@@ -250,7 +251,7 @@ lemma abstract_val_signed_unary_minus:
 lemma abstract_val_unsigned_unary_minus:
   "\<lbrakk> abstract_val P r unat r' \<rbrakk> \<Longrightarrow>
        abstract_val P (if r = 0 then 0 else UWORD_MAX TYPE('a::len) + 1 - r) unat ( - (r' :: 'a word))"
-  by (clarsimp simp: unat_minus word_size unat_eq_zero UWORD_MAX_def)
+  by (clarsimp simp: unat_minus' word_size unat_eq_zero UWORD_MAX_def)
 
 lemmas abstract_val_signed_ops [simplified simp_thms] =
   abstract_expr_bool_binop [OF snat_abstract_bool_binops(1)]
@@ -513,6 +514,13 @@ lemma corresTA_L2_guard:
   apply (monad_eq simp: L2_defs corresXF_def)
   done
 
+lemma corresTA_L2_spec:
+  "(\<And>s t. abstract_val (Q s) (P s t) id (P' s t)) \<Longrightarrow>
+   corresTA Q rx ex (L2_spec {(s, t). P s t}) (L2_spec {(s, t). P' s t})"
+  apply (monad_eq simp: L2_defs corresXF_def in_liftE split: sum.splits)
+  apply (erule exI)
+  done
+
 lemma corresTA_L2_condition:
   "\<lbrakk> corresTA P rx ex L L';
      corresTA Q rx ex R R';
@@ -556,7 +564,7 @@ lemma corresTA_L2_call:
 lemma corresTA_measure_call:
   "\<lbrakk> monad_mono B; \<And>m. corresTA P rx id (A m) (B m) \<rbrakk> \<Longrightarrow>
         corresTA P rx id (measure_call A) (measure_call B)"
-  by (simp add: corresTA_def corresXF_measure_call)
+  by (simp add: corresXF_measure_call)
 
 lemma corresTA_L2_unknown:
   "corresTA \<top> rx ex (L2_unknown x) (L2_unknown x)"
@@ -582,6 +590,41 @@ lemma corresTA_L2_call_exec_abstract:
   apply (monad_eq split: sum.splits)
   apply fastforce
   done
+
+(* More backup rules for calls. *)
+lemma corresTA_L2_call_exec_concrete':
+  "\<lbrakk> corresTA P f1 x1 A B;
+     valid_typ_abs_fn Q1 Q1' f1 f1';
+     valid_typ_abs_fn Q2 Q2' f2 f2'
+   \<rbrakk> \<Longrightarrow>
+   corresTA (\<lambda>s. \<forall>s'. s = st s' \<longrightarrow> P s') f2 x2
+       (L2_seq (exec_concrete st (L2_call A)) (\<lambda>ret. (L2_seq (L2_guard (\<lambda>_. Q1' ret)) (\<lambda>_. L2_gets (\<lambda>_. f2 (f1' ret)) [''ret'']))))
+       (exec_concrete st (L2_call B))"
+  apply (clarsimp simp: L2_defs L2_call_def corresXF_def)
+  apply (monad_eq split: sum.splits)
+  apply (rule conjI)
+   apply clarsimp
+   apply metis
+  apply clarsimp
+  apply blast
+  done
+
+lemma corresTA_L2_call_exec_abstract':
+  "\<lbrakk> corresTA P f1 x1 A B;
+     valid_typ_abs_fn Q1 Q1' f1 f1';
+     valid_typ_abs_fn Q2 Q2' f2 f2'
+   \<rbrakk> \<Longrightarrow>
+   corresTA (\<lambda>s. P (st s)) f2 x2
+       (L2_seq (exec_abstract st (L2_call A)) (\<lambda>ret. (L2_seq (L2_guard (\<lambda>_. Q1' ret)) (\<lambda>_. L2_gets (\<lambda>_. f2 (f1' ret)) [''ret'']))))
+       (exec_abstract st (L2_call B))"
+  apply (clarsimp simp: L2_defs L2_call_def corresXF_def)
+  apply (monad_eq split: sum.splits)
+  apply (rule conjI)
+   apply metis
+  apply clarsimp
+  apply blast
+  done
+
 
 lemma abstract_val_fun_app:
    "\<lbrakk> abstract_val Q b id b'; abstract_val P a id a' \<rbrakk> \<Longrightarrow>
@@ -755,7 +798,7 @@ lemma abstract_val_abs_var [consumes 1]:
   "\<lbrakk> abs_var a f a' \<rbrakk> \<Longrightarrow> abstract_val True a f a'"
   by (clarsimp simp: fun_upd_def split: if_splits)
 
-lemma abstract_val_abs_var_concretise  [consumes 1]:
+lemma abstract_val_abs_var_concretise [consumes 1]:
   "\<lbrakk> abs_var a A a'; introduce_typ_abs_fn A; valid_typ_abs_fn PA PC A (C :: 'a \<Rightarrow> 'c)  \<rbrakk>
       \<Longrightarrow> abstract_val (PC a) (C a) id a'"
   by (clarsimp simp: fun_upd_def split: if_splits)
@@ -766,7 +809,7 @@ lemma abstract_val_abs_var_give_up [consumes 1]:
 
 (* Misc *)
 
-lemma len_of_word_comparisons [word_abs, L2opt]:
+lemma len_of_word_comparisons [L2opt]:
   "len_of TYPE(32) \<le> len_of TYPE(32)"
   "len_of TYPE(16) \<le> len_of TYPE(32)"
   "len_of TYPE( 8) \<le> len_of TYPE(32)"
@@ -810,17 +853,17 @@ lemma scast_ucast_simps [simp, L2opt]:
 
 declare len_signed [L2opt]
 
-lemmas [L2opt, polish] = zero_sle_ucast_up
+lemmas [L2opt] = zero_sle_ucast_up
 
-lemma zero_sle_ucast_WORD_MAX [L2opt, polish]:
+lemma zero_sle_ucast_WORD_MAX [L2opt]:
   "(0 <=s ((ucast (b::('a::len) word)) :: ('a::len) signed word))
                 = (uint b \<le> WORD_MAX (TYPE('a)))"
   by (clarsimp simp: WORD_MAX_def zero_sle_ucast)
 
-lemmas [L2opt, polish] =
+lemmas [L2opt] =
     is_up is_down unat_ucast_upcast sint_ucast_eq_uint
 
-lemmas [L2opt, polish] =
+lemmas [L2opt] =
     ucast_down_add scast_down_add
     ucast_down_minus scast_down_minus
     ucast_down_mult scast_down_mult
@@ -828,6 +871,8 @@ lemmas [L2opt, polish] =
 (*
  * Setup word abstraction rules.
  *)
+
+named_theorems word_abs
 
 (* Common word abstraction rules. *)
 
@@ -842,11 +887,14 @@ lemmas [word_abs] =
   corresTA_L2_catch
   corresTA_L2_while
   corresTA_L2_guard
+  corresTA_L2_spec
   corresTA_L2_condition
   corresTA_L2_unknown
   corresTA_L2_recguard
   corresTA_case_prod
+  corresTA_L2_call_exec_concrete'
   corresTA_L2_call_exec_concrete
+  corresTA_L2_call_exec_abstract'
   corresTA_L2_call_exec_abstract
   corresTA_L2_call'
   corresTA_L2_call
@@ -877,6 +925,7 @@ lemmas word_abs_base [word_abs] =
   valid_typ_abs_fn_unit
   valid_typ_abs_fn_sint
   valid_typ_abs_fn_unat
+  len_of_word_comparisons
 
 (*
  * Signed word abstraction rules: sword32 \<rightarrow> int

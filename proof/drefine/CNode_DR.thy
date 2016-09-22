@@ -12,6 +12,8 @@ theory CNode_DR
 imports Finalise_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
   translate_cnode_invocation :: "Invocations_A.cnode_invocation \<Rightarrow> cdl_cnode_invocation"
 where
@@ -32,8 +34,8 @@ where
               (transform_cslot_ptr slot3)"
 
 lemma corres_assert_lhs:
-  "(F \<Longrightarrow> corres_underlying sr False r P P' (f ()) g)
-    \<Longrightarrow> corres_underlying sr False r (\<lambda>s. F \<and> P s) P' (assert F >>= f) g"
+  "(F \<Longrightarrow> corres_underlying sr False False r P P' (f ()) g)
+    \<Longrightarrow> corres_underlying sr False False r (\<lambda>s. F \<and> P s) P' (assert F >>= f) g"
   by (cases F, simp_all)
 
 lemma ex_cte_cap_to_not_idle:
@@ -501,9 +503,9 @@ lemma cap_null_reply_case_If:
 
 (* FIXME: move *)
 lemma corres_if_rhs2:
-  "\<lbrakk> G \<Longrightarrow> corres_underlying sr nf rvr P Q a b;
-      \<not> G \<Longrightarrow> corres_underlying sr nf rvr P' Q' a c \<rbrakk>
-     \<Longrightarrow> corres_underlying sr nf rvr (P and P') (\<lambda>s. (G \<longrightarrow> Q s) \<and> (\<not> G \<longrightarrow> Q' s))
+  "\<lbrakk> G \<Longrightarrow> corres_underlying sr nf nf' rvr P Q a b;
+      \<not> G \<Longrightarrow> corres_underlying sr nf nf' rvr P' Q' a c \<rbrakk>
+     \<Longrightarrow> corres_underlying sr nf nf' rvr (P and P') (\<lambda>s. (G \<longrightarrow> Q s) \<and> (\<not> G \<longrightarrow> Q' s))
         a (if G then b else c)"
   by (rule corres_guard_imp, rule corres_if_rhs, simp+)
 
@@ -680,7 +682,7 @@ lemma dcorres_select_select_ext:
   by (clarsimp simp: select_def select_ext_def get_def bind_def return_def assert_def fail_def corres_underlying_def)
 
 crunch valid_etcbs[wp]: cap_delete "valid_etcbs"
-  (wp: rec_del_preservation2 cap_revoke_preservation2)
+  (wp: rec_del_preservation_valid_pdpt_objs cap_revoke_preservation_valid_pdpt_objs)
 
 lemma cap_revoke_corres_helper:
   "dcorres boolean_exception (\<lambda>_. True)
@@ -875,8 +877,8 @@ lemma cancel_badged_sends_def'':
 done
 
 lemma corres_mapM_to_mapM_x:
-  "corres_underlying sr fl dc P P' f (mapM_x g xs)
-     \<Longrightarrow> corres_underlying sr fl dc P P' f (mapM g xs)"
+  "corres_underlying sr fl fl' dc P P' f (mapM_x g xs)
+     \<Longrightarrow> corres_underlying sr fl fl' dc P P' f (mapM g xs)"
   by (simp add: mapM_x_mapM liftM_def[symmetric])
 
 lemma ep_waiting_set_recv_upd_kh:
@@ -1063,8 +1065,8 @@ lemma dcorres_ep_cancel_badge_sends:
 
 lemma neq_CPSR:
   "msg_info_register \<noteq> CPSR \<and> cap_register \<noteq> CPSR"
-  by (clarsimp simp:msg_info_register_def cap_register_def MachineTypes.capRegister_def
-    MachineTypes.msgInfoRegister_def register.simps )
+  by (clarsimp simp:msg_info_register_def cap_register_def ARM.capRegister_def
+    ARM.msgInfoRegister_def register.simps )
 
 lemma transform_intent_invalid_invocation:
   "transform_intent (invocation_type (mi_label (data_to_message_info 0))) = (\<lambda>x. None)"
@@ -1130,7 +1132,7 @@ lemma set_asid_pool_empty'_helper:
   "n < 1023 \<Longrightarrow>
    (if x = ucast ((1 :: word32) + of_nat n) then None else if x \<le> of_nat n then None else ap x) =
    (if (x :: 10 word) \<le> 1 + of_nat n then None else ap x)"
-  apply (frule of_nat_mono_maybe[where X="2^10 - 1" and 'a=10, simplified])
+  apply (frule of_nat_mono_maybe[where x="2^10 - 1" and 'a=10, simplified])
   apply (subgoal_tac "ucast (1 + of_nat n :: word32) = (1 + of_nat n :: 10 word)")
    prefer 2
    apply (rule word_unat.Rep_eqD)
@@ -1146,9 +1148,9 @@ lemma set_asid_pool_empty':
           [0 :: word32 .e. of_nat n]"
   apply (induct n)
    apply (simp add: mapM_x_Cons mapM_x_Nil fun_upd_def)
-  apply (subgoal_tac "of_nat n < (2 :: word32) ^ WordSetup.word_bits - 1")
+  apply (subgoal_tac "of_nat n < (2 :: word32) ^ word_bits - 1")
    prefer 2
-   apply (rule of_nat_mono_maybe[where X="2^word_bits - 1", simplified])
+   apply (rule of_nat_mono_maybe[where x="2^word_bits - 1", simplified])
     apply (simp add:word_bits_def)
    apply (simp add:asid_low_bits_def word_bits_def)
   apply (simp, drule sym)
@@ -1157,7 +1159,7 @@ lemma set_asid_pool_empty':
   done
 
 lemma empty_pool:
-  "(\<lambda>x. if x \<le> 2 ^ Arch_Structs_A.asid_low_bits - 1 then None else (ap :: 10 word \<rightharpoonup> word32) x) = Map.empty"
+  "(\<lambda>x. if x \<le> 2 ^ ARM_A.asid_low_bits - 1 then None else (ap :: 10 word \<rightharpoonup> word32) x) = Map.empty"
   apply (rule ext)
   apply (cut_tac ptr=x and 'a=10 in word_up_bound)
   apply (simp add:asid_low_bits_def)
@@ -1177,8 +1179,8 @@ lemma get_set_asid_pool:
 lemma set_asid_pool_empty:
   "set_asid_pool a Map.empty \<equiv>
    mapM_x (\<lambda>slot. get_asid_pool a >>= (\<lambda>pool. set_asid_pool a (pool(ucast slot:=None))))
-          [0 :: word32 .e. 2 ^ Arch_Structs_A.asid_low_bits - 1]"
-  using set_asid_pool_empty' [of "2 ^ Arch_Structs_A.asid_low_bits - 1" a]
+          [0 :: word32 .e. 2 ^ ARM_A.asid_low_bits - 1]"
+  using set_asid_pool_empty' [of "2 ^ ARM_A.asid_low_bits - 1" a]
   apply -
   apply (rule eq_reflection)
   apply simp
@@ -1240,7 +1242,7 @@ lemma dcorres_set_asid_pool_empty:
   "dcorres dc \<top> (valid_idle and asid_pool_at a and
                  (\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)))
     (mapM_x PageTableUnmap_D.empty_slot
-                            (map (Pair a) [0 .e. 2 ^ Arch_Structs_A.asid_low_bits - 1]))
+                            (map (Pair a) [0 .e. 2 ^ ARM_A.asid_low_bits - 1]))
     (set_asid_pool a Map.empty)"
   apply (unfold set_asid_pool_empty)
   apply (rule dcorres_list_all2_mapM_[where F="\<lambda>x y. snd x = snd (transform_asid y)"])
@@ -1266,7 +1268,7 @@ lemma dcorres_set_asid_pool_empty:
            apply (wp | clarsimp)+
         apply simp
        apply (wp get_asid_pool_triv | clarsimp simp:typ_at_eq_kheap_obj obj_at_def swp_def)+
-     apply (subgoal_tac "(aa, snd (transform_asid y)) \<in> set (map (Pair a) [0..<2 ^ Arch_Structs_A.asid_low_bits])")
+     apply (subgoal_tac "(aa, snd (transform_asid y)) \<in> set (map (Pair a) [0..<2 ^ ARM_A.asid_low_bits])")
       apply (clarsimp simp:set_map)
      apply (clarsimp simp del:set_map simp:suffixeq_def)
     apply (wp | clarsimp simp:swp_def)+
@@ -1399,7 +1401,7 @@ crunch st_tcb_at[wp] : copy_global_mappings "st_tcb_at P thread"
   (wp: crunch_wps  simp: crunch_simps)
 
 lemma delete_asid_pool_idle [wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> ArchVSpace_A.delete_asid_pool p q\<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> ARM_A.delete_asid_pool p q\<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   apply (simp add:delete_asid_pool_def)
   apply wp
   apply (rule mapM_wp)
@@ -1492,7 +1494,7 @@ lemma dcorres_arch_recycle_cap_page_cap:
   apply (clarsimp simp: CSpace_D.recycle_cap_def arch_recycle_cap_def
                         clearMemory_def bind_assoc
                         mapM_x_mapM do_machine_op_bind
-                        empty_fail_mapM ef_storeWord ef_machine_op_lift)
+                        ef_storeWord)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
          apply (rule corres_split
@@ -1561,7 +1563,7 @@ lemma dcorres_empty_pde_slot:"
 ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
  \<Longrightarrow> dcorres dc \<top> (valid_idle and cur_tcb and (\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)))
   (PageTableUnmap_D.empty_slot (y && ~~ mask pd_bits,unat (y && mask pd_bits >>2)))
-  (store_pde y Arch_Structs_A.pde.InvalidPDE)"
+  (store_pde y ARM_A.pde.InvalidPDE)"
   apply (clarsimp simp:store_pde_def get_pd_def get_object_def bind_assoc gets_def)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -1583,7 +1585,7 @@ ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
    apply (rule ext)
    apply (clarsimp simp: transform_page_directory_contents_def unat_map_def
                          kernel_pde_mask_def ucast_nat_def transform_pde_def
-                   split: if_splits Arch_Structs_A.pte.split_asm)
+                   split: if_splits ARM_A.pte.split_asm)
   apply (clarsimp simp:)+
   apply (rule corres_dummy_return_pr)
   apply (rule_tac P'="\<lambda>r. op = s'" in  corres_underlying_split[where r'=dc])
@@ -1612,7 +1614,7 @@ ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
 lemma dcorres_empty_pte_slot:
   " dcorres dc \<top> (valid_idle and cur_tcb and (\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)))
      (PageTableUnmap_D.empty_slot (y && ~~ mask pt_bits, unat (y && mask pt_bits >> 2)))
-     (store_pte y Arch_Structs_A.pte.InvalidPTE)"
+     (store_pte y ARM_A.pte.InvalidPTE)"
   apply (clarsimp simp:store_pte_def get_pt_def get_object_def bind_assoc gets_def)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -1633,7 +1635,7 @@ lemma dcorres_empty_pte_slot:
    apply (clarsimp simp: not_idle_thread_def transform_objects_def restrict_map_def map_add_def)
    apply (rule ext)
    apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def ucast_nat_def
-                   split: if_splits Arch_Structs_A.pte.split_asm)
+                   split: if_splits ARM_A.pte.split_asm)
   apply (clarsimp simp: )+
   apply (rule corres_dummy_return_pr)
   apply (rule_tac P'="\<lambda>r. op = s'" in  corres_underlying_split[where r'=dc])
@@ -1934,7 +1936,7 @@ lemma dcorres_recycle_pd_caps:
 lemma dcorres_clear_object_caps_pt:
   "dcorres dc \<top> (invs and  cte_wp_at (op = (cap.ArchObjectCap (arch_cap.PageTableCap w option))) (a, b))
     (clear_object_caps w)
-    (mapM_x (swp store_pte Arch_Structs_A.pte.InvalidPTE) [w , w + 4 .e. w + 2 ^ pt_bits - 1])"
+    (mapM_x (swp store_pte ARM_A.pte.InvalidPTE) [w , w + 4 .e. w + 2 ^ pt_bits - 1])"
   apply (clarsimp simp:arch_recycle_cap_def clear_object_caps_def gets_def)
   apply (rule dcorres_absorb_get_l)
   apply (subgoal_tac "\<exists>ptx. (ko_at (ArchObj (arch_kernel_obj.PageTable ptx)) w) s'")
@@ -1944,7 +1946,7 @@ lemma dcorres_clear_object_caps_pt:
       apply (drule cte_wp_valid_cap,simp)
       apply (clarsimp simp:valid_cap_def cap_aligned_def)
       apply (rule is_aligned_no_overflow)
-    apply (simp add:pt_bits_def pageBits_def pageBits_def WordSetup.word_bits_def )+
+    apply (simp add:pt_bits_def pageBits_def pageBits_def word_bits_def)+
   apply (rule corres_guard_imp)
     apply (rule_tac x = "(map (\<lambda>x. (w,unat (x >> 2))) [0 , 4 .e. 2 ^ pt_bits - 1])" in select_pick_corres)
       apply (rule_tac S = "{(x,y). x = (y && ~~ mask pt_bits,unat (y && mask pt_bits >> 2))}"  in corres_mapM_x)
@@ -1953,7 +1955,7 @@ lemma dcorres_clear_object_caps_pt:
       apply (rule hoare_pre)
        apply (wp valid_idle_store_pte store_pte_ct |clarsimp simp:cur_tcb_def | wps store_pte_ct )+
       apply (simp add:swp_def)
-    apply (simp add:pt_bits_def pageBits_def pageBits_def WordSetup.word_bits_def )+
+    apply (simp add:pt_bits_def pageBits_def pageBits_def word_bits_def)+
     apply clarsimp
     apply (subst (asm) zip_map_eqv)
     apply (clarsimp)
@@ -2574,9 +2576,9 @@ crunch inv[wp]: ensure_empty "P"
 
 lemma corres_symb_exec_r_dcE:
   "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>rv. P\<rbrace>;
-     \<And>x. corres_underlying rel False (dc \<oplus> anyrel) P (R x) (throwError e) (h x);
+     \<And>x. corres_underlying rel False False (dc \<oplus> anyrel) P (R x) (throwError e) (h x);
      \<lbrace>Q\<rbrace> g \<lbrace>R\<rbrace>,- \<rbrakk> \<Longrightarrow>
-   corres_underlying rel False (dc \<oplus> anyrel) P Q
+   corres_underlying rel False False (dc \<oplus> anyrel) P Q
       (throwError e) (g >>=E (\<lambda>x. h x))"
   unfolding bindE_def
   apply (rule corres_symb_exec_r[where Q'="\<lambda>rv. case rv of Inl _ \<Rightarrow> \<top> | Inr x \<Rightarrow> R x"])
@@ -2636,9 +2638,9 @@ lemma lookup_slot_for_cnode_op_corres:
                    cdl_resolve_address_bits_error_branch1)
   apply (rule conjI)
    prefer 2
-   apply (cases "depth = 0 \<or> Types_D.word_bits < depth", simp)
+   apply (cases "depth = 0 \<or> word_bits < depth", simp)
    apply (simp add: fault_to_except_def throw_handle)
-  apply (clarsimp simp: Types_D.word_bits_def WordSetup.word_bits_def)
+  apply (clarsimp simp: word_bits_def)
   apply (rule whenE_throwError_corres_initial, simp, rule refl)
   apply (simp add: fault_to_except_def lookup_error_on_failure_def)
   apply (rule corres_handle2')
@@ -2800,10 +2802,10 @@ lemma dcorres_update_cap_data:
     apply (simp add: CSpace_D.badge_update_def update_cap_badge_def
                      Structures_A.badge_update_def Types_D.badge_bits_def)
    apply (simp add:  bind_assoc gets_the_def gets_def the_cnode_cap_def)
-   apply (clarsimp simp:word_bits_def Types_D.word_bits_def dest!:leI)
+   apply (clarsimp simp:word_bits_def dest!:leI)
    apply (simp add:of_drop_to_bl)
    apply (simp add:mask_twice)
-   apply (clarsimp simp:word_size opt_object_def Types_D.word_bits_def)
+   apply (clarsimp simp:word_size opt_object_def word_bits_def)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_update_cap_data_def)
   done
@@ -2896,7 +2898,7 @@ lemma cnode_decode_rotate_throw:
 lemma corres_bindE_throwError:
   assumes f:"\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
   assumes nf: "sf \<Longrightarrow> no_fail P' f"
-  shows "corres_underlying sr sf (dc \<oplus> r) P P' (Monads_D.throw) (doE x \<leftarrow> f; throwError (e x) odE)"
+  shows "corres_underlying sr af sf (dc \<oplus> r) P P' (Monads_D.throw) (doE x \<leftarrow> f; throwError (e x) odE)"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    apply (clarsimp simp: in_monad bindE_def throwError_def return_def)
@@ -3271,5 +3273,7 @@ lemma decode_cnode_label_not_match:
    apply wp
   apply (clarsimp simp: upto_enum_def fromEnum_def toEnum_def enum_invocation_label)
   done
+
+end
 
 end

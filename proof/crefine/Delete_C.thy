@@ -120,7 +120,7 @@ lemma cap_zombie_cap_set_capZombieNumber_spec:
   apply clarsimp
   apply (frule(2) ccap_zombie_radix_less1)
   apply (clarsimp simp: cap_zombie_cap_lift
-                        ccap_relation_def option_map_Some_eq2
+                        ccap_relation_def map_option_Some_eq2
                         cap_to_H_def get_capZombieBits_CL_def
                  split: split_if_asm)
    apply (simp add: mask_def word_bw_assocs word_ao_dist)
@@ -711,6 +711,8 @@ schematic_goal finaliseSlot_ccorres_induction_helper:
   done
 
 lemma finaliseSlot_ccorres:
+  notes from_bool_neq_0 [simp del]
+  shows
   "ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
      (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))
                    ret__struct_finaliseSlot_ret_C_')
@@ -779,7 +781,7 @@ lemma finaliseSlot_ccorres:
              apply (rule ccorres_drop_cutMon,
                     rule ccorres_split_throws)
               apply (rule_tac P="\<lambda>s. case (snd rvb) of None \<Rightarrow> True
-                                  | Some v \<Rightarrow> ucast v \<le> maxIRQ"
+                                  | Some v \<Rightarrow> ucast v \<le> Kernel_C.maxIRQ"
                         in ccorres_from_vcg_throws[where P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)
               apply (clarsimp simp: returnOk_def return_def
@@ -881,7 +883,7 @@ lemma finaliseSlot_ccorres:
                     apply (clarsimp simp: throwError_def return_def cintr_def)
                    apply vcg
                   apply (wp preemptionPoint_invR)
-		  apply simp
+                 apply simp
                  apply simp
                  apply (rule ccorres_split_throws)
                   apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
@@ -911,7 +913,7 @@ lemma finaliseSlot_ccorres:
           apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of
                          split: option.split)
           apply (auto dest!: ctes_of_valid'
-                       simp: valid_cap'_def maxIRQ_def Platform.maxIRQ_def
+                       simp: valid_cap'_def Kernel_C.maxIRQ_def ARM.maxIRQ_def
                              unat_ucast word_le_nat_alt)[1]
          apply (clarsimp dest!: isCapDs)
          subgoal by (auto dest!: valid_capAligned ctes_of_valid'
@@ -973,7 +975,7 @@ lemma cteRevoke_ccorres1:
          apply (clarsimp simp: cte_wp_at_ctes_of)
          apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])         
          apply (simp add: typ_heap_simps)
-         apply (clarsimp simp: ccte_relation_def option_map_Some_eq2)
+         apply (clarsimp simp: ccte_relation_def map_option_Some_eq2)
         apply ceqv
        apply (rule ccorres_rhs_assoc2)+
        apply (rule iffD1 [OF ccorres_expand_while_iff_Seq2])

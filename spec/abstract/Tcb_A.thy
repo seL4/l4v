@@ -18,6 +18,13 @@ theory Tcb_A
 imports TcbAcc_A Schedule_A
 begin
 
+context begin interpretation Arch .
+
+requalify_consts
+  arch_activate_idle_thread
+
+end
+
 section "Activating Threads"
 
 text {* Threads that are active always have a master Reply capability to

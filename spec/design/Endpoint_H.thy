@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Endpoint_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -42,7 +44,7 @@ defs sendIPC_def:
                 setEndpoint epptr $ SendEP $ queue @ [thread]
             od)
             else  return ()
-            | RecvEP v1 \<Rightarrow> (case v1 of dest # queue \<Rightarrow>  (do
+            | RecvEP v3 \<Rightarrow> (case v3 of dest # queue \<Rightarrow>  (do
                 setEndpoint epptr $ (case queue of
                       [] \<Rightarrow>   IdleEP
                     | _ \<Rightarrow>   RecvEP queue

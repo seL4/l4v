@@ -12,6 +12,8 @@ theory Intent_DR
 imports Corres_D
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition not_idle_thread:: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where "not_idle_thread x \<equiv> (\<lambda>s. x \<noteq> idle_thread s)"
 
@@ -2197,5 +2199,7 @@ lemma dcorres_store_word_conservative:
   apply (rule corres_guard_imp[OF store_word_corres])
     apply simp+
   done
+
+end
 
 end

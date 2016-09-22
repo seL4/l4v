@@ -12,6 +12,8 @@ theory UserOp_IF
 imports Syscall_IF "../access-control/ADT_AC"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 text {*
   This theory defines an enhanced @{term do_user_op} function for the
   automaton used for the information flow proofs. This enhanced model of
@@ -500,7 +502,7 @@ lemma data_at_same_size:
   done
 qed
 
-lemma valid_pdpt_align_ptD: 
+lemma valid_pdpt_align_ptD:
   "\<lbrakk>kheap s ptr = Some (ArchObj (PageTable pt));valid_pdpt_objs s; pt a = entry\<rbrakk> \<Longrightarrow> is_aligned a (pte_range_sz entry)"
   apply (drule(1) valid_pdpt_objs_ptD)
   apply (clarsimp simp:entries_align_def)
@@ -1170,4 +1172,6 @@ lemma do_user_op_reads_respects_g:
     apply (clarsimp simp:context_matches_state_def comp_def  reads_equiv_g_def globals_equiv_def)
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_def)
   done
+end
+
 end

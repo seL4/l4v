@@ -12,6 +12,8 @@ theory Finalise_AC
 imports Arch_AC
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma tcb_sched_action_dequeue_integrity[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and K (is_subject aag thread)\<rbrace>
     tcb_sched_action tcb_sched_dequeue thread
@@ -814,7 +816,7 @@ lemma arch_recycle_cap_respects:
      -- "clag from Finalise_R.arch_recycle_cap_corres"
    apply (cases slot, simp)
    apply (intro exI, erule cte_wp_at_weakenE)
-   apply (clarsimp simp: is_cap_simps word32_shift_by_2 upto_enum_step_def split: split_if_asm)
+   apply (clarsimp simp: is_cap_simps word_shift_by_2 upto_enum_step_def split: split_if_asm)
    apply (rule conjunct2[OF is_aligned_add_helper[OF _ shiftl_less_t2n]],
      simp_all add: pt_bits_def pageBits_def )[1]
    apply unat_arith
@@ -1303,5 +1305,7 @@ lemma invoke_cnode_pas_refined:
                     | drule auth_derived_caps_of_state_impls
                     | fastforce intro: cap_cur_auth_caps_of_state )+
   done
+
+end
 
 end

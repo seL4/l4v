@@ -117,7 +117,7 @@ decode_irq_handler_invocation cap cap_ref caps (IrqHandlerSetEndpointIntent)
 
 lemma decode_irq_control_issue_irq_rv:
 "\<lbrace>\<lambda>s. P (IssueIrqHandler irq target_ref (cap_object root_cap, offset index r)) s \<and>
-        caps = (root_cap, root_ptr)#xs \<and> (unat depth) \<le> WordSetup.word_bits \<and> 0 < (unat depth) \<and>
+        caps = (root_cap, root_ptr)#xs \<and> (unat depth) \<le> word_bits \<and> 0 < (unat depth) \<and>
          <\<box> (r, (unat depth)) : root_cap index \<mapsto>u cap \<and>* R> s\<rbrace>
            decode_irq_control_invocation target target_ref caps (IrqControlIssueIrqHandlerIntent irq index depth) \<lbrace>P\<rbrace>, -"
   apply (clarsimp simp: decode_irq_control_invocation_def)
@@ -164,13 +164,13 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
          cap_object root_cap \<mapsto>f CNode (empty_cnode root_size) \<and>*
          (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cap \<and>*
           control_ptr \<mapsto>c c_cap \<and>* target_ptr \<mapsto>c target_cap \<and>* root_ptr \<mapsto>c root_cap \<and>* R  \<guillemotright>
-              and K ( \<not> ep_related_cap c_cap  \<and> one_lvl_lookup root_cap WordSetup.word_bits root_size \<and>
+              and K ( \<not> ep_related_cap c_cap  \<and> one_lvl_lookup root_cap word_bits root_size \<and>
               one_lvl_lookup root_cap (unat node_depth) root_size \<and>
               guard_equal root_cap node_index (unat node_depth) \<and>
-              guard_equal root_cap root WordSetup.word_bits  \<and>
-              guard_equal root_cap control_cap WordSetup.word_bits \<and>
-              guard_equal root_cap node_index WordSetup.word_bits \<and>
-              unat node_depth \<le> WordSetup.word_bits \<and> 0 < unat node_depth \<and>
+              guard_equal root_cap root word_bits  \<and>
+              guard_equal root_cap control_cap word_bits \<and>
+              guard_equal root_cap node_index word_bits \<and>
+              unat node_depth \<le> word_bits \<and> 0 < unat node_depth \<and>
               is_irqcontrol_cap c_cap \<and> is_cnode_cap root_cap \<and> is_cnode_cap root_cap)\<rbrace>
         seL4_IRQControl_Get control_cap irq root node_index node_depth
         \<lbrace>\<lambda>fail s. \<guillemotleft> root_tcb_id \<mapsto>f root_tcb \<and>*
@@ -325,9 +325,9 @@ lemma seL4_IRQHandler_SetEndpoint_wp_helper:
 
 shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>* irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap' \<and>*
          cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap  \<and>* (endpoint_ptr) \<mapsto>c endpoint_cap \<and>* irq_ptr \<mapsto>c irq_cap \<and>* R \<guillemotright>
-              and K (\<not> ep_related_cap cap' \<and> \<not> ep_related_cap irq_cap \<and> \<not>is_untyped_cap endpoint_cap \<and> \<not>is_memory_cap endpoint_cap \<and> one_lvl_lookup cnode_cap WordSetup.word_bits root_size \<and>
-              guard_equal cnode_cap endpoint_cptr WordSetup.word_bits \<and> is_ntfn_cap endpoint_cap \<and>
-              guard_equal cnode_cap irq_handler_cap WordSetup.word_bits \<and>
+              and K (\<not> ep_related_cap cap' \<and> \<not> ep_related_cap irq_cap \<and> \<not>is_untyped_cap endpoint_cap \<and> \<not>is_memory_cap endpoint_cap \<and> one_lvl_lookup cnode_cap word_bits root_size \<and>
+              guard_equal cnode_cap endpoint_cptr word_bits \<and> is_ntfn_cap endpoint_cap \<and>
+              guard_equal cnode_cap irq_handler_cap word_bits \<and>
               is_cnode_cap cnode_cap \<and> is_irqhandler_cap irq_cap  )\<rbrace>
         seL4_IRQHandler_SetEndpoint irq_handler_cap endpoint_cptr
         \<lbrace>\<lambda>fail s. \<guillemotleft> root_tcb_id \<mapsto>f root_tcb \<and>*
@@ -458,9 +458,9 @@ lemma seL4_IRQHandler_SetEndpoint_wp:
 
      \<not> ep_related_cap old_cap \<and>
 
-     one_lvl_lookup cnode_cap WordSetup.word_bits root_size \<and>
-     guard_equal cnode_cap endpoint_cptr WordSetup.word_bits \<and>
-     guard_equal cnode_cap irq_handler_cptr WordSetup.word_bits \<and>
+     one_lvl_lookup cnode_cap word_bits root_size \<and>
+     guard_equal cnode_cap endpoint_cptr word_bits \<and>
+     guard_equal cnode_cap irq_handler_cptr word_bits \<and>
      offset endpoint_cptr root_size = endpoint_slot \<and>
      offset irq_handler_cptr root_size = irq_handler_slot)\<rbrace>
     seL4_IRQHandler_SetEndpoint irq_handler_cptr endpoint_cptr

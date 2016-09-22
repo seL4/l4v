@@ -19,10 +19,36 @@ imports
   Config_H
 begin
 
-#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=ArchThreadDecls_H bodies_only NOT doNormalTransfer doIPCTransfer doReplyTransfer doNormalTransfer transferCaps transferCapsToSlots
+context Arch begin
 
-#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=ArchThreadDecls_H ONLY transferCapsToSlots
+requalify_consts
+  activateIdleThread
+  configureIdleThread
+  switchToIdleThread
+  switchToThread
 
-#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=ArchThreadDecls_H bodies_only ONLY doNormalTransfer doIPCTransfer doReplyTransfer doNormalTransfer transferCaps
+context begin global_naming global
+
+requalify_consts
+  ThreadDecls_H.configureIdleThread
+  ThreadDecls_H.switchToIdleThread
+  ThreadDecls_H.switchToThread
+
+end
+
+end
+
+context begin interpretation Arch .
+
+requalify_consts
+  capRegister
+
+end
+
+#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=Arch bodies_only NOT doNormalTransfer doIPCTransfer doReplyTransfer doNormalTransfer transferCaps transferCapsToSlots
+
+#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=Arch ONLY transferCapsToSlots
+
+#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=Arch bodies_only ONLY doNormalTransfer doIPCTransfer doReplyTransfer doNormalTransfer transferCaps
 
 end

@@ -19,29 +19,6 @@ fun warn s = (TextIO.output(TextIO.stdErr, s^"\n");
               TextIO.flushOut TextIO.stdErr)
 val execname = CommandLine.name
 
-fun usage() = die ("Usage: \n  "^execname()^
-                   " [--cpp=path|--nocpp] [-v<verboseness>] [-l<int>] [-I<include-dir>]* filename\n\
-                   \Use -l to adjust error lookahead.  (The higher the number, the more the parser\n\
-                   \will try to make sense of stuff with parse errors.)\n\
-                   \\n\
-                   \For no analyses at all (not even typechecking), add --rawsyntaxonly\n\
-                   \Alternatively, add any of the following for additional analyses:\n\
-                   \  --addressed_vars\n\
-                   \  --bogus_const\n\
-                   \  --bogus_pure\n\
-                   \  --dotfile\n\
-                   \  --embedded_fncalls\n\
-                   \  --fnslocs\n\
-                   \  --fnspecs\n\
-                   \  --mmbytes\n\
-                   \  --mmwords\n\
-                   \  --modifies\n\
-                   \  --protoes\n\
-                   \  --reads\n\
-                   \  --toposort\n\
-                   \  --unannotated_protoes\n\
-                   \  --uncalledfns\n\
-                   \  --unmodifiedglobs")
 
 val _ = Feedback.errorThreshold := NONE;
 val _ = Feedback.informf := (fn s => (TextIO.output(TextIO.stdOut, s);
@@ -402,6 +379,19 @@ in
   recurse ast
 end
 
+fun print_ast cse ast = let
+  open Absyn_Serial
+
+  fun serial_defn (FnDefn ((retty,fnm),params,specs,body))
+    = Nm ("Function", [varspec_serial (retty,fnm),
+        list_serial varspec_serial params,
+        list_serial fnspec_serial specs,
+        list_serial bi_serial (node body)])
+    | serial_defn (Decl dw) = decl_serial (node dw)
+  fun print_lines ss = app print (map (fn s => s ^ "\n") ss)
+in
+  app (print_lines o lines_serial o serial_defn) ast
+end
 
 val analyses = ref ([] : (ProgramAnalysis.csenv -> Absyn.ext_decl list -> unit) list)
 val includes = ref ([] : string list)
@@ -413,45 +403,65 @@ fun add_cse_analysis f = analyses := (fn cse => fn ast => f cse) :: !analyses
 
 val cpp = ref (SOME "/usr/bin/cpp")
 val parse_only = ref false
+val underscore_idents = ref false
+val show_help = ref false
+val bad_option = ref false
+val munge_info_fname = ref (NONE : string option)
 
-fun handler sopt =
-    case sopt of
-      ("h", _) => usage()
-    | ("?", _) => usage()
-    | ("I",SOME dir) => includes := dir:: !includes
-    | ("v",SOME v) => let
-      in
-        case Int.fromString v of
-          NONE => usage()
-        | SOME v_i => verbosity := v_i
-      end
-    | ("l", SOME l) => let
-      in
-        case Int.fromString l of
-            NONE => usage()
-          | SOME v_i => error_lookahead := v_i
-      end
-    | ("addressed_vars", NONE) => add_cse_analysis print_addressed_vars
-    | ("bogus_const", NONE) => add_cse_analysis print_bogus_consts
-    | ("bogus_pure", NONE) => add_cse_analysis print_bogus_pures
-    | ("cpp", SOME v) => if v = "" then cpp := NONE else cpp := SOME v
-    | ("embedded_fncalls", NONE) => add_cse_analysis print_embedded_fncalls
-    | ("fnslocs", NONE) => add_analysis print_fnslocs
-    | ("fnspecs", NONE) => add_cse_analysis print_fnspecs
-    | ("mmbytes", NONE) => add_cse_analysis mmsizes
-    | ("modifies", NONE) => add_cse_analysis print_modifies
-    | ("nolinedirectives", NONE) =>
-         (SourceFile.observe_line_directives := false)
-    | ("nocpp", NONE) => (cpp := NONE)
-    | ("protoes", NONE) => add_cse_analysis print_protoes
-    | ("reads", NONE) => add_cse_analysis print_reads
-    | ("toposort", NONE) => add_cse_analysis produce_toposort
-    | ("dotfile", NONE) => add_cse_analysis produce_dotfile
-    | ("unannotated_protoes", NONE) => add_cse_analysis print_unannotated_protoes
-    | ("uncalledfns", NONE) => add_cse_analysis print_uncalledfns
-    | ("unmodifiedglobs", NONE) => add_cse_analysis print_unmodified_globals
-    | ("rawsyntaxonly", NONE) => (parse_only := true)
-    | _ => usage()
+val options = let
+  open GetOpt
+  fun intref r s =
+    case Int.fromString s of
+        NONE => (show_help := true; bad_option := true)
+      | SOME i => r := i
+  fun cse_analysis nm f =
+    {short = "", long = [nm], help = "Do "^nm^" analysis",
+     desc = NoArg (fn () => add_cse_analysis f)}
+  fun ast_analysis nm f =
+    {short = "", long = [nm], help = "Do "^nm^" analysis",
+     desc = NoArg (fn () => add_analysis f)}
+in
+  [{short = "h?", long = ["help"], help = "Show usage information",
+    desc = NoArg (fn () => show_help := true)},
+   {short = "I", long = [], help = "Add include directory (repeatable)",
+    desc = ReqArg ((fn dir => includes := dir :: !includes), "directory")},
+   {short = "v", long = [], help = "Set parser error verbosity",
+    desc = ReqArg (intref verbosity, "number")},
+   {short = "l", long = [], help = "Set parser lookahead",
+    desc = ReqArg (intref error_lookahead, "number")},
+   cse_analysis "addressed_vars" print_addressed_vars,
+   cse_analysis "bogus_const" print_bogus_consts,
+   cse_analysis "bogus_pure" print_bogus_pures,
+   {short = "", long = ["cpp"], help = "Set cpp path (see also --nocpp)",
+    desc = ReqArg ((fn p => cpp := SOME p), "path")},
+   cse_analysis "embedded_fncalls" print_embedded_fncalls,
+   ast_analysis "fnslocs" print_fnslocs,
+   cse_analysis "fnspecs" print_fnspecs,
+   cse_analysis "mmbytes" mmsizes,
+   cse_analysis "modifies" print_modifies,
+   {short = "", long = ["munge_info_fname"], help = "Path for munge info",
+    desc = ReqArg ((fn p => munge_info_fname := SOME p), "path")},
+   {short = "", long = ["nocpp"], help = "Don't use cpp",
+    desc = NoArg (fn () => cpp := NONE)},
+   {short = "", long = ["nolinedirectives"], help = "Ignore #line directives",
+    desc = NoArg (fn () => SourceFile.observe_line_directives := false)},
+   cse_analysis "protoes"             print_protoes,
+   {short = "", long = ["rawsyntaxonly"], help = "Don't perform any analyses",
+    desc = NoArg (fn () => parse_only := true)},
+   {short = "", long = ["underscore_idents"], help = "Allow identifiers starting with underscores",
+    desc = NoArg (fn () => underscore_idents := true)},
+   cse_analysis "reads" print_reads,
+   cse_analysis "toposort" produce_toposort,
+   cse_analysis "produce dotfile" produce_dotfile,
+   cse_analysis "unannotated_protoes" print_unannotated_protoes,
+   cse_analysis "uncalledfns" print_uncalledfns,
+   cse_analysis "unmodifiedglobs" print_unmodified_globals,
+   ast_analysis "ast" print_ast
+  ]
+end
+
+
+
 
 fun docpp (SOME p) {includes, filename} =
   let
@@ -466,12 +476,34 @@ fun docpp (SOME p) {includes, filename} =
   end
   | docpp NONE {filename, ...} = filename
 
+val usage_msg = GetOpt.usageInfo {
+    header =
+    "Usage: \n  "^execname()^" [options] filename\n\n\
+    \Use -l to adjust error lookahead. (The higher the number, the more the parser\n\
+    \will try to make sense of stuff with parse errors.)\n\n\
+    \For no analyses at all (not even typechecking), use --rawsyntaxonly.\n\n\
+    \All options:\n",
+    options = options
+  }
+
+
+
 fun doit args =
-    case cmdline_options handler args of
-      [] => usage()
+  let
+    val (_, realargs) =
+        GetOpt.getOpt {argOrder = GetOpt.RequireOrder, options = options,
+                       errFn = die} args
+    val _ = if !show_help then
+              (print usage_msg ; OS.Process.exit OS.Process.success)
+            else if !bad_option then die usage_msg
+            else ()
+  in
+    case realargs of
+      [] => die usage_msg
     | [fname] =>
       let
-        val (ast,n) = StrictCParser.parse (docpp (!cpp)) (!error_lookahead) (List.rev (!includes)) fname
+        val (ast,n) = StrictCParser.parse (docpp (!cpp)) (!error_lookahead)
+                                          (List.rev (!includes)) fname
       in
         if !parse_only then ()
         else
@@ -479,9 +511,10 @@ fun doit args =
             val ((ast', inits), cse) =
                 ProgramAnalysis.process_decls
                   {anon_vars = false, owners = [],
-                   munge_info_fname = NONE,
-                   allow_underscore_idents = false}
+                   munge_info_fname = !munge_info_fname,
+                   allow_underscore_idents = !underscore_idents}
                   (SyntaxTransforms.remove_typedefs ast)
+            val _ = ProgramAnalysis.export_mungedb cse
             val _ = filename := fname
             fun do_analyses alist =
                 case alist of
@@ -495,6 +528,7 @@ fun doit args =
             do_analyses (List.rev (!analyses))
           end
       end
-    | _ => usage()
+    | _ => die usage_msg
+  end
 
 end;

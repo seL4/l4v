@@ -12,6 +12,8 @@ theory Decode_IF
 imports Ipc_IF
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma data_to_obj_type_rev:
   "reads_equiv_valid_inv A aag \<top> (data_to_obj_type type)"
   unfolding data_to_obj_type_def fun_app_def arch_data_to_obj_type_def
@@ -719,5 +721,7 @@ lemma decode_invocation_reads_respects_f:
 crunch globals_equiv: decode_invocation "globals_equiv st"
 
 lemmas decode_invocation_reads_respects_f_g = reads_respects_f_g[OF decode_invocation_reads_respects_f doesnt_touch_globalsI, where Q="\<top>", simplified, OF decode_invocation_globals_equiv]
+
+end
 
 end

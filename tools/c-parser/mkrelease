@@ -1,5 +1,14 @@
 #!/bin/bash
 #
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+#
 # Generate a standalone tarball of the C parser.
 #
 
@@ -85,13 +94,9 @@ git -C ${TOPLEVEL_DIR} ls-files | grep ^tools/c-parser |
 
 
 echo "Copying misc files"
-cp -v lib/Apply_Trace.thy lib/Apply_Trace_Cmd.thy lib/DistinctProp.thy lib/WordEnum.thy lib/Lib.thy \
-      lib/Eisbach_Compat.thy lib/Eisbach_Methods.thy lib/Enumeration.thy lib/WordLib.thy \
-      lib/NICTACompat.thy lib/Rule_By_Method.thy lib/StringOrd.thy lib/SignedWords.thy \
-   "$outputdir/src/lib"
-mkdir -p "$outputdir/src/lib/subgoal_focus"
-cp -v lib/subgoal_focus/Subgoal_Focus.thy lib/subgoal_focus/Subgoal_Methods.thy \
-  "$outputdir/src/lib/subgoal_focus"
+misc/scripts/thydeps -T text -o - tools/c-parser/CTranslation.thy |
+    grep '^lib/' |
+    xargs '-d\n' cp -v --parents -t "$outputdir/src"
 
 echo "Rearranging directories"
 /bin/mv -v $outputdir/src/tools/c-parser/README $outputdir

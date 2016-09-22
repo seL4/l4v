@@ -10,6 +10,9 @@
 
 (*
  * Rewrite L2 specifications to use a higher-level ("lifted") heap representation.
+ *
+ * The main interface to this module is translate (and inner functions
+ * convert and define). See AutoCorresUtil for a conceptual overview.
  *)
 
 structure HeapLift =
@@ -52,27 +55,27 @@ fun get_heap_valid_setter (heap_info : heap_info) T =
   | NONE => Utils.invalid_typ "heap type for valid setter" T
 
 (* Return the heap type used by a function. *)
-fun get_expected_fn_state_type heap_info unliftable_functions fn_name =
-  if Symset.contains unliftable_functions fn_name then
-    #old_globals_type heap_info
-  else
+fun get_expected_fn_state_type heap_info is_function_lifted fn_name =
+  if is_function_lifted fn_name then
     #globals_type heap_info
+  else
+    #old_globals_type heap_info
 
 (* Get a state translation function for the given function. *)
-fun get_expected_st heap_info unliftable_functions fn_name =
-  if Symset.contains unliftable_functions fn_name then
-    @{mk_term "id :: ?'a => ?'a" ('a)} (#old_globals_type heap_info)
-  else
+fun get_expected_st heap_info is_function_lifted fn_name =
+  if is_function_lifted fn_name then
     (#lift_fn_full heap_info)
+  else
+    @{mk_term "id :: ?'a => ?'a" ('a)} (#old_globals_type heap_info)
 
 (* Get the expected type of a function from its name. *)
-fun get_expected_hl_fn_type prog_info fn_info (heap_info : HeapLiftBase.heap_info)
-    unliftable_functions fn_name =
+fun get_expected_hl_fn_type prog_info l2_infos (heap_info : HeapLiftBase.heap_info)
+                            is_function_lifted fn_name =
 let
-  val fn_def = FunctionInfo.get_function_def fn_info fn_name
+  val fn_def = the (Symtab.lookup l2_infos fn_name)
   val fn_params_typ = map snd (#args fn_def)
   (* Fill in the measure argument and return type *)
-  val globals_typ = get_expected_fn_state_type heap_info unliftable_functions fn_name
+  val globals_typ = get_expected_fn_state_type heap_info is_function_lifted fn_name
   val fn_ret_typ = #return_type fn_def
   val measure_typ = @{typ "nat"}
   val fn_typ = (measure_typ :: fn_params_typ)
@@ -82,55 +85,39 @@ in
 end
 
 (* Get the expected theorem that will be generated about a function. *)
-fun get_expected_hl_fn_thm prog_info fn_info (heap_info : HeapLiftBase.heap_info)
-    unliftable_functions ctxt fn_name function_free fn_args _ measure_var =
+fun get_expected_hl_fn_thm prog_info l2_infos (heap_info : HeapLiftBase.heap_info)
+    is_function_lifted ctxt fn_name function_free fn_args _ measure_var =
 let
   (* Get L2 const *)
-  val l2_def = FunctionInfo.get_function_def fn_info fn_name
+  val l2_def = the (Symtab.lookup l2_infos fn_name)
   val l2_term = betapplys (#const l2_def, measure_var :: fn_args)
 
   (* Get expected HL const. *)
   val hl_term = betapplys (function_free, measure_var :: fn_args)
 in
   @{mk_term "Trueprop (L2Tcorres ?st ?A ?C)" (st, A, C)}
-    (get_expected_st heap_info unliftable_functions fn_name, hl_term, l2_term)
+    (get_expected_st heap_info is_function_lifted fn_name, hl_term, l2_term)
 end
 
 (* Get arguments passed into the function. *)
-fun get_expected_hl_fn_args prog_info fn_info fn_name =
-  #args (FunctionInfo.get_function_def fn_info fn_name)
+fun get_expected_hl_fn_args prog_info l2_infos fn_name =
+  #args (the (Symtab.lookup l2_infos fn_name))
 
 (*
- * Use some heuristics to determine which functions cannot be lifted.
+ * Guess whether a function can be lifted.
  *
  * For example, we probably can't lift functions that introspect the heap-type
  * data "hrs_htd".
  *)
-fun get_unliftable_functions lthy prog_info fn_info =
+fun can_lift_function lthy prog_info fn_info =
 let
+  val t = #definition fn_info |> Thm.prop_of |> Utils.rhs_of
   (* Determine if everything in term "t" appears valid for lifting. *)
-  fun can_lift_term t =
-  let
-    val bad_consts = [@{const_name hrs_htd}, @{const_name hrs_htd_update}, @{const_name ptr_retyp}]
-    fun term_contains_const_name c t =
-      exists_Const (fn (const_name, _) => c = const_name) t
-  in
-    not (exists (fn c => term_contains_const_name c t) bad_consts)
-  end
-
-  (* Find all functions that are directly unliftable. *)
-  val raw_unliftable_functions =
-    AutoCorresUtil.map_all lthy fn_info (fn fn_name =>
-        (fn_name,
-            FunctionInfo.get_function_def fn_info fn_name
-            |> #definition
-            |> Thm.prop_of
-            |> Utils.rhs_of
-            |> can_lift_term))
-    |> filter (not o snd)
-    |> map fst
+  val bad_consts = [@{const_name hrs_htd}, @{const_name hrs_htd_update}, @{const_name ptr_retyp}]
+  fun term_contains_const_name c t =
+    exists_Const (fn (const_name, _) => c = const_name) t
 in
-  Symset.make raw_unliftable_functions
+  not (exists (fn c => term_contains_const_name c t) bad_consts)
 end
 
 (*
@@ -203,11 +190,12 @@ end
  *
  *  * On that note, lemmas relating structs and struct fields
  *    (foo vs foo.field) are not being generated.
+ *    * TODO: this problem appears in Suzuki.thy
  *
  *  * The syntax looks as terrible as c-parser's. Well, at least you won't need
  *    to subscript greek letters.
  *
- *  * Isabelle doesn't like overloaded syntax.
+ *  * Isabelle doesn't like overloaded syntax. Issue VER-412
  *)
 
 exception NO_GETTER_SETTER (* Not visible externally *)
@@ -370,84 +358,11 @@ fun eta_rhs lthy thm = let
                (fn params => simp_tac (put_simpset HOL_basic_ss (#context params) addsimps thm :: @{thms atomize_eq ext}) 1)
 in thm' end
 
-(* Convert a program to use a lifted heap. *)
-fun system_heap_lift
-    (filename : string)
-    (prog_info : ProgramInfo.prog_info)
-    (fn_info : FunctionInfo.fn_info)
-    (no_heap_abs : Symset.key Symset.set)
-    (force_heap_abs : Symset.key Symset.set)
-    (make_lifted_globals_field_name : string -> string)
-    (heap_abs_syntax : bool)
-    (keep_going : bool)
-    (trace_funcs : string list)
-    (do_opt : bool)
-    (trace_opt : bool)
-    (hl_function_name : string -> string)
-    (gen_word_heaps : bool)
-    lthy =
-let
-  (* Create base definitions for the new program, including a new
-   * "globals" record with a lifted heap. *)
-  val (heap_info, lthy) = HeapLiftBase.setup prog_info fn_info make_lifted_globals_field_name gen_word_heaps lthy
+(* Extract the abstract term out of a L2Tcorres thm. *)
+fun dest_L2Tcorres_term_abs @{term_pat "L2Tcorres _ ?t _"} = t
 
-  (* Do some extra lifting and create syntax (see field_syntax comment). *)
-  val (syntax_lift_rules, lthy) =
-    if not heap_abs_syntax then
-      ([], lthy)
-    else
-      Utils.exec_background_result (fn lthy =>
-        let
-            fun optcat xs = List.concat (map the_list xs)
-
-            (* Define the new heap operations and their syntax. *)
-            val (new_getters, new_setters, lthy) =
-                make_heap_syntax heap_info lthy
-
-            (* Make simplification thms and add them to the simpset. *)
-            val update_thms = map (fn get => map (fn set => new_heap_update_thm get set lthy)
-                                                 (Symtab.dest new_setters |> map snd))
-                                  (Symtab.dest new_getters |> map snd)
-                              |> List.concat
-            val valid_thms = map (fn valid => map (fn set => new_heap_valid_thm valid set lthy)
-                                                  (Symtab.dest new_setters |> map snd))
-                                 (Typtab.dest (#heap_valid_getters heap_info) |> map snd)
-                             |> List.concat
-            val thms = update_thms @ valid_thms |> optcat
-            val lthy = Utils.simp_add thms lthy
-
-            (* Name the thms. *)
-            val (_, lthy) = Utils.define_lemmas "heap_abs_simps" thms lthy
-
-            (* Rewrite rules for converting the program. *)
-            val getter_thms = Symtab.dest new_getters |> map (#4 o snd) |> optcat
-            val setter_thms = Symtab.dest new_setters |> map (#4 o snd) |> optcat
-            val eta_setter_thms = map (eta_rhs lthy) setter_thms
-            val rewrite_thms = map (fn thm => @{thm symmetric} OF [thm])
-                                   (getter_thms @ eta_setter_thms)
-        in (rewrite_thms, lthy) end) lthy
-
-  (* Extract the abstract term out of a L2Tcorres thm. *)
-  fun dest_L2Tcorres_term_abs (_ $ _ $ t $ _ ) = t
-  fun get_body_of_thm ctxt thm =
-      Thm.concl_of (Variable.gen_all ctxt thm)
-      |> HOLogic.dest_Trueprop
-      |> dest_L2Tcorres_term_abs
-
-  (* Determine which functions cannot be lifted. *)
-  val unliftable_functions =
-        get_unliftable_functions lthy prog_info fn_info
-        |> Symset.union no_heap_abs
-        |> Symset.subtract force_heap_abs
-
-  (* TODO: explain why each function in the list isn't being lifted. *)
-  val _ =
-    if Symset.card unliftable_functions > 0 then
-      writeln ("HL: Functions cannot be lifted: "
-          ^ (commas (Symset.dest unliftable_functions)))
-    else
-      ()
-
+(* Generate lifted_globals lemmas and instantiate them into the heap lifting rules. *)
+fun lifted_globals_lemmas prog_info heap_info lthy = let
   (* Tactic to solve subgoals below. *)
   local
     (* Fetch simp rules generated by the C Parser about structures. *)
@@ -498,6 +413,9 @@ let
                  REPEAT (subgoal_solver_tac (#context params))))))
 
   (* Make thms for all types. *)
+  (* FIXME: these are currently auto-parallelised using prove_future, but perhaps
+   * we should exercise finer control over the evaluation, as prove_futures
+   * persist long after the AutoCorres command actually returns. *)
   val heap_types = (#heap_getters heap_info |> Typtab.dest |> map fst)
   val valid_typ_heap_thms = map mk_valid_typ_heap_thm heap_types
 
@@ -573,7 +491,8 @@ let
   (* Generate conversions from globals embedded directly in the "globals" and
    * "lifted_globals" record. *)
   fun mk_valid_globals_field_thm name =
-    @{mk_term "Trueprop (valid_globals_field ?st ?old_get ?old_set ?new_get ?new_set)" (st, old_get, old_set, new_get, new_set)}
+    @{mk_term "Trueprop (valid_globals_field ?st ?old_get ?old_set ?new_get ?new_set)"
+      (st, old_get, old_set, new_get, new_set)}
       (#lift_fn_full heap_info,
         Symtab.lookup (#global_field_getters heap_info) name |> the |> fst,
         Symtab.lookup (#global_field_setters heap_info) name |> the |> fst,
@@ -582,60 +501,245 @@ let
     |> (fn prop => Goal.prove_future lthy [] [] prop (fn params => subgoal_solver_tac (#context params)))
   val valid_global_field_thms = map (#1 #> mk_valid_globals_field_thm) (#global_fields heap_info)
 
-  (*
-   * Fetch rules from the theory, instantiating any rule with
-   * "valid_globals_field", "valid_typ_heap" etc with the predicates generated
-   * above.
-   *)
-  val base_rules = HeapAbsThms.get lthy
-  (* FIXME: make an attribute for these rules? *)
-  val base_nolift_rules = @{thms struct_rewrite_expr_id}
-  val [rules, nolift_rules] =
-    map (fn rules =>
-      cross_instantiate rules [
-        valid_typ_heap_thms,
-        valid_field_thms,
-        valid_global_field_thms]
-    |> filter (Thm.prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_globals_field"}, _) => true | _ => false) #> not)
-    |> filter (Thm.prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_struct_field"}, _) => true | _ => false) #> not)
-    |> filter (Thm.prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_struct_field_legacy"}, _) => true | _ => false) #> not)
-    |> filter (Thm.prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_typ_heap"}, _) => true | _ => false) #> not)
-       ) [base_rules, base_nolift_rules]
+  (* At this point, the lemmas are ready to be instantiated into the generic
+   * heap_abs rules (which will be fetched from the most recent lthy). *)
+in
+  [ valid_typ_heap_thms, valid_field_thms, valid_global_field_thms ]
+end;
 
-  (*val _ = map (fn r => @{trace} r) rules*)
+
+(*
+ * Prepare for the heap lifting phase.
+ * We need to:
+ *   - define a lifted_globals type
+ *   - prove generic heap lifting lemmas for the lifted_globals type
+ *   - define heap syntax and rewrite rules (if heap_abs_syntax is set)
+ *   - store these new results into the HeapInfo theory data
+ * Note that because we are adding definitions that are required by all
+ * conversions, we need to wait for all previous L2 conversions to finish,
+ * limiting parallelism somewhat. This requires us to modify l2_results by
+ * updating its intermediate lthys.
+ *
+ * These results are cached in the local theory, so we attempt to fetch an
+ * existing definition (in the case that we are resuming a previous run).
+ * In this scenario, we don't have to modify l2_results.
+ *)
+fun prepare_heap_lift
+    (filename : string)
+    (prog_info : ProgramInfo.prog_info)
+    (l2_results : (local_theory * FunctionInfo.function_info Symtab.table) FSeq.fseq)
+    (* An initial lthy, used to check for an existing heap_lift_setup.
+     * Also used as fallback target in the unlikely case where l2_results = [] *)
+    (lthy0 : local_theory)
+    (* We define the lifted heap for all functions in the program, even if they are
+     * not included in this translation. This allows heap lifting to work with
+     * incremental translations. *)
+    (all_simpl_infos : FunctionInfo.function_info Symtab.table)
+    (* Settings *)
+    (make_lifted_globals_field_name : string -> string)
+    (gen_word_heaps : bool)
+    (heap_abs_syntax : bool)
+    : ((local_theory * FunctionInfo.function_info Symtab.table) FSeq.fseq
+        * HeapLiftBase.heap_lift_setup) =
+let
+  (* Get target lthy for adding new definitions.
+   * This is the most recent l2_results lthy, except if there are no results,
+   * in which case the fallback lthy is used. *)
+  fun get_target_lthy l2_results fallback_lthy =
+        if FSeq.null l2_results then Option.getOpt (fallback_lthy, lthy0)
+        else fst (List.last (FSeq.list_of l2_results));
+
+  fun update_results lthy = FSeq.map (apfst (K lthy));
+
+  (* Set up heap_info and associated lemmas *)
+  val (l2_results, HL_setup, fallback_lthy) =
+      case Symtab.lookup (HeapInfo.get (Proof_Context.theory_of lthy0)) filename of
+          SOME HL_setup => (l2_results, HL_setup, NONE)
+        | NONE => let
+            val lthy = get_target_lthy l2_results NONE;
+            val (heap_info, lthy) = HeapLiftBase.setup prog_info all_simpl_infos
+                                        make_lifted_globals_field_name gen_word_heaps lthy;
+            val lifted_heap_lemmas = lifted_globals_lemmas prog_info heap_info lthy;
+            val HL_setup = { heap_info = heap_info,
+                             lifted_heap_lemmas = lifted_heap_lemmas,
+                             heap_syntax_rewrs = [] };
+            val lthy = Local_Theory.background_theory (
+                  HeapInfo.map (fn tbl => Symtab.update (filename, HL_setup) tbl)) lthy;
+            in (update_results lthy l2_results, HL_setup, SOME lthy) end;
+
+  (* Do some extra lifting and create syntax (see field_syntax comment).
+   * We do this separately because heap_abs_syntax could be enabled halfway
+   * through an incremental translation. *)
+  val (l2_results, HL_setup, fallback_lthy) =
+    if not heap_abs_syntax orelse not (null (#heap_syntax_rewrs HL_setup))
+    then (l2_results, HL_setup, fallback_lthy)
+    else
+      let val lthy = get_target_lthy l2_results fallback_lthy;
+          val (heap_syntax_rewrs, lthy) =
+            Utils.exec_background_result (fn lthy => let
+                val optcat = List.mapPartial I
+                val heap_info = #heap_info HL_setup
+
+                (* Define the new heap operations and their syntax. *)
+                val (new_getters, new_setters, lthy) =
+                    make_heap_syntax heap_info lthy
+
+                (* Make simplification thms and add them to the simpset. *)
+                val update_thms = map (fn get => map (fn set => new_heap_update_thm get set lthy)
+                                                     (Symtab.dest new_setters |> map snd))
+                                      (Symtab.dest new_getters |> map snd)
+                                  |> List.concat
+                val valid_thms = map (fn valid => map (fn set => new_heap_valid_thm valid set lthy)
+                                                      (Symtab.dest new_setters |> map snd))
+                                     (Typtab.dest (#heap_valid_getters heap_info) |> map snd)
+                                 |> List.concat
+                val thms = update_thms @ valid_thms |> optcat
+                val lthy = Utils.simp_add thms lthy
+
+                (* Name the thms. (FIXME: do this elsewhere?) *)
+                val (_, lthy) = Utils.define_lemmas "heap_abs_simps" thms lthy
+
+                (* Rewrite rules for converting the program. *)
+                val getter_thms = Symtab.dest new_getters |> map (#4 o snd) |> optcat
+                val setter_thms = Symtab.dest new_setters |> map (#4 o snd) |> optcat
+                val eta_setter_thms = map (eta_rhs lthy) setter_thms
+                val rewrite_thms = map (fn thm => @{thm symmetric} OF [thm])
+                                       (getter_thms @ eta_setter_thms)
+            in (rewrite_thms, lthy) end) lthy;
+      val HL_setup = { heap_info = #heap_info HL_setup,
+                       lifted_heap_lemmas = #lifted_heap_lemmas HL_setup,
+                       heap_syntax_rewrs = heap_syntax_rewrs };
+      val lthy = Local_Theory.background_theory (
+            HeapInfo.map (fn tbl => Symtab.update (filename, HL_setup) tbl)) lthy;
+      in (update_results lthy l2_results, HL_setup, SOME lthy) end;
+
+  in (l2_results, HL_setup) end;
+
+(* Convert a program to use a lifted heap. *)
+fun translate
+    (filename : string)
+    (prog_info : ProgramInfo.prog_info)
+    (l2_results : FunctionInfo.phase_results)
+    (existing_l2_infos : FunctionInfo.function_info Symtab.table)
+    (existing_hl_infos : FunctionInfo.function_info Symtab.table)
+    (HL_setup : HeapLiftBase.heap_lift_setup)
+    (no_heap_abs : Symset.key Symset.set)
+    (force_heap_abs : Symset.key Symset.set)
+    (heap_abs_syntax : bool)
+    (keep_going : bool)
+    (trace_funcs : string list)
+    (do_opt : bool)
+    (trace_opt : bool)
+    (add_trace: string -> string -> AutoCorresData.Trace -> unit)
+    (hl_function_name : string -> string)
+    : FunctionInfo.phase_results =
+if FSeq.null l2_results then FSeq.empty () else
+let
+  (* lthy for conversion rules. This needs to be (at latest) the earliest lthy
+   * result so that the rules can be used in all conversions *)
+  val lthy0 = fst (FSeq.hd l2_results);
+  val heap_info = #heap_info HL_setup;
+
+  (*
+   * Fetch rules from the theory, instantiating any rule with the
+   * lifted_globals lemmas for "valid_globals_field", "valid_typ_heap" etc.
+   * that we generated previously.
+   *)
+  val base_rules = Utils.get_rules lthy0 @{named_theorems heap_abs}
+  val rules =
+      cross_instantiate base_rules (#lifted_heap_lemmas HL_setup)
+      (* Remove rules that haven't been fully instantiated *)
+      |> filter_out (Thm.prop_of #> exists_subterm (fn x =>
+           case x of Const (@{const_name "valid_globals_field"}, _) => true
+                   | Const (@{const_name "valid_struct_field"}, _) => true
+                   | Const (@{const_name "valid_struct_field_legacy"}, _) => true
+                   | Const (@{const_name "valid_typ_heap"}, _) => true
+                   | _ => false));
+
+  (* We only use this blanket rule for non-lifted functions;
+   * liftable expressions can be handled by specific struct_rewrite rules *)
+  val nolift_rules = @{thms struct_rewrite_expr_id}
+
+  (* This does a linear search. We will only need it in is_function_lifted, though *)
+  fun lookup_l2_results f_name =
+        FSeq.find (fn (_, l2_infos) => Symtab.defined l2_infos f_name) l2_results
+        |> the' ("HL: missing L2 results for " ^ f_name);
+  fun is_function_lifted f_name =
+        case Symtab.lookup existing_hl_infos f_name of
+            SOME info => let
+              (* We heap-lifted this function earlier. Check its state type. *)
+              val body = #definition info |> Thm.prop_of |> Utils.rhs_of_eq;
+              val stT = LocalVarExtract.l2monad_state_type body;
+              in stT = #globals_type heap_info end
+          | NONE => let
+              val (lthy, l2_infos) = lookup_l2_results f_name;
+              val can_lift =
+                    if can_lift_function lthy prog_info (the (Symtab.lookup l2_infos f_name))
+                    then not (Symset.contains no_heap_abs f_name)
+                    else if Symset.contains force_heap_abs f_name
+                         then true
+                         else (* Report functions that we're not lifting,
+                               * but not if the user has overridden explicitly *)
+                              (if Symset.contains no_heap_abs f_name then () else
+                                 writeln ("HL: disabling heap lift for: " ^ f_name ^
+                                          " (use force_heap_abs to enable)");
+                               false);
+              in can_lift end;
+  (* Cache answers for which functions we are lifting. *)
+  val is_function_lifted = String_Memo.memo is_function_lifted;
 
   (* Convert to new heap format. *)
-  fun convert ctxt fn_name callee_terms measure_var fn_args =
+  fun convert lthy l2_infos f: AutoCorresUtil.convert_result =
   let
+    val f_l2_info = the (Symtab.lookup l2_infos f);
+
+    (* Fix measure variable. *)
+    val ([measure_var_name], lthy) = Variable.variant_fixes ["rec_measure'"] lthy;
+    val measure_var = Free (measure_var_name, AutoCorresUtil.measureT);
+
+  (* Add callee assumptions. *)
+    val (lthy, export_thm, callee_terms) =
+      AutoCorresUtil.assume_called_functions_corres lthy
+        (#callees f_l2_info) (#rec_callees f_l2_info)
+        (get_expected_hl_fn_type prog_info l2_infos heap_info is_function_lifted)
+        (get_expected_hl_fn_thm prog_info l2_infos heap_info is_function_lifted)
+        (get_expected_hl_fn_args prog_info l2_infos)
+        hl_function_name
+        measure_var;
+
+    (* Fix argument variables. *)
+    val new_fn_args = get_expected_hl_fn_args prog_info l2_infos f;
+    val (arg_names, lthy) = Variable.variant_fixes (map fst new_fn_args) lthy;
+    val arg_frees = map Free (arg_names ~~ map snd new_fn_args);
+
     (* Fetch the function definition. *)
-    val fn_def = FunctionInfo.get_function_def fn_info fn_name
     val l2_body_def =
-        #definition fn_def
+        #definition f_l2_info
         (* Instantiate the arguments. *)
-        |> Utils.inst_args ctxt (map (Thm.cterm_of ctxt) (measure_var :: fn_args))
+        |> Utils.inst_args lthy (map (Thm.cterm_of lthy) (measure_var :: arg_frees))
 
     (* Get L2 body definition with function arguments. *)
-    val l2_term = betapplys (#const fn_def, measure_var :: fn_args)
+    val l2_term = betapplys (#const f_l2_info, measure_var :: arg_frees)
 
     (* Get our state translation function. *)
-    val st = get_expected_st heap_info unliftable_functions fn_name
+    val st = get_expected_st heap_info is_function_lifted f
 
     (* Generate a schematic goal. *)
     val goal = @{mk_term "Trueprop (L2Tcorres ?st ?A ?C)" (st, C)}
         (st, l2_term)
-        |> Thm.cterm_of ctxt
+        |> Thm.cterm_of lthy
         |> Goal.init
-        |> Utils.apply_tac "unfold RHS" (EqSubst.eqsubst_tac ctxt [0] [l2_body_def] 1)
+        |> Utils.apply_tac "unfold RHS" (EqSubst.eqsubst_tac lthy [0] [l2_body_def] 1)
 
-    val callee_mono_thms = Symtab.dest callee_terms |> map fst
+    val callee_mono_thms =
+        callee_terms |> map fst
         |> List.mapPartial (fn callee =>
-               if FunctionInfo.is_function_recursive fn_info callee
-               then SOME (FunctionInfo.get_function_def fn_info callee |> #mono_thm)
+               if FunctionInfo.is_function_recursive (the (Symtab.lookup l2_infos callee))
+               then #mono_thm (the (Symtab.lookup l2_infos callee))
                else NONE)
-    val rules = rules @ (map (snd #> #3) (Symtab.dest callee_terms)) @ callee_mono_thms
-    val rules = if Symset.contains unliftable_functions fn_name
-                then rules @ nolift_rules else rules
-    val fo_rules = HeapAbsFOThms.get ctxt
+    val rules = rules @ (map (snd #> #3) callee_terms) @ callee_mono_thms
+    val rules = if is_function_lifted f then rules else rules @ nolift_rules
+    val fo_rules = Utils.get_rules lthy @{named_theorems heap_abs_fo}
 
     (* Apply a conversion to the concrete side of the given L2T term.
      * By convention, the concrete side is the last argument (index ~1). *)
@@ -643,30 +747,16 @@ let
       Conv.params_conv (~1) (K (Conv.arg_conv (Utils.nth_arg_conv (~1) conv)))
 
     (* Standard tactics. *)
-    val print_debug = fn_name = ""
+    val print_debug = f = ""
     fun rtac_all r n = (APPEND_LIST (map (fn thm =>
-                          resolve_tac ctxt [thm] n THEN (fn x =>
+                          resolve_tac lthy [thm] n THEN (fn x =>
                             (if print_debug then @{trace} thm else ();
                             Seq.succeed x))) r))
 
-    fun print1_tac label t =
-      (@{trace} (
-         label ^ ": subgoal 1 of " ^ Int.toString (Logic.count_prems (term_of_thm t)),
-         Logic.get_goal (term_of_thm t) 1 |> Thm.cterm_of lthy);
-       all_tac t)
-
     (* Convert the concrete side of the given L2T term to/from first-order form. *)
-    val l2t_to_fo_tac = CONVERSION (Drule.beta_eta_conversion then_conv l2t_conc_body_conv (mk_first_order ctxt) ctxt)
-    val l2t_from_fo_tac = CONVERSION (l2t_conc_body_conv (dest_first_order ctxt then_conv Drule.beta_eta_conversion) ctxt)
+    val l2t_to_fo_tac = CONVERSION (Drule.beta_eta_conversion then_conv l2t_conc_body_conv (mk_first_order lthy) lthy)
+    val l2t_from_fo_tac = CONVERSION (l2t_conc_body_conv (dest_first_order lthy then_conv Drule.beta_eta_conversion) lthy)
     val fo_tac = ((l2t_to_fo_tac THEN' rtac_all fo_rules) THEN_ALL_NEW l2t_from_fo_tac) 1
-
-    (* If debugging enabled, print goal states when we backtrack. *)
-    val error_printed = ref 0
-    fun print_n_tac printed_ref t =
-      (if false orelse (!printed_ref >= ML_Options.get_print_depth ()) then
-        all_tac
-      else
-        (printed_ref := (!printed_ref) + 1; print_tac ctxt "Error solving subgoal")) t
 
     (*
      * Recursively solve subgoals.
@@ -678,99 +768,130 @@ let
      * leading to exponential explosion (of many different combinations of
      * "good solutions") once we hit an unsolvable subgoal.
      *)
-    fun solve_tac n =
-      (if print_debug then print1_tac fn_name else all_tac) THEN
-      DETERM ((SOLVES (
-          ((K (CHANGED ((rtac_all rules 1) APPEND (fo_tac)))) THEN_ALL_NEW solve_tac) 1))
-            ORELSE (print_n_tac error_printed THEN no_tac))
-
     val tactics =
-        if #is_simpl_wrapper fn_def
+        if #is_simpl_wrapper f_l2_info
         then (* Solver for trivial simpl wrappers. *)
-             [(@{thm L2Tcorres_id}, resolve_tac ctxt [@{thm L2Tcorres_id}] 1)]
-        else map (fn rule => (rule, resolve_tac ctxt [rule] 1)) rules
+             [(@{thm L2Tcorres_id}, resolve_tac lthy [@{thm L2Tcorres_id}] 1)]
+        else map (fn rule => (rule, resolve_tac lthy [rule] 1)) rules
              @ [(@{thm fun_app_def}, fo_tac)]
 
     val replay_failure_start = 1
     val replay_failures = Unsynchronized.ref replay_failure_start
     val (thm, trace) =
-         case AutoCorresTrace.maybe_trace_solve_tac ctxt (member (op =) trace_funcs fn_name)
+         case AutoCorresTrace.maybe_trace_solve_tac lthy (member (op =) trace_funcs f)
                 true false (K tactics) goal NONE replay_failures of
             NONE => (* intentionally generate a TRACE_SOLVE_TAC_FAIL *)
-                    (AutoCorresTrace.trace_solve_tac ctxt false false (K tactics) goal NONE (Unsynchronized.ref 0);
+                    (AutoCorresTrace.trace_solve_tac lthy false false (K tactics) goal NONE (Unsynchronized.ref 0);
                      (* never reached *) error "heap_lift fail tac: impossible")
-          | SOME (thm, [trace]) => (Goal.finish ctxt thm, trace)
+          | SOME (thm, [trace]) => (Goal.finish lthy thm, trace)
     val _ = if !replay_failures < replay_failure_start then
-              @{trace} (fn_name ^ " HL: reverted to slow replay " ^
+              warning ("HL: " ^ f ^ ": reverted to slow replay " ^
                         Int.toString(replay_failure_start - !replay_failures) ^ " time(s)") else ()
 
     (* DEBUG: make sure that all uses of field_lvalue and c_guard are rewritten.
      *        Also make sure that we cleaned up internal constants. *)
-    fun contains_const name = let
-          fun check (Const (n, _)) = n = name
-            | check (Abs (_, _, t)) = check t
-            | check (f $ x) = check f orelse check x
-            | check _ = false
-        in check end
+    fun contains_const name = exists_subterm (fn x => case x of Const (n, _) => n = name | _ => false)
     fun const_gone term name =
         if not (contains_const name term) then ()
         else Utils.TERM_non_critical keep_going
-               ("Heap lift: could not remove " ^ name ^ " in " ^ fn_name ^ ".") [term]
+               ("Heap lift: could not remove " ^ name ^ " in " ^ f ^ ".") [term]
     fun const_old_heap term name =
         if not (contains_const name term) then ()
-        else warning ("Heap lift: could not remove " ^ name ^ " in " ^ fn_name ^
+        else warning ("Heap lift: could not remove " ^ name ^ " in " ^ f ^
                       ". Output program may be unprovable.")
-    val _ = if Symset.contains unliftable_functions fn_name then []
+    val _ = if not (is_function_lifted f) then []
             else (map (const_gone (term_of_thm thm))
                       [@{const_name "heap_lift__h_val"}];
                   map (const_old_heap (term_of_thm thm))
                       [@{const_name "field_lvalue"}, @{const_name "c_guard"}]
                  )
 
-    (* Gather statistics. *)
-    val _ = Statistics.gather ctxt "HL" fn_name
-        (Thm.prop_of thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 1))
-
     (* Apply peephole optimisations to the theorem. *)
-    val _ = writeln ("Simplifying (HL) " ^ fn_name)
-    val (thm, opt_traces) = L2Opt.cleanup_thm_tagged ctxt thm (if do_opt then 0 else 2) 2 trace_opt "HL"
+    val _ = writeln ("Simplifying (HL) " ^ f)
+    val (thm, opt_traces) = L2Opt.cleanup_thm_tagged lthy thm (if do_opt then 0 else 2) 2 trace_opt "HL"
 
     (* If we created extra heap wrappers, apply them now.
      * Our simp rules don't seem to be enough for L2Opt,
      * so we cannot change the program before that. *)
-    val thm = Raw_Simplifier.rewrite_rule ctxt syntax_lift_rules thm
+    val thm = if not heap_abs_syntax then thm else
+                Raw_Simplifier.rewrite_rule lthy (#heap_syntax_rewrs HL_setup) thm
 
-    (* Gather post-simplification statistics. *)
-    val _ = Statistics.gather ctxt "HLsimp" fn_name
-        (Thm.prop_of thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 1))
+    val f_body = dest_L2Tcorres_term_abs (HOLogic.dest_Trueprop (Thm.concl_of thm));
+    (* Get actual recursive callees *)
+    val rec_callees = AutoCorresUtil.get_rec_callees callee_terms f_body;
+
+    (* Return the constants that we fixed. This will be used to process the returned body. *)
+    val callee_consts =
+          callee_terms |> map (fn (callee, (_, const, _)) => (callee, const)) |> Symtab.make;
   in
-    (get_body_of_thm ctxt thm, Variable.gen_all ctxt thm,
-     (if member (op =) trace_funcs fn_name then [("HL", AutoCorresData.RuleTrace trace)] else []) @ opt_traces)
+    { body = f_body,
+      proof = Morphism.thm export_thm thm,
+      rec_callees = rec_callees,
+      callee_consts = callee_consts,
+      arg_frees = map dest_Free (measure_var :: arg_frees),
+      traces = (if member (op =) trace_funcs f
+                then [("HL", AutoCorresData.RuleTrace trace)] else []) @ opt_traces
+    }
   end
 
-  (* Save the heap info to the theory data. *)
-  val lthy = Local_Theory.background_theory (
-	  HeapInfo.map (fn tbl =>
-	    Symtab.update (filename, heap_info) tbl)) lthy
+  (* Define a previously-converted function (or recursive function group).
+   * lthy must include all definitions from hl_callees. *)
+  fun define
+        (lthy: local_theory)
+        (l2_infos: FunctionInfo.function_info Symtab.table)
+        (hl_callees: FunctionInfo.function_info Symtab.table)
+        (funcs: AutoCorresUtil.convert_result Symtab.table)
+        : FunctionInfo.function_info Symtab.table * local_theory = let
+    val funcs' = Symtab.dest funcs |>
+          map (fn result as (name, {proof, arg_frees, ...}) =>
+                     (name, (AutoCorresUtil.abstract_fn_body l2_infos result,
+                             proof, arg_frees)));
+    val (new_thms, lthy') =
+          AutoCorresUtil.define_funcs
+              FunctionInfo.HL filename l2_infos hl_function_name
+              (get_expected_hl_fn_type prog_info l2_infos heap_info is_function_lifted)
+              (get_expected_hl_fn_thm prog_info l2_infos heap_info is_function_lifted)
+              (get_expected_hl_fn_args prog_info l2_infos)
+              @{thm L2Tcorres_recguard_0}
+              lthy (Symtab.map (K #corres_thm) hl_callees)
+              funcs';
+    val new_infos = Symtab.map (fn f_name => fn (const, def, corres_thm) => let
+          val old_info = the (Symtab.lookup l2_infos f_name);
+          in old_info
+             |> FunctionInfo.function_info_upd_phase FunctionInfo.HL
+             |> FunctionInfo.function_info_upd_const const
+             |> FunctionInfo.function_info_upd_definition def
+             |> FunctionInfo.function_info_upd_corres_thm corres_thm
+             |> FunctionInfo.function_info_upd_mono_thm NONE (* added later *)
+          end) new_thms;
+    in (new_infos, lthy') end;
 
-  (* Update function information. *)
-  fun update_function_defs lthy fn_def =
-    FunctionInfo.fn_def_update_const (Utils.get_term lthy (hl_function_name (#name fn_def))) fn_def
-    |> FunctionInfo.fn_def_update_definition (
-        (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
-            filename "HLdef" (#name fn_def))))
-in
-  AutoCorresUtil.do_translation_phase
-    "HL" filename prog_info fn_info
-    (get_expected_hl_fn_type prog_info fn_info heap_info unliftable_functions)
-    (get_expected_hl_fn_thm prog_info fn_info heap_info unliftable_functions)
-    (get_expected_hl_fn_args prog_info fn_info)
-    hl_function_name
-    convert
-    LocalVarExtract.l2_monad_mono
-    update_function_defs
-    @{thm L2Tcorres_recguard_0}
-    lthy
-end
+  (* Do conversions in parallel. *)
+  val converted_groups = AutoCorresUtil.par_convert convert existing_l2_infos l2_results add_trace;
+
+  (* Sequence of new function_infos and intermediate lthys *)
+  val def_results = FSeq.mk (fn _ =>
+        (* If there's nothing to translate, we won't have a lthy to use *)
+        if FSeq.null l2_results then NONE else
+          let (* Get initial lthy from end of L2 defs *)
+              val (l2_lthy, _) = FSeq.list_of l2_results |> List.last;
+              val results = AutoCorresUtil.define_funcs_sequence
+                              l2_lthy define existing_l2_infos existing_hl_infos converted_groups;
+          in FSeq.uncons results end);
+
+  (* Produce a mapping from each function group to its L1 phase_infos and the
+   * earliest intermediate lthy where it is defined. *)
+  val results =
+        def_results
+        |> FSeq.map (fn (lthy, f_defs) => let
+              (* Add monad_mono proofs. These are done in parallel as well
+               * (though in practice, they already run pretty quickly). *)
+              val mono_thms = if FunctionInfo.is_function_recursive (snd (hd (Symtab.dest f_defs)))
+                              then LocalVarExtract.l2_monad_mono lthy f_defs
+                              else Symtab.empty;
+              val f_defs' = f_defs |> Symtab.map (fn f =>
+                    FunctionInfo.function_info_upd_mono_thm (Symtab.lookup mono_thms f));
+              in (lthy, f_defs') end);
+in results end
 
 end

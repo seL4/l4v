@@ -12,7 +12,7 @@
 
 theory Bisim_UL
 imports
-  "wp/NonDetMonadVCG"
+  "Monad_WP/NonDetMonadVCG"
   Corres_UL
   EmptyFailLib
 begin

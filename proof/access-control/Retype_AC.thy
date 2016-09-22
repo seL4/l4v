@@ -12,6 +12,8 @@ theory Retype_AC
 imports CNode_AC
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 (* put in here that we own the region mentioned in the invocation *)
 definition
   authorised_untyped_inv :: "'a PAS \<Rightarrow> Invocations_A.untyped_invocation \<Rightarrow> bool"
@@ -80,7 +82,7 @@ lemma ptr_range_add_memI:
   apply (erule is_aligned_no_overflow')
   apply (subgoal_tac "2 ^ n = (0 :: 'a word)")
    apply simp
-  apply (simp add: p2_eq_0 word_bits_conv)
+  apply (simp add: word_bits_conv)
   done
 
 lemma storeWord_integrity_autarch:
@@ -684,10 +686,14 @@ lemma init_arch_objects_pas_refined:
          fastforce simp: post_retype_invs_def)+
   done
 
+end
+
 locale retype_region_proofs' = retype_region_proofs + constrains s ::"det_ext state" and s' :: "det_ext state"
 
 context retype_region_proofs
 begin
+
+interpretation Arch . (*FIXME; arch_split*)
 
 lemma vs_refs_no_global_pts_default [simp]:
   "vs_refs_no_global_pts (default_object ty dev us) = {}"
@@ -721,6 +727,8 @@ end
 context retype_region_proofs'
 begin
 
+interpretation Arch . (*FIXME; arch_split*)
+
 lemma domains_of_state: "domains_of_state s' \<subseteq> domains_of_state s"
   unfolding s'_def by simp
 
@@ -744,6 +752,8 @@ lemma pas_refined: "pas_refined aag s \<Longrightarrow> pas_refined aag s'"
   done
 
 end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma retype_region_ext_kheap_update:
   "\<lbrace>Q xs and R xs\<rbrace> retype_region_ext xs ty \<lbrace>\<lambda>_. Q xs\<rbrace>
@@ -785,6 +795,8 @@ lemma use_retype_region_proofs_ext':
 lemmas use_retype_region_proofs_ext
     = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q, simplified] for Q
 
+end
+
 lemma (in is_extended) pas_refined_tcb_domain_map_wellformed':
   assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag and P\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"
   shows "\<lbrace>pas_refined aag and P\<rbrace> f \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
@@ -793,6 +805,8 @@ apply (wp tdmw)
 apply (wp lift_inv)
 apply simp+
 done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma retype_region_ext_pas_refined:
   "\<lbrace>pas_refined aag and pas_cur_domain aag and K (\<forall>x\<in> set xs. is_subject aag x)\<rbrace> retype_region_ext xs ty \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
@@ -1381,7 +1395,7 @@ lemma invoke_untyped_pas_refined:
                    (obj_bits_api apiobject_type nat) (length list)) and
                K (\<forall>x\<in>set (retype_addrs word2 apiobject_type (length list) nat).
                     is_subject aag x) and
-               K (apiobject_type = Invariants_AI.CapTableObject \<longrightarrow> 0 < nat) and
+               K (apiobject_type = CapTableObject \<longrightarrow> 0 < nat) and
                (\<lambda>s. {word2..(word2 &&
                              ~~ mask
                                  (bits_of cap)) +
@@ -1658,5 +1672,7 @@ lemma decode_untyped_invocation_authorised:
                     aag_cap_auth_def ptr_range_def
              dest: cte_wp_at_eqD2 simp: bits_of_UntypedCap)
   done
+
+end
 
 end

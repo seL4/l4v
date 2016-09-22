@@ -14,6 +14,8 @@ imports
   "../../lib/EquivValid"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 (* We take the authority graph from the access proofs. We identify each
    label in that graph with an information flow domain. Our goal is to
    construct an equivalence relation (R l) on states, for each label l of
@@ -1544,5 +1546,7 @@ lemma modifies_at_mostI:
 lemma invs_kernel_mappings:
   "invs s \<Longrightarrow> valid_kernel_mappings s"
   by (auto simp: invs_def valid_state_def)
+
+end
 
 end

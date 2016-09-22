@@ -12,6 +12,8 @@ theory Access
 imports Deterministic_AC
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 text{*
 
 The goal is to place limits on what untrusted agents can do while the
@@ -94,6 +96,8 @@ new domains.
 
 *}
 
+end
+
 record 'a PAS =
   pasObjectAbs :: "'a agent_map"
   pasASIDAbs :: "'a agent_asid_map"
@@ -104,6 +108,8 @@ record 'a PAS =
   pasMayEditReadyQueues :: "bool"
   pasMaySendIrqs :: "bool"
   pasDomainAbs :: "domain \<Rightarrow> 'a"
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 text{*
 
@@ -268,19 +274,19 @@ where
 
 definition
  "pte_ref pte \<equiv> case pte of
-    Arch_Structs_A.pte.SmallPagePTE addr atts rights
+    SmallPagePTE addr atts rights
        \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSmallPage, vspace_cap_rights_to_auth rights)
-  | Arch_Structs_A.pte.LargePagePTE addr atts rights
+  | LargePagePTE addr atts rights
        \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMLargePage, vspace_cap_rights_to_auth rights)
   | _ \<Rightarrow> None"
 
 definition
  "pde_ref2 pde \<equiv> case pde of
-    Arch_Structs_A.pde.SectionPDE addr atts domain rights
+    SectionPDE addr atts domain rights
        \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSection, vspace_cap_rights_to_auth rights)
-  | Arch_Structs_A.pde.SuperSectionPDE addr atts rights
+  | SuperSectionPDE addr atts rights
        \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSuperSection, vspace_cap_rights_to_auth rights)
-  | Arch_Structs_A.pde.PageTablePDE addr atts domain
+  | PageTablePDE addr atts domain
        \<Rightarrow> Some (ptrFromPAddr addr, 0, {Control}) (* The 0 is a hack, saying that we own only addr, although 12 would also be OK *)
   | _ \<Rightarrow> None"
 
@@ -298,12 +304,12 @@ definition
             \<Rightarrow> (obj_ref \<times> vs_ref \<times> auth) set"
 where
   "vs_refs_no_global_pts \<equiv> \<lambda>ko. case ko of
-    ArchObj (Arch_Structs_A.ASIDPool pool) \<Rightarrow>
+    ArchObj (ASIDPool pool) \<Rightarrow>
        (\<lambda>(r,p). (p, VSRef (ucast r) (Some AASIDPool), Control)) ` graph_of pool
-  | ArchObj (Arch_Structs_A.PageDirectory pd) \<Rightarrow>
+  | ArchObj (PageDirectory pd) \<Rightarrow>
       \<Union>(r,(p, sz, auth)) \<in> graph_of (pde_ref2 o pd) - {(x,y). (ucast (kernel_base >> 20) \<le> x)}.
           (\<lambda>(p, a). (p, VSRef (ucast r) (Some APageDirectory), a)) ` (ptr_range p sz \<times> auth)
-  | ArchObj (Arch_Structs_A.PageTable pt) \<Rightarrow>
+  | ArchObj (PageTable pt) \<Rightarrow>
       \<Union>(r,(p, sz, auth)) \<in> graph_of (pte_ref o pt).
           (\<lambda>(p, a). (p, VSRef (ucast r) (Some APageTable), a)) ` (ptr_range p sz \<times> auth)
   | _ \<Rightarrow> {}"
@@ -372,15 +378,15 @@ where
 fun
   cap_asid' :: "cap \<Rightarrow> asid set"
 where
-  "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.PageCap _ _ _ _ mapping))
+  "cap_asid' (ArchObjectCap (PageCap _ _ _ _ mapping))
       = fst ` set_option mapping"
-  | "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.PageTableCap _ mapping))
+  | "cap_asid' (ArchObjectCap (PageTableCap _ mapping))
       = fst ` set_option mapping"
-  | "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap _ asid_opt))
+  | "cap_asid' (ArchObjectCap (PageDirectoryCap _ asid_opt))
       = set_option asid_opt"
-  | "cap_asid' (Structures_A.ArchObjectCap (Arch_Structs_A.ASIDPoolCap _ asid))
+  | "cap_asid' (ArchObjectCap (ASIDPoolCap _ asid))
           = {x. asid_high_bits_of x = asid_high_bits_of asid \<and> x \<noteq> 0}"
-  | "cap_asid' (Structures_A.ArchObjectCap Arch_Structs_A.ASIDControlCap) = UNIV"
+  | "cap_asid' (ArchObjectCap ASIDControlCap) = UNIV"
   | "cap_asid' _ = {}"
 
 inductive_set
@@ -453,7 +459,11 @@ lemmas sta_caps = state_objs_to_policy_intros(1)
 lemmas state_objs_to_policy_cases
     = state_bits_to_policy.cases[OF state_objs_to_policy_mem[THEN iffD1]]
 
+end
+
 context pspace_update_eq begin
+
+interpretation Arch . (*FIXME: arch_split*)
 
 lemma state_vrefs[iff]: "state_vrefs (f s) = state_vrefs s"
   by (simp add: state_vrefs_def pspace)
@@ -470,6 +480,8 @@ lemma thread_bound_ntfns[iff]: "thread_bound_ntfns (f s) = thread_bound_ntfns s"
 *)
 
 end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma tcb_states_of_state_preserved:
   "\<lbrakk> get_tcb thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
@@ -765,8 +777,8 @@ where
                      tcb' = tcb \<lparr>tcb_bound_notification := None\<rparr>;
                      tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) None subjects aag \<rbrakk>
                  \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
-| tro_asidpool_clear: "\<lbrakk> ko = Some (ArchObj (Arch_Structs_A.ASIDPool pool));
-                         ko' = Some (ArchObj (Arch_Structs_A.ASIDPool pool'));
+| tro_asidpool_clear: "\<lbrakk> ko = Some (ArchObj (ASIDPool pool));
+                         ko' = Some (ArchObj (ASIDPool pool'));
                          \<forall>x. pool' x \<noteq> pool x \<longrightarrow> pool' x = None
                             \<and> aag_subjects_have_auth_to subjects aag Control (the (pool x)) \<rbrakk>
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
@@ -1250,14 +1262,19 @@ crunch integrity_autarch: set_thread_state "integrity aag X st"
 
 lemmas integrity_def = integrity_subjects_def
 
-context pspace_update_eq
-begin
+end
+
+context pspace_update_eq begin
+
+interpretation Arch . (*FIXME: arch_split*)
 
 lemma integrity_update_eq[iff]:
   "tcb_states_of_state (f s) = tcb_states_of_state s"
   by (simp add: pspace tcb_states_of_state_def get_tcb_def)
 
 end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   label_owns_asid_slot :: "'a PAS \<Rightarrow> 'a \<Rightarrow> asid \<Rightarrow> bool"
@@ -1689,5 +1706,7 @@ lemma integrity_mono:
   done
 
 abbreviation "einvs \<equiv> invs and valid_list and valid_sched"
+
+end
 
 end

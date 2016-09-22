@@ -12,6 +12,8 @@ theory Syscall_S
 imports Separation
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma syscall_bisim:
   assumes bs:
     "bisim (fr \<oplus> r_flt_rel) P P' m_flt m_flt'" 
@@ -817,5 +819,7 @@ lemma call_kernel_separate_state:
   apply (simp add: call_kernel_def)
   apply (wp | wpc | wps | simp | strengthen imp_consequent)+
   done
+
+end
 
 end

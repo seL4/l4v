@@ -96,11 +96,15 @@ fun simp_monad_equiv_pre_tac ctxt =
       Const (@{const_name Trueprop}, _) $
         (Const (@{const_name monad_equiv}, _) $ P $ _ $ _ $ _ $ _) =>
         let
+          (* If P is schematic, we could end up with flex-flex pairs that Isabelle refuses to solve.
+           * Our monad_equiv rules should never allow this to happen. *)
+          val _ = if not (exists_subterm is_Var P) then () else
+                    raise CTERM ("autocorres: bad schematic in monad_equiv_pre", [Thm.cprem_of thm 1])
           (* Perform basic simplification of the term. *)
           val simp_thm = Simplifier.asm_full_rewrite (map_opt_simpset false ctxt) (Thm.cterm_of ctxt P)
         in
           (resolve_tac ctxt [@{thm monad_equiv_weaken_pre''} OF [simp_thm]] 1
-            ORELSE (fn t => raise (CTERM ("failed to prove goal", [Thm.cprem_of t 1])))) thm
+            ORELSE (fn t => raise (CTERM ("autocorres: monad_equiv_pre failed to prove goal", [Thm.cprem_of t 1])))) thm
         end
     | _ =>
         all_tac thm
@@ -131,7 +135,7 @@ let
       (no_tac t)
 
   (* Fetch theorms used in the simplification process. *)
-  val thms = L2FlowThms.get ctxt
+  val thms = Utils.get_rules ctxt @{named_theorems L2flow}
 
   (* Tactic to blindly apply simplification rules. *)
   fun solve_goal_tac _ =
@@ -243,7 +247,7 @@ let
   (* Setup basic simplifier. *)
   fun basic_ss ctxt =
       put_simpset AUTOCORRES_SIMPSET ctxt
-      |> (fn ctxt => if fast_mode < 2 then ctxt addsimps (L2PeepholeThms.get ctxt) else ctxt)
+      |> (fn ctxt => if fast_mode < 2 then ctxt addsimps (Utils.get_rules ctxt @{named_theorems L2opt}) else ctxt)
       |> (fn ctxt => if fast_mode < 2 then ctxt addsimprocs [l2_gets_bind_simproc] else ctxt)
       |> (fn ctxt => ctxt addsimprocs [l2_guard_simproc (simpset_of ctxt)])
       |> map_opt_simpset false

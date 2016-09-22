@@ -24,6 +24,7 @@ sig
     Method.text_range -> Proof.state -> Proof.state Seq.result Seq.seq
 
   (* Lower level interface. *)
+  val can_clear : theory -> bool
   val clear_deps : thm -> thm
   val join_deps : thm -> thm -> thm
   val used_facts : thm -> (string * term) list
@@ -61,7 +62,13 @@ in case thm' of SOME thm' => thm' | NONE => error "Can't clear deps here" end
 
 fun can_clear thy = Context.subthy(@{theory},thy)
 
-fun join_deps thm thm' = Conjunction.intr thm thm' |> Conjunction.elim |> snd 
+fun join_deps pre_thm post_thm =
+let
+  val pre_thm' = Thm.flexflex_rule NONE pre_thm |> Seq.hd
+    |> Thm.adjust_maxidx_thm (Thm.maxidx_of post_thm + 1)
+in
+  Conjunction.intr pre_thm' post_thm |> Conjunction.elim |> snd
+end 
 
 fun thms_of (PBody {thms,...}) = thms
 
@@ -71,7 +78,7 @@ fun proof_body_descend' (_,("",_,body)) = fold (append o proof_body_descend') (t
 
 fun used_facts thm = fold (append o proof_body_descend') (thms_of (Thm.proof_body_of thm)) []
 
-fun raw_primitive_text f = Method.Basic (fn _ => (Method.METHOD (K (fn thm => Seq.single (f thm)))))
+fun raw_primitive_text f = Method.Basic (fn _ => ((K (fn (ctxt, thm) => Seq.make_results (Seq.single (ctxt, f thm))))))
     
 
 (*Find local facts from new hyps*)

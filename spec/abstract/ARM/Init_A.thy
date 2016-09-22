@@ -18,17 +18,13 @@ theory Init_A
 imports "../Retype_A"
 begin
 
+context Arch begin global_naming ARM_A
+
 text {* 
   This is not a specification of true kernel
   initialisation. This theory describes a dummy initial state only, to
   show that the invariants and refinement relation are consistent. 
 *}
-
-(* Moved to Deterministic_A
-definition
-  idle_thread_ptr :: word32 where
-  "idle_thread_ptr = kernel_base + 0x1000"
-*)
 
 definition
   init_tcb_ptr :: word32 where
@@ -111,6 +107,8 @@ definition
     arch_state = init_arch_state,
     exst = ext_init 
   \<rparr>"
+
+end
 
 
 end

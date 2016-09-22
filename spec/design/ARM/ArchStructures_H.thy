@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file ArchStructures_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -14,6 +16,7 @@ imports
   "../Types_H"
   Hardware_H
 begin
+context Arch begin global_naming ARM_H
 
 type_synonym asid = "word32"
 
@@ -202,29 +205,29 @@ datatype arch_kernel_object =
   | KOPTE pte
   | KOPDE pde
 
-consts
+consts'
 archObjSize :: "arch_kernel_object \<Rightarrow> nat"
 
-consts
+consts'
 asidHighBits :: "nat"
 
-consts
+consts'
 asidLowBits :: "nat"
 
-consts
+consts'
 asidBits :: "nat"
 
-consts
+consts'
 asidRange :: "(asid * asid)"
 
-consts
+consts'
 asidHighBitsOf :: "asid \<Rightarrow> asid"
 
 defs archObjSize_def:
 "archObjSize a\<equiv> (case a of
-                  KOASIDPool v1 \<Rightarrow>   pageBits
-                | KOPTE v2 \<Rightarrow>   2
-                | KOPDE v3 \<Rightarrow>   2
+                  KOASIDPool v10 \<Rightarrow>   pageBits
+                | KOPTE v11 \<Rightarrow>   2
+                | KOPDE v12 \<Rightarrow>   2
                 )"
 
 defs asidHighBits_def:
@@ -255,4 +258,5 @@ where
 | "archTypeOf (KOPTE e) = PTET"
 | "archTypeOf (KOASIDPool e) = ASIDPoolT"
 
+end
 end

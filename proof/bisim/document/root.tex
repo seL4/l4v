@@ -11,6 +11,17 @@
 % LaTeX master document for abstract spec.
 
 \documentclass[10pt,a4paper]{scrbook}
+
+% These old font commands have been removed from newer versions of
+% the scrbook document class, but isabelle.sty still uses them.
+\DeclareOldFontCommand{\rm}{\normalfont\rmfamily}{\mathrm}
+\DeclareOldFontCommand{\sf}{\normalfont\sffamily}{\mathsf}
+\DeclareOldFontCommand{\tt}{\normalfont\ttfamily}{\mathtt}
+\DeclareOldFontCommand{\bf}{\normalfont\bfseries}{\mathbf}
+\DeclareOldFontCommand{\it}{\normalfont\itshape}{\mathit}
+\DeclareOldFontCommand{\sl}{\normalfont\slshape}{\@nomath\sl}
+\DeclareOldFontCommand{\sc}{\normalfont\scshape}{\@nomath\sc}
+
 \usepackage{isabelle,isabellesym}
 
 % further packages required for unusual symbols (see also isabellesym.sty)

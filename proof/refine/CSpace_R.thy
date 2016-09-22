@@ -57,6 +57,8 @@ locale mdb_move =
   modify_map n (mdbNext src_node)
                (cteMDBNode_update (mdbPrev_update (\<lambda>_. dest)))"
 begin
+interpretation Arch . (*FIXME: arch_split*)
+
 
 lemmas src = m_p
 
@@ -898,7 +900,7 @@ lemma set_cap_not_quite_corres':
                 using cr
                 apply (fastforce simp: c p pspace_relations_def)+
                 done
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cap_move_corres:
   assumes cr: "cap_relation cap cap'"
   notes trans_state_update'[symmetric,simp]
@@ -1302,10 +1304,10 @@ lemma setObject_cte_ct:
 
 crunch ct[wp]: cteInsert "\<lambda>s. P (ksCurThread s)"
   (wp: setObject_cte_ct hoare_drop_imps ignore: setObject)
-
+end
 context mdb_insert
 begin
-
+interpretation Arch . (*FIXME: arch_split*)
 lemma n_src_dest:
   "n \<turnstile> src \<leadsto> dest"
   by (simp add: n_direct_eq)
@@ -1825,7 +1827,7 @@ lemma untyped_inc_prev_update:
 lemma is_derived_badge_derived':
   "is_derived' m src cap cap' \<Longrightarrow> badge_derived' cap cap'"
   by (simp add: is_derived'_def)
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cteInsert_mdb_chain_0:
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and
     (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)\<rbrace>
@@ -3576,7 +3578,7 @@ lemma ensureNoChildren_wp:
 
 lemma set_cap_pspace_corres:
   "cap_relation cap (cteCap cte) \<Longrightarrow>
-   corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} True dc
+   corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} False True dc
       (pspace_distinct and pspace_aligned and valid_objs and cte_at p)
       (pspace_aligned' and pspace_distinct' and cte_at' (cte_map p))
       (set_cap cap p)
@@ -3621,7 +3623,7 @@ lemma ghost_relation_of_heap:
   done
 
 lemma corres_caps_decomposition:
-  assumes x: "corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} True r P P' f g"
+  assumes x: "corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} False True r P P' f g"
   assumes u: "\<And>P. \<lbrace>\<lambda>s. P (new_caps s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_mdb s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_list s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cdt_list (s))\<rbrace>"
@@ -3737,14 +3739,14 @@ proof -
 qed
 
 lemma getCTE_symb_exec_r:
-  "corres_underlying sr nf dc \<top> (cte_at' p) (return ()) (getCTE p)"
+  "corres_underlying sr False nf' dc \<top> (cte_at' p) (return ()) (getCTE p)"
   apply (rule corres_no_failI, wp)
   apply (clarsimp simp: return_def
                  elim!: use_valid [OF _ getCTE_inv])
   done
 
 lemma updateMDB_symb_exec_r:
-  "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} nf dc
+  "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} False nf' dc
         \<top> (pspace_aligned' and pspace_distinct' and (no_0 \<circ> ctes_of) and (\<lambda>s. p \<noteq> 0 \<longrightarrow> cte_at' p s))
         (return ()) (updateMDB p m)"
   using no_fail_updateMDB [of p m]
@@ -3803,7 +3805,7 @@ lemma setCTE_gsCNodes[wp]:
   done
 
 lemma set_original_symb_exec_l':
-  "corres_underlying {(s, s'). f (ekheap s) (kheap s) s'} nf dc P P' (set_original p b) (return x)"
+  "corres_underlying {(s, s'). f (ekheap s) (kheap s) s'} False nf' dc P P' (set_original p b) (return x)"
   by (simp add: corres_underlying_def return_def set_original_def in_monad Bex_def)
 
 lemma setCTE_schedule_index[wp]:
@@ -3917,7 +3919,7 @@ lemma cte_map_nat_to_cref:
    defer
    apply assumption
   apply (subst unat_of_nat)
-  apply (rule mod_le_dividend)
+  apply (rule mod_less_eq_dividend)
   done
 
 lemma valid_nullcapsE:
@@ -4527,14 +4529,14 @@ definition
   \<not> isCNodeCap cap \<and>
   \<not> isZombie cap \<and>
   \<not> isArchPageCap cap"
-
+end
 
 (* FIXME: duplicated *)
 locale mdb_insert_simple = mdb_insert +
   assumes safe_parent: "safe_parent_for' m src c'"
   assumes simple: "is_simple_cap' c'"
 begin
-
+interpretation Arch . (*FIXME: arch_split*)
 lemma dest_no_parent_n:
   "n \<turnstile> dest \<rightarrow> p = False"
   using src simple safe_parent
@@ -4735,7 +4737,7 @@ done
 lemma is_simple_cap'_maskedAsFull[simp]:
   "is_simple_cap' (maskedAsFull src_cap' c') =  is_simple_cap' src_cap'"
   by (auto simp: is_simple_cap'_def maskedAsFull_def isCap_simps split:if_splits)
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cins_corres_simple:
   assumes "cap_relation c c'" "src' = cte_map src" "dest' = cte_map dest"
   notes trans_state_update'[symmetric,simp]
@@ -5097,12 +5099,12 @@ lemma safe_parent_capClass:
   by (auto simp: safe_parent_for'_def isCap_simps sameRegionAs_def2 capRange_Master capRange_def
            capMasterCap_def
            split: capability.splits arch_capability.splits)
-
+end
 locale mdb_insert_simple' = mdb_insert_simple +
   fixes n'
   defines  "n' \<equiv> modify_map n (mdbNext src_node) (cteMDBNode_update (mdbPrev_update (\<lambda>_. dest)))"
 begin
-
+interpretation Arch . (*FIXME: arch_split*)
 lemma no_0_n' [intro!]: "no_0 n'" by (auto simp: n'_def)
 lemmas n_0_simps' [iff] = no_0_simps [OF no_0_n']
 
@@ -5886,7 +5888,7 @@ setUntypedCapAsFull (cteCap srcCTE) cap src
   apply wp
   apply clarsimp
 done
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cteInsert_simple_mdb':
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and K (capAligned cap) and
     (\<lambda>s. safe_parent_for' (ctes_of s) src cap) and K (is_simple_cap' cap) \<rbrace>
@@ -5976,7 +5978,7 @@ lemma cte_refs_maskCapRights[simp]:
   "cte_refs' (maskCapRights rghts cap) = cte_refs' cap"
   by (rule ext, cases cap,
       simp_all add: maskCapRights_def isCap_defs Let_def
-                    ArchRetype_H.maskCapRights_def
+                    ARM_H.maskCapRights_def
          split del: split_if
              split: arch_capability.split)
 
@@ -6225,7 +6227,7 @@ lemma diminished_Untyped' :
    (* 6 subgoals *)
    apply (rename_tac arch_capability R)
    apply (case_tac arch_capability)
-    apply (clarsimp simp: isCap_simps ArchRetype_H.maskCapRights_def maskCapRights_def
+    apply (clarsimp simp: isCap_simps ARM_H.maskCapRights_def maskCapRights_def
                           diminished'_def Let_def)+
 done
 
@@ -6349,4 +6351,5 @@ lemma updateFreeIndex_invs':
   apply (clarsimp simp:isCap_simps cte_wp_at_ctes_of)+
   done
 
+end
 end

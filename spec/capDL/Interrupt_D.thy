@@ -13,8 +13,16 @@
  *)
 
 theory Interrupt_D
-imports Endpoint_D
+imports Endpoint_D "../machine/$L4V_ARCH/Platform"
 begin
+
+context begin interpretation Arch .
+requalify_types
+  irq
+
+requalify_consts
+  maxIRQ
+end
 
 (* Return the currently pending IRQ. *)
 definition
@@ -113,7 +121,7 @@ where
 definition
   handle_interrupt :: "cdl_irq \<Rightarrow> unit k_monad"
 where
-  "handle_interrupt irq \<equiv>
+  "handle_interrupt irq \<equiv> if (irq > maxIRQ) then return () else 
     do
       irq_slot \<leftarrow> gets $ get_irq_slot irq;
       c \<leftarrow> gets $ opt_cap irq_slot;

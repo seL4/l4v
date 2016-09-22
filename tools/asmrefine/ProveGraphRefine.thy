@@ -1,3 +1,13 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
 theory ProveGraphRefine
 
 imports GraphRefine
@@ -134,7 +144,7 @@ lemma drop_sign_projections:
 lemmas drop_sign_isomorphism
     = drop_sign_isomorphism_ariths drop_sign_projections
         drop_sign_isomorphism_bitwise
-        ucast_id 
+        ucast_id
 
 lemma ptr_equalities_to_ptr_val:
   "(Ptr addr = p) = (addr = ptr_val p)"
@@ -193,6 +203,11 @@ lemma fold_of_nat_eq_Ifs:
 lemma of_int_sint_scast:
   "of_int (sint x) = scast x"
   by (simp add: scast_def word_of_int)
+
+lemma(in comm_semiring_1) add_mult_comms:
+  "a + b + c = a + c + b"
+  "a * b * c = a * c * b"
+  by (rule semiring_normalization_rules)+
 
 lemma array_index_update_If:
   "i < CARD ('b :: finite)
@@ -283,10 +298,12 @@ fun eqsubst_either_wrap_tac ctxt thms = (eqsubst_asm_wrap_tac ctxt thms
     ORELSE' eqsubst_wrap_tac ctxt thms)
 *}
 
+
+
 ML {*
 structure ProveSimplToGraphGoals = struct
 
-fun goal_eq (g, g') = 
+fun goal_eq (g, g') =
     (eq_list (op aconv) (Logic.strip_assums_hyp g, Logic.strip_assums_hyp g'))
     andalso (Logic.strip_assums_concl g aconv Logic.strip_assums_concl g')
     andalso (map snd (Logic.strip_params g) = map snd (Logic.strip_params g'))
@@ -307,7 +324,7 @@ fun tactic_check s tac = let
   end
 
 (* FIXME: shadows SimplExport *)
-fun get_c_type_size ctxt (Type (@{type_name array}, [elT, nT])) = 
+fun get_c_type_size ctxt (Type (@{type_name array}, [elT, nT])) =
     get_c_type_size ctxt elT * Word_Lib.dest_binT nT
   | get_c_type_size _ @{typ word8} = 1
   | get_c_type_size _ @{typ word16} = 2
@@ -433,7 +450,8 @@ fun normalise_mem_accs ctxt = DETERM o let
             | @{term Trueprop} $ (Const (@{const_name ptr_safe}, _) $ _ $ _)
               => prove_ptr_safe "normalise_mem_accs" ctxt i
             | _ => all_tac)
-    THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_ptr h_val_word32 h_val_word8})
+    THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_ptr h_val_word32 h_val_word8
+        h_val_sword32 h_val_sword8})
   end
 
 val heap_update_id_nonsense
@@ -449,10 +467,10 @@ fun prove_mem_equality ctxt = DETERM o let
     val unpack_simpset = ctxt
         addsimps @{thms heap_update_def to_bytes_array
                heap_update_list_append heap_list_update_ptr heap_list_update_word32
-               h_val_word8 heap_list_update_word8
+               h_val_word8 h_val_sword8 heap_list_update_word8 to_bytes_sword
                field_lvalue_offset_eq ptr_add_def
                array_ptr_index_def
-               h_val_word32 h_val_ptr
+               h_val_word32 h_val_ptr h_val_sword32
                take_heap_list_min drop_heap_list_general
                ucast_nat_def of_int_sint_scast
         } @ Proof_Context.get_thms ctxt "field_to_bytes_rewrites"
@@ -460,7 +478,7 @@ fun prove_mem_equality ctxt = DETERM o let
       handle ERROR _ => raise THM
         ("prove_mem_equality: run add_field_to_bytes_rewrites on ctxt", 1, [])
 
-    fun heap_update_id_proofs ctxt = 
+    fun heap_update_id_proofs ctxt =
         REPEAT_ALL_NEW (eqsubst_wrap_tac ctxt [heap_update_id_nonsense]
             THEN' prove_heap_update_id ctxt)
 
@@ -480,9 +498,10 @@ fun prove_mem_equality ctxt = DETERM o let
     THEN_ALL_NEW normalise_mem_accs ctxt
     THEN_ALL_NEW simp_tac unpack_simpset
     THEN_ALL_NEW simp_tac (ctxt addsimps @{thms store_word32s_equality_fold
-        store_word32s_equality_final add.commute})
+        store_word32s_equality_final add.commute mult.commute add_mult_comms ucast_id})
     THEN_ALL_NEW simp_tac (ctxt addsimprocs [store_word32s_equality_simproc]
-        addsimps @{thms store_word32s_equality_final add.commute})
+        addsimps @{thms store_word32s_equality_final add.commute
+            mult.commute add_mult_comms ucast_id})
     THEN_ALL_NEW SUBGOAL (fn (t, i) => if exists_Const
             (fn (s, _) => s = @{const_name store_word32}
                 orelse s = @{const_name heap_update}

@@ -49,7 +49,7 @@ lemma decode_invocation_invER[wp]:
 
 definition
   "cap_mapped cap = (case cap of PageTableCap _ _ asid \<Rightarrow> asid
-  | FrameCap _ _ _ _ asid \<Rightarrow> asid)"
+  | FrameCap _ _ _ _ _ asid \<Rightarrow> asid)"
 
 definition
   "cap_asid cap = (case cap of PageDirectoryCap pd_ptr real' asid' \<Rightarrow> asid')"
@@ -61,9 +61,9 @@ definition
 
 lemma decode_page_map_intent_rv_20_24:
   "\<lbrakk>n = 20 \<or> n = 24 \<rbrakk>
-  \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap frame_ptr rights n Real (get_mapped_asid asid' vaddr))
-         (FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) ref [cdl_lookup_pd_slot ptr vaddr])) \<rbrace>
-  decode_invocation (FrameCap frame_ptr rights n real asid) ref
+  \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
+         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) ref [cdl_lookup_pd_slot ptr vaddr])) \<rbrace>
+  decode_invocation (FrameCap dev frame_ptr rights n real asid) ref
   [(PageDirectoryCap ptr real' asid',pdref)]
   (PageIntent (PageMapIntent vaddr perms vmattr))
   \<lbrace>\<lambda>r s. R r\<rbrace>, -"
@@ -81,11 +81,11 @@ lemma decode_page_map_intent_rv_20_24:
 
 lemma decode_page_map_intent_rv_16_12:
   "\<lbrakk>n = 12 \<or> n = 16 \<rbrakk>
-  \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap frame_ptr rights n Real (get_mapped_asid asid' vaddr))
-         (FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) ref
+  \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
+         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) ref
          [(p, unat ((vaddr >> 12) && 0xFF))]))
   \<and> <(ptr, unat (vaddr >> 20)) \<mapsto>c PageTableCap p Fake None \<and>* (\<lambda>s. True)> s\<rbrace>
-  decode_invocation (FrameCap frame_ptr rights n real asid) ref
+  decode_invocation (FrameCap dev frame_ptr rights n real asid) ref
   [(PageDirectoryCap ptr real' asid',pdref)]
   (PageIntent (PageMapIntent vaddr perms vmattr))
   \<lbrace>\<lambda>r s. R r\<rbrace>, -"
@@ -107,14 +107,14 @@ abbreviation(input)
   case ivk of (InvokePage (PageMap cap cap' ref xs)) \<Rightarrow> xs"
 
 lemma invoke_page_wp:
-  "pinv = PageMap (FrameCap frame_ptr rights n fake asid)
-  (FrameCap frame_ptr rights' n fake' asid') ref x
+  "pinv = PageMap (FrameCap dev frame_ptr rights n fake asid)
+  (FrameCap False frame_ptr rights' n fake' asid') ref x
   \<Longrightarrow>\<lbrace><ref \<mapsto>c - \<and>* \<And>* map sep_any_map_c (invoke_page_map_slots (InvokePage pinv))
     \<and>* P (invoke_page_map_slots (InvokePage pinv)) >\<rbrace>
     invoke_page pinv
-   \<lbrace>\<lambda>r. <\<And>* map (\<lambda>ptr. ptr\<mapsto>c (FrameCap frame_ptr rights' n fake' asid'))
+   \<lbrace>\<lambda>r. <\<And>* map (\<lambda>ptr. ptr\<mapsto>c (FrameCap False frame_ptr rights' n fake' asid'))
           (invoke_page_map_slots (InvokePage pinv))
-       \<and>* ref \<mapsto>c (FrameCap frame_ptr rights n fake asid) \<and>* P (invoke_page_map_slots (InvokePage pinv))>\<rbrace>"
+       \<and>* ref \<mapsto>c (FrameCap dev frame_ptr rights n fake asid) \<and>* P (invoke_page_map_slots (InvokePage pinv))>\<rbrace>"
   apply (simp add:invoke_page_def)
   apply wp
   apply (rule sep_lifted.mapM_x_sep_inv
@@ -321,13 +321,13 @@ lemma seL4_Section_Map_wp:
   \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
   \<and>* (cdl_lookup_pd_slot pd_ptr vaddr) \<mapsto>c -
   \<and>* (cnode_id, pd_offset) \<mapsto>c (PageDirectoryCap pd_ptr real None)
-  \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap frame_ptr rights n Real None \<and>* R \<guillemotright> \<rbrace>
+  \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap dev frame_ptr rights n Real None \<and>* R \<guillemotright> \<rbrace>
   seL4_Page_Map sel_page sel4_page_directory vaddr perms vmattr
   \<lbrace>\<lambda>r s. \<guillemotleft> (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
     \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
     \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c
-       FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None
-    \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap frame_ptr rights n Real None
+       FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None
+    \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap dev frame_ptr rights n Real None
     \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
     \<and>* (cnode_id, pd_offset) \<mapsto>c (PageDirectoryCap pd_ptr real None)
     \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
@@ -343,8 +343,8 @@ lemma seL4_Section_Map_wp:
                 apply (rule set_cap_wp)
                apply wp[4]
            apply (rule_tac P = "\<exists>asid'. iv = InvokePage
-             (PageMap (FrameCap frame_ptr rights n Real asid')
-             (FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
+             (PageMap (FrameCap dev frame_ptr rights n Real asid')
+             (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
              [cdl_lookup_pd_slot pd_ptr vaddr])"
              in hoare_gen_asmEx)
            apply clarsimp
@@ -365,7 +365,7 @@ lemma seL4_Section_Map_wp:
           apply (wp hoare_strengthen_post[OF set_cap_wp])
           apply (sep_solve)
          apply wp
-        apply (rule_tac P = "\<exists>asid asid'. (c = (FrameCap frame_ptr rights n Real asid)
+        apply (rule_tac P = "\<exists>asid asid'. (c = (FrameCap dev frame_ptr rights n Real asid)
          \<and> cs = [(PageDirectoryCap pd_ptr real asid',(cnode_id,pd_offset))]
          \<and> ref = (cnode_id,frame_offset))"
          in hoare_gen_asmEx)
@@ -380,8 +380,8 @@ lemma seL4_Section_Map_wp:
           \<and>* root_tcb_id \<mapsto>f Tcb tcb \<and>* (cnode_id, pd_offset) \<mapsto>c PageDirectoryCap pd_ptr real None
           \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*  R> s \<and>
          iv = InvokePage
-         (PageMap (FrameCap frame_ptr rights n Real (get_mapped_asid asid' vaddr))
-         (FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
+         (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
+         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
           [cdl_lookup_pd_slot pd_ptr vaddr])"
          in hoare_post_impErr[rotated -1])
           apply assumption
@@ -402,11 +402,11 @@ lemma seL4_Section_Map_wp:
        and cap' = "PageDirectoryCap pd_ptr real None"])
       apply (rule hoare_pre)
        apply (wp lookup_cap_and_slot_rvu[where r = root_size
-        and cap' = "FrameCap frame_ptr rights n Real None"])[1]
+        and cap' = "FrameCap dev frame_ptr rights n Real None"])[1]
       apply (erule_tac Q="cdl_current_domain sa = minBound" in conjE, assumption)
      apply (rule hoare_pre)
       apply (wp lookup_cap_and_slot_rvu[where r = root_size
-       and cap' = "FrameCap frame_ptr rights n Real None"])[1]
+       and cap' = "FrameCap dev frame_ptr rights n Real None"])[1]
      apply clarsimp
      apply (rule conjI)
       apply (clarsimp simp:reset_cap_asid_def ep_related_cap_def
@@ -437,7 +437,7 @@ lemma seL4_Section_Map_wp:
        simp:ep_related_cap_def)
     apply (clarsimp simp:user_pointer_at_def Let_def
           word_bits_def sep_conj_assoc)
-  apply (drule_tac x = "FrameCap frame_ptr rights n Real None"  in spec)
+  apply (drule_tac x = "FrameCap dev frame_ptr rights n Real None"  in spec)
    apply clarsimp
   apply (erule impE)
    apply (rule_tac x = "PageDirectoryCap pd_ptr real None" in exI)
@@ -464,15 +464,15 @@ lemma seL4_Page_Map_wp:
   \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
   \<and>* (cdl_lookup_pd_slot pd_ptr vaddr) \<mapsto>c PageTableCap pt_ptr Fake None
   \<and>* (cnode_id, pd_offset) \<mapsto>c (PageDirectoryCap pd_ptr real None)
-  \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap frame_ptr rights n Real None
+  \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap dev frame_ptr rights n Real None
   \<and>* (pt_ptr, unat ((vaddr >> 12) && 0xFF)) \<mapsto>c -
   \<and>* R \<guillemotright> \<rbrace>
   seL4_Page_Map sel_page sel4_page_directory vaddr perms vmattr
   \<lbrace>\<lambda>r s. \<guillemotleft> (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
     \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
     \<and>* (pt_ptr, unat ((vaddr >> 12) && 0xFF)) \<mapsto>c
-       FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None
-    \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap frame_ptr rights n Real None
+       FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None
+    \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap dev frame_ptr rights n Real None
     \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
     \<and>* (cnode_id, pd_offset) \<mapsto>c (PageDirectoryCap pd_ptr real None)
     \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
@@ -488,8 +488,8 @@ lemma seL4_Page_Map_wp:
                 apply (rule set_cap_wp)
                apply wp[4]
            apply (rule_tac P = "\<exists>asid'. iv = InvokePage
-             (PageMap (FrameCap frame_ptr rights n Real asid')
-             (FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
+             (PageMap (FrameCap dev frame_ptr rights n Real asid')
+             (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
              [(pt_ptr, unat ((vaddr >> 12) && 0xFF))])"
              in hoare_gen_asmEx)
            apply clarsimp
@@ -510,7 +510,7 @@ lemma seL4_Page_Map_wp:
           apply (wp hoare_strengthen_post[OF set_cap_wp])
           apply (sep_solve)
          apply wp
-        apply (rule_tac P = "\<exists>asid asid'. (c = (FrameCap frame_ptr rights n Real asid)
+        apply (rule_tac P = "\<exists>asid asid'. (c = (FrameCap dev frame_ptr rights n Real asid)
          \<and> cs = [(PageDirectoryCap pd_ptr real asid',(cnode_id,pd_offset))]
          \<and> ref = (cnode_id,frame_offset))"
          in hoare_gen_asmEx)
@@ -527,8 +527,8 @@ lemma seL4_Page_Map_wp:
           \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c PageTableCap pt_ptr Fake None
           \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*  R> s \<and>
          iv = InvokePage
-         (PageMap (FrameCap frame_ptr rights n Real (get_mapped_asid asid' vaddr))
-         (FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None)
+         (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
+         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None)
              (cnode_id,frame_offset) [ (pt_ptr, unat ((vaddr >> 12) && 0xFF))] )"
          in hoare_post_impErr[rotated -1])
           apply assumption
@@ -549,11 +549,11 @@ lemma seL4_Page_Map_wp:
        and cap' = "PageDirectoryCap pd_ptr real None"])
       apply (rule hoare_pre)
        apply (wp lookup_cap_and_slot_rvu[where r = root_size
-        and cap' = "FrameCap frame_ptr rights n Real None"])[1]
+        and cap' = "FrameCap dev frame_ptr rights n Real None"])[1]
       apply (erule_tac Q="cdl_current_domain sa = minBound" in conjE, assumption)
      apply (rule hoare_pre)
       apply (wp lookup_cap_and_slot_rvu[where r = root_size
-       and cap' = "FrameCap frame_ptr rights n Real None"])[1]
+       and cap' = "FrameCap dev frame_ptr rights n Real None"])[1]
      apply clarsimp
      apply (rule conjI)
       apply (clarsimp simp:reset_cap_asid_def ep_related_cap_def
@@ -582,7 +582,7 @@ lemma seL4_Page_Map_wp:
     apply (sep_solve)
    apply sep_solve
   apply clarsimp
-  apply (drule_tac x = "FrameCap frame_ptr rights n Real None"  in spec)
+  apply (drule_tac x = "FrameCap dev frame_ptr rights n Real None"  in spec)
    apply clarsimp
   apply (erule impE)
    apply (rule_tac x = "PageDirectoryCap pd_ptr real None" in exI)
@@ -658,7 +658,7 @@ lemma invoke_asid_pool_wp:
   done
 
 lemma sep_map_c_asid_simp:
-  "(slot \<mapsto>c FrameCap ptr rights sz real option) = (slot \<mapsto>c FrameCap ptr rights sz real None)"
+  "(slot \<mapsto>c FrameCap dev ptr rights sz real option) = (slot \<mapsto>c FrameCap dev ptr rights sz real None)"
   "(slot \<mapsto>c PageTableCap ptr real option) = (slot \<mapsto>c PageTableCap ptr real None)"
   "(slot \<mapsto>c PageDirectoryCap ptr real option') = (slot \<mapsto>c PageDirectoryCap ptr real None)"
   by (simp_all add:sep_map_c_asid_reset)

@@ -10,9 +10,9 @@
 
 theory LemmaBucket_C
 imports
+  Lib
+  "$L4V_ARCH/WordSetup"
   TypHeapLib
-  Aligned
-  WordLemmaBucket
   "../tools/c-parser/umm_heap/ArrayAssertion"
 begin
 
@@ -53,8 +53,7 @@ lemma exec_Guard:
   "(G \<turnstile> \<langle>Guard Err S c, Normal s\<rangle> \<Rightarrow> s')
        = (if s \<in> S then G \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> s'
                 else s' = Fault Err)"
-  by (auto split: split_if elim!: exec_elim_cases
-           intro: exec.intros)
+  by (auto split: split_if elim!: exec_elim_cases intro: exec.intros)
 
 lemma to_bytes_word8:
   "to_bytes (v :: word8) xs = [v]"
@@ -215,7 +214,7 @@ lemma upto_intvl_eq':
     apply (subst field_simps [symmetric], rule word_plus_mono_right)
      apply simp
     apply assumption
-   apply (subst of_nat_mono_maybe_le [symmetric])
+   apply (subst Word_Lemmas.of_nat_mono_maybe_le [symmetric])
      apply simp
     apply simp
    apply simp
@@ -396,7 +395,7 @@ proof (rule disjointI, rule notI)
   
   also have "\<dots> \<le> c" by (rule abc)  
   also have "\<dots> \<le> c + of_nat ky" using cld dlt ky
-    by - (rule word_random [OF _ iffD1 [OF of_nat_mono_maybe_le]], simp+ )
+    by - (rule word_random [OF _ iffD1 [OF Word_Lemmas.of_nat_mono_maybe_le]], simp+ )
   finally show False using ac by simp
 qed
 
@@ -651,13 +650,7 @@ lemma take_drop_foldl_concat:
    apply (induct x, simp_all)[1]
   apply simp
   done
-
-(* FIXME : Move to WordLib *)
-lemma scast_of_nat [simp]:
-    "scast (of_nat x :: 'a::len signed word) = (of_nat x :: 'a word)"
-  by (metis (hide_lams, no_types) len_signed scast_def uint_sint
-         word_of_nat word_ubin.Abs_norm word_ubin.eq_norm)
-
+  
 definition
   array_ptr_index :: "(('a :: c_type)['b :: finite]) ptr \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> 'a ptr"
 where
@@ -926,7 +919,7 @@ lemma h_t_valid_Array_element':
    apply (clarsimp simp: intvl_def)
    apply (drule_tac x="offs * size_of TYPE('a) + k" in spec)
    apply (drule mp)
-    apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def field_simps of_nat_nat)
+    apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def field_simps)
    apply (erule notE)
    apply (rule_tac y="Suc offs * size_of TYPE('a)" in order_less_le_trans)
     apply (simp add: size_of_def)

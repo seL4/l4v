@@ -13,7 +13,7 @@
                 Rafal Kolanski <rafal.kolanski at nicta.com.au>
 *)
 
-header "Abstract Separation Logic, Alternative Definition"
+chapter "Abstract Separation Logic, Alternative Definition"
 
 theory Separation_Algebra_Alt
 imports "~~/src/HOL/Main"
@@ -135,7 +135,7 @@ lemma sep_conj_comI:
 
 lemma sep_conj_com:
   "P ** Q = Q ** P"
-  by (auto intro: sep_conj_comI intro!: ext)
+  by (auto intro: sep_conj_comI)
 
 lemma lift_to_add2:
   "\<lbrakk>z \<oplus> q = Some s; x \<oplus> y = Some q\<rbrakk> \<Longrightarrow> Some z ++ Some x ++ Some y = Some s"
@@ -186,11 +186,11 @@ lemma disjoint_submaps_exist:
 lemma sep_conj_true[simp]:
   "(sep_true ** sep_true) = sep_true"
   unfolding sep_conj_def
-  by (auto intro!: ext intro: disjoint_submaps_exist)
+  by (auto intro: disjoint_submaps_exist)
 
 lemma sep_conj_false_right[simp]:
   "(P ** sep_false) = sep_false"
-  by (force elim: sep_conjE intro!: ext)
+  by (force elim: sep_conjE)
 
 lemma sep_conj_false_left[simp]:
   "(sep_false ** P) = sep_false"
@@ -239,7 +239,7 @@ lemma sep_conj_exists1:
 
 lemma sep_conj_exists2:
   "(P ** (\<lambda>s. \<exists>x. Q x s)) = (\<lambda>s. (\<exists>x. (P ** Q x) s))"
-  by (force intro!: sep_conjI ext elim!: sep_conjE)
+  by (force intro!: sep_conjI elim!: sep_conjE)
 
 lemmas sep_conj_exists = sep_conj_exists1 sep_conj_exists2
 
@@ -280,11 +280,11 @@ lemma sep_implD:
 
 lemma sep_impl_sep_true[simp]:
   "(P \<longrightarrow>\<^sup>* sep_true) = sep_true"
-  by (force intro!: sep_implI ext)
+  by (force intro!: sep_implI)
 
 lemma sep_impl_sep_false[simp]:
   "(sep_false \<longrightarrow>\<^sup>* P) = sep_true"
-  by (force intro!: sep_implI ext)
+  by (force intro!: sep_implI)
 
 lemma sep_impl_sep_true_P:
   "(sep_true \<longrightarrow>\<^sup>* P) s \<Longrightarrow> P s"
@@ -295,7 +295,7 @@ lemma sep_impl_sep_true_P:
 
 lemma sep_impl_sep_true_false[simp]:
   "(sep_true \<longrightarrow>\<^sup>* sep_false) = sep_false"
-  by (force intro!: ext dest: sep_impl_sep_true_P)
+  by (force dest: sep_impl_sep_true_P)
 
 lemma sep_conj_sep_impl:
   "\<lbrakk> P s; \<And>s. (P ** Q) s \<Longrightarrow> R s \<rbrakk> \<Longrightarrow> (Q \<longrightarrow>\<^sup>* R) s"

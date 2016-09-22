@@ -9,7 +9,7 @@
  *)
 
 theory addrlocal
-imports CTranslation
+imports "../../CTranslation"
 begin
 
 install_C_file "addrlocal.c";

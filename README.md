@@ -43,6 +43,8 @@ The repository is organised as follows.
 
  * [`spec`](spec/): a number of different formal specifications of seL4
     * [`abstract`](spec/abstract/): the functional abstract specification of seL4
+    * [`haskell`](spec/haskell/): Haskell model of the seL4 kernel, kept in sync
+      with the C code
     * [`design`](spec/design/): the Haskell-generated design-level specification of seL4
     * [`machine`](spec/machine/): the machine interface of these two specifications
     * [`cspec`](spec/cspec/): the entry point for automatically translating the seL4 C code
@@ -111,20 +113,24 @@ cores are useful.
 
 ### Software
 
-The proofs in this repository use `Isabelle2015`. A copy of Isabelle
+The proofs in this repository use `Isabelle2016`. A copy of Isabelle
 is included in the repository setup.
 
-The dependencies for installing Isabelle are
+The dependencies for installing Isabelle in this repository are
 
  * Perl 5.x with `libwww-perl`
  * Python 2.x
- * LaTeX (e.g. `texlive` with `texlive-bibtex-extra` + `texlive-latex-extra` +
-   `texlive-fonts-recommended`)
+ * LaTeX, for instance on Ubuntu 14.04
+   `sudo apt-get install texlive-fonts-recommended texlive-latex-extra texlive-metapost texlive-bibtex-extra`     
  * 32-bit C/C++ standard libraries on 64-bit platforms (optional)
 
 For running the standalone version of the C Parser you will additionally need
 
  * [MLton][7] ML compiler (package `mlton-compiler` on Ubuntu)
+
+For building the Haskell kernel model, GHC 7.8.x is currently required.
+Note that this repository does not contain the QEmu interface for actually
+running the model.
 
 For running the C proofs, you need a working C preprocessor setup for the seL4
 repository.
@@ -201,7 +207,7 @@ These commands perform the following steps:
  * build basic Isabelle images, including `HOL-Word` to ensure that
    the installation works. This may take a few minutes.
 
-Alternatively, it is possible to use the official Isabelle2015 release
+Alternatively, it is possible to use the official Isabelle2016 release
 bundle for your platform from the [Isabelle website][2]. In this case, the
 installation steps above can be skipped, and you would replace the directory
 `verification/isabelle/` with a symbolic link to the Isabelle home directory

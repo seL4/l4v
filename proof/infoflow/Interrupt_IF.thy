@@ -12,8 +12,9 @@ theory Interrupt_IF
 imports Finalise_IF
 begin
 
-subsection "reads respects"
+context begin interpretation Arch . (*FIXME: arch_split*)
 
+subsection "reads respects"
 
 (* invs comes from cap_delete_one *)
 lemma invoke_irq_handler_reads_respects_f:
@@ -96,5 +97,6 @@ lemma invoke_irq_control_reads_respects_g:
    apply(wp invoke_irq_control_globals_equiv | simp)+
   done
 
+end
 
 end

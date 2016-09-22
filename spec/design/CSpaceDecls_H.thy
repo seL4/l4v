@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file CSpaceDecls_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -14,28 +16,28 @@ theory CSpaceDecls_H
 imports FaultMonad_H
 begin
 
-consts
+consts'
 lookupCap :: "machine_word \<Rightarrow> cptr \<Rightarrow> ( lookup_failure , capability ) kernel_f"
 
-consts
+consts'
 lookupCapAndSlot :: "machine_word \<Rightarrow> cptr \<Rightarrow> ( lookup_failure , (capability * machine_word) ) kernel_f"
 
-consts
+consts'
 lookupSlotForThread :: "machine_word \<Rightarrow> cptr \<Rightarrow> ( lookup_failure , (machine_word) ) kernel_f"
 
-consts
+consts'
 lookupSlotForCNodeOp :: "bool \<Rightarrow> capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow> ( syscall_error , (machine_word) ) kernel_f"
 
-consts
+consts'
 lookupSourceSlot :: "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow> ( syscall_error , (machine_word) ) kernel_f"
 
-consts
+consts'
 lookupTargetSlot :: "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow> ( syscall_error , (machine_word) ) kernel_f"
 
-consts
+consts'
 lookupPivotSlot :: "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow> ( syscall_error , (machine_word) ) kernel_f"
 
-consts
+consts'
 resolveAddressBits :: "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow> ( lookup_failure , (machine_word * nat) ) kernel_f"
 
 

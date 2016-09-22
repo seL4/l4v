@@ -8,11 +8,9 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory Etanercept imports
-  "~~/src/HOL/Word/Word"
-  NICTACompat
-  SignedWords
-  WordBitwiseSigned
+theory Etanercept (* FIXME: broken, untested *)
+imports
+  "$L4V_ARCH/WordSetup"
   "ml-helpers/TermPatternAntiquote"
 keywords
   "word_refute" :: diag

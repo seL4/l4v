@@ -191,4 +191,9 @@ where
     return a
   od"
 
+text {* Raise an exception if a property does not hold. *}
+definition
+throw_on_false :: "'e \<Rightarrow> (bool,'z::state_ext) s_monad \<Rightarrow> ('e + unit,'z::state_ext) s_monad" where
+"throw_on_false ex f \<equiv> doE v \<leftarrow> liftE f; unlessE v $ throwError ex odE"
+
 end

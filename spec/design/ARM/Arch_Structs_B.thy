@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Arch_Structs_B.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -13,8 +15,9 @@
 chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
-imports "~~/src/HOL/Main"
+imports "~~/src/HOL/Main" "../../../spec/machine/Setup_Locale"
 begin
+context Arch begin global_naming ARM_H
 
 datatype arm_vspace_region_use =
     ArmVSpaceUserRegion
@@ -23,4 +26,5 @@ datatype arm_vspace_region_use =
   | ArmVSpaceDeviceWindow
 
 
+end
 end

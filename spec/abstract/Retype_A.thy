@@ -22,6 +22,16 @@ imports
   "./$L4V_ARCH/ArchRetype_A"
 begin
 
+context begin interpretation Arch .
+
+requalify_consts
+  arch_default_cap
+  default_arch_object
+  init_arch_objects 
+
+end
+                                
+
 section "Creating Caps"
 
 text {* The original capability created when an object of a given type is
@@ -58,7 +68,6 @@ definition
   empty_cnode :: "nat \<Rightarrow> cnode_contents" where
   "empty_cnode bits \<equiv> \<lambda>x. if length x = bits then Some NullCap else None"
 
-thm default_arch_object_def
 
 text {* The initial state objects of various types are in when created. *}
 definition
@@ -108,10 +117,12 @@ where
 
 section "Invoking Untyped Capabilities"
 
+abbreviation (input) "extended_state_update \<equiv> trans_state"
+
 text {* Remove objects from a region of the heap. *}
 definition
   detype :: "(obj_ref set) \<Rightarrow> 'z::state_ext state \<Rightarrow> 'z::state_ext state" where
- "detype S s \<equiv> s \<lparr> kheap := (\<lambda>x. if x \<in> S then None else kheap s x), exst := detype_ext S (exst s)\<rparr>"
+ "detype S s \<equiv> s \<lparr> kheap := (\<lambda>x. if x \<in> S then None else kheap s x), extended_state := detype_ext S (exst s)\<rparr>"
 
 text {* Delete objects within a specified region. *}
 definition

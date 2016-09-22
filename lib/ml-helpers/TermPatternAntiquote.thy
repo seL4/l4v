@@ -1,3 +1,13 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
 text \<open>
   term_pat: ML antiquotation for pattern matching on terms.
 \<close>
@@ -41,7 +51,7 @@ text \<open>
 ML {*
 structure Term_Pattern_Antiquote = struct
 
-val quote_string = quote o String.toString
+val quote_string = quote
 
 (* typ matching; doesn't support matching on named TVars.
  * This is because each TVar is likely to appear many times in the pattern. *)
@@ -61,7 +71,14 @@ fun gen_term_pattern (Var (("_dummy_", _), _)) = "_"
       "Term.Const (" ^ quote_string n ^ ", " ^ gen_typ_pattern typ ^ ")"
   | gen_term_pattern (Free (n, typ)) =
       "Term.Free (" ^ quote_string n ^ ", " ^ gen_typ_pattern typ ^ ")"
-  | gen_term_pattern (f $ x) = "(" ^ gen_term_pattern f ^ " $ " ^ gen_term_pattern x ^ ")"
+  | gen_term_pattern (t as f $ x) =
+      (* (read_term_pattern "_") "helpfully" generates a dummy var that is
+       * applied to all bound vars in scope. We go back and remove them. *)
+      let fun default () = "(" ^ gen_term_pattern f ^ " $ " ^ gen_term_pattern x ^ ")";
+      in case strip_comb t of
+             (h as Var (("_dummy_", _), _), bs) =>
+               if forall is_Bound bs then gen_term_pattern h else default ()
+           | _ => default () end
   | gen_term_pattern (Abs (_, typ, t)) =
       "Term.Abs (_, " ^ gen_typ_pattern typ ^ ", " ^ gen_term_pattern t ^ ")"
   | gen_term_pattern (Bound n) = "Bound " ^ string_of_int n
@@ -97,6 +114,16 @@ fun eval_num @{term_pat "numeral ?n"} = HOLogic.dest_num n
   | eval_num t = raise TERM ("eval_num", [t]);
 
 eval_num @{term "(1 + 2) * 3 - 4 div 5"}
+*}
+
+text \<open>Regression test: backslash handling\<close>
+ML_val {*
+val @{term_pat "\<alpha>"} = @{term "\<alpha>"}
+*}
+
+text \<open>Regression test: special-casing for dummy vars\<close>
+ML_val {*
+val @{term_pat "\<lambda>x y. _"} = @{term "\<lambda>x y. ()"}
 *}
 
 end

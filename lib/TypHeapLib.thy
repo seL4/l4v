@@ -13,10 +13,10 @@ imports "../tools/c-parser/CTranslation"
 begin
 
 (* This file contains everything you need to know and use for the
-   day-to-day solving of TypHeap related goals.  See KernelState,thy for
+   day-to-day solving of TypHeap related goals.  See KernelState.thy for
    abbreviations for cslift etc. *)
 
-section "abbreviations and helpers"
+section "Abbreviations and helpers"
 
 (* The idea here is to make sure that all abbreviations have defs that let you know they are an abbrev. *)
 definition "is_an_abbreviation \<equiv> True"

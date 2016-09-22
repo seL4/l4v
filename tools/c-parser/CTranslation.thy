@@ -67,7 +67,7 @@ where
 
 definition
   "guarded_spec_body F R = Guard F (fst ` R) (Spec R)"
-  
+
 lemma guarded_spec_body_wp [vcg_hoare]:
 "P \<subseteq>
 {s. (\<forall>t. (s,t) \<in> R \<longrightarrow> t \<in> Q) \<and> (Ft \<notin> F \<longrightarrow> (\<exists>t. (s,t) \<in> R))}
@@ -84,8 +84,8 @@ apply simp
 apply (erule order_trans)
 apply (auto simp: image_def Bex_def)
 done
-  
-  
+
+
 ML_file "tools/mlyacc/mlyacclib/MLY_base-sig.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_join.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_lrtable.ML"
@@ -107,6 +107,7 @@ ML_file "recursive_records/recursive_record_pp.ML"
 ML_file "recursive_records/recursive_record_package.ML"
 ML_file "expression_typing.ML"
 ML_file "UMM_Proofs.ML"
+ML_file "Listsort.ML"
 ML_file "program_analysis.ML"
 ML_file "heapstatetype.ML"
 ML_file "MemoryModelExtras-sig.ML"
@@ -123,22 +124,21 @@ declare typ_info_word [simp del]
 declare typ_info_ptr [simp del]
 
 lemma valid_call_Spec_eq_subset:
-"\<Gamma>' procname = Some (Spec R)
-\<Longrightarrow> HoarePartialDef.valid \<Gamma>' NF P (Call procname) Q A
-= (P \<subseteq> fst ` R \<and> (R \<subseteq> (- P) \<times> UNIV \<union> UNIV \<times> Q))"
-apply (safe, simp_all)
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (rule ccontr)
-apply (drule_tac x="Normal x" in spec, elim allE,
-drule mp, erule exec.Call, rule exec.SpecStuck)
-apply (auto simp: image_def)[2]
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (elim allE, drule mp, erule exec.Call, erule exec.Spec)
-apply auto[1]
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (erule exec_Normal_elim_cases, simp_all)
-apply (erule exec_Normal_elim_cases, auto)
-done
+  "\<Gamma>' procname = Some (Spec R) \<Longrightarrow>
+  HoarePartialDef.valid \<Gamma>' NF P (Call procname) Q A = (P \<subseteq> fst ` R \<and> (R \<subseteq> (- P) \<times> UNIV \<union> UNIV \<times> Q))"
+  apply (safe, simp_all)
+    apply (clarsimp simp: HoarePartialDef.valid_def)
+    apply (rule ccontr)
+     apply (drule_tac x="Normal x" in spec, elim allE,
+            drule mp, erule exec.Call, rule exec.SpecStuck)
+     apply (auto simp: image_def)[2]
+   apply (clarsimp simp: HoarePartialDef.valid_def)
+   apply (elim allE, drule mp, erule exec.Call, erule exec.Spec)
+   apply auto[1]
+  apply (clarsimp simp: HoarePartialDef.valid_def)
+  apply (erule exec_Normal_elim_cases, simp_all)
+  apply (erule exec_Normal_elim_cases, auto)
+  done
 
 lemma creturn_wp [vcg_hoare]:
   assumes "P \<subseteq> {s. (exnupd (\<lambda>_. Return)) (rvupd (\<lambda>_. v s) s) \<in> A}"

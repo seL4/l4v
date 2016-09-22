@@ -23,4 +23,3 @@ unsigned gcd(unsigned a, unsigned b) {
 	}
 	return b;
 }
-

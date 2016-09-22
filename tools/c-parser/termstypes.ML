@@ -20,7 +20,7 @@ val word16 = word_ty @{typ "16"}
 val word32 = word_ty @{typ "32"}
 val word64 = word_ty @{typ "64"}
 
-fun sword_ty arg = Type(@{type_name "Word.word"}, [Type (@{type_name "SignedWords.signed"}, [arg])])
+fun sword_ty arg = Type(@{type_name "Word.word"}, [Type (@{type_name "Signed_Words.signed"}, [arg])])
 val sword8 = sword_ty @{typ "8"}
 val sword16 = sword_ty @{typ "16"}
 val sword32 = sword_ty @{typ "32"}

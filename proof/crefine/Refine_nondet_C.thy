@@ -10,10 +10,10 @@
 
 header "Toplevel Refinement Statement for nondeterministic specification"
 
-theory Refine_nondet_C
+theory Refine_nondet_C (* FIXME: broken *)
 imports
   Refine_C
-  "../invariant_abstract/BCorres2_AI"
+  "../invariant-abstract/BCorres2_AI"
 begin
 
 definition (in state_rel)

@@ -10,10 +10,11 @@
 
 theory Hoare_Sep_Tactics
 imports
-  "../wp/NonDetMonadVCG"
+  "../Monad_WP/NonDetMonadVCG"
   "../sep_algebra/Sep_Algebra_L4v"
 begin
 
+(* FIXME: needs cleanup *)
 
 lemma hoare_eq_pre:  " \<lbrakk> \<And>s. P s = G s; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>G\<rbrace> f \<lbrace>Q\<rbrace>"
   by (erule hoare_pre_subst [rotated], auto)
@@ -22,17 +23,16 @@ lemma hoare_eq_preE:  " \<lbrakk> \<And>s. P s = G s; \<lbrace>P\<rbrace> f \<lb
   apply (rule hoare_weaken_preE)
    apply (assumption)
   apply (clarsimp)
-done
+  done
 
 lemma hoare_eq_preE_R:  " \<lbrakk> \<And>s. P s = G s; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-\<rbrakk> \<Longrightarrow> \<lbrace>G\<rbrace> f \<lbrace>Q\<rbrace>,-"
   apply (clarsimp simp: validE_R_def)
    apply (erule hoare_eq_preE)
   apply (clarsimp)
-done
+  done
 
 lemma hoare_eq_post: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>G\<rbrace>"
-  apply (rule hoare_strengthen_post, assumption, clarsimp)
-done
+  by (rule hoare_strengthen_post, assumption, clarsimp)
 
 lemma hoare_eq_postE: " \<lbrakk> \<And>rv s. Q rv s = G rv s; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>G\<rbrace>, \<lbrace>E\<rbrace>"
   by (metis (full_types) hoare_post_impErr')
@@ -370,30 +370,24 @@ done
 
 ML {*
    fun J f x = f x
-               handle _ => x   (* FIXME *)
+               handle _ => x   (* FIXME! exceptions *)
 
    fun sep_wp thms ctxt  =
-   let val thms' = map (sep_wandise_helper ctxt |> J) thms;
-       val wp = WeakestPre.apply_once_tac false ctxt thms'  (Unsynchronized.ref [] : thm list Unsynchronized.ref)
-       val sep_impi = (REPEAT_ALL_NEW  (sep_match_trivial_tac ctxt)) THEN' assume_tac ctxt
-       val schemsolve = sep_rule_tac (eresolve0_tac [@{thm boxsolve}]) ctxt
-       val hoare_post = (resolve0_tac [(rotate_prems ~1 @{thm hoare_strengthen_post})])
-       in K wp THEN' (TRY o sep_flatten ctxt) THEN' (TRY o (hoare_post THEN' (schemsolve ORELSE' sep_impi))) THEN'
-          (TRY o (sep_match_trivial_tac ctxt |> REPEAT_ALL_NEW)) THEN'
-          (TRY o sep_flatten ctxt)
-       end ;
-
-   fun sep_wp_parse xs =
-       (Attrib.thms >> curry (fn (thms, ctxt) =>
-      Method.SIMPLE_METHOD' (
-       sep_wp thms ctxt
-      ))) xs
-
+   let
+     val thms' = map (sep_wandise_helper ctxt |> J) thms;
+     val wp = WeakestPre.apply_once_tac false ctxt thms'  (Unsynchronized.ref [] : thm list Unsynchronized.ref)
+     val sep_impi = (REPEAT_ALL_NEW  (sep_match_trivial_tac ctxt)) THEN' assume_tac ctxt
+     val schemsolve = sep_rule_tac (eresolve0_tac [@{thm boxsolve}]) ctxt
+     val hoare_post = (resolve0_tac [(rotate_prems ~1 @{thm hoare_strengthen_post})])
+   in
+     K wp THEN' (TRY o sep_flatten ctxt) THEN' (TRY o (hoare_post THEN' (schemsolve ORELSE' sep_impi))) THEN'
+     (TRY o (sep_match_trivial_tac ctxt |> REPEAT_ALL_NEW)) THEN'
+     (TRY o sep_flatten ctxt)
+   end
 *}
 
 method_setup sep_wp = {*
-  sep_wp_parse
+  Attrib.thms >> (fn thms => fn ctxt => Method.SIMPLE_METHOD' (sep_wp thms ctxt))
 *}
-
 
 end

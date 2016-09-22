@@ -19,7 +19,7 @@ begin
 lemma maskCapRights_cap_cases:
   "return (maskCapRights R c) =
   (case c of
-    ArchObjectCap ac \<Rightarrow> return (ArchRetypeDecls_H.maskCapRights R ac)
+    ArchObjectCap ac \<Rightarrow> return (Arch.maskCapRights R ac)
   | EndpointCap _ _ _ _ _ \<Rightarrow> 
     return (capEPCanGrant_update
        (\<lambda>_. capEPCanGrant c \<and> capAllowGrant R)
@@ -64,8 +64,11 @@ lemma maskVMRights_spec:
   apply vcg
   apply clarsimp
   apply (rule conjI) 
-   apply (auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
-              split: bool.split)[1]
+   apply ((auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs 
+                      cap_rights_to_H_def to_bool_def
+               split: bool.split 
+         | simp add: mask_def
+         | word_bitwise)+)[1]
   apply clarsimp
   apply (subgoal_tac "vm_rights = 0 \<or> vm_rights = 1 \<or> vm_rights = 2 \<or> vm_rights = 3")
    apply (auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
@@ -100,11 +103,11 @@ lemma Arch_maskCapRights_ccorres [corres]:
   (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap arch_cap) \<acute>cap\<rbrace> \<inter>
   \<lbrace>ccap_rights_relation R \<acute>cap_rights_mask\<rbrace>)
   []
-  (return (ArchRetypeDecls_H.maskCapRights R arch_cap))
+  (return (Arch.maskCapRights R arch_cap))
   (Call Arch_maskCapRights_'proc)"
   apply (cinit' (trace) lift: cap_' cap_rights_mask_')
    apply csymbr
-   apply (unfold ArchRetype_H.maskCapRights_def)
+   apply (unfold ARM_H.maskCapRights_def)
    apply (simp only: Let_def)
    apply (case_tac "cap_get_tag cap = scast cap_small_frame_cap")
     apply (clarsimp simp add: ccorres_cond_iffs cap_get_tag_isCap isCap_simps)
@@ -788,7 +791,7 @@ schematic_goal ccap_relation_tag_Master:
                                 then scast cap_small_frame_cap else scast cap_frame_cap)
                            ?ad ?ae) ?h ?i ?j ?k
             (capMasterCap cap)"
-  by (fastforce simp: ccap_relation_def option_map_Some_eq2
+  by (fastforce simp: ccap_relation_def map_option_Some_eq2
                      Let_def cap_lift_def cap_to_H_def
               split: split_if_asm)
 
@@ -2233,7 +2236,9 @@ definition
   irq_opt_relation_def:
   "irq_opt_relation (airq :: (10 word) option) (cirq :: word16) \<equiv>
        case airq of
-         Some irq \<Rightarrow> (cirq = ucast irq \<and> irq \<noteq> scast irqInvalid \<and> ucast irq \<le> (scast maxIRQ :: word16))
+         Some irq \<Rightarrow> (cirq = ucast irq \<and>
+                      irq \<noteq> scast irqInvalid \<and>
+                      ucast irq \<le> (scast Kernel_C.maxIRQ :: word16))
        | None \<Rightarrow> cirq = scast irqInvalid"
 
 
@@ -2242,7 +2247,7 @@ declare unat_ucast_up_simp[simp]
 
 lemma setIRQState_ccorres:
   "ccorres dc xfdc
-          (\<top> and (\<lambda>s. ucast irq \<le> (scast maxIRQ :: word16)))
+          (\<top> and (\<lambda>s. ucast irq \<le> (scast Kernel_C.maxIRQ :: word16)))
           (UNIV \<inter> {s. irqState_' s = irqstate_to_C irqState} 
                 \<inter> {s. irq_' s = (ucast irq :: word16)}  )
           []
@@ -2269,7 +2274,7 @@ show ?thesis
           apply (clarsimp simp: simpler_modify_def) 
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                 carch_state_relation_def cmachine_state_relation_def)
-          apply (simp add: cinterrupt_relation_def maxIRQ_def)
+          apply (simp add: cinterrupt_relation_def Kernel_C.maxIRQ_def)
           apply (clarsimp simp:  word_sless_msb_less order_le_less_trans
                             unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b 
                          split: split_if )
@@ -2300,7 +2305,9 @@ qed
 
 
 lemma deletedIRQHandler_ccorres:
-  "ccorres dc xfdc (\<lambda>s. ucast irq \<le> (scast maxIRQ :: 16 word)) (UNIV\<inter> {s. irq_' s = ucast irq}) []
+  "ccorres dc xfdc
+         (\<lambda>s. ucast irq \<le> (scast Kernel_C.maxIRQ :: 16 word))
+         (UNIV\<inter> {s. irq_' s = ucast irq}) []
          (deletedIRQHandler irq)
          (Call deletedIRQHandler_'proc )"
   apply (cinit simp del: return_bind)
@@ -2678,11 +2685,11 @@ lemma Arch_sameRegionAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>  ccap_relation (ArchObjectCap capa) \<acute>cap_a \<and>
                  ccap_relation (ArchObjectCap capb) \<acute>cap_b  \<rbrace>
   Call Arch_sameRegionAs_'proc
-  \<lbrace>  \<acute>ret__unsigned_long = from_bool (ArchRetypeDecls_H.sameRegionAs capa capb) \<rbrace>"
+  \<lbrace>  \<acute>ret__unsigned_long = from_bool (Arch.sameRegionAs capa capb) \<rbrace>"
   apply vcg
   apply clarsimp
 
-  apply (simp add: ArchRetype_H.sameRegionAs_def)
+  apply (simp add: ARM_H.sameRegionAs_def)
   subgoal for capa capb cap_b cap_a  
   apply (cases capa; simp add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
 
@@ -3066,7 +3073,7 @@ lemma cap_get_capSizeBits_spec:
 lemma ccap_relation_get_capSizeBits_physical:
   notes unfolds = ccap_relation_def get_capSizeBits_CL_def cap_lift_def
                   cap_tag_defs cap_to_H_def objBits_def objBitsKO_simps
-                  Let_def field_simps mask_def asid_low_bits_def ArchRetype_H.capUntypedSize_def
+                  Let_def field_simps mask_def asid_low_bits_def ARM_H.capUntypedSize_def
   shows
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap = PhysicalClass;
             capAligned hcap \<rbrakk> \<Longrightarrow>
@@ -3122,7 +3129,7 @@ lemma get_capSizeBits_valid_shift:
      (* zombie *)
      apply (clarsimp simp: Let_def split: split_if)
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
-     apply (clarsimp simp: ccap_relation_def option_map_Some_eq2
+     apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                            cap_lift_zombie_cap cap_to_H_def
                            Let_def capAligned_def objBits_simps
                            word_bits_conv)
@@ -3145,7 +3152,7 @@ lemma get_capSizeBits_valid_shift:
    apply (simp add: word_and_le1)
   (* cnode *)
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  apply (clarsimp simp: ccap_relation_def option_map_Some_eq2
+  apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                         cap_lift_cnode_cap cap_to_H_def
                         Let_def capAligned_def objBits_simps
                         word_bits_conv)
@@ -3237,11 +3244,66 @@ lemma cap_get_capPtr_spec:
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
                   Let_def cap_untyped_cap_lift_def  split: split_if_asm)
 
+definition get_capIsPhysical_CL :: "cap_CL option \<Rightarrow> bool"
+where
+  "get_capIsPhysical_CL \<equiv> \<lambda>cap. (case cap of
+  Some (Cap_untyped_cap c) \<Rightarrow> True
+    | Some (Cap_endpoint_cap c) \<Rightarrow> True
+    | Some (Cap_notification_cap c) \<Rightarrow> True
+    | Some (Cap_cnode_cap c) \<Rightarrow> True
+    | Some (Cap_thread_cap c) \<Rightarrow> True
+    | Some (Cap_small_frame_cap c) \<Rightarrow> True
+    | Some (Cap_frame_cap c) \<Rightarrow> True
+    | Some (Cap_page_table_cap c) \<Rightarrow> True
+    | Some (Cap_page_directory_cap c) \<Rightarrow> True
+    | Some (Cap_asid_pool_cap c) \<Rightarrow> True
+    | Some (Cap_zombie_cap c) \<Rightarrow> True
+    | _ \<Rightarrow> False)"
+    
+lemma cap_get_capIsPhysical_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+       Call cap_get_capIsPhysical_'proc
+       \<lbrace>\<acute>ret__unsigned_long = from_bool (get_capIsPhysical_CL (cap_lift \<^bsup>s\<^esup>cap))\<rbrace>"
+  apply vcg
+  apply (clarsimp simp: get_capIsPhysical_CL_def)
+  apply (intro impI conjI)
+                    apply (clarsimp simp: cap_lifts pageBitsForSize_def 
+                                          cap_lift_asid_control_cap word_sle_def
+                                          cap_lift_irq_control_cap cap_lift_null_cap
+                                          mask_def objBits_simps cap_lift_domain_cap
+                                          ptr_add_assertion_positive from_bool_def
+                                          true_def false_def
+                                   dest!: sym [where t = "cap_get_tag cap" for cap]
+                                   split: vmpage_size.splits)+
+  (* XXX: slow. there should be a rule for this *)
+  by (case_tac "cap_lift cap", simp_all, case_tac a, auto simp: cap_lift_def cap_tag_defs Let_def
+                  cap_small_frame_cap_lift_def cap_frame_cap_lift_def
+                  cap_endpoint_cap_lift_def cap_notification_cap_lift_def
+                  cap_cnode_cap_lift_def cap_thread_cap_lift_def
+                  cap_zombie_cap_lift_def cap_page_table_cap_lift_def
+                  cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
+                  Let_def cap_untyped_cap_lift_def  split: split_if_asm)
+
 lemma ccap_relation_get_capPtr_not_physical:
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap \<noteq> PhysicalClass \<rbrakk> \<Longrightarrow>
    get_capPtr_CL (cap_lift ccap) = Ptr 0"
   by (clarsimp simp: ccap_relation_def get_capPtr_CL_def cap_to_H_def Let_def
               split: option.split cap_CL.split_asm split_if_asm)
+  
+lemma ccap_relation_get_capIsPhysical:
+  "ccap_relation hcap ccap \<Longrightarrow> isPhysicalCap hcap = get_capIsPhysical_CL (cap_lift ccap)"
+  apply (case_tac hcap; clarsimp simp: cap_lifts cap_lift_domain_cap cap_lift_null_cap 
+                                       cap_lift_irq_control_cap cap_to_H_def 
+                                       get_capIsPhysical_CL_def 
+                       dest!: cap_get_tag_isCap_unfolded_H_cap)
+  apply (rename_tac arch_cap)
+  apply (case_tac arch_cap; clarsimp simp: cap_lifts cap_lift_asid_control_cap                                        
+                      dest!: cap_get_tag_isCap_unfolded_H_cap)
+  apply (rename_tac p R sz asid)
+  apply (case_tac sz)
+  apply (drule (1) cap_get_tag_isCap_unfolded_H_cap(16), clarsimp simp: cap_lifts)
+  apply (drule cap_get_tag_isCap_unfolded_H_cap(17), simp, clarsimp simp: cap_lifts)+
+  done
 
 lemma ctcb_ptr_to_tcb_ptr_mask':
   "is_aligned (ctcb_ptr_to_tcb_ptr (tcb_Ptr x)) (objBits (undefined :: tcb)) \<Longrightarrow>
@@ -3425,38 +3487,33 @@ lemma sameRegionAs_spec:
     -- "capa is an UntypedCap"
     apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(9))
     apply (intro conjI)
-       apply (rule impI, drule(1) cap_get_tag_to_H)+
-       apply (clarsimp simp: capAligned_def word_bits_conv
-                             objBits_simps get_capZombieBits_CL_def
-                             Let_def word_less_nat_alt
-                             less_mask_eq
-                      split: split_if_asm)
-      apply (subgoal_tac "capBlockSize_CL (cap_untyped_cap_lift cap_a) \<le> 0x1F")
-       apply (simp add: word_le_make_less)
-      apply (simp add: cap_untyped_cap_lift_def cap_lift_def
-                       cap_tag_defs word_and_le1)
-     apply (clarsimp simp: get_capSizeBits_valid_shift_word)
-    apply (clarsimp simp: from_bool_def Let_def split: split_if bool.splits)
-    apply (subst unat_of_nat32,
-           clarsimp simp: unat_of_nat32 word_bits_def
-                   dest!: get_capSizeBits_valid_shift)+
-    apply (clarsimp simp: ccap_relation_get_capPtr_physical
-                          ccap_relation_get_capPtr_untyped
-                          ccap_relation_get_capSizeBits_physical
-                          ccap_relation_get_capSizeBits_untyped)
-    apply (intro conjI impI)
-       apply ((clarsimp simp: ccap_relation_def map_option_case
-                              cap_untyped_cap_lift cap_to_H_def
-                              field_simps valid_cap'_def)+)[4]
-    apply (case_tac "capClass capb = PhysicalClass")
+     apply (rule impI, intro conjI)
+        apply (rule impI, drule(1) cap_get_tag_to_H)+
+        apply (clarsimp simp: capAligned_def word_bits_conv
+                              objBits_simps get_capZombieBits_CL_def
+                              Let_def word_less_nat_alt
+                              less_mask_eq true_def
+                       split: split_if_asm)
+       apply (subgoal_tac "capBlockSize_CL (cap_untyped_cap_lift cap_a) \<le> 0x1F")
+        apply (simp add: word_le_make_less)
+       apply (simp add: cap_untyped_cap_lift_def cap_lift_def
+                        cap_tag_defs word_and_le1)
+      apply (clarsimp simp: get_capSizeBits_valid_shift_word)
+     apply (clarsimp simp: from_bool_def Let_def split: split_if bool.splits)
+     apply (subst unat_of_nat32,
+              clarsimp simp: unat_of_nat32 word_bits_def
+                      dest!: get_capSizeBits_valid_shift)+
      apply (clarsimp simp: ccap_relation_get_capPtr_physical
-                           ccap_relation_get_capSizeBits_physical
-                           ccap_relation_get_capPtr_not_physical
                            ccap_relation_get_capPtr_untyped
-                           ccap_relation_get_capSizeBits_untyped
-                           field_simps ccap_relation_def
-                           cap_untyped_cap_lift cap_to_H_def)
-    apply (clarsimp simp: ccap_relation_get_capPtr_not_physical)
+                           ccap_relation_get_capIsPhysical[symmetric]
+                           ccap_relation_get_capSizeBits_physical
+                           ccap_relation_get_capSizeBits_untyped)
+     apply (intro conjI impI)
+        apply ((clarsimp simp: ccap_relation_def map_option_case
+                               cap_untyped_cap_lift cap_to_H_def
+                               field_simps valid_cap'_def)+)[4]
+    apply (rule impI, simp add: from_bool_0 ccap_relation_get_capIsPhysical[symmetric])
+    apply (simp add: from_bool_def false_def)
    -- "capa is a CNodeCap"
    apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
                 isCap_simps cap_tag_defs from_bool_def false_def)[1]
@@ -3506,9 +3563,9 @@ lemma Arch_sameObjectAs_spec:
                      capAligned (ArchObjectCap capa) \<and>
                      capAligned (ArchObjectCap capb) \<rbrace>
   Call Arch_sameObjectAs_'proc
-  \<lbrace> \<acute>ret__unsigned_long = from_bool (ArchRetypeDecls_H.sameObjectAs capa capb) \<rbrace>"
+  \<lbrace> \<acute>ret__unsigned_long = from_bool (Arch.sameObjectAs capa capb) \<rbrace>"
   apply vcg
-  apply (clarsimp simp: ArchRetype_H.sameObjectAs_def)
+  apply (clarsimp simp: ARM_H.sameObjectAs_def)
   apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                       isCap_defs cap_tag_defs)
       apply fastforce+
@@ -3769,7 +3826,7 @@ lemma updateCapData_spec:
    apply clarsimp
    apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
    apply (simp add: isArchCap_tag_def2)
-   apply (simp add: ArchRetype_H.updateCapData_def) 
+   apply (simp add: ARM_H.updateCapData_def) 
 
   -- "CNodeCap"
   apply clarsimp
@@ -3886,11 +3943,8 @@ lemma cap_small_frame_cap_set_capFMappedASID_spec:
                  cap_small_frame_cap_CL.capFMappedASIDLow_CL  := \<^bsup>s\<^esup>asid && mask asidLowBits \<rparr>
         \<and> cap_get_tag \<acute>ret__struct_cap_C = scast cap_small_frame_cap\<rbrace>"
   apply vcg
-  apply (clarsimp simp: Kernel_C.asidLowBits_def word_sle_def
-                        Kernel_C.asidHighBits_def asid_low_bits_def
-                        asid_high_bits_def mask_def)
-  apply (simp add: word_bw_assocs)
-  done
+  by (clarsimp simp: Kernel_C.asidLowBits_def word_sle_def
+                     Kernel_C.asidHighBits_def asid_low_bits_def asid_high_bits_def mask_def)
 
 lemma cap_frame_cap_set_capFMappedASID_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. cap_get_tag \<^bsup>s\<^esup>cap = scast cap_frame_cap\<rbrace>
@@ -3901,19 +3955,16 @@ lemma cap_frame_cap_set_capFMappedASID_spec:
                  cap_frame_cap_CL.capFMappedASIDLow_CL  := \<^bsup>s\<^esup>asid && mask asidLowBits \<rparr>
         \<and> cap_get_tag \<acute>ret__struct_cap_C = scast cap_frame_cap\<rbrace>"
   apply vcg
-  apply (clarsimp simp: Kernel_C.asidLowBits_def word_sle_def
-                        Kernel_C.asidHighBits_def asid_low_bits_def
-                        asid_high_bits_def mask_def)
-  apply (simp add: word_bw_assocs)
-  done
+  by (clarsimp simp: Kernel_C.asidLowBits_def word_sle_def
+                     Kernel_C.asidHighBits_def asid_low_bits_def asid_high_bits_def mask_def)
 
 lemma Arch_deriveCap_ccorres:
   "ccorres (syscall_error_rel \<currency> (ccap_relation \<circ> ArchObjectCap)) deriveCap_xf
   \<top> (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}) []
-  (ArchRetypeDecls_H.deriveCap slot cap) (Call Arch_deriveCap_'proc)"
+  (Arch.deriveCap slot cap) (Call Arch_deriveCap_'proc)"
   apply (cinit lift: cap_')
    apply csymbr
-   apply (unfold ArchRetype_H.deriveCap_def Let_def)
+   apply (unfold ARM_H.deriveCap_def Let_def)
    apply (fold case_bool_If)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject

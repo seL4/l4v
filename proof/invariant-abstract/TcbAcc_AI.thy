@@ -9,8 +9,18 @@
  *)
 
 theory TcbAcc_AI
-imports CSpace_AI
+imports "$L4V_ARCH/ArchCSpace_AI"
 begin
+
+
+locale TcbAcc_AI_storeWord_invs =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes storeWord_invs[wp]:
+    "\<And> p w.
+      \<lbrace>in_user_frame p and invs :: 'state_ext state \<Rightarrow> bool\<rbrace>
+        do_machine_op (storeWord p w)
+      \<lbrace>\<lambda>rv. invs\<rbrace>"
+
 
 lemmas gts_inv[wp] = get_thread_state_inv
 
@@ -68,11 +78,6 @@ proof -
     apply (clarsimp simp add: select_f_def simpler_modify_def bind_def image_def)
     done
 qed
-
-lemma valid_ipc_buffer_cap_0[simp]:
-  "valid_ipc_buffer_cap cap a \<Longrightarrow> valid_ipc_buffer_cap cap 0"
-  by (auto simp add: valid_ipc_buffer_cap_def case_bool_If
-    split: cap.split arch_cap.split)
 
 lemma ball_tcb_cap_casesI:
   "\<lbrakk> P (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>));
@@ -146,7 +151,6 @@ proof -
   with v show Q by (auto elim: obj_at_valid_objsE simp: Q)
 qed
 
-
 lemma thread_set_split_out_set_thread_state:
   assumes f: "\<forall>tcb. (tcb_state_update (\<lambda>_. tcb_state (f undefined)) (f tcb))
                         = f tcb"
@@ -186,7 +190,14 @@ schematic_goal tcb_ipcframe_in_cases:
   by (fastforce simp add: ran_tcb_cap_cases)
 
 
+
 lemmas valid_ipc_buffer_cap_simps= valid_ipc_buffer_cap_def[split_simps cap.split]
+locale TcbAcc_AI_valid_ipc_buffer_cap_0 =
+  assumes valid_ipc_buffer_cap_0[simp]:
+    "\<And>cap buf. valid_ipc_buffer_cap cap buf \<Longrightarrow> valid_ipc_buffer_cap cap 0"
+
+
+context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
 lemma thread_set_valid_objs_triv:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
@@ -224,6 +235,8 @@ lemma thread_set_valid_objs_triv:
   apply (cut_tac tcb=y in b)
   apply auto[1]
   done
+
+end
 
 
 lemma thread_set_aligned [wp]:
@@ -285,6 +298,7 @@ lemma thread_set_zombies_trivial:
   apply wp
   apply (clarsimp simp: x)
   done
+
 
 (* FIXME-NTFN: possible need for assumption on tcb_bound_notification *)
 lemma thread_set_refs_trivial:
@@ -364,7 +378,7 @@ lemma thread_set_valid_reply_masters_trivial:
 crunch interrupt_states[wp]: thread_set "\<lambda>s. P (interrupt_states s)"
 
 lemma thread_set_obj_at_impossible:
-  "\<lbrakk> \<And>tcb. \<not> P (TCB tcb) \<rbrakk> \<Longrightarrow> \<lbrace>obj_at P p\<rbrace> thread_set f t \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
+  "\<lbrakk> \<And>tcb. \<not> (P (TCB tcb)) \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. obj_at P p s\<rbrace> thread_set f t \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply wp
   apply (clarsimp dest!: get_tcb_SomeD)
@@ -376,29 +390,9 @@ lemma tcb_not_empty_table:
   "\<not> empty_table S (TCB tcb)"
   by (simp add: empty_table_def)
 
-
 lemmas thread_set_arch_caps_trivial
-  = valid_arch_caps_lift [OF thread_set_vs_lookup_pages thread_set_caps_of_state_trivial
-                          thread_set_arch thread_set_obj_at_impossible,
-                          OF _ tcb_not_empty_table]
-
-
-lemmas thread_set_valid_globals[wp]
-  = valid_global_objs_lift [OF thread_set_arch thread_set_arch
-                                valid_ao_at_lift,
-                            OF thread_set_typ_at  _ _ thread_set_obj_at_impossible,
-                            simplified, OF _ _ tcb_not_empty_table,
-                            OF thread_set_obj_at_impossible
-                            thread_set_obj_at_impossible, simplified]
-
-
-crunch v_ker_map[wp]: thread_set "valid_kernel_mappings"
-  (wp: set_object_v_ker_map crunch_wps)
-
-
-crunch eq_ker_map[wp]: thread_set "equal_kernel_mappings"
-  (wp: set_object_equal_mappings crunch_wps ignore: set_object)
-
+  = valid_arch_caps_lift_weak[OF thread_set_arch thread_set.aobj_at 
+                                 thread_set_caps_of_state_trivial, simplified]
 
 lemma thread_set_only_idle:
   "\<lbrace>only_idle and K (\<forall>tcb. tcb_state (f tcb) = tcb_state tcb \<or> \<not>idle (tcb_state (f tcb)))\<rbrace>
@@ -410,13 +404,6 @@ lemma thread_set_only_idle:
   apply force
   done
 
-lemma thread_set_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_pd_mappings\<rbrace>
-      thread_set f t \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
-  apply (simp add: thread_set_def)
-  apply (wp set_object_global_pd_mappings)
-  apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
-  done
 
 lemma thread_set_pspace_in_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> thread_set f t \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
@@ -473,18 +460,10 @@ lemma thread_set_valid_ioc_trivial:
                         split_def tcb_cnode_map_tcb_cap_cases
                  split: option.splits Structures_A.kernel_object.splits)
   apply (drule_tac x="(get,set,ba)" in bspec)
-   apply fastforce+
+   apply (fastforce simp: ranI)+
   done
 
-lemma thread_set_vms[wp]:
-  "\<lbrace>valid_machine_state\<rbrace> thread_set f t \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
-  apply (wp get_object_wp)
-  apply clarify
-  apply (rule valid_machine_state_heap_updI,simp_all)
-  apply (fastforce simp: get_tcb_def obj_at_def a_type_def
-              split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  done
+context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
 lemma thread_set_invs_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
@@ -522,6 +501,9 @@ lemma thread_set_invs_trivial:
              | rule x z z' w y a | erule bspec_split [OF x] | simp add: z')+
   apply (simp add: z)
   done
+
+end
+
 
 lemma thread_set_cte_wp_at_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
@@ -614,11 +596,17 @@ proof -
     done
 qed
 
+
+context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
+
 lemma as_user_invs[wp]: "\<lbrace>invs\<rbrace> as_user t m \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule as_user_wp_thread_set_helper)
   apply (rule hoare_pre)
   apply (wp thread_set_invs_trivial ball_tcb_cap_casesI | simp)+
   done
+
+end
+
 
 lemma as_user_psp_distinct[wp]:
   "\<lbrace>pspace_distinct\<rbrace> as_user t m \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
@@ -630,6 +618,8 @@ lemma as_user_psp_aligned[wp]:
   by (wp as_user_wp_thread_set_helper) simp
 
 
+context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
+
 lemma as_user_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> as_user a f \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (wp as_user_wp_thread_set_helper
@@ -637,6 +627,8 @@ lemma as_user_objs [wp]:
      apply (fastforce simp add: tcb_cap_cases_def)
   apply (wp | simp)+
   done
+
+end
 
 
 lemma as_user_idle[wp]:
@@ -908,39 +900,6 @@ lemma as_user_tcb [wp]: "\<lbrace>tcb_at t'\<rbrace> as_user t m \<lbrace>\<lamb
   apply simp
   done
 
-lemma mab_pb [simp]:
-  "msg_align_bits \<le> pageBits"
-  unfolding msg_align_bits pageBits_def by simp
-
-lemma mab_wb [simp]:
-  "msg_align_bits < word_bits"
-  unfolding msg_align_bits word_bits_conv by simp
-
-lemma take_min_len:
-  "take (min (length xs) n) xs = take n xs"
-  apply (cases "length xs \<le> n")
-   apply simp
-  apply (subst min.commute)
-  apply (subst min.absorb1)
-   apply simp
-  apply simp
-  done
-
-lemma zip_take_triv2:
-  "n \<ge> length as \<Longrightarrow> zip as (take n bs) = zip as bs"
-  apply (induct as arbitrary: n bs)
-   apply simp
-  apply simp
-  apply (case_tac n, simp_all)
-  apply (case_tac bs, simp_all)
-  done
-
-lemma zip_take_triv:
-  "n \<ge> length bs \<Longrightarrow> zip (take n as) bs = zip as bs"
-  apply (induct bs arbitrary: n as, simp_all)
-  apply (case_tac n, simp_all)
-  apply (case_tac as, simp_all)
-  done
 
 lemma fold_fun_upd:
   "distinct keys \<Longrightarrow>
@@ -961,39 +920,10 @@ lemma fold_fun_upd:
 crunch obj_at[wp]: store_word_offs "\<lambda>s. P (obj_at Q p s)"
 
 
-lemma store_word_offs_in_user_frame[wp]:
-  "\<lbrace>\<lambda>s. in_user_frame p s\<rbrace> store_word_offs a x w \<lbrace>\<lambda>_ s. in_user_frame p s\<rbrace>"
-  unfolding in_user_frame_def
-  by (wp hoare_vcg_ex_lift)
-
-lemma store_word_offs_in_device_frame[wp]:
-  "\<lbrace>\<lambda>s. in_device_frame p s\<rbrace> store_word_offs a x w \<lbrace>\<lambda>_ s. in_device_frame p s\<rbrace>"
-  unfolding in_device_frame_def
-  by (wp hoare_vcg_ex_lift)
-
-
-lemma as_user_in_user_frame[wp]:
-  "\<lbrace>\<lambda>s. in_user_frame p s\<rbrace> as_user t m \<lbrace>\<lambda>_ s. in_user_frame p s\<rbrace>"
-  unfolding in_user_frame_def
-  by (wp hoare_vcg_ex_lift)
-
-lemma as_user_in_device_frame[wp]:
-  "\<lbrace>\<lambda>s. in_device_frame p s\<rbrace> as_user t m \<lbrace>\<lambda>_ s. in_device_frame p s\<rbrace>"
-  unfolding in_device_frame_def
-  by (wp hoare_vcg_ex_lift)
-
-crunch obj_at[wp]: load_word_offs "\<lambda>s. P (obj_at Q p s)"
-
-
-lemma load_word_offs_in_user_frame[wp]:
-  "\<lbrace>\<lambda>s. in_user_frame p s\<rbrace> load_word_offs a x \<lbrace>\<lambda>_ s. in_user_frame p s\<rbrace>"
-  unfolding in_user_frame_def
-  by (wp hoare_vcg_ex_lift)
-
-lemma load_word_offs_in_device_frame[wp]:
-  "\<lbrace>\<lambda>s. in_device_frame p s\<rbrace> load_word_offs a x \<lbrace>\<lambda>_ s. in_device_frame p s\<rbrace>"
-  unfolding in_device_frame_def
-  by (wp hoare_vcg_ex_lift)
+lemma load_word_offs_P[wp]:
+  "\<lbrace>P\<rbrace> load_word_offs a x \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding load_word_offs_def
+  by (wp dmo_inv loadWord_inv)
 
 lemma valid_tcb_objs:
   assumes vs: "valid_objs s"
@@ -1009,26 +939,13 @@ proof -
 qed
 
 
-lemma vm_sets_diff[simp]:
-  "vm_read_only \<noteq> vm_read_write"
-  by (simp add: vm_read_write_def vm_read_only_def)
-
-
-lemmas vm_sets_diff2[simp] = not_sym[OF vm_sets_diff]
-
-
-lemma get_cap_valid_ipc:
-  "\<lbrace>valid_objs and obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_ipc_buffer tcb = v) t\<rbrace>
-     get_cap (t, tcb_cnode_index 4)
-   \<lbrace>\<lambda>rv s. valid_ipc_buffer_cap rv v\<rbrace>"
-  apply (wp get_cap_wp)
-  apply clarsimp
-  apply (drule(1) cte_wp_tcb_cap_valid)
-  apply (clarsimp simp add: tcb_cap_valid_def obj_at_def)
-  apply (simp add: valid_ipc_buffer_cap_def mask_cap_def cap_rights_update_def
-                   acap_rights_update_def is_tcb
-            split: cap.split_asm arch_cap.split_asm)
-  done
+locale TcbAcc_AI_get_cap_valid_ipc =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes get_cap_valid_ipc:
+    "\<And>v t.
+      \<lbrace>valid_objs and obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_ipc_buffer tcb = v) t\<rbrace>
+        get_cap (t, tcb_cnode_index 4)
+      \<lbrace>\<lambda>rv (s::'state_ext state). valid_ipc_buffer_cap rv v\<rbrace>"
 
 
 lemma get_cap_aligned:
@@ -1093,9 +1010,6 @@ lemma wf_cs_0:
   apply (rule_tac x = "replicate sz False" in exI)
   apply (simp add: bl_to_bin_rep_False)
   done
-
-
-crunch inv[wp]: lookup_ipc_buffer "I"
 
 
 lemma ct_active_st_tcb_at_weaken:
@@ -1265,6 +1179,7 @@ lemma sts_refs_of_helper: "
           tcb_bound_refs ntfnptr"
   by (auto simp add: tcb_st_refs_of_def tcb_bound_refs_def split: thread_state.splits option.splits)
 
+
 lemma sts_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s) (t := tcb_st_refs_of st
                          \<union> {r. r \<in> state_refs_of s t \<and> snd r = TCBBound}))\<rbrace>
@@ -1409,8 +1324,6 @@ lemma sbn_reply_masters [wp]:
   done
 
 
-
-
 lemma set_thread_state_mdb [wp]:
   "\<lbrace>valid_mdb\<rbrace> set_thread_state p st \<lbrace>\<lambda>_. valid_mdb\<rbrace>"
   apply (simp add: set_thread_state_thread_set)
@@ -1465,33 +1378,38 @@ lemma bound_tcb_ex_cap:
   unfolding pred_tcb_at_def
   by (erule (1) if_live_then_nonz_capD, fastforce)
 
-lemma pred_tcb_cap_wp_at:
-  "\<lbrakk>pred_tcb_at proj P t s; valid_objs s;
-    ref \<in> dom tcb_cap_cases;
-    \<forall>cap. (pred_tcb_at proj P t s \<and> tcb_cap_valid cap (t, ref) s) \<longrightarrow> Q cap\<rbrakk> \<Longrightarrow>
-   cte_wp_at Q (t, ref) s"
-  apply (clarsimp simp: cte_wp_at_cases tcb_at_def dest!: get_tcb_SomeD)
-  apply (rename_tac getF setF restr)
-  apply (clarsimp simp: tcb_cap_valid_def pred_tcb_at_def obj_at_def)
-  apply (erule(1) valid_objsE)
-  apply (clarsimp simp add: valid_obj_def valid_tcb_def)
-  apply (erule_tac x="(getF, setF, restr)" in ballE)
-   apply fastforce+
-  done
+
+locale TcbAcc_AI_pred_tcb_cap_wp_at =
+  fixes proj :: "itcb \<Rightarrow> 'proj"
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes pred_tcb_cap_wp_at:
+    "\<And>P t (s::'state_ext state) ref Q.
+      \<lbrakk> pred_tcb_at proj P t s; valid_objs s;
+        ref \<in> dom tcb_cap_cases;
+        \<forall>cap. (pred_tcb_at proj P t s \<and> tcb_cap_valid cap (t, ref) s) \<longrightarrow> Q cap\<rbrakk>
+      \<Longrightarrow> cte_wp_at Q (t, ref) s"
+
+
+locale TcbAcc_AI_st_tcb_at_cap_wp_at = TcbAcc_AI_pred_tcb_cap_wp_at itcb_state state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself"
+
+
+context TcbAcc_AI_st_tcb_at_cap_wp_at begin
 
 lemma st_tcb_reply_cap_valid:
-  "\<And>P. \<not> P (Structures_A.Inactive) \<and> \<not> P (Structures_A.IdleThreadState) \<Longrightarrow>
-   \<forall>cap. (st_tcb_at P t s \<and> tcb_cap_valid cap (t, tcb_cnode_index 2) s) \<longrightarrow>
+  "\<And>P t (s::'state_ext state).
+    \<not> P (Structures_A.Inactive) \<and> \<not> P (Structures_A.IdleThreadState) \<Longrightarrow>
+    \<forall>cap. (st_tcb_at P t s \<and> tcb_cap_valid cap (t, tcb_cnode_index 2) s) \<longrightarrow>
             is_master_reply_cap cap \<and> obj_ref_of cap = t"
   by (clarsimp simp: tcb_cap_valid_def st_tcb_at_tcb_at st_tcb_def2
                   split: Structures_A.thread_state.split_asm)
 
 lemma st_tcb_caller_cap_null:
-  "\<And>ep. \<forall>cap. (st_tcb_at (\<lambda>st. st = Structures_A.BlockedOnReceive ep) t s \<and>
+  "\<And>ep t (s::'state_ext state).
+    \<forall>cap. (st_tcb_at (\<lambda>st. st = Structures_A.BlockedOnReceive ep) t s \<and>
             tcb_cap_valid cap (t, tcb_cnode_index 3) s) \<longrightarrow>
             cap = cap.NullCap"
   by (clarsimp simp: tcb_cap_valid_def st_tcb_at_tcb_at st_tcb_def2)
-
 
 lemma dom_tcb_cap_cases:
   "tcb_cnode_index 0 \<in> dom tcb_cap_cases"
@@ -1501,7 +1419,6 @@ lemma dom_tcb_cap_cases:
   "tcb_cnode_index 4 \<in> dom tcb_cap_cases"
   by clarsimp+
 
-
 lemmas st_tcb_at_reply_cap_valid =
        pred_tcb_cap_wp_at [OF _ _ _ st_tcb_reply_cap_valid,
                          simplified dom_tcb_cap_cases] 
@@ -1509,6 +1426,8 @@ lemmas st_tcb_at_reply_cap_valid =
 lemmas st_tcb_at_caller_cap_null =
        pred_tcb_cap_wp_at [OF _ _ _ st_tcb_caller_cap_null,
                          simplified dom_tcb_cap_cases]
+
+end
 
 
 crunch irq_node[wp]: set_thread_state, set_bound_notification "\<lambda>s. P (interrupt_irq_node s)"
@@ -1534,39 +1453,6 @@ lemma sbn_obj_at_impossible:
   unfolding set_bound_notification_thread_set
   by (wp thread_set_obj_at_impossible, simp)
 
-lemmas sts_arch_caps[wp]
-  = valid_arch_caps_lift [OF sts_vs_lookup_pages set_thread_state_caps_of_state
-                             set_thread_state_arch sts_obj_at_impossible,
-                          OF tcb_not_empty_table]
-
-
-lemmas sts_valid_globals[wp]
-  = valid_global_objs_lift [OF set_thread_state_arch set_thread_state_arch
-                               valid_ao_at_lift,
-                            OF set_thread_state_typ_at sts_obj_at_impossible
-                               sts_obj_at_impossible sts_obj_at_impossible,
-                            simplified, OF tcb_not_empty_table]
-
-lemmas sbn_arch_caps[wp]
-  = valid_arch_caps_lift [OF set_bound_notification_vs_lookup_pages set_bound_notification_caps_of_state
-                             set_bound_notification_arch sbn_obj_at_impossible,
-                          OF tcb_not_empty_table]
-
-
-lemmas sbn_valid_globals[wp]
-  = valid_global_objs_lift [OF set_bound_notification_arch set_bound_notification_arch
-                               valid_ao_at_lift,
-                            OF set_bound_notification_typ_at sbn_obj_at_impossible 
-                               sbn_obj_at_impossible sbn_obj_at_impossible,
-                            simplified, OF tcb_not_empty_table]
-
-crunch v_ker_map[wp]: set_thread_state, set_bound_notification "valid_kernel_mappings"
-  (wp: set_object_v_ker_map crunch_wps)
-
-
-crunch eq_ker_map[wp]: set_thread_state, set_bound_notification "equal_kernel_mappings"
-  (wp: set_object_equal_mappings crunch_wps ignore: set_object)
-
 
 lemma sts_only_idle:
   "\<lbrace>only_idle and (\<lambda>s. idle st \<longrightarrow> t = idle_thread s)\<rbrace>
@@ -1586,8 +1472,8 @@ lemma sbn_only_idle[wp]:
   done
 
 lemma set_thread_state_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_pd_mappings\<rbrace>
-      set_thread_state p st \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
+  "\<lbrace>valid_global_vspace_mappings\<rbrace>
+      set_thread_state p st \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   by (simp add: set_thread_state_thread_set, wp, simp, wp)
 
 lemma set_thread_state_pspace_in_kernel_window[wp]:
@@ -1613,8 +1499,8 @@ lemma set_thread_state_cap_refs_respects_device_regionw[wp]:
                 ball_tcb_cap_casesI)+
 
 lemma set_bound_notification_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_pd_mappings\<rbrace>
-      set_bound_notification p ntfn \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
+  "\<lbrace>valid_global_vspace_mappings\<rbrace>
+      set_bound_notification p ntfn \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   by (simp add: set_bound_notification_thread_set, wp)
 
 lemma set_bound_notification_pspace_in_kernel_window[wp]:
@@ -1652,17 +1538,6 @@ lemma set_thread_state_valid_ioc[wp]:
                         split_if_asm)
   done
 
-
-lemma set_thread_state_vms[wp]:
-  "\<lbrace>valid_machine_state\<rbrace> set_thread_state t st \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
-  apply (wp,simp,wp)
-  apply clarify
-  apply (rule valid_machine_state_heap_updI,simp_all)
-  apply (fastforce simp: get_tcb_def obj_at_def a_type_def 
-              split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  done
-
 lemma set_bound_notification_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   apply (simp add: set_bound_notification_def)
@@ -1674,16 +1549,6 @@ lemma set_bound_notification_valid_ioc[wp]:
                         null_filter_def cte_wp_at_cases tcb_cap_cases_def
                  split: option.splits Structures_A.kernel_object.splits
                         split_if_asm)
-  done
-
-
-lemma set_bound_notification_vms[wp]:
-  "\<lbrace>valid_machine_state\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  apply (simp add: set_bound_notification_def set_object_def)
-  apply (wp, clarify)
-  apply (rule valid_machine_state_heap_updI,simp_all)
-  apply (fastforce simp: get_tcb_def obj_at_def a_type_def 
-              split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   done
 
 lemma sts_invs_minor:
@@ -1752,6 +1617,7 @@ lemma sts_invs_minor2:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done (* FIXME tidy *)
 
+
 lemma sbn_invs_minor:
   "\<lbrace>bound_tcb_at (\<lambda>ntfn'. tcb_bound_refs ntfn' = tcb_bound_refs ntfn) t 
     and (\<lambda>s. bound ntfn \<longrightarrow> ex_nonz_cap_to t s)
@@ -1765,8 +1631,8 @@ lemma sbn_invs_minor:
   apply clarsimp
   apply (rule conjI)
    apply (simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
-   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_ntfn_def
-                  split: Structures_A.thread_state.splits option.splits)
+   subgoal by (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_ntfn_def
+                       split: Structures_A.thread_state.splits option.splits)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
                   dest!: bound_tcb_at_state_refs_ofD)
@@ -1922,7 +1788,6 @@ lemma thread_set_ct_running:
 lemmas thread_set_caps_of_state_trivial2
   = thread_set_caps_of_state_trivial [OF ball_tcb_cap_casesI]
 
-
 lemmas sts_typ_ats = abs_typ_at_lifts [OF set_thread_state_typ_at]
 
 
@@ -1955,6 +1820,71 @@ lemma sts_tcb_cap_valid_cases:
              hoare_vcg_const_imp_lift sts_tcb_ko_at
              hoare_vcg_all_lift)
   apply (clarsimp simp: tcb_at_typ tcb_cap_valid_def split: option.split)
+  done
+
+
+lemmas set_mrs_redux =
+   set_mrs_def bind_assoc[symmetric]
+   thread_set_def[simplified, symmetric]
+
+
+locale TcbAcc_AI
+  = TcbAcc_AI_storeWord_invs state_ext_t
+  + TcbAcc_AI_valid_ipc_buffer_cap_0
+  + TcbAcc_AI_get_cap_valid_ipc state_ext_t
+  + TcbAcc_AI_st_tcb_at_cap_wp_at state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself"
+
+
+context TcbAcc_AI begin
+
+lemma set_mrs_invs[wp]:
+  "\<And>receiver recv_buf mrs.
+    \<lbrace> invs and tcb_at receiver :: 'state_ext state \<Rightarrow> bool \<rbrace>
+      set_mrs receiver recv_buf mrs
+    \<lbrace>\<lambda>rv. invs \<rbrace>"
+  apply (simp add: set_mrs_redux)
+  apply wp
+   apply (rule_tac P="invs" in hoare_triv)
+   apply (case_tac recv_buf)
+    apply simp
+   apply (simp add: zipWithM_x_mapM split del: split_if)
+   apply wp
+   apply (rule mapM_wp)
+    apply (simp add: split_def store_word_offs_def)
+    apply (wp storeWord_invs)
+    apply simp
+   apply blast
+  apply (wp thread_set_invs_trivial)
+  apply (auto simp: tcb_cap_cases_def)
+  done
+
+end
+
+
+lemma set_mrs_thread_set_dmo:
+  assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := c tcb\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
+  assumes dmo: "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>rv. Q\<rbrace>"
+  shows "\<lbrace>P\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. Q\<rbrace>"
+  apply (simp add: set_mrs_redux)
+  apply (case_tac t)
+   apply simp
+   apply wp
+   apply (rule ts)
+  apply (simp add: zipWithM_x_mapM store_word_offs_def split_def
+              split del: split_if)
+  apply (wp mapM_wp dmo)
+    apply simp
+   apply blast
+  apply (rule ts)
+  done
+
+lemma set_mrs_st_tcb [wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  apply (rule set_mrs_thread_set_dmo) 
+   apply (rule thread_set_no_change_tcb_pred)
+   apply (simp add: tcb_to_itcb_def)
+  apply wp
   done
 
 end

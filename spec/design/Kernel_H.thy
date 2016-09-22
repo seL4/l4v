@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Kernel_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -17,5 +19,4 @@ imports
   FaultHandler_H
   CSpace_H
 begin
-
 end

@@ -13,7 +13,7 @@
                 Rafal Kolanski <rafal.kolanski at nicta.com.au>
 *)
 
-header "Equivalence between Separation Algebra Formulations"
+chapter "Equivalence between Separation Algebra Formulations"
 
 theory Sep_Eq
 imports
@@ -29,6 +29,7 @@ text {*
 *}
 
 no_notation map_add (infixl "++" 100)
+declare [[syntax_ambiguity_warning = false]]
 
 section "Total implies Partial"
 

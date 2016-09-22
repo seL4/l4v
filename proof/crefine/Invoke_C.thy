@@ -532,7 +532,7 @@ lemma cnode_invok_case_cleanup2:
 lemma Arch_hasRecycleRights_spec:
   "\<forall>cap. \<Gamma> \<turnstile> \<lbrace> ccap_relation (ArchObjectCap cap) \<acute>cap \<rbrace> 
              Call Arch_hasRecycleRights_'proc 
-             \<lbrace> \<acute>ret__unsigned_long = from_bool (ArchRetypeDecls_H.hasRecycleRights cap) \<rbrace>"
+             \<lbrace> \<acute>ret__unsigned_long = from_bool (Arch.hasRecycleRights cap) \<rbrace>"
   apply vcg
   apply clarsimp
   apply (rule conjI)
@@ -540,7 +540,7 @@ lemma Arch_hasRecycleRights_spec:
    apply (frule cap_get_tag_PageCap_frame [THEN iffD1], assumption)
    apply clarsimp
    apply (drule ccap_relation_PageCap_generics)
-   apply (auto simp: ArchRetype_H.hasRecycleRights_def 
+   apply (auto simp: ARM_H.hasRecycleRights_def 
                          vmrights_to_H_def true_def false_def 
                          vmrights_defs
                    dest: less_4_cases
@@ -550,13 +550,13 @@ lemma Arch_hasRecycleRights_spec:
    apply (frule cap_get_tag_PageCap_small_frame [THEN iffD1], assumption)
    apply clarsimp
    apply (drule ccap_relation_PageCap_generics)
-   apply (auto simp: ArchRetype_H.hasRecycleRights_def 
+   apply (auto simp: ARM_H.hasRecycleRights_def 
                          vmrights_to_H_def true_def false_def 
                          vmrights_defs
                    dest: less_4_cases
                    split: if_splits)[1]
   apply (case_tac cap,
-         auto simp: ArchRetype_H.hasRecycleRights_def
+         auto simp: ARM_H.hasRecycleRights_def
               dest: ccap_relation_frame_tags)[1]
   done
 
@@ -1447,7 +1447,7 @@ lemma decodeCNodeInvocation_ccorres:
             | clarsimp simp: rightsFromWord_wordFromRights
                              ccte_relation_def c_valid_cte_def
                              cl_valid_cte_def c_valid_cap_def
-                             option_map_Some_eq2 neq_Nil_conv
+                             map_option_Some_eq2 neq_Nil_conv
                              ccap_relation_def numeral_eqs
                              ccap_relation_NullCap_iff[symmetric]
                              if_1_0_0 interpret_excaps_test_null
@@ -1457,6 +1457,8 @@ lemma decodeCNodeInvocation_ccorres:
   done
 
 end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch valid_queues[wp]: insertNewCap "valid_queues"
   (wp: crunch_wps)
@@ -1489,6 +1491,8 @@ lemma deleteObjects_gsCNodes_at_pt:
 crunch gsCNodes[wp]: setThreadState "\<lambda>s. P (gsCNodes s)"
   (simp: unless_def)
 
+end
+
 context kernel_m begin
 
 lemma wordFromMessageInfo_spec:
@@ -1513,7 +1517,7 @@ lemma globals_update_id:
    by (simp add:id_def hrs_htd_update_def)
 
 lemma getObjectSize_spec:
-  "\<forall>s. \<Gamma>\<turnstile>\<lbrace>s. \<acute>t \<le> of_nat (length (enum::ArchTypes_H.object_type list) - 1)\<rbrace> Call getObjectSize_'proc
+  "\<forall>s. \<Gamma>\<turnstile>\<lbrace>s. \<acute>t \<le> of_nat (length (enum::object_type list) - 1)\<rbrace> Call getObjectSize_'proc
            \<lbrace>\<acute>ret__unsigned_long = of_nat (getObjectSize (object_type_to_H (t_' s)) (unat (userObjSize_' s)))\<rbrace>"
   apply vcg
   apply (clarsimp simp:ARMSmallPageBits_def ARMLargePageBits_def objBits_simps
@@ -1524,7 +1528,7 @@ lemma getObjectSize_spec:
   done
 
 lemma object_type_from_H_bound:
-  "object_type_from_H newType \<le> of_nat (length (enum::ArchTypes_H.object_type list) - Suc 0)"
+  "object_type_from_H newType \<le> of_nat (length (enum::object_type list) - Suc 0)"
   apply (simp add:enum_object_type enum_apiobject_type object_type_from_H_def)
   apply (case_tac newType)
   apply (clarsimp simp:ARMSmallPageBits_def ARMLargePageBits_def objBits_simps
@@ -1687,7 +1691,7 @@ lemma invokeUntyped_Retype_ccorres_side_case:
            (\<forall>n<length destSlots.
                destSlots ! n = cnodeptr + (start + of_nat n) * 0x10) \<and> 
            (isdev \<longrightarrow> (newType = APIObjectType ArchTypes_H.apiobject_type.Untyped 
-             \<or> ArchTypes_H.isFrameType newType))\<rbrace>
+             \<or> isFrameType newType))\<rbrace>
             )
          [] (do invokeUntyped (Retype cref ptr_base ptr newType us destSlots isdev);
                 returnOk ()
@@ -1715,7 +1719,7 @@ lemma invokeUntyped_Retype_ccorres_side_case:
      "case gsCNodes s cnodeptr of None \<Rightarrow> False
        | Some n \<Rightarrow> length destSlots + unat start \<le> 2 ^ n"
      "idx \<le> unat (ptr && mask sz)" 
-     "isdev \<longrightarrow> (newType = APIObjectType ArchTypes_H.apiobject_type.Untyped \<or> ArchTypes_H.isFrameType newType)"
+     "isdev \<longrightarrow> (newType = APIObjectType ArchTypes_H.apiobject_type.Untyped \<or> isFrameType newType)"
 
    note no_simps[simp del] =
      untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
@@ -1920,7 +1924,7 @@ lemma invokeUntyped_Retype_ccorres:
                 (\<forall>n<length destSlots.
                     destSlots ! n = cnodeptr + (start + of_nat n) * 0x10) \<and> 
                 (isdev \<longrightarrow> (newType = APIObjectType ArchTypes_H.apiobject_type.Untyped 
-                \<or> ArchTypes_H.isFrameType newType))\<rbrace>
+                \<or> isFrameType newType))\<rbrace>
             )
      []
      (do invokeUntyped (Retype cref ptr_base ptr newType us destSlots isdev);
@@ -1956,7 +1960,7 @@ lemma invokeUntyped_Retype_ccorres:
       "ex_cte_cap_to' cnodeptr s"
       "case gsCNodes s cnodeptr of None \<Rightarrow> False
         | Some n \<Rightarrow> length destSlots + unat start \<le> 2 ^ n"
-     "isdev \<longrightarrow> (newType = APIObjectType ArchTypes_H.apiobject_type.Untyped \<or> ArchTypes_H.isFrameType newType)"
+     "isdev \<longrightarrow> (newType = APIObjectType ArchTypes_H.apiobject_type.Untyped \<or> isFrameType newType)"
    note no_simps[simp del] = untyped_range.simps usable_untyped_range.simps
          atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
@@ -2082,16 +2086,16 @@ lemma invokeUntyped_Retype_ccorres:
                      apply (clarsimp dest!: invokeUntyped_proofs.slots_invD[OF proofs] split: split_if)
                     apply (simp add: atLeastAtMost_iff)
 
-                   apply (rule contra_subsetD[rotated],
-                     erule(1) invokeUntyped_proofs.ex_cte_no_overlap')
-                   apply (simp add: shiftl_t2n mult.commute)
-                   apply (rule order_trans, erule range_cover_subset', simp_all)[1]
-
-                  apply (rule_tac us1="unat userSize" in is_aligned_weaken
-                            [OF _ APIType_capBits_low[where newType = newType]])
-                    apply (rule is_aligned_mult_triv2)
+                   apply (rule_tac us1="unat userSize" in is_aligned_weaken
+                             [OF _ APIType_capBits_low[where newType = newType]])
+                     apply (rule is_aligned_mult_triv2)
+                    apply simp
                    apply simp
-                  apply simp
+
+                  apply (rule contra_subsetD[rotated], erule(1) invokeUntyped_proofs.ex_cte_no_overlap')
+                  apply (simp add: shiftl_t2n mult.commute)
+                  apply (rule order_trans, erule range_cover_subset', simp_all)[1]
+
                  apply (frule range_cover.unat_of_nat_n_shift[OF _ le_refl])
                  apply (clarsimp simp: shiftl_t2n)
                  apply (frule range_cover.range_cover_n_le(2))
@@ -2170,7 +2174,6 @@ lemma invokeUntyped_Retype_ccorres:
             apply (rule APIType_capBits_high)
              apply (clarsimp simp: unat_of_nat32[where x=us] word_bits_def)+
           apply (clarsimp simp:getFreeIndex_def)
-         apply (simp add: word_sle_def)
          apply (simp add: shiftL_nat word_bits_conv shiftl_t2n)
          apply (clarsimp dest!: range_cover_sz'
                           simp: unat_of_nat32 word_bits_def)
@@ -2392,7 +2395,7 @@ lemma setThreadStateRestart_ct_active':
   done
 
 lemma toEnum_object_type_to_H:
-  "unat v \<le> (fromEnum::ArchTypes_H.object_type \<Rightarrow> nat) maxBound
+  "unat v \<le> (fromEnum::object_type \<Rightarrow> nat) maxBound
   \<Longrightarrow> toEnum (unat v) = (object_type_to_H (v::word32))"
   apply (simp add:enum_object_type enum_apiobject_type object_type_to_H_def toEnum_def
                   maxBound_less_length)
@@ -2401,7 +2404,7 @@ lemma toEnum_object_type_to_H:
   done
 
 lemma unat_of_nat_APIType_capBits:
-  "b \<le> 30
+  "b \<le> 29
   \<Longrightarrow> unat (of_nat (APIType_capBits z b) ::word32) = APIType_capBits z b"
   apply (rule unat_of_nat32)
   apply (case_tac z)
@@ -2418,7 +2421,7 @@ lemma valid_untyped_inv'_D:
   done
   
 lemma  object_type_from_to_H:
-  "unat v \<le> (fromEnum::ArchTypes_H.object_type \<Rightarrow> nat) maxBound
+  "unat v \<le> (fromEnum::object_type \<Rightarrow> nat) maxBound
          \<Longrightarrow> v = object_type_from_H (object_type_to_H v)"
   apply (simp add:toEnum_object_type_to_H[symmetric])
   apply (rule iffD1[OF word_unat.Rep_inject])
@@ -2479,18 +2482,15 @@ lemma Arch_isFrameType_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. unat \<acute>type \<le> fromEnum (maxBound::ArchTypes_H.object_type)\<rbrace>
              Call Arch_isFrameType_'proc 
   \<lbrace> \<acute>ret__unsigned_long = 
-     from_bool (ArchTypes_H.isFrameType ((toEnum (unat \<^bsup>s\<^esup> type))::ArchTypes_H.object_type))\<rbrace>"
+     from_bool (isFrameType ((toEnum (unat \<^bsup>s\<^esup> type))::ArchTypes_H.object_type))\<rbrace>"
   apply vcg
   apply (simp add:toEnum_object_type_to_H)
   apply (frule object_type_from_to_H)
   apply (auto dest!:object_type_from_H_toAPIType_simps[THEN iffD1,OF eq_commute[THEN iffD1]])
-  apply (auto simp:object_type_to_H_def ArchTypes_H.isFrameType_def ArchTypes_H.isFrameType_def
+  apply (auto simp:object_type_to_H_def isFrameType_def isFrameType_def
             split:if_splits object_type.splits)
   apply (auto simp:object_type_from_H_def )
   done
-
-
-
 
 declare[[goals_limit = 1]]
 lemma decodeUntypedInvocation_ccorres_helper:
@@ -2625,7 +2625,7 @@ shows
                  apply (simp add: toEnum_eq_to_fromEnum_eq
                                   fromEnum_object_type_to_H
                                   object_type_from_H_def
-                                  fromAPIType_def ArchTypes_H.fromAPIType_def)
+                                  fromAPIType_def ARM_H.fromAPIType_def)
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
                apply (rule ccorres_split_when_throwError_cond
@@ -2637,7 +2637,7 @@ shows
                                        toEnum_eq_to_fromEnum_eq)
                  apply (simp add: fromEnum_object_type_to_H
                                   object_type_from_H_def
-                                  fromAPIType_def ArchTypes_H.fromAPIType_def)
+                                  fromAPIType_def ARM_H.fromAPIType_def)
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
                 apply (rule_tac xf'="nodeCap_'"
@@ -2876,14 +2876,14 @@ shows
 
                            apply (rule_tac xf'=ret__int_' in ccorres_abstract, ceqv)
                            apply (rule_tac P = "rv'c = from_bool (capIsDevice cp \<and>
-                             \<not> Types_H.isFrameType (toEnum (unat (hd args))))"
+                             \<not> isFrameType (toEnum (unat (hd args))))"
                              in ccorres_gen_asm2)
                            apply (rule_tac
                              ccorres_split_when_throwError_cond[where Q = \<top> and Q' = \<top>])
                            apply (clarsimp simp: toEnum_eq_to_fromEnum_eq
                                   fromEnum_object_type_to_H from_bool_0
                                   object_type_from_H_def hd_conv_nth length_ineq_not_Nil
-                                  fromAPIType_def ArchTypes_H.fromAPIType_def)
+                                  fromAPIType_def ARM_H.fromAPIType_def)
                           apply (rule syscall_error_throwError_ccorres_n)
                           apply (clarsimp simp: syscall_error_rel_def
                             ccap_relation_untyped_CL_simps shiftL_nat
@@ -2925,8 +2925,8 @@ shows
                                 apply (subst nth_map_upt)
                                  apply (clarsimp simp:field_simps Suc_unat_diff_1 unat_plus_simple[THEN iffD1])
                                 apply (clarsimp simp:cte_level_bits_def)
-                               apply (clarsimp simp:Types_H.isFrameType_def
-                                Types_H.fromAPIType_def ArchTypes_H.fromAPIType_def)
+                               apply (clarsimp simp:isFrameType_def
+                                fromAPIType_def ARM_H.fromAPIType_def)
                               apply simp
                              apply wp
                              apply simp
@@ -2970,18 +2970,14 @@ shows
                      apply (rule ccontr)
                      apply (clarsimp simp:not_less shiftr_overflow)
                     apply (intro conjI allI impI)
-                            apply ((clarsimp simp:shiftL_nat isCap_simps valid_cap_simps' Types_H.isFrameType_def
-                       ThreadState_Restart_def not_less mask_def split:split_if_asm | 
+                            apply ((clarsimp simp:shiftL_nat isCap_simps valid_cap_simps' isFrameType_def
+                       ThreadState_Restart_def not_less mask_def 
+                       split:split_if_asm | 
                        simp add: false_def of_nat_power[where x = 5,simplified] not_less)+)[8]
-                   apply (rule ccontr)
-                   apply clarsimp
-                   apply (rule conjI allI)
-                     apply (clarsimp simp:shiftL_nat isCap_simps valid_cap_simps',simp add:word_bits_def)
                    apply (intro conjI allI impI APIType_capBits_high word_of_nat_less)
-                            apply ((clarsimp simp:shiftL_nat isCap_simps valid_cap_simps' Types_H.isFrameType_def
-                       ThreadState_Restart_def not_less mask_def ArchTypes_H.isFrameType_def split:split_if_asm | 
-                       simp add: false_def of_nat_power[where x = 5,simplified] not_less)+)[13]
-                   apply simp
+                            apply ((clarsimp simp:shiftL_nat isCap_simps valid_cap_simps' isFrameType_def
+                       ThreadState_Restart_def not_less mask_def isFrameType_def split:split_if_asm | 
+                       simp add: false_def of_nat_power[where x = 5,simplified] not_less)+)[5]
                   apply (rule_tac Q'="\<lambda>r. cte_wp_at' (\<lambda>cte. cteCap cte = cp) slot
                       and invs' and  (\<lambda>s. ksCurThread s = thread)
                       and ex_cte_cap_to' (capCNodePtr rv)
@@ -3084,7 +3080,7 @@ shows
    apply (clarsimp simp: linorder_not_less isCap_simps)
    apply (clarsimp simp: sysargs_rel_to_n)
    apply (rule conjI, clarsimp)
-   apply (clarsimp simp: ArchTypes_H.fromAPIType_def Types_H.fromAPIType_def)
+   apply (clarsimp simp: fromAPIType_def)
    apply (subgoal_tac "unat (args ! Suc 0) < word_bits")
     prefer 2
     apply (erule le_less_trans)

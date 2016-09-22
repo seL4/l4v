@@ -10,6 +10,8 @@
 
 (*
  * Miscellaneous functions and utilities.
+ *
+ * TODO: many of these are no longer used and should be cleaned.
  *)
 structure Utils =
 struct
@@ -66,12 +68,11 @@ fun ac_warning str = warning ("autocorres: " ^ str)
 
 (* List functions that should really be included in PolyML. *)
 
-fun zipWith _ [] _ = []
-  | zipWith _ _ [] = []
-  | zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
-fun zip xs ys = zipWith (fn x => fn y => (x, y)) xs ys
-fun zip3 [] [] [] = []
-    | zip3 (x::xs) (y::ys) (z::zs) = ((x,y,z)::(zip3 xs ys zs))
+fun zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
+  | zipWith _ _ _ = []
+fun zip xs ys = zipWith (curry I) xs ys
+fun zip3 (x::xs) (y::ys) (z::zs) = ((x,y,z)::(zip3 xs ys zs))
+  | zip3 _ _ _ = []
 
 fun findIndex p =
   let fun find _ [] = NONE
@@ -85,6 +86,13 @@ fun enumerate xs = let
 
 fun nubBy _ [] = []
   | nubBy f (x::xs) = x :: filter (fn y => f x <> f y) (nubBy f xs)
+
+fun accumulate f acc xs = let
+  fun walk results acc [] = (results [], acc)
+    | walk results acc (x::xs) = let
+        val acc' = f x acc;
+        in walk (results o cons acc') acc' xs end;
+  in walk I acc xs end;
 
 (* Define a constant "name" of type "term" into the local theory "lthy". *)
 fun define_const name term lthy =
@@ -382,7 +390,7 @@ fun mk_conj_list [] = @{term "HOL.True"}
 
 (* Destruct a list of conjunctions. *)
 fun dest_conj_list (Const (@{const_name "HOL.conj"}, _) $ l $ r)
-        = dest_conj_list l @ dest_conj_list r
+        = l :: dest_conj_list r
   | dest_conj_list x = [x]
 
 (*
@@ -391,8 +399,7 @@ fun dest_conj_list (Const (@{const_name "HOL.conj"}, _) $ l $ r)
  *)
 fun apply_tac (step : string) tac (thm : thm) =
   (tac thm |> Seq.hd) handle Option =>
-    error ("Failed to apply tactic during '" ^ step ^ "': " ^ (
-        (PolyML.makestring (cprems_of thm))))
+    raise TERM ("Failed to apply tactic during " ^ quote step, Thm.prems_of thm)
 
 (*
  * A "the" operator that explains what is going wrong.
@@ -761,42 +768,6 @@ in
 end
 
 (*
- * Given a term of the form "%(a, b, c). X a b c" send the function
- * "f" the term with the abstracted variables converted into concrete
- * free variables.
- *
- * This is like "concrete_abs", but supports "case_prod.
- *)
-fun concrete_split' ctxt t =
-let
-  fun do_split (Const (@{const_name "case_prod"}, _) $ t) =
-    let
-      (* Abstract the first variable in the split... *)
-      val (new_term, free, name) = concrete_abs' ctxt t
-
-      (* Recursively abstract the rest. *)
-      val (final_term, rest) = do_split new_term
-    in
-      (final_term, (free, name) :: rest)
-    end
-    | do_split t =
-    let
-      (* Abstract the final variable in a split. *)
-      val (new_term, free, name) = concrete_abs' ctxt t
-    in
-      (new_term, [(free, name)])
-    end
-in
-  do_split t
-end
-fun concrete_split ctxt f t =
-let
-  val ((new_t, r), free_vars) = concrete_split' ctxt t |>> f
-in
-  (abs_over_tuple (map (fn (x, y) => (y, x)) free_vars) new_t, r)
-end
-
-(*
  * Given a definition "thm" of the form:
  *
  *    x a b c == a + b + c
@@ -872,36 +843,6 @@ fun all_facts_of ctxt =
 fun guess_thm_name ctxt thm =
   List.find (fn x => Thm.eq_thm (thm, snd x)) (all_facts_of ctxt)
   |> Option.map (fst #> Facts.string_of_ref)
-
-(*
- * Declare a constant (without any definition) in the local theory.
- * Currently used to declare termination measures of recursive functions.
- * The constant is added to the lthy and also to a symbol table.
-*)
-fun declare_constant (symtab_name, const_name, const_typ) (consts_symtab, lthy) =
-let
-  val bind = ((Binding.name const_name, const_typ), NoSyn)
-  fun add_const thy = Sign.declare_const lthy bind thy
-  val (const_term, lthy') = Local_Theory.raw_theory_result add_const lthy
-in
-  (Symtab.update_new (symtab_name, const_term) consts_symtab, lthy')
-end
-
-(*
- * Define a previously-declared constant in the local theory.
- * Its definition is added to the lthy and also to a symbol table.
- *)
-fun define_constant (symtab_name, thm_name, const_name, const_def) (defs_symtab, lthy) =
-let
-  val const_def' = Primitive_Defs.dest_def lthy Term.is_Const
-                                           (K false) (K false) const_def
-                   |> snd
-  fun def_const thy = Thm.add_def (Proof_Context.defs_context lthy) true true (Binding.name const_name, const_def') thy
-  val ((_, thm), lthy) = Local_Theory.raw_theory_result def_const lthy
-  val (_, lthy') = define_lemma thm_name thm lthy
-in
-  (Symtab.update_new (symtab_name, thm) defs_symtab, lthy')
-end
 
 (* Expand type abbreviations. *)
 fun expand_type_abbrevs ctxt t = Thm.typ_of (Thm.ctyp_of ctxt t)
@@ -998,13 +939,6 @@ fun exec_background f lthy =
   exec_background_result (fn lthy => ((), f lthy)) lthy
   |> snd
 
-(* Assert no flex flex pairs in the given theorem. *)
-fun no_flexflex_tac thm =
-  if not (null (Thm.tpairs_of thm)) then
-    (raise THM ("Flex-flex pairs in goal", 1, [thm]))
-  else
-    all_tac thm
-
 (* Messages for non-critical errors. *)
 val keep_going_instruction =
   "\nPlease notify the AutoCorres maintainers of this failure. " ^
@@ -1059,6 +993,8 @@ fun mk_Some T t = Const (@{const_name "Some"}, T --> mk_optionT T) $ t
 fun mk_fun_upd rangeT domT f src dest =
   Const (@{const_name "fun_upd"}, (rangeT --> domT) --> rangeT --> domT --> rangeT --> domT)
     $ f $ src $ dest
+fun mk_bool true = @{term True}
+  | mk_bool false = @{term False}
 
 (* Succeed only if there are no subgoals. *)
 fun solved_tac thm =
@@ -1070,29 +1006,148 @@ fun mk_simproc' ctxt (name : string, pats : string list, proc : Proof.context ->
        {lhss = map (Proof_Context.read_term_pattern ctxt) pats,
         proc = K proc, identifier = []} end
 
-end
+(* Get named_theorems in reverse order. We use this for translation rulesets
+ * so that user-added rules can override the built-in ones. *)
+fun get_rules ctxt = Named_Theorems.get ctxt #> rev
+
+(* As Substring.position but searches from the end *)
+fun positionr pat s = let
+  val (s0, begin0, size0) = Substring.base s
+  fun search i = if i < begin0 then
+                   (s, Substring.substring (s0, begin0 + size0, 0)) (* not found *)
+                 else if Substring.isPrefix pat (Substring.substring (s0, i, size0 - i)) then
+                   (Substring.substring (s0, begin0, i), (* found *)
+                    Substring.substring (s0, begin0 + i, size0 - i))
+                 else search (i - 1)
+  in search size0 end
+val _ = assert (apply2 Substring.string (positionr "br" (Substring.full "abracadabra"))
+                 = ("abracada", "bra")) ""
+val _ = assert (apply2 Substring.string (positionr "xx" (Substring.full "abracadabra"))
+                 = ("abracadabra", "")) ""
+
+(* Merge a list of Symtabs. *)
+fun symtab_merge allow_dups tabs =
+      maps Symtab.dest tabs
+      |> (if allow_dups then sort_distinct (fast_string_ord o apply2 fst) else I)
+      |> Symtab.make;
+
+(* Merge with custom merge operation. *)
+fun symtab_merge_with merge (tab1, tab2) =
+  sort_distinct fast_string_ord (Symtab.keys tab1 @ Symtab.keys tab2)
+  |> map (fn k => (k, case (Symtab.lookup tab1 k, Symtab.lookup tab2 k) of
+                          (SOME x1, SOME x2) => merge (x1, x2)
+                        | (SOME x1, NONE) => x1
+                        | (NONE, SOME x2) => x2
+                        (* (NONE, NONE) impossible *)))
+  |> Symtab.make
+
+end (* structure Utils *)
+
+
+(*
+ * Future sequence.
+ * This is similar to seq except that values are computed eagerly and then cached.
+ * See AutoCorresUtil for an overview of how this is used in AutoCorres.
+ *)
+signature FSEQ = sig
+  type 'a fseq;
+
+  (* Standard list operations *)
+  val empty: unit -> 'a fseq;
+  val mk: (unit -> ('a * 'a fseq) option) -> 'a fseq;
+  val cons: 'a -> 'a fseq -> 'a fseq;
+  val fcons: (unit -> 'a * 'a fseq) -> 'a fseq;
+  val uncons: 'a fseq -> ('a * 'a fseq) option;
+  val null: 'a fseq -> bool;
+  val hd: 'a fseq -> 'a;
+  val tl: 'a fseq -> 'a fseq;
+
+  val append: 'a fseq -> 'a fseq -> 'a fseq;
+  val map: ('a -> 'b) -> 'a fseq -> 'b fseq;
+  val fold_map: ('acc -> 'a -> 'b * 'acc) -> 'acc -> 'a fseq -> 'b fseq;
+
+  val of_list: 'a list -> 'a fseq;
+  val list_of: 'a fseq -> 'a list;
+
+  (* Only waits on the shortest prefix of the sequence that contains
+   * a matching value. We rely on this to maximise parallelism
+   * between conversions. *)
+  val find: ('a -> bool) -> 'a fseq -> 'a option;
+end;
+
+structure FSeq : FSEQ = struct
+  datatype 'a fseq_base = fseqNil
+                        | fseqCons of 'a * 'a fseq_base future;
+  type 'a fseq = 'a fseq_base future;
+
+  fun empty () = Future.value fseqNil;
+  fun mk f =
+        Future.fork (fn _ =>
+            case f () of NONE => fseqNil
+                       | SOME x => fseqCons x);
+  fun fcons f = mk (fn _ => SOME (f ()));
+  fun cons x xs = Future.value (fseqCons (x, xs));
+  fun uncons xs =
+      case Future.join xs of
+          fseqNil => NONE
+        | fseqCons p => SOME p;
+  fun null xs = not (isSome (uncons xs));
+  fun hd xs = fst (the (uncons xs));
+  fun tl xs = snd (the (uncons xs));
+
+  fun append xs ys =
+      xs |> Future.map (fn x =>
+              case x of fseqNil => Future.join ys
+                      | fseqCons (x, xs') => fseqCons (x, append xs' ys));
+  fun map f xs =
+      Future.fork (fn () =>
+          case Future.join xs of
+              fseqNil => fseqNil
+            | fseqCons (x, xs') => fseqCons (f x, map f xs'));
+  fun fold_map f acc xs =
+      Future.fork (fn () =>
+          case Future.join xs of
+              fseqNil => fseqNil
+            | fseqCons (x, xs') =>
+                let val (x', acc') = f acc x;
+                in fseqCons (x', fold_map f acc' xs') end);
+
+  fun of_list [] = empty ()
+    | of_list (x::xs) = cons x (of_list xs);
+  fun list_of xs =
+        case Future.join xs of
+            fseqNil => []
+          | fseqCons (x, xs') => x :: list_of xs';
+
+  fun find P xs =
+        case Future.join xs of
+            fseqNil => NONE
+          | fseqCons (x, xs') => if P x then SOME x else find P xs';
+end;
+
+(* Memoization using a serialized cache. *)
+signature Memo = sig
+  type arg;
+  val memo: (arg -> 'a) -> (arg -> 'a);
+end;
+
+functor Memo(Table: TABLE) = struct
+  type arg = Table.key;
+  fun memo f = let
+    val table = Synchronized.var "" Table.empty;
+    in fn a =>
+         Synchronized.change_result table (fn tab =>
+             case Table.lookup tab a of
+                 SOME r => (r, tab)
+               | NONE => let
+                   val r = f a;
+                   in (r, Table.update (a, r) tab) end)
+    end;
+end;
+structure String_Memo = Memo(Symtab);
 
 (* Insist the the given tactic solves a subgoal. *)
 fun SOLVES tac = (((K tac) THEN_ALL_NEW (K no_tac)) 1)
 
 (* Given a list of tactics, try them all, backtracking when necessary. *)
 fun APPEND_LIST tacs = fold_rev (curry op APPEND) tacs no_tac;
-
-(* Version of "OF'" where an arbitrary resolution is taken in the event that
- * multiple exist. *)
-infix 0 OF'
-fun op OF' (b, a) =
-let
-  fun aux_of b [] = Seq.single b
-    | aux_of b (x::xs) = Seq.maps (fn b => aux_of b xs)
-        (Thm.biresolution NONE false [(false, x)] 1 b)
-  val result = aux_of b a
-    |> Seq.list_of
-    |> distinct Thm.eq_thm
-in
-  case result of
-    [] => raise THM ("No unifiers", 0, b :: a)
-  | [x] => x
-  | (x::xs) => (warning ("Multiple unifiers! Arbitrarily selecting the first. "
-      ^ (PolyML.makestring (x::xs))); x)
-end

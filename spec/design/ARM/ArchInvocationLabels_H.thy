@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file ArchInvocationLabels_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -11,8 +13,11 @@
 chapter "Architecture-specific Invocation Labels"
 
 theory ArchInvocationLabels_H
-imports "../../../lib/Enumeration"
+imports
+    "../../../lib/Word_Lib/Enumeration"
+    "../../machine/Setup_Locale"
 begin
+context Arch begin global_naming ARM_H
 
 text {*
   An enumeration of arch-specific system call labels.
@@ -36,9 +41,21 @@ datatype arch_invocation_label =
   | ARMASIDControlMakePool
   | ARMASIDPoolAssign
 
+
+end
+
+context begin interpretation Arch .
+requalify_types arch_invocation_label
+end
+
+context Arch begin global_naming ARM_H
+
+end
+qualify ARM_H (in Arch) 
 (* arch_invocation_label instance proofs *)
 (*<*)
 instantiation arch_invocation_label :: enum begin
+interpretation Arch .
 definition
   enum_arch_invocation_label: "enum_class.enum \<equiv> 
     [ 
@@ -77,6 +94,7 @@ end
 
 instantiation arch_invocation_label :: enum_alt
 begin
+interpretation Arch .
 definition
   enum_alt_arch_invocation_label: "enum_alt \<equiv> 
     alt_from_ord (enum :: arch_invocation_label list)"
@@ -85,10 +103,14 @@ end
 
 instantiation arch_invocation_label :: enumeration_both
 begin
+interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_arch_invocation_label)
 end
 
 (*>*)
+end_qualify
+context Arch begin global_naming ARM_H
 
 
+end
 end

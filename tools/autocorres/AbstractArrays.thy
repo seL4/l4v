@@ -11,7 +11,7 @@
 theory AbstractArrays
 imports
   "../../lib/TypHeapLib"
-  "../../lib/WordLemmaBucket"
+  "../../lib/$L4V_ARCH/WordSetup"
 begin
 
 (*
@@ -97,4 +97,3 @@ lemma set_array_addrs:
   done
 
 end
-

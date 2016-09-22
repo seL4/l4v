@@ -548,21 +548,21 @@ lemma heap_to_user_data_in_user_mem'[simp]:
    apply (frule(1) pspace_distinctD')
    apply (subgoal_tac "x + ucast off * 4 + xa  && ~~ mask pageBits = x" )
     apply (clarsimp simp:pointerInUserData_def typ_at'_def ko_wp_at'_def)
-   apply (simp add:pageBits_def)
+   apply (simp add:ARM.pageBits_def)
    apply (subst mask_lower_twice2[where n = 2 and m = 12,simplified,symmetric])
    apply (subst is_aligned_add_helper[THEN conjunct2,where n1 = 2])
      apply (erule aligned_add_aligned)
       apply (simp add:is_aligned_mult_triv2[where n = 2,simplified])
-     apply  (clarsimp simp:objBits_simps pageBits_def)
+     apply  (clarsimp simp:objBits_simps ARM.pageBits_def)
     apply simp
    apply (rule is_aligned_add_helper[THEN conjunct2])
-    apply (simp add:pageBits_def objBits_simps)
-   apply (rule power_helper[where n = 2,simplified])
+    apply (simp add:ARM.pageBits_def objBits_simps)
+   apply (rule word_less_power_trans2[where k = 2,simplified])
      apply (rule less_le_trans[OF ucast_less])
       apply simp+
-    apply (simp add:word_bits_def)
-  apply (clarsimp simp:byte_to_word_heap_def Let_def pointerInUserData_def option_to_0_def)
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch pde_mappings'[wp]: invalidateTLBByASID "valid_pde_mappings'"
 crunch ksArchState[wp]: invalidateTLBByASID "\<lambda>s. P (ksArchState s)"
@@ -571,6 +571,7 @@ crunch gsMaxObjectSize[wp]: invalidateTLBByASID "\<lambda>s. P (gsMaxObjectSize 
 crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
   (ignore: setObject getObject wp: crunch_wps getObject_inv loadObject_default_inv
      simp: crunch_simps)
+end
 
 context kernel_m begin
 
@@ -617,8 +618,8 @@ lemma clearMemory_setObject_PTE_ccorres:
                 and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)
                 and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
             (UNIV \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr} \<inter> {s. bits_' s = of_nat ptBits}) []
-       (do x \<leftarrow> mapM_x (\<lambda>a. setObject a Hardware_H.pte.InvalidPTE)
-                       [ptr , ptr + 2 ^ objBits Hardware_H.pte.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
+       (do x \<leftarrow> mapM_x (\<lambda>a. setObject a ARM_H.InvalidPTE)
+                       [ptr , ptr + 2 ^ objBits ARM_H.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
            doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits - 1) pstart)
         od)
        (Call clearMemory_'proc)"
@@ -738,7 +739,7 @@ lemma arch_recycleCap_ccorres_helper:
            (invs' and valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
                and K (ccap_relation (ArchObjectCap cp) cap))
            UNIV [SKIP]
-           (do y \<leftarrow> ArchRetypeDecls_H.finaliseCap cp is_final;
+           (do y \<leftarrow> Arch.finaliseCap cp is_final;
                return (resetMemMapping cp)
             od)
            (call (\<lambda>s. s\<lparr>cap_' := cap, final_' := from_bool is_final\<rparr>) Arch_finaliseCap_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s t. Basic (\<lambda>s. s));;
@@ -749,7 +750,7 @@ lemma arch_recycleCap_ccorres_helper:
     apply csymbr -- "C reset mem mapping"
     apply (rule ccorres_return_C_seq, simp_all)[1]
    apply wp
-  by (clarsimp elim!: ccap_relationE simp: option_map_Some_eq2 ccap_relation_def)
+  by (clarsimp elim!: ccap_relationE simp: map_option_Some_eq2 ccap_relation_def)
 
 lemma arch_recycleCap_ccorres_helper':
   notes Collect_const [simp del]
@@ -759,7 +760,7 @@ lemma arch_recycleCap_ccorres_helper':
                     and K (ccap_relation (ArchObjectCap cp) cap))
                  UNIV 
             [SKIP]
-           (do y \<leftarrow> ArchRetypeDecls_H.finaliseCap cp is_final;
+           (do y \<leftarrow> Arch.finaliseCap cp is_final;
                return (if is_final then resetMemMapping cp else cp)
             od)
            (call (\<lambda>s. s\<lparr>cap_' := cap, final_' := from_bool is_final\<rparr>) Arch_finaliseCap_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s t. Basic (\<lambda>s. s));;
@@ -778,7 +779,7 @@ lemma arch_recycleCap_ccorres_helper':
   apply (rule ccorres_return_C_seq, simp_all)[1]
    apply vcg
   apply wp
-  by (clarsimp simp: from_bool_0 ccap_relation_def option_map_Some_eq2)
+  by (clarsimp simp: from_bool_0 ccap_relation_def map_option_Some_eq2)
 
 lemma ccap_relation_VPIsDevice:
   "\<lbrakk>isPageCap cp; ccap_relation (ArchObjectCap cp) cap  \<rbrakk> \<Longrightarrow>
@@ -792,23 +793,23 @@ lemma arch_recycleCap_ccorres:
   notes Collect_const [simp del]
   notes ccorres_if_True_False_simps [simp]
   notes if_cong[cong]
+  notes from_bool_neq_0 [simp del]
   shows "ccorres (ccap_relation o ArchObjectCap) ret__struct_cap_C_'
          (invs' and valid_cap' (ArchObjectCap cp)
                 and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
                 and (\<lambda>s. capRange (ArchObjectCap cp) \<inter> kernel_data_refs = {}))
          (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
          ) []
-     (ArchRetypeDecls_H.recycleCap is_final cp) (Call Arch_recycleCap_'proc)"
+     (Arch.recycleCap is_final cp) (Call Arch_recycleCap_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: is_final_' cap_'  )
    apply csymbr
-   apply (simp add: ArchRetype_H.recycleCap_def cap_get_tag_isCap
+   apply (simp add: ARM_H.recycleCap_def cap_get_tag_isCap
                     cap_get_tag_isCap_ArchObject
                     isArchPageCap_ArchObjectCap
-               del: Collect_const cong: call_ignore_cong)
+               cong: call_ignore_cong)
    apply (rule ccorres_if_lhs)
-    apply (simp add: ccorres_cond_iffs Collect_True
-                del: Collect_const)
+    apply (simp add: ccorres_cond_iffs Collect_True)
     apply (rule ccorres_rhs_assoc)+
     apply (rule ccorres_symb_exec_r)
       apply (rule ccorres_Guard_Seq)
@@ -829,9 +830,8 @@ lemma arch_recycleCap_ccorres:
      apply vcg
     apply (rule conseqPre, vcg, clarsimp)
    apply (rule ccorres_if_lhs)
-    apply (simp add: ccorres_cond_iffs Collect_True Collect_False
-                     Let_def
-                del: Collect_const cong: call_ignore_cong)
+    apply (simp add: ccorres_cond_iffs Collect_True Collect_False Let_def
+                cong: call_ignore_cong)
     apply (rule ccorres_rhs_assoc)+
     apply (csymbr, csymbr, csymbr)
     apply (subst bind_assoc[symmetric])
@@ -871,11 +871,10 @@ lemma arch_recycleCap_ccorres:
                           true_def false_def
                    elim!: ccap_relationE split: split_if_asm)
     apply (clarsimp simp: word_neq_0_conv resetMemMapping_def
-                          ccap_relation_def option_map_Some_eq2)
+                          ccap_relation_def map_option_Some_eq2)
    apply (rule ccorres_if_lhs)
     apply (simp add: ccorres_cond_iffs Collect_True Collect_False
-                     Let_def ARMSectionBits_def
-                del: Collect_const)
+                     Let_def ARMSectionBits_def)
     apply (rule ccorres_rhs_assoc)+
     apply (csymbr, csymbr)
     apply (rule ccorres_Guard_Seq)+
@@ -904,7 +903,7 @@ lemma arch_recycleCap_ccorres:
         apply (erule subsetD, simp)
         apply (erule subsetD[rotated], rule intvl_start_le)
         apply simp
-       apply (clarsimp simp: split_def upto_enum_word kernelBase_def Platform.kernelBase_def
+       apply (clarsimp simp: split_def upto_enum_word kernelBase_def ARM.kernelBase_def
                        cong: StateSpace.state.fold_congs globals.fold_congs)
        apply (erule_tac S="{x. valid_pde_mapping_offset' (x && mask pdBits)}"
                   in mapM_x_store_memset_ccorres_assist[unfolded split_def],
@@ -933,7 +932,7 @@ lemma arch_recycleCap_ccorres:
                          update_pde_map_to_pdes carray_map_relation_upd_triv)
         apply (rule cmap_relation_updI, simp_all)[1]
         subgoal by (simp add: cpde_relation_def Let_def pde_lift_def
-                         fcp_beta pde_get_tag_def pde_tag_defs)
+                              pde_get_tag_def pde_tag_defs)
        subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                         typ_heap_simps pde_stored_asid_update_valid_offset
                         update_pde_map_tos)
@@ -958,7 +957,7 @@ lemma arch_recycleCap_ccorres:
           apply (rule ccorres_split_nothrowE)
                apply (ctac add: findPDForASID_ccorres)
               apply ceqv
-             apply (simp add: liftE_liftM when_def dc_def[symmetric] del: Collect_const)
+             apply (simp add: liftE_liftM when_def dc_def[symmetric])
              apply (rule ccorres_cond2[where R=\<top>])
                apply fastforce
               apply (ctac add: invalidateTLBByASID_ccorres)
@@ -1256,11 +1255,13 @@ lemma cpspace_relation_ep_update_ep2:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma setObject_tcb_ep_obj_at'[wp]:
   "\<lbrace>obj_at' (P :: endpoint \<Rightarrow> bool) ptr\<rbrace> setObject ptr' (tcb :: tcb) \<lbrace>\<lambda>rv. obj_at' P ptr\<rbrace>"
   apply (rule obj_at_setObject2, simp_all)
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
+end
 
 crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
   (ignore: getObject setObject simp: unless_def)

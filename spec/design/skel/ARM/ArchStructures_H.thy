@@ -14,10 +14,11 @@ imports
   "../Types_H"
   Hardware_H
 begin
+context Arch begin global_naming ARM_H
 
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs decls_only
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs instanceproofs
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs bodies_only
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_H decls_only
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_H instanceproofs
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_H bodies_only
 
 datatype arch_kernel_object_type =
     PDET
@@ -31,4 +32,5 @@ where
 | "archTypeOf (KOPTE e) = PTET"
 | "archTypeOf (KOASIDPool e) = ASIDPoolT"
 
+end
 end

@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file ArchInterrupt_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -11,6 +13,7 @@
 theory ArchInterrupt_H
 imports "../RetypeDecls_H" "../CNode_H" "../InterruptDecls_H" ArchInterruptDecls_H
 begin
+context Arch begin global_naming ARM_H
 
 defs decodeIRQControlInvocation_def:
 "decodeIRQControlInvocation arg1 arg2 arg3 arg4 \<equiv> throw IllegalOperation"
@@ -22,4 +25,5 @@ defs checkIRQ_def:
 "checkIRQ irq\<equiv> rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)"
 
 
+end
 end

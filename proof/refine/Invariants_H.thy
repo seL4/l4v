@@ -15,6 +15,26 @@ imports
   "../invariant-abstract/AInvs"
 begin
 
+context Arch begin
+lemmas [crunch_def] =
+  deriveCap_def finaliseCap_def recycleCap_def
+  hasRecycleRights_def sameRegionAs_def isPhysicalCap_def
+  sameObjectAs_def updateCapData_def maskCapRights_def
+  createObject_def capUntypedPtr_def capUntypedSize_def
+  performInvocation_def decodeInvocation_def
+
+context begin global_naming global
+requalify_facts
+  Retype_H.deriveCap_def Retype_H.finaliseCap_def Retype_H.recycleCap_def
+  Retype_H.hasRecycleRights_def Retype_H.sameRegionAs_def Retype_H.isPhysicalCap_def
+  Retype_H.sameObjectAs_def Retype_H.updateCapData_def Retype_H.maskCapRights_def
+  Retype_H.createObject_def Retype_H.capUntypedPtr_def Retype_H.capUntypedSize_def
+  Retype_H.performInvocation_def Retype_H.decodeInvocation_def
+end
+
+end
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 -- ---------------------------------------------------------------------------
 section "Invariants on Executable Spec"
 
@@ -30,6 +50,8 @@ definition
   "ko_wp_at' P p s \<equiv>
    \<exists>ko. ksPSpace s p = Some ko \<and> is_aligned p (objBitsKO ko) \<and> P ko \<and>
         ps_clear p (objBitsKO ko) s"
+
+
 
 definition
   obj_at' :: "('a::pspace_storable \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -58,6 +80,7 @@ abbreviation
   "pde_at' \<equiv> typ_at' (ArchT PDET)"
 abbreviation
   "pte_at' \<equiv> typ_at' (ArchT PTET)"
+end
 
 record itcb' =
   itcbState          :: thread_state
@@ -275,6 +298,8 @@ where
 
 section "Valid caps and objects (Haskell)"
 
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 primrec
   acapBits :: "arch_capability \<Rightarrow> nat"
 where
@@ -283,6 +308,8 @@ where
 | "acapBits (PageCap d x y sz z) = pageBitsForSize sz"
 | "acapBits (PageTableCap x y) = 10"
 | "acapBits (PageDirectoryCap x y) = 14"
+end
+
 
 primrec
   zBits :: "zombie_type \<Rightarrow> nat"
@@ -309,7 +336,7 @@ where
 definition
   "capAligned c \<equiv>
    is_aligned (capUntypedPtr c) (capBits c) \<and> capBits c < word_bits"
-
+                       
 definition
  "obj_range' (p::word32) ko \<equiv> {p .. p + 2 ^ objBitsKO ko - 1}"
 
@@ -323,6 +350,10 @@ definition
   "valid_untyped' d ptr bits idx s \<equiv>
   \<forall>ptr'. \<not> ko_wp_at' (\<lambda>ko. {ptr .. ptr + 2 ^ bits - 1} \<subset> obj_range' ptr' ko
   \<or> obj_range' ptr' ko \<inter> usableUntypedRange(UntypedCap d ptr bits idx) \<noteq> {}) ptr' s"
+
+
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
   page_table_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -372,19 +403,19 @@ where valid_cap'_def:
             \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
                     \<and> (\<forall>addr. real_cte_at' (r + 16 * (addr && mask n)) s))
   | Structures_H.ArchObjectCap ac \<Rightarrow> (case ac of
-    ArchStructures_H.ASIDPoolCap pool asid \<Rightarrow>
+    ASIDPoolCap pool asid \<Rightarrow>
     typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
-  | ArchStructures_H.ASIDControlCap \<Rightarrow> True
-  | ArchStructures_H.PageCap d ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
+  | ASIDControlCap \<Rightarrow> True
+  | PageCap d ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase)
-  | ArchStructures_H.PageTableCap ref mapdata \<Rightarrow>
+  | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
-  | ArchStructures_H.PageDirectoryCap ref mapdata \<Rightarrow>
+  | PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
 
@@ -467,17 +498,17 @@ definition
   valid_mapping' :: "word32 \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz)
-                            \<and> Platform.ptrFromPAddr x \<noteq> 0"
+                            \<and> ptrFromPAddr x \<noteq> 0"
 
 primrec
-  valid_pte' :: "Hardware_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_pte' :: "ARM_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_pte' (InvalidPTE) = \<top>"
 | "valid_pte' (LargePagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMLargePage)"
 | "valid_pte' (SmallPagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMSmallPage)"
 
 primrec
-  valid_pde' :: "Hardware_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_pde' :: "ARM_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_pde' (InvalidPDE) = \<top>"
 | "valid_pde' (SectionPDE ptr _ _ _ _ _ _) = (valid_mapping' ptr ARMSection)"
@@ -784,8 +815,8 @@ definition
 definition
   vs_ptr_align :: "Structures_H.kernel_object \<Rightarrow> nat" where
  "vs_ptr_align obj \<equiv>
-  case obj of KOArch (KOPTE (Hardware_H.pte.LargePagePTE _ _ _ _ _)) \<Rightarrow> 6
-            | KOArch (KOPDE (Hardware_H.pde.SuperSectionPDE _ _ _ _ _ _)) \<Rightarrow> 6
+  case obj of KOArch (KOPTE (pte.LargePagePTE _ _ _ _ _)) \<Rightarrow> 6
+            | KOArch (KOPDE (pde.SuperSectionPDE _ _ _ _ _ _)) \<Rightarrow> 6
             | _ \<Rightarrow> 0"
 
 definition "vs_valid_duplicates' \<equiv> \<lambda>h.
@@ -1216,6 +1247,7 @@ abbreviation (input)
 lemma invs'_to_invs_no_cicd'_def:
   "invs' = (all_invs_but_ct_idle_or_in_cur_domain' and ct_idle_or_in_cur_domain')"
   by (fastforce simp: invs'_def all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def )
+end
 
 locale mdb_next =
   fixes m :: cte_heap
@@ -1229,6 +1261,177 @@ locale mdb_next =
 locale mdb_order = mdb_next +
   assumes no_0: "no_0 m"
   assumes chain: "mdb_chain_0 m"
+
+-- ---------------------------------------------------------------------------
+section "Alternate split rules for preserving subgoal order"
+context begin interpretation Arch . (*FIXME: arch_split*)
+lemma capability_splits[split]:
+  "P (case capability of capability.ThreadCap x \<Rightarrow> f1 x
+     | capability.NullCap \<Rightarrow> f2
+     | capability.NotificationCap x xa xb xc \<Rightarrow> f3 x xa xb xc
+     | capability.IRQHandlerCap x \<Rightarrow> f4 x
+     | capability.EndpointCap x xa xb xc xd \<Rightarrow> f5 x xa xb xc xd
+     | capability.DomainCap \<Rightarrow> f6
+     | capability.Zombie x xa xb \<Rightarrow> f7 x xa xb
+     | capability.ArchObjectCap x \<Rightarrow> f8 x
+     | capability.ReplyCap x xa \<Rightarrow> f9 x xa
+     | capability.UntypedCap dev x xa xb \<Rightarrow> f10 dev x xa xb
+     | capability.CNodeCap x xa xb xc \<Rightarrow> f11 x xa xb xc
+     | capability.IRQControlCap \<Rightarrow> f12) =
+  ((\<forall>x1. capability = capability.ThreadCap x1 \<longrightarrow> P (f1 x1)) \<and>
+   (capability = capability.NullCap \<longrightarrow> P f2) \<and>
+   (\<forall>x31 x32 x33 x34.
+       capability =
+       capability.NotificationCap x31 x32 x33 x34 \<longrightarrow>
+       P (f3 x31 x32 x33 x34)) \<and>
+   (\<forall>x4. capability = capability.IRQHandlerCap x4 \<longrightarrow>
+         P (f4 x4)) \<and>
+   (\<forall>x51 x52 x53 x54 x55.
+       capability =
+       capability.EndpointCap x51 x52 x53 x54 x55 \<longrightarrow>
+       P (f5 x51 x52 x53 x54 x55)) \<and>
+   (capability = capability.DomainCap \<longrightarrow> P f6) \<and>
+   (\<forall>x71 x72 x73.
+       capability = capability.Zombie x71 x72 x73 \<longrightarrow>
+       P (f7 x71 x72 x73)) \<and>
+   (\<forall>x8. capability = capability.ArchObjectCap x8 \<longrightarrow>
+         P (f8 x8)) \<and>
+   (\<forall>x91 x92.
+       capability = capability.ReplyCap x91 x92 \<longrightarrow>
+       P (f9 x91 x92)) \<and>
+   (\<forall>dev x101 x102 x103.
+       capability = capability.UntypedCap dev x101 x102 x103 \<longrightarrow>
+       P (f10 dev x101 x102 x103)) \<and>
+   (\<forall>x111 x112 x113 x114.
+       capability = capability.CNodeCap x111 x112 x113 x114 \<longrightarrow>
+       P (f11 x111 x112 x113 x114)) \<and>
+   (capability = capability.IRQControlCap \<longrightarrow> P f12))"
+  "P (case capability of capability.ThreadCap x \<Rightarrow> f1 x
+     | capability.NullCap \<Rightarrow> f2
+     | capability.NotificationCap x xa xb xc \<Rightarrow> f3 x xa xb xc
+     | capability.IRQHandlerCap x \<Rightarrow> f4 x
+     | capability.EndpointCap x xa xb xc xd \<Rightarrow> f5 x xa xb xc xd
+     | capability.DomainCap \<Rightarrow> f6
+     | capability.Zombie x xa xb \<Rightarrow> f7 x xa xb
+     | capability.ArchObjectCap x \<Rightarrow> f8 x
+     | capability.ReplyCap x xa \<Rightarrow> f9 x xa
+     | capability.UntypedCap dev x xa xb \<Rightarrow> f10 dev x xa xb
+     | capability.CNodeCap x xa xb xc \<Rightarrow> f11 x xa xb xc
+     | capability.IRQControlCap \<Rightarrow> f12) =
+  (\<not> ((\<exists>x1. capability = capability.ThreadCap x1 \<and>
+             \<not> P (f1 x1)) \<or>
+       capability = capability.NullCap \<and> \<not> P f2 \<or>
+       (\<exists>x31 x32 x33 x34.
+           capability =
+           capability.NotificationCap x31 x32 x33 x34 \<and>
+           \<not> P (f3 x31 x32 x33 x34)) \<or>
+       (\<exists>x4. capability = capability.IRQHandlerCap x4 \<and>
+             \<not> P (f4 x4)) \<or>
+       (\<exists>x51 x52 x53 x54 x55.
+           capability =
+           capability.EndpointCap x51 x52 x53 x54 x55 \<and>
+           \<not> P (f5 x51 x52 x53 x54 x55)) \<or>
+       capability = capability.DomainCap \<and> \<not> P f6 \<or>
+       (\<exists>x71 x72 x73.
+           capability = capability.Zombie x71 x72 x73 \<and>
+           \<not> P (f7 x71 x72 x73)) \<or>
+       (\<exists>x8. capability = capability.ArchObjectCap x8 \<and>
+             \<not> P (f8 x8)) \<or>
+       (\<exists>x91 x92.
+           capability = capability.ReplyCap x91 x92 \<and>
+           \<not> P (f9 x91 x92)) \<or>
+       (\<exists>x101 x102 x103 dev.
+           capability = capability.UntypedCap dev x101 x102 x103 \<and>
+           \<not> P (f10 dev x101 x102 x103)) \<or>
+       (\<exists>x111 x112 x113 x114.
+           capability =
+           capability.CNodeCap x111 x112 x113 x114 \<and>
+           \<not> P (f11 x111 x112 x113 x114)) \<or>
+       capability = capability.IRQControlCap \<and> \<not> P f12))"
+  by (case_tac capability; simp)+
+  
+lemma thread_state_splits[split]:
+  " P (case thread_state of
+     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
+     | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
+     | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
+     | Structures_H.thread_state.Running \<Rightarrow> f4
+     | Structures_H.thread_state.Inactive \<Rightarrow> f5
+     | Structures_H.thread_state.IdleThreadState \<Rightarrow> f6
+     | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
+         f7 x xa xb xc
+     | Structures_H.thread_state.Restart \<Rightarrow> f8) =
+  ((\<forall>x11.
+       thread_state =
+       Structures_H.thread_state.BlockedOnReceive x11 \<longrightarrow>
+       P (f1 x11)) \<and>
+   (awaiting_reply' thread_state \<longrightarrow> P f2) \<and>
+   (\<forall>x3. thread_state =
+         Structures_H.thread_state.BlockedOnNotification x3 \<longrightarrow>
+         P (f3 x3)) \<and>
+   (thread_state = Structures_H.thread_state.Running \<longrightarrow>
+    P f4) \<and>
+   (thread_state = Structures_H.thread_state.Inactive \<longrightarrow>
+    P f5) \<and>
+   (idle' thread_state \<longrightarrow> P f6) \<and>
+   (\<forall>x71 x72 x73 x74.
+       thread_state =
+       Structures_H.thread_state.BlockedOnSend x71 x72 x73
+        x74 \<longrightarrow>
+       P (f7 x71 x72 x73 x74)) \<and>
+   (thread_state = Structures_H.thread_state.Restart \<longrightarrow> P f8))"
+  "P (case thread_state of
+     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
+     | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
+     | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
+     | Structures_H.thread_state.Running \<Rightarrow> f4
+     | Structures_H.thread_state.Inactive \<Rightarrow> f5
+     | Structures_H.thread_state.IdleThreadState \<Rightarrow> f6
+     | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
+         f7 x xa xb xc
+     | Structures_H.thread_state.Restart \<Rightarrow> f8) =
+  (\<not> ((\<exists>x11.
+           thread_state =
+           Structures_H.thread_state.BlockedOnReceive x11 \<and>
+           \<not> P (f1 x11)) \<or>
+       awaiting_reply' thread_state \<and> \<not> P f2 \<or>
+       (\<exists>x3. thread_state =
+             Structures_H.thread_state.BlockedOnNotification
+              x3 \<and>
+             \<not> P (f3 x3)) \<or>
+       thread_state = Structures_H.thread_state.Running \<and>
+       \<not> P f4 \<or>
+       thread_state = Structures_H.thread_state.Inactive \<and>
+       \<not> P f5 \<or>
+       idle' thread_state \<and> \<not> P f6 \<or>
+       (\<exists>x71 x72 x73 x74.
+           thread_state =
+           Structures_H.thread_state.BlockedOnSend x71 x72 x73
+            x74 \<and>
+           \<not> P (f7 x71 x72 x73 x74)) \<or>
+       thread_state = Structures_H.thread_state.Restart \<and>
+       \<not> P f8))"
+  by (case_tac thread_state; simp)+
+  
+lemma ntfn_splits[split]:
+  " P (case ntfn of Structures_H.ntfn.IdleNtfn \<Rightarrow> f1
+     | Structures_H.ntfn.ActiveNtfn x \<Rightarrow> f2 x
+     | Structures_H.ntfn.WaitingNtfn x \<Rightarrow> f3 x) =
+  ((ntfn = Structures_H.ntfn.IdleNtfn \<longrightarrow> P f1) \<and>
+   (\<forall>x2. ntfn = Structures_H.ntfn.ActiveNtfn x2 \<longrightarrow>
+         P (f2 x2)) \<and>
+   (\<forall>x3. ntfn = Structures_H.ntfn.WaitingNtfn x3 \<longrightarrow>
+         P (f3 x3)))"
+  "P (case ntfn of Structures_H.ntfn.IdleNtfn \<Rightarrow> f1
+     | Structures_H.ntfn.ActiveNtfn x \<Rightarrow> f2 x
+     | Structures_H.ntfn.WaitingNtfn x \<Rightarrow> f3 x) =
+  (\<not> (ntfn = Structures_H.ntfn.IdleNtfn \<and> \<not> P f1 \<or>
+       (\<exists>x2. ntfn = Structures_H.ntfn.ActiveNtfn x2 \<and>
+             \<not> P (f2 x2)) \<or>
+       (\<exists>x3. ntfn = Structures_H.ntfn.WaitingNtfn x3 \<and>
+             \<not> P (f3 x3))))"
+  by (case_tac ntfn; simp)+
+-- ---------------------------------------------------------------------------
 
 section "Lemmas"
 
@@ -1249,7 +1452,7 @@ lemma valid_bound_tcb'_Some[simp]:
   by (auto simp: valid_bound_tcb'_def)
 
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def
-lemmas objBitsKO_simps = objBitsKO_def word_size_def objBits_simps
+lemmas objBitsKO_simps = objBits_simps
 
 lemmas wordRadix_def' = wordRadix_def[simplified]
 
@@ -2659,7 +2862,7 @@ lemma mdb_next_fold:
   "(m \<turnstile> p \<leadsto> c) = (mdb_next m p = Some c)"
   unfolding mdb_next_rel_def
   by simp
-
+end
 locale PSpace_update_eq =
   fixes f :: "kernel_state \<Rightarrow> kernel_state"
   assumes pspace: "ksPSpace (f s) = ksPSpace s"
@@ -2945,7 +3148,7 @@ lemma ex_cte_cap_to'_pres:
    apply assumption
   apply simp
   done
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma page_directory_pde_atI':
   "\<lbrakk> page_directory_at' p s; x < 2 ^ pageBits \<rbrakk> \<Longrightarrow> pde_at' (p + (x << 2)) s"
   by (simp add: page_directory_at'_def pageBits_def)
@@ -3113,6 +3316,7 @@ lemma sch_act_wf_cases:
   | ChooseNewThread     \<Rightarrow> \<top>
   | SwitchToThread t    \<Rightarrow> \<lambda>s. st_tcb_at' runnable' t s \<and> tcb_in_cur_domain' t s)"
 by (cases action) auto
+end
 
 lemma (in PSpace_update_eq) cteCaps_of_update[iff]: "cteCaps_of (f s) = cteCaps_of s"
   by (simp add: cteCaps_of_def pspace)
@@ -3121,7 +3325,7 @@ lemma vms_sch_act_update'[iff]:
   "valid_machine_state' (ksSchedulerAction_update f s) =
    valid_machine_state' s"
   by (simp add: valid_machine_state'_def )
-
+context begin interpretation Arch . (*FIXME: arch_split*)
 lemma objBitsT_simps:
   "objBitsT EndpointT = 4"
   "objBitsT NotificationT = 4"
@@ -3366,7 +3570,7 @@ lemma valid_bitmap_valid_bitmapQ_exceptI[intro]:
   "valid_bitmapQ s \<Longrightarrow> valid_bitmapQ_except d p s"
   unfolding valid_bitmapQ_except_def valid_bitmapQ_def
   by simp
-
+end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:
   ko_at' ko p s \<Longrightarrow>
   obj_at' (complicated_P (obj_at' (complicated_Q (obj_at' ...)) p s)) p s

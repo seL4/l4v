@@ -970,7 +970,7 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
     val (n, nm) = emit_body ctxt outfile params a n c e
     val thy = Proof_Context.theory_of ctxt
     val G = Pattern.rewrite_term thy
-      (@{thms WordLemmaBucket.signed_arith_ineq_checks_to_eq_word32
+      (@{thms Word_Lemmas_32.signed_arith_ineq_checks_to_eq_word32
               signed_arith_eq_checks_to_ord
               signed_mult_eq_checks32_to_64
               sdiv_word32_min[THEN eqTrueI] sdiv_word32_max_ineq

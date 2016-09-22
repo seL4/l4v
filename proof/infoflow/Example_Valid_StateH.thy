@@ -14,6 +14,8 @@ imports
   ADT_IF_Refine
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 section {* Haskell state *}
 
 text {* One invariant we need on s0 is that there exists
@@ -44,7 +46,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> (Structures_H.CNodeCap Low_cnode_ptr 10 2 10, MDB 0 Low_tcb_ptr False False), 
         (the_nat_to_bl_10 3)
-            \<mapsto> (Structures_H.ArchObjectCap (ArchStructures_H.PageDirectoryCap Low_pd_ptr 
+            \<mapsto> (Structures_H.ArchObjectCap (ARM_H.PageDirectoryCap Low_pd_ptr 
                                              (Some Low_asid)), MDB 0 (Low_tcb_ptr + 0x10) False False),
         (the_nat_to_bl_10 318) 
             \<mapsto> (Structures_H.NotificationCap ntfn_ptr 0 True False,
@@ -74,7 +76,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> (Structures_H.CNodeCap High_cnode_ptr 10 2 10, MDB 0 High_tcb_ptr False False),
         (the_nat_to_bl_10 3)
-           \<mapsto> (Structures_H.ArchObjectCap (ArchStructures_H.PageDirectoryCap High_pd_ptr 
+           \<mapsto> (Structures_H.ArchObjectCap (ARM_H.PageDirectoryCap High_pd_ptr 
                                             (Some High_asid)), MDB 0 (High_tcb_ptr + 0x10) False False),
         (the_nat_to_bl_10 318)
            \<mapsto> (Structures_H.NotificationCap ntfn_ptr 0 False True,
@@ -127,33 +129,33 @@ where
 text {* Low's VSpace (PageDirectory)*}
 
 definition
-  Low_pt'H :: "word8 \<Rightarrow> Hardware_H.pte " 
+  Low_pt'H :: "word8 \<Rightarrow> ARM_H.pte " 
 where
-  "Low_pt'H \<equiv> (\<lambda>_. Hardware_H.InvalidPTE)
-            (0 := Hardware_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map vm_read_write))"
+  "Low_pt'H \<equiv> (\<lambda>_. ARM_H.InvalidPTE)
+            (0 := ARM_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map vm_read_write))"
 
 definition 
   Low_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_ptH \<equiv>
-     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ArchStructures_H.KOPTE (Low_pt'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARM_H.KOPTE (Low_pt'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 10 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
 definition
   [simp]:
-  "global_pdH \<equiv> (\<lambda>_. Hardware_H.InvalidPDE)( ucast (kernel_base >> 20) := 
-       Hardware_H.SectionPDE (addrFromPPtr kernel_base) (ParityEnabled \<in> {}) 0 
+  "global_pdH \<equiv> (\<lambda>_. ARM_H.InvalidPDE)( ucast (kernel_base >> 20) := 
+       ARM_H.SectionPDE (addrFromPPtr kernel_base) (ParityEnabled \<in> {}) 0 
                              (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map {}))"
 
 
 definition
-  Low_pd'H :: "12 word \<Rightarrow> Hardware_H.pde " 
+  Low_pd'H :: "12 word \<Rightarrow> ARM_H.pde " 
 where
   "Low_pd'H \<equiv> 
     global_pdH
-     (0 := Hardware_H.PageTablePDE 
-              (Platform.addrFromPPtr Low_pt_ptr) 
+     (0 := ARM_H.PageTablePDE 
+              (addrFromPPtr Low_pt_ptr) 
               (ParityEnabled \<in> {})
               undefined)"
 
@@ -164,7 +166,7 @@ definition
   Low_pdH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_pdH \<equiv>
-     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ArchStructures_H.KOPDE (Low_pd'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARM_H.KOPDE (Low_pd'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -173,11 +175,11 @@ text {* High's VSpace (PageDirectory)*}
 
 
 definition
-  High_pt'H :: "word8 \<Rightarrow> Hardware_H.pte " 
+  High_pt'H :: "word8 \<Rightarrow> ARM_H.pte " 
 where
   "High_pt'H \<equiv> 
-    (\<lambda>_. Hardware_H.InvalidPTE)
-     (0 := Hardware_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {})
+    (\<lambda>_. ARM_H.InvalidPTE)
+     (0 := ARM_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {})
                       (vmrights_map vm_read_only))"
 
 
@@ -185,18 +187,18 @@ definition
   High_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "High_ptH \<equiv>
-     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ArchStructures_H.KOPTE (High_pt'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARM_H.KOPTE (High_pt'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 10 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
 
 definition
-  High_pd'H :: "12 word \<Rightarrow> Hardware_H.pde " 
+  High_pd'H :: "12 word \<Rightarrow> ARM_H.pde " 
 where
   "High_pd'H \<equiv>
     global_pdH
-     (0 := Hardware_H.PageTablePDE  
-             (Platform.addrFromPPtr High_pt_ptr) 
+     (0 := ARM_H.PageTablePDE  
+             (addrFromPPtr High_pt_ptr) 
              (ParityEnabled \<in> {})
              undefined )" 
 
@@ -207,7 +209,7 @@ definition
   High_pdH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option" 
 where
   "High_pdH \<equiv>
-     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ArchStructures_H.KOPDE (High_pd'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARM_H.KOPDE (High_pd'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -296,7 +298,7 @@ definition
   global_pdH' :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "global_pdH' \<equiv> \<lambda>base.
-     (map_option (\<lambda>x. Structures_H.KOArch (ArchStructures_H.KOPDE (global_pdH (x::12 word))))) \<circ>
+     (map_option (\<lambda>x. Structures_H.KOArch (ARM_H.KOPDE (global_pdH (x::12 word))))) \<circ>
      (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
              then Some (ucast (offs - base >> 2)) else None)"
 
@@ -1077,7 +1079,7 @@ lemma kh0H_SomeD:
   apply (clarsimp | frule offs_range_correct)+
   done
 
-definition arch_state0H :: ArchStateData_H.kernel_state where
+definition arch_state0H :: Arch.kernel_state where
   "arch_state0H \<equiv> ARMKernelState
              (* armKSGlobalsFrame = *) init_globals_frame
              (* armKSASIDTable    = *) Map.empty
@@ -1231,7 +1233,7 @@ lemma range_tcb_not_kh0H_dom:
   "{(x && ~~ mask 9) + 1..(x && ~~ mask 9) + 2 ^ 9 - 1} \<inter> dom kh0H \<noteq> {} \<Longrightarrow> (x && ~~ mask 9) \<noteq> Low_tcb_ptr"
   "{(x && ~~ mask 9) + 1..(x && ~~ mask 9) + 2 ^ 9 - 1} \<inter> dom kh0H \<noteq> {} \<Longrightarrow> (x && ~~ mask 9) \<noteq> idle_tcb_ptr"
     apply clarsimp
-    apply (drule WordLemmaBucket.int_not_emptyD)
+    apply (drule int_not_emptyD)
     apply (clarsimp simp: kh0H_dom)
     apply (subgoal_tac "xa \<in> tcb_offs_range High_tcb_ptr")
      prefer 2
@@ -1244,7 +1246,7 @@ lemma range_tcb_not_kh0H_dom:
           | clarsimp simp: kh0H_dom_sets_distinct[THEN orthD1])+)[1]
     apply (clarsimp simp: s0_ptr_defs tcb_offs_range_def)
    apply clarsimp
-   apply (drule WordLemmaBucket.int_not_emptyD)
+   apply (drule int_not_emptyD)
    apply (clarsimp simp: kh0H_dom)
    apply (subgoal_tac "xa \<in> tcb_offs_range Low_tcb_ptr")
     prefer 2
@@ -1257,7 +1259,7 @@ lemma range_tcb_not_kh0H_dom:
          | clarsimp simp: kh0H_dom_sets_distinct[THEN orthD1])+)[1]
    apply (clarsimp simp: s0_ptr_defs tcb_offs_range_def)
   apply clarsimp
-  apply (drule WordLemmaBucket.int_not_emptyD)
+  apply (drule int_not_emptyD)
   apply (clarsimp simp: kh0H_dom)
   apply (subgoal_tac "xa \<in> tcb_offs_range idle_tcb_ptr")
    prefer 2
@@ -1371,7 +1373,7 @@ lemma map_to_ctes_kh0H:
           clarsimp,
           clarsimp simp: s0_ptr_defs cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def objBitsKO_def kh0H_dom,
           rule FalseE,
-          drule WordLemmaBucket.int_not_emptyD,
+          drule int_not_emptyD,
           clarsimp,
           (elim disjE, (clarsimp | drule(1) order_trans le_less_trans, fastforce)+)[1])+)[3]
    apply (clarsimp simp: map_to_ctes_def Let_def kh0H_obj_def split del: split_if,
@@ -1390,7 +1392,7 @@ lemma map_to_ctes_kh0H:
           rule impI,
           clarsimp simp: s0_ptr_defs cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def objBitsKO_def kh0H_dom is_aligned_def,
           rule FalseE,
-          drule WordLemmaBucket.int_not_emptyD,
+          drule int_not_emptyD,
           clarsimp,
           (elim disjE, (clarsimp | drule(1) order_trans le_less_trans, fastforce)+)[1])
    apply (clarsimp simp: map_to_ctes_def Let_def kh0H_obj_def split del: split_if)
@@ -1417,7 +1419,7 @@ lemma map_to_ctes_kh0H:
    apply (drule plus_one_helper[where n="0x3FFF", simplified])
    apply (elim disjE)
          apply (unat_arith+)[6]
-   apply (drule WordLemmaBucket.int_not_emptyD)
+   apply (drule int_not_emptyD)
    apply clarsimp
    apply (elim disjE,
           ((clarsimp,
@@ -1453,7 +1455,7 @@ lemma map_to_ctes_kh0H:
            frule_tac 'a=32 in of_bl_length_le,
             simp,
            simp,
-          drule WordLemmaBucket.int_not_emptyD,
+          drule int_not_emptyD,
           clarsimp simp: kh0H_dom s0_ptr_defs cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def cte_level_bits_def,
           (elim disjE,
            (clarsimp simp: s0_ptr_defs,
@@ -2176,17 +2178,17 @@ lemma s0H_valid_objs':
          apply (clarsimp simp: valid_obj'_def Low_cte_def Low_cte'_def Low_capsH_def empty_cte_def valid_cte'_def split: split_if_asm)
         apply (clarsimp simp: valid_obj'_def High_cte_def High_cte'_def High_capsH_def empty_cte_def valid_cte'_def split: split_if_asm)
        apply (clarsimp simp: valid_obj'_def Silc_cte_def Silc_cte'_def Silc_capsH_def empty_cte_def valid_cte'_def split: split_if_asm)
-      apply (clarsimp simp: valid_obj'_def global_pdH'_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def Platform.ptrFromPAddr_def
-        physMappingOffset_def Platform.kernelBase_def Platform.physBase_def
+      apply (clarsimp simp: valid_obj'_def global_pdH'_def valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def ARM.ptrFromPAddr_def
+        physMappingOffset_def ARM.kernelBase_def ARM.physBase_def
         kernelBase_addr_def physBase_def split: split_if_asm)
-     apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def 
-       Platform.kernelBase_def Platform.physBase_def Platform.ptrFromPAddr_def ptBits_def pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
-    apply (clarsimp simp: valid_obj'_def Low_pdH_def Low_pd'H_def valid_pde'_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def 
-      Platform.ptrFromPAddr_def Platform.physBase_def ptBits_def pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
-   apply (clarsimp simp: valid_obj'_def High_ptH_def High_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def
-     Platform.ptrFromPAddr_def Platform.kernelBase_def Platform.physBase_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
-  apply (clarsimp simp: valid_obj'_def Low_ptH_def Low_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def
-    Platform.physBase_def Platform.ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
+     apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def 
+       ARM.kernelBase_def ARM.physBase_def ARM.ptrFromPAddr_def ptBits_def pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
+    apply (clarsimp simp: valid_obj'_def Low_pdH_def Low_pd'H_def valid_pde'_def valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def 
+      ARM.ptrFromPAddr_def ARM.physBase_def ptBits_def pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
+   apply (clarsimp simp: valid_obj'_def High_ptH_def High_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def
+     ARM.ptrFromPAddr_def ARM.kernelBase_def ARM.physBase_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
+  apply (clarsimp simp: valid_obj'_def Low_ptH_def Low_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def
+    ARM.physBase_def ARM.ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
   done
 
 lemmas the_nat_to_bl_simps =
@@ -2426,10 +2428,10 @@ lemma sameRegionAs_s0H:
            apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
           apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
          apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
-         apply (elim disjE, simp_all add: sameRegionAs_def ArchRetype_H.sameRegionAs_def isCap_simps)[1]
+         apply (elim disjE, simp_all add: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps)[1]
             apply (simp add: s0_ptr_defs)
            apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-          apply (clarsimp simp: ArchRetype_H.sameRegionAs_def isCap_simps kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
+          apply (clarsimp simp: ARM_H.sameRegionAs_def isCap_simps kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
          apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
         apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
         apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
@@ -2443,11 +2445,11 @@ lemma sameRegionAs_s0H:
         apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
        apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
       apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
-      apply (elim disjE, simp_all add: sameRegionAs_def ArchRetype_H.sameRegionAs_def isCap_simps)[1]
+      apply (elim disjE, simp_all add: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps)[1]
          apply (simp add: s0_ptr_defs)
         apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
        apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
-      apply (clarsimp simp: ArchRetype_H.sameRegionAs_def isCap_simps kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
+      apply (clarsimp simp: ARM_H.sameRegionAs_def isCap_simps kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
      apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
      apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
        apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
@@ -2492,7 +2494,7 @@ lemma sameRegionAs_s0H:
        apply clarsimp
       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
      apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
-     apply (elim disjE, simp_all add: sameRegionAs_def ArchRetype_H.sameRegionAs_def isCap_simps)[1]
+     apply (elim disjE, simp_all add: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps)[1]
         apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
        apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps split: split_if_asm)
@@ -2510,7 +2512,7 @@ lemma sameRegionAs_s0H:
      apply (drule(2) ucast_shiftr_3)
        apply (rule s0_ptrs_aligned)
       apply simp
-     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps s0_ptrs_aligned ArchRetype_H.sameRegionAs_def isCap_simps split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps s0_ptrs_aligned ARM_H.sameRegionAs_def isCap_simps split: split_if_asm)
     apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
     apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
        apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
@@ -2550,11 +2552,11 @@ lemma sameRegionAs_s0H:
       apply simp
      apply clarsimp
     apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
-    apply (elim disjE, simp_all add: sameRegionAs_def ArchRetype_H.sameRegionAs_def isCap_simps)[1]
+    apply (elim disjE, simp_all add: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps)[1]
         apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
        apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
-     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned ArchRetype_H.sameRegionAs_def isCap_simps split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned ARM_H.sameRegionAs_def isCap_simps split: split_if_asm)
     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
     apply (drule(2) ucast_shiftr_3)
       apply (rule s0_ptrs_aligned)
@@ -2752,6 +2754,8 @@ lemma s0H_valid_pspace':
     apply ((clarsimp split: split_if_asm)+)[3]
     done
 
+end
+
 (* Instantiate the current, abstract domain scheduler into the
    concrete scheduler required for this example *)
 axiomatization newKSDomSchedInst where
@@ -2763,6 +2767,8 @@ axiomatization newKSDomSchedInst where
 axiomatization kernel_data_refs_valid where
   kdr_valid_global_refs': "valid_global_refs' s0H_internal" and
   kdr_pspace_domain_valid: "pspace_domain_valid s0H_internal"
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma s0H_invs:
   "invs' s0H_internal"
@@ -3366,4 +3372,6 @@ lemma Sys1_valid_initial_state_noenabled:
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   shows "valid_initial_state_noenabled det_inv utf s0_internal Sys1PAS timer_irq s0_context"
   by (rule Sys1_valid_initial_state_noenabled[OF step_restrict_s0 utf_det utf_non_empty utf_non_interrupt det_inv_invariant det_inv_s0])
+end
+
 end

@@ -12,6 +12,8 @@ theory Finalise_IF
 imports Arch_IF IRQMasks_IF
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 crunch_ignore (add: tcb_sched_action)
 
 crunch cur_thread[wp]: finalise_cap "\<lambda>s. P (cur_thread s)"
@@ -1369,6 +1371,9 @@ lemma thread_set_tcb_at:
   apply (clarsimp simp: get_tcb_def obj_at_def is_tcb_def split: option.splits Structures_A.kernel_object.splits)
   done
 
+(* FIXME: Why was the [wp] attribute on this lemma clobbered by interpretation of the Arch locale? *)
+lemmas [wp] = thread_set_fault_valid_global_refs
+
 lemma reply_cancel_ipc_reads_respects_f:
   notes gets_ev[wp del]
   shows
@@ -2122,5 +2127,7 @@ lemma arch_recycle_cap_globals_equiv:
     apply (wp mapM_x_swp_store_kernel_base_globals_equiv)
     apply auto
   done
+
+end
 
 end

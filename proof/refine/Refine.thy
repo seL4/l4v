@@ -19,6 +19,8 @@ imports
   PageTableDuplicates
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 text {* User memory content is the same on both levels *}
 lemma typ_at_AUserDataI:
   "\<lbrakk> typ_at (AArch (AUserData sz)) p s; pspace_relation (kheap s) (ksPSpace s');
@@ -479,7 +481,7 @@ lemma ptable_rights_imp_UserData:
   assumes rel: "(s,s') : state_relation"
   assumes rights: "ptable_rights t (absKState s') x \<noteq> {}"
   assumes trans:
-    "ptable_lift t (absKState s') x = Some (Platform.addrFromPPtr y)"
+    "ptable_lift t (absKState s') x = Some (ARM.addrFromPPtr y)"
   shows "pointerInUserData y s' \<or> pointerInDeviceData y s'"
 proof -
   from invs invs' rel have [simp]: "absKState s' = abs_state s"
@@ -504,13 +506,6 @@ lemma device_update_invs':
      gets_def get_def bind_def valid_def return_def)
    by (clarsimp simp:invs'_def valid_state'_def valid_irq_states'_def valid_machine_state'_def)
 
-lemma device_update_ct_in_state':
-  "\<lbrace>\<lambda>s. P (ct_in_state' Q s)\<rbrace>doMachineOp (device_update ds)
-   \<lbrace>\<lambda>_ s. P (ct_in_state' Q s)\<rbrace>"
-   apply (simp add:doMachineOp_def device_update_def simpler_modify_def select_f_def
-     gets_def get_def bind_def valid_def return_def)
-   by (clarsimp simp:ct_in_state'_def)
-
 lemma doUserOp_invs':
   "\<lbrace>invs' and ex_abs einvs and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running'\<rbrace>
@@ -518,7 +513,7 @@ lemma doUserOp_invs':
    \<lbrace>\<lambda>_. invs' and
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
-  apply (wp device_update_invs' device_update_ct_in_state')
+  apply (wp device_update_invs')
   apply (wp dmo_invs' doMachineOp_ct_running')
         apply (clarsimp simp add: no_irq_modify device_memory_update_def
           user_memory_update_def)
@@ -638,10 +633,6 @@ lemma corres_gets_machine_state:
   by (clarsimp simp:gets_def corres_underlying_def 
     in_monad bind_def get_def return_def state_relation_def)
 
-lemma device_update_no_fail[wp]:
-  "no_fail \<top> (device_update r)"
-  by (simp add:no_fail_def device_update_def simpler_modify_def)
-
 lemma do_user_op_corres:
   "corres (op =) (einvs and ct_running)
                  (invs' and (%s. ksSchedulerAction s = ResumeCurrentThread) and
@@ -704,7 +695,7 @@ lemma ct_idle_related:
 (* FIXME: move *)
 lemma valid_corres_combined:
   assumes "valid P f Q"
-  assumes "corres_underlying sr nf rr P P' f f'"
+  assumes "corres_underlying sr False nf' rr P P' f f'"
   assumes "valid (\<lambda>s'. \<exists>s. (s,s')\<in>sr \<and> P s \<and> P' s') f' Q'" (is "valid ?P _ _")
   shows "valid ?P f' (\<lambda>r' s'. \<exists>r s. (s,s') \<in> sr \<and> Q r s \<and> Q' r' s' \<and> rr r r')"
   using assms
@@ -824,11 +815,12 @@ lemma ckernel_invariant:
   apply (clarsimp simp: ADT_A_def ADT_H_def global_automaton_def)
 
   apply (erule_tac P="a \<and> (\<exists>x. b x)" for a b in disjE)
-   apply ((clarsimp simp: kernel_call_H_def
+   subgoal
+   by ((clarsimp simp: kernel_call_H_def
         | drule use_valid[OF _ valid_corres_combined
             [OF kernel_entry_invs entry_corres], 
              OF _ kernelEntry_invs'[THEN hoare_weaken_pre]]
-        | fastforce simp: ex_abs_def sch_act_simple_def ct_running_related sched_act_rct_related)+)[1]
+        | fastforce simp: ex_abs_def sch_act_simple_def ct_running_related sched_act_rct_related)+)
   apply (erule_tac P="a \<and> b" for a b in disjE)
    apply (clarsimp simp add: do_user_op_H_def monad_to_transition_def)
    apply (drule use_valid)
@@ -971,5 +963,7 @@ theorem refinement:
    apply (rule ckernel_invariant)
   apply (rule fw_sim_A_H)
   done
+
+end
 
 end

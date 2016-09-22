@@ -732,7 +732,7 @@ lemma retype_untyped_loop_inv_success:
                  in retype_untyped_bij_success,
           (assumption|simp|clarsimp)+)
          apply (drule list_all_nth [where xs=free_slots], simp)
-         apply (metis of_nat_less_pow offset_slot_si_cnode_size
+         apply (metis of_nat_less_pow_32 offset_slot_si_cnode_size
                        offset_slot' si_cnode_size_less_than_word_size)
         apply simp
         apply (drule list_all_nth [where xs=untyped_slots], simp)
@@ -740,9 +740,9 @@ lemma retype_untyped_loop_inv_success:
                      si_cnode_size_less_than_word_size unat_power_lower32)
        apply force
       apply (drule list_all_nth [where xs=free_slots], simp)
-      apply (metis nth_map' of_nat_less_pow si_cnode_size_less_than_word_size)
+      apply (metis nth_map' of_nat_less_pow_32 si_cnode_size_less_than_word_size)
      apply (drule list_all_nth [where xs=untyped_slots], simp)
-     apply (metis nth_map' of_nat_less_pow si_cnode_size_less_than_word_size)
+     apply (metis nth_map' of_nat_less_pow_32 si_cnode_size_less_than_word_size)
     apply (frule (1) well_formed_object_untyped, simp)
    apply (clarsimp)
    apply (rule conjI)
@@ -977,9 +977,9 @@ lemma retype_untyped_loop_inv_fail:
                  in hoare_vcg_conj_lift [OF retype_untyped_bij_fail],
                  (assumption|simp|clarsimp)+)
          apply (drule list_all_nth [where xs=free_slots], simp)
-         apply (metis of_nat_less_pow si_cnode_size_less_than_word_size)
+         apply (metis of_nat_less_pow_32 si_cnode_size_less_than_word_size)
         apply (drule list_all_nth [where xs=untyped_slots], simp)
-        apply (metis nth_map' of_nat_less_pow si_cnode_size_less_than_word_size)
+        apply (metis nth_map' of_nat_less_pow_32 si_cnode_size_less_than_word_size)
        apply clarsimp
        apply (drule list_all_nth [where xs=free_slots], simp)
        apply (metis (hide_lams, no_types) Diff_disjoint Int_commute UN_nth_mem disjoint_subset2)
@@ -1397,7 +1397,7 @@ lemma create_objects_sep:
      apply (fastforce simp: list_all_iff unat_less_2_si_cnode_size')
     apply (clarsimp simp: length_real_object_at_card)
    apply (rule_tac x=untyped_caps in exI)
-   apply (clarsimp simp: zip_map comp_tuple sep_conj_assoc)
+   apply (clarsimp simp: zip_map1 comp_tuple sep_conj_assoc)
    apply (subst comp_apply)+
    apply (subst sep_list_conj_sep_map_set_conj, simp add: distinct_zipI1)
    apply (subst sep_list_conj_sep_map_set_conj, simp add: distinct_zipI1)
@@ -1409,7 +1409,7 @@ lemma create_objects_sep:
   apply (rule_tac x=untyped_capsa in exI)
   apply (rule_tac x=all_available_ids in exI)
   apply (subst (asm) sep_list_conj_sep_map_set_conj [where xs="[obj\<leftarrow>obj_ids . real_object_at obj spec]"], simp)+
-  apply (clarsimp simp: zip_map drop_map comp_def split_beta')
+  apply (clarsimp simp: zip_map1 drop_map comp_def split_beta')
   apply (subst (asm) sep_list_conj_sep_map_set_conj, simp add: distinct_zipI1)+
   apply sep_solve
   done

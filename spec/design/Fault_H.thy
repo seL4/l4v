@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Fault_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -441,10 +443,10 @@ where
     AlignmentError \<Rightarrow> True
   | _ \<Rightarrow> False"
 
-consts
+consts'
 msgFromSyscallError :: "syscall_error \<Rightarrow> (machine_word * machine_word list)"
 
-consts
+consts'
 msgFromLookupFailure :: "lookup_failure \<Rightarrow> machine_word list"
 
 defs msgFromSyscallError_def:

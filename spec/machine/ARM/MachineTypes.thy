@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file MachineTypes.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -12,16 +14,15 @@ chapter "ARM Machine Types"
 
 theory MachineTypes
 imports
-  "../../../lib/Enumeration"
-  "../../../lib/WordSetup"
-  "../../../lib/wp/NonDetMonad"
+  "../../../lib/Monad_WP/NonDetMonad"
+  "../Setup_Locale"
   Platform
 begin
 
-(* !!! Generated File !!! Skeleton in ../haskell-translator/ARMMachineTypes.thy *)
+context Arch begin global_naming ARM
 
 text {*
-  An implementation of the machine's types, defining register set 
+  An implementation of the machine's types, defining register set
   and some observable machine state.
 *}
 
@@ -49,16 +50,30 @@ datatype register =
 
 type_synonym machine_word = "word32"
 
-consts
+consts'
 initContext :: "(register * machine_word) list"
 
-consts
+consts'
 sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 
 (*<*)
+
+type_synonym machine_word_len = 32
+
+end
+
+context begin interpretation Arch .
+requalify_types register
+end
+
+context Arch begin global_naming ARM
+
+end
+qualify ARM (in Arch) 
 (* register instance proofs *)
 (*<*)
 instantiation register :: enum begin
+interpretation Arch .
 definition
   enum_register: "enum_class.enum \<equiv> 
     [ 
@@ -99,6 +114,7 @@ end
 
 instantiation register :: enum_alt
 begin
+interpretation Arch .
 definition
   enum_alt_register: "enum_alt \<equiv> 
     alt_from_ord (enum :: register list)"
@@ -107,10 +123,13 @@ end
 
 instantiation register :: enumeration_both
 begin
+interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_register)
 end
 
 (*>*)
+end_qualify
+context Arch begin global_naming ARM
 
 (*>*)
 definition
@@ -163,32 +182,47 @@ text {*
 *}
 type_synonym exclusive_monitors = "(word32 \<Rightarrow> bool) list \<times> (word32 \<times> nat \<Rightarrow> bool)"
 
-text {* 
+text {*
   The full machine state is the state observable by the kernel plus
-  the underspecified rest above. The observable parts are the 
+  the underspecified rest above. The observable parts are the
   interrupt controller (which IRQs are masked) and the memory of the
   machine. The latter is shadow state: kernel memory is kept in a
   separate, more abstract datatype; user memory is reflected down
   to the underlying memory of the machine.
-*} 
+*}
+end
+
+qualify ARM (in Arch)
+
 record
   machine_state =
-  irq_masks :: "irq \<Rightarrow> bool"
+  irq_masks :: "ARM.irq \<Rightarrow> bool"
   irq_state :: nat
   underlying_memory :: "word32 \<Rightarrow> word8"
   device_state :: "word32 \<Rightarrow> word8 option"
-  exclusive_state :: exclusive_monitors
-  machine_state_rest :: machine_state_rest  
+  exclusive_state :: ARM.exclusive_monitors
+  machine_state_rest :: ARM.machine_state_rest
 
 consts irq_oracle :: "nat \<Rightarrow> 10 word"
+
+axiomatization irq_oracle_max_irqInst where
+  irq_oracle_max_irq: "\<forall> n. (irq_oracle n) <= ARM.maxIRQ"
+
+end_qualify
+
+context Arch begin global_naming ARM
 
 text {*
   The machine monad is used for operations on the state defined above.
 *}
 type_synonym 'a machine_monad = "(machine_state, 'a) nondet_monad"
 
+end
+
 translations
-  (type) "'c machine_monad" <= (type) "(machine_state, 'c) nondet_monad"
+  (type) "'c ARM.machine_monad" <= (type) "(ARM.machine_state, 'c) nondet_monad"
+
+context Arch begin global_naming ARM
 
 text {*
   After kernel initialisation all IRQs are masked.
@@ -208,7 +242,8 @@ text {*
   The initial exclusive state is the same constant
   that clearExMonitor defaults it to.
 *}
-consts default_exclusive_state :: exclusive_monitors
+
+consts' default_exclusive_state :: exclusive_monitors
 
 text {*
   We leave open the underspecified rest of the machine state in
@@ -216,9 +251,9 @@ text {*
 *}
 definition
   init_machine_state :: machine_state where
- "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks, 
+ "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,
                          irq_state = 0,
-                         underlying_memory = init_underlying_memory, 
+                         underlying_memory = init_underlying_memory,
                          device_state = empty,
                          exclusive_state = default_exclusive_state,
                          machine_state_rest = undefined \<rparr>"
@@ -273,9 +308,21 @@ where
   | ARMSuperSection \<Rightarrow>    24
   )"
 
+
+end
+
+context begin interpretation Arch .
+requalify_types vmpage_size
+end
+
+context Arch begin global_naming ARM
+
+end
+qualify ARM (in Arch) 
 (* vmpage_size instance proofs *)
 (*<*)
 instantiation vmpage_size :: enum begin
+interpretation Arch .
 definition
   enum_vmpage_size: "enum_class.enum \<equiv> 
     [ 
@@ -302,6 +349,7 @@ end
 
 instantiation vmpage_size :: enum_alt
 begin
+interpretation Arch .
 definition
   enum_alt_vmpage_size: "enum_alt \<equiv> 
     alt_from_ord (enum :: vmpage_size list)"
@@ -310,10 +358,14 @@ end
 
 instantiation vmpage_size :: enumeration_both
 begin
+interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_vmpage_size)
 end
 
 (*>*)
+end_qualify
+context Arch begin global_naming ARM
 
 
+end
 end

@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file Retype_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -18,6 +20,26 @@ imports
   Interrupt_H
 begin
 
+context Arch begin
+requalify_consts
+  deriveCap finaliseCap recycleCap
+  hasRecycleRights sameRegionAs isPhysicalCap
+  sameObjectAs updateCapData maskCapRights
+  createObject capUntypedPtr capUntypedSize
+  performInvocation decodeInvocation
+
+context begin global_naming global
+
+requalify_consts
+  RetypeDecls_H.deriveCap RetypeDecls_H.finaliseCap RetypeDecls_H.recycleCap
+  RetypeDecls_H.hasRecycleRights RetypeDecls_H.sameRegionAs RetypeDecls_H.isPhysicalCap
+  RetypeDecls_H.sameObjectAs RetypeDecls_H.updateCapData RetypeDecls_H.maskCapRights
+  RetypeDecls_H.createObject RetypeDecls_H.capUntypedPtr RetypeDecls_H.capUntypedSize
+  RetypeDecls_H.performInvocation RetypeDecls_H.decodeInvocation
+end
+
+end
+
 defs deriveCap_def:
 "deriveCap slot x1\<equiv> (let cap = x1 in
   if isZombie cap
@@ -34,20 +56,20 @@ defs deriveCap_def:
   else if isArchObjectCap cap
   then let cap = capCap cap
   in  
-    liftME ArchObjectCap $ ArchRetypeDecls_H.deriveCap slot cap
+    liftME ArchObjectCap $ Arch.deriveCap slot cap
   else   returnOk cap
   )"
 
 defs finaliseCap_def:
-"finaliseCap x0 x1 x2\<equiv> (let (v1, v2, v3) = (x0, x1, x2) in
-  if isEndpointCap v1
-  then let ptr = capEPPtr v1; final = v2
+"finaliseCap x0 x1 x2\<equiv> (let (v13, v14, v15) = (x0, x1, x2) in
+  if isEndpointCap v13
+  then let ptr = capEPPtr v13; final = v14
   in   (do
     when final $ cancelAllIPC ptr;
     return (NullCap, Nothing)
   od)
-  else if isNotificationCap v1
-  then let ptr = capNtfnPtr v1; final = v2
+  else if isNotificationCap v13
+  then let ptr = capNtfnPtr v13; final = v14
   in   (do
     when final $ (do
         unbindMaybeNotification ptr;
@@ -55,41 +77,41 @@ defs finaliseCap_def:
     od);
     return (NullCap, Nothing)
   od)
-  else if isReplyCap v1
+  else if isReplyCap v13
   then   return (NullCap, Nothing)
-  else if isNullCap v1
+  else if isNullCap v13
   then   return (NullCap, Nothing)
-  else if isDomainCap v1
+  else if isDomainCap v13
   then   return (NullCap, Nothing)
-  else if v3
+  else if v15
   then   haskell_fail []
-  else if isCNodeCap v1 \<and> v2
-  then let ptr = capCNodePtr v1; bits = capCNodeBits v1
+  else if isCNodeCap v13 \<and> v14
+  then let ptr = capCNodePtr v13; bits = capCNodeBits v13
   in  
     return (Zombie ptr (ZombieCNode bits) (bit bits), Nothing)
-  else if isThreadCap v1 \<and> v2
-  then let tcb = capTCBPtr v1
+  else if isThreadCap v13 \<and> v14
+  then let tcb = capTCBPtr v13
   in   (do
     cte_ptr \<leftarrow> getThreadCSpaceRoot tcb;
     unbindNotification tcb;
     suspend tcb;
     return (Zombie cte_ptr ZombieTCB 5, Nothing)
   od)
-  else if isZombie v1 \<and> v2
-  then let z = v1
+  else if isZombie v13 \<and> v14
+  then let z = v13
   in  
     return (z, Nothing)
-  else if isArchObjectCap v1
-  then let cap = capCap v1; final = v2
+  else if isArchObjectCap v13
+  then let cap = capCap v13; final = v14
   in  
-    liftM (\<lambda> cap. (cap, Nothing)) $ ArchRetypeDecls_H.finaliseCap cap final
-  else if isIRQHandlerCap v1 \<and> v2
-  then let irq = capIRQ v1
+    liftM (\<lambda> cap. (cap, Nothing)) $ Arch.finaliseCap cap final
+  else if isIRQHandlerCap v13 \<and> v14
+  then let irq = capIRQ v13
   in   (do
     deletingIRQHandler irq;
     return (NullCap, Just irq)
   od)
-  else if isZombie v1 \<and> \<not> v2
+  else if isZombie v13 \<and> \<not> v14
   then   haskell_fail []
   else   return (NullCap, Nothing)
   )"
@@ -135,7 +157,7 @@ defs recycleCap_def:
   else if isArchObjectCap cap
   then let cap = capCap cap
   in  
-    liftM ArchObjectCap $ ArchRetypeDecls_H.recycleCap is_final cap
+    liftM ArchObjectCap $ Arch.recycleCap is_final cap
   else   return cap
   )"
 
@@ -147,7 +169,7 @@ defs hasRecycleRights_def:
   | (EndpointCap _ _ _ _ _) \<Rightarrow>    False
   | (NotificationCap _ _ True True) \<Rightarrow>    True
   | (NotificationCap _ _ _ _) \<Rightarrow>    False
-  | (ArchObjectCap cap) \<Rightarrow>    ArchRetypeDecls_H.hasRecycleRights cap
+  | (ArchObjectCap cap) \<Rightarrow>    Arch.hasRecycleRights cap
   | _ \<Rightarrow>    True
   )"
 
@@ -191,7 +213,7 @@ defs sameRegionAs_def:
   else if isArchObjectCap a \<and> isArchObjectCap b
   then (case (a, b) of
   (ArchObjectCap a, ArchObjectCap b) \<Rightarrow>  
-    a `~ArchRetypeDecls_H.sameRegionAs~` b
+    a `~Arch.sameRegionAs~` b
   )
   else   False
   )"
@@ -203,7 +225,7 @@ defs isPhysicalCap_def:
   | DomainCap \<Rightarrow>    False
   | (IRQHandlerCap _) \<Rightarrow>    False
   | (ReplyCap _ _) \<Rightarrow>    False
-  | (ArchObjectCap a) \<Rightarrow>    ArchRetypeDecls_H.isPhysicalCap a
+  | (ArchObjectCap a) \<Rightarrow>    Arch.isPhysicalCap a
   | _ \<Rightarrow>    True
   )"
 
@@ -211,30 +233,30 @@ defs sameObjectAs_def:
 "sameObjectAs x0 x1\<equiv> (case (x0, x1) of
     ((UntypedCap _ _ _ _), _) \<Rightarrow>    False
   | (IRQControlCap, (IRQHandlerCap _)) \<Rightarrow>    False
-  | ((ArchObjectCap a), (ArchObjectCap b)) \<Rightarrow>    a `~ArchRetypeDecls_H.sameObjectAs~` b
+  | ((ArchObjectCap a), (ArchObjectCap b)) \<Rightarrow>    a `~Arch.sameObjectAs~` b
   | (a, b) \<Rightarrow>    a `~sameRegionAs~` b
   )"
 
 defs updateCapData_def:
-"updateCapData x0 x1 x2\<equiv> (let (v4, v5, v6) = (x0, x1, x2) in
-  if isEndpointCap v6
-  then let preserve = v4; new = v5; cap = v6
+"updateCapData x0 x1 x2\<equiv> (let (v16, v17, v18) = (x0, x1, x2) in
+  if isEndpointCap v18
+  then let preserve = v16; new = v17; cap = v18
   in  
     if
     Not preserve \<and> capEPBadge cap = 0 then cap \<lparr> capEPBadge := new && mask badgeBits \<rparr>
     else if
     True      then NullCap
     else undefined
-  else if isNotificationCap v6
-  then let preserve = v4; new = v5; cap = v6
+  else if isNotificationCap v18
+  then let preserve = v16; new = v17; cap = v18
   in  
     if
     Not preserve \<and> capNtfnBadge cap = 0 then cap \<lparr> capNtfnBadge := new && mask badgeBits \<rparr>
     else if
     True      then NullCap
     else undefined
-  else if isCNodeCap v6
-  then let w = v5; cap = v6
+  else if isCNodeCap v18
+  then let w = v17; cap = v18
   in  
     let
         rightsBits = 3;
@@ -262,11 +284,11 @@ defs updateCapData_def:
         capCNodeGuard := guard,
         capCNodeGuardSize := guardSize \<rparr>
     else undefined
-  else if isArchObjectCap v6
-  then let p = v4; w = v5; aoCap = capCap v6
+  else if isArchObjectCap v18
+  then let p = v16; w = v17; aoCap = capCap v18
   in  
-    ArchRetypeDecls_H.updateCapData p w aoCap
-  else let cap = v6
+    Arch.updateCapData p w aoCap
+  else let cap = v18
   in   cap
   )"
 
@@ -301,7 +323,7 @@ defs maskCapRights_def:
   else if isIRQHandlerCap c
   then   c
   else if isArchObjectCap c
-  then   ArchRetypeDecls_H.maskCapRights r aoCap
+  then   Arch.maskCapRights r aoCap
   else if isZombie c
   then   c
   else undefined
@@ -335,7 +357,7 @@ defs createObject_def:
         | Some Untyped \<Rightarrow>  
             return $ UntypedCap isDevice (PPtr $ fromPPtr regionBase) userSize 0
         | None \<Rightarrow>   (do
-            archCap \<leftarrow> ArchRetypeDecls_H.createObject t regionBase userSize isDevice;
+            archCap \<leftarrow> Arch.createObject t regionBase userSize isDevice;
             return $ ArchObjectCap archCap
         od)
         )"
@@ -381,7 +403,7 @@ defs decodeInvocation_def:
   then let cap = capCap cap
   in  
     liftME InvokeArchObject $
-        ArchRetypeDecls_H.decodeInvocation label args capIndex slot cap extraCaps
+        Arch.decodeInvocation label args capIndex slot cap extraCaps
   else   throw $ InvalidCapability 0
   )"
 
@@ -423,7 +445,7 @@ defs performInvocation_def:
     withoutPreemption $ invokeIRQHandler invok;
     returnOk $ []
   odE)
-  | (InvokeArchObject invok) \<Rightarrow>    ArchRetypeDecls_H.performInvocation invok
+  | (InvokeArchObject invok) \<Rightarrow>    Arch.performInvocation invok
   )"
 
 defs capUntypedPtr_def:
@@ -439,7 +461,7 @@ defs capUntypedPtr_def:
   | (Zombie ((* PPtr *) p) _ _) \<Rightarrow>    PPtr p
   | IRQControlCap \<Rightarrow>    error []
   | (IRQHandlerCap _) \<Rightarrow>    error []
-  | (ArchObjectCap a) \<Rightarrow>    ArchRetypeDecls_H.capUntypedPtr a
+  | (ArchObjectCap a) \<Rightarrow>    Arch.capUntypedPtr a
   )"
 
 defs capUntypedSize_def:
@@ -451,7 +473,7 @@ defs capUntypedSize_def:
   | (NotificationCap _ _ _ _) \<Rightarrow>    1 `~shiftL~` objBits (undefined::notification)
   | (ThreadCap _) \<Rightarrow>    1 `~shiftL~` objBits (undefined::tcb)
   | (DomainCap ) \<Rightarrow>    1
-  | (ArchObjectCap a) \<Rightarrow>    ArchRetypeDecls_H.capUntypedSize a
+  | (ArchObjectCap a) \<Rightarrow>    Arch.capUntypedSize a
   | (Zombie _ ZombieTCB _) \<Rightarrow>    1 `~shiftL~` objBits (undefined::tcb)
   | (Zombie _ (ZombieCNode sz) _) \<Rightarrow>    1 `~shiftL~` (objBits (undefined::cte) + sz)
   | (ReplyCap _ _) \<Rightarrow>    1 `~shiftL~` objBits (undefined::tcb)

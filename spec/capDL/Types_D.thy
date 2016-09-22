@@ -17,7 +17,7 @@
 
 theory Types_D
 imports
-  "../abstract/$L4V_ARCH/ArchVMRights_A"
+  "../abstract/VMRights_A"
   Intents_D
   "../../lib/SplitRule"
 begin
@@ -62,12 +62,6 @@ type_synonym cdl_asid = "cdl_cnode_index \<times> cdl_cnode_index"
 
 (* mapped address  *)
 type_synonym cdl_mapped_addr = "(cdl_asid \<times> word32)"
-
-(* Number of bits in a word. *)
-definition
-  word_bits
-where
-  "word_bits \<equiv> 32"
 
 (* Number of bits of a badge we can use. *)
 definition

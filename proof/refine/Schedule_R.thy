@@ -12,6 +12,8 @@ theory Schedule_R
 imports VSpace_R
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
  (* FIXME REMOVE and rename other uses, also there is a duplicate of this in KHeap_R too *)
 declare doMachineOp_cte_wp_at'[wp]
 
@@ -202,7 +204,7 @@ lemma st_tcb_at_coerce_abstract:
   apply (clarsimp simp: st_tcb_at_def obj_at_def other_obj_relation_def
                         tcb_relation_def
                  split: Structures_A.kernel_object.split_asm split_if_asm
-                        Arch_Structs_A.arch_kernel_obj.split_asm)+
+                        ARM_A.arch_kernel_obj.split_asm)+
   apply fastforce
   done
 
@@ -236,8 +238,8 @@ lemma arch_switch_thread_corres:
               and unique_table_refs o caps_of_state
               and st_tcb_at runnable t)
              (valid_arch_state' and valid_pspace' and st_tcb_at' runnable' t)
-             (arch_switch_to_thread t) (ArchThreadDecls_H.switchToThread t)"
-  apply (simp add: arch_switch_to_thread_def ArchThread_H.switchToThread_def)
+             (arch_switch_to_thread t) (Arch.switchToThread t)"
+  apply (simp add: arch_switch_to_thread_def ARM_H.switchToThread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split' [OF set_vm_root_corres])
       apply (rule corres_split_eqr)
@@ -246,7 +248,7 @@ lemma arch_switch_thread_corres:
              apply (rule corres_split_nor [OF _ store_word_corres])
                apply (rule corres_machine_op)
                apply (rule corres_Id[where r=dc], simp+)
-               apply (simp add: MachineOps.clearExMonitor_def)
+               apply (simp add: ARM.clearExMonitor_def)
               apply wp
 	    apply simp
 	   apply (simp add: tcb_relation_def)
@@ -938,23 +940,23 @@ lemma cur_thread_update_corres:
   apply (simp add: state_relation_def swp_def)
   done
 
-lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  by (unfold ArchThread_H.switchToThread_def, wp typ_at_lift_tcb')
+lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
+  by (unfold ARM_H.switchToThread_def, wp typ_at_lift_tcb')
 
-crunch typ_at'[wp]: "ThreadDecls_H.switchToThread" "\<lambda>s. P (typ_at' T p s)"
-  (ignore: MachineOps.clearExMonitor)
+crunch typ_at'[wp]: "switchToThread" "\<lambda>s. P (typ_at' T p s)"
+  (ignore: clearExMonitor)
 
 lemma Arch_switchToThread_pred_tcb'[wp]:
   "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>
-   ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
+   Arch.switchToThread t \<lbrace>\<lambda>rv s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
 proof -
-  have pos: "\<And>P t t'. \<lbrace>pred_tcb_at' proj P t'\<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv. pred_tcb_at' proj P t'\<rbrace>"
-    apply (simp add: ArchThread_H.switchToThread_def storeWordUser_def pred_tcb_at'_def)
+  have pos: "\<And>P t t'. \<lbrace>pred_tcb_at' proj P t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. pred_tcb_at' proj P t'\<rbrace>"
+    apply (simp add: ARM_H.switchToThread_def storeWordUser_def pred_tcb_at'_def)
     apply (wp doMachineOp_obj_at hoare_drop_imps)+
     done
   show ?thesis
     apply (rule P_bool_lift [OF pos])
-    by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_switchToThread_typ_at' pos])
+    by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_ARM_H_switchToThread_typ_at' pos])
 qed
 
 crunch ksQ[wp]: storeWordUser "\<lambda>s. P (ksReadyQueues s p)"
@@ -963,13 +965,13 @@ crunch ksQ[wp]: setVMRoot "\<lambda>s. P (ksReadyQueues s)"
 crunch ksIdleThread[wp]: storeWordUser "\<lambda>s. P (ksIdleThread s)"
 
 lemma arch_switch_thread_ksQ[wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
-  apply (simp add: ArchThread_H.switchToThread_def)
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
+  apply (simp add: ARM_H.switchToThread_def)
   apply (wp)
   done
 
-crunch valid_queues[wp]: "ArchThreadDecls_H.switchToThread" "Invariants_H.valid_queues"
-(wp: crunch_wps simp: crunch_simps ignore: MachineOps.clearExMonitor)
+crunch valid_queues[wp]: "Arch.switchToThread" "Invariants_H.valid_queues"
+(wp: crunch_wps simp: crunch_simps ignore: clearExMonitor)
 
 lemma switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map 
@@ -988,7 +990,7 @@ proof -
          y \<leftarrow> (tcb_sched_action tcb_sched_dequeue t);
          modify (cur_thread_update (\<lambda>_. t))
       od)
-     (do y \<leftarrow> ArchThreadDecls_H.switchToThread t;
+     (do y \<leftarrow> Arch.switchToThread t;
          y \<leftarrow> tcbSchedDequeue t;
          setCurThread t
       od)"
@@ -1000,7 +1002,7 @@ proof -
 
   show ?thesis
     apply -
-    apply (simp add: switch_to_thread_def switchToThread_def K_bind_def)
+    apply (simp add: switch_to_thread_def Thread_H.switchToThread_def K_bind_def)
     apply (rule corres_symb_exec_l [where Q = "\<lambda> s rv. (?PA and op = rv) s",
                                     OF corres_symb_exec_l [OF mainpart]])
     apply (auto intro: no_fail_pre [OF no_fail_assert]
@@ -1031,9 +1033,9 @@ lemma typ_at'_typ_at'_mask: "\<And>s. \<lbrakk> typ_at' t (P s) s \<rbrakk> \<Lo
   done
 
 lemma arch_switch_idle_thread_corres:
-  "corres dc \<top> (valid_arch_state' and pspace_aligned') arch_switch_to_idle_thread ArchThreadDecls_H.switchToIdleThread"
+  "corres dc \<top> (valid_arch_state' and pspace_aligned') arch_switch_to_idle_thread Arch.switchToIdleThread"
   apply (simp add: arch_switch_to_idle_thread_def
-                ArchThread_H.switchToIdleThread_def)
+                ARM_H.switchToIdleThread_def)
   apply (rule corres_guard_imp, rule corres_split[OF _ corres_gets_arch_globals])
       apply (simp, rule store_word_corres)
      apply (wp | clarsimp)+
@@ -1045,7 +1047,7 @@ lemma arch_switch_idle_thread_corres:
 
 lemma switch_idle_thread_corres:
   "corres dc invs invs_no_cicd' switch_to_idle_thread switchToIdleThread"
-  apply (simp add: switch_to_idle_thread_def switchToIdleThread_def)
+  apply (simp add: switch_to_idle_thread_def Thread_H.switchToIdleThread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ git_corres])
       apply (rule corres_split [OF _ arch_switch_idle_thread_corres])
@@ -1270,42 +1272,42 @@ lemma setCurThread_invs_idle_thread:
      (clarsimp simp: invs'_to_invs_no_cicd'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
 
 lemma clearExMonitor_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp MachineOps.clearExMonitor \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs')
+  "\<lbrace>invs'\<rbrace> doMachineOp ARM.clearExMonitor \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq)
    apply (simp add: no_irq_clearExMonitor)
-  apply (clarsimp simp: MachineOps.clearExMonitor_def machine_op_lift_def
+  apply (clarsimp simp: ARM.clearExMonitor_def machine_op_lift_def
                         in_monad select_f_def)
   done
 
 lemma Arch_switchToThread_invs:
-  "\<lbrace>invs'\<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: ArchThread_H.switchToThread_def)
+  "\<lbrace>invs'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: ARM_H.switchToThread_def)
   apply wp
   done
 
 lemma Arch_switchToThread_tcb':
-  "\<lbrace>tcb_at' t\<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
-  apply (simp add: ArchThread_H.switchToThread_def storeWordUser_def)
+  "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
+  apply (simp add: ARM_H.switchToThread_def storeWordUser_def)
   apply (wp doMachineOp_obj_at hoare_drop_imps)+
   done
 
-crunch ksCurDomain[wp]: "ArchThreadDecls_H.switchToThread" "\<lambda>s. P (ksCurDomain s)"
+crunch ksCurDomain[wp]: "Arch.switchToThread" "\<lambda>s. P (ksCurDomain s)"
 (simp: whenE_def)
 
 lemma Arch_swichToThread_tcbDomain_triv[wp]:
-  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
-  apply (clarsimp simp: ArchThread_H.switchToThread_def storeWordUser_def)
+  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
+  apply (clarsimp simp: ARM_H.switchToThread_def storeWordUser_def)
   apply (wp hoare_drop_imp | simp)+
   done
 
 lemma Arch_swichToThread_tcbPriority_triv[wp]:
-  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>"
-  apply (clarsimp simp: ArchThread_H.switchToThread_def storeWordUser_def)
+  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>"
+  apply (clarsimp simp: ARM_H.switchToThread_def storeWordUser_def)
   apply (wp hoare_drop_imp | simp)+
   done
 
 lemma Arch_switchToThread_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
+  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
   apply (rule tcb_in_cur_domain'_lift)
    apply wp
   done
@@ -1323,25 +1325,25 @@ lemma tcbSchedDequeue_not_tcbQueued:
 
 lemma Arch_switchToThread_obj_at:
   "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>
-   ArchThreadDecls_H.switchToThread t
+   Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t\<rbrace>"
-  apply (simp add: ArchThread_H.switchToThread_def storeWordUser_def)
+  apply (simp add: ARM_H.switchToThread_def storeWordUser_def)
   apply (wp doMachineOp_obj_at setVMRoot_obj_at hoare_drop_imps)
   done
 
 declare doMachineOp_obj_at[wp]
 
 lemma clearExMonitor_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp MachineOps.clearExMonitor \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wp dmo_invs_no_cicd')
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp ARM.clearExMonitor \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wp dmo_invs_no_cicd' no_irq)
    apply (simp add: no_irq_clearExMonitor)
-  apply (clarsimp simp: MachineOps.clearExMonitor_def machine_op_lift_def
+  apply (clarsimp simp: ARM.clearExMonitor_def machine_op_lift_def
                         in_monad select_f_def)
   done
 
 lemma Arch_switchToThread_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (simp add: ArchThread_H.switchToThread_def)
+  "\<lbrace>invs_no_cicd'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (simp add: ARM_H.switchToThread_def)
   apply (wp setVMRoot_invs_no_cicd')
   done
 
@@ -1362,7 +1364,7 @@ lemma tcbSchedDequeue_invs_no_cicd'[wp]:
 
 lemma switchToThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd' and st_tcb_at' runnable' t and tcb_in_cur_domain' t \<rbrace> ThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv. invs' \<rbrace>"
-  apply (simp add: switchToThread_def )
+  apply (simp add: Thread_H.switchToThread_def )
   apply (wp setCurThread_invs_no_cicd'
              Arch_switchToThread_invs_no_cicd' Arch_switchToThread_pred_tcb'
               tcbSchedDequeue_not_tcbQueued)
@@ -1371,7 +1373,7 @@ lemma switchToThread_invs_no_cicd':
 
 lemma switchToThread_invs[wp]:
   "\<lbrace>invs' and st_tcb_at' runnable' t and tcb_in_cur_domain' t \<rbrace> switchToThread t \<lbrace>\<lambda>rv. invs' \<rbrace>"
-  apply (simp add: switchToThread_def )
+  apply (simp add: Thread_H.switchToThread_def )
   apply (wp threadSet_timeslice_invs setCurThread_invs
              Arch_switchToThread_invs dmo_invs'
              doMachineOp_obj_at tcbSchedDequeue_not_tcbQueued)
@@ -1396,7 +1398,7 @@ proof -
   have P: "\<And>f x. tcbState (tcbTimeSlice_update f x) = tcbState x"
     by (case_tac x, simp)
   show ?thesis
-    apply (simp add: switchToThread_def tcbSchedEnqueue_def unless_def)
+    apply (simp add: Thread_H.switchToThread_def tcbSchedEnqueue_def unless_def)
     apply (wp setCurThread_ct_in_state Arch_switchToThread_obj_at
          | simp add: P o_def cong: if_cong)+
     done
@@ -1430,8 +1432,12 @@ lemma sct_cap_to'[wp]:
   apply (clarsimp elim!: cte_wp_at'_pspaceI)
   done
 
+
+crunch cap_to'[wp]: "Arch.switchToThread" "ex_nonz_cap_to' p"
+  (simp: crunch_simps ignore: ARM.clearExMonitor)
+
 crunch cap_to'[wp]: switchToThread "ex_nonz_cap_to' p"
-  (simp: crunch_simps ignore: MachineOps.clearExMonitor)
+  (simp: crunch_simps ignore: ARM.clearExMonitor)
 
 lemma no_longer_inQ[simp]:
   "\<not> inQ d p (tcbQueued_update (\<lambda>x. False) tcb)"
@@ -1689,7 +1695,7 @@ lemma setThreadState_rct:
 
 lemma switchToIdleThread_invs'[wp]:
   "\<lbrace>invs'\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (clarsimp simp: switchToIdleThread_def ArchThread_H.switchToIdleThread_def)
+  apply (clarsimp simp: Thread_H.switchToIdleThread_def ARM_H.switchToIdleThread_def)
   apply (wp_trace setCurThread_invs_idle_thread)
   apply clarsimp
 
@@ -1906,17 +1912,18 @@ qed
 
 lemma switchToIdleThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (clarsimp simp: switchToIdleThread_def ArchThread_H.switchToIdleThread_def)
+  apply (clarsimp simp: Thread_H.switchToIdleThread_def ARM_H.switchToIdleThread_def)
   apply (wp setCurThread_invs_no_cicd'_idle_thread storeWordUser_invs_no_cicd')
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_idle'_def)
   done
 
-crunch obj_at'[wp]: "ArchThreadDecls_H.switchToIdleThread" "\<lambda>s. obj_at' P t s"
+crunch obj_at'[wp]: "Arch.switchToIdleThread" "\<lambda>s. obj_at' P t s"
+
 
 lemma switchToIdleThread_activatable[wp]:
   "\<lbrace>invs'\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv. ct_in_state' activatable'\<rbrace>"
-  apply (simp add: switchToIdleThread_def
-                   ArchThread_H.switchToIdleThread_def)
+  apply (simp add: Thread_H.switchToIdleThread_def
+                   ARM_H.switchToIdleThread_def)
   apply (wp setCurThread_ct_in_state)
   apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def
                         pred_tcb_at'_def obj_at'_def)
@@ -1939,15 +1946,17 @@ lemma setCurThread_const:
   "\<lbrace>\<lambda>_. P t \<rbrace> setCurThread t \<lbrace>\<lambda>_ s. P (ksCurThread s) \<rbrace>"
   by (simp add: setCurThread_def | wp)+
 
-crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)"
+
+
+crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)" 
 crunch it[wp]: switchToThread "\<lambda>s. P (ksIdleThread s)"
-    (ignore: MachineOps.clearExMonitor)
+    (ignore: clearExMonitor)
 
 lemma switchToIdleThread_curr_is_idle:
   "\<lbrace>\<top>\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv s. ksCurThread s = ksIdleThread s\<rbrace>"
   apply (rule hoare_weaken_pre)
    apply (wps switchToIdleThread_it)
-   apply (simp add: switchToIdleThread_def)
+   apply (simp add: Thread_H.switchToIdleThread_def)
    apply (wp setCurThread_const)
   apply (simp)
  done
@@ -1976,7 +1985,7 @@ lemma valid_irq_node'_ct_update[simp]:
 lemma switchToThread_ct_not_queued:
   "\<lbrace>invs' and tcb_at' t\<rbrace> switchToThread t \<lbrace>\<lambda>rv s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s\<rbrace>"
   (is "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. ?POST\<rbrace>")
-  apply (simp add: switchToThread_def)
+  apply (simp add: Thread_H.switchToThread_def)
   apply (wp)
     apply (simp add: switchToThread_def setCurThread_def)
     apply (wp tcbSchedDequeue_not_tcbQueued | simp )+
@@ -2073,8 +2082,8 @@ crunch cur[wp]: tcbSchedEnqueue cur_tcb'
 lemma corres_noop3:
   assumes x: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk>  \<Longrightarrow> \<lbrace>op = s\<rbrace> f \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   assumes y: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> \<lbrace>op = s'\<rbrace> g \<lbrace>\<lambda>r. op = s'\<rbrace>"
-  assumes z: "nf \<Longrightarrow> no_fail P' g"
-  shows      "corres_underlying sr nf dc P P' f g"
+  assumes z: "nf' \<Longrightarrow> no_fail P' g"
+  shows      "corres_underlying sr nf nf' dc P P' f g"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    apply clarsimp
@@ -2094,10 +2103,10 @@ lemma corres_noop3:
   done
 
 lemma corres_symb_exec_l':
-  assumes z: "\<And>rv. corres_underlying sr nf r (Q' rv) P' (x rv) y"
+  assumes z: "\<And>rv. corres_underlying sr nf nf' r (Q' rv) P' (x rv) y"
   assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   assumes y: "\<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>"
-  shows      "corres_underlying sr nf r (P and Q) P' (m >>= (\<lambda>rv. x rv)) y"
+  shows      "corres_underlying sr nf nf' r (P and Q) P' (m >>= (\<lambda>rv. x rv)) y"
   apply (rule corres_guard_imp)
     apply (subst gets_bind_ign[symmetric], rule corres_split)
        apply (rule z)
@@ -2111,11 +2120,11 @@ lemma corres_symb_exec_l':
    done
 
 lemma corres_symb_exec_r':
-  assumes z: "\<And>rv. corres_underlying sr nf r P (P'' rv) x (y rv)"
+  assumes z: "\<And>rv. corres_underlying sr nf nf' r P (P'' rv) x (y rv)"
   assumes y: "\<lbrace>P'\<rbrace> m \<lbrace>P''\<rbrace>"
   assumes x: "\<And>s. Q' s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>"
-  assumes nf: "nf \<Longrightarrow> no_fail R' m"
-  shows      "corres_underlying sr nf r P (P' and Q' and R') x (m >>= (\<lambda>rv. y rv))"
+  assumes nf: "nf' \<Longrightarrow> no_fail R' m"
+  shows      "corres_underlying sr nf nf' r P (P' and Q' and R') x (m >>= (\<lambda>rv. y rv))"
   apply (rule corres_guard_imp)
     apply (subst gets_bind_ign[symmetric], rule corres_split)
        apply (rule z)
@@ -2262,7 +2271,7 @@ lemma enumPrio_word_div:
     apply (simp add: maxPriority_def numPriorities_def)
    apply (clarsimp simp: unat_of_nat_eq)
   apply (erule conjE)
-  apply (drule_tac Y="unat v" and X="x" in of_nat_mono_maybe[rotated, where 'a="8"])
+  apply (drule_tac y="unat v" and x="x" in of_nat_mono_maybe[rotated, where 'a="8"])
    apply (simp add: maxPriority_def numPriorities_def)+
   done
 
@@ -2675,9 +2684,9 @@ lemma getDomainTime_wp[wp]: "\<lbrace>\<lambda>s. P (ksDomainTime s) s \<rbrace>
 lemma switchToThread_ct_not_queued_2:
   "\<lbrace>invs_no_cicd' and tcb_at' t\<rbrace> switchToThread t \<lbrace>\<lambda>rv s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s\<rbrace>"
   (is "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. ?POST\<rbrace>")
-  apply (simp add: switchToThread_def)
+  apply (simp add: Thread_H.switchToThread_def)
   apply (wp)
-    apply (simp add: switchToThread_def setCurThread_def)
+    apply (simp add: ARM_H.switchToThread_def setCurThread_def)
     apply (wp tcbSchedDequeue_not_tcbQueued | simp )+
   done
 
@@ -2706,7 +2715,7 @@ qed
 
 lemma switchToIdleThread_ct_not_queued_no_cicd':
   "\<lbrace> invs_no_cicd' \<rbrace> switchToIdleThread \<lbrace>\<lambda>rv s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s \<rbrace>"
-  apply (simp add: switchToIdleThread_def)
+  apply (simp add: Thread_H.switchToIdleThread_def)
   apply (wp setCurThread_obj_at')
   apply (rule idle'_not_tcbQueued')
   apply (simp add: invs_no_cicd'_def)+
@@ -2714,8 +2723,8 @@ lemma switchToIdleThread_ct_not_queued_no_cicd':
 
 lemma switchToIdleThread_activatable_2[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv. ct_in_state' activatable'\<rbrace>"
-  apply (simp add: switchToIdleThread_def
-                   ArchThread_H.switchToIdleThread_def)
+  apply (simp add: Thread_H.switchToIdleThread_def
+                   ARM_H.switchToIdleThread_def)
   apply (wp setCurThread_ct_in_state)
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_idle'_def
                         pred_tcb_at'_def obj_at'_def)
@@ -2724,10 +2733,10 @@ lemma switchToIdleThread_activatable_2[wp]:
 lemma switchToThread_tcb_in_cur_domain':
   "\<lbrace>tcb_in_cur_domain' thread\<rbrace> ThreadDecls_H.switchToThread thread 
   \<lbrace>\<lambda>y s. tcb_in_cur_domain' (ksCurThread s) s\<rbrace>"
-  apply (simp add: switchToThread_def)
+  apply (simp add: Thread_H.switchToThread_def)
   apply (rule hoare_pre)
   apply (wp)
-    apply (simp add: switchToThread_def setCurThread_def)
+    apply (simp add: ARM_H.switchToThread_def setCurThread_def)
     apply (wp tcbSchedDequeue_not_tcbQueued | simp )+
    apply (simp add:tcb_in_cur_domain'_def)
    apply (wp tcbSchedDequeue_tcbDomain | wps)+
@@ -2891,7 +2900,7 @@ lemma stt_nosch:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
   switchToThread t
   \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  apply (simp add: switchToThread_def ArchThread_H.switchToThread_def storeWordUser_def)
+  apply (simp add: Thread_H.switchToThread_def ARM_H.switchToThread_def storeWordUser_def)
   apply (wp setCurThread_nosch hoare_drop_imp |simp)+
   done
 
@@ -2899,8 +2908,8 @@ lemma stit_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
     switchToIdleThread
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  apply (simp add: switchToIdleThread_def
-                   ArchThread_H.switchToIdleThread_def  storeWordUser_def)
+  apply (simp add: Thread_H.switchToIdleThread_def
+                   ARM_H.switchToIdleThread_def  storeWordUser_def)
   apply (wp setCurThread_nosch | simp add: getIdleThread_def)+
   done
 
@@ -3063,4 +3072,5 @@ lemma switchIfRequiredTo_corres:
   apply (simp add: switch_if_required_to_def switchIfRequiredTo_def)
   done
 
+end
 end

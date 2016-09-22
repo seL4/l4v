@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file FaultMonad_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -13,6 +15,11 @@ chapter "The Fault Monad"
 theory FaultMonad_H
 imports KernelStateData_H Fault_H
 begin
+
+context begin interpretation Arch .
+requalify_consts
+  getActiveIRQ
+end
 
 type_synonym ('f, 'a) kernel_f = "('f + 'a) kernel"
 

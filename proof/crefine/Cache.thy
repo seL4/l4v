@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-theory Cache
+theory Cache (* FIXME: broken *)
 imports "~~/src/HOL/Main"
 begin
 

@@ -14,8 +14,18 @@ imports
   "./$L4V_ARCH/ArchRetypeDecls_H"
   "./$L4V_ARCH/ArchLabelFuns_H"
 begin
+requalify_types (in Arch)
+  copy_register_sets irqcontrol_invocation
+  invocation
 
-#INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=ArchRetypeDecls_H NOT InvocationLabel
+#INCLUDE_HASKELL SEL4/API/Invocation.lhs Arch=Arch NOT InvocationLabel
 #INCLUDE_HASKELL SEL4/API/InvocationLabels.lhs ONLY invocationType
+
+context Arch begin
+context begin global_naming global
+requalify_types
+  Invocations_H.invocation
+end
+end
 
 end

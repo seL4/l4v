@@ -40,6 +40,8 @@ lemma irq_state_independent_H_disjI[intro]:
    \<Longrightarrow> irq_state_independent_H (\<lambda>s. P s \<or> Q s)"
   by (simp add: irq_state_independent_H_def)+
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma dmo_getirq_inv[wp]:
   "irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp getActiveIRQ \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getActiveIRQ_def doMachineOp_def split_def exec_gets
@@ -105,4 +107,5 @@ lemma getActiveIRQ_neq_Some0xFF:
    apply auto
   done
 
+end
 end

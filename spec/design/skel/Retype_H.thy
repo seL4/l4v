@@ -18,6 +18,26 @@ imports
   Interrupt_H
 begin
 
-#INCLUDE_HASKELL SEL4/Object/ObjectType.lhs Arch=ArchRetypeDecls_H bodies_only
+context Arch begin
+requalify_consts
+  deriveCap finaliseCap recycleCap
+  hasRecycleRights sameRegionAs isPhysicalCap
+  sameObjectAs updateCapData maskCapRights
+  createObject capUntypedPtr capUntypedSize
+  performInvocation decodeInvocation
+
+context begin global_naming global
+
+requalify_consts
+  RetypeDecls_H.deriveCap RetypeDecls_H.finaliseCap RetypeDecls_H.recycleCap
+  RetypeDecls_H.hasRecycleRights RetypeDecls_H.sameRegionAs RetypeDecls_H.isPhysicalCap
+  RetypeDecls_H.sameObjectAs RetypeDecls_H.updateCapData RetypeDecls_H.maskCapRights
+  RetypeDecls_H.createObject RetypeDecls_H.capUntypedPtr RetypeDecls_H.capUntypedSize
+  RetypeDecls_H.performInvocation RetypeDecls_H.decodeInvocation
+end
+
+end
+
+#INCLUDE_HASKELL SEL4/Object/ObjectType.lhs Arch=Arch bodies_only
 
 end

@@ -18,6 +18,8 @@ theory Arch_A
 imports "../TcbAcc_A"
 begin
 
+context Arch begin global_naming ARM_A
+
 definition "page_bits \<equiv> pageBits"
 
 text {* The ARM architecture does not provide any additional operations on its
@@ -120,13 +122,6 @@ where
      return (pd \<noteq> InvalidPDE)
   od"
 
-definition
-  set_message_info :: "obj_ref \<Rightarrow> message_info \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_message_info thread info \<equiv>
-     as_user thread $ set_register msg_info_register $
-                      message_info_to_data info"
-
 
 text {* The Page capability confers the authority to map, unmap and flush the
 memory page. The remap system call is a convenience operation that ensures the
@@ -172,7 +167,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
     if flush then (invalidate_tlb_by_asid asid) else return ()
   od
 | PageUnmap cap ct_slot \<Rightarrow> 
-    case cap of
+    (case cap of
       PageCap dev p R vp_size vp_mapped_addr \<Rightarrow> do
         case vp_mapped_addr of
             Some (asid, vaddr) \<Rightarrow> unmap_page vp_size asid vaddr p
@@ -180,7 +175,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
         cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
         set_cap (ArchObjectCap $ update_map_data cap None) ct_slot
       od
-    | _ \<Rightarrow> fail
+    | _ \<Rightarrow> fail)
 | PageFlush typ start end pstart pd asid \<Rightarrow> 
     when (start < end) $ do
       root_switched \<leftarrow> set_vm_root_for_flush pd asid;
@@ -232,5 +227,7 @@ definition
         | InvokeASIDPool oper \<Rightarrow> perform_asid_pool_invocation oper;
     return $ []
 od"
+
+end
 
 end

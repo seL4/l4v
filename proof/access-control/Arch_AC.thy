@@ -12,6 +12,8 @@ theory Arch_AC
 imports Retype_AC
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 text{*
 
 Arch-specific access control.
@@ -146,14 +148,14 @@ lemma unmap_page_table_respects:
   done
 
 definition
-  authorised_page_table_inv :: "'a PAS \<Rightarrow> ArchInvocation_A.page_table_invocation \<Rightarrow> bool"
+  authorised_page_table_inv :: "'a PAS \<Rightarrow> page_table_invocation \<Rightarrow> bool"
 where
   "authorised_page_table_inv aag pti \<equiv> case pti of
-     ArchInvocation_A.page_table_invocation.PageTableMap cap cslot_ptr pde obj_ref \<Rightarrow>
+     page_table_invocation.PageTableMap cap cslot_ptr pde obj_ref \<Rightarrow>
          is_subject aag (fst cslot_ptr) \<and> is_subject aag (obj_ref && ~~ mask pd_bits)
        \<and> (case_option True (is_subject aag o fst) (pde_ref2 pde))
        \<and> pas_cap_cur_auth aag cap
-   | ArchInvocation_A.page_table_invocation.PageTableUnmap cap cslot_ptr \<Rightarrow>
+   | page_table_invocation.PageTableUnmap cap cslot_ptr \<Rightarrow>
        is_subject aag (fst cslot_ptr) \<and> aag_cap_auth aag (pasSubject aag) cap
          \<and> (\<forall>p asid vspace_ref. cap = cap.ArchObjectCap (arch_cap.PageTableCap p (Some (asid, vspace_ref)))
                 \<longrightarrow> is_subject_asid aag asid
@@ -167,7 +169,7 @@ lemma perform_page_table_invocation_respects:
    \<lbrace>\<lambda>s. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: perform_page_table_invocation_def
-             cong: ArchInvocation_A.page_table_invocation.case_cong option.case_cong prod.case_cong
+             cong: page_table_invocation.case_cong option.case_cong prod.case_cong
                    cap.case_cong arch_cap.case_cong)
   apply (rule hoare_pre)
   apply (wp store_pde_respects get_cap_integrity_autarch set_cap_integrity_autarch store_pte_respects unmap_page_table_respects mapM_wp'
@@ -188,7 +190,7 @@ lemma clas_update_map_data_strg:
   unfolding cap_links_asid_slot_def
   by (fastforce simp: is_cap_simps update_map_data_def)
 
-lemmas pte_ref_simps = pte_ref_def[split_simps Arch_Structs_A.pte.split]
+lemmas pte_ref_simps = pte_ref_def[split_simps pte.split]
 
 lemmas store_pde_pas_refined_simple
     = store_pde_pas_refined[where pde=InvalidPDE, simplified pde_ref_simps, simplified]
@@ -217,7 +219,7 @@ lemma perform_page_table_invocation_pas_refined [wp]:
    \<lbrace>\<lambda>s. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: perform_page_table_invocation_def
-             cong: ArchInvocation_A.page_table_invocation.case_cong option.case_cong prod.case_cong
+             cong: page_table_invocation.case_cong option.case_cong prod.case_cong
                    cap.case_cong arch_cap.case_cong)
   apply (rule hoare_pre)
   apply (wp get_cap_wp mapM_wp' store_pte_cte_wp_at do_machine_op_cte_wp_at hoare_vcg_all_lift
@@ -240,7 +242,7 @@ lemma perform_page_table_invocation_pas_refined [wp]:
   done
 
 definition
-  authorised_slots :: "'a PAS \<Rightarrow> Arch_Structs_A.pte \<times> (obj_ref list) + Arch_Structs_A.pde \<times> (obj_ref list) \<Rightarrow> bool"
+  authorised_slots :: "'a PAS \<Rightarrow> pte \<times> (obj_ref list) + pde \<times> (obj_ref list) \<Rightarrow> bool"
 where
  "authorised_slots aag m \<equiv> case m of
     Inl (pte, slots) \<Rightarrow> (\<forall>x. pte_ref pte = Some x \<longrightarrow> (\<forall>a \<in> (snd (snd x)). \<forall>p \<in> ptr_range (fst x) (fst (snd x)).(aag_has_auth_to aag a p)))
@@ -249,27 +251,27 @@ where
            \<and> (\<forall>x \<in> set slots. is_subject aag (x && ~~ mask pd_bits))"
 
 definition
-  authorised_page_inv :: "'a PAS \<Rightarrow> ArchInvocation_A.page_invocation \<Rightarrow> bool"
+  authorised_page_inv :: "'a PAS \<Rightarrow> page_invocation \<Rightarrow> bool"
 where
   "authorised_page_inv aag pi \<equiv> case pi of
-     ArchInvocation_A.PageMap asid cap ptr slots \<Rightarrow>
+     PageMap asid cap ptr slots \<Rightarrow>
        pas_cap_cur_auth aag cap \<and> is_subject aag (fst ptr) \<and> authorised_slots aag slots
-   | ArchInvocation_A.PageRemap asid slots \<Rightarrow> authorised_slots aag slots
-   | ArchInvocation_A.PageUnmap cap ptr \<Rightarrow> pas_cap_cur_auth aag (Structures_A.ArchObjectCap cap) \<and> is_subject aag (fst ptr)
-   | ArchInvocation_A.PageFlush typ start end pstart pd asid \<Rightarrow> True
-   | ArchInvocation_A.PageGetAddr ptr \<Rightarrow> True"
+   | PageRemap asid slots \<Rightarrow> authorised_slots aag slots
+   | PageUnmap cap ptr \<Rightarrow> pas_cap_cur_auth aag (Structures_A.ArchObjectCap cap) \<and> is_subject aag (fst ptr)
+   | PageFlush typ start end pstart pd asid \<Rightarrow> True
+   | PageGetAddr ptr \<Rightarrow> True"
 
 crunch respects[wp]: check_mapping_pptr "integrity X aag st"
 
 crunch respects[wp]: lookup_pt_slot "integrity X aag st"
 
-lemma ptrFromPAddr_inj: "inj Platform.ptrFromPAddr"
-  by (auto intro: injI simp: Platform.ptrFromPAddr_def)
+lemma ptrFromPAddr_inj: "inj ptrFromPAddr"
+  by (auto intro: injI simp: ptrFromPAddr_def)
 
 lemma vs_refs_no_global_pts_pdI:
-  "\<lbrakk>pd (ucast r) = Arch_Structs_A.pde.PageTablePDE x a b;
+  "\<lbrakk>pd (ucast r) = PageTablePDE x a b;
     ((ucast r)::12 word) < ucast (kernel_base >> 20) \<rbrakk> \<Longrightarrow>
-        (Platform.ptrFromPAddr x, VSRef (r && mask 12)
+        (ptrFromPAddr x, VSRef (r && mask 12)
                   (Some APageDirectory), Control)
           \<in> vs_refs_no_global_pts (ArchObj (PageDirectory pd))"
   apply(clarsimp simp: vs_refs_no_global_pts_def)
@@ -430,8 +432,8 @@ lemma unmap_page_respects:
                    | wpc
                    | simp add: is_aligned_6_masks is_aligned_mask[symmetric] cleanByVA_PoU_def
                    | wp_once hoare_drop_imps
-                     mapM_set'' [where f = "(\<lambda>a. store_pte a Arch_Structs_A.pte.InvalidPTE)" and I = "\<lambda>x s. is_subject aag (x && ~~ mask pt_bits)" and Q = "integrity aag X st"]
-                     mapM_set'' [where f = "(\<lambda>a. store_pde a Arch_Structs_A.pde.InvalidPDE)" and I = "\<lambda>x s. is_subject aag (x && ~~ mask pd_bits)" and Q = "integrity aag X st"]
+                     mapM_set'' [where f = "(\<lambda>a. store_pte a InvalidPTE)" and I = "\<lambda>x s. is_subject aag (x && ~~ mask pt_bits)" and Q = "integrity aag X st"]
+                     mapM_set'' [where f = "(\<lambda>a. store_pde a InvalidPDE)" and I = "\<lambda>x s. is_subject aag (x && ~~ mask pd_bits)" and Q = "integrity aag X st"]
                    | wp_once hoare_drop_imps[where R="\<lambda>rv s. rv"])+
   done
 
@@ -647,7 +649,7 @@ proof -
   apply (simp add: perform_page_invocation_def mapM_discarded swp_def
                    valid_page_inv_def valid_unmap_def 
                    authorised_page_inv_def authorised_slots_def 
-            split: ArchInvocation_A.page_invocation.split sum.split
+            split: page_invocation.split sum.split
                    arch_cap.split option.split,
          safe)
         apply (wp set_cap_integrity_autarch unmap_page_respects 
@@ -675,7 +677,7 @@ lemma perform_page_invocation_pas_refined [wp]:
   apply (simp add: perform_page_invocation_def mapM_discarded
     valid_page_inv_def valid_unmap_def swp_def
     authorised_page_inv_def authorised_slots_def
-    cong: ArchInvocation_A.page_invocation.case_cong sum.case_cong)
+    cong: page_invocation.case_cong sum.case_cong)
   apply (rule hoare_pre)
    apply wpc
       apply (wp set_cap_pas_refined unmap_page_pas_refined case_sum_wp  case_prod_wp
@@ -1017,7 +1019,7 @@ lemma perform_asid_pool_invocation_pas_refined [wp]:
   done
 
 definition
-  authorised_page_directory_inv :: "'a PAS \<Rightarrow> ArchInvocation_A.page_directory_invocation \<Rightarrow> bool"
+  authorised_page_directory_inv :: "'a PAS \<Rightarrow> page_directory_invocation \<Rightarrow> bool"
 where
   "authorised_page_directory_inv aag pdi \<equiv> True"
 
@@ -1025,11 +1027,11 @@ definition
   authorised_arch_inv :: "'a PAS \<Rightarrow> arch_invocation \<Rightarrow> bool"
 where
  "authorised_arch_inv aag ai \<equiv> case ai of
-     arch_invocation.InvokePageTable pti \<Rightarrow> authorised_page_table_inv aag pti
-   | arch_invocation.InvokePageDirectory pdi \<Rightarrow> authorised_page_directory_inv aag pdi
-   | arch_invocation.InvokePage pi \<Rightarrow> authorised_page_inv aag pi
-   | arch_invocation.InvokeASIDControl aci \<Rightarrow> authorised_asid_control_inv aag aci
-   | arch_invocation.InvokeASIDPool api \<Rightarrow> authorised_asid_pool_inv aag api"
+     InvokePageTable pti \<Rightarrow> authorised_page_table_inv aag pti
+   | InvokePageDirectory pdi \<Rightarrow> authorised_page_directory_inv aag pdi
+   | InvokePage pi \<Rightarrow> authorised_page_inv aag pi
+   | InvokeASIDControl aci \<Rightarrow> authorised_asid_control_inv aag aci
+   | InvokeASIDPool api \<Rightarrow> authorised_asid_pool_inv aag api"
 
 crunch respects [wp]: perform_page_directory_invocation "integrity aag X st"
   (ignore: do_machine_op)
@@ -1066,7 +1068,7 @@ lemma create_mapping_entries_authorised_slots [wp]:
   "\<lbrace>\<exists>\<rhd> pd and invs and pas_refined aag
          and K (is_subject aag pd \<and> is_aligned pd pd_bits
                      \<and> vmsz_aligned vptr vmpage_size \<and> vptr < kernel_base
-                     \<and> (\<forall>a\<in>vspace_cap_rights_to_auth rights. \<forall>p\<in>ptr_range (Platform.ptrFromPAddr base) (pageBitsForSize vmpage_size). aag_has_auth_to aag a p))\<rbrace>
+                     \<and> (\<forall>a\<in>vspace_cap_rights_to_auth rights. \<forall>p\<in>ptr_range (ptrFromPAddr base) (pageBitsForSize vmpage_size). aag_has_auth_to aag a p))\<rbrace>
   create_mapping_entries base vptr vmpage_size rights attrib pd
   \<lbrace>\<lambda>rv s. authorised_slots aag rv\<rbrace>, -"
   unfolding authorised_slots_def
@@ -1283,5 +1285,7 @@ lemma delete_asid_respects:
      apply (wp hoare_vcg_all_lift)
   apply (clarsimp simp: obj_at_def pas_refined_refl)
   done
+
+end
 
 end

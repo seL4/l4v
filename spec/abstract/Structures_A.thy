@@ -18,8 +18,29 @@ chapter "Basic Data Structures"
 theory Structures_A
 imports
   "./$L4V_ARCH/Arch_Structs_A"
-  "../machine/$L4V_ARCH/MachineOps"
-begin
+  "../machine/MachineExports"
+
+begin     
+
+context begin interpretation Arch .
+
+requalify_types
+  aobject_type 
+  arch_cap 
+  vm_rights
+  arch_kernel_obj
+  arch_state
+
+requalify_consts
+  acap_rights
+  acap_rights_update
+  arch_kobj_size
+  arch_obj_size
+  aobj_ref
+  asid_high_bits
+  asid_low_bits
+  arch_is_frame_type
+end
 
 text {*
   User mode can request these objects to be created by retype:
@@ -84,7 +105,14 @@ datatype cap
          | IRQHandlerCap irq
          | Zombie obj_ref "nat option" nat
            -- {* @{text "cnode ptr * nat + tcb or cspace ptr"} *}
-         | ArchObjectCap arch_cap
+         | ArchObjectCap (the_arch_cap: arch_cap)
+
+lemmas cap_cases =
+  cap.induct[where cap=cap and P="\<lambda>cap'. cap' = cap \<longrightarrow> P cap'" for cap P, simplified, rule_format]
+
+lemmas cap_cases_asm =
+cap.induct[where cap=cap and P="\<lambda>cap'. cap = cap' \<longrightarrow> P cap' \<longrightarrow> R" for P R cap, 
+  simplified, rule_format, rotated -1]
 
 text {* The CNode object is an array of capability slots. The domain of the
 function will always be the set of boolean lists of some specific length.
@@ -250,27 +278,6 @@ primrec
 where
  "mi_caps_unwrapped (MI ln exc unw label) = unw"
 
-text {* Message infos are encoded to or decoded from a data word. *}
-primrec
-  message_info_to_data :: "message_info \<Rightarrow> data"
-where
-  "message_info_to_data (MI ln exc unw mlabel) =
-   (let
-        extra = exc << 7;
-        unwrapped = unw << 9;
-        label = mlabel << 12
-    in
-       label || extra || unwrapped || ln)"
-
-text {* Hard-coded to avoid recursive imports? *}
-definition
-  data_to_message_info :: "data \<Rightarrow> message_info"
-where
-  "data_to_message_info w \<equiv>
-   MI (let v = w && ((1 << 7) - 1) in if v > 120 then 120 else v) ((w >> 7) && ((1 << 2) - 1))
-      ((w >> 9) && ((1 << 3) - 1)) (w >> 12)"
-
-
 
 section {* Kernel Objects *}
 
@@ -406,7 +413,14 @@ datatype kernel_object
          | TCB tcb
          | Endpoint endpoint
          | Notification notification
-         | ArchObj arch_kernel_obj
+         | ArchObj (the_arch_obj: arch_kernel_obj)
+
+lemmas kernel_object_cases =
+  kernel_object.induct[where kernel_object=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
+
+lemmas kernel_object_cases_asm =
+kernel_object.induct[where kernel_object=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+  simplified, rule_format, rotated -1]
 
 
 text {* Checks whether a cnode's contents are well-formed. *}

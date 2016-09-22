@@ -151,11 +151,11 @@ lemma lift_t_typ_clear_region:
   \<Longrightarrow> {ptr_val x..+size_of TYPE('a)} \<inter> {ptr..+2 ^ bits} = {}"
   shows "(lift_t g (hrs_htd_update (typ_clear_region ptr bits) hp) :: 'a :: mem_type typ_heap) = 
           lift_t g hp |` (- Ptr ` {ptr ..+2 ^ bits})"
-  apply (rule ext)  
+  apply (rule ext)
   apply (case_tac "({ptr_val x..+size_of TYPE('a)} \<inter> {ptr..+2 ^ bits} = {} \<and> hrs_htd hp,g \<Turnstile>\<^sub>t x)")
-  apply (clarsimp simp add: lift_t_def lift_typ_heap_if s_valid_def h_t_valid_ptr_clear_region del: disj_not1)   
+  apply (clarsimp simp add: lift_t_def lift_typ_heap_if s_valid_def h_t_valid_ptr_clear_region)
    apply (subgoal_tac "x \<in> - Ptr ` {ptr..+2 ^ bits}")
-   apply (clarsimp simp: restrict_in)
+   apply clarsimp
     apply (subst heap_list_s_heap_list')
      apply (clarsimp simp add: hrs_htd_update h_t_valid_ptr_clear_region)
      apply (erule h_t_valid_taut)
@@ -170,7 +170,7 @@ lemma lift_t_typ_clear_region:
   apply (subst if_not_P)
    apply simp
    apply (case_tac "x \<in> (- Ptr ` {ptr..+2 ^ bits})")
-   apply (simp add: restrict_in del: disj_not1)
+   apply (simp del: disj_not1)
    apply (erule contrapos_pn)
    apply simp
    apply (erule doms)
@@ -420,7 +420,7 @@ proof -
       done
    
     thus ?thesis using subset1
-      by (simp add: psubset_eq del: atLeastatMost_subset_iff Icc_eq_Icc)
+      by (simp add: psubset_eq del: Icc_eq_Icc)
   qed
 qed
 
@@ -562,7 +562,7 @@ proof -
     thus "{ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb} \<inter> {ptr..+2 ^ bits} = {}"
       apply (rule contrapos_np)
       apply (rule valid_untyped_cap_ko_at_disjoint [OF vuc koat])
-      apply (simp add: ran' oran')
+      apply simp
       done
     
     from koat show "{ptr_val x..+size_of TYPE(tcb_C)} \<subseteq> {ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb}"
@@ -746,7 +746,7 @@ proof -
     hence "?tran \<inter> ?ran' = {}"
       apply (rule contrapos_np)
       apply (rule valid_untyped_cap_ko_at_disjoint [OF vuc koat])
-      apply (simp add: ran' oran')
+      apply simp
       done
    
     finally have "{ptr_val x..+2 ^ objBits cte} \<inter> ?ran' = {}"
@@ -1087,7 +1087,7 @@ lemma cmap_relation_restrict_both:
   apply (rule conjI)
    apply (clarsimp simp: image_Int bij_image_Compl_eq bij_def)
   apply (rule ballI)
-  apply (clarsimp simp: image_iff bij_def)
+  apply (clarsimp simp: image_iff2 bij_def)
   done
 
 lemma cmap_relation_restrict_both_proj:
@@ -1097,7 +1097,7 @@ lemma cmap_relation_restrict_both_proj:
   apply (rule conjI)
    apply (rule equalityI)
     apply rule
-    apply (clarsimp simp: map_comp_restrict_map_Some_iff image_iff bij_def)
+    apply (clarsimp simp: map_comp_restrict_map_Some_iff image_iff2 bij_def)
     apply (erule (1) cmap_domE1)
     apply simp
    apply (clarsimp simp: image_Int bij_image_Compl_eq bij_def)

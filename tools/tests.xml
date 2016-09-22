@@ -20,13 +20,11 @@
 <testsuite cpu-timeout="3600" depends="isabelle">
 
     <!-- C Parser -->
-    <set cwd="c-parser">
-        <sequence>
-            <test name="CParser">isabelle env make -f IsaMakefile CParser</test>
-            <test name="CParserTest" cpu-timeout="7200">isabelle env make -f IsaMakefile cparser_test</test>
-        </sequence>
-        <test name="CParserTools">isabelle env make -f IsaMakefile cparser_tools</test>
-    </set>
+    <sequence cwd="c-parser">
+      <test name="CParser">../../isabelle/bin/isabelle env make -f IsaMakefile CParser</test>
+      <test name="CParserTest" cpu-timeout="7200">../../isabelle/bin/isabelle env make -f IsaMakefile cparser_test</test>
+      <test name="CParserTools">../../isabelle/bin/isabelle env make -f IsaMakefile cparser_tools</test>
+    </sequence>
 
     <!-- AutoCorres -->
     <set depends="CParser" cwd="autocorres">

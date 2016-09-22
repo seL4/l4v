@@ -17,7 +17,6 @@ theory PageTableUnmap_D
 imports
   Invocations_D
   KHeap_D
-  "../../lib/wp/NonDetMonadLemmas"
 begin
 
 -- "Return all slots in the system containing a cap with the given property."

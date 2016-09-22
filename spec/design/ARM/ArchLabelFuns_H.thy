@@ -1,3 +1,5 @@
+(* THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT. *)
+(* instead, see the skeleton file ArchLabelFuns_H.thy *)
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -13,7 +15,7 @@ chapter "Architecture-specific Invocation Label Functions"
 theory ArchLabelFuns_H
 imports "../InvocationLabels_H"
 begin
-
+context Arch begin global_naming ARM_H
 text {*
   Arch-specific functions on invocation labels
 *}
@@ -41,4 +43,5 @@ where
       )"
 
 
+end
 end

@@ -16,13 +16,15 @@ imports
 
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread s)"
 (wp: OR_choiceE_weak_wp crunch_wps simp: crunch_simps ignore: do_extended_op OR_choiceE)
   
 crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cap_recycle "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
  
 lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
-  apply (rule CNodeInv_AI.cap_revoke_preservation2)
+  apply (rule cap_revoke_preservation2)
    apply wp
   done
 
@@ -47,7 +49,7 @@ lemma preemption_point_domain_fields[wp]:
 crunch domain_fields[wp]: retype_region_ext,create_cap_ext,cap_insert_ext,ethread_set,recycle_cap_ext,cap_move_ext,empty_slot_ext,cap_swap_ext,set_thread_state_ext,tcb_sched_action,reschedule_required,cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cap_recycle,cap_insert "domain_fields P" (wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
 
 lemma cap_revoke_domain_fields[wp]:"\<lbrace>domain_fields P\<rbrace> cap_revoke a \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
-  apply (rule CNodeInv_AI.cap_revoke_preservation2)
+  apply (rule cap_revoke_preservation2)
    apply wp
   done
 
@@ -300,5 +302,7 @@ lemma pas_refined_pasMayEditReadyQueues_update:
   apply(simp add: pas_refined_def)
   apply(clarsimp simp: irq_map_wellformed_aux_def state_asids_to_policy_pasMayEditReadyQueues_update state_irqs_to_policy_pasMayEditReadyQueues_update tcb_domain_map_wellformed_aux_def)
   done
+
+end
 
 end

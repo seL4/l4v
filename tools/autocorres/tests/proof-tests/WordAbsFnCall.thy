@@ -15,7 +15,8 @@ begin
 install_C_file "word_abs_fn_call.c"
 
 (* Test interaction of abstracted/non-abstracted functions calling the
- * opposite. *)
-autocorres [unsigned_word_abs = bar bar2 foo3 foo4 ] "word_abs_fn_call.c"
+ * opposite. Also test interaction with heap abstraction. *)
+autocorres [ unsigned_word_abs = bar bar2 bar5 bar6 foo3 foo4 foo7 foo8,
+             no_heap_abs = foo3 foo4 foo7 foo8 ] "word_abs_fn_call.c"
 
 end

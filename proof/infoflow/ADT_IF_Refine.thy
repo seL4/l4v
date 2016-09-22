@@ -13,6 +13,8 @@ imports
     "ADT_IF" "../refine/Refine" "../refine/EmptyFail_H"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 definition
   kernelEntry_if
 where
@@ -214,8 +216,8 @@ lemma ptable_attrs_abs_state[simp]:
 lemma corres_gets_same:
   assumes equiv: "\<And>s s'. \<lbrakk>P s; Q s'; (s, s') \<in> sr\<rbrakk>\<Longrightarrow> f s = g s'"
      and rimp : "\<And>s. P s \<Longrightarrow> R (f s) s"
-     and corres: "\<And>r.  corres_underlying sr b rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
-  shows "corres_underlying sr b rr P Q 
+     and corres: "\<And>r.  corres_underlying sr b c rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
+  shows "corres_underlying sr b c rr P Q 
   (do r \<leftarrow> gets f; n r od)
   (do r \<leftarrow> gets g; m r od)"
   apply (rule corres_guard_imp)
@@ -230,12 +232,12 @@ lemma corres_gets_same:
   done
 
 lemma corres_assert_imp_r:
-  "\<lbrakk>\<And>s. P s\<Longrightarrow> Q' ; corres_underlying state_relation a rr P Q f (g ())\<rbrakk>
-  \<Longrightarrow> corres_underlying state_relation a rr P Q f (assert Q' >>= g)"
+  "\<lbrakk>\<And>s. P s\<Longrightarrow> Q' ; corres_underlying state_relation a b rr P Q f (g ())\<rbrakk>
+  \<Longrightarrow> corres_underlying state_relation a b rr P Q f (assert Q' >>= g)"
   by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
 
 lemma corres_return_same_trivial:
-  "corres_underlying sr b op= \<top> \<top> (return a) (return a)"
+  "corres_underlying sr b c op= \<top> \<top> (return a) (return a)"
   by simp
 
 crunch (no_fail) no_fail[wp]: device_memory_update
@@ -398,24 +400,24 @@ lemma doUserOp_if_ct_in_state[wp]:
 
 
 lemma corres_ex_abs_lift':
-  "\<lbrakk>corres_underlying state_relation nf r S P' f f'; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>corres_underlying state_relation False False r S P' f f'; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>\<rbrakk> \<Longrightarrow>
    \<lbrace>ex_abs (P and S) and P'\<rbrace> f' \<lbrace>\<lambda>_. ex_abs Q\<rbrace>"
   apply (clarsimp simp: corres_underlying_def valid_def ex_abs_def)
   apply fastforce
   done
 
-lemma gct_corres': "corres_underlying state_relation nf op = \<top> \<top> (gets cur_thread) getCurThread"
+lemma gct_corres': "corres_underlying state_relation nf nf' op = \<top> \<top> (gets cur_thread) getCurThread"
   by (simp add: getCurThread_def curthread_relation)
 
 lemma user_mem_corres':
-  "corres_underlying state_relation nf (op =) invs invs' (gets (\<lambda>x. g (user_mem x))) (gets (\<lambda>x. g (user_mem' x)))"
+  "corres_underlying state_relation nf nf' (op =) invs invs' (gets (\<lambda>x. g (user_mem x))) (gets (\<lambda>x. g (user_mem' x)))"
   by (clarsimp simp add: gets_def get_def return_def bind_def
                          invs_def invs'_def
                          corres_underlying_def user_mem_relation)
 
 lemma corres_machine_op':
-  assumes P: "corres_underlying Id nf r P Q x x'"
-  shows      "corres_underlying state_relation nf r (P \<circ> machine_state) (Q \<circ> ksMachineState)
+  assumes P: "corres_underlying Id nf nf' r P Q x x'"
+  shows      "corres_underlying state_relation nf nf' r (P \<circ> machine_state) (Q \<circ> ksMachineState)
                        (do_machine_op x) (doMachineOp x')"
   apply (rule corres_submonad3
               [OF submonad_do_machine_op submonad_doMachineOp _ _ _ _ P])
@@ -423,11 +425,11 @@ lemma corres_machine_op':
   done
 
 lemma corres_assert':
-  "corres_underlying sr False dc \<top> \<top> (assert P) (assert P)"
+  "corres_underlying sr nf False dc \<top> \<top> (assert P) (assert P)"
   by (clarsimp simp: corres_underlying_def assert_def return_def fail_def)
 
 lemma do_user_op_if_corres':
-   "corres_underlying state_relation False op = (einvs and ct_running)
+   "corres_underlying state_relation nf False op = (einvs and ct_running)
    (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
     ct_running')
    (do_user_op_if f tc) (doUserOp_if f tc)"
@@ -544,7 +546,7 @@ lemma check_active_irq_if_corres:
   apply (simp add: checkActiveIRQ_if_def check_active_irq_if_def)
   apply (rule corres_underlying_split[where r'="op ="])
   apply (rule dmo_getActiveIRQ_corres)
-  apply wp
+  apply (wp do_machine_op_domain_list)
   apply clarsimp
   done
 
@@ -908,6 +910,7 @@ lemma step_corresE:
     apply (rule d)
     apply simp+
     done
+end
 
 locale global_automaton_invs =
   fixes check_active_irq
@@ -1324,7 +1327,8 @@ end
 
 lemma 
   step_corres_lift:  
-   "(\<And>tc. corres_underlying srel nf (op =) (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc)) \<Longrightarrow>
+   "(\<And>tc. corres_underlying srel False nf (op =)
+             (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc)) \<Longrightarrow>
     (\<And>tc. nf \<Longrightarrow> empty_fail (f' tc)) \<Longrightarrow>
     step_corres nf (lift_snd_rel srel) mode P
      P'
@@ -1338,7 +1342,8 @@ lemma
   done
 
 lemma step_corres_lift':
-  "(\<And>tc. corres_underlying srel nf (op =) (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f u tc) (f' u tc)) \<Longrightarrow>
+  "(\<And>tc. corres_underlying srel False nf (op =)
+            (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f u tc) (f' u tc)) \<Longrightarrow>
    (\<And>tc. nf \<Longrightarrow> empty_fail (f' u tc)) \<Longrightarrow>
    step_corres nf (lift_snd_rel srel) mode
          P P'
@@ -1353,7 +1358,8 @@ lemma step_corres_lift':
 
 
 lemma step_corres_lift'':
-  "(\<And>tc. corres_underlying srel nf (\<lambda>r r'. ((fst r) = Inr ()) = ((fst r') = Inr ()) \<and> (snd r) = (snd r')) (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f e tc) (f' e tc)) \<Longrightarrow>
+  "(\<And>tc. corres_underlying srel False nf (\<lambda>r r'. ((fst r) = Inr ()) = ((fst r') = Inr ()) \<and> (snd r) = (snd r'))
+            (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f e tc) (f' e tc)) \<Longrightarrow>
   (\<And>tc. nf \<Longrightarrow> empty_fail (f' e tc)) \<Longrightarrow>
   step_corres nf (lift_snd_rel srel) mode
          P P'
@@ -1369,7 +1375,8 @@ lemma step_corres_lift'':
   done
 
 lemma step_corres_lift''':
-  "(\<And>tc. corres_underlying srel nf op = (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc)) \<Longrightarrow>
+  "(\<And>tc. corres_underlying srel False nf op = (\<lambda>s. ((tc,s),mode) \<in> P)
+            (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc)) \<Longrightarrow>
    (\<And>tc. nf \<Longrightarrow> empty_fail (f' tc)) \<Longrightarrow>
   step_corres nf (lift_snd_rel srel) mode
      P P'
@@ -1383,7 +1390,8 @@ lemma step_corres_lift''':
   done
 
 lemma step_corres_lift'''':
-  "(\<And>tc. corres_underlying srel nf op = (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc)) \<Longrightarrow>
+  "(\<And>tc. corres_underlying srel False nf op = (\<lambda>s. ((tc,s),mode) \<in> P)
+            (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc)) \<Longrightarrow>
    (\<And>tc. nf \<Longrightarrow> empty_fail (f' tc)) \<Longrightarrow>
    (\<And>tc s s'. (s,s') \<in> srel \<Longrightarrow> S' s' \<Longrightarrow> S s \<Longrightarrow> y s = y' s') \<Longrightarrow>
       (\<And>tc. \<lbrace>\<lambda>s'. ((tc,s'),mode) \<in> P'\<rbrace> (f' tc) \<lbrace>\<lambda>_. S'\<rbrace>) \<Longrightarrow>
@@ -1586,5 +1594,5 @@ sublocale valid_initial_state_noenabled \<subseteq> valid_initial_state
      using ADT_A_if_Init_Fin_serial[OF uop_sane, of s0]
      apply (simp only: Init_Fin_serial_def serial_system_def Init_Fin_serial_axioms_def s0_def)+
   done
- 
+
 end

@@ -8,13 +8,11 @@
  * @TAG(GD_GPL)
  *)
 
-theory KernelInitSepProofs_AI
+theory KernelInitSepProofs_AI (* unused and broken, kept here for future reference *)
 imports
   KernelInitSep_AI
   CSpaceInv_AI
   "../../spec/abstract/KernelInit_A"
-uses
-  "../../misc/isabelle_hacks/const_deps.ML"
 begin
 
 lemma propagate_do_kernel_op:

@@ -15,6 +15,8 @@ imports
   "../../lib/LemmaBucket"
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 declare word_neq_0_conv [simp del]
 
 (* Rule previously in the simpset, now not. *)
@@ -39,8 +41,6 @@ lemma ps_clear_upd_None:
     ps_clear x n (ksPSpace_update (\<lambda>a. (ksPSpace s)(y := None)) s') = ps_clear x n s"
   by (rule iffI | clarsimp elim!: ps_clear_domE | fastforce)+
 
-declare empty_fail_mapM_x[intro!,simp]
-
 lemma ntfnQueue_head_mask_4 :
   "ntfnQueue_head_CL (notification_lift ko') && ~~ mask 4 = ntfnQueue_head_CL (notification_lift ko')"
   unfolding notification_lift_def
@@ -49,11 +49,7 @@ lemma ntfnQueue_head_mask_4 :
 (* Levity: moved from Ipc_C (20090419 09:44:31) *) (* and remove from Syscall_C *)
 lemma empty_fail_doMachineOp[intro!]:
   "empty_fail m \<Longrightarrow> empty_fail (doMachineOp m)"
-  apply (simp add: doMachineOp_def split_def)
-  apply (intro empty_fail_bind empty_fail_select_f,
-         simp_all)
-  apply (simp add: empty_fail_def)
-  done
+  by (rule ef_dmo')
 
 (* Levity: moved from Ipc_C (20090419 09:44:31) *) (* why isn't this in Kernel_C? *)
 lemmas C_register_defs =
@@ -70,7 +66,7 @@ lemma no_overlap_new_cap_addrs_disjoint:
      pspace_no_overlap' ptr sz s \<rbrakk> \<Longrightarrow>
    set (new_cap_addrs n ptr ko) \<inter> dom (ksPSpace s) = {}"
   apply (erule disjoint_subset [OF new_cap_addrs_subset, where sz1=sz])
-  apply (clarsimp simp: WordSetup.ptr_add_def field_simps)
+  apply (clarsimp simp: Word_Lib.ptr_add_def field_simps)
   apply (rule pspace_no_overlap_disjoint')
   apply auto
   done
@@ -82,7 +78,7 @@ lemma empty_fail_asUser[iff]:
   apply (simp add: select_f_def empty_fail_def)
   done
 
-declare empty_fail_doMachineOp [intro!, simp]
+declare empty_fail_doMachineOp [simp]
 
 lemma empty_fail_loadWordUser[intro!, simp]:
   "empty_fail (loadWordUser x)"
@@ -195,16 +191,13 @@ lemma empty_fail_rethrowFailure:
   "empty_fail f \<Longrightarrow> empty_fail (rethrowFailure fn f)"
   apply (simp add: rethrowFailure_def handleE'_def)
   apply (erule empty_fail_bind)
-  apply (simp split: sum.split add: empty_fail_error_bits)
+  apply (simp split: sum.split)
   done
 
 lemma empty_fail_resolveAddressBits:
   "empty_fail (resolveAddressBits cap cptr bits)"
 proof -
-  note 
-    empty_fail_assertE[iff]
-    empty_fail_error_bits[simp]
-    resolveAddressBits.simps[simp del]
+  note empty_fail_assertE[iff]
   show ?thesis
   apply (rule empty_fail_use_cutMon)
   apply (induct rule: resolveAddressBits.induct)
@@ -223,9 +216,7 @@ lemma empty_fail_getReceiveSlots:
 proof -
   note 
     empty_fail_assertE[iff]
-    empty_fail_error_bits[simp]
     empty_fail_resolveAddressBits[iff]
-    resolveAddressBits.simps[simp del]
   show ?thesis
   apply (clarsimp simp: getReceiveSlots_def loadCapTransfer_def split_def
                  split: option.split)
@@ -256,5 +247,7 @@ lemma exec_Basic_Guard_UNIV:
   apply simp_all
   apply (rule exec_Seq' exec.Basic exec.Guard | simp)+
   done
+
+end
 
 end

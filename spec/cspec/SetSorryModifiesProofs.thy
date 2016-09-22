@@ -9,7 +9,7 @@
  *)
 
 theory SetSorryModifiesProofs
-imports "../../c-parser/CTranslation"
+imports "../../tools/c-parser/CTranslation"
 begin
 
 ML {*

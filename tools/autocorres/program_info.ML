@@ -117,23 +117,24 @@ end
 
 (*
  * Demangle a name mangled by the C parser.
- *
- *    c___ret_int => c
- *    ret_eret_2 => ret2
  *)
 fun demangle_name m =
-let
-  (* Remove everything after "__". *)
-  val n = (Substring.position "__" (Substring.full m) |> fst) |> Substring.string
+  if NameGeneration.rmUScoreSafety m <> m
+  then (* ignore the "StrictC'" prefix when decoding, but we need to re-mangle it in
+        * so that the resulting name is legal in Isabelle *)
+       NameGeneration.mkIdentUScoreSafe (demangle_name (NameGeneration.rmUScoreSafety m))
+  else case NameGeneration.dest_embret (MString.mk m) of
+           (* Return variable for function f *)
+           SOME (f, n) => "ret" ^ (if n > 1 then string_of_int n else "")
+           (* Ordinary variable. Split the type suffix off if there is one. *)
+         | NONE => let
+             val delim = "___" (* NameGeneration.tag_name_with_type *)
+             val (prefix, suffix) = apply2 Substring.string (Utils.positionr delim (Substring.full m))
+             in prefix end
 
-  (* Clean up "_eret_" names. *)
-  val (_, v') = Substring.position "_eret_" (Substring.full n)
-in
-  if (Substring.isEmpty v') then
-    n
-  else
-    ("ret" ^ ((Substring.taker (fn x => x <> #"_") v') |> Substring.string))
-end
+val _ = assert (demangle_name "c___ret_int" = "c") ""
+val _ = assert (demangle_name "ret_eret_2" = "ret2") ""
+val _ = assert (demangle_name "StrictC'__reserved___int" = "StrictC'__reserved") ""
 
 
 (*
@@ -228,6 +229,4 @@ fun is_t_hrs_const (prog_info : prog_info) t =
 fun is_t_hrs_update_const (prog_info : prog_info) t =
   (t = #t_hrs_setter prog_info)
 
-
 end
-

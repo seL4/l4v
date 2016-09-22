@@ -12,6 +12,8 @@ theory KHeap_DR
 imports Intent_DR
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma nat_bl_to_bin_surj:
   "\<exists>bl. n = nat (bl_to_bin bl)"
   using n_less_equal_power_2[where n=n, folded zless_int, simplified]
@@ -447,7 +449,7 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s; valid_etcbs s\<
                 clarsimp simp: unat_map_def transform_page_table_contents_def cap_counts_def
                           transform_page_directory_contents_def transform_asid_pool_contents_def
                           transform_pte_def transform_pde_def transform_asid_pool_entry_def
-                    split:option.splits if_splits Arch_Structs_A.pte.splits Arch_Structs_A.pde.splits
+                    split:option.splits if_splits ARM_A.pte.splits ARM_A.pde.splits
                     dest!:assms)+)
   done
 
@@ -1568,7 +1570,7 @@ lemma ntfn_bound_set_lift:
                          transform_tcb_def restrict_map_Some_iff tcb_slots
                   split: Structures_A.kernel_object.splits option.splits
                          Structures_A.thread_state.splits 
-                         Arch_Structs_A.arch_kernel_obj.splits| drule(1) valid_etcbs_tcb_etcb)+
+                         ARM_A.arch_kernel_obj.splits| drule(1) valid_etcbs_tcb_etcb)+
   apply (clarsimp simp: transform_def transform_object_def
                         transform_tcb_def transform_objects_def tcb_slots valid_idle_def obj_at_def
                         infer_tcb_bound_notification_def map_add_def restrict_map_Some_iff pred_tcb_at_def
@@ -3392,7 +3394,7 @@ lemma not_idle_thread_resolve_address_bits:
   done
 
 lemma lookup_cap_corres:
-  "\<lbrakk>w = of_bl blist;length blist = Types_D.word_bits\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>w = of_bl blist;length blist = word_bits\<rbrakk> \<Longrightarrow>
   dcorres (dc \<oplus> (\<lambda>x y. x = transform_cap y)) \<top>
      (valid_global_refs and valid_objs and valid_irq_node and valid_idle and not_idle_thread thread and valid_etcbs)
      (CSpace_D.lookup_cap thread w)
@@ -3409,8 +3411,8 @@ lemma lookup_cap_corres:
         apply simp
        apply (rule corres_rel_imp)
         apply (rule resolve_address_bits_corres)
-          apply (simp add:Types_D.word_bits_def)
-         apply (clarsimp simp: obj_at_def opt_cap_tcb not_idle_thread_def transform_cap_def Types_D.word_bits_def)+
+          apply (simp add: word_bits_def)
+         apply (clarsimp simp: obj_at_def opt_cap_tcb not_idle_thread_def transform_cap_def word_bits_def)+
        apply (case_tac x, auto)[1]
       apply (wp_once+)[1]
      apply wp
@@ -3441,7 +3443,7 @@ lemma get_cap_get_tcb_dcorres:
   done
 
 lemma dcorres_lookup_slot:
-  "\<lbrakk>w = of_bl ptr;length ptr = Types_D.word_bits\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>w = of_bl ptr;length ptr = word_bits\<rbrakk> \<Longrightarrow>
   dcorres (dc \<oplus> (\<lambda>x y. x = transform_cslot_ptr (fst y))) \<top>
   (not_idle_thread thread and valid_global_refs and valid_objs and valid_irq_node and valid_idle and valid_etcbs)
   (CSpace_D.lookup_slot thread w)
@@ -3457,7 +3459,7 @@ lemma dcorres_lookup_slot:
            apply clarsimp
            apply (rule corres_returnOk [where P=\<top> and P'=\<top>])
            apply clarsimp
-          apply (clarsimp simp: Types_D.word_bits_def)
+          apply (clarsimp simp: word_bits_def)
          apply assumption
         apply simp
        apply wp
@@ -3468,7 +3470,7 @@ lemma dcorres_lookup_slot:
 
 
 lemma dcorres_lookup_cap_and_slot:
- "\<lbrakk>w = of_bl ptr;length ptr = Types_D.word_bits\<rbrakk> \<Longrightarrow>
+ "\<lbrakk>w = of_bl ptr;length ptr = word_bits\<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> (\<lambda>x y. fst x = transform_cap (fst y) \<and> snd x = transform_cslot_ptr (snd y))) \<top>
   (not_idle_thread thread and valid_global_refs and valid_objs and valid_irq_node and valid_idle and valid_etcbs)
   (CSpace_D.lookup_cap_and_slot thread w)
@@ -3537,4 +3539,4 @@ lemma set_cap_noop_dcorres2:
 
 end
 
-
+end

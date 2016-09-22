@@ -9,8 +9,8 @@
  *)
 
 
-theory Crunch_Test
-imports Crunch Crunch_Test_Qualified GenericLib
+theory Crunch_Test (* FIXME: not tested *)
+imports Crunch Crunch_Test_Qualified GenericLib Defs
 begin
 
 text {* Test cases for crunch *}
@@ -136,6 +136,21 @@ definition
   od"
 
 crunch test[wp]: crunch_foo9 "\<lambda>x. x > y" (ignore: modify)
+
+definition
+  "crunch_foo10 (x :: nat) \<equiv> do
+    modify (op + x);
+    modify (op + x)
+  od"
+
+(*crunch_def attribute overrides definition lookup *)
+
+lemma crunch_foo10_def2[crunch_def]:
+  "crunch_foo10 = crunch_foo9"
+  unfolding crunch_foo10_def[abs_def] crunch_foo9_def[abs_def]
+  by simp
+
+crunch test[wp]: crunch_foo10 "\<lambda>x. x > y"
 
 (* crunch_ignore works within a locale *)
 crunch_ignore (add: modify)

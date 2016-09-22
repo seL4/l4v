@@ -14,9 +14,6 @@ imports
   "../lib/NonDetMonadLemmaBucket"
 begin
 
-(* We don't need two versions of word_bits. *)
-hide_const (open) Types_D.word_bits
-
 definition
   parse_bootinfo :: "cdl_bootinfo \<Rightarrow> (cdl_cptr list \<times> cdl_cptr list) u_monad"
 where

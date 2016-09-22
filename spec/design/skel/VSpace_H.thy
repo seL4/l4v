@@ -19,6 +19,29 @@ imports
   KernelInitMonad_H
 begin
 
-#INCLUDE_HASKELL SEL4/Kernel/VSpace.lhs Arch=ArchVSpaceDecls_H 
+context begin interpretation Arch .
+requalify_consts
+  mapKernelWindow
+  activateGlobalVSpace
+  configureTimer
+  initL2Cache
+  initIRQController
+
+  createIPCBufferFrame
+  createBIFrame
+  createFramesOfRegion
+  createITPDPTs
+  writeITPDPTs
+  createITASIDPool
+  writeITASIDPool
+  createDeviceFrames
+  handleVMFault
+  isValidVTableRoot
+  checkValidIPCBuffer
+  lookupIPCBuffer
+  vptrFromPPtr
+end
+
+#INCLUDE_HASKELL SEL4/Kernel/VSpace.lhs Arch= ONLY initKernelVM initPlatform initCPU
 
 end

@@ -1,5 +1,5 @@
 (*
- * @LICENSE(NICTA_BSD)
+ * @TAG(NICTA_BSD)
  *
  * Insulin.thy: regulate sugar in terms, thms and proof goals.
  *

@@ -30,6 +30,7 @@ class Call(object):
         self.bodies_only = False
         self.bad_type_assignment = False
         self.body = False
+        self.current_context = []
 
 
 class Def(object):
@@ -101,8 +102,8 @@ element matches pred"""
 
 
 def get_defs(filename):
-    if filename in file_defs:
-        return file_defs[filename]
+    #if filename in file_defs:
+    #    return file_defs[filename]
 
     cmdline = os.environ['L4CPP']
     f = os.popen('cpp -Wno-invalid-pp-token -traditional-cpp %s %s' %
@@ -326,6 +327,22 @@ def defs_transform(d):
     return d
 
 
+def wrap_qualify(lines, deep=True):
+    if len(lines) == 0:
+        return lines
+
+    """Close and then re-open a locale so instantiations can go through"""
+    if deep:
+        asdfextra = ""
+    else:
+        asdfextra = ""
+
+    if call.current_context:
+        lines.insert(0, 'end\nqualify {} (in Arch) {}'.format(call.current_context[-1], 
+                asdfextra))
+        lines.append('end_qualify\ncontext Arch begin global_naming %s' % call.current_context[-1])
+    return lines
+
 def def_lines(d, call):
     """Produces the set of lines associated with a definition."""
     if call.all_bits:
@@ -342,7 +359,7 @@ def def_lines(d, call):
         elif d.type == 'newtype':
             L.extend(flatten_tree(d.body))
         if d.instance_proofs:
-            L.extend(flatten_tree(d.instance_proofs))
+            L.extend(wrap_qualify(flatten_tree(d.instance_proofs)))
             L.append('')
         if d.instance_extras:
             L.extend(flatten_tree(d.instance_extras))
@@ -351,7 +368,7 @@ def def_lines(d, call):
 
     if call.instanceproofs:
         if not call.bodies_only:
-            instance_proofs = flatten_tree(d.instance_proofs)
+            instance_proofs = wrap_qualify(flatten_tree(d.instance_proofs))
         else:
             instance_proofs = []
 
@@ -378,7 +395,7 @@ def def_lines(d, call):
     if type == 'definitions':
         if call.decls_only:
             if typesig:
-                return comments + ['consts'] + typesig
+                return comments + ["consts'"] + typesig
             else:
                 return []
         elif call.bodies_only:
@@ -1000,6 +1017,8 @@ def finite_instance_proofs(header, cons):
     lines = []
     lines.append('')
     lines.append('instance %s :: finite' % header)
+    if call.current_context:
+        lines.append('interpretation Arch .')
     lines.append('  apply (intro_classes)')
     lines.append('  apply (rule_tac f="%s" in finite_surj_type)'
                  % cons)
@@ -1180,9 +1199,11 @@ num_instance_proofs.order = 2
 def enum_instance_proofs (header, canonical, d):
     lines = ['(*<*)']
     if len(canonical) == 1:
-        [(_, (cons, n))] = canonical 
+        [(_, (cons, n))] = canonical
         assert n == 1
         lines.append('instantiation %s :: enum begin' % header)
+        if call.current_context:
+            lines.append('interpretation Arch .')
         lines.append('definition')
         lines.append('  enum_%s: "enum_class.enum \<equiv> map %s enum"' \
                      % (header, cons))
@@ -1193,6 +1214,8 @@ def enum_instance_proofs (header, canonical, d):
         cons_two_args = [cons for i, (cons, n) in canonical if n > 1]
         assert cons_two_args == []
         lines.append ('instantiation %s :: enum begin' % header)
+        if call.current_context:
+            lines.append('interpretation Arch .')
         lines.append ('definition')
         lines.append ('  enum_%s: "enum_class.enum \<equiv> ' % header)
         lines.append ('    [ ')
@@ -1235,6 +1258,8 @@ def enum_instance_proofs (header, canonical, d):
     lines.append('')
     lines.append('instantiation %s :: enum_alt' % header)
     lines.append('begin')
+    if call.current_context:
+        lines.append('interpretation Arch .')
     lines.append('definition')
     lines.append('  enum_alt_%s: "enum_alt \<equiv> ' % header)
     lines.append('    alt_from_ord (enum :: %s list)"' % header)
@@ -1243,6 +1268,8 @@ def enum_instance_proofs (header, canonical, d):
     lines.append('')
     lines.append('instantiation %s :: enumeration_both' % header)
     lines.append('begin')
+    if call.current_context:
+        lines.append('interpretation Arch .')
     lines.append('instance by (intro_classes, simp add: enum_alt_%s)' \
             % header)
     lines.append('end')
@@ -2114,6 +2141,7 @@ regexes = [
     (re.compile('\\(Right'), '(Inr'),
     (re.compile(r"\$!"), r"$"),
     (re.compile('([^>])>='), r'\1\<ge>'),
+    (re.compile('>>([^=])'), r'>>_\1'),
     (re.compile('<='), '\<le>'),
     (re.compile(r" \\\\ "), " `~listSubtract~` "),
     (re.compile(r"(\s\w+)\s*@\s*\w+\s*{\s*}\s*\<leftarrow>"),
@@ -2744,4 +2772,7 @@ def subst_module_redirects(line, call):
     after = subst_module_redirects(after, call)
     if module in call.moduletranslations:
         module = call.moduletranslations[module]
-    return before + module + '.' + after
+    if module:
+        return before + module + '.' + after
+    else:
+        return before + after

@@ -20,9 +20,11 @@ theory StateTranslation_D
 imports Lemmas_D
 begin
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 type_synonym kernel_object = Structures_A.kernel_object
 type_synonym tcb = Structures_A.tcb
-type_synonym pte = Arch_Structs_A.pte
+type_synonym pte = ARM_A.pte
 
 (* Transform an abstract-spec cap ptr to a capDL one. This is currently
  * a no-op; however, it is conceivable that the capDL cptr representation could
@@ -592,15 +594,15 @@ where
     | Structures_A.Zombie ptr _ _ \<Rightarrow>
         Types_D.ZombieCap ptr
     | Structures_A.ArchObjectCap arch_cap \<Rightarrow> (case arch_cap of
-          Arch_Structs_A.ASIDControlCap \<Rightarrow>
+          ARM_A.ASIDControlCap \<Rightarrow>
             Types_D.AsidControlCap
-        | Arch_Structs_A.ASIDPoolCap ptr asid \<Rightarrow>
+        | ARM_A.ASIDPoolCap ptr asid \<Rightarrow>
             Types_D.AsidPoolCap ptr (fst $ (transform_asid asid))
-        | Arch_Structs_A.PageCap dev ptr cap_rights_ sz mp \<Rightarrow>
+        | ARM_A.PageCap dev ptr cap_rights_ sz mp \<Rightarrow>
             Types_D.FrameCap dev ptr cap_rights_ (pageBitsForSize sz) Real (transform_mapping mp)
-        | Arch_Structs_A.PageTableCap ptr mp \<Rightarrow>
+        | ARM_A.PageTableCap ptr mp \<Rightarrow>
             Types_D.PageTableCap ptr Real (transform_mapping mp)
-        | Arch_Structs_A.PageDirectoryCap ptr mp \<Rightarrow>
+        | ARM_A.PageDirectoryCap ptr mp \<Rightarrow>
             Types_D.PageDirectoryCap ptr Real (option_map transform_asid mp)
         )
   "
@@ -812,19 +814,19 @@ declare transform_paddr_def[simp]
  * This transforms the references to frames into frame caps.
  *)
 definition
-  transform_pte :: "Arch_Structs_A.pte \<Rightarrow> cdl_cap"
+  transform_pte :: "ARM_A.pte \<Rightarrow> cdl_cap"
 where
   "transform_pte pte \<equiv> case pte of
-           Arch_Structs_A.InvalidPTE \<Rightarrow> cdl_cap.NullCap
-         | Arch_Structs_A.LargePagePTE ref _ rights_ \<Rightarrow>
+           ARM_A.InvalidPTE \<Rightarrow> cdl_cap.NullCap
+         | ARM_A.LargePagePTE ref _ rights_ \<Rightarrow>
              Types_D.FrameCap False (transform_paddr ref) rights_
                               (pageBitsForSize ARMLargePage) Fake None
-         | Arch_Structs_A.SmallPagePTE ref _ rights_ \<Rightarrow>
+         | ARM_A.SmallPagePTE ref _ rights_ \<Rightarrow>
              Types_D.FrameCap False (transform_paddr ref) rights_
                               (pageBitsForSize ARMSmallPage) Fake None"
 
 definition
-  transform_page_table_contents :: "(word8 \<Rightarrow> Arch_Structs_A.pte) \<Rightarrow> (nat \<Rightarrow> cdl_cap option)"
+  transform_page_table_contents :: "(word8 \<Rightarrow> ARM_A.pte) \<Rightarrow> (nat \<Rightarrow> cdl_cap option)"
 where
   "transform_page_table_contents M \<equiv> unat_map (Some o transform_pte o M)"
 
@@ -834,27 +836,27 @@ where
  * This transforms the references to frames into PageTable or Frame caps.
  *)
 definition
-  transform_pde :: "Arch_Structs_A.pde \<Rightarrow> cdl_cap"
+  transform_pde :: "ARM_A.pde \<Rightarrow> cdl_cap"
 where
   "transform_pde pde \<equiv> case pde of
-           Arch_Structs_A.InvalidPDE \<Rightarrow> cdl_cap.NullCap
-         | Arch_Structs_A.PageTablePDE ref _ _ \<Rightarrow>
+           ARM_A.InvalidPDE \<Rightarrow> cdl_cap.NullCap
+         | ARM_A.PageTablePDE ref _ _ \<Rightarrow>
              Types_D.PageTableCap (transform_paddr ref) Fake None
-         | Arch_Structs_A.SectionPDE ref _ _ rights_ \<Rightarrow>
+         | ARM_A.SectionPDE ref _ _ rights_ \<Rightarrow>
              Types_D.FrameCap False (transform_paddr ref) rights_
                               (pageBitsForSize ARMSection) Fake None
-         | Arch_Structs_A.SuperSectionPDE ref _ rights_ \<Rightarrow>
+         | ARM_A.SuperSectionPDE ref _ rights_ \<Rightarrow>
              Types_D.FrameCap False (transform_paddr ref) rights_
                               (pageBitsForSize ARMSuperSection) Fake None"
 
 definition
-  kernel_pde_mask ::  "(12 word \<Rightarrow> Arch_Structs_A.pde) \<Rightarrow> (12 word \<Rightarrow> Arch_Structs_A.pde)"
+  kernel_pde_mask ::  "(12 word \<Rightarrow> ARM_A.pde) \<Rightarrow> (12 word \<Rightarrow> ARM_A.pde)"
 where
   "kernel_pde_mask M \<equiv> \<lambda>x.
-  if (ucast (kernel_base >> 20)) \<le> x then Arch_Structs_A.InvalidPDE else M x"
+  if (ucast (kernel_base >> 20)) \<le> x then ARM_A.InvalidPDE else M x"
 
 definition
-  transform_page_directory_contents :: "(12 word \<Rightarrow> Arch_Structs_A.pde) \<Rightarrow> (nat \<Rightarrow> cdl_cap option)"
+  transform_page_directory_contents :: "(12 word \<Rightarrow> ARM_A.pde) \<Rightarrow> (nat \<Rightarrow> cdl_cap option)"
 where
   "transform_page_directory_contents M \<equiv> unat_map (Some o transform_pde o kernel_pde_mask M)"
 
@@ -875,17 +877,17 @@ definition
          | Structures_A.TCB tcb \<Rightarrow> case opt_etcb of Some etcb \<Rightarrow> transform_tcb ms ref tcb etcb | None \<Rightarrow> undefined
          | Structures_A.Endpoint _ \<Rightarrow> Types_D.Endpoint
          | Structures_A.Notification _ \<Rightarrow> Types_D.Notification
-         | Structures_A.ArchObj (Arch_Structs_A.ASIDPool ap) \<Rightarrow>
+         | Structures_A.ArchObj (ARM_A.ASIDPool ap) \<Rightarrow>
                 Types_D.AsidPool \<lparr>cdl_asid_pool_caps = (transform_asid_pool_contents ap)\<rparr>
-         | Structures_A.ArchObj (Arch_Structs_A.PageTable ptx) \<Rightarrow>
+         | Structures_A.ArchObj (ARM_A.PageTable ptx) \<Rightarrow>
                 Types_D.PageTable \<lparr>cdl_page_table_caps = (transform_page_table_contents ptx)\<rparr>
-         | Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd) \<Rightarrow>
+         | Structures_A.ArchObj (ARM_A.PageDirectory pd) \<Rightarrow>
                 Types_D.PageDirectory \<lparr>cdl_page_directory_caps = (transform_page_directory_contents pd)\<rparr>
-         | Structures_A.ArchObj (Arch_Structs_A.DataPage dev sz) \<Rightarrow>
+         | Structures_A.ArchObj (ARM_A.DataPage dev sz) \<Rightarrow>
                 Types_D.Frame \<lparr>cdl_frame_size_bits = pageBitsForSize sz\<rparr>"
 
 lemmas transform_object_simps [simp] =
-  transform_object_def [split_simps Structures_A.kernel_object.split Arch_Structs_A.arch_kernel_obj.split]
+  transform_object_def [split_simps Structures_A.kernel_object.split ARM_A.arch_kernel_obj.split]
 
 (* Lifts a map over a function, returning the empty map if that
    function would be insufficiently injective *)
@@ -1117,6 +1119,8 @@ where
     cdl_asid_table     = transform_asid_table s,
     cdl_current_domain = transform_current_domain s
     \<rparr>"
+
+end
 
 end
 

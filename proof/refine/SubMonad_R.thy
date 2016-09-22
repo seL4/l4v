@@ -25,7 +25,7 @@ interpretation submonad_doMachineOp:
   by (rule submonad_doMachineOp)
 
 lemma corres_machine_op:
-  assumes P: "corres_underlying Id True r \<top> \<top> x x'"
+  assumes P: "corres_underlying Id False True r \<top> \<top> x x'"
   shows      "corres r \<top> \<top> (do_machine_op x) (doMachineOp x')"
   apply (rule corres_submonad [OF submonad_do_machine_op submonad_doMachineOp _ _ P])
    apply (simp_all add: state_relation_def swp_def)
@@ -76,6 +76,8 @@ lemma threadGet_stateAssert_gets_asUser:
   apply (clarsimp simp: obj_at'_def asUser_fetch_def projectKOs)
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma threadSet_modify_asUser:
   "tcb_at' t st \<Longrightarrow>
    threadSet (tcbContext_update (\<lambda>_. uc)) t st = modify (asUser_replace t uc) st"
@@ -118,7 +120,9 @@ lemma submonad_asUser:
   apply (rule refl)
   done
 
-interpretation submonad_asUser:
+end
+
+global_interpretation submonad_asUser:
   submonad "asUser_fetch t" "asUser_replace t" "tcb_at' t" "asUser t"
   by (rule submonad_asUser)
 

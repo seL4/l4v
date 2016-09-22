@@ -17,8 +17,10 @@ imports
   Hardware_H
   "../KI_Decls_H"
 begin
+context Arch begin global_naming ARM_H
 
-#INCLUDE_HASKELL SEL4/Object/ObjectType/ARM.lhs Arch.Types=ArchTypes_H ArchInv=ArchRetypeDecls_H bodies_only
-#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs bodies_only NOT isPDFlushLabel isPageFlushLabel
+#INCLUDE_HASKELL SEL4/Object/ObjectType/ARM.lhs CONTEXT ARM_H Arch.Types= ArchInv= bodies_only
+#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs bodies_only CONTEXT ARM_H NOT isPDFlushLabel isPageFlushLabel
 
+end
 end

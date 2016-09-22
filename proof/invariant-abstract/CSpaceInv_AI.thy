@@ -8,20 +8,51 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 CSpace invariants
 *)
 
 theory CSpaceInv_AI
-imports ArchAcc_AI
+imports "./$L4V_ARCH/ArchCSpaceInvPre_AI"
 begin
+
+context begin interpretation Arch .
+
+requalify_consts
+  cap_master_arch_cap
+  replaceable_final_arch_cap
+  replaceable_non_final_arch_cap
+  unique_table_refs
+
+requalify_facts
+  aobj_ref_acap_rights_update
+  arch_obj_size_acap_rights_update
+  valid_arch_cap_acap_rights_update
+  valid_validate_vm_rights
+  cap_master_arch_inv
+  unique_table_refs_def
+  valid_ipc_buffer_cap_def
+  acap_rights_update_idem
+  cap_master_arch_cap_rights
+  acap_rights_update_id
+
+  is_nondevice_page_cap_simps
+end
+
+lemmas [simp] = aobj_ref_acap_rights_update arch_obj_size_acap_rights_update 
+  valid_validate_vm_rights cap_master_arch_inv acap_rights_update_idem
+  cap_master_arch_cap_rights acap_rights_update_id
+
+lemmas [intro] = valid_arch_cap_acap_rights_update
+lemmas [intro!] = acap_rights_update_id
 
 lemma remove_rights_cap_valid[simp]:
   "s \<turnstile> c \<Longrightarrow> s \<turnstile> remove_rights S c"
-  using valid_validate_vm_rights[simplified valid_vm_rights_def]
-  by (cases c, simp_all add: remove_rights_def cap_rights_update_def
-                   valid_cap_def cap_aligned_def acap_rights_update_def
-                 split: arch_cap.splits if_splits)
+  using valid_validate_vm_rights
+  apply (cases c, simp_all add: remove_rights_def cap_rights_update_def
+                   valid_cap_def cap_aligned_def)
+  by fastforce
+
 
 
 lemma get_thread_state_inv [simp]:
@@ -241,71 +272,6 @@ lemma valid_reply_masters_tcb_update:
   by (clarsimp simp: valid_reply_masters_def fun_upd_def is_tcb 
                      cte_wp_at_after_update obj_at_def)
 
-
-lemma valid_arch_obj_tcb_update':
-  "\<lbrakk> valid_arch_obj obj s; kheap s p = Some (TCB t) \<rbrakk>
-   \<Longrightarrow> valid_arch_obj obj (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
-  apply (cases obj)
-     apply (fastforce elim: typ_at_same_type [rotated -1])
-    apply clarsimp
-    apply (rename_tac "fun" x)
-    apply (erule_tac x=x in allE)
-    apply (case_tac "fun x", (clarsimp simp: obj_at_def data_at_def )+)[1]
-   apply clarsimp
-   apply (rename_tac "fun" x)
-   apply (erule_tac x=x in ballE)
-   apply (case_tac "fun x", (clarsimp simp: obj_at_def data_at_def)+)[1]
-   apply (fastforce elim: typ_at_same_type [rotated -1])
-  apply simp
-  done
-
-
-lemma valid_arch_obj_tcb_update:
-  "kheap s p = Some (TCB t)
-   \<Longrightarrow> valid_arch_obj obj (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>) = valid_arch_obj obj s"
-  apply (rule iffI)
-   apply (drule valid_arch_obj_tcb_update'[where p=p and t'=t], simp)
-   apply (simp add: fun_upd_idem)
-  apply (erule(1) valid_arch_obj_tcb_update')
-  done
-
-
-lemma valid_arch_objs_tcb_update:
-  "\<lbrakk> valid_arch_objs s; kheap s p = Some (TCB t)\<rbrakk>
-    \<Longrightarrow> valid_arch_objs (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
-  apply (erule valid_arch_objs_stateI)
-    apply (clarsimp simp: obj_at_def vs_refs_def split: split_if_asm)
-   apply simp
-  apply (clarsimp simp: obj_at_def valid_arch_obj_tcb_update split: split_if_asm)
-  done
-
-
-lemma vs_lookup1_tcb_update:
-  "kheap s p = Some (TCB t)
-      \<Longrightarrow> vs_lookup1 (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>) = vs_lookup1 s"
-  by (clarsimp simp add: vs_lookup1_def obj_at_def vs_refs_def intro!: set_eqI)
-
-
-lemma vs_lookup_tcb_update:
-  "kheap s p = Some (TCB t)
-      \<Longrightarrow> vs_lookup (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>) = vs_lookup s"
-  by (clarsimp simp add: vs_lookup_def vs_lookup1_tcb_update)
-
-
-lemma only_idle_tcb_update:
-  "\<lbrakk>only_idle s; ko_at (TCB t) p s; tcb_state t = tcb_state t' \<or> \<not>idle (tcb_state t') \<rbrakk>
-    \<Longrightarrow> only_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
-  by (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def)
-
-
-lemma tcb_update_global_pd_mappings:
-  "\<lbrakk> valid_global_pd_mappings s; ko_at (TCB t) p s \<rbrakk>
-       \<Longrightarrow> valid_global_pd_mappings (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
-  apply (erule valid_global_pd_mappings_pres)
-     apply (clarsimp simp: obj_at_def)+
-  done
-
-
 lemma tcb_state_same_cte_wp_at:
   "\<lbrakk> ko_at (TCB t) p s; \<forall>(getF, v) \<in> ran tcb_cap_cases. getF t = getF t' \<rbrakk>
      \<Longrightarrow> \<forall>P p'. cte_wp_at P p' (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)
@@ -395,16 +361,7 @@ where
  | cap.DomainCap \<Rightarrow> cap.DomainCap
  | cap.ReplyCap ref master \<Rightarrow> cap.ReplyCap ref True
  | cap.UntypedCap dev ref n f \<Rightarrow> cap.UntypedCap dev ref n 0
- | cap.ArchObjectCap acap \<Rightarrow> cap.ArchObjectCap (case acap of
-      arch_cap.PageCap dev ref rghts sz mapdata \<Rightarrow>
-         arch_cap.PageCap dev ref UNIV sz None
-    | arch_cap.ASIDPoolCap pool asid \<Rightarrow>
-         arch_cap.ASIDPoolCap pool 0
-    | arch_cap.PageTableCap ptr data \<Rightarrow>
-         arch_cap.PageTableCap ptr None
-    | arch_cap.PageDirectoryCap ptr data \<Rightarrow>
-         arch_cap.PageDirectoryCap ptr None
-       | _ \<Rightarrow> acap)
+ | cap.ArchObjectCap acap \<Rightarrow> cap.ArchObjectCap (cap_master_arch_cap acap)
  | _ \<Rightarrow> cap"
 
 
@@ -434,22 +391,18 @@ lemma cap_master_cap_eqDs1:
   "cap_master_cap cap = cap.ReplyCap ref master
      \<Longrightarrow> master = True
           \<and> (\<exists>master. cap = cap.ReplyCap ref master)"
-  "cap_master_cap cap = cap.ArchObjectCap (arch_cap.PageCap dev ref rghts sz mapdata)
-     \<Longrightarrow> rghts = UNIV \<and> mapdata = None
-          \<and> (\<exists>rghts mapdata. cap = cap.ArchObjectCap (arch_cap.PageCap dev ref rghts sz mapdata))"
-  "cap_master_cap cap = cap.ArchObjectCap arch_cap.ASIDControlCap
-     \<Longrightarrow> cap = cap.ArchObjectCap arch_cap.ASIDControlCap"
-  "cap_master_cap cap = cap.ArchObjectCap (arch_cap.ASIDPoolCap pool asid)
-     \<Longrightarrow> asid = 0 \<and> (\<exists>asid. cap = cap.ArchObjectCap (arch_cap.ASIDPoolCap pool asid))"
-  "cap_master_cap cap = cap.ArchObjectCap (arch_cap.PageTableCap ptr data)
-     \<Longrightarrow> data = None \<and> (\<exists>data. cap = cap.ArchObjectCap (arch_cap.PageTableCap ptr data))"
-  "cap_master_cap cap = cap.ArchObjectCap (arch_cap.PageDirectoryCap ptr data2)
-     \<Longrightarrow> data2 = None \<and> (\<exists>data2. cap = cap.ArchObjectCap (arch_cap.PageDirectoryCap ptr data2))"
   by (clarsimp simp: cap_master_cap_def
-              split: cap.split_asm arch_cap.split_asm)+
+              split: cap.split_asm)+
 
+lemma cap_master_cap_arch_eqD:
+    "cap_master_cap cap = ArchObjectCap acap
+     \<Longrightarrow> \<exists>ac. cap = ArchObjectCap ac \<and> acap = cap_master_arch_cap ac"
+       by (clarsimp simp: cap_master_cap_def
+              split: cap.split_asm)+
 
-lemmas cap_master_cap_eqDs = cap_master_cap_eqDs1 cap_master_cap_eqDs1 [OF sym]
+lemmas cap_master_cap_eqDs = 
+  cap_master_cap_eqDs1 cap_master_cap_arch_eqD 
+  cap_master_cap_eqDs1 [OF sym] cap_master_cap_arch_eqD [OF sym]
 
 
 definition
@@ -476,13 +429,7 @@ lemma cap_badge_simps [simp]:
  "cap_badge (cap.ArchObjectCap cap)                = None"
   by (auto simp: cap_badge_def)
 
-(* FIXME: move to somewhere sensible *)
-lemma pageBitsForSize_simps[simp]:
-  "pageBitsForSize ARMSmallPage    = 12"
-  "pageBitsForSize ARMLargePage    = 16"
-  "pageBitsForSize ARMSection      = 20"
-  "pageBitsForSize ARMSuperSection = 24"
-  by (simp add: pageBitsForSize_def)+
+
 
 
 lemma cdt_parent_of_def:
@@ -532,26 +479,6 @@ lemma set_object_cte_wp_at:
   done
 
 
-lemma set_cap_caps_of_state[wp]:
-  "\<lbrace>\<lambda>s. P ((caps_of_state s) (ptr \<mapsto> cap))\<rbrace> set_cap cap ptr \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  apply (cases ptr)
-  apply (clarsimp simp add: set_cap_def split_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply (case_tac obj, simp_all add: set_object_def
-                          split del: split_if cong: if_cong bind_cong)
-   apply (rule hoare_pre, wp)
-   apply (clarsimp elim!: rsubst[where P=P]
-                    simp: caps_of_state_cte_wp_at cte_wp_at_cases
-                          fun_upd_def[symmetric] wf_cs_upd obj_at_def
-                  intro!: ext)
-   apply auto[1]
-  apply (rule hoare_pre, wp)
-  apply (clarsimp simp: obj_at_def)
-  apply (safe elim!: rsubst[where P=P] intro!: ext)
-      apply (auto simp: caps_of_state_cte_wp_at cte_wp_at_cases,
-             auto simp: tcb_cap_cases_def split: split_if_asm)
-  done
-
 
 lemma set_cap_cte_wp_at: 
   "\<lbrace>(\<lambda>s. if p = ptr then P cap else cte_wp_at P p s) and cte_at ptr\<rbrace> 
@@ -597,14 +524,6 @@ lemma set_cap_a_type_inv:
   done
 
 
-crunch arch[wp]: set_cap "\<lambda>s. P (arch_state s)" (simp: split_def)
-
-
-lemma set_cap_arch_state [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> set_cap cap p \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (wp valid_arch_state_lift set_cap_typ_at)
-
-
 lemma set_cap_tcb:
   "\<lbrace>tcb_at p'\<rbrace> set_cap cap  p \<lbrace>\<lambda>rv. tcb_at p'\<rbrace>"
   by (clarsimp simp: tcb_at_typ intro!: set_cap_typ_at)
@@ -629,7 +548,7 @@ lemma set_cap_cte_at:
 
 
 lemma set_cap_valid_objs:
-  "\<lbrace>valid_objs and valid_cap x
+  "\<lbrace>(valid_objs::'state_ext::state_ext state \<Rightarrow> bool) and valid_cap x
         and tcb_cap_valid x p\<rbrace>
       set_cap x p \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: set_cap_def split_def)
@@ -842,8 +761,8 @@ crunch it[wp]: set_cap "\<lambda>s. P (idle_thread s)"
 
 lemma set_cap_refs [wp]:
   "\<lbrace>\<lambda>x. P (global_refs x)\<rbrace> set_cap cap p \<lbrace>\<lambda>_ x. P (global_refs x)\<rbrace>"
-  apply (simp add: global_refs_def)
-  apply wpx
+  apply (rule global_refs_lift)
+  apply wp
   done
 
 
@@ -1131,18 +1050,6 @@ lemma new_cap_valid_pspace:
   done
 
 
-lemma obj_irq_refs_inD:
-  "x \<in> obj_irq_refs cap \<Longrightarrow> obj_irq_refs cap = {x}"
-  apply (case_tac cap, simp_all add: obj_irq_refs_def cap_irqs_def
-                                     cap_irq_opt_def split: sum.split_asm)
-  apply clarsimp
-  done
-
-
-lemma objirqrefs_distinct_or_equal:
-  "\<lbrakk> obj_irq_refs cap \<inter> obj_irq_refs cap' \<noteq> {} \<rbrakk> 
-     \<Longrightarrow> obj_irq_refs cap = obj_irq_refs cap'"
-  by (clarsimp elim!: nonemptyE dest!: obj_irq_refs_inD)
 
 
 lemma objirqrefs_distinct_or_equal_corl:
@@ -1156,25 +1063,6 @@ lemma obj_refs_cap_irqs_not_both:
   by (clarsimp simp: cap_irqs_def cap_irq_opt_def split: cap.split sum.split_asm)
 
 
-lemmas obj_irq_refs_Int_not =
-    arg_cong [where f=Not, OF obj_irq_refs_Int, simplified, symmetric]
-
-
-lemma not_final_another':
-  "\<lbrakk> \<not> is_final_cap' cap s; fst (get_cap p s) = {(cap, s)};
-       obj_irq_refs cap \<noteq> {} \<rbrakk>
-      \<Longrightarrow> \<exists>p' cap'. p' \<noteq> p \<and> fst (get_cap p' s) = {(cap', s)}
-                         \<and> obj_irq_refs cap' = obj_irq_refs cap
-                         \<and> \<not> is_final_cap' cap' s"
-  apply (simp add: is_final_cap'_def obj_irq_refs_Int_not cong: conj_cong
-              del: split_paired_Ex split_paired_All)
-  apply (erule not_singleton_oneE[where p=p])
-   apply simp
-  apply (rule_tac x=p' in exI)
-  apply clarsimp
-  apply (drule objirqrefs_distinct_or_equal)
-  apply simp
-  done
 
 
 lemma not_final_another:
@@ -1202,49 +1090,37 @@ lemma get_cap_caps_of_state:
   "(fst (get_cap p s) = {(cap, s)}) = (Some cap = caps_of_state s p)"
   by (clarsimp simp: caps_of_state_def eq_commute)
 
+context Arch begin
+ 
+lemma abj_ref_none_no_refs:
+  "obj_refs c = {} \<Longrightarrow> table_cap_ref c = None"
+  unfolding table_cap_ref_def
+  apply (cases c; simp)
+  subgoal for ac by (cases ac; simp)
+  done
 
-definition
-  no_cap_to_obj_with_diff_ref :: "cap \<Rightarrow> cslot_ptr set \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
- "no_cap_to_obj_with_diff_ref cap S \<equiv>
-  \<lambda>s. \<forall>p \<in> UNIV - S. \<not> cte_wp_at (\<lambda>c. obj_refs c = obj_refs cap \<and>
-                                       \<not> (table_cap_ref c = table_cap_ref cap)) p s"
+end
 
-
-lemma obj_ref_none_no_asid:
-  "{} = obj_refs new_cap \<longrightarrow> None = table_cap_ref new_cap"
-  "obj_refs new_cap = {} \<longrightarrow> table_cap_ref new_cap = None"
-  by (simp add: table_cap_ref_def split: cap.split arch_cap.split)+
-
+requalify_facts Arch.abj_ref_none_no_refs
 
 lemma no_cap_to_obj_with_diff_ref_Null:
-  "no_cap_to_obj_with_diff_ref cap.NullCap S = \<top>"
-  by (rule ext, simp add: no_cap_to_obj_with_diff_ref_def
-                          cte_wp_at_caps_of_state obj_ref_none_no_asid)
+  "no_cap_to_obj_with_diff_ref NullCap S = \<top>"
+  by (rule ext, clarsimp simp: no_cap_to_obj_with_diff_ref_def
+                               cte_wp_at_caps_of_state abj_ref_none_no_refs)
 
-
-definition
-  "is_ap_cap cap \<equiv> case cap of cap.ArchObjectCap (arch_cap.ASIDPoolCap ap asid) \<Rightarrow> True | _ \<Rightarrow> False"
-
-
-lemmas is_ap_cap_simps [simp] = is_ap_cap_def [split_simps cap.split arch_cap.split]
-
-
-definition
-  "reachable_pg_cap cap \<equiv> \<lambda>s.
-   is_pg_cap cap \<and>
-   (\<exists>vref. vs_cap_ref cap = Some vref \<and> (vref \<unrhd> obj_ref_of cap) s)"
-
+lemma "(a \<or> (\<not>b \<and> c \<and> d) \<or> (b \<and> e \<and> f)) \<longleftrightarrow> (a \<or> (if b then e else c) \<and> (if b then f else d))"
+by simp
 
 definition
   replaceable :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
 where
  "replaceable s sl newcap \<equiv> \<lambda>cap.
     (cap = newcap)
-  \<or> (\<not> is_final_cap' cap s \<and> newcap = cap.NullCap \<and> \<not> reachable_pg_cap cap s)
+  \<or> (\<not> is_final_cap' cap s
+      \<and> newcap = NullCap
+      \<and> replaceable_non_final_arch_cap s sl newcap cap)
   \<or> (is_final_cap' cap s
-      \<and> (\<forall>p\<in>zobj_refs cap - zobj_refs newcap.
-              obj_at (Not \<circ> live) p s)
+      \<and> (\<forall>p\<in>zobj_refs cap - zobj_refs newcap. obj_at (Not \<circ> live) p s)
       \<and> (\<forall>p'. p' \<in> cte_refs cap (interrupt_irq_node s)
                \<and> (p' \<notin> cte_refs newcap (interrupt_irq_node s)
                     \<or> (\<exists>cp. appropriate_cte_cap cp cap
@@ -1261,34 +1137,14 @@ where
       \<and> \<not> is_untyped_cap newcap \<and> \<not> is_master_reply_cap newcap
       \<and> \<not> is_reply_cap newcap
       \<and> newcap \<noteq> cap.IRQControlCap
-      \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> (cap_class newcap = cap_class cap \<and> cap_is_device newcap = cap_is_device cap))
-      \<and> (\<forall>vref. vs_cap_ref cap = Some vref
-                \<longrightarrow> (vs_cap_ref newcap = Some vref
-                       \<and> obj_refs newcap = obj_refs cap)
-                 \<or> (\<forall>oref \<in> obj_refs cap. \<not> (vref \<unrhd> oref) s))
-      \<and> no_cap_to_obj_with_diff_ref newcap {sl} s
-      \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap) \<longrightarrow> cap_asid newcap = None
-          \<longrightarrow> (\<forall>r \<in> obj_refs newcap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
-      \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap)
-             \<longrightarrow> ((is_pt_cap newcap \<and> is_pt_cap cap \<or> is_pd_cap newcap \<and> is_pd_cap cap)
-                      \<longrightarrow> (cap_asid newcap = None \<longrightarrow> cap_asid cap = None)
-                      \<longrightarrow> obj_refs cap \<noteq> obj_refs newcap)
-             \<longrightarrow> (\<forall>sl'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs newcap
-                                           \<and> (is_pd_cap newcap \<and> is_pd_cap cap' \<or> is_pt_cap newcap \<and> is_pt_cap cap')
-                                           \<and> (cap_asid newcap = None \<or> cap_asid cap' = None)) sl' s \<longrightarrow> sl' = sl))
-      \<and> \<not>is_ap_cap newcap)"
-
+      \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> cap_class newcap = cap_class cap \<and> cap_is_device newcap = cap_is_device cap)
+      \<and> replaceable_final_arch_cap s sl newcap cap)"
 
 lemma range_not_empty_is_physical:
   "valid_cap cap s \<Longrightarrow> (cap_class cap = PhysicalClass) = (cap_range cap \<noteq> {})"
   apply (case_tac cap)
-   apply (simp_all add:cap_range_def valid_cap_simps cap_aligned_def is_aligned_no_overflow)
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap)
-   apply (simp_all add:cap_range_def aobj_ref_def)
-  done
-
-
+   by (simp_all add:cap_range_def valid_cap_simps cap_aligned_def is_aligned_no_overflow physical_arch_cap_has_ref)
+ 
 lemma zombies_finalE:
   "\<lbrakk> \<not> is_final_cap' cap s; is_zombie cap; zombies_final s;
      cte_wp_at (op = cap) p s \<rbrakk>
@@ -1297,22 +1153,6 @@ lemma zombies_finalE:
    apply simp
   apply (clarsimp simp: cte_wp_at_def)
   done
-
-
-lemma obj_ref_is_obj_irq_ref:
-  "x \<in> obj_refs cap \<Longrightarrow> Inl x \<in> obj_irq_refs cap"
-  by (simp add: obj_irq_refs_def)
-
-
-lemma obj_irq_refs_eq:
-  "(obj_irq_refs cap = obj_irq_refs cap')
-      = (obj_refs cap = obj_refs cap' \<and> cap_irqs cap = cap_irqs cap')"
-  apply (simp add: obj_irq_refs_def)
-  apply (subgoal_tac "\<forall>x y. Inl x \<noteq> Inr y")
-   apply blast
-  apply simp
-  done
-
 
 lemma delete_duplicate_iflive:
   "\<lbrace>\<lambda>s. cte_wp_at (\<lambda>cap. \<not> is_final_cap' cap s) p s
@@ -1376,7 +1216,6 @@ lemma appropriate_cte_cap_irqs:
   apply (simp add: appropriate_cte_cap_def split: cap.splits)
   done
 
-
 lemma not_final_another_cte:
   "\<lbrakk> \<not> is_final_cap' cap s; fst (get_cap p s) = {(cap, s)};
        x \<in> cte_refs cap y; valid_objs s; zombies_final s \<rbrakk>
@@ -1387,15 +1226,17 @@ lemma not_final_another_cte:
                          \<and> \<not> is_final_cap' cap' s"
   apply (frule cte_refs_obj_refs_elem)
   apply (frule(1) not_final_another')
-   apply (auto simp: obj_irq_refs_def cap_irqs_def cap_irq_opt_def)[1]
+   subgoal by (auto simp: obj_irq_refs_def cap_irqs_def cap_irq_opt_def)
   apply (elim exEI, clarsimp)
   apply (drule(2) not_final_not_zombieD)+
   apply (drule(1) get_cap_valid_objs_valid_cap)+
-  apply (clarsimp simp: is_zombie_def valid_cap_def obj_at_def is_obj_defs
+  by (auto simp: is_zombie_def valid_cap_def 
+                        obj_at_def is_obj_defs
                         a_type_def obj_irq_refs_eq
+                        option_set_singleton_eq
                         appropriate_cte_cap_irqs
-                 split: cap.split_asm arch_cap.split_asm split_if_asm)
-  done
+                 dest:  obj_ref_is_arch
+                 split: cap.split_asm split_if_asm)
 
 
 lemma delete_duplicate_ifunsafe:
@@ -1533,9 +1374,6 @@ lemma set_cap_reply_masters [wp]:
 crunch interrupt_states[wp]: cap_insert "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch interrupt_states[wp]: cap_insert "\<lambda>s. P (interrupt_states s)"
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma set_cap_irq_handlers:
  "\<lbrace>\<lambda>s. valid_irq_handlers s
       \<and> cte_wp_at (\<lambda>cap'. \<forall>irq \<in> cap_irqs cap - cap_irqs cap'. irq_issued irq s) ptr s\<rbrace>
@@ -1544,228 +1382,12 @@ lemma set_cap_irq_handlers:
   apply (simp add: valid_irq_handlers_def irq_issued_def)
   apply wpx
   apply (clarsimp simp: cte_wp_at_caps_of_state elim!: ranE split: split_if_asm)
-   apply auto
+   apply (auto intro: ranI)
   done
 
-
-lemma wf_cs_ran_nonempty:
-  "well_formed_cnode_n sz cs \<Longrightarrow> ran cs \<noteq> {}"
-  apply (clarsimp simp: well_formed_cnode_n_def)
-  apply (drule_tac f="\<lambda>S. replicate sz False \<in> S" in arg_cong)
-  apply auto
-  done
-
-
-lemma set_cap_obj_at_impossible:
-  "\<lbrace>\<lambda>s. P (obj_at P' p s) \<and> (\<forall>ko. P' ko \<longrightarrow> caps_of ko = {})\<rbrace>
-     set_cap cap ptr
-   \<lbrace>\<lambda>rv s. P (obj_at P' p s)\<rbrace>"
-  apply (simp add: set_cap_def split_def set_object_def)
-  apply (wp get_object_wp | wpc)+
-  apply (clarsimp simp: obj_at_def)
-  apply (subgoal_tac "\<forall>sz cs. well_formed_cnode_n sz cs \<longrightarrow> \<not> P' (CNode sz cs)")
-   apply (subgoal_tac "\<forall>tcb. \<not> P' (TCB tcb)")
-    apply (clarsimp simp: fun_upd_def[symmetric] wf_cs_insert dom_def)
-    apply auto[1]
-   apply (auto simp:caps_of_def cap_of_def ran_tcb_cnode_map wf_cs_ran_nonempty)
-  done
-
-
-lemma empty_table_caps_of:
-  "empty_table S ko \<Longrightarrow> caps_of ko = {}"
-  by (cases ko, simp_all add: empty_table_def caps_of_def cap_of_def)
-
-
-lemma not_final_another_caps:
-  "\<lbrakk> \<not> is_final_cap' cap s; caps_of_state s p = Some cap;
-       r \<in> obj_irq_refs cap \<rbrakk>
-      \<Longrightarrow> \<exists>p' cap'. p' \<noteq> p \<and> caps_of_state s p' = Some cap'
-                         \<and> obj_irq_refs cap' = obj_irq_refs cap
-                         \<and> \<not> is_final_cap' cap' s"
-  apply (clarsimp dest!: caps_of_state_cteD
-                   simp: cte_wp_at_def)
-  apply (drule(1) not_final_another')
-   apply clarsimp
-  apply clarsimp
-  apply (subgoal_tac "cte_wp_at (op = cap') (a, b) s")
-   apply (fastforce simp: cte_wp_at_caps_of_state)
-  apply (simp add: cte_wp_at_def)
-  done
-
-
-lemma unique_table_refsD:
-  "\<lbrakk> unique_table_refs cps; cps p = Some cap; cps p' = Some cap';
-     obj_refs cap = obj_refs cap'\<rbrakk>
-     \<Longrightarrow> table_cap_ref cap = table_cap_ref cap'"
-  unfolding unique_table_refs_def
-  by blast
-
-
-lemma table_cap_ref_vs_cap_ref_Some:
-  "table_cap_ref x = Some y \<Longrightarrow> vs_cap_ref x = Some y"
-  by (clarsimp simp: table_cap_ref_def vs_cap_ref_def 
-              split: Structures_A.cap.splits Arch_Structs_A.arch_cap.splits)
-
-
-lemma set_cap_valid_vs_lookup:
-  "\<lbrace>\<lambda>s. valid_vs_lookup s
-      \<and> (\<forall>vref cap'. cte_wp_at (op = cap') ptr s
-                \<longrightarrow> vs_cap_ref cap' = Some vref
-                \<longrightarrow> (vs_cap_ref cap = Some vref \<and> obj_refs cap = obj_refs cap')
-                 \<or> (\<not> is_final_cap' cap' s \<and> \<not> reachable_pg_cap cap' s)
-                 \<or> (\<forall>oref \<in> obj_refs cap'. \<not> (vref \<unrhd> oref) s))
-      \<and> unique_table_refs (caps_of_state s)\<rbrace>
-     set_cap cap ptr
-   \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
-  apply (simp add: valid_vs_lookup_def
-              del: split_paired_All split_paired_Ex)
-  apply (rule hoare_pre)
-   apply (wp hoare_vcg_all_lift hoare_convert_imp[OF set_cap_vs_lookup_pages]
-             hoare_vcg_disj_lift)
-  apply (elim conjE allEI, rule impI, drule(1) mp)
-  apply (simp only: simp_thms)
-  apply (elim exE conjE)
-  apply (case_tac "p' = ptr")
-   apply (clarsimp simp: cte_wp_at_caps_of_state)
-   apply (elim disjE impCE)
-     apply fastforce
-    apply clarsimp
-    apply (drule (1) not_final_another_caps)
-     apply (erule obj_ref_is_obj_irq_ref)
-    apply (simp, elim exEI, clarsimp simp: obj_irq_refs_eq)
-    apply (rule conjI, clarsimp)
-    apply (drule(3) unique_table_refsD)
-    apply (clarsimp simp: reachable_pg_cap_def is_pg_cap_def)
-    apply (case_tac cap, simp_all add: vs_cap_ref_simps)[1]
-    apply (rename_tac arch_cap)
-    apply (case_tac arch_cap,
-           simp_all add: vs_cap_ref_simps table_cap_ref_simps)[1]
-       apply (clarsimp dest!: table_cap_ref_vs_cap_ref_Some)
-      apply fastforce
-     apply (clarsimp dest!: table_cap_ref_vs_cap_ref_Some)+
-  apply (auto simp: cte_wp_at_caps_of_state)[1]
-  done
-
-
-lemma set_cap_valid_table_caps:
-  "\<lbrace>\<lambda>s. valid_table_caps s
-         \<and> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))\<rbrace>
-     set_cap cap ptr
-   \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
-  apply (simp add: valid_table_caps_def)
-  apply (wp hoare_vcg_all_lift
-            hoare_vcg_disj_lift hoare_convert_imp[OF set_cap_caps_of_state]
-            hoare_use_eq[OF set_cap_arch set_cap_obj_at_impossible])
-  apply (simp add: empty_table_caps_of)
-  done
-
-
-lemma set_cap_unique_table_caps:
-  "\<lbrace>\<lambda>s. unique_table_caps (caps_of_state s)
-      \<and> ((is_pt_cap cap \<or> is_pd_cap cap)
-             \<longrightarrow> (\<forall>oldcap. caps_of_state s ptr = Some oldcap \<longrightarrow>
-                  (is_pt_cap cap \<and> is_pt_cap oldcap \<or> is_pd_cap cap \<and> is_pd_cap oldcap)
-                    \<longrightarrow> (cap_asid cap = None \<longrightarrow> cap_asid oldcap = None)
-                    \<longrightarrow> obj_refs oldcap \<noteq> obj_refs cap)
-             \<longrightarrow> (\<forall>ptr'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs cap
-                                              \<and> (is_pd_cap cap \<and> is_pd_cap cap' \<or> is_pt_cap cap \<and> is_pt_cap cap')
-                                              \<and> (cap_asid cap = None \<or> cap_asid cap' = None)) ptr' s \<longrightarrow> ptr' = ptr))\<rbrace>
-     set_cap cap ptr
-   \<lbrace>\<lambda>rv s. unique_table_caps (caps_of_state s)\<rbrace>"
-  apply wp
-  apply (simp only: unique_table_caps_def)
-  apply (elim conjE)
-  apply (erule impCE)
-   apply clarsimp
-  apply (erule impCE)
-   prefer 2
-   apply (simp del: imp_disjL)
-   apply (thin_tac "\<forall>a b. P a b" for P)
-   apply (auto simp: cte_wp_at_caps_of_state)[1]
-  apply (clarsimp simp del: imp_disjL del: allI)
-  apply (case_tac "cap_asid cap \<noteq> None")
-   apply (clarsimp del: allI)
-   apply (elim allEI | rule impI)+
-   apply (auto simp: is_pt_cap_def is_pd_cap_def)[1]
-  apply (elim allEI)
-  apply (intro conjI impI)
-   apply (elim allEI)
-   apply (auto simp: is_pt_cap_def is_pd_cap_def)[1]
-  apply (elim allEI)
-  apply (auto simp: is_pt_cap_def is_pd_cap_def)[1]
-  done
-
-
-lemma set_cap_unique_table_refs:
-  "\<lbrace>\<lambda>s. unique_table_refs (caps_of_state s)
-      \<and> no_cap_to_obj_with_diff_ref cap {ptr} s\<rbrace>
-     set_cap cap ptr
-   \<lbrace>\<lambda>rv s. unique_table_refs (caps_of_state s)\<rbrace>"
-  apply wp
-  apply clarsimp
-  apply (simp add: unique_table_refs_def
-              split del: split_if del: split_paired_All)
-  apply (erule allEI, erule allEI)
-  apply (clarsimp split del: split_if)
-  apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
-                        cte_wp_at_caps_of_state
-                 split: split_if_asm)
-  done
-
-
-lemma set_cap_valid_arch_caps:
-  "\<lbrace>\<lambda>s. valid_arch_caps s
-      \<and> (\<forall>vref cap'. cte_wp_at (op = cap') ptr s
-                \<longrightarrow> vs_cap_ref cap' = Some vref
-                \<longrightarrow> (vs_cap_ref cap = Some vref \<and> obj_refs cap = obj_refs cap')
-                 \<or> (\<not> is_final_cap' cap' s \<and> \<not> reachable_pg_cap cap' s)
-                 \<or> (\<forall>oref \<in> obj_refs cap'. \<not> (vref \<unrhd> oref) s))
-      \<and> no_cap_to_obj_with_diff_ref cap {ptr} s
-      \<and> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
-      \<and> ((is_pt_cap cap \<or> is_pd_cap cap)
-             \<longrightarrow> (\<forall>oldcap. caps_of_state s ptr = Some oldcap \<longrightarrow>
-                  (is_pt_cap cap \<and> is_pt_cap oldcap \<or> is_pd_cap cap \<and> is_pd_cap oldcap)
-                    \<longrightarrow> (cap_asid cap = None \<longrightarrow> cap_asid oldcap = None)
-                    \<longrightarrow> obj_refs oldcap \<noteq> obj_refs cap)
-             \<longrightarrow> (\<forall>ptr'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs cap
-                                              \<and> (is_pd_cap cap \<and> is_pd_cap cap' \<or> is_pt_cap cap \<and> is_pt_cap cap')
-                                              \<and> (cap_asid cap = None \<or> cap_asid cap' = None)) ptr' s \<longrightarrow> ptr' = ptr))\<rbrace>
-     set_cap cap ptr
-   \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  apply (simp add: valid_arch_caps_def pred_conj_def)
-  apply (wp set_cap_valid_vs_lookup set_cap_valid_table_caps
-            set_cap_unique_table_caps set_cap_unique_table_refs)
-  apply simp+
-  done
-
-lemma set_cap_valid_arch_objs[wp]:
-  "\<lbrace>valid_arch_objs\<rbrace> set_cap cap ptr \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
-  apply (wp valid_arch_objs_lift set_cap_typ_at set_cap_obj_at_impossible)
-  apply (clarsimp simp: caps_of_def cap_of_def)
-  done
-
-
-lemma set_cap_valid_global_objs[wp]:
-  "\<lbrace>valid_global_objs\<rbrace> set_cap ptr cap \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-  apply (wp valid_global_objs_lift valid_ao_at_lift
-            set_cap_typ_at set_cap_obj_at_impossible
-                  | simp add: caps_of_def cap_of_def)+
-  apply (clarsimp simp: empty_table_def
-                 split: Structures_A.kernel_object.split_asm)
-  done
-
-
-lemma get_cap_det:
-  "(r,s') \<in> fst (get_cap p s) \<Longrightarrow> get_cap p s = ({(r,s)}, False)"
-  apply (cases p)
-  apply (clarsimp simp add: in_monad get_cap_def get_object_def
-                     split: Structures_A.kernel_object.split_asm)
-   apply (clarsimp simp add: bind_def return_def assert_opt_def simpler_gets_def)
-  apply (simp add: bind_def simpler_gets_def return_def assert_opt_def)
-  done
-
+lemma arch_obj_caps_of:
+  "caps_of (ArchObj ko) = {}"
+  by (simp add: caps_of_def cap_of_def)
 
 lemma get_cap_wp:
   "\<lbrace>\<lambda>s. \<forall>cap. cte_wp_at (op = cap) p s \<longrightarrow> Q cap s\<rbrace> get_cap p \<lbrace>Q\<rbrace>"
@@ -1775,20 +1397,28 @@ lemma get_cap_wp:
   apply simp
   done
 
+lemma cap_irqs_must_be_irqhandler: "irq \<in> cap_irqs cap \<Longrightarrow> cap = IRQHandlerCap irq"
+  by (simp add: cap_irqs_def cap_irq_opt_def split: cap.splits)
+
 lemma cap_insert_irq_handlers[wp]:
  "\<lbrace>\<lambda>s. valid_irq_handlers s
       \<and> cte_wp_at (\<lambda>cap'. \<forall>irq \<in> cap_irqs cap - cap_irqs cap'. irq_issued irq s) src s\<rbrace>
     cap_insert cap src dest
   \<lbrace>\<lambda>rv. valid_irq_handlers\<rbrace>"
-  apply (simp add: cap_insert_def set_untyped_cap_as_full_def update_cdt_def set_cdt_def set_original_def)
+  apply (simp add: cap_insert_def set_untyped_cap_as_full_def
+                   update_cdt_def set_cdt_def set_original_def)
   apply (wp | simp split del: split_if)+
       apply (wp set_cap_irq_handlers get_cap_wp)
       apply (clarsimp simp:is_cap_simps )
       apply (wp set_cap_cte_wp_at get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_irq_handlers_def)
-  apply (auto simp:is_cap_simps free_index_update_def)
+  apply (clarsimp simp: free_index_update_def
+                 dest!: cap_irqs_must_be_irqhandler
+                 split: cap.splits)
+  apply (rename_tac irq irq')
+  apply (case_tac "irq = irq'"; simp)
+   apply (drule_tac x=cap in bspec; clarsimp simp: ranI)
   done
-
 
 lemma final_cap_duplicate:
   "\<lbrakk> fst (get_cap p s) = {(cap', s)};
@@ -1805,7 +1435,6 @@ lemma final_cap_duplicate:
   apply blast
   done
 
-
 lemma obj_irq_refs_subset:
   "(obj_irq_refs cap \<subseteq> obj_irq_refs cap')
        = (obj_refs cap \<subseteq> obj_refs cap'
@@ -1816,7 +1445,6 @@ lemma obj_irq_refs_subset:
   apply simp
   done
 
-
 lemma set_cap_same_valid_pspace:
   "\<lbrace>cte_wp_at (\<lambda>c. c = cap) p and valid_pspace\<rbrace> set_cap cap p \<lbrace>\<lambda>rv. valid_pspace\<rbrace>"
   apply (wp set_cap_valid_pspace)
@@ -1824,7 +1452,6 @@ lemma set_cap_same_valid_pspace:
   apply (clarsimp simp: caps_of_state_valid_cap valid_pspace_def
                         cte_wp_tcb_cap_valid [OF caps_of_state_cteD])
   done
-
 
 lemma replace_cap_valid_pspace:
   "\<lbrace>\<lambda>s. valid_pspace s \<and> cte_wp_at (replaceable s p cap) p s
@@ -1853,7 +1480,6 @@ lemma replace_cap_valid_pspace:
   apply simp
   done
 
-
 lemma replace_cap_ifunsafe:
   "\<lbrace>\<lambda>s. cte_wp_at (replaceable s p cap) p s
        \<and> if_unsafe_then_cap s \<and> valid_objs s \<and> zombies_final s
@@ -1876,7 +1502,6 @@ lemma replace_cap_ifunsafe:
   apply simp
   done
 
-
 lemma thread_set_mdb:
   assumes c: "\<And>t getF v. (getF, v) \<in> ran tcb_cap_cases
                     \<Longrightarrow> getF (f t) = getF t"
@@ -1890,7 +1515,6 @@ lemma thread_set_mdb:
     apply simp
    apply (wp | simp)+
   done
-
 
 lemma set_cap_caps_of_state2:
   "\<lbrace>\<lambda>s. P (caps_of_state s (p \<mapsto> cap)) (cdt s) (is_original_cap s)\<rbrace> 
@@ -1906,41 +1530,13 @@ lemma set_cap_caps_of_state2:
   apply (simp add: fun_upd_def)
   done
 
-
 lemma obj_irq_refs_empty:
   "(obj_irq_refs cap = {}) = (cap_irqs cap = {} \<and> obj_refs cap = {})"
   by (simp add: obj_irq_refs_def conj_comms)
 
-
 lemma final_NullCap:
-  "is_final_cap' cap.NullCap = \<bottom>"
+  "is_final_cap' NullCap = \<bottom>"
   by (rule ext, simp add: is_final_cap'_def)
-
-
-lemma valid_table_capsD:
-  "\<lbrakk> cte_wp_at (op = cap) ptr s; valid_table_caps s;
-        is_pt_cap cap | is_pd_cap cap; cap_asid cap = None \<rbrakk>
-        \<Longrightarrow> \<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s"
-  apply (clarsimp simp: cte_wp_at_caps_of_state valid_table_caps_def)
-  apply (cases ptr, fastforce)
-  done
-
-
-lemma unique_table_capsD:
-  "\<lbrakk> unique_table_caps cps; cps ptr = Some cap; cps ptr' = Some cap';
-     obj_refs cap = obj_refs cap'; cap_asid cap = None \<or> cap_asid cap' = None;
-     (is_pd_cap cap \<and> is_pd_cap cap') \<or> (is_pt_cap cap \<and> is_pt_cap cap') \<rbrakk>
-     \<Longrightarrow> ptr = ptr'"
-  unfolding unique_table_caps_def
-  by blast
-
-
-(* FIXME: move *)
-lemma valid_capsD:
-  "\<lbrakk>caps_of_state s p = Some cap; valid_caps (caps_of_state s) s\<rbrakk>
-   \<Longrightarrow> valid_cap cap s"
-  by (cases p, simp add: valid_caps_def)
-
 
 lemma unique_table_refs_no_cap_asidE:
   "\<lbrakk>caps_of_state s p = Some cap;
@@ -1955,40 +1551,12 @@ lemma unique_table_refs_no_cap_asidE:
   apply (clarsimp simp: is_cap_simps)
   done
 
-
 lemmas unique_table_refs_no_cap_asidD
      = unique_table_refs_no_cap_asidE[where S="{}"]
-
-
-lemma set_cap_valid_kernel_mappings[wp]:
-  "\<lbrace>valid_kernel_mappings\<rbrace> set_cap cap p \<lbrace>\<lambda>rv. valid_kernel_mappings\<rbrace>"
-  apply (simp add: set_cap_def split_def)
-  apply (wp set_object_v_ker_map get_object_wp | wpc)+
-  apply (clarsimp)
-  done
-
-
-lemma set_cap_equal_kernel_mappings[wp]:
-  "\<lbrace>equal_kernel_mappings\<rbrace> set_cap cap p \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
-  apply (simp add: set_cap_def split_def)
-  apply (wp set_object_equal_mappings get_object_wp | wpc)+
-  apply (clarsimp)
-  done
-
 
 lemma set_cap_only_idle [wp]:
   "\<lbrace>only_idle\<rbrace> set_cap cap p \<lbrace>\<lambda>_. only_idle\<rbrace>" 
   by (wp only_idle_lift set_cap_typ_at)
-
-
-lemma set_cap_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_pd_mappings\<rbrace>
-       set_cap cap p \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
-  apply (simp add: set_cap_def split_def)
-  apply (wp set_object_global_pd_mappings get_object_wp | wpc)+
-  apply (clarsimp simp: obj_at_def a_type_def)
-  done
-
 
 lemma set_cap_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_cap cap p \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
@@ -2006,21 +1574,6 @@ lemma set_cap_pspace_respects_device[wp]:
   apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: fun_upd_def[symmetric]
                         a_type_def wf_cs_upd)
-  done
-
-
-lemma set_cap_cap_refs_in_kernel_window[wp]:
-  "\<lbrace>cap_refs_in_kernel_window
-         and (\<lambda>s. \<forall>ref \<in> cap_range cap. arm_kernel_vspace (arch_state s) ref
-                         = ArmVSpaceKernelWindow)\<rbrace>
-     set_cap cap p
-   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  apply (simp add: cap_refs_in_kernel_window_def valid_refs_def2
-                   pred_conj_def)
-  apply (rule hoare_lift_Pf2[where f=arch_state])
-   apply wp
-   apply (fastforce elim!: ranE split: split_if_asm)
-  apply wp
   done
 
 lemma set_cap_cap_refs_respects_device_region:
@@ -2093,17 +1646,6 @@ lemma set_cap_cap_refs_respects_device_region_replaceable:
   apply (simp add: replaceable_cap_is_device_cap replaceable_cap_range)
   done
 
-(* FIXME: SELFOUR-421 - how does this change? *)
-lemma cap_refs_in_kernel_windowD:
-  "\<lbrakk> caps_of_state s ptr = Some cap; cap_refs_in_kernel_window s \<rbrakk>
-   \<Longrightarrow> \<forall>ref \<in> cap_range cap.
-         arm_kernel_vspace (arch_state s) ref = ArmVSpaceKernelWindow"
-  apply (clarsimp simp: cap_refs_in_kernel_window_def valid_refs_def
-                        cte_wp_at_caps_of_state)
-  apply (cases ptr, fastforce)
-  done
-
-
 lemma set_cap_valid_ioc[wp]:
   "\<lbrace>valid_ioc and (\<lambda>s. p = cap.NullCap \<longrightarrow> \<not> is_original_cap s pt)\<rbrace>
    set_cap p pt
@@ -2159,18 +1701,6 @@ lemma set_cap_valid_ioc[wp]:
   apply fastforce
   done
 
-
-lemma set_cap_vms[wp]:
-  "\<lbrace>valid_machine_state\<rbrace> set_cap cap p \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  apply (simp add: set_cap_def split_def set_object_def)
-  apply (wp get_object_wp | wpc)+
-  apply (intro allI impI conjI valid_machine_state_heap_updI)
-    apply (auto simp:obj_at_def a_type_simps fun_upd_def[symmetric] 
-      well_formed_cnode_n_def 
-      split:arch_kernel_obj.splits kernel_object.splits)+
-  done
-
-
 lemma descendants_inc_minor:
   "\<lbrakk>descendants_inc m cs; mdb_cte_at (\<lambda>p. \<exists>c. cs p = Some c \<and> cap.NullCap \<noteq> c) m;
    \<forall>x\<in> dom cs. cap_class (the (cs' x)) = cap_class (the (cs x)) \<and> cap_range (the (cs' x)) = cap_range (the (cs x))\<rbrakk>
@@ -2188,99 +1718,6 @@ lemma descendants_inc_minor:
   apply (elim conjE exE)
   apply (drule_tac m1 = cs in bspec[OF _ domI,rotated],assumption)+
   apply simp
-  done
-
-
- 
-
-lemma replace_cap_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s p cap) p s
-        \<and> cap \<noteq> cap.NullCap
-        \<and> ex_cte_cap_wp_to (appropriate_cte_cap cap) p s
-        \<and> s \<turnstile> cap\<rbrace>
-     set_cap cap p
-   \<lbrace>\<lambda>rv s. invs s\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_mdb_def2)
-  apply (rule hoare_pre)
-   apply (wp replace_cap_valid_pspace
-             set_cap_caps_of_state2 set_cap_idle
-             replace_cap_ifunsafe valid_irq_node_typ
-             set_cap_typ_at set_cap_irq_handlers
-             set_cap_valid_arch_caps set_cap_valid_arch_objs
-             set_cap_cap_refs_respects_device_region_replaceable)
-  apply (clarsimp simp: valid_pspace_def cte_wp_at_caps_of_state replaceable_def)
-  apply (rule conjI)
-   apply (fastforce simp: tcb_cap_valid_def 
-                  dest!: cte_wp_tcb_cap_valid [OF caps_of_state_cteD])
-  apply (rule conjI)
-   apply (erule_tac P="\<lambda>cps. mdb_cte_at cps (cdt s)" in rsubst)
-   apply (rule ext)
-   apply (safe del: disjE)[1]
-    apply (simp add: obj_irq_refs_empty final_NullCap)+
-  apply (rule conjI)
-   apply (simp add: untyped_mdb_def is_cap_simps)
-   apply (erule disjE)
-    apply (clarsimp, rule conjI, clarsimp+)[1]
-   apply (erule allEI, erule allEI)
-   apply (drule_tac x="fst p" in spec, drule_tac x="snd p" in spec)
-   apply (clarsimp simp: obj_irq_refs_subset)
-   apply (drule(1) disjoint_subset, simp)
-  apply (rule conjI)
-   apply (erule descendants_inc_minor)
-    apply simp
-   apply (elim disjE)
-    apply clarsimp
-   apply clarsimp
-  apply (rule conjI)
-   apply (erule disjE)
-    apply (simp add: fun_upd_def[symmetric] fun_upd_idem)
-   apply (simp add: untyped_inc_def not_is_untyped_no_range)
-  apply (rule conjI)
-   apply (erule disjE)
-    apply (simp add: fun_upd_def[symmetric] fun_upd_idem)
-   apply (simp add: ut_revocable_def)
-  apply (rule conjI)
-   apply (erule disjE)
-    apply (clarsimp simp: irq_revocable_def)
-   apply clarsimp
-   apply (clarsimp simp: irq_revocable_def)
-  apply (rule conjI)
-   apply (erule disjE)
-    apply (simp add: fun_upd_def[symmetric] fun_upd_idem)
-   apply (simp add: reply_master_revocable_def)
-  apply (rule conjI)
-   apply (erule disjE)
-    apply (simp add: fun_upd_def[symmetric] fun_upd_idem)
-   apply (clarsimp simp add: reply_mdb_def)
-   apply (thin_tac "\<forall>a b. (a, b) \<in> cte_refs cp nd \<and> Q a b\<longrightarrow> R a b" for cp nd Q R)
-   apply (thin_tac "is_pt_cap cap \<longrightarrow> P" for cap P)+ 
-   apply (thin_tac "is_pd_cap cap \<longrightarrow> P" for cap P)+
-   apply (rule conjI)
-    apply (unfold reply_caps_mdb_def)[1]
-    apply (erule allEI, erule allEI)
-    apply (fastforce split: split_if_asm simp: is_cap_simps)
-   apply (unfold reply_masters_mdb_def)[1]
-   apply (erule allEI, erule allEI)
-   apply (fastforce split: split_if_asm simp: is_cap_simps)
-  apply (rule conjI)
-   apply (erule disjE)
-    apply (clarsimp)
-    apply (drule caps_of_state_cteD)
-    apply (erule(1) valid_reply_capsD [OF has_reply_cap_cte_wpD])
-   apply (simp add: is_cap_simps)
-  apply (frule(1) valid_global_refsD2)
-  apply (frule(1) cap_refs_in_kernel_windowD)
-  apply (rule conjI)
-   apply (erule disjE)
-    apply (clarsimp simp: valid_reply_masters_def cte_wp_at_caps_of_state)
-    apply (cases p, fastforce)
-   apply (simp add: is_cap_simps)
-  apply (elim disjE)
-   apply simp
-   apply (clarsimp simp: valid_table_capsD[OF caps_of_state_cteD]
-                    valid_arch_caps_def unique_table_refs_no_cap_asidE)
-  apply simp
-  apply (rule Ball_emptyI, simp add: obj_irq_refs_subset)
   done
 
 crunch cte_wp_at: set_cdt "cte_wp_at P p"
@@ -2423,22 +1860,10 @@ lemma set_untyped_cap_as_full_cte_wp_at:
   apply (auto simp:is_cap_simps cte_wp_at_caps_of_state masked_as_full_def)
   done
 
-
-lemma free_index_update_test_function_stuff[simp]:
-  "cap_asid (src_cap\<lparr>free_index := a\<rparr>) = cap_asid src_cap"
-  "obj_irq_refs (src_cap\<lparr>free_index := a\<rparr>) = obj_irq_refs src_cap"
-  "vs_cap_ref (src_cap\<lparr>free_index := a\<rparr>) = vs_cap_ref src_cap"
-  "untyped_range (cap \<lparr>free_index :=a \<rparr>) = untyped_range cap"
-  "zobj_refs (c\<lparr>free_index:=a\<rparr>) =  zobj_refs c"
-  "obj_refs (c\<lparr>free_index:=a\<rparr>) = obj_refs c"
-  by (auto simp:cap_asid_def free_index_update_def  vs_cap_ref_def
-    is_cap_simps obj_irq_refs_def split:cap.splits arch_cap.splits)
-
-
 lemma valid_cap_free_index_update[simp]:
   "valid_cap cap s \<Longrightarrow> valid_cap (max_free_index_update cap) s"
   apply (case_tac cap)
-  apply (simp_all add:free_index_update_def split:cap.splits arch_cap.splits)
+  apply (simp_all add:free_index_update_def split:cap.splits )
   apply (clarsimp simp:valid_cap_def cap_aligned_def valid_untyped_def max_free_index_def)
   done
 
@@ -2598,20 +2023,20 @@ lemma tcb_cap_valid_update_free_index[simp]:
   apply (intro conjI impI allI)
     apply (clarsimp simp:tcb_at_def pred_tcb_at_def is_tcb_def obj_at_def 
       dest!:get_tcb_SomeD)
-    apply (clarsimp simp:tcb_cap_cases_def free_index_update_def is_cap_simps
+    apply (clarsimp simp:tcb_cap_cases_def free_index_update_def is_cap_simps is_nondevice_page_cap_simps
       split:if_splits cap.split_asm Structures_A.thread_state.split_asm)
-    apply (clarsimp simp:pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def
+    apply (clarsimp simp:pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def is_nondevice_page_cap_simps
       split:cap.split_asm)
   apply (clarsimp simp:tcb_cap_valid_def)
   apply (intro conjI impI allI)
     apply (clarsimp simp:tcb_at_def pred_tcb_at_def is_tcb_def obj_at_def 
       dest!:get_tcb_SomeD)
-    apply (clarsimp simp:tcb_cap_cases_def free_index_update_def is_cap_simps
+    apply (clarsimp simp:tcb_cap_cases_def free_index_update_def is_cap_simps is_nondevice_page_cap_simps
       split:if_splits cap.split_asm Structures_A.thread_state.split_asm)
-    apply (clarsimp simp:pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def
+  apply (clarsimp simp:pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def
       valid_ipc_buffer_cap_def
-      split:cap.split_asm)
-    done
+      split:cap.splits)
+  done
 
 
 lemma set_untyped_cap_full_valid_objs:
@@ -2681,13 +2106,13 @@ lemma cap_insert_valid_cap[wp]:
 
 lemma cap_rights_update_idem [simp]:
   "cap_rights_update R (cap_rights_update R' cap) = cap_rights_update R cap"
-  by (simp add: cap_rights_update_def acap_rights_update_def split: cap.splits arch_cap.splits)
+  by (simp add: cap_rights_update_def split: cap.splits)
 
 
 lemma cap_master_cap_rights [simp]:
   "cap_master_cap (cap_rights_update R cap) = cap_master_cap cap"
-  by (simp add: cap_master_cap_def cap_rights_update_def acap_rights_update_def 
-           split: cap.splits arch_cap.splits)
+  by (simp add: cap_master_cap_def cap_rights_update_def 
+           split: cap.splits)
 
 
 lemma cap_insert_obj_at_other:
@@ -2697,6 +2122,10 @@ lemma cap_insert_obj_at_other:
    apply (wp set_cap_obj_at_other get_cap_wp|simp split del: split_if)+
   done
 
+lemma only_idle_tcb_update:
+  "\<lbrakk>only_idle s; ko_at (TCB t) p s; tcb_state t = tcb_state t' \<or> \<not>idle (tcb_state t') \<rbrakk>
+    \<Longrightarrow> only_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
+  by (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def)
 
 lemma as_user_only_idle :
   "\<lbrace>only_idle\<rbrace> as_user t m \<lbrace>\<lambda>_. only_idle\<rbrace>"
@@ -2709,20 +2138,12 @@ lemma as_user_only_idle :
   apply simp
   done
 
-
-lemma valid_cap_imp_valid_vm_rights:
-  "valid_cap (cap.ArchObjectCap (arch_cap.PageCap dev mw rs sz m)) s \<Longrightarrow>
-   rs \<in> valid_vm_rights"
-by (simp add: valid_cap_def valid_vm_rights_def)
-
-
 lemma cap_rights_update_id [intro!, simp]:
   "valid_cap c s \<Longrightarrow> cap_rights_update (cap_rights c) c = c"
   unfolding cap_rights_update_def 
-           acap_rights_update_def
   apply (cases c, simp_all)
    apply (simp add: valid_cap_def)
-  apply (clarsimp simp: valid_cap_imp_valid_vm_rights  split: arch_cap.splits)
+  apply (fastforce simp: valid_cap_def)
   done
 
 

@@ -690,21 +690,21 @@ proof -
 qed
 
 (* Merge of lemmas ccorresE and corresXF. *)
-definition "ac_corres st \<Gamma> rx G \<equiv>
+definition "ac_corres st check_termination \<Gamma> rx G \<equiv>
   \<lambda>A B. \<forall>s. (G s \<and> \<not> snd (A (st s))) \<longrightarrow>
          (\<forall>t. \<Gamma> \<turnstile> \<langle>B, Normal s\<rangle> \<Rightarrow> t \<longrightarrow>
             (\<exists>s'. t = Normal s' \<and> (Inr (rx s'), st s') \<in> fst (A (st s))))
-          \<and> \<Gamma> \<turnstile> B \<down> Normal s"
+          \<and> (check_termination \<longrightarrow> \<Gamma> \<turnstile> B \<down> Normal s)"
 
 (* We can merge ccorresE and corresXF to form a ccorresXF statement. *)
 lemma ccorresE_corresXF_merge:
-  "\<lbrakk> ccorresE st1 \<Gamma> \<top> G1 M B;
+  "\<lbrakk> ccorresE st1 ct \<Gamma> \<top> G1 M B;
      corresXF st2 rx ex G2 A M;
      no_throw \<top> A;
      \<And>s. st s = st2 (st1 s);
      \<And>r s. rx' s = rx r (st1 s);
      \<And>s. G s \<longrightarrow> (s \<in> G1 \<and> G2 (st1 s)) \<rbrakk> \<Longrightarrow>
-    ac_corres st \<Gamma> rx' G A B"
+    ac_corres st ct \<Gamma> rx' G A B"
   apply (unfold ac_corres_def)
   apply clarsimp
   apply (clarsimp simp: ccorresE_def)
@@ -737,13 +737,13 @@ lemma corresXF_corresXF_merge:
   done
 
 lemma ac_corres_guard_imp:
-  "\<lbrakk> ac_corres st G rx P A C; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> ac_corres st G rx P' A C"
+  "\<lbrakk> ac_corres st ct G rx P A C; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> ac_corres st ct G rx P' A C"
   apply atomize
   apply (clarsimp simp: ac_corres_def)
   done
 
 lemma hoarep_from_ac_corres:
-  "\<lbrakk> ac_corres st G rx P' A C; \<lbrace> \<lambda>s. P s \<rbrace> A \<lbrace> \<lambda>rv s. Q rv s \<rbrace>, \<lbrace> \<lambda>rv s. True \<rbrace>!; \<And>s. P (st s) \<Longrightarrow> P' s \<rbrakk>
+  "\<lbrakk> ac_corres st ct G rx P' A C; \<lbrace> \<lambda>s. P s \<rbrace> A \<lbrace> \<lambda>rv s. Q rv s \<rbrace>, \<lbrace> \<lambda>rv s. True \<rbrace>!; \<And>s. P (st s) \<Longrightarrow> P' s \<rbrakk>
     \<Longrightarrow> hoarep G \<Theta> F {s. P (st s) } C {s. Q (rx s) (st s) } E"
   apply (clarsimp simp: ac_corres_def)
   apply (rule hoare_complete')
@@ -768,7 +768,8 @@ lemma hoarep_from_ac_corres:
   done
 
 lemma hoaret_from_ac_corres:
-  "\<lbrakk> ac_corres st G rx P' A C; \<lbrace> \<lambda>s. P s \<rbrace> A \<lbrace> \<lambda>rv s. Q rv s \<rbrace>, \<lbrace> \<lambda>rv s. True \<rbrace>!; \<And>s. P (st s) \<Longrightarrow> P' s \<rbrakk>
+  "\<lbrakk> ac_corres st ct G rx P' A C; \<lbrace> \<lambda>s. P s \<rbrace> A \<lbrace> \<lambda>rv s. Q rv s \<rbrace>, \<lbrace> \<lambda>rv s. True \<rbrace>!;
+        \<And>s. P (st s) \<Longrightarrow> P' s; ct \<rbrakk>
     \<Longrightarrow> hoaret G \<Theta> F {s. P (st s) } C {s. Q (rx s) (st s) } E"
   apply (rule TerminationPartial)
    apply (erule (1) hoarep_from_ac_corres, simp)
@@ -827,11 +828,6 @@ lemma corresXF_spec:
   apply (frule_tac y=s' in surjD)
   apply (clarsimp simp: image_def set_eq_UNIV)
   apply metis
-  done
-
-lemma globals_surj [simp]: "surj globals"
-  apply (rule surjI [where f="\<lambda>x. undefined\<lparr> globals := x\<rparr>"])
-  apply simp
   done
 
 lemma corresXF_throw:
