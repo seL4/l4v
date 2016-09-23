@@ -57,4 +57,7 @@ lemma suspend_st_tcb_at':
   apply (simp|wp cancelIPC_st_tcb_at' sts_st_tcb')+
   done
 
+lemma to_bool_if:
+  "(if w \<noteq> 0 then 1 else 0) = (if to_bool w then 1 else 0)"
+  by (auto simp: to_bool_def)
 end

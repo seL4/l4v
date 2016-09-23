@@ -16,6 +16,9 @@ theory Retype_AI
 imports VSpace_AI
 begin
 
+abbreviation "up_aligned_area ptr sz \<equiv> {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}"
+abbreviation "down_aligned_area ptr sz \<equiv> {(ptr && ~~ mask sz) + (2 ^ sz - 1) .. ptr}"
+
 context begin interpretation Arch .
 requalify_facts
   global_refs_kheap
@@ -33,7 +36,6 @@ locale Retype_AI_clearMemoryVM =
 context Retype_AI_clearMemoryVM begin
 lemmas clearMemoryVM_return_raw = clearMemoryVM_return[abs_def]
 end
-
 
 lemma upto_enum_inc_1:
   "a < 2^word_bits - 1 \<Longrightarrow> [(0::machine_word).e.1 + a] = [0.e.a] @ [(1+a)]"
@@ -325,23 +327,34 @@ lemma aligned_diff:
 
 
 lemma default_object_tcbE:
-  "\<lbrakk> default_object ty us = TCB tcb; ty \<noteq> Untyped; 
+  "\<lbrakk> default_object ty dev us = TCB tcb; ty \<noteq> Untyped; 
    \<lbrakk> tcb = default_tcb; ty = Structures_A.TCBObject \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding default_object_def by (cases ty, auto)
 
 
 locale Retype_AI_slot_bits =
   assumes slot_bits_def2: "slot_bits = cte_level_bits"
+     and  arch_kobj_size_cong: 
+            "\<And>a a1 c c1. \<lbrakk>a = a1; c=c1\<rbrakk> \<Longrightarrow> arch_kobj_size (default_arch_object a b c) 
+                 = arch_kobj_size (default_arch_object a1 b1 c1)"
+
+
+lemma (in Retype_AI_slot_bits) obj_bits_cong: 
+  "\<lbrakk>a = a1; c=c1\<rbrakk> \<Longrightarrow> obj_bits (default_object a b c) 
+    = obj_bits (default_object a1 b1 c1)"
+  by (simp add: default_object_def arch_kobj_size_cong
+         split: if_splits apiobject_type.splits)
 
 lemma (in Retype_AI_slot_bits) obj_bits_api_default_object:
-  "\<lbrakk> ty \<noteq> Untyped\<rbrakk> \<Longrightarrow> obj_bits_api ty us = obj_bits (default_object ty us)"
+  "\<lbrakk> ty \<noteq> Untyped\<rbrakk> \<Longrightarrow> obj_bits_api ty us = obj_bits (default_object ty dev us)"
   unfolding obj_bits_api_def default_object_def
   by (cases ty)
-     (simp_all add: slot_bits_def2 wf_empty_bits cte_level_bits_def)
+     (simp_all add: slot_bits_def2 arch_kobj_size_cong wf_empty_bits cte_level_bits_def)
+
 
 
 lemma obj_bits_api_default_CapTableObject:
-  "obj_bits (default_object Structures_A.apiobject_type.CapTableObject us) 
+  "obj_bits (default_object Structures_A.apiobject_type.CapTableObject dev us) 
   = cte_level_bits + us"
   unfolding default_object_def 
   by (simp add: cte_level_bits_def wf_empty_bits)
@@ -357,7 +370,7 @@ context Retype_AI_slot_bits begin
 lemma obj_bits_api_def2:
   "obj_bits_api type obj_size_bits =
    (case type of Structures_A.Untyped \<Rightarrow> obj_size_bits
-           | _ \<Rightarrow> obj_bits (default_object type obj_size_bits))" 
+           | _ \<Rightarrow> obj_bits (default_object type False obj_size_bits))" 
   by (simp add: obj_bits_api_def default_object_def
                 wf_empty_bits dom_empty_cnode ex_with_length
                 slot_bits_def2 cte_level_bits_def
@@ -366,9 +379,28 @@ lemma obj_bits_api_def2:
 lemma obj_bits_api_def3:
   "obj_bits_api type obj_size_bits =
    (if type = Structures_A.Untyped then obj_size_bits
-     else obj_bits (default_object type obj_size_bits))"
-  by (simp add: obj_bits_api_def2 split: Structures_A.apiobject_type.split)
+     else obj_bits (default_object type False obj_size_bits))"
+  by (simp add: obj_bits_api_def default_object_def
+                wf_empty_bits dom_empty_cnode ex_with_length
+                slot_bits_def2 cte_level_bits_def
+         split: apiobject_type.split)
 
+lemma obj_bits_api_def4:
+  "obj_bits_api type obj_size_bits =
+   (if type = Structures_A.Untyped then obj_size_bits
+     else obj_bits (default_object type True obj_size_bits))"
+  by (simp add: obj_bits_api_def default_object_def arch_kobj_size_cong
+                wf_empty_bits dom_empty_cnode ex_with_length
+                slot_bits_def2 cte_level_bits_def
+         split: apiobject_type.split)
+
+lemma obj_bits_dev_irr:
+  "ty \<noteq> Untyped \<Longrightarrow> obj_bits (default_object ty dev us) = obj_bits_api ty us"
+  by (simp add: obj_bits_api_def3 cong: obj_bits_cong)
+
+lemma default_obj_range:
+  "ty \<noteq> Untyped \<Longrightarrow> obj_range p (default_object ty dev us) = {p..p + 2 ^ (obj_bits_api ty us) - 1}"
+  by (simp add: obj_range_def obj_bits_dev_irr)
 end
 
 
@@ -556,6 +588,15 @@ proof -
   done
  qed
 
+lemma no_overflow_n:"n * 2^sbit < 2^len_of TYPE('a)"
+  using aligned sz
+  apply (clarsimp dest!:add_leD1)
+  apply (rule le_less_trans)
+  apply (drule Nat.mult_le_mono[where i = n and k = "2^sbit",OF _ le_refl])
+  apply (clarsimp simp: power_add[symmetric])
+   apply (assumption)
+  apply clarsimp
+  done
 
 lemma range_cover_n_le:
   "n \<le> 2 ^ (len_of TYPE('a) - sbit)"
@@ -875,8 +916,8 @@ lemma mdb_cte_at_no_descendants:
 
 lemma caps_of_state_foldr:
   assumes tyun: "ty \<noteq> Untyped"
-  fixes s sz ptr us addrs
-  defines "s' \<equiv> (s\<lparr>kheap := foldr (\<lambda>p ps. ps(p \<mapsto> default_object ty us)) 
+  fixes s sz ptr us addrs dev
+  defines "s' \<equiv> (s\<lparr>kheap := foldr (\<lambda>p ps. ps(p \<mapsto> default_object ty dev us)) 
                   addrs (kheap s)\<rparr>)"
   shows
   "caps_of_state s' =
@@ -913,10 +954,10 @@ lemma caps_of_state_foldr:
 
 
 lemma null_filter_caps_of_state_foldr:
-  fixes s sz ptr us addrs
+  fixes s sz ptr us addrs dev
   assumes tyun: "ty \<noteq> Untyped"
     and nondom: "\<forall>x \<in> set addrs. x \<notin> dom (kheap s)"
-  defines "s' \<equiv> (s\<lparr>kheap := foldr (\<lambda>p ps. ps(p \<mapsto> default_object ty us)) 
+  defines "s' \<equiv> (s\<lparr>kheap := foldr (\<lambda>p ps. ps(p \<mapsto> default_object ty dev us)) 
                   addrs (kheap s)\<rparr>)"
   shows
   "null_filter (caps_of_state s') =
@@ -1131,16 +1172,14 @@ lemma range_cover_subset_not_empty:
     apply (fastforce simp:range_cover_def)+
   done
 
-
 crunch global_refs[wp]: retype_region "\<lambda>s. P (global_refs s)"
   (simp: crunch_simps)
-
 
 locale Retype_AI_retype_region_ret =
   fixes state_ext_t :: "'state_ext :: state_ext itself"
   assumes retype_region_ret_folded:
-    "\<And> y n bits ty.
-      \<lbrace>\<top>\<rbrace> retype_region y n bits ty 
+    "\<And> y n bits ty dev.
+      \<lbrace>\<top>\<rbrace> retype_region y n bits ty dev
       \<lbrace>\<lambda>r (s :: 'state_ext state). r = retype_addrs y ty n bits\<rbrace>"
 
 
@@ -1151,7 +1190,7 @@ lemmas retype_region_ret = retype_region_ret_folded[unfolded retype_addrs_def]
 lemma retype_region_global_refs_disjoint:
   "\<lbrace>(\<lambda>s::'state_ext state. {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<inter> global_refs s = {})
             and K (range_cover ptr sz (obj_bits_api apiobject_type obits) n)\<rbrace>
-     retype_region ptr n obits apiobject_type 
+     retype_region ptr n obits apiobject_type dev
    \<lbrace>\<lambda>r s. global_refs s \<inter> set r = {}\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_lift_Pf3[where f=global_refs])
@@ -1185,7 +1224,6 @@ done
 
 end
 
-
 crunch valid_pspace: do_machine_op "valid_pspace"
 
 
@@ -1199,7 +1237,6 @@ lemma do_machine_op_return_foo:
   apply clarsimp
   done
 
-
 abbreviation(input)
  "all_invs_but_equal_kernel_mappings_restricted S
     \<equiv> (\<lambda>s. equal_kernel_mappings (s \<lparr> kheap := restrict_map (kheap s) (- S) \<rparr>))
@@ -1211,6 +1248,7 @@ abbreviation(input)
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings 
        and valid_asid_map and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
+       and pspace_respects_device_region and cap_refs_respects_device_region
        and cur_tcb and valid_ioc and valid_machine_state"
 
 
@@ -1248,10 +1286,9 @@ locale Retype_AI_post_retype_invs =
         then all_invs_but_equal_kernel_mappings_restricted (set refs)
         else invs"
 
-
-lemma (in Retype_AI_retype_region_ret) retype_region_aligned_for_init[wp]:
+lemma  (in Retype_AI_retype_region_ret)  retype_region_aligned_for_init[wp]:
   "\<lbrace>\<lambda>s::'state_ext state. range_cover ptr sz (obj_bits_api new_type obj_sz) n\<rbrace>
-     retype_region ptr n obj_sz new_type
+     retype_region ptr n obj_sz new_type dev
    \<lbrace>\<lambda>rv s. \<forall>ref \<in> set rv. is_aligned ref (obj_bits_api new_type obj_sz)\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (rule hoare_chain, rule retype_region_ret)
@@ -1459,14 +1496,14 @@ lemma valid_mdb_rep3:
 
 
 lemma retype_region_mdb[wp]:
-  "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> retype_region ptr n us ty \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> retype_region ptr n us ty dev \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
   apply (simp add: retype_region_def split del: split_if cong: if_cong)
   apply (wp|clarsimp)+
   done
 
 
 lemma retype_region_revokable[wp]:
-  "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> retype_region ptr n us ty \<lbrace>\<lambda>rv s. P (is_original_cap s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> retype_region ptr n us ty dev \<lbrace>\<lambda>rv s. P (is_original_cap s)\<rbrace>"
   apply (simp add: retype_region_def split del: split_if cong: if_cong)
   apply (wp|clarsimp)+
   done
@@ -1494,8 +1531,8 @@ lemma obj_at_kheap_trans_state[simp]:"obj_at P ptr (kheap_update f (trans_state 
 
 lemma retype_region_obj_at:
   assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
-  shows "\<lbrace>\<top>\<rbrace> retype_region ptr n us ty 
-  \<lbrace>\<lambda>r s. \<forall>x \<in> set (retype_addrs ptr ty n us). obj_at (\<lambda>ko. ko = default_object ty us) x s\<rbrace>"
+  shows "\<lbrace>\<top>\<rbrace> retype_region ptr n us ty dev
+  \<lbrace>\<lambda>r s. \<forall>x \<in> set (retype_addrs ptr ty n us). obj_at (\<lambda>ko. ko = default_object ty dev us) x s\<rbrace>"
   using tyunt unfolding retype_region_def
   apply (simp only: return_bind bind_return foldr_upd_app_if fun_app_def K_bind_def)
   apply wp
@@ -1512,7 +1549,7 @@ lemma retype_region_obj_at:
 
 lemma retype_region_obj_at_other:
   assumes ptrv: "ptr \<notin> set (retype_addrs ptr' ty n us)"
-  shows "\<lbrace>obj_at P ptr\<rbrace> retype_region ptr' n us ty \<lbrace>\<lambda>r. obj_at P ptr\<rbrace>"
+  shows "\<lbrace>obj_at P ptr\<rbrace> retype_region ptr' n us ty dev \<lbrace>\<lambda>r. obj_at P ptr\<rbrace>"
   using ptrv unfolding retype_region_def retype_addrs_def 
   apply (simp only: foldr_upd_app_if fun_app_def K_bind_def)
   apply wp
@@ -1527,7 +1564,7 @@ lemma retype_region_obj_at_other:
 
 lemma retype_region_obj_at_other2:
   "\<lbrace>\<lambda>s. ptr \<notin> set (retype_addrs ptr' ty n us)
-       \<and> obj_at P ptr s\<rbrace> retype_region ptr' n us ty \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
+       \<and> obj_at P ptr s\<rbrace> retype_region ptr' n us ty dev \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (wp retype_region_obj_at_other)
    apply simp_all
@@ -1537,7 +1574,7 @@ lemma retype_region_obj_at_other2:
 lemma retype_region_obj_at_other3:
   "\<lbrace>\<lambda>s. pspace_no_overlap ptr sz s \<and> obj_at P p s \<and> range_cover ptr sz (obj_bits_api ty us) n
            \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
-     retype_region ptr n us ty
+     retype_region ptr n us ty dev
    \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
    apply (rule hoare_pre)
     apply (rule retype_region_obj_at_other2)
@@ -1552,7 +1589,7 @@ done
 lemma retype_region_st_tcb_at:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). pspace_no_overlap ptr' sz s \<and> pred_tcb_at proj P t s \<and> range_cover ptr' sz (obj_bits_api ty us) n
           \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
-     retype_region ptr' n us ty \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+     retype_region ptr' n us ty dev \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   by (simp add: retype_region_obj_at_other3 pred_tcb_at_def)
 
 
@@ -1560,7 +1597,7 @@ lemma retype_region_cur_tcb[wp]:
   "\<lbrace>pspace_no_overlap ptr sz and cur_tcb and K (range_cover ptr sz (obj_bits_api ty us) n)
      and K (is_aligned ptr sz \<and> sz < word_bits)
      and valid_objs and pspace_aligned\<rbrace>
-     retype_region ptr n us ty
+     retype_region ptr n us ty dev
    \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
   apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>tp. tcb_at tp s \<and> cur_thread s = tp"])
    apply (simp add: cur_tcb_def)
@@ -1605,21 +1642,21 @@ context Retype_AI_slot_bits begin
 
 lemma retype_addrs_obj_range_subset:
   "\<lbrakk>  p \<in> set (retype_addrs ptr ty n us);
-      range_cover ptr sz (obj_bits (default_object ty us)) n;
+      range_cover ptr sz (obj_bits (default_object ty dev us)) n;
   ty \<noteq> Untyped \<rbrakk>
-  \<Longrightarrow> obj_range p (default_object ty us) \<subseteq> {ptr..(ptr && ~~ mask sz) + 2^sz - 1}"
+  \<Longrightarrow> obj_range p (default_object ty dev us) \<subseteq> {ptr..(ptr && ~~ mask sz) + (2^sz - 1)}"
   by(simp add: obj_range_def obj_bits_api_default_object[symmetric]
-                retype_addrs_range_subset
+                retype_addrs_range_subset p_assoc_help[symmetric]
            del: atLeastatMost_subset_iff)
 
 lemma retype_addrs_obj_range_subset_strong:
   "\<lbrakk> p \<in> set (retype_addrs ptr ty n us);
-    range_cover ptr sz (obj_bits (default_object ty us)) n;
+    range_cover ptr sz (obj_bits_api ty us) n;
   ty \<noteq> Untyped \<rbrakk>
-   \<Longrightarrow> obj_range p (default_object ty us) \<subseteq>  {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}"
+   \<Longrightarrow> obj_range p (default_object ty dev us) \<subseteq>  {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}"
   unfolding obj_range_def
-
-  apply (frule(1) retype_addrs_obj_range_subset)
+  apply (frule retype_addrs_obj_range_subset)
+   apply (simp add:obj_bits_dev_irr)
   apply (simp add:obj_range_def)+
   apply (intro conjI impI)
   apply (erule(1) impE)
@@ -1627,7 +1664,7 @@ lemma retype_addrs_obj_range_subset_strong:
   apply (case_tac "n = 0")
    apply (clarsimp simp:retype_addrs_def)
   proof -
-    assume cover:"range_cover ptr sz (obj_bits (default_object ty us)) n"
+    assume cover:"range_cover ptr sz (obj_bits_api ty us) n"
       and  mem_p:"p \<in> set (retype_addrs ptr ty n us)"
       and  not_0:"n\<noteq> 0"
       and  tyunt:"ty\<noteq> Untyped"
@@ -1635,29 +1672,30 @@ lemma retype_addrs_obj_range_subset_strong:
     have unat_of_nat_m1: "unat (of_nat n - (1::word32)) < n"
       using not_0 n_less
        by (simp add:unat_of_nat_minus_1)
-    have decomp:"of_nat n * 2 ^ obj_bits_api ty us = of_nat (n - 1) * 2 ^ (obj_bits (default_object ty us))
-      + (2 :: word32) ^ obj_bits (default_object ty us)"
+    have decomp:"of_nat n * 2 ^ obj_bits_api ty us = of_nat (n - 1) * 2 ^ (obj_bits (default_object ty dev us))
+      + (2 :: word32) ^ obj_bits (default_object ty dev us)"
       apply (simp add:distrib_right[where b = "1::'a::len word",simplified,symmetric])
       using not_0 n_less
-      apply (simp add:unat_of_nat_minus_1 obj_bits_api_def3 tyunt)
+      apply (simp add: unat_of_nat_minus_1 obj_bits_api_def3 tyunt cong: obj_bits_cong)
       done
-    show  "p + 2 ^ obj_bits (default_object ty us) - 1 \<le> ptr + of_nat n * 2 ^ obj_bits_api ty us - 1"
+    show  "p + 2 ^ obj_bits (default_object ty dev us) - 1 \<le> ptr + of_nat n * 2 ^ obj_bits_api ty us - 1"
       apply (subst decomp)
       apply (simp add:add.assoc[symmetric])
       apply (simp add:p_assoc_help)
       apply (rule order_trans[OF word_plus_mono_left word_plus_mono_right])
        using mem_p not_0
-         apply (clarsimp simp:retype_addrs_def ptr_add_def shiftl_t2n tyunt obj_bits_api_def3)
+         apply (clarsimp simp: retype_addrs_def ptr_add_def shiftl_t2n tyunt 
+                               obj_bits_dev_irr)
          apply (rule word_plus_mono_right)
           apply (rule word_mult_le_mono1[OF word_of_nat_le])
           using n_less not_0
             apply (simp add:unat_of_nat_minus_1)
            apply (rule p2_gt_0[THEN iffD2])
            using cover
-           apply (simp add:word_bits_def range_cover_def)
+           apply (simp add: word_bits_def range_cover_def obj_bits_dev_irr tyunt)
           apply (simp only: word_bits_def[symmetric])
           using not_0 n_less
-          apply (clarsimp simp: unat_of_nat_minus_1)
+          apply (clarsimp simp: unat_of_nat_minus_1 obj_bits_dev_irr tyunt)
           apply (subst unat_power_lower)
             using cover
             apply (simp add:range_cover_def)
@@ -1671,13 +1709,13 @@ lemma retype_addrs_obj_range_subset_strong:
        using cover
        apply (simp add:range_cover_def word_bits_def)
       apply (rule olen_add_eqv[THEN iffD2])
-      apply (subst add.commute[where a = "2^(obj_bits (default_object ty us)) - 1"])
+      apply (subst add.commute[where a = "2^(obj_bits (default_object ty dev us)) - 1"])
      apply (subst p_assoc_help[symmetric])
      apply (rule is_aligned_no_overflow)
      apply (insert cover)
      apply (clarsimp simp:range_cover_def)
      apply (erule aligned_add_aligned[OF _  is_aligned_mult_triv2])
-       apply (simp add:range_cover_def)+
+       apply (simp add: obj_bits_dev_irr range_cover_def tyunt)+
    done
   qed
 
@@ -1687,17 +1725,9 @@ lemma retype_addrs_mem_subset_ptr_bits:
   and tynunt: "ty \<noteq> Untyped"
   and     xv: "x \<in> set (retype_addrs ptr ty n us)"
   shows "{x .. x + (2 ^ obj_bits_api ty us - 1)} \<subseteq> {ptr .. (ptr && ~~ mask sz) + (2 ^ sz - 1)}"
-proof -
-  have P: "obj_bits_api ty us = obj_bits (default_object ty us)"
-    apply (cases ty)
-      apply (simp add: obj_bits_api_def2 tynunt)+
-    done
-  show ?thesis
-    apply (insert cover)
-    using retype_addrs_obj_range_subset [OF xv _ tynunt]
-    by (simp add: P obj_range_def field_simps)
-qed
-
+  apply (insert cover)
+  using retype_addrs_obj_range_subset [OF xv _ tynunt]
+  by (simp add: obj_bits_dev_irr tynunt obj_range_def field_simps)
 
 lemma pspace_no_overlap_retype_addrs_empty:
   assumes nptr: "pspace_no_overlap ptr sz s"
@@ -1707,9 +1737,9 @@ lemma pspace_no_overlap_retype_addrs_empty:
   and tyv: "ty \<noteq> Structures_A.apiobject_type.Untyped"
   and cover: "range_cover ptr sz (obj_bits_api ty us) n" 
   and oab: "obj_bits_api ty us \<le> sz"  
-  shows "{x..x + (2 ^ obj_bits (default_object ty us) - 1)} \<inter> {y..y + (2 ^ obj_bits ko - 1)} = {}"
+  shows "{x..x + (2 ^ obj_bits (default_object ty dev us) - 1)} \<inter> {y..y + (2 ^ obj_bits ko - 1)} = {}"
 proof -
-  have "{x..x + (2 ^ obj_bits (default_object ty us) - 1)} \<subseteq> {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}"
+  have "{x..x + (2 ^ obj_bits (default_object ty dev us) - 1)} \<subseteq> {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}"
    by (subst obj_bits_api_default_object [OF tyv, symmetric],
       rule retype_addrs_mem_subset_ptr_bits) fact+
   
@@ -1725,7 +1755,7 @@ end
 lemma valid_obj_default_object:
   assumes tyunt: "ty \<noteq> Untyped"
   and      tyct: "ty = CapTableObject \<Longrightarrow> us < word_bits - cte_level_bits \<and> 0 < us"
-  shows "valid_obj ptr (default_object ty us) s"
+  shows "valid_obj ptr (default_object ty dev us) s"
   unfolding valid_obj_def default_object_def
   apply (cases ty)
        apply (simp add: tyunt)
@@ -1749,7 +1779,7 @@ lemma valid_obj_default_object:
 
 lemma valid_arch_obj_default:
   assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
-  shows "ArchObj ao = default_object ty us \<Longrightarrow> valid_arch_obj ao s'"
+  shows "ArchObj ao = default_object ty dev us \<Longrightarrow> valid_arch_obj ao s'"
   apply (cases ty, simp_all add: default_object_def tyunt)
   apply (simp add: valid_arch_obj_default')
   done
@@ -1777,7 +1807,7 @@ lemma usable_range_emptyD:
 locale Retype_AI_valid_untyped_helper =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes valid_untyped_helper:
-    "\<And>s c q ty ptr sz us n.
+    "\<And>s c q ty ptr sz us n dev.
       \<lbrakk> (s :: 'state_ext state) \<turnstile> c; 
         cte_wp_at (op = c) q s;
         ty \<noteq> Untyped;
@@ -1789,13 +1819,24 @@ locale Retype_AI_valid_untyped_helper =
         valid_pspace s \<rbrakk>
       \<Longrightarrow> valid_cap c
            (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us) 
-                             then Some (default_object ty us)
+                             then Some (default_object ty dev us)
                              else kheap s x\<rparr>)"
 
 
+lemma cap_refs_respects_device_region_cap_range:
+  "\<lbrakk>cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s;
+    cap_refs_respects_device_region s\<rbrakk>
+    \<Longrightarrow> up_aligned_area ptr sz \<subseteq> (if dev then device_region s else - device_region s)"
+  unfolding cap_refs_respects_device_region_def
+  apply (drule spec[where x = slot])
+  apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def)
+  apply fastforce
+  done
+  
+
 locale retype_region_proofs =
   fixes s :: "'state_ext :: state_ext state"
-    and ty us ptr sz n ps s'
+    and ty us ptr sz n ps s' dev
   assumes    vp: "valid_pspace s"
       and    vm: "valid_mdb s"
       and   res: "caps_overlap_reserved {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} s"
@@ -1803,18 +1844,19 @@ locale retype_region_proofs =
       and  tyct: "ty = CapTableObject \<Longrightarrow> us < word_bits - cte_level_bits \<and> 0 < us"
       and  orth: "pspace_no_overlap ptr sz s"
       and  mem :  "caps_no_overlap ptr sz s"
-      and cover: "range_cover ptr sz (obj_bits_api ty us) n" 
-  defines "ps \<equiv> (\<lambda>x. if x \<in> set (retype_addrs ptr ty n us) then Some (default_object ty us)
+      and cover: "range_cover ptr sz (obj_bits_api ty us) n"
+      and dev: "\<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s"
+  defines "ps \<equiv> (\<lambda>x. if x \<in> set (retype_addrs ptr ty n us) then Some (default_object ty dev us)
                        else kheap s x)"
       and "s' \<equiv> kheap_update (\<lambda>y. ps) s"
 
 
 locale retype_region_proofs_gen
-  = retype_region_proofs s ty us ptr sz n ps s'
+  = retype_region_proofs s ty us ptr sz n ps s' dev
   + Retype_AI_slot_bits
   + Retype_AI_valid_untyped_helper "TYPE('state_ext)"
   for s :: "'state_ext :: state_ext state"
-  and ty us ptr sz n ps s'
+  and ty us ptr sz n ps s' dev
 
 
 context retype_region_proofs begin
@@ -1863,21 +1905,22 @@ proof -
       apply (rule retype_addrs_aligned)
       apply fact+
       apply (insert cover)
-        apply (auto simp:range_cover_def word_bits_def)
+        apply (auto simp: range_cover_def word_bits_def)
       done
     moreover
     have "is_aligned y (obj_bits_api ty us)"
       apply (rule retype_addrs_aligned)
       apply fact+
       apply (insert cover)
-      apply (auto simp:range_cover_def word_bits_def)
+      apply (auto simp: range_cover_def word_bits_def)
       done
     ultimately have
-      "{x..x + (2 ^ obj_bits (default_object ty us) - 1)} \<inter> {y..y + (2 ^ obj_bits (default_object ty us) - 1)} = {}"
+      "{x..x + (2 ^ obj_bits (default_object ty dev us) - 1)} \<inter>
+       {y..y + (2 ^ obj_bits (default_object ty dev us) - 1)} = {}"
       using xne tyunt cover
       apply -
       apply (rule aligned_neq_into_no_overlap)
-      apply (simp_all add: obj_bits_api_default_object range_cover_def word_bits_def)
+      apply (simp_all add: range_cover_def word_bits_def obj_bits_dev_irr)
       done
   } note inter = this
   moreover
@@ -1885,11 +1928,11 @@ proof -
     fix x y ko'
     assume xne: "x \<noteq> y" and xv: "x \<in> set (retype_addrs ptr ty n us)" 
         and yv: "y \<notin> set (retype_addrs ptr ty n us)" and  "kheap s y = Some ko'"
-    have "{x..x + (2 ^ obj_bits (default_object ty us) - 1)} \<inter> {y..y + (2 ^ obj_bits ko' - 1)} = {}"
+    have "{x..x + (2 ^ obj_bits (default_object ty dev us) - 1)} \<inter> {y..y + (2 ^ obj_bits ko' - 1)} = {}"
       apply (rule pspace_no_overlap_retype_addrs_empty [OF orth])
       apply fact+
       apply (insert cover tyunt)
-      apply (simp add:range_cover_def word_bits_def)+
+      apply (simp add: range_cover_def word_bits_def)+
       done
   }note inter' = this
   show ?thesis
@@ -1921,13 +1964,13 @@ lemma psp_al:
 proof (clarsimp split: split_if_asm)
   fix x
   assume "x \<in> set (retype_addrs ptr ty n us)"
-  thus "is_aligned x (obj_bits (default_object ty us))"
+  thus "is_aligned x (obj_bits (default_object ty dev us))"
     apply -
     apply (drule retype_addrs_aligned)
     apply (insert cover tyunt)
       apply (fastforce simp:range_cover_def word_bits_def)+
-    apply (simp add:obj_bits_api_def2 
-      split: Structures_A.apiobject_type.splits)
+    apply (simp add: obj_bits_dev_irr
+              split: Structures_A.apiobject_type.splits)
     done
 next
   fix x y
@@ -2102,7 +2145,6 @@ lemma (in retype_region_proofs) null_filter:
   apply (simp add: F2 cte_retype)
   done
 
-
 context retype_region_proofs begin
 
 lemma idle_s':
@@ -2172,6 +2214,24 @@ lemma valid_irq_handlers_def2:
   done
 
 
+lemma p_in_obj_range:
+  "\<lbrakk> kheap s p = Some ko; pspace_aligned s; valid_objs s \<rbrakk> \<Longrightarrow> p \<in> obj_range p ko"
+  apply (simp add: pspace_aligned_def)
+  apply (drule bspec, erule domI)
+  apply (drule valid_obj_sizes, erule ranI)
+  apply (simp add: obj_range_def add_diff_eq[symmetric])
+  apply (erule is_aligned_no_wrap')
+  apply (erule word_power_less_1[where 'a=32, folded word_bits_def])
+  done
+
+lemma p_in_obj_range_internal:
+  "\<lbrakk> kheap s (p && ~~ mask (obj_bits ko))= Some ko; pspace_aligned s; valid_objs s \<rbrakk> 
+  \<Longrightarrow> p \<in> obj_range (p && ~~ mask (obj_bits ko)) ko"
+  apply (drule p_in_obj_range,simp+)
+  apply (simp add: obj_range_def word_and_le2 word_neg_and_le p_assoc_help)
+  done
+
+
 context retype_region_proofs begin
 
 lemma interrupt_states:
@@ -2220,12 +2280,11 @@ lemma valid_ioc:
 
 end
 
-
 locale retype_region_proofs_invs
-  = retype_region_proofs_gen s ty us ptr sz n ps s'
+  = retype_region_proofs_gen s ty us ptr sz n ps s' dev
   + Retype_AI_post_retype_invs "TYPE('state_ext)" post_retype_invs_check post_retype_invs
   for s :: "'state_ext :: state_ext state"
-  and ty us ptr sz n ps s' post_retype_invs_check
+  and ty us ptr sz n ps s' dev post_retype_invs_check
   and post_retype_invs :: "apiobject_type \<Rightarrow> word32 list \<Rightarrow> 'state_ext state \<Rightarrow> bool" +
   fixes region_in_kernel_window :: "word32 set \<Rightarrow> 'state_ext state \<Rightarrow> bool"
   assumes valid_global_refs: "valid_global_refs s \<Longrightarrow> valid_global_refs s'"
@@ -2239,14 +2298,13 @@ locale retype_region_proofs_invs
     "\<lbrakk> invs (s :: 'state_ext state); region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} s \<rbrakk>
         \<Longrightarrow> post_retype_invs ty (retype_addrs ptr ty n us) s'"
 
-
 context Retype_AI_slot_bits begin
 
 lemma use_retype_region_proofs':
-  assumes x: "\<And>s. \<lbrakk> retype_region_proofs s ty us ptr sz n; P s \<rbrakk>
+  assumes x: "\<And>s. \<lbrakk> retype_region_proofs s ty us ptr sz n dev; P s \<rbrakk>
    \<Longrightarrow> Q (retype_addrs ptr ty n us) (s\<lparr>kheap :=
            \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
-             then Some (default_object ty us)
+             then Some (default_object ty dev us)
              else kheap s x\<rparr>)"
   assumes y: "\<And>x s f. Q x (trans_state f s) = Q x s"
   shows
@@ -2254,8 +2312,9 @@ lemma use_retype_region_proofs':
          \<And>s. P s \<longrightarrow> Q (retype_addrs ptr ty n us) s \<rbrakk> \<Longrightarrow>
     \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n 
         \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s
-        \<and> caps_no_overlap ptr sz s \<and> pspace_no_overlap ptr sz s \<and>
-        P s\<rbrace> retype_region ptr n us ty \<lbrace>Q\<rbrace>"
+        \<and> caps_no_overlap ptr sz s \<and> pspace_no_overlap ptr sz s
+        \<and> (\<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
+        \<and> P s\<rbrace> retype_region ptr n us ty dev \<lbrace>Q\<rbrace>"
   apply (simp add: retype_region_def split del: split_if)
   apply (rule hoare_pre, (wp|simp add:y trans_state_update[symmetric] del: trans_state_update)+)
   apply (clarsimp simp: retype_addrs_fold 
@@ -2263,10 +2322,10 @@ lemma use_retype_region_proofs':
   apply safe
   apply (rule x)
    apply (rule retype_region_proofs.intro, simp_all)[1]
-   apply (clarsimp simp add: range_cover_def obj_bits_api_def 
+
+   apply (fastforce simp add: range_cover_def obj_bits_api_def 
      slot_bits_def2 word_bits_def cte_level_bits_def)+
   done
-
 end
 
 
@@ -2291,9 +2350,9 @@ locale Retype_AI
     "\<And>(f::'state_ext \<Rightarrow> 'state_ext') (s::'state_ext state).
       equal_kernel_mappings (trans_state f s) = equal_kernel_mappings s"
   assumes retype_region_proofs_assms:
-    "\<And>s ty us ptr sz n.
-      retype_region_proofs (s::'state_ext state) ty us ptr sz n
-        \<Longrightarrow> retype_region_proofs_invs s ty us ptr sz n
+    "\<And>s ty us ptr sz n dev.
+      retype_region_proofs (s::'state_ext state) ty us ptr sz n dev
+        \<Longrightarrow> retype_region_proofs_invs s ty us ptr sz n dev
                                       post_retype_invs_check post_retype_invs
                                       region_in_kernel_window"
 
@@ -2306,8 +2365,8 @@ lemmas use_retype_region_proofs
 
 
 lemma retype_region_proofs_assms':
-  assumes "retype_region_proofs (s::'state_ext state) ty us ptr sz n"
-  shows "retype_region_proofs_gen s ty us ptr sz n"
+  assumes "retype_region_proofs (s::'state_ext state) ty us ptr sz n dev"
+  shows "retype_region_proofs_gen s ty us ptr sz n dev"
   using assms retype_region_proofs_assms
   by (auto simp: retype_region_proofs_invs_def)
 
@@ -2329,8 +2388,9 @@ lemma retype_region_valid_cap:
    \<Longrightarrow> \<lbrace>(\<lambda>s::'state_ext state. valid_pspace s \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s \<and>
            valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n \<and>
            caps_no_overlap ptr sz s \<and> pspace_no_overlap ptr sz s  \<and>
+           (\<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) \<and>
            s \<turnstile> cap) and K (untyped_range cap \<inter> {ptr..(ptr &&~~ mask sz) + 2 ^ sz - 1} = {})\<rbrace>
-        retype_region ptr n us ty
+        retype_region ptr n us ty dev
       \<lbrace>\<lambda>r s. s \<turnstile> cap\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
@@ -2406,9 +2466,10 @@ lemma retype_region_post_retype_invs:
   "\<lbrace>(invs::'state_ext state \<Rightarrow> bool) and caps_no_overlap ptr sz and pspace_no_overlap ptr sz
       and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
       and region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
+      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
       and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
       and K (range_cover ptr sz (obj_bits_api ty us) n) \<rbrace>
-      retype_region ptr n us ty \<lbrace>\<lambda>rv. post_retype_invs ty rv\<rbrace>"
+      retype_region ptr n us ty dev\<lbrace>\<lambda>rv. post_retype_invs ty rv\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (rule hoare_pre,
          rule use_retype_region_proofs'[where sz = sz 
@@ -2432,7 +2493,7 @@ lemma cte_wp_at_trans_state[simp]: "cte_wp_at P ptr (kheap_update f (trans_state
 lemma retype_region_cte_at_other:
   assumes cover: "range_cover ptr' sz (obj_bits_api ty us) n"
   shows "\<lbrace>\<lambda>s. pspace_no_overlap ptr' sz s \<and> cte_wp_at P ptr s \<and> valid_pspace s\<rbrace> 
-  retype_region ptr' n us ty \<lbrace>\<lambda>r. cte_wp_at P ptr\<rbrace>"
+  retype_region ptr' n us ty dev \<lbrace>\<lambda>r. cte_wp_at P ptr\<rbrace>"
   unfolding retype_region_def 
   apply (simp only: foldr_upd_app_if fun_app_def K_bind_def)
   apply wp
@@ -2449,7 +2510,7 @@ done
 lemma retype_cte_wp_at:
   "\<lbrace>\<lambda>s. cte_wp_at P ptr s \<and> pspace_no_overlap ptr' sz s \<and> 
        valid_pspace s \<and> range_cover ptr' sz (obj_bits_api ty us) n\<rbrace> 
-  retype_region ptr' n us ty 
+  retype_region ptr' n us ty dev
   \<lbrace>\<lambda>r. cte_wp_at P ptr\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (rule hoare_pre)
@@ -2519,5 +2580,4 @@ lemma no_cap_to_obj_with_diff_ref_more_update[simp]:
   by (simp add: no_cap_to_obj_with_diff_ref_def)
 
 end
-
 end

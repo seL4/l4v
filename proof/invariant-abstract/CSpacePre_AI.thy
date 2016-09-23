@@ -41,7 +41,7 @@ lemma P_bool_lift':
   done
 
 lemma free_index_update_simps[simp]:
-  "free_index_update g (cap.UntypedCap ref sz f) = cap.UntypedCap ref sz (g f)"
+  "free_index_update g (cap.UntypedCap dev ref sz f) = cap.UntypedCap dev ref sz (g f)"
    by (simp add:free_index_update_def)
 
 (* FIXME: MOVE*)

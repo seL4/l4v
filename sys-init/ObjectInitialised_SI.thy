@@ -458,7 +458,7 @@ lemma is_default_cap_cap_transform [simp]:
 lemma default_cap_cap_transform:
   "\<lbrakk>is_default_cap cap; well_formed_cap cap; t (cap_object cap) = Some obj_id;
     cap_type cap = Some type; type \<noteq> IRQNodeType\<rbrakk>
-  \<Longrightarrow> default_cap type {obj_id} (cnode_cap_size cap) = cap_transform t cap"
+  \<Longrightarrow> default_cap type {obj_id} (cnode_cap_size cap) (is_device_cap cap) = cap_transform t cap"
   by (clarsimp simp: is_default_cap_def default_cap_def cap_transform_def cap_type_def
                      well_formed_cap_def cap_has_object_def
                      update_cap_object_def split: cdl_cap.splits)+
@@ -470,20 +470,29 @@ lemma cap_transform_update_cap_object:
                      cap_object_def cap_has_object_def
               split: cdl_cap.splits)
 
+lemma is_default_cap_def2:
+  "is_default_cap cap =
+  ((\<exists>type. cap_type cap = Some type \<and> cap = default_cap type (cap_objects cap) (cnode_cap_size cap) (is_device_cap cap)) \<or>
+  is_irqhandler_cap cap)"
+  apply (clarsimp simp:is_default_cap_def)
+  apply (case_tac cap)
+  apply (auto simp: default_cap_def cap_type_def)
+  done
+
 lemma default_cap_update_cap_object:
   "\<lbrakk>is_default_cap cap; cap_type cap = Some type; cnode_cap_size cap \<le> 32;
     type \<noteq> UntypedType; type \<noteq> AsidPoolType; type \<noteq> IRQNodeType\<rbrakk>
-  \<Longrightarrow> default_cap type {obj_id} (cnode_cap_size cap) = update_cap_object obj_id cap"
+  \<Longrightarrow> default_cap type {obj_id} (cnode_cap_size cap) (is_device_cap cap) = update_cap_object obj_id cap"
   apply (subst default_cap_cap_transform, simp_all)
    apply (frule (1) default_cap_well_formed_cap2 [where obj_ids="cap_objects cap"
-     and sz = "(cnode_cap_size cap)"], simp+)
-   apply (fastforce simp: is_default_cap_def)
+     and sz = "(cnode_cap_size cap)" and dev = "is_device_cap cap"], simp+)
+   apply (fastforce simp: is_default_cap_def2)
   apply (subst cap_transform_update_cap_object, simp_all)
   done
 
 lemma default_cap_update_cap_object_pd:
   "\<lbrakk>is_pd_cap cap; \<not> vm_cap_has_asid cap; \<not> is_fake_vm_cap cap\<rbrakk>
-  \<Longrightarrow> default_cap PageDirectoryType {obj_id} (cnode_cap_size cap) = update_cap_object obj_id cap"
+  \<Longrightarrow> default_cap PageDirectoryType {obj_id} (cnode_cap_size cap) dev = update_cap_object obj_id cap"
   by (clarsimp simp: default_cap_def update_cap_object_def cap_type_def
                      vm_cap_has_asid_def is_fake_vm_cap_def not_Some_eq_tuple
               split: cdl_cap.splits cdl_frame_cap_type.splits)

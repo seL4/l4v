@@ -912,19 +912,19 @@ lemma pointerInUserData_c_guard':
   done
 
 lemma heap_relation_user_word_at_cross_over:
-  "\<lbrakk> user_word_at x p s; cmap_relation (heap_to_page_data (ksPSpace s)
-       (underlying_memory (ksMachineState s))) (cslift s') Ptr cuser_data_relation;
+  "\<lbrakk> user_word_at x p s; cmap_relation (heap_to_user_data (ksPSpace s)
+       (underlying_memory (ksMachineState s))) (cslift s') Ptr cuser_user_data_relation;
        p' = Ptr p \<rbrakk>
    \<Longrightarrow> c_guard p' \<and> hrs_htd (t_hrs_' (globals s')) \<Turnstile>\<^sub>t p'
          \<and> h_val (hrs_mem (t_hrs_' (globals s'))) p' = x"
   apply (erule cmap_relationE1)
-   apply (clarsimp simp: heap_to_page_data_def Let_def
+   apply (clarsimp simp: heap_to_user_data_def Let_def
                          user_word_at_def pointerInUserData_def
                          typ_at_to_obj_at'[where 'a=user_data, simplified])
    apply (drule obj_at_ko_at', clarsimp)
    apply (rule conjI, rule exI, erule ko_at_projectKO_opt)
    apply (rule refl)
-  apply (thin_tac "heap_to_page_data a b c = d" for a b c d)
+  apply (thin_tac "heap_to_user_data a b c = d" for a b c d)
   apply (cut_tac x=p and w="~~ mask pageBits" in word_plus_and_or_coroll2)
   apply (rule conjI)
    apply (clarsimp simp: user_word_at_def pointerInUserData_def)
@@ -942,7 +942,7 @@ lemma heap_relation_user_word_at_cross_over:
            erule is_aligned_andI1)
     apply (simp add: word_le_nat_alt mask_def pageBits_def)
    apply simp
-  apply (clarsimp simp: cuser_data_relation_def user_word_at_def)
+  apply (clarsimp simp: cuser_user_data_relation_def user_word_at_def)
   apply (frule_tac f="[''words_C'']" in h_t_valid_field[OF h_t_valid_clift],
          simp+)
   apply (drule_tac n="uint (p && mask pageBits >> 2)" in h_t_valid_Array_element)
@@ -975,8 +975,8 @@ lemma heap_relation_user_word_at_cross_over:
   done
 
 lemma pointerInUserData_h_t_valid2:
-  "\<lbrakk> pointerInUserData ptr s; cmap_relation (heap_to_page_data (ksPSpace s)
-       (underlying_memory (ksMachineState s))) (cslift s') Ptr cuser_data_relation;
+  "\<lbrakk> pointerInUserData ptr s; cmap_relation (heap_to_user_data (ksPSpace s)
+       (underlying_memory (ksMachineState s))) (cslift s') Ptr cuser_user_data_relation;
        is_aligned ptr 2 \<rbrakk>
       \<Longrightarrow> hrs_htd (t_hrs_' (globals s')) \<Turnstile>\<^sub>t (Ptr ptr :: word32 ptr)"
   apply (frule_tac p=ptr in
@@ -1969,7 +1969,7 @@ lemma ccorres_updateCap [corres]:
    apply (rule conjI)
     apply (erule (3) cpspace_cte_relation_upd_capI)
    apply (erule_tac t = s' in ssubst)
-   apply (simp add: heap_to_page_data_def)
+   apply (simp add: heap_to_user_data_def)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
@@ -2000,7 +2000,7 @@ lemma setCTE_rf_sr:
    apply (rule conjI)
     apply (erule(2) cmap_relation_updI, simp)
    apply (erule_tac t = s'a in ssubst)
-   apply (simp add: heap_to_page_data_def)
+   apply (simp add: heap_to_user_data_def)
    apply (rule conjI)
     apply (erule(1) setCTE_tcb_case)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
@@ -4257,6 +4257,9 @@ lemma lookupExtraCaps_simple_rewrite:
   by (cases mi, simp add: lookupExtraCaps_def getExtraCPtrs_def
                           liftE_bindE upto_enum_step_def mapM_Nil
                    split: option.split)
+
+lemma lookupIPC_inv: "\<lbrace>P\<rbrace> lookupIPCBuffer f t \<lbrace>\<lambda>rv. P\<rbrace>"
+  by wp
 
 lemma doIPCTransfer_simple_rewrite:
   "monadic_rewrite True True

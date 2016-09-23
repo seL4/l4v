@@ -9,7 +9,7 @@
  *)
 
 theory Tcb_C
-imports Move Delete_C
+imports Move Delete_C Ipc_C
 begin
 
 lemma asUser_obj_at' :
@@ -1583,6 +1583,7 @@ lemma valid_ipc_buffer_ptr_the_strengthen:
   "x \<noteq> None \<and> case_option \<top> valid_ipc_buffer_ptr' x s \<longrightarrow> valid_ipc_buffer_ptr' (the x) s"
   by clarsimp
 
+
 lemma lookupIPCBuffer_Some_0:
   "\<lbrace>\<top>\<rbrace> lookupIPCBuffer w t \<lbrace>\<lambda>rv s. rv \<noteq> Some 0\<rbrace>"
   apply (simp add: lookupIPCBuffer_def
@@ -1590,9 +1591,7 @@ lemma lookupIPCBuffer_Some_0:
                    Let_def getThreadBufferSlot_def
                    locateSlot_conv
              cong: if_cong)
-  apply wp
-   apply simp
-  apply (rule hoare_vcg_prop , simp add:hoare_TrueI)
+  apply (wp haskell_assert_wp | wpc | simp)+
   done
 
 lemma asUser_valid_ipc_buffer_ptr':
@@ -2004,7 +2003,7 @@ shows
      apply (vcg exspec=suspend_modifies)
     apply vcg
    apply (rule conseqPre, vcg, clarsimp)
-  apply (clarsimp simp: rf_sr_ksCurThread ct_in_state'_def 
+  apply (clarsimp simp: rf_sr_ksCurThread ct_in_state'_def true_def
                  split: split_if)
   done
 
@@ -2420,53 +2419,98 @@ lemma ccap_relation_gen_framesize_to_H:
   apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def)
   done
 
+lemma isDevice_PageCap_ccap_relation:
+  "ccap_relation (capability.ArchObjectCap (arch_capability.PageCap d ref rghts sz data)) cap
+  \<Longrightarrow> (generic_frame_cap_get_capFIsDevice_CL (cap_lift cap) \<noteq> 0)  = d"
+   by (clarsimp elim!: ccap_relationE 
+                 simp: isPageCap_def generic_frame_cap_get_capFIsDevice_CL_def cap_to_H_def
+                       Let_def to_bool_def
+                split: arch_capability.split_asm cap_CL.split_asm split_if_asm)
+
 lemma checkValidIPCBuffer_ccorres:
   "ccorres (syscall_error_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs') (UNIV \<inter> {s. vptr_' s = vptr} \<inter> {s. ccap_relation cp (cap_' s)}) []
        (checkValidIPCBuffer vptr cp)
        (Call checkValidIPCBuffer_'proc)"
-  apply (cases "isArchPageCap cp")
-   apply (simp only: isCap_simps, safe)[1]
+apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
+  apply (cases "isArchPageCap cp \<and> \<not> isDeviceCap cp")
+   apply (simp only: isCap_simps isDeviceCap.simps, safe)[1]
    apply (cinit lift: vptr_' cap_')
-    apply (simp add: ARM_H.checkValidIPCBuffer_def del: Collect_const)
-    apply (csymbr, csymbr)
-    apply (simp add: cap_get_tag_isCap if_1_0_0 isCap_simps del: Collect_const)
-    apply (rule ccorres_add_return,
-           rule_tac xf'=ret__int_' and r'="\<lambda>rv rv'. rv' = 0" in ccorres_split_nothrow)
-        apply (rule ccorres_Cond_rhs)
-         apply csymbr
-         apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-         apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp add: return_def cap_get_tag_isCap isCap_simps)
-        apply (rule ccorres_return_Skip')
-       apply ceqv
-      apply (simp add: Collect_False del: Collect_const)
+    apply (simp add: ARM_H.checkValidIPCBuffer_def  if_1_0_0 del: Collect_const)
+    apply csymbr
+    apply csymbr
+    apply (clarsimp simp : if_1_0_0)
+    apply (rule ccorres_symb_exec_r)
+      apply simp
+      apply (rule_tac xf'=ret__int_' in ccorres_abstract, ceqv)
+      apply (rename_tac cond_is_frame)
+      apply (rule ccorres_cond_false_seq)
+      apply simp
+      apply csymbr
+      apply (rule ccorres_cond_false_seq)
+      apply clarsimp
+      apply (simp only:Cond_if_mem)
       apply (rule ccorres_Guard_Seq)+
-      apply (simp add: whenE_def ccorres_seq_cond_raise
-                       if_to_top_of_bindE del: Collect_const)
-      apply (rule ccorres_cond2[where R=\<top>])
-        apply (simp add: mask_def Collect_const_mem msgAlignBits_def)
-       apply (simp cong: StateSpace.state.fold_congs globals.fold_congs)
+      apply (rule ccorres_Cond_rhs_Seq)
+       apply (clarsimp simp add: msgAlignBits_def mask_def whenE_def)
        apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
-        apply vcg
+         apply vcg
+        apply (rule conseqPre, vcg)
+        apply (clarsimp simp: throwError_def return_def exception_defs
+                              syscall_error_rel_def syscall_error_to_H_cases)
+      apply (simp add: whenE_def msgAlignBits_def mask_def)
+      apply (rule ccorres_return_CE, simp+)[1]
+     apply (clarsimp simp: cap_get_tag_isCap isCap_simps pageSize_def
+                           isDevice_PageCap_ccap_relation Collect_const_mem if_1_0_0
+                           word_sle_def)
+     apply vcg
+     apply (clarsimp simp: cap_get_tag_isCap isCap_simps pageSize_def
+                           isDevice_PageCap_ccap_relation Collect_const_mem)
+    apply (rule conseqPre, vcg)
+    apply (clarsimp simp: cap_get_tag_isCap isCap_simps pageSize_def
+                          isDevice_PageCap_ccap_relation Collect_const_mem if_1_0_0
+                          word_sle_def)
+   apply (clarsimp simp: cap_get_tag_isCap isCap_simps pageSize_def
+                         isDevice_PageCap_ccap_relation Collect_const_mem)
+     apply (clarsimp simp: Collect_const_mem if_1_0_0
+                          word_sle_def)
+  apply (cases "isArchPageCap cp")
+   apply (simp only: isCap_simps isDeviceCap.simps, safe)[1]
+   apply (cinit lift: vptr_' cap_')
+    apply (simp add: ARM_H.checkValidIPCBuffer_def  if_1_0_0 del: Collect_const)
+    apply csymbr
+    apply csymbr
+    apply (clarsimp simp : if_1_0_0)
+    apply (rule ccorres_symb_exec_r)
+      apply simp
+      apply (rule_tac xf'=ret__int_' in ccorres_abstract, ceqv)
+      apply (rename_tac cond_is_frame)
+      apply (rule ccorres_cond_false_seq)
+      apply simp
+      apply csymbr
+      apply (rule ccorres_cond_true_seq)
+      apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+       apply vcg
        apply (rule conseqPre, vcg)
        apply (clarsimp simp: throwError_def return_def exception_defs
                              syscall_error_rel_def syscall_error_to_H_cases)
-      apply (simp add: Let_def)
-      apply (rule ccorres_return_CE, simp+)[1]
-     apply (simp only: pred_conj_def simp_thms)
-     apply wp
-    apply (simp add: Collect_const_mem)
-    apply vcg
-   apply (clarsimp simp: Collect_const_mem if_1_0_0
-                         word_sle_def)
-   apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+      apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def)
+      apply vcg
+     apply (rule conseqPre, vcg)
+     apply (case_tac cp)
+     apply (clarsimp simp: syscall_error_rel_def syscall_error_to_H_cases isCap_simps
+                           exception_defs throwError_def return_def if_1_0_0
+                    split: capability.split arch_capability.split split_if_asm)+
+   apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def Cond_if_mem)
+   apply (frule ccap_relation_page_is_device)
+   apply (auto simp add: isCap_simps isDeviceCap.simps pageSize_def 
+                  split: if_splits)[1]
   apply (cinit lift: vptr_' cap_')
    apply csymbr
    apply (simp add: ARM_H.checkValidIPCBuffer_def
                     cap_get_tag_isCap)
    apply csymbr
-   apply simp
+   apply (rule ccorres_cond_true_seq)+
    apply (rule ccorres_rhs_assoc)+
    apply csymbr
    apply csymbr
@@ -2474,12 +2518,11 @@ lemma checkValidIPCBuffer_ccorres:
    apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
     apply vcg
    apply (rule conseqPre, vcg)
-   apply (clarsimp simp: syscall_error_rel_def syscall_error_to_H_cases
-                         exception_defs throwError_def return_def
-                  split: capability.split arch_capability.split)
-   apply (auto simp add: isCap_simps)[1]
-  apply simp
-  done
+   apply (case_tac cp)
+   apply (auto simp: syscall_error_rel_def syscall_error_to_H_cases isCap_simps
+                         exception_defs throwError_def return_def if_1_0_0
+                  split: capability.split arch_capability.split split_if_asm)
+   done
 
 lemma slotCapLongRunningDelete_ccorres:
   "ccorres (op = \<circ> from_bool) ret__unsigned_long_' invs'

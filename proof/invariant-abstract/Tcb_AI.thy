@@ -681,6 +681,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
              thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
              thread_set_valid_ioc_trivial
+             thread_set_cap_refs_respects_device_region
               | simp add: ran_tcb_cap_cases
               | rule conjI | erule disjE)+
   apply (clarsimp simp: valid_tcb_def dest!: get_tcb_SomeD)
@@ -721,7 +722,7 @@ lemma out_tcb_valid:
 
 
 lemma thread_set_ipc_tcb_cap_valid:
-  "\<lbrace>\<lambda>s. is_arch_cap cap
+  "\<lbrace>\<lambda>s. is_nondevice_page_cap cap
            \<and> (\<forall>ptr. valid_ipc_buffer_cap cap (f ptr))\<rbrace>
      thread_set (tcb_ipc_buffer_update f) t
    \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
@@ -993,7 +994,6 @@ lemma decode_set_priority_inv[wp]:
   apply simp
   done
 
-
 lemma derive_is_arch[wp]:
   "\<lbrace>\<lambda>s. is_arch_cap c\<rbrace> derive_cap slot c \<lbrace>\<lambda>rv s. is_arch_cap rv\<rbrace>,-"
   apply (simp add: derive_cap_def cong: cap.case_cong)
@@ -1155,7 +1155,10 @@ crunch inv[wp]:  decode_unbind_notification P
 lemma decode_bind_notification_inv[wp]:
   "\<lbrace>P\<rbrace> decode_bind_notification cap excaps \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding decode_bind_notification_def
-  by (rule hoare_pre) (wp get_ntfn_wp gbn_wp | wpc | clarsimp simp: whenE_def split del: split_if)+
+  by (rule hoare_pre) 
+     (wp get_ntfn_wp gbn_wp 
+       | wpc 
+       | clarsimp simp: whenE_def split del: split_if)+
 
 
 lemma (in Tcb_AI) decode_tcb_inv_inv:

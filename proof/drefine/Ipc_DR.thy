@@ -132,7 +132,7 @@ lemmas transform_congs = transform_cdt_cong transform_current_thread_cong
                          cap_installed_at_irq_weak_cong caps_of_state_pspace
 lemma is_arch_page_capE:
   assumes ispc: "is_arch_page_cap cap"
-  and     rl:   "\<And>buf rights sz mapdata. \<lbrakk> cap = cap.ArchObjectCap (arch_cap.PageCap buf rights sz mapdata)\<rbrakk> \<Longrightarrow> R"
+  and     rl:   "\<And>buf rights sz mapdata dev. \<lbrakk> cap = cap.ArchObjectCap (arch_cap.PageCap dev buf rights sz mapdata)\<rbrakk> \<Longrightarrow> R"
   shows   "R"
   using ispc unfolding is_arch_page_cap_def
   apply (simp split:  cap.splits arch_cap.splits)
@@ -1012,7 +1012,7 @@ lemma send_signal_corres:
      apply (rule select_pick_corres)
      apply (rule corres_update_waiting_ntfn_do_notification_transfer)
     apply (drule_tac s = "insert y (set ys)" in sym)
-    apply (clarsimp simp:image_def)
+    apply (clarsimp simp: image_def)
    apply (drule_tac s = "insert y (set ys)" in sym)
    apply (drule_tac A="ntfn_waiting_set epptr s'" and x = y in eqset_imp_iff)
    apply (clarsimp simp:valid_pspace_def ntfn_waiting_set_def)
@@ -1516,7 +1516,7 @@ lemma load_cap_transfer_def':
   done
 
 lemma get_ipc_buffer_words_receive_slots:
-  "\<lbrakk> tcb_ipcframe obj = cap.ArchObjectCap (arch_cap.PageCap b rs sz mapdata); valid_cap (tcb_ipcframe obj) s;
+  "\<lbrakk> tcb_ipcframe obj = cap.ArchObjectCap (arch_cap.PageCap False b rs sz mapdata); valid_cap (tcb_ipcframe obj) s;
     AllowRead \<in> rs;valid_ipc_buffer_cap (tcb_ipcframe obj) (tcb_ipc_buffer obj)\<rbrakk>
   \<Longrightarrow> \<exists>a b c. get_ipc_buffer_words (machine_state s) obj [Suc (Suc (msg_max_length + msg_max_extra_caps))..<5 + (msg_max_length + msg_max_extra_caps)] = [a,b,c]"
   apply (clarsimp simp:valid_ipc_buffer_cap_def get_ipc_buffer_words_def msg_max_length_def msg_max_extra_caps_def Let_def cong:if_weak_cong)
@@ -1582,7 +1582,8 @@ lemma get_receive_slot_dcorres:
    apply (rename_tac word set vm opt)
    apply (drule_tac x = word in spec)
    apply (drule_tac x = "set" in spec)
-   apply (clarsimp simp:cte_wp_at_cases dest!:get_tcb_SomeD)
+   apply (clarsimp simp: cte_wp_at_cases dest!: get_tcb_SomeD spec)
+   apply force
   apply (simp add:get_receive_slot_def empty_on_failure_def)
   apply (rule dcorres_expand_pfx)
   apply (subst get_thread_def)
@@ -1611,6 +1612,10 @@ lemma get_receive_slot_dcorres:
      apply (clarsimp,intro conjI,(simp add:obj_at_def)+)
     apply (rule dcorres_expand_pfx)
     apply clarsimp
+    apply (frule get_tcb_rev,frule valid_tcb_objs,simp)
+    apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_nondevice_page_cap_simps 
+                          is_nondevice_page_cap_arch_def
+                   split: bool.split_asm)
     apply (drule get_ipc_buffer_words_receive_slots)
        apply (clarsimp dest!:get_tcb_rev,drule valid_tcb_objs,simp)
        apply (clarsimp simp:valid_tcb_def tcb_cap_cases_def)
@@ -2841,6 +2846,7 @@ lemma tcb_fault_update_valid_state[wp]:
   apply (wp thread_set_arch_caps_trivial
             thread_set_pspace_in_kernel_window
             thread_set_cap_refs_in_kernel_window
+            thread_set_cap_refs_respects_device_region
          | simp_all | clarsimp simp:tcb_cap_cases_def)+
 done
 

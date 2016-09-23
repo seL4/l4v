@@ -59,12 +59,12 @@ where
 primrec (nonexhaustive)
   available_range :: "cdl_cap \<Rightarrow> cdl_object_id set"
 where
-  "available_range (UntypedCap r available) = available"
+  "available_range (UntypedCap _ r available) = available"
 
 primrec (nonexhaustive)
   set_available_range :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap"
 where
-  "set_available_range (UntypedCap r available) nrange = UntypedCap r nrange"
+  "set_available_range (UntypedCap d r available) nrange = UntypedCap d r nrange"
 
 definition
   set_untyped_cap_as_full :: "cdl_cap \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> unit k_monad"
@@ -174,7 +174,7 @@ fun
 where
   "finalise_cap NullCap                  final = return (NullCap, None)"
 | "finalise_cap RestartCap               final = return (NullCap, None)"
-| "finalise_cap (UntypedCap r a)           final = return (NullCap, None)"
+| "finalise_cap (UntypedCap dev r a)           final = return (NullCap, None)"
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, None)) $ when  final $ cancel_all_ipc r)"
 | "finalise_cap (NotificationCap r b R) final =
@@ -225,7 +225,7 @@ where
          return (NullCap, None)
        od
        else return (NullCap, None))"
-| "finalise_cap (FrameCap ptr _ s x (Some asid))       final = (
+| "finalise_cap (FrameCap dev ptr _ s x (Some asid))       final = (
        if x = Real then do
          unmap_page asid ptr s;
          return (NullCap, None)
@@ -500,7 +500,7 @@ where "merge_with_dft_tcb o_id \<equiv>
 fun
   reset_mem_mapping :: "cdl_cap \<Rightarrow> cdl_cap"
 where
-  "reset_mem_mapping (FrameCap p rts sz b mp) = FrameCap p rts sz b None"
+  "reset_mem_mapping (FrameCap dev p rts sz b mp) = FrameCap dev p rts sz b None"
 | "reset_mem_mapping (PageTableCap ptr b mp) = PageTableCap ptr b None"
 | "reset_mem_mapping (PageDirectoryCap ptr b ma) = PageDirectoryCap ptr b None"
 | "reset_mem_mapping cap = cap"
@@ -539,7 +539,7 @@ where
       finalise_cap cap is_final;
       return $ if is_final then reset_mem_mapping cap else cap
     od
-  | FrameCap ptr _ _ _ _ \<Rightarrow>
+  | FrameCap _ ptr _ _ _ _ \<Rightarrow>
     do
       corrupt_frame ptr;
       finalise_cap cap is_final;
@@ -719,12 +719,12 @@ definition
   derive_cap :: "cdl_cap_ref \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap except_monad"
 where
   "derive_cap slot cap \<equiv> case cap of
-     UntypedCap _ _ \<Rightarrow> doE ensure_no_children slot; returnOk cap odE
+     UntypedCap _ _ _ \<Rightarrow> doE ensure_no_children slot; returnOk cap odE
    | ReplyCap _ \<Rightarrow> returnOk NullCap
    | MasterReplyCap oref \<Rightarrow> returnOk NullCap
    | IrqControlCap \<Rightarrow> returnOk NullCap
    | ZombieCap _ \<Rightarrow> returnOk NullCap
-   | FrameCap p r sz b x \<Rightarrow> returnOk (FrameCap p r sz b None)
+   | FrameCap dev p r sz b x \<Rightarrow> returnOk (FrameCap dev p r sz b None)
    | PageTableCap _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
    | PageDirectoryCap _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
    | _ \<Rightarrow> returnOk cap"

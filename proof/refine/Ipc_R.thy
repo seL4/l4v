@@ -1858,7 +1858,7 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   unfolding lookupIPCBuffer_def ARM_H.lookupIPCBuffer_def
   apply (simp add: Let_def getSlotCap_def getThreadBufferSlot_def
                    locateSlot_conv threadGet_def comp_def)
-  apply (wp getCTE_wp getObject_tcb_wp)
+  apply (wp getCTE_wp getObject_tcb_wp | wpc)+
   apply (clarsimp simp del: imp_disjL)
   apply (drule obj_at_ko_at')
   apply (clarsimp simp del: imp_disjL)
@@ -1878,10 +1878,10 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
      apply (clarsimp simp add: capAligned_def)
      apply assumption
     apply (erule is_aligned_andI1)
-   apply (case_tac v2, simp_all add: msg_align_bits)[1]
+   apply (case_tac xd, simp_all add: msg_align_bits)[1]
   apply (clarsimp simp: capAligned_def)
   apply (drule_tac x = 
-    "(tcbIPCBuffer ko && mask (pageBitsForSize v2))  >> pageBits" in spec)
+    "(tcbIPCBuffer ko && mask (pageBitsForSize xd))  >> pageBits" in spec)
   apply (subst(asm) mult.commute mult.left_commute, subst(asm) shiftl_t2n[symmetric])
   apply (simp add: shiftr_shiftl1)
   apply (subst (asm) mask_out_add_aligned)

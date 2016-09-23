@@ -35,14 +35,14 @@ lemma arch_cap_fun_lift_expand[simp]:
   "(arch_cap_fun_lift (\<lambda> ac. case ac of
                                 ASIDPoolCap obj_ref asid \<Rightarrow> P_ASIDPoolCap obj_ref asid
                               | ASIDControlCap \<Rightarrow> P_ASIDControlCap
-                              | PageCap obj_ref rights sz vr \<Rightarrow> P_PageCap obj_ref rights sz vr
+                              | PageCap dev obj_ref rights sz vr \<Rightarrow> P_PageCap dev obj_ref rights sz vr
                               | PageTableCap obj_ref vr \<Rightarrow> P_PageTableCap obj_ref vr
                               | PageDirectoryCap obj_ref asid \<Rightarrow> P_PageDirectoryCap obj_ref asid)
                       F) = (\<lambda>c. 
    (case c of
       ArchObjectCap (ASIDPoolCap obj_ref asid) \<Rightarrow> P_ASIDPoolCap obj_ref asid
     | ArchObjectCap (ASIDControlCap) \<Rightarrow> P_ASIDControlCap
-    | ArchObjectCap (PageCap obj_ref rights sz vr) \<Rightarrow> P_PageCap obj_ref rights sz vr
+    | ArchObjectCap (PageCap dev obj_ref rights sz vr) \<Rightarrow> P_PageCap dev obj_ref rights sz vr
     | ArchObjectCap (PageTableCap obj_ref vr) \<Rightarrow> P_PageTableCap obj_ref vr
     | ArchObjectCap (PageDirectoryCap obj_ref asid) \<Rightarrow> P_PageDirectoryCap obj_ref asid
     | _ \<Rightarrow> F))"
@@ -54,13 +54,13 @@ lemma arch_obj_fun_lift_expand[simp]:
                                 ASIDPool pool \<Rightarrow> P_ASIDPool pool
                               | PageTable pt \<Rightarrow> P_PageTable pt
                               | PageDirectory pd \<Rightarrow> P_PageDirectory pd
-                              | DataPage s \<Rightarrow> P_DataPage s)
+                              | DataPage dev s \<Rightarrow> P_DataPage dev s)
                       F) = (\<lambda>ko. 
    (case ko of
       ArchObj (ASIDPool pool) \<Rightarrow> P_ASIDPool pool
     | ArchObj (PageTable pt) \<Rightarrow> P_PageTable pt
     | ArchObj (PageDirectory pd) \<Rightarrow> P_PageDirectory pd
-    | ArchObj (DataPage s) \<Rightarrow> P_DataPage s
+    | ArchObj (DataPage dev s) \<Rightarrow> P_DataPage dev s
     | _ \<Rightarrow> F))"
   apply (rule ext)
   by (simp only: arch_obj_fun_lift_def)
@@ -87,7 +87,7 @@ where
    case ac of
      ASIDPoolCap r as
        \<Rightarrow> is_aligned as asid_low_bits \<and> as \<le> 2^asid_bits - 1
-   | PageCap r rghts sz mapdata \<Rightarrow> rghts \<in> valid_vm_rights \<and>
+   | PageCap dev r rghts sz mapdata \<Rightarrow> rghts \<in> valid_vm_rights \<and>
      case_option True (wellformed_mapdata sz) mapdata
    | PageTableCap r (Some mapdata) \<Rightarrow>
      wellformed_mapdata ARMSection mapdata
@@ -98,6 +98,35 @@ where
 lemmas wellformed_acap_simps =
   wellformed_mapdata_def wellformed_acap_def[split_simps arch_cap.split]
 
+definition
+  "in_device_frame p \<equiv> \<lambda>s.
+   \<exists>sz. typ_at (AArch (ADeviceData sz)) (p && ~~ mask (pageBitsForSize sz)) s"
+
+definition
+  "user_mem s \<equiv> \<lambda>p.
+  if (in_user_frame p s)
+  then Some (underlying_memory (machine_state s) p)
+  else None"
+
+definition
+  "device_mem s \<equiv> \<lambda>p.
+  if (in_device_frame p s)
+  then Some p
+  else None"
+
+abbreviation "device_region s \<equiv> dom (device_state (machine_state s))"
+
+lemma typ_at_pg_user:
+  "typ_at (AArch (AUserData sz)) buf s = ko_at (ArchObj (DataPage False sz)) buf s"
+  unfolding obj_at_def
+  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)
+
+lemma typ_at_pg_device:
+  "typ_at (AArch (ADeviceData sz)) buf s = ko_at (ArchObj (DataPage True sz)) buf s"
+  unfolding obj_at_def
+  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)
+
+lemmas typ_at_pg = typ_at_pg_user typ_at_pg_device
 
 (* this time with typ_at. might lead to confusion, but this is how
    the rest should have been defined.. *)
@@ -121,7 +150,8 @@ where
   "valid_arch_cap_ref ac s \<equiv> (case ac of
     ASIDPoolCap r as \<Rightarrow> typ_at (AArch AASIDPool) r s
   | ASIDControlCap \<Rightarrow> True
-  | PageCap r rghts sz mapdata \<Rightarrow> typ_at (AArch (AIntData sz)) r s
+  | PageCap dev r rghts sz mapdata \<Rightarrow> if dev then (typ_at (AArch (ADeviceData sz)) r s) 
+                                      else (typ_at (AArch (AUserData sz)) r s)
   | PageTableCap r mapdata \<Rightarrow> typ_at (AArch APageTable) r s
   | PageDirectoryCap r mapdata\<Rightarrow> typ_at (AArch APageDirectory) r s)"
 
@@ -136,8 +166,10 @@ where
          typ_at (AArch AASIDPool) r s \<and> is_aligned as asid_low_bits
            \<and> as \<le> 2^asid_bits - 1
   | ASIDControlCap \<Rightarrow> True
-  | PageCap r rghts sz mapdata \<Rightarrow>
-    typ_at (AArch (AIntData sz)) r s \<and> rghts \<in> valid_vm_rights \<and>
+  | PageCap dev r rghts sz mapdata \<Rightarrow>
+    (if dev then (typ_at (AArch (ADeviceData sz)) r s) 
+                                      else (typ_at (AArch (AUserData sz)) r s)) \<and>
+    rghts \<in> valid_vm_rights \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits - 1
                                              \<and> vmsz_aligned ref sz \<and> ref < kernel_base)
   | PageTableCap r mapdata \<Rightarrow>
@@ -153,12 +185,22 @@ where
 lemmas valid_arch_cap_simps =
   valid_arch_cap_def[split_simps arch_cap.split]
 
+definition
+  "is_nondevice_page_cap_arch \<equiv> \<lambda>cap. case cap of
+      (PageCap False x xa xb xc) \<Rightarrow>  True
+  | _ \<Rightarrow> False"
+
+definition
+  "is_nondevice_page_cap \<equiv> \<lambda>c. arch_cap_fun_lift is_nondevice_page_cap_arch False c"
+
+lemmas is_nondevice_page_cap_simps = is_nondevice_page_cap_def[split_simps arch_cap.split cap.split]
+
 primrec
   acap_class :: "arch_cap \<Rightarrow> capclass"
 where
   "acap_class (ASIDPoolCap x y)      = PhysicalClass"
 | "acap_class (ASIDControlCap)       = ASIDMasterClass"
-| "acap_class (PageCap x y sz z)     = PhysicalClass"
+| "acap_class (PageCap dev x y sz z) = PhysicalClass"
 | "acap_class (PageTableCap x y)     = PhysicalClass"
 | "acap_class (PageDirectoryCap x y) = PhysicalClass"
 
@@ -167,16 +209,20 @@ definition
 where
   "valid_ipc_buffer_cap_arch ac bufptr \<equiv>
          case ac of
-              (PageCap ref rghts sz mapdata) \<Rightarrow>
-                   is_aligned bufptr msg_align_bits
-
-            | _ \<Rightarrow> True"
+              (PageCap False ref rghts sz mapdata) \<Rightarrow>
+                   is_aligned bufptr msg_align_bits (* \<and> bufptr \<noteq> 0 *)
+            | _ \<Rightarrow> False"
 
 declare valid_ipc_buffer_cap_arch_def[simp]
 
 definition
   "valid_ipc_buffer_cap c bufptr \<equiv> 
-     arch_cap_fun_lift (\<lambda>ac. valid_ipc_buffer_cap_arch ac bufptr) True c"
+     case c of NullCap \<Rightarrow> True 
+     | ArchObjectCap acap \<Rightarrow> valid_ipc_buffer_cap_arch acap bufptr
+     | _ \<Rightarrow> False"
+
+definition "data_at \<equiv> \<lambda>sz p s. typ_at (AArch (AUserData sz)) p s
+  \<or> typ_at (AArch (ADeviceData sz)) p s"
 
 primrec
   valid_pte :: "pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -184,10 +230,10 @@ where
   "valid_pte (InvalidPTE) = \<top>"
 | "valid_pte (LargePagePTE ptr x y) =
    (\<lambda>s. is_aligned ptr pageBits \<and>
-        typ_at (AArch (AIntData ARMLargePage)) (ptrFromPAddr ptr) s)"
+        data_at ARMLargePage (ptrFromPAddr ptr) s)"
 | "valid_pte (SmallPagePTE ptr x y) =
    (\<lambda>s. is_aligned ptr pageBits \<and>
-        typ_at (AArch (AIntData ARMSmallPage)) (ptrFromPAddr ptr) s)"
+        data_at ARMSmallPage (ptrFromPAddr ptr) s)"
 
 primrec
   valid_pde :: "pde \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -195,11 +241,10 @@ where
   "valid_pde (InvalidPDE) = \<top>"
 | "valid_pde (SectionPDE ptr x y z) =
    (\<lambda>s. is_aligned ptr pageBits \<and>
-        typ_at (AArch (AIntData ARMSection)) (ptrFromPAddr ptr) s)"
+        data_at ARMSection (ptrFromPAddr ptr) s)"
 | "valid_pde (SuperSectionPDE ptr x z) =
    (\<lambda>s. is_aligned ptr pageBits \<and>
-        typ_at (AArch (AIntData ARMSuperSection))
-               (ptrFromPAddr ptr) s)"
+        data_at ARMSuperSection (ptrFromPAddr ptr) s)"
 | "valid_pde (PageTablePDE ptr x z) =
    (typ_at (AArch APageTable) (ptrFromPAddr ptr))"
 
@@ -216,7 +261,7 @@ where
 | "valid_arch_obj (PageDirectory pd) =
    (\<lambda>s. \<forall>x \<in> -kernel_mapping_slots. valid_pde (pd x) s)"
 | "valid_arch_obj (PageTable pt) = (\<lambda>s. \<forall>x. valid_pte (pt x) s)"
-| "valid_arch_obj (DataPage sz) = \<top>"
+| "valid_arch_obj (DataPage dev sz) = \<top>"
 
 
 definition
@@ -319,7 +364,7 @@ abbreviation
   "ref \<rhd>* ref' \<equiv> \<lambda>s. (ref,ref') \<in> vs_lookup_trans s"
 
 definition
-  vs_asid_refs :: "(word8 \<rightharpoonup> obj_ref) \<Rightarrow> vs_chain set"
+  vs_asid_refs :: "(7 word \<rightharpoonup> obj_ref) \<Rightarrow> vs_chain set"
 where
   "vs_asid_refs t \<equiv> (\<lambda>(r,p). ([VSRef (ucast r) None], p)) ` graph_of t"
 
@@ -579,7 +624,7 @@ where
           \<exists>pt. ko_at (ArchObj (PageTable pt)) p s \<and> (\<forall>x. aligned_pte (pt x)))"
 
 definition
-  valid_asid_table :: "(word8 \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_asid_table :: "(7 word \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_asid_table table \<equiv> \<lambda>s. (\<forall>p \<in> ran table. asid_pool_at p s) \<and>
                                 inj_on table (dom table)"
@@ -594,7 +639,7 @@ definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_state \<equiv> \<lambda>s.
-  typ_at (AArch (AIntData ARMSmallPage)) (arm_globals_frame (arch_state s)) s \<and>
+  typ_at (AArch (AUserData ARMSmallPage)) (arm_globals_frame (arch_state s)) s \<and>
   valid_asid_table (arm_asid_table (arch_state s)) s \<and>
   page_directory_at (arm_global_pd (arch_state s)) s \<and>
   valid_global_pts s \<and>
@@ -614,21 +659,21 @@ where
      Some [VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | PageCap word rights ARMSmallPage (Some (asid, vptr)) \<Rightarrow>
+ | PageCap dev word rights ARMSmallPage (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 12) && mask 8) (Some APageTable),
            VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | PageCap word rights ARMLargePage (Some (asid, vptr)) \<Rightarrow>
+ | PageCap dev word rights ARMLargePage (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 12) && mask 8) (Some APageTable),
            VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | PageCap word rights ARMSection (Some (asid, vptr)) \<Rightarrow>
+ | PageCap dev word rights ARMSection (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | PageCap word rights ARMSuperSection (Some (asid, vptr)) \<Rightarrow>
+ | PageCap dev word rights ARMSuperSection (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
@@ -640,7 +685,7 @@ definition
   "vs_cap_ref cap \<equiv> arch_cap_fun_lift vs_cap_ref_arch None cap"
 
 definition
-  "is_pg_cap cap \<equiv> \<exists>p R sz m. cap = ArchObjectCap (PageCap p R sz m)"
+  "is_pg_cap cap \<equiv> \<exists>dev p R sz m. cap = ArchObjectCap (PageCap dev p R sz m)"
 
 definition
   "is_pd_cap c \<equiv>
@@ -650,14 +695,14 @@ definition
   "is_pt_cap c \<equiv> \<exists>p asid. c = ArchObjectCap (PageTableCap p asid)"
 
 lemma is_arch_cap_simps:
-  "is_pg_cap cap = (\<exists>p R sz m. cap = (ArchObjectCap (PageCap p R sz m)))"
+  "is_pg_cap cap = (\<exists>dev p R sz m. cap = (ArchObjectCap (PageCap dev p R sz m)))"
   "is_pd_cap cap = (\<exists>p asid. cap = (ArchObjectCap (PageDirectoryCap p asid)))"
   "is_pt_cap cap = (\<exists>p asid. cap = (ArchObjectCap (PageTableCap p asid)))"
   by (auto simp add: is_pg_cap_def is_pd_cap_def is_pt_cap_def)
 
 definition
   "cap_asid_arch cap \<equiv> case cap of
-    PageCap _ _ _ (Some (asid, _)) \<Rightarrow> Some asid
+    PageCap _ _ _ _ (Some (asid, _)) \<Rightarrow> Some asid
   | PageTableCap _ (Some (asid, _)) \<Rightarrow> Some asid
   | PageDirectoryCap _ (Some asid) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
@@ -771,7 +816,8 @@ definition
 where
  "arch_obj_bits_type T' \<equiv> (case T' of
     AASIDPool \<Rightarrow> arch_kobj_size (ASIDPool undefined)
-  | AIntData sz \<Rightarrow> arch_kobj_size (DataPage sz)
+  | ADeviceData sz \<Rightarrow> arch_kobj_size (DataPage True sz)
+  | AUserData sz \<Rightarrow> arch_kobj_size (DataPage False sz)
   | APageDirectory \<Rightarrow> arch_kobj_size (PageDirectory undefined)
   | APageTable \<Rightarrow> arch_kobj_size (PageTable undefined))"
 
@@ -934,20 +980,22 @@ lemma valid_arch_cap_typ:
   shows      "\<lbrace>\<lambda>s. valid_arch_cap c s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_cap c s\<rbrace>"
   apply (simp add: valid_arch_cap_def)
   apply (case_tac c, simp_all)
-  by (wp P)
+  apply (wp P hoare_vcg_ball_lift hoare_vcg_imp_lift hoare_vcg_conj_lift | clarsimp)+
+  done
 
 lemma valid_arch_obj_typ:
   assumes P: "\<And>p T. \<lbrace>\<lambda>s. (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s.  (typ_at (AArch T) p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_arch_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_obj ob s\<rbrace>"
   apply (cases ob, simp_all)
-     apply (rule hoare_vcg_ball_lift [OF P])
+     apply (rule hoare_vcg_const_Ball_lift [OF P])
     apply (rule hoare_vcg_all_lift)
     apply (rename_tac "fun" x)
-    apply (case_tac "fun x"; simp; wp P)
+    apply (case_tac "fun x",simp_all add: data_at_def hoare_vcg_prop P)
+    apply (wp hoare_vcg_disj_lift P)
   apply (rule hoare_vcg_ball_lift)
   apply (rename_tac "fun" x)
-  apply (case_tac "fun x";simp; wp P)
-  apply wp
+  apply (case_tac "fun x", simp_all add: data_at_def hoare_vcg_prop P)
+  apply (wp hoare_vcg_disj_lift P)
   done
 
 
@@ -955,7 +1003,8 @@ lemma atyp_at_eq_kheap_obj:
   "typ_at (AArch AASIDPool) p s \<longleftrightarrow> (\<exists>f. kheap s p = Some (ArchObj (ASIDPool f)))"
   "typ_at (AArch APageTable) p s \<longleftrightarrow> (\<exists>pt. kheap s p = Some (ArchObj (PageTable pt)))"
   "typ_at (AArch APageDirectory) p s \<longleftrightarrow> (\<exists>pd. kheap s p = Some (ArchObj (PageDirectory pd)))"
-  "typ_at (AArch (AIntData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage sz)))"
+  "typ_at (AArch (AUserData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage False sz)))"
+  "typ_at (AArch (ADeviceData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage True sz)))"
   apply (auto simp add: obj_at_def)
   apply (simp_all add: a_type_def
                 split: split_if_asm kernel_object.splits arch_kernel_obj.splits)
@@ -978,12 +1027,16 @@ lemma shows
    aa_type_APageTableE:
   "\<lbrakk>a_type ko = AArch APageTable; (\<And>pt. ko = ArchObj (PageTable pt) \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R" and
-   aa_type_AIntDataE:
-  "\<lbrakk>a_type ko = AArch (AIntData sz); ko = ArchObj (DataPage sz) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+   aa_type_AUserDataE:
+  "\<lbrakk>a_type ko = AArch (AUserData sz); ko = ArchObj (DataPage False sz) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+   and
+   aa_type_ADeviceDataE:
+  "\<lbrakk>a_type ko = AArch (ADeviceData sz); ko = ArchObj (DataPage True sz) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   by (rule kernel_object_exhaust[of ko]; clarsimp simp add: a_type_simps split: split_if_asm)+
 
 lemmas aa_type_elims[elim!] =
-   aa_type_AASIDPoolE aa_type_APageDirectoryE aa_type_APageTableE aa_type_AIntDataE
+   aa_type_AASIDPoolE aa_type_APageDirectoryE aa_type_APageTableE aa_type_AUserDataE
+   aa_type_ADeviceDataE
 
 lemma valid_arch_obj_pspaceI:
   "\<lbrakk> valid_arch_obj obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_obj obj s'"
@@ -991,10 +1044,10 @@ lemma valid_arch_obj_pspaceI:
     apply (simp add: obj_at_def)
    apply (erule allEI)
    apply (rename_tac "fun" x)
-   apply (case_tac "fun x", simp_all add: obj_at_def)
+   apply (case_tac "fun x", simp_all add: obj_at_def data_at_def)
   apply (erule ballEI)
   apply (rename_tac "fun" x)
-  apply (case_tac "fun x", simp_all add: obj_at_def)
+  apply (case_tac "fun x", simp_all add: obj_at_def data_at_def)
   done
 
 lemmas  pageBitsForSize_simps[simp] =
@@ -1036,6 +1089,10 @@ lemma in_user_frame_update[iff]:
   "in_user_frame p (f s) = in_user_frame p s"
   by (simp add: in_user_frame_def pspace)
 
+lemma in_device_frame_update[iff]:
+  "in_device_frame p (f s) = in_device_frame p s"
+  by (simp add: in_device_frame_def obj_at_def pspace)
+
 lemma obj_at_update [iff]:
   "obj_at P p (f s) = obj_at P p s"
   by (fastforce intro: obj_at_pspaceI simp: pspace)
@@ -1051,11 +1108,11 @@ lemma valid_global_pts_update [iff]:
 
 lemma valid_pte_update [iff]:
   "valid_pte pte (f s) = valid_pte pte s"
-  by (cases pte) auto
+  by (cases pte) (auto simp: data_at_def)
 
 lemma valid_pde_update [iff]:
   "valid_pde pde (f s) = valid_pde pde s"
-  by (cases pde) auto
+  by (cases pde) (auto simp: data_at_def)
 
 lemma valid_arch_obj_update [iff]:
   "valid_arch_obj ao (f s) = valid_arch_obj ao s"
@@ -1177,8 +1234,8 @@ lemma valid_arch_state_lift:
 
 lemma aobj_at_default_arch_cap_valid:
   assumes "ty \<noteq> ASIDPoolObj"
-  assumes "ko_at (ArchObj (default_arch_object ty us)) x s"
-  shows "valid_arch_cap (arch_default_cap ty x us) s"
+  assumes "ko_at (ArchObj (default_arch_object ty dev us)) x s"
+  shows "valid_arch_cap (arch_default_cap ty x us dev) s"
   using assms
   by (auto elim!: obj_at_weakenE
         simp add: arch_default_cap_def valid_arch_cap_def default_arch_object_def
@@ -1187,18 +1244,18 @@ lemma aobj_at_default_arch_cap_valid:
            split: apiobject_type.splits aobject_type.splits option.splits)
 
 lemma aobj_ref_default:
-  "aobj_ref (arch_default_cap x6 x us) = Some x"
+  "aobj_ref (arch_default_cap x6 x us dev) = Some x"
   by (auto simp add: arch_default_cap_def split: aobject_type.splits)
 
 lemma valid_pde_lift:
   assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_pde pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde pde s\<rbrace>"
-  by (cases pde) (simp | wp x)+
+  by (cases pde) (simp add: data_at_def | wp x hoare_vcg_disj_lift)+
 
 lemma valid_pte_lift:
   assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_pte pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte pte s\<rbrace>"
-  by (cases pte) (simp | wp x)+
+  by (cases pte) (simp add: data_at_def| wp x hoare_vcg_disj_lift)+
 
 lemma pde_at_atyp:
   assumes x: "\<And>p T. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
@@ -1698,15 +1755,15 @@ proof -
      apply clarsimp
      apply (erule (6) 2)
     apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
-                          pde_ref_pages_def 
-                   dest!: vs_lookup_pages1D
+                          pde_ref_pages_def data_at_def
+                   dest!: vs_lookup_pages1D elim!: disjE
                    split: split_if_asm pde.splits)
     apply (frule_tac d=ac in vpt, assumption+)
     apply (erule converse_rtranclE)
      apply clarsimp
      apply (erule (8) 3)
-    apply (clarsimp simp:vs_refs_pages_def graph_of_def obj_at_def
-                          pte_ref_pages_def
+    apply (auto simp: vs_refs_pages_def graph_of_def obj_at_def
+                          pte_ref_pages_def data_at_def
                    dest!: vs_lookup_pages1D
                    split: pte.splits)
     done
@@ -1847,12 +1904,12 @@ by (simp add: addrFromPPtr_def ptrFromPAddr_def)
 lemma valid_pte_lift2:
   assumes x: "\<And>T p. \<lbrace>Q and typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. Q s \<and> valid_pte pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte pte s\<rbrace>"
-  by (cases pte) (simp | wp x)+
+  by (cases pte) (simp add: data_at_def | wp hoare_vcg_disj_lift x)+
 
 lemma valid_pde_lift2:
   assumes x: "\<And>T p. \<lbrace>Q and typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. Q s \<and> valid_pde pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde pde s\<rbrace>"
-  by (cases pde) (simp | wp x)+
+  by (cases pde) (simp add: data_at_def | wp hoare_vcg_disj_lift x)+
 
 lemma valid_arch_obj_typ2:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. Q s \<and> P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
@@ -2038,10 +2095,9 @@ lemma acap_rights_update_id [intro!, simp]:
 lemmas cap_asid_simps [simp] =
   cap_asid_def [simplified, split_simps cap.split arch_cap.split option.split prod.split]
 
-
 lemma in_user_frame_def:
   "in_user_frame p \<equiv> \<lambda>s.
-   \<exists>sz. typ_at (AArch (AIntData sz)) (p && ~~ mask (pageBitsForSize sz)) s"
+   \<exists>sz. typ_at (AArch (AUserData sz)) (p && ~~ mask (pageBitsForSize sz)) s"
   apply (rule eq_reflection, rule ext)
   apply (simp add: in_user_frame_def obj_at_def)
   apply (rule_tac f=Ex in arg_cong)
@@ -2057,16 +2113,15 @@ lemma in_user_frame_lift:
  by (wp hoare_vcg_ex_lift typ_at)
 
 lemma wellformed_arch_default: 
-  "wellformed_arch_obj (default_arch_object aobject_type us)"
+  "wellformed_arch_obj (default_arch_object aobject_type dev us)"
   unfolding wellformed_arch_obj_def default_arch_object_def
   by (cases aobject_type; simp)
 
 lemma valid_arch_obj_default': 
-  "valid_arch_obj (default_arch_object aobject_type us) s"
+  "valid_arch_obj (default_arch_object aobject_type dev us) s"
   unfolding default_arch_object_def
   by (cases aobject_type; simp)
 
 
 end
-
 end

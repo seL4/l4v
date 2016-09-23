@@ -18,7 +18,7 @@ begin
 
 lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
   "\<lbrace>\<guillemotleft>irq_empty spec t irq \<and>*
-     si_cap_at t orig_caps spec ntfn_id \<and>*
+     si_cap_at t orig_caps spec dev ntfn_id \<and>*
      si_irq_cap_at irq_caps spec irq \<and>*
      si_objects \<and>* R\<guillemotright> and
    K(well_formed spec \<and>
@@ -40,7 +40,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
      seL4_IRQHandler_SetEndpoint irq_handler_cptr endpoint_cptr
    \<lbrace>\<lambda>_.
     \<guillemotleft>irq_initialised spec t irq \<and>*
-     si_cap_at t orig_caps spec ntfn_id \<and>*
+     si_cap_at t orig_caps spec dev ntfn_id \<and>*
      si_irq_cap_at irq_caps spec irq \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
@@ -98,7 +98,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
 
 lemma seL4_IRQHandler_SetEndpoint_irq_initialised_sep:
   "\<lbrace>\<guillemotleft>irq_empty spec t irq \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
      si_irq_caps_at irq_caps spec (bound_irqs spec) \<and>*
      si_objects \<and>* R\<guillemotright> and
    K(well_formed spec \<and>
@@ -108,7 +108,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_sep:
      seL4_IRQHandler_SetEndpoint irq_handler_cptr endpoint_cptr
    \<lbrace>\<lambda>_.
     \<guillemotleft>irq_initialised spec t irq \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
      si_irq_caps_at irq_caps spec (bound_irqs spec) \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -121,10 +121,10 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_sep:
   apply (frule slots_of_cdl_objects, clarsimp)
   apply (rule hoare_chain [OF sep_set_conj_map_singleton_wp
          [where P = "irq_empty spec t irq \<and>*
-                     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+                     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
                      si_objects"
             and Q = "irq_initialised spec t irq \<and>*
-                     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+                     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
                      si_objects"
             and I = "si_irq_cap_at irq_caps spec"
             and x = irq
@@ -137,7 +137,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_sep:
               and Q = "irq_initialised spec t irq \<and>*
                        si_irq_cap_at irq_caps spec irq \<and>*
                        si_objects"
-              and I = "si_cap_at t orig_caps spec"
+              and I = "si_cap_at t orig_caps spec dev"
               and x = "cap_object (the (opt_cap (cdl_irq_node spec irq, 0) spec))"
               and xs = "{obj_id. real_object_at obj_id spec}"]], simp+)
        apply (wp sep_wp: seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep [where t=t and spec=spec and irq=irq
@@ -156,14 +156,14 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_sep:
 
 lemma init_irq_sep:
   "\<lbrace>\<guillemotleft>irq_empty spec t irq \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
      si_irq_caps_at irq_caps spec (bound_irqs spec) \<and>*
      si_objects \<and>* R\<guillemotright> and
    K(well_formed spec \<and>
      irq \<in> bound_irqs spec)\<rbrace>
    init_irq spec orig_caps irq_caps irq
    \<lbrace>\<lambda>_. \<guillemotleft>irq_initialised spec t irq \<and>*
-         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+         si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
          si_irq_caps_at irq_caps spec (bound_irqs spec) \<and>*
          si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
@@ -180,13 +180,13 @@ lemma init_irq_sep:
 
 lemma init_irqs_bound_irqs_sep:
   "\<lbrace>\<guillemotleft>irqs_empty spec t (bound_irqs spec) \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
      si_irq_caps_at irq_caps spec (bound_irqs spec) \<and>*
      si_objects \<and>* R\<guillemotright> and
    K(well_formed spec)\<rbrace>
    init_irqs spec orig_caps irq_caps
    \<lbrace>\<lambda>_.\<guillemotleft>irqs_initialised spec t (bound_irqs spec) \<and>*
-        si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+        si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
         si_irq_caps_at irq_caps spec (bound_irqs spec) \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -196,7 +196,7 @@ lemma init_irqs_bound_irqs_sep:
   apply (rule mapM_x_set_sep' [where
               P="irq_empty spec t" and
               Q="irq_initialised spec t" and
-              I="si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+              I="si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
                  si_irq_caps_at irq_caps spec (bound_irqs spec) \<and>*
                  si_objects" and
               xs="sorted_list_of_set (bound_irqs spec)" and
@@ -258,13 +258,13 @@ lemma irq_empty_initialised:
 *)
 lemma init_irqs_sep:
   "\<lbrace>\<guillemotleft>irqs_empty spec t (used_irqs spec) \<and>*
-     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
      si_irq_caps_at irq_caps spec (used_irqs spec) \<and>*
      si_objects \<and>* R\<guillemotright> and
    K(well_formed spec)\<rbrace>
    init_irqs spec orig_caps irq_caps
    \<lbrace>\<lambda>_.\<guillemotleft>irqs_initialised spec t (used_irqs spec) \<and>*
-        si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+        si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
         si_irq_caps_at irq_caps spec (used_irqs spec) \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -272,9 +272,9 @@ lemma init_irqs_sep:
   apply (frule well_formed_bound_irqs_are_used_irqs)
   apply (frule sep_set_conj_subset_wp
          [where P = "sep_map_set_conj (irq_empty spec t) (used_irqs spec) \<and>*
-                     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>* si_objects"
+                     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>* si_objects"
             and Q = "sep_map_set_conj (irq_initialised spec t) (used_irqs spec) \<and>*
-                     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>* si_objects"
+                     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>* si_objects"
             and f = "init_irqs spec orig_caps irq_caps"], simp+)
    apply (subst sep.setprod.subset_diff, assumption, simp)+
    apply (sep_wp init_irqs_bound_irqs_sep [where t=t])

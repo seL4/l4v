@@ -37,7 +37,7 @@ crunch schedact[wp]: create_cap, cap_insert "\<lambda>s :: det_ext state. P (sch
 
 crunch cur_domain[wp]: create_cap, cap_insert "\<lambda>s :: det_ext state. P (cur_domain s)" (wp: crunch_wps)
 
-lemma create_cap_ct[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> create_cap a b c d \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
+lemma create_cap_ct[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> create_cap a b c d e \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   apply (simp add: create_cap_def)
   apply (rule hoare_pre)
    apply (wp dxo_wp_weak | wpc | simp)+
@@ -49,7 +49,7 @@ lemma valid_etcb_fold_update: "valid_etcbs_2 ekh kh \<Longrightarrow> type \<not
           (foldr (\<lambda>p ekh. ekh(p := default_ext type cdom))
             ptrs
             ekh)
-          (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type o_bits))
+          (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits))
             ptrs
             kh)"
   apply (induct ptrs)
@@ -58,57 +58,9 @@ lemma valid_etcb_fold_update: "valid_etcbs_2 ekh kh \<Longrightarrow> type \<not
   apply (clarsimp simp add: valid_etcbs_def st_tcb_at_kh_def obj_at_kh_def obj_at_def is_etcb_at_def default_object_def default_ext_def)+
   done
 
-(*
-lemma valid_etcb_fold_update': "valid_etcbs_2 ekh kh \<Longrightarrow> \<not> is_tcb new_obj \<Longrightarrow> valid_etcbs_2
-          ekh
-          (foldr (\<lambda>p kh. kh(p \<mapsto> new_obj))
-            ptrs
-            kh)"
-  apply (induct ptrs)
-  apply simp
-  apply (simp add: valid_etcbs_def)
-
-
-  apply (clarsimp simp add: valid_etcbs_def st_tcb_at_kh_def obj_at_kh_def obj_at_def is_etcb_at_def default_object_def)+
-  apply force
-  done
-
-thm valid_queues_def
-
-lemma valid_queues_fold_update: "\<forall>ptr \<in> set ptrs. \<forall>p. ptr \<notin> set (queues p) \<Longrightarrow> valid_queues_2 queues ekh kh \<Longrightarrow> valid_queues_2 queues
-          (foldr (\<lambda>p ekh. ekh(p \<mapsto> default_etcb))
-            ptrs
-            ekh)
-          (foldr (\<lambda>p kh. kh(p \<mapsto> default_object TCBObject o_bits))
-            ptrs
-            kh)"
-  apply (induct ptrs)
-  apply (clarsimp simp add: valid_queues_def st_tcb_at_kh_def obj_at_kh_def obj_at_def is_etcb_at_def default_object_def etcb_at_def)+
-  done
-
-thm valid_sched_def
-thm kernel_object.cases
-lemma valid_sched_action_fold_update: "\<forall>ptr \<in> set ptrs. ptr \<noteq> ct \<and> kh ptr = None \<Longrightarrow>
-         valid_sched_action_2 sa kh ct \<Longrightarrow>
-          valid_sched_action_2 sa (foldr (\<lambda>p kh. kh(p \<mapsto> default_object TCBObject o_bits))
-            ptrs
-            kh) ct"
-   apply (induct ptrs)
-  apply (clarsimp simp add: valid_sched_action_def is_activatable_def weak_valid_sched_action_def st_tcb_at_kh_def obj_at_kh_def obj_at_def is_etcb_at_def default_object_def etcb_at_def)+
-  done
-
-lemma valid_sched_fold_update: "\<forall>ptr \<in> set ptrs. ptr \<noteq> ct \<and> kh ptr = None \<Longrightarrow> valid_sched_2 queues ekh sa kh ct \<Longrightarrow>
-         valid_sched_2 queues (foldr (\<lambda>p ekh. ekh(p \<mapsto> default_etcb))
-            ptrs
-            ekh) sa (foldr (\<lambda>p kh. kh(p \<mapsto> default_object TCBObject o_bits))
-            ptrs
-            kh) ct"
-  apply (simp add: valid_sched_2_def valid_etcb_fold_update valid_sched_action_fold_update)
-  apply (fastforce intro: valid_queues_fold_update simp: valid_queues_def st_tcb_at_kh_def obj_at_kh_def obj_at_def)
-  done*)
 
 lemma retype_etcb_at_helper: "\<lbrakk>etcb_at' P t ekh; valid_etcbs_2 ekh kh; d \<noteq> apiobject_type.Untyped;
-        foldr (\<lambda>p kh. kh(p \<mapsto> default_object d c))
+        foldr (\<lambda>p kh. kh(p \<mapsto> default_object d dev c))
          ptrs
          kh t =
         Some (TCB tcb);
@@ -123,7 +75,7 @@ lemma retype_etcb_at_helper: "\<lbrakk>etcb_at' P t ekh; valid_etcbs_2 ekh kh; d
   apply (clarsimp split: split_if_asm simp: default_tcb_def default_object_def default_ext_def etcb_at'_def)+
   done
 
-lemma retype_region_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcbs\<rbrace> retype_region a b c d \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
+lemma retype_region_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcbs\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
   apply (simp add: retype_region_def)
   apply (simp add: retype_region_ext_def bind_assoc)
   apply wp
@@ -131,7 +83,7 @@ lemma retype_region_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcb
   apply (blast intro: retype_etcb_at_helper)
   done
 
-lemma retype_region_valid_etcbs[wp]:"\<lbrace>valid_etcbs\<rbrace> retype_region a b c d \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
+lemma retype_region_valid_etcbs[wp]:"\<lbrace>valid_etcbs\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   apply (simp add: retype_region_def)
   apply (simp add: retype_region_ext_def bind_assoc)
   apply wp
@@ -167,7 +119,7 @@ lemma typ_at_pred_tcb_at_lift:
 
 
 lemma create_cap_no_pred_tcb_at: "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace>
-          create_cap apiobject_type nat' prod' x
+          create_cap apiobject_type nat' prod' dev x
           \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
   apply (rule typ_at_pred_tcb_at_lift)
   apply wp
@@ -197,9 +149,9 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
         invoke_untyped ui
       \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
   assumes init_arch_objects_valid_etcbs[wp]:
-    "\<And>t r n sz refs. \<lbrace>valid_etcbs\<rbrace> init_arch_objects t r n sz refs \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
+    "\<And>t r n sz refs dev. \<lbrace>valid_etcbs\<rbrace> init_arch_objects t r n sz refs dev\<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   assumes init_arch_objects_valid_blocked[wp]:
-    "\<And>t r n sz refs. \<lbrace>valid_blocked\<rbrace> init_arch_objects t r n sz refs \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
+    "\<And>t r n sz refs dev. \<lbrace>valid_blocked\<rbrace> init_arch_objects t r n sz refs dev \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   assumes invoke_untyped_cur_domain[wp]:
     "\<And>P i. \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
   assumes invoke_untyped_ready_queues[wp]:
@@ -235,7 +187,7 @@ crunch valid_blocked[wp]: create_cap,cap_insert,set_cap valid_blocked
 
 lemma valid_blocked_fold_update: "valid_blocked_2 queues kh sa ct \<Longrightarrow> type \<noteq> apiobject_type.Untyped \<Longrightarrow> valid_blocked_2
           queues
-          (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type o_bits))
+          (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits))
             ptrs
             kh) sa ct"
   apply (induct ptrs)
@@ -248,7 +200,7 @@ lemma valid_blocked_fold_update: "valid_blocked_2 queues kh sa ct \<Longrightarr
       done
 
 lemma retype_region_valid_blocked[wp]:
-  "\<lbrace>valid_blocked\<rbrace> retype_region a b c d \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
+  "\<lbrace>valid_blocked\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: retype_region_def)
   apply (simp add: retype_region_ext_def bind_assoc)
   apply wp

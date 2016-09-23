@@ -200,6 +200,7 @@ where
   | (KOEndpoint ep)       => ep_q_refs_of' ep
   | (KONotification ntfn)     => ntfn_q_refs_of' (ntfnObj ntfn) \<union> ntfn_bound_refs' (ntfnBoundTCB ntfn)
   | (KOUserData)          => {}
+  | (KOUserDataDevice)    => {}
   | (KOKernelData)        => {}
   | (KOArch ako)          => {}"
 
@@ -224,6 +225,7 @@ where
 | "live' (KOEndpoint ep)       = (ep \<noteq> IdleEP)"
 | "live' (KONotification ntfn)     = (bound (ntfnBoundTCB ntfn) \<or> (\<exists>ts. ntfnObj ntfn = WaitingNtfn ts))"
 | "live' (KOUserData)          = False"
+| "live' (KOUserDataDevice)    = False"
 | "live' (KOKernelData)        = False"
 | "live' (KOArch ako)          = False"
 
@@ -232,7 +234,7 @@ primrec
 where
   "zobj_refs' NullCap                        = {}"
 | "zobj_refs' DomainCap                      = {}"
-| "zobj_refs' (UntypedCap r n f)             = {}"
+| "zobj_refs' (UntypedCap d r n f)           = {}"
 | "zobj_refs' (EndpointCap r badge x y z)    = {r}"
 | "zobj_refs' (NotificationCap r badge x y) = {r}"
 | "zobj_refs' (CNodeCap r b g gsz)           = {}"
@@ -259,7 +261,7 @@ where
 primrec
   cte_refs' :: "capability \<Rightarrow> word32 \<Rightarrow> word32 set"
 where
-  "cte_refs' (UntypedCap p n f) x                 = {}"
+  "cte_refs' (UntypedCap d p n f) x               = {}"
 | "cte_refs' (NullCap) x                          = {}"
 | "cte_refs' (DomainCap) x                        = {}"
 | "cte_refs' (EndpointCap ref badge s r g) x      = {}"
@@ -303,7 +305,7 @@ primrec
 where
   "acapBits (ASIDPoolCap x y) = asidLowBits + 2"
 | "acapBits ASIDControlCap = asidHighBits + 2"
-| "acapBits (PageCap x y sz z) = pageBitsForSize sz"
+| "acapBits (PageCap d x y sz z) = pageBitsForSize sz"
 | "acapBits (PageTableCap x y) = 10"
 | "acapBits (PageDirectoryCap x y) = 14"
 end
@@ -320,7 +322,7 @@ primrec
 where
   "capBits NullCap = 0"
 | "capBits DomainCap = 0"
-| "capBits (UntypedCap r b f) = b"
+| "capBits (UntypedCap d r b f) = b"
 | "capBits (EndpointCap r b x y z) = objBits (undefined::endpoint)"
 | "capBits (NotificationCap r b x y) = objBits (undefined::Structures_H.notification)"
 | "capBits (CNodeCap r b g gs) = objBits (undefined::cte) + b"
@@ -341,13 +343,13 @@ definition
 primrec (nonexhaustive)
   usableUntypedRange :: "capability \<Rightarrow> word32 set"
 where
- "usableUntypedRange (UntypedCap p n f) =
+ "usableUntypedRange (UntypedCap d p n f) =
     (if f < 2^n then {p+of_nat f .. p + 2 ^ n - 1} else {})"
 
 definition
-  "valid_untyped' ptr bits idx s \<equiv>
+  "valid_untyped' d ptr bits idx s \<equiv>
   \<forall>ptr'. \<not> ko_wp_at' (\<lambda>ko. {ptr .. ptr + 2 ^ bits - 1} \<subset> obj_range' ptr' ko
-  \<or> obj_range' ptr' ko \<inter> usableUntypedRange(UntypedCap ptr bits idx) \<noteq> {}) ptr' s"
+  \<or> obj_range' ptr' ko \<inter> usableUntypedRange(UntypedCap d ptr bits idx) \<noteq> {}) ptr' s"
 
 
 
@@ -385,8 +387,8 @@ where valid_cap'_def:
   (case c of
     Structures_H.NullCap \<Rightarrow> True
   | Structures_H.DomainCap \<Rightarrow> True
-  | Structures_H.UntypedCap r n f \<Rightarrow>
-      valid_untyped' r n f s \<and> r \<noteq> 0 \<and> 4\<le> n \<and> n \<le> 30 \<and> f \<le> 2^n \<and>  is_aligned (of_nat f :: word32) 4
+  | Structures_H.UntypedCap d r n f \<Rightarrow>
+      valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> 4\<le> n \<and> n \<le> 29 \<and> f \<le> 2^n \<and>  is_aligned (of_nat f :: word32) 4
   | Structures_H.EndpointCap r badge x y z \<Rightarrow> ep_at' r s
   | Structures_H.NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>
@@ -404,8 +406,9 @@ where valid_cap'_def:
     ASIDPoolCap pool asid \<Rightarrow>
     typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
   | ASIDControlCap \<Rightarrow> True
-  | PageCap ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
-    (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' UserDataT (ref + p * 2 ^ pageBits) s) \<and>
+  | PageCap d ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
+    (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
+    (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase)
   | PageTableCap ref mapdata \<Rightarrow>
@@ -446,6 +449,13 @@ where
   "valid_bound_ntfn' ntfn_opt s \<equiv> case ntfn_opt of
                                  None \<Rightarrow> True
                                | Some a \<Rightarrow> ntfn_at' a s"
+
+definition
+  is_device_page_cap' :: "capability \<Rightarrow> bool"
+where
+  "is_device_page_cap' cap \<equiv> case cap of 
+    capability.ArchObjectCap (arch_capability.PageCap dev _ _ _ _) \<Rightarrow> dev
+   | _ \<Rightarrow> False"
 
 definition
   valid_tcb' :: "Structures_H.tcb \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -527,6 +537,7 @@ where
   | KONotification notification \<Rightarrow> valid_ntfn' notification s
   | KOKernelData \<Rightarrow> False
   | KOUserData \<Rightarrow> True
+  | KOUserDataDevice \<Rightarrow> True
   | KOTCB tcb \<Rightarrow> valid_tcb' tcb s
   | KOCTE cte \<Rightarrow> valid_cte' cte s
   | KOArch arch_kernel_object \<Rightarrow> valid_arch_obj' arch_kernel_object s"
@@ -615,7 +626,7 @@ definition
 function (sequential)
   untypedRange :: "capability \<Rightarrow> word32 set"
 where
-   "untypedRange (UntypedCap p n f) = {p .. p + 2 ^ n - 1}"
+   "untypedRange (UntypedCap d p n f) = {p .. p + 2 ^ n - 1}"
 |  "untypedRange c = {}"
   by pat_completeness auto
 
@@ -626,7 +637,7 @@ primrec
 where
   "acapClass (ASIDPoolCap x y)      = PhysicalClass"
 | "acapClass ASIDControlCap         = ASIDMasterClass"
-| "acapClass (PageCap x y sz z)     = PhysicalClass"
+| "acapClass (PageCap d x y sz z)   = PhysicalClass"
 | "acapClass (PageTableCap x y)     = PhysicalClass"
 | "acapClass (PageDirectoryCap x y) = PhysicalClass"
 
@@ -635,7 +646,7 @@ primrec
 where
   "capClass (NullCap)                          = NullClass"
 | "capClass (DomainCap)                        = DomainClass"
-| "capClass (UntypedCap p n f)                 = PhysicalClass"
+| "capClass (UntypedCap d p n f)               = PhysicalClass"
 | "capClass (EndpointCap ref badge s r g)      = PhysicalClass"
 | "capClass (NotificationCap ref badge s r)   = PhysicalClass"
 | "capClass (CNodeCap ref bits g gs)           = PhysicalClass"
@@ -761,7 +772,7 @@ definition
 definition
   isArchPageCap :: "capability \<Rightarrow> bool"
 where
- "isArchPageCap cap \<equiv> case cap of ArchObjectCap (PageCap ref rghts sz data) \<Rightarrow> True | _ \<Rightarrow> False"
+ "isArchPageCap cap \<equiv> case cap of ArchObjectCap (PageCap d ref rghts sz data) \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
   distinct_zombie_caps :: "(word32 \<Rightarrow> capability option) \<Rightarrow> bool"
@@ -1082,11 +1093,16 @@ abbreviation
   valid_irq_masks' (intStateIRQTable (ksInterruptState s)) (irq_masks (ksMachineState s))"
 
 defs pointerInUserData_def:
-  "pointerInUserData p \<equiv> typ_at' UserDataT (p && ~~ mask pageBits)"
+  "pointerInUserData p \<equiv> \<lambda>s. (typ_at' UserDataT (p && ~~ mask pageBits) s)"
+
+(* pointerInDeviceData is not defined in spec but is necessary for valid_machine_state' *)
+definition pointerInDeviceData :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "pointerInDeviceData p \<equiv> \<lambda>s. (typ_at' UserDataDeviceT (p && ~~ mask pageBits) s)"
 
 definition
   "valid_machine_state' \<equiv>
-   \<lambda>s. \<forall>p. pointerInUserData p s \<or> underlying_memory (ksMachineState s) p = 0"
+   \<lambda>s. \<forall>p. pointerInUserData p s \<or> pointerInDeviceData p s \<or> underlying_memory (ksMachineState s) p = 0"
 
 (* FIXME: this really should be a definition like the above. *)
 (* The schedule is invariant. *)
@@ -1144,6 +1160,7 @@ definition
                     | CTET \<Rightarrow> injectKO (makeObject :: cte)
                     | TCBT \<Rightarrow> injectKO (makeObject :: tcb)
                     | UserDataT \<Rightarrow> injectKO (makeObject :: user_data)
+                    | UserDataDeviceT \<Rightarrow> injectKO (makeObject :: user_data_device)
                     | KernelDataT \<Rightarrow> KOKernelData
                     | ArchT atp \<Rightarrow> (case atp of
                                           PDET \<Rightarrow> injectKO (makeObject :: pde)
@@ -1258,7 +1275,7 @@ lemma capability_splits[split]:
      | capability.Zombie x xa xb \<Rightarrow> f7 x xa xb
      | capability.ArchObjectCap x \<Rightarrow> f8 x
      | capability.ReplyCap x xa \<Rightarrow> f9 x xa
-     | capability.UntypedCap x xa xb \<Rightarrow> f10 x xa xb
+     | capability.UntypedCap dev x xa xb \<Rightarrow> f10 dev x xa xb
      | capability.CNodeCap x xa xb xc \<Rightarrow> f11 x xa xb xc
      | capability.IRQControlCap \<Rightarrow> f12) =
   ((\<forall>x1. capability = capability.ThreadCap x1 \<longrightarrow> P (f1 x1)) \<and>
@@ -1282,9 +1299,9 @@ lemma capability_splits[split]:
    (\<forall>x91 x92.
        capability = capability.ReplyCap x91 x92 \<longrightarrow>
        P (f9 x91 x92)) \<and>
-   (\<forall>x101 x102 x103.
-       capability = capability.UntypedCap x101 x102 x103 \<longrightarrow>
-       P (f10 x101 x102 x103)) \<and>
+   (\<forall>dev x101 x102 x103.
+       capability = capability.UntypedCap dev x101 x102 x103 \<longrightarrow>
+       P (f10 dev x101 x102 x103)) \<and>
    (\<forall>x111 x112 x113 x114.
        capability = capability.CNodeCap x111 x112 x113 x114 \<longrightarrow>
        P (f11 x111 x112 x113 x114)) \<and>
@@ -1298,7 +1315,7 @@ lemma capability_splits[split]:
      | capability.Zombie x xa xb \<Rightarrow> f7 x xa xb
      | capability.ArchObjectCap x \<Rightarrow> f8 x
      | capability.ReplyCap x xa \<Rightarrow> f9 x xa
-     | capability.UntypedCap x xa xb \<Rightarrow> f10 x xa xb
+     | capability.UntypedCap dev x xa xb \<Rightarrow> f10 dev x xa xb
      | capability.CNodeCap x xa xb xc \<Rightarrow> f11 x xa xb xc
      | capability.IRQControlCap \<Rightarrow> f12) =
   (\<not> ((\<exists>x1. capability = capability.ThreadCap x1 \<and>
@@ -1323,9 +1340,9 @@ lemma capability_splits[split]:
        (\<exists>x91 x92.
            capability = capability.ReplyCap x91 x92 \<and>
            \<not> P (f9 x91 x92)) \<or>
-       (\<exists>x101 x102 x103.
-           capability = capability.UntypedCap x101 x102 x103 \<and>
-           \<not> P (f10 x101 x102 x103)) \<or>
+       (\<exists>x101 x102 x103 dev.
+           capability = capability.UntypedCap dev x101 x102 x103 \<and>
+           \<not> P (f10 dev x101 x102 x103)) \<or>
        (\<exists>x111 x112 x113 x114.
            capability =
            capability.CNodeCap x111 x112 x113 x114 \<and>
@@ -1415,6 +1432,7 @@ lemma ntfn_splits[split]:
              \<not> P (f3 x3))))"
   by (case_tac ntfn; simp)+
 -- ---------------------------------------------------------------------------
+
 section "Lemmas"
 
 lemma valid_bound_ntfn'_None[simp]:
@@ -1551,6 +1569,7 @@ lemma refs_of'_simps[simp]:
  "refs_of' (KOEndpoint ep)       = ep_q_refs_of' ep"
  "refs_of' (KONotification ntfn)     = ntfn_q_refs_of' (ntfnObj ntfn) \<union> ntfn_bound_refs' (ntfnBoundTCB ntfn)"
  "refs_of' (KOUserData)          = {}"
+ "refs_of' (KOUserDataDevice)          = {}"
  "refs_of' (KOKernelData)        = {}"
  "refs_of' (KOArch ako)          = {}"
   by (auto simp: refs_of'_def)
@@ -1903,8 +1922,8 @@ lemma cte_wp_at'_pspaceI:
   done
 
 lemma valid_untyped'_pspaceI:
-  "\<lbrakk>ksPSpace s = ksPSpace s'; valid_untyped' p n idx s\<rbrakk>
-  \<Longrightarrow> valid_untyped' p n idx s'"
+  "\<lbrakk>ksPSpace s = ksPSpace s'; valid_untyped' d p n idx s\<rbrakk>
+  \<Longrightarrow> valid_untyped' d p n idx s'"
   by (simp add: valid_untyped'_def ko_wp_at'_def ps_clear_def)
 
 lemma typ_at'_pspaceI:
@@ -2466,7 +2485,7 @@ lemma typ_at_tcb':
   apply (rule iffI)
    apply clarsimp
    apply (case_tac ko)
-   apply (auto simp: projectKO_opt_tcb)[8]
+   apply (auto simp: projectKO_opt_tcb)[9]
   apply (case_tac ko)
   apply (auto simp: projectKO_opt_tcb)
   done
@@ -2479,7 +2498,7 @@ lemma typ_at_ep:
   apply (rule iffI)
    apply clarsimp
    apply (case_tac ko)
-   apply (auto simp: projectKO_opt_ep)[8]
+   apply (auto simp: projectKO_opt_ep)[9]
   apply (case_tac ko)
   apply (auto simp: projectKO_opt_ep)
   done
@@ -2492,7 +2511,7 @@ lemma typ_at_ntfn:
   apply (rule iffI)
    apply clarsimp
    apply (case_tac ko)
-   apply (auto simp: projectKO_opt_ntfn)[7]
+   apply (auto simp: projectKO_opt_ntfn)[8]
   apply clarsimp
   apply (case_tac ko)
   apply (auto simp: projectKO_opt_ntfn)
@@ -2506,7 +2525,7 @@ lemma typ_at_cte:
   apply (rule iffI)
    apply clarsimp
    apply (case_tac ko)
-   apply (auto simp: projectKO_opt_cte)[7]
+   apply (auto simp: projectKO_opt_cte)[8]
   apply clarsimp
   apply (case_tac ko)
   apply (auto simp: projectKO_opt_cte)
@@ -2573,7 +2592,7 @@ lemma koType_obj_range':
 
 lemma typ_at_lift_valid_untyped':
   assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_untyped' p n idx s\<rbrace> f \<lbrace>\<lambda>rv s. valid_untyped' p n idx s\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_untyped' d p n idx s\<rbrace> f \<lbrace>\<lambda>rv s. valid_untyped' d p n idx s\<rbrace>"
   apply (clarsimp simp: valid_untyped'_def split del:split_if)
   apply (rule hoare_vcg_all_lift)
   apply (clarsimp simp: valid_def split del:split_if)
@@ -2603,7 +2622,6 @@ lemma typ_at_lift_valid_cap':
   shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
   apply (simp add: valid_cap'_def)
   apply wp
-  thm capability.splits capability_splits
   apply (case_tac cap;
          simp add: valid_cap'_def P [where P=id, simplified] typ_at_lift_tcb'
                    hoare_vcg_prop typ_at_lift_ep'
@@ -2615,7 +2633,8 @@ lemma typ_at_lift_valid_cap':
     apply (rename_tac arch_capability)
     apply (case_tac arch_capability,
            simp_all add: P [where P=id, simplified] page_table_at'_def
-                         hoare_vcg_prop page_directory_at'_def All_less_Ball)
+                         hoare_vcg_prop page_directory_at'_def All_less_Ball
+              split del: if_splits)
      apply (wp hoare_vcg_const_Ball_lift P)
    apply (wp typ_at_lift_valid_untyped' [OF P])
   apply (wp hoare_vcg_all_lift typ_at_lift_cte' P)
@@ -2930,6 +2949,10 @@ lemma valid_pde_mappings'_update [iff]:
 lemma pointerInUserData_update[iff]:
   "pointerInUserData p (f s) = pointerInUserData p s"
   by (simp add: pointerInUserData_def)
+
+lemma pointerInDeviceData_update[iff]:
+  "pointerInDeviceData p (f s) = pointerInDeviceData p s"
+  by (simp add: pointerInDeviceData_def)
 
 lemma pspace_domain_valid_update [iff]:
   "pspace_domain_valid (f s) = pspace_domain_valid s"
@@ -3309,6 +3332,7 @@ lemma objBitsT_simps:
   "objBitsT CTET = 4"
   "objBitsT TCBT = 9"
   "objBitsT UserDataT = pageBits"
+  "objBitsT UserDataDeviceT = pageBits"
   "objBitsT KernelDataT = pageBits"
   "objBitsT (ArchT PDET) = 2"
   "objBitsT (ArchT PTET) = 2"
@@ -3570,6 +3594,5 @@ method normalise_obj_at' =
    clarsimp simp: ko_at_defn_unique, clarsimp simp: ko_at'_defn_def)
 
 end
-
 
 end

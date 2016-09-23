@@ -204,17 +204,18 @@ lemma schedule_reads_affects_equiv_sameFor:
 
 
 lemma globals_equiv_to_scheduler_globals_frame_equiv:
-  "globals_equiv s t \<Longrightarrow> invs s \<Longrightarrow> scheduler_globals_frame_equiv s t"
+  "globals_equiv s t \<Longrightarrow> invs s \<Longrightarrow> invs t\<Longrightarrow> scheduler_globals_frame_equiv s t"
   apply(simp add: globals_equiv_def scheduler_globals_frame_equiv_def)
   apply(rule ballI)
-  apply(clarify, erule bspec)
-  apply(rule subsetD[OF Access.ptr_range_subset[where x="0", simplified]])
-     prefer 4
-     apply fastforce
+  apply clarify
+  apply (drule sym)
+  apply clarsimp
+  apply(frule subsetD[OF Access.ptr_range_subset[where x="0" and sz = 12, simplified],rotated -1])
     apply(rule arm_globals_frame_aligned)
      apply(erule invs_arch_state)
     apply(erule invs_psp_aligned)
    apply simp+
+  apply (simp add: globals_frame_not_device)
   done
 
 lemma globals_equiv_to_cur_thread_eq:
@@ -226,7 +227,9 @@ lemma globals_equiv_to_exclusive_state_equiv:
   by(simp add: globals_equiv_def idle_equiv_def)
 
 lemma sameFor_scheduler_affects_equiv:
-  "\<lbrakk>(s,s') \<in> sameFor (pasPolicy aag) (pasObjectAbs aag) (pasIRQAbs aag) (pasASIDAbs aag) (pasDomainAbs aag) PSched; (s,s') \<in> sameFor (pasPolicy aag) (pasObjectAbs aag) (pasIRQAbs aag) (pasASIDAbs aag) (pasDomainAbs aag) (Partition l); invs (internal_state_if s)\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>(s,s') \<in> sameFor (pasPolicy aag) (pasObjectAbs aag) (pasIRQAbs aag) (pasASIDAbs aag) (pasDomainAbs aag) PSched; 
+    (s,s') \<in> sameFor (pasPolicy aag) (pasObjectAbs aag) (pasIRQAbs aag) (pasASIDAbs aag) (pasDomainAbs aag) (Partition l);
+    invs (internal_state_if s);invs (internal_state_if s')\<rbrakk> \<Longrightarrow>
     scheduler_equiv aag (internal_state_if s) (internal_state_if s') \<and> scheduler_affects_equiv aag (OrdinaryLabel l) (internal_state_if s) (internal_state_if s')"
   apply (rule conjI)
    apply (blast intro: sameFor_scheduler_equiv)
@@ -315,10 +318,22 @@ lemma pas_refined_irq_state_independent:
   apply(auto simp: irq_state_independent_def)
   done
 
+lemma irq_update_pspace_respects_device_region[simp]:
+  "pspace_respects_device_region (s\<lparr>machine_state := irq_state_update f sa\<rparr>)
+  = pspace_respects_device_region (s\<lparr>machine_state := sa\<rparr>)"
+  by (clarsimp simp: pspace_respects_device_region_def user_mem_def device_mem_def)
+
+lemma irq_update_cap_refs_respects_device_region[simp]:
+  "cap_refs_respects_device_region (s\<lparr>machine_state := irq_state_update f sa\<rparr>)
+  = cap_refs_respects_device_region (s\<lparr>machine_state := sa\<rparr>)"
+  by (clarsimp simp: cap_refs_respects_device_region_def user_mem_def 
+    device_mem_def cap_range_respects_device_region_def)
+
 lemma invs_irq_state_independent:
   "irq_state_independent
          (\<lambda>sa. invs (s\<lparr>machine_state := sa\<rparr>))"
-  apply(auto simp: irq_state_independent_def invs_def valid_state_def valid_machine_state_def cur_tcb_def valid_irq_states_def)
+  apply(auto simp: irq_state_independent_def invs_def valid_state_def
+    valid_machine_state_def cur_tcb_def valid_irq_states_def)
   done
 
 lemma thread_set_tcb_context_update_ct_active[wp]:
@@ -398,17 +413,42 @@ lemma kernel_entry_if_integrity:
   apply(rule ext, simp_all)
   done
 
+lemma dmo_device_update_respects_Write:
+  "\<lbrace>integrity aag X st 
+  and K (\<forall>p \<in> dom um'. aag_has_auth_to aag Write p)\<rbrace>
+  do_machine_op (device_memory_update um')
+  \<lbrace>\<lambda>a. integrity aag X st\<rbrace>"
+  apply (simp add: device_memory_update_def)
+  apply (rule hoare_pre)
+   apply (wp dmo_wp)
+  apply clarsimp
+  apply (simp cong: abstract_state.fold_congs)
+  apply (rule integrity_device_state_update)
+    apply simp
+   apply clarify
+   apply (drule(1) bspec)
+   apply simp
+  apply fastforce
+  done
+
 (* clagged straight from ADT_AC.do_user_op_respects *)
 lemma do_user_op_if_integrity:
  "\<lbrace> invs and integrity aag X st and is_subject aag \<circ> cur_thread and pas_refined aag \<rbrace>
     do_user_op_if uop tc
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: do_user_op_if_def)
-   apply (wp dmo_user_memory_update_respects_Write hoare_vcg_all_lift hoare_vcg_imp_lift
+   apply (wp dmo_user_memory_update_respects_Write dmo_device_update_respects_Write
+     hoare_vcg_all_lift hoare_vcg_imp_lift
         | wpc | clarsimp)+
        apply (rule hoare_pre_cont)
       apply (wp   select_wp | wpc | clarsimp)+
-  apply (simp add: restrict_map_def ptable_lift_s_def ptable_rights_s_def split:if_splits)
+  apply (rule conjI)
+   apply clarsimp
+   apply (simp add: restrict_map_def ptable_lift_s_def ptable_rights_s_def split: if_splits)
+   apply (drule_tac auth=Write in user_op_access')
+     apply (simp add: vspace_cap_rights_to_auth_def)+
+  apply clarsimp
+  apply (simp add: restrict_map_def ptable_lift_s_def ptable_rights_s_def split: if_splits)
   apply (drule_tac auth=Write in user_op_access')
       apply (simp add: vspace_cap_rights_to_auth_def)+
   done
@@ -525,10 +565,10 @@ lemma dmo_user_memory_update_globals_equiv_scheduler:
                                         pr = ptable_rights t s))\<rbrace>
           do_machine_op
            (user_memory_update
-             (ba |`
+             ((ba |`
               {y. \<exists>x. pl x = Some y \<and>
                       AllowWrite \<in> pr x} \<circ>
-              addrFromPPtr)) 
+              addrFromPPtr) |` S)) 
    \<lbrace>\<lambda>y. globals_equiv_scheduler st\<rbrace>"
    apply(rule do_machine_op_globals_equiv_scheduler)
    apply clarsimp
@@ -540,6 +580,23 @@ lemma dmo_user_memory_update_globals_equiv_scheduler:
   apply(blast dest: empty_rights_in_arm_globals_frame)
   done
 
+lemma dmo_device_memory_update_globals_equiv_scheduler:
+  "\<lbrace>globals_equiv_scheduler st and (\<lambda>s. device_region s = S)\<rbrace>
+          do_machine_op
+           (device_memory_update
+             ((ba |`
+              {y. \<exists>x. pl x = Some y \<and>
+                      AllowWrite \<in> pr x} \<circ>
+              addrFromPPtr) |` S)) 
+   \<lbrace>\<lambda>y. globals_equiv_scheduler st\<rbrace>"
+   apply(rule do_machine_op_globals_equiv_scheduler)
+   apply clarsimp
+   apply(simp add: device_memory_update_def simpler_modify_def)
+  apply(clarsimp simp: globals_equiv_scheduler_def split: option.splits)
+  apply blast
+  done
+
+
 lemma globals_equiv_scheduler_exclusive_state_update[simp]:
   "globals_equiv_scheduler st (s\<lparr>machine_state := machine_state s\<lparr>exclusive_state := es\<rparr>\<rparr>) = globals_equiv_scheduler st s"
   by (simp add: globals_equiv_scheduler_def)
@@ -549,7 +606,8 @@ lemma do_user_op_if_globals_equiv_scheduler:
    do_user_op_if tc uop
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
   apply(simp add: do_user_op_if_def)
-  apply (wp dmo_user_memory_update_globals_equiv_scheduler select_wp | wpc | simp)+
+  apply (wp dmo_user_memory_update_globals_equiv_scheduler
+    dmo_device_memory_update_globals_equiv_scheduler select_wp | wpc | simp)+
   apply (auto simp: ptable_lift_s_def ptable_rights_s_def)
   done
 
@@ -679,20 +737,23 @@ lemmas integrity_subjects_eobj =
 lemmas integrity_subjects_mem = 
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_cdt = 
+lemmas integrity_subjects_device = 
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_cdt_list = 
+lemmas integrity_subjects_cdt = 
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_interrupts = 
+lemmas integrity_subjects_cdt_list = 
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_asids = 
+lemmas integrity_subjects_interrupts = 
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
+lemmas integrity_subjects_asids = 
+  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
+
 lemmas integrity_subjects_ready_queues = 
-  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2]
+  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2]
 
 
 lemma partitionIntegrity_arm_globals_frame:
@@ -1195,6 +1256,26 @@ lemma subject_can_affect_its_own_partition:
   apply(blast intro: affects_lrefl reads_lrefl)
   done
 
+(* FIXME: cleanup this wonderful proof *)
+lemma partitionIntegrity_subjectAffects_device:
+  "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; invs s;
+    invs s';
+    device_state (machine_state s) x \<noteq>
+    device_state (machine_state s') x; x \<notin> range_of_arm_globals_frame s \<or> x \<notin> range_of_arm_globals_frame s'\<rbrakk> \<Longrightarrow> 
+   pasObjectAbs aag x
+     \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
+  apply(frule partitionIntegrity_arm_globals_frame)
+  apply(drule partitionIntegrity_integrity)
+  apply(frule integrity_subjects_device)
+  apply(drule_tac x=x in spec)
+  apply(erule integrity_device.cases)
+    apply(fastforce intro: affects_lrefl)
+   apply blast
+  apply(fastforce intro: affects_write)
+  done
+    
+
+
 (* a hack to prevent safe etc. below from taking apart the implication *)
 definition guarded_is_subject_cur_thread where
   "guarded_is_subject_cur_thread aag s \<equiv> cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s)"
@@ -1218,6 +1299,7 @@ lemma partsSubjectAffects_bounds_subjects_affects:
              apply ((auto dest: partitionIntegrity_subjectAffects_obj 
                                 partitionIntegrity_subjectAffects_eobj 
                                  partitionIntegrity_subjectAffects_mem
+                                 partitionIntegrity_subjectAffects_device
                                  partitionIntegrity_subjectAffects_cdt 
                                  partitionIntegrity_subjectAffects_cdt_list
                                  partitionIntegrity_subjectAffects_is_original_cap
@@ -1225,7 +1307,7 @@ lemma partsSubjectAffects_bounds_subjects_affects:
                                  partitionIntegrity_subjectAffects_interrupt_irq_node
                                  partitionIntegrity_subjectAffects_asid
                                  partitionIntegrity_subjectAffects_ready_queues[folded guarded_is_subject_cur_thread_def]
-                           | fastforce simp: partitionIntegrity_def silc_dom_equiv_def equiv_for_def)+)[10]
+                           | fastforce simp: partitionIntegrity_def silc_dom_equiv_def equiv_for_def)+)[11]
                 apply((fastforce intro: affects_lrefl simp: partitionIntegrity_def domain_fields_equiv_def)+)[16]
   done
 
@@ -2204,7 +2286,7 @@ lemma schedule_if_reads_respects_g:
   done
 
 lemma do_user_op_if_reads_respects_g:
-  "reads_respects_g aag l (pas_refined aag and einvs and is_subject aag \<circ> cur_thread and det_inv InUserMode tc and ct_running) (do_user_op_if utf tc)"
+  "reads_respects_g aag l (pas_refined aag and valid_pdpt_objs and einvs and is_subject aag \<circ> cur_thread and det_inv InUserMode tc and ct_running) (do_user_op_if utf tc)"
   apply (rule equiv_valid_guard_imp)
    apply (rule UserOp_IF.do_user_op_reads_respects_g[where P="\<lambda>tc. einvs and det_inv InUserMode tc and ct_running"])
    using utf_det
@@ -3388,7 +3470,7 @@ fun label_for_partition where
  | "label_for_partition PSched = SilcLabel"
 
 lemma uwr_scheduler_affects_equiv:
-  "\<lbrakk>(s,s') \<in> uwr PSched; (s,s') \<in> uwr u; invs_if s\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>(s,s') \<in> uwr PSched; (s,s') \<in> uwr u; invs_if s; invs_if s'\<rbrakk> \<Longrightarrow>
     scheduler_equiv initial_aag (internal_state_if s) (internal_state_if s') \<and> scheduler_affects_equiv initial_aag (label_for_partition u) (internal_state_if s) (internal_state_if s')"
   apply (simp add: uwr_def)
   apply (case_tac u)

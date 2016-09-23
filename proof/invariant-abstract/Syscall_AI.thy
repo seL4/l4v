@@ -500,7 +500,7 @@ lemma decode_inv_inv[wp]:
   done
 
 lemma diminished_Untyped [simp]:
-  "diminished (cap.UntypedCap x xa idx) = (\<lambda>c. c = cap.UntypedCap x xa idx)"
+  "diminished (cap.UntypedCap d x xa idx) = (\<lambda>c. c = cap.UntypedCap d x xa idx)"
   apply (rule ext)
   apply (case_tac c,
          auto simp: diminished_def cap_rights_update_def mask_cap_def)

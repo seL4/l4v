@@ -1803,7 +1803,8 @@ lemma arch_recycle_cap_reads_respects:
             mapM_x_swp_store_pde_invs_unmap
             find_pd_for_asid_reads_respects
             store_pde_invs_unmap
-            mapM_x_wp'
+            mapM_x_wp' 
+            hoare_unless_wp
     | wpc
     | simp add: when_def invs_valid_objs
                 invs_psp_aligned pte_ref_def
@@ -1812,7 +1813,7 @@ lemma arch_recycle_cap_reads_respects:
                 invs_valid_ko_at_arm
                 pde_ref_def
                 pde_ref2_def
-           split del: split_if
+                unless_def
     | intro impI conjI allI cte_wp_at_pt_exists_cap
             cte_wp_at_page_directory_not_in_kernel_mappings
             cte_wp_at_page_directory_not_in_globals
@@ -1857,6 +1858,8 @@ lemma set_irq_state_valid_global_objs:
   apply(wp modify_wp)
   apply(fastforce simp: valid_global_objs_def)
   done
+
+crunch device_state_invs[wp]: maskInterrupt "\<lambda> ms. P (device_state ms)"
 
 lemma set_irq_state_globals_equiv:
   "invariant (set_irq_state state irq) (globals_equiv st)"
@@ -2091,25 +2094,23 @@ lemma arch_recycle_cap_globals_equiv:
     arch_recycle_cap is_final arch_cap
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding arch_recycle_cap_def
-  apply (simp |wpc | wp modify_wp set_asid_pool_globals_equiv invs_valid_ko_at_arm
-    arch_finalise_cap_globals_equiv'
-    dmo_clearMemory_globals_equiv
-    dmo_cleanCacheRange_PoU_globals_equiv
-    page_table_mapped_inv
-    mapM_x_swp_store_pte_invs'
-    mapM_x_swp_store_pte_globals_equiv
-
-    hoare_drop_imps
-
-    | clarsimp simp add:  valid_pspace_def pbfs_less_wb page_caps_do_not_overlap_arm_globals_frame
-    cte_wp_at_page_cap_aligned
-    invs_valid_objs
-    invs_valid_global_refs
-    invs_arch_state
-    invs_distinct
-    split: arch_cap.splits | intro impI conjI allI)+
+  apply (simp | wpc 
+    | wp modify_wp set_asid_pool_globals_equiv invs_valid_ko_at_arm
+         arch_finalise_cap_globals_equiv'
+         dmo_clearMemory_globals_equiv
+         dmo_cleanCacheRange_PoU_globals_equiv
+         page_table_mapped_inv
+         mapM_x_swp_store_pte_invs'
+         mapM_x_swp_store_pte_globals_equiv
+         hoare_unless_wp
+         hoare_drop_imps
+    | clarsimp simp: valid_pspace_def pbfs_less_wb page_caps_do_not_overlap_arm_globals_frame
+                     cte_wp_at_page_cap_aligned invs_valid_objs invs_valid_global_refs
+                     invs_arch_state invs_distinct
+              split: arch_cap.splits 
+    | intro impI conjI allI)+
    apply (rule_tac Q="\<lambda>r s. globals_equiv st s \<and> invs s" in hoare_strengthen_post)
-    apply (wp mapM_x_swp_store_kernel_base_globals_equiv)
+    apply (wp mapM_x_swp_store_kernel_base_globals_equiv )
     apply clarsimp
     apply assumption
    apply simp

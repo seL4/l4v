@@ -43,7 +43,7 @@ datatype cnode_invocation =
   | RecycleCall cslot_ptr 
 
 datatype untyped_invocation =
-    Retype cslot_ptr obj_ref obj_ref apiobject_type nat "cslot_ptr list"
+    Retype cslot_ptr obj_ref obj_ref apiobject_type nat "cslot_ptr list" bool
 
 datatype tcb_invocation =                                          
     WriteRegisters machine_word bool "machine_word list" arch_copy_register_sets

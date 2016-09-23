@@ -31,7 +31,7 @@ where
          (* Fetch the untyped item, and ensure it is valid. *)
          (untyped_cap, untyped_cap_ref) \<leftarrow> throw_on_none $ get_index caps 0;
          (case untyped_cap of
-             UntypedCap s _ \<Rightarrow> returnOk ()
+             UntypedCap _ s _ \<Rightarrow> returnOk ()
            | _ \<Rightarrow> throw);
          ensure_no_children untyped_cap_ref;
 

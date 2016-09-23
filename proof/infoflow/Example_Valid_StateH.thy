@@ -3364,15 +3364,14 @@ lemma step_restrict_s0:
   done
 
 lemma Sys1_valid_initial_state_noenabled:
-  assumes utf_det: "\<forall>pl pr pxn tc um es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um es s \<and> ct_running s
-                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, es) = {x})"
-  assumes utf_non_empty: "\<forall>t pl pr pxn tc um es. utf t pl pr pxn (tc, um, es) \<noteq> {}"
-  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, es) \<longrightarrow> e \<noteq> Some Interrupt"
+  assumes utf_det: "\<forall>pl pr pxn tc um ds es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um ds es s \<and> ct_running s
+                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, ds, es) = {x})"
+  assumes utf_non_empty: "\<forall>t pl pr pxn tc um ds es. utf t pl pr pxn (tc, um, ds, es) \<noteq> {}"
+  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um ds es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, ds, es) \<longrightarrow> e \<noteq> Some Interrupt"
   assumes det_inv_invariant: "invariant_over_ADT_if det_inv utf"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   shows "valid_initial_state_noenabled det_inv utf s0_internal Sys1PAS timer_irq s0_context"
   by (rule Sys1_valid_initial_state_noenabled[OF step_restrict_s0 utf_det utf_non_empty utf_non_interrupt det_inv_invariant det_inv_s0])
-
 end
 
 end

@@ -246,7 +246,7 @@ where
  "cap_auth_conferred cap \<equiv>
     case cap of
       Structures_A.NullCap \<Rightarrow> {}
-    | Structures_A.UntypedCap oref bits freeIndex \<Rightarrow> {Control}
+    | Structures_A.UntypedCap isdev oref bits freeIndex \<Rightarrow> {Control}
     | Structures_A.EndpointCap oref badge r \<Rightarrow>
          cap_rights_to_auth r True
     | Structures_A.NotificationCap oref badge r \<Rightarrow>
@@ -338,7 +338,7 @@ primrec
 where
   "aobj_ref' (arch_cap.ASIDPoolCap p as) = {p}"
 | "aobj_ref' arch_cap.ASIDControlCap = {}"
-| "aobj_ref' (arch_cap.PageCap x rs sz as4) = ptr_range x (pageBitsForSize sz)"
+| "aobj_ref' (arch_cap.PageCap isdev x rs sz as4) = ptr_range x (pageBitsForSize sz)"
 | "aobj_ref' (arch_cap.PageDirectoryCap x as2) = {x}"
 | "aobj_ref' (arch_cap.PageTableCap x as3) = {x}"
 
@@ -349,7 +349,7 @@ where
 | "obj_refs (cap.ReplyCap r m) = {r}"
 | "obj_refs cap.IRQControlCap = {}"
 | "obj_refs (cap.IRQHandlerCap irq) = {}"
-| "obj_refs (cap.UntypedCap r s f) = {}"
+| "obj_refs (cap.UntypedCap d r s f) = {}"
 | "obj_refs (cap.CNodeCap r bits guard) = {r}"
 | "obj_refs (cap.EndpointCap r b cr) = {r}"
 | "obj_refs (cap.NotificationCap r b cr) = {r}"
@@ -378,7 +378,7 @@ where
 fun
   cap_asid' :: "cap \<Rightarrow> asid set"
 where
-  "cap_asid' (ArchObjectCap (PageCap _ _ _ mapping))
+  "cap_asid' (ArchObjectCap (PageCap _ _ _ _ mapping))
       = fst ` set_option mapping"
   | "cap_asid' (ArchObjectCap (PageTableCap _ mapping))
       = fst ` set_option mapping"
@@ -832,7 +832,7 @@ where
   "auth_ipc_buffers s \<equiv> \<lambda>p. case (get_tcb p s) of
                                  None \<Rightarrow> {}
                                | Some tcb \<Rightarrow> case tcb_ipcframe tcb of
-                                                  cap.ArchObjectCap (arch_cap.PageCap p' R vms _) \<Rightarrow>
+                                                  cap.ArchObjectCap (arch_cap.PageCap False p' R vms _) \<Rightarrow>
                                                        if AllowWrite \<in> R then (ptr_range (p' + (tcb_ipc_buffer tcb && mask (pageBitsForSize vms))) msg_align_bits) else {}
                                                  | _ \<Rightarrow> {}"
 
@@ -856,12 +856,12 @@ lemma caps_of_state_tcb_cap_cases:
 
 lemma auth_ipc_buffers_member_def:
   "x \<in> auth_ipc_buffers s p = (\<exists>tcb p' R vms xx. get_tcb p s = Some tcb
-                                              \<and> tcb_ipcframe tcb = (cap.ArchObjectCap (arch_cap.PageCap p' R vms xx))
-                                              \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (cap.ArchObjectCap (arch_cap.PageCap p' R vms xx))
+                                              \<and> tcb_ipcframe tcb = (cap.ArchObjectCap (arch_cap.PageCap False p' R vms xx))
+                                              \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (cap.ArchObjectCap (arch_cap.PageCap False p' R vms xx))
                                               \<and> AllowWrite \<in> R
                                               \<and> x \<in> ptr_range (p' + (tcb_ipc_buffer tcb && mask (pageBitsForSize vms))) msg_align_bits)"
   unfolding auth_ipc_buffers_def
-  by (clarsimp simp: caps_of_state_tcb split: option.splits cap.splits arch_cap.splits )
+  by (clarsimp simp: caps_of_state_tcb split: option.splits cap.splits arch_cap.splits bool.splits)
 
 text {*
   Inductive for now, we should add something about user memory/transitions.
@@ -885,9 +885,18 @@ where
 abbreviation
   "memory_integrity X aag x t1 t2 ipc == integrity_mem (aag :: 'a PAS) {pasSubject aag} x t1 t2 ipc X"
 
+inductive
+  integrity_device for aag subjects p ts ts'  w w'
+where
+  trd_lrefl: "\<lbrakk> pasObjectAbs aag p \<in> subjects \<rbrakk>
+     \<Longrightarrow> integrity_device aag subjects p ts ts' w w'" (* implied by wf and write *)
+  | trd_orefl: "\<lbrakk> w = w' \<rbrakk> \<Longrightarrow> integrity_device aag subjects p ts ts' w w'"
+  | trd_write: "\<lbrakk> aag_subjects_have_auth_to subjects aag Write p \<rbrakk> \<Longrightarrow> integrity_device aag subjects p ts ts' w w'"
+
 lemmas integrity_obj_simps [simp] = tro_orefl[OF refl]
     tro_lrefl[OF singletonI]
     trm_orefl[OF refl]
+    trd_orefl[OF refl]
     tre_lrefl[OF singletonI]
     tre_orefl[OF refl]
 
@@ -960,6 +969,9 @@ where
                        (auth_ipc_buffers s) X
                        (underlying_memory (machine_state s) x)
                        (underlying_memory (machine_state s') x)) \<and>
+         (\<forall>x. integrity_device aag subjects x (tcb_states_of_state s) (tcb_states_of_state s')
+                       (device_state (machine_state s) x)
+                       (device_state (machine_state s') x)) \<and>
          (\<forall>x. integrity_cdt aag subjects x (cdt s x, is_original_cap s x) (cdt s' x, is_original_cap s' x)) \<and>
          (\<forall>x. integrity_cdt_list aag subjects x (cdt_list s x) (cdt_list s' x)) \<and>
          (\<forall>x. integrity_interrupts aag subjects x (interrupt_irq_node s x, interrupt_states s x) (interrupt_irq_node s' x, interrupt_states s' x)) \<and>
@@ -1071,7 +1083,9 @@ lemma auth_ipc_buffers_tro:
           pasObjectAbs aag p \<notin> subjects \<rbrakk>
   \<Longrightarrow> x \<in> auth_ipc_buffers s p "
   apply (drule_tac x = p in spec)
-  apply (erule integrity_obj.cases, simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def split: cap.split_asm arch_cap.split_asm split_if_asm)
+  apply (erule integrity_obj.cases, 
+        simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def 
+               split: cap.split_asm arch_cap.split_asm split_if_asm bool.splits)
   apply fastforce
   done
 
@@ -1080,7 +1094,9 @@ lemma auth_ipc_buffers_tro_fwd:
           pasObjectAbs aag p \<notin> subjects \<rbrakk>
   \<Longrightarrow> x \<in> auth_ipc_buffers s' p "
   apply (drule_tac x = p in spec)
-  apply (erule integrity_obj.cases, simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def split: cap.split_asm arch_cap.split_asm split_if_asm)
+  apply (erule integrity_obj.cases,
+        simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def
+                split: cap.split_asm arch_cap.split_asm split_if_asm bool.splits)
   apply fastforce
   done
 
@@ -1103,7 +1119,7 @@ proof -
   from t2 have tro2: "\<forall>x. integrity_obj aag activate subjects (pasObjectAbs aag x) (kheap s' x) (kheap s'' x)"
     unfolding integrity_subjects_def by simp
 
-  have "\<forall>x. integrity_mem aag subjects x
+  have intm: "\<forall>x. integrity_mem aag subjects x
                   (tcb_states_of_state s) (tcb_states_of_state s'') (auth_ipc_buffers s) X
                   (underlying_memory (machine_state s) x)
                   (underlying_memory (machine_state s'') x)" (is "\<forall>x. ?P x s s''")
@@ -1157,7 +1173,33 @@ proof -
     qed
   qed
 
-  thus ?thesis using tro_trans[OF tro1 tro2] t1 t2
+  moreover have "\<forall>x. integrity_device aag subjects x
+                  (tcb_states_of_state s) (tcb_states_of_state s'')
+                  (device_state (machine_state s) x)
+                  (device_state (machine_state s'') x)" (is "\<forall>x. ?P x s s''")
+  proof
+    fix x
+    from t1 t2 have m1: "?P x s s'" and m2: "?P x s' s''" unfolding integrity_subjects_def by auto
+
+    from m1 show "?P x s s''"
+    proof cases
+      case trd_lrefl thus ?thesis by (rule integrity_device.intros)
+    next
+      case torel1: trd_orefl
+      from m2 show ?thesis
+      proof cases
+        case (trd_lrefl) thus ?thesis by (rule integrity_device.trd_lrefl)
+      next
+        case trd_orefl thus ?thesis
+          by (simp add:torel1)
+      next
+        case trd_write thus ?thesis by (rule integrity_device.trd_write)
+      qed
+    next
+      case trd_write thus ?thesis by (rule integrity_device.intros)
+    qed
+  qed
+  thus ?thesis using tro_trans[OF tro1 tro2] t1 t2 intm
     apply (clarsimp simp add: integrity_subjects_def)
     apply (drule(1) trcdt_trans[simplified])
     apply (drule(1) trcdtlist_trans[simplified])
@@ -1181,13 +1223,17 @@ subsection{* Generic stuff *}
 lemma integrity_update_autarch:
   "\<lbrakk> integrity aag X st s; is_subject aag ptr \<rbrakk> \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)"
   unfolding integrity_subjects_def
-  apply (rule conjI)
+  apply (intro conjI,simp_all)
    apply clarsimp
-  apply clarsimp
-  apply (drule_tac x = x in spec, erule integrity_mem.cases)
+   apply (drule_tac x = x in spec, erule integrity_mem.cases)
    apply ((auto intro: integrity_mem.intros)+)[4]
-  apply (erule trm_ipc, simp_all)
-  apply (clarsimp simp: restrict_map_Some_iff tcb_states_of_state_def get_tcb_def)
+   apply (erule trm_ipc, simp_all)
+   apply (clarsimp simp: restrict_map_Some_iff tcb_states_of_state_def get_tcb_def)
+  apply clarsimp
+  apply (drule_tac x = x in spec, erule integrity_device.cases)
+    apply (erule integrity_device.trd_lrefl)
+   apply (erule integrity_device.trd_orefl)
+  apply (erule integrity_device.trd_write)
   done
 
 lemma set_object_integrity_autarch:
@@ -1587,7 +1633,7 @@ lemma pbfs_less_wb:
   by (cases x, simp_all add: word_bits_def)
 
 lemma ipcframe_subset_page:
-  "\<lbrakk>valid_objs s; get_tcb p s = Some tcb; tcb_ipcframe tcb = cap.ArchObjectCap (arch_cap.PageCap p' R vms xx);
+  "\<lbrakk>valid_objs s; get_tcb p s = Some tcb; tcb_ipcframe tcb = cap.ArchObjectCap (arch_cap.PageCap d p' R vms xx);
     x \<in> ptr_range (p' + (tcb_ipc_buffer tcb && mask (pageBitsForSize vms))) msg_align_bits \<rbrakk>
   \<Longrightarrow> x \<in> ptr_range p' (pageBitsForSize vms)"
    apply (frule (1) valid_tcb_objs)
@@ -1595,7 +1641,7 @@ lemma ipcframe_subset_page:
    apply (erule set_mp[rotated])
    apply (rule ptr_range_subset)
      apply (simp add: valid_cap_def cap_aligned_def)
-    apply (simp add: valid_tcb_def valid_ipc_buffer_cap_def is_aligned_andI1)
+    apply (simp add: valid_tcb_def valid_ipc_buffer_cap_def is_aligned_andI1 split:bool.splits)
    apply (rule order_trans [OF _ pbfs_atleast_pageBits])
    apply (simp add: msg_align_bits pageBits_def)
   apply (rule and_mask_less')
@@ -1642,6 +1688,10 @@ lemma integrity_mono:
    apply clarsimp
    apply (drule_tac x=x in spec, erule integrity_mem.cases,
            (blast intro: integrity_mem.intros trm_ipc')+)[1]
+  apply (rule conjI)
+   apply clarsimp
+   apply (drule_tac x=x in spec, erule integrity_device.cases,
+           (blast intro: integrity_device.intros)+)[1]
   apply (simp add: integrity_cdt_list_def)
   apply (rule conjI)
    apply (fastforce simp: integrity_cdt_def)

@@ -1139,6 +1139,18 @@ lemma hoare_pre_disj':
   apply simp
   done
 
+(* FIXME: move *)
+lemma invs_pspace_alignedI:
+  "invs s \<Longrightarrow> pspace_aligned s"
+  apply (simp add: invs_def valid_state_def valid_pspace_def)
+  done
+
+lemma cte_wp_at_disj:
+  "cte_wp_at (\<lambda>c. P c \<or> P' c) sl s =
+   (cte_wp_at (\<lambda>c. P c) sl s \<or> cte_wp_at (\<lambda>c. P' c) sl s)"
+  unfolding cte_wp_at_def
+  by fastforce
+
 lemmas thread_set_final_cap =
     final_cap_lift [OF thread_set_caps_of_state_trivial]
 

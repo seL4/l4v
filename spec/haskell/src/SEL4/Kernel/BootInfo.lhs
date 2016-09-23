@@ -92,6 +92,7 @@ Warning: rootCNodeSizeBits should be rootCNodeSize + objBits (undefined::CTE)
 >         bifUntypedObjCaps = [],
 >         bifUntypedObjPAddrs = [],
 >         bifUntypedObjSizeBits = [],
+>         bifUntypedObjIsDeviceList = [],
 >         bifITCNodeSizeBits = fromIntegral rootCNodeSize, -- Initialized here is fine
 >         bifNumDeviceRegions = 0,
 >         bifDeviceRegions = [] 

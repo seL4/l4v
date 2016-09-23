@@ -174,7 +174,7 @@ lemma create_irq_cap_sep:
 lemma create_irq_caps_sep_helper:
   "\<lbrace>\<guillemotleft>((\<And>* cptr \<in> set (take (card (used_irqs spec)) free_cptrs).
            ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) \<and>*
-      si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>* si_irq_nodes spec \<and>* R)  and
    K (well_formed spec \<and>
       list_all (\<lambda>n. n < 2 ^ si_cnode_size) free_cptrs \<and>
@@ -184,7 +184,7 @@ lemma create_irq_caps_sep_helper:
    \<lbrace>\<lambda>rv s. \<exists>(t'::32 word \<Rightarrow> 32 word option).
     \<guillemotleft>(irqs_empty spec t' (used_irqs spec) \<and>*
       si_irq_caps_at (fst rv) spec (used_irqs spec) \<and>*
-      si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>* R)
     and K ((map_of (zip (used_irq_list spec) free_cptrs), drop (card (used_irqs spec)) free_cptrs) = rv \<and>
     inj_on t' (used_irq_nodes spec) \<and>
@@ -205,7 +205,7 @@ lemma create_irq_caps_sep_helper:
                                                            |` used_irq_nodes spec) irq \<and>*
                                           si_irq_cap_at (map_of (zip (used_irq_list spec) free_cptrs)) spec irq" and
                   I1 = "si_objects" and
-                  R1 = "si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+                  R1 = "si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
                         R" in hoare_chain [OF mapM_x_set_sep])
      apply (metis distinct_zipI2)
     apply (clarsimp split:prod.splits)
@@ -280,7 +280,7 @@ lemma object_empty_cong:
 
 lemma si_cap_at_cong:
   "t obj_id = t' obj_id
-  \<Longrightarrow> si_cap_at  t si_caps spec obj_id = si_cap_at  t' si_caps spec obj_id"
+  \<Longrightarrow> si_cap_at  t si_caps spec dev obj_id = si_cap_at  t' si_caps spec dev obj_id"
   by (clarsimp simp: si_cap_at_def)
 
 lemma irq_empty_map_add:
@@ -301,7 +301,7 @@ lemma object_empty_map_add:
 
 lemma si_caps_at_map_add:
   "\<lbrakk>dom t = obj_ids; map_disj t t'\<rbrakk>
-  \<Longrightarrow> si_caps_at t si_caps spec obj_ids = si_caps_at (t++t') si_caps spec obj_ids"
+  \<Longrightarrow> si_caps_at t si_caps spec dev obj_ids = si_caps_at (t++t') si_caps spec dev obj_ids"
   apply (clarsimp simp: si_caps_at_def)
   apply (rule sep.setprod.cong, simp)
   apply (subst si_cap_at_cong [where t'="t++t'" and t=t], simp_all)
@@ -375,7 +375,7 @@ lemma si_objects_extra_caps'_split:
 lemma create_irq_caps_sep:
   "\<lbrace>\<lambda>s. \<exists>t_real.
     \<guillemotleft>(objects_empty spec t_real {obj_id. real_object_at obj_id spec} \<and>*
-      si_caps_at t_real orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+      si_caps_at t_real orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>*
       si_objects_extra_caps' {obj_id. real_object_at obj_id spec} free_cptrs_orig untyped_cptrs \<and>*
       si_irq_nodes spec \<and>* R)  and
@@ -391,7 +391,7 @@ lemma create_irq_caps_sep:
    \<lbrace>\<lambda>rv s. \<exists>(t::32 word \<Rightarrow> 32 word option).
     \<guillemotleft>(objects_empty spec t {obj_id. real_object_at obj_id spec} \<and>*
       irqs_empty spec t (used_irqs spec) \<and>*
-      si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_irq_caps_at (fst rv) spec (used_irqs spec) \<and>*
       si_objects \<and>*
       si_objects_extra_caps' (dom (cdl_objects spec)) free_cptrs_orig untyped_cptrs \<and>*

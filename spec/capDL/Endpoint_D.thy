@@ -37,7 +37,7 @@ where
   "get_receive_slot thread \<equiv>
     do
       tcb \<leftarrow> get_thread thread;
-      recv_slot \<leftarrow> (case (cdl_tcb_caps tcb tcb_ipcbuffer_slot) of (Some (FrameCap _ rights _ _ _)) \<Rightarrow> 
+      recv_slot \<leftarrow> (case (cdl_tcb_caps tcb tcb_ipcbuffer_slot) of (Some (FrameCap _ _ rights _ _ _)) \<Rightarrow> 
         if (Read \<in> rights \<and> Write \<in> rights)
           then return (cdl_intent_recv_slot (cdl_tcb_intent tcb))
         else
@@ -78,7 +78,7 @@ where
   "get_ipc_buffer oid in_receive \<equiv> do
     frame_cap \<leftarrow> get_cap (oid,tcb_ipcbuffer_slot);
     (case frame_cap of
-        Types_D.FrameCap a rights _ _ _ \<Rightarrow> if (Write \<in> rights \<and> Read \<in> rights) \<or> (Read\<in> rights \<and> \<not> in_receive)
+        Types_D.FrameCap _ a rights _ _ _ \<Rightarrow> if (Write \<in> rights \<and> Read \<in> rights) \<or> (Read\<in> rights \<and> \<not> in_receive)
           then return (Some a)
           else return None
         | _ \<Rightarrow> return None)

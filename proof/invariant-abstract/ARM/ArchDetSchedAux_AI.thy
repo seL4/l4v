@@ -16,9 +16,9 @@ context Arch begin global_naming ARM
 
 named_theorems DetSchedAux_AI_assms
 
-crunch exst[wp]: init_arch_objects "\<lambda>s. P (exst s)" (wp: crunch_wps)
-crunch ct[wp]: init_arch_objects "\<lambda>s. P (cur_thread s)" (wp: crunch_wps)
-crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at Q t" (wp: mapM_x_wp')
+crunch exst[wp]: init_arch_objects "\<lambda>s. P (exst s)" (wp: crunch_wps hoare_unless_wp)
+crunch ct[wp]: init_arch_objects "\<lambda>s. P (cur_thread s)" (wp: crunch_wps hoare_unless_wp)
+crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at Q t" (wp: mapM_x_wp' hoare_unless_wp)
 crunch valid_etcbs[wp, DetSchedAux_AI_assms]: init_arch_objects valid_etcbs (wp: valid_etcbs_lift)
 
 lemma delete_objects_etcb_at[wp, DetSchedAux_AI_assms]:
@@ -63,7 +63,7 @@ crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s :: det_e
    ignore: freeMemory)
 
 crunch idle_thread[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps dxo_wp_weak
+  (wp: crunch_wps dxo_wp_weak hoare_unless_wp
    simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym
    ignore: freeMemory retype_region_ext)
 

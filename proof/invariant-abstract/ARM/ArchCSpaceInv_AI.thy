@@ -31,12 +31,12 @@ lemma replace_cap_invs:
              set_cap_caps_of_state2 set_cap_idle
              replace_cap_ifunsafe valid_irq_node_typ
              set_cap_typ_at set_cap_irq_handlers
-             set_cap_valid_arch_caps)
-  apply (clarsimp simp: valid_pspace_def cte_wp_at_caps_of_state
-                        replaceable_def)
+             set_cap_valid_arch_caps 
+             set_cap_cap_refs_respects_device_region_replaceable)
+  apply (clarsimp simp: valid_pspace_def cte_wp_at_caps_of_state replaceable_def)
   apply (rule conjI)
    apply (fastforce simp: tcb_cap_valid_def
-                  dest!: cte_wp_tcb_cap_valid [OF caps_of_state_cteD])
+                   dest!: cte_wp_tcb_cap_valid [OF caps_of_state_cteD])
   apply (rule conjI)
    apply (erule_tac P="\<lambda>cps. mdb_cte_at cps (cdt s)" in rsubst)
    apply (rule ext)
@@ -105,10 +105,8 @@ lemma replace_cap_invs:
    apply (clarsimp simp: valid_table_capsD[OF caps_of_state_cteD]
                     valid_arch_caps_def unique_table_refs_no_cap_asidE)
   apply simp
-  apply (rule Ball_emptyI)
-  apply (simp add: obj_irq_refs_subset)
+  apply (rule Ball_emptyI, simp add: obj_irq_refs_subset)
   done
-
 end
 
 context begin interpretation Arch .

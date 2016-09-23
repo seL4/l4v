@@ -1118,8 +1118,8 @@ crunch inv [wp]: alignError "P"
 
 lemma createObjects_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> pspace_aligned' s \<and> pspace_no_overlap' ptr sz s \<and> pspace_distinct' s 
-      \<and> n \<noteq> 0 \<and> range_cover ptr sz (objBitsKO (injectKOS val) + gbits) n
-      \<and> \<not> case_option False (is_active_thread_state \<circ> tcbState) (projectKO_opt (injectKOS val)) \<rbrace>
+      \<and> n \<noteq> 0 \<and> range_cover ptr sz (objBitsKO val + gbits) n
+      \<and> \<not> case_option False (is_active_thread_state \<circ> tcbState) (projectKO_opt val) \<rbrace>
    createObjects ptr n val gbits
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (clarsimp simp: no_orphans_def all_active_tcb_ptrs_def
@@ -1137,12 +1137,12 @@ lemma createObjects_no_orphans [wp]:
 
 lemma createWordObjects_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> pspace_aligned' s \<and> pspace_distinct' s 
-   \<and> pspace_no_overlap' ptr sz s \<and> n \<noteq> 0 \<and> range_cover ptr sz (objBitsKO KOUserData + us) n\<rbrace>
-   createWordObjects ptr n us
+   \<and> pspace_no_overlap' ptr sz s \<and> n \<noteq> 0 \<and> range_cover ptr sz (pageBits + us) n\<rbrace>
+   createWordObjects ptr n us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding createWordObjects_def
-  apply (wp | clarsimp simp: projectKO_opt_tcb)+
-  apply (intro conjI,simp+)
+  apply (wp hoare_unless_wp | clarsimp simp: projectKO_opt_tcb split del: split_if)+
+  apply (intro conjI | simp add: objBits_simps)+
   done
 
 lemma copyGlobalMappings_no_orphans [wp]:
@@ -1168,7 +1168,7 @@ lemma createNewCaps_no_orphans:
          \<and>  pspace_no_overlap' ptr sz s
          \<and>  (tp = APIObjectType CapTableObject \<longrightarrow> us > 0))
          and K (range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n) \<rbrace> 
-   createNewCaps tp ptr n us
+   createNewCaps tp ptr n us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (clarsimp simp: createNewCaps_def toAPIType_def
     split del: split_if cong: option.case_cong)
@@ -1184,71 +1184,76 @@ lemma createNewCaps_no_orphans:
 
 lemma createObject_no_orphans:
   "\<lbrace>pspace_no_overlap' ptr sz and pspace_aligned' and pspace_distinct' and
-    cte_wp_at' (\<lambda>cte. cteCap cte = (capability.UntypedCap ptr sz idx)) cref and
+    cte_wp_at' (\<lambda>cte. cteCap cte = (capability.UntypedCap d ptr sz idx)) cref and
     K (range_cover ptr sz (APIType_capBits tp us) (Suc 0)) and no_orphans\<rbrace>
-   RetypeDecls_H.createObject tp ptr us
+   RetypeDecls_H.createObject tp ptr us d
    \<lbrace>\<lambda>xa. no_orphans\<rbrace>"
   apply (case_tac tp)
-        apply (simp_all add:createObject_def ARM_H.createObject_def)
+        apply (simp_all add: createObject_def ARM_H.createObject_def split del: split_if)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
             apply (simp_all add: ARM_H.createObject_def createPageObject_def placeNewObject_def2
-                                 toAPIType_def)+
+              toAPIType_def split del: split_if)+
             apply (wp threadSet_no_orphans | clarsimp)+
-           apply ((wp createObjects'_wp_subst[where c = "makeObject::Structures_H.tcb"]
+           apply ((wp createObjects'_wp_subst
                   createObjects_no_orphans[where sz = sz] | 
              clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
              is_active_thread_state_def makeObject_tcb
              projectKO_opt_tcb isRunning_def isRestart_def
              APIType_capBits_def objBits_simps split:option.splits)+)[1]
-          apply ((wp createObjects'_wp_subst[where c = "makeObject::Structures_H.endpoint"]
+          apply ((wp createObjects'_wp_subst
                   createObjects_no_orphans[where sz = sz] | 
           clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
           is_active_thread_state_def makeObject_tcb
           projectKO_opt_tcb isRunning_def isRestart_def
           APIType_capBits_def objBits_simps split:option.splits)+)[1]
-         apply ((wp createObjects'_wp_subst[where c = "makeObject::Structures_H.notification"]
+         apply ((wp createObjects'_wp_subst
                   createObjects_no_orphans[where sz = sz] | 
           clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
           is_active_thread_state_def makeObject_tcb
           projectKO_opt_tcb isRunning_def isRestart_def
           APIType_capBits_def objBits_simps split:option.splits)+)[1]
-        apply ((wp createObjects'_wp_subst[where c = "makeObject::cte"]
+        apply ((wp createObjects'_wp_subst
                    createObjects_no_orphans[where sz = sz] | 
          clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-         is_active_thread_state_def makeObject_tcb
-         projectKO_opt_tcb isRunning_def isRestart_def
-         APIType_capBits_def objBits_simps split:option.splits)+)[1]
-       apply ((wp createObjects'_wp_subst[where c = "makeObject::user_data"]
+                        is_active_thread_state_def makeObject_tcb
+                        projectKO_opt_tcb isRunning_def isRestart_def
+                        APIType_capBits_def objBits_simps
+                 split: option.splits split del: split_if)+)[1]
+       apply ((wp createObjects'_wp_subst hoare_if
                 createObjects_no_orphans[where sz = sz] | 
-        clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-        is_active_thread_state_def makeObject_tcb pageBits_def
-        projectKO_opt_tcb isRunning_def isRestart_def
-        APIType_capBits_def objBits_simps split:option.splits)+)[4]
-   apply ((wp createObjects'_wp_subst[where c = "makeObject::pte"]
+        clarsimp simp: placeNewObject_def2
+                       projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
+                       is_active_thread_state_def makeObject_tcb pageBits_def unless_def
+                       projectKO_opt_tcb isRunning_def isRestart_def
+                       APIType_capBits_def objBits_simps split: option.splits 
+            split del: split_if)+)[4]
+   apply ((wp createObjects'_wp_subst
                createObjects_no_orphans[where sz = sz ] | 
        clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-       is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def
-       projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
-       APIType_capBits_def objBits_simps split:option.splits)+)[1]
-  apply ((wp createObjects'_wp_subst[where c = "makeObject::pde"]
+                      is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def
+                      projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
+                      APIType_capBits_def objBits_simps
+               split: option.splits)+)[1]
+  apply ((wp createObjects'_wp_subst
               createObjects_no_orphans[where sz = sz] | 
       clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-      is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def pdBits_def
-      projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
-      APIType_capBits_def objBits_simps split:option.splits))+
+                     is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def pdBits_def
+                     projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
+                     APIType_capBits_def objBits_simps
+              split: option.splits))+
   done
 
 lemma createNewObjects_no_orphans :
   "\<lbrace>\<lambda>s. no_orphans s \<and> invs' s \<and> pspace_no_overlap' ptr sz s
          \<and> (\<forall>slot\<in>set slots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
-         \<and> cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap (ptr && ~~ mask sz) sz idx) cref s
+         \<and> cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d (ptr && ~~ mask sz) sz idx) cref s
          \<and> caps_no_overlap'' ptr sz s
          \<and> range_cover ptr sz (APIType_capBits tp us) (length slots) 
          \<and> (tp = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)
          \<and> caps_overlap_reserved' {ptr..ptr + of_nat (length slots) * 2 ^ APIType_capBits tp us - 1} s
          \<and> slots \<noteq> [] \<and> distinct slots \<and> ptr \<noteq> 0\<rbrace>
-   createNewObjects tp cref slots ptr us
+   createNewObjects tp cref slots ptr us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (rule hoare_name_pre_state)
   apply clarsimp
@@ -1292,22 +1297,22 @@ lemma deleteObjects_no_orphans [wp]:
   done
 
 lemma invokeUntyped_no_orphans' [wp]:
-  "ui = Retype cref ptr_base ptr tp us slots \<Longrightarrow>
+  "ui = Retype cref ptr_base ptr tp us slots d \<Longrightarrow>
    \<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_untyped_inv' ui s \<and> ct_active' s \<rbrace>
    invokeUntyped ui 
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
   apply (rule hoare_name_pre_state)
   apply clarsimp
-  apply (subgoal_tac "invokeUntyped_proofs s cref ptr tp us slots sz idx")
+  apply (subgoal_tac "invokeUntyped_proofs s cref ptr tp us slots sz idx d")
   prefer 2
    apply (simp add:invokeUntyped_proofs_def)
   proof -
-    fix s sz idx
+    fix s sz idx d
     assume no_orph: "no_orphans s"
     assume misc : " (tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> 0 < us)"
-                  " tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 30"
+                  " tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29"
                   " sch_act_simple s " "ct_active' s"
-    assume ivk_pf: "invokeUntyped_proofs s cref ptr tp us slots sz idx"
+    assume ivk_pf: "invokeUntyped_proofs s cref ptr tp us slots sz idx d"
     note blah[simp del] = 
           atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex usableUntypedRange.simps
@@ -1326,7 +1331,7 @@ lemma invokeUntyped_no_orphans' [wp]:
       apply simp
       done
 
-  show "\<lbrace>op = s\<rbrace> invokeUntyped (Invocations_H.untyped_invocation.Retype cref (ptr && ~~ mask sz) ptr tp us slots) 
+  show "\<lbrace>op = s\<rbrace> invokeUntyped (Invocations_H.untyped_invocation.Retype cref (ptr && ~~ mask sz) ptr tp us slots d) 
           \<lbrace>\<lambda>reply. no_orphans\<rbrace>"
   apply (simp add: invokeUntyped_def insertNewCaps_def
                    split_def bind_assoc zipWithM_x_mapM
@@ -1373,22 +1378,22 @@ lemma invokeUntyped_no_orphans' [wp]:
    apply (strengthen invs_pspace_aligned' invs_valid_pspace'
           invs_pspace_distinct' invs_arch_state invs_psp_aligned)
    apply (clarsimp simp:conj_comms invokeUntyped_proofs.slots_invD[OF ivk_pf])
-   apply (rule_tac P = "cap = capability.UntypedCap (ptr && ~~ mask sz) sz idx"
+   apply (rule_tac P = "cap = capability.UntypedCap d (ptr && ~~ mask sz) sz idx" 
        in hoare_gen_asm)
    apply (clarsimp simp:misc)
-   apply (wp deleteObjects_invs'[where idx = idx and p = "cref"]
-     deleteObjects_caps_no_overlap''[where idx = idx and slot = "cref"] 
-     deleteObject_no_overlap[where idx = idx]
-     deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz]
-     deleteObjects_caps_overlap_reserved'[where idx = idx and slot = "cref"] 
-     deleteObjects_descendants[where idx = idx and p = "cref"]
+   apply (wp deleteObjects_invs'[where idx = idx and p = "cref" and d=d] 
+     deleteObjects_caps_no_overlap''[where idx = idx and slot = "cref" and d=d] 
+     deleteObject_no_overlap[where idx = idx and d=d]
+     deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz and d=d]
+     deleteObjects_caps_overlap_reserved'[where idx = idx and slot = "cref" and d=d] 
+     deleteObjects_descendants[where idx = idx and p = "cref" and d=d]
      hoare_vcg_ball_lift hoare_drop_imp hoare_vcg_ex_lift 
-     deleteObjects_st_tcb_at'[where p = cref]
-     deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz]
-     deleteObjects_ct_active'[where idx = idx and cref = cref])
-  apply (clarsimp simp:conj_comms)
-  apply (wp getSlotCap_wp)
-  using invokeUntyped_proofs.usableRange_disjoint[OF ivk_pf]
+     deleteObjects_st_tcb_at'[where p = cref and d=d]
+     deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz and d=d]
+     deleteObjects_ct_active'[where idx = idx and cref = cref and d=d])
+   apply (clarsimp simp: conj_comms)
+   apply (wp getSlotCap_wp)
+   using invokeUntyped_proofs.usableRange_disjoint[OF ivk_pf]
      invokeUntyped_proofs.descendants_range[OF ivk_pf]
      invokeUntyped_proofs.slots_invD[OF ivk_pf]
      invokeUntyped_proofs.vc'[OF ivk_pf]
@@ -1792,13 +1797,13 @@ lemma arch_recycleCap_no_orphans:
   apply (simp add: ARM_H.recycleCap_def
               split del: split_if)
   apply (rule hoare_pre)
-   apply (wp mapM_x_wp' static_imp_wp | wpc | clarsimp simp: Let_def split del: split_if)+
+   apply (wp mapM_x_wp' static_imp_wp hoare_unless_wp | wpc | clarsimp simp: Let_def split del: split_if)+
       apply (rule_tac Q="\<lambda>rv s. no_orphans s" in hoare_post_imp)
        apply (clarsimp simp: no_orphans_def all_queued_tcb_ptrs_def
                              all_active_tcb_ptrs_def is_active_tcb_ptr_def)
       apply (wp undefined_valid | clarsimp)+
   apply (drule cte_wp_at_valid_objs_valid_cap', clarsimp+)
-  apply (clarsimp simp: valid_cap'_def isCap_simps
+  apply (clarsimp simp: valid_cap'_def isCap_simps simp del: not_ex
                   split: arch_capability.splits)
   done
 
@@ -2037,11 +2042,11 @@ lemma performASIDControlInvocation_no_orphans [wp]:
   assume no_orphans: "no_orphans s"
     and  invs'     : "invs' s"
     and  cte       : "ctes_of s p = Some null_cte" "cteCap null_cte = capability.NullCap"
-                     "ctes_of s cref = Some ut_cte" "cteCap ut_cte = capability.UntypedCap ptr_base pageBits idx"
+                     "ctes_of s cref = Some ut_cte" "cteCap ut_cte = capability.UntypedCap False ptr_base pageBits idx"
     and  desc      : "descendants_of' cref (ctes_of s) = {}"
     and  misc      : "p \<noteq> cref" "ex_cte_cap_wp_to' (\<lambda>_. True) p s" "sch_act_simple s" "is_aligned ptr asid_low_bits"
                      "(ptr :: word32) < 2 ^ asid_bits" "ct_active' s"
-  have vc:"s \<turnstile>' UntypedCap ptr_base pageBits idx"
+  have vc:"s \<turnstile>' UntypedCap False ptr_base pageBits idx"
     using cte misc invs'
     apply -
     apply (case_tac ut_cte)
@@ -2076,13 +2081,12 @@ lemma performASIDControlInvocation_no_orphans [wp]:
      apply (clarsimp simp: no_orphans_def all_active_tcb_ptrs_def
                            is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
     apply (wp | clarsimp simp:placeNewObject_def2)+
-     apply (wp createObjects'_wp_subst[where c = "makeObject::asidpool"])
-      apply simp
+     apply (wp createObjects'_wp_subst)
      apply (wp static_imp_wp updateFreeIndex_pspace_no_overlap'[where sz= pageBits] getSlotCap_wp | simp)+
   apply (strengthen invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace')
   apply (clarsimp simp:conj_comms)
-     apply (wp deleteObjects_invs'[where idx = idx]
-       hoare_ex_wp deleteObjects_cte_wp_at'[where idx = idx] hoare_vcg_const_imp_lift )
+     apply (wp deleteObjects_invs'[where idx = idx and d=False]
+       hoare_ex_wp deleteObjects_cte_wp_at'[where idx = idx and d=False] hoare_vcg_const_imp_lift )
   using invs' misc cte exclude no_orphans cover
   apply (clarsimp simp: is_active_thread_state_def makeObject_tcb valid_aci'_def
                         cte_wp_at_ctes_of invs_pspace_aligned' invs_pspace_distinct'

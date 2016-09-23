@@ -851,8 +851,9 @@ lemma sameObject_corres2:
   apply (rename_tac arch_capa)
   apply (clarsimp simp add: ARM_H.sameObjectAs_def Let_def)
   apply (intro conjI impI)
-   apply (case_tac arch_cap; simp add: isCap_simps)
-   apply (case_tac arch_capa; simp)
+   apply (case_tac arch_cap; simp add: isCap_simps del: not_ex)
+   apply (case_tac arch_capa; clarsimp simp del: not_ex)
+   apply fastforce
   apply (case_tac arch_cap; simp add: sameRegionAs_def isCap_simps)
   apply (case_tac arch_capa; simp)
   done
@@ -1000,7 +1001,7 @@ lemma checked_insert_tcb_invs'[wp]:
    apply fastforce
   apply (clarsimp simp: isCap_simps cteCaps_of_def)
   apply (erule(1) valid_irq_handlers_ctes_ofD)
-  apply (clarsimp simp:invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def)
   done
 
 lemma checkCap_inv:
@@ -1412,7 +1413,7 @@ lemma setSchedulerAction_invs'[wp]:
   apply (clarsimp simp add: invs'_def valid_state'_def valid_irq_node'_def
                 valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs cur_tcb'_def
                 ct_not_inQ_def)
-  apply (simp add:ct_idle_or_in_cur_domain'_def)
+  apply (simp add: ct_idle_or_in_cur_domain'_def)
   done
 
 end
@@ -1844,13 +1845,13 @@ lemma check_valid_ipc_corres:
                    checkValidIPCBuffer_def
                    ARM_H.checkValidIPCBuffer_def
                    unlessE_def Let_def
-            split: cap_relation_split_asm arch_cap.split_asm)
+            split: cap_relation_split_asm arch_cap.split_asm bool.splits)
   apply (simp add: capTransferDataSize_def msgMaxLength_def
                    msg_max_length_def msgMaxExtraCaps_def
                    cap_transfer_data_size_def word_size
                    msgLengthBits_def msgExtraCapBits_def msg_align_bits msgAlignBits_def
-                   msg_max_extra_caps_def is_aligned_mask whenE_def)
-  apply (simp add: returnOk_def )
+                   msg_max_extra_caps_def is_aligned_mask whenE_def split:vmpage_size.splits)
+  apply (auto simp add: returnOk_def )
   done
 
 lemma checkValidIPCBuffer_ArchObject_wp:
@@ -1864,8 +1865,8 @@ lemma checkValidIPCBuffer_ArchObject_wp:
                    arch_capability.case_cong
             split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | wpc)+
-  apply (clarsimp simp: isCap_simps is_aligned_mask msg_align_bits msgAlignBits_def)
+  apply (wp whenE_throwError_wp 
+    | wpc | clarsimp simp: isCap_simps is_aligned_mask msg_align_bits msgAlignBits_def)+
   done
 
 lemma decode_set_ipc_corres:

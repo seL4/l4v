@@ -108,14 +108,14 @@ All other capabilities need no finalisation action.
 \subsection{Recycling Capabilities}
 
 > resetMemMapping :: ArchCapability -> ArchCapability
-> resetMemMapping (PageCap p rts sz _) = PageCap p rts sz Nothing
+> resetMemMapping (PageCap dev p rts sz _) = PageCap dev p rts sz Nothing
 > resetMemMapping (PageTableCap ptr _) = PageTableCap ptr Nothing
 > resetMemMapping (PageDirectoryCap ptr _) = PageDirectoryCap ptr Nothing
 > resetMemMapping cap = cap
 
 > recycleCap :: Bool -> ArchCapability -> Kernel ArchCapability
-> recycleCap is_final (cap@PageCap {}) = do
->       doMachineOp $ clearMemory (capVPBasePtr cap)
+> recycleCap is_final (cap@PageCap { capVPIsDevice = isDevice }) = do
+>       unless isDevice $ doMachineOp $ clearMemory (capVPBasePtr cap)
 >           (1 `shiftL` (pageBitsForSize $ capVPSize cap))
 >       finaliseCap cap is_final
 >       return $ resetMemMapping cap
@@ -203,53 +203,58 @@ All other capabilities need no finalisation action.
 > sameObjectAs (a@PageCap { capVPBasePtr = ptrA }) (b@PageCap {}) =
 >     (ptrA == capVPBasePtr b) && (capVPSize a == capVPSize b)
 >         && (ptrA <= ptrA + bit (pageBitsForSize $ capVPSize a) - 1)
+>         && (capVPIsDevice a == capVPIsDevice b)
 > sameObjectAs a b = sameRegionAs a b
 
 \subsection{Creating New Capabilities}
 
 Creates a page-sized object that consists of plain words observable to the user.
 
-> createPageObject ptr numPages = do
->     addrs <- placeNewObject ptr UserData numPages
->     doMachineOp $ initMemory (PPtr $ fromPPtr ptr) (1 `shiftL` (pageBits + numPages) )
->     return addrs
+> createPageObject ptr numPages isDevice =
+>     if isDevice then do
+>       addrs <- placeNewObject ptr UserDataDevice numPages
+>       return addrs
+>     else do 
+>       addrs <- placeNewObject ptr UserData numPages
+>       doMachineOp $ initMemory (PPtr $ fromPPtr ptr) (1 `shiftL` (pageBits + numPages) ) -- only write to non-device pages
+>       return addrs
 
 Create an architecture-specific object.
 
-> createObject :: ObjectType -> PPtr () -> Int -> Kernel ArchCapability
-> createObject t regionBase _ =
+> createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
+> createObject t regionBase _ isDevice =
 >     let funupd = (\f x v y -> if y == x then v else f y) in
 >     let pointerCast = PPtr . fromPPtr
 >     in case t of
 >         Arch.Types.APIObjectType _ ->
 >             fail "Arch.createObject got an API type"
 >         Arch.Types.SmallPageObject -> do
->             createPageObject regionBase 0
+>             createPageObject regionBase 0 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSmallPage)})
->             return $! PageCap (pointerCast regionBase)
+>             return $! PageCap isDevice (pointerCast regionBase)
 >                   VMReadWrite ARMSmallPage Nothing
 >         Arch.Types.LargePageObject -> do
->             createPageObject regionBase 4
+>             createPageObject regionBase 4 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMLargePage)})
->             return $! PageCap (pointerCast regionBase)
+>             return $! PageCap isDevice (pointerCast regionBase)
 >                   VMReadWrite ARMLargePage Nothing
 >         Arch.Types.SectionObject -> do
->             createPageObject regionBase 8
+>             createPageObject regionBase 8 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSection)})
->             return $! PageCap (pointerCast regionBase)
+>             return $! PageCap isDevice (pointerCast regionBase)
 >                   VMReadWrite ARMSection Nothing
 >         Arch.Types.SuperSectionObject -> do
->             createPageObject regionBase 12 
+>             createPageObject regionBase 12 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSuperSection)})
->             return $! PageCap (pointerCast regionBase)
+>             return $! PageCap isDevice (pointerCast regionBase)
 >                   VMReadWrite ARMSuperSection Nothing
 >         Arch.Types.PageTableObject -> do
 >             let ptSize = ptBits - objBits (makeObject :: PTE)

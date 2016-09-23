@@ -192,7 +192,7 @@ where
   | AsidPoolCap _ f2 \<Rightarrow> AsidPoolCap obj_id f2
   | PageDirectoryCap _ f2 f3 \<Rightarrow> PageDirectoryCap obj_id f2 f3
   | PageTableCap _ f2 f3 \<Rightarrow> PageTableCap obj_id f2 f3
-  | FrameCap _ f2 f3 f4 f5 \<Rightarrow> FrameCap obj_id f2 f3 f4 f5
+  | FrameCap dev _ f2 f3 f4 f5 \<Rightarrow> FrameCap dev obj_id f2 f3 f4 f5
   | TcbCap _ \<Rightarrow> TcbCap obj_id
   | CNodeCap _ f2 f3 f4 \<Rightarrow> CNodeCap obj_id f2 f3 f4
   | MasterReplyCap _ \<Rightarrow> MasterReplyCap obj_id
@@ -209,7 +209,7 @@ where
 definition update_cap_objects :: "cdl_object_id set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
 where
     "update_cap_objects obj_ids cap \<equiv> case cap of
-    UntypedCap _ a \<Rightarrow> UntypedCap obj_ids a
+    UntypedCap d _ a \<Rightarrow> UntypedCap d obj_ids a
   | _ \<Rightarrow> cap"
 
 lemma slots_of_cdl_objects:
@@ -272,11 +272,11 @@ definition
   well_formed_untyped_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "well_formed_untyped_cap cap \<equiv> case cap of
-    UntypedCap cover_ids available_ids \<Rightarrow> available_ids \<subseteq> cover_ids
+    UntypedCap _ cover_ids available_ids \<Rightarrow> available_ids \<subseteq> cover_ids
   | _ \<Rightarrow> True"
 
 lemma cap_free_ids_simps:
-  "cap_free_ids (UntypedCap cover_ids available_ids) = available_ids"
+  "cap_free_ids (UntypedCap d cover_ids available_ids) = available_ids"
   by (clarsimp simp: cap_free_ids_def)
 
 
@@ -295,10 +295,19 @@ lemma cap_type_remove_free_ids [simp]:
   by (clarsimp simp: cap_type_def remove_free_ids_def
               split: cdl_cap.splits)
 
+definition
+  is_device_cap :: "cdl_cap \<Rightarrow> bool"
+where  "is_device_cap cap \<equiv> case cap of
+   (UntypedCap dev cover_ids available_ids) \<Rightarrow> dev
+   | (FrameCap dev _ _ _ _ _) \<Rightarrow> dev
+   | _ \<Rightarrow> False"
+
+lemmas is_device_cap_simps[simp] = is_device_cap_def[split_simps cdl_cap.split]
+
 lemma remove_free_ids_simps:
   "\<lbrakk>is_untyped_cap cap; available_ids \<subseteq> cap_free_ids cap\<rbrakk>
   \<Longrightarrow> remove_free_ids cap (cap_free_ids cap - available_ids)
-    = UntypedCap (cap_objects cap) available_ids"
+    = UntypedCap (is_device_cap cap) (cap_objects cap) available_ids"
   by (auto simp: remove_free_ids_def cap_free_ids_def cap_type_def
           split: cdl_cap.splits)
 
@@ -306,7 +315,7 @@ definition
   is_full_untyped_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "is_full_untyped_cap cap \<equiv> case cap of
-     UntypedCap cover_ids available_ids \<Rightarrow> cover_ids = available_ids
+     UntypedCap dev cover_ids available_ids \<Rightarrow> cover_ids = available_ids
    | _ \<Rightarrow> False"
 
 lemma is_full_untyped_cap_is_untyped_cap:
@@ -653,14 +662,14 @@ abbreviation "fake_pt_cap_at \<equiv> cap_at is_fake_pt_cap"
 abbreviation "irqhandler_cap_at \<equiv> cap_at is_irqhandler_cap"
 
 lemma is_cnode_cap_simps:
-  "is_cnode_cap (UntypedCap ids ids') = False"
+  "is_cnode_cap (UntypedCap dev ids ids') = False"
   "is_cnode_cap (IOPageTableCap x) = False"
   "is_cnode_cap (IOSpaceCap x) = False"
   "is_cnode_cap (IOPortsCap x a) = False"
   "is_cnode_cap (AsidPoolCap x b) = False"
   "is_cnode_cap (PageDirectoryCap x c d) = False"
   "is_cnode_cap (PageTableCap x e f) = False"
-  "is_cnode_cap (FrameCap x g h i j) = False"
+  "is_cnode_cap (FrameCap dev x g h i j) = False"
   "is_cnode_cap (TcbCap x) = False"
   "is_cnode_cap (MasterReplyCap x) = False"
   "is_cnode_cap (ReplyCap x) = False"
@@ -693,18 +702,18 @@ where
 definition is_default_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "is_default_cap cap \<equiv>
-  (\<exists>type. cap_type cap = Some type \<and>
-   cap = default_cap type (cap_objects cap) (cnode_cap_size cap)) \<or>
+  (\<exists>type dev. cap_type cap = Some type \<and>
+   cap = default_cap type (cap_objects cap) (cnode_cap_size cap) dev) \<or>
    is_irqhandler_cap cap"
 
 lemma default_cap_eq:
   "\<lbrakk>is_default_cap cap; is_default_cap cap';
     cap_type cap = cap_type cap'; cap_objects cap = cap_objects cap';
     cnode_cap_size cap = cnode_cap_size cap';
-    cap_irq cap = cap_irq cap'\<rbrakk>
+    cap_irq cap = cap_irq cap'; is_device_cap cap = is_device_cap cap'\<rbrakk>
   \<Longrightarrow> cap = cap'"
-  by (auto simp: is_default_cap_def cap_type_def cap_irq_def
-          split: cdl_cap.splits)
+  by (auto simp: is_default_cap_def cap_type_def cap_irq_def default_cap_def
+          split: cdl_cap.splits )
 
 
 lemma cnode_cap_size_non_cnode [simp]:
@@ -718,14 +727,15 @@ lemma irqhandler_cap_irq_non_irqhandler [simp]:
 lemma default_cap_eq_non_cnode:
   "\<lbrakk>is_default_cap cap; is_default_cap cap';
    \<not> is_cnode_cap cap; \<not> is_irqhandler_cap cap;
-    cap_type cap = cap_type cap'; cap_objects cap = cap_objects cap'\<rbrakk>
+    cap_type cap = cap_type cap'; cap_objects cap = cap_objects cap';
+    is_device_cap cap = is_device_cap cap'\<rbrakk>
   \<Longrightarrow> cap = cap'"
-  apply (frule (1) default_cap_eq, simp+)
-  apply (clarsimp simp: is_default_cap_def cap_type_def)
+  apply (rule default_cap_eq)
+   apply simp+
   done
 
 lemma cap_type_default_cap [simp]:
-  "cap_type (default_cap type {obj_id} sz) = Some type"
+  "cap_type (default_cap type {obj_id} sz dev) = Some type"
   by (clarsimp simp: default_cap_def cap_type_def split: cdl_object_type.splits)
 
 lemma is_tcb_update_slots [simp]:
@@ -786,23 +796,23 @@ lemma cap_has_object_update_cap_object [simp]:
 
 lemma cap_object_default_cap' [simp]:
   "\<lbrakk>\<not>is_untyped obj; \<not>is_irq_node obj\<rbrakk>
-  \<Longrightarrow> cap_object (default_cap (object_type obj) {obj_id} sz) = obj_id"
+  \<Longrightarrow> cap_object (default_cap (object_type obj) {obj_id} sz dev) = obj_id"
   by (clarsimp simp: default_cap_def  object_type_def is_untyped_def is_irq_node_def cap_object_simps
               split: cdl_object_type.splits cdl_object.splits)
 
 lemma cap_object_default_cap [simp]:
   "\<lbrakk>type \<noteq> UntypedType; type \<noteq> IRQNodeType\<rbrakk>
-  \<Longrightarrow> cap_object (default_cap type {obj_id} sz) = obj_id"
+  \<Longrightarrow> cap_object (default_cap type {obj_id} sz dev) = obj_id"
   by (clarsimp simp: default_cap_def  object_type_def is_untyped_def cap_object_simps
               split: cdl_object_type.splits cdl_object.splits)
 
 lemma cap_object_default_cap_frame:
-  "is_frame_cap cap \<Longrightarrow> cap_object (default_cap (the (cap_type cap)) {obj_id} sz) = obj_id"
+  "is_frame_cap cap \<Longrightarrow> cap_object (default_cap (the (cap_type cap)) {obj_id} sz dev) = obj_id"
   by clarsimp
 
 lemma default_cap_not_null [elim!]:
-  "default_cap type obj_ids sz = NullCap \<Longrightarrow> False"
-  "NullCap = default_cap type obj_ids sz\<Longrightarrow> False"
+  "default_cap type obj_ids sz dev = NullCap \<Longrightarrow> False"
+  "NullCap = default_cap type obj_ids sz dev\<Longrightarrow> False"
   by (simp add: default_cap_def split: cdl_object_type.splits)+
 
 lemma cap_objects_update_cap_object [simp]:
@@ -812,11 +822,11 @@ lemma cap_objects_update_cap_object [simp]:
               split: cdl_cap.splits)
 
 lemma  cap_has_object_default_cap [simp]:
-  "type \<noteq> IRQNodeType \<Longrightarrow> cap_has_object (default_cap type ids sz)"
+  "type \<noteq> IRQNodeType \<Longrightarrow> cap_has_object (default_cap type ids sz dev)"
   by (clarsimp simp: default_cap_def cap_has_object_def split: cdl_object_type.splits)
 
 lemma cap_rights_default_cap_cnode [simp]:
-  "cap_rights (default_cap CNodeType ids sz) = UNIV"
+  "cap_rights (default_cap CNodeType ids sz dev) = UNIV"
   by (clarsimp simp: cap_rights_def default_cap_def)
 
 lemma cap_rights_cnode_cap [simp]:
@@ -831,7 +841,7 @@ lemma cap_has_object_simps [simp]:
   "cap_has_object (AsidPoolCap x b)"
   "cap_has_object (PageDirectoryCap x c d)"
   "cap_has_object (PageTableCap x e f)"
-  "cap_has_object (FrameCap x g h i j)"
+  "cap_has_object (FrameCap dev x g h i j)"
   "cap_has_object (TcbCap x)"
   "cap_has_object (CNodeCap x k l sz)"
   "cap_has_object (MasterReplyCap x)"
@@ -842,7 +852,7 @@ lemma cap_has_object_simps [simp]:
   "cap_has_object (PendingSyncSendCap x s t u v)"
   "cap_has_object (PendingSyncRecvCap x t)"
   "cap_has_object (PendingNtfnRecvCap x)"
-  "cap_has_object (UntypedCap ids ids') = True"
+  "cap_has_object (UntypedCap dev ids ids') = True"
   by (simp_all add:cap_has_object_def)
 
 lemma is_cap_NullCap [simp]:
@@ -931,7 +941,7 @@ where "derived_cap cap \<equiv> case cap of
           ReplyCap _ \<Rightarrow> NullCap
         | MasterReplyCap _ \<Rightarrow> NullCap
         | IrqControlCap \<Rightarrow> NullCap
-        | FrameCap p r sz b x \<Rightarrow> FrameCap p r sz b None
+        | FrameCap d p r sz b x \<Rightarrow> FrameCap d p r sz b None
         | ZombieCap _ \<Rightarrow> NullCap
         | _ \<Rightarrow> cap "
 
@@ -946,7 +956,7 @@ lemma derive_cap_wp:
 definition safe_for_derive :: "cdl_cap \<Rightarrow> bool"
 where "safe_for_derive cap \<equiv> case cap of
     NullCap \<Rightarrow> False
-  | UntypedCap _ _ \<Rightarrow> False
+  | UntypedCap _ _ _ \<Rightarrow> False
   | PageTableCap _ _ _ \<Rightarrow> False
   | PageDirectoryCap _ _ _ \<Rightarrow> False
   | ReplyCap _ \<Rightarrow> False

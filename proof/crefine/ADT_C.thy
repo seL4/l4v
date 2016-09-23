@@ -10,9 +10,10 @@
 
 theory ADT_C
 imports
-  Schedule_C
+  Schedule_C Retype_C Recycle_C
   "../invariant-abstract/BCorres2_AI"
 begin
+
 
 definition
   exec_C :: "(cstate, int, strictc_errortype) body \<Rightarrow> 
@@ -209,6 +210,16 @@ where
               in Some (bs!i)
   | None \<Rightarrow> None"
 
+
+definition
+  device_mem_C :: "globals \<Rightarrow> word32 \<Rightarrow> word32 option"
+where
+  "device_mem_C s \<equiv> \<lambda>p. 
+  case clift (t_hrs_' s) (Ptr (p && ~~mask pageBits)) of 
+    Some (v::user_data_device_C) \<Rightarrow> Some p
+  | None \<Rightarrow> None"
+
+
 (* FIXME: move to somewhere sensible *)
 definition
   "setUserMem_C um \<equiv>
@@ -216,27 +227,31 @@ definition
      (%p. case um p of None \<Rightarrow> fst (t_hrs_' (globals s)) p | Some x \<Rightarrow> x,
       snd (t_hrs_' (globals s))) \<rparr>\<rparr>)"
 
+definition
+  "setDeviceState_C um \<equiv>
+   modify (\<lambda>s. s\<lparr>globals := globals s\<lparr>phantom_machine_state_' := (phantom_machine_state_' (globals s))\<lparr>device_state := ((device_state (phantom_machine_state_' (globals s))) ++ um)\<rparr>\<rparr>\<rparr>)"
+
 lemma setUserMem_C_def_foldl:
   "setUserMem_C um \<equiv>
    modify (\<lambda>s. s\<lparr>globals := (globals s)\<lparr>t_hrs_' :=
      (foldl (%f p. f(p := the (um p))) (fst (t_hrs_' (globals s)))
             (filter (%p. p : dom um) enum),
       snd (t_hrs_' (globals s))) \<rparr>\<rparr>)"
-apply (rule eq_reflection)
-apply (simp add: setUserMem_C_def)
-apply (rule arg_cong[where f=modify])
-apply (rule ext)
-apply (rule_tac f=globals_update in arg_cong2)
- apply (rule ext)
- apply (rule_tac f=t_hrs_'_update in arg_cong2)
+  apply (rule eq_reflection)
+  apply (simp add: setUserMem_C_def)
+  apply (rule arg_cong[where f=modify])
   apply (rule ext)
-  apply simp_all
-apply (rule ext)
-apply (simp add: foldl_fun_upd_value)
-apply (intro conjI impI)
- apply clarsimp
-apply (clarsimp split: option.splits)
-done
+  apply (rule_tac f=globals_update in arg_cong2)
+   apply (rule ext)
+   apply (rule_tac f=t_hrs_'_update in arg_cong2)
+    apply (rule ext)
+    apply simp_all
+  apply (rule ext)
+  apply (simp add: foldl_fun_upd_value)
+  apply (intro conjI impI)
+   apply clarsimp
+  apply (clarsimp split: option.splits)
+  done
 
 (* FIXME: move *_to_H to StateRelation_C.thy? *)
 definition
@@ -245,11 +260,19 @@ definition
    else if p = Ptr (~~ 0) then ChooseNewThread
    else SwitchToThread (ctcb_ptr_to_tcb_ptr p)"
 
+
+
 (* FIXME: move *)
+lemma not_neq:
+  "(\<not> a \<noteq> b) = (a = b)"
+  by simp
+
 lemma max_word_neq_0[simp]: "max_word \<noteq> 0"
-  apply (clarsimp simp: max_word_def)
+  apply (rule ccontr)
+  apply (cut_tac max_word_minus[where 'a = 'a])
   apply (case_tac "len_of TYPE('a)")
    apply clarsimp
+  apply (subst(asm) not_neq)
   apply (metis eq_iff_diff_eq_0 max_word_def max_word_eq word_pow_0 zero_neq_one)
   done
 
@@ -305,7 +328,7 @@ lemma cint_rel_to_H:
 
 definition
   "cstate_to_machine_H s \<equiv>
-   (phantom_machine_state_' s)\<lparr>underlying_memory := option_to_0 \<circ> user_mem_C s\<rparr>"
+   (phantom_machine_state_' s)\<lparr>underlying_memory := option_to_0 \<circ> (user_mem_C s)\<rparr>"
 
 lemma projectKO_opt_UserData [simp]:
   "projectKO_opt KOUserData = Some UserData"
@@ -316,6 +339,10 @@ lemma ucast_ucast_mask_pageBits_shift:
   apply (rule word_eqI)
   apply (auto simp: word_size nth_ucast nth_shiftr pageBits_def)
   done
+
+definition 
+"processMemory s \<equiv> (ksMachineState s) \<lparr>underlying_memory := option_to_0 \<circ> (user_mem' s)\<rparr>"
+
 
 lemma unat_ucast_mask_pageBits_shift:
   "unat (ucast (p && mask pageBits >> 2) :: 10 word) = unat ((p::word32) && mask pageBits >> 2)"
@@ -359,13 +386,13 @@ lemma user_mem_C_relation:
    apply (drule user_data_at_ko)
    apply (clarsimp simp: cmap_relation_def)
    apply (subgoal_tac "(Ptr (p && ~~mask pageBits) :: user_data_C ptr) \<in> 
-                        Ptr ` dom (heap_to_page_data (ksPSpace s') (underlying_memory (ksMachineState s')))")
+                        Ptr ` dom (heap_to_user_data (ksPSpace s') (underlying_memory (ksMachineState s')))")
     apply simp
     apply clarsimp
    apply (thin_tac "Ball A P" for A P)
    apply (thin_tac "t = dom (clift (t_hrs_' s))" for t)
    apply (rule imageI)
-   apply (clarsimp simp: dom_def heap_to_page_data_def obj_at'_def projectKOs)
+   apply (clarsimp simp: dom_def heap_to_user_data_def obj_at'_def projectKOs)
   apply (clarsimp simp: pointerInUserData_def)
   apply (clarsimp simp: cmap_relation_def)
   apply (drule equalityD2)
@@ -374,7 +401,7 @@ lemma user_mem_C_relation:
   apply clarsimp
   apply (drule bspec)
    apply (fastforce simp: dom_def)
-  apply (clarsimp simp: heap_to_page_data_def map_comp_def projectKOs
+  apply (clarsimp simp: heap_to_user_data_def map_comp_def projectKOs
                   split: option.splits)
   apply (rule conjI)
    prefer 2
@@ -383,7 +410,7 @@ lemma user_mem_C_relation:
     apply fastforce
    apply (clarsimp simp: objBitsKO_def)
   apply clarsimp
-  apply (clarsimp simp: cuser_data_relation_def byte_to_word_heap_def Let_def)
+  apply (clarsimp simp: cuser_user_data_relation_def byte_to_word_heap_def Let_def)
   apply (erule_tac x="ucast (p && mask pageBits >> 2)" in allE)
   apply (simp add: ucast_ucast_mask_pageBits_shift unat_ucast_mask_pageBits_shift)
   apply (rotate_tac -1)
@@ -405,6 +432,43 @@ lemma user_mem_C_relation:
   apply (clarsimp simp: word_size)
   done
 
+
+lemma device_mem_C_relation:
+  "\<lbrakk>cpspace_device_data_relation (ksPSpace s')
+      (underlying_memory (ksMachineState s')) (t_hrs_' s);
+    pspace_distinct' s'\<rbrakk>
+   \<Longrightarrow> device_mem_C s = device_mem' s'"
+  apply (rule ext)
+  apply (rename_tac p)
+  apply (clarsimp simp: device_mem_C_def device_mem'_def
+                  split: if_splits option.splits)
+  apply (rule conjI)
+   apply (clarsimp simp: pointerInDeviceData_def)
+   apply (clarsimp simp: cmap_relation_def)
+   apply (subgoal_tac "(Ptr (p && ~~mask pageBits) :: user_data_device_C ptr) \<in> 
+                        Ptr ` dom (heap_to_device_data (ksPSpace s') (underlying_memory (ksMachineState s')))")
+    apply clarsimp
+   apply (thin_tac "Ball A P" for A P)
+   apply (thin_tac "t = dom (clift (t_hrs_' s))" for t)
+   apply (drule device_data_at_ko)
+   apply (rule imageI)
+   apply (clarsimp simp: dom_def heap_to_device_data_def obj_at'_def projectKOs)
+  apply (clarsimp simp: pointerInDeviceData_def)
+  apply (clarsimp simp: cmap_relation_def)
+  apply (drule equalityD2)
+  apply (drule subsetD)
+   apply (fastforce simp: dom_def)
+  apply clarsimp
+  apply (drule bspec)
+   apply (fastforce simp: dom_def)
+  apply (clarsimp simp: heap_to_device_data_def map_comp_def projectKOs
+                  split: option.splits)
+  apply (clarsimp simp: typ_at'_def ko_wp_at'_def objBitsKO_def)
+  apply (drule pspace_distinctD')
+  apply fastforce
+  apply (clarsimp simp: objBitsKO_def)
+  done
+
 lemma
   assumes vms': "valid_machine_state' a"
   assumes mach_rel: "cmachine_state_relation (ksMachineState a) s"
@@ -412,17 +476,23 @@ lemma
     "cpspace_user_data_relation (ksPSpace a)
        (underlying_memory (ksMachineState a)) (t_hrs_' s)"
     "pspace_distinct' a"
-  shows cstate_to_machine_H_correct: "cstate_to_machine_H s = ksMachineState a"
+  shows cstate_to_machine_H_correct: "cstate_to_machine_H s = observable_memory (ksMachineState a) (user_mem' a)"
 proof -
-  have "underlying_memory (ksMachineState a) = option_to_0 \<circ> user_mem' a"
+  have "underlying_memory (observable_memory (ksMachineState a) (user_mem' a)) = option_to_0 \<circ> user_mem' a"
     apply (rule ext)
     using vms'[simplified valid_machine_state'_def]
-    by (auto simp: user_mem'_def option_to_0_def
+    apply (auto simp: user_mem'_def option_to_0_def typ_at'_def ko_wp_at'_def
+      option_to_ptr_def pointerInUserData_def observable_memory_def
             split: option.splits split_if_asm)
+    done
   with mach_rel[simplified cmachine_state_relation_def]
        user_mem_C_relation[OF um_rel]
-  show ?thesis by (simp add: cstate_to_machine_H_def)
+  show ?thesis
+ apply (simp add: cstate_to_machine_H_def)
+ apply (intro MachineTypes.machine_state.equality,simp_all add:observable_memory_def)
+ done 
 qed
+
 
 definition
   "array_to_map n c \<equiv> \<lambda>i. if i\<le>n then Some (index c (unat i)) else None"
@@ -612,7 +682,9 @@ lemma eq_option_to_ptr_rev:
   "Some 0 \<notin> A \<Longrightarrow>
    \<forall>x. \<forall>y\<in>A. (op = \<circ> option_to_ptr) y x \<longrightarrow>
               (if x=NULL then None else Some (ptr_val x)) = y"
-  by (auto simp: option_to_ptr_def option_to_0_def split: option.splits)
+  apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
+  apply (auto intro: word_gt_0[THEN iffD2])
+  done
 
 lemma (in kernel_m)  carch_state_to_H_correct:
   assumes valid:  "valid_arch_state' astate"
@@ -757,7 +829,7 @@ lemma ps_clear_is_aligned_ksPSpace_None:
    \<Longrightarrow> ksPSpace s (p + d) = None"
   apply (simp add: ps_clear_def add_diff_eq[symmetric] mask_2pm1[symmetric]) 
   apply (drule equals0D[where a="p + d"])
-  apply (simp add: dom_def word_gt_0)
+  apply (simp add: dom_def word_gt_0 del: word_neq_0_conv)
   apply (drule mp)
    apply (rule word_plus_mono_right)
     apply simp
@@ -1040,26 +1112,45 @@ lemma valid_objs'_imp_wf_asid_pool':
   done
 
 lemma cpspace_user_data_relation_unique:
-  "\<lbrakk>cmap_relation (heap_to_page_data ah bh) (clift ch) Ptr cuser_data_relation;
-    cmap_relation(heap_to_page_data ah' bh')(clift ch) Ptr cuser_data_relation\<rbrakk>
+  "\<lbrakk>cmap_relation (heap_to_user_data ah bh) (clift ch) Ptr cuser_user_data_relation;
+    cmap_relation (heap_to_user_data ah' bh')(clift ch) Ptr cuser_user_data_relation\<rbrakk>
    \<Longrightarrow> map_to_user_data ah' = map_to_user_data ah"
   apply (clarsimp simp add: cmap_relation_def)
   apply (drule inj_image_inv[OF inj_Ptr])+
   apply simp
   apply (rule ext)
-  apply (case_tac "x:dom (heap_to_page_data ah bh)")
+  apply (case_tac "x:dom (heap_to_user_data ah bh)")
    apply (drule bspec, assumption)+
    apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
-   apply (clarsimp simp add: cuser_data_relation_def heap_to_page_data_def)
+   apply (clarsimp simp add: cuser_user_data_relation_def heap_to_user_data_def)
    apply (rule ccontr)
    apply (case_tac z, case_tac za)
    apply simp
-  apply (fastforce simp: dom_def heap_to_page_data_def Collect_eq)
+  apply (fastforce simp: dom_def heap_to_user_data_def Collect_eq)
+  done
+
+lemma cpspace_device_data_relation_unique:
+  "\<lbrakk>cmap_relation (heap_to_device_data ah bh) (clift ch) Ptr cuser_device_data_relation;
+    cmap_relation (heap_to_device_data ah' bh')(clift ch) Ptr cuser_device_data_relation\<rbrakk>
+   \<Longrightarrow> map_to_user_data_device ah' = map_to_user_data_device ah"
+  apply (clarsimp simp add: cmap_relation_def)
+  apply (drule inj_image_inv[OF inj_Ptr])+
+  apply simp
+  apply (rule ext)
+  apply (case_tac "x:dom (heap_to_device_data ah bh)")
+   apply (drule bspec, assumption)+
+   apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
+   apply (clarsimp simp add: heap_to_device_data_def)
+   apply (rule ccontr)
+   apply (case_tac z, case_tac za)
+   apply simp
+  apply (fastforce simp: dom_def heap_to_device_data_def Collect_eq)
   done
 
 lemmas projectKO_opts = projectKO_opt_ep projectKO_opt_ntfn projectKO_opt_tcb
                         projectKO_opt_pte projectKO_opt_pde projectKO_opt_cte
-                        projectKO_opt_asidpool  projectKO_opt_user_data
+                        projectKO_opt_asidpool  projectKO_opt_user_data 
+                        projectKO_opt_user_data_device
 
 (* Following from the definition of map_to_ctes,
    there are two kinds of capability tables, namely CNodes and TCBs.
@@ -1189,6 +1280,7 @@ proof -
    apply (frule (1) map_to_ko_atI[OF _ aligned' distinct'])
   apply (drule (1) map_to_cnes_eq[OF aligned aligned' distinct distinct'])
   apply (drule (1) cpspace_user_data_relation_unique)
+  apply (drule (1)  cpspace_device_data_relation_unique)
   apply (thin_tac "cmap_relation a c f r" for a c f r)+
   apply (cut_tac no_kdatas)
   apply (clarsimp simp add: ran_def fun_eq_iff)
@@ -1294,18 +1386,20 @@ end
 lemma (in kernel_m) cDomScheduleIdx_to_H_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
-  assumes ms: "cstate_to_machine_H cs = ksMachineState as"
+  assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
 using assms
-by (clarsimp simp: cstate_relation_def Let_def valid_state'_def newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
+by (clarsimp simp: cstate_relation_def Let_def observable_memory_def
+  valid_state'_def newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
 
 definition cDomSchedule_to_H :: "(dschedule_C['b :: finite]) \<Rightarrow> (8 word \<times> 32 word) list" where
   "cDomSchedule_to_H cs \<equiv> THE as. cdom_schedule_relation as cs"
 
+(* FIXME: The assumption of this is unnecessarily strong *)
 lemma (in kernel_m) cDomSchedule_to_H_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
-  assumes ms: "cstate_to_machine_H cs = ksMachineState as"
+  assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "cDomSchedule_to_H kernel_all_global_addresses.ksDomSchedule = kernel_state.ksDomSchedule as"
   using assms
   apply (clarsimp simp: cstate_relation_def Let_def valid_state'_def newKernelState_def cDomSchedule_to_H_def cdom_schedule_relation_def)
@@ -1371,23 +1465,43 @@ where
     ksArchState = carch_state_to_H s,
     ksMachineState = cstate_to_machine_H s\<rparr>"
 
+
+lemma trivial_eq_conj: "B = C \<Longrightarrow> (A \<and> B) = (A \<and> C)"
+  by simp
+
+lemma cpspace_user_data_relation_user_mem'[simp]:
+  "\<lbrakk>pspace_aligned' as;pspace_distinct' as\<rbrakk> \<Longrightarrow> cpspace_user_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
+  = cpspace_user_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
+  by (simp add: cmap_relation_def)
+
+lemma cpspace_device_data_relation_user_mem'[simp]:
+  "cpspace_device_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
+  = cpspace_device_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
+  apply (clarsimp simp: cmap_relation_def cuser_user_data_device_relation_def heap_to_device_data_def)
+  apply (rule_tac arg_cong[where  f = "%x. x = y" for y])
+  by auto
+
+
 lemma (in kernel_m) cstate_to_H_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
-  shows "cstate_to_H cs = as"
-  apply (subgoal_tac "cstate_to_machine_H cs = ksMachineState as")
+  shows "cstate_to_H cs = as \<lparr>ksMachineState:=  observable_memory (ksMachineState as) (user_mem' as)\<rparr>"
+  apply (subgoal_tac "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)")
    apply (rule kernel_state.equality, simp_all add: cstate_to_H_def)
                    apply (rule cstate_to_pspace_H_correct)
                     using valid
                     apply (simp add: valid_state'_def)
-                   using cstate_rel
-                   apply (clarsimp simp: cstate_relation_def Let_def)
+                   using cstate_rel valid
+                   apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def 
+                     observable_memory_def valid_state'_def
+                  valid_pspace'_def)
                   using cstate_rel
-                  apply (clarsimp simp: cstate_relation_def Let_def prod_eq_iff)
+                  apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def prod_eq_iff)
                  using cstate_rel
-                 apply (clarsimp simp: cstate_relation_def Let_def prod_eq_iff)
-                using cstate_rel
-                apply (fastforce simp: cstate_relation_def Let_def ghost_size_rel_def unat_eq_0
+                 apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def prod_eq_iff)
+                using cstate_rel 
+                apply (fastforce simp: cstate_relation_def cpspace_relation_def 
+                  Let_def ghost_size_rel_def unat_eq_0
                             split: split_if)
                using valid cstate_rel
                apply (rule cDomScheduleIdx_to_H_correct)
@@ -1444,11 +1558,13 @@ lemma (in kernel_m) cstate_to_H_correct:
    apply (clarsimp simp: cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
   using cstate_rel
   apply (clarsimp simp: cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
-  apply (rule cstate_to_machine_H_correct)
-     using valid
-     apply (simp add: valid_state'_def)
+  apply (rule cstate_to_machine_H_correct[simplified])
+      using valid
+      apply (simp add: valid_state'_def)
+     using cstate_rel
+     apply (simp add: cstate_relation_def Let_def)
     using cstate_rel
-    apply (simp add: cstate_relation_def Let_def)
+    apply (simp add: cstate_relation_def Let_def cpspace_relation_def)
    using cstate_rel
    apply (simp add: cstate_relation_def Let_def cpspace_relation_def)
   using valid
@@ -1472,12 +1588,20 @@ definition (in state_rel)
       conv \<leftarrow> gets (ptable_lift t \<circ> cstate_to_A);
       rights \<leftarrow> gets (ptable_rights t \<circ> cstate_to_A);
       um \<leftarrow> gets (\<lambda>s. user_mem_C (globals s) \<circ> ptrFromPAddr);
-      (e,tc',um') \<leftarrow> select (fst (uop t (restrict_map conv {pa. rights pa \<noteq> {}}) rights
+      dm \<leftarrow> gets (\<lambda>s. device_mem_C (globals s) \<circ> ptrFromPAddr);
+      ds \<leftarrow> gets (\<lambda>s. (device_state (phantom_machine_state_' (globals s))));
+
+      assert (dom (um \<circ> addrFromPPtr) \<subseteq> - dom ds);
+      assert (dom (dm \<circ> addrFromPPtr) \<subseteq> dom ds);
+
+      (e,tc',um',ds') \<leftarrow> select (fst (uop t (restrict_map conv {pa. rights pa \<noteq> {}}) rights
                      (tc, restrict_map um
-                          {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va})));
-      setUserMem_C (restrict_map um'
-                        {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
-                      \<circ> addrFromPPtr);
+                          {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va},
+                     (ds \<circ> ptrFromPAddr) |`  {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va} )));
+      setUserMem_C ((um' |` {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
+                      \<circ> addrFromPPtr) |` (- dom ds));
+      setDeviceState_C ((ds' |` {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va}
+                      \<circ> addrFromPPtr) |` (dom ds));
       return (e,tc')
    od"
 

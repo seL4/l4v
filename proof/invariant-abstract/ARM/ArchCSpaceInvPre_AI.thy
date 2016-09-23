@@ -33,8 +33,8 @@ definition
   cap_master_arch_cap where
   "cap_master_arch_cap acap \<equiv>
      (case acap of
-           arch_cap.PageCap ref rghts sz mapdata \<Rightarrow>
-              arch_cap.PageCap ref UNIV sz None
+           arch_cap.PageCap dev ref rghts sz mapdata \<Rightarrow>
+              arch_cap.PageCap dev ref UNIV sz None
          | arch_cap.ASIDPoolCap pool asid \<Rightarrow>
               arch_cap.ASIDPoolCap pool 0
          | arch_cap.PageTableCap ptr data \<Rightarrow>
@@ -42,11 +42,12 @@ definition
          | arch_cap.PageDirectoryCap ptr data \<Rightarrow>
               arch_cap.PageDirectoryCap ptr None
          | _ \<Rightarrow> acap)"
+
 lemma
   cap_master_arch_cap_eqDs1:
-  "cap_master_arch_cap cap =  (arch_cap.PageCap ref rghts sz mapdata)
+  "cap_master_arch_cap cap =  (arch_cap.PageCap dev ref rghts sz mapdata)
      \<Longrightarrow> rghts = UNIV \<and> mapdata = None
-          \<and> (\<exists>rghts mapdata. cap =  (arch_cap.PageCap ref rghts sz mapdata))"
+          \<and> (\<exists>rghts mapdata. cap =  (arch_cap.PageCap dev ref rghts sz mapdata))"
   "cap_master_arch_cap cap =  arch_cap.ASIDControlCap
      \<Longrightarrow> cap =  arch_cap.ASIDControlCap"
   "cap_master_arch_cap cap =  (arch_cap.ASIDPoolCap pool asid)
@@ -285,9 +286,9 @@ lemma cap_refs_in_kernel_windowD:
   done
 
 lemma valid_cap_imp_valid_vm_rights:
-  "valid_cap (cap.ArchObjectCap (PageCap mw rs sz m)) s \<Longrightarrow>
+  "valid_cap (cap.ArchObjectCap (PageCap dev mw rs sz m)) s \<Longrightarrow>
    rs \<in> valid_vm_rights"
-by (simp add: valid_cap_def valid_vm_rights_def)
+  by (simp add: valid_cap_def valid_vm_rights_def)
 
 lemma acap_rights_update_idem [simp]:
   "acap_rights_update R (acap_rights_update R' cap) = acap_rights_update R cap"
@@ -307,6 +308,5 @@ lemma obj_ref_none_no_asid:
   "{} = obj_refs new_cap \<longrightarrow> None = table_cap_ref new_cap"
   "obj_refs new_cap = {} \<longrightarrow> table_cap_ref new_cap = None"
   by (simp add: table_cap_ref_def split: cap.split arch_cap.split)+
-
 end
 end

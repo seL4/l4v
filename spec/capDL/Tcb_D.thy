@@ -34,8 +34,8 @@ where "cdl_same_arch_obj_as capa capb \<equiv>
   | AsidControlCap \<Rightarrow> (
        case capb of AsidControlCap \<Rightarrow> True
         | _ \<Rightarrow> False)
-  | FrameCap ra _ sa _ _ \<Rightarrow> (
-       case capb of FrameCap rb _ sb _ _ \<Rightarrow> rb = ra \<and> sb = sa
+  | FrameCap dev ra _ sa _ _ \<Rightarrow> (
+       case capb of FrameCap dev' rb _ sb _ _ \<Rightarrow> rb = ra \<and> sb = sa \<and> dev = dev'
         | _ \<Rightarrow> False)
   | cdl_cap.PageTableCap a _ _ \<Rightarrow> (
        case capb of cdl_cap.PageTableCap b _ _ \<Rightarrow> b = a

@@ -49,7 +49,7 @@ lemma well_formed_empty:
   cdl_asid_table = undefined,
   cdl_current_domain = undefined
 \<rparr>"
-  by (clarsimp simp: well_formed_def well_formed_orig_caps_unique_def
+  by (clarsimp simp: well_formed_def well_formed_orig_caps_unique_def cap_at_def
                      well_formed_irqhandler_caps_unique_def well_formed_irqhandler_caps_def
                      well_formed_irq_table_def down_ucast_inj is_down
                      well_formed_fake_pt_caps_unique_def irq_nodes_def object_at_def
@@ -68,7 +68,7 @@ definition
                    tcb_vspace_slot \<mapsto> PageDirectoryCap pd_id Real None,
                    tcb_replycap_slot \<mapsto> NullCap,
                    tcb_caller_slot \<mapsto> NullCap,
-                   tcb_ipcbuffer_slot \<mapsto> FrameCap frame_id {AllowRead, AllowWrite} small_frame_size Real None,
+                   tcb_ipcbuffer_slot \<mapsto> FrameCap False frame_id {AllowRead, AllowWrite} small_frame_size Real None,
                    tcb_pending_op_slot \<mapsto> NullCap,
                    tcb_boundntfn_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
@@ -103,7 +103,7 @@ definition
                        [0 \<mapsto> TcbCap tcb_id,
                         1 \<mapsto> CNodeCap cnode_id 0 0 2,
                         2 \<mapsto> PageDirectoryCap pd_id Real None,
-                        3 \<mapsto> FrameCap frame_id {AllowRead, AllowWrite} small_frame_size Real None],
+                        3 \<mapsto> FrameCap False frame_id {AllowRead, AllowWrite} small_frame_size Real None],
                                cdl_cnode_size_bits = 2\<rparr>),
                   pd_id \<mapsto> PageDirectory \<lparr>cdl_page_directory_caps = empty_cap_map pd_size\<rparr>,
                   frame_id \<mapsto> Frame \<lparr>cdl_frame_size_bits = small_frame_size\<rparr>],
@@ -337,27 +337,34 @@ lemma well_formed_example:
   "well_formed example_spec"
   apply (clarsimp simp: well_formed_def)
   apply (intro conjI)
-      apply (rule well_formed_orig_caps_unique_example)
-     apply (rule well_formed_irqhandler_caps_unique_example)
-    apply (rule well_formed_fake_pt_caps_unique_example)
-   apply (rule well_formed_irqhandler_caps_example)
-  apply (clarsimp split: option.splits, rename_tac obj)
-  apply (clarsimp simp: well_formed_cap_to_object_example
+       apply (rule well_formed_orig_caps_unique_example)
+      apply (rule well_formed_irqhandler_caps_unique_example)
+     apply (rule well_formed_fake_pt_caps_unique_example)
+    apply (rule well_formed_irqhandler_caps_example)
+   apply (clarsimp split: option.splits, rename_tac obj)
+   apply (clarsimp simp: well_formed_cap_to_object_example
                         well_formed_orig_caps_unique_example)
-  apply (rule conjI)
-   apply (erule well_formed_tcb_example)
-  apply (rule conjI)
-   apply (fact well_formed_vspace_example)
-  apply (rule conjI)
-   apply (fact well_formed_irq_node_example)
-  by (fastforce simp: example_spec_def object_size_bits_def object_default_state_def2
+   apply (rule conjI)
+    apply (erule well_formed_tcb_example)
+   apply (rule conjI)
+    apply (fact well_formed_vspace_example)
+   apply (rule conjI)
+    apply (fact well_formed_irq_node_example)
+   apply (fastforce simp: example_spec_def object_size_bits_def object_default_state_def2
                          pd_size_def word_bits_def empty_cnode_def is_cnode_def
                          object_slots_def empty_cap_map_def tcb_slot_defs
                          default_tcb_def example_tcb_def
                          small_frame_size_def object_at_def
                          irq_nodes_def range_example_irq_node
                   split: split_if_asm)
-
+  apply (clarsimp simp: example_spec_def object_size_bits_def object_default_state_def2
+                         pd_size_def word_bits_def empty_cnode_def is_cnode_def
+                         object_slots_def empty_cap_map_def tcb_slot_defs
+                         default_tcb_def example_tcb_def cap_at_def opt_cap_def slots_of_def
+                         small_frame_size_def object_at_def opt_object_def
+                         irq_nodes_def range_example_irq_node
+                  split: split_if_asm)
+  done
 end
 
 end

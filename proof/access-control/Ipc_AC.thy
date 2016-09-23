@@ -141,13 +141,24 @@ lemma kheap_auth_ipc_buffer_same:
   "kheap st thread = kheap s thread \<Longrightarrow> auth_ipc_buffers st thread = auth_ipc_buffers s thread"
   unfolding auth_ipc_buffers_def get_tcb_def by simp
 
+lemma tcb_ipc_buffer_not_device:
+  "\<lbrakk>kheap s thread = Some (TCB tcb);valid_objs s\<rbrakk>
+  \<Longrightarrow> \<not> cap_is_device (tcb_ipcframe tcb)"
+  apply (erule(1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
+                 split: cap.split_asm arch_cap.split_asm)
+  done
+
 lemma tro_auth_ipc_buffer_idem:
   "\<lbrakk> \<forall>x. integrity_obj aag activate subjects (pasObjectAbs aag x) (kheap st x) (kheap s x);
-        pasObjectAbs aag thread \<notin> subjects \<rbrakk> \<Longrightarrow> auth_ipc_buffers st thread = auth_ipc_buffers s thread"
+        pasObjectAbs aag thread \<notin> subjects; valid_objs s \<rbrakk> \<Longrightarrow> auth_ipc_buffers st thread = auth_ipc_buffers s thread"
   apply (drule spec [where x = thread])
   apply (erule integrity_obj.cases,
          simp_all add: auth_ipc_buffers_def get_tcb_def)
-  apply (auto cong: cap.case_cong arch_cap.case_cong if_cong)
+  apply (auto cong: cap.case_cong arch_cap.case_cong if_cong 
+              simp: case_bool_if
+             dest!: tcb_ipc_buffer_not_device split:arch_cap.splits cap.splits 
+             split: if_splits)
   done
  
 lemma dmo_storeWord_respects_ipc:
@@ -245,7 +256,8 @@ lemma lookup_ipc_buffer_has_auth [wp]:
    apply (erule aligned_add_aligned)
     apply (rule is_aligned_andI1)
     apply (drule (1) valid_tcb_objs)
-    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def)
+    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
+                   split: if_splits)
    apply (rule order_trans [OF _ pbfs_atleast_pageBits])
    apply (simp add: msg_align_bits pageBits_def)
   apply simp
@@ -356,7 +368,7 @@ lemma as_user_set_register_respects:
   done
 
 lemma lookup_ipc_buffer_ptr_range:
-  "\<lbrace>integrity aag X st\<rbrace>
+  "\<lbrace>valid_objs and integrity aag X st\<rbrace>
   lookup_ipc_buffer True thread 
   \<lbrace>\<lambda>rv s. \<not> is_subject aag thread \<longrightarrow> (case rv of None \<Rightarrow> True | Some buf' \<Rightarrow> auth_ipc_buffers st thread = ptr_range buf' msg_align_bits) \<rbrace>"
   unfolding lookup_ipc_buffer_def
@@ -368,6 +380,9 @@ lemma lookup_ipc_buffer_ptr_range:
   apply (clarsimp simp: auth_ipc_buffers_def get_tcb_ko_at [symmetric] integrity_def)
   apply (drule spec [where x = thread])+
   apply (drule get_tcb_SomeD)+
+  apply (erule(1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def case_bool_if
+                 split: split_if_asm)
   apply (erule integrity_obj.cases, simp_all add: get_tcb_def vm_read_write_def)
   apply auto
   done
@@ -1853,7 +1868,7 @@ lemma do_fault_transfer_respects_in_ipc:
   done
 
 lemma lookup_ipc_buffer_ptr_range_in_ipc:
-  "\<lbrace>integrity_tcb_in_ipc aag X thread epptr tst st\<rbrace>
+  "\<lbrace>valid_objs and integrity_tcb_in_ipc aag X thread epptr tst st\<rbrace>
   lookup_ipc_buffer True thread 
   \<lbrace>\<lambda>rv s. \<not> is_subject aag thread \<longrightarrow> (case rv of None \<Rightarrow> True | Some buf' \<Rightarrow> auth_ipc_buffers st thread = ptr_range buf' msg_align_bits) \<rbrace>"
   unfolding lookup_ipc_buffer_def
@@ -1863,6 +1878,10 @@ lemma lookup_ipc_buffer_ptr_range_in_ipc:
   apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
    apply (simp add: dom_tcb_cap_cases)
   apply (clarsimp simp: auth_ipc_buffers_def get_tcb_ko_at [symmetric] integrity_tcb_in_ipc_def)
+  apply (drule get_tcb_SomeD)
+  apply (erule(1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def case_bool_if
+                 split: split_if_asm)
   apply (erule tcb_in_ipc.cases, simp_all)
    apply (clarsimp simp: get_tcb_def vm_read_write_def)
   apply (clarsimp simp: get_tcb_def vm_read_write_def)
@@ -1883,7 +1902,8 @@ lemma lookup_ipc_buffer_aligned:
   apply (erule aligned_add_aligned)
     apply (rule is_aligned_andI1)
     apply (drule (1) valid_tcb_objs)
-    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def)
+    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
+                   split: if_splits)
   apply (rule order_trans [OF _ pbfs_atleast_pageBits])
   apply (simp add: msg_align_bits pageBits_def)
   done

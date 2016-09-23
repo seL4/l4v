@@ -328,7 +328,9 @@ lemma set_ep_cap_refs_in_kernel_window [wp]:
                   split: Structures_A.kernel_object.splits)
   done
 
-  
+crunch pspace_respects_device_region[wp]: set_endpoint pspace_respects_device_region
+crunch cap_refs_respects_device_region[wp]: set_endpoint cap_refs_respects_device_region
+  (wp: crunch_wps)
 
 lemma set_endpoint_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. valid_ioc\<rbrace>"
@@ -906,7 +908,9 @@ lemma cancel_all_ipc_invs_helper:
    apply (wp cancel_all_invs_helper hoare_vcg_const_Ball_lift valid_irq_node_typ)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_ep_def)
   apply (rule conjI)
-   apply (clarsimp elim!:obj_at_weakenE)
+   apply (clarsimp elim!: obj_at_weakenE)
+  apply (rule conjI)
+   apply (clarsimp elim!: obj_at_weakenE)
   apply (rule conjI)
    apply clarsimp
    apply (drule(1) sym_refs_obj_atD, clarsimp)
@@ -1228,7 +1232,7 @@ lemma cancel_badged_sends_invs[wp]:
                 cong: list.case_cong)
      apply (rule hoare_strengthen_post,
             rule cancel_badged_sends_filterM_helper[where epptr=epptr])
-     apply blast
+     apply (auto intro:obj_at_weakenE)[1]
     apply (wp valid_irq_node_typ)
    apply (clarsimp simp: valid_ep_def conj_comms)
    apply (subst obj_at_weakenE[where P'=is_ep], assumption)
@@ -1237,7 +1241,7 @@ lemma cancel_badged_sends_invs[wp]:
    apply (frule(1) if_live_then_nonz_capD, clarsimp+)
    apply (erule(1) obj_at_valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_ep_def st_tcb_at_refs_of_rev)
-   apply (simp add: fun_upd_idem | subst fun_upd_def[symmetric])+
+   apply (simp add: fun_upd_idem obj_at_def is_ep_def | subst fun_upd_def[symmetric])+
    apply (clarsimp, drule(1) bspec)
    apply (drule st_tcb_at_state_refs_ofD)
    apply (clarsimp simp only: cancel_badged_sends_invs_helper Un_iff, clarsimp)

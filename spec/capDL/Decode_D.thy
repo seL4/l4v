@@ -176,13 +176,13 @@ where
              liftME InvokeAsidControl $ decode_asid_control_invocation
                  invoked_cap invoked_cap_ref caps asid_control_intent
            odE
-       | UntypedCap _ _ \<Rightarrow>
+       | UntypedCap _ _ _ \<Rightarrow>
            doE
              untyped_intent \<leftarrow> throw_opt undefined $ get_untyped_intent intent;
              liftME InvokeUntyped $ decode_untyped_invocation
                  invoked_cap invoked_cap_ref caps untyped_intent
            odE
-       | FrameCap _ _ _ _ _ \<Rightarrow>
+       | FrameCap _ _ _ _ _ _ \<Rightarrow>
            doE
              page_intent \<leftarrow> throw_opt undefined $ get_page_intent intent;
              liftME InvokePage $ decode_page_invocation

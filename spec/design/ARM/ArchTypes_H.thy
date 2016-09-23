@@ -141,6 +141,17 @@ where
   | (APIObjectType apiObjectType) \<Rightarrow>    apiGetObjectSize apiObjectType magnitude
   )"
 
+definition
+isFrameType :: "object_type \<Rightarrow> bool"
+where
+"isFrameType x0\<equiv> (case x0 of
+    SmallPageObject \<Rightarrow>    True
+  | LargePageObject \<Rightarrow>    True
+  | SectionObject \<Rightarrow>    True
+  | SuperSectionObject \<Rightarrow>    True
+  | _ \<Rightarrow>    False
+  )"
+
 
 end
 

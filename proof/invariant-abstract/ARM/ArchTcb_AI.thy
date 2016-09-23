@@ -158,7 +158,7 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
   "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
-  by (simp add:free_index_update_def table_cap_ref_def split:cap.splits)
+  by (simp add: free_index_update_def table_cap_ref_def split: cap.splits)
 
 
 interpretation Tcb_AI_1? : Tcb_AI_1 
@@ -250,22 +250,24 @@ lemma tc_invs[Tcb_AI_asms]:
         | strengthen use_no_cap_to_obj_asid_strg
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
-  apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
-                        is_cap_simps is_valid_vtable_root_def
+  apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified] is_nondevice_page_cap_arch_def
+                        is_cap_simps is_valid_vtable_root_def is_nondevice_page_cap_simps
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         invs_valid_objs cap_asid_def vs_cap_ref_def
-                 split: option.split_asm
-       | rule conjI)+
+                 split: option.split_asm )+
+      apply (simp add: case_bool_If valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
+                       is_nondevice_page_cap_arch_def
+                split: arch_cap.splits if_splits)+
   done
 
 
-lemma check_valid_ipc_buffer_inv: (* arch_specific *)
+lemma check_valid_ipc_buffer_inv:
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: check_valid_ipc_buffer_def whenE_def
              cong: cap.case_cong arch_cap.case_cong
              split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | simp split del: split_if | wpcw)+
+   apply (wp | simp add: whenE_def split del: split_if | wpcw)+
   done
 
 lemma check_valid_ipc_buffer_wp[Tcb_AI_asms]:
@@ -279,7 +281,7 @@ lemma check_valid_ipc_buffer_wp[Tcb_AI_asms]:
              cong: cap.case_cong arch_cap.case_cong
              split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | simp split del: split_if | wpc)+
+   apply (wp | simp add: whenE_def split del: split_if | wpc)+
   apply (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def
                         valid_ipc_buffer_cap_def)
   done

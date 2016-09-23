@@ -115,13 +115,13 @@ where
     | NotificationCap _ b r  \<Rightarrow> (b < 2 ^ badge_bits) \<and> (r \<subseteq> {AllowRead, AllowWrite})
     | CNodeCap _ g gs sz      \<Rightarrow> (gs < guard_bits) \<and> (g < 2 ^ gs) \<and> (sz + gs \<le> 32)
     | TcbCap _                \<Rightarrow> True
-    | FrameCap _ r _ _ ad     \<Rightarrow> r \<in> {vm_read_write, vm_read_only} \<and> ad = None
+    | FrameCap _ _ r _ _ ad     \<Rightarrow> r \<in> {vm_read_write, vm_read_only} \<and> ad = None
     | PageTableCap  _ _ ad    \<Rightarrow> ad = None
     | PageDirectoryCap _ _ ad \<Rightarrow> ad = None
     | IrqHandlerCap _         \<Rightarrow> True
 (* LIMITATION: The following should probably eventually be true. *)
     | IrqControlCap           \<Rightarrow> False
-    | UntypedCap _ _          \<Rightarrow> False
+    | UntypedCap _ _ _          \<Rightarrow> False
     | AsidControlCap          \<Rightarrow> False
     | AsidPoolCap _ _         \<Rightarrow> False
     | _                       \<Rightarrow> False)"
@@ -131,7 +131,7 @@ definition vm_cap_has_asid :: "cdl_cap \<Rightarrow> bool"
 where
   "vm_cap_has_asid cap \<equiv>
        (case cap of
-           FrameCap _ _ _ _ ad     \<Rightarrow> ad \<noteq> None
+           FrameCap _ _ _ _ _ ad     \<Rightarrow> ad \<noteq> None
          | PageTableCap _ _ ad     \<Rightarrow> ad \<noteq> None
          | PageDirectoryCap _ _ ad \<Rightarrow> ad \<noteq> None
          | _                       \<Rightarrow> False)"
@@ -140,7 +140,7 @@ definition is_real_vm_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "is_real_vm_cap cap \<equiv>
        (case cap of
-           FrameCap _ _ _ Real _     \<Rightarrow> True
+           FrameCap _ _ _ _ Real _     \<Rightarrow> True
          | PageTableCap _ Real _     \<Rightarrow> True
          | PageDirectoryCap _ Real _ \<Rightarrow> True
          | _                         \<Rightarrow> False)"
@@ -149,7 +149,7 @@ definition is_fake_vm_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "is_fake_vm_cap cap \<equiv>
        (case cap of
-           FrameCap _ _ _ Fake _     \<Rightarrow> True
+           FrameCap _ _ _ _ Fake _     \<Rightarrow> True
          | PageTableCap _ Fake _     \<Rightarrow> True
          | PageDirectoryCap _ Fake _ \<Rightarrow> True
          | _                         \<Rightarrow> False)"
@@ -166,7 +166,7 @@ definition
    well_formed_orig_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "well_formed_orig_cap cap \<equiv>
-  (cap_has_type cap \<longrightarrow> cap_rights (default_cap (the (cap_type cap)) undefined undefined)
+  (cap_has_type cap \<longrightarrow> cap_rights (default_cap (the (cap_type cap)) undefined undefined undefined)
                       = cap_rights cap) \<and>
   (ep_related_cap cap \<longrightarrow> cap_badge cap = 0)"
 
@@ -364,7 +364,8 @@ where
                     object_size_bits (object_default_state obj) = object_size_bits obj \<and>
                     dom (object_slots (object_default_state obj)) = dom (object_slots obj) \<and>
                     (cnode_at obj_id spec \<longrightarrow> 0 < object_size_bits obj)
-      | None \<Rightarrow> True)"
+      | None \<Rightarrow> True)
+  \<and> (\<forall>slot. \<not> cap_at (\<lambda>c. is_device_cap c = True) slot spec)"
 
 lemma dom_cap_map [simp]:
   "dom (\<lambda>n. if n \<le> N then Some a else None) = {0::nat .. N}"
@@ -398,7 +399,7 @@ lemma well_formed_cap_update_cap_object [simp]:
 
 lemma cap_rights_inter_default_cap_rights:
   "\<lbrakk>well_formed_cap cap; cap_type cap = Some type\<rbrakk>
-  \<Longrightarrow> cap_rights (default_cap type ids sz) \<inter> cap_rights cap
+  \<Longrightarrow> cap_rights (default_cap type ids sz dev) \<inter> cap_rights cap
     = cap_rights cap"
   by (fastforce simp: well_formed_cap_def default_cap_def cap_type_def cap_rights_def
                       validate_vm_rights_def vm_read_write_def
@@ -777,7 +778,7 @@ lemma default_ntfn_cap[simp]:
 
 lemma default_cap_well_formed_cap:
   "\<lbrakk>well_formed_cap cap; cap_type cap = Some type; cnode_cap_size cap = sz\<rbrakk>
-  \<Longrightarrow> well_formed_cap (default_cap type obj_ids sz)"
+  \<Longrightarrow> well_formed_cap (default_cap type obj_ids sz dev)"
   by (auto simp: well_formed_cap_def default_cap_def cap_type_def
                  word_gt_a_gt_0 vm_read_write_def cnode_cap_size_def
           split: cdl_cap.splits)
@@ -785,7 +786,7 @@ lemma default_cap_well_formed_cap:
 lemma default_cap_well_formed_cap2:
   "\<lbrakk>is_default_cap cap; cap_type cap = Some type; sz \<le> 32;
     \<not> is_untyped_cap cap; \<not> is_asidpool_cap cap\<rbrakk>
-  \<Longrightarrow> well_formed_cap (default_cap type obj_ids sz)"
+  \<Longrightarrow> well_formed_cap (default_cap type obj_ids sz dev )"
   apply (clarsimp simp: is_default_cap_def)
   apply (clarsimp simp: default_cap_def well_formed_cap_def
                         word_gt_a_gt_0 badge_bits_def guard_bits_def
@@ -826,8 +827,8 @@ lemma well_formed_orig_ep_cap_is_default:
   done
 
 lemma cap_rights_default_cap_eq:
-  "cap_rights (default_cap type obj_ids sz) =
-   cap_rights (default_cap type obj_ids' sz')"
+  "cap_rights (default_cap type obj_ids sz dev) =
+   cap_rights (default_cap type obj_ids' sz' dev')"
   apply (clarsimp simp: cap_rights_def default_cap_def)
   apply (case_tac type, simp_all)
   done
@@ -835,7 +836,7 @@ lemma cap_rights_default_cap_eq:
 lemma well_formed_orig_caps:
   "\<lbrakk>well_formed spec; original_cap_at (obj_id, slot) spec;
     slots_of obj_id spec slot = Some cap; cap \<noteq> NullCap; cap_type cap = Some type\<rbrakk>
-  \<Longrightarrow> cap_rights (default_cap type obj_ids sz) = cap_rights cap"
+  \<Longrightarrow> cap_rights (default_cap type obj_ids sz dev) = cap_rights cap"
   apply (frule well_formed_well_formed_orig_cap, simp add: opt_cap_def, assumption+)
   apply (clarsimp simp: well_formed_orig_cap_def)
   apply (subst (asm) cap_rights_default_cap_eq, fast)
@@ -1582,7 +1583,7 @@ lemma update_cap_rights_and_data:
  \<Longrightarrow> update_cap_data_det
      (cap_data spec_cap)
      (update_cap_rights (cap_rights spec_cap)
-                        (default_cap type {client_object_id} (cnode_cap_size spec_cap))) =
+                        (default_cap type {client_object_id} (cnode_cap_size spec_cap) (is_device_cap spec_cap))) =
   update_cap_object client_object_id spec_cap"
   apply (case_tac "\<not>is_cnode_cap spec_cap")
    apply (case_tac spec_cap, simp_all add: cap_type_def,
@@ -1644,15 +1645,16 @@ lemma update_cap_data:
     cap_type spec_cap = Some type; cap_data spec_cap = data;
     well_formed_cap spec_cap; \<not> is_untyped_cap spec_cap;
     \<not> vm_cap_has_asid spec_cap; \<not> is_fake_vm_cap spec_cap; \<not> is_irqhandler_cap spec_cap;
-    cap_rights (default_cap type {obj_id} sz) = cap_rights spec_cap\<rbrakk>
- \<Longrightarrow> update_cap_data_det data (default_cap type {client_object_id} (cnode_cap_size spec_cap)) =
+    cap_rights (default_cap type {obj_id} sz (is_device_cap spec_cap)) = cap_rights spec_cap;
+    dev = is_device_cap spec_cap\<rbrakk>
+ \<Longrightarrow> update_cap_data_det data (default_cap type {client_object_id} (cnode_cap_size spec_cap) dev) =
      update_cap_object client_object_id spec_cap"
   apply (frule (6) update_cap_rights_and_data)
   apply clarsimp
-  apply (subgoal_tac "update_cap_rights
+  apply (subgoal_tac "\<And>dev. update_cap_rights
                       (cap_rights spec_cap)
-                      (default_cap type {client_object_id} (cnode_cap_size spec_cap))
-                     = default_cap type {client_object_id} (cnode_cap_size spec_cap)")
+                      (default_cap type {client_object_id} (cnode_cap_size spec_cap) dev)
+                     = default_cap type {client_object_id} (cnode_cap_size spec_cap) dev")
    apply clarsimp
   apply (subst well_formed_update_cap_rights_idem)
     apply (erule (1) default_cap_well_formed_cap, simp)

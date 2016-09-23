@@ -78,7 +78,7 @@ lemma is_untyped_cap_transform_cap[simp]:
 
 lemma is_untyped_cap_eqD:
   "Structures_A.is_untyped_cap src_cap
-  \<Longrightarrow> \<exists>ptr sz idx. src_cap = cap.UntypedCap ptr sz idx"
+  \<Longrightarrow> \<exists>dev ptr sz idx. src_cap = cap.UntypedCap dev ptr sz idx"
   by (case_tac src_cap, simp_all)
 
 lemma p2_less_minus:
@@ -1422,20 +1422,20 @@ lemma arch_recycle_cap_idle[wp]:
   apply (simp_all add:arch_recycle_cap_def)
     apply wp
     apply (rule_tac Q = "\<lambda>r s. P (idle_thread s)" in  hoare_strengthen_post,(wp|wpc|clarsimp)+)+
-  apply (wp mapM_x_wp | wpc | clarsimp | intro conjI impI | force)+
+  apply (wp mapM_x_wp hoare_unless_wp | wpc | clarsimp | intro conjI impI | force)+
   done
 
 lemma arch_recycle_cap_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P thread\<rbrace> arch_recycle_cap is_final arch_cap \<lbrace>\<lambda>r. st_tcb_at P thread\<rbrace>"
   apply (case_tac arch_cap)
   apply (simp_all add:arch_recycle_cap_def split del: split_if)
-  apply (wp mapM_x_wp set_asid_pool_pred_tcb_at static_imp_wp invalidate_tlb_by_asid_st_tcb_at
+  apply (wp mapM_x_wp set_asid_pool_pred_tcb_at static_imp_wp invalidate_tlb_by_asid_st_tcb_at hoare_unless_wp
          | wpc | clarsimp| intro conjI impI | fastforce)+
   done
 
 lemma dcorres_storeWord_mapM_x_cvt:
   "\<forall>x\<in>set ls. within_page buf x sz
-   \<Longrightarrow> dcorres dc (\<lambda>_. True) (ko_at (ArchObj (DataPage sz)) buf and  valid_objs and pspace_distinct and pspace_aligned and valid_etcbs)
+   \<Longrightarrow> dcorres dc (\<lambda>_. True) (ko_at (ArchObj (DataPage False sz)) buf and  valid_objs and pspace_distinct and pspace_aligned and valid_etcbs)
     (corrupt_frame buf)
        (do_machine_op (mapM (\<lambda>p. storeWord p 0) ls))"
   proof (induct ls)
@@ -1466,16 +1466,24 @@ lemma dcorres_storeWord_mapM_x_cvt:
       apply wp
       using Cons
       apply fastforce
-      apply (wp|clarsimp)+
+      apply (wp|clarsimp|force)+
    done
 qed
 
 lemmas upto_enum_step_shift_red =
   upto_enum_step_shift_red[where 'a=32, simplified word_bits_def[symmetric]]
 
+lemma dcorres_unless_r:
+  "\<lbrakk> \<not> G \<Longrightarrow> dcorres r P P' f g;
+    G \<Longrightarrow> dcorres r Q Q' f (return ()) \<rbrakk>
+  \<Longrightarrow> dcorres r (P and Q) (\<lambda>s. (\<not>G \<longrightarrow> P' s) \<and> (G \<longrightarrow> Q' s)) f (unless G g)"
+  apply (cases G, simp_all add: when_def unless_def)
+   apply (rule corres_guard_imp, simp+)+
+  done
+
 lemma dcorres_arch_recycle_cap_page_cap:
   notes CSpace_D.finalise_cap.simps [simp del]
-  assumes cap: "cap = (arch_cap.PageCap buf fun sz option)"
+  assumes cap: "cap = (arch_cap.PageCap dev buf fun sz option)"
   shows
   "dcorres (\<lambda>x. (\<lambda>cap'. x = transform_cap cap') \<circ> cap.ArchObjectCap)
     \<top>
@@ -1489,17 +1497,27 @@ lemma dcorres_arch_recycle_cap_page_cap:
                         ef_storeWord)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
-       apply (rule dcorres_symb_exec_r)
          apply (rule corres_split
-           [OF _ dcorres_finalise_cap [where slot = slot and cap="cap.ArchObjectCap (arch_cap.PageCap buf fun sz option)", simplified, OF refl]])
+           [OF _ dcorres_finalise_cap [where slot = slot and cap="cap.ArchObjectCap (arch_cap.PageCap dev buf fun sz option)", simplified, OF refl]])
            apply (rule corres_trivial, simp add:transform_mapping_def)
           apply (wp dmo_dwp machine_op_lift)
-      apply (rule corres_gen_asm2, erule dcorres_storeWord_mapM_x_cvt[where sz = sz])
+      apply (rule dcorres_unless_r)
+       apply (rule corres_dummy_return_l)
+       apply (rule corres_split[where r'= "\<lambda>r rv. r = ()"])
+          apply simp
+          apply (rule dcorres_machine_op_noop)
+          apply wp
+         apply (clarsimp simp: dc_def[symmetric])
+         apply (rule corres_gen_asm2, erule dcorres_storeWord_mapM_x_cvt[where sz = sz])
+        apply wp
+      apply (rule dcorres_dummy_corrupt_frame)
      apply wp
+    apply (wp hoare_unless_wp)
    apply simp
-  apply (clarsimp dest!: cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs]
-    simp: cap_aligned_def valid_cap_def typ_at_eq_kheap_obj)
-  apply (rule conjI, fastforce simp: obj_at_def)+ -- "all but Ball within_page"
+  apply clarsimp
+  apply (frule(1) cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs])
+  apply (clarsimp simp: cap_aligned_def  valid_cap_def typ_at_pg split: if_splits)
+  apply (rule conjI impI, fastforce)+ -- "all but Ball within_page"
   apply (clarsimp simp: within_page_def word_size_def upto_enum_step_shift_red [where us = 2,simplified])
   apply (erule is_aligned_add_helper [THEN conjunct2])
   apply (erule word_less_power_trans_ofnat [where k = 2, simplified])
@@ -2354,7 +2372,7 @@ lemma recycle_cap_corres_pre:
   done
 
 crunch valid_etcbs[wp]: recycle_cap valid_etcbs
-(wp: mapM_x_wp hoare_drop_imps ignore: filterM)
+(wp: mapM_x_wp hoare_drop_imps hoare_unless_wp ignore: filterM)
 
 lemma recycle_cap_corres:
   notes hoare_post_taut [simp del]

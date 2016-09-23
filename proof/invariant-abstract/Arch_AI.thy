@@ -120,7 +120,6 @@ lemma obj_at_delete_objects:
 crunch arch [wp]: retype_region "\<lambda>s. P (arch_state s)"
   (simp: crunch_simps)
 
-
 lemma set_free_index_final_cap:
   "\<lbrace>\<lambda>s. P (is_final_cap' cap s) \<and> cte_wp_at (op = src_cap) src s\<rbrace>
    set_cap (free_index_update f src_cap) src 
@@ -162,7 +161,6 @@ lemma set_cap_empty_tables[wp]:
   apply (clarsimp simp: empty_table_caps_of)
   done
 
-
 lemma cte_wp_at_eq_to_op_eq:
   "cte_wp_at (\<lambda>c. c = cap) = cte_wp_at (op = cap)"
   by (simp add: cte_wp_at_caps_of_state fun_eq_iff)
@@ -196,13 +194,11 @@ lemma sts_pspace_no_overlap [wp]:
   "\<lbrace>pspace_no_overlap w b\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. pspace_no_overlap w b\<rbrace>"
   by (wp pspace_no_overlap_typ_at_lift)
 
-
 lemma diminished_cte_wp_at_valid_cap:
   "cte_wp_at (diminished c) p s \<Longrightarrow> valid_objs s \<Longrightarrow> s \<turnstile> c"
   apply (drule(1) cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: diminished_def)
   done
-
 
 lemma delete_objects_st_tcb_at:
   "\<lbrace>pred_tcb_at proj P t and invs and K (t \<notin> {ptr .. ptr + 2 ^ bits - 1})\<rbrace> 

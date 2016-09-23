@@ -1000,7 +1000,6 @@ lemma ut_rev_n: "ut_revocable' n"
   apply(drule n_revokable)
   apply(clarsimp simp: isCap_simps split: split_if_asm)
   apply(simp add: valid_mdb_ctes_def ut_revocable'_def)
-  apply(clarsimp simp: isUntypedCap_def)
   done
 
 lemma class_links_n: "class_links n"
@@ -1133,7 +1132,7 @@ where
   "threadCapRefs (ThreadCap r)                  = {r}"
 | "threadCapRefs (ReplyCap t m)                 = {}"
 | "threadCapRefs NullCap                        = {}"
-| "threadCapRefs (UntypedCap r n i)             = {}"
+| "threadCapRefs (UntypedCap d r n i)             = {}"
 | "threadCapRefs (EndpointCap r badge x y z)    = {}"
 | "threadCapRefs (NotificationCap r badge x y) = {}"
 | "threadCapRefs (CNodeCap r b g gsz)           = {}"
@@ -1367,7 +1366,7 @@ crunch umm[wp]: emptySlot "\<lambda>s. P (underlying_memory (ksMachineState s))"
 
 lemma emptySlot_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> emptySlot slot irq \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  by (simp add: valid_machine_state'_def pointerInUserData_def)
+  by (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
      (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
 
 crunch pspace_domain_valid[wp]: emptySlot "pspace_domain_valid"
@@ -1572,6 +1571,8 @@ lemma empty_slot_corres:
   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
   apply (simp add: pspace_relations_def)
   apply (rule conjI)
+   apply (clarsimp simp: data_at_def ghost_relation_typ_at set_cap_a_type_inv)
+  apply (rule conjI)
    prefer 2
    apply (rule conjI)
     apply (clarsimp simp: cdt_list_relation_def)
@@ -1726,7 +1727,7 @@ where
   | Zombie ptr zb n \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> True
   | ArchObjectCap acap \<Rightarrow> (case acap of
-    PageCap ref rghts sz mapdata \<Rightarrow> False
+    PageCap d ref rghts sz mapdata \<Rightarrow> False
   | ASIDControlCap \<Rightarrow> False
   | _ \<Rightarrow> True)
   | _ \<Rightarrow> False"
@@ -3780,13 +3781,13 @@ lemma arch_recycleCap_invs:
                    Let_def
               split del: split_if)
   apply (rule hoare_pre)
-   apply (wp dmo'_bind_return
+   apply (wp dmo'_bind_return hoare_unless_wp
              pageTableMapped_invs' mapM_x_storePTE_invs mapM_x_wp' 
              storePTE_typ_ats storePDE_typ_ats          
           | wpc | simp | simp add: eq_commute invalidateTLBByASID_def)+
       apply (rule hoare_post_imp
                   [where Q="\<lambda>rv s. invs' s \<and> s \<turnstile>' capability.ArchObjectCap cap"])
-       apply (wp dmo'_bind_return
+       apply (wp dmo'_bind_return 
                  pageTableMapped_invs' mapM_x_storePTE_invs mapM_x_wp' 
                  storePTE_typ_ats storePDE_typ_ats static_imp_wp
               | wpc | simp | simp add: eq_commute invalidateTLBByASID_def)+
@@ -3966,7 +3967,7 @@ lemma arch_recycle_cap_corres:
                  apply (wp | simp add: inv_def)+
       apply (auto simp: valid_cap_def valid_cap'_def inv_def mask_def)[2]
     -- "PageCap"
-    apply (rename_tac word vmrights vmpage_size option)
+    apply (rename_tac dev word vmrights vmpage_size option)
     apply (rule corres_guard_imp)
       apply (rule corres_split [where r' = dc])
          apply (rule corres_split [where R = "\<top>\<top>" and R' = "\<top>\<top>" and r' = cap_relation])
@@ -3976,16 +3977,16 @@ lemma arch_recycle_cap_corres:
            apply simp
           apply wp
         apply (rule_tac F = "is_aligned word 2" in corres_gen_asm2)
+        apply (simp add: unless_def)
+        apply (rule corres_when, simp)
         apply (rule corres_machine_op)
         apply (rule corres_guard_imp)
           apply (simp add: shiftL_nat)
           apply (rule clearMemory_corres)
          apply simp
         apply assumption
-       apply simp
-       apply (wp do_machine_op_valid_cap no_irq_clearMemory)
-     apply simp
-    apply simp
+       apply (simp add: unless_def
+            | wp hoare_when_weak_wp do_machine_op_valid_cap no_irq_clearMemory)+
     apply (clarsimp simp add: valid_cap'_def capAligned_def final_matters'_def)
     apply (erule is_aligned_weaken)
     apply (case_tac vmpage_size, simp_all)[1]
@@ -4218,14 +4219,17 @@ lemma set_thread_all_corres:
   apply (clarsimp simp add: state_relation_def z)
   apply (simp add: trans_state_update'[symmetric] trans_state_update[symmetric]
          del: trans_state_update)
-  apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
-                            swp_def fun_upd_def obj_at_def is_etcb_at_def)
+  apply (clarsimp simp add: swp_def fun_upd_def obj_at_def is_etcb_at_def)
+  apply (subst cte_wp_at_after_update,fastforce simp add: obj_at_def)
+  apply (subst caps_of_state_after_update,fastforce simp add: obj_at_def)
+  apply clarsimp
   apply (subst conj_assoc[symmetric])
   apply (rule conjI[rotated])
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x=ptr in allE)+
    apply (clarsimp simp: obj_at_def a_type_def 
                    split: Structures_A.kernel_object.splits split_if_asm)
+    
   apply (fold fun_upd_def)
   apply (simp only: pspace_relation_def dom_fun_upd2 simp_thms)
   apply (subst pspace_dom_update)

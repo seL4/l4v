@@ -243,7 +243,6 @@ lemmas (in Interrupt_AI)
                                                              , OF TrueI TrueI TrueI
                                                              , simplified
                                                         ]
-
 crunch interrupt_states[wp]: update_waiting_ntfn, cancel_signal, blocked_cancel_ipc "\<lambda>s. P (interrupt_states s)" (wp: mapM_x_wp_inv)
 
 lemma cancel_ipc_noreply_interrupt_states:

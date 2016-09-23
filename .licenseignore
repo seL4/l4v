@@ -27,6 +27,7 @@
 *~
 .*.attrib_trace
 .*.skip
+*.mps
 
 isabelle/*
 internal/*

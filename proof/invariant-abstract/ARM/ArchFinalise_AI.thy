@@ -21,7 +21,7 @@ lemma (* obj_at_not_live_valid_arch_cap_strg *) [Finalise_AI_asms]:
         \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"
   by (clarsimp simp: valid_cap_def obj_at_def
                      a_type_arch_live
-              split: arch_cap.split_asm)
+              split: arch_cap.split_asm if_splits)
 
 global_naming ARM
 
@@ -262,7 +262,9 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
         apply (wp replace_cap_valid_pspace set_cap_caps_of_state2
                   replace_cap_ifunsafe get_cap_wp
                   set_cap_idle valid_irq_node_typ set_cap_typ_at
-                  set_cap_irq_handlers set_cap_valid_arch_caps | simp add: trans_state_update[symmetric] del: trans_state_update fun_upd_apply split del: split_if )+
+                  set_cap_irq_handlers set_cap_valid_arch_caps
+                  set_cap_cap_refs_respects_device_region_NullCap
+                  | simp add: trans_state_update[symmetric] del: trans_state_update fun_upd_apply split del: split_if )+
   apply (clarsimp simp: is_final_cap'_def2 simp del: fun_upd_apply)
   apply (clarsimp simp: conj_comms invs_def valid_state_def valid_mdb_def2)
   apply (subgoal_tac "mdb_empty_abs s")
@@ -417,7 +419,7 @@ lemma obj_at_not_live_valid_arch_cap_strg [Finalise_AI_asms]:
         \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"
   by (clarsimp simp: valid_cap_def obj_at_def
                      a_type_arch_live
-              split: arch_cap.split_asm)
+              split: arch_cap.split_asm if_splits)
 
 lemma arch_finalise_cap_replaceable[wp]:
   notes strg = tcb_cap_valid_imp_NullCap
@@ -455,7 +457,7 @@ lemma arch_finalise_cap_replaceable[wp]:
            | simp add: simps is_master_reply_cap_def reachable_pg_cap_def
            | wpc)+
   apply (auto simp: valid_cap_def obj_at_def simps is_master_reply_cap_def
-                    a_type_def
+                    a_type_def data_at_def
              elim!: tcb_cap_valid_imp_NullCap[rule_format, rotated]
              split: cap.splits arch_cap.splits vmpage_size.splits)[1]
   done
@@ -556,7 +558,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                       (wp_once hoare_drop_imps)?,
                       wp_once deleting_irq_handler_empty)
                    | wpc
-                   | simp add: valid_cap_simps)+)
+                   | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)
   apply (rule hoare_chain)
     apply (rule arch_finalise_cap_replaceable[where sl=sl])
    apply (clarsimp simp: replaceable_def reachable_pg_cap_def
@@ -637,8 +639,8 @@ lemma tcb_cap_valid_pagetable:
   "tcb_cap_valid (ArchObjectCap (PageTableCap word (Some v))) slot
     = tcb_cap_valid (ArchObjectCap (PageTableCap word None)) slot"
   apply (rule ext)
-  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def
-                   is_cap_simps valid_ipc_buffer_cap_def
+  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def is_nondevice_page_cap_arch_def
+                   is_cap_simps valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
             split: Structures_A.thread_state.split)
   done
 
@@ -646,8 +648,8 @@ lemma tcb_cap_valid_pagedirectory:
   "tcb_cap_valid (ArchObjectCap (PageDirectoryCap word (Some v))) slot
     = tcb_cap_valid (ArchObjectCap (PageDirectoryCap word None)) slot"
   apply (rule ext)
-  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def
-                   is_cap_simps valid_ipc_buffer_cap_def
+  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def is_nondevice_page_cap_arch_def
+                   is_cap_simps valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
             split: Structures_A.thread_state.split)
   done
 
@@ -827,8 +829,8 @@ lemma final_cap_pd_slot_eq:
 
 lemma is_arch_update_reset_page:
   "is_arch_update
-     (ArchObjectCap (PageCap p r sz m))
-     (ArchObjectCap (PageCap p r' sz m'))"
+     (ArchObjectCap (PageCap dev p r sz m))
+     (ArchObjectCap (PageCap dev p r' sz m'))"
   apply (simp add: is_arch_update_def is_arch_cap_def cap_master_cap_def)
   done
 
@@ -917,7 +919,7 @@ lemma page_directory_at_def2:
    apply (erule exE)
    apply (case_tac ko, simp_all add: split_if_eq1)
    apply (rename_tac arch_kernel_obj)
-   apply (case_tac arch_kernel_obj, simp_all)
+   apply (case_tac arch_kernel_obj, simp_all split: if_splits)
   apply (erule exE)
   apply (rule_tac x="ArchObj (PageDirectory pd)" in exI)
   apply simp
@@ -1217,8 +1219,8 @@ lemma arch_finalise_case_no_lookup:
       |simp add:vs_cap_ref_def
       vs_lookup_pages_eq_at[THEN fun_cong,symmetric]
       vs_lookup_pages_eq_ap[THEN fun_cong,symmetric])+
-   apply (auto simp: valid_cap_simps valid_arch_state_def
-              split: vmpage_size.split)
+   apply (auto simp: valid_cap_simps valid_arch_state_def data_at_def
+              split: vmpage_size.split if_splits)
    done
 
 lemma arch_finalise_pt_pd_empty:
@@ -1247,9 +1249,9 @@ lemma do_machine_op_reachable_pg_cap[wp]:
   done
 
 lemma replaceable_or_arch_update_pg:
-  " (case (vs_cap_ref (ArchObjectCap (PageCap word fun vm_pgsz y))) of None \<Rightarrow> True | Some ref \<Rightarrow> \<not> (ref \<unrhd> word) s)
-  \<longrightarrow> replaceable_or_arch_update s slot (ArchObjectCap (PageCap word fun vm_pgsz None))
-                (ArchObjectCap (PageCap word fun vm_pgsz y))"
+  " (case (vs_cap_ref (ArchObjectCap (PageCap dev word fun vm_pgsz y))) of None \<Rightarrow> True | Some ref \<Rightarrow> \<not> (ref \<unrhd> word) s)
+  \<longrightarrow> replaceable_or_arch_update s slot (ArchObjectCap (PageCap dev word fun vm_pgsz None))
+                (ArchObjectCap (PageCap dev word fun vm_pgsz y))"
   unfolding replaceable_or_arch_update_def
   apply (auto simp: is_cap_simps is_arch_update_def cap_master_cap_simps)
   done
@@ -1419,6 +1421,13 @@ interpretation Finalise_AI_3?: Finalise_AI_3
 
 context Arch begin global_naming ARM
 
+lemma typ_at_data_at_wp:
+  assumes typ_wp: "\<And>a.\<lbrace>typ_at a p \<rbrace> g \<lbrace>\<lambda>s. typ_at a p\<rbrace>"
+  shows "\<lbrace>data_at b p\<rbrace> g \<lbrace>\<lambda>s. data_at b p\<rbrace>"
+  apply (simp add: data_at_def)
+  apply (wp typ_wp hoare_vcg_disj_lift)
+  done
+
 lemma arch_cap_recycle_replaceable:
   notes split_if [split del]
   and   arch_reset_mem_mapping.simps [simp del]
@@ -1447,15 +1456,15 @@ lemma arch_cap_recycle_replaceable:
             mapM_x_wp' [OF store_pte_typ_ats(14)]
             mapM_x_store_pte_valid_arch_objs
             mapM_x_swp_store_empty_table_set[unfolded swp_def]
-            hoare_vcg_all_lift hoare_vcg_const_imp_lift
+            hoare_vcg_all_lift hoare_vcg_const_imp_lift typ_at_data_at_wp
        | strengthen replaceable_reset_pt_strg [OF refl] invs_valid_objs
                     replaceable_or_arch_update_pg invs_valid_asid_table
        | simp add: replaceable_or_arch_update_same swp_def if_distrib
-                   if_apply_def2
+                   if_apply_def2 unless_def
        | wp_once hoare_drop_imps )+)[1]
-      apply (simp add:arch_finalise_cap_def)
-      apply ((wpc | wp valid_case_option_post_wp unmap_page_unmapped
-                      hoare_vcg_all_lift hoare_vcg_imp_lift K_valid)+)[2]
+      apply (simp add: arch_finalise_cap_def)
+      apply ((wpc | wp valid_case_option_post_wp unmap_page_unmapped typ_at_data_at_wp
+                      hoare_vcg_all_lift hoare_vcg_imp_lift K_valid | simp add: unless_def)+)[2]
       -- "PagetableCap case"
     apply ((simp only: replaceable_or_arch_update_pg
        | wp arch_finalise_case_no_lookup arch_finalise_pt_pd_empty
@@ -1469,7 +1478,7 @@ lemma arch_cap_recycle_replaceable:
             mapM_x_wp' [OF store_pte_typ_ats(14)]
             mapM_x_store_pte_valid_arch_objs
             mapM_x_swp_store_empty_table_set[unfolded swp_def]
-            hoare_vcg_all_lift hoare_vcg_const_imp_lift
+            hoare_vcg_all_lift hoare_vcg_const_imp_lift typ_at_data_at_wp
        | strengthen replaceable_reset_pt_strg [OF refl] invs_valid_objs
                     invs_valid_asid_table
        | simp add: replaceable_or_arch_update_same swp_def if_distrib
@@ -1492,20 +1501,20 @@ lemma arch_cap_recycle_replaceable:
       | simp add: replaceable_or_arch_update_same swp_def if_distrib
         if_apply_def2
       | wp_once hoare_drop_imps )+)[1]
-  apply (clarsimp simp: cte_wp_at_caps_of_state invs_psp_aligned
+  apply (clarsimp simp: cte_wp_at_caps_of_state invs_pspace_alignedI
                         invs_arch_objs)
   apply (frule (1) caps_of_state_valid [OF _ invs_valid_objs])
   apply (cases cap, simp_all add: is_cap_simps replaceable_or_arch_update_same)
   -- "pt"
-    apply (clarsimp simp: vs_cap_ref_def valid_cap_simps invs_psp_aligned
+    apply (fastforce simp: vs_cap_ref_def valid_cap_simps invs_psp_aligned data_at_def
                           invs_arch_objs invs_valid_objs invs_valid_asid_table
-                   split: option.splits vmpage_size.splits)
+                   split: option.splits vmpage_size.splits if_splits)
    apply (rename_tac word option)
    apply (case_tac slot)
    apply (clarsimp simp: valid_cap_simps)
    apply (case_tac "\<not> is_final_cap' (cap.ArchObjectCap (arch_cap.PageTableCap word option)) s")
     apply clarsimp
-   apply (clarsimp simp:conj_comms)
+   apply (clarsimp simp: conj_comms)
    apply (intro conjI)
       apply (fastforce intro!: word_aligned_pt_slots
                        elim!: caps_of_state_aligned_page_table)
@@ -1523,20 +1532,29 @@ lemma arch_cap_recycle_replaceable:
    apply clarsimp
   apply (frule caps_of_state_valid)
    apply fastforce
-  apply (clarsimp simp:cap_aligned_def valid_cap_simps conj_comms)
+  apply (clarsimp simp: cap_aligned_def valid_cap_simps conj_comms)
   -- "pd"
   apply (frule caps_of_state_aligned_page_directory)
    apply simp
-  apply (clarsimp simp:valid_cap_simps cap_aligned_def pd_bits_def pageBits_def)
+  apply (clarsimp simp: valid_cap_simps cap_aligned_def pd_bits_def pageBits_def)
   apply (auto simp: pd_shifting_kernel_mapping_slots
                       [unfolded pd_bits_def pageBits_def,simplified]
                     pd_shifting_global_refs
                       [unfolded pd_bits_def pageBits_def,simplified])
   done
 
+crunch caps_of_state[wp]: recycle_cap "\<lambda>s. P (caps_of_state s)"
+  (ignore: filterM set_object thread_set clearMemory recycle_cap_ext
+     simp: filterM_mapM crunch_simps tcb_registers_caps_merge_def unless_def
+       wp: crunch_wps thread_set_caps_of_state_trivial2)
+
+lemmas recycle_cap_cte_wp_at[wp] =
+  hoare_cte_wp_caps_of_state_lift [OF recycle_cap_caps_of_state]
+
+
 crunch irq_node[wp]: recycle_cap "\<lambda>s. P (interrupt_irq_node s)"
   (ignore: filterM clearMemory recycle_cap_ext
-     simp: filterM_mapM crunch_simps
+     simp: filterM_mapM crunch_simps unless_def
        wp: crunch_wps)
 
 global_naming Arch
@@ -1585,7 +1603,7 @@ lemma (* cap_recycle_replaceable *) [Finalise_AI_asms]:
        apply (drule tcb_cap_cases_lt)
        apply (simp add: nat_to_cref_unat_of_bl')
 
-      apply (clarsimp simp: cte_wp_at_caps_of_state
+      apply (clarsimp simp: cte_wp_at_caps_of_state is_nondevice_page_cap_simps
                             tcb_cap_cases_def is_cap_simps
                      split: Structures_A.thread_state.split_asm)
      apply (simp add: valid_ipc_buffer_cap_def)
@@ -1593,7 +1611,7 @@ lemma (* cap_recycle_replaceable *) [Finalise_AI_asms]:
     apply simp
     -- "Some case"
    apply (intro conjI)
-     apply (clarsimp simp: cte_wp_at_caps_of_state
+     apply (clarsimp simp: cte_wp_at_caps_of_state is_nondevice_page_cap_simps
                            tcb_cap_cases_def is_cap_simps
                     split: Structures_A.thread_state.split_asm)
     apply (simp add: valid_ipc_buffer_cap_def)
@@ -1626,7 +1644,7 @@ context Arch begin global_naming ARM
 crunch typ_at[wp]: recycle_cap "\<lambda>s. P (typ_at T p s)"
   (ignore: filterM clearMemory recycle_cap_ext
      simp: filterM_mapM crunch_simps
-       wp: crunch_wps)
+       wp: crunch_wps hoare_unless_wp)
 
 lemma set_asid_pool_obj_at_ptr:
   "\<lbrace>\<lambda>s. P (ArchObj (arch_kernel_obj.ASIDPool mp))\<rbrace>
@@ -1838,8 +1856,8 @@ lemma set_asid_pool_invs_table:
    apply (frule(2) unique_table_refsD,
           unfold obj_refs.simps aobj_ref.simps option.simps,
           assumption)
-   apply (clarsimp simp:vs_cap_ref_def table_cap_ref_def
-     split:cap.split_asm arch_cap.split_asm)
+   apply (clarsimp simp: vs_cap_ref_def table_cap_ref_def
+                  split: cap.split_asm arch_cap.split_asm)
   apply clarsimp
   apply (drule vs_asid_refsI)
   apply (drule vs_lookupI, rule rtrancl_refl)
@@ -1973,7 +1991,10 @@ lemma (* clearMemory_invs *) [wp,Finalise_AI_asms]:
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply (clarsimp simp: invs_def valid_state_def clearMemory_vms cur_tcb_def)
-  apply (erule use_valid[OF _ clearMemory_valid_irq_states], simp)
+  apply (frule use_valid)
+    apply (rule_tac P = "\<lambda>ms. ms = device_state (machine_state s)" in clearMemory_device_state_inv)
+   apply clarsimp+
+  apply(erule use_valid[OF _ clearMemory_valid_irq_states], simp)
   done
 
 lemma arch_recycle_cap_invs_ARCH [Finalise_AI_asms]:
@@ -1991,7 +2012,7 @@ lemma arch_recycle_cap_invs_ARCH [Finalise_AI_asms]:
              mapM_x_wp'[where P="\<lambda>s. Q (typ_at T p s)" for Q T p]
              store_pte_typ_at static_imp_wp
            | simp add: fun_upd_def[symmetric] cte_wp_at_caps_of_state
-                       valid_cap_simps
+                       valid_cap_simps unless_def
            | wpc)+)
   apply (case_tac slot)
   apply clarsimp
@@ -2156,7 +2177,7 @@ lemma (* arch_recycle_cap_valid *)[wp, Finalise_AI_asms]:
            | wp_once hoare_vcg_conj_lift
            | wp_once hoare_vcg_all_lift
            | wp_once hoare_drop_imps
-           | simp add: swp_def)+
+           | clarsimp simp add: swp_def unless_def)+
   apply force
   done
 

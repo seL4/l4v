@@ -678,7 +678,7 @@ lemma cancel_badged_sends_domain_sep_inv[wp]:
    done
 
 crunch domain_sep_inv[wp]: arch_recycle_cap "domain_sep_inv irqs st"
-  (wp: crunch_wps)
+  (wp: crunch_wps hoare_unless_wp)
 
 lemma recycle_cap_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
@@ -715,7 +715,7 @@ lemma invoke_cnode_domain_sep_inv:
 
 lemma create_cap_domain_sep_inv[wp]:
   "\<lbrace> domain_sep_inv irqs st\<rbrace>
-   create_cap tp sz p slot
+   create_cap tp sz p dev slot
    \<lbrace> \<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(simp add: create_cap_def)
   apply(rule hoare_pre)
@@ -742,7 +742,7 @@ lemma domain_sep_inv_detype_lift:
 
 lemma retype_region_neg_cte_wp_at_not_domain_sep_inv_cap:
   "\<lbrace>\<lambda>s. \<not> cte_wp_at (not domain_sep_inv_cap irqs) slot s \<rbrace>
-   retype_region base n sz ty
+   retype_region  base n sz ty dev
    \<lbrace>\<lambda>rv s. \<not> cte_wp_at (not domain_sep_inv_cap irqs) slot s\<rbrace>"
   apply(rule hoare_pre)
    apply(simp only: retype_region_def retype_addrs_def
@@ -762,7 +762,7 @@ lemma retype_region_neg_cte_wp_at_not_domain_sep_inv_cap:
 
 lemma retype_region_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
-   retype_region base n sz tp
+   retype_region base n sz tp dev
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(rule domain_sep_inv_wp[where P="\<top>" and R="\<top>", simplified])
    apply(rule retype_region_neg_cte_wp_at_not_domain_sep_inv_cap)
@@ -770,13 +770,13 @@ lemma retype_region_domain_sep_inv[wp]:
   done
 
 lemma domain_sep_inv_cap_UntypedCap[simp]:
-  "domain_sep_inv_cap irqs (UntypedCap base sz n)"
+  "domain_sep_inv_cap irqs (UntypedCap dev base sz n)"
   apply(simp add: domain_sep_inv_cap_def)
   done
 
 crunch domain_sep_inv[wp]: invoke_untyped "domain_sep_inv irqs st"
   (ignore: freeMemory retype_region wp: crunch_wps domain_sep_inv_detype_lift
-   get_cap_wp
+   get_cap_wp hoare_unless_wp
    simp: crunch_simps mapM_x_def_bak)
 
 lemma perform_page_invocation_domain_sep_inv_get_cap_helper:

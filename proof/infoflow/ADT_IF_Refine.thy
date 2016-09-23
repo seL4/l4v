@@ -127,17 +127,28 @@ definition doUserOp_if :: "user_transition_if \<Rightarrow> user_context \<Right
   do pr \<leftarrow> gets ptable_rights_s';
      pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s' s x);
      pl \<leftarrow> gets (\<lambda>s. ptable_lift_s' s |` {x. pr x \<noteq> {}});
+     allow_read \<leftarrow> return {y. \<exists>x. pl x = Some y \<and> AllowRead \<in> pr x};
+     allow_write \<leftarrow> return {y. \<exists>x. pl x = Some y \<and> AllowWrite \<in> pr x};
      t \<leftarrow> getCurThread;
-     um \<leftarrow>
-     gets (\<lambda>s. (user_mem' s \<circ> ptrFromPAddr) |`
-               {y. \<exists>x. pl x = Some y \<and> AllowRead \<in> pr x});
+     um \<leftarrow> gets (\<lambda>s. (user_mem' s \<circ> ptrFromPAddr));
+     dm \<leftarrow> gets (\<lambda>s. (device_mem' s \<circ> ptrFromPAddr));
+     ds \<leftarrow> gets (device_state \<circ> ksMachineState);
+     assert (dom (um \<circ> addrFromPPtr) \<subseteq> - dom ds);
+     assert (dom (dm \<circ> addrFromPPtr) \<subseteq> dom ds);
      es \<leftarrow> doMachineOp getExMonitor;
-     u \<leftarrow> return (uop t pl pr pxn (tc, um, es));
+     u \<leftarrow>
+       return
+        (uop t pl pr pxn
+          (tc, um |` allow_read,
+           (ds \<circ> ptrFromPAddr) |` allow_read, es));
      assert (u \<noteq> {});
-     (e, tc', um', es') \<leftarrow> select u;
+     (e, tc', um',ds', es') \<leftarrow> select u;
      doMachineOp
       (user_memory_update
-        (um' |` {y. \<exists>x. pl x = Some y \<and> AllowWrite \<in> pr x} \<circ> addrFromPPtr));
+        ((um' |` allow_write \<circ> addrFromPPtr) |` (- (dom ds))));
+     doMachineOp
+      (device_memory_update
+          ((ds' |` allow_write \<circ> addrFromPPtr) |` dom ds));
      doMachineOp (setExMonitor es');
      return (e, tc')
   od"
@@ -147,6 +158,7 @@ lemma empty_fail_select_bind: "empty_fail (assert (S \<noteq> {}) >>= (\<lambda>
   done
 
 crunch (empty_fail) empty_fail[wp]: user_memory_update
+crunch (empty_fail) empty_fail[wp]: device_memory_update
 
 lemma getExMonitor_empty_fail[wp]:
   "empty_fail getExMonitor"
@@ -182,11 +194,53 @@ lemma doUserOp_if_empty_fail: "empty_fail (doUserOp_if uop tc)"
    apply wp_once
   apply wp_once
    apply wp[1]
+  apply wp_once
+   apply wp[1]
+  apply wp_once
+   apply wp[1]
+  apply wp_once
+   apply wp[1]
+  apply wp_once
+   apply wp[1]
   apply (subst bind_assoc[symmetric])
   apply (rule empty_fail_bind)
    apply (rule empty_fail_select_bind)
   apply (wp | wpc)+
   done
+
+
+lemma ptable_attrs_abs_state[simp]:
+  "ptable_attrs thread (abs_state s) = ptable_attrs thread s"
+  by (simp add: ptable_attrs_def abs_state_def)
+
+lemma corres_gets_same:
+  assumes equiv: "\<And>s s'. \<lbrakk>P s; Q s'; (s, s') \<in> sr\<rbrakk>\<Longrightarrow> f s = g s'"
+     and rimp : "\<And>s. P s \<Longrightarrow> R (f s) s"
+     and corres: "\<And>r.  corres_underlying sr b c rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
+  shows "corres_underlying sr b c rr P Q 
+  (do r \<leftarrow> gets f; n r od)
+  (do r \<leftarrow> gets g; m r od)"
+  apply (rule corres_guard_imp)
+  apply (rule corres_split[where r' = "op ="])
+   apply simp
+   apply (rule corres)
+   apply clarsimp
+   apply (rule equiv)
+   apply (wp|simp)+
+   apply (simp add: rimp)
+  apply simp
+  done
+
+lemma corres_assert_imp_r:
+  "\<lbrakk>\<And>s. P s\<Longrightarrow> Q' ; corres_underlying state_relation a b rr P Q f (g ())\<rbrakk>
+  \<Longrightarrow> corres_underlying state_relation a b rr P Q f (assert Q' >>= g)"
+  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
+
+lemma corres_return_same_trivial:
+  "corres_underlying sr b c op= \<top> \<top> (return a) (return a)"
+  by simp
+
+crunch (no_fail) no_fail[wp]: device_memory_update
 
 lemma do_user_op_if_corres:
    "corres op = (einvs and ct_running and (\<lambda>_. \<forall>t pl pr pxn tcu. f t pl pr pxn tcu \<noteq> {}))
@@ -195,52 +249,63 @@ lemma do_user_op_if_corres:
    (do_user_op_if f tc) (doUserOp_if f tc)"
   apply (rule corres_gen_asm)
   apply (simp add: do_user_op_if_def doUserOp_if_def)
+  apply (rule corres_gets_same)
+    apply (clarsimp simp: ptable_rights_s_def ptable_rights_s'_def)
+    apply (subst absKState_correct, fastforce, assumption+)
+    apply (clarsimp elim!: state_relationE)
+   apply simp
+  apply (rule corres_gets_same)
+    apply (clarsimp simp: ptable_attrs_s'_def ptable_attrs_s_def ptable_xn_s'_def ptable_xn_s_def)
+    apply (subst absKState_correct, fastforce, assumption+)
+    apply (clarsimp elim!: state_relationE)
+   apply simp
+  apply (rule corres_gets_same)
+    apply (clarsimp simp: absArchState_correct curthread_relation ptable_lift_s'_def
+                         ptable_lift_s_def)
+    apply (subst absKState_correct, fastforce, assumption+)
+    apply (clarsimp elim!: state_relationE)
+   apply simp
+  apply (simp add: getCurThread_def)
+  apply (rule corres_gets_same)
+    apply (simp add: curthread_relation)
+   apply simp
+  apply (rule corres_gets_same[where R ="\<lambda>r s. dom (r \<circ> addrFromPPtr) \<subseteq> - device_region s"])
+   apply (clarsimp simp add: user_mem_relation dest!: invs_valid_stateI invs_valid_stateI')
+   apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
+   apply fastforce
+  apply (rule corres_gets_same[where R ="\<lambda>r s. dom (r \<circ> addrFromPPtr) \<subseteq> device_region s"])
+   apply (clarsimp simp add: device_mem_relation dest!: invs_valid_stateI invs_valid_stateI')
+   apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
+   apply fastforce
+  apply (rule corres_gets_same[where R ="\<lambda>r s. dom r = device_region s"])
+    apply (clarsimp simp: state_relation_def)
+   apply simp
+  apply (rule corres_assert_imp_r)
+   apply fastforce
+  apply (rule corres_assert_imp_r)
+   apply fastforce
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
-       prefer 2
-       apply (clarsimp simp: ptable_rights_s_def ptable_rights_s'_def)
-       apply (subst absKState_correct, fastforce, assumption+)
-       apply (clarsimp elim!: state_relationE)
-      apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
-         prefer 2
-         apply (clarsimp simp: ptable_attrs_s'_def ptable_attrs_s_def ptable_xn_s'_def ptable_xn_s_def)
-         apply (subst absKState_correct, fastforce, assumption+)
-         apply (clarsimp elim!: state_relationE)
-        apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
-           prefer 2
-           apply (clarsimp simp: absArchState_correct curthread_relation ptable_lift_s'_def
-                                 ptable_lift_s_def)
-           apply (subst absKState_correct, fastforce, assumption+)
-           apply (clarsimp elim!: state_relationE)
-          apply (rule corres_split[OF _ gct_corres])
-            apply simp
-            apply (rule corres_split[OF _ user_mem_corres])
-              apply clarsimp
-              apply (rule corres_split[where r'="op ="]) 
-                 apply clarsimp
-                 apply (rule corres_split[where r'="op ="])
-                    apply clarsimp
-                    apply (rule corres_split[where r'="op ="])
-                       apply clarsimp
-                       apply (rule corres_split[where r'="op ="])
-                          apply clarsimp
-                         apply (rule corres_machine_op)
-                         apply (rule corres_underlying_trivial)
-                         apply (wp hoare_TrueI)
-                      apply (clarsimp simp: addrFromPPtr_def)
-                      apply (rule corres_machine_op)
-                      apply (rule corres_underlying_trivial)
-                      apply (clarsimp simp: user_memory_update_def)
-                      apply (rule non_fail_modify)
-                     apply clarsimp
-                     apply (wp hoare_TrueI)
-                    apply clarsimp
-                    apply (wp hoare_TrueI)
-                   apply (clarsimp simp: select_def corres_underlying_def)
-                  apply (simp only: comp_def | wp hoare_TrueI)+
-                apply (rule corres_machine_op)
-                apply (rule corres_underlying_trivial)
-                apply (wp hoare_TrueI)
+       apply (rule corres_split[OF _ corres_machine_op,where r'="op="])
+         apply clarsimp
+         apply (rule corres_split[where r'="op="])
+            apply clarsimp
+            apply (rule corres_split[OF _ corres_machine_op,where r'="op="])
+               apply clarsimp
+               apply (rule corres_split[OF _ corres_machine_op,where r'="op="])
+                  apply clarsimp
+                  apply (rule corres_split[OF _ corres_machine_op, where r'="op="])
+                     apply (rule corres_return_same_trivial)
+                    apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+
+            apply (clarsimp simp: user_memory_update_def)
+            apply (rule non_fail_modify)
+           apply clarsimp
+           apply (wp hoare_TrueI)
+          apply clarsimp
+          apply (wp hoare_TrueI)
+         apply (clarsimp simp: select_def corres_underlying_def)
+         apply (simp only: comp_def | wp hoare_TrueI)+
+      apply (rule corres_underlying_trivial)
+     apply (wp hoare_TrueI)
    apply clarsimp
    apply force
   apply force
@@ -279,18 +344,18 @@ lemma invs'_exclusive_state_update[iff]:
 
 lemma doUserOp_if_invs'[wp]:
    "\<lbrace>invs'  and
- (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
- ct_running' and ex_abs (einvs)\<rbrace>
-doUserOp_if f tc 
-\<lbrace>\<lambda>_. invs'\<rbrace>"
+    (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
+    ct_running' and ex_abs (einvs)\<rbrace>
+   doUserOp_if f tc 
+  \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: doUserOp_if_def split_def ex_abs_def)
-  apply (wp dmo_setExMonitor_wp' dmo_invs' | simp)+
+  apply (wp device_update_invs' dmo_setExMonitor_wp' dmo_invs' | simp)+
          apply (clarsimp simp add: no_irq_modify user_memory_update_def)
         apply (wp doMachineOp_ct_running' doMachineOp_sch_act select_wp)
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
                   split: option.splits)
-  apply (erule ptable_rights_imp_UserData[rotated 2], auto simp: ptable_rights_s'_def ptable_lift_s'_def)
+  apply (drule ptable_rights_imp_UserData[rotated 2], auto simp: ptable_rights_s'_def ptable_lift_s'_def)
   done
 
 lemma doUserOp_valid_duplicates[wp]:
@@ -369,75 +434,66 @@ lemma do_user_op_if_corres':
     ct_running')
    (do_user_op_if f tc) (doUserOp_if f tc)"
   apply (simp add: do_user_op_if_def doUserOp_if_def)
+  apply (rule corres_gets_same)
+    apply (clarsimp simp: ptable_rights_s_def ptable_rights_s'_def)
+    apply (subst absKState_correct, fastforce, assumption+)
+    apply (clarsimp elim!: state_relationE)
+   apply simp
+  apply (rule corres_gets_same)
+    apply (clarsimp simp: ptable_attrs_s'_def ptable_attrs_s_def ptable_xn_s'_def ptable_xn_s_def)
+    apply (subst absKState_correct, fastforce, assumption+)
+    apply (clarsimp elim!: state_relationE)
+   apply simp
+  apply (rule corres_gets_same)
+    apply (clarsimp simp: absArchState_correct curthread_relation ptable_lift_s'_def
+                         ptable_lift_s_def)
+    apply (subst absKState_correct, fastforce, assumption+)
+    apply (clarsimp elim!: state_relationE)
+   apply simp
+  apply (simp add: getCurThread_def)
+  apply (rule corres_gets_same)
+    apply (simp add: curthread_relation)
+   apply simp
+  apply (rule corres_gets_same[where R ="\<lambda>r s. dom (r \<circ> addrFromPPtr) \<subseteq> - device_region s"])
+   apply (clarsimp simp add: user_mem_relation dest!: invs_valid_stateI invs_valid_stateI')
+   apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
+   apply fastforce
+  apply (rule corres_gets_same[where R ="\<lambda>r s. dom (r \<circ> addrFromPPtr) \<subseteq> device_region s"])
+   apply (clarsimp simp add: device_mem_relation dest!: invs_valid_stateI invs_valid_stateI')
+   apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def dom_def)
+  apply (rule corres_gets_same[where R ="\<lambda>r s. dom r = device_region s"])
+    apply (clarsimp simp: state_relation_def)
+   apply simp
+  apply (rule corres_assert_imp_r)
+   apply fastforce
+  apply (rule corres_assert_imp_r)
+   apply fastforce
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
-       prefer 2
-       apply (clarsimp simp: ptable_rights_s_def ptable_rights_s'_def)
-       apply (subst absKState_correct, fastforce, assumption+)
-       apply (clarsimp elim!: state_relationE)
-      apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
-         prefer 2
-         apply (clarsimp simp: absArchState_correct curthread_relation ptable_xn_s'_def
-                               ptable_xn_s_def ptable_attrs_s_def ptable_attrs_s'_def)
-         apply (subst absKState_correct, fastforce, assumption+)
+       apply (rule corres_split[OF _ corres_machine_op',where r'="op="])
          apply simp
-         apply (clarsimp elim!: state_relationE)
-        apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
-           prefer 2
-           apply (clarsimp simp: absArchState_correct curthread_relation ptable_lift_s'_def
-                                 ptable_lift_s_def)
-           apply (subst absKState_correct, fastforce, assumption+)
-           apply (clarsimp elim!: state_relationE)
-          apply (rule corres_split[OF _ gct_corres'])
+         apply (rule corres_split[where r'="dc"])
             apply simp
-            apply (rule corres_split[OF _ user_mem_corres'])
-              apply clarsimp
-              apply (rule corres_split[where r'="op ="]) 
-                 apply clarsimp
-                 apply (rule corres_split[where r'="op ="])
-                    apply clarsimp
-                    apply (rule corres_split[where r'="op ="])
-                       apply clarsimp
-                       apply (rule corres_split[where r'="op ="])
-                          apply clarsimp
-                          apply (rule corres_split[where r'="op ="])
-                             apply clarsimp
-                            apply (rule corres_machine_op')
-                            apply (rule corres_underlying_trivial)
-                            apply (wp do_machine_op_domain_list)
-                         apply (clarsimp simp: addrFromPPtr_def)
-                         apply (rule corres_machine_op')
-                         apply (rule corres_underlying_trivial)
-                         apply (clarsimp simp: user_memory_update_def)
-                        apply clarsimp
-                        apply (wp hoare_TrueI)
-                       apply clarsimp
-                       apply (wp hoare_TrueI)
-                      apply (clarsimp simp: select_def corres_underlying_def)
-                     apply (simp only: comp_def | wp hoare_TrueI)+
-                   apply (rule corres_rel_imp[OF corres_assert'])
-                   apply simp
-                  apply (simp only: comp_def | wp hoare_TrueI)+
-                apply (rule corres_machine_op')
-                apply (rule corres_underlying_trivial)
-                apply (wp hoare_TrueI)
-           apply clarsimp
-           apply assumption
-          apply (wp hoare_TrueI)
-       apply clarsimp
-       apply assumption
-      apply (wp hoare_TrueI)
+            apply (rule corres_split[where r'="op="])
+               apply clarsimp
+               apply (rule corres_split[OF _ corres_machine_op',where r'="op="])
+                  apply simp
+                  apply (rule corres_split[OF _ corres_machine_op', where r'="op="])
+                     apply simp
+                     apply (rule corres_split[OF _ corres_machine_op', where r'="op="])
+                     apply (rule corres_return_same_trivial)
+                    apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+
+           apply (clarsimp simp: select_def corres_underlying_def)
+           apply (simp only: comp_def | wp hoare_TrueI)+
+       apply (rule corres_assert')
+       apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+      
    apply clarsimp
-   apply (rule TrueI conjI)+
-  apply clarsimp
-  apply (rule TrueI conjI)+
+   apply force
+  apply force
   done
 
 lemma doUserOp_if_ex_abs[wp]:
-   "\<lbrace>invs'  and
- (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
- ct_running' and ex_abs (einvs)\<rbrace>
-doUserOp_if f tc 
+   "\<lbrace>invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and ex_abs (einvs)\<rbrace>
+  doUserOp_if f tc 
 \<lbrace>\<lambda>_. ex_abs (einvs)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule corres_ex_abs_lift'[OF do_user_op_if_corres'])
@@ -854,7 +910,6 @@ lemma step_corresE:
     apply (rule d)
     apply simp+
     done
-
 end
 
 locale global_automaton_invs =
@@ -917,10 +972,6 @@ lemma invariant_holds_inter: "A \<Turnstile> I \<Longrightarrow> A \<Turnstile> 
   apply (clarsimp simp: invariant_holds_def)
   apply blast
   done
-
-
-
-
 
 lemma preserves_lift_ret: "(\<And>tc. \<lbrace>\<lambda>s. ((tc,s),mode) \<in> P\<rbrace> f tc \<lbrace>\<lambda>tc' s'. ((snd tc',s'),mode') \<in> P\<rbrace>)
       \<Longrightarrow>
@@ -1276,7 +1327,7 @@ end
 
 lemma 
   step_corres_lift:  
-   "(\<And>tc. corres_underlying srel False True (op =)
+   "(\<And>tc. corres_underlying srel False nf (op =)
              (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc)) \<Longrightarrow>
     (\<And>tc. nf \<Longrightarrow> empty_fail (f' tc)) \<Longrightarrow>
     step_corres nf (lift_snd_rel srel) mode P
@@ -1291,7 +1342,7 @@ lemma
   done
 
 lemma step_corres_lift':
-  "(\<And>tc. corres_underlying srel False True (op =)
+  "(\<And>tc. corres_underlying srel False nf (op =)
             (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f u tc) (f' u tc)) \<Longrightarrow>
    (\<And>tc. nf \<Longrightarrow> empty_fail (f' u tc)) \<Longrightarrow>
    step_corres nf (lift_snd_rel srel) mode
@@ -1307,7 +1358,7 @@ lemma step_corres_lift':
 
 
 lemma step_corres_lift'':
-  "(\<And>tc. corres_underlying srel False True (\<lambda>r r'. ((fst r) = Inr ()) = ((fst r') = Inr ()) \<and> (snd r) = (snd r'))
+  "(\<And>tc. corres_underlying srel False nf (\<lambda>r r'. ((fst r) = Inr ()) = ((fst r') = Inr ()) \<and> (snd r) = (snd r'))
             (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f e tc) (f' e tc)) \<Longrightarrow>
   (\<And>tc. nf \<Longrightarrow> empty_fail (f' e tc)) \<Longrightarrow>
   step_corres nf (lift_snd_rel srel) mode
@@ -1324,7 +1375,7 @@ lemma step_corres_lift'':
   done
 
 lemma step_corres_lift''':
-  "(\<And>tc. corres_underlying srel False True op = (\<lambda>s. ((tc,s),mode) \<in> P)
+  "(\<And>tc. corres_underlying srel False nf op = (\<lambda>s. ((tc,s),mode) \<in> P)
             (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc)) \<Longrightarrow>
    (\<And>tc. nf \<Longrightarrow> empty_fail (f' tc)) \<Longrightarrow>
   step_corres nf (lift_snd_rel srel) mode
@@ -1339,7 +1390,7 @@ lemma step_corres_lift''':
   done
 
 lemma step_corres_lift'''':
-  "(\<And>tc. corres_underlying srel False True op = (\<lambda>s. ((tc,s),mode) \<in> P)
+  "(\<And>tc. corres_underlying srel False nf op = (\<lambda>s. ((tc,s),mode) \<in> P)
             (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc)) \<Longrightarrow>
    (\<And>tc. nf \<Longrightarrow> empty_fail (f' tc)) \<Longrightarrow>
    (\<And>tc s s'. (s,s') \<in> srel \<Longrightarrow> S' s' \<Longrightarrow> S s \<Longrightarrow> y s = y' s') \<Longrightarrow>
@@ -1406,6 +1457,10 @@ lemma ct_idle'_related: "\<lbrakk>(a, c) \<in> state_relation; invs' c; ct_idle 
   apply (case_tac st, simp_all)[1]
   done
 
+lemma invs_machine_state:
+  "invs s \<Longrightarrow> valid_machine_state s"
+  by (clarsimp simp: invs_def valid_state_def)
+
 lemma haskell_to_abs: "uop_nonempty uop \<Longrightarrow> global_automata_refine 
                                check_active_irq_A_if (do_user_op_A_if uop)
                                kernel_call_A_if kernel_handle_preemption_if
@@ -1423,8 +1478,9 @@ lemma haskell_to_abs: "uop_nonempty uop \<Longrightarrow> global_automata_refine
            apply (simp add: step_restrict_def)
           apply (simp add: ADT_H_if_def ADT_A_if_def)
           apply (clarsimp simp add: lift_snd_rel_def full_invs_if_def full_invs_if'_def)
-          apply (rule absKState_correct)
-            apply simp+
+          apply (frule valid_device_abs_state_eq[OF invs_machine_state])
+          apply (frule absKState_correct[rotated])
+            apply simp+         
          apply (simp add: ADT_H_if_def ADT_A_if_def lift_fst_rel_def)
          apply (clarsimp simp: lift_snd_rel_def)
          apply (subgoal_tac "((a, absKState bb), ba) \<in> full_invs_if \<and> (absKState bb, bb) \<in> state_relation")
@@ -1434,6 +1490,7 @@ lemma haskell_to_abs: "uop_nonempty uop \<Longrightarrow> global_automata_refine
          apply (clarsimp simp: ex_abs_def)
          apply (frule(1) absKState_correct[rotated],simp+)
          apply (simp add: full_invs_if_def)
+         apply (frule valid_device_abs_state_eq[OF invs_machine_state])
          apply (case_tac ba)
               apply (fastforce simp: active_from_running ct_running_related ct_idle_related schedaction_related)+
         apply (simp add: check_active_irq_A_if_def checkActiveIRQ_H_if_def)

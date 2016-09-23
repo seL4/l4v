@@ -1015,7 +1015,7 @@ lemma invs'_invs_no_cicd':
   by (simp add: invs'_invs_no_cicd)
 
 lemma deleteASIDPool_ccorres:
-  "ccorres dc xfdc (invs' and (\<lambda>_. base < 2 ^ 18 \<and> pool \<noteq> 0))
+  "ccorres dc xfdc (invs' and (\<lambda>_. base < 2 ^ 17 \<and> pool \<noteq> 0))
       (UNIV \<inter> {s. asid_base_' s = base} \<inter> {s. pool_' s = Ptr pool}) []
       (deleteASIDPool base pool) (Call deleteASIDPool_'proc)"
   apply (rule ccorres_gen_asm)
@@ -1114,7 +1114,7 @@ lemma deleteASIDPool_ccorres:
            apply (simp add: asid_high_bits_of_def unat_ucast asid_low_bits_def)
            apply (rule sym, rule nat_mod_eq')
            apply (rule order_less_le_trans, rule iffD1[OF word_less_nat_alt])
-            apply (rule shiftr_less_t2n[where m=8])
+            apply (rule shiftr_less_t2n[where m=7])
             subgoal by simp
            subgoal by simp
           subgoal by (simp add: option_to_ptr_def option_to_0_def)
@@ -1141,7 +1141,7 @@ lemma deleteASIDPool_ccorres:
   done
 
 lemma deleteASID_ccorres:
-  "ccorres dc xfdc (invs' and K (asid < 2 ^ 18) and K (pdPtr \<noteq> 0))
+  "ccorres dc xfdc (invs' and K (asid < 2 ^ 17) and K (pdPtr \<noteq> 0))
       (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. pd_' s = Ptr pdPtr}) []
       (deleteASID asid pdPtr) (Call deleteASID_'proc)"
   apply (cinit lift: asid_' pd_' cong: call_ignore_cong)
@@ -1150,7 +1150,7 @@ lemma deleteASID_ccorres:
                                 None \<Rightarrow> rv' = NULL
                               | Some v \<Rightarrow> rv' = Ptr v \<and> rv' \<noteq> NULL"
                and xf'="poolPtr_'" in ccorres_split_nothrow)
-       apply (rule_tac P="invs' and K (asid < 2 ^ 18)"
+       apply (rule_tac P="invs' and K (asid < 2 ^ 17)"
                    and P'=UNIV in ccorres_from_vcg)
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: simpler_gets_def Let_def)
@@ -1159,9 +1159,9 @@ lemma deleteASID_ccorres:
                          asidLowBits_def Kernel_C.asidLowBits_def
                          asid_low_bits_def unat_ucast)
         apply (rule sym, rule mod_less)
-        apply (rule unat_less_power[where sz=8, simplified])
+        apply (rule unat_less_power[where sz=7, simplified])
          apply (simp add: word_bits_conv)
-        apply (rule shiftr_less_t2n[where m=8, simplified])
+        apply (rule shiftr_less_t2n[where m=7, simplified])
         apply simp
        apply (rule order_less_le_trans, rule ucast_less)
         apply simp

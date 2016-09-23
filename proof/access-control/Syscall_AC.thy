@@ -969,7 +969,7 @@ lemma handle_interrupt_arch_state [wp]:
 lemmas sequence_x_mapM_x = mapM_x_def [symmetric]
 
 crunch arm_globals_frame [wp]: invoke_untyped "\<lambda>s. P (arm_globals_frame (arch_state s))"
-   (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch
+   (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch hoare_unless_wp
      simp: crunch_simps sequence_x_mapM_x
      ignore: do_machine_op freeMemory clearMemory)
 

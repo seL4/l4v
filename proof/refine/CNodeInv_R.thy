@@ -5339,7 +5339,7 @@ lemma sameObjectAs_same_refs:
 lemmas sameObject_sameRegion = sameObjectAs_sameRegionAs
 
 lemma sameObject_UntypedD [dest!]:
-  "sameObjectAs cap (UntypedCap v0 v1 idx) \<Longrightarrow> (cap = UntypedCap v0 v1 idx)"
+  "sameObjectAs cap (UntypedCap d v0 v1 idx) \<Longrightarrow> (cap = UntypedCap d v0 v1 idx)"
   by (simp add: sameObjectAs_def2 isCap_simps)
 
 lemma mdb_next_cap_upd:
@@ -5535,8 +5535,7 @@ lemma Final_notUntyped_capRange_disjoint:
                  split: capability.split_asm zombie_type.split_asm
                         arch_capability.split_asm
                  dest!: spec[where x=0])
-    apply (simp add: isCap_simps)
-   apply (simp add: isCap_simps)
+    apply fastforce+
   apply (clarsimp simp: isCap_simps sameObjectAs_def3)
   done
 
@@ -7695,9 +7694,9 @@ next
         apply clarsimp
        apply (clarsimp simp: cte_wp_at_caps_of_state)
        apply (erule tcb_valid_nonspecial_cap, fastforce)
-        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps
+        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps is_nondevice_page_cap_simps
                        split: Structures_A.thread_state.split)
-       apply (simp add: ran_tcb_cap_cases is_cap_simps)
+       apply (simp add: ran_tcb_cap_cases is_cap_simps is_nondevice_page_cap_simps)
       apply fastforce
      apply wp
     apply (rule no_fail_pre, wp)
@@ -8318,7 +8317,7 @@ lemma arch_recycleCap_improve_cases': "\<lbrakk>\<not> isPageCap param_b; \<not>
 crunch st_tcb_at'[wp]: "Arch.recycleCap" "st_tcb_at' P t"
   (ignore: getObject setObject
        wp: crunch_wps undefined_valid
-     simp: crunch_simps arch_recycleCap_improve_cases')
+     simp: crunch_simps arch_recycleCap_improve_cases' unless_def)
 
 lemma threadSet_st_tcb_at2:
   assumes x: "\<forall>tcb. P (tcbState tcb) \<longrightarrow> P (tcbState (f tcb))"
@@ -8988,10 +8987,6 @@ lemma cte_wp_at_extract2':
   "\<lbrakk>cte_wp_at' (op = x) p s; cte_wp_at' P p s \<rbrakk> \<Longrightarrow> P x"
   by (rule cte_wp_at_extract') (subst eq_commute,  simp_all)
 
-lemma Untyped_isUntyped[simp]:
-  "isUntypedCap (UntypedCap a b c) = True"
-  by (simp add: isUntypedCap_def)
-
 lemma cteMove_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
       \<and> cte_wp_at' (\<lambda>c. weak_derived' (cteCap c) cap) src s
@@ -9041,7 +9036,7 @@ lemma cteMove_valid_pspace' [wp]:
   apply (rule_tac old_dest_node = "cteMDBNode cte" and src_cap = "cteCap ctea" in
     mdb_move.cteMove_valid_mdb_helper)
   prefer 2
-   apply (clarsimp simp:cte_wp_at_ctes_of weak_derived'_def isCap_simps)
+   apply (clarsimp simp: cte_wp_at_ctes_of weak_derived'_def isCap_simps simp del: not_ex)
   apply unfold_locales
          apply (simp_all add: valid_mdb'_def cte_wp_at_ctes_of nullPointer_def weak_derived'_def)
   apply clarsimp
@@ -9515,7 +9510,7 @@ lemma arch_recycleCap_valid[wp]:
   "\<lbrace>valid_cap' (ArchObjectCap cap) and valid_objs'\<rbrace>
      Arch.recycleCap is_final cap
    \<lbrace>valid_cap' \<circ> capability.ArchObjectCap\<rbrace>"
-  apply (simp add: ARM_H.recycleCap_def Let_def
+  apply (simp add: ARM_H.recycleCap_def Let_def unless_def
                    arch_recycleCap_improve_cases
                    doMachineOp_bind doMachineOp_return
                split del: split_if
@@ -9540,7 +9535,7 @@ lemma recycleCap_valid[wp]:
 
 crunch cte_wp_at'[wp]: recycleCap "cte_wp_at' P p"
   (ignore: filterM setObject getObject
-     simp: filterM_mapM crunch_simps arch_recycleCap_improve_cases'
+     simp: filterM_mapM crunch_simps arch_recycleCap_improve_cases' unless_def
        wp: crunch_wps)
 
 lemma recycleCap_cases:

@@ -697,7 +697,7 @@ lemma is_cnode_cap_guard_equal:
 
 lemma valid_src_cap_has_type[simp]:
   "cap_type cap = Some type
-  \<Longrightarrow> valid_src_cap (default_cap type ids (cnode_cap_size cap))
+  \<Longrightarrow> valid_src_cap (default_cap type ids (cnode_cap_size cap) dev)
   = valid_src_cap cap"
   apply (rule ext)
   apply (clarsimp simp: default_cap_def valid_src_cap_def
@@ -708,7 +708,7 @@ lemma valid_src_cap_has_type[simp]:
 
 lemma exclusive_cap_has_type[simp]:
   "cap_type cap = Some type
-  \<Longrightarrow> safe_for_derive (default_cap type ids sz) = safe_for_derive cap"
+  \<Longrightarrow> safe_for_derive (default_cap type ids sz dev) = safe_for_derive cap"
   by (fastforce simp: default_cap_def
                       cap_type_def safe_for_derive_def
                split: cdl_cap.splits)

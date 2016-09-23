@@ -737,7 +737,7 @@ declare setEndpoint_valid_irq_states' [wp]
 
 lemma setEndpoint_vms[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setEndpoint epptr ep' \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  by (simp add: valid_machine_state'_def pointerInUserData_def)
+  by (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
      (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
 
 crunch ksQ[wp]: setEndpoint "\<lambda>s. P (ksReadyQueues s p)"
