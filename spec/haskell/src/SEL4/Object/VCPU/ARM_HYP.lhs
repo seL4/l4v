@@ -54,7 +54,6 @@ FIXME ARMHYP the VCPU also contains gic interface info and cpXRegs, time will te
 >         KernelF SyscallError ArchInv.Invocation
 > decodeVCPUSetTCB cap@(VCPUCap {}) extraCaps = do
 >     when (null extraCaps) $ throw TruncatedMessage
->     -- FIXME ARMHYP C code calls deriveCap here before checking the cap type, discuss with kernel team
 >     tcbPtr <- case fst (head extraCaps) of
 >         ThreadCap tcbPtr -> return tcbPtr
 >         _ -> throw IllegalOperation
@@ -63,8 +62,8 @@ FIXME ARMHYP the VCPU also contains gic interface info and cpXRegs, time will te
 
 It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome has to be an associated TCB and VCPU. The only way to get lasting dissociation is to delete the TCB or the VCPU.
 
-> dissociateVCPUTCB :: PPtr TCB -> PPtr VCPU -> Kernel ()
-> dissociateVCPUTCB tcbPtr vcpuPtr = do
+> dissociateVCPUTCB :: PPtr VCPU -> PPtr TCB -> Kernel ()
+> dissociateVCPUTCB vcpuPtr tcbPtr = do
 >     tcbVCPU <- archThreadGet atcbVCPUPtr tcbPtr
 >     vcpu <- getObject vcpuPtr
 >     let vcpuTCB = vcpuTCBPtr vcpu
@@ -73,15 +72,15 @@ It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome
 >     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Nothing }
 >     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Nothing }) tcbPtr
 
-> associateVCPUTCB :: PPtr TCB -> PPtr VCPU -> Kernel ()
-> associateVCPUTCB tcbPtr vcpuPtr = do
+> associateVCPUTCB :: PPtr VCPU -> PPtr TCB -> Kernel ()
+> associateVCPUTCB vcpuPtr tcbPtr = do
 >     tcbVCPU <- archThreadGet atcbVCPUPtr tcbPtr
 >     case tcbVCPU of
->       Just ptr -> dissociateVCPUTCB tcbPtr ptr
+>       Just ptr -> dissociateVCPUTCB ptr tcbPtr
 >       _ -> return ()
 >     vcpu <- getObject vcpuPtr
 >     case (vcpuTCBPtr vcpu) of
->         Just ptr -> dissociateVCPUTCB ptr vcpuPtr
+>         Just ptr -> dissociateVCPUTCB vcpuPtr ptr
 >         _ -> return ()
 >     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Just vcpuPtr }) tcbPtr
 >     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Just tcbPtr }
@@ -188,7 +187,7 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 
 > performARMVCPUInvocation :: VCPUInvocation -> Kernel ()
 > performARMVCPUInvocation (VCPUSetTCB vcpuPtr tcbPtr) =
->     associateVCPUTCB tcbPtr vcpuPtr
+>     associateVCPUTCB vcpuPtr tcbPtr
 > performARMVCPUInvocation (VCPUReadRegister vcpuPtr reg) =
 >     invokeVCPUReadReg vcpuPtr reg
 > performARMVCPUInvocation (VCPUWriteRegister vcpuPtr reg val) =
