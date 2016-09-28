@@ -70,7 +70,7 @@ FIXME ARMHYP ksCurCPU will be renamed
 >     armKSGlobalPTs :: [PPtr PTE],
 #else
 >     armUSGlobalPT :: PPtr PTE,
->     armKSCurVCPU :: VCPU,
+>     armHSCurVCPU :: VCPU,
 >     armKSGICVCPUNumListRegs :: Int,
 #endif
 >     armKSKernelVSpace :: PPtr Word -> ArmVSpaceRegionUse}
@@ -125,7 +125,7 @@ FIXME ARMHYP ok, someone needs to explain how this actually works before it gets
 >             armKSNextASID = minBound,
 >             armKSASIDMap = funPartialArray (const Nothing) asidRange,
 >             armUSGlobalPT = error "FIXME ARMHYP TODO",
->             armKSCurVCPU = error "FIXME ARMHYP TODO",
+>             armHSCurVCPU = error "FIXME ARMHYP TODO",
 >             armKSGICVCPUNumListRegs = error "FIXME ARMHYP read from platform",
 >             armKSKernelVSpace =
 >                 (\vref -> if vref < mask 20 then ArmVSpaceKernelWindow

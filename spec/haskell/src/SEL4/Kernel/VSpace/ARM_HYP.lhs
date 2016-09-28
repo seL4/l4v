@@ -790,12 +790,11 @@ XXX ARMHYP no changes in this subsection
 >         _ -> return Nothing
 
 FIXME ARMHYP implement after decision re PageCap contents and MOVE
-FIXME ARMHYP this is not a helpful name, but it's the same as C
 
 #ifdef CONFIG_ARM_SMMU
-> isIOSpaceFrame (PageCap {}) = error "FIXME ARMHYP undecided on PageCap contents"
+> isIOSpaceFrameCap (PageCap {}) = error "FIXME ARMHYP undecided on PageCap contents"
 #endif
-> isIOSpaceFrame _ = False
+> isIOSpaceFrameCap _ = False
 
 > decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -888,7 +887,7 @@ Note that these capabilities cannot be copied until they have been mapped, so an
 
 Virtual page capabilities may each represent a single mapping into a page table. Unlike page table capabilities, they may be unmapped without deletion, and may be freely copied to allow multiple mappings of the same page. Along with the \emph{Map} and \emph{Unmap} operations, there is a \emph{Remap} operation, which is used to change the access permissions on an existing mapping.
 
-FIXME ARMHYP TODO check SMMU isIOSpaceFrame(cap) for remap / unmap
+FIXME ARMHYP TODO check SMMU isIOSpaceFrameCap(cap) for remap / unmap
 FIXME ARMHYP TODO add call to ARMPageMapIO decode for map and unmap; remap not allowed
 FIXME ARMHYP capVPMappedAddress is not what we want for ARM\_HYP? C code has capFMappedAddress for ARM, capFBasePtr for ARM\_HYP here
 
@@ -927,7 +926,7 @@ FIXME ARMHYP capVPMappedAddress is not what we want for ARM\_HYP? C code has cap
 >         (ArchInvocationLabel ARMPageMapIO, _, _) -> error "FIXME ARMHYP TODO IO"
 #endif
 >         (ArchInvocationLabel ARMPageRemap, rightsMask:attr:_, (pdCap, _):_) -> do
->             when (isIOSpaceFrame cap) $ throw IllegalOperation
+>             when (isIOSpaceFrameCap cap) $ throw IllegalOperation
 >             (pd,asid) <- case pdCap of
 >                 ArchObjectCap (PageDirectoryCap {
 >                         capPDMappedASID = Just asid,
@@ -952,7 +951,7 @@ FIXME ARMHYP capVPMappedAddress is not what we want for ARM\_HYP? C code has cap
 >         (ArchInvocationLabel ARMPageUnmap, _, _) ->
 >                 return $
 #ifdef CONFIG_ARM_SMMU
->                          if (isIOSpaceFrame cap)
+>                          if (isIOSpaceFrameCap cap)
 >                          then error "FIXME ARMHYP TODO IO"
 >                          else
 #endif
