@@ -133,7 +133,7 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >             msgExtraCaps = 0,
 >             msgLength = 1 }
 >     setMessageInfo ct msgInfo
->     -- prevent kernel from generating a reply to ct as we already did
+>     -- prevent kernel from generating a reply to ct since we already did
 >     setThreadState Running ct
 
 > invokeVCPUWriteReg :: PPtr VCPU -> HyperReg -> HyperRegVal -> Kernel ()
@@ -155,8 +155,7 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 
 > decodeVCPUInjectIRQ :: [Word] -> ArchCapability ->
 >         KernelF SyscallError ArchInv.Invocation
-> decodeVCPUInjectIRQ (mr0:mr1:_) cap@(VCPUCap {}) =
->   do
+> decodeVCPUInjectIRQ (mr0:mr1:_) cap@(VCPUCap {}) = do
 >     let vcpuPtr = capVCPUPtr cap
 >     let vid = mr0 .&. 0xffff
 >     let priority = (mr0 `shiftR` 16) .&. 0xff
@@ -170,11 +169,20 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >         gets (armKSGICVCPUNumListRegs . ksArchState)
 >     rangeCheck index 0 gic_vcpu_num_list_regs
 >     vcpuLR <- withoutFailure $ liftM (vgicLR . vcpuVGIC) $ getObject vcpuPtr
+>
 >     when (vcpuLR ! (fromIntegral index) .&. vgicIRQMask == vgicIRQActive) $
 >         throw DeleteFirst
+>
 >     let virq = makeVIRQ (fromIntegral group) (fromIntegral priority) (fromIntegral vid)
 >     return $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) virq
 > decodeVCPUInjectIRQ _ _ = throw TruncatedMessage
+
+> invokeVCPUInjectIRQ :: PPtr VCPU -> Int -> VIRQ -> Kernel ()
+> invokeVCPUInjectIRQ vcpuPtr index virq = do
+>     vcpu <- getObject vcpuPtr
+>     let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // [(index, virq)]
+>     setObject vcpuPtr $ vcpu { vcpuVGIC = (vcpuVGIC vcpu) { vgicLR = vcpuLR }}
+
 
 \subsection{VCPU: perform and decode main functions}
 
@@ -185,7 +193,8 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >     invokeVCPUReadReg vcpuPtr reg
 > performARMVCPUInvocation (VCPUWriteRegister vcpuPtr reg val) =
 >     invokeVCPUWriteReg vcpuPtr reg val
-> performARMVCPUInvocation (VCPUInjectIRQ vcpuPtr _ _)  = error "FIXME ARMHYP TODO"
+> performARMVCPUInvocation (VCPUInjectIRQ vcpuPtr index virq) =
+>     invokeVCPUInjectIRQ vcpuPtr index virq
 
 > decodeARMVCPUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -203,7 +212,7 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >         _ -> throw IllegalOperation
 > decodeARMVCPUInvocation _ _ _ _ _ _ = throw IllegalOperation
 
-% vcpuInjectIRQ
+% FIXME ARMHYP TODO
 % vcpuFinalise?
 % vcpuInit?
 % vcpuSwitch? vcpuRestore?
