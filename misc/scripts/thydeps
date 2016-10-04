@@ -27,7 +27,7 @@ use Cwd;
 use Env;
 no warnings 'experimental';
 
-sub shell_quote { my ($_) = @_; s/([ ><();*?\\|#'"])/\\$1/g; return $_; }
+sub shell_quote { my ($v) = @_; $v =~ s/([ ><();*?\\|#'"])/\\$1/g; return $v; }
 my $cmdline = join(' ', map { shell_quote($_) } ($0, @ARGV));
 
 my %o = (verbose => 1, basedir => '.', uses => '1', recursive => '1',
@@ -113,7 +113,7 @@ my %leaves; # dependencies that are not among the keys. HASH avoids duplicates
 my %missing; # file names that could not be found. HASH avoids duplicates
 
 # BUG: does not handle filenames without a dot (but that's unlikely to happen).
-sub splitname { my $_ = shift; m{^(.*/)?([^/]*)\.([^.]*)$}; return ($1,$2,$3); }
+sub splitname { my $arg = shift; $arg =~ m{^(.*/)?([^/]*)\.([^.]*)$}; return ($1,$2,$3); }
 
 # tries to find the theory with file name $relpath given relative to $basedir
 # and returns the absolute file path
@@ -145,7 +145,7 @@ sub thy_dep {
   my $afn = shift; # absolute filename (hopefully unique) internal identifier
 
   $dtn =~ m{^(?:.*/)?([^/]*)$};
-  foreach my $_ (@{$o{ignore}}) { return if $_ eq $1; };
+  foreach my $i (@{$o{ignore}}) { return if $i eq $1; };
 
   my $dir = (splitname($afn))[0];
   my $dfn = findthy($ofn, $dtn, $dir);
@@ -173,7 +173,7 @@ sub read_thy {
   my $afn = shift; # absolute filename (hopefully unique) internal identifier
 
   my ($dir, $tn, $ty) = splitname($afn);
-  foreach my $_ (@{$o{prune}}) { $leaves{$afn} = 1 and return if $_ eq $tn; };
+  foreach my $i (@{$o{prune}}) { $leaves{$afn} = 1 and return if $i eq $tn; };
   
   open(FILE, "<", "$afn") || die "$afn: $!";
   my $content = '';
