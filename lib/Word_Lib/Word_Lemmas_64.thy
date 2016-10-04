@@ -133,7 +133,7 @@ lemmas if_then_simps = if_then_0_else_1 if_then_1_else_0
 
 lemma ucast_le_ucast_8_64:
   "(ucast x \<le> (ucast y :: word64)) = (x \<le> (y :: word8))"
-  by (simp add: word_le_nat_alt unat_ucast_8_64)
+  by (simp add: ucast_le_ucast)
 
 lemma in_16_range:
   "0 \<in> S \<Longrightarrow> r \<in> (\<lambda>x. r + x * (16 :: word64)) ` S"
