@@ -360,7 +360,9 @@ datatype thread_state
   | BlockedOnReply
   | BlockedOnNotification obj_ref
   | IdleThreadState
+
 type_synonym priority = word8
+
 record tcb =
  tcb_ctable        :: cap
  tcb_vtable        :: cap
@@ -373,7 +375,7 @@ record tcb =
  tcb_context       :: user_context
  tcb_fault         :: "fault option"
  tcb_bound_notification     :: "obj_ref option"
- tcb_mcpriority :: "priority"
+ tcb_mcpriority    :: priority
 
 
 text {* Determines whether a thread in a given state may be scheduled. *}

@@ -324,15 +324,15 @@ done
 (* FIXME: Pretty general. Probably belongs somewhere else *)
 
 lemma invoke_tcb_thread_preservation:
-  assumes cap_delete_P: "\<And>slot. 
-   \<lbrace>invs and P and emptyable slot \<rbrace> cap_delete slot \<lbrace>\<lambda>_.P\<rbrace>"
+  assumes cap_delete_P: "\<And>slot. \<lbrace>invs and P and emptyable slot \<rbrace> cap_delete slot \<lbrace>\<lambda>_.P\<rbrace>"
   assumes cap_insert_P: "\<And>new_cap src dest. \<lbrace>invs and P\<rbrace> cap_insert new_cap src dest \<lbrace>\<lambda>_.P\<rbrace>"
   assumes thread_set_P: "\<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_ipc_buffer_update f) ptr \<lbrace>\<lambda>_.P\<rbrace>"
   assumes thread_set_P': "\<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_fault_handler_update f) ptr \<lbrace>\<lambda>_.P\<rbrace>"
+  assumes set_mcpriority_P: "\<And>mcp ptr. \<lbrace>invs and P\<rbrace> set_mcpriority ptr mcp \<lbrace>\<lambda>_.P\<rbrace>"
   assumes P_trans[simp]: "\<And>f s. P (trans_state f s) = P s"
 shows "
-   \<lbrace>P and invs and Tcb_AI.tcb_inv_wf (tcb_invocation.ThreadControl t sl ep prio croot vroot buf)\<rbrace>
-     invoke_tcb (tcb_invocation.ThreadControl t sl ep prio croot vroot buf)
+   \<lbrace>P and invs and Tcb_AI.tcb_inv_wf (tcb_invocation.ThreadControl t sl ep mcp prio croot vroot buf)\<rbrace>
+     invoke_tcb (tcb_invocation.ThreadControl t sl ep mcp prio croot vroot buf)
    \<lbrace>\<lambda>rv. P\<rbrace>"
   
   apply (simp add: split_def cong: option.case_cong)
@@ -370,6 +370,7 @@ shows "
              cap_delete_P
              cap_insert_P
              thread_set_P thread_set_P'
+             set_mcpriority_P
              dxo_wp_weak
              static_imp_wp
             )
@@ -381,7 +382,7 @@ shows "
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
               apply (unfold option_update_thread_def)
-      apply (wp itr_wps thread_set_P thread_set_P'| simp add: emptyable_def | wpc)+ (*slow*)
+      apply (wp itr_wps thread_set_P thread_set_P' | simp add: emptyable_def | wpc)+ (*slow*)
   apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
                         is_cap_simps is_valid_vtable_root_def
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
@@ -430,6 +431,8 @@ lemma invoke_tcb_NotificationControl_globals_equiv:
   apply (wp unbind_notification_globals_equiv bind_notification_globals_equiv)
   done
 
+crunch globals_equiv: set_mcpriority "globals_equiv st"
+
 lemma invoke_tcb_globals_equiv:
   "\<lbrace> invs and globals_equiv st and Tcb_AI.tcb_inv_wf ti\<rbrace>
    invoke_tcb ti
@@ -438,8 +441,9 @@ lemma invoke_tcb_globals_equiv:
        prefer 4
        apply (simp del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps)
        
-       apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv 
+       apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
                  cap_insert_globals_equiv'' thread_set_globals_equiv 
+                 set_mcpriority_globals_equiv
               | clarsimp simp add: invs_valid_ko_at_arm split del: split_if)+
        apply (simp_all del: Tcb_AI.tcb_inv_wf.simps split del: split_if)
        apply (wp | clarsimp simp: invs_valid_ko_at_arm no_cap_to_idle_thread | intro conjI impI)+
@@ -560,7 +564,7 @@ lemma checked_insert_reads_respects:
 
 definition authorised_tcb_inv_extra where
   "authorised_tcb_inv_extra aag ti \<equiv> 
-    (case ti of ThreadControl _ slot _ _ _ _ _ \<Rightarrow> is_subject aag (fst slot) | _ \<Rightarrow> True)"
+    (case ti of ThreadControl _ slot _ _ _ _ _ _ \<Rightarrow> is_subject aag (fst slot) | _ \<Rightarrow> True)"
 
 lemmas as_user_reads_respects_f = reads_respects_f[OF as_user_reads_respects, where Q="\<top>", simplified, OF as_user_silc_inv]
 
@@ -602,6 +606,11 @@ lemma set_priority_reads_respects: "reads_respects aag l
             rule hoare_strengthen_post, rule ethread_set_priority_pas_refined | force)+
   done
 
+lemma set_mcpriority_reads_respects:
+  "reads_respects aag l \<top> (set_mcpriority x y)"
+  unfolding set_mcpriority_def
+  by (rule thread_set_reads_respects)
+
 lemma checked_cap_insert_only_timer_irq_inv:
   "\<lbrace>only_timer_irq_inv irq (st::det_ext state)\<rbrace>
   check_cap_at a b (check_cap_at c d (cap_insert a b e)) 
@@ -621,6 +630,14 @@ lemma cap_delete_only_timer_irq_inv:
 lemma set_priority_only_timer_irq_inv:
   "\<lbrace>only_timer_irq_inv irq (st::det_ext state)\<rbrace>
    set_priority t prio
+   \<lbrace>\<lambda>rv. only_timer_irq_inv irq st\<rbrace>"
+  apply (simp add: only_timer_irq_inv_def)
+  apply (wp only_timer_irq_pres | force)+
+  done
+
+lemma set_mcpriority_only_timer_irq_inv:
+  "\<lbrace>only_timer_irq_inv irq (st::det_ext state)\<rbrace>
+   set_mcpriority t prio
    \<lbrace>\<lambda>rv. only_timer_irq_inv irq st\<rbrace>"
   apply (simp add: only_timer_irq_inv_def)
   apply (wp only_timer_irq_pres | force)+
@@ -673,17 +690,19 @@ lemma invoke_tcb_reads_respects_f:
   apply(wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
             reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
             set_priority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+            set_mcpriority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
             check_cap_inv[OF check_cap_inv[OF cap_insert_valid_list]]
             check_cap_inv[OF check_cap_inv[OF cap_insert_valid_sched]]
             check_cap_inv[OF check_cap_inv[OF cap_insert_simple_sched_action]]
             get_thread_state_rev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-             hoare_vcg_all_lift_R hoare_vcg_all_lift
+            hoare_vcg_all_lift_R hoare_vcg_all_lift
             cap_delete_reads_respects[where st=st] itr_wps(19) cap_insert_pas_refined
             thread_set_pas_refined reads_respects_f[OF checked_insert_reads_respects, where st=st]
             checked_cap_insert_silc_inv[where st=st] cap_delete_silc_inv[where st=st]
             checked_cap_insert_only_timer_irq_inv[where st=st' and irq=irq]
             cap_delete_only_timer_irq_inv[where st=st' and irq=irq]
             set_priority_only_timer_irq_inv[where st=st' and irq=irq]
+            set_mcpriority_only_timer_irq_inv[where st=st' and irq=irq]
             cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
             cap_delete_pas_refined itr_wps(12) itr_wps(14) cap_insert_cte_at
             checked_insert_no_cap_to hoare_vcg_const_imp_lift_R
@@ -724,17 +743,17 @@ lemma decode_tcb_invocation_authorised_extra:
   apply(simp add: decode_tcb_invocation_def)
   apply(rule hoare_pre)
    apply(wp OR_choice_E_weak_wp 
-             | wpc | simp add: decode_read_registers_def
+            | wpc | simp add: decode_read_registers_def
                               decode_write_registers_def
                               decode_copy_registers_def
                               decode_tcb_configure_def
                               decode_set_priority_def
+                              decode_set_mcpriority_def
                               decode_set_ipc_buffer_def
                               decode_bind_notification_def
                               decode_unbind_notification_def
                               split_def decode_set_space_def
-                              
-                         split del: split_if)+
+                   split del: split_if)+
   done
 
 end

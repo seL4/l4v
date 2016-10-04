@@ -26,9 +26,6 @@ requalify_consts
 
 end
 
-definition minPrio :: priority where "minPrio \<equiv> 0"
-definition maxPrio :: priority where "maxPrio \<equiv> 255"
-
 abbreviation
   "idle st \<equiv> st = Structures_A.IdleThreadState"
 

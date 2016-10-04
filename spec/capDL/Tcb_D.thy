@@ -78,8 +78,8 @@ where
      | TcbResumeIntent \<Rightarrow>
          returnOk (Resume (cap_object target)) \<sqinter> throw
 
-       (* Configure: target, fault_ep, priority, cspace_root_data, vspace_root_data, buffer *)
-     | TcbConfigureIntent fault_ep priority cspace_root_data vspace_root_data buffer \<Rightarrow>
+       (* Configure: target, fault_ep, mcp, priority, cspace_root_data, vspace_root_data, buffer *)
+     | TcbConfigureIntent fault_ep (mcp, priority) cspace_root_data vspace_root_data buffer \<Rightarrow>
          doE
            cspace_root \<leftarrow> throw_on_none $ get_index caps 0;
            vspace_root \<leftarrow> throw_on_none $ get_index caps 1;
@@ -90,6 +90,10 @@ where
            returnOk (ThreadControl (cap_object target) slot (Some fault_ep)
                (Some cspace_root_cap_ref) (Some vspace_root_cap_ref) (buffer_frame_opt))
          odE \<sqinter> throw
+
+       (* Modify a thread's maximum control priority. *)
+     | TcbSetMCPriorityIntent mcp \<Rightarrow>
+         returnOk (ThreadControl (cap_object target) slot None None None None) \<sqinter> throw
 
        (* Modify a thread's priority. *)
      | TcbSetPriorityIntent priority \<Rightarrow>

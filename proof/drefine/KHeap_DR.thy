@@ -1336,9 +1336,9 @@ lemma set_irq_state_dcorres:
    apply wp
   done
 
-lemma dcorres_gets_all_param: "(\<And>x. dcorres dc R R' h (g x)) \<Longrightarrow> dcorres dc R R' h (do x \<leftarrow> gets f; g x od)"
-  apply (simp add: corres_underlying_def bind_def gets_def get_def return_def)
-  done
+lemma dcorres_gets_all_param:
+  "(\<And>x. dcorres R P P' h (g x)) \<Longrightarrow> dcorres R P P' h (do x \<leftarrow> gets f; g x od)"
+  by (clarsimp simp: corres_underlying_def bind_def gets_def get_def return_def)
 
 lemma empty_slot_ext_dcorres: "dcorres dc P P' (return ()) (empty_slot_ext slot v)"
   apply (clarsimp simp: empty_slot_ext_def)

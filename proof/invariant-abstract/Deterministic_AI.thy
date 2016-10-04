@@ -4007,7 +4007,8 @@ lemma invoke_cnode_valid_list[wp]: "\<lbrace>valid_list\<rbrace>
 
 end
 
-crunch valid_list[wp]: switch_if_required_to,set_priority "valid_list" (wp: crunch_wps)
+crunch valid_list[wp]: switch_if_required_to,set_priority,set_mcpriority "valid_list"
+  (wp: crunch_wps)
 
 crunch all_but_exst[wp]: switch_if_required_to "all_but_exst P" (simp: ethread_get_def)
 
@@ -4028,9 +4029,9 @@ global_interpretation switch_if_required_to_extended: is_extended "switch_if_req
   apply wp
   done
 
-crunch all_but_exst[wp]: set_priority  "all_but_exst P" (simp: ethread_get_def)
+crunch all_but_exst[wp]: set_priority "all_but_exst P" (simp: ethread_get_def)
 
-crunch (empty_fail)empty_fail[wp]: set_priority
+crunch (empty_fail)empty_fail[wp]: set_priority,set_mcpriority
 
 global_interpretation set_priority_extended: is_extended "set_priority a b"
   apply (unfold_locales)

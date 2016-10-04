@@ -30,6 +30,8 @@ lemma invoke_untyped_bcorres[wp]:" bcorres (invoke_untyped a) (invoke_untyped a)
   apply (wp | simp)+
   done
 
+crunch (bcorres)bcorres[wp]: set_mcpriority truncate_state
+
 lemma invoke_tcb_bcorres[wp]:
   fixes a
   shows "bcorres (invoke_tcb a) (invoke_tcb a)"
@@ -75,7 +77,9 @@ lemma decode_cnode_invocation[wp]: "bcorres (decode_cnode_invocation a b c d) (d
   apply (wp | wpc | simp add: split_def | intro impI conjI)+
   done
 
-crunch (bcorres)bcorres[wp]: decode_set_ipc_buffer,decode_set_space,decode_set_priority,decode_bind_notification,decode_unbind_notification truncate_state
+crunch (bcorres)bcorres[wp]:
+  decode_set_ipc_buffer,decode_set_space,decode_set_priority,decode_set_mcpriority,
+  decode_bind_notification,decode_unbind_notification truncate_state
 
 lemma decode_tcb_configure_bcorres[wp]: "bcorres (decode_tcb_configure b (cap.ThreadCap c) d e)
      (decode_tcb_configure b (cap.ThreadCap c) d e)"
@@ -97,7 +101,9 @@ lemma ensure_safe_mapping_bcorres[wp]: "bcorres (ensure_safe_mapping a) (ensure_
   apply (wp | wpc | simp)+
   done
 
-crunch (bcorres)bcorres[wp]: handle_invocation truncate_state (simp:  Syscall_A.syscall_def Let_def gets_the_def ignore: get_register Syscall_A.syscall cap_fault_on_failure set_register without_preemption const_on_failure)
+crunch (bcorres)bcorres[wp]: handle_invocation truncate_state
+  (simp: syscall_def Let_def gets_the_def ignore: get_register syscall cap_fault_on_failure
+         set_register without_preemption const_on_failure)
 
 crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
 

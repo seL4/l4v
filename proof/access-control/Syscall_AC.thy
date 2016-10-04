@@ -225,6 +225,7 @@ lemma set_thread_state_authorised[wp]:
       apply (case_tac tcb_invocation, simp_all)
             apply (wp hoare_case_option_wp sts_typ_ats set_thread_state_cte_wp_at
                       hoare_vcg_conj_lift static_imp_wp
+                 | wp_once valid_case_option_post_wp
                  | simp)+
            apply ((clarsimp split: option.splits)+)[3]
         apply ((wp

@@ -1,10 +1,5 @@
-Built from git repo at /Users/xgao/verification/l4v/spec/haskell by xgao
+Built from git repo at /home/matthewb/verification/patch/l4v/spec/haskell by matthewb
 
 Generated from changeset:
-75c159b untypeddevice-proof: fix drefine
+1c569f1 SELFOUR-276: reworked haskell
 
-
- M ../../proof/crefine/StateRelation_C.thy
- M ../../proof/crefine/Tcb_C.thy
- M ../abstract/Decode_A.thy
- M src/SEL4/Object/TCB.lhs

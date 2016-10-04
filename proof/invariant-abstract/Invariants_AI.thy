@@ -3130,7 +3130,6 @@ lemma invs_vobjs_strgs:
   "invs s \<longrightarrow> valid_objs s"
   by auto
 
-
 lemma invs_valid_global_refs [elim!]:
   "invs s \<Longrightarrow> valid_global_refs s"
   by (simp add: invs_def valid_state_def)

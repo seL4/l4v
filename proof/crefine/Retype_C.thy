@@ -3379,7 +3379,7 @@ proof -
           (\<lambda>_. foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<2]
                 (lookup_fault_C.words_C (tcbLookupFailure_C undefined)))
           (tcbLookupFailure_C undefined),
-       tcbPriority_C := 0, tcbDomain_C := 0, tcbTimeSlice_C := 0,
+       tcbPriority_C := 0, tcbMCP_C := 0, tcbDomain_C := 0, tcbTimeSlice_C := 0,
        tcbFaultHandler_C := 0, tcbIPCBuffer_C := 0,
        tcbSchedNext_C := tcb_Ptr 0, tcbSchedPrev_C := tcb_Ptr 0,
        tcbEPNext_C := tcb_Ptr 0, tcbEPPrev_C := tcb_Ptr 0,
@@ -3416,7 +3416,7 @@ proof -
     apply (simp add: cfault_rel_def fault_lift_def fault_get_tag_def Let_def 
       lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
       eval_nat_numeral fault_null_fault_def option_to_ptr_def option_to_0_def
-      split: split_if)+    
+      split: split_if)+
     done
   
   have pks: "ks (ctcb_ptr_to_tcb_ptr p) = None"

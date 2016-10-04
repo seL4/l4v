@@ -414,14 +414,16 @@ lemma transform_intent_thread_cap_None:
   apply (case_tac "invocation_type label")
     apply simp_all
     apply wp
-    apply (clarsimp simp:transform_intent_def decode_read_registers_def decode_write_registers_def decode_copy_registers_def
-      decode_tcb_configure_def decode_set_priority_def decode_set_ipc_buffer_def
-      transform_intent_tcb_read_registers_def transform_intent_tcb_write_registers_def transform_intent_tcb_copy_registers_def
-      transform_intent_tcb_configure_def transform_intent_tcb_set_priority_def transform_intent_tcb_set_ipc_buffer_def 
-      split:list.split_asm,wp)+
-    apply (clarsimp simp:transform_intent_def decode_set_space_def decode_bind_notification_def decode_unbind_notification_def  transform_intent_tcb_set_space_def
-      split del:if_splits split:list.split_asm,wp
-      | clarsimp simp: transform_intent_def)+
+    apply (clarsimp simp: transform_intent_def decode_read_registers_def decode_write_registers_def
+                          decode_copy_registers_def decode_tcb_configure_def decode_set_priority_def
+                          decode_set_mcpriority_def decode_set_ipc_buffer_def transform_intent_tcb_defs 
+                   split: list.split_asm
+          | wp)+
+    apply (clarsimp simp: transform_intent_def decode_set_space_def decode_bind_notification_def
+                          decode_unbind_notification_def transform_intent_tcb_set_space_def
+                   split: list.split_asm
+          , wp
+          | clarsimp simp: transform_intent_def)+
   done
 
 lemma transform_intent_irq_control_None:

@@ -117,50 +117,6 @@ type_synonym domain = "word8"
 
 type_synonym priority = "word8"
 
-datatype prio_props =
-    PrioProps priority priority
-
-primrec
-  ppMCP :: "prio_props \<Rightarrow> priority"
-where
-  "ppMCP (PrioProps v0 v1) = v1"
-
-primrec
-  ppPriority :: "prio_props \<Rightarrow> priority"
-where
-  "ppPriority (PrioProps v0 v1) = v0"
-
-primrec
-  ppMCP_update :: "(priority \<Rightarrow> priority) \<Rightarrow> prio_props \<Rightarrow> prio_props"
-where
-  "ppMCP_update f (PrioProps v0 v1) = PrioProps v0 (f v1)"
-
-primrec
-  ppPriority_update :: "(priority \<Rightarrow> priority) \<Rightarrow> prio_props \<Rightarrow> prio_props"
-where
-  "ppPriority_update f (PrioProps v0 v1) = PrioProps (f v0) v1"
-
-abbreviation (input)
-  PrioProps_trans :: "(priority) \<Rightarrow> (priority) \<Rightarrow> prio_props" ("PrioProps'_ \<lparr> ppPriority= _, ppMCP= _ \<rparr>")
-where
-  "PrioProps_ \<lparr> ppPriority= v0, ppMCP= v1 \<rparr> == PrioProps v0 v1"
-
-lemma ppMCP_ppMCP_update [simp]:
-  "ppMCP (ppMCP_update f v) = f (ppMCP v)"
-  by (cases v) simp
-
-lemma ppMCP_ppPriority_update [simp]:
-  "ppMCP (ppPriority_update f v) = ppMCP v"
-  by (cases v) simp
-
-lemma ppPriority_ppMCP_update [simp]:
-  "ppPriority (ppMCP_update f v) = ppPriority v"
-  by (cases v) simp
-
-lemma ppPriority_ppPriority_update [simp]:
-  "ppPriority (ppPriority_update f v) = f (ppPriority v)"
-  by (cases v) simp
-
 type_synonym cptr = "machine_word"
 
 definition
@@ -1918,18 +1874,6 @@ definition
 priorityBits :: "nat"
 where
 "priorityBits \<equiv> 8"
-
-definition
-mcpBits :: "nat"
-where
-"mcpBits \<equiv> 8"
-
-definition
-prioPropsFromWord :: "machine_word \<Rightarrow> prio_props"
-where
-"prioPropsFromWord w \<equiv> PrioProps_ \<lparr>
-        ppPriority=  fromIntegral $ w && mask priorityBits,
-        ppMCP= fromIntegral $ (w `~shiftR~` priorityBits) && (mask mcpBits)\<rparr>"
 
 definition
 msgLengthBits :: "nat"

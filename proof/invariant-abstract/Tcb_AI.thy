@@ -565,27 +565,31 @@ locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
      cap_delete slot
    \<lbrace>\<lambda>rv. no_cap_to_obj_dr_emp cap\<rbrace>"
   assumes tc_invs:
-  "\<And>a e f g b sl pr. \<lbrace>(invs::'state_ext state \<Rightarrow> bool) and tcb_at a
-       and (case_option \<top> (valid_cap o fst) e)
-       and (case_option \<top> (valid_cap o fst) f)
-       and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) g)
-       and (case_option \<top> (cte_at o snd) e)
-       and (case_option \<top> (cte_at o snd) f)
-       and (case_option \<top> (case_option \<top> (cte_at o snd) o snd) g)
-       and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
-       and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
-       and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
-       and K (case_option True (is_cnode_cap o fst) e)
-       and K (case_option True (is_valid_vtable_root o fst) f)
-       and K (case_option True (\<lambda>v. case_option True
-                          ((swp valid_ipc_buffer_cap (fst v)
-                             and is_arch_cap and is_cnode_or_valid_arch)
-                                o fst) (snd v)) g)
-       and K (case_option True (\<lambda>bl. length bl = word_bits) b)\<rbrace>
-      invoke_tcb (ThreadControl a sl b pr e f g)
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<And>a e f g b mcp sl pr.
+    \<lbrace>(invs::'state_ext state \<Rightarrow> bool) and tcb_at a
+        and (case_option \<top> (valid_cap o fst) e)
+        and (case_option \<top> (valid_cap o fst) f)
+        and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) g)
+        and (case_option \<top> (cte_at o snd) e)
+        and (case_option \<top> (cte_at o snd) f)
+        and (case_option \<top> (case_option \<top> (cte_at o snd) o snd) g)
+        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
+        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
+        and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
+        and (\<lambda>s. case_option True (\<lambda>pr. mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) (cur_thread s) s) pr)
+        and (\<lambda>s. case_option True (\<lambda>mcp. mcpriority_tcb_at (\<lambda>m. mcp \<le> m) (cur_thread s) s) mcp)
+        and K (case_option True (is_cnode_cap o fst) e)
+        and K (case_option True (is_valid_vtable_root o fst) f)
+        and K (case_option True (\<lambda>v. case_option True
+                           ((swp valid_ipc_buffer_cap (fst v)
+                              and is_arch_cap and is_cnode_or_valid_arch)
+                                 o fst) (snd v)) g)
+        and K (case_option True (\<lambda>bl. length bl = word_bits) b)\<rbrace>
+      invoke_tcb (ThreadControl a sl b mcp pr e f g)
+    \<lbrace>\<lambda>rv. invs\<rbrace>"
   assumes decode_set_ipc_inv[wp]:
-  "\<And>P args cap slot excaps. \<lbrace>P::'state_ext state \<Rightarrow> bool\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<And>P args cap slot excaps.
+    \<lbrace>P::'state_ext state \<Rightarrow> bool\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   assumes update_cap_valid:
   "\<And>cap s capdata rs p. valid_cap cap (s::'state_ext state) \<Longrightarrow>
    valid_cap (case capdata of
@@ -733,27 +737,24 @@ lemma thread_set_ipc_tcb_cap_valid:
                  dest!: get_tcb_SomeD)
   done
 
-lemma update_mcpriority_valid_tcb[simp]: "valid_tcb p t s \<Longrightarrow> valid_tcb p (t\<lparr>tcb_mcpriority := x\<rparr>) s"
-by  (simp add: valid_tcb_def ran_tcb_cap_cases)
+lemma update_mcpriority_valid_tcb[simp]:
+  "valid_tcb p t s \<Longrightarrow> valid_tcb p (t\<lparr>tcb_mcpriority := x\<rparr>) s"
+  by (simp add: valid_tcb_def ran_tcb_cap_cases)
 
-
-lemma set_mcpriority_valid_objs[wp]: "\<lbrace>invs  \<rbrace>set_mcpriority t x \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+lemma set_mcpriority_valid_objs[wp]:
+  "\<lbrace>invs\<rbrace> set_mcpriority t x \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  unfolding set_mcpriority_def
   apply (rule hoare_pre)
    apply (wp thread_set_cte_at ts_cur thread_set_valid_objs')
   apply (simp add: Invariants_AI.invs_valid_objs)
   done
- 
-lemma set_mcpriority_valid_cap[wp]: "\<lbrace> valid_cap c \<rbrace>set_mcpriority t x \<lbrace>\<lambda>rv. valid_cap c\<rbrace>"
-  apply (rule hoare_pre)
-   apply (rule thread_set_valid_cap)
-   by  simp
 
-lemma set_mcpriority_cte_at [wp]: 
-    "\<lbrace>cte_wp_at (\<lambda>_. True) c\<rbrace> set_mcpriority t p \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>_. True) c\<rbrace>"
-  by (rule thread_set_cte_at)
+crunch valid_cap[wp]: set_mcpriority "valid_cap c"
+crunch cte_at[wp]: set_mcpriority "cte_at c"
 
 lemma set_mcpriority_invs[wp]: 
-   "\<lbrace>invs and tcb_at t\<rbrace> set_mcpriority t x \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs and tcb_at t\<rbrace> set_mcpriority t x \<lbrace>\<lambda>rv. invs\<rbrace>"
+  unfolding set_mcpriority_def
   by (wp thread_set_valid_objs''
              thread_set_refs_trivial
              thread_set_iflive_trivial
@@ -771,13 +772,13 @@ lemma set_mcpriority_invs[wp]:
              thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
              thread_set_valid_ioc_trivial
+             thread_set_cap_refs_respects_device_region
               | simp add: ran_tcb_cap_cases invs_def valid_state_def valid_pspace_def
               | rule conjI | erule disjE)+
 
-       and (\<lambda>s. case_option True (\<lambda>pr. mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) (cur_thread s) s) pr) (* only set prio \<le> mcp *)
-       and (\<lambda>s. case_option True (\<lambda>mcp. mcpriority_tcb_at (\<lambda>m. mcp \<le> m) (cur_thread s) s) mcp) (* only set mcp \<le> prev_mcp *)
 
 context Tcb_AI begin
+
 primrec
   tcb_inv_wf  :: "tcb_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -806,8 +807,8 @@ where
                         and (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
                                     \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
                         and K (case_option True (\<lambda>bl. length bl = word_bits) fe)
-                        and (\<lambda>s. case_option True (\<lambda>pr. mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) (cur_thread s) s) pr) (* only set prio \<le> mcp *)
-                        and (\<lambda>s. case_option True (\<lambda>mcp. mcpriority_tcb_at (\<lambda>m. mcp \<le> m) (cur_thread s) s) mcp) (* only set mcp \<le> prev_mcp *)
+                        and (\<lambda>s. case_option True (\<lambda>pr. mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) (cur_thread s) s) pr)
+                        and (\<lambda>s. case_option True (\<lambda>mcp. mcpriority_tcb_at (\<lambda>m. mcp \<le> m) (cur_thread s) s) mcp)
                         and ex_nonz_cap_to t)"
 | "tcb_inv_wf (tcb_invocation.ReadRegisters src susp n arch)
              = (tcb_at src and ex_nonz_cap_to src)"
@@ -904,7 +905,7 @@ lemma (in Tcb_AI) tcbinv_invs:
   done
 
 crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
-  (ignore: check_cap_at setNextPC zipWithM 
+  (ignore: check_cap_at setNextPC zipWithM
        wp: hoare_drop_imps mapM_x_wp' check_cap_inv
      simp: crunch_simps)
 
@@ -993,56 +994,58 @@ lemma OR_choiceE_E_weak_wp: "\<lbrace>P\<rbrace> f \<sqinter> g \<lbrace>Q\<rbra
   apply (simp add: validE_R_def validE_def OR_choiceE_weak_wp)
   done
 
-lemma get_mcp_wp: "\<lbrace>\<lambda>s. \<forall>mcp. mcpriority_tcb_at (op = mcp) t s \<longrightarrow> P mcp s\<rbrace> get_mcpriority t \<lbrace>P\<rbrace>"
+lemma thread_get_pred_tcb_at_wp:
+  "\<lbrace>\<lambda>s. \<forall>f. pred_tcb_at proj (op = f) t s \<longrightarrow> P f s \<rbrace> thread_get (proj \<circ> tcb_to_itcb) t \<lbrace>P\<rbrace>"
   apply (wp thread_get_wp')
-  apply (clarsimp)
+  apply clarsimp
   apply (drule spec, erule mp)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  done
-  
-lemma get_mcp_ret: "\<lbrace>\<lambda>_. True\<rbrace> get_mcpriority t \<lbrace>\<lambda>rv. mcpriority_tcb_at (op = rv) t\<rbrace>"
+  by (simp add: pred_tcb_at_def obj_at_def)
+
+lemma thread_get_ret:
+  "\<lbrace>\<top>\<rbrace> thread_get (proj \<circ> tcb_to_itcb) t \<lbrace>\<lambda>rv. pred_tcb_at proj (op = rv) t\<rbrace>"
   apply (simp add: thread_get_def)
   apply wp
-  apply (clarsimp simp: pred_tcb_at_def)
-  done
-  
+  by (clarsimp simp: pred_tcb_at_def)
+
+lemmas get_mcpriority_wp =
+  thread_get_pred_tcb_at_wp[where proj=itcb_mcpriority, simplified comp_def, simplified]
+
+lemmas get_mcpriority_get =
+  thread_get_ret[where proj=itcb_mcpriority, simplified comp_def, simplified]
+
 lemma check_prio_inv: "\<lbrace>P\<rbrace> check_prio a \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: check_prio_def)
   apply (wp whenE_inv, simp)
   done
 
 lemma check_prio_lt_ct:
-  "\<lbrace>\<top>\<rbrace> check_prio a \<lbrace>\<lambda>rv s. mcpriority_tcb_at (op \<le> a) (cur_thread s) s\<rbrace>, -"
+  "\<lbrace>\<top>\<rbrace> check_prio prio \<lbrace>\<lambda>rv s. mcpriority_tcb_at (\<lambda>mcp. prio \<le> ucast mcp) (cur_thread s) s\<rbrace>, -"
   apply (clarsimp simp: check_prio_def)
   apply (rule hoare_pre)
-  apply (wp get_mcp_wp whenE_throwError_wp)
+  apply (wp get_mcpriority_wp whenE_throwError_wp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   by simp
-  
+
+lemma check_prio_lt_ct_weak:
+  "\<lbrace>\<top>\<rbrace> check_prio prio \<lbrace>\<lambda>rv s. mcpriority_tcb_at (\<lambda>mcp. ucast prio \<le> mcp) (cur_thread s) s\<rbrace>, -"
+  apply (rule hoare_post_imp_R)
+  apply (rule check_prio_lt_ct)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  by (rule le_ucast_ucast_le) simp
 
 lemma (in Tcb_AI) decode_set_priority_wf[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace>
-        decode_set_priority args (cap.ThreadCap t) slot \<lbrace>tcb_inv_wf\<rbrace>,-"
-  apply (simp add:Let_def  decode_set_priority_def  split del: split_if)
+        decode_set_priority args (ThreadCap t) slot \<lbrace>tcb_inv_wf\<rbrace>,-"
+  apply (simp add: decode_set_priority_def split del: split_if)
   apply (rule hoare_pre)
-   by (wp check_prio_lt_ct | simp | wp_once check_prio_inv)+
-    
-lemma check_mcp_rewrite_magic[simp]: "check_mcp a = check_prio a"
-  apply (simp add: check_mcp_def)
-  apply (subgoal_tac "a \<le> maxPrio")
-   apply (clarsimp simp: whenE_def)
-   apply simp
-  apply (simp add: maxPrio_def)
-  apply (cut_tac max_word_max[where 'a=8 and n=a, unfolded max_word_def])
-  apply simp
-  done
+   by (wp check_prio_lt_ct_weak | simp | wp_once check_prio_inv)+
    
-lemma decode_set_mcpriority_wf[wp]:
+lemma (in Tcb_AI) decode_set_mcpriority_wf[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace>
-        decode_set_mcpriority args (cap.ThreadCap t) slot \<lbrace>tcb_inv_wf\<rbrace>,-"
+        decode_set_mcpriority args (ThreadCap t) slot \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (simp add: decode_set_mcpriority_def Let_def  split del: split_if)
   apply (rule hoare_pre)
-   by (wp check_prio_lt_ct | simp | wp_once check_prio_inv)+
+   by (wp check_prio_lt_ct_weak | simp | wp_once check_prio_inv)+
 
 definition
   is_thread_control :: "tcb_invocation \<Rightarrow> bool"
@@ -1070,7 +1073,7 @@ lemma decode_set_priority_is_tc[wp]:
   apply (rule hoare_pre)
   apply (simp    add: decode_set_priority_def Let_def check_prio_def
            split del: split_if
-            | wp NonDetMonadLemmaBucket.whenE_inv   NonDetMonadVCG.hoare_seq_ext)+
+            | wp whenE_inv hoare_seq_ext)+
   done
 
 
@@ -1155,8 +1158,7 @@ lemma (in Tcb_AI) decode_set_space_wf[wp]:
           split del: split_if)
   apply (rule hoare_pre)
    apply (wp derive_cap_valid_cap
-             | simp   add: ARM_A.is_valid_vtable_root_def o_def
-                split del: split_if
+             | simp add: o_def split del: split_if
              | rule hoare_drop_imps)+
   apply (clarsimp split del: split_if simp: ball_conj_distrib
                    simp del: length_greater_0_conv)
@@ -1203,6 +1205,7 @@ lemma decode_set_space_target[wp]:
 (* FIXME: move *)
 lemma boring_simp[simp]:
   "(if x then True else False) = x" by simp
+
 
 lemma (in Tcb_AI) decode_tcb_conf_wf[wp]:
   "\<lbrace>(invs::('state_ext::state_ext) state\<Rightarrow>bool) 
@@ -1342,13 +1345,6 @@ lemma pred_tcb_at_arch_state[simp]:
   "pred_tcb_at proj P t (arch_state_update f s) = pred_tcb_at proj P t s"
   by (simp add: pred_tcb_at_def obj_at_def)
 
-(*
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch pred_tcb_at: arch_switch_to_thread "pred_tcb_at proj P t"
-  (wp: crunch_wps simp: crunch_simps)
-end
-*)
-
 lemma invoke_domain_invs:
   "\<lbrace>invs\<rbrace>
      invoke_domain t d
@@ -1432,5 +1428,16 @@ lemma unbind_notification_sym_refs[wp]:
               elim!: obj_at_valid_objsE
               intro!: ntfn_q_refs_no_NTFNBound)
   done
+
+lemma tcb_cap_cases_tcb_mcpriority:
+  "\<forall>(getF, v)\<in>ran tcb_cap_cases.
+         getF (tcb_mcpriority_update F tcb) = getF tcb"
+  by (rule ball_tcb_cap_casesI, simp+)
+
+crunch tcb_at[wp]: set_mcpriority "tcb_at r"
+
+lemma set_mcpriority_no_cap_to_obj_with_diff_ref[wp]:
+  "\<lbrace>no_cap_to_obj_with_diff_ref c S\<rbrace> set_mcpriority t mcp \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref c S\<rbrace>"
+  by (simp add: set_mcpriority_def thread_set_no_cap_to_trivial tcb_cap_cases_tcb_mcpriority)
 
 end

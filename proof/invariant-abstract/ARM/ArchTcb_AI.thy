@@ -207,6 +207,10 @@ lemma tc_invs[Tcb_AI_asms]:
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
        and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
+       (* only set prio \<le> mcp *)
+       and (\<lambda>s. case_option True (\<lambda>pr. mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) (cur_thread s) s) pr)
+       (* only set mcp \<le> prev_mcp *)
+       and (\<lambda>s. case_option True (\<lambda>mcp. mcpriority_tcb_at (\<lambda>m. mcp \<le> m) (cur_thread s) s) mcp)
        and K (case_option True (is_cnode_cap o fst) e)
        and K (case_option True (is_valid_vtable_root o fst) f)
        and K (case_option True (\<lambda>v. case_option True
@@ -214,10 +218,10 @@ lemma tc_invs[Tcb_AI_asms]:
                              and is_arch_cap and is_cnode_or_valid_arch)
                                 o fst) (snd v)) g)
        and K (case_option True (\<lambda>bl. length bl = word_bits) b)\<rbrace>
-      invoke_tcb (ThreadControl a sl b pr e f g)
+      invoke_tcb (ThreadControl a sl b mcp pr e f g)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_gen_asm)+
-  apply (simp add: split_def cong: option.case_cong)
+  apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    apply wp
       apply ((simp only: simp_thms

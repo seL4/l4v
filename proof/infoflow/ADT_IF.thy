@@ -2975,6 +2975,8 @@ crunch irq_state_of_state: bind_notification "\<lambda>s. P (irq_state_of_state 
 lemmas bind_notification_irq_state_inv[wp] = 
   irq_state_inv_triv[OF bind_notification_irq_state_of_state bind_notification_irq_masks_of_state]
 
+crunch machine_state[wp]: set_mcpriority "\<lambda>s. P (machine_state s)"
+
 lemma invoke_tcb_irq_state_inv:
   "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False sta and
     Tcb_AI.tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>

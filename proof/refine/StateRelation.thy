@@ -376,7 +376,6 @@ where
   "sched_act_relation choose_new_thread a' = (a' = ChooseNewThread)" |
   "sched_act_relation (switch_thread x) a' = (a' = SwitchToThread x)"
 
-typ priority
 definition
   ready_queues_relation :: "(Deterministic_A.domain \<Rightarrow> Structures_A.priority \<Rightarrow> Deterministic_A.ready_queue)
                          \<Rightarrow> (domain \<times> priority \<Rightarrow> KernelStateData_H.ready_queue) \<Rightarrow> bool"

@@ -556,7 +556,6 @@ lemma thread_bound_ntfns_transform_rev:
    apply (clarsimp simp: infer_tcb_pending_op_def split: Structures_A.thread_state.splits)
     apply (case_tac "tcb_bound_notification tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def 
                                              infer_tcb_bound_notification_def split: option.splits)
-   apply(case_tac tcb_state;simp)
   done
 
 lemma idle_thread_null_cap:

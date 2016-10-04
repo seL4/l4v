@@ -21,7 +21,7 @@ begin
  * (If capDL doesn't have them, then we might not need them to prove conformance.)
  *)
 
-consts tcb_priority :: "cdl_tcb \<Rightarrow> word8"
+consts tcb_priority :: "cdl_tcb \<Rightarrow> word8 \<times> word8"
 consts tcb_ip :: "cdl_tcb \<Rightarrow> word32"
 consts tcb_sp :: "cdl_tcb \<Rightarrow> word32"
 consts opt_vmattribs :: "cdl_object \<Rightarrow> cdl_raw_vmattrs option"

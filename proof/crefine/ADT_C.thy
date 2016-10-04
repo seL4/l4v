@@ -962,7 +962,6 @@ lemma cpspace_tcb_relation_unique:
    apply (thin_tac "map_to_tcbs x y = Some z" for x y z)+
    apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x100)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
-   apply (drule up_ucast_inj_eq[THEN iffD1,rotated], simp+)
    apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
    apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq
                      ccontext_relation_imp_eq up_ucast_inj_eq)

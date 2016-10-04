@@ -124,24 +124,12 @@ The current security domain is represented by an 8-bit unsigned integer.
 
 \subsection{Thread Priority}
 
-> type Priority = Word8
-
 The priority of a thread is represented by an 8-bit unsigned integer.
 
-> data PrioProps = PrioProps {
->         ppPriority :: Priority,
->         ppMCP :: Priority }
->     deriving Show
+> type Priority = Word8
 
 > priorityBits :: Int
 > priorityBits = 8
-> mcpBits :: Int
-> mcpBits = 8
-
-> prioPropsFromWord :: Word -> PrioProps
-> prioPropsFromWord w = PrioProps {
->         ppPriority =  fromIntegral $ w .&. mask priorityBits,
->         ppMCP = fromIntegral $ (w `shiftR` priorityBits) .&. (mask mcpBits)}
 
 \subsection{Capability References}
 
@@ -199,8 +187,6 @@ The maximum number of capabilities passed as arguments to a method invocation. T
 
 > msgAlignBits :: Int
 > msgAlignBits = 9
-
-
 
 \subsection{Capability Transfers}
 

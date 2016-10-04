@@ -190,7 +190,7 @@ lemma invoke_irq_control_irq_masks:
 crunch irq_masks[wp]: arch_perform_invocation, bind_notification "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps no_irq simp: crunch_simps no_irq_cleanByVA_PoU no_irq_invalidateTLB_ASID no_irq_do_flush)
 
-crunch irq_masks[wp]: restart "\<lambda>s. P (irq_masks_of_state s)"
+crunch irq_masks[wp]: restart, set_mcpriority "\<lambda>s. P (irq_masks_of_state s)"
 
 lemma checked_insert_irq_masks[wp]:
   "\<lbrace>\<lambda> s. P (irq_masks_of_state s)\<rbrace>

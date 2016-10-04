@@ -2335,18 +2335,6 @@ lemma ucast_ucast_id:
   by (auto intro: ucast_up_ucast_id simp: is_up_def source_size_def target_size_def word_size)
 
 
-lemma ucast_le_ucast:
-  "len_of TYPE('a) \<le> len_of TYPE('b) \<Longrightarrow>
-   (ucast x \<le> ((ucast (y :: ('a::len) word)) :: ('b::len) word)) = (x \<le> y)"
-  apply (simp add: word_le_nat_alt unat_ucast)
-  apply (subst mod_less)
-   apply(rule less_le_trans[OF unat_lt2p], simp)
-  apply (subst mod_less)
-   apply(rule less_le_trans[OF unat_lt2p], simp)
-  apply simp
-  done
-
-
 lemma kernel_base_kernel_mapping_slots:
   "x < kernel_base \<Longrightarrow> ucast (x >> 20) \<notin> kernel_mapping_slots"
   apply (simp add: kernel_mapping_slots_def kernel_base_def)

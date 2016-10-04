@@ -642,10 +642,10 @@ crunch obj_at_ntfn[wp]: setThreadState "obj_at' (\<lambda>ntfn. P (ntfnBoundTCB 
   (ignore: getObject setObject wp: obj_at_setObject2  crunch_wps
    simp: crunch_simps updateObject_default_def in_monad)
 
-lemma sts_mcpriority_tcb_at':
-  "\<lbrace>mcpriority_tcb_at' P t\<rbrace> 
-  setThreadState st t' 
-  \<lbrace>\<lambda>_. mcpriority_tcb_at' P t\<rbrace>"
+lemma sts_mcpriority_tcb_at'[wp]:
+  "\<lbrace>mcpriority_tcb_at' P t\<rbrace>
+    setThreadState st t'
+   \<lbrace>\<lambda>_. mcpriority_tcb_at' P t\<rbrace>"
   apply (cases "t = t'",
          simp_all add: setThreadState_def
                   split del: split_if)
@@ -653,16 +653,16 @@ lemma sts_mcpriority_tcb_at':
    apply (wp threadSet_obj_at'_really_strongest
                | simp add: pred_tcb_at'_def)+
   done
-  
-lemma sts_mcpriority_tcb_at_ct':
-  "\<lbrace>\<lambda>s. mcpriority_tcb_at' P (ksCurThread s) s\<rbrace> 
-  setThreadState st t'
-  \<lbrace>\<lambda>_ s. mcpriority_tcb_at' P (ksCurThread s) s\<rbrace>"
+
+lemma sts_mcpriority_tcb_at_ct'[wp]:
+  "\<lbrace>\<lambda>s. mcpriority_tcb_at' P (ksCurThread s) s\<rbrace>
+    setThreadState st t'
+   \<lbrace>\<lambda>_ s. mcpriority_tcb_at' P (ksCurThread s) s\<rbrace>"
   apply (rule hoare_pre)
    apply wps
-   apply (wp sts_mcpriority_tcb_at')
+   apply wp
   by simp
-  
+
 lemma sts_valid_inv'[wp]:
   "\<lbrace>valid_invocation' i\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_invocation' i\<rbrace>"
   apply (case_tac i, simp_all add: sts_valid_untyped_inv' sts_valid_arch_inv')
@@ -686,8 +686,7 @@ lemma sts_valid_inv'[wp]:
                           sts_cap_to' sts_cte_cap_to'
                           setThreadState_typ_ats
                    split: option.splits)[1]
-  apply (wp sts_bound_tcb_at' sts_mcpriority_tcb_at_ct' hoare_vcg_all_lift 
-            hoare_vcg_const_imp_lift)
+  apply (wp sts_bound_tcb_at' hoare_vcg_all_lift hoare_vcg_const_imp_lift)
   done
 
 (* FIXME: move to TCB *)

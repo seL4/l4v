@@ -114,8 +114,6 @@ datatype scheduler_action =
   | switch_thread obj_ref
   | choose_new_thread
 
-
-
 type_synonym domain = word8
 
 record etcb =
@@ -132,9 +130,6 @@ definition time_slice :: "nat" where
 definition default_priority :: "priority" where
   "default_priority \<equiv> minBound"
 
-
-
-  
 definition default_domain :: "domain" where
   "default_domain \<equiv> minBound"
 
@@ -271,9 +266,7 @@ definition
 definition
   thread_set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> unit det_ext_monad" where
   "thread_set_priority tptr prio \<equiv> ethread_set (\<lambda>tcb. tcb\<lparr>tcb_priority := prio\<rparr>) tptr"
-  
 
-  
 definition
   thread_set_time_slice :: "obj_ref \<Rightarrow> nat \<Rightarrow> unit det_ext_monad" where
   "thread_set_time_slice tptr time \<equiv> ethread_set (\<lambda>tcb. tcb\<lparr>tcb_time_slice := time\<rparr>) tptr"
@@ -420,8 +413,6 @@ definition max_non_empty_queue :: "(priority \<Rightarrow> ready_queue) \<Righta
   "max_non_empty_queue queues \<equiv> queues (Max {prio. queues prio \<noteq> []})"
 
 
-
-  
 definition default_ext :: "apiobject_type \<Rightarrow> domain \<Rightarrow> etcb option" where
   "default_ext type cdom \<equiv>
       case type of TCBObject \<Rightarrow> Some (default_etcb\<lparr>tcb_domain := cdom\<rparr>)

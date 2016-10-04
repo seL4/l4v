@@ -217,7 +217,9 @@ definition "irq_cnode_ptr = kernel_base + 0x1C000"
 
 definition "timer_irq \<equiv> 10" (* not sure exactly how this fits in *)
 
+definition "Low_mcp \<equiv> 5 :: word8"
 definition "Low_prio \<equiv> 5 :: word8"
+definition "High_mcp \<equiv> 5 :: word8"
 definition "High_prio \<equiv> 5 :: word8"
 definition "Low_time_slice \<equiv> 0 :: nat"
 definition "High_time_slice \<equiv> 5 :: nat"
@@ -586,7 +588,8 @@ where
      tcb_ipc_buffer    = 0,
      tcb_context       = undefined,
      tcb_fault         = None,
-     tcb_bound_notification     = None \<rparr>"
+     tcb_bound_notification     = None,
+     tcb_mcpriority    = Low_mcp \<rparr>"
 
 definition
   Low_etcb :: etcb
@@ -614,7 +617,8 @@ where
      tcb_ipc_buffer    = 0,
      tcb_context       = undefined,
      tcb_fault         = None,
-     tcb_bound_notification     = None \<rparr>"
+     tcb_bound_notification     = None,
+     tcb_mcpriority    = High_mcp \<rparr>"
 
 definition
   High_etcb :: etcb
@@ -641,7 +645,8 @@ where
      tcb_ipc_buffer    = 0,
      tcb_context       = empty_context,
      tcb_fault         = None,
-     tcb_bound_notification     = None \<rparr>"
+     tcb_bound_notification     = None,
+     tcb_mcpriority    = default_priority \<rparr>"
 
 
 definition

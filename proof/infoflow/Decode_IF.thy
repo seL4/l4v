@@ -199,21 +199,23 @@ lemma OR_choice_def2: "(\<And>P. \<lbrace>P\<rbrace> (c :: bool det_ext_monad) \
                    ef_mk_ef)
   by (subst no_state_changes[where f=c],simp,fastforce simp: bind_assoc split_def)
 
-lemma decode_set_priority_error_choice[wp]: "\<lbrace>P\<rbrace> decode_set_priority_error_choice a b \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: decode_set_priority_error_choice_def)
-  apply wp
-  apply (simp add: etcb_at_def)
-  done
+lemma check_prio_rev:
+  "reads_respects aag l (is_subject aag \<circ> cur_thread) (check_prio prio)"
+  apply (clarsimp simp: check_prio_def)
+  apply (wp thread_get_reads_respects)
+  by (clarsimp simp: reads_equiv_def)
 
 lemma decode_set_priority_rev:
   "reads_respects aag l (is_subject aag \<circ> cur_thread) (decode_set_priority args cap slot)"
-  apply (clarsimp simp add: decode_set_priority_def)
-  apply (subst OR_choice_def2)
-  apply wp
-  apply (simp add: decode_set_priority_error_choice_def)
-  apply (intro impI conjI)
-       apply (wp reads_respects_ethread_get | simp add: reads_equiv_def)+
-  done
+  apply (clarsimp simp: decode_set_priority_def wp_ev)
+  apply (wp check_prio_rev)
+  by simp
+
+lemma decode_set_mcpriority_rev:
+  "reads_respects aag l (is_subject aag \<circ> cur_thread) (decode_set_mcpriority args cap slot)"
+  apply (clarsimp simp: decode_set_mcpriority_def wp_ev)
+  apply (wp check_prio_rev)
+  by simp
 
 lemma decode_tcb_invocation_reads_respects_f:
   notes respects_f = reads_respects_f[where st=st and Q=\<top>]
@@ -237,6 +239,7 @@ lemma decode_tcb_invocation_reads_respects_f:
              respects_f[OF check_valid_ipc_buffer_rev]
              check_valid_ipc_buffer_inv
              respects_f[OF decode_set_priority_rev]
+             respects_f[OF decode_set_mcpriority_rev]
              respects_f[OF get_notification_reads_respects]
              respects_f[OF get_bound_notification_reads_respects']
         | wp_once whenE_throwError_wp

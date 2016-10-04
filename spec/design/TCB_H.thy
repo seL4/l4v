@@ -115,9 +115,10 @@ defs decodeWriteRegisters_def:
 defs decodeTCBConfigure_def:
 "decodeTCBConfigure x0 cap slot x3\<equiv> (case (x0, x3) of
     ((faultEP#packedPrioProps#cRootData#vRootData#buffer#_), (cRoot#vRoot#bufferFrame#_)) \<Rightarrow>    (doE
-    prioProps \<leftarrow> returnOk ( prioPropsFromWord packedPrioProps);
-    setPriority \<leftarrow> decodeSetPriority [fromIntegral $ ppPriority prioProps] cap;
-    setMCP \<leftarrow> decodeSetMCPriority [fromIntegral $ ppMCP prioProps] cap;
+    prio \<leftarrow> returnOk ( packedPrioProps && mask priorityBits);
+    mcp \<leftarrow> returnOk ( (packedPrioProps `~shiftR~` priorityBits) && mask priorityBits);
+    setPriority \<leftarrow> decodeSetPriority [prio] cap;
+    setMCP \<leftarrow> decodeSetMCPriority [mcp] cap;
     setIPCParams \<leftarrow> decodeSetIPCBuffer [buffer] cap slot [bufferFrame];
     setSpace \<leftarrow> decodeSetSpace [faultEP, cRootData, vRootData]
         cap slot [cRoot, vRoot];
@@ -134,23 +135,17 @@ defs decodeTCBConfigure_def:
   | (_, _) \<Rightarrow>    throw TruncatedMessage
   )"
 
-defs checkMCP_def:
-"checkMCP new_mcp \<equiv> (doE
-    checkPrio new_mcp;
-    whenE (new_mcp > maxPriority) $ throw (RangeError (fromIntegral minPriority) (fromIntegral maxPriority))
-odE)"
-
 defs checkPrio_def:
 "checkPrio prio\<equiv> (doE
     ct \<leftarrow> withoutFailure $ getCurThread;
     mcp \<leftarrow> withoutFailure $ threadGet tcbMCP ct;
-    whenE (prio > mcp) $ throw (RangeError (fromIntegral minPriority) (fromIntegral mcp))
+    whenE (prio > fromIntegral mcp) $ throw (RangeError (fromIntegral minPriority) (fromIntegral mcp))
 odE)"
 
 defs decodeSetPriority_def:
 "decodeSetPriority x0 cap\<equiv> (case x0 of
     (newPrio#_) \<Rightarrow>    (doE
-    checkPrio (fromIntegral newPrio);
+    checkPrio newPrio;
     returnOk $ ThreadControl_ \<lparr>
         tcThread= capTCBPtr cap,
         tcThreadCapSlot= 0,
@@ -167,7 +162,7 @@ defs decodeSetPriority_def:
 defs decodeSetMCPriority_def:
 "decodeSetMCPriority x0 cap\<equiv> (case x0 of
     (newMCP#_) \<Rightarrow>    (doE
-    checkMCP (fromIntegral newMCP);
+    checkPrio newMCP;
     returnOk $ ThreadControl_ \<lparr>
         tcThread= capTCBPtr cap,
         tcThreadCapSlot= 0,

@@ -22,7 +22,7 @@ where
  "authorised_tcb_inv aag ti \<equiv> case ti of
      tcb_invocation.Suspend t \<Rightarrow> is_subject aag t
    | tcb_invocation.Resume t \<Rightarrow> is_subject aag t
-   | tcb_invocation.ThreadControl t sl ep priority croot vroot buf
+   | tcb_invocation.ThreadControl t sl ep mcp priority croot vroot buf
           \<Rightarrow> is_subject aag t \<and>
             (\<forall>(cap, slot) \<in> (set_option croot \<union> set_option vroot \<union> (case_option {} (set_option \<circ> snd) buf)). pas_cap_cur_auth aag cap \<and> is_subject aag (fst slot))
    | tcb_invocation.NotificationControl t ntfn \<Rightarrow> is_subject aag t \<and>
@@ -74,7 +74,7 @@ lemma invoke_tcb_cases:
   "invoke_tcb ti = (case ti of
      tcb_invocation.Suspend t \<Rightarrow> invoke_tcb (tcb_invocation.Suspend t)
    | tcb_invocation.Resume t \<Rightarrow> invoke_tcb (tcb_invocation.Resume t)
-   | tcb_invocation.ThreadControl t sl ep priority croot vroot buf \<Rightarrow> invoke_tcb (tcb_invocation.ThreadControl t sl ep priority croot vroot buf)
+   | tcb_invocation.ThreadControl t sl ep mcp priority croot vroot buf \<Rightarrow> invoke_tcb (tcb_invocation.ThreadControl t sl ep mcp priority croot vroot buf)
    | tcb_invocation.NotificationControl t ntfn \<Rightarrow> invoke_tcb (tcb_invocation.NotificationControl t ntfn)
    | tcb_invocation.ReadRegisters src susp n arch \<Rightarrow> invoke_tcb (tcb_invocation.ReadRegisters src susp n arch)
    | tcb_invocation.WriteRegisters dest res values arch \<Rightarrow> invoke_tcb (tcb_invocation.WriteRegisters dest res values arch)
@@ -179,9 +179,6 @@ lemma set_priority_pas_refined[wp]:
   apply (force intro: domtcbs split: split_if_asm)
   done
 
-crunch pas_refined[wp]: set_priority "pas_refined aag"
-  (ignore: tcb_sched_action)
-
 lemma gts_test[wp]: "\<lbrace>\<top>\<rbrace> get_thread_state t \<lbrace>\<lambda>rv s. test rv = st_tcb_at test t s\<rbrace>"
   apply (simp add: get_thread_state_def thread_get_def)
   apply wp
@@ -217,19 +214,24 @@ lemma (in is_extended') no_cap_to_obj_dr_emp[wp]: "I (no_cap_to_obj_dr_emp a)" b
 
 lemma (in is_extended') cte_wp_at[wp]: "I (cte_wp_at P a)" by (rule lift_inv,simp)
 
+crunch pas_refined[wp]: set_mcpriority "pas_refined aag"
+  (wp: tcb_cap_cases_tcb_mcpriority)
+
+crunch integrity_autarch: set_mcpriority "integrity aag X st"
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma invoke_tcb_tc_respects_aag:
 
   "\<lbrace> integrity aag X st and pas_refined aag
-         and einvs and simple_sched_action and Tcb_AI.tcb_inv_wf (tcb_invocation.ThreadControl t sl ep priority croot vroot buf)
-         and K (authorised_tcb_inv aag (tcb_invocation.ThreadControl t sl ep priority croot vroot buf))\<rbrace>
-     invoke_tcb (tcb_invocation.ThreadControl t sl ep priority croot vroot buf)
+         and einvs and simple_sched_action and tcb_inv_wf (ThreadControl t sl ep mcp priority croot vroot buf)
+         and K (authorised_tcb_inv aag (ThreadControl t sl ep mcp priority croot vroot buf))\<rbrace>
+     invoke_tcb (ThreadControl t sl ep mcp priority croot vroot buf)
    \<lbrace>\<lambda>rv. integrity aag X st and pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (subst invoke_tcb.simps)
   apply (subst set_priority_extended.dxo_eq)
- apply (rule hoare_vcg_precond_imp)
+  apply (rule hoare_vcg_precond_imp)
   apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
                 in hoare_gen_asm)
   apply wp
@@ -239,7 +241,7 @@ lemma invoke_tcb_tc_respects_aag:
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
                    hoare_vcg_R_conj 
         | (wp 
-             restart_integrity_autarch 
+             restart_integrity_autarch set_mcpriority_integrity_autarch
              as_user_integrity_autarch thread_set_integrity_autarch
              option_update_thread_integrity_autarch thread_set_pas_refined_triv
              out_valid_sched static_imp_wp
@@ -257,8 +259,8 @@ lemma invoke_tcb_tc_respects_aag:
              thread_set_tcb_ipc_buffer_cap_cleared_invs
              thread_set_invs_trivial[OF ball_tcb_cap_casesI]
              hoare_vcg_all_lift thread_set_valid_cap out_emptyable
-             check_cap_inv [where P="valid_cap c" for c]
-             check_cap_inv [where P="tcb_cap_valid c p" for c p]
+             check_cap_inv[where P="valid_cap c" for c]
+             check_cap_inv[where P="tcb_cap_valid c p" for c p]
              check_cap_inv[where P="cte_at p0" for p0]
              check_cap_inv[where P="tcb_at p0" for p0]
              check_cap_inv[where P="simple_sched_action"]
@@ -280,7 +282,6 @@ lemma invoke_tcb_tc_respects_aag:
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"]
         )+)[1]),(rule_tac x="\<lambda>_. invs and valid_list and valid_sched and integrity aag X st and pas_refined aag and simple_sched_action" in simplify_post,simp,erule use_safe_id)?)+
   (* clocked at around 3min 20secs on my home machine - TS *)
-     
   apply (clarsimp simp: authorised_tcb_inv_def)
   by (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
                         is_cap_simps is_valid_vtable_root_def
@@ -396,8 +397,8 @@ lemma invoke_tcb_pas_refined:
   "\<lbrace>pas_refined aag and Tcb_AI.tcb_inv_wf ti and einvs and simple_sched_action and K (authorised_tcb_inv aag ti)\<rbrace>
      invoke_tcb ti
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (cases "\<exists>t sl ep priority croot vroot buf.
-              ti = tcb_invocation.ThreadControl t sl ep priority croot vroot buf")
+  apply (cases "\<exists>t sl ep mcp priority croot vroot buf.
+              ti = tcb_invocation.ThreadControl t sl ep mcp priority croot vroot buf")
    apply safe
    apply (rule hoare_chain, rule_tac Q'="\<lambda>_. pas_refined aag" and st1="\<lambda>x. x" in  hoare_st_refl[OF invoke_tcb_tc_respects_aag])
    apply force
@@ -467,7 +468,9 @@ lemma decode_set_space_authorised':
                       \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x))
                       \<and> authorised_tcb_inv aag set_param \<and> is_thread_control set_param)\<rbrace>
      decode_set_space ws (cap.ThreadCap t) slot excaps
-   \<lbrace>\<lambda>rv s. authorised_tcb_inv aag (tcb_invocation.ThreadControl t slot (tc_new_fault_ep rv) (tc_new_priority prio) (tc_new_croot rv) (tc_new_vroot rv) (tc_new_buffer set_param))\<rbrace>, -"
+   \<lbrace>\<lambda>rv s. authorised_tcb_inv aag (tcb_invocation.ThreadControl t slot (tc_new_fault_ep rv)
+                                    (tc_new_mcpriority mcp) (tc_new_priority prio) (tc_new_croot rv)
+                                    (tc_new_vroot rv) (tc_new_buffer set_param))\<rbrace>, -"
   apply (rule hoare_gen_asmE)
   apply (cases set_param)  
   apply (simp_all add: is_thread_control_def decode_set_space_def authorised_tcb_inv_def
@@ -497,14 +500,21 @@ lemma decode_tcb_configure_authorised:
 
 lemma decode_set_priority_authorised:
   "\<lbrace>K (is_subject aag t)\<rbrace>
-    decode_set_priority msg (cap.ThreadCap t) slot
+    decode_set_priority msg (ThreadCap t) slot
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
-  unfolding decode_set_priority_def authorised_tcb_inv_def
-  apply (cases msg)
-   apply simp_all
-  apply (wp validE_validE_R[OF throwError_wp] OR_choice_E_weak_wp)+
-  apply simp
-  done
+  unfolding decode_set_priority_def check_prio_def authorised_tcb_inv_def
+  apply (cases msg; simp add: Let_def)
+   apply (wp validE_validE_R[OF throwError_wp])
+  by simp
+
+lemma decode_set_mcpriority_authorised:
+  "\<lbrace>K (is_subject aag t)\<rbrace>
+    decode_set_mcpriority msg (ThreadCap t) slot
+   \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
+  unfolding decode_set_mcpriority_def check_prio_def authorised_tcb_inv_def
+  apply (cases msg; simp)
+   apply (wp validE_validE_R[OF throwError_wp])
+  by simp
 
 lemma decode_unbind_notification_authorised:
   "\<lbrace>K (is_subject aag t)\<rbrace>
@@ -536,11 +546,12 @@ lemma decode_tcb_invocation_authorised:
   unfolding decode_tcb_invocation_def
   apply (rule hoare_pre)
   apply wpc
-  apply (wp decode_registers_authorised decode_tcb_configure_authorised decode_set_priority_authorised
-            decode_set_ipc_buffer_authorised decode_set_space_authorised decode_bind_notification_authorised 
+  apply (wp decode_registers_authorised decode_tcb_configure_authorised
+            decode_set_priority_authorised decode_set_mcpriority_authorised
+            decode_set_ipc_buffer_authorised decode_set_space_authorised
+            decode_bind_notification_authorised
             decode_unbind_notification_authorised)
-  apply (auto iff: authorised_tcb_inv_def)
-  done
+  by (auto iff: authorised_tcb_inv_def)
 
 text{*
 

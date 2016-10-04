@@ -1660,7 +1660,7 @@ lemma coerce_memset_to_heap_update:
                     (NULL)
                     (fault_C (FCP (\<lambda>x. 0)))
                     (lookup_fault_C (FCP (\<lambda>x. 0)))
-                      0 0 0 0 0 NULL NULL NULL NULL)"
+                      0 0 0 0 0 0 NULL NULL NULL NULL)"
   apply (intro ext, simp add: heap_update_def)
   apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps tcb_C_tag_def)
@@ -1693,13 +1693,14 @@ lemma recycleCap_ccorres':
      (recycleCap is_final cp) (Call recycleCap_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: cap_')
+   apply ccorres_rewrite
    apply csymbr
    apply (simp only: cap_get_tag_isCap)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: from_bool_neq_0)
     apply (subst if_not_P, fastforce simp: isCap_simps)+
     apply (simp add: isArchCap_T_isArchObjectCap Let_def liftM_def)
-    apply (rule ccorres_rhs_assoc)+
+    apply (rule ccorres_rhs_assoc)
     apply (ctac(no_vcg) add: arch_recycleCap_ccorres)
      apply (rule ccorres_rhs_assoc2, rule ccorres_split_throws)
       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
@@ -1711,7 +1712,7 @@ lemma recycleCap_ccorres':
    apply csymbr
    apply (simp only: cap_get_tag_isCap)
    apply (rule ccorres_cond2[where R=\<top>], simp del: Collect_const)
-    apply (simp?, rule ccorres_fail)
+    apply (rule ccorres_fail)
    apply (rule ccorres_Cond_rhs)
     apply (subst if_not_P, fastforce simp: isCap_simps)+
     apply ((rule ccorres_return_C | simp)+)[1]
@@ -1722,30 +1723,32 @@ lemma recycleCap_ccorres':
     apply (subst if_not_P, fastforce simp: isCap_simps)+
     apply ((rule ccorres_return_C | simp)+)[1]
    apply (rule ccorres_Cond_rhs)
+    apply (thin_tac "\<not> _ cp")+
     apply (rule_tac P="capAligned cp \<and> capZombieType cp \<noteq> ZombieCNode 0"
                in ccorres_gen_asm)
-    apply (simp only: cap_get_tag_isCap[symmetric],
-           frule(1) cap_get_tag_to_H)
-    apply (simp add: Let_def word_sle_def Collect_True
-                     Collect_False cap_get_tag_to_H
-                del: Collect_const)
-    apply (csymbr | rule ccorres_rhs_assoc ccorres_Guard)+
-    apply (simp del: Collect_const)
+    apply (rule ccorres_rhs_assoc)
+    apply csymbr
+    apply csymbr
+    apply (clarsimp simp: Let_def simp del: Collect_const)
+    apply (frule (1) cap_get_tag_isCap[symmetric, THEN iffD1];
+           frule (1) cap_get_tag_to_H[rotated])
     apply (rule ccorres_Cond_rhs)
      apply (simp add: isZombieTCB_C_def ZombieTCB_C_def)
      apply (rule ccorres_rhs_assoc | csymbr)+
      apply (simp del: Collect_const)
-     apply (rule  ccorres_Guard_Seq[where S=UNIV])+
-     apply csymbr
      apply (rule ccorres_move_c_guard_tcb)
      apply (rule ccorres_symb_exec_r)
        apply (simp del: Collect_const)
        apply (rule ccorres_pre_threadGet)
        apply (rule ccorres_assert)+
        apply (rule ccorres_pre_curDomain)
-       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
-              rule ccorres_split_nothrow_novcg_dc)
-          apply (rule_tac P="op = tcb" and P'="\<lambda>s. invs' s \<and> rv = ksCurDomain s
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_rhs_assoc2)
+       apply (rule ccorres_split_nothrow_novcg_dc)
+          apply clarsimp
+          apply (rename_tac cap tcb dom)
+          apply (rule_tac P="op = tcb" and P'="\<lambda>s. invs' s \<and> dom = ksCurDomain s
                             \<and> size_of TYPE(tcb_C) \<le> gsMaxObjectSize s"
                      in threadSet_ccorres_lemma3, vcg)
           apply (simp only: replicateHider_def[symmetric])
@@ -1763,10 +1766,9 @@ lemma recycleCap_ccorres':
                  simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
           apply (rule conjI)
            apply (simp add: size_of_def)
-           apply (drule is_aligned_no_wrap'[OF is_aligned_tcb_ptr_to_ctcb_ptr, where off="0x8B"])
+           apply (drule is_aligned_no_wrap'[OF is_aligned_tcb_ptr_to_ctcb_ptr, where off="0x8F"])
             subgoal by simp
            apply (simp add: field_simps tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
-
           apply (rule conjI)
            apply (erule aligned_add_aligned)
              apply (clarsimp simp: is_aligned_def)
@@ -1781,9 +1783,7 @@ lemma recycleCap_ccorres':
           apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
           apply (rule rf_sr_tcb_update_not_in_queue2,
                  (simp add: typ_heap_simps' tcb_ptr_to_ctcb_ptr_def ctcb_offset_def
-                      cong: if_weak_cong)+) (*
-             apply (clarsimp split: Structures_H.thread_state.split_asm)
-            apply simp *)
+                      cong: if_weak_cong)+)
            subgoal by (rule ball_tcb_cte_casesI, simp_all)
           apply (clarsimp simp: ctcb_relation_def makeObject_tcb minBound_word
                                 fault_lift_null_fault fault_null_fault_def
@@ -1815,9 +1815,8 @@ lemma recycleCap_ccorres':
       apply vcg
      apply (rule conseqPre, vcg)
      subgoal by clarsimp
-    apply (simp add: isZombieTCB_C_def ZombieTCB_C_def
-                     Let_def
-                del: Collect_const)
+    apply (clarsimp simp add: isZombieTCB_C_def ZombieTCB_C_def Let_def
+                    simp del: Collect_const)
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
     apply (rule allI, rule conseqPre, vcg)
     apply (clarsimp simp: return_def ccap_zombie_radix_less4

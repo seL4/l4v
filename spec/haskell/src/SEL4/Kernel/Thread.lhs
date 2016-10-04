@@ -23,7 +23,7 @@ We use the C preprocessor to select a target architecture.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Model SEL4.Machine SEL4.Object.Structures SEL4.Object.Instances() SEL4.API.Types #-}
-% {-# BOOT-EXPORTS: setDomain setPriority setMCPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer attemptSwitchTo switchIfRequiredTo tcbSchedEnqueue tcbSchedDequeue rescheduleRequired timerTick #-}
+% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer attemptSwitchTo switchIfRequiredTo tcbSchedEnqueue tcbSchedDequeue rescheduleRequired timerTick #-}
 
 > import SEL4.Config
 > import SEL4.API.Types

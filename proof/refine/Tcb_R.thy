@@ -645,19 +645,14 @@ lemma sp_corres: "corres dc (einvs and tcb_at t) (invs' and tcb_at' t and valid_
   apply (clarsimp simp: invs'_def valid_state'_def sch_act_wf_weak)
   done
 
-lemma tcb_cap_cases_tcb_mcpriority:
-  "\<forall>(getF, v)\<in>ran tcb_cap_cases.
-         getF (tcb_mcpriority_update F tcb) = getF tcb"
-  by (rule ball_tcb_cap_casesI, simp+)
-  
 lemma smcp_corres: "corres dc (tcb_at t) (tcb_at' t)
                      (set_mcpriority t x) (setMCPriority t x)"
   apply (rule corres_guard_imp)
-    apply (clarsimp simp: setMCPriority_def)
+    apply (clarsimp simp: setMCPriority_def set_mcpriority_def)
     apply (rule threadset_corresT)
        by (clarsimp simp: tcb_relation_def tcb_cap_cases_tcb_mcpriority 
                           tcb_cte_cases_def exst_same_def)+
-  
+
 definition
  "out_rel fn fn' v v' \<equiv>
      ((v = None) = (v' = None)) \<and>
@@ -1063,7 +1058,8 @@ lemma setMCPriority_invs':
   apply (rule hoare_pre)
   by (wp threadSet_invs_trivial, (clarsimp simp: inQ_def)+)
   
-lemma valid_tcb'_tcbMCP_update: "\<lbrakk>valid_tcb' tcb s \<and> f (tcbMCP tcb) \<le> maxPriority\<rbrakk> \<Longrightarrow> valid_tcb' (tcbMCP_update f tcb) s"
+lemma valid_tcb'_tcbMCP_update:
+  "\<lbrakk>valid_tcb' tcb s \<and> f (tcbMCP tcb) \<le> maxPriority\<rbrakk> \<Longrightarrow> valid_tcb' (tcbMCP_update f tcb) s"
   apply (simp add: valid_tcb'_def tcb_cte_cases_def)
   done
 
@@ -1085,9 +1081,9 @@ lemma setMCPriority_valid_objs'[wp]:
   apply (rule valid_tcb'_tcbMCP_update)
   apply (fastforce  simp: obj_at'_def)+
   done
-  
-crunch sch_act_simple[wp]: setPriority, setMCPriority sch_act_simple
-  (wp: ssa_sch_act_simple crunch_wps lift: sch_act_simple_lift simp: crunch_simps)
+
+crunch sch_act_simple[wp]: setPriority,setMCPriority sch_act_simple
+  (wp: ssa_sch_act_simple crunch_wps rule: sch_act_simple_lift simp: crunch_simps)
 
 (* For some reason, when this was embedded in a larger expression clarsimp wouldn't remove it. Adding it as a simp rule does *)
 lemma inQ_tc_corres_helper:
@@ -1369,7 +1365,6 @@ proof -
              apply (rule corres_split_norE [OF _ T [OF y V], simplified])
                 apply (simp add: liftME_def[symmetric] o_def dc_def[symmetric])
                 apply (rule T2[simplified])
-
                apply (wp stuff hoare_vcg_all_lift_R hoare_vcg_all_lift
                          hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
                          threadSet_valid_objs' thread_set_not_state_valid_sched
@@ -1377,7 +1372,6 @@ proof -
                          typ_at_lifts [OF setMCPriority_typ_at'] setP_invs'
                          assertDerived_wp threadSet_cap_to' out_pred_tcb_at_preserved
                          setMCPriority_invs'
-                         thread_set_no_cap_to_trivial[OF tcb_cap_cases_tcb_mcpriority]
                        | simp add: ran_tcb_cap_cases split_def U V
                                    emptyable_def
                        | wpc
@@ -1842,7 +1836,7 @@ lemma eq_ucast_word8[simp]:
   apply (simp add: ucast_up_ucast_id is_up_def
                    source_size_def target_size_def word_size)
   done
-  
+
 lemma check_prio_corres:
   "corres (ser \<oplus> dc) cur_tcb cur_tcb'
      (check_prio p) (checkPrio p)"
@@ -1855,31 +1849,20 @@ lemma check_prio_corres:
                          R = \<top> and 
                         R' = \<top> 
                in whenE_throwError_corres'[where m="returnOk ()" and m'="returnOk ()", simplified])
-         apply (simp add: minPriority_def ser_def)
-        apply (clarsimp simp: minPriority_def eq_ucast_word8)
+         apply (simp add: minPriority_def)
+        apply (clarsimp simp: minPriority_def)
        apply (rule corres_returnOkTT)
        apply (simp add: minPriority_def)
       apply (simp, rule threadget_corres, simp add: tcb_relation_def)
      apply (wp gct_wp)
    apply (simp add: cur_tcb_def cur_tcb'_def)+
   done
- 
-lemma checkMCP_rewrite_magic[simp]:
-  "checkMCP p = checkPrio p"
-  apply (clarsimp simp: checkMCP_def)
-  apply (subgoal_tac "p \<le> maxPriority")
-   apply (clarsimp simp: whenE_def)
-   apply simp
-  apply (simp add: maxPriority_def numPriorities_def)
-  apply (cut_tac max_word_max[where 'a=8 and n=p, unfolded max_word_def])
-  apply simp
-  done
-  
+
 lemma decode_set_priority_corres:
   "\<lbrakk> cap_relation cap cap'; is_thread_cap cap \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> tcbinv_relation) (cur_tcb and valid_etcbs) invs'
        (decode_set_priority args cap slot)
-       (decodeSetPriority args cap')"              
+       (decodeSetPriority args cap')"
   apply (simp    add: decode_set_priority_def decodeSetPriority_def checkPrio_def Let_def
            split del: split_if)
   apply (cases args)
@@ -1893,7 +1876,7 @@ lemma decode_set_priority_corres:
    apply (force simp: cur_tcb_def valid_etcbs_def tcb_at_st_tcb_at)
   apply (simp add: invs'_def cur_tcb'_def)
   done
-  
+
 lemma decode_set_mcpriority_corres:
   "\<lbrakk> cap_relation cap cap'; is_thread_cap cap \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> tcbinv_relation) (cur_tcb and valid_etcbs) invs'
@@ -1941,26 +1924,36 @@ lemma getMCP_wp: "\<lbrace>\<lambda>s. \<forall>mcp. mcpriority_tcb_at' (op = mc
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
   
-
 lemma checkPrio_inv: "\<lbrace>P\<rbrace> checkPrio a \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: checkPrio_def)
   apply (wp whenE_inv gct_wp, simp)
   done
 
+lemma checkPrio_wp:
+  "\<lbrace> \<lambda>s. mcpriority_tcb_at' (\<lambda>mcp. prio \<le> ucast mcp) (ksCurThread s) s \<longrightarrow> P s \<rbrace>
+    checkPrio prio
+   \<lbrace> \<lambda>rv. P \<rbrace>,-"
+  apply (simp add: checkPrio_def)
+  apply (wp NonDetMonadVCG.whenE_throwError_wp getMCP_wp)
+  by (auto simp add: pred_tcb_at'_def obj_at'_def)
+
 lemma checkPrio_lt_ct:
-  "\<lbrace>\<top>\<rbrace> checkPrio a \<lbrace>\<lambda>rv s. mcpriority_tcb_at' (op \<le> a) (ksCurThread s) s\<rbrace>, -"
-  apply (clarsimp simp: checkPrio_def)
-  apply (rule hoare_pre)
-  apply (wp getMCP_wp whenE_throwError_wp)
+  "\<lbrace>\<top>\<rbrace> checkPrio prio \<lbrace>\<lambda>rv s. mcpriority_tcb_at' (\<lambda>mcp. prio \<le> ucast mcp) (ksCurThread s) s\<rbrace>, -"
+  by (wp checkPrio_wp) simp
+
+lemma checkPrio_lt_ct_weak:
+  "\<lbrace>\<top>\<rbrace> checkPrio prio \<lbrace>\<lambda>rv s. mcpriority_tcb_at' (\<lambda>mcp. ucast prio \<le> mcp) (ksCurThread s) s\<rbrace>, -"
+  apply (rule hoare_post_imp_R)
+  apply (rule checkPrio_lt_ct)
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-  by simp
-  
+  by (rule le_ucast_ucast_le) simp
+
 lemma decodeSetPriority_wf[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t \<rbrace>
     decodeSetPriority args (ThreadCap t) \<lbrace>tcb_inv_wf'\<rbrace>,-"
-  unfolding decodeSetPriority_def Let_def
+  unfolding decodeSetPriority_def
   apply (rule hoare_pre)
-  apply (wp checkPrio_lt_ct | wpc | simp | wp_once checkPrio_inv)+
+  apply (wp checkPrio_lt_ct_weak | wpc | simp | wp_once checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
   apply (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
   apply simp
@@ -1980,7 +1973,7 @@ lemma decodeSetMCPriority_wf[wp]:
     decodeSetMCPriority args (ThreadCap t) \<lbrace>tcb_inv_wf'\<rbrace>,-"
   unfolding decodeSetMCPriority_def Let_def
   apply (rule hoare_pre)
-  apply (wp checkPrio_lt_ct | wpc | simp | wp_once checkPrio_inv)+
+  apply (wp checkPrio_lt_ct_weak | wpc | simp | wp_once checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
   apply (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
   apply simp
@@ -2274,14 +2267,6 @@ lemma decodeSetSpace_tc_slot[wp]:
   apply simp
   done
 
-lemma prio_from_word_ppPrio_eq: "prio_from_word props = (ucast (ppPriority (prioPropsFromWord props)))"
-  apply (simp add: prio_from_word_def prioPropsFromWord_def priorityBits_def ucast_mask_drop)
-  by (simp add: ucast_ucast_mask8)
-  
-lemma mcp_from_word_ppMCP_eq: "mcp_from_word props = (ucast (ppMCP (prioPropsFromWord props)))"
-  apply (simp add: mcp_from_word_def prioPropsFromWord_def priorityBits_def mcpBits_def ucast_mask_drop)
-  by (simp add: ucast_ucast_mask8)
-  
 lemma decode_tcb_conf_corres:
   notes if_cong [cong] option.case_cong [cong]
   shows
@@ -2291,14 +2276,13 @@ lemma decode_tcb_conf_corres:
                                  (invs' and valid_cap' cap' and (\<lambda>s. \<forall>x \<in> set extras'. cte_at' (snd x) s))
       (decode_tcb_configure args cap slot extras)
       (decodeTCBConfigure args cap' (cte_map slot) extras')"
-  apply (clarsimp simp add: decode_tcb_configure_def decodeTCBConfigure_def Let_def)
+  apply (clarsimp simp add: decode_tcb_configure_def decodeTCBConfigure_def)
   apply (cases "length args < 5")
    apply (clarsimp split: list.split)
   apply (cases "length extras < 3")
    apply (clarsimp split: list.split simp: list_all2_Cons2)
-  apply (clarsimp simp: linorder_not_less val_le_length_Cons
-                        list_all2_Cons1 prio_from_word_ppPrio_eq
-                        mcp_from_word_ppMCP_eq)
+  apply (clarsimp simp: linorder_not_less val_le_length_Cons list_all2_Cons1
+                        prio_from_word_def mcp_from_word_def priorityBits_def)
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE [OF _ decode_set_priority_corres])
         apply (rule corres_splitEE [OF _ decode_set_mcpriority_corres])

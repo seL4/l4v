@@ -212,44 +212,38 @@ where
 | _ \<Rightarrow> throwError TruncatedMessage"
 
 
-definition check_prio
-  :: "priority \<Rightarrow> (unit,'z::state_ext) se_monad" where
+definition
+  check_prio :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
+where
   "check_prio new_prio \<equiv>
     doE
       cur \<leftarrow> liftE $ gets cur_thread;
       mcp \<leftarrow> liftE $ thread_get tcb_mcpriority cur;
-      whenE (new_prio > mcp) $ throwError (RangeError 0 (ucast mcp))      
+      whenE (new_prio > ucast mcp) $ throwError (RangeError 0 (ucast mcp))      
     odE"
-    
-definition check_mcp
-  :: "priority \<Rightarrow> (unit,'z::state_ext) se_monad" where
-  "check_mcp new_mcp \<equiv>
-    doE
-      check_prio new_mcp;
-      whenE (new_mcp > maxPrio) $ throwError (RangeError 0 (ucast maxPrio))
-    odE"    
 
 definition
   decode_set_priority :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
-  "decode_set_priority args cap slot \<equiv> 
+  "decode_set_priority args cap slot \<equiv>
      if length args = 0 then throwError TruncatedMessage
-     else let prio = (ucast $ args ! 0) in doE
-       check_prio prio;
+     else let prio = ucast (args ! 0) in doE
+       check_prio (args ! 0);
        returnOk (ThreadControl (obj_ref_of cap) slot None
              None (Some prio) None None None)
     odE"
-    
+
 definition
   decode_set_mcpriority :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
-  "decode_set_mcpriority args cap slot \<equiv> 
+  "decode_set_mcpriority args cap slot \<equiv>
      if length args = 0 then throwError TruncatedMessage
      else let new_mcp = ucast $ args ! 0 in doE
-       check_mcp new_mcp;
+       check_prio (args ! 0);
        returnOk (ThreadControl (obj_ref_of cap) slot None
              (Some new_mcp) None None None None)
      odE"
+
 
 definition
   decode_set_ipc_buffer :: 
@@ -308,11 +302,16 @@ where
                             (Some croot) (Some vroot) None
  odE"
 
-definition prio_from_word :: "data \<Rightarrow> data" where
-"prio_from_word w \<equiv> w && mask 8"
 
-definition mcp_from_word :: "data \<Rightarrow> data" where
-"mcp_from_word w \<equiv> (w >> 8) && mask 8"
+definition
+  prio_from_word :: "data \<Rightarrow> data"
+where
+  "prio_from_word w \<equiv> w && mask 8"
+
+definition
+  mcp_from_word :: "data \<Rightarrow> data"
+where
+  "mcp_from_word w \<equiv> (w >> 8) && mask 8"
 
 
 definition
