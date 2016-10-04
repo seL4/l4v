@@ -130,7 +130,7 @@ lemma com_eq_Cond_empty [C_simp]:
   unfolding com_eq_def
   by (clarsimp, case_tac s, auto intro: exec.CondFalse elim!: exec_elim_cases)
 
-lemma com_eq_Cond_univ [C_simp]:
+lemma com_eq_Cond_UNIV [C_simp]:
   "c \<sim> c' \<Longrightarrow> Cond UNIV c c2 \<sim> c'"
   unfolding com_eq_def
   by (clarsimp, case_tac s, auto intro: exec.CondTrue  elim!: exec_elim_cases)
@@ -151,7 +151,7 @@ lemma com_eq_If_False [C_simp]:
 
 lemma com_eq_If_True [C_simp]:
   "c \<sim> c' \<Longrightarrow> IF True THEN c ELSE c2 FI \<sim> c'"
-  by (simp add: com_eq_Cond_univ)
+  by (simp add: com_eq_Cond_UNIV)
 
 lemma com_eq_While_empty [C_simp]:
   "While {} c \<sim> Skip"
@@ -162,10 +162,23 @@ lemma com_eq_While_FALSE [C_simp]:
   "WHILE False INV P DO c OD \<sim> Skip"
   by (simp add: com_eq_While_empty whileAnno_def)
 
-lemma com_eq_Guard_univ [C_simp]:
+lemma com_eq_Guard_UNIV [C_simp]:
   "c \<sim> c' \<Longrightarrow> Guard f UNIV c \<sim> c'"
   unfolding com_eq_def
   by (clarsimp, case_tac s, auto intro: exec.Guard elim!: exec_elim_cases)
+
+lemma com_eq_Guard_True [C_simp]:
+  "c \<sim> c' \<Longrightarrow> Guard f \<lbrace>True\<rbrace> c \<sim> c'"
+  by (clarsimp simp: com_eq_Guard_UNIV)
+
+lemma com_eq_Guard_empty [C_simp]:
+  "Guard f {} c \<sim> Guard f {} Skip"
+  unfolding com_eq_def
+  by (clarsimp, case_tac s, auto intro: exec.GuardFault elim!: exec_elim_cases)
+
+lemma com_eq_Guard_False [C_simp]:
+  "Guard f \<lbrace>False\<rbrace> c \<sim> Guard f {} Skip"
+  by (clarsimp simp: com_eq_Guard_empty)
 
 lemma com_eq_Catch_Skip [C_simp]:
   "Catch Skip c \<sim> Skip"
