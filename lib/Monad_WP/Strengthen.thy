@@ -220,6 +220,8 @@ structure Congs = Theory_Data
     val merge = Thm.merge_thms;
 end);
 
+val tracing = Attrib.config_bool @{binding strengthen_trace} (K false)
+
 fun map_context_total f (Context.Theory t) = (Context.Theory (f t))
   | map_context_total f (Context.Proof p)
     = (Context.Proof (Context.raw_transfer (f (Proof_Context.theory_of p)) p))
@@ -232,7 +234,8 @@ val strg_del = Thm.declaration_attribute
   
 val setup =
   Attrib.setup @{binding "strg"} (Attrib.add_del strg_add strg_del)
-    "strengthening congruence rules";
+    "strengthening congruence rules"
+    #> snd tracing;
 
 val do_elim = SUBGOAL (fn (t, i) => case (head_of (Logic.strip_assums_concl t)) of
     @{term elim} => eresolve0_tac @{thms do_elim} i
@@ -248,14 +251,24 @@ fun (tac1 THEN_TRY_ALL_NEW tac2) i st = let
   in st |> (tac1 i THEN (fn st' =>
     inner false (i + Thm.nprems_of st' - Thm.nprems_of st) st')) end
 
-fun apply_strg ctxt congs rules = let
-  in TRY o resolve_tac ctxt @{thms strengthen_Not}
-    THEN' ((resolve_tac ctxt rules THEN_ALL_NEW do_elim)
-        ORELSE' (resolve_tac ctxt congs THEN_TRY_ALL_NEW (fn i => apply_strg ctxt congs rules i)))
-  end
+fun maybe_trace_tac false _ _ = K all_tac
+  | maybe_trace_tac true ctxt msg = SUBGOAL (fn (t, _) => let
+    val tr = Pretty.big_list msg [Syntax.pretty_term ctxt t]
+  in
+    Pretty.writeln tr;
+    all_tac
+  end)
+
+fun apply_strg ctxt trace congs rules = EVERY' [
+    maybe_trace_tac trace ctxt "apply_strg",
+    DETERM o TRY o resolve_tac ctxt @{thms strengthen_Not},
+    DETERM o ((resolve_tac ctxt rules THEN_ALL_NEW do_elim)
+        ORELSE' (resolve_tac ctxt congs THEN_TRY_ALL_NEW
+            (fn i => apply_strg ctxt trace congs rules i)))
+]
 
 fun do_strg ctxt congs rules
-    = apply_strg ctxt congs rules
+    = apply_strg ctxt (Config.get ctxt (fst tracing)) congs rules
         THEN_ALL_NEW (TRY o resolve_tac ctxt @{thms strengthen_refl intro_oblig})
 
 fun strengthen ctxt thms = let
@@ -300,16 +313,16 @@ lemma strengthen_imp_ord[simp]:
   by (auto simp add: st_def)
 
 lemma strengthen_imp_conj [strg]:
-  "\<lbrakk> B \<Longrightarrow> st F (op \<longrightarrow>) A A'; A' \<Longrightarrow> st F (op \<longrightarrow>) B B' \<rbrakk>
+  "\<lbrakk> B \<Longrightarrow> st F (op \<longrightarrow>) A A'; st F (op \<longrightarrow>) B B' \<rbrakk>
     \<Longrightarrow> st F (op \<longrightarrow>) (A \<and> B) (A' \<and> B')"
   by (cases F, auto)
 
 lemma strengthen_imp_disj [strg]:
-  "\<lbrakk> \<not> B \<Longrightarrow> st F (op \<longrightarrow>) A A'; \<not> A' \<Longrightarrow> st F (op \<longrightarrow>) B B' \<rbrakk>
+  "\<lbrakk> \<not> B \<Longrightarrow> st F (op \<longrightarrow>) A A'; st F (op \<longrightarrow>) B B' \<rbrakk>
     \<Longrightarrow> st F (op \<longrightarrow>) (A \<or> B) (A' \<or> B')"
   by (cases F, auto)
 
-lemma strengthen_imp_implies [strg]:
+lemma strengthen_imp_implies [rotated, strg]:
   "\<lbrakk> st (\<not> F) (op \<longrightarrow>) X X'; X' \<Longrightarrow> st F (op \<longrightarrow>) Y Y' \<rbrakk>
     \<Longrightarrow> st F (op \<longrightarrow>) (X \<longrightarrow> Y) (X' \<longrightarrow> Y')"
   by (cases F, auto)
@@ -324,13 +337,13 @@ lemma strengthen_ex[strg]:
     \<Longrightarrow> st F (op \<longrightarrow>) (\<exists>x. P x) (\<exists>x. Q x)"
   by (cases F, auto)
 
-lemma strengthen_Ball[strg]:
+lemma strengthen_Ball[rotated, strg]:
   "\<lbrakk> st_ord (Not F) S S';
         \<And>x. x \<in> S' \<Longrightarrow> st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
     \<Longrightarrow> st F (op \<longrightarrow>) (\<forall>x \<in> S. P x) (\<forall>x \<in> S'. Q x)"
   by (cases F, auto)
 
-lemma strengthen_Bex[strg]:
+lemma strengthen_Bex[rotated, strg]:
   "\<lbrakk> st_ord F S S';
         \<And>x. x \<in> S' \<Longrightarrow> st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
     \<Longrightarrow> st F (op \<longrightarrow>) (\<exists>x \<in> S. P x) (\<exists>x \<in> S'. Q x)"
@@ -380,7 +393,7 @@ lemma imp_consequent:
 
 end
 
-text {* Test case. *}
+text {* Test cases. *}
 
 lemma 
   assumes x: "\<And>x. P x \<longrightarrow> Q x"
@@ -388,5 +401,31 @@ lemma
   apply (strengthen x)
   apply clarsimp
   done
+
+locale strengthen_silly_test begin
+
+definition
+  silly :: "nat \<Rightarrow> nat \<Rightarrow> bool"
+where
+  "silly x y = (x \<le> y)"
+
+lemma silly_trans:
+  "silly x y \<Longrightarrow> silly y z \<Longrightarrow> silly x z"
+  by (simp add: silly_def)
+
+lemma silly_refl:
+  "silly x x"
+  by (simp add: silly_def)
+
+lemma foo:
+  "silly x y \<Longrightarrow> silly a b \<Longrightarrow> silly b c
+    \<Longrightarrow> silly x y \<and> (\<forall>x :: nat. silly a c )"
+  using [[strengthen_trace = true]]
+  apply (strengthen silly_trans[mk_strg I E])+
+  apply (strengthen silly_refl)
+  apply simp
+  done
+
+end
 
 end
