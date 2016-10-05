@@ -73,11 +73,11 @@ datatype page_invocation
      | PageUnmap 
          (page_unmap_cap: arch_cap)
          (page_unmap_cap_slot: cslot_ptr)
-     | PageIOMap 
+(*     | PageIOMap 
          (page_iomap_cap: cap)
          (page_iomap_ct_clot: cslot_ptr)
          (page_iomap_asid: iopte)
-         (page_iomap_entries: "obj_ref") (*FIXME: double check plz*)
+         (page_iomap_entries: "obj_ref") (*FIXME: double check plz*)*)
      | PageGetAddr
          (page_get_paddr: obj_ref)
 

@@ -164,7 +164,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
             (case mapped of Some (asid, vaddr) \<Rightarrow> unmap_page sz asid vaddr base
                           | None \<Rightarrow> return ())
           | _ \<Rightarrow> fail)
-  | PageIOMap asid cap ct_slot entries \<Rightarrow> undefined (* FIXME unimplemented *)
+(*  | PageIOMap asid cap ct_slot entries \<Rightarrow> undefined (* FIXME unimplemented *)*)
   | PageGetAddr ptr \<Rightarrow> do
       paddr \<leftarrow> return $ fromPAddr $ addrFromPPtr ptr;
       ct \<leftarrow> gets cur_thread;

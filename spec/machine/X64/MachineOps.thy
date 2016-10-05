@@ -255,10 +255,13 @@ mfence :: "unit machine_monad"
 where
 "mfence \<equiv> undefined"
 
+consts'
+  invalidateTLBEntry_impl :: "word64 \<Rightarrow> unit machine_rest_monad"
+
 definition
 invalidateTLBEntry :: "word64 \<Rightarrow> unit machine_monad"
 where
-"invalidateTLBEntry vptr \<equiv> undefined vptr"
+"invalidateTLBEntry vptr \<equiv> machine_op_lift (invalidateTLBEntry_impl vptr)"
 
 definition
 firstValidIODomain :: "word16"
