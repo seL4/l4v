@@ -2410,6 +2410,16 @@ lemma empty_table_pml4e_refD:
   r \<in> S"
   by (simp add: empty_table_def)
 
+lemma valid_global_pdptsD:
+  "\<lbrakk>r \<in> set (x64_global_pdpts (arch_state s)); valid_global_objs s\<rbrakk>
+    \<Longrightarrow> \<exists>pdpt. ko_at (ArchObj (PDPointerTable pdpt)) r s \<and> (\<forall>x. aligned_pdpte (pdpt x)) 
+             \<and> (\<forall>r. pdpte_ref (pdpt x) = Some r 
+                     \<longrightarrow> r \<in> set (x64_global_pds (arch_state s))) 
+             \<and> valid_global_pdpt pdpt"
+  apply (clarsimp simp: valid_global_objs_def)
+  apply (drule_tac x=r in bspec, assumption)
+  by auto
+  
 lemma valid_table_caps_pdD:
   "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageDirectoryCap pd None));
      valid_table_caps s \<rbrakk> \<Longrightarrow>
