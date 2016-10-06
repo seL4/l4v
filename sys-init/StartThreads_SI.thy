@@ -69,12 +69,12 @@ lemma cap_transform_MasterReplyCap:
 
 lemma start_thread_sep:
   "\<lbrace>\<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
-     si_cap_at t dup_caps spec obj_id \<and>*
+     si_cap_at t dup_caps spec False obj_id \<and>*
      si_objects \<and>* R\<guillemotright> and
    K(well_formed spec \<and> obj_id \<in> {obj_id. is_waiting_thread_at obj_id spec})\<rbrace>
    start_thread spec dup_caps obj_id
    \<lbrace>\<lambda>_.\<guillemotleft>object_initialised spec t obj_id \<and>*
-        si_cap_at t dup_caps spec obj_id \<and>*
+        si_cap_at t dup_caps spec False obj_id \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: start_thread_def object_initialised_def tcb_half_initialised_def object_initialised_general_def
@@ -126,12 +126,12 @@ lemma tcb_half_initialised_object_initialised':
 
 lemma start_threads_sep:
   "\<lbrace>\<guillemotleft>tcbs_half_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
-     si_caps_at t dup_caps spec {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
+     si_caps_at t dup_caps spec False {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and
      K(well_formed spec \<and> set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)\<rbrace>
    start_threads spec dup_caps obj_ids
    \<lbrace>\<lambda>_.\<guillemotleft>objects_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
-        si_caps_at t dup_caps spec {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
+        si_caps_at t dup_caps spec False {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: start_threads_def tcbs_half_initialised_def objects_initialised_def)
@@ -150,7 +150,7 @@ lemma start_threads_sep:
   apply (rule mapM_x_set_sep' [where
                P="\<lambda>obj_id. tcb_half_initialised spec t obj_id" and
                Q="\<lambda>obj_id. object_initialised spec t obj_id" and
-               I="si_caps_at t dup_caps spec {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
+               I="si_caps_at t dup_caps spec False {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
                   si_objects" and
                xs="[obj_id \<leftarrow> obj_ids. is_waiting_thread_at obj_id spec]" and
                X="{obj_id. object_at is_waiting_thread obj_id spec}" and
@@ -165,7 +165,7 @@ lemma start_threads_sep:
                 and xs = "{obj_id. cnode_or_tcb_at obj_id spec}"
                 and P = "tcb_half_initialised spec t obj_id \<and>* si_objects"
                 and Q = "object_initialised spec t obj_id \<and>* si_objects"
-                and I = "si_cap_at t dup_caps spec"
+                and I = "si_cap_at t dup_caps spec False"
                 and R=R
                  in sep_set_conj_map_singleton_wp [simplified], simp_all add: object_at_real_object_at)
 

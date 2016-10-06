@@ -25,8 +25,7 @@ include $(CPARSER_PFX)/globalmakevars
 all: CParser cparser_test cparser_tools
 
 # Build tools
-cparser_tools: $(CPARSER_PFX)/standalone-parser/c-parser \
-	$(CPARSER_PFX)/standalone-parser/tokenizer
+cparser_tools: stp_all
 
 # Setup heaps we use.
 HEAPS += Simpl-VCG CParser

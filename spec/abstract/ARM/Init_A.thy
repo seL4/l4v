@@ -80,9 +80,10 @@ definition
     tcb_ipc_buffer = 0,
     tcb_context = empty_context,
     tcb_fault = None,
-    tcb_bound_notification = None
+    tcb_bound_notification = None,
+    tcb_mcpriority = minBound
   \<rparr>, 
-  init_globals_frame \<mapsto> ArchObj (DataPage ARMSmallPage),
+  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage),
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd)
   )"
 

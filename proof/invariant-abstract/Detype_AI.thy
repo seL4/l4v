@@ -163,17 +163,6 @@ lemma subset_splitE:
 lemma cap_range_untyped_range_eq[simp]:
   "is_untyped_cap a \<Longrightarrow> cap_range a = untyped_range a"
   by (clarsimp simp:is_cap_simps cap_range_def)
-  
-
-lemma p_in_obj_range:
-  "\<lbrakk> kheap s p = Some ko; pspace_aligned s; valid_objs s \<rbrakk> \<Longrightarrow> p \<in> obj_range p ko"
-  apply (simp add: pspace_aligned_def)
-  apply (drule bspec, erule domI)
-  apply (drule valid_obj_sizes, erule ranI)
-  apply (simp add: obj_range_def add_diff_eq[symmetric])
-  apply (erule is_aligned_no_wrap')
-  apply (erule word_power_less_1[where 'a=32, folded word_bits_def])
-  done
 
 
 lemma (in Detype_AI) untyped_cap_descendants_range:
@@ -474,8 +463,10 @@ locale detype_locale_gen_2 = detype_locale_gen_1 cap ptr s
     "valid_global_vspace_mappings (detype (untyped_range cap) s)"
     "pspace_in_kernel_window (detype (untyped_range cap) s)"
     "valid_machine_state (clear_um (untyped_range cap) (detype (untyped_range cap) s))"  
+    "pspace_respects_device_region (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
+    "cap_refs_respects_device_region (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
 
-locale detype_locale_arch = detype_locale + Arch        
+locale detype_locale_arch = detype_locale + Arch
 
 context detype_locale_gen_1 
 begin
@@ -582,7 +573,7 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
      apply (rename_tac notification ntfn_ext)
      apply (case_tac "ntfn_obj ntfn_ext")
        apply (auto simp: valid_ntfn_def ntfn_bound_refs_def split: option.splits)
-    done 
+    done
   
 lemma valid_objs_detype[detype_invs_lemmas] : "valid_objs (detype (untyped_range cap) s)"
   using invs_valid_objs[OF invs]
@@ -737,7 +728,7 @@ lemma valid_reply_caps_detype[detype_invs_lemmas]: "valid_reply_caps (detype (un
      apply (fastforce dest: live_okE)
     apply (clarsimp simp: unique_reply_caps_def)
     done
-  
+
 lemma valid_irq_detype[detype_invs_lemmas]: "valid_irq_node (detype (untyped_range cap) s)"
   using invs valid_globals_irq_node [OF globals cap]
   by (simp add: valid_irq_node_def invs_def valid_state_def cap_range_def)
@@ -799,6 +790,7 @@ lemma valid_irq_states_detype[detype_invs_lemmas]: "valid_irq_states
       apply(clarsimp simp: clear_um_def detype_def valid_irq_states_def)
       done
   qed
+
 end
 
 context detype_locale_gen_2 begin  
@@ -1112,17 +1104,17 @@ lemma invs_untyped_children[elim!]:
                      untyped_mdb_alt)
 
 lemma dmo_valid_cap[wp]:
-  "\<lbrace>\<lambda>s. s \<turnstile> cap.UntypedCap base magnitude idx\<rbrace>
+  "\<lbrace>\<lambda>s. s \<turnstile> cap.UntypedCap dev base magnitude idx\<rbrace>
    do_machine_op f
-   \<lbrace>\<lambda>rv s. s \<turnstile> cap.UntypedCap base magnitude idx\<rbrace>"
+   \<lbrace>\<lambda>rv s. s \<turnstile> cap.UntypedCap dev base magnitude idx\<rbrace>"
   by (simp add: do_machine_op_def split_def | wp)+
 
 lemma (in Detype_AI)cte_map_not_null_outside':
-  "\<lbrakk>cte_wp_at (op = (cap.UntypedCap q n m)) p' (s :: 'a state);
-    descendants_range (cap.UntypedCap q n m) p' s; untyped_children_in_mdb s;
+  "\<lbrakk>cte_wp_at (op = (cap.UntypedCap dev q n m)) p' (s :: 'a state);
+    descendants_range (cap.UntypedCap dev q n m) p' s; untyped_children_in_mdb s;
     if_unsafe_then_cap s; valid_global_refs s;
     cte_wp_at (op \<noteq> cap.NullCap) p s\<rbrakk>
-   \<Longrightarrow> fst p \<notin> untyped_range (cap.UntypedCap q n m)"
+   \<Longrightarrow> fst p \<notin> untyped_range (cap.UntypedCap dev q n m)"
   by (erule (1) cte_map_not_null_outside, simp_all)
 
 lemma refl_spec[simp]:

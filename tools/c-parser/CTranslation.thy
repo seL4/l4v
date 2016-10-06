@@ -67,7 +67,7 @@ where
 
 definition
   "guarded_spec_body F R = Guard F (fst ` R) (Spec R)"
-  
+
 lemma guarded_spec_body_wp [vcg_hoare]:
 "P \<subseteq>
 {s. (\<forall>t. (s,t) \<in> R \<longrightarrow> t \<in> Q) \<and> (Ft \<notin> F \<longrightarrow> (\<exists>t. (s,t) \<in> R))}
@@ -84,8 +84,8 @@ apply simp
 apply (erule order_trans)
 apply (auto simp: image_def Bex_def)
 done
-  
-  
+
+
 ML_file "tools/mlyacc/mlyacclib/MLY_base-sig.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_join.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_lrtable.ML"
@@ -123,7 +123,7 @@ declare typ_info_word [simp del]
 declare typ_info_ptr [simp del]
 
 lemma valid_call_Spec_eq_subset:
-  "\<Gamma>' procname = Some (Spec R) \<Longrightarrow> 
+  "\<Gamma>' procname = Some (Spec R) \<Longrightarrow>
   HoarePartialDef.valid \<Gamma>' NF P (Call procname) Q A = (P \<subseteq> fst ` R \<and> (R \<subseteq> (- P) \<times> UNIV \<union> UNIV \<times> Q))"
   apply (safe, simp_all)
     apply (clarsimp simp: HoarePartialDef.valid_def)

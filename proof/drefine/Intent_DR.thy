@@ -49,7 +49,7 @@ lemma tcb_cap_casesE:
                                          (op = cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)) \<rbrakk> \<Longrightarrow> R"
               "\<lbrakk> p = tcb_cnode_index 4; gf = tcb_ipcframe; sf = tcb_ipcframe_update; restr =
-                                     (\<lambda>_ _. is_arch_cap or (op = cap.NullCap)) \<rbrakk> \<Longrightarrow> R"
+                                     (\<lambda>_ _. is_nondevice_page_cap or (op = cap.NullCap)) \<rbrakk> \<Longrightarrow> R"
   shows "R"
   using cs
   unfolding tcb_cap_cases_def
@@ -107,7 +107,7 @@ lemma tcb_cap_cases_slot_simps[simp]:
                                          (op = cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)))"
   "tcb_cap_cases (tcb_cnode_index tcb_ipcbuffer_slot) = Some (tcb_ipcframe, tcb_ipcframe_update,
-                                     (\<lambda>_ _. is_arch_cap or (op = cap.NullCap)))"
+                                     (\<lambda>_ _. is_nondevice_page_cap or (op = cap.NullCap)))"
   by (simp add: tcb_slots)+
 
 lemma opt_cap_tcb:
@@ -983,7 +983,7 @@ lemma empty_when_fail_lookup_ipc_buffer:
 
 abbreviation
 "\<lambda>s. ipc_frame_cte_at thread buf rights sz s \<equiv>
-  \<lambda>s. (\<exists>mapdata. cte_wp_at (op = (cap.ArchObjectCap (arch_cap.PageCap buf rights sz mapdata))) (thread,tcb_cnode_index 4) s)"
+  \<lambda>s. (\<exists>mapdata dev. cte_wp_at (op = (cap.ArchObjectCap (arch_cap.PageCap dev buf rights sz mapdata))) (thread,tcb_cnode_index 4) s)"
 
 lemma lookup_ipc_buffer_SomeB_evalMonad:
   "evalMonad (lookup_ipc_buffer in_receive thread) sa = Some (Some buf)
@@ -1001,7 +1001,7 @@ lemma lookup_ipc_buffer_SomeB_evalMonad:
    apply (clarsimp simp:evalMonad_get_cap split:option.splits)
    apply (clarsimp dest!:caps_of_state_cteD get_tcb_SomeD simp:obj_at_def split:cap.splits arch_cap.splits if_splits)
    apply (clarsimp simp:cte_wp_at_cases)
-   apply (auto simp:obj_at_def vm_read_only_def vm_read_write_def)
+   apply (fastforce simp: obj_at_def vm_read_only_def vm_read_write_def)
 done
 
 lemma lookup_ipc_buffer_None_evalMonad:
@@ -1148,7 +1148,7 @@ definition
   where
   "ipc_frame_wp_at P \<equiv> obj_at (%ko. \<exists>tcb. ko = TCB tcb \<and>
   (case (tcb_ipcframe tcb) of
-  cap.ArchObjectCap (arch_cap.PageCap ptr rights sz mapdata)  \<Rightarrow> P ptr rights sz mapdata
+  cap.ArchObjectCap (arch_cap.PageCap dev ptr rights sz mapdata)  \<Rightarrow> P ptr rights sz mapdata
   | _                                                         \<Rightarrow> False))"
 
 definition
@@ -1178,7 +1178,7 @@ definition
   is_arch_page_cap :: "cap \<Rightarrow> bool"
 where
   "is_arch_page_cap cap = (case cap of
-                               cap.ArchObjectCap (arch_cap.PageCap buf rights sz mapdata) \<Rightarrow> True
+                               cap.ArchObjectCap (arch_cap.PageCap dev buf rights sz mapdata) \<Rightarrow> True
                              | _ \<Rightarrow> False)"
 
 lemmas is_arch_page_cap_simps [simp] = is_arch_page_cap_def [split_simps cap.split arch_cap.split]
@@ -1279,23 +1279,24 @@ lemma underlying_memory_storeWord:
   done
 
 lemma ipc_frame_ptr_at_frame_at:
-  "\<lbrakk>valid_objs s;ipc_frame_ptr_at buf thread s;ipc_frame_sz_at sz thread s\<rbrakk> \<Longrightarrow>ko_at (ArchObj (DataPage sz)) buf s"
+  "\<lbrakk>valid_objs s;ipc_frame_ptr_at buf thread s;ipc_frame_sz_at sz thread s\<rbrakk> \<Longrightarrow>ko_at (ArchObj (DataPage False sz)) buf s"
   apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
   apply (clarsimp split:cap.splits arch_cap.splits)
   apply (drule valid_tcb_objs)
     apply (erule get_tcb_rev)
   apply (simp add:valid_tcb_def)
-  apply (clarsimp simp:valid_ipc_buffer_cap_def tcb_cap_cases_def)
-  apply (clarsimp simp:valid_cap_def obj_at_def a_type_def)
-  apply (clarsimp split:Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
+  apply (clarsimp simp: valid_ipc_buffer_cap_def tcb_cap_cases_def is_nondevice_page_cap_def
+                 split: bool.split_asm)
+  apply (clarsimp simp: valid_cap_def obj_at_def a_type_def is_nondevice_page_cap_def)
+  apply (clarsimp split: Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
 done
 
 lemma ipc_buffer_within_frame:
   "\<lbrakk>
     pspace_aligned s;
     pspace_distinct s;
-    ko_at (ArchObj (DataPage sz)) buf s;
-    ko_at (ArchObj (DataPage sz')) buf' s;
+    ko_at (ArchObj (DataPage dev sz)) buf s;
+    ko_at (ArchObj (DataPage dev' sz')) buf' s;
     ptr && ~~ mask (pageBitsForSize sz) = buf;
     ptr' && ~~ mask (pageBitsForSize sz') = buf';
     buf\<noteq>buf'\<rbrakk>
@@ -1308,8 +1309,8 @@ lemma ipc_buffer_within_frame:
   apply (unfold pspace_distinct_def)
   apply (drule_tac x = buf in spec)
   apply (drule_tac x = buf' in spec)
-  apply (drule_tac x = "ArchObj (DataPage sz)" in spec)
-  apply (drule_tac x = "ArchObj (DataPage sz')" in spec)
+  apply (drule_tac x = "ArchObj (DataPage dev sz)" in spec)
+  apply (drule_tac x = "ArchObj (DataPage dev' sz')" in spec)
   apply (rule distinct_element)
     apply (rule mp)
      apply (assumption)
@@ -1330,8 +1331,9 @@ lemma valid_tcb_obj_ipc_align_etc:
   apply (frule ipc_frame_ptr_at_frame_at)
     apply simp+
   apply (drule(1) valid_tcb_objs)
-  apply (clarsimp dest!:get_tcb_SomeD simp:valid_tcb_def valid_ipc_buffer_cap_def ipc_frame_wp_at_def obj_at_def)
-  apply (clarsimp split:cap.splits arch_cap.splits)
+  apply (clarsimp dest!: get_tcb_SomeD simp:valid_tcb_def valid_ipc_buffer_cap_def   
+                         ipc_frame_wp_at_def obj_at_def)
+  apply (clarsimp split: cap.splits arch_cap.splits bool.split_asm)
   apply (rule conjI)
     apply (rule is_aligned_weaken,simp+)
       apply (simp add:msg_align_bits_def)
@@ -1342,6 +1344,7 @@ lemma valid_tcb_obj_ipc_align_etc:
   apply (rule is_aligned_weaken)
     apply simp+
 done
+
 lemma mask_neg_mask_cancel:
   "a&& mask n && ~~ mask n = 0 "
  by (simp add:mask_out_sub_mask)
@@ -1350,7 +1353,7 @@ lemma get_ipc_buffer_words_helper:
   "\<lbrakk>valid_objs s;
     get_tcb thread s = Some tcb_type;
     ipc_frame_ptr_at obuf thread s;ipc_frame_sz_at osz thread s;
-    ko_at (ArchObj (DataPage sz)) buf s;
+    ko_at (ArchObj (DataPage dev sz)) buf s;
     is_aligned ptr 2;
     pspace_aligned s; pspace_distinct s;
     within_page buf ptr sz;
@@ -1681,7 +1684,7 @@ lemma select_f_evalMonad:
 lemma dcorres_store_word_safe:
   "within_page obuf ptr sz \<Longrightarrow>
    dcorres dc \<top>
-    (ko_at (ArchObj (DataPage sz)) obuf and (\<lambda>s. \<forall>buf thread. ipc_frame_ptr_at buf thread s \<longrightarrow> buf\<noteq> obuf) and
+    (ko_at (ArchObj (DataPage dev sz)) obuf and (\<lambda>s. \<forall>buf thread. ipc_frame_ptr_at buf thread s \<longrightarrow> buf\<noteq> obuf) and
     valid_objs and pspace_distinct and pspace_aligned and valid_etcbs)
     (return a)
     (do_machine_op (storeWord ptr b))"
@@ -1701,9 +1704,10 @@ lemma dcorres_store_word_safe:
                    split:cap.split_asm arch_cap.split_asm
                    split del: split_if)
    apply (frule valid_tcb_objs, erule get_tcb_rev)
-   apply (clarsimp simp:valid_tcb_def tcb_cap_cases_def valid_ipc_buffer_cap_def simp del:upt.simps)
+   apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def valid_ipc_buffer_cap_def
+               simp del: upt.simps)
    apply (erule disjE)
-    apply (clarsimp simp:is_arch_cap_def split:cap.split_asm simp del:upt.simps)
+    apply (clarsimp simp: is_nondevice_page_cap_def split: cap.split_asm simp del: upt.simps)
     apply (rename_tac tcb arch_cap)
     apply (case_tac arch_cap)
         apply ((simp add:get_ipc_buffer_words_def)+)[2]
@@ -1716,7 +1720,7 @@ lemma dcorres_store_word_safe:
                 apply (erule get_tcb_rev)
                apply ((simp add:ipc_frame_wp_at_def obj_at_def)+)[2]
              apply (simp add:obj_at_def)
-            apply (clarsimp simp:is_aligned_mask simp del:upt.simps)+
+            apply (clarsimp simp: is_aligned_mask split: bool.split_asm simp del: upt.simps)+
         apply (rule_tac y = thread in within_page_ipc_buf)
               apply (simp add:ipc_frame_wp_at_def obj_at_def ipc_buffer_wp_at_def)+
         apply (simp add:msg_max_length_def msg_align_bits)
@@ -2163,20 +2167,20 @@ lemma dcorres_copy_mrs:
   done
 
 lemma ipc_frame_ptr_at_sz_at:
-  "\<lbrakk>ko_at (ArchObj (DataPage sz)) obuf s; valid_objs s;ipc_frame_ptr_at obuf thread s \<rbrakk> \<Longrightarrow> ipc_frame_sz_at sz thread s"
+  "\<lbrakk>ko_at (ArchObj (DataPage dev sz)) obuf s; valid_objs s;ipc_frame_ptr_at obuf thread s \<rbrakk> \<Longrightarrow> ipc_frame_sz_at sz thread s"
   apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
   apply (clarsimp split:cap.splits arch_cap.splits)
   apply (frule valid_tcb_objs)
    apply (erule get_tcb_rev)
   apply (subgoal_tac "valid_cap (tcb_ipcframe tcb) s")
-   apply (clarsimp simp:valid_cap_def obj_at_def a_type_def split:arch_kernel_obj.splits)
-  apply (clarsimp simp:valid_tcb_def tcb_cap_cases_def)
+   apply (clarsimp simp: valid_cap_def obj_at_def a_type_def split: if_splits arch_kernel_obj.splits)
+  apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def split: if_splits)
   done
 
 lemma dcorres_store_word_conservative:
   " within_page obuf ptr sz \<Longrightarrow>
     dcorres dc (\<lambda>_. True)
-     (ko_at (ArchObj (DataPage sz)) obuf and valid_objs and
+     (ko_at (ArchObj (DataPage dev sz)) obuf and valid_objs and
       pspace_distinct and
       pspace_aligned and valid_etcbs)
      (corrupt_frame obuf) (do_machine_op (storeWord ptr b))"

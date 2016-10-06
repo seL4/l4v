@@ -90,7 +90,7 @@ datatype cdl_cap =
     NullCap
 
   (* Kernel object capabilities *)
-  | UntypedCap cdl_object_set cdl_object_set
+  | UntypedCap bool cdl_object_set cdl_object_set
   | EndpointCap cdl_object_id cdl_badge "cdl_right set"
   | NotificationCap cdl_object_id cdl_badge "cdl_right set"
   | ReplyCap cdl_object_id (* The id of the tcb of the target thread *)
@@ -123,7 +123,7 @@ datatype cdl_cap =
   | IrqHandlerCap cdl_irq
 
   (* Virtual memory capabilties *)
-  | FrameCap cdl_object_id "cdl_right set" nat cdl_frame_cap_type "cdl_mapped_addr option"
+  | FrameCap bool cdl_object_id "cdl_right set" nat cdl_frame_cap_type "cdl_mapped_addr option"
   | PageTableCap cdl_object_id cdl_frame_cap_type "cdl_mapped_addr option"
   | PageDirectoryCap cdl_object_id cdl_frame_cap_type "cdl_asid option"
   | AsidControlCap
@@ -280,13 +280,13 @@ lemmas object_type_simps = object_type_def[split_simps cdl_object.split]
 
 definition
   asid_high_bits :: nat where
-  "asid_high_bits \<equiv> 8"
+  "asid_high_bits \<equiv> 7"
 definition
   asid_low_bits :: nat where
   "asid_low_bits \<equiv> 10 :: nat"
 definition
   asid_bits :: nat where
-  "asid_bits \<equiv> 18 :: nat"
+  "asid_bits \<equiv> 17 :: nat"
 
 (*
  * Each TCB contains a number of cap slots, each with a specific
@@ -324,14 +324,14 @@ where
   | "cap_objects (AsidPoolCap x _) = {x}"
   | "cap_objects (PageDirectoryCap x _ _) = {x}"
   | "cap_objects (PageTableCap x _ _) = {x}"
-  | "cap_objects (FrameCap x _ _ _ _) = {x}"
+  | "cap_objects (FrameCap _ x _ _ _ _) = {x}"
   | "cap_objects (TcbCap x) = {x}"
   | "cap_objects (CNodeCap x _ _ _) = {x}"
   | "cap_objects (MasterReplyCap x) = {x}"
   | "cap_objects (ReplyCap x) = {x}"
   | "cap_objects (NotificationCap x _ _) = {x}"
   | "cap_objects (EndpointCap x _ _) = {x}"
-  | "cap_objects (UntypedCap x a) = x"
+  | "cap_objects (UntypedCap _ x a) = x"
   | "cap_objects (ZombieCap x) = {x}"
   | "cap_objects (PendingSyncSendCap x _ _ _ _) = {x}"
   | "cap_objects (PendingSyncRecvCap x _ ) = {x}"
@@ -367,7 +367,7 @@ lemma cap_object_simps:
   "cap_object (AsidPoolCap x b) = x"
   "cap_object (PageDirectoryCap x c d) = x"
   "cap_object (PageTableCap x e f) = x"
-  "cap_object (FrameCap x g h i j) = x"
+  "cap_object (FrameCap dev x g h i j) = x"
   "cap_object (TcbCap x) = x"
   "cap_object (CNodeCap x k l sz) = x"
   "cap_object (MasterReplyCap x) = x"
@@ -398,7 +398,7 @@ definition
   cap_rights :: "cdl_cap \<Rightarrow> cdl_right set"
 where
   "cap_rights c \<equiv> case c of
-      FrameCap _ x _ _ _ \<Rightarrow> x
+      FrameCap _ _ x _ _ _ \<Rightarrow> x
     | NotificationCap _ _ x \<Rightarrow> x
     | EndpointCap _ _ x \<Rightarrow> x
     | _ \<Rightarrow> UNIV"
@@ -407,7 +407,7 @@ definition
   update_cap_rights :: "cdl_right set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
 where
   "update_cap_rights r c \<equiv> case c of
-      FrameCap f1 _ f2 f3 f4 \<Rightarrow> FrameCap f1 (validate_vm_rights r) f2 f3 f4
+      FrameCap dev f1 _ f2 f3 f4 \<Rightarrow> FrameCap dev f1 (validate_vm_rights r) f2 f3 f4
     | NotificationCap f1 f2 _ \<Rightarrow> NotificationCap f1 f2 (r - {Grant})
     | EndpointCap f1 f2 _ \<Rightarrow> EndpointCap f1 f2 r
     | _ \<Rightarrow> c"
@@ -416,7 +416,7 @@ definition
   update_mapping_cap_status :: "cdl_frame_cap_type \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
 where
  "update_mapping_cap_status r c \<equiv> case c of
-      FrameCap f1 f2 f3 _ f4 \<Rightarrow> FrameCap f1 f2 f3 r f4
+      FrameCap dev f1 f2 f3 _ f4 \<Rightarrow> FrameCap dev f1 f2 f3 r f4
     | PageTableCap pt1 _ pt2 \<Rightarrow> PageTableCap pt1 r pt2
     | _ \<Rightarrow> c"
 
@@ -491,14 +491,14 @@ definition
   cap_free_ids :: "cdl_cap \<Rightarrow> cdl_object_id set"
 where
   "cap_free_ids cap \<equiv> (case cap of
-     UntypedCap _ free_ids \<Rightarrow> free_ids
+     UntypedCap _ _ free_ids \<Rightarrow> free_ids
    | _ \<Rightarrow> {})"
 
 definition
   remove_free_ids :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap"
 where
   "remove_free_ids cap obj_ids \<equiv> case cap of
-     UntypedCap c a \<Rightarrow> UntypedCap c (a - obj_ids)
+     UntypedCap dev c a \<Rightarrow> UntypedCap dev c (a - obj_ids)
    | _ \<Rightarrow> cap"
 
 definition cap_irq :: "cdl_cap \<Rightarrow> cdl_irq"
@@ -517,7 +517,7 @@ where
 definition cap_type :: "cdl_cap \<Rightarrow> cdl_object_type option"
 where
   "cap_type x \<equiv> case x of
-    UntypedCap _ _         \<Rightarrow> Some UntypedType
+    UntypedCap _ _ _         \<Rightarrow> Some UntypedType
   | EndpointCap _ _ _      \<Rightarrow> Some EndpointType
   | NotificationCap _ _ _ \<Rightarrow> Some NotificationType
   | TcbCap _               \<Rightarrow> Some TcbType
@@ -525,7 +525,7 @@ where
   | AsidPoolCap _ _        \<Rightarrow> Some AsidPoolType
   | PageTableCap _ _ _     \<Rightarrow> Some PageTableType
   | PageDirectoryCap _ _ _ \<Rightarrow> Some PageDirectoryType
-  | FrameCap _ _ f _ _     \<Rightarrow> Some (FrameType f)
+  | FrameCap _ _ _ f _ _     \<Rightarrow> Some (FrameType f)
   | IrqHandlerCap _        \<Rightarrow> Some IRQNodeType
   | _                      \<Rightarrow> None "
 
@@ -542,7 +542,7 @@ abbreviation "is_irqhandler_cap cap \<equiv> (cap_type cap = Some IRQNodeType)"
 definition   "is_irqcontrol_cap cap \<equiv> (cap = IrqControlCap)"
 
 lemma cap_type_simps [simp]:
-  "is_untyped_cap    (UntypedCap a a')"
+  "is_untyped_cap    (UntypedCap dev a a')"
   "is_ep_cap         (EndpointCap b c d)"
   "is_ntfn_cap        (NotificationCap e f g)"
   "is_tcb_cap        (TcbCap h)"
@@ -550,9 +550,9 @@ lemma cap_type_simps [simp]:
   "is_asidpool_cap   (AsidPoolCap n p)"
   "is_pd_cap         (PageDirectoryCap r s t)"
   "is_pt_cap         (PageTableCap u v w)"
-  "is_frame_cap      (FrameCap a1 a2 a3 a4 a5)"
+  "is_frame_cap      (FrameCap dev a1 a2 a3 a4 a5)"
   "is_irqhandler_cap (IrqHandlerCap a6)"
-  "cap_type (FrameCap obj_id rights sz rs asid) = Some (FrameType sz)"
+  "cap_type (FrameCap dev obj_id rights sz rs asid) = Some (FrameType sz)"
   by (clarsimp simp: cap_type_def)+
 
 abbreviation "cap_has_type cap \<equiv> (\<exists>type. cap_type cap = Some type)"
@@ -647,19 +647,19 @@ abbreviation "pick a \<equiv> SOME x. x\<in> a"
 
 (* Construct a cap for a new object. *)
 definition
-  default_cap :: "cdl_object_type \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_size_bits \<Rightarrow> cdl_cap"
+  default_cap :: "cdl_object_type \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_size_bits \<Rightarrow> bool \<Rightarrow> cdl_cap"
 where
-  "default_cap t id_set sz \<equiv>
+  "default_cap t id_set sz dev \<equiv>
     case t of
         EndpointType \<Rightarrow> EndpointCap (pick id_set) 0 UNIV
       | NotificationType \<Rightarrow> NotificationCap (THE i. i \<in> id_set) 0 {Read,Write}
       | TcbType \<Rightarrow> TcbCap (pick id_set)
       | CNodeType \<Rightarrow> CNodeCap (pick id_set) 0 0 sz
       | IRQNodeType \<Rightarrow> IrqHandlerCap undefined
-      | UntypedType \<Rightarrow> UntypedCap id_set id_set
+      | UntypedType \<Rightarrow> UntypedCap dev id_set id_set
       | AsidPoolType \<Rightarrow> AsidPoolCap (pick id_set) 0
       | PageTableType \<Rightarrow> PageTableCap (pick id_set) Real None
       | PageDirectoryType \<Rightarrow> PageDirectoryCap (pick id_set) Real None
-      | FrameType frame_size \<Rightarrow> FrameCap (pick id_set) {Read, Write} frame_size Real None"
+      | FrameType frame_size \<Rightarrow> FrameCap dev (pick id_set) {Read, Write} frame_size Real None"
 
 end

@@ -71,7 +71,8 @@ lemma detype_irq_state_of_state[simp]:
   done
 
 crunch irq_state_of_state[wp]: invoke_untyped "\<lambda>s. P (irq_state_of_state s)"
-  (wp: dmo_wp modify_wp crunch_wps simp: crunch_simps ignore: freeMemory simp: freeMemory_def storeWord_def clearMemory_def machine_op_lift_def machine_rest_lift_def mapM_x_defsym)
+  (wp: dmo_wp modify_wp hoare_unless_wp crunch_wps simp: crunch_simps 
+    ignore: freeMemory simp: freeMemory_def storeWord_def clearMemory_def machine_op_lift_def machine_rest_lift_def mapM_x_defsym)
 
 crunch irq_state_of_state[wp]: invoke_irq_control "\<lambda>s. P (irq_state_of_state s)"
 
@@ -95,7 +96,7 @@ crunch irq_state_of_state[wp]: cap_swap_for_delete "\<lambda>(s::det_state). P (
 crunch irq_state_of_state[wp]: load_hw_asid "\<lambda>(s::det_state). P (irq_state_of_state s)"
 
 crunch irq_state_of_state[wp]: recycle_cap "\<lambda>(s::det_state). P (irq_state_of_state s)"
-  (wp: crunch_wps dmo_wp modify_wp simp: filterM_mapM crunch_simps no_irq_clearMemory simp: clearMemory_def storeWord_def invalidateTLB_ASID_def 
+  (wp: crunch_wps dmo_wp hoare_unless_wp modify_wp simp: filterM_mapM crunch_simps no_irq_clearMemory simp: clearMemory_def storeWord_def invalidateTLB_ASID_def 
    ignore: filterM)
 
 crunch irq_state_of_state[wp]: restart,invoke_domain "\<lambda>(s::det_state). P (irq_state_of_state s)"
@@ -2081,7 +2082,7 @@ lemma perform_page_invocation_globals_equiv:
 
 lemma retype_region_ASIDPoolObj_globals_equiv:
   "\<lbrace>globals_equiv s and (\<lambda>sa. ptr \<noteq> arm_global_pd (arch_state s)) and (\<lambda>sa. ptr \<noteq> idle_thread sa)\<rbrace>
-  retype_region ptr 1 0 (ArchObject ASIDPoolObj) 
+  retype_region ptr 1 0 (ArchObject ASIDPoolObj) dev
   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding retype_region_def
   apply(wp modify_wp dxo_wp_weak | simp | fastforce simp: globals_equiv_def default_arch_object_def obj_bits_api_def)+
@@ -2103,7 +2104,7 @@ lemma cap_insert_globals_equiv'':
 
 lemma retype_region_ASIDPoolObj_valid_ko_at_arm:
   "\<lbrace>valid_ko_at_arm and (\<lambda>s. ptr \<noteq> arm_global_pd (arch_state s))\<rbrace>
-  retype_region ptr 1 0 (ArchObject ASIDPoolObj) 
+  retype_region ptr 1 0 (ArchObject ASIDPoolObj) dev
   \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   apply(simp add: retype_region_def)
   apply(wp modify_wp dxo_wp_weak |simp add: trans_state_update[symmetric] del: trans_state_update)+
@@ -2173,6 +2174,7 @@ lemma perform_asid_control_invocation_globals_equiv:
              set_cap_caps_no_overlap max_index_upd_caps_overlap_reserved
              region_in_kernel_window_preserved 
              hoare_vcg_all_lift  get_cap_wp static_imp_wp
+             set_cap_idx_up_aligned_area[where dev = False,simplified]
          | simp)+
    (* factor out the implication -- we know what the relevant components of the
       cap referred to in the cte_wp_at are anyway from valid_aci, so just use
@@ -2180,7 +2182,7 @@ lemma perform_asid_control_invocation_globals_equiv:
    apply(rule_tac Q="\<lambda> a b. globals_equiv s b \<and> 
                             invs b \<and> valid_ko_at_arm b \<and> word1 \<noteq> arm_global_pd (arch_state b) \<and> 
                             word1 \<noteq> idle_thread b \<and>
-                            (\<exists> idx. cte_wp_at (op = (UntypedCap word1 pageBits idx)) cslot_ptr2 b) \<and> 
+                            (\<exists> idx. cte_wp_at (op = (UntypedCap False word1 pageBits idx)) cslot_ptr2 b) \<and> 
                              descendants_of cslot_ptr2 (cdt b) = {} \<and>
                              pspace_no_overlap word1 pageBits b" 
          in hoare_strengthen_post)
@@ -2202,17 +2204,20 @@ lemma perform_asid_control_invocation_globals_equiv:
     apply(clarsimp simp: range_cover_def)
     apply(subst is_aligned_neg_mask_eq[THEN sym], assumption)
     apply(simp add: mask_neg_mask_is_zero pageBits_def)
-   apply(wp delete_objects_invs_ex delete_objects_pspace_no_overlap
+    apply (rule conjI)
+     apply (rule free_index_of_UntypedCap[symmetric])
+    apply (simp add: invs_valid_objs)
+   apply(wp delete_objects_invs_ex[where dev=False] delete_objects_pspace_no_overlap[where dev=False]
             delete_objects_globals_equiv delete_objects_valid_ko_at_arm
             hoare_vcg_ex_lift 
         | simp add: page_bits_def)+
   apply (clarsimp simp: conj_comms invs_valid_ko_at_arm invs_psp_aligned invs_valid_objs valid_aci_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (frule_tac cap="UntypedCap a b c" for a b c  in caps_of_state_valid, assumption)
+  apply (frule_tac cap="UntypedCap False a b c" for a b c  in caps_of_state_valid, assumption)
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
   apply (frule_tac slot="(aa,ba)" in untyped_caps_do_not_overlap_global_refs[rotated, OF invs_valid_global_refs])
    apply (clarsimp simp: cte_wp_at_caps_of_state)
-   apply ((rule conjI |rule refl)+)[1]
+   apply ((rule conjI |rule refl | simp)+)[1]
   apply(rule conjI)
    apply(clarsimp simp: global_refs_def ptr_range_memI)
   apply(rule conjI)
@@ -2233,6 +2238,8 @@ lemma perform_asid_control_invocation_globals_equiv:
      apply(simp add: invs_valid_global_refs)
     apply(simp add: cte_wp_at_caps_of_state)
    apply assumption
+  apply (intro allI conjI)
+   apply fastforce
   apply (auto intro: empty_descendants_range_in simp: descendants_range_def2 cap_range_def)
   done
 

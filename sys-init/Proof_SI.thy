@@ -201,6 +201,7 @@ lemma small_one:
    distinct_sets (map cap_free_ids untyped_caps);
    list_all is_full_untyped_cap untyped_caps;
    list_all well_formed_untyped_cap untyped_caps;
+   list_all (\<lambda>c. \<not> is_device_cap c) untyped_caps;
    bi_untypes bootinfo = (ustart, uend);
    bi_free_slots bootinfo = (fstart, fend);
    unat ustart < 2 ^ si_cnode_size;
@@ -221,7 +222,7 @@ lemma small_one:
     \<guillemotleft>objects_initialised spec t {obj_id. real_object_at obj_id spec} \<and>*
      irqs_initialised spec t (used_irqs spec) \<and>*
     (\<And>* cptr\<in>set (take (card (dom (cdl_objects spec))) free_cptrs). (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-     si_caps_at t dup_caps spec {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
+     si_caps_at t dup_caps spec False {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
      si_objects \<and>*
      si_objects_extra_caps (dom (cdl_objects spec))
                             (free_cptrs :: 32 word list)
@@ -240,16 +241,16 @@ lemma small_one:
          apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_tcbs_sep [sep_wandise])
         apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_vspace_sep [sep_wandise])
        apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_pd_asids_sep [sep_wandise])
-      apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_irqs_sep [sep_wandise])
-     apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and
+      apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and dev=False in init_irqs_sep [sep_wandise])
+     apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and dev=False and
                                             untyped_cptrs = "[ustart .e. uend - 1]" and
                                             free_cptrs_orig = "[fstart .e. fend - 1]" in duplicate_caps_sep [sep_wandise])
-     apply (rule create_irq_caps_sep [sep_wandise,
+     apply (rule create_irq_caps_sep [where dev = False,sep_wandise,
             where free_cptrs_orig = "[fstart .e. fend - 1]"
               and untyped_cptrs = "[ustart .e. uend - 1]"
               and orig_caps = "map_of (zip [obj\<leftarrow>obj_ids. real_object_at obj spec] [fstart .e. fend - 1])"
               and spec = spec])
-    apply (wp sep_wp: create_objects_sep [where untyped_caps = untyped_caps])
+    apply (wp sep_wp: create_objects_sep [where untyped_caps = untyped_caps and dev = False])
     apply (wp sep_wp: parse_bootinfo_sep [where fstart = fstart
                                             and fend = fend
                                             and ustart = ustart
@@ -342,4 +343,3 @@ lemma sys_init_paper:
   done
 
 end
-

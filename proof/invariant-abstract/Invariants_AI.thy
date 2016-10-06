@@ -22,6 +22,8 @@ requalify_consts
   not_kernel_window
   global_refs
   arch_obj_bits_type
+  arch_cap_is_device
+  is_nondevice_page_cap
 
   wellformed_acap
   valid_arch_cap
@@ -51,6 +53,9 @@ requalify_consts
   vs_refs_pages
 
   valid_vs_lookup
+  user_mem
+  device_mem
+  device_region
 
 requalify_facts
   valid_arch_sizes
@@ -72,6 +77,7 @@ requalify_facts
   valid_arch_obj_default'
   vs_lookup1_stateI2
   vs_lookup_pages1_stateI2
+  typ_at_pg
 
 end
 
@@ -134,13 +140,15 @@ record itcb =
   itcb_ipc_buffer    :: vspace_ref
   itcb_fault         :: "fault option"
   itcb_bound_notification     :: "obj_ref option"
+  itcb_mcpriority    :: priority
 
 
 definition "tcb_to_itcb tcb \<equiv> \<lparr> itcb_state              = tcb_state tcb,
                                 itcb_fault_handler      = tcb_fault_handler tcb,
                                 itcb_ipc_buffer         = tcb_ipc_buffer tcb,
                                 itcb_fault              = tcb_fault tcb,
-                                itcb_bound_notification = tcb_bound_notification tcb \<rparr>"
+                                itcb_bound_notification = tcb_bound_notification tcb,
+                                itcb_mcpriority         = tcb_mcpriority tcb\<rparr>"
 
 (* sseefried: The simplification rules below are used to help produce
  * lemmas that talk about fields of the 'tcb' data structure rather than
@@ -174,6 +182,9 @@ lemma [simp]: "itcb_fault (tcb_to_itcb tcb) = tcb_fault tcb"
 lemma [simp]: "itcb_bound_notification (tcb_to_itcb tcb) = tcb_bound_notification tcb"
   by (auto simp: tcb_to_itcb_def)
 
+lemma [simp]: "itcb_mcpriority (tcb_to_itcb tcb) = tcb_mcpriority tcb"
+ by (auto simp: tcb_to_itcb_def)
+
 definition
   pred_tcb_at :: "(itcb \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> machine_word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -181,6 +192,7 @@ where
 
 abbreviation "st_tcb_at \<equiv> pred_tcb_at itcb_state"
 abbreviation "bound_tcb_at \<equiv> pred_tcb_at itcb_bound_notification"
+abbreviation "mcpriority_tcb_at \<equiv> pred_tcb_at itcb_mcpriority"
 
 (* sseefried: 'st_tcb_at_def' only exists to make existing proofs go through. Use 'pred_tcb_at_def' from now on. *)
 lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
@@ -204,25 +216,25 @@ where
 subsection "Valid caps and objects"
 
 primrec
-  untyped_range :: "cap \<Rightarrow> machine_word set"
+  untyped_range :: "cap \<Rightarrow> word32 set"
 where
-  "untyped_range (UntypedCap p n f)                 = {p..p + (1 << n) - 1}"
-| "untyped_range (NullCap)                          = {}"
-| "untyped_range (EndpointCap r badge rights)       = {}"
-| "untyped_range (NotificationCap r badge rights)   = {}"
-| "untyped_range (CNodeCap r bits guard)            = {}"
-| "untyped_range (ThreadCap r)                      = {}"
-| "untyped_range (DomainCap)                        = {}"
-| "untyped_range (ReplyCap r master)                = {}"
-| "untyped_range (IRQControlCap)                    = {}"
-| "untyped_range (IRQHandlerCap irq)                = {}"
-| "untyped_range (Zombie r b n)                     = {}"
-| "untyped_range (ArchObjectCap cap)                = {}"
+  "untyped_range (cap.UntypedCap dev p n f)             = {p..p + (1 << n) - 1}"
+| "untyped_range (cap.NullCap)                          = {}"
+| "untyped_range (cap.EndpointCap r badge rights)       = {}"
+| "untyped_range (cap.NotificationCap r badge rights)   = {}"
+| "untyped_range (cap.CNodeCap r bits guard)            = {}"
+| "untyped_range (cap.ThreadCap r)                      = {}"
+| "untyped_range (cap.DomainCap)                        = {}"
+| "untyped_range (cap.ReplyCap r master)                = {}"
+| "untyped_range (cap.IRQControlCap)                    = {}"
+| "untyped_range (cap.IRQHandlerCap irq)                = {}"
+| "untyped_range (cap.Zombie r b n)                     = {}"
+| "untyped_range (cap.ArchObjectCap cap)                = {}"
 
-primrec (nonexhaustive)
-  usable_untyped_range :: "cap \<Rightarrow> machine_word set"
+primrec
+  usable_untyped_range :: "cap \<Rightarrow> word32 set"
 where
- "usable_untyped_range (UntypedCap p n f) =
+ "usable_untyped_range (cap.UntypedCap _ p n f) =
   (if f < 2^n  then {p+of_nat f .. p + 2 ^ n - 1} else {})"
 
 definition
@@ -244,7 +256,7 @@ primrec
   cap_bits :: "cap \<Rightarrow> nat"
 where
   "cap_bits NullCap = 0"
-| "cap_bits (UntypedCap r b f) = b"
+| "cap_bits (UntypedCap dev r b f) = b"
 | "cap_bits (EndpointCap r b R) = obj_bits (Endpoint undefined)"
 | "cap_bits (NotificationCap r b R) = obj_bits (Notification undefined)"
 | "cap_bits (CNodeCap r b m) = cte_level_bits + b"
@@ -257,6 +269,13 @@ where
 | "cap_bits (IRQControlCap) = 0"
 | "cap_bits (IRQHandlerCap irq) = 0"
 | "cap_bits (ArchObjectCap x) = arch_obj_size x"
+
+fun
+  cap_is_device :: "cap \<Rightarrow> bool"
+where
+  "cap_is_device (cap.UntypedCap dev r b f) = dev"
+| "cap_is_device (cap.ArchObjectCap x) = arch_cap_is_device x"
+| "cap_is_device _ = False"
 
 definition
   "cap_aligned c \<equiv>
@@ -279,7 +298,7 @@ definition
 where
   "wellformed_cap c \<equiv>
   case c of
-    UntypedCap p sz idx \<Rightarrow> sz \<ge> 4
+    UntypedCap dev p sz idx \<Rightarrow> sz \<ge> 4
   | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
   | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
@@ -293,7 +312,7 @@ definition
 where
   "valid_cap_ref c s \<equiv> case c of
     NullCap \<Rightarrow> True
-  | UntypedCap p b idx \<Rightarrow> valid_untyped c s \<and> idx \<le> 2^ b \<and> p \<noteq> 0
+  | UntypedCap dev p b idx \<Rightarrow> valid_untyped c s \<and> idx \<le> 2^ b \<and> p \<noteq> 0
   | EndpointCap r badge rights \<Rightarrow> ep_at r s
   | NotificationCap r badge rights \<Rightarrow> ntfn_at r s
   | CNodeCap r bits guard \<Rightarrow> cap_table_at bits r s
@@ -312,7 +331,7 @@ definition
 where
   "valid_cap c s \<equiv> cap_aligned c \<and> (case c of
     NullCap \<Rightarrow> True
-  | UntypedCap p b f \<Rightarrow> valid_untyped c s \<and> 4 \<le> b \<and> f \<le> 2 ^ b \<and> p \<noteq> 0
+  | UntypedCap dev p b f \<Rightarrow> valid_untyped c s \<and> 4 \<le> b \<and> f \<le> 2 ^ b \<and> p \<noteq> 0
   | EndpointCap r badge rights \<Rightarrow> ep_at r s
   | NotificationCap r badge rights \<Rightarrow>
          ntfn_at r s \<and> AllowGrant \<notin> rights
@@ -328,6 +347,7 @@ where
                   | Some b \<Rightarrow> cap_table_at b r s \<and> n \<le> 2 ^ b \<and> b \<noteq> 0)
   | ArchObjectCap ac \<Rightarrow> valid_arch_cap ac s)"
 
+
 abbreviation
   valid_cap_syn :: "'z::state_ext state \<Rightarrow> cap \<Rightarrow> bool" ("_ \<turnstile> _" [60, 60] 61)
 where
@@ -339,18 +359,19 @@ definition
 primrec
   cap_class :: "cap \<Rightarrow> capclass"
 where
-  "cap_class (NullCap)                          = NullClass"
-| "cap_class (UntypedCap p n f)                 = PhysicalClass"
-| "cap_class (EndpointCap ref badge r)          = PhysicalClass"
-| "cap_class (NotificationCap ref badge r)     = PhysicalClass"
-| "cap_class (CNodeCap ref n bits)              = PhysicalClass"
-| "cap_class (ThreadCap ref)                    = PhysicalClass"
-| "cap_class (DomainCap)                        = DomainClass"
-| "cap_class (Zombie r b n)                     = PhysicalClass"
-| "cap_class (IRQControlCap)                    = IRQClass"
-| "cap_class (IRQHandlerCap irq)                = IRQClass"
-| "cap_class (ReplyCap tcb m)                   = ReplyClass tcb"
-| "cap_class (ArchObjectCap cap)                = acap_class cap"
+  "cap_class (cap.NullCap)                          = NullClass"
+| "cap_class (cap.UntypedCap dev p n f)             = PhysicalClass"
+| "cap_class (cap.EndpointCap ref badge r)          = PhysicalClass"
+| "cap_class (cap.NotificationCap ref badge r)     = PhysicalClass"
+| "cap_class (cap.CNodeCap ref n bits)              = PhysicalClass"
+| "cap_class (cap.ThreadCap ref)                    = PhysicalClass"
+| "cap_class (cap.DomainCap)                        = DomainClass"
+| "cap_class (cap.Zombie r b n)                     = PhysicalClass"
+| "cap_class (cap.IRQControlCap)                    = IRQClass"
+| "cap_class (cap.IRQHandlerCap irq)                = IRQClass"
+| "cap_class (cap.ReplyCap tcb m)                   = ReplyClass tcb"
+| "cap_class (cap.ArchObjectCap cap)                = acap_class cap"
+
 
 definition
   valid_cs_size :: "nat \<Rightarrow> cnode_contents \<Rightarrow> bool" where
@@ -397,9 +418,7 @@ where
                                       (op = NullCap)
                                   | _ \<Rightarrow> is_reply_cap or (op = NullCap))),
     tcb_cnode_index 4 \<mapsto> (tcb_ipcframe, tcb_ipcframe_update,
-                          (\<lambda>_ _. is_arch_cap or (op = NullCap)))]"
-
-
+                          (\<lambda>_ _. is_nondevice_page_cap or (op = NullCap)))]"
 
 definition
   valid_fault :: "ExceptionTypes_A.fault \<Rightarrow> bool"
@@ -472,8 +491,6 @@ where
   | RecvEP ts \<Rightarrow>
       (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts)"
 
-
-
 definition
   valid_obj :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -488,7 +505,6 @@ definition
   valid_objs :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_objs s \<equiv> \<forall>ptr \<in> dom $ kheap s. \<exists>obj. kheap s ptr = Some obj \<and> valid_obj ptr obj s"
-
 
 datatype reftype
   = TCBWaitingSend | TCBWaitingRecv | TCBBlockedSend | TCBBlockedRecv
@@ -573,6 +589,14 @@ where
  "sym_refs st \<equiv> \<forall>x. \<forall>(y, tp) \<in> st x. (x, symreftype tp) \<in> st y"
 
 
+text "objects live in device_region or non_device_region"
+
+definition
+  pspace_respects_device_region:: "'z::state_ext state \<Rightarrow> bool"
+where
+ "pspace_respects_device_region \<equiv> \<lambda>s. (dom (user_mem s)) \<subseteq> - (device_region s)
+ \<and> (dom (device_mem s)) \<subseteq> (device_region s)"
+
 primrec
   live :: "kernel_object \<Rightarrow> bool"
 where
@@ -608,7 +632,7 @@ where
 primrec
   cte_refs :: "cap \<Rightarrow> (irq \<Rightarrow> obj_ref) \<Rightarrow> cslot_ptr set"
 where
-  "cte_refs (UntypedCap p n fr) f                = {}"
+  "cte_refs (UntypedCap dev p n fr) f                = {}"
 | "cte_refs (NullCap) f                          = {}"
 | "cte_refs (EndpointCap r badge rights) f       = {}"
 | "cte_refs (NotificationCap r badge rights) f  = {}"
@@ -819,6 +843,16 @@ definition valid_irq_states :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_irq_states \<equiv> \<lambda>s.
     valid_irq_masks (interrupt_states s) (irq_masks (machine_state s))"
 
+definition "cap_range_respects_device_region c s \<equiv> 
+  if (cap_is_device c) then cap_range c \<subseteq> device_region s
+  else cap_range c \<subseteq> - device_region s"
+
+definition
+  cap_refs_respects_device_region :: "'z::state_ext state \<Rightarrow> bool"
+where
+ "cap_refs_respects_device_region \<equiv> \<lambda>s. \<forall>cref.
+   \<not> cte_wp_at (\<lambda>c. \<not> cap_range_respects_device_region  c s) cref s"
+
 definition
   "valid_machine_state \<equiv>
    \<lambda>s. \<forall>p. in_user_frame p (s::'z::state_ext state) \<or> underlying_memory (machine_state s) p = 0"
@@ -848,7 +882,9 @@ where
                   and valid_asid_map
                   and valid_global_vspace_mappings
                   and pspace_in_kernel_window
-                  and cap_refs_in_kernel_window"
+                  and cap_refs_in_kernel_window
+                  and pspace_respects_device_region
+                  and cap_refs_respects_device_region"
 
 definition
  "ct_in_state test \<equiv> \<lambda>s. st_tcb_at test (cur_thread s) s"
@@ -926,6 +962,7 @@ abbreviation(input)
        and equal_kernel_mappings and valid_asid_map
        and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
+       and pspace_respects_device_region and cap_refs_respects_device_region
        and cur_tcb"
 
 
@@ -1082,7 +1119,7 @@ lemma tcb_cap_cases_simps[simp]:
                  | _ \<Rightarrow> is_reply_cap or (op = NullCap)))"
   "tcb_cap_cases (tcb_cnode_index 4) =
    Some (tcb_ipcframe, tcb_ipcframe_update,
-         (\<lambda>_ _. is_arch_cap or (op = NullCap)))"
+         (\<lambda>_ _. is_nondevice_page_cap or (op = cap.NullCap)))"
   by (simp add: tcb_cap_cases_def)+
 
 lemma ran_tcb_cap_cases:
@@ -1093,10 +1130,10 @@ lemma ran_tcb_cap_cases:
                                        (is_master_reply_cap c \<and> obj_ref_of c = t)
                                      \<or> (halted st \<and> (c = NullCap)))),
      (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
-                                       BlockedOnReceive e \<Rightarrow>
+                                       Structures_A.BlockedOnReceive e \<Rightarrow>
                                          (op = NullCap)
                                      | _ \<Rightarrow> is_reply_cap or (op = NullCap))),
-     (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_arch_cap or (op = NullCap)))}"
+     (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or (op = NullCap)))}"
   by (simp add: tcb_cap_cases_def insert_commute)
 
 lemma tcb_cnode_map_tcb_cap_cases:
@@ -1116,7 +1153,6 @@ lemma st_tcb_idle_cap_valid_Null [simp]:
                       pred_tcb_at_def obj_at_def
                       valid_ipc_buffer_cap_null)
 
-
  
 lemma valid_objsI [intro]:
   "(\<And>obj x. kheap s x = Some obj \<Longrightarrow> valid_obj x obj s) \<Longrightarrow> valid_objs s"
@@ -1130,7 +1166,6 @@ lemma valid_objsE [elim]:
 lemma obj_at_ko_at:
   "obj_at P p s \<Longrightarrow> \<exists>ko. ko_at ko p s \<and> P ko"
   by (auto simp add: obj_at_def)
-
 
 lemma symreftype_inverse[simp]:
   "symreftype (symreftype t) = t"
@@ -1483,7 +1518,6 @@ lemma only_idleI:
   "(\<And>t. st_tcb_at idle t s \<Longrightarrow> t = idle_thread s) \<Longrightarrow> only_idle s"
   by (simp add: only_idle_def)
 
-
 lemma valid_refs_def2:
   "valid_refs R = (\<lambda>s. \<forall>c \<in> ran (caps_of_state s). R \<inter> cap_range c = {})"
   apply (simp add: valid_refs_def cte_wp_at_caps_of_state ran_def)
@@ -1577,7 +1611,6 @@ lemma valid_cap_pspaceI:
   by (auto intro: obj_at_pspaceI cte_wp_at_pspaceI valid_arch_cap_pspaceI
             simp: obj_range_def valid_untyped_def pred_tcb_at_def
            split: option.split sum.split)
-
 
 (* FIXME-NTFN: ugly proof *)
 lemma valid_obj_pspaceI:
@@ -2105,8 +2138,8 @@ lemma valid_untyped_T:
 
 lemma valid_untyped_typ:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  shows "\<lbrace>valid_untyped (UntypedCap r n fr)\<rbrace> f
-         \<lbrace>\<lambda>rv. valid_untyped (UntypedCap r n fr)\<rbrace>"
+  shows "\<lbrace>valid_untyped (UntypedCap dev r n fr)\<rbrace> f
+         \<lbrace>\<lambda>rv. valid_untyped (UntypedCap dev r n fr)\<rbrace>"
   unfolding valid_untyped_T
   apply (rule hoare_vcg_all_lift)
   apply (rule hoare_vcg_all_lift)
@@ -2242,7 +2275,7 @@ lemma is_cap_simps:
   "is_cnode_cap cap = (\<exists>r bits g. cap = CNodeCap r bits g)"
   "is_thread_cap cap = (\<exists>r. cap = ThreadCap r)"
   "is_domain_cap cap = (cap = DomainCap)"
-  "is_untyped_cap cap = (\<exists>r bits f. cap = UntypedCap r bits f)"
+  "is_untyped_cap cap = (\<exists>dev r bits f. cap = UntypedCap dev r bits f)"
   "is_ep_cap cap = (\<exists>r b R. cap = EndpointCap r b R)"
   "is_ntfn_cap cap = (\<exists>r b R. cap = NotificationCap r b R)"
   "is_zombie cap = (\<exists>r b n. cap = Zombie r b n)"
@@ -2297,8 +2330,8 @@ lemma typ_at_eq_kheap_obj:
    (\<exists>cs. kheap s p = Some (CNode n cs) \<and> well_formed_cnode_n n cs)"
   "typ_at AGarbage p s \<longleftrightarrow>
    (\<exists>n cs. kheap s p = Some (CNode n cs) \<and> \<not> well_formed_cnode_n n cs)"
-apply (auto simp add: obj_at_def  a_type_def)
-apply (case_tac ko, simp_all add: wf_unique
+  apply (auto simp add: obj_at_def  a_type_def)
+  apply (case_tac ko, simp_all add: wf_unique
                     split: split_if_asm kernel_object.splits )
 done
 
@@ -2326,7 +2359,6 @@ lemma a_type_AEndpointE:
 lemma a_type_ANTFNE:
   "\<lbrakk>a_type ko = ANTFN; (!!ntfn. ko = Notification ntfn \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
-
 
 lemmas a_type_elims[elim!] =
    a_type_ACapTableE a_type_AGarbageE a_type_ATCBE
@@ -2482,7 +2514,9 @@ lemma valid_reply_masters_update [iff]:
   "valid_reply_masters (f s) = valid_reply_masters s"
   by (simp add: valid_reply_masters_def)
 
+
 lemmas in_user_frame_update[iff] = in_user_frame_update
+lemmas in_device_frame_update[iff] = in_device_frame_update
 lemmas equal_kernel_mappings_update[iff] = equal_kernel_mappings_update
 
 end
@@ -2728,11 +2762,11 @@ lemma dom_empty_cnode: "dom (empty_cnode us) = {x. length x = us}"
   by (simp add: dom_def)
 
 lemma obj_at_default_cap_valid:
-  "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty us) x s;
+  "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty dev us) x s;
    ty = CapTableObject \<Longrightarrow> 0 < us;
    ty \<noteq> Untyped; ty \<noteq> ArchObject ASIDPoolObj;
-   cap_aligned (default_cap ty x us)\<rbrakk>
-  \<Longrightarrow> s \<turnstile> default_cap ty x us"
+   cap_aligned (default_cap ty x us dev)\<rbrakk>
+  \<Longrightarrow> s \<turnstile> default_cap ty x us dev"
   unfolding valid_cap_def
   by (clarsimp elim!: obj_at_weakenE
       intro!: aobj_at_default_arch_cap_valid
@@ -2742,8 +2776,9 @@ lemma obj_at_default_cap_valid:
      split: apiobject_type.splits
             option.splits)
 
+
 lemma obj_ref_default [simp]:
-  "obj_ref_of (default_cap ty x us) = x"
+  "obj_ref_of (default_cap ty x us dev) = x"
   by (cases ty, auto simp: aobj_ref_default)
 
 lemma valid_pspace_aligned2 [elim!]:
@@ -2772,7 +2807,6 @@ lemma cap_table_at_typ_at:
   by (simp add: cap_table_at_typ)
 
 
-
 lemmas abs_typ_at_lifts  =
   ep_at_typ_at ntfn_at_typ_at tcb_at_typ_at
   cap_table_at_typ_at
@@ -2796,7 +2830,7 @@ lemmas caps_of_state_valid_cap = cte_wp_valid_cap [OF caps_of_state_cteD]
 
 lemma (in Arch) obj_ref_is_arch:
   "\<lbrakk>aobj_ref c = Some r; valid_arch_cap c s\<rbrakk> \<Longrightarrow> \<exists> ako. kheap s r = Some (ArchObj ako)"
-by (auto simp add: valid_arch_cap_def obj_at_def split: arch_cap.splits)
+by (auto simp add: valid_arch_cap_def obj_at_def split: arch_cap.splits if_splits)
 
 
 requalify_facts Arch.obj_ref_is_arch

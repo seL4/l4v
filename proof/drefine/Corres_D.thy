@@ -112,6 +112,10 @@ lemma corres_dummy_returnOk_r:
   "dcorres c P P' f (g >>=E returnOk) \<Longrightarrow> dcorres c P P' f g"
   by simp
 
+lemma corres_dummy_returnOk_pl:
+  "dcorres c P P' (returnOk b >>=E (\<lambda>_. f)) g \<Longrightarrow> dcorres c P P' f g"
+  by (fastforce simp: corres_underlying_def bindE_def returnOk_def)
+
 lemma corres_dummy_get_pr:
   "dcorres c P P' f (do s\<leftarrow>get;g od)\<Longrightarrow> dcorres c P P' f g"
   by (fastforce simp: corres_underlying_def bind_def get_def)
@@ -658,5 +662,12 @@ lemma dcorres_dc_rhs_noop_below_2: "\<lbrakk> \<forall>rv'. dcorres dc (Q ()) (Q
   done
 
 lemmas dcorres_dc_rhs_noop_below_2_True = dcorres_dc_rhs_noop_below_2[OF _ _ hoare_TrueI hoare_TrueI hoare_TrueI]
+
+lemma dcorres_assert_opt_assume:
+  assumes "\<And>x. m = Some x \<Longrightarrow> dcorres R P P' a (c x)"
+  shows "dcorres R P P' a (assert_opt m >>= c)"
+  using assms
+  by (auto simp: bind_def assert_opt_def assert_def fail_def return_def 
+                 corres_underlying_def split: option.splits)
 
 end

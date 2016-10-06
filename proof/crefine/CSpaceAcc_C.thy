@@ -288,7 +288,5 @@ lemma getSlotCap_h_val_ccorres [corres]:
   done
 
 
-
-
 end
 end

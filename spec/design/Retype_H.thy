@@ -231,7 +231,7 @@ defs isPhysicalCap_def:
 
 defs sameObjectAs_def:
 "sameObjectAs x0 x1\<equiv> (case (x0, x1) of
-    ((UntypedCap _ _ _), _) \<Rightarrow>    False
+    ((UntypedCap _ _ _ _), _) \<Rightarrow>    False
   | (IRQControlCap, (IRQHandlerCap _)) \<Rightarrow>    False
   | ((ArchObjectCap a), (ArchObjectCap b)) \<Rightarrow>    a `~Arch.sameObjectAs~` b
   | (a, b) \<Rightarrow>    a `~sameRegionAs~` b
@@ -330,7 +330,7 @@ defs maskCapRights_def:
   )"
 
 defs createObject_def:
-"createObject t regionBase userSize \<equiv>
+"createObject t regionBase userSize isDevice \<equiv>
     let funupd = (\<lambda> f x v y. if y = x then v else f y) in
     (case toAPIType t of
           Some TCBObject \<Rightarrow>   (do
@@ -355,9 +355,9 @@ defs createObject_def:
             return $ CNodeCap (PPtr $ fromPPtr regionBase) userSize 0 0
         od)
         | Some Untyped \<Rightarrow>  
-            return $ UntypedCap (PPtr $ fromPPtr regionBase) userSize 0
+            return $ UntypedCap isDevice (PPtr $ fromPPtr regionBase) userSize 0
         | None \<Rightarrow>   (do
-            archCap \<leftarrow> Arch.createObject t regionBase userSize;
+            archCap \<leftarrow> Arch.createObject t regionBase userSize isDevice;
             return $ ArchObjectCap archCap
         od)
         )"
@@ -451,7 +451,7 @@ defs performInvocation_def:
 defs capUntypedPtr_def:
 "capUntypedPtr x0\<equiv> (case x0 of
     NullCap \<Rightarrow>    error []
-  | (UntypedCap p _ _) \<Rightarrow>    p
+  | (UntypedCap _ p _ _) \<Rightarrow>    p
   | (EndpointCap ((* PPtr *) p) _ _ _ _) \<Rightarrow>    PPtr p
   | (NotificationCap ((* PPtr *) p) _ _ _) \<Rightarrow>    PPtr p
   | (ReplyCap ((* PPtr *) p) _) \<Rightarrow>    PPtr p
@@ -467,7 +467,7 @@ defs capUntypedPtr_def:
 defs capUntypedSize_def:
 "capUntypedSize x0\<equiv> (case x0 of
     NullCap \<Rightarrow>    0
-  | (UntypedCap _ b _) \<Rightarrow>    1 `~shiftL~` b
+  | (UntypedCap _ _ b _) \<Rightarrow>    1 `~shiftL~` b
   | (CNodeCap _ c _ _) \<Rightarrow>    1 `~shiftL~` (objBits (undefined::cte) + c)
   | (EndpointCap _ _ _ _ _) \<Rightarrow>    1 `~shiftL~` objBits (undefined::endpoint)
   | (NotificationCap _ _ _ _) \<Rightarrow>    1 `~shiftL~` objBits (undefined::notification)

@@ -153,7 +153,7 @@ lemma doMachineOp_irq_states':
 lemma dmo_invs':
   assumes masks: "\<And>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
   shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). \<forall>p.
-             pointerInUserData p s \<or>
+             pointerInUserData p s \<or> pointerInDeviceData p s \<or>
              underlying_memory m' p = underlying_memory m p) and
           invs'\<rbrace> doMachineOp f \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
@@ -169,7 +169,7 @@ lemma dmo_invs':
 lemma dmo_invs_no_cicd':
   assumes masks: "\<And>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
   shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). \<forall>p.
-             pointerInUserData p s \<or>
+             pointerInUserData p s \<or> pointerInDeviceData p s \<or>
              underlying_memory m' p = underlying_memory m p) and
           invs_no_cicd'\<rbrace> doMachineOp f \<lbrace>\<lambda>r. invs_no_cicd'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
@@ -315,7 +315,7 @@ lemma ball_tcb_cte_casesI:
   by (simp add: tcb_cte_cases_def)
 
 lemma all_tcbI:
-  "\<lbrakk> \<And>a b c d e f g h i j k l m n p. P (Thread a b c d e f g h i j k l m n p) \<rbrakk> \<Longrightarrow> \<forall>tcb. P tcb"
+  "\<lbrakk> \<And>a b c d e f g h i j k l m n p q. P (Thread a b c d e f g h i j k l m n p q) \<rbrakk> \<Longrightarrow> \<forall>tcb. P tcb"
   by (rule allI, case_tac tcb, simp)
 
 lemma threadset_corresT:
@@ -354,11 +354,10 @@ lemma pspace_relation_tcb_at:
   shows "tcb_at t a" using assms
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE, simp_all)
-  apply (clarsimp simp: other_obj_relation_def
-                 split: Structures_A.kernel_object.split_asm
-                        ARM_A.arch_kernel_obj.split_asm)
-  apply (simp add: is_tcb obj_at_def)
+  apply (erule(1) obj_relation_cutsE)
+  apply (clarsimp simp: other_obj_relation_def is_tcb obj_at_def
+                 split: Structures_A.kernel_object.split_asm split_if_asm
+                        ARM_A.arch_kernel_obj.split_asm)+
   done
 
 lemma threadSet_corres_noopT:
@@ -686,6 +685,7 @@ lemma threadSet_valid_pspace'T_P:
                       \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
   assumes u: "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
   assumes w: "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
+  assumes w': "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
   shows
   "\<lbrace>valid_pspace' and (\<lambda>s. P \<longrightarrow> st_tcb_at' Q t s \<and> bound_tcb_at' Q' t s)\<rbrace>
      threadSet F t
@@ -697,7 +697,7 @@ lemma threadSet_valid_pspace'T_P:
   apply (erule(1) valid_objsE')
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
                             bspec_split [OF spec [OF x]] z
-                            split_paired_Ball y u w v)
+                            split_paired_Ball y u w v w')
   done
 
 lemmas threadSet_valid_pspace'T =
@@ -1246,7 +1246,7 @@ lemma threadSet_ksMachine[wp]:
 
 lemma threadSet_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> threadSet F t \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def)
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
   by (intro hoare_vcg_all_lift hoare_vcg_disj_lift, wp)
 
 lemma vms_ksReadyQueues_update[simp]:
@@ -1304,6 +1304,7 @@ lemma threadSet_invs_trivialT:
   assumes w: "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
   assumes v: "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
   assumes u: "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
+  assumes b: "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
   shows
   "\<lbrace>\<lambda>s. invs' s \<and>
        tcb_at' t s \<and>
@@ -1322,7 +1323,7 @@ proof -
   show ?thesis
     apply (simp add: invs'_def valid_state'_def split del: split_if)
     apply (rule hoare_pre)
-     apply (wp x w v u
+     apply (wp x w v u b
               threadSet_valid_pspace'T
               threadSet_sch_actT_P[where P=False, simplified]
               threadSet_valid_queues
@@ -3955,6 +3956,8 @@ proof (rule ccontr)
     by (clarsimp simp: pspace_relation_def)
 qed
 
+lemmas valid_ipc_buffer_cap_simps = valid_ipc_buffer_cap_def [split_simps cap.split arch_cap.split]
+
 lemma lipcb_corres':
   "corres op = (tcb_at t and valid_objs and pspace_aligned) 
                (tcb_at' t and valid_objs' and pspace_aligned'
@@ -3972,13 +3975,14 @@ lemma lipcb_corres':
                     in corres_assume_pre)
           apply (simp add: Let_def split: cap.split arch_cap.split
                          split del: split_if cong: if_cong)
-          apply (safe, simp_all add: isCap_simps)[1]
+          apply (safe, simp_all add: isCap_simps valid_ipc_buffer_cap_simps split:bool.split_asm)[1]
           apply (rename_tac word rights vmpage_size option)
           apply (subgoal_tac "word + (buffer_ptr &&
                                       mask (pageBitsForSize vmpage_size)) \<noteq> 0")
            apply (simp add: cap_aligned_def
                             valid_ipc_buffer_cap_def
                             vmrights_map_def vm_read_only_def vm_read_write_def)
+           apply auto[1]
           apply (subgoal_tac "word \<noteq> 0")
            apply (subgoal_tac "word \<le> word + (buffer_ptr &&
                                  mask (pageBitsForSize vmpage_size))")
@@ -3991,8 +3995,8 @@ lemma lipcb_corres':
                          intro!: word_less_sub_1 and_mask_less')
            apply (case_tac vmpage_size, simp_all)[1]
            apply (drule state_relation_pspace_relation)
-          apply (clarsimp simp: valid_cap_def obj_at_def no_0_obj_kheap
-                                obj_relation_cuts_def3 no_0_obj'_def)
+           apply (clarsimp simp: valid_cap_def obj_at_def no_0_obj_kheap
+                                obj_relation_cuts_def3 no_0_obj'_def split:split_if_asm)
          apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def tcbIPCBufferSlot_def)
         apply (wp get_cap_valid_ipc get_cap_aligned)
       apply (simp add: tcb_relation_def)
@@ -4008,11 +4012,8 @@ lemma lipcb_corres:
   using lipcb_corres'
   by (rule corres_guard_imp, auto simp: invs'_def valid_state'_def)
 
-lemma lookupIPC_inv[wp]: "\<lbrace>I\<rbrace> lookupIPCBuffer w t \<lbrace>\<lambda>rv. I\<rbrace>"
-  by (simp add:      lookupIPCBuffer_def nothingOnFailure_def
-                     ARM_H.lookupIPCBuffer_def Let_def
-                     getThreadBufferSlot_def
-          split del: split_if | wp crunch_wps)+
+
+crunch inv'[wp]: lookupIPCBuffer P
 
 crunch pred_tcb_at'[wp]: rescheduleRequired "pred_tcb_at' proj P t"
   (wp: threadSet_pred_tcb_no_state simp: unless_def ignore: threadSet)
@@ -4407,7 +4408,7 @@ crunch pspace_domain_valid[wp]: setThreadState, setBoundNotification "pspace_dom
 
 lemma setThreadState_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setThreadState F t \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def)
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift, wp)
   done
 
@@ -4424,7 +4425,7 @@ lemma ct_not_inQ_removeFromBitmap[wp]:
 
 lemma setBoundNotification_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def)
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift, wp)
   done
 
@@ -5052,7 +5053,8 @@ lemma set_eobject_corres':
    apply (clarsimp simp: aobj_relation_cuts_def split: ARM_A.arch_kernel_obj.splits)
    apply (rename_tac arch_kernel_obj obj d p ts)
    apply (case_tac arch_kernel_obj; simp)
-     apply (clarsimp simp: pte_relation_def pde_relation_def is_tcb_def)+
+     apply (clarsimp simp: pte_relation_def pde_relation_def is_tcb_def
+                    split: split_if_asm)+
   apply (simp only: ekheap_relation_def dom_fun_upd2 simp_thms)
   apply (frule bspec, erule domI)
   apply (rule ballI, drule(1) bspec)

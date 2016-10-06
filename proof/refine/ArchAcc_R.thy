@@ -23,7 +23,7 @@ lemma asid_pool_at_ko:
   apply (clarsimp simp: obj_at_def a_type_def)
   apply (case_tac ko, simp_all split: split_if_asm)
   apply (rename_tac arch_kernel_obj)
-  apply (case_tac arch_kernel_obj, auto)
+  apply (case_tac arch_kernel_obj, auto split: split_if_asm)
   done
 
 
@@ -804,8 +804,8 @@ lemma set_pd_corres:
       apply (drule test_bit_size)
       apply (clarsimp simp: word_size pd_bits_def pageBits_def)
       apply arith
-     apply simp
-    apply simp
+     apply (simp split: split_if_asm)
+    apply (simp split: split_if_asm)
    apply (simp add: other_obj_relation_def 
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule conjI)
@@ -880,8 +880,8 @@ lemma set_pt_corres:
        apply (clarsimp simp: word_size pt_bits_def pageBits_def)
        apply arith
       apply simp
-     apply simp
-    apply simp
+     apply (simp split: split_if_asm)
+    apply (simp split: split_if_asm)
    apply (simp add: other_obj_relation_def 
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule conjI)

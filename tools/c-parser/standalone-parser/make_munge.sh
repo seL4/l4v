@@ -65,7 +65,6 @@ mkdir -p ${MUN_TMP}
 # Useful refs
 CKERNEL_DIR=${L4V}/spec/cspec/c
 CKERNEL=${CKERNEL_DIR}/kernel_all.c_pp
-CPARSER=${CPARSER_DIR}/c-parser
 NAMES_FILE=${MUN_TMP}/ckernel_names.txt
 AST_FILE=${MUN_TMP}/ckernel_ast.txt
 SEL4_CLONE=${MUN_TMP}/sel4-clone
@@ -97,7 +96,8 @@ export CONFIG_KERNEL_EXTRA_CPPFLAGS=${CONFIG_KERNEL_EXTRA_CPPFLAGS:="-P"}
 make -C ${CKERNEL_DIR} SOURCE_ROOT=${SEL4_CLONE} kernel_all.c_pp
 
 # does the c-parser exist?
-[ -x ${CPARSER} ] || (echo "Building c-parser..." ; make -C ${CPARSER_DIR})
+CPARSER="${CPARSER_DIR}/${L4V_ARCH}/c-parser"
+[ -x "${CPARSER}" ] || (echo "Building c-parser..." ; make -C "${CPARSER_DIR}")
 
 # build munge file!!
 ${CPARSER} --munge_info_fname=${NAMES_FILE} ${CKERNEL}

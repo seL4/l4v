@@ -40,7 +40,7 @@ where
           Invocations_D.WriteRegisters oid' b' [0] 0
       | Invocations_A.CopyRegisters dest_tcb src_tcb a b c d e \<Rightarrow>
           Invocations_D.CopyRegisters dest_tcb src_tcb a b c d 0
-      | Invocations_A.ThreadControl target_tcb target_slot faultep _ croot vroot buffer \<Rightarrow>
+      | Invocations_A.ThreadControl target_tcb target_slot faultep _ _ croot vroot buffer \<Rightarrow>
           Invocations_D.ThreadControl
              target_tcb
              (transform_cslot_ptr target_slot)
@@ -58,7 +58,7 @@ where
 lemma decode_set_ipc_buffer_translate_tcb_invocation:
   "\<lbrakk>x \<noteq> [];excaps ! 0 = (a,b,c)\<rbrakk> \<Longrightarrow>
     (\<And>s. \<lbrace>op = s\<rbrace> decode_set_ipc_buffer x (cap.ThreadCap t) slot' excaps
-    \<lbrace>\<lambda>rv s'. s' = s \<and> rv = tcb_invocation.ThreadControl t slot' None None None None (tc_new_buffer rv) \<and>
+    \<lbrace>\<lambda>rv s'. s' = s \<and> rv = tcb_invocation.ThreadControl t slot' None None None None None (tc_new_buffer rv) \<and>
       translate_tcb_invocation_thread_ctrl_buffer (tc_new_buffer rv) = (if (x ! 0) = 0 then None
       else Some (reset_mem_mapping (transform_cap a), transform_cslot_ptr (b, c)))
     \<rbrace>,\<lbrace>\<lambda>ft. op = s\<rbrace>)"
@@ -68,8 +68,7 @@ lemma decode_set_ipc_buffer_translate_tcb_invocation:
    apply (wp , clarsimp simp:translate_tcb_invocation_thread_ctrl_buffer_def)
   apply (wp | clarsimp | rule conjI)+
    apply (simp add:check_valid_ipc_buffer_def)
-   apply (wpc,wp)
-   apply wpc
+   apply (wpc|wp)+
        apply (wp hoare_whenE_wp)
   apply (case_tac a)
              apply (simp_all add:derive_cap_def split del:split_if)
@@ -143,7 +142,7 @@ lemma valid_vtable_root_update:
 lemma decode_set_space_translate_tcb_invocation:
   "\<And>s. \<lbrace>op = s\<rbrace> decode_set_space x (cap.ThreadCap t) slot' (excaps')
     \<lbrace>\<lambda>rv s'. s' = s \<and>
-    (rv =  tcb_invocation.ThreadControl t slot' (tc_new_fault_ep rv) None (tc_new_croot rv) (tc_new_vroot rv) None) \<and>
+    (rv =  tcb_invocation.ThreadControl t slot' (tc_new_fault_ep rv) None None (tc_new_croot rv) (tc_new_vroot rv) None) \<and>
     (tc_new_fault_ep rv = Some (to_bl (x!0)))
     \<and> (option_map (\<lambda>c. snd c)  (tc_new_croot rv) = Some (snd (excaps' ! 0)))
     \<and> (option_map (\<lambda>c. snd c)  (tc_new_vroot rv) = Some (snd (excaps' ! Suc 0)))
@@ -206,13 +205,13 @@ lemma decode_tcb_cap_label_not_match:
   apply (case_tac "invocation_type label'")
     apply (simp_all add:transform_intent_def)
     apply wp
-    apply (simp_all add:whenE_def transform_intent_tcb_read_registers_def transform_intent_tcb_write_registers_def
-        transform_intent_untyped_retype_def transform_intent_tcb_configure_def transform_intent_tcb_set_space_def
-        transform_intent_tcb_copy_registers_def transform_intent_tcb_set_priority_def transform_intent_tcb_set_ipc_buffer_def
-    split:option.splits)
+    apply (simp_all add: whenE_def transform_intent_tcb_defs
+                  split: option.splits)
     apply (simp_all split:List.list.split list.split_asm option.splits)
       apply (simp add: decode_read_registers_def decode_write_registers_def decode_set_ipc_buffer_def
-          decode_copy_registers_def decode_set_space_def decode_tcb_configure_def decode_set_priority_def | wp)+
+                       decode_copy_registers_def decode_set_space_def decode_tcb_configure_def
+                       decode_set_priority_def decode_set_mcpriority_def
+            | wp)+
   done
 
 lemma is_cnode_cap_update_cap_data:
@@ -234,6 +233,24 @@ lemma update_cnode_cap_data:
   apply (clarsimp simp:cdl_update_cnode_cap_data_def word_bits_def of_drop_to_bl
     word_size mask_twice dest!:leI)
 done
+
+lemma
+  assumes "1 \<le> length args'"
+  shows decode_set_priority_dcorres:
+    "dcorres (dc \<oplus> (\<lambda>x y. x = translate_tcb_invocation y)) \<top> \<top>
+      (returnOk (cdl_tcb_invocation.ThreadControl t (transform_cslot_ptr slot') None None None None)
+        \<sqinter> Monads_D.throw)
+      (decode_set_priority args' (cap.ThreadCap t) slot')"
+  and decode_set_mcpriority_dcorres:
+    "dcorres (dc \<oplus> (\<lambda>x y. x = translate_tcb_invocation y)) \<top> \<top>
+      (returnOk (cdl_tcb_invocation.ThreadControl t (transform_cslot_ptr slot') None None None None)
+        \<sqinter> Monads_D.throw)
+      (decode_set_mcpriority args' (cap.ThreadCap t) slot')"
+  using assms
+  by (auto simp: decode_set_priority_def decode_set_mcpriority_def
+                 corres_throw_skip_r corres_alternate1 dcorres_returnOk
+                 translate_tcb_invocation_thread_ctrl_buffer_def
+                 translate_tcb_invocation_def check_prio_inv)
 
 lemma decode_tcb_corres:
   "\<lbrakk> Some (TcbIntent ui) = transform_intent (invocation_type label') args';
@@ -300,49 +317,36 @@ lemma decode_tcb_corres:
                 apply ((clarsimp simp:throw_on_none_def get_index_def dcorres_alternative_throw split:option.splits)+)[5]
               (* TCBConfigures *)
            apply (clarsimp simp:decode_tcb_configure_def dcorres_alternative_throw whenE_def)
-           apply (clarsimp simp:decode_set_priority_def)
-           apply (clarsimp simp:alternative_bindE_distrib bindE_assoc bind_bindE_assoc)
-           apply (rule corres_guard_imp)
-             apply (rule dcorres_symb_exec_rE)
-               apply (rule dcorres_symb_exec_r)
-                 apply simp
-                 apply (rule conjI[rotated])
-                  apply clarsimp
-                  apply (case_tac "excaps' ! 2")
-                  apply (case_tac "excaps' ! Suc 0")
-                  apply (case_tac "excaps' ! 0")
-                  apply clarsimp
-                  apply (rule split_return_throw_thingy)
-                    apply (rule_tac a = a and b = b and c = c in decode_set_ipc_buffer_translate_tcb_invocation)
-                     apply simp+
-                   apply (rule split_return_throw_thingy)
-                     apply (rule decode_set_space_translate_tcb_invocation)
-                    apply (clarsimp simp:throw_on_none_def get_index_def)
-                    apply (rule conjI | clarsimp)+
-                      apply (rule corres_alternate1,rule dcorres_returnOk)
-                      apply (clarsimp simp:translate_tcb_invocation_def update_cnode_cap_data)
-                     apply (clarsimp simp:| rule conjI)+
-                     apply (rule corres_alternate1,rule dcorres_returnOk)
-                     apply (clarsimp simp:translate_tcb_invocation_def update_cnode_cap_data)
-                    apply (clarsimp simp:no_fail_def)+
-                 apply (rule dcorres_alternative_throw)
-                apply wp
-               apply ((clarsimp simp: decode_set_priority_error_choice_def | wp)+)[5]
+           apply (rule split_return_throw_thingy[where rvP=\<top>]; simp)
+            apply (rule hoare_weaken_preE)
+             apply (wp decode_set_priority_inv)
+            apply simp
+           apply (rule split_return_throw_thingy[where rvP=\<top>]; simp)
+            apply (rule hoare_weaken_preE)
+             apply (wp decode_set_mcpriority_inv)
+            apply simp
+            apply (case_tac "excaps' ! 2")
+            apply (case_tac "excaps' ! Suc 0")
+            apply (case_tac "excaps' ! 0")
+            apply clarsimp
+            apply (rule split_return_throw_thingy)
+              apply (rule_tac a = a and b = b and c = c in decode_set_ipc_buffer_translate_tcb_invocation)
+               apply simp+
+             apply (rule split_return_throw_thingy)
+               apply (rule decode_set_space_translate_tcb_invocation)
+              apply (clarsimp simp:throw_on_none_def get_index_def)
+              apply (rule conjI | clarsimp)+
+                apply (rule corres_alternate1,rule dcorres_returnOk)
+                apply (clarsimp simp:translate_tcb_invocation_def update_cnode_cap_data)
+               apply (clarsimp simp:| rule conjI)+
+               apply (rule corres_alternate1,rule dcorres_returnOk)
+               apply (clarsimp simp:translate_tcb_invocation_def update_cnode_cap_data)
+              apply (clarsimp simp:no_fail_def)+
            (* TCBSetPriority *)
-          apply (clarsimp simp: decode_set_priority_def dcorres_alternative_throw)
-          apply (rule corres_guard_imp)
-            apply (rule dcorres_symb_exec_rE)
-              apply (rule dcorres_symb_exec_r)
-                apply simp
-                apply (rule conjI[rotated])
-                 apply clarsimp
-                 apply (rule corres_alternate1, rule dcorres_returnOk)
-                 apply (clarsimp simp:translate_tcb_invocation_def translate_tcb_invocation_thread_ctrl_buffer_def)
-                apply clarsimp
-                apply (rule dcorres_alternative_throw)
-               apply wp
-              apply ((clarsimp simp: decode_set_priority_error_choice_def | wp)+)[5]
-          (* TCBSetIPCBuffer *)
+           subgoal by (rule decode_set_priority_dcorres; simp)
+          (* TCBSetMCPriority *)
+          subgoal by (rule decode_set_mcpriority_dcorres; simp)
+         (* TCBSetIPCBuffer *)
          apply (clarsimp simp:transform_intent_def transform_intent_tcb_set_ipc_buffer_def)
          apply (case_tac args')
           apply clarsimp+
@@ -912,7 +916,7 @@ lemma update_ipc_buffer_valid_objs:
   apply (clarsimp simp:valid_tcb_def)
   apply (intro conjI allI)
    apply (clarsimp simp:tcb_cap_cases_def)
-  apply (auto simp:valid_ipc_buffer_cap_def split:cap.splits arch_cap.splits)
+  apply (auto simp: valid_ipc_buffer_cap_def split: cap.splits arch_cap.splits bool.splits)
   done
 
 lemma dcorres_tcb_empty_slot:
@@ -1026,11 +1030,12 @@ lemma dcorres_tcb_update_ipc_buffer:
                 apply clarsimp
                apply (rule arch_same_obj_as_lift)
                   apply (simp add:valid_ipc_buffer_cap_def is_arch_cap_def split:cap.splits)
-                 apply (clarsimp simp:valid_cap_def is_arch_cap_def)+
+                 apply (clarsimp simp: valid_cap_def is_arch_cap_def valid_ipc_buffer_cap_def
+                                split: cap.split_asm arch_cap.split_asm)+
               apply (rule corres_split[OF _ get_cap_corres])
                  apply (rule corres_when)
                   apply (rule sym)
-                  apply (case_tac rv')
+                  apply (case_tac cap')
                              apply (clarsimp simp:same_object_as_def)+
                   apply (simp add:transform_cap_def split:arch_cap.splits)
                  apply (rule dcorres_insert_cap_combine)
@@ -1048,7 +1053,7 @@ lemma dcorres_tcb_update_ipc_buffer:
               apply (drule ex_cte_cap_to_not_idle, auto simp: not_idle_thread_def)[1]
              apply (wp hoare_when_wp)
             apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]],clarsimp+)
-         apply (rule hoare_drop_imp,wp)
+         apply (wp hoare_drop_imp get_cap_weak_wp)
        apply (clarsimp simp:conj_comms)
        apply (wp thread_set_global_refs_triv thread_set_valid_idle)
         apply (clarsimp simp:tcb_cap_cases_def)
@@ -1063,7 +1068,7 @@ lemma dcorres_tcb_update_ipc_buffer:
      apply (rule hoare_post_impErr[OF validE_R_validE[OF hoare_True_E_R]])
       apply simp+
     apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread (fst a') s \<and> tcb_at obj_id' s
-      \<and> not_idle_thread obj_id' s \<and> not_idle_thread ab s \<and> cte_wp_at (\<lambda>_. True) (ab,ba) s
+      \<and> not_idle_thread obj_id' s \<and> not_idle_thread ab s \<and> cte_wp_at (\<lambda>a. True) (ab,ba) s
       \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) (obj_id', tcb_cnode_index 4) s \<and> is_aligned a msg_align_bits"
       in hoare_post_impErr[where E="\<lambda>x. \<top>"])
       apply (simp add:not_idle_thread_def)
@@ -1106,51 +1111,51 @@ lemma dcorres_tcb_update_vspace_root:
   apply (rule dcorres_expand_pfx)
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE[OF _ dcorres_tcb_empty_slot])
-    apply (clarsimp simp:check_cap_at_def liftE_bindE)
-    apply (clarsimp simp:whenE_liftE bind_assoc)
-    apply (clarsimp simp:liftE_def bind_assoc)
-    apply (clarsimp simp: is_valid_vtable_root_def )
-    apply (rule corres_split[OF _ get_cap_corres])
-      apply (rule corres_split[OF _ corres_when])
-      apply (rule corres_trivial)
-        apply clarsimp
-      apply (rule arch_same_obj_as_lift)
-        apply (clarsimp simp:valid_cap_def is_arch_cap_def)+
-      apply (rule corres_split[OF _ get_cap_corres])
-        apply (rule corres_when)
-          apply (rule sym)
-          apply (case_tac cap')
-          apply (clarsimp simp:same_object_as_def)+
-          apply (simp add:transform_cap_def split:arch_cap.splits)
-        apply (simp add: transform_tcb_slot_1[symmetric])
-        apply (rule dcorres_insert_cap_combine[folded alternative_com])
-        apply (simp add:transform_cap_def,simp)
-        apply wp
-      apply (simp add:same_object_as_def)
-      apply (rule_tac Q = "\<lambda>r s. cte_wp_at (op = cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
-        \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
-        \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index (Suc 0)) s)"
-        in hoare_strengthen_post)
-      apply (wp get_cap_ex_cte_cap_wp_to,clarsimp)
-      apply clarsimp
-      apply (drule (3) ex_cte_cap_to_not_idle, simp add: not_idle_thread_def)
-      apply (wp hoare_when_wp)
-    apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
-    apply (clarsimp+)[2]
-    apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
-    apply clarsimp+
-    apply (rule hoare_drop_imp)
-    apply (wp | simp add: transform_tcb_slot_1[symmetric])+
+       apply (clarsimp simp: check_cap_at_def liftE_bindE)
+       apply (clarsimp simp: whenE_liftE bind_assoc)
+       apply (clarsimp simp: liftE_def bind_assoc)
+       apply (clarsimp simp: is_valid_vtable_root_def )
+       apply (rule corres_split[OF _ get_cap_corres])
+          apply (rule corres_split[OF _ corres_when])
+              apply (rule corres_trivial)
+              apply clarsimp
+              apply (rule arch_same_obj_as_lift)
+              apply (clarsimp simp: valid_cap_def is_arch_cap_def)+
+            apply (rule corres_split[OF _ get_cap_corres])
+               apply (rule corres_when)
+                apply (rule sym)
+                apply (case_tac cap')
+                 apply (clarsimp simp: same_object_as_def)+
+                apply (simp add: transform_cap_def split: arch_cap.splits)
+               apply (simp add: transform_tcb_slot_1[symmetric])
+               apply (rule dcorres_insert_cap_combine[folded alternative_com])
+               apply (simp add: transform_cap_def,simp)
+             apply wp
+            apply (simp add: same_object_as_def)
+            apply (rule_tac Q = "\<lambda>r s. cte_wp_at (op = cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
+              \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
+              \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index (Suc 0)) s)"
+              in hoare_strengthen_post)
+             apply (wp get_cap_ex_cte_cap_wp_to,clarsimp)
+            apply clarsimp
+            apply (drule (3) ex_cte_cap_to_not_idle, simp add: not_idle_thread_def)
+           apply (wp hoare_when_wp)
+          apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
+          apply (clarsimp+)[2]
+        apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
+        apply clarsimp+
+       apply (rule hoare_drop_imp)
+       apply (wp | simp add: transform_tcb_slot_1[symmetric])+
     apply (rule validE_validE_R)
     apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread ba s \<and>
                  not_idle_thread (fst a') s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s \<and>
                  cte_wp_at (\<lambda>c. c = cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s"
           in hoare_post_impErr[where E="\<lambda>x. \<top>"])
-      apply (simp add:not_idle_thread_def)
+      apply (simp add: not_idle_thread_def)
       apply (wp cap_delete_cte_at cap_delete_deletes)
-      apply (clarsimp simp:invs_def valid_state_def valid_pspace_def)
+      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
       apply (erule cte_wp_at_weakenE,clarsimp+)
-    apply (simp add:emptyable_def not_idle_thread_def)
+    apply (simp add: emptyable_def not_idle_thread_def)
     apply (erule tcb_at_cte_at,clarsimp)
 done
 
@@ -1324,6 +1329,7 @@ lemma thread_set_priority_transform: "\<lbrace>\<lambda>ps. transform ps = cs\<r
   apply (rule ext)
   apply (clarsimp simp: transform_object_def transform_tcb_def restrict_map_def get_etcb_def split: option.splits Structures_A.kernel_object.splits)
   done
+
 lemma option_set_priority_corres:
   "dcorres (dc \<oplus> dc) \<top> \<top>
         (returnOk ())
@@ -1335,7 +1341,35 @@ lemma option_set_priority_corres:
    apply (wp reschedule_required_transform tcb_sched_action_transform thread_set_priority_transform | simp)+
   done
 
-crunch valid_etcbs[wp]: set_priority "valid_etcbs"
+lemma transform_full_intent_set_mcpriority:
+  "transform_full_intent ms t (tcb_mcpriority_update f tcb) = transform_full_intent ms t tcb"
+  by (simp add: transform_full_intent_def Let_def get_ipc_buffer_words_def
+                get_tcb_message_info_def get_tcb_mrs_def)
+
+lemma set_mcpriority_transform:
+  "\<lbrace>\<lambda>s. transform s = i \<and> valid_etcbs s\<rbrace> set_mcpriority t mcp \<lbrace>\<lambda>rv s. transform s = i\<rbrace>"
+  apply (clarsimp simp: set_mcpriority_def thread_set_def set_object_def)
+  apply wp
+  apply (clarsimp simp: transform_def transform_current_thread_def transform_objects_def)
+  apply (thin_tac "i = _")
+  apply (rule_tac f="op ++ ((\<lambda>ptr. Some cdl_object.Untyped) |` (- {idle_thread s}))" in arg_cong)
+  apply (rule ext)
+  apply (rename_tac s tcb ptr)
+  apply (drule (1) valid_etcbs_get_tcb_get_etcb; clarsimp)
+  apply (drule get_etcb_SomeD; drule get_tcb_SomeD)
+  by (case_tac "ptr = idle_thread s";
+      clarsimp simp: transform_tcb_def transform_full_intent_set_mcpriority)
+
+lemma option_set_mcpriority_corres:
+  "dcorres (dc \<oplus> dc) \<top> valid_etcbs
+    (returnOk ())
+    (liftE (case mcp' of None \<Rightarrow> return () | Some mcp \<Rightarrow> set_mcpriority t mcp))"
+  apply (cases mcp'; simp add: liftE_def returnOk_def)
+  apply (rule corres_noop; clarsimp)
+  apply (wp set_mcpriority_transform)
+  by simp
+
+crunch valid_etcbs[wp]: option_update_thread, set_priority, set_mcpriority "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma not_idle_thread_ekheap_update[iff]:
@@ -1346,11 +1380,10 @@ lemma not_idle_thread_scheduler_action_update[iff]:
   "not_idle_thread ptr (scheduler_action_update f s) = not_idle_thread ptr s"
   by (simp add: not_idle_thread_def)
 
-crunch not_idle_thread[wp]: reschedule_required "not_idle_thread ptr"
+crunch not_idle_thread[wp]: reschedule_required, set_priority, set_mcpriority "not_idle_thread ptr"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch not_idle_thread[wp]: set_priority "not_idle_thread ptr"
-  (wp: crunch_wps simp: crunch_simps)
+crunch idle_thread[wp]: set_mcpriority "\<lambda>s. P (idle_thread s)"
 
 crunch emptyable[wp]: tcb_sched_action "emptyable ptr"
   (wp: crunch_wps simp: crunch_simps)
@@ -1358,20 +1391,23 @@ crunch emptyable[wp]: tcb_sched_action "emptyable ptr"
 crunch emptyable[wp]: reschedule_required "emptyable ptr"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch emptyable[wp]: set_priority "emptyable ptr"
+crunch emptyable[wp]: set_priority, set_mcpriority "emptyable ptr"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_priority_transform: "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_priority tptr prio \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   by (clarsimp simp: set_priority_def ethread_set_def set_eobject_def | wp reschedule_required_transform tcb_sched_action_transform thread_set_priority_transform)+
 
-crunch valid_etcbs[wp]: option_update_thread "valid_etcbs"
-  (wp: crunch_wps simp: crunch_simps)
+(* Workaround for schematic that won't instantiate with the usual valid_cap rule
+   in the following dcorres_thread_control proof. *)
+lemma set_mcpriority_valid_cap_fst:
+  "\<lbrace>(valid_cap \<circ> fst) caps\<rbrace> set_mcpriority obj_id' new_mcp \<lbrace>\<lambda>rv. (valid_cap \<circ> fst) caps\<rbrace>"
+  by clarsimp wp
 
 lemma dcorres_thread_control:
   notes option.case_cong_weak [cong]
   notes case_map_option [simp del]
   shows
-  "\<lbrakk> t' = tcb_invocation.ThreadControl obj_id' a' fault_ep' prio' croot' vroot' ipc_buffer';
+  "\<lbrakk> t' = tcb_invocation.ThreadControl obj_id' a' fault_ep' mcp' prio' croot' vroot' ipc_buffer';
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> dc) \<top> (\<lambda>s. invs s \<and> valid_etcbs s \<and>
             not_idle_thread obj_id' s \<and>
@@ -1399,106 +1435,115 @@ lemma dcorres_thread_control:
           \<and> (case fault_ep' of None \<Rightarrow> True | Some bl \<Rightarrow> length bl = word_bits))
        (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   (is "\<lbrakk> ?eq; ?eq' \<rbrakk> \<Longrightarrow> dcorres (dc \<oplus> dc) \<top> ?P ?f ?g")
-  apply (clarsimp simp: Tcb_D.invoke_tcb_def)
-  apply (clarsimp simp: translate_tcb_invocation_def)
+  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE[OF _ option_update_thread_corres])
-      apply (rule dcorres_symb_exec_rE)
-        apply (rule corres_splitEE[OF _ dcorres_tcb_update_cspace_root])
-          apply (rule corres_splitEE[OF _ dcorres_tcb_update_vspace_root])
-            apply (rule dcorres_tcb_update_ipc_buffer)
-           apply (wp)
-          apply (wp|wpc)+
+      apply (rule corres_dummy_returnOk_pl)
+      apply (rule corres_splitEE[OF _ option_set_mcpriority_corres])
+        apply (rule corres_dummy_returnOk_pl)
+        apply (rule corres_splitEE[OF _ option_set_priority_corres])
+          apply (rule corres_splitEE[OF _ dcorres_tcb_update_cspace_root])
+            apply (rule corres_splitEE[OF _ dcorres_tcb_update_vspace_root])
+              apply (rule dcorres_tcb_update_ipc_buffer)
+             apply (wp)
+            apply (wp|wpc)+
+              apply (wp checked_insert_tcb_invs | clarsimp)+
+              apply (rule check_cap_at_stable, (clarsimp simp: not_idle_thread_def | wp)+)+
+              apply (rule check_cap_at_stable)
+              apply (rule case_option_wp, clarsimp split: option.splits, wp)
+              apply (rule case_option_wp)
+              apply simp
+              apply (rule case_option_wp)
+              apply (rule check_cap_at_stable,
+                     clarsimp simp: not_idle_thread_def split: option.splits, wp)
+             apply (simp,rule check_cap_at_stable)
+             apply (case_tac ipc_buffer')
+              apply (clarsimp simp:not_idle_thread_def)+
+             apply wp
+            apply (clarsimp simp: conj_comms)
+            apply (wp cap_delete_deletes cap_delete_valid_cap)
+            apply (strengthen tcb_cap_always_valid_strg use_no_cap_to_obj_asid_strg)
+            apply (clarsimp simp: tcb_cap_cases_def)
+            apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct1])
+            apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct2])
+            apply (wp hoare_case_someE)
+             apply (clarsimp simp: not_idle_thread_def)
+             apply (wp cap_delete_deletes cap_delete_cte_at cap_delete_valid_cap)
+            apply (wp case_option_wpE)
+             apply simp
+             apply (rule case_option_wpE)
+             apply simp
+             apply (wp cap_delete_cte_at)
+            apply (wp case_option_wpE)
+             apply (simp add: not_idle_thread_def)
+             apply (wp cap_delete_cte_at cap_delete_valid_cap)
+          apply (rule_tac Q'="\<lambda>_. ?P" in hoare_post_imp_R[rotated])
+           apply (clarsimp simp: is_valid_vtable_root_def is_cnode_or_valid_arch_def
+                                 is_arch_cap_def not_idle_thread_def emptyable_def
+                          split: option.splits)
+          apply (wpc|wp)+
             apply (wp checked_insert_tcb_invs | clarsimp)+
-            apply (rule check_cap_at_stable,(clarsimp simp:not_idle_thread_def | wp)+)+
-            apply (rule check_cap_at_stable)
-            apply (rule case_option_wp,clarsimp split:option.splits,wp)
+            apply (rule check_cap_at_stable, (simp add: not_idle_thread_def | wp)+)+
+            apply (wp checked_insert_no_cap_to hoare_case_some)
+            apply (simp, rule check_cap_at_stable, simp add: not_idle_thread_def)
+            apply wp
+            apply (simp, rule check_cap_at_stable)
+            apply (rule case_option_wp, clarsimp split: option.splits, wp)
             apply (rule case_option_wp)
             apply simp
+            apply (rule check_cap_at_stable, clarsimp simp: not_idle_thread_def split: option.splits, wp)
             apply (rule case_option_wp)
-            apply (rule check_cap_at_stable,clarsimp simp:not_idle_thread_def split:option.splits,wp)
-           apply (simp,rule check_cap_at_stable)
-           apply (case_tac ipc_buffer')
-            apply (clarsimp simp:not_idle_thread_def)+
-           apply wp
-          apply (clarsimp simp:conj_comms)
+            apply simp
+            apply (rule check_cap_at_stable,wp)
+            apply (rule case_option_wp)
+            apply simp
+            apply (wp checked_insert_no_cap_to)
+            apply (wp hoare_case_some)
+            apply (simp, rule check_cap_at_stable, simp add: not_idle_thread_def)
+            apply (wp case_option_wp)
+            apply simp
+            apply (rule case_option_wp, simp add: not_idle_thread_def)
+            apply (rule check_cap_at_stable, wp)
+            apply (wp case_option_wp check_cap_at_stable | simp)+
           apply (wp cap_delete_deletes cap_delete_valid_cap)
           apply (strengthen tcb_cap_always_valid_strg use_no_cap_to_obj_asid_strg)
-          apply (clarsimp simp:tcb_cap_cases_def)
+          apply (simp add: tcb_cap_cases_def)
           apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct1])
           apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct2])
-          apply (wp hoare_case_someE)
-           apply (clarsimp simp:not_idle_thread_def)
-           apply (wp cap_delete_deletes cap_delete_cte_at cap_delete_valid_cap)
-          apply (wp case_option_wpE)
-           apply simp
-           apply (rule case_option_wpE)
-           apply simp
-           apply (wp cap_delete_cte_at)
-          apply (wp case_option_wpE)
-           apply (simp add:not_idle_thread_def)
-           apply (wp cap_delete_cte_at cap_delete_valid_cap)
-        apply (rule_tac Q'="\<lambda>_. ?P" in hoare_post_imp_R[rotated])
-         apply (clarsimp simp:is_valid_vtable_root_def is_cnode_or_valid_arch_def
-                              is_arch_cap_def not_idle_thread_def emptyable_def
-                         split:option.splits)
-        apply (wpc|wp)+
-          apply (wp checked_insert_tcb_invs | clarsimp)+
-          apply (rule check_cap_at_stable,(simp add:not_idle_thread_def | wp)+)+
-          apply (wp checked_insert_no_cap_to hoare_case_some)
-          apply (simp,rule check_cap_at_stable,simp add:not_idle_thread_def)
-          apply wp
-          apply (simp,rule check_cap_at_stable)
-          apply (rule case_option_wp,clarsimp split:option.splits,wp)
-          apply (rule case_option_wp)
           apply simp
-          apply (rule check_cap_at_stable,clarsimp simp:not_idle_thread_def split:option.splits,wp)
-          apply (rule case_option_wp)
-          apply simp
-          apply (rule check_cap_at_stable,wp)
-          apply (rule case_option_wp)
-          apply simp
-          apply (wp checked_insert_no_cap_to)
-          apply (wp hoare_case_some)
-          apply (simp, rule check_cap_at_stable,simp add:not_idle_thread_def)
-          apply (wp case_option_wp)
-          apply simp
-          apply (rule case_option_wp,simp add:not_idle_thread_def)
-          apply (rule check_cap_at_stable,wp)
-          apply (wp case_option_wp check_cap_at_stable | simp)+
-        apply (wp cap_delete_deletes cap_delete_valid_cap)
-        apply (strengthen tcb_cap_always_valid_strg use_no_cap_to_obj_asid_strg)
-        apply (simp add:tcb_cap_cases_def)
-        apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct1])
-        apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct2])
-        apply simp
-        apply (wp cap_delete_deletes cap_delete_cte_at cap_delete_valid_cap)
-        apply (wp case_option_wpE cap_delete_valid_cap cap_delete_deletes cap_delete_cte_at hoare_case_someE
-              | simp add:not_idle_thread_def)+
-       apply (case_tac prio', clarsimp, rule return_wp)
-       apply clarsimp
-       apply ((wp case_option_wp dxo_wp_weak | clarsimp split: option.splits | rule conjI)+)[1]
-      apply ((wp set_priority_transform | clarsimp split: option.splits | rule conjI)+)[1]
+          apply (wp cap_delete_deletes cap_delete_cte_at cap_delete_valid_cap)
+          apply (wp case_option_wpE cap_delete_valid_cap cap_delete_deletes cap_delete_cte_at
+                    hoare_case_someE
+                  | simp add: not_idle_thread_def)+
+        apply (case_tac prio', clarsimp, rule return_wp, clarsimp)
+        subgoal by (wp case_option_wp dxo_wp_weak
+                     | clarsimp split: option.splits
+                     | rule conjI)+
+       apply (simp, wp)
+      apply (case_tac mcp', clarsimp, rule return_wp, clarsimp)
+      subgoal by (wp case_option_wp set_mcpriority_valid_cap_fst
+                   | clarsimp split: option.splits
+                   | rule conjI)+
      apply (wp case_option_wpE)
-  apply (rule_tac Q="\<lambda>_. ?P" in hoare_strengthen_post[rotated])
-  apply (clarsimp simp:is_valid_vtable_root_def is_cnode_or_valid_arch_def
-                       is_arch_cap_def not_idle_thread_def emptyable_def
-                  split:option.splits)
-  apply (rule_tac P = "(case fault_ep' of None \<Rightarrow> True | Some bl \<Rightarrow> length bl = word_bits)" in hoare_gen_asm)
-  apply (wp out_invs_trivialT)
-    apply (clarsimp simp:tcb_cap_cases_def)+
-  apply (wp case_option_wp out_cte_at out_valid_cap hoare_case_some| simp)+
-  apply (wp out_no_cap_to_trivial)
-    apply (clarsimp simp:tcb_cap_cases_def)
-  apply (wp case_option_wp out_cte_at out_valid_cap hoare_case_some| simp)+
-  apply (wp out_no_cap_to_trivial)
-    apply (clarsimp simp:tcb_cap_cases_def)
-  apply (wp case_option_wp out_cte_at out_valid_cap hoare_case_some | simp)+
-  apply (clarsimp split:option.splits)
-  done
+    apply (rule_tac Q="\<lambda>_. ?P" in hoare_strengthen_post[rotated])
+     apply (clarsimp simp: is_valid_vtable_root_def is_cnode_or_valid_arch_def
+                           is_arch_cap_def not_idle_thread_def emptyable_def
+                    split: option.splits)
+    apply (rule_tac P = "(case fault_ep' of None \<Rightarrow> True | Some bl \<Rightarrow> length bl = word_bits)"
+             in hoare_gen_asm)
+    apply (wp out_invs_trivialT)
+          apply (clarsimp simp: tcb_cap_cases_def)+
+    apply (wp case_option_wp out_cte_at out_valid_cap hoare_case_some | simp)+
+     apply (wp out_no_cap_to_trivial)
+     apply (clarsimp simp: tcb_cap_cases_def)
+    apply (wp case_option_wp out_cte_at out_valid_cap hoare_case_some | simp)+
+     apply (wp out_no_cap_to_trivial)
+     apply (clarsimp simp: tcb_cap_cases_def)
+    apply (wp case_option_wp out_cte_at out_valid_cap hoare_case_some | simp)+
+  by (clarsimp split: option.splits)
 
 lemma invoke_tcb_corres_thread_control:
-  "\<lbrakk> t' = tcb_invocation.ThreadControl obj_id' a' fault_ep' prio' croot' vroot' ipc_buffer';
+  "\<lbrakk> t' = tcb_invocation.ThreadControl obj_id' a' fault_ep' mcp' prio' croot' vroot' ipc_buffer';
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> dc) \<top> (\<lambda>s. invs s \<and> valid_etcbs s \<and> not_idle_thread obj_id' s
                    \<and> valid_pdpt_objs s \<and> Tcb_AI.tcb_inv_wf t' s)

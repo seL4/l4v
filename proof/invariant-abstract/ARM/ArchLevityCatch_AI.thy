@@ -74,5 +74,12 @@ lemma preemption_point_success [simp,intro]:
 lemma pageBits_less_word_bits [simp]:
   "pageBits < word_bits" by (simp add: pageBits_def word_bits_conv)
 
+lemma aobj_ref_arch_cap[simp]:
+  "aobj_ref (arch_default_cap aty ptr us dev) = Some ptr"
+  apply (case_tac aty)
+   apply (simp_all add: aobj_ref_def arch_default_cap_def p_assoc_help)
+  done
+
+
 end
 end

@@ -99,7 +99,7 @@ apply vcg
   prefer 2
   apply (clarsimp simp del: distinct_rev)
   apply (case_tac xs, fastforce)
-  apply (clarsimp simp: lift_t_g)
+  apply (clarsimp simp: lift_t_g ucast_id)
   apply (rule_tac x=lista in exI)
   apply auto
 done

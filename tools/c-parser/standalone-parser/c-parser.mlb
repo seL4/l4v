@@ -5,7 +5,7 @@ ann
   "sequenceNonUnit warn"
 in
   ../TargetNumbers-sig.ML
-  ../Target-ARM32.ML
+  ../umm_heap/$(L4V_ARCH)/TargetNumbers.ML
   ../SourcePos.ML
   ../SourceFile.ML
   ../Region.ML
@@ -33,6 +33,7 @@ in
   ../expression_typing.ML
   ../FunctionalRecordUpdate.ML
   ../complit.ML
+  library.ML
   ../program_analysis.ML
   ../syntax_transforms.ML
   ann

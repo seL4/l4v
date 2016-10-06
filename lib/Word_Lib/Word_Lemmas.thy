@@ -5335,4 +5335,46 @@ lemma NOT_mask_shifted_lenword:
   apply (simp add: word_size nth_shiftl nth_shiftr)
   by auto
 
+lemma eq_ucast_ucast_eq:
+  fixes x :: "'a::len word"
+    and y :: "'b::len word"
+  assumes "len_of TYPE('b) \<le> len_of TYPE('a)"
+  shows   "x = ucast y \<Longrightarrow> ucast x = y"
+  using assms
+  by (simp add: is_down ucast_id ucast_ucast_a)
+
+lemma le_ucast_ucast_le:
+  fixes x :: "'a::len word"
+    and y :: "'b::len word"
+  assumes "len_of TYPE('b) \<le> len_of TYPE('a)"
+  shows   "x \<le> ucast y \<Longrightarrow> ucast x \<le> y"
+  using assms
+  apply (simp add: word_le_nat_alt unat_ucast_up_simp[where x=y])
+  apply (simp add: unat_ucast)
+  by (rule le_trans; fastforce)
+
+lemma less_ucast_ucast_less:
+  fixes x :: "'a::len word"
+    and y :: "'b::len word"
+  assumes "len_of TYPE('b) \<le> len_of TYPE('a)"
+  shows   "x < ucast y \<Longrightarrow> ucast x < y"
+  using assms
+  apply (simp add: word_less_nat_alt unat_ucast_up_simp[where x=y])
+  apply (simp add: unat_ucast)
+  by (rule le_less_trans; fastforce)
+
+lemma ucast_le_ucast:
+  fixes x :: "'a::len word"
+    and y :: "'a::len word"
+  assumes "len_of TYPE('a) \<le> len_of TYPE('b)"
+  shows "(ucast x \<le> (ucast y::'b::len word)) = (x \<le> y)"
+  using assms
+  apply (simp add: word_le_nat_alt unat_ucast)
+  apply (subst mod_less)
+   apply(rule less_le_trans[OF unat_lt2p], simp)
+  apply (subst mod_less)
+   apply(rule less_le_trans[OF unat_lt2p], simp)
+  apply simp
+  done
+
 end

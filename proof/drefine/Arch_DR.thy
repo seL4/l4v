@@ -17,7 +17,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 definition
  "make_arch_duplicate cap \<equiv> case cap of
     cdl_cap.PageTableCap oid _ mp \<Rightarrow> cdl_cap.PageTableCap oid Fake None
-  | cdl_cap.FrameCap oid rghts sz _ mp \<Rightarrow> cdl_cap.FrameCap oid rghts sz Fake None"
+  | cdl_cap.FrameCap dev oid rghts sz _ mp \<Rightarrow> cdl_cap.FrameCap dev oid rghts sz Fake None"
 
 definition
   "get_pt_mapped_addr cap \<equiv> 
@@ -65,7 +65,7 @@ where "transform_page_inv invok \<equiv> case invok of
         (case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
         (case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
           (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) entries))
-| ARM_A.page_invocation.PageUnmap (arch_cap.PageCap a _ sz asid) ref \<Rightarrow>
+| ARM_A.page_invocation.PageUnmap (arch_cap.PageCap _ a _ sz asid) ref \<Rightarrow>
     Some (cdl_page_invocation.PageUnmap (transform_mapping asid) a (transform_cslot_ptr ref) (pageBitsForSize sz))
 | ARM_A.page_invocation.PageFlush flush _ _ _ _ _ \<Rightarrow> 
     Some (cdl_page_invocation.PageFlushCaches (flush_type_map flush))
@@ -81,7 +81,7 @@ where "translate_arch_invocation invo \<equiv> case invo of
       Some (case oper of ARM_A.MakePool frame slot parent base
         \<Rightarrow> cdl_invocation.InvokeAsidControl
                (cdl_asid_control_invocation.MakePool
-                             (cdl_cap.UntypedCap {frame..frame + 2 ^ pageBits - 1} {})
+                             (cdl_cap.UntypedCap False {frame..frame + 2 ^ pageBits - 1} {})
                              (transform_cslot_ptr parent)
                              {frame..frame + 2 ^ pageBits - 1}
                              (transform_cslot_ptr slot)
@@ -215,7 +215,7 @@ lemma create_mapping_entries_dcorres:
   "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
                                  (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) rv'
                      \<and> case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
-                           = FrameCap (ptrFromPAddr base)
+                           = FrameCap False (ptrFromPAddr base)
                                vm_rights (pageBitsForSize pgsz) Fake None))
      \<top>
      (page_directory_at pd_ptr and valid_idle and valid_arch_objs and pspace_aligned
@@ -332,7 +332,7 @@ lemma create_mapping_entries_dcorres_select:
   "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
                                  (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) rv'
                      \<and> case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
-                           = FrameCap (ptrFromPAddr base)
+                           = FrameCap False (ptrFromPAddr base)
                                vm_rights (pageBitsForSize pgsz) Fake None))
      (\<lambda>s. frslots = all_pd_pt_slots pd pdid s
               \<and> cdl_objects s pdid = Some pd)
@@ -650,6 +650,23 @@ next
               defer
               apply ((rule corres_symb_exec_r[OF dcorres_alternative_throw],
                      (wp | simp)+)+)[11]
+    apply (rename_tac dev ptr sz v)
+    apply (case_tac dev)
+     apply simp
+     apply (rule corres_alternate2)
+     apply (rule corres_guard_imp)
+       apply (rule corres_symb_exec_r)
+          apply (rule dcorres_throw)
+         apply ((wp|simp)+)[5]
+    apply clarsimp
+    apply (rule conjI[rotated])
+     apply clarsimp
+     apply (rule corres_alternate2)
+     apply (rule corres_guard_imp)
+       apply (rule corres_symb_exec_r)
+          apply (rule dcorres_throw)
+         apply ((wp|simp)+)[5]
+    apply clarsimp
     apply (rule corres_guard_imp)
       apply (rule corres_alternate1)
       apply (clarsimp simp: select_ext_def bind_assoc)
@@ -661,6 +678,7 @@ next
          apply (rule le_p2_minus_1)
          apply (rule unat_le_helper)
          apply simp
+        apply (simp add:bindE_assoc)
         apply (rule corres_splitEE [OF _ dcorres_ensure_no_children[where P="op \<noteq> cap.NullCap"]])
           apply (rule corres_splitEE [OF _ lookup_slot_for_cnode_op_corres])
                 apply (simp, elim conjE)
@@ -685,7 +703,7 @@ next
     apply auto
     done
 next
-  case (PageCap base rights pgsz asid)
+  case (PageCap dev base rights pgsz asid)
   thus ?case
     apply (simp add: Decode_D.decode_invocation_def
                      decode_invocation_def arch_decode_invocation_def
@@ -729,8 +747,7 @@ next
                  apply (simp only: linorder_not_le, erule order_le_less_trans[rotated])
                  apply simp
                 apply simp
-               apply (clarsimp simp: neq_Nil_conv valid_cap_simps dest!:page_directory_at_rev)
-               apply auto[1]
+               apply (fastforce simp: neq_Nil_conv valid_cap_simps dest!:page_directory_at_rev)
               apply (rule corres_from_rdonly[where P=\<top> and P'=\<top>], simp_all)[1]
                 apply (wp | simp)+
               apply (rule validE_cases_valid, rule hoare_pre)
@@ -1341,8 +1358,8 @@ lemma set_vm_root_for_flush_dwp[wp]:
 done
 
 lemma diminished_page_is_page:
-  "diminished (cap.ArchObjectCap (arch_cap.PageCap x rs sz mp)) c
-  \<Longrightarrow> \<exists>rs'. c = cap.ArchObjectCap (arch_cap.PageCap x rs' sz mp)"
+  "diminished (cap.ArchObjectCap (arch_cap.PageCap dev x rs sz mp)) c
+  \<Longrightarrow> \<exists>rs'. c = cap.ArchObjectCap (arch_cap.PageCap dev x rs' sz mp)"
   apply (case_tac c,
          simp_all add:diminished_def cap_rights_update_def acap_rights_update_def mask_cap_def)
   apply (rename_tac arch_cap)
@@ -1842,7 +1859,7 @@ proof -
         "cnode_ref \<noteq> cref"
         "CSpaceAcc_A.descendants_of cref (cdt s') = {}"
         "caps_of_state s' cref = Some cap"
-        "cap = cap.UntypedCap frame pageBits idx"
+        "cap = cap.UntypedCap False frame pageBits idx"
         "is_aligned (base::word32) ARM_A.asid_low_bits"
         "base < 2 ^ ARM_A.asid_bits"
   assume relation:"arch_invocation_relation (InvokeAsidControl asid_inv)
@@ -1862,7 +1879,7 @@ proof -
     apply (rule corres_guard_imp)
       apply (rule corres_split [OF _ delete_objects_dcorres])
          apply (rule corres_symb_exec_r)
-            apply (rule_tac F = "cdl_cap.UntypedCap {frame..frame + 2 ^ pageBits - 1} {} =
+            apply (rule_tac F = "cdl_cap.UntypedCap False {frame..frame + 2 ^ pageBits - 1} {} =
               transform_cap (max_free_index_update pcap)" in corres_gen_asm2)
             apply (rule corres_split[OF _ set_cap_corres])
                 apply (rule generate_object_ids_exec
@@ -1881,7 +1898,7 @@ proof -
                     apply (clarsimp simp:transform_asid_table_def transform_asid_def
                       fun_upd_def[symmetric] unat_map_upd)
                    apply wp
-                apply (rule_tac Q="\<lambda>rv s. cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap frame pageBits idx))
+                apply (rule_tac Q="\<lambda>rv s. cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx))
                                              cref s
                                 \<and> asid_pool_at frame s
                                 \<and> cte_wp_at (op = cap.NullCap) cnode_ref s
@@ -1908,11 +1925,17 @@ proof -
               apply simp
             apply (clarsimp simp:conj_comms pred_conj_def
               | strengthen invs_valid_pspace invs_valid_idle)+
-            apply (rule_tac P = "pcap = cap.UntypedCap frame pageBits idx" in hoare_gen_asm)
+            apply (rule_tac P = "pcap = cap.UntypedCap False frame pageBits idx 
+              \<and>  is_aligned frame (obj_bits_api (ArchObject ASIDPoolObj) 0)" in hoare_gen_asm)
             apply (wp max_index_upd_invs_simple set_cap_idle
               set_cap_caps_no_overlap set_cap_no_overlap
               set_cap_cte_wp_at set_cap_cte_cap_wp_to)
-            apply (simp add:region_in_kernel_window_def)
+            apply (simp add:region_in_kernel_window_def obj_bits_api_def default_arch_object_def)
+            apply (wp set_untyped_cap_caps_overlap_reserved get_cap_wp)
+            apply (rule hoare_strengthen_post)
+            apply (rule set_cap_device_and_range_aligned[where dev = False,simp])
+             apply simp
+            apply simp
             apply (wp set_untyped_cap_caps_overlap_reserved get_cap_wp)
           apply clarsimp
          apply clarsimp
@@ -1926,8 +1949,8 @@ proof -
       apply (simp add: delete_objects_rewrite is_aligned_neg_mask_eq)
       apply (rule_tac Q="\<lambda>_ s.
         invs s \<and> valid_etcbs s \<and> pspace_no_overlap frame pageBits s \<and>
-        descendants_range_in (untyped_range (cap.UntypedCap frame pageBits idx)) cref s \<and>
-        cte_wp_at (op = (cap.UntypedCap frame pageBits idx)) cref s \<and>
+        descendants_range_in (untyped_range (cap.UntypedCap False frame pageBits idx)) cref s \<and>
+        cte_wp_at (op = (cap.UntypedCap False frame pageBits idx)) cref s \<and>
         cte_wp_at (op = cap.NullCap) cnode_ref s \<and>
         ex_cte_cap_wp_to (\<lambda>_. True) cnode_ref s \<and>
         region_in_kernel_window {frame..frame + 2 ^ pageBits - 1} s \<and>
@@ -1951,7 +1974,7 @@ proof -
      apply fastforce
     using misc
     apply (clarsimp simp:cte_wp_at_caps_of_state page_bits_def)
-    apply (subgoal_tac " descendants_range (cap.UntypedCap frame pageBits idx) cref s'")
+    apply (subgoal_tac " descendants_range (cap.UntypedCap False frame pageBits idx) cref s'")
      prefer 2
      apply (simp add:descendants_range_def2 empty_descendants_range_in)
     apply (rule conjI)
@@ -1975,7 +1998,7 @@ proof -
             apply clarsimp+
           apply (clarsimp simp:descendants_range_in_def)
          apply (rule ex_cte_cap_protects)
-              apply (rule_tac P = "\<lambda>cap. cap = cap.UntypedCap frame pageBits idx"
+              apply (rule_tac P = "\<lambda>cap. cap = cap.UntypedCap False frame pageBits idx"
                 in if_unsafe_then_capD)
                 apply (fastforce simp:cte_wp_at_caps_of_state)+
             apply (clarsimp simp:descendants_range_def2 untyped_range.simps)+

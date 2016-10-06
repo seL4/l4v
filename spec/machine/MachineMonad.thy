@@ -22,6 +22,8 @@ requalify_types
 requalify_consts
   underlying_memory
   underlying_memory_update
+  device_state
+  device_state_update
   irq_masks
   machine_state_rest
   machine_state_rest_update

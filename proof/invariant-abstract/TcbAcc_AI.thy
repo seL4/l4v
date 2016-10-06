@@ -79,7 +79,6 @@ proof -
     done
 qed
 
-
 lemma ball_tcb_cap_casesI:
   "\<lbrakk> P (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>));
      P (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>));
@@ -90,7 +89,7 @@ lemma ball_tcb_cap_casesI:
                                        Structures_A.BlockedOnReceive e \<Rightarrow>
                                          (op = cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)));
-     P (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_arch_cap or (op = cap.NullCap))) \<rbrakk>
+     P (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or (op = cap.NullCap))) \<rbrakk>
     \<Longrightarrow> \<forall>x \<in> ran tcb_cap_cases. P x"
   by (simp add: tcb_cap_cases_def)
 
@@ -191,20 +190,20 @@ schematic_goal tcb_ipcframe_in_cases:
   by (fastforce simp add: ran_tcb_cap_cases)
 
 
+lemmas valid_ipc_buffer_cap_simps= valid_ipc_buffer_cap_def[split_simps cap.split]
 locale TcbAcc_AI_valid_ipc_buffer_cap_0 =
   assumes valid_ipc_buffer_cap_0[simp]:
-    "\<And>cap. valid_ipc_buffer_cap cap 0"
+    "\<And>cap buf. valid_ipc_buffer_cap cap buf \<Longrightarrow> valid_ipc_buffer_cap cap 0"
 
 
 context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
-(* FIXME-NTFN: needs assumption for tcb_bound_notification *)
 lemma thread_set_valid_objs_triv:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
   assumes z: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (f tcb) = tcb_ipc_buffer tcb
-                         \<or> tcb_ipc_buffer (f tcb) = 0"
+                        \<or> (tcb_ipc_buffer (f tcb) = 0)"
   assumes y: "\<And>tcb. tcb_fault_handler (f tcb) \<noteq> tcb_fault_handler tcb
                        \<longrightarrow> length (tcb_fault_handler (f tcb)) = word_bits"
   assumes a: "\<And>tcb. tcb_fault (f tcb) \<noteq> tcb_fault tcb
@@ -227,7 +226,9 @@ lemma thread_set_valid_objs_triv:
   apply (rule conjI)
    apply (elim allEI)
    apply auto[1]
-  apply (cut_tac tcb=y in w)
+  apply (rule conjI)
+   apply (cut_tac tcb = y in w)
+   apply (auto simp: valid_ipc_buffer_cap_simps)[1]
   apply (cut_tac tcb=y in y)
   apply (cut_tac tcb=y in a)
   apply (cut_tac tcb=y in b)
@@ -410,6 +411,9 @@ lemma thread_set_pspace_in_kernel_window[wp]:
   apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
   done
 
+crunch pspace_respects_device_region[wp]: thread_set "pspace_respects_device_region"
+  (wp: set_object_pspace_respect_device_region)
+
 lemma thread_set_cap_refs_in_kernel_window:
   assumes y: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
@@ -417,6 +421,20 @@ lemma thread_set_cap_refs_in_kernel_window:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> thread_set f t \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: thread_set_def)
   apply (wp set_object_cap_refs_in_kernel_window)
+  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (drule bspec[OF y])
+  apply simp
+  apply (erule sym)
+  done
+
+lemma thread_set_cap_refs_respects_device_region:
+  assumes y: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
+                  getF (f tcb) = getF tcb"
+  shows
+  "\<lbrace>cap_refs_respects_device_region\<rbrace> thread_set f t \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: thread_set_def)
+  apply (wp set_object_cap_refs_respects_device_region)
   apply (clarsimp simp: obj_at_def)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (drule bspec[OF y])
@@ -444,7 +462,6 @@ lemma thread_set_valid_ioc_trivial:
    apply (fastforce simp: ranI)+
   done
 
-
 context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
 lemma thread_set_invs_trivial:
@@ -453,7 +470,7 @@ lemma thread_set_invs_trivial:
   assumes z:  "\<And>tcb. tcb_state     (f tcb) = tcb_state tcb"
   assumes z': "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (f tcb) = tcb_ipc_buffer tcb
-                       \<or> tcb_ipc_buffer (f tcb) = 0"
+                        \<or> (tcb_ipc_buffer (f tcb) = 0)"
   assumes y: "\<And>tcb. tcb_fault_handler (f tcb) \<noteq> tcb_fault_handler tcb
                        \<longrightarrow> length (tcb_fault_handler (f tcb)) = word_bits"
   assumes a: "\<And>tcb. tcb_fault (f tcb) \<noteq> tcb_fault tcb
@@ -478,6 +495,7 @@ lemma thread_set_invs_trivial:
              thread_set_caps_of_state_trivial
              thread_set_arch_caps_trivial thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
+             thread_set_cap_refs_respects_device_region
              thread_set_aligned
              | rule x z z' w y a | erule bspec_split [OF x] | simp add: z')+
   apply (simp add: z)
@@ -582,6 +600,7 @@ context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
 lemma as_user_invs[wp]: "\<lbrace>invs\<rbrace> as_user t m \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule as_user_wp_thread_set_helper)
+  apply (rule hoare_pre)
   apply (wp thread_set_invs_trivial ball_tcb_cap_casesI | simp)+
   done
 
@@ -775,9 +794,10 @@ lemma gts_wf[wp]: "\<lbrace>tcb_at t and invs\<rbrace> get_thread_state t \<lbra
 
 lemma idle_thread_idle[wp]:
   "\<lbrace>\<lambda>s. valid_idle s \<and> t = idle_thread s\<rbrace> get_thread_state t \<lbrace>\<lambda>r s. idle r\<rbrace>"
-  apply (clarsimp simp: valid_def get_thread_state_def thread_get_def bind_def return_def gets_the_def gets_def get_def assert_opt_def get_tcb_def
+  apply (clarsimp simp: valid_def get_thread_state_def thread_get_def bind_def return_def
+                        gets_the_def gets_def get_def assert_opt_def get_tcb_def
                         fail_def valid_idle_def obj_at_def pred_tcb_at_def
-                  split: option.splits Structures_A.kernel_object.splits)
+                 split: option.splits Structures_A.kernel_object.splits)
   done
 
 lemma set_thread_state_valid_objs[wp]:
@@ -902,7 +922,6 @@ lemma load_word_offs_P[wp]:
   "\<lbrace>P\<rbrace> load_word_offs a x \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding load_word_offs_def
   by (wp dmo_inv loadWord_inv)
-
 
 lemma valid_tcb_objs:
   assumes vs: "valid_objs s"
@@ -1460,11 +1479,21 @@ lemma set_thread_state_pspace_in_kernel_window[wp]:
       set_thread_state p st \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   by (simp add: set_thread_state_thread_set, wp, simp, wp)
 
+crunch pspace_respects_device_region[wp]: set_thread_state pspace_respects_device_region
+(wp: set_object_pspace_respect_device_region)
+
 lemma set_thread_state_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace>
       set_thread_state p st \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   by (simp add: set_thread_state_thread_set
            | wp thread_set_cap_refs_in_kernel_window
+                ball_tcb_cap_casesI)+
+
+lemma set_thread_state_cap_refs_respects_device_regionw[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace>
+      set_thread_state p st \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  by (simp add: set_thread_state_thread_set
+           | wp thread_set_cap_refs_respects_device_region
                 ball_tcb_cap_casesI)+
 
 lemma set_bound_notification_global_pd_mappings[wp]:
@@ -1477,11 +1506,21 @@ lemma set_bound_notification_pspace_in_kernel_window[wp]:
       set_bound_notification p ntfn \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   by (simp add: set_bound_notification_thread_set, wp)
 
+crunch pspace_respects_device_region[wp]: set_bound_notification pspace_respects_device_region
+  (wp: set_object_pspace_respect_device_region)
+
 lemma set_bound_notification_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace>
       set_bound_notification p ntfn \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   by (simp add: set_bound_notification_thread_set
            | wp thread_set_cap_refs_in_kernel_window
+                ball_tcb_cap_casesI)+
+
+lemma set_bound_notification_cap_refs_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace>
+      set_bound_notification p ntfn \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  by (simp add: set_bound_notification_thread_set
+           | wp thread_set_cap_refs_respects_device_region
                 ball_tcb_cap_casesI)+
 
 lemma set_thread_state_valid_ioc[wp]:
@@ -1497,7 +1536,6 @@ lemma set_thread_state_valid_ioc[wp]:
                         split_if_asm)
   done
 
-
 lemma set_bound_notification_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   apply (simp add: set_bound_notification_def)
@@ -1510,7 +1548,6 @@ lemma set_bound_notification_valid_ioc[wp]:
                  split: option.splits Structures_A.kernel_object.splits
                         split_if_asm)
   done
-
 
 lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t

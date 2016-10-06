@@ -13,6 +13,14 @@ imports
   "./$L4V_ARCH/ArchLevityCatch_AI"
 begin
 
+context begin interpretation Arch .
+requalify_facts
+  aobj_ref_arch_cap
+
+end
+
+lemmas aobj_ref_arch_cap_simps[simp] = aobj_ref_arch_cap
+
 lemma detype_arch_state :
   "arch_state (detype S s) = arch_state s"
   by (simp add: detype_def)

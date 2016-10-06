@@ -213,16 +213,35 @@ where
 
 
 definition
+  check_prio :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
+where
+  "check_prio new_prio \<equiv>
+    doE
+      cur \<leftarrow> liftE $ gets cur_thread;
+      mcp \<leftarrow> liftE $ thread_get tcb_mcpriority cur;
+      whenE (new_prio > ucast mcp) $ throwError (RangeError 0 (ucast mcp))      
+    odE"
+
+definition
   decode_set_priority :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
-  "decode_set_priority args cap slot \<equiv> 
+  "decode_set_priority args cap slot \<equiv>
      if length args = 0 then throwError TruncatedMessage
-     else doE
-       cur \<leftarrow> liftE $ gets cur_thread;
-       OR_choice (decode_set_priority_error_choice (ucast $ args ! 0) cur)
-           (throwError IllegalOperation)
-           (returnOk (ThreadControl (obj_ref_of cap) slot None
-             (Some (ucast $ args ! 0)) None None None))
+     else let prio = ucast (args ! 0) in doE
+       check_prio (args ! 0);
+       returnOk (ThreadControl (obj_ref_of cap) slot None
+             None (Some prio) None None None)
+    odE"
+
+definition
+  decode_set_mcpriority :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+where
+  "decode_set_mcpriority args cap slot \<equiv>
+     if length args = 0 then throwError TruncatedMessage
+     else let new_mcp = ucast $ args ! 0 in doE
+       check_prio (args ! 0);
+       returnOk (ThreadControl (obj_ref_of cap) slot None
+             (Some new_mcp) None None None None)
      odE"
 
 
@@ -242,7 +261,7 @@ where
       returnOk $ Some (buffer_cap, bslot)
     odE;
   returnOk $ 
-    ThreadControl (obj_ref_of cap) slot None None None None (Some (buffer, newbuf))
+    ThreadControl (obj_ref_of cap) slot None None None None None (Some (buffer, newbuf))
 odE"
 
 
@@ -279,9 +298,20 @@ where
    unlessE (is_valid_vtable_root vroot_cap') $ throwError IllegalOperation;
    vroot \<leftarrow> returnOk (vroot_cap', vroot_slot);       
    
-   returnOk $ ThreadControl (obj_ref_of cap) slot (Some (to_bl fault_ep)) None 
+   returnOk $ ThreadControl (obj_ref_of cap) slot (Some (to_bl fault_ep)) None None
                             (Some croot) (Some vroot) None
  odE"
+
+
+definition
+  prio_from_word :: "data \<Rightarrow> data"
+where
+  "prio_from_word w \<equiv> w && mask 8"
+
+definition
+  mcp_from_word :: "data \<Rightarrow> data"
+where
+  "mcp_from_word w \<equiv> (w >> 8) && mask 8"
 
 
 definition
@@ -292,17 +322,18 @@ where
      whenE (length args < 5) $ throwError TruncatedMessage;
      whenE (length extra_caps < 3) $ throwError TruncatedMessage;
      fault_ep \<leftarrow> returnOk $ args ! 0;
-     prio     \<leftarrow> returnOk $ args ! 1;
+     prioProps  \<leftarrow> returnOk $ args ! 1;
      croot_data \<leftarrow> returnOk $ args ! 2;
      vroot_data \<leftarrow> returnOk $ args ! 3;
      crootvroot \<leftarrow> returnOk $ take 2 extra_caps;
      buffer_cap \<leftarrow> returnOk $ extra_caps ! 2;
      buffer \<leftarrow> returnOk $ args ! 4;
-     set_prio \<leftarrow> decode_set_priority [prio] cap slot;
+     set_prio \<leftarrow> decode_set_priority [prio_from_word prioProps] cap slot;
+     set_mcp \<leftarrow> decode_set_mcpriority [mcp_from_word prioProps] cap slot;
      set_params \<leftarrow> decode_set_ipc_buffer [buffer] cap slot [buffer_cap];
      set_space \<leftarrow> decode_set_space [fault_ep, croot_data, vroot_data] cap slot crootvroot;
      returnOk $ ThreadControl (obj_ref_of cap) slot (tc_new_fault_ep set_space)
-                              (tc_new_priority set_prio)
+                              (tc_new_mcpriority set_mcp) (tc_new_priority set_prio)
                               (tc_new_croot set_space) (tc_new_vroot set_space) 
                               (tc_new_buffer set_params)
    odE" 
@@ -359,6 +390,7 @@ where
     | TCBResume \<Rightarrow> returnOk $ Resume $ obj_ref_of cap
     | TCBConfigure \<Rightarrow> decode_tcb_configure args cap slot excs
     | TCBSetPriority \<Rightarrow> decode_set_priority args cap slot 
+    | TCBSetMCPriority \<Rightarrow> decode_set_mcpriority args cap slot
     | TCBSetIPCBuffer \<Rightarrow> decode_set_ipc_buffer args cap slot excs
     | TCBSetSpace \<Rightarrow> decode_set_space args cap slot excs
     | TCBBindNotification \<Rightarrow> decode_bind_notification cap excs
@@ -482,8 +514,8 @@ where
   new_type \<leftarrow> data_to_obj_type (args!0);
 
   user_obj_size \<leftarrow> returnOk $ data_to_nat (args!1);
-  unlessE (user_obj_size < word_bits - 1)
-    $ throwError (RangeError 0 (of_nat word_bits - 2));
+  unlessE (user_obj_size < word_bits - 2)
+    $ throwError (RangeError 0 (of_nat word_bits - 3)); (* max size of untyped = 2^30 *)
   whenE (new_type = CapTableObject \<and> user_obj_size = 0) 
     $ throwError (InvalidArgument 1);
   whenE (new_type = Untyped \<and> user_obj_size < 4) 
@@ -536,10 +568,14 @@ where
   max_count \<leftarrow> returnOk ( untyped_free_bytes >> object_size);
   whenE (unat max_count < node_window) $
         throwError $ NotEnoughMemory $ untyped_free_bytes;
-  (ptr, block_size) \<leftarrow> case cap of 
-                        UntypedCap p n f \<Rightarrow> returnOk (p,n) 
+
+  not_frame \<leftarrow> returnOk (\<not> is_frame_type new_type);
+  (ptr, is_device) \<leftarrow> case cap of 
+                        UntypedCap dev p n f \<Rightarrow> returnOk (p,dev) 
                       | _ \<Rightarrow> fail;
-  returnOk $ Retype slot ptr aligned_free_ref new_type user_obj_size slots
+  whenE (is_device \<and> not_frame \<and> new_type \<noteq> Untyped) $ 
+           throwError $ InvalidArgument 1; 
+  returnOk $ Retype slot ptr aligned_free_ref new_type user_obj_size slots is_device
 odE"
 
 section "Toplevel invocation decode."
@@ -577,7 +613,7 @@ where
       liftME (case_prod InvokeDomain) $ decode_domain_invocation label args excaps
   | CNodeCap ptr bits _ \<Rightarrow>
       liftME InvokeCNode $ decode_cnode_invocation label args cap (map fst excaps)
-  | UntypedCap ptr sz fi \<Rightarrow>
+  | UntypedCap dev ptr sz fi \<Rightarrow>
       liftME InvokeUntyped $ decode_untyped_invocation label args slot cap (map fst excaps)
   | ArchObjectCap arch_cap \<Rightarrow>
       liftME InvokeArchObject $ 

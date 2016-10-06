@@ -642,6 +642,26 @@ crunch obj_at_ntfn[wp]: setThreadState "obj_at' (\<lambda>ntfn. P (ntfnBoundTCB 
   (ignore: getObject setObject wp: obj_at_setObject2  crunch_wps
    simp: crunch_simps updateObject_default_def in_monad)
 
+lemma sts_mcpriority_tcb_at'[wp]:
+  "\<lbrace>mcpriority_tcb_at' P t\<rbrace>
+    setThreadState st t'
+   \<lbrace>\<lambda>_. mcpriority_tcb_at' P t\<rbrace>"
+  apply (cases "t = t'",
+         simp_all add: setThreadState_def
+                  split del: split_if)
+   apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
+   apply (wp threadSet_obj_at'_really_strongest
+               | simp add: pred_tcb_at'_def)+
+  done
+
+lemma sts_mcpriority_tcb_at_ct'[wp]:
+  "\<lbrace>\<lambda>s. mcpriority_tcb_at' P (ksCurThread s) s\<rbrace>
+    setThreadState st t'
+   \<lbrace>\<lambda>_ s. mcpriority_tcb_at' P (ksCurThread s) s\<rbrace>"
+  apply (rule hoare_pre)
+   apply wps
+   apply wp
+  by simp
 
 lemma sts_valid_inv'[wp]:
   "\<lbrace>valid_invocation' i\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_invocation' i\<rbrace>"
@@ -666,7 +686,7 @@ lemma sts_valid_inv'[wp]:
                           sts_cap_to' sts_cte_cap_to'
                           setThreadState_typ_ats
                    split: option.splits)[1]
-  apply (wp sts_bound_tcb_at')
+  apply (wp sts_bound_tcb_at' hoare_vcg_all_lift hoare_vcg_const_imp_lift)
   done
 
 (* FIXME: move to TCB *)
@@ -1467,7 +1487,7 @@ crunch st_tcb_at'[wp]: replyFromKernel "st_tcb_at' P t"
 crunch cap_to'[wp]: replyFromKernel "ex_nonz_cap_to' p"
 crunch it'[wp]: replyFromKernel "\<lambda>s. P (ksIdleThread s)"
 crunch sch_act_simple[wp]: replyFromKernel sch_act_simple
-  (lift: sch_act_simple_lift)
+  (rule: sch_act_simple_lift)
 
 lemma rfk_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> replyFromKernel t x1 \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
@@ -1668,7 +1688,7 @@ lemma deleteCallerCap_nonz_cap:
 crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
   (wp: crunch_wps ss_sch_act_sane_weak loadObject_default_inv getObject_inv
    simp: crunch_simps unless_def
-   lift: sch_act_sane_lift
+   rule: sch_act_sane_lift
    ignore: getObject)
 
 crunch sch_act_sane[wp]: deleteCallerCap sch_act_sane

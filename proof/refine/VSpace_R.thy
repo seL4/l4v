@@ -1922,7 +1922,7 @@ definition
           and K (valid_pde_slots' m) and (valid_slots_duplicated' m)
   | PageRemap asid m \<Rightarrow> valid_slots' m and K (valid_pde_slots' m) and (valid_slots_duplicated' m)
   | PageUnmap cap ptr \<Rightarrow> 
-      \<lambda>s. \<exists>r R sz m. cap = PageCap r R sz m \<and> 
+      \<lambda>s. \<exists>d r R sz m. cap = PageCap d r R sz m \<and> 
           cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr s \<and>
           s \<turnstile>' (ArchObjectCap cap)
   | PageFlush typ start end pstart pd asid \<Rightarrow> \<top>
@@ -2370,20 +2370,13 @@ proof -
         apply clarsimp
        apply (rule conjI)
         apply (rule_tac x=ad in exI, rule_tac x=bc in exI, rule_tac x=capa in exI)
-        apply (clarsimp simp: same_refs_def pde_ref_def pde_ref_pages_def valid_pde_def invs_def valid_state_def valid_pspace_def)
+        apply (clarsimp simp: same_refs_def pde_ref_def pde_ref_pages_def 
+                              valid_pde_def invs_def valid_state_def valid_pspace_def)
         apply (drule valid_objs_caps)
         apply (clarsimp simp: valid_caps_def)
         apply (drule spec, drule spec, drule_tac x=capa in spec, drule (1) mp)
         apply (case_tac aa, simp_all)
-         apply (fold_subgoals (prefix))[2]
-         subgoal
-         by ((clarsimp simp: valid_cap_def obj_at_def a_type_def is_ep_def
-                                is_ntfn_def is_cap_table_def is_tcb_def
-                                is_pg_cap_def
-                        split: cap.splits Structures_A.kernel_object.splits
-                               split_if_asm
-                               ARM_A.arch_kernel_obj.splits option.splits
-                               arch_cap.splits)+)
+          apply (erule(1) data_at_pg_cap[rotated],fastforce)+
        apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
        apply (case_tac ko, simp_all split: split_if_asm)[1]
        apply (rename_tac arch_kernel_obj)
@@ -2392,16 +2385,15 @@ proof -
         apply clarsimp
         apply (drule_tac ptr="(ac,bb)" in
                valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-          apply simp+
+          apply (simp split: split_if_asm)+
         apply force
        apply (rule conjI[rotated], fastforce)
        apply (erule ballEI)
        apply clarsimp
        apply (drule_tac ptr="(ac,bb)" in
                valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-         apply simp+
-       apply force
-      apply auto[1]
+       apply (force split: split_if_asm)+
+      apply (auto split: split_if_asm)[1]
      apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
                            page_invocation_map_def)
      apply (rule corres_assume_pre)
@@ -3066,7 +3058,8 @@ lemma storePDE_pde_mappings'[wp]:
 
 lemma storePDE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: storePDE_def valid_machine_state'_def pointerInUserData_def)
+  apply (simp add: storePDE_def valid_machine_state'_def pointerInUserData_def
+                   pointerInDeviceData_def)
   apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   done
@@ -3263,7 +3256,8 @@ lemma storePTE_pde_mappings'[wp]:
 
 lemma storePTE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: storePTE_def valid_machine_state'_def pointerInUserData_def)
+  apply (simp add: storePTE_def valid_machine_state'_def pointerInUserData_def
+                   pointerInDeviceData_def)
   apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   done
@@ -3437,7 +3431,7 @@ lemma setObject_asidpool_mappings'[wp]:
 
 lemma setASIDPool_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def)
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
   apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   done
@@ -3712,8 +3706,8 @@ lemma perform_pt_invs [wp]:
   apply clarsimp
   apply (wp arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp|wpc)+
   apply (rename_tac acap word a b)
-  apply (rule_tac Q="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>r R sz m. cteCap cte =
-                                       ArchObjectCap (PageCap r R sz m)) word" 
+  apply (rule_tac Q="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>d r R sz m. cteCap cte =
+                                       ArchObjectCap (PageCap d r R sz m)) word" 
                in hoare_strengthen_post)
    apply (wp unmapPage_cte_wp_at')
     apply (clarsimp simp: cte_wp_at_ctes_of)

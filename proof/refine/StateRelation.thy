@@ -74,8 +74,8 @@ where
         arch_capability.ASIDPoolCap x y)"
 | "acap_relation (arch_cap.ASIDControlCap) c              = (c =
         arch_capability.ASIDControlCap)"
-| "acap_relation (arch_cap.PageCap word rghts sz data) c  = (c =
-        arch_capability.PageCap word (vmrights_map rghts) sz data)"
+| "acap_relation (arch_cap.PageCap dev word rghts sz data) c  = (c =
+        arch_capability.PageCap dev word (vmrights_map rghts) sz data)"
 | "acap_relation (arch_cap.PageTableCap word data) c      = (c =
         arch_capability.PageTableCap word data)"
 | "acap_relation (arch_cap.PageDirectoryCap word data) c  = (c =
@@ -88,8 +88,8 @@ where
            Structures_H.NullCap)"
 | "cap_relation Structures_A.DomainCap c                  = (c =
            Structures_H.DomainCap)"
-| "cap_relation (Structures_A.UntypedCap ref n f) c       = (c =
-           Structures_H.UntypedCap ref n f)"
+| "cap_relation (Structures_A.UntypedCap dev ref n f) c       = (c =
+           Structures_H.UntypedCap dev ref n f)"
 | "cap_relation (Structures_A.EndpointCap ref b r) c      = (c =
            Structures_H.EndpointCap ref b (AllowSend \<in> r)
              (AllowRecv \<in> r) (AllowGrant \<in> r))"
@@ -180,7 +180,8 @@ where
   \<and> cap_relation (tcb_reply tcb) (cteCap (tcbReply tcb'))
   \<and> cap_relation (tcb_caller tcb) (cteCap (tcbCaller tcb'))
   \<and> cap_relation (tcb_ipcframe tcb) (cteCap (tcbIPCBufferFrame tcb'))
-  \<and> tcb_bound_notification tcb = tcbBoundNotification tcb'"
+  \<and> tcb_bound_notification tcb = tcbBoundNotification tcb'
+  \<and> tcb_mcpriority tcb = tcbMCP tcb'"
 
 definition
   other_obj_relation :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
@@ -255,11 +256,11 @@ definition
  "pde_relation y \<equiv> \<lambda>ko ko'. \<exists>pd pde. ko = ArchObj (PageDirectory pd) \<and> ko' = KOArch (KOPDE pde)
                               \<and> pde_relation_aligned y (pd y) pde"
 
-
 primrec
  aobj_relation_cuts :: "ARM_A.arch_kernel_obj \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
 where
-  "aobj_relation_cuts (DataPage sz) x = {(x + n * 2 ^ pageBits, \<lambda>_. (op =) KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }"
+  "aobj_relation_cuts (DataPage dev sz) x = 
+      {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = (if dev then KOUserDataDevice else KOUserData) ) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }"
 | "aobj_relation_cuts (ARM_A.ASIDPool pool) x =
      {(x, other_obj_relation)}"
 | "aobj_relation_cuts (PageTable pt) x =
@@ -289,7 +290,8 @@ lemma obj_relation_cuts_def2:
                                            ` (UNIV :: word8 set)
              | ArchObj (PageDirectory pd) \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
                                            ` (UNIV :: 12 word set)
-             | ArchObj (DataPage sz)      \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_. (op =) KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
+             | ArchObj (DataPage dev sz)      \<Rightarrow> 
+                 {(x + n * 2 ^ pageBits,  \<lambda>_ obj. obj =(if dev then KOUserDataDevice else KOUserData)) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
              | _ \<Rightarrow> {(x, other_obj_relation)})"
   by (simp split: Structures_A.kernel_object.split
                   ARM_A.arch_kernel_obj.split)
@@ -302,7 +304,8 @@ lemma obj_relation_cuts_def3:
                             ` (UNIV :: word8 set)
    | AArch APageDirectory \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
                             ` (UNIV :: 12 word set)
-   | AArch (AIntData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_. (op =) KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
+   | AArch (AUserData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
+   | AArch (ADeviceData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserDataDevice ) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
    | AGarbage \<Rightarrow> {(x, \<bottom>\<bottom>)}
    | _ \<Rightarrow> {(x, other_obj_relation)})"
   apply (simp add: obj_relation_cuts_def2 a_type_def
@@ -317,7 +320,8 @@ definition
      ACapTable n \<Rightarrow> False
    | AArch APageTable \<Rightarrow> False
    | AArch APageDirectory \<Rightarrow> False
-   | AArch (AIntData _)   \<Rightarrow> False
+   | AArch (AUserData _)   \<Rightarrow> False
+   | AArch (ADeviceData _)   \<Rightarrow> False
    | AGarbage \<Rightarrow> False
    | _ \<Rightarrow> True"
 
@@ -325,8 +329,12 @@ lemma is_other_obj_relation_type_CapTable:
   "\<not> is_other_obj_relation_type (ACapTable n)"
   by (simp add: is_other_obj_relation_type_def)
 
-lemma is_other_obj_relation_type_IntData:
-  "\<not> is_other_obj_relation_type (AArch (AIntData sz))"
+lemma is_other_obj_relation_type_UserData:
+  "\<not> is_other_obj_relation_type (AArch (AUserData sz))"
+  unfolding is_other_obj_relation_type_def by simp
+
+lemma is_other_obj_relation_type_DeviceData:
+  "\<not> is_other_obj_relation_type (AArch (ADeviceData sz))"
   unfolding is_other_obj_relation_type_def by simp
 
 lemma is_other_obj_relation_type:
@@ -369,7 +377,7 @@ where
   "sched_act_relation (switch_thread x) a' = (a' = SwitchToThread x)"
 
 definition
-  ready_queues_relation :: "(Deterministic_A.domain \<Rightarrow> Deterministic_A.priority \<Rightarrow> Deterministic_A.ready_queue)
+  ready_queues_relation :: "(Deterministic_A.domain \<Rightarrow> Structures_A.priority \<Rightarrow> Deterministic_A.ready_queue)
                          \<Rightarrow> (domain \<times> priority \<Rightarrow> KernelStateData_H.ready_queue) \<Rightarrow> bool"
 where
   "ready_queues_relation qs qs' \<equiv> \<forall>d p. (qs d p = qs' (d, p))"
@@ -378,7 +386,7 @@ definition
   ghost_relation :: "Structures_A.kheap \<Rightarrow> (word32 \<rightharpoonup> vmpage_size) \<Rightarrow> (word32 \<rightharpoonup> nat) \<Rightarrow> bool"
 where
   "ghost_relation h ups cns \<equiv>
-   (\<forall>a sz. h a = Some (ArchObj (DataPage sz)) \<longleftrightarrow> ups a = Some sz) \<and>
+   (\<forall>a sz. (\<exists>dev. h a = Some (ArchObj (DataPage dev sz))) \<longleftrightarrow> ups a = Some sz) \<and>
    (\<forall>a n. (\<exists>cs. h a = Some (CNode n cs) \<and> well_formed_cnode_n n cs) \<longleftrightarrow>
           cns a = Some n)"
 
@@ -453,14 +461,16 @@ lemma obj_relation_cutsE:
      \<And>pd (z :: 12 word) pde'. \<lbrakk> ko = ArchObj (PageDirectory pd); y = x + (ucast z << 2);
                               ko' = KOArch (KOPDE pde'); pde_relation_aligned z (pd z) pde' \<rbrakk>
               \<Longrightarrow> R;
-     \<And>sz n. \<lbrakk> ko = ArchObj (DataPage sz); ko' = KOUserData; y = x + n * 2 ^ pageBits; n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk> \<Longrightarrow> R;
-     \<lbrakk> y = x; other_obj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R
+     \<And>sz dev n. \<lbrakk> ko = ArchObj (DataPage dev sz); ko' = (if dev then KOUserDataDevice else KOUserData);
+              y = x + n * 2 ^ pageBits; n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk> \<Longrightarrow> R;
+            \<lbrakk> y = x; other_obj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R
     \<rbrakk> \<Longrightarrow> R"
   apply (simp add: obj_relation_cuts_def2 is_other_obj_relation_type_def
                    a_type_def
             split: Structures_A.kernel_object.split_asm split_if_asm
                    ARM_A.arch_kernel_obj.split_asm)
-    apply (force simp: cte_relation_def pte_relation_def pde_relation_def)+
+    apply ((clarsimp split: if_splits,
+                force simp: cte_relation_def pte_relation_def pde_relation_def)+)[5]
   done
 
 lemma eq_trans_helper:
@@ -733,9 +743,12 @@ lemma pspace_dom_relatedE:
 
 lemma ghost_relation_typ_at:
   "ghost_relation (kheap s) ups cns \<equiv>
-   (\<forall>a sz. typ_at (AArch (AIntData sz)) a s = (ups a = Some sz)) \<and>
+   (\<forall>a sz. data_at sz a s = (ups a = Some sz)) \<and>
    (\<forall>a n. typ_at (ACapTable n) a s = (cns a = Some n))"
-by (rule eq_reflection) (clarsimp simp: ghost_relation_def typ_at_eq_kheap_obj)
-
+   apply (rule eq_reflection) 
+   apply (clarsimp simp: ghost_relation_def typ_at_eq_kheap_obj data_at_def)
+   apply (intro conjI impI iffI allI,simp_all)
+    apply (auto elim!: allE)
+   done
 end
 end

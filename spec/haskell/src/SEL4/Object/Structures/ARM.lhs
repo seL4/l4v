@@ -40,6 +40,7 @@ There are six ARM-specific capability types: the global ASID control capability,
 >         capASIDBase :: ASID }
 >     | ASIDControlCap
 >     | PageCap {
+>         capVPIsDevice :: Bool,
 >         capVPBasePtr :: PPtr Word,
 >         capVPRights :: VMRights,
 >         capVPSize :: VMPageSize,
@@ -83,7 +84,7 @@ An ASID is an unsigned word. Note that it is a \emph{virtual} address space iden
 ASIDs are mapped to address space roots by a global two-level table. The actual ASID values are opaque to the user, as are the sizes of the levels of the tables; ASID allocation calls will simply return an error once the available ASIDs are exhausted.
 
 > asidHighBits :: Int
-> asidHighBits = 8
+> asidHighBits = 7
 
 > asidLowBits :: Int
 > asidLowBits = 10

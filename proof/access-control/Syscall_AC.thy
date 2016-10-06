@@ -225,6 +225,7 @@ lemma set_thread_state_authorised[wp]:
       apply (case_tac tcb_invocation, simp_all)
             apply (wp hoare_case_option_wp sts_typ_ats set_thread_state_cte_wp_at
                       hoare_vcg_conj_lift static_imp_wp
+                 | wp_once valid_case_option_post_wp
                  | simp)+
            apply ((clarsimp split: option.splits)+)[3]
         apply ((wp
@@ -969,7 +970,7 @@ lemma handle_interrupt_arch_state [wp]:
 lemmas sequence_x_mapM_x = mapM_x_def [symmetric]
 
 crunch arm_globals_frame [wp]: invoke_untyped "\<lambda>s. P (arm_globals_frame (arch_state s))"
-   (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch
+   (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch hoare_unless_wp
      simp: crunch_simps sequence_x_mapM_x
      ignore: do_machine_op freeMemory clearMemory)
 

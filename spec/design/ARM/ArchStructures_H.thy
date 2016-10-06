@@ -18,6 +18,7 @@ imports
 begin
 context Arch begin global_naming ARM_H
 
+
 type_synonym asid = "word32"
 
 definition
@@ -28,14 +29,19 @@ where ASID_def[simp]:
 datatype arch_capability =
     ASIDPoolCap machine_word asid
   | ASIDControlCap
-  | PageCap machine_word vmrights vmpage_size "(asid * vptr) option"
+  | PageCap bool machine_word vmrights vmpage_size "(asid * vptr) option"
   | PageTableCap machine_word "(asid * vptr) option"
   | PageDirectoryCap machine_word "asid option"
 
 primrec
-  capVPBasePtr :: "arch_capability \<Rightarrow> machine_word"
+  capVPIsDevice :: "arch_capability \<Rightarrow> bool"
 where
-  "capVPBasePtr (PageCap v0 v1 v2 v3) = v0"
+  "capVPIsDevice (PageCap v0 v1 v2 v3 v4) = v0"
+
+primrec
+  capVPSize :: "arch_capability \<Rightarrow> vmpage_size"
+where
+  "capVPSize (PageCap v0 v1 v2 v3 v4) = v3"
 
 primrec
   capASIDPool :: "arch_capability \<Rightarrow> machine_word"
@@ -50,7 +56,7 @@ where
 primrec
   capVPRights :: "arch_capability \<Rightarrow> vmrights"
 where
-  "capVPRights (PageCap v0 v1 v2 v3) = v1"
+  "capVPRights (PageCap v0 v1 v2 v3 v4) = v2"
 
 primrec
   capPTMappedAddress :: "arch_capability \<Rightarrow> (asid * vptr) option"
@@ -68,9 +74,9 @@ where
   "capASIDBase (ASIDPoolCap v0 v1) = v1"
 
 primrec
-  capVPSize :: "arch_capability \<Rightarrow> vmpage_size"
+  capVPBasePtr :: "arch_capability \<Rightarrow> machine_word"
 where
-  "capVPSize (PageCap v0 v1 v2 v3) = v2"
+  "capVPBasePtr (PageCap v0 v1 v2 v3 v4) = v1"
 
 primrec
   capPTBasePtr :: "arch_capability \<Rightarrow> machine_word"
@@ -80,12 +86,17 @@ where
 primrec
   capVPMappedAddress :: "arch_capability \<Rightarrow> (asid * vptr) option"
 where
-  "capVPMappedAddress (PageCap v0 v1 v2 v3) = v3"
+  "capVPMappedAddress (PageCap v0 v1 v2 v3 v4) = v4"
 
 primrec
-  capVPBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
+  capVPIsDevice_update :: "(bool \<Rightarrow> bool) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
 where
-  "capVPBasePtr_update f (PageCap v0 v1 v2 v3) = PageCap (f v0) v1 v2 v3"
+  "capVPIsDevice_update f (PageCap v0 v1 v2 v3 v4) = PageCap (f v0) v1 v2 v3 v4"
+
+primrec
+  capVPSize_update :: "(vmpage_size \<Rightarrow> vmpage_size) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
+where
+  "capVPSize_update f (PageCap v0 v1 v2 v3 v4) = PageCap v0 v1 v2 (f v3) v4"
 
 primrec
   capASIDPool_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
@@ -100,7 +111,7 @@ where
 primrec
   capVPRights_update :: "(vmrights \<Rightarrow> vmrights) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
 where
-  "capVPRights_update f (PageCap v0 v1 v2 v3) = PageCap v0 (f v1) v2 v3"
+  "capVPRights_update f (PageCap v0 v1 v2 v3 v4) = PageCap v0 v1 (f v2) v3 v4"
 
 primrec
   capPTMappedAddress_update :: "(((asid * vptr) option) \<Rightarrow> ((asid * vptr) option)) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
@@ -118,9 +129,9 @@ where
   "capASIDBase_update f (ASIDPoolCap v0 v1) = ASIDPoolCap v0 (f v1)"
 
 primrec
-  capVPSize_update :: "(vmpage_size \<Rightarrow> vmpage_size) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
+  capVPBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
 where
-  "capVPSize_update f (PageCap v0 v1 v2 v3) = PageCap v0 v1 (f v2) v3"
+  "capVPBasePtr_update f (PageCap v0 v1 v2 v3 v4) = PageCap v0 (f v1) v2 v3 v4"
 
 primrec
   capPTBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
@@ -130,7 +141,7 @@ where
 primrec
   capVPMappedAddress_update :: "(((asid * vptr) option) \<Rightarrow> ((asid * vptr) option)) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
 where
-  "capVPMappedAddress_update f (PageCap v0 v1 v2 v3) = PageCap v0 v1 v2 (f v3)"
+  "capVPMappedAddress_update f (PageCap v0 v1 v2 v3 v4) = PageCap v0 v1 v2 v3 (f v4)"
 
 abbreviation (input)
   ASIDPoolCap_trans :: "(machine_word) \<Rightarrow> (asid) \<Rightarrow> arch_capability" ("ASIDPoolCap'_ \<lparr> capASIDPool= _, capASIDBase= _ \<rparr>")
@@ -138,9 +149,9 @@ where
   "ASIDPoolCap_ \<lparr> capASIDPool= v0, capASIDBase= v1 \<rparr> == ASIDPoolCap v0 v1"
 
 abbreviation (input)
-  PageCap_trans :: "(machine_word) \<Rightarrow> (vmrights) \<Rightarrow> (vmpage_size) \<Rightarrow> ((asid * vptr) option) \<Rightarrow> arch_capability" ("PageCap'_ \<lparr> capVPBasePtr= _, capVPRights= _, capVPSize= _, capVPMappedAddress= _ \<rparr>")
+  PageCap_trans :: "(bool) \<Rightarrow> (machine_word) \<Rightarrow> (vmrights) \<Rightarrow> (vmpage_size) \<Rightarrow> ((asid * vptr) option) \<Rightarrow> arch_capability" ("PageCap'_ \<lparr> capVPIsDevice= _, capVPBasePtr= _, capVPRights= _, capVPSize= _, capVPMappedAddress= _ \<rparr>")
 where
-  "PageCap_ \<lparr> capVPBasePtr= v0, capVPRights= v1, capVPSize= v2, capVPMappedAddress= v3 \<rparr> == PageCap v0 v1 v2 v3"
+  "PageCap_ \<lparr> capVPIsDevice= v0, capVPBasePtr= v1, capVPRights= v2, capVPSize= v3, capVPMappedAddress= v4 \<rparr> == PageCap v0 v1 v2 v3 v4"
 
 abbreviation (input)
   PageTableCap_trans :: "(machine_word) \<Rightarrow> ((asid * vptr) option) \<Rightarrow> arch_capability" ("PageTableCap'_ \<lparr> capPTBasePtr= _, capPTMappedAddress= _ \<rparr>")
@@ -170,7 +181,7 @@ definition
   isPageCap :: "arch_capability \<Rightarrow> bool"
 where
  "isPageCap v \<equiv> case v of
-    PageCap v0 v1 v2 v3 \<Rightarrow> True
+    PageCap v0 v1 v2 v3 v4 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition
@@ -221,7 +232,7 @@ defs archObjSize_def:
                 )"
 
 defs asidHighBits_def:
-"asidHighBits \<equiv> 8"
+"asidHighBits \<equiv> 7"
 
 defs asidLowBits_def:
 "asidLowBits \<equiv> 10"

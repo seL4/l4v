@@ -57,6 +57,9 @@ The following functions are used to convert between the above two types.
 > toAPIType :: ObjectType -> Maybe APIObjectType
 > toAPIType = Arch.toAPIType
 
+> isFrameType :: ObjectType -> Bool
+> isFrameType = Arch.isFrameType
+
 The following constant defines the default page type for the architecture, used by the kernel's initialisation code to map the root task's pages. It must have the size defined by "pageBits".
 
 > pageType :: ObjectType
@@ -124,6 +127,9 @@ The current security domain is represented by an 8-bit unsigned integer.
 The priority of a thread is represented by an 8-bit unsigned integer.
 
 > type Priority = Word8
+
+> priorityBits :: Int
+> priorityBits = 8
 
 \subsection{Capability References}
 
@@ -231,6 +237,7 @@ address space regions.
 >         bifUntypedObjCaps :: [Word],
 >         bifUntypedObjPAddrs :: [PAddr],
 >         bifUntypedObjSizeBits :: [Word8], --combine these into one list?
+>         bifUntypedObjIsDeviceList :: [Bool],
 >         bifITCNodeSizeBits :: Word8,
 >         bifNumDeviceRegions :: Word32,
 >         bifDeviceRegions :: [BIDeviceRegion] }

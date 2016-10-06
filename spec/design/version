@@ -1,10 +1,5 @@
-Built from git repo at /home/matthewb/verification/x64/l4v/spec/haskell by matthewb
+Built from git repo at /home/matthewb/verification/patch/l4v/spec/haskell by matthewb
 
 Generated from changeset:
-9a56b22 lkasjdhflkajshf
+1c569f1 SELFOUR-276: reworked haskell
 
-
-Warning - uncomitted changes used:
- M ../abstract/X64/Arch_Structs_A.thy
- M ../design/skel/X64/Arch_Structs_B.thy
- M ../design/version

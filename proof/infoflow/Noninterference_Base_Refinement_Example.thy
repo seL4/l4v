@@ -57,7 +57,6 @@ definition policy :: "(domain \<times> domain) set" where "policy \<equiv> {(Onl
 
 definition out :: "domain \<Rightarrow> state \<Rightarrow> state" where "out \<equiv> \<lambda> d x. x"
 
-
 lemma execution_Step_0:
   "length as = 0 \<Longrightarrow> execution Step S0 as = {S0}"
   apply(clarsimp simp: execution_def)

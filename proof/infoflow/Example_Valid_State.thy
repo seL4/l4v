@@ -217,7 +217,9 @@ definition "irq_cnode_ptr = kernel_base + 0x1C000"
 
 definition "timer_irq \<equiv> 10" (* not sure exactly how this fits in *)
 
+definition "Low_mcp \<equiv> 5 :: word8"
 definition "Low_prio \<equiv> 5 :: word8"
+definition "High_mcp \<equiv> 5 :: word8"
 definition "High_prio \<equiv> 5 :: word8"
 definition "Low_time_slice \<equiv> 0 :: nat"
 definition "High_time_slice \<equiv> 5 :: nat"
@@ -586,7 +588,8 @@ where
      tcb_ipc_buffer    = 0,
      tcb_context       = undefined,
      tcb_fault         = None,
-     tcb_bound_notification     = None \<rparr>"
+     tcb_bound_notification     = None,
+     tcb_mcpriority    = Low_mcp \<rparr>"
 
 definition
   Low_etcb :: etcb
@@ -614,7 +617,8 @@ where
      tcb_ipc_buffer    = 0,
      tcb_context       = undefined,
      tcb_fault         = None,
-     tcb_bound_notification     = None \<rparr>"
+     tcb_bound_notification     = None,
+     tcb_mcpriority    = High_mcp \<rparr>"
 
 definition
   High_etcb :: etcb
@@ -641,7 +645,8 @@ where
      tcb_ipc_buffer    = 0,
      tcb_context       = empty_context,
      tcb_fault         = None,
-     tcb_bound_notification     = None \<rparr>"
+     tcb_bound_notification     = None,
+     tcb_mcpriority    = default_priority \<rparr>"
 
 
 definition
@@ -664,7 +669,7 @@ where
           Low_tcb_ptr    \<mapsto> Low_tcb,
           High_tcb_ptr   \<mapsto> High_tcb,
           idle_tcb_ptr   \<mapsto> idle_tcb,
-          init_globals_frame \<mapsto> ArchObj (DataPage ARMSmallPage),
+          init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage),
           init_global_pd \<mapsto> ArchObj (PageDirectory global_pd))"
 
 lemma irq_node_offs_min:
@@ -783,7 +788,7 @@ lemmas kh0_SomeD' = set_mp[OF equalityD1[OF kh0_dom[simplified dom_def]], OF Col
 
 lemma kh0_SomeD:
   "kh0 x = Some y \<Longrightarrow>
-        x = init_globals_frame \<and> y = ArchObj (DataPage ARMSmallPage) \<or>
+        x = init_globals_frame \<and> y = ArchObj (DataPage False ARMSmallPage) \<or>
         x = init_global_pd \<and> y = ArchObj (PageDirectory global_pd) \<or>
         x = idle_tcb_ptr \<and> y = idle_tcb \<or>
         x = High_tcb_ptr \<and> y = High_tcb \<or>
@@ -827,6 +832,7 @@ definition machine_state0 :: "machine_state" where
   "machine_state0 \<equiv> \<lparr>irq_masks = (\<lambda>irq. if irq = timer_irq then False else True),
                      irq_state = 0,
                      underlying_memory = const 0,
+                     device_state = empty,
                      exclusive_state = undefined,
                      machine_state_rest = undefined \<rparr>"
 
@@ -1230,7 +1236,7 @@ lemma valid_obj_s0[simp]:
   "valid_obj init_global_pd (ArchObj (PageDirectory ((\<lambda>_. InvalidPDE)
             (ucast (kernel_base >> 20) := SectionPDE (addrFromPPtr kernel_base) {} 0 {}))))
                                      s0_internal"
-  "valid_obj init_globals_frame (ArchObj (DataPage ARMSmallPage)) s0_internal"
+  "valid_obj init_globals_frame (ArchObj (DataPage False ARMSmallPage)) s0_internal"
                apply (simp_all add: valid_obj_def kh0_obj_def)
               apply (simp add: valid_cs_def Low_caps_ran High_caps_ran Silc_caps_ran
                                valid_cs_size_def word_bits_def cte_level_bits_def)+
@@ -1733,10 +1739,31 @@ lemma valid_sched_s0[simp]:
   apply (clarsimp simp: valid_idle_etcb_def etcb_at'_def ekh0_obj_def s0_ptr_defs idle_thread_ptr_def)
   done
 
+lemma respects_device_trivial:
+  "pspace_respects_device_region s0_internal"
+  "cap_refs_respects_device_region s0_internal"
+  apply (clarsimp simp: s0_internal_def pspace_respects_device_region_def machine_state0_def device_mem_def
+                        in_device_frame_def kh0_obj_def obj_at_kh_def obj_at_def kh0_def a_type_def
+                 split: if_splits)[1]
+   apply fastforce
+  apply (clarsimp simp: cap_refs_respects_device_region_def Invariants_AI.cte_wp_at_caps_of_state
+                        cap_range_respects_device_region_def machine_state0_def)
+  apply (intro conjI impI)
+   apply (drule s0_caps_of_state)
+   apply (fastforce simp: cap_is_device.simps)[1]
+  apply (clarsimp simp: s0_internal_def machine_state0_def)
+  done
+
 lemma einvs_s0:
   "einvs s0_internal"
-  apply (simp add: valid_state_def invs_def)
+  apply (simp add: valid_state_def invs_def respects_device_trivial)
   done
+
+lemma obj_valid_pdpt_kh0:
+  "x \<in> ran kh0 \<Longrightarrow> obj_valid_pdpt x"
+  by (auto simp: kh0_def valid_entries_def obj_valid_pdpt_def idle_tcb_def High_tcb_def Low_tcb_def
+                 High_pt_def High_pt'_def entries_align_def Low_pt_def High_pd_def Low_pt'_def High_pd'_def
+                 Low_pd_def irq_cnode_def ntfn_def Silc_cnode_def High_cnode_def Low_cnode_def Low_pd'_def)
 
 subsubsection {* Haskell state *}
 
@@ -1748,16 +1775,18 @@ text {* One invariant we need on s0 is that there exists
 
 lemma Sys1_valid_initial_state_noenabled:
   assumes extras_s0: "step_restrict s0"
-  assumes utf_det: "\<forall>pl pr pxn tc um es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um es s \<and> ct_running s
-                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, es) = {x})"
-  assumes utf_non_empty: "\<forall>t pl pr pxn tc um es. utf t pl pr pxn (tc, um, es) \<noteq> {}"
-  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, es) \<longrightarrow> e \<noteq> Some Interrupt"
+  assumes utf_det: "\<forall>pl pr pxn tc um ds es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um ds es s \<and> ct_running s
+                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, ds, es) = {x})"
+  assumes utf_non_empty: "\<forall>t pl pr pxn tc um ds es. utf t pl pr pxn (tc, um, ds, es) \<noteq> {}"
+  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um ds es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, ds, es) \<longrightarrow> e \<noteq> Some Interrupt"
   assumes det_inv_invariant: "invariant_over_ADT_if det_inv utf"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   shows "valid_initial_state_noenabled det_inv utf s0_internal Sys1PAS timer_irq s0_context"
   apply (unfold_locales, simp_all only: pasMaySendIrqs_Sys1PAS)
-                     apply (insert det_inv_invariant)[8]
-                     apply (erule invariant_over_ADT_if.check_active_irq_if_Idle_det_inv
+                     apply (insert det_inv_invariant)[9]
+                     apply (erule(2) invariant_over_ADT_if.det_inv_abs_state)
+                     apply (erule invariant_over_ADT_if.det_inv_abs_state 
+                            invariant_over_ADT_if.check_active_irq_if_Idle_det_inv
                             invariant_over_ADT_if.check_active_irq_if_User_det_inv
                             invariant_over_ADT_if.do_user_op_if_det_inv
                             invariant_over_ADT_if.handle_preemption_if_det_inv
@@ -1771,7 +1800,7 @@ lemma Sys1_valid_initial_state_noenabled:
            apply (simp add: only_timer_irq_inv_s0 silc_inv_s0 Sys1_pas_cur_domain
                             domain_sep_inv_s0 Sys1_pas_refined Sys1_guarded_pas_domain
                             idle_equiv_refl)
-           apply (simp add: valid_domain_list_2_def s0_internal_def exst0_def)
+           apply (clarsimp simp: obj_valid_pdpt_kh0 valid_domain_list_2_def s0_internal_def exst0_def)
           apply (simp add: det_inv_s0)
          apply (simp add: s0_internal_def exst0_def)
         apply (simp add: ct_in_state_def st_tcb_at_tcb_states_of_state_eq

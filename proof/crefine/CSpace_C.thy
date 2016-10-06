@@ -126,22 +126,22 @@ lemma Arch_maskCapRights_ccorres [corres]:
       apply (simp add: ccap_rights_relation_def)
      apply (simp add: pageSize_def)
     apply (simp add: pageSize_def)
-   apply (clarsimp simp add: cap_get_tag_isCap isCap_simps)
+   apply (clarsimp simp add: cap_get_tag_isCap isCap_simps simp del: not_ex)
    apply (rule conjI, clarsimp)
     apply (simp add: ccorres_cond_iffs)
     apply (rule ccorres_guard_imp)
       apply (csymbr)
       apply (case_tac "cap_get_tag cap = scast cap_frame_cap")
-       apply (clarsimp simp add: ccorres_cond_iffs cap_get_tag_isCap isCap_simps)
+       apply (clarsimp simp add: ccorres_cond_iffs cap_get_tag_isCap isCap_simps simp del: not_ex)
        apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
        apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+       apply (clarsimp simp: cap_get_tag_isCap isCap_simps simp del: not_ex)
        apply (clarsimp simp: return_def)
        apply (unfold ccap_relation_def)[1]
        apply (simp add: cap_frame_cap_lift [THEN iffD1])
        apply (clarsimp simp: cap_to_H_def)
        apply (simp add: map_option_case split: option.splits)
-       apply (clarsimp simp add: isCap_simps pageSize_def cap_to_H_def Let_def
+       apply (clarsimp simp add: isCap_simps pageSize_def cap_to_H_def Let_def simp del: not_ex
                           split: cap_CL.splits split_if_asm)
         apply (simp add: cap_frame_cap_lift_def)
         apply (simp add: ccap_rights_relation_def)
@@ -149,13 +149,13 @@ lemma Arch_maskCapRights_ccorres [corres]:
        apply (simp add: cap_frame_cap_lift_def)
        apply (simp add: ccap_rights_relation_def)
        apply (simp add: c_valid_cap_def cl_valid_cap_def cap_lift_frame_cap)
-      apply (clarsimp simp add: cap_get_tag_isCap isCap_simps)+
+      apply (clarsimp simp add: cap_get_tag_isCap isCap_simps simp del: not_ex)+
    apply (simp add: ccorres_cond_iffs)
    apply (rule ccorres_from_vcg_throws)
    apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp add: return_def)
+   apply (clarsimp simp add: return_def simp del: not_ex)
    apply (cases arch_cap)
-       by (clarsimp simp add: cap_get_tag_isCap isCap_simps)+
+       by (fastforce simp add: cap_get_tag_isCap isCap_simps  simp del: not_ex omgwtfbbq)+
 
 lemma to_bool_mask_to_bool_bf:
   "to_bool (x && mask (Suc 0)) = to_bool_bf (x::word32)"
@@ -455,7 +455,8 @@ lemma ccorres_updateCap [corres]:
     apply (erule (3) cpspace_cte_relation_upd_capI)
    apply (frule_tac f="ksPSpace" in arg_cong)
    apply (erule_tac t = s' in ssubst)
-   apply (simp add: heap_to_page_data_def)
+    apply simp
+   apply (simp add: heap_to_user_data_def heap_to_device_data_def)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
@@ -493,7 +494,7 @@ lemma ccorres_updateMDB_const [corres]:
    apply (rule conjI)
     apply (erule (3) cspace_cte_relation_upd_mdbI)
    apply (erule_tac t = s' in ssubst)
-   apply (simp add: heap_to_page_data_def)
+   apply (simp add: heap_to_user_data_def)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
@@ -636,7 +637,7 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
     apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
     apply (erule bexI [rotated])
     apply (clarsimp simp add: rf_sr_def cstate_relation_def 
-      Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_page_data_def
+      Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_user_data_def
      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
     apply (rule conjI)
      apply (erule (2) cspace_cte_relation_upd_mdbI)
@@ -683,16 +684,16 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
    apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
    apply (erule bexI [rotated])
    apply (clarsimp simp add: rf_sr_def cstate_relation_def 
-     Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_page_data_def
+     Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_user_data_def
      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
    apply (rule conjI)   
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)   
 
     subgoal for _ s' by (cases "v_' s' = 0"; simp)
-   
    apply (erule_tac t = s'a in ssubst)
-   apply (simp add: carch_state_relation_def cmachine_state_relation_def h_t_valid_clift_Some_iff)
+   apply (simp add: carch_state_relation_def cmachine_state_relation_def
+     h_t_valid_clift_Some_iff)
 
    apply (erule (1) setCTE_tcb_case)
    apply clarsimp
@@ -786,7 +787,7 @@ schematic_goal ccap_relation_tag_Master:
       \<Longrightarrow> cap_get_tag ccap = 
             case_capability ?a ?b ?c ?d ?e ?f ?g
                (case_arch_capability ?aa ?ab
-                        (\<lambda>ptr rghts sz data. if sz = ARMSmallPage
+                        (\<lambda>dev ptr rghts sz data. if sz = ARMSmallPage
                                 then scast cap_small_frame_cap else scast cap_frame_cap)
                            ?ad ?ae) ?h ?i ?j ?k
             (capMasterCap cap)"
@@ -826,22 +827,28 @@ lemma setUntypedCapAsFull_cte_at_wp' [wp]:
   done
 
 lemma valid_cap_untyped_inv:
-  "valid_cap' (UntypedCap r n f) s \<Longrightarrow> n \<ge> 4 \<and> is_aligned (of_nat f :: word32) 4 \<and> n \<le> 30 \<and> n < word_bits"
+  "valid_cap' (UntypedCap d r n f) s \<Longrightarrow> n \<ge> 4 \<and> is_aligned (of_nat f :: word32) 4 \<and> n \<le> 30 \<and> n < word_bits"
   apply (clarsimp simp:valid_cap'_def capAligned_def)
   done
 
+lemma and_and_mask_simple: "(y && mask n) = mask n \<Longrightarrow> ((x && y) && mask n) = x && mask n"
+  by (simp add: word_bool_alg.conj.assoc)
+  
+lemma and_and_mask_simple_not: "(y && mask n) = 0 \<Longrightarrow> ((x && y) && mask n) = 0"
+  by (simp add: word_bool_alg.conj.assoc)
+  
 lemma update_freeIndex:
   "ccorres dc xfdc
-           (valid_objs' and cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = UntypedCap p sz i) srcSlot 
+           (valid_objs' and cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = UntypedCap d p sz i) srcSlot 
            and (\<lambda>_. is_aligned (of_nat i' :: word32) 4 \<and> i' \<le> 2 ^ sz))
            (UNIV \<inter> {s. cap_ptr_' s = Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])} \<inter> {s.  v_' s = (of_nat (i') :: word32)>> 4})
-           [] (updateCap srcSlot (UntypedCap p sz i'))
+           [] (updateCap srcSlot (UntypedCap d p sz i'))
            (Call cap_untyped_cap_ptr_set_capFreeIndex_'proc)"
   apply (rule ccorres_gen_asm)
   apply (rule ccorres_guard_imp)
      prefer 3
      apply assumption
-    apply (rule_tac P = "sz \<le> 30" and G = "cte_wp_at' S srcSlot" for S in ccorres_gen_asm)
+    apply (rule_tac P = "sz \<le> 29" and G = "cte_wp_at' S srcSlot" for S in ccorres_gen_asm)
    prefer 2
    apply clarsimp
    apply (rule conjI, assumption)
@@ -852,65 +859,69 @@ lemma update_freeIndex:
    apply clarify
 proof -
   assume ialign:"is_aligned (of_nat i' :: word32) 4"
-  assume szbound:"sz\<le> 30"
+  assume szbound:"sz\<le> 29"
   assume ibound:"i'\<le> 2^sz"
-  have [simp]:"\<And>x. (x::word32) && 0xFFFFFFE0 = x && ~~ mask 5"
+  note ibound_concrete = order_trans[OF ibound power_increasing[OF szbound], simplified]
+  have ibound_concrete_word:
+    "(of_nat i' :: word32) \<le> 2 ^ 29"
+    using ibound_concrete
+    by (simp add: word_of_nat_le)
+  have [simp]:"\<And>x. (x::word32) && 0xFFFFFFC0 = x && ~~ mask 6"
     by (simp add:mask_def)
-  have [simp]:"\<And>x. ((x::word32) && ~~ mask 5) && mask 5 = 0"
+  have [simp]:"\<And>x. ((x::word32) && ~~ mask 6) && mask 6 = 0"
     by (simp add:is_aligned_mask[THEN iffD1,OF is_aligned_neg_mask])
-  have [simp]:"(0x7FFFFFF::word32) = mask 27"
+  have [simp]:"(0x3FFFFFF::word32) = mask 26"
     by (simp add:mask_def)
-  have [simp]:"\<And>(n::word32) m. (n && mask 5 || m && ~~ mask 5 >> 5) && mask 27 = (m >> 5) && mask 27"
+  have [simp]:"\<And>(n::word32) m. (n && mask 6 || m && ~~ mask 6 >> 6) && mask 26 = (m >> 6) && mask 26"
     apply (rule word_eqI)
     apply (simp add:nth_shiftr)
     apply (simp add:neg_mask_bang word_size)
-    done
-  have [simp]:"(((of_nat i')::word32) >> 4 << 5 >> 5) = (of_nat i' >> 4)"
-    using szbound
-    apply (subst shiftl_shiftr_id)
-      apply (simp add:word_bits_def)
-     apply (rule shiftr_less_t2n)
-     apply (rule word_of_nat_less)
-     apply (rule le_less_trans[OF ibound])
-     apply (subst unat_power_lower32[symmetric])
-      apply (simp add:word_bits_def)
-     apply (subst word_less_nat_alt[symmetric])
-     apply (rule le_less_trans)
-      apply (erule two_power_increasing)
-      apply (simp add:word_bits_def)
-     apply (simp add:word_bits_def)
-    apply simp
-    done
- 
-  have ib':"unat ((of_nat i' >> 4 ::word32) && mask 27 << 4)  = i'"
-    using ialign ibound szbound
-    apply (simp add:is_aligned_mask)
-    apply (rule of_nat_inj32[THEN iffD1])
-      apply (rule less_le_trans[OF unat_lt2p])
-      apply (simp add:word_bits_def)
-     apply (erule le_less_trans)
-     apply (rule power_strict_increasing)
-     apply (simp add:word_bits_def)
-    apply simp+
-    apply (subgoal_tac "((of_nat i')::word32) && ~~ mask 31 = 0")
-     apply (word_bitwise)
-     apply (simp add: nth_mask word_size)
-    apply (rule mask_out_eq_0)
-     apply (erule le_less_trans)
-      apply (rule power_strict_increasing)
-      apply simp
+    done    
+  have terrible_word_stuff: "\<And>x1. to_bool
+            ((cap_C.words_C x1.[Suc 0] >> 5) && 1) =
+           to_bool
+            ((cap_C.words_C x1.[Suc 0] && 0x3F ||
+              (of_nat i' >> 4 << 6) && ~~ mask 6 >>
+              5) &&
+             1) \<and>
+           cap_C.words_C x1.[Suc 0] && 0x1F =
+           (cap_C.words_C x1.[Suc 0] && 0x3F ||
+            (of_nat i' >> 4 << 6) && ~~ mask 6) &&
+           0x1F \<and>
+           i' =
+           unat
+            ((cap_C.words_C x1.[Suc 0] && 0x3F ||
+              (of_nat i' >> 4 << 6) && ~~ mask 6 >>
+              6) &&
+             mask 26 <<
+             4)"
+    apply (rule conjI)
+     apply (clarsimp simp: to_bool_and_1 nth_shiftr neg_mask_bang)
+    apply (clarsimp simp: word_bool_alg.conj_disj_distrib2 mask_def[where n = 5,simplified,symmetric])
+    apply (rule conjI)
+     apply (subst and_and_mask_simple)
+      apply (simp add: mask_def[where n=5, simplified])
+     apply (subst and_and_mask_simple_not)
+      apply (simp add: mask_def[where n=5, simplified] mask_def[where n=6, simplified])
      apply simp
-    apply (simp add:word_bits_def)
+    apply (rule inj_onD[OF word_unat.Abs_inj_on[where 'a=32]], simp)
+      apply (cut_tac ialign ibound_concrete_word)
+      apply (simp add: is_aligned_mask)
+      apply word_bitwise
+      apply (simp add: word_size)
+     apply (cut_tac ibound_concrete)
+     apply (simp add: unats_def)
+    apply (simp add: word_unat.Rep[where 'a=32, simplified])
     done
 
   note option.case_cong_weak [cong]
 
-show "ccorresG rf_sr \<Gamma> dc xfdc (cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = capability.UntypedCap p sz i) srcSlot)
+show "ccorresG rf_sr \<Gamma> dc xfdc (cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = capability.UntypedCap d p sz i) srcSlot)
         (UNIV \<inter> \<lbrace>\<acute>cap_ptr = cap_Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])\<rbrace> \<inter> \<lbrace>\<acute>v = (of_nat i' :: word32) >> 4\<rbrace>) []
-        (updateCap srcSlot (capability.UntypedCap p sz i')) (Call cap_untyped_cap_ptr_set_capFreeIndex_'proc)"
+        (updateCap srcSlot (capability.UntypedCap d p sz i')) (Call cap_untyped_cap_ptr_set_capFreeIndex_'proc)"
   apply (cinit lift: cap_ptr_' v_')
    apply (rule ccorres_pre_getCTE)
-   apply (rule_tac P = "\<lambda>s. ctes_of s srcSlot = Some rv \<and> (\<exists>i. cteCap rv = UntypedCap p sz i)" in 
+   apply (rule_tac P = "\<lambda>s. ctes_of s srcSlot = Some rv \<and> (\<exists>i. cteCap rv = UntypedCap d p sz i)" in 
     ccorres_from_vcg[where P' = UNIV])
    apply (rule allI)
    apply (rule conseqPre)
@@ -940,9 +951,7 @@ show "ccorresG rf_sr \<Gamma> dc xfdc (cte_wp_at' (\<lambda>cte. \<exists>i. cte
     apply (case_tac cte',simp)
     apply (clarsimp simp:ccap_relation_def cap_lift_def
       cap_get_tag_def cap_to_H_def)
-    apply (simp add:mask_def[where n = 5,simplified,symmetric]
-       word_bool_alg.conj_disj_distrib2 mask_twice)
-    subgoal by (simp add:ib')
+    subgoal by (rule terrible_word_stuff)
    apply (erule_tac t = s' in ssubst)
    apply clarsimp
    apply (rule conjI)
@@ -2603,7 +2612,7 @@ lemma cap_get_tag_PageCap_small_frame:
    (cap_get_tag cap' = scast cap_small_frame_cap) =
    (cap =
     capability.ArchObjectCap
-     (PageCap (cap_small_frame_cap_CL.capFBasePtr_CL (cap_small_frame_cap_lift cap'))
+     (PageCap (to_bool ((cap_small_frame_cap_CL.capFIsDevice_CL (cap_small_frame_cap_lift cap')))) (cap_small_frame_cap_CL.capFBasePtr_CL (cap_small_frame_cap_lift cap'))
               (vmrights_to_H (cap_small_frame_cap_CL.capFVMRights_CL (cap_small_frame_cap_lift cap')))
               vmpage_size.ARMSmallPage
    (if cap_small_frame_cap_CL.capFMappedASIDHigh_CL (cap_small_frame_cap_lift cap') = 0
@@ -2624,7 +2633,7 @@ lemma cap_get_tag_PageCap_frame:
    (cap_get_tag cap' = scast cap_frame_cap) =
    (cap =
     capability.ArchObjectCap
-     (PageCap (cap_frame_cap_CL.capFBasePtr_CL (cap_frame_cap_lift cap'))
+     (PageCap (to_bool (cap_frame_cap_CL.capFIsDevice_CL (cap_frame_cap_lift cap'))) (cap_frame_cap_CL.capFBasePtr_CL (cap_frame_cap_lift cap'))
               (vmrights_to_H (cap_frame_cap_CL.capFVMRights_CL (cap_frame_cap_lift cap')))
               (framesize_to_H (capFSize_CL (cap_frame_cap_lift cap')))
     (if cap_frame_cap_CL.capFMappedASIDHigh_CL (cap_frame_cap_lift cap') = 0
@@ -2635,7 +2644,7 @@ lemma cap_get_tag_PageCap_frame:
           cap_frame_cap_CL.capFMappedAddress_CL (cap_frame_cap_lift cap')))))"
   apply (rule iffI)   
    apply (erule ccap_relationE)  
-   apply (clarsimp simp add: cap_lifts cap_to_H_def Let_def split: split_if)
+   apply (clarsimp simp add: cap_lifts cap_to_H_def Let_def  split: split_if)
   apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def)
 done
 
@@ -2659,7 +2668,7 @@ lemma fff_is_pageBits:
 
 (* used? *)
 lemma valid_cap'_PageCap_is_aligned:
-  "valid_cap' (ArchObjectCap (arch_capability.PageCap w r sz option)) t  \<Longrightarrow>
+  "valid_cap' (ArchObjectCap (arch_capability.PageCap d w r sz option)) t  \<Longrightarrow>
   is_aligned w (pageBitsForSize sz)"
   apply (simp add: valid_cap'_def capAligned_def) 
 done
@@ -2964,7 +2973,28 @@ lemma generic_frame_cap_get_capFBasePtr_spec:
    apply (clarsimp simp: cap_lift_frame_cap cap_frame_cap_lift_def)
   apply (clarsimp simp: cap_lifts [THEN sym])
   done
-
+  
+definition
+  "generic_frame_cap_get_capFIsDevice_CL \<equiv> \<lambda>cap. case cap of
+      Some (Cap_small_frame_cap c) \<Rightarrow> cap_small_frame_cap_CL.capFIsDevice_CL c
+    | Some (Cap_frame_cap c) \<Rightarrow> cap_frame_cap_CL.capFIsDevice_CL c
+    | Some _ \<Rightarrow> 0 | None \<Rightarrow> 0"
+    
+lemma generic_frame_cap_get_capFIsDevice_spec:
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. cap_get_tag \<acute>cap = scast cap_small_frame_cap \<or>
+                cap_get_tag \<acute>cap = scast cap_frame_cap\<rbrace>
+       \<acute>ret__unsigned_long :== PROC generic_frame_cap_get_capFIsDevice(\<acute>cap)
+       \<lbrace>\<acute>ret__unsigned_long = generic_frame_cap_get_capFIsDevice_CL (cap_lift \<^bsup>s\<^esup>cap)\<rbrace>"
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: generic_frame_cap_get_capFIsDevice_CL_def)
+  apply (intro conjI impI)
+    apply (clarsimp simp: cap_lift_small_frame_cap cap_small_frame_cap_lift_def)
+   apply (clarsimp simp: cap_lift_frame_cap cap_frame_cap_lift_def)
+  apply (clarsimp simp: cap_lifts [THEN sym])
+  by (clarsimp simp: generic_frame_cap_get_capFIsDevice_CL_def
+                        cap_lift_small_frame_cap cap_lift_frame_cap
+                        cap_small_frame_cap_lift_def cap_frame_cap_lift_def)
+  
 definition
  "generic_frame_cap_get_capFVMRights_CL \<equiv> \<lambda>cap. case cap of
       Some (Cap_small_frame_cap c) \<Rightarrow> cap_small_frame_cap_CL.capFVMRights_CL c
@@ -3051,10 +3081,9 @@ lemma ccap_relation_get_capSizeBits_physical:
   apply (case_tac hcap, simp_all)
         defer 4 (* zombie caps second last *)
         defer 4 (* arch caps last *)
-        apply (fold_subgoals (prefix))[5]
-        subgoal premises prems by (frule cap_get_tag_isCap_unfolded_H_cap,
+        apply ((frule cap_get_tag_isCap_unfolded_H_cap,
                      clarsimp simp: unfolds
-                             split: split_if_asm)+
+                             split: split_if_asm)+)[5] (* SOMEONE FIX SUBGOAL PLZ *)
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
    apply (clarsimp simp: unfolds split: split_if_asm)
    apply (rule arg_cong [OF less_mask_eq[where n=5, unfolded mask_def, simplified]])
@@ -3079,7 +3108,7 @@ lemma ccap_relation_get_capSizeBits_physical:
   done
 
 lemma ccap_relation_get_capSizeBits_untyped:
-  "\<lbrakk> ccap_relation (UntypedCap word bits idx) ccap \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> ccap_relation (UntypedCap d word bits idx) ccap \<rbrakk> \<Longrightarrow>
    get_capSizeBits_CL (cap_lift ccap) = bits"
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   by (clarsimp simp: get_capSizeBits_CL_def ccap_relation_def
@@ -3300,10 +3329,9 @@ lemma ccap_relation_get_capPtr_physical:
   apply (cases hcap; simp add: isCap_simps)
         defer 4
         defer 4
-        apply (fold_subgoals (prefix))[5]
-        subgoal by (frule cap_get_tag_isCap_unfolded_H_cap,
+        apply ((frule cap_get_tag_isCap_unfolded_H_cap,
                     clarsimp simp: unfolds
-                    split: split_if_asm dest!: ctcb_ptr_to_tcb_ptr_mask)+
+                    split: split_if_asm dest!: ctcb_ptr_to_tcb_ptr_mask)+)[5]
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
    apply (clarsimp simp: unfolds split: split_if_asm dest!: ctcb_ptr_to_tcb_ptr_mask)
    apply (rule arg_cong [OF less_mask_eq])
@@ -3328,7 +3356,7 @@ lemma ccap_relation_get_capPtr_physical:
   done
 
 lemma ccap_relation_get_capPtr_untyped:
-  "\<lbrakk> ccap_relation (UntypedCap word bits idx) ccap \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> ccap_relation (UntypedCap d word bits idx) ccap \<rbrakk> \<Longrightarrow>
    get_capPtr_CL (cap_lift ccap) = Ptr word"
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   by (clarsimp simp: get_capPtr_CL_def ccap_relation_def
@@ -3544,7 +3572,7 @@ lemma Arch_sameObjectAs_spec:
     apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                         isCap_defs cap_tag_defs)
         apply fastforce+
-      apply (rename_tac vmpage_size opt w r vmpage_sizea opt')
+      apply (rename_tac vmpage_size opt d w r vmpage_sizea opt')
       apply (case_tac "vmpage_size = ARMSmallPage",
              simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)[1]
        apply (rename_tac vmpage_sizea optiona)
@@ -3555,7 +3583,7 @@ lemma Arch_sameObjectAs_spec:
        apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), simp)
        apply (simp add: ccap_relation_def map_option_case)
        apply (simp add: cap_small_frame_cap_lift)
-       apply (clarsimp simp: cap_to_H_def capAligned_def from_bool_def
+       apply (clarsimp simp: cap_to_H_def capAligned_def to_bool_def from_bool_def 
                       split: split_if bool.split
                       dest!: is_aligned_no_overflow)
       apply (case_tac "vmpage_sizea = ARMSmallPage",
@@ -3570,7 +3598,7 @@ lemma Arch_sameObjectAs_spec:
                             Kernel_C.ARMSmallPage_def
                      split: split_if bool.split vmpage_size.split_asm
                      dest!: is_aligned_no_overflow)
-      apply (simp add: framesize_to_H_eq capFSize_range
+      apply (simp add: framesize_to_H_eq capFSize_range to_bool_def
                        cap_frame_cap_lift [symmetric])
      apply fastforce+
   done

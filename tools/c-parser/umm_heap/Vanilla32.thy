@@ -11,134 +11,10 @@
 (* License: BSD, terms see file ./LICENSE *)
 
 theory Vanilla32
-imports "../../../lib/Word_Lib/Word_Lib" CTypes
+imports "./$L4V_ARCH/Word_Mem_Encoding" "../../../lib/Word_Lib/Word_Lib" CTypes
 begin
 
-section "Words and Pointers"
 
-instantiation unit :: c_type
-begin
-instance ..
-end
-
-definition "unit_tag \<equiv> TypDesc (TypScalar 1 0
-      (\<lparr> field_access = (\<lambda>v bs. [0]), field_update = (\<lambda>bs v. ())\<rparr>)) ''unit''"
-
-declare unit_tag_def [simp]
-
-overloading typ_info_unit \<equiv> typ_info_t begin
-  definition typ_info_unit [simp]: "typ_info_unit (x::unit itself) \<equiv> unit_tag"
-end
-
-instantiation unit :: mem_type
-begin
-  definition
-    to_bytes_unit :: "unit \<Rightarrow> byte list" where
-    "to_bytes_unit a \<equiv> [0]"
-
-  definition
-    from_bytes_unit :: "byte list \<Rightarrow> unit" where
-    "from_bytes_unit bs \<equiv> ()"
-
-  definition
-    size_of_unit :: "unit itself \<Rightarrow> nat" where
-    "size_of_unit x \<equiv> 0"
-
-  definition
-    align_of_unit :: "unit itself \<Rightarrow> nat" where
-    "align_of_unit x \<equiv> 1"
-
-  instance
-    apply intro_classes
-    apply (auto simp: size_of_def align_of_def align_field_def addr_card
-                      wf_lf_def fd_cons_desc_def
-                      fd_cons_double_update_def fd_cons_update_access_def
-                      fd_cons_access_update_def fd_cons_length_def)
-  done
-end
-
-definition
-  "bogus_log2lessthree (n::nat) ==
-             if n = 64 then (3::nat)
-             else if n = 32 then 2
-             else if n = 16 then 1
-             else if n = 8 then 0
-             else undefined"
-definition
-  "len_exp (x::('a::len) itself) \<equiv> bogus_log2lessthree (len_of TYPE('a))"
-
-lemma lx8' [simp] : "len_exp (x::8 itself) = 0"
-by (simp add: len_exp_def bogus_log2lessthree_def)
-
-lemma lx16' [simp]: "len_exp (x::16 itself) = 1"
-by (simp add: len_exp_def bogus_log2lessthree_def)
-
-lemma lx32' [simp]: "len_exp (x::32 itself) = 2"
-by (simp add: len_exp_def bogus_log2lessthree_def)
-
-lemma lx64' [simp]: "len_exp (x::64 itself) = 3"
-by (simp add: len_exp_def bogus_log2lessthree_def)
-
-lemma lx_signed' [simp]: "len_exp (x::('a::len) signed itself) = len_exp (TYPE('a))"
-  by (simp add: len_exp_def)
-
-class len8 = len +
-  (* this constraint gives us (in the most convoluted way possible) that we're only
-     interested in words with a length that is divisible by 8 *)
-  assumes len8_bytes: "len_of TYPE('a::len) = 8 * (2^len_exp TYPE('a))"
-  (* len8_len class gives us that the words are \<le> than 128 bits.
-     This is a wacky restriction really, but we're really only interested in words
-     up to 64 bits, so who cares. *)
-  assumes len8_width: "len_of TYPE('a::len) \<le> 128"
-begin
-
-lemma len8_size:
-  "len_of TYPE('a) div 8 < addr_card"
-apply(subgoal_tac "len_of TYPE('a) \<le> 128")
- apply(simp add: addr_card)
-apply(rule len8_width)
-done
-
-lemma len8_dv8:
-  "8 dvd len_of TYPE('a)"
-  by (simp add: len8_bytes)
-
-lemma len8_pow:
-  "\<exists>k. len_of TYPE('a) div 8 = 2^k"
-  by (simp add: len8_bytes)
-
-end
-
-fun
-  nat_to_bin_string :: "nat \<Rightarrow> char list"
-  where
-  ntbs: "nat_to_bin_string n = (if (n = 0) then ''0'' else (if n mod 2 = 1 then CHR ''1'' else CHR ''0'') # nat_to_bin_string (n div 2))"
-
-declare nat_to_bin_string.simps [simp del]
-
-lemma nat_to_bin_string_simps:
-  "nat_to_bin_string 0 = ''0''"
-  "n > 0 \<Longrightarrow> nat_to_bin_string n =
-      (if n mod 2 = 1 then CHR ''1'' else CHR ''0'') # nat_to_bin_string (n div 2)"
-  apply (induct n, auto simp: nat_to_bin_string.simps)
-  done
-
-(* Little-endian encoding *)
-definition
-  word_tag :: "'a::len8 word itself \<Rightarrow> 'a word typ_info"
-where
-  "word_tag (w::'a::len8 word itself) \<equiv> TypDesc (TypScalar (len_of TYPE('a) div 8) (len_exp TYPE('a)) \<lparr> field_access = \<lambda>v bs. (rev o word_rsplit) v, field_update = \<lambda>bs v. (word_rcat (rev bs)::'a::len8 word) \<rparr>)  (''word'' @  nat_to_bin_string (len_of TYPE('a)) )"
-
-instantiation word :: (len8) c_type
-begin
-instance ..
-end
-
-instance signed :: (len8) len8
-  apply intro_classes
-   apply (metis len8_bytes len_exp_def len_signed)
-  apply (metis len8_width len_signed)
-  done
 
 overloading typ_info_word \<equiv> typ_info_t begin
 definition
@@ -240,29 +116,42 @@ done
 instance num1 :: len_lg03
 by (intro_classes, simp)
 
-class len_lg14 = len +
-  assumes len_lg14: "len_of TYPE('a::len) \<in> {2,4,8,16}"
-instance bit0 :: (len_lg03) len_lg14
+class len_lg04 = len +
+  assumes len_lg04: "len_of TYPE('a::len) \<in> {1,2,4,8,16}"
+instance bit0 :: (len_lg03) len_lg04
 apply intro_classes
 apply (insert len_lg03[where 'a = 'a])
 apply simp
 done
 
-class len_lg25 = len +
-  assumes len_lg25: "len_of TYPE('a::len) \<in> {4,8,16,32}"
-instance bit0 :: (len_lg14) len_lg25
+instance num1 :: len_lg04
+by (intro_classes, simp)
+class len_lg15 = len +
+  assumes len_lg15: "len_of TYPE('a::len) \<in> {2,4,8,16,32}"
+instance bit0 :: (len_lg04) len_lg15
 apply intro_classes
-apply (insert len_lg14[where 'a = 'a])
+apply (insert len_lg04[where 'a = 'a])
 apply simp
 done
 
-instance bit0 :: (len_lg25) len8
+class len_lg26 = len +
+  assumes len_lg26: "len_of TYPE('a::len) \<in> {4,8,16,32,64}"
+
+instance bit0 :: (len_lg15) len_lg26
+apply intro_classes
+apply (insert len_lg15[where 'a = 'a])
+apply simp
+done
+
+instance bit0 :: (len_lg26) len8
 apply intro_classes
   apply simp
-  apply (insert len_lg25[where 'a = 'a])
+  apply (insert len_lg26[where 'a = 'a])
   apply (simp add: len_exp_def)
   apply (erule disjE)
     apply (simp add: bogus_log2lessthree_def len8_bytes len8_width)
+  apply (erule disjE)
+    apply (simp add: bogus_log2lessthree_def)
   apply (erule disjE)
     apply (simp add: bogus_log2lessthree_def)
   apply (erule disjE)
@@ -276,8 +165,9 @@ instance signed :: (len_eq1) len_eq1     using len_eq1  by (intro_classes, simp)
 instance signed :: (len_lg01) len_lg01   using len_lg01 by (intro_classes, simp)
 instance signed :: (len_lg02) len_lg02   using len_lg02 by (intro_classes, simp)
 instance signed :: (len_lg03) len_lg03   using len_lg03 by (intro_classes, simp)
-instance signed :: (len_lg14) len_lg14   using len_lg14 by (intro_classes, simp)
-instance signed :: (len_lg25) len_lg25   using len_lg25 by (intro_classes, simp)
+instance signed :: (len_lg04) len_lg04   using len_lg04 by (intro_classes, simp)
+instance signed :: (len_lg15) len_lg15   using len_lg15 by (intro_classes, simp)
+instance signed :: (len_lg26) len_lg26   using len_lg26 by (intro_classes, simp)
 
 lemma
   "to_bytes (1*256*256*256 + 2*256*256 + 3*256 + (4::32 word)) bs = [4, 3, 2, 1]"
@@ -349,7 +239,8 @@ overloading typ_info_ptr \<equiv> typ_info_t begin
 definition typ_info_ptr :: "'a::c_type ptr itself \<Rightarrow> 'a::c_type ptr field_desc typ_desc" where
   typ_info_ptr:
   "typ_info_ptr (p::'a::c_type ptr itself) \<equiv> TypDesc
-    (TypScalar 4 2 \<lparr> field_access = \<lambda>p bs. rev (word_rsplit (ptr_val p)),
+    (TypScalar (addr_bitsize div 8) addr_align \<lparr>
+        field_access = \<lambda>p bs. rev (word_rsplit (ptr_val p)),
         field_update = \<lambda>bs v. Ptr (word_rcat (rev bs)::addr) \<rparr> )
     (typ_name_itself TYPE('a) @ ''+ptr'')"
 end
@@ -367,14 +258,14 @@ definition
 end
 
 lemma align_of_ptr [simp]:
-  "align_of (p::'a::c_type ptr itself) = 4"
+  "align_of (p::'a::c_type ptr itself) = 2 ^ addr_align"
   by (simp add: align_of_def typ_info_ptr)
 
 instantiation ptr :: (c_type) mem_type
 begin
 instance
   apply (intro_classes)
-    apply (auto simp:  to_bytes_def from_bytes_def
+    apply (auto simp: to_bytes_def from_bytes_def
                  length_word_rsplit_exp_size' word_size
                  word_rcat_rsplit size_of_def  addr_card
                  typ_info_ptr fd_cons_double_update_def
@@ -395,31 +286,37 @@ instance
 end
 
 lemma size_td_ptr [simp]:
-  "size_td (typ_info_t TYPE('a::c_type ptr)) = 4"
+  "size_td (typ_info_t TYPE('a::c_type ptr)) = addr_bitsize div 8"
   by (simp add: typ_info_ptr)
 
 lemma size_of_ptr [simp]:
-  "size_of TYPE('a::c_type ptr) = 4"
+  "size_of TYPE('a::c_type ptr) = addr_bitsize div 8"
   by (simp add: size_of_def)
 
-lemma align_td_ptr [simp]: "align_td (typ_info_t TYPE('a::c_type ptr)) = 2"
+lemma align_td_ptr [simp]: "align_td (typ_info_t TYPE('a::c_type ptr)) = addr_align"
   by (simp add: typ_info_ptr)
 
 lemma ptr_add_word32_signed [simp]:
   fixes a :: "32 word ptr"
   shows "ptr_val (a +\<^sub>p x) = ptr_val a + 4 * of_int x"
-  by (cases a) (simp add: ptr_add_def scast_id)
+  by (cases a) (simp add: CTypesDefs.ptr_add_def scast_id)
 
 lemma ptr_add_word32 [simp]:
-  fixes a :: "32 word ptr" and x :: "32 word"
+  fixes a :: "32 word ptr"
   shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 4 * x"
   by (cases a) (simp add: ptr_add_def scast_id)
+(*
+lemma ptr_add_word64 [simp]:
+  fixes a :: "64 word ptr" and x :: "64 word"
+  shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 8 * x"
+  by (cases a) (simp add: ptr_add_def scast_id)
+*)
 
 lemma ptr_add_0_id[simp]:"x +\<^sub>p 0 = x"
-  by (clarsimp simp:ptr_add_def)
+  by (simp add:CTypesDefs.ptr_add_def)
 
 lemma from_bytes_ptr_to_bytes_ptr:
-  "from_bytes (to_bytes (v::32 word) bs) = (Ptr v :: 'a::c_type ptr)"
+  "from_bytes (to_bytes (v::addr_bitsize word) bs) = (Ptr v :: 'a::c_type ptr)"
   by (simp add: from_bytes_def to_bytes_def typ_info_ptr word_tag_def
                 typ_info_word word_size
                 length_word_rsplit_exp_size' word_rcat_rsplit)
@@ -471,10 +368,10 @@ lemma typ_name_swords [simp]:
 
 lemma ptr_arith[simp]:
   "(x +\<^sub>p a = y +\<^sub>p a) = ((x::('a::c_type) ptr) = (y::'a ptr))"
-  by (clarsimp simp:ptr_add_def)
+  by (clarsimp simp:CTypesDefs.ptr_add_def)
 
 lemma ptr_arith'[simp]:
   "(ptr_coerce (x +\<^sub>p a) = ptr_coerce (y +\<^sub>p a)) = ((x::('a::c_type) ptr) = (y::'a ptr))"
-  by (clarsimp simp:ptr_add_def)
+  by (clarsimp simp:CTypesDefs.ptr_add_def)
 
 end

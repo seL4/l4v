@@ -229,8 +229,8 @@ lemma findPDForASIDAssert_pd_at_wp2:
   done
 
 lemma asid_shiftr_low_bits_less:
-  "(asid :: word32) \<le> mask asid_bits \<Longrightarrow> asid >> asid_low_bits < 0x100"
-  apply (rule_tac y="2 ^ 8" in order_less_le_trans)
+  "(asid :: word32) \<le> mask asid_bits \<Longrightarrow> asid >> asid_low_bits < 0x80"
+  apply (rule_tac y="2 ^ 7" in order_less_le_trans)
    apply (rule shiftr_less_t2n)
    apply (simp add: le_mask_iff_lt_2n[THEN iffD1] asid_bits_def asid_low_bits_def)
   apply simp
@@ -526,12 +526,12 @@ lemma rf_sr_asidTable_None:
   (index (armKSASIDTable_' (globals x)) (unat (asid >> asid_low_bits)) = ap_Ptr 0) = 
   (armKSASIDTable (ksArchState \<sigma>) (ucast (asid_high_bits_of asid)) = None)"
   apply (simp add: asid_high_bits_of_def ucast_ucast_mask)
-  apply (subgoal_tac "(asid >> asid_low_bits) && mask 8 = asid >> asid_low_bits")
+  apply (subgoal_tac "(asid >> asid_low_bits) && mask 7 = asid >> asid_low_bits")(*asid_low_bits*)
    prefer 2
    apply (rule word_eqI)
    apply (subst (asm) bang_eq)
    apply (simp add: word_size nth_shiftr asid_bits_def asid_low_bits_def)
-   apply (case_tac "n < 8", simp)
+   apply (case_tac "n < 7", simp) (*asid_low_bits*)
    apply (clarsimp simp: linorder_not_less)
    apply (erule_tac x="n+10" in allE)
    apply simp
@@ -571,7 +571,7 @@ lemma ucast_asid_high_bits_is_shift:
   apply (simp add: word_size nth_shiftr nth_ucast asid_low_bits_def asid_bits_def word_bits_def)
   apply (erule_tac x="n+10" in allE)
   apply simp
-  apply (case_tac "n < 8", simp)  
+  apply (case_tac "n < 7", simp) (*asid_low_bits*)  
   apply (simp add: linorder_not_less)
   apply (rule notI)
   apply (frule test_bit_size)
@@ -2643,19 +2643,19 @@ lemma unmapPage_ccorres:
 
 (* FIXME: move *)
 lemma cap_to_H_PageCap_tag:
-  "\<lbrakk> cap_to_H cap = ArchObjectCap (PageCap p R sz A);
+  "\<lbrakk> cap_to_H cap = ArchObjectCap (PageCap d p R sz A);
      cap_lift C_cap = Some cap \<rbrakk> \<Longrightarrow>
     cap_get_tag C_cap = scast cap_frame_cap \<or> cap_get_tag C_cap = scast cap_small_frame_cap"
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits split_if_asm)
      by (simp_all add: Let_def cap_lift_def split_def split: if_splits)
 
 lemma generic_frame_mapped_address:
-  "\<lbrakk> cap_to_H a = capability.ArchObjectCap (arch_capability.PageCap v0 v1 v2 v3); 
+  "\<lbrakk> cap_to_H a = capability.ArchObjectCap (arch_capability.PageCap d v0 v1 v2 v3); 
      cap_lift (cte_C.cap_C cte') = Some a;
      cl_valid_cte \<lparr>cap_CL = a, cteMDBNode_CL = mdb_node_lift (cteMDBNode_C cte')\<rparr>; 
      generic_frame_cap_set_capFMappedAddress_CL (Some a) (scast asidInvalid) 0 = Some cap';  
     cap_lift (cte_C.cap_C cte'a) = Some cap'\<rbrakk>
-  \<Longrightarrow> ArchObjectCap (PageCap v0 v1 v2 None) = cap_to_H cap' \<and> c_valid_cap (cte_C.cap_C cte'a)"
+  \<Longrightarrow> ArchObjectCap (PageCap d v0 v1 v2 None) = cap_to_H cap' \<and> c_valid_cap (cte_C.cap_C cte'a)"
   apply (cases cte')
   apply (cases cte'a)
   apply (clarsimp simp: cl_valid_cte_def)
@@ -2705,7 +2705,7 @@ lemma updateCap_frame_mapped_addr_ccorres:
    apply clarsimp 
    apply (frule (1) rf_sr_ctes_of_clift)
    apply clarsimp
-   apply (subgoal_tac "ccte_relation (cteCap_update (\<lambda>_. ArchObjectCap (PageCap v0 v1 v2 None)) (cte_to_H ctel')) cte'a")
+   apply (subgoal_tac "ccte_relation (cteCap_update (\<lambda>_. ArchObjectCap (PageCap d v0 v1 v2 None)) (cte_to_H ctel')) cte'a")
     prefer 2
     apply (clarsimp simp: ccte_relation_def)
     apply (clarsimp simp: cte_lift_def)
@@ -2719,7 +2719,7 @@ lemma updateCap_frame_mapped_addr_ccorres:
     apply (erule (3) cmap_relation_updI)
     subgoal by simp
    apply (erule_tac t = s' in ssubst)
-   apply (simp add: heap_to_page_data_def)
+   apply (simp add: heap_to_user_data_def)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
@@ -2730,8 +2730,8 @@ lemma updateCap_frame_mapped_addr_ccorres:
 
 (* FIXME: move *)
 lemma diminished_PageCap:
-  "diminished' (ArchObjectCap (PageCap p R sz a)) cap \<Longrightarrow>
-  \<exists>R'. cap = ArchObjectCap (PageCap p R' sz a)"
+  "diminished' (ArchObjectCap (PageCap d p R sz a)) cap \<Longrightarrow>
+  \<exists>R'. cap = ArchObjectCap (PageCap d p R' sz a)"
   apply (clarsimp simp: diminished'_def)
   apply (clarsimp simp: maskCapRights_def Let_def)
   apply (cases cap, simp_all add: isCap_simps)
@@ -2757,7 +2757,7 @@ lemma word_aligend_0_sum:
 
 (* FIXME: move *)
 lemma ccap_relation_mapped_asid_0:
-  "ccap_relation (ArchObjectCap (PageCap v0 v1 v2 v3)) cap 
+  "ccap_relation (ArchObjectCap (PageCap d v0 v1 v2 v3)) cap 
   \<Longrightarrow> (generic_frame_cap_get_capFMappedASID_CL (cap_lift cap) \<noteq> 0 \<longrightarrow> v3 \<noteq> None) \<and>
      (generic_frame_cap_get_capFMappedASID_CL (cap_lift cap) = 0 \<longrightarrow> v3 = None)"
   apply (erule ccap_relationE)
@@ -2826,7 +2826,7 @@ lemma vmsz_aligned_aligned_pageBits:
   done
 
 lemma ccap_relation_PageCap_generics:
-  "ccap_relation (ArchObjectCap (PageCap ptr rghts sz mapdata)) cap'
+  "ccap_relation (ArchObjectCap (PageCap d ptr rghts sz mapdata)) cap'
     \<Longrightarrow> (mapdata \<noteq> None \<longrightarrow>
            generic_frame_cap_get_capFMappedAddress_CL (cap_lift cap')
                     = snd (the mapdata)
@@ -2838,7 +2838,8 @@ lemma ccap_relation_PageCap_generics:
       \<and> gen_framesize_to_H (generic_frame_cap_get_capFSize_CL (cap_lift cap')) = sz
       \<and> generic_frame_cap_get_capFBasePtr_CL (cap_lift cap') = ptr
       \<and> generic_frame_cap_get_capFVMRights_CL (cap_lift cap') < 4
-      \<and> generic_frame_cap_get_capFSize_CL (cap_lift cap') < 4"
+      \<and> generic_frame_cap_get_capFSize_CL (cap_lift cap') < 4
+      \<and> to_bool (generic_frame_cap_get_capFIsDevice_CL (cap_lift cap')) = d"
   apply (frule ccap_relation_mapped_asid_0)
   apply (case_tac "sz = ARMSmallPage")
    apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
@@ -2848,6 +2849,7 @@ lemma ccap_relation_PageCap_generics:
                          generic_frame_cap_get_capFSize_CL_def
                          generic_frame_cap_get_capFMappedASID_CL_def
                          generic_frame_cap_get_capFBasePtr_CL_def
+                         generic_frame_cap_get_capFIsDevice_CL_def
                   elim!: ccap_relationE)
    apply (simp add: gen_framesize_to_H_def)
    apply (simp add: vm_page_size_defs order_le_less_trans [OF word_and_le1]
@@ -2860,6 +2862,7 @@ lemma ccap_relation_PageCap_generics:
                         generic_frame_cap_get_capFSize_CL_def
                         generic_frame_cap_get_capFMappedASID_CL_def
                         generic_frame_cap_get_capFBasePtr_CL_def
+                        generic_frame_cap_get_capFIsDevice_CL_def
                         c_valid_cap_def cl_valid_cap_def
                         option_to_0_def
                  elim!: ccap_relationE)
@@ -3280,7 +3283,7 @@ lemma performASIDPoolInvocation_ccorres:
                 apply (erule (1) cap_lift_PDCap_Base)
                apply simp
               apply (erule_tac t = s' in ssubst)
-              apply (simp add: heap_to_page_data_def)
+              apply (simp add: heap_to_user_data_def)
               apply (rule conjI)
                apply (erule (1) setCTE_tcb_case)
               apply (simp add: carch_state_relation_def cmachine_state_relation_def

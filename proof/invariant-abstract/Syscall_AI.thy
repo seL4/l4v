@@ -457,6 +457,25 @@ lemma sts_no_cap_asid[wp]:
   by (simp add: no_cap_to_obj_with_diff_ref_def
                 cte_wp_at_caps_of_state, wp)
 
+lemma sts_mcpriority_tcb_at[wp]:
+  "\<lbrace>mcpriority_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>rv. mcpriority_tcb_at P t\<rbrace>"
+  apply (simp add: set_thread_state_def set_object_def)
+  apply (wp | simp)+
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (drule get_tcb_SomeD)
+  apply clarsimp
+  done
+
+lemma sts_mcpriority_tcb_at_ct[wp]:
+  "\<lbrace>\<lambda>s. mcpriority_tcb_at P (cur_thread s) s\<rbrace> set_thread_state p ts \<lbrace>\<lambda>rv s. mcpriority_tcb_at P (cur_thread s) s\<rbrace>"
+  apply (simp add: set_thread_state_def set_object_def)
+  apply (wp | simp)+
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (drule get_tcb_SomeD)
+  apply clarsimp
+  done  
+
+  
 lemma sts_valid_inv[wp]:
   "\<lbrace>valid_invocation i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_invocation i\<rbrace>"
   apply (case_tac i, simp_all add: ntfn_at_typ ep_at_typ 
@@ -464,10 +483,10 @@ lemma sts_valid_inv[wp]:
          apply (wp | simp)+
       apply (rename_tac tcb_invocation)
       apply (case_tac tcb_invocation, 
-             (wp set_thread_state_valid_cap|
-              simp add: tcb_at_typ split: option.split|
+             (wp set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift|
+              simp add: tcb_at_typ  split: option.split|
               safe | 
-             wp sts_obj_at_impossible)+)
+             wp sts_obj_at_impossible )+)
     apply (rename_tac cnode_invocation)
     apply (case_tac cnode_invocation, simp_all)[1]
     apply (case_tac cnode_invocation,
@@ -500,7 +519,7 @@ lemma decode_inv_inv[wp]:
   done
 
 lemma diminished_Untyped [simp]:
-  "diminished (cap.UntypedCap x xa idx) = (\<lambda>c. c = cap.UntypedCap x xa idx)"
+  "diminished (cap.UntypedCap d x xa idx) = (\<lambda>c. c = cap.UntypedCap d x xa idx)"
   apply (rule ext)
   apply (case_tac c,
          auto simp: diminished_def cap_rights_update_def mask_cap_def)

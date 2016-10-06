@@ -27,7 +27,7 @@ lemma has_slots_simps:
 lemma reset_cap_asid_id:
   "reset_cap_asid cap = reset_cap_asid cap'
   \<Longrightarrow> cap = cap'
-     \<or> (\<exists>a b c d e. cap = FrameCap a b c d e)
+     \<or> (\<exists>a b c d e f. cap = FrameCap f a b c d e)
      \<or> (\<exists>a b c. cap = PageTableCap a b c)
      \<or> (\<exists>a b c. cap = PageDirectoryCap a b c)"
   by (case_tac cap, (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)+)
@@ -37,7 +37,7 @@ definition is_memory_cap :: "cdl_cap \<Rightarrow> bool"
 where
     "is_memory_cap cap \<equiv>
        (case cap of
-           FrameCap _ _ _ _ _     \<Rightarrow> True
+           FrameCap _ _ _ _ _ _     \<Rightarrow> True
          | PageTableCap _ _ _     \<Rightarrow> True
          | PageDirectoryCap _ _ _ \<Rightarrow> True
          | _                      \<Rightarrow> False)"
@@ -58,7 +58,7 @@ lemmas reset_cap_asid_simps[simp] = reset_cap_asid_def
 lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = NullCap \<Longrightarrow> cap = NullCap"
   "reset_cap_asid cap = RunningCap \<Longrightarrow> cap = RunningCap"
-  "reset_cap_asid cap = (UntypedCap a ra) \<Longrightarrow> cap = UntypedCap a ra"
+  "reset_cap_asid cap = (UntypedCap dev a ra) \<Longrightarrow> cap = UntypedCap dev a ra"
   "reset_cap_asid cap = (EndpointCap b c d) \<Longrightarrow> cap = EndpointCap b c d"
   "reset_cap_asid cap = (NotificationCap e f g) \<Longrightarrow> cap = NotificationCap e f g"
   "reset_cap_asid cap = (ReplyCap h) \<Longrightarrow> cap = ReplyCap h"
@@ -80,7 +80,7 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = (IOPageTableCap a2) \<Longrightarrow> cap = (IOPageTableCap a2)"
   "reset_cap_asid cap = (ZombieCap a3) \<Longrightarrow> cap = (ZombieCap a3)"
   "reset_cap_asid cap = (BoundNotificationCap a4) \<Longrightarrow> cap = (BoundNotificationCap a4)"
-  "reset_cap_asid cap = (FrameCap aa real sz rset ma) \<Longrightarrow> \<exists>asid. cap = FrameCap aa real sz rset asid"
+  "reset_cap_asid cap = (FrameCap dev aa real sz rset ma) \<Longrightarrow> \<exists>asid. cap = FrameCap dev aa real sz rset asid"
   "reset_cap_asid cap = (PageTableCap aa rights ma) \<Longrightarrow> \<exists>asid. cap = PageTableCap aa rights asid"
   "reset_cap_asid cap = (PageDirectoryCap aa rights as) \<Longrightarrow> \<exists>asid. cap = PageDirectoryCap aa rights asid"
 by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)+
@@ -581,7 +581,7 @@ done
 
 
 lemma derive_cap_rv:
-"\<lbrace>\<lambda>s. case cap of FrameCap p r sz b x \<Rightarrow> False | otherwise \<Rightarrow> P s\<rbrace>
+"\<lbrace>\<lambda>s. case cap of FrameCap dev p r sz b x \<Rightarrow> False | otherwise \<Rightarrow> P s\<rbrace>
      derive_cap slot cap
  \<lbrace>\<lambda>rv s. P s \<and> ( rv = cap \<or> rv = NullCap )\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
   apply (clarsimp simp: derive_cap_def returnOk_def split: cdl_cap.splits,safe)
@@ -957,13 +957,13 @@ lemma cnode_cap_size_upd_cap_rights[simp]:
 
 lemma has_type_default_not_non:
   "cap_type spec_cap = Some type
-  \<Longrightarrow> default_cap type ids sz \<noteq>  NullCap"
+  \<Longrightarrow> default_cap type ids sz dev \<noteq>  NullCap"
   by (clarsimp simp: default_cap_def cap_type_def
               split: cdl_cap.splits)
 
 lemma ep_related_cap_default_cap:
  "cap_type cap = Some type \<Longrightarrow>
-  ep_related_cap (default_cap type ids sz) = ep_related_cap cap"
+  ep_related_cap (default_cap type ids sz dev) = ep_related_cap cap"
   by (fastforce simp: cap_type_def ep_related_cap_def default_cap_def
                split: cdl_cap.splits cdl_object_type.splits)
 

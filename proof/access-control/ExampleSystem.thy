@@ -305,18 +305,18 @@ definition
 where
   "obj1_3079 \<equiv> 
    TCB \<lparr> 
-     tcb_ctable        = CNodeCap 6 undefined undefined ,
-     tcb_vtable        = ArchObjectCap 
-                           (PageDirectoryCap 3063 (Some asid1_3063)),
-     tcb_reply         = ReplyCap 3079 True, (* master reply cap to itself *)
-     tcb_caller        = NullCap,
-     tcb_ipcframe      = NullCap,
-     tcb_state         = Running, 
-     tcb_fault_handler = undefined, 
-     tcb_ipc_buffer    = undefined,
-     tcb_context       = undefined,
-     tcb_fault         = undefined, 
-     tcb_bound_notification     = None \<rparr>"
+     tcb_ctable             = CNodeCap 6 undefined undefined,
+     tcb_vtable             = ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063)),
+     tcb_reply              = ReplyCap 3079 True, (* master reply cap to itself *)
+     tcb_caller             = NullCap,
+     tcb_ipcframe           = NullCap,
+     tcb_state              = Running, 
+     tcb_fault_handler      = undefined, 
+     tcb_ipc_buffer         = undefined,
+     tcb_context            = undefined,
+     tcb_fault              = undefined, 
+     tcb_bound_notification = None,
+     tcb_mcpriority         = undefined \<rparr>"
 
 
 text {* T1's tcb *}
@@ -326,18 +326,18 @@ definition
 where
   "obj1_3080 \<equiv> 
    TCB \<lparr> 
-     tcb_ctable        = CNodeCap 7 undefined undefined ,
-     tcb_vtable        = ArchObjectCap 
-                           (PageDirectoryCap 3065 (Some asid1_3065)),
-     tcb_reply         = ReplyCap 3080 True, (* master reply cap to itself *)
-     tcb_caller        = NullCap,
-     tcb_ipcframe      = NullCap,
-     tcb_state         = BlockedOnReceive 9,
-     tcb_fault_handler = undefined, 
-     tcb_ipc_buffer    = undefined,
-     tcb_context       = undefined,
-     tcb_fault         = undefined,
-     tcb_bound_notification     = None \<rparr>"
+     tcb_ctable             = CNodeCap 7 undefined undefined,
+     tcb_vtable             = ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065)),
+     tcb_reply              = ReplyCap 3080 True, (* master reply cap to itself *)
+     tcb_caller             = NullCap,
+     tcb_ipcframe           = NullCap,
+     tcb_state              = BlockedOnReceive 9,
+     tcb_fault_handler      = undefined, 
+     tcb_ipc_buffer         = undefined,
+     tcb_context            = undefined,
+     tcb_fault              = undefined,
+     tcb_bound_notification = None,
+     tcb_mcpriority         = undefined \<rparr>"
 
 definition
  "obj1_10 \<equiv> CNode 10 (Map.empty([] \<mapsto> cap.NullCap))"
@@ -844,18 +844,18 @@ definition
 where
   "obj2_3079 \<equiv> 
    TCB \<lparr> 
-     tcb_ctable        = CNodeCap 6 undefined undefined ,
-     tcb_vtable        = ArchObjectCap 
-                           (PageDirectoryCap 3063 (Some asid2_3063)),
-     tcb_reply         = ReplyCap 3079 True, (* master reply cap to itself *)
-     tcb_caller        = NullCap,
-     tcb_ipcframe      = NullCap,
-     tcb_state         = Running, 
-     tcb_fault_handler = undefined, 
-     tcb_ipc_buffer    = undefined,
-     tcb_context       = undefined,
-     tcb_fault         = undefined,
-     tcb_bound_notification     = None \<rparr>"
+     tcb_ctable             = CNodeCap 6 undefined undefined ,
+     tcb_vtable             = ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063)),
+     tcb_reply              = ReplyCap 3079 True, (* master reply cap to itself *)
+     tcb_caller             = NullCap,
+     tcb_ipcframe           = NullCap,
+     tcb_state              = Running, 
+     tcb_fault_handler      = undefined, 
+     tcb_ipc_buffer         = undefined,
+     tcb_context            = undefined,
+     tcb_fault              = undefined,
+     tcb_bound_notification = None,
+     tcb_mcpriority         = undefined \<rparr>"
 
 
 text {* T1's tcb *}
@@ -865,18 +865,18 @@ definition
 where
   "obj2_3080 \<equiv> 
    TCB \<lparr> 
-     tcb_ctable        = CNodeCap 7 undefined undefined ,
-     tcb_vtable        = ArchObjectCap 
-                           (PageDirectoryCap 3065 (Some asid2_3065)),
-     tcb_reply         = ReplyCap 3080 True, (* master reply cap to itself *)
-     tcb_caller        = NullCap,
-     tcb_ipcframe      = NullCap,
-     tcb_state         = BlockedOnReceive 9,
-     tcb_fault_handler = undefined, 
-     tcb_ipc_buffer    = undefined,
-     tcb_context       = undefined,
-     tcb_fault         = undefined,
-     tcb_bound_notification     = None \<rparr>"
+     tcb_ctable             = CNodeCap 7 undefined undefined ,
+     tcb_vtable             = ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065)),
+     tcb_reply              = ReplyCap 3080 True, (* master reply cap to itself *)
+     tcb_caller             = NullCap,
+     tcb_ipcframe           = NullCap,
+     tcb_state              = BlockedOnReceive 9,
+     tcb_fault_handler      = undefined, 
+     tcb_ipc_buffer         = undefined,
+     tcb_context            = undefined,
+     tcb_fault              = undefined,
+     tcb_bound_notification = None,
+     tcb_mcpriority         = undefined \<rparr>"
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.
 but Tom says it only matters if the sender can grant - which is not the case of the UT1 - I think *)

@@ -23,7 +23,7 @@ where
  "cdl_cap_auth_conferred cap \<equiv>
     case cap of
       cdl_cap.NullCap \<Rightarrow> {}
-    | cdl_cap.UntypedCap refs frange \<Rightarrow> {Control}
+    | cdl_cap.UntypedCap dev refs frange \<Rightarrow> {Control}
     | cdl_cap.EndpointCap oref badge r \<Rightarrow>
          cap_rights_to_auth r True
     | cdl_cap.NotificationCap oref badge r \<Rightarrow>
@@ -40,7 +40,7 @@ where
     | cdl_cap.RestartCap \<Rightarrow> {}
     | cdl_cap.IrqControlCap \<Rightarrow> {Control}
     | cdl_cap.IrqHandlerCap irq \<Rightarrow> {Control}
-    | cdl_cap.FrameCap oref r sz is_real asid \<Rightarrow> vspace_cap_rights_to_auth r
+    | cdl_cap.FrameCap dev oref r sz is_real asid \<Rightarrow> vspace_cap_rights_to_auth r
     | cdl_cap.PageTableCap oref is_real asid\<Rightarrow> {Control}
     | cdl_cap.PageDirectoryCap oref is_real asid \<Rightarrow> {Control}
     | cdl_cap.AsidControlCap \<Rightarrow> {Control}
@@ -53,7 +53,7 @@ fun
   cdl_obj_refs :: "cdl_cap \<Rightarrow> obj_ref set"
 where
   "cdl_obj_refs cdl_cap.NullCap = {}"
-| "cdl_obj_refs (cdl_cap.UntypedCap rs frange) = rs"
+| "cdl_obj_refs (cdl_cap.UntypedCap dev rs frange) = rs"
 | "cdl_obj_refs (cdl_cap.EndpointCap r b cr) = {r}"
 | "cdl_obj_refs (cdl_cap.NotificationCap r b cr) = {r}"
 | "cdl_obj_refs (cdl_cap.ReplyCap r) = {r}"
@@ -67,7 +67,7 @@ where
 | "cdl_obj_refs cdl_cap.RestartCap = {}"
 | "cdl_obj_refs cdl_cap.IrqControlCap = {}"
 | "cdl_obj_refs (cdl_cap.IrqHandlerCap irq) = {}"
-| "cdl_obj_refs (cdl_cap.FrameCap x rs sz is_real asid) = ptr_range x sz"
+| "cdl_obj_refs (cdl_cap.FrameCap dev x rs sz is_real asid) = ptr_range x sz"
 | "cdl_obj_refs (cdl_cap.PageDirectoryCap x is_real asid) = {x}"
 | "cdl_obj_refs (cdl_cap.PageTableCap x is_real asid) = {x}"
 | "cdl_obj_refs (cdl_cap.AsidPoolCap p asid) = {p}"
@@ -115,7 +115,7 @@ where
 fun
   cdl_cap_asid' :: "cdl_cap \<Rightarrow> asid set"
 where
-    "cdl_cap_asid' (Types_D.FrameCap _ _ _ _ asid) = (transform_asid_rev o fst) ` set_option asid"
+    "cdl_cap_asid' (Types_D.FrameCap _ _ _ _ _ asid) = (transform_asid_rev o fst) ` set_option asid"
   | "cdl_cap_asid' (Types_D.PageTableCap _ _ asid) = (transform_asid_rev o fst) ` set_option asid"
   | "cdl_cap_asid' (Types_D.PageDirectoryCap _ _ asid) = transform_asid_rev ` set_option asid"
   | "cdl_cap_asid' (Types_D.AsidPoolCap _ asid) =
@@ -211,7 +211,7 @@ lemma transform_asid_rev [simp]:
    apply (subst ucast_ucast_mask)
    apply (simp add:mask_out_sub_mask)
   apply (simp add:ARM_A.asid_high_bits_def)
-  apply (rule shiftr_less_t2n[where m=8, simplified])
+  apply (rule shiftr_less_t2n[where m=7, simplified])
   apply (simp add:ARM_A.asid_bits_def)
   done
 
@@ -274,7 +274,7 @@ definition
   is_real_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "is_real_cap cap \<equiv> case cap of
-    cdl_cap.FrameCap _ _ _ Fake _ \<Rightarrow> False
+    cdl_cap.FrameCap _ _ _ _ Fake _ \<Rightarrow> False
   | cdl_cap.PageTableCap _ Fake _ \<Rightarrow> False
   | cdl_cap.PageDirectoryCap _ Fake _ \<Rightarrow> False
   | _ \<Rightarrow> True"
@@ -295,7 +295,7 @@ definition
   is_untyped_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "is_untyped_cap cap \<equiv> case cap of
-    cdl_cap.UntypedCap _ _ \<Rightarrow> True
+    cdl_cap.UntypedCap _ _ _ \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 lemma caps_of_state_transform_opt_cap_rev:
@@ -357,7 +357,7 @@ lemma caps_of_state_transform_opt_cap_rev:
 
 abbreviation
   "get_size cap \<equiv> case cap of
-     cdl_cap.FrameCap _ _ sz _ _ \<Rightarrow> sz
+     cdl_cap.FrameCap _ _ _ sz _ _ \<Rightarrow> sz
    | cdl_cap.PageTableCap _ _ _ \<Rightarrow> 0"
 
 lemma opt_cap_None_word_bits:
@@ -405,14 +405,14 @@ lemma opt_cap_Some_rev:
   done
 
 lemma obj_refs_transform:
-  "\<not> (\<exists>x sz i. cap = cap.UntypedCap x sz i) \<Longrightarrow> obj_refs cap = cdl_obj_refs (transform_cap cap)"
+  "\<not> (\<exists>x sz i dev. cap = cap.UntypedCap dev x sz i) \<Longrightarrow> obj_refs cap = cdl_obj_refs (transform_cap cap)"
   apply (case_tac cap; clarsimp)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap; clarsimp)
   done
 
 lemma untyped_range_transform:
-  "(\<exists>x sz i. cap = cap.UntypedCap x sz i) \<Longrightarrow> untyped_range cap = cdl_obj_refs (transform_cap cap)"
+  "(\<exists>x sz i dev. cap = cap.UntypedCap dev x sz i) \<Longrightarrow> untyped_range cap = cdl_obj_refs (transform_cap cap)"
   by auto
 
 lemma cap_auth_conferred_transform:
@@ -556,7 +556,6 @@ lemma thread_bound_ntfns_transform_rev:
    apply (clarsimp simp: infer_tcb_pending_op_def split: Structures_A.thread_state.splits)
     apply (case_tac "tcb_bound_notification tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def 
                                              infer_tcb_bound_notification_def split: option.splits)
-   apply(case_tac tcb_state;simp)
   done
 
 lemma idle_thread_null_cap:
@@ -875,7 +874,7 @@ lemma asid_table_entry_transform:
   apply (clarsimp simp:transform_def transform_asid_table_def unat_map_def
                        transform_asid_table_entry_def transform_asid_def)
   apply (simp add:transform_asid_def asid_high_bits_of_def asid_low_bits_def)
-  apply (rule unat_lt2p[where 'a=8, simplified])
+  apply (rule unat_lt2p[where 'a=7, simplified])
   done
 
 lemma transform_asid_high_bits_of:
@@ -908,36 +907,36 @@ lemma state_asids_transform:
   apply (drule state_asids_to_policy_aux.induct)
      prefer 4
      apply simp
-    apply (simp add:fst_transform_cslot_ptr)
+    apply (simp add: fst_transform_cslot_ptr)
     apply (rule_tac cap="transform_cap cap" in csata_asid)
      apply (rule caps_of_state_transform_opt_cap)
        apply simp
       apply fastforce
-     apply (clarsimp simp:idle_thread_no_asid)
+     apply (clarsimp simp: idle_thread_no_asid)
     apply (fastforce simp: cap_asid'_transform)
    apply (frule state_vrefs_asidpool_control, simp)
-   apply (simp add:state_vrefs_def, case_tac "kheap s poolptr", simp_all)
+   apply (simp add: state_vrefs_def, case_tac "kheap s poolptr", simp_all)
    apply (case_tac aa, simp_all add:vs_refs_no_global_pts_def)
    apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj, simp_all add:graph_of_def, safe)
    apply (rule_tac pdcap="cdl_cap.PageDirectoryCap b Fake None" in csata_asid_lookup)
-       apply (simp add:asid_table_entry_transform)
-      apply (simp add:is_null_cap_def transform_asid_table_entry_def)
-     apply (simp add:is_null_cap_def transform_asid_table_entry_def)
-    apply (simp add:ucast_up_ucast_id is_up_def source_size_def target_size_def word_size)
-   apply (simp add:transform_asid_table_entry_def)
+       apply (simp add: asid_table_entry_transform)
+      apply (simp add: is_null_cap_def transform_asid_table_entry_def)
+     apply (simp add: is_null_cap_def transform_asid_table_entry_def)
+    apply (simp add: ucast_up_ucast_id is_up_def source_size_def target_size_def word_size)
+   apply (simp add: transform_asid_table_entry_def)
    apply (drule_tac asid="asid" in opt_cap_asid_pool_Some[rotated])
-    apply (simp add:invs_valid_idle)
+    apply (simp add: invs_valid_idle)
    apply (subst (asm) mask_asid_low_bits_ucast_ucast)
    apply (subst (asm) up_ucast_inj_eq)
     apply simp
-   apply (simp add:transform_asid_pool_entry_def)
+   apply (simp add: transform_asid_pool_entry_def)
   apply (cut_tac aag=aag and asid=asid and asid_tab="cdl_asid_table (transform s)" in csata_asidpool)
-     apply (clarsimp simp:transform_def transform_asid_table_def unat_map_def)
+     apply (clarsimp simp: transform_def transform_asid_table_def unat_map_def)
      apply safe[1]
-      apply (simp add:transform_asid_table_entry_def transform_asid_high_bits_of)
-     apply (simp add:transform_asid_def unat_lt2p[where 'a=8, simplified])
-    apply (simp add:is_null_cap_def)
+      apply (simp add: transform_asid_table_entry_def transform_asid_high_bits_of)
+     apply (simp add: transform_asid_def unat_lt2p[where 'a=7, simplified])
+    apply (simp add: is_null_cap_def)
    apply simp
   apply simp
   done

@@ -68,4 +68,10 @@ There are three ARM-specific object types: virtual pages, page tables, and page 
 > getObjectSize PageDirectoryObject _ = pdBits
 > getObjectSize (APIObjectType apiObjectType) size = apiGetObjectSize apiObjectType size
 
+> isFrameType :: ObjectType -> Bool
+> isFrameType SmallPageObject = True
+> isFrameType LargePageObject = True
+> isFrameType SectionObject = True
+> isFrameType SuperSectionObject = True
+> isFrameType _ = False
 

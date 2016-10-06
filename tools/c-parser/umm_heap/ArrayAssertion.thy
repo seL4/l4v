@@ -79,24 +79,24 @@ for at least n more elements. *}
 definition
   "array_assertion (p :: ('a :: c_type) ptr) n htd
     = (\<exists>q i j. h_t_array_valid htd q j
-        \<and> p = ptr_add q (int i) \<and> i < j \<and> i + n \<le> j)"
+        \<and> p = CTypesDefs.ptr_add q (int i) \<and> i < j \<and> i + n \<le> j)"
 
 lemma array_assertion_shrink_right:
   "array_assertion p n htd \<Longrightarrow> n' \<le> n \<Longrightarrow> array_assertion p n' htd"
   by (fastforce simp: array_assertion_def)
 
 lemma array_assertion_shrink_leftD:
-  "array_assertion p n htd \<Longrightarrow> j < n \<Longrightarrow> array_assertion (ptr_add p (int j)) (n - j) htd"
+  "array_assertion p n htd \<Longrightarrow> j < n \<Longrightarrow> array_assertion (CTypesDefs.ptr_add p (int j)) (n - j) htd"
   apply (clarsimp simp: array_assertion_def)
   apply (rule exI, rule_tac x="i + j" in exI, rule exI, erule conjI)
-  apply (simp add: ptr_add_def field_simps)
+  apply (simp add: CTypesDefs.ptr_add_def field_simps)
   done
 
 lemma array_assertion_shrink_leftI:
-  "array_assertion (ptr_add p (- (int j))) (n + j) htd
+  "array_assertion (CTypesDefs.ptr_add p (- (int j))) (n + j) htd
     \<Longrightarrow> n \<noteq> 0 \<Longrightarrow> array_assertion p n htd"
   apply (drule_tac j=j in array_assertion_shrink_leftD, simp)
-  apply (simp add: ptr_add_def)
+  apply (simp add: CTypesDefs.ptr_add_def)
   done
 
 lemma h_t_array_valid:
@@ -133,7 +133,7 @@ definition
   ptr_add_assertion :: "('a :: c_type) ptr \<Rightarrow> int \<Rightarrow> bool \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
 where
   "ptr_add_assertion ptr offs strong htd \<equiv> offs = 0
-    \<or> array_assertion (if offs < 0 then ptr_add ptr offs else ptr)
+    \<or> array_assertion (if offs < 0 then CTypesDefs.ptr_add ptr offs else ptr)
         (if offs < 0 then nat (- offs) else if strong then Suc (nat offs) else nat offs)
         htd"
 
@@ -145,7 +145,7 @@ lemma ptr_add_assertion_positive:
 
 lemma ptr_add_assertion_negative:
   "offs < 0 \<Longrightarrow> ptr_add_assertion ptr offs strong htd
-    = array_assertion (ptr_add ptr offs) (nat (- offs)) htd"
+    = array_assertion (CTypesDefs.ptr_add ptr offs) (nat (- offs)) htd"
   by (simp add: ptr_add_assertion_def)
 
 lemma ptr_add_assertion_uint[simp]:

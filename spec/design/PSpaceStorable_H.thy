@@ -29,6 +29,10 @@ lemma UserData_singleton [simp]:
   "(v = UserData) = True" "(UserData = v) = True" 
   by (cases v, simp)+
 
+lemma UserDataDevice_singleton [simp]:
+  "(v = UserDataDevice) = True" "(UserDataDevice = v) = True" 
+  by (cases v, simp)+
+
 datatype 
   kernel_object_type = 
     EndpointT
@@ -36,6 +40,7 @@ datatype
   | CTET
   | TCBT
   | UserDataT
+  | UserDataDeviceT
   | KernelDataT
   | ArchT arch_kernel_object_type
 
@@ -47,6 +52,7 @@ where
 | "koTypeOf (KOCTE e) = CTET"
 | "koTypeOf (KOTCB e) = TCBT"
 | "koTypeOf (KOUserData) = UserDataT"
+| "koTypeOf (KOUserDataDevice) = UserDataDeviceT"
 | "koTypeOf (KOKernelData) = KernelDataT"
 | "koTypeOf (KOArch e) = ArchT (archTypeOf e)"
 

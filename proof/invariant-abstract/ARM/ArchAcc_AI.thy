@@ -917,14 +917,20 @@ lemma set_asid_pool_aligned [wp]:
   apply (simp add: set_asid_pool_def get_object_def)
   apply (wp set_object_aligned|wpc)+
   including unfold_objects
-  by (auto simp: a_type_def)
+  apply (clarsimp simp: a_type_def)
+  apply (rule_tac x = "ArchObj (ASIDPool x)" for x in exI)
+  apply auto
+  done
 
 lemma set_asid_pool_distinct [wp]:
   "\<lbrace>pspace_distinct\<rbrace> set_asid_pool p ptr \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
   apply (simp add: set_asid_pool_def get_object_def)
   apply (wp set_object_distinct|wpc)+
   including unfold_objects
-  by (auto simp: a_type_def)
+  apply (clarsimp simp: a_type_def)
+  apply (rule_tac x = "ArchObj (ASIDPool x)" for x in exI)
+  apply auto
+  done
 
 
 lemma store_pde_arch [wp]:
@@ -1453,18 +1459,18 @@ lemma set_pt_valid_arch_objs[wp]:
      apply (clarsimp simp: obj_at_def)
      subgoal for _ x
        apply (drule_tac x=x in spec)
-       by (cases "pt x"; clarsimp simp: obj_at_def a_type_simps)
+       by (cases "pt x"; clarsimp simp: data_at_def obj_at_def a_type_simps)
     apply (cases ao; simp add: obj_at_def a_type_simps)
       apply clarsimp
       apply (drule bspec, assumption, clarsimp)
      apply clarsimp
      subgoal for "fun" _ x
        apply (spec x)
-       by (cases "fun x"; clarsimp simp: obj_at_def a_type_simps)
+       by (cases "fun x"; clarsimp simp: obj_at_def data_at_def a_type_simps)
     apply clarsimp
     apply (drule bspec,fastforce)
     subgoal for "fun" x
-      by (cases "fun x"; clarsimp simp: obj_at_def a_type_simps)
+      by (cases "fun x"; clarsimp simp: data_at_def obj_at_def a_type_simps)
     done
   done
 
@@ -1636,13 +1642,30 @@ lemma set_pt_kernel_window[wp]:
                         arch_kernel_obj.split_asm)
   done
 
+lemma set_pt_respects_device_region[wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_pt_def)
+  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def
+                 split: Structures_A.kernel_object.split_asm
+                        arch_kernel_obj.split_asm)
+  done
 
-lemma set_pt_caps_kernel_window[wp]:
+lemma set_pt_caps_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wp set_object_cap_refs_in_kernel_window get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: kernel_object.split_asm
+                        arch_kernel_obj.split_asm)
+  done
+
+lemma set_pt_caps_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: set_pt_def)
+  apply (wp set_object_cap_refs_respects_device_region get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def
+                 split: Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm)
   done
 
@@ -1655,17 +1678,85 @@ lemma set_pt_valid_ioc[wp]:
               split: kernel_object.splits arch_kernel_obj.splits)
 
 
+
+lemma valid_machine_stateE:
+  assumes vm: "valid_machine_state s"
+  assumes e: "\<lbrakk>in_user_frame p s 
+    \<or> underlying_memory (machine_state s) p = 0 \<rbrakk> \<Longrightarrow> E "
+  shows E
+  using vm
+  apply (clarsimp simp: valid_machine_state_def)
+  apply (drule_tac x = p in spec)
+  apply (rule e)
+  apply auto
+  done
+
+lemma in_user_frame_same_type_upd:
+  "\<lbrakk>typ_at type p s; type = a_type obj; in_user_frame q s\<rbrakk>
+    \<Longrightarrow> in_user_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+  apply (clarsimp simp: in_user_frame_def obj_at_def)
+  apply (rule_tac x=sz in exI)
+  apply (auto simp: a_type_simps)
+  done
+
+lemma in_device_frame_same_type_upd:
+  "\<lbrakk>typ_at type p s; type = a_type obj ; in_device_frame q s\<rbrakk>
+    \<Longrightarrow> in_device_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+  apply (clarsimp simp: in_device_frame_def obj_at_def)
+  apply (rule_tac x=sz in exI)
+  apply (auto simp: a_type_simps)
+  done
+
+lemma store_word_offs_in_user_frame[wp]:
+  "\<lbrace>\<lambda>s. in_user_frame p s\<rbrace> store_word_offs a x w \<lbrace>\<lambda>_ s. in_user_frame p s\<rbrace>"
+  unfolding in_user_frame_def
+  by (wp hoare_vcg_ex_lift)
+
+lemma store_word_offs_in_device_frame[wp]:
+  "\<lbrace>\<lambda>s. in_device_frame p s\<rbrace> store_word_offs a x w \<lbrace>\<lambda>_ s. in_device_frame p s\<rbrace>"
+  unfolding in_device_frame_def
+  by (wp hoare_vcg_ex_lift)
+
+
+lemma as_user_in_user_frame[wp]:
+  "\<lbrace>\<lambda>s. in_user_frame p s\<rbrace> as_user t m \<lbrace>\<lambda>_ s. in_user_frame p s\<rbrace>"
+  unfolding in_user_frame_def
+  by (wp hoare_vcg_ex_lift)
+
+lemma as_user_in_device_frame[wp]:
+  "\<lbrace>\<lambda>s. in_device_frame p s\<rbrace> as_user t m \<lbrace>\<lambda>_ s. in_device_frame p s\<rbrace>"
+  unfolding in_device_frame_def
+  by (wp hoare_vcg_ex_lift)
+
+crunch obj_at[wp]: load_word_offs "\<lambda>s. P (obj_at Q p s)"
+
+lemma load_word_offs_in_user_frame[wp]:
+  "\<lbrace>\<lambda>s. in_user_frame p s\<rbrace> load_word_offs a x \<lbrace>\<lambda>_ s. in_user_frame p s\<rbrace>"
+  unfolding in_user_frame_def
+  by (wp hoare_vcg_ex_lift)
+
+lemma valid_machine_state_heap_updI:
+assumes vm : "valid_machine_state s"
+assumes tyat : "typ_at type p s"
+shows
+  " a_type obj = type \<Longrightarrow> valid_machine_state (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+  apply (clarsimp simp: valid_machine_state_def)
+  subgoal for p
+   apply (rule valid_machine_stateE[OF vm,where p = p])
+   apply (elim disjE,simp_all)
+   apply (drule(1) in_user_frame_same_type_upd[OF tyat])
+    apply simp+
+   done
+  done
+
 lemma set_pt_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_pt p pt \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: valid_machine_state_def in_user_frame_def obj_at_def
-                 split: kernel_object.splits arch_kernel_obj.splits)
-  apply (frule_tac x=pa in spec)
-  apply (frule_tac x=p in spec)
-  apply (clarsimp simp add: a_type_simps)
-  apply (rule_tac x=sz in exI)
-  apply (clarsimp simp: a_type_simps)
+  apply clarify
+  apply (erule valid_machine_state_heap_updI)
+   apply (fastforce simp: obj_at_def a_type_def 
+                   split: kernel_object.splits arch_kernel_obj.splits)+
   done
 
 crunch valid_irq_states[wp]: set_pt "valid_irq_states"
@@ -1736,7 +1827,7 @@ lemma vs_lookup_pages_pt_eq:
    apply (clarsimp simp: obj_at_def pde_ref_pages_def
                   split: pde.splits)
    apply (erule (5) vs_lookup_pdI)
-  apply (clarsimp simp: obj_at_def pte_ref_pages_def
+  apply (auto simp: obj_at_def pte_ref_pages_def data_at_def
                  split: pte.splits)
   done
 
@@ -2023,13 +2114,13 @@ lemma set_asid_pool_vs_lookup_unmap:
 lemma valid_pte_typ_at:
   "(\<And>T p. typ_at (AArch T) p s = typ_at (AArch T) p s') \<Longrightarrow>
    valid_pte pte s = valid_pte pte s'"
-  by (case_tac pte, simp+)
+  by (case_tac pte, auto simp add: data_at_def)
 
 
 lemma valid_pde_typ_at:
   "(\<And>T p. typ_at (AArch T) p s = typ_at (AArch T) p s') \<Longrightarrow>
    valid_pde pde s = valid_pde pde s'"
-  by (case_tac pde, simp+)
+  by (case_tac pde, auto simp add: data_at_def)
 
 
 lemma set_asid_pool_global_objs [wp]:
@@ -2147,11 +2238,25 @@ lemma set_asid_pool_kernel_window[wp]:
   including unfold_objects_asm
   by (clarsimp simp: a_type_def)
 
+lemma set_asid_pool_pspace_respects_device_region[wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  including unfold_objects_asm
+  by (clarsimp simp: a_type_def)
+
 
 lemma set_asid_pool_caps_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: set_asid_pool_def)
   apply (wp set_object_cap_refs_in_kernel_window get_object_wp)
+  including unfold_objects_asm
+  by clarsimp
+
+lemma set_asid_pool_caps_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_cap_refs_respects_device_region get_object_wp)
   including unfold_objects_asm
   by clarsimp
 
@@ -2170,16 +2275,10 @@ lemma set_asid_pool_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_asid_pool p S \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
-  including unfold_objects
-  apply (clarsimp simp: valid_machine_state_def in_user_frame_def)
-  subgoal for \<dots> pa
-   apply (frule spec[of _ pa])
-   apply (frule spec[of _ p])
-   apply (clarsimp simp add: a_type_simps)
-   subgoal for sz
-     apply (rule exI[of _ sz])
-     by (clarsimp simp: a_type_simps)
-   done
+  apply clarify
+  apply (erule valid_machine_state_heap_updI)
+  apply (fastforce simp: a_type_def obj_at_def
+                  split: kernel_object.splits arch_kernel_obj.splits)+
   done
 
 
@@ -2234,18 +2333,6 @@ lemma valid_slots_typ_at:
 lemma ucast_ucast_id:
   "(len_of TYPE('a)) < (len_of TYPE('b)) \<Longrightarrow> ucast ((ucast (x::('a::len) word))::('b::len) word) = x"
   by (auto intro: ucast_up_ucast_id simp: is_up_def source_size_def target_size_def word_size)
-
-
-lemma ucast_le_ucast:
-  "len_of TYPE('a) \<le> len_of TYPE('b) \<Longrightarrow>
-   (ucast x \<le> ((ucast (y :: ('a::len) word)) :: ('b::len) word)) = (x \<le> y)"
-  apply (simp add: word_le_nat_alt unat_ucast)
-  apply (subst mod_less)
-   apply(rule less_le_trans[OF unat_lt2p], simp)
-  apply (subst mod_less)
-   apply(rule less_le_trans[OF unat_lt2p], simp)
-  apply simp
-  done
 
 
 lemma kernel_base_kernel_mapping_slots:
@@ -2672,7 +2759,7 @@ lemma pd_bits: "pd_bits = 14"
 lemma create_mapping_entries_valid_slots [wp]:
   "\<lbrace>valid_arch_state and valid_arch_objs and equal_kernel_mappings
    and pspace_aligned and valid_global_objs
-   and \<exists>\<rhd> pd and page_directory_at pd and typ_at (AArch (AIntData sz)) (ptrFromPAddr base) and
+   and \<exists>\<rhd> pd and page_directory_at pd and data_at sz (ptrFromPAddr base) and
     K (is_aligned base pageBits \<and> vmsz_aligned vptr sz \<and> vptr < kernel_base \<and>
        vm_rights \<in> valid_vm_rights)\<rbrace>
   create_mapping_entries base vptr sz vm_rights attrib pd
@@ -3251,6 +3338,15 @@ lemma set_pd_kernel_window[wp]:
                         arch_kernel_obj.split_asm)
   done
 
+lemma set_pd_device_region[wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> set_pd p pd \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_pd_def)
+  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def
+                 split: Structures_A.kernel_object.split_asm
+                        arch_kernel_obj.split_asm)
+  done
+
 
 lemma set_pd_caps_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_pd p pd \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
@@ -3261,6 +3357,14 @@ lemma set_pd_caps_kernel_window[wp]:
                         arch_kernel_obj.split_asm)
   done
 
+lemma set_pd_caps_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_pd p pd \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: set_pd_def)
+  apply (wp set_object_cap_refs_respects_device_region get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def
+                 split: Structures_A.kernel_object.split_asm
+                        arch_kernel_obj.split_asm)
+  done
 
 lemma set_pd_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_pd p pt \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
@@ -3276,16 +3380,10 @@ lemma set_pd_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace> set_pd p pt \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: set_pd_def set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: valid_machine_state_def in_user_frame_def obj_at_def
-           split: kernel_object.splits arch_kernel_obj.splits)
-  subgoal for _ x3 pa
-    apply (frule spec[of _ pa])
-    apply (frule spec[of _ p])
-    apply (clarsimp simp add: a_type_simps)
-    subgoal for sz
-      apply (rule exI[of _ sz])
-      by (clarsimp simp: a_type_simps)
-    done
+  apply clarify
+  apply (erule valid_machine_state_heap_updI)
+  apply (fastforce simp: a_type_def obj_at_def
+           split: Structures_A.kernel_object.splits arch_kernel_obj.splits)+
   done
 
     
@@ -3308,18 +3406,31 @@ lemma vs_refs_pages_subset2:
    \<Longrightarrow> vs_refs ko \<subseteq> vs_refs ko'"
   apply clarsimp
   apply (drule (1) subsetD[OF _ subsetD[OF vs_refs_pages_subset]])
-  apply (clarsimp simp: vs_refs_def vs_refs_pages_def graph_of_def
-                 split: kernel_object.splits arch_kernel_obj.splits if_splits)
-  subgoal for pd pd' a b
-   using
-     imageI[where
-       A="{(x, y). (if x \<in> kernel_mapping_slots then None else pde_ref (pd' x)) = Some y}"
-       and f="(\<lambda>(r, y). (VSRef (ucast r) (Some APageDirectory), y))" and x="(a,b)"]
-   apply (clarsimp simp: pde_ref_def pde_ref_pages_def split: pde.splits)
-    apply (drule bspec, simp)+
-    apply (clarsimp simp: obj_at_def a_type_def)
-   apply (drule bspec, simp)+
-   by (clarsimp simp: obj_at_def a_type_def)
+  apply (case_tac ko; simp add: vs_refs_def)
+  subgoal for fstref b arch_kernel_obj
+    apply (cases arch_kernel_obj; simp add: vs_refs_def)
+     apply (cases ko'; simp add: vs_refs_pages_def)
+     subgoal for \<dots> arch_kernel_obja
+     by (cases arch_kernel_obja;clarsimp)
+    apply (cases ko'; simp add: vs_refs_pages_def)
+    subgoal for \<dots> arch_kernel_obja
+      apply (cases arch_kernel_obja; clarsimp)
+      apply (clarsimp simp: graph_of_def split: if_splits)
+      subgoal for "fun" a
+        apply (cut_tac
+        imageI[where
+               A="{(x, y). (if x \<in> kernel_mapping_slots then None else pde_ref (fun x)) = Some y}"
+               and f="(\<lambda>(r, y). (VSRef (ucast r) (Some APageDirectory), y))" and x="(a,b)"])
+         apply simp
+        apply (clarsimp simp: pde_ref_def pde_ref_pages_def
+          split: pde.splits)
+         apply (drule bspec,simp)+
+         apply (simp add: valid_pde_def)
+         apply (clarsimp simp: data_at_def obj_at_def a_type_def)
+        apply (drule bspec, simp split: if_splits)+
+      by (clarsimp simp: obj_at_def a_type_def data_at_def)
+    done
+  done
   done
 
 lemma set_pd_invs_unmap:
@@ -3388,6 +3499,41 @@ lemma valid_asid_map_next_asid [iff]:
   "valid_asid_map (s\<lparr>arch_state := arm_next_asid_update f (arch_state s)\<rparr>) =
   valid_asid_map s"
   by (simp add: valid_asid_map_def vspace_at_asid_def)
+
+lemma pspace_respects_device_region_dmo:
+  assumes valid_f: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms. P (device_state ms)\<rbrace>"
+  shows "\<lbrace>pspace_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
+  apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
+    get_def return_def)
+  apply (drule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_f])
+  apply auto
+  done
+
+lemma cap_refs_respects_device_region_dmo:
+  assumes valid_f: "\<And>P. \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms. P (device_state ms)\<rbrace>"
+  shows "\<lbrace>cap_refs_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. cap_refs_respects_device_region\<rbrace>"
+  apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
+    get_def return_def)
+  apply (drule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_f])
+  apply auto
+  done
+
+lemma machine_op_lift_device_state[wp]:
+  "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
+  by (clarsimp simp: machine_op_lift_def NonDetMonad.valid_def bind_def
+                     machine_rest_lift_def gets_def simpler_modify_def get_def return_def
+                     select_def ignore_failure_def select_f_def
+              split: if_splits)
+
+crunch device_state_inv[wp]: invalidateTLB_ASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: invalidateTLB_VAASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: setHardwareASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: isb "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: dsb "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: setCurrentPD "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: storeWord "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: cleanByVA_PoU "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: cleanL2Range "\<lambda>ms. P (device_state ms)"
 
 end
 

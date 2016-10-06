@@ -114,8 +114,6 @@ datatype scheduler_action =
   | switch_thread obj_ref
   | choose_new_thread
 
-type_synonym priority = word8
-
 type_synonym domain = word8
 
 record etcb =
@@ -414,14 +412,6 @@ text {* \emph{Extended operations} for the deterministic abstract specification.
 definition max_non_empty_queue :: "(priority \<Rightarrow> ready_queue) \<Rightarrow> ready_queue" where
   "max_non_empty_queue queues \<equiv> queues (Max {prio. queues prio \<noteq> []})"
 
-
-definition decode_set_priority_error_choice
-  :: "priority \<Rightarrow> obj_ref \<Rightarrow> bool det_ext_monad" where
-  "decode_set_priority_error_choice new_prio cur \<equiv>
-    do
-      prio \<leftarrow> ethread_get tcb_priority cur;
-      return (new_prio > prio)
-    od"
 
 definition default_ext :: "apiobject_type \<Rightarrow> domain \<Rightarrow> etcb option" where
   "default_ext type cdom \<equiv>

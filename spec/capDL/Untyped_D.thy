@@ -89,13 +89,13 @@ where
 
 (* Insert a cap for a new object in the given location. *)
 definition
-  create_cap :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap_ref \<times> cdl_object_id set) \<Rightarrow> unit k_monad"
+  create_cap :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> cdl_cap_ref \<Rightarrow> bool \<Rightarrow> (cdl_cap_ref \<times> cdl_object_id set) \<Rightarrow> unit k_monad"
 where
-  "create_cap new_type sz parent_slot \<equiv> \<lambda>(dest_slot, obj_refs).
+  "create_cap new_type sz parent_slot dev \<equiv> \<lambda>(dest_slot, obj_refs).
   do
     old_cap \<leftarrow> get_cap dest_slot;
     assert (old_cap = NullCap);
-    set_cap dest_slot (default_cap new_type obj_refs sz);
+    set_cap dest_slot (default_cap new_type obj_refs sz dev);
     set_parent dest_slot parent_slot
   od"
 
@@ -129,7 +129,10 @@ where
       return target_object_ids
     od"
 
-
+primrec (nonexhaustive)
+  untyped_is_device :: "cdl_cap \<Rightarrow> bool"
+where
+  "untyped_is_device (UntypedCap d _ _) = d"
 
 definition
   invoke_untyped :: "cdl_untyped_invocation \<Rightarrow> unit k_monad"
@@ -151,7 +154,7 @@ where
          retype_region type_size new_type new_obj_refs;
 
          (* Construct caps for the new objects. *)
-         mapM_x (create_cap new_type type_size untyped_ref) (zip target_slots new_obj_refs);
+         mapM_x (create_cap new_type type_size untyped_ref (untyped_is_device untyped_cap)) (zip target_slots new_obj_refs);
 
          (* Ideally, we should return back to the user how many
           * objects were created. *)

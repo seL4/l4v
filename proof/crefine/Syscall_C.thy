@@ -875,11 +875,14 @@ lemma handleInvocation_ccorres:
                       apply (clarsimp simp: word_less_nat_alt)
                       apply (rule conjI)
                        apply clarsimp
-                       apply (case_tac rvd, clarsimp simp: option_to_0_def min_def n_msgRegisters_def)
-                       apply (clarsimp simp: option_to_0_def)
+                       apply (case_tac rvd, clarsimp simp: option_to_ptr_def option_to_0_def min_def n_msgRegisters_def)
+                       apply (clarsimp simp: option_to_0_def option_to_ptr_def)
                       apply clarsimp
-                      apply (case_tac rvd, clarsimp simp: option_to_0_def min_def  n_msgRegisters_def split: if_splits)
-                      apply (clarsimp simp: option_to_0_def)
+                      apply (case_tac rvd,
+                             clarsimp simp: option_to_0_def min_def option_to_ptr_def
+                                            n_msgRegisters_def 
+                                     split: if_splits)
+                      apply (clarsimp simp: option_to_0_def option_to_ptr_def)
                      apply wp
                     apply (wp getMRs_length)
                    apply simp

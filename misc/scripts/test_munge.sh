@@ -93,6 +93,7 @@ mv kernel_all.txt kernel_all_2.txt
 [ -z ${AST+x} ] || mv ckernel_ast.txt ckernel_ast_2.txt
 
 set +e
+ERRORS=false
 # Check for differences in
 echo -en "${RED}"
 if ! diff ckernel_names_1.txt ckernel_names_2.txt &> /dev/null
@@ -103,8 +104,6 @@ then
     echo -e "#################################\n"
     echo "please address this issue appropriately"
     echo "and run make_muge.sh afterwards."
-    echo -e "\n${NC}${YEL}kernel_all diff:${NC}"
-    diff -uw kernel_all_1.txt kernel_all_2.txt
     echo -e "\n${YEL}Symbols diff:${NC}"
     diff -uw ckernel_names_1.txt ckernel_names_2.txt
     ERRORS=true
@@ -125,7 +124,20 @@ fi
 
 echo -en "${NC}"
 
-if [ -z ${ERRORS+x} ]
+if ! ${ERRORS}
 then echo -e "${GRE}Everything seems fine${NC}"
-else exit 1
+else
+    echo -en "${RED}"
+    if ! diff ckernel_all_1.txt ckernel_all_2.txt &> /dev/null
+    then
+        echo -e "${RED}"
+        echo "#################################"
+        echo "#   Something has changed       #"
+        echo -e "#################################\n"
+        echo "please address this issue appropriately"
+        echo "and run make_muge.sh afterwards."
+        echo -e "\n${NC}${YEL}kernel_all diff:${NC}"
+        diff -uw kernel_all_1.txt kernel_all_2.txt
+    fi
+    exit 1
 fi

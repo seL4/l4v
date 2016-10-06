@@ -116,6 +116,10 @@ definition
      when (tptr = cur) reschedule_required
    od"
 
+definition
+  set_mcpriority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad"  where
+  "set_mcpriority ref mcp \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_mcpriority:=mcp\<rparr>) ref "
+
 section {* Synchronous and Asyncronous Endpoints *}
 
 definition

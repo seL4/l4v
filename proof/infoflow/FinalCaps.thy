@@ -1145,30 +1145,24 @@ lemma cap_delete_one_silc_inv:
   apply (clarsimp simp: silc_inv_def)
   done
 
+lemma thread_set_silc_inv:
+  assumes cap_inv: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb"
+  shows "\<lbrace>silc_inv aag st\<rbrace> thread_set f t \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  apply (rule silc_inv_pres)
+    apply (subst thread_set_def)
+    apply (wp set_object_wp)
+    apply (simp split: kernel_object.splits)
+    apply (rule impI | simp)+
+    apply (fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
+   apply (rule thread_set_Pmdb)
+  apply (rule thread_set_cte_wp_at_trivial[OF cap_inv])
+  done
+
 lemma thread_set_tcb_fault_update_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace>
    thread_set (tcb_fault_update blah) t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding thread_set_def
-  apply(rule silc_inv_pres)
-   apply(wp set_object_wp)
-   apply (simp split: kernel_object.splits)
-   apply(rule impI | simp)+
-   apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
-  apply(wp set_object_wp | simp)+
-  apply(case_tac "t = fst slot")
-   apply(clarsimp split: kernel_object.splits)
-   apply(erule notE)
-   apply(erule cte_wp_atE)
-    apply(fastforce simp: obj_at_def)
-   apply(drule get_tcb_SomeD)
-   apply(rule cte_wp_at_tcbI)
-     apply(simp)
-    apply assumption
-   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
-
+  by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
 
 lemma reply_cancel_ipc_silc_inv:
   "\<lbrace>silc_inv aag st and pas_refined aag and K (is_subject aag t) \<rbrace>
@@ -1856,28 +1850,10 @@ lemma thread_set_tcb_registers_caps_merge_default_tcb_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace>
    thread_set (tcb_registers_caps_merge default_tcb) word 
    \<lbrace>\<lambda>xa. silc_inv aag st\<rbrace>"
-  unfolding thread_set_def
-  apply(rule silc_inv_pres)
-   apply(wp set_object_wp)
-   apply (simp split: kernel_object.splits)
-   apply(rule impI | simp)+
-   apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
-  apply(wp set_object_wp | simp)+
-  apply(case_tac "word = fst slot")
-   apply(clarsimp split: kernel_object.splits)
-   apply(erule notE)
-   apply(erule cte_wp_atE)
-    apply(fastforce simp: obj_at_def)
-   apply(drule get_tcb_SomeD)
-   apply(rule cte_wp_at_tcbI)
-     apply(simp)
-    apply assumption
-   apply (clarsimp simp: tcb_cap_cases_def tcb_registers_caps_merge_def split: if_splits)
-  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
+  by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def tcb_registers_caps_merge_def)
 
 crunch silc_inv[wp]: recycle_cap "silc_inv aag st"
-  (wp: crunch_wps simp: crunch_simps ignore: filterM set_object thread_set simp: filterM_mapM)
+  (wp: crunch_wps hoare_unless_wp simp: crunch_simps ignore: filterM set_object thread_set simp: filterM_mapM)
 
 lemma slots_holding_overlapping_caps_arch_reset_mem_mappings[simp]:
   "FinalCaps.slots_holding_overlapping_caps
@@ -1983,7 +1959,7 @@ lemma invoke_cnode_silc_inv:
 
 lemma set_cap_default_cap_silc_inv:
   "\<lbrace>silc_inv aag st and K (is_subject aag (fst slot) \<and> is_subject aag oref)\<rbrace> 
-    set_cap (default_cap a oref b) slot
+    set_cap (default_cap a oref b dev) slot
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply(rule hoare_pre)
    apply(rule set_cap_silc_inv)
@@ -1993,7 +1969,7 @@ lemma set_cap_default_cap_silc_inv:
 
 lemma create_cap_silc_inv:
   "\<lbrace> silc_inv aag st and K (is_subject aag (fst (fst ref)) \<and> is_subject aag (snd ref) \<and> is_subject aag (fst c))\<rbrace>
-   create_cap a b c ref
+   create_cap a b c dev ref
    \<lbrace> \<lambda>_. silc_inv aag st \<rbrace>"
   unfolding create_cap_def
   apply(rule hoare_gen_asm)
@@ -2005,12 +1981,12 @@ lemma create_cap_silc_inv:
   done
 
 crunch silc_inv[wp]: init_arch_objects "silc_inv aag st"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps hoare_unless_wp simp: crunch_simps)
 
 lemma retype_region_silc_inv:
   "\<lbrace>silc_inv aag st  and K (range_cover ptr sz (obj_bits_api type o_bits) num_objects \<and>
       (\<forall>x\<in>{ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}. is_subject aag x)) \<rbrace>
-   retype_region ptr num_objects o_bits type
+   retype_region ptr num_objects o_bits type dev
    \<lbrace>\<lambda>_. silc_inv aag st \<rbrace>"
   apply(rule hoare_gen_asm)+
   apply(simp only: retype_region_def retype_addrs_def 
@@ -2120,7 +2096,7 @@ lemma invoke_untyped_silc_inv:
    \<lbrace> \<lambda>_. silc_inv aag st \<rbrace>"
   apply(rule hoare_gen_asm)
   apply(case_tac ui, simp add: mapM_x_def[symmetric] authorised_untyped_inv_def)
-  apply(rename_tac word1 word2 apiobjt nat list)
+  apply(rename_tac word1 word2 apiobjt nat list dev)
   apply wp
        apply(rule_tac Q="\<lambda> r s. silc_inv aag st s \<and> (\<forall> x\<in>set list. is_subject aag (fst x)) \<and> (\<forall> oref\<in>set orefs. is_subject aag oref)" in hoare_strengthen_post)
   apply (wp mapM_x_wp[OF _ subset_refl] create_cap_silc_inv retype_region_silc_inv
@@ -2234,19 +2210,17 @@ lemma is_arch_diminished_pt_is_pt_or_pg_cap:
   apply(erule cte_wp_at_weakenE)
   apply (clarsimp simp: is_arch_diminished_def diminished_def mask_cap_def cap_rights_update_def split: cap.splits arch_cap.splits simp: acap_rights_update_def acap_rights_def)
   apply(case_tac c, simp_all)[1]
-   apply fastforce
   apply(rename_tac arch_cap)
   apply(drule_tac x=arch_cap in spec)
   apply(case_tac arch_cap, simp_all add: is_pt_cap_def)[1]
   done
 
 lemma is_arch_diminished_pg_is_pt_or_pg_cap:
-  "cte_wp_at (is_arch_diminished (ArchObjectCap (PageCap x xa xb xc))) slot s
+  "cte_wp_at (is_arch_diminished (ArchObjectCap (PageCap dev x xa xb xc))) slot s
        \<Longrightarrow> cte_wp_at (\<lambda>a. is_pt_cap a \<or> is_pg_cap a) slot s"
   apply(erule cte_wp_at_weakenE)
   apply (clarsimp simp: is_arch_diminished_def diminished_def mask_cap_def cap_rights_update_def split: cap.splits arch_cap.splits simp: acap_rights_update_def acap_rights_def)
   apply(case_tac c, simp_all)[1]
-   apply fastforce
   apply(rename_tac arch_cap)
   apply(drule_tac x=arch_cap in spec)
   apply(case_tac arch_cap, simp_all add: is_pg_cap_def)[1]
@@ -2465,7 +2439,7 @@ lemma get_cap_perform_asid_control_invocation_helper:
 
 lemma retype_region_cte_wp_at_other':
   "\<lbrace> cte_wp_at P slot and K ((fst slot) \<notin>  set (retype_addrs ptr ty n us)) \<rbrace>
-    retype_region ptr n us ty 
+    retype_region ptr n us ty dev
    \<lbrace> \<lambda>_. cte_wp_at P slot \<rbrace>"
   apply(rule hoare_gen_asm)
   apply(clarsimp simp: valid_def)
@@ -2954,49 +2928,13 @@ lemma thread_set_tcb_ipc_buffer_update_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace>
    thread_set (tcb_ipc_buffer_update blah) t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding thread_set_def
-  apply(rule silc_inv_pres)
-   apply(wp set_object_wp)
-   apply (simp split: kernel_object.splits)
-   apply(rule impI | simp)+
-   apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
-  apply(wp set_object_wp | simp)+
-  apply(case_tac "t = fst slot")
-   apply(clarsimp split: kernel_object.splits)
-   apply(erule notE)
-   apply(erule cte_wp_atE)
-    apply(fastforce simp: obj_at_def)
-   apply(drule get_tcb_SomeD)
-   apply(rule cte_wp_at_tcbI)
-     apply(simp)
-    apply assumption
-   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
+  by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
 
 lemma thread_set_tcb_fault_handler_update_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace>
    thread_set (tcb_fault_handler_update blah) t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding thread_set_def
-  apply(rule silc_inv_pres)
-   apply(wp set_object_wp)
-   apply (simp split: kernel_object.splits)
-   apply(rule impI | simp)+
-   apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
-  apply(wp set_object_wp | simp)+
-  apply(case_tac "t = fst slot")
-   apply(clarsimp split: kernel_object.splits)
-   apply(erule notE)
-   apply(erule cte_wp_atE)
-    apply(fastforce simp: obj_at_def)
-   apply(drule get_tcb_SomeD)
-   apply(rule cte_wp_at_tcbI)
-     apply(simp)
-    apply assumption
-   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
+  by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
 
 lemma thread_set_tcb_fault_handler_update_invs:
   "\<lbrace>invs and K (length a = word_bits)\<rbrace>
@@ -3006,6 +2944,11 @@ lemma thread_set_tcb_fault_handler_update_invs:
   apply(wp itr_wps | simp)+
   done
 
+lemma set_mcpriority_silc_inv[wp]:
+  "\<lbrace>silc_inv aag st\<rbrace> set_mcpriority t mcp \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding set_mcpriority_def
+  by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
+find_theorems thread_set silc_inv
 crunch silc_inv[wp]: bind_notification "silc_inv aag st"
 
 lemma invoke_tcb_silc_inv:

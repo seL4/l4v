@@ -61,7 +61,7 @@ where
   "sep_cut' p n \<equiv> \<lambda>s. dom s = {(x,y). x \<in> {p..+n}}"
 
 definition
-  sep_cut :: "addr \<Rightarrow> 32 word \<Rightarrow> (s_addr,'b) map_assert"
+  sep_cut :: "addr \<Rightarrow> addr_bitsize word \<Rightarrow> (s_addr,'b) map_assert"
 where
   "sep_cut x y \<equiv> sep_cut' x (unat y)"
 
@@ -384,7 +384,7 @@ apply (rule iffI)
  apply (drule intvlD, clarsimp simp add: unat_of_nat)
 apply (simp add: intvl_def unat_arith_simps(4) unat_of_nat split: split_if_asm)
  apply (rule_tac x="unat x - unat ptr" in exI, simp)
-apply (rule_tac x="unat x + 2^32 - unat ptr" in exI)
+apply (rule_tac x="unat x + 2^addr_bitsize - unat ptr" in exI)
 apply (cut_tac x=ptr in unat_lt2p)
 apply (simp add: unat_arith_simps unat_of_nat)
 done

@@ -27,7 +27,7 @@ lemma seL4_Untyped_Retype_cdt_inc':
    \<lbrace>\<lambda>s.
     \<guillemotleft> si_tcb_id \<mapsto>f Tcb tcb \<and>*
     si_cnode_id \<mapsto>f CNode (empty_cnode si_cnode_size) \<and>*
-    (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap obj_range free_range \<and>*
+    (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range \<and>*
     (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap \<and>*
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>*
      sep_true \<guillemotright> s \<and>
@@ -46,7 +46,7 @@ lemma seL4_Untyped_Retype_has_children_wp:
   \<lbrace>\<lambda>s.
    \<guillemotleft>si_tcb_id \<mapsto>f Tcb tcb \<and>*
     si_cnode_id \<mapsto>f CNode (empty_cnode si_cnode_size) \<and>*
-    (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap obj_range free_range \<and>*
+    (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range \<and>*
     (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap \<and>*
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>*
     sep_true \<guillemotright> s \<and>
@@ -69,7 +69,7 @@ lemma seL4_Untyped_Retype_list_all_has_children_index_wp:
   \<lbrace>\<lambda>s.
    \<guillemotleft>si_tcb_id \<mapsto>f Tcb tcb \<and>*
     si_cnode_id \<mapsto>f CNode (empty_cnode si_cnode_size) \<and>*
-    (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap obj_range free_range \<and>*
+    (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range \<and>*
     (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap \<and>*
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>*
     sep_true\<guillemotright> s \<and>
@@ -94,7 +94,7 @@ lemma seL4_Untyped_Retype_sep_cdt_inc:
     \<guillemotleft>si_tcb_id \<mapsto>f (Tcb tcb)
   \<and>* (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
   \<and>* (cap_object si_cnode_cap \<mapsto>f CNode (empty_cnode si_cnode_size))
-  \<and>* (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap obj_range free_range
+  \<and>* (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range
   \<and>* (si_cnode_id, unat ncptr ) \<mapsto>c NullCap
   \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
   \<and>* (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap
@@ -108,11 +108,11 @@ lemma seL4_Untyped_Retype_sep_cdt_inc:
   \<lbrace>\<lambda>r s. (\<not> r \<longrightarrow> (\<exists>oid free_range'. (\<guillemotleft>
      (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
   \<and>* si_tcb_id \<mapsto>f (Tcb tcb)
-  \<and>* (si_cnode_id, unat ncptr) \<mapsto>c (default_cap nt {oid} (unat ts))
+  \<and>* (si_cnode_id, unat ncptr) \<mapsto>c (default_cap nt {oid} (unat ts) dev)
   \<and>* oid \<mapsto>o obj
   \<and>* (cap_object si_cnode_cap \<mapsto>f CNode (empty_cnode si_cnode_size))
   \<and>* (\<And>* ptr\<in>tot_free_range - {oid}. ptr \<mapsto>o Untyped)
-  \<and>* (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap obj_range free_range'
+  \<and>* (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range'
   \<and>* (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap
   \<and>* (cap_object si_cnode_cap, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap
   \<and>* R \<guillemotright> s ) \<and> free_range' \<subseteq> free_range - {oid} \<and> oid \<in> free_range)
@@ -121,7 +121,7 @@ lemma seL4_Untyped_Retype_sep_cdt_inc:
      (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
   \<and>* si_tcb_id \<mapsto>f (Tcb tcb)
   \<and>* (cap_object si_cnode_cap \<mapsto>f CNode (empty_cnode si_cnode_size))
-  \<and>* (si_cnode_id,unat untyped_cptr) \<mapsto>c UntypedCap obj_range free_range
+  \<and>* (si_cnode_id,unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range
   \<and>* (si_cnode_id, unat ncptr) \<mapsto>c NullCap
   \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
   \<and>* (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap
@@ -151,6 +151,7 @@ lemma seL4_Untyped_Retype_sep_cdt_inc:
     apply clarsimp
     apply sep_solve
    apply clarsimp
+   apply sep_solve
   apply clarsimp
   done
 
@@ -175,7 +176,7 @@ lemma retype_untyped_wp:
     sz < 2 ^ word_bits;
     type \<noteq> UntypedType\<rbrakk>
   \<Longrightarrow>
-   \<lbrace>\<lambda>s. \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap cover_ids available_ids \<and>*
+   \<lbrace>\<lambda>s. \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev cover_ids available_ids \<and>*
     (\<And>* obj_id \<in> all_available_ids. (obj_id \<mapsto>o Untyped)) \<and>*
     (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
@@ -188,10 +189,10 @@ lemma retype_untyped_wp:
      retype_untyped free_cptr untyped_cptr type sz
    \<lbrace>\<lambda>rv s. (\<not>rv \<longrightarrow> (\<exists>new_id available_ids'.
      new_id \<in> available_ids \<and> available_ids' \<subseteq> available_ids - {new_id} \<and>
-    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap cover_ids available_ids' \<and>*
+    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev cover_ids available_ids' \<and>*
     (\<And>* obj_id \<in> all_available_ids - {new_id}. (obj_id \<mapsto>o Untyped)) \<and>*
      new_id \<mapsto>o new_object \<and>*
-    (si_cnode_id, unat free_cptr) \<mapsto>c default_cap type {new_id} sz \<and>*
+    (si_cnode_id, unat free_cptr) \<mapsto>c default_cap type {new_id} sz dev \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
     (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
     (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -200,7 +201,7 @@ lemma retype_untyped_wp:
     has_children (si_cnode_id,unat untyped_cptr) (kernel_state s) \<and>
      list_all (\<lambda>index. has_children (si_cnode_id, untyped_slots ! index) (kernel_state s)) indices) \<and>
    (rv \<longrightarrow>
-    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap cover_ids available_ids \<and>*
+    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev cover_ids available_ids \<and>*
     (\<And>* obj_id \<in> all_available_ids. (obj_id \<mapsto>o Untyped)) \<and>*
     (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
@@ -236,14 +237,14 @@ lemma retype_untyped_wp:
   done
 
 lemma retype_untyped_wp_success:
-  "\<lbrakk>default_object type sz minBound = Some new_object;
+  "\<lbrakk>default_object type sz minBound= Some new_object;
     available_ids \<subseteq> all_available_ids;
     free_cptr < 2 ^ si_cnode_size;
     untyped_cptr < 2 ^ si_cnode_size;
     sz < 2 ^ word_bits;
     type \<noteq> UntypedType\<rbrakk>
   \<Longrightarrow>
-   \<lbrace>\<lambda>s. \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap cover_ids available_ids \<and>*
+   \<lbrace>\<lambda>s. \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev cover_ids available_ids \<and>*
     (\<And>* obj_id \<in> all_available_ids. (obj_id \<mapsto>o Untyped)) \<and>*
     (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
@@ -256,10 +257,10 @@ lemma retype_untyped_wp_success:
      retype_untyped free_cptr untyped_cptr type sz
    \<lbrace>\<lambda>rv s. \<not>rv \<longrightarrow> (\<exists>new_id available_ids'.
      new_id \<in> available_ids \<and> available_ids' \<subseteq> available_ids - {new_id} \<and>
-    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap cover_ids available_ids' \<and>*
+    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev cover_ids available_ids' \<and>*
     (\<And>* obj_id \<in> all_available_ids - {new_id}. (obj_id \<mapsto>o Untyped)) \<and>*
      new_id \<mapsto>o new_object \<and>*
-    (si_cnode_id, unat free_cptr) \<mapsto>c default_cap type {new_id} sz \<and>*
+    (si_cnode_id, unat free_cptr) \<mapsto>c default_cap type {new_id} sz dev \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
     (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
     (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -279,7 +280,7 @@ lemma retype_untyped_wp_fail:
     sz < 2 ^ word_bits;
     type \<noteq> UntypedType\<rbrakk>
   \<Longrightarrow>
-   \<lbrace>\<lambda>s. \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap cover_ids available_ids \<and>*
+   \<lbrace>\<lambda>s. \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev cover_ids available_ids \<and>*
     (\<And>* obj_id \<in> all_available_ids. (obj_id \<mapsto>o Untyped)) \<and>*
     (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
@@ -291,7 +292,7 @@ lemma retype_untyped_wp_fail:
      list_all (\<lambda>index. has_children (si_cnode_id, untyped_slots ! index) (kernel_state s)) indices\<rbrace>
      retype_untyped free_cptr untyped_cptr type sz
    \<lbrace>\<lambda>rv s. rv \<longrightarrow>
-    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap cover_ids available_ids \<and>*
+    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev cover_ids available_ids \<and>*
     (\<And>* obj_id \<in> all_available_ids. (obj_id \<mapsto>o Untyped)) \<and>*
     (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
@@ -321,7 +322,7 @@ lemma retype_untyped_bij_success:
      dom t = used_spec_ids \<and>
      obj_id \<notin> used_spec_ids \<and>
      available_ids \<subseteq> all_available_ids \<and>
-    \<guillemotleft>(si_cnode_id, untyped_slot) \<mapsto>c UntypedCap cover_ids available_ids \<and>*
+    \<guillemotleft>(si_cnode_id, untyped_slot) \<mapsto>c UntypedCap dev cover_ids available_ids \<and>*
     (\<And>* obj_id \<in> all_available_ids. (obj_id \<mapsto>o Untyped)) \<and>*
     (si_cnode_id, free_slot) \<mapsto>c NullCap \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
@@ -342,11 +343,11 @@ lemma retype_untyped_bij_success:
      obj_id \<notin> used_spec_ids \<and>
      new_id \<in> available_ids \<and>
      available_ids' \<subseteq> available_ids - {new_id} \<and>
-    \<guillemotleft>(si_cnode_id, untyped_slot) \<mapsto>c UntypedCap cover_ids available_ids' \<and>*
+    \<guillemotleft>(si_cnode_id, untyped_slot) \<mapsto>c UntypedCap dev cover_ids available_ids' \<and>*
     (\<And>* obj_id \<in> all_available_ids - {new_id}. (obj_id \<mapsto>o Untyped)) \<and>*
      object_empty spec (t(obj_id \<mapsto> new_id)) obj_id \<and>*
      si_cap_at (t(obj_id \<mapsto> new_id)) (si_caps(obj_id \<mapsto> free_cptr))
-                  spec obj_id \<and>*
+                  spec dev obj_id \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
     (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
     (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -390,15 +391,15 @@ lemma retype_untyped_bij_success:
   done
 
 lemma si_cap_at_update:
-  "\<lbrakk>(si_cap_at t si_caps spec obj_id) s; obj_id \<noteq> obj_id'\<rbrakk>
-  \<Longrightarrow> (si_cap_at t (si_caps(obj_id' \<mapsto> cap_ptr)) spec obj_id) s"
+  "\<lbrakk>(si_cap_at t si_caps spec dev obj_id) s; obj_id \<noteq> obj_id'\<rbrakk>
+  \<Longrightarrow> (si_cap_at t (si_caps(obj_id' \<mapsto> cap_ptr)) spec dev obj_id) s"
   by (clarsimp simp: si_cap_at_def)
 
 lemma map_si_cap_at_update_old:
   "\<lbrakk>distinct obj_ids; obj_id_index < length obj_ids;
     obj_id = obj_ids ! obj_id_index;
-   (\<And>* map (si_cap_at t si_caps spec) (take obj_id_index obj_ids)) s\<rbrakk>
-  \<Longrightarrow> (\<And>* map (si_cap_at t (si_caps(obj_id \<mapsto> cap_ptr)) spec)
+   (\<And>* map (si_cap_at t si_caps spec dev) (take obj_id_index obj_ids)) s\<rbrakk>
+  \<Longrightarrow> (\<And>* map (si_cap_at t (si_caps(obj_id \<mapsto> cap_ptr)) spec dev)
               (take obj_id_index obj_ids)) s"
   apply (erule sep_list_conj_map_impl [rotated])
   apply (erule si_cap_at_update)
@@ -407,10 +408,10 @@ lemma map_si_cap_at_update_old:
   done
 
 lemma map_si_cap_at_update': (* Need better tactics. *)
-  "\<lbrakk>(\<And>* map (si_cap_at t si_caps spec) (take obj_id_index obj_ids) \<and>* R) s;
+  "\<lbrakk>(\<And>* map (si_cap_at t si_caps spec dev) (take obj_id_index obj_ids) \<and>* R) s;
     distinct obj_ids; obj_id_index < length obj_ids;
     obj_id = obj_ids ! obj_id_index\<rbrakk>
-  \<Longrightarrow> (\<And>* map (si_cap_at t (si_caps(obj_id \<mapsto> cap_ptr)) spec)
+  \<Longrightarrow> (\<And>* map (si_cap_at t (si_caps(obj_id \<mapsto> cap_ptr)) spec dev)
               (take obj_id_index obj_ids) \<and>* R) s"
   by (drule sep_conj_impl, erule map_si_cap_at_update_old, assumption+)
 
@@ -457,7 +458,7 @@ lemma all_available_ids_updates:
   done
 
 lemma untyped_cap_eq:
-  "is_untyped_cap cap \<Longrightarrow> UntypedCap (cap_objects cap) (cap_free_ids cap) = cap"
+  "is_untyped_cap cap \<Longrightarrow> UntypedCap (is_device_cap cap) (cap_objects cap) (cap_free_ids cap) = cap"
   by (clarsimp simp: cap_type_def cap_free_ids_def split: cdl_cap.splits)
 
 lemma retype_untyped_loop_inv_pre:
@@ -470,7 +471,7 @@ lemma retype_untyped_loop_inv_pre:
     \<And>* map (\<lambda>slot. (si_cnode_id, slot) \<mapsto>c NullCap) (drop obj_id_index free_slots) \<and>*
     \<And>* map (object_empty spec t) (take obj_id_index obj_ids) \<and>*
    (\<And>* obj_id\<in>all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-    \<And>* map (si_cap_at t si_caps spec) (take obj_id_index obj_ids) \<and>*
+    \<And>* map (si_cap_at t si_caps spec dev) (take obj_id_index obj_ids) \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
     (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
     (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -482,7 +483,7 @@ lemma retype_untyped_loop_inv_pre:
          [index\<leftarrow>[0..<length untyped_caps] . \<not> is_full_untyped_cap (untyped_caps ! index)]
  \<Longrightarrow>
   \<guillemotleft>(si_cnode_id, untyped_slots ! untyped_index) \<mapsto>c
-        UntypedCap (cap_objects (untyped_caps ! untyped_index))
+        UntypedCap (is_device_cap (untyped_caps ! untyped_index)) (cap_objects (untyped_caps ! untyped_index))
                    (cap_free_ids (untyped_caps ! untyped_index)) \<and>*
    (\<And>* obj_id\<in>all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
     (si_cnode_id, free_slots ! obj_id_index) \<mapsto>c NullCap \<and>*
@@ -497,7 +498,7 @@ lemma retype_untyped_loop_inv_pre:
              (drop (Suc untyped_index) (zip untyped_slots untyped_caps)) \<and>*
     \<And>* map (\<lambda>slot. (si_cnode_id, slot) \<mapsto>c NullCap) (drop (Suc obj_id_index) free_slots) \<and>*
     \<And>* map (object_empty spec t) (take obj_id_index obj_ids) \<and>*
-    \<And>* map (si_cap_at t si_caps spec) (take obj_id_index obj_ids) \<and>*
+    \<And>* map (si_cap_at t si_caps spec dev) (take obj_id_index obj_ids) \<and>*
     R\<guillemotright> s \<and>
     (\<not> has_children (si_cnode_id, untyped_slots ! untyped_index) (kernel_state s) \<longrightarrow>
            cap_objects (untyped_caps ! untyped_index) =
@@ -533,7 +534,7 @@ lemma retype_untyped_loop_inv_post:
     object_empty spec t obj_id \<and>*
     si_cap_at t
         (si_caps(obj_id \<mapsto> of_nat (free_slots ! obj_id_index)))
-        spec obj_id \<and>*
+        spec dev obj_id \<and>*
     si_tcb_id \<mapsto>f root_tcb \<and>*
    (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
    (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -546,7 +547,7 @@ lemma retype_untyped_loop_inv_post:
     \<And>* map (\<lambda>slot. (si_cnode_id, slot) \<mapsto>c NullCap)
              (drop (Suc obj_id_index) free_slots) \<and>*
     \<And>* map (object_empty spec t) (take obj_id_index obj_ids) \<and>*
-    \<And>* map (si_cap_at t si_caps spec) (take obj_id_index obj_ids) \<and>*
+    \<And>* map (si_cap_at t si_caps spec dev) (take obj_id_index obj_ids) \<and>*
     R\<guillemotright> s
   \<Longrightarrow>
    \<guillemotleft>\<And>* map (\<lambda>(slot, cap). (si_cnode_id, slot) \<mapsto>c cap)
@@ -558,7 +559,7 @@ lemma retype_untyped_loop_inv_post:
    (\<And>* obj_id\<in>all_available_ids - {new_id}. obj_id \<mapsto>o Untyped) \<and>*
     \<And>* map (si_cap_at t
                         (si_caps(obj_id \<mapsto> of_nat (free_slots ! obj_id_index)))
-                        spec) (take (Suc obj_id_index) obj_ids) \<and>*
+                        spec dev) (take (Suc obj_id_index) obj_ids) \<and>*
     si_tcb_id \<mapsto>f root_tcb \<and>*
    (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
    (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -611,8 +612,8 @@ lemma map_object_empty_update:
 
 lemma map_si_cap_at_update:
   "\<lbrakk>i < length obj_ids; distinct obj_ids\<rbrakk>
-  \<Longrightarrow> \<And>* map (si_cap_at (t(obj_ids ! i \<mapsto> obj_id')) si_caps spec) (take i obj_ids)
-  = \<And>* map (si_cap_at t si_caps spec) (take i obj_ids)"
+  \<Longrightarrow> \<And>* map (si_cap_at (t(obj_ids ! i \<mapsto> obj_id')) si_caps spec dev) (take i obj_ids)
+  = \<And>* map (si_cap_at t si_caps spec dev) (take i obj_ids)"
   apply (erule (1) sep_map_conj_f_update)
   apply (clarsimp simp: si_cap_at_def)
   done
@@ -631,6 +632,17 @@ lemma ran_insert_new:
   "\<lbrakk>a \<notin> dom m; b \<notin> ran m\<rbrakk> \<Longrightarrow> ran (m(a \<mapsto> b)) = insert b (ran m)"
   by auto
 
+lemma remove_free_ids_is_device[simp]:
+  "is_untyped_cap a \<Longrightarrow> is_device_cap (remove_free_ids a b) = is_device_cap a"
+  by (simp add: remove_free_ids_def split:cdl_cap.splits)
+
+lemma list_all_conj:
+  "(list_all P xs \<and> list_all Q xs) = list_all (P and Q) xs"
+  by (auto simp: pred_list_def)
+
+lemmas list_all_conjI = list_all_conj[THEN iffD1,unfolded pred_conj_def,OF conjI]
+
+
 lemma retype_untyped_loop_inv_success:
  "\<lbrakk>well_formed spec;
    distinct obj_ids;
@@ -646,13 +658,13 @@ lemma retype_untyped_loop_inv_success:
    type = object_type object;
    object_size = of_nat (object_at_pointer_size_bits spec obj_id)\<rbrakk>
   \<Longrightarrow>
-  \<lbrace>\<lambda>s. \<exists>untyped_caps t all_available_ids.
+  \<lbrace>\<lambda>s. \<exists>untyped_caps t all_available_ids. 
     \<guillemotleft>\<And>* map (\<lambda>(slot, cap). (si_cnode_id, slot) \<mapsto>c cap)
             (zip untyped_slots untyped_caps) \<and>*
      \<And>* map (\<lambda>slot. (si_cnode_id, slot) \<mapsto>c NullCap) (drop obj_id_index free_slots) \<and>*
      \<And>* map (object_empty spec t) (take obj_id_index obj_ids) \<and>*
    (\<And>* obj_id\<in>all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-    \<And>* map (si_cap_at t si_caps spec) (take obj_id_index obj_ids) \<and>*
+    \<And>* map (si_cap_at t si_caps spec dev) (take obj_id_index obj_ids) \<and>*
 
     si_tcb_id \<mapsto>f root_tcb \<and>*
    (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
@@ -661,6 +673,7 @@ lemma retype_untyped_loop_inv_success:
    (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R\<guillemotright> s \<and>
     length untyped_slots = length untyped_caps \<and>
     list_all is_untyped_cap untyped_caps \<and>
+    list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
     list_all well_formed_untyped_cap untyped_caps \<and>
     list_all (\<lambda>n. n < 2 ^ si_cnode_size) untyped_slots \<and>
     list_all (\<lambda>n. n < 2 ^ si_cnode_size) free_slots \<and>
@@ -680,7 +693,7 @@ lemma retype_untyped_loop_inv_success:
      \<And>* map (object_empty spec t)
              (take (Suc obj_id_index) obj_ids) \<and>*
    (\<And>* obj_id\<in>all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-    \<And>* map (si_cap_at t (si_caps(obj_id \<mapsto> free_cptr)) spec)
+    \<And>* map (si_cap_at t (si_caps(obj_id \<mapsto> free_cptr)) spec dev)
             (take (Suc obj_id_index) obj_ids) \<and>*
     si_tcb_id \<mapsto>f root_tcb \<and>*
    (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
@@ -689,6 +702,7 @@ lemma retype_untyped_loop_inv_success:
    (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R\<guillemotright> s \<and>
     length untyped_slots = length untyped_caps \<and>
     list_all is_untyped_cap untyped_caps \<and>
+    list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
     list_all well_formed_untyped_cap untyped_caps \<and>
     distinct_sets (map cap_free_ids untyped_caps) \<and>
    (\<Union>x\<in>set untyped_caps. cap_free_ids x) \<subseteq> all_available_ids \<and>
@@ -722,7 +736,7 @@ lemma retype_untyped_loop_inv_success:
                                  (drop (Suc obj_id_index) free_slots) \<and>*
                          \<And>* map (object_empty spec t)
                                  (take obj_id_index obj_ids) \<and>*
-                         \<And>* map (si_cap_at t si_caps spec)
+                         \<And>* map (si_cap_at t si_caps spec dev)
                                  (take obj_id_index obj_ids) \<and>* R" and
                     indices = "[index\<leftarrow>[0..<length untyped_slots].
                               \<not> is_full_untyped_cap (untyped_caps ! index)]" and
@@ -751,7 +765,7 @@ lemma retype_untyped_loop_inv_success:
    apply (rule conjI)
     apply (metis UN_subset_iff nth_mem)
    apply (rule retype_untyped_loop_inv_pre, simp+)
-  apply clarsimp
+  apply (clarsimp)
   apply (rule_tac x="untyped_caps[untyped_index :=
          remove_free_ids (untyped_caps ! untyped_index)
                          ((cap_free_ids (untyped_caps ! untyped_index)) - available_ids')]" in exI)
@@ -764,12 +778,16 @@ lemma retype_untyped_loop_inv_success:
    apply (subst remove_free_ids_simps)
      apply (rule list_all_nth, assumption, assumption)
     apply fast
+   apply (drule list_all_nth [where P = "\<lambda>c. is_device_cap c = dev"], simp)
    apply simp
   apply (rule conjI)
    apply (subst length_list_update, rule refl)
   apply (subst (asm) take_insert_nth, assumption)
+  apply (subst conj_assoc[symmetric])
+  apply (subst list_all_conj)
   apply (rule conjI)
-   apply (erule (1) list_all_update, simp)
+   apply (rule list_all_update,simp)
+   apply (rule list_all_conjI,simp+)
   apply (rule conjI)
    apply (erule (1) list_all_update)
    apply (erule well_formed_untyped_cap_remove_free_ids)
@@ -784,7 +802,6 @@ lemma retype_untyped_loop_inv_success:
    apply (subst ran_insert_new, simp, force)
    apply clarsimp
   apply (rule conjI)
-   apply clarsimp
    apply (rule take_insert_nth)
    apply clarsimp
   apply (rule conjI)
@@ -819,7 +836,7 @@ lemma retype_untyped_bij_fail:
    \<lbrace>\<lambda>s.
      bij_betw_map t used_spec_ids used_ids \<and> obj_id \<notin> used_spec_ids \<and>
      available_ids \<subseteq> all_available_ids \<and>
-    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap cover_ids available_ids \<and>*
+    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev cover_ids available_ids \<and>*
     (\<And>* obj_id \<in> all_available_ids. (obj_id \<mapsto>o Untyped)) \<and>*
     (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
@@ -835,7 +852,7 @@ lemma retype_untyped_bij_fail:
    \<lbrace>\<lambda>rv s. rv \<longrightarrow>
      (bij_betw_map t used_spec_ids used_ids \<and> obj_id \<notin> used_spec_ids \<and>
      available_ids \<subseteq> all_available_ids \<and>
-    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap cover_ids available_ids \<and>*
+    \<guillemotleft>(si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev cover_ids available_ids \<and>*
     (\<And>* obj_id \<in> all_available_ids. (obj_id \<mapsto>o Untyped)) \<and>*
     (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
@@ -900,7 +917,7 @@ lemma retype_untyped_loop_inv_fail:
      \<And>* map (\<lambda>slot. (si_cnode_id, slot) \<mapsto>c NullCap) (drop obj_id_index free_slots) \<and>*
      \<And>* map (object_empty spec t) (take obj_id_index obj_ids) \<and>*
    (\<And>* obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-    \<And>* map (si_cap_at t si_caps spec) (take obj_id_index obj_ids) \<and>*
+    \<And>* map (si_cap_at t si_caps spec dev) (take obj_id_index obj_ids) \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
     (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
     (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -908,6 +925,7 @@ lemma retype_untyped_loop_inv_fail:
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R\<guillemotright> s \<and>
     length untyped_slots = length untyped_caps \<and>
     list_all is_untyped_cap untyped_caps \<and>
+    list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
     list_all well_formed_untyped_cap untyped_caps \<and>
     list_all (\<lambda>n. n < 2 ^ si_cnode_size) untyped_slots \<and>
     list_all (\<lambda>n. n < 2 ^ si_cnode_size) free_slots \<and>
@@ -927,7 +945,7 @@ lemma retype_untyped_loop_inv_fail:
      \<And>* map (object_empty spec t)
              (take obj_id_index obj_ids) \<and>*
    (\<And>* obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-    \<And>* map (si_cap_at t si_caps spec)
+    \<And>* map (si_cap_at t si_caps spec dev)
             (take obj_id_index obj_ids) \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
     (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
@@ -936,6 +954,7 @@ lemma retype_untyped_loop_inv_fail:
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R\<guillemotright> s \<and>
     length untyped_slots = length untyped_caps \<and>
     list_all is_untyped_cap untyped_caps \<and>
+    list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
     list_all well_formed_untyped_cap untyped_caps \<and>
     distinct_sets (map cap_free_ids untyped_caps) \<and>
    (\<Union>x\<in>set untyped_caps. cap_free_ids x) \<subseteq> all_available_ids \<and>
@@ -966,7 +985,7 @@ lemma retype_untyped_loop_inv_fail:
                             (drop (Suc obj_id_index) free_slots) \<and>*
                          \<And>* map (object_empty spec t)
                             (take obj_id_index obj_ids) \<and>*
-                         \<And>* map (si_cap_at t si_caps spec)
+                         \<And>* map (si_cap_at t si_caps spec dev)
                             (take obj_id_index obj_ids) \<and>* R" and
                     untyped_slots1 = untyped_slots and
                     untyped_caps1 = untyped_caps and
@@ -1019,7 +1038,7 @@ lemma retype_untyped_loop_inv_fail:
    apply (clarsimp simp: untyped_cap_eq sep_conj_assoc)
    apply (subst (asm) unat_of_nat32)
     apply (metis (full_types) si_cnode_size_less_than_word_size unat_less_word_bits unat_power_lower32)
-   apply sep_solve
+    apply sep_cancel+
   apply (subst (asm) list_all_imp_filter2, simp)
   done
 
@@ -1044,7 +1063,7 @@ lemma retype_untyped_loop_inv_helper:
      \<And>* map (\<lambda>slot. (si_cnode_id, slot) \<mapsto>c NullCap) (drop obj_id_index free_slots) \<and>*
      \<And>* map (object_empty spec t) (take obj_id_index obj_ids) \<and>*
    (\<And>* obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-    \<And>* map (si_cap_at t si_caps spec) (take obj_id_index obj_ids) \<and>*
+    \<And>* map (si_cap_at t si_caps spec dev) (take obj_id_index obj_ids) \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
     (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
     (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -1052,6 +1071,7 @@ lemma retype_untyped_loop_inv_helper:
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R\<guillemotright> s \<and>
     length untyped_slots = length untyped_caps \<and>
     list_all is_untyped_cap untyped_caps \<and>
+    list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
     list_all well_formed_untyped_cap untyped_caps \<and>
     list_all (\<lambda>n. n < 2 ^ si_cnode_size) untyped_slots \<and>
     list_all (\<lambda>n. n < 2 ^ si_cnode_size) free_slots \<and>
@@ -1074,7 +1094,7 @@ lemma retype_untyped_loop_inv_helper:
              (take (if rv then obj_id_index else Suc obj_id_index) obj_ids) \<and>*
    (\<And>* obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
     \<And>* map (si_cap_at t (if rv then si_caps
-                   else si_caps(obj_id \<mapsto> free_cptr)) spec)
+                   else si_caps(obj_id \<mapsto> free_cptr)) spec dev)
             (take (if rv then obj_id_index else Suc obj_id_index) obj_ids) \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
     (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
@@ -1083,6 +1103,7 @@ lemma retype_untyped_loop_inv_helper:
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R\<guillemotright> s \<and>
     length untyped_slots = length untyped_caps \<and>
     list_all is_untyped_cap untyped_caps \<and>
+    list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
     list_all well_formed_untyped_cap untyped_caps \<and>
     distinct_sets (map cap_free_ids untyped_caps) \<and>
    (\<Union>x\<in>set untyped_caps. cap_free_ids x) \<subseteq> all_available_ids \<and>
@@ -1101,18 +1122,9 @@ lemma retype_untyped_loop_inv_helper:
   apply (case_tac r, simp_all)
   done
 
-
-
-
-
 lemma nth_mem_sub:
   "\<lbrakk>set xs \<subseteq> dom f; n < length xs\<rbrakk> \<Longrightarrow> f (xs ! n) = Some (the (f (xs ! n)))"
   by (metis Some_the nth_mem set_rev_mp)
-
-
-
-
-
 
 lemma retype_untyped_loop_inv:
  "\<lbrace>\<lambda>s. \<exists>untyped_caps t all_available_ids.
@@ -1121,7 +1133,7 @@ lemma retype_untyped_loop_inv:
      \<And>* map (\<lambda>slot. (si_cnode_id, slot) \<mapsto>c NullCap) (drop obj_id_index free_slots) \<and>*
      \<And>* map (object_empty spec t) (take obj_id_index obj_ids) \<and>*
    (\<And>* obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-    \<And>* map (si_cap_at t si_caps spec) (take obj_id_index obj_ids) \<and>*
+    \<And>* map (si_cap_at t si_caps spec dev) (take obj_id_index obj_ids) \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
     (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
     (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -1143,6 +1155,7 @@ lemma retype_untyped_loop_inv:
     untyped_cptr = untyped_cptrs ! untyped_index \<and>
     type = object_type (the (cdl_objects spec obj_id)) \<and>
     list_all is_untyped_cap untyped_caps \<and>
+    list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
     list_all well_formed_untyped_cap untyped_caps \<and>
     list_all (\<lambda>n. n < 2 ^ si_cnode_size) untyped_slots \<and>
     list_all (\<lambda>n. n < 2 ^ si_cnode_size) free_slots \<and>
@@ -1165,7 +1178,7 @@ lemma retype_untyped_loop_inv:
              (take (if rv then obj_id_index else Suc obj_id_index) obj_ids) \<and>*
    (\<And>* obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
     \<And>* map (si_cap_at t (if rv then si_caps
-                   else si_caps(obj_id \<mapsto> free_cptr)) spec)
+                   else si_caps(obj_id \<mapsto> free_cptr)) spec dev)
             (take (if rv then obj_id_index else Suc obj_id_index) obj_ids) \<and>*
      si_tcb_id \<mapsto>f root_tcb \<and>*
     (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
@@ -1178,6 +1191,7 @@ lemma retype_untyped_loop_inv:
     length obj_ids \<le> length free_slots \<and>
     length untyped_slots = length untyped_caps \<and>
     list_all is_untyped_cap untyped_caps \<and>
+    list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
     list_all well_formed_untyped_cap untyped_caps \<and>
     distinct_sets (map cap_free_ids untyped_caps) \<and>
    (\<Union>x\<in>set untyped_caps. cap_free_ids x) \<subseteq> all_available_ids \<and>
@@ -1247,6 +1261,7 @@ lemma retype_untypeds_wp_helper:
    (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R\<guillemotright> s \<and>
    length untyped_slots = length untyped_caps \<and>
    list_all is_full_untyped_cap untyped_caps \<and>
+   list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
    list_all well_formed_untyped_cap untyped_caps \<and>
    distinct_sets (map cap_free_ids untyped_caps)\<rbrace>
 
@@ -1257,7 +1272,7 @@ lemma retype_untypeds_wp_helper:
       \<And>* map (\<lambda>slot. (si_cnode_id, slot) \<mapsto>c NullCap) (drop (length [obj\<leftarrow>obj_ids. real_object_at obj spec]) free_slots) \<and>*
       \<And>* map (object_empty spec t) [obj\<leftarrow>obj_ids. real_object_at obj spec] \<and>*
      (\<And>* obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-      \<And>* map (si_cap_at t si_caps spec) [obj\<leftarrow>obj_ids. real_object_at obj spec] \<and>*
+      \<And>* map (si_cap_at t si_caps spec dev) [obj\<leftarrow>obj_ids. real_object_at obj spec] \<and>*
       si_tcb_id \<mapsto>f root_tcb \<and>*
      (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
      (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -1277,7 +1292,7 @@ lemma retype_untypeds_wp_helper:
       \<And>* map (\<lambda>slot. (si_cnode_id, slot) \<mapsto>c NullCap) (drop obj_id_index free_slots) \<and>*
       \<And>* map (object_empty spec t) (take obj_id_index [obj\<leftarrow>obj_ids. real_object_at obj spec]) \<and>*
      (\<And>* obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-     \<And>* map (si_cap_at t si_caps spec) (take obj_id_index [obj\<leftarrow>obj_ids. real_object_at obj spec]) \<and>*
+     \<And>* map (si_cap_at t si_caps spec dev) (take obj_id_index [obj\<leftarrow>obj_ids. real_object_at obj spec]) \<and>*
       si_tcb_id \<mapsto>f root_tcb \<and>*
      (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
      (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
@@ -1288,6 +1303,7 @@ lemma retype_untypeds_wp_helper:
              untyped_index \<le> length untyped_cptrs \<and>
              length untyped_slots = length untyped_caps \<and>
              list_all is_untyped_cap untyped_caps \<and>
+             list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
              list_all well_formed_untyped_cap untyped_caps \<and>
              distinct_sets (map cap_free_ids untyped_caps) \<and>
             (\<Union>x\<in>set untyped_caps. cap_free_ids x) \<subseteq> all_available_ids \<and>
@@ -1309,7 +1325,7 @@ lemma retype_untypeds_wp_helper:
                             free_slots=free_slots and free_cptrs=free_cptrs and
                             untyped_slots=untyped_slots and
                             untyped_cptrs=untyped_cptrs and
-                            si_caps=si_caps and
+                            si_caps=si_caps and dev = dev and
                             obj_id=obj_id and R=R
                          in retype_untyped_loop_inv)
           apply (erule pre_post_ex)+
@@ -1365,6 +1381,7 @@ lemma create_objects_sep:
           distinct untyped_cptrs \<and>
           length untyped_cptrs = length untyped_caps \<and>
           list_all is_full_untyped_cap untyped_caps \<and>
+          list_all (\<lambda>c. is_device_cap c = dev) untyped_caps \<and>
           list_all well_formed_untyped_cap untyped_caps \<and>
           distinct_sets (map cap_free_ids untyped_caps) \<and>
           card {obj_id. real_object_at obj_id spec} \<le> length free_cptrs \<and>
@@ -1375,7 +1392,7 @@ lemma create_objects_sep:
 
 \<lbrace>\<lambda>rv s. \<exists>t.
     \<guillemotleft>(objects_empty spec t {obj_id. real_object_at obj_id spec} \<and>*
-      si_caps_at t (fst rv) spec {obj_id. real_object_at obj_id spec} \<and>*
+      si_caps_at t (fst rv) spec dev {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>*
       si_objects_extra_caps' {obj_id. real_object_at obj_id spec} free_cptrs untyped_cptrs \<and>*
       R) and
@@ -1390,7 +1407,7 @@ lemma create_objects_sep:
   apply (rule hoare_chain)
     apply (wp retype_untypeds_wp_helper
       [where R="(si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>* si_asid \<and>* R"
-         and untyped_slots = "map unat untyped_cptrs"
+         and untyped_slots = "map unat untyped_cptrs" and dev = dev
          and free_slots    = "map unat free_cptrs"],
            (simp|clarsimp)+)
       apply (fastforce simp: list_all_iff unat_less_2_si_cnode_size')
@@ -1401,7 +1418,7 @@ lemma create_objects_sep:
    apply (subst comp_apply)+
    apply (subst sep_list_conj_sep_map_set_conj, simp add: distinct_zipI1)
    apply (subst sep_list_conj_sep_map_set_conj, simp add: distinct_zipI1)
-   apply sep_solve
+   apply sep_cancel+
   apply (clarsimp simp: length_real_object_at_card)
   apply (rule_tac x=t in exI)
   apply (clarsimp simp: sep_conj_exists sep_conj_assoc

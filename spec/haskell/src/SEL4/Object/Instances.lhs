@@ -134,6 +134,7 @@ By default, new threads are unable to change the security domains of other threa
 >         tcbIPCBufferFrame = makeObject,
 >         tcbDomain = minBound,
 >         tcbState = Inactive,
+>         tcbMCP = minBound,
 >         tcbPriority = minBound,
 >         tcbQueued = False,
 >         tcbFault = Nothing,
@@ -155,5 +156,13 @@ By default, new threads are unable to change the security domains of other threa
 >     projectKO o = case o of 
 >         KOUserData -> return UserData
 >         _ -> typeError "UserData" o
+
+> instance PSpaceStorable UserDataDevice where
+>     makeObject = UserDataDevice
+>     injectKO _ = KOUserDataDevice
+>     projectKO o = case o of
+>         KOUserDataDevice -> return UserDataDevice
+>         _ -> typeError "UserDataDevice" o
+
 
 

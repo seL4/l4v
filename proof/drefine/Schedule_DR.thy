@@ -66,6 +66,7 @@ lemma dcorres_storeWord_globals:
     apply (drule_tac x = "(arm_globals_frame (arch_state sa))" in bspec)
       apply (clarsimp)
     apply (simp add:obj_bits_def is_aligned_mask mask_out_sub_mask)
+    apply force
   apply (clarsimp simp:invs_def valid_state_def valid_pspace_def)
   apply (simp add:valid_global_refs_def valid_refs_def)
   apply (frule ipc_frame_wp_at_cte_at,clarsimp)

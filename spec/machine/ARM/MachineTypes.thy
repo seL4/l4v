@@ -199,6 +199,7 @@ record
   irq_masks :: "ARM.irq \<Rightarrow> bool"
   irq_state :: nat
   underlying_memory :: "word32 \<Rightarrow> word8"
+  device_state :: "word32 \<Rightarrow> word8 option"
   exclusive_state :: ARM.exclusive_monitors
   machine_state_rest :: ARM.machine_state_rest
 
@@ -253,6 +254,7 @@ definition
  "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,
                          irq_state = 0,
                          underlying_memory = init_underlying_memory,
+                         device_state = empty,
                          exclusive_state = default_exclusive_state,
                          machine_state_rest = undefined \<rparr>"
 

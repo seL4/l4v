@@ -95,12 +95,11 @@ lemma crunch_foo4_alt:
 crunch gt3: crunch_foo4 "\<lambda>x. x > y"
   (ignore: modify bind)
 *)
-
 crunch (no_fail) no_fail2: crunch_foo4
-  (unfold: "(crunch_foo4, crunch_foo4_alt)" ignore: modify bind)
+  (rule: crunch_foo4_alt ignore: modify bind)
 
 crunch gt3: crunch_foo4 "\<lambda>x. x > y"
-  (unfold: "(crunch_foo4, crunch_foo4_alt)" ignore: modify bind)
+  (rule: crunch_foo4_alt ignore: modify bind)
 
 crunch gt4: crunch_foo5 "\<lambda>x. x > y"
   (ignore: modify bind)

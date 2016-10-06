@@ -101,6 +101,25 @@ instance
 
 end
 
+instantiation user_data_device :: pre_storable
+begin
+
+definition
+  projectKO_opt_user_data_device:
+  "projectKO_opt e \<equiv> case e of KOUserDataDevice \<Rightarrow> Some UserDataDevice | _ \<Rightarrow> None"
+
+definition
+  injectKO_user_data_device [simp]:
+  "injectKO (t :: user_data_device) \<equiv> KOUserDataDevice"
+
+definition
+  koType_user_data_device [simp]:
+  "koType (t::user_data_device itself) \<equiv> UserDataDeviceT"
+
+instance
+  by (intro_classes,
+      auto simp: projectKO_opt_user_data_device split: kernel_object.splits)
+end
 
 instantiation user_data :: pre_storable
 begin
@@ -147,13 +166,14 @@ end
 
 
 lemmas projectKO_opts_defs = 
-  projectKO_opt_tcb projectKO_opt_cte projectKO_opt_ntfn projectKO_opt_ep projectKO_opt_user_data
+  projectKO_opt_tcb projectKO_opt_cte projectKO_opt_ntfn projectKO_opt_ep 
+  projectKO_opt_user_data projectKO_opt_user_data_device
 
 lemmas injectKO_defs = 
-  injectKO_tcb injectKO_cte injectKO_ntfn injectKO_ep injectKO_user_data
+  injectKO_tcb injectKO_cte injectKO_ntfn injectKO_ep injectKO_user_data injectKO_user_data_device
 
 lemmas koType_defs = 
-  koType_tcb koType_cte koType_ntfn koType_ep koType_user_data
+  koType_tcb koType_cte koType_ntfn koType_ep koType_user_data koType_user_data_device
 
 -- -----------------------------------
 
@@ -340,6 +360,36 @@ instance
 end
 
 
+instantiation user_data_device :: pspace_storable
+begin
+
+(* user_data_device extra instance defs *)
+
+
+definition
+  makeObject_user_data_device: "(makeObject :: user_data_device)  \<equiv> UserDataDevice"
+
+definition
+  loadObject_user_data_device[simp]:
+ "(loadObject p q n obj) :: user_data_device kernel \<equiv>
+    loadObject_default p q n obj"
+
+definition
+  updateObject_user_data_device[simp]:
+ "updateObject (val :: user_data_device) \<equiv>
+    updateObject_default val"
+
+
+instance
+  apply (intro_classes)
+  apply (case_tac ko, auto simp: projectKO_opt_user_data_device updateObject_default_def 
+                                 in_monad projectKO_eq2 
+                           split: kernel_object.splits)
+  done
+
+end
+
+
 instantiation tcb :: pspace_storable
 begin
 
@@ -355,6 +405,7 @@ definition
         tcbIPCBufferFrame= makeObject,
         tcbDomain= minBound,
         tcbState= Inactive,
+        tcbMCP= minBound,
         tcbPriority= minBound,
         tcbQueued= False,
         tcbFault= Nothing,

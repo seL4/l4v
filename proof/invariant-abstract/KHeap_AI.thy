@@ -16,6 +16,7 @@ context begin interpretation Arch .
 
 requalify_consts
   valid_ao_at
+  obj_is_device
 
 requalify_facts
   pspace_in_kernel_window_atyp_lift
@@ -34,8 +35,18 @@ requalify_facts
   valid_global_pts_lift
   in_user_frame_lift
 
+  in_user_frame_obj_upd
+  in_device_frame_obj_upd
+  device_mem_obj_upd_dom
+  user_mem_obj_upd_dom
 
+  pspace_respects_region_cong
+  cap_is_device_obj_is_device
+  storeWord_device_state_inv
 end
+
+lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device
+lemmas storeWord_device_state_hoare[wp] = storeWord_device_state_inv
 
 lemma get_object_wp:
   "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object p \<lbrace>Q\<rbrace>"
@@ -110,8 +121,8 @@ lemma cte_at_same_type:
 
 
 lemma untyped_same_type:
-  "\<lbrakk>valid_untyped (cap.UntypedCap r n f) s; a_type k = a_type ko; kheap s p = Some ko\<rbrakk>
-  \<Longrightarrow> valid_untyped (cap.UntypedCap r n f) (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+  "\<lbrakk>valid_untyped (cap.UntypedCap dev r n f) s; a_type k = a_type ko; kheap s p = Some ko\<rbrakk>
+  \<Longrightarrow> valid_untyped (cap.UntypedCap dev r n f) (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   unfolding valid_untyped_def
   by (clarsimp simp: obj_range_def obj_bits_T)
 
@@ -579,6 +590,18 @@ lemma set_object_pspace_in_kernel_window:
     apply (wp; clarsimp simp add: obj_at_def)+
   by simp
 
+
+lemma set_object_pspace_respect_device_region:
+  "\<lbrace>pspace_respects_device_region and obj_at (\<lambda>ko. a_type k = a_type ko) p\<rbrace> 
+  set_object p k
+  \<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_object_def, wp)
+  apply (clarsimp simp: pspace_respects_device_region_def 
+                        device_mem_obj_upd_dom user_mem_obj_upd_dom
+                        obj_at_def in_user_frame_obj_upd in_device_frame_obj_upd 
+                 split: split_if_asm)
+  done
+
 lemma set_ntfn_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   apply (simp add: set_notification_def)
@@ -587,10 +610,26 @@ lemma set_ntfn_kernel_window[wp]:
                  split: Structures_A.kernel_object.split_asm)
   done
 
+lemma set_ntfn_respect_device_region[wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_notification_def)
+  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def
+                 split: Structures_A.kernel_object.split_asm)
+  done
+
 lemma set_ep_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   apply (simp add: set_endpoint_def)
   apply (wp set_object_pspace_in_kernel_window get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def
+                 split: Structures_A.kernel_object.split_asm)
+  done
+
+lemma set_ep_respects_device_region[wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_endpoint_def)
+  apply (wp set_object_pspace_respect_device_region get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: Structures_A.kernel_object.split_asm)
   done
@@ -782,7 +821,6 @@ lemma set_ntfn_caps_of_state[wp]:
   apply (case_tac y, auto simp: cte_wp_at_cases)
   done
 
-
 lemma set_object_cap_refs_in_kernel_window:
   "\<lbrace>cap_refs_in_kernel_window and obj_at (same_caps ko) p\<rbrace> 
   set_object p ko
@@ -790,6 +828,21 @@ lemma set_object_cap_refs_in_kernel_window:
   apply (simp add: set_object_def, wp)
   apply (clarsimp simp: cap_refs_in_kernel_window_def)
   apply (clarsimp simp: valid_refs_def cte_wp_at_after_update)
+  done
+
+lemma set_object_cap_refs_respects_device_region:
+  "\<lbrace>cap_refs_respects_device_region and obj_at (same_caps ko) p\<rbrace> 
+  set_object p ko
+  \<lbrace>\<lambda>r. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: set_object_def, wp)
+  apply (clarsimp simp: cap_refs_respects_device_region_def)
+  apply (drule_tac x = a in spec)
+  apply (drule_tac x = b in spec)
+  apply (clarsimp simp: valid_refs_def cte_wp_at_after_update
+    cap_range_respects_device_region_def)
+  apply (erule notE)
+  apply (erule cte_wp_at_weakenE)
+  apply auto
   done
 
 
@@ -944,23 +997,39 @@ lemma valid_irq_statesE:
   "\<lbrakk>valid_irq_states s; (\<And> irq. interrupt_states s irq = IRQInactive \<Longrightarrow> irq_masks (machine_state s) irq) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   by(auto simp: valid_irq_states_def valid_irq_masks_def)
 
+lemma cap_refs_respects_region_cong:
+  "\<lbrakk>caps_of_state a  = caps_of_state b; device_state (machine_state a) = device_state (machine_state b)\<rbrakk>
+  \<Longrightarrow> cap_refs_respects_device_region a = cap_refs_respects_device_region b"
+  by (simp add: cap_refs_respects_device_region_def cte_wp_at_caps_of_state dom_def cap_range_respects_device_region_def)
+
+lemmas device_region_congs[cong] = pspace_respects_region_cong cap_refs_respects_region_cong
+
 lemma dmo_invs:
-  "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). (\<forall>p.
-       in_user_frame p s \<or> underlying_memory m' p = underlying_memory m p) \<and>
+  assumes valid_mf: "\<And>P. \<lbrace>\<lambda>ms.  P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms.  P (device_state ms)\<rbrace>"
+  shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). (\<forall>p.
+       in_user_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
          (m = machine_state s \<longrightarrow> (\<forall>irq. (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or> (irq_masks m' irq = irq_masks m irq))))
     and invs\<rbrace>
    do_machine_op f
    \<lbrace>\<lambda>_. invs\<rbrace>"
    apply (simp add: do_machine_op_def split_def)
    apply wp
-   apply clarsimp
-   apply (drule_tac x="machine_state s" in spec)
-   apply (drule_tac x="(a,b)" in bspec;simp)
-   apply clarsimp
-   by (fastforce simp: invs_def cur_tcb_def valid_state_def
+
+   apply (clarsimp simp: invs_def cur_tcb_def valid_state_def
                           valid_machine_state_def
                     intro!: valid_irq_states_machine_state_updateI
                     elim:  valid_irq_statesE)
+   apply (frule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_mf])
+    apply simp
+   apply clarsimp
+   apply (intro conjI)
+    apply (fastforce simp: invs_def cur_tcb_def valid_state_def
+                           valid_machine_state_def
+                    intro: valid_irq_states_machine_state_updateI
+                     elim: valid_irq_statesE)
+   apply (drule_tac x = "machine_state s" in spec,fastforce)
+   done
+
 
 
 lemma as_user_typ_at[wp]:
@@ -1417,6 +1486,15 @@ lemma set_ntfn_cap_refs_kernel_window[wp]:
                  split: Structures_A.kernel_object.split_asm)
   done
 
+lemma set_ntfn_cap_refs_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_notification p ep \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: set_notification_def)
+  apply (wp set_object_cap_refs_respects_device_region get_object_wp)
+  apply (clarsimp simp: obj_at_def is_ntfn
+                 split: Structures_A.kernel_object.split_asm)
+  done
+
+
 (* There are two wp rules for preserving valid_ioc over set_object.
    First, the more involved rule for CNodes and TCBs *)
 lemma set_object_valid_ioc_caps:
@@ -1475,7 +1553,6 @@ lemma set_notification_valid_ioc[wp]:
 lemma set_object_machine_state[wp]:
   "\<lbrace>\<lambda>s. P (machine_state s)\<rbrace> set_object p ko \<lbrace>\<lambda>_ s. P (machine_state s)\<rbrace>"
   by (simp add: set_object_def, wp, simp)
-
 
 lemma valid_irq_states_triv:
   assumes irqs: "\<And>P. \<lbrace>\<lambda>s. P (interrupt_states s)\<rbrace> f \<lbrace>\<lambda>_ s. P (interrupt_states s)\<rbrace>"

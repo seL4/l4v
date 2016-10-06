@@ -16,6 +16,9 @@ context Arch begin global_naming ARM
 
 named_theorems CNodeInv_AI_assms
 
+lemma set_cap_in_device_frame[wp]:
+  "\<lbrace>in_device_frame buffer\<rbrace> set_cap cap ref \<lbrace>\<lambda>_. in_device_frame buffer\<rbrace>"
+  by (simp add: in_device_frame_def) (wp hoare_vcg_ex_lift set_cap_typ_at)
 
 (* unused *)
 lemma derive_cap_objrefs [CNodeInv_AI_assms]:
@@ -109,10 +112,10 @@ lemma cap_master_update_cap_data [CNodeInv_AI_assms]:
 
 lemma same_object_as_def2:
   "same_object_as cp cp' = (cap_master_cap cp = cap_master_cap cp'
-                                \<and> \<not> cp = NullCap \<and> \<not> is_untyped_cap cp
+                                \<and> \<not> cp = cap.NullCap \<and> \<not> is_untyped_cap cp
                                 \<and> \<not> is_zombie cp
                                 \<and> (is_arch_cap cp \<longrightarrow>
-                                     (case the_arch_cap cp of PageCap x rs sz v
+                                     (case the_arch_cap cp of arch_cap.PageCap d x rs sz v
                                               \<Rightarrow> x \<le> x + 2 ^ pageBitsForSize sz - 1
                                           | _ \<Rightarrow> True)))"
   apply (simp add: same_object_as_def is_cap_simps split: cap.split)
@@ -126,7 +129,13 @@ lemma same_object_as_cap_master [CNodeInv_AI_assms]:
   "same_object_as cap cap' \<Longrightarrow> cap_master_cap cap = cap_master_cap cap'"
   by (simp add: same_object_as_def2)
 
-
+lemma weak_derived_cap_is_device[CNodeInv_AI_assms]: 
+  "\<lbrakk>weak_derived c' c\<rbrakk> \<Longrightarrow>  cap_is_device c = cap_is_device c'"
+  apply (auto simp: weak_derived_def copy_of_def is_cap_simps
+                    same_object_as_def2 
+             split: split_if_asm
+             dest!: master_cap_eq_is_device_cap_eq)
+  done
 
 lemma cap_asid_update_cap_data [CNodeInv_AI_assms]:
   "update_cap_data P x c \<noteq> NullCap
@@ -509,7 +518,7 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
 
 
 crunch emptyable[wp, CNodeInv_AI_assms]: finalise_cap "emptyable sl"
-  (simp: crunch_simps lift: emptyable_lift
+  (simp: crunch_simps rule: emptyable_lift
      wp: crunch_wps suspend_emptyable unbind_notification_invs unbind_maybe_notification_invs)
 
 
@@ -688,9 +697,9 @@ next
       apply (rule conjI, clarsimp simp: cte_wp_at_caps_of_state)
        apply (erule tcb_valid_nonspecial_cap)
          apply fastforce
-        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps
+        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps is_nondevice_page_cap_simps
                        split: Structures_A.thread_state.splits)
-       apply (clarsimp simp: is_cap_simps)
+       apply (clarsimp simp: is_cap_simps is_nondevice_page_cap_simps)
       apply (rule conjI)
        apply (drule cte_wp_valid_cap, clarsimp)
        apply (frule cte_at_nat_to_cref_zbits [where m=0], simp)
@@ -738,8 +747,9 @@ next
            apply (rule mp [OF tcb_cap_valid_imp'])
            apply (fastforce simp: ran_tcb_cap_cases is_cap_simps
                                  is_pt_cap_def vs_cap_ref_def
+                                 is_nondevice_page_cap_simps
                                  valid_ipc_buffer_cap_def
-                          split: Structures_A.thread_state.splits)
+                          split: thread_state.splits)
           apply (drule unique_table_refs_no_cap_asidD)
            apply (simp add: invs_def valid_state_def valid_arch_caps_def)
           apply (simp add: no_cap_to_obj_with_diff_ref_def Ball_def
@@ -769,7 +779,7 @@ next
        apply (clarsimp simp: valid_cap_def cap_aligned_def is_cap_simps
                              cte_wp_at_cte_at appropriate_Zombie
                       split: option.split_asm)
-      apply (wp get_cap_cte_wp_at)[1] 
+      apply (wp get_cap_cte_wp_at)[1]
      apply simp
      apply (subst conj_assoc[symmetric])
      apply (rule spec_valid_conj_liftE2)
@@ -980,6 +990,8 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
     apply (wp set_cap_valid_objs set_cap_idle set_cap_typ_at
               cap_table_at_lift_irq tcb_at_typ_at
               hoare_vcg_disj_lift hoare_vcg_all_lift
+              set_cap_cap_refs_respects_device_region_NullCap
+            | wp set_cap_cap_refs_respects_device_region_spec[where ptr = ptr]
             | simp del: split_paired_Ex split_paired_All
             | simp add: valid_irq_node_def valid_machine_state_def
                    del: split_paired_All split_paired_Ex)+
@@ -991,7 +1003,7 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
    apply (simp add: cap_range_NullCap valid_ipc_buffer_cap_def[where c=cap.NullCap])
    apply (simp add: is_cap_simps)
    apply (subgoal_tac "tcb_cap_valid cap.NullCap ptr s")
-    apply (simp add: tcb_cap_valid_def)
+    apply (simp add: tcb_cap_valid_def weak_derived_cap_is_device)
    apply (rule tcb_cap_valid_NullCapD)
     apply (erule(1) tcb_cap_valid_caps_of_stateD)
    apply (simp add: is_cap_simps)

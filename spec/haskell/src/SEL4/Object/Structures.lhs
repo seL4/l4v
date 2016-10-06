@@ -67,6 +67,7 @@ This is the type used to represent a capability.
 >             capTCBPtr :: PPtr TCB,
 >             capReplyMaster :: Bool }
 >         | UntypedCap {
+>             capIsDevice :: Bool,
 >             capPtr :: PPtr (), 
 >             capBlockSize :: Int,
 >             capFreeIndex :: Int }
@@ -114,6 +115,7 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 >     | KONotification Notification
 >     | KOKernelData
 >     | KOUserData
+>     | KOUserDataDevice
 >     | KOTCB       TCB
 >     | KOCTE       CTE
 >     | KOArch      ArchKernelObject
@@ -125,6 +127,7 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 >         KONotification  _ -> "Notification"
 >         KOKernelData   -> "KernelData"
 >         KOUserData     -> "UserData"
+>         KOUserDataDevice -> "UserDataDevice"
 >         KOTCB        _ -> "TCB"
 >         KOCTE        _ -> "CTE"
 >         KOArch       _ -> "Arch Specific"
@@ -135,6 +138,7 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 > objBitsKO (KOCTE _) = wordSizeCase 4 5
 > objBitsKO (KOTCB _) = 9
 > objBitsKO (KOUserData) = pageBits
+> objBitsKO (KOUserDataDevice) = pageBits
 > objBitsKO (KOKernelData) = pageBits
 > objBitsKO (KOArch a) = archObjSize a
 
@@ -239,6 +243,7 @@ The TCB is used to store various data about the thread's current state:
 \item the thread's scheduler state and priority;
 
 >         tcbState :: ThreadState,
+>         tcbMCP :: Priority,
 >         tcbPriority :: Priority,
 >         tcbQueued :: Bool,
 
@@ -285,6 +290,9 @@ Each TCB contains four CTE entries. The following constants define the slot numb
 
 > tcbIPCBufferSlot :: Word
 > tcbIPCBufferSlot = 4
+
+> minPriority :: Priority
+> minPriority = 0
 
 The maximum priority is derived from the configuration parameter "numPriorities".
 
@@ -454,6 +462,8 @@ Convenience functions dealing with properties of the machine word:
 This type is used to represent a frame in the user's address space.
 
 > data UserData = UserData
+
+> data UserDataDevice = UserDataDevice
 
 \subsubsection{The max free index of a UntypedCap}
 

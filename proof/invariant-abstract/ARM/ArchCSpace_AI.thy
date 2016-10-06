@@ -52,7 +52,8 @@ lemma weak_derived_tcb_cap_valid:
   apply (erule disjE; simp add: copy_of_def split: split_if_asm; (solves \<open>clarsimp\<close>)?)
   apply (clarsimp simp: tcb_cap_cases_def split: split_if_asm)
     apply (auto simp: is_cap_simps same_object_as_def
-                      valid_ipc_buffer_cap_def
+                      valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
+                      is_nondevice_page_cap_arch_def
                split: cap.split_asm arch_cap.split_asm
                       thread_state.split_asm)
   done
@@ -96,8 +97,10 @@ lemma set_free_index_invs [CSpace_AI_assms]:
     set_cap_idle update_cap_ifunsafe)
   apply (simp add:valid_irq_node_def)
   apply wps
-  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap.valid_arch_obj set_cap_valid_arch_caps
-            set_cap.valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at )
+ 
+  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_arch_objs set_cap_valid_arch_caps
+    set_cap_valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at
+    set_cap_cap_refs_respects_device_region_spec[where ptr = cref])
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (rule conjI,simp add:valid_pspace_def)
   apply (rule conjI,clarsimp simp:is_cap_simps)
@@ -124,7 +127,7 @@ lemma set_free_index_invs [CSpace_AI_assms]:
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (drule_tac x = ref in orthD2[rotated])
    apply (simp add:cap_range_def)
-  apply (simp)
+  apply simp
   done
 
 lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
@@ -169,7 +172,8 @@ lemma is_derived_is_cap:
   \<and> (is_cnode_cap cap = is_cnode_cap cap')
   \<and> (is_thread_cap cap = is_thread_cap cap')
   \<and> (is_zombie cap = is_zombie cap')
-  \<and> (is_arch_cap cap = is_arch_cap cap')"
+  \<and> (is_arch_cap cap = is_arch_cap cap')
+  \<and> (cap_is_device cap = cap_is_device cap')"
   apply (clarsimp simp: is_derived_def is_derived_arch_def split: split_if_asm)
   apply (clarsimp simp: cap_master_cap_def is_cap_simps
     split: cap.splits arch_cap.splits)+
@@ -431,7 +435,7 @@ lemma ex_nonz_tcb_cte_caps [CSpace_AI_assms]:
    apply (clarsimp simp: valid_cap_def obj_at_def
                          is_obj_defs dom_def
                          appropriate_cte_cap_def
-                  split: cap.splits arch_cap.split_asm)
+                  split: cap.splits arch_cap.split_asm if_splits)
   apply (clarsimp simp: caps_of_state_valid_cap)
   done
 
@@ -527,6 +531,22 @@ global_interpretation CSpace_AI?: CSpace_AI
 
 context Arch begin global_naming ARM
 
+lemma is_cap_simps':
+  "is_cnode_cap cap = (\<exists>r bits g. cap = cap.CNodeCap r bits g)"
+  "is_thread_cap cap = (\<exists>r. cap = cap.ThreadCap r)"
+  "is_domain_cap cap = (cap = cap.DomainCap)"
+  "is_untyped_cap cap = (\<exists>dev r bits f. cap = cap.UntypedCap dev r bits f)"
+  "is_ep_cap cap = (\<exists>r b R. cap = cap.EndpointCap r b R)"
+  "is_ntfn_cap cap = (\<exists>r b R. cap = cap.NotificationCap r b R)"
+  "is_zombie cap = (\<exists>r b n. cap = cap.Zombie r b n)"
+  "is_arch_cap cap = (\<exists>a. cap = cap.ArchObjectCap a)"
+  "is_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x False)"
+  "is_master_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x True)"
+  "is_nondevice_page_cap cap = (\<exists> u v w x. cap = ArchObjectCap (PageCap False u v w x))"
+  by (cases cap,  (auto simp: is_zombie_def is_arch_cap_def is_nondevice_page_cap_def
+                              is_reply_cap_def is_master_reply_cap_def is_nondevice_page_cap_arch_def
+                       split: cap.splits arch_cap.splits )+)+
+
 lemma cap_insert_simple_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and
     ex_cte_cap_wp_to (appropriate_cte_cap cap) dest and
@@ -538,25 +558,24 @@ lemma cap_insert_simple_invs:
   cap_insert cap src dest \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
-   apply (wp cap_insert_simple_mdb cap_insert_iflive 
-             cap_insert_zombies cap_insert_ifunsafe 
+   apply (wp cap_insert_simple_mdb cap_insert_iflive
+             cap_insert_zombies cap_insert_ifunsafe
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_no_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state)
-  apply (drule safe_parent_cap_range)
+  apply (frule safe_parent_cap_range)
   apply simp
   apply (rule conjI)
    prefer 2
-   apply (clarsimp simp: is_cap_simps)
+   apply (clarsimp simp: is_cap_simps safe_parent_for_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
-  apply (clarsimp dest!: is_cap_simps [THEN iffD1])
+  apply (clarsimp dest!: is_cap_simps' [THEN iffD1])
   apply (auto simp add: valid_cap_def [where c="cap.Zombie a b x" for a b x]
               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
   done
 
 lemmas is_derived_def = is_derived_def[simplified is_derived_arch_def]
-
 end
 
 end

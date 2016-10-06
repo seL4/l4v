@@ -42,7 +42,8 @@ lemma delete_objects_irq_masks[wp]:
   
 
 crunch irq_masks[wp]: invoke_untyped "\<lambda>s. P (irq_masks_of_state s)"
-  (ignore: delete_objects wp: crunch_wps dmo_wp no_irq simp: crunch_simps no_irq_clearMemory no_irq_cleanCacheRange_PoU mapM_x_def_bak)
+  (ignore: delete_objects wp: hoare_unless_wp 
+    crunch_wps dmo_wp no_irq simp: crunch_simps no_irq_clearMemory no_irq_cleanCacheRange_PoU mapM_x_def_bak)
 
 crunch irq_masks[wp]: cap_insert "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps)
@@ -189,7 +190,7 @@ lemma invoke_irq_control_irq_masks:
 crunch irq_masks[wp]: arch_perform_invocation, bind_notification "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps no_irq simp: crunch_simps no_irq_cleanByVA_PoU no_irq_invalidateTLB_ASID no_irq_do_flush)
 
-crunch irq_masks[wp]: restart "\<lambda>s. P (irq_masks_of_state s)"
+crunch irq_masks[wp]: restart, set_mcpriority "\<lambda>s. P (irq_masks_of_state s)"
 
 lemma checked_insert_irq_masks[wp]:
   "\<lbrace>\<lambda> s. P (irq_masks_of_state s)\<rbrace>
@@ -307,7 +308,7 @@ lemma cap_revoke_irq_masks':
 lemmas cap_revoke_irq_masks = use_spec(2)[OF cap_revoke_irq_masks']
 
 crunch irq_masks[wp]: recycle_cap "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: crunch_wps dmo_wp no_irq simp: filterM_mapM crunch_simps no_irq_clearMemory no_irq_invalidateTLB_ASID
+  (wp: crunch_wps dmo_wp no_irq hoare_unless_wp simp: filterM_mapM crunch_simps no_irq_clearMemory no_irq_invalidateTLB_ASID
    ignore: filterM)
 
 lemma finalise_slot_irq_masks:

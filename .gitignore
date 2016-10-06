@@ -34,8 +34,8 @@ tools/autocorres/tests/examples/trace_demo_incr.trace
 
 tools/c-parser/standalone-parser/table.ML
 tools/c-parser/StrictC.grm.desc
-tools/c-parser/standalone-parser/c-parser
-tools/c-parser/standalone-parser/tokenizer
+tools/c-parser/standalone-parser/ARM/
+tools/c-parser/standalone-parser/FAKE64/
 tools/c-parser/tools/mllex/mllex
 tools/c-parser/tools/mlyacc/mlyacc
 tools/c-parser/tools/mlyacc/src/yacc.lex.sml

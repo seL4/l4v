@@ -211,14 +211,14 @@ defs createUntypedObject_def:
     regEnd \<leftarrow> returnOk ( (snd \<circ> fromRegion));
     regEndPAddr \<leftarrow> returnOk ( (addrFromPPtr \<circ> regEnd));
     slotBefore \<leftarrow> noInitFailure $ gets initSlotPosCur;
-    mapME_x (\<lambda> i. provideUntypedCap rootCNodeCap i (fromIntegral pageBits) slotBefore)
+    mapME_x (\<lambda> i. provideUntypedCap rootCNodeCap False i (fromIntegral pageBits) slotBefore)
              [regStartPAddr bootMemReuseReg, (regStartPAddr bootMemReuseReg + bit pageBits)  .e.  (regEndPAddr bootMemReuseReg - 1)];
     currSlot \<leftarrow> noInitFailure $ gets initSlotPosCur;
     mapME_x (\<lambda> _. (doE
              paddr \<leftarrow> allocRegion pageBits;
-             provideUntypedCap rootCNodeCap paddr (fromIntegral pageBits) slotBefore
+             provideUntypedCap rootCNodeCap False paddr (fromIntegral pageBits) slotBefore
     odE)
-                                                                                    )
+                                                                                          )
           [(currSlot - slotBefore)  .e.  (fromIntegral minNum4kUntypedObj - 1)];
     freemem \<leftarrow> noInitFailure $ gets initFreeMemory;
     (flip mapME) (take maxNumFreememRegions freemem)
@@ -228,13 +228,13 @@ defs createUntypedObject_def:
                     reg' \<leftarrow> (if Not (isAligned (regStartPAddr reg) (bits + 1))
                                 \<and> (regEndPAddr reg) - (regStartPAddr reg) \<ge> bit bits
                         then (doE
-                            provideUntypedCap rootCNodeCap (regStartPAddr reg) (fromIntegral bits) slotBefore;
+                            provideUntypedCap rootCNodeCap False (regStartPAddr reg) (fromIntegral bits) slotBefore;
                             returnOk $ Region (regStart reg + bit bits, regEnd reg)
                         odE)
                         else returnOk reg);
                     if Not (isAligned (regEndPAddr reg') (bits + 1)) \<and> (regEndPAddr reg') - (regStartPAddr reg') \<ge> bit bits
                         then (doE
-                            provideUntypedCap rootCNodeCap (regEndPAddr reg' - bit bits) (fromIntegral bits) slotBefore;
+                            provideUntypedCap rootCNodeCap False (regEndPAddr reg' - bit bits) (fromIntegral bits) slotBefore;
                             returnOk $ Region (regStart reg', regEnd reg' - bit bits)
                         odE)
                         else returnOk reg' 
@@ -263,7 +263,7 @@ defs makeRootCNode_def:
       slotBits \<leftarrow> returnOk ( objBits (undefined::cte));
       levelBits \<leftarrow> returnOk ( rootCNodeSize);
       frame \<leftarrow> liftME ptrFromPAddr $ allocRegion (levelBits + slotBits);
-      rootCNCap \<leftarrow> doKernelOp $ createObject (fromAPIType CapTableObject) frame levelBits;
+      rootCNCap \<leftarrow> doKernelOp $ createObject (fromAPIType CapTableObject) frame levelBits False;
       rootCNCap \<leftarrow> returnOk $ rootCNCap \<lparr>capCNodeGuardSize := 32 - levelBits\<rparr>;
       slot \<leftarrow> doKernelOp $ locateSlotCap rootCNCap biCapITCNode;
       doKernelOp $ insertInitCap slot rootCNCap;
@@ -281,18 +281,22 @@ defs provideCap_def:
 odE)"
 
 defs provideUntypedCap_def:
-"provideUntypedCap rootCNodeCap pptr magnitudeBits slotPosBefore\<equiv> (doE
+"provideUntypedCap rootCNodeCap isDevice pptr magnitudeBits slotPosBefore\<equiv> (doE
     currSlot \<leftarrow> noInitFailure $ gets initSlotPosCur;
     i \<leftarrow> returnOk ( currSlot - slotPosBefore);
     untypedObjs \<leftarrow> noInitFailure $ gets (bifUntypedObjPAddrs \<circ> initBootInfo);
     haskell_assertE (length untypedObjs = fromIntegral i) [];
     untypedObjs' \<leftarrow> noInitFailure $ gets (bifUntypedObjSizeBits \<circ> initBootInfo);
     haskell_assertE (length untypedObjs' = fromIntegral i) [];
+    untypedDevices \<leftarrow> noInitFailure $ gets (bifUntypedObjIsDeviceList \<circ> initBootInfo);
+    haskell_assertE (length untypedDevices = fromIntegral i) [];
     bootInfo \<leftarrow> noInitFailure $ gets initBootInfo;
     bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr> bifUntypedObjPAddrs := untypedObjs @ [pptr],
-                               bifUntypedObjSizeBits := untypedObjs' @ [magnitudeBits] \<rparr>);
+                               bifUntypedObjSizeBits := untypedObjs' @ [magnitudeBits],
+                               bifUntypedObjIsDeviceList := untypedDevices @ [isDevice] \<rparr>);
     noInitFailure $ modify (\<lambda> st. st \<lparr> initBootInfo := bootInfo' \<rparr>);
     provideCap rootCNodeCap $ UntypedCap_ \<lparr>
+                                  capIsDevice= isDevice,
                                   capPtr= ptrFromPAddr pptr,
                                   capBlockSize= fromIntegral magnitudeBits,
                                   capFreeIndex= 0 \<rparr>

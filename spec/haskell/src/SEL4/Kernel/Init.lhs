@@ -279,6 +279,7 @@ Create idle thread and set up current thread + scheduler state.
 >             setSchedulerAction ResumeCurrentThread
 >       configureIdleThread tcbPPtr
 
+> -- FIXME: SELFOUR-421 boot code
 > createUntypedObject :: Capability -> Region -> KernelInit ()
 > createUntypedObject rootCNodeCap bootMemReuseReg = do
 >     let regStart = (fst . fromRegion)
@@ -286,13 +287,12 @@ Create idle thread and set up current thread + scheduler state.
 >     let regEnd = (snd . fromRegion)
 >     let regEndPAddr = (addrFromPPtr . regEnd)
 >     slotBefore <- noInitFailure $ gets initSlotPosCur
-
->     mapM_ (\i -> provideUntypedCap rootCNodeCap i (fromIntegral pageBits) slotBefore) 
+>     mapM_ (\i -> provideUntypedCap rootCNodeCap False i (fromIntegral pageBits) slotBefore) 
 >              [regStartPAddr bootMemReuseReg, (regStartPAddr bootMemReuseReg + bit pageBits) .. (regEndPAddr bootMemReuseReg - 1)]
 >     currSlot <- noInitFailure $ gets initSlotPosCur
 >     mapM_ (\_ -> do
 >              paddr <- allocRegion pageBits
->              provideUntypedCap rootCNodeCap paddr (fromIntegral pageBits) slotBefore)
+>              provideUntypedCap rootCNodeCap False paddr (fromIntegral pageBits) slotBefore)
 >           [(currSlot - slotBefore) .. (fromIntegral minNum4kUntypedObj - 1)]
 >     freemem <- noInitFailure $ gets initFreeMemory
 
@@ -303,12 +303,12 @@ Create idle thread and set up current thread + scheduler state.
 >                     reg' <- (if not (isAligned (regStartPAddr reg) (bits + 1)) 
 >                                 && (regEndPAddr reg) - (regStartPAddr reg) >= bit bits 
 >                         then do
->                             provideUntypedCap rootCNodeCap (regStartPAddr reg) (fromIntegral bits) slotBefore
+>                             provideUntypedCap rootCNodeCap False (regStartPAddr reg) (fromIntegral bits) slotBefore
 >                             return $ Region (regStart reg + bit bits, regEnd reg)
 >                         else return reg)
 >                     if not (isAligned (regEndPAddr reg') (bits + 1)) && (regEndPAddr reg') - (regStartPAddr reg') >= bit bits
 >                         then do
->                             provideUntypedCap rootCNodeCap (regEndPAddr reg' - bit bits) (fromIntegral bits) slotBefore
+>                             provideUntypedCap rootCNodeCap False (regEndPAddr reg' - bit bits) (fromIntegral bits) slotBefore
 >                             return $ Region (regStart reg', regEnd reg' - bit bits)
 >                         else return reg' )
 >         )
@@ -338,7 +338,7 @@ Specific allocRegion for convenience, since most allocations are frame-sized.
 >       let levelBits = rootCNodeSize
 >       frame <- liftM ptrFromPAddr $ allocRegion (levelBits + slotBits)
 
->       rootCNCap <- doKernelOp $ createObject (fromAPIType CapTableObject) frame levelBits
+>       rootCNCap <- doKernelOp $ createObject (fromAPIType CapTableObject) frame levelBits False
 >       rootCNCap <- return $ rootCNCap {capCNodeGuardSize = 32 - levelBits}
 >       slot <- doKernelOp $ locateSlotCap rootCNCap biCapITCNode
 >       doKernelOp $ insertInitCap slot rootCNCap
@@ -354,19 +354,23 @@ Specific allocRegion for convenience, since most allocations are frame-sized.
 >     doKernelOp $ insertInitCap slot cap
 >     noInitFailure $ modify (\st -> st { initSlotPosCur = currSlot + 1 })  
 
-> provideUntypedCap :: Capability -> PAddr -> Word8 -> Word -> KernelInit ()
-> provideUntypedCap rootCNodeCap pptr sizeBits slotPosBefore = do
+> provideUntypedCap :: Capability -> Bool ->  PAddr -> Word8 -> Word -> KernelInit ()
+> provideUntypedCap rootCNodeCap isDevice pptr sizeBits slotPosBefore = do
 >     currSlot <- noInitFailure $ gets initSlotPosCur
 >     let i = currSlot - slotPosBefore
 >     untypedObjs <- noInitFailure $ gets (bifUntypedObjPAddrs . initBootInfo)
 >     assert (length untypedObjs == fromIntegral i) "Untyped Object List is inconsistent"
 >     untypedObjs' <- noInitFailure $ gets (bifUntypedObjSizeBits . initBootInfo)
 >     assert (length untypedObjs' == fromIntegral i) "Untyped Object List is inconsistent"
+>     untypedDevices <- noInitFailure $ gets (bifUntypedObjIsDeviceList . initBootInfo)
+>     assert (length untypedDevices == fromIntegral i) " Untyped Object List is inconsistent"
 >     bootInfo <- noInitFailure $ gets initBootInfo
 >     let bootInfo' = bootInfo { bifUntypedObjPAddrs = untypedObjs ++ [pptr],
->                                bifUntypedObjSizeBits = untypedObjs' ++ [sizeBits] }
+>                                bifUntypedObjSizeBits = untypedObjs' ++ [sizeBits],
+>                                bifUntypedObjIsDeviceList = untypedDevices ++ [isDevice] }
 >     noInitFailure $ modify (\st -> st { initBootInfo = bootInfo' })
 >     provideCap rootCNodeCap $ UntypedCap {
+>                                   capIsDevice = isDevice,
 >                                   capPtr = ptrFromPAddr pptr,
 >                                   capBlockSize = fromIntegral sizeBits,
 >                                   capFreeIndex = 0 }

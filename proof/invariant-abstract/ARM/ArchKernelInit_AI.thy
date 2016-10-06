@@ -234,6 +234,23 @@ lemmas cte_wp_at_caps_of_state_eq
 
 declare ptrFormPAddr_addFromPPtr[simp]
 
+lemma pspace_respects_device_region_init[simp]:
+  "pspace_respects_device_region init_A_st"
+   apply (clarsimp simp: pspace_respects_device_region_def init_A_st_def init_machine_state_def device_mem_def
+                         in_device_frame_def obj_at_def init_kheap_def a_type_def)
+   apply (rule ext)
+   apply clarsimp
+   done
+
+lemma cap_refs_respects_device_region_init[simp]:
+  "cap_refs_respects_device_region init_A_st"
+   apply (clarsimp simp: cap_refs_respects_device_region_def)
+   apply (frule cte_wp_at_caps_of_state[THEN iffD1])
+   apply clarsimp
+   apply (subst(asm) caps_of_state_init_A_st_Null)
+   apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def)
+   done
+
 lemma invs_A:
   "invs init_A_st"
 
@@ -251,7 +268,7 @@ lemma invs_A:
     apply (rule conjI)
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def 
                            valid_cap_def obj_at_def valid_tcb_state_def 
-                           cap_aligned_def word_bits_def)+
+                           cap_aligned_def word_bits_def valid_ipc_buffer_cap_simps)+
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
                           init_irq_ptrs_all_ineqs valid_tcb_def
                    split: split_if_asm)

@@ -127,6 +127,8 @@ locale CNodeInv_AI =
     "\<And>c c' m. \<lbrakk> weak_derived c c'; cap_aligned c \<rbrakk> \<Longrightarrow> weak_derived (mask_cap m c) c'"
   assumes vs_cap_ref_update_cap_data[simp]:
     "\<And>P d cap. vs_cap_ref (update_cap_data P d cap) = vs_cap_ref cap"
+  assumes weak_derived_cap_is_device:
+    "\<And>c c'. \<lbrakk>weak_derived c' c\<rbrakk> \<Longrightarrow>  cap_is_device c = cap_is_device c'"
   assumes in_preempt[simp,intro]:
     "\<And>rv s' (s::'state_ext state).
       (Inr rv, s') \<in> fst (preemption_point s) \<Longrightarrow>
@@ -378,7 +380,6 @@ lemma zombies_final_helper:
    apply blast
   apply simp
   done
-
 
 lemma cap_asid_mask[simp]:
   "cap_asid (mask_cap m c) = cap_asid c"
@@ -1075,20 +1076,13 @@ next
     done
 qed (auto simp: rec_del_dom rec_del_fails)
 
-lemmas rec_del_preservation =
+lemmas rec_del_preservation[crunch_rules] =
        validE_valid [OF use_spec(2) [OF rec_del_preservation']]
 
 end
 
 
-
-lemma cap_swap_fd_typ_at:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> cap_swap_for_delete src dst \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  apply(simp add: cap_swap_for_delete_def)
-  apply(wp cap_swap_typ_at)
-  apply(simp)
-  done
-
+crunch typ_at: cap_swap_for_delete "\<lambda>s. P (typ_at T p s)"
 
 lemma cap_swap_valid_cap:
   "\<lbrace>valid_cap c\<rbrace> cap_swap_for_delete x y \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
@@ -1108,12 +1102,8 @@ lemma cap_swap_cte_at:
 
 context CNodeInv_AI begin
 
-lemma rec_del_typ_at:
-  "\<And>P T p call. \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> rec_del call \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wp rec_del_preservation cancel_all_ipc_typ_at cancel_all_signals_typ_at
-           cap_swap_fd_typ_at empty_slot_typ_at set_cap_typ_at
-           irq_state_independent_AI preemption_point_inv
-       | simp)+
+crunch typ_at: rec_del "\<lambda>s::'state_ext state. P (typ_at T p s)"
+  (ignore: preemption_point wp: preemption_point_inv)
 
 lemma rec_del_cte_at:
   "\<And>c call. \<lbrace>cte_at c :: 'state_ext state \<Rightarrow> bool\<rbrace> rec_del call \<lbrace>\<lambda>_. cte_at c\<rbrace>"
@@ -1429,7 +1419,7 @@ lemma cap_swap_mdb [wp]:
    apply (erule mdb_swap_abs_invs.descendants_inc_n)
   apply (rule conjI)
    apply (erule mdb_swap_abs_invs.untyped_inc_n)
-     apply (clarsimp simp:cte_wp_at_caps_of_state)+
+     apply (clarsimp simp: cte_wp_at_caps_of_state)+
   apply (rule conjI)
    apply (simp add: ut_revocable_def weak_derived_ranges del: split_paired_All)
   apply (rule conjI)
@@ -1931,8 +1921,48 @@ crunch machine_state[wp]: cap_swap "\<lambda>s. P(machine_state s)"
 
 crunch valid_irq_states[wp]: cap_swap "valid_irq_states"
 
+crunch pspace_respects_device_region[wp]: cap_swap pspace_respects_device_region
+
+lemma cap_refs_respects_device_region_original_cap[wp]:
+  "cap_refs_respects_device_region
+                (s\<lparr>is_original_cap := ocp\<rparr>) = cap_refs_respects_device_region s"
+  by (simp add:cap_refs_respects_device_region_def)
 
 context CNodeInv_AI begin
+lemma cap_swap_cap_refs_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>  
+    cap_swap c a c' b \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (rule hoare_pre)
+  apply (simp add:cap_swap_def)
+  apply wp
+        apply (simp add: cap_refs_respects_device_region_def)
+       apply (rule hoare_strengthen_post[OF CSpace_AI.set_cdt_cap_refs_respects_device_region])
+       apply simp
+      apply wp
+   apply (clarsimp simp add: cap_refs_respects_device_region_def cte_wp_at_caps_of_state
+                    cap_range_respects_device_region_def
+                   simp del: split_paired_All split_paired_Ex split_paired_all
+                  | wp hoare_vcg_all_lift hoare_vcg_imp_lift)+
+  apply (frule_tac x = a in spec)
+  apply (frule_tac x = b in spec)
+  apply (clarsimp simp: weak_derived_cap_range)
+  apply (intro conjI impI allI)
+       apply (simp add: weak_derived_cap_range weak_derived_cap_is_device)+
+      apply (rule ccontr)
+      apply simp
+     apply (rule disjI2)
+     apply (intro conjI impI)
+      apply (simp add: weak_derived_cap_range weak_derived_cap_is_device)+
+     apply (rule ccontr)
+     apply simp
+    apply (simp add: weak_derived_cap_range weak_derived_cap_is_device)+
+   apply (rule ccontr)
+   apply simp
+  apply (rule disjI2)
+  apply (rule ccontr)
+  apply (clarsimp simp add: weak_derived_cap_range weak_derived_cap_is_device)+
+  apply fastforce
+  done
 
 lemma cap_swap_invs[wp]:
   "\<And>c' a c b.
@@ -2350,7 +2380,7 @@ lemma tcb_valid_nonspecial_cap:
   "\<lbrakk> caps_of_state s p = Some cap; valid_objs s;
        \<forall>ptr st. \<forall>(getF, setF, restr) \<in> ran tcb_cap_cases.
                     \<not> restr ptr st cap \<or> (\<forall>cap. restr ptr st cap);
-       \<forall>ptr. (is_arch_cap cap \<or> cap = cap.NullCap) \<and>
+       \<forall>ptr. (is_nondevice_page_cap cap \<or> cap = cap.NullCap) \<and>
              valid_ipc_buffer_cap cap ptr
                 \<longrightarrow> valid_ipc_buffer_cap cap' ptr \<rbrakk>
       \<Longrightarrow> tcb_cap_valid cap' p s"
@@ -2429,10 +2459,10 @@ lemma suspend_emptyable[wp]:
 
 
 crunch emptyable[wp]: do_machine_op "emptyable sl"
-  (lift: emptyable_lift)
+  (rule: emptyable_lift)
 
 crunch emptyable[wp]: set_irq_state "emptyable sl"
-  (lift: emptyable_lift)
+  (rule: emptyable_lift)
 
 
 declare get_irq_slot_real_cte [wp]
@@ -3414,7 +3444,6 @@ lemma cap_move_valid_ioc[wp]:
   done
 
 declare cdt_update.state_refs_update [simp]
-
 
 locale CNodeInv_AI_5 = CNodeInv_AI_4 state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +

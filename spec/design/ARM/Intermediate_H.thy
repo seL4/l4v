@@ -31,75 +31,75 @@ end
  *)
 
 consts
-insertNewCaps :: "object_type \<Rightarrow> machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
+insertNewCaps :: "object_type \<Rightarrow> machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> unit kernel"
 
 consts
-createObjects :: "machine_word \<Rightarrow> nat \<Rightarrow> ('a :: pspace_storable) \<Rightarrow> nat \<Rightarrow> machine_word list kernel"
+createObjects :: "machine_word \<Rightarrow> nat \<Rightarrow> Structures_H.kernel_object \<Rightarrow> nat \<Rightarrow> machine_word list kernel"
 
 consts
 createObjects' :: "machine_word \<Rightarrow> nat \<Rightarrow> kernel_object \<Rightarrow> nat \<Rightarrow> unit kernel"
 
 consts
-createNewCaps :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> capability list kernel"
+createNewCaps :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> capability list kernel"
 
 consts
-Arch_createNewCaps :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> arch_capability list kernel"
-
+Arch_createNewCaps :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_capability list kernel"
+thm injectKO_defs
 definition
-"createWordObjects ptr numObjects gs\<equiv> (do
-    gbits \<leftarrow> return ( objBitsKO (injectKO UserData) + gs);
-    addrs \<leftarrow> createObjects ptr numObjects UserData gs;
-    doMachineOp $ mapM_x (\<lambda>x. clearMemory (PPtr $ fromPPtr x) ((1::nat) `~shiftL~` gbits)) addrs;
+"createWordObjects ptr numObjects gs dev\<equiv> (do
+    gbits \<leftarrow> return (pageBits + gs);
+    addrs \<leftarrow> createObjects ptr numObjects (if dev then KOUserDataDevice else KOUserData) gs;
+    unless dev $ doMachineOp $ mapM_x (\<lambda>x. clearMemory (PPtr $ fromPPtr x) ((1::nat) `~shiftL~` gbits)) addrs;
     return addrs
 od)"
 
 defs insertNewCaps_def:
-"insertNewCaps newType srcSlot destSlots regionBase magnitudeBits\<equiv> (do
-    caps \<leftarrow> createNewCaps newType regionBase (length destSlots) magnitudeBits;
+"insertNewCaps newType srcSlot destSlots regionBase magnitudeBits dev \<equiv> (do
+    caps \<leftarrow> createNewCaps newType regionBase (length destSlots) magnitudeBits dev ;
     zipWithM_x (insertNewCap srcSlot) destSlots caps
 od)"
 
 defs (in Arch) Arch_createNewCaps_def:
-"Arch_createNewCaps t regionBase numObjects arg4 \<equiv>
+"Arch_createNewCaps t regionBase numObjects arg4 dev \<equiv>
     let pointerCast = PPtr \<circ> fromPPtr
     in (case t of 
         APIObjectType v5 \<Rightarrow> 
             haskell_fail []
         | SmallPageObject \<Rightarrow>  (do
-            addrs \<leftarrow> createWordObjects regionBase numObjects 0;
+            addrs \<leftarrow> createWordObjects regionBase numObjects 0 dev;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMSmallPage
               else gsUserPages ks addr)\<rparr>);
-            return $ map (\<lambda> n. PageCap (pointerCast n) VMReadWrite
+            return $ map (\<lambda> n. PageCap dev (pointerCast n) VMReadWrite
                     ARMSmallPage Nothing) addrs
         od)
         | LargePageObject \<Rightarrow>  (do
-            addrs \<leftarrow> createWordObjects regionBase numObjects 4;
+            addrs \<leftarrow> createWordObjects regionBase numObjects 4 dev;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMLargePage
               else gsUserPages ks addr)\<rparr>);
-            return $ map (\<lambda> n. PageCap (pointerCast n) VMReadWrite
+            return $ map (\<lambda> n. PageCap dev (pointerCast n) VMReadWrite
                     ARMLargePage Nothing) addrs
         od)
         | SectionObject \<Rightarrow>  (do
-            addrs \<leftarrow> createWordObjects regionBase numObjects 8;
+            addrs \<leftarrow> createWordObjects regionBase numObjects 8 dev;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMSection
               else gsUserPages ks addr)\<rparr>);
-            return $ map (\<lambda> n. PageCap (pointerCast n) VMReadWrite
+            return $ map (\<lambda> n. PageCap dev (pointerCast n) VMReadWrite
                     ARMSection Nothing) addrs
         od)
         | SuperSectionObject \<Rightarrow>  (do
-            addrs \<leftarrow> createWordObjects regionBase numObjects 12;
+            addrs \<leftarrow> createWordObjects regionBase numObjects 12 dev;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMSuperSection
               else gsUserPages ks addr)\<rparr>);
-            return $ map (\<lambda> n. PageCap (pointerCast n) VMReadWrite
+            return $ map (\<lambda> n. PageCap dev (pointerCast n) VMReadWrite
                     ARMSuperSection Nothing) addrs
         od)
         | PageTableObject \<Rightarrow>  (do
             ptSize \<leftarrow> return ( ptBits - objBits (makeObject ::pte));
-            addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::pte) ptSize;
+            addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::pte)) ptSize;
             objSize \<leftarrow> return (((1::nat) `~shiftL~` ptBits));
             pts \<leftarrow> return ( map pointerCast addrs);
             doMachineOp $ mapM_x (flip clearMemoryVM ptBits) pts;
@@ -109,7 +109,7 @@ defs (in Arch) Arch_createNewCaps_def:
         od)
         | PageDirectoryObject \<Rightarrow>  (do
             pdSize \<leftarrow> return ( pdBits - objBits (makeObject ::pde));
-            addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::pde) pdSize;
+            addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::pde)) pdSize;
             objSize \<leftarrow> return ( ((1::nat) `~shiftL~` pdBits));
             pds \<leftarrow> return ( map pointerCast addrs);
             doMachineOp $ mapM_x (flip clearMemoryVM pdBits) pds;
@@ -121,24 +121,24 @@ defs (in Arch) Arch_createNewCaps_def:
         )"
 
 defs createNewCaps_def:
-"createNewCaps t regionBase numObjects userSize \<equiv>
+"createNewCaps t regionBase numObjects userSize dev \<equiv>
     (case toAPIType t of
           Some TCBObject \<Rightarrow>   (do
-            addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::tcb) 0;
+            addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::tcb)) 0;
             curdom \<leftarrow> curDomain;
             mapM_x (\<lambda>tptr. threadSet (tcbDomain_update (\<lambda>_. curdom)) tptr) addrs;
             return $ map (\<lambda> addr. ThreadCap addr) addrs
           od)
         | Some EndpointObject \<Rightarrow>   (do
-            addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::endpoint) 0;
+            addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::endpoint)) 0;
             return $ map (\<lambda> addr. EndpointCap addr 0 True True True) addrs
         od)
         | Some NotificationObject \<Rightarrow>   (do
-            addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::notification) 0;
+            addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::notification)) 0;
             return $ map (\<lambda> addr. NotificationCap addr 0 True True) addrs
         od)
         | Some ArchTypes_H.CapTableObject \<Rightarrow>   (do
-            addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::cte) userSize;
+            addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::cte)) userSize;
             modify (\<lambda> ks. ks \<lparr> gsCNodes := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just userSize
               else gsCNodes ks addr)\<rparr>);
@@ -146,19 +146,19 @@ defs createNewCaps_def:
         od)
         | Some ArchTypes_H.Untyped \<Rightarrow>  
             return $ map
-                (\<lambda> n. UntypedCap (regionBase + n * 2 ^ (fromIntegral userSize)) userSize 0)
+                (\<lambda> n. UntypedCap dev (regionBase + n * 2 ^ (fromIntegral userSize)) userSize 0)
                 [0  .e.  (fromIntegral numObjects) - 1]
         | None \<Rightarrow>   (do
-            archCaps \<leftarrow> Arch_createNewCaps t regionBase numObjects userSize;
+            archCaps \<leftarrow> Arch_createNewCaps t regionBase numObjects userSize dev;
             return $ map ArchObjectCap archCaps
         od)
         )"
 
 defs createObjects_def:
 "createObjects ptr numObjects val gSize \<equiv> (do
-        oBits \<leftarrow> return ( objBitsKO (injectKO val));
+        oBits \<leftarrow> return ( objBitsKO val);
         gBits \<leftarrow> return ( oBits + gSize);
-        createObjects' ptr numObjects (injectKO val) gSize;
+        createObjects' ptr numObjects val gSize;
         return (map (\<lambda> n. (ptr + n `~shiftL~` gBits))
                 [0  .e.  (of_nat numObjects) - 1])
   od)"

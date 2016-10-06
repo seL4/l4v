@@ -92,7 +92,7 @@ lemma decode_invocation_untypedcap_corres:
      invoked_cap_ref = transform_cslot_ptr invoked_cap_ref';
      invoked_cap = transform_cap invoked_cap';
      excaps = transform_cap_list excaps';
-     invoked_cap' = cap.UntypedCap a b idx \<rbrakk> \<Longrightarrow>
+     invoked_cap' = cap.UntypedCap dev a b idx \<rbrakk> \<Longrightarrow>
     dcorres (dc \<oplus> cdl_invocation_relation) \<top>
         (invs and cte_wp_at (op = invoked_cap') invoked_cap_ref'
                  and (\<lambda>s. \<forall>x \<in> set (map fst excaps'). s \<turnstile> x)
@@ -350,7 +350,7 @@ lemma transform_type_eq_None:
   done
 
 lemma transform_intent_untyped_cap_None:
-  "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.UntypedCap w n idx\<rbrakk>
+  "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.UntypedCap dev w n idx\<rbrakk>
          \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp
@@ -414,14 +414,16 @@ lemma transform_intent_thread_cap_None:
   apply (case_tac "invocation_type label")
     apply simp_all
     apply wp
-    apply (clarsimp simp:transform_intent_def decode_read_registers_def decode_write_registers_def decode_copy_registers_def
-      decode_tcb_configure_def decode_set_priority_def decode_set_ipc_buffer_def
-      transform_intent_tcb_read_registers_def transform_intent_tcb_write_registers_def transform_intent_tcb_copy_registers_def
-      transform_intent_tcb_configure_def transform_intent_tcb_set_priority_def transform_intent_tcb_set_ipc_buffer_def 
-      split:list.split_asm,wp)+
-    apply (clarsimp simp:transform_intent_def decode_set_space_def decode_bind_notification_def decode_unbind_notification_def  transform_intent_tcb_set_space_def
-      split del:if_splits split:list.split_asm,wp
-      | clarsimp simp: transform_intent_def)+
+    apply (clarsimp simp: transform_intent_def decode_read_registers_def decode_write_registers_def
+                          decode_copy_registers_def decode_tcb_configure_def decode_set_priority_def
+                          decode_set_mcpriority_def decode_set_ipc_buffer_def transform_intent_tcb_defs 
+                   split: list.split_asm
+          | wp)+
+    apply (clarsimp simp: transform_intent_def decode_set_space_def decode_bind_notification_def
+                          decode_unbind_notification_def transform_intent_tcb_set_space_def
+                   split: list.split_asm
+          , wp
+          | clarsimp simp: transform_intent_def)+
   done
 
 lemma transform_intent_irq_control_None:
@@ -1203,7 +1205,7 @@ lemma cap_recycle_idle:
       apply (rule hoare_pre)
       apply (wpc|wp|clarsimp)+
         apply (rule_tac Q = "\<lambda>rv s. P (idle_thread s)" in hoare_strengthen_post)
-      apply (wp mapM_x_wp|clarsimp)+
+      apply (wp mapM_x_wp hoare_unless_wp | clarsimp | wpc)+
     apply assumption
     apply (wpc | wp mapM_x_wp' | clarsimp)+
     apply (simp add:validE_def finalise_slot_def)

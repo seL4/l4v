@@ -60,6 +60,7 @@ The following data type defines the set of possible TCB invocation operations. T
 >             tcThread :: PPtr TCB,
 >             tcThreadCapSlot :: PPtr CTE,
 >             tcNewFaultEP :: Maybe CPtr,
+>             tcNewMCPriority :: Maybe Priority,
 >             tcNewPriority :: Maybe Priority,
 >             tcNewCRoot, tcNewVRoot :: Maybe (Capability, PPtr CTE),
 >             tcNewIPCBuffer :: Maybe (VPtr, Maybe (Capability, PPtr CTE)) }
@@ -116,7 +117,8 @@ The following data type defines the parameters expected for invocations of Untyp
 >             retypeFreeRegionBase :: PPtr (),
 >             retypeNewType :: ObjectType,
 >             retypeNewSizeBits :: Int,
->             retypeSlots :: [PPtr CTE] }
+>             retypeSlots :: [PPtr CTE], 
+>             retypeIsDevice :: Bool }
 >         deriving Show
 
 \subsubsection{Interrupt Controller Invocations}

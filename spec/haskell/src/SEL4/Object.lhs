@@ -31,6 +31,6 @@
 >     ThreadState(..), SchedulerAction(..),
 >     CTE, Endpoint, Notification, TCB, 
 >     Capability(..), KernelObject(..), UserData(..),
->     isNullCap)
+>     UserDataDevice(..), isNullCap)
 
 

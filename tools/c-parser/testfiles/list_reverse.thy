@@ -57,7 +57,7 @@ apply vcg
  apply rule
   apply(erule sep_map'_ptr_safe)
  apply(rule_tac x="lista" in exI)
- apply clarsimp
+ apply (simp add: ucast_id) 
  apply sep_exists_tac
  apply(rule_tac x=j in exI)
  apply simp

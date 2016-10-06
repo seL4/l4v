@@ -103,8 +103,10 @@ datatype cdl_tcb_intent =
  |  TcbSuspendIntent
     (* Resume: (target) *)
  |  TcbResumeIntent
-    (* Configure: (target), fault_ep, priority, (cspace_root), cspace_root_data, (vspace_root), vspace_root_data, buffer, (bufferFrame) *)
- |  TcbConfigureIntent cdl_cptr word8 cdl_raw_capdata cdl_raw_capdata word32
+    (* Configure: (target), fault_ep, (mcp, priority), (cspace_root), cspace_root_data, (vspace_root), vspace_root_data, buffer, (bufferFrame) *)
+ |  TcbConfigureIntent cdl_cptr "word8 \<times> word8" cdl_raw_capdata cdl_raw_capdata word32
+    (* SetMCPriority: (target), mcp *)
+ |  TcbSetMCPriorityIntent word8
     (* SetPriority: (target), priority *)
  |  TcbSetPriorityIntent word8
     (* SetIPCBuffer: (target), buffer, (bufferFrame) *)

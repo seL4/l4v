@@ -229,7 +229,7 @@ definition
   tcb_ipcframe_id :: "cdl_tcb \<Rightarrow> cdl_object_id option"
 where
   "tcb_ipcframe_id tcb \<equiv> case (cdl_tcb_caps tcb tcb_ipcbuffer_slot) of
-                              Some (FrameCap oid _ _ _ _) \<Rightarrow> Some oid
+                              Some (FrameCap _ oid _ _ _ _) \<Rightarrow> Some oid
                               | _                       \<Rightarrow> None"
 
 (* 

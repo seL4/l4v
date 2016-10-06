@@ -34,6 +34,7 @@ requalify_consts
   getObjectSize
   fromAPIType
   toAPIType
+  isFrameType
   pageType
   ptrFromPAddr
 end
@@ -430,162 +431,172 @@ lemma bidrBasePAddr_bidrBasePAddr_update [simp]:
   by (cases v) simp
 
 datatype biframe_data =
-    BIFrameData word32 word32 word32 vptr "machine_word list" "machine_word list" "machine_word list" "machine_word list" "machine_word list" "machine_word list" "paddr list" "word8 list" word8 word32 "bidevice_region list"
+    BIFrameData word32 word32 word32 vptr "machine_word list" "machine_word list" "machine_word list" "machine_word list" "machine_word list" "machine_word list" "paddr list" "word8 list" "bool list" word8 word32 "bidevice_region list"
 
 primrec
   bifNumIOPTLevels :: "biframe_data \<Rightarrow> word32"
 where
-  "bifNumIOPTLevels (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v2"
+  "bifNumIOPTLevels (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v2"
 
 primrec
   bifNullCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifNullCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v4"
+  "bifNullCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v4"
 
 primrec
   bifIPCBufVPtr :: "biframe_data \<Rightarrow> vptr"
 where
-  "bifIPCBufVPtr (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v3"
+  "bifIPCBufVPtr (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v3"
 
 primrec
   bifUIPTCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifUIPTCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v8"
+  "bifUIPTCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v8"
 
 primrec
   bifUIFrameCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifUIFrameCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v6"
+  "bifUIFrameCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v6"
 
 primrec
   bifUntypedObjSizeBits :: "biframe_data \<Rightarrow> word8 list"
 where
-  "bifUntypedObjSizeBits (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v11"
+  "bifUntypedObjSizeBits (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v11"
 
 primrec
   bifNodeID :: "biframe_data \<Rightarrow> word32"
 where
-  "bifNodeID (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v0"
+  "bifNodeID (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v0"
 
 primrec
   bifNumDeviceRegions :: "biframe_data \<Rightarrow> word32"
 where
-  "bifNumDeviceRegions (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v13"
+  "bifNumDeviceRegions (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v14"
 
 primrec
   bifSharedFrameCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifSharedFrameCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v5"
+  "bifSharedFrameCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v5"
 
 primrec
   bifDeviceRegions :: "biframe_data \<Rightarrow> bidevice_region list"
 where
-  "bifDeviceRegions (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v14"
+  "bifDeviceRegions (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v15"
 
 primrec
   bifUntypedObjPAddrs :: "biframe_data \<Rightarrow> paddr list"
 where
-  "bifUntypedObjPAddrs (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v10"
+  "bifUntypedObjPAddrs (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v10"
 
 primrec
   bifNumNodes :: "biframe_data \<Rightarrow> word32"
 where
-  "bifNumNodes (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v1"
+  "bifNumNodes (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v1"
 
 primrec
   bifUIPDCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifUIPDCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v7"
+  "bifUIPDCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v7"
+
+primrec
+  bifUntypedObjIsDeviceList :: "biframe_data \<Rightarrow> bool list"
+where
+  "bifUntypedObjIsDeviceList (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v12"
 
 primrec
   bifUntypedObjCaps :: "biframe_data \<Rightarrow> machine_word list"
 where
-  "bifUntypedObjCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v9"
+  "bifUntypedObjCaps (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v9"
 
 primrec
   bifITCNodeSizeBits :: "biframe_data \<Rightarrow> word8"
 where
-  "bifITCNodeSizeBits (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v12"
+  "bifITCNodeSizeBits (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = v13"
 
 primrec
   bifNumIOPTLevels_update :: "(word32 \<Rightarrow> word32) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifNumIOPTLevels_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 (f v2) v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifNumIOPTLevels_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 (f v2) v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15"
 
 primrec
   bifNullCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifNullCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 (f v4) v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifNullCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 (f v4) v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15"
 
 primrec
   bifIPCBufVPtr_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifIPCBufVPtr_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 (f v3) v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifIPCBufVPtr_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 (f v3) v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15"
 
 primrec
   bifUIPTCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUIPTCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 (f v8) v9 v10 v11 v12 v13 v14"
+  "bifUIPTCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 (f v8) v9 v10 v11 v12 v13 v14 v15"
 
 primrec
   bifUIFrameCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUIFrameCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 (f v6) v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifUIFrameCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 v5 (f v6) v7 v8 v9 v10 v11 v12 v13 v14 v15"
 
 primrec
   bifUntypedObjSizeBits_update :: "((word8 list) \<Rightarrow> (word8 list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUntypedObjSizeBits_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 (f v11) v12 v13 v14"
+  "bifUntypedObjSizeBits_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 (f v11) v12 v13 v14 v15"
 
 primrec
   bifNodeID_update :: "(word32 \<Rightarrow> word32) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifNodeID_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData (f v0) v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifNodeID_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData (f v0) v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15"
 
 primrec
   bifNumDeviceRegions_update :: "(word32 \<Rightarrow> word32) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifNumDeviceRegions_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 (f v13) v14"
+  "bifNumDeviceRegions_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 (f v14) v15"
 
 primrec
   bifSharedFrameCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifSharedFrameCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 (f v5) v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifSharedFrameCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 (f v5) v6 v7 v8 v9 v10 v11 v12 v13 v14 v15"
 
 primrec
   bifDeviceRegions_update :: "((bidevice_region list) \<Rightarrow> (bidevice_region list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifDeviceRegions_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 (f v14)"
+  "bifDeviceRegions_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 (f v15)"
 
 primrec
   bifUntypedObjPAddrs_update :: "((paddr list) \<Rightarrow> (paddr list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUntypedObjPAddrs_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 (f v10) v11 v12 v13 v14"
+  "bifUntypedObjPAddrs_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 (f v10) v11 v12 v13 v14 v15"
 
 primrec
   bifNumNodes_update :: "(word32 \<Rightarrow> word32) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifNumNodes_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 (f v1) v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "bifNumNodes_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 (f v1) v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15"
 
 primrec
   bifUIPDCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUIPDCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 (f v7) v8 v9 v10 v11 v12 v13 v14"
+  "bifUIPDCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 v5 v6 (f v7) v8 v9 v10 v11 v12 v13 v14 v15"
+
+primrec
+  bifUntypedObjIsDeviceList_update :: "((bool list) \<Rightarrow> (bool list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
+where
+  "bifUntypedObjIsDeviceList_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 (f v12) v13 v14 v15"
 
 primrec
   bifUntypedObjCaps_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifUntypedObjCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 (f v9) v10 v11 v12 v13 v14"
+  "bifUntypedObjCaps_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 (f v9) v10 v11 v12 v13 v14 v15"
 
 primrec
   bifITCNodeSizeBits_update :: "(word8 \<Rightarrow> word8) \<Rightarrow> biframe_data \<Rightarrow> biframe_data"
 where
-  "bifITCNodeSizeBits_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 (f v12) v13 v14"
+  "bifITCNodeSizeBits_update f (BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15) = BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 (f v13) v14 v15"
 
 abbreviation (input)
-  BIFrameData_trans :: "(word32) \<Rightarrow> (word32) \<Rightarrow> (word32) \<Rightarrow> (vptr) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (paddr list) \<Rightarrow> (word8 list) \<Rightarrow> (word8) \<Rightarrow> (word32) \<Rightarrow> (bidevice_region list) \<Rightarrow> biframe_data" ("BIFrameData'_ \<lparr> bifNodeID= _, bifNumNodes= _, bifNumIOPTLevels= _, bifIPCBufVPtr= _, bifNullCaps= _, bifSharedFrameCaps= _, bifUIFrameCaps= _, bifUIPDCaps= _, bifUIPTCaps= _, bifUntypedObjCaps= _, bifUntypedObjPAddrs= _, bifUntypedObjSizeBits= _, bifITCNodeSizeBits= _, bifNumDeviceRegions= _, bifDeviceRegions= _ \<rparr>")
+  BIFrameData_trans :: "(word32) \<Rightarrow> (word32) \<Rightarrow> (word32) \<Rightarrow> (vptr) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (machine_word list) \<Rightarrow> (paddr list) \<Rightarrow> (word8 list) \<Rightarrow> (bool list) \<Rightarrow> (word8) \<Rightarrow> (word32) \<Rightarrow> (bidevice_region list) \<Rightarrow> biframe_data" ("BIFrameData'_ \<lparr> bifNodeID= _, bifNumNodes= _, bifNumIOPTLevels= _, bifIPCBufVPtr= _, bifNullCaps= _, bifSharedFrameCaps= _, bifUIFrameCaps= _, bifUIPDCaps= _, bifUIPTCaps= _, bifUntypedObjCaps= _, bifUntypedObjPAddrs= _, bifUntypedObjSizeBits= _, bifUntypedObjIsDeviceList= _, bifITCNodeSizeBits= _, bifNumDeviceRegions= _, bifDeviceRegions= _ \<rparr>")
 where
-  "BIFrameData_ \<lparr> bifNodeID= v0, bifNumNodes= v1, bifNumIOPTLevels= v2, bifIPCBufVPtr= v3, bifNullCaps= v4, bifSharedFrameCaps= v5, bifUIFrameCaps= v6, bifUIPDCaps= v7, bifUIPTCaps= v8, bifUntypedObjCaps= v9, bifUntypedObjPAddrs= v10, bifUntypedObjSizeBits= v11, bifITCNodeSizeBits= v12, bifNumDeviceRegions= v13, bifDeviceRegions= v14 \<rparr> == BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+  "BIFrameData_ \<lparr> bifNodeID= v0, bifNumNodes= v1, bifNumIOPTLevels= v2, bifIPCBufVPtr= v3, bifNullCaps= v4, bifSharedFrameCaps= v5, bifUIFrameCaps= v6, bifUIPDCaps= v7, bifUIPTCaps= v8, bifUntypedObjCaps= v9, bifUntypedObjPAddrs= v10, bifUntypedObjSizeBits= v11, bifUntypedObjIsDeviceList= v12, bifITCNodeSizeBits= v13, bifNumDeviceRegions= v14, bifDeviceRegions= v15 \<rparr> == BIFrameData v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15"
 
 lemma bifNumIOPTLevels_bifNumIOPTLevels_update [simp]:
   "bifNumIOPTLevels (bifNumIOPTLevels_update f v) = f (bifNumIOPTLevels v)"
@@ -637,6 +648,10 @@ lemma bifNumIOPTLevels_bifNumNodes_update [simp]:
 
 lemma bifNumIOPTLevels_bifUIPDCaps_update [simp]:
   "bifNumIOPTLevels (bifUIPDCaps_update f v) = bifNumIOPTLevels v"
+  by (cases v) simp
+
+lemma bifNumIOPTLevels_bifUntypedObjIsDeviceList_update [simp]:
+  "bifNumIOPTLevels (bifUntypedObjIsDeviceList_update f v) = bifNumIOPTLevels v"
   by (cases v) simp
 
 lemma bifNumIOPTLevels_bifUntypedObjCaps_update [simp]:
@@ -699,6 +714,10 @@ lemma bifNullCaps_bifUIPDCaps_update [simp]:
   "bifNullCaps (bifUIPDCaps_update f v) = bifNullCaps v"
   by (cases v) simp
 
+lemma bifNullCaps_bifUntypedObjIsDeviceList_update [simp]:
+  "bifNullCaps (bifUntypedObjIsDeviceList_update f v) = bifNullCaps v"
+  by (cases v) simp
+
 lemma bifNullCaps_bifUntypedObjCaps_update [simp]:
   "bifNullCaps (bifUntypedObjCaps_update f v) = bifNullCaps v"
   by (cases v) simp
@@ -757,6 +776,10 @@ lemma bifIPCBufVPtr_bifNumNodes_update [simp]:
 
 lemma bifIPCBufVPtr_bifUIPDCaps_update [simp]:
   "bifIPCBufVPtr (bifUIPDCaps_update f v) = bifIPCBufVPtr v"
+  by (cases v) simp
+
+lemma bifIPCBufVPtr_bifUntypedObjIsDeviceList_update [simp]:
+  "bifIPCBufVPtr (bifUntypedObjIsDeviceList_update f v) = bifIPCBufVPtr v"
   by (cases v) simp
 
 lemma bifIPCBufVPtr_bifUntypedObjCaps_update [simp]:
@@ -819,6 +842,10 @@ lemma bifUIPTCaps_bifUIPDCaps_update [simp]:
   "bifUIPTCaps (bifUIPDCaps_update f v) = bifUIPTCaps v"
   by (cases v) simp
 
+lemma bifUIPTCaps_bifUntypedObjIsDeviceList_update [simp]:
+  "bifUIPTCaps (bifUntypedObjIsDeviceList_update f v) = bifUIPTCaps v"
+  by (cases v) simp
+
 lemma bifUIPTCaps_bifUntypedObjCaps_update [simp]:
   "bifUIPTCaps (bifUntypedObjCaps_update f v) = bifUIPTCaps v"
   by (cases v) simp
@@ -877,6 +904,10 @@ lemma bifUIFrameCaps_bifNumNodes_update [simp]:
 
 lemma bifUIFrameCaps_bifUIPDCaps_update [simp]:
   "bifUIFrameCaps (bifUIPDCaps_update f v) = bifUIFrameCaps v"
+  by (cases v) simp
+
+lemma bifUIFrameCaps_bifUntypedObjIsDeviceList_update [simp]:
+  "bifUIFrameCaps (bifUntypedObjIsDeviceList_update f v) = bifUIFrameCaps v"
   by (cases v) simp
 
 lemma bifUIFrameCaps_bifUntypedObjCaps_update [simp]:
@@ -939,6 +970,10 @@ lemma bifUntypedObjSizeBits_bifUIPDCaps_update [simp]:
   "bifUntypedObjSizeBits (bifUIPDCaps_update f v) = bifUntypedObjSizeBits v"
   by (cases v) simp
 
+lemma bifUntypedObjSizeBits_bifUntypedObjIsDeviceList_update [simp]:
+  "bifUntypedObjSizeBits (bifUntypedObjIsDeviceList_update f v) = bifUntypedObjSizeBits v"
+  by (cases v) simp
+
 lemma bifUntypedObjSizeBits_bifUntypedObjCaps_update [simp]:
   "bifUntypedObjSizeBits (bifUntypedObjCaps_update f v) = bifUntypedObjSizeBits v"
   by (cases v) simp
@@ -997,6 +1032,10 @@ lemma bifNodeID_bifNumNodes_update [simp]:
 
 lemma bifNodeID_bifUIPDCaps_update [simp]:
   "bifNodeID (bifUIPDCaps_update f v) = bifNodeID v"
+  by (cases v) simp
+
+lemma bifNodeID_bifUntypedObjIsDeviceList_update [simp]:
+  "bifNodeID (bifUntypedObjIsDeviceList_update f v) = bifNodeID v"
   by (cases v) simp
 
 lemma bifNodeID_bifUntypedObjCaps_update [simp]:
@@ -1059,6 +1098,10 @@ lemma bifNumDeviceRegions_bifUIPDCaps_update [simp]:
   "bifNumDeviceRegions (bifUIPDCaps_update f v) = bifNumDeviceRegions v"
   by (cases v) simp
 
+lemma bifNumDeviceRegions_bifUntypedObjIsDeviceList_update [simp]:
+  "bifNumDeviceRegions (bifUntypedObjIsDeviceList_update f v) = bifNumDeviceRegions v"
+  by (cases v) simp
+
 lemma bifNumDeviceRegions_bifUntypedObjCaps_update [simp]:
   "bifNumDeviceRegions (bifUntypedObjCaps_update f v) = bifNumDeviceRegions v"
   by (cases v) simp
@@ -1117,6 +1160,10 @@ lemma bifSharedFrameCaps_bifNumNodes_update [simp]:
 
 lemma bifSharedFrameCaps_bifUIPDCaps_update [simp]:
   "bifSharedFrameCaps (bifUIPDCaps_update f v) = bifSharedFrameCaps v"
+  by (cases v) simp
+
+lemma bifSharedFrameCaps_bifUntypedObjIsDeviceList_update [simp]:
+  "bifSharedFrameCaps (bifUntypedObjIsDeviceList_update f v) = bifSharedFrameCaps v"
   by (cases v) simp
 
 lemma bifSharedFrameCaps_bifUntypedObjCaps_update [simp]:
@@ -1179,6 +1226,10 @@ lemma bifDeviceRegions_bifUIPDCaps_update [simp]:
   "bifDeviceRegions (bifUIPDCaps_update f v) = bifDeviceRegions v"
   by (cases v) simp
 
+lemma bifDeviceRegions_bifUntypedObjIsDeviceList_update [simp]:
+  "bifDeviceRegions (bifUntypedObjIsDeviceList_update f v) = bifDeviceRegions v"
+  by (cases v) simp
+
 lemma bifDeviceRegions_bifUntypedObjCaps_update [simp]:
   "bifDeviceRegions (bifUntypedObjCaps_update f v) = bifDeviceRegions v"
   by (cases v) simp
@@ -1237,6 +1288,10 @@ lemma bifUntypedObjPAddrs_bifNumNodes_update [simp]:
 
 lemma bifUntypedObjPAddrs_bifUIPDCaps_update [simp]:
   "bifUntypedObjPAddrs (bifUIPDCaps_update f v) = bifUntypedObjPAddrs v"
+  by (cases v) simp
+
+lemma bifUntypedObjPAddrs_bifUntypedObjIsDeviceList_update [simp]:
+  "bifUntypedObjPAddrs (bifUntypedObjIsDeviceList_update f v) = bifUntypedObjPAddrs v"
   by (cases v) simp
 
 lemma bifUntypedObjPAddrs_bifUntypedObjCaps_update [simp]:
@@ -1299,6 +1354,10 @@ lemma bifNumNodes_bifUIPDCaps_update [simp]:
   "bifNumNodes (bifUIPDCaps_update f v) = bifNumNodes v"
   by (cases v) simp
 
+lemma bifNumNodes_bifUntypedObjIsDeviceList_update [simp]:
+  "bifNumNodes (bifUntypedObjIsDeviceList_update f v) = bifNumNodes v"
+  by (cases v) simp
+
 lemma bifNumNodes_bifUntypedObjCaps_update [simp]:
   "bifNumNodes (bifUntypedObjCaps_update f v) = bifNumNodes v"
   by (cases v) simp
@@ -1359,12 +1418,80 @@ lemma bifUIPDCaps_bifUIPDCaps_update [simp]:
   "bifUIPDCaps (bifUIPDCaps_update f v) = f (bifUIPDCaps v)"
   by (cases v) simp
 
+lemma bifUIPDCaps_bifUntypedObjIsDeviceList_update [simp]:
+  "bifUIPDCaps (bifUntypedObjIsDeviceList_update f v) = bifUIPDCaps v"
+  by (cases v) simp
+
 lemma bifUIPDCaps_bifUntypedObjCaps_update [simp]:
   "bifUIPDCaps (bifUntypedObjCaps_update f v) = bifUIPDCaps v"
   by (cases v) simp
 
 lemma bifUIPDCaps_bifITCNodeSizeBits_update [simp]:
   "bifUIPDCaps (bifITCNodeSizeBits_update f v) = bifUIPDCaps v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifNumIOPTLevels_update [simp]:
+  "bifUntypedObjIsDeviceList (bifNumIOPTLevels_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifNullCaps_update [simp]:
+  "bifUntypedObjIsDeviceList (bifNullCaps_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifIPCBufVPtr_update [simp]:
+  "bifUntypedObjIsDeviceList (bifIPCBufVPtr_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifUIPTCaps_update [simp]:
+  "bifUntypedObjIsDeviceList (bifUIPTCaps_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifUIFrameCaps_update [simp]:
+  "bifUntypedObjIsDeviceList (bifUIFrameCaps_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifUntypedObjSizeBits_update [simp]:
+  "bifUntypedObjIsDeviceList (bifUntypedObjSizeBits_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifNodeID_update [simp]:
+  "bifUntypedObjIsDeviceList (bifNodeID_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifNumDeviceRegions_update [simp]:
+  "bifUntypedObjIsDeviceList (bifNumDeviceRegions_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifSharedFrameCaps_update [simp]:
+  "bifUntypedObjIsDeviceList (bifSharedFrameCaps_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifDeviceRegions_update [simp]:
+  "bifUntypedObjIsDeviceList (bifDeviceRegions_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifUntypedObjPAddrs_update [simp]:
+  "bifUntypedObjIsDeviceList (bifUntypedObjPAddrs_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifNumNodes_update [simp]:
+  "bifUntypedObjIsDeviceList (bifNumNodes_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifUIPDCaps_update [simp]:
+  "bifUntypedObjIsDeviceList (bifUIPDCaps_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifUntypedObjIsDeviceList_update [simp]:
+  "bifUntypedObjIsDeviceList (bifUntypedObjIsDeviceList_update f v) = f (bifUntypedObjIsDeviceList v)"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifUntypedObjCaps_update [simp]:
+  "bifUntypedObjIsDeviceList (bifUntypedObjCaps_update f v) = bifUntypedObjIsDeviceList v"
+  by (cases v) simp
+
+lemma bifUntypedObjIsDeviceList_bifITCNodeSizeBits_update [simp]:
+  "bifUntypedObjIsDeviceList (bifITCNodeSizeBits_update f v) = bifUntypedObjIsDeviceList v"
   by (cases v) simp
 
 lemma bifUntypedObjCaps_bifNumIOPTLevels_update [simp]:
@@ -1417,6 +1544,10 @@ lemma bifUntypedObjCaps_bifNumNodes_update [simp]:
 
 lemma bifUntypedObjCaps_bifUIPDCaps_update [simp]:
   "bifUntypedObjCaps (bifUIPDCaps_update f v) = bifUntypedObjCaps v"
+  by (cases v) simp
+
+lemma bifUntypedObjCaps_bifUntypedObjIsDeviceList_update [simp]:
+  "bifUntypedObjCaps (bifUntypedObjIsDeviceList_update f v) = bifUntypedObjCaps v"
   by (cases v) simp
 
 lemma bifUntypedObjCaps_bifUntypedObjCaps_update [simp]:
@@ -1477,6 +1608,10 @@ lemma bifITCNodeSizeBits_bifNumNodes_update [simp]:
 
 lemma bifITCNodeSizeBits_bifUIPDCaps_update [simp]:
   "bifITCNodeSizeBits (bifUIPDCaps_update f v) = bifITCNodeSizeBits v"
+  by (cases v) simp
+
+lemma bifITCNodeSizeBits_bifUntypedObjIsDeviceList_update [simp]:
+  "bifITCNodeSizeBits (bifUntypedObjIsDeviceList_update f v) = bifITCNodeSizeBits v"
   by (cases v) simp
 
 lemma bifITCNodeSizeBits_bifUntypedObjCaps_update [simp]:
@@ -1734,6 +1869,11 @@ where
         
         (bitIf r1 0) || (bitIf r2 1) || (bitIf r3 2)
   )"
+
+definition
+priorityBits :: "nat"
+where
+"priorityBits \<equiv> 8"
 
 definition
 msgLengthBits :: "nat"

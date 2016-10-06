@@ -3860,7 +3860,7 @@ lemma create_cap_valid_list[wp]:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows
   "\<lbrace>valid_list \<rbrace>
-      create_cap tp sz p x \<lbrace>\<lambda>rv. valid_list\<rbrace>"
+      create_cap tp sz p dev x \<lbrace>\<lambda>rv. valid_list\<rbrace>"
   apply (case_tac x)
   apply (simp add: create_cap_def)
   apply(simp add: set_cdt_def update_cdt_list_def set_cdt_list_def bind_assoc create_cap_ext_def bind_assoc)
@@ -4007,7 +4007,8 @@ lemma invoke_cnode_valid_list[wp]: "\<lbrace>valid_list\<rbrace>
 
 end
 
-crunch valid_list[wp]: switch_if_required_to,set_priority "valid_list" (wp: crunch_wps)
+crunch valid_list[wp]: switch_if_required_to,set_priority,set_mcpriority "valid_list"
+  (wp: crunch_wps)
 
 crunch all_but_exst[wp]: switch_if_required_to "all_but_exst P" (simp: ethread_get_def)
 
@@ -4030,7 +4031,7 @@ global_interpretation switch_if_required_to_extended: is_extended "switch_if_req
 
 crunch all_but_exst[wp]: set_priority "all_but_exst P" (simp: ethread_get_def)
 
-crunch (empty_fail)empty_fail[wp]: set_priority
+crunch (empty_fail)empty_fail[wp]: set_priority,set_mcpriority
 
 global_interpretation set_priority_extended: is_extended "set_priority a b"
   apply (unfold_locales)

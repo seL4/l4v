@@ -37,7 +37,7 @@ lemma prop_of_obj_ref_of_cnode_cap:
 
 lemma decode_untyped_invocation_rev:
   "reads_equiv_valid_inv A aag (pas_refined aag and 
-                                (K (cap = UntypedCap bs sz idx \<and>  
+                                (K (cap = UntypedCap dev bs sz idx \<and>  
                                     is_subject aag (fst slot) \<and> 
                                     (\<forall>c\<in>set excaps. pas_cap_cur_auth aag c))))
         (decode_untyped_invocation label args slot cap excaps)"
@@ -72,7 +72,7 @@ lemma decode_untyped_invocation_rev:
   done
 
 lemma derive_cap_rev':
-  "reads_equiv_valid_inv A aag (\<lambda> s. (\<exists>x xa xb. cap = cap.UntypedCap x xa xb) \<longrightarrow>
+  "reads_equiv_valid_inv A aag (\<lambda> s. (\<exists>x xa xb dev. cap = cap.UntypedCap dev x xa xb) \<longrightarrow>
          pas_refined aag s \<and> is_subject aag (fst slot)) (derive_cap slot cap)"
   unfolding derive_cap_def arch_derive_cap_def
   apply(rule equiv_valid_guard_imp)
@@ -199,21 +199,23 @@ lemma OR_choice_def2: "(\<And>P. \<lbrace>P\<rbrace> (c :: bool det_ext_monad) \
                    ef_mk_ef)
   by (subst no_state_changes[where f=c],simp,fastforce simp: bind_assoc split_def)
 
-lemma decode_set_priority_error_choice[wp]: "\<lbrace>P\<rbrace> decode_set_priority_error_choice a b \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: decode_set_priority_error_choice_def)
-  apply wp
-  apply (simp add: etcb_at_def)
-  done
+lemma check_prio_rev:
+  "reads_respects aag l (is_subject aag \<circ> cur_thread) (check_prio prio)"
+  apply (clarsimp simp: check_prio_def)
+  apply (wp thread_get_reads_respects)
+  by (clarsimp simp: reads_equiv_def)
 
 lemma decode_set_priority_rev:
   "reads_respects aag l (is_subject aag \<circ> cur_thread) (decode_set_priority args cap slot)"
-  apply (clarsimp simp add: decode_set_priority_def)
-  apply (subst OR_choice_def2)
-  apply wp
-  apply (simp add: decode_set_priority_error_choice_def)
-  apply (intro impI conjI)
-       apply (wp reads_respects_ethread_get | simp add: reads_equiv_def)+
-  done
+  apply (clarsimp simp: decode_set_priority_def wp_ev)
+  apply (wp check_prio_rev)
+  by simp
+
+lemma decode_set_mcpriority_rev:
+  "reads_respects aag l (is_subject aag \<circ> cur_thread) (decode_set_mcpriority args cap slot)"
+  apply (clarsimp simp: decode_set_mcpriority_def wp_ev)
+  apply (wp check_prio_rev)
+  by simp
 
 lemma decode_tcb_invocation_reads_respects_f:
   notes respects_f = reads_respects_f[where st=st and Q=\<top>]
@@ -237,6 +239,7 @@ lemma decode_tcb_invocation_reads_respects_f:
              respects_f[OF check_valid_ipc_buffer_rev]
              check_valid_ipc_buffer_inv
              respects_f[OF decode_set_priority_rev]
+             respects_f[OF decode_set_mcpriority_rev]
              respects_f[OF get_notification_reads_respects]
              respects_f[OF get_bound_notification_reads_respects']
         | wp_once whenE_throwError_wp
@@ -565,7 +568,6 @@ lemma arch_decode_invocation_reads_respects_f:
                          apply(fastforce intro: nth_mem)
                         apply clarify
                         apply(subgoal_tac "excaps ! Suc 0 \<in> set excaps")
-  thm select_ext_ev
                          apply(rule_tac cap="fst (excaps ! Suc 0)" and p="snd (excaps ! Suc 0)" in caps_of_state_pasObjectAbs_eq)
                              apply(rule cte_wp_at_caps_of_state)
                              apply(rule cte_wp_at_diminished_cnode_cap)
@@ -597,16 +599,15 @@ lemma arch_decode_invocation_reads_respects_f:
                    apply fastforce
                   apply fastforce
                  (* clagged from Arch_AI *)
-                 apply (simp add: linorder_not_le kernel_base_less_observation)
-                 apply (simp add: vmsz_aligned_def split: vmpage_size.splits)
+                 apply (simp add: linorder_not_le kernel_base_less_observation vmsz_aligned_def p_assoc_help)
                  apply (subst(asm) mask_lower_twice[symmetric])
                   prefer 2
-                  apply (subst(asm) add_diff_eq[symmetric],
-                         subst(asm) is_aligned_add_helper,
+                  apply (subst(asm) is_aligned_add_helper,
                          assumption)
-                   apply(case_tac xb, simp_all)[1]
+                  apply (rule word_power_less_1)
+                   apply(case_tac xc, simp_all)[1]
                   apply simp
-                 apply(case_tac xb, simp_all)[1]
+                 apply(case_tac xc, simp_all)[1]
                 apply(rule ball_subset[OF _ vspace_cap_rights_to_auth_mask_vm_rights])
                 apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def)
                apply(simp add: lookup_pd_slot_def)

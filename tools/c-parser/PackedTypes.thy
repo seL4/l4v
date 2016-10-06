@@ -874,7 +874,7 @@ proof (simp add: packed_type_access_ti, rule ext)
 
   from cgrd have al: "ptr_val p \<le> ptr_val p + of_nat (size_of TYPE('b) - 1)" by (rule c_guard_no_wrap)
 
-  have szb: "size_of TYPE('b) < 2 ^ len_of TYPE(32)"
+  have szb: "size_of TYPE('b) < 2 ^ len_of TYPE(addr_bitsize)"
     apply (fold card_word)
     apply (fold addr_card_def)
     apply (rule max_size)
@@ -893,7 +893,7 @@ proof (simp add: packed_type_access_ti, rule ext)
     unfolding size_of_def
     by (rule wf_size_desc_gt)
 
-  have uofn: "unat (of_nat n :: 32 word) = n" using szn szb
+  have uofn: "unat (of_nat n :: addr_bitsize word) = n" using szn szb
     by (simp add: unat_simps)
 
   from eu have std: "size_td t = size_of TYPE('a)" using fl
@@ -915,7 +915,7 @@ proof (simp add: packed_type_access_ti, rule ext)
 	apply (simp add: std)
 	done
 
-      have szt': "size_td t < 2 ^ len_of TYPE(32)"
+      have szt': "size_td t < 2 ^ len_of TYPE(addr_bitsize)"
 	apply (subst std)
 	apply (fold card_word)
 	apply (fold addr_card_def)
@@ -928,7 +928,7 @@ proof (simp add: packed_type_access_ti, rule ext)
 	  unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
 	  by (rule intvl_le_lower)
       next
-	from szb szn have "of_nat n \<le> (of_nat (size_of TYPE('b) - 1) :: 32 word)"
+	from szb szn have "of_nat n \<le> (of_nat (size_of TYPE('b) - 1) :: addr_bitsize word)"
 	  apply -
 	  apply (rule of_nat_mono_maybe_le)
 	  apply simp_all
@@ -953,7 +953,7 @@ proof (simp add: packed_type_access_ti, rule ext)
      apply (metis (hide_lams, mono_tags) add.commute of_nat_add)
 	apply (erule (2) intvl_le_lower)
 	done
-      moreover have "unat (of_nat n + of_nat (size_td t - 1) :: 32 word) = n + size_td t - 1"
+      moreover have "unat (of_nat n + of_nat (size_td t - 1) :: addr_bitsize word) = n + size_td t - 1"
 	using t0 order_le_less_trans [OF szt1 szb]
 	apply (subst Abs_fnat_homs(1))
 	apply (subst unat_of_nat)

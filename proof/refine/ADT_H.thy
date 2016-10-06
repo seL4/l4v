@@ -51,9 +51,16 @@ definition
 
 definition 
   "user_mem' s \<equiv> \<lambda>p.
-  if pointerInUserData p s 
+  if (pointerInUserData p s)
   then Some (underlying_memory (ksMachineState s) p) 
   else None"
+
+definition 
+  "device_mem' s \<equiv> \<lambda>p.
+  if (pointerInDeviceData p s)
+  then Some p 
+  else None"
+
 
 definition
   vm_rights_of :: "vmrights \<Rightarrow> rights set"
@@ -234,7 +241,7 @@ lemma
   apply (rename_tac arch_kernel_object z a b)
   apply (case_tac arch_kernel_object)
     apply (clarsimp split: asidpool.splits)
-    apply (simp add:other_obj_relation_def asid_pool_relation_def o_def inv_def)
+    apply (simp add: other_obj_relation_def asid_pool_relation_def o_def inv_def)
    apply simp
    apply (clarsimp simp: pte_relation_def pte_relation_aligned_def
                   split: split_if_asm)
@@ -243,7 +250,7 @@ lemma
    apply simp
    apply (erule_tac x=y in allE)
    apply clarsimp
-   apply (simp add: absPageTable_def  split:option.splits ARM_H.pte.splits)
+   apply (simp add: absPageTable_def  split: option.splits ARM_H.pte.splits)
    apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
               vm_kernel_only_def vm_read_only_def vm_read_write_def
             split: vmrights.splits)
@@ -287,7 +294,7 @@ fun
   CapabilityMap :: "capability \<Rightarrow> cap"
  where
   "CapabilityMap capability.NullCap = cap.NullCap"
-| "CapabilityMap (capability.UntypedCap ref n idx) = cap.UntypedCap ref n idx"
+| "CapabilityMap (capability.UntypedCap d ref n idx) = cap.UntypedCap d ref n idx"
 | "CapabilityMap (capability.EndpointCap ref b sr rr gr) =
    cap.EndpointCap ref b {x. sr \<and> x = AllowSend \<or> rr \<and> x = AllowRecv \<or>
                              gr \<and> x = AllowGrant}"
@@ -307,8 +314,8 @@ fun
 | "CapabilityMap (capability.ArchObjectCap (arch_capability.ASIDControlCap)) =
    cap.ArchObjectCap (arch_cap.ASIDControlCap)"
 | "CapabilityMap (capability.ArchObjectCap
-                    (arch_capability.PageCap word rghts sz data)) =
-   cap.ArchObjectCap (arch_cap.PageCap word (vm_rights_of rghts) sz data)"
+                    (arch_capability.PageCap d word rghts sz data)) =
+   cap.ArchObjectCap (arch_cap.PageCap d word (vm_rights_of rghts) sz data)"
 | "CapabilityMap (capability.ArchObjectCap
                     (arch_capability.PageTableCap word data)) =
   cap.ArchObjectCap (arch_cap.PageTableCap word data)"
@@ -317,7 +324,7 @@ fun
   cap.ArchObjectCap (arch_cap.PageDirectoryCap word data)"
 
 lemma cap_relation_CapabilityMap:
-  "\<lbrakk>\<forall>w r s d. c = capability.ArchObjectCap (arch_capability.PageCap w r s d) \<longrightarrow>
+  "\<lbrakk>\<forall>dev w r s d. c = capability.ArchObjectCap (arch_capability.PageCap dev w r s d) \<longrightarrow>
               r \<noteq> VMNoAccess;
     \<forall>ref n L l. c = capability.CNodeCap ref n L l \<longrightarrow>
                 of_bl (bin_to_bl l (uint L)) = L\<rbrakk>
@@ -434,7 +441,8 @@ definition
       tcb_ipc_buffer = tcbIPCBuffer tcb,
       tcb_context = tcbContext tcb,
       tcb_fault = map_option FaultMap (tcbFault tcb),
-      tcb_bound_notification = tcbBoundNotification tcb\<rparr>"
+      tcb_bound_notification = tcbBoundNotification tcb,
+      tcb_mcpriority = tcbMCP tcb\<rparr>"
 
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.
@@ -452,7 +460,8 @@ definition
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
      | Some (KONotification ntfn) \<Rightarrow> Some (Notification (AEndpointMap ntfn))
      | Some KOKernelData \<Rightarrow> undefined (* forbidden by pspace_relation *)
-     | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage) (ups x)
+     | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage False) (ups x)
+     | Some KOUserDataDevice \<Rightarrow> map_option (ArchObj \<circ> DataPage True) (ups x)
      | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
      | Some (KOCTE cte) \<Rightarrow> map_option (%sz. absCNode sz h x) (cns x)
      | Some (KOArch ako) \<Rightarrow> map_option ArchObj (absHeapArch h x ako)
@@ -578,12 +587,12 @@ shows
 proof -
   from ghost_relation
   have gsUserPages:
-    "\<And>a sz. kheap s a = Some (ArchObj (DataPage sz)) \<longleftrightarrow>
+    "\<And>a sz. (\<exists>dev. kheap s a = Some (ArchObj (DataPage dev sz))) \<longleftrightarrow>
              gsUserPages s' a = Some sz"
    and gsCNodes:
     "\<And>a n. (\<exists>cs. kheap s a = Some (CNode n cs) \<and> well_formed_cnode_n n cs) \<longleftrightarrow>
             gsCNodes s' a = Some n"
-    by (simp_all add: ghost_relation_def)
+    by (fastforce simp add: ghost_relation_def)+
 
   show "?thesis"
     apply (rule ext)
@@ -598,6 +607,7 @@ proof -
      apply (erule_tac x=x in allE, clarsimp)
      apply (erule_tac x=x in allE, simp add: Ball_def)
      apply (erule_tac x=x in allE, clarsimp)
+
      apply (case_tac a)
          apply (simp_all add: other_obj_relation_def
                        split: split_if_asm Structures_H.kernel_object.splits)
@@ -630,7 +640,7 @@ proof -
                   simp_all add: other_obj_relation_def)
              apply (clarsimp simp add: pte_relation_def)
             apply (clarsimp simp add: pde_relation_def)
-           apply clarsimp+
+           apply (clarsimp split: split_if_asm)+
 
           apply (erule pspace_dom_relatedE[OF _ pspace_relation])
           apply (case_tac ko, simp_all add: other_obj_relation_def)
@@ -640,10 +650,10 @@ proof -
           apply (clarsimp simp add: AEndpointMap_def
                    split: Structures_A.ntfn.splits)
           apply (rename_tac arch_kernel_obj)
-          apply (case_tac arch_kernel_obj, simp_all add:other_obj_relation_def)
+          apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
             apply (clarsimp simp add: pte_relation_def)
            apply (clarsimp simp add: pde_relation_def)
-          apply clarsimp+
+          apply (clarsimp split: split_if_asm)+
 
          apply (erule pspace_dom_relatedE[OF _ pspace_relation])
          apply (case_tac ko, simp_all add: other_obj_relation_def)
@@ -652,7 +662,7 @@ proof -
          apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
            apply (clarsimp simp add: pte_relation_def)
           apply (clarsimp simp add: pde_relation_def)
-         apply clarsimp+
+         apply (clarsimp split: split_if_asm)+
 
         apply (erule pspace_dom_relatedE[OF _ pspace_relation])
         apply (case_tac ko, simp_all add: other_obj_relation_def)
@@ -662,11 +672,37 @@ proof -
           apply (clarsimp simp add: pte_relation_def)
          apply (clarsimp simp add: pde_relation_def)
         apply (rename_tac vmpage_size)
-        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp)
+        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: split_if_asm)
         apply (case_tac "n=0", simp)
         apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
          apply (rule ccontr)
-         apply (clarsimp simp: gsUserPages[symmetric, THEN iffD1])
+         apply (clarsimp dest!: gsUserPages[symmetric, THEN iffD1] )
+        using pspace_aligned
+        apply (simp add: pspace_aligned_def dom_def)
+        apply (erule_tac x=y in allE)
+        apply (case_tac "n=0",(simp split: split_if_asm)+)
+        apply (frule (2) unaligned_page_offsets_helper)
+        apply (frule_tac y="n*2^pageBits" in pspace_aligned_distinct_None'
+                                          [OF pspace_aligned pspace_distinct])
+         apply simp
+         apply (rule conjI, clarsimp simp add: word_gt_0)
+         apply (simp add: is_aligned_mask)
+         apply (clarsimp simp add: pageBits_def mask_def)
+        apply (case_tac vmpage_size; simp)
+          apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
+        apply (erule pspace_dom_relatedE[OF _ pspace_relation])
+        apply (case_tac ko, simp_all add: other_obj_relation_def)
+          apply (clarsimp simp add: cte_relation_def split: split_if_asm)
+        apply (rename_tac arch_kernel_obj)
+        apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
+          apply (clarsimp simp add: pte_relation_def)
+         apply (clarsimp simp add: pde_relation_def)
+        apply (rename_tac vmpage_size)
+        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: split_if_asm)
+        apply (case_tac "n=0", simp)
+        apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
+         apply (rule ccontr)
+         apply (clarsimp dest!: gsUserPages[symmetric, THEN iffD1])
         using pspace_aligned
         apply (simp add: pspace_aligned_def dom_def)
         apply (erule_tac x=y in allE)
@@ -680,7 +716,6 @@ proof -
          apply (clarsimp simp add: pageBits_def mask_def)
         apply (case_tac vmpage_size; simp)
           apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
-
        apply (erule pspace_dom_relatedE[OF _ pspace_relation])
        apply (case_tac ko, simp_all add: other_obj_relation_def)
          apply (clarsimp simp add: cte_relation_def split: split_if_asm)
@@ -689,7 +724,7 @@ proof -
         apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
           apply (clarsimp simp add: pte_relation_def)
          apply (clarsimp simp add: pde_relation_def)
-        apply clarsimp
+        apply (clarsimp split: split_if_asm)
        apply (clarsimp simp add: TcbMap_def tcb_relation_def valid_obj_def)
        apply (rename_tac tcb y tcb')
        apply (case_tac tcb)
@@ -716,7 +751,7 @@ proof -
        apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
          apply (clarsimp simp add: pte_relation_def)
         apply (clarsimp simp add: pde_relation_def)
-       apply clarsimp
+       apply (clarsimp split: split_if_asm)
       apply (simp add: cte_map_def)
       apply (clarsimp simp add: cte_relation_def)
       apply (cut_tac a=y and n=sz in gsCNodes, clarsimp)
@@ -749,7 +784,7 @@ proof -
         using valid_objs[simplified valid_objs_def Ball_def dom_def
                                     fun_app_def]
         apply (erule_tac x=y in allE)
-        apply (clarsimp simp:valid_obj_def valid_cs_def valid_cap_def2 ran_def)
+        apply (clarsimp simp: valid_obj_def valid_cs_def valid_cap_def2 ran_def)
         apply fastforce+
       apply (subgoal_tac "kheap s (y + of_bl ya * 0x10) = None")
        prefer 2
@@ -789,7 +824,7 @@ proof -
                           inv_def o_def)
         apply (clarsimp simp add:  pte_relation_def)
        apply (clarsimp simp add:  pde_relation_def)
-      apply clarsimp+
+      apply (clarsimp split: split_if_asm)+
 
      apply (case_tac arch_kernel_obj)
         apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
@@ -832,7 +867,7 @@ proof -
        apply (rule set_eqI, clarsimp)
        apply (case_tac x, simp_all)[1]
       apply (clarsimp simp add: pde_relation_def)
-     apply clarsimp+
+     apply (clarsimp split: split_if_asm)+
 
     apply (case_tac arch_kernel_obj)
        apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
@@ -878,7 +913,7 @@ proof -
      apply (clarsimp split: ARM_A.pde.splits)
      apply (rule set_eqI, clarsimp)
      apply (case_tac x, simp_all)[1]
-    apply (clarsimp simp add: pde_relation_def)
+    apply (clarsimp simp add: pde_relation_def split: split_if_asm)
     done
 qed
 
@@ -925,10 +960,10 @@ shows
   apply (insert pspace_relation)
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE, simp_all)
+  apply (erule(1) obj_relation_cutsE)
   apply (clarsimp simp: other_obj_relation_def
-                 split: Structures_A.kernel_object.split_asm
-                        ARM_A.arch_kernel_obj.split_asm)
+                 split: Structures_A.kernel_object.split_asm  split_if_asm
+                        ARM_A.arch_kernel_obj.split_asm)+
   done
 
 text {* The following function can be used to reverse cte_map. *}
@@ -937,8 +972,6 @@ definition
    let P = (%(a,bl). cte_map (a,bl) = p \<and> cns a = Some (length bl))
    in if \<exists>x. P x then (SOME x. P x)
       else (p && ~~ mask 9, bin_to_bl 3 (uint (p>>4)))"
-
-term cteMap
 
 lemma wf_unique':
    "P (THE x. \<forall>y\<in>dom fun. length y = x) \<Longrightarrow>
@@ -1099,7 +1132,7 @@ proof -
   apply (frule_tac b=b in bin_to_bl_of_bl_eq, simp+)
   apply (case_tac "b = [False, False, False]")
    apply (simp add: is_aligned_neg_mask_eq)
-  apply (frule_tac b=b in bin_to_bl_of_bl_eq, (simp add:tcb_cap_cases_length)+)
+  apply (frule_tac b=b in bin_to_bl_of_bl_eq, (simp add: tcb_cap_cases_length)+)
   apply (subgoal_tac "ksPSpace s' (cte_map (a, b)) = None")
    prefer 2
    apply (rule ccontr)
@@ -1850,13 +1883,14 @@ lemma absExst_correct:
       apply (fastforce simp: absEkheap_correct)
   done
 
+
 definition
   "absKState s \<equiv>
    \<lparr>kheap = absHeap (gsUserPages s) (gsCNodes s) (ksPSpace s),
     cdt = absCDT (cteMap (gsCNodes s)) (ctes_of s),
     is_original_cap = absIsOriginalCap (cteMap (gsCNodes s)) (ksPSpace s),
     cur_thread = ksCurThread s, idle_thread = ksIdleThread s,
-    machine_state = ksMachineState s,
+    machine_state = observable_memory (ksMachineState s) (user_mem' s),
     interrupt_irq_node = absInterruptIRQNode (ksInterruptState s),
     interrupt_states = absInterruptStates (ksInterruptState s),
     arch_state = absArchState (ksArchState s),
@@ -1867,24 +1901,6 @@ lemma invs_valid_ioc[elim!]: "invs s \<Longrightarrow> valid_ioc s"
   by (clarsimp simp add: invs_def valid_state_def)
 
 
-lemma absKState_correct:
-assumes invs: "einvs (s :: det_ext state)" and invs': "invs' s'"
-assumes rel: "(s,s') \<in> state_relation"
-shows "absKState s' = s"
-  using assms
-  apply (intro state.equality, simp_all add: absKState_def)
-           apply (rule absHeap_correct, clarsimp+)
-           apply (clarsimp elim!: state_relationE)
-          apply (rule absCDT_correct, clarsimp+)
-         apply (rule absIsOriginalCap_correct, clarsimp+)
-        apply (simp add: state_relation_def)
-       apply (simp add: state_relation_def)
-      apply (simp add: state_relation_def)
-     apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
-    apply (rule absInterruptStates_correct, simp add: state_relation_def)
-   apply (rule absArchState_correct, simp)
-  apply (rule absExst_correct, simp+)
-  done
 
 definition 
   checkActiveIRQ :: "(kernel_state, bool) nondet_monad"
@@ -1907,14 +1923,25 @@ definition
    do t \<leftarrow> getCurThread;
       trans \<leftarrow> gets (ptable_lift t \<circ> absKState);
       perms \<leftarrow> gets (ptable_rights t \<circ> absKState);
+
       um \<leftarrow> gets (\<lambda>s. user_mem' s \<circ> ptrFromPAddr);
-      (e, tc',um') \<leftarrow> select (fst (uop t (restrict_map trans {pa. perms pa \<noteq> {}}) perms
+      dm \<leftarrow> gets (\<lambda>s. device_mem' s \<circ> ptrFromPAddr);
+
+      ds \<leftarrow> gets (device_state \<circ> ksMachineState);
+      assert (dom (um \<circ> addrFromPPtr) \<subseteq> - dom ds);
+      assert (dom (dm \<circ> addrFromPPtr) \<subseteq> dom ds);
+
+      (e, tc',um',ds') \<leftarrow> select (fst (uop t (restrict_map trans {pa. perms pa \<noteq> {}}) perms
                    (tc, restrict_map um
-                        {pa. \<exists>va. trans va = Some pa \<and> AllowRead \<in> perms va})));
+                        {pa. \<exists>va. trans va = Some pa \<and> AllowRead \<in> perms va}
+                       ,(ds \<circ> ptrFromPAddr) |`  {pa. \<exists>va. trans va = Some pa \<and> AllowRead \<in> perms va} ) 
+                       ));
       doMachineOp (user_memory_update
-                     (restrict_map um'
-                        {pa. \<exists>va. trans va = Some pa \<and> AllowWrite \<in> perms va} \<circ>
-                   addrFromPPtr));
+                       ((um' |` {pa. \<exists>va. trans va = Some pa \<and> AllowWrite \<in> perms va}
+                      \<circ> addrFromPPtr) |` (- dom ds)));
+      doMachineOp (device_memory_update 
+                       ((ds' |` {pa. \<exists>va. trans va = Some pa \<and> AllowWrite \<in> perms va}
+                      \<circ> addrFromPPtr )|` (dom ds)));
       return (e, tc')
    od"
 

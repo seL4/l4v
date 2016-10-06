@@ -19,7 +19,7 @@ definition
   authorised_untyped_inv :: "'a PAS \<Rightarrow> Invocations_A.untyped_invocation \<Rightarrow> bool"
 where
  "authorised_untyped_inv aag ui \<equiv> case ui of
-     Invocations_A.untyped_invocation.Retype src_slot base aligned_free_ref new_type obj_sz slots \<Rightarrow>
+     Invocations_A.untyped_invocation.Retype src_slot base aligned_free_ref new_type obj_sz slots dev \<Rightarrow>
        is_subject aag (fst src_slot) \<and> (0::word32) < of_nat (length slots) \<and>
        (\<forall>x\<in>{aligned_free_ref..aligned_free_ref + of_nat (length slots)*2^(obj_bits_api new_type obj_sz) - 1}. is_subject aag x) \<and>
        new_type \<noteq> ArchObject ASIDPoolObj \<and>
@@ -29,7 +29,7 @@ definition
   authorised_untyped_inv_state :: "'a PAS \<Rightarrow> Invocations_A.untyped_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
  "authorised_untyped_inv_state aag ui s \<equiv> case ui of
-     Invocations_A.untyped_invocation.Retype src_slot base aligned_free_ref new_type obj_sz slots \<Rightarrow>
+     Invocations_A.untyped_invocation.Retype src_slot base aligned_free_ref new_type obj_sz slots dev \<Rightarrow>
        (\<forall> cap. cte_wp_at (op = cap) src_slot s \<longrightarrow>
          (\<forall> x\<in>ptr_range base (bits_of cap). is_subject aag x))"
 
@@ -39,7 +39,7 @@ subsection{* invoke *}
 
 lemma create_cap_integrity:
   "\<lbrace>integrity aag X st and K (is_subject aag (fst (fst ref)))\<rbrace>
-     create_cap tp sz p ref
+     create_cap tp sz p dev ref 
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: create_cap_def split_def)
   apply (wp set_cap_integrity_autarch[unfolded pred_conj_def K_def]
@@ -139,10 +139,11 @@ lemma create_word_objects_integrity:
     K (range_cover ptr sz bits numObjects \<and>
        of_nat numObjects > (0::word32) \<and> bits \<ge> 2 \<and>
        (\<forall>y\<in>{ptr..ptr + (of_nat numObjects)*(2^bits) - 1}. is_subject aag y)) \<rbrace>
-     create_word_objects ptr numObjects bits
+     create_word_objects ptr numObjects bits dev
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply(simp add: create_word_objects_def do_machine_op_def)
-  apply (wp, simp add: split_def, wp modify_wp)
+  apply (wp hoare_unless_wp, simp add: split_def, wp modify_wp)
+  apply simp
   apply clarify
   apply (erule use_valid)
   apply (wp mapM_x_wp' clearMemory_respects | simp)+
@@ -289,7 +290,7 @@ lemma init_arch_objects_integrity:
     K (\<forall> x\<in>set refs. new_type = ArchObject PageDirectoryObj \<longrightarrow> is_aligned x pd_bits) and
     K (word_object_range_cover_auth aag new_type ptr sz num_objects \<and>
        of_nat num_objects > (0::word32))\<rbrace>
-     init_arch_objects new_type ptr num_objects obj_sz refs
+     init_arch_objects new_type ptr num_objects obj_sz refs dev
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply(rule hoare_gen_asm)+
   apply(cases new_type)
@@ -315,7 +316,7 @@ lemma retype_region_integrity:
   "\<lbrace>integrity aag X st and
     K (range_cover ptr sz (obj_bits_api type o_bits) num_objects \<and>
        (\<forall>x\<in>{ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}. is_subject aag x))\<rbrace>
-   retype_region ptr num_objects o_bits type
+   retype_region ptr num_objects o_bits type dev
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply(rule hoare_gen_asm)+
   apply(simp only: retype_region_def retype_region_ext_extended.dxo_eq)
@@ -333,7 +334,7 @@ lemma retype_region_integrity:
 lemma retype_region_ret_is_subject:
   "\<lbrace>K (range_cover ptr sz (obj_bits_api tp us) num_objects \<and>
        (\<forall>x\<in>{ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}. is_subject aag x))\<rbrace>
-   retype_region ptr num_objects us tp
+   retype_region ptr num_objects us tp dev
    \<lbrace>\<lambda>rv. K (\<forall> ref \<in> set rv. is_subject aag ref)\<rbrace>"
   apply(rule hoare_gen_asm2 | rule hoare_gen_asm)+
   apply(rule hoare_strengthen_post)
@@ -350,7 +351,7 @@ lemma retype_region_ret_is_subject:
 
 lemma retype_region_ret_pd_aligned:
   "\<lbrace>K (range_cover ptr sz (obj_bits_api tp us) num_objects)\<rbrace>
-   retype_region ptr num_objects us tp
+   retype_region ptr num_objects us tp dev
    \<lbrace>\<lambda>rv. K (\<forall> ref \<in> set rv. tp = ArchObject PageDirectoryObj \<longrightarrow> is_aligned ref pd_bits)\<rbrace>"
   apply(rule hoare_strengthen_post)
   apply(rule hoare_weaken_pre)
@@ -475,6 +476,9 @@ lemma word_object_range_cover:
   apply(auto simp: word_object_range_cover_auth_def obj_bits_api_def word_object_size_def default_arch_object_def | auto dest!: range_cover_subset' subsetD)+
   done
 
+lemma bool_enum[simp]: "(\<forall>x. d = (\<not> x)) = False" "(\<forall>x. d = x) = False" 
+  by blast+
+
 lemma invoke_untyped_integrity:
   "\<lbrace>integrity aag X st and valid_objs and authorised_untyped_inv_state aag ui and valid_untyped_inv ui and K (authorised_untyped_inv aag ui)\<rbrace>
      invoke_untyped ui
@@ -489,15 +493,16 @@ lemma invoke_untyped_integrity:
             set_cap_integrity_autarch hoare_vcg_if_lift get_cap_wp
     | clarsimp simp: split_paired_Ball
     | erule in_set_zipE | blast)+
+  apply (rename_tac ptr ty bits li dev s cap sz idx )
   apply(frule (1) cte_wp_at_eqD2)
   apply(clarsimp simp: authorised_untyped_inv_state_def is_aligned_neg_mask_eq ptr_range_def p_assoc_help bits_of_def)
   apply(rule conjI)
    apply(rule impI)
-   apply(drule_tac t=word2 in sym)
+   apply(drule_tac t=ptr in sym)
    apply clarsimp
    apply(drule (1) cte_wp_at_valid_objs_valid_cap)
    apply(clarsimp simp: valid_cap_def cap_aligned_def)
-   apply(subgoal_tac "range_cover word2 (bits_of (UntypedCap word2 sz idx)) (obj_bits_api apiobject_type nat) (length list)")
+   apply(subgoal_tac "range_cover ptr (bits_of (UntypedCap dev ptr sz idx)) (obj_bits_api ty bits) (length li)")
     apply(rule conjI, assumption)
     apply(rule conjI)
      apply(fastforce split: cap.splits simp: bits_of_def)
@@ -508,11 +513,11 @@ lemma invoke_untyped_integrity:
       apply assumption
      apply(blast dest: unat_less_helper)
     apply(clarsimp simp: bits_of_def split: cap.splits)
-    apply(drule_tac x="UntypedCap word2 sz idx" in spec, clarsimp, fastforce simp: p_assoc_help)
+    apply(drule_tac x="UntypedCap dev ptr sz idx" in spec, clarsimp, fastforce simp: p_assoc_help)
    apply(simp add: bits_of_def split: cap.splits)
   apply(rule impI)
   apply(clarsimp simp: bits_of_def split: cap.splits)
-  apply(drule_tac x="UntypedCap (word2 && ~~ mask sz) sz idx" in spec, clarsimp)
+  apply(drule_tac x="UntypedCap dev (ptr && ~~ mask sz) sz idx" in spec, clarsimp)
   apply(rule conjI)
    apply(rule ballI, erule bspec, erule subsetD[rotated], rule range_subsetI[OF word_and_le2], simp+)
   apply(rule word_object_range_cover)
@@ -523,7 +528,7 @@ lemma invoke_untyped_integrity:
 
 
 lemma clas_default_cap:
-  "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag p (default_cap tp p' sz)"
+  "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag p (default_cap tp p' sz dev)"
   unfolding cap_links_asid_slot_def
   apply (cases tp, simp_all)
   apply (rename_tac aobject_type) 
@@ -531,25 +536,25 @@ lemma clas_default_cap:
   done
 
 lemma cli_default_cap:
-  "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_irq aag p (default_cap tp p' sz)"
+  "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_irq aag p (default_cap tp p' sz dev)"
   unfolding cap_links_irq_def
   apply (cases tp, simp_all)
   done
 
 lemma obj_refs_default_nut:
   "\<lbrakk> tp \<noteq> Untyped; \<forall>atp. tp \<noteq> ArchObject atp \<rbrakk> \<Longrightarrow>
-  obj_refs (default_cap tp oref sz) = {oref}"
+  obj_refs (default_cap tp oref sz dev) = {oref}"
   by (cases tp, simp_all add: arch_default_cap_def  split: aobject_type.splits)
 
 lemma obj_refs_default':
-  "is_aligned oref (obj_bits_api tp sz) \<Longrightarrow> obj_refs (default_cap tp oref sz) \<subseteq> ptr_range oref (obj_bits_api tp sz)"
+  "is_aligned oref (obj_bits_api tp sz) \<Longrightarrow> obj_refs (default_cap tp oref sz dev) \<subseteq> ptr_range oref (obj_bits_api tp sz)"
   by (cases tp, simp_all add: arch_default_cap_def ptr_range_memI obj_bits_api_def default_arch_object_def split: aobject_type.splits)
 
 lemma create_cap_pas_refined:
   "\<lbrace>pas_refined aag and K (tp \<noteq> ArchObject ASIDPoolObj \<and> is_subject aag (fst p) \<and> is_subject aag (fst (fst ref)) \<and>
     (\<forall>x \<in> ptr_range (snd ref) (obj_bits_api tp sz). is_subject aag x)
     \<and> is_aligned (snd ref)  (obj_bits_api tp sz))\<rbrace>
-     create_cap tp sz p ref
+     create_cap tp sz p dev ref
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply(simp add: create_cap_def split_def)
   apply(wp set_cdt_pas_refined | clarsimp)+
@@ -568,10 +573,11 @@ crunch pas_refined[wp]: do_machine_op "pas_refined aag"
 
 lemma create_word_objects_pas_refined:
   "\<lbrace>pas_refined aag\<rbrace>
-     create_word_objects ptr bits sz
+     create_word_objects ptr bits sz dev
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply(simp add: create_word_objects_def)
-  apply(wp)
+  apply (simp add: create_word_objects_def unless_def)
+  apply wp
+  apply clarsimp
   done
 
 crunch arm_global_pd: store_pde "\<lambda> s. P (arm_global_pd (arch_state s))"
@@ -658,7 +664,7 @@ lemma init_arch_objects_pas_refined:
     post_retype_invs tp refs and
     (\<lambda> s. \<forall> x\<in>set refs. x \<notin> global_refs s) and
     K (\<forall> x\<in>set refs. tp = ArchObject PageDirectoryObj \<longrightarrow> is_aligned x pd_bits)\<rbrace>
-     init_arch_objects tp ptr bits obj_sz refs
+     init_arch_objects tp ptr bits obj_sz refs dev
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply(rule hoare_gen_asm)
   apply(cases tp)
@@ -690,7 +696,7 @@ begin
 interpretation Arch . (*FIXME; arch_split*)
 
 lemma vs_refs_no_global_pts_default [simp]:
-  "vs_refs_no_global_pts (default_object ty us) = {}"
+  "vs_refs_no_global_pts (default_object ty dev us) = {}"
   by (simp add: default_object_def default_arch_object_def tyunt
                 vs_refs_no_global_pts_def pde_ref2_def pte_ref_def
                 o_def
@@ -758,10 +764,10 @@ lemma retype_region_ext_kheap_update:
   done
 
 lemma use_retype_region_proofs_ext':
-  assumes x: "\<And>(s::det_ext state). \<lbrakk> retype_region_proofs s ty us ptr sz n; P s \<rbrakk>
+  assumes x: "\<And>(s::det_ext state). \<lbrakk> retype_region_proofs s ty us ptr sz n dev; P s \<rbrakk>
    \<Longrightarrow> Q (retype_addrs ptr ty n us) (s\<lparr>kheap :=
            \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
-             then Some (default_object ty us)
+             then Some (default_object ty dev us )
              else kheap s x\<rparr>)"
   assumes y: "\<And>xs. \<lbrace>Q xs and R xs\<rbrace> retype_region_ext xs ty \<lbrace>\<lambda>_. Q xs\<rbrace>"
   assumes z: "\<And>f xs s. R xs (kheap_update f s) = R xs s"
@@ -770,8 +776,9 @@ lemma use_retype_region_proofs_ext':
          \<And>s. P s \<Longrightarrow> Q (retype_addrs ptr ty n us) s \<rbrakk> \<Longrightarrow>
     \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n 
         \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s
-        \<and> caps_no_overlap ptr sz s \<and> pspace_no_overlap ptr sz s \<and>
-        P s \<and> R (retype_addrs ptr ty n us) s\<rbrace> retype_region ptr n us ty \<lbrace>Q\<rbrace>"
+        \<and> caps_no_overlap ptr sz s \<and> pspace_no_overlap ptr sz s
+        \<and> (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) \<and>
+        P s \<and> R (retype_addrs ptr ty n us) s\<rbrace> retype_region ptr n us ty dev \<lbrace>Q\<rbrace>"
   apply (simp add: retype_region_def split del: split_if)
   apply (rule hoare_pre, (wp|simp)+)
     apply (rule retype_region_ext_kheap_update[OF y])
@@ -781,7 +788,7 @@ lemma use_retype_region_proofs_ext':
   apply safe
   apply (rule x)
    apply (rule retype_region_proofs.intro, simp_all)[1]
-   apply (simp add: range_cover_def obj_bits_api_def z
+   apply (fastforce simp add: range_cover_def obj_bits_api_def z
      slot_bits_def word_bits_def cte_level_bits_def)+
    done
 
@@ -821,10 +828,11 @@ lemma retype_region_pas_refined:
             {ptr..ptr + of_nat num_objects * 2 ^ obj_bits_api type o_bits -
                   1} and
     caps_no_overlap ptr sz and pspace_no_overlap ptr sz and
+    (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) and
     K (range_cover ptr sz (obj_bits_api type o_bits) num_objects) and
     K (\<forall>x\<in>set (retype_addrs ptr type num_objects o_bits). is_subject aag x) and
     K ((type = CapTableObject \<longrightarrow> 0 < o_bits))\<rbrace>
-     retype_region ptr num_objects o_bits type
+     retype_region ptr num_objects o_bits type dev
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
@@ -841,9 +849,10 @@ lemma retype_region_aag_bits:
        \<and> valid_pspace s \<and> valid_mdb s \<and>
            caps_overlap_reserved
             {ptr..ptr + of_nat num_objects * 2 ^ obj_bits_api tp us - 1} s \<and>
-           caps_no_overlap ptr sz s \<and> pspace_no_overlap ptr sz s
+           caps_no_overlap ptr sz s \<and> pspace_no_overlap ptr sz s \<and>
+           (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
        \<and> ((tp = CapTableObject \<longrightarrow> 0 < us) \<and> range_cover ptr sz (obj_bits_api tp us) num_objects)\<rbrace>
-  retype_region ptr num_objects us tp
+  retype_region ptr num_objects us tp dev
   \<lbrace>\<lambda>_ s. P (null_filter (caps_of_state s)) (state_refs_of s) (cdt s) (state_vrefs s)\<rbrace>"
   apply (subst conj_assoc [symmetric])+
   apply (rule hoare_gen_asm [unfolded pred_conj_def K_def])+
@@ -862,7 +871,7 @@ lemma retype_region_aag_bits:
 
 lemma retype_region_ranges'':
   "\<lbrace>K (range_cover ptr sz (obj_bits_api tp us) num_objects \<and> num_objects \<noteq> 0)\<rbrace>
-  retype_region ptr num_objects us tp
+  retype_region ptr num_objects us tp dev
    \<lbrace>\<lambda>rv s. \<forall>y\<in>set rv. ptr_range y (obj_bits_api tp us) \<subseteq> {ptr..ptr + of_nat num_objects * 2 ^ (obj_bits_api tp us) - 1}\<rbrace>"
   apply simp
   apply (rule hoare_gen_asm[where P'="\<top>", simplified])
@@ -950,12 +959,19 @@ lemma freeMemory_valid_irq_states:
   apply(wp mapM_x_wp[OF _ subset_refl] storeWord_valid_irq_states)
   done
 
+crunch pspace_respects_device_region[wp]: freeMemory "\<lambda>ms. P (device_state ms)"
+ (wp: crunch_wps)
+
 lemma dmo_freeMemory_invs:
   "\<lbrace> invs \<rbrace>
      do_machine_op (freeMemory ptr bits)
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply(simp add: do_machine_op_def invs_def valid_state_def cur_tcb_def | wp | wpc)+
-  apply(clarsimp)
+  apply (simp add: do_machine_op_def invs_def valid_state_def cur_tcb_def | wp | wpc)+
+  apply (clarsimp)
+  apply (frule_tac P1="op = (device_state (machine_state s))" in
+    use_valid[OF _ freeMemory_pspace_respects_device_region])
+   apply simp
+  apply simp
   apply(rule conjI)
    apply(erule use_valid[OF _ freeMemory_valid_irq_states], simp)
   apply(drule freeMemory_vms)
@@ -1049,7 +1065,7 @@ lemma descendants_range_in_detype_ex_strengthen:
 lemma delete_objects_descendants_range_in':
   notes modify_wp[wp del]
   shows
-    "\<lbrace>invs and (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap word2 sz idx)) slot s) and
+    "\<lbrace>invs and (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap dev word2 sz idx)) slot s) and
      descendants_range_in {word2..word2 + 2 ^ sz - 1} slot\<rbrace>
      (delete_objects word2 sz)
      \<lbrace>\<lambda>_. descendants_range_in {word2..word2 + 2 ^ sz - 1} slot\<rbrace>"
@@ -1063,14 +1079,14 @@ lemma delete_objects_descendants_range_in':
   done
 
 lemma untyped_cap_aligned:
-  "\<lbrakk>cte_wp_at (op = (UntypedCap word sz idx)) slot s; valid_objs s\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>cte_wp_at (op = (UntypedCap dev word sz idx)) slot s; valid_objs s\<rbrakk> \<Longrightarrow>
    is_aligned word sz"
   apply(fastforce dest: cte_wp_at_valid_objs_valid_cap simp: valid_cap_def cap_aligned_def)
   done
 
 lemma delete_objects_descendants_range_in'':
   shows
-    "\<lbrace>invs and (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap word2 sz idx)) slot s) and
+    "\<lbrace>invs and (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap dev word2 sz idx)) slot s) and
      descendants_range_in {word2..word2 + 2 ^ sz - 1} slot\<rbrace>
      (delete_objects word2 sz)
      \<lbrace>\<lambda>_. descendants_range_in {word2..(word2 && ~~ mask sz) + 2 ^ sz - 1} slot\<rbrace>"
@@ -1083,7 +1099,7 @@ lemma delete_objects_descendants_range_in'':
 
 lemma delete_objects_descendants_range_in''':
   shows
-    "\<lbrace>invs and (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap word2 sz idx)) slot s) and
+    "\<lbrace>invs and (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap dev word2 sz idx)) slot s) and
      descendants_range_in {word2..word2 + 2 ^ sz - 1} slot\<rbrace>
      (delete_objects word2 sz)
      \<lbrace>\<lambda>_. descendants_range_in {word2 && ~~ mask sz..(word2 && ~~ mask sz) + 2 ^ sz - 1} slot\<rbrace>"
@@ -1097,7 +1113,7 @@ lemma delete_objects_descendants_range_in''':
 
 lemma delete_objects_descendants_range_in'''':
   shows
-   "\<lbrace>invs and (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap word2 sz idx)) slot s) and
+   "\<lbrace>invs and (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap dev word2 sz idx)) slot s) and
     ct_active and descendants_range_in {word2..word2 + 2 ^ sz - 1} slot and
      K (range_cover word2 sz bits n \<and>
         n \<noteq> 0)\<rbrace>
@@ -1126,7 +1142,7 @@ crunch arch_state[wp]: delete_objects "\<lambda> s. P (arch_state s)"
 
 
 lemma  bits_of_UntypedCap:
-  "bits_of (UntypedCap ptr sz free) = sz"
+  "bits_of (UntypedCap dev ptr sz free) = sz"
   apply(simp add: bits_of_def split: cap.splits)
   done
 
@@ -1141,7 +1157,7 @@ declare word_neq_0_conv[simp del]
 
 (* clagged from Untyped_R.invoke_untyped_proofs.usable_range_disjoint *)
 lemma usable_range_disjoint:
-  assumes cte_wp_at: "cte_wp_at (op = (cap.UntypedCap (ptr && ~~ mask sz) sz idx)) cref s"
+  assumes cte_wp_at: "cte_wp_at (op = (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) cref s"
   assumes  misc     : "distinct slots" "idx \<le> unat (ptr && mask sz) \<or> ptr = ptr && ~~ mask sz"
   "invs s" "slots \<noteq> []" "ct_active s"
   "\<forall>slot\<in>set slots. cte_wp_at (op = cap.NullCap) slot s"
@@ -1150,7 +1166,7 @@ lemma usable_range_disjoint:
   notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows
-       "usable_untyped_range (cap.UntypedCap (ptr && ~~ mask sz) sz
+       "usable_untyped_range (cap.UntypedCap dev (ptr && ~~ mask sz) sz
        (unat ((ptr && mask sz) + of_nat (length slots) * 2 ^ obj_bits_api tp us))) \<inter>
        {ptr..ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1} = {}"
       proof -
@@ -1185,9 +1201,9 @@ lemma set_free_index_invs':
           (descendants_range_in {word1..word1 + 2 ^ (bits_of cap) - 1} slot s \<and>
            pspace_no_overlap word1 (bits_of cap) s)) \<and>
          idx' \<le> 2 ^ cap_bits cap \<and>
-         is_untyped_cap cap) and K(word1 = obj_ref_of cap)\<rbrace>
+         is_untyped_cap cap) and K(word1 = obj_ref_of cap \<and> dev = (cap_is_device cap))\<rbrace>
        set_cap
-           (UntypedCap word1 (bits_of cap) idx')
+           (UntypedCap dev word1 (bits_of cap) idx')
             slot
        \<lbrace>\<lambda>_. invs \<rbrace>"
   apply(rule hoare_gen_asm)
@@ -1195,7 +1211,7 @@ lemma set_free_index_invs':
   apply(case_tac "free_index_of cap \<le> idx'")
    apply simp
     apply(cut_tac cap=cap and cref=slot and idx="idx'" in set_free_index_invs)
-    apply(simp add: free_index_update_def conj_comms)
+    apply(simp add: free_index_update_def conj_comms is_cap_simps)
    apply simp
    apply(wp set_untyped_cap_invs_simple | simp)+
    apply(fastforce simp: cte_wp_at_def)
@@ -1203,7 +1219,7 @@ lemma set_free_index_invs':
 
 lemma delete_objects_pspace_no_overlap:
   "\<lbrace> pspace_aligned and valid_objs and
-     cte_wp_at (op = (UntypedCap ptr sz idx)) slot\<rbrace>
+     cte_wp_at (op = (UntypedCap dev ptr sz idx)) slot\<rbrace>
     delete_objects ptr sz
    \<lbrace>\<lambda>rv. pspace_no_overlap ptr sz\<rbrace>"
   unfolding delete_objects_def do_machine_op_def
@@ -1215,7 +1231,7 @@ lemma delete_objects_pspace_no_overlap:
 
 lemma delete_objects_pspace_no_overlap':
   "\<lbrace> pspace_aligned and valid_objs and
-     cte_wp_at (op = (UntypedCap ptr sz idx)) slot\<rbrace>
+     cte_wp_at (op = (UntypedCap dev ptr sz idx)) slot\<rbrace>
     delete_objects ptr sz
    \<lbrace>\<lambda>rv. pspace_no_overlap (ptr && ~~ mask sz) sz\<rbrace>"
   apply(clarsimp simp: valid_def)
@@ -1224,12 +1240,21 @@ lemma delete_objects_pspace_no_overlap':
   apply(erule use_valid, wp delete_objects_pspace_no_overlap, simp)
   done
 
+(* FIXME: move *)
+lemma valid_cap_range_untyped:
+  "\<lbrakk> valid_objs s; cte_wp_at (op = (UntypedCap dev (ptr && ~~ mask sz) sz idx)) slot s\<rbrakk>
+  \<Longrightarrow> cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s"
+  apply (rule cte_wp_at_weakenE)
+   apply simp
+  apply (clarsimp simp: word_and_le2 p_assoc_help)
+  done
+
 lemma retype_region_pas_refined':
   "\<lbrace>pas_refined aag and pas_cur_domain aag and invs and
     caps_overlap_reserved
             {ptr..ptr + of_nat num_objects * 2 ^ obj_bits_api type o_bits -
                   1} and
-    (\<lambda> s. \<exists> idx. cte_wp_at (\<lambda> c. c = (UntypedCap (ptr && ~~ mask sz) sz idx)) slot s \<and>
+    (\<lambda> s. \<exists> idx. cte_wp_at (\<lambda> c. c = (UntypedCap dev (ptr && ~~ mask sz) sz idx)) slot s \<and>
                  (idx \<le> unat (ptr && mask sz) \<or>
                   (descendants_range_in {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1} slot s) \<and>
                     pspace_no_overlap ptr sz s)) and
@@ -1237,24 +1262,31 @@ lemma retype_region_pas_refined':
     K (range_cover ptr sz (obj_bits_api type o_bits) num_objects) and
     K (\<forall>x\<in>set (retype_addrs ptr type num_objects o_bits). is_subject aag x) and
     K ((type = CapTableObject \<longrightarrow> 0 < o_bits))\<rbrace>
-     retype_region ptr num_objects o_bits type
+     retype_region ptr num_objects o_bits type dev
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply(rule hoare_gen_asm)+
   apply(rule hoare_weaken_pre)
   apply(rule use_retype_region_proofs_ext)
      apply(erule (1) retype_region_proofs'.pas_refined[OF retype_region_proofs'.intro])
     apply (wp retype_region_ext_pas_refined)
-    apply simp
-   apply (auto intro: cte_wp_at_caps_no_overlapI descendants_range_caps_no_overlapI cte_wp_at_pspace_no_overlapI simp: cte_wp_at_sym)
+     apply simp
+    apply fastforce
+   apply fastforce
+  apply clarsimp
+  apply (frule valid_cap_range_untyped[OF invs_valid_objs])
+   apply (fastforce simp: cte_wp_at_caps_of_state)
+  apply (cases slot)
+  apply (auto intro: cte_wp_at_caps_no_overlapI descendants_range_caps_no_overlapI
+           cte_wp_at_pspace_no_overlapI simp: cte_wp_at_sym)
   done
 
 
 lemma free_index_of_UntypedCap:
-  "free_index_of (UntypedCap ptr sz idx) = idx"
+  "free_index_of (UntypedCap dev ptr sz idx) = idx"
   apply(simp add: free_index_of_def)
   done
 
-fun slot_of_untyped_inv where "slot_of_untyped_inv (Retype slot _ _ _ _ _ ) = slot"
+fun slot_of_untyped_inv where "slot_of_untyped_inv (Retype slot _ _ _ _ _ _ ) = slot"
 
 lemma region_in_kernel_window_subseteq:
   "\<lbrakk> region_in_kernel_window S s; T \<subseteq> S\<rbrakk> \<Longrightarrow>
@@ -1263,19 +1295,35 @@ lemma region_in_kernel_window_subseteq:
   done
 
 lemma aag_cap_auth_UntypedCap_idx:
-   "aag_cap_auth aag l (UntypedCap base sz idx) \<Longrightarrow>
-    aag_cap_auth aag l (UntypedCap base sz idx')"
+   "aag_cap_auth aag l (UntypedCap dev base sz idx) \<Longrightarrow>
+    aag_cap_auth aag l (UntypedCap dev base sz idx')"
   apply(clarsimp simp: aag_cap_auth_def cap_links_asid_slot_def cap_links_irq_def)
   done
 
 lemma cte_wp_at_pas_cap_cur_auth_UntypedCap_idx:
-  "\<lbrakk>cte_wp_at (op = (UntypedCap base sz idx)) slot s; is_subject aag (fst slot);
+  "\<lbrakk>cte_wp_at (op = (UntypedCap dev base sz idx)) slot s; is_subject aag (fst slot);
     pas_refined aag s\<rbrakk> \<Longrightarrow>
-  pas_cap_cur_auth aag (UntypedCap base sz idx')"
+  pas_cap_cur_auth aag (UntypedCap dev base sz idx')"
   apply(rule aag_cap_auth_UntypedCap_idx)
   apply(auto intro: cap_cur_auth_caps_of_state simp: cte_wp_at_caps_of_state)
   done
 
+
+lemma retype_region_post_retype_invs_spec:
+  "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap ptr sz
+      and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
+      and region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
+      and (\<lambda>s. \<exists>idx. cte_wp_at (op = (UntypedCap dev (ptr && ~~ mask sz) sz idx)) slot s) 
+      and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
+      and K (range_cover ptr sz (obj_bits_api ty us) n) \<rbrace>
+      retype_region ptr n us ty dev\<lbrace>\<lambda>rv. post_retype_invs ty rv\<rbrace>"
+  apply (rule hoare_pre)
+  apply (wp retype_region_post_retype_invs)
+  apply (clarsimp simp del: split_paired_Ex)
+  apply (frule valid_cap_range_untyped[OF invs_valid_objs],simp)
+  apply (intro conjI)
+    apply fastforce+
+  done
 
 lemma invoke_untyped_pas_refined:
   notes modify_wp[wp del]
@@ -1286,7 +1334,7 @@ lemma invoke_untyped_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply(rule hoare_gen_asm)
   apply(cases ui)
-  apply (rename_tac cslot_ptr word1 word2 apiobject_type nat list)
+  apply (rename_tac cslot_ptr word1 word2 apiobject_type nat list dev)
   apply(simp add: mapM_x_def[symmetric] authorised_untyped_inv_def)
   apply(rule hoare_weaken_pre)
    apply(wp mapM_x_and_const_wp [OF create_cap_pas_refined]
@@ -1294,18 +1342,19 @@ lemma invoke_untyped_pas_refined:
      | simp)+
        (* strengthen postcondition to talk about retvalue of retype_region *)
    apply (simp add: ball_conj_distrib)
+    apply (rename_tac slot ptr apiobject_type sz list nat dev)
     apply(rule_tac
      Q="\<lambda>rv. (\<lambda>s. global_refs s \<inter> set rv = {}) and
              (\<lambda> s. post_retype_invs apiobject_type rv s) and
-             (\<lambda>s. \<forall>p \<in> set rv. is_aligned p (obj_bits_api apiobject_type nat)) and
+             (\<lambda>s. \<forall>p \<in> set rv. is_aligned p (obj_bits_api apiobject_type sz)) and
              K (\<forall>p \<in> set rv. is_subject aag p) and
              K (\<forall>ref\<in>set rv. apiobject_type = ArchObject PageDirectoryObj \<longrightarrow>
                                                      is_aligned ref pd_bits) and
-             (\<lambda>s. (\<forall>y\<in>set rv. ptr_range y (obj_bits_api apiobject_type nat) \<subseteq>
-                               {word2..word2 + of_nat (length list) * 2 ^ (obj_bits_api apiobject_type nat) - 1}))" in hoare_strengthen_post)
+             (\<lambda>s. (\<forall>y\<in>set rv. ptr_range y (obj_bits_api apiobject_type sz) \<subseteq>
+                               {ptr..ptr + of_nat (length list) * 2 ^ (obj_bits_api apiobject_type sz) - 1}))" in hoare_strengthen_post)
      apply (wp retype_region_ret_is_subject
                retype_region_ranges''
-               retype_region_post_retype_invs
+               retype_region_post_retype_invs_spec
                retype_region_aligned_for_init
                retype_region_global_refs_disjoint
                retype_region_ret_pd_aligned)
@@ -1320,7 +1369,7 @@ lemma invoke_untyped_pas_refined:
                         1} and
                (\<lambda>s. \<exists>idx. cte_wp_at
                            (\<lambda>c. c =
-                                UntypedCap
+                                UntypedCap dev
                                  (word2 &&
                                   ~~ mask
                                       (bits_of cap)) (bits_of cap)
@@ -1375,13 +1424,13 @@ lemma invoke_untyped_pas_refined:
               set_free_index_invs' region_in_kernel_window_preserved
               delete_objects_pas_refined  hoare_ex_wp set_cap_cte_wp_at
               set_cap_no_overlap set_cap_descendants_range_in hoare_vcg_disj_lift
-          | simp split del: split_if)+
+          | simp split del: split_if add:p_assoc_help[symmetric])+
      apply clarsimp
      apply (intro conjI exI, assumption)
-                   apply (auto simp: cte_wp_at_def retype_addrs_def intro:
+                   apply (auto simp: cte_wp_at_caps_of_state retype_addrs_def intro:
                        cte_wp_at_caps_no_overlapI
                        descendants_range_caps_no_overlapI
-                       cte_wp_at_pspace_no_overlapI dest: unat_less_helper)[15]
+                       cte_wp_at_pspace_no_overlapI dest: unat_less_helper)[16]
     apply(clarsimp split del: split_if)
     apply(simp add: conj_comms cong: conj_cong split del: split_if)
     apply(wp delete_objects_invs delete_objects_pas_refined[where aag=aag]
@@ -1399,7 +1448,7 @@ lemma invoke_untyped_pas_refined:
   apply(subgoal_tac "sz < word_bits")
    apply(intro conjI impI)
    apply(simp_all add: cte_wp_at_cte_at cte_wp_at_sym)
-                           apply fastforce
+
                           apply(drule cap_refs_in_kernel_windowD2)
                            apply(simp add: invs_cap_refs_in_kernel_window)
                           apply(fastforce simp: cap_range_def)
@@ -1409,26 +1458,26 @@ lemma invoke_untyped_pas_refined:
                          apply(subst unat_mult_power_lem)
                           apply(erule range_cover.string)
                          apply(simp add: mult.commute)
-                        apply(fastforce intro!: cte_wp_at_pas_cap_cur_auth_UntypedCap_idx)
-
+                      (*  apply(fastforce intro!: cte_wp_at_pas_cap_cur_auth_UntypedCap_idx)*)
                          apply (frule retype_addrs_subset_ptr_bits)
                          apply (clarsimp simp: authorised_untyped_inv_state_def)
-                         apply (erule_tac x="UntypedCap word2 sz idx" in allE)
+                         apply (erule_tac x="UntypedCap dev word2 sz idx" in allE)
                          apply (force simp: ptr_range_def bits_of_UntypedCap p_assoc_help)
-
+                        apply(fastforce intro!: cte_wp_at_pas_cap_cur_auth_UntypedCap_idx)
                        apply(fastforce dest: valid_global_refsD2 simp: cte_wp_at_caps_of_state)
                       apply(fastforce dest!: untyped_slots_not_in_untyped_range[OF _ _ _ _ _ subset_refl])
                      apply(clarsimp simp: authorised_untyped_inv_state_def)
-                     apply(drule_tac x="UntypedCap word2 sz idx" in spec, fastforce simp: cte_wp_at_def ptr_range_def bits_of_UntypedCap pas_refined_refl p_assoc_help)
+                     apply(drule_tac x="UntypedCap dev word2 sz idx" in spec, 
+                       fastforce simp: cte_wp_at_def ptr_range_def bits_of_UntypedCap pas_refined_refl p_assoc_help)
                     apply(erule ssubst[OF free_index_of_UntypedCap])
+                    apply fastforce
                    apply(subgoal_tac "usable_untyped_range
-           (UntypedCap (word2 && ~~ mask sz) sz
+           (UntypedCap dev (word2 && ~~ mask sz) sz
              (unat
                ((word2 && mask sz) + of_nat (length list) * 2 ^ obj_bits_api apiobject_type nat))) \<inter>
           {word2..word2 +
                   of_nat (length list) * 2 ^ obj_bits_api apiobject_type nat -
-                  1} =
-          {}")
+                  1} = {}")
                      apply(subgoal_tac "word2 && mask sz = 0", clarsimp simp: shiftl_t2n mult.commute)
                     apply(erule subst, rule mask_neg_mask_is_zero)
                    apply(rule usable_range_disjoint, simp+)
@@ -1439,16 +1488,18 @@ lemma invoke_untyped_pas_refined:
                  apply(fastforce simp: descendants_range_def2)
                 apply(rule disjI2)
                 apply(clarsimp simp: cte_wp_at_caps_of_state invs_def valid_state_def valid_pspace_def)
+                apply (rule conjI[OF refl])
                 apply(erule ssubst[OF free_index_of_UntypedCap])
                apply(rule disjI2)
                apply(clarsimp simp: cte_wp_at_caps_of_state invs_def valid_state_def valid_pspace_def)
+               apply (rule conjI[OF refl])
                apply(erule ssubst[OF free_index_of_UntypedCap])
 
                apply (frule retype_addrs_subset_ptr_bits)
                apply clarsimp
                apply (frule(1) subsetD)
                apply(clarsimp simp: authorised_untyped_inv_state_def)
-               apply(drule_tac x="UntypedCap (word2 && ~~ mask sz) sz idx" in spec, clarsimp simp: cte_wp_at_def ptr_range_def bits_of_UntypedCap pas_refined_refl word_and_le2)
+               apply(drule_tac x="UntypedCap dev (word2 && ~~ mask sz) sz idx" in spec, clarsimp simp: cte_wp_at_def ptr_range_def bits_of_UntypedCap pas_refined_refl word_and_le2)
                apply(erule bspec, simp add: p_assoc_help, erule order_trans[rotated])
                apply(fastforce simp: word_and_le2)
 
@@ -1470,7 +1521,7 @@ lemma invoke_untyped_pas_refined:
            apply(simp add: range_cover.range_cover_compare_bound[simplified add.commute])
 
           apply(clarsimp simp: authorised_untyped_inv_state_def)
-          apply(drule_tac x="UntypedCap (word2 && ~~ mask sz) sz idx" in spec, clarsimp simp: cte_wp_at_def ptr_range_def bits_of_UntypedCap pas_refined_refl word_and_le2)
+          apply(drule_tac x="UntypedCap dev (word2 && ~~ mask sz) sz idx" in spec, clarsimp simp: cte_wp_at_def ptr_range_def bits_of_UntypedCap pas_refined_refl word_and_le2)
           apply(erule bspec, simp add: p_assoc_help, erule order_trans[rotated])
           apply(fastforce simp: word_and_le2)
          apply(fastforce intro!: cte_wp_at_pas_cap_cur_auth_UntypedCap_idx)
@@ -1530,7 +1581,7 @@ crunch inv[wp]: data_to_obj_type "P"
 
 definition authorised_untyped_inv' where
  "authorised_untyped_inv' aag ui \<equiv> case ui of
-     Invocations_A.untyped_invocation.Retype src_slot base aligned_free_ref new_type obj_sz slots \<Rightarrow>
+     Invocations_A.untyped_invocation.Retype src_slot base aligned_free_ref new_type obj_sz slots dev\<Rightarrow>
        is_subject aag (fst src_slot) \<and> (0::word32) < of_nat (length slots) \<and>
        new_type \<noteq> ArchObject ASIDPoolObj \<and>
        (\<forall>x\<in>set slots. is_subject aag (fst x))"
@@ -1545,9 +1596,9 @@ lemma authorised_untyped_invI:
         authorised_untyped_inv' aag ui\<rbrakk> \<Longrightarrow>
    authorised_untyped_inv aag ui"
   apply(case_tac ui)
-  apply (rename_tac cslot_ptr word1 word2 apiobject_type nat list)
+  apply (rename_tac cslot_ptr word1 word2 apiobject_type nat list dev)
   apply(clarsimp simp: authorised_untyped_inv_state_def cte_wp_at_sym authorised_untyped_inv_def authorised_untyped_inv'_def)
-  apply(drule_tac x="UntypedCap  (word2 && ~~ mask sz) sz idx" in spec, clarsimp simp: ptr_range_def bits_of_UntypedCap)
+  apply(drule_tac x="UntypedCap dev (word2 && ~~ mask sz) sz idx" in spec, clarsimp simp: ptr_range_def bits_of_UntypedCap)
   apply(erule bspec)
   apply(erule subsetD[OF _ subsetD[OF range_cover_subset'], rotated])
     apply(simp add: blah word_and_le2)+
@@ -1566,7 +1617,7 @@ lemma decode_untyped_invocation_authorised:
                    (\<forall>r\<in>cte_refs cap (interrupt_irq_node s).
                        ex_cte_cap_wp_to is_cnode_cap r s))
         and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x)
-        and K (cap = cap.UntypedCap base sz idx
+        and K (cap = cap.UntypedCap dev base sz idx
                \<and> is_subject aag (fst slot)
                \<and> (\<forall>c \<in> set excaps. pas_cap_cur_auth aag c)
                \<and> (\<forall> ref \<in> untyped_range cap. is_subject aag ref))\<rbrace>

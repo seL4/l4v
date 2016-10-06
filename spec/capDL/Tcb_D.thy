@@ -34,8 +34,8 @@ where "cdl_same_arch_obj_as capa capb \<equiv>
   | AsidControlCap \<Rightarrow> (
        case capb of AsidControlCap \<Rightarrow> True
         | _ \<Rightarrow> False)
-  | FrameCap ra _ sa _ _ \<Rightarrow> (
-       case capb of FrameCap rb _ sb _ _ \<Rightarrow> rb = ra \<and> sb = sa
+  | FrameCap dev ra _ sa _ _ \<Rightarrow> (
+       case capb of FrameCap dev' rb _ sb _ _ \<Rightarrow> rb = ra \<and> sb = sa \<and> dev = dev'
         | _ \<Rightarrow> False)
   | cdl_cap.PageTableCap a _ _ \<Rightarrow> (
        case capb of cdl_cap.PageTableCap b _ _ \<Rightarrow> b = a
@@ -78,8 +78,8 @@ where
      | TcbResumeIntent \<Rightarrow>
          returnOk (Resume (cap_object target)) \<sqinter> throw
 
-       (* Configure: target, fault_ep, priority, cspace_root_data, vspace_root_data, buffer *)
-     | TcbConfigureIntent fault_ep priority cspace_root_data vspace_root_data buffer \<Rightarrow>
+       (* Configure: target, fault_ep, mcp, priority, cspace_root_data, vspace_root_data, buffer *)
+     | TcbConfigureIntent fault_ep (mcp, priority) cspace_root_data vspace_root_data buffer \<Rightarrow>
          doE
            cspace_root \<leftarrow> throw_on_none $ get_index caps 0;
            vspace_root \<leftarrow> throw_on_none $ get_index caps 1;
@@ -90,6 +90,10 @@ where
            returnOk (ThreadControl (cap_object target) slot (Some fault_ep)
                (Some cspace_root_cap_ref) (Some vspace_root_cap_ref) (buffer_frame_opt))
          odE \<sqinter> throw
+
+       (* Modify a thread's maximum control priority. *)
+     | TcbSetMCPriorityIntent mcp \<Rightarrow>
+         returnOk (ThreadControl (cap_object target) slot None None None None) \<sqinter> throw
 
        (* Modify a thread's priority. *)
      | TcbSetPriorityIntent priority \<Rightarrow>

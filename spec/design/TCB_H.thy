@@ -46,6 +46,7 @@ defs decodeTCBInvocation_def:
         | TCBResume \<Rightarrow>   returnOk $ Resume (capTCBPtr cap)
         | TCBConfigure \<Rightarrow>   decodeTCBConfigure args cap slot extraCaps
         | TCBSetPriority \<Rightarrow>   decodeSetPriority args cap
+        | TCBSetMCPriority \<Rightarrow>   decodeSetMCPriority args cap
         | TCBSetIPCBuffer \<Rightarrow>   decodeSetIPCBuffer args cap slot extraCaps
         | TCBSetSpace \<Rightarrow>   decodeSetSpace args cap slot extraCaps
         | TCBBindNotification \<Rightarrow>   decodeBindNotification cap extraCaps
@@ -113,8 +114,11 @@ defs decodeWriteRegisters_def:
 
 defs decodeTCBConfigure_def:
 "decodeTCBConfigure x0 cap slot x3\<equiv> (case (x0, x3) of
-    ((faultEP#prio#cRootData#vRootData#buffer#_), (cRoot#vRoot#bufferFrame#_)) \<Rightarrow>    (doE
+    ((faultEP#packedPrioProps#cRootData#vRootData#buffer#_), (cRoot#vRoot#bufferFrame#_)) \<Rightarrow>    (doE
+    prio \<leftarrow> returnOk ( packedPrioProps && mask priorityBits);
+    mcp \<leftarrow> returnOk ( (packedPrioProps `~shiftR~` priorityBits) && mask priorityBits);
     setPriority \<leftarrow> decodeSetPriority [prio] cap;
+    setMCP \<leftarrow> decodeSetMCPriority [mcp] cap;
     setIPCParams \<leftarrow> decodeSetIPCBuffer [buffer] cap slot [bufferFrame];
     setSpace \<leftarrow> decodeSetSpace [faultEP, cRootData, vRootData]
         cap slot [cRoot, vRoot];
@@ -122,6 +126,7 @@ defs decodeTCBConfigure_def:
         tcThread= capTCBPtr cap,
         tcThreadCapSlot= tcThreadCapSlot setSpace,
         tcNewFaultEP= tcNewFaultEP setSpace,
+        tcNewMCPriority= tcNewMCPriority setMCP,
         tcNewPriority= tcNewPriority setPriority,
         tcNewCRoot= tcNewCRoot setSpace,
         tcNewVRoot= tcNewVRoot setSpace,
@@ -130,18 +135,40 @@ defs decodeTCBConfigure_def:
   | (_, _) \<Rightarrow>    throw TruncatedMessage
   )"
 
+defs checkPrio_def:
+"checkPrio prio\<equiv> (doE
+    ct \<leftarrow> withoutFailure $ getCurThread;
+    mcp \<leftarrow> withoutFailure $ threadGet tcbMCP ct;
+    whenE (prio > fromIntegral mcp) $ throw (RangeError (fromIntegral minPriority) (fromIntegral mcp))
+odE)"
+
 defs decodeSetPriority_def:
 "decodeSetPriority x0 cap\<equiv> (case x0 of
     (newPrio#_) \<Rightarrow>    (doE
-    curThread \<leftarrow> withoutFailure $ getCurThread;
-    curPriority \<leftarrow> withoutFailure $ threadGet tcbPriority curThread;
-    whenE (fromIntegral newPrio > curPriority) $
-        throw IllegalOperation;
+    checkPrio newPrio;
     returnOk $ ThreadControl_ \<lparr>
         tcThread= capTCBPtr cap,
         tcThreadCapSlot= 0,
         tcNewFaultEP= Nothing,
+        tcNewMCPriority= Nothing,
         tcNewPriority= Just $ fromIntegral newPrio,
+        tcNewCRoot= Nothing,
+        tcNewVRoot= Nothing,
+        tcNewIPCBuffer= Nothing \<rparr>
+    odE)
+  | _ \<Rightarrow>    throw TruncatedMessage
+  )"
+
+defs decodeSetMCPriority_def:
+"decodeSetMCPriority x0 cap\<equiv> (case x0 of
+    (newMCP#_) \<Rightarrow>    (doE
+    checkPrio newMCP;
+    returnOk $ ThreadControl_ \<lparr>
+        tcThread= capTCBPtr cap,
+        tcThreadCapSlot= 0,
+        tcNewFaultEP= Nothing,
+        tcNewMCPriority= Just $ fromIntegral newMCP,
+        tcNewPriority= Nothing,
         tcNewCRoot= Nothing,
         tcNewVRoot= Nothing,
         tcNewIPCBuffer= Nothing \<rparr>
@@ -164,6 +191,7 @@ defs decodeSetIPCBuffer_def:
         tcThread= capTCBPtr cap,
         tcThreadCapSlot= slot,
         tcNewFaultEP= Nothing,
+        tcNewMCPriority= Nothing,
         tcNewPriority= Nothing,
         tcNewCRoot= Nothing,
         tcNewVRoot= Nothing,
@@ -200,6 +228,7 @@ defs decodeSetSpace_def:
         tcThread= capTCBPtr cap,
         tcThreadCapSlot= slot,
         tcNewFaultEP= Just $ CPtr faultEP,
+        tcNewMCPriority= Nothing,
         tcNewPriority= Nothing,
         tcNewCRoot= Just cRoot,
         tcNewVRoot= Just vRoot,
@@ -258,11 +287,12 @@ defs invokeTCB_def:
         restart thread;
         return []
     od)
-  | (ThreadControl target slot faultep priority cRoot vRoot buffer) \<Rightarrow>    (doE
+  | (ThreadControl target slot faultep mcp priority cRoot vRoot buffer) \<Rightarrow>    (doE
         tCap \<leftarrow> returnOk ( ThreadCap_ \<lparr> capTCBPtr= target \<rparr>);
         withoutPreemption $ maybe (return ())
             (\<lambda> ep. threadSet (\<lambda> t. t \<lparr>tcbFaultHandler := ep\<rparr>) target)
             faultep;
+        withoutPreemption $ maybe (return ()) (setMCPriority target) mcp;
         withoutPreemption $ maybe (return ()) (setPriority target) priority;
         maybe (returnOk ()) (\<lambda> (newCap, srcSlot). (doE
             rootSlot \<leftarrow> withoutPreemption $ getThreadCSpaceRoot target;

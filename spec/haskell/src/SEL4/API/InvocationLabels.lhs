@@ -39,6 +39,7 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | TCBCopyRegisters
 >         | TCBConfigure
 >         | TCBSetPriority
+>         | TCBSetMCPriority
 >         | TCBSetIPCBuffer
 >         | TCBSetSpace
 >         | TCBSuspend
@@ -75,28 +76,29 @@ The following type enumerates all the kinds of invocations that clients can requ
 >          TCBCopyRegisters -> 4
 >          TCBConfigure -> 5
 >          TCBSetPriority -> 6
->          TCBSetIPCBuffer -> 7
->          TCBSetSpace -> 8
->          TCBSuspend -> 9
->          TCBResume -> 10
->          TCBBindNotification -> 11
->          TCBUnbindNotification -> 12
->          CNodeRevoke -> 13
->          CNodeDelete -> 14
->          CNodeRecycle -> 15
->          CNodeCopy -> 16
->          CNodeMint -> 17
->          CNodeMove -> 18
->          CNodeMutate -> 19
->          CNodeRotate -> 20
->          CNodeSaveCaller -> 21
->          IRQIssueIRQHandler -> 22
->          IRQAckIRQ -> 23
->          IRQSetIRQHandler -> 24
->          IRQClearIRQHandler -> 25
+>          TCBSetMCPriority -> 7
+>          TCBSetIPCBuffer -> 8
+>          TCBSetSpace -> 9
+>          TCBSuspend -> 10
+>          TCBResume -> 11
+>          TCBBindNotification -> 12
+>          TCBUnbindNotification -> 13
+>          CNodeRevoke -> 14
+>          CNodeDelete -> 15
+>          CNodeRecycle -> 16
+>          CNodeCopy -> 17
+>          CNodeMint -> 18
+>          CNodeMove -> 19
+>          CNodeMutate -> 20
+>          CNodeRotate -> 21
+>          CNodeSaveCaller -> 22
+>          IRQIssueIRQHandler -> 23
+>          IRQAckIRQ -> 24
+>          IRQSetIRQHandler -> 25
+>          IRQClearIRQHandler -> 26
 >          DomainSetSet -> apiMax
 >          ArchInvocationLabel a -> apiMax + 1 + fromEnum a
->          where apiMax = 26
+>          where apiMax = 27
 >     toEnum n
 >         | n == 0 = InvalidInvocation
 >         | n == 1 = UntypedRetype
@@ -104,30 +106,31 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | n == 3 = TCBWriteRegisters
 >         | n == 4 = TCBCopyRegisters
 >         | n == 5 = TCBConfigure
->         | n == 6 = TCBSetPriority
->         | n == 7 = TCBSetIPCBuffer
->         | n == 8 = TCBSetSpace
->         | n == 9 = TCBSuspend
->         | n == 10 = TCBResume
->         | n == 11 = TCBBindNotification
->         | n == 12 = TCBUnbindNotification
->         | n == 13 = CNodeRevoke
->         | n == 14 = CNodeDelete
->         | n == 15 = CNodeRecycle
->         | n == 16 = CNodeCopy
->         | n == 17 = CNodeMint
->         | n == 18 = CNodeMove
->         | n == 19 = CNodeMutate
->         | n == 20 = CNodeRotate
->         | n == 21 = CNodeSaveCaller
->         | n == 22 = IRQIssueIRQHandler
->         | n == 23 = IRQAckIRQ
->         | n == 24 = IRQSetIRQHandler
->         | n == 25 = IRQClearIRQHandler
->         | n == 26 = DomainSetSet
+>         | n == 6 = TCBSetMCPriority
+>         | n == 7 = TCBSetPriority
+>         | n == 8 = TCBSetIPCBuffer
+>         | n == 9 = TCBSetSpace
+>         | n == 10 = TCBSuspend
+>         | n == 11 = TCBResume
+>         | n == 12 = TCBBindNotification
+>         | n == 13 = TCBUnbindNotification
+>         | n == 14 = CNodeRevoke
+>         | n == 15 = CNodeDelete
+>         | n == 16 = CNodeRecycle
+>         | n == 17 = CNodeCopy
+>         | n == 18 = CNodeMint
+>         | n == 19 = CNodeMove
+>         | n == 20 = CNodeMutate
+>         | n == 21 = CNodeRotate
+>         | n == 22 = CNodeSaveCaller
+>         | n == 23 = IRQIssueIRQHandler
+>         | n == 24 = IRQAckIRQ
+>         | n == 25 = IRQSetIRQHandler
+>         | n == 26 = IRQClearIRQHandler
+>         | n == 27 = DomainSetSet
 >         | n > apiMax = ArchInvocationLabel $ toEnum (n - 1 - apiMax)
 >         | otherwise = error "toEnum out of range for InvocationLabel"
->         where apiMax = 26
+>         where apiMax = 27
 
 Decode the invocation type requested by a particular message label.
 

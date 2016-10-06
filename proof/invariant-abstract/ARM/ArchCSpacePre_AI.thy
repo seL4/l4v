@@ -29,13 +29,13 @@ definition
      (case ac of
          ASIDPoolCap r as \<Rightarrow> True
        | ASIDControlCap \<Rightarrow> False
-       | PageCap r rghts sz mapdata \<Rightarrow> False
+       | PageCap dev r rghts sz mapdata \<Rightarrow> False
        | PageTableCap r mapdata \<Rightarrow> True
        | PageDirectoryCap r mapdata \<Rightarrow> True)"
 
 definition
   "cap_vptr_arch acap \<equiv> case acap of 
-     (PageCap _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
+     (PageCap _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
   |  (PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
   | _ \<Rightarrow> None"
 
@@ -68,8 +68,9 @@ lemma is_derived_cap_arch_asid:
   by (auto simp: is_cap_simps cap_master_cap_def split: arch_cap.splits)
 
 
+
 lemma is_page_cap_PageCap[simp]:
-  "is_page_cap (PageCap ref rghts pgsiz mapdata)"
+  "is_page_cap (PageCap dev ref rghts pgsiz mapdata)"
   by (simp add: is_page_cap_def)
 
 lemma pageBitsForSize_eq[simp]:
@@ -79,8 +80,8 @@ by (case_tac sz) (case_tac sz', simp+)+
 
 lemma
   cap_master_cap_arch_simps:
-  "cap_master_arch_cap ((arch_cap.PageCap ref rghts sz mapdata)) =
-         (arch_cap.PageCap ref UNIV sz None)"
+  "cap_master_arch_cap ((arch_cap.PageCap dev ref rghts sz mapdata)) =
+         (arch_cap.PageCap dev ref UNIV sz None)"
   "cap_master_arch_cap ( (arch_cap.ASIDPoolCap pool asid)) =
           (arch_cap.ASIDPoolCap pool 0)"
   "cap_master_arch_cap ( (arch_cap.PageTableCap ptr x)) =
@@ -102,7 +103,7 @@ lemma aobj_ref_cases:
   (case acap of 
     arch_cap.ASIDPoolCap w1 w2 \<Rightarrow> Some w1 
   | arch_cap.ASIDControlCap \<Rightarrow> None
-  | arch_cap.PageCap w s sz opt \<Rightarrow> Some w
+  | arch_cap.PageCap _ w s sz opt \<Rightarrow> Some w
   | arch_cap.PageTableCap w opt \<Rightarrow> Some w
   | arch_cap.PageDirectoryCap w opt \<Rightarrow> Some w)"
   apply (subst aobj_ref_cases')
@@ -124,18 +125,19 @@ lemmas cap_asid_base_simps [simp] =
 
 definition
   "ups_of_heap h \<equiv> \<lambda>p.
-   case h p of Some (ArchObj (DataPage sz)) \<Rightarrow> Some sz | _ \<Rightarrow> None"
+   case h p of Some (ArchObj (DataPage dev sz)) \<Rightarrow> Some sz | _ \<Rightarrow> None"
 
 lemma ups_of_heap_typ_at:
-  "ups_of_heap (kheap s) p = Some sz \<longleftrightarrow> typ_at (AArch (AIntData sz)) p s"
-  by (simp add: typ_at_eq_kheap_obj ups_of_heap_def
+  "ups_of_heap (kheap s) p = Some sz \<longleftrightarrow> data_at sz p s"
+  apply (simp add: typ_at_eq_kheap_obj ups_of_heap_def data_at_def
       split: option.splits Structures_A.kernel_object.splits
              arch_kernel_obj.splits)
+  by force
 
 lemma ups_of_heap_typ_at_def:
   "ups_of_heap (kheap s) \<equiv> \<lambda>p.
-   if \<exists>!sz. typ_at (AArch (AIntData sz)) p s
-     then Some (THE sz. typ_at (AArch (AIntData sz)) p s)
+   if \<exists>!sz. data_at sz p s
+     then Some (THE sz. data_at sz p s)
    else None"
   apply (rule eq_reflection)
   apply (rule ext)
@@ -144,7 +146,8 @@ lemma ups_of_heap_typ_at_def:
    apply (frule (1) theI')
   apply safe
    apply (fastforce simp: ups_of_heap_typ_at)
-  apply (clarsimp simp add: obj_at_def)
+  apply (clarsimp simp add: obj_at_def data_at_def)
+  apply force
   done
 
 lemma ups_of_heap_non_arch_upd:
@@ -262,5 +265,14 @@ lemma set_untyped_cap_as_full_not_final_not_pg_cap:
    apply (auto simp: cte_wp_at_caps_of_state is_cap_simps masked_as_full_def cap_bits_untyped_def)
   done
 
+lemma arch_derived_is_device:
+  "\<lbrakk>cap_master_arch_cap c = cap_master_arch_cap c';
+        is_derived_arch (ArchObjectCap c) (ArchObjectCap c')\<rbrakk>
+       \<Longrightarrow> arch_cap_is_device c' = arch_cap_is_device c"
+  apply (case_tac c)
+  apply (clarsimp simp: is_derived_arch_def
+    cap_range_def is_cap_simps cap_master_cap_def cap_master_arch_cap_def
+              split: split_if_asm cap.splits arch_cap.splits)+
+  done
 end
 end

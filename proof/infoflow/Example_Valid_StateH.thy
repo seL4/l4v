@@ -228,6 +228,7 @@ where
      (* tcbIPCBufferFrame  = *) (CTE NullCap Null_mdb)
      (* tcbDomain          = *) Low_domain
      (* tcbState           = *) Running
+     (* tcbMCPriority      = *) Low_mcp
      (* tcbPriority        = *) Low_prio
      (* tcbQueued          = *) False
      (* tcbFault           = *) None
@@ -252,6 +253,7 @@ where
      (* tcbIPCBufferFrame  = *) (CTE NullCap Null_mdb)
      (* tcbDomain          = *) High_domain
      (* tcbState           = *) (BlockedOnNotification ntfn_ptr)
+     (* tcbMCPriority      = *) High_mcp
      (* tcbPriority        = *) High_prio
      (* tcbQueued          = *) False
      (* tcbFault           = *) None
@@ -275,6 +277,7 @@ where
      (* tcbIPCBufferFrame  = *) (CTE NullCap Null_mdb)
      (* tcbDomain          = *) default_domain
      (* tcbState           = *) IdleThreadState
+     (* tcbMCPriority      = *) default_priority
      (* tcbPriority        = *) default_priority
      (* tcbQueued          = *) False
      (* tcbFault           = *) None
@@ -2161,34 +2164,62 @@ lemma s0H_valid_objs':
   apply (drule kh0H_SomeD)
   apply (elim disjE)
                 apply clarsimp
-               apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def default_domain_def maxDomain_def numDomains_def minBound_word default_priority_def tcb_cte_cases_def)
-              apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def High_domain_def maxDomain_def numDomains_def minBound_word High_prio_def maxPriority_def numPriorities_def tcb_cte_cases_def High_capsH_def obj_at'_def projectKO_eq project_inject ntfnH_def)
+               apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def
+                                     default_domain_def maxDomain_def numDomains_def minBound_word
+                                     default_priority_def tcb_cte_cases_def)
+              apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def
+                                    High_domain_def maxDomain_def numDomains_def minBound_word
+                                    High_mcp_def High_prio_def maxPriority_def numPriorities_def
+                                    tcb_cte_cases_def High_capsH_def obj_at'_def projectKO_eq
+                                    project_inject ntfnH_def)
               apply (rule conjI)
                apply (simp add: is_aligned_def s0_ptr_defs objBitsKO_def)
               apply (rule pspace_distinctD'[OF _ s0H_pspace_distinct'])
               apply (simp add: ntfnH_def)
-             apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def Low_domain_def maxDomain_def numDomains_def minBound_word Low_prio_def maxPriority_def numPriorities_def tcb_cte_cases_def Low_capsH_def)
-            apply (clarsimp simp: valid_obj'_def ntfnH_def valid_ntfn'_def obj_at'_def projectKO_eq project_inject ntfnH_def)
+             apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def
+                                   Low_domain_def maxDomain_def numDomains_def minBound_word
+                                   Low_mcp_def Low_prio_def maxPriority_def numPriorities_def
+                                   tcb_cte_cases_def Low_capsH_def)
+            apply (clarsimp simp: valid_obj'_def ntfnH_def valid_ntfn'_def obj_at'_def projectKO_eq
+                                  project_inject ntfnH_def)
             apply (rule conjI)
              apply (clarsimp simp: is_aligned_def s0_ptr_defs objBitsKO_def)
             apply (rule pspace_distinctD'[OF _ s0H_pspace_distinct'])
             apply simp
            apply (clarsimp simp: valid_obj'_def irq_cte_def valid_cte'_def)
           apply (clarsimp simp: valid_obj'_def valid_cte'_def)
-         apply (clarsimp simp: valid_obj'_def Low_cte_def Low_cte'_def Low_capsH_def empty_cte_def valid_cte'_def split: split_if_asm)
-        apply (clarsimp simp: valid_obj'_def High_cte_def High_cte'_def High_capsH_def empty_cte_def valid_cte'_def split: split_if_asm)
-       apply (clarsimp simp: valid_obj'_def Silc_cte_def Silc_cte'_def Silc_capsH_def empty_cte_def valid_cte'_def split: split_if_asm)
-      apply (clarsimp simp: valid_obj'_def global_pdH'_def valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def ARM.ptrFromPAddr_def
-        physMappingOffset_def ARM.kernelBase_def ARM.physBase_def
-        kernelBase_addr_def physBase_def split: split_if_asm)
-     apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def 
-       ARM.kernelBase_def ARM.physBase_def ARM.ptrFromPAddr_def ptBits_def pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
-    apply (clarsimp simp: valid_obj'_def Low_pdH_def Low_pd'H_def valid_pde'_def valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def 
-      ARM.ptrFromPAddr_def ARM.physBase_def ptBits_def pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
-   apply (clarsimp simp: valid_obj'_def High_ptH_def High_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def
-     ARM.ptrFromPAddr_def ARM.kernelBase_def ARM.physBase_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
-  apply (clarsimp simp: valid_obj'_def Low_ptH_def Low_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def
-    ARM.physBase_def ARM.ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
+         apply (clarsimp simp: valid_obj'_def Low_cte_def Low_cte'_def Low_capsH_def empty_cte_def
+                               valid_cte'_def
+                        split: split_if_asm)
+        apply (clarsimp simp: valid_obj'_def High_cte_def High_cte'_def High_capsH_def empty_cte_def
+                              valid_cte'_def
+                       split: split_if_asm)
+       apply (clarsimp simp: valid_obj'_def Silc_cte_def Silc_cte'_def Silc_capsH_def empty_cte_def
+                             valid_cte'_def
+                      split: split_if_asm)
+      apply (clarsimp simp: valid_obj'_def global_pdH'_def valid_mapping'_def s0_ptr_defs
+                            is_aligned_def ARM.addrFromPPtr_def ARM.ptrFromPAddr_def
+                            physMappingOffset_def ARM.kernelBase_def ARM.physBase_def
+                            kernelBase_addr_def physBase_def
+                     split: split_if_asm)
+     apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def
+                           valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def 
+                           ARM.kernelBase_def ARM.physBase_def ARM.ptrFromPAddr_def ptBits_def
+                           pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def
+                    split: split_if_asm)
+    apply (clarsimp simp: valid_obj'_def Low_pdH_def Low_pd'H_def valid_pde'_def valid_mapping'_def
+                          s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def 
+                          ARM.ptrFromPAddr_def ARM.physBase_def ptBits_def pageBits_def
+                          physMappingOffset_def kernelBase_addr_def physBase_def
+                   split: split_if_asm)
+   apply (clarsimp simp: valid_obj'_def High_ptH_def High_pt'H_def valid_mapping'_def s0_ptr_defs
+                         is_aligned_def ARM.addrFromPPtr_def ARM.ptrFromPAddr_def ARM.kernelBase_def
+                         ARM.physBase_def physMappingOffset_def kernelBase_addr_def physBase_def
+                  split: split_if_asm)
+  apply (clarsimp simp: valid_obj'_def Low_ptH_def Low_pt'H_def valid_mapping'_def s0_ptr_defs
+                        is_aligned_def ARM.addrFromPPtr_def ARM.physBase_def ARM.ptrFromPAddr_def
+                        physMappingOffset_def kernelBase_addr_def physBase_def
+                 split: split_if_asm)
   done
 
 lemmas the_nat_to_bl_simps =
@@ -3364,15 +3395,14 @@ lemma step_restrict_s0:
   done
 
 lemma Sys1_valid_initial_state_noenabled:
-  assumes utf_det: "\<forall>pl pr pxn tc um es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um es s \<and> ct_running s
-                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, es) = {x})"
-  assumes utf_non_empty: "\<forall>t pl pr pxn tc um es. utf t pl pr pxn (tc, um, es) \<noteq> {}"
-  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, es) \<longrightarrow> e \<noteq> Some Interrupt"
+  assumes utf_det: "\<forall>pl pr pxn tc um ds es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um ds es s \<and> ct_running s
+                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, ds, es) = {x})"
+  assumes utf_non_empty: "\<forall>t pl pr pxn tc um ds es. utf t pl pr pxn (tc, um, ds, es) \<noteq> {}"
+  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um ds es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, ds, es) \<longrightarrow> e \<noteq> Some Interrupt"
   assumes det_inv_invariant: "invariant_over_ADT_if det_inv utf"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   shows "valid_initial_state_noenabled det_inv utf s0_internal Sys1PAS timer_irq s0_context"
   by (rule Sys1_valid_initial_state_noenabled[OF step_restrict_s0 utf_det utf_non_empty utf_non_interrupt det_inv_invariant det_inv_s0])
-
 end
 
 end

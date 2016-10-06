@@ -26,11 +26,11 @@ lemma capUntypedPtr_simps [simp]:
   "capUntypedPtr (EndpointCap r badge a b c) = r"
   "capUntypedPtr (Zombie r bits n) = r"
   "capUntypedPtr (ArchObjectCap x) = Arch.capUntypedPtr x"
-  "capUntypedPtr (UntypedCap r n f) = r"
+  "capUntypedPtr (UntypedCap d r n f) = r"
   "capUntypedPtr (CNodeCap r n g n2) = r"
   "capUntypedPtr (ReplyCap r m) = r"
   "Arch.capUntypedPtr (ARM_H.ASIDPoolCap r asid) = r"
-  "Arch.capUntypedPtr (ARM_H.PageCap r rghts sz mapdata) = r"
+  "Arch.capUntypedPtr (ARM_H.PageCap d r rghts sz mapdata) = r"
   "Arch.capUntypedPtr (ARM_H.PageTableCap r mapdata2) = r"
   "Arch.capUntypedPtr (ARM_H.PageDirectoryCap r mapdata3) = r"
   by (auto simp: capUntypedPtr_def
@@ -564,7 +564,7 @@ lemma capRange_untyped:
   by (cases cap, auto simp: isCap_simps) 
 
 lemma capRange_of_untyped [simp]:
-  "capRange (UntypedCap r n f) = untypedRange (UntypedCap r n f)"
+  "capRange (UntypedCap d r n f) = untypedRange (UntypedCap d r n f)"
   by (simp add: capRange_def isCap_simps capUntypedSize_def)
 
 lemma caps_contained_no_overlap:
@@ -627,10 +627,10 @@ where
  | CNodeCap ref bits gd gs \<Rightarrow> CNodeCap ref bits 0 0
  | ThreadCap ref \<Rightarrow> ThreadCap ref
  | ReplyCap ref master \<Rightarrow> ReplyCap ref True
- | UntypedCap ref n f \<Rightarrow> UntypedCap ref n 0
+ | UntypedCap d ref n f \<Rightarrow> UntypedCap d ref n 0
  | ArchObjectCap acap \<Rightarrow> ArchObjectCap (case acap of
-      PageCap ref rghts sz mapdata \<Rightarrow>
-         PageCap ref VMReadWrite sz None
+      PageCap d ref rghts sz mapdata \<Rightarrow>
+         PageCap d ref VMReadWrite sz None
     | ASIDPoolCap pool asid \<Rightarrow>
          ASIDPoolCap pool 0
     | PageTableCap ptr data \<Rightarrow>
@@ -653,13 +653,13 @@ lemma capMasterCap_simps[simp]:
             capability.ArchObjectCap (arch_capability.ASIDPoolCap word1 0)"
   "capMasterCap (capability.ArchObjectCap arch_capability.ASIDControlCap) =
          capability.ArchObjectCap arch_capability.ASIDControlCap"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.PageCap word vmrights vmpage_size pdata)) =
-            capability.ArchObjectCap (arch_capability.PageCap word VMReadWrite vmpage_size None)"
+  "capMasterCap (capability.ArchObjectCap (arch_capability.PageCap d word vmrights vmpage_size pdata)) =
+            capability.ArchObjectCap (arch_capability.PageCap d word VMReadWrite vmpage_size None)"
   "capMasterCap (capability.ArchObjectCap (arch_capability.PageTableCap word ptdata)) =
             capability.ArchObjectCap (arch_capability.PageTableCap word None)"
   "capMasterCap (capability.ArchObjectCap (arch_capability.PageDirectoryCap word pddata)) =
             capability.ArchObjectCap (arch_capability.PageDirectoryCap word None)"
-  "capMasterCap (capability.UntypedCap word n f) = capability.UntypedCap word n 0"
+  "capMasterCap (capability.UntypedCap d word n f) = capability.UntypedCap d word n 0"
   "capMasterCap capability.IRQControlCap = capability.IRQControlCap"
   "capMasterCap (capability.ReplyCap word m) = capability.ReplyCap word True"
   by (simp_all add: capMasterCap_def)
@@ -685,13 +685,13 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> cap = IRQHandlerCap irq"
   "capMasterCap cap = Zombie ref tp n
      \<Longrightarrow> cap = Zombie ref tp n"
-  "capMasterCap cap = UntypedCap ref bits 0
-     \<Longrightarrow> \<exists>f. cap = UntypedCap ref bits f"
+  "capMasterCap cap = UntypedCap d ref bits 0
+     \<Longrightarrow> \<exists>f. cap = UntypedCap d ref bits f"
   "capMasterCap cap = ReplyCap ref master
      \<Longrightarrow> \<exists>master. cap = ReplyCap ref master"
-  "capMasterCap cap = ArchObjectCap (PageCap ref rghts sz mapdata)
+  "capMasterCap cap = ArchObjectCap (PageCap d ref rghts sz mapdata)
      \<Longrightarrow> rghts = VMReadWrite \<and> mapdata = None
-          \<and> (\<exists>rghts mapdata. cap = ArchObjectCap (PageCap ref rghts sz mapdata))"
+          \<and> (\<exists>rghts mapdata. cap = ArchObjectCap (PageCap d ref rghts sz mapdata))"
   "capMasterCap cap = ArchObjectCap ASIDControlCap
      \<Longrightarrow> cap = ArchObjectCap ASIDControlCap"
   "capMasterCap cap = ArchObjectCap (ASIDPoolCap pool asid)
@@ -713,7 +713,7 @@ where
                  else None"
 
 lemma capBadge_simps[simp]:
- "capBadge (UntypedCap p n f)                 = None"
+ "capBadge (UntypedCap d p n f)                 = None"
  "capBadge (NullCap)                          = None"
  "capBadge (DomainCap)                        = None"
  "capBadge (EndpointCap ref badge s r w)      = Some badge"
@@ -766,6 +766,7 @@ lemma capUntypedSize_capBits:
                    zombie_type.splits)
   apply fastforce
   done
+
 lemma sameRegionAs_def2:
  "sameRegionAs cap cap' = (\<lambda>cap cap'.
      (cap = cap'
@@ -781,7 +782,7 @@ lemma sameRegionAs_def2:
    apply (clarsimp simp: sameRegionAs_def Let_def
                          isCap_Master capRange_Master capClass_Master)
    apply (clarsimp simp: isCap_simps
-                         capMasterCap_def[where cap="UntypedCap p n f" for p n f])
+                         capMasterCap_def[where cap="UntypedCap d p n f" for d p n f])
    apply (simp add: capRange_def interval_empty capUntypedSize_capBits)
    apply (intro impI iffI)
     apply (clarsimp del: subsetI intro!: range_subsetI)
@@ -798,7 +799,7 @@ lemma sameRegionAs_def2:
   apply (clarsimp simp: capRange_def Let_def)
   apply (simp add: range_subset_eq2 cong: conj_cong)
   apply (simp add: interval_empty conj_comms)
-  done
+  by blast
 
 lemma sameObjectAs_def2:
  "sameObjectAs cap cap' = (\<lambda>cap cap'.
@@ -814,9 +815,9 @@ lemma sameObjectAs_def2:
                    isCap_simps capMasterCap_def
             split: capability.split)
   apply (clarsimp simp: ARM_H.sameObjectAs_def isCap_simps
-                 split: arch_capability.split)
+                 split: arch_capability.split cong: if_cong)
   apply (clarsimp simp: ARM_H.sameRegionAs_def isCap_simps
-             split del: split_if)
+             split del: split_if cong: if_cong)
   apply (simp add: capRange_def interval_empty)
   apply fastforce
   done
@@ -893,7 +894,7 @@ lemma capUntypedSize_simps [simp]:
   "capUntypedSize NullCap = 0"
   "capUntypedSize DomainCap = 1"
   "capUntypedSize (ArchObjectCap x) = Arch.capUntypedSize x"
-  "capUntypedSize (UntypedCap r n f) = 1 << n"
+  "capUntypedSize (UntypedCap d r n f) = 1 << n"
   "capUntypedSize (CNodeCap r n g n2) = 1 << (objBits (undefined::cte) + n)"
   "capUntypedSize (ReplyCap r m) = 1 << objBits (undefined :: tcb)"
   "capUntypedSize IRQControlCap = 1"
@@ -2141,11 +2142,12 @@ lemma setCTE_valid_mdb:
   done
 
 lemma setCTE_valid_objs'[wp]:
-  "\<lbrace>valid_objs' and (valid_cap' (cteCap cte))\<rbrace>
+  "\<lbrace>valid_objs' and (valid_cap' (cteCap cte)) \<rbrace>
     setCTE p cte \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   unfolding setCTE_def
   apply (rule setObject_valid_objs')
-  apply (clarsimp simp: prod_eq_iff lookupAround2_char1
+   apply (clarsimp simp: prod_eq_iff lookupAround2_char1 updateObject_cte objBits_simps)
+   apply (clarsimp simp: prod_eq_iff lookupAround2_char1
 			updateObject_cte in_monad typeError_def
 			valid_obj'_def valid_tcb'_def valid_cte'_def
 			tcb_cte_cases_def

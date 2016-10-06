@@ -1557,17 +1557,21 @@ lemma set_priority_valid_sched[wp]:
                 not_cur_thread_def ct_in_state_def not_pred_tcb st_tcb_at_def obj_at_def)
   done
 
-crunch simple_sched_action[wp]: set_priority simple_sched_action
+lemma set_mcpriority_valid_sched[wp]:
+  "\<lbrace>valid_sched\<rbrace> set_mcpriority tptr prio \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  by (simp add: set_mcpriority_def thread_set_not_state_valid_sched)
+
+crunch simple_sched_action[wp]: set_priority,set_mcpriority simple_sched_action
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma tc_valid_sched[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
-      invoke_tcb (ThreadControl a sl b pr e f g)
+      invoke_tcb (ThreadControl a sl b mcp pr e f g)
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  apply (simp add: split_def cong: option.case_cong)
+  apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    apply (wp check_cap_inv thread_set_not_state_valid_sched hoare_vcg_all_lift gts_wp static_imp_wp
-         | wpc | simp add: option_update_thread_def | wp_once hoare_drop_imps)+
+         | wpc | simp add: option_update_thread_def)+
    done
 end
 
@@ -2047,7 +2051,7 @@ lemma thread_set_state_eq_valid_sched:
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch valid_sched[wp]: arch_recycle_cap valid_sched (wp: crunch_wps)
+crunch valid_sched[wp]: arch_recycle_cap valid_sched (wp: crunch_wps simp: unless_def)
 end
 
 crunch exst[wp]: thread_set "\<lambda>s. P (exst s)"
@@ -2726,8 +2730,8 @@ apply (simp add: invs_valid_tcb_ctable_strengthen)
 done
 
 lemma handle_recv_valid_sched:
-  "\<lbrace>valid_sched and valid_objs and ct_active and sym_refs \<circ> state_refs_of
-      and ct_not_queued and scheduler_act_sane and invs\<rbrace>
+  "\<lbrace>valid_sched and invs and ct_active
+      and ct_not_queued and scheduler_act_sane\<rbrace>
    handle_recv is_blocking \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
               cong: if_cong)
@@ -2741,7 +2745,7 @@ lemma handle_recv_valid_sched:
      apply (wp hoare_drop_imps hoare_vcg_all_lift_R)
     apply (wp delete_caller_cap_not_queued | simp | strengthen invs_valid_tcb_ctable_strengthen)+
   apply (simp add: ct_in_state_def tcb_at_invs)
-  apply (auto simp: objs_valid_tcb_ctable)
+  apply (auto simp: objs_valid_tcb_ctable invs_valid_objs)
   done
 
 lemma handle_recv_valid_sched':

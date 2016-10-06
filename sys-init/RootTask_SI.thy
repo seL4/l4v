@@ -292,12 +292,12 @@ lemma offset_seL4_CapIRQControl [simp]:
  * This predicate can be used for spec objects, or the duplicated cnode caps.
  *)
 definition si_cap_at :: "(cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow>
-                           (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow>
+                           (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow> bool \<Rightarrow>
                             cdl_object_id \<Rightarrow> sep_pred"
 where
-  "si_cap_at t si_caps spec obj_id \<equiv> \<lambda>s.
+  "si_cap_at t si_caps spec dev obj_id \<equiv> \<lambda>s.
     \<exists>cap_ptr slot obj kobj_id.
-     ((si_cnode_id, slot) \<mapsto>c default_cap (object_type obj) {kobj_id} (object_size_bits obj)) s \<and>
+     ((si_cnode_id, slot) \<mapsto>c default_cap (object_type obj) {kobj_id} (object_size_bits obj) dev) s \<and>
      si_caps obj_id = Some cap_ptr \<and>
      unat cap_ptr = slot \<and>
      cap_ptr < 2 ^ si_cnode_size \<and>
@@ -315,11 +315,11 @@ where
      cap_ptr < 2 ^ si_cnode_size"
 
 definition si_caps_at :: "(cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow>
-                           (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow>
+                           (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow> bool \<Rightarrow>
                             cdl_object_id set \<Rightarrow> sep_pred"
 where
-  "si_caps_at t si_caps spec obj_ids \<equiv>
-  \<And>* obj_id \<in> obj_ids. (si_cap_at t si_caps spec) obj_id"
+  "si_caps_at t si_caps spec dev obj_ids \<equiv>
+  \<And>* obj_id \<in> obj_ids. (si_cap_at t si_caps spec) dev obj_id"
 
 definition si_irq_caps_at :: "(cdl_irq \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow>
                                 cdl_irq set \<Rightarrow> sep_pred"
@@ -329,34 +329,34 @@ where
 
 definition
   si_obj_cap_at' :: " (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow>
-                        (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow>
+                        (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow> bool \<Rightarrow>
                          cdl_object_id \<Rightarrow> cdl_cnode_index \<Rightarrow> sep_pred"
 where
-  "si_obj_cap_at' t si_caps spec obj_id slot \<equiv> \<lambda>s. \<exists> spec_cap.
-   si_cap_at t si_caps spec (cap_object spec_cap) s \<and>
+  "si_obj_cap_at' t si_caps spec dev obj_id slot \<equiv> \<lambda>s. \<exists> spec_cap.
+   si_cap_at t si_caps spec dev (cap_object spec_cap) s \<and>
    opt_cap (obj_id, slot) spec = Some spec_cap"
 
 definition si_obj_cap_at where
-  "si_obj_cap_at t si_caps spec obj_id slot \<equiv>
+  "si_obj_cap_at t si_caps spec dev obj_id slot \<equiv>
      if original_cap_at (obj_id, slot) spec \<and> cap_at cap_has_object (obj_id, slot) spec
-     then si_obj_cap_at' t si_caps spec obj_id slot
+     then si_obj_cap_at' t si_caps spec dev obj_id slot
      else \<box>"
 
 definition
   si_obj_caps_at :: "(cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow>
-                            (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow>
+                            (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow> bool \<Rightarrow>
                              cdl_object_id \<Rightarrow> sep_pred"
 where
-  "si_obj_caps_at t si_caps spec obj_id \<equiv>
-   \<And>* slot \<in> dom (slots_of obj_id spec). si_obj_cap_at t si_caps spec obj_id slot"
+  "si_obj_caps_at t si_caps spec dev obj_id \<equiv>
+   \<And>* slot \<in> dom (slots_of obj_id spec). si_obj_cap_at t si_caps spec dev obj_id slot"
 
 definition
   si_objs_caps_at :: "(cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow>
-                             (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow>
+                             (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow> bool \<Rightarrow>
                               cdl_object_id set \<Rightarrow> sep_pred"
 where
-  "si_objs_caps_at t si_caps spec obj_ids \<equiv>
-   \<And>* obj_id \<in> obj_ids. (si_obj_caps_at t si_caps spec) obj_id"
+  "si_objs_caps_at t si_caps spec dev obj_ids \<equiv>
+   \<And>* obj_id \<in> obj_ids. (si_obj_caps_at t si_caps spec) dev obj_id"
 
 definition
   si_spec_irq_cap_at' :: "(cdl_irq \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_state \<Rightarrow>
@@ -471,7 +471,7 @@ where
 
 
 lemma si_cap_at_less_si_cnode_size:
-  "\<lbrakk>\<guillemotleft>si_cap_at t opt_sel4_cap spec obj_id \<and>* R\<guillemotright> s;
+  "\<lbrakk>\<guillemotleft>si_cap_at t opt_sel4_cap spec dev obj_id \<and>* R\<guillemotright> s;
     Some cap_ptr = opt_sel4_cap obj_id\<rbrakk>
   \<Longrightarrow> cap_ptr < 2 ^ si_cnode_size"
   by (clarsimp simp: si_cap_at_def sep_conj_exists)
@@ -483,7 +483,7 @@ lemma si_irq_cap_at_less_si_cnode_size:
   by (clarsimp simp: si_irq_cap_at_def sep_conj_exists)
 
 lemma si_cap_at_has_k_obj_id:
-  "\<lbrakk>\<guillemotleft>si_cap_at t opt_sel4_cap spec obj_id \<and>* R\<guillemotright> s\<rbrakk>
+  "\<lbrakk>\<guillemotleft>si_cap_at t opt_sel4_cap spec dev obj_id \<and>* R\<guillemotright> s\<rbrakk>
   \<Longrightarrow> \<exists>cap_object_id. t obj_id = Some cap_object_id"
   by (clarsimp simp: si_cap_at_def sep_conj_exists)
 
@@ -493,16 +493,16 @@ lemma si_cap_at_has_k_obj_id:
 
 lemma valid_si_caps_at_si_cap_at:
   "\<lbrakk>finite obj_ids; obj_id \<in> obj_ids;
-   (\<And>R. \<lbrace>\<guillemotleft>si_cap_at t orig_caps spec obj_id \<and>* P \<and>* R\<guillemotright>\<rbrace>
+   (\<And>R. \<lbrace>\<guillemotleft>si_cap_at t orig_caps spec dev obj_id \<and>* P \<and>* R\<guillemotright>\<rbrace>
    f
-   \<lbrace>\<lambda>_.\<guillemotleft>si_cap_at t orig_caps spec obj_id \<and>* Q \<and>* R\<guillemotright>\<rbrace>)\<rbrakk>
+   \<lbrace>\<lambda>_.\<guillemotleft>si_cap_at t orig_caps spec dev obj_id \<and>* Q \<and>* R\<guillemotright>\<rbrace>)\<rbrakk>
    \<Longrightarrow>
-   \<lbrace>\<guillemotleft>si_caps_at t orig_caps spec obj_ids \<and>* P \<and>* R\<guillemotright>\<rbrace>
+   \<lbrace>\<guillemotleft>si_caps_at t orig_caps spec dev obj_ids \<and>* P \<and>* R\<guillemotright>\<rbrace>
    f
-   \<lbrace>\<lambda>_.\<guillemotleft>si_caps_at t orig_caps spec obj_ids \<and>* Q \<and>* R\<guillemotright>\<rbrace>"
+   \<lbrace>\<lambda>_.\<guillemotleft>si_caps_at t orig_caps spec dev obj_ids \<and>* Q \<and>* R\<guillemotright>\<rbrace>"
   apply (clarsimp simp: si_caps_at_def)
   apply (drule sep_set_conj_map_singleton_wp [where f=f and
-                   I="si_cap_at t orig_caps spec" and  P=P and Q=Q and R=R, rotated])
+                   I="si_cap_at t orig_caps spec dev" and  P=P and Q=Q and R=R, rotated])
     apply (clarsimp simp: sep_conj_ac)+
   done
 
@@ -526,6 +526,7 @@ where
    distinct_sets (map cap_free_ids untyped_caps) \<and>
    list_all is_full_untyped_cap untyped_caps \<and>
    list_all well_formed_untyped_cap untyped_caps \<and>
+   list_all (\<lambda>c. \<not> is_device_cap c) untyped_caps \<and>
    bi_untypes bootinfo = (ustart, uend) \<and>
    bi_free_slots bootinfo = (fstart, fend) \<and>
    ustart < 2 ^ si_cnode_size \<and>
@@ -547,7 +548,7 @@ where
      (\<And>* (cptr, untyped_cap) \<in> set (zip untyped_cptrs untyped_caps).
           (si_cnode_id, unat cptr) \<mapsto>c untyped_cap) \<and>*
      (\<And>*  obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-     (\<And>*  obj_id \<in> {obj_id. cnode_or_tcb_at obj_id spec}. (si_cap_at t dup_caps spec obj_id)) \<and>*
+     (\<And>*  obj_id \<in> {obj_id. cnode_or_tcb_at obj_id spec}. (si_cap_at t dup_caps spec False obj_id)) \<and>*
       si_objects) s"
 
 (********************************************************
@@ -668,8 +669,8 @@ lemma si_caps_at_conversion:
   "\<lbrakk>well_formed spec;
     real_ids = {obj_id. real_object_at obj_id spec};
     cnode_ids = {obj_id. cnode_at obj_id spec}\<rbrakk>
-  \<Longrightarrow> si_objs_caps_at t si_caps spec cnode_ids =
-      si_caps_at t si_caps spec real_ids"
+  \<Longrightarrow> si_objs_caps_at t si_caps spec dev cnode_ids =
+      si_caps_at t si_caps spec dev real_ids"
   apply (clarsimp simp: si_objs_caps_at_def si_obj_caps_at_def [abs_def]
                         si_obj_cap_at_def [abs_def] si_caps_at_def)
   apply (subst sep.setprod.Sigma, clarsimp+)

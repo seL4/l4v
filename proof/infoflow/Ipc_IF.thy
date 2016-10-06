@@ -47,14 +47,10 @@ lemma dmo_storeWord_modifies_at_most:
   apply(subst dummy_machine_state_update)
   apply(rule states_equiv_for_machine_state_update)
    apply assumption
-  apply(erule states_equiv_forE_mem)
-  apply(rule equiv_forI)
-  apply(fastforce simp: image_def dest: distinct_lemma[where f="pasObjectAbs aag"] intro: ptr_range_memI ptr_range_add_memI)
+  apply (erule states_equiv_forE_mem)
+  apply (intro conjI equiv_forI)
+   apply(fastforce simp: image_def dest: distinct_lemma[where f="pasObjectAbs aag"] intro: ptr_range_memI ptr_range_add_memI)+
   done
-
-
-
-
 
 
 
@@ -103,11 +99,17 @@ lemma storeWord_equiv_but_for_labels:
   apply (rule states_equiv_forI)
             apply(fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD[where f=kheap])
            apply (simp add: states_equiv_for_def)
-          apply(rule equiv_forI)
+          apply (rule conjI)
+           apply(rule equiv_forI)
+           apply(erule states_equiv_forE)
+           apply clarsimp
+           apply(drule_tac f=underlying_memory in equiv_forD,fastforce)
+           apply(fastforce intro: is_aligned_no_wrap' word_plus_mono_right simp: is_aligned_mask for_each_byte_of_word_def)
+           apply(rule equiv_forI)
           apply(erule states_equiv_forE)
-          apply simp
-          apply(drule_tac f=underlying_memory in equiv_forD, assumption)
-          apply(fastforce intro: is_aligned_no_wrap' word_plus_mono_right simp: is_aligned_mask for_each_byte_of_word_def)
+          apply clarsimp
+          apply(drule_tac f=device_state in equiv_forD,fastforce)
+          apply clarsimp 
          apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
         apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ekheap])
        apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt_list])
@@ -849,13 +851,14 @@ lemma lookup_ipc_buffer_has_read_auth:
    apply (simp add: dom_tcb_cap_cases)
   apply (frule (1) caps_of_state_valid_cap)
   apply (clarsimp simp: vm_read_only_def vm_read_write_def)
-  apply (rule_tac Q="AllowRead \<in> xb" in conj_imp)
+  apply (rule_tac Q="AllowRead \<in> xc" in conj_imp)
     apply (clarsimp simp: valid_cap_simps cap_aligned_def)
     apply (rule conjI)
      apply (erule aligned_add_aligned)
       apply (rule is_aligned_andI1)
       apply (drule (1) valid_tcb_objs)
-      apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def)
+      apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
+                     split: if_splits)
      apply (rule order_trans [OF _ pbfs_atleast_pageBits])
      apply (simp add: msg_align_bits pageBits_def)
     apply (drule (1) cap_auth_caps_of_state)
@@ -1082,7 +1085,7 @@ lemma arch_derive_cap_reads_respects:
   done
 
 lemma derive_cap_rev':
-  "reads_equiv_valid_inv A aag (\<lambda> s. (\<exists>x xa xb. cap = cap.UntypedCap x xa xb) \<longrightarrow>
+  "reads_equiv_valid_inv A aag (\<lambda> s. (\<exists>x xa xb d. cap = cap.UntypedCap d x xa xb) \<longrightarrow>
          pas_refined aag s \<and> is_subject aag (fst slot)) (derive_cap slot cap)"
   unfolding derive_cap_def arch_derive_cap_def
   apply(rule equiv_valid_guard_imp)
@@ -1245,7 +1248,6 @@ lemma load_cap_transfer_rev:
    apply blast
   apply(erule aag_has_auth_to_read_captransfer[where x=2, simplified])
   done
-
 
 
 lemma get_endpoint_rev:
@@ -1692,8 +1694,92 @@ lemma ipc_buffer_disjoint_from_None[simp]:
   apply(simp add: ipc_buffer_disjoint_from_def)
   done
 
+(* GENERALIZE the following is possible *)
+lemma ptr_in_obj_range:
+  "\<lbrakk>valid_objs s; pspace_aligned s; kheap s ptr = Some obj\<rbrakk> 
+  \<Longrightarrow> ptr + (a && mask (obj_bits obj)) \<in> obj_range ptr obj"
+  apply (simp add: obj_range_def)
+  apply (rule context_conjI)
+  apply (frule(1) pspace_alignedD)
+  apply (erule is_aligned_no_wrap')
+   apply (rule and_mask_less')
+    apply (drule valid_obj_sizes)
+    apply fastforce
+   apply (simp add: word_bits_def)
+  apply (simp add: p_assoc_help)
+  apply (rule word_plus_mono_right)
+   apply (rule word_less_sub_1)
+    apply (drule valid_obj_sizes)
+    apply fastforce
+   apply (simp add: word_bits_def and_mask_less')
+  apply (rule is_aligned_no_overflow')
+  apply (erule(1) pspace_alignedD)
+  done
+
+(* GENERALIZE the following is possible but the generalized version might not easy to use*)
+lemma ptr_not_in_globals_frame:
+  "\<lbrakk> arm_globals_frame (arch_state s) \<noteq> ptr; valid_arch_state s;valid_objs s;
+     pspace_distinct s;pspace_aligned s; kheap s ptr = Some obj\<rbrakk> \<Longrightarrow> 
+     ptr + (a && mask (obj_bits obj)) \<notin> range_of_arm_globals_frame s"
+  apply (clarsimp simp: valid_arch_state_def pspace_distinct_def')
+  apply (erule_tac x= ptr in allE)
+  apply (erule_tac x="arm_globals_frame (arch_state s)" in allE)
+  apply (clarsimp simp: obj_at_def obj_range_page_as_ptr_range_pageBitsForSize pageBits_def)
+  apply (drule(2) ptr_in_obj_range[where ptr = ptr])
+  apply (drule(1) IntI)
+  apply fastforce
+  done
+
+lemma pagecap_range:
+  "cap_range (ArchObjectCap (PageCap dev ptr rights sz asid)) = ptr_range ptr (pageBitsForSize sz)"
+  apply (simp add: cap_range_def)
+  oops
+
+lemma tcb_buffer_orth_globals_frame:
+  "\<lbrakk>valid_objs s; valid_global_refs s; pspace_aligned s; pspace_distinct s; valid_arch_state s;
+        get_tcb sender s = Some tcb;
+        caps_of_state s (sender, tcb_cnode_index 4) = Some (ArchObjectCap (PageCap xa xb xc xd xe))\<rbrakk>
+     \<Longrightarrow> range_of_arm_globals_frame s \<inter>
+           ptr_range (xb + (tcb_ipc_buffer tcb && mask (pageBitsForSize xd))) msg_align_bits =
+           {}"
+  apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
+   apply (simp add: dom_tcb_cap_cases)
+  apply (frule (1) caps_of_state_valid_cap)
+  apply (clarsimp simp: valid_cap_simps cap_aligned_def)
+  apply (rule ptr_range_disjoint_strong)
+  (* CLAGged from here onwards from auth_ipc_buffers_do_not_overlap_globals_frame *)
+      apply (rule ccontr)
+      apply clarsimp
+      apply (frule caps_of_state_cteD)
+      apply (frule cte_wp_at_valid_objs_valid_cap)
+       apply(simp)
+      apply (clarsimp simp: valid_cap_def)
+      apply (simp add: valid_global_refs_def valid_refs_def)
+      apply (erule_tac x=sender in allE)
+      apply (erule_tac x="tcb_cnode_index 4" in allE)
+      apply (erule notE)
+      apply (erule cte_wp_at_weakenE)
+      apply (clarsimp simp: global_refs_def cap_range_def)
+      apply (drule_tac t = "tcb_ipcframe tcb" in sym,simp)
+      apply (clarsimp simp: obj_at_def split: if_splits)
+       apply (drule(5) ptr_not_in_globals_frame)
+         apply (fastforce simp: obj_bits_def)
+      apply (drule(5) ptr_not_in_globals_frame)
+        apply (fastforce simp: obj_bits_def)
+     apply (clarsimp simp: valid_arch_state_def obj_at_def dest!: pspace_alignedD)
+    apply (erule aligned_add_aligned)
+     apply (rule is_aligned_andI1)
+     apply (drule (1) valid_tcb_objs)
+     apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
+                    split: if_splits)
+    apply (rule order_trans [OF _ pbfs_atleast_pageBits])
+    apply (simp add: msg_align_bits pageBits_def)
+   apply simp
+  apply (simp add: msg_align_bits)
+  done
+
 lemma lookup_ipc_buffer_disjoint_from_globals_frame:
-  "\<lbrace>valid_objs and valid_global_refs and pspace_distinct and valid_arch_state\<rbrace> lookup_ipc_buffer b sender 
+  "\<lbrace>valid_objs and valid_global_refs and pspace_aligned and pspace_distinct and valid_arch_state\<rbrace> lookup_ipc_buffer b sender 
        \<lbrace>\<lambda>rva s.
            ipc_buffer_disjoint_from (range_of_arm_globals_frame s) rva\<rbrace>"
   unfolding lookup_ipc_buffer_def
@@ -1701,60 +1787,26 @@ lemma lookup_ipc_buffer_disjoint_from_globals_frame:
    apply (wp get_cap_wp thread_get_wp' | wpc | simp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state ipc_buffer_has_read_auth_def get_tcb_ko_at [symmetric])
   apply (rule drop_imp)
-  (* CLAG from here onwards -- FIXME to remove duplication in this file *)
-  (* upto the next CLAG, clagged from lookup_ipc_buffer_has_read auth *)
   apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
    apply (simp add: dom_tcb_cap_cases)
   apply (frule (1) caps_of_state_valid_cap)
   apply (clarsimp simp: valid_cap_simps cap_aligned_def)
   apply (simp add: ipc_buffer_disjoint_from_def)
-  apply (rule conjI)
+  apply (rule context_conjI)
    apply (erule aligned_add_aligned)
     apply (rule is_aligned_andI1)
     apply (drule (1) valid_tcb_objs)
-    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def)
+    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
+                   split: if_splits)
    apply (rule order_trans [OF _ pbfs_atleast_pageBits])
    apply (simp add: msg_align_bits pageBits_def)
-  (* CLAGged from here onwards from auth_ipc_buffers_do_not_overlap_globals_frame *)
-  apply(rule ccontr)
-  apply(drule int_not_emptyD)
-  apply(clarsimp)
-  apply(frule caps_of_state_cteD)
-  apply(frule cte_wp_at_valid_objs_valid_cap)
-   apply(simp)
-  apply(clarsimp simp: valid_cap_def)
-  apply(clarsimp simp: obj_at_def)  (* ko_at word  from valid_objs*)
-  apply(simp add: valid_global_refs_def valid_refs_def)
-  apply(erule_tac x=sender in allE)
-  apply(erule_tac x="tcb_cnode_index 4" in allE)
-  apply(erule notE)
-  apply(erule cte_wp_at_weakenE)
-  apply(clarsimp)
-  apply(simp add: global_refs_def)
-  apply(clarsimp)
-  apply(frule_tac p'=xa and R=xb and vms=xc and xx=xd in ipcframe_subset_page)
-     apply(simp)
-    apply(simp)
-   apply(simp)
-  apply(simp add: cap_range_def)
-  apply(case_tac "tcb_ipcframe tcb")
-             apply(simp)+
-  apply(rename_tac arch_cap)
-  apply(case_tac arch_cap)
-      apply(simp)+ (* word \<noteq> arm_globals_frame from valid_global_refs*)
-    apply(rename_tac word cap_rights vmpage_size option)
-    apply(clarsimp simp: valid_arch_state_def obj_at_def) (* ko_at arm *)
-    apply(unfold pspace_distinct_def')
-    apply(erule_tac x=word in allE)
-    apply(erule_tac x="arm_globals_frame (arch_state s)" in allE)
-    apply(erule_tac x="ArchObj (DataPage vmpage_size)" in allE)
-    apply(erule_tac x="ArchObj (DataPage ARMSmallPage)" in allE)
-    apply(simp add: a_type_def)
-    apply(fastforce simp: obj_range_def ptr_range_def)+
+  apply (subst Int_commute)
+  apply (rule tcb_buffer_orth_globals_frame)
+   apply simp+
   done
 
 lemma do_ipc_transfer_reads_respects:
-  "reads_respects aag l (valid_objs and valid_global_refs and pspace_distinct 
+  "reads_respects aag l (valid_objs and valid_global_refs and pspace_distinct and pspace_aligned
                          and valid_arch_state and pas_refined aag and
                          K ((grant \<longrightarrow> (is_subject aag sender \<and> 
                                        is_subject aag receiver)) \<and> 
@@ -1793,7 +1845,7 @@ lemma receive_ipc_base_reads_respects:
   shows "reads_respects aag l
      (valid_objs
       and valid_global_refs
-      and pspace_distinct
+      and pspace_distinct and pspace_aligned
       and pas_refined aag
       and pas_cur_domain aag
       and valid_arch_state
@@ -1873,7 +1925,9 @@ lemma receive_ipc_base_reads_respects:
   done
 
 lemma receive_ipc_reads_respects:
-  "reads_respects aag l (valid_objs and pspace_distinct and valid_global_refs and valid_arch_state and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_cap cap and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
+  "reads_respects aag l (valid_objs and pspace_distinct and pspace_aligned and
+                         valid_global_refs and valid_arch_state and sym_refs \<circ> state_refs_of and
+                         pas_refined aag and pas_cur_domain aag and valid_cap cap and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
           (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))) (receive_ipc receiver cap is_blocking)"
   apply (rule gen_asm_ev)
   apply (simp add: receive_ipc_def thread_get_def split: cap.split)
@@ -1947,7 +2001,8 @@ lemma receive_endpoint_reads_affects_queued:
   done
 
 lemma send_ipc_reads_respects:
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and valid_objs and pspace_distinct and valid_arch_state and valid_global_refs and sym_refs \<circ> state_refs_of and
+  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and valid_objs and pspace_distinct and 
+                         pspace_aligned and valid_arch_state and valid_global_refs and sym_refs \<circ> state_refs_of and
          (\<lambda>s. is_subject aag (cur_thread s)) and
          (\<lambda>s. \<exists>ep. ko_at (Endpoint ep) epptr s
                      \<and> (can_grant \<longrightarrow> ((\<forall>(t, rt) \<in> ep_q_refs_of ep. rt = EPRecv \<longrightarrow> is_subject aag t)
@@ -2007,7 +2062,9 @@ lemma send_ipc_reads_respects:
 subsection "Faults"
 
 lemma send_fault_ipc_reads_respects:
-  "reads_respects aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_objs and pspace_distinct and valid_global_refs and valid_arch_state and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag thread \<and> valid_fault fault)) (send_fault_ipc thread fault)"
+  "reads_respects aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag 
+        and valid_objs and pspace_distinct and pspace_aligned
+        and valid_global_refs and valid_arch_state and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag thread \<and> valid_fault fault)) (send_fault_ipc thread fault)"
   apply (rule gen_asm_ev)
   apply (simp add: send_fault_ipc_def Let_def lookup_cap_def split_def)
   apply (wp send_ipc_reads_respects thread_set_reads_respects
@@ -2023,7 +2080,7 @@ lemma send_fault_ipc_reads_respects:
   (* clagged from Ipc_AC *)
       apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s
                           \<and> pas_cur_domain aag s
-                          \<and> valid_objs s \<and> pspace_distinct s
+                          \<and> valid_objs s \<and> pspace_distinct s \<and> pspace_aligned s
                           \<and> valid_global_refs s \<and> valid_arch_state s
                           \<and> sym_refs (state_refs_of s)
                           \<and> valid_fault fault 
@@ -2050,7 +2107,10 @@ lemma send_fault_ipc_reads_respects:
 
 
 lemma handle_fault_reads_respects:
-  "reads_respects aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_objs and pspace_distinct and valid_global_refs and valid_arch_state and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag thread \<and> valid_fault fault)) (handle_fault thread fault)"
+  "reads_respects aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag 
+  and valid_objs and pspace_distinct and pspace_aligned 
+  and valid_global_refs and valid_arch_state and (\<lambda>s. is_subject aag (cur_thread s))
+  and K (is_subject aag thread \<and> valid_fault fault)) (handle_fault thread fault)"
   unfolding handle_fault_def catch_def fun_app_def handle_double_fault_def
   apply(wp_once hoare_drop_imps |
         wp set_thread_state_reads_respects send_fault_ipc_reads_respects | wpc | simp)+
@@ -2101,7 +2161,7 @@ lemma do_reply_transfer_reads_respects_f:
                | wp cap_delete_one_invs  hoare_vcg_all_lift
                     cap_delete_one_silc_inv reads_respects_f[OF thread_get_reads_respects]
                     reads_respects_f[OF get_thread_state_rev]
-               | simp add: invs_valid_objs invs_valid_global_refs invs_distinct invs_arch_state invs_valid_ko_at_arm | rule conjI | elim conjE | assumption)+)[8]
+               | simp add: invs_valid_objs invs_psp_aligned invs_valid_global_refs invs_distinct invs_arch_state invs_valid_ko_at_arm | rule conjI | elim conjE | assumption)+)[8]
   apply(clarsimp simp: conj_comms)
   apply(rule conjI, fastforce intro: reads_lrefl)+
   apply(rule allI)
@@ -2154,12 +2214,6 @@ lemma setup_caller_cap_globals_equiv:
   apply(wp cap_insert_globals_equiv'' set_thread_state_globals_equiv)
    apply(simp_all)
    done
-
-
-
-
-
-
 
 lemma set_extra_badge_globals_equiv:
   "\<lbrace>globals_equiv s and (\<lambda>sa. ptr_range (buffer + (of_nat buffer_cptr_index
@@ -2324,7 +2378,7 @@ lemma do_fault_transfer_globals_equiv:
   done
 
 lemma lookup_ipc_buffer_ptr_range':
-  "\<lbrace>\<top>\<rbrace>
+  "\<lbrace>valid_objs\<rbrace>
   lookup_ipc_buffer True thread 
   \<lbrace>\<lambda>rv s. rv = Some buf' \<longrightarrow> auth_ipc_buffers s thread = ptr_range buf' msg_align_bits\<rbrace>"
   unfolding lookup_ipc_buffer_def
@@ -2334,8 +2388,9 @@ lemma lookup_ipc_buffer_ptr_range':
   apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
    apply (simp add: dom_tcb_cap_cases)
   apply (clarsimp simp: auth_ipc_buffers_def get_tcb_ko_at [symmetric])
+  apply (drule(1) valid_tcb_objs)
   apply (drule get_tcb_SomeD)+
-  apply(simp add: vm_read_write_def)
+  apply (simp add: vm_read_write_def valid_tcb_def valid_ipc_buffer_cap_def split: bool.splits)
   done
 
 lemma lookup_ipc_buffer_aligned':
@@ -2345,49 +2400,23 @@ lemma lookup_ipc_buffer_aligned':
   apply(fastforce simp: valid_def)
   done
 
-
+lemma set_collection: "a = {x. x\<in>a}"
+  by simp
 
 lemma auth_ipc_buffers_do_not_overlap_arm_globals_frame:
-  "\<lbrakk>valid_arch_state s; valid_global_refs s; valid_objs s; pspace_distinct s\<rbrakk> \<Longrightarrow> auth_ipc_buffers s thread \<inter> range_of_arm_globals_frame s = {}"
-  apply(rule ccontr)
-  apply(drule int_not_emptyD)
-  apply(clarsimp simp: auth_ipc_buffers_member_def)
-  apply(frule caps_of_state_cteD)
-  apply(frule cte_wp_at_valid_objs_valid_cap)
-   apply(simp)
-  apply(clarsimp simp: valid_cap_def)
-  apply(clarsimp simp: obj_at_def)  (* ko_at word  from valid_objs*)
-  apply(simp add: valid_global_refs_def valid_refs_def)
-  apply(erule_tac x=thread in allE)
-  apply(erule_tac x="tcb_cnode_index 4" in allE)
-  apply(erule notE)
-  apply(erule cte_wp_at_weakenE)
-  apply(clarsimp)
-  apply(simp add: global_refs_def)
-  apply(clarsimp)
-  apply(frule_tac p'=p' and R=R and vms=vms and xx=xx in ipcframe_subset_page)
-     apply(simp)
-    apply(simp)
-   apply(simp)
-  apply(simp add: cap_range_def)
-  apply(case_tac "tcb_ipcframe tcb")
-             apply(simp)+
-  apply(rename_tac arch_cap)
-  apply(case_tac arch_cap)
-      apply(simp)+ (* word \<noteq> arm_globals_frame from valid_global_refs*)
-    apply(rename_tac word rights vmpage_size option)
-    apply(clarsimp simp: valid_arch_state_def obj_at_def) (* ko_at arm *)
-    apply(unfold pspace_distinct_def')
-    apply(erule_tac x=word in allE)
-    apply(erule_tac x="arm_globals_frame (arch_state s)" in allE)
-    apply(erule_tac x="ArchObj (DataPage vmpage_size)" in allE)
-    apply(erule_tac x="ArchObj (DataPage ARMSmallPage)" in allE)
-    apply(fastforce simp: obj_range_def ptr_range_def)+
+  "\<lbrakk>valid_arch_state s; valid_global_refs s; valid_objs s; pspace_distinct s; pspace_aligned  s\<rbrakk>
+  \<Longrightarrow> auth_ipc_buffers s thread \<inter> range_of_arm_globals_frame s = {}"
+  apply (rule ccontr)
+  apply (drule int_not_emptyD)
+  apply (clarsimp simp: auth_ipc_buffers_member_def)
+  apply (erule(1) in_empty_interE[rotated])
+  apply (rule tcb_buffer_orth_globals_frame)
+  apply auto
   done
 
-
 lemma do_ipc_transfer_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
+  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_objs and valid_arch_state and valid_global_refs 
+    and pspace_distinct and pspace_aligned and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
     do_ipc_transfer sender ep badge grant receiver
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding do_ipc_transfer_def
@@ -2456,7 +2485,8 @@ lemma do_ipc_transfer_globals_equiv:
 crunch valid_ko_at_arm[wp]: do_ipc_transfer "valid_ko_at_arm"
 
 lemma send_ipc_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and valid_idle and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
+  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs 
+    and pspace_distinct and pspace_aligned and valid_global_objs and valid_idle and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
     send_ipc block call badge can_grant thread epptr
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding send_ipc_def
@@ -2472,7 +2502,9 @@ lemma send_ipc_globals_equiv:
     apply(clarsimp)
     apply(rule hoare_drop_imps)
     apply(wp set_endpoint_globals_equiv)
-  apply(rule_tac Q="\<lambda>ep. ko_at (Endpoint ep) epptr and globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and (\<lambda>s. sym_refs (state_refs_of s)) and valid_idle"
+  apply(rule_tac Q="\<lambda>ep. ko_at (Endpoint ep) epptr and globals_equiv st and valid_objs 
+        and valid_arch_state and valid_global_refs and pspace_distinct and pspace_aligned
+        and valid_global_objs and (\<lambda>s. sym_refs (state_refs_of s)) and valid_idle"
         in hoare_strengthen_post)
    apply(wp get_endpoint_sp)
     apply(clarsimp simp: valid_arch_state_ko_at_arm)+
@@ -2504,7 +2536,8 @@ crunch globals_equiv[wp]: complete_signal "globals_equiv st"
 
 lemma receive_ipc_globals_equiv:
   notes do_nbrecv_failed_transfer_def[simp]
-  shows "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> 
+  shows "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct
+     and pspace_aligned and valid_global_objs and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> 
      receive_ipc thread cap is_blocking
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding receive_ipc_def thread_get_def
@@ -2639,13 +2672,18 @@ lemma set_object_valid_global_refs:
 
 
 lemma send_fault_ipc_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and valid_idle and (\<lambda>s. sym_refs (state_refs_of s)) and K (valid_fault fault)\<rbrace> send_fault_ipc tptr fault
+  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
+    and pspace_distinct and pspace_aligned
+    and valid_global_objs and valid_idle and (\<lambda>s. sym_refs (state_refs_of s)) and K (valid_fault fault)\<rbrace>
+    send_fault_ipc tptr fault
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding send_fault_ipc_def
   apply(wp)
     apply(simp add: Let_def)
     apply(wp send_ipc_globals_equiv thread_set_globals_equiv thread_set_valid_objs'' thread_set_fault_valid_global_refs thread_set_valid_idle_trivial thread_set_refs_trivial | wpc | simp)+
-   apply(rule_tac Q'="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and K (valid_fault fault) and valid_idle and (\<lambda>s. sym_refs (state_refs_of s))"
+   apply(rule_tac Q'="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and valid_global_refs 
+        and pspace_distinct and pspace_aligned and 
+        valid_global_objs and K (valid_fault fault) and valid_idle and (\<lambda>s. sym_refs (state_refs_of s))"
         in hoare_post_imp_R)
     apply(wp | simp)+
    apply(clarsimp simp: valid_arch_state_ko_at_arm)
@@ -2701,7 +2739,10 @@ lemma send_fault_ipc_valid_ko_at_arm[wp]:
 done
 
 lemma handle_fault_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and valid_idle and (\<lambda>s. sym_refs (state_refs_of s)) and K (valid_fault ex)\<rbrace> handle_fault thread ex
+  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs 
+    and pspace_distinct and pspace_aligned 
+    and valid_global_objs and valid_idle and (\<lambda>s. sym_refs (state_refs_of s))
+    and K (valid_fault ex)\<rbrace> handle_fault thread ex
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding handle_fault_def
   apply(wp handle_double_fault_globals_equiv)
@@ -2722,28 +2763,33 @@ lemma handle_fault_reply_globals_equiv:
 crunch valid_global_objs: handle_fault_reply "valid_global_objs"
 
 lemma do_reply_transfer_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and valid_idle\<rbrace>
+  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct
+    and pspace_aligned and valid_global_objs and valid_idle\<rbrace>
     do_reply_transfer sender receiver slot
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding do_reply_transfer_def
-  apply(wp set_thread_state_globals_equiv cap_delete_one_globals_equiv  do_ipc_transfer_globals_equiv thread_set_globals_equiv handle_fault_reply_globals_equiv dxo_wp_weak | wpc | simp split del: split_if)+
-    apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s) and valid_idle" in hoare_strengthen_post)
+  apply(wp set_thread_state_globals_equiv cap_delete_one_globals_equiv  do_ipc_transfer_globals_equiv
+    thread_set_globals_equiv handle_fault_reply_globals_equiv dxo_wp_weak | wpc | simp split del: split_if)+
+    apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_objs and valid_arch_state
+      and valid_global_refs and pspace_distinct and pspace_aligned and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s) and valid_idle" in hoare_strengthen_post)
     apply (wp gts_wp | fastforce simp: valid_arch_state_ko_at_arm pred_tcb_at_def obj_at_def valid_idle_def)+
     done
 
 lemma handle_reply_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and valid_idle\<rbrace> handle_reply
+  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs 
+    and pspace_distinct and pspace_aligned and valid_global_objs and valid_idle\<rbrace> handle_reply
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding handle_reply_def
   apply(wp do_reply_transfer_globals_equiv | wpc)+
-   apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and valid_idle"
+   apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
+        and pspace_distinct and pspace_aligned and valid_global_objs and valid_idle"
         in hoare_strengthen_post)
     apply(wp | simp)+
     done
 
 lemma reply_from_kernel_globals_equiv:
   "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct
-   and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> reply_from_kernel thread x
+   and pspace_aligned and  (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> reply_from_kernel thread x
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding reply_from_kernel_def
   apply(wp set_message_info_globals_equiv set_mrs_globals_equiv
@@ -2809,7 +2855,9 @@ lemma receive_signal_reads_respects_g:
 subsection "Sycn IPC"
 
 lemma send_ipc_reads_respects_g:
-  "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_idle and sym_refs \<circ> state_refs_of and is_subject aag \<circ> cur_thread and (\<lambda> s. \<exists>ep. ko_at (Endpoint ep) epptr s \<and>
+  "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_objs and valid_global_objs 
+     and valid_arch_state and valid_global_refs and pspace_distinct and pspace_aligned
+     and valid_idle and sym_refs \<circ> state_refs_of and is_subject aag \<circ> cur_thread and (\<lambda> s. \<exists>ep. ko_at (Endpoint ep) epptr s \<and>
              (can_grant \<longrightarrow>
               (\<forall>x\<in>ep_q_refs_of ep.
                   (\<lambda>(t, rt). rt = EPRecv \<longrightarrow> is_subject aag t) x) \<and>
@@ -2822,7 +2870,8 @@ lemma send_ipc_reads_respects_g:
   done
 
 lemma receive_ipc_reads_respects_g:
-  "reads_respects_g aag l (valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and pspace_distinct and (\<lambda>s. receiver \<noteq> idle_thread s) and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_cap cap and is_subject aag \<circ> cur_thread and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
+  "reads_respects_g aag l (valid_objs and valid_global_objs and valid_arch_state and valid_global_refs
+    and pspace_distinct and pspace_aligned and (\<lambda>s. receiver \<noteq> idle_thread s) and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_cap cap and is_subject aag \<circ> cur_thread and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
           (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))) (receive_ipc receiver cap is_blocking)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule receive_ipc_reads_respects)
@@ -2834,7 +2883,8 @@ lemma receive_ipc_reads_respects_g:
 subsection "Faults"
 
 lemma send_fault_ipc_reads_respects_g:
-  "reads_respects_g aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_idle and is_subject aag \<circ> cur_thread and K (is_subject aag thread \<and> valid_fault fault)) (send_fault_ipc thread fault)"
+  "reads_respects_g aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs
+    and pspace_distinct and pspace_aligned and valid_idle and is_subject aag \<circ> cur_thread and K (is_subject aag thread \<and> valid_fault fault)) (send_fault_ipc thread fault)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule send_fault_ipc_reads_respects)
    apply(rule doesnt_touch_globalsI)
@@ -2843,7 +2893,9 @@ lemma send_fault_ipc_reads_respects_g:
   
 
 lemma handle_fault_reads_respects_g:
-  "reads_respects_g aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_idle and is_subject aag \<circ> cur_thread and K (is_subject aag thread \<and> valid_fault fault)) (handle_fault thread fault)"
+  "reads_respects_g aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag 
+    and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs 
+    and pspace_distinct and pspace_aligned and valid_idle and is_subject aag \<circ> cur_thread and K (is_subject aag thread \<and> valid_fault fault)) (handle_fault thread fault)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule handle_fault_reads_respects)
    apply(rule doesnt_touch_globalsI)
@@ -2882,8 +2934,8 @@ lemma handle_reply_reads_respects_g:
 
 lemma reply_from_kernel_reads_respects_g:
   "reads_respects_g aag l (valid_global_objs and
-        valid_objs and
-        valid_arch_state and valid_global_refs and pspace_distinct and (\<lambda>s. thread \<noteq> idle_thread s) and K (is_subject aag thread)) (reply_from_kernel thread x)"
+        valid_objs and valid_arch_state and valid_global_refs and pspace_distinct
+        and pspace_aligned and (\<lambda>s. thread \<noteq> idle_thread s) and K (is_subject aag thread)) (reply_from_kernel thread x)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule reply_from_kernel_reads_respects)
    apply(rule doesnt_touch_globalsI)
