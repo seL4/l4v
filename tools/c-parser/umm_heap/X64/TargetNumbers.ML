@@ -26,10 +26,10 @@ val boolWidth = fromInt 8
 val charWidth = 8
 val shortWidth = 16
 val intWidth = 32
-val longWidth = 32
+val longWidth = 64
 val llongWidth = 64
 val ptrWidth : int = 64
-val ptr_t = BaseCTypes.LongLong
+val ptr_t = BaseCTypes.Long
 val CHAR_BIT : int = 8
 
 fun umax width = exp(2, width) - 1
