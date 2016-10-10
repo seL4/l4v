@@ -91,7 +91,7 @@ perform_asid_control_invocation :: "asid_control_invocation \<Rightarrow> (unit,
     delete_objects frame page_bits;
     pcap \<leftarrow> get_cap parent;
     set_cap (max_free_index_update pcap) parent;
-    retype_region frame 1 0 (ArchObject ASIDPoolObj);
+    retype_region frame 1 0 (ArchObject ASIDPoolObj) False;
     cap_insert (ArchObjectCap $ ASIDPoolCap frame base) parent slot;
     assert (base && mask asid_low_bits = 0);
     asid_table \<leftarrow> gets (x64_asid_table \<circ> arch_state);
@@ -160,7 +160,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
         | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte)
   | PageUnmap cap ct_slot \<Rightarrow>
       (case cap
-         of PageCap base rights map_type sz mapped \<Rightarrow>
+         of PageCap dev base rights map_type sz mapped \<Rightarrow>
             (case mapped of Some (asid, vaddr) \<Rightarrow> unmap_page sz asid vaddr base
                           | None \<Rightarrow> return ())
           | _ \<Rightarrow> fail)

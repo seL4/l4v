@@ -88,6 +88,11 @@ lemma mask_out_8_less_kernel_base:
   using mask_out_8_le_kernel_base[where x=x]
   by (simp add: linorder_not_less[symmetric])
 
-  
+lemma aobj_ref_arch_cap[simp]:
+  "aobj_ref (arch_default_cap aty ptr us dev) = Some ptr"
+  apply (case_tac aty)
+   apply (simp_all add: aobj_ref_def arch_default_cap_def p_assoc_help)
+  done
+
 end
 end

@@ -51,8 +51,7 @@ lemma weak_derived_tcb_cap_valid:
   apply (clarsimp simp: st_tcb_def2)
   apply (erule disjE; simp add: copy_of_def split: split_if_asm; (solves \<open>clarsimp\<close>)?)
   apply (clarsimp simp: tcb_cap_cases_def split: split_if_asm)
-    apply (auto simp: is_cap_simps same_object_as_def
-                      valid_ipc_buffer_cap_def
+    apply (auto simp: is_cap_simps same_object_as_def valid_ipc_buffer_cap_def
                split: cap.split_asm arch_cap.split_asm
                       thread_state.split_asm)
   done
@@ -97,7 +96,8 @@ lemma set_free_index_invs [CSpace_AI_assms]:
   apply (simp add:valid_irq_node_def)
   apply wps
   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap.valid_arch_obj set_cap_valid_arch_caps
-            set_cap.valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at )
+            set_cap.valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at
+            set_cap_cap_refs_respects_device_region_spec[where ptr = cref])
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (rule conjI,simp add:valid_pspace_def)
   apply (rule conjI,clarsimp simp:is_cap_simps)
@@ -123,8 +123,7 @@ lemma set_free_index_invs [CSpace_AI_assms]:
   apply (drule_tac x = cref in spec)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (drule_tac x = ref in orthD2[rotated])
-   apply (simp add:cap_range_def)
-  apply (simp)
+   apply (simp add: cap_range_def)+
   done
 
 lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
@@ -169,7 +168,8 @@ lemma is_derived_is_cap:
   \<and> (is_cnode_cap cap = is_cnode_cap cap')
   \<and> (is_thread_cap cap = is_thread_cap cap')
   \<and> (is_zombie cap = is_zombie cap')
-  \<and> (is_arch_cap cap = is_arch_cap cap')"
+  \<and> (is_arch_cap cap = is_arch_cap cap')
+  \<and> (cap_is_device cap = cap_is_device cap')"
   apply (clarsimp simp: is_derived_def is_derived_arch_def split: split_if_asm)
   apply (clarsimp simp: cap_master_cap_def is_cap_simps
     split: cap.splits arch_cap.splits)+
@@ -465,7 +465,7 @@ lemma ex_nonz_tcb_cte_caps [CSpace_AI_assms]:
    apply (clarsimp simp: valid_cap_def obj_at_def
                          is_obj_defs dom_def
                          appropriate_cte_cap_def
-                  split: cap.splits arch_cap.split_asm)
+                  split: cap.splits arch_cap.split_asm if_splits)
   apply (clarsimp simp: caps_of_state_valid_cap)
   done
 
@@ -577,11 +577,11 @@ lemma cap_insert_simple_invs:
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_no_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state)
-  apply (drule safe_parent_cap_range)
+  apply (frule safe_parent_cap_range)
   apply simp
   apply (rule conjI)
    prefer 2
-   apply (clarsimp simp: is_cap_simps)
+   apply (clarsimp simp: is_cap_simps safe_parent_for_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
   apply (clarsimp dest!: is_cap_simps [THEN iffD1])

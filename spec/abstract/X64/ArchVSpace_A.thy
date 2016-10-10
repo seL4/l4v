@@ -99,7 +99,7 @@ lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'
     buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 4);
     buffer_cap \<leftarrow> get_cap buffer_frame_slot;
     (case buffer_cap of
-      ArchObjectCap (PageCap p R _ vms _) \<Rightarrow>
+      ArchObjectCap (PageCap _ p R _ vms _) \<Rightarrow>
         if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
         then return $ Some $ p + (buffer_ptr && mask (pageBitsForSize vms))
         else return None
@@ -374,7 +374,7 @@ where
    | PDPointerTableCap _ None \<Rightarrow> throwError IllegalOperation
    | PML4Cap _ (Some x) \<Rightarrow> returnOk c
    | PML4Cap _ None \<Rightarrow> throwError IllegalOperation
-   | PageCap r R mt pgs x \<Rightarrow> returnOk (PageCap r R mt pgs None)
+   | PageCap dev r R mt pgs x \<Rightarrow> returnOk (PageCap dev r R mt pgs None)
    | ASIDControlCap \<Rightarrow> returnOk c
    | ASIDPoolCap _ _ \<Rightarrow> returnOk c
 (* FIXME x64-vtd: *)
@@ -425,7 +425,7 @@ where
     unmap_page_table a v ptr;
     return NullCap
   od
-  | (PageCap ptr _ _ s (Some (a, v)), _) \<Rightarrow> do
+  | (PageCap _ ptr _ _ s (Some (a, v)), _) \<Rightarrow> do
      unmap_page s a v ptr;
      return NullCap
   od
@@ -438,7 +438,7 @@ text {* Remove record of mappings to a page cap, page table cap or page director
 fun
   arch_reset_mem_mapping :: "arch_cap \<Rightarrow> arch_cap"
 where
-  "arch_reset_mem_mapping (PageCap p rts mt sz mp) = PageCap p rts mt sz None"
+  "arch_reset_mem_mapping (PageCap dev p rts mt sz mp) = PageCap dev p rts mt sz None"
 | "arch_reset_mem_mapping (PageTableCap ptr mp) = PageTableCap ptr None"
 | "arch_reset_mem_mapping (PageDirectoryCap ptr ma) = PageDirectoryCap ptr None"
 | "arch_reset_mem_mapping (PDPointerTableCap ptr ma) = PDPointerTableCap ptr None"
@@ -454,8 +454,8 @@ definition
   arch_recycle_cap :: "bool \<Rightarrow> arch_cap \<Rightarrow> (arch_cap,'z::state_ext) s_monad"
 where
   "arch_recycle_cap is_final cap \<equiv> case cap of
-    PageCap p _ _ sz _ \<Rightarrow> do
-      do_machine_op $ clearMemory p (2 ^ pageBitsForSize sz);
+    PageCap dev p _ _ sz _ \<Rightarrow> do
+      unless dev $ do_machine_op $ clearMemory p (2 ^ pageBitsForSize sz);
       arch_finalise_cap cap is_final;
       return $ arch_reset_mem_mapping cap
     od
@@ -566,7 +566,7 @@ qed
 definition
 check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) se_monad" where
 "check_valid_ipc_buffer vptr c \<equiv> case c of
-  (ArchObjectCap (PageCap _ _ _ _ _)) \<Rightarrow> doE
+  (ArchObjectCap (PageCap False _ _ _ _ _)) \<Rightarrow> doE
     whenE (\<not> is_aligned vptr msg_align_bits) $ throwError AlignmentError;
     returnOk ()
   odE
@@ -594,7 +594,7 @@ text {* Update the mapping data saved in a page or page table capability. *}
 definition
   update_map_data :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref) option \<Rightarrow> arch_cap" where
   "update_map_data cap m \<equiv> case cap of 
-     PageCap p R mt sz _ \<Rightarrow> PageCap p R mt sz m
+     PageCap dev p R mt sz _ \<Rightarrow> PageCap dev p R mt sz m
    | PageTableCap p _ \<Rightarrow> PageTableCap p m
    | PageDirectoryCap p _ \<Rightarrow> PageDirectoryCap p m
    | PDPointerTableCap p _ \<Rightarrow> PDPointerTableCap p m"
@@ -606,7 +606,7 @@ definition
   in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "in_user_frame p s \<equiv>
    \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) =
-        Some (ArchObj (DataPage sz))"
+        Some (ArchObj (DataPage False sz))"
 
 end
 end

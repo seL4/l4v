@@ -30,7 +30,7 @@ definition
          ASIDPoolCap r as \<Rightarrow> True
        | ASIDControlCap \<Rightarrow> False
        | IOPortCap first_port last_port \<Rightarrow> True (* FIXME: stab in the dark. *)
-       | PageCap r rghts maptype sz mapdata \<Rightarrow> False
+       | PageCap dev r rghts maptype sz mapdata \<Rightarrow> False
        | PageTableCap r mapdata \<Rightarrow> True
        | PageDirectoryCap r mapdata \<Rightarrow> True
        | PDPointerTableCap r mapdata \<Rightarrow> True
@@ -38,7 +38,7 @@ definition
 
 definition
   "cap_vptr_arch acap \<equiv> case acap of
-     (PageCap _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
+     (PageCap _ _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
   |  (PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
   |  (PageDirectoryCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
   |  (PDPointerTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
@@ -72,7 +72,7 @@ lemma is_derived_cap_arch_asid:
   by (auto simp: is_cap_simps cap_master_cap_def split: arch_cap.splits)
 
 lemma is_page_cap_PageCap[simp]:
-  "is_page_cap (PageCap ref rghts maptype pgsiz mapdata)"
+  "is_page_cap (PageCap dev ref rghts maptype pgsiz mapdata)"
   by (simp add: is_page_cap_def)
 
 lemma pageBitsForSize_eq[simp]:
@@ -85,7 +85,8 @@ lemma
   "cap_master_arch_cap (ASIDPoolCap pool asid) = ASIDPoolCap pool 0"
   "cap_master_arch_cap ASIDControlCap = ASIDControlCap"
   "cap_master_arch_cap (IOPortCap first_port last_port) = IOPortCap 0 (-1)"
-  "cap_master_arch_cap (PageCap ref rghts maptype sz mapdata) = PageCap ref UNIV VMNoMap sz None"
+  "cap_master_arch_cap (PageCap dev ref rghts maptype sz mapdata)
+      = PageCap dev ref UNIV VMNoMap sz None"
   "cap_master_arch_cap (PageTableCap ptr x) = PageTableCap ptr None"
   "cap_master_arch_cap (PageDirectoryCap ptr x) = PageDirectoryCap ptr None"
   "cap_master_arch_cap (PDPointerTableCap ptr x) = PDPointerTableCap ptr None"
@@ -104,7 +105,7 @@ lemma aobj_ref_cases:
     ASIDPoolCap w1 w2 \<Rightarrow> Some w1 
   | ASIDControlCap \<Rightarrow> None
   | IOPortCap _ _ \<Rightarrow> None
-  | PageCap w s mt sz opt \<Rightarrow> Some w
+  | PageCap dev w s mt sz opt \<Rightarrow> Some w
   | PageTableCap w opt \<Rightarrow> Some w
   | PageDirectoryCap w opt \<Rightarrow> Some w
   | PDPointerTableCap w opt \<Rightarrow> Some w
@@ -128,19 +129,19 @@ lemmas cap_asid_base_simps [simp] =
 
 definition
   "ups_of_heap h \<equiv> \<lambda>p.
-   case h p of Some (ArchObj (DataPage sz)) \<Rightarrow> Some sz | _ \<Rightarrow> None"
+   case h p of Some (ArchObj (DataPage dev sz)) \<Rightarrow> Some sz | _ \<Rightarrow> None"
 
 lemma ups_of_heap_typ_at:
-  "ups_of_heap (kheap s) p = Some sz \<longleftrightarrow> typ_at (AArch (AIntData sz)) p s"
-  by (simp add: typ_at_eq_kheap_obj ups_of_heap_def
-      split: option.splits Structures_A.kernel_object.splits
-             arch_kernel_obj.splits)
+  "ups_of_heap (kheap s) p = Some sz \<longleftrightarrow> data_at sz p s"
+  by (auto simp: typ_at_eq_kheap_obj ups_of_heap_def data_at_def
+          split: option.splits Structures_A.kernel_object.splits
+                 arch_kernel_obj.splits)
 
 lemma ups_of_heap_typ_at_def:
   "ups_of_heap (kheap s) \<equiv> \<lambda>p.
-   if \<exists>!sz. typ_at (AArch (AIntData sz)) p s
-     then Some (THE sz. typ_at (AArch (AIntData sz)) p s)
-   else None"
+   if \<exists>!sz. data_at sz p s
+     then Some (THE sz. data_at sz p s)
+     else None"
   apply (rule eq_reflection)
   apply (rule ext)
   apply (clarsimp simp: ups_of_heap_typ_at)
@@ -148,8 +149,7 @@ lemma ups_of_heap_typ_at_def:
    apply (frule (1) theI')
   apply safe
    apply (fastforce simp: ups_of_heap_typ_at)
-  apply (clarsimp simp add: obj_at_def)
-  done
+  by (auto simp: obj_at_def data_at_def)
 
 lemma ups_of_heap_non_arch_upd:
   "h x = Some ko \<Longrightarrow> non_arch_obj ko \<Longrightarrow> non_arch_obj ko' \<Longrightarrow> ups_of_heap (h(x \<mapsto> ko')) = ups_of_heap h"
@@ -271,6 +271,16 @@ lemma set_untyped_cap_as_full_not_final_not_pg_cap:
     subgoal by (auto simp: cte_wp_at_caps_of_state is_cap_simps masked_as_full_def cap_bits_untyped_def)
    apply (wp set_untyped_cap_as_full_cte_wp_at_neg)
    apply (auto simp: cte_wp_at_caps_of_state is_cap_simps masked_as_full_def cap_bits_untyped_def)
+  done
+
+lemma arch_derived_is_device:
+  "\<lbrakk>cap_master_arch_cap c = cap_master_arch_cap c';
+        is_derived_arch (ArchObjectCap c) (ArchObjectCap c')\<rbrakk>
+       \<Longrightarrow> arch_cap_is_device c' = arch_cap_is_device c"
+  apply (case_tac c)
+  apply (clarsimp simp: is_derived_arch_def
+    cap_range_def is_cap_simps cap_master_cap_def cap_master_arch_cap_def
+              split: split_if_asm cap.splits arch_cap.splits)+
   done
 
 end

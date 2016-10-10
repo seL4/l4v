@@ -48,7 +48,7 @@ datatype arch_cap =
  | IOSpaceCap (cap_io_domain_id : "16 word") (cap_io_pci_device : "io_asid option")
  | IOPageTableCap (cap_iopt_base_ptr : obj_ref) (cap_io_pt_level : nat) (cap_iopt_mapped_address : "(io_asid * vspace_ref) option")
 *)
- | PageCap obj_ref (acap_rights : cap_rights) vm_map_type vmpage_size "(asid * vspace_ref) option"
+ | PageCap bool obj_ref (acap_rights : cap_rights) vm_map_type vmpage_size "(asid * vspace_ref) option"
  | PageTableCap obj_ref "(asid * vspace_ref) option"
  | PageDirectoryCap obj_ref "(asid * vspace_ref) option"
  | PDPointerTableCap obj_ref "(asid * vspace_ref) option"
@@ -142,7 +142,7 @@ datatype arch_kernel_obj =
  | PageDirectory "9 word \<Rightarrow> pde"
  | PDPointerTable "9 word \<Rightarrow> pdpte"
  | PageMapL4 "9 word \<Rightarrow> pml4e"
- | DataPage vmpage_size
+ | DataPage bool vmpage_size
 (* FIXME x64-vtd:
  | IORootTable "16 word \<Rightarrow> iorte"
  | IOContextTable "16 word \<Rightarrow> iocte"
@@ -170,11 +170,26 @@ where
 (* FIXME x64-vtd:
 | "arch_obj_size (IOSpaceCap _ _) = 0"
 | "arch_obj_size (IOPageTableCap _ _ _) = iotable_size" (* FIXME: check *) *)
-| "arch_obj_size (PageCap _ _ _ sz _) = pageBitsForSize sz"
+| "arch_obj_size (PageCap _ _ _ _ sz _) = pageBitsForSize sz"
 | "arch_obj_size (PageTableCap _ _) = table_size"
 | "arch_obj_size (PageDirectoryCap _ _) = table_size"
 | "arch_obj_size (PDPointerTableCap _ _) = table_size"
 | "arch_obj_size (PML4Cap _ _) = table_size"
+
+primrec
+  arch_cap_is_device :: "arch_cap \<Rightarrow> bool"
+where
+  "arch_cap_is_device (ASIDPoolCap _ _) = False"
+| "arch_cap_is_device ASIDControlCap = False"
+| "arch_cap_is_device (IOPortCap _ _) = False"
+(* FIXME x64-vtd:
+| "arch_cap_is_device (IOSpaceCap _ _) = False"
+| "arch_cap_is_device (IOPageTableCap _ _ _) = False" (* FIXME: check *) *)
+| "arch_cap_is_device (PageCap is_dev _ _ _ _ _) = is_dev"
+| "arch_cap_is_device (PageTableCap _ _) = False"
+| "arch_cap_is_device (PageDirectoryCap _ _) = False"
+| "arch_cap_is_device (PDPointerTableCap _ _) = False"
+| "arch_cap_is_device (PML4Cap _ _) = False"
 
 primrec
   arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat"
@@ -184,7 +199,7 @@ where
 | "arch_kobj_size (PageDirectory _) = table_size"
 | "arch_kobj_size (PDPointerTable _) = table_size"
 | "arch_kobj_size (PageMapL4 _) = table_size"
-| "arch_kobj_size (DataPage sz) = pageBitsForSize sz"
+| "arch_kobj_size (DataPage _ sz) = pageBitsForSize sz"
 
 primrec
   aobj_ref :: "arch_cap \<rightharpoonup> obj_ref"
@@ -195,7 +210,7 @@ where
 (* FIXME x64-vtd:
 | "aobj_ref (IOSpaceCap _ _) = None"
 | "aobj_ref (IOPageTableCap x _ _) = Some x" *)
-| "aobj_ref (PageCap x _ _ _ _) = Some x"
+| "aobj_ref (PageCap _ x _ _ _ _) = Some x"
 | "aobj_ref (PageDirectoryCap x _) = Some x"
 | "aobj_ref (PageTableCap x _) = Some x"
 | "aobj_ref (PDPointerTableCap x _) = Some x"
@@ -205,7 +220,7 @@ where
 definition
   acap_rights_update :: "cap_rights \<Rightarrow> arch_cap \<Rightarrow> arch_cap" where
  "acap_rights_update rs ac \<equiv> case ac of
-    PageCap x rs' m sz as \<Rightarrow> PageCap x (validate_vm_rights rs) m sz as
+    PageCap dev x rs' m sz as \<Rightarrow> PageCap dev x (validate_vm_rights rs) m sz as
   | _                   \<Rightarrow> ac"
 
 section {* Architecture-specific object types and default objects *}
@@ -222,11 +237,20 @@ datatype
   | ASIDPoolObj
 
 definition
-  arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> arch_cap" where
- "arch_default_cap tp r n \<equiv> case tp of
-  SmallPageObj \<Rightarrow> PageCap r vm_read_write VMNoMap X64SmallPage None
-  | LargePageObj \<Rightarrow> PageCap r vm_read_write VMNoMap X64LargePage None
-  | HugePageObj \<Rightarrow> PageCap r vm_read_write VMNoMap X64HugePage None
+  arch_is_frame_type :: "aobject_type \<Rightarrow> bool"
+where
+  "arch_is_frame_type aobj \<equiv> case aobj of
+         SmallPageObj \<Rightarrow> True
+       | LargePageObj \<Rightarrow> True
+       | HugePageObj \<Rightarrow> True
+       | _ \<Rightarrow> False"
+
+definition
+  arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_cap" where
+ "arch_default_cap tp r n dev \<equiv> case tp of
+    SmallPageObj \<Rightarrow> PageCap dev r vm_read_write VMNoMap X64SmallPage None
+  | LargePageObj \<Rightarrow> PageCap dev r vm_read_write VMNoMap X64LargePage None
+  | HugePageObj \<Rightarrow> PageCap dev r vm_read_write VMNoMap X64HugePage None
   | PageTableObj \<Rightarrow> PageTableCap r None
   | PageDirectoryObj \<Rightarrow> PageDirectoryCap r None
   | PDPTObj \<Rightarrow> PDPointerTableCap r None
@@ -234,11 +258,11 @@ definition
   | ASIDPoolObj \<Rightarrow> ASIDPoolCap r 0" (* unused *)
 
 definition
-  default_arch_object :: "aobject_type \<Rightarrow> nat \<Rightarrow> arch_kernel_obj" where
- "default_arch_object tp n \<equiv> case tp of
-    SmallPageObj \<Rightarrow> DataPage X64SmallPage 
-  | LargePageObj \<Rightarrow> DataPage X64LargePage
-  | HugePageObj \<Rightarrow> DataPage X64HugePage
+  default_arch_object :: "aobject_type \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> arch_kernel_obj" where
+ "default_arch_object tp dev n \<equiv> case tp of
+    SmallPageObj \<Rightarrow> DataPage dev X64SmallPage 
+  | LargePageObj \<Rightarrow> DataPage dev X64LargePage
+  | HugePageObj \<Rightarrow> DataPage dev X64HugePage
   | PageTableObj \<Rightarrow> PageTable (\<lambda>x. InvalidPTE)
   | PageDirectoryObj \<Rightarrow> PageDirectory (\<lambda>x. InvalidPDE)
   | PDPTObj \<Rightarrow> PDPointerTable (\<lambda>x. InvalidPDPTE)
@@ -331,7 +355,8 @@ datatype aa_type =
   | APageDirectory
   | APDPointerTable
   | APageMapL4
-  | AIntData vmpage_size
+  | AUserData vmpage_size
+  | ADeviceData vmpage_size
 
 (* FIXME x64-vtd: add *)
 definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type"
@@ -339,12 +364,10 @@ where
  "aa_type ao \<equiv> (case ao of
            PageTable pt             \<Rightarrow> APageTable
          | PageDirectory pd         \<Rightarrow> APageDirectory
-         | DataPage sz              \<Rightarrow> AIntData sz
+         | DataPage dev sz          \<Rightarrow> if dev then ADeviceData sz else AUserData sz
          | ASIDPool f               \<Rightarrow> AASIDPool
          | PDPointerTable pdpt      \<Rightarrow> APDPointerTable
          | PageMapL4 pm             \<Rightarrow> APageMapL4)"
-
-
 
 end
 end

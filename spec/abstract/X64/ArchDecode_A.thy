@@ -182,8 +182,8 @@ where
  
 definition page_cap_set_vm_map_type :: "arch_cap \<Rightarrow> vm_map_type \<Rightarrow> arch_cap"
 where "page_cap_set_vm_map_type cap t \<equiv> (case cap of
-  PageCap p R map_type pgsz mapped_address \<Rightarrow> PageCap p R t pgsz mapped_address
-  | _ \<Rightarrow> undefined)" 
+  PageCap dev p R map_type pgsz mapped_address \<Rightarrow> PageCap dev p R t pgsz mapped_address
+  | _ \<Rightarrow> undefined)"
 
 definition 
   get_iovm_rights :: "vm_rights \<Rightarrow> vm_rights \<Rightarrow> vm_rights"
@@ -300,7 +300,7 @@ decode_page_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr 
                             \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
   "decode_page_invocation label args cte cap extra_caps \<equiv> (case cap of
-  PageCap p R map_type pgsz mapped_address \<Rightarrow> 
+  PageCap dev p R map_type pgsz mapped_address \<Rightarrow> 
     if invocation_type label = ArchInvocationLabel X64PageMap then
     if length args > 2 \<and> length extra_caps > 0
     then let vaddr = args ! 0;
@@ -323,7 +323,7 @@ where
                                                (attribs_from_word attr) vspace;
              ensure_safe_mapping entries;
              returnOk $ InvokePage $ PageMap asid 
-                       (ArchObjectCap $ PageCap p R map_type pgsz (Some (asid,vaddr))) cte entries
+                       (ArchObjectCap $ PageCap dev p R map_type pgsz (Some (asid,vaddr))) cte entries
           odE
     else throwError TruncatedMessage
     else if invocation_type label = ArchInvocationLabel X64PageRemap then
@@ -439,7 +439,7 @@ where
         odE
       else throwError IllegalOperation
 
-  | PageCap _ _ _ _ _ \<Rightarrow> decode_page_invocation label args cte cap extra_caps 
+  | PageCap _ _ _ _ _ _ \<Rightarrow> decode_page_invocation label args cte cap extra_caps 
 
   | PDPointerTableCap p mapped_address \<Rightarrow>
       if invocation_type label = ArchInvocationLabel X64PDPTMap then
@@ -487,7 +487,7 @@ where
                whenE (free_set = {}) $ throwError DeleteFirst;
                free \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_select asid_table) free_set;
                base \<leftarrow> returnOk (ucast free << asid_low_bits);
-               (p,n) \<leftarrow> (case untyped of UntypedCap p n f \<Rightarrow> returnOk (p,n)
+               (p,n) \<leftarrow> (case untyped of UntypedCap False p n f \<Rightarrow> returnOk (p,n)
                                         | _ \<Rightarrow> throwError $ InvalidCapability 1);
                frame \<leftarrow> (if n = pageBits
                         then doE

@@ -214,24 +214,28 @@ lemma get_pd_entry_None_iff_get_pde_fail:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
    get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr = None \<longleftrightarrow>
    get_pde (pd_ref + (vptr >> pd_shift_bits << 3)) s = ({}, True)"
-apply (subgoal_tac "(vptr >> pd_shift_bits << 3) && ~~ mask pd_bits = 0")
- apply (clarsimp simp add: get_pd_entry_def get_arch_obj_def
-            split: option.splits Structures_A.kernel_object.splits
-                   arch_kernel_obj.splits)
- apply (clarsimp simp add: get_pde_def get_pd_def bind_def return_def assert_def
-  get_object_def simpler_gets_def fail_def split_def mask_out_sub_mask mask_eqs)
- apply (subgoal_tac "pd_ref + (vptr >> pd_shift_bits << 3) -
-                    (pd_ref + (vptr >> pd_shift_bits << 3) && mask pd_shift_bits) = pd_ref")
-  apply (simp (no_asm_simp) add: fail_def return_def)
-  apply clarsimp
- apply (simp add: mask_add_aligned pd_bits_def pageBits_def pd_shift_bits_def ptTranslationBits_def table_size)
-apply (simp add: pd_bits_def pageBits_def)
-apply (simp add: and_not_mask)
-apply (simp add: shiftl_shiftr3 word_size shiftr_shiftr)
-apply (subgoal_tac "vptr >> 32 = 0", simp)
-apply (cut_tac shiftr_less_t2n'[of vptr 32 0], simp)
- apply (simp add: mask_eq_iff)
- apply (cut_tac lt2p_lem[of 32 vptr])
+  apply (subgoal_tac "(vptr >> pd_shift_bits << 3) && ~~ mask pd_bits = 0")
+   apply (clarsimp simp add: get_pd_entry_def get_arch_obj_def
+                      split: option.splits Structures_A.kernel_object.splits
+                             arch_kernel_obj.splits)
+   apply (clarsimp simp add: get_pde_def get_pd_def bind_def return_def assert_def
+                             get_object_def simpler_gets_def fail_def split_def mask_out_sub_mask
+                             mask_eqs)
+   apply (subgoal_tac "pd_ref + (vptr >> pd_shift_bits << 3) -
+                      (pd_ref + (vptr >> pd_shift_bits << 3) && mask pd_bits) = pd_ref")
+    apply (simp (no_asm_simp) add: fail_def return_def)
+    apply clarsimp
+   apply (simp add: mask_add_aligned pd_bits_def pageBits_def pd_shift_bits_def
+                    ptTranslationBits_def table_size
+                    and_not_mask shiftl_shiftr3 word_size shiftr_shiftr)+
+  apply (simp add: and_not_mask)
+  apply (simp add: pd_bits_def table_size_def ptTranslationBits_def word_size_bits_def pd_shift_bits_def)
+  apply (simp add: and_not_mask)
+  apply (simp add: shiftl_shiftr3 word_size shiftr_shiftr)
+  apply (subgoal_tac "vptr >> 32 = 0", simp)
+  apply (cut_tac shiftr_less_t2n'[of vptr 32 0], simp)
+  apply (simp add: mask_eq_iff)
+  apply (cut_tac lt2p_lem[of 32 vptr])
   apply (cut_tac word_bits_len_of, simp+)
 sorry
 
@@ -332,7 +336,7 @@ text {*
 *}
 definition
   get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow>
-                    word32 \<rightharpoonup> (word32 \<times> nat \<times> vm_attributes \<times> vm_rights)"
+                    machine_word \<rightharpoonup> (machine_word \<times> nat \<times> frame_attrs \<times> vm_rights)"
 where
   get_page_info_def:
   "get_page_info ahp pd_ref vptr \<equiv>
@@ -367,7 +371,7 @@ lemma pd_shifting':
   apply clarsimp
   apply (erule_tac x=n in allE)
   apply simp
-  done
+  sorry
 
 lemma lookup_pt_slot_fail:
   "is_aligned pd pd_bits \<Longrightarrow>

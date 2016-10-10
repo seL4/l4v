@@ -27,9 +27,9 @@ lemma cap_master_cap_arch_eqDs:
   "cap_master_cap cap = ArchObjectCap (IOPortCap first_port last_port)
      \<Longrightarrow> first_port = 0 \<and> last_port = -1
           \<and> (\<exists> first_port last_port. cap = ArchObjectCap (IOPortCap first_port last_port))"
-  "cap_master_cap cap = ArchObjectCap (PageCap ref rghts maptype sz mapdata)
+  "cap_master_cap cap = ArchObjectCap (PageCap dev ref rghts maptype sz mapdata)
      \<Longrightarrow> maptype = VMNoMap \<and> rghts = UNIV \<and> mapdata = None
-          \<and> (\<exists>maptype rghts mapdata. cap = ArchObjectCap (PageCap ref rghts maptype sz mapdata))"
+          \<and> (\<exists>maptype rghts mapdata. cap = ArchObjectCap (PageCap dev ref rghts maptype sz mapdata))"
   "cap_master_cap cap = ArchObjectCap (PageTableCap ptr data)
      \<Longrightarrow> data = None \<and> (\<exists>data. cap = ArchObjectCap (PageTableCap ptr data))"
   "cap_master_cap cap = ArchObjectCap (PageDirectoryCap ptr data)
@@ -57,7 +57,7 @@ lemma cap_master_cap_tcb_cap_valid_arch:
   "\<lbrakk> cap_master_cap c = cap_master_cap c'; is_arch_cap c \<rbrakk> \<Longrightarrow>
   tcb_cap_valid c p s = tcb_cap_valid c' p s"
   by (simp add: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
-                   valid_ipc_buffer_cap_def  is_cap_simps
+                   valid_ipc_buffer_cap_def is_cap_simps
             split: option.splits cap.splits arch_cap.splits
                    thread_state.splits)
 
@@ -90,8 +90,9 @@ proof -
 qed
 
 lemma valid_ipc_buffer_cap_0[simp, TcbAcc_AI_assms]:
-  "valid_ipc_buffer_cap cap 0"
-  by (simp add: valid_ipc_buffer_cap_def split: cap.split arch_cap.split)
+  "valid_ipc_buffer_cap cap a \<Longrightarrow> valid_ipc_buffer_cap cap 0"
+  by (auto simp: valid_ipc_buffer_cap_def case_bool_If
+          split: cap.split arch_cap.split)
 
 
 lemma mab_pb [simp]:

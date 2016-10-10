@@ -47,8 +47,8 @@ contained in the region of the first one. *}
 fun
   arch_same_region_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
 where
-  "arch_same_region_as (PageCap r R t s m) c' =
-   (\<exists> r' R' t' s' m'. c' = PageCap r' R' t' s' m' \<and>
+  "arch_same_region_as (PageCap dev r R t s m) c' =
+   (\<exists> dev' r' R' t' s' m'. c' = PageCap dev' r' R' t' s' m' \<and>
    (let
       topA = r + (1 << pageBitsForSize s) - 1;
       topB = r' + (1 << pageBitsForSize s') - 1
@@ -73,8 +73,8 @@ definition
   same_aobject_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool" where
  "same_aobject_as cp cp' \<equiv>
    (case (cp, cp') of
-      (PageCap ref _ _ pgsz _, PageCap ref' _ _ pgsz' _)
-          \<Rightarrow> (ref, pgsz) = (ref', pgsz')
+      (PageCap dev ref _ _ pgsz _, PageCap dev' ref' _ _ pgsz' _)
+          \<Rightarrow> (dev, ref, pgsz) = (dev', ref', pgsz')
               \<and> ref \<le> ref + 2 ^ pageBitsForSize pgsz - 1
     | (IOPortCap frst lst, IOPortCap frst' lst')
           \<Rightarrow> (frst, lst) = (frst', lst')
@@ -87,7 +87,7 @@ text {* Only caps with sufficient rights can be recycled. *}
 definition
   arch_has_recycle_rights :: "arch_cap \<Rightarrow> bool" where
   "arch_has_recycle_rights cap \<equiv> case cap of
-     PageCap _ R _ _ _ \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
+     PageCap _ _ R _ _ _ \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
    | _ \<Rightarrow> True"
 
 end

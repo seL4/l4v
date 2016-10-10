@@ -216,7 +216,7 @@ where
 subsection "Valid caps and objects"
 
 primrec
-  untyped_range :: "cap \<Rightarrow> word32 set"
+  untyped_range :: "cap \<Rightarrow> machine_word set"
 where
   "untyped_range (cap.UntypedCap dev p n f)             = {p..p + (1 << n) - 1}"
 | "untyped_range (cap.NullCap)                          = {}"
@@ -231,10 +231,10 @@ where
 | "untyped_range (cap.Zombie r b n)                     = {}"
 | "untyped_range (cap.ArchObjectCap cap)                = {}"
 
-primrec
-  usable_untyped_range :: "cap \<Rightarrow> word32 set"
+primrec (nonexhaustive)
+  usable_untyped_range :: "cap \<Rightarrow> machine_word set"
 where
- "usable_untyped_range (cap.UntypedCap _ p n f) =
+ "usable_untyped_range (UntypedCap _ p n f) =
   (if f < 2^n  then {p+of_nat f .. p + 2 ^ n - 1} else {})"
 
 definition

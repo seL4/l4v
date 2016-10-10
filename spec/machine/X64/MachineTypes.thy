@@ -309,6 +309,7 @@ record
   irq_masks :: "X64.irq \<Rightarrow> bool"
   irq_state :: nat
   underlying_memory :: "word64 \<Rightarrow> word8"
+  device_state :: "word64 \<Rightarrow> word8 option"
   machine_state_rest :: X64.machine_state_rest  
 
 consts irq_oracle :: "nat \<Rightarrow> word8"
@@ -349,9 +350,10 @@ text {*
 *}
 definition
   init_machine_state :: machine_state where
- "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks, 
+ "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,
                          irq_state = 0,
-                         underlying_memory = init_underlying_memory, 
+                         underlying_memory = init_underlying_memory,
+                         device_state = empty,
                          machine_state_rest = undefined \<rparr>"
 
 datatype vmpage_size =

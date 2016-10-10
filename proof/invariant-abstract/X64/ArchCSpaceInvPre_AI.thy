@@ -36,7 +36,7 @@ definition
      (case acap of
            ASIDPoolCap pool asid \<Rightarrow> ASIDPoolCap pool 0
          | IOPortCap first_port last_port \<Rightarrow> IOPortCap 0 (-1)
-         | PageCap ref rghts map_type sz map_data \<Rightarrow> PageCap ref UNIV VMNoMap sz None
+         | PageCap dev ref rghts map_type sz map_data \<Rightarrow> PageCap dev ref UNIV VMNoMap sz None
          | PageTableCap ptr data \<Rightarrow> PageTableCap ptr None
          | PageDirectoryCap ptr data \<Rightarrow> PageDirectoryCap ptr None
          | PDPointerTableCap ptr data \<Rightarrow> PDPointerTableCap ptr None
@@ -51,9 +51,9 @@ lemma
   "cap_master_arch_cap cap = IOPortCap first_port last_port
      \<Longrightarrow> first_port = 0 \<and> last_port = -1
           \<and> (\<exists>first_port last_port. cap = IOPortCap first_port last_port)"
-  "cap_master_arch_cap cap = PageCap ref rghts map_type sz map_data
+  "cap_master_arch_cap cap = PageCap dev ref rghts map_type sz map_data
      \<Longrightarrow> rghts = UNIV \<and> map_type = VMNoMap \<and> map_data = None
-          \<and> (\<exists>rghts map_type map_data. cap = PageCap ref rghts map_type sz map_data)"
+          \<and> (\<exists>rghts map_type map_data. cap = PageCap dev ref rghts map_type sz map_data)"
   "cap_master_arch_cap cap = PageTableCap ptr data
      \<Longrightarrow> data = None \<and> (\<exists>data. cap = PageTableCap ptr data)"
   "cap_master_arch_cap cap = PageDirectoryCap ptr data
@@ -313,9 +313,8 @@ lemma cap_refs_in_kernel_windowD:
   done
 
 lemma valid_cap_imp_valid_vm_rights:
-  "valid_cap (ArchObjectCap (PageCap mw rs mt sz m)) s \<Longrightarrow>
-   rs \<in> valid_vm_rights"
-by (simp add: valid_cap_def valid_vm_rights_def)
+  "valid_cap (ArchObjectCap (PageCap dev mw rs mt sz m)) s \<Longrightarrow> rs \<in> valid_vm_rights"
+  by (simp add: valid_cap_def valid_vm_rights_def)
 
 lemma acap_rights_update_idem [simp]:
   "acap_rights_update R (acap_rights_update R' cap) = acap_rights_update R cap"
