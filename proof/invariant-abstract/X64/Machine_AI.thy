@@ -30,12 +30,16 @@ ML {*
 structure CrunchNoIrqInstance : CrunchInstance =
 struct
   type extra = unit;
+  val eq_extra = op =;
   val name = "no_irq";
   val has_preconds = false;
   fun mk_term _ body _ =
     (Syntax.parse_term @{context} "no_irq") $ body;
   fun get_precond _ = error "crunch no_irq should not be calling get_precond";
   fun put_precond _ _ = error "crunch no_irq should not be calling put_precond";
+  fun dest_term (Const (@{const_name no_irq}, _) $ body)
+    = SOME (Term.dummy, body, ())
+    | dest_term _ = NONE;
   val pre_thms = [];
   val wpc_tactic = wp_cases_tactic_weak;
   fun parse_extra ctxt extra
