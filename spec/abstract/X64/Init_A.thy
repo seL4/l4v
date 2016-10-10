@@ -60,7 +60,8 @@ definition
     tcb_ipc_buffer = 0,
     tcb_context = empty_context,
     tcb_fault = None,
-    tcb_bound_notification = None
+    tcb_bound_notification = None,
+    tcb_mcpriority = minBound
   \<rparr>
   )"
 
