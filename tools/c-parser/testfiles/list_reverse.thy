@@ -9,7 +9,7 @@
  *)
 
 theory list_reverse
-imports "../CTranslation"
+imports "../CTranslation" "$L4V_ARCH/MachineWords"
 begin
 
 declare hrs_simps [simp add]
@@ -17,7 +17,7 @@ declare exists_left [simp add]
 declare sep_conj_ac [simp add]
 
 primrec
-  list :: "word32 list \<Rightarrow> word32 ptr \<Rightarrow> heap_state \<Rightarrow> bool"
+  list :: "machine_word list \<Rightarrow> machine_word ptr \<Rightarrow> heap_state \<Rightarrow> bool"
 where
   "list [] i = (\<lambda>s. i=NULL \<and> \<box> s)"
 | "list (x#xs) i = (\<lambda>s. i=Ptr x \<and> x\<noteq>0 \<and> (\<exists>j. ((i \<mapsto> j) \<and>\<^sup>* list xs (Ptr j)) s))"

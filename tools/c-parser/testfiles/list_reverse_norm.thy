@@ -9,14 +9,14 @@
  *)
 
 theory list_reverse_norm
-imports "../CTranslation"
+imports "../CTranslation" "$L4V_ARCH/MachineWords"
 begin
 
 declare sep_conj_ac [simp add]
 declare hrs_simps [simp add]
 
 primrec
-  list :: "word32 typ_heap \<Rightarrow> word32 list \<Rightarrow> word32 ptr \<Rightarrow> bool"
+  list :: "machine_word typ_heap \<Rightarrow> machine_word list \<Rightarrow> machine_word ptr \<Rightarrow> bool"
 where
   "list h [] i = (i = Ptr 0)"
 
@@ -63,7 +63,7 @@ lemma in_list_Some:
 
 lemma in_list_valid [simp]:
   "\<lbrakk> list (lift_t_c (h,d)) xs p; ptr_val q \<in> set xs \<rbrakk>
-  \<Longrightarrow> d \<Turnstile>\<^sub>t (q::word32 ptr)"
+  \<Longrightarrow> d \<Turnstile>\<^sub>t (q::machine_word ptr)"
   by (auto dest: in_list_Some simp: lift_t_if split: split_if_asm)
 
 lemma list_restrict:
