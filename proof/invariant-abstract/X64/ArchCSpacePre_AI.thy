@@ -9,14 +9,14 @@
  *)
 
 (*
-ARM-specific CSpace invariants
+X64-specific CSpace invariants
 *)
 
 theory ArchCSpacePre_AI
 imports "../CSpacePre_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 lemmas typ_at_eq_kheap_obj = typ_at_eq_kheap_obj atyp_at_eq_kheap_obj
 

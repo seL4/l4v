@@ -16,7 +16,7 @@ theory ArchRetype_AI
 imports "../Retype_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 named_theorems Retype_AI_assms
 
@@ -630,7 +630,7 @@ global_interpretation Retype_AI_post_retype_invs?: Retype_AI_post_retype_invs
   by (unfold_locales; fact post_retype_invs_def)
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 lemma dmo_mapM_x_ccr_invs[wp]:
   "\<lbrace>invs\<rbrace>
@@ -708,7 +708,7 @@ global_interpretation Retype_AI_slot_bits?: Retype_AI_slot_bits
   qed
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 lemma valid_untyped_helper [Retype_AI_assms]:
   assumes valid_c : "s  \<turnstile> c" 
@@ -943,7 +943,7 @@ sublocale retype_region_proofs_gen?: retype_region_proofs_gen ..
 end
 
 
-context Arch begin global_naming ARM (*FIXME: arch_split*)
+context Arch begin global_naming X64 (*FIXME: arch_split*)
 
 definition
   valid_vs_lookup2 :: "(vs_ref list \<times> word32) set \<Rightarrow> word32 set \<Rightarrow> (cslot_ptr \<rightharpoonup> cap) \<Rightarrow> bool"
@@ -1159,7 +1159,7 @@ lemmas post_retype_invs_axioms = retype_region_proofs_invs_axioms
 end
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 named_theorems Retype_AI_assms'
 
@@ -1180,7 +1180,7 @@ end
 
 
 global_interpretation Retype_AI?: Retype_AI
-  where no_gs_types = ARM.no_gs_types
+  where no_gs_types = X64.no_gs_types
     and post_retype_invs_check = post_retype_invs_check
     and post_retype_invs = post_retype_invs
     and region_in_kernel_window = region_in_kernel_window
@@ -1192,7 +1192,7 @@ global_interpretation Retype_AI?: Retype_AI
   qed
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 lemma retype_region_plain_invs:
   "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap ptr sz 

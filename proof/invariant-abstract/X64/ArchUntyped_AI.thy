@@ -12,7 +12,7 @@ theory ArchUntyped_AI
 imports "../Untyped_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 named_theorems Untyped_AI_assms
 
@@ -181,7 +181,7 @@ lemma retype_ret_valid_caps_aobj[Untyped_AI_assms]:
   range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0\<rbrakk>
             \<Longrightarrow> \<forall>y\<in>{0..<n}. s
                    \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object (ArchObject x6) us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api (ArchObject x6) us)) [0..<n])
-                              (kheap s)\<rparr> \<turnstile> ArchObjectCap (ARM_A.arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us)"
+                              (kheap s)\<rparr> \<turnstile> ArchObjectCap (X64_A.arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us)"
   apply (rename_tac aobject_type us n)
   apply (case_tac aobject_type)
 by (clarsimp simp:valid_cap_def default_object_def cap_aligned_def 
@@ -788,7 +788,7 @@ lemmas msimp[simp] = misc neg_mask_add_mask
 end
 
 global_interpretation Untyped_AI? : Untyped_AI
-  where nonempty_table = ARM.nonempty_table
+  where nonempty_table = X64.nonempty_table
  proof goal_cases
   interpret Arch .
   case 1 show ?case

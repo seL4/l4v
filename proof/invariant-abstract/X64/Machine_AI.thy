@@ -312,6 +312,9 @@ lemma no_irq_modify:
   apply (rule allI, simp add: valid_def put_def get_def)
   apply (clarsimp simp: in_monad)
   done
+  
+lemma no_irq_setCurrentVSpaceRoot: "no_irq (setCurrentVSpaceRoot pm addr)"
+  by (clarsimp simp: setCurrentVSpaceRoot_def)
 
 lemma no_irq_storeWord: "no_irq (storeWord w p)"
   apply (simp add: storeWord_def)    

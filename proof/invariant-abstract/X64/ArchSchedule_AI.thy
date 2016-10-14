@@ -12,7 +12,7 @@ theory ArchSchedule_AI
 imports "../Schedule_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 named_theorems Schedule_AI_asms
 
@@ -32,7 +32,7 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
   apply simp
   done
 
-global_naming ARM (*FIXME: arch_split*)
+global_naming X64 (*FIXME: arch_split*)
 lemma set_vm_root_kheap_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace> set_vm_root a
    \<lbrace>\<lambda>_ s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace>" (is "valid ?P _ _")
@@ -62,7 +62,7 @@ lemma arch_stt_invs [wp,Schedule_AI_asms]:
   apply wp
   apply (simp add: in_user_frame_def obj_at_def)
   apply (wp hoare_vcg_ex_lift)
-  apply (rule_tac x=ARMSmallPage in exI)
+  apply (rule_tac x=X64SmallPage in exI)
   apply (clarsimp simp add: invs_def valid_state_def valid_arch_state_def
            valid_pspace_def pspace_aligned_def obj_at_def dom_def)
   apply (drule spec, erule impE, fastforce)
@@ -89,7 +89,7 @@ lemma stit_invs [wp,Schedule_AI_asms]:
      apply wp
   apply (clarsimp simp: invs_def valid_state_def valid_idle_def pred_tcb_at_tcb_at)
   apply (clarsimp simp: in_user_frame_def valid_arch_state_def)
-  apply (rule_tac x=ARMSmallPage in exI)
+  apply (rule_tac x=X64SmallPage in exI)
   apply (clarsimp simp: obj_at_def)
   apply (drule_tac addr="arm_globals_frame (arch_state s)" in valid_pspace_aligned, simp)
   apply (drule is_aligned_neg_mask_eq, simp add: a_type_def)

@@ -3314,7 +3314,7 @@ lemma is_aligned_addrFromPPtr:
   "is_aligned p pageBits \<Longrightarrow> is_aligned (Platform.X64.addrFromPPtr p) pageBits"
   by (simp add: is_aligned_addrFromPPtr_n pageBits_def)
 
-(* FIXME x64: ARM magic numbers
+(* FIXME x64: X64 magic numbers
 lemma is_aligned_ptrFromPAddr_n:
   "\<lbrakk>is_aligned x sz; sz\<le> 28\<rbrakk>
   \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"

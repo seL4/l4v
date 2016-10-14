@@ -427,6 +427,19 @@ where
     PDPointerTablePML4E ptr x z \<Rightarrow> Some (ptrFromPAddr ptr)
   | _ \<Rightarrow> None"
 
+(* vs_ref is used to keep track of the translations of a given address.
+   The first argument is an index into the type of table given by the 
+   second argument. For example:
+     "VSRef x (Some APageTable)"
+   indicates that you use index x into the page table level of translation.
+   
+   These can be combined into a list to show the provenance of an address.
+   For example:
+    [VSRef x (Some APageTable), VSRef y (Some APageDirectory),
+     VSRef z (Some APDPointerTable), VSRef w (Some APageMapL4),
+     VSRef v (Some AASIDPool)]
+   shows the full translation from ASIDPool down through four levels of
+   page translation. *)
 datatype vs_ref = VSRef word64 "aa_type option"
 
 definition
@@ -1532,7 +1545,7 @@ lemma valid_table_caps_update [iff]:
 
 end
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 lemma global_refs_equiv:
   assumes "idle_thread s = idle_thread s'"
@@ -1624,8 +1637,8 @@ lemma pte_at_atyp:
   by (simp add: pte_at_def | wp x)+
 
 lemmas abs_atyp_at_lifts =
-  valid_pde_lift valid_pte_lift
-  pde_at_atyp pte_at_atyp
+  valid_pde_lift valid_pte_lift valid_pdpte_lift valid_pml4e_lift
+  pde_at_atyp pte_at_atyp pdpte_at_atyp pml4e_at_atyp
 
 lemma table_size:
   "table_size = 12"

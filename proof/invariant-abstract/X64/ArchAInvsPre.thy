@@ -14,7 +14,7 @@ begin
 
 context Arch begin
 
-global_naming ARM
+global_naming X64
 
 lemma kernel_mappings_slots_eq:
   "p \<in> kernel_mappings \<longleftrightarrow> ucast (p >> 20) \<in> kernel_mapping_slots"
@@ -61,19 +61,19 @@ lemma some_get_page_info_kmapsD:
                   split: option.splits Structures_A.kernel_object.splits
                          arch_kernel_obj.splits
                          pde.splits pte.splits)
-      apply (rule conjI, rule_tac x=ARMLargePage in exI, simp)
+      apply (rule conjI, rule_tac x=X64LargePage in exI, simp)
       apply (simp add: valid_pde_kernel_mappings_def obj_at_def
                        valid_pt_kernel_mappings_def)
       apply (drule_tac x="ucast ((p >> 12) && mask 8)" in spec)
       apply (clarsimp simp: valid_pte_kernel_mappings_def)
-     apply (rule conjI, rule_tac x=ARMSmallPage in exI, simp)
+     apply (rule conjI, rule_tac x=X64SmallPage in exI, simp)
      apply (simp add: valid_pde_kernel_mappings_def obj_at_def
                       valid_pt_kernel_mappings_def)
      apply (drule_tac x="ucast ((p >> 12) && mask 8)" in spec)
      apply (clarsimp simp: valid_pte_kernel_mappings_def)
-    apply (rule conjI, rule_tac x=ARMSection in exI, simp)
+    apply (rule conjI, rule_tac x=X64Section in exI, simp)
     apply (simp add: valid_pde_kernel_mappings_def)
-   apply (rule conjI, rule_tac x=ARMSuperSection in exI, simp)
+   apply (rule conjI, rule_tac x=X64SuperSection in exI, simp)
    apply (simp add: valid_pde_kernel_mappings_def)
    done
 
@@ -193,7 +193,7 @@ lemma (* ptable_rights_imp_user_frame *)[AInvsPre_asms]:
   apply (frule is_aligned_add_helper[OF _ and_mask_less',
                                      THEN conjunct2, of _ _ x])
    apply (simp only: pbfs_less_wb'[simplified word_bits_def])
-  apply (clarsimp simp: ptrFromPAddr_def Platform.ARM.addrFromPPtr_def
+  apply (clarsimp simp: ptrFromPAddr_def Platform.X64.addrFromPPtr_def
                         field_simps)
   apply (rule_tac x=sz in exI)
   apply (subst add.assoc[symmetric])

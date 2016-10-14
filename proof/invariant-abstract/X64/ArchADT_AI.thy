@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header {* ARM-specific definitions for abstract datatype for the abstract specification *}
+header {* X64-specific definitions for abstract datatype for the abstract specification *}
 
 theory ArchADT_AI
 imports

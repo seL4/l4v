@@ -12,7 +12,7 @@ theory ArchArch_AI
 imports "../Arch_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 definition
   "valid_aci aci \<equiv> case aci of MakePool frame slot parent base \<Rightarrow>   
@@ -409,7 +409,7 @@ lemma valid_asid_map':
 end
 
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 lemma valid_arch_state_strg:
   "valid_arch_state s \<and> ap \<notin> ran (arm_asid_table (arch_state s)) \<and> asid_pool_at ap s \<longrightarrow>
@@ -1232,7 +1232,7 @@ lemma create_mapping_entries_same_refs_ex:
     (\<lambda>s. \<exists>pd_cap pd_cptr asid rights'. cte_wp_at (diminished pd_cap) pd_cptr s
           \<and> pd_cap = cap.ArchObjectCap (arch_cap.PageDirectoryCap pd (Some asid))
           \<and> page_directory_at pd s \<and> vaddr < kernel_base \<and> (cap = (cap.ArchObjectCap (arch_cap.PageCap p rights' pgsz (Some (asid, vaddr))))))\<rbrace>
-   create_mapping_entries (Platform.ARM.addrFromPPtr p) vaddr pgsz rights attribs pd
+   create_mapping_entries (Platform.X64.addrFromPPtr p) vaddr pgsz rights attribs pd
    \<lbrace>\<lambda>rv s. same_refs rv cap s\<rbrace>,-"
   apply (clarsimp simp: validE_R_def validE_def valid_def split: sum.split)
   apply (erule use_validE_R[OF _ create_mapping_entries_same_refs])
@@ -1389,7 +1389,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (clarsimp simp:diminished_def)
     apply (simp add: arch_decode_invocation_def Let_def split_def 
                 cong: if_cong split del: split_if)
-    apply (cases "invocation_type label = ArchInvocationLabel ARMPageMap")
+    apply (cases "invocation_type label = ArchInvocationLabel X64PageMap")
      apply (rename_tac word rights vmpage_size option)
      apply (simp split del: split_if)
      apply (rule hoare_pre)
@@ -1418,7 +1418,7 @@ lemma arch_decode_inv_wf[wp]:
                        elim: is_aligned_weaken split: vmpage_size.split
                      intro!: is_aligned_addrFromPPtr pbfs_atleast_pageBits,
             (fastforce intro: diminished_pd_self)+)[1]
-    apply (cases "invocation_type label = ArchInvocationLabel ARMPageRemap")
+    apply (cases "invocation_type label = ArchInvocationLabel X64PageRemap")
      apply (rename_tac word rights vmpage_size option)
      apply (simp split del: split_if)
      apply (rule hoare_pre)
@@ -1442,7 +1442,7 @@ lemma arch_decode_inv_wf[wp]:
                  elim: is_aligned_weaken 
                intro!: is_aligned_addrFromPPtr pbfs_atleast_pageBits,
             fastforce+)[1]
-    apply (cases "invocation_type label = ArchInvocationLabel ARMPageUnmap")
+    apply (cases "invocation_type label = ArchInvocationLabel X64PageUnmap")
      apply (simp split del: split_if)
      apply (rule hoare_pre, wp)
      apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
@@ -1462,7 +1462,7 @@ lemma arch_decode_inv_wf[wp]:
         apply (wp find_pd_for_asid_pd_at_asid | wpc)+
      apply (clarsimp simp: valid_cap_def mask_def)
     apply (simp split del: split_if)
-    apply (cases "invocation_type label = ArchInvocationLabel ARMPageGetAddress")
+    apply (cases "invocation_type label = ArchInvocationLabel X64PageGetAddress")
      apply (simp split del: split_if)
      apply (rule hoare_pre, wp)
      apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)

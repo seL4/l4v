@@ -18,18 +18,17 @@ begin
 
 context Arch begin global_naming X64
 
-lemma kernel_base_shift_cast_le:
-  fixes x :: "12 word"
-  shows  "(kernel_base >> 52 \<le> ucast x) =
-        (ucast (kernel_base >> 52) \<le> x)"
-  apply (simp add: word_le_def)
-  apply (subst uint_ucast, simp,
-         simp add: kernel_base_def)
-  apply (simp add: ucast_def)
-  apply (subst word_uint.Abs_inverse)
-   apply (cut_tac x=x in word_uint.Rep)
-   apply (simp add: uints_num)
-  apply simp
+abbreviation "canonicalise x \<equiv> (scast ((ucast x) :: 48 word)) :: 64 word"
+
+(* FIXME x64: this needs canonical_address shenanigans *)
+lemma pptr_base_shift_cast_le:
+  fixes x :: "9 word"
+  shows  "((pptr_base >> pml4_shift_bits) && mask ptTranslationBits \<le> ucast x) =
+        (ucast (pptr_base >> pml4_shift_bits) \<le> x)"
+  apply (subgoal_tac "((pptr_base >> pml4_shift_bits) && mask ptTranslationBits) = ucast (ucast (pptr_base >> pml4_shift_bits) :: 9 word)")
+   prefer 2
+   apply (simp add: ucast_ucast_mask ptTranslationBits_def)
+  apply (simp add: ucast_le_ucast)
   done
 
 (* FIXME: move to Invariant_AI *)
@@ -40,12 +39,10 @@ definition
       (\<lambda>(r,p). (VSRef (ucast r) (Some AASIDPool), p)) ` graph_of pool
   | PageMapL4 pm \<Rightarrow>
       (\<lambda>(r,p). (VSRef (ucast r) (Some APageMapL4), p)) ` graph_of (pml4e_ref \<circ> pm)
-(* FIXME: Not sure if we need these...
   | PDPointerTable pdpt \<Rightarrow>
       (\<lambda>(r,p). (VSRef (ucast r) (Some APDPointerTable), p)) ` graph_of (pdpte_ref \<circ> pdpt)
   | PageDirectory pd \<Rightarrow>
       (\<lambda>(r,p). (VSRef (ucast r) (Some APageDirectory), p)) ` graph_of (pde_ref \<circ> pd)
-*)
   | _ \<Rightarrow> {}"
 
 declare glob_vs_refs_arch_def[simp]
@@ -58,7 +55,6 @@ crunch pspace_in_kernel_window[wp]: unmap_page, perform_page_invocation "pspace_
 
 definition
   "vspace_at_uniq asid pd \<equiv> \<lambda>s. pd \<notin> ran (x64_asid_map (arch_state s) |` (- {asid}))"
-
 
 crunch inv[wp]: find_vspace_for_asid_assert "P"
   (simp: crunch_simps)
@@ -445,30 +441,19 @@ lemma find_vspace_for_asid_assert_wp:
   apply (simp add: mask_asid_low_bits_ucast_ucast)
   done
 
-
 lemma valid_vs_lookup_arch_update:
   "x64_asid_table (f (arch_state s)) = x64_asid_table (arch_state s)
      \<Longrightarrow> valid_vs_lookup (arch_state_update f s) = valid_vs_lookup s"
   by (simp add: valid_vs_lookup_def vs_lookup_pages_arch_update)
 
-
 crunch typ_at [wp]: find_vspace_for_asid "\<lambda>s. P (typ_at T p s)"
-
-crunch typ_at [wp]: flush_table "\<lambda>s. P (typ_at T p s)"
-  (simp: assertE_def whenE_def when_def wp: crunch_wps)
-
-
-lemmas flush_table_typ_ats [wp] = abs_typ_at_lifts [OF flush_table_typ_at]
 
 lemmas find_vspace_for_asid_typ_ats [wp] = abs_typ_at_lifts [OF find_vspace_for_asid_typ_at]
 
-crunch aligned [wp]: flush_table pspace_aligned
-  (simp: crunch_simps whenE_def when_def wp: crunch_wps)
-
-lemma find_vspace_for_asid_page_directory [wp]:
+lemma find_vspace_for_asid_page_map_l4 [wp]:
   "\<lbrace>valid_arch_objs\<rbrace> 
   find_vspace_for_asid asid 
-  \<lbrace>\<lambda>pd. page_directory_at pd\<rbrace>, -"
+  \<lbrace>\<lambda>pd. page_map_l4_at pd\<rbrace>, -"
   apply (simp add: find_vspace_for_asid_def assertE_def whenE_def split del: split_if)
   apply (wp|wpc|clarsimp|rule conjI)+
   apply (drule vs_lookup_atI)
@@ -503,33 +488,23 @@ lemma find_vspace_for_asid_lookup[wp]:
 lemma find_vspace_for_asid_pde [wp]:
   "\<lbrace>valid_arch_objs and pspace_aligned\<rbrace> 
   find_vspace_for_asid asid 
-  \<lbrace>\<lambda>pd. pde_at (pd + (vptr >> 20 << 2))\<rbrace>, -"
+  \<lbrace>\<lambda>pd. pml4e_at (pd + (get_pml4_index vptr << word_size_bits))\<rbrace>, -"
 proof -
   have x: 
     "\<lbrace>valid_arch_objs and pspace_aligned\<rbrace> find_vspace_for_asid asid 
-     \<lbrace>\<lambda>pd. pspace_aligned and page_directory_at pd\<rbrace>, -"
+     \<lbrace>\<lambda>pd. pspace_aligned and page_map_l4_at pd\<rbrace>, -"
     by (rule hoare_pre) (wp, simp)
   show ?thesis
     apply (rule hoare_post_imp_R, rule x)
     apply clarsimp
-    apply (erule page_directory_pde_atI)
+    apply (erule page_map_l4_pml4e_atI)
      prefer 2
      apply assumption
     apply (rule vptr_shiftr_le_2p)
     done
 qed
 
-
-crunch valid_objs [wp]: flush_page "valid_objs"
-  (wp: crunch_wps hoare_drop_imps simp: whenE_def crunch_simps)
-
-
 crunch valid_arch [wp]: store_pde "valid_arch_state" 
-
-
-crunch valid_arch [wp]: flush_page "valid_arch_state" 
-  (wp: crunch_wps simp: crunch_simps)
-
 
 lemma vs_lookup1_rtrancl_iterations:
   "(tup, tup') \<in> (vs_lookup1 s)\<^sup>*
@@ -569,8 +544,8 @@ lemma find_vspace_for_asid_lookup_none:
   done
 
 
-lemma find_vspace_for_asid_aligned_pd [wp]:
-  "\<lbrace>pspace_aligned and valid_arch_objs\<rbrace> find_vspace_for_asid asid \<lbrace>\<lambda>rv s. is_aligned rv 14\<rbrace>,-"
+lemma find_vspace_for_asid_aligned_pm [wp]:
+  "\<lbrace>pspace_aligned and valid_arch_objs\<rbrace> find_vspace_for_asid asid \<lbrace>\<lambda>rv s. is_aligned rv table_size\<rbrace>,-"
   apply (simp add: find_vspace_for_asid_def assertE_def split del: split_if)
   apply (rule hoare_pre)
    apply (wp|wpc)+
@@ -582,22 +557,20 @@ lemma find_vspace_for_asid_aligned_pd [wp]:
   apply (thin_tac "ko_at ko p s" for ko p)
   apply (clarsimp simp: pspace_aligned_def obj_at_def)
   apply (drule bspec, blast)
-  apply (clarsimp simp: a_type_def 
+  apply (clarsimp simp: a_type_def bit_simps
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits split_if_asm)
   done
 
-
-lemma find_vspace_for_asid_aligned_pd_bits[wp]:
+lemma find_vspace_for_asid_aligned_pm_bits[wp]:
   "\<lbrace>pspace_aligned and valid_arch_objs\<rbrace>
       find_vspace_for_asid asid
-   \<lbrace>\<lambda>rv s. is_aligned rv pd_bits\<rbrace>, -"
-  by (simp add: pd_bits_def pageBits_def, rule find_vspace_for_asid_aligned_pd)
-
+   \<lbrace>\<lambda>rv s. is_aligned rv pml4_bits\<rbrace>, -"
+  by (simp add: pml4_bits_def pageBits_def, rule find_vspace_for_asid_aligned_pm)
 
 lemma find_vspace_for_asid_lots:
   "\<lbrace>\<lambda>s. (\<forall>rv. ([VSRef (asid && mask asid_low_bits) (Some AASIDPool),
    VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> rv) s
-           \<longrightarrow> (valid_arch_objs s \<longrightarrow> page_directory_at rv s)
+           \<longrightarrow> (valid_arch_objs s \<longrightarrow> page_map_l4_at rv s)
            \<longrightarrow> Q rv s)
        \<and> ((\<forall>rv. \<not> ([VSRef (asid && mask asid_low_bits) (Some AASIDPool),
    VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> rv) s) \<longrightarrow> (\<forall>e. E e s))\<rbrace>
@@ -614,12 +587,11 @@ lemma find_vspace_for_asid_lots:
   apply (clarsimp split: sum.split_asm)
   apply (drule spec, drule uncurry, erule mp)
   apply clarsimp
-  apply (frule use_valid [OF _ find_vspace_for_asid_page_directory
+  apply (frule use_valid [OF _ find_vspace_for_asid_page_map_l4
                                 [unfolded validE_R_def validE_def]])
    apply simp
   apply simp
   done
-
 
 lemma vs_lookup1_inj:
   "\<lbrakk> ((ref, p), (ref', p')) \<in> vs_lookup1 s ^^ n;
@@ -633,7 +605,6 @@ lemma vs_lookup1_inj:
   apply (auto simp: vs_refs_def up_ucast_inj_eq dest!: graph_ofD
              split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm)
   done
-
 
 lemma vs_lookup_Cons_eq:
   "(ref \<rhd> p) s \<Longrightarrow> ((v # ref) \<rhd> p') s = ((ref, p) \<rhd>1 (v # ref, p')) s"
@@ -650,79 +621,10 @@ lemma vs_lookup_Cons_eq:
   apply simp
   done
 
-
-lemma vptr_shifting_3_ways:
-  fixes vptr :: word32 shows
-  "vptr >> 20 << 2 >> 2 = vptr >> 20"
-  apply (rule shiftl_shiftr_id, simp add: word_bits_def)
-  apply (rule shiftr_less_t2n', simp_all add: word_bits_def)
-  apply (cut_tac word_log_esimps[where x=vptr])
-  apply (simp add: mask_def)
-  done
-
-
-lemma page_table_mapped_wp:
-  "\<lbrace>\<lambda>s. valid_arch_objs s \<and> pspace_aligned s
-        \<and> (\<not> ([VSRef (vptr >> 20) (Some APageDirectory),
-               VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-               VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> pt) s
-                  \<longrightarrow> Q None s)
-        \<and> (\<forall>pd. vspace_at_asid asid pd s \<and> page_directory_at pd s
-                 \<and> is_aligned pd pd_bits
-                    \<longrightarrow> Q (Some pd) s)\<rbrace>
-     page_table_mapped asid vptr pt
-   \<lbrace>Q\<rbrace>"
-  (is "\<lbrace>?P\<rbrace> page_table_mapped asid vptr pt \<lbrace>Q\<rbrace>")
-  apply (simp add: page_table_mapped_def)
-  apply (rule hoare_pre)
-   apply (wp get_pde_wp find_vspace_for_asid_lots | wpc)+
-  apply (clarsimp simp: lookup_pd_slot_def Let_def vspace_at_asid_def)
-  apply (rule conjI[rotated])
-   apply (clarsimp simp: vs_lookup_def vs_asid_refs_def
-                  dest!: graph_ofD vs_lookup1D vs_lookup1_rtrancl_iterations)
-   apply (drule spec, erule notE, rule ImageI[rotated])
-    apply (rule image_eqI, rule refl, erule graph_ofI)
-   apply (rule r_into_rtrancl, simp)
-   apply (erule(1) vs_lookup1I)
-   apply simp
-  apply (clarsimp simp: vs_lookup_Cons_eq)
-  apply (frule(1) pd_aligned)
-  apply (clarsimp simp: vs_lookup1_def obj_at_def pd_shifting
-                        vs_refs_def pd_shifting_dual vptr_shifting_3_ways)
-  apply (simp add: pd_bits_def pageBits_def)
-  apply (auto simp: pde_ref_def ucast_up_ucast_id is_up_def a_type_simps
-                    source_size_def target_size_def word_size
-                    addrFromPPtr_def ptrFromPAddr_def
-             split: split_if_asm
-             dest!: graph_ofD)
-  done
-
-
-crunch typ_at [wp]: flush_page "\<lambda>s. P (typ_at T p s)"
-  (wp: crunch_wps hoare_drop_imps)
-
-
-lemmas flush_page_typ_ats [wp] = abs_typ_at_lifts [OF flush_page_typ_at]
-
-
-crunch aligned [wp]: flush_page "pspace_aligned"
-  (wp: crunch_wps hoare_drop_imps)
-
-
 definition
   valid_unmap :: "vmpage_size \<Rightarrow> asid * vspace_ref \<Rightarrow> bool"
 where
-  "valid_unmap sz \<equiv> \<lambda>(asid, vptr). 0 < asid \<and> is_aligned vptr pageBits \<and> 
-                                   (sz = ARMSuperSection \<longrightarrow> is_aligned vptr 24) \<and>
-                                   (sz = ARMLargePage \<longrightarrow> is_aligned vptr 16) \<and>
-                                   (sz = ARMSection \<longrightarrow> is_aligned vptr 20)"
-
-
-crunch vs_lookup [wp]: flush_page "\<lambda>s. P (vs_lookup s)"
-  (wp: crunch_wps simp: crunch_simps vs_lookup_arch_update)
-
-crunch vs_lookup_pages [wp]: flush_page "\<lambda>s. P (vs_lookup_pages s)"
-  (wp: crunch_wps simp: crunch_simps vs_lookup_pages_arch_update)
+  "valid_unmap sz \<equiv> \<lambda>(asid, vptr). 0 < asid \<and> is_aligned vptr (pageBitsForSize sz)" 
 
 lemma store_pde_vspace_at_asid:
   "\<lbrace>vspace_at_asid asid pd\<rbrace>
@@ -748,93 +650,85 @@ lemma store_pde_vspace_at_asid:
   apply (clarsimp simp: obj_at_def vs_refs_def)
   done
 
+crunch "distinct" [wp]: store_pde, store_pdpte, store_pml4e pspace_distinct
 
-lemma flush_page_vspace_at_asid [wp]:
-  "\<lbrace>vspace_at_asid a pd\<rbrace> flush_page pgsz pd asid vptr \<lbrace>\<lambda>_. vspace_at_asid a pd\<rbrace>"
-  apply (simp add: vspace_at_asid_def)
-  apply wp
-  done
-
-
-crunch "distinct" [wp]: store_pde pspace_distinct
-crunch "distinct" [wp]: flush_page pspace_distinct (simp: crunch_simps)
-
-definition "pg_entry_align pgsz \<equiv> case pgsz of 
-    ARMSmallPage \<Rightarrow> 2
-  | ARMLargePage \<Rightarrow> 6
-  | ARMSection \<Rightarrow> 2
-  | ARMSuperSection \<Rightarrow> 6"
-
-crunch "distinct" [wp]: flush_page pspace_distinct (simp: crunch_simps)
-
-
-crunch inv[wp]: check_mapping_pptr "P"
-
-lemma lookup_pd_slot_pd:
-  "is_aligned pd pd_bits \<Longrightarrow> (lookup_pd_slot pd vptr && ~~ mask pd_bits) = pd"
-  apply (simp add: lookup_pd_slot_def Let_def)
-  apply (rule pd_shifting)
-  apply (simp add: pd_bits_def pageBits_def)
-  done
-
-crunch arch_objs [wp]: flush_page valid_arch_objs
-  (simp: crunch_simps valid_arch_objs_arch_update)
-
-crunch equal_mappings [wp]: flush_page equal_kernel_mappings
-  (simp: crunch_simps)
-
-crunch global_objs [wp]: flush_page valid_global_objs
-  (simp: crunch_simps)
-
-lemma lookup_pt_slot_is_aligned:
-  "\<lbrace>(\<exists>\<rhd> pd) and K (vmsz_aligned vptr sz) and K (is_aligned pd pd_bits)
+lemma lookup_pdpt_slot_is_aligned:
+  "\<lbrace>(\<exists>\<rhd> pm) and K (vmsz_aligned vptr sz) and K (is_aligned pm pml4_bits)
     and valid_arch_state and valid_arch_objs and equal_kernel_mappings
     and pspace_aligned and valid_global_objs\<rbrace>
-     lookup_pt_slot pd vptr
-   \<lbrace>\<lambda>rv s. is_aligned rv (pg_entry_align sz)\<rbrace>,-"
-  apply (simp add: lookup_pt_slot_def)
-  apply (wp get_pde_wp | wpc)+
-  apply (clarsimp simp: lookup_pd_slot_pd)
+     lookup_pdpt_slot pm vptr
+   \<lbrace>\<lambda>rv s. is_aligned rv word_size_bits\<rbrace>,-"
+  apply (simp add: lookup_pdpt_slot_def)
+  apply (wp get_pml4e_wp | wpc)+
+  apply (clarsimp simp: lookup_pml4_slot_eq)
   apply (frule(2) valid_arch_objsD[rotated])
   apply simp
   apply (rule is_aligned_add)
-   apply (case_tac "ucast (lookup_pd_slot pd vptr && mask pd_bits >> 2) \<in> kernel_mapping_slots")
-    apply (frule kernel_mapping_slots_empty_pdeI)
+   apply (case_tac "ucast (lookup_pml4_slot pm vptr && mask pml4_bits >> word_size_bits) \<in> kernel_mapping_slots")
+    apply (frule kernel_mapping_slots_empty_pml4eI)
      apply (simp add: obj_at_def)+
-    apply clarsimp
     apply (erule_tac x="ptrFromPAddr x" in allE)
-    apply (simp add: pde_ref_def)
-    apply (erule is_aligned_weaken[OF is_aligned_global_pt])
+    apply (simp add: pml4e_ref_def)
+    apply (erule is_aligned_weaken[OF is_aligned_global_pdpt])
       apply ((simp add: invs_psp_aligned invs_arch_objs invs_arch_state
-                        pg_entry_align_def pt_bits_def pageBits_def
+                        pdpt_bits_def pageBits_def bit_simps
                  split: vmpage_size.split)+)[3]
-   apply (drule_tac x="ucast (lookup_pd_slot pd vptr && mask pd_bits >> 2)" in bspec, simp)  
+   apply (drule_tac x="ucast (lookup_pml4_slot pm vptr && mask pml4_bits >> word_size_bits)" in bspec, simp)  
    apply (clarsimp simp: obj_at_def a_type_def)
    apply (simp split: Structures_A.kernel_object.split_asm split_if_asm
                      arch_kernel_obj.split_asm)
    apply (erule is_aligned_weaken[OF pspace_alignedD], simp)
-   apply (simp add: obj_bits_def pg_entry_align_def  split: vmpage_size.splits)
+   apply (simp add: obj_bits_def bit_simps  split: vmpage_size.splits)
   apply (rule is_aligned_shiftl)
-  apply (rule is_aligned_andI1)
-  apply (rule is_aligned_shiftr)
-  apply (case_tac sz)
-     apply (clarsimp simp: vmsz_aligned_def pg_entry_align_def
-                    elim!: is_aligned_weaken  split: vmpage_size.splits)+
+  apply (simp add: bit_simps)
   done
 
-lemmas lookup_pt_slot_is_aligned_6 =
-  lookup_pt_slot_is_aligned[where sz=ARMLargePage,
-    unfolded pg_entry_align_def, simplified vmpage_size.simps]
-
-lemma lookup_pd_slot_aligned_6:
-  "\<lbrakk> vmsz_aligned vptr ARMSuperSection; is_aligned pd 14 \<rbrakk>
-        \<Longrightarrow> is_aligned (lookup_pd_slot pd vptr) 6"
+(* FIXME x64: need pd, pt versions of this *)
+lemma lookup_pd_slot_is_aligned:
+  "\<lbrace>(\<exists>\<rhd> pm) and K (vmsz_aligned vptr sz) and K (is_aligned pm pml4_bits)
+    and valid_arch_state and valid_arch_objs and equal_kernel_mappings
+    and pspace_aligned and valid_global_objs\<rbrace>
+     lookup_pd_slot pm vptr
+   \<lbrace>\<lambda>rv s. is_aligned rv word_size_bits\<rbrace>,-"
+  oops (*
   apply (simp add: lookup_pd_slot_def)
-  apply (erule aligned_add_aligned, simp_all add: word_bits_conv)
-  apply (intro is_aligned_shiftl is_aligned_shiftr)
-  apply (simp add: vmsz_aligned_def)
+  apply (rule hoare_pre)
+   apply (wp get_pdpte_wp hoare_vcg_all_lift_R | wpc | simp)+
+   apply (wp_once hoare_drop_imps)
+   apply (wp hoare_vcg_all_lift_R hoare_vcg_ex_lift_R)
+  apply (clarsimp simp: get_pd_index_def bit_simps)
+  apply (subgoal_tac "is_aligned (ptrFromPAddr x) word_size_bits")
+  apply (clarsimp simp: lookup_pml4_slot_eq)
+  apply (frule(2) valid_arch_objsD[rotated])
+  apply simp
+  apply (rule is_aligned_add)
+   apply (case_tac "ucast (lookup_pml4_slot pm vptr && mask pml4_bits >> word_size_bits) \<in> kernel_mapping_slots")
+    apply (frule kernel_mapping_slots_empty_pml4eI)
+     apply (simp add: obj_at_def)+
+    apply (erule_tac x="ptrFromPAddr x" in allE)
+    apply (simp add: pml4e_ref_def)
+    apply (erule is_aligned_weaken[OF is_aligned_global_pdpt])
+      apply ((simp add: invs_psp_aligned invs_arch_objs invs_arch_state
+                        pdpt_bits_def pageBits_def bit_simps
+                 split: vmpage_size.split)+)[3]
+   apply (drule_tac x="ucast (lookup_pml4_slot pm vptr && mask pml4_bits >> word_size_bits)" in bspec, simp)  
+   apply (clarsimp simp: obj_at_def a_type_def)
+   apply (simp split: Structures_A.kernel_object.split_asm split_if_asm
+                     arch_kernel_obj.split_asm)
+   apply (erule is_aligned_weaken[OF pspace_alignedD], simp)
+   apply (simp add: obj_bits_def bit_simps  split: vmpage_size.splits)
+  apply (rule is_aligned_shiftl)
+  apply (simp add: bit_simps)
+  done *)
+  
+lemma pd_pointer_table_at_aligned_pdpt_bits:
+  "\<lbrakk>pd_pointer_table_at pdpt s;pspace_aligned s\<rbrakk>
+       \<Longrightarrow> is_aligned pdpt pdpt_bits"
+  apply (clarsimp simp:obj_at_def)
+  apply (drule(1) pspace_alignedD)
+  apply (simp add:pdpt_bits_def pageBits_def)
   done
-
+  
 lemma page_directory_at_aligned_pd_bits:
   "\<lbrakk>page_directory_at pd s;pspace_aligned s\<rbrakk>
        \<Longrightarrow> is_aligned pd pd_bits"
@@ -843,74 +737,69 @@ lemma page_directory_at_aligned_pd_bits:
   apply (simp add:pd_bits_def pageBits_def)
   done
 
-crunch arch_objs [wp]: flush_page valid_arch_objs
-  (simp: crunch_simps valid_arch_objs_arch_update)
+lemma page_map_l4_at_aligned_pml4_bits:
+  "\<lbrakk>page_map_l4_at pm s;pspace_aligned s\<rbrakk>
+       \<Longrightarrow> is_aligned pm pml4_bits"
+  apply (clarsimp simp:obj_at_def)
+  apply (drule(1) pspace_alignedD)
+  apply (simp add:pml4_bits_def pageBits_def)
+  done
 
-
+(* FIXME x64: check *)
 definition
-  "empty_refs m \<equiv> case m of Inr (pde, _) \<Rightarrow> pde_ref pde = None | _ \<Rightarrow> True"
+  "empty_refs m \<equiv> case m of (VMPDE pde, _) \<Rightarrow> pde_ref pde = None 
+                          | (VMPDPTE pdpte, _) \<Rightarrow> pdpte_ref pdpte = None 
+                      | _ \<Rightarrow> True"
 
+definition 
+  "parent_for_refs entry \<equiv> \<lambda>cap. 
+     case entry of (VMPTE _, slot)
+        \<Rightarrow> slot \<in> obj_refs cap \<and> is_pt_cap cap \<and> cap_asid cap \<noteq> None
+      | (VMPDE _, slot) 
+        \<Rightarrow> slot \<in> obj_refs cap \<and> is_pd_cap cap \<and> cap_asid cap \<noteq> None
+      | (VMPDPTE _, slot)
+        \<Rightarrow> slot \<in> obj_refs cap \<and> is_pdpt_cap cap \<and> cap_asid cap \<noteq> None"
 
-definition
-  "parent_for_refs m \<equiv> \<lambda>cap.
-   case m of Inl (_, slots)
-      \<Rightarrow> (\<lambda>x. x && ~~ mask pt_bits) ` set slots \<subseteq> obj_refs cap
-              \<and> is_pt_cap cap \<and> cap_asid cap \<noteq> None
-    | Inr (_, slots)
-      \<Rightarrow> (\<lambda>x. x && ~~ mask pd_bits) ` set slots \<subseteq> obj_refs cap
-              \<and> is_pd_cap cap \<and> cap_asid cap \<noteq> None"
-
+(* FIXME x64: check *)
 definition
   "same_refs m cap s \<equiv>
       case m of
-      Inl (pte, slots) \<Rightarrow>
-        (\<exists>p. pte_ref_pages pte = Some p \<and> p \<in> obj_refs cap) \<and>
-        (case slots of 
-           [] \<Rightarrow> True
-         | x # xs \<Rightarrow> \<forall>ref. (ref \<rhd> (x && ~~ mask pt_bits)) s \<longrightarrow>
-                      vs_cap_ref cap = Some (VSRef (x && mask pt_bits >> 2) (Some APageTable) # ref))
-      | Inr (pde, slots) \<Rightarrow>
-          (\<exists>p. pde_ref_pages pde = Some p \<and> p \<in> obj_refs cap) \<and>
-          (case slots of
-             [] \<Rightarrow> True
-           | x # xs \<Rightarrow> \<forall>ref. (ref \<rhd> (x && ~~ mask pd_bits)) s \<longrightarrow>
-                        vs_cap_ref cap = Some (VSRef (x && mask pd_bits >> 2) (Some APageDirectory) # ref))"
-
+       (VMPTE pte, slot) \<Rightarrow>
+         (\<exists>p. pte_ref_pages pte = Some p \<and> p \<in> obj_refs cap) \<and>
+         (\<forall>ref. (ref \<rhd> (slot && ~~ mask pt_bits)) s \<longrightarrow> 
+           vs_cap_ref cap = Some (VSRef (slot && mask pt_bits >> word_size_bits) (Some APageTable) # ref))
+     | (VMPDE pde, slot) \<Rightarrow> 
+         (\<exists>p. pde_ref_pages pde = Some p \<and> p \<in> obj_refs cap) \<and>
+         (\<forall>ref. (ref \<rhd> (slot && ~~ mask pd_bits)) s \<longrightarrow> 
+           vs_cap_ref cap = Some (VSRef (slot && mask pd_bits >> word_size_bits) (Some APageDirectory) # ref))
+     | (VMPDPTE pdpte, slot) \<Rightarrow> 
+         (\<exists>p. pdpte_ref_pages pdpte = Some p \<and> p \<in> obj_refs cap) \<and>
+         (\<forall>ref. (ref \<rhd> (slot && ~~ mask pdpt_bits)) s \<longrightarrow> 
+           vs_cap_ref cap = Some (VSRef (slot && mask pdpt_bits >> word_size_bits) (Some APDPointerTable) # ref))"
 
 definition
   "valid_page_inv pi \<equiv> case pi of
-    PageMap asid cap ptr m \<Rightarrow>
+    PageMap cap ptr m \<Rightarrow>
       cte_wp_at (is_arch_update cap and (op = None \<circ> vs_cap_ref)) ptr
       and cte_wp_at is_pg_cap ptr
       and (\<lambda>s. same_refs m cap s)
       and valid_slots m
       and valid_cap cap
-      and K (is_pg_cap cap \<and> empty_refs m \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0)
+      and K (is_pg_cap cap \<and> empty_refs m)
       and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs m) slot s)
-      and (\<lambda>s. \<exists>pd. vspace_at_asid asid pd s)
-  | PageRemap asid m \<Rightarrow>
-      valid_slots m and K (empty_refs m \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0)
+  | PageRemap m \<Rightarrow>
+      valid_slots m and K (empty_refs m)
       and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs m) slot s)
       and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>cap. same_refs m cap s) slot s)
-      and (\<lambda>s. \<exists>pd. vspace_at_asid asid pd s)
   | PageUnmap cap ptr \<Rightarrow>
-     \<lambda>s. \<exists>r R sz m. cap = PageCap r R sz m \<and>
+     \<lambda>s. \<exists>d r R maptyp sz m. cap = PageCap d r R maptyp sz m \<and>
          case_option True (valid_unmap sz) m \<and>
          cte_wp_at (is_arch_diminished (cap.ArchObjectCap cap)) ptr s \<and>
          s \<turnstile> (cap.ArchObjectCap cap)
-  | PageFlush typ start end pstart pd asid \<Rightarrow>
-      vspace_at_asid asid pd and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
-definition 
-  "valid_pdi pdi \<equiv> case pdi of
-    PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
-      vspace_at_asid asid pd and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
-  | PageDirectoryNothing \<Rightarrow> \<top>"
-
-
 crunch aligned [wp]: unmap_page pspace_aligned
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 
 crunch "distinct" [wp]: unmap_page pspace_distinct
@@ -918,7 +807,7 @@ crunch "distinct" [wp]: unmap_page pspace_distinct
 
 
 crunch valid_objs[wp]: unmap_page "valid_objs"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 
 crunch caps_of_state [wp]: unmap_page "\<lambda>s. P (caps_of_state s)"
@@ -928,11 +817,9 @@ lemma set_cap_valid_slots[wp]:
   "\<lbrace>valid_slots x2\<rbrace> set_cap cap (a, b) 
           \<lbrace>\<lambda>rv s. valid_slots x2 s \<rbrace>"
    apply (case_tac x2)
-   apply (clarsimp simp:valid_slots_def)
-   apply (wp hoare_vcg_ball_lift)
-  apply (clarsimp simp:valid_slots_def)
-  apply (wp hoare_vcg_ball_lift)
-  done
+   apply (simp only:)
+   apply (case_tac aa; clarsimp simp: valid_slots_def)
+    by (wp hoare_vcg_ball_lift)
 
 definition
   empty_pde_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -941,12 +828,24 @@ where
   \<exists>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s \<and> 
        pd (ucast (p && mask pd_bits >> 2)) = InvalidPDE"
 
-
+definition
+  empty_pdpte_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "empty_pdpte_at p \<equiv> \<lambda>s. 
+  \<exists>pdpt. ko_at (ArchObj (PDPointerTable pdpt)) (p && ~~ mask pdpt_bits) s \<and> 
+       pdpt (ucast (p && mask pdpt_bits >> 2)) = InvalidPDPTE"
+       
+definition
+  empty_pml4e_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "empty_pml4e_at p \<equiv> \<lambda>s. 
+  \<exists>pml4. ko_at (ArchObj (PageMapL4 pml4)) (p && ~~ mask pml4_bits) s \<and> 
+       pml4 (ucast (p && mask pml4_bits >> 2)) = InvalidPML4E"
+       
 definition
   kernel_vsrefs :: "vs_ref set"
 where
- "kernel_vsrefs \<equiv> {r. case r of VSRef x y \<Rightarrow> (kernel_base >> 20) \<le> x}"
-
+ "kernel_vsrefs \<equiv> {r. case r of VSRef x y \<Rightarrow>  (pptr_base >> pml4_shift_bits) && mask ptTranslationBits \<le> x}"
 
 definition
   "valid_pti pti \<equiv> case pti of 
@@ -955,7 +854,7 @@ definition
      valid_pde pde and valid_cap cap and
      cte_wp_at (\<lambda>c. is_arch_update cap c \<and> cap_asid c = None) ptr and
      empty_pde_at p and
-     (\<lambda>s. \<exists>p' ref. vs_cap_ref cap = Some (VSRef (p && mask pd_bits >> 2) (Some APageDirectory) # ref)
+     (\<lambda>s. \<exists>p' ref. vs_cap_ref cap = Some (VSRef (p && mask pd_bits >> word_size_bits) (Some APageDirectory) # ref)
               \<and> (ref \<rhd> (p && ~~ mask pd_bits)) s
               \<and> pde_ref pde = Some p' \<and> p' \<in> obj_refs cap
               \<and> (\<exists>ao. ko_at (ArchObj ao) p' s \<and> valid_arch_obj ao s)
@@ -966,128 +865,58 @@ definition
        and is_final_cap' cap
        and K (is_pt_cap cap)"
 
+lemma flush_table_aligned[wp]:
+  "\<lbrace>pspace_aligned\<rbrace> flush_table a b c \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
+  by ((wp mapM_x_wp_inv get_cap_wp | wpc | simp add: flush_table_def)+ 
+      | rule hoare_pre)+
+       
 crunch aligned [wp]: unmap_page_table pspace_aligned
-  (wp: crunch_wps)
+  (wp: crunch_wps dmo_aligned simp: crunch_simps)
 
+lemma flush_table_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> flush_table a b c \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  by ((wp mapM_x_wp_inv get_cap_wp | wpc | simp add: flush_table_def)+ 
+      | rule hoare_pre)+ 
 
+lemmas flush_table_typ_ats [wp] = abs_typ_at_lifts [OF flush_table_typ_at]
+
+lemma flush_table_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> flush_table a b c \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  by ((wp mapM_x_wp_inv get_cap_wp | wpc | simp add: flush_table_def)+ 
+      | rule hoare_pre)+
+
+lemma flush_table_distinct[wp]:
+  "\<lbrace>pspace_distinct\<rbrace> flush_table a b c \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
+  by ((wp mapM_x_wp_inv get_cap_wp | wpc | simp add: flush_table_def)+ 
+      | rule hoare_pre)+
+  
+lemma flush_table_caps_of_state[wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> flush_table a b c \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
+  by ((wp mapM_x_wp_inv get_cap_wp | wpc | simp add: flush_table_def)+ 
+      | rule hoare_pre)+
+  
 crunch valid_objs [wp]: unmap_page_table valid_objs
   (wp: crunch_wps simp: crunch_simps)
-
 
 crunch "distinct" [wp]: unmap_page_table pspace_distinct
   (wp: crunch_wps simp: crunch_simps)
 
-
 crunch caps_of_state [wp]: unmap_page_table "\<lambda>s. P (caps_of_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
-
 crunch typ_at [wp]: unmap_page_table "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps hoare_drop_imps)
-
 
 definition
   "valid_apinv ap \<equiv> case ap of
   asid_pool_invocation.Assign asid p slot \<Rightarrow>
   (\<lambda>s. \<exists>pool. ko_at (ArchObj (arch_kernel_obj.ASIDPool pool)) p s \<and> 
               pool (ucast asid) = None)
-  and cte_wp_at (\<lambda>cap. is_pd_cap cap \<and> cap_asid cap = None) slot 
+  and cte_wp_at (\<lambda>cap. is_pml4_cap cap \<and> cap_asid cap = None) slot 
   and K (0 < asid \<and> asid \<le> 2^asid_bits - 1)
   and ([VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> p)"
 
-
-lemma store_hw_asid_invs:
-  "\<lbrace>invs and
-   (\<lambda>s. arm_asid_map (arch_state s) asid = None \<and> 
-        arm_hwasid_table (arch_state s) hw_asid = None \<and>
-        asid \<le> mask asid_bits)\<rbrace>
-  store_hw_asid asid hw_asid 
-  \<lbrace>\<lambda>x. invs\<rbrace>"
-  apply (rule hoare_add_post)
-    apply (rule store_hw_asid_valid_arch)
-   apply fastforce
-  apply (simp add: store_hw_asid_def)
-  apply (wp find_vspace_for_asid_assert_wp)
-  apply (clarsimp simp: invs_def valid_state_def)
-  apply (simp add: valid_global_refs_def global_refs_def
-                   valid_irq_node_def valid_arch_objs_arch_update
-                   valid_global_objs_def valid_arch_caps_def
-                   valid_table_caps_def valid_kernel_mappings_def
-                   valid_machine_state_def valid_vs_lookup_arch_update)
-  apply (simp add: valid_asid_map_def fun_upd_def[symmetric]
-                   vspace_at_asid_arch_up)
-  done
-
-lemma invalidateTLB_ASID_valid_irq_states:
-  "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> invalidateTLB_ASID x
-   \<lbrace>\<lambda>a b. valid_irq_states (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  apply(simp add: valid_irq_states_def | wp no_irq | simp add: no_irq_invalidateTLB_ASID)+
-  done
-
-lemma find_free_hw_asid_invs [wp]:
-  "\<lbrace>invs\<rbrace> find_free_hw_asid \<lbrace>\<lambda>asid. invs\<rbrace>"
-  apply (rule hoare_add_post)
-    apply (rule find_free_hw_asid_valid_arch)
-   apply fastforce
-  apply (simp add: find_free_hw_asid_def invalidate_hw_asid_entry_def invalidate_asid_def
-                   do_machine_op_def split_def
-              cong: option.case_cong)
-  apply (wp|wpc)+ 
-  apply (clarsimp simp: invs_def valid_state_def split del: split_if)
-  apply (simp add: valid_global_refs_def global_refs_def cur_tcb_def
-                   valid_irq_node_def valid_arch_objs_arch_update
-                   valid_global_objs_def valid_arch_caps_def
-                   valid_table_caps_def valid_kernel_mappings_def
-                   valid_machine_state_def valid_vs_lookup_arch_update)
-  apply (elim conjE)
-  apply (rule conjI)
-   apply(erule use_valid[OF _ invalidateTLB_ASID_valid_irq_states])
-   apply fastforce
-  apply(rule conjI)
-   apply clarsimp
-   apply (drule use_valid)
-     apply (rule_tac p=p in invalidateTLB_ASID_underlying_memory, simp, fastforce)
-  apply (clarsimp simp: valid_asid_map_def fun_upd_def[symmetric]
-                        vspace_at_asid_arch_up')
-  apply (rule conjI, blast)
-  apply (clarsimp simp: vspace_at_asid_def)
-  done
-
-lemma get_hw_asid_invs [wp]:
-  "\<lbrace>invs and K (a \<le> mask asid_bits)\<rbrace> get_hw_asid a \<lbrace>\<lambda>hw_asid. invs\<rbrace>"
-  apply (simp add: get_hw_asid_def)
-  apply (wp store_hw_asid_invs load_hw_asid_wp|wpc)+
-  apply simp
-  done
-
-lemma arm_context_switch_invs [wp]:
-  "\<lbrace>invs and K (a \<le> mask asid_bits)\<rbrace> arm_context_switch pd a \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: arm_context_switch_def)
-  apply (wp dmo_invs)
-  apply (rule hoare_post_imp[rotated])
-  apply (rule get_hw_asid_invs[simplified])
-  apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-          in use_valid)
-     apply ((clarsimp simp: setHardwareASID_def setCurrentPD_def writeTTBR0_def 
-                            isb_def dsb_def machine_op_lift_def
-                            machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule use_valid)
-   apply(wp no_irq | simp add: no_irq_setHardwareASID no_irq_setCurrentPD)+
-  done
-
-lemmas setCurrentPD_irq_masks = no_irq[OF no_irq_setCurrentPD]
-lemmas setHardwareASID_irq_masks = no_irq[OF no_irq_setHardwareASID]
-
-lemma dmo_setCurrentPD_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setCurrentPD addr) \<lbrace>\<lambda>y. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-          in use_valid)
-     apply ((clarsimp simp: setCurrentPD_def writeTTBR0_def dsb_def isb_def machine_op_lift_def
-                           machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule (1) use_valid[OF _ setCurrentPD_irq_masks])
-  done
+crunch device_state_inv[wp]: ackInterrupt, setCurrentVSpaceRoot "\<lambda>ms. P (device_state ms)"
 
 lemma dmo_ackInterrupt[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ackInterrupt irq) \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
@@ -1098,12 +927,24 @@ lemma dmo_ackInterrupt[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ackInterrupt 
                            machine_rest_lift_def split_def | wp)+)[3]
   apply(erule (1) use_valid[OF _ ackInterrupt_irq_masks])
   done
+  
+lemmas setCurrentVSpaceRoot_irq_masks = no_irq[OF no_irq_setCurrentVSpaceRoot]
+  
+lemma dmo_setCurrentVSpaceRoot_invs[wp]: 
+  "\<lbrace>invs\<rbrace> do_machine_op (setCurrentVSpaceRoot vspace addr) \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid)
+     apply ((clarsimp simp: setCurrentVSpaceRoot_def split_def machine_op_lift_def
+                           machine_rest_lift_def | wp)+)[3]
+  apply (erule (1) use_valid[OF _ setCurrentVSpaceRoot_irq_masks])
+  done
 
 lemma svr_invs [wp]:
   "\<lbrace>invs\<rbrace> set_vm_root t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: set_vm_root_def)
   apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp find_vspace_for_asid_inv hoare_vcg_all_lift | wpc | simp add: split_def)+
+   apply (wp hoare_whenE_wp find_vspace_for_asid_inv hoare_vcg_all_lift  | wpc | simp add: split_def)+
     apply (rule_tac Q'="\<lambda>_ s. invs s \<and> x2 \<le> mask asid_bits" in hoare_post_imp_R)
      prefer 2
      apply simp
@@ -1115,8 +956,6 @@ lemma svr_invs [wp]:
   apply(simp add: invs_valid_objs)
   done
 
-crunch pred_tcb_at[wp]: arm_context_switch "pred_tcb_at proj P t"
-
 lemma svr_pred_st_tcb[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vm_root t \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_vm_root_def)
@@ -1126,7 +965,7 @@ lemma svr_pred_st_tcb[wp]:
    apply (case_tac arch_cap, (simp add: throwError_def | wp)+)
    apply (rename_tac word mapped)
    apply (case_tac mapped, (simp add: throwError_def | wp)+)
-    apply(case_tac "word \<noteq> pd'")
+    apply(case_tac "word \<noteq> pml4'")
      apply (simp add: whenE_def | wp find_vspace_for_asid_pred_tcb_at)+
   done
 
@@ -1141,33 +980,67 @@ lemma valid_pte_lift3:
   apply (insert bool_function_four_cases[where f=P])
   apply (erule disjE)
    apply (cases pte)
-     apply (simp | wp hoare_vcg_const_imp_lift x)+
+     apply (simp add: data_at_def | wp hoare_vcg_const_imp_lift x)+
   apply (erule disjE)
    apply (cases pte)     
-     apply (simp | wp hoare_vcg_const_imp_lift x)+
+     apply (simp add: data_at_def | wp hoare_vcg_disj_lift hoare_vcg_const_imp_lift x)+
   apply (erule disjE)
    apply (simp | wp)+
   done
-
 
 lemma set_cap_valid_pte_stronger:
   "\<lbrace>\<lambda>s. P (valid_pte pte s)\<rbrace> set_cap cap p \<lbrace>\<lambda>rv s. P (valid_pte pte s)\<rbrace>"
   by (wp valid_pte_lift3 set_cap_typ_at)
 
+lemma valid_pde_lift3:
+  assumes x: "(\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>)"
+  shows "\<lbrace>\<lambda>s. P (valid_pde pde s)\<rbrace> f \<lbrace>\<lambda>rv s. P (valid_pde pde s)\<rbrace>"
+  apply (insert bool_function_four_cases[where f=P])
+  apply (erule disjE)
+   apply (cases pde)
+     apply (simp add: data_at_def | wp hoare_vcg_const_imp_lift x)+
+  apply (erule disjE)
+   apply (cases pde)     
+     apply (simp add: data_at_def | wp hoare_vcg_disj_lift hoare_vcg_const_imp_lift x)+
+  apply (erule disjE)
+   apply (simp | wp)+
+  done
+
+lemma set_cap_valid_pde_stronger:
+  "\<lbrace>\<lambda>s. P (valid_pde pde s)\<rbrace> set_cap cap p \<lbrace>\<lambda>rv s. P (valid_pde pde s)\<rbrace>"
+  by (wp valid_pde_lift3 set_cap_typ_at)
+  
+lemma valid_pdpte_lift3:
+  assumes x: "(\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>)"
+  shows "\<lbrace>\<lambda>s. P (valid_pdpte pdpte s)\<rbrace> f \<lbrace>\<lambda>rv s. P (valid_pdpte pdpte s)\<rbrace>"
+  apply (insert bool_function_four_cases[where f=P])
+  apply (erule disjE)
+   apply (cases pdpte)
+     apply (simp add: data_at_def | wp hoare_vcg_const_imp_lift x)+
+  apply (erule disjE)
+   apply (cases pdpte)     
+     apply (simp add: data_at_def | wp hoare_vcg_disj_lift hoare_vcg_const_imp_lift x)+
+  apply (erule disjE)
+   apply (simp | wp)+
+  done
+
+lemma set_cap_valid_pdpte_stronger:
+  "\<lbrace>\<lambda>s. P (valid_pdpte pdpte s)\<rbrace> set_cap cap p \<lbrace>\<lambda>rv s. P (valid_pdpte pdpte s)\<rbrace>"
+  by (wp valid_pdpte_lift3 set_cap_typ_at)
+  
 end
 
-locale vs_lookup_map_some_pdes = Arch +
-  fixes pd pdp s s' S T pd'
-  defines "s' \<equiv> s\<lparr>kheap := kheap s(pdp \<mapsto> ArchObj (PageDirectory pd'))\<rparr>"
-  assumes refs: "vs_refs (ArchObj (PageDirectory pd')) =
-                 (vs_refs (ArchObj (PageDirectory pd)) - T) \<union> S"
-  assumes old: "kheap s pdp = Some (ArchObj (PageDirectory pd))"
-  assumes pts: "\<forall>x \<in> S. page_table_at (snd x) s"
+locale vs_lookup_map_some_pml4es = Arch +
+  fixes pml4 pml4p s s' S T pml4'
+  defines "s' \<equiv> s\<lparr>kheap := kheap s(pml4p \<mapsto> ArchObj (PageMapL4 pml4'))\<rparr>"
+  assumes refs: "vs_refs (ArchObj (PageMapL4 pml4')) =
+                 (vs_refs (ArchObj (PageMapL4 pml4)) - T) \<union> S"
+  assumes old: "kheap s pml4p = Some (ArchObj (PageMapL4 pml4))"
+  assumes pts: "\<forall>x \<in> S. pd_pointer_table_at (snd x) s"
 begin
 
 definition
-  "new_lookups \<equiv> {((rs,p),(rs',p')). \<exists>r. rs' = r # rs \<and> (r,p') \<in> S \<and> p = pdp}"
-
+  "new_lookups \<equiv> {((rs,p),(rs',p')). \<exists>r. rs' = r # rs \<and> (r,p') \<in> S \<and> p = pml4p}"
 
 lemma vs_lookup1:
   "vs_lookup1 s' \<subseteq> vs_lookup1 s \<union> new_lookups"
@@ -1176,7 +1049,7 @@ lemma vs_lookup1:
   apply (auto split: split_if_asm simp: refs old)
   done
 
-
+(* FIXME x64: no idea whats going on here, does it need more level stuff? *)
 lemma vs_lookup_trans:
   "(vs_lookup1 s')^* \<subseteq> (vs_lookup1 s)^* \<union> (vs_lookup1 s)^* O new_lookups^*"
   apply (rule ord_le_eq_trans, rule rtrancl_mono, rule vs_lookup1)
@@ -1184,14 +1057,12 @@ lemma vs_lookup_trans:
   apply (clarsimp simp add: new_lookups_def)
   apply (drule bspec [OF pts])
   apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def)
-  done
-
+  sorry
 
 lemma double_new_lookup:
   "\<lbrakk> (x, y) \<in> new_lookups; (y, z) \<in> new_lookups \<rbrakk> \<Longrightarrow> False"
   by (auto simp: new_lookups_def obj_at_def old a_type_def
           dest!: bspec [OF pts])
-
 
 lemma new_lookups_trans:
   "new_lookups^* = (new_lookups \<union> Id)"
@@ -1205,11 +1076,9 @@ lemma new_lookups_trans:
   apply auto
   done
 
-
 lemma arch_state [simp]:
   "arch_state s' = arch_state s"
   by (simp add: s'_def)
-
 
 lemma vs_lookup:
   "vs_lookup s' \<subseteq> vs_lookup s \<union> new_lookups^* `` vs_lookup s"
@@ -1226,28 +1095,27 @@ lemma vs_lookup2:
   apply (auto simp add: vs_lookup new_lookups_trans)
   done
 
-
 end
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
-lemma set_pd_arch_objs_map:
+lemma set_pml4_arch_objs_map:
   notes valid_arch_obj.simps[simp del] and a_type_elims[rule del]
   shows
   "\<lbrace>valid_arch_objs and 
-   obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) = vs_refs ko - T \<union> S) p and 
-   (\<lambda>s. \<forall>x \<in> S. page_table_at (snd x) s) and
+   obj_at (\<lambda>ko. vs_refs (ArchObj (PageMapL4 pm)) = vs_refs ko - T \<union> S) p and 
+   (\<lambda>s. \<forall>x \<in> S. pd_pointer_table_at (snd x) s) and
    (\<lambda>s. \<forall>(r,p') \<in> S. \<forall>ao. (\<exists>\<rhd>p) s \<longrightarrow> ko_at (ArchObj ao) p' s
                       \<longrightarrow> valid_arch_obj ao s) and
-   (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (PageDirectory pd) s)\<rbrace>
-  set_pd p pd \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  apply (simp add: set_pd_def set_object_def)
+   (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (PageMapL4 pm) s)\<rbrace>
+  set_pml4 p pm \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
+  apply (simp add: set_pml4_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_arch_objs_def
            simp del: fun_upd_apply
            split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (frule (1) vs_lookup_map_some_pdes.intro, simp add: obj_at_def)
-  apply (frule vs_lookup_map_some_pdes.vs_lookup2)
+  apply (frule (1) vs_lookup_map_some_pml4es.intro, simp add: obj_at_def)
+  apply (frule vs_lookup_map_some_pml4es.vs_lookup2)
   apply (drule(1) subsetD)
   apply (erule UnE)
    apply (simp only: fun_upd_apply split: split_if_asm)
@@ -1259,7 +1127,7 @@ lemma set_pd_arch_objs_map:
      apply fastforce
     apply assumption
    apply (clarsimp simp: a_type_def)
-  apply (clarsimp simp add: vs_lookup_map_some_pdes.new_lookups_def)
+  apply (clarsimp simp add: vs_lookup_map_some_pml4es.new_lookups_def)
   apply (drule(1) bspec)+
   apply (clarsimp simp add: a_type_simps  split: split_if_asm)
   apply (drule mp, erule exI)+
@@ -1268,47 +1136,75 @@ lemma set_pd_arch_objs_map:
   done
 
 (* FIXME: move *)
-lemma simpler_set_pd_def:
-  "set_pd p pd =
-   (\<lambda>s. if \<exists>pd. kheap s p = Some (ArchObj (PageDirectory pd))
-        then ({((), s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>)},
+lemma simpler_set_pml4_def:
+  "set_pml4 p pml4 =
+   (\<lambda>s. if \<exists>pml4. kheap s p = Some (ArchObj (PageMapL4 pml4))
+        then ({((), s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageMapL4 pml4))\<rparr>)},
               False)
         else ({}, True))"
   by (rule ext)
-     (auto simp: set_pd_def get_object_def simpler_gets_def assert_def
+     (auto simp: set_pml4_def get_object_def simpler_gets_def assert_def
                  return_def fail_def set_object_def get_def put_def bind_def
           split: Structures_A.kernel_object.split arch_kernel_obj.split)
 
-lemma set_pd_valid_vs_lookup_map:
+(* FIXME x64: this needs fleshing out with PD, PT levels *)
+lemma set_pml4_valid_vs_lookup_map:
   "\<lbrace>valid_vs_lookup and valid_arch_state and valid_arch_objs and
-    obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) =
+    obj_at (\<lambda>ko. vs_refs (ArchObj (PageMapL4 pml4)) =
                  vs_refs ko - T \<union> S) p and
-    (\<lambda>s. \<forall>x\<in>S. page_table_at (snd x) s) and
-    obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageDirectory pd)) =
+    (\<lambda>s. \<forall>x\<in>S. pd_pointer_table_at (snd x) s) and
+    obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageMapL4 pml4)) =
                  vs_refs_pages ko - T' \<union> S') p and
     (\<lambda>s. \<forall>(r, p')\<in>S. \<forall>ao. (\<exists>\<rhd> p) s \<longrightarrow>
                            ko_at (ArchObj ao) p' s \<longrightarrow> valid_arch_obj ao s) and
-    (\<lambda>s. (\<exists>\<rhd> p) s \<longrightarrow> valid_arch_obj (PageDirectory pd) s) and
+    (\<lambda>s. (\<exists>\<rhd> p) s \<longrightarrow> valid_arch_obj (PageMapL4 pml4) s) and
     (\<lambda>s. \<forall>r. (r \<unrhd> p) s \<longrightarrow>
              (\<forall>c\<in>- kernel_mapping_slots. \<forall>q.
-                 pde_ref_pages (pd c) = Some q \<longrightarrow>
+                 pml4e_ref_pages (pml4 c) = Some q \<longrightarrow>
                     (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
                          q \<in> obj_refs cap \<and> vs_cap_ref cap =
-         Some (VSRef (ucast c) (Some APageDirectory) # r)))) and
+         Some (VSRef (ucast c) (Some APageMapL4) # r)))) and
     (\<lambda>s. \<forall>r. (r \<unrhd> p) s \<longrightarrow>
              (\<forall>c\<in>- kernel_mapping_slots. \<forall>q.
-                 pde_ref (pd c) = Some q \<longrightarrow>
-                    (\<forall>q' pt d. ko_at (ArchObj (PageTable pt)) q s \<longrightarrow>
-                        pte_ref_pages (pt d) = Some q' \<longrightarrow>
+                 pml4e_ref (pml4 c) = Some q \<longrightarrow>
+                    (\<forall>q' pt d. ko_at (ArchObj (PDPointerTable pt)) q s \<longrightarrow>
+                        pdpte_ref_pages (pt d) = Some q' \<longrightarrow>
                         (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
                                   q' \<in> obj_refs cap \<and> vs_cap_ref cap =
-         Some (VSRef (ucast d) (Some APageTable) #
-               VSRef (ucast c) (Some APageDirectory) # r)))))\<rbrace>
-   set_pd p pd
+         Some (VSRef (ucast d) (Some APDPointerTable) #
+               VSRef (ucast c) (Some APageMapL4) # r))))) and 
+     (\<lambda>s. \<forall>r. (r \<unrhd> p) s \<longrightarrow>
+              (\<forall>c\<in>- kernel_mapping_slots. \<forall>q.
+                  pml4e_ref (pml4 c) = Some q \<longrightarrow>
+                     (\<forall>q' pdpt d. ko_at (ArchObj (PDPointerTable pdpt)) q s \<longrightarrow>
+                         pdpte_ref (pdpt d) = Some q' \<longrightarrow>
+                             (\<forall>q'' pd e. ko_at (ArchObj (PageDirectory pd)) q' s \<longrightarrow>
+                                pde_ref_pages (pd e) = Some q'' \<longrightarrow>
+                                (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
+                                          q'' \<in> obj_refs cap \<and> vs_cap_ref cap =
+         Some (VSRef (ucast e) (Some APageDirectory) #
+               VSRef (ucast d) (Some APDPointerTable) #
+               VSRef (ucast c) (Some APageMapL4) # r)))))) and 
+     (\<lambda>s. \<forall>r. (r \<unrhd> p) s \<longrightarrow>
+              (\<forall>c\<in>- kernel_mapping_slots. \<forall>q.
+                  pml4e_ref (pml4 c) = Some q \<longrightarrow>
+                     (\<forall>q' pdpt d. ko_at (ArchObj (PDPointerTable pdpt)) q s \<longrightarrow>
+                         pdpte_ref (pdpt d) = Some q' \<longrightarrow>
+                             (\<forall>q'' pd e. ko_at (ArchObj (PageDirectory pd)) q' s \<longrightarrow>
+                                pde_ref (pd e) = Some q'' \<longrightarrow>
+                                    (\<forall>q''' pt f. ko_at (ArchObj (PageTable pt)) q'' s \<longrightarrow>
+                                       pte_ref_pages (pt f) = Some q''' \<longrightarrow>
+                                (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
+                                          q'' \<in> obj_refs cap \<and> vs_cap_ref cap =
+         Some (VSRef (ucast f) (Some APageTable) #
+               VSRef (ucast e) (Some APageDirectory) #
+               VSRef (ucast d) (Some APDPointerTable) #
+               VSRef (ucast c) (Some APageMapL4) # r)))))))\<rbrace>
+   set_pml4 p pml4
    \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
-  using set_pd_arch_objs_map[where p=p and pd=pd and T=T and S=S]
-        set_pd_valid_arch[of p pd]
-  apply (clarsimp simp: valid_def simpler_set_pd_def)
+  using set_pml4_arch_objs_map[where p=p and pm=pml4 and T=T and S=S]
+        set_pml4_valid_arch[of p pml4]
+  apply (clarsimp simp: valid_def simpler_set_pml4_def)
   apply (drule_tac x=s in spec)+
   apply (clarsimp simp: valid_vs_lookup_def  split: split_if_asm)
   apply (subst caps_of_state_after_update[folded fun_upd_apply],
@@ -1327,19 +1223,19 @@ lemma set_pd_valid_vs_lookup_map:
     apply (drule vs_lookup_pages_apI)
       apply (simp split: split_if_asm)
      apply (simp+)[2]
-   apply (frule_tac s="s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>"
-                 in vs_lookup_pages_pdI[rotated -1])
+   apply (frule_tac s="s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageMapL4 pml4))\<rparr>"
+                 in vs_lookup_pages_pml4I[rotated -1])
         apply (simp del: fun_upd_apply)+
    apply (frule vs_lookup_pages_apI)
      apply (simp split: split_if_asm)+
    apply (thin_tac "\<forall>r. (r \<unrhd> p) s \<longrightarrow> Q r" for Q)+
    apply (thin_tac "P \<longrightarrow> Q" for P Q)+
    apply (drule_tac x=pa in spec)
-   apply (drule_tac x="[VSRef (ucast c) (Some APageDirectory),
+   apply (drule_tac x="[VSRef (ucast c) (Some APageMapL4),
                         VSRef (ucast b) (Some AASIDPool),
                         VSRef (ucast a) None]" in spec)
    apply (erule impE)
-   apply (erule vs_lookup_pages_pdI)
+   apply (erule vs_lookup_pages_pml4I)
      apply simp+
   apply (thin_tac "\<forall>r. (r \<unrhd> p) s \<longrightarrow> Q r" for Q)
   apply (thin_tac "P \<longrightarrow> Q" for P Q)+
@@ -1351,49 +1247,75 @@ lemma set_pd_valid_vs_lookup_map:
    apply (drule spec, erule impE, assumption)
    apply (clarsimp split: split_if_asm)
    apply (drule bspec, fastforce)
-   apply (simp add: pde_ref_def obj_at_def)
+   apply (simp add: pml4e_ref_def obj_at_def)
   apply (thin_tac "\<forall>r. (r \<unrhd> p) s \<longrightarrow> Q r" for Q)
   apply (clarsimp split: split_if_asm)
-  apply (drule (7) vs_lookup_pages_ptI)
+  apply (drule (7) vs_lookup_pages_pdptI)
   apply simp
-  done
+  oops
 
-
-lemma set_pd_valid_arch_caps:
+lemma set_pml4_valid_arch_caps:
   "\<lbrace>valid_arch_caps and valid_arch_state and valid_arch_objs and
     valid_objs and
-    obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) =
+    obj_at (\<lambda>ko. vs_refs (ArchObj (PageMapL4 pml4)) =
                  vs_refs ko - T \<union> S) p and
-    obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageDirectory pd)) =
+    obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageMapL4 pml4)) =
                  vs_refs_pages ko - T' \<union> S') p and
-    (\<lambda>s. \<forall>x\<in>S. page_table_at (snd x) s) and
+    (\<lambda>s. \<forall>x\<in>S. pd_pointer_table_at (snd x) s) and
     (\<lambda>s. \<forall>p. (VSRef 0 (Some AASIDPool), p) \<notin> S) and
     (\<lambda>s. \<forall>(r, p')\<in>S. \<forall>ao. (\<exists>\<rhd> p) s \<longrightarrow>
                            ko_at (ArchObj ao) p' s \<longrightarrow> valid_arch_obj ao s) and
-    (\<lambda>s. (\<exists>\<rhd> p) s \<longrightarrow> valid_arch_obj (PageDirectory pd) s) and
-    (\<lambda>s. (\<exists>p' cap. caps_of_state s p' = Some cap \<and> is_pd_cap cap \<and>
+    (\<lambda>s. (\<exists>\<rhd> p) s \<longrightarrow> valid_arch_obj (PageMapL4 pml4) s) and
+    (\<lambda>s. (\<exists>p' cap. caps_of_state s p' = Some cap \<and> is_pml4_cap cap \<and>
                    p \<in> obj_refs cap \<and> cap_asid cap \<noteq> None)
        \<or> (obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) p s \<longrightarrow>
                   empty_table (set (x64_global_pdpts (arch_state s)))
-                              (ArchObj (PageDirectory pd)))) and
+                              (ArchObj (PageMapL4 pml4)))) and
     (\<lambda>s. \<forall>r. (r \<unrhd> p) s \<longrightarrow>
              (\<forall>c\<in>- kernel_mapping_slots. \<forall>q.
-                 pde_ref_pages (pd c) = Some q \<longrightarrow>
+                 pml4e_ref_pages (pml4 c) = Some q \<longrightarrow>
                     (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
                          q \<in> obj_refs cap \<and> vs_cap_ref cap =
-         Some (VSRef (ucast c) (Some APageDirectory) # r)))) and
+         Some (VSRef (ucast c) (Some APageMapL4) # r)))) and
     (\<lambda>s. \<forall>r. (r \<unrhd> p) s \<longrightarrow>
              (\<forall>c\<in>- kernel_mapping_slots. \<forall>q.
-                 pde_ref (pd c) = Some q \<longrightarrow>
-                    (\<forall>q' pt d. ko_at (ArchObj (PageTable pt)) q s \<longrightarrow>
-                        pte_ref_pages (pt d) = Some q' \<longrightarrow>
+                 pml4e_ref (pml4 c) = Some q \<longrightarrow>
+                    (\<forall>q' pdpt d. ko_at (ArchObj (PDPointerTable pdpt)) q s \<longrightarrow>
+                        pdpte_ref_pages (pdpt d) = Some q' \<longrightarrow>
                         (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
                                   q' \<in> obj_refs cap \<and> vs_cap_ref cap =
-         Some (VSRef (ucast d) (Some APageTable) #
-               VSRef (ucast c) (Some APageDirectory) # r)))))\<rbrace>
-   set_pd p pd
+         Some (VSRef (ucast d) (Some APDPointerTable) #
+               VSRef (ucast c) (Some APageMapL4) # r))))) and 
+     (\<lambda>s. \<forall>r. (r \<unrhd> p) s \<longrightarrow>
+              (\<forall>c\<in>- kernel_mapping_slots. \<forall>q.
+                  pml4e_ref (pml4 c) = Some q \<longrightarrow>
+                     (\<forall>q' pdpt d. ko_at (ArchObj (PDPointerTable pdpt)) q s \<longrightarrow>
+                         pdpte_ref (pdpt d) = Some q' \<longrightarrow>
+                             (\<forall>q'' pd e. ko_at (ArchObj (PageDirectory pd)) q' s \<longrightarrow>
+                                pde_ref_pages (pd e) = Some q'' \<longrightarrow>
+                                (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
+                                          q'' \<in> obj_refs cap \<and> vs_cap_ref cap =
+         Some (VSRef (ucast e) (Some APageDirectory) #
+               VSRef (ucast d) (Some APDPointerTable) #
+               VSRef (ucast c) (Some APageMapL4) # r)))))) and 
+     (\<lambda>s. \<forall>r. (r \<unrhd> p) s \<longrightarrow>
+              (\<forall>c\<in>- kernel_mapping_slots. \<forall>q.
+                  pml4e_ref (pml4 c) = Some q \<longrightarrow>
+                     (\<forall>q' pdpt d. ko_at (ArchObj (PDPointerTable pdpt)) q s \<longrightarrow>
+                         pdpte_ref (pdpt d) = Some q' \<longrightarrow>
+                             (\<forall>q'' pd e. ko_at (ArchObj (PageDirectory pd)) q' s \<longrightarrow>
+                                pde_ref (pd e) = Some q'' \<longrightarrow>
+                                    (\<forall>q''' pt f. ko_at (ArchObj (PageTable pt)) q'' s \<longrightarrow>
+                                       pte_ref_pages (pt f) = Some q''' \<longrightarrow>
+                                (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
+                                          q'' \<in> obj_refs cap \<and> vs_cap_ref cap =
+         Some (VSRef (ucast f) (Some APageTable) #
+               VSRef (ucast e) (Some APageDirectory) #
+               VSRef (ucast d) (Some APDPointerTable) #
+               VSRef (ucast c) (Some APageMapL4) # r)))))))\<rbrace>
+   set_pml4 p pml4
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  apply (simp add: set_pd_def set_object_def)
+  apply (simp add: set_pml4_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def  simp del: fun_upd_apply
                  split: Structures_A.kernel_object.split arch_kernel_obj.split)
@@ -1402,61 +1324,60 @@ lemma set_pd_valid_arch_caps:
          simp add: obj_at_def)+
   apply simp
   apply (rule conjI)
-   using set_pd_valid_vs_lookup_map[where p=p and pd=pd and T=T and S=S
+  (*
+   using set_pml4_valid_vs_lookup_map[where p=p and pm=pml4 and T=T and S=S
                                                      and T'=T' and S'=S']
    apply (clarsimp simp add: valid_def)
    apply (drule_tac x=s in spec)
-   apply (simp add: simpler_set_pd_def obj_at_def)
+   apply (simp add: simpler_set_pml4_def obj_at_def)
   apply (simp add: valid_table_caps_def obj_at_def
-                   caps_of_state_after_update[folded fun_upd_def]
+                   caps_of_state_after_upml4ate[folded fun_upml4_def]
               del: imp_disjL)
   apply (drule_tac x=p in spec, elim allEI, intro impI)
   apply clarsimp
-  apply (erule_tac P="is_pd_cap cap" in disjE)
+  apply (erule_tac P="is_pml4_cap cap" in disjE)
    prefer 2
    apply (frule_tac p="(a,b)" in caps_of_state_valid_cap, simp)
    apply (clarsimp simp add: is_pt_cap_def valid_cap_def obj_at_def
                              valid_arch_cap_def
                              a_type_def)
-  apply (frule_tac cap=cap and cap'=capa and cs="caps_of_state s" in unique_table_caps_pdD)
-        apply (simp add: is_pd_cap_def)+
-    apply (clarsimp simp: is_pd_cap_def)+
-  done
+  apply (frule_tac cap=cap and cap'=capa and cs="caps_of_state s" in unique_table_caps_pml4D)
+        apply (simp add: is_pml4_cap_def)+
+    apply (clarsimp simp: is_pml4_cap_def)+
+  done *) oops
 
 (* FIXME: move to wellformed *)
-lemma global_pde_graph_ofI:
- " \<lbrakk>pd x = pde; pde_ref pde = Some v\<rbrakk>
-  \<Longrightarrow> (x, v) \<in> graph_of (pde_ref o pd)"
-  by (clarsimp simp: graph_of_def pde_ref_def comp_def)
-
-
-
-lemma set_pd_valid_kernel_mappings_map:
+lemma global_pml4e_graph_ofI:
+ " \<lbrakk>pm x = pml4e; pml4e_ref pml4e = Some v\<rbrakk>
+  \<Longrightarrow> (x, v) \<in> graph_of (pml4e_ref o pm)"
+  by (clarsimp simp: graph_of_def pml4e_ref_def comp_def)
+  
+lemma set_pml4_valid_kernel_mappings_map:
   "\<lbrace>valid_kernel_mappings and 
-     obj_at (\<lambda>ko. glob_vs_refs (ArchObj (PageDirectory pd)) = glob_vs_refs ko - T \<union> S) p and 
+     obj_at (\<lambda>ko. glob_vs_refs (ArchObj (PageMapL4 pml4)) = glob_vs_refs ko - T \<union> S) p and 
      (\<lambda>s. \<forall>(r,p) \<in> S. (r \<in> kernel_vsrefs)
                          = (p \<in> set (x64_global_pdpts (arch_state s))))\<rbrace>
-     set_pd p pd
+     set_pml4 p pml4
    \<lbrace>\<lambda>rv. valid_kernel_mappings\<rbrace>"
-  apply (simp add: set_pd_def)
+  apply (simp add: set_pml4_def)
   apply (wp set_object_v_ker_map get_object_wp)
   apply (clarsimp simp: obj_at_def valid_kernel_mappings_def
                  split: Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm)
   apply (drule bspec, erule ranI)
-  apply (clarsimp simp: valid_kernel_mappings_if_pd_def
+  apply (clarsimp simp: valid_kernel_mappings_if_pm_def
                         kernel_vsrefs_def)
-  apply (drule_tac f="\<lambda>S. (VSRef (ucast x) (Some APageDirectory), r) \<in> S"
+  apply (drule_tac f="\<lambda>S. (VSRef (ucast x) (Some APageMapL4), r) \<in> S"
                in arg_cong)
   apply (simp add: glob_vs_refs_def)
   apply (drule iffD1)
    apply (rule image_eqI[rotated])
-    apply (erule global_pde_graph_ofI[rotated])
+    apply (erule global_pml4e_graph_ofI[rotated])
     apply simp+
   apply (elim conjE disjE)
    apply (clarsimp dest!: graph_ofD)
   apply (drule(1) bspec)
-  apply (clarsimp simp: kernel_base_shift_cast_le
+  apply (clarsimp simp: pptr_base_shift_cast_le
                         kernel_mapping_slots_def)
   done
 
@@ -1468,21 +1389,21 @@ lemma glob_vs_refs_subset:
   apply (simp add: graph_of_def split:split_if_asm)
   done
 
-lemma vs_refs_pages_pdI:
-  "\<lbrakk>pde_ref_pages (pd x) = Some a; x \<notin> kernel_mapping_slots\<rbrakk>
-    \<Longrightarrow> (VSRef (ucast x) (Some APageDirectory), a) \<in> vs_refs_pages (ArchObj (PageDirectory pd))"
-  by (auto simp: pde_ref_pages_def vs_refs_pages_def graph_of_def image_def split: pde.splits)
+lemma vs_refs_pages_pml4I:
+  "\<lbrakk>pml4e_ref_pages (pml4 x) = Some a; x \<notin> kernel_mapping_slots\<rbrakk>
+    \<Longrightarrow> (VSRef (ucast x) (Some APageMapL4), a) \<in> vs_refs_pages (ArchObj (PageMapL4 pml4))"
+  by (auto simp: pml4e_ref_pages_def vs_refs_pages_def graph_of_def image_def split: pml4e.splits)
 
-lemma pde_ref_pde_ref_pagesI[elim!]:
-  "pde_ref (pd x) = Some a \<Longrightarrow> pde_ref_pages (pd x) = Some a"
-  by (auto simp: pde_ref_def pde_ref_pages_def split: pde.splits)
+lemma pml4e_ref_pml4e_ref_pagesI[elim!]:
+  "pml4e_ref (pml4 x) = Some a \<Longrightarrow> pml4e_ref_pages (pml4 x) = Some a"
+  by (auto simp: pml4e_ref_def pml4e_ref_pages_def split: pml4e.splits)
 
-lemma vs_refs_pdI2:
-  "\<lbrakk>pd r = PageTablePDE x a b; r \<notin> kernel_mapping_slots\<rbrakk> 
-   \<Longrightarrow> (VSRef (ucast r) (Some APageDirectory), ptrFromPAddr x) \<in> vs_refs (ArchObj (PageDirectory pd))"
-  by (auto simp: vs_refs_def pde_ref_def graph_of_def)
+lemma vs_refs_pml4I2:
+  "\<lbrakk>pml4 r = PDPointerTablePML4E x a b; r \<notin> kernel_mapping_slots\<rbrakk> 
+   \<Longrightarrow> (VSRef (ucast r) (Some APageMapL4), ptrFromPAddr x) \<in> vs_refs (ArchObj (PageMapL4 pml4))"
+  by (auto simp: vs_refs_def pml4e_ref_def graph_of_def)
 
-
+(* FIXME x64: this needs the same treatment as previous lemmas *)
 lemma set_pd_invs_map:
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pde (pd i)) and
      obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) = vs_refs ko \<union> S) p and

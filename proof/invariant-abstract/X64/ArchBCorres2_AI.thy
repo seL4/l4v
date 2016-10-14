@@ -13,7 +13,7 @@ imports
   "../BCorres2_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 named_theorems BCorres2_AI_assms
 

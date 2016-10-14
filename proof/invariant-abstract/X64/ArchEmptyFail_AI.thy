@@ -12,7 +12,7 @@ theory ArchEmptyFail_AI
 imports "../EmptyFail_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 named_theorems EmptyFail_AI_assms
 
@@ -36,7 +36,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
@@ -54,8 +54,8 @@ crunch (empty_fail) empty_fail[wp]: find_pd_for_asid, get_master_pde, check_vp_a
                    create_mapping_entries, ensure_safe_mapping, get_asid_pool, resolve_vaddr
   (simp: kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits)
 
-lemma arch_decode_ARMASIDControlMakePool_empty_fail:
-  "invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
+lemma arch_decode_X64ASIDControlMakePool_empty_fail:
+  "invocation_type label = ArchInvocationLabel X64ASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (simp add: arch_decode_invocation_def Let_def)
   apply (intro impI conjI allI)
@@ -69,8 +69,8 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
     subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: split_if_asm)
    by (simp add: Let_def split: cap.splits arch_cap.splits option.splits | wp | intro conjI impI allI)+
 
-lemma arch_decode_ARMASIDPoolAssign_empty_fail:
-  "invocation_type label = ArchInvocationLabel ARMASIDPoolAssign
+lemma arch_decode_X64ASIDPoolAssign_empty_fail:
+  "invocation_type label = ArchInvocationLabel X64ASIDPoolAssign
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (simp add: arch_decode_invocation_def split_def Let_def isPageFlushLabel_def isPDFlushLabel_def
             split: arch_cap.splits cap.splits option.splits | intro impI allI)+
@@ -96,9 +96,9 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>match premises in "_ = ArchInvocationLabel _" \<Rightarrow> \<open>-\<close>\<close>)
   apply (rename_tac alabel)
   apply (case_tac alabel; simp)
-  apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDControlMakePool_empty_fail\<close>\<close>)
-  apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
-  apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]  
+  apply (find_goal \<open>succeeds \<open>erule arch_decode_X64ASIDControlMakePool_empty_fail\<close>\<close>)
+  apply (find_goal \<open>succeeds \<open>erule arch_decode_X64ASIDPoolAssign_empty_fail\<close>\<close>)
+  apply ((simp add: arch_decode_X64ASIDControlMakePool_empty_fail arch_decode_X64ASIDPoolAssign_empty_fail)+)[2]  
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 
 end
@@ -109,7 +109,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
     setHardwareASID, setCurrentPD, finalise_cap, preemption_point,
@@ -128,7 +128,7 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
   cap_delete, choose_thread
 end
@@ -151,7 +151,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits

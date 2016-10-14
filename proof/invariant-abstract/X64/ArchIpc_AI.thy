@@ -12,7 +12,7 @@ theory ArchIpc_AI
 imports "../Ipc_AI"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 named_theorems Ipc_AI_assms
 
