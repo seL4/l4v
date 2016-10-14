@@ -63,8 +63,7 @@ datatype asid_pool_invocation =
     Assign asid obj_ref cslot_ptr
 
 datatype page_invocation
-     = PageMap 
-         (page_map_asid: asid)
+     = PageMap
          (page_map_cap: cap)
          (page_map_ct_slot: cslot_ptr)
          (page_map_entries: "vm_page_entry \<times> obj_ref")

@@ -147,7 +147,7 @@ in. *}
 definition
 perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "perform_page_invocation iv \<equiv> (case iv of
-    PageMap asid cap ct_slot entries \<Rightarrow> do
+    PageMap cap ct_slot entries \<Rightarrow> do
       set_cap cap ct_slot;
       case entries
        of (VMPTE pte, slot) \<Rightarrow> store_pte slot pte

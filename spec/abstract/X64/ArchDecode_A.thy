@@ -322,7 +322,7 @@ where
              entries \<leftarrow> create_mapping_entries (addrFromPPtr p) vaddr pgsz vm_rights
                                                (attribs_from_word attr) vspace;
              ensure_safe_mapping entries;
-             returnOk $ InvokePage $ PageMap asid 
+             returnOk $ InvokePage $ PageMap  
                        (ArchObjectCap $ PageCap dev p R map_type pgsz (Some (asid,vaddr))) cte entries
           odE
     else throwError TruncatedMessage
