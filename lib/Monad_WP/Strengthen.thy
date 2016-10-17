@@ -322,8 +322,8 @@ lemma strengthen_imp_disj [strg]:
     \<Longrightarrow> st F (op \<longrightarrow>) (A \<or> B) (A' \<or> B')"
   by (cases F, auto)
 
-lemma strengthen_imp_implies [rotated, strg]:
-  "\<lbrakk> st (\<not> F) (op \<longrightarrow>) X X'; X' \<Longrightarrow> st F (op \<longrightarrow>) Y Y' \<rbrakk>
+lemma strengthen_imp_implies [strg]:
+  "\<lbrakk> st (\<not> F) (op \<longrightarrow>) X X'; X \<Longrightarrow> st F (op \<longrightarrow>) Y Y' \<rbrakk>
     \<Longrightarrow> st F (op \<longrightarrow>) (X \<longrightarrow> Y) (X' \<longrightarrow> Y')"
   by (cases F, auto)
 
@@ -337,15 +337,15 @@ lemma strengthen_ex[strg]:
     \<Longrightarrow> st F (op \<longrightarrow>) (\<exists>x. P x) (\<exists>x. Q x)"
   by (cases F, auto)
 
-lemma strengthen_Ball[rotated, strg]:
+lemma strengthen_Ball[strg]:
   "\<lbrakk> st_ord (Not F) S S';
-        \<And>x. x \<in> S' \<Longrightarrow> st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
+        \<And>x. x \<in> S \<Longrightarrow> st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
     \<Longrightarrow> st F (op \<longrightarrow>) (\<forall>x \<in> S. P x) (\<forall>x \<in> S'. Q x)"
   by (cases F, auto)
 
-lemma strengthen_Bex[rotated, strg]:
+lemma strengthen_Bex[strg]:
   "\<lbrakk> st_ord F S S';
-        \<And>x. x \<in> S' \<Longrightarrow> st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
+        \<And>x. x \<in> S \<Longrightarrow> st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
     \<Longrightarrow> st F (op \<longrightarrow>) (\<exists>x \<in> S. P x) (\<exists>x \<in> S'. Q x)"
   by (cases F, auto)
 

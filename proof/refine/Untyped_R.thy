@@ -397,7 +397,7 @@ next
           apply (clarsimp simp: is_cap_simps bits_of_def cap_aligned_def
                                 valid_cap_def word_bits_def)
           apply (frule caps_of_state_valid_cap, clarsimp+)
-          apply (strengthen refl exI[mk_strg I E])+
+          apply (strengthen refl exI[mk_strg I E] exI[where x=d])+
           apply simp
          apply wp
          apply (rule hoare_strengthen_post [where Q = "\<lambda>r. invs' and cte_at' (cte_map slot)"])
@@ -409,7 +409,7 @@ next
                          cte_wp_at_caps_of_state cte_wp_at_ctes_of )
    apply (clarsimp simp: invs_valid_objs invs_psp_aligned)
    apply (frule caps_of_state_valid_cap, clarsimp+)
-   apply (strengthen refl exI[mk_strg I E])+
+   apply (strengthen refl[where t=True] refl exI[mk_strg I E] exI[where x=d])+
    apply (clarsimp simp: is_cap_simps valid_cap_def bits_of_def cap_aligned_def
                          cte_level_bits_def word_bits_conv)
   apply (clarsimp simp: invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
@@ -431,7 +431,6 @@ lemma decodeUntyped_inv[wp]:
                | wpcw
                | simp add: lookupTargetSlot_def locateSlot_conv)+
   done
-
 
 declare inj_Pair[simp]
 
