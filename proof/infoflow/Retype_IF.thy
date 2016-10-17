@@ -1045,6 +1045,10 @@ lemma delete_objects_pspace_no_overlap_again:
   apply(simp add: valid_cap_simps cap_aligned_def is_aligned_neg_mask_eq field_simps)
   done
 
+lemma ex_tupleI:
+  "P (fst t) (snd t) \<Longrightarrow> \<exists>a b. P a b"
+  by blast
+
 lemma reset_untyped_cap_reads_respects_g:
  "reads_equiv_valid_g_inv (affects_equiv aag l) aag
     (\<lambda>s. cte_wp_at is_untyped_cap slot s \<and> invs s \<and> ct_active s
@@ -1052,7 +1056,7 @@ lemma reset_untyped_cap_reads_respects_g:
         \<and> is_subject aag (fst slot)
         \<and> (descendants_of slot (cdt s) = {}))
     (reset_untyped_cap slot)"
-  apply (simp add: reset_untyped_cap_def)
+  apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule equiv_valid_guard_imp)
    apply (wp set_cap_reads_respects_g dmo_clearMemory_reads_respects_g
        | simp add: unless_def when_def split del: split_if)+
@@ -1128,12 +1132,14 @@ lemma reset_untyped_cap_reads_respects_g:
   apply (clarsimp simp: ptr_range_def[symmetric] global_refs_def
                         descendants_range_def2)
   apply (frule if_unsafe_then_capD[OF caps_of_state_cteD], clarsimp+)
-  apply (strengthen empty_descendants_range_in)
+  apply (strengthen refl[where t=True] refl ex_tupleI[where t=slot]
+            empty_descendants_range_in
+    | clarsimp)+
   apply (drule ex_cte_cap_protects[OF _ _ _ _ order_refl],
     erule caps_of_state_cteD)
      apply (clarsimp simp: descendants_range_def2 empty_descendants_range_in)
     apply clarsimp+
-  apply (cases slot, fastforce)
+  apply fastforce
   done
 
 lemma equiv_valid_obtain:

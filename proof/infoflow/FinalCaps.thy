@@ -2116,7 +2116,7 @@ lemma reset_untyped_cap_silc_inv:
   apply (rule hoare_gen_asm)
   apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule validE_valid, rule hoare_pre)
-   apply (wp set_cap_silc_inv_simple | simp)+
+   apply (wp set_cap_silc_inv_simple | simp add: unless_def)+
      apply (rule valid_validE, rule_tac Q="\<lambda>_. cte_wp_at is_untyped_cap slot
            and silc_inv aag st" in hoare_strengthen_post)
       apply (rule validE_valid, rule mapME_x_inv_wp, rule hoare_pre)

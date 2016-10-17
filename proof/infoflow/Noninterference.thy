@@ -2548,12 +2548,19 @@ lemma partitionIntegrity_irq_state_update[simp]:
   apply(cut_tac s=y and aag=aag in partitionIntegrity_refl)
   apply(clarsimp simp: partitionIntegrity_def integrity_subjects_def domain_fields_equiv_def globals_equiv_scheduler_def silc_dom_equiv_def equiv_for_def)
   done
-  
+
+lemma invs_if_Invs:
+  "invs_if s
+    \<Longrightarrow> Invs (internal_state_if s)
+        \<and> det_inv (sys_mode_of s) (cur_thread_context_of s) (internal_state_if s)"
+  by (simp add: invs_if_def)
+
 lemma do_user_op_A_if_confidentiality:
   notes
     read_respects_irq =
       use_ev[OF check_active_irq_if_reads_respects_f_g[
-        where st=s0_internal and st'=s0_internal and irq=timer_irq]] and
+        where st=s0_internal and st'=s0_internal and irq=timer_irq
+          and aag="current_aag (internal_state_if s)"]] and
     read_respects_user_op =
       use_ev[OF do_user_op_if_reads_respects_f_g[
         where aag="current_aag (internal_state_if s)" and st="s0_internal"]]
@@ -2577,10 +2584,9 @@ lemma do_user_op_A_if_confidentiality:
              H: "(_,_) \<in> fst (check_active_irq_if _ p)"
           for p q \<Rightarrow> \<open>rule revcut_rl[OF read_respects_irq[where t=q, OF H]]\<close>)
        apply assumption
-      apply (clarsimp simp: invs_if_def Invs_def)
-      apply assumption
-     apply(clarsimp simp: invs_if_def Invs_def)
-     apply(drule uwr_PSched_cur_domain)
+      apply (clarsimp dest!: invs_if_Invs simp: Invs_def)
+     apply (drule uwr_PSched_cur_domain)
+     apply (clarsimp dest!: invs_if_Invs simp: Invs_def)
      apply(clarsimp simp: current_aag_def)
     apply simp
    apply fastforce
@@ -2591,7 +2597,8 @@ lemma do_user_op_A_if_confidentiality:
        apply assumption
       apply (match premises in "s = ((_,p),_)" and H: "(_,_) \<in> fst (check_active_irq_if _ p)"
               for p \<Rightarrow> \<open>rule revcut_rl[OF use_valid[OF H check_active_irq_if_User_det_inv]]\<close>)
-       apply (clarsimp simp: invs_if_def Invs_def cur_thread_context_of_def)
+       apply (simp(no_asm_use) add: invs_if_def Invs_def cur_thread_context_of_def)
+       apply (clarsimp simp only: simp_thms)
       apply simp
       apply (erule use_valid)
        apply(wp check_active_irq_if_wp)
@@ -2601,7 +2608,8 @@ lemma do_user_op_A_if_confidentiality:
         apply (simp add: active_from_running)+
      apply (match premises in "t_aux = (_,q)" and H: "(_,q) \<in> fst (check_active_irq_if _ _)"
               for q \<Rightarrow> \<open>rule revcut_rl[OF use_valid[OF H check_active_irq_if_User_det_inv]]\<close>)
-      apply (clarsimp simp: invs_if_def Invs_def cur_thread_context_of_def)
+      apply (simp(no_asm_use) add: invs_if_def Invs_def cur_thread_context_of_def)
+      apply (clarsimp simp only: simp_thms)
      apply simp
      apply(erule_tac s'=yc in use_valid)
       apply(wp check_active_irq_if_wp)
@@ -2615,19 +2623,21 @@ lemma do_user_op_A_if_confidentiality:
       apply (match premises in "t = ((_,q),_)" for q \<Rightarrow>
               \<open>rule revcut_rl[OF current_aag_def[where t=q]]\<close>)
       apply (rule guarded_pas_is_subject_current_aag[rule_format])
-        apply (simp add: active_from_running)+
+        apply (simp only: active_from_running)+
      apply(drule uwr_PSched_cur_domain, simp add: current_aag_def)
     apply simp
    apply simp
   apply simp
   apply(rule reads_equiv_f_g_affects_equiv_uwr)
-           apply (simp add: invs_if_def Invs_def)+
+           apply ((clarsimp simp: Invs_def dest!: invs_if_Invs; rule TrueI)+)
+      apply (simp add: invs_if_def Invs_def)+
      apply(erule use_valid[OF _ do_user_op_if_partitionIntegrity])
      apply(erule use_valid[OF _ check_active_irq_if_wp])
      apply(clarsimp)
      apply(frule (1) ct_running_cur_thread_not_idle_thread[OF invs_valid_idle])
      apply (rule guarded_pas_is_subject_current_aag[rule_format])
-       apply (simp add: active_from_running)+
+       apply (simp only: active_from_running)+
+    apply simp
     apply(erule_tac s'=s'aa in use_valid[OF _ do_user_op_if_partitionIntegrity])
     apply(erule_tac s'=yc in use_valid[OF _ check_active_irq_if_wp])
     apply(clarsimp)
@@ -2636,11 +2646,10 @@ lemma do_user_op_A_if_confidentiality:
             \<open>rule revcut_rl[OF ct_running_cur_thread_not_idle_thread[OF invs_valid_idle[OF H]]]\<close>)
      apply assumption
     apply (rule guarded_pas_is_subject_current_aag[rule_format])
-      apply (simp add: active_from_running)+
+      apply (simp only: active_from_running)+
    apply(simp add: sys_mode_of_def)
   apply(simp add: user_context_of_def)
   done
-  
 
 lemma do_user_op_A_if_confidentiality':
   "\<lbrakk>(XX, YY) \<in> uwr PSched; XX = s; YY = t; (s, t) \<in> uwr (part s); (s, t) \<in> uwr u;

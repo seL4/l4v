@@ -1107,6 +1107,7 @@ where
           High_cnode_ptr \<mapsto> 10,
           Silc_cnode_ptr \<mapsto> 10,
           irq_cnode_ptr  \<mapsto> 0),
+    gsUntypedZeroRanges = ran (map_comp untypedZeroRange (option_map cteCap o map_to_ctes kh0H)),
     gsMaxObjectSize = card (UNIV :: word32 set),
     ksDomScheduleIdx = 0,
     ksDomSchedule = [(0 ,10), (1, 10)],
@@ -1546,6 +1547,11 @@ lemma map_to_ctes_kh0H:
           clarsimp simp: option_update_range_def kh0H_dom_distinct[THEN set_mem_neq] not_in_range_cte_None,
           ((clarsimp simp: kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None irq_node_offs_in_range |
           clarsimp simp: kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1])+
+
+lemma option_update_range_map_comp:
+  "option_update_range m m' = map_add m' m"
+  by (simp add: fun_eq_iff option_update_range_def map_comp_def map_add_def
+         split: option.split)
 
 lemma tcb_offs_in_rangeI:
   "\<lbrakk>ptr \<le> ptr + x; ptr + x \<le> ptr + 2 ^ 9 - 1\<rbrakk> \<Longrightarrow> ptr + x \<in> tcb_offs_range ptr"
@@ -3034,16 +3040,11 @@ lemma s0H_invs:
    apply (clarsimp split: split_if_asm)
   apply (rule conjI)
    apply (clarsimp simp: kdr_pspace_domain_valid) (* use axiomatization for now *)
-  apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def)
-  apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def)
-  apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def maxDomain_def numDomains_def dschDomain_def dschLength_def)
-  apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def newKernelState_def newKSDomSched)
-  apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def newKernelState_def newKSDomSched)
+  (* unfold s0H_internal for remaining goals *)
+  apply (clarsimp simp: s0H_internal_def cteCaps_of_def
+                        untyped_ranges_zero_inv_def
+                        maxDomain_def numDomains_def dschDomain_def dschLength_def)
+  apply (clarsimp simp: newKernelState_def newKSDomSched)
   apply (clarsimp simp: cur_tcb'_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])

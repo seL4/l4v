@@ -3061,7 +3061,7 @@ lemma reset_untyped_cap_irq_state_inv:
              preemption_point_irq_state_inv'[where irq=irq]
              get_cap_wp
      | rule irq_state_inv_triv
-     | simp
+     | simp add: unless_def
      | wp_once dmo_wp)+
   done
 
