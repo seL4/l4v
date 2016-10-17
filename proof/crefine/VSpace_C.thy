@@ -1503,8 +1503,6 @@ lemma setVMRoot_ccorres:
       apply (simp add: cap_case_isPageDirectoryCap cong: if_cong)
       apply (simp add: throwError_def catch_def)
       apply (rule ccorres_rhs_assoc)+
-      apply simp
-      apply (rule ccorres_rhs_assoc)+
       apply (rule ccorres_h_t_valid_armKSGlobalPD)
       apply csymbr
       apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState[unfolded comp_def])
@@ -1537,8 +1535,6 @@ lemma setVMRoot_ccorres:
          apply (rule ccorres_stateAssert)
          apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState[unfolded o_def])
          apply (rule ccorres_rhs_assoc)+
-         apply simp
-         apply (rule ccorres_rhs_assoc)+
          apply (rule ccorres_h_t_valid_armKSGlobalPD)
          apply csymbr
          apply (rule ccorres_add_return2)
@@ -1558,8 +1554,6 @@ lemma setVMRoot_ccorres:
        apply (rule ccorres_stateAssert)
        apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState[unfolded o_def])
-       apply simp
-       apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_h_t_valid_armKSGlobalPD)
        apply csymbr
        apply (rule ccorres_add_return2)
