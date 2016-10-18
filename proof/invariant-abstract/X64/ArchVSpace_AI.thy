@@ -758,7 +758,8 @@ definition
       | (VMPDE _, slot) 
         \<Rightarrow> slot \<in> obj_refs cap \<and> is_pd_cap cap \<and> cap_asid cap \<noteq> None
       | (VMPDPTE _, slot)
-        \<Rightarrow> slot \<in> obj_refs cap \<and> is_pdpt_cap cap \<and> cap_asid cap \<noteq> None"
+        \<Rightarrow> slot \<in> obj_refs cap \<and> is_pdpt_cap cap \<and> cap_asid cap \<noteq> None
+      | (VMPML4E _, _) \<Rightarrow> True"
 
 (* FIXME x64: check *)
 definition
@@ -775,7 +776,8 @@ definition
      | (VMPDPTE pdpte, slot) \<Rightarrow> 
          (\<exists>p. pdpte_ref_pages pdpte = Some p \<and> p \<in> obj_refs cap) \<and>
          (\<forall>ref. (ref \<rhd> (slot && ~~ mask pdpt_bits)) s \<longrightarrow> 
-           vs_cap_ref cap = Some (VSRef (slot && mask pdpt_bits >> word_size_bits) (Some APDPointerTable) # ref))"
+           vs_cap_ref cap = Some (VSRef (slot && mask pdpt_bits >> word_size_bits) (Some APDPointerTable) # ref))
+     | (VMPML4E _, _) \<Rightarrow> True"
 
 definition
   "valid_page_inv pi \<equiv> case pi of
@@ -826,21 +828,21 @@ definition
 where
   "empty_pde_at p \<equiv> \<lambda>s. 
   \<exists>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s \<and> 
-       pd (ucast (p && mask pd_bits >> 2)) = InvalidPDE"
+       pd (ucast (p && mask pd_bits >> word_size_bits)) = InvalidPDE"
 
 definition
   empty_pdpte_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "empty_pdpte_at p \<equiv> \<lambda>s. 
   \<exists>pdpt. ko_at (ArchObj (PDPointerTable pdpt)) (p && ~~ mask pdpt_bits) s \<and> 
-       pdpt (ucast (p && mask pdpt_bits >> 2)) = InvalidPDPTE"
+       pdpt (ucast (p && mask pdpt_bits >> word_size_bits)) = InvalidPDPTE"
        
 definition
   empty_pml4e_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "empty_pml4e_at p \<equiv> \<lambda>s. 
   \<exists>pml4. ko_at (ArchObj (PageMapL4 pml4)) (p && ~~ mask pml4_bits) s \<and> 
-       pml4 (ucast (p && mask pml4_bits >> 2)) = InvalidPML4E"
+       pml4 (ucast (p && mask pml4_bits >> word_size_bits)) = InvalidPML4E"
        
 definition
   kernel_vsrefs :: "vs_ref set"
@@ -1524,10 +1526,10 @@ lemma set_pd_invs_map:
 
 lemma vs_refs_add_one':
   "p \<notin> kernel_mapping_slots \<Longrightarrow>
-   vs_refs (ArchObj (PageDirectory (pd (p := pde)))) =
-   vs_refs (ArchObj (PageDirectory pd))
-       - Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref (pd p))
-       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref pde)"
+   vs_refs (ArchObj (PageMapL4 (pml4 (p := pml4e)))) =
+   vs_refs (ArchObj (PageMapL4 pml4))
+       - Pair (VSRef (ucast p) (Some APageMapL4)) ` set_option (pml4e_ref (pml4 p))
+       \<union> Pair (VSRef (ucast p) (Some APageMapL4)) ` set_option (pml4e_ref pml4e)"
   apply (simp add: vs_refs_def)
   apply (rule set_eqI)
   apply clarsimp
@@ -1552,19 +1554,19 @@ lemma vs_refs_add_one':
 
 
 lemma vs_refs_add_one:
-  "\<lbrakk>pde_ref (pd p) = None; p \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
-   vs_refs (ArchObj (PageDirectory (pd (p := pde)))) =
-   vs_refs (ArchObj (PageDirectory pd))
-       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref pde)"
+  "\<lbrakk>pml4e_ref (pml4 p) = None; p \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
+   vs_refs (ArchObj (PageMapL4 (pml4 (p := pml4e)))) =
+   vs_refs (ArchObj (PageMapL4 pml4))
+       \<union> Pair (VSRef (ucast p) (Some APageMapL4)) ` set_option (pml4e_ref pml4e)"
   by (simp add: vs_refs_add_one')
 
 
 lemma vs_refs_pages_add_one':
   "p \<notin> kernel_mapping_slots \<Longrightarrow>
-   vs_refs_pages (ArchObj (PageDirectory (pd (p := pde)))) =
-   vs_refs_pages (ArchObj (PageDirectory pd))
-       - Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref_pages (pd p))
-       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref_pages pde)"
+   vs_refs_pages (ArchObj (PageMapL4 (pml4 (p := pml4e)))) =
+   vs_refs_pages (ArchObj (PageMapL4 pml4))
+       - Pair (VSRef (ucast p) (Some APageMapL4)) ` set_option (pml4e_ref_pages (pml4 p))
+       \<union> Pair (VSRef (ucast p) (Some APageMapL4)) ` set_option (pml4e_ref_pages pml4e)"
   apply (simp add: vs_refs_pages_def)
   apply (rule set_eqI)
   apply clarsimp
@@ -1588,10 +1590,10 @@ lemma vs_refs_pages_add_one':
   done
 
 lemma vs_refs_pages_add_one:
-  "\<lbrakk>pde_ref_pages (pd p) = None; p \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
-   vs_refs_pages (ArchObj (PageDirectory (pd (p := pde)))) =
-   vs_refs_pages (ArchObj (PageDirectory pd))
-       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref_pages pde)"
+  "\<lbrakk>pml4e_ref_pages (pml4 p) = None; p \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
+   vs_refs_pages (ArchObj (PageMapL4 (pml4 (p := pml4e)))) =
+   vs_refs_pages (ArchObj (PageMapL4 pml4))
+       \<union> Pair (VSRef (ucast p) (Some APageMapL4)) ` set_option (pml4e_ref_pages pml4e)"
   by (simp add: vs_refs_pages_add_one')
 
 definition is_asid_pool_cap :: "cap \<Rightarrow> bool"
@@ -1602,7 +1604,17 @@ definition is_asid_pool_cap :: "cap \<Rightarrow> bool"
 lemma valid_cap_to_pt_cap:
   "\<lbrakk>valid_cap c s; obj_refs c = {p}; page_table_at p s\<rbrakk> \<Longrightarrow> is_pt_cap c"
   by (clarsimp simp: valid_cap_def obj_at_def is_obj_defs is_pt_cap_def
-              split: cap.splits option.splits arch_cap.splits)
+                 split: cap.splits option.splits arch_cap.splits if_splits)
+
+lemma valid_cap_to_pdpt_cap:
+  "\<lbrakk>valid_cap c s; obj_refs c = {p}; pd_pointer_table_at p s\<rbrakk> \<Longrightarrow> is_pdpt_cap c"
+  by (clarsimp simp: valid_cap_def obj_at_def is_obj_defs is_pdpt_cap_def
+                 split: cap.splits option.splits arch_cap.splits if_splits)
+
+lemma valid_cap_to_pd_cap:
+  "\<lbrakk>valid_cap c s; obj_refs c = {p}; page_directory_at p s\<rbrakk> \<Longrightarrow> is_pd_cap c"
+  by (clarsimp simp: valid_cap_def obj_at_def is_obj_defs is_pd_cap_def
+                 split: cap.splits option.splits arch_cap.splits if_splits)
 
 lemma ref_is_unique:
   "\<lbrakk>(ref \<rhd> p) s; (ref' \<rhd> p) s; p \<notin> set (x64_global_pdpts (arch_state s));
@@ -1611,68 +1623,54 @@ lemma ref_is_unique:
     valid_caps (caps_of_state s) s\<rbrakk>
    \<Longrightarrow> ref = ref'"
   apply (erule (1) vs_lookupE_alt[OF _ _ valid_asid_table_ran], clarsimp)
+      apply (erule (1) vs_lookupE_alt[OF _ _ valid_asid_table_ran], clarsimp)
+          apply (clarsimp simp: valid_asid_table_def up_ucast_inj_eq)
+          apply (erule (2) inj_on_domD)
+         apply ((clarsimp simp: obj_at_def)+)[4]
+     apply (erule (1) vs_lookupE_alt[OF _ _ valid_asid_table_ran], clarsimp)
+         apply (clarsimp simp: obj_at_def)
+        apply (drule (2) vs_lookup_apI)+
+        apply (clarsimp dest!: valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI]
+                               obj_ref_elemD
+                         simp: table_cap_ref_ap_eq[symmetric])
+        apply (drule_tac cap=cap and cap'=capa in unique_table_refsD, simp+)[1]
+       apply ((clarsimp simp: obj_at_def)+)[3]
     apply (erule (1) vs_lookupE_alt[OF _ _ valid_asid_table_ran], clarsimp)
-      apply (clarsimp simp: valid_asid_table_def up_ucast_inj_eq)
-      apply (erule (2) inj_on_domD)
+        apply ((clarsimp simp: obj_at_def)+)[2]
+      apply (simp add: pml4e_ref_def split: pml4e.splits)
+      apply (drule (5) vs_lookup_pml4I)+
+      apply (clarsimp dest!: valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI]
+                             obj_ref_elemD)
+      apply (drule_tac cap=cap and cap'=capa in unique_table_refsD, simp+)[1]
+      apply (drule (3) valid_capsD[THEN valid_cap_to_pdpt_cap])+
+      apply (clarsimp simp: is_pdpt_cap_def table_cap_ref_simps vs_cap_ref_simps)
      apply ((clarsimp simp: obj_at_def)+)[2]
    apply (erule (1) vs_lookupE_alt[OF _ _ valid_asid_table_ran], clarsimp)
-     apply (clarsimp simp: obj_at_def)
-    apply (drule (2) vs_lookup_apI)+
-    apply (clarsimp dest!: valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI]
-                           obj_ref_elemD
-                     simp: table_cap_ref_ap_eq[symmetric])
+       apply ((clarsimp simp: obj_at_def)+)[3]
+    apply (simp add: pdpte_ref_def split: pdpte.splits)
+    apply (drule (7) vs_lookup_pdptI)+
+    apply (clarsimp dest!: valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI] obj_ref_elemD)
     apply (drule_tac cap=cap and cap'=capa in unique_table_refsD, simp+)[1]
+    apply (drule (3) valid_capsD[THEN valid_cap_to_pd_cap])+
+    apply (clarsimp simp: is_pd_cap_def table_cap_ref_simps vs_cap_ref_simps)
    apply (clarsimp simp: obj_at_def)
   apply (erule (1) vs_lookupE_alt[OF _ _ valid_asid_table_ran], clarsimp)
-    apply ((clarsimp simp: obj_at_def)+)[2]
+      apply ((clarsimp simp: obj_at_def)+)[4]
   apply (simp add: pde_ref_def split: pde.splits)
-  apply (drule (5) vs_lookup_pdI)+
-  apply (clarsimp dest!: valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI]
-                         obj_ref_elemD)
+  apply (drule (9) vs_lookup_pdI)+
+  apply (clarsimp dest!: valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI] obj_ref_elemD)
   apply (drule_tac cap=cap and cap'=capa in unique_table_refsD, simp+)[1]
   apply (drule (3) valid_capsD[THEN valid_cap_to_pt_cap])+
   apply (clarsimp simp: is_pt_cap_def table_cap_ref_simps vs_cap_ref_simps)
   done
 
-lemma mask_shift_mask_helper:
-  "(p && mask pd_bits >> 2) && mask 12 = (p && mask pd_bits >> 2)"
-  apply (rule word_eqI)
-  apply (simp add: word_size pd_bits_def pageBits_def nth_shiftr conj_comms)
-  done
-
-lemma ucast_ucast_mask_shift_helper:
-  "ucast (ucast (p && mask pd_bits >> 2 :: word32) :: 12 word)
-        = (p && mask pd_bits >> 2 :: word32)"
-  apply (rule ucast_ucast_len)
-  apply (rule shiftr_less_t2n)
-  apply (simp add: pd_bits_def pageBits_def)
-  apply (rule order_less_le_trans, rule and_mask_less_size)
-   apply (simp add: word_size)+
-  done
-
-lemma unat_ucast_pd_bits_shift:
-  "unat (ucast ((p :: word32) && mask pd_bits >> 2) :: 12 word)
-       = unat (p && mask pd_bits >> 2)"
-  apply (simp only: unat_ucast)
-  apply (rule mod_less)
-  apply (rule unat_less_power)
-   apply (simp add: word_bits_def)
-  apply (rule shiftr_less_t2n)
-  apply (rule order_le_less_trans [OF word_and_le1])
-  apply (simp add: pd_bits_def pageBits_def mask_def)
-  done
-
-lemma kernel_vsrefs_kernel_mapping_slots:
-  "(ucast (p && mask pd_bits >> 2) \<in> kernel_mapping_slots) =
-    (VSRef (p && mask pd_bits >> 2) (Some APageDirectory) \<in> kernel_vsrefs)"
-  by (clarsimp simp: kernel_mapping_slots_def kernel_vsrefs_def
-                     word_le_nat_alt unat_ucast_pd_bits_shift
-                     kernel_base_def)
 
 lemma vs_lookup_typI:
   "\<lbrakk>(r \<rhd> p) s; valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s\<rbrakk> 
    \<Longrightarrow> page_table_at p s
     \<or> page_directory_at p s
+    \<or> pd_pointer_table_at p s
+    \<or> page_map_l4_at p s
     \<or> asid_pool_at p s"
   apply (erule (1) vs_lookupE_alt)
      apply (clarsimp simp: ran_def)
@@ -1681,7 +1679,7 @@ lemma vs_lookup_typI:
   done
 
 lemma vs_lookup_vs_lookup_pagesI':
-  "\<lbrakk>(r \<unrhd> p) s; page_table_at p s \<or> page_directory_at p s \<or> asid_pool_at p s;
+  "\<lbrakk>(r \<unrhd> p) s; page_table_at p s \<or> page_directory_at p s \<or> pd_pointer_table_at p s \<or> page_map_l4_at p s \<or> asid_pool_at p s;
     valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s\<rbrakk>
    \<Longrightarrow> (r \<rhd> p) s"
   apply (erule (1) vs_lookup_pagesE_alt)
@@ -1703,24 +1701,24 @@ lemma vs_lookup_vs_lookup_pagesI':
    apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def)
    apply (rule_tac x="(c, p)" in image_eqI)
     apply simp
-   apply (clarsimp simp: pde_ref_def pde_ref_pages_def valid_pde_def obj_at_def 
+   apply (clarsimp simp: pml4e_ref_def pml4e_ref_pages_def valid_pde_def obj_at_def 
                          a_type_def 
-                   split:pde.splits )
+                   split:pml4e.splits )
   apply (rule vs_lookupI)
    apply (fastforce simp: vs_asid_refs_def graph_of_def)
   apply (rule_tac y="([VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None], p\<^sub>2)" in rtrancl_trans)
    apply (rule rtrancl_into_rtrancl[OF rtrancl.intros(1)])
    apply (fastforce simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def)
-  apply (rule_tac y="([VSRef (ucast c) (Some APageDirectory), VSRef (ucast b) (Some AASIDPool),
+  apply (rule_tac y="([VSRef (ucast c) (Some APageMapL4), VSRef (ucast b) (Some AASIDPool),
            VSRef (ucast a) None], (ptrFromPAddr addr))" in rtrancl_trans)
    apply (rule rtrancl_into_rtrancl[OF rtrancl.intros(1)])
    apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def)
    apply (rule_tac x="(c,(ptrFromPAddr addr))" in image_eqI)
     apply simp 
-   apply (clarsimp simp: pde_ref_def)
+   apply (clarsimp simp: pml4e_ref_def)
   apply (rule rtrancl_into_rtrancl[OF rtrancl.intros(1)])
-  apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def pte_ref_pages_def a_type_def 
-                  split: pte.splits)
+  apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def pdpte_ref_pages_def a_type_def 
+                  split: pdpte.splits )
   done
 
 lemma vs_lookup_vs_lookup_pagesI:
@@ -1729,31 +1727,31 @@ lemma vs_lookup_vs_lookup_pagesI:
   by (erule (5) vs_lookup_vs_lookup_pagesI'[OF _ vs_lookup_typI])
 
 (* FIXME: move *)
-lemma valid_cap_to_pd_cap:
-  "\<lbrakk>valid_cap c s; obj_refs c = {p}; page_directory_at p s\<rbrakk> \<Longrightarrow> is_pd_cap c"
-  by (clarsimp simp: valid_cap_def obj_at_def is_obj_defs is_pd_cap_def
-              split: cap.splits option.splits arch_cap.splits)
+lemma valid_cap_to_pml4_cap:
+  "\<lbrakk>valid_cap c s; obj_refs c = {p}; page_map_l4_at p s\<rbrakk> \<Longrightarrow> is_pml4_cap c"
+  by (clarsimp simp: valid_cap_def obj_at_def is_obj_defs is_pml4_cap_def
+              split: cap.splits option.splits arch_cap.splits if_splits)
 
-lemma store_pde_map_invs:
-  "\<lbrace>(\<lambda>s. wellformed_pde pde) and invs and empty_pde_at p and valid_pde pde
-     and (\<lambda>s. \<forall>p. pde_ref pde = Some p \<longrightarrow> (\<exists>ao. ko_at (ArchObj ao) p s \<and> valid_arch_obj ao s))
-     and K (VSRef (p && mask pd_bits >> 2) (Some APageDirectory)
+lemma store_pml4e_map_invs:
+  "\<lbrace>(\<lambda>s. wellformed_pml4e pml4e) and invs and empty_pml4e_at p and valid_pml4e pml4e
+     and (\<lambda>s. \<forall>p. pml4e_ref pml4e = Some p \<longrightarrow> (\<exists>ao. ko_at (ArchObj ao) p s \<and> valid_arch_obj ao s))
+     and K (VSRef (p && mask pml4_bits >> 2) (Some APageMapL4)
                \<notin> kernel_vsrefs)
-     and (\<lambda>s. \<exists>r. (r \<rhd> (p && (~~ mask pd_bits))) s \<and> 
-               (\<forall>p'. pde_ref_pages pde = Some p' \<longrightarrow>
+     and (\<lambda>s. \<exists>r. (r \<rhd> (p && (~~ mask pml4_bits))) s \<and> 
+               (\<forall>p'. pml4e_ref_pages pml4e = Some p' \<longrightarrow>
                          (\<exists>p'' cap. caps_of_state s p'' = Some cap \<and> p' \<in> obj_refs cap
-                                     \<and> vs_cap_ref cap = Some (VSRef (p && mask pd_bits >> 2) (Some APageDirectory) # r))
-                         \<and> (\<forall>p''' a b. pde = PageTablePDE p''' a b \<longrightarrow> 
-                             (\<forall>pt. ko_at (ArchObj (PageTable pt)) (ptrFromPAddr p''') s \<longrightarrow>
-                                    (\<forall>x word. pte_ref_pages (pt x) = Some word \<longrightarrow>
+                                     \<and> vs_cap_ref cap = Some (VSRef (p && mask pml4_bits >> 2) (Some APageMapL4) # r))
+                         \<and> (\<forall>p''' a b. pml4e = PDPointerTablePML4E p''' a b \<longrightarrow> 
+                             (\<forall>pt. ko_at (ArchObj (PDPointerTable pt)) (ptrFromPAddr p''') s \<longrightarrow>
+                                    (\<forall>x word. pdpte_ref_pages (pt x) = Some word \<longrightarrow>
                                           (\<exists>p'' cap. caps_of_state s p'' = Some cap \<and> word \<in> obj_refs cap
                                                    \<and> vs_cap_ref cap = 
-                                                        Some (VSRef (ucast x) (Some APageTable) 
-                                                            # VSRef (p && mask pd_bits >> 2) (Some APageDirectory) 
+                                                        Some (VSRef (ucast x) (Some APDPointerTable) 
+                                                            # VSRef (p && mask pml4_bits >> 2) (Some APageMapL4) 
                                                             # r)))))))\<rbrace>
-  store_pde p pde \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: store_pde_def)
-  apply (wp dmo_invs set_pd_invs_map)
+  store_pml4e p pml4e \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: store_pml4e_def)
+  apply (wp dmo_invs set_pml4_invs_map)
   apply clarsimp
   apply (rule conjI)
    apply (drule invs_valid_objs)
@@ -1836,10 +1834,35 @@ lemma set_cap_empty_pde:
   apply (clarsimp simp: cte_wp_at_cases obj_at_def)
   done
 
-lemma valid_cap_obj_ref_pt_pd:
+lemma set_cap_empty_pml4e:
+  "\<lbrace>empty_pml4e_at p and cte_at p'\<rbrace> set_cap cap p' \<lbrace>\<lambda>_. empty_pml4e_at p\<rbrace>"
+  apply (simp add: empty_pml4e_at_def)
+  apply (rule hoare_pre) 
+   apply (wp set_cap_obj_at_other hoare_vcg_ex_lift)
+  apply clarsimp
+  apply (rule exI, rule conjI, assumption)
+  apply (erule conjI)
+  apply (clarsimp simp: cte_wp_at_cases obj_at_def)
+  done
+  
+lemma set_cap_empty_pdpte:
+  "\<lbrace>empty_pdpte_at p and cte_at p'\<rbrace> set_cap cap p' \<lbrace>\<lambda>_. empty_pdpte_at p\<rbrace>"
+  apply (simp add: empty_pdpte_at_def)
+  apply (rule hoare_pre) 
+   apply (wp set_cap_obj_at_other hoare_vcg_ex_lift)
+  apply clarsimp
+  apply (rule exI, rule conjI, assumption)
+  apply (erule conjI)
+  apply (clarsimp simp: cte_wp_at_cases obj_at_def)
+  done
+  
+  
+lemma valid_cap_obj_ref_vspace:
   "\<lbrakk> s \<turnstile> cap; s \<turnstile> cap'; obj_refs cap = obj_refs cap' \<rbrakk>
        \<Longrightarrow> (is_pt_cap cap \<longrightarrow> is_pt_cap cap')
-         \<and> (is_pd_cap cap \<longrightarrow> is_pd_cap cap')"
+         \<and> (is_pd_cap cap \<longrightarrow> is_pd_cap cap')
+         \<and> (is_pdpt_cap cap \<longrightarrow> is_pdpt_cap cap')
+         \<and> (is_pml4_cap cap \<longrightarrow> is_pml4_cap cap')"
   by (auto simp: is_cap_simps valid_cap_def
                  obj_at_def is_ep is_ntfn is_cap_table
                  is_tcb a_type_def
@@ -1848,14 +1871,14 @@ lemma valid_cap_obj_ref_pt_pd:
 
 
 
-lemma is_pt_pd_cap_asid_None_table_ref:
-  "is_pt_cap cap \<or> is_pd_cap cap
+lemma is_vspace_cap_asid_None_table_ref:
+  "is_pt_cap cap \<or> is_pd_cap cap \<or> is_pdpt_cap cap \<or> is_pml4_cap cap
      \<Longrightarrow> ((table_cap_ref cap = None) = (cap_asid cap = None))"
   by (auto simp: is_cap_simps table_cap_ref_def cap_asid_def
           split: option.split_asm)
 
 lemma no_cap_to_obj_with_diff_ref_map:
-  "\<lbrakk> caps_of_state s p = Some cap; is_pt_cap cap \<or> is_pd_cap cap;
+  "\<lbrakk> caps_of_state s p = Some cap; is_pt_cap cap \<or> is_pd_cap cap \<or> is_pdpt_cap cap \<or> is_pml4_cap cap;
      table_cap_ref cap = None;
      unique_table_caps (caps_of_state s);
      valid_objs s; obj_refs cap = obj_refs cap' \<rbrakk>
@@ -1864,10 +1887,10 @@ lemma no_cap_to_obj_with_diff_ref_map:
                         cte_wp_at_caps_of_state)
   apply (frule(1) caps_of_state_valid_cap[where p=p])
   apply (frule(1) caps_of_state_valid_cap[where p="(a, b)" for a b])
-  apply (drule(1) valid_cap_obj_ref_pt_pd, simp)
+  apply (drule(1) valid_cap_obj_ref_vspace, simp)
   apply (drule(1) unique_table_capsD[rotated, where cps="caps_of_state s"])
       apply simp
-     apply (simp add: is_pt_pd_cap_asid_None_table_ref)
+     apply (simp add: is_vspace_cap_asid_None_table_ref)
     apply fastforce
    apply assumption
   apply simp
@@ -1877,6 +1900,12 @@ lemma no_cap_to_obj_with_diff_ref_map:
 lemmas store_pte_cte_wp_at1[wp]
     = hoare_cte_wp_caps_of_state_lift [OF store_pte_caps_of_state]
 
+lemmas store_pde_cte_wp_at1[wp]
+    = hoare_cte_wp_caps_of_state_lift [OF store_pde_caps_of_state]
+    
+lemmas store_pdpte_cte_wp_at1[wp]
+    = hoare_cte_wp_caps_of_state_lift [OF store_pdpte_caps_of_state]
+ 
 lemma mdb_cte_at_store_pte[wp]:
   "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
    store_pte y pte
@@ -1888,24 +1917,82 @@ lemma mdb_cte_at_store_pte[wp]:
     apply wp
     apply (rule hoare_drop_imp)
     apply (wp|simp)+
-done
+  done
 
+lemma mdb_cte_at_store_pde[wp]:
+  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
+   store_pde y pde
+   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
+  apply (clarsimp simp:mdb_cte_at_def)
+  apply (simp only: imp_conv_disj)
+  apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
+    apply (simp add:store_pde_def set_pd_def)
+    apply wp
+    apply (rule hoare_drop_imp)
+    apply (wp|simp)+
+  done
+  
+lemma mdb_cte_at_store_pdpte[wp]:
+  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
+   store_pdpte y pdpte
+   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
+  apply (clarsimp simp:mdb_cte_at_def)
+  apply (simp only: imp_conv_disj)
+  apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
+    apply (simp add:store_pdpte_def set_pdpt_def)
+    apply wp
+    apply (rule hoare_drop_imp)
+    apply (wp|simp)+
+  done
+  
 lemma valid_idle_store_pte[wp]:
   "\<lbrace>valid_idle\<rbrace> store_pte y pte \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add:store_pte_def)
   apply wp
-  apply (rule hoare_vcg_precond_imp[where Q="valid_idle"])
-  apply (simp add:set_pt_def)
-  apply wp
-  apply (simp add:get_object_def)
-  apply wp
-  apply (clarsimp simp:obj_at_def
-    split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (fastforce simp:is_tcb_def)
-  apply (assumption)
+   apply (rule hoare_vcg_precond_imp[where Q="valid_idle"])
+    apply (simp add:set_pt_def)
+    apply wp
+    apply (simp add:get_object_def)
+    apply wp
+    apply (clarsimp simp: obj_at_def
+                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+    apply (fastforce simp:is_tcb_def)
+   apply (assumption)
   apply (wp|simp)+
-done
+  done
+  
+lemma valid_idle_store_pde[wp]:
+  "\<lbrace>valid_idle\<rbrace> store_pde y pde \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  apply (simp add:store_pde_def)
+  apply wp
+   apply (rule hoare_vcg_precond_imp[where Q="valid_idle"])
+    apply (simp add:set_pd_def)
+    apply wp
+    apply (simp add:get_object_def)
+    apply wp
+    apply (clarsimp simp: obj_at_def
+                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+    apply (fastforce simp:is_tcb_def)
+   apply (assumption)
+  apply (wp|simp)+
+  done
 
+lemma valid_idle_store_pdpte[wp]:
+  "\<lbrace>valid_idle\<rbrace> store_pdpte y pdpte \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  apply (simp add:store_pdpte_def)
+  apply wp
+   apply (rule hoare_vcg_precond_imp[where Q="valid_idle"])
+    apply (simp add:set_pdpt_def)
+    apply wp
+    apply (simp add:get_object_def)
+    apply wp
+    apply (clarsimp simp: obj_at_def
+                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+    apply (fastforce simp:is_tcb_def)
+   apply (assumption)
+  apply (wp|simp)+
+  done
+  
 lemma mapM_swp_store_pte_invs[wp]:
   "\<lbrace>invs and (\<lambda>s. (\<exists>p\<in>set slots. (\<exists>\<rhd> (p && ~~ mask pt_bits)) s) \<longrightarrow>
                   valid_pte pte s) and
@@ -1921,7 +2008,7 @@ lemma mapM_swp_store_pte_invs[wp]:
                        q \<in> obj_refs cap \<and>
                        vs_cap_ref cap =
                        Some
-                        (VSRef (p && mask pt_bits >> 2) (Some APageTable) #
+                        (VSRef (p && mask pt_bits >> word_size_bits) (Some APageTable) #
                          ref))))\<rbrace>
      mapM (swp store_pte pte) slots \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (rule hoare_post_imp)
@@ -1936,83 +2023,111 @@ lemma mapM_swp_store_pte_invs[wp]:
   apply (fastforce simp: cte_wp_at_caps_of_state is_pt_cap_def cap_asid_def)
   done
 
-lemmas store_pde_cte_wp_at1[wp]
-    = hoare_cte_wp_caps_of_state_lift [OF store_pde_caps_of_state]
-
-crunch global_refs_inv[wp]: store_pde "\<lambda>s. P (global_refs s)"
+(* FIXME x64: needs store_pde_invs *)
+lemma mapM_swp_store_pde_invs[wp]:
+  "\<lbrace>invs and (\<lambda>s. (\<exists>p\<in>set slots. (\<exists>\<rhd> (p && ~~ mask pd_bits)) s) \<longrightarrow>
+                  valid_pde pde s) and
+    (\<lambda>s. wellformed_pde pde) and
+    (\<lambda>s. \<exists>slot. cte_wp_at
+           (\<lambda>c. image (\<lambda>x. x && ~~ mask pd_bits) (set slots) \<subseteq> obj_refs c \<and>
+                is_pd_cap c \<and> (pde = InvalidPDE \<or>
+                               cap_asid c \<noteq> None)) slot s) and
+   (\<lambda>s. \<forall>p\<in>set slots. \<forall>ref. (ref \<rhd> (p && ~~ mask pd_bits)) s \<longrightarrow>
+              (\<forall>q. pde_ref_pages pde = Some q \<longrightarrow>
+                   (\<exists>p' cap.
+                       caps_of_state s p' = Some cap \<and>
+                       q \<in> obj_refs cap \<and>
+                       vs_cap_ref cap =
+                       Some
+                        (VSRef (p && mask pd_bits >> word_size_bits) (Some APageDirectory) #
+                         ref))))\<rbrace>
+     mapM (swp store_pde pde) slots \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (rule hoare_post_imp)
+   prefer 2
+   apply (rule mapM_wp')
+   apply simp_all
+  apply (wp hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_ball_lift
+            hoare_vcg_all_lift hoare_vcg_imp_lift)
+      apply clarsimp+
+  apply (intro conjI)
+   apply clarsimp+
+  apply (fastforce simp: cte_wp_at_caps_of_state is_pd_cap_def cap_asid_def)
+  done
+  
+crunch global_refs_inv[wp]: store_pml4e "\<lambda>s. P (global_refs s)"
     (wp: get_object_wp) (* added by sjw, something dropped out of some set :( *)
 
-lemma mapM_swp_store_pde_invs_unmap:
+lemma mapM_swp_store_pml4e_invs_unmap:
   "\<lbrace>invs and
     (\<lambda>s. \<forall>sl\<in>set slots.
-            ucast (sl && mask pd_bits >> 2) \<notin> kernel_mapping_slots) and
-    (\<lambda>s. \<forall>sl\<in>set slots. sl && ~~ mask pd_bits \<notin> global_refs s) and
-    K (pde = InvalidPDE)\<rbrace>
-  mapM (swp store_pde pde) slots \<lbrace>\<lambda>_. invs\<rbrace>"
+            ucast (sl && mask pml4_bits >> word_size_bits) \<notin> kernel_mapping_slots) and
+    (\<lambda>s. \<forall>sl\<in>set slots. sl && ~~ mask pml4_bits \<notin> global_refs s) and
+    K (pml4e = InvalidPML4E)\<rbrace>
+  mapM (swp store_pml4e pml4e) slots \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule mapM_wp')
    apply simp
-   apply (rule hoare_pre, wp store_pde_invs_unmap hoare_vcg_const_Ball_lift
+   apply (rule hoare_pre, wp store_pml4e_invs_unmap hoare_vcg_const_Ball_lift
                              hoare_vcg_ex_lift)
     apply clarsimp+
   done
 
-lemma vs_refs_pdI3:
-  "\<lbrakk>pde_ref (pd x) = Some p; x \<notin> kernel_mapping_slots\<rbrakk>
-   \<Longrightarrow> (VSRef (ucast x) (Some APageDirectory), p) \<in> vs_refs (ArchObj (PageDirectory pd))"
-  by (auto simp: pde_ref_def vs_refs_def graph_of_def)
+lemma vs_refs_pml4I3:
+  "\<lbrakk>pml4e_ref (pml4 x) = Some p; x \<notin> kernel_mapping_slots\<rbrakk>
+   \<Longrightarrow> (VSRef (ucast x) (Some APageMapL4), p) \<in> vs_refs (ArchObj (PageMapL4 pml4))"
+  by (auto simp: pml4e_ref_def vs_refs_def graph_of_def)
 
 
-lemma set_pd_invs_unmap':
-  "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pde (pd i)) and
-    (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (PageDirectory pd) s) and
-    obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) = vs_refs ko - T) p and
-    obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageDirectory pd)) = vs_refs_pages ko - T' \<union> S') p and
-    obj_at (\<lambda>ko. \<exists>pd'. ko = ArchObj (PageDirectory pd')
-                       \<and> (\<forall>x \<in> kernel_mapping_slots. pd x = pd' x)) p and
+lemma set_pml4_invs_unmap':
+  "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pml4e (pml4 i)) and
+    (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (PageMapL4 pml4) s) and
+    obj_at (\<lambda>ko. vs_refs (ArchObj (PageMapL4 pml4)) = vs_refs ko - T) p and
+    obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageMapL4 pml4)) = vs_refs_pages ko - T' \<union> S') p and
+    obj_at (\<lambda>ko. \<exists>pml4'. ko = ArchObj (PageMapL4 pml4')
+                       \<and> (\<forall>x \<in> kernel_mapping_slots. pml4 x = pml4' x)) p and
     (\<lambda>s. p \<notin> global_refs s) and 
     (\<lambda>s. \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and>
-                   is_pd_cap cap \<and>
+                   is_pml4_cap cap \<and>
                    p \<in> obj_refs cap \<and> (\<exists>y. cap_asid cap = Some y)) and
     (\<lambda>s. \<forall>(a,b)\<in>S'. (\<forall>ref. 
                   (ref \<unrhd> p) s \<longrightarrow> 
                     (\<exists>p' cap.
                       caps_of_state s p' = Some cap \<and>
                       b \<in> obj_refs cap \<and> vs_cap_ref cap = Some (a # ref))))\<rbrace>
-  set_pd p pd 
+  set_pml4 p pml4 
   \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def)
   apply (rule hoare_pre)
-   apply (wp set_pd_valid_objs set_pd_iflive set_pd_zombies
-             set_pd_zombies_state_refs set_pd_valid_mdb 
-             set_pd_valid_idle set_pd_ifunsafe set_pd_reply_caps
-             set_pd_valid_arch set_pd_valid_global set_pd_cur 
-             set_pd_reply_masters valid_irq_node_typ
-             set_pd_arch_objs_unmap set_pd_valid_vs_lookup_map[where T=T and S="{}" and T'=T' and S'=S']
+   apply (wp set_pml4_valid_objs set_pml4_iflive set_pml4_zombies
+             set_pml4_zombies_state_refs set_pml4_valid_mdb 
+             set_pml4_valid_idle set_pml4_ifunsafe set_pml4_reply_caps
+             set_pml4_valid_arch set_pml4_valid_global set_pml4_cur 
+             set_pml4_reply_masters valid_irq_node_typ
+             set_pml4_arch_objs_unmap (* set_pml4_valid_vs_lookup_map[where T=T and S="{}" and T'=T' and S'=S'] *)
              valid_irq_handlers_lift
-             set_pd_unmap_mappings set_pd_equal_kernel_mappings_triv)
+             set_pml4_unmap_mappings set_pml4_equal_kernel_mappings_triv)
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def valid_objs_caps obj_at_def
     del: disjCI) 
   apply (rule conjI, clarsimp)
   apply (rule conjI)
    apply clarsimp
-   apply (erule_tac x="(VSRef (ucast c) (Some APageDirectory), q)" in ballE)
+   apply (erule_tac x="(VSRef (ucast c) (Some APageMapL4), q)" in ballE)
     apply clarsimp
-   apply (frule (1) vs_refs_pages_pdI) 
+   apply (frule (1) vs_refs_pages_pml4I) 
    apply (clarsimp simp: valid_arch_caps_def)
-    apply (drule_tac p'=q and ref'="VSRef (ucast c) (Some APageDirectory) # r" in vs_lookup_pages_step)
+    apply (drule_tac p'=q and ref'="VSRef (ucast c) (Some APageMapL4) # r" in vs_lookup_pages_step)
     apply (clarsimp simp: vs_lookup_pages1_def obj_at_def)
    apply (drule (1) valid_vs_lookupD) 
    apply (clarsimp)
   apply (rule conjI)
    apply clarsimp
-   apply (drule (1) vs_refs_pdI3)
+   apply (drule (1) vs_refs_pml4I3)
    apply clarsimp
-   apply (drule_tac p'=q and ref'="VSRef (ucast c) (Some APageDirectory) # r" in vs_lookup_pages_step)
+   apply (drule_tac p'=q and ref'="VSRef (ucast c) (Some APageMapL4) # r" in vs_lookup_pages_step)
     apply (clarsimp simp: vs_lookup_pages1_def obj_at_def)
     apply (erule subsetD[OF vs_refs_pages_subset])
-   apply (drule_tac p'=q' and ref'="VSRef (ucast d) (Some APageTable) # VSRef (ucast c) (Some APageDirectory) # r" 
+   apply (drule_tac p'=q' and ref'="VSRef (ucast d) (Some APDPointerTable) # VSRef (ucast c) (Some APageMapL4) # r" 
                  in vs_lookup_pages_step)
     apply (clarsimp simp: vs_lookup_pages1_def obj_at_def)
     apply (erule pte_ref_pagesD)
@@ -2021,104 +2136,111 @@ lemma set_pd_invs_unmap':
   apply auto
   done
 
-lemma same_refs_lD:
-  "\<lbrakk>same_refs (Inl(pte,p # slots)) cap s\<rbrakk>
+lemma same_refs_pteD:
+  "\<lbrakk>same_refs (VMPTE pte,p) cap s\<rbrakk>
  \<Longrightarrow> (\<exists>p. pte_ref_pages pte = Some p \<and> p \<in> obj_refs cap) \<and>
   (\<forall>ref. (ref \<rhd> (p && ~~ mask pt_bits)) s \<longrightarrow>
-  vs_cap_ref cap = Some (VSRef (p && mask pt_bits >> 2) (Some APageTable) # ref))"
-  apply (clarsimp simp:same_refs_def split:list.splits)
-  done
+  vs_cap_ref cap = Some (VSRef (p && mask pt_bits >> word_size_bits) (Some APageTable) # ref))"
+  by (clarsimp simp:same_refs_def split:list.splits)
 
-lemma same_refs_rD:
-  "\<lbrakk>same_refs (Inr(pde,p # slots)) cap s\<rbrakk>
+lemma same_refs_pdeD:
+  "\<lbrakk>same_refs (VMPDE pde,p) cap s\<rbrakk>
  \<Longrightarrow>  (\<exists>p. pde_ref_pages pde = Some p \<and> p \<in> obj_refs cap) \<and>
          (\<forall>ref. (ref \<rhd> (p && ~~ mask pd_bits)) s \<longrightarrow>
                vs_cap_ref cap =
-               Some (VSRef (p && mask pd_bits >> 2) (Some APageDirectory) # ref))"
+               Some (VSRef (p && mask pd_bits >> word_size_bits) (Some APageDirectory) # ref))"
+   by (clarsimp simp:same_refs_def split:list.splits)
+   
+lemma same_refs_pdpteD:
+  "\<lbrakk>same_refs (VMPDPTE pdpte,p) cap s\<rbrakk>
+ \<Longrightarrow>  (\<exists>p. pdpte_ref_pages pdpte = Some p \<and> p \<in> obj_refs cap) \<and>
+         (\<forall>ref. (ref \<rhd> (p && ~~ mask pdpt_bits)) s \<longrightarrow>
+               vs_cap_ref cap =
+               Some (VSRef (p && mask pdpt_bits >> word_size_bits) (Some APDPointerTable) # ref))"
    by (clarsimp simp:same_refs_def split:list.splits)
 
-lemma store_pde_invs_unmap':
-  "\<lbrace>invs
-    and (\<exists>\<rhd> (p && ~~ mask pd_bits))
-    and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs (Inr (pde, slots))) slot s)
-    and (\<lambda>s. \<exists>ptr cap. caps_of_state s ptr = Some cap
-                    \<and> is_pg_cap cap
-                    \<and> same_refs (Inr (pde, slots)) cap s)
-    and valid_pde pde
-    and (\<lambda>s. p && ~~ mask pd_bits \<notin> global_refs s)
-    and K (wellformed_pde pde \<and> pde_ref pde = None)
-    and K (ucast (p && mask pd_bits >> 2) \<notin> kernel_mapping_slots
-           \<and> (\<exists>xs. slots = p # xs) )
-    and (\<lambda>s. \<exists>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s)\<rbrace>
-   store_pde p pde
-   \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (rule hoare_name_pre_state)
-   apply (clarsimp simp: store_pde_def | wp)+ 
-    apply (rule_tac T ="  Pair (VSRef (p && mask pd_bits >> 2) (Some APageDirectory))
-                        ` set_option (pde_ref (pd (ucast (p && mask pd_bits >> 2))))"
-                and T'="  Pair (VSRef (p && mask pd_bits >> 2) (Some APageDirectory))
-                        ` set_option (pde_ref_pages (pd (ucast (p && mask pd_bits >> 2))))"
-                and S'="  Pair (VSRef (p && mask pd_bits >> 2) (Some APageDirectory))
-                        ` set_option (pde_ref_pages pde)" in set_pd_invs_unmap')
-  apply wp
-  apply (clarsimp simp: obj_at_def)
-  apply (rule conjI)
-   apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def 
-                             valid_objs_def valid_obj_def dom_def)
-   apply (erule_tac P="\<lambda>x. (\<exists>y. a y x) \<longrightarrow> b x" for a b in allE[where x="(p && ~~ mask pd_bits)"])
-   apply (erule impE)
-    apply (clarsimp simp: obj_at_def vs_refs_def)+
-
-  apply (rule conjI)
-   apply (clarsimp simp add: invs_def valid_state_def valid_arch_objs_def)
-   apply (erule_tac P="\<lambda>x. (\<exists>y. a y x) \<longrightarrow> b x" for a b in allE[where x="(p && ~~ mask pd_bits)"])
-   apply (erule impE)
-    apply (erule_tac x=ref in exI)
-   apply (erule_tac x="PageDirectory pd" in allE)
-   apply (clarsimp simp: obj_at_def)
-
-  apply (rule conjI)
-   apply (safe)[1]
-     apply (clarsimp simp add: vs_refs_def graph_of_def split: split_if_asm)
-     apply (rule pair_imageI)
-     apply (clarsimp)
-    apply (clarsimp simp: vs_refs_def graph_of_def split: split_if_asm)
-    apply (subst (asm) ucast_ucast_mask_shift_helper[symmetric], simp)
-   apply (clarsimp simp: vs_refs_def graph_of_def split: split_if_asm)
-   apply (rule_tac x="(ac, bc)" in image_eqI)
-    apply clarsimp
-   apply (clarsimp simp: ucast_ucast_mask_shift_helper ucast_id)
-
-  apply (rule conjI)
-   apply safe[1]
-      apply (clarsimp simp: vs_refs_pages_def graph_of_def 
-                            ucast_ucast_mask_shift_helper ucast_id 
-                      split: split_if_asm)
-      apply (rule_tac x="(ac, bc)" in image_eqI)
-       apply clarsimp
+(* FIXME x64: do we need to add a VMPML4E for this case? *)
+lemma store_pml4e_invs_unmap':
+    "\<lbrace>invs
+      and (\<exists>\<rhd> (p && ~~ mask pml4_bits))
+      and (\<lambda>s. \<exists>slot. cte_wp_at (parent_for_refs (VMPML4E pml4e, slots)) slot s)
+      and (\<lambda>s. \<exists>ptr cap. caps_of_state s ptr = Some cap
+                      \<and> is_pg_cap cap
+                      \<and> same_refs (VMPML4E pml4e, slots) cap s)
+      and valid_pml4e pml4e
+      and (\<lambda>s. p && ~~ mask pml4_bits \<notin> global_refs s)
+      and K (wellformed_pml4e pml4e \<and> pml4e_ref pml4e = None)
+      and K (ucast (p && mask pml4_bits >> word_size_bits) \<notin> kernel_mapping_slots)
+      and (\<lambda>s. \<exists>pml4. ko_at (ArchObj (PageMapL4 pml4)) (p && ~~ mask pml4_bits) s)\<rbrace>
+     store_pml4e p pml4e
+     \<lbrace>\<lambda>_. invs\<rbrace>"
+    apply (rule hoare_name_pre_state)
+     apply (clarsimp simp: store_pml4e_def | wp)+ 
+      apply (rule_tac T ="  Pair (VSRef (p && mask pml4_bits >> word_size_bits) (Some APageMapL4))
+                          ` set_option (pml4e_ref (pml4 (ucast (p && mask pml4_bits >> word_size_bits))))"
+                  and T'="  Pair (VSRef (p && mask pml4_bits >> word_size_bits) (Some APageMapL4))
+                          ` set_option (pml4e_ref_pages (pml4 (ucast (p && mask pml4_bits >> word_size_bits))))"
+                  and S'="  Pair (VSRef (p && mask pml4_bits >> word_size_bits) (Some APageMapL4))
+                          ` set_option (pml4e_ref_pages pml4e)" in set_pml4_invs_unmap')
+    apply wp
+    apply (clarsimp simp: obj_at_def)
+    apply (rule conjI)
+     apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def 
+                               valid_objs_def valid_obj_def dom_def)
+     apply (erule_tac P="\<lambda>x. (\<exists>y. a y x) \<longrightarrow> b x" for a b in allE[where x="(p && ~~ mask pml4_bits)"])
+     apply (erule impE)
+      apply (clarsimp simp: obj_at_def vs_refs_def)+
+  
+    apply (rule conjI)
+     apply (clarsimp simp add: invs_def valid_state_def valid_arch_objs_def)
+     apply (erule_tac P="\<lambda>x. (\<exists>y. a y x) \<longrightarrow> b x" for a b in allE[where x="(p && ~~ mask pml4_bits)"])
+     apply (erule impE)
+      apply (erule_tac x=ref in exI)
+     apply (erule_tac x="PageMapL4 pml4" in allE)
+     apply (clarsimp simp: obj_at_def)
+  
+    apply (rule conjI)
+     apply (safe)[1]
+       apply (clarsimp simp add: vs_refs_def graph_of_def split: split_if_asm)
+       apply (rule pair_imageI)
+       apply (clarsimp)
+      apply (clarsimp simp: vs_refs_def graph_of_def split: split_if_asm)
+      apply (subst (asm) ucast_ucast_mask_shift_helper[symmetric], simp)
+     apply (clarsimp simp: vs_refs_def graph_of_def split: split_if_asm)
+     apply (rule_tac x="(ac, bc)" in image_eqI)
       apply clarsimp
-     apply (clarsimp simp: vs_refs_pages_def graph_of_def ucast_ucast_id
-                     split: split_if_asm)
-    apply (clarsimp simp: vs_refs_pages_def graph_of_def
-                    split: split_if_asm)
-    apply (rule_tac x="(ac,bc)" in image_eqI)
+     apply (clarsimp simp: ucast_ucast_mask_shift_helper ucast_id)
+  
+    apply (rule conjI)
+     apply safe[1]
+        apply (clarsimp simp: vs_refs_pages_def graph_of_def 
+                              ucast_ucast_mask_shift_helper ucast_id 
+                        split: split_if_asm)
+        apply (rule_tac x="(ac, bc)" in image_eqI)
+         apply clarsimp
+        apply clarsimp
+       apply (clarsimp simp: vs_refs_pages_def graph_of_def ucast_ucast_id
+                       split: split_if_asm)
+      apply (clarsimp simp: vs_refs_pages_def graph_of_def
+                      split: split_if_asm)
+      apply (rule_tac x="(ac,bc)" in image_eqI)
+       apply clarsimp
+      apply (clarsimp simp: ucast_ucast_mask_shift_helper ucast_id)
+     apply (clarsimp simp: vs_refs_pages_def graph_of_def)
+     apply (rule_tac x="(ucast (p && mask pml4_bits >> word_size_bits), x)" in image_eqI)
+      apply (clarsimp simp: ucast_ucast_mask_shift_helper)
      apply clarsimp
-    apply (clarsimp simp: ucast_ucast_mask_shift_helper ucast_id)
-   apply (clarsimp simp: vs_refs_pages_def graph_of_def)
-   apply (rule_tac x="(ucast (p && mask pd_bits >> 2), x)" in image_eqI)
-    apply (clarsimp simp: ucast_ucast_mask_shift_helper)
-   apply clarsimp
-  apply (rule conjI)
-   apply (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def) 
-   apply (drule same_refs_rD)
-    apply (clarsimp split: list.splits)
-   apply blast
-  apply (drule same_refs_rD)
-  apply clarsimp
-  apply (drule spec, drule (2) mp[OF _ vs_lookup_vs_lookup_pagesI])
-    apply ((clarsimp simp: invs_def valid_state_def valid_arch_state_def)+)[2]
-  apply (rule_tac x=aa in exI, rule_tac x=ba in exI, rule_tac x=cap in exI)
-  apply clarsimp
+    apply (rule conjI)
+     apply (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def) 
+     apply (drule same_refs_rD)
+      apply (clarsimp split: list.splits)
+     apply blast
+    apply (drule same_refs_rD)
+    apply clarsimp
+    apply (drule spec, drule (word_size_bits) mp[OF _ vs_lookup_vs_lookup_pagesI])
+      apply ((clarsimp simp: invs_def valid_state_def valid_arch_state_def)+)[3]
+    apply (rule_tac x=aa in exI, rule_tac x=ba in exI, rule_tac x=cap in exI)
+    apply clarsimp
   done
 
 lemma update_self_reachable:

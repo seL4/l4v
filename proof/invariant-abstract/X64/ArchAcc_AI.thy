@@ -510,6 +510,7 @@ definition
   | (VMPDPTE (InvalidPDPTE), _) \<Rightarrow> \<top>
   | (VMPDPTE (HugePagePDPTE _ _ _), p) \<Rightarrow> pdpte_at p
   | (VMPDPTE (PageDirectoryPDPTE _ _ _), _) \<Rightarrow> \<bottom>"
+  | (VMPML4E _, _) \<Rightarrow> \<bottom>
 
 definition "invalid_pte_at p \<equiv> obj_at (\<lambda>ko. \<exists>pt. ko = (ArchObj (PageTable pt))
   \<and> pt (ucast (p && mask pt_bits) >> word_size_bits) = pte.InvalidPTE) (p && ~~ mask pt_bits)"
@@ -536,7 +537,8 @@ definition
           wellformed_pde pde \<and> valid_pde pde s
   | (VMPDPTE pdpte, p) \<Rightarrow>
       \<lambda>s. (\<exists>\<rhd> (p && ~~ mask pdpt_bits) and pdpte_at p) s \<and>
-          wellformed_pdpte pdpte \<and> valid_pdpte pdpte s"
+          wellformed_pdpte pdpte \<and> valid_pdpte pdpte s
+  | (VMPML4E pml4e, _) \<Rightarrow> \<bottom>"
 
 lemma ucast_mask_asid_low_bits [simp]:
   "ucast ((asid::word64) && mask asid_low_bits) = (ucast asid :: 9 word)"
