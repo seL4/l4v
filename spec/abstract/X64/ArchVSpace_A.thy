@@ -89,6 +89,8 @@ where
 "ensure_safe_mapping (VMPDE (PageTablePDE _ _ _), _) = fail"
 |
 "ensure_safe_mapping (VMPDPTE (PageDirectoryPDPTE _ _ _), _) = fail"
+|
+"ensure_safe_mapping (VMPML4E _, _) = fail"
 
 text {* Look up a thread's IPC buffer and check that the thread has the right
 authority to read or (in the receiver case) write to it. *}

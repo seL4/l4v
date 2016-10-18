@@ -110,7 +110,7 @@ datatype pte
          (pte_rights : cap_rights)
 
 
-datatype vm_page_entry = VMPTE pte | VMPDE pde | VMPDPTE pdpte
+datatype vm_page_entry = VMPTE pte | VMPDE pde | VMPDPTE pdpte | VMPML4E pml4e
 
 datatype translation_type = NotTranslated | Translated
 

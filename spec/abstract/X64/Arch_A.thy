@@ -153,11 +153,13 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
        of (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
         | (VMPDE pde, slot) \<Rightarrow> store_pde slot pde
         | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte
+        | _ \<Rightarrow> fail
       od
   | PageRemap entries \<Rightarrow> (case entries
        of (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
         | (VMPDE pde, slot) \<Rightarrow> store_pde slot pde
-        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte)
+        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte
+        | _ \<Rightarrow> fail)
   | PageUnmap cap ct_slot \<Rightarrow>
       (case cap
          of PageCap dev base rights map_type sz mapped \<Rightarrow>
