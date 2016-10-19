@@ -221,6 +221,7 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
     # Poll the kill switch.
     def watch_kill_switch():
         while True:
+            interval = 1.0
             if test_status[0] is not RUNNING:
                 break
             if kill_switch.wait(1):
@@ -228,6 +229,7 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
                     break
                 test_status[0] = CANCELLED
                 kill_family(grace_period, process.pid)
+            time.sleep(interval)
     kill_switch_thread = threading.Thread(target=watch_kill_switch)
     kill_switch_thread.daemon = True
     kill_switch_thread.start()
