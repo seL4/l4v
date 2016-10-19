@@ -5931,6 +5931,7 @@ proof -
               apply simp
               apply (rule ccorres_pre_curDomain)
               apply ctac
+                apply ccorres_rewrite
                 apply (rule ccorres_symb_exec_r)
                   apply (rule ccorres_return_C, simp, simp, simp)
                  apply vcg
