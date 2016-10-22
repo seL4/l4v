@@ -191,6 +191,11 @@ Similarly, these functions access the idle thread pointer, the ready queue for a
 > modifyWorkUnits f = modify (\ks -> ks { ksWorkUnitsCompleted = 
 >                                         f (ksWorkUnitsCompleted ks) })
 
+TODO use this where update is restricted to arch state instead of fiddling in place
+
+> modifyArchState :: (Arch.KernelState -> Arch.KernelState) -> Kernel ()
+> modifyArchState f = modify (\s -> s { ksArchState = f (ksArchState s) })
+
 These functions access and modify the current domain and the number of ticks remaining until the current domain changes.
 
 > curDomain :: Kernel Domain
