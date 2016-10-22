@@ -122,7 +122,9 @@ Deletion of any mapped frame capability requires the page table slot to be locat
 >               return NullCap
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> finaliseCap (VCPUCap {}) _ = error "FIXME ARMHYP TODO VCPU vcpu_finalise"
+> finaliseCap (VCPUCap { capVCPUPtr = vcpu }) True = do
+>     vcpuFinalise vcpu
+>     return NullCap
 #endif
 
 #ifdef CONFIG_ARM_SMMU
@@ -205,7 +207,10 @@ All other capabilities need no finalisation action.
 >     return cap
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> recycleCap _ (VCPUCap {}) = error "FIXME ARMHYP TODO VCPU vcpu_finalise + init"
+> recycleCap _ (cap@VCPUCap { capVCPUPtr = vcpu }) = do
+>     vcpuFinalise vcpu
+>     setObject vcpu (makeObject :: VCPU)
+>     return cap
 #endif
 
 #ifdef CONFIG_ARM_SMMU
@@ -325,7 +330,8 @@ Create an architecture-specific object.
 >             return $! PageDirectoryCap (pointerCast regionBase) Nothing
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         Arch.Types.VCPUObject -> do
->             error "FIXME ARMHYP VCPU no idea"
+>             placeNewObject regionBase (makeObject :: VCPU) 0
+>             return $! VCPUCap (PPtr $ fromPPtr regionBase)
 #endif
 #ifdef CONFIG_ARM_SMMU
 >         Arch.Types.IOPageTableObject -> do
@@ -381,9 +387,6 @@ Create an architecture-specific object.
 > capUntypedPtr (IOPageTableCap { capIOPTBasePtr = PPtr p }) = PPtr p
 #endif
 
-
-FIXME ARMHYP if none of the IO or VCPU caps are physical, then capUntypedSize never gets called so we can scrap the extras in this part... check with Kernel people
-
 > capUntypedSize :: ArchCapability -> Word
 > capUntypedSize (PageCap {capVPSize = sz}) = bit (pageBitsForSize sz)
 > capUntypedSize (PageTableCap {}) = bit (ptBits + pteBits)
@@ -394,7 +397,7 @@ FIXME ARMHYP if none of the IO or VCPU caps are physical, then capUntypedSize ne
 > capUntypedSize (VCPUCap {}) = bit vcpuBits
 #endif
 #ifdef CONFIG_ARM_SMMU
-> capUntypedSize (IOSpaceCap {}) = 0 -- invalid, use C default
+> capUntypedSize (IOSpaceCap {}) = 0 -- invalid, use C default FIXME ARMHYP
 > capUntypedSize (IOPageTableCap {}) = bit ioptBits
 #endif
 

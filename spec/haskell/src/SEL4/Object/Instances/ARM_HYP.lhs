@@ -46,7 +46,7 @@ This module defines instances of "PSpaceStorable" for ARM-specific kernel object
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > instance PSpaceStorable VCPU where
->     makeObject = newVCPU
+>     makeObject = makeVCPUObject
 >     injectKO = KOArch . KOVCPU
 >     projectKO o = case o of
 >                 KOArch (KOVCPU p) -> return p

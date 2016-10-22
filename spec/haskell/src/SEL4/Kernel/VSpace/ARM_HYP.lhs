@@ -13,7 +13,7 @@ This module defines the handling of the ARM hardware-defined page tables.
 FIXME ARMHYP this file is only for ARM\_HYP, uses preprocessor only to disable SMMU unlike nearly all the other ones; fixable, but too much clutter for the moment
 
 FIXME ARMHYP the amount of magic numbers is staggering
-FIXME ARMHYP 0, 4 .. 60 should be 0, 1 << pteBits, 15 << pteBits
+FIXME ARMHYP 0, 4 .. 60 should be 0, 1 << pteBits .. 15 << pteBits
 
 \begin{impdetails}
 
@@ -42,6 +42,7 @@ FIXME ARMHYP this is so that disabling SMMU results in successful compile
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.Init
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
+> import SEL4.Object.VCPU.ARM_HYP
 
 > import Data.Bits
 > import Data.Maybe
@@ -539,7 +540,10 @@ If the current thread has no page directory, or if it has an invalid ASID, the h
 >                 pd' <- findPDForASID asid
 >                 when (pd /= pd') $ do
 >                     throw InvalidRoot
->                 withoutFailure $ armv_contextSwitch pd asid
+>                 withoutFailure $ do
+>                     armv_contextSwitch pd asid
+>                     tcbobj <- getObject tcb
+>                     vcpuSwitch (atcbVCPUPtr $ tcbArch tcbobj)
 >             _ -> throw InvalidRoot)
 >         (\_ -> do
 >             case threadRoot of
@@ -791,6 +795,7 @@ XXX ARMHYP no changes in this subsection
 
 FIXME ARMHYP implement after decision re PageCap contents and MOVE
 
+> isIOSpaceFrameCap :: ArchCapability -> Bool
 #ifdef CONFIG_ARM_SMMU
 > isIOSpaceFrameCap (PageCap {}) = error "FIXME ARMHYP undecided on PageCap contents"
 #endif

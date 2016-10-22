@@ -438,6 +438,9 @@ implementation assumes the monitor is not modelled in our simulator.
 > getHSR :: MachineMonad Word
 > getHSR = error "FIXME ARMHYP machine callback unimplemented"
 
+> setHCR :: Word -> MachineMonad ()
+> setHCR _hcr = error "FIXME ARMHYP machine callback unimplemented"
+
 > getFAR :: MachineMonad VPtr
 > getFAR = do
 >     cbptr <- ask
@@ -448,6 +451,19 @@ implementation assumes the monitor is not modelled in our simulator.
 
 > addressTranslateS1CPR :: VPtr -> MachineMonad VPtr
 > addressTranslateS1CPR = error "FIXME ARMHYP machine callback unimplemented"
+
+> getSCTLR :: MachineMonad Word
+> getSCTLR = error "FIXME ARMHYP machine callback unimplemented"
+
+> setSCTLR :: Word -> MachineMonad ()
+> setSCTLR _sctlr = error "FIXME ARMHYP machine callback unimplemented"
+
+> getACTLR :: MachineMonad Word
+> getACTLR = error "FIXME ARMHYP machine callback unimplemented"
+
+> setACTLR :: Word -> MachineMonad ()
+> setACTLR _actlr = error "FIXME ARMHYP machine callback unimplemented"
+
 
 \subsubsection{Page Table Structure}
 
@@ -735,46 +751,46 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 FIXME ARMHYP consider moving to platform code?
 
-> vgicIRQActive :: Word32
+> vgicIRQActive :: Word
 > vgicIRQActive = 2 `shiftL` 28
 
-> vgicIRQMask :: Word32
+> vgicIRQMask :: Word
 > vgicIRQMask = 3 `shiftL` 28
 
-> get_gic_vcpu_ctrl_hcr :: MachineMonad Word32
+> get_gic_vcpu_ctrl_hcr :: MachineMonad Word
 > get_gic_vcpu_ctrl_hcr = error "FIXME ARMHYP Unimplemented callback"
 
-> set_gic_vcpu_ctrl_hcr :: Word32 -> MachineMonad ()
+> set_gic_vcpu_ctrl_hcr :: Word -> MachineMonad ()
 > set_gic_vcpu_ctrl_hcr = error "FIXME ARMHYP Unimplemented callback"
 
-> get_gic_vcpu_ctrl_vmcr :: MachineMonad Word32
+> get_gic_vcpu_ctrl_vmcr :: MachineMonad Word
 > get_gic_vcpu_ctrl_vmcr = error "FIXME ARMHYP Unimplemented callback"
 
-> set_gic_vcpu_ctrl_vmcr :: Word32 -> MachineMonad ()
+> set_gic_vcpu_ctrl_vmcr :: Word -> MachineMonad ()
 > set_gic_vcpu_ctrl_vmcr = error "FIXME ARMHYP Unimplemented callback"
 
-> get_gic_vcpu_ctrl_apr :: MachineMonad Word32
+> get_gic_vcpu_ctrl_apr :: MachineMonad Word
 > get_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
 
-> set_gic_vcpu_ctrl_apr :: Word32 -> MachineMonad ()
+> set_gic_vcpu_ctrl_apr :: Word -> MachineMonad ()
 > set_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
 
-> get_gic_vcpu_ctrl_vtr :: Word32
+> get_gic_vcpu_ctrl_vtr :: MachineMonad Word
 > get_gic_vcpu_ctrl_vtr = error "FIXME ARMHYP Unimplemented callback"
 
-> get_gic_vcpu_ctrl_eisr0 :: Word32
+> get_gic_vcpu_ctrl_eisr0 :: MachineMonad Word
 > get_gic_vcpu_ctrl_eisr0 = error "FIXME ARMHYP Unimplemented callback"
 
-> get_gic_vcpu_ctrl_eisr1 :: Word32
+> get_gic_vcpu_ctrl_eisr1 :: MachineMonad Word
 > get_gic_vcpu_ctrl_eisr1 = error "FIXME ARMHYP Unimplemented callback"
 
-> get_gic_vcpu_ctrl_misr :: Word32
+> get_gic_vcpu_ctrl_misr :: MachineMonad Word
 > get_gic_vcpu_ctrl_misr = error "FIXME ARMHYP Unimplemented callback"
 
-> get_gic_vcpu_ctrl_lr :: Int -> Word32
+> get_gic_vcpu_ctrl_lr :: Int -> MachineMonad Word
 > get_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
 
-> set_gic_vcpu_ctrl_lr :: Int -> Word32 -> MachineMonad ()
+> set_gic_vcpu_ctrl_lr :: Int -> Word -> MachineMonad ()
 > set_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
 
 #endif

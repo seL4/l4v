@@ -10,7 +10,9 @@
 
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, GeneralizedNewtypeDeriving #-}
 
-module SEL4.Machine.Hardware.ARM_HYP.Callbacks where -- FIXME ARMHYP straight copy of ARM/Callbacks.hs
+module SEL4.Machine.Hardware.ARM_HYP.Callbacks where
+
+-- XXX ARMHYP this is a straight copy of ARM/Callbacks.hs
 
 import SEL4.Machine.RegisterSet
 import Foreign.Ptr

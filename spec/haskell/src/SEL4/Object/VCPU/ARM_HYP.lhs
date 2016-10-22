@@ -18,7 +18,7 @@ hypervisor extensions on ARM.
 
 \end{impdetails}
 
-> module SEL4.Object.VCPU.ARM_HYP(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation) where
+> module SEL4.Object.VCPU.ARM_HYP(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch) where
 
 \begin{impdetails}
 
@@ -124,6 +124,11 @@ Currently, there is only one VCPU register available for reading/writing by the 
 > invokeVCPUReadReg :: PPtr VCPU -> HyperReg -> Kernel ()
 > invokeVCPUReadReg vcpuPtr reg = do
 >     ct <- getCurThread
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     case hsCurVCPU of
+>         Just (vcpuPtr, _) ->
+>            vcpuCleanInvalidateActive
+>         _ -> return ()
 >     val <- readVCPUReg vcpuPtr reg
 >     asUser ct $ setRegister (msgRegisters !! 0) $ fromIntegral val
 >     let msgInfo = MI {
@@ -136,14 +141,22 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >     setThreadState Running ct
 
 > invokeVCPUWriteReg :: PPtr VCPU -> HyperReg -> HyperRegVal -> Kernel ()
-> invokeVCPUWriteReg vcpuPtr reg val = writeVCPUReg vcpuPtr reg val
+> invokeVCPUWriteReg vcpuPtr reg val = do
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     case hsCurVCPU of
+>         Just (vcpuPtr, _) ->
+>             vcpuCleanInvalidateActive
+>         _ -> return ()
+>     writeVCPUReg vcpuPtr reg val
+>     ct <- getCurThread
+>     setThreadState Restart ct
 
 \subsection{VCPU: inject IRQ}
 
 FIXME ARMHYP: this does not at this instance correspond to exactly what the C
     does, but it is the value that is stored inside of lr in the vgic
 
-> makeVIRQ :: Word32 -> Word32 -> Word32 -> VIRQ
+> makeVIRQ :: Word -> Word -> Word -> VIRQ
 > makeVIRQ group prio irq =
 >     (group `shiftL` groupShift) .|. (prio `shiftL` prioShift) .|. irq .|.
 >         irqPending .|. eoiirqen
@@ -178,9 +191,16 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 
 > invokeVCPUInjectIRQ :: PPtr VCPU -> Int -> VIRQ -> Kernel ()
 > invokeVCPUInjectIRQ vcpuPtr index virq = do
->     vcpu <- getObject vcpuPtr
->     let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // [(index, virq)]
->     setObject vcpuPtr $ vcpu { vcpuVGIC = (vcpuVGIC vcpu) { vgicLR = vcpuLR }}
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     case hsCurVCPU of
+>         Just (vcpuPtr, _) ->
+>             doMachineOp $ set_gic_vcpu_ctrl_lr index virq
+>         _ -> do
+>              vcpu <- getObject vcpuPtr
+>              let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // [(index, virq)]
+>              setObject vcpuPtr $ vcpu { vcpuVGIC = (vcpuVGIC vcpu) { vgicLR = vcpuLR }}
+>     ct <- getCurThread
+>     setThreadState Restart ct
 
 
 \subsection{VCPU: perform and decode main functions}
@@ -211,11 +231,153 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >         _ -> throw IllegalOperation
 > decodeARMVCPUInvocation _ _ _ _ _ _ = throw IllegalOperation
 
+\subsection{Finalisation}
+
+For initialisation, see makeVCPUObject.
+
+> vcpuFinalise :: PPtr VCPU -> Kernel ()
+> vcpuFinalise vcpuPtr = do
+>     vcpu <- getObject vcpuPtr
+>     case vcpuTCBPtr vcpu of
+>         Just tcbPtr -> dissociateVCPUTCB vcpuPtr tcbPtr
+>         Nothing -> return ()
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     case hsCurVCPU of
+>         Just (vcpuPtr, _) -> vcpuInvalidateActive
+>         _ -> return ()
+
+\subsection{VCPU State Control}
+
+> vcpuEnable :: PPtr VCPU -> Kernel ()
+> vcpuEnable vcpuPtr = do
+>     vcpu <- getObject vcpuPtr
+>     doMachineOp $ do
+>         setSCTLR (vcpuSCTLR vcpu)
+>         setHCR hcrVCPU
+>         isb
+>         set_gic_vcpu_ctrl_hcr (vgicHCR . vcpuVGIC $ vcpu)
+
+> vcpuDisable :: Maybe (PPtr VCPU) -> Kernel ()
+> vcpuDisable vcpuPtrOpt = do
+>     doMachineOp dsb
+>
+>     case vcpuPtrOpt of
+>         Just vcpuPtr -> do
+>            vcpu <- getObject vcpuPtr
+>            hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
+>            sctlr <- doMachineOp getSCTLR
+>            setObject vcpuPtr $ vcpu {
+>                  vcpuSCTLR = sctlr
+>                , vcpuVGIC = (vcpuVGIC vcpu) { vgicHCR = hcr }
+>                }
+>         Nothing -> return ()
+>
+>     doMachineOp $ do
+>         set_gic_vcpu_ctrl_hcr 0 -- VGIC off
+>         isb
+>         setSCTLR sctlrDefault -- S1 MMU off
+>         setHCR hcrNative
+>         isb
+
+> vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
+> vcpuSave (Just (vcpuPtr, active)) = do
+>     doMachineOp dsb
+>
+>     vcpu <- getObject vcpuPtr
+>
+>     -- disabled vcpus already had SCTLR and HCR stored
+>     (hcr, sctlr) <- if active
+>                         then do
+>                             sctlr <- doMachineOp getSCTLR
+>                             hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
+>                             return (sctlr, hcr)
+>                         else return (vcpuSCTLR vcpu, vgicHCR . vcpuVGIC $ vcpu)
+>
+>     actlr <- doMachineOp getACTLR
+>     vmcr <- doMachineOp get_gic_vcpu_ctrl_vmcr
+>     apr <- doMachineOp get_gic_vcpu_ctrl_apr
+>
+>     numListRegs <- gets (armKSGICVCPUNumListRegs . ksArchState)
+>     let gicIndices = [0..numListRegs-1]
+>     lrVals <- doMachineOp $ mapM get_gic_vcpu_ctrl_lr gicIndices
+>     let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // zip gicIndices lrVals
+>
+>     setObject vcpuPtr $ vcpu {
+>           vcpuSCTLR = sctlr
+>         , vcpuACTLR = actlr
+>         , vcpuVGIC = (vcpuVGIC vcpu) { vgicHCR = hcr
+>                                      , vgicVMCR = vmcr
+>                                      , vgicAPR = apr
+>                                      , vgicLR = vcpuLR }
+>         }
+>     doMachineOp isb
+> vcpuSave _ = fail "vcpuSave: no VCPU to save"
+
+> vcpuRestore :: PPtr VCPU -> Kernel ()
+> vcpuRestore vcpuPtr = do
+>     -- turn off VGIC
+>     doMachineOp $ set_gic_vcpu_ctrl_hcr 0
+>     doMachineOp $ isb
+>
+>     -- restore GIC VCPU control state
+>     vcpu <- getObject vcpuPtr
+>     let vgic = vcpuVGIC vcpu
+>
+>     doMachineOp $ do
+>         set_gic_vcpu_ctrl_vmcr (vgicVMCR vgic)
+>         set_gic_vcpu_ctrl_apr (vgicAPR vgic)
+>
+>         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (i, (vgicLR vgic) ! i)) [0..gicVCPUMaxNumLR-1])
+>
+>         setACTLR (vcpuACTLR vcpu)
+>
+>     vcpuEnable vcpuPtr
+
 % FIXME ARMHYP TODO
-% vcpuFinalise?
-% vcpuInit?
-% vcpuSwitch? vcpuRestore?
-% vcpuSave/Restore?
+% TODO ARMHYP VGICMaintenance
+% TODO ARMHYP handleVCPUFault
+
+> vcpuInvalidateActive :: Kernel ()
+> vcpuInvalidateActive = do
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     case hsCurVCPU of
+>         Just (vcpuPtr, True) -> do
+>             vcpuDisable Nothing
+>             modifyArchState (\s -> s { armHSCurVCPU = Just (vcpuPtr, False) })
+>         _ -> return ()
+
+> vcpuCleanInvalidateActive = do
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     vcpuSave hsCurVCPU
+>     vcpuInvalidateActive
+
+> vcpuSwitch :: Maybe (PPtr VCPU) -> Kernel ()
+> vcpuSwitch Nothing = do
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     case hsCurVCPU of
+>         Nothing -> return () -- both null, current can't be active
+>         Just (vcpuPtr, active) -> do -- switch to thread without vcpu
+>             when active $ do -- save state if not saved already
+>                 vcpuDisable (Just vcpuPtr)
+>                 modifyArchState (\s -> s { armHSCurVCPU = Just (vcpuPtr, False) })
+>             return ()
+> vcpuSwitch (Just new) = do
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     case hsCurVCPU of
+>         Nothing -> do -- switch to new VCPU with no current
+>             vcpuRestore new
+>             modifyArchState (\s -> s { armHSCurVCPU = Just (new, True) })
+>         Just (vcpuPtr, active) -> do -- switch from an existing VCPU
+>             if vcpuPtr /= new
+>                 then do -- different VCPU
+>                     vcpuSave hsCurVCPU
+>                     vcpuRestore new
+>                     modifyArchState (\s -> s { armHSCurVCPU = Just (new, True) })
+>                 else do -- same VCPU
+>                     when (not active) $ do
+>                         doMachineOp isb
+>                         vcpuEnable new
+>                         modifyArchState (\s -> s { armHSCurVCPU = Just (new, False) })
 
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 

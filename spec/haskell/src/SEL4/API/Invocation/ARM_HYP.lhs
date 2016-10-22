@@ -123,12 +123,11 @@ IO pages are invoked using InvokePage (cap contains a bit indicating it is an IO
 
 FIXME ARMHYP move HyperReg definition (to Hardware?)
 
-> type HyperReg = Int -- FIXME ARMHYP can abstract
-> type HyperRegVal = Word32 -- FIXME ARMHYP can abstract
+> type HyperReg = Int
+> type HyperRegVal = Word
 
 > data VCPUInvocation
 >     = VCPUSetTCB (PPtr VCPU) (PPtr TCB)
->     -- XXX ARMHYP vcpu index virq
 >     | VCPUInjectIRQ (PPtr VCPU) Int VIRQ
 >     | VCPUReadRegister (PPtr VCPU) HyperReg
 >     | VCPUWriteRegister (PPtr VCPU) HyperReg HyperRegVal
@@ -140,9 +139,8 @@ FIXME ARMHYP move HyperReg definition (to Hardware?)
 
 \subsection{IO Page Tables}
 
-FIXME ARMHYP there is an assymetry here compared to how we deal with normal
-pages: IOPageTableMap handles IOPDEs, PageMapIO handles IOPTEs, but on
-the normal MMU side PageMap handles both
+Note the assymetry: for IO pages, IOPageTableMap handles IOPDEs and PageMapIO
+handles IOPTEs, but on the normal MMU side PageMap handles both. FIXME ARMHYP check this again
 
 > data IOPageTableInvocation
 >     = IOPageTableUnmap {

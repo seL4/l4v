@@ -165,30 +165,48 @@ but this structure is never manipulated as a whole.
 
 FIXME ARMHYP move to platform
 
-> type VIRQ = Word32
+> type VIRQ = Word
 
 > gicVCPUMaxNumLR = (64 :: Int)
 
 > data GICVCPUInterface = VGICInterface {
->                        vgicHCR :: Word32,
->                        vgicVMCR :: Word32,
->                        vgicAPR :: Word32,
+>                        vgicHCR :: Word,
+>                        vgicVMCR :: Word, -- FIXME ARMHYP UNUSED?
+>                        vgicAPR :: Word,
 >                        vgicLR :: Array Int VIRQ
 >                        }
 >     deriving Show
 
 > data VCPU = VCPUObj {
 >                 vcpuTCBPtr :: Maybe (PPtr TCB)
->                 ,vcpuSCTLR :: Word32
->                 ,vcpuACTLR :: Word32
+>                 ,vcpuSCTLR :: Word
+>                 ,vcpuACTLR :: Word
 >                 ,vcpuVGIC :: GICVCPUInterface
 >                 }
 >     deriving Show
 
-> newVCPU :: VCPU
-> newVCPU =
->     let vgic = funPartialArray (const (0 :: Int)) (0, gicVCPUMaxNumLR) in
->     error "FIXME ARMHYP TODO init code"
+> hcrVCPU =  (0x87039 :: Word) -- HCR_VCPU
+> hcrNative = (0xfe8703b :: Word) -- HCR_NATIVE
+> vgicHCREN = (0x1 :: Word) -- VGIC_HCR_EN
+> sctlrDefault = (0xc5187c :: Word) -- SCTLR_DEFAULT
+> actlrDefault = (0x40 :: Word) -- ACTLR_DEFAULT
+
+makeObject specialised to VCPUs.
+
+> makeVCPUObject :: VCPU
+> makeVCPUObject =
+>     let vgicLR = funPartialArray (const (0 :: Word)) (0, gicVCPUMaxNumLR-1) in
+>     VCPUObj {
+>           vcpuTCBPtr = Nothing
+>         , vcpuSCTLR = sctlrDefault
+>         , vcpuACTLR = actlrDefault
+>         , vcpuVGIC = VGICInterface {
+>                           vgicHCR = vgicHCREN
+>                         , vgicVMCR = 0
+>                         , vgicAPR = 0
+>                         , vgicLR = vgicLR
+>                         }
+>         }
 
 #endif
 

@@ -53,11 +53,9 @@ directory, which the user cannot map. This allows fast changes to hardware
 ASIDs for a given address space.  To represent this, we use a ghost state
 armKSASIDMap to map from page directories to hardware ASIDs.
 
-FIXME ARMHYP there is no sign of armKSKernelVSpace - ghost state
+armKSKernelVSpace is ghost state.
 
-FIXME ARMHYP missing IO ASID to PD map for SMMU (not yet in C)
-
-FIXME ARMHYP ksCurCPU will be renamed
+FIXME ARMHYP missing IO ASID to PD map for SMMU
 
 > data KernelState = ARMKernelState {
 >     armKSGlobalsFrame :: PPtr Word,
@@ -70,7 +68,7 @@ FIXME ARMHYP ksCurCPU will be renamed
 >     armKSGlobalPTs :: [PPtr PTE],
 #else
 >     armUSGlobalPT :: PPtr PTE,
->     armHSCurVCPU :: VCPU,
+>     armHSCurVCPU :: Maybe (PPtr VCPU, Bool),
 >     armKSGICVCPUNumListRegs :: Int,
 #endif
 >     armKSKernelVSpace :: PPtr Word -> ArmVSpaceRegionUse}
@@ -125,7 +123,7 @@ FIXME ARMHYP ok, someone needs to explain how this actually works before it gets
 >             armKSNextASID = minBound,
 >             armKSASIDMap = funPartialArray (const Nothing) asidRange,
 >             armUSGlobalPT = error "FIXME ARMHYP TODO",
->             armHSCurVCPU = error "FIXME ARMHYP TODO",
+>             armHSCurVCPU = Nothing,
 >             armKSGICVCPUNumListRegs = error "FIXME ARMHYP read from platform",
 >             armKSKernelVSpace =
 >                 (\vref -> if vref < mask 20 then ArmVSpaceKernelWindow
@@ -133,9 +131,4 @@ FIXME ARMHYP ok, someone needs to explain how this actually works before it gets
 >             }
 
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
-
-FIXME ARMHYP REMOVE
-physBase = 0x80000000
-physMappingOffset (kernelBase - physBase)
-kernelBase = 0xe0000000
 

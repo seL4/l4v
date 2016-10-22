@@ -29,7 +29,7 @@ This module defines the encoding of arch-specific faults.
 
 > import SEL4.API.Failures.ARM_HYP
 
-FIXME ARMHYP why is thig s code (from setMRs\_fault) duplicating the translation
+FIXME ARMHYP why is this code (from setMRs\_fault) duplicating the translation
 in handleVMFault?
 
 > makeArchFaultMessage :: ArchFault -> PPtr TCB -> Kernel (Word, [Word])
