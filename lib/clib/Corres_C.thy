@@ -718,7 +718,7 @@ lemma ccorres_trim_return:
   apply -
   apply (rule ccorres_rhs_assoc2)+
   apply (rule ccorres_trim_redundant_throw)
-   apply (clarsimp split del: split_if)
+   apply (clarsimp split del: if_split)
    apply (rule iffD2 [OF ccorres_semantic_equiv, OF _ cc])
    apply (rule semantic_equivI)
    apply (case_tac s')

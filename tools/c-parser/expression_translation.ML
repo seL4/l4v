@@ -606,7 +606,7 @@ in
       if is_result_signed (ei1, ei2) then
         add_guard div_zero_check (check_signed_binop(@{const_name "smod"}, mk_smod, ei1, ei2))
       else
-        add_guard div_zero_check (mk_arithop(@{const_name "mod"}, ei1, ei2))
+        add_guard div_zero_check (mk_arithop(@{const_name "modulo"}, ei1, ei2))
     end
   | BitwiseAnd => mk_arithop(@{const_name "bitAND"}, ei1, ei2)
   | BitwiseOr => mk_arithop(@{const_name "bitOR"}, ei1, ei2)

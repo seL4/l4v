@@ -53,7 +53,7 @@ lemma tcb_cap_casesE:
   shows "R"
   using cs
   unfolding tcb_cap_cases_def
-  apply (simp split: split_if_asm del: One_nat_def)
+  apply (simp split: if_split_asm del: One_nat_def)
   apply (erule rules, fastforce+)+
   done
 
@@ -168,21 +168,21 @@ lemma caps_of_object_update_state [simp]:
   "(\<lambda>n. map_option (\<lambda>(f, _). f (tcb_state_update stf tcb)) (tcb_cap_cases n)) =
    (\<lambda>n. map_option (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
   apply (rule ext)
-  apply (simp add: tcb_cap_cases_def split: split_if)
+  apply (simp add: tcb_cap_cases_def split: if_split)
   done
 
 lemma caps_of_object_update_boundntfn [simp]:
   "(\<lambda>n. map_option (\<lambda>(f, _). f (tcb_bound_notification_update stf tcb)) (tcb_cap_cases n)) =
    (\<lambda>n. map_option (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
   apply (rule ext)
-  apply (simp add: tcb_cap_cases_def split: split_if)
+  apply (simp add: tcb_cap_cases_def split: if_split)
   done
 
 lemma caps_of_object_update_context [simp]:
   "(\<lambda>n. map_option (\<lambda>(f, _). f (tcb_arch_update (tcb_context_update stf) tcb)) (tcb_cap_cases n)) =
    (\<lambda>n. map_option (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
   apply (rule ext)
-  apply (simp add: tcb_cap_cases_def split: split_if)
+  apply (simp add: tcb_cap_cases_def split: if_split)
   done
 
 definition
@@ -1032,7 +1032,7 @@ lemma cdl_get_ipc_buffer_None:
       apply (simp add:obj_at_def get_tcb_rev not_idle_thread_def | drule(1) valid_etcbs_tcb_etcb | fastforce simp: get_etcb_rev)+
   apply (clarsimp simp: assert_opt_def return_def split: cdl_cap.splits)
   apply (clarsimp simp:transform_cap_def split:cap.splits arch_cap.splits)
-  apply (auto simp:cte_wp_at_cases split:split_if_asm)
+  apply (auto simp:cte_wp_at_cases split:if_split_asm)
 done
 
 lemma cdl_get_ipc_buffer_Some:
@@ -1103,15 +1103,15 @@ lemma get_tcb_mrs_wp:
     apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def)
     apply (wp|wpc)+
     apply (clarsimp simp:get_tcb_mrs_def Let_def)
-    apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:split_if)
+    apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_split)
     apply (clarsimp simp:get_tcb_message_info_def get_ipc_buffer_words_empty)
     apply (clarsimp dest!:get_tcb_SomeD simp:obj_at_def)
   apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def)
-  apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:split_if)
+  apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_split)
   apply (wp|wpc)+
   apply (rule_tac P = "tcb = obj" in hoare_gen_asm)
    apply (clarsimp simp: get_tcb_mrs_def Let_def get_tcb_message_info_def Suc_leI[OF msg_registers_lt_msg_max_length]
-                   split del:split_if)
+                   split del:if_split)
     apply (rule_tac Q="\<lambda>buf_mrs s. buf_mrs =
       (get_ipc_buffer_words (machine_state sa) obj ([Suc (length msg_registers)..<msg_max_length] @ [msg_max_length]))"
       in hoare_strengthen_post)
@@ -1567,16 +1567,16 @@ lemma store_word_corres_helper:
   apply clarsimp
   apply (rule conjI)
    apply (clarsimp simp:restrict_map_def transform_object_def transform_tcb_def
-                   split:cdl_object.split_asm Structures_A.kernel_object.split_asm split_if_asm)
+                   split:cdl_object.split_asm Structures_A.kernel_object.split_asm if_split_asm)
             apply (drule(1) valid_etcbs_tcb_etcb,
                    clarsimp simp:restrict_map_def transform_object_def transform_tcb_def
-                            split:cdl_object.split_asm Structures_A.kernel_object.split_asm split_if_asm)+
+                            split:cdl_object.split_asm Structures_A.kernel_object.split_asm if_split_asm)+
           defer
           apply (drule(1) valid_etcbs_tcb_etcb,
                  clarsimp simp:restrict_map_def transform_object_def transform_tcb_def
-                          split:cdl_object.split_asm Structures_A.kernel_object.split_asm split_if_asm)+
+                          split:cdl_object.split_asm Structures_A.kernel_object.split_asm if_split_asm)+
    defer
-   apply (simp add:tcb_ipcframe_id_def tcb_boundntfn_slot_def tcb_ipcbuffer_slot_def split:split_if_asm)
+   apply (simp add:tcb_ipcframe_id_def tcb_boundntfn_slot_def tcb_ipcbuffer_slot_def split:if_split_asm)
     apply (simp add:tcb_ipcbuffer_slot_def tcb_pending_op_slot_def)
    apply (frule_tac thread = thread in valid_tcb_objs)
     apply (simp add: get_tcb_rev)
@@ -1585,7 +1585,7 @@ lemma store_word_corres_helper:
    apply (case_tac "\<not> is_arch_page_cap (tcb_ipcframe tcb)")
     apply (simp add:transform_full_intent_no_ipc_buffer)
    apply (clarsimp simp del:upt.simps simp:transform_full_intent_def Let_def get_tcb_mrs_def is_arch_page_cap_def
-                   split:cap.split_asm arch_cap.split_asm split del:split_if)
+                   split:cap.split_asm arch_cap.split_asm split del:if_split)
    apply (rename_tac word cap_rights vmpage_size option)
    apply (clarsimp simp:transform_cap_def arch_cap.split_asm simp del:upt.simps)
    apply (frule_tac thread = thread and ptr = ptr and sz = sz
@@ -1703,7 +1703,7 @@ lemma dcorres_store_word_safe:
    apply (clarsimp simp del:upt.simps
                    simp: Let_def get_tcb_mrs_def is_arch_page_cap_def
                    split:cap.split_asm arch_cap.split_asm
-                   split del: split_if)
+                   split del: if_split)
    apply (frule valid_tcb_objs, erule get_tcb_rev)
    apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def valid_ipc_buffer_cap_def
                simp del: upt.simps)
@@ -1867,7 +1867,7 @@ lemma zip_store_word_corres:
     and (ipc_frame_sz_at sz s_id) and (ipc_frame_ptr_at buf s_id) and valid_etcbs)
    (corrupt_frame buf)
    (zipWithM_x (store_word_offs base) xs ys)"
-  apply (clarsimp simp:zipWithM_x_mapM_x split del: split_if)
+  apply (clarsimp simp:zipWithM_x_mapM_x split del: if_split)
   apply (induct xs arbitrary: ys)
    apply (clarsimp simp: mapM_x_Cons)
    apply (clarsimp simp: mapM_x_Nil)
@@ -2119,7 +2119,7 @@ shows "dcorres dc \<top> P (corrupt_frame buf) g"
   apply (drule_tac x = xa in fun_cong)
   apply (case_tac xa)
   apply (clarsimp simp:not_idle_thread_def tcb_ipcframe_id_def restrict_map_def transform_objects_def
-                  split: split_if)
+                  split: if_split)
   apply (clarsimp dest!:get_tcb_rev simp: transform_objects_tcb tcb_ipcbuffer_slot_def
                         tcb_pending_op_slot_def tcb_boundntfn_slot_def)
   apply (clarsimp simp: tcb_ipcbuffer_slot_def tcb_ipcframe_id_def | rule conjI)+

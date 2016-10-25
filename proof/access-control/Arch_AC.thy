@@ -304,7 +304,7 @@ lemma lookup_pt_slot_authorised:
    apply (simp add: aag_has_auth_to_Control_eq_owns)
    apply (drule_tac f="\<lambda>pde. valid_pde pde s" in arg_cong, simp)
    apply (clarsimp simp: obj_at_def a_type_def less_kernel_base_mapping_slots)
-   apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
+   apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
                           arch_kernel_obj.split_asm)
    apply (erule pspace_alignedE, erule domI)
    apply (simp add: pt_bits_def pageBits_def)
@@ -517,10 +517,10 @@ lemma set_mrs_state_vrefs[wp]:
   apply (simp add: set_mrs_def split_def set_object_def)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp'
        | wpc
-       | simp split del: split_if add: zipWithM_x_mapM_x split_def store_word_offs_def)+
+       | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def)+
   apply (auto simp: obj_at_def state_vrefs_def get_tcb_ko_at
              elim!: rsubst[where P=P, OF _ ext]
-             split: split_if_asm simp: vs_refs_no_global_pts_def)
+             split: if_split_asm simp: vs_refs_no_global_pts_def)
   done
 
 (* FIXME: move *)
@@ -529,7 +529,7 @@ lemma set_mrs_thread_states[wp]:
   apply (simp add: set_mrs_def split_def set_object_def)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp'
        | wpc
-       | simp split del: split_if add: zipWithM_x_mapM_x split_def store_word_offs_def)+
+       | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def)+
   apply (clarsimp simp: fun_upd_def[symmetric] thread_states_preserved)
   done
 
@@ -538,7 +538,7 @@ lemma set_mrs_thread_bound_ntfns[wp]:
   apply (simp add: set_mrs_def split_def set_object_def)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp' dmo_wp
        | wpc
-       | simp split del: split_if add: zipWithM_x_mapM_x split_def store_word_offs_def no_irq_storeWord)+
+       | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def no_irq_storeWord)+
   apply (clarsimp simp: fun_upd_def[symmetric] thread_bound_ntfns_preserved )
   done
 
@@ -616,8 +616,8 @@ lemma set_mrs_integrity_autarch:
   apply (simp add: set_mrs_def)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp' store_word_offs_integrity_autarch [where aag = aag and thread = thread]
        | wpc
-       | simp split del: split_if add: split_def zipWithM_x_mapM_x )+
-    apply (clarsimp elim!: in_set_zipE split: split_if_asm)
+       | simp split del: if_split add: split_def zipWithM_x_mapM_x )+
+    apply (clarsimp elim!: in_set_zipE split: if_split_asm)
     apply (rule order_le_less_trans [where y = msg_max_length])
      apply (fastforce simp add: le_eq_less_or_eq)
     apply (simp add: msg_max_length_def msg_align_bits)
@@ -763,7 +763,7 @@ lemma pas_refined_set_asid_strg:
     \<longrightarrow>
   pas_refined aag (s\<lparr>arch_state := arch_state s \<lparr>arm_asid_table := (arm_asid_table (arch_state s))(base \<mapsto> pool)\<rparr>\<rparr>)"
   apply (clarsimp simp: pas_refined_def state_objs_to_policy_def)
-  apply (erule state_asids_to_policy_aux.cases, simp_all split: split_if_asm)
+  apply (erule state_asids_to_policy_aux.cases, simp_all split: if_split_asm)
     apply (auto intro: state_asids_to_policy_aux.intros auth_graph_map_memI[OF sbta_vref] pas_refined_refl[simplified pas_refined_def state_objs_to_policy_def])
   done
 
@@ -984,7 +984,7 @@ lemma perform_asid_pool_invocation_pas_refined [wp]:
   apply (clarsimp simp: cap_auth_conferred_def is_cap_simps is_page_cap_def auth_graph_map_mem
                         pas_refined_all_auth_is_owns pas_refined_refl cli_no_irqs
                  dest!: graph_ofD)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
    apply (clarsimp simp add: pas_refined_refl auth_graph_map_def2
                              mask_asid_low_bits_ucast_ucast[symmetric]
                              valid_apinv_def obj_at_def)
@@ -1105,7 +1105,7 @@ lemma decode_arch_invocation_authorised:
   unfolding arch_decode_invocation_def authorised_arch_inv_def aag_cap_auth_def
   apply (rule hoare_pre)
    apply (simp add: split_def Let_def
-     cong: cap.case_cong arch_cap.case_cong if_cong option.case_cong split del: split_if)
+     cong: cap.case_cong arch_cap.case_cong if_cong option.case_cong split del: if_split)
 
    apply (wp select_wp whenE_throwError_wp check_vp_wpR
              find_pd_for_asid_authority2
@@ -1113,7 +1113,7 @@ lemma decode_arch_invocation_authorised:
            | simp add: authorised_asid_control_inv_def authorised_page_inv_def
                        authorised_page_directory_inv_def
                   del: hoare_post_taut hoare_True_E_R
-                  split del: split_if)+
+                  split del: if_split)+
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
                         neq_Nil_conv invs_psp_aligned invs_arch_objs cli_no_irqs)
   apply (drule diminished_cte_wp_at_valid_cap, clarsimp+)
@@ -1158,7 +1158,7 @@ lemma decode_arch_invocation_authorised:
     apply (clarsimp simp: vspace_cap_rights_to_auth_def mask_vm_rights_def
                 validate_vm_rights_def vm_read_write_def vm_read_only_def
                 vm_kernel_only_def
-             split: split_if_asm)
+             split: if_split_asm)
    -- "Unmap"
    apply (simp add: aag_cap_auth_def cli_no_irqs)
    -- "PageTableCap"
@@ -1174,7 +1174,7 @@ lemma decode_arch_invocation_authorised:
      pde_ref2_def pas_refined_all_auth_is_owns pas_refined_refl  )
    apply (subgoal_tac "x && ~~ mask pt_bits = word")
    apply simp
-  apply (clarsimp simp: valid_cap_simps cap_aligned_def split: split_if_asm)
+  apply (clarsimp simp: valid_cap_simps cap_aligned_def split: if_split_asm)
   apply (subst (asm) upto_enum_step_subtract)
   apply (subgoal_tac "is_aligned word pt_bits")
    apply (simp add: is_aligned_no_overflow)
@@ -1207,11 +1207,11 @@ lemma delete_asid_pas_refined[wp]:
    apply (clarsimp dest!: auth_graph_map_memD graph_ofD)
    apply (erule pas_refined_mem[OF sta_vref, rotated])
    apply (fastforce simp: state_vrefs_def vs_refs_no_global_pts_def
-                         image_def graph_of_def split: split_if_asm)
+                         image_def graph_of_def split: if_split_asm)
   apply (clarsimp simp: pas_refined_def dest!: graph_ofD)
   apply (erule subsetD, erule state_asids_to_policy_aux.intros)
   apply (fastforce simp: state_vrefs_def vs_refs_no_global_pts_def
-                        graph_of_def image_def split: split_if_asm)
+                        graph_of_def image_def split: if_split_asm)
   done
 
 lemma delete_asid_pool_pas_refined [wp]:

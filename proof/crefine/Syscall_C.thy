@@ -41,7 +41,7 @@ lemma one_on_true_True[simp]: "one_on_true True = 1"
   by (simp add: one_on_true_def)
 
 lemma one_on_true_eq_0[simp]: "(one_on_true P = 0) = (\<not> P)"
-  by (simp add: one_on_true_def split: split_if)
+  by (simp add: one_on_true_def split: if_split)
 
 lemma cap_cases_one_on_true_sum:
   "one_on_true (isZombie cap) + one_on_true (isArchObjectCap cap)
@@ -352,7 +352,7 @@ lemma wordFromRights_mask_0:
   "wordFromRights rghts && ~~ mask 4 = 0"
   apply (simp add: wordFromRights_def word_ao_dist word_or_zero
             split: cap_rights.split)
-  apply (simp add: mask_def split: split_if)
+  apply (simp add: mask_def split: if_split)
   done
 
 lemma wordFromRights_mask_eq:
@@ -503,7 +503,7 @@ lemma handleInvocation_def2:
   apply (simp cong: bind_cong add: ts_Restart_case_helper')
   apply (simp add: when_def[symmetric] replyOnRestart_def[symmetric])
   apply (simp add: liftE_def replyOnRestart_twice alternative_bind 
-                   alternative_refl split: split_if)
+                   alternative_refl split: if_split)
   done
 
 lemma thread_state_to_tsType_eq_Restart:
@@ -670,7 +670,7 @@ lemma sendFaultIPC_ccorres:
                  apply (simp add: cfault_rel_def)
                  apply (clarsimp)
                  apply (clarsimp simp: seL4_Fault_lift_def Let_def is_cap_fault_def
-                                 split: split_if_asm)
+                                 split: if_split_asm)
                 apply ceqv
 
                apply csymbr
@@ -828,7 +828,7 @@ lemma getMessageInfo_msgLength':
   apply wp
   apply (rule hoare_strengthen_post, rule hoare_vcg_prop)
   apply (simp add: messageInfoFromWord_def Let_def msgMaxLength_def not_less
-                   Types_H.msgExtraCapBits_def split: split_if )
+                   Types_H.msgExtraCapBits_def split: if_split )
   done
 
 lemma handleInvocation_ccorres:

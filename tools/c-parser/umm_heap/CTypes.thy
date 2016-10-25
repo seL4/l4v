@@ -189,7 +189,7 @@ lemma field_lookup_offset_le:
           m \<le> n"
 proof (induct t and st and ts and x)
   case (Cons_typ_desc x xs) thus ?case by (fastforce split: option.splits)
-qed (auto split: split_if_asm)
+qed (auto split: if_split_asm)
 
 lemma field_lookup_offset':
   shows "\<And>f m m' n t'. (field_lookup t f m = Some ((t'::'a typ_desc),m + n))
@@ -518,7 +518,7 @@ apply(clarsimp split: option.splits)
  apply(case_tac dt_pair)
  apply clarsimp
  apply(case_tac f, clarsimp+)
- apply(clarsimp split: split_if_asm)
+ apply(clarsimp split: if_split_asm)
  apply(simp add: field_lookup_list_None)
 done
 
@@ -806,7 +806,7 @@ apply(induct t and st and ts and x)
  apply clarsimp
  apply(rule_tac x=f in exI)
  apply(clarsimp split: option.splits)
- apply(case_tac dt_pair, clarsimp split: split_if_asm)
+ apply(case_tac dt_pair, clarsimp split: if_split_asm)
  apply(case_tac f, clarsimp+)
  apply(simp add: field_lookup_list_None)
 apply clarsimp
@@ -982,7 +982,7 @@ apply(induct t and st and ts and x)
    apply(case_tac dt_pair, simp )
    apply(subgoal_tac "0 < size_td a")
     apply simp
-   apply(clarsimp split: split_if_asm)
+   apply(clarsimp split: if_split_asm)
     apply(drule (2) field_lookup_wf_size_desc_gt)+
   apply(frule td_set_pair_field_lookup_pairD)
   apply(drule field_lookup_offset_le)
@@ -991,7 +991,7 @@ apply(induct t and st and ts and x)
   apply(case_tac dt_pair, simp )
   apply(subgoal_tac "0 < size_td a")
    apply simp
-  apply(clarsimp split: split_if_asm)
+  apply(clarsimp split: if_split_asm)
    apply(drule (2) field_lookup_wf_size_desc_gt)+
  apply best
 apply(drule_tac x="tl f" in spec)
@@ -1206,7 +1206,7 @@ apply(simp add: tf4)
 apply auto
 apply(clarsimp simp: tf_set_pair_def tf_set_list_def)
 apply(case_tac x, simp)
-apply(clarsimp split: split_if_asm)
+apply(clarsimp split: if_split_asm)
 apply(case_tac ba, simp+)
 apply(drule_tac fs=list and m=0 in field_lookup_list_None)
 apply auto
@@ -1416,7 +1416,7 @@ apply(induct t and st and ts and x)
 apply(drule_tac x=s in spec)
 apply(drule_tac x="fn @ [list]" in spec)
 apply clarsimp
-apply(clarsimp simp: prefixeq_def less_eq_list_def)
+apply(clarsimp simp: prefix_def less_eq_list_def)
 done
 
 lemma lf_set_fn:
@@ -1434,7 +1434,7 @@ apply(case_tac x, auto) (* FIXME! *)
 apply(case_tac a, auto) (* FIXME! *)
 apply(drule lf_set_fn)+
 apply clarsimp
-apply(clarsimp simp: prefixeq_def less_eq_list_def)
+apply(clarsimp simp: prefix_def less_eq_list_def)
 done
 
 lemma wf_lf_fn:
@@ -1511,7 +1511,7 @@ apply(induct t and st and ts and x)
   apply(drule_tac x="take (size_td_pair dt_pair) bs" in spec)
   apply clarsimp
   apply(erule impE)
-   apply(clarsimp simp: min_def split: split_if_asm)
+   apply(clarsimp simp: min_def split: if_split_asm)
   apply(rotate_tac -1)
   apply(drule_tac x="take (size_td_pair dt_pair) bs'" in spec)
   apply(simp add: min_ll)
@@ -1624,11 +1624,11 @@ lemma wf_fd_field_lookup [rule_format]:
   "\<forall>f m n s. wf_fd_list (ts::'a typ_info_pair list) \<longrightarrow> field_lookup_list ts f m = Some (s,n) \<longrightarrow> wf_fd s"
   "\<forall>f m n s. wf_fd_pair (x::'a typ_info_pair) \<longrightarrow> field_lookup_pair x f m = Some (s,n) \<longrightarrow> wf_fd s"
 apply(induct t and st and ts and x)
-     apply(clarsimp split: typ_struct.split split: split_if_asm)
+     apply(clarsimp split: typ_struct.split split: if_split_asm)
     apply clarsimp+
  apply(clarsimp split: option.splits)
 apply clarify
-apply(simp split: split_if_asm)
+apply(simp split: if_split_asm)
 done
 
 
@@ -1810,7 +1810,7 @@ apply(simp add: fu_commutes_def)
 apply(clarsimp simp: fa_fu_ind_def field_desc_pair_def field_desc_list_def)
 apply(drule_tac x="(take (size_td_pair dt_pair) bs)" in spec)
 apply(erule impE)
- apply(clarsimp simp: min_def split: split_if_asm)
+ apply(clarsimp simp: min_def split: if_split_asm)
 apply(rotate_tac -1)
 apply(drule_tac x="take (size_td_pair dt_pair) bs'" in spec)
 apply(simp add: min_ll)
@@ -1917,7 +1917,7 @@ apply(induct t and st and ts and x)
   apply(drule_tac x="take (size_td_pair dt_pair) bs" in spec)
   apply clarsimp
   apply(erule impE)
-   apply(clarsimp simp: min_def split: split_if_asm)
+   apply(clarsimp simp: min_def split: if_split_asm)
   apply(rotate_tac -1)
   apply(drule_tac x="take (size_td_pair dt_pair) bs'" in spec)
   apply(simp add: min_ll)
@@ -2062,7 +2062,7 @@ apply(induct t and st and ts and x)
  apply(frule field_lookup_offset_le)
  apply simp
  apply(case_tac dt_pair, clarsimp)
- apply(clarsimp split: split_if_asm)
+ apply(clarsimp split: if_split_asm)
  apply(subst drop_take)
  apply simp
  apply(drule td_set_field_lookupD)
@@ -2089,7 +2089,7 @@ apply(subst wf_fd_norm_tuD)
   apply(rule wf_fd_field_lookupD)
    apply fast
   apply simp
- apply(clarsimp simp: min_def split: split_if_asm)
+ apply(clarsimp simp: min_def split: if_split_asm)
  apply(drule td_set_field_lookupD)
  apply(drule td_set_offset_size)
  apply simp
@@ -2116,19 +2116,19 @@ lemma drop_super_update_bs2:
   "\<lbrakk> n \<le> length bs; n + length v \<le> k \<rbrakk> \<Longrightarrow>
       drop k (super_update_bs v bs n) = drop k bs"
 apply(simp add: super_update_bs_def)
-apply(clarsimp simp: min_def split: split_if_asm)
+apply(clarsimp simp: min_def split: if_split_asm)
 done
 
 lemma take_super_update_bs:
   "\<lbrakk> k \<le> n; n \<le> length bs \<rbrakk> \<Longrightarrow> take k (super_update_bs v bs n) = take k bs"
 apply(simp add: super_update_bs_def)
-apply(clarsimp simp: min_def split: split_if_asm)
+apply(clarsimp simp: min_def split: if_split_asm)
 done
 
 lemma take_super_update_bs2:
   "\<lbrakk> n \<le> length bs; n + length v \<le> k \<rbrakk> \<Longrightarrow> take k (super_update_bs v bs n) = super_update_bs v (take k bs) n"
 apply(simp add: super_update_bs_def)
-apply(clarsimp simp: min_def split: split_if_asm)
+apply(clarsimp simp: min_def split: if_split_asm)
 apply(case_tac "n=k")
  apply simp
 apply auto
@@ -2195,14 +2195,14 @@ apply(induct t and st and ts and x)
  apply(drule_tac x="s" in spec)
  apply clarsimp
  apply(drule_tac x="take (size_td_pair dt_pair) bs" in spec, erule impE)
-  apply(clarsimp simp: min_def split: split_if_asm)
+  apply(clarsimp simp: min_def split: if_split_asm)
  apply(rotate_tac -1)
  apply(drule_tac x=v in spec)
  apply clarsimp
  apply(drule_tac x="update_ti_list_t list
              (drop (size_td_pair dt_pair) (super_update_bs v bs n)) w" in spec)
  apply(case_tac dt_pair, clarsimp)
- apply(clarsimp split: split_if_asm)
+ apply(clarsimp split: if_split_asm)
  apply(frule td_set_field_lookupD)
  apply(drule td_set_offset_size_m)
  apply(subst take_super_update_bs2)
@@ -2693,7 +2693,7 @@ apply(subgoal_tac "wf_fd (typ_info_t TYPE('a))")
  apply(clarsimp simp: fd_cons_def fd_cons_update_access_def fd_cons_desc_def)
  apply(drule_tac x=x in spec)
  apply(insert upd [where v=x and w=undefined and bs="access_ti (typ_info_t TYPE('a)) x bs"])
- apply(clarsimp simp: update_ti_t_def  fd_cons_length_def size_of_def split: split_if_asm )
+ apply(clarsimp simp: update_ti_t_def  fd_cons_length_def size_of_def split: if_split_asm )
 apply simp
 done
 

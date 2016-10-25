@@ -129,7 +129,7 @@ lemma arch_update_cap_zombies:
   apply wp
   apply (intro allI impI)
   apply (elim conjE exE)
-  apply (simp del: split_paired_All add: is_arch_update_def split: split_if_asm)
+  apply (simp del: split_paired_All add: is_arch_update_def split: if_split_asm)
     apply (erule_tac x=p in allE)
     apply (erule_tac x=p' in allE)
     apply simp
@@ -215,7 +215,7 @@ lemma set_mrs_typ_at[wp]:
   apply (simp add: set_mrs_def zipWithM_x_mapM split_def
                    store_word_offs_def set_object_def
               cong: option.case_cong
-              split del: split_if)
+              split del: if_split)
   apply (wp hoare_vcg_split_case_option)
     apply (rule mapM_wp [where S=UNIV, simplified])
     apply (wp | simp)+

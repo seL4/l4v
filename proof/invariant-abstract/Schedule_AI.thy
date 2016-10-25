@@ -40,8 +40,8 @@ requalify_facts
 end
 
 lemma findM_inv'':
-  assumes p: "suffixeq xs xs'"
-  assumes x: "\<And>x xs. suffixeq (x # xs) xs' \<Longrightarrow> \<lbrace>P (x # xs)\<rbrace> m x \<lbrace>\<lambda>rv s. (rv \<longrightarrow> Q s) \<and> (\<not> rv \<longrightarrow> P xs s)\<rbrace>"
+  assumes p: "suffix xs xs'"
+  assumes x: "\<And>x xs. suffix (x # xs) xs' \<Longrightarrow> \<lbrace>P (x # xs)\<rbrace> m x \<lbrace>\<lambda>rv s. (rv \<longrightarrow> Q s) \<and> (\<not> rv \<longrightarrow> P xs s)\<rbrace>"
   assumes y: "\<And>s. P [] s \<Longrightarrow> Q s"
   shows      "\<lbrace>P xs\<rbrace> findM m xs \<lbrace>\<lambda>rv. Q\<rbrace>"
   using p
@@ -49,14 +49,14 @@ lemma findM_inv'':
    apply simp
    apply wp
    apply (erule y)
-  apply (frule suffixeq_ConsD)
+  apply (frule suffix_ConsD)
   apply simp
   apply wp
    apply assumption
   apply (erule x)
   done
 
-lemmas findM_inv' = findM_inv''[OF suffixeq_refl]
+lemmas findM_inv' = findM_inv''[OF suffix_refl]
 
 lemma findM_inv:
   assumes x: "\<And>x xs. \<lbrace>P\<rbrace> m x \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -70,19 +70,19 @@ lemma allActiveTCBs_gets:
 
 
 lemma postfix_tails:
-  "\<lbrakk> suffixeq (xs # ys) (tails zs) \<rbrakk>
-     \<Longrightarrow> suffixeq xs zs \<and> (xs # ys) = tails xs"
+  "\<lbrakk> suffix (xs # ys) (tails zs) \<rbrakk>
+     \<Longrightarrow> suffix xs zs \<and> (xs # ys) = tails xs"
   apply (induct zs arbitrary: xs ys)
-   apply (clarsimp elim!: suffixeqE)
+   apply (clarsimp elim!: suffixE)
    apply (case_tac zs, simp_all)[1]
-  apply (clarsimp elim!: suffixeqE)
+  apply (clarsimp elim!: suffixE)
   apply (case_tac zsa, simp_all)
    apply clarsimp
   apply clarsimp
   apply (erule meta_allE, erule meta_allE, drule meta_mp,
-         rule suffixeq_appendI[OF suffixeq_refl])
+         rule suffix_appendI[OF suffix_refl])
   apply clarsimp
-  apply (erule suffixeq_ConsI)
+  apply (erule suffix_ConsI)
   done
 
 
@@ -170,7 +170,7 @@ lemma OR_choice_weak_wp:
   "\<lbrace>P\<rbrace> f \<sqinter> g \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> OR_choice b f g \<lbrace>Q\<rbrace>"
   apply (fastforce simp add: OR_choice_def alternative_def valid_def bind_def
                     select_f_def gets_def return_def get_def
-          split: option.splits split_if_asm)
+          split: option.splits if_split_asm)
   done
 
 locale Schedule_AI_U = Schedule_AI "TYPE(unit)" 
@@ -207,10 +207,10 @@ lemma (in Schedule_AI_U) schedule_ct_activateable[wp]:
      apply clarsimp
      apply (case_tac "get_tcb (cur_thread s) s", simp_all add: ct_in_state_def)
      apply (drule get_tcb_SomeD)
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def split: split_if_asm)
+     apply (clarsimp simp: pred_tcb_at_def obj_at_def split: if_split_asm)
     apply (case_tac "get_tcb x s", simp_all)
     apply (drule get_tcb_SomeD)
-    apply (clarsimp simp: pred_tcb_at_def obj_at_def split: split_if_asm)
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def split: if_split_asm)
     done
 qed
 

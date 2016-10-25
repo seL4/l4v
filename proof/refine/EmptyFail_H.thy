@@ -140,7 +140,7 @@ lemma transferCapsToSlots_empty_fail[intro!, wp, simp]:
   apply (induct caps arbitrary: slots n mi)
    apply simp
   apply (simp add: Let_def split_def
-             split del: split_if)
+             split del: if_split)
   apply (simp | wp | wpc | safe)+
   done
 
@@ -195,7 +195,7 @@ lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
 lemma spec_empty_fail_If:
   "\<lbrakk> P \<Longrightarrow> spec_empty_fail f s; \<not> P \<Longrightarrow> spec_empty_fail g s \<rbrakk>
    \<Longrightarrow> spec_empty_fail (if P then f else g) s"
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemma spec_empty_whenE':
   "\<lbrakk> P \<Longrightarrow> spec_empty_fail f s \<rbrakk> \<Longrightarrow> spec_empty_fail (whenE P f) s"

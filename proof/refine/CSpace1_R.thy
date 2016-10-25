@@ -39,7 +39,7 @@ lemma isMDBParentOf_CTE1:
            capEPBadge cap = capEPBadge cap' \<and> \<not> mdbFirstBadged node')
       \<and> (isNotificationCap cap \<longrightarrow> capNtfnBadge cap \<noteq> 0 \<longrightarrow>
            capNtfnBadge cap = capNtfnBadge cap' \<and> \<not> mdbFirstBadged node'))"
-  apply (simp add: isMDBParentOf_def Let_def split: cte.splits split del: split_if)
+  apply (simp add: isMDBParentOf_def Let_def split: cte.splits split del: if_split)
   apply (clarsimp simp: Let_def)
   apply (fastforce simp: isCap_simps)
   done
@@ -181,15 +181,15 @@ lemma can_be_is:
   apply (rename_tac cap mdbnode)
   apply (cases cte')
   apply (rename_tac cap' mdbnode')
-  apply (clarsimp split del: split_if)
+  apply (clarsimp split del: if_split)
   apply (case_tac "mdbRevocable mdbnode")
    prefer 2
    apply simp
-  apply (clarsimp split del: split_if)
+  apply (clarsimp split del: if_split)
   apply (case_tac "RetypeDecls_H.sameRegionAs cap cap'")
    prefer 2
    apply (simp add: same_region_as_relation)
-  apply (simp add: same_region_as_relation split del: split_if)
+  apply (simp add: same_region_as_relation split del: if_split)
   apply (cases c, simp_all add: isCap_simps)
     apply (cases c', auto simp: sameRegionAs_def Let_def isCap_simps)[1]
    apply (cases c', auto simp: sameRegionAs_def isCap_simps is_cap_simps)[1]
@@ -206,11 +206,11 @@ lemma no_fail_getCTE [wp]:
   apply (clarsimp simp: cte_wp_at'_def getObject_def
                         loadObject_cte split_def in_monad
                  dest!: in_singleton
-             split del: split_if)
+             split del: if_split)
   apply (clarsimp simp: in_monad typeError_def objBits_simps
                         magnitudeCheck_def
-                 split: kernel_object.split_asm split_if_asm option.split_asm
-             split del: split_if)
+                 split: kernel_object.split_asm if_split_asm option.split_asm
+             split del: if_split)
        apply simp+
   done
 
@@ -220,7 +220,7 @@ lemma tcb_cases_related:
                \<and> (\<forall>tcb tcb'. tcb_relation tcb tcb' \<longrightarrow> cap_relation (getF tcb) (cteCap (getF' tcb')))"
   by (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1
                 cte_map_def tcb_relation_def
-         split: split_if_asm)
+         split: if_split_asm)
 
 lemma pspace_relation_cte_wp_at:
   "\<lbrakk> pspace_relation (kheap s) (ksPSpace s');
@@ -295,7 +295,7 @@ apply (case_tac c, simp_all add: isCap_defs maskCapRights_def Let_def
                                  rights_mask_map_def maskVMRights_def
                                  AllowSend_def AllowRecv_def
                                  cap_rights_update_def
-                          split del: split_if)
+                          split del: if_split)
 apply (clarsimp simp add: isCap_defs)
 by (rule ArchAcc_R.arch_cap_rights_update
          [simplified, simplified rights_mask_map_def])
@@ -349,7 +349,7 @@ lemma maskCap_valid [simp]:
   by (simp    add: valid_cap'_def maskCapRights_def isCap_simps
                    capAligned_def ARM_H.maskCapRights_def
             split: capability.split arch_capability.split
-        split del: split_if)
+        split del: if_split)
 
 lemma getSlotCap_valid_cap:
   "\<lbrace>valid_objs'\<rbrace> getSlotCap t \<lbrace>\<lambda>r. valid_cap' r and cte_at' t\<rbrace>"
@@ -369,12 +369,12 @@ proof (induct rule: resolveAddressBits.induct)
   show ?case
     apply (clarsimp simp: validE_def validE_R_def valid_def split: sum.split)
     apply (subst (asm) resolveAddressBits.simps)
-    apply (simp only: Let_def split: split_if_asm)
+    apply (simp only: Let_def split: if_split_asm)
      prefer 2
      apply (simp add: in_monad)
     apply (simp only: in_bindE_R K_bind_def)
     apply (elim exE conjE)
-    apply (simp only: split: split_if_asm)
+    apply (simp only: split: if_split_asm)
      apply (clarsimp simp: in_monad locateSlot_conv stateAssert_def)
      apply (cases cap)
        apply (simp_all add: isCap_defs)[12]
@@ -382,7 +382,7 @@ proof (induct rule: resolveAddressBits.induct)
                         split: option.split_asm)
     apply (simp only: in_bindE_R K_bind_def)
     apply (elim exE conjE)
-    apply (simp only: cap_case_CNodeCap split: split_if_asm)
+    apply (simp only: cap_case_CNodeCap split: if_split_asm)
      apply (drule_tac cap=nextCap in isCapDs(4), elim exE)
      apply (simp only: in_bindE_R K_bind_def)
      apply (frule (12) 1 [OF refl], (assumption | rule refl)+)
@@ -473,7 +473,7 @@ lemma cte_map_shift:
 proof -
   let ?l = "length cref - (cbits + length guard)"
   from pre obtain xs where
-    xs: "cref = guard @ xs" by (auto simp: prefixeq_def less_eq_list_def)
+    xs: "cref = guard @ xs" by (auto simp: prefix_def less_eq_list_def)
   hence len_c: "length cref = length guard + length xs" by simp
   with len have len_x: "cbits \<le> length xs" by simp
 
@@ -579,7 +579,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (rule get_cap_success)
       apply (auto simp: in_monad intro!: get_cap_success) (* takes time *)
       done
-    note split_if [split del]
+    note if_split [split del]
     { assume "cbits + length guard = 0 \<or> cbits = 0 \<and> guard = []"
       hence ?thesis
         apply (simp add: caps isCap_defs
@@ -593,7 +593,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
       hence [simp]: "((cbits + length guard = 0) = False) \<and>
                      ((cbits = 0 \<and> guard = []) = False) \<and>
                     (0 < cbits \<or> guard \<noteq> []) " by simp
-      note split_if [split del]
+      note if_split [split del]
       from "1.prems"
       have ?thesis
         apply -
@@ -828,12 +828,12 @@ lemma setObject_cte_obj_at_tcb':
   apply (clarsimp simp: setObject_def in_monad split_def
                         valid_def lookupAround2_char1
                         obj_at'_def ps_clear_upd' projectKOs
-             split del: split_if)
+             split del: if_split)
   apply (clarsimp elim!: rsubst[where P=P'])
   apply (clarsimp simp: updateObject_cte in_monad objBits_simps
                         tcbCTableSlot_def tcbVTableSlot_def x
                         typeError_def
-                 split: split_if_asm
+                 split: if_split_asm
                         Structures_H.kernel_object.split_asm)
   done
 
@@ -981,7 +981,7 @@ lemma cap_insert_objs' [wp]:
   "\<lbrace>valid_objs'
     and valid_cap' cap\<rbrace>
    cteInsert cap src dest \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: cteInsert_def updateCap_def setUntypedCapAsFull_def bind_assoc split del: split_if)
+  apply (simp add: cteInsert_def updateCap_def setUntypedCapAsFull_def bind_assoc split del: if_split)
   apply (wp setCTE_valid_objs)
       apply simp
       apply wp
@@ -1000,10 +1000,10 @@ lemma cteInsert_weak_cte_wp_at:
    cteInsert cap src dest
    \<lbrace>\<lambda>uu. cte_wp_at'(\<lambda>c. P (cteCap c)) p\<rbrace>"
   unfolding cteInsert_def error_def updateCap_def setUntypedCapAsFull_def
-  apply (simp add: bind_assoc split del: split_if)
+  apply (simp add: bind_assoc split del: if_split)
   apply (wp setCTE_weak_cte_wp_at updateMDB_weak_cte_wp_at static_imp_wp | simp)+
    apply (wp getCTE_ctes_wp)
-   apply (clarsimp simp: isCap_simps split:split_if_asm| rule conjI)+
+   apply (clarsimp simp: isCap_simps split:if_split_asm| rule conjI)+
 done
 
 lemma setCTE_valid_cap:
@@ -1170,13 +1170,13 @@ next
     case (base y)
     thus ?case using Some
       by (auto intro!: r_into_trancl
-        simp: modify_map_def mdb_next_update next_unfold' split: split_if_asm)
+        simp: modify_map_def mdb_next_update next_unfold' split: if_split_asm)
   next
     case (step q r)
     show ?case
     proof
       show "m \<turnstile> q \<leadsto> r" using step(2) Some
-      by (auto simp: modify_map_def mdb_next_update next_unfold' split: split_if_asm)
+      by (auto simp: modify_map_def mdb_next_update next_unfold' split: if_split_asm)
     qed fact+
   qed
   thus ?thesis using Some
@@ -1289,7 +1289,7 @@ proof -
     {
       assume "ptr = post"
       hence ?thesis using m1 mp cn cp tpost tpre prepost
-        by (clarsimp simp: modify_map_app split: split_if_asm)
+        by (clarsimp simp: modify_map_app split: if_split_asm)
     } moreover
     {
       assume p: "ptr = pre"
@@ -1344,7 +1344,7 @@ proof -
     {
       assume "ptr = pre"
       hence ?thesis using m1 mp cn cp tpost tpre prepost
-        by (clarsimp simp: modify_map_app split: split_if_asm)
+        by (clarsimp simp: modify_map_app split: if_split_asm)
     } moreover
     {
       assume p: "ptr = post"
@@ -1399,7 +1399,7 @@ lemma mdb_chain_0_modify_map_prev:
   unfolding mdb_chain_0_def
   apply rule
   apply (rule update_prev_next_trancl)
-   apply (clarsimp simp: modify_map_def dom_def split: option.splits split_if_asm)
+   apply (clarsimp simp: modify_map_def dom_def split: option.splits if_split_asm)
    done
 
 lemma mdb_chain_0_modify_map_next:
@@ -1415,7 +1415,7 @@ proof
   fix x
   assume "x \<in> dom ?M"
   hence xd: "x \<in> dom m"
-    by (clarsimp simp: modify_map_def dom_def split: split_if_asm)
+    by (clarsimp simp: modify_map_def dom_def split: if_split_asm)
   hence x0: "m \<turnstile> x \<leadsto>\<^sup>+ 0" using chain unfolding mdb_chain_0_def by simp
 
   from dom have t0: "m \<turnstile> target \<leadsto>\<^sup>+ 0"
@@ -1580,7 +1580,7 @@ lemma updateCapData_Master:
   "updateCapData P d cap \<noteq> NullCap \<Longrightarrow>
    capMasterCap (updateCapData P d cap) = capMasterCap cap"
   apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
-                           split: split_if_asm)
+                           split: if_split_asm)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability, simp_all add: ARM_H.updateCapData_def)
   done
@@ -1660,7 +1660,7 @@ lemmas cteInsert_valid_objs = cap_insert_objs'
 lemma cteInsert_valid_cap:
   "\<lbrace>valid_cap' c\<rbrace> cteInsert cap src dest \<lbrace> \<lambda>_. valid_cap' c\<rbrace>"
   unfolding cteInsert_def updateCap_def setUntypedCapAsFull_def
-  apply (simp split del: split_if)
+  apply (simp split del: if_split)
   apply (wp updateMDB_valid_cap setCTE_valid_cap )
    prefer 2
    apply (rule getCTE_sp)
@@ -1731,7 +1731,7 @@ next
         apply (clarsimp simp: mdb_next_unfold)
        apply assumption
       apply (cases "p\<noteq>x")
-       apply (clarsimp simp: parentOf_def  split: split_if_asm)
+       apply (clarsimp simp: parentOf_def  split: if_split_asm)
       apply clarsimp
       apply (clarsimp simp: mdb_next_unfold)
       apply (case_tac z)
@@ -1847,7 +1847,7 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (erule is_aligned_no_wrap')
    apply simp
   apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1
-              split: split_if_asm)
+              split: if_split_asm)
   done
 
 lemma cte_map_inj:
@@ -1915,7 +1915,7 @@ lemma tcb_cases_related2:
                         \<longrightarrow> tcb_relation (setF' (\<lambda>x. cap) tcb) (setF (\<lambda>x. cte) tcb'))"
   apply (clarsimp simp: tcb_cte_cases_def tcb_relation_def
                         tcb_cap_cases_simps[simplified]
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (simp_all add: tcb_cnode_index_def cte_map_def field_simps to_bl_1)
   done
 
@@ -1933,7 +1933,7 @@ lemma cte_map_pulls_tcb_to_abstract:
      \<Longrightarrow> \<exists>tcb'. kheap s x = Some (TCB tcb') \<and> tcb_relation tcb' tcb
                   \<and> (z = (x, tcb_cnode_index (unat ((y - x) >> 4))))"
   apply (rule pspace_dom_relatedE, assumption+)
-  apply (erule(1) obj_relation_cutsE, simp_all split: split_if_asm)
+  apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
                         ARM_A.arch_kernel_obj.split_asm)
@@ -1956,7 +1956,7 @@ lemma pspace_relation_update_tcbs:
   apply (clarsimp split: Structures_A.kernel_object.split_asm)
   apply (drule bspec, fastforce)
   apply clarsimp
-  apply (erule(1) obj_relation_cutsE, simp_all split: split_if_asm)
+  apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
   done
 
 lemma cte_map_pulls_cte_to_abstract:
@@ -1969,7 +1969,7 @@ lemma cte_map_pulls_cte_to_abstract:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply clarsimp
   apply (frule(1) cte_map_inj_eq[OF sym], simp_all)
-  apply (rule cte_wp_at_cteI, (fastforce split: split_if_asm)+)
+  apply (rule cte_wp_at_cteI, (fastforce split: if_split_asm)+)
   done
 
 lemma pspace_relation_update_ctes:
@@ -2017,7 +2017,7 @@ proof -
 
   show ?thesis using ps octe
     apply (clarsimp simp add: pspace_relation_def dom_fun_upd2
-                    simp del: dom_fun_upd split del: split_if)
+                    simp del: dom_fun_upd split del: if_split)
     apply (rule conjI)
      apply (erule subst[where t="dom s'"])
      apply (simp add: pspace_dom_def obj_relation_cuts2)
@@ -2026,7 +2026,7 @@ proof -
     apply clarsimp
     apply (intro conjI impI)
      apply (simp add: s'')
-     apply (rule obj_relation_cutsE, assumption+, simp_all split: split_if_asm)[1]
+     apply (rule obj_relation_cutsE, assumption+, simp_all split: if_split_asm)[1]
      apply (clarsimp simp: cte_relation_def rel)
     apply (rule obj_relation_cutsE, assumption+, simp_all add: s'')
      apply (clarsimp simp: cte_relation_def)
@@ -2064,7 +2064,7 @@ lemma set_cap_not_quite_corres_prequel:
     apply (simp add: c)
    apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
    apply (drule bspec, erule domI)
-   apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: split_if_asm)
+   apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: if_split_asm)
   apply (clarsimp simp: pspace_relations_def)
   apply (frule(5) cte_map_pulls_cte_to_abstract[OF p])
   apply (clarsimp simp: set_cap_def split_def bind_def get_object_def
@@ -2089,7 +2089,7 @@ lemma set_cap_not_quite_corres_prequel:
    apply (simp add: c)
   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
   apply (drule bspec, erule domI)
-  apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: split_if_asm)
+  apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: if_split_asm)
   done
 
 lemma setCTE_pspace_only:
@@ -2149,7 +2149,7 @@ lemma set_cap_not_quite_corres:
   apply (frule setCTE_pspace_only)
   apply (clarsimp simp: set_cap_def split_def in_monad set_object_def
                         get_object_def
-                 split: Structures_A.kernel_object.split_asm split_if_asm)
+                 split: Structures_A.kernel_object.split_asm if_split_asm)
   done
 
 lemma descendants_of_eq':
@@ -2207,12 +2207,12 @@ lemma pspace_relation_cte_wp_atI':
   apply (simp add: cte_wp_at_cases')
   apply (elim disjE conjE exE)
    apply (erule(1) pspace_dom_relatedE)
-   apply (erule(1) obj_relation_cutsE, simp_all split: split_if_asm)[1]
+   apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)[1]
    apply (intro exI, rule conjI[OF _ conjI [OF _ refl]])
     apply (simp add: cte_wp_at_cases domI well_formed_cnode_invsI)
-   apply (simp split: split_if_asm)
+   apply (simp split: if_split_asm)
   apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE, simp_all split: split_if_asm)
+  apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
   apply (simp add: other_obj_relation_def
             split: Structures_A.kernel_object.split_asm
                    ARM_A.arch_kernel_obj.split_asm)
@@ -2364,7 +2364,7 @@ qed
 
 lemma isMDBParent_sameRegion:
   "isMDBParentOf cte cte' \<Longrightarrow> sameRegionAs (cteCap cte) (cteCap cte')"
-  by (simp add: isMDBParentOf_def split: cte.split_asm split_if_asm)
+  by (simp add: isMDBParentOf_def split: cte.split_asm if_split_asm)
 
 lemma is_final_descendants:
   "\<lbrakk> ctes_of s' (cte_map slot) = Some cte;
@@ -2639,11 +2639,11 @@ proof (simp add: descendants_of'_def subset_iff,
         using subtree_neq [OF subtree.direct_parent [OF direct_parent(1-3)]]
         apply -
         apply (rule subtree.direct_parent)
-          apply (clarsimp simp: mdb_next_unfold m'_def m split: split_if_asm)
+          apply (clarsimp simp: mdb_next_unfold m'_def m split: if_split_asm)
          apply assumption
         apply (insert z m t pu)
         apply (simp add: cap'_def)
-        apply (simp add: m'_def parentOf_def split: split_if_asm)
+        apply (simp add: m'_def parentOf_def split: if_split_asm)
          apply (clarsimp simp: parent2)
         apply (clarsimp simp add: notparent2 [OF _ _ P])
         done
@@ -2653,11 +2653,11 @@ proof (simp add: descendants_of'_def subset_iff,
         using subtree_neq [OF subtree.trans_parent [OF trans_parent(1, 3-5)]]
         apply -
         apply (erule subtree.trans_parent)
-          apply (clarsimp simp: mdb_next_unfold m'_def m split: split_if_asm)
+          apply (clarsimp simp: mdb_next_unfold m'_def m split: if_split_asm)
          apply assumption
         apply (insert z m t pu)
         apply (simp add: cap'_def)
-        apply (simp add: m'_def parentOf_def split: split_if_asm)
+        apply (simp add: m'_def parentOf_def split: if_split_asm)
          apply (clarsimp simp: parent2)
         apply (clarsimp simp: notparent2 [OF _ _ P])
         done
@@ -2739,12 +2739,12 @@ lemma no_fail_setCTE [wp]:
   apply (clarsimp simp: cte_wp_at'_def getObject_def split_def
                         in_monad loadObject_cte
                  dest!: in_singleton
-             split del: split_if)
+             split del: if_split)
   apply (clarsimp simp: typeError_def alignCheck_def alignError_def
                         in_monad is_aligned_mask[symmetric] objBits_simps
                         magnitudeCheck_def
-                 split: kernel_object.split_asm split_if_asm option.splits
-             split del: split_if)
+                 split: kernel_object.split_asm if_split_asm option.splits
+             split del: if_split)
     apply simp_all
   done
 
@@ -2868,7 +2868,7 @@ lemma cap_update_corres:
    apply (intro allI impI)
    apply (erule_tac x=c in allE)
    apply (erule impE[where P="\<exists>y. v = Some y" for v])
-    apply (clarsimp simp: null_filter_def is_zombie_def split: split_if_asm)
+    apply (clarsimp simp: null_filter_def is_zombie_def split: if_split_asm)
    apply (auto elim!: modify_map_casesE del: disjE)[1]
   apply (case_tac "ctes_of b (cte_map slot)")
    apply (simp add: modify_map_None)
@@ -2899,7 +2899,7 @@ lemma cap_update_corres:
 lemma exst_set_cap:
   "(x,s') \<in> fst (set_cap p c s) \<Longrightarrow> exst s' = exst s"
   by (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-               split: split_if_asm Structures_A.kernel_object.splits)
+               split: if_split_asm Structures_A.kernel_object.splits)
 
 lemma cap_relation_NullCap [simp]:
   "cap_relation c NullCap = (c = Structures_A.NullCap)"
@@ -2921,7 +2921,7 @@ lemma updateMDB_eqs:
          ksDomSchedule s''    = ksDomSchedule s' \<and>
          ksCurDomain s''      = ksCurDomain s' \<and>
          ksDomainTime s''     = ksDomainTime s'" using assms
-  apply (clarsimp simp: updateMDB_def Let_def in_monad split: split_if_asm)
+  apply (clarsimp simp: updateMDB_def Let_def in_monad split: if_split_asm)
   apply (drule in_inv_by_hoareD [OF getCTE_inv])
   apply (clarsimp simp: setCTE_def setObject_def in_monad split_def)
   apply (drule in_inv_by_hoareD [OF updateObject_cte_inv])
@@ -2933,7 +2933,7 @@ lemma updateMDB_pspace_relation:
   assumes "pspace_relation (kheap s) (ksPSpace s')"
   assumes "pspace_aligned' s'" "pspace_distinct' s'"
   shows "pspace_relation (kheap s) (ksPSpace s'')" using assms
-  apply (clarsimp simp: updateMDB_def Let_def in_monad split: split_if_asm)
+  apply (clarsimp simp: updateMDB_def Let_def in_monad split: if_split_asm)
   apply (drule_tac P="op = s'" in use_valid [OF _ getCTE_sp], rule refl)
   apply clarsimp
   apply (clarsimp simp: setCTE_def setObject_def in_monad
@@ -2945,7 +2945,7 @@ lemma updateMDB_pspace_relation:
     apply (clarsimp simp: tcb_ctes_clear)
    apply clarsimp
    apply (rule pspace_dom_relatedE, assumption+)
-   apply (rule obj_relation_cutsE, assumption+, simp_all split: split_if_asm)[1]
+   apply (rule obj_relation_cutsE, assumption+, simp_all split: if_split_asm)[1]
    apply (clarsimp split: Structures_A.kernel_object.split_asm
                           ARM_A.arch_kernel_obj.split_asm
                     simp: other_obj_relation_def)
@@ -2956,11 +2956,11 @@ lemma updateMDB_pspace_relation:
    apply (erule(2) pspace_relation_update_tcbs)
    apply (case_tac tcba)
    apply (simp add: tcb_cte_cases_def tcb_relation_def del: diff_neg_mask
-             split: split_if_asm)
+             split: if_split_asm)
   apply (clarsimp simp: cte_wp_at_cases')
   apply (erule disjE)
    apply (rule pspace_dom_relatedE, assumption+)
-   apply (rule obj_relation_cutsE, assumption+, simp_all split: split_if_asm)[1]
+   apply (rule obj_relation_cutsE, assumption+, simp_all split: if_split_asm)[1]
    apply (clarsimp simp: cte_relation_def)
    apply (simp add: pspace_relation_def dom_fun_upd2
                del: dom_fun_upd)
@@ -2968,7 +2968,7 @@ lemma updateMDB_pspace_relation:
    apply (rule ballI, drule(1) bspec)
    apply (rule ballI, drule(1) bspec)
    apply clarsimp
-   apply (rule obj_relation_cutsE, assumption+, simp_all split: split_if_asm)[1]
+   apply (rule obj_relation_cutsE, assumption+, simp_all split: if_split_asm)[1]
    apply (clarsimp simp: cte_relation_def)
   apply clarsimp
   apply (drule_tac y=p in tcb_ctes_clear[rotated], assumption+)
@@ -2980,11 +2980,11 @@ lemma updateMDB_ekheap_relation:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
   assumes "ekheap_relation (ekheap s) (ksPSpace s')"
   shows "ekheap_relation (ekheap s) (ksPSpace s'')" using assms
-  apply (clarsimp simp: updateMDB_def Let_def setCTE_def setObject_def in_monad ekheap_relation_def etcb_relation_def split_def split: split_if_asm)
+  apply (clarsimp simp: updateMDB_def Let_def setCTE_def setObject_def in_monad ekheap_relation_def etcb_relation_def split_def split: if_split_asm)
   apply (drule(1) updateObject_cte_is_tcb_or_cte[OF _ refl, rotated])
   apply (drule_tac P="op = s'" in use_valid [OF _ getCTE_sp], rule refl)
   apply (drule bspec, erule domI)
-  apply (clarsimp simp: tcb_cte_cases_def lookupAround2_char1 split: split_if_asm)
+  apply (clarsimp simp: tcb_cte_cases_def lookupAround2_char1 split: if_split_asm)
   done
 
 lemma updateMDB_pspace_relations:
@@ -3033,7 +3033,7 @@ lemma updateMDB_the_lot:
          ksCurDomain s''      = ksCurDomain s' \<and>
          ksDomainTime s''     = ksDomainTime s'"
 using assms
-  apply (simp add: updateMDB_eqs updateMDB_pspace_relations split del: split_if)
+  apply (simp add: updateMDB_eqs updateMDB_pspace_relations split del: if_split)
   apply (frule (1) updateMDB_ctes_of)
   apply clarsimp
   apply (rule conjI)
@@ -3105,9 +3105,9 @@ next
     thus ?case
       apply -
       apply (rule subtree.direct_parent)
-        apply (clarsimp simp add: mdb_next_unfold modify_map_def split: split_if_asm)
+        apply (clarsimp simp add: mdb_next_unfold modify_map_def split: if_split_asm)
        apply assumption
-      apply (clarsimp simp add: parentOf_def modify_map_def split: split_if_asm)
+      apply (clarsimp simp add: parentOf_def modify_map_def split: if_split_asm)
       done
   next
     case (trans_parent c c')
@@ -3115,9 +3115,9 @@ next
       apply -
       apply (rule subtree.trans_parent)
          apply (rule trans_parent.hyps)
-        apply (clarsimp simp add: mdb_next_unfold modify_map_def split: split_if_asm)
+        apply (clarsimp simp add: mdb_next_unfold modify_map_def split: if_split_asm)
        apply assumption
-      apply (clarsimp simp add: parentOf_def modify_map_def split: split_if_asm)
+      apply (clarsimp simp add: parentOf_def modify_map_def split: if_split_asm)
       done
   qed
 qed
@@ -3458,10 +3458,10 @@ proof -
   apply (rule iffI)
    apply clarsimp
    apply (clarsimp simp: capBadge_ordering_def capBadge_def isCap_simps sameRegionAs_def3
-                   split: split_if_asm)
+                   split: if_split_asm)
   apply clarsimp
   apply (clarsimp simp: capBadge_ordering_def capBadge_def isCap_simps sameRegionAs_def3
-                  split: split_if_asm)
+                  split: if_split_asm)
   done
 qed
 
@@ -3481,7 +3481,7 @@ proof -
   apply (cases c, clarsimp)
   apply (simp add: isMDBParentOf_CTE)
   apply (auto simp: capBadge_ordering_def capBadge_def isCap_simps sameRegionAs_def3
-                  split: split_if_asm)[1]
+                  split: if_split_asm)[1]
   done
 qed
 
@@ -3595,7 +3595,7 @@ lemma set_cap_same_master:
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
    apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-                       split: split_if_asm Structures_A.kernel_object.splits)
+                       split: if_split_asm Structures_A.kernel_object.splits)
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
    apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv ARM.data_at_def)
@@ -3608,24 +3608,24 @@ lemma set_cap_same_master:
      apply (frule setCTE_pspace_only)
      apply clarsimp
      apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-                    split: split_if_asm Structures_A.kernel_object.splits)
+                    split: if_split_asm Structures_A.kernel_object.splits)
     apply (frule set_cap_caps_of_state_monad)
     apply (drule is_original_cap_set_cap)
     apply clarsimp
     apply (erule use_valid [OF _ setCTE_ctes_of_wp])
     apply (clarsimp simp: revokable_relation_def simp del: fun_upd_apply)
-    apply (clarsimp split: split_if_asm)
+    apply (clarsimp split: if_split_asm)
      apply (drule cte_map_inj_eq)
           prefer 2
           apply (erule cte_wp_at_weakenE, rule TrueI)
-         apply (simp add: null_filter_def split: split_if_asm)
+         apply (simp add: null_filter_def split: if_split_asm)
           apply (erule cte_wp_at_weakenE, rule TrueI)
          apply (erule caps_of_state_cte_at)
         apply fastforce
        apply fastforce
       apply fastforce
      apply clarsimp
-     apply (simp add: null_filter_def split: split_if_asm)
+     apply (simp add: null_filter_def split: if_split_asm)
      apply (erule_tac x=aa in allE, erule_tac x=bb in allE)
      apply (clarsimp simp: cte_wp_at_caps_of_state)
      apply (erule disjE)
@@ -3635,7 +3635,7 @@ lemma set_cap_same_master:
     apply (subgoal_tac "(aa,bb) \<noteq> slot")
      prefer 2
      apply clarsimp
-    apply (simp add: null_filter_def cte_wp_at_caps_of_state split: split_if_asm)
+    apply (simp add: null_filter_def cte_wp_at_caps_of_state split: if_split_asm)
    apply (frule mdb_set_cap, frule exst_set_cap)
    apply (erule use_valid [OF _ setCTE_ctes_of_wp])
    apply (clarsimp simp: cdt_list_relation_def)
@@ -3854,7 +3854,7 @@ lemma revokable_plus_orderD:
   "\<lbrakk> revokable' old new; (capBadge old, capBadge new) \<in> capBadge_ordering P;
        capMasterCap old = capMasterCap new \<rbrakk>
       \<Longrightarrow> (isUntypedCap new \<or> (\<exists>x. capBadge old = Some 0 \<and> capBadge new = Some x \<and> x \<noteq> 0))"
-  by (clarsimp simp: revokable'_def isCap_simps split: split_if_asm)
+  by (clarsimp simp: revokable'_def isCap_simps split: if_split_asm)
 
 lemma valid_badges_def2:
   "valid_badges m =
@@ -4024,28 +4024,28 @@ proof -
        apply clarsimp
       apply clarsimp
       apply (rule subtree.direct_parent)
-        apply (simp add: n_direct_eq split: split_if_asm)
+        apply (simp add: n_direct_eq split: if_split_asm)
        apply simp
-      apply (clarsimp simp: parentOf_def n src new_src_def split: split_if_asm)
+      apply (clarsimp simp: parentOf_def n src new_src_def split: if_split_asm)
       done
   next
     case (trans_parent c d)
     thus ?case
       apply clarsimp
       apply (rule conjI, clarsimp)
-      apply (clarsimp split: split_if_asm)
+      apply (clarsimp split: if_split_asm)
       apply (simp add: n_direct_eq)
       apply (cases "p=src")
        apply simp
        apply (rule subtree.direct_parent, assumption, assumption)
-       apply (clarsimp simp: parentOf_def n src new_src_def split: split_if_asm)
+       apply (clarsimp simp: parentOf_def n src new_src_def split: if_split_asm)
       apply clarsimp
       apply (erule subtree.trans_parent, assumption, assumption)
-      apply (clarsimp simp: parentOf_def n src new_src_def split: split_if_asm)
+      apply (clarsimp simp: parentOf_def n src new_src_def split: if_split_asm)
      apply (erule subtree.trans_parent)
-       apply (simp add: n_direct_eq split: split_if_asm)
+       apply (simp add: n_direct_eq split: if_split_asm)
       apply assumption
-     apply (clarsimp simp: parentOf_def n src new_src_def split: split_if_asm)
+     apply (clarsimp simp: parentOf_def n src new_src_def split: if_split_asm)
      done
  qed
 qed
@@ -4056,7 +4056,7 @@ lemma descendants:
    then descendants_of' p m \<union> {dest} else descendants_of' p m)"
   apply (rule set_eqI)
   apply (simp add: descendants_of'_def)
-  apply (fastforce dest!: parent_n_m dest: parent_m_n simp: n_dest_child split: split_if_asm)
+  apply (fastforce dest!: parent_n_m dest: parent_m_n simp: n_dest_child split: if_split_asm)
   done
 
 end
@@ -4141,15 +4141,15 @@ lemma parent_n:
    apply (rule direct_parent)
      apply (simp add: n_direct_eq)
     apply assumption
-   apply (clarsimp simp: parentOf_def n src new_src_def split: split_if_asm)
+   apply (clarsimp simp: parentOf_def n src new_src_def split: if_split_asm)
   apply simp
   apply (rule conjI)
-   apply (clarsimp simp: n_direct_eq split: split_if_asm)
-  apply (clarsimp simp: n_direct_eq split: split_if_asm)
+   apply (clarsimp simp: n_direct_eq split: if_split_asm)
+  apply (clarsimp simp: n_direct_eq split: if_split_asm)
    apply (erule trans_parent, assumption, assumption)
-   apply (clarsimp simp: parentOf_def n src new_src_def split: split_if_asm)
+   apply (clarsimp simp: parentOf_def n src new_src_def split: if_split_asm)
   apply (erule trans_parent, assumption, assumption)
-  apply (clarsimp simp: parentOf_def n src new_src_def split: split_if_asm)
+  apply (clarsimp simp: parentOf_def n src new_src_def split: if_split_asm)
   done
 
 lemma parent_m:
@@ -4205,7 +4205,7 @@ lemma parent_n_eq:
   "n \<turnstile> p \<rightarrow> p' = (if p' = dest then m \<turnstile> p \<rightarrow> src else m \<turnstile> p \<rightarrow> p')"
   apply (rule iffI)
    apply (erule parent_n)
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
    apply (drule parent_m, simp)
   apply (drule parent_m, clarsimp)
   done
@@ -4233,7 +4233,7 @@ lemma mdb_None:
   apply simp
   done
 
-declare split_if [split del]
+declare if_split [split del]
 
 lemma derived_sameRegionAs:
   "\<lbrakk> is_derived' m p cap' cap; s \<turnstile>' cap' \<rbrakk>
@@ -4264,7 +4264,7 @@ lemma no_fail_updateMDB [wp]:
   "no_fail (\<lambda>s. p \<noteq> 0 \<longrightarrow> cte_at' p s) (updateMDB p f)"
   apply (simp add: updateMDB_def)
   apply (rule no_fail_pre, wp)
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   done
 
 lemma updateMDB_cte_at' [wp]:
@@ -4275,7 +4275,7 @@ lemma updateMDB_cte_at' [wp]:
   apply simp
   apply safe
   apply (wp setCTE_weak_cte_wp_at)
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   done
 
 lemma updateCap_cte_at' [wp]:
@@ -4370,7 +4370,7 @@ lemma parentOf_preserve_oneway:
       apply assumption
     apply (drule_tac x = x in misc)
       apply assumption
-    apply (clarsimp simp:isMDBParentOf_def split:cte.splits split_if_asm)
+    apply (clarsimp simp:isMDBParentOf_def split:cte.splits if_split_asm)
     by (clarsimp simp: sameRegionAs_def isCap_simps split:if_splits | rule conjI)+
 
 
@@ -4454,7 +4454,7 @@ lemma set_untyped_cap_corres:
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
    apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-                    split: split_if_asm Structures_A.kernel_object.splits)
+                    split: if_split_asm Structures_A.kernel_object.splits)
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
    apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
@@ -4463,34 +4463,34 @@ lemma set_untyped_cap_corres:
    apply (rule conjI)
     apply (frule mdb_set_cap, frule exst_set_cap)
     apply (erule use_valid [OF _ setCTE_ctes_of_wp])
-    apply (clarsimp simp: cdt_list_relation_def cte_wp_at_ctes_of split: split_if_asm)
+    apply (clarsimp simp: cdt_list_relation_def cte_wp_at_ctes_of split: if_split_asm)
    apply (rule conjI)
     prefer 2
     apply (frule setCTE_pspace_only)
     apply clarsimp
     apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-                    split: split_if_asm Structures_A.kernel_object.splits)
+                    split: if_split_asm Structures_A.kernel_object.splits)
    apply (frule set_cap_caps_of_state_monad)
    apply (drule is_original_cap_set_cap)
    apply clarsimp
    apply (erule use_valid [OF _ setCTE_ctes_of_wp])
    apply (clarsimp simp: revokable_relation_def simp del: fun_upd_apply)
-   apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
     apply (frule cte_map_inj_eq)
          prefer 2
          apply (erule cte_wp_at_weakenE, rule TrueI)
-        apply (simp add: null_filter_def split: split_if_asm)
+        apply (simp add: null_filter_def split: if_split_asm)
          apply (erule cte_wp_at_weakenE, rule TrueI)
         apply (erule caps_of_state_cte_at)
        apply fastforce
       apply fastforce
      apply fastforce
     apply clarsimp
-    apply (simp add: null_filter_def split: split_if_asm)
+    apply (simp add: null_filter_def split: if_split_asm)
     apply (erule_tac x=aa in allE, erule_tac x=bb in allE)
     apply (case_tac cte)
     apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps isCap_simps cte_wp_at_ctes_of)
-   apply (simp add: null_filter_def cte_wp_at_caps_of_state split: split_if_asm)
+   apply (simp add: null_filter_def cte_wp_at_caps_of_state split: if_split_asm)
    apply (erule_tac x=aa in allE, erule_tac x=bb in allE)
    apply (clarsimp)
   apply (clarsimp simp: cdt_relation_def)
@@ -5338,8 +5338,8 @@ lemma updateCap_cte_wp_at':
         updateCap ptr cap \<lbrace>\<lambda>rv s. Q (cte_wp_at' P' p s)\<rbrace>"
   apply (simp add:updateCap_def cte_wp_at_ctes_of)
   apply (wp setCTE_ctes_of_wp getCTE_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of split del: split_if)
-  apply (case_tac cte, auto split: split_if)
+  apply (clarsimp simp: cte_wp_at_ctes_of split del: if_split)
+  apply (case_tac cte, auto split: if_split)
   done
 
 lemma updateCapFreeIndex_mdb_chain_0:
@@ -5971,7 +5971,7 @@ lemma cins_corres:
                apply (frule mdb_insert_der.intro)
                 apply (rule mdb_insert_der_axioms.intro)
                 apply (simp add: is_derived_eq)
-               apply (simp (no_asm_simp) add: cdt_relation_def split: split_if)
+               apply (simp (no_asm_simp) add: cdt_relation_def split: if_split)
                apply (subgoal_tac "descendants_of dest (cdt a) = {}")
                 prefer 2
                 apply (drule mdb_insert.dest_no_descendants)
@@ -6003,12 +6003,12 @@ lemma cins_corres:
                  apply(case_tac "ca=src")
                   apply(simp)
                   apply(clarsimp simp: modify_map_def)
-                  apply(fastforce split: split_if_asm)
+                  apply(fastforce split: if_split_asm)
                  apply(case_tac "ca = dest")
                   apply(simp)
                   apply(rule impI)
                   apply(clarsimp simp: modify_map_def const_def)
-                  apply(simp split: split_if_asm)
+                  apply(simp split: if_split_asm)
                     apply(drule_tac p="cte_map src" in valid_mdbD1')
                       subgoal by(simp)
                      subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -6024,7 +6024,7 @@ lemma cins_corres:
                   apply(rule cte_at_next_slot)
                      apply(simp_all)[4]
                  apply(clarsimp simp: modify_map_def const_def)
-                 apply(simp split: split_if_asm)
+                 apply(simp split: if_split_asm)
                        apply(drule cte_map_inj_eq')
                             apply(simp_all)[2]
                       apply(drule_tac p="cte_map src" in valid_mdbD1')
@@ -6049,12 +6049,12 @@ lemma cins_corres:
                 apply(case_tac "ca=src")
                  apply(simp)
                  apply(clarsimp simp: modify_map_def)
-                 subgoal by(fastforce split: split_if_asm)
+                 subgoal by(fastforce split: if_split_asm)
                 apply(case_tac "ca = dest")
                  apply(simp)
                  apply(rule impI)
                  apply(clarsimp simp: modify_map_def const_def)
-                 apply(simp split: split_if_asm)
+                 apply(simp split: if_split_asm)
                    apply(drule_tac p="cte_map src" in valid_mdbD1')
                      subgoal by(simp)
                     apply(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -6070,7 +6070,7 @@ lemma cins_corres:
                  apply(rule cte_at_next_slot)
                     apply(simp_all)[4]
                 apply(clarsimp simp: modify_map_def const_def)
-                apply(simp split: split_if_asm)
+                apply(simp split: if_split_asm)
                       apply(drule cte_map_inj_eq')
                            apply(simp_all)[2]
                      apply(drule_tac p="cte_map src" in valid_mdbD1')
@@ -6156,7 +6156,7 @@ lemma cins_corres:
                  apply(rule cte_at_next_slot)
                     apply(simp_all)[4]
                 apply(clarsimp simp: modify_map_def const_def)
-                apply(simp split: split_if_asm)
+                apply(simp split: if_split_asm)
                       apply(drule cte_map_inj_eq')
                            apply(simp_all)[2]
                      apply(drule_tac p="cte_map src" in valid_mdbD1')
@@ -6182,14 +6182,14 @@ lemma cins_corres:
                     apply(simp_all)[5]
                apply(case_tac "ca=src")
                 apply(clarsimp simp: modify_map_def)
-                subgoal by(fastforce split: split_if_asm)
+                subgoal by(fastforce split: if_split_asm)
                apply(case_tac "ca = dest")
                 apply(simp)
                 apply(case_tac "next_slot src (cdt_list (a)) (cdt a)")
                  subgoal by(simp)
                 apply(simp)
                 apply(clarsimp simp: modify_map_def const_def)
-                apply(simp split: split_if_asm)
+                apply(simp split: if_split_asm)
                   apply(drule_tac p="cte_map src" in valid_mdbD1')
                     subgoal by(simp)
                    apply(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -6207,7 +6207,7 @@ lemma cins_corres:
                 apply(rule cte_at_next_slot)
                    apply(simp_all)[4]
                apply(clarsimp simp: modify_map_def const_def)
-               apply(simp split: split_if_asm)
+               apply(simp split: if_split_asm)
                      apply(drule cte_map_inj_eq')
                           apply(simp_all)[2]
                     apply(drule_tac p="cte_map src" in valid_mdbD1')
@@ -6228,13 +6228,13 @@ lemma cins_corres:
                subgoal by(fastforce)
               apply (thin_tac "ctes_of t = t'" for t t')+
               apply (clarsimp simp: modify_map_apply)
-              apply (clarsimp simp: revokable_relation_def  split: split_if)
+              apply (clarsimp simp: revokable_relation_def  split: if_split)
               apply (rule conjI)
               apply clarsimp
                apply (subgoal_tac "mdbRevocable node = revokable' (cteCap srcCTE) c'")
                 prefer 2
                 apply (case_tac rv')
-                subgoal by (clarsimp simp add: const_def modify_map_def split: split_if_asm)
+                subgoal by (clarsimp simp add: const_def modify_map_def split: if_split_asm)
                apply simp
                apply (rule revokable_eq, assumption, assumption)
                 apply (rule derived_sameRegionAs)
@@ -6250,7 +6250,7 @@ lemma cins_corres:
               apply clarsimp
               apply (subgoal_tac "\<exists>cap' node'. ctes_of b (cte_map (aa,bb)) = Some (CTE cap' node')")
                prefer 2
-               apply (clarsimp simp: modify_map_def split: split_if_asm)
+               apply (clarsimp simp: modify_map_def split: if_split_asm)
                apply (case_tac z)
                subgoal by clarsimp
               apply clarsimp
@@ -6267,7 +6267,7 @@ lemma cins_corres:
               apply (subgoal_tac "mdbRevocable node = mdbRevocable node'")
                subgoal by clarsimp
               apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map dest")
-               subgoal by (clarsimp simp: modify_map_def split: split_if_asm)
+               subgoal by (clarsimp simp: modify_map_def split: if_split_asm)
               apply (erule (5) cte_map_inj)
 (* FIX ME *)
 
@@ -6313,7 +6313,7 @@ lemma cins_corres:
   apply (frule mdb_insert_der.intro)
    apply (rule mdb_insert_der_axioms.intro)
    apply (simp add: is_derived_eq)
-  apply (simp (no_asm_simp) add: cdt_relation_def split: split_if)
+  apply (simp (no_asm_simp) add: cdt_relation_def split: if_split)
   apply (subgoal_tac "descendants_of dest (cdt a) = {}")
    prefer 2
    apply (drule mdb_insert.dest_no_descendants)
@@ -6366,7 +6366,7 @@ lemma cins_corres:
           prefer 2
           apply assumption
          apply (simp_all)[6]
-   apply (simp add: cdt_relation_def split: split_if del: split_paired_All)
+   apply (simp add: cdt_relation_def split: if_split del: split_paired_All)
    apply clarsimp
    apply (drule (5) cte_map_inj)+
    apply simp
@@ -6401,7 +6401,7 @@ lemma cins_corres:
     apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: if_splits)
     subgoal by (clarsimp simp: masked_as_full_def is_cap_simps free_index_update_def split: if_splits)
    subgoal by simp
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   apply (frule_tac p="(aa, bb)" in in_set_cap_cte_at)
   apply (rule conjI)
    apply (clarsimp simp: descendants_of_eq')
@@ -6411,7 +6411,7 @@ lemma cins_corres:
   done
 
 
-declare split_if [split]
+declare if_split [split]
 
 lemma updateCap_no_0:
   "\<lbrace>\<lambda>s. no_0 (ctes_of s)\<rbrace> updateCap cap ptr \<lbrace>\<lambda>_ s. no_0 (ctes_of s)\<rbrace>"
@@ -6426,7 +6426,7 @@ lemma revokable_relation_prev [simp]:
   apply (rule iffI)
    apply (clarsimp simp add: revokable_relation_def)
    apply (erule allE, erule allE, erule impE, erule exI)
-   apply (clarsimp simp: modify_map_def split: split_if_asm)
+   apply (clarsimp simp: modify_map_def split: if_split_asm)
   apply (clarsimp simp add: revokable_relation_def modify_map_def)
   apply (erule allE, erule allE, erule impE, erule exI)
   apply (case_tac z)
@@ -6439,7 +6439,7 @@ lemma revokable_relation_next [simp]:
   apply (rule iffI)
    apply (clarsimp simp add: revokable_relation_def)
    apply (erule allE, erule allE, erule impE, erule exI)
-   apply (clarsimp simp: modify_map_def split: split_if_asm)
+   apply (clarsimp simp: modify_map_def split: if_split_asm)
   apply (clarsimp simp add: revokable_relation_def modify_map_def)
   apply (erule allE, erule allE, erule impE, erule exI)
   apply (case_tac z)
@@ -6452,7 +6452,7 @@ lemma revokable_relation_cap [simp]:
   apply (rule iffI)
    apply (clarsimp simp add: revokable_relation_def)
    apply (erule allE, erule allE, erule impE, erule exI)
-   apply (clarsimp simp: modify_map_def split: split_if_asm)
+   apply (clarsimp simp: modify_map_def split: if_split_asm)
   apply (clarsimp simp add: revokable_relation_def modify_map_def)
   apply (erule allE, erule allE, erule impE, erule exI)
   apply (case_tac z)
@@ -6716,13 +6716,13 @@ lemma revokable:
   apply clarsimp
   apply (rule conjI, clarsimp)
    apply (simp add: n_def n'_def modify_map_apply)
-   apply (simp add: modify_map_def const_def split: split_if_asm)
+   apply (simp add: modify_map_def const_def split: if_split_asm)
   apply clarsimp
   apply (rule conjI, clarsimp)
    apply (simp add: n_def n'_def modify_map_apply)
-   apply (simp add: modify_map_def const_def split: split_if_asm)
+   apply (simp add: modify_map_def const_def split: if_split_asm)
   apply (clarsimp simp: n_def)
-  apply (clarsimp simp add: modify_map_def map_option_case split: split_if_asm option.splits)
+  apply (clarsimp simp add: modify_map_def map_option_case split: if_split_asm option.splits)
      apply (auto split: cteMDBNode_update_split_asm elim: revokable_n' revokable_n'[OF sym])
   done
 
@@ -6737,13 +6737,13 @@ lemma badge_n:
   apply clarsimp
   apply (rule conjI, clarsimp)
    apply (simp add: n_def n'_def modify_map_apply)
-   apply (simp add: modify_map_def const_def split: split_if_asm)
+   apply (simp add: modify_map_def const_def split: if_split_asm)
   apply clarsimp
   apply (rule conjI, clarsimp)
    apply (simp add: n_def n'_def modify_map_apply)
-   apply (simp add: modify_map_def const_def split: split_if_asm)
+   apply (simp add: modify_map_def const_def split: if_split_asm)
   apply (clarsimp simp: n_def)
-  apply (clarsimp simp add: modify_map_def map_option_case split: split_if_asm option.splits)
+  apply (clarsimp simp add: modify_map_def map_option_case split: if_split_asm option.splits)
      apply (auto split: cteMDBNode_update_split_asm elim: badge_n' badge_n'[OF sym])
   done
 
@@ -6773,13 +6773,13 @@ lemma n_cap:
    apply (drule sym)
    apply (insert src dest dest2 [symmetric])[1]
    apply (simp add: n_def n'_def modify_map_apply)
-   apply (simp add: modify_map_def split: split_if_asm)
+   apply (simp add: modify_map_def split: if_split_asm)
   apply clarsimp
   apply (rule conjI, clarsimp)
    apply (drule sym)
    apply (insert src dest dest2 [symmetric])[1]
    apply (simp add: n_def n'_def modify_map_apply)
-   apply (simp add: modify_map_def split: split_if_asm)
+   apply (simp add: modify_map_def split: if_split_asm)
   apply clarsimp
   apply (insert src dest dest2)
   apply (clarsimp simp: n_def modify_map_cases)
@@ -6916,11 +6916,11 @@ lemma next_m_n:
   apply (rule conjI, clarsimp)
    apply (rule conjI, clarsimp)
     apply (clarsimp simp: mdb_next_unfold modify_map_cases dest2_node_def
-                    split: split_if_asm)
+                    split: if_split_asm)
    apply clarsimp
    apply (rule conjI, clarsimp)
     apply (clarsimp simp: mdb_next_unfold modify_map_cases)
-    apply (auto simp add: dest2_node_def split: split_if_asm)[1]
+    apply (auto simp add: dest2_node_def split: if_split_asm)[1]
    apply clarsimp
    apply (simp add: mdb_next_unfold modify_map_cases)
    apply (simp add: dest2_node_def const_def)
@@ -6944,7 +6944,7 @@ lemma next_m_n:
    apply clarsimp
    apply (rule conjI, clarsimp)
     apply (clarsimp simp: mdb_next_unfold modify_map_cases dest2_node_def
-                    split: split_if_asm)
+                    split: if_split_asm)
    apply clarsimp
    apply (clarsimp simp: mdb_next_unfold modify_map_cases dest2_node_def)
    apply (rule conjI, clarsimp)
@@ -7138,26 +7138,26 @@ lemma n_next:
   else if p = mdbPrev src_node then mdbNext node = dest
   else if p = mdbPrev dest_node then mdbNext node = src
   else \<exists>cap' node'. m p = Some (CTE cap' node') \<and> mdbNext node = mdbNext node'"
-  apply (simp add: n_def del: dest2_parts split del: split_if)
-  apply (simp only: dest2_next dest2_prev split del: split_if)
-  apply (simp add: dest2_node_def split del: split_if)
-  apply (simp add: n'_def const_def cong: if_cong split del: split_if)
+  apply (simp add: n_def del: dest2_parts split del: if_split)
+  apply (simp only: dest2_next dest2_prev split del: if_split)
+  apply (simp add: dest2_node_def split del: if_split)
+  apply (simp add: n'_def const_def cong: if_cong split del: if_split)
   apply(case_tac "p=dest")
-   apply(clarsimp simp: modify_map_cases const_def split: split_if_asm)
+   apply(clarsimp simp: modify_map_cases const_def split: if_split_asm)
   apply(case_tac "p=src")
-   apply(simp split del: split_if)
-   apply(clarsimp simp: modify_map_cases const_def split: split_if_asm)
+   apply(simp split del: if_split)
+   apply(clarsimp simp: modify_map_cases const_def split: if_split_asm)
   apply(case_tac "p=mdbPrev src_node")
-   apply(simp split del: split_if)
-   apply(clarsimp simp: modify_map_cases const_def split: split_if_asm)
+   apply(simp split del: if_split)
+   apply(clarsimp simp: modify_map_cases const_def split: if_split_asm)
     apply(fastforce)
    apply(fastforce)
   apply(case_tac "p=mdbPrev dest_node")
-   apply(simp split del: split_if)
-   apply(clarsimp simp: modify_map_cases const_def split: split_if_asm)
+   apply(simp split del: if_split)
+   apply(clarsimp simp: modify_map_cases const_def split: if_split_asm)
    apply(fastforce)
-  apply(simp split del: split_if)
-  apply (clarsimp simp: modify_map_cases const_def split: split_if_asm)
+  apply(simp split del: if_split)
+  apply (clarsimp simp: modify_map_cases const_def split: if_split_asm)
     apply(fastforce)+
   done
 
@@ -7183,16 +7183,16 @@ lemma parent_of_m_n:
    apply (erule isMDBParentOf_eq)
       apply simp
       apply (drule n_cap)+
-      subgoal by (simp add: s_d_swap_def src dest split: split_if_asm)
+      subgoal by (simp add: s_d_swap_def src dest split: if_split_asm)
      apply simp
      apply (drule revokable)+
-     subgoal by (simp add: s_d_swap_def src dest split: split_if_asm)
+     subgoal by (simp add: s_d_swap_def src dest split: if_split_asm)
     apply simp
     apply (drule n_cap)+
-    subgoal by (simp add: s_d_swap_def src dest split: split_if_asm)
+    subgoal by (simp add: s_d_swap_def src dest split: if_split_asm)
    apply simp
    apply (drule badge_n)+
-   subgoal by (simp add: s_d_swap_def src dest split: split_if_asm)
+   subgoal by (simp add: s_d_swap_def src dest split: if_split_asm)
   apply clarsimp
   apply (case_tac cte, case_tac cte')
   apply (rename_tac cap0 node0 cap1 node1)
@@ -7203,24 +7203,24 @@ lemma parent_of_m_n:
    prefer 2
    apply (drule m_exists)+
    apply clarsimp
-   apply (simp add: s_d_swap_def src dest split: split_if_asm)
+   apply (simp add: s_d_swap_def src dest split: if_split_asm)
   apply clarsimp
   apply (insert src_derived dest_derived)[1]
   apply (erule isMDBParentOf_eq)
      apply simp
      apply (rule weak_derived_sym')
      apply (drule n_cap)+
-     apply (simp add: s_d_swap_def src dest split: split_if_asm)
+     apply (simp add: s_d_swap_def src dest split: if_split_asm)
     apply simp
     apply (drule revokable)+
-    subgoal by (simp add: s_d_swap_def src dest split: split_if_asm)
+    subgoal by (simp add: s_d_swap_def src dest split: if_split_asm)
    apply simp
    apply (rule weak_derived_sym')
    apply (drule n_cap)+
-   subgoal by (simp add: s_d_swap_def src dest split: split_if_asm)
+   subgoal by (simp add: s_d_swap_def src dest split: if_split_asm)
   apply simp
   apply (drule badge_n)+
-  subgoal by (simp add: s_d_swap_def src dest split: split_if_asm)
+  subgoal by (simp add: s_d_swap_def src dest split: if_split_asm)
   done
 
 lemma parency_m_n:
@@ -7302,7 +7302,7 @@ lemma inj_on_descendants_cte_map:
 lemmas revokable_relation_simps [simp del] =
   revokable_relation_cap revokable_relation_next revokable_relation_prev
 
-declare split_if [split del]
+declare if_split [split del]
 
 (*
 lemma corres_bind_ext:
@@ -7393,7 +7393,7 @@ lemma cap_swap_corres:
       apply simp
      apply (erule_tac p="cte_map dest" in valid_dlistEp, assumption, simp)
      apply simp
-    apply (auto simp: modify_map_if split: split_if_asm)[1]
+    apply (auto simp: modify_map_if split: if_split_asm)[1]
    apply clarsimp
    apply (subgoal_tac "mdbNext node = mdbPrev src_node \<or>
                        mdbNext node = mdbNext dest_node")
@@ -7403,7 +7403,7 @@ lemma cap_swap_corres:
      apply simp
     apply (erule_tac p="cte_map dest" in valid_dlistEn, assumption, simp)
     apply simp
-   apply (auto simp: modify_map_if split: split_if_asm)[1]
+   apply (auto simp: modify_map_if split: if_split_asm)[1]
   apply (clarsimp simp: corres_underlying_def in_monad
                         state_relation_def)
   apply (clarsimp simp: valid_mdb'_def)
@@ -7487,7 +7487,7 @@ lemma cap_swap_corres:
                    simp del: split_paired_All)
    apply (drule set_cap_caps_of_state_monad)+
    apply (thin_tac "pspace_relation s t" for s t)+
-   apply (simp del: split_paired_All split: split_if)
+   apply (simp del: split_paired_All split: if_split)
    apply (rule conjI)
     apply (clarsimp simp: cte_wp_at_caps_of_state simp del: split_paired_All)
     apply (drule(1) mdb_swap.revokable)
@@ -7546,7 +7546,7 @@ lemma cap_swap_corres:
    apply (subst image_Un)+
    apply (subgoal_tac "cte_at (s_d_swap c src dest) a")
     prefer 2
-    apply (simp add: s_d_swap_def split: split_if)
+    apply (simp add: s_d_swap_def split: if_split)
     apply (rule conjI, clarsimp simp: cte_wp_at_caps_of_state)
     apply (rule impI, rule conjI, clarsimp simp: cte_wp_at_caps_of_state)
     apply (fastforce dest: in_set_cap_cte_at)
@@ -7564,7 +7564,7 @@ lemma cap_swap_corres:
     prefer 2
     apply (simp del: split_paired_All)
    apply simp
-   apply (simp split: split_if)
+   apply (simp split: if_split)
    apply (frule_tac p="s_d_swap c src dest" in inj_on_descendants_cte_map, assumption+)
    apply (rule conjI, clarsimp)
     apply (rule conjI, clarsimp)
@@ -7799,7 +7799,7 @@ lemma cap_swap_for_delete_corres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
 done
 
-declare split_if [split]
+declare if_split [split]
 declare revokable_relation_simps [simp]
 
 definition

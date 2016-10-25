@@ -29,7 +29,7 @@ lemma dvd_padup_add:
   "0 < x \<Longrightarrow> x dvd y + padup x y"
 apply(clarsimp simp: padup_def)
 apply(subst mod_if [where m="x - y mod x"])
-apply(clarsimp split: split_if_asm)
+apply(clarsimp split: if_split_asm)
 apply(rule conjI)
  apply clarsimp
  apply(subst ac_simps)
@@ -37,10 +37,10 @@ apply(rule conjI)
   apply(rule mod_less_eq_dividend)
  apply(rule dvd_add)
   apply simp
- apply(subst mod_div_equality')
+ apply(subst minus_div_mult_eq_mod[symmetric])
  apply(subst diff_diff_right)
   apply(subst ac_simps)
-  apply(subst mult_div_cancel)
+  apply(subst minus_mod_eq_mult_div[symmetric])
   apply simp
  apply simp
 apply(auto simp: dvd_eq_mod_eq_0)

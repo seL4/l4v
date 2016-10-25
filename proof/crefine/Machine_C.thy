@@ -358,7 +358,7 @@ lemma add_right_shift:
   "\<lbrakk>x && mask n = 0; y && mask n = 0; x \<le> x + y \<rbrakk>
     \<Longrightarrow> (x + y :: ('a :: len) word) >> n = (x >> n) + (y >> n)"
   apply (simp add: no_olen_add_nat is_aligned_mask[symmetric])
-  apply (simp add: unat_arith_simps shiftr_div_2n' split del: split_if)
+  apply (simp add: unat_arith_simps shiftr_div_2n' split del: if_split)
   apply (subst if_P)
    apply (erule order_le_less_trans[rotated])
    apply (simp add: add_mono)
@@ -561,7 +561,7 @@ lemma cleanCacheRange_PoU_ccorres:
 
 lemma dmo_if:
   "(doMachineOp (if a then b else c)) = (if a then (doMachineOp b) else (doMachineOp c))"
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemma invalidateCacheRange_RAM_ccorres:
   "ccorres dc xfdc ((\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s)
@@ -572,13 +572,13 @@ lemma invalidateCacheRange_RAM_ccorres:
            (Call invalidateCacheRange_RAM_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit' lift: start_' end_' pstart_')
-   apply (clarsimp simp: word_sle_def whileAnno_def split del: split_if)
+   apply (clarsimp simp: word_sle_def whileAnno_def split del: if_split)
    apply (ccorres_remove_UNIV_guard)
    apply (simp add: invalidateCacheRange_RAM_def doMachineOp_bind when_def
                     split_if_empty_fail empty_fail_cleanCacheRange_RAM
                     empty_fail_invalidateL2Range empty_fail_cacheRangeOp empty_fail_invalidateByVA
                     empty_fail_dsb dmo_if
-              split del: split_if)
+              split del: if_split)
    apply (rule ccorres_split_nothrow_novcg)
        apply (rule ccorres_cond[where R=\<top>])
          apply (clarsimp simp: lineStart_def cacheLineBits_def)
@@ -621,7 +621,7 @@ lemma invalidateCacheRange_RAM_ccorres:
       apply wp
      apply (simp add: guard_is_UNIV_def)
      apply (auto dest: ghost_assertion_size_logic simp: o_def)[1]
-    apply (wp | clarsimp split: split_if)+
+    apply (wp | clarsimp split: if_split)+
    apply (clarsimp simp: lineStart_def cacheLineBits_def guard_is_UNIV_def)
   apply (clarsimp simp: lineStart_mask)
   apply (subst mask_eqs(7)[symmetric])

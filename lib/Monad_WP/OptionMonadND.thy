@@ -176,12 +176,12 @@ proof -
   have "\<And>s. owhile C B r s = None
       \<Longrightarrow> whileLoop C (\<lambda>a. gets_the (B a)) r s = ({}, True)"
     by (auto simp: whileLoop_def owhile_def option_while_def option_while'_THE gets_the_loop_terminates
-      split: split_if_asm dest: option_while'_None wl'_Inl option_while'_inj)
+      split: if_split_asm dest: option_while'_None wl'_Inl option_while'_inj)
   moreover
   have "\<And>s r'. owhile C B r s = Some r'
       \<Longrightarrow> whileLoop C (\<lambda>a. gets_the (B a)) r s = ({(r', s)}, False)"
     by (auto simp: whileLoop_def owhile_def option_while_def option_while'_THE gets_the_loop_terminates
-      split: split_if_asm dest: wl'_Inl wl'_Inr option_while'_inj intro: option_while'_Some)
+      split: if_split_asm dest: wl'_Inl wl'_Inr option_while'_inj intro: option_while'_Some)
   ultimately
   show ?thesis
     by (auto simp: fun_eq_iff gets_the_conv split: option.split)

@@ -696,7 +696,7 @@ lemma weak_derived_overlaps':
   apply(erule disjE)
    prefer 2
    apply simp
-  apply(simp add: copy_of_def split: split_if_asm add: same_object_as_def split: cap.splits)
+  apply(simp add: copy_of_def split: if_split_asm add: same_object_as_def split: cap.splits)
        apply((case_tac cap; simp)+)[5]
   subgoal for arch1 arch2 by (cases arch1; cases arch2; simp)
   done
@@ -797,7 +797,7 @@ lemma cap_swap_silc_inv:
   apply(rule hoare_gen_asm)
   unfolding cap_swap_def
   apply(rule hoare_pre)
-  apply (wp set_cap_silc_inv hoare_vcg_ex_lift set_cap_slots_holding_overlapping_caps_other[where aag=aag] set_cdt_silc_inv static_imp_wp | simp  split del: split_if)+
+  apply (wp set_cap_silc_inv hoare_vcg_ex_lift set_cap_slots_holding_overlapping_caps_other[where aag=aag] set_cdt_silc_inv static_imp_wp | simp  split del: if_split)+
   apply(rule conjI)
    apply(rule impI, elim conjE)
    apply(drule weak_derived_overlaps)
@@ -1035,7 +1035,7 @@ lemma set_thread_state_silc_inv[wp]:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding set_thread_state_def
   apply(rule silc_inv_pres)
-   apply(wp set_object_wp|simp split del: split_if)+
+   apply(wp set_object_wp|simp split del: if_split)+
    apply (simp split: kernel_object.splits)
    apply(rule impI | simp)+
    apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
@@ -1059,7 +1059,7 @@ lemma set_bound_notification_silc_inv[wp]:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding set_bound_notification_def
   apply(rule silc_inv_pres)
-    apply(wp set_object_wp|simp split del: split_if)+
+    apply(wp set_object_wp|simp split del: if_split)+
     apply (simp split: kernel_object.splits)
     apply(rule impI | simp)+
     apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
@@ -1301,13 +1301,13 @@ crunch silc_inv[wp]: arch_finalise_cap "silc_inv aag st"
 lemma finalise_cap_silc_inv:
   "\<lbrace> silc_inv aag st and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply(case_tac cap)
-            apply(wp cancel_ipc_silc_inv | simp split del: split_if add: suspend_def| clarsimp)+
+            apply(wp cancel_ipc_silc_inv | simp split del: if_split add: suspend_def| clarsimp)+
       apply(clarsimp simp: aag_cap_auth_Thread)
-     apply(wp | simp split del: split_if | clarsimp split del: split_if)+
+     apply(wp | simp split del: if_split | clarsimp split del: if_split)+
     apply(rule hoare_pre)
     apply (wp cap_delete_one_silc_inv | simp add: deleting_irq_handler_def)+
     apply (fastforce simp: aag_cap_auth_def cap_links_irq_def elim: aag_Control_into_owns_irq)
-   apply(wp | simp split del: split_if)+
+   apply(wp | simp split del: if_split)+
   done
 
 
@@ -1320,8 +1320,8 @@ lemma validE_validE_R':
 lemma finalise_cap_ret_subset_cap_irqs:
   "\<lbrace>\<lambda> s. (cap_irqs cap) = X\<rbrace> finalise_cap cap blah \<lbrace>\<lambda>rv s. (cap_irqs (fst rv)) \<subseteq> X\<rbrace>"
   apply(case_tac cap)
-            apply(wp | simp add: o_def split del: split_if)+
-       apply(simp split: split_if)
+            apply(wp | simp add: o_def split del: if_split)+
+       apply(simp split: if_split)
       apply(wp | simp add: o_def | safe)+
   apply(simp add: arch_finalise_cap_def)
   apply(rule hoare_pre)
@@ -1331,8 +1331,8 @@ lemma finalise_cap_ret_subset_cap_irqs:
 lemma finalise_cap_ret_subset_obj_refs:
   "\<lbrace>\<lambda> s. (Structures_A.obj_refs cap) = X\<rbrace> finalise_cap cap blah \<lbrace>\<lambda>rv s. (Structures_A.obj_refs (fst rv)) \<subseteq> X\<rbrace>"
   apply(case_tac cap)
-            apply(wp | simp add: o_def split del: split_if)+
-       apply(simp split: split_if)
+            apply(wp | simp add: o_def split del: if_split)+
+       apply(simp split: if_split)
       apply(wp | simp add: o_def | safe)+
   apply(simp add: arch_finalise_cap_def)
   apply(rule hoare_pre)
@@ -1433,7 +1433,7 @@ lemma arch_finalise_cap_ret:
 lemma finalise_cap_ret:
   "(rv, s') \<in> fst (finalise_cap cap final s) \<Longrightarrow> case (fst rv) of NullCap \<Rightarrow> True | Zombie ptr bits n \<Rightarrow> True | _ \<Rightarrow> False"
   apply(case_tac cap, simp_all add: return_def)
-       apply(fastforce simp: liftM_def when_def bind_def return_def split: split_if_asm)+
+       apply(fastforce simp: liftM_def when_def bind_def return_def split: if_split_asm)+
   apply(clarsimp simp: bind_def liftM_def return_def)
   apply(drule arch_finalise_cap_ret)
   apply(simp)
@@ -1705,17 +1705,17 @@ lemma rec_del_silc_inv':
     done
   next
   case (2 slot exposed s) show ?case
-    apply(simp add: rec_del.simps split del: split_if)
+    apply(simp add: rec_del.simps split del: if_split)
     apply(rule hoare_pre_spec_validE)
      apply(wp drop_spec_validE[OF returnOk_wp] drop_spec_validE[OF liftE_wp] set_cap_silc_inv 
               "2.hyps"
-          |simp add: split_def split del: split_if)+
+          |simp add: split_def split del: if_split)+
           apply(rule drop_spec_validE, (wp preemption_point_inv'| simp)+)[1]
          apply simp
          apply(rule spec_valid_conj_liftE2)
           apply(wp validE_validE_R'[OF rec_del_pas_refined'[simplified]] "2.hyps" 
                    drop_spec_validE[OF liftE_wp] set_cap_silc_inv
-               |simp add: without_preemption_def split del: split_if)+
+               |simp add: without_preemption_def split del: if_split)+
  
        (* where the action is *)
        apply(simp cong: conj_cong add: conj_comms)
@@ -2121,7 +2121,7 @@ lemma invoke_untyped_silc_inv:
      apply (rule hoare_pre)
       apply (wp set_cap_silc_inv_simple set_cap_cte_wp_at)
      apply (cases ui, clarsimp simp: cte_wp_at_caps_of_state is_cap_simps
-                 split del: split_if cong: if_cong)
+                 split del: if_split cong: if_cong)
      apply (clarsimp simp: authorised_untyped_inv_def)
     apply (wp reset_untyped_cap_silc_inv reset_untyped_cap_untyped_cap)
    apply simp
@@ -2274,10 +2274,10 @@ lemma set_mrs_silc_inv[wp]:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding set_mrs_def
   apply(rule silc_inv_pres)
-   apply(wp crunch_wps set_object_wp | wpc | simp add: crunch_simps split del: split_if)+
+   apply(wp crunch_wps set_object_wp | wpc | simp add: crunch_simps split del: if_split)+
    apply (clarsimp)
    apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
-  apply(wp crunch_wps set_object_wp | wpc | simp add: crunch_simps split del: split_if)+
+  apply(wp crunch_wps set_object_wp | wpc | simp add: crunch_simps split del: if_split)+
   apply(case_tac "a = fst slot")
    apply(clarsimp split: kernel_object.splits cong: conj_cong)
    apply(erule notE)
@@ -2340,7 +2340,7 @@ lemma cap_insert_silc_inv':
        \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding cap_insert_def
 
-  apply (wp set_cap_silc_inv hoare_vcg_ex_lift set_untyped_cap_as_full_slots_holding_overlapping_caps_other[where aag=aag] get_cap_wp update_cdt_silc_inv set_cap_caps_of_state2 set_untyped_cap_as_full_cdt_is_original_cap static_imp_wp | simp split del: split_if)+
+  apply (wp set_cap_silc_inv hoare_vcg_ex_lift set_untyped_cap_as_full_slots_holding_overlapping_caps_other[where aag=aag] get_cap_wp update_cdt_silc_inv set_cap_caps_of_state2 set_untyped_cap_as_full_cdt_is_original_cap static_imp_wp | simp split del: if_split)+
   apply (intro allI impI conjI)
     apply clarsimp
     apply(fastforce dest: silc_invD simp: intra_label_cap_def)
@@ -2512,7 +2512,7 @@ lemma cap_insert_silc_inv'':
        cap_insert cap src dest
        \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding cap_insert_def
-  apply (wp set_cap_silc_inv hoare_vcg_ex_lift set_untyped_cap_as_full_slots_holding_overlapping_caps_other[where aag=aag] get_cap_wp update_cdt_silc_inv set_cap_caps_of_state2 set_untyped_cap_as_full_cdt_is_original_cap static_imp_wp | simp split del: split_if)+
+  apply (wp set_cap_silc_inv hoare_vcg_ex_lift set_untyped_cap_as_full_slots_holding_overlapping_caps_other[where aag=aag] get_cap_wp update_cdt_silc_inv set_cap_caps_of_state2 set_untyped_cap_as_full_cdt_is_original_cap static_imp_wp | simp split del: if_split)+
   apply (intro impI conjI allI)
      apply clarsimp
      apply(fastforce simp: silc_inv_def)
@@ -2728,7 +2728,7 @@ lemma receive_ipc_base_silc_inv:
   apply (clarsimp simp: thread_get_def get_thread_state_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
    apply (wp setup_caller_cap_silc_inv
-        | wpc | simp split del: split_if)+
+        | wpc | simp split del: if_split)+
           apply (rename_tac list tcb data)
           apply(rule_tac Q="\<lambda> r s. (sender_can_grant data \<longrightarrow> is_subject aag receiver \<and> is_subject aag (hd list)) \<and> silc_inv aag st s" in hoare_strengthen_post)
           apply(wp do_ipc_transfer_silc_inv hoare_vcg_all_lift | wpc | simp)+
@@ -2803,7 +2803,7 @@ lemma send_fault_ipc_silc_inv:
   apply(wp send_ipc_silc_inv thread_set_valid_objs thread_set_tcb_fault_update_valid_mdb 
            thread_set_fault_pas_refined thread_set_refs_trivial thread_set_obj_at_impossible
            hoare_vcg_ex_lift 
-       | wpc| simp add: Let_def split_def lookup_cap_def valid_tcb_fault_update split del: split_if)+
+       | wpc| simp add: Let_def split_def lookup_cap_def valid_tcb_fault_update split del: if_split)+
     apply(rule_tac Q="\<lambda> handler_cap s. silc_inv aag st s \<and>
                                        valid_objs s \<and> valid_mdb s \<and>
                                        pas_refined aag s \<and>
@@ -2930,7 +2930,7 @@ lemma invoke_tcb_silc_inv:
   apply(case_tac tinv)
        apply((wp restart_silc_inv hoare_vcg_if_lift suspend_silc_inv mapM_x_wp[OF _ subset_refl] static_imp_wp
             | wpc
-            | simp split del: split_if add: authorised_tcb_inv_def check_cap_at_def 
+            | simp split del: if_split add: authorised_tcb_inv_def check_cap_at_def
             | clarsimp)+)[3]
     defer
     apply((wp suspend_silc_inv restart_silc_inv | simp add: authorised_tcb_inv_def)+)[2]
@@ -2992,10 +2992,10 @@ lemma handle_invocation_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc
-              split del: split_if)
+              split del: if_split)
   apply(wp syscall_valid perform_invocation_silc_inv set_thread_state_runnable_valid_sched
            set_thread_state_pas_refined decode_invocation_authorised
-       | simp split del: split_if)+
+       | simp split del: if_split)+
        apply(rule_tac E="\<lambda>ft. silc_inv aag st and pas_refined aag and
                   valid_objs and
                   sym_refs \<circ> state_refs_of and

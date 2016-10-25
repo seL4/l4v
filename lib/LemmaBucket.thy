@@ -295,8 +295,8 @@ lemma sum_suc_pair: "(\<Sum>(a, b) \<leftarrow> xs. Suc (f a b)) = length xs + (
    by clarsimp+
 
 lemma fold_add_sum: "fold op + ((map (\<lambda>(a, b). f a b) xs)::nat list) 0 = (\<Sum>(a, b) \<leftarrow> xs. f a b)"
-  apply (subst fold_plus_listsum_rev)
-  apply (subst listsum_rev)
+  apply (subst fold_plus_sum_list_rev)
+  apply (subst sum_list_rev)
   by clarsimp
 
 lemma set_of_enumerate:"card (set (enumerate n xs)) = length xs"
@@ -435,7 +435,7 @@ lemma dom_map_fold:"dom (fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) m
   by (induct xs arbitrary:f g ms; clarsimp)
 
 lemma list_ran_prop:"map_of (map (\<lambda>x. (f x, g x)) xs) i = Some t \<Longrightarrow> \<exists>x \<in> set xs. g x = t"
-  by (induct xs arbitrary:f g t i; clarsimp split:split_if_asm)
+  by (induct xs arbitrary:f g t i; clarsimp split:if_split_asm)
 
 lemma in_set_enumerate_eq2:"(a, b) \<in> set (enumerate n xs) \<Longrightarrow> (b = xs ! (a - n))"
   by (simp add: in_set_enumerate_eq)

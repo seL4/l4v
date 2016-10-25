@@ -358,7 +358,7 @@ fun unfold_data ctxt constn goal nmspce nil = (
 
 
 
-val split_if = @{thm "split_if"}
+val split_if = @{thm "if_split"}
 
 fun maybe_cheat_tac ctxt thm =
   if (Goal.skip_proofs_enabled ())

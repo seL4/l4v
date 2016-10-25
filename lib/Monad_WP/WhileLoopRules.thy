@@ -492,7 +492,7 @@ proof -
 
     have cond_true: "\<And>x s. fst (whileLoop C B x s) = {} \<Longrightarrow> C x s"
       apply (subst (asm) whileLoop_unroll)
-      apply (clarsimp simp: condition_def return_def split: split_if_asm)
+      apply (clarsimp simp: condition_def return_def split: if_split_asm)
       done
 
     have  "snd (whileLoop C B r s)"

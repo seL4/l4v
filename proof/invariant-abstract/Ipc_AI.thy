@@ -359,14 +359,14 @@ lemma cap_insert_cte_wp_at:
   "\<lbrace>\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s \<and> valid_mdb s \<and> valid_objs s
     \<and> (if p = dest then P cap else cte_wp_at (\<lambda>c. P (masked_as_full c cap)) p s)\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>uu. cte_wp_at P p\<rbrace>"
   apply (rule hoare_name_pre_state)
-  apply (clarsimp split:split_if_asm)
+  apply (clarsimp split:if_split_asm)
   apply (clarsimp simp:cap_insert_def)
-  apply (wp set_cap_cte_wp_at | simp split del: split_if)+
+  apply (wp set_cap_cte_wp_at | simp split del: if_split)+
      apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
     apply (wp get_cap_wp)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (clarsimp simp:cap_insert_def)
-  apply (wp set_cap_cte_wp_at | simp split del: split_if)+
+  apply (wp set_cap_cte_wp_at | simp split del: if_split)+
     apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
    apply (wp set_cap_cte_wp_at get_cap_wp)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
@@ -376,7 +376,7 @@ lemma cap_insert_cte_wp_at:
    apply (clarsimp simp:valid_mdb_def is_derived_def)
    apply (drule(4) untyped_incD)
    apply (clarsimp simp:is_cap_simps cap_aligned_def
-      dest!:valid_cap_aligned split:split_if_asm)
+      dest!:valid_cap_aligned split:if_split_asm)
     apply (drule_tac y = "of_nat fa" in word_plus_mono_right[OF _ is_aligned_no_overflow',rotated])
      apply (simp add:word_of_nat_less)
     apply (clarsimp simp:p_assoc_help)
@@ -433,7 +433,7 @@ lemma transfer_caps_loop_mi_label[wp]:
    apply simp
    apply wp
    apply simp
-  apply (clarsimp split del: split_if)
+  apply (clarsimp split del: if_split)
   apply (rule hoare_pre)
    apply (wp const_on_failure_wp hoare_drop_imps | assumption)+
   apply simp
@@ -456,7 +456,7 @@ lemma cap_insert_assume_null:
    apply (simp add: cap_insert_def)
    apply (rule hoare_seq_ext[OF _ get_cap_sp])+
    apply (clarsimp simp: valid_def cte_wp_at_caps_of_state in_monad
-              split del: split_if)
+              split del: if_split)
   apply (erule hoare_pre(1))
   apply simp
   done
@@ -485,10 +485,10 @@ lemma transfer_caps_loop_presM:
   apply (induct caps arbitrary: slots n mi)
    apply (simp, wp, simp)
   apply (clarsimp simp add: Let_def split_def whenE_def
-                      cong: if_cong list.case_cong split del: split_if)
+                      cong: if_cong list.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp eb hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift static_imp_wp
-           | assumption | simp split del: split_if)+
+           | assumption | simp split del: if_split)+
       apply (rule cap_insert_assume_null)
       apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at static_imp_wp)
       apply (rule hoare_vcg_conj_liftE_R)
@@ -507,7 +507,7 @@ lemma transfer_caps_loop_presM:
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         ex_cte_cap_to_cnode_always_appropriate_strg
                         real_cte_tcb_valid caps_of_state_valid
-             split del: split_if)
+             split del: if_split)
   apply (clarsimp simp: remove_rights_def caps_of_state_valid
                         neq_Nil_conv cte_wp_at_caps_of_state
                         imp_conjR[symmetric] conj_comms
@@ -707,18 +707,18 @@ lemma (in Ipc_AI) tcl_zombies[wp]:
      apply clarsimp
      apply (case_tac "(a, b) = (ab, bb)")
       apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def)
-      apply (simp split: split_if_asm)
+      apply (simp split: if_split_asm)
       apply (clarsimp simp: is_cap_simps cap_master_cap_def
                      split: cap.split_asm)+
       apply fastforce
      apply (frule(3) zombies_finalD3)
       apply (clarsimp simp: is_derived_def is_cap_simps cap_master_cap_simps
-                      split: split_if_asm dest!:cap_master_cap_eqDs)
+                      split: if_split_asm dest!:cap_master_cap_eqDs)
       apply (drule_tac a=r in equals0D)
       apply (drule master_cap_obj_refs, simp)
      apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def
                            is_cap_simps cap_master_cap_def
-                    split: split_if_asm cap.split_asm)
+                    split: if_split_asm cap.split_asm)
      apply fastforce
     apply wp
   apply (clarsimp simp:cte_wp_at_caps_of_state)
@@ -835,7 +835,7 @@ lemma transfer_caps_loop_irq_handlers[wp]:
    apply (rule transfer_caps_loop_presM[where vo=True and em=False and ex=False])
      apply wp
      apply (clarsimp simp: cte_wp_at_caps_of_state)
-     apply (clarsimp simp: is_derived_def split: split_if_asm)
+     apply (clarsimp simp: is_derived_def split: if_split_asm)
      apply (simp add: cap_master_cap_irqs)+
     apply (wp valid_irq_handlers_lift)
    apply (clarsimp simp:cte_wp_at_caps_of_state|intro conjI ballI)+
@@ -1105,7 +1105,7 @@ lemma transfer_cap_typ_at[wp]:
     \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
       transfer_caps mi caps ep receiver recv_buf
     \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: transfer_caps_def split_def split del: split_if |
+  apply (simp add: transfer_caps_def split_def split del: if_split |
          wp cap_insert_typ_at hoare_drop_imps|wpc)+
   done
 
@@ -1152,7 +1152,7 @@ lemma is_cnode_cap_mask[simp]:
 lemma get_rs_cap_to[wp]:
   "\<lbrace>\<top>\<rbrace> get_receive_slots rcvr buf
    \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. ex_cte_cap_wp_to is_cnode_cap x s\<rbrace> "
-  apply (cases buf, simp_all add: split_def whenE_def split del: split_if)
+  apply (cases buf, simp_all add: split_def whenE_def split del: if_split)
    apply (wp | simp | rule hoare_drop_imps)+
   done
 
@@ -1240,7 +1240,7 @@ lemma copy_mrs_typ_at[wp]:
   apply (simp add: copy_mrs_def load_word_offs_def
                    store_word_offs_def set_object_def
               cong: option.case_cong
-              split del: split_if)
+              split del: if_split)
   apply (wp hoare_vcg_split_case_option mapM_wp')
    apply (wp hoare_drop_imps mapM_wp')
    apply simp_all
@@ -1274,7 +1274,7 @@ lemma copy_mrs_invs[wp]:
    apply (rule_tac P="invs" in hoare_triv)
    apply (case_tac sb, simp)
    apply (case_tac rb, simp)
-   apply (simp split del: split_if)
+   apply (simp split del: if_split)
    apply (rule mapM_wp [where S=UNIV, simplified])
    apply wp
   apply (rule hoare_strengthen_post)
@@ -1292,7 +1292,7 @@ lemma set_mrs_valid_objs [wp]:
       apply simp+
   apply (simp add: set_mrs_redux zipWithM_x_mapM split_def
                    store_word_offs_def
-            split del: split_if)
+            split del: if_split)
   apply (wp mapM_wp' thread_set_valid_objs_triv | simp)+
       apply (auto simp: tcb_cap_cases_def)
   done
@@ -1362,7 +1362,7 @@ lemma set_mrs_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_mrs t b m \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (simp add: set_mrs_redux zipWithM_x_mapM split_def
              cong: option.case_cong
-                split del: split_if)
+                split del: if_split)
   apply (wp mapM_wp' | wpc)+
   apply (wp thread_set_caps_of_state_trivial2 | simp)+
   done
@@ -1698,7 +1698,7 @@ lemma as_user_valid_ioc[wp]:
   apply (drule spec, drule spec, erule impE, assumption)
   apply (clarsimp simp: cap_of_def tcb_cnode_map_tcb_cap_cases
                         cte_wp_at_cases null_filter_def)
-  apply (simp add: tcb_cap_cases_def split: split_if_asm)
+  apply (simp add: tcb_cap_cases_def split: if_split_asm)
   done
 
 context Ipc_AI begin
@@ -1720,11 +1720,11 @@ lemma set_mrs_valid_ioc[wp]:
    apply (drule spec, drule spec, erule impE, assumption)
    apply (clarsimp simp: cap_of_def tcb_cnode_map_tcb_cap_cases
                          cte_wp_at_cases null_filter_def)
-   apply (simp add: tcb_cap_cases_def split: split_if_asm)
+   apply (simp add: tcb_cap_cases_def split: if_split_asm)
   apply (drule spec, drule spec, erule impE, assumption)
   apply (clarsimp simp: cap_of_def tcb_cnode_map_tcb_cap_cases
                         cte_wp_at_cases null_filter_def)
-  apply (simp add: tcb_cap_cases_def split: split_if_asm)
+  apply (simp add: tcb_cap_cases_def split: if_split_asm)
   done
 
 crunch valid_ioc[wp]: do_ipc_transfer "valid_ioc :: 'state_ext state \<Rightarrow> bool"
@@ -1924,7 +1924,7 @@ lemma tcb_bound_refs_eq_restr:
 
 
 lemma update_waiting_invs:
-  notes split_if[split del]
+  notes if_split[split del]
   shows
   "\<lbrace>ko_at (Notification ntfn) ntfnptr and invs
      and K (ntfn_obj ntfn = ntfn.WaitingNtfn q \<and> ntfn_bound_tcb ntfn = bound_tcb)\<rbrace>
@@ -1955,17 +1955,17 @@ lemma update_waiting_invs:
   apply (frule st_tcb_at_state_refs_ofD)
   apply (erule(1) obj_at_valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_ntfn_def
-             split del: split_if)
+             split del: if_split)
   apply (rule conjI, clarsimp simp: obj_at_def split: option.splits list.splits)
   apply (rule conjI, clarsimp elim!: pred_tcb_weakenE) 
   apply (rule conjI, clarsimp dest!: idle_no_ex_cap)
   apply (rule conjI, erule delta_sym_refs)
     apply (clarsimp dest!: refs_in_ntfn_bound_refs
-                    split: split_if_asm split_if)
+                    split: if_split_asm if_split)
    apply (simp only: tcb_bound_refs_eq_restr, simp)
    apply (fastforce dest!: refs_in_ntfn_bound_refs symreftype_inverse'
                   elim!: valid_objsE simp: valid_obj_def valid_ntfn_def obj_at_def is_tcb
-                 split: split_if_asm split_if)
+                 split: if_split_asm if_split)
   apply (clarsimp elim!: pred_tcb_weakenE)
   done
 
@@ -2540,7 +2540,7 @@ crunch pspace_respects_device_region[wp]: as_user "pspace_respects_device_region
 context Ipc_AI_cont begin
 lemma ri_invs':
   fixes Q t cap is_blocking
-  notes split_if[split del]
+  notes if_split[split del]
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes set_notification_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> complete_signal a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -2570,7 +2570,7 @@ lemma ri_invs':
       apply (simp add: valid_ep_def)
       apply (wp valid_irq_node_typ sts_only_idle 
                 failed_transfer_Q[simplified do_nbrecv_failed_transfer_def, simplified] 
-            | simp add: do_nbrecv_failed_transfer_def split del: split_if)+
+            | simp add: do_nbrecv_failed_transfer_def split del: if_split)+
      apply (clarsimp simp: st_tcb_at_tcb_at valid_tcb_state_def invs_def valid_state_def valid_pspace_def)
      apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ep_def)
      apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
@@ -2579,8 +2579,8 @@ lemma ri_invs':
        apply (drule obj_at_state_refs_ofD)
        apply (drule active_st_tcb_at_state_refs_ofD)
        apply (erule delta_sym_refs)
-        apply (clarsimp split: split_if_asm)
-       apply (clarsimp split: split_if_asm split_if)
+        apply (clarsimp split: if_split_asm)
+       apply (clarsimp split: if_split_asm if_split)
        apply (fastforce dest!: symreftype_inverse' 
                          simp: pred_tcb_at_def2 tcb_bound_refs_def2)
       apply (clarsimp simp: obj_at_def st_tcb_at_def)
@@ -2611,13 +2611,13 @@ lemma ri_invs':
      apply (clarsimp simp: st_tcb_def2 obj_at_def is_ep_def 
        conj_comms tcb_at_cte_at_2)
      apply (erule delta_sym_refs)
-      apply (clarsimp split: split_if_asm)
-     apply (clarsimp split: split_if_asm split_if) 
+      apply (clarsimp split: if_split_asm)
+     apply (clarsimp split: if_split_asm if_split)
        apply ((fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2 is_tcb
                        dest!: symreftype_inverse')+)[3]
     apply (rule conjI)
      apply (clarsimp simp: pred_tcb_at_def2 tcb_bound_refs_def2
-                     split: split_if_asm)
+                     split: if_split_asm)
      apply (simp add: set_eq_subset)
 
     apply (rule conjI, clarsimp dest!: idle_no_ex_cap)+
@@ -2640,12 +2640,12 @@ lemma ri_invs':
    apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ep_def)
    apply (rule conjI, fastforce simp: st_tcb_def2)
    apply (rule conjI, erule delta_sym_refs)
-     apply (clarsimp split: split_if_asm split_if)
+     apply (clarsimp split: if_split_asm if_split)
      apply (rule conjI, rule impI)
       apply (clarsimp simp: pred_tcb_at_def2 obj_at_def)
      apply (fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2
                      dest!: symreftype_inverse')
-    apply (clarsimp split: split_if_asm split_if)
+    apply (clarsimp split: if_split_asm if_split)
     apply (fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2
                     dest!: symreftype_inverse')
    apply (fastforce simp: obj_at_def is_ep pred_tcb_at_def2 dest!: idle_no_ex_cap valid_reply_capsD)
@@ -2753,8 +2753,8 @@ lemma rai_invs':
       apply (drule ko_at_state_refs_ofD)
       apply (drule active_st_tcb_at_state_refs_ofD)
       apply (erule delta_sym_refs)
-       apply (clarsimp split: split_if_asm)
-      apply (fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2 split: split_if_asm)
+       apply (clarsimp split: if_split_asm)
+      apply (fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2 split: if_split_asm)
      apply (clarsimp simp: obj_at_def pred_tcb_at_def)
     apply (simp add: is_ntfn obj_at_def)
     apply (fastforce dest!: idle_no_ex_cap valid_reply_capsD
@@ -2779,8 +2779,8 @@ lemma rai_invs':
     apply (rule conjI, clarsimp split: option.splits)
     apply (rule conjI, erule delta_sym_refs)
       apply (fastforce simp: pred_tcb_at_def2 obj_at_def symreftype_inverse'
-                      split: split_if_asm)
-     apply (fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2 split: split_if_asm)
+                      split: if_split_asm)
+     apply (fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2 split: if_split_asm)
     apply (simp add: obj_at_def is_ntfn idle_not_queued)
     apply (fastforce dest: idle_no_ex_cap valid_reply_capsD
                     elim!: pred_tcb_weakenE
@@ -2799,8 +2799,8 @@ lemma rai_invs':
   apply (frule ko_at_state_refs_ofD)
   apply (frule active_st_tcb_at_state_refs_ofD)
   apply (rule conjI, erule delta_sym_refs)
-    apply (clarsimp split: split_if_asm)
-   apply (clarsimp split: split_if_asm)
+    apply (clarsimp split: if_split_asm)
+   apply (clarsimp split: if_split_asm)
   apply (fastforce simp: obj_at_def is_ntfn_def state_refs_of_def
                         valid_idle_def pred_tcb_at_def
                         st_tcb_at_reply_cap_valid
@@ -2896,10 +2896,10 @@ lemma si_invs':
      apply (rule conjI, subgoal_tac "t \<noteq> ep")
        apply (drule ko_at_state_refs_ofD active_st_tcb_at_state_refs_ofD)+
        apply (erule delta_sym_refs)
-        apply (clarsimp split: split_if_asm)
+        apply (clarsimp split: if_split_asm)
        apply (fastforce simp: pred_tcb_at_def2
                        dest!: refs_in_tcb_bound_refs
-                       split: split_if_asm)
+                       split: if_split_asm)
       apply (clarsimp simp: pred_tcb_at_def obj_at_def)
      apply (simp add: obj_at_def is_ep)
      apply (fastforce dest: idle_no_ex_cap valid_reply_capsD
@@ -2921,10 +2921,10 @@ lemma si_invs':
      apply (rule conjI, clarsimp simp: obj_at_def is_ep_def)
      apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
      apply (rule conjI, erule delta_sym_refs)
-       apply (fastforce split: split_if_asm)
+       apply (fastforce split: if_split_asm)
       apply (fastforce simp: pred_tcb_at_def2
                       dest!: refs_in_tcb_bound_refs
-                      split: split_if_asm)
+                      split: if_split_asm)
      apply (simp add: obj_at_def is_ep idle_not_queued)
      apply (fastforce dest: idle_no_ex_cap valid_reply_capsD
                      simp: st_tcb_def2)
@@ -2933,7 +2933,7 @@ lemma si_invs':
     apply (drule(1) bspec, clarsimp simp: pred_tcb_at_def obj_at_def)
    apply (wp, simp)
   apply (rename_tac list)
-  apply (case_tac list, simp_all add: invs_def valid_state_def valid_pspace_def split del:split_if)
+  apply (case_tac list, simp_all add: invs_def valid_state_def valid_pspace_def split del:if_split)
   apply (rule hoare_pre)
    apply (wp valid_irq_node_typ)
           apply (simp add: if_apply_def2 )
@@ -2963,10 +2963,10 @@ lemma si_invs':
      apply (fastforce elim!: pred_tcb_weakenE st_tcb_at_reply_cap_valid simp: conj_commute)
 
     apply (erule delta_sym_refs)
-     apply (clarsimp simp: fun_upd_def split: split_if_asm)
+     apply (clarsimp simp: fun_upd_def split: if_split_asm)
     apply (fastforce simp: fun_upd_def
                     dest!: symreftype_inverse' st_tcb_at_state_refs_ofD refs_in_tcb_bound_refs 
-                    split: split_if_asm)
+                    split: if_split_asm)
    apply (clarsimp dest!: st_tcb_at_state_refs_ofD simp: sts_refs_of_helper)
    apply fastforce
   apply (drule bound_tcb_at_state_refs_ofD)
@@ -3109,13 +3109,13 @@ lemma si_blk_makes_simple:
    apply clarsimp
   apply (rule hoare_gen_asm[simplified])
   apply (rename_tac list)
-  apply (case_tac list, simp_all split del:split_if)
+  apply (case_tac list, simp_all split del:if_split)
   apply (rule hoare_seq_ext [OF _ set_ep_pred_tcb_at])
   apply (rule hoare_seq_ext [OF _ gts_sp])
-  apply (case_tac recv_state, simp_all split del: split_if)
+  apply (case_tac recv_state, simp_all split del: if_split)
   apply (wp sts_st_tcb_at_cases setup_caller_cap_makes_simple
             hoare_drop_imps
-            | simp add: if_apply_def2 split del: split_if)+
+            | simp add: if_apply_def2 split del: if_split)+
   done
 
 end

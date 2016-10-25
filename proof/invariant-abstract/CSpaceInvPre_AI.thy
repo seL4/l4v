@@ -30,7 +30,7 @@ lemma set_cap_caps_of_state[wp]:
   apply (clarsimp simp add: set_cap_def split_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply (case_tac obj, simp_all add: set_object_def
-                          split del: split_if cong: if_cong bind_cong)
+                          split del: if_split cong: if_cong bind_cong)
    apply (rule hoare_pre, wp)
    apply (clarsimp elim!: rsubst[where P=P]
                     simp: caps_of_state_cte_wp_at cte_wp_at_cases
@@ -41,7 +41,7 @@ lemma set_cap_caps_of_state[wp]:
   apply (clarsimp simp: obj_at_def)
   apply (safe elim!: rsubst[where P=P] intro!: ext)
       apply (auto simp: caps_of_state_cte_wp_at cte_wp_at_cases,
-             auto simp: tcb_cap_cases_def split: split_if_asm)
+             auto simp: tcb_cap_cases_def split: if_split_asm)
   done
 
 lemmas obj_irq_refs_Int_not =

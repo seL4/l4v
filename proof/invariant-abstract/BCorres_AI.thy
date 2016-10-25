@@ -38,7 +38,7 @@ lemma OR_choice_bcorres[wp]:
   apply (simp add: split_def)
 
   apply (simp add: bcorres_underlying_def s_bcorres_underlying_def)
-  apply (clarsimp simp: split_if_asm)
+  apply (clarsimp simp: if_split_asm)
   apply (rule_tac x=ab in exI)
   apply (intro conjI impI)
    apply simp
@@ -63,7 +63,7 @@ lemma OR_choiceE_bcorres[wp]:
   apply (simp add: split_def)
 
   apply (simp add: bcorres_underlying_def s_bcorres_underlying_def)
-  apply (clarsimp simp: split_if_asm)
+  apply (clarsimp simp: if_split_asm)
   apply (rule_tac x=ab in exI)
   apply (intro conjI impI)
    apply simp

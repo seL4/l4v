@@ -205,10 +205,10 @@ lemma updateObject_cte_is_tcb_or_cte:
   apply (subst(asm) in_magnitude_check3, simp+)
    apply (simp add: in_monad tcbCTableSlot_def tcbVTableSlot_def
                     tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
-             split: split_if_asm)
+             split: if_split_asm)
   apply (simp add: in_monad tcbCTableSlot_def tcbVTableSlot_def
                    tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
-            split: split_if_asm)
+            split: if_split_asm)
   done
 
 declare plus_1_less[simp]
@@ -331,7 +331,7 @@ lemma setObject_typ_at_not:
   apply (clarsimp simp: setObject_def valid_def in_monad split_def)
   apply (erule notE)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
    apply (drule updateObject_type)
    apply clarsimp
    apply (drule objBits_type)
@@ -354,7 +354,7 @@ lemma setObject_cte_wp_at2':
   assumes y: "\<And>x n cte s. fst (updateObject v (KOCTE cte) ptr x n s) = {}"
   shows      "\<lbrace>\<lambda>s. P' (cte_wp_at' P p s) \<and> Q s\<rbrace> setObject ptr v \<lbrace>\<lambda>rv s. P' (cte_wp_at' P p s)\<rbrace>"
   apply (clarsimp simp add: setObject_def valid_def in_monad split_def)
-  apply (simp add: cte_wp_at_cases' split del: split_if)
+  apply (simp add: cte_wp_at_cases' split del: if_split)
   apply (erule rsubst[where P=P'])
   apply (rule iffI)
    apply (erule disjEI)
@@ -366,12 +366,12 @@ lemma setObject_cte_wp_at2':
    apply (fastforce dest: bspec [OF _ ranI])
   apply (erule disjEI)
    apply (clarsimp simp: ps_clear_upd' lookupAround2_char1
-                  split: split_if_asm)
+                  split: if_split_asm)
    apply (frule updateObject_type)
    apply (case_tac ba, simp_all add: y)[1]
   apply (erule exEI)
   apply (clarsimp simp: ps_clear_upd' lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (frule updateObject_type)
   apply (case_tac ba, simp_all)
   apply (drule(1) x)
@@ -520,7 +520,7 @@ lemma getObject_cte_inv [wp]: "\<lbrace>P\<rbrace> (getObject addr :: cte kernel
   apply (simp add: getObject_def loadObject_cte split_def)
   apply (clarsimp simp: valid_def in_monad)
   apply (clarsimp simp: typeError_def in_monad magnitudeCheck_def
-                 split: kernel_object.split_asm split_if_asm option.split_asm)
+                 split: kernel_object.split_asm if_split_asm option.split_asm)
   done
 
 lemma getObject_ko_at:
@@ -591,7 +591,7 @@ lemma setObject_distinct[wp]:
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_distinct'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm
+                 split: if_split_asm
                  dest!: updateObject_objBitsKO)
    apply (fastforce dest: bspec[OF _ domI])
   apply (fastforce dest: bspec[OF _ domI])
@@ -602,7 +602,7 @@ lemma setObject_aligned[wp]:
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm
+                 split: if_split_asm
                  dest!: updateObject_objBitsKO)
    apply (fastforce dest: bspec[OF _ domI])
   apply (fastforce dest: bspec[OF _ domI])
@@ -697,13 +697,13 @@ lemma cte_wp_at_ctes_of:
   "cte_wp_at' P p s = (\<exists>cte. ctes_of s p = Some cte \<and> P cte)"
   apply (simp add: cte_wp_at_cases' map_to_ctes_def Let_def
                    cte_level_bits_def objBits_simps
-          split del: split_if)
+          split del: if_split)
   apply (safe del: disjCI)
     apply (clarsimp simp: ps_clear_def3 field_simps)
    apply (clarsimp simp: ps_clear_def3 field_simps
-              split del: split_if)
+              split del: if_split)
    apply (frule is_aligned_sub_helper)
-    apply (clarsimp simp: tcb_cte_cases_def split: split_if_asm)
+    apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
    apply (case_tac "n = 0")
     apply (clarsimp simp: field_simps)
    apply (subgoal_tac "ksPSpace s p = None")
@@ -718,7 +718,7 @@ lemma cte_wp_at_ctes_of:
    apply (drule minus_one_helper3)
    apply clarsimp
    apply (simp add: field_simps)
-  apply (clarsimp split: split_if_asm del: disjCI)
+  apply (clarsimp split: if_split_asm del: disjCI)
    apply (simp add: ps_clear_def3 field_simps)
   apply (rule disjI2, rule exI[where x="(p - (p && ~~ mask 9))"])
   apply (clarsimp simp: ps_clear_def3[where na=9] is_aligned_mask
@@ -728,7 +728,7 @@ lemma cte_wp_at_ctes_of:
 lemma tcb_cte_cases_small:
   "\<lbrakk> tcb_cte_cases v = Some (getF, setF) \<rbrakk>
       \<Longrightarrow> v < 2 ^ 9"
-  by (simp add: tcb_cte_cases_def split: split_if_asm)
+  by (simp add: tcb_cte_cases_def split: if_split_asm)
 
 lemmas tcb_cte_cases_aligned_helpers =
     is_aligned_add_helper [OF _ tcb_cte_cases_small]
@@ -754,12 +754,12 @@ lemma map_to_ctes_upd_cte:
      map_to_ctes (s (p \<mapsto> (KOCTE cte))) = ((map_to_ctes s) (p \<mapsto> cte))"
   apply (rule ext)
   apply (simp    add: map_to_ctes_def Let_def dom_fun_upd2
-           split del: split_if del: dom_fun_upd)
+           split del: if_split del: dom_fun_upd)
   apply (case_tac "x = p")
    apply (simp add: objBits_simps field_simps)
   apply (case_tac "(x && ~~ mask (objBitsKO (KOTCB undefined))) = p")
    apply clarsimp
-  apply (simp del: dom_fun_upd split del: split_if cong: if_cong
+  apply (simp del: dom_fun_upd split del: if_split cong: if_cong
               add: dom_fun_upd2 field_simps objBits_simps)
   done
 
@@ -775,15 +775,15 @@ lemma map_to_ctes_upd_tcb:
   apply (subgoal_tac "p && ~~ (mask 9) = p")
    apply (rule ext)
    apply (simp    add: map_to_ctes_def Let_def dom_fun_upd2
-            split del: split_if del: dom_fun_upd
+            split del: if_split del: dom_fun_upd
                  cong: option.case_cong if_cong)
    apply (case_tac "x = p")
     apply (simp add: objBits_simps field_simps map_to_ctes_def)
    apply (case_tac "x && ~~ mask (objBitsKO (KOTCB undefined)) = p")
     apply (case_tac "tcb_cte_cases (x - p)")
-     apply (simp split del: split_if cong: if_cong option.case_cong)
+     apply (simp split del: if_split cong: if_cong option.case_cong)
     apply (subgoal_tac "s x = None")
-     apply (simp add: field_simps objBits_simps split del: split_if
+     apply (simp add: field_simps objBits_simps split del: if_split
                 cong: if_cong option.case_cong)
      apply clarsimp
     apply (subst(asm) mask_in_range[where bits="objBitsKO v" for v])
@@ -794,7 +794,7 @@ lemma map_to_ctes_upd_tcb:
     apply (rule ccontr, simp add: linorder_not_le)
     apply (drule minus_one_helper3, simp)
    apply (case_tac "tcb_cte_cases (x - p)")
-    apply (simp split del: split_if cong: if_cong option.case_cong)
+    apply (simp split del: if_split cong: if_cong option.case_cong)
    apply (rule FalseE)
    apply (subst(asm) mask_in_range[where bits="objBitsKO v" for v])
     apply (simp add: objBitsKO_def)
@@ -806,7 +806,7 @@ lemma map_to_ctes_upd_tcb:
      apply (erule is_aligned_no_overflow)
     apply (simp add: objBits_simps field_simps)
    apply (clarsimp simp: tcb_cte_cases_def objBits_simps field_simps
-     split: split_if_asm)
+     split: if_split_asm)
   apply (subst mask_in_range, assumption)
   apply (simp only: atLeastAtMost_iff order_refl simp_thms)
   apply (erule is_aligned_no_overflow)
@@ -818,7 +818,7 @@ lemma map_to_ctes_upd_other:
      map_to_ctes (s (p \<mapsto> ko')) = (map_to_ctes s)"
   apply (rule ext)
   apply (simp    add: map_to_ctes_def Let_def dom_fun_upd2
-           split del: split_if del: dom_fun_upd
+           split del: if_split del: dom_fun_upd
                 cong: if_cong)
   apply (rule if_cong)
     apply clarsimp
@@ -840,8 +840,8 @@ lemma tcb_cte_cases_change:
    (\<exists>getF. (\<exists>setF. tcb_cte_cases y = Some (getF, setF)) \<and> getF (setF f tcb) \<noteq> getF tcb)
      = (x = y \<and> f (getF tcb) \<noteq> getF tcb)"
   apply (rule iffI)
-   apply (clarsimp simp: tcb_cte_cases_def split: split_if_asm)
-  apply (clarsimp simp: tcb_cte_cases_def split: split_if_asm)
+   apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
+  apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
   done
 
 lemma ctes_of_setObject_cte:
@@ -853,7 +853,7 @@ lemma ctes_of_setObject_cte:
                          lookupAround2_char1 tcb_cte_cases_change)
    apply (rule ext, clarsimp)
    apply (intro conjI impI)
-    apply (clarsimp simp: tcb_cte_cases_def split: split_if_asm)
+    apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
    apply (drule(1) cte_wp_at_tcbI'[where P="op = cte"])
       apply (simp add: ps_clear_def3 field_simps)
      apply assumption+
@@ -985,7 +985,7 @@ lemma obj_relation_cut_same_type:
   apply (simp add: obj_relation_cuts_def2 a_type_def)
   apply (auto simp: other_obj_relation_def cte_relation_def
                     pte_relation_def pde_relation_def
-             split: Structures_A.kernel_object.split_asm split_if_asm
+             split: Structures_A.kernel_object.split_asm if_split_asm
                     Structures_H.kernel_object.split_asm
                     ARM_A.arch_kernel_obj.split_asm)
   done
@@ -1032,7 +1032,7 @@ lemma set_other_obj_corres:
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x=ptr in allE)+
    apply (clarsimp simp: obj_at_def a_type_def 
-                   split: Structures_A.kernel_object.splits split_if_asm)
+                   split: Structures_A.kernel_object.splits if_split_asm)
    apply (simp split: arch_kernel_obj.splits if_splits)
   apply (fold fun_upd_def)
   apply (simp only: pspace_relation_def pspace_dom_update dom_fun_upd2 simp_thms)
@@ -1186,17 +1186,17 @@ lemma setObject_ko_wp_at:
                         ko_wp_at'_def split_def
                         R updateObject_default_def
                         projectKOs obj_at'_real_def
-             split del: split_if)
+             split del: if_split)
   apply (clarsimp simp: project_inject objBits_def[symmetric] n
                         in_magnitude_check [OF _ m]
                  elim!: rsubst[where P=P]
-             split del: split_if)
+             split del: if_split)
   apply (rule iffI)
    apply (clarsimp simp: n ps_clear_upd' objBits_def[symmetric]
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply (clarsimp simp: n project_inject objBits_def[symmetric]
                         ps_clear_upd
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemma typ_at'_valid_obj'_lift:
@@ -1245,7 +1245,7 @@ lemma setObject_valid_objs':
   apply (drule(1) x)
     apply (simp add: ranI)
    apply (simp add: prod_eqI lookupAround2_char1)
-  apply (clarsimp elim!: ranE split: split_if_asm simp: ranI)
+  apply (clarsimp elim!: ranE split: if_split_asm simp: ranI)
   done
 
 lemma setObject_iflive':
@@ -1645,7 +1645,7 @@ lemma setObject_state_refs_of':
                         updateObject_default_def x in_magnitude_check
                         projectKOs y
                  elim!: rsubst[where P=P] intro!: ext
-             split del: split_if cong: option.case_cong if_cong)
+             split del: if_split cong: option.case_cong if_cong)
   apply (clarsimp simp: state_refs_of'_def objBits_def[symmetric]
                         ps_clear_upd
                   cong: if_cong option.case_cong)
@@ -1663,7 +1663,7 @@ lemma setObject_state_refs_of_eq:
                         updateObject_default_def in_magnitude_check
                         projectKOs lookupAround2_char1
                  elim!: rsubst[where P=P] intro!: ext
-             split del: split_if cong: option.case_cong if_cong)
+             split del: if_split cong: option.case_cong if_cong)
   apply (frule x, drule updateObject_objBitsKO)
   apply (simp add: state_refs_of'_def ps_clear_upd
              cong: option.case_cong if_cong)
@@ -2147,7 +2147,7 @@ lemma setObject_pspace_domain_valid[wp]:
    \<lbrace>\<lambda>rv. pspace_domain_valid\<rbrace>"
   apply (clarsimp simp: setObject_def split_def pspace_domain_valid_def
                         valid_def in_monad
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (drule updateObject_objBitsKO)
   apply (clarsimp simp: lookupAround2_char1)
   done

@@ -269,9 +269,9 @@ lemma mapM_x_Cons:
 
 lemma mapM_x_inv_wp2:
   assumes post: "\<And>s. \<lbrakk> I s; V [] s \<rbrakk> \<Longrightarrow> Q s"
-  and     hr: "\<And>a as. suffixeq (a # as) xs \<Longrightarrow> \<lbrace>\<lambda>s. I s \<and> V (a # as) s\<rbrace> m a \<lbrace>\<lambda>r s. I s \<and> V as s\<rbrace>"
+  and     hr: "\<And>a as. suffix (a # as) xs \<Longrightarrow> \<lbrace>\<lambda>s. I s \<and> V (a # as) s\<rbrace> m a \<lbrace>\<lambda>r s. I s \<and> V as s\<rbrace>"
   shows   "\<lbrace>I and V xs\<rbrace> mapM_x m xs \<lbrace>\<lambda>rv. Q\<rbrace>"
-proof (induct xs rule: list_induct_suffixeq)
+proof (induct xs rule: list_induct_suffix)
   case Nil thus ?case
     apply (simp add: mapM_x_Nil)
     apply wp
@@ -576,7 +576,7 @@ lemma cutMon_walk_bindE:
   apply (simp add: bindE_def cutMon_walk_bind)
   apply (rule bind_cong, rule refl)
   apply (simp add: cutMon_def lift_def fail_def
-            split: split_if_asm)
+            split: if_split_asm)
   apply (clarsimp split: sum.split)
   done
 
@@ -596,11 +596,11 @@ lemma cutMon_validE_drop:
 lemma assertE_assert:
   "assertE F = liftE (assert F)"
   by (clarsimp simp: assertE_def assert_def liftE_def returnOk_def
-              split: split_if)
+              split: if_split)
 
 lemma snd_cutMon:
   "snd (cutMon P f s) = (P s \<longrightarrow> snd (f s))"
-  by (simp add: cutMon_def fail_def split: split_if)
+  by (simp add: cutMon_def fail_def split: if_split)
 
 lemma exec_modify:
   "(modify f >>= g) s = g () (f s)"
@@ -612,7 +612,7 @@ lemma no_fail_spec:
 
 lemma no_fail_assertE [wp]:
   "no_fail (\<lambda>_. P) (assertE P)"
-  by (simp add: assertE_def split: split_if)
+  by (simp add: assertE_def split: if_split)
 
 lemma no_fail_spec_pre:
   "\<lbrakk> no_fail ((op = s) and P') f; \<And>s. P s \<Longrightarrow> P' s \<rbrakk> \<Longrightarrow> no_fail ((op = s) and P) f"
@@ -620,11 +620,11 @@ lemma no_fail_spec_pre:
 
 lemma no_fail_whenE [wp]:
   "\<lbrakk> G \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. G \<longrightarrow> P s) (whenE G f)"
-  by (simp add: whenE_def split: split_if)
+  by (simp add: whenE_def split: if_split)
 
 lemma no_fail_unlessE [wp]:
   "\<lbrakk> \<not> G \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. \<not> G \<longrightarrow> P s) (unlessE G f)"
-  by (simp add: unlessE_def split: split_if)
+  by (simp add: unlessE_def split: if_split)
 
 lemma no_fail_throwError [wp]:
   "no_fail \<top> (throwError e)"
@@ -718,7 +718,7 @@ lemma select_f_asserts:
   "select_f (assert P s) = do assert P; return ((), s) od"
   "select_f (assert_opt v s) = do v' \<leftarrow> assert_opt v; return (v', s) od"
   by (simp add: select_f_def fail_def assert_def return_def bind_def
-                assert_opt_def split: split_if option.split)+
+                assert_opt_def split: if_split option.split)+
 
 lemma liftE_bindE_handle:
   "((liftE f >>=E (\<lambda>x. g x)) <handle> h)
@@ -766,24 +766,24 @@ lemma liftE_bindE_assoc:
 lemma empty_fail_use_cutMon:
   "\<lbrakk> \<And>s. empty_fail (cutMon (op = s) f) \<rbrakk> \<Longrightarrow> empty_fail f"
   apply (clarsimp simp add: empty_fail_def cutMon_def)
-  apply (fastforce split: split_if_asm)
+  apply (fastforce split: if_split_asm)
   done
 
 lemma empty_fail_drop_cutMon:
   "empty_fail f \<Longrightarrow> empty_fail (cutMon P f)"
-  by (simp add: empty_fail_def fail_def cutMon_def split: split_if)
+  by (simp add: empty_fail_def fail_def cutMon_def split: if_split)
 
 lemma empty_fail_cutMon:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> empty_fail (cutMon (op = s) f) \<rbrakk>
     \<Longrightarrow> empty_fail (cutMon P f)"
   apply (clarsimp simp: empty_fail_def cutMon_def fail_def
-                 split: split_if)
-  apply (fastforce split: split_if_asm)
+                 split: if_split)
+  apply (fastforce split: if_split_asm)
   done
 
 lemma empty_fail_If:
   "\<lbrakk> P \<Longrightarrow> empty_fail f; \<not> P \<Longrightarrow> empty_fail g \<rbrakk> \<Longrightarrow> empty_fail (if P then f else g)"
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemmas empty_fail_cutMon_intros =
      cutMon_walk_bind[THEN arg_cong[where f=empty_fail], THEN iffD2,
@@ -796,16 +796,16 @@ lemmas empty_fail_cutMon_intros =
 lemma empty_fail_whenEs:
   "empty_fail f \<Longrightarrow> empty_fail (whenE P f)"
   "empty_fail f \<Longrightarrow> empty_fail (unlessE P f)"
-  by (auto simp add: whenE_def unlessE_def empty_fail_error_bits split: split_if)
+  by (auto simp add: whenE_def unlessE_def empty_fail_error_bits split: if_split)
 
 lemma empty_fail_assertE:
   "empty_fail (assertE P)"
-  by (simp add: assertE_def empty_fail_error_bits split: split_if)
+  by (simp add: assertE_def empty_fail_error_bits split: if_split)
 
 lemma unlessE_throw_catch_If:
   "catch (unlessE P (throwError e) >>=E f) g
       = (if P then catch (f ()) g else g e)"
-  by (simp add: unlessE_def catch_throwError split: split_if)
+  by (simp add: unlessE_def catch_throwError split: if_split)
 
 lemma gets_the_return:
   "(return x = gets_the f) = (\<forall>s. f s = Some x)"
@@ -834,7 +834,7 @@ lemma cutMon_assert_opt:
       = gets_the (\<lambda>s. if P s then f s else None) >>= g"
   by (simp add: cutMon_def gets_the_def exec_gets
                 bind_assoc fun_eq_iff assert_opt_def
-         split: split_if)
+         split: if_split)
 
 lemma gets_the_eq_bind:
   "\<lbrakk> \<exists>fn. f = gets_the (fn o fn');
@@ -870,7 +870,7 @@ lemma gets_the_asserts:
   "(assertE P = gets_the h) = (\<forall>s. h s = (if P then Some (Inr ()) else None))"
   by (simp add: assert_def assertE_def
                 gets_the_fail gets_the_returns
-         split: split_if)+
+         split: if_split)+
 
 lemma gets_the_condsE:
   "(\<exists>fn. whenE P f = gets_the (fn o fn'))
@@ -879,7 +879,7 @@ lemma gets_the_condsE:
             = (\<not> P \<longrightarrow> (\<exists>fn. g = gets_the (fn o fn')))"
   by (simp add: whenE_def unlessE_def gets_the_returns
                 ex_const_function
-         split: split_if)+
+         split: if_split)+
 
 lemma no_fail_gets_the [wp]:
   "no_fail (\<lambda>s. f s \<noteq> None) (gets_the f)"
@@ -907,11 +907,11 @@ lemma assert_opt_If:
 
 lemma if_to_top_of_bind:
   "(bind (If P x y) z) = If P (bind x z) (bind y z)"
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemma if_to_top_of_bindE:
   "(bindE (If P x y) z) = If P (bindE x z) (bindE y z)"
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemma alternative_bind:
   "((a \<sqinter> b) >>= c) = ((a >>= c) \<sqinter> (b >>= c))"
@@ -2222,7 +2222,7 @@ lemma oblivious_returnOk [simp]:
 
 lemma oblivious_assertE [simp]:
   "oblivious f (assertE P)"
-  by (simp add: assertE_def split: split_if)
+  by (simp add: assertE_def split: if_split)
 
 
 lemma oblivious_throwError [simp]:
@@ -2247,11 +2247,11 @@ lemma oblivious_catch:
 
 lemma oblivious_when [simp]:
   "oblivious f (when P m) = (P \<longrightarrow> oblivious f m)"
-  by (simp add: when_def split: split_if)
+  by (simp add: when_def split: if_split)
 
 lemma oblivious_whenE [simp]:
   "oblivious f (whenE P g) = (P \<longrightarrow> oblivious f g)"
-  by (simp add: whenE_def split: split_if)
+  by (simp add: whenE_def split: if_split)
 
 lemma select_f_oblivious [simp]:
   "oblivious f (select_f v)"
@@ -2319,7 +2319,7 @@ lemma zipWithM_x_Nil2 :
 lemma assert2:
   "(do v1 \<leftarrow> assert P; v2 \<leftarrow> assert Q; c od)
      = (do v \<leftarrow> assert (P \<and> Q); c od)"
-  by (simp add: assert_def split: split_if)
+  by (simp add: assert_def split: if_split)
 
 lemma assert_opt_def2:
   "assert_opt v = (do assert (v \<noteq> None); return (the v) od)"
@@ -2334,7 +2334,7 @@ lemma gets_assert:
   "(do v1 \<leftarrow> assert v; v2 \<leftarrow> gets f; c v1 v2 od)
      = (do v2 \<leftarrow> gets f; v1 \<leftarrow> assert v; c v1 v2 od)"
   by (simp add: simpler_gets_def return_def assert_def fail_def bind_def
-         split: split_if)
+         split: if_split)
 
 lemma list_case_return2:
   "(case x of [] \<Rightarrow> return v | y # ys \<Rightarrow> return (f y ys))
@@ -2345,7 +2345,7 @@ lemma modify_assert:
   "(do v2 \<leftarrow> modify f; v1 \<leftarrow> assert v; c v1 od)
     = (do v1 \<leftarrow> assert v; v2 \<leftarrow> modify f; c v1 od)"
   by (simp add: simpler_modify_def return_def assert_def fail_def bind_def
-         split: split_if)
+         split: if_split)
 
 lemma gets_fold_into_modify:
   "do x \<leftarrow> gets f; modify (g x) od = modify (\<lambda>s. g (f s) s)"
@@ -2504,7 +2504,7 @@ lemma case_option_find_give_me_a_map:
   apply (induct xs)
    apply simp
    apply (simp add: liftM_def mapME_Nil)
-  apply (simp add: mapME_Cons split: split_if)
+  apply (simp add: mapME_Cons split: if_split)
   apply (clarsimp simp add: throwError_def bindE_def bind_assoc
                             liftM_def)
   apply (rule bind_cong [OF refl])

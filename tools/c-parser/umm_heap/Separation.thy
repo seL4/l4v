@@ -114,7 +114,7 @@ declare sep_false_def [symmetric, simp add]
 lemma singleton_dom':
   "dom (singleton p (v::'a::mem_type) h d) = dom (lift_state (h,d)) \<inter> s_footprint p"
 apply(auto simp: singleton_def lift_state_def
-           split: split_if_asm s_heap_index.splits)
+           split: if_split_asm s_heap_index.splits)
 done
 
 lemma lift_state_dom:
@@ -166,7 +166,7 @@ lemma h_t_valid_restrict_proj_d:
 apply(auto simp: h_t_valid_def valid_footprint_def Let_def)
  apply(drule_tac x=y in spec)
  apply simp
- apply(auto simp: proj_d_def map_le_def split: split_if_asm option.splits)
+ apply(auto simp: proj_d_def map_le_def split: if_split_asm option.splits)
   apply(drule_tac x="ptr_val p + of_nat y" in spec)
   apply(drule_tac x="SIndexTyp a" in spec)
   apply(erule impE)
@@ -278,7 +278,7 @@ lemma sep_map_dom_exc:
 
 lemma sep_map_inj:
   "\<lbrakk> (p \<mapsto>\<^sub>g (v::'a::c_type)) s; (p \<mapsto>\<^sub>h v') s \<rbrakk> \<Longrightarrow> v = v'"
-  by (clarsimp simp: sep_map_def lift_typ_heap_if split: split_if_asm)
+  by (clarsimp simp: sep_map_def lift_typ_heap_if split: if_split_asm)
 
 lemma sep_map_anyI_exc [simp]:
   "(p \<mapsto>\<^sub>g v) s \<Longrightarrow> (p \<mapsto>\<^sub>g -) s"
@@ -336,7 +336,7 @@ lemma s_valid_heap_merge_right2:
 apply(auto simp: s_valid_def h_t_valid_def valid_footprint_def Let_def)
  apply(clarsimp simp: map_le_def)
  apply(subst proj_d_map_add_snd)
- apply(clarsimp split: split_if_asm)
+ apply(clarsimp split: if_split_asm)
  apply(subgoal_tac "(ptr_val p + of_nat y,SIndexTyp a) \<in> s_footprint p")
   apply fast
  apply(erule s_footprintI)
@@ -346,7 +346,7 @@ apply(subgoal_tac "(ptr_val p + of_nat y,SIndexVal) \<in> s_footprint p")
  apply clarsimp
  apply(subst (asm) proj_d_map_add_fst)
  apply(drule_tac x=y in spec)
- apply(clarsimp split: split_if_asm)
+ apply(clarsimp split: if_split_asm)
 apply(rule s_footprintI2)
 apply(simp add: size_of_def)
 done
@@ -377,7 +377,7 @@ lemma lift_typ_heap_heap_merge_right:
   "\<lbrakk> lift_typ_heap g s\<^sub>1 p = Some v (*; wf_heap_state s\<^sub>1*) \<rbrakk> \<Longrightarrow>
       lift_typ_heap g (s\<^sub>0 ++ s\<^sub>1) (p::'a::c_type ptr) = Some v"
   by (force simp: lift_typ_heap_if s_valid_heap_merge_right
-                  heap_list_s_heap_merge_right split: split_if_asm)
+                  heap_list_s_heap_merge_right split: if_split_asm)
 
 lemma lift_typ_heap_heap_merge_sep_map:
   "(p \<mapsto>\<^sub>g v) s\<^sub>1 \<Longrightarrow>
@@ -739,7 +739,7 @@ lemma sep_no_skew:
           {ptr_val q..+size_of TYPE('a)} = {}"
 apply clarsimp
 apply(drule sep_map'_lift_typ_heapD)+
-apply(clarsimp simp: lift_typ_heap_if s_valid_def split: split_if_asm)
+apply(clarsimp simp: lift_typ_heap_if s_valid_def split: if_split_asm)
 apply(rule ccontr)
 apply(drule (1) h_t_valid_neq_disjoint)
   apply simp
@@ -753,7 +753,7 @@ lemma sep_no_skew2:
           {ptr_val (q::'b::c_type ptr)..+size_of TYPE('b)} = {}"
 apply clarsimp
 apply(drule sep_map'_lift_typ_heapD)+
-apply(clarsimp simp: lift_typ_heap_if s_valid_def split: split_if_asm)
+apply(clarsimp simp: lift_typ_heap_if s_valid_def split: if_split_asm)
 apply(frule (1) h_t_valid_neq_disjoint[where q=q])
   apply(clarsimp simp: tag_disj_def sub_typ_proper_def)
   apply(simp add: typ_tag_lt_def)

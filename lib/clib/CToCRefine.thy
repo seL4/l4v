@@ -43,14 +43,14 @@ val unfold_bodies = Simplifier.make_simproc @{context} "unfold constants named *
 *}
 
 theorem spec_refine:
-  notes split_if[split del]
+  notes if_split[split del]
   shows
   "spec_statefn_simulates id (kernel_all_global_addresses.\<Gamma> symbol_table)
      (kernel_all_substitute.\<Gamma> symbol_table domain)"
   apply (simp add: kernel_all_global_addresses.\<Gamma>_def kernel_all_substitute.\<Gamma>_def)
   apply (intro spec_statefn_simulates_lookup_tree_Node spec_statefn_simulates_lookup_tree_Leaf)
   apply (tactic {* ALLGOALS (asm_simp_tac (put_simpset HOL_ss @{context} addsimps @{thms switch.simps fst_conv snd_conv}
-                  addsimprocs [unfold_bodies] |> Splitter.del_split @{thm split_if}))
+                  addsimprocs [unfold_bodies] |> Splitter.del_split @{thm if_split}))
               THEN ALLGOALS (TRY o resolve_tac @{context} @{thms exec_statefn_simulates_refl}) *})
 
   apply (tactic {* ALLGOALS (REPEAT_ALL_NEW (resolve_tac @{context} @{thms exec_statefn_simulates_comI

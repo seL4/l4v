@@ -183,10 +183,10 @@ lemma dmo_storeWord_respects_ipc:
   apply (simp add: storeWord_def)
   apply (wp dmo_wp)
   apply clarsimp
-  apply (simp add: integrity_def split del: split_if)
-  apply (clarsimp split del: split_if)
+  apply (simp add: integrity_def split del: if_split)
+  apply (clarsimp split del: if_split)
   apply (case_tac "x \<in> ptr_range (buf + of_nat p * of_nat word_size) 2")
-   apply (clarsimp simp add: st_tcb_at_tcb_states_of_state split del: split_if)
+   apply (clarsimp simp add: st_tcb_at_tcb_states_of_state split del: if_split)
    apply (rule trm_ipc [where p' = thread])
       apply simp
      apply assumption
@@ -263,7 +263,7 @@ lemma lookup_ipc_buffer_has_auth [wp]:
   apply simp
   apply (drule (1) cap_auth_caps_of_state)
   apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def vspace_cap_rights_to_auth_def
-                        vm_read_write_def is_page_cap_def split: split_if_asm)
+                        vm_read_write_def is_page_cap_def split: if_split_asm)
   apply (drule bspec)
    apply (erule (3) ipcframe_subset_page)
   apply simp
@@ -331,13 +331,13 @@ lemma set_mrs_respects_in_signalling':
   apply (simp add: set_mrs_def split_def set_object_def)
   apply (wp gets_the_wp get_wp put_wp 
        | wpc
-       | simp split del: split_if
+       | simp split del: if_split
                     add: zipWithM_x_mapM_x split_def store_word_offs_def fun_upd_def[symmetric])+
   apply (rule hoare_post_imp [where Q = "\<lambda>rv. st_tcb_at (op = Structures_A.Running) thread and integrity aag X st"])
    apply simp
   apply (wp mapM_x_wp' dmo_storeWord_respects_ipc [where thread = thread and ep = ep])
    apply (fastforce simp add: set_zip nth_append simp: msg_align_bits msg_max_length_def
-                       split: split_if_asm)
+                       split: if_split_asm)
    apply wp
   apply (rule impI)
   apply (subgoal_tac "\<forall>c'. integrity aag X st
@@ -382,7 +382,7 @@ lemma lookup_ipc_buffer_ptr_range:
   apply (drule get_tcb_SomeD)+
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def case_bool_if
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (erule integrity_obj.cases, simp_all add: get_tcb_def vm_read_write_def)
   apply auto
   done
@@ -699,10 +699,10 @@ next
   thus ?case 
     apply (cases m)
     apply (clarsimp simp add: Let_def split_def whenE_def
-                    cong: if_cong list.case_cong split del: split_if)
+                    cong: if_cong list.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp eb [OF nN] hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift
-           | assumption | simp split del: split_if)+
+           | assumption | simp split del: if_split)+
    
       apply (rule cap_insert_assume_null)
       apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at)
@@ -721,7 +721,7 @@ next
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         ex_cte_cap_to_cnode_always_appropriate_strg
                         real_cte_tcb_valid caps_of_state_valid
-             split del: split_if)
+             split del: if_split)
   apply (clarsimp simp: remove_rights_def caps_of_state_valid
                         neq_Nil_conv cte_wp_at_caps_of_state
                         imp_conjR[symmetric] cap_master_cap_masked_as_full
@@ -817,7 +817,7 @@ lemma remove_rights_clas [simp]:
 lemma remove_rights_cap_auth_conferred_subset:
   "x \<in> cap_auth_conferred (remove_rights R cap) \<Longrightarrow> x \<in> cap_auth_conferred cap"
   unfolding remove_rights_def cap_rights_update_def 
-  apply (clarsimp split: split_if_asm cap.splits arch_cap.splits 
+  apply (clarsimp split: if_split_asm cap.splits arch_cap.splits
     simp: cap_auth_conferred_def vspace_cap_rights_to_auth_def acap_rights_update_def 
           validate_vm_rights_def vm_read_only_def vm_kernel_only_def)
   apply (erule set_mp [OF cap_rights_to_auth_mono, rotated], clarsimp)+
@@ -857,7 +857,7 @@ next
   case (Cons c caps')
   show ?case using Cons.prems
     apply (cases c)
-    apply (simp split del: split_if cong: if_cong)
+    apply (simp split del: if_split cong: if_cong)
     apply (rule hoare_pre)
     apply (wp)
     apply (elim conjE, erule subst, rule Cons.hyps)
@@ -866,7 +866,7 @@ next
     apply (fastforce dest: in_set_dropD in_set_dropD[where n=1, folded tl_drop_1])
     apply (wp cap_insert_pas_refined hoare_vcg_ball_lift hoare_whenE_wp hoare_drop_imps
       derive_cap_aag_caps 
-      | simp split del: split_if add: if_apply_def2)+
+      | simp split del: if_split add: if_apply_def2)+
     done
 qed
 
@@ -1018,7 +1018,7 @@ lemma send_ipc_pas_refined:
      apply (wp set_thread_state_pas_refined)
      apply wpc
      apply (wp set_thread_state_pas_refined)
-     apply (simp add: hoare_if_r_and split del:split_if)
+     apply (simp add: hoare_if_r_and split del:if_split)
          apply (rename_tac list x xs recv_state)
          apply (rule_tac Q="\<lambda>rv. pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))"
                          in hoare_strengthen_post[rotated])
@@ -1115,7 +1115,7 @@ lemma receive_ipc_base_pas_refined:
   apply (clarsimp simp: thread_get_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
    apply (wp static_imp_wp set_thread_state_pas_refined get_endpoint_wp
-        | wpc | simp add: thread_get_def do_nbrecv_failed_transfer_def split del: split_if)+
+        | wpc | simp add: thread_get_def do_nbrecv_failed_transfer_def split del: if_split)+
         apply (simp add:aag_cap_auth_def clas_no_asid cli_no_irqs)
         apply (rename_tac list sss data)
         apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> (sender_can_grant data \<longrightarrow> is_subject aag (hd list))"
@@ -1254,7 +1254,7 @@ lemma copy_mrs_integrity_autarch:
             store_word_offs_integrity_autarch [where aag = aag and thread = receiver]
        | wpc
        | simp
-       | fastforce simp: length_msg_registers msg_align_bits split: split_if_asm)+
+       | fastforce simp: length_msg_registers msg_align_bits split: if_split_asm)+
   done
 
 (* FIXME: Why was the [wp] attribute clobbered by interpretation of the Arch locale? *)
@@ -1520,7 +1520,7 @@ lemma auth_ipc_buffers_mem_Write:
   apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def
                         vspace_cap_rights_to_auth_def vm_read_write_def
                         is_page_cap_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (auto dest: ipcframe_subset_page)
   done
 
@@ -1550,7 +1550,7 @@ lemma integrity_tcb_in_ipc_final:
      apply (simp add: tcb_states_of_state_def get_tcb_def)
     apply (simp add: tcb_states_of_state_def get_tcb_def)
    apply (simp add: auth_ipc_buffers_def get_tcb_def
-     split: option.split_asm cap.split_asm arch_cap.split_asm split_if_asm  split del: split_if)
+     split: option.split_asm cap.split_asm arch_cap.split_asm if_split_asm  split del: if_split)
   apply simp
   done
 
@@ -1594,7 +1594,7 @@ lemma as_user_respects_in_ipc:
   apply (simp add: as_user_def set_object_def)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp'
        | wpc
-       | simp split del: split_if add: zipWithM_x_mapM_x split_def store_word_offs_def)+
+       | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def)+
   apply (clarsimp simp: st_tcb_def2 tcb_at_def fun_upd_def[symmetric])
   apply (auto elim: update_tcb_context_in_ipc)
   done
@@ -1681,7 +1681,7 @@ lemma set_original_respects_in_ipc_autarch:
   apply (clarsimp simp: integrity_tcb_in_ipc_def)
   apply (simp add: integrity_def
                    tcb_states_of_state_def get_tcb_def map_option_def
-                 split del: split_if cong: if_cong)
+                 split del: if_split cong: if_cong)
   apply simp
   apply (clarsimp simp: integrity_cdt_def)
   done
@@ -1695,7 +1695,7 @@ lemma update_cdt_fun_upd_respects_in_ipc_autarch:
   apply wp
   apply (clarsimp simp: integrity_tcb_in_ipc_def integrity_def
                         tcb_states_of_state_def get_tcb_def
-             split del: split_if cong: if_cong)
+             split del: if_split cong: if_cong)
   apply simp
   apply (clarsimp simp add: integrity_cdt_def)
   done
@@ -1721,13 +1721,13 @@ lemma cap_insert_ext_integrity_in_ipc:
           src_slot dest_slot src_p dest_p) 
        \<lbrace>\<lambda>yd. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
   apply (rule hoare_gen_asm)+
-  apply (simp add: integrity_tcb_in_ipc_def split del: split_if)
+  apply (simp add: integrity_tcb_in_ipc_def split del: if_split)
   apply (unfold integrity_def)
   apply (simp only: integrity_cdt_list_as_list_integ)
   apply (rule hoare_lift_Pf[where f="ekheap"])
    apply (clarsimp simp: integrity_tcb_in_ipc_def integrity_def
                          tcb_states_of_state_def get_tcb_def
-              split del: split_if cong: if_cong)
+              split del: if_split cong: if_cong)
    apply wp
    apply (rule hoare_vcg_conj_lift)
     apply (simp add: list_integ_def del: split_paired_All)
@@ -1748,7 +1748,7 @@ lemma cap_inserintegrity_in_ipc_autarch:
              update_cdt_fun_upd_respects_in_ipc_autarch
              set_cap_respects_in_ipc_autarch get_cap_wp
              cap_insert_ext_integrity_in_ipc
-              | simp split del: split_if)+
+              | simp split del: if_split)+
   done
 
 lemma transfer_caps_loop_respects_in_ipc_autarch:
@@ -1812,7 +1812,7 @@ lemma copy_mrs_respects_in_ipc:
             mapM_wp'
             hoare_vcg_const_imp_lift hoare_vcg_all_lift
        | wpc
-       | fastforce split: split_if_asm simp: length_msg_registers)+
+       | fastforce split: if_split_asm simp: length_msg_registers)+
   done
 
 lemma do_normal_transfer_respects_in_ipc:
@@ -1849,9 +1849,9 @@ lemma set_mrs_respects_in_ipc:
   apply (simp add: set_mrs_def set_object_def)
   apply (wp mapM_x_wp' store_word_offs_respects_in_ipc
        | wpc
-       | simp split del: split_if add: zipWithM_x_mapM_x split_def)+
+       | simp split del: if_split add: zipWithM_x_mapM_x split_def)+
    apply (clarsimp simp add: set_zip nth_append simp: msg_align_bits msg_max_length_def
-                   split: split_if_asm)
+                   split: if_split_asm)
    apply (simp add: length_msg_registers)
    apply arith
    apply simp
@@ -1886,7 +1886,7 @@ lemma lookup_ipc_buffer_ptr_range_in_ipc:
   apply (drule get_tcb_SomeD)
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def case_bool_if
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (erule tcb_in_ipc.cases, simp_all)
    apply (clarsimp simp: get_tcb_def vm_read_write_def)
   apply (clarsimp simp: get_tcb_def vm_read_write_def)
@@ -2039,7 +2039,7 @@ lemma send_ipc_integrity_autarch:
           apply simp+
           apply (wp set_thread_state_integrity_autarch thread_get_wp' do_ipc_transfer_integrity_autarch
                     hoare_vcg_all_lift hoare_drop_imps set_endpoinintegrity
-                   | wpc | simp add: get_thread_state_def split del: split_if
+                   | wpc | simp add: get_thread_state_def split del: if_split
                                 del: hoare_post_taut hoare_True_E_R)+
    apply clarsimp
    apply (intro conjI)
@@ -2139,7 +2139,7 @@ lemma send_fault_ipc_pas_refined:
             hoare_vcg_conj_lift hoare_vcg_ex_lift hoare_vcg_all_lift
        | wpc
        | rule hoare_drop_imps
-       | simp add: split_def del: split_if)+
+       | simp add: split_def del: if_split)+
   apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s
                           \<and> is_subject aag (cur_thread s)
                           \<and> valid_objs s \<and> sym_refs (state_refs_of s)
@@ -2281,7 +2281,7 @@ lemma do_reply_transfer_pas_refined:
   apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined
             thread_set_pas_refined_triv K_valid 
        | wpc 
-       | simp add: thread_get_def split del: split_if)+
+       | simp add: thread_get_def split del: if_split)+
   (* otherwise simp does too much *)
   apply (rule hoare_strengthen_post, rule gts_inv)
    apply (rule impI)
@@ -2303,7 +2303,7 @@ lemma do_reply_transfer_respects:
             do_ipc_transfer_integrity_autarch do_ipc_transfer_pas_refined
             thread_set_integrity_autarch
             handle_fault_reply_respects
-       | wpc | simp split del: split_if)+
+       | wpc | simp split del: if_split)+
   apply (clarsimp simp: tcb_at_def invs_mdb invs_valid_objs)
   done
 

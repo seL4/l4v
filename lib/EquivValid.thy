@@ -329,7 +329,7 @@ lemma if_ev:
   assumes "b \<Longrightarrow> equiv_valid I A B P f"
   assumes "\<not> b \<Longrightarrow> equiv_valid I A B Q g"
   shows "equiv_valid I A B (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not>b \<longrightarrow> Q s)) (if b then f else g)"
-  apply (clarsimp split: split_if)
+  apply (clarsimp split: if_split)
   using assms by blast
 
 lemmas if_ev_pre = equiv_valid_guard_imp[OF if_ev]
@@ -984,7 +984,7 @@ lemma if_evrv:
   assumes "b \<Longrightarrow> equiv_valid_rv_inv I A R P f"
   assumes "\<not> b \<Longrightarrow> equiv_valid_rv_inv I A R Q g"
   shows "equiv_valid_rv_inv I A R (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not>b \<longrightarrow> Q s)) (if b then f else g)"
-  apply (clarsimp split: split_if)
+  apply (clarsimp split: if_split)
   using assms by blast
 
 end

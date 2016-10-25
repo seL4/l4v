@@ -21,9 +21,9 @@ context Arch begin global_naming ARM_A (*FIXME: arch_split*)
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (ARM_A.ASIDPool pool)) p s"
   apply (clarsimp simp: obj_at_def a_type_def)
-  apply (case_tac ko, simp_all split: split_if_asm)
+  apply (case_tac ko, simp_all split: if_split_asm)
   apply (rename_tac arch_kernel_obj)
-  apply (case_tac arch_kernel_obj, auto split: split_if_asm)
+  apply (case_tac arch_kernel_obj, auto split: if_split_asm)
   done
 
 
@@ -189,13 +189,13 @@ lemma set_asid_pool_corres:
        prefer 5
        apply (rule get_object_sp)
       apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
-      apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)[1]
+      apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)[1]
      apply wp
      apply (clarsimp simp: obj_at_def a_type_def)
-     apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)[1]
+     apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)[1]
     apply (rule no_fail_pre, wp)
     apply (clarsimp simp: simp: obj_at_def a_type_def)
-    apply (auto split: Structures_A.kernel_object.splits arch_kernel_obj.splits split_if_asm)[1]
+    apply (auto split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)[1]
    apply (clarsimp simp: obj_at_def exs_valid_def get_object_def exec_gets)
    apply (simp add: return_def)
   apply (rule no_fail_pre, wp)
@@ -238,7 +238,7 @@ lemma get_pde_corres:
   apply (simp add: bind_assoc exec_gets)
   apply (clarsimp simp: pde_at_def obj_at_def)
   apply (clarsimp simp add: a_type_def return_def 
-                  split: split_if_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
+                  split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
   apply (clarsimp simp: bind_def)
@@ -260,7 +260,7 @@ lemma aligned_distinct_relation_pde_atI'[elim]:
         \<Longrightarrow> pde_at' p s'"
   apply (clarsimp simp add: pde_at_def obj_at_def a_type_def)
   apply (simp split: Structures_A.kernel_object.split_asm
-                     split_if_asm arch_kernel_obj.split_asm)
+                     if_split_asm arch_kernel_obj.split_asm)
   apply (drule(1) pspace_relation_absD)
   apply (clarsimp simp: other_obj_relation_def)
   apply (drule_tac x="ucast ((p && mask pd_bits) >> 2)"
@@ -351,7 +351,7 @@ lemma get_master_pde_corres:
   -- "master_pde = InvaliatePTE"
        apply (clarsimp simp add: a_type_def return_def get_pd_def
                   bind_def get_pde_def get_object_def gets_def get_def
-                  split: split_if_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
+                  split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
        apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
        apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
        apply (clarsimp simp:state_relation_def)
@@ -378,7 +378,7 @@ lemma get_master_pde_corres:
   -- "master_pde = PageTablePDE"
       apply (clarsimp simp add: a_type_def return_def get_pd_def
         bind_def get_pde_def get_object_def gets_def get_def
-        split: split_if_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
+        split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
       apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
       apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
       apply (clarsimp simp:state_relation_def)
@@ -402,7 +402,7 @@ lemma get_master_pde_corres:
   -- "master_pde = SectionPDE"
      apply (clarsimp simp add: a_type_def return_def get_pd_def
        bind_def get_pde_def get_object_def gets_def get_def
-       split: split_if_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
+       split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
      apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
      apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
      apply (clarsimp simp:state_relation_def)
@@ -426,7 +426,7 @@ lemma get_master_pde_corres:
   -- "master_pde = SuperSectionPDE"
     apply (clarsimp simp add: a_type_def return_def get_pd_def
       bind_def get_pde_def get_object_def gets_def get_def
-      split: split_if_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
+      split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
     apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
     apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
     apply (clarsimp simp:state_relation_def)
@@ -509,7 +509,7 @@ lemma get_pte_corres:
   apply (simp add: bind_assoc exec_gets)
   apply (clarsimp simp: obj_at_def pte_at_def)
   apply (clarsimp simp add: a_type_def return_def 
-                  split: split_if_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
+                  split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
   apply (clarsimp simp: bind_def)
@@ -543,7 +543,7 @@ lemma aligned_distinct_relation_pte_atI'[elim]:
         \<Longrightarrow> pte_at' p s'"
   apply (clarsimp simp add: pte_at_def obj_at_def a_type_def)
   apply (simp split: Structures_A.kernel_object.split_asm
-                     split_if_asm arch_kernel_obj.split_asm)
+                     if_split_asm arch_kernel_obj.split_asm)
   apply (drule(1) pspace_relation_absD)
   apply (clarsimp simp: other_obj_relation_def)
   apply (drule_tac x="ucast ((p && mask pt_bits) >> 2)"
@@ -621,7 +621,7 @@ lemma get_master_pte_corres:
   -- "master_pde = InvaliatePTE"
       apply (clarsimp simp add: a_type_def return_def get_pt_def
                   bind_def get_pte_def get_object_def gets_def get_def
-                  split: split_if_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
+                  split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
       apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
       apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
       apply (clarsimp simp:state_relation_def)
@@ -645,7 +645,7 @@ lemma get_master_pte_corres:
   -- "master_pde = LargePagePTE"
      apply (clarsimp simp add: a_type_def return_def get_pt_def
        bind_def get_pte_def get_object_def gets_def get_def
-       split: split_if_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
+       split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
      apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
      apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
      apply (clarsimp simp:state_relation_def)
@@ -677,7 +677,7 @@ lemma get_master_pte_corres:
   -- "master_pde = SmallPagePTE"
     apply (clarsimp simp add: a_type_def return_def get_pt_def
                bind_def get_pte_def get_object_def gets_def get_def
-            split: split_if_asm Structures_A.kernel_object.splits
+            split: if_split_asm Structures_A.kernel_object.splits
                    arch_kernel_obj.splits)
    apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
    apply (clarsimp simp: in_magnitude_check objBits_simps
@@ -769,7 +769,7 @@ lemma set_pd_corres:
   apply (clarsimp simp: put_def)
   apply (clarsimp simp: state_relation_def mask_pd_bits_inner_beauty)
   apply (rule conjI)
-   apply (clarsimp simp: pspace_relation_def split del: split_if)
+   apply (clarsimp simp: pspace_relation_def split del: if_split)
    apply (rule conjI)
     apply (subst pspace_dom_update, assumption)
      apply (simp add: a_type_def)
@@ -804,8 +804,8 @@ lemma set_pd_corres:
       apply (drule test_bit_size)
       apply (clarsimp simp: word_size pd_bits_def pageBits_def)
       apply arith
-     apply (simp split: split_if_asm)
-    apply (simp split: split_if_asm)
+     apply (simp split: if_split_asm)
+    apply (simp split: if_split_asm)
    apply (simp add: other_obj_relation_def 
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule conjI)
@@ -847,7 +847,7 @@ lemma set_pt_corres:
   apply (clarsimp simp: put_def)
   apply (clarsimp simp: state_relation_def mask_pt_bits_inner_beauty)
   apply (rule conjI)
-   apply (clarsimp simp: pspace_relation_def split del: split_if)
+   apply (clarsimp simp: pspace_relation_def split del: if_split)
    apply (rule conjI)
     apply (subst pspace_dom_update, assumption)
      apply (simp add: a_type_def)
@@ -880,8 +880,8 @@ lemma set_pt_corres:
        apply (clarsimp simp: word_size pt_bits_def pageBits_def)
        apply arith
       apply simp
-     apply (simp split: split_if_asm)
-    apply (simp split: split_if_asm)
+     apply (simp split: if_split_asm)
+    apply (simp split: if_split_asm)
    apply (simp add: other_obj_relation_def 
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule conjI)
@@ -909,13 +909,13 @@ lemma store_pde_corres:
     apply (clarsimp simp: exs_valid_def get_pd_def get_object_def exec_gets bind_assoc
                           obj_at_def pde_at_def)
     apply (clarsimp simp: a_type_def return_def 
-                    split: Structures_A.kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                    split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
    apply wp
    apply clarsimp
   apply (clarsimp simp: get_pd_def obj_at_def no_fail_def pde_at_def
                         get_object_def bind_assoc exec_gets)
   apply (clarsimp simp: a_type_def return_def 
-                  split: Structures_A.kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                  split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
   done
 
 lemma store_pde_corres':
@@ -937,13 +937,13 @@ lemma store_pte_corres:
     apply (clarsimp simp: exs_valid_def get_pt_def get_object_def
                           exec_gets bind_assoc obj_at_def pte_at_def)
     apply (clarsimp simp: a_type_def return_def 
-                    split: Structures_A.kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                    split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
    apply wp
    apply clarsimp
   apply (clarsimp simp: get_pt_def obj_at_def pte_at_def no_fail_def
                         get_object_def bind_assoc exec_gets)
   apply (clarsimp simp: a_type_def return_def 
-                  split: Structures_A.kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                  split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
   done
 
 lemma store_pte_corres':
@@ -1208,7 +1208,7 @@ lemma arch_deriveCap_inv:
   "\<lbrace>P\<rbrace> Arch.deriveCap arch_cap u \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp      add: ARM_H.deriveCap_def
                   cong: if_cong
-             split del: split_if)
+             split del: if_split)
   apply (rule hoare_pre, wp undefined_valid)
   apply (cases u, simp_all add: isCap_defs)
   done
@@ -1219,7 +1219,7 @@ lemma arch_deriveCap_valid:
    \<lbrace>\<lambda>rv. valid_cap' (ArchObjectCap rv)\<rbrace>,-"
   apply (simp      add: ARM_H.deriveCap_def
                   cong: if_cong
-             split del: split_if)
+             split del: if_split)
   apply (rule hoare_pre, wp undefined_validE_R)
   apply (cases arch_cap, simp_all add: isCap_defs)
   apply (simp add: valid_cap'_def capAligned_def
@@ -1233,7 +1233,7 @@ lemma arch_derive_corres:
          (arch_derive_cap c) 
          (Arch.deriveCap slot c')"
   unfolding arch_derive_cap_def ARM_H.deriveCap_def Let_def
-  apply (cases c, simp_all add: isCap_simps split: option.splits split del: split_if)
+  apply (cases c, simp_all add: isCap_simps split: option.splits split del: if_split)
       apply (rule corres_noopE, wp, simp, rule no_fail_pre, wp)+
    apply clarsimp
    apply (rule corres_noopE, wp, simp, rule no_fail_pre, wp)
@@ -1413,7 +1413,7 @@ lemma find_pd_for_asid_corres'':
        apply (clarsimp simp: obj_at_def no_0_obj'_def state_relation_def
                              pspace_relation_def a_type_def)
        apply (simp split: Structures_A.kernel_object.splits
-                          arch_kernel_obj.splits split_if_asm)
+                          arch_kernel_obj.splits if_split_asm)
        apply (drule_tac f="\<lambda>S. 0 \<in> S" in arg_cong)
        apply (simp add: pspace_dom_def)
        apply (drule iffD1, rule rev_bexI, erule domI)

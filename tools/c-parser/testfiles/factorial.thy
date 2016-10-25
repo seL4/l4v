@@ -108,7 +108,7 @@ lemma (in factorial_global_addresses) mem_safe_alloc:
   apply(unfold alloc_body_def)
   apply(subst mem_safe_restrict)
   apply(rule intra_mem_safe)
-   apply(simp_all add: restrict_map_def split: split_if_asm)
+   apply(simp_all add: restrict_map_def split: if_split_asm)
   apply(auto simp: whileAnno_def comp_def hrs_comm split_def mono_guard_def)
   done
 
@@ -132,7 +132,7 @@ lemma (in alloc_spec) alloc_spec':
   apply(insert alloc_spec)
   apply(rule_tac x=\<sigma> in spec)
   apply(rule sep_frame_alloc)
-     apply(clarsimp simp: sep_app_def split: split_if_asm)
+     apply(clarsimp simp: sep_app_def split: if_split_asm)
     apply simp+
   done
 
@@ -143,7 +143,7 @@ lemma (in factorial_global_addresses) mem_safe_free:
   apply(subst mem_safe_restrict)
   apply(auto simp: whileAnno_def)
   apply(rule intra_mem_safe)
-   apply(auto simp: restrict_map_def split: split_if_asm)
+   apply(auto simp: restrict_map_def split: if_split_asm)
   done
 
 lemma (in factorial_global_addresses) sep_frame_free:
@@ -166,7 +166,7 @@ lemma (in free_spec) free_spec':
   apply(insert free_spec)
   apply(rule_tac x=\<sigma> in spec)
   apply(rule sep_frame_free)
-     apply(clarsimp simp: sep_app_def split: split_if_asm)
+     apply(clarsimp simp: sep_app_def split: if_split_asm)
     apply simp+
   done
 
@@ -337,7 +337,7 @@ lemma (in factorial_global_addresses) mem_safe_factorial:
    apply(drule_tac t="Some C" in sym)
    apply(simp_all add: restrict_map_def call_def block_def whileAnno_def
                        free_body_def alloc_body_def factorial_body_def creturn_def
-                split: split_if_asm option.splits)
+                split: if_split_asm option.splits)
   apply((erule disjE)?, simp,
         (thin_tac "C=x" for x, (thin_tac "\<Gamma> x = y" for x y)+,
         force simp: intra_sc)?)+

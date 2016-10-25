@@ -557,7 +557,7 @@ lemma ccorres_special_trim_guard_DontReach_pis:
 end
 
 lemmas ccorres_boilerplace_simp_dels = 
-  Collect_const -- "Avoid getting an implication due to split_if.  Should probably just remove split_if"
+  Collect_const -- "Avoid getting an implication due to if_split.  Should probably just remove if_split"
 
 lemma ccorres_introduce_UNIV_Int_when_needed:
   "ccorres_underlying sr Gamm r xf ar axf P (UNIV \<inter> {x. Q x}) hs a c
@@ -1359,7 +1359,7 @@ lemma ceqv_xpres_rewrite_set_rules:
   "\<lbrakk> ceqv_xpres_rewrite_set xf v S S''; ceqv_xpres_rewrite_set xf v S' S''' \<rbrakk>
      \<Longrightarrow> ceqv_xpres_rewrite_set xf v (if G then S else S') (if G then S'' else S''')"
   by (simp_all add: ceqv_xpres_rewrite_set_def ceqv_xpres_rewrite_basic_def
-             split: split_if)
+             split: if_split)
 
 lemma ceqv_xpres_eq_If_rules:
   "ceqv_xpres_eq_If False x y y"
@@ -1467,7 +1467,7 @@ lemma ceqv_xpres_While_simpl_sequence:
               [0 ..< (LEAST n. \<not> CP (v + of_nat n
                   * (THE offs. \<forall>s v. (xf' (simpl_final_basic (c' v) s) - v = offs))))])
           else While {s. CP (xf' s)} c)"
-  apply (split split_if, simp add: ceqv_xpres_def[where c=c and c'=c for c])
+  apply (split if_split, simp add: ceqv_xpres_def[where c=c and c'=c for c])
   apply (clarsimp simp: ceqv_xpres_eq_ceqv)
   apply (rule ceqv_trans)
    apply (rule_tac n="LEAST n. \<not> CP (v + of_nat n * offs)"
@@ -1993,7 +1993,7 @@ fun tac ctxt =
             ceqv_Seq_Skip_cases ceqv_Guard_UNIV[THEN iffD2]
             Guard_ceqv[OF impI, OF refl] ceqv_refl
             finish_ceqv_Seq_Skip_cases} 1
-        ORELSE (resolve_tac ctxt [@{thm xpresI}] THEN' simp_tac (ctxt |> Splitter.del_split @{thm "split_if"})) 1
+        ORELSE (resolve_tac ctxt [@{thm xpresI}] THEN' simp_tac (ctxt |> Splitter.del_split @{thm "if_split"})) 1
     ))
   THEN simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms com.case}) 1
 *}

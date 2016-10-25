@@ -360,7 +360,7 @@ lemma op0_legal:
 lemma execute_op0_safe:
   "step op0 s0 \<subseteq> ({s0, s1})"
   by (fastforce simp: op0_def step_def createOperation_def s0_def s1_def
-                 split: split_if_asm)
+                 split: if_split_asm)
 
 lemma execute_op0_live:
   "step op0 s0 \<supseteq> ({s0, s1})"
@@ -391,7 +391,7 @@ lemma execute_op1_safe:
   "step op1 s1 \<subseteq> ({s1, s2})"
   by (clarsimp simp: op1_def step_def grantOperation_def diminish_def
                      s1_def s2_def create_cap_def null_entity_def
-              split: split_if_asm)
+              split: if_split_asm)
 
 lemma execute_op1_live:
   "step op1 s1 \<supseteq> ({s1, s2})"
@@ -423,7 +423,7 @@ lemma execute_op2_safe:
   apply clarsimp
   apply (rule ext)
   apply (auto simp: op2_def step_def grantOperation_def diminish_def s2_def s3_def full_cap_def all_rights_def
-             split: split_if_asm)
+             split: if_split_asm)
   done
 
 lemma execute_op2_live:
@@ -453,7 +453,7 @@ lemma execute_op3_safe:
   "step op3 s3 \<subseteq> ({s3, s4})"
   apply (clarsimp, rule ext)
   apply (auto simp: op3_def step_def createOperation_def s3_def s4_def
-             split: split_if_asm)
+             split: if_split_asm)
   done
 
 lemma execute_op3_live:
@@ -483,7 +483,7 @@ lemma execute_op4_safe:
   apply (clarsimp, rule ext)
   apply (auto simp: s4_def s5_def op4_def step_def takeOperation_def
                     diminish_def all_rights_def write_cap_def
-             split: split_if_asm)
+             split: if_split_asm)
   done
 
 lemma execute_op4_live:
@@ -513,7 +513,7 @@ lemma execute_op5_safe:
   "step op5 s5 \<subseteq> ({s5, s6})"
   apply (clarsimp, rule ext)
   apply (auto simp: s5_def s6_def op5_def step_def copyOperation_def diminish_def all_rights_def read_cap_def
-             split: split_if_asm)
+             split: if_split_asm)
   done
 
 lemma execute_op5_live:
@@ -542,7 +542,7 @@ lemma execute_op6_safe:
   "step op6 s6 \<subseteq> ({s6, s7})"
   apply (clarsimp, rule ext)
   apply (auto simp: s6_def s7_def s4_def op7_def step_def revokeOperation_def
-          split: split_if_asm)
+          split: if_split_asm)
   oops
 
 lemma execute_op6_live:
@@ -571,7 +571,7 @@ lemma execute_op7_safe:
   "step op7 s7 \<subseteq> ({s7, s8})"
   apply (clarsimp, rule ext)
   apply (auto simp: s7_def s8_def s4_def op7_def step_def createOperation_def
-             split: split_if_asm)
+             split: if_split_asm)
   done
 
 lemma execute_op7_live:
@@ -627,14 +627,14 @@ lemma execute_op8:
 lemma op9_legal:
   "legal op9 s9"
   apply (simp add: op9_def)
-  apply (fastforce simp: s9_def e0_caps_def null_entity_def split:split_if_asm)
+  apply (fastforce simp: s9_def e0_caps_def null_entity_def split:if_split_asm)
   done
 
 lemma execute_op9_safe:
   "step op9 s9 \<subseteq> ({s9, s10})"
   apply (clarsimp, rule ext)
   apply (auto simp: s9_def s10_def s4_def op9_def step_def destroyOperation_def
-             split: split_if_asm)
+             split: if_split_asm)
   done
 
 lemma execute_op9_live:
@@ -667,7 +667,7 @@ lemma execute_op10_safe:
   "step op10 s10 \<subseteq> ({s10, s})"
   apply (clarsimp, rule ext)
   apply (auto simp: s10_def op10_def step_def removeSetOperation_def s4_def s_def
-              split: split_if_asm)
+              split: if_split_asm)
   done
 
 lemma execute_op10_live:
@@ -737,7 +737,7 @@ lemma store_connected_direct_s:
   by (fastforce simp: store_connected_direct_def s_def e0_caps_def
                       full_cap_def all_rights_def create_cap_def null_entity_def
                       store_connected_direct_s_helper1 store_connected_direct_s_helper2
-               split: split_if_asm)
+               split: if_split_asm)
 
 (*********************************)
 (*        store_connected        *)

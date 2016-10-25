@@ -107,7 +107,7 @@ lemma byte_to_word_heap_upd_outside_range:
                           intvl_inter_le [where k=0 and ka=2, simplified, OF refl]
                           intvl_inter_le [where k=0 and ka=1, simplified, OF refl]
                           intvl_inter_le [where k=0 and ka=0, simplified, OF refl]
-                   split: split_if_asm)
+                   split: if_split_asm)
   done
 
 lemma intvl_range_conv:
@@ -175,7 +175,7 @@ lemma update_ti_t_acc_foo:
                 \<Longrightarrow> acc (update_ti_pair a ys v) = update_ti_pair (f a) ys (acc v);
               \<And>a. size_td_pair (f a) = size_td_pair a \<rbrakk> \<Longrightarrow>
        \<forall>xs. acc (update_ti_list_t adjs xs v) = update_ti_list_t (map f adjs) xs (acc v)"
-  apply (simp add: update_ti_list_t_def size_td_list_map2 split: split_if)
+  apply (simp add: update_ti_list_t_def size_td_list_map2 split: if_split)
   apply (induct adjs)
    apply simp
   apply clarsimp
@@ -467,7 +467,7 @@ proof (intro allI impI)
             \<Longrightarrow> update_ti_pair (map_td_pair f a) ys (Cons v) = Cons (update_ti_pair a ys v) \<rbrakk>
       \<Longrightarrow> \<forall>xs. update_ti_list_t (map_td_list f adjs) xs v
      = Cons (update_ti_list_t adjs xs v')"
-    apply (simp add: update_ti_list_t_def split: split_if)
+    apply (simp add: update_ti_list_t_def split: if_split)
     apply (induct_tac adjs)
      apply simp
     apply clarsimp
@@ -669,7 +669,7 @@ proof (intro allI impI)
      apply (rule ext)
      apply clarsimp
      apply (case_tac y)
-     apply (clarsimp split: split_if)
+     apply (clarsimp split: if_split)
     apply (rule cmap_relationI)
     apply (clarsimp simp: dom_heap_to_device_data cmap_relation_def dom_if_Some
                   intro!: Un_absorb1 [symmetric])
@@ -776,7 +776,7 @@ proof (intro allI impI)
             \<Longrightarrow> update_ti_pair (map_td_pair f a) ys (Cons v) = Cons (update_ti_pair a ys v) \<rbrakk>
       \<Longrightarrow> \<forall>xs. update_ti_list_t (map_td_list f adjs) xs v
      = Cons (update_ti_list_t adjs xs v')"
-    apply (simp add: update_ti_list_t_def split: split_if)
+    apply (simp add: update_ti_list_t_def split: if_split)
     apply (induct_tac adjs)
      apply simp
     apply clarsimp
@@ -978,7 +978,7 @@ proof (intro allI impI)
      apply (rule ext)
      apply clarsimp
      apply (case_tac y)
-     apply (clarsimp split: split_if)
+     apply (clarsimp split: if_split)
     apply (rule cmap_relationI)
     apply (clarsimp simp: dom_heap_to_user_data cmap_relation_def dom_if_Some
                    intro!: Un_absorb1 [symmetric])
@@ -1068,12 +1068,12 @@ proof -
      apply (rule kernel_state.fold_congs[OF refl refl], simp only:)
      apply (rule machine_state.fold_congs[OF refl refl], simp only:)
      apply (cut_tac p=ptr in unat_mask_2_less_4)
-     apply (simp del: list_update.simps split del: split_if
+     apply (simp del: list_update.simps split del: if_split
                  add: word_rsplit_rcat_size word_size nth_list_update
                       horrible_helper)
      apply (subgoal_tac "(ptr && ~~ mask 2) + (ptr && mask 2) = ptr")
       apply (subgoal_tac "(ptr && mask 2) \<in> {0, 1, 2, 3}")
-       apply (auto split: split_if simp: fun_upd_idem)[1]
+       apply (auto split: if_split simp: fun_upd_idem)[1]
       apply (simp add: word_unat.Rep_inject[symmetric]
                   del: word_unat.Rep_inject)
       apply arith
@@ -1107,7 +1107,7 @@ proof -
      apply (rule if_cong)
        apply assumption
       apply simp
-     apply (clarsimp simp: nth_list_update split: split_if)
+     apply (clarsimp simp: nth_list_update split: if_split)
      apply (frule_tac ptr=x in memory_cross_over, simp+)
       apply (clarsimp simp: pointerInUserData_def pointerInDeviceData_def)
       apply (cut_tac p="ptr && ~~ mask 2" and n=2 and d="x - (ptr && ~~ mask 2)"
@@ -1142,11 +1142,11 @@ lemma storeWord_ccorres':
      (Basic (\<lambda>s. globals_update (t_hrs_'_update
            (hrs_mem_update (heap_update (ptr' s) (val' s)))) s))"
   apply (clarsimp simp: storeWordUser_def simp del: Collect_const
-             split del: split_if)
+             split del: if_split)
   apply (rule ccorres_from_vcg_nofail)
   apply (rule allI)
   apply (rule conseqPre, vcg)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
   apply (rule bexI[rotated])
    apply (subst in_doMachineOp)
    apply (fastforce simp: storeWord_def in_monad is_aligned_mask)

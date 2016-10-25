@@ -279,7 +279,7 @@ lemma setQueue_no_orphans_enq:
   unfolding setQueue_def
   apply wp
   apply (clarsimp simp: no_orphans_def all_queued_tcb_ptrs_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply fastforce
   done
 
@@ -290,7 +290,7 @@ lemma setQueue_almost_no_orphans_enq:
   unfolding setQueue_def
   apply wp
   apply (clarsimp simp: no_orphans_def almost_no_orphans_def all_queued_tcb_ptrs_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply fastforce
   done
 
@@ -301,7 +301,7 @@ lemma setQueue_almost_no_orphans_enq_lift:
   unfolding setQueue_def
   apply wp
   apply (clarsimp simp: almost_no_orphans_def all_queued_tcb_ptrs_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply fastforce
   done
 
@@ -1162,8 +1162,8 @@ lemma createNewCaps_no_orphans:
    createNewCaps tp ptr n us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (clarsimp simp: createNewCaps_def toAPIType_def
-    split del: split_if cong: option.case_cong)
-  apply (cases tp, simp_all split del: split_if)
+    split del: if_split cong: option.case_cong)
+  apply (cases tp, simp_all split del: if_split)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type, simp_all)
             apply (wp mapM_x_wp' threadSet_no_orphans
@@ -1171,7 +1171,7 @@ lemma createNewCaps_no_orphans:
                                     projectKO_opt_tcb isRunning_def isRestart_def
                                     APIType_capBits_def Arch_createNewCaps_def
                                     objBits_if_dev
-                          split del: split_if
+                          split del: if_split
                    | simp add: objBits_simps
                    | fastforce simp:pageBits_def archObjSize_def ptBits_def pdBits_def)+
   done
@@ -1183,11 +1183,11 @@ lemma createObject_no_orphans:
    RetypeDecls_H.createObject tp ptr us d
    \<lbrace>\<lambda>xa. no_orphans\<rbrace>"
   apply (case_tac tp)
-        apply (simp_all add: createObject_def ARM_H.createObject_def split del: split_if)
+        apply (simp_all add: createObject_def ARM_H.createObject_def split del: if_split)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
             apply (simp_all add: ARM_H.createObject_def placeNewObject_def2
-              toAPIType_def split del: split_if)+
+              toAPIType_def split del: if_split)+
             apply (wp threadSet_no_orphans | clarsimp)+
            apply ((wp createObjects'_wp_subst
                   createObjects_no_orphans[where sz = sz] | 
@@ -1213,7 +1213,7 @@ lemma createObject_no_orphans:
                         is_active_thread_state_def makeObject_tcb
                         projectKO_opt_tcb isRunning_def isRestart_def
                         APIType_capBits_def objBits_simps
-                 split: option.splits split del: split_if)+)[1]
+                 split: option.splits split del: if_split)+)[1]
        apply ((wp createObjects'_wp_subst hoare_if
                 createObjects_no_orphans[where sz = sz] | 
         clarsimp simp: placeNewObject_def2 placeNewDataObject_def
@@ -1221,7 +1221,7 @@ lemma createObject_no_orphans:
                        is_active_thread_state_def makeObject_tcb pageBits_def unless_def
                        projectKO_opt_tcb isRunning_def isRestart_def
                        APIType_capBits_def objBits_simps split: option.splits 
-            split del: split_if)+)[4]
+            split del: if_split)+)[4]
    apply ((wp createObjects'_wp_subst
                createObjects_no_orphans[where sz = sz ] | 
        clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
@@ -1315,8 +1315,8 @@ lemma resetUntypedCap_no_orphans [wp]:
   apply (simp add: resetUntypedCap_def)
   apply (rule hoare_pre)
    apply (wp mapME_x_inv_wp preemptionPoint_inv getSlotCap_wp hoare_drop_imps
-     | simp add: unless_def split del: split_if)+
-  apply (clarsimp simp: cte_wp_at_ctes_of split del: split_if)
+     | simp add: unless_def split del: if_split)+
+  apply (clarsimp simp: cte_wp_at_ctes_of split del: if_split)
   apply (frule(1) cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD])
   apply (clarsimp simp: isCap_simps valid_cap_simps' capAligned_def)
   done
@@ -1619,7 +1619,7 @@ lemma finaliseCap_no_orphans [wp]:
    finaliseCap cap final flag
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (simp add: finaliseCap_def Let_def
-              cong: if_cong split del: split_if)
+              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp | clarsimp simp: o_def | wpc)+
   apply (auto simp: valid_cap'_def dest!: isCapDs)
@@ -1854,7 +1854,7 @@ lemma invokeCNode_no_orphans [wp]:
    \<lbrace> \<lambda>rv. no_orphans \<rbrace>"
   unfolding invokeCNode_def
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_unless_wp | wpc | clarsimp split del: split_if)+
+   apply (wp hoare_drop_imps hoare_unless_wp | wpc | clarsimp split del: if_split)+
   apply (simp add: invs_valid_queues')
   done
 
@@ -2051,12 +2051,12 @@ lemma handleInvocation_no_orphans [wp]:
         apply (wp setThreadState_current_no_orphans sts_invs_minor'
                   ct_in_state'_set setThreadState_st_tcb
                   hoare_vcg_all_lift
-                | simp add: split_def split del: split_if)+
+                | simp add: split_def split del: if_split)+
          apply (wps setThreadState_ct')
          apply (wp sts_ksQ
                    setThreadState_current_no_orphans sts_invs_minor'
                    ct_in_state'_set setThreadState_st_tcb
-                 | simp add: split_def split del: split_if)+
+                 | simp add: split_def split del: if_split)+
   apply (clarsimp)
   apply (frule(1) ct_not_ksQ)
   by (auto simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def invs'_def
@@ -2106,7 +2106,7 @@ notes if_cong[cong] shows
    handleRecv isBlocking
    \<lbrace> \<lambda>rv . no_orphans \<rbrace>"
   unfolding handleRecv_def
-  apply (clarsimp simp: whenE_def split del: split_if | wp hoare_drop_imps getNotification_wp | wpc )+ (*takes a while*)
+  apply (clarsimp simp: whenE_def split del: if_split | wp hoare_drop_imps getNotification_wp | wpc )+ (*takes a while*)
      apply (rule_tac Q'="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp_R)
       apply (wp, fastforce)
     apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp)

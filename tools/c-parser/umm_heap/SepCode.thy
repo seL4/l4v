@@ -89,7 +89,7 @@ done
 
 lemma singleton_t_dom [simp]:
   "dom (singleton_t p (v::'a::mem_type)) = s_footprint p"
-apply(auto simp: singleton_t_def lift_state_def s_footprint_intvl split: s_heap_index.splits  split_if_asm option.splits)
+apply(auto simp: singleton_t_def lift_state_def s_footprint_intvl split: s_heap_index.splits  if_split_asm option.splits)
 apply(rule ccontr)
    apply(simp add: ptr_retyp_None)
   prefer 2
@@ -100,7 +100,7 @@ apply(rule ccontr)
  apply(simp add: ptr_retyp_footprint)
 apply(case_tac "a \<in> {ptr_val p..+size_of TYPE('a)}")
  apply(simp add: ptr_retyp_footprint)
- apply(simp add: list_map_eq split: split_if_asm)
+ apply(simp add: list_map_eq split: if_split_asm)
  apply(drule intvlD, clarsimp)
  apply(rule s_footprintI)
   apply(subst (asm) word_unat.eq_norm)
@@ -174,7 +174,7 @@ lemma ptr_retyp_tagd_exc:
   "g (p::'a::mem_type ptr) \<Longrightarrow>
       (g \<turnstile>\<^sub>s p) (lift_state (h, ptr_retyp p empty_htd))"
 apply(simp add: tagd_def ptr_retyp_s_valid lift_state_dom)
-apply(auto simp: lift_state_def split: s_heap_index.splits split_if_asm option.splits)
+apply(auto simp: lift_state_def split: s_heap_index.splits if_split_asm option.splits)
    apply(case_tac "a \<in> {ptr_val p..+size_of TYPE('a)}")
     apply(drule intvlD, clarsimp)
     apply(rule s_footprintI2, simp)
@@ -190,7 +190,7 @@ apply(auto simp: lift_state_def split: s_heap_index.splits split_if_asm option.s
     apply(erule less_trans)
     apply simp
    apply(subst (asm) list_map_eq)
-   apply(clarsimp split: split_if_asm)
+   apply(clarsimp split: if_split_asm)
    apply(erule (1) s_footprintI)
   apply(simp add: ptr_retyp_None)
  apply(case_tac "a \<in> {ptr_val p..+size_of TYPE('a)}")
@@ -207,7 +207,7 @@ apply(case_tac "a \<in> {ptr_val p..+size_of TYPE('a)}")
   apply(erule less_trans)
   apply simp
  apply(subst (asm) list_map_eq)
- apply(clarsimp split: split_if_asm)
+ apply(clarsimp split: if_split_asm)
  apply(drule s_footprintD2)
  apply simp
  apply(subst (asm) unat_of_nat)
@@ -236,7 +236,7 @@ apply(case_tac "x \<in> s_footprint p")
 apply(case_tac x, clarsimp)
 apply(drule_tac x=aa in fun_cong)
 apply(auto simp: s_footprint_restrict lift_state_def
-           split: s_heap_index.splits split_if_asm option.splits) (* FIXME! *)
+           split: s_heap_index.splits if_split_asm option.splits) (* FIXME! *)
       apply(clarsimp simp: restrict_s_def)
      apply(clarsimp simp: restrict_s_def)
     apply(clarsimp simp: restrict_s_def)
@@ -292,9 +292,9 @@ apply(case_tac "(aa,ba) \<in> s_footprint p")
  apply(rule, clarsimp)
   apply force
  apply clarsimp
- apply(clarsimp simp: lift_state_def map_add_def  split: option.splits s_heap_index.splits split_if_asm)
-  apply(clarsimp simp: singleton_def lift_state_def split: split_if_asm)
- apply(clarsimp simp: singleton_def lift_state_def split: split_if_asm option.splits)
+ apply(clarsimp simp: lift_state_def map_add_def  split: option.splits s_heap_index.splits if_split_asm)
+  apply(clarsimp simp: singleton_def lift_state_def split: if_split_asm)
+ apply(clarsimp simp: singleton_def lift_state_def split: if_split_asm option.splits)
  apply(clarsimp simp: proj_d_def)
 apply(auto simp: map_add_def singleton_def split: option.splits)
 done
@@ -369,7 +369,7 @@ lemma heap_update_list_value:
    heap_update_list p v h q =
    (if q \<in> {p..+length v} then v!unat (q-p) else h q)"
 by (auto simp add: heap_update_nmem_same heap_update_mem_same_point
-            split: split_if)
+            split: if_split)
 
 lemma heap_update_list_value':
   "length xs < addr_card \<Longrightarrow>
@@ -382,7 +382,7 @@ apply (rule if_cong)
   apply simp_all
 apply (rule iffI)
  apply (drule intvlD, clarsimp simp add: unat_of_nat)
-apply (simp add: intvl_def unat_arith_simps(4) unat_of_nat split: split_if_asm)
+apply (simp add: intvl_def unat_arith_simps(4) unat_of_nat split: if_split_asm)
  apply (rule_tac x="unat x - unat ptr" in exI, simp)
 apply (rule_tac x="unat x + 2^addr_bitsize - unat ptr" in exI)
 apply (cut_tac x=ptr in unat_lt2p)
@@ -487,7 +487,7 @@ lemma fs_footprint_un:
 lemma proj_d_restrict_map_le:
   "snd (proj_d (s |` X) x) \<subseteq>\<^sub>m snd (proj_d s x)"
 apply(clarsimp simp: map_le_def proj_d_def restrict_map_def
-               split: option.splits split_if_asm)
+               split: option.splits if_split_asm)
 done
 
 lemma SIndexVal_conj_setcomp_simp [simp]:
@@ -638,7 +638,7 @@ apply(drule td_set_field_lookupD)
 apply(frule td_set_offset_size)
 apply(drule_tac k=x in typ_slice_td_set)
 apply simp
-apply(auto simp: prefixeq_def less_eq_list_def)
+apply(auto simp: prefix_def less_eq_list_def)
 done
 
 lemma wf_heap_val_map_add [simp]:
@@ -916,7 +916,7 @@ apply(auto simp: s_valid_def h_t_valid_def valid_footprint_def Let_def)
  apply(subst proj_d_restrict_map_snd)
   apply simp+
 apply(subst proj_d_map_add_fst)
-apply(clarsimp split: split_if_asm)
+apply(clarsimp split: if_split_asm)
 apply(subst proj_d_restrict_map_fst)
  apply simp+
 done
@@ -938,7 +938,7 @@ apply(rule conjI)
  apply(subst fs_footprint_un[where F=F])
  apply(clarsimp simp: fields_def)
  apply fast
-apply(clarsimp simp: lift_typ_heap_if split: split_if_asm)
+apply(clarsimp simp: lift_typ_heap_if split: if_split_asm)
 apply(rule, clarsimp)
  apply(subgoal_tac "(singleton_t p v ++
            s |` (s_footprint p - fs_footprint p F - fs_footprint p {f})) =
@@ -1052,7 +1052,7 @@ apply(subgoal_tac "field_footprint p f = s_footprint ((Ptr &(p\<rightarrow>f))::
 apply simp
 apply(frule lift_typ_heap_mono)
    apply assumption+
-apply(clarsimp simp: lift_typ_heap_if split: split_if_asm)
+apply(clarsimp simp: lift_typ_heap_if split: if_split_asm)
 apply(rule, clarsimp)
  apply(subst (asm) heap_list_s_heap_merge_right[where p="&(p\<rightarrow>f)"])
    apply assumption+
@@ -1098,7 +1098,7 @@ apply rule
  apply(subst map_add_com [where h\<^sub>0=s\<^sub>1])
   apply(simp add: map_ac_simps)
  apply(subst map_add_assoc)
- apply(clarsimp simp: lift_typ_heap_if split: split_if_asm)
+ apply(clarsimp simp: lift_typ_heap_if split: if_split_asm)
  apply(rule, clarsimp)
   apply(subst heap_list_s_map_add_super_update_bs)
      apply(subst s_footprint_untyped_dom_SIndexVal)
@@ -1182,7 +1182,7 @@ apply rule
 apply(clarsimp simp: s_valid_def h_t_valid_def valid_footprint_def Let_def)
 apply(rule, clarsimp simp: map_le_def)
  apply(subst proj_d_map_add_snd[where t=s\<^sub>1])
- apply(clarsimp split: split_if_asm)
+ apply(clarsimp split: if_split_asm)
  apply(frule s_footprintD2)
  apply(drule s_footprintD)
  apply(drule_tac x=y in spec)
@@ -1214,7 +1214,7 @@ apply(rule, clarsimp simp: map_le_def)
  apply simp
  apply(simp add: typ_uinfo_t_def)
  apply(subgoal_tac "y=n+k")
-  apply(simp add: prefix_def)
+  apply(simp add: strict_prefix_def)
   apply clarsimp
   apply(subst (asm) unat_of_nat)
   apply(subst (asm) mod_less)
@@ -1243,7 +1243,7 @@ apply(rule, clarsimp simp: map_le_def)
   apply simp
  apply simp
 apply(subst proj_d_map_add_fst)
-apply(clarsimp split: split_if_asm)
+apply(clarsimp split: if_split_asm)
 apply(drule s_footprintD, clarsimp)
 apply(drule intvlD, clarsimp simp: field_lvalue_def)
 apply(fastforce simp: size_of_def ac_simps)
@@ -1392,7 +1392,7 @@ apply(induct t and st and ts and y)
  prefer 2
  apply clarsimp
 apply clarify
-apply(clarsimp split: split_if_asm)
+apply(clarsimp split: if_split_asm)
 apply(clarsimp split: option.splits)
 
  apply(rotate_tac -3)
@@ -1453,7 +1453,7 @@ apply(subgoal_tac "length (access_ti_pair dt_pair (update_ti_t s bs v)
   apply clarsimp
   apply(drule_tac x=bs in spec)
   apply(drule_tac x="take (size_td_pair dt_pair) bs'" in spec)
-  apply(clarsimp simp: min_def split: split_if_asm)
+  apply(clarsimp simp: min_def split: if_split_asm)
  apply(drule wf_fd_cons_pairD)
  apply(clarsimp simp: fd_cons_pair_def fd_cons_desc_def fd_cons_length_def)
 apply(drule wf_fd_cons_pairD)
@@ -1530,7 +1530,7 @@ apply(simp add: access_ti\<^sub>0_def)
 apply(rule field_access_update_nth_disjD)
      apply assumption
     apply(subst (asm) ptr_retyp_d_eq_fst)
-    apply(clarsimp simp: empty_htd_def split: split_if_asm)
+    apply(clarsimp simp: empty_htd_def split: if_split_asm)
     apply(drule intvlD, clarsimp)
     apply(subst unat_of_nat)
     apply(subst mod_less)
@@ -1540,7 +1540,7 @@ apply(rule field_access_update_nth_disjD)
     apply(simp add: size_of_def)
    apply simp
    apply(subst (asm) ptr_retyp_d_eq_fst)
-   apply(clarsimp simp: empty_htd_def split: split_if_asm)
+   apply(clarsimp simp: empty_htd_def split: if_split_asm)
    apply(drule_tac k="of_nat n" and n="size_td s" in intvl_cut)
      prefer 2
      apply simp
@@ -1852,7 +1852,7 @@ lemma dom_exact_sep_cut':
 
 lemma dom_lift_state_dom_s [simp]:
   "dom (lift_state (h,d)) = dom_s d"
-apply(auto simp: lift_state_def dom_s_def split: s_heap_index.splits split_if_asm option.splits)
+apply(auto simp: lift_state_def dom_s_def split: s_heap_index.splits if_split_asm option.splits)
 apply fast
 done
 
@@ -1951,7 +1951,7 @@ lemma tagd_ptr_safe_exc:
   "(g \<turnstile>\<^sub>s p \<and>\<^sup>* sep_true) (lift_state (h,d)) \<Longrightarrow> ptr_safe p d"
 apply(clarsimp simp: ptr_safe_def sep_conj_ac sep_conj_def, drule tagd_dom_exc)
 apply(drule_tac x="(a,b)" in fun_cong)
-apply(auto simp: map_ac_simps lift_state_def sep_conj_ac split: option.splits s_heap_index.splits split_if_asm)
+apply(auto simp: map_ac_simps lift_state_def sep_conj_ac split: option.splits s_heap_index.splits if_split_asm)
    apply(clarsimp simp: dom_s_def sep_conj_ac)
   apply(subst (asm) merge_dom)
    apply fast

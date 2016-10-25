@@ -1504,7 +1504,7 @@ lemma projectKO_stateI:
 lemma singleton_in_magnitude_check:
   "(x, s) \<in> fst (magnitudeCheck a b c s') \<Longrightarrow> \<forall>s'. fst (magnitudeCheck a b c s') = {(x, s')}"
   by (simp add: magnitudeCheck_def when_def in_monad return_def
-         split: split_if_asm option.split_asm)
+         split: if_split_asm option.split_asm)
 
 lemma wordSizeCase_simp [simp]: "wordSizeCase a b = a"
   by (simp add: wordSizeCase_def wordBits_def word_size)
@@ -1672,12 +1672,12 @@ lemma st_tcb_at_refs_of_rev':
 lemma state_refs_of'_elemD:
   "\<lbrakk> ref \<in> state_refs_of' s x \<rbrakk> \<Longrightarrow> ko_wp_at' (\<lambda>obj. ref \<in> refs_of' obj) x s"
   by (clarsimp simp add: state_refs_of'_def ko_wp_at'_def
-                  split: option.splits split_if_asm)
+                  split: option.splits if_split_asm)
 
 lemma state_refs_of'_eqD:
   "\<lbrakk> state_refs_of' s x = S; S \<noteq> {} \<rbrakk> \<Longrightarrow> ko_wp_at' (\<lambda>obj. refs_of' obj = S) x s"
   by (clarsimp simp add: state_refs_of'_def ko_wp_at'_def
-                  split: option.splits split_if_asm)
+                  split: option.splits if_split_asm)
 
 lemma obj_at_state_refs_ofD':
   "obj_at' P p s \<Longrightarrow> \<exists>obj. P obj \<and> state_refs_of' s p = refs_of' (injectKO obj)"
@@ -1784,7 +1784,7 @@ lemma if_live_state_refsE:
   "\<lbrakk> if_live_then_nonz_cap' s;
      state_refs_of' s p \<noteq> {} \<rbrakk> \<Longrightarrow> ex_nonz_cap_to' p s"
   by (clarsimp simp: state_refs_of'_def ko_wp_at'_def
-              split: option.splits split_if_asm
+              split: option.splits if_split_asm
               elim!: refs_of_live' if_live_then_nonz_capE')
 
 lemmas ex_cte_cap_to'_def = ex_cte_cap_wp_to'_def
@@ -1925,12 +1925,12 @@ lemma cte_wp_at'_pspaceI:
    prefer 2
    apply (simp add: in_monad return_def alignError_def assert_opt_def
                     alignCheck_def magnitudeCheck_def when_def bind_def
-             split: split_if_asm option.splits)
+             split: if_split_asm option.splits)
   apply (clarsimp simp: in_monad return_def alignError_def fail_def assert_opt_def
                         alignCheck_def bind_def when_def
                         objBits_cte_conv tcbCTableSlot_def tcbVTableSlot_def
                         tcbReplySlot_def
-                 split: split_if_asm
+                 split: if_split_asm
                  dest!: singleton_in_magnitude_check)
   done
 
@@ -2055,12 +2055,12 @@ lemma pred_tcb'_weakenE:
 
 lemma lookupBefore_fst_snd:
   "lookupBefore x s = Some v \<Longrightarrow> snd v = the (s (fst v))"
-  by (clarsimp simp add: lookupBefore_def Let_def split: split_if_asm)
+  by (clarsimp simp add: lookupBefore_def Let_def split: if_split_asm)
 
 lemma lookupBefore_exact2:
   "\<lbrakk> lookupBefore x s = Some v; fst v = x \<rbrakk> \<Longrightarrow> s x = Some (snd v)"
   apply (cases v)
-  apply (clarsimp simp add: lookupBefore_def Let_def split: split_if_asm)
+  apply (clarsimp simp add: lookupBefore_def Let_def split: if_split_asm)
   apply (drule subst[where P="\<lambda>x. x \<in> y" for y, OF _ Max_in])
     apply simp
    apply fastforce
@@ -2101,18 +2101,18 @@ lemma lookupAround2_char1:
   "(fst (lookupAround2 x s) = Some (y, v)) =
     (y \<le> x \<and> s y = Some v \<and> (\<forall>z. y < z \<and> z \<le> x \<longrightarrow> s z = None))"
   apply (simp    add: lookupAround2_def Let_def split_def lookupAround_def
-           split del: split_if
+           split del: if_split
                split: option.split)
   apply (intro conjI impI iffI)
-      apply (clarsimp split: split_if_asm)
+      apply (clarsimp split: if_split_asm)
       apply (rule Max_prop)
        apply (simp add: order_less_imp_le)
       apply fastforce
-     apply (clarsimp split: split_if_asm)
+     apply (clarsimp split: if_split_asm)
      apply (rule Max_prop)
       apply clarsimp
      apply fastforce
-    apply (clarsimp split: split_if_asm)
+    apply (clarsimp split: if_split_asm)
     apply (subst(asm) Max_less_iff)
       apply simp
      apply fastforce
@@ -2141,10 +2141,10 @@ lemma lookupAround2_char1:
 lemma lookupAround2_None1:
   "(fst (lookupAround2 x s) = None) = (\<forall>y \<le> x. s y = None)"
   apply (simp    add: lookupAround2_def Let_def split_def lookupAround_def
-           split del: split_if
+           split del: if_split
                split: option.split)
   apply safe
-    apply (fastforce split: split_if_asm)
+    apply (fastforce split: if_split_asm)
    apply (clarsimp simp: order_less_imp_le)
   apply fastforce
   done
@@ -2281,7 +2281,7 @@ lemma in_magnitude_check3:
     apply (drule word_l_diffs, simp)
     apply (simp add: field_simps)
    apply (simp add: power_overflow)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
   apply (erule(1) ps_clear_lookupAround2)
     apply simp
    apply (drule minus_one_helper3[where x="y - x"])
@@ -2321,7 +2321,7 @@ lemma tcb_space_clear:
    apply (simp add: word_bits_conv)
   apply simp
   apply (rule_tac x="y - x" in exI)
-  apply (simp add: tcb_cte_cases_def split: split_if_asm)
+  apply (simp add: tcb_cte_cases_def split: if_split_asm)
   done
 
 lemma tcb_ctes_clear:
@@ -2356,14 +2356,14 @@ lemma cte_wp_at_cases':
                          lookupAround2_char1
                          cte_level_bits_def Ball_def
                          unless_def when_def bind_def
-                  split: kernel_object.splits split_if_asm option.splits
+                  split: kernel_object.splits if_split_asm option.splits
                     del: disjCI)
         apply (subst(asm) in_magnitude_check3, simp+,
-               simp split: split_if_asm, (rule disjI2)?, intro exI, rule conjI,
+               simp split: if_split_asm, (rule disjI2)?, intro exI, rule conjI,
                erule rsubst[where P="\<lambda>x. ksPSpace s x = v" for s v],
                fastforce simp add: field_simps, simp)+
    apply (subst(asm) in_magnitude_check3, simp+)
-   apply (simp split: split_if_asm)
+   apply (simp split: if_split_asm)
   apply (simp add: cte_wp_at'_def getObject_def split_def
                    bind_def simpler_gets_def return_def
                    assert_opt_def fail_def
@@ -2390,18 +2390,18 @@ lemma cte_wp_at_cases':
                     return_def fail_def tcbCTableSlot_def tcbVTableSlot_def
                     tcbIPCBufferSlot_def tcbReplySlot_def tcbCallerSlot_def
                 split: option.split_asm)
-     apply (clarsimp simp: bind_def tcb_cte_cases_def split: split_if_asm)
+     apply (clarsimp simp: bind_def tcb_cte_cases_def split: if_split_asm)
     apply (clarsimp simp: bind_def tcb_cte_cases_def iffD2[OF linorder_not_less]
                           when_False return_def
-                   split: split_if_asm)
+                   split: if_split_asm)
    apply (subgoal_tac "p - n \<le> (p - n) + n", simp)
    apply (erule is_aligned_no_wrap')
     apply (simp add: word_bits_conv)
-   apply (simp add: tcb_cte_cases_def split: split_if_asm)
+   apply (simp add: tcb_cte_cases_def split: if_split_asm)
   apply (subgoal_tac "(p - n) + n \<le> (p - n) + 511")
    apply (simp add: field_simps)
   apply (rule word_plus_mono_right)
-   apply (simp add: tcb_cte_cases_def split: split_if_asm)
+   apply (simp add: tcb_cte_cases_def split: if_split_asm)
   apply (erule is_aligned_no_wrap')
   apply simp
   done
@@ -2606,9 +2606,9 @@ lemma koType_obj_range':
 lemma typ_at_lift_valid_untyped':
   assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_untyped' d p n idx s\<rbrace> f \<lbrace>\<lambda>rv s. valid_untyped' d p n idx s\<rbrace>"
-  apply (clarsimp simp: valid_untyped'_def split del:split_if)
+  apply (clarsimp simp: valid_untyped'_def split del:if_split)
   apply (rule hoare_vcg_all_lift)
-  apply (clarsimp simp: valid_def split del:split_if)
+  apply (clarsimp simp: valid_def split del:if_split)
   apply (frule ko_wp_typ_at')
   apply clarsimp
   apply (cut_tac T=T and p=ptr' in P)

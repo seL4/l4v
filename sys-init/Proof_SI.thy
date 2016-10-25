@@ -158,7 +158,7 @@ lemma objects_empty_objects_initialised_capless:
   "objects_empty spec t {obj_id. capless_at obj_id spec} =
    objects_initialised spec t {obj_id. capless_at obj_id spec}"
   apply (clarsimp simp: objects_empty_def objects_initialised_def)
-  apply (rule sep.setprod.cong, simp)
+  apply (rule sep.prod.cong, simp)
   apply (clarsimp simp: object_empty_object_initialised_capless)
   done
 

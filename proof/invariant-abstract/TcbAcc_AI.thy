@@ -133,7 +133,7 @@ lemma thread_set_no_change_tcb_pred_converse:
   apply (clarsimp simp: thread_set_def pred_tcb_at_def set_object_def in_monad
                         gets_the_def valid_def)
   apply (erule notE)
-  apply (clarsimp simp: obj_at_def split: split_if_asm)
+  apply (clarsimp simp: obj_at_def split: if_split_asm)
   apply (drule get_tcb_SomeD)
   apply (clarsimp simp: x)
   done
@@ -911,8 +911,8 @@ lemma fold_fun_upd:
       else s key)"
   apply (induct keys arbitrary: vals s)
    apply simp
-  apply (case_tac vals, simp_all split del: split_if)
-  apply (case_tac "key = a", simp_all split del: split_if)
+  apply (case_tac vals, simp_all split del: if_split)
+  apply (case_tac "key = a", simp_all split del: if_split)
    apply clarsimp
    apply (drule in_set_takeD)
    apply simp
@@ -1536,7 +1536,7 @@ lemma set_thread_state_valid_ioc[wp]:
   apply (clarsimp simp: get_tcb_def cap_of_def tcb_cnode_map_tcb_cap_cases
                         null_filter_def cte_wp_at_cases tcb_cap_cases_def
                  split: option.splits Structures_A.kernel_object.splits
-                        split_if_asm)
+                        if_split_asm)
   done
 
 lemma set_bound_notification_valid_ioc[wp]:
@@ -1549,7 +1549,7 @@ lemma set_bound_notification_valid_ioc[wp]:
   apply (clarsimp simp: get_tcb_def cap_of_def tcb_cnode_map_tcb_cap_cases
                         null_filter_def cte_wp_at_cases tcb_cap_cases_def
                  split: option.splits Structures_A.kernel_object.splits
-                        split_if_asm)
+                        if_split_asm)
   done
 
 lemma sts_invs_minor:
@@ -1854,7 +1854,7 @@ lemma set_mrs_invs[wp]:
    apply (rule_tac P="invs" in hoare_triv)
    apply (case_tac recv_buf)
     apply simp
-   apply (simp add: zipWithM_x_mapM split del: split_if)
+   apply (simp add: zipWithM_x_mapM split del: if_split)
    apply wp
    apply (rule mapM_wp)
     apply (simp add: split_def store_word_offs_def)
@@ -1878,7 +1878,7 @@ lemma set_mrs_thread_set_dmo:
    apply wp
    apply (rule ts)
   apply (simp add: zipWithM_x_mapM store_word_offs_def split_def
-              split del: split_if)
+              split del: if_split)
   apply (wp mapM_wp dmo)
     apply simp
    apply blast

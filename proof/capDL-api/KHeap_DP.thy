@@ -470,10 +470,10 @@ lemma resolve_cap_rv1:
   apply (wp gets_the_wpE)
   apply (clarsimp simp: one_lvl_lookup_def offset_def)
   apply (clarsimp simp: split_def split: sum.splits option.splits)
-  apply (simp add: split_def resolve_cap.simps split: split_if_asm)
+  apply (simp add: split_def resolve_cap.simps split: if_split_asm)
   apply (simp add: obind_def split:option.splits)
   apply (drule sep_f_size_opt_cnode)
-   apply (simp split: split_if_asm)+
+   apply (simp split: if_split_asm)+
 done
 
 lemma resolve_cap_u:
@@ -485,10 +485,10 @@ lemma resolve_cap_u:
   apply (clarsimp simp:
     user_pointer_at_def Let_unfold one_lvl_lookup_def
     offset_def  split:option.splits sum.splits)
-  apply (simp add: split_def resolve_cap.simps split: split_if_asm)
+  apply (simp add: split_def resolve_cap.simps split: if_split_asm)
   apply (simp add: obind_def sep_conj_assoc split:option.splits)
   apply (sep_drule (direct) sep_f_size_opt_cnode)
-  apply (fastforce split: split_if_asm)+
+  apply (fastforce split: if_split_asm)+
 done
 
 lemma resolve_cap_u_nf:
@@ -501,14 +501,14 @@ lemma resolve_cap_u_nf:
                         offset_def sep.mult_assoc)
   apply (clarsimp simp: split_def split: sum.splits option.splits)
   apply (safe)
-   apply (simp add: split_def resolve_cap.simps split: split_if_asm)
+   apply (simp add: split_def resolve_cap.simps split: if_split_asm)
    apply (simp add: obind_def split:option.splits)
    apply (sep_drule (direct) sep_f_size_opt_cnode)
     apply (fastforce)+
-  apply (simp add: split_def resolve_cap.simps split: split_if_asm)
+  apply (simp add: split_def resolve_cap.simps split: if_split_asm)
   apply (simp add: obind_def split:option.splits)
    apply (sep_drule (direct) sep_f_size_opt_cnode)
-    apply (fastforce split: split_if_asm)+
+    apply (fastforce split: if_split_asm)+
 done
 
 lemma resolve_cap_rv:
@@ -911,10 +911,10 @@ lemma is_exclusive_cap_update_cap_data:
   apply (rule iffI)
    apply (simp_all add: safe_for_derive_def update_cap_data_def update_cap_data_det_def)
    apply (case_tac cap, simp_all add: safe_for_derive_def badge_update_def
-                               split: split_if_asm)
+                               split: if_split_asm)
   apply (case_tac cap, simp_all add: badge_update_def guard_update_def
                                      update_cap_badge_def
-                              split: split_if_asm)
+                              split: if_split_asm)
   done
 
 lemma cap_object_update_cap_rights:
@@ -928,13 +928,13 @@ lemma derived_cap_update_cap_data_det_NullCap [simp]:
  = (derived_cap cap = NullCap)"
   by (clarsimp simp: derived_cap_def update_cap_data_det_def
                      badge_update_def update_cap_badge_def guard_update_def
-              split: cdl_cap.splits split_if_asm)
+              split: cdl_cap.splits if_split_asm)
 
 lemma derived_cap_update_cap_rights_NullCap [simp]:
   "(derived_cap (update_cap_rights rights cap) = NullCap)
  = (derived_cap cap = NullCap)"
   by (clarsimp simp: derived_cap_def update_cap_rights_def
-              split: cdl_cap.splits split_if_asm)
+              split: cdl_cap.splits if_split_asm)
 
 lemma derived_cap_reset_cap_asid_NullCap:
   "\<lbrakk>reset_cap_asid cap = reset_cap_asid cap'; derived_cap cap = NullCap\<rbrakk>
@@ -1043,7 +1043,7 @@ lemma update_cap_data_non:
   by (rule iffI,
       simp_all add: update_cap_data_det_def badge_update_def
                     guard_update_def update_cap_badge_def
-             split: cdl_cap.splits split_if_asm)
+             split: cdl_cap.splits if_split_asm)
 
 lemma decode_cnode_mutate_rvu:
   "\<lbrace>\<lambda>s. caps \<noteq> []

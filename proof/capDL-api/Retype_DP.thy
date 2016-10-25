@@ -152,7 +152,7 @@ lemma retype_region_wp:
     apply (rule_tac P="current_domain = minBound" in hoare_gen_asm)
     apply (wp create_objects_wp | simp)+
   apply (subst sep_conj_assoc[symmetric])
-  apply (subst sep.setprod.union_disjoint [symmetric])
+  apply (subst sep.prod.union_disjoint [symmetric])
    apply simp+
   apply (simp add:Un_absorb1)
   done
@@ -204,7 +204,7 @@ lemma dummy_detype_if_untyped:
   apply (case_tac s,clarsimp simp:detype_def sep_set_conj_def)
   apply (rule ext)
   apply (clarsimp simp:sep_state_projection_def sep_conj_def)
-  apply (subst (asm) sep.setprod.remove)
+  apply (subst (asm) sep.prod.remove)
    apply simp+
   apply (clarsimp simp:sep_map_o_conj image_def)
   apply (drule_tac f = sep_heap in arg_cong)
@@ -276,7 +276,7 @@ lemma reset_untyped_cap_wp:
    apply (clarsimp dest!: reset_cap_asid_untyped_cap_eqD)
    apply (subgoal_tac "tot_free_range = obj_range \<union> (tot_free_range - obj_range)")
     apply simp
-    apply (subst (asm) sep.setprod.subset_diff)
+    apply (subst (asm) sep.prod.subset_diff)
       apply simp+
     apply (sep_select_asm 2)
     apply (simp add:sep_conj_assoc)
@@ -355,18 +355,18 @@ lemma invoke_untyped_wp:
           \<and>  distinct (map pick new_obj_refs) \<and>
            new_obj_refs = map ((\<lambda>x. {x}) \<circ> pick) new_obj_refs \<and>
            pick ` set new_obj_refs \<subseteq> tot_free_range" in hoare_gen_asm)
-        apply (simp del:set_map split del:split_if)
+        apply (simp del:set_map split del:if_split)
         apply (rule hoare_strengthen_post[OF update_available_range_wp])
         apply clarsimp
         apply (rule_tac x = nfr in exI)
         apply (rule conjI)
          apply (clarsimp split:if_splits)
         apply (sep_select 3,sep_select 2,simp)
-       apply (wp|simp split del:split_if)+
+       apply (wp|simp split del:if_split)+
      apply (rule_tac P = "untyped_cap = UntypedCap dev obj_range free_range"
        in hoare_gen_asm)
-     apply (clarsimp simp:conj_comms split del: split_if)
-     apply (simp add: conj_assoc[symmetric] del:conj_assoc split del: split_if)+
+     apply (clarsimp simp:conj_comms split del: if_split)
+     apply (simp add: conj_assoc[symmetric] del:conj_assoc split del: if_split)+
      apply (rule hoare_vcg_conj_lift)
       apply wp
       apply (rule hoare_strengthen_post[OF generate_object_ids_rv])
@@ -1055,10 +1055,10 @@ lemma transfer_caps_loop_cdl_parent:
    "\<lbrace>\<lambda>s. cdl_cdt s slot = Some parent\<rbrace>
      transfer_caps_loop ep rcvr caps dest
    \<lbrace>\<lambda>_ s. cdl_cdt s slot = Some parent\<rbrace>"
-   apply (induct caps arbitrary: dest; clarsimp split del: split_if)
+   apply (induct caps arbitrary: dest; clarsimp split del: if_split)
    apply (rule hoare_pre)
     apply (wp alternative_wp crunch_wps | assumption
-      | simp add: crunch_simps split del: split_if)+
+      | simp add: crunch_simps split del: if_split)+
    done
 
 lemmas reset_untyped_cap_cdl2[wp] = reset_untyped_cap_cdl_parent[THEN valid_validE_E]
@@ -1114,7 +1114,7 @@ lemma default_object_no_pending_cap:
   apply (case_tac b)
   apply (clarsimp simp: default_object_def object_slots_def default_tcb_def is_pending_cap_def
                         empty_cnode_def empty_cap_map_def empty_irq_node_def
-                 split: split_if_asm)+
+                 split: if_split_asm)+
   done
  
 lemma create_objects_no_pending[wp]:

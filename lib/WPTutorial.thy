@@ -76,7 +76,7 @@ An additional annoyance to the clarsimp/tuple issue described above is
 the splitter. The wp tool is designed to work on a hoare triple with a
 schematic precondition. Note how the simplifier splits the problem
 in two because it contains an if constant. Delete the split
-rule from the simpset with (simp split del: split_if) to avoid this
+rule from the simpset with (simp split del: if_split) to avoid this
 issue and see where wp gets stuck.
 
 We still need to deal with the if constant. In this (somewhat contrived)
@@ -95,7 +95,7 @@ lemma example_3:
      return $ y \<and> \<not> x
    od \<lbrace>\<lambda>rv s. rv\<rbrace>"
   apply wp
-  apply (simp add: if_apply_def2 split del: split_if)
+  apply (simp add: if_apply_def2 split del: if_split)
   apply wp
   apply simp
   done

@@ -78,7 +78,7 @@ lemma invoke_untyped_etcb_at [DetSchedAux_AI_assms]:
   "\<lbrace>(\<lambda>s :: det_ext state. etcb_at P t s) and valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   apply (cases ui)
   apply (simp add: mapM_x_def[symmetric] invoke_untyped_def whenE_def
-           split del: split_if)
+           split del: if_split)
   apply (rule hoare_pre)
    apply (wp retype_region_etcb_at mapM_x_wp'
              create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift

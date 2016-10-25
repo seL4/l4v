@@ -224,7 +224,7 @@ proof
   from n
   have "p \<noteq> slot"
     by (clarsimp dest!: tranclD simp: n_def cdt_parent_of_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   moreover
   from n
   have "p' \<noteq> slot"
@@ -235,14 +235,14 @@ proof
   proof induct
     case (base x)
     thus ?case
-      apply (clarsimp simp: cdt_parent_of_def n_def split: split_if_asm)
+      apply (clarsimp simp: cdt_parent_of_def n_def split: if_split_asm)
        apply (rule trancl_trans)
         apply (fastforce simp: cdt_parent_of_def)+
       done
   next
     case (step y z)
     thus ?case
-      apply (clarsimp simp: cdt_parent_of_def n_def split: split_if_asm)
+      apply (clarsimp simp: cdt_parent_of_def n_def split: if_split_asm)
        apply (erule trancl_trans)
        apply (rule trancl_trans)
         apply (fastforce simp: cdt_parent_of_def)
@@ -401,7 +401,7 @@ lemma empty_slot_final_cap_at:
   apply (rule hoare_gen_asm)
   apply (simp add: empty_slot_def final_cap_at_eq cte_wp_at_conj)
   apply (simp add: cte_wp_at_caps_of_state)
-  apply (wp opt_return_pres_lift | simp split del: split_if)+
+  apply (wp opt_return_pres_lift | simp split del: if_split)+
   apply (rule hoare_strengthen_post [OF get_cap_sp])
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
@@ -416,7 +416,7 @@ lemma set_cap_revokable_update:
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
-  apply (auto simp add: in_monad set_object_def split: split_if_asm)
+  apply (auto simp add: in_monad set_object_def split: if_split_asm)
   done
 
 
@@ -425,7 +425,7 @@ lemma set_cap_cdt_update:
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
-  apply (auto simp add: in_monad set_object_def split: split_if_asm)
+  apply (auto simp add: in_monad set_object_def split: if_split_asm)
   done
 
 lemma tcb_cap_cases_lt:
@@ -638,17 +638,17 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
                    dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
-                   split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
+                   split: if_split_asm)
+  apply (clarsimp split: if_split_asm)
    apply (subst (asm) ko_at_state_refs_ofD, assumption)
    apply (fastforce simp: ntfn_q_refs_no_NTFNBound symreftype_inverse'  is_tcb refs_of_rev
                   dest!: refs_in_ntfn_q_refs)
   apply (rule delta_sym_refs, assumption)
-   apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
    apply (subst (asm) ko_at_state_refs_ofD, assumption)
    apply (frule refs_in_ntfn_q_refs)
    apply (fastforce)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
    apply (frule_tac P="op = (Some ntfnptr)" in ntfn_bound_tcb_at, simp_all add: obj_at_def)[1]
    apply (fastforce simp: ntfn_q_refs_no_NTFNBound tcb_at_no_ntfn_bound tcb_ntfn_is_bound_def
                           obj_at_def tcb_st_refs_no_TCBBound
@@ -790,7 +790,7 @@ lemma empty_slot_cte_wp_elsewhere:
   "\<lbrace>(\<lambda>s. cte_wp_at P p s) and K (p \<noteq> p')\<rbrace> empty_slot p' opt \<lbrace>\<lambda>rv s. cte_wp_at P p s\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: empty_slot_def cte_wp_at_caps_of_state)
-  apply (wp opt_return_pres_lift | simp split del: split_if)+
+  apply (wp opt_return_pres_lift | simp split del: if_split)+
   done
 
 
@@ -824,7 +824,7 @@ lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
   "\<lbrace>cte_wp_at (op = cap) sl :: 'a state \<Rightarrow> bool\<rbrace>
      finalise_cap cap fin
    \<lbrace>\<lambda>rv. cte_wp_at (op = cap) sl\<rbrace>"
-  apply (cases cap, simp_all split del: split_if)
+  apply (cases cap, simp_all split del: if_split)
     apply (wp suspend_cte_wp_at_preserved
                  deleting_irq_handler_cte_preserved
                  hoare_drop_imp thread_set_cte_wp_at_trivial
@@ -946,7 +946,7 @@ lemma cap_delete_one_deletes_reply:
                   in hoare_post_imp)
       apply (clarsimp simp add: has_reply_cap_def cte_wp_at_caps_of_state
                       simp del: split_paired_All split_paired_Ex
-                         split: split_if_asm elim!: allEI)
+                         split: if_split_asm elim!: allEI)
      apply (rule hoare_vcg_all_lift)
      apply simp
      apply (wp static_imp_wp empty_slot_deletes empty_slot_caps_of_state get_cap_wp)
@@ -1066,7 +1066,7 @@ lemma unbind_maybe_notification_cte_cap_to[wp]:
 
 lemma (in Finalise_AI_3) finalise_cap_cte_cap_to[wp]:
   "\<lbrace>ex_cte_cap_wp_to P sl :: 'a state \<Rightarrow> bool\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P sl\<rbrace>"
-  apply (cases cap, simp_all add: ex_cte_cap_wp_to_def split del: split_if)
+  apply (cases cap, simp_all add: ex_cte_cap_wp_to_def split del: if_split)
        apply (wp hoare_vcg_ex_lift hoare_drop_imps
                  deleting_irq_handler_cte_preserved_irqn
                  | simp
@@ -1078,7 +1078,7 @@ lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
   "\<lbrace>cte_wp_at (\<lambda>cp. is_zombie cp \<and> P cp) sl :: 'a state \<Rightarrow> bool\<rbrace>
      finalise_cap cap fin
    \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>cp. is_zombie cp \<and> P cp) sl\<rbrace>"
-  apply (cases cap, simp_all split del: split_if)
+  apply (cases cap, simp_all split del: if_split)
        apply (wp deleting_irq_handler_cte_preserved
                | clarsimp simp: is_cap_simps can_fast_finalise_def)+
   done

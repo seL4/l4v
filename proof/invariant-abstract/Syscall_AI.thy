@@ -57,7 +57,7 @@ lemma schedule_ct_activateable[wp]:
                              get_tcb_queue_def ethread_get_def
                | wpc | wp_once hoare_drop_imps)+
     apply (force simp: ct_in_state_def pred_tcb_at_def obj_at_def invs_def valid_state_def
-                       valid_idle_def split: split_if_asm)
+                       valid_idle_def split: if_split_asm)
     done
 qed
 
@@ -333,7 +333,7 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
       apply (wp)
       apply (rule do_ipc_transfer_non_null_cte_wp_at2, clarsimp)
       apply (clarsimp simp: is_cap_simps)
-     apply (wp sts_invs_minor | simp split del: split_if)+
+     apply (wp sts_invs_minor | simp split del: if_split)+
           apply (wp sts_invs_minor thread_set_no_change_tcb_state)
            apply (clarsimp)
           apply (clarsimp)
@@ -624,7 +624,7 @@ lemma decode_inv_wf[wp]:
    \<lbrace>valid_invocation\<rbrace>,-"
   apply (simp add: decode_invocation_def
              cong: cap.case_cong if_cong
-                split del: split_if)
+                split del: if_split)
   apply (rule hoare_pre)
    apply (wp Tcb_AI.decode_tcb_inv_wf decode_domain_inv_wf[simplified split_def] | wpc |
           simp add: o_def uncurry_def split_def del: is_cnode_cap.simps cte_refs.simps)+
@@ -716,7 +716,7 @@ lemma lec_ex_nonz_cap_to [wp]:
 lemma lookup_extras_real_ctes[wp]:
   "\<lbrace>valid_objs\<rbrace> lookup_extra_caps t xs info \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. real_cte_at (snd x) s\<rbrace>,-"
   apply (simp add: lookup_extra_caps_def
-              split del: split_if)
+              split del: if_split)
   apply (rule hoare_pre)
    apply (wp mapME_set)
       apply (simp add: lookup_cap_and_slot_def split_def)
@@ -777,31 +777,31 @@ proof (induct param rule: resolve_address_bits'.induct)
               defer 6 (* cnode *)
               apply (simp_all add: spec_validE_def validE_def valid_def
                          throwError_def return_def valid_fault_def)[11]
-    apply (simp only: split: cap.splits split_if_asm)
+    apply (simp only: split: cap.splits if_split_asm)
      apply (simp add: fail_def)
     apply (simp only: K_bind_def in_bindE)
     apply (elim conjE exE disjE)
         apply ((clarsimp simp: whenE_def bindE_def bind_def lift_def liftE_def
                     throwError_def returnOk_def return_def valid_fault_def
                     valid_cap_def2 wellformed_cap_def
-                  split: split_if_asm cap.splits)+)[4]
-    apply (split split_if_asm)
+                  split: if_split_asm cap.splits)+)[4]
+    apply (split if_split_asm)
      apply (clarsimp simp: whenE_def bindE_def bind_def lift_def liftE_def
                 throwError_def returnOk_def return_def valid_fault_def
                 valid_cap_def2 wellformed_cap_def
-              split: split_if_asm cap.splits)
+              split: if_split_asm cap.splits)
     apply (simp only: K_bind_def in_bindE)
     apply (elim conjE exE disjE)
      apply (clarsimp simp: whenE_def bindE_def bind_def lift_def liftE_def
                 throwError_def returnOk_def return_def valid_fault_def
                 valid_cap_def2 wellformed_cap_def
-              split: split_if_asm cap.splits)
-    apply (split split_if_asm)
+              split: if_split_asm cap.splits)
+    apply (split if_split_asm)
      apply (frule (8) "1.hyps")
      apply (clarsimp simp add: validE_def valid_def whenE_def bindE_def
                bind_def lift_def liftE_def throwError_def
                returnOk_def return_def valid_fault_def
-             split: split_if_asm cap.splits sum.splits)
+             split: if_split_asm cap.splits sum.splits)
      apply (frule in_inv_by_hoareD [OF get_cap_inv])
      apply simp
      apply (frule (1) post_by_hoare [OF get_cap_valid])
@@ -811,7 +811,7 @@ proof (induct param rule: resolve_address_bits'.induct)
     apply (frule in_inv_by_hoareD [OF get_cap_inv])
     apply (clarsimp simp: whenE_def bindE_def bind_def throwError_def
                           returnOk_def return_def
-                    split: split_if_asm cap.splits sum.splits)
+                    split: if_split_asm cap.splits sum.splits)
     done
 qed
 
@@ -849,7 +849,7 @@ lemma lec_valid_fault:
   "\<lbrace>valid_objs\<rbrace>
    lookup_extra_caps thread buffer info
    \<lbrace>\<lambda>_. valid_objs\<rbrace>,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
-  apply (simp add: lookup_extra_caps_def split del: split_if)
+  apply (simp add: lookup_extra_caps_def split del: if_split)
   apply (wp mapME_wp' lookup_cap_and_slot_valid_fault)
   done
 
@@ -865,7 +865,7 @@ lemma lec_valid_fault2[wp]:
 lemma lec_caps_to[wp]:
   "\<lbrace>invs and K (\<forall>cap. is_cnode_cap cap \<longrightarrow> P cap)\<rbrace> lookup_extra_caps t buffer info 
    \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. ex_cte_cap_wp_to P (snd x) s)\<rbrace>,-"
-  apply (simp add: lookup_extra_caps_def split del: split_if)
+  apply (simp add: lookup_extra_caps_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp mapME_set)
       apply (simp add: lookup_cap_and_slot_def split_def)
@@ -883,7 +883,7 @@ lemma lec_derived[wp]:
   "\<lbrace>invs\<rbrace>
      lookup_extra_caps t buffer info 
    \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. cte_wp_at (interrupt_derived (fst x)) (snd x) s)\<rbrace>,-"
-  apply (simp add: lookup_extra_caps_def split del: split_if)
+  apply (simp add: lookup_extra_caps_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp mapME_set)
       apply (simp add: lookup_cap_and_slot_def split_def)
@@ -991,7 +991,7 @@ lemma hinv_invs':
                    liftE_liftM_liftME liftME_def bindE_assoc)
 
   apply (wp syscall_valid sts_invs_minor2 rfk_invs
-            hoare_vcg_all_lift hoare_vcg_disj_lift | simp split del: split_if)+
+            hoare_vcg_all_lift hoare_vcg_disj_lift | simp split del: if_split)+
   apply (rule_tac Q = "\<lambda>st. st_tcb_at (op = st) thread and (invs and Q)" in
          hoare_post_imp)
   apply (auto elim!: pred_tcb_weakenE st_tcb_ex_cap
@@ -1105,7 +1105,7 @@ lemma delete_caller_deletes_caller[wp]:
                in hoare_post_imp,
          clarsimp elim!: cte_wp_at_weakenE)
   apply (simp add: delete_caller_cap_def cap_delete_one_def, wp)
-   apply (clarsimp simp add: split_if unless_def when_def)
+   apply (clarsimp simp add: if_split unless_def when_def)
    apply (rule conjI [rotated], clarsimp, wp)
    apply (clarsimp elim!: cte_wp_at_weakenE | wp get_cap_wp)+
   done
@@ -1255,7 +1255,7 @@ lemma do_reply_transfer_nonz_cap:
   apply (simp add: do_reply_transfer_def)
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (rule hoare_pre)
-   apply (wp cap_delete_one_cte_wp_at_preserved hoare_vcg_ex_lift | simp split del: split_if
+   apply (wp cap_delete_one_cte_wp_at_preserved hoare_vcg_ex_lift | simp split del: if_split
           | wpc | strengthen ex_nonz_cap_to_tcb_strg)+
        apply (clarsimp simp add: tcb_cap_cases_def is_cap_simps can_fast_finalise_def)
       apply (strengthen ex_tcb_cap_to_tcb_at_strg)

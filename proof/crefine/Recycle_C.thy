@@ -531,7 +531,7 @@ lemma invalidateTLBByASID_ccorres:
     apply csymbr
     apply (simp add: case_option_If2 del: Collect_const)
     apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
-       apply (clarsimp simp: pde_stored_asid_def to_bool_def split: split_if)
+       apply (clarsimp simp: pde_stored_asid_def to_bool_def split: if_split)
       apply (rule ccorres_return_void_C[unfolded dc_def])
      apply (simp add: dc_def[symmetric])
      apply csymbr
@@ -744,14 +744,14 @@ lemma ccap_relation_VPIsDevice:
    by (clarsimp elim!:ccap_relationE 
      simp : isPageCap_def generic_frame_cap_get_capFIsDevice_CL_def cap_to_H_def
             Let_def to_bool_def
-     split: arch_capability.split_asm cap_CL.split_asm split_if_asm)
+     split: arch_capability.split_asm cap_CL.split_asm if_split_asm)
 
 lemma ccap_relation_get_capZombiePtr_CL:
   "\<lbrakk> ccap_relation cap cap'; isZombie cap; capAligned cap \<rbrakk>
       \<Longrightarrow> get_capZombiePtr_CL (cap_zombie_cap_lift cap') = capZombiePtr cap"
   apply (simp only: cap_get_tag_isCap[symmetric])
   apply (drule(1) cap_get_tag_to_H)
-  apply (clarsimp simp: get_capZombiePtr_CL_def get_capZombieBits_CL_def Let_def split: split_if)
+  apply (clarsimp simp: get_capZombiePtr_CL_def get_capZombieBits_CL_def Let_def split: if_split)
   apply (subst less_mask_eq)
    apply (clarsimp simp add: capAligned_def objBits_simps word_bits_conv)
    apply unat_arith
@@ -776,7 +776,7 @@ lemma snd_lookupAround2_update:
   apply (clarsimp simp: lookupAround2_def lookupAround_def Let_def
                         dom_fun_upd2
               simp del: dom_fun_upd cong: if_cong option.case_cong)
-  apply (clarsimp split: option.split split_if  cong: if_cong)
+  apply (clarsimp split: option.split if_split  cong: if_cong)
   apply auto
   done
 
@@ -826,7 +826,7 @@ lemma cpspace_relation_ep_update_ep2:
   apply (rule_tac P="\<lambda>a. cmap_relation a b c d" for b c d in rsubst,
                    erule cmap_relation_upd_relI, assumption+)
     apply simp+
-  apply (rule ext, simp add: map_comp_def projectKO_opt_ep split: split_if)
+  apply (rule ext, simp add: map_comp_def projectKO_opt_ep split: if_split)
   done
 
 end
@@ -913,7 +913,7 @@ lemma tcbSchedEnqueue_ep_at:
    \<lbrace>\<lambda>rv. obj_at' P ep\<rbrace>"
   apply (simp add: tcbSchedEnqueue_def unless_def null_def)
   apply (wp threadGet_wp, clarsimp, wp)
-  apply (clarsimp split: split_if, wp)
+  apply (clarsimp split: if_split, wp)
   done
 
 lemma ctcb_relation_unat_tcbPriority_C:
@@ -1044,7 +1044,7 @@ lemma cancelBadgedSends_ccorres:
                apply (subgoal_tac "tcb_at' (last (a # list)) \<sigma> \<and> tcb_at' a \<sigma>")
                 apply (clarsimp simp: is_aligned_neg_mask [OF is_aligned_tcb_ptr_to_ctcb_ptr[where P=\<top>]])
                 subgoal by (simp add: tcb_queue_relation'_def EPState_Send_def mask_def)
-               subgoal by (auto split: split_if)
+               subgoal by (auto split: if_split)
               subgoal by simp
              apply (ctac add: rescheduleRequired_ccorres[unfolded dc_def])
             apply (rule hoare_pre, wp weak_sch_act_wf_lift_linear set_ep_valid_objs')
@@ -1160,7 +1160,7 @@ lemma cancelBadgedSends_ccorres:
           apply (thin_tac "\<forall>x. P x" for P)
           apply (clarsimp simp: pred_tcb_at' ball_Un)
           apply (rule conjI)
-           apply (clarsimp split: split_if)
+           apply (clarsimp split: if_split)
            subgoal by (fastforce simp: valid_tcb_state'_def valid_objs'_maxDomain
                                   valid_objs'_maxPriority dest: pred_tcb_at')
           apply (clarsimp simp: tcb_at_not_NULL [OF pred_tcb_at'])
@@ -1208,7 +1208,7 @@ lemma cancelBadgedSends_ccorres:
    apply (clarsimp simp: typ_heap_simps)
    apply (clarsimp simp: cendpoint_relation_def Let_def)
    subgoal by (clarsimp simp: tcb_queue_relation'_def neq_Nil_conv
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply clarsimp
   apply (frule ko_at_valid_objs', clarsimp)
    apply (simp add: projectKOs)
@@ -1218,7 +1218,7 @@ lemma cancelBadgedSends_ccorres:
   apply (rule conjI)
    subgoal by (auto simp: isBlockedOnSend_def elim!: pred_tcb'_weakenE)
   apply (rule conjI)
-   apply (clarsimp split: split_if)
+   apply (clarsimp split: if_split)
    apply (drule sym_refsD, clarsimp)
    apply (drule(1) bspec)+
    by (auto simp: obj_at'_def projectKOs state_refs_of'_def pred_tcb_at'_def tcb_bound_refs'_def 

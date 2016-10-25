@@ -149,7 +149,7 @@ lemma si_objects_extra_caps'_si_objects_extra_caps:
   apply (subst take_drop_append [where a="card obj_ids" and
                b="card {obj_id \<in> obj_ids. cnode_or_tcb_at obj_id spec}"])
   apply clarsimp
-  apply (subst sep.setprod.union_disjoint, (simp add: distinct_take_drop_append)+)+
+  apply (subst sep.prod.union_disjoint, (simp add: distinct_take_drop_append)+)+
   apply (clarsimp simp: sep_conj_ac)
   done
 
@@ -673,7 +673,7 @@ lemma si_caps_at_conversion:
       si_caps_at t si_caps spec dev real_ids"
   apply (clarsimp simp: si_objs_caps_at_def si_obj_caps_at_def [abs_def]
                         si_obj_cap_at_def [abs_def] si_caps_at_def)
-  apply (subst sep.setprod.Sigma, clarsimp+)
+  apply (subst sep.prod.Sigma, clarsimp+)
   apply (clarsimp simp: split_def)
   apply (subst sep_map_set_conj_restrict_predicate)
    apply (rule finite_SigmaI, clarsimp+)
@@ -696,7 +696,7 @@ lemma si_null_caps_at_conversion:
       si_null_caps_at t si_caps spec real_ids"
   apply (clarsimp simp: si_spec_objs_null_caps_at_def si_spec_obj_null_caps_at_def [abs_def]
                         si_spec_obj_null_cap_at_def [abs_def] si_null_caps_at_def)
-  apply (subst sep.setprod.Sigma, clarsimp+)
+  apply (subst sep.prod.Sigma, clarsimp+)
   apply (clarsimp simp: split_def)
   apply (subst sep_map_set_conj_restrict_predicate)
    apply (rule finite_SigmaI, clarsimp+)
@@ -784,7 +784,7 @@ lemma si_irq_caps_at_conversion:
   apply (clarsimp simp: si_spec_irqs_caps_at_def si_irq_caps_at_def
                         si_spec_irq_caps_at_def [abs_def]
                         si_spec_irq_cap_at_def [abs_def])
-  apply (subst sep.setprod.Sigma, clarsimp+)
+  apply (subst sep.prod.Sigma, clarsimp+)
   apply (clarsimp simp: split_def)
   apply (subst sep_map_set_conj_restrict_predicate)
    apply (rule finite_SigmaI, clarsimp+)
@@ -874,7 +874,7 @@ lemma si_irq_null_caps_at_simplified:
    (\<And>* cptr \<in> set (take (length irqs) free_cptrs). ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) s"
   apply (clarsimp simp: si_spec_irqs_null_caps_at_def si_spec_irq_null_caps_at_def
                         si_spec_irq_null_cap_at_def si_spec_irqs_caps_at_def)
-  apply (subst (asm) sep.setprod.Sigma, clarsimp+)
+  apply (subst (asm) sep.prod.Sigma, clarsimp+)
   apply (clarsimp simp: split_def)
   apply (subst (asm) sep_map_set_conj_restrict_predicate, rule finite_SigmaI, clarsimp+)
   apply (subst (asm) rewrite_irqhandler_cap_at, simp)

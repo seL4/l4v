@@ -49,7 +49,7 @@ val ops = Symtab.make [
     (@{const_name "plus"}, ("Plus", true)),
     (@{const_name "minus"}, ("Minus", true)),
     (@{const_name "times"}, ("Times", true)),
-    (@{const_name "div_class.mod"}, ("Modulus", true)),
+    (@{const_name "modulo_class.modulo"}, ("Modulus", true)),
     (@{const_name "divide_class.divide"}, ("DividedBy", true)),
     (@{const_name "bitAND"}, ("BWAnd", true)),
     (@{const_name "bitOR"}, ("BWOr", true)),

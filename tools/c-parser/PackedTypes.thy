@@ -71,7 +71,7 @@ lemma field_lookup_td_fafu_idem:
   and   "\<And>(s :: 'a field_desc typ_desc) f m n. \<lbrakk> field_lookup_struct st f m = Some (s, n); td_fafu_idem_struct st \<rbrakk> \<Longrightarrow> td_fafu_idem s"
   and   "\<And>(s :: 'a field_desc typ_desc) f m n. \<lbrakk> field_lookup_list ts f m = Some (s, n); td_fafu_idem_list ts \<rbrakk> \<Longrightarrow> td_fafu_idem s"
   and   "\<And>(s :: 'a field_desc typ_desc) f m n. \<lbrakk> field_lookup_pair p f m = Some (s, n); td_fafu_idem_pair p \<rbrakk> \<Longrightarrow> td_fafu_idem s"
-  by (induct t and st and ts and p) (auto split: split_if_asm option.splits)
+  by (induct t and st and ts and p) (auto split: if_split_asm option.splits)
 
 lemma field_access_update_same:
   fixes t :: "'a :: mem_type field_desc typ_desc" and st :: "'a field_desc typ_struct"
@@ -238,7 +238,7 @@ next
     hence "x < size_td (dt_fst p')"
       apply -
       apply (cases p')
-      apply (simp split: split_if_asm)
+      apply (simp split: if_split_asm)
       apply (drule field_lookup_offset_size')
       apply (rule order_less_le_trans [OF xln])
       apply simp
@@ -248,7 +248,7 @@ next
       by (simp add: nth_append length_fa_ti access_ti_pair_dt_fst size_td_pair_dt_fst ih[OF fl])
   }
   ultimately show ?case using `field_lookup_list (p' # ts') f 0 = Some (s, n)` by (simp split: option.splits)
-qed (clarsimp split: split_if_asm)+
+qed (clarsimp split: if_split_asm)+
 
 subsection {* td_fa_hi *}
 

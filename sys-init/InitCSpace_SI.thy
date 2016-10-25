@@ -1267,11 +1267,11 @@ lemma init_cnode_slots_move_sep:
                simplified sep_conj_assoc], clarsimp+)
      apply (wp init_cnode_slot_move_sep, simp+)
      apply fastforce
-   apply (subst sep.setprod.distrib)+
+   apply (subst sep.prod.distrib)+
    apply (clarsimp simp: sep_conj_assoc fun_eq_iff)
    apply sep_solve
   apply clarsimp
-  apply (subst (asm) sep.setprod.distrib)+
+  apply (subst (asm) sep.prod.distrib)+
   apply (clarsimp simp: sep_conj_assoc fun_eq_iff)
   apply sep_solve
   done
@@ -1335,9 +1335,9 @@ lemma init_cspace_move_sep:
                     xs="cnode_list", simplified sep_conj_assoc], simp)
      apply (wp init_cnode_move_sep, simp+)
    apply clarsimp
-   apply (subst sep.setprod.distrib)+
+   apply (subst sep.prod.distrib)+
    apply sep_solve
-  apply (subst (asm) sep.setprod.distrib)+
+  apply (subst (asm) sep.prod.distrib)+
   apply sep_solve
   done
 
@@ -1653,10 +1653,10 @@ lemma init_cspace_copy_sep:
     apply sep_solve
    apply clarsimp
    apply sep_solve
-   apply (subst sep.setprod.distrib)+
+   apply (subst sep.prod.distrib)+
    apply clarsimp
    apply sep_solve
-  apply (subst (asm) sep.setprod.distrib)+
+  apply (subst (asm) sep.prod.distrib)+
   apply clarsimp
   apply sep_solve
   done
@@ -1694,7 +1694,7 @@ lemma si_caps_at_filter:
   "si_caps_at t si_caps spec dev (set xs) =
   (si_caps_at t si_caps spec dev (set [x\<leftarrow>xs. P x]) \<and>* si_caps_at t si_caps spec dev (set [x\<leftarrow>xs. \<not>P x]))"
   apply (clarsimp simp: si_caps_at_def)
-  apply (subst sep.setprod.union_disjoint [symmetric], (fastforce simp: union_filter)+)
+  apply (subst sep.prod.union_disjoint [symmetric], (fastforce simp: union_filter)+)
   done
 
 lemma si_caps_at_restrict:
@@ -1771,7 +1771,7 @@ lemma init_cspace_sep:
   apply (sep_drule si_irq_null_caps_at_simplified [where
                        free_cptrs="drop (card {obj_id. real_object_at obj_id spec}) free_cptrs"
                    and irqs="used_irq_list spec"], simp+)
-  apply (subst (asm) sep.setprod.union_disjoint [symmetric], simp+)
+  apply (subst (asm) sep.prod.union_disjoint [symmetric], simp+)
    apply (metis (no_types) distinct_append distinct_take_strg inf_sup_aci(1) take_add)
   apply (erule sep_map_set_conj_set_cong)
   apply clarsimp

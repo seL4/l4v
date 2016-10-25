@@ -185,7 +185,7 @@ lemma decode_invocation_corres:
              -- "Null"
              apply (simp add: isCap_defs)
             -- "Untyped"
-            apply (simp add: isCap_defs Let_def o_def split del: split_if)
+            apply (simp add: isCap_defs Let_def o_def split del: if_split)
             apply (rule corres_guard_imp, rule dec_untyped_inv_corres)
               apply ((clarsimp simp:cte_wp_at_caps_of_state diminished_def)+)[3]
            -- "(Async)Endpoint"
@@ -197,7 +197,7 @@ lemma decode_invocation_corres:
         -- "CNodeCap"
         apply (rename_tac word nat list)
         apply (simp add: isCap_defs Let_def CanModify_def
-                    split del: split_if cong: if_cong)
+                    split del: if_split cong: if_cong)
         apply (clarsimp simp add: o_def)
         apply (rule corres_guard_imp)
           apply (rule_tac F="length list \<le> 32" in corres_gen_asm)
@@ -206,7 +206,7 @@ lemma decode_invocation_corres:
         apply simp
        -- "ThreadCap"
        apply (simp add: isCap_defs Let_def CanModify_def
-                   split del: split_if cong: if_cong)
+                   split del: if_split cong: if_cong)
        apply (clarsimp simp add: o_def)
        apply (rule corres_guard_imp)
          apply (rule decode_tcb_inv_corres, rule refl,
@@ -415,7 +415,7 @@ lemma threadSet_tcbDomain_update_invs':
      threadSet (tcbDomain_update (\<lambda>_. domain)) t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (simp add: invs'_def valid_state'_def split del: split_if)
+  apply (simp add: invs'_def valid_state'_def split del: if_split)
   apply (rule hoare_pre)
   apply (wp
                threadSet_valid_pspace'
@@ -587,10 +587,10 @@ lemma invokeTCB_typ_at'[wp]:
   apply (cases tinv,
          simp_all add: invokeTCB_def
                        getThreadBufferSlot_def locateSlot_conv
-            split del: split_if)
+            split del: if_split)
    apply (simp only: cases_simp if_cancel simp_thms conj_comms pred_conj_def
                      Let_def split_def getThreadVSpaceRoot
-          | (simp split del: split_if cong: if_cong)
+          | (simp split del: if_split cong: if_cong)
           | (wp mapM_x_wp[where S=UNIV, simplified]
                 checkCap_inv_typ_at'
                 case_options_weak_wp)[1]
@@ -650,7 +650,7 @@ lemma sts_mcpriority_tcb_at'[wp]:
    \<lbrace>\<lambda>_. mcpriority_tcb_at' P t\<rbrace>"
   apply (cases "t = t'",
          simp_all add: setThreadState_def
-                  split del: split_if)
+                  split del: if_split)
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
    apply (wp threadSet_obj_at'_really_strongest
                | simp add: pred_tcb_at'_def)+
@@ -698,7 +698,7 @@ crunch inv[wp]: decodeDomainInvocation P
 lemma decode_inv_inv'[wp]:
   "\<lbrace>P\<rbrace> decodeInvocation label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: decodeInvocation_def Let_def
-              split del: split_if
+              split del: if_split
               cong: if_cong)
   apply (rule hoare_pre)
    apply (wp decodeTCBInvocation_inv |
@@ -717,7 +717,7 @@ lemma diminished_IRQHandler' [simp]:
 lemma diminished_ReplyCap' [simp]:
   "diminished' (ReplyCap x y) cap = (cap = ReplyCap x y)"
   apply (rule iffI)
-   apply (clarsimp simp: diminished'_def maskCapRights_def Let_def split del: split_if)
+   apply (clarsimp simp: diminished'_def maskCapRights_def Let_def split del: if_split)
    apply (cases cap, simp_all add: isCap_simps)[1]
    apply (simp add: ARM_H.maskCapRights_def isPageCap_def split: arch_capability.splits)
   apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
@@ -765,7 +765,7 @@ lemma decode_inv_wf'[wp]:
      decodeInvocation label args cap_index slot cap excaps
    \<lbrace>valid_invocation'\<rbrace>,-"
   apply (case_tac cap, simp_all add: decodeInvocation_def Let_def isCap_defs uncurry_def split_def
-              split del: split_if
+              split del: if_split
               cong: if_cong)
           apply ((rule hoare_pre,
                  ((wp_trace decodeTCBInv_wf | simp add: o_def)+)[1],
@@ -1249,14 +1249,14 @@ lemma lec_dimished'[wp]:
   "\<lbrace>\<top>\<rbrace>
      lookupExtraCaps t buffer info 
    \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. cte_wp_at' (diminished' (fst x) o cteCap) (snd x) s)\<rbrace>,-"
-  apply (simp add: lookupExtraCaps_def split del: split_if)
+  apply (simp add: lookupExtraCaps_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp mapME_set|simp)+
   done
 
 lemma lookupExtras_real_ctes[wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupExtraCaps t xs info \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. real_cte_at' (snd x) s\<rbrace>,-"
-  apply (simp add: lookupExtraCaps_def Let_def split del: split_if cong: if_cong)
+  apply (simp add: lookupExtraCaps_def Let_def split del: if_split cong: if_cong)
   apply (rule hoare_pre)
    apply (wp mapME_set)
       apply (simp add: lookupCapAndSlot_def split_def)
@@ -1282,7 +1282,7 @@ lemma lec_caps_to'[wp]:
   "\<lbrace>invs' and K (\<forall>cap. isCNodeCap cap \<longrightarrow> P cap)\<rbrace>
      lookupExtraCaps t buffer info 
    \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. ex_cte_cap_wp_to' P (snd x) s)\<rbrace>,-"
-  apply (simp add: lookupExtraCaps_def split del: split_if)
+  apply (simp add: lookupExtraCaps_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp mapME_set)
       apply (simp add: lookupCapAndSlot_def split_def)
@@ -1301,7 +1301,7 @@ lemma lec_derived'[wp]:
   "\<lbrace>invs'\<rbrace>
      lookupExtraCaps t buffer info 
    \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. cte_wp_at' (badge_derived' (fst x) o cteCap) (snd x) s)\<rbrace>,-"
-  apply (simp add: lookupExtraCaps_def split del: split_if)
+  apply (simp add: lookupExtraCaps_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp mapME_set)
       apply (simp add: lookupCapAndSlot_def split_def)
@@ -1353,7 +1353,7 @@ lemma setTCB_valid_duplicates'[wp]:
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = tcb,simplified])
   apply (clarsimp simp:updateObject_default_def assert_def bind_def 
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
@@ -1548,7 +1548,7 @@ lemma hinv_tcb'[wp]:
   apply (simp add: handleInvocation_def split_def
                    ts_Restart_case_helper')
   apply (wp syscall_valid' setThreadState_nonqueued_state_update
-            sts_st_tcb' ct_in_state'_set | simp split del: split_if)+
+            sts_st_tcb' ct_in_state'_set | simp split del: if_split)+
      apply (auto, auto simp: ct_in_state'_def dest: st_tcb_at_idle_thread')
   done
 
@@ -1727,7 +1727,7 @@ lemma hw_corres':
                                and (\<lambda>s. (cur_thread s) = thread  )
                                and valid_cap rv"
                        and P'="?pre2 and tcb_at' thread and valid_cap' rv'" in corres_inst)
-            apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm split del: split_if
+            apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm split del: if_split
                              simp: lookup_failure_map_def whenE_def)
              apply (rule corres_guard_imp)
                apply (rename_tac rights)
@@ -1760,7 +1760,7 @@ lemma hw_corres':
           apply wp
            apply (simp add: split_def)
            apply (wp resolve_address_bits_valid_fault2)
-         apply (wp getNotification_wp | wpcw | simp add: valid_fault_def whenE_def split del: split_if)+
+         apply (wp getNotification_wp | wpcw | simp add: valid_fault_def whenE_def split del: if_split)+
   apply (clarsimp simp add: ct_in_state_def  ct_in_state'_def conj_comms invs_valid_tcb_ctable 
                             invs_valid_objs tcb_at_invs invs_psp_aligned invs_cur)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
@@ -1816,7 +1816,7 @@ lemma hw_invs'[wp]:
                          deleteCallerCap_ksQ_ct'
                          hoare_lift_Pf2[OF deleteCallerCap_simple
                          deleteCallerCap_ct']
-                    | wpc | simp add: ct_in_state'_def whenE_def split del: split_if)+
+                    | wpc | simp add: ct_in_state'_def whenE_def split del: if_split)+
      apply (rule validE_validE_R)
      apply (rule_tac Q="\<lambda>rv s. invs' s
                              \<and> sch_act_sane s
@@ -1840,7 +1840,7 @@ lemma hw_invs'[wp]:
 
 lemma hw_tcb'[wp]: "\<lbrace>tcb_at' t\<rbrace> handleRecv isBlocking \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
   apply (simp add: handleRecv_def cong: if_cong)
-  apply (clarsimp simp add: whenE_def split del: split_if | wp  hoare_whenE_wp hoare_drop_imps
+  apply (clarsimp simp add: whenE_def split del: if_split | wp  hoare_whenE_wp hoare_drop_imps
               | wpcw)+
   done
 

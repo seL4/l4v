@@ -166,7 +166,7 @@ lemma binary_search_correct:
                 \<and> (found \<noteq> 0 \<longrightarrow> v \<in> unat ` set data)"
           and  M="\<lambda>((found, l, r), s). if found = 0 then 1 + (r - l) else 0" ])
   apply wp
-     apply (clarsimp split del: split_if cong: if_cong
+     apply (clarsimp split del: if_split cong: if_cong
        simp: field_simps array_access_to_list_access array_Ex UINT_MAX_def)
     apply (subgoal_tac "aa \<le> ((aa + b)  div 2) \<and> ((aa + b) div 2) \<le> b")
      apply (case_tac "unat (data ! ((aa + b) div 2)) = v")
@@ -178,7 +178,7 @@ lemma binary_search_correct:
       apply (fastforce elim: sorted_index_gt)
      apply force
     apply force
-   apply (clarsimp split del: split_if simp: field_simps cong: if_cong)
+   apply (clarsimp split del: if_split simp: field_simps cong: if_cong)
    apply rule
     apply clarsimp
    apply clarsimp

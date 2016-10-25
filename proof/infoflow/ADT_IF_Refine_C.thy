@@ -322,7 +322,7 @@ lemma kernelEntry_corres_C:
             apply (clarsimp simp: all_invs'_def)
            apply simp
           apply (rule_tac P="\<top>" and P'="\<top>" in corres_inst)
-          apply (clarsimp simp: prod_lift_def split: split_if)
+          apply (clarsimp simp: prod_lift_def split: if_split)
          apply wp
        apply (rule hoare_strengthen_post)
         apply (subst archTcbUpdate_aux2[symmetric])
@@ -584,7 +584,7 @@ lemma check_active_irq_corres_C:
   apply (subst bind_assoc[symmetric])
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'="\<lambda>a c. case a of None \<Rightarrow> c = 0xFFFF | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> 0xFFFF", OF _ ccorres_corres_u_xf])
-        apply (clarsimp split: split_if option.splits)
+        apply (clarsimp split: if_split option.splits)
         apply (rule ucast_ucast_id[symmetric], simp)
        apply (rule ccorres_guard_imp)
          apply (rule ccorres_rel_imp, rule ccorres_guard_imp)

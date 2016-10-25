@@ -125,7 +125,7 @@ lemma tcb_set_cap_local_via_explosion:
     apply (clarsimp simp: sep_conj_assoc) -- "flatten"
     apply (sep_rule sep_map_base_sep_map_capI'[where ko="TCB tcb"])
      apply simp+
-   apply (clarsimp simp: a_base_type_cmp_of_def split: split_if_asm)
+   apply (clarsimp simp: a_base_type_cmp_of_def split: if_split_asm)
    apply sep_cancel
    apply (sep_select_asm 2)
    apply (drule abt_valid_cnode_index_in_components)
@@ -157,7 +157,7 @@ lemma cnode_set_cap_local_via_explosion:
     apply (clarsimp simp: valid_cnode_index_def)
    apply sep_cancel
    apply (sep_select_asm 2)
-   apply (simp split: split_if_asm)
+   apply (simp split: if_split_asm)
     apply (drule sep_map_cap_sep_map_base[where ko="CNode 0 cn"])
      apply simp
     apply (simp add: bl_length_set_equal)

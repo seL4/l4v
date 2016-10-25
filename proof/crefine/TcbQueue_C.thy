@@ -77,7 +77,7 @@ next
     proof (rule conjI)
       show "?prev tcb (tcb' # tcbs) qprev'" 
 	using ih [THEN conjunct1] tcbp_not_tcb' hd_tcbs tcbsnz
-	apply (clarsimp split: split_if_asm)
+	apply (clarsimp split: if_split_asm)
 	apply fastforce
 	apply (rule_tac x = "Suc n" in exI)
 	apply simp
@@ -85,7 +85,7 @@ next
     next
       show "?next tcb (tcb' # tcbs)" 
 	using ih [THEN conjunct2] tcbp_not_tcb' hd_tcbs tcbsnz
-	apply (clarsimp split: split_if_asm)
+	apply (clarsimp split: if_split_asm)
 	apply (rule_tac x = "Suc n" in exI)
 	apply simp
 	done
@@ -121,7 +121,7 @@ lemma tcb_queue_valid_ptrsD:
   apply (frule (3) tcb_queue_memberD)
   apply (elim exE)
   apply (frule (3) tcb_queueD)
-  apply (auto intro!: tcb_at_h_t_valid elim!: bspec split: split_if_asm)
+  apply (auto intro!: tcb_at_h_t_valid elim!: bspec split: if_split_asm)
   done
 
 lemma tcb_queue_relation_restrict0:
@@ -301,7 +301,7 @@ lemma tcb_queue_relation_ptr_rel:
   apply -  
   apply (frule (3) tcb_queueD)
   apply (frule (2) tcb_queue_relation_not_NULL')
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
      apply (rule not_sym)
      apply (rule notI)
      apply simp
@@ -437,7 +437,7 @@ lemma tcb_queue_next_prev:
    apply simp  
   apply (cut_tac bspec [OF tcb_queue_relation_not_NULL, OF qr valid_ep(1) tq(1)])
   apply (cut_tac bspec [OF tcb_queue_relation_not_NULL, OF qr valid_ep(1) tq(2)])        
-  apply (simp add: inj_eq split: split_if_asm)
+  apply (simp add: inj_eq split: if_split_asm)
 	   apply clarsimp
 	  apply clarsimp
 	 subgoal by (clarsimp simp: last_conv_nth  distinct_nth distinct_nth_cons)
@@ -623,7 +623,7 @@ next
 	by (simp add: upd_unless_null_def)
       
       thus ?thesis using qp qh tq cs_tcb tcbp Cons nnull 
-	apply (simp (no_asm) add: tcbp Cons split del: split_if)
+	apply (simp (no_asm) add: tcbp Cons split del: if_split)
 	apply (subst tcb_queue_relation_cong [OF refl refl refl mpeq])
 	apply assumption
 	apply (clarsimp simp: f)
@@ -717,7 +717,7 @@ proof -
     using queue_rel in_queue cs_tcb
     apply -
     apply (drule tcb_queue_relation'_queue_rel)
-    apply (clarsimp split: split_if)
+    apply (clarsimp split: if_split)
     apply (cases queue)
      apply simp
     apply clarsimp
@@ -776,14 +776,14 @@ proof -
 	apply simp
 	apply (subgoal_tac "(remove1 (last queue) queue) \<noteq> []")
 	 apply (clarsimp simp: inj_eq last_conv_nth nth_eq_iff_index_eq length_remove1 
-	   distinct_remove1_take_drop split: split_if_asm)
+	   distinct_remove1_take_drop split: if_split_asm)
 	 apply arith
-	apply (clarsimp simp: remove1_empty last_conv_nth hd_conv_nth nth_eq_iff_index_eq not_le split: split_if_asm)
+	apply (clarsimp simp: remove1_empty last_conv_nth hd_conv_nth nth_eq_iff_index_eq not_le split: if_split_asm)
 	apply (cases queue)
 	 apply simp
 	apply simp
-       apply (fastforce simp: inj_eq split: split_if_asm)
-      apply (clarsimp simp: last_conv_nth distinct_remove1_take_drop nth_eq_iff_index_eq inj_eq split: split_if_asm)
+       apply (fastforce simp: inj_eq split: if_split_asm)
+      apply (clarsimp simp: last_conv_nth distinct_remove1_take_drop nth_eq_iff_index_eq inj_eq split: if_split_asm)
        apply arith
       apply (simp add: nth_append min_def nth_eq_iff_index_eq)
       apply clarsimp
@@ -852,7 +852,7 @@ next
   hence "ctcb_ptr_to_tcb_ptr (getNext tcb) \<in> set queue" using assms
     apply -
     apply (drule (3) tcb_queueD)
-    apply (clarsimp split: split_if_asm)
+    apply (clarsimp split: if_split_asm)
     done
   
   with valid_ep(1) have "tcb_at' (ctcb_ptr_to_tcb_ptr (getNext tcb)) s" ..
@@ -877,7 +877,7 @@ next
   hence "ctcb_ptr_to_tcb_ptr (getPrev tcb) \<in> set queue" using assms
     apply -
     apply (drule (3) tcb_queueD)
-    apply (clarsimp split: split_if_asm)
+    apply (clarsimp split: if_split_asm)
     done
   
   with valid_ep(1) have "tcb_at' (ctcb_ptr_to_tcb_ptr (getPrev tcb)) s" ..

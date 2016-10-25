@@ -120,7 +120,7 @@ lemma tcb_half_initialised_object_initialised':
                    tcb_half_initialised spec t obj_id)
     = (\<And>*obj_id | tcb_at obj_id spec \<and> \<not> object_at is_waiting_thread obj_id spec.
                    object_initialised spec t obj_id)"
-  apply(rule sep.setprod.cong, simp)
+  apply(rule sep.prod.cong, simp)
   apply (rule tcb_half_initialised_object_initialised, simp+)
   done
 

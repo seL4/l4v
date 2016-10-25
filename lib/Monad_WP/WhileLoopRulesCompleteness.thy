@@ -46,9 +46,9 @@ lemma valid_whileLoop_complete:
    apply clarsimp
    apply (subst (asm) (2) whileLoop_unroll)
    apply (case_tac "C a b")
-    apply (clarsimp simp: valid_def bind_def' Bex_def condition_def split: split_if_asm)
+    apply (clarsimp simp: valid_def bind_def' Bex_def condition_def split: if_split_asm)
     apply force
-   apply (clarsimp simp: valid_def bind_def' Bex_def condition_def split: split_if_asm)
+   apply (clarsimp simp: valid_def bind_def' Bex_def condition_def split: if_split_asm)
    apply force
   apply (subst whileLoop_unroll)
   apply (clarsimp simp: valid_def bind_def' condition_def return_def)
@@ -351,7 +351,7 @@ lemma valid_path_implies_exs_valid_whileLoop:
    apply (clarsimp split: prod.splits)
    apply (case_tac l)
     apply clarsimp
-   apply (clarsimp split del: split_if)
+   apply (clarsimp split del: if_split)
    apply (erule bexI [rotated])
    apply clarsimp
   apply clarsimp
@@ -379,7 +379,7 @@ lemma shortest_path_gets_shorter:
    apply (drule valid_path_implies_exs_valid_whileLoop)
    apply (clarsimp simp: exs_valid_def)
    apply (erule bexI [rotated])
-   apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
   apply clarsimp
   done
 

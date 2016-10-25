@@ -354,7 +354,7 @@ lemma next_not_child_pinduct2':
   \<forall>a slot. next_sib a t m = Some slot \<longrightarrow> P slot\<rbrakk>
     \<Longrightarrow> P n"
   apply(induct rule: next_not_child.pinduct)
-  apply(simp split: split_if_asm del: split_paired_All)
+  apply(simp split: if_split_asm del: split_paired_All)
   apply(case_tac "m slot")
    apply simp
   apply simp
@@ -385,7 +385,7 @@ lemma next_not_child_linearI:
     apply(simp)
     apply(atomize)
     apply(erule_tac x=aa in allE)
-    apply(simp split: split_if_asm)
+    apply(simp split: if_split_asm)
      apply(case_tac "m' aa")
       apply(simp)
       apply(simp add: next_not_child_termination)
@@ -574,7 +574,7 @@ lemma next_not_childD':
     apply(erule disjE)
      apply(erule exE, drule next_sibD)
      apply(simp add: next_sib_def)
-    apply(simp add: next_not_child_termination split: split_if_asm)
+    apply(simp add: next_not_child_termination split: if_split_asm)
    apply(atomize)
    apply(erule_tac x=a in allE)
    apply(simp)
@@ -663,7 +663,7 @@ lemma next_not_child_NoneD':
    apply(erule impE)
     apply(simp add: next_not_child_termination)
    apply(case_tac "q=a")
-    apply(simp add: next_not_child_termination split: split_if_asm)
+    apply(simp add: next_not_child_termination split: if_split_asm)
    apply(erule conjE)
    apply(erule_tac x=q in allE)
    apply(erule impE)
@@ -810,7 +810,7 @@ lemma after_in_list_not_self_helper:
   apply (case_tac xs)
   apply (case_tac "aa =x")
    apply (case_tac "x = y",simp,simp)
-   apply (simp split: split_if_asm)+
+   apply (simp split: if_split_asm)+
    done
 
 lemma after_in_list_not_self:
@@ -1016,7 +1016,7 @@ lemma finite_depth_insert_child:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows
   "finite_depth m \<Longrightarrow> finite_depth (m(dest \<mapsto> src))"
-  apply(simp add: finite_depth_def descendants_child split del: split_if)
+  apply(simp add: finite_depth_def descendants_child split del: if_split)
   apply(rule allI)
   apply(case_tac "slot=dest")
    apply(case_tac "m src")
@@ -1116,7 +1116,7 @@ lemma next_not_child:
   apply(simp)
   apply(intro conjI impI)
    apply(case_tac "next_slot src t m")
-    apply(simp add: next_slot_def split: split_if_asm)
+    apply(simp add: next_slot_def split: if_split_asm)
      apply(case_tac "t src", simp, simp add: next_child_def)
     apply(drule(1) next_not_child_NoneD)
     apply(rule next_not_child_NoneI)
@@ -1124,7 +1124,7 @@ lemma next_not_child:
       apply(simp add: descendants_of_def)
      apply(simp add: next_sib')
     apply(simp add: finite_depth_insert_child)
-   apply(simp add: next_slot_def split: split_if_asm)
+   apply(simp add: next_slot_def split: if_split_asm)
     apply(rule next_not_childI)
      apply(simp add: next_sib)
     apply(simp add: finite_depth_insert_child)
@@ -1156,8 +1156,8 @@ lemma next_not_child:
   apply(simp)
   apply(drule(2) next_not_childD)
   apply(rule next_not_childI)
-   apply(simp add: next_sib descendants_child split del: split_if)
-   apply(erule disjE, simp, simp split del: split_if)
+   apply(simp add: next_sib descendants_child split del: if_split)
+   apply(erule disjE, simp, simp split del: if_split)
    apply(elim exE conjE)
    apply(rule_tac x=q in exI)
    apply(simp add: desc neq)
@@ -1249,11 +1249,11 @@ lemma next_child:
    apply(simp)
    apply(case_tac "t src_p")
     apply(simp)
-   apply(simp split: split_if_asm)
+   apply(simp split: if_split_asm)
   apply(simp)
   apply(case_tac "t src_p")
    apply(simp)
-  apply(simp split: split_if_asm)
+  apply(simp split: if_split_asm)
   done
 
 lemma next_sib_no_parent:
@@ -1333,7 +1333,7 @@ lemma next_not_child_no_parent:
     apply(simp add: finite_depth)
    apply(rule next_not_child_NoneI)
      apply(intro allI impI)
-     apply(fastforce simp: descendants split: split_if_asm dest: descendants_of_NoneD)
+     apply(fastforce simp: descendants split: if_split_asm dest: descendants_of_NoneD)
     apply(simp add: next_sib_no_parent)
     apply(simp add: next_sib_def)
    apply(simp add: finite_depth)
@@ -1544,24 +1544,24 @@ lemma cap_insert_valid_list [wp]:
   apply(simp add: set_untyped_cap_as_full_def update_cdt_def set_cdt_def update_cdt_list_def set_cdt_list_def bind_assoc cap_insert_ext_def)
   apply (rule hoare_pre)
    apply (fold revokable_def)
-   apply (wp | simp cong: option.case_cong if_cong del: fun_upd_apply split del: split_if)+
+   apply (wp | simp cong: option.case_cong if_cong del: fun_upd_apply split del: if_split)+
        apply(wp set_cap_caps_of_state3)[1]
       apply (case_tac "is_untyped_cap src_cap \<and>
          is_untyped_cap cap \<and>
          obj_ref_of src_cap = obj_ref_of cap \<and>
          cap_bits_untyped src_cap = cap_bits_untyped cap")
 
-       apply (simp del: fun_upd_apply split del: split_if)
+       apply (simp del: fun_upd_apply split del: if_split)
        apply (wp set_cap_caps_of_state3)
       apply (simp only:)
-      apply (simp del: fun_upd_apply split del: split_if)
+      apply (simp del: fun_upd_apply split del: if_split)
      apply (wp get_cap_wp)
   apply(intro allI impI conjI)
   apply (case_tac "src = dest")
    apply (simp add: cte_wp_at_caps_of_state fun_upd_idem del: fun_upd_apply)
    apply (case_tac "cdt s dest")
-    apply (simp del: fun_upd_apply split del: split_if  cong: option.case_cong)
-   apply (simp add: del: fun_upd_apply split del: split_if  cong: option.case_cong)
+    apply (simp del: fun_upd_apply split del: if_split  cong: option.case_cong)
+   apply (simp add: del: fun_upd_apply split del: if_split  cong: option.case_cong)
 
    apply (fastforce simp add: valid_list_2_def list_remove_removed list_remove_distinct)
   apply (case_tac "cdt s dest")
@@ -1627,7 +1627,7 @@ lemma cte_at_next_slot:
   shows "\<lbrakk>valid_list s; valid_mdb s; finite_depth (cdt s)\<rbrakk>
     \<Longrightarrow> next_slot p (cdt_list s) (cdt s) = Some n \<Longrightarrow> cte_at p s"
   apply(simp add: next_slot_def)
-  apply(simp split: split_if_asm)
+  apply(simp split: if_split_asm)
    apply(drule next_childD, simp)
    apply(rule_tac p=n in descendants_of_cte_at2)
     apply(simp add: child_descendant)
@@ -1635,7 +1635,7 @@ lemma cte_at_next_slot:
   apply(subgoal_tac "next_not_child_dom (p, cdt_list s, cdt s)")
    prefer 2
    apply(simp add: next_not_child_termination valid_mdb_def valid_list_2_def)
-  apply(simp split: split_if_asm)
+  apply(simp split: if_split_asm)
    apply(case_tac "cdt s p")
     apply(simp)
    apply(rule descendants_of_cte_at)
@@ -1655,7 +1655,7 @@ lemma cte_at_next_slot':
   "\<lbrakk>valid_list s; valid_mdb s; finite_depth (cdt s)\<rbrakk>
     \<Longrightarrow> next_slot p (cdt_list s) (cdt s) = Some n \<Longrightarrow> cte_at n s"
   apply(simp add: next_slot_def)
-  apply(simp split: split_if_asm)
+  apply(simp split: if_split_asm)
    apply(drule next_childD, simp)
    apply(rule_tac x=p in descendants_of_cte_at, simp add: child_descendant, simp)
   apply(rule next_not_child_pinduct2[where t="cdt_list s" and p=p
@@ -1665,7 +1665,7 @@ lemma cte_at_next_slot':
       apply(simp)
      apply(assumption)
     apply(simp add: next_not_child_termination valid_mdb_def valid_list_2_def
-               split: split_if_asm)
+               split: if_split_asm)
      apply(case_tac "cdt s p")
       apply(simp)
      apply(simp)
@@ -1850,7 +1850,7 @@ lemma valid_list_post:
   "\<lbrakk>valid_list_2 t m; m src = Some src_p\<rbrakk>
     \<Longrightarrow> valid_list_2 (t(src_p := list_replace (t src_p) src dest, src := [], dest := t src)) m'"
   apply (simp add: valid_list_2_def)
-  apply (rule Collect_cong | simp add: list_replace_def m'_def m''_def split: split_if_asm | intro iffI impI conjI notI allI | force | fastforce)+
+  apply (rule Collect_cong | simp add: list_replace_def m'_def m''_def split: if_split_asm | intro iffI impI conjI notI allI | force | fastforce)+
   apply clarsimp
   apply (subgoal_tac "dest \<notin> set (t src_p)")
    apply (blast intro: valid_list_post_helper)
@@ -1862,7 +1862,7 @@ lemma valid_list_post_no_parent:
   shows
   "\<lbrakk>valid_list_2 t m; m src = None\<rbrakk>\<Longrightarrow> valid_list_2 (t(src := [], dest := t src)) m'"
   apply(simp add: valid_list_2_def)
-  apply (rule Collect_cong | simp add: list_replace_def m'_def m''_def split: split_if_asm | intro iffI impI conjI notI allI | fastforce)+
+  apply (rule Collect_cong | simp add: list_replace_def m'_def m''_def split: if_split_asm | intro iffI impI conjI notI allI | fastforce)+
   done
 
 
@@ -1875,7 +1875,7 @@ lemma next_child:
          else if p = dest then next_child src t
          else if next_child p t = Some src then Some dest
          else next_child p t)"
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   apply (clarsimp simp: next_child_def list_replace_def)
   apply (intro impI conjI)
     apply (fold next_child_def)[1]
@@ -1899,7 +1899,7 @@ lemma next_child_no_parent:
          else if p = dest then next_child src t
          else if next_child p t = Some src then Some dest
          else next_child p t)"
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   apply (clarsimp simp add: next_child_def)
   apply (fold next_child_def)
   apply (frule(1) next_childD,clarsimp)
@@ -1914,7 +1914,7 @@ lemma next_sib_no_parent:
          else if p = dest then next_sib src t m
          else if next_sib p t m = Some src then Some dest
          else next_sib p t m)"
-  apply (simp add: next_sib_def m'_def m''_def split: split_if)
+  apply (simp add: next_sib_def m'_def m''_def split: if_split)
   apply (intro impI conjI)
     apply (simp split: option.splits  | drule(1) valid_list_2D[OF _ after_in_list_in_list])+
    done
@@ -1933,7 +1933,7 @@ lemma next_sib:
          else if p = dest then next_sib src t m
          else if next_sib p t m = Some src then Some dest
          else next_sib p t m)"
-  apply (simp add: next_sib_def m'_def m''_def split: split_if)
+  apply (simp add: next_sib_def m'_def m''_def split: if_split)
   apply (intro impI conjI)
     apply (intro impI | simp split: option.splits  | drule(1) valid_list_2D[OF _ after_in_list_in_list] | rule after_in_list_list_replace | rule replace_list_preserve_after replace_list_preserve_after' | simp add: valid_list_2_def)+
     done
@@ -1967,10 +1967,10 @@ lemma next_not_child_no_parent:
     apply ((simp add: m'_def m''_def)+)[2]
   apply (case_tac "next_sib slot t m")
    apply (drule_tac x="a" in meta_spec)
-   apply (simp add: m'_def m''_def next_sib_def nnext nnext'' cong: if_weak_cong split: split_if_asm)
-  apply (simp split del: split_if)
+   apply (simp add: m'_def m''_def next_sib_def nnext nnext'' cong: if_weak_cong split: if_split_asm)
+  apply (simp split del: if_split)
   apply (thin_tac "\<And>a. \<lbrakk>False; Q a\<rbrakk> \<Longrightarrow> P a" for Q P)
-  apply (simp add: m'_def m''_def next_sib_def nnext nnext'' cong: if_weak_cong split: split_if_asm | intro impI conjI)+
+  apply (simp add: m'_def m''_def next_sib_def nnext nnext'' cong: if_weak_cong split: if_split_asm | intro impI conjI)+
     apply (simp add: valid_list_2_def | drule after_in_list_in_list | clarsimp)+
     done
 
@@ -2118,7 +2118,7 @@ shows
           nnext'[where slot=slot]
           nnext'[where slot=dest]
           nnext'[where slot=src]
-split: split_if_asm)
+split: if_split_asm)
     apply (intro impI conjI,simp_all)
       apply (drule next_not_childD[OF _ findepth no_mloop])
       apply (elim disjE)
@@ -2147,15 +2147,15 @@ lemma next_not_child:
          else if next_not_child p t m = Some src then Some dest
          else next_not_child p t m)"
   apply (insert misc)
-  apply (insert src_loop_facts[where src_p=src_p],simp split del: split_if)
+  apply (insert src_loop_facts[where src_p=src_p],simp split del: if_split)
   apply (induct p rule: next_not_child_pinduct[where t=t and m=m, OF _ findepth])
   apply (case_tac "m slot")
-   apply (rule next_not_child_helper',(simp split del: split_if)+)
+   apply (rule next_not_child_helper',(simp split del: if_split)+)
   apply (drule_tac x=a in meta_spec)
-  apply (simp split del: split_if)
+  apply (simp split del: if_split)
   apply (case_tac "next_sib slot t m")
-   apply (rule next_not_child_helper''',(simp split del: split_if)+)
-  apply (rule next_not_child_helper'',(simp split del: split_if)+)
+   apply (rule next_not_child_helper''',(simp split del: if_split)+)
+  apply (rule next_not_child_helper'',(simp split del: if_split)+)
   done
 
 
@@ -2166,7 +2166,7 @@ lemma next_slot_no_parent:
          else if p = dest then next_slot src t m
          else if next_slot p t m = Some src then Some dest
          else next_slot p t m)"
-  apply (simp only: next_slot_def split: split_if)
+  apply (simp only: next_slot_def split: if_split)
   apply (intro impI conjI)
   apply (subst next_child_no_parent| subst next_not_child_no_parent | simp)+
   done
@@ -2180,9 +2180,9 @@ lemma next_slot:
          else if p = dest then next_slot src t m
          else if next_slot p t m = Some src then Some dest
          else next_slot p t m)"
-  apply (simp only: next_slot_def split: split_if)
+  apply (simp only: next_slot_def split: if_split)
   apply (intro impI conjI)
-  apply (subst next_child | subst next_not_child | (simp split: split_if_asm) | intro impI conjI)+
+  apply (subst next_child | subst next_not_child | (simp split: if_split_asm) | intro impI conjI)+
   done
 
 end
@@ -2211,7 +2211,7 @@ lemma cap_move_valid_list [wp]:
   apply (case_tac "src = dest")
    apply (simp add: cap_move_def)
    apply(simp add: set_cdt_def cap_move_ext_def
-                    update_cdt_list_def set_cdt_list_def del: fun_upd_apply split del: split_if)
+                    update_cdt_list_def set_cdt_list_def del: fun_upd_apply split del: if_split)
    apply(wp)
     apply (simp del: fun_upd_apply cong: option.case_cong)
     apply (wp set_cap_caps_of_state3)
@@ -2219,11 +2219,11 @@ lemma cap_move_valid_list [wp]:
     apply (fastforce simp: valid_list_2_def list_remove_removed intro: list_remove_distinct)+
   apply (simp add: cap_move_def)
   apply(simp add: cap_move_def set_cdt_def cap_move_ext_def bind_assoc
-                  update_cdt_list_def set_cdt_list_def del: fun_upd_apply split del: split_if)
+                  update_cdt_list_def set_cdt_list_def del: fun_upd_apply split del: if_split)
   apply(wp)
-   apply (simp del: fun_upd_apply split del: split_if)
+   apply (simp del: fun_upd_apply split del: if_split)
    apply (unfold valid_list_2_def)
-   apply (simp del: fun_upd_apply cong: option.case_cong split del: split_if)
+   apply (simp del: fun_upd_apply cong: option.case_cong split del: if_split)
    apply (wp set_cap_caps_of_state3)
   apply (fold valid_list_2_def)
   apply (rule mdb_move_abs_simple.valid_list_post)
@@ -2385,8 +2385,8 @@ lemma (in mdb_empty_abs') valid_list_post_no_parent:
   "\<lbrakk>valid_list_2 t m; m slot = None\<rbrakk> \<Longrightarrow> valid_list_2 (t(slot := [])) n"
   apply(simp add: valid_list_2_def)
   apply(intro conjI impI allI notI)
-   apply(simp add: n_def split: split_if_asm)
-  apply(fastforce simp: n_def split: split_if_asm)
+   apply(simp add: n_def split: if_split_asm)
+  apply(fastforce simp: n_def split: if_split_asm)
   done
 
 
@@ -2447,7 +2447,7 @@ lemma (in mdb_empty_abs') next_child:
   apply(case_tac "p=slot")
    apply(fastforce intro: next_child_NoneI dest: next_child_NoneD)
   apply(case_tac "next_child p t = Some slot")
-   apply(simp split del: split_if)
+   apply(simp split del: if_split)
    apply(drule(1) next_childD)
    apply(elim exE conjE)
    apply(case_tac "t slot")
@@ -2666,7 +2666,7 @@ lemma (in mdb_empty_abs') next_not_child_no_parent:
    apply(drule(1) next_not_child_NoneD)
    apply(rule next_not_child_NoneI)
      apply(intro allI impI)
-     apply(simp add: next_sib_no_parent descendants split: split_if_asm)
+     apply(simp add: next_sib_no_parent descendants split: if_split_asm)
     apply(simp add: next_sib_no_parent)
    apply(simp add: finite_depth)
   apply(simp)
@@ -2699,7 +2699,7 @@ lemma (in mdb_empty_abs') next_not_child_no_parent:
     apply(simp add: descendants_of_def cdt_parent_defs)
     apply(drule tranclD2, simp)
    apply(intro allI impI)
-   apply(simp add: next_sib_no_parent descendants split: split_if_asm)
+   apply(simp add: next_sib_no_parent descendants split: if_split_asm)
   apply(simp add: finite_depth)
   done
 
@@ -2715,7 +2715,7 @@ lemma (in mdb_empty_abs') next_sib':
   apply(insert next_sib)
   apply(atomize)
   apply(erule_tac x=t in allE, erule_tac x=slot_p in allE, erule_tac x=p in allE)
-  apply(simp split: split_if_asm)
+  apply(simp split: if_split_asm)
   apply(simp add: valid_list_2_def)
   apply(erule conjE)
   apply(erule_tac x=slot in allE)
@@ -2822,7 +2822,7 @@ lemma (in mdb_empty_abs') next_not_child:
     apply(drule(1) next_not_childD, simp add: no_mloop)
     apply(rule next_not_child_NoneI)
       apply(intro impI allI)
-      apply(simp add: next_sib' descendants split: split_if_asm)
+      apply(simp add: next_sib' descendants split: if_split_asm)
       apply(erule disjE)
        apply(drule_tac c=q in next_sib_share_parent, simp)
        apply(fastforce)
@@ -2906,7 +2906,7 @@ lemma (in mdb_empty_abs') next_not_child:
    apply(erule conjE)
    apply(rule next_not_child_NoneI)
      apply(intro allI impI)
-     apply(simp add: next_sib descendants split: split_if_asm)
+     apply(simp add: next_sib descendants split: if_split_asm)
      apply(intro impI conjI)
       apply(simp add: valid_list_2_def)
       apply(erule conjE)
@@ -2980,7 +2980,7 @@ lemma (in mdb_empty_abs') next_not_child:
      apply(simp add: descendants)
      apply(fastforce)
     apply(intro allI impI)
-    apply(simp add: next_sib descendants split: split_if_asm)
+    apply(simp add: next_sib descendants split: if_split_asm)
     apply(subgoal_tac "next_sib q' t m = None")
      prefer 2
      apply(erule_tac x=q' in allE)
@@ -3013,7 +3013,7 @@ lemma (in mdb_empty_abs') next_not_child:
      apply(simp)
     apply(simp add: descendants)
    apply(intro allI impI)
-   apply(simp add: next_sib descendants split: split_if_asm)
+   apply(simp add: next_sib descendants split: if_split_asm)
    apply(intro conjI impI)
     apply(simp add: valid_list_2_def, erule conjE)
     apply(erule_tac x=slot in allE)+
@@ -3049,13 +3049,13 @@ lemma (in mdb_empty_abs') next_slot_no_parent:
    apply(simp add: next_slot_def)
    apply(intro conjI impI)
     apply(elim exE conjE)
-    apply(simp split: split_if_asm)
+    apply(simp split: if_split_asm)
     apply(drule(1) next_childD)
     apply(simp)
    apply(simp add: next_not_child_no_parent)
   apply(simp only:, simp)
   apply(simp add: next_slot_def next_child_no_parent next_not_child_no_parent)
-  apply(fastforce split: split_if_asm)
+  apply(fastforce split: if_split_asm)
   done
 
 lemma (in mdb_empty_abs') next_slot:
@@ -3071,7 +3071,7 @@ lemma (in mdb_empty_abs') next_slot:
   apply(case_tac "next_slot p t m = Some slot")
    apply(simp only: next_slot_def next_not_child next_child)
    apply(case_tac "t slot = []")
-    apply(simp split del: split_if)
+    apply(simp split del: if_split)
     apply(case_tac "t p = []")
      apply(fastforce)
     apply(case_tac "p=slot_p \<and> t slot_p = [slot]")
@@ -3085,14 +3085,14 @@ lemma (in mdb_empty_abs') next_slot:
      apply(frule_tac src=slot in next_sib_not_self)
      apply(drule next_sibD)
      apply(fastforce)
-    apply(simp split del: split_if)
+    apply(simp split del: if_split)
     apply(case_tac "p = slot_p")
      apply(subgoal_tac "list_replace_list (t slot_p) slot [] \<noteq> []")
       prefer 2
       apply(case_tac "t slot_p")
        apply(simp)
       apply(simp add: valid_list_2_def)
-     apply(simp split del: split_if)
+     apply(simp split del: if_split)
      apply(simp)
      apply(intro conjI impI)
       apply(case_tac "t slot_p")
@@ -3121,20 +3121,20 @@ lemma (in mdb_empty_abs') next_slot:
     apply(case_tac "t p")
      apply(simp)
     apply(simp add: next_child_def)
-   apply(simp split del: split_if)
+   apply(simp split del: if_split)
    apply(case_tac "t p")
     apply(fastforce)
    apply(case_tac "t p = [slot]")
     apply(fastforce)
-   apply(fastforce split: split_if_asm)
+   apply(fastforce split: if_split_asm)
   apply(simp)
-  apply(simp add: next_slot_def split del: split_if)
+  apply(simp add: next_slot_def split del: if_split)
   apply(case_tac "t p")
    apply(fastforce simp: next_not_child next_child)
   apply(case_tac "t p = [slot]")
    apply(simp add: next_not_child next_child next_child_def)
   apply(simp add: next_child next_not_child)
-  apply(fastforce split: split_if_asm)
+  apply(fastforce split: if_split_asm)
   done
 
 crunch valid_list[wp]: deleted_irq_handler,set_cap valid_list
@@ -3176,7 +3176,7 @@ lemma set_cap_exst_update:
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
-      apply (auto simp add: in_monad set_object_def split: split_if_asm)
+      apply (auto simp add: in_monad set_object_def split: if_split_asm)
       done
 
 lemma no_parent_not_next_slot:
@@ -3184,7 +3184,7 @@ lemma no_parent_not_next_slot:
   shows "\<lbrakk>m slot = None; valid_list_2 t m; finite_depth m; no_mloop m\<rbrakk>
     \<Longrightarrow> next_slot p t m \<noteq> Some slot"
   apply(rule notI)
-  apply(simp add: next_slot_def split: split_if_asm)
+  apply(simp add: next_slot_def split: if_split_asm)
    apply(drule(1) next_childD)
    apply(simp)
   apply(drule(2) next_not_childD)
@@ -3313,8 +3313,8 @@ lemma finite_depth:
   shows
   "finite_depth n"
   apply (insert findepth)
-  apply(simp add: finite_depth_def descendants split del: split_if)
-  apply(simp add: n_def n'_def split del: split_if)
+  apply(simp add: finite_depth_def descendants split del: if_split)
+  apply(simp add: n_def n'_def split del: if_split)
   apply(rule allI)
   apply(case_tac "slot=src")
    apply(erule_tac x=dest in allE)
@@ -3558,7 +3558,7 @@ lemma next_not_child:
      apply(rule_tac x=q in exI)
      apply(simp)
      apply(intro conjI impI notI allI)
-            apply(simp add: descendants s_d_swap_def split: split_if_asm)+
+            apply(simp add: descendants s_d_swap_def split: if_split_asm)+
     apply(simp add: finite_depth)
    apply(simp)
    apply(case_tac "next_not_child dest t m")
@@ -3575,7 +3575,7 @@ lemma next_not_child:
      apply(simp add: next_sib)
     apply(elim conjE exE)
     apply(rule disjI2)
-    apply(simp add: next_sib split del: split_if)
+    apply(simp add: next_sib split del: if_split)
     apply(case_tac "q=src")
      apply(rule_tac x=dest in exI)
      apply(simp add: descendants s_d_swap_def)
@@ -3595,7 +3595,7 @@ lemma next_not_child:
      prefer 2
      apply(rule notI, simp)
      apply(drule(1) desc_sib_ne, simp add: valid_list, simp add: no_mloop, simp)
-    apply(simp add: descendants s_d_swap_def split del: split_if)
+    apply(simp add: descendants s_d_swap_def split del: if_split)
     apply(simp)
     apply(intro conjI impI allI notI, simp+)
    apply(simp add: finite_depth)
@@ -3627,7 +3627,7 @@ lemma next_not_child:
      apply(rule_tac x=q in exI)
      apply(simp)
      apply(intro conjI impI notI allI)
-            apply(simp add: descendants s_d_swap_def split: split_if_asm)+
+            apply(simp add: descendants s_d_swap_def split: if_split_asm)+
     apply(simp add: finite_depth)
    apply(simp)
    apply(case_tac "next_not_child src t m")
@@ -3644,7 +3644,7 @@ lemma next_not_child:
      apply(simp add: next_sib)
     apply(elim conjE exE)
     apply(rule disjI2)
-    apply(simp add: next_sib split del: split_if)
+    apply(simp add: next_sib split del: if_split)
     apply(case_tac "q=dest")
      apply(rule_tac x=src in exI)
      apply(simp add: descendants s_d_swap_def)
@@ -3664,7 +3664,7 @@ lemma next_not_child:
      prefer 2
      apply(rule notI, simp)
      apply(drule(1) desc_sib_ne, simp add: valid_list, simp add: no_mloop, simp)
-    apply(simp add: descendants s_d_swap_def split del: split_if)
+    apply(simp add: descendants s_d_swap_def split del: if_split)
     apply(simp)
     apply(intro conjI impI allI notI, simp+)
    apply(simp add: finite_depth)
@@ -3679,10 +3679,10 @@ lemma next_not_child:
     apply(subst next_sib, simp)
     apply(case_tac "q=dest")
      apply(rule_tac x=src in exI)
-     apply(simp add: next_sib descendants s_d_swap_def split del: split_if)
+     apply(simp add: next_sib descendants s_d_swap_def split del: if_split)
      apply(intro allI impI)
      apply(simp)
-     apply(simp split: split_if_asm)
+     apply(simp split: if_split_asm)
     apply(rule_tac x=q in exI)
     apply(subgoal_tac "q\<noteq>src")
      prefer 2
@@ -3697,8 +3697,8 @@ lemma next_not_child:
      apply(rule notI)
      apply(drule_tac a=q and b=dest in next_sib_inj, simp, simp add: valid_list, simp)
     apply(case_tac "q'=dest")
-     apply(simp add: descendants s_d_swap_def split: split_if_asm)
-    apply(simp add: descendants s_d_swap_def split: split_if_asm)
+     apply(simp add: descendants s_d_swap_def split: if_split_asm)
+    apply(simp add: descendants s_d_swap_def split: if_split_asm)
    apply(simp add: finite_depth)
   apply(case_tac "next_not_child p t m = Some dest")
    apply(simp)
@@ -3711,10 +3711,10 @@ lemma next_not_child:
     apply(subst next_sib, simp)
     apply(case_tac "q=src")
      apply(rule_tac x=dest in exI)
-     apply(simp add: next_sib descendants s_d_swap_def split del: split_if)
+     apply(simp add: next_sib descendants s_d_swap_def split del: if_split)
      apply(intro allI impI)
      apply(simp)
-     apply(simp split: split_if_asm)
+     apply(simp split: if_split_asm)
     apply(rule_tac x=q in exI)
     apply(subgoal_tac "q\<noteq>dest")
      prefer 2
@@ -3729,15 +3729,15 @@ lemma next_not_child:
      apply(rule notI)
      apply(drule_tac a=q and b=src in next_sib_inj, simp, simp add: valid_list, simp)
     apply(case_tac "q'=src")
-     apply(simp add: descendants s_d_swap_def split: split_if_asm)
-    apply(simp add: descendants s_d_swap_def split: split_if_asm)
+     apply(simp add: descendants s_d_swap_def split: if_split_asm)
+    apply(simp add: descendants s_d_swap_def split: if_split_asm)
    apply(simp add: finite_depth)
   apply(simp)
   apply(case_tac "next_not_child p t m")
    apply(simp)
    apply(drule next_not_child_NoneD, simp add: findepth)
    apply(rule next_not_child_NoneI)
-     apply(simp add: descendants s_d_swap_def next_sib split del: split_if)
+     apply(simp add: descendants s_d_swap_def next_sib split del: if_split)
      apply(intro allI conjI)
        apply(simp_all)[3]
     apply(simp add: next_sib)
@@ -3756,18 +3756,18 @@ lemma next_not_child:
     apply(intro conjI impI allI)
       apply(simp add: next_sib)
      apply(simp add: descendants s_d_swap_def)
-    apply(simp add: next_sib descendants s_d_swap_def split: split_if_asm)
+    apply(simp add: next_sib descendants s_d_swap_def split: if_split_asm)
    apply(case_tac "q=src")
     apply(rule_tac x=dest in exI)
     apply(intro conjI impI allI)
       apply(simp add: next_sib)
      apply(simp add: descendants s_d_swap_def)
-    apply(simp add: next_sib descendants s_d_swap_def split: split_if_asm)
+    apply(simp add: next_sib descendants s_d_swap_def split: if_split_asm)
    apply(rule_tac x=q in exI)
    apply(intro conjI impI allI)
      apply(simp add: next_sib)
     apply(simp add: descendants s_d_swap_def)
-   apply(simp add: next_sib descendants s_d_swap_def split: split_if_asm)
+   apply(simp add: next_sib descendants s_d_swap_def split: if_split_asm)
   apply(simp add: finite_depth)
   done
 
@@ -3776,7 +3776,7 @@ lemma t'_empty:
   "(t' dest = []) = (t src = [])"
   "p\<noteq>src \<and> p\<noteq>dest \<Longrightarrow> (t' p = []) = (t p = [])"
   apply(fastforce simp: n_def n'_def t''_def t'_def list_swap_def
-        split: option.splits split: split_if_asm)+
+        split: option.splits split: if_split_asm)+
   done
 
 lemma next_slot:
@@ -3795,15 +3795,15 @@ lemma next_slot:
    apply(simp add: next_slot_def next_child next_not_child valid_list t'_empty)
   apply(case_tac "p=dest")
    apply(simp add: next_slot_def next_child next_not_child valid_list t'_empty
-         split: split_if_asm)
+         split: if_split_asm)
   apply(case_tac "next_slot p t m = Some src")
    apply(simp add: next_slot_def next_child next_not_child s_d_swap_def t'_empty
-         split: split_if_asm)
+         split: if_split_asm)
   apply(case_tac "next_slot p t m = Some dest")
    apply(simp add: next_slot_def next_child next_not_child s_d_swap_def  t'_empty
-         split: split_if_asm)
+         split: if_split_asm)
   apply(simp add: next_slot_def next_child next_not_child s_d_swap_def t'_empty
-        split: split_if_asm)
+        split: if_split_asm)
   done
 
 end
@@ -3827,7 +3827,7 @@ lemma cap_swap_valid_list [wp]:
   apply (simp only: cap_swap_def cap_swap_ext_extended.dxo_eq)
   apply (simp only: cap_swap_ext_def update_cdt_list_def set_cdt_list_def set_cdt_def bind_assoc)
   apply wp
-  apply (simp del: fun_upd_apply split del: split_if cong: option.case_cong)
+  apply (simp del: fun_upd_apply split del: if_split cong: option.case_cong)
         apply (wp set_cap_caps_of_state3)
   apply (case_tac "a = b")
   apply (simp split: option.splits)
@@ -3836,7 +3836,7 @@ lemma cap_swap_valid_list [wp]:
    apply(rule mdb_swap_abs_simple.intro)
    apply simp
   apply(frule mdb_swap_abs_simple.valid_list_post[where src=a and dest=b])
-  apply(simp add: fun_upd_def split del: split_if cong: option.case_cong)
+  apply(simp add: fun_upd_def split del: if_split cong: option.case_cong)
   done
 
 
@@ -3864,9 +3864,9 @@ lemma create_cap_valid_list[wp]:
   apply(simp add: set_cdt_def update_cdt_list_def set_cdt_list_def bind_assoc create_cap_ext_def bind_assoc)
   apply (rule hoare_pre)
    apply (simp add: valid_list_2_def)
-   apply (wp | simp cong: option.case_cong if_cong del: fun_upd_apply split del: split_if)+
+   apply (wp | simp cong: option.case_cong if_cong del: fun_upd_apply split del: if_split)+
          apply(wp set_cap_caps_of_state3 get_cap_wp)+
-  apply(simp del: fun_upd_apply split: option.splits split del: split_if cong:if_weak_cong)
+  apply(simp del: fun_upd_apply split: option.splits split del: if_split cong:if_weak_cong)
   apply (intro impI conjI allI)
      apply (simp add: valid_list_2_def | intro impI conjI allI | fastforce simp: list_remove_removed list_remove_distinct)+
   done
@@ -3989,7 +3989,7 @@ lemma invoke_cnode_valid_list[wp]: "\<lbrace>valid_list\<rbrace>
            invoke_cnode ci
        \<lbrace>\<lambda>_.valid_list\<rbrace>"
   apply (rule hoare_pre)
-   apply (wp crunch_wps cap_move_src_slot_Null hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: invoke_cnode_def crunch_simps split del: split_if)+
+   apply (wp crunch_wps cap_move_src_slot_Null hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: invoke_cnode_def crunch_simps split del: if_split)+
   done
 
 end
@@ -4193,7 +4193,7 @@ lemma (in mdb_insert_abs) cap_insert_ext_det_def2:
         p := if src_parent then list p else list_insert_after (list p) src_slot dest_slot))) src_parent src dest src_p dest_p e"
   apply (simp add: cap_insert_ext_def update_cdt_list_bind)
   apply (rule update_list_eq)
-  apply (simp split del: split_if cong: option.case_cong)
+  apply (simp split del: if_split cong: option.case_cong)
   apply (insert dest neq)
   apply (case_tac "m src")
    apply simp+
@@ -4282,7 +4282,7 @@ lemma next_slot_setD:
   apply(simp)
   apply(induct_tac "next" slot rule: trancl.induct)
     apply(assumption)
-   apply(simp add: next_slot_def split: split_if_asm)
+   apply(simp add: next_slot_def split: if_split_asm)
     apply(simp add: next_child_def valid_list_2_def descendants_of_def cdt_parent_defs)
     apply(case_tac "t b", simp, fastforce)
    apply(drule(2) next_not_childD)
@@ -4291,7 +4291,7 @@ lemma next_slot_setD:
    apply(fastforce simp: next_sib_set_def)
   apply(simp)
   apply(erule disjE)
-   apply(simp add: next_slot_def split: split_if_asm)
+   apply(simp add: next_slot_def split: if_split_asm)
     apply(rule disjI1)
     apply(rule_tac b=b in descendants_trans)
      apply(simp)
@@ -4299,7 +4299,7 @@ lemma next_slot_setD:
    apply(drule(2) next_not_childD)
    apply(fastforce simp: next_sib_set_def)
   apply(erule disjE)
-   apply(simp add: next_slot_def split: split_if_asm)
+   apply(simp add: next_slot_def split: if_split_asm)
     apply(rule disjI1)
     apply(fastforce intro: child_descendant dest: next_childD next_sib_set_same_parent)
    apply(drule(2) next_not_childD)
@@ -4308,7 +4308,7 @@ lemma next_slot_setD:
    apply(intro disjI2, elim exE conjE)
    apply(rule_tac x=q in exI)
    apply(fastforce simp: next_sib_set_def intro: trancl_into_trancl)
-  apply(simp add: next_slot_def split: split_if_asm)
+  apply(simp add: next_slot_def split: if_split_asm)
    apply(erule disjE)
     apply(rule disjI2)+
     apply(rule_tac x=p in exI)
@@ -4499,7 +4499,7 @@ lemma next_slot_induct:
     \<Longrightarrow> P slot"
   apply(induct_tac rule: wf_induct[where r="{(next, p). next_slot p (cdt_list s) (cdt s) = Some next}"])
    apply(simp add: wf_next_slot)
-  apply(fastforce split: split_if_asm)
+  apply(fastforce split: if_split_asm)
   done
 
 lemma next_sib_2_termination:
@@ -4551,14 +4551,14 @@ lemma next_slot_set_in_desc:
     apply(drule(1) rtrancl_trancl_trancl)
     apply(simp add: no_mloop_def cdt_parent_defs)
    apply(frule(1) next_sib_set_same_parent)
-   apply(simp add: next_slot_def split: split_if_asm)
+   apply(simp add: next_slot_def split: if_split_asm)
     apply(drule(1) next_childD)
     apply(simp add: descendants_of_def cdt_parent_defs)
     apply(rule_tac b=slot in r_r_into_trancl)
      apply(simp)
     apply(simp)
    apply(simp add: next_not_child_termination)
-   apply(simp split: split_if_asm option.splits)
+   apply(simp split: if_split_asm option.splits)
     apply(fastforce dest: tranclD2 simp: next_sib_set_def)+
    apply(drule(1) next_sib_same_parent, simp add: child_descendant)
   apply(elim exE conjE)
@@ -4602,7 +4602,7 @@ lemma next_slot_set_in_desc:
    apply(fastforce dest: sib_not_desc[simplified descendants_of_def cdt_parent_defs]
                next_sib_set_same_parent)
   apply(simp)
-  apply(simp add: next_slot_def split: split_if_asm)
+  apply(simp add: next_slot_def split: if_split_asm)
    apply(drule(1) next_childD)
    apply(rule descendants_trans)
     apply(rule child_descendant)
@@ -4695,11 +4695,11 @@ lemma last_childD:
   shows "\<lbrakk>last_child slot t = Some child; valid_list_2 t m\<rbrakk>
     \<Longrightarrow> m child = Some slot \<and> next_sib child t m = None"
   apply(rule context_conjI)
-   apply(fastforce simp: valid_list_2_def last_child_def split: split_if_asm)
+   apply(fastforce simp: valid_list_2_def last_child_def split: if_split_asm)
   apply(rule next_sib_NoneI[where p=slot])
   apply(case_tac "t slot")
    apply(simp)
-  apply(simp add: valid_list_2_def last_child_def split: split_if_asm)
+  apply(simp add: valid_list_2_def last_child_def split: if_split_asm)
   apply(erule_tac x=slot in allE)+
   apply(drule after_in_list_last_None)
   apply(simp)
@@ -4755,7 +4755,7 @@ lemma last_child_induct:
     \<Longrightarrow> P slot"
   apply(induct_tac rule: wf_induct[where r="{(next, p). last_child p (cdt_list s) = Some next}"])
    apply(simp add: wf_last_child)
-  apply(fastforce split: split_if_asm)
+  apply(fastforce split: if_split_asm)
   done
 
 
@@ -4769,7 +4769,7 @@ declare last_last_child.psimps[simp]
 
 lemma last_child_NoneD:
   "\<lbrakk>last_child x t = None; valid_list_2 t m\<rbrakk> \<Longrightarrow> descendants_of x m = {}"
-  apply(simp add: last_child_def empty_list_empty_desc split: split_if_asm)
+  apply(simp add: last_child_def empty_list_empty_desc split: if_split_asm)
   done
 
 lemma last_last_child_NoneD:
@@ -4778,7 +4778,7 @@ lemma last_last_child_NoneD:
   shows "descendants_of slot (cdt s) = {}"
   apply(insert assms)
   apply(simp add: last_last_child_termination)
-  apply(simp split: split_if_asm option.splits)
+  apply(simp split: if_split_asm option.splits)
    apply(simp add:last_child_NoneD)
   apply(erule exE)
   apply(induct slot rule: last_child_induct[where s=s])
@@ -4797,7 +4797,7 @@ lemma last_last_child_NoneD:
 
 lemma last_child_None_empty_desc:
   "\<lbrakk>last_child slot t = None; valid_list_2 t m\<rbrakk> \<Longrightarrow> descendants_of slot m = {}"
-  by (simp add: last_child_def empty_list_empty_desc split: split_if_asm)
+  by (simp add: last_child_def empty_list_empty_desc split: if_split_asm)
 
 lemma last_last_child_empty_desc:
   assumes "last_last_child slot (cdt_list s) = Some child" "valid_mdb s" "valid_list s"
@@ -4807,12 +4807,12 @@ lemma last_last_child_empty_desc:
      apply(simp add: last_last_child_termination)
     apply(case_tac "y=child")
      apply(simp add: last_last_child_termination last_child_None_empty_desc
-              split: split_if_asm)
+              split: if_split_asm)
     apply(simp)
     apply(atomize, erule impE)
      apply(subst(asm) last_last_child.psimps)
       apply(simp add: last_last_child_termination)
-     apply(simp split: option.splits split_if_asm)
+     apply(simp split: option.splits if_split_asm)
     apply(simp)
    using assms
    apply(simp+)
@@ -4830,7 +4830,7 @@ lemma last_last_child_next_sib:
     apply(atomize, erule impE)
      apply(subst(asm) last_last_child.psimps)
       apply(simp add: last_last_child_termination)
-     apply(simp split: option.splits split_if_asm)
+     apply(simp split: option.splits if_split_asm)
     apply(simp)
    using assms
    apply(simp+)
@@ -4850,7 +4850,7 @@ lemma last_last_child_in_desc:
     apply(atomize, erule impE)
      apply(subst(asm) last_last_child.psimps)
       apply(simp add: last_last_child_termination)
-     apply(simp split: option.splits split_if_asm)
+     apply(simp split: option.splits if_split_asm)
     apply(drule last_childD, simp)
     apply(fastforce dest: child_descendant descendants_trans)
    using assms
@@ -4875,10 +4875,10 @@ lemma last_last_child_next_not_child:
     apply(elim impE)
       apply(subst(asm) last_last_child.psimps)
        apply(simp add: last_last_child_termination)
-      apply(simp split: option.splits split_if_asm)
+      apply(simp split: option.splits if_split_asm)
      apply(subst(asm) last_last_child.psimps)
       apply(simp add: last_last_child_termination)
-     apply(simp split: split_if_asm)
+     apply(simp split: if_split_asm)
      apply(rule last_last_child_in_desc, simp+)
     apply(drule last_childD, simp)
     apply(simp add: next_not_child_termination finite_depth)
@@ -4922,13 +4922,13 @@ lemma desc_next_slot_desc_or_sib:
    apply(frule(2) last_last_child_empty_desc)
    apply(frule(2) last_last_child_next_not_child)
    apply(rule disjI2)
-   apply(simp add: next_slot_def empty_list_empty_desc split: split_if_asm)
+   apply(simp add: next_slot_def empty_list_empty_desc split: if_split_asm)
   apply(rule disjI1)
   apply(case_tac "next_slot p (cdt_list s) (cdt s)")
    apply(simp)
    apply(erule notE)
    apply(rule last_last_childI)
-      apply(simp add: next_slot_def split: split_if_asm)
+      apply(simp add: next_slot_def split: if_split_asm)
        apply(drule next_child_NoneD)
        apply(simp add: empty_list_empty_desc )
       apply(simp add: empty_list_empty_desc)
@@ -4952,7 +4952,7 @@ lemma desc_next_slot_desc_or_sib:
           apply(simp add: next_sib_def)
           apply(drule after_in_list_last_None)
           apply(drule after_in_list_None_last, simp)
-          apply(simp add: last_child_def split: split_if_asm)
+          apply(simp add: last_child_def split: if_split_asm)
          apply(erule_tac x=z and P="\<lambda>q. (q, p) \<in> {(p, c). cdt s c = Some p}\<^sup>+ \<longrightarrow>
             next_sib q (cdt_list s) (cdt s) = None" in allE)
          apply(erule impE)
@@ -4962,12 +4962,12 @@ lemma desc_next_slot_desc_or_sib:
          apply(erule_tac x=x in allE)+
          apply(drule after_in_list_last_None)
          apply(drule after_in_list_None_last, simp)
-         apply(simp add: last_child_def split: split_if_asm)
+         apply(simp add: last_child_def split: if_split_asm)
         apply(fastforce simp: last_child_set_def intro: trancl_into_trancl)
        using assms
        apply(simp_all add: empty_list_empty_desc)
-   apply(simp add: next_slot_def empty_list_empty_desc next_child_def split: split_if_asm list.splits)
-  apply(simp add: next_slot_def split: split_if_asm)
+   apply(simp add: next_slot_def empty_list_empty_desc next_child_def split: if_split_asm list.splits)
+  apply(simp add: next_slot_def split: if_split_asm)
    apply(fastforce dest: next_childD child_descendant descendants_trans)
   apply(drule next_not_childD, simp add: finite_depth, simp add: valid_mdb_def)
   apply(erule disjE)
@@ -5011,7 +5011,7 @@ lemma desc_next_slot_desc_or_sib:
           apply(simp add: next_sib_def)
           apply(drule after_in_list_last_None)
           apply(drule after_in_list_None_last, simp)
-          apply(simp add: last_child_def split: split_if_asm)
+          apply(simp add: last_child_def split: if_split_asm)
          apply(erule_tac x=z in allE)
          apply(erule impE)
           apply(rule conjI)
@@ -5022,7 +5022,7 @@ lemma desc_next_slot_desc_or_sib:
          apply(erule_tac x=x in allE)+
          apply(drule after_in_list_last_None)
          apply(drule after_in_list_None_last, simp)
-         apply(simp add: last_child_def split: split_if_asm)
+         apply(simp add: last_child_def split: if_split_asm)
         apply(rule notI, erule notE)
         apply(drule(1) last_childD)
         apply(fastforce dest: child_descendant intro: descendants_trans)
@@ -5116,7 +5116,7 @@ lemma next_sib_in_next_slot_set:
     apply(simp)
     apply(drule trancl_Collect_rev, simp)
    apply(case_tac "next_slot slot (cdt_list s) (cdt s)")
-    apply(fastforce simp: next_slot_def empty_list_empty_desc next_child_def split: split_if_asm list.splits)
+    apply(fastforce simp: next_slot_def empty_list_empty_desc next_child_def split: if_split_asm list.splits)
    apply(rule_tac x=aa in set_neqI[symmetric])
     apply(fastforce simp: next_slot_set_def)
    apply(rule ccontr, simp)
@@ -5210,17 +5210,16 @@ lemma next_sib_2_sib':
     apply(atomize)
     apply(erule_tac x=a in allE, simp)
     apply(case_tac "a=next")
-     apply(simp add: next_sib_2_termination split: split_if_asm | erule impE)+
+     apply(simp add: next_sib_2_termination split: if_split_asm | erule impE)+
    apply(insert assms, simp+)
    done
 
 lemma next_sib_2_sib:
   "\<lbrakk>next_sib_2 slot p s = Some next; valid_list s; valid_mdb s\<rbrakk>
     \<Longrightarrow> cdt s next = Some p"
-  apply(insert assms)
   apply(case_tac "cdt s slot = Some p")
-   apply(simp add: next_sib_2_termination split: split_if_asm)
-   apply(simp split: option.splits split_if_asm)
+   apply(simp add: next_sib_2_termination split: if_split_asm)
+   apply(simp split: option.splits if_split_asm)
    apply(fastforce intro: next_sib_2_sib')+
    done
 
@@ -5296,7 +5295,7 @@ lemma between_next_sib_2_not_sib:
     apply(intro allI impI)
     apply(elim conjE)
     apply(drule(2) next_sib_2I)
-       apply(simp add: next_sib_2_termination split: split_if_asm)
+       apply(simp add: next_sib_2_termination split: if_split_asm)
       apply(simp)
      apply(simp)
     apply(simp)
@@ -5312,10 +5311,10 @@ lemma between_next_sib_2_not_sib:
       apply(drule(2) next_slot_no_loop[simplified next_slot_set_def, where x=q])
       apply(simp)
      apply(case_tac "y=q")
-      apply(simp add: next_sib_2_termination split: split_if_asm)
+      apply(simp add: next_sib_2_termination split: if_split_asm)
      apply(atomize)
      apply(elim impE)
-       apply(simp add: next_sib_2_termination split: split_if_asm)
+       apply(simp add: next_sib_2_termination split: if_split_asm)
       apply(fastforce simp: next_slot_set_def dest: rtranclD tranclD2)
      apply(elim exE conjE)
      apply(rule_tac x=xa in exI)
@@ -5328,7 +5327,7 @@ lemma between_next_sib_2_not_sib:
      apply(erule_tac x=qa in allE)
      apply(simp)
      apply(case_tac "qa=y")
-      apply(simp add: next_sib_2_termination split: split_if_asm)
+      apply(simp add: next_sib_2_termination split: if_split_asm)
      apply(simp add: next_slot_set_def)
      apply(erule conjE)
      apply(drule_tac x=qa and y=x in tranclD2, simp)

@@ -72,7 +72,7 @@ lemma retype_etcb_at_helper: "\<lbrakk>etcb_at' P t ekh; valid_etcbs_2 ekh kh; d
   apply (induct ptrs)
   apply simp
   apply (case_tac d)
-  apply (clarsimp split: split_if_asm simp: default_tcb_def default_object_def default_ext_def etcb_at'_def)+
+  apply (clarsimp split: if_split_asm simp: default_tcb_def default_object_def default_ext_def etcb_at'_def)+
   done
 
 lemma retype_region_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcbs\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "

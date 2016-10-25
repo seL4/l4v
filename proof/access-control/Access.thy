@@ -1089,7 +1089,7 @@ lemma auth_ipc_buffers_tro:
   apply (drule_tac x = p in spec)
   apply (erule integrity_obj.cases, 
         simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def 
-               split: cap.split_asm arch_cap.split_asm split_if_asm bool.splits)
+               split: cap.split_asm arch_cap.split_asm if_split_asm bool.splits)
   apply fastforce
   done
 
@@ -1100,7 +1100,7 @@ lemma auth_ipc_buffers_tro_fwd:
   apply (drule_tac x = p in spec)
   apply (erule integrity_obj.cases,
         simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def
-                split: cap.split_asm arch_cap.split_asm split_if_asm bool.splits)
+                split: cap.split_asm arch_cap.split_asm if_split_asm bool.splits)
   apply fastforce
   done
 

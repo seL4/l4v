@@ -204,7 +204,7 @@ lemma exec_trace_drop_n_Cons:
                   split: graph_function.split_asm)
   apply (clarsimp simp: nat_trace_rel_def trace_drop_n_def
                         all_less_Suc_eq
-             split del: split_if)
+             split del: if_split)
   apply (cut_tac i="Suc i + na" in exec_trace_Nil[OF tr(1)])
   apply (drule_tac x="Suc i + na" in spec)+
   apply (clarsimp simp: field_simps)
@@ -300,11 +300,11 @@ lemma trace_end_trace_drop_n_None:
   "trace_end (trace_drop_n i j tr) = None \<Longrightarrow> tr \<in> exec_trace Gamma f
     \<Longrightarrow> trace_drop_n i j tr \<in> exec_trace Gamma f'
     \<Longrightarrow> trace_end tr = None"
-  apply (clarsimp simp: trace_end_def dom_Max_None split: split_if_asm)
+  apply (clarsimp simp: trace_end_def dom_Max_None split: if_split_asm)
   apply (rule ccontr, simp)
   apply (drule(1) exec_trace_None_dom_subset)
   apply (drule_tac x="n + i + 1" in spec)
-  apply (clarsimp simp: trace_drop_n_def split: split_if_asm)
+  apply (clarsimp simp: trace_drop_n_def split: if_split_asm)
   apply auto[1]
   done
 

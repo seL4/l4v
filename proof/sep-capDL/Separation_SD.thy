@@ -323,7 +323,7 @@ lemma sep_map_general_inj:
   apply (clarsimp simp: inj_on_def fun_eq_iff sep_map_general_def)
   apply (erule_tac x="SepState (object_to_sep_state x object cmps) empty" in allE)
   apply (fastforce simp: object_to_sep_state_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   done
 
 lemma sep_map_o_inj:
@@ -339,7 +339,7 @@ lemma sep_map_s_inj:
   apply (clarsimp simp: inj_on_def fun_eq_iff sep_map_s_def sep_map_general_def)
   apply (erule_tac x="SepState (object_to_sep_state a obj {Slot b}) empty" in allE)
   apply (fastforce simp: object_to_sep_state_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   done
 
 lemma sep_map_c_inj:
@@ -351,7 +351,7 @@ lemma sep_map_c_inj:
                                                  {Slot b})
                                 empty" in allE)
   apply (auto simp: object_to_sep_state_def object_project_def object_slots_def
-             split: split_if_asm)
+             split: if_split_asm)
   done
 
 
@@ -464,7 +464,7 @@ lemma restrict_map_remerge':
   "(f |` S) ++ (f |` T) = f |` (S \<union> T)"
   apply (rule ext)
   apply (clarsimp simp: restrict_map_def map_add_def
-                 split: split_if_asm option.splits)
+                 split: if_split_asm option.splits)
   done
 
 

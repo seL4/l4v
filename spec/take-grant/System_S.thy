@@ -249,7 +249,7 @@ lemma removeOperation_simpler:
     None \<Rightarrow> s
   | Some (Entity caps) \<Rightarrow> s (target c\<^sub>1 \<mapsto> Entity (caps - {c\<^sub>2})))"
   by (rule eq_reflection, simp add: removeOperation_def is_entity_def direct_caps_of_def
-                             split: split_if_asm option.splits)
+                             split: if_split_asm option.splits)
 
 definition
   removeSetOperation ::
@@ -267,7 +267,7 @@ lemma removeSetOperation_simpler:
   | Some (Entity caps') \<Rightarrow> s (target c \<mapsto> Entity (caps' - caps)))"
   by (auto simp: removeSetOperation_def is_entity_def direct_caps_of_def
          intro!: eq_reflection
-          split: split_if_asm option.splits)
+          split: if_split_asm option.splits)
 
 lemma removeSetOperation_fold_removeOperation:
   "removeSetOperation e c (set caps) s = fold (removeOperation e c) caps s"

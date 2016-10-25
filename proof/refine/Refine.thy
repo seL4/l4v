@@ -29,7 +29,7 @@ lemma typ_at_AUserDataI:
         \<Longrightarrow> typ_at' UserDataT (p + n * 2 ^ pageBits) s'"
   apply (clarsimp simp add: obj_at_def a_type_def )
   apply (simp split: Structures_A.kernel_object.split_asm
-                     arch_kernel_obj.split_asm split: split_if_asm)
+                     arch_kernel_obj.split_asm split: if_split_asm)
   apply (drule(1) pspace_relation_absD)
   apply (clarsimp)
   apply (drule_tac x = "p + n * 2 ^ pageBits" in spec)
@@ -52,7 +52,7 @@ lemma typ_at_ADeviceDataI:
         \<Longrightarrow> typ_at' UserDataDeviceT (p + n * 2 ^ pageBits) s'"
   apply (clarsimp simp add: obj_at_def a_type_def )
   apply (simp split: Structures_A.kernel_object.split_asm
-                     arch_kernel_obj.split_asm split: split_if_asm)
+                     arch_kernel_obj.split_asm split: if_split_asm)
   apply (drule(1) pspace_relation_absD)
   apply (clarsimp)
   apply (drule_tac x = "p + n * 2 ^ pageBits" in spec)
@@ -89,7 +89,7 @@ lemma typ_at_UserDataI:
                         pde_relation_def
               split: Structures_A.kernel_object.split_asm 
                      Structures_H.kernel_object.split_asm
-                     split_if_asm arch_kernel_obj.split_asm)
+                     if_split_asm arch_kernel_obj.split_asm)
   apply (rename_tac vmpage_size n)
   apply (rule_tac x = vmpage_size in exI)
   apply (subst conjunct2 [OF is_aligned_add_helper])
@@ -120,7 +120,7 @@ lemma typ_at_DeviceDataI:
                         pde_relation_def
               split: Structures_A.kernel_object.split_asm 
                      Structures_H.kernel_object.split_asm
-                     split_if_asm arch_kernel_obj.split_asm)
+                     if_split_asm arch_kernel_obj.split_asm)
   apply (rename_tac vmpage_size n)
   apply (rule_tac x = vmpage_size in exI)
   apply (subst conjunct2 [OF is_aligned_add_helper])

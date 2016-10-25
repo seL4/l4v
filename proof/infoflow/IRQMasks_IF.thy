@@ -93,12 +93,12 @@ lemma handle_interrupt_irq_masks:
    handle_interrupt irq
    \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply(simp add: handle_interrupt_def split del: split_if)
+  apply(simp add: handle_interrupt_def split del: if_split)
   apply (rule hoare_pre)
    apply (rule hoare_if)
     apply simp
    apply( wp dmo_wp
-        | simp add: ackInterrupt_def maskInterrupt_def when_def split del: split_if
+        | simp add: ackInterrupt_def maskInterrupt_def when_def split del: if_split
         | wpc
         | simp add: get_irq_state_def handle_reserved_irq_def
         | wp_once hoare_drop_imp)+
@@ -124,10 +124,10 @@ lemma rec_del_irq_masks':
     done
   next
   case (2 slot exposed s) show ?case
-    apply(simp add: rec_del.simps split del: split_if)
+    apply(simp add: rec_del.simps split del: if_split)
     apply(rule hoare_pre_spec_validE)
      apply(wp drop_spec_validE[OF returnOk_wp] drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
-          |simp add: split_def split del: split_if)+
+          |simp add: split_def split del: if_split)+
            apply(rule spec_strengthen_postE)
             apply(rule "2.hyps"[simplified], fastforce+)
           apply(rule drop_spec_validE, (wp preemption_point_inv | simp)+)[1]
@@ -137,7 +137,7 @@ lemma rec_del_irq_masks':
          apply(wp  finalise_cap_domain_sep_inv_cap get_cap_wp 
                    finalise_cap_returns_None[where irqs=False, simplified]
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
-               |simp split del: split_if
+               |simp split del: if_split
                |wp_once hoare_drop_imps)+
     apply(blast dest: cte_wp_at_domain_sep_inv_cap)
     done
@@ -217,7 +217,7 @@ lemma invoke_tcb_irq_masks:
   apply(case_tac tinv)
        apply((wp restart_irq_masks hoare_vcg_if_lift  mapM_x_wp[OF _ subset_refl]
             | wpc
-            | simp split del: split_if add: check_cap_at_def 
+            | simp split del: if_split add: check_cap_at_def
             | clarsimp)+)[3]
     defer
     apply((wp | simp )+)[2]
@@ -328,7 +328,7 @@ lemma invoke_cnode_irq_masks:
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   unfolding invoke_cnode_def
   apply(case_tac ci)
-        apply(wp cap_insert_irq_masks cap_move_irq_masks cap_revoke_irq_masks[where st=st] cap_delete_irq_masks[where st=st] | simp split del: split_if)+
+        apply(wp cap_insert_irq_masks cap_move_irq_masks cap_revoke_irq_masks[where st=st] cap_delete_irq_masks[where st=st] | simp split del: if_split)+
     apply(rule hoare_pre)
      by(wp hoare_vcg_all_lift  | simp | wpc | wp_once hoare_drop_imps | rule hoare_pre)+
 
@@ -365,13 +365,13 @@ lemma decode_invocation_IRQHandlerCap:
                 (\<exists>a b. cte_wp_at
                         (op = (IRQHandlerCap (irq_of_handler_inv x)))
                         (a, b) s))\<rbrace>,-"
-  apply(simp add: decode_invocation_def split del: split_if)
+  apply(simp add: decode_invocation_def split del: if_split)
   apply(rule hoare_pre)
    apply (wp | wpc | simp add: o_def)+
        apply (rule hoare_post_imp_R[where Q'="\<top>\<top>"])
         apply wp
        apply (clarsimp simp: uncurry_def)
-      apply(wp | wpc | simp add: decode_irq_handler_invocation_def o_def split del: split_if)+
+      apply(wp | wpc | simp add: decode_irq_handler_invocation_def o_def split del: if_split)+
   apply (safe | rule TrueI | simp add: op_equal | rule exI[where x="fst slot"], rule exI[where x="snd slot"])+
   done
 
@@ -381,9 +381,9 @@ lemma handle_invocation_irq_masks:
    \<lbrace> \<lambda> rv s. P (irq_masks_of_state s) \<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc
-              split del: split_if)
+              split del: if_split)
   apply(wp static_imp_wp syscall_valid perform_invocation_irq_masks[where st=st] hoare_vcg_all_lift hoare_vcg_ex_lift decode_invocation_IRQHandlerCap
-       | simp split del: split_if)+
+       | simp split del: if_split)+
   apply(simp add: invs_valid_objs)
   done
 

@@ -370,7 +370,7 @@ lemma invokeCNodeRotate_ccorres:
        (invokeCNode (Rotate cap1 cap2 slot1 slot2 slot3)) 
   (Call invokeCNodeRotate_'proc)"
   apply (cinit lift: slot1_' slot2_' slot3_' cap1_' cap2_' simp del: return_bind cong:call_ignore_cong)
-   apply (simp split del: split_if del: Collect_const)
+   apply (simp split del: if_split del: Collect_const)
    apply (simp only: liftE_def)
    apply (rule_tac r'="dc" and xf'="xfdc" in ccorres_split_nothrow_novcg)
        apply (rule ccorres_cond [where R = \<top>])
@@ -410,7 +410,7 @@ lemma invokeCNodeSaveCaller_ccorres:
        (invokeCNode (SaveCaller destSlot)) 
   (Call invokeCNodeSaveCaller_'proc)" 
   apply (cinit lift: destSlot_'  simp del: return_bind cong:call_ignore_cong)
-   apply (simp add: Collect_True split del: split_if  del: Collect_const cong:call_ignore_cong)
+   apply (simp add: Collect_True split del: if_split  del: Collect_const cong:call_ignore_cong)
    apply (simp only: liftE_def)
    apply (rule ccorres_Guard_Seq)+
    apply (simp only: bind_assoc)
@@ -557,7 +557,7 @@ lemma hasCancelSendRights_spec:
    apply (drule sym, drule (1) cap_get_tag_to_H)
    apply (clarsimp simp: hasCancelSendRights_def to_bool_def 
                          true_def false_def 
-                   split: split_if bool.splits)
+                   split: if_split bool.splits)
   apply (rule impI)
   apply (case_tac cap,
          auto simp: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs  
@@ -818,7 +818,7 @@ lemma decodeCNodeInvocation_ccorres:
                           apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
                            apply vcg
                           apply (rule conseqPre, vcg)
-                          apply (clarsimp split: split_if simp: injection_handler_throwError)
+                          apply (clarsimp split: if_split simp: injection_handler_throwError)
                           apply (auto simp: throwError_def return_def
                                             syscall_error_to_H_cases syscall_error_rel_def
                                             exception_defs)[1]
@@ -1705,8 +1705,8 @@ lemma pspace_no_overlap_underlying_zero_update:
         = s"
   apply (subgoal_tac "\<forall>x \<in> S. underlying_memory (ksMachineState s) x = 0")
    apply (cases "ksMachineState s")
-   apply (cases s, simp add: fun_eq_iff split: split_if)
-  apply (clarsimp split: split_if_asm)
+   apply (cases s, simp add: fun_eq_iff split: if_split)
+  apply (clarsimp split: if_split_asm)
   apply (erule pspace_no_overlap_underlying_zero)
    apply (simp add: invs'_def valid_state'_def)
   apply blast
@@ -1781,7 +1781,7 @@ lemma clearMemory_untyped_ccorres:
   apply (simp add: addrFromPPtr_mask)
   apply (cases "ptr = 0")
    apply (drule subsetD, rule intvl_self, simp)
-   apply (simp split: split_if_asm)
+   apply (simp split: if_split_asm)
   apply simp
   done
 
@@ -1954,7 +1954,7 @@ lemma byte_regions_unmodified_actually_heap_list:
   apply (drule_tac x=x in spec)
   apply (drule_tac x=x in bspec)
    apply blast
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
   done
 
 lemma resetUntypedCap_ccorres:
@@ -2147,7 +2147,7 @@ lemma resetUntypedCap_ccorres:
               apply (clarsimp simp: valid_cap_simps' capAligned_def
                                     aligned_offset_non_zero cteCaps_of_def
                                     is_aligned_mask_out_add_eq_sub[OF is_aligned_weaken]
-                                    split_if[where P="\<lambda>z. a \<le> z" for a])
+                                    if_split[where P="\<lambda>z. a \<le> z" for a])
               apply (strengthen is_aligned_mult_triv2[THEN is_aligned_weaken]
                   aligned_sub_aligned[OF _ _ order_refl]
                   aligned_intvl_offset_subset_ran
@@ -2551,7 +2551,7 @@ lemma invokeUntyped_Retype_ccorres:
              apply clarsimp
              apply (frule cap_get_tag_isCap_unfolded_H_cap)
              apply (cut_tac some_range_cover_arithmetic)
-             apply (case_tac cte', clarsimp simp: modify_map_def fun_eq_iff split: split_if)
+             apply (case_tac cte', clarsimp simp: modify_map_def fun_eq_iff split: if_split)
              apply (simp add: mex_def meq_def ptr_base_eq del: split_paired_Ex)
              apply (rule exI, strengthen refl, simp)
              apply (strengthen globals.fold_congs, simp add: field_simps)
@@ -2594,7 +2594,7 @@ lemma invokeUntyped_Retype_ccorres:
                               invokeUntyped_proofs.caps_no_overlap'
                               invokeUntyped_proofs.ps_no_overlap'
                               invokeUntyped_proofs.descendants_range
-                              split_if[where P="\<lambda>v. v \<le> getFreeIndex x y" for x y]
+                              if_split[where P="\<lambda>v. v \<le> getFreeIndex x y" for x y]
                               empty_descendants_range_in'
                               invs_pspace_aligned' invs_pspace_distinct'
                               invs_ksCurDomain_maxDomain'
@@ -2620,7 +2620,7 @@ lemma invokeUntyped_Retype_ccorres:
                 apply (erule is_aligned_weaken[OF range_cover.aligned])
                 apply (clarsimp simp: APIType_capBits_low)
                (* new idx le *)
-               apply (clarsimp split: split_if)
+               apply (clarsimp split: if_split)
               (* cnodeptr not in area *)
               apply (rule contra_subsetD[rotated],
                 rule invokeUntyped_proofs.ex_cte_no_overlap'[OF proofs], rule misc)
@@ -2645,7 +2645,7 @@ lemma invokeUntyped_Retype_ccorres:
           apply (rule order_trans, erule invokeUntyped_proofs.subset_stuff)
           apply (simp add: atLeastatMost_subset_iff word_and_le2)
          (* destSlots *)
-         apply (clarsimp split: split_if)
+         apply (clarsimp split: if_split)
          apply (frule invokeUntyped_proofs.slots_invD[OF proofs])
          apply (simp add: conj_comms)
         (* usableUntyped *)
@@ -2666,7 +2666,7 @@ lemma invokeUntyped_Retype_ccorres:
         apply (cut_tac vui)
         apply (clarsimp simp: cap_get_tag_isCap getFreeIndex_def
                               cte_wp_at_ctes_of shiftL_nat
-                       split: split_if)
+                       split: if_split)
         apply (simp add: mask_out_sub_mask field_simps region_is_bytes'_def)
         apply (clarsimp elim!: region_actually_is_bytes_subset)
        apply (rule order_refl)
@@ -2708,7 +2708,7 @@ lemma ccorres_returnOk_Basic:
 lemma injection_handler_whenE:
   "injection_handler injf (whenE P f)
     = whenE P (injection_handler injf f)"
-  by (simp add: whenE_def injection_handler_returnOk split: split_if)
+  by (simp add: whenE_def injection_handler_returnOk split: if_split)
 
 lemma fromEnum_object_type_to_H:
   "fromEnum x = unat (object_type_from_H x)"
@@ -2717,7 +2717,7 @@ lemma fromEnum_object_type_to_H:
                    enum_apiobject_type
                    object_type_from_H_def
                    "StrictC'_object_defs" "api_object_defs"
-            split: split_if)
+            split: if_split)
   apply (auto simp: "api_object_defs")
   done
 
@@ -2747,7 +2747,7 @@ lemma ccorres_throwError_inl_rrel:
     apply (simp add: throwError_def return_def)
    apply assumption
   apply (simp add: throwError_def return_def
-                   unif_rrel_def split: split_if_asm)
+                   unif_rrel_def split: if_split_asm)
   done
 
 lemmas ccorres_return_C_errorE_inl_rrel
@@ -2958,7 +2958,7 @@ proof -
   from foo have plus: "unat wbase + unat wlength < 2 ^ len_of TYPE('a)"
     apply -
     apply (rule order_le_less_trans[rotated], rule sz_less, simp)
-    apply (simp add: unat_arith_simps split: split_if_asm)
+    apply (simp add: unat_arith_simps split: if_split_asm)
     done
 
   from foo show ?thesis
@@ -2967,7 +2967,7 @@ qed
 
 lemma unat_2tp_if:
   "unat (2 ^ n :: ('a :: len) word) = (if n < len_of TYPE ('a) then 2 ^ n else 0)"
-  by (split split_if, simp_all add: power_overflow)
+  by (split if_split, simp_all add: power_overflow)
 
 lemma ctes_of_ex_cte_cap_to':
   "ctes_of s p = Some cte \<Longrightarrow> \<forall>r \<in> cte_refs' (cteCap cte) (irq_node' s). ex_cte_cap_to' r s"
@@ -3298,7 +3298,7 @@ shows
                               apply (simp add: all_ex_eq_helper)
                               apply (vcg exspec=ensureEmptySlot_modifies)
                              apply (clarsimp simp: upto_enum_word
-                                            split: split_if_asm simp del: upt.simps)
+                                            split: if_split_asm simp del: upt.simps)
                              apply (simp add: cte_level_bits_def field_simps size_of_def
                                               numeral_eqs[symmetric])
                              apply (simp add: cap_get_tag_isCap[symmetric]
@@ -3472,7 +3472,7 @@ shows
                     apply (strengthen word_of_nat_less)
                     apply (clarsimp simp: StrictC'_thread_state_defs mask_def true_def false_def
                                           from_bool_0 ccap_relation_isDeviceCap2
-                                   split: split_if)
+                                   split: if_split)
                     apply (intro conjI impI; clarsimp simp:not_less shiftr_overflow)
                    apply simp
                   apply simp
@@ -3506,7 +3506,7 @@ shows
                                      fromAPIType_def)
                     apply (clarsimp simp: word_le_nat_alt unat_2tp_if
                                           valid_tcb_state'_def 
-                                   split: option.split_asm split_if_asm)
+                                   split: option.split_asm if_split_asm)
                     apply blast
                    apply (case_tac "tcbState obja",
                      (simp add: runnable'_def valid_tcb_state'_def)+)[1]
@@ -3540,7 +3540,7 @@ shows
                     wbase="args ! 4" and wlength="args ! 5"], simp_all)[1]
                  apply (simp add: valid_cap_simps' capAligned_def word_bits_def)
                 apply (clarsimp simp: upto_enum_def word_le_nat_alt[symmetric]
-                               split: option.split_asm split_if_asm)
+                               split: option.split_asm if_split_asm)
                 apply (drule spec, drule mp, erule conjI, rule order_refl)
                 apply clarsimp
                apply (simp del: Collect_const)

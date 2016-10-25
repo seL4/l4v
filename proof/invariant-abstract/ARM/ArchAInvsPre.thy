@@ -96,7 +96,7 @@ lemma get_pd_of_thread_reachable:
   "get_pd_of_thread (kheap s) (arch_state s) t \<noteq> arm_global_pd (arch_state s)
    \<Longrightarrow> (\<exists>\<rhd> get_pd_of_thread (kheap s) (arch_state s) t) s"
   by (auto simp: get_pd_of_thread_vs_lookup
-          split: Structures_A.kernel_object.splits split_if_asm option.splits
+          split: Structures_A.kernel_object.splits if_split_asm option.splits
                  cap.splits arch_cap.splits)
 
 lemma is_aligned_ptrFromPAddrD:

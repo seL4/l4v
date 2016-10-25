@@ -924,7 +924,7 @@ lemma cep_relations_drop_fun_upd:
       \<Longrightarrow> cnotification_relation (f (x \<mapsto> v')) = cnotification_relation f"
   by (intro ext cendpoint_relation_upd_tcb_no_queues[where thread=x]
                 cnotification_relation_upd_tcb_no_queues[where thread=x]
-          | simp split: split_if)+
+          | simp split: if_split)+
 
 lemma threadSet_timeSlice_ccorres [corres]:
   "ccorres dc xfdc (tcb_at' thread) {s. thread' s = tcb_ptr_to_ctcb_ptr thread \<and> unat (v' s) = v} hs 
@@ -947,8 +947,8 @@ lemma threadSet_timeSlice_ccorres [corres]:
   apply (rule conjI)
    defer
    apply (erule cready_queues_relation_not_queue_ptrs)
-    apply (rule ext, simp split: split_if)
-   apply (rule ext, simp split: split_if)
+    apply (rule ext, simp split: if_split)
+   apply (rule ext, simp split: if_split)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
     apply (simp add: ctcb_relation_def)

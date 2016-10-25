@@ -65,7 +65,7 @@ lemma fake_pt_cap_at_conversion:
         if fake_pt_cap_at (obj_id, slot) spec then f (cap_ref_object (obj_id, slot) spec) else \<box>) =
       (\<And>* obj_id \<in> {obj_id. \<exists>cap. cap \<in> all_caps spec \<and> is_fake_pt_cap cap \<and> obj_id = cap_object cap}.
            f obj_id)"
-  apply (subst sep.setprod.Sigma, clarsimp+)
+  apply (subst sep.prod.Sigma, clarsimp+)
   apply (subst sep_map_set_conj_restrict_predicate)
    apply (rule finite_SigmaI, clarsimp+)
   apply (subst fake_cap_rewrite, assumption)
@@ -254,7 +254,7 @@ lemma sep_caps_at_split: "a \<in> A \<Longrightarrow>
   si_caps_at t orig_caps spec dev A = (
   si_cap_at t orig_caps spec dev a \<and>* si_caps_at t orig_caps spec dev (A - {a}))"
   apply (simp add:si_caps_at_def)
-  apply (subst sep.setprod.union_disjoint [where A = "{a}", simplified, symmetric])
+  apply (subst sep.prod.union_disjoint [where A = "{a}", simplified, symmetric])
    apply simp
   apply (simp add:insert_absorb)
   done
@@ -732,7 +732,7 @@ lemma map_object_empty_initialised_pt:
                                                 cap \<in> all_caps spec \<longrightarrow>
                                                 obj_id \<noteq> cap_object cap)}.
            (object_initialised spec t) obj_id)"
-  apply (rule sep.setprod.cong, clarsimp)
+  apply (rule sep.prod.cong, clarsimp)
   apply (clarsimp simp: object_empty_initialised_pt)
   done
 
@@ -1035,7 +1035,7 @@ lemma object_initialised_slot_initialised:
        = (object_slot_initialised spec t obj_id slot \<and>* F)"
   apply (frule well_formed_finite [where obj_id=obj_id])
   apply (simp add: object_initialised_decomp_total)
-  apply (subst sep.setprod.remove, assumption+)
+  apply (subst sep.prod.remove, assumption+)
   by (metis sep_conj_assoc sep_conj_left_commute)
 
 lemma map_page_directory_page_tables_wp:
@@ -1110,8 +1110,8 @@ lemma map_map_page_directory_page_tables_wp'':
   apply simp
   apply (wp sep_wp: map_page_directory_page_tables_wp [where t=t])
   apply simp
-  apply (subst (asm) sep.setprod.remove, simp, simp)
-  apply (subst sep.setprod.remove, simp, simp)
+  apply (subst (asm) sep.prod.remove, simp, simp)
+  apply (subst sep.prod.remove, simp, simp)
   apply clarsimp
   apply sep_solve
   done

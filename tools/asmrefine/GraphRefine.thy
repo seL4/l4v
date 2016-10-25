@@ -30,7 +30,7 @@ lemma exec_via_trace:
         \<and> option_map exec_final_step (trace_end tr) = Some xs)"
 proof -
   have dom_If: "\<And>n f. dom (\<lambda>i. if i \<le> n then Some (f i) else None) = {..n}"
-    by (auto split: split_if_asm)
+    by (auto split: if_split_asm)
   have end_If: "\<And>n f. trace_end (\<lambda>i. if i \<le> n then Some (f i) else None) = Some (f n)"
     apply (simp add: trace_end_def dom_If)
     apply (subst Max_eqI, simp+)
@@ -314,7 +314,7 @@ proof -
     apply (cut_tac i=n in f_induct[rule_format], clarsimp)
     apply (frule_tac step[rule_format])
     apply (clarsimp simp: fun_eq_iff restrict_map_def linorder_not_le split_def
-                   split: split_if_asm)
+                   split: if_split_asm)
     apply (drule_tac x=i in spec)
     apply (auto simp: le_Suc_eq)
     done
@@ -325,7 +325,7 @@ proof -
     apply (cut_tac i=j and j="min i j" and k="max i j" in f_eq[rule_format])
       apply (simp add: min_def linorder_not_le f_induct)
      apply simp
-    apply (simp add: min_def max_def split: split_if_asm)
+    apply (simp add: min_def max_def split: if_split_asm)
     done
 
   show "?thesis"
@@ -355,8 +355,8 @@ lemma restrict_map_eq_Some_le:
     \<Longrightarrow> tr' (m :: nat) = Some v
     \<Longrightarrow> n \<ge> m \<and> (\<forall>k \<le> m. restrict_map tr {..k} = restrict_map tr' {..k})"
   apply (frule_tac x=m in fun_cong, simp(no_asm_use) add: restrict_map_def)
-  apply (simp split: split_if_asm)
-  apply (auto simp: fun_eq_iff split: split_if_asm)
+  apply (simp split: if_split_asm)
+  apply (auto simp: fun_eq_iff split: if_split_asm)
   done
 
 lemma trace_prefixes_to_trace:
@@ -1393,11 +1393,11 @@ lemma heap_update_list_If1:
    apply (rule refl)
   apply (induct xs rule: rev_induct)
    apply simp
-  apply (simp split del: split_if)
+  apply (simp split del: if_split)
   apply (subst foldl_cong[OF refl refl])
    apply (clarsimp simp: nth_append)
    apply (rule refl)
-  apply (simp add: nth_append split del: split_if cong: if_cong)
+  apply (simp add: nth_append split del: if_split cong: if_cong)
   apply (auto simp: unat_of_nat addr_card linorder_not_less less_Suc_eq
               dest: word_unat.Rep_inverse')
   done
@@ -1484,7 +1484,7 @@ lemma c_guard_to_word_ineq:
    apply (drule_tac x="unat (- ptr_val p)" in spec)
    apply simp
    apply (simp add: Aligned.unat_minus word_le_nat_alt
-             split: split_if_asm)
+             split: if_split_asm)
     apply (drule of_nat_inverse, simp+)
     apply (cut_tac 'a='a in sz_nzero, simp)
    apply (simp add: word_size unat_of_nat linorder_not_le
@@ -1493,7 +1493,7 @@ lemma c_guard_to_word_ineq:
   apply (simp add: word_neq_0_conv[symmetric] del: word_neq_0_conv)
   apply (subgoal_tac "ptr_val p = (- (of_nat k))")
    apply simp
-   apply (simp add: word_le_nat_alt Aligned.unat_minus split: split_if_asm)
+   apply (simp add: word_le_nat_alt Aligned.unat_minus split: if_split_asm)
     apply (drule of_nat_inverse, simp+)
     apply (cut_tac 'a='a in sz_nzero, simp)
    apply (simp add: word_size unat_of_nat)
@@ -1645,7 +1645,7 @@ lemma store_word32s_equality_split:
   apply (safe intro!: load_word32_offset_represents[where p=p])
     apply (simp_all add: load_fold_filter_apply_store_word32)
   apply (drule_tac f="load_word32 (p + x)" in arg_cong)+
-  apply (simp add: load_fold_filter_apply_store_word32 split: split_if_asm)
+  apply (simp add: load_fold_filter_apply_store_word32 split: if_split_asm)
   done
 
 lemma apply_store_word32_over_store:
@@ -1675,7 +1675,7 @@ lemma store_word32s_equality_final:
                         load_apply_store_word32
                         apply_store_load_word32
                   dest: arg_cong[where f="load_word32 (p + x)"]
-                 split: split_if_asm simp del: word_neq_0_conv)
+                 split: if_split_asm simp del: word_neq_0_conv)
   apply (simp_all add: apply_store_word32_def del: word_neq_0_conv)
   done
 

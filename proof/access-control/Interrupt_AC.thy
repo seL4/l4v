@@ -87,7 +87,7 @@ lemma decode_irq_control_invocation_authorised [wp]:
   unfolding decode_irq_control_invocation_def authorised_irq_ctl_inv_def arch_check_irq_def
   apply (rule hoare_gen_asmE)
   apply (rule hoare_pre)
-   apply (simp add: Let_def split del: split_if cong: if_cong)
+   apply (simp add: Let_def split del: if_split cong: if_cong)
    apply (wp whenE_throwError_wp hoare_vcg_imp_lift hoare_drop_imps
               | strengthen  aag_Control_owns_strg
               | simp add: o_def del: hoare_post_taut hoare_True_E_R)+
@@ -105,7 +105,7 @@ lemma decode_irq_handler_invocation_authorised [wp]:
   \<lbrace>\<lambda>x s. authorised_irq_hdl_inv aag x\<rbrace>, -"
   unfolding decode_irq_handler_invocation_def authorised_irq_hdl_inv_def
   apply (rule hoare_pre)
-   apply (simp add: Let_def split_def split del: split_if cong: if_cong)
+   apply (simp add: Let_def split_def split del: if_split cong: if_cong)
    apply wp
   apply (auto dest!: hd_in_set)
   done

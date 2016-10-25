@@ -85,11 +85,11 @@ proof (induct arbitrary: s rule: resolveAddressBits.induct)
   show ?case
     apply (subst resolveAddressBits.simps)
     apply (simp add: Let_def split_def cap_case_CNodeCap[unfolded isCap_simps]
-               split del: split_if cong: if_cong)
+               split del: if_split cong: if_cong)
     apply (rule hoare_pre_spec_validE)
      apply ((elim exE | wp_once spec_strengthen_postE[OF "1.hyps"])+,
-              (rule refl conjI | simp add: in_monad split del: split_if)+)
-            apply (wp | simp add: locateSlot_conv split del: split_if
+              (rule refl conjI | simp add: in_monad split del: if_split)+)
+            apply (wp | simp add: locateSlot_conv split del: if_split
                       | wp_once hoare_drop_imps)+
   done
 qed
@@ -106,7 +106,7 @@ lemma updateObject_cte_inv:
   "\<lbrace>P\<rbrace> updateObject (cte :: cte) ko x y n \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: updateObject_cte)
   apply (cases ko, simp_all add: typeError_def unless_def
-                      split del: split_if
+                      split del: if_split
                            cong: if_cong)
    apply (wp | simp)+
   done
@@ -521,7 +521,7 @@ proof (unfold valid_badges_def, clarify)
   from pv nx nxt p p0 c d m 0
   have "c' \<noteq> p" 
     apply clarsimp
-    apply (simp add: mdb_next_unfold split: split_if_asm)
+    apply (simp add: mdb_next_unfold split: if_split_asm)
     apply (erule (1) valid_dlistEn, simp)
     apply (clarsimp simp: no_mdb_def no_0_def)
     done
@@ -792,10 +792,10 @@ lemma sameRegionAs_def2:
   apply (simp     add: capMasterCap_def sameRegionAs_def isCap_simps
                        capBadge_simps isArchPageCap_def
                 split: capability.split
-            split del: split_if cong: if_cong)
+            split del: if_split cong: if_cong)
   apply (simp    add: ARM_H.sameRegionAs_def isCap_simps
                split: arch_capability.split
-           split del: split_if cong: if_cong)
+           split del: if_split cong: if_cong)
   apply (clarsimp simp: capRange_def Let_def)
   apply (simp add: range_subset_eq2 cong: conj_cong)
   apply (simp add: interval_empty conj_comms)
@@ -817,7 +817,7 @@ lemma sameObjectAs_def2:
   apply (clarsimp simp: ARM_H.sameObjectAs_def isCap_simps
                  split: arch_capability.split cong: if_cong)
   apply (clarsimp simp: ARM_H.sameRegionAs_def isCap_simps
-             split del: split_if cong: if_cong)
+             split del: if_split cong: if_cong)
   apply (simp add: capRange_def interval_empty)
   apply fastforce
   done
@@ -907,7 +907,7 @@ lemma sameRegionAs_classes:
   apply (erule sameRegionAsE)
       apply (rule master_eqI, rule capClass_Master)
       apply simp
-     apply (simp add: capRange_def split: split_if_asm)
+     apply (simp add: capRange_def split: if_split_asm)
     apply (clarsimp simp: isCap_simps)
    apply (clarsimp simp: isCap_simps)
   done
@@ -981,7 +981,7 @@ lemma getObject_cte_det:
   "(r::cte,s') \<in> fst (getObject p s) \<Longrightarrow> fst (getObject p s) = {(r,s)} \<and> s' = s"
   apply (clarsimp simp add: getObject_def bind_def get_def gets_def
                             return_def loadObject_cte split_def)
-  apply (clarsimp split: kernel_object.split_asm split_if_asm option.split_asm
+  apply (clarsimp split: kernel_object.split_asm if_split_asm option.split_asm
                    simp: in_monad typeError_def alignError_def magnitudeCheck_def)
        apply (simp_all add: bind_def return_def assert_opt_def split_def
                             alignCheck_def is_aligned_mask[symmetric]
@@ -1699,11 +1699,11 @@ lemma (in mdb_ptr) descendants_of_init':
       apply (rule valid_dlist_init[OF dlist, OF m_p n])
      apply (insert no_0)[1]
      apply (clarsimp simp: no_0_def)
-    apply (clarsimp simp: mdb_next_unfold split: split_if_asm)
+    apply (clarsimp simp: mdb_next_unfold split: if_split_asm)
     apply (rule direct_parent)
       apply (clarsimp simp: mdb_next_unfold)
      apply assumption
-    apply (clarsimp simp: parentOf_def split: split_if_asm)
+    apply (clarsimp simp: parentOf_def split: if_split_asm)
    apply (frule no_mdb_not_target [where p=p])
        apply simp
       apply (simp add: no_mdb_def)
@@ -1712,9 +1712,9 @@ lemma (in mdb_ptr) descendants_of_init':
     apply (clarsimp simp: no_0_def)
    apply (subgoal_tac "p' \<noteq> p")
     apply (erule trans_parent)
-      apply (clarsimp simp: mdb_next_unfold split: split_if_asm)
+      apply (clarsimp simp: mdb_next_unfold split: if_split_asm)
      apply assumption
-    apply (clarsimp simp: parentOf_def m_p split: split_if_asm)
+    apply (clarsimp simp: parentOf_def m_p split: if_split_asm)
    apply clarsimp
    apply (drule subtree_mdb_next)+
    apply (drule tranclD)+
@@ -1887,7 +1887,7 @@ lemma class_links_init:
   "\<lbrakk> class_links m; no_0 m; m p = Some cte;
      no_mdb cte; valid_dlist m \<rbrakk>
    \<Longrightarrow> class_links (m(p \<mapsto> CTE cap initMDBNode))"
-  apply (simp add: class_links_def split del: split_if)
+  apply (simp add: class_links_def split del: if_split)
   apply (erule allEI, erule allEI)
   apply simp
   apply (intro conjI impI)
@@ -1981,7 +1981,7 @@ lemma distinct_zombies_unzombieE:
         capUntypedPtr (cteCap cte') = capUntypedPtr (cteCap cte) \<rbrakk>
           \<Longrightarrow> distinct_zombies (m(x \<mapsto> cte'))"
   apply (simp add: distinct_zombies_def distinct_zombie_caps_def
-                     split del: split_if)
+                     split del: if_split)
   apply (erule allEI, erule allEI)
   apply clarsimp
   done
@@ -2121,7 +2121,7 @@ lemma setCTE_state_refs_of'[wp]:
   apply (rule setObject_state_refs_of_eq)
   apply (clarsimp simp: updateObject_cte in_monad typeError_def
                         in_magnitude_check objBits_simps
-                 split: kernel_object.split_asm split_if_asm)
+                 split: kernel_object.split_asm if_split_asm)
   done
 
 lemma setCTE_valid_mdb:
@@ -2151,7 +2151,7 @@ lemma setCTE_valid_objs'[wp]:
 			updateObject_cte in_monad typeError_def
 			valid_obj'_def valid_tcb'_def valid_cte'_def
 			tcb_cte_cases_def
-		 split: kernel_object.split_asm split_if_asm)
+		 split: kernel_object.split_asm if_split_asm)
   done
 
 lemma setCTE_valid_pspace:
@@ -2233,9 +2233,9 @@ lemma insertInitCap_valid_pspace:
   unfolding insertInitCap_def
   apply (simp   add: updateCap_def valid_pspace'_def
                      valid_mdb'_def bind_assoc
-          split del: split_if)
+          split del: if_split)
   apply (wp setCTE_map_to_ctes getCTE_ctes_wp
-            | simp add: updateMDB_def split del: split_if)+
+            | simp add: updateMDB_def split del: if_split)+
        apply (rule hoare_post_imp)
         apply (erule_tac P="pspace_aligned' s \<and> pspace_distinct' s
           \<and> no_0_obj' s" in conjunct2)

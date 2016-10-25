@@ -106,7 +106,7 @@ lemma bisim_rab:
    apply (auto intro!: bisim_underlyingI
                elim!: separate_cnode_capE
                simp: whenE_def in_monad Bex_def in_bindE word_bits_def in_get_cap_cte_wp_at cte_wp_at_caps_of_state 
-               simp del: add_is_0 split: split_if_asm)[1]
+               simp del: add_is_0 split: if_split_asm)[1]
   apply simp
   apply (rule bisim_underlyingI)
    apply (clarsimp )
@@ -117,14 +117,14 @@ lemma bisim_rab:
  apply (drule (2) valid_sep_cap_not_cnode [where cref = cref])
     apply simp
    apply (fastforce simp: in_monad Bex_def in_bindE word_bits_def in_get_cap_cte_wp_at cte_wp_at_caps_of_state whenE_def
-               simp del: add_is_0 split: split_if_asm)
+               simp del: add_is_0 split: if_split_asm)
   apply clarsimp
   apply (erule separate_cnode_capE)
    apply (fastforce simp: word_bits_def in_monad)
   apply (drule (2) valid_sep_cap_not_cnode [where cref = cref])
    apply simp
   apply (fastforce simp: in_monad Bex_def in_bindE word_bits_def in_get_cap_cte_wp_at cte_wp_at_caps_of_state whenE_def
-              simp del: add_is_0 split: split_if_asm)
+              simp del: add_is_0 split: if_split_asm)
   done
  
 
@@ -359,9 +359,9 @@ lemma decode_invocation_bisim:
   unfolding decode_invocation_def Decode_A.decode_invocation_def
   apply (rule bisim_guard_imp)
     apply (rule bisim_separate_cap_cases [where cap = cap])
-      apply (simp split del: split_if)
+      apply (simp split del: if_split)
       apply (rule bisim_throwError, simp)
-     apply (simp split del: split_if)
+     apply (simp split del: if_split)
      apply (rule bisim_reflE)
     apply (fastforce intro!: bisim_throwError bisim_returnOk simp: AllowRecv_def AllowSend_def)
    apply simp   
@@ -386,7 +386,7 @@ lemma decode_separate_inv:
   unfolding Decode_A.decode_invocation_def
   apply (rule hoare_gen_asmE)
   apply clarify
-  apply (erule separate_capE, simp_all split del: split_if)
+  apply (erule separate_capE, simp_all split del: if_split)
     apply (rule hoare_pre, (wp | simp add: comp_def)+)[1]
    apply (rule hoare_pre) 
    apply (wp | simp)+
@@ -626,7 +626,7 @@ lemma handle_recv_bisim:
               apply (rule bisim_split_reflE)
                   apply (rule_tac cap = rb in bisim_separate_cap_cases)
                     apply (simp, rule bisim_throwError, rule refl)+
-                   apply (simp split del: split_if)
+                   apply (simp split del: if_split)
                    apply (rule bisim_refl [where P = \<top> and P' = \<top>])
                    apply (case_tac rc, simp_all)[1]
                    apply (wp get_cap_wp' lsft_sep | simp add: lookup_cap_def split_def del:  hoare_True_E_R)+

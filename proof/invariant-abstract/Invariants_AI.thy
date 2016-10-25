@@ -1574,7 +1574,7 @@ lemma cte_wp_at_cases:
   apply (simp add: cte_wp_at_def get_cap_def tcb_cnode_map_def bind_def
                    get_object_def assert_opt_def return_def gets_def get_def
                    assert_def fail_def dom_def
-              split: split_if_asm kernel_object.splits
+              split: if_split_asm kernel_object.splits
                      option.splits)
   apply (simp add: tcb_cap_cases_def)
   done
@@ -2089,8 +2089,8 @@ lemma cte_at_typ:
     apply (drule_tac m="fun" in domI)
     apply simp
    apply (case_tac ko, simp_all)
-   apply (simp add: well_formed_cnode_n_def length_set_helper split: split_if_asm)
-  apply (case_tac ko, simp_all split: split_if_asm)
+   apply (simp add: well_formed_cnode_n_def length_set_helper split: if_split_asm)
+  apply (case_tac ko, simp_all split: if_split_asm)
   done
 
 lemma valid_cte_at_typ:
@@ -2318,7 +2318,7 @@ lemma typ_at_range:
    apply blast
   apply clarsimp
   apply (case_tac ko)
-       apply (clarsimp simp: a_type_def split: split_if_asm)
+       apply (clarsimp simp: a_type_def split: if_split_asm)
         apply (clarsimp simp: typ_range_def obj_bits_type_def interval_empty cte_level_bits_def)
         apply (erule notE)
         apply (erule is_aligned_no_overflow)
@@ -2339,31 +2339,31 @@ lemma typ_at_eq_kheap_obj:
    (\<exists>cs. n \<ge> cte_level_bits \<and> kheap s p = Some (CNode (n - cte_level_bits) cs) \<and> \<not> well_formed_cnode_n (n - cte_level_bits) cs)"
   by ((clarsimp simp add: obj_at_def a_type_def; rule iffI; clarsimp),
       case_tac ko; fastforce simp: wf_unique
-                             split: split_if_asm kernel_object.splits )+
+                             split: if_split_asm kernel_object.splits)+
 
 lemma a_type_ACapTableE:
   "\<lbrakk>a_type ko = ACapTable n;
     (!!cs. \<lbrakk>ko = CNode n cs; well_formed_cnode_n n cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
-  by (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+  by (case_tac ko, simp_all add: a_type_simps split: if_split_asm)
   
 lemma a_type_AGarbageE:
   "\<lbrakk>a_type ko = AGarbage n;
     (!!cs. \<lbrakk>n \<ge> cte_level_bits; ko = CNode (n - cte_level_bits) cs; \<not>well_formed_cnode_n (n - cte_level_bits) cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
-  by (case_tac ko, simp_all add: a_type_simps split: split_if_asm, fastforce)
+  by (case_tac ko, simp_all add: a_type_simps split: if_split_asm, fastforce)
 
 lemma a_type_ATCBE:
   "\<lbrakk>a_type ko = ATCB; (!!tcb. ko = TCB tcb \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
-  by (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+  by (case_tac ko, simp_all add: a_type_simps split: if_split_asm)
 
 lemma a_type_AEndpointE:
   "\<lbrakk>a_type ko = AEndpoint; (!!ep. ko = Endpoint ep \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
-  by (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+  by (case_tac ko, simp_all add: a_type_simps split: if_split_asm)
 
 lemma a_type_ANTFNE:
   "\<lbrakk>a_type ko = ANTFN; (!!ntfn. ko = Notification ntfn \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
-  by (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+  by (case_tac ko, simp_all add: a_type_simps split: if_split_asm)
 
 lemmas a_type_elims[elim!] =
    a_type_ACapTableE a_type_AGarbageE a_type_ATCBE
@@ -2853,7 +2853,7 @@ lemma obj_ref_is_cap_table:
   is_cnode_cap cap \<or> is_zombie cap"
   by (auto simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
            dest: obj_ref_is_arch
-           split: cap.splits split_if_asm)
+           split: cap.splits if_split_asm)
 
 lemma ut_revocableD:
   "\<lbrakk> cs p = Some cap; is_untyped_cap cap; ut_revocable r cs \<rbrakk> \<Longrightarrow> r p"
@@ -2961,7 +2961,7 @@ lemma dmo_aligned:
 
 lemma cte_wp_at_eqD2:
   "\<lbrakk>cte_wp_at (op = c) p s; cte_wp_at P p s \<rbrakk> \<Longrightarrow> P c"
-  by (auto elim!: cte_wp_atE split: split_if_asm)
+  by (auto elim!: cte_wp_atE split: if_split_asm)
 
 lemma not_pred_tcb:
   "(\<not>pred_tcb_at proj P t s) = (\<not>tcb_at t s \<or> pred_tcb_at proj (\<lambda>a. \<not>P a) t s)"

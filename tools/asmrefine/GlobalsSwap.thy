@@ -460,7 +460,7 @@ lemma globals_swap_access_mem_raw:
   apply (clarsimp simp: in_set_conv_decomp)
   apply (subst append_2nd_simp_backward)
   apply (subst globals_swap_reorder_append, simp+)
-  apply (simp add: globals_swap_def del: foldr_append split del: split_if)
+  apply (simp add: globals_swap_def del: foldr_append split del: if_split)
   apply (subgoal_tac "global_data_valid g_hrs g_hrs_upd
                              (GlobalData nm (size_of TYPE('a)) ok g s)")
    apply (subst append_assoc[symmetric], subst foldr_append)

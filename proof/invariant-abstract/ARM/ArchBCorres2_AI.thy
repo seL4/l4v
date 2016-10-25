@@ -148,7 +148,7 @@ lemma choose_switch_or_idle:
                    return_def get_def modify_def put_def
                     get_thread_state_def
                    thread_get_def
-                   split: split_if_asm)
+                   split: if_split_asm)
   apply force
   done
 

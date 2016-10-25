@@ -1384,7 +1384,7 @@ lemma reply_cancel_ipc_reads_respects_f:
             reads_respects_f[OF get_cap_rev, where st=st and aag=aag] assert_wp
             reads_respects_f[OF thread_set_reads_respects, where st=st and aag=aag ]
             reads_respects_f[OF gets_descendants_of_revrv[folded equiv_valid_def2]]
-        | simp add: when_def split del: split_if | elim conjE)+
+        | simp add: when_def split del: if_split | elim conjE)+
    apply(rule_tac Q="\<lambda> rv s. silc_inv aag st s \<and> invs s \<and> pas_refined aag s \<and> is_subject aag tptr \<and>
                    (\<forall>x\<in>descendants_of (tptr, tcb_cnode_index 2) (cdt s).
                        is_subject aag (fst x))" in hoare_strengthen_post)
@@ -1469,18 +1469,18 @@ lemma finalise_cap_reads_respects:
     and K (final \<longrightarrow> (case cap of EndpointCap r badge rights \<Rightarrow> is_subject aag r |
                            NotificationCap r badge rights \<Rightarrow> is_subject aag r |
                             _ \<Rightarrow> True))) (finalise_cap cap final)"
-  apply(case_tac cap, simp_all split del: split_if)
+  apply(case_tac cap, simp_all split del: if_split)
             apply ((wp cancel_all_ipc_reads_respects cancel_all_signals_reads_respects
                       suspend_reads_respects_f[where st=st] deleting_irq_handler_reads_respects
                       unbind_notification_is_subj_reads_respects
                       unbind_maybe_notification_reads_respects
                       unbind_notification_invs unbind_maybe_notification_invs
-                  | simp add: when_def split del: split_if
+                  | simp add: when_def split del: if_split
                          add: invs_valid_objs invs_sym_refs aag_cap_auth_def
                               cap_auth_conferred_def cap_rights_to_auth_def
                               cap_links_irq_def aag_has_auth_to_Control_eq_owns
                   | rule aag_Control_into_owns_irq
-                  | clarsimp split del: split_if
+                  | clarsimp split del: if_split
                   | rule conjI
                   | wp_once reads_respects_f[where st=st] 
                   | blast
@@ -1611,7 +1611,7 @@ next
               drop_spec_ev[OF preemption_point_reads_respects_f[where st=st and st'=st']]
               validE_validE_R'[OF rec_del_silc_inv] rec_del_invs rec_del_respects(2)
               rec_del_only_timer_irq_inv
-          | simp add: split_def split del: split_if | (rule irq_state_independent_A_conjI, simp)+)+
+          | simp add: split_def split del: if_split | (rule irq_state_independent_A_conjI, simp)+)+
              apply(rule_tac Q'="\<lambda>rv s. emptyable (slot_rdcall (ReduceZombieCall (fst rvb) slot exposed)) s \<and> (\<not> exposed \<longrightarrow>
                    ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) slot s) \<and>
                   is_subject aag (fst slot)" in hoare_post_imp_R)
@@ -1647,7 +1647,7 @@ next
          apply (clarsimp simp: cte_wp_at_caps_of_state)
          apply (erule disjE)
           apply (clarsimp simp: cap_irq_opt_def cte_wp_at_def is_zombie_def
-                         split: cap.split_asm split_if_asm
+                         split: cap.split_asm if_split_asm
                          elim!: ranE dest!: caps_of_state_cteD)
           apply(clarsimp cong: conj_cong simp: conj_comms)
           apply(rename_tac word option nat)

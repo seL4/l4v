@@ -54,7 +54,7 @@ proof -
   have abs_sint_gt_1:
     "b \<noteq> 0 \<and> b \<noteq> 1 \<and> b \<noteq> -1 \<Longrightarrow> abs (sint b) > 1"
     apply (fold word_sint.Rep_inject,
-        simp only: sints abs_if split: split_if)
+        simp only: sints abs_if split: if_split)
     apply arith
     done
   have mag: "(a \<noteq> (- (2 ^ (size a - 1))) \<or> (b \<noteq> -1 \<and> b \<noteq> 1))

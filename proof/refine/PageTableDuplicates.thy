@@ -21,7 +21,7 @@ lemma set_ep_valid_duplicate' [wp]:
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = v,simplified])
   apply (clarsimp simp:updateObject_default_def assert_def bind_def 
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
@@ -39,7 +39,7 @@ lemma set_ntfn_valid_duplicate' [wp]:
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = v,simplified])
   apply (clarsimp simp:updateObject_default_def assert_def bind_def 
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
@@ -57,7 +57,7 @@ lemma setCTE_valid_duplicates'[wp]:
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = cte,simplified])
   apply (clarsimp simp:ObjectInstances_H.updateObject_cte assert_def bind_def 
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
@@ -87,7 +87,7 @@ lemma setEP_valid_duplicates'[wp]:
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = b,simplified])
   apply (clarsimp simp:updateObject_default_def assert_def bind_def 
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
@@ -102,7 +102,7 @@ lemma setTCB_valid_duplicates'[wp]:
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = tcb,simplified])
   apply (clarsimp simp:updateObject_default_def assert_def bind_def 
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
@@ -510,7 +510,7 @@ lemma mapM_x_storePDE_updates:
    apply (drule(1) bspec)
    apply (clarsimp simp:typ_at'_def ko_wp_at'_def
      objBits_simps archObjSize_def dest!:koTypeOf_pde
-     split:  Structures_H.kernel_object.split_asm  arch_kernel_object.split_asm split_if)
+     split:  Structures_H.kernel_object.split_asm  arch_kernel_object.split_asm if_split)
    apply (simp add:ps_clear_def dom_fun_upd2[unfolded fun_upd_def])
   apply (erule rsubst[where P=Q])
   apply (rule ext, clarsimp)
@@ -702,9 +702,9 @@ lemma copyGlobalMappings_ksPSpace_stable:
       apply simp
       done
     have postfix_listD:
-      "\<And>a as. suffixeq (a # as) [kernelBase >> 20.e.2 ^ (pdBits - 2) - 1]
+      "\<And>a as. suffix (a # as) [kernelBase >> 20.e.2 ^ (pdBits - 2) - 1]
        \<Longrightarrow> a \<in> set [kernelBase >> 20 .e. 2 ^ (pdBits - 2) - 1]"
-       apply (clarsimp simp:suffixeq_def)
+       apply (clarsimp simp:suffix_def)
        apply (subgoal_tac "a \<in> set (zs @ a # as)")
         apply (drule sym)
         apply simp
@@ -1153,15 +1153,15 @@ lemma createObject_valid_duplicates'[wp]:
   apply (rule hoare_gen_asm)
   apply (simp add:createObject_def) 
   apply (rule hoare_pre)
-  apply (wpc | wp| simp add: ARM_H.createObject_def split del: split_if)+
+  apply (wpc | wp| simp add: ARM_H.createObject_def split del: if_split)+
          apply (simp add: placeNewObject_def placeNewDataObject_def
-                          placeNewObject'_def split_def split del: split_if
+                          placeNewObject'_def split_def split del: if_split
            | wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>]
-           | wpc | simp add: alignError_def split del: split_if)+
+           | wpc | simp add: alignError_def split del: if_split)+
      apply (rule copyGlobalMappings_valid_duplicates')
     apply ((wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>] | wpc
             | simp add: alignError_def placeNewObject_def 
-                        placeNewObject'_def split_def split del: split_if)+)[2]
+                        placeNewObject'_def split_def split del: if_split)+)[2]
   apply (intro conjI impI)
              apply clarsimp+
             apply (erule(2) valid_duplicates'_update)
@@ -1449,7 +1449,7 @@ lemma resetUntypedCap_valid_duplicates'[wp]:
    apply (wp | simp add: unless_def)+
    apply (wp mapME_x_inv_wp preemptionPoint_inv | simp | wp_once hoare_drop_imps)+
    apply (wp getSlotCap_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of split del: split_if)
+  apply (clarsimp simp: cte_wp_at_ctes_of split del: if_split)
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
   apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def)
   done
@@ -1490,7 +1490,7 @@ lemma invokeUntyped_valid_duplicates[wp]:
     defer
     apply simp
    apply (clarsimp simp del: valid_untyped_inv_wcap'.simps
-                split del: split_if)
+                split del: if_split)
    apply (rule conjI, assumption)
    apply (auto simp: cte_wp_at_ctes_of isCap_simps)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -1499,7 +1499,7 @@ lemma invokeUntyped_valid_duplicates[wp]:
   apply (strengthen is_aligned_armKSGlobalPD)
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
   apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def)
-  apply (auto split: split_if_asm)
+  apply (auto split: if_split_asm)
   done
 
 crunch valid_duplicates'[wp]:
@@ -1533,7 +1533,7 @@ lemma set_asid_pool_valid_duplicates'[wp]:
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = pool,simplified])
   apply (clarsimp simp:updateObject_default_def assert_def bind_def 
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
@@ -2261,7 +2261,7 @@ lemma setASIDPool_valid_duplicates':
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = ap,simplified])
   apply (clarsimp simp:updateObject_default_def assert_def bind_def 
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
@@ -2553,7 +2553,7 @@ lemma handleRecv_valid_duplicates'[wp]:
   apply (simp add: handleRecv_def cong: if_cong)
   apply (rule hoare_pre)
    apply wp
-       apply ((wp getNotification_wp | wpc | simp add: whenE_def split del: split_if)+)[1]
+       apply ((wp getNotification_wp | wpc | simp add: whenE_def split del: if_split)+)[1]
 
       apply (rule_tac Q="\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)"
 

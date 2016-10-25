@@ -477,7 +477,7 @@ lemma obj_relation_cutsE:
     \<rbrakk> \<Longrightarrow> R"
   apply (simp add: obj_relation_cuts_def2 is_other_obj_relation_type_def
                    a_type_def
-            split: Structures_A.kernel_object.split_asm split_if_asm
+            split: Structures_A.kernel_object.split_asm if_split_asm
                    ARM_A.arch_kernel_obj.split_asm)
     apply ((clarsimp split: if_splits,
                 force simp: cte_relation_def pte_relation_def pde_relation_def)+)[5]

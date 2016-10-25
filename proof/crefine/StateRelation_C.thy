@@ -897,7 +897,7 @@ lemma (in kernel) syscall_error_to_H_cases_rev:
   "syscall_error_to_H e lf = Some RevokeFirst \<Longrightarrow>
         type_C e = scast seL4_RevokeFirst"
   by (clarsimp simp: syscall_error_to_H_def syscall_error_type_defs
-              split: split_if_asm)+
+              split: if_split_asm)+
 
 definition 
   syscall_from_H :: "syscall \<Rightarrow> word32"

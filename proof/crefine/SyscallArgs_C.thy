@@ -300,7 +300,7 @@ lemma ccorres_invocationCatch_Inr:
   apply (rule bind_apply_cong [OF refl])+
   apply (simp add: throwError_bind returnOk_bind lift_def liftE_def
                    alternative_bind
-            split: sum.split split_if)
+            split: sum.split if_split)
   apply (simp add: throwError_def)
   done
 
@@ -504,7 +504,7 @@ lemma injection_handler_If:
   "injection_handler injector (If P a b)
      = If P (injection_handler injector a)
             (injection_handler injector b)"
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 (* FIXME: duplicated in CSpace_All *)
 lemma injection_handler_liftM:
@@ -633,7 +633,7 @@ lemma msgRegisters_ccorres:
   "n < unat n_msgRegisters \<Longrightarrow> 
   register_from_H (ARM_H.msgRegisters ! n) = (index msgRegistersC n)"
   apply (simp add: msgRegistersC_def msgRegisters_unfold fupdate_def)
-  apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: split_if)
+  apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: if_split)
   done
 
 
@@ -701,7 +701,7 @@ lemma getMRs_tcbContext:
    apply clarsimp
    apply (wp asUser_const_rv)
   apply (clarsimp simp: n_msgRegisters_def msgRegisters_unfold)
-  apply (simp add: nth_Cons' cur_tcb'_def split: split_if)
+  apply (simp add: nth_Cons' cur_tcb'_def split: if_split)
   done
 
 lemma threadGet_tcbIpcBuffer_ccorres [corres]:
@@ -850,7 +850,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
                apply (clarsimp simp: vmrights_to_H_def)
                apply (simp add: Kernel_C.VMReadOnly_def Kernel_C.VMKernelOnly_def 
                            Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
-                         split: split_if)
+                         split: if_split)
                apply clarsimp
                apply (drule less_4_cases)
                apply auto[1]
@@ -904,7 +904,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
                 apply (clarsimp simp: vmrights_to_H_def)
                 apply (simp add: Kernel_C.VMReadOnly_def Kernel_C.VMKernelOnly_def 
                                  Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
-                          split: split_if)
+                          split: if_split)
                 apply clarsimp
                 apply (drule less_4_cases)
                 apply auto[1]
@@ -1092,7 +1092,7 @@ lemma getMRs_user_word:
                    wordSize_def')
   done
 
-declare split_if [split]
+declare if_split [split]
 
 definition
   "getMRs_rel args buffer \<equiv> \<lambda>s. \<exists>mi. msgLength mi \<le> msgMaxLength \<and> fst (getMRs (ksCurThread s) buffer mi s) = {(args, s)}"
@@ -1273,7 +1273,7 @@ lemma getSyscallArg_ccorres_foo:
     apply assumption
    apply (rule ccorres_cond_seq) 
    apply (rule_tac R=\<top> and P="\<lambda>_. n < unat (scast n_msgRegisters :: word32)" in ccorres_cond_both)
-     apply (simp add: word_less_nat_alt split: split_if)
+     apply (simp add: word_less_nat_alt split: if_split)
     apply (rule ccorres_add_return2)
     apply (rule ccorres_symb_exec_l)
        apply (rule_tac P="\<lambda>s. n < unat (scast n_msgRegisters :: word32) \<and> obj_at' (\<lambda>tcb. atcbContextGet (tcbArch tcb) (ARM_H.msgRegisters!n) = x!n) (ksCurThread s) s"
@@ -1303,9 +1303,9 @@ lemma getSyscallArg_ccorres_foo:
                       \<and> valid_ipc_buffer_ptr' (ptr_val ipc_buffer) s \<and> n < msgMaxLength"
                   and P'=UNIV 
                    in ccorres_from_vcg_throws)
-      apply (simp add: return_def split del: split_if)
+      apply (simp add: return_def split del: if_split)
       apply (rule allI, rule conseqPre, vcg)
-      apply (clarsimp split del: split_if)
+      apply (clarsimp split del: if_split)
       apply (frule(1) user_word_at_cross_over, rule refl)
       apply (clarsimp simp: ptr_add_def mult.commute
                             msgMaxLength_def)
@@ -1325,7 +1325,7 @@ lemma getSyscallArg_ccorres_foo:
    apply (drule equalityD2)
    apply clarsimp
    apply (drule use_valid, rule getMRs_length, assumption)
-   apply (simp add: n_msgRegisters_def  split: split_if_asm)
+   apply (simp add: n_msgRegisters_def  split: if_split_asm)
   apply (rule conjI)
    apply (clarsimp simp: option_to_ptr_def option_to_0_def
       word_less_nat_alt word_le_nat_alt unat_of_nat32 word_bits_def
@@ -1334,7 +1334,7 @@ lemma getSyscallArg_ccorres_foo:
    apply clarsimp
    apply (drule use_valid, rule getMRs_length)
     apply (simp add: word_le_nat_alt msgMaxLength_def)
-   apply (simp split: split_if_asm)
+   apply (simp split: if_split_asm)
   apply (rule conjI, clarsimp simp: cur_tcb'_def)
   apply clarsimp
   apply (clarsimp simp: bind_def gets_def return_def split_def get_def)  
@@ -1351,7 +1351,7 @@ lemma invocation_eq_use_type:
   apply (fold invocation_type_eq, unfold invocationType_def)
   apply (simp add: maxBound_is_length Let_def toEnum_def
                    nth_eq_iff_index_eq nat_le_Suc_less_imp
-            split: split_if)
+            split: if_split)
   apply (intro impI conjI)
    apply (simp add: enum_invocation_label)
   apply (subgoal_tac "InvalidInvocation = enum ! 0")

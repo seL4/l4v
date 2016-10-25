@@ -376,7 +376,7 @@ lemma fib'_correct_rec_helper:
   apply (subst fib'.simps)
   apply (clarsimp simp: unat_eq_of_nat)
   apply (wp ind)
-  apply (clarsimp simp: split: split_if_asm)
+  apply (clarsimp simp: split: if_split_asm)
   apply safe
       apply (subst (asm) fibo32.simps, simp)
      apply (subst (asm) fibo32.simps, simp)

@@ -20,7 +20,7 @@ lemma ccorres_drop_cutMon:
     \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f) g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (subst if_P, simp)
   apply fastforce
   done
@@ -30,7 +30,7 @@ lemma ccorres_drop_cutMon_bind:
     \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f >>= f') g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def bind_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (subst if_P, simp)+
   apply fastforce
   done
@@ -40,7 +40,7 @@ lemma ccorres_drop_cutMon_bindE:
     \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f >>=E f') g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def bind_def bindE_def lift_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (subst if_P, simp)+
   apply fastforce
   done
@@ -50,11 +50,11 @@ lemma ccorres_cutMon:
         \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f) g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def bind_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (erule meta_allE, drule(1) meta_mp)
   apply (drule(1) bspec)
   apply (clarsimp simp: fail_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (subst if_P, assumption)+
   apply fastforce
   done
@@ -67,7 +67,7 @@ lemma ccap_zombie_radix_less1:
   apply (clarsimp simp: Let_def capAligned_def
                         objBits_simps word_bits_conv word_less_nat_alt
                         word_le_nat_alt less_mask_eq
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemmas ccap_zombie_radix_less2
@@ -78,7 +78,7 @@ lemma ccap_zombie_radix_less3:
       \<Longrightarrow> get_capZombieBits_CL (cap_zombie_cap_lift ccap) < 28"
   by (clarsimp simp: get_capZombieBits_CL_def Let_def
                      less_mask_eq ccap_zombie_radix_less2
-              split: split_if)
+              split: if_split)
 
 lemmas ccap_zombie_radix_less4
   = order_less_le_trans [OF ccap_zombie_radix_less3]
@@ -99,7 +99,7 @@ lemma cap_zombie_cap_get_capZombieNumber_spec:
   apply (rule conjI)
    apply unat_arith
   apply (fold mask_2pm1)
-  apply (simp add: get_capZombieBits_CL_def Let_def split: split_if_asm)
+  apply (simp add: get_capZombieBits_CL_def Let_def split: if_split_asm)
   apply (subst unat_Suc2)
    apply clarsimp
   apply (subst less_mask_eq, erule order_less_le_trans)
@@ -122,7 +122,7 @@ lemma cap_zombie_cap_set_capZombieNumber_spec:
   apply (clarsimp simp: cap_zombie_cap_lift
                         ccap_relation_def map_option_Some_eq2
                         cap_to_H_def get_capZombieBits_CL_def
-                 split: split_if_asm)
+                 split: if_split_asm)
    apply (simp add: mask_def word_bw_assocs word_ao_dist)
    apply (rule sym, rule less_mask_eq[where n=5, unfolded mask_def, simplified])
    apply unat_arith
@@ -155,7 +155,7 @@ lemma capRemovable_spec:
   apply (clarsimp simp: get_capZombiePtr_CL_def Let_def get_capZombieBits_CL_def
                         isCap_simps unat_eq_0 unat_eq_1
                         less_mask_eq ccap_zombie_radix_less2
-             split: split_if_asm)
+             split: if_split_asm)
   done
 
 lemma capCyclicZombie_spec:
@@ -172,7 +172,7 @@ lemma capCyclicZombie_spec:
   apply (frule(1) cap_get_tag_to_H)
   apply (clarsimp simp: capCyclicZombie_def Let_def
                         get_capZombieBits_CL_def get_capZombiePtr_CL_def
-                 split: split_if_asm)
+                 split: if_split_asm)
    apply (auto simp: less_mask_eq ccap_zombie_radix_less2)
   done
 
@@ -183,7 +183,7 @@ lemma case_assertE_to_assert:
                 | _ \<Rightarrow> returnOk ())
        = liftE (assert (case cap of Zombie ptr2 x xa \<Rightarrow> P ptr2 x xa | _ \<Rightarrow> True))"
   apply (simp add: assertE_def returnOk_liftE assert_def
-            split: capability.split split_if)
+            split: capability.split if_split)
   done
 
 lemma cteDelete_ccorres1:
@@ -258,7 +258,7 @@ lemma zombie_rf_sr_helperE:
   apply (clarsimp simp: get_capZombiePtr_CL_def Let_def
                         get_capZombieBits_CL_def
                         isZombieTCB_C_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (simp add: less_mask_eq ccap_zombie_radix_less2
                    isZombieTCB_C_def)
   done
@@ -786,7 +786,7 @@ lemma finaliseSlot_ccorres:
               apply (rule allI, rule conseqPre, vcg)
               apply (clarsimp simp: returnOk_def return_def
                                     from_bool_def true_def)
-              apply (clarsimp simp: irq_opt_relation_def split: split_if)
+              apply (clarsimp simp: irq_opt_relation_def split: if_split)
              apply vcg
             apply (simp only: cutMon_walk_if Collect_False ccorres_seq_cond_empty
                               ccorres_seq_skip)
@@ -822,7 +822,7 @@ lemma finaliseSlot_ccorres:
                   apply (clarsimp simp: returnOk_def return_def)
                   apply (drule use_valid [OF _ finaliseCap_cases, OF _ TrueI])
                   apply (simp add: from_bool_def false_def irq_opt_relation_def true_def
-                            split: split_if_asm)
+                            split: if_split_asm)
                  apply vcg
                 apply wp
                apply (simp add: guard_is_UNIV_def true_def)

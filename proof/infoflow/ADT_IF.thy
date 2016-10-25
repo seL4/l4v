@@ -1768,7 +1768,7 @@ lemma handle_interrupt_domain_time_sched_action:
    \<lbrace>\<lambda>s. domain_time s > 0\<rbrace> 
    handle_interrupt e
    \<lbrace>\<lambda>r s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"   
-  apply(simp add: handle_interrupt_def split del: split_if)
+  apply(simp add: handle_interrupt_def split del: if_split)
   apply (rule hoare_pre)
   apply (wp)
    apply(case_tac "st \<noteq> IRQTimer")
@@ -2707,12 +2707,12 @@ lemma rec_del_irq_state_inv':
   next
   case (2 slot exposed s) show ?case
     apply(rule hoare_spec_gen_asm)
-    apply(simp add: rec_del.simps split del: split_if)
+    apply(simp add: rec_del.simps split del: if_split)
     apply(rule hoare_pre_spec_validE)
      apply(wp drop_spec_validE[OF returnOk_wp] drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
-          |simp add: split_def split del: split_if)+
+          |simp add: split_def split del: if_split)+
          apply(wp irq_state_inv_triv)[1]
-        apply (wp | simp split del: split_if)+
+        apply (wp | simp split del: if_split)+
            apply(rule spec_strengthen_postE)
             apply(rule "2.hyps"[simplified], fastforce+)
           apply(rule drop_spec_validE, (wp preemption_point_irq_state_inv[where irq=irq] | simp)+)[1]
@@ -2721,7 +2721,7 @@ lemma rec_del_irq_state_inv':
          apply(wp  finalise_cap_domain_sep_inv_cap get_cap_wp 
                    finalise_cap_returns_None[where irqs=False, simplified]
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
-               |simp add: without_preemption_def split del: split_if
+               |simp add: without_preemption_def split del: if_split
                |wp_once hoare_drop_imps
                |wp irq_state_inv_triv)+
     apply(blast dest: cte_wp_at_domain_sep_inv_cap)
@@ -2815,7 +2815,7 @@ lemma invoke_cnode_irq_state_inv:
   apply(simp add: invoke_cnode_def)
   apply(rule hoare_pre)
    apply wpc
-         apply((wp cap_revoke_irq_state_inv' cap_delete_irq_state_inv hoare_vcg_all_lift | wpc | simp add: cap_move_def split del: split_if | wp_once irq_state_inv_triv | wp_once hoare_drop_imps)+)[7]
+         apply((wp cap_revoke_irq_state_inv' cap_delete_irq_state_inv hoare_vcg_all_lift | wpc | simp add: cap_move_def split del: if_split | wp_once irq_state_inv_triv | wp_once hoare_drop_imps)+)[7]
   apply fastforce
   done
 
@@ -2852,7 +2852,7 @@ lemma invoke_tcb_irq_state_inv:
   apply(case_tac tinv)
        apply((wp hoare_vcg_if_lift  mapM_x_wp[OF _ subset_refl]
             | wpc
-            | simp split del: split_if add: check_cap_at_def 
+            | simp split del: if_split add: check_cap_at_def
             | clarsimp
             | wp_once irq_state_inv_triv)+)[3]
     defer
@@ -2992,10 +2992,10 @@ lemma handle_invocation_irq_state_inv:
     handle_invocation x y \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc
-              split del: split_if)
+              split del: if_split)
   apply(wp syscall_valid)
          apply ((wp irq_state_inv_triv | wpc | simp)+)[2]
-       apply(wp static_imp_wp perform_invocation_irq_state_inv hoare_vcg_all_lift hoare_vcg_ex_lift decode_invocation_IRQHandlerCap | wpc | wp_once hoare_drop_imps | simp split del: split_if | wp_once irq_state_inv_triv)+
+       apply(wp static_imp_wp perform_invocation_irq_state_inv hoare_vcg_all_lift hoare_vcg_ex_lift decode_invocation_IRQHandlerCap | wpc | wp_once hoare_drop_imps | simp split del: if_split | wp_once irq_state_inv_triv)+
   apply fastforce
   done
 

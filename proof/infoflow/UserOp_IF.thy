@@ -432,7 +432,7 @@ lemma data_at_aligned:
   apply (clarsimp simp: data_at_def)
   apply (elim disjE)
   apply (clarsimp simp: obj_at_def 
-                 split: kernel_object.split_asm split_if_asm arch_kernel_obj.split_asm
+                 split: kernel_object.split_asm if_split_asm arch_kernel_obj.split_asm
                  dest!: pspace_alignedD)+
   done
 

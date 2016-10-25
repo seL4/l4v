@@ -68,14 +68,14 @@ lemma corres_if2:
   by simp
 
 lemma findM_awesome':
-  assumes x: "\<And>x xs. suffixeq (x # xs) xs' \<Longrightarrow>
+  assumes x: "\<And>x xs. suffix (x # xs) xs' \<Longrightarrow>
                   corres (\<lambda>a b. if b then (\<exists>a'. a = Some a' \<and> r a' (Some x)) else a = None)
                       P (P' (x # xs))
                       ((f >>= (\<lambda>x. return (Some x))) OR (return None)) (g x)"
   assumes y: "corres r P (P' []) f (return None)"
-  assumes z: "\<And>x xs. suffixeq (x # xs) xs' \<Longrightarrow>
+  assumes z: "\<And>x xs. suffix (x # xs) xs' \<Longrightarrow>
                  \<lbrace>P' (x # xs)\<rbrace> g x \<lbrace>\<lambda>rv s. \<not> rv \<longrightarrow> P' xs s\<rbrace>"
-  assumes p: "suffixeq xs xs'"
+  assumes p: "suffix xs xs'"
   shows      "corres r P (P' xs) f (findM g xs)"
 proof -
   have P: "f = do x \<leftarrow> (do x \<leftarrow> f; return (Some x) od) OR return None; if x \<noteq> None then return (the x) else f od"
@@ -95,7 +95,7 @@ proof -
            apply (case_tac ra, clarsimp+)[1]
           apply (rule corres_trivial, clarsimp)
           apply (case_tac ra, simp_all)[1]
-         apply (erule(1) meta_mp [OF _ suffixeq_ConsD])
+         apply (erule(1) meta_mp [OF _ suffix_ConsD])
         apply assumption
        apply (rule Q)
       apply (rule hoare_post_imp [OF _ z])
@@ -103,7 +103,7 @@ proof -
     done
 qed
 
-lemmas findM_awesome = findM_awesome' [OF _ _ _ suffixeq_refl]
+lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_refl]
 
 lemma corres_rhs_disj_division:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> corres r R S x y; Q \<Longrightarrow> corres r T U x y \<rbrakk>
@@ -203,7 +203,7 @@ lemma st_tcb_at_coerce_abstract:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: st_tcb_at_def obj_at_def other_obj_relation_def
                         tcb_relation_def
-                 split: Structures_A.kernel_object.split_asm split_if_asm
+                 split: Structures_A.kernel_object.split_asm if_split_asm
                         ARM_A.arch_kernel_obj.split_asm)+
   apply fastforce
   done
@@ -1571,7 +1571,7 @@ lemma tcbSchedDequeue_ksReadyQueues_eq:
    \<lbrace>\<lambda>rv s. ksReadyQueues s (d, p) = ts\<rbrace>"
   apply (simp add: tcbSchedDequeue_def threadGet_def liftM_def)
   apply (wp getObject_tcb_wp|clarsimp)+
-  apply (clarsimp simp: obj_at'_def projectKOs inQ_def split del: split_if)
+  apply (clarsimp simp: obj_at'_def projectKOs inQ_def split del: if_split)
   apply (simp add: eq_commute)
   apply (rule_tac x=obj in exI, clarsimp)+
   done
@@ -1580,8 +1580,8 @@ lemma hd_ksReadyQueues_runnable:
   "\<lbrakk>invs' s; ksReadyQueues s (d, p) = a # as\<rbrakk>
      \<Longrightarrow> st_tcb_at' runnable' a s"
   apply(simp add: invs'_def valid_state'_def, rule valid_queues_running, clarsimp)
-   apply(rule suffixeq_Cons_mem)
-   apply(simp add: suffixeq_def)
+   apply(rule suffix_Cons_mem)
+   apply(simp add: suffix_def)
    apply(rule exI)
    apply(rule eq_Nil_appendI)
    by auto
@@ -1602,8 +1602,8 @@ lemma chooseThread_invs_fragment: "\<lbrace>invs' and (\<lambda>s. ksCurDomain s
   apply (wp)
   apply (clarsimp simp: invs'_def valid_state'_def , rule conjI)
    apply (rule valid_queues_running)
-    apply (rule suffixeq_Cons_mem)
-    apply (simp add: suffixeq_def)
+    apply (rule suffix_Cons_mem)
+    apply (simp add: suffix_def)
     apply (rule exI)
     apply (rule eq_Nil_appendI)
     apply simp+
@@ -2281,23 +2281,23 @@ lemma guarded_switch_to_corres:
    apply (induct l)
     apply (clarsimp simp add:  bind_def gets_def get_def return_def)
    apply simp
-   apply (clarsimp simp add:  bind_def gets_def get_def return_def cong: if_cong split: split_if_asm)
+   apply (clarsimp simp add:  bind_def gets_def get_def return_def cong: if_cong split: if_split_asm)
    apply safe
-      apply (clarsimp split: split_if_asm)
+      apply (clarsimp split: if_split_asm)
        apply force
       apply (frule terminate_False)
       apply simp
       apply (rule_tac x="(False,ba)" in bexI,clarsimp+)
-     apply (clarsimp split: split_if_asm)+
+     apply (clarsimp split: if_split_asm)+
       apply force
      apply (frule terminate_False)
      apply clarsimp
      apply (rule_tac x="(False,ba)" in bexI,clarsimp+)
-    apply (clarsimp split: split_if_asm)+
+    apply (clarsimp split: if_split_asm)+
     apply (frule terminate_False)
     apply clarsimp
     apply force
-   apply (clarsimp split: split_if_asm)+
+   apply (clarsimp split: if_split_asm)+
    apply (frule terminate_False)
    apply clarsimp
    apply (rule bexI [rotated], assumption)
@@ -2765,8 +2765,8 @@ lemma hd_ksReadyQueues_runnable_2:
   "\<lbrakk>Invariants_H.valid_queues s; ksReadyQueues s (d, p) = a # as\<rbrakk>
      \<Longrightarrow> st_tcb_at' runnable' a s"
    apply( rule valid_queues_running)
-   apply(rule suffixeq_Cons_mem)
-   apply(simp add: suffixeq_def)
+   apply(rule suffix_Cons_mem)
+   apply(simp add: suffix_def)
    apply(rule exI)
    apply(rule eq_Nil_appendI)
    by auto

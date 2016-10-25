@@ -393,7 +393,7 @@ proof -
          apply simp
         apply (drule_tac t="pda v" for v in sym, simp)
         apply (clarsimp simp: obj_at_def a_type_def del: disjCI)
-        apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
+        apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
                                arch_kernel_obj.split_asm del: disjCI)
         apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
         apply (rule disjI2, rule conjI)
@@ -436,7 +436,7 @@ proof -
          apply simp
         apply (drule_tac t="pda v" for v in sym, simp)
         apply (clarsimp simp: obj_at_def a_type_def del: disjCI)
-        apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
+        apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
                                arch_kernel_obj.split_asm del: disjCI)
         apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
         apply (rule map_includedI)
@@ -455,7 +455,7 @@ proof -
                            restrict_map_def)
           apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
          apply (clarsimp simp: upto_enum_step_def pt_bits_def pageBits_def
-                        split: split_if_asm)
+                        split: if_split_asm)
          apply (subst add.assoc, subst is_aligned_add_helper, assumption)
           apply (simp only: word_shift_by_2 word_shiftl_add_distrib[symmetric])
           apply (rule shiftl_less_t2n)
@@ -573,11 +573,11 @@ proof (induct x)
   thus ?case
     apply (simp add: Decode_D.decode_invocation_def
                      decode_invocation_def arch_decode_invocation_def
-               split del: split_if)
+               split del: if_split)
     apply (clarsimp simp: get_asid_pool_intent_def transform_intent_def
                           map_option_Some_eq2 throw_opt_def
                           decode_asid_pool_invocation_def
-               split del: split_if split: label_split_asm list.split_asm)
+               split del: if_split split: label_split_asm list.split_asm)
     apply (simp add: split_beta corres_alternate2
                      liftE_bindE corres_symb_exec_in_gets
                      corres_whenE_throwError_split_rhs
@@ -621,7 +621,7 @@ proof (induct x)
            apply (rule ucast_up_inj[where 'b=32])
             apply (simp add: ucast_ucast_mask is_aligned_mask asid_low_bits_def)
            apply simp
-          apply (wp select_wp | simp add:valid_cap_def split del: split_if)+
+          apply (wp select_wp | simp add:valid_cap_def split del: if_split)+
     done
 next
   case ASIDControlCap
@@ -629,12 +629,12 @@ next
     apply (simp add: Decode_D.decode_invocation_def
                      decode_invocation_def arch_decode_invocation_def
                      bindE_assoc
-               split del: split_if)
+               split del: if_split)
     apply (clarsimp simp: get_asid_control_intent_def transform_intent_def
                           map_option_Some_eq2 throw_opt_def
                           decode_asid_control_invocation_def
                           transform_cnode_index_and_depth_def
-               split del: split_if split: label_split_asm list.split_asm)
+               split del: if_split split: label_split_asm list.split_asm)
     apply (simp add: split_beta corres_alternate2
                      liftE_bindE corres_symb_exec_in_gets
                      corres_whenE_throwError_split_rhs
@@ -707,13 +707,13 @@ next
   thus ?case
     apply (simp add: Decode_D.decode_invocation_def
                      decode_invocation_def arch_decode_invocation_def
-               split del: split_if)
+               split del: if_split)
     apply (clarsimp simp: get_page_intent_def transform_intent_def
                           map_option_Some_eq2 throw_opt_def
                           decode_page_invocation_def
                           transform_intent_page_map_def
                           transform_intent_page_remap_def
-               split del: split_if split: label_split_asm list.split_asm,
+               split del: if_split split: label_split_asm list.split_asm,
            simp_all add: split_beta corres_alternate2
                          liftE_bindE corres_symb_exec_in_gets
                          corres_whenE_throwError_split_rhs
@@ -761,7 +761,7 @@ next
              apply wp
           apply (rule hoare_pre, wp, simp)
          apply (rule hoare_pre, wp, auto)[1]
-        apply (wp | simp add: whenE_def split del: split_if)+
+        apply (wp | simp add: whenE_def split del: if_split)+
        apply (rule hoare_pre, wp, simp)
       apply clarsimp
       apply (clarsimp simp: gets_bind_alternative
@@ -806,7 +806,7 @@ next
             apply wp
          apply (rule hoare_pre, wp, simp)
         apply (rule hoare_pre, wp, auto)[1]
-       apply (wp | simp add: whenE_def split del: split_if)+
+       apply (wp | simp add: whenE_def split del: if_split)+
       apply (rule hoare_pre, wp, simp)
      apply (rule corres_alternate1)
      apply (simp add: returnOk_def arch_invocation_relation_def cap_object_simps
@@ -866,12 +866,12 @@ next
   thus ?case
     apply (simp add: Decode_D.decode_invocation_def
                      decode_invocation_def arch_decode_invocation_def
-               split del: split_if)
+               split del: if_split)
     apply (clarsimp simp: get_page_table_intent_def transform_intent_def
                           map_option_Some_eq2 throw_opt_def cdl_get_pt_mapped_addr_def
                           decode_page_table_invocation_def
                           transform_intent_page_table_map_def
-               split del: split_if
+               split del: if_split
                split: label_split_asm list.split_asm)
      apply (simp add: throw_on_none_def transform_cap_list_def
        get_index_def split_beta alternative_refl
@@ -912,7 +912,7 @@ next
                          le_shiftr linorder_not_le cap_object_simps)
        apply (rule hoare_pre, wp, auto)[1]
       apply (wp | simp)+
-     apply (simp add: whenE_def split del: split_if)
+     apply (simp add: whenE_def split del: if_split)
      apply (rule hoare_pre, wp, simp)
     apply (clarsimp simp: is_final_cap'_def 
       is_final_cap_def split:list.splits)
@@ -931,7 +931,7 @@ next
   decode_invocation_def arch_decode_invocation_def
   get_page_directory_intent_def transform_intent_def
   isPDFlushLabel_def
-  split del: split_if)
+  split del: if_split)
   apply (clarsimp simp: get_page_directory_intent_def transform_intent_def
            map_option_Some_eq2 throw_opt_def decode_page_directory_invocation_def 
     split: label_split_asm  cdl_intent.splits
@@ -1112,7 +1112,7 @@ lemma set_object_simple_corres:
   apply (clarsimp simp: transform_def transform_objects_def
                         not_idle_thread_def obj_at_def
                         transform_current_thread_def)
-  apply (rule ext, simp split: split_if)
+  apply (rule ext, simp split: if_split)
   apply (intro conjI impI allI)
    apply (clarsimp simp: transform_object_def
                   split: Structures_A.kernel_object.split)
@@ -1212,7 +1212,7 @@ lemma set_cap_opt_cap':
   apply (rule hoare_seq_ext [OF _ dget_object_sp])
   apply (case_tac obj, simp_all add:KHeap_D.set_object_def has_slots_def
                                     update_slots_def object_slots_def
-                          split del:split_if cong: if_cong bind_cong)
+                          split del:if_split cong: if_cong bind_cong)
        apply (rule hoare_pre, wp select_wp)
        apply (clarsimp simp:fun_upd_def[symmetric])
        apply (safe elim!:rsubst[where P=P] intro!: ext)
@@ -1256,7 +1256,7 @@ lemma invoke_page_table_corres:
   apply (simp add: invoke_page_table_def perform_page_table_invocation_def)
   apply (clarsimp simp: transform_page_table_inv_def
             split: ARM_A.page_table_invocation.split_asm
-                   split_if_asm)
+                   if_split_asm)
    apply (rename_tac word oref attribs)
    apply (clarsimp simp: is_pt_cap_def valid_pti_def make_arch_duplicate_def)
    apply (rule stronger_corres_guard_imp)
@@ -1655,7 +1655,7 @@ lemma invoke_page_corres:
          apply (rule corres_split [OF _ set_cap_corres])
              apply (rule corres_dummy_return_pl[where b ="()"])
              apply (rule corres_split[OF _ pte_check_if_mapped_corres])
-               apply (simp split del: split_if)
+               apply (simp split del: if_split)
                apply (rule corres_dummy_return_l)
                apply (rule corres_split[OF _ store_pte_set_cap_corres])
                    apply (rule corres_dummy_return_l)
@@ -1674,7 +1674,7 @@ lemma invoke_page_corres:
         apply (rule corres_split [OF _ set_cap_corres])
             apply (rule corres_dummy_return_pl[where b="()"])
             apply (rule corres_split[OF _ pde_check_if_mapped_corres])
-              apply (simp split del: split_if)
+              apply (simp split del: if_split)
               apply (rule corres_dummy_return_l)
               apply (rule corres_split[OF _ store_pde_set_cap_corres])
                    apply (rule corres_dummy_return_l)
@@ -1702,7 +1702,7 @@ lemma invoke_page_corres:
      apply (rule corres_guard_imp)
        apply (rule corres_dummy_return_pl[where b="()"])
        apply (rule corres_split[OF _ pte_check_if_mapped_corres])
-         apply (simp split del: split_if)
+         apply (simp split del: if_split)
          apply (rule corres_dummy_return_l)
          apply (rule corres_split[OF _ store_pte_set_cap_corres])
              apply (rule corres_dummy_return_l)
@@ -1718,7 +1718,7 @@ lemma invoke_page_corres:
     apply (rule corres_guard_imp)
       apply (rule corres_dummy_return_pl[where b="()"])
       apply (rule corres_split[OF _ pde_check_if_mapped_corres])
-        apply (simp split del: split_if)
+        apply (simp split del: if_split)
         apply (rule corres_dummy_return_l)
         apply (rule corres_split[OF _ store_pde_set_cap_corres])
              apply (rule corres_dummy_return_l)
@@ -1780,7 +1780,7 @@ lemma invoke_page_corres:
   apply (clarsimp simp: when_def split: if_splits)
   apply (rule corres_guard_imp)
     apply (rule dcorres_symb_exec_r)+
-        apply (simp only: split_if_asm)
+        apply (simp only: if_split_asm)
         apply (safe)
          apply (erule notE)
          apply (rule dcorres_symb_exec_r)+

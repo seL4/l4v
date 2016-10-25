@@ -26,7 +26,7 @@ lemma switchIfRequiredTo_ccorres [corres]:
   apply clarsimp
   done
 
-declare split_if [split del]
+declare if_split [split del]
 
 lemma empty_fail_getEndpoint:
   "empty_fail (getEndpoint ep)"
@@ -59,9 +59,9 @@ lemma tcbSchedEnqueue_cslift_spec:
                         h_t_valid_field[OF h_t_valid_clift])
   apply (rule conjI)
    apply (clarsimp simp: typ_heap_simps cong: if_cong)
-   apply (simp split: split_if)
+   apply (simp split: if_split)
   apply (clarsimp simp: typ_heap_simps if_Some_helper cong: if_cong)
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemma setThreadState_cslift_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>tptr \<and> (\<forall>x. ksSchedulerAction_' (globals s) = tcb_Ptr x
@@ -103,7 +103,7 @@ lemma setThreadState_cslift_spec:
      apply vcg_step+
   apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
                         fun_eq_iff option_map2_def if_1_0_0)
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemma ep_queue_relation_shift:
   "(option_map2 tcbEPNext_C (cslift s')
@@ -355,7 +355,7 @@ lemma cancelAllIPC_ccorres:
                   | simp)+
               apply (rule mapM_x_wp', wp)+
              apply (wp sts_st_tcb')
-             apply (clarsimp split: split_if)
+             apply (clarsimp split: if_split)
             apply (rule mapM_x_wp', wp)+
            apply (clarsimp simp: valid_tcb_state'_def)
           apply (simp add: guard_is_UNIV_def)
@@ -402,7 +402,7 @@ lemma cancelAllIPC_ccorres:
           apply (ctac add: rescheduleRequired_ccorres)
          apply (wp cancelAllIPC_mapM_x_valid_queues)
          apply (wp mapM_x_wp' weak_sch_act_wf_lift_linear
-                   sts_st_tcb' | clarsimp simp: valid_tcb_state'_def split: split_if)+
+                   sts_st_tcb' | clarsimp simp: valid_tcb_state'_def split: if_split)+
         apply (simp add: guard_is_UNIV_def)
        apply (wp set_ep_valid_objs' hoare_vcg_const_Ball_lift
                  weak_sch_act_wf_lift_linear)
@@ -489,7 +489,7 @@ lemma cancelAllSignals_ccorres:
           apply (ctac add: rescheduleRequired_ccorres)
          apply (wp cancelAllIPC_mapM_x_valid_queues)
          apply (wp mapM_x_wp' weak_sch_act_wf_lift_linear
-                   sts_st_tcb' | clarsimp simp: valid_tcb_state'_def split: split_if)+
+                   sts_st_tcb' | clarsimp simp: valid_tcb_state'_def split: if_split)+
         apply (simp add: guard_is_UNIV_def)
        apply (wp set_ntfn_valid_objs' hoare_vcg_const_Ball_lift
                  weak_sch_act_wf_lift_linear)
@@ -564,7 +564,7 @@ lemma tcb_queue_relation2_concat:
   apply (induct xs arbitrary: before)
    apply simp
   apply (rename_tac x xs before)
-  apply (simp split del: split_if)
+  apply (simp split del: if_split)
   apply (case_tac "hp x")
    apply simp
   apply simp
@@ -640,7 +640,7 @@ lemma cap_to_H_NTFNCap_tag:
   "\<lbrakk> cap_to_H cap = NotificationCap word1 word2 a b;
      cap_lift C_cap = Some cap \<rbrakk> \<Longrightarrow>
     cap_get_tag C_cap = scast cap_notification_cap"
-  apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits split_if_asm)
+  apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_split_asm)
      by (simp_all add: Let_def cap_lift_def split: if_splits)
 
 lemmas ccorres_pre_getBoundNotification = ccorres_pre_threadGet [where f=tcbBoundNotification, folded getBoundNotification_def]
@@ -976,13 +976,13 @@ lemma invalidateASIDEntry_ccorres:
     apply (rule ccorres_split_nothrow_novcg_dc)
        apply (rule ccorres_cond2[where R=\<top>])
          apply (clarsimp simp: Collect_const_mem pde_stored_asid_def to_bool_def
-                        split: split_if)
+                        split: if_split)
         apply csymbr
         apply (rule ccorres_Guard)+
         apply (rule_tac P="rv \<noteq> None" in ccorres_gen_asm)
         apply (ctac(no_simp) add: invalidateHWASIDEntry_ccorres)
         apply (clarsimp simp: pde_stored_asid_def unat_ucast
-                       split: split_if_asm)
+                       split: if_split_asm)
         apply (rule sym, rule nat_mod_eq')
         apply (simp add: pde_pde_invalid_lift_def pde_lift_def)
         apply (rule unat_less_power[where sz=8, simplified])
@@ -1203,7 +1203,7 @@ lemma deleteASID_ccorres:
         apply (drule sym, simp)
         apply (simp add: option_to_ptr_def option_to_0_def
                          from_bool_def inv_ASIDPool
-                  split: option.split split_if bool.split)
+                  split: option.split if_split bool.split)
        apply ceqv
       apply (rule ccorres_cond2[where R=\<top>])
         apply (simp add: Collect_const_mem from_bool_0)
@@ -1268,7 +1268,7 @@ lemma deleteASID_ccorres:
                          projectKOs invs_valid_pde_mappings'
                          invs_cur')
    apply (rule conjI, blast)
-   subgoal by (fastforce simp: inv_into_def ran_def  split: split_if_asm)
+   subgoal by (fastforce simp: inv_into_def ran_def  split: if_split_asm)
   by (clarsimp simp: order_le_less_trans [OF word_and_le1]
                         asid_shiftr_low_bits_less asid_bits_def mask_def
                         plus_one_helper arg_cong[where f="\<lambda>x. 2 ^ x", OF meta_eq_to_obj_eq, OF asid_low_bits_def]
@@ -1369,8 +1369,8 @@ lemma pageTableMapped_ccorres:
                                   return_def addrFromPPtr_def
                                   pde_pde_coarse_lift_def)
             apply (rule conjI)
-             apply (simp add: pde_lift_def Let_def split: split_if_asm)
-            apply (clarsimp simp: option_to_0_def option_to_ptr_def split: split_if)
+             apply (simp add: pde_lift_def Let_def split: if_split_asm)
+            apply (clarsimp simp: option_to_0_def option_to_ptr_def split: if_split)
             apply (clarsimp simp: ARM.addrFromPPtr_def ARM.ptrFromPAddr_def)
            apply ((rule ccorres_cond_false_seq ccorres_cond_false
                           ccorres_return_C | simp)+)[3]
@@ -1378,7 +1378,7 @@ lemma pageTableMapped_ccorres:
         apply wp
        apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem if_1_0_0)
        apply (simp add: cpde_relation_def Let_def pde_lift_def
-                 split: split_if_asm,
+                 split: if_split_asm,
               auto simp: option_to_0_def option_to_ptr_def pde_tag_defs)[1]
       apply simp
       apply (rule ccorres_split_throws)
@@ -1398,7 +1398,7 @@ lemma pageTableMapped_pd:
   apply (rule hoare_pre)
    apply (wp getPDE_wp hoare_vcg_all_lift_R | wpc)+
    apply (rule hoare_post_imp_R, rule findPDForASID_page_directory_at'_simple)
-   apply (clarsimp split: split_if)
+   apply (clarsimp split: if_split)
   apply simp
   done
 
@@ -1580,24 +1580,24 @@ lemma Arch_finaliseCap_ccorres:
          subgoal by (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def to_bool_def
                                vmsz_aligned_aligned_pageBits
                         elim!: ccap_relationE
-                        split: option.split_asm split_if_asm)
+                        split: option.split_asm if_split_asm)
         apply (clarsimp simp: valid_cap'_def mask_def)
         apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
         subgoal by (clarsimp simp: cap_frame_cap_lift cap_to_H_def to_bool_def
                               vmsz_aligned_aligned_pageBits
                        elim!: ccap_relationE
-                       split: option.split_asm split_if_asm)
+                       split: option.split_asm if_split_asm)
        apply (clarsimp simp: valid_cap'_def mask_def)
        apply (frule cap_get_tag_isCap_unfolded_H_cap)
        apply (clarsimp simp: cap_page_table_cap_lift cap_to_H_def to_bool_def
                       elim!: ccap_relationE
-                      split: option.split_asm split_if_asm)
+                      split: option.split_asm if_split_asm)
        apply (clarsimp simp: valid_cap'_def)
        apply (frule cap_get_tag_isCap_unfolded_H_cap)
        apply (frule cap_lift_page_directory_cap)
        apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def 
                              to_bool_def cap_page_directory_cap_lift_def
-                       split: split_if_asm)
+                       split: if_split_asm)
        apply (rule conjI)
         apply (clarsimp simp: asid_bits_def cap_page_directory_cap_lift_def)
        apply clarsimp
@@ -1619,7 +1619,7 @@ lemma Arch_finaliseCap_ccorres:
     apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                           vm_page_size_defs framesize_to_H_def
                    elim!: ccap_relationE simp del: Collect_const frame_cap_size
-                   split: split_if)
+                   split: if_split)
     apply (clarsimp simp: c_valid_cap_def cl_valid_cap_def
                           Kernel_C.ARMSmallPage_def)
    apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap)
@@ -1690,7 +1690,7 @@ lemma isFinalCapability_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def from_bool_eq_if from_bool_0
                              mdbNext_to_H[symmetric] rf_sr_cte_at_validD)
-       apply (clarsimp simp: cte_wp_at_ctes_of split: split_if)
+       apply (clarsimp simp: cte_wp_at_ctes_of split: if_split)
        apply (rule cmap_relationE1 [OF cmap_relation_cte], assumption+,
                   simp?, simp add: typ_heap_simps)+
        apply (drule ccte_relation_ccap_relation)+
@@ -2032,7 +2032,7 @@ lemma finaliseCap_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def)
        apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-       apply (simp add: ccap_relation_NullCap_iff split: split_if)
+       apply (simp add: ccap_relation_NullCap_iff split: if_split)
        apply (frule(1) ccap_relation_IRQHandler_mask)
        apply (erule irq_opt_relation_Some_ucast)
        apply (simp add: ARM.maxIRQ_def Kernel_C.maxIRQ_def)

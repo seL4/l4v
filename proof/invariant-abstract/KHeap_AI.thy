@@ -113,10 +113,10 @@ lemma cte_at_same_type:
   apply (elim exE disjE)
    apply (clarsimp simp: a_type_def well_formed_cnode_n_def length_set_helper
                   split: Structures_A.kernel_object.split_asm
-                         split_if_asm)
+                         if_split_asm)
   apply (clarsimp simp: a_type_def
                  split: Structures_A.kernel_object.split_asm
-                        split_if_asm)
+                        if_split_asm)
   done
 
 
@@ -599,7 +599,7 @@ lemma set_object_pspace_respect_device_region:
   apply (clarsimp simp: pspace_respects_device_region_def 
                         device_mem_obj_upd_dom user_mem_obj_upd_dom
                         obj_at_def in_user_frame_obj_upd in_device_frame_obj_upd 
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemma set_ntfn_kernel_window[wp]:
@@ -700,7 +700,7 @@ lemma cte_wp_at_after_update:
   "\<lbrakk> obj_at (same_caps val) p' s \<rbrakk>
     \<Longrightarrow> cte_wp_at P p (kheap_update (\<lambda>a b. if b = p' then Some val else kheap s b) s)
          = cte_wp_at P p s" 
-  by (fastforce simp: obj_at_def cte_wp_at_cases split: split_if_asm dest: bspec [OF _ ranI])
+  by (fastforce simp: obj_at_def cte_wp_at_cases split: if_split_asm dest: bspec [OF _ ranI])
 
 
 lemma ex_cap_to_after_update:
@@ -945,7 +945,7 @@ lemma captable_case_helper:
 lemma null_filter_caps_of_stateD:
   "null_filter (caps_of_state s) p = Some c \<Longrightarrow>
   cte_wp_at (\<lambda>c'. c' = c \<and> c' \<noteq> cap.NullCap) p s"
-  apply (simp add: null_filter_def split: split_if_asm)
+  apply (simp add: null_filter_def split: if_split_asm)
   apply (drule caps_of_state_cteD)
   apply (simp add: cte_wp_at_def)
   done
@@ -1399,7 +1399,7 @@ lemma
   set_mrs_caps_of_state[wp]:
    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   unfolding set_mrs_def set_object_def[abs_def]
-  apply (wp mapM_x_inv_wp | wpc | simp add: zipWithM_x_mapM_x split del: split_if | clarsimp)+
+  apply (wp mapM_x_inv_wp | wpc | simp add: zipWithM_x_mapM_x split del: if_split | clarsimp)+
   apply (safe; erule rsubst[where P=P], rule cte_wp_caps_of_lift)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
 
@@ -1416,7 +1416,7 @@ interpretation
             set_bound_notification_def thread_set_def set_cap_def[simplified split_def]
             as_user_def set_mrs_def
   apply -
-  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: split_if)+\<close>)
+  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: if_split)+\<close>)
   by (fastforce simp: obj_at_def[abs_def] a_type_def 
                split: Structures_A.kernel_object.splits)+
 
@@ -1436,7 +1436,7 @@ interpretation
   apply unfold_locales
   apply (all \<open>(wp ; fail)?\<close>)
   unfolding set_mrs_def set_object_def
-  apply (all \<open>(wp mapM_x_inv_wp | wpc | simp add: zipWithM_x_mapM_x split del: split_if | clarsimp)+\<close>)
+  apply (all \<open>(wp mapM_x_inv_wp | wpc | simp add: zipWithM_x_mapM_x split del: if_split | clarsimp)+\<close>)
   apply (rule drop_imp)
   apply (clarsimp simp: obj_at_def get_tcb_def split: kernel_object.splits option.splits)
   subgoal for _ P'
@@ -1526,11 +1526,11 @@ lemma set_object_valid_ioc_caps:
    apply (clarsimp simp add: obj_at_def a_type_simps)
    apply (fastforce simp: a_type_def cap_of_def
                          null_filter_def
-                  split: Structures_A.kernel_object.splits split_if_asm)
+                  split: Structures_A.kernel_object.splits if_split_asm)
   apply (rule disjI2)
   apply (clarsimp simp add: obj_at_def a_type_simps)
   apply (fastforce simp: a_type_def cap_of_def tcb_cnode_map_def null_filter_def
-                 split: Structures_A.kernel_object.splits split_if_asm)
+                 split: Structures_A.kernel_object.splits if_split_asm)
   done
 
 
@@ -1547,9 +1547,9 @@ lemma set_object_valid_ioc_no_caps:
   apply (elim disjE)
    prefer 2
    apply (fastforce simp: obj_at_def a_type_def
-                   split: Structures_A.kernel_object.splits split_if_asm)
+                   split: Structures_A.kernel_object.splits if_split_asm)
   apply (fastforce simp: obj_at_def a_type_def is_cap_table_def well_formed_cnode_n_def
-                  split: Structures_A.kernel_object.splits split_if_asm)
+                  split: Structures_A.kernel_object.splits if_split_asm)
   done
 
 

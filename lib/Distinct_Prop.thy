@@ -51,7 +51,7 @@ lemma distinct_prefix:
   "\<lbrakk> distinct xs; ys \<le> xs \<rbrakk> \<Longrightarrow> distinct ys"
   apply (induct xs arbitrary: ys; clarsimp) 
   apply (case_tac ys; clarsimp)
-  by (fastforce simp: less_eq_list_def dest: set_mono_prefixeq)
+  by (fastforce simp: less_eq_list_def dest: set_mono_prefix)
 
 lemma distinct_sets_prop:
   "distinct_sets xs = distinct_prop (\<lambda>x y. x \<inter> y = {}) xs"
@@ -62,10 +62,10 @@ lemma distinct_take_strg:
   by simp
 
 lemma distinct_prop_prefixE:
-  "\<lbrakk> distinct_prop P ys; prefixeq xs ys \<rbrakk> \<Longrightarrow> distinct_prop P xs"
+  "\<lbrakk> distinct_prop P ys; prefix xs ys \<rbrakk> \<Longrightarrow> distinct_prop P xs"
   apply (induct xs arbitrary: ys; clarsimp) 
   apply (case_tac ys; clarsimp)
-  by (fastforce dest: set_mono_prefixeq)
+  by (fastforce dest: set_mono_prefix)
 
 
 lemma distinct_sets_union_sub:
@@ -108,7 +108,7 @@ lemma distinct_sets_append_Cons_disjoint:
 
 lemma distinct_prop_take:
   "\<lbrakk>distinct_prop P xs; i < length xs\<rbrakk> \<Longrightarrow> distinct_prop P (take i xs)"
-  by (metis take_is_prefixeq distinct_prop_prefixE)
+  by (metis take_is_prefix distinct_prop_prefixE)
 
 lemma distinct_sets_take:
   "\<lbrakk>distinct_sets xs; i < length xs\<rbrakk> \<Longrightarrow> distinct_sets (take i xs)"

@@ -55,7 +55,7 @@ lemma globals_list_valid:
   apply (rule globals_list_valid_optimisation[OF _ _ globals_list_ok])
   apply (simp_all add: globals_list_def globals_list_valid_def
                        global_data_defs
-                  del: distinct_prop.simps split del: split_if)
+                  del: distinct_prop.simps split del: if_split)
    apply (simp add: global_data_swappable_def global_data_def)
   apply (simp_all add: global_data_valid)
   apply (simp_all add: global_data_valid_def addressed_global_data_def

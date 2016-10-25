@@ -612,7 +612,7 @@ lemma invoke_asid_pool_wp:
           apply (rule hoare_strengthen_post[OF set_cap_wp])
           apply (subst set_split_single[where A = "(Collect (\<lambda>off. off < 2 ^ asid_low_bits))"])
            apply simp
-          apply (subst sep.setprod.union_disjoint)
+          apply (subst sep.prod.union_disjoint)
              apply simp+
           apply (clarsimp simp: sep_conj_assoc)
           apply (sep_erule_concl sep_any_imp, sep_solve)
@@ -627,7 +627,7 @@ lemma invoke_asid_pool_wp:
   apply (safe,fastforce+)
    apply (subst (asm) set_split_single[where A = "(Collect (\<lambda>off. off < 2 ^ asid_low_bits))"])
     apply simp
-   apply (subst (asm) sep.setprod.union_disjoint)
+   apply (subst (asm) sep.prod.union_disjoint)
      apply simp+
    apply (simp add:sep_conj_assoc)
    apply sep_solve

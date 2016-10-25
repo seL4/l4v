@@ -43,7 +43,7 @@ lemma decode_untyped_invocation_rev:
   unfolding decode_untyped_invocation_def fun_app_def
   apply(rule gen_asm_ev)
   apply(simp add: unlessE_def[symmetric] unlessE_whenE
-       split del: split_if)
+       split del: if_split)
   apply (wp_once whenE_throwError_wp
        | wp mapME_x_ev' ensure_empty_rev get_cap_rev
              lookup_slot_for_cnode_op_rev
@@ -86,7 +86,7 @@ lemma derive_cap_rev:
 lemma if_apply_ev:
   "equiv_valid I A B P (if a then b x  else c x) \<Longrightarrow>
    equiv_valid I A B P ((if a then b else c) x)"
-  by(simp split: split_if_asm)
+  by(simp split: if_split_asm)
 
 lemma whenE_throwError_bindE_ev:
   assumes ev: "\<not> b \<Longrightarrow> equiv_valid I A A P f"
@@ -119,7 +119,7 @@ lemma decode_cnode_invocation_rev:
   apply ((wp if_apply_ev derive_cap_rev whenE_inv hoare_vcg_imp_lift_R
             lookup_slot_for_cnode_op_rev hoare_vcg_all_lift_R
             lookup_slot_for_cnode_op_authorised ensure_empty_rev get_cap_rev
-        | simp add: split_def unlessE_whenE split del: split_if
+        | simp add: split_def unlessE_whenE split del: if_split
                del: hoare_True_E_R
         | wpc
         | (wp_once hoare_drop_imps, wp_once lookup_slot_for_cnode_op_authorised))+)
@@ -234,7 +234,7 @@ lemma decode_tcb_invocation_reads_respects_f:
   decode_tcb_configure_def decode_set_space_def decode_bind_notification_def
   decode_set_ipc_buffer_def fun_app_def decode_unbind_notification_def
   apply (simp add: unlessE_def[symmetric] unlessE_whenE
-        split del: split_if
+        split del: if_split
              cong: invocation_label.case_cong)
   apply (rule equiv_valid_guard_imp)
    apply (wp_once requiv_cur_thread_eq range_check_ev
@@ -249,7 +249,7 @@ lemma decode_tcb_invocation_reads_respects_f:
         | wp_once whenE_throwError_wp
         | wp_once hoare_drop_imps
         | wpc
-        | simp add: unlessE_whenE split del: split_if add: o_def split_def)+
+        | simp add: unlessE_whenE split del: if_split add: o_def split_def)+
   unfolding get_tcb_ctable_ptr_def get_tcb_vtable_ptr_def
   apply (subgoal_tac "\<not>length excaps < 3 \<longrightarrow> is_subject aag (fst (snd (excaps ! 2)))")
    prefer 2
@@ -355,7 +355,7 @@ lemma create_mapping_entries_rev:
 lemma check_vp_alignment_rev:
   "reads_equiv_valid_inv A aag \<top> (check_vp_alignment sz vptr)"
   unfolding check_vp_alignment_def
-  apply(wp | simp add: crunch_simps split del: split_if)+
+  apply(wp | simp add: crunch_simps split del: if_split)+
   done
 
 lemmas reads_respects_f_inv = reads_respects_f[where Q="\<top>", simplified]
@@ -507,7 +507,7 @@ lemma lookup_pt_slot_no_fail_is_subject:
   apply (simp add: aag_has_auth_to_Control_eq_owns)
   apply (drule_tac f="\<lambda>pde. valid_pde pde s" in arg_cong, simp)
   apply (clarsimp simp: obj_at_def a_type_def kernel_base_kernel_mapping_slots)
-  apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
+  apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
                          arch_kernel_obj.split_asm)
   apply (erule pspace_alignedE, erule domI)
   apply (simp add: pt_bits_def pageBits_def)

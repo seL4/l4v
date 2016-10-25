@@ -33,8 +33,8 @@ lemma maskCapRights_cap_cases:
                         (capNtfnCanSend_update
                           (\<lambda>_. capNtfnCanSend c \<and> capAllowWrite R) c))
   | _ \<Rightarrow> return c)"
-  apply (simp add: maskCapRights_def Let_def split del: split_if)
-  apply (cases c; simp add: isCap_simps split del: split_if)
+  apply (simp add: maskCapRights_def Let_def split del: if_split)
+  apply (cases c; simp add: isCap_simps split del: if_split)
   done
 
 
@@ -119,7 +119,7 @@ lemma Arch_maskCapRights_ccorres [corres]:
     apply (simp add: cap_small_frame_cap_lift [THEN iffD1])
     apply (clarsimp simp: cap_to_H_def)
     apply (simp add: map_option_case split: option.splits)
-    apply (clarsimp simp add: cap_to_H_def Let_def split: cap_CL.splits split_if_asm)
+    apply (clarsimp simp add: cap_to_H_def Let_def split: cap_CL.splits if_split_asm)
        apply (simp add: cap_small_frame_cap_lift_def)
        apply (simp add: ccap_rights_relation_def)
       apply (simp add: cap_small_frame_cap_lift_def)
@@ -142,7 +142,7 @@ lemma Arch_maskCapRights_ccorres [corres]:
        apply (clarsimp simp: cap_to_H_def)
        apply (simp add: map_option_case split: option.splits)
        apply (clarsimp simp add: isCap_simps pageSize_def cap_to_H_def Let_def simp del: not_ex
-                          split: cap_CL.splits split_if_asm)
+                          split: cap_CL.splits if_split_asm)
         apply (simp add: cap_frame_cap_lift_def)
         apply (simp add: ccap_rights_relation_def)
         apply (simp add: c_valid_cap_def cl_valid_cap_def cap_lift_frame_cap)
@@ -185,7 +185,7 @@ lemma to_bool_ntfn_cap_bf:
   "cap_lift c = Some (Cap_notification_cap cap) \<Longrightarrow> 
   to_bool (capNtfnCanSend_CL cap) = to_bool_bf (capNtfnCanSend_CL cap) \<and>
   to_bool (capNtfnCanReceive_CL cap) = to_bool_bf (capNtfnCanReceive_CL cap)"
-  apply (simp add:cap_lift_def Let_def split: split_if_asm)
+  apply (simp add:cap_lift_def Let_def split: if_split_asm)
   apply (subst to_bool_bf_to_bool_mask,
          clarsimp simp: cap_lift_thread_cap mask_def word_bw_assocs)+
   apply simp
@@ -196,7 +196,7 @@ lemma to_bool_ep_cap_bf:
   to_bool (capCanSend_CL cap) = to_bool_bf (capCanSend_CL cap) \<and>
   to_bool (capCanReceive_CL cap) = to_bool_bf (capCanReceive_CL cap) \<and>
   to_bool (capCanGrant_CL cap) = to_bool_bf (capCanGrant_CL cap)"
-  apply (simp add:cap_lift_def Let_def split: split_if_asm)
+  apply (simp add:cap_lift_def Let_def split: if_split_asm)
   apply (subst to_bool_bf_to_bool_mask,
          clarsimp simp: cap_lift_thread_cap mask_def word_bw_assocs)+
   apply simp
@@ -260,7 +260,7 @@ lemma maskCapRights_ccorres [corres]:
             apply (clarsimp simp: cap_to_H_def)
             apply (simp add: map_option_case split: option.splits)
             apply (clarsimp simp add: cap_to_H_def Let_def
-                               split: cap_CL.splits split_if_asm)
+                               split: cap_CL.splits if_split_asm)
             apply (simp add: cap_notification_cap_lift_def)
             apply (simp add: ccap_rights_relation_def cap_rights_to_H_def
                              to_bool_ntfn_cap_bf
@@ -296,7 +296,7 @@ lemma maskCapRights_ccorres [corres]:
           apply (clarsimp simp: cap_to_H_def)
           apply (simp add: map_option_case split: option.splits)
           apply (clarsimp simp add: cap_to_H_def Let_def
-                             split: cap_CL.splits split_if_asm)
+                             split: cap_CL.splits if_split_asm)
           apply (simp add: cap_endpoint_cap_lift_def)
           apply (simp add: ccap_rights_relation_def cap_rights_to_H_def
                            to_bool_ep_cap_bf
@@ -506,13 +506,13 @@ lemma cap_lift_capNtfnBadge_mask_eq:
   "cap_lift cap = Some (Cap_notification_cap ec)
   \<Longrightarrow> capNtfnBadge_CL ec && mask 28 = capNtfnBadge_CL ec"
   unfolding cap_lift_def
-  by (fastforce simp: Let_def mask_def word_bw_assocs split: split_if_asm)
+  by (fastforce simp: Let_def mask_def word_bw_assocs split: if_split_asm)
 
 lemma cap_lift_capEPBadge_mask_eq:
   "cap_lift cap = Some (Cap_endpoint_cap ec)
   \<Longrightarrow> capEPBadge_CL ec && mask 28 = capEPBadge_CL ec"
   unfolding cap_lift_def
-  by (fastforce simp: Let_def mask_def word_bw_assocs split: split_if_asm)
+  by (fastforce simp: Let_def mask_def word_bw_assocs split: if_split_asm)
 
 lemma revokable_ccorres:
   "\<lbrakk>ccap_relation cap newCap; cmdbnode_relation rva srcMDB;
@@ -795,7 +795,7 @@ schematic_goal ccap_relation_tag_Master:
             (capMasterCap cap)"
   by (fastforce simp: ccap_relation_def map_option_Some_eq2
                      Let_def cap_lift_def cap_to_H_def
-              split: split_if_asm)
+              split: if_split_asm)
 
 lemma ccap_relation_is_derived_tag_equal:
   "\<lbrakk> is_derived' cs p cap cap'; ccap_relation cap ccap; ccap_relation cap' ccap' \<rbrakk> 
@@ -947,9 +947,9 @@ show "ccorresG rf_sr \<Gamma> dc xfdc (cte_wp_at' (\<lambda>cte. \<exists>i. cte
     apply (erule(2) cpspace_cte_relation_upd_capI)
     apply (simp add:cte_lift_def)
     apply (simp split:option.splits )
-    apply (simp add:cap_to_H_def Let_def split:cap_CL.splits split_if_asm)
+    apply (simp add:cap_to_H_def Let_def split:cap_CL.splits if_split_asm)
     apply (case_tac y)
-    apply (simp add:cap_lift_def Let_def split:split_if_asm)
+    apply (simp add:cap_lift_def Let_def split:if_split_asm)
     apply (case_tac cte',simp)
     apply (clarsimp simp:ccap_relation_def cap_lift_def
       cap_get_tag_def cap_to_H_def)
@@ -1004,7 +1004,7 @@ lemma t2p_shiftr:
   done
 
 lemma setUntypedCapAsFull_ccorres [corres]:
-  notes split_if [split del]
+  notes if_split [split del]
   notes Collect_const [simp del]
   notes Collect_True [simp] Collect_False [simp]
   shows
@@ -1064,15 +1064,15 @@ lemma setUntypedCapAsFull_ccorres [corres]:
      apply csymbr
      apply csymbr
      apply (rule ccorres_cases [where P="capPtr srcCap = capPtr newCap"])
-      apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap split: split_if_asm)
+      apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap split: if_split_asm)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
       apply csymbr
       apply csymbr
-      apply (clarsimp simp: cap_get_tag_to_H cap_get_tag_UntypedCap split: split_if_asm)
+      apply (clarsimp simp: cap_get_tag_to_H cap_get_tag_UntypedCap split: if_split_asm)
       apply (rule ccorres_cond_false)
       apply (rule ccorres_return_Skip [unfolded dc_def])
-     apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap split: split_if_asm)
+     apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap split: if_split_asm)
      apply (rule ccorres_cond_false)
      apply (rule ccorres_return_Skip [unfolded dc_def])
     apply (rule ccorres_return_Skip [unfolded dc_def])
@@ -1084,7 +1084,7 @@ lemma setUntypedCapAsFull_ccorres [corres]:
   apply clarsimp
   apply (intro conjI impI allI)
               apply (erule cte_wp_at_weakenE')
-              apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap split: split_if_asm)
+              apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap split: if_split_asm)
              apply clarsimp
              apply (drule valid_cap_untyped_inv,clarsimp simp:max_free_index_def)
              apply (rule is_aligned_weaken)
@@ -1103,11 +1103,11 @@ lemma setUntypedCapAsFull_ccorres [corres]:
         apply (rule capBlockSize_CL_maxSize)
         apply (clarsimp simp: cap_get_tag_UntypedCap)
        apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap)
-      apply (clarsimp split: split_if_asm)
-     apply (clarsimp split: split_if_asm)
-    apply (clarsimp split: split_if_asm)
-   apply (clarsimp split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
+      apply (clarsimp split: if_split_asm)
+     apply (clarsimp split: if_split_asm)
+    apply (clarsimp split: if_split_asm)
+   apply (clarsimp split: if_split_asm)
+  apply (clarsimp split: if_split_asm)
   done
 
 lemma ccte_lift:
@@ -1214,14 +1214,14 @@ thm cteInsert_body_def
                   apply (simp add:dc_def[symmetric])
                   apply (ctac ccorres: ccorres_updateMDB_skip)
                  apply (wp static_imp_wp)
-               apply (clarsimp simp: Collect_const_mem dc_def split del: split_if)
+               apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
                apply vcg
               apply (wp static_imp_wp)
-             apply (clarsimp simp: Collect_const_mem dc_def split del: split_if)
+             apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
              apply vcg
             apply (clarsimp simp:cmdb_node_relation_mdbNext)
             apply (wp setUntypedCapAsFull_cte_at_wp static_imp_wp)
-           apply (clarsimp simp: Collect_const_mem dc_def split del: split_if)
+           apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
            apply (vcg exspec=setUntypedCapAsFull_modifies)
           apply wp
          apply vcg
@@ -1233,7 +1233,7 @@ thm cteInsert_body_def
      apply vcg
     apply wp
    apply vcg
-  apply (simp add: Collect_const_mem split del: split_if) -- "Takes a while"
+  apply (simp add: Collect_const_mem split del: if_split) -- "Takes a while"
   apply (rule conjI)
    apply (clarsimp simp: conj_comms cte_wp_at_ctes_of)
    apply (intro conjI)
@@ -1256,7 +1256,7 @@ thm cteInsert_body_def
     apply simp
    apply clarsimp
   apply (clarsimp simp: map_comp_Some_iff cte_wp_at_ctes_of
-             split del: split_if)
+             split del: if_split)
   apply (clarsimp simp: typ_heap_simps c_guard_clift split_def)
   apply (clarsimp simp: is_simple_cap_get_tag_relation ccte_relation_ccap_relation cmdb_node_relation_mdbNext[symmetric])
   apply (metis (hide_lams, no_types) ccap_relation_Master_tags_eq ccte_relation_ccap_relation rf_sr_cte_relation)
@@ -1394,7 +1394,7 @@ lemma cteMove_ccorres:
    apply (intro conjI, simp+)
    apply (erule (2) is_aligned_3_prev)
    apply (erule (2) is_aligned_3_next)
-  apply (clarsimp simp: dc_def split del: split_if)
+  apply (clarsimp simp: dc_def split del: if_split)
   apply (simp add: ccap_relation_NullCap_iff)
   apply (clarsimp simp add: cmdbnode_relation_def
     mdb_node_to_H_def nullMDBNode_def 
@@ -1539,7 +1539,7 @@ lemma cteMove_ccorres_verbose:
   -- "***C generalised precondition***"
   -- "***--------------------------***"
   apply (unfold dc_def)
-  apply (clarsimp simp: ccap_relation_NullCap_iff split del: split_if)
+  apply (clarsimp simp: ccap_relation_NullCap_iff split del: if_split)
   -- "cmdbnode_relation nullMDBNode va"
   apply (simp add: cmdbnode_relation_def) 
   apply (simp add: mdb_node_to_H_def) 
@@ -1892,7 +1892,7 @@ lemma cteSwap_ccorres:
    -- "modify_map (modify_map \<dots>) (?P3540 \<dots>) = Some cte"
    -- "\<dots>\<longrightarrow> (\<exists>ctea. ctes_of s (mdbPrev (cteMDBNode cte)) = Some ctea) \<and> is_aligned (mdbPrev (cteMDBNode cte)) 3"
    -- "   Important: we need the first part to prove the second \<Longrightarrow> we need conj_cong"      
-      apply (clarsimp simp: modify_map_if cong: if_cong split: split_if_asm)
+      apply (clarsimp simp: modify_map_if cong: if_cong split: if_split_asm)
       apply (erule disjE)
        apply clarsimp      
       apply clarsimp
@@ -1937,7 +1937,7 @@ done
 (************************************************************************)
 
 
-declare split_if [split del]
+declare if_split [split del]
 
 
 (* rq CALL mdb_node_ptr_set_mdbNext_'proc \<dots>) is a printing bug
@@ -2078,7 +2078,7 @@ lemma emptySlot_helper:
     prefer 2 
     apply (drule cteMDBNode_CL_lift [symmetric])
     subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
-   apply (simp add: to_bool_def mask_def split: split_if)
+   apply (simp add: to_bool_def mask_def split: if_split)
 
   -- "trivial case where mdbNext rva = 0"
    apply (simp add:ccorres_cond_empty_iff)
@@ -2239,7 +2239,7 @@ show ?thesis
           apply (simp add: cinterrupt_relation_def Kernel_C.maxIRQ_def)
           apply (clarsimp simp:  word_sless_msb_less order_le_less_trans
                             unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b 
-                         split: split_if )
+                         split: if_split )
           apply (rule word_0_sle_from_less)
 
           apply (rule order_less_le_trans[where y = 160])
@@ -2357,7 +2357,7 @@ lemma untypedZeroRange_idx_forward_helper:
   apply (clarsimp split: option.split)
   apply (clarsimp simp: untypedZeroRange_def max_free_index_def Let_def
                         isCap_simps valid_cap_simps' capAligned_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (erule subsetD[rotated], rule intvl_both_le)
    apply (clarsimp simp: getFreeRef_def)
    apply (rule word_plus_mono_right)
@@ -2400,7 +2400,7 @@ lemma untypedZeroRange_idx_backward_helper:
    apply (rule intvl_both_le; clarsimp simp: untypedZeroRange_def
                          max_free_index_def Let_def
                          isCap_simps valid_cap_simps' capAligned_def
-                  split: split_if_asm)
+                  split: if_split_asm)
     apply (clarsimp simp: getFreeRef_def)
    apply (clarsimp simp: getFreeRef_def)
    apply (simp add: word_of_nat_le unat_sub
@@ -2410,11 +2410,11 @@ lemma untypedZeroRange_idx_backward_helper:
    apply (clarsimp simp: untypedZeroRange_def
                          max_free_index_def Let_def
                          getFreeRef_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply (clarsimp simp: untypedZeroRange_def
                         max_free_index_def Let_def
                         getFreeRef_def isCap_simps valid_cap_simps'
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (simp add: word_of_nat_le unat_sub capAligned_def
                    order_le_less_trans[OF _ power_strict_increasing]
                    order_le_less_trans[where x=idx]
@@ -2470,7 +2470,7 @@ lemma updateTrackedFreeIndex_noop_ccorres:
     apply (clarsimp simp: simpler_modify_def bind_def cte_wp_at_ctes_of)
     apply (erule gsUntypedZeroRanges_update_helper)
     apply (clarsimp simp: zero_ranges_are_zero_def
-                   split: split_if)
+                   split: if_split)
     apply (case_tac "(a, b) \<in> gsUntypedZeroRanges \<sigma>")
      apply (drule(1) bspec, simp)
     apply (erule disjE_L)
@@ -2480,7 +2480,7 @@ lemma updateTrackedFreeIndex_noop_ccorres:
       apply (clarsimp simp: untypedZeroRange_def
                        valid_cap_simps'
                        max_free_index_def Let_def
-                     split: split_if_asm)
+                     split: if_split_asm)
      apply clarsimp
      apply (thin_tac "\<not> capIsDevice cap' \<longrightarrow> P" for P)
      apply (clarsimp split: option.split_asm)
@@ -2558,7 +2558,7 @@ lemma emptySlot_ccorres:
     apply (rule ccorres_cond2'[where R=\<top>])
 
     -- "*** link between abstract and concrete conditionals ***"
-      apply (clarsimp split: split_if)
+      apply (clarsimp split: if_split)
 
     -- "*** proof for the 'else' branch (return () and SKIP) ***"
      prefer 2
@@ -2635,7 +2635,7 @@ lemma emptySlot_ccorres:
   -- "final precondition proof"
   apply (clarsimp simp: typ_heap_simps Collect_const_mem
                         cte_wp_at_ctes_of
-             split del: split_if)
+             split del: if_split)
 
   apply (rule conjI)
    -- "Haskell side"
@@ -2741,7 +2741,7 @@ lemma cap_get_tag_PageCap_small_frame:
           cap_small_frame_cap_CL.capFMappedAddress_CL (cap_small_frame_cap_lift cap')))))"
   apply (rule iffI)
    apply (erule ccap_relationE)  
-   apply (clarsimp simp add: cap_lifts cap_to_H_def Let_def split: split_if)
+   apply (clarsimp simp add: cap_lifts cap_to_H_def Let_def split: if_split)
   apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def)
 done
 
@@ -2762,7 +2762,7 @@ lemma cap_get_tag_PageCap_frame:
           cap_frame_cap_CL.capFMappedAddress_CL (cap_frame_cap_lift cap')))))"
   apply (rule iffI)   
    apply (erule ccap_relationE)  
-   apply (clarsimp simp add: cap_lifts cap_to_H_def Let_def  split: split_if)
+   apply (clarsimp simp add: cap_lifts cap_to_H_def Let_def  split: if_split)
   apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def)
 done
 
@@ -3126,7 +3126,7 @@ lemma generic_frame_cap_get_capFVMRights_spec:
   apply (clarsimp simp: generic_frame_cap_get_capFVMRights_CL_def
                         cap_lift_small_frame_cap cap_lift_frame_cap
                         cap_small_frame_cap_lift_def cap_frame_cap_lift_def)
-  by (simp add: cap_lift_def Let_def Kernel_C.VMNoAccess_def split: split_if)
+  by (simp add: cap_lift_def Let_def Kernel_C.VMNoAccess_def split: if_split)
 
 definition
   get_capSizeBits_CL :: "cap_CL option \<Rightarrow> nat" where
@@ -3186,7 +3186,7 @@ lemma cap_get_capSizeBits_spec:
                   cap_cnode_cap_lift_def cap_thread_cap_lift_def
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
-                  Let_def cap_untyped_cap_lift_def  split: split_if_asm)
+                  Let_def cap_untyped_cap_lift_def  split: if_split_asm)
 
 lemma ccap_relation_get_capSizeBits_physical:
   notes unfolds = ccap_relation_def get_capSizeBits_CL_def cap_lift_def
@@ -3201,9 +3201,9 @@ lemma ccap_relation_get_capSizeBits_physical:
         defer 4 (* arch caps last *)
         apply ((frule cap_get_tag_isCap_unfolded_H_cap,
                      clarsimp simp: unfolds
-                             split: split_if_asm)+)[5] (* SOMEONE FIX SUBGOAL PLZ *)
+                             split: if_split_asm)+)[5] (* SOMEONE FIX SUBGOAL PLZ *)
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
-   apply (clarsimp simp: unfolds split: split_if_asm)
+   apply (clarsimp simp: unfolds split: if_split_asm)
    apply (rule arg_cong [OF less_mask_eq[where n=5, unfolded mask_def, simplified]])
    apply (simp add: capAligned_def objBits_simps word_bits_conv word_less_nat_alt)
   subgoal for arch_capability
@@ -3212,17 +3212,17 @@ lemma ccap_relation_get_capSizeBits_physical:
      apply (fold_subgoals (prefix))[3]
      subgoal premises prems by ((frule cap_get_tag_isCap_unfolded_H_cap,
                clarsimp simp: unfolds
-                       split: split_if_asm)+)
+                       split: if_split_asm)+)
   apply (rename_tac vmpage_size option)
   apply (case_tac "vmpage_size = ARMSmallPage", simp_all)
    apply (frule cap_get_tag_isCap_unfolded_H_cap(16), simp)
-   subgoal by (clarsimp simp: unfolds split: split_if_asm)
+   subgoal by (clarsimp simp: unfolds split: if_split_asm)
   by (frule cap_get_tag_isCap_unfolded_H_cap(17), simp,
          clarsimp simp: unfolds
                         pageBitsForSize_spec gen_framesize_to_H_def
                         c_valid_cap_def cl_valid_cap_def framesize_to_H_def
                         generic_frame_cap_get_capFSize_CL_def
-                 split: split_if_asm)+
+                 split: if_split_asm)+
   done
 
 lemma ccap_relation_get_capSizeBits_untyped:
@@ -3245,7 +3245,7 @@ lemma get_capSizeBits_valid_shift:
   apply (cases hcap;
          simp add: cap_get_tag_isCap_unfolded_H_cap cap_lift_def cap_tag_defs)
      (* zombie *)
-     apply (clarsimp simp: Let_def split: split_if)
+     apply (clarsimp simp: Let_def split: if_split)
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
      apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                            cap_lift_zombie_cap cap_to_H_def
@@ -3310,9 +3310,9 @@ lemma cap_zombie_cap_get_capZombiePtr_spec:
   apply (intro conjI)
    apply (simp add: word_add_less_mono1[where k=1 and j="0x1F", simplified])
   apply (subst unat_plus_if_size)
-  apply (clarsimp split: split_if)
+  apply (clarsimp split: if_split)
   apply (clarsimp simp: get_capZombieBits_CL_def Let_def word_size
-                 split: split_if split_if_asm)
+                 split: if_split if_split_asm)
   apply (subgoal_tac "unat (capZombieType_CL (cap_zombie_cap_lift cap) && mask 5)
                       < unat ((2::word32) ^ 5)")
    apply clarsimp
@@ -3360,7 +3360,7 @@ lemma cap_get_capPtr_spec:
                   cap_cnode_cap_lift_def cap_thread_cap_lift_def
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
-                  Let_def cap_untyped_cap_lift_def  split: split_if_asm)
+                  Let_def cap_untyped_cap_lift_def  split: if_split_asm)
 
 definition get_capIsPhysical_CL :: "cap_CL option \<Rightarrow> bool"
 where
@@ -3400,13 +3400,13 @@ lemma cap_get_capIsPhysical_spec:
                   cap_cnode_cap_lift_def cap_thread_cap_lift_def
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
-                  Let_def cap_untyped_cap_lift_def  split: split_if_asm)
+                  Let_def cap_untyped_cap_lift_def  split: if_split_asm)
 
 lemma ccap_relation_get_capPtr_not_physical:
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap \<noteq> PhysicalClass \<rbrakk> \<Longrightarrow>
    get_capPtr_CL (cap_lift ccap) = Ptr 0"
   by (clarsimp simp: ccap_relation_def get_capPtr_CL_def cap_to_H_def Let_def
-              split: option.split cap_CL.split_asm split_if_asm)
+              split: option.split cap_CL.split_asm if_split_asm)
   
 lemma ccap_relation_get_capIsPhysical:
   "ccap_relation hcap ccap \<Longrightarrow> isPhysicalCap hcap = get_capIsPhysical_CL (cap_lift ccap)"
@@ -3449,9 +3449,9 @@ lemma ccap_relation_get_capPtr_physical:
         defer 4
         apply ((frule cap_get_tag_isCap_unfolded_H_cap,
                     clarsimp simp: unfolds
-                    split: split_if_asm dest!: ctcb_ptr_to_tcb_ptr_mask)+)[5]
+                    split: if_split_asm dest!: ctcb_ptr_to_tcb_ptr_mask)+)[5]
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
-   apply (clarsimp simp: unfolds split: split_if_asm dest!: ctcb_ptr_to_tcb_ptr_mask)
+   apply (clarsimp simp: unfolds split: if_split_asm dest!: ctcb_ptr_to_tcb_ptr_mask)
    apply (rule arg_cong [OF less_mask_eq])
    apply (simp add: capAligned_def word_bits_conv objBits_simps
                     word_less_nat_alt)
@@ -3460,16 +3460,16 @@ lemma ccap_relation_get_capPtr_physical:
      defer 2 (* page caps last *)
      apply (fold_subgoals (prefix))[3]
      subgoal by ((frule cap_get_tag_isCap_unfolded_H_cap,
-                  clarsimp simp: unfolds split: split_if_asm)+)
+                  clarsimp simp: unfolds split: if_split_asm)+)
   defer
    subgoal for \<dots> vmpage_size option
    apply (cases "vmpage_size = ARMSmallPage"; simp?)
     apply (frule cap_get_tag_isCap_unfolded_H_cap(16), simp)
-    subgoal by (clarsimp simp: unfolds split: split_if_asm)
+    subgoal by (clarsimp simp: unfolds split: if_split_asm)
    by (frule cap_get_tag_isCap_unfolded_H_cap(17), simp,
           clarsimp simp: unfolds
                          cap_tag_defs cap_to_H_def
-                  split: split_if_asm)+
+                  split: if_split_asm)+
   done
   done
 
@@ -3543,7 +3543,7 @@ lemma sameRegionAs_spec:
             apply (simp add: ccap_relation_def map_option_case)
             apply (simp add: cap_notification_cap_lift)
             apply (simp add: cap_to_H_def)
-            apply (clarsimp split: split_if)
+            apply (clarsimp split: if_split)
            apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
            apply (clarsimp simp: isArchCap_tag_def2)
           -- "capa is an IRQHandlerCap"
@@ -3556,7 +3556,7 @@ lemma sameRegionAs_spec:
            apply (simp add: cap_to_H_def)
            apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def
                                  cl_valid_cap_def mask_twice
-                          split: split_if bool.split
+                          split: if_split bool.split
                           | intro impI conjI
                           | simp )+
                apply (drule ucast_ucast_mask_eq, simp)
@@ -3572,14 +3572,14 @@ lemma sameRegionAs_spec:
           apply (simp add: ccap_relation_def map_option_case)
           apply (simp add: cap_endpoint_cap_lift)
           apply (simp add: cap_to_H_def)
-          apply (clarsimp split: split_if)
+          apply (clarsimp split: if_split)
          apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
          apply (clarsimp simp: isArchCap_tag_def2)
         -- "capa is a DomainCap"
         apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                      isCap_simps cap_tag_defs from_bool_def false_def true_def)[1]
         apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
-        apply (fastforce simp: isArchCap_tag_def2 split: split_if)
+        apply (fastforce simp: isArchCap_tag_def2 split: if_split)
        -- "capa is a Zombie"
        apply (simp add: cap_tag_defs from_bool_def false_def)
       -- "capa is an Arch object cap"
@@ -3601,7 +3601,7 @@ lemma sameRegionAs_spec:
      apply (simp add: ccap_relation_def map_option_case)
      apply (simp add: cap_reply_cap_lift)
      apply (simp add: cap_to_H_def ctcb_ptr_to_tcb_ptr_def)
-     apply (clarsimp split: split_if)
+     apply (clarsimp split: if_split)
     -- "capa is an UntypedCap"
     apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(9))
     apply (intro conjI)
@@ -3611,13 +3611,13 @@ lemma sameRegionAs_spec:
                               objBits_simps get_capZombieBits_CL_def
                               Let_def word_less_nat_alt
                               less_mask_eq true_def
-                       split: split_if_asm)
+                       split: if_split_asm)
        apply (subgoal_tac "capBlockSize_CL (cap_untyped_cap_lift cap_a) \<le> 0x1F")
         apply (simp add: word_le_make_less)
        apply (simp add: cap_untyped_cap_lift_def cap_lift_def
                         cap_tag_defs word_and_le1)
       apply (clarsimp simp: get_capSizeBits_valid_shift_word)
-     apply (clarsimp simp: from_bool_def Let_def split: split_if bool.splits)
+     apply (clarsimp simp: from_bool_def Let_def split: if_split bool.splits)
      apply (subst unat_of_nat32,
               clarsimp simp: unat_of_nat32 word_bits_def
                       dest!: get_capSizeBits_valid_shift)+
@@ -3642,12 +3642,12 @@ lemma sameRegionAs_spec:
    apply (simp add: ccap_relation_def map_option_case)
    apply (simp add: cap_cnode_cap_lift)
    apply (simp add: cap_to_H_def)
-   apply (clarsimp split: split_if bool.split)
+   apply (clarsimp split: if_split bool.split)
   -- "capa is an IRQControlCap"
   apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
                isCap_simps cap_tag_defs from_bool_def false_def true_def)[1]
   apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
-  apply (fastforce simp: isArchCap_tag_def2 split: split_if)
+  apply (fastforce simp: isArchCap_tag_def2 split: if_split)
   done
 
 lemma gen_framesize_to_H_eq:
@@ -3656,7 +3656,7 @@ lemma gen_framesize_to_H_eq:
   by (fastforce simp: gen_framesize_to_H_def Kernel_C.ARMSmallPage_def
                      Kernel_C.ARMLargePage_def Kernel_C.ARMSection_def
                      word_le_make_less
-              split: split_if
+              split: if_split
                dest: word_less_cases)
 
 lemma framesize_to_H_eq:
@@ -3665,7 +3665,7 @@ lemma framesize_to_H_eq:
   by (fastforce simp: framesize_to_H_def Kernel_C.ARMSmallPage_def
                      Kernel_C.ARMLargePage_def Kernel_C.ARMSection_def
                      word_le_make_less
-              split: split_if
+              split: if_split
                dest: word_less_cases)
 
 lemma capFSize_range:
@@ -3702,7 +3702,7 @@ lemma Arch_sameObjectAs_spec:
        apply (simp add: ccap_relation_def map_option_case)
        apply (simp add: cap_small_frame_cap_lift)
        apply (clarsimp simp: cap_to_H_def capAligned_def to_bool_def from_bool_def 
-                      split: split_if bool.split
+                      split: if_split bool.split
                       dest!: is_aligned_no_overflow)
       apply (case_tac "vmpage_sizea = ARMSmallPage",
              simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs
@@ -3714,7 +3714,7 @@ lemma Arch_sameObjectAs_spec:
       apply (clarsimp simp: cap_to_H_def capAligned_def from_bool_def
                             c_valid_cap_def cl_valid_cap_def
                             Kernel_C.ARMSmallPage_def
-                     split: split_if bool.split vmpage_size.split_asm
+                     split: if_split bool.split vmpage_size.split_asm
                      dest!: is_aligned_no_overflow)
       apply (simp add: framesize_to_H_eq capFSize_range to_bool_def
                        cap_frame_cap_lift [symmetric])
@@ -3814,7 +3814,7 @@ lemma isMDBParentOf_spec:
      apply (simp add: cte_lift_def)
      apply (clarsimp simp: cte_to_H_def mdb_node_to_H_def split: option.split_asm)
      apply (clarsimp simp: Let_def false_def from_bool_def to_bool_def
-                    split: split_if bool.splits)
+                    split: if_split bool.splits)
      apply ((clarsimp simp: typ_heap_simps dest!: lift_t_g)+)[3]
   apply (rule_tac x="cteCap ctea" in exI, rule conjI)
    apply (clarsimp simp: ccte_relation_ccap_relation typ_heap_simps
@@ -3833,7 +3833,7 @@ lemma isMDBParentOf_spec:
    -- "sameRegionAs = 0"
    apply (rule impI)
    apply (clarsimp simp: from_bool_def false_def
-                  split: split_if bool.splits)
+                  split: if_split bool.splits)
 
   -- "sameRegionAs \<noteq> 0"
   apply (clarsimp simp: from_bool_def false_def)
@@ -3855,7 +3855,7 @@ lemma isMDBParentOf_spec:
 
    apply (clarsimp simp: if_1_0_0 typ_heap_simps'   Let_def case_bool_If)
    apply (frule_tac cap="(cap_to_H x2c)" in cap_get_tag_EndpointCap)
-   apply (clarsimp split: split_if_asm simp: if_distrib [where f=scast])
+   apply (clarsimp split: if_split_asm simp: if_distrib [where f=scast])
 
   apply (clarsimp, rule conjI)
   --" cap_get_tag of cte_a is an notification"
@@ -4111,7 +4111,7 @@ lemma Arch_deriveCap_ccorres:
     subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
                           cap_tag_defs cap_to_H_def to_bool_def
                           cap_page_table_cap_lift_def
-                   split: split_if_asm)
+                   split: if_split_asm)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
@@ -4139,7 +4139,7 @@ lemma Arch_deriveCap_ccorres:
     subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
                           cap_tag_defs cap_to_H_def to_bool_def
                           cap_page_directory_cap_lift_def
-                   split: split_if_asm)
+                   split: if_split_asm)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)

@@ -286,7 +286,7 @@ lemma caps_of_state_transform_opt_cap_no_idle:
                          slots_of_def opt_object_def transform_def transform_objects_def
                          transform_cnode_contents_def well_formed_cnode_n_def
                          restrict_map_def
-                   split: option.splits split_if_asm nat.splits)
+                   split: option.splits if_split_asm nat.splits)
     apply (frule(1) eqset_imp_iff[THEN iffD1, OF _ domI])
     apply (simp add: nat_to_bl_zero_zero option_map_join_def)
    apply clarsimp
@@ -304,7 +304,7 @@ lemma caps_of_state_transform_opt_cap_no_idle:
                         transform_tcb_def tcb_slot_defs infer_tcb_bound_notification_def
                         tcb_pending_op_slot_def tcb_cap_cases_def tcb_boundntfn_slot_def
                         bl_to_bin_tcb_cnode_index bl_to_bin_tcb_cnode_index_le0
-                 split: split_if_asm option.splits)
+                 split: if_split_asm option.splits)
   done
 
 lemma transform_cap_Null [simp]:
@@ -2055,7 +2055,7 @@ lemma check_mapping_pptr_pt_relation:
   apply (rule hoare_pre, wp get_pte_wp)
   apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: a_type_def pt_page_relation_def
-                 split: Structures_A.kernel_object.split_asm split_if_asm
+                 split: Structures_A.kernel_object.split_asm if_split_asm
                         arch_kernel_obj.split_asm)
   apply (simp split: ARM_A.pte.split_asm)
   done
@@ -2069,7 +2069,7 @@ lemma check_mapping_pptr_section_relation:
    apply (wp get_pde_wp)
   apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: a_type_def pd_section_relation_def pd_super_section_relation_def
-                 split: Structures_A.kernel_object.split_asm split_if_asm
+                 split: Structures_A.kernel_object.split_asm if_split_asm
                         arch_kernel_obj.split_asm
                         ARM_A.pde.split_asm)
 done
@@ -2082,7 +2082,7 @@ lemma check_mapping_pptr_super_section_relation:
    apply (wp get_pde_wp)
   apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: a_type_def pd_section_relation_def pd_super_section_relation_def
-                 split: Structures_A.kernel_object.split_asm split_if_asm
+                 split: Structures_A.kernel_object.split_asm if_split_asm
                         arch_kernel_obj.split_asm
                         ARM_A.pde.split_asm)
 done
@@ -3033,23 +3033,23 @@ proof -
 
         apply (clarsimp simp:transform_def transform_current_thread_def
                              transform_asid_table_def transform_objects_def
-                             transform_cdt_def split del: split_if)
+                             transform_cdt_def split del: if_split)
         apply (rule sym)
         apply (subgoal_tac "inj_on transform_cslot_ptr
                    ({slot_a, slot_b} \<union> dom (cdt s') \<union> ran (cdt s'))
                      \<and> cdt s' slot_a \<noteq> Some slot_a \<and> cdt s' slot_b \<noteq> Some slot_b")
          apply (elim conjE)
          apply (subst map_lift_over_upd, erule subset_inj_on)
-          apply (safe elim!: ranE, simp_all split: split_if_asm,
+          apply (safe elim!: ranE, simp_all split: if_split_asm,
                  simp_all add: ranI)[1]
          apply (subst map_lift_over_upd, erule subset_inj_on)
-          apply (safe elim!: ranE, simp_all split: split_if_asm,
+          apply (safe elim!: ranE, simp_all split: if_split_asm,
                  simp_all add: ranI)[1]
          apply (subst map_lift_over_if_eq_twice)
           apply (erule subset_inj_on, fastforce)
          apply (rule ext)
          apply (cases slot_a, cases slot_b)
-         apply (simp split del: split_if)
+         apply (simp split del: if_split)
          apply (intro if_cong[OF refl],
                 simp_all add: map_lift_over_eq_Some inj_on_eq_iff[where f=transform_cslot_ptr]
                               ranI domI)[1]
@@ -3127,7 +3127,7 @@ lemma set_cap_noop_dcorres3:
                     get_tcb_mrs_def)
    apply fastforce
   apply clarsimp
-  apply (simp add: transform_cap_def split: cap.split_asm arch_cap.split_asm split_if_asm,
+  apply (simp add: transform_cap_def split: cap.split_asm arch_cap.split_asm if_split_asm,
          simp_all add: get_ipc_buffer_words_def)
   done
 
@@ -3162,7 +3162,7 @@ lemma corres_use_cutMon:
        \<Longrightarrow> corres_underlying sr False fl r P P' f g"
   apply atomize
   apply (simp add: corres_underlying_def cutMon_def fail_def
-            split: split_if_asm)
+            split: if_split_asm)
   apply (clarsimp simp: split_def)
   done
 
@@ -3170,7 +3170,7 @@ lemma corres_drop_cutMon:
   "corres_underlying sr False False r P P' f g
      \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon Q g)"
   apply (simp add: corres_underlying_def cutMon_def fail_def
-            split: split_if)
+            split: if_split)
   apply (clarsimp simp: split_def)
   done
 
@@ -3178,7 +3178,7 @@ lemma corres_drop_cutMon_bind:
   "corres_underlying sr False False r P P' f (g >>= h)
      \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon Q g >>= h)"
   apply (simp add: corres_underlying_def cutMon_def fail_def bind_def
-            split: split_if)
+            split: if_split)
   apply (clarsimp simp: split_def)
   done
 
@@ -3194,7 +3194,7 @@ lemma corres_cutMon:
          \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon Q g)"
   apply atomize
   apply (simp add: corres_underlying_def cutMon_def fail_def
-            split: split_if_asm)
+            split: if_split_asm)
   apply (clarsimp simp: split_def)
   done
 
@@ -3577,7 +3577,7 @@ proof (induct arbitrary: S rule: rec_del.induct,
     done
 next
   case (2 slot exposed s S)
-  note split_if[split del]
+  note if_split[split del]
   have removeables:
     "\<And>s cap fin. \<lbrakk> cte_wp_at (op = cap) slot s; s \<turnstile> remainder_cap fin cap; invs s; valid_etcbs s;
             CSpace_A.cap_removeable (remainder_cap fin cap) slot  \<rbrakk>
@@ -3587,7 +3587,7 @@ next
      apply (simp add: CSpace_D.cap_removeable_def)
     apply (clarsimp simp: remainder_cap_def valid_cap_simps
                           cte_wp_at_caps_of_state
-                   split: cap.split_asm split_if_asm)
+                   split: cap.split_asm if_split_asm)
     apply (rename_tac word nat option)
     apply (frule valid_global_refsD2, clarsimp)
     apply (clarsimp simp: CSpace_D.cap_removeable_def)
@@ -3602,7 +3602,7 @@ next
      apply (frule zombie_cap_has_all[rotated -2], simp, clarsimp+)
     apply (clarsimp simp: tcb_at_def cap_range_def global_refs_def
                           opt_cap_tcb
-                   split: option.split_asm split_if_asm | drule(1) valid_etcbs_get_tcb_get_etcb)+
+                   split: option.split_asm if_split_asm | drule(1) valid_etcbs_get_tcb_get_etcb)+
        apply (rule_tac x="tcb_cnode_index b" in exI)
        apply (clarsimp simp: transform_cslot_ptr_def dest!: get_tcb_SomeD)
        apply (rule conjI, rule sym, rule bl_to_bin_tcb_cnode_index)
@@ -3839,7 +3839,7 @@ next
           apply (rule corres_drop_cutMon)
           apply (simp add: liftE_bindE)
           apply (rule corres_symb_exec_r)
-             apply (simp add: liftME_def[symmetric] split del: split_if)
+             apply (simp add: liftME_def[symmetric] split del: if_split)
              apply (rule monadic_rewrite_corres2)
               apply (rule monadic_trancl_preemptible_return)
              apply (rule corres_if_rhs_only)

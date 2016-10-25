@@ -166,7 +166,7 @@ lemma sbn_pas_refined[wp]:
   apply (clarsimp dest!: auth_graph_map_memD)
   apply (erule state_bits_to_policy.cases)
   apply (auto intro: state_bits_to_policy.intros auth_graph_map_memI
-              split: split_if_asm)
+              split: if_split_asm)
   done
 
 lemma unbind_notification_pas_refined[wp]:
@@ -320,7 +320,7 @@ lemma fast_finalise_respects[wp]:
      apply (wp unbind_maybe_notification_valid_objs get_ntfn_wp unbind_maybe_notification_respects
              | wpc 
              | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def when_def 
-                  split: split_if_asm 
+                  split: if_split_asm
              | fastforce)+
       apply (clarsimp simp: obj_at_def valid_cap_def is_ntfn invs_def valid_state_def valid_pspace_def 
                      split: option.splits)+
@@ -440,7 +440,7 @@ lemma finalise_cap_respects[wp]:
               apply ((wp unbind_maybe_notification_valid_objs get_ntfn_wp 
                          unbind_maybe_notification_respects 
                          | wpc 
-                         | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def                               split: split_if_asm 
+                         | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def                               split: if_split_asm
                          | fastforce)+)[3]
                 apply (clarsimp simp: obj_at_def valid_cap_def is_ntfn invs_def 
                                       valid_state_def valid_pspace_def 
@@ -455,18 +455,18 @@ lemma finalise_cap_respects[wp]:
                  | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def 
                                   unbind_maybe_notification_def 
                            elim!: pas_refined_Control[symmetric]
-                 | simp add: if_apply_def2 split del: split_if )+
+                 | simp add: if_apply_def2 split del: if_split )+
          apply (clarsimp simp: valid_cap_def pred_tcb_at_def obj_at_def is_tcb 
                         dest!: tcb_at_ko_at)
          apply (clarsimp split: option.splits elim!: pas_refined_Control[symmetric])
          apply (frule bound_tcb_at_implies_reset, fastforce simp add: pred_tcb_at_def obj_at_def)
          apply (drule pas_refined_Control, simp, simp)
          (* other caps *)
-        apply (wp | simp add: if_apply_def2 split del: split_if
+        apply (wp | simp add: if_apply_def2 split del: if_split
                   | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def is_cap_simps 
                                    pas_refined_all_auth_is_owns aag_cap_auth_def
                                    deleting_irq_handler_def cap_links_irq_def invs_valid_objs
-                        split del: split_if
+                        split del: if_split
                             elim!: pas_refined_Control [symmetric])+
   done
 
@@ -502,16 +502,16 @@ lemma finalise_cap_auth':
       finalise_cap cap final
    \<lbrace>\<lambda>rv s. pas_cap_cur_auth aag (fst rv)\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (cases cap, simp_all add: arch_finalise_cap_def split del: split_if)
+  apply (cases cap, simp_all add: arch_finalise_cap_def split del: if_split)
   apply (wp
-    | simp add: comp_def hoare_post_taut [where P = \<top>] del: hoare_post_taut split del: split_if
+    | simp add: comp_def hoare_post_taut [where P = \<top>] del: hoare_post_taut split del: if_split
     | fastforce simp:  aag_cap_auth_Zombie aag_cap_auth_CNode aag_cap_auth_Thread
     )+
   apply (rule hoare_pre)
   apply (wp | simp)+
   apply (rule hoare_pre)
   apply (wp | wpc
-    | simp add: comp_def hoare_post_taut [where P = \<top>] del: hoare_post_taut split del: split_if)+
+    | simp add: comp_def hoare_post_taut [where P = \<top>] del: hoare_post_taut split del: if_split)+
   done
 
 lemma finalise_cap_obj_refs:
@@ -789,7 +789,7 @@ lemma pas_refined_set_asid_table_empty_strg:
   pas_refined aag (s\<lparr>arch_state := arch_state s \<lparr>arm_asid_table := (arm_asid_table (arch_state s))(base \<mapsto> pool)\<rparr>\<rparr>)"
   apply (clarsimp simp: pas_refined_def state_objs_to_policy_def)
   apply (erule state_asids_to_policy_aux.cases)
-    apply(simp_all split: split_if_asm)
+    apply(simp_all split: if_split_asm)
       prefer 2
       apply (clarsimp simp: state_vrefs_def obj_at_def vs_refs_no_global_pts_def)
      apply (auto intro: state_asids_to_policy_aux.intros auth_graph_map_memI[OF sbta_vref] pas_refined_refl[simplified pas_refined_def state_objs_to_policy_def])[3]
@@ -843,7 +843,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
      apply (wp "1.hyps", assumption+)
             apply ((wp preemption_point_inv' | simp add: integrity_subjects_def pas_refined_def)+)[1]
            apply (wp select_ext_weak_wp cap_delete_respects cap_delete_pas_refined
-                    | simp split del: split_if | wp_once hoare_vcg_const_imp_lift hoare_drop_imps)+
+                    | simp split del: if_split | wp_once hoare_vcg_const_imp_lift hoare_drop_imps)+
     apply (auto simp: emptyable_def dest: descendants_of_owned reply_slot_not_descendant)
     done
 qed
@@ -882,14 +882,14 @@ lemma finalise_cap_caps_of_state_nullinv:
   "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P (caps_of_state s(p \<mapsto> cap.NullCap)))\<rbrace>
   finalise_cap cap final
   \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  apply (cases cap, simp_all split del: split_if)
+  apply (cases cap, simp_all split del: if_split)
              apply (wp suspend_caps_of_state unbind_notification_caps_of_state 
                        unbind_notification_cte_wp_at 
                        hoare_vcg_all_lift hoare_drop_imps 
-                    | simp split del: split_if 
+                    | simp split del: if_split
                     | fastforce simp: fun_upd_def )+
     apply (rule hoare_pre)
-     apply (wp deleting_irq_handler_caps_of_state_nullinv | clarsimp split del: split_if | fastforce simp: fun_upd_def)+
+     apply (wp deleting_irq_handler_caps_of_state_nullinv | clarsimp split del: if_split | fastforce simp: fun_upd_def)+
   done
 
 lemma finalise_cap_cte_wp_at_nullinv:
@@ -903,8 +903,8 @@ lemma finalise_cap_cte_wp_at_nullinv:
 
 lemma finalise_cap_fst_ret:
   "\<lbrace>\<lambda>s. P cap.NullCap \<and> (\<forall>a b c. P (cap.Zombie a b c)) \<rbrace> finalise_cap cap is_final\<lbrace>\<lambda>rv s. P (fst rv)\<rbrace>"
-  apply (cases cap, simp_all add: arch_finalise_cap_def split del: split_if)
-  apply (wp | simp add: comp_def split del: split_if | fastforce)+
+  apply (cases cap, simp_all add: arch_finalise_cap_def split del: if_split)
+  apply (wp | simp add: comp_def split del: if_split | fastforce)+
   apply (rule hoare_pre)
   apply (wp | simp | (rule hoare_pre, wpc))+
   done
@@ -1057,7 +1057,7 @@ lemma invoke_cnode_pas_refined:
    apply (wp cap_insert_pas_refined cap_delete_pas_refined cap_revoke_pas_refined
              get_cap_wp 
              | wpc
-             | simp split del: split_if)+
+             | simp split del: if_split)+
   apply (cases ci, simp_all add: authorised_cnode_inv_def
                                  cnode_inv_auth_derivations_def integrity_def)
         apply (clarsimp simp: cte_wp_at_caps_of_state pas_refined_refl cap_links_irq_def

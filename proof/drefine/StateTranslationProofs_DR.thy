@@ -171,7 +171,7 @@ lemma caps_of_state_update_tcb:
       caps_of_state (update_kheap kh s)"
   apply (erule caps_of_state_update_same_caps)
   apply (rule ext)
-  apply (simp add: tcb_cap_cases_def split: split_if)
+  apply (simp add: tcb_cap_cases_def split: if_split)
   done
 
 lemmas caps_of_state_upds = caps_of_state_update_tcb caps_of_state_update_same_caps
@@ -273,7 +273,7 @@ proof -
       "inj_on f (dom m - {x} \<union> ran (m(x := None)))"
       "inj_on f (dom m - {x})"
     apply (safe intro!: subset_inj_on[OF inj_f])
-    apply (auto simp: ran_def split: split_if_asm)
+    apply (auto simp: ran_def split: if_split_asm)
     done
   show ?thesis
     apply (simp add: map_lift_over_def Q del: inj_on_insert)
@@ -299,7 +299,7 @@ proof -
   have 1: "inj_on f (dom m \<union> ran m)" "inj_on f (dom m)"
     by (auto simp: inj_on_Un)
   have "dom ?ifeq \<subseteq> dom m"
-    by (auto split: split_if_asm)
+    by (auto split: if_split_asm)
   with inj_f
   have 2: "inj_on f (dom ?ifeq)"
     by (auto elim!: subset_inj_on)
@@ -309,19 +309,19 @@ proof -
   have "inj_on f (dom ?ifeq \<union> ran ?ifeq)"
     by (auto elim!: subset_inj_on)
   note Q = 1 2 this
-  note split_if[split del]
+  note if_split[split del]
   show ?thesis
     apply (simp add: map_lift_over_def Q)
     apply (rule ext)
     apply (case_tac "x \<in> f ` dom ?ifeq")
      apply clarsimp
-     apply (subst if_P, fastforce split: split_if_asm)+
+     apply (subst if_P, fastforce split: if_split_asm)+
      apply (simp add: Q[THEN inv_into_f_f] domI ranI inj_on_eq_iff[OF inj_f]
-               split: split_if_asm)
+               split: if_split_asm)
     apply (subst if_not_P, simp, rule allI, fastforce)+
     apply (auto simp: option_map_def Q[THEN inv_into_f_f] domI ranI
                       inj_on_eq_iff[OF inj_f]
-               split: split_if option.split)
+               split: if_split option.split)
     done
 qed
 

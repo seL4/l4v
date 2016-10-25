@@ -102,7 +102,7 @@ proof -
     apply (clarsimp simp: monadic_rewrite_def bind_def P image_constant_conv
                     cong: image_cong)
     apply (drule empty_failD2[OF ef])
-    apply (clarsimp simp: prod_eq_iff split: split_if_asm)
+    apply (clarsimp simp: prod_eq_iff split: if_split_asm)
     done
 qed
 
@@ -173,7 +173,7 @@ lemma monadic_rewrite_gen_asm:
 lemma monadic_rewrite_assert:
   "\<lbrakk> Q \<Longrightarrow> monadic_rewrite True E P (f ()) g \<rbrakk>
       \<Longrightarrow> monadic_rewrite True E (\<lambda>s. Q \<longrightarrow> P s) (assert Q >>= f) g"
-  apply (simp add: assert_def split: split_if)
+  apply (simp add: assert_def split: if_split)
   apply (simp add: monadic_rewrite_def fail_def)
   done
 

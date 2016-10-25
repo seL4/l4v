@@ -1121,7 +1121,7 @@ lemma kernel_all_subset_kernel:
            apply (simp add: callKernel_C_def callKernel_withFastpath_C_def
                             kernel_global.callKernel_C_def
                             kernel_global.callKernel_withFastpath_C_def
-                       split: event.split split_if)
+                       split: event.split if_split)
            apply (intro allI impI conjI monadic_rewrite_\<Gamma>)[1]
           apply ((wp | simp)+)[3]
         apply (clarsimp simp: snd_bind snd_modify in_monad gets_def)

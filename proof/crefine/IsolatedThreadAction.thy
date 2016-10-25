@@ -245,7 +245,7 @@ lemma partial_overwrite_fun_upd:
    partial_overwrite idx (tsrs (x := y))
     = (\<lambda>ps. (partial_overwrite idx tsrs ps) (idx x := put_tcb_state_regs y (ps (idx x))))"
   apply (intro ext, simp add: partial_overwrite_def)
-  apply (clarsimp split: split_if)
+  apply (clarsimp split: if_split)
   done
 
 lemma get_tcb_state_regs_ko_at':
@@ -266,7 +266,7 @@ lemma partial_overwrite_get_tcb_state_regs:
    partial_overwrite idx (\<lambda>x. get_tcb_state_regs (ksPSpace s (idx x)))
                 (ksPSpace s) = ksPSpace s"
   apply (rule ext, simp add: partial_overwrite_def
-                      split: split_if)
+                      split: if_split)
   apply clarsimp
   apply (drule_tac x=xa in spec)
   apply (clarsimp simp: obj_at'_def projectKOs put_tcb_state_regs_def
@@ -341,7 +341,7 @@ lemma dom_partial_overwrite:
        = dom (ksPSpace s)"
   apply (rule set_eqI)
   apply (clarsimp simp: dom_def partial_overwrite_def put_tcb_state_regs_def
-                 split: split_if)
+                 split: if_split)
   apply (fastforce elim!: obj_atE')
   done
 
@@ -361,7 +361,7 @@ lemma map_to_ctes_partial_overwrite:
    apply (simp add: put_tcb_state_regs_def put_tcb_state_regs_tcb_def
                     objBits_simps
               cong: if_cong option.case_cong)
-   apply (case_tac obj, simp split: tcb_state_regs.split split_if)
+   apply (case_tac obj, simp split: tcb_state_regs.split if_split)
   apply simp
   apply (rule if_cong[OF refl])
    apply simp
@@ -373,10 +373,10 @@ lemma map_to_ctes_partial_overwrite:
    apply (simp add: put_tcb_state_regs_def put_tcb_state_regs_tcb_def
                     objBits_simps
               cong: if_cong option.case_cong)
-   apply (case_tac obj, simp split: tcb_state_regs.split split_if)
+   apply (case_tac obj, simp split: tcb_state_regs.split if_split)
    apply (intro impI allI)
    apply (subgoal_tac "x - idx xa = x && mask 9")
-    apply (clarsimp simp: tcb_cte_cases_def split: split_if)
+    apply (clarsimp simp: tcb_cte_cases_def split: if_split)
    apply (drule_tac t = "idx xa" in sym)
     apply simp
   apply (simp cong: if_cong)
@@ -449,7 +449,7 @@ lemma getObject_get_assert:
                    alignCheck_assert)
   apply (case_tac "ksPSpace x p")
    apply (simp add: obj_at'_def assert_opt_def assert_def
-             split: option.split split_if)
+             split: option.split if_split)
   apply (simp add: lookupAround2_known1 assert_opt_def
                    obj_at'_def projectKO_def2
             split: option.split)
@@ -473,7 +473,7 @@ lemma obj_at_partial_overwrite_If:
                 else obj_at' P p s)"
   apply (frule dom_partial_overwrite[where tsrs=f])
   apply (simp add: obj_at'_def ps_clear_def partial_overwrite_def
-                   projectKOs split: split_if)
+                   projectKOs split: if_split)
   apply clarsimp
   apply (drule_tac x=x in spec)
   apply (clarsimp simp: put_tcb_state_regs_def objBits_simps)
@@ -494,7 +494,7 @@ lemma obj_at_partial_overwrite_id2:
              = obj_at' P p s"
   apply (frule dom_partial_overwrite[where tsrs=f])
   apply (simp add: obj_at'_def ps_clear_def partial_overwrite_def
-                   projectKOs split: split_if)
+                   projectKOs split: if_split)
   apply clarsimp
   apply (drule_tac x=x in spec)
   apply (clarsimp simp: put_tcb_state_regs_def objBits_simps
@@ -1012,7 +1012,7 @@ lemma oblivious_getObject_ksPSpace_cte[simp]:
                    typeError_def unless_when
              cong: Structures_H.kernel_object.case_cong)
   apply (intro oblivious_bind,
-         simp_all split: Structures_H.kernel_object.split split_if)
+         simp_all split: Structures_H.kernel_object.split if_split)
   by (safe intro!: oblivious_bind, simp_all)
 
 lemma oblivious_doMachineOp[simp]:
@@ -1167,7 +1167,7 @@ lemma setThreadState_no_sch_change:
   apply (simp add: setThreadState_def setSchedulerAction_def)
   apply (wp hoare_pre_cont[where a=rescheduleRequired])
   apply (rule_tac Q="\<lambda>_. ?P and st_tcb_at' (op = st) t" in hoare_post_imp)
-   apply (clarsimp split: split_if)
+   apply (clarsimp split: if_split)
    apply (clarsimp simp: obj_at'_def st_tcb_at'_def projectKOs)
   apply (rule hoare_pre, wp threadSet_pred_tcb_at_state)
   apply simp
@@ -1205,7 +1205,7 @@ lemma setObject_modify_assert:
    apply (simp only: objBits_def objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
    apply (simp add: magnitudeCheck_assert2 simpler_modify_def)
   apply (clarsimp simp: assert_opt_def assert_def magnitudeCheck_assert2
-                 split: option.split split_if)
+                 split: option.split if_split)
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp simp: project_inject)
   apply (simp only: objBits_def objBitsT_koTypeOf[symmetric]
@@ -1235,7 +1235,7 @@ lemma setEndpoint_isolatable:
       apply (clarsimp simp: o_def partial_overwrite_def)
       apply (rule kernel_state.fold_congs[OF refl refl])
       apply (clarsimp simp: fun_eq_iff
-                     split: split_if)
+                     split: if_split)
      apply (wp | simp)+
   done
 
@@ -1257,7 +1257,7 @@ lemma setCTE_assert_modify:
                          assert_opt_def alignCheck_assert objBits_simps
                          magnitudeCheck_assert2 updateObject_cte)
    apply (simp add: simpler_modify_def)
-  apply (simp split: split_if, intro conjI impI)
+  apply (simp split: if_split, intro conjI impI)
    apply (clarsimp simp: obj_at'_def projectKOs)
    apply (subgoal_tac "p \<le> (p && ~~ mask 9) + 2 ^ 9 - 1")
     apply (subgoal_tac "fst (lookupAround2 p (ksPSpace x))
@@ -1303,7 +1303,7 @@ lemma partial_overwrite_fun_upd2:
      = (partial_overwrite idx tsrs f)
           (x := if x \<in> range idx then put_tcb_state_regs (tsrs (inv idx x)) y
                 else y)"
-  by (simp add: fun_eq_iff partial_overwrite_def split: split_if)
+  by (simp add: fun_eq_iff partial_overwrite_def split: if_split)
 
 lemma setCTE_isolatable:
   "thread_actions_isolatable idx (setCTE p v)"
@@ -1321,22 +1321,22 @@ lemma setCTE_isolatable:
    apply clarsimp
    apply (frule_tac x=x in spec, erule obj_atE')
    apply (subgoal_tac "\<not> real_cte_at' p s")
-    apply (clarsimp simp: select_f_returns select_f_asserts split: split_if)
+    apply (clarsimp simp: select_f_returns select_f_asserts split: if_split)
     apply (clarsimp simp: o_def simpler_modify_def partial_overwrite_fun_upd2)
     apply (rule kernel_state.fold_congs[OF refl refl])
     apply (rule ext)
     apply (clarsimp simp: partial_overwrite_get_tcb_state_regs
-                   split: split_if)
+                   split: if_split)
     apply (clarsimp simp: projectKOs get_tcb_state_regs_def
                           put_tcb_state_regs_def put_tcb_state_regs_tcb_def
                           partial_overwrite_def
                    split: tcb_state_regs.split)
     apply (case_tac obj, simp add: projectKO_opt_tcb)
-    apply (simp add: tcb_cte_cases_def split: split_if_asm)
+    apply (simp add: tcb_cte_cases_def split: if_split_asm)
    apply (drule_tac x=x in spec)
    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps subtract_mask(2) [symmetric])
    apply (erule notE[rotated], erule (3) tcb_ctes_clear[rotated])
-  apply (simp add: select_f_returns select_f_asserts split: split_if)
+  apply (simp add: select_f_returns select_f_asserts split: if_split)
   apply (intro conjI impI)
     apply (clarsimp simp: simpler_modify_def fun_eq_iff
                           partial_overwrite_fun_upd2 o_def
@@ -1349,7 +1349,7 @@ lemma setCTE_isolatable:
                          partial_overwrite_fun_upd2 o_def
                          partial_overwrite_get_tcb_state_regs
                  intro!: kernel_state.fold_congs[OF refl refl]
-                  split: split_if)
+                  split: if_split)
    apply (simp add: partial_overwrite_def)
   apply (subgoal_tac "p \<notin> range idx")
    apply (clarsimp simp: simpler_modify_def
@@ -1463,7 +1463,7 @@ lemma threadGet_isolatable:
   apply (clarsimp simp: projectKOs
                         partial_overwrite_def put_tcb_state_regs_def
                   cong: if_cong)
-  apply (simp add: projectKO_opt_tcb v split: split_if)
+  apply (simp add: projectKO_opt_tcb v split: if_split)
   done
 
  lemma switchToThread_isolatable:
@@ -1543,7 +1543,7 @@ lemma tcb_at_KOTCB_upd:
    tcb_at' p (ksPSpace_update (\<lambda>ps. ps(idx x \<mapsto> KOTCB tcb)) s)
         = tcb_at' p s"
   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
-                 split: split_if)
+                 split: if_split)
   apply (simp add: ps_clear_def)
   done
 
@@ -1612,7 +1612,7 @@ lemma copy_register_isolate:
   apply (simp add: projectKO_opt_tcb put_tcb_state_regs_def
                    put_tcb_state_regs_tcb_def get_tcb_state_regs_def
              cong: if_cong)
-  apply (auto simp: fun_eq_iff split: split_if)
+  apply (auto simp: fun_eq_iff split: if_split)
   done
 
 lemmas monadic_rewrite_bind_alt
@@ -1693,7 +1693,7 @@ lemma setSchedulerAction_isolate:
 lemma updateMDB_isolatable:
   "thread_actions_isolatable idx (updateMDB slot f)"
   apply (simp add: updateMDB_def thread_actions_isolatable_return
-            split: split_if)
+            split: if_split)
   apply (intro impI thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                getCTE_isolatable setCTE_isolatable,
            (wp | simp)+)

@@ -71,16 +71,16 @@ lemma decode_set_ipc_buffer_translate_tcb_invocation:
    apply (wpc|wp)+
        apply (wp hoare_whenE_wp)
   apply (case_tac a)
-             apply (simp_all add:derive_cap_def split del:split_if)
-             apply (wp|clarsimp split del:split_if)+
+             apply (simp_all add:derive_cap_def split del:if_split)
+             apply (wp|clarsimp split del:if_split)+
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
-      apply (simp_all add:arch_derive_cap_def split del: split_if)
-      apply (wp | clarsimp split del: split_if)+
+      apply (simp_all add:arch_derive_cap_def split del: if_split)
+      apply (wp | clarsimp split del: if_split)+
     apply (clarsimp simp:transform_mapping_def)
    apply (rule hoare_pre)
     apply wpc
-     apply (wp | clarsimp split del: split_if)+
+     apply (wp | clarsimp split del: if_split)+
   apply (rule hoare_pre)
    apply wpc
     apply wp
@@ -136,7 +136,7 @@ lemma valid_vtable_root_update:
          \<Longrightarrow> CSpace_A.update_cap_data False x aa = aa"
   apply (clarsimp simp: update_cap_data_def badge_update_def is_valid_vtable_root_def Let_def
                         the_cnode_cap_def is_arch_cap_def arch_update_cap_data_def the_arch_cap_def
-                  split: split_if_asm cap.split_asm)
+                  split: if_split_asm cap.split_asm)
   done
 
 lemma decode_set_space_translate_tcb_invocation:
@@ -169,7 +169,7 @@ lemma decode_set_space_translate_tcb_invocation:
         apply (rule validE_validE_R)
         apply simp
         apply (rule_tac s1 = s in hoare_post_impErr[OF derive_cnode_cap_as_vroot],simp)
-         apply (rule conjI|simp split:split_if_asm)+
+         apply (rule conjI|simp split:if_split_asm)+
        apply (wp|clarsimp)+
       apply (rule validE_validE_R)
       apply (rule_tac s1 = s in hoare_post_impErr[OF derive_cnode_cap_as_croot])
@@ -188,7 +188,7 @@ lemma decode_set_space_translate_tcb_invocation:
        apply (rule validE_validE_R)
        apply simp
        apply (rule_tac s1 = s in hoare_post_impErr[OF derive_cnode_cap_as_vroot],simp)
-        apply (rule conjI|simp split:split_if_asm)+
+        apply (rule conjI|simp split:if_split_asm)+
          apply (rule valid_vtable_root_update)
          apply clarsimp+
       apply (wp|clarsimp)+
@@ -218,7 +218,7 @@ lemma is_cnode_cap_update_cap_data:
   "Structures_A.is_cnode_cap (CSpace_A.update_cap_data x w a) \<Longrightarrow> is_cnode_cap a"
   apply (case_tac a)
     apply (clarsimp simp:update_cap_data_def arch_update_cap_data_def is_arch_cap_def badge_update_def
-      is_cap_simps split:split_if_asm)+
+      is_cap_simps split:if_split_asm)+
 done
 
 lemma update_cnode_cap_data:
@@ -229,7 +229,7 @@ lemma update_cnode_cap_data:
     apply (simp add:cdl_update_cnode_cap_data_def CSpace_D.update_cap_data_def)
   apply (clarsimp simp: update_cap_data_def arch_update_cap_data_def split:if_splits)
   apply ((cases ab,simp_all add:badge_update_def)+)[2]
-  apply (clarsimp simp:is_cap_simps the_cnode_cap_def word_size split:split_if_asm simp:Let_def)
+  apply (clarsimp simp:is_cap_simps the_cnode_cap_def word_size split:if_split_asm simp:Let_def)
   apply (clarsimp simp:cdl_update_cnode_cap_data_def word_bits_def of_drop_to_bl
     word_size mask_twice dest!:leI)
 done
@@ -386,22 +386,22 @@ lemma decode_tcb_corres:
       apply (rule dcorres_symb_exec_rE)
         apply (case_tac rv, simp)
          (* please continue scrolling *)
-         apply (case_tac "(fst (hd excaps'))", simp_all split del: split_if)[1]
+         apply (case_tac "(fst (hd excaps'))", simp_all split del: if_split)[1]
                     prefer 4
                     apply (rename_tac rights)
                     apply (case_tac "AllowRead \<notin> rights", simp)
                      apply (rule corres_alternate2, rule dcorres_throw)
                     apply simp
                     apply (rule dcorres_symb_exec_rE)
-                      apply (case_tac "ntfn_obj rva", simp_all split del: split_if)[1]
-                        apply (case_tac "ntfn_bound_tcb rva", simp_all split del: split_if)[1]
+                      apply (case_tac "ntfn_obj rva", simp_all split del: if_split)[1]
+                        apply (case_tac "ntfn_bound_tcb rva", simp_all split del: if_split)[1]
                          apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw)
                          apply (case_tac "excaps' ! 0", clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
-                        apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if)+
-                      apply (case_tac "ntfn_bound_tcb rva", simp split del: split_if)[1]
+                        apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: if_split)+
+                      apply (case_tac "ntfn_bound_tcb rva", simp split del: if_split)[1]
                        apply (rename_tac rva word)
                        apply ((case_tac "excaps' ! 0",clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
-                                | clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if
+                                | clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: if_split
                                 | wp get_ntfn_wp
                                 | (case_tac "excaps' ! 0", rule dcorres_alternative_throw)
                                 | (case_tac "AllowRead \<in> rights", simp))+
@@ -1257,7 +1257,7 @@ lemma dcorres_tcb_update_cspace_root:
             apply (clarsimp)
           apply (rule iffI)
             apply (clarsimp simp:is_cap_simps bits_of_def cap_type_def transform_cap_def
-              split:cap.split_asm arch_cap.split_asm split_if_asm)
+              split:cap.split_asm arch_cap.split_asm if_split_asm)
           apply (clarsimp simp:cap_has_object_def is_cap_simps cap_type_def)
           apply (rule corres_split[OF _ get_cap_corres])
             apply (rule corres_when)

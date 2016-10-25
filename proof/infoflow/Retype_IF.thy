@@ -622,7 +622,7 @@ lemma retype_region_reads_respects:
                    retype_region_ext_extended.dxo_eq
                    )
   apply (simp only: retype_region_ext_def2)
-  apply(simp split del: split_if add: equiv_valid_def2)
+  apply(simp split del: if_split add: equiv_valid_def2)
   apply(rule_tac W="\<top>\<top>" and Q="\<top>\<top>" in equiv_valid_rv_bind)
     apply(rule equiv_valid_rv_guard_imp[OF if_evrv])
       apply (rule equiv_valid_rv_bind[OF gets_kheap_revrv])
@@ -672,7 +672,7 @@ lemma retype_region_globals_equiv:
      apply (wp | simp)+
   apply clarsimp
   apply (simp only: globals_equiv_def)
-  apply (clarsimp split del: split_if)
+  apply (clarsimp split del: if_split)
   apply (subgoal_tac "pspace_no_overlap_range_cover ptr sz sa")
    apply (rule conjI)
     apply(clarsimp simp: pspace_no_overlap_def)
@@ -750,12 +750,12 @@ lemma retype_region_reads_respects_g:
 
 lemma post_retype_invs_valid_arch_stateI:
   "post_retype_invs ty rv s \<Longrightarrow> valid_arch_state s"
-  apply(clarsimp simp: post_retype_invs_def invs_def valid_state_def split: split_if_asm)
+  apply(clarsimp simp: post_retype_invs_def invs_def valid_state_def split: if_split_asm)
   done
 
 lemma post_retype_invs_pspace_alignedI:
   "post_retype_invs ty rv s \<Longrightarrow> pspace_aligned s"
-  apply(clarsimp simp: post_retype_invs_def invs_def valid_state_def split: split_if_asm)
+  apply(clarsimp simp: post_retype_invs_def invs_def valid_state_def split: if_split_asm)
   done
 
 lemma detype_def2: "detype S (s :: det_state) = s
@@ -819,7 +819,7 @@ lemma a_type_small_pageD:
   ko = ArchObj (DataPage False ARMSmallPage)"
   apply (clarsimp simp: a_type_def
                  split: Structures_A.kernel_object.splits
-                        arch_kernel_obj.splits split_if_asm)
+                        arch_kernel_obj.splits if_split_asm)
   done
 
 lemma obj_range_small_page_as_ptr_range:
@@ -1010,7 +1010,7 @@ lemma reset_untyped_cap_reads_respects_g:
   apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule equiv_valid_guard_imp)
    apply (wp set_cap_reads_respects_g dmo_clearMemory_reads_respects_g
-       | simp add: unless_def when_def split del: split_if)+
+       | simp add: unless_def when_def split del: if_split)+
        apply (rule_tac I="invs and cte_wp_at (\<lambda>cp. is_untyped_cap rv
              \<and> (\<exists>idx. cp = free_index_update (\<lambda>_. idx) rv)
              \<and> free_index_of rv \<le> 2 ^ (bits_of rv)
@@ -1179,7 +1179,7 @@ lemma invoke_untyped_reads_respects_g_wcap:
                get_cap_reads_respects_g get_cap_wp
                reset_untyped_cap_reads_respects_g[where irq=irq and st=st]
            |strengthen invs_valid_global_objs_strg
-           |simp split del: split_if)+
+           |simp split del: if_split)+
   apply (clarsimp simp only: )
   apply (rule_tac P="authorised_untyped_inv aag ui
         \<and> (\<forall>p \<in> ptr_range ptr sz. is_subject aag p)" in hoare_gen_asmE)
@@ -1196,8 +1196,8 @@ lemma invoke_untyped_reads_respects_g_wcap:
     apply (frule(2) invoke_untyped_proofs.intro)
     apply (clarsimp simp: cte_wp_at_caps_of_state bits_of_def
                           free_index_of_def untyped_range_def
-                          split_if[where P="\<lambda>x. x \<le> unat v" for v]
-               split del: split_if)
+                          if_split[where P="\<lambda>x. x \<le> unat v" for v]
+               split del: if_split)
     apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
     apply (strengthen refl)
     apply (clarsimp simp: authorised_untyped_inv_def conj_comms
@@ -1210,7 +1210,7 @@ lemma invoke_untyped_reads_respects_g_wcap:
     apply (simp add: invoke_untyped_proofs.simps untyped_range_def
                      invs_cap_refs_in_kernel_window
                      atLeastatMost_subset_iff[where b=x and d=x for x]
-               cong: conj_cong split del: split_if)
+               cong: conj_cong split del: if_split)
     apply (intro conjI)
          (* mostly clagged from Untyped_AI *)
            apply (simp add: atLeastatMost_subset_iff word_and_le2)
@@ -1308,7 +1308,7 @@ lemma reset_untyped_cap_globals_equiv:
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         descendants_range_def2
                         is_cap_simps bits_of_def
-       split del: split_if)
+       split del: if_split)
   apply (frule caps_of_state_valid_cap, clarsimp+)
   apply (clarsimp simp: valid_cap_simps cap_aligned_def)
   apply (frule valid_global_refsD2, clarsimp+)
@@ -1333,11 +1333,11 @@ lemma invoke_untyped_globals_equiv:
       apply (clarsimp simp: retype_addrs_aligned_range_cover cte_wp_at_caps_of_state
                   simp del: valid_untyped_inv_wcap.simps)
       apply (frule valid_global_refsD2)
-       apply (clarsimp simp: post_retype_invs_def split: split_if_asm)
+       apply (clarsimp simp: post_retype_invs_def split: if_split_asm)
       apply (drule disjoint_subset2[rotated])
        apply (rule order_trans, erule retype_addrs_subset_ptr_bits)
        apply (simp add: untyped_range_def blah word_and_le2 field_simps)
-      apply (auto simp: global_refs_def post_retype_invs_def split: split_if_asm)[1]
+      apply (auto simp: global_refs_def post_retype_invs_def split: if_split_asm)[1]
      apply (rule hoare_pre, wp retype_region_globals_equiv[where slot="slot_of_untyped_inv ui"])
      apply (clarsimp simp: cte_wp_at_caps_of_state)
      apply (strengthen refl)

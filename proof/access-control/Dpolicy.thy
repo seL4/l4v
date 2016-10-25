@@ -315,7 +315,7 @@ lemma caps_of_state_transform_opt_cap_rev:
   apply (clarsimp simp:valid_objs_def dom_def)
   apply (drule_tac x=a in spec, clarsimp)
   apply (case_tac aa, simp_all add: object_slots_def caps_of_state_def2 nat_split_conv_to_if
-                             split: split_if_asm)
+                             split: if_split_asm)
      apply (clarsimp simp:valid_obj_def valid_cs_def valid_cs_size_def)
      apply (clarsimp simp:transform_cnode_contents_def)
      apply (rule_tac x=z in exI, simp)
@@ -331,7 +331,7 @@ lemma caps_of_state_transform_opt_cap_rev:
     apply (rule nat_to_bl_to_bin, simp+)
    apply (drule valid_etcbs_tcb_etcb [rotated], fastforce)
    apply clarsimp
-   apply (clarsimp simp:transform_tcb_def tcb_slot_defs split:split_if_asm)
+   apply (clarsimp simp:transform_tcb_def tcb_slot_defs split:if_split_asm)
          apply (clarsimp simp: is_null_cap_def is_bound_ntfn_cap_def infer_tcb_bound_notification_def 
                          split: option.splits)
         apply (simp add:is_thread_state_cap_def infer_tcb_pending_op_def is_null_cap_def is_real_cap_def
@@ -344,13 +344,13 @@ lemma caps_of_state_transform_opt_cap_rev:
    apply (subst bl_to_bin_tcb_cnode_index_le0; simp)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj; simp)
-    apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
+    apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:if_split_asm)
     apply (clarsimp simp:is_real_cap_def is_null_cap_def transform_asid_pool_entry_def
                     split:option.splits)
-   apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:split_if_asm)
+   apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:if_split_asm)
    apply (clarsimp simp:is_real_cap_def is_null_cap_def transform_pte_def
                    split:ARM_A.pte.splits)
-  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:split_if_asm)
+  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:if_split_asm)
   apply (clarsimp simp:is_real_cap_def is_null_cap_def transform_pde_def
                   split:ARM_A.pde.splits)
   done
@@ -371,7 +371,7 @@ lemma opt_cap_None_word_bits:
   apply (drule invs_valid_objs)
   apply (simp add:object_slots_def valid_objs_def)
   apply (case_tac aa, simp_all add: nat_split_conv_to_if
-                             split: split_if_asm)
+                             split: if_split_asm)
     apply (clarsimp simp:transform_cnode_contents_def object_slots_def)
     apply (drule_tac x=a in bspec)
      apply (simp add:dom_def)+
@@ -438,9 +438,9 @@ lemma thread_states_transform:
      apply simp
     apply (rule notI, drule invs_valid_idle, simp add:valid_idle_def pred_tcb_def2)
    apply (simp add:infer_tcb_pending_op_def, case_tac "tcb_state a",
-                                              (simp add:split_if_asm| erule disjE)+)
+                                              (simp add:if_split_asm| erule disjE)+)
   apply (simp add:infer_tcb_pending_op_def cdl_cap_auth_conferred_def,
-                    case_tac "tcb_state a", (simp add:split_if_asm| erule disjE)+)
+                    case_tac "tcb_state a", (simp add:if_split_asm| erule disjE)+)
   done
 
 lemma thread_bound_ntfns_transform:
@@ -473,23 +473,23 @@ lemma thread_state_cap_transform_tcb:
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (simp add:get_tcb_def object_slots_def)
   apply (case_tac aa, simp_all add: nat_split_conv_to_if
-                             split: split_if_asm)
+                             split: if_split_asm)
     apply (clarsimp simp:transform_cnode_contents_def)
-    apply (case_tac z, simp_all add:is_thread_state_cap_def split:split_if_asm)
+    apply (case_tac z, simp_all add:is_thread_state_cap_def split:if_split_asm)
     apply (rename_tac arch_cap)
     apply (case_tac arch_cap; simp)
    apply (clarsimp simp:transform_cnode_contents_def)
-   apply (case_tac z, simp_all add:is_thread_state_cap_def split:split_if_asm)
+   apply (case_tac z, simp_all add:is_thread_state_cap_def split:if_split_asm)
    apply (rename_tac arch_cap)
    apply (case_tac arch_cap; simp)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj; simp)
     apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def transform_asid_pool_entry_def
-                    split:split_if_asm option.splits)
+                    split:if_split_asm option.splits)
    apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def
-                   split:split_if_asm ARM_A.pte.splits)
+                   split:if_split_asm ARM_A.pte.splits)
   apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def
-                   split:split_if_asm ARM_A.pde.splits)
+                   split:if_split_asm ARM_A.pde.splits)
   done
 
 
@@ -514,12 +514,12 @@ lemma thread_bound_ntfn_cap_transform_tcb:
    apply (clarsimp simp:transform_cnode_contents_def)
   apply (clarsimp simp:transform_cnode_contents_def)
   apply (rename_tac arch_obj)
-  apply (case_tac arch_obj;clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
+  apply (case_tac arch_obj;clarsimp simp:transform_asid_pool_contents_def unat_map_def split:if_split_asm)
   apply (clarsimp simp:transform_asid_pool_entry_def is_bound_ntfn_cap_def split:option.splits)
      apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def is_bound_ntfn_cap_def
-                   split:split_if_asm ARM_A.pte.splits)
+                   split:if_split_asm ARM_A.pte.splits)
   apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def is_bound_ntfn_cap_def
-                   split:split_if_asm ARM_A.pde.splits)
+                   split:if_split_asm ARM_A.pde.splits)
   done
 
 
@@ -532,10 +532,10 @@ lemma thread_states_transform_rev:
   apply (clarsimp simp:thread_states_def tcb_states_of_state_def)
   apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
   apply (frule_tac sl=b in opt_cap_tcb, assumption, simp)
-  apply (clarsimp split:split_if_asm)
-   apply (case_tac "aa tcb", simp_all add:is_thread_state_cap_def split:split_if_asm)
+  apply (clarsimp split:if_split_asm)
+   apply (case_tac "aa tcb", simp_all add:is_thread_state_cap_def split:if_split_asm)
    apply (rename_tac arch_cap)
-   apply (case_tac "arch_cap", simp_all split:split_if_asm)
+   apply (case_tac "arch_cap", simp_all split:if_split_asm)
   apply (case_tac "tcb_state tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def 
                                              infer_tcb_bound_notification_def split: option.splits)
   done
@@ -549,10 +549,10 @@ lemma thread_bound_ntfns_transform_rev:
   apply (clarsimp simp:thread_bound_ntfns_def)
   apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
   apply (frule_tac sl=b in opt_cap_tcb, assumption, simp)
-  apply (clarsimp split:split_if_asm)    
-   apply (case_tac "tcb"; simp add:is_thread_state_cap_def is_bound_ntfn_cap_def split:split_if_asm)
+  apply (clarsimp split:if_split_asm)
+   apply (case_tac "tcb"; simp add:is_thread_state_cap_def is_bound_ntfn_cap_def split:if_split_asm)
    apply (rename_tac arch_cap)
-   apply (case_tac "arch_cap", simp_all split:split_if_asm)
+   apply (case_tac "arch_cap", simp_all split:if_split_asm)
   apply (clarsimp simp: infer_tcb_pending_op_def split: Structures_A.thread_state.splits)
   apply (case_tac "tcb_bound_notification tcb",
          auto simp: infer_tcb_pending_op_def cdl_cap_auth_conferred_def
@@ -704,16 +704,16 @@ lemma state_vrefs_transform_rev:
   apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
                        opt_cap_def slots_of_def opt_object_def)
   apply (case_tac aa, simp_all add: transform_object_def object_slots_def nat_split_conv_to_if
-                             split: split_if_asm)
+                             split: if_split_asm)
      apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
    apply (frule valid_etcbs_tcb_etcb [rotated], fastforce)
    apply (clarsimp simp: transform_tcb_def is_real_cap_transform is_real_cap_infer_tcb_pending_op 
                          is_real_cap_infer_tcb_bound_notification
-                   split:split_if_asm)
+                   split:if_split_asm)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add:vs_refs_no_global_pts_def graph_of_def)
-    apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
+    apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:if_split_asm)
     apply (rule exI)
     apply (rename_tac "fun")
     apply (case_tac "fun (of_nat b)")
@@ -722,7 +722,7 @@ lemma state_vrefs_transform_rev:
      apply (clarsimp simp:transform_asid_pool_entry_def cdl_cap_auth_conferred_def)
      apply simp
     apply (clarsimp simp:transform_asid_pool_entry_def)
-   apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:split_if_asm)
+   apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:if_split_asm)
    apply (rule exI)+
    apply (drule pte_ref_transform_rev)
    apply safe[1]
@@ -730,7 +730,7 @@ lemma state_vrefs_transform_rev:
    apply (rule_tac x="(ptr', auth)" in image_eqI)
     apply simp
    apply simp
-  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:split_if_asm)
+  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:if_split_asm)
   apply (subgoal_tac "(of_nat b :: 12 word) < ucast (kernel_base >> 20)")
    prefer 2
    apply (subst word_not_le[symmetric])
@@ -752,7 +752,7 @@ lemma cdl_cdt_transform_rev:
   "\<lbrakk> invs s; cdl_cdt (transform s) slot' = Some slot \<rbrakk> \<Longrightarrow>
      \<exists>ptr' ptr. slot' = transform_cslot_ptr ptr' \<and> slot = transform_cslot_ptr ptr \<and>
                 cdt s ptr' = Some ptr"
-  apply (clarsimp simp:cdt_transform map_lift_over_def split:split_if_asm)
+  apply (clarsimp simp:cdt_transform map_lift_over_def split:if_split_asm)
   apply (rule_tac x=a in exI, rule_tac x=b in exI)
   apply (subst (asm) inv_into_f_f)
     apply (rule subset_inj_on)
@@ -832,7 +832,7 @@ lemma state_objs_transform_rev:
       apply simp
      apply (subst (asm) untyped_range_transform[symmetric])
       apply (simp add:is_untyped_cap_def transform_cap_def
-                  split:cap.splits arch_cap.splits split_if_asm)
+                  split:cap.splits arch_cap.splits if_split_asm)
      apply simp
     apply (simp add:cdl_cap_auth_conferred_def is_untyped_cap_def split:cdl_cap.splits)
    apply clarsimp
@@ -841,7 +841,7 @@ lemma state_objs_transform_rev:
      apply simp
     apply (subst (asm) obj_refs_transform[symmetric])
      apply (simp add:is_untyped_cap_def transform_cap_def
-                 split:cap.splits arch_cap.splits split_if_asm)
+                 split:cap.splits arch_cap.splits if_split_asm)
     apply simp
    apply (simp add:cap_auth_conferred_transform)
   apply (drule cdl_cdt_transform_rev [rotated], simp+)
@@ -952,20 +952,20 @@ lemma opt_cap_Some_asid_real:
   apply (case_tac "kheap s a")
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac aa, simp_all add:object_slots_def valid_objs_def nat_split_conv_to_if
-                             split: split_if_asm)
+                             split: if_split_asm)
      apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
    apply (clarsimp simp: transform_tcb_def tcb_slot_defs is_real_cap_infer_tcb_bound_notification 
                          is_real_cap_transform is_real_cap_infer_tcb_pending_op 
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj; simp)
-    apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
+    apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:if_split_asm)
     apply (clarsimp simp:transform_asid_pool_entry_def split:option.splits)
-   apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:split_if_asm)
+   apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:if_split_asm)
    apply (clarsimp simp:transform_pte_def split:ARM_A.pte.splits)
-  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:split_if_asm)
+  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:if_split_asm)
   apply (clarsimp simp:transform_pde_def split:ARM_A.pde.splits)
   done
 
@@ -994,11 +994,11 @@ lemma state_vrefs_asid_pool_transform_rev:
   apply (drule bspec)
    apply fastforce
   apply (case_tac a, simp_all add:transform_object_def object_slots_def)
-    apply (clarsimp simp:obj_at_def a_type_def split:split_if_asm)+
+    apply (clarsimp simp:obj_at_def a_type_def split:if_split_asm)+
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj; simp add:vs_refs_no_global_pts_def graph_of_def)
   apply (simp add:transform_asid_pool_contents_def unat_map_def transform_asid_low_bits_of
-              split:split_if_asm)
+              split:if_split_asm)
   apply (rule_tac x="(ucast asid, cap_object pdcap)" in image_eqI)
    apply (simp add:mask_asid_low_bits_ucast_ucast)
   apply (clarsimp simp:transform_asid_pool_entry_def split:option.splits)
@@ -1114,9 +1114,9 @@ proof -
     apply (cases)
      using e
      apply (clarsimp simp: transform_def transform_objects_def restrict_map_def
-                     split: split_if_asm Structures_A.kernel_object.splits)
+                     split: if_split_asm Structures_A.kernel_object.splits)
      apply (case_tac z, simp_all add: nat_split_conv_to_if
-                               split: split_if_asm)
+                               split: if_split_asm)
       prefer 2
       apply (rename_tac arch_kernel_obj)
       apply (case_tac arch_kernel_obj; simp)

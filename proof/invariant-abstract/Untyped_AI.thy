@@ -77,7 +77,7 @@ lemma cnode_cap_bits_range:
   apply (frule domI, drule (1) bspec)
   apply (clarsimp simp: obj_bits.simps ex_with_length add.commute 
                         cte_level_bits_def 
-                  split: split_if_asm)
+                  split: if_split_asm)
   done
 
 
@@ -168,9 +168,9 @@ lemma dui_inv[wp]:
   "\<lbrace>P\<rbrace> decode_untyped_invocation label args slot (cap.UntypedCap dev w n idx) cs \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: decode_untyped_invocation_def whenE_def
                    split_def data_to_obj_type_def unlessE_def
-              split del: split_if cong: if_cong)
+              split del: if_split cong: if_cong)
   apply (rule hoare_pre)
-   apply (simp split del: split_if
+   apply (simp split del: if_split
               | wp_once mapME_x_inv_wp hoare_drop_imps const_on_failure_wp
               | assumption 
               | simp add: lookup_target_slot_def
@@ -870,7 +870,7 @@ lemma create_cap_wps[wp]:
       apply (wp set_cap_cte_wp_at' set_cdt_cte_wp_at
                 set_cap_valid_objs set_cdt_valid_objs
                 set_cdt_valid_cap set_cap_valid_cap
-              | simp split del: split_if
+              | simp split del: if_split
                            add: real_cte_tcb_valid)+
   done
 
@@ -953,7 +953,7 @@ lemma untyped_inc':
   unfolding untyped_inc_def descendants_of_def
   apply (intro allI impI)
   apply (rule conjI)
-    apply (simp add: parency del: split_paired_All split: split_if_asm)
+    apply (simp add: parency del: split_paired_All split: if_split_asm)
     apply (rule untyped_ranges_aligned_disjoing_or_subset[OF _ cs_cap_aligned])
      apply simp
     apply simp
@@ -961,7 +961,7 @@ lemma untyped_inc':
      apply simp
     apply simp
   apply (case_tac "p' = src")
-   apply (simp add: parency del: split_paired_All split: split_if_asm)
+   apply (simp add: parency del: split_paired_All split: if_split_asm)
       apply (erule_tac x=src in allE)
       apply (erule_tac x=p in allE)
       apply (simp add: c_dest)
@@ -986,7 +986,7 @@ lemma untyped_inc':
        apply simp+
     apply (intro conjI impI,clarsimp+)[1]
    apply (intro conjI impI,clarsimp+)[1]
-  apply (simp add: parency del: split_paired_All split: split_if_asm)
+  apply (simp add: parency del: split_paired_All split: if_split_asm)
     apply (erule_tac x=src in allE)
     apply (erule_tac x=p' in allE)
     apply simp
@@ -1156,7 +1156,7 @@ lemma create_cap_mdb[wp]:
   apply (fold fun_upd_def)
   apply (intro conjI)
           apply (rule mdb_cte_atI)
-          apply (simp add: is_cap_simps split: split_if_asm)
+          apply (simp add: is_cap_simps split: if_split_asm)
            apply (drule(1) mdb_cte_atD,clarsimp)+
          apply (simp add: untyped_mdb_def descendants_of_def mdb_insert_abs.parency 
                 del: split_paired_All)
@@ -1191,7 +1191,7 @@ lemma create_cap_mdb[wp]:
         apply (clarsimp simp: is_cap_simps cap_range_def cap_class_default_cap)
        apply (clarsimp simp: no_mloop_def)
        apply (frule_tac p = "(a,b)" and p'="(a,b)" in mdb_insert_abs.parency)
-       apply (simp split: split_if_asm)
+       apply (simp split: if_split_asm)
        apply (erule disjE)
         apply (drule_tac m = "cdt s" in mdb_cte_at_Null_descendants)
          apply (clarsimp simp: untyped_mdb_def)
@@ -1334,7 +1334,7 @@ lemma retype_region_invs_extras:
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   apply (wp hoare_strengthen_post [OF retype_region_post_retype_invs],
-    auto simp: post_retype_invs_def split: split_if_asm)+
+    auto simp: post_retype_invs_def split: if_split_asm)+
   done
 
 lemma set_tuple_pick:
@@ -1360,7 +1360,7 @@ lemma retype_ret_valid_caps:
       and K (tp \<noteq> ArchObject ASIDPoolObj)
       and K (range_cover ptr sz (obj_bits_api tp us) n \<and> ptr \<noteq> 0)\<rbrace>
         retype_region ptr n us tp dev\<lbrace>\<lambda>rv (s::'state_ext state). \<forall>y\<in>set rv. s \<turnstile> default_cap tp y us dev\<rbrace>"
-  apply (simp add: retype_region_def split del: split_if cong: if_cong)
+  apply (simp add: retype_region_def split del: if_split cong: if_cong)
   apply wp
   apply (simp only: trans_state_update[symmetric] more_update.valid_cap_update)
   apply wp
@@ -1744,7 +1744,7 @@ lemma caps_overlap_reserved_def2:
     apply (elim ballE impE)
       apply simp
      apply simp
-    apply (simp add: ran_def null_filter_def split: split_if_asm option.splits)    
+    apply (simp add: ran_def null_filter_def split: if_split_asm option.splits)
   apply (elim ballE impE)
     apply simp
    apply simp
@@ -1938,10 +1938,10 @@ lemma set_untyped_cap_caps_overlap_reserved:
   apply (unfold caps_overlap_reserved_def)
   apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state caps_overlap_reserved_def 
-              simp del: usable_untyped_range.simps split: split_if_asm)
+              simp del: usable_untyped_range.simps split: if_split_asm)
   apply (frule invs_mdb)
   apply (erule ranE)
-  apply (simp split: split_if_asm del: usable_untyped_range.simps add: valid_mdb_def)
+  apply (simp split: if_split_asm del: usable_untyped_range.simps add: valid_mdb_def)
   apply (drule untyped_incD)
    apply ((simp add: is_cap_simps)+)[4]
   apply clarify
@@ -2648,7 +2648,7 @@ lemma alignUp_ge_nat:
   apply (cases n, simp_all add: Suc_le_eq)
   apply (subgoal_tac "\<exists>q r. nat = q * m + r \<and> r < m")
    apply clarsimp
-  apply (metis mod_div_equality mod_less_divisor)
+  apply (metis div_mult_mod_eq mod_less_divisor)
   done
 
 lemma alignUp_le_nat:
@@ -2860,7 +2860,7 @@ lemma reset_untyped_cap_invs_etc:
   apply (rule hoare_vcg_seqE[rotated])
    apply (wp get_cap_sp)[1]
   apply (rule hoare_name_pre_stateE)
-  apply (clarsimp simp: cte_wp_at_caps_of_state bits_of_def split del: split_if)
+  apply (clarsimp simp: cte_wp_at_caps_of_state bits_of_def split del: if_split)
   apply (subgoal_tac "is_aligned ptr sz")
    prefer 2
    apply (frule caps_of_state_valid_cap, clarsimp+)
@@ -2871,7 +2871,7 @@ lemma reset_untyped_cap_invs_etc:
    apply clarsimp
    apply (frule(1) caps_of_state_pspace_no_overlapD, simp+)
    apply (simp add: word_bw_assocs field_simps)
-  apply (clarsimp simp: free_index_of_def split del: split_if)
+  apply (clarsimp simp: free_index_of_def split del: if_split)
   apply (rule_tac B="\<lambda>_. invs and valid_untyped_inv_wcap ?ui (Some ?cap)
         and ct_active and ?psp" in hoare_vcg_seqE[rotated])
    apply clarsimp
@@ -2934,10 +2934,10 @@ lemma reset_untyped_cap_invs_etc:
      apply (clarsimp simp: is_aligned_neg_mask_eq bits_of_def field_simps
                            cte_wp_at_caps_of_state nth_rev)
      apply (strengthen order_trans[where z="2 ^ sz", rotated, mk_strg I E])
-     apply (clarsimp split: split_if_asm)
+     apply (clarsimp split: if_split_asm)
       apply auto[1]
      apply (auto elim: order_trans[rotated])[1]
-    apply (clarsimp simp: cte_wp_at_caps_of_state split: split_if_asm)
+    apply (clarsimp simp: cte_wp_at_caps_of_state split: if_split_asm)
    apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
@@ -3073,7 +3073,7 @@ lemma create_cap_valid_global_refs[wp]:
   apply (simp only: imp_conv_disj)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-                | simp split del: split_if)+
+                | simp split del: if_split)+
   apply clarsimp
   apply (subgoal_tac "global_refs s \<inter> cap_range (default_cap tp oref sz dev) = {}")
    apply auto[1]
@@ -3546,12 +3546,12 @@ lemma (in Untyped_AI_nonempty_table) retype_nonempty_table[wp]:
   "\<lbrace>\<lambda>(s::('state_ext::state_ext) state). \<not> (obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)\<rbrace>
      retype_region ptr sz us tp dev
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)\<rbrace>"
-  apply (simp add: retype_region_def split del: split_if)
+  apply (simp add: retype_region_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp|simp del: fun_upd_apply)+
   apply (clarsimp simp del: fun_upd_apply)
   apply (simp add: foldr_upd_app_if)
-  apply (clarsimp simp: obj_at_def split: split_if_asm)
+  apply (clarsimp simp: obj_at_def split: if_split_asm)
   done
 
 lemma invs_valid_global_objs_strg:
@@ -3848,7 +3848,7 @@ lemma invoke_untyp_invs':
        apply blast
 
       apply (simp add: cte_wp_at_conj ball_conj_distrib
-                       split del: split_if
+                       split del: if_split
               | wp hoare_vcg_const_Ball_lift set_tuple_pick
                    retype_region_ex_cte_cap_to [where sz = sz] 
                    retype_region_obj_ref_range [where sz = sz]
@@ -3911,19 +3911,19 @@ lemma invoke_untyp_invs':
        apply (wp set_cap_cte_wp_at_neg hoare_vcg_all_lift get_cap_wp)
 
       apply (clarsimp simp: slot_not_in field_simps ui free_index_of_def
-                   split del: split_if)
+                   split del: if_split)
       apply ((strengthen cover refl)+)?
       apply (simp only: cte_wp_at_caps_of_state, clarify,
-        simp only: option.simps, simp(no_asm_use) split del: split_if, clarify)
+        simp only: option.simps, simp(no_asm_use) split del: if_split, clarify)
       apply (clarsimp simp: bits_of_def untyped_range.simps
-                            split_if[where P="\<lambda>v. v \<le> unat x" for x])
+                            if_split[where P="\<lambda>v. v \<le> unat x" for x])
 
       apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
       apply (clarsimp simp:cte_wp_at_caps_of_state untyped_range.simps
                            conj_comms
-                 split del: split_if)
+                 split del: if_split)
       apply (frule invoke_untyped_proofs.intro[where cref="(cref, oref)" and reset=reset, rotated 1],
-        simp_all add: cte_wp_at_caps_of_state split del: split_if)
+        simp_all add: cte_wp_at_caps_of_state split del: if_split)
        apply (rule conjI, (rule refl | assumption))+
        apply clarsimp
       apply (simp add: invoke_untyped_proofs.simps p_neq_0)

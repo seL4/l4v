@@ -687,7 +687,7 @@ fun tactic_check' (ss, t) = (ss, tactic_check (hd ss) t)
 fun graph_refine_proof_tacs csenv ctxt = let
     (* FIXME: fix shiftr_no and sshiftr_no in Word *)
     val ctxt = ctxt delsimps @{thms shiftr_no sshiftr_no shiftl_numeral}
-        |> Splitter.del_split @{thm split_if}
+        |> Splitter.del_split @{thm if_split}
         |> Simplifier.del_cong @{thm if_weak_cong}
 
   in [

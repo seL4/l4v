@@ -116,7 +116,7 @@ lemma getObject_state:
   \<Longrightarrow> (if t = t' then tcbState_update (\<lambda>_. st) x else x, 
       s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>)
       \<in> fst (getObject t' (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   apply (rule conjI)
    apply clarsimp
    apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad 
@@ -125,7 +125,7 @@ lemma getObject_state:
    apply (simp add: magnitudeCheck_def in_monad split: option.splits)
    apply clarsimp
    apply (simp add: lookupAround2_char2)
-   apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
    apply (erule_tac x=x2 in allE)
    apply (clarsimp simp: ps_clear_def)
    apply (drule_tac x=x2 in orthD2)
@@ -142,7 +142,7 @@ lemma getObject_state:
   apply (simp add: magnitudeCheck_def in_monad split: option.splits)
   apply clarsimp
   apply (simp add: lookupAround2_char2)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
    apply (erule_tac x=t in allE)
    apply simp
    apply (clarsimp simp: obj_at'_real_def projectKOs 
@@ -207,7 +207,7 @@ lemma asUser_state:
   apply (clarsimp simp: setObject_def split_def updateObject_default_def threadGet_def
                         in_magnitude_check' getObject_def loadObject_default_def liftM_def
                         objBits_simps projectKOs in_monad)
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   apply (rule conjI)
    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
    apply (clarsimp simp: magnitudeCheck_def in_monad split: option.splits)
@@ -215,12 +215,12 @@ lemma asUser_state:
     apply clarsimp
     apply (cases s, simp)
     apply (rule ext)
-    apply (clarsimp split: split_if)
+    apply (clarsimp split: if_split)
     apply (cases ko)
     apply clarsimp
    apply clarsimp
    apply (rule conjI)
-    apply (clarsimp simp add: lookupAround2_char2 split: split_if_asm)
+    apply (clarsimp simp add: lookupAround2_char2 split: if_split_asm)
     apply (erule_tac x=x2 in allE)
     apply simp
     apply (simp add: ps_clear_def)
@@ -236,17 +236,17 @@ lemma asUser_state:
    apply (rule conjI, fastforce)
    apply clarsimp
    apply (cases s, clarsimp)
-   apply (rule ext, clarsimp split: split_if)
+   apply (rule ext, clarsimp split: if_split)
    apply (cases ko, clarsimp)
   apply (clarsimp simp: magnitudeCheck_def in_monad split: option.splits)
   apply (rule conjI)
    apply clarsimp
    apply (cases s, clarsimp)
-   apply (rule ext, clarsimp split: split_if)
+   apply (rule ext, clarsimp split: if_split)
    apply (case_tac tcb, clarsimp)
   apply clarsimp
   apply (rule conjI)
-   apply (clarsimp simp add: lookupAround2_char2 split: split_if_asm)
+   apply (clarsimp simp add: lookupAround2_char2 split: if_split_asm)
     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs objBits_simps)
     apply (erule_tac x=t in allE)
     apply simp
@@ -276,7 +276,7 @@ lemma asUser_state:
   apply (rule conjI, fastforce)
   apply clarsimp
   apply (cases s, clarsimp)
-  apply (rule ext, clarsimp split: split_if)
+  apply (rule ext, clarsimp split: if_split)
   apply (case_tac tcb, clarsimp)
   done
 
@@ -325,10 +325,10 @@ lemma getMRs_rel_state:
    apply (simp add: cur_tcb'_def)
    apply (rule conjI)
     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs 
-                          objBits_simps ps_clear_def split: split_if)
+                          objBits_simps ps_clear_def split: if_split)
    apply (clarsimp simp: valid_ipc_buffer_ptr'_def split: option.splits)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def projectKOs obj_at'_real_def
-                         objBits_simps ps_clear_def split: split_if)
+                         objBits_simps ps_clear_def split: if_split)
   apply (clarsimp simp: getMRs_def in_monad)
   apply (frule use_valid, rule asUser_inv [where P="op = s"])
     apply (wp mapM_wp' getRegister_inv)[1]
@@ -351,7 +351,7 @@ lemma getMRs_rel_state:
   apply (rule conjI)
    apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def 
                          projectKOs ps_clear_def obj_at'_real_def
-                  split: split_if)
+                  split: if_split)
   apply (erule doMachineOp_state)
   done
 
@@ -379,7 +379,7 @@ lemma setThreadState_getMRs_rel:
   apply (drule obj_at_ko_at')+
   apply (clarsimp simp del: fun_upd_apply)
   apply (rule exI, rule conjI, assumption)
-  apply (clarsimp split: split_if simp del: fun_upd_apply)
+  apply (clarsimp split: if_split simp del: fun_upd_apply)
   apply (simp add: getMRs_rel_state)
   done
 
@@ -405,7 +405,7 @@ lemma distinct_remove1_filter:
   "distinct xs \<Longrightarrow> remove1 v xs = [x\<leftarrow>xs. x \<noteq> v]"
   apply (induct xs)
    apply simp
-  apply (clarsimp split: split_if)
+  apply (clarsimp split: if_split)
   apply (rule sym, simp add: filter_id_conv)
   apply clarsimp
   done
@@ -1119,7 +1119,7 @@ lemma invokeTCB_CopyRegisters_ccorres:
            apply wp
          apply (simp add: pred_conj_def guard_is_UNIV_def cong: if_cong
                    | wp mapM_x_wp' static_imp_wp)+
-  apply (clarsimp simp: Collect_const_mem from_bool_def true_def split: split_if)
+  apply (clarsimp simp: Collect_const_mem from_bool_def true_def split: if_split)
   apply (auto simp: invs'_def valid_state'_def global'_no_ex_cap sch_act_simple_imp_weak_sch_act_wf)
   done
 
@@ -1173,7 +1173,7 @@ lemma getObject_context:
   \<Longrightarrow> (if t = t' then tcbContext_update (\<lambda>_. st) x else x, 
       s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>)
       \<in> fst (getObject t' (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>))"
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   apply (rule conjI)
    apply clarsimp
    apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad 
@@ -1182,7 +1182,7 @@ lemma getObject_context:
    apply (simp add: magnitudeCheck_def in_monad split: option.splits)
    apply clarsimp
    apply (simp add: lookupAround2_char2)
-   apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
    apply (erule_tac x=x2 in allE)
    apply (clarsimp simp: ps_clear_def)
    apply (drule_tac x=x2 in orthD2)
@@ -1200,7 +1200,7 @@ lemma getObject_context:
   apply (simp add: magnitudeCheck_def in_monad split: option.splits)
   apply clarsimp
   apply (simp add: lookupAround2_char2)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
    apply (erule_tac x=t in allE)
    apply simp
    apply (clarsimp simp: obj_at'_real_def projectKOs 
@@ -1272,12 +1272,12 @@ lemma asUser_context:
   apply (rule conjI)
    apply clarsimp
    apply (cases s, simp)
-   apply (rule ext, clarsimp split: split_if) 
+   apply (rule ext, clarsimp split: if_split)
    apply (case_tac tcb, simp)
 
   apply clarsimp
   apply (rule conjI)
-   apply (clarsimp simp add: lookupAround2_char2 split: split_if_asm)
+   apply (clarsimp simp add: lookupAround2_char2 split: if_split_asm)
     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs objBits_simps)
     apply (erule_tac x=t in allE)
     apply simp
@@ -1307,7 +1307,7 @@ lemma asUser_context:
   apply (rule conjI, fastforce)
   apply clarsimp
   apply (cases s, clarsimp)
-  apply (rule ext, clarsimp split: split_if)
+  apply (rule ext, clarsimp split: if_split)
   apply (case_tac tcb, clarsimp)
 done
 
@@ -1325,10 +1325,10 @@ lemma getMRs_rel_context:
    apply (simp add: cur_tcb'_def)
    apply (rule conjI)
     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs 
-                          objBits_simps ps_clear_def split: split_if)
+                          objBits_simps ps_clear_def split: if_split)
    apply (clarsimp simp: valid_ipc_buffer_ptr'_def split: option.splits)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def projectKOs obj_at'_real_def
-                         objBits_simps ps_clear_def split: split_if)
+                         objBits_simps ps_clear_def split: if_split)
   apply (clarsimp simp: getMRs_def in_monad)
   apply (frule use_valid, rule asUser_inv [where P="op = s"])
     apply (wp mapM_wp' getRegister_inv)[1]
@@ -1352,7 +1352,7 @@ lemma getMRs_rel_context:
   apply (rule conjI)
    apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def 
                          projectKOs ps_clear_def obj_at'_real_def
-                  split: split_if)
+                  split: if_split)
   apply (erule doMachineOp_context)
 done
 
@@ -1372,7 +1372,7 @@ lemma asUser_getMRs_rel:
   apply (drule obj_at_ko_at')+
   apply (clarsimp simp del: fun_upd_apply)
   apply (rule exI, rule conjI, assumption)
-  apply (clarsimp split: split_if simp del: fun_upd_apply)
+  apply (clarsimp split: if_split simp del: fun_upd_apply)
   apply (erule getMRs_rel_context, simp)
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs)
   apply simp
@@ -1531,7 +1531,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
     apply (simp add: performTransfer_def)
     apply wp
    apply vcg
-  apply (clarsimp simp: n_msgRegisters_def sysargs_rel_n_def split: split_if)
+  apply (clarsimp simp: n_msgRegisters_def sysargs_rel_n_def split: if_split)
   apply (rule conjI)
    apply (cases args, simp)
    apply (case_tac list, simp)
@@ -1539,7 +1539,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
    apply simp
   apply (clarsimp simp: frame_gp_registers_convs word_less_nat_alt
                         sysargs_rel_def n_frameRegisters_def n_msgRegisters_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemma invokeTCB_Suspend_ccorres:
@@ -1649,7 +1649,7 @@ shows
      apply (rename_tac cthread,
             rule_tac P="cthread = tcb_ptr_to_ctcb_ptr thread" in ccorres_gen_asm2)
      apply (rule ccorres_split_nothrow_dc)
-        apply (simp add: when_def del: Collect_const split del: split_if)
+        apply (simp add: when_def del: Collect_const split del: if_split)
         apply (rule ccorres_cond2[where R=\<top>], simp add: from_bool_0 Collect_const_mem)
          apply (ctac add: suspend_ccorres[OF cteDeleteOne_ccorres])
         apply (rule ccorres_return_Skip)
@@ -1706,13 +1706,13 @@ shows
                              apply (clarsimp simp: obj_at'_def projectKOs asUser_fetch_def
                                                    frame_gp_registers_convs genericTake_def
                                                    nth_append
-                                            split: split_if)
+                                            split: if_split)
                             apply (simp add: n_frameRegisters_def n_msgRegisters_def)
                            apply (simp add: frame_gp_registers_convs msg_registers_convs
                                             n_msgRegisters_def n_frameRegisters_def
                                             n_gpRegisters_def msgMaxLength_def msgLengthBits_def
                                      split: option.split)
-                           apply (simp add: min_def word_less_nat_alt split: split_if)[1]
+                           apply (simp add: min_def word_less_nat_alt split: if_split)[1]
                            apply arith
                           apply (rule allI, rule conseqPre, vcg exspec=setRegister_modifies
                                                                 exspec=getRegister_modifies)
@@ -1807,8 +1807,8 @@ shows
                                                 n_gpRegisters_def Types_H.msgMaxLength_def
                                                 Types_H.msgLengthBits_def
                                          split: option.split)
-                               apply (simp add: min_def word_less_nat_alt split: split_if)[1]
-                               apply (simp split: split_if_asm, arith+)[1]
+                               apply (simp add: min_def word_less_nat_alt split: if_split)[1]
+                               apply (simp split: if_split_asm, arith+)[1]
                               apply (rule allI, rule conseqPre, vcg)
                               apply clarsimp
                              apply (wp)
@@ -1820,7 +1820,7 @@ shows
                                                  msgMaxLength_def Types_H.msgLengthBits_def
                                                  n_gpRegisters_def msg_registers_convs
                                           split: option.split_asm)
-                           apply (simp add: min_def split: split_if_asm split_if)
+                           apply (simp add: min_def split: if_split_asm if_split)
                            apply arith
                           apply (drule_tac s=rv'a in sym, simp)
                           apply (rule_tac P=\<top> and P'="{s. i_' s = rv'a}" in ccorres_inst)
@@ -1833,12 +1833,12 @@ shows
                             apply (rule ccorres_guard_imp2, rule ccorres_return_Skip')
                             apply (simp add: n_msgRegisters_def n_frameRegisters_def
                                              n_gpRegisters_def cong: option.case_cong)
-                            apply (simp add: min_def split: split_if option.split)
+                            apply (simp add: min_def split: if_split option.split)
                            apply (simp add: mapM_x_Nil)
                            apply (rule ccorres_guard_imp2, rule ccorres_return_Skip')
                            apply (simp add: n_msgRegisters_def n_frameRegisters_def
                                             n_gpRegisters_def cong: option.case_cong)
-                           apply (simp add: min_def split: split_if option.split)
+                           apply (simp add: min_def split: if_split option.split)
                            apply (clarsimp simp only: unat_arith_simps, simp)
                           apply (clarsimp simp: less_diff_conv word_le_nat_alt linorder_not_less)
                           apply (subst(asm) unat_of_nat32)
@@ -1895,7 +1895,7 @@ shows
                                                      n_msgRegisters_def n_frameRegisters_def
                                                      n_gpRegisters_def msgMaxLength_def msgLengthBits_def
                                                 del: upt.simps upt_rec_numeral)
-                                    apply (simp add: min_def split: split_if_asm)
+                                    apply (simp add: min_def split: if_split_asm)
                                    apply (rule frame_gp_registers_convs)
                                    apply (simp add: frame_gp_registers_convs n_msgRegisters_def n_frameRegisters_def
                                                     n_gpRegisters_def msgMaxLength_def msgLengthBits_def
@@ -1911,7 +1911,7 @@ shows
                                                        nth_append frame_gp_registers_convs
                                                        n_frameRegisters_def n_gpRegisters_def
                                                        n_msgRegisters_def frame_gp_registers_convs
-                                                 cong: if_cong split: split_if)
+                                                 cong: if_cong split: if_split)
                                  apply (clarsimp simp: frame_gp_registers_convs n_gpRegisters_def
                                                        min.absorb1 unat_of_nat)
                                 apply (clarsimp simp: less_diff_conv)
@@ -1920,11 +1920,11 @@ shows
                                                       n_msgRegisters_def frame_gp_registers_convs
                                                       Types_H.msgMaxLength_def Types_H.msgLengthBits_def
                                                       msg_registers_convs
-                                                cong: if_cong split: split_if)
+                                                cong: if_cong split: if_split)
                                 apply (simp add: word_less_nat_alt unat_of_nat)
                                 apply (simp add: iffD1[OF unat_add_lem] cong: conj_cong)
                                 apply (simp add: min_def
-                                          split: split_if split_if_asm, arith+)[1]
+                                          split: if_split if_split_asm, arith+)[1]
                                apply (rule allI, rule conseqPre, vcg)
                                apply clarsimp
                               apply wp
@@ -1964,11 +1964,11 @@ shows
                                        split: option.split_asm)
                          apply (clarsimp simp: min_def iffD2 [OF mask_eq_iff_w2p] word_size
                                                word_less_nat_alt
-                                       split: split_if_asm dest!: word_unat.Rep_inverse')
+                                       split: if_split_asm dest!: word_unat.Rep_inverse')
                         apply (clarsimp simp: length_msgRegisters n_msgRegisters_def)
                         apply (clarsimp simp: min_def iffD2 [OF mask_eq_iff_w2p] word_size
                                               word_less_nat_alt 
-                                      split: split_if_asm dest!: word_unat.Rep_inverse')
+                                      split: if_split_asm dest!: word_unat.Rep_inverse')
                         apply unat_arith
                        apply simp
                        apply (wp mapM_x_wp' sch_act_wf_lift valid_queues_lift static_imp_wp
@@ -1986,7 +1986,7 @@ shows
                                           n_frameRegisters_def n_gpRegisters_def
                                           msgMaxLength_def msgLengthBits_def
                                           word_less_nat_alt unat_of_nat)
-                    apply (simp add: min_def split: split_if_asm)
+                    apply (simp add: min_def split: if_split_asm)
                    apply (wp_once hoare_drop_imps)
                    apply (wp asUser_obj_at'[where t'=target] static_imp_wp
                              asUser_valid_ipc_buffer_ptr')
@@ -2030,7 +2030,7 @@ shows
     apply vcg
    apply (rule conseqPre, vcg, clarsimp)
   apply (clarsimp simp: rf_sr_ksCurThread ct_in_state'_def true_def
-                 split: split_if)
+                 split: if_split)
   done
 
 lemma capTCBPtr_eq:
@@ -2130,7 +2130,7 @@ lemma decodeReadRegisters_ccorres:
          apply (rule ccorres_nondet_refinement)
           apply (rule is_nondet_refinement_bindE)
            apply (rule is_nondet_refinement_refl)
-          apply (simp split: split_if)
+          apply (simp split: if_split)
           apply (rule conjI[rotated], rule impI, rule is_nondet_refinement_refl)
           apply (rule impI)
           apply (rule is_nondet_refinement_alternative1)         
@@ -2162,7 +2162,7 @@ lemma decodeReadRegisters_ccorres:
                      valid_tcb_state'_def
               elim!: pred_tcb'_weakenE
               dest!: st_tcb_at_idle_thread')[1]
-  apply (clarsimp simp: from_bool_def word_and_1 split: split_if)
+  apply (clarsimp simp: from_bool_def word_and_1 split: if_split)
   done
 
 lemma decodeWriteRegisters_ccorres:
@@ -2276,7 +2276,7 @@ lemma decodeWriteRegisters_ccorres:
   apply (clarsimp simp: genericTake_def linorder_not_less)
   apply (subst hd_conv_nth, clarsimp simp: unat_eq_0)
   apply (clarsimp simp: from_bool_def word_and_1
-                 split: split_if)
+                 split: if_split)
   done
 
 lemma excaps_map_Nil: "(excaps_map caps = []) = (caps = [])"
@@ -2407,7 +2407,7 @@ lemma decodeCopyRegisters_ccorres:
               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]
   apply (clarsimp simp: word_sle_def CopyRegistersFlags_defs word_sless_def
                         "StrictC'_thread_state_defs" rf_sr_ksCurThread
-                 split: split_if)
+                 split: if_split)
   apply (drule interpret_excaps_eq)
   apply (clarsimp simp: mask_def excaps_map_def split_def ccap_rights_relation_def
                         rightsFromWord_wordFromRights excaps_map_Nil)
@@ -2415,7 +2415,7 @@ lemma decodeCopyRegisters_ccorres:
          drule(1) cap_get_tag_to_H)
   apply (clarsimp simp: cap_get_tag_isCap to_bool_def)
   apply (auto simp: unat_eq_of_nat word_and_1_shiftls
-    word_and_1_shiftl [where n=3,simplified] cap_get_tag_isCap[symmetric] split: split_if_asm)
+    word_and_1_shiftl [where n=3,simplified] cap_get_tag_isCap[symmetric] split: if_split_asm)
   done
 
 (* FIXME: move *)
@@ -2439,7 +2439,7 @@ lemma ccap_relation_gen_framesize_to_H:
    apply (frule(1) iffD1 [OF cap_get_tag_PageCap_frame])
    apply (clarsimp simp: cap_frame_cap_lift generic_frame_cap_get_capFSize_CL_def)
    apply (simp add: gen_framesize_to_H_def framesize_to_H_def
-             split: split_if)
+             split: if_split)
    apply (clarsimp simp: ccap_relation_def c_valid_cap_def
                          cl_valid_cap_def)
   apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def)
@@ -2451,7 +2451,7 @@ lemma isDevice_PageCap_ccap_relation:
    by (clarsimp elim!: ccap_relationE 
                  simp: isPageCap_def generic_frame_cap_get_capFIsDevice_CL_def cap_to_H_def
                        Let_def to_bool_def
-                split: arch_capability.split_asm cap_CL.split_asm split_if_asm)
+                split: arch_capability.split_asm cap_CL.split_asm if_split_asm)
 
 lemma checkValidIPCBuffer_ccorres:
   "ccorres (syscall_error_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -2526,7 +2526,7 @@ apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
      apply (case_tac cp)
      apply (clarsimp simp: syscall_error_rel_def syscall_error_to_H_cases isCap_simps
                            exception_defs throwError_def return_def if_1_0_0
-                    split: capability.split arch_capability.split split_if_asm)+
+                    split: capability.split arch_capability.split if_split_asm)+
    apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def Cond_if_mem)
    apply (frule ccap_relation_page_is_device)
    apply (auto simp add: isCap_simps isDeviceCap.simps pageSize_def 
@@ -2547,7 +2547,7 @@ apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
    apply (case_tac cp)
    apply (auto simp: syscall_error_rel_def syscall_error_to_H_cases isCap_simps
                          exception_defs throwError_def return_def if_1_0_0
-                  split: capability.split arch_capability.split split_if_asm)
+                  split: capability.split arch_capability.split if_split_asm)
    done
 
 lemma slotCapLongRunningDelete_ccorres:
@@ -2610,7 +2610,7 @@ lemma empty_fail_slotCapLongRunningDelete:
   "empty_fail (slotCapLongRunningDelete slot)"
   by (auto simp: slotCapLongRunningDelete_def Let_def
                  case_Null_If isFinalCapability_def
-          split: split_if
+          split: if_split
          intro!: empty_fail_bind)
 
 definition
@@ -2624,7 +2624,7 @@ lemma isValidVTableRoot_spec:
     {s'. ret__unsigned_long_' s' = from_bool (isValidVTableRoot_C (cap_' s))}"
   apply vcg
   apply (clarsimp simp: isValidVTableRoot_C_def if_1_0_0 from_bool_0)
-  apply (simp add: from_bool_def to_bool_def false_def split: split_if)
+  apply (simp add: from_bool_def to_bool_def false_def split: if_split)
   done
 
 lemma isValidVTableRoot_conv:
@@ -2640,7 +2640,7 @@ lemma isValidVTableRoot_conv:
     apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                           cap_page_directory_cap_lift cap_to_H_def
                           from_bool_def)
-    apply (clarsimp simp: to_bool_def split: split_if)
+    apply (clarsimp simp: to_bool_def split: if_split)
    apply (clarsimp simp: cap_get_tag_isCap cap_get_tag_isCap_ArchObject)
    apply (simp split: arch_capability.split_asm add: isCap_simps)
   apply (case_tac "cap_get_tag cap' = scast cap_page_directory_cap")
@@ -2656,7 +2656,7 @@ lemma updateCapData_spec:
 
 lemma if_n_updateCapData_valid_strg:
   "s \<turnstile>' cap \<longrightarrow> s \<turnstile>' (if P then cap else updateCapData prs v cap)"
-  by (simp add: valid_updateCapDataI split: split_if)
+  by (simp add: valid_updateCapDataI split: if_split)
 
 lemma length_excaps_map:
   "length (excaps_map xcs) = length xcs"
@@ -2728,7 +2728,7 @@ lemma checkPrio_ccorres:
        apply (clarsimp simp: rf_sr_ksCurThread obj_at'_def projectKOs
                              typ_heap_simps' ctcb_relation_def)
       apply ceqv
-     apply (simp add: whenE_def del: Collect_const split: split_if)
+     apply (simp add: whenE_def del: Collect_const split: if_split)
      apply (rule conjI; clarsimp)
       apply (rule ccorres_from_vcg_split_throws)
        apply vcg
@@ -3759,7 +3759,7 @@ lemma decodeBindNotification_ccorres:
          apply (clarsimp simp: typ_heap_simps cnotification_relation_def Let_def
                                valid_ntfn'_def)
          apply (case_tac "ntfnObj ntfn", simp_all add: isWaitingNtfn_def option_to_ctcb_ptr_def
-                             false_def true_def split: option.split_asm split_if,
+                             false_def true_def split: option.split_asm if_split,
                          auto simp: neq_Nil_conv tcb_queue_relation'_def tcb_at_not_NULL[symmetric]
                                     tcb_at_not_NULL)[1]
         apply ceqv
@@ -3861,7 +3861,7 @@ lemma decodeBindNotification_ccorres:
         apply (clarsimp simp: typ_heap_simps cap_get_tag_ThreadCap ccap_relation_def)
        apply (auto simp: word_sless_alt typ_heap_simps cap_get_tag_ThreadCap ctcb_relation_def
                          option_to_ptr_def option_to_0_def
-                  split: split_if)
+                  split: if_split)
   done
 
 

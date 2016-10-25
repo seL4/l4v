@@ -81,7 +81,7 @@ theorem is_prime_correct:
 
 lemma not_prime:
     "\<lbrakk> \<not> prime (a :: nat); a > 1 \<rbrakk> \<Longrightarrow> \<exists>x y. x * y = a \<and> 1 < x \<and> 1 < y \<and> x * x \<le> a"
-  apply (clarsimp simp: prime_def dvd_def)
+  apply (clarsimp simp: prime_nat_iff dvd_def)
   apply (case_tac "m > k")
    apply (metis Suc_lessD Suc_lessI less_imp_le_nat mult.commute nat_0_less_mult_iff nat_mult_less_cancel_disj)
   apply fastforce
@@ -124,7 +124,7 @@ lemma uint_max_factor [simp]:
 
 lemma prime_dvd:
     "\<lbrakk> prime (p::nat) \<rbrakk> \<Longrightarrow> (r dvd p) = (r = 1 \<or> r = p)"
-  by (fastforce simp: prime_def)
+  by (fastforce simp: prime_nat_iff)
 
 definition is_prime_inv
   where [simp]: "is_prime_inv n i s \<equiv> (1 < i \<and> i \<le> n \<and> i \<le> SQRT_UINT_MAX \<and> i * i \<le> SQRT_UINT_MAX * SQRT_UINT_MAX \<and> partial_prime n i)"
