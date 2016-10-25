@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* User Guide \label{sec:UserGuide}*}
+section \<open>User Guide \label{sec:UserGuide}\<close>
 (*<*)
 theory UserGuide 
 imports HeapList Vcg
@@ -40,16 +40,16 @@ syntax
 
 
 
-text {*
+text \<open>
 We introduce the verification environment with a couple
 of examples that illustrate how to use the different
 bits and pieces to verify programs. 
-*}
+\<close>
 
 
-subsection {* Basics *}
+subsection \<open>Basics\<close>
 
-text {*
+text \<open>
 
 First of all we have to decide how to represent the state space. There
 are currently two implementations. One is based on records the other
@@ -69,7 +69,7 @@ In this user guide we prefer statespaces, but give some comments on
 the usage of records in Section \ref{sec:records}. 
 
 
-*}
+\<close>
 
 hoarestate vars = 
   A :: nat
@@ -79,13 +79,13 @@ hoarestate vars =
   R :: nat
   S :: nat
 
-text (in vars) {* The command \isacommand{hoarestate} is a simple preprocessor
+text (in vars) \<open>The command \isacommand{hoarestate} is a simple preprocessor
 for the command \isacommand{statespaces} which decorates the state
-components with the suffix @{text "_'"}, to avoid cluttering the
+components with the suffix \<open>_'\<close>, to avoid cluttering the
 namespace. Also note that underscores are printed as hyphens in this
 documentation. So what you see as @{term "A_'"} in this document is
 actually \texttt{A\_'}.  Every component name becomes a fixed variable in
-the locale @{text vars} and can no longer be used for logical
+the locale \<open>vars\<close> and can no longer be used for logical
 variables. 
 
 Lookup of a component @{term "A_'"} in a state @{term "s"} is written as
@@ -93,83 +93,83 @@ Lookup of a component @{term "A_'"} in a state @{term "s"} is written as
 
 To deal with local and global variables in the context of procedures the
 program state is organised as a record containing the two componets @{const "locals"} 
-and @{const "globals"}. The variables defined in hoarestate @{text "vars"} reside
+and @{const "globals"}. The variables defined in hoarestate \<open>vars\<close> reside
 in the @{const "locals"} part.
 
-*}
+\<close>
 
-text {*
+text \<open>
   Here is a first example.
-*}
+\<close>
 
 lemma (in vars) "\<Gamma>\<turnstile> \<lbrace>\<acute>N = 5\<rbrace> \<acute>N :== 2 * \<acute>N \<lbrace>\<acute>N = 10\<rbrace>"
   apply vcg
-  txt {* @{subgoals} *}
+  txt \<open>@{subgoals}\<close>
   apply simp
-  txt {* @{subgoals} *}
+  txt \<open>@{subgoals}\<close>
   done
 
-text {* We enable the locale of statespace @{text vars} by the
+text \<open>We enable the locale of statespace \<open>vars\<close> by the
 \texttt{in vars} directive.  The verification condition generator is
-invoked via the @{text vcg} method and leaves us with the expected
-subgoal that can be proved by simplification.  *}
+invoked via the \<open>vcg\<close> method and leaves us with the expected
+subgoal that can be proved by simplification.\<close>
 
-text (in vars) {*
+text (in vars) \<open>
  If we refer to components (variables) of the state-space of the program
- we always mark these with @{text "\<acute>"} (in assertions and also in the
+ we always mark these with \<open>\<acute>\<close> (in assertions and also in the
  program itself). It is the acute-symbol and is present on
  most keyboards. The assertions of the Hoare tuple are
  ordinary Isabelle sets. As we usually want to refer to the state space
  in the assertions, we provide special brackets for them. They can be written 
- as {\verb+{| |}+} in ASCII or @{text "\<lbrace> \<rbrace>"} with symbols. Internally,
+ as {\verb+{| |}+} in ASCII or \<open>\<lbrace> \<rbrace>\<close> with symbols. Internally,
  marking variables has two effects. First of all we refer to the implicit
- state and secondary we get rid of the suffix @{text "_'"}.
+ state and secondary we get rid of the suffix \<open>_'\<close>.
  So the assertion @{term "{|\<acute>N = 5|}"} internally gets expanded to 
- @{text "{s. locals s \<cdot>N_' = 5}"} written in ordinary set comprehension notation of
- Isabelle. It describes the set of states where the @{text "N_'"} component
- is equal to @{text "5"}. 
+ \<open>{s. locals s \<cdot>N_' = 5}\<close> written in ordinary set comprehension notation of
+ Isabelle. It describes the set of states where the \<open>N_'\<close> component
+ is equal to \<open>5\<close>. 
  An empty context and an empty postcondition for abrupt termination can be
  omitted. The lemma above is a shorthand for 
-  @{text "\<Gamma>,{}\<turnstile> \<lbrace>\<acute>N = 5\<rbrace> \<acute>N :== 2 * \<acute>N \<lbrace>\<acute>N = 10\<rbrace>,{}"}.
-*}
+  \<open>\<Gamma>,{}\<turnstile> \<lbrace>\<acute>N = 5\<rbrace> \<acute>N :== 2 * \<acute>N \<lbrace>\<acute>N = 10\<rbrace>,{}\<close>.
+\<close>
 
-text {* We can step through verification condition generation by the
-method @{text vcg_step}.
-*}
+text \<open>We can step through verification condition generation by the
+method \<open>vcg_step\<close>.
+\<close>
 
 lemma (in vars) "\<Gamma>,{}\<turnstile> \<lbrace>\<acute>N = 5\<rbrace> \<acute>N :== 2 * \<acute>N \<lbrace>\<acute>N = 10\<rbrace>"
   apply vcg_step
-  txt {* @{subgoals} *}
-  txt {* The last step of verification condition generation, 
+  txt \<open>@{subgoals}\<close>
+  txt \<open>The last step of verification condition generation, 
          transforms the inclusion of state sets to the corresponding 
          predicate on components of the state space. 
-  *}
+\<close>
   apply vcg_step
-  txt {* @{subgoals} *}
+  txt \<open>@{subgoals}\<close>
   by simp
 
-text {*
+text \<open>
 Although our assertions work semantically on the state space, stepping
 through verification condition generation ``feels'' like the expected
 syntactic substitutions of traditional Hoare logic. This is achieved
 by light simplification on the assertions calculated by the Hoare rules.
-*}
+\<close>
 
 lemma (in vars) "\<Gamma>\<turnstile> \<lbrace>\<acute>N = 5\<rbrace> \<acute>N :== 2 * \<acute>N \<lbrace>\<acute>N = 10\<rbrace>"
   apply (rule HoarePartial.Basic)
-  txt {* @{subgoals} *}
+  txt \<open>@{subgoals}\<close>
   apply (simp only: mem_Collect_eq)
-  txt {* @{subgoals} *}
+  txt \<open>@{subgoals}\<close>
   apply (tactic 
-    {* Hoare.BasicSimpTac @{context} Hoare.Function false
-       [] (K all_tac) 1*})
-  txt {* @{subgoals} *}
+    \<open>Hoare.BasicSimpTac @{context} Hoare.Function false
+       [] (K all_tac) 1\<close>)
+  txt \<open>@{subgoals}\<close>
   by simp
 
 
-text {* The next example shows how we deal with the while loop. Note the
+text \<open>The next example shows how we deal with the while loop. Note the
 invariant annotation.
-*}
+\<close>
 
 lemma (in vars) 
   "\<Gamma>,{}\<turnstile> \<lbrace>\<acute>M = 0 \<and> \<acute>S = 0\<rbrace>
@@ -178,24 +178,24 @@ lemma (in vars)
           DO \<acute>S :== \<acute>S + b;; \<acute>M :== \<acute>M + 1 OD
           \<lbrace>\<acute>S = a * b\<rbrace>"
   apply vcg
-  txt {* @{subgoals [display]} *}
-  txt {* The verification condition generator gives us three proof obligations,
+  txt \<open>@{subgoals [display]}\<close>
+  txt \<open>The verification condition generator gives us three proof obligations,
          stemming from the path from the precondition to the invariant,
          from the invariant together with loop condition through the
          loop body to the invariant, and finally from the invariant together
-         with the negated loop condition to the postcondition.*}
+         with the negated loop condition to the postcondition.\<close>
   apply auto
   done
 
-subsection {* Procedures *}
+subsection \<open>Procedures\<close>
 
-subsubsection {* Declaration *}
+subsubsection \<open>Declaration\<close>
 
-text {*
+text \<open>
 Our first procedure is a simple square procedure. We provide the
 command \isacommand{procedures}, to declare and define a
 procedure.
-*}
+\<close>
 
 procedures
   Square (N::nat|R::nat) 
@@ -204,28 +204,28 @@ procedures
   
 
 
-text {* A procedure is given by the signature of the procedure
+text \<open>A procedure is given by the signature of the procedure
 followed by the procedure body.  The signature consists of the name of
 the procedure and a list of parameters together with their types. The
-parameters in front of the pipe @{text "|"} are value parameters and
+parameters in front of the pipe \<open>|\<close> are value parameters and
 behind the pipe are the result parameters. Value parameters model call
 by value semantics. The value of a result parameter at the end of the
 procedure is passed back to the caller. Local variables follow the
-@{text "where"}. If there are no local variables the @{text "where \<dots>
-in"} can be omitted. The variable @{term "I"} is actually unused in
-the body, but is used in the examples below.  *}
+\<open>where\<close>. If there are no local variables the \<open>where \<dots>
+in\<close> can be omitted. The variable @{term "I"} is actually unused in
+the body, but is used in the examples below.\<close>
 
 
-text {*
+text \<open>
 The procedures command provides convenient syntax
 for procedure calls (that creates the proper @{term init}, @{term return} and
 @{term result} functions on the fly) and creates locales and statespaces to 
 reason about the procedure. The purpose of locales is to set up logical contexts
 to support modular reasoning. Locales can be seen as freeze-dried proof contexts that
 get alive as you setup a new lemma or theorem (\cite{Ballarin-04-locales}).
-The locale the user deals with is named @{text "Square_impl"}.
+The locale the user deals with is named \<open>Square_impl\<close>.
  It defines the procedure name (internally   @{term "Square_'proc"}), the procedure body 
-(named @{text "Square_body"}) and the statespaces for parameters and local and
+(named \<open>Square_body\<close>) and the statespaces for parameters and local and
 global variables.
 Moreover it contains the 
 assumption @{term "\<Gamma> Square_'proc = Some Square_body"}, which states 
@@ -237,30 +237,30 @@ In this locale the procedure context @{term "\<Gamma>"} is fixed.
 So we always use this letter for the procedure
 specification. This is crucial, if we prove programs under the
 assumption of some procedure specifications.
-*}
+\<close>
 
 (*<*)
 context Square_impl
 begin
 (*>*)
-text {* The procedures command generates syntax, so that we can 
-either write @{text "CALL Square(\<acute>I,\<acute>R)"} or @{term "\<acute>I :== CALL
+text \<open>The procedures command generates syntax, so that we can 
+either write \<open>CALL Square(\<acute>I,\<acute>R)\<close> or @{term "\<acute>I :== CALL
 Square(\<acute>R)"} for the procedure call. The internal term is the
 following: 
-*} 
+\<close> 
 
 (*<*) declare [[hoare_use_call_tr' = false]] (*>*) 
-text {* \small @{term [display] "CALL Square(\<acute>I,\<acute>R)"} *} 
+text \<open>\small @{term [display] "CALL Square(\<acute>I,\<acute>R)"}\<close> 
 (*<*) declare [[hoare_use_call_tr' = true]] (*>*)
 
-text {* Note the
+text \<open>Note the
         additional decoration (with the procedure name) of the parameter and
-         local variable names.*}
+         local variable names.\<close>
 (*<*)
 end 
 (*>*)
 
-text {* The abstract syntax for the
+text \<open>The abstract syntax for the
 procedure call is @{term "call init p return result"}.  The @{term
 "init"} function copies the values of the actual parameters to the
 formal parameters, the @{term return} function copies the global
@@ -271,50 +271,50 @@ be all kind of expressions, since we only need their value. But result
 parameters must be proper ``lvalues'': variables (including
 dereferenced pointers) or array locations, since we have to assign
 values to them. 
-*}
+\<close>
 
-subsubsection {* Verification *}
+subsubsection \<open>Verification\<close>
 
-text (in Square_impl) {*
+text (in Square_impl) \<open>
 A procedure specification is an ordinary Hoare tuple. 
 We use the parameterless
-call for the specification; @{text "\<acute>R :== PROC Square(\<acute>N)"} is syntactic sugar
-for @{text "Call Square_'proc"}. This emphasises that the specification 
+call for the specification; \<open>\<acute>R :== PROC Square(\<acute>N)\<close> is syntactic sugar
+for \<open>Call Square_'proc\<close>. This emphasises that the specification 
 describes the internal behaviour of the procedure, whereas parameter passing
 corresponds to the procedure call.
-The following precondition fixes the current value @{text "\<acute>N"} to the logical 
+The following precondition fixes the current value \<open>\<acute>N\<close> to the logical 
 variable @{term n}. 
 Universal quantification of @{term "n"} enables us to adapt 
 the specification to an actual parameter. The specification is
 used in the rule for procedure call when we come upon a call to @{term Square}. 
 Thus @{term "n"} plays the role of the auxiliary variable @{term "Z"}.
-*}
+\<close>
 
 
-text {* To verify the procedure we need to verify the body. We use
+text \<open>To verify the procedure we need to verify the body. We use
 a derived variant of the general recursion rule, tailored for non recursive procedures:
 @{thm [source] HoarePartial.ProcNoRec1}:
 \begin{center}
 @{thm [mode=Rule,mode=ParenStmt] HoarePartial.ProcNoRec1 [no_vars]}
 \end{center}
 The naming convention for the rule 
-is the following: The @{text "1"} expresses that we look at one
- procedure, and @{text NoRec} that the procedure is non
+is the following: The \<open>1\<close> expresses that we look at one
+ procedure, and \<open>NoRec\<close> that the procedure is non
 recursive. 
-*} 
+\<close> 
 
 
 lemma (in Square_impl)
 shows "\<forall>n. \<Gamma>\<turnstile>\<lbrace>\<acute>N = n\<rbrace>  \<acute>R :== PROC Square(\<acute>N) \<lbrace>\<acute>R = n * n\<rbrace>"
-txt {* The directive @{text "in"} has the effect that
+txt \<open>The directive \<open>in\<close> has the effect that
 the context of the locale @{term "Square_impl"} is included to the current
 lemma, and that the lemma is added as a fact to the locale, after it is proven. The
 next time locale @{term "Square_impl"} is invoked this lemma is immediately available
 as fact, which the verification condition generator can use.
-*}
+\<close>
 apply (hoare_rule HoarePartial.ProcNoRec1)
  txt "@{subgoals[display]}"
- txt {* The method @{text "hoare_rule"}, like @{text "rule"} applies a 
+ txt \<open>The method \<open>hoare_rule\<close>, like \<open>rule\<close> applies a 
      single rule, but additionally does some ``obvious'' steps:
      It solves the canonical side-conditions of various Hoare-rules and it 
      automatically expands the
@@ -324,31 +324,31 @@ apply (hoare_rule HoarePartial.ProcNoRec1)
      can unfold the definition of the body.
 
      The proof is finished by the vcg and simp.
- *}
+\<close>
 txt "@{subgoals[display]}"
 by vcg simp
 
-text {* If the procedure is non recursive and there is no specification given, the
-verification condition generator automatically expands the body.*}
+text \<open>If the procedure is non recursive and there is no specification given, the
+verification condition generator automatically expands the body.\<close>
 
 lemma (in Square_impl) Square_spec: 
 shows "\<forall>n. \<Gamma>\<turnstile>\<lbrace>\<acute>N = n\<rbrace>  \<acute>R :== PROC Square(\<acute>N) \<lbrace>\<acute>R = n * n\<rbrace>"
   by vcg simp
 
-text {* An important naming convention is to name the specification as
-@{text "<procedure-name>_spec"}. The verification condition generator refers to
+text \<open>An important naming convention is to name the specification as
+\<open><procedure-name>_spec\<close>. The verification condition generator refers to
 this name in order to search for a specification in the theorem database.
-*}
+\<close>
 
-subsubsection {* Usage *}
+subsubsection \<open>Usage\<close>
 
 
-text{* Let us see how we can use procedure specifications. *}
+text\<open>Let us see how we can use procedure specifications.\<close>
 (* FIXME: maybe don't show this at all *)
 lemma (in Square_impl)
   shows "\<Gamma>\<turnstile>\<lbrace>\<acute>I = 2\<rbrace> \<acute>R :== CALL Square(\<acute>I) \<lbrace>\<acute>R = 4\<rbrace>"
-  txt {* Remember that we have already proven @{thm [source] "Square_spec"} in the locale
-  @{text "Square_impl"}. This is crucial for 
+  txt \<open>Remember that we have already proven @{thm [source] "Square_spec"} in the locale
+  \<open>Square_impl\<close>. This is crucial for 
   verification condition generation. When reaching a procedure call,
   it looks for the specification (by its name) and applies the
   rule @{thm [source,mode=ParenStmt] HoarePartial.ProcSpec}  
@@ -360,7 +360,7 @@ instantiated with the specification
   @{thm [display] Square_spec [no_vars]}
   The specification talks about the formal parameters @{term "N"} and 
   @{term R}. The precondition @{term "\<lbrace>\<acute>N = n\<rbrace>"} just fixes the initial
-  value of @{text N}.
+  value of \<open>N\<close>.
   The actual parameters are @{term "I"} and @{term "R"}. We 
   have to adapt the specification to this calling context.
   @{term "\<forall>n. \<Gamma>\<turnstile> \<lbrace>\<acute>I = n\<rbrace> \<acute>R :== CALL Square(\<acute>I) \<lbrace>\<acute>R = n * n\<rbrace>"}.
@@ -371,21 +371,21 @@ instantiated with the specification
   tells us @{term "\<lbrace>\<acute>I = n\<rbrace>"} for the pre-state. So the value of @{term n}
   is the value of @{term I} in the pre-state. So we arrive at
   @{term "\<lbrace>\<acute>I = 2\<rbrace> \<subseteq> \<lbrace>\<acute>I * \<acute>I = 4\<rbrace>"}.
-  *}
+\<close>
   apply vcg_step
   txt "@{subgoals[display]}"
-  txt {*
+  txt \<open>
   The second set looks slightly more involved:
     @{term "\<lbrace>\<forall>t. \<^bsup>t\<^esup>R = \<acute>I * \<acute>I \<longrightarrow> \<acute>I * \<acute>I = 4\<rbrace>"}, this is an artefact from the
-  procedure call rule. Originally @{text "\<acute>I * \<acute>I = 4"} was @{text "\<^bsup>t\<^esup>R = 4"}. Where
+  procedure call rule. Originally \<open>\<acute>I * \<acute>I = 4\<close> was \<open>\<^bsup>t\<^esup>R = 4\<close>. Where
   @{term "t"} denotes the final state of the procedure and the superscript notation
   allows to select a component from a particular state. 
-  *}
+\<close>
   apply vcg_step
   txt "@{subgoals[display]}"
   by simp
   
-text {*
+text \<open>
 The adaption of the procedure specification to the actual calling 
 context is done due to the @{term init}, @{term return} and @{term result} functions 
 in the rule @{thm [source] HoarePartial.ProcSpec} (or in the variant 
@@ -393,16 +393,16 @@ in the rule @{thm [source] HoarePartial.ProcSpec} (or in the variant
 incorporates the fact that the postcondition for abrupt termination
 is the empty set). For the readers interested in the internals, 
 here a version without vcg.
-*}
+\<close>
 lemma (in Square_impl)
   shows "\<Gamma>\<turnstile>\<lbrace>\<acute>I = 2\<rbrace> \<acute>R :== CALL Square(\<acute>I) \<lbrace>\<acute>R = 4\<rbrace>"
   apply (rule HoarePartial.ProcSpecNoAbrupt [OF _ _ Square_spec])
   txt "@{subgoals[display]}"
-  txt {* This is the raw verification condition, 
+  txt \<open>This is the raw verification condition, 
          It is interesting to see how the auxiliary variable @{term "Z"} is
          actually used. It is unified with @{term n} of the specification and
          fixes the state after parameter passing. 
-  *}
+\<close>
   apply simp
   txt "@{subgoals[display]}"
   prefer 2
@@ -413,11 +413,11 @@ lemma (in Square_impl)
 
 
 
-subsubsection {* Recursion *}
+subsubsection \<open>Recursion\<close>
 
-text {* We want to define a procedure for the factorial. We first
+text \<open>We want to define a procedure for the factorial. We first
 define a HOL function that calculates it, to specify the procedure later on.
-*}
+\<close>
 
 primrec fac:: "nat \<Rightarrow> nat"
 where
@@ -429,7 +429,7 @@ lemma fac_simp [simp]: "0 < i \<Longrightarrow>  fac i = i * fac (i - 1)"
   by (cases i) simp_all
 (*>*)
 
-text {* Now we define the procedure. *}
+text \<open>Now we define the procedure.\<close>
 procedures
   Fac (N::nat | R::nat) 
   "IF \<acute>N = 0 THEN \<acute>R :== 1
@@ -437,9 +437,9 @@ procedures
         \<acute>R :== \<acute>N * \<acute>R
    FI"
   
-text {*
+text \<open>
 Now let us prove that our implementation of @{term "Fac"} meets its specification. 
-*}
+\<close>
 
 lemma (in Fac_impl)
 shows "\<forall>n. \<Gamma>\<turnstile> \<lbrace>\<acute>N = n\<rbrace> \<acute>R :== PROC Fac(\<acute>N) \<lbrace>\<acute>R = fac n\<rbrace>"
@@ -450,7 +450,7 @@ txt "@{subgoals[display]}"
 apply simp
 done
 
-text {* 
+text \<open>
 Since the factorial is implemented recursively,
 the main ingredient of this proof is, to assume that the specification holds for 
 the recursive call of @{term Fac} and prove the body correct.
@@ -462,36 +462,36 @@ the rule @{thm [source] HoarePartial.ProcRec1}
 \end{center}
 The verification condition generator infers the specification out of the
 context @{term "\<Theta>"} when it encounters a recursive call of the factorial.
-*}
+\<close>
 
-subsection {* Global Variables and Heap \label{sec:VcgHeap}*}
+subsection \<open>Global Variables and Heap \label{sec:VcgHeap}\<close>
 
-text {*
+text \<open>
 Now we define and verify some procedures on heap-lists. We consider
 list structures consisting of two fields, a content element @{term "cont"} and
 a reference to the next list element @{term "next"}. We model this by the 
 following state space where every field has its own heap.
-*}
+\<close>
 
 hoarestate globals_heap =
   "next" :: "ref \<Rightarrow> ref"
   cont :: "ref \<Rightarrow> nat"
 
-text {* It is mandatory to start the state name with `globals'. This is exploited
+text \<open>It is mandatory to start the state name with `globals'. This is exploited
 by the syntax translations to store the components in the @{const globals} part
 of the state.
-*}
+\<close>
 
-text {* Updates to global components inside a procedure are
+text \<open>Updates to global components inside a procedure are
 always propagated to the caller. This is implicitly done by the
 parameter passing syntax translations. 
-*}
+\<close>
 
-text {* We first define an append function on lists. It takes two 
+text \<open>We first define an append function on lists. It takes two 
 references as parameters. It appends the list referred to by the first
 parameter with the list referred to by the second parameter. The statespace
 of the global variables has to be imported.
-*}
+\<close>
 
 procedures (imports globals_heap)
   append(p :: ref, q::ref | p::ref) 
@@ -502,39 +502,39 @@ procedures (imports globals_heap)
 context append_impl
 begin
 (*>*)
-text {*
+text \<open>
 The difference of a global and a local variable is that global
 variables are automatically copied back to the procedure caller.
 We can study this effect on the translation of @{term "\<acute>p :== CALL append(\<acute>p,\<acute>q)"}:
-*}
+\<close>
 (*<*)
 declare [[hoare_use_call_tr' = false]]
 (*>*)
-text {*
+text \<open>
 @{term [display] "\<acute>p :== CALL append(\<acute>p,\<acute>q)"}
-*}
+\<close>
 (*<*)
 declare [[hoare_use_call_tr' = true]]
 end
 (*>*)
 
-text {* Below we give two specifications this time.
+text \<open>Below we give two specifications this time.
 One captures the functional behaviour and focuses on the
 entities that are potentially modified by the procedure, the second one
 is a pure frame condition. 
-*}
+\<close>
 
 
 
-text {* 
+text \<open>
 The functional specification below introduces two logical variables besides the
 state space variable @{term "\<sigma>"}, namely @{term "Ps"} and @{term "Qs"}.
 They are universally quantified and range over both the pre-and the postcondition, so 
 that we are able to properly instantiate the specification
-during the proofs. The syntax @{text "\<lbrace>\<sigma>. \<dots>\<rbrace>"} is a shorthand to fix the current 
-state: @{text "{s. \<sigma> = s \<dots>}"}. Moreover @{text "\<^bsup>\<sigma>\<^esup>x"} abbreviates 
-the lookup of variable @{text "x"} in the state 
-@{text \<sigma>}.  
+during the proofs. The syntax \<open>\<lbrace>\<sigma>. \<dots>\<rbrace>\<close> is a shorthand to fix the current 
+state: \<open>{s. \<sigma> = s \<dots>}\<close>. Moreover \<open>\<^bsup>\<sigma>\<^esup>x\<close> abbreviates 
+the lookup of variable \<open>x\<close> in the state 
+\<open>\<sigma>\<close>.  
 
 The approach to specify procedures on lists
 basically follows \cite{MehtaN-CADE03}. From the pointer structure
@@ -553,7 +553,7 @@ the references in @{term h} up to the reference @{term y}.
 
 A list @{term "List p h ps"} is a path starting in @{term p} and ending up
 in @{term Null}.
-*}
+\<close>
 
 
 lemma (in append_impl) append_spec1: 
@@ -562,32 +562,32 @@ shows "\<forall>\<sigma> Ps Qs.
        \<acute>p :== PROC append(\<acute>p,\<acute>q) 
      \<lbrace>List \<acute>p \<acute>next (Ps@Qs) \<and> (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
 apply (hoare_rule HoarePartial.ProcRec1)
-txt {* @{subgoals [margin=80,display]} 
+txt \<open>@{subgoals [margin=80,display]} 
 Note that @{term "hoare_rule"} takes care of multiple auxiliary variables! 
 @{thm [source] HoarePartial.ProcRec1} has only one auxiliary variable, namely @{term Z}. 
-But the type of @{term Z} can be instantiated arbitrarily. So @{text "hoare_rule"} 
+But the type of @{term Z} can be instantiated arbitrarily. So \<open>hoare_rule\<close> 
 instantiates @{term Z} with the tuple @{term "(\<sigma>,Ps,Qs)"} and derives a proper variant
-of the rule. Therefore @{text "hoare_rule"} depends on the proper quantification of
+of the rule. Therefore \<open>hoare_rule\<close> depends on the proper quantification of
 auxiliary variables!
-*}
+\<close>
 apply vcg
-txt {* @{subgoals [display]} 
-For each branch of the @{text IF} statement we have one conjunct to prove. The
-@{text THEN} branch starts with @{text "p = Null \<longrightarrow> \<dots>"} and the @{text ELSE} branch
-with @{text "p \<noteq> Null \<longrightarrow> \<dots>"}. Let us focus on the @{text ELSE} branch, were the
+txt \<open>@{subgoals [display]} 
+For each branch of the \<open>IF\<close> statement we have one conjunct to prove. The
+\<open>THEN\<close> branch starts with \<open>p = Null \<longrightarrow> \<dots>\<close> and the \<open>ELSE\<close> branch
+with \<open>p \<noteq> Null \<longrightarrow> \<dots>\<close>. Let us focus on the \<open>ELSE\<close> branch, were the
 recursive call to append occurs. First of all we have to prove that the precondition for
 the recursive call is fulfilled. That means we have to provide some witnesses for
-the lists @{term Psa} and @{term Qsa} which are referenced by @{text "p\<rightarrow>next"} (now
+the lists @{term Psa} and @{term Qsa} which are referenced by \<open>p\<rightarrow>next\<close> (now
 written as @{term "next p"}) and @{term q}. Then we have to show that we can 
 derive the overall postcondition from the postcondition of the recursive call. The
 state components that have changed by the recursive call are the ones with the suffix
-@{text a}, like @{text nexta} and @{text pa}.
-*}
+\<open>a\<close>, like \<open>nexta\<close> and \<open>pa\<close>.
+\<close>
 apply fastforce
 done
 
 
-text {* If the verification condition generator works on a procedure
+text \<open>If the verification condition generator works on a procedure
 call it checks whether it can find a modifies clause in the
 context. If one is present the procedure call is simplified before the
 Hoare rule @{thm [source] HoarePartial.ProcSpec} is
@@ -598,28 +598,28 @@ simplification is justified by the rule @{thm [source]
 HoarePartial.ProcModifyReturn}. 
 So after this simplification all global
 components that do not appear in the modifies clause are treated
-as local variables. *}
+as local variables.\<close>
 
-text {* We study the effect of the modifies clause on the following 
+text \<open>We study the effect of the modifies clause on the following 
 examples, where we want to prove that @{term "append"} does not change
 the @{term "cont"} part of the heap.
-*}
+\<close>
 lemma (in append_impl)
 shows "\<Gamma>\<turnstile> \<lbrace>\<acute>cont=c\<rbrace> \<acute>p :== CALL append(Null,Null) \<lbrace>\<acute>cont=c\<rbrace>" 
 proof -
   note append_spec = append_spec1
   show ?thesis
     apply vcg
-    txt {* @{subgoals [display]} *}
-    txt {* Only focus on the very last line: @{term conta} is the heap component 
+    txt \<open>@{subgoals [display]}\<close>
+    txt \<open>Only focus on the very last line: @{term conta} is the heap component 
       after the procedure call,
       and @{term cont} the heap component before the procedure call. Since
       we have not added the modified clause we do not know that they have
       to be equal. 
-      *}
+\<close>
     oops
 
-text {*
+text \<open>
 We now add the frame condition.
 The list in the modifies clause names all global state components that
 may be changed by the procedure. Note that we know from the modifies clause
@@ -627,7 +627,7 @@ that the @{term cont} parts are not changed. Also a small
 side note on the syntax. We use ordinary brackets in the postcondition
 of the modifies clause, and also the state components do not carry the
 acute, because we explicitly note the state @{term t} here.
-*}
+\<close>
 
 
 lemma (in append_impl) append_modifies:
@@ -637,17 +637,17 @@ lemma (in append_impl) append_modifies:
   apply (vcg spec=modifies)
   done
 
-text {* We tell the verification condition generator to use only the
+text \<open>We tell the verification condition generator to use only the
 modifies clauses and not to search for functional specifications by 
-the parameter @{text "spec=modifies"}. It also tries to solve the 
+the parameter \<open>spec=modifies\<close>. It also tries to solve the 
 verification conditions automatically. Again it is crucial to name 
 the lemma with this naming scheme, since the verfication condition 
 generator searches for these names. 
-*}
+\<close>
 
-text {* The modifies clause is equal to a state update specification
+text \<open>The modifies clause is equal to a state update specification
 of the following form. 
-*}
+\<close>
 
 lemma (in append_impl) shows "{t. t may_only_modify_globals Z in [next]} 
        = 
@@ -656,8 +656,8 @@ lemma (in append_impl) shows "{t. t may_only_modify_globals Z in [next]}
   apply simp
   done
 
-text {* Now that we have proven the frame-condition, it is available within
-the locale @{text "append_impl"} and the @{text "vcg"} exploits it.*}
+text \<open>Now that we have proven the frame-condition, it is available within
+the locale \<open>append_impl\<close> and the \<open>vcg\<close> exploits it.\<close>
 
 lemma (in append_impl) 
 shows "\<Gamma>\<turnstile> \<lbrace>\<acute>cont=c\<rbrace> \<acute>p :== CALL append(Null,Null) \<lbrace>\<acute>cont=c\<rbrace>"
@@ -665,23 +665,23 @@ proof -
   note append_spec = append_spec1
   show ?thesis
     apply vcg
-    txt {* @{subgoals [display]} *}
-    txt {* With a modifies clause present we know that no change to @{term cont}
+    txt \<open>@{subgoals [display]}\<close>
+    txt \<open>With a modifies clause present we know that no change to @{term cont}
       has occurred. 
-      *}
+\<close>
     by simp
 qed
  
 
-text {*
+text \<open>
 Of course we could add the modifies clause to the functional specification as 
 well. But separating both has the advantage that we split up the verification
 work. We can make use of the modifies clause before we apply the
 functional specification in a fully automatic fashion.
-*}
+\<close>
  
 
-text {* 
+text \<open>
 To prove that a procedure respects the modifies clause, we only need
 the modifies clauses of the procedures called in the body. We do not need
 the functional specifications. So we can always prove the modifies
@@ -689,13 +689,13 @@ clause without functional specifications, but we may need the modifies
 clause to prove the functional specifications. So usually the modifies clause is
 proved before the proof of the functional specification, so that it can already be used
 by the verification condition generator.
-*}
+\<close>
 
 
  
-subsection {* Total Correctness *}
+subsection \<open>Total Correctness\<close>
 
-text {* When proving total correctness the additional proof burden to
+text \<open>When proving total correctness the additional proof burden to
 the user is to come up with a well-founded relation and to prove that
 certain states get smaller according to this relation. Proving that a
 relation is well-founded can be quite hard. But fortunately there are
@@ -711,7 +711,7 @@ best explained by some equations:
 @{thm in_lex_iff [no_vars]}\\
 @{thm in_inv_image_iff [no_vars]}
 
-Another useful construction is @{text "<*mlex*>"} which is a combination
+Another useful construction is \<open><*mlex*>\<close> which is a combination
 of a measure and a lexicographic product:
 
 @{thm in_mlex_iff [no_vars]}\\
@@ -720,7 +720,7 @@ The state may either decrease according to the measure function @{term f} or the
 measure stays the same and the state decreases because of the relation @{term r}.
 
 Lets look at a loop:
-*}
+\<close>
 
 lemma (in vars) 
   "\<Gamma>\<turnstile>\<^sub>t \<lbrace>\<acute>M = 0 \<and> \<acute>S = 0\<rbrace>
@@ -730,40 +730,40 @@ lemma (in vars)
        DO \<acute>S :== \<acute>S + b;; \<acute>M :== \<acute>M + 1 OD
        \<lbrace>\<acute>S = a * b\<rbrace>"
 apply vcg
-txt {* @{subgoals [display]} 
+txt \<open>@{subgoals [display]} 
 The first conjunct of the second subgoal is the proof obligation that the
 variant decreases in the loop body. 
-*}
+\<close>
 by auto
 
 
 
-text {* The variant annotation is preceded by @{text VAR}. The capital @{text MEASURE}
-is a shorthand for @{text "measure (\<lambda>s. a - \<^bsup>s\<^esup>M)"}. Analogous there is a capital 
-@{text "<*MLEX*>"}.
-*}
+text \<open>The variant annotation is preceded by \<open>VAR\<close>. The capital \<open>MEASURE\<close>
+is a shorthand for \<open>measure (\<lambda>s. a - \<^bsup>s\<^esup>M)\<close>. Analogous there is a capital 
+\<open><*MLEX*>\<close>.
+\<close>
 
 lemma (in Fac_impl) Fac_spec': 
 shows "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^sub>t {\<sigma>} \<acute>R :==  PROC Fac(\<acute>N) \<lbrace>\<acute>R = fac \<^bsup>\<sigma>\<^esup>N\<rbrace>"
 apply (hoare_rule HoareTotal.ProcRec1 [where r="measure (\<lambda>(s,p). \<^bsup>s\<^esup>N)"])
-txt {* In case of the factorial the parameter @{term N} decreases in every call. This
+txt \<open>In case of the factorial the parameter @{term N} decreases in every call. This
 is easily expressed by the measure function. Note that the well-founded relation for
 recursive procedures is formally defined on tuples
 containing the state space and the procedure name.
-*}
-txt {* @{subgoals [display]} 
+\<close>
+txt \<open>@{subgoals [display]} 
 The initial call to the factorial is in state @{term "\<sigma>"}. Note that in the 
 precondition @{term "{\<sigma>} \<inter> {\<sigma>'}"}, @{term "\<sigma>'"} stems from the lemma we want to prove
 and @{term "\<sigma>"} stems from the recursion rule for total correctness. Both are
 synonym for the initial state. To use the assumption in the Hoare context we
 have to show that the call to the factorial is invoked on a smaller @{term N} compared
-to the initial @{text "\<^bsup>\<sigma>\<^esup>N"}.
-*}
+to the initial \<open>\<^bsup>\<sigma>\<^esup>N\<close>.
+\<close>
 apply vcg
-txt {* @{subgoals [display]} 
-The tribute to termination is that we have to show @{text "N - 1 < N"} in case of
+txt \<open>@{subgoals [display]} 
+The tribute to termination is that we have to show \<open>N - 1 < N\<close> in case of
 the recursive call.
-*}
+\<close>
 by simp
 
 lemma (in append_impl) append_spec2:
@@ -773,15 +773,15 @@ shows "\<forall>\<sigma> Ps Qs. \<Gamma>\<turnstile>\<^sub>t
   \<lbrace>List \<acute>p \<acute>next (Ps@Qs) \<and> (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
 apply (hoare_rule HoareTotal.ProcRec1
            [where r="measure (\<lambda>(s,p). length (list \<^bsup>s\<^esup>p \<^bsup>s\<^esup>next))"])
-txt {* In case of the append function the length of the list referenced by @{term p}
+txt \<open>In case of the append function the length of the list referenced by @{term p}
 decreases in every recursive call.
-*}
-txt {* @{subgoals [margin=80,display]} *}
+\<close>
+txt \<open>@{subgoals [margin=80,display]}\<close>
 apply vcg
 apply (fastforce simp add: List_list)
 done
 
-text {*
+text \<open>
 In case of the lists above, we have used a relational list abstraction @{term List}
 to construct the HOL lists @{term Ps} and @{term Qs} for the pre- and postcondition.
 To supply a proper measure function we use a functional abstraction @{term list}.
@@ -792,14 +792,14 @@ since the lists are already uniquely determined by the relational abstraction:
 @{thm list_def [no_vars]}
 
 \isacommand{lemma} @{thm List_conv_islist_list [no_vars]}
-*}
+\<close>
 
-text {*
+text \<open>
 The next contrived example is taken from \cite{Homeier-95-vcg}, to illustrate
 a more complex termination criterion for mutually recursive procedures. The procedures
 do not calculate anything useful.
 
-*}
+\<close>
 
 
 procedures 
@@ -816,25 +816,25 @@ procedures
    IF 0 < \<acute>M THEN CALL coast(\<acute>N,\<acute>M- 1) FI"
 
 
-text {*
-In the recursive calls in procedure @{text pedal} the first argument always decreases.
-In the body of @{text coast} in the recursive call of @{text coast} the second
-argument decreases, but in the call to @{text pedal} no argument decreases. 
+text \<open>
+In the recursive calls in procedure \<open>pedal\<close> the first argument always decreases.
+In the body of \<open>coast\<close> in the recursive call of \<open>coast\<close> the second
+argument decreases, but in the call to \<open>pedal\<close> no argument decreases. 
 Therefore an relation only on the state space is insufficient. We have to
 take the procedure names into account, too.
-We consider the procedure @{text coast} to be ``bigger'' than @{text pedal}
+We consider the procedure \<open>coast\<close> to be ``bigger'' than \<open>pedal\<close>
 when we construct a well-founded relation on the product of state space and procedure
 names.
-*}
+\<close>
 
-ML {* ML_Thms.bind_thm ("HoareTotal_ProcRec2", Hoare.gen_proc_rec @{context} Hoare.Total 2)*}
+ML \<open>ML_Thms.bind_thm ("HoareTotal_ProcRec2", Hoare.gen_proc_rec @{context} Hoare.Total 2)\<close>
 
 
-text {*
+text \<open>
   We provide the ML function {\tt gen\_proc\_rec} to
 automatically derive a convenient rule for recursion for a given number of mutually
 recursive procedures.
-*}
+\<close>
 
  
 lemma (in pedal_coast_clique)
@@ -844,19 +844,19 @@ apply (hoare_rule HoareTotal_ProcRec2
             [where r= "((\<lambda>(s,p). \<^bsup>s\<^esup>N) <*mlex*>
                            (\<lambda>(s,p). \<^bsup>s\<^esup>M) <*mlex*>
                            measure (\<lambda>(s,p). if p = coast_'proc then 1 else 0))"])
-  txt {* We can directly express the termination condition described above with
-  the @{text "<*mlex*>"} construction. Either state component @{text N} decreases,
-  or it stays the same and @{text M} decreases or this also stays the same, but
-  then the procedure name has to decrease.*}
-  txt {* @{subgoals [margin=80,display]} *}
+  txt \<open>We can directly express the termination condition described above with
+  the \<open><*mlex*>\<close> construction. Either state component \<open>N\<close> decreases,
+  or it stays the same and \<open>M\<close> decreases or this also stays the same, but
+  then the procedure name has to decrease.\<close>
+  txt \<open>@{subgoals [margin=80,display]}\<close>
 apply  simp_all
-  txt {* @{subgoals [margin=75,display]} *}
+  txt \<open>@{subgoals [margin=75,display]}\<close>
 by (vcg,simp)+
 
-text {* We can achieve the same effect without @{text "<*mlex*>"} by using
- the ordinary lexicographic product @{text "<*lex*>"}, @{text "inv_image"} and
- @{text "measure"} 
-*}
+text \<open>We can achieve the same effect without \<open><*mlex*>\<close> by using
+ the ordinary lexicographic product \<open><*lex*>\<close>, \<open>inv_image\<close> and
+ \<open>measure\<close> 
+\<close>
  
 lemma (in pedal_coast_clique)
 shows "(\<forall>\<sigma>. \<Gamma>\<turnstile>\<^sub>t {\<sigma>} PROC pedal(\<acute>N,\<acute>M) UNIV) \<and>
@@ -866,18 +866,18 @@ apply (hoare_rule HoareTotal_ProcRec2
                                         measure (\<lambda>m. m) <*lex*> 
                                         measure (\<lambda>p. if p = coast_'proc then 1 else 0))
                            (\<lambda>(s,p). (\<^bsup>s\<^esup>N,\<^bsup>s\<^esup>M,p))"])
-  txt {* With the lexicographic product we construct a well-founded relation on
+  txt \<open>With the lexicographic product we construct a well-founded relation on
          triples of type @{typ "(nat\<times>nat\<times>string)"}. With @{term inv_image} we project
          the components out of the state-space and the procedure names to this
          triple.
-     *}
-  txt {* @{subgoals [margin=75,display]} *}
+\<close>
+  txt \<open>@{subgoals [margin=75,display]}\<close>
 apply simp_all
 by (vcg,simp)+
 
-text {* By doing some arithmetic we can express the termination condition with a single
+text \<open>By doing some arithmetic we can express the termination condition with a single
 measure function.
-*}
+\<close>
 
 lemma (in pedal_coast_clique) 
 shows "(\<forall>\<sigma>. \<Gamma>\<turnstile>\<^sub>t {\<sigma>} PROC pedal(\<acute>N,\<acute>M) UNIV) \<and>
@@ -885,40 +885,40 @@ shows "(\<forall>\<sigma>. \<Gamma>\<turnstile>\<^sub>t {\<sigma>} PROC pedal(\<
 apply(hoare_rule HoareTotal_ProcRec2
        [where r= "measure (\<lambda>(s,p). \<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M + (if p = coast_'proc then 1 else 0))"])
 apply simp_all
-txt {* @{subgoals [margin=75,display]} *}
+txt \<open>@{subgoals [margin=75,display]}\<close>
 by (vcg,simp,arith?)+
 
 
-subsection {* Guards *}
+subsection \<open>Guards\<close>
 
-text (in vars) {* The purpose of a guard is to guard the {\bf (sub-) expressions} of a
+text (in vars) \<open>The purpose of a guard is to guard the {\bf (sub-) expressions} of a
 statement against runtime faults. Typical runtime faults are array bound violations,
 dereferencing null pointers or arithmetical overflow. Guards make the potential
 runtime faults explicit, since the expressions themselves never ``fail'' because 
 they are ordinary HOL expressions. To relieve the user from typing in lots of standard
 guards for every subexpression, we supply some input syntax for the common
 language constructs that automatically generate the guards.
-For example the guarded assignment @{text "\<acute>M :==\<^sub>g (\<acute>M + 1) div \<acute>N"} gets expanded to 
+For example the guarded assignment \<open>\<acute>M :==\<^sub>g (\<acute>M + 1) div \<acute>N\<close> gets expanded to 
 guarded command @{term "\<acute>M :==\<^sub>g (\<acute>M + 1) div \<acute>N"}. Here @{term "in_range"} is
 uninterpreted by now. 
-*}
+\<close>
 
 lemma (in vars) "\<Gamma>\<turnstile>\<lbrace>True\<rbrace> \<acute>M :==\<^sub>g (\<acute>M + 1) div \<acute>N \<lbrace>True\<rbrace>"
 apply vcg
-txt {* @{subgoals} *}
+txt \<open>@{subgoals}\<close>
 oops
 
-text {*
-The user can supply on (overloaded) definition of @{text "in_range"}
+text \<open>
+The user can supply on (overloaded) definition of \<open>in_range\<close>
 to fit to his needs.
 
 Currently guards are generated for:
 
 \begin{itemize}
-\item overflow and underflow of numbers (@{text "in_range"}). For subtraction of
-      natural numbers @{text "a - b"} the guard @{text "b \<le> a"} is generated instead
-      of @{text "in_range"} to guard against underflows.
-\item division by @{text 0}
+\item overflow and underflow of numbers (\<open>in_range\<close>). For subtraction of
+      natural numbers \<open>a - b\<close> the guard \<open>b \<le> a\<close> is generated instead
+      of \<open>in_range\<close> to guard against underflows.
+\item division by \<open>0\<close>
 \item dereferencing of @{term Null} pointers
 \item array bound violations
 \end{itemize}
@@ -926,22 +926,22 @@ Currently guards are generated for:
 Following (input) variants of guarded statements are available:
 
 \begin{itemize}
-\item Assignment: @{text "\<dots> :==\<^sub>g \<dots>"}
-\item If: @{text "IF\<^sub>g \<dots>"}
-\item While: @{text "WHILE\<^sub>g \<dots>"}
-\item Call: @{text "CALL\<^sub>g \<dots>"} or @{text "\<dots> :== CALL\<^sub>g \<dots>"}
+\item Assignment: \<open>\<dots> :==\<^sub>g \<dots>\<close>
+\item If: \<open>IF\<^sub>g \<dots>\<close>
+\item While: \<open>WHILE\<^sub>g \<dots>\<close>
+\item Call: \<open>CALL\<^sub>g \<dots>\<close> or \<open>\<dots> :== CALL\<^sub>g \<dots>\<close>
 \end{itemize}
-*}
+\<close>
 
-subsection {* Miscellaneous Techniques *}
+subsection \<open>Miscellaneous Techniques\<close>
 
 
 
-subsubsection {* Modifies Clause *}
+subsubsection \<open>Modifies Clause\<close>
 
-text {* We look at some issues regarding the modifies clause with the example
+text \<open>We look at some issues regarding the modifies clause with the example
 of insertion sort for heap lists.
-*}
+\<close>
 
 primrec sorted:: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a list  \<Rightarrow> bool"
 where
@@ -984,7 +984,7 @@ lemma (in insert_impl) insert_spec:
   done
   (*>*)
 
-text {*
+text \<open>
 In the postcondition of the functional specification there is a small but 
 important subtlety. Whenever we talk about the @{term "cont"} part we refer to 
 the one of the pre-state.
@@ -992,23 +992,23 @@ The reason is that we have separated out the information that @{term "cont"} is 
 modified by the procedure, to the modifies clause. So whenever we talk about unmodified
 parts in the postcondition we have to use the pre-state part, or explicitly
 state an equality in the postcondition.
-The reason is simple. If the postcondition would talk about @{text "\<acute>cont"}
-instead of \mbox{@{text "\<^bsup>\<sigma>\<^esup>cont"}}, we get a new instance of @{text "cont"} during
+The reason is simple. If the postcondition would talk about \<open>\<acute>cont\<close>
+instead of \mbox{\<open>\<^bsup>\<sigma>\<^esup>cont\<close>}, we get a new instance of \<open>cont\<close> during
 verification and the postcondition would only state something about this
 new instance. But as the verification condition generator uses the
 modifies clause the caller of @{term "insert"} instead still has the
-old @{text "cont"} after the call. Thats the sense of the modifies clause.
+old \<open>cont\<close> after the call. Thats the sense of the modifies clause.
 So the caller and the specification simply talk about two different things,
 without being able to relate them (unless an explicit equality is added to
 the specification). 
-*}
+\<close>
 
 
-subsubsection {* Annotations *}
+subsubsection \<open>Annotations\<close>
 
-text {*
+text \<open>
 Annotations (like loop invariants)
-are mere syntactic sugar of statements that are used by the @{text "vcg"}.  
+are mere syntactic sugar of statements that are used by the \<open>vcg\<close>.  
 Logically a statement with an annotation is
 equal to the statement without it. Hence annotations can be introduced by the user
 while building a proof:
@@ -1020,14 +1020,14 @@ nesting of sequential composition. Then after stripping the annotations the resu
 is no longer syntactically identical to original one, only equivalent modulo associativity of sequential composition. The following rule also deals with this case:
 
 @{thm [source] HoarePartial.annotate_normI}: @{thm [mode=Rule] HoarePartial.annotate_normI [no_vars]} 
-*}
+\<close>
 
-text_raw {* \paragraph{Loop Annotations} 
+text_raw \<open>\paragraph{Loop Annotations} 
 \mbox{}
 \medskip
 
 \mbox{}
-*}
+\<close>
 
 procedures (imports globals_heap)
   insertSort(p::ref| p::ref) 
@@ -1051,11 +1051,11 @@ done
 
 
 
-text {* Insertion sort is not implemented recursively here, but with a 
+text \<open>Insertion sort is not implemented recursively here, but with a 
 loop. Note that the while loop is not annotated with an invariant in the
 procedure definition. The invariant only comes into play during verification.
-Therefore we annotate the loop first, before we run the @{text "vcg"}. 
-*}
+Therefore we annotate the loop first, before we run the \<open>vcg\<close>. 
+\<close>
 
 lemma (in insertSort_impl) insertSort_spec:
 shows "\<forall>\<sigma> Ps. 
@@ -1074,7 +1074,7 @@ apply (hoare_rule anno=
           DO \<acute>q :== \<acute>p;; \<acute>p :== \<acute>p\<rightarrow>\<acute>next;; \<acute>r :== CALL insert(\<acute>q,\<acute>r) OD;;
           \<acute>p :== \<acute>r" in HoarePartial.annotateI)
 apply vcg
-txt {* @{text "\<dots>"} *}
+txt \<open>\<open>\<dots>\<close>\<close>
 (*<*)
   
   apply   fastforce
@@ -1091,20 +1091,20 @@ txt {* @{text "\<dots>"} *}
   done
 (*>*)
 
-text {* The method @{text "hoare_rule"} automatically solves the side-condition 
+text \<open>The method \<open>hoare_rule\<close> automatically solves the side-condition 
         that the annotated
-        program is the same as the original one after stripping the annotations. *}
+        program is the same as the original one after stripping the annotations.\<close>
 
-text_raw {* \paragraph{Specification Annotations} 
+text_raw \<open>\paragraph{Specification Annotations} 
 \mbox{}
 \medskip
 
 \mbox{}
-*}
+\<close>
 
 
 
-text {*
+text \<open>
 When verifying a larger block of program text, it might be useful to split up
 the block and to prove the parts in isolation. This is especially useful to
 isolate loops. On the level of the Hoare calculus
@@ -1125,15 +1125,15 @@ used by the verification condition generator. We express this by defining the
 whole @{term specAnno} to be equivalent with the body applied to an arbitrary
 variable.
 
-The Hoare rule for @{text "specAnno"} is mainly an instance of the consequence rule:
+The Hoare rule for \<open>specAnno\<close> is mainly an instance of the consequence rule:
 
 @{thm [mode=Rule,mode=ParenStmt] HoarePartial.SpecAnno [no_vars]}
 
 The side-condition @{term "\<forall>Z. c Z = c undefined"} expresses the intention of body @{term c}
 explained above: The raw body is independent of the auxiliary variable. This
-side-condition is solved automatically by the @{text "vcg"}. The concrete syntax for 
+side-condition is solved automatically by the \<open>vcg\<close>. The concrete syntax for 
 this specification annotation is shown in the following example: 
-*}
+\<close>
 
 lemma (in vars) "\<Gamma>\<turnstile> {\<sigma>} 
             \<acute>I :== \<acute>M;; 
@@ -1141,27 +1141,27 @@ lemma (in vars) "\<Gamma>\<turnstile> {\<sigma>}
                          \<acute>M :== \<acute>N;; \<acute>N :== \<acute>I 
                         \<lbrace>\<acute>M = \<^bsup>\<tau>\<^esup>N \<and> \<acute>N = \<^bsup>\<tau>\<^esup>I\<rbrace>
            \<lbrace>\<acute>M = \<^bsup>\<sigma>\<^esup>N \<and> \<acute>N = \<^bsup>\<sigma>\<^esup>M\<rbrace>"
-txt {* With the annotation we can name an intermediate state @{term \<tau>}. Since the
+txt \<open>With the annotation we can name an intermediate state @{term \<tau>}. Since the
        postcondition refers to @{term "\<sigma>"} we have to link the information about
-       the equivalence of @{text "\<^bsup>\<tau>\<^esup>I"} and @{text "\<^bsup>\<sigma>\<^esup>M"} in the specification in order
+       the equivalence of \<open>\<^bsup>\<tau>\<^esup>I\<close> and \<open>\<^bsup>\<sigma>\<^esup>M\<close> in the specification in order
        to be able to derive the postcondition.
-    *}
+\<close>
 apply vcg_step
 apply   vcg_step
-txt {* @{subgoals [display]} *}
-txt {* The first subgoal is the isolated Hoare tuple. The second one is the
+txt \<open>@{subgoals [display]}\<close>
+txt \<open>The first subgoal is the isolated Hoare tuple. The second one is the
        side-condition of the consequence rule that allows us to derive the outermost
        pre/post condition from our inserted specification.
-       @{text "\<acute>I = \<^bsup>\<sigma>\<^esup>M"} is the precondition of the specification, 
+       \<open>\<acute>I = \<^bsup>\<sigma>\<^esup>M\<close> is the precondition of the specification, 
        The second conjunct is a simplified version of
-       @{text "\<forall>t. \<^bsup>t\<^esup>M = \<acute>N \<and> \<^bsup>t\<^esup>N = \<acute>I \<longrightarrow> \<^bsup>t\<^esup>M = \<^bsup>\<sigma>\<^esup>N \<and> \<^bsup>t\<^esup>N = \<^bsup>\<sigma>\<^esup>M"} expressing that the
+       \<open>\<forall>t. \<^bsup>t\<^esup>M = \<acute>N \<and> \<^bsup>t\<^esup>N = \<acute>I \<longrightarrow> \<^bsup>t\<^esup>M = \<^bsup>\<sigma>\<^esup>N \<and> \<^bsup>t\<^esup>N = \<^bsup>\<sigma>\<^esup>M\<close> expressing that the
        postcondition of the specification implies the outermost postcondition.
-    *}
+\<close>
 apply  vcg
-txt {* @{subgoals [display]} *}
+txt \<open>@{subgoals [display]}\<close>
 apply  simp
 apply vcg
-txt {* @{subgoals [display]} *}
+txt \<open>@{subgoals [display]}\<close>
 by simp
 
 
@@ -1173,19 +1173,19 @@ lemma (in vars)
     \<lbrace>\<acute>M = \<^bsup>\<tau>\<^esup>N \<and> \<acute>N = \<^bsup>\<tau>\<^esup>I\<rbrace>
   \<lbrace>\<acute>M = \<^bsup>\<sigma>\<^esup>N \<and> \<acute>N = \<^bsup>\<sigma>\<^esup>M\<rbrace>"
 apply vcg
-txt {* @{subgoals [display]} *}
+txt \<open>@{subgoals [display]}\<close>
 by simp_all
 
-text {* Note that @{text "vcg_step"} changes the order of sequential composition, to 
-allow the user to decompose sequences by repeated calls to @{text "vcg_step"}, whereas
-@{text "vcg"} preserves the order.
+text \<open>Note that \<open>vcg_step\<close> changes the order of sequential composition, to 
+allow the user to decompose sequences by repeated calls to \<open>vcg_step\<close>, whereas
+\<open>vcg\<close> preserves the order.
 
 The above example illustrates how we can introduce a new logical state variable 
 @{term "\<tau>"}. You can introduce multiple variables by using a tuple:
 
 
 
-*}
+\<close>
 
 
 lemma (in vars) 
@@ -1196,25 +1196,25 @@ lemma (in vars)
    \<lbrace>\<acute>M = n \<and> \<acute>N = i\<rbrace>
   \<lbrace>\<acute>M = \<^bsup>\<sigma>\<^esup>N \<and> \<acute>N = \<^bsup>\<sigma>\<^esup>M\<rbrace>"
 apply vcg
-txt {* @{subgoals [display]} *}
+txt \<open>@{subgoals [display]}\<close>
 by simp_all
 
-text_raw {* \paragraph{Lemma Annotations} 
+text_raw \<open>\paragraph{Lemma Annotations} 
 \mbox{}
 \medskip
 
 \mbox{}
 
-*}
+\<close>
 
-text {*
+text \<open>
 The specification annotations described before split the verification
 into several Hoare triples which result in several subgoals. If we
 instead want to proof the Hoare triples independently as
-separate lemmas we can use the @{text "LEMMA"} annotation to plug together the
+separate lemmas we can use the \<open>LEMMA\<close> annotation to plug together the
 lemmas. It
 inserts the lemma in the same fashion as the specification annotation.
-*}
+\<close>
 lemma (in vars) foo_lemma: 
   "\<forall>n m. \<Gamma>\<turnstile> \<lbrace>\<acute>N = n \<and> \<acute>M = m\<rbrace> \<acute>N :== \<acute>N + 1;; \<acute>M :== \<acute>M + 1   
              \<lbrace>\<acute>N = n + 1 \<and> \<acute>M = m + 1\<rbrace>"
@@ -1264,24 +1264,24 @@ lemma (in vars)
   done
 
 
-subsubsection {* Total Correctness of Nested Loops *}
+subsubsection \<open>Total Correctness of Nested Loops\<close>
 
-text {*
+text \<open>
 When proving termination of nested loops it is sometimes necessary to express that
 the loop variable of the outer loop is not modified in the inner loop. To express this
 one has to fix the value of the outer loop variable before the inner loop and use this value
 in the invariant of the inner loop. This can be achieved by surrounding the inner while loop
-with an @{text "ANNO"} specification as explained previously. However, this
+with an \<open>ANNO\<close> specification as explained previously. However, this
 leads to repeating the invariant of the inner loop three times: in the invariant itself and
-in the the pre- and postcondition of the @{text "ANNO"} specification. Moreover one has
-to deal with the additional subgoal introduced by @{text "ANNO"} that expresses how
+in the the pre- and postcondition of the \<open>ANNO\<close> specification. Moreover one has
+to deal with the additional subgoal introduced by \<open>ANNO\<close> that expresses how
 the pre- and postcondition is connected to the invariant. To avoid this extra specification
 and verification work, we introduce an variant of the annotated while-loop, where one can
-introduce logical variables by @{text "FIX"}. As for the @{text "ANNO"} specification
-multiple logical variables can be introduced via a tuple (@{text "FIX (a,b,c)."}).
+introduce logical variables by \<open>FIX\<close>. As for the \<open>ANNO\<close> specification
+multiple logical variables can be introduced via a tuple (\<open>FIX (a,b,c).\<close>).
 
 The Hoare logic rule for the augmented while-loop is a mixture of the invariant rule for
-loops and the consequence rule for @{text "ANNO"}:
+loops and the consequence rule for \<open>ANNO\<close>:
 
 \begin{center}
 @{thm [mode=Rule,mode=ParenStmt] HoareTotal.WhileAnnoFix' [no_vars]}
@@ -1303,7 +1303,7 @@ loop variable @{term "M"} while the inner loop increments @{term "N"}. To discha
 proof obligation for the termination of the outer loop, we need to know that the inner loop
 does not mess around with @{term "M"}. This is expressed by introducing the logical variable
 @{term "m"} and fixing the value of @{term "M"} to it.
-*}
+\<close>
 
 
 lemma (in vars) 
@@ -1324,7 +1324,7 @@ lemma (in vars)
        OD
        \<lbrace>\<acute>M=i \<and> (\<acute>M\<noteq>0 \<longrightarrow> \<acute>N=j)\<rbrace>"
 apply vcg
-txt {* @{subgoals [display]} 
+txt \<open>@{subgoals [display]} 
 
 The first subgoal is from the precondition to the invariant of the outer loop.
 The fourth subgoal is from the invariant together with the negated loop condition 
@@ -1337,11 +1337,11 @@ of the inner loop. And at the same time from the invariant of the inner loop to 
 invariant of the outer loop (together with the proof obligation that the measure of the
 outer loop decreases). The universal quantified variables @{term "Ma"} and @{term "N"} are
 the ``fresh'' state variables introduced for the final state of the inner loop. 
-The equality @{term "Ma=M"} is the result of the equality @{text "\<acute>M=m"} in the inner 
+The equality @{term "Ma=M"} is the result of the equality \<open>\<acute>M=m\<close> in the inner 
 invariant. Subgoal three is the preservation of the invariant by the
 inner loop body (together with the proof obligation that the measure of
 the inner loop decreases).
-*}
+\<close>
 (*<*)
 apply    (simp)
 apply   (simp,arith)
@@ -1349,9 +1349,9 @@ apply  (simp,arith)
 done
 (*>*)
 
-subsection {* Functional Correctness, Termination and Runtime Faults *}
+subsection \<open>Functional Correctness, Termination and Runtime Faults\<close>
 
-text {*
+text \<open>
 Total correctness of a program with guards conceptually leads to three verification 
 tasks.
 \begin{itemize}
@@ -1372,7 +1372,7 @@ functional specification parts.  So after all there is no reason why
 we should again prove the absence of runtime faults and termination
 for the modifies clause. Therefor it suffices to have partial
 correctness of the modifies clause for a program were all guards are
-ignored.  This leads to the following pattern: *}
+ignored.  This leads to the following pattern:\<close>
 
 
 
@@ -1384,67 +1384,67 @@ procedures foo (N::nat|M::nat)
   foo_modifies: "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} \<acute>M :== PROC foo(\<acute>N) 
                    {t. t may_only_modify_globals \<sigma> in []}"
 
-text {*
+text \<open>
 The verification condition generator can solve those modifies clauses automatically
-and can use them to simplify calls to @{text foo} even in the context of total
+and can use them to simplify calls to \<open>foo\<close> even in the context of total
 correctness.
-*}
+\<close>
 
-subsection {* Procedures and Locales \label{sec:Locales}*}
+subsection \<open>Procedures and Locales \label{sec:Locales}\<close>
 
 
 
-text {*
+text \<open>
 Verification of a larger program is organised on the granularity of procedures. 
 We proof the procedures in a bottom up fashion.  Of course you can also always use Isabelle's
-dummy proof @{text "sorry"} to prototype your formalisation. So you can write the
+dummy proof \<open>sorry\<close> to prototype your formalisation. So you can write the
 theory in a bottom up fashion but actually prove the lemmas in any other order.
  
 Here are some explanations of handling of locales. In the examples below, consider
-@{text proc\<^sub>1} and @{text proc\<^sub>2} to be ``leaf'' procedures, which do not call any 
+\<open>proc\<^sub>1\<close> and \<open>proc\<^sub>2\<close> to be ``leaf'' procedures, which do not call any 
 other procedure.
-Procedure @{text "proc"} directly calls @{text proc\<^sub>1} and @{text proc\<^sub>2}.
+Procedure \<open>proc\<close> directly calls \<open>proc\<^sub>1\<close> and \<open>proc\<^sub>2\<close>.
 
-\isacommand{lemma} (\isacommand{in} @{text "proc\<^sub>1_impl"}) @{text "proc\<^sub>1_modifies"}:\\
-\isacommand{shows} @{text "\<dots>"} 
+\isacommand{lemma} (\isacommand{in} \<open>proc\<^sub>1_impl\<close>) \<open>proc\<^sub>1_modifies\<close>:\\
+\isacommand{shows} \<open>\<dots>\<close> 
 
-After the proof of @{text "proc\<^sub>1_modifies"}, the \isacommand{in} directive  
+After the proof of \<open>proc\<^sub>1_modifies\<close>, the \isacommand{in} directive  
 stores the lemma in the
-locale @{text "proc\<^sub>1_impl"}. When we later on include @{text "proc\<^sub>1_impl"} or prove 
-another theorem in locale @{text "proc\<^sub>1_impl"} the lemma @{text "proc\<^sub>1_modifies"}
+locale \<open>proc\<^sub>1_impl\<close>. When we later on include \<open>proc\<^sub>1_impl\<close> or prove 
+another theorem in locale \<open>proc\<^sub>1_impl\<close> the lemma \<open>proc\<^sub>1_modifies\<close>
 will already be available as fact.
 
-\isacommand{lemma} (\isacommand{in} @{text "proc\<^sub>1_impl"}) @{text "proc\<^sub>1_spec"}:\\
-\isacommand{shows} @{text "\<dots>"} 
+\isacommand{lemma} (\isacommand{in} \<open>proc\<^sub>1_impl\<close>) \<open>proc\<^sub>1_spec\<close>:\\
+\isacommand{shows} \<open>\<dots>\<close> 
 
-\isacommand{lemma} (\isacommand{in} @{text "proc\<^sub>2_impl"}) @{text "proc\<^sub>2_modifies"}:\\
-\isacommand{shows} @{text "\<dots>"} 
+\isacommand{lemma} (\isacommand{in} \<open>proc\<^sub>2_impl\<close>) \<open>proc\<^sub>2_modifies\<close>:\\
+\isacommand{shows} \<open>\<dots>\<close> 
 
-\isacommand{lemma} (\isacommand{in} @{text "proc\<^sub>2_impl"}) @{text "proc\<^sub>2_spec"}:\\
-\isacommand{shows} @{text "\<dots>"} 
+\isacommand{lemma} (\isacommand{in} \<open>proc\<^sub>2_impl\<close>) \<open>proc\<^sub>2_spec\<close>:\\
+\isacommand{shows} \<open>\<dots>\<close> 
 
 
-\isacommand{lemma} (\isacommand{in} @{text "proc_impl"}) @{text "proc_modifies"}:\\
-\isacommand{shows} @{text "\<dots>"} 
+\isacommand{lemma} (\isacommand{in} \<open>proc_impl\<close>) \<open>proc_modifies\<close>:\\
+\isacommand{shows} \<open>\<dots>\<close> 
 
-Note that we do not explicitly include anything about @{text "proc\<^sub>1"} or  
-@{text "proc\<^sub>2"} here. This is handled automatically. When defining
-an @{text impl}-locale it imports all @{text impl}-locales of procedures that are
-called in the body. In case of @{text "proc_impl"} this means, that @{text "proc\<^sub>1_impl"}
-and @{text "proc\<^sub>2_impl"} are imported. This has the neat effect that all theorems that
-are proven in @{text "proc\<^sub>1_impl"} and @{text "proc\<^sub>2_impl"} are also present
-in @{text "proc_impl"}.
+Note that we do not explicitly include anything about \<open>proc\<^sub>1\<close> or  
+\<open>proc\<^sub>2\<close> here. This is handled automatically. When defining
+an \<open>impl\<close>-locale it imports all \<open>impl\<close>-locales of procedures that are
+called in the body. In case of \<open>proc_impl\<close> this means, that \<open>proc\<^sub>1_impl\<close>
+and \<open>proc\<^sub>2_impl\<close> are imported. This has the neat effect that all theorems that
+are proven in \<open>proc\<^sub>1_impl\<close> and \<open>proc\<^sub>2_impl\<close> are also present
+in \<open>proc_impl\<close>.
 
-\isacommand{lemma} (\isacommand{in} @{text "proc_impl"}) @{text "proc_spec"}:\\
-\isacommand{shows} @{text "\<dots>"} 
+\isacommand{lemma} (\isacommand{in} \<open>proc_impl\<close>) \<open>proc_spec\<close>:\\
+\isacommand{shows} \<open>\<dots>\<close> 
 
 As we have seen in this example you only have to prove a procedure in its own
-@{text "impl"} locale. You do not have to include any other locale. 
-*}
+\<open>impl\<close> locale. You do not have to include any other locale. 
+\<close>
 
-subsection {* Records \label{sec:records}*}
+subsection \<open>Records \label{sec:records}\<close>
 
-text {*
+text \<open>
 Before @{term "statespaces"} where introduced the state was represented as a @{term "record"}.
 This is still supported. Compared to the flexibility of statespaces there are some drawbacks
 in particular with respect to modularity. Even names of local variables and 
@@ -1453,18 +1453,18 @@ statespaces also allow multiple inheritance. The usage of records is quite simil
 We repeat the example of an append function for heap lists.
 First we define the global components. 
 Again the appearance of the prefix `globals' is mandatory. This is the way the syntax layer distinguishes local and global variables.  
-*}
+\<close>
 record globals_list = 
   next_' :: "ref \<Rightarrow> ref"
   cont_' :: "ref \<Rightarrow> nat"
 
 
-text {* The local variables also have to be defined as a record before the actual definition
-of the procedure. The parent record @{text "state"} defines a generic @{term "globals"}
+text \<open>The local variables also have to be defined as a record before the actual definition
+of the procedure. The parent record \<open>state\<close> defines a generic @{term "globals"}
 field as a place-holder for the record of global components. In contrast to the
 statespace approach there is no single @{term "locals"} slot. The local components are
 just added to the record.
-*}
+\<close>
 record 'g list_vars = "'g state" +
   p_'    :: "ref"
   q_'    :: "ref"
@@ -1472,20 +1472,20 @@ record 'g list_vars = "'g state" +
   root_' :: "ref"
   tmp_'  :: "ref"
 
-text {* Since the parameters and local variables are determined by the record, there are
+text \<open>Since the parameters and local variables are determined by the record, there are
 no type annotations or definitions of local variables while defining a procedure.
-*}
+\<close>
 
 procedures
   append'(p,q|p) = 
     "IF \<acute>p=Null THEN \<acute>p :== \<acute>q 
      ELSE \<acute>p \<rightarrow>\<acute>next:== CALL append'(\<acute>p\<rightarrow>\<acute>next,\<acute>q) FI"
 
-text {* As in the statespace approach, a locale called @{text "append'_impl"} is created.
+text \<open>As in the statespace approach, a locale called \<open>append'_impl\<close> is created.
 Note that we do not give any explicit information which global or local state-record to use.
 Since the records are already defined we rely on Isabelle's type inference. 
 Dealing with the locale is analogous to the case with statespaces.
-*}
+\<close>
 
 lemma (in append'_impl) append'_modifies: 
   shows
@@ -1506,34 +1506,34 @@ lemma (in append'_impl) append'_spec:
   done
 
 
-text {*
+text \<open>
 However, in some corner cases the inferred state type in a procedure definition 
 can be too general which raises problems when  attempting to proof a suitable 
 specifications in the locale.
 Consider for example the simple procedure body @{term "\<acute>p :== NULL"} for a procedure
-@{text "init"}. 
-*}
+\<open>init\<close>. 
+\<close>
 
 procedures init (|p) = 
   "\<acute>p:== Null"
 
 
-text {*
+text \<open>
 Here Isabelle can only
 infer the local variable record. Since no reference to any global variable is
-made the type fixed for the global variables (in the locale @{text "init'_impl"}) is a 
+made the type fixed for the global variables (in the locale \<open>init'_impl\<close>) is a 
 type variable say @{typ "'g"} and not a @{term "globals_list"} record. Any specification
 mentioning @{term "next"} or @{term "cont"} restricts the state type and cannot be
-added to the locale @{text "init_impl"}. Hence we have to restrict the body
+added to the locale \<open>init_impl\<close>. Hence we have to restrict the body
 @{term "\<acute>p :== NULL"} in the first place by adding a typing annotation:
-*}
+\<close>
 
 procedures init' (|p) = 
   "\<acute>p:== Null::(('a globals_list_scheme, 'b) list_vars_scheme, char list, 'c) com"
 
 
-subsubsection {* Extending State Spaces *}
-text {*
+subsubsection \<open>Extending State Spaces\<close>
+text \<open>
 The records in Isabelle are
 extensible \cite{Nipkow-02-hol,NaraschewskiW-TPHOLs98}. In principle this can be exploited 
 during verification. The state space can be extended while we we add procedures.
@@ -1543,14 +1543,14 @@ But there is one major drawback:
 \end{itemize}
 
 You can extend both the main state record as well as the record for the global variables.
-*}
+\<close>
 
-subsubsection {* Mapping Variables to Record Fields *}
+subsubsection \<open>Mapping Variables to Record Fields\<close>
 
-text {*
+text \<open>
 Generally the state space (global and local variables) is flat and all components
 are accessible from everywhere. Locality or globality of variables is achieved by
-the proper @{text "init"} and @{text "return"}/@{text "result"} functions in procedure
+the proper \<open>init\<close> and \<open>return\<close>/\<open>result\<close> functions in procedure
 calls. What is the best way to map programming language variables to the state records?
 One way is to disambiguate all names, by using the procedure names as prefix or the
 structure names for heap components. This leads to long names and lots of 
@@ -1559,8 +1559,8 @@ variable @{term i} of procedure @{term A} and variable @{term "i"} of procedure 
 can be mapped to the same record component, without any harm, provided they have the
 same logical type. Therefor for local variables it is preferable to map them per type. You
 only have to distinguish a variable with the same name if they have a different type.
-Note that all pointers just have logical type @{text "ref"}. So you even do not
-have to distinguish between a  pointer @{text p} to a integer and a pointer @{text p} to
+Note that all pointers just have logical type \<open>ref\<close>. So you even do not
+have to distinguish between a  pointer \<open>p\<close> to a integer and a pointer \<open>p\<close> to
 a list.
 For global components (global variables and heap structures) you have to disambiguate the
 name. But hopefully the field names of structures have different names anyway.
@@ -1569,16 +1569,16 @@ the logic. You have to disambiguate global and local names!
 As the names of the components show up in the specifications and the
 proof obligations, names are even more important as for programming. Try to
 find meaningful and short names, to avoid cluttering up your reasoning.
-*}
+\<close>
 
 (*<*)
-text {*
+text \<open>
 in locales, includes, spec or impl?
 Names: per type not per procedure\<dots>
 downgrading total to partial\<dots>
-*}
+\<close>
 (*>*)
-text {**}
+text \<open>\<close>
 (*<*)
 end
 (*>*)

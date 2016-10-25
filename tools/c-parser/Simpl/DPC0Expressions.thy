@@ -4,7 +4,7 @@
     License:     LGPL
 *)
 
-section {* SHORTENED! Parallel expressions in DPC/Hoare. *}
+section \<open>SHORTENED! Parallel expressions in DPC/Hoare.\<close>
 
 theory DPC0Expressions imports Main begin
 

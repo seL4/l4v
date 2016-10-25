@@ -25,11 +25,11 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
-section {* Terminating Programs *}
+section \<open>Terminating Programs\<close>
 
 theory Termination imports Semantic begin
 
-subsection {* Inductive Characterisation: @{text "\<Gamma>\<turnstile>c\<down>s"}*}
+subsection \<open>Inductive Characterisation: \<open>\<Gamma>\<turnstile>c\<down>s\<close>\<close>
 
 inductive "terminates"::"('s,'p,'f) body \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'f) xstate \<Rightarrow> bool"
   ("_\<turnstile>_ \<down> _" [60,20,60] 89)
@@ -311,8 +311,8 @@ done
 
 
 (* ************************************************************************* *)
-subsection {* Lemmas about @{const "sequence"}, @{const "flatten"} and 
- @{const "normalize"} *}
+subsection \<open>Lemmas about @{const "sequence"}, @{const "flatten"} and 
+ @{const "normalize"}\<close>
 (* ************************************************************************ *)
 
 lemma terminates_sequence_app: 
@@ -630,7 +630,7 @@ lemma terminates_iff_terminates_normalize:
     terminates_normalize_to_terminates)
 
 (* ************************************************************************* *)
-subsection {* Lemmas about @{const "strip_guards"} *}
+subsection \<open>Lemmas about @{const "strip_guards"}\<close>
 (* ************************************************************************* *)
 
 lemma terminates_strip_guards_to_terminates: "\<And>s. \<Gamma>\<turnstile>strip_guards F c\<down>s  \<Longrightarrow> \<Gamma>\<turnstile>c\<down>s"
@@ -722,8 +722,8 @@ next
     proof (induct)
       case (WhileTrue s b' c')
       have eqs: "While b' c' = While b (strip_guards F c)" by fact
-      with `s\<in>b'` have b: "s\<in>b" by simp
-      from eqs `\<Gamma>\<turnstile>c' \<down> Normal s` have "\<Gamma>\<turnstile>strip_guards F c \<down> Normal s"
+      with \<open>s\<in>b'\<close> have b: "s\<in>b" by simp
+      from eqs \<open>\<Gamma>\<turnstile>c' \<down> Normal s\<close> have "\<Gamma>\<turnstile>strip_guards F c \<down> Normal s"
         by simp
       hence term_c: "\<Gamma>\<turnstile>c \<down> Normal s"
         by (rule hyp_c)
@@ -770,7 +770,7 @@ next
   case Guard 
   thus ?case
     by (cases s) (auto elim: terminates_Normal_elim_cases intro: terminates.intros
-                  split: split_if_asm)
+                  split: if_split_asm)
 next
   case Throw thus ?case by simp
 next
@@ -876,7 +876,7 @@ next
 qed (auto intro: terminates.intros)
 
 (* ************************************************************************* *)
-subsection {* Lemmas about @{term "c\<^sub>1 \<inter>\<^sub>g c\<^sub>2"} *}
+subsection \<open>Lemmas about @{term "c\<^sub>1 \<inter>\<^sub>g c\<^sub>2"}\<close>
 (* ************************************************************************* *)
 
 lemma inter_guards_terminates: 
@@ -1131,7 +1131,7 @@ proof -
 qed
 
 (* ************************************************************************* *)
-subsection {* Lemmas about @{const "mark_guards"} *}
+subsection \<open>Lemmas about @{const "mark_guards"}\<close>
 (* ************************************************************************ *)
 
 lemma terminates_to_terminates_mark_guards:
@@ -1383,7 +1383,7 @@ lemma terminates_mark_guards_to_terminates:
 
 
 (* ************************************************************************* *)
-subsection {* Lemmas about @{const "merge_guards"} *}
+subsection \<open>Lemmas about @{const "merge_guards"}\<close>
 (* ************************************************************************ *)
 
 lemma terminates_to_terminates_merge_guards:
@@ -1428,7 +1428,7 @@ next
   have "s \<notin> g" by fact
   thus ?case
     by (cases "merge_guards c")
-       (auto intro: terminates.intros split: split_if_asm simp add: Let_def)
+       (auto intro: terminates.intros split: if_split_asm simp add: Let_def)
 qed (fastforce intro: terminates.intros dest: exec_merge_guards_to_exec)+
 
 lemma terminates_merge_guards_to_terminates_Normal:
@@ -1573,7 +1573,7 @@ theorem terminates_iff_terminates_merge_guards:
     terminates_merge_guards_to_terminates)
 
 (* ************************************************************************* *)
-subsection {* Lemmas about @{term "c\<^sub>1 \<subseteq>\<^sub>g c\<^sub>2"} *}
+subsection \<open>Lemmas about @{term "c\<^sub>1 \<subseteq>\<^sub>g c\<^sub>2"}\<close>
 (* ************************************************************************ *)
 
 lemma terminates_fewer_guards_Normal:
@@ -1916,12 +1916,11 @@ next
     next
       case False
       with exec_strip_guards_to_exec [OF exec_strip_guards_c1] noFault_c1
-      have "\<Gamma>\<turnstile>\<langle>c1,Normal s \<rangle> \<Rightarrow> s'"
+      have *: "\<Gamma>\<turnstile>\<langle>c1,Normal s \<rangle> \<Rightarrow> s'"
         by (auto simp add: final_notin_def elim!: isFaultE)
-      moreover
-      from this noFault_Seq have "\<Gamma>\<turnstile>\<langle>c2,s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
+      with noFault_Seq have "\<Gamma>\<turnstile>\<langle>c2,s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
         by (auto simp add: final_notin_def intro: exec.intros)
-      ultimately show ?thesis
+      with * show ?thesis
         using Seq.hyps by simp
     qed
   }
@@ -1951,12 +1950,11 @@ next
     next
       case False
       with exec_strip_guards_to_exec [OF exec_strip_guards_c] noFault_c
-      have "\<Gamma>\<turnstile>\<langle>c,Normal s \<rangle> \<Rightarrow> s'"
+      have *: "\<Gamma>\<turnstile>\<langle>c,Normal s \<rangle> \<Rightarrow> s'"
         by (auto simp add: final_notin_def elim!: isFaultE)
-      moreover
-      from this s_in_b noFault_while have "\<Gamma>\<turnstile>\<langle>While b c,s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
+      with s_in_b noFault_while have "\<Gamma>\<turnstile>\<langle>While b c,s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
         by (auto simp add: final_notin_def intro: exec.intros)
-      ultimately show ?thesis
+      with * show ?thesis
         using WhileTrue.hyps by simp
     qed
   }
@@ -1990,12 +1988,11 @@ next
     have "\<Gamma>\<turnstile>strip_guards F c2 \<down> Normal s'"
     proof -
       from exec_strip_guards_to_exec [OF exec_strip_guards_c1] noFault_c1
-      have "\<Gamma>\<turnstile>\<langle>c1,Normal s \<rangle> \<Rightarrow> Abrupt s'"
+      have *: "\<Gamma>\<turnstile>\<langle>c1,Normal s \<rangle> \<Rightarrow> Abrupt s'"
         by (auto simp add: final_notin_def elim!: isFaultE)
-      moreover
-      from this noFault_Catch have "\<Gamma>\<turnstile>\<langle>c2,Normal s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
+      with noFault_Catch have "\<Gamma>\<turnstile>\<langle>c2,Normal s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
         by (auto simp add: final_notin_def intro: exec.intros)
-      ultimately show ?thesis
+      with * show ?thesis
         using Catch.hyps by simp
     qed
   }
@@ -2004,7 +2001,7 @@ next
 qed
 
 (* ************************************************************************* *)
-subsection {* Lemmas about @{const "strip_guards"} *}
+subsection \<open>Lemmas about @{const "strip_guards"}\<close>
 (* ************************************************************************* *)
 
 lemma terminates_noFault_strip:
@@ -2048,12 +2045,11 @@ next
     next
       case False
       with exec_strip_to_exec [OF exec_strip_c1] noFault_c1
-      have "\<Gamma>\<turnstile>\<langle>c1,Normal s \<rangle> \<Rightarrow> s'"
+      have *: "\<Gamma>\<turnstile>\<langle>c1,Normal s \<rangle> \<Rightarrow> s'"
         by (auto simp add: final_notin_def elim!: isFaultE)
-      moreover
-      from this noFault_Seq have "\<Gamma>\<turnstile>\<langle>c2,s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
+      with noFault_Seq have "\<Gamma>\<turnstile>\<langle>c2,s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
         by (auto simp add: final_notin_def intro: exec.intros)
-      ultimately show ?thesis
+      with * show ?thesis
         using Seq.hyps by (simp del: strip_simp)
     qed
   }
@@ -2083,12 +2079,11 @@ next
     next
       case False
       with exec_strip_to_exec [OF exec_strip_c] noFault_c
-      have "\<Gamma>\<turnstile>\<langle>c,Normal s \<rangle> \<Rightarrow> s'"
+      have *: "\<Gamma>\<turnstile>\<langle>c,Normal s \<rangle> \<Rightarrow> s'"
         by (auto simp add: final_notin_def elim!: isFaultE)
-      moreover
-      from this s_in_b noFault_while have "\<Gamma>\<turnstile>\<langle>While b c,s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
+      with s_in_b noFault_while have "\<Gamma>\<turnstile>\<langle>While b c,s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
         by (auto simp add: final_notin_def intro: exec.intros)
-      ultimately show ?thesis
+      with * show ?thesis
         using WhileTrue.hyps by (simp del: strip_simp)
     qed
   }
@@ -2134,12 +2129,11 @@ next
     have "strip F \<Gamma>\<turnstile>c2 \<down> Normal s'"
     proof -
       from exec_strip_to_exec [OF exec_strip_c1] noFault_c1
-      have "\<Gamma>\<turnstile>\<langle>c1,Normal s \<rangle> \<Rightarrow> Abrupt s'"
+      have *: "\<Gamma>\<turnstile>\<langle>c1,Normal s \<rangle> \<Rightarrow> Abrupt s'"
         by (auto simp add: final_notin_def elim!: isFaultE)
-      moreover
-      from this noFault_Catch have "\<Gamma>\<turnstile>\<langle>c2,Normal s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
+      with * noFault_Catch have "\<Gamma>\<turnstile>\<langle>c2,Normal s' \<rangle> \<Rightarrow>\<notin>Fault ` F"
         by (auto simp add: final_notin_def intro: exec.intros)
-      ultimately show ?thesis
+      with * show ?thesis
         using Catch.hyps by (simp del: strip_simp)
     qed
   }
@@ -2149,7 +2143,7 @@ qed
 
 
 (* ************************************************************************* *)
-subsection {* Miscellaneous *}
+subsection \<open>Miscellaneous\<close>
 (* ************************************************************************* *)
 
 lemma terminates_while_lemma:

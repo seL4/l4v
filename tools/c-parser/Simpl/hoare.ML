@@ -135,20 +135,25 @@ fun dest_Un (Const (@{const_name Lattices.sup}, _) $ t1 $ t2) = dest_Un t1 @ des
 fun mk_UN' dT rT t = 
   let
     val dTs = HOLogic.mk_setT dT;
+    val rTs = HOLogic.mk_setT rT;
   in
-    Const (@{const_name Complete_Lattices.SUPREMUM},
-      dTs --> (dT --> rT) --> rT) $
-      Const (@{const_name Orderings.top}, dTs) $ t
+    Const (@{const_name Complete_Lattices.Sup}, rTs --> rT) $
+      (Const (@{const_name image}, (dT --> rT) --> dTs --> rTs) $ t $
+      Const (@{const_name Orderings.top}, dTs))
   end;
 
 fun mk_UN ((x, T), P) = mk_UN' T (fastype_of P) (absfree (x, T) P);
 
-fun dest_UN (Const (@{const_name Complete_Lattices.SUPREMUM}, _) $ Const (@{const_name Orderings.top}, _) $ Abs (x, T, t)) =
+fun dest_UN (Const (@{const_name Complete_Lattices.Sup}, _) $
+      (Const (@{const_name Set.image}, _) $ Abs (x, T, t) $
+      Const (@{const_name Orderings.top}, _))) =
       let val (vars, body) = dest_UN t
       in ((x, T) :: vars, body) end
   | dest_UN t = ([], t);
 
-fun tap_UN (Const (@{const_name Complete_Lattices.SUPREMUM}, _) $ Const (@{const_name Orderings.top}, _) $ t) = SOME t
+fun tap_UN (Const (@{const_name Complete_Lattices.Sup}, _) $
+     (Const (@{const_name Set.image}, _) $ t $
+     Const (@{const_name Orderings.top}, _))) = SOME t
   | tap_UN _ = NONE;
 
 
@@ -534,7 +539,7 @@ fun dest_Guard (Const (@{const_name Language.com.Guard},_)$f$g$c) = (f,g,c,false
 
 fun add_declaration name decl thy =
   thy
-  |> Named_Target.init name
+  |> Named_Target.init NONE name
   |> Local_Theory.declaration {syntax = false, pervasive = false} decl
   |> Local_Theory.exit
   |> Proof_Context.theory_of;
@@ -569,7 +574,7 @@ structure Hoare_Data = Generic_Data
   type T = hoare_data;
 
   val empty = make_hoare_data
-               (Symtab.empty: proc_info Symtab.table) (* smlnj needs typing *)
+               (Symtab.empty: proc_info Symtab.table)
                ([]:string list list)
                (Function)
                (stamp (),(K (K NONE)): Proof.context -> term -> term option)
@@ -883,7 +888,7 @@ fun apply_in_context thy lexp f t =
 
 fun add_abbrev loc mode name spec thy =
   thy
-  |> Named_Target.init loc
+  |> Named_Target.init NONE loc
   |> (fn lthy => let val t = Syntax.read_term (Local_Theory.target_of lthy) spec;
       in Local_Theory.abbrev mode ((Binding.name name, NoSyn), t) lthy end)
   |> #2
@@ -1055,7 +1060,7 @@ fun procedures_definition locname procs thy =
         fun add_decl_and_def lname ctxt =
             ctxt
             |> Proof_Context.theory_of
-            |> Named_Target.init lname
+            |> Named_Target.init NONE lname
             |> Local_Theory.declaration {syntax = false, pervasive = false} parameter_info_decl
             |> (fn lthy => if has_body name
                            then snd (Local_Theory.define (def lthy) lthy)
@@ -1187,7 +1192,7 @@ fun procedures_definition locname procs thy =
 
 (* outer syntax *)
 
-val var_declP  = Parse.name -- (@{keyword "::"} |-- Parse.!!! Parse.typ_group);
+val var_declP  = Parse.name -- (@{keyword "::"} |-- Parse.!!! Parse.embedded);
 val var_declP' = Parse.name >> (fn n => (n,""));
 
 val localsP = Scan.repeat var_declP;
@@ -1211,10 +1216,10 @@ val proc_decl = proc_decl_statespace >> pair Function || proc_decl_record >> pai
 
 val loc_decl = Scan.optional (@{keyword "where"} |-- localsP --| @{keyword "in"}) []
 
-val proc_body = Parse.term_group (*>> BodyTerm*)
+val proc_body = Parse.embedded (*>> BodyTerm*)
 
 
-fun proc_specs x = (Parse.!!! (Scan.repeat (Parse_Spec.thm_name ":" -- Parse.prop_group))
+fun proc_specs x = (Parse.!!! (Scan.repeat (Parse_Spec.thm_name ":" -- Parse.embedded))
     >> map (fn ((thm_name, _), prop) => (Binding.name_of thm_name, prop))) x
 
 val par_loc =
@@ -1581,10 +1586,9 @@ fun assertion_simp_tac ctxt state_kind thms i =
 (* simplify equality test on strings (and datatype-constructors) and propagate result*)
 fun string_eq_simp_tac ctxt =
   simp_tac (put_simpset HOL_basic_ss ctxt
-    addsimps (@{thms list.inject} @ @{thms char.inject}
-      @ @{thms list.distinct} @ @{thms simp_thms}));
-    
-
+    addsimps @{thms list.inject list.distinct Char_eq_Char_iff
+      cut_eq_simps simp_thms});
+   
 
 fun assertion_string_eq_simp_tac ctxt state_kind thms i =
     assertion_simp_tac ctxt state_kind thms i THEN_MAYBE string_eq_simp_tac ctxt i;
@@ -2957,8 +2961,8 @@ val ss =
   simpset_of
     (put_simpset (simpset_of @{theory_context Fun}) @{context}
       addsimps (@{thm StateFun.lookup_def} :: @{thm StateFun.id_id_cancel}
-      :: @{thms list.inject} @ @{thms char.inject}
-      @ @{thms list.distinct} @ @{thms simp_thms})
+      :: @{thms list.inject list.distinct Char_eq_Char_iff
+      cut_eq_simps simp_thms})
     addsimprocs [Record.simproc, StateFun.lazy_conj_simproc]
     |> fold Simplifier.add_cong @{thms block_conj_cong});
 
@@ -3098,11 +3102,11 @@ local
 val state_fun_update_ss =
   simpset_of (put_simpset HOL_basic_ss @{context}
     addsimps ([@{thm StateFun.update_def}, @{thm id_def}, @{thm fun_upd_apply}, @{thm if_True}, @{thm if_False}]
-      @ @{thms list.inject} @ @{thms char.inject}
-      @ @{thms list.distinct} @ @{thms simp_thms} @ K_fun_convs)
+      @ @{thms list.inject list.distinct Char_eq_Char_iff
+      cut_eq_simps simp_thms} @ K_fun_convs)
     addsimprocs [DistinctTreeProver.distinct_simproc ["distinct_fields", "distinct_fields_globals"]]
     |> Simplifier.add_cong @{thm imp_cong} (* K_fun_congs  FIXME: Stefan fragen*)
-    |> Splitter.add_split @{thm split_if});
+    |> Splitter.add_split @{thm if_split});
 
 in
 

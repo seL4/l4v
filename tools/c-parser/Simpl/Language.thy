@@ -26,15 +26,15 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* The Simpl Syntax *}
+section \<open>The Simpl Syntax\<close>
 
 theory Language imports "~~/src/HOL/Library/Old_Recdef" begin
 
-subsection {* The Core Language *}
+subsection \<open>The Core Language\<close>
 
-text {* We use a shallow embedding of boolean expressions as well as assertions
+text \<open>We use a shallow embedding of boolean expressions as well as assertions
 as sets of states. 
-*}
+\<close>
 
 type_synonym 's bexp = "'s set"
 type_synonym 's assn = "'s set"
@@ -57,7 +57,7 @@ datatype (dead 's, 'p, 'f) com =
 
 
 
-subsection {* Derived Language Constructs *}
+subsection \<open>Derived Language Constructs\<close>
 
 definition
   raise:: "('s \<Rightarrow> 's) \<Rightarrow> ('s,'p,'f) com" where
@@ -160,10 +160,10 @@ lemma snd_guaranteeStripPair: "snd (guaranteeStripPair f g) = g"
   by (simp add: guaranteeStripPair_def)
 
 
-subsection {* Operations on Simpl-Syntax *}
+subsection \<open>Operations on Simpl-Syntax\<close>
 
 
-subsubsection {* Normalisation of Sequential Composition: @{text "sequence"}, @{text "flatten"} and @{text "normalize"} *}
+subsubsection \<open>Normalisation of Sequential Composition: \<open>sequence\<close>, \<open>flatten\<close> and \<open>normalize\<close>\<close>
 
 primrec flatten:: "('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com list" 
 where
@@ -425,8 +425,8 @@ lemma normalize_guards [simp]:
   "normalize (guards gs c) = guards gs (normalize c)"
   by (induct gs) auto
 
-text {* Sequencial composition with guards in the body is not preserved by
-        normalize *}
+text \<open>Sequencial composition with guards in the body is not preserved by
+        normalize\<close>
 lemma normalize_while [simp]:
   "normalize (while gs b c) = guards gs
       (While b (sequence Seq (flatten (normalize c) @ flatten (guards gs Skip))))" 
@@ -452,7 +452,7 @@ lemmas normalize_simps =
   normalize_while normalize_whileAnno normalize_whileAnnoG normalize_specAnno
 
 
-subsubsection {* Stripping Guards: @{text "strip_guards"} *}
+subsubsection \<open>Stripping Guards: \<open>strip_guards\<close>\<close>
 
 primrec strip_guards:: "'f set \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
 where
@@ -570,7 +570,7 @@ lemmas strip_guards_simps = strip_guards.simps strip_guards_raise
   strip_guards_while strip_guards_whileAnno strip_guards_whileAnnoG
   strip_guards_specAnno
 
-subsubsection {* Marking Guards: @{text "mark_guards"} *}
+subsubsection \<open>Marking Guards: \<open>mark_guards\<close>\<close>
 
 primrec mark_guards:: "'f \<Rightarrow> ('s,'p,'g) com \<Rightarrow> ('s,'p,'f) com"
 where
@@ -703,7 +703,7 @@ lemma dest_Guard_guaranteeStrip [simp]: "dest_Guard (guaranteeStrip f g c) = (f,
 
 lemmas dest_Guard_simps = dest_Guard.simps dest_Guard_guaranteeStrip
 
-subsubsection {* Merging Guards: @{text merge_guards}*}
+subsubsection \<open>Merging Guards: \<open>merge_guards\<close>\<close>
 
 primrec merge_guards:: "('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
 where
@@ -732,43 +732,43 @@ where
 "merge_guards (Catch c\<^sub>1 c\<^sub>2) = Catch (merge_guards c\<^sub>1) (merge_guards c\<^sub>2)"
 
 lemma merge_guards_res_Skip: "merge_guards c = Skip \<Longrightarrow> c = Skip"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_Basic: "merge_guards c = Basic f \<Longrightarrow> c = Basic f"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_Spec: "merge_guards c = Spec r \<Longrightarrow> c = Spec r"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_Seq: "merge_guards c = Seq c1 c2 \<Longrightarrow> 
     \<exists>c1' c2'. c = Seq c1' c2' \<and> merge_guards c1' = c1 \<and> merge_guards c2' = c2"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_Cond: "merge_guards c = Cond b c1 c2 \<Longrightarrow> 
     \<exists>c1' c2'. c = Cond b c1' c2' \<and> merge_guards c1' = c1 \<and> merge_guards c2' = c2"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_While: "merge_guards c = While b c' \<Longrightarrow> 
     \<exists>c''. c = While b c''  \<and> merge_guards c'' = c'"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_Call: "merge_guards c = Call p \<Longrightarrow> c = Call p"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_DynCom: "merge_guards c = DynCom c' \<Longrightarrow> 
     \<exists>c''. c = DynCom c''  \<and> (\<lambda>s. (merge_guards (c'' s))) = c'"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_Throw: "merge_guards c = Throw \<Longrightarrow> c = Throw"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_Catch: "merge_guards c = Catch c1 c2 \<Longrightarrow> 
     \<exists>c1' c2'. c = Catch c1' c2' \<and> merge_guards c1' = c1 \<and> merge_guards c2' = c2"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_Guard: 
  "merge_guards c = Guard f g c' \<Longrightarrow> \<exists>c'' f' g'. c = Guard f' g' c''"
-  by (cases c) (auto split: com.splits split_if_asm simp add: is_Guard_def Let_def)
+  by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemmas merge_guards_res_simps = merge_guards_res_Skip merge_guards_res_Basic 
  merge_guards_res_Spec merge_guards_res_Seq merge_guards_res_Cond 
@@ -836,9 +836,9 @@ lemma merge_guards_specAnno [simp]:
     specAnno P (\<lambda>s. merge_guards (c undefined)) Q A"
   by (simp add: specAnno_def)
 
-text {* @{term "merge_guards"} for guard-lists as in @{const guards}, @{const while}
+text \<open>@{term "merge_guards"} for guard-lists as in @{const guards}, @{const while}
  and @{const whileAnnoG} may have funny effects since the guard-list has to
- be merged with the body statement too.*}
+ be merged with the body statement too.\<close>
 
 lemmas merge_guards_simps = merge_guards.simps merge_guards_raise 
   merge_guards_condCatch merge_guards_bind merge_guards_bseq merge_guards_block
@@ -876,7 +876,7 @@ where
 "nothrows Throw = False" |
 "nothrows (Catch c\<^sub>1 c\<^sub>2) = (nothrows c\<^sub>1 \<and> nothrows c\<^sub>2)"
 
-subsubsection {* Intersecting Guards: @{text "c\<^sub>1 \<inter>\<^sub>g c\<^sub>2"}*}
+subsubsection \<open>Intersecting Guards: \<open>c\<^sub>1 \<inter>\<^sub>g c\<^sub>2\<close>\<close>
 
 inductive_set com_rel ::"(('s,'p,'f) com \<times> ('s,'p,'f) com) set"
 where
@@ -991,28 +991,28 @@ lemma inter_guards_strip_eq:
     (strip_guards UNIV c = strip_guards UNIV c2)"
 apply (induct c1 c2 rule: inter_guards.induct) 
 prefer 8 
-apply (simp split: split_if_asm)
+apply (simp split: if_split_asm)
 apply hypsubst
 apply simp
 apply (rule ext)
 apply (erule_tac x=s in allE, erule exE)
 apply (erule_tac x=s in allE)
 apply fastforce
-apply (fastforce split: option.splits split_if_asm)+
+apply (fastforce split: option.splits if_split_asm)+
 done
 
 lemma inter_guards_sym: "\<And>c. (c1 \<inter>\<^sub>g c2) = Some c \<Longrightarrow> (c2 \<inter>\<^sub>g c1) = Some c"
 apply (induct c1 c2 rule: inter_guards.induct)
 apply (simp_all)
 prefer 7
-apply (simp split: split_if_asm add: not_None_eq)
+apply (simp split: if_split_asm add: not_None_eq)
 apply (rule conjI)
 apply  (clarsimp)
 apply  (rule ext)
 apply  (erule_tac x=s in allE)+
 apply  fastforce
 apply fastforce
-apply (fastforce split: option.splits split_if_asm)+
+apply (fastforce split: option.splits if_split_asm)+
 done
 
 
@@ -1043,18 +1043,18 @@ lemma inter_guards_While:
  "(While cnd bdy1 \<inter>\<^sub>g c2) = Some c =
      (\<exists>bdy2 bdy. c2 =While cnd bdy2 \<and> (bdy1 \<inter>\<^sub>g bdy2) = Some bdy \<and>
        c=While cnd bdy)"
-  by (cases c2) (auto split: option.splits split_if_asm)
+  by (cases c2) (auto split: option.splits if_split_asm)
 
 lemma inter_guards_Call:
   "(Call p \<inter>\<^sub>g c2) = Some c =
      (c2=Call p \<and> c=Call p)"
-  by (cases c2) (auto split: split_if_asm)
+  by (cases c2) (auto split: if_split_asm)
 
 lemma inter_guards_DynCom:
   "(DynCom f1 \<inter>\<^sub>g c2) = Some c =
      (\<exists>f2. c2=DynCom f2 \<and> (\<forall>s. ((f1 s) \<inter>\<^sub>g (f2 s)) \<noteq> None) \<and>
       c=DynCom (\<lambda>s. the ((f1 s) \<inter>\<^sub>g (f2 s))))"
-  by (cases c2) (auto split: split_if_asm)
+  by (cases c2) (auto split: if_split_asm)
 
 
 lemma inter_guards_Guard:
@@ -1079,7 +1079,7 @@ lemmas inter_guards_simps = inter_guards_Skip inter_guards_Basic inter_guards_Sp
   inter_guards_DynCom inter_guards_Guard inter_guards_Throw 
   inter_guards_Catch
 
-subsubsection {* Subset on Guards: @{text "c\<^sub>1 \<subseteq>\<^sub>g c\<^sub>2"} *} 
+subsubsection \<open>Subset on Guards: \<open>c\<^sub>1 \<subseteq>\<^sub>g c\<^sub>2\<close>\<close> 
 
 
 consts subseteq_guards:: "('s,'p,'f) com \<times> ('s,'p,'f) com \<Rightarrow> bool"
@@ -1145,7 +1145,7 @@ lemma subseteq_guards_DynCom:
 lemma subseteq_guards_Guard:
   "c \<subseteq>\<^sub>g Guard f g c'  \<Longrightarrow> 
      (c \<subseteq>\<^sub>g c') \<or> (\<exists>c''. c=Guard f g c'' \<and> (c'' \<subseteq>\<^sub>g c'))"
-  by (cases c) (auto split: split_if_asm)
+  by (cases c) (auto split: if_split_asm)
 
 lemma subseteq_guards_Throw:
  "c \<subseteq>\<^sub>g Throw \<Longrightarrow> c = Throw"

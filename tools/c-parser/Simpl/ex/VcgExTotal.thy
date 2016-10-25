@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* Examples for Total Correctness *}
+section \<open>Examples for Total Correctness\<close>
 
 theory VcgExTotal imports "../HeapList" "../Vcg" begin
 
@@ -60,10 +60,10 @@ apply vcg
 apply auto
 done
 
-text {* Total correctness of a nested loop. In the inner loop we have to 
+text \<open>Total correctness of a nested loop. In the inner loop we have to 
 express that the loop variable of the outer loop is not changed. We use
-@{text "FIX"} to introduce a new logical variable
-*}
+\<open>FIX\<close> to introduce a new logical variable
+\<close>
 
 lemma "\<Gamma>\<turnstile>\<^sub>t \<lbrace>\<acute>M=0 \<and> \<acute>N=0\<rbrace> 
       WHILE (\<acute>M < i) 
@@ -214,7 +214,7 @@ procedures Rev(p|p) =
  Rev_modifies:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} \<acute>p :== PROC Rev(\<acute>p) {t. t may_only_modify_globals \<sigma> in [next]}"
 
-text {* We only need partial correctness of modifies clause!*}
+text \<open>We only need partial correctness of modifies clause!\<close>
 
 
 
@@ -307,7 +307,7 @@ and
                          IF 0 < \<acute>M THEN CALL coast(\<acute>N,\<acute>M- 1) FI"
 
 
-ML {* ML_Thms.bind_thm ("HoareTotal_ProcRec2", Hoare.gen_proc_rec @{context} Hoare.Total 2)*}
+ML \<open>ML_Thms.bind_thm ("HoareTotal_ProcRec2", Hoare.gen_proc_rec @{context} Hoare.Total 2)\<close>
 
 
 lemma (in pedal_coast_clique)

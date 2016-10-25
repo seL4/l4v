@@ -26,11 +26,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* Properties of Partial Correctness Hoare Logic *}
+section \<open>Properties of Partial Correctness Hoare Logic\<close>
 
 theory HoarePartialProps imports HoarePartialDef begin
 
-subsection {* Soundness *}
+subsection \<open>Soundness\<close>
 
 lemma hoare_cnvalid: 
  assumes hoare: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
@@ -411,7 +411,7 @@ qed
 theorem hoare_sound: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A \<Longrightarrow> \<Gamma>,\<Theta>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A"
   by (iprover intro: cnvalid_to_cvalid hoare_cnvalid)
 
-subsection {* Completeness *}
+subsection \<open>Completeness\<close>
 
 lemma MGT_valid:
 "\<Gamma>\<Turnstile>\<^bsub>/F\<^esub>{s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union>  Fault ` (-F))} c 
@@ -426,8 +426,8 @@ proof (rule validI)
     by (cases t) (auto simp add: final_notin_def)
 qed
 
-text {* The consequence rule where the existential @{term Z} is instantiated
-to @{term s}. Usefull in proof of @{text "MGT_lemma"}.*}
+text \<open>The consequence rule where the existential @{term Z} is instantiated
+to @{term s}. Usefull in proof of \<open>MGT_lemma\<close>.\<close>
 lemma ConseqMGT: 
   assumes modif: "\<forall>Z. \<Gamma>,\<Theta> \<turnstile>\<^bsub>/F\<^esub> (P' Z) c (Q' Z),(A' Z)"
   assumes impl: "\<And>s. s \<in> P \<Longrightarrow> s \<in> P' s \<and> (\<forall>t. t \<in> Q' s \<longrightarrow> t \<in> Q) \<and> 
@@ -493,10 +493,10 @@ lemma MGT_implies_complete:
   apply (auto simp add: valid_def intro!: final_notinI)
   done
 
-text {* Equipped only with the classic consequence rule @{thm "conseqPrePost"}
+text \<open>Equipped only with the classic consequence rule @{thm "conseqPrePost"}
         we can only derive this syntactically more involved version
         of completeness. But semantically it is equivalent to the "real" one
-        (see below) *}
+        (see below)\<close>
 lemma MGT_implies_complete':
   assumes MGT: "\<forall>Z. \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> 
                        {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union>  Fault ` (-F))} c 
@@ -512,7 +512,7 @@ lemma MGT_implies_complete':
   apply (fastforce simp add: valid_def)
   done
 
-text {* Semantic equivalence of both kind of formulations *}
+text \<open>Semantic equivalence of both kind of formulations\<close>
 lemma valid_involved_to_valid:
   assumes valid: 
     "\<forall>Z. \<Gamma>\<Turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> s \<in> P} c {t. Z \<in> P \<longrightarrow> t \<in> Q},{t. Z \<in> P \<longrightarrow> t \<in> A}"
@@ -526,10 +526,10 @@ lemma valid_involved_to_valid:
   apply fastforce
   done
 
-text {* The sophisticated consequence rule allow us to do this 
+text \<open>The sophisticated consequence rule allow us to do this 
         semantical transformation on the hoare-level, too. 
         The magic is, that it allow us to
-        choose the instance of @{term Z} under the assumption of an state @{term "s \<in> P"} *}
+        choose the instance of @{term Z} under the assumption of an state @{term "s \<in> P"}\<close>
 lemma
   assumes deriv: 
     "\<forall>Z. \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> s \<in> P} c {t. Z \<in> P \<longrightarrow> t \<in> Q},{t. Z \<in> P \<longrightarrow> t \<in> A}"
@@ -1068,9 +1068,9 @@ proof (rule hoare_complete)
 qed
 
 
-subsection {* And Now: Some Useful Rules *}
+subsection \<open>And Now: Some Useful Rules\<close>
  
-subsubsection {* Consequence *}
+subsubsection \<open>Consequence\<close>
 
 
 lemma LiberalConseq_sound:
@@ -1334,7 +1334,7 @@ apply (rule LiberalConseq_noguards_nothrows
 apply auto
 done
 
-subsubsection {* Modify Return *}
+subsubsection \<open>Modify Return\<close>
 
 lemma ProcModifyReturn_sound:
   assumes valid_call: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P call init p return' c Q,A"
@@ -1566,7 +1566,7 @@ using modifies_spec
 apply (blast intro: hoare_cnvalid)
 done
 
-subsubsection {* DynCall *}
+subsubsection \<open>DynCall\<close>
   
 lemma dynProcModifyReturn_sound:
 assumes valid_call: "\<And>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P dynCall init p return' c Q,A"
@@ -1825,7 +1825,7 @@ apply assumption
 done
 
 
-subsubsection {* Conjunction of Postcondition *}
+subsubsection \<open>Conjunction of Postcondition\<close>
 
 lemma PostConjI_sound:
 assumes valid_Q: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A" 
@@ -1878,12 +1878,12 @@ proof (rule cnvalidI)
   show "t \<in> Normal ` (Q \<inter> R) \<union> Abrupt ` (A \<inter> X)"
   proof -
     from cnvalidD [OF validF [rule_format] ctxt exec P t_noFault]
-    have "t \<in> Normal ` Q \<union> Abrupt ` A".
-    moreover from this have "t \<notin> Fault ` G"
+    have *: "t \<in> Normal ` Q \<union> Abrupt ` A".
+    then have "t \<notin> Fault ` G"
       by auto
     from cnvalidD [OF validG [rule_format] ctxt' exec P' this]
     have "t \<in> Normal ` R \<union> Abrupt ` X" .
-    ultimately show ?thesis by auto
+    with * show ?thesis by auto
   qed
 qed
 
@@ -1900,7 +1900,7 @@ using validF apply (blast intro:hoare_cnvalid)
 using validG apply (blast intro:hoare_cnvalid)
 done
 
-subsubsection {* Weaken Context *}
+subsubsection \<open>Weaken Context\<close>
 
 
 lemma WeakenContext_sound:
@@ -1934,7 +1934,7 @@ using deriv_ctxt
 apply (blast intro: hoare_cnvalid)
 done
 
-subsubsection {* Guards and Guarantees *}
+subsubsection \<open>Guards and Guarantees\<close>
 
 lemma SplitGuards_sound:
 assumes valid_c1: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c\<^sub>1 Q,A"
@@ -2323,7 +2323,7 @@ apply (iprover intro: hoare_cnvalid [OF deriv])
 done
 
 
-subsubsection {* Restricting the Procedure Environment *}
+subsubsection \<open>Restricting the Procedure Environment\<close>
 
 lemma nvalid_restrict_to_nvalid:
 assumes valid_c: "\<Gamma>|\<^bsub>M\<^esub>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"

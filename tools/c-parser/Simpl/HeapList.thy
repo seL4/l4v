@@ -25,12 +25,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* Paths and Lists in the Heap *}
+section \<open>Paths and Lists in the Heap\<close>
 theory HeapList
 imports Simpl_Heap
 begin
 
-text {* Adapted from 'HOL/Hoare/Heap.thy'. *}
+text \<open>Adapted from 'HOL/Hoare/Heap.thy'.\<close>
 
 
 subsection "Paths in The Heap"
@@ -67,10 +67,10 @@ lemma Path_upd_same [simp]:
       ((p=Null \<and> q=Null \<and> qs = []) \<or> (p\<noteq>Null \<and> q=p \<and> (\<forall>x\<in>set qs. x=p)))"
 by (induct qs) auto
 
-text {* @{thm[source] Path_upd_same} prevents 
+text \<open>@{thm[source] Path_upd_same} prevents 
 @{term "p\<noteq>Null \<Longrightarrow> Path p (f(p:=p)) q qs = X"} from looping, because of 
 @{thm[source] Path_not_Null_iff} and @{thm[source]fun_upd_apply}.
- *}
+\<close>
 
 lemma notin_Path_updateI [intro]:
  "\<lbrakk>Path p h q ps ; r \<notin> set ps\<rbrakk> \<Longrightarrow> Path p (h(r := y)) q ps "
@@ -135,10 +135,10 @@ apply  simp
 apply (fast dest: List_upd_same_lemma)
 done
 
-text {* @{thm[source] List_upd_same} prevents 
+text \<open>@{thm[source] List_upd_same} prevents 
 @{term "p\<noteq>Null \<Longrightarrow> List p (h(p:=p)) as = X"} from looping, because of 
 @{thm[source] List_not_Null} and @{thm[source] fun_upd_apply}.
- *}
+\<close>
 
 lemma  List_update_new [simp]: "\<lbrakk>set ps \<subseteq> set alloc\<rbrakk>
      \<Longrightarrow> List p (h(new (set alloc) := x)) ps = List p h ps"
@@ -189,9 +189,9 @@ lemma heap_eq_ListI1:
   by (simp add: heap_eq_List_eq [OF hp_eq])
 
 
-text {* The following lemmata are usefull for the simplifier to instantiate
+text \<open>The following lemmata are usefull for the simplifier to instantiate
 bound variables in the assumptions resp. conclusion, using the uniqueness
-of the List predicate *}
+of the List predicate\<close>
 
 lemma conj_impl_simp: "(P \<and> Q \<longrightarrow> K) = (P \<longrightarrow> Q \<longrightarrow> K)"
 by auto

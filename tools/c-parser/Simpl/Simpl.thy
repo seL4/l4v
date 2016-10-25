@@ -6,7 +6,7 @@
 (*  Title:      Simpl.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2008 Norbert Schirmer 
+Copyright (C) 2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -27,19 +27,19 @@ USA
 (*<*)
 theory Simpl
 imports
- StateSpace
- AlternativeSmallStep
- SyntaxTest
- "ex/VcgEx"
- "ex/VcgExSP"
- "ex/VcgExTotal" 
- "ex/Quicksort"
- "ex/XVcgEx" 
- "ex/ProcParEx"
- "ex/ProcParExSP"
- "ex/ClosureEx"
- "ex/ComposeEx"
- "UserGuide"
+  StateSpace
+  AlternativeSmallStep
+  SyntaxTest
+  "ex/VcgEx"
+  "ex/VcgExSP"
+  "ex/VcgExTotal"
+  "ex/Quicksort"
+  "ex/XVcgEx"
+  "ex/ProcParEx"
+  "ex/ProcParExSP"
+  "ex/ClosureEx"
+  "ex/ComposeEx"
+  "UserGuide"
 begin
 end
 (*>*)

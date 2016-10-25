@@ -26,18 +26,18 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* Examples using Statespaces *}
+section \<open>Examples using Statespaces\<close>
 
 theory VcgExSP imports "../HeapList" "../Vcg" begin
 
 
-subsection {* State Spaces *}
+subsection \<open>State Spaces\<close>
 
-text {*
+text \<open>
  First of all we provide a store of program variables that
  occur in the programs considered later.  Slightly unexpected
  things may happen when attempting to work with undeclared variables.
-*}
+\<close>
 
 
 hoarestate state_space = 
@@ -53,29 +53,29 @@ hoarestate state_space =
 lemma (in state_space)"\<Gamma>\<turnstile> \<lbrace>\<acute>N = n\<rbrace> LOC \<acute>N :== 10;; \<acute>N :== \<acute>N + 2 COL \<lbrace>\<acute>N = n\<rbrace>"
   by vcg
 
-text {* Internally we decorate the state components in the statespace with the 
-suffix @{text "_'"},
+text \<open>Internally we decorate the state components in the statespace with the 
+suffix \<open>_'\<close>,
 to avoid cluttering the namespace with the simple names that could no longer
 be used for logical variables otherwise. 
-*}
+\<close>
 
-text {* We will first consider programs without procedures, later on
+text \<open>We will first consider programs without procedures, later on
 we will regard procedures without global variables and finally we
 will get the full pictures: mutually recursive procedures with global
 variables (including heap).
-*}
+\<close>
 
-subsection {* Basic Examples *}
+subsection \<open>Basic Examples\<close>
 
-text {*
+text \<open>
  We look at few trivialities involving assignment and sequential
  composition, in order to get an idea of how to work with our
  formulation of Hoare Logic.
-*}
+\<close>
 
-text {*
+text \<open>
  Using the basic rule directly is a bit cumbersome.
-*}
+\<close>
  
 lemma (in state_space) "\<Gamma>\<turnstile> {|\<acute>N = 5|} \<acute>N :== 2 * \<acute>N {|\<acute>N = 10|}"
   apply (rule HoarePartial.Basic)  
@@ -118,10 +118,10 @@ lemma (in state_space)
   apply simp
   done
 
-text {*
+text \<open>
 We can also perform verification conditions generation step by step by using
-the @{text vcg_step} method.
-*}
+the \<open>vcg_step\<close> method.
+\<close>
 
 lemma (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>\<acute>M = a \<and> \<acute>N = b\<rbrace>
@@ -135,11 +135,11 @@ lemma (in state_space)
   done
 
 
-text {*
+text \<open>
  In the following assignments we make use of the consequence rule in
  order to achieve the intended precondition.  Certainly, the
- @{text vcg} method is able to handle this case, too.
-*}
+ \<open>vcg\<close> method is able to handle this case, too.
+\<close>
 
 lemma (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>\<acute>M = \<acute>N\<rbrace> \<acute>M :== \<acute>M + 1 \<lbrace>\<acute>M \<noteq> \<acute>N\<rbrace>"
@@ -155,8 +155,8 @@ lemma (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>\<acute>M = \<acute>N\<rbrace> \<acute>M :== \<acute>M + 1 \<lbrace>\<acute>M \<noteq> \<acute>N\<rbrace>"
 proof -
   have "\<And>m n::nat. m = n \<longrightarrow> m + 1 \<noteq> n"
-      -- {* inclusion of assertions expressed in ``pure'' logic, *}
-      -- {* without mentioning the state space *}
+      \<comment> \<open>inclusion of assertions expressed in ``pure'' logic,\<close>
+      \<comment> \<open>without mentioning the state space\<close>
     by simp
   also have "\<Gamma>\<turnstile> \<lbrace>\<acute>M + 1 \<noteq> \<acute>N\<rbrace> \<acute>M :== \<acute>M + 1 \<lbrace>\<acute>M \<noteq> \<acute>N\<rbrace>"
     by vcg
@@ -169,14 +169,14 @@ lemma (in state_space)
   apply simp
   done
 
-subsection {* Multiplication by Addition *}
+subsection \<open>Multiplication by Addition\<close>
 
-text {*
+text \<open>
  We now do some basic examples of actual \texttt{WHILE} programs.
  This one is a loop for calculating the product of two natural
  numbers, by iterated addition.  We first give detailed structured
  proof based on single-step Hoare rules.
-*}
+\<close>
 
 lemma (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>\<acute>M = 0 \<and> \<acute>S = 0\<rbrace>
@@ -201,12 +201,12 @@ proof -
 qed
 
 
-text {*
- The subsequent version of the proof applies the @{text vcg} method
+text \<open>
+ The subsequent version of the proof applies the \<open>vcg\<close> method
  to reduce the Hoare statement to a purely logical problem that can be
  solved fully automatically.  Note that we have to specify the
  \texttt{WHILE} loop invariant in the original statement.
-*}
+\<close>
 
 lemma (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>\<acute>M = 0 \<and> \<acute>S = 0\<rbrace>
@@ -218,7 +218,7 @@ lemma (in state_space)
   apply auto
   done
 
-text {* Here some examples of ``breaking'' out of a loop *}
+text \<open>Here some examples of ``breaking'' out of a loop\<close>
 
 lemma (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>\<acute>M = 0 \<and> \<acute>S = 0\<rbrace>
@@ -257,10 +257,10 @@ done
 
 
 
-text {* Some more syntactic sugar, the label statement @{text "\<dots> \<bullet> \<dots>"} as shorthand
-for the @{text "TRY-CATCH"} above, and the @{text "RAISE"} for an state-update followed
-by a @{text "THROW"}. 
-*}
+text \<open>Some more syntactic sugar, the label statement \<open>\<dots> \<bullet> \<dots>\<close> as shorthand
+for the \<open>TRY-CATCH\<close> above, and the \<open>RAISE\<close> for an state-update followed
+by a \<open>THROW\<close>. 
+\<close>
 lemma (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>\<acute>M = 0 \<and> \<acute>S = 0\<rbrace>
           \<lbrace>\<acute>Abr = ''Break''\<rbrace>\<bullet> WHILE True INV \<lbrace>\<acute>S = \<acute>M * b\<rbrace>
@@ -303,7 +303,7 @@ apply vcg
 apply auto
 done
 
-text {* Blocks *}
+text \<open>Blocks\<close>
 
 lemma  (in state_space)
   shows "\<Gamma>\<turnstile>\<lbrace>\<acute>I = i\<rbrace> LOC \<acute>I;; \<acute>I :== 2  COL \<lbrace>\<acute>I \<le> i\<rbrace>"
@@ -311,13 +311,13 @@ lemma  (in state_space)
   by simp
 
  
-subsection {* Summing Natural Numbers *}
+subsection \<open>Summing Natural Numbers\<close>
 
-text {*
+text \<open>
  We verify an imperative program to sum natural numbers up to a given
  limit.  First some functional definition for proper specification of
  the problem.
-*}
+\<close>
 
 primrec
   sum :: "(nat => nat) => nat => nat"
@@ -331,13 +331,13 @@ syntax
 translations
   "SUMM j<k. b" == "CONST sum (\<lambda>j. b) k"
 
-text {*
+text \<open>
  The following proof is quite explicit in the individual steps taken,
- with the @{text vcg} method only applied locally to take care of
+ with the \<open>vcg\<close> method only applied locally to take care of
  assignment and sequential composition.  Note that we express
  intermediate proof obligation in pure logic, without referring to the
  state space.
-*}
+\<close>
 
 theorem (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>True\<rbrace>
@@ -375,10 +375,10 @@ proof -
   finally show ?thesis .
 qed
 
-text {*
- The next version uses the @{text vcg} method, while still explaining
+text \<open>
+ The next version uses the \<open>vcg\<close> method, while still explaining
  the resulting proof obligations in an abstract, structured manner.
-*}
+\<close>
 
 theorem (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>True\<rbrace>
@@ -406,10 +406,10 @@ proof -
   qed
 qed
 
-text {*
+text \<open>
  Certainly, this proof may be done fully automatically as well, provided
  that the invariant is given beforehand.
-*}
+\<close>
 
 theorem (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>True\<rbrace>
@@ -425,7 +425,7 @@ theorem (in state_space)
   apply auto
   done
 
-subsection {* SWITCH *}
+subsection \<open>SWITCH\<close>
 
 lemma (in state_space)
   shows "\<Gamma>\<turnstile> \<lbrace>\<acute>N = 5\<rbrace> SWITCH \<acute>B 
@@ -447,13 +447,13 @@ apply vcg
 apply simp
 done
 
-subsection {* (Mutually) Recursive Procedures *}
+subsection \<open>(Mutually) Recursive Procedures\<close>
 
-subsubsection {* Factorial *}
+subsubsection \<open>Factorial\<close>
 
-text {* We want to define a procedure for the factorial. We first
+text \<open>We want to define a procedure for the factorial. We first
 define a HOL functions that calculates it to specify the procedure later on.
-*}
+\<close>
 
 primrec fac:: "nat \<Rightarrow> nat"
 where
@@ -463,7 +463,7 @@ where
 lemma fac_simp [simp]: "0 < i \<Longrightarrow>  fac i = i * fac (i - 1)"
   by (cases i) simp_all
 
-text {* Now we define the procedure *}
+text \<open>Now we define the procedure\<close>
 
 
 procedures 
@@ -475,27 +475,27 @@ procedures
 
 print_locale Fac_impl
 
-text {*
+text \<open>
 To see how a call is syntactically translated you can switch off the
-printing translation via the configuration option @{text hoare_use_call_tr'}
-*}
+printing translation via the configuration option \<open>hoare_use_call_tr'\<close>
+\<close>
 
 context Fac_impl 
 begin
-text {*
+text \<open>
 @{term "CALL Fac(\<acute>N,\<acute>R)"} is internally:
-*}
+\<close>
 declare [[hoare_use_call_tr' = false]]
-text {*
+text \<open>
 @{term "CALL Fac(\<acute>N,\<acute>R)"}
-*}
+\<close>
 term "CALL Fac(\<acute>N,\<acute>R)"
 declare [[hoare_use_call_tr' = true]]
 
 
-text {*
+text \<open>
 Now let us prove that @{term "Fac"} meets its specification. 
-*}
+\<close>
 
 end
 
@@ -508,7 +508,7 @@ lemma (in Fac_impl) Fac_spec':
   done
 
 
-text {* 
+text \<open>
 Since the factorial was implemented recursively,
 the main ingredient of this proof is, to assume that the specification holds for 
 the recursive call of @{term Fac} and prove the body correct.
@@ -518,13 +518,13 @@ the rule @{thm [source] HoarePartial.ProcRec1}
 @{thm [display] HoarePartial.ProcRec1 [no_vars]}
 The verification condition generator will infer the specification out of the
 context when it encounters a recursive call of the factorial.
-*}
+\<close>
 
-text {* We can also step through verification condition generation. When
+text \<open>We can also step through verification condition generation. When
 the verification condition generator encounters a procedure call it tries to
-  use the rule @{text ProcSpec}. To be successful there must be a specification
+  use the rule \<open>ProcSpec\<close>. To be successful there must be a specification
 of the procedure in the context.  
-*}
+\<close>
 
 lemma (in Fac_impl) Fac_spec1:
   shows "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>{\<sigma>} \<acute>R :== PROC Fac(\<acute>N) \<lbrace>\<acute>R = fac \<^bsup>\<sigma>\<^esup>N\<rbrace>"
@@ -538,7 +538,7 @@ lemma (in Fac_impl) Fac_spec1:
   done
 
 
-text {* Here some Isar style version of the proof *}
+text \<open>Here some Isar style version of the proof\<close>
 lemma (in Fac_impl) Fac_spec2:
   
   shows "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>{\<sigma>} \<acute>R :== PROC Fac(\<acute>N) \<lbrace>\<acute>R = fac \<^bsup>\<sigma>\<^esup>N\<rbrace>"
@@ -556,10 +556,10 @@ proof (hoare_rule HoarePartial.ProcRec1)
     done
 qed
 
-text {* To avoid retyping of potentially large pre and postconditions in 
+text \<open>To avoid retyping of potentially large pre and postconditions in 
 the previous proof we can use the casual term abbreviations of the Isar 
 language.
-*}
+\<close>
 
 lemma (in Fac_impl) Fac_spec3:
   shows "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>{\<sigma>} \<acute>R :== PROC Fac(\<acute>N) \<lbrace>\<acute>R = fac \<^bsup>\<sigma>\<^esup>N\<rbrace>" 
@@ -578,24 +578,24 @@ proof (hoare_rule HoarePartial.ProcRec1)
     done
 qed
 
-text {* The previous proof pattern has still some kind of inconvenience.
+text \<open>The previous proof pattern has still some kind of inconvenience.
 The augmented context is always printed in the proof state. That can
 mess up the state, especially if we have large specifications. This may
 be annoying if we want to develop single step or structured proofs. In this
 case it can be a good idea to introduce a new variable for the augmented
 context.
-*}
+\<close>
 
 lemma (in Fac_impl) Fac_spec4:
   shows "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>{\<sigma>} \<acute>R :== PROC Fac(\<acute>N) \<lbrace>\<acute>R = fac \<^bsup>\<sigma>\<^esup>N\<rbrace>" 
   (is "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>(?Pre \<sigma>) ?Fac (?Post \<sigma>)")
 proof (hoare_rule HoarePartial.ProcRec1)
-  def "\<Theta>'"=="(\<Theta>\<union>(\<Union>\<sigma>. {(?Pre \<sigma>, Fac_'proc, ?Post \<sigma>,{})}))"
+  define \<Theta>' where "\<Theta>' = \<Theta> \<union> (\<Union>\<sigma>. {(?Pre \<sigma>, Fac_'proc, ?Post \<sigma>,{})})"
   have Fac_spec: "\<forall>\<sigma>. \<Gamma>,\<Theta>'\<turnstile>(?Pre \<sigma>) ?Fac (?Post \<sigma>)"
     by (unfold \<Theta>'_def, rule allI, rule hoarep.Asm) simp
-  txt {* We have to name the fact @{text "Fac_spec"}, so that the vcg can
+  txt \<open>We have to name the fact \<open>Fac_spec\<close>, so that the vcg can
    use the specification for the recursive call, since it cannot infer it
-   from the opaque @{term "\<Theta>'"}. *}
+   from the opaque @{term "\<Theta>'"}.\<close>
   show "\<forall>\<sigma>. \<Gamma>,\<Theta>'\<turnstile> (?Pre \<sigma>) IF \<acute>N = 0 THEN \<acute>R :== 1
             ELSE \<acute>R :== CALL Fac(\<acute>N - 1);; \<acute>R :== \<acute>N * \<acute>R FI (?Post \<sigma>)"
     apply vcg
@@ -603,7 +603,7 @@ proof (hoare_rule HoarePartial.ProcRec1)
     done
 qed
 
-text {* There are different rules available to prove procedure calls,
+text \<open>There are different rules available to prove procedure calls,
 depending on the kind of postcondition and whether or not the
 procedure is recursive or even mutually recursive. 
 See for example @{thm [source] HoareTotal.ProcRec1}, 
@@ -613,15 +613,15 @@ They are all derived from the most general rule
 All of them have some side-conditions concerning the parameter
 passing protocol and its relation to the pre and postcondition. They can be
 solved in a uniform fashion. Thats why we have created the method 
-@{text "hoare_rule"}, which behaves like the method @{text "rule"} but automatically
+\<open>hoare_rule\<close>, which behaves like the method \<open>rule\<close> but automatically
 tries to solve the side-conditions.
-*}
+\<close>
 
-subsubsection {* Odd and Even *}
+subsubsection \<open>Odd and Even\<close>
 
-text {* Odd and even are defined mutually recursive here. In the 
-@{text "procedures"} command we conjoin both definitions with @{text "and"}.
-*}
+text \<open>Odd and even are defined mutually recursive here. In the 
+\<open>procedures\<close> command we conjoin both definitions with \<open>and\<close>.
+\<close>
 
 procedures 
  odd(N::nat | A::nat) "IF \<acute>N=0 THEN \<acute>A:==0
@@ -640,16 +640,16 @@ print_theorems
 print_locale! odd_even_clique
 
 
-text {* To prove the procedure calls to @{term "odd"} respectively 
+text \<open>To prove the procedure calls to @{term "odd"} respectively 
 @{term "even"} correct we first derive a rule to justify that we
 can assume both specifications to verify the bodies. This rule can
 be derived from the general @{thm [source] HoareTotal.ProcRec} rule. An ML function will
 do this work:
-*}
+\<close>
 
 
 
-ML {* ML_Thms.bind_thm ("ProcRec2", Hoare.gen_proc_rec @{context} Hoare.Partial 2) *}
+ML \<open>ML_Thms.bind_thm ("ProcRec2", Hoare.gen_proc_rec @{context} Hoare.Partial 2)\<close>
 
 
 lemma (in odd_even_clique)
@@ -672,7 +672,7 @@ proof -
     by iprover+
 qed
 
-subsection {*Expressions With Side Effects *}
+subsection \<open>Expressions With Side Effects\<close>
 
 
 (* R := N++ + M++*) 
@@ -712,15 +712,15 @@ proof -
 qed
 
 
-subsection {* Global Variables and Heap *}
+subsection \<open>Global Variables and Heap\<close>
 
 
-text {*
+text \<open>
 Now we will define and verify some procedures on heap-lists. We consider
 list structures consisting of two fields, a content element @{term "cont"} and
 a reference to the next list element @{term "next"}. We model this by the 
 following state space where every field has its own heap.
-*}
+\<close>
 
 
 hoarestate globals_list = 
@@ -730,16 +730,16 @@ hoarestate globals_list =
 
 
 
-text {* Updates to global components inside a procedure will
+text \<open>Updates to global components inside a procedure will
 always be propagated to the caller. This is implicitly done by the
 parameter passing syntax translations. The record containing the global variables must begin with the prefix "globals".
-*}
+\<close>
 
-text {* We will first define an append function on lists. It takes two 
+text \<open>We will first define an append function on lists. It takes two 
 references as parameters. It appends the list referred to by the first
 parameter with the list referred to by the second parameter, and returns
 the result right into the first parameter.
-*}
+\<close>
 
 procedures (imports globals_list)
   append(p::ref,q::ref|p::ref) 
@@ -754,7 +754,7 @@ term "CALL append(\<acute>p,\<acute>q,\<acute>p\<rightarrow>\<acute>next)"
 end
 declare [[hoare_use_call_tr' = true]]
 
-text {* Below we give two specifications this time..
+text \<open>Below we give two specifications this time..
 The first one captures the functional behaviour and focuses on the
 entities that are potentially modified by the procedure, the second one
 is a pure frame condition.
@@ -769,9 +769,9 @@ The functional specification now introduces two logical variables besides the
 state space variable @{term "\<sigma>"}, namely @{term "Ps"} and @{term "Qs"}.
 They are universally quantified and range over both the pre and the postcondition, so 
 that we are able to properly instantiate the specification
-during the proofs. The syntax @{text "\<lbrace>\<sigma>. \<dots>\<rbrace>"} is a shorthand to fix the current 
-state: @{text "{s. \<sigma> = s \<dots>}"}.  
-*}
+during the proofs. The syntax \<open>\<lbrace>\<sigma>. \<dots>\<rbrace>\<close> is a shorthand to fix the current 
+state: \<open>{s. \<sigma> = s \<dots>}\<close>.  
+\<close>
 
 lemma (in append_impl) append_spec:
   shows "\<forall>\<sigma> Ps Qs. \<Gamma>\<turnstile> 
@@ -784,9 +784,9 @@ lemma (in append_impl) append_spec:
   done
 
 
-text {* The modifies clause is equal to a proper record update specification
+text \<open>The modifies clause is equal to a proper record update specification
 of the following form. 
-*}
+\<close>
 
 lemma (in append_impl) shows "{t. t may_only_modify_globals Z in [next]} 
        = 
@@ -795,7 +795,7 @@ lemma (in append_impl) shows "{t. t may_only_modify_globals Z in [next]}
   apply simp
   done
 
-text {* If the verification condition generator works on a procedure call
+text \<open>If the verification condition generator works on a procedure call
 it checks whether it can find a modifies clause in the context. If one
 is present the procedure call is simplified before the Hoare rule 
 @{thm [source] HoareTotal.ProcSpec} is applied. Simplification of the procedure call means,
@@ -804,23 +804,23 @@ components that occur in the modifies clause will actually be copied back.
 This simplification is justified by the rule @{thm [source] HoareTotal.ProcModifyReturn}. 
 So after this simplification all global components that do not appear in
 the modifies clause will be treated as local variables. 
-*}
+\<close>
 
-text {* You can study the effect of the modifies clause on the following two
+text \<open>You can study the effect of the modifies clause on the following two
 examples, where we want to prove that @{term "append"} does not change
 the @{term "cont"} part of the heap.
-*}
+\<close>
 lemma (in append_impl)
   shows "\<Gamma>\<turnstile> \<lbrace>\<acute>p=Null \<and> \<acute>cont=c\<rbrace> \<acute>p :== CALL append(\<acute>p,Null) \<lbrace>\<acute>cont=c\<rbrace>" 
   apply vcg
   oops
 
-text {* To prove the frame condition, 
+text \<open>To prove the frame condition, 
 we have to tell the verification condition generator to use only the
 modifies clauses and not to search for functional specifications by 
-the parameter @{text "spec=modifies"} It will also try to solve the 
+the parameter \<open>spec=modifies\<close> It will also try to solve the 
 verification conditions automatically.
-*}
+\<close>
 
 lemma (in append_impl) append_modifies: 
   shows
@@ -835,32 +835,32 @@ lemma (in append_impl)
   apply simp
   done
 
-text {*
+text \<open>
 Of course we could add the modifies clause to the functional specification as 
 well. But separating both has the advantage that we split up the verification
 work. We can make use of the modifies clause before we apply the
 functional specification in a fully automatic fashion.
-*}
+\<close>
  
 
-text {* To verify the body of @{term "append"} we do not need the modifies
+text \<open>To verify the body of @{term "append"} we do not need the modifies
 clause, since the specification does not talk about @{term "cont"} at all, and
 we don't access @{term "cont"} inside the body. This may be different for 
 more complex procedures.
-*}
+\<close>
 
-text {* 
+text \<open>
 To prove that a procedure respects the modifies clause, we only need
 the modifies clauses of the procedures called in the body. We do not need
 the functional specifications. So we can always prove the modifies
 clause without functional specifications, but me may need the modifies
 clause to prove the functional specifications.
-*}
+\<close>
 
 
 
  
-subsubsection {*Insertion Sort*}
+subsubsection \<open>Insertion Sort\<close>
 
 primrec sorted:: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a list  \<Rightarrow> bool"
 where
@@ -881,7 +881,7 @@ procedures (imports globals_list)
      FI"
 
 
-text {*
+text \<open>
 In the postcondition of the functional specification there is a small but 
 important subtlety. Whenever we talk about the @{term "cont"} part we refer to 
 the one of the pre-state, even in the conclusion of the implication.
@@ -889,16 +889,16 @@ The reason is, that we have separated out, that @{term "cont"} is not modified
 by the procedure, to the modifies clause. So whenever we talk about unmodified
 parts in the postcondition we have to use the pre-state part, or explicitely
 state an equality in the postcondition.
-The reason is simple. If the postcondition would talk about @{text "\<acute>cont"}
-instead of @{text "\<^bsup>\<sigma>\<^esup>cont"}, we will get a new instance of @{text "cont"} during
+The reason is simple. If the postcondition would talk about \<open>\<acute>cont\<close>
+instead of \<open>\<^bsup>\<sigma>\<^esup>cont\<close>, we will get a new instance of \<open>cont\<close> during
 verification and the postcondition would only state something about this
 new instance. But as the verification condition generator will use the
-modifies clause the caller of @{text "insert"} instead will still have the
-old @{text "cont"} after the call. Thats the sense of the modifies clause.
+modifies clause the caller of \<open>insert\<close> instead will still have the
+old \<open>cont\<close> after the call. Thats the sense of the modifies clause.
 So the caller and the specification will simply talk about two different things,
 without being able to relate them (unless an explicit equality is added to
 the specification). 
-*}
+\<close>
 
 lemma (in insert_impl) insert_modifies:
   "\<forall>\<sigma>. \<Gamma>\<turnstile> {\<sigma>} \<acute>p :== PROC insert(\<acute>r,\<acute>p){t. t may_only_modify_globals \<sigma> in [next]}"
@@ -949,12 +949,12 @@ apply (vcg spec=modifies)
 done
 
 
-text {* Insertion sort is not implemented recursively here but with a while
+text \<open>Insertion sort is not implemented recursively here but with a while
 loop. Note that the while loop is not annotated with an invariant in the
 procedure definition. The invariant only comes into play during verification.
 Therefore we will annotate the body during the proof with the
 rule @{thm [source] HoareTotal.annotateI}.
-*}
+\<close>
 
 
 lemma (in insertSort_impl) insertSort_body_spec:
@@ -988,11 +988,11 @@ lemma (in insertSort_impl) insertSort_body_spec:
 
 subsubsection "Memory Allocation and Deallocation"
 
-text {* The basic idea of memory management is to keep a list of allocated
+text \<open>The basic idea of memory management is to keep a list of allocated
 references in the state space. Allocation of a new reference adds a
 new reference to the list deallocation removes a reference. Moreover
 we keep a counter "free" for the free memory.
-*}
+\<close>
 
 (*
 record globals_list_alloc = globals_list +
@@ -1077,14 +1077,14 @@ apply  (simp add: sz_def)
 apply fastforce
 done
 
-subsection {* Fault Avoiding Semantics *}
+subsection \<open>Fault Avoiding Semantics\<close>
 
-text {*
+text \<open>
 If we want to ensure that no runtime errors occur we can insert guards into
 the code. We will not be able to prove any nontrivial Hoare triple 
 about code with guards, if we cannot show that the guards will never fail.
 A trivial Hoare triple is one with an empty precondtion. 
-*}
+\<close>
 
 
 lemma (in list_alloc) "\<Gamma>,\<Theta>\<turnstile> \<lbrace>True\<rbrace>  \<lbrace>\<acute>p\<noteq>Null\<rbrace>\<longmapsto> \<acute>p\<rightarrow>\<acute>next :== \<acute>p \<lbrace>True\<rbrace>"
@@ -1095,9 +1095,9 @@ lemma (in list_alloc) "\<Gamma>,\<Theta>\<turnstile> {}  \<lbrace>\<acute>p\<not
 apply vcg
 done
 
-text {* Let us consider this small program that reverts a list. At
+text \<open>Let us consider this small program that reverts a list. At
 first without guards. 
-*}
+\<close>
 lemma (in list_alloc)
   shows 
   "\<Gamma>,\<Theta>\<turnstile> \<lbrace>List \<acute>p \<acute>next Ps \<and> List \<acute>q \<acute>next Qs \<and> set Ps \<inter> set Qs = {} \<and>
@@ -1115,9 +1115,9 @@ apply (vcg)
 apply fastforce+
 done
 
-text {* If we want to ensure that we do not dereference @{term "Null"} or
+text \<open>If we want to ensure that we do not dereference @{term "Null"} or
 access unallocated memory, we have to add some guards.
-*}
+\<close>
 lemma (in list_alloc)
   shows 
   "\<Gamma>,\<Theta>\<turnstile> \<lbrace>List \<acute>p \<acute>next Ps \<and> List \<acute>q \<acute>next Qs \<and> set Ps \<inter> set Qs = {} \<and>
@@ -1136,9 +1136,9 @@ apply fastforce+
 done
 
 
-text {* We can also just prove that no faults will occur, by giving the
+text \<open>We can also just prove that no faults will occur, by giving the
 trivial postcondition.
-*}
+\<close>
 lemma (in list_alloc) rev_noFault:
   shows 
   "\<Gamma>,\<Theta>\<turnstile> \<lbrace>List \<acute>p \<acute>next Ps \<and> List \<acute>q \<acute>next Qs \<and> set Ps \<inter> set Qs = {} \<and>
@@ -1197,10 +1197,10 @@ proof -
 qed
 
 
-text {* We can then combine the prove that no fault will occur with the
+text \<open>We can then combine the prove that no fault will occur with the
 functional prove of the programm without guards to get the full proove by
 the rule @{thm HoarePartialProps.CombineStrip}
-*}
+\<close>
 
 
 lemma (in list_alloc)
@@ -1223,16 +1223,16 @@ apply simp
 done
 
 
-text {* In the previous example the effort to split up the prove did not
+text \<open>In the previous example the effort to split up the prove did not
 really pay off. But when we think of programs with a lot of guards and
 complicated specifications it may be better to first focus on a prove without
 the messy guards. Maybe it is possible to automate the no fault proofs so
 that it suffices to focus on the stripped program. 
-*}
+\<close>
 
 context list_alloc
 begin
-text {*
+text \<open>
 The purpose of guards is to watch for faults that can occur during 
 evaluation of expressions. In the example before we watched for null pointer
 dereferencing or memory faults. We can also look for array index bounds or
@@ -1240,10 +1240,10 @@ division by zero. As the condition of a while loop is evaluated in each
 iteration we cannot just add a guard before the while loop. Instead we need
 a special guard for the condition.
 Example: @{term "WHILE  \<lbrace>\<acute>p\<noteq>Null\<rbrace>\<longmapsto> \<acute>p\<rightarrow>\<acute>next\<noteq>Null DO SKIP OD"}
-*}
+\<close>
 end
 
-subsection {* Cicular Lists *}
+subsection \<open>Cicular Lists\<close>
 definition
   distPath :: "ref \<Rightarrow> (ref \<Rightarrow> ref) \<Rightarrow> ref \<Rightarrow> ref list \<Rightarrow> bool" where
   "distPath x next y as = (Path x next y as  \<and>  distinct as)"
@@ -1282,10 +1282,10 @@ apply (induct Ps)
 apply (auto simp add:fun_upd_apply)
 done
 
-text {*
+text \<open>
 The simple algorithm for acyclic list reversal, with modified
 annotations, works for cyclic lists as well.: 
-*}
+\<close>
 
 lemma (in list_alloc) circular_list_rev_II:
  "\<Gamma>,\<Theta>\<turnstile>
@@ -1316,17 +1316,17 @@ apply  force
 apply fastforce
 done
 
-text{* Although the above algorithm is more succinct, its invariant
+text\<open>Although the above algorithm is more succinct, its invariant
 looks more involved. The reason for the case distinction on @{term q}
 is due to the fact that during execution, the pointer variables can
 point to either cyclic or acyclic structures.
-*}
+\<close>
 
-text {*
+text \<open>
 When working on lists, its sometimes better to remove
 @{thm[source] fun_upd_apply} from the simpset, and instead include @{thm[source] fun_upd_same} and @{thm[source] fun_upd_other} to
 the simpset
-*}
+\<close>
 
 (*
 declare fun_upd_apply[simp del]fun_upd_same[simp] fun_upd_other[simp]
@@ -1368,7 +1368,7 @@ apply vcg_step
 apply auto
 done
 
-text {* Just some test on marked, guards *}
+text \<open>Just some test on marked, guards\<close>
 lemma (in state_space) "\<Gamma>\<turnstile>\<lbrace>True\<rbrace> WHILE \<lbrace>P \<acute>N \<rbrace>\<surd>, \<lbrace>Q \<acute>M\<rbrace>#, \<lbrace>R \<acute>N\<rbrace>\<longmapsto> \<acute>N < \<acute>M 
                     INV \<lbrace>\<acute>N < 2\<rbrace> DO
                     \<acute>N :== \<acute>M

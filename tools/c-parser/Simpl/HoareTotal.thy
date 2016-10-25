@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* Derived Hoare Rules for Total Correctness *}
+section \<open>Derived Hoare Rules for Total Correctness\<close>
 
 theory HoareTotal imports HoareTotalProps begin 
 
@@ -37,8 +37,8 @@ lemma conseq_no_aux:
   \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
   by (rule conseq [where P'="\<lambda>Z. P'" and Q'="\<lambda>Z. Q'" and A'="\<lambda>Z. A'"]) auto
 
-text {* If for example a specification for a "procedure pointer" parameter 
-is in the precondition we can extract it with this rule *}
+text \<open>If for example a specification for a "procedure pointer" parameter 
+is in the precondition we can extract it with this rule\<close>
 lemma conseq_exploit_pre:
              "\<lbrakk>\<forall>s \<in> P. \<Gamma>,\<Theta> \<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({s} \<inter> P) c Q,A\<rbrakk>
               \<Longrightarrow>
@@ -387,8 +387,8 @@ qed
 lemma "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> (P \<inter> b) c Q,A \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> (P \<inter> b) (Seq c (Guard f Q Skip)) Q,A"
 oops
 
-text {* @{term "J"} will be instantiated by tactic with @{term "gs' \<inter> I"} for
-  those guards that are not stripped.*} 
+text \<open>@{term "J"} will be instantiated by tactic with @{term "gs' \<inter> I"} for
+  those guards that are not stripped.\<close> 
 lemma WhileAnnoG:
   "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (guards gs 
                     (whileAnno  b J V (Seq c (guards gs Skip)))) Q,A 
@@ -396,7 +396,7 @@ lemma WhileAnnoG:
         \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (whileAnnoG gs b I V c) Q,A"
   by (simp add: whileAnnoG_def whileAnno_def while_def)
 
-text {* This form stems from @{term "strip_guards F (whileAnnoG gs b I V c)"} *} 
+text \<open>This form stems from @{term "strip_guards F (whileAnnoG gs b I V c)"}\<close> 
 lemma WhileNoGuard': 
   assumes P_I: "P \<subseteq> I" 
   assumes deriv_body: "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({\<sigma>} \<inter> I \<inter> b) c ({t. (t, \<sigma>) \<in> V} \<inter> I),A"
@@ -972,8 +972,8 @@ qed
 
 lemma ProcProcParModifyReturn: 
   assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
-   --{* @{thm[source] DynProcProcPar} introduces the same constraint as first conjunction in 
-         @{term P'}, so the vcg can simplify it. *}
+   \<comment>\<open>@{thm[source] DynProcProcPar} introduces the same constraint as first conjunction in 
+         @{term P'}, so the vcg can simplify it.\<close>
   assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall init p return' c) Q,A"
   assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s)) 
                             \<longrightarrow> return' s t = return s t"
@@ -997,8 +997,8 @@ qed
 
 lemma ProcProcParModifyReturnSameFaults: 
   assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
-   --{* @{thm[source] DynProcProcPar} introduces the same constraint as first conjunction in 
-         @{term P'}, so the vcg can simplify it. *}
+   \<comment>\<open>@{thm[source] DynProcProcPar} introduces the same constraint as first conjunction in 
+         @{term P'}, so the vcg can simplify it.\<close>
   assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall init p return' c) Q,A"
   assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s)) 
                             \<longrightarrow> return' s t = return s t"
@@ -1021,8 +1021,8 @@ qed
 
 lemma ProcProcParModifyReturnNoAbr: 
   assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
-   --{* @{thm[source] DynProcProcParNoAbrupt} introduces the same constraint as 
-      first conjunction in @{term P'}, so the vcg can simplify it. *}
+   \<comment>\<open>@{thm[source] DynProcProcParNoAbrupt} introduces the same constraint as 
+      first conjunction in @{term P'}, so the vcg can simplify it.\<close>
   assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall init p return' c) Q,A"
   assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s)) 
                             \<longrightarrow> return' s t = return s t"
@@ -1042,8 +1042,8 @@ qed
 
 lemma ProcProcParModifyReturnNoAbrSameFaults: 
   assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
-      --{* @{thm[source] DynProcProcParNoAbrupt} introduces the same constraint as 
-      first conjunction in @{term P'}, so the vcg can simplify it. *}
+      \<comment>\<open>@{thm[source] DynProcProcParNoAbrupt} introduces the same constraint as 
+      first conjunction in @{term P'}, so the vcg can simplify it.\<close>
   assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall init p return' c) Q,A"
   assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s)) 
                             \<longrightarrow> return' s t = return s t"
@@ -1149,16 +1149,16 @@ proof -
     by (rule E)
 qed
 
-subsubsection {* Rules for Single-Step Proof \label{sec:hoare-isar} *}
+subsubsection \<open>Rules for Single-Step Proof \label{sec:hoare-isar}\<close>
 
-text {*
+text \<open>
  We are now ready to introduce a set of Hoare rules to be used in
  single-step structured proofs in Isabelle/Isar.  
 
  \medskip Assertions of Hoare Logic may be manipulated in
  calculational proofs, with the inclusion expressed in terms of sets
  or predicates.  Reversed order is supported as well.
-*}
+\<close>
 
 
 lemma annotateI [trans]:

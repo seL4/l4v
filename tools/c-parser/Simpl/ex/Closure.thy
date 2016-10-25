@@ -303,7 +303,7 @@ lemma app_closure_spec:
   apply blast
   done
 
-text {* Implementation of closures as association lists. *}
+text \<open>Implementation of closures as association lists.\<close>
 
 definition "gen_upd var es s = foldl (\<lambda>s (x,i). the (var x) i s) s es"
 definition "ap es c \<equiv> (es@fst c,snd c)"

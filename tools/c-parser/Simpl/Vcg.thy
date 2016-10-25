@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* Facilitating the Hoare Logic *}
+section \<open>Facilitating the Hoare Logic\<close>
 theory Vcg
 imports StateSpace "~~/src/HOL/Statespace/StateSpaceLocale" Generalise
 keywords "procedures" "hoarestate" :: thy_decl
@@ -51,11 +51,11 @@ method_setup vcg_step = "Hoare.vcg_step"
 method_setup hoare_rule = "Hoare.hoare_rule" 
   "apply single hoare rule and solve certain sideconditions"
 
-text {* Variables of the programming language are represented as components 
+text \<open>Variables of the programming language are represented as components 
 of a record. To avoid cluttering up the namespace of Isabelle with lots of 
 typical variable names, we append a unusual suffix at the end of each name by 
 parsing
-*}
+\<close>
 
 definition list_multsel:: "'a list \<Rightarrow> nat list \<Rightarrow> 'a list" (infixl "!!" 100)
   where "xs !! ns = map (nth xs) ns"
@@ -66,7 +66,7 @@ definition list_multupd:: "'a list \<Rightarrow> nat list \<Rightarrow> 'a list 
 nonterminal lmupdbinds and lmupdbind
 
 syntax
-  -- {* multiple list update *}
+  \<comment> \<open>multiple list update\<close>
   "_lmupdbind":: "['a, 'a] => lmupdbind"    ("(2_ [:=]/ _)")
   "" :: "lmupdbind => lmupdbinds"    ("_")
   "_lmupdbinds" :: "[lmupdbind, lmupdbinds] => lmupdbinds"    ("_,/ _")
@@ -77,14 +77,14 @@ translations
   "xs[is[:=]ys]" == "CONST list_multupd xs is ys"
 
 
-subsection {* Some Fancy Syntax *}
+subsection \<open>Some Fancy Syntax\<close>
 
 
 (* priority guidline:
  * If command should be atomic for the guard it must have at least priority 21.
  *)
 
-text {* reverse application *}
+text \<open>reverse application\<close>
 definition rapp:: "'a \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 'b" (infixr "|>" 60)
   where "rapp x f = f x"
 
@@ -298,25 +298,25 @@ translations
  "(_switchcasesCons b bs)" => "CONST Cons b bs"
  "(_Switch v vs)" => "CONST switch (_quote v) vs"
 
-parse_ast_translation {*
+parse_ast_translation \<open>
   let
     fun tr c asts = Ast.mk_appl (Ast.Constant c) (map Ast.strip_positions asts)
   in
    [(@{syntax_const "_antiquoteCur0"}, K (tr @{syntax_const "_antiquoteCur"})),
     (@{syntax_const "_antiquoteOld0"}, K (tr @{syntax_const "_antiquoteOld"}))]
   end
-*}
+\<close>
 
-print_ast_translation {*
+print_ast_translation \<open>
   let
     fun tr c asts = Ast.mk_appl (Ast.Constant c) asts
   in
    [(@{syntax_const "_antiquoteCur"}, K (tr @{syntax_const "_antiquoteCur0"})),
     (@{syntax_const "_antiquoteOld"}, K (tr @{syntax_const "_antiquoteOld0"}))]
   end
-*}
+\<close>
 
-print_ast_translation {*
+print_ast_translation \<open>
   let
     fun dest_abs (Ast.Appl [Ast.Constant @{syntax_const "_abs"}, x, t]) = (x, t)
       | dest_abs _ = raise Match;
@@ -343,7 +343,7 @@ print_ast_translation {*
    [(@{const_syntax specAnno}, K spec_tr'),
     (@{const_syntax whileAnnoFix}, K whileAnnoFix_tr')]
   end
-*}
+\<close>
 
 
 
@@ -424,7 +424,7 @@ definition Let':: "['a, 'a => 'b] => 'b"
 ML_file "hoare_syntax.ML"
 
 
-parse_translation {*
+parse_translation \<open>
   let
     val argsC = @{syntax_const "_modifyargs"};
     val globalsN = "globals";
@@ -461,10 +461,10 @@ parse_translation {*
    [(@{syntax_const "_may_modify"}, may_modify_tr),
     (@{syntax_const "_may_not_modify"}, may_not_modify_tr)]
   end;
-*}
+\<close>
 
 
-print_translation {*
+print_translation \<open>
   let
     val argsC = @{syntax_const "_modifyargs"};
     val chop = Hoare.chopsfx Hoare.deco;
@@ -499,7 +499,7 @@ print_translation {*
     [(@{const_syntax mex}, K may_modify_tr'),
      (@{const_syntax meq}, K may_not_modify_tr')]
   end;
-*}
+\<close>
 
 
 (* decorate state components with suffix *)
@@ -520,13 +520,13 @@ parse_ast_translation {*
 *)
 
 
-parse_translation {*
+parse_translation \<open>
  [(@{syntax_const "_antiquoteCur"},
     K (Hoare_Syntax.antiquote_varname_tr @{syntax_const "_antiquoteCur"}))]
-*}
+\<close>
 
 
-parse_translation {*
+parse_translation \<open>
  [(@{syntax_const "_antiquoteOld"}, Hoare_Syntax.antiquoteOld_tr),
   (@{syntax_const "_Call"}, Hoare_Syntax.call_tr false false),
   (@{syntax_const "_FCall"}, Hoare_Syntax.fcall_tr),
@@ -540,7 +540,7 @@ parse_translation {*
   (@{syntax_const "_GuardedDynCall"}, Hoare_Syntax.call_tr true true),
   (@{syntax_const "_GuardedDynCallAss"}, Hoare_Syntax.call_ass_tr true true),
   (@{syntax_const "_BasicBlock"}, Hoare_Syntax.basic_assigns_tr)]
-*}
+\<close>
 
 (*
   (@{syntax_const "_Call"}, Hoare_Syntax.call_ast_tr),
@@ -549,16 +549,16 @@ parse_translation {*
   (@{syntax_const "_GuardedCallAss"}, Hoare_Syntax.guarded_call_ass_ast_tr)
 *)
 
-parse_translation {*
+parse_translation \<open>
   let
     fun quote_tr ctxt [t] = Hoare_Syntax.quote_tr ctxt @{syntax_const "_antiquoteCur"} t
       | quote_tr ctxt ts = raise TERM ("quote_tr", ts);
   in [(@{syntax_const "_quote"}, quote_tr)] end
-*}
+\<close>
 
 
 
-parse_translation {*
+parse_translation \<open>
  [(@{syntax_const "_Assign"}, Hoare_Syntax.assign_tr),
   (@{syntax_const "_raise"}, Hoare_Syntax.raise_tr),
   (@{syntax_const "_New"}, Hoare_Syntax.new_tr),
@@ -570,15 +570,15 @@ parse_translation {*
   (@{syntax_const "_GuardedWhileFix_inv_var_hook"}, Hoare_Syntax.guarded_WhileFix_tr),
   (@{syntax_const "_GuardedCond"}, Hoare_Syntax.guarded_Cond_tr),
   (@{syntax_const "_Basic"}, Hoare_Syntax.basic_tr)]
-*}
+\<close>
 
-parse_translation {*
+parse_translation \<open>
  [(@{syntax_const "_Init"}, Hoare_Syntax.init_tr),
   (@{syntax_const "_Loc"}, Hoare_Syntax.loc_tr)] 
-*}
+\<close>
 
 
-print_translation {*
+print_translation \<open>
  [(@{const_syntax Basic}, Hoare_Syntax.assign_tr'),
   (@{const_syntax raise}, Hoare_Syntax.raise_tr'),
   (@{const_syntax Basic}, Hoare_Syntax.new_tr'),
@@ -593,10 +593,10 @@ print_translation {*
   (@{const_syntax whileAnnoG}, Hoare_Syntax.whileAnnoG_tr'),
   (@{const_syntax whileAnnoGFix}, Hoare_Syntax.whileAnnoGFix_tr'),
   (@{const_syntax bind}, Hoare_Syntax.bind_tr')]
-*}
+\<close>
 
 
-print_translation {*
+print_translation \<open>
   let
     fun spec_tr' ctxt ((coll as Const _)$
                    ((splt as Const _) $ (t as (Abs (s,T,p))))::ts) =
@@ -614,7 +614,7 @@ print_translation {*
           end
       | spec_tr' _ ts = raise Match
   in [(@{const_syntax Spec}, spec_tr')] end
-*}
+\<close>
 
 syntax
 "_Measure":: "('a \<Rightarrow> nat) \<Rightarrow> ('a \<times> 'a) set"
@@ -629,7 +629,7 @@ translations
 
 
 
-print_translation {*
+print_translation \<open>
   let
     fun selector (Const (c,T)) = Hoare.is_state_var c  
       | selector _ = false;
@@ -650,14 +650,14 @@ print_translation {*
    [(@{const_syntax measure}, measure_tr'),
     (@{const_syntax mlex_prod}, mlex_tr')]
   end
-*}
+\<close>
 
 
-print_translation {*
+print_translation \<open>
  [(@{const_syntax call}, Hoare_Syntax.call_tr'),
   (@{const_syntax dynCall}, Hoare_Syntax.dyn_call_tr'),
   (@{const_syntax fcall}, Hoare_Syntax.fcall_tr'),
   (@{const_syntax Call}, Hoare_Syntax.proc_tr')]
-*}
+\<close>
 
 end
