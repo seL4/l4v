@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-header {* Concurrent Imperative Syntax and Semantics \label{s:cimp} *}
+chapter {* Concurrent Imperative Syntax and Semantics \label{s:cimp} *}
 (*<*)
 theory CIMP
 imports Main

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Toplevel Refinement Statement"
+chapter "Toplevel Refinement Statement"
 
 theory Init_C
 imports ADT_C

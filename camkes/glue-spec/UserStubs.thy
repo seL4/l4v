@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-header {* \label{h:userstubs}Component Behaviour *}
+chapter {* \label{h:userstubs}Component Behaviour *}
 
 (*<*)
 theory UserStubs

@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-header {* Event Send *}
+chapter {* Event Send *}
 (*<*)
 theory EventFrom imports
   "../../tools/c-parser/CTranslation"

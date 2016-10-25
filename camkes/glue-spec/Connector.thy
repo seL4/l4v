@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-header {* \label{h:connector}Connector Components *}
+chapter {* \label{h:connector}Connector Components *}
 
 (*<*)
 theory Connector

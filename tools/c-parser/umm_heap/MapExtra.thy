@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-header {* More properties of maps plus map disjuction. *}
+chapter {* More properties of maps plus map disjuction. *}
 
 theory MapExtra
 imports "~~/src/HOL/Main"

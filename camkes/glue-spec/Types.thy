@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-header {* \label{h:types}Datatypes *}
+chapter {* \label{h:types}Datatypes *}
 
 (*<*)
 theory Types

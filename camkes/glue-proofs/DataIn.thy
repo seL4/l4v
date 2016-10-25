@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-header {* Shared Memory *}
+chapter {* Shared Memory *}
 (*<*)
 theory DataIn imports
   "../../tools/c-parser/CTranslation"

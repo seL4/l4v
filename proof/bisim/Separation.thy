@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-header "Restricted capabilities in the Separation Kernel Abstract Specification"
+chapter "Restricted capabilities in the Separation Kernel Abstract Specification"
 
 theory Separation
 imports

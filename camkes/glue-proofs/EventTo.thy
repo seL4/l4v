@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-header {* Event Receive *}
+chapter {* Event Receive *}
 (*<*)
 theory EventTo imports
   "../../tools/c-parser/CTranslation"

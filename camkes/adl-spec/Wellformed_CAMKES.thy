@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-header {* Wellformedness of Specifications *}
+chapter {* Wellformedness of Specifications *}
 
 (*<*)
 theory Wellformed_CAMKES

@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-header {* RPC Receive *}
+chapter {* RPC Receive *}
 (*<*)
 theory RPCTo imports
   "../../tools/c-parser/CTranslation"
