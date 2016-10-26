@@ -315,7 +315,16 @@ lemma no_irq_modify:
   
 lemma no_irq_setCurrentVSpaceRoot: "no_irq (setCurrentVSpaceRoot pm addr)"
   by (clarsimp simp: setCurrentVSpaceRoot_def)
+  
+lemma no_irq_invalidateTLBEntry: "no_irq (invalidateTLBEntry a)"
+  by (clarsimp simp: invalidateTLBEntry_def)
+  
+lemma no_irq_invalidatePageStructureCache: "no_irq invalidatePageStructureCache"
+  by (clarsimp simp: invalidatePageStructureCache_def)
 
+lemma no_irq_resetCR3: "no_irq resetCR3"
+  by (clarsimp simp: resetCR3_def)
+  
 lemma no_irq_storeWord: "no_irq (storeWord w p)"
   apply (simp add: storeWord_def)    
   apply (wp no_irq_modify)
@@ -350,7 +359,7 @@ lemma getActiveIRQ_neq_Some0xFF':
 
 lemma empty_fail_invalidateTLB: "empty_fail  invalidateTLB"
   by (simp add: invalidateTLB_def)
-
+  
 lemma empty_fail_initL2Cache: "empty_fail  initL2Cache"
   by (simp add: initL2Cache_def)
 
