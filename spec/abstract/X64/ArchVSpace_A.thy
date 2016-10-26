@@ -210,22 +210,17 @@ delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_
     od
 od"
 
-(* FIXME x64: should be in hardware interface *)
-definition
-  resetCR3 :: "unit machine_monad" where
-  "resetCR3 = undefined"
-
 definition
   flush_all :: "(unit,'z::state_ext) s_monad" where
   "flush_all = do_machine_op resetCR3"
 
-definition
+abbreviation
   flush_pdpt :: "(unit,'z::state_ext) s_monad" where
-  "flush_pdpt = flush_all"
+  "flush_pdpt \<equiv> flush_all"
 
-definition
+abbreviation
   flush_pd :: "(unit,'z::state_ext) s_monad" where
-  "flush_pd = flush_all"
+  "flush_pd \<equiv> flush_all"
 
 text {* Flush mappings associated with a page table. *}
 definition
@@ -250,10 +245,6 @@ flush_table :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightar
 od"
 
 
-(* FIXME x64: should be in hardware interface *)
-definition
-  invalidatePageStructureCache :: "unit machine_monad" where
-  "invalidatePageStructureCache = undefined"
 
 
 text {* Unmap a Page Directory Pointer Table from a PML4. *}
@@ -285,6 +276,7 @@ unmap_pd :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (
       if pd' = addrFromPPtr pd then returnOk () else throwError InvalidRoot
     | _ \<Rightarrow> throwError InvalidRoot;
   liftE $ do
+    flush_pd;
     store_pdpte pdpt_slot InvalidPDPTE;
     do_machine_op invalidatePageStructureCache
   od

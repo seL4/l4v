@@ -263,6 +263,20 @@ invalidateTLBEntry :: "word64 \<Rightarrow> unit machine_monad"
 where
 "invalidateTLBEntry vptr \<equiv> machine_op_lift (invalidateTLBEntry_impl vptr)"
 
+consts'
+  invalidatePageStructureCache_impl :: "unit machine_rest_monad"
+  
+definition
+  invalidatePageStructureCache :: "unit machine_monad" where
+  "invalidatePageStructureCache \<equiv> machine_op_lift invalidatePageStructureCache_impl"
+  
+consts'
+  resetCR3_impl :: "unit machine_rest_monad"
+  
+definition
+  resetCR3 :: "unit machine_monad" where
+  "resetCR3 \<equiv> machine_op_lift resetCR3_impl "
+
 definition
 firstValidIODomain :: "word16"
 where
