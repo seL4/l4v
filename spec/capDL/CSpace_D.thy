@@ -61,10 +61,13 @@ primrec (nonexhaustive)
 where
   "available_range (UntypedCap _ r available) = available"
 
-primrec (nonexhaustive)
+definition
   set_available_range :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap"
 where
-  "set_available_range (UntypedCap d r available) nrange = UntypedCap d r nrange"
+  "set_available_range cap nrange \<equiv>
+    case cap of UntypedCap d r available \<Rightarrow> UntypedCap d r nrange | _ \<Rightarrow> cap"
+
+lemmas set_avaiable_range_simps[simp] = set_available_range_def[split_simps cdl_cap.split]
 
 definition
   set_untyped_cap_as_full :: "cdl_cap \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> unit k_monad"

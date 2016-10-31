@@ -1075,6 +1075,7 @@ shows
           apply (simp)
           apply (elim exE)
           apply simp
+          apply (rule false_e_explode)
           apply (rule no_exception_conj')
            apply (wp invoke_tcb_ThreadControl_cur_thread)[1]
             apply (clarsimp cong:reset_cap_asid_cap_type)
@@ -1166,34 +1167,26 @@ shows
        apply (rule lookup_cap_and_slot_rvu[where r=root_size and cap=cnode_cap and cap'=tcb_cap])
       apply (erule_tac Q="cdl_current_domain s = minBound" in conjE)
       apply (assumption)
-     apply (unfold validE_R_def)
-     apply (wp lookup_cap_and_slot_rvu[where r=root_size and cap=cnode_cap and cap'=tcb_cap])
-     apply (rule conjI)
-      apply (simp)
-      apply (clarsimp simp: ep_related_cap_def)
-     defer
      apply (simp add: split_def)
      apply clarsimp
-     apply (wp hoare_vcg_ball_lift hoare_vcg_conj_lift hoare_vcg_imp_lift
-          hoare_vcg_all_lift)
+     apply (wp hoare_vcg_ball_lift hoare_vcg_conj_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
           apply (rule update_thread_intent_update)
          apply (wp hoare_vcg_ball_lift
-    hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
-    update_thread_intent_update)
+                   hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
+                   update_thread_intent_update)
     defer
     apply (clarsimp)
     apply (intro conjI allI impI disjI2)
-              apply (clarsimp dest!:reset_cap_asid_cnode_cap simp:cnode_cap_reset_asid)+
-              apply sep_cancel+
-              apply (clarsimp simp:is_tcb_cap_is_object)
-             apply sep_solve
-            apply (clarsimp simp: dest!:reset_cap_asid_cnode_cap)
-           apply (drule reset_cap_asid_mem_mapping[where buffer_frame_cap = buffer_frame_cap,rotated])
-            apply simp
+             apply (clarsimp dest!:reset_cap_asid_cnode_cap simp:cnode_cap_reset_asid)+
+             apply sep_cancel+
+             apply (clarsimp simp:is_tcb_cap_is_object)
+            apply sep_solve
+           apply (clarsimp simp: dest!:reset_cap_asid_cnode_cap)
+          apply (drule reset_cap_asid_mem_mapping[where buffer_frame_cap = buffer_frame_cap,rotated])
            apply simp
-          apply (clarsimp simp: unify user_pointer_at_def Let_unfold sep_conj_assoc, sep_solve)+
-       apply (clarsimp simp:reset_cap_asid_tcb)+
-     apply (clarsimp simp: unify user_pointer_at_def Let_unfold sep_conj_assoc, sep_solve)
+          apply simp
+         apply (clarsimp simp: unify user_pointer_at_def Let_unfold sep_conj_assoc, sep_solve)+
+      apply (clarsimp simp:reset_cap_asid_tcb)+
     apply (clarsimp simp: unify user_pointer_at_def Let_unfold sep_conj_assoc, sep_solve)
    apply (clarsimp simp: unify user_pointer_at_def Let_unfold sep_conj_assoc, sep_solve)
   apply clarsimp
@@ -1311,14 +1304,6 @@ lemma seL4_TCB_WriteRegisters_wp:
        apply (rule returnOk_wp)
       apply (rule lookup_cap_and_slot_rvu
         [where r=root_size and cap=cnode_cap and cap'=tcb_cap])
-     apply (unfold validE_R_def)
-     apply (wp lookup_cap_and_slot_rvu[where r=root_size and cap=cnode_cap and cap'=tcb_cap])
-     apply (intro conjI allI impI)
-      apply clarify
-      apply (drule spec)
-      apply fastforce
-     apply clarify
-     apply sep_solve
     apply clarsimp
     apply (wp hoare_vcg_ball_lift hoare_vcg_conj_lift hoare_vcg_imp_lift
        hoare_vcg_all_lift)
@@ -1412,14 +1397,6 @@ lemma seL4_TCB_Resume_wp:
        apply (rule returnOk_wp)
       apply (rule lookup_cap_and_slot_rvu
         [where r=root_size and cap=cnode_cap and cap'=tcb_cap])
-     apply (unfold validE_R_def)
-     apply (wp lookup_cap_and_slot_rvu[where r=root_size and cap=cnode_cap and cap'=tcb_cap])
-     apply (intro conjI allI impI)
-      apply clarify
-      apply (drule spec)
-      apply fastforce
-     apply clarify
-     apply sep_solve
     apply clarsimp
     apply (wp hoare_vcg_conj_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
       apply (wp update_thread_intent_update)

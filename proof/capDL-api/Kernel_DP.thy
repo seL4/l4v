@@ -62,6 +62,23 @@ where
     return (cdl_intent_error (cdl_tcb_intent tcb))
   od"
 
+definition
+  call_kernel_loop :: "event \<Rightarrow> unit k_monad"
+where
+  "call_kernel_loop ev = do
+      (* Deal with the event. *)
+      whileLoop (\<lambda>rv s. isLeft rv)
+        (\<lambda>_. handle_event ev
+            <handle> (\<lambda> _. do handle_pending_interrupts; throwError PreemptError od)
+            )
+      (Inl PreemptError);
+      schedule;
+      t \<leftarrow> gets cdl_current_thread;
+      case t of Some thread \<Rightarrow> do
+       restart \<leftarrow> has_restart_cap thread;
+       when restart $ set_cap (thread, tcb_pending_op_slot) RunningCap
+      od | None \<Rightarrow> return ()
+    od"
 
 (* Kernel call functions *)
 definition call_kernel_with_intent :: "cdl_full_intent \<Rightarrow>bool \<Rightarrow> bool k_monad"
@@ -73,7 +90,7 @@ where
       domain \<leftarrow> gets cdl_current_domain;
       assert (domain = minBound);
       update_thread thread_ptr (cdl_tcb_intent_update (\<lambda>x. full_intent));
-      call_kernel $ SyscallEvent SysCall;
+      call_kernel_loop $ SyscallEvent SysCall;
       ntptr \<leftarrow> gets_the cdl_current_thread;
       assert (thread_ptr = ntptr);
       ndomain \<leftarrow> gets cdl_current_domain;

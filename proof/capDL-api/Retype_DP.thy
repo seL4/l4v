@@ -223,6 +223,84 @@ lemma dummy_detype_if_untyped:
     object_to_sep_state_def object_project_def object_clean_def
     sep_state_disj_def)+
   done
+  
+lemma mapME_x_wp:
+  "\<forall>x \<in> set xs. \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>,\<lbrace>E\<rbrace>"
+  proof (induct xs)
+  case Nil
+  show ?case
+   apply (simp add: mapME_x_def sequenceE_x_def)
+   by wp
+  next
+  case Cons
+  show ?case
+   using Cons.prems
+   apply (simp add: mapME_x_def sequenceE_x_def)
+   apply (fold mapME_x_def sequenceE_x_def)
+   apply wp
+    apply (rule Cons.hyps)
+    apply fastforce
+   apply fastforce
+   done
+  qed
+
+lemma reset_untyped_cap_wp:
+  "obj_range \<subseteq> tot_free_range
+  \<Longrightarrow> \<lbrace>< (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
+    \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range
+    \<and>* P >\<rbrace> reset_untyped_cap uref 
+  \<lbrace>\<lambda>y s. \<exists>fr. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range \<and>  
+    cdl.lift (uref \<mapsto>c UntypedCap dev obj_range fr \<and>* (\<And>*ptr\<in>tot_free_range. ptr \<mapsto>o Untyped) \<and>* P) s\<rbrace>,-"
+  apply (simp add:reset_untyped_cap_def bind_assoc bindE_assoc)
+  apply (rule hoare_pre)
+   apply (wp hoare_whenE_wp)
+      apply (rule_tac P = "\<exists>fr. cap = UntypedCap dev obj_range fr 
+          \<and> (\<forall>fr\<in> set x. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range)" in hoare_gen_asmE)
+      apply clarsimp
+      apply (wp hoare_whenE_wp mapME_x_wp alternativeE_wp)
+      apply (rule ballI)
+       apply (rule hoare_pre)
+       apply (wp alternative_wp)
+       apply simp
+       apply (rule hoare_post_imp[OF _ set_cap_wp])
+       apply clarsimp
+       apply (rule_tac x = xa in exI)
+        apply ((rule conjI, fastforce)+, sep_solve)
+      apply clarsimp
+      apply sep_solve
+     apply (wp select_wp | clarsimp)+
+  apply (subst dummy_detype_if_untyped)
+    apply simp
+   apply (sep_select_asm 2)
+   apply (frule opt_cap_sep_imp)
+   apply (clarsimp dest!: reset_cap_asid_untyped_cap_eqD)
+   apply (subgoal_tac "tot_free_range = obj_range \<union> (tot_free_range - obj_range)")
+    apply simp
+    apply (subst (asm) sep.setprod.subset_diff)
+      apply simp+
+    apply (sep_select_asm 2)
+    apply (simp add:sep_conj_assoc)
+    apply sep_solve
+   apply blast
+  apply (sep_select_asm 2, frule opt_cap_sep_imp)
+  apply (clarsimp dest!: reset_cap_asid_simps2)
+  apply (intro conjI impI exI allI)
+      apply fastforce
+     apply (elim conjE)
+     apply (drule hd_in_set)
+     apply (drule(1) bspec)
+     apply force
+    apply sep_solve
+   apply fastforce+
+  done
+
+crunch cdl_current_domain[wp]: reset_untyped_cap "\<lambda>s. P (cdl_current_domain s)"
+(wp:select_wp mapM_x_wp' mapME_x_inv_wp alternativeE_wp crunch_wps hoare_unless_wp
+  simp: detype_def crunch_simps)
+
+crunch cdl_current_domain[wp]: invoke_untyped "\<lambda>s. P (cdl_current_domain s)"
+(wp: select_wp mapM_x_wp' mapME_x_inv_wp alternativeE_wp crunch_wps hoare_unless_wp 
+  simp: detype_def crunch_simps validE_E_def)
 
 lemma invoke_untyped_wp:
   "\<lbrace> K (default_object nt ts minBound = Some obj \<and> nt \<noteq> UntypedType
@@ -241,8 +319,9 @@ lemma invoke_untyped_wp:
   \<and>* (\<And>* ptr\<in>set nlist. ptr \<mapsto>o obj)
   \<and>* (\<And>* ptr\<in>tot_free_range - set nlist. ptr \<mapsto>o Untyped)
   \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range'
-  \<and>* P > s) \<rbrace>"
-  apply (rule hoare_name_pre_state)
+  \<and>* P > s) \<rbrace>, -"
+  apply (simp add: validE_R_def)
+  apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp:invoke_untyped_def unless_def)
   apply (rule hoare_pre)
    apply wp
@@ -293,22 +372,19 @@ lemma invoke_untyped_wp:
       apply (rule hoare_strengthen_post[OF generate_object_ids_rv])
       apply (clarsimp simp:Fun.comp_def split:if_splits)
        apply (drule(1) subset_trans[rotated],fastforce)+
-     apply wp
+     apply (wp reset_untyped_cap_wp unlessE_wp| simp)+
+   apply (wp hoare_drop_impE_R)
+   apply (erule hoare_post_imp_R[OF reset_untyped_cap_wp
+            [where free_range = free_range and obj_range = obj_range]])
+   apply clarsimp
+   apply (rule conjI)
+    apply sep_solve
+   apply (drule opt_cap_sep_imp)
+   apply (fastforce dest!: reset_cap_asid_simps2)
+  apply (clarsimp split: if_splits)
   apply (sep_select_asm 3)
-  apply (frule opt_cap_sep_imp)
-  apply (clarsimp dest!:reset_cap_asid_untyped_cap_eqD)
-  apply (rule conjI, clarsimp)
-   apply (rule subst[OF dummy_detype_if_untyped[symmetric]])
-     apply simp
-    apply (subgoal_tac "tot_free_range = obj_range \<union> (tot_free_range - obj_range)")
-     apply simp
-     apply (subst (asm) sep.setprod.subset_diff)
-       apply simp+
-     apply (sep_select_asm 2)
-     apply (simp add:sep_conj_assoc)
-     apply sep_solve
-    apply blast
-   apply clarsimp+
+  apply (frule opt_cap_sep_imp, clarsimp dest!: reset_cap_asid_simps2)
+  apply (intro conjI impI)
    apply sep_cancel+
    apply (erule sep_list_conj_impl[rotated])
    apply (rule list_all2I)
@@ -318,7 +394,6 @@ lemma invoke_untyped_wp:
   apply (rule list_all2I)
    apply (clarsimp simp add: zip_map1 zip_map2 set_zip_same sep_any_map_c_imp)+
   done
-
 
 
 lemma mapME_x_singleton:
@@ -382,7 +457,7 @@ crunch has_children[wp]: update_available_range "has_children slot"
 
 lemma invoke_untyped_one_has_children:
   "uinv = (Retype uref nt ts [slot] has_kids (Suc 0))
-  \<Longrightarrow> \<lbrace>K(nt \<noteq> UntypedType)\<rbrace> invoke_untyped uinv \<lbrace>\<lambda>r. has_children uref\<rbrace>"
+  \<Longrightarrow> \<lbrace>K(nt \<noteq> UntypedType)\<rbrace> invoke_untyped uinv \<lbrace>\<lambda>r. has_children uref\<rbrace>,-"
   apply (simp add:invoke_untyped_def)
   apply (wp)
        apply (rule_tac P = "zip [slot] new_obj_refs \<noteq> []" in hoare_gen_asm)
@@ -395,8 +470,33 @@ lemma invoke_untyped_one_has_children:
      apply wp
     apply (rule hoare_strengthen_post[OF generate_object_ids_rv])
      apply (clarsimp simp:zip_is_empty)
-    apply wp
-  apply simp
+    apply (wp unlessE_wp hoare_drop_imps | simp)+
+  done
+
+lemma invoke_untyped_exception:
+  "uinv = (Retype uref nt ts [dest_slot] has_kids (Suc 0))
+  \<Longrightarrow> \<lbrace>K (default_object nt ts minBound = Some obj \<and> nt \<noteq> UntypedType
+     \<and> free_range \<subseteq> tot_free_range
+     \<and> (\<not> retype_with_kids (InvokeUntyped uinv) \<longrightarrow> free_range = obj_range) \<and> finite tot_free_range)
+     and (\<lambda>s. cdl_current_domain s = minBound)
+     and < dest_slot \<mapsto>c NullCap
+    \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
+    \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range
+    \<and>* P > \<rbrace>
+   invoke_untyped uinv -,\<lbrace>\<lambda>r. Q\<rbrace>"
+  apply (simp add: invoke_untyped_def validE_E_def)
+  apply (rule hoare_name_pre_stateE)
+  apply (cases uinv)
+  apply clarsimp
+  apply (wp unlessE_wp  alternative_wp
+          | wpc | simp add: reset_untyped_cap_def)+
+    apply (rule_tac P = "available_range cap = cap_objects cap" in hoare_gen_asmEx)
+    apply (simp add: whenE_def)
+   apply wp
+  apply clarsimp
+  apply (cut_tac p = "(a,b)" in opt_cap_sep_imp) 
+   apply sep_solve
+  apply (clarsimp dest!: reset_cap_asid_simps2)
   done
 
 lemma invoke_untyped_one_wp:
@@ -417,10 +517,10 @@ lemma invoke_untyped_one_wp:
   \<and>* oid \<mapsto>o obj
   \<and>* (\<And>* ptr\<in>tot_free_range - {oid}. ptr \<mapsto>o Untyped)
   \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range'
-  \<and>* P > s) \<rbrace>"
+  \<and>* P > s) \<rbrace>, -"
   apply simp
   apply (rule hoare_pre)
-   apply (rule hoare_strengthen_post)
+   apply (rule hoare_post_imp_R)
     apply (rule invoke_untyped_wp
       [where free_range = free_range and obj_range = obj_range
       and tot_free_range = tot_free_range and obj = obj and P = P])
@@ -471,9 +571,6 @@ crunch cdt[wp]: set_cap "\<lambda>s. P (cdl_cdt s)"
 crunch has_children[wp]: set_cap "has_children slot"
 (wp:select_wp simp:crunch_simps corrupt_intents_def simp:has_children_def is_cdt_parent_def)
 
-crunch cdl_current_domain[wp]: invoke_untyped "\<lambda>s. P (cdl_current_domain s)"
-(wp:select_wp mapM_x_wp' crunch_wps hoare_unless_wp
-  simp:detype_def crunch_simps)
 
 lemma seL4_Untyped_Retype_sep:
   "\<lbrakk>cap_object root_cnode_cap = root_cnode;
@@ -484,7 +581,7 @@ lemma seL4_Untyped_Retype_sep:
    one_lvl_lookup root_cnode_cap 32 root_size;
    guard_equal root_cnode_cap ucptr 32;
    guard_equal root_cnode_cap root 32\<rbrakk>
-  \<Longrightarrow> \<lbrace> K (nt\<noteq> UntypedType \<and> default_object nt (unat ts) minBound = Some obj
+  \<Longrightarrow> \<lbrace> K (nt\<noteq> UntypedType \<and> default_object  nt (unat ts) minBound = Some obj
     \<and> free_range\<subseteq> tot_free_range) and
     \<guillemotleft>root_tcb_id \<mapsto>f (Tcb tcb)
   \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
@@ -526,7 +623,7 @@ lemma seL4_Untyped_Retype_sep:
   apply (rule hoare_pre)
    apply (rule do_kernel_op_pull_back)
    apply (rule call_kernel_with_intent_allow_error_helper
-     [where check= False and tcb = tcb,simplified,rotated -1])
+               [where check= False and tcb = tcb,simplified,rotated -1])
                 apply assumption
                apply fastforce
               apply (wp hoare_vcg_ex_lift set_cap_wp)[5]
@@ -535,24 +632,29 @@ lemma seL4_Untyped_Retype_sep:
                has_kids 1)"
            in hoare_gen_asmEx)
          apply clarsimp
-         apply wp
-         apply (rule hoare_strengthen_post[OF hoare_vcg_conj_lift])
-          apply (rule invoke_untyped_one_has_children)
-          apply fastforce
-         apply (rule_tac P = "P1 \<and>* P2" for P1 P2 in
-           invoke_untyped_one_wp
-             [where free_range = free_range
-               and obj_range = obj_range
-               and obj = obj
-               and tot_free_range = tot_free_range])
-          apply fastforce
-         apply clarsimp
-         apply (rule conjI)
-         apply (sep_erule refl_imp, simp)
-         apply (rule_tac x = oid in exI)
-         apply (rule_tac x = free_range' in exI)
-         apply clarsimp
-         apply (sep_schem)
+         apply (rule hoare_vcg_E_elim[where P = P and P' = P for P,simplified,rotated])
+          apply wp
+          apply (rule hoare_post_imp_R[OF hoare_vcg_conj_lift_R])
+           apply (rule invoke_untyped_one_has_children)
+           apply fastforce
+          apply (rule_tac P = "P1 \<and>* P2" for P1 P2 in
+            invoke_untyped_one_wp
+              [where free_range = free_range
+                and obj_range = obj_range
+                and obj = obj
+                and tot_free_range = tot_free_range])
+           apply fastforce
+          apply clarsimp
+          apply (rule conjI)
+          apply (sep_erule refl_imp, simp)
+          apply (rule_tac x = oid in exI)
+          apply (rule_tac x = free_range' in exI)
+          apply clarsimp
+          apply (sep_schem)
+         apply (rule hoare_pre)
+          apply (rule invoke_untyped_exception
+              [where tot_free_range = tot_free_range and free_range = free_range and obj_range = obj_range], simp)
+         apply force
         apply (wp hoare_vcg_conj_lift)
          apply (wp hoare_strengthen_post[OF set_cap_wp])
          apply (sep_select 4,assumption)
@@ -579,31 +681,20 @@ lemma seL4_Untyped_Retype_sep:
         apply (intro conjI,simp_all)[1]
           apply sep_solve
          apply sep_cancel+
-
-      apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
+      apply (clarsimp simp: user_pointer_at_def Let_def word_bits_def)
       apply (rule conjI)
        apply (thin_tac "<P \<and>* Q \<and>* (\<lambda>s. True)> s" for P Q s)
        apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
        apply (sep_solve)
       apply (clarsimp simp: ep_related_cap_def
-        dest!: reset_cap_asid_simps2 reset_cap_asid_cnode_cap)+
+                     dest!: reset_cap_asid_simps2 reset_cap_asid_cnode_cap)+
           apply (thin_tac "<P \<and>* Q \<and>* (\<lambda>s. True)> s" for P Q s)
       apply (sep_cancel)
-    apply (clarsimp simp:user_pointer_at_def Let_def
-       word_bits_def sep_conj_assoc)
+    apply (clarsimp simp: user_pointer_at_def Let_def
+                          word_bits_def sep_conj_assoc)
     apply (sep_solve)
-    apply (clarsimp simp:user_pointer_at_def Let_def
-       word_bits_def sep_conj_assoc)
-    apply (rule hoare_pre)
-     apply (wp lookup_cap_and_slot_rvu[where r = root_size and
-       cap = "root_cnode_cap" and cap' = "UntypedCap dev obj_range free_range"])
-    apply (intro conjI impI allI)
-     apply (clarsimp simp: ep_related_cap_def
-       dest!: reset_cap_asid_simps2 reset_cap_asid_cnode_cap)
-    apply (clarsimp simp:user_pointer_at_def Let_def
-      word_bits_def sep_conj_assoc)
-    apply (thin_tac "<P \<and>* Q \<and>* sep_true> sa" for P Q)
-    apply sep_solve
+   apply (clarsimp simp: user_pointer_at_def Let_def
+                         word_bits_def sep_conj_assoc)
    apply (wp update_thread_intent_update)
   apply (intro conjI allI impI,simp_all)
      apply (clarsimp simp:ep_related_cap_def)+
@@ -693,8 +784,16 @@ crunch cdt_inv[wp]: set_cap "\<lambda>s. P (cdl_cdt s)"
 (wp:hoare_vcg_conj_lift hoare_drop_impE_R
   simp:crunch_simps)
 
-crunch cdt_inc[wp]: handle_pending_interrupts "\<lambda>s. cdl_cdt s child = parent"
+crunch cdt_inc[wp]: handle_pending_interrupts "\<lambda>s. P (cdl_cdt s)"
 (wp:select_wp alternative_wp simp:crunch_simps)
+
+lemma unify_failure_valid:
+  "\<lbrace>\<lambda>s. P s\<rbrace> f \<lbrace>\<lambda>r s. P s\<rbrace>
+  \<Longrightarrow> \<lbrace>\<lambda>s. P s\<rbrace> unify_failure f \<lbrace>\<lambda>r s. P s\<rbrace>"
+  apply (simp add:unify_failure_def)
+  apply (wp hoare_drop_imps)
+  apply (clarsimp simp:validE_def valid_def)
+  done
 
 lemma set_parent_other:
   "\<lbrace>\<lambda>s. cdl_cdt s child = Some parent\<rbrace> set_parent dest uref \<lbrace>\<lambda>_ s. cdl_cdt s child = Some parent\<rbrace>"
@@ -703,21 +802,34 @@ lemma set_parent_other:
   apply auto
   done
 
-lemma invoke_untyped_same_parent:
-  "uinv = (Retype uref nt ts dest_slots has_kids n)
-  \<Longrightarrow> \<lbrace>\<lambda>s.  cdl_cdt s child = Some parent \<rbrace>
+lemma invoke_untyped_cdt_inc[wp]:
+  "\<lbrace>\<lambda>s. cdl_cdt s child = Some parent \<rbrace>
   invoke_untyped uinv
   \<lbrace>\<lambda>_ s. cdl_cdt s child = Some parent \<rbrace>"
   apply (clarsimp simp:invoke_untyped_def)
-  apply wp
+  apply (case_tac uinv)
+  apply simp
+  apply (rule hoare_pre)
+  apply (wp unlessE_wp)
       apply clarsimp
       apply (wp mapM_x_wp[OF _ subset_refl])
        apply (simp add:create_cap_def)
         apply (rule hoare_pre)
-        apply (wp set_parent_other hoare_unless_wp
-          |wpc|simp)+
+        apply (wp set_parent_other hoare_unless_wp unlessE_wp
+               | wpc | simp)+
+   apply (simp add: reset_untyped_cap_def validE_def sum.case_eq_if)
+   apply (rule_tac Q = "\<lambda>r s. cdl_cdt s child = Some parent" in hoare_post_imp)
+    apply simp
+   apply (wp hoare_whenE_wp alternativeE_wp mapME_x_inv_wp select_wp | simp)+
   apply (clarsimp simp:detype_def)
   done
+
+lemma object_at_cdl_cdt[simp]:
+  "object_at P ptr (s\<lparr>cdl_cdt := a\<rparr>)
+   = object_at P ptr s"
+  by (simp add: object_at_def)
+
+crunch tcb_intent[wp]: set_parent "\<lambda>s. tcb_at' (\<lambda>tcb. P (cdl_tcb_intent tcb)) ptr s"
 
 lemma throw_on_none_wp:
   "\<lbrace>\<lambda>s. case x of None \<Rightarrow> Q s | Some y \<Rightarrow> P y s\<rbrace> throw_on_none x \<lbrace>P\<rbrace>, \<lbrace>\<lambda>r s. Q s\<rbrace>"
@@ -751,112 +863,478 @@ lemma lookup_cap_rvu':
   apply (sep_solve)
   done
 
-lemma seL4_Untyped_Retype_cdt_inc:
+crunch cdl_current_thread [wp]:  handle_pending_interrupts "\<lambda>s. P (cdl_current_thread s)"
+(wp: alternative_wp select_wp)
+
+crunch cdl_current_thread [wp]:  lookup_slot_for_cnode_op "\<lambda>s. P (cdl_current_thread s)"
+(wp: alternative_wp select_wp)
+
+crunch cdl_current_thread [wp]:  lookup_slot "\<lambda>s. P (cdl_current_thread s)"
+(wp: alternative_wp select_wp)
+
+crunch cdl_current_thread [wp]:  lookup_cap "\<lambda>s. P (cdl_current_thread s)"
+(wp: alternative_wp select_wp hoare_drop_imps)
+
+lemma throw_opt_wp_valid:
+  "\<lbrace>P\<rbrace> throw_opt err x \<lbrace>\<lambda>r. P\<rbrace>"
+  apply (rule hoare_pre)
+   apply (clarsimp simp:throw_opt_def)
+   apply (wp | wpc | simp)+
+  done
+
+lemma do_notification_transfer_sep_wp:
+  "\<lbrace> cdl.lift ((thread, tcb_pending_op_slot) \<mapsto>c - \<and>* P)\<rbrace> do_notification_transfer thread
+    \<lbrace>\<lambda>rv. cdl.lift ((thread, tcb_pending_op_slot) \<mapsto>c - \<and>* P)\<rbrace>"
+  apply (simp add: do_notification_transfer_def)
+  apply (rule hoare_pre)
+   apply wp
+   apply (rule hoare_post_imp[rotated])
+   apply (rule set_cap_wp)
+   apply sep_solve
+  apply simp
+  done
+
+lemma update_thread_no_pending:
+  "\<lbrace>no_pending and 
+    K(\<forall>x. (case cdl_tcb_caps x tcb_pending_op_slot of Some cap \<Rightarrow> \<not> is_pending_cap cap | _ \<Rightarrow> True)\<longrightarrow>
+          (case cdl_tcb_caps (t x) tcb_pending_op_slot of Some cap \<Rightarrow> \<not> is_pending_cap cap | _ \<Rightarrow> True))\<rbrace> 
+    update_thread thread_ptr t \<lbrace>\<lambda>rv. no_pending\<rbrace>"
+  apply (rule hoare_pre)
+  apply (simp add: update_thread_def set_object_def | wp modify_wp | wpc)+
+  apply (clarsimp simp: no_pending_def)
+  apply (intro conjI impI allI, simp_all)
+  apply (drule_tac x = oid in spec)
+  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def 
+                        object_slots_def 
+                 split: if_splits option.splits)
+  done
+
+lemma update_thread_tcb_at:
+  "\<lbrace>K(\<forall>x. P (t x))\<rbrace> 
+    update_thread thread_ptr t \<lbrace>\<lambda>rv. tcb_at' P thread_ptr\<rbrace>"
+  apply (rule hoare_pre)
+  apply (simp add: update_thread_def set_object_def | wp modify_wp | wpc)+
+  apply (auto simp: no_pending_def object_at_def)
+  done
+
+lemma corrupt_intents_no_pending:
+  "no_pending s \<Longrightarrow> no_pending (corrupt_intents a b s)"
+  apply (clarsimp simp: no_pending_def corrupt_intents_def opt_cap_def slots_of_def)
+  apply (drule_tac x = oid in spec)
+  apply (clarsimp simp: opt_object_def split: option.splits)
+  apply (auto split: option.splits cdl_object.splits if_splits
+              simp: object_slots_def)
+  done
+
+crunch no_pending[wp]: corrupt_ipc_buffer no_pending
+  (wp: crunch_wps select_wp update_thread_no_pending corrupt_intents_no_pending)
+
+crunch no_pending[wp]: mark_tcb_intent_error no_pending
+  (wp: crunch_wps select_wp update_thread_no_pending corrupt_intents_no_pending)
+
+lemma detype_one_wp:
+  "<obj_id \<mapsto>o - \<and>* R> s
+   \<Longrightarrow> <obj_id \<mapsto>o Untyped \<and>* R> (detype {obj_id} s)"
+  apply (clarsimp simp: detype_def sep_any_exist)
+  apply (clarsimp simp: sep_state_projection_def sep_map_o_conj sep_any_def)
+  apply (rule conjI)
+   apply (rule ext)
+    apply (clarsimp simp:object_project_def
+      restrict_map_def object_to_sep_state_def)
+  apply (erule arg_cong[where f = R,THEN iffD1,rotated])
+  apply clarsimp
+  apply (rule ext)
+  apply (clarsimp simp:restrict_map_def split:if_splits)
+  done
+
+lemma detype_insert:
+  "detype (insert a A) s = detype {a} (detype A s)"
+  by (cases s, simp add: detype_def fun_eq_iff)
+  
+lemma detype_set_sep_helper:
+  "finite S \<Longrightarrow> <(\<And>* x\<in> S. x \<mapsto>o -) \<and>* R> s
+   \<Longrightarrow> <(\<And>* x \<in> S. x \<mapsto>o Untyped) \<and>* R> (detype S s)"
+proof (induct arbitrary: R rule: finite_induct)
+  case empty
+  show ?case using empty by (simp add: detype_def)
+next
+  case (insert a A)
+  show ?case using insert.hyps(1-2) insert.prems
+    apply (subst detype_insert)
+    apply (simp add: )
+    apply (subst sep_conj_assoc)
+    apply (rule detype_one_wp)
+    apply (sep_select 2)
+    apply (rule insert.hyps(3))
+    apply sep_solve
+  done
+qed
+
+lemma detype_set_wp:
+  "finite S \<Longrightarrow>
+   \<lbrace><(\<And>* x\<in> S. x \<mapsto>o -) \<and>* R>\<rbrace>
+    modify (detype S)
+   \<lbrace>\<lambda>_. <(\<And>* x \<in> S. x \<mapsto>o Untyped) \<and>* R>\<rbrace>"
+  apply (clarsimp simp: modify_def)
+  apply wp
+  apply (rule detype_set_sep_helper)
+   apply simp+
+  done
+
+lemma invoke_untyped_preempt:
+  "finite obj_range \<Longrightarrow>
+  \<lbrace>cdl.lift (slot \<mapsto>c UntypedCap dev obj_range free_range \<and>*
+         sep_map_set_conj sep_any_map_o obj_range \<and>* Q)\<rbrace>
+    invoke_untyped (Retype slot nt (unat ts) dests has_kids n) 
+   -, \<lbrace>\<lambda>x s. \<exists>free_range. cdl.lift
+         (slot \<mapsto>c UntypedCap dev obj_range free_range \<and>*
+         sep_map_set_conj sep_any_map_o obj_range \<and>* Q) s\<rbrace>"
+  apply (simp add: invoke_untyped_def)
+  apply (wp unlessE_wp)
+   apply (simp add: reset_untyped_cap_def whenE_liftE | wp hoare_whenE_wp alternative_wp)+
+      apply (rule_tac P = "\<exists>a. cap = UntypedCap dev obj_range a" in hoare_gen_asmEx)
+      apply (rule hoare_post_impErr[where E = E and F = E for E])
+        apply (rule mapME_x_inv_wp[where P = P and E = "\<lambda>r. P" for P])
+        apply (wp alternative_wp)
+         apply simp
+         apply (rule hoare_pre)
+         apply (wp hoare_vcg_ex_lift)
+          apply (rule hoare_post_imp[OF _ set_cap_wp])
+          apply sep_solve
+         apply clarsimp
+        apply (rule exI)
+        apply sep_solve
+       apply simp
+      apply simp
+     apply sep_solve
+    apply (wp select_wp)
+  apply clarsimp
+  apply (frule opt_cap_sep_imp)
+  apply (clarsimp dest!: reset_cap_asid_untyped_cap_eqD)
+  apply (cut_tac S = obj_range in detype_set_wp[unfolded bind_def valid_def simpler_modify_def])
+   apply simp
+  apply (drule_tac x = s in spec)
+  apply (erule impE)
+   apply clarsimp
+   apply sep_solve
+  apply clarsimp
+  apply (rule exI)
+  apply sep_cancel+
+  apply (erule sep_map_set_conj_impl)
+   apply sep_solve
+  apply simp
+  done
+
+lemma set_parent_cdt_parent:
+  "\<lbrace>\<lambda>s. cdl_cdt s slot = Some parent\<rbrace> set_parent param_a param_b \<lbrace>\<lambda>_ s. cdl_cdt s slot = Some parent\<rbrace>"
+  apply (simp add: set_parent_def)
+  apply wp
+  apply (clarsimp simp add: )
+  done
+
+lemma set_parent_cdl_parent:
+   "\<lbrace>\<lambda>s. cdl_cdt s slot = Some parent\<rbrace>
+     set_parent slot' parent'
+   \<lbrace>\<lambda>_ s. cdl_cdt s slot = Some parent\<rbrace>"
+   apply (simp add: set_parent_def)
+   apply wp
+   apply clarsimp
+   done
+
+crunch cdl_parent[wp]: reset_untyped_cap "\<lambda>s. cdl_cdt s slot = Some parent"
+   (wp: assert_inv crunch_wps select_wp mapME_x_inv_wp alternative_wp
+simp: crunch_simps detype_def)
+
+crunch cdl_parent[wp]: insert_cap_child, corrupt_ipc_buffer,
+          corrupt_tcb_intent, update_thread, derive_cap, insert_cap_sibling
+      "\<lambda>s. cdl_cdt s slot = Some parent"
+   (wp: crunch_wps select_wp set_parent_cdl_parent simp: crunch_simps
+corrupt_intents_def)
+
+lemma transfer_caps_loop_cdl_parent:
+   "\<lbrace>\<lambda>s. cdl_cdt s slot = Some parent\<rbrace>
+     transfer_caps_loop ep rcvr caps dest
+   \<lbrace>\<lambda>_ s. cdl_cdt s slot = Some parent\<rbrace>"
+   apply (induct caps arbitrary: dest; clarsimp split del: split_if)
+   apply (rule hoare_pre)
+    apply (wp alternative_wp crunch_wps | assumption
+      | simp add: crunch_simps split del: split_if)+
+   done
+
+lemmas reset_untyped_cap_cdl2[wp] = reset_untyped_cap_cdl_parent[THEN valid_validE_E]
+
+crunch cdl_parent[wp]: invoke_untyped "\<lambda>s. cdl_cdt s slot = Some parent"
+   (wp: assert_inv crunch_wps select_wp mapME_x_inv_wp alternative_wp
+       simp: crunch_simps detype_def)
+
+crunch cdt_parent: inject_reply_cap "\<lambda>s. cdl_cdt s slot = Some parent"
+  (simp: crunch_simps unless_def wp: crunch_wps)
+
+lemma set_object_no_pending:
+  "\<lbrace>no_pending and K(\<forall>cap. object_slots x tcb_pending_op_slot = Some cap \<longrightarrow> \<not> is_pending_cap cap)\<rbrace> set_object a x \<lbrace>\<lambda>rv. no_pending\<rbrace>"
+  apply (clarsimp simp: set_object_def simpler_modify_def valid_def no_pending_def)
+  apply (drule_tac x=oid in spec)
+  apply (fastforce simp: opt_cap_def slots_of_def opt_object_def ran_def
+                 split: option.split_asm if_splits)
+  done
+
+lemma object_slots_upd_intent[simp]:
+  "object_slots (Tcb (x\<lparr>cdl_tcb_intent := intent\<rparr>)) = object_slots (Tcb x)"
+  by (clarsimp simp: object_slots_def)
+
+lemma no_pending_cong[cong]:
+  "cdl_objects s = cdl_objects b \<Longrightarrow> no_pending s = no_pending b"
+  by (clarsimp simp: no_pending_def opt_cap_def slots_of_def opt_object_def)
+
+lemma default_cap_not_pending[simp]:
+  "\<not> is_pending_cap (default_cap a b c d)"
+  by (simp add: default_cap_def is_pending_cap_def split: cdl_object_type.splits)
+
+lemma set_cap_no_pending[wp]:
+  "snd slot = tcb_pending_op_slot \<longrightarrow> \<not> is_pending_cap cap \<Longrightarrow>
+  \<lbrace>no_pending\<rbrace> set_cap slot cap \<lbrace>\<lambda>rv s. no_pending s\<rbrace>"
+  apply (simp add: set_cap_def)
+  apply (cases slot, simp)
+  apply (wp set_object_no_pending select_wp | wpc | simp add: no_pending_def)+
+  apply (drule_tac x = a in spec)
+  apply (rule conjI)
+    apply (clarsimp simp: tcb_pending_op_slot_def tcb_ipcbuffer_slot_def)
+  apply clarsimp
+  apply (intro conjI impI allI)
+            apply (clarsimp simp: opt_cap_def slots_of_def)+
+            apply (case_tac y, (fastforce simp: object_slots_def update_slots_def)+)
+           apply (clarsimp simp: opt_cap_def slots_of_def)+
+  done
+
+crunch no_pending[wp]: create_cap no_pending
+
+lemma default_object_no_pending_cap:
+  "\<lbrakk> default_object b c d = Some x2; object_slots x2 tcb_pending_op_slot = Some cap\<rbrakk>
+    \<Longrightarrow> \<not> is_pending_cap cap"
+  apply (case_tac b)
+  apply (clarsimp simp: default_object_def object_slots_def default_tcb_def is_pending_cap_def
+                        empty_cnode_def empty_cap_map_def empty_irq_node_def
+                 split: split_if_asm)+
+  done
+ 
+lemma create_objects_no_pending[wp]:
+  "\<lbrace>no_pending\<rbrace> create_objects a (default_object b c d) \<lbrace>\<lambda>rv. no_pending\<rbrace>"
+  apply (clarsimp simp: create_objects_def no_pending_def)
+  apply (drule_tac x = oid in spec)
+  apply (clarsimp simp: opt_cap_def default_object_no_pending_cap 
+                        slots_of_def opt_object_def 
+                 split: if_splits option.split_asm)
+  done
+
+  
+crunch no_pending[wp]: retype_region "no_pending"
+  (wp: crunch_wps ignore: create_objects)
+
+lemma detype_no_pending:
+  "no_pending s \<Longrightarrow> no_pending (detype S s)"
+  apply (clarsimp simp: detype_def no_pending_def)
+  apply (drule_tac x = oid in spec)
+  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def object_slots_def split: if_splits option.splits)
+  done
+
+lemma is_pending_cap_set_available_range[simp]:
+  "is_pending_cap (set_available_range cap xa) = is_pending_cap cap"
+  by (case_tac cap, simp_all add: is_pending_cap_def cap_type_def)
+
+lemma reset_untyped_cap_no_pending[wp]:
+  "\<lbrace>no_pending \<rbrace> reset_untyped_cap cref \<lbrace>\<lambda>rv. no_pending\<rbrace>"
+  apply (simp add: reset_untyped_cap_def)
+  apply (wp hoare_whenE_wp)
+     apply (rule_tac P = "snd cref = tcb_pending_op_slot \<longrightarrow> \<not> is_pending_cap cap" in hoare_gen_asmEx)
+     apply (wp mapME_x_inv_wp alternativeE_wp | simp)+
+    apply (wp select_wp)
+  apply (clarsimp simp: detype_no_pending)
+  apply (cases cref, clarsimp simp: no_pending_def)
+  done
+
+lemma set_cap_opt_cap:
+  "\<lbrace>\<lambda>s. P (Some cap)\<rbrace>
+  set_cap cref cap 
+  \<lbrace>\<lambda>rv s. P (opt_cap cref s)\<rbrace>"
+  apply (cases cref)
+  apply (simp add: set_cap_def gets_the_def gets_def get_def assert_opt_def bind_assoc)
+  apply (clarsimp simp: bind_def return_def valid_def split:option.splits)
+  apply (clarsimp simp: fail_def assert_def return_def select_def bind_def
+                 split: cdl_object.split_asm)
+           apply (simp_all add: set_object_def simpler_modify_def opt_cap_def
+                                 slots_of_def has_slots_def update_slots_def
+                         split: cdl_object.split_asm)+
+       apply (clarsimp simp: opt_object_def select_def return_def bind_def
+                             object_slots_def update_slots_def
+                      split: if_splits)+
+  done
+
+lemma set_cap_opt_cap_sep_imp:
+  assumes asid:
+    "\<And>c c'. reset_cap_asid c = reset_cap_asid c' \<Longrightarrow> P (Some c) = P (Some c')"
+  shows 
+    "\<lbrace>\<lambda>s. cdl.lift (ptr \<mapsto>c c \<and>* cref \<mapsto>c - \<and>* sep_true) s \<and> P (Some c)\<rbrace>
+    set_cap cref cap 
+    \<lbrace>\<lambda>rv s. P (opt_cap ptr s)\<rbrace>"
+  apply (rule hoare_name_pre_state)
+  apply (rule hoare_pre)
+   apply (rule hoare_post_imp[OF _ set_cap_wp])
+   prefer 2
+   apply clarsimp
+   apply sep_solve
+  apply clarsimp
+  apply (sep_select_asm 2)
+  apply (drule opt_cap_sep_imp)+
+  apply (clarsimp dest!: asid)
+  done
+
+lemma reset_untyped_cap_not_pending_cap[wp]:
+  "\<lbrace>\<lambda>s. \<not> is_pending_cap (the (opt_cap cref s))\<rbrace> 
+  reset_untyped_cap cref
+  \<lbrace>\<lambda>rv s.  (\<exists>cap. opt_cap cref s = Some cap) \<longrightarrow> \<not> is_pending_cap (the (opt_cap cref s))\<rbrace>"
+  apply (simp add: reset_untyped_cap_def)
+  apply (wp hoare_whenE_wp)
+     apply (rule_tac P = " \<not> is_pending_cap cap" in hoare_gen_asmEx)
+     apply (wp mapME_x_inv_wp alternativeE_wp set_cap_opt_cap)
+     apply simp
+    apply (wp select_wp)
+  apply (clarsimp simp: detype_no_pending)
+  apply (cases cref)
+  apply (clarsimp simp: detype_def opt_cap_def slots_of_def opt_object_def object_slots_def
+                 split: option.split_asm if_splits)
+  done
+
+lemma invoke_untyped_no_pending[wp]:
+  "\<lbrace>no_pending and (\<lambda>s. \<not> is_pending_cap (the (opt_cap ref s)))\<rbrace>
+  invoke_untyped (Retype ref a b c d e)
+  \<lbrace>\<lambda>rv. no_pending\<rbrace>"
+  apply (simp add: invoke_untyped_def create_cap_def)
+  apply (rule hoare_pre)
+  apply (wp mapM_x_wp | wpc | simp add:update_available_range_def )+
+          apply (case_tac x)
+          apply (simp | wp)+
+         apply force
+        apply wp
+       apply (simp add: update_available_range_def)
+       apply (rule_tac P = "snd ref = tcb_pending_op_slot \<longrightarrow> \<not> is_pending_cap untyped_cap" in hoare_gen_asm)
+       apply (wp | simp)+
+       apply (wp select_wp hoare_drop_imps | simp)+
+    apply (wp unlessE_wp | simp)+
+    apply (rule_tac Q' = "\<lambda>r s. no_pending s \<and> ((\<exists>y. opt_cap ref s = Some y) \<longrightarrow>
+                         \<not> is_pending_cap (the (opt_cap ref s)))" in hoare_post_imp_R)
+    apply (wp reset_untyped_cap_no_pending)
+   apply simp
+  apply auto
+  done
+
+lemma is_pending_cap_reset_cap_asid:
+  "reset_cap_asid c = reset_cap_asid c'
+  \<Longrightarrow> is_pending_cap c = is_pending_cap c'"
+  apply (case_tac c')
+  apply (clarsimp simp: is_pending_cap_def dest!:reset_cap_asid_simps2)+
+  done
+
+lemmas
+  is_pending_cap_simps[simp] = is_pending_cap_def[split_simps cdl_cap.split]
+
+lemma seL4_Untyped_Retype_inc_no_preempt:
   "\<lbrakk>cap_object root_cnode_cap = root_cnode;
    ucptr_slot = offset ucptr root_size;
    is_cnode_cap root_cnode_cap;
+   ncptr_slot = offset ncptr root_size;
+   unat ncptr_slot_nat = ncptr_slot;
    one_lvl_lookup root_cnode_cap 32 root_size;
    guard_equal root_cnode_cap ucptr 32;
    guard_equal root_cnode_cap root 32\<rbrakk>
-   \<Longrightarrow> \<lbrace>\<lambda>s.  \<guillemotleft>root_tcb_id \<mapsto>f Tcb tcb \<and>*
-  cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size) \<and>*
-  (cap_object root_cnode_cap, offset ucptr root_size) \<mapsto>c UntypedCap dev obj_range free_range \<and>*
-  (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap \<and>*
-  (cap_object root_cnode_cap, offset root root_size) \<mapsto>c root_cnode_cap \<and>* sep_true\<guillemotright> s
-  \<and> cdl_cdt (kernel_state s) child = Some parent\<rbrace>
-  seL4_Untyped_Retype ucptr type sz root node_index
-    node_depth node_offset node_window
+  \<Longrightarrow> \<lbrace> K (nt\<noteq> UntypedType \<and> default_object  nt (unat ts) minBound = Some obj
+    \<and> free_range\<subseteq> tot_free_range) and
+    \<guillemotleft>root_tcb_id \<mapsto>f (Tcb tcb)
+  \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
+  \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
+  \<and>* (root_cnode, ucptr_slot) \<mapsto>c UntypedCap dev obj_range free_range
+  \<and>* (root_cnode, ncptr_slot ) \<mapsto>c NullCap
+  \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
+  \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
+  \<and>* (cap_object root_cnode_cap, offset root root_size) \<mapsto>c root_cnode_cap
+  \<and>* P\<guillemotright>
+    and (\<lambda>s. \<not> has_children (root_cnode,ucptr_slot) (kernel_state s) \<longrightarrow> obj_range = free_range)
+    and (\<lambda>s. cdl_cdt (kernel_state s) child = Some parent)
+  \<rbrace>
+  seL4_Untyped_Retype ucptr nt ts root node_index 0 ncptr_slot_nat 1
   \<lbrace>\<lambda>rv s. cdl_cdt (kernel_state s) child = Some parent\<rbrace>"
-  apply (clarsimp simp: seL4_Untyped_Retype_def)
+  apply (simp add:seL4_Untyped_Retype_def sep_state_projection2_def)
+  apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
-  apply (rule lift_do_kernel_op')
-  apply (clarsimp simp: call_kernel_with_intent_def)
-  apply wp
-    apply (clarsimp simp: call_kernel_def)
-    apply (wp hoare_drop_imps |wpc|clarsimp)+
-    apply (clarsimp simp: handle_event_def handle_syscall_def handle_invocation_def)
-    apply wp
-      apply (clarsimp simp: syscall_def)
-       apply (rule hoare_vcg_handle_elseE[rotated])
-         apply (rule valid_validE)
-         apply (rule hoare_pre_cont)
-        apply (rule valid_validE)
-        apply (rule_tac P = "cdl_intent_op (cdl_tcb_intent xb) \<noteq> None"
-          in hoare_gen_asm)
-        apply (clarsimp split del:split_if)
-        apply wp
-        apply (rule hoare_vcg_handle_elseE[rotated])
-          apply (wp whenE_inv|simp)+
-          apply (rule_tac P = "\<exists>has_kids ref nt ts dests n.
-            xc = InvokeUntyped (Retype ref nt (unat ts)
-               dests
-               has_kids n)"
+   apply (rule do_kernel_op_pull_back)
+   apply (rule call_kernel_with_intent_allow_error_helper
+     [where check= False and tcb = tcb and Q = Q  and Perror = Q
+        for Q , simplified])
+               apply fastforce
+              apply (wp hoare_vcg_ex_lift set_cap_wp)[5]
+         apply (rule_tac P = "\<exists>has_kids. iv = InvokeUntyped (Retype (root_cnode,ucptr_slot) nt (unat ts)
+               [(root_cnode, ncptr_slot)]
+               has_kids 1)"
            in hoare_gen_asmEx)
+         apply clarsimp
+         apply (rule hoare_vcg_E_elim[where P = P and P' = P for P,simplified,rotated])
+          apply wp
+          apply (rule hoare_post_imp_R[OF hoare_vcg_conj_lift_R])
+           apply (rule valid_validE_R)
+           apply (rule invoke_untyped_cdt_inc)
+          apply (rule_tac P = "P1 \<and>* P2" for P1 P2 in
+            invoke_untyped_one_wp
+              [where free_range = free_range
+                and obj_range = obj_range
+                and obj = obj
+                and tot_free_range = tot_free_range])
+           apply fastforce
           apply clarsimp
-          apply (rule invoke_untyped_same_parent)
+          apply (rule conjI)
+           apply (sep_erule refl_imp, simp)
           apply fastforce
-       apply wp
-       apply (rule_tac P ="fst (a,(aa,b),ba) = UntypedCap dev obj_range free_range"
-        in hoare_gen_asmEx)
-       apply (simp add:decode_untyped_invocation_def decode_invocation_def)
-       apply (wp throw_on_none_wp alternativeE_wp |wpc | simp)+
-               apply (wp mapME_x_inv_wp unlessE_wp hoare_drop_imps
-                 throw_on_none_wp | simp)+
-        apply (rule hoare_post_impErr
-          [rotated 1,where Q = "\<lambda>r s. cdl_cdt s child = Some parent"])
-          apply (clarsimp split:option.split)
-          apply fastforce
-         apply assumption
-        apply (wp throw_opt_wp)
-       apply (clarsimp split:option.split)
-       apply (intro conjI impI,assumption+)
-      apply (rule_tac P = "cdl_intent_extras (cdl_tcb_intent xb) = [root]" in hoare_gen_asmEx)
-      apply (clarsimp simp:lookup_extra_caps_def mapME_singleton bindE_assoc)
-      apply (rule wp_no_exception_seq)
-       apply wpc
-       apply (rule wp_no_exception_seq)
+         apply (rule hoare_pre)
+          apply (rule invoke_untyped_exception
+              [where tot_free_range = tot_free_range and free_range = free_range and obj_range = obj_range], simp)
+         apply force
+        apply (wp hoare_vcg_conj_lift)
+         apply (wp hoare_strengthen_post[OF set_cap_wp])
+         apply (sep_select 4,assumption)
         apply wp[1]
-       apply (wp lookup_cap_and_slot_rvu)[2]
-     apply clarsimp
-    apply (wp get_thread_sep_wp_precise hoare_drop_imps update_thread_wp)
-    apply (rule_tac P = " x = root_tcb_id " in hoare_gen_asm)
-    apply simp
-    apply (rule_tac Q = "\<lambda>r s. cdl_cdt s child = Some parent \<and>
-      (cdl_current_thread s) = Some root_tcb_id \<and>
-      tcb_at' (\<lambda>tcb. cdl_tcb_intent tcb = \<lparr>cdl_intent_op =
-      Some (UntypedIntent (UntypedRetypeIntent type sz node_index node_depth node_offset node_window)),
-      cdl_intent_error = False, cdl_intent_cap = ucptr, cdl_intent_extras = [root],
-      cdl_intent_recv_slot = None\<rparr>) root_tcb_id s \<and>
-      < root_tcb_id \<mapsto>f (Tcb tcb)
-      \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
-      \<and>* (cap_object root_cnode_cap, offset ucptr root_size) \<mapsto>c UntypedCap dev obj_range free_range
-      \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
-      \<and>* (cap_object root_cnode_cap, offset root root_size) \<mapsto>c root_cnode_cap
-      \<and>* sep_true> s" in  hoare_strengthen_post)
+       apply (rule_tac P =" nt \<noteq> UntypedType
+        \<and> c = UntypedCap dev obj_range free_range \<and> cs = [(root_cnode_cap,(root_cnode,offset root root_size))]"
+        in hoare_gen_asmEx)
+      apply simp
+       apply (rule decode_untyped_invocation_rvu)
+       apply simp
+      apply (simp add:lookup_extra_caps_def mapME_singleton)
+      apply (rule wp_no_exception_seq)
+       apply wp[1]
+      apply (rule lookup_cap_and_slot_rvu[where r = root_size
+       and  cap' = "root_cnode_cap"])
+      apply clarsimp
+     apply (wp lookup_cap_and_slot_rvu[where r = root_size
+       and cap' = "UntypedCap dev obj_range free_range"])[1]
     apply clarsimp
-    apply (wp update_thread_wp update_thread_intent_update)
-    apply clarsimp
-    apply (frule obj_exists_map_f)
-     apply (clarsimp simp:opt_object_def
-       object_type_def,simp split:cdl_object.split_asm)
-    apply (clarsimp simp:object_at_def)
-    apply (intro conjI allI impI)
-    prefer 3
-        apply (clarsimp simp:user_pointer_at_def Let_def
-          word_bits_def sep_conj_assoc)
-        apply (intro conjI,simp_all)[1]
-        apply sep_solve
-     apply (clarsimp simp:reset_cap_asid_untyped_cap_eqD)
-    apply (clarsimp simp:user_pointer_at_def Let_def
-          word_bits_def sep_conj_assoc)
-    apply (intro conjI,simp_all)[1]
-    apply sep_solve
+    apply (wp hoare_vcg_ball_lift
+              update_thread_intent_update
+              hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
+              is_cnode_cap_guard_equal update_thread_intent_update )
    apply clarsimp
-   apply wp
-  apply (clarsimp simp:sep_state_projection2_def)
-  apply (drule obj_exists_map_f)
-  apply (clarsimp simp:object_at_def opt_object_def object_type_def)
-  apply (fastforce split:cdl_object.split_asm)
+   apply (erule conjE)+
+   apply (drule_tac x = "UntypedCap dev obj_range free_range" in spec)
+   apply clarsimp
+   apply (erule conjE)+
+   apply (drule_tac x = root_cnode_cap in spec)
+   apply clarsimp
+   apply (erule conjE)+
+   apply clarsimp
+   apply (erule use_sep_true_for_sep_map_c)
+   apply (thin_tac "<P \<and>* Q \<and>* sep_true> sa" for P Q)
+   apply sep_solve
+  apply clarsimp
+  apply (intro conjI impI allI, simp_all)
+          apply (clarsimp simp: user_pointer_at_def Let_def ep_related_cap_def
+                                word_bits_def sep_conj_assoc
+                         dest!: reset_cap_asid_simps2 reset_cap_asid_cnode_cap | sep_solve)+
   done
-
 end
