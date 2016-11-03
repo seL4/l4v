@@ -264,7 +264,7 @@ definition
     atcbContext= newContext \<rparr>"
 
 defs atcbContextSet_def:
-"atcbContextSet uc at \<equiv> at \<lparr> atcbContext := uc \<rparr>"
+"atcbContextSet uc atcb \<equiv> atcb \<lparr> atcbContext := uc \<rparr>"
 
 defs atcbContextGet_def:
 "atcbContextGet \<equiv> atcbContext"

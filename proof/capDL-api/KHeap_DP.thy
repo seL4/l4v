@@ -80,7 +80,7 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = (IOPageTableCap a2) \<Longrightarrow> cap = (IOPageTableCap a2)"
   "reset_cap_asid cap = (ZombieCap a3) \<Longrightarrow> cap = (ZombieCap a3)"
   "reset_cap_asid cap = (BoundNotificationCap a4) \<Longrightarrow> cap = (BoundNotificationCap a4)"
-  "reset_cap_asid cap = (FrameCap dev aa real sz rset ma) \<Longrightarrow> \<exists>asid. cap = FrameCap dev aa real sz rset asid"
+  "reset_cap_asid cap = (FrameCap dev aa rghts sz rset ma) \<Longrightarrow> \<exists>asid. cap = FrameCap dev aa rghts sz rset asid"
   "reset_cap_asid cap = (PageTableCap aa rights ma) \<Longrightarrow> \<exists>asid. cap = PageTableCap aa rights asid"
   "reset_cap_asid cap = (PageDirectoryCap aa rights as) \<Longrightarrow> \<exists>asid. cap = PageDirectoryCap aa rights asid"
 by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)+

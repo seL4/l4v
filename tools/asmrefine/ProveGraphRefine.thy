@@ -215,7 +215,7 @@ lemma Collect_const_mem:
 
 lemma typ_uinfo_t_diff_from_typ_name:
   "typ_name (typ_info_t TYPE ('a :: c_type)) \<noteq> typ_name (typ_info_t TYPE('b :: c_type))
-    \<Longrightarrow> typ_uinfo_t (at :: 'a itself) \<noteq> typ_uinfo_t (bt :: 'b itself)"
+    \<Longrightarrow> typ_uinfo_t (aty :: 'a itself) \<noteq> typ_uinfo_t (bty :: 'b itself)"
   by (clarsimp simp: typ_uinfo_t_def td_diff_from_typ_name)
 
 lemmas ptr_add_assertion_unfold_numeral

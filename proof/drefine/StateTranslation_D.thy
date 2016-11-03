@@ -768,7 +768,7 @@ where
     cdl_intent_cap = arch_tcb_context_get (tcb_arch tcb) cap_register,
     cdl_intent_extras = get_ipc_buffer_words ms tcb [buffer_cptr_index ..< buffer_cptr_index + (unat (mi_extra_caps mi))],
     cdl_intent_recv_slot = case (get_ipc_buffer_words ms tcb [offset ..< offset + 3]) of
-                                [root, index, depth] \<Rightarrow> Some (root, index, unat depth)
+                                [croot, index, depth] \<Rightarrow> Some (croot, index, unat depth)
                               | _                    \<Rightarrow> None
   \<rparr>"
 

@@ -65,9 +65,9 @@ where
 primrec
   valid_rec_del_call :: "rec_del_call \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_rec_del_call (CTEDeleteCall slot exp) = \<top>"
-| "valid_rec_del_call (FinaliseSlotCall slot exp) = \<top>"
-| "valid_rec_del_call (ReduceZombieCall cap slot exp) =
+  "valid_rec_del_call (CTEDeleteCall slot _) = \<top>"
+| "valid_rec_del_call (FinaliseSlotCall slot _) = \<top>"
+| "valid_rec_del_call (ReduceZombieCall cap slot _) =
        (cte_wp_at (op = cap) slot and is_final_cap' cap
             and K (is_zombie cap))"
 
@@ -227,7 +227,7 @@ locale CNodeInv_AI_2 = CNodeInv_AI state_ext_t
                 | _ \<Rightarrow> True)\<rbrace>
           rec_del call 
           \<lbrace>\<lambda>rv s. invs s \<and>
-              (case call of CTEDeleteCall prod bool \<Rightarrow> True
+              (case call of CTEDeleteCall _ bool \<Rightarrow> True
                 | FinaliseSlotCall sl x \<Rightarrow> (fst rv \<or> x \<longrightarrow> cte_wp_at (replaceable s sl NullCap) sl s) \<and>
                     (\<forall>irq. snd rv = Some irq \<longrightarrow> IRQHandlerCap irq \<notin> ran (caps_of_state s(sl \<mapsto> NullCap)))
                 | ReduceZombieCall cap sl x \<Rightarrow> \<not> x \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) sl s) \<and>

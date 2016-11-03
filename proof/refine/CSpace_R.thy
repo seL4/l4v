@@ -3593,7 +3593,7 @@ crunch inv'[wp]: rangeCheck "P"
   (simp: crunch_simps)
 
 lemma lookupSlotForCNodeOp_inv'[wp]:
-  "\<lbrace>P\<rbrace> lookupSlotForCNodeOp src root ptr depth \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrace>P\<rbrace> lookupSlotForCNodeOp src croot ptr depth \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: lookupSlotForCNodeOp_def split_def unlessE_def
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)

@@ -897,7 +897,7 @@ lemma cteDelete_preservation:
     "\<And>f s. P (ksWorkUnitsCompleted_update f s) = P s"
   assumes irq: "irq_state_independent_H P"
   shows
-    "\<lbrace>P\<rbrace> cteDelete p exp \<lbrace>\<lambda>rv. P\<rbrace>"
+    "\<lbrace>P\<rbrace> cteDelete p e \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: cteDelete_def whenE_def split_def)
   apply (wp wp)
   apply (simp only: simp_thms cases_simp)
@@ -6312,14 +6312,14 @@ crunch it [wp]: emptySlot "\<lambda>s. P (ksIdleThread s)"
 crunch it [wp]: capSwapForDelete "\<lambda>s. P (ksIdleThread s)"
 
 lemma cteDelete_it [wp]:
-  "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> cteDelete slot exp \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> cteDelete slot e \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
   by (rule cteDelete_preservation) (wp | clarsimp)+
 
 lemma cteDelete_delete_cases:
   "\<lbrace>\<top>\<rbrace>
-     cteDelete slot exp
+     cteDelete slot e
    \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>c. cteCap c = NullCap
-                       \<or> \<not> exp \<and> isZombie (cteCap c)
+                       \<or> \<not> e \<and> isZombie (cteCap c)
                            \<and> capZombiePtr (cteCap c) = slot) slot\<rbrace>, -"
   apply (simp add: cteDelete_def whenE_def split_def)
   apply wp
@@ -6332,7 +6332,7 @@ lemma cteDelete_delete_cases:
   apply simp
   done
 
-lemmas cteDelete_deletes = cteDelete_delete_cases[where exp=True, simplified]
+lemmas cteDelete_deletes = cteDelete_delete_cases[where e=True, simplified]
 
 lemma cteSwap_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_to' p\<rbrace> capSwapForDelete c1 c2 \<lbrace>\<lambda>rv. ex_cte_cap_to' p\<rbrace>"
@@ -6739,22 +6739,22 @@ lemma finaliseSlot_invs'':
   done
 
 lemma finaliseSlot_invs:
-  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> exp \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace> finaliseSlot slot exp \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> e \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace> finaliseSlot slot e \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule validE_valid, rule hoare_post_impErr)
     apply (rule finaliseSlot_invs'')
    apply simp+
   done
 
 lemma finaliseSlot_sch_act_simple:
-  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> exp \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace> finaliseSlot slot exp \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
+  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> e \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace> finaliseSlot slot e \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
   apply (rule validE_valid, rule hoare_post_impErr)
     apply (rule finaliseSlot_invs'')
    apply simp+
   done
 
 lemma finaliseSlot_removeable:
-  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> exp \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace>
-     finaliseSlot slot exp
+  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> e \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace>
+     finaliseSlot slot e
    \<lbrace>\<lambda>rv s. fst rv \<longrightarrow> cte_wp_at' (\<lambda>cte. removeable' slot s (cteCap cte)) slot s\<rbrace>,-"
   apply (rule validE_validE_R, rule hoare_post_impErr)
     apply (rule finaliseSlot_invs'')
@@ -6762,8 +6762,8 @@ lemma finaliseSlot_removeable:
   done
 
 lemma finaliseSlot_irqs:
-  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> exp \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace>
-     finaliseSlot slot exp
+  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> e \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace>
+     finaliseSlot slot e
    \<lbrace>\<lambda>rv s. \<forall>irq sl'. snd rv = Some irq \<longrightarrow> sl' \<noteq> slot \<longrightarrow> cteCaps_of s sl' \<noteq> Some (capability.IRQHandlerCap irq)\<rbrace>,-"
   apply (rule validE_validE_R, rule hoare_post_impErr)
     apply (rule finaliseSlot_invs'')
@@ -7080,7 +7080,7 @@ lemmas finalise_induct3 = finaliseSlot'.induct[where P=
 
 lemma finaliseSlot_rvk_prog:
   "s \<turnstile> \<lbrace>\<lambda>s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)\<rbrace>
-       finaliseSlot' slot exp
+       finaliseSlot' slot e
    \<lbrace>\<lambda>rv s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
 proof (induct rule: finalise_induct3)
   case (1 sl ex st)
@@ -7141,7 +7141,7 @@ qed
 
 lemma cteDelete_rvk_prog:
   "\<lbrace>\<lambda>s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)\<rbrace>
-       cteDelete slot exp
+       cteDelete slot e
    \<lbrace>\<lambda>rv s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)\<rbrace>,-"
   apply (simp add: cteDelete_def whenE_def split_def)
   apply (wp emptySlot_rvk_prog)

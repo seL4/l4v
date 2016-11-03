@@ -580,7 +580,7 @@ lemma seL4_Untyped_Retype_sep:
    unat ncptr_slot_nat = ncptr_slot;
    one_lvl_lookup root_cnode_cap 32 root_size;
    guard_equal root_cnode_cap ucptr 32;
-   guard_equal root_cnode_cap root 32\<rbrakk>
+   guard_equal root_cnode_cap croot 32\<rbrakk>
   \<Longrightarrow> \<lbrace> K (nt\<noteq> UntypedType \<and> default_object  nt (unat ts) minBound = Some obj
     \<and> free_range\<subseteq> tot_free_range) and
     \<guillemotleft>root_tcb_id \<mapsto>f (Tcb tcb)
@@ -590,11 +590,11 @@ lemma seL4_Untyped_Retype_sep:
   \<and>* (root_cnode, ncptr_slot ) \<mapsto>c NullCap
   \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
   \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
-  \<and>* (cap_object root_cnode_cap, offset root root_size) \<mapsto>c root_cnode_cap
+  \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
   \<and>* P\<guillemotright>
     and (\<lambda>s. \<not> has_children (root_cnode,ucptr_slot) (kernel_state s) \<longrightarrow> obj_range = free_range)
   \<rbrace>
-  seL4_Untyped_Retype ucptr nt ts root node_index 0 ncptr_slot_nat 1
+  seL4_Untyped_Retype ucptr nt ts croot node_index 0 ncptr_slot_nat 1
   \<lbrace>\<lambda>r s. (\<not> r \<longrightarrow> (\<exists>oid free_range'. (\<guillemotleft>
      (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
   \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
@@ -604,7 +604,7 @@ lemma seL4_Untyped_Retype_sep:
   \<and>* (\<And>* ptr\<in>tot_free_range - {oid}. ptr \<mapsto>o Untyped)
   \<and>* (root_cnode, ucptr_slot) \<mapsto>c UntypedCap dev obj_range free_range'
   \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
-  \<and>* (cap_object root_cnode_cap, offset root root_size) \<mapsto>c root_cnode_cap
+  \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
   \<and>* P \<guillemotright> s ) \<and> free_range' \<subseteq> free_range - {oid} \<and> oid \<in> free_range)
   \<and> has_children (root_cnode,ucptr_slot) (kernel_state s))
   \<and> (r \<longrightarrow> (\<guillemotleft>
@@ -615,7 +615,7 @@ lemma seL4_Untyped_Retype_sep:
   \<and>* (root_cnode, ncptr_slot) \<mapsto>c NullCap
   \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
   \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
-  \<and>* (cap_object root_cnode_cap, offset root root_size) \<mapsto>c root_cnode_cap
+  \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
   \<and>* P \<guillemotright> s )
   \<and> (\<not>has_children (root_cnode,ucptr_slot) (kernel_state s) \<longrightarrow> obj_range = free_range))  \<rbrace>"
   apply (simp add:seL4_Untyped_Retype_def sep_state_projection2_def)
@@ -660,7 +660,7 @@ lemma seL4_Untyped_Retype_sep:
          apply (sep_select 4,assumption)
         apply wp[1]
        apply (rule_tac P =" nt \<noteq> UntypedType
-        \<and> c = UntypedCap dev obj_range free_range \<and> cs = [(root_cnode_cap,(root_cnode,offset root root_size))]"
+        \<and> c = UntypedCap dev obj_range free_range \<and> cs = [(root_cnode_cap,(root_cnode,offset croot root_size))]"
         in hoare_gen_asmEx)
       apply simp
        apply (rule decode_untyped_invocation_rvu)
@@ -1245,7 +1245,7 @@ lemma seL4_Untyped_Retype_inc_no_preempt:
    unat ncptr_slot_nat = ncptr_slot;
    one_lvl_lookup root_cnode_cap 32 root_size;
    guard_equal root_cnode_cap ucptr 32;
-   guard_equal root_cnode_cap root 32\<rbrakk>
+   guard_equal root_cnode_cap croot 32\<rbrakk>
   \<Longrightarrow> \<lbrace> K (nt\<noteq> UntypedType \<and> default_object  nt (unat ts) minBound = Some obj
     \<and> free_range\<subseteq> tot_free_range) and
     \<guillemotleft>root_tcb_id \<mapsto>f (Tcb tcb)
@@ -1255,12 +1255,12 @@ lemma seL4_Untyped_Retype_inc_no_preempt:
   \<and>* (root_cnode, ncptr_slot ) \<mapsto>c NullCap
   \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
   \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
-  \<and>* (cap_object root_cnode_cap, offset root root_size) \<mapsto>c root_cnode_cap
+  \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
   \<and>* P\<guillemotright>
     and (\<lambda>s. \<not> has_children (root_cnode,ucptr_slot) (kernel_state s) \<longrightarrow> obj_range = free_range)
     and (\<lambda>s. cdl_cdt (kernel_state s) child = Some parent)
   \<rbrace>
-  seL4_Untyped_Retype ucptr nt ts root node_index 0 ncptr_slot_nat 1
+  seL4_Untyped_Retype ucptr nt ts croot node_index 0 ncptr_slot_nat 1
   \<lbrace>\<lambda>rv s. cdl_cdt (kernel_state s) child = Some parent\<rbrace>"
   apply (simp add:seL4_Untyped_Retype_def sep_state_projection2_def)
   apply (rule hoare_name_pre_state)
@@ -1301,7 +1301,7 @@ lemma seL4_Untyped_Retype_inc_no_preempt:
          apply (sep_select 4,assumption)
         apply wp[1]
        apply (rule_tac P =" nt \<noteq> UntypedType
-        \<and> c = UntypedCap dev obj_range free_range \<and> cs = [(root_cnode_cap,(root_cnode,offset root root_size))]"
+        \<and> c = UntypedCap dev obj_range free_range \<and> cs = [(root_cnode_cap,(root_cnode,offset croot root_size))]"
         in hoare_gen_asmEx)
       apply simp
        apply (rule decode_untyped_invocation_rvu)

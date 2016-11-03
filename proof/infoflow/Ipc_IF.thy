@@ -1115,7 +1115,7 @@ lemma unify_failure_ev:
   done
 
 lemma lookup_slot_for_cnode_op_rev:
-  "reads_equiv_valid_inv A aag (\<lambda>s. ((depth \<noteq> 0 \<and> depth \<le> word_bits) \<longrightarrow> (pas_refined aag s \<and> (is_cnode_cap root \<longrightarrow> is_subject aag (obj_ref_of root))))) (lookup_slot_for_cnode_op is_source root ptr depth)"
+  "reads_equiv_valid_inv A aag (\<lambda>s. ((depth \<noteq> 0 \<and> depth \<le> word_bits) \<longrightarrow> (pas_refined aag s \<and> (is_cnode_cap croot \<longrightarrow> is_subject aag (obj_ref_of croot))))) (lookup_slot_for_cnode_op is_source croot ptr depth)"
   unfolding lookup_slot_for_cnode_op_def
   apply (clarsimp split del: if_split)
   apply (wp resolve_address_bits_rev lookup_error_on_failure_rev
@@ -1126,7 +1126,7 @@ lemma lookup_slot_for_cnode_op_rev:
   done
 
 lemma lookup_slot_for_cnode_op_reads_respects:
-  "reads_respects aag l (pas_refined aag and K (is_subject aag (obj_ref_of root))) (lookup_slot_for_cnode_op is_source root ptr depth)"
+  "reads_respects aag l (pas_refined aag and K (is_subject aag (obj_ref_of croot))) (lookup_slot_for_cnode_op is_source croot ptr depth)"
   apply(rule equiv_valid_guard_imp[OF lookup_slot_for_cnode_op_rev])
   by simp
 

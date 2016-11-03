@@ -46,10 +46,10 @@ where
       case ( recv_slot ) of
           None \<Rightarrow>
             return None
-        | Some (root, index, depth) \<Rightarrow>
+        | Some (croot, index, depth) \<Rightarrow>
             doE
               (* Lookup the slot. *)
-              cspace_root \<leftarrow> unify_failure $ lookup_cap thread root;
+              cspace_root \<leftarrow> unify_failure $ lookup_cap thread croot;
               result \<leftarrow> unify_failure $ lookup_slot_for_cnode_op cspace_root index depth;
 
               (* Ensure nothing is already in it. *)

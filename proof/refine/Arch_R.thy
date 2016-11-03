@@ -362,8 +362,8 @@ where
        \<exists>pti'. ai' = InvokePageTable pti' \<and> page_table_invocation_map pti pti'
    | arch_invocation.InvokePageDirectory pdi \<Rightarrow>
        \<exists>pdi'. ai' = InvokePageDirectory pdi' \<and> page_directory_invocation_map pdi pdi'
-   | arch_invocation.InvokePage pi \<Rightarrow>
-       \<exists>pi'. ai' = InvokePage pi' \<and> page_invocation_map pi pi'
+   | arch_invocation.InvokePage pgi \<Rightarrow>
+       \<exists>pgi'. ai' = InvokePage pgi' \<and> page_invocation_map pgi pgi'
    | arch_invocation.InvokeASIDControl aci \<Rightarrow>
        \<exists>aci'. ai' = InvokeASIDControl aci' \<and> aci' = asid_ci_map aci 
    | arch_invocation.InvokeASIDPool ap \<Rightarrow>
@@ -375,7 +375,7 @@ where
   "valid_arch_inv' ai \<equiv> case ai of
      InvokePageTable pti \<Rightarrow> valid_pti' pti
    | InvokePageDirectory pdi \<Rightarrow> \<top>
-   | InvokePage pi \<Rightarrow> valid_page_inv' pi
+   | InvokePage pgi \<Rightarrow> valid_page_inv' pgi
    | InvokeASIDControl aci \<Rightarrow> valid_aci' aci
    | InvokeASIDPool ap \<Rightarrow> valid_apinv' ap"
 
@@ -516,9 +516,9 @@ lemma free_asid_select_guarded:
   done *)
 
 lemma select_ext_fa:
-  "free_asid_select at \<in> S
-  \<Longrightarrow> ((select_ext (\<lambda>_. free_asid_select at) S) :: (7 word) det_ext_monad)
-   = return (free_asid_select at)"
+  "free_asid_select asid_tbl \<in> S
+  \<Longrightarrow> ((select_ext (\<lambda>_. free_asid_select asid_tbl) S) :: (7 word) det_ext_monad)
+   = return (free_asid_select asid_tbl)"
   by (simp add: select_ext_def get_def gets_def bind_def assert_def return_def fail_def)
 
 lemma select_ext_fap:
@@ -2073,7 +2073,7 @@ lemma arch_pinv_st_tcb_at':
   "\<lbrace>valid_arch_inv' ai and st_tcb_at' (P and op \<noteq> Inactive and op \<noteq> IdleThreadState) t and 
     invs' and ct_active'\<rbrace>
      Arch.performInvocation ai
-   \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>" (is "?pre (pi ai) ?post")
+   \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>" (is "?pre (pgi ai) ?post")
 proof(cases ai)
   txt {* The preservation rules for each invocation have already been proved by crunch, so
     this just becomes a case distinction. *}

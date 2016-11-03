@@ -588,10 +588,10 @@ where
 definition
   lookup_slot_for_cnode_op :: "cdl_cap \<Rightarrow> cdl_cptr \<Rightarrow> nat \<Rightarrow> cdl_cap_ref except_monad"
 where
-  "lookup_slot_for_cnode_op root cptr depth \<equiv>
+  "lookup_slot_for_cnode_op croot cptr depth \<equiv>
     doE
       whenE (depth < 1 \<or> depth > word_bits) throw;
-      (slot, rem) \<leftarrow> fault_to_except $ resolve_address_bits root cptr depth;
+      (slot, rem) \<leftarrow> fault_to_except $ resolve_address_bits croot cptr depth;
       if rem = 0 then returnOk slot else throw
     odE"
 

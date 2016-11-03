@@ -197,8 +197,8 @@ crunch inv[wp]: "InterruptDecls_H.decodeIRQControlInvocation"  "P"
 declare ensureEmptySlot_stronger [wp]
 
 lemma lsfco_real_cte_at'[wp]:
-  "\<lbrace>valid_objs' and valid_cap' root\<rbrace>
-     lookupSlotForCNodeOp is_src root ptr depth
+  "\<lbrace>valid_objs' and valid_cap' croot\<rbrace>
+     lookupSlotForCNodeOp is_src croot ptr depth
    \<lbrace>\<lambda>rv s. real_cte_at' rv s\<rbrace>,-"
   apply (simp add: lookupSlotForCNodeOp_def split_def unlessE_def
                    whenE_def

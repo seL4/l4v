@@ -4340,8 +4340,8 @@ lemma lsfco_cte_at[wp]:
   done
 
 lemma lookup_slot_for_cnode_op_cap_to[wp]:
-  "\<lbrace>\<lambda>s. \<forall>r\<in>cte_refs root (interrupt_irq_node s). ex_cte_cap_to r s\<rbrace>
-    lookup_slot_for_cnode_op is_src root ptr depth
+  "\<lbrace>\<lambda>s. \<forall>r\<in>cte_refs croot (interrupt_irq_node s). ex_cte_cap_to r s\<rbrace>
+    lookup_slot_for_cnode_op is_src croot ptr depth
    \<lbrace>\<lambda>rv. ex_cte_cap_to rv\<rbrace>,-"
 proof -
   have x: "\<And>x f g. (case x of [] \<Rightarrow> f | _ \<Rightarrow> g) = (if x = [] then f else g)"
@@ -5011,8 +5011,8 @@ lemma safe_parent_for_masked_as_full[simp]:
 done
 
 lemma lookup_cnode_slot_real_cte [wp]:
-  "\<lbrace>valid_objs and valid_cap root\<rbrace> lookup_slot_for_cnode_op s root ptr depth \<lbrace>\<lambda>rv. real_cte_at rv\<rbrace>, -"
-  apply (simp add: lookup_slot_for_cnode_op_def split_def unlessE_whenE cong: if_cong split del: split_if)
+  "\<lbrace>valid_objs and valid_cap croot\<rbrace> lookup_slot_for_cnode_op s croot ptr depth \<lbrace>\<lambda>rv. real_cte_at rv\<rbrace>, -"
+  apply (simp add: lookup_slot_for_cnode_op_def split_def unlessE_whenE cong: if_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps resolve_address_bits_real_cte_at whenE_throwError_wp
           |wpc|simp)+
@@ -5027,10 +5027,10 @@ lemma cte_refs_rights_update [simp]:
 lemmas set_cap_typ_ats [wp] = abs_typ_at_lifts [OF set_cap_typ_at]
 
 lemma lookup_slot_for_cnode_op_cap_to2[wp]:
-  "\<lbrace>\<lambda>s. (is_cnode_cap root \<longrightarrow>
-          (\<forall>r\<in>cte_refs root (interrupt_irq_node s). ex_cte_cap_wp_to P r s))
+  "\<lbrace>\<lambda>s. (is_cnode_cap croot \<longrightarrow>
+          (\<forall>r\<in>cte_refs croot (interrupt_irq_node s). ex_cte_cap_wp_to P r s))
        \<and> (\<forall>cp. is_cnode_cap cp \<longrightarrow> P cp)\<rbrace>
-    lookup_slot_for_cnode_op is_src root ptr depth
+    lookup_slot_for_cnode_op is_src croot ptr depth
    \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P rv\<rbrace>,-"
 proof -
   have x: "\<And>x f g. (case x of [] \<Rightarrow> f | _ \<Rightarrow> g) = (if x = [] then f else g)"

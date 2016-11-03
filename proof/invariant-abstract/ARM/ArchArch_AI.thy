@@ -59,8 +59,8 @@ where
        valid_pti pti
    | InvokePageDirectory pdi \<Rightarrow>
        valid_pdi pdi
-   | InvokePage pi \<Rightarrow>
-       valid_page_inv pi
+   | InvokePage pgi \<Rightarrow>
+       valid_page_inv pgi
    | InvokeASIDControl aci \<Rightarrow>
        valid_aci aci
    | InvokeASIDPool ap \<Rightarrow>

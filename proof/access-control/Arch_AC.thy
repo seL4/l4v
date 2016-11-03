@@ -253,7 +253,7 @@ where
 definition
   authorised_page_inv :: "'a PAS \<Rightarrow> page_invocation \<Rightarrow> bool"
 where
-  "authorised_page_inv aag pi \<equiv> case pi of
+  "authorised_page_inv aag pgi \<equiv> case pgi of
      PageMap asid cap ptr slots \<Rightarrow>
        pas_cap_cur_auth aag cap \<and> is_subject aag (fst ptr) \<and> authorised_slots aag slots
    | PageRemap asid slots \<Rightarrow> authorised_slots aag slots
@@ -627,8 +627,8 @@ lemma set_mrs_integrity_autarch:
   done
 
 lemma perform_page_invocation_respects:
-  "\<lbrace>integrity aag X st and pas_refined aag and K (authorised_page_inv aag pi) and valid_page_inv pi and valid_arch_objs and pspace_aligned and is_subject aag  \<circ> cur_thread\<rbrace>
-     perform_page_invocation pi
+  "\<lbrace>integrity aag X st and pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi and valid_arch_objs and pspace_aligned and is_subject aag  \<circ> cur_thread\<rbrace>
+     perform_page_invocation pgi
    \<lbrace>\<lambda>s. integrity aag X st\<rbrace>"
 proof -
   (* does not work as elim rule with clarsimp, which hammers Ball in concl. *)
@@ -664,8 +664,8 @@ proof -
 qed
 
 lemma perform_page_invocation_pas_refined [wp]:
-  "\<lbrace>pas_refined aag and K (authorised_page_inv aag pi) and valid_page_inv pi\<rbrace>
-     perform_page_invocation pi
+  "\<lbrace>pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi\<rbrace>
+     perform_page_invocation pgi
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: perform_page_invocation_def mapM_discarded
     valid_page_inv_def valid_unmap_def swp_def
@@ -680,7 +680,7 @@ lemma perform_page_invocation_pas_refined [wp]:
             | strengthen clas_update_map_data_strg
             | wpc
             | simp)+
-  apply (case_tac pi)
+  apply (case_tac pgi)
      apply (clarsimp simp: valid_slots_def pte_ref_def
        pde_ref2_def auth_graph_map_mem pas_refined_refl split:sum.splits)
     apply (clarsimp simp: pte_ref_def pde_ref2_def pte_ref_def
@@ -1013,7 +1013,7 @@ where
  "authorised_arch_inv aag ai \<equiv> case ai of
      InvokePageTable pti \<Rightarrow> authorised_page_table_inv aag pti
    | InvokePageDirectory pdi \<Rightarrow> authorised_page_directory_inv aag pdi
-   | InvokePage pi \<Rightarrow> authorised_page_inv aag pi
+   | InvokePage pgi \<Rightarrow> authorised_page_inv aag pgi
    | InvokeASIDControl aci \<Rightarrow> authorised_asid_control_inv aag aci
    | InvokeASIDPool api \<Rightarrow> authorised_asid_pool_inv aag api"
 

@@ -2174,9 +2174,9 @@ cct_relation:: "cap_transfer \<Rightarrow> cap_transfer_C \<Rightarrow> bool"
 where
 "cct_relation atc ctc \<equiv> 
   case atc of
-    (CT root idx dpt) \<Rightarrow>  ctReceiveRoot_C ctc = root \<and>
-                          ctReceiveIndex_C  ctc= idx \<and>
-                          unat (ctReceiveDepth_C ctc) = dpt"
+    (CT croot idx dpt) \<Rightarrow>  ctReceiveRoot_C ctc = croot \<and>
+                           ctReceiveIndex_C  ctc= idx \<and>
+                           unat (ctReceiveDepth_C ctc) = dpt"
 
 lemma capTransferFromWords_ccorres [corres]:
   "ccorres cct_relation ret__struct_cap_transfer_C_' 

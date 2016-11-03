@@ -1146,7 +1146,7 @@ defs decodeARMMMUInvocation_def:
   else if isASIDControlCap cap
   then  
     (case (invocationType label, args, extraCaps) of
-          (ArchInvocationLabel ARMASIDControlMakePool, index#depth#_, (untyped,parentSlot)#(root,_)#_) \<Rightarrow>   (doE
+          (ArchInvocationLabel ARMASIDControlMakePool, index#depth#_, (untyped,parentSlot)#(croot,_)#_) \<Rightarrow>   (doE
             asidTable \<leftarrow> withoutFailure $ gets (armKSASIDTable \<circ> ksArchState);
             free \<leftarrow> returnOk ( filter (\<lambda> (x,y). x \<le> (1 `~shiftL~` asidHighBits) - 1 \<and> isNothing y) $ assocs asidTable);
             whenE (null free) $ throw DeleteFirst;
@@ -1161,7 +1161,7 @@ defs decodeARMMMUInvocation_def:
                 else  throw $ InvalidCapability 1
                 );
             destSlot \<leftarrow> lookupTargetSlot
-                root (CPtr index) (fromIntegral depth);
+                croot (CPtr index) (fromIntegral depth);
             ensureEmptySlot destSlot;
             returnOk $ InvokeASIDControl $ MakePool_ \<lparr>
                 makePoolFrame= frame,

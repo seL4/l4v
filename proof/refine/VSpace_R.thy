@@ -1742,21 +1742,21 @@ lemma perform_page_directory_corres:
   done
 
 definition
-  "page_invocation_map pi pi' \<equiv> case pi of
+  "page_invocation_map pgi pgi' \<equiv> case pgi of
     ARM_A.PageMap a c ptr m \<Rightarrow> 
-      \<exists>c' m'. pi' = PageMap a c' (cte_map ptr) m' \<and> 
+      \<exists>c' m'. pgi' = PageMap a c' (cte_map ptr) m' \<and>
               cap_relation c c' \<and> 
               mapping_map m m'
               
   | ARM_A.PageRemap a m \<Rightarrow> 
-      \<exists>m'. pi' = PageRemap a m' \<and> mapping_map m m'
+      \<exists>m'. pgi' = PageRemap a m' \<and> mapping_map m m'
   | ARM_A.PageUnmap c ptr \<Rightarrow>
-      \<exists>c'. pi' = PageUnmap c' (cte_map ptr) \<and> 
+      \<exists>c'. pgi' = PageUnmap c' (cte_map ptr) \<and>
          acap_relation c c' 
   | ARM_A.PageFlush typ start end pstart pd asid \<Rightarrow>
-      pi' = PageFlush (flush_type_map typ) start end pstart pd asid
+      pgi' = PageFlush (flush_type_map typ) start end pstart pd asid
   | ARM_A.PageGetAddr ptr \<Rightarrow>
-      pi' = PageGetAddr ptr"
+      pgi' = PageGetAddr ptr"
 
 definition
   "valid_pde_slots' m \<equiv> case m of Inl (pte, xs) \<Rightarrow> True
@@ -1915,7 +1915,7 @@ lemma valid_slots_duplicated_updateCap[wp]:
   done
 
 definition
-  "valid_page_inv' pi \<equiv> case pi of 
+  "valid_page_inv' pgi \<equiv> case pgi of
     PageMap asid cap ptr m \<Rightarrow> 
       cte_wp_at' (is_arch_update' cap) ptr and valid_slots' m and valid_cap' cap
           and K (valid_pde_slots' m) and (valid_slots_duplicated' m)
@@ -2157,17 +2157,17 @@ lemma set_mrs_invs'[wp]:
   done
 
 lemma perform_page_corres:
-  assumes "page_invocation_map pi pi'"
-  shows "corres dc (invs and valid_etcbs and valid_page_inv pi) 
-            (invs' and valid_page_inv' pi' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))) 
-            (perform_page_invocation pi) (performPageInvocation pi')"
+  assumes "page_invocation_map pgi pgi'"
+  shows "corres dc (invs and valid_etcbs and valid_page_inv pgi)
+            (invs' and valid_page_inv' pgi' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+            (perform_page_invocation pgi) (performPageInvocation pgi')"
 proof -
   have pull_out_P:
     "\<And>P s Q c p. P s \<and> (\<forall>c. caps_of_state s p = Some c \<longrightarrow> Q s c) \<longrightarrow> (\<forall>c. caps_of_state s p = Some c \<longrightarrow> P s \<and> Q s c)"
    by blast
   show ?thesis
   using assms
-  apply (cases pi)
+  apply (cases pgi)
        apply (rename_tac word cap prod sum)
        apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
                              page_invocation_map_def)

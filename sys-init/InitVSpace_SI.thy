@@ -780,7 +780,7 @@ lemma cdl_lookup_pd_slot_compute:
   done
 
 lemma well_formed_frame_valid:
-  "\<lbrakk>well_formed spec; opt_cap cap_ref spec = Some (FrameCap dev ptr seta sz real option)\<rbrakk>
+  "\<lbrakk>well_formed spec; opt_cap cap_ref spec = Some (FrameCap dev ptr seta sz real_type option)\<rbrakk>
    \<Longrightarrow> validate_vm_rights seta = seta"
   apply (case_tac cap_ref, clarsimp)
   apply (frule (1) well_formed_well_formed_cap', simp)

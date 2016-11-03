@@ -313,7 +313,7 @@ consts
 
 defs
 newKernelState_def:
-"newKernelState arg \<equiv> \<lparr>
+"newKernelState data_start \<equiv> \<lparr>
         ksPSpace= newPSpace,
         gsUserPages= (\<lambda>x. None),
         gsCNodes= (\<lambda>x. None),
@@ -331,7 +331,7 @@ newKernelState_def:
         ksSchedulerAction= ResumeCurrentThread,
         ksInterruptState= error [],
         ksWorkUnitsCompleted= 0,
-        ksArchState= fst (Arch.newKernelState arg),
+        ksArchState= fst (Arch.newKernelState data_start),
         ksMachineState= init_machine_state
 	\<rparr>"
 

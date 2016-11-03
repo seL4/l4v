@@ -267,7 +267,7 @@ This function is called when an IPC message includes a capability to transfer. I
 >        Kernel MessageInfo
 > transferCapsToSlots _ _ n [] _ mi =
 >     return $ mi { msgExtraCaps = fromIntegral n }
-> transferCapsToSlots ep rcvBuffer n (arg:caps) slots mi =
+> transferCapsToSlots ep rcvBuffer n (capWithSrcSlot:caps) slots mi =
 >     constOnFailure (mi { msgExtraCaps = fromIntegral n }) $ do
 >         case (cap, ep, slots) of
 >             (EndpointCap { capEPPtr = p1 }, Just p2, _) | p1 == p2 -> do
@@ -283,7 +283,7 @@ This function is called when an IPC message includes a capability to transfer. I
 >     where
 >        transferAgain = transferCapsToSlots ep rcvBuffer (n + 1) caps
 >        miCapUnfolded = mi { msgCapsUnwrapped = msgCapsUnwrapped mi .|. bit n}
->        (cap, srcSlot) = arg
+>        (cap, srcSlot) = capWithSrcSlot
 
 \subsubsection{Notification Objects}
 

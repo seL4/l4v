@@ -73,10 +73,10 @@ definition
         \<Rightarrow> (string \<Rightarrow> word32) \<Rightarrow> 'g global_data \<Rightarrow> 'g \<Rightarrow> 'g"
 where
  "global_swap g_hrs g_hrs_upd symtab gd \<equiv>
-    (case gd of GlobalData name ln n g p \<Rightarrow> \<lambda>gs.
+    (case gd of GlobalData name len n g p \<Rightarrow> \<lambda>gs.
       g_hrs_upd (\<lambda>_. hrs_mem_update (heap_update_list (symtab name)
-            (take ln (g (g_hrs_upd (K undefined) gs)))) (g_hrs gs))
-        (p (heap_list (hrs_mem (g_hrs gs)) ln (symtab name))
+            (take len (g (g_hrs_upd (K undefined) gs)))) (g_hrs gs))
+        (p (heap_list (hrs_mem (g_hrs gs)) len (symtab name))
         (g_hrs_upd (K undefined) gs))
     | _ \<Rightarrow> id)"
 

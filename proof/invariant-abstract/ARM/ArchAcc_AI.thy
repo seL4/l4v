@@ -1810,7 +1810,7 @@ lemma invs_valid_asid_table [elim!]:
 
 (* FIXME: move to Invariants_A *)
 lemma valid_asid_table_ran:
-  "valid_asid_table at s \<Longrightarrow> \<forall>p\<in>ran at. asid_pool_at p s"
+  "valid_asid_table asid_tbl s \<Longrightarrow> \<forall>p\<in>ran asid_tbl. asid_pool_at p s"
   by (simp add: invs_def valid_state_def valid_arch_state_def
                 valid_asid_table_def)
 

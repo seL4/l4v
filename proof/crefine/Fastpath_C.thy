@@ -1981,11 +1981,11 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
 lemma fastpath_copy_mrs_ccorres:
 notes nat_min_simps [simp del]
 shows
-  "ccorres dc xfdc (\<top> and (\<lambda>_. ln <= length ARM_H.msgRegisters))
-     (UNIV \<inter> {s. unat (length___unsigned_long_' s) = ln}
+  "ccorres dc xfdc (\<top> and (\<lambda>_. len <= length ARM_H.msgRegisters))
+     (UNIV \<inter> {s. unat (length___unsigned_long_' s) = len}
            \<inter> {s. src_' s = tcb_ptr_to_ctcb_ptr src}
            \<inter> {s. dest_' s = tcb_ptr_to_ctcb_ptr dest}) []
-     (forM_x (take ln ARM_H.msgRegisters)
+     (forM_x (take len ARM_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser src (getRegister r);
                     asUser dest (setRegister r v) od))
      (Call fastpath_copy_mrs_'proc)"

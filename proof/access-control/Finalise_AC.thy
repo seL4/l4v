@@ -581,9 +581,9 @@ lemma rec_del_respects'_pre':
                   and einvs and simple_sched_action and valid_rec_del_call call and emptyable (slot_rdcall call)
                   and (\<lambda>s. \<not> exposed_rdcall call \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall call) s)
                   and K (is_subject aag (fst (slot_rdcall call)))
-                  and K (case call of ReduceZombieCall cap sl exp \<Rightarrow> \<forall>x \<in> obj_refs cap. is_subject aag x | _ \<Rightarrow> True)\<rbrace>
+                  and K (case call of ReduceZombieCall cap sl _ \<Rightarrow> \<forall>x \<in> obj_refs cap. is_subject aag x | _ \<Rightarrow> True)\<rbrace>
      rec_del call
-   \<lbrace>\<lambda>rv. (\<lambda>s. trp \<longrightarrow> (case call of FinaliseSlotCall sl exp \<Rightarrow> (\<forall> irq. snd rv = Some irq \<longrightarrow> is_subject_irq aag irq) | _ \<Rightarrow> True) \<and> integrity aag X st s) and pas_refined aag\<rbrace>,\<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
+   \<lbrace>\<lambda>rv. (\<lambda>s. trp \<longrightarrow> (case call of FinaliseSlotCall sl _ \<Rightarrow> (\<forall> irq. snd rv = Some irq \<longrightarrow> is_subject_irq aag irq) | _ \<Rightarrow> True) \<and> integrity aag X st s) and pas_refined aag\<rbrace>,\<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
 proof (induct arbitrary: st rule: rec_del.induct,
        simp_all only: rec_del_fails)
      case (1 slot exposed s)
@@ -699,7 +699,7 @@ lemma rec_del_respects'_pre:
                   and einvs and simple_sched_action and valid_rec_del_call call and emptyable (slot_rdcall call)
                   and (\<lambda>s. \<not> exposed_rdcall call \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall call) s)
                   and K (is_subject aag (fst (slot_rdcall call)))
-                  and K (case call of ReduceZombieCall cap sl exp \<Rightarrow> \<forall>x \<in> obj_refs cap. is_subject aag x | _ \<Rightarrow> True)\<rbrace>
+                  and K (case call of ReduceZombieCall cap sl _ \<Rightarrow> \<forall>x \<in> obj_refs cap. is_subject aag x | _ \<Rightarrow> True)\<rbrace>
      rec_del call
    \<lbrace>\<lambda>rv. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>,\<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
   apply (rule spec_strengthen_postE[OF rec_del_respects'_pre'])
@@ -914,7 +914,7 @@ lemma rec_del_preserves_cte_zombie_null:
   assumes P_Zombie: "\<And>word x y. P (Zombie word x y)"
   shows "s \<turnstile> \<lbrace>\<lambda>s. ((slot_rdcall call \<noteq> p \<or> exposed_rdcall call)
                          \<longrightarrow> cte_wp_at P p s)
-                    \<and> (case call of ReduceZombieCall remove slot exp
+                    \<and> (case call of ReduceZombieCall remove slot _
                         \<Rightarrow> cte_wp_at (op = remove) slot s | _ \<Rightarrow> True)\<rbrace>
               rec_del call
              \<lbrace>\<lambda>_ s. (slot_rdcall call \<noteq> p \<or> exposed_rdcall call)

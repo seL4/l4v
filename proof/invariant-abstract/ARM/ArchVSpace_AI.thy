@@ -1481,7 +1481,7 @@ definition
                         vs_cap_ref cap = Some (VSRef (x && mask pd_bits >> 2) (Some APageDirectory) # ref))"
 
 definition
-  "valid_page_inv pi \<equiv> case pi of
+  "valid_page_inv pg_inv \<equiv> case pg_inv of
     PageMap asid cap ptr m \<Rightarrow>
       cte_wp_at (is_arch_update cap and (op = None \<circ> vs_cap_ref)) ptr
       and cte_wp_at is_pg_cap ptr
@@ -4654,9 +4654,9 @@ lemma data_at_pg_cap:
   done
 
 lemma perform_page_invs [wp]:
-  "\<lbrace>invs and valid_page_inv pi\<rbrace> perform_page_invocation pi \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>invs and valid_page_inv pg_inv\<rbrace> perform_page_invocation pg_inv \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: perform_page_invocation_def)
-  apply (cases pi, simp_all)
+  apply (cases pg_inv, simp_all)
      -- "PageMap"
      apply (rename_tac asid cap cslot_ptr sum)
      apply clarsimp

@@ -1023,7 +1023,7 @@ definition
 definition
   "invocation_duplicates_valid i \<equiv>
    case i of
-     InvokeArchObject (InvokePage pi) \<Rightarrow> page_inv_duplicates_valid pi
+     InvokeArchObject (InvokePage pgi) \<Rightarrow> page_inv_duplicates_valid pgi
    | InvokeArchObject (InvokePageTable pti) \<Rightarrow> pti_duplicates_valid pti
    | _ \<Rightarrow> \<top>"
 

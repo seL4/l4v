@@ -275,8 +275,8 @@ lemma get_cap_cte_wp_at_rv:
 
 
 lemma lsfco_cte_wp_at_univ:
-  "\<lbrace>valid_objs and valid_cap root and K (\<forall>cap rv. P cap rv)\<rbrace>
-      lookup_slot_for_cnode_op f root idx depth
+  "\<lbrace>valid_objs and valid_cap croot and K (\<forall>cap rv. P cap rv)\<rbrace>
+      lookup_slot_for_cnode_op f croot idx depth
    \<lbrace>\<lambda>rv. cte_wp_at (P rv) rv\<rbrace>, -"
   apply (rule hoare_gen_asmE)
   apply (rule hoare_post_imp_R)

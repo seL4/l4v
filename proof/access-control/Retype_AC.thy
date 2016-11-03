@@ -1400,7 +1400,7 @@ lemma invoke_untyped_pas_refined:
 subsection{* decode *}
 
 lemma data_to_obj_type_ret_not_asid_pool:
-  "\<lbrace> \<top> \<rbrace> data_to_obj_type arg \<lbrace> \<lambda>r s. r \<noteq> ArchObject ASIDPoolObj \<rbrace>,-"
+  "\<lbrace> \<top> \<rbrace> data_to_obj_type v \<lbrace> \<lambda>r s. r \<noteq> ArchObject ASIDPoolObj \<rbrace>,-"
   apply(clarsimp simp: validE_R_def validE_def valid_def)
   apply(auto simp: data_to_obj_type_def arch_data_to_obj_type_def throwError_def simp: returnOk_def bindE_def return_def bind_def lift_def split: if_split_asm)
   done

@@ -464,8 +464,8 @@ lemma cap_swap_vms[wp, CNodeInv_AI_assms]:
 
 
 lemma unat_of_bl_nat_to_cref[CNodeInv_AI_assms]:
-  "\<lbrakk> n < 2 ^ ln; ln < word_bits \<rbrakk>
-    \<Longrightarrow> unat (of_bl (nat_to_cref ln n) :: word32) = n"
+  "\<lbrakk> n < 2 ^ len; len < word_bits \<rbrakk>
+    \<Longrightarrow> unat (of_bl (nat_to_cref len n) :: word32) = n"
   apply (simp add: nat_to_cref_def word_bits_conv of_drop_to_bl
                    word_size)
   apply (subst less_mask_eq)

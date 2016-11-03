@@ -1640,8 +1640,8 @@ lemma no_orphans_finalise_prop_stuff:
                   is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
 
 lemma finaliseSlot_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> (\<not> exp \<longrightarrow> ex_cte_cap_to' slot s) \<rbrace>
-    finaliseSlot slot exp
+  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> (\<not> e \<longrightarrow> ex_cte_cap_to' slot s) \<rbrace>
+    finaliseSlot slot e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding finaliseSlot_def
   apply (rule validE_valid, rule hoare_pre,
@@ -1888,7 +1888,7 @@ lemma performPageTableInvocation_no_orphans [wp]:
 
 lemma performPageInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
-   performPageInvocation pi
+   performPageInvocation pgi
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
   apply (simp add: performPageInvocation_def
               cong: page_invocation.case_cong)

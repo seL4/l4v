@@ -24,13 +24,13 @@ text {* Message infos are encoded to or decoded from a data word. *}
 primrec
   message_info_to_data :: "message_info \<Rightarrow> data"
 where
-  "message_info_to_data (MI ln exc unw mlabel) =
+  "message_info_to_data (MI len exc unw mlabel) =
    (let
         extra = exc << 7;
         unwrapped = unw << 9;
         label = mlabel << 12
     in
-       label || extra || unwrapped || ln)"
+       label || extra || unwrapped || len)"
 
 text {* Hard-coded to avoid recursive imports? *}
 definition

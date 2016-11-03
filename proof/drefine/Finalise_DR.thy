@@ -3505,7 +3505,7 @@ lemma rec_del_valid_etcbs[wp]:
   by (wp rec_del_preservation | simp)+
 
 lemma dcorres_rec_del:
-  "\<lbrakk> (case args of CTEDeleteCall slot exp \<Rightarrow> \<not> exp | _ \<Rightarrow> True);
+  "\<lbrakk> (case args of CTEDeleteCall slot e \<Rightarrow> \<not> e | _ \<Rightarrow> True);
            (transform_cslot_ptr (slot_rdcall args), \<not> exposed_rdcall args) \<in> fst S;
            (case args of ReduceZombieCall (cap.Zombie p zbits (Suc n)) _ _ \<Rightarrow>
                (transform_cslot_ptr (p, replicate (zombie_cte_bits zbits) False), True) \<in> fst S

@@ -154,7 +154,7 @@ done
 lemma seL4_IRQHandler_IRQControl_Get_helper:
  assumes unify : "irq_cap = IrqHandlerCap irq \<and>
                   target_index = offset node_index root_size \<and>
-                  root_index = offset root root_size \<and>
+                  root_index = offset croot root_size \<and>
                   control_index = offset control_cap root_size \<and>
                   target_ptr = (cap_object root_cap, target_index) \<and>
                   control_ptr = (cap_object root_cap, control_index) \<and>
@@ -167,12 +167,12 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
               and K ( \<not> ep_related_cap c_cap  \<and> one_lvl_lookup root_cap word_bits root_size \<and>
               one_lvl_lookup root_cap (unat node_depth) root_size \<and>
               guard_equal root_cap node_index (unat node_depth) \<and>
-              guard_equal root_cap root word_bits  \<and>
+              guard_equal root_cap croot word_bits  \<and>
               guard_equal root_cap control_cap word_bits \<and>
               guard_equal root_cap node_index word_bits \<and>
               unat node_depth \<le> word_bits \<and> 0 < unat node_depth \<and>
               is_irqcontrol_cap c_cap \<and> is_cnode_cap root_cap \<and> is_cnode_cap root_cap)\<rbrace>
-        seL4_IRQControl_Get control_cap irq root node_index node_depth
+        seL4_IRQControl_Get control_cap irq croot node_index node_depth
         \<lbrace>\<lambda>fail s. \<guillemotleft> root_tcb_id \<mapsto>f root_tcb \<and>*
        (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
        (* Root CNode. *)
@@ -184,7 +184,7 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
   apply (rule hoare_pre)
    apply (wp do_kernel_op_pull_back)
    apply (rule call_kernel_with_intent_allow_error_helper
-                [where check = True and Perror = \<top> and intent_op = "(IrqControlIntent (IrqControlIssueIrqHandlerIntent irq node_index node_depth))" and tcb = t and intent_cptr = control_cap and intent_extra = "[root]" ,simplified])
+                [where check = True and Perror = \<top> and intent_op = "(IrqControlIntent (IrqControlIssueIrqHandlerIntent irq node_index node_depth))" and tcb = t and intent_cptr = control_cap and intent_extra = "[croot]" ,simplified])
                 apply (clarsimp)
                apply (rule set_cap_wp[sep_wand_wp])
               apply (rule mark_tcb_intent_error_sep_inv)
@@ -269,16 +269,16 @@ lemma seL4_IRQHandler_IRQControl_Get:
             is_cnode_cap cnode_cap \<and>
             cnode_id      = cap_object cnode_cap \<and>
             target_index  = offset node_index root_size \<and>
-            root_index    = offset root root_size \<and>
+            root_index    = offset croot root_size \<and>
             control_index = offset control_cap root_size \<and>
             one_lvl_lookup cnode_cap word_bits root_size \<and>
             one_lvl_lookup cnode_cap (unat node_depth) root_size \<and>
             guard_equal cnode_cap node_index (unat node_depth) \<and>
-            guard_equal cnode_cap root word_bits  \<and>
+            guard_equal cnode_cap croot word_bits  \<and>
             guard_equal cnode_cap control_cap word_bits \<and>
             guard_equal cnode_cap node_index word_bits \<and>
             unat node_depth \<le> word_bits \<and> 0 < unat node_depth)\<rbrace>
-     seL4_IRQControl_Get control_cap irq root node_index node_depth
+     seL4_IRQControl_Get control_cap irq croot node_index node_depth
   \<lbrace>\<lambda>fail.
     \<guillemotleft>root_tcb_id \<mapsto>f root_tcb \<and>*
     (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*

@@ -174,8 +174,8 @@ lemma resolve_address_bits_authorised[wp]:
   done
 
 lemma lookup_slot_for_cnode_op_authorised[wp]:
-  "\<lbrace>pas_refined aag and K (is_cnode_cap root \<longrightarrow> (\<forall>x \<in> obj_refs root. is_subject aag x))\<rbrace>
-    lookup_slot_for_cnode_op is_source root ptr depth
+  "\<lbrace>pas_refined aag and K (is_cnode_cap croot \<longrightarrow> (\<forall>x \<in> obj_refs croot. is_subject aag x))\<rbrace>
+    lookup_slot_for_cnode_op is_source croot ptr depth
    \<lbrace>\<lambda>rv s. is_subject aag (fst rv)\<rbrace>, -"
   apply (simp add: lookup_slot_for_cnode_op_def split del: if_split)
   apply (rule hoare_pre)

@@ -1060,7 +1060,7 @@ lemma set_mrs_reads_respects:
   done
 
 lemma perform_page_invocation_reads_respects:
-  "reads_respects aag l (pas_refined aag and K (authorised_page_inv aag pi) and valid_page_inv pi and valid_arch_objs and pspace_aligned and is_subject aag \<circ> cur_thread) (perform_page_invocation pi)"
+  "reads_respects aag l (pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi and valid_arch_objs and pspace_aligned and is_subject aag \<circ> cur_thread) (perform_page_invocation pgi)"
   unfolding perform_page_invocation_def fun_app_def when_def cleanCacheRange_PoU_def
   apply(rule equiv_valid_guard_imp)
   apply wpc
@@ -1960,8 +1960,8 @@ lemma cte_wp_parent_not_global_pd: "valid_global_refs s \<Longrightarrow> cte_wp
 done
 
 definition authorised_for_globals_page_inv :: "page_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-  where "authorised_for_globals_page_inv pi \<equiv>
-    \<lambda>s. case pi of PageMap asid cap ptr m \<Rightarrow>
+  where "authorised_for_globals_page_inv pgi \<equiv>
+    \<lambda>s. case pgi of PageMap asid cap ptr m \<Rightarrow>
   \<exists>slot. cte_wp_at (parent_for_refs m) slot s | PageRemap asid m \<Rightarrow>
   \<exists>slot. cte_wp_at (parent_for_refs m) slot s | _ \<Rightarrow> True"
 
@@ -2051,10 +2051,10 @@ crunch valid_ko_at_arm[wp]: set_mrs valid_ko_at_arm
   (wp: crunch_wps simp: crunch_simps arm_global_pd_not_tcb)
 
 lemma perform_page_invocation_globals_equiv:
-  "\<lbrace>authorised_for_globals_page_inv pi and valid_page_inv pi and globals_equiv st
+  "\<lbrace>authorised_for_globals_page_inv pgi and valid_page_inv pgi and globals_equiv st
     and valid_arch_state and pspace_aligned and valid_arch_objs and valid_global_objs
     and valid_vs_lookup and valid_global_refs and ct_active and valid_idle\<rbrace> 
-   perform_page_invocation pi 
+   perform_page_invocation pgi
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding perform_page_invocation_def cleanCacheRange_PoU_def
   apply(rule hoare_weaken_pre)

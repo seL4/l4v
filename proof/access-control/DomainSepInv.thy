@@ -807,8 +807,8 @@ crunch domain_sep_inv[wp]: copy_mrs, set_message_info, invalidate_tlb_by_asid "d
   (wp: crunch_wps)
 
 lemma perform_page_invocation_domain_sep_inv:
-  "\<lbrace>domain_sep_inv irqs st and valid_page_inv pi\<rbrace>
-  perform_page_invocation pi
+  "\<lbrace>domain_sep_inv irqs st and valid_page_inv pgi\<rbrace>
+  perform_page_invocation pgi
   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(rule hoare_pre)
    apply(wp mapM_wp[OF _ subset_refl] set_cap_domain_sep_inv
@@ -820,8 +820,8 @@ lemma perform_page_invocation_domain_sep_inv:
   done
 
 lemma perform_page_table_invocation_domain_sep_inv:
-  "\<lbrace>domain_sep_inv irqs st and valid_pti pi\<rbrace>
-  perform_page_table_invocation pi
+  "\<lbrace>domain_sep_inv irqs st and valid_pti pgi\<rbrace>
+  perform_page_table_invocation pgi
   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(rule hoare_pre)
    apply(simp add: perform_page_table_invocation_def)

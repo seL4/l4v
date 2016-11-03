@@ -108,10 +108,10 @@ od)"
 defs lookupAround2_def:
 "lookupAround2 ptr mp \<equiv>
     let
-        (before, at, after) = lookupAround ptr mp;
+        (before, middle, after) = lookupAround ptr mp;
         after' = maybe Nothing (Just \<circ> fst) after
     in
-                              (case at of
+                              (case middle of
                               Some v \<Rightarrow>   (Just (ptr, v), after')
                             | None \<Rightarrow>   (before, after')
                             )"

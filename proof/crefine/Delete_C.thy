@@ -191,14 +191,14 @@ lemma cteDelete_ccorres1:
     "ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
      (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))
                    ret__struct_finaliseSlot_ret_C_')
-     (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (exp \<or> ex_cte_cap_to' slot s))
-     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool exp}) []
-     (cutMon (op = s) (finaliseSlot slot exp)) (Call finaliseSlot_'proc)"
+     (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (expo \<or> ex_cte_cap_to' slot s))
+     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool expo}) []
+     (cutMon (op = s) (finaliseSlot slot expo)) (Call finaliseSlot_'proc)"
   shows
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_' )
-     (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (exp \<or> ex_cte_cap_to' slot s))
-     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. exposed_' s = from_bool exp}) []
-     (cutMon (op = s) (cteDelete slot exp)) (Call cteDelete_'proc)"
+     (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (expo \<or> ex_cte_cap_to' slot s))
+     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. exposed_' s = from_bool expo}) []
+     (cutMon (op = s) (cteDelete slot expo)) (Call cteDelete_'proc)"
   apply (cinit' lift: slot_' exposed_' cong: call_ignore_cong)
    apply (simp add: cteDelete_def split_def cutMon_walk_bindE
                del: Collect_const cong: call_ignore_cong)
@@ -410,7 +410,7 @@ lemma ccorres_cutMon_locateSlotCap_Zombie:
 
 lemma reduceZombie_ccorres1:
   assumes fs_cc:
-    "\<And>slot. \<lbrakk> capZombieNumber cap \<noteq> 0; exp;
+    "\<And>slot. \<lbrakk> capZombieNumber cap \<noteq> 0; expo;
                (slot, s) \<in> fst (locateSlotCap cap
                                (fromIntegral (capZombieNumber cap - 1)) s) \<rbrakk> \<Longrightarrow>
      ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
@@ -423,8 +423,8 @@ lemma reduceZombie_ccorres1:
   "isZombie cap \<Longrightarrow>
    ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_' )
      (invs' and sch_act_simple and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot)
-     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool exp}) []
-     (cutMon (op = s) (reduceZombie cap slot exp)) (Call reduceZombie_'proc)"
+     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool expo}) []
+     (cutMon (op = s) (reduceZombie cap slot expo)) (Call reduceZombie_'proc)"
   apply (cinit' lift: slot_' immediate_')
    apply (simp add: from_bool_0
                del: Collect_const)
@@ -721,7 +721,7 @@ lemma finaliseSlot_ccorres:
      (cutMon (op = s) (finaliseSlot slot exposed)) (Call finaliseSlot_'proc)"
   apply (rule finaliseSlot_ccorres_induction_helper)
   apply (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and ?a2.0=s])
-  subgoal premises hyps for slot' exp s'
+  subgoal premises hyps for slot' expo s'
     apply (subst finaliseSlot'.simps)
     apply (fold cteDelete_def[unfolded finaliseSlot_def])
     apply (fold reduceZombie_def)
@@ -758,7 +758,7 @@ lemma finaliseSlot_ccorres:
         apply (rule ccorres_drop_cutMon_bind)
         apply (rule ccorres_move_c_guard_cte)
         apply (rule_tac A="\<lambda>s. invs' s \<and> sch_act_simple s \<and> cte_wp_at' (op = rv) slot' s
-                                \<and> (exp \<or> ex_cte_cap_to' slot' s)
+                                \<and> (expo \<or> ex_cte_cap_to' slot' s)
                                 \<and> (final_matters' (cteCap rv) \<longrightarrow> rva = isFinal (cteCap rv) slot' (cteCaps_of s))"
                     and A'=UNIV
                      in ccorres_guard_imp2)
@@ -901,7 +901,7 @@ lemma finaliseSlot_ccorres:
           apply (simp add: guard_is_UNIV_def)
          apply (rule hoare_strengthen_post)
           apply (rule_tac Q="\<lambda>fin s. invs' s \<and> sch_act_simple s \<and> s \<turnstile>' (fst fin)
-                                   \<and> (exp \<or> ex_cte_cap_to' slot' s)
+                                   \<and> (expo \<or> ex_cte_cap_to' slot' s)
                                    \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cteCap rv) slot' s"
                      in hoare_vcg_conj_lift) 
            apply (wp hoare_vcg_disj_lift finaliseCap_invs[where sl=slot'])[1]
