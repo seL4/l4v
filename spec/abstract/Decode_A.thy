@@ -100,10 +100,10 @@ where
     ensure_empty dest_slot;
     returnOk $ SaveCall dest_slot
   odE
-  else if invocation_type label = CNodeRecycle then doE
+  else if invocation_type label = CNodeCancelBadgedSends then doE
     cap \<leftarrow> liftE $ get_cap dest_slot;
-    unlessE (has_recycle_rights cap) $ throwError IllegalOperation;
-    returnOk $ RecycleCall dest_slot
+    unlessE (has_cancel_send_rights cap) $ throwError IllegalOperation;
+    returnOk $ CancelBadgedSendsCall cap
   odE
   else if invocation_type label = CNodeRotate \<and> length args > 5
           \<and> length excaps > 1 then

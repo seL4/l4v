@@ -87,8 +87,8 @@ datatype cdl_cnode_intent =
  |  CNodeDeleteIntent word32 word32
     (* SaveCaller: (target), index, depth *)
  |  CNodeSaveCallerIntent word32 word32
-    (* Recycle: (target), index, depth *)
- |  CNodeRecycleIntent word32 word32
+    (* CancelBadgedSends: (target), index, depth *)
+ |  CNodeCancelBadgedSendsIntent word32 word32
     (* Rotate: (target), dest_index, dest_depth, (pivot_root), pivot_index, pivot_depth, pivot_badge, (src_root), src_index, src_depth, src_badge *)
  |  CNodeRotateIntent word32 word32 word32 word32 cdl_raw_capdata word32 word32 cdl_raw_capdata
 

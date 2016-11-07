@@ -426,7 +426,6 @@ crunch valid_pdpt_objs[wp]: cap_delete, cap_revoke "valid_pdpt_objs"
 crunch valid_pdpt_objs[wp]: invalidate_tlb_by_asid, page_table_mapped
    "valid_pdpt_objs"
 
-
 lemma mapM_x_copy_pde_updates:
   "\<lbrakk> \<forall>x \<in> set xs. f x && ~~ mask pd_bits = 0; is_aligned p pd_bits;
                is_aligned p' pd_bits \<rbrakk> \<Longrightarrow>
@@ -607,54 +606,8 @@ lemma non_invalid_in_pte_range:
   \<Longrightarrow> x \<in> pte_range pte x"
   by (case_tac pte,simp_all)
 
-lemma arch_recycle_cap_valid_pdpt[wp]:
-  "\<lbrace>valid_pdpt_objs and valid_cap (cap.ArchObjectCap cap)
-         and pspace_aligned and valid_arch_state\<rbrace>
-      arch_recycle_cap is_final cap \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: arch_recycle_cap_def
-             cong: arch_cap.case_cong split del: split_if)
-  apply (rule hoare_pre)
-   apply (wp |wpc | simp add: unless_def)+
-     apply (simp add:swp_def)
-     apply (wp mapM_x_store_pte_valid_pdpt2 static_imp_wp)
-    apply (simp add:swp_def)
-    apply (wp hoare_drop_imp
-        mapM_x_store_pte_valid_pdpt2
-      | wpc | simp)+
-   apply (clarsimp simp:mapM_x_map)
-   apply (wp mapM_x_store_pde_valid_pdpt2 static_imp_wp)
-  apply (auto simp: valid_cap_def cap_aligned_def pt_bits_def
-                    pageBits_def pd_bits_def)
-  done
-
 crunch valid_pdpt_objs[wp]: cancel_badged_sends "valid_pdpt_objs"
   (simp: crunch_simps filterM_mapM wp: crunch_wps ignore: filterM)
-
-lemma recycle_cap_valid_pdpt[wp]:
-  "\<lbrace>valid_pdpt_objs and invs and valid_cap cap\<rbrace>
-        recycle_cap is_final cap \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: recycle_cap_def)
-  apply (rule hoare_pre)
-   apply (wp | wpc | simp | wp_once hoare_drop_imps)+
-  apply auto
-  done
-
-lemma cap_recycle_valid_pdpt[wp]:
-  "\<lbrace>invs and valid_pdpt_objs and real_cte_at slot\<rbrace> cap_recycle slot \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: cap_recycle_def unless_def)
-  apply (wp get_cap_wp)
-   apply (rule_tac Q="\<lambda>rv. invs and valid_pdpt_objs"
-              and E="\<lambda>rv. valid_pdpt_objs" in hoare_post_impErr)
-     apply (simp add: finalise_slot_def)
-     apply (wp rec_del_invs)
-    apply (clarsimp simp: cte_wp_at_caps_of_state caps_of_state_valid)
-   apply simp
-  apply simp
-  apply (rule hoare_pre, wp)
-   apply (strengthen real_cte_emptyable_strg)
-   apply (wp cap_revoke_invs)
-  apply simp
-  done
 
 crunch valid_pdpt_objs[wp]: cap_move, cap_insert "valid_pdpt_objs"
 
@@ -663,7 +616,6 @@ lemma invoke_cnode_valid_pdpt_objs[wp]:
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
    apply (wp get_cap_wp | wpc | simp split del: split_if)+
-  apply (clarsimp)
   done
 
 lemma as_user_valid_pdpt_objs[wp]:

@@ -97,7 +97,7 @@ crunch irq_state_of_state[wp]: cap_swap_for_delete "\<lambda>(s::det_state). P (
 
 crunch irq_state_of_state[wp]: load_hw_asid "\<lambda>(s::det_state). P (irq_state_of_state s)"
 
-crunch irq_state_of_state[wp]: recycle_cap "\<lambda>(s::det_state). P (irq_state_of_state s)"
+crunch irq_state_of_state[wp]: cancel_badged_sends "\<lambda>(s::det_state). P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp hoare_unless_wp modify_wp simp: filterM_mapM crunch_simps no_irq_clearMemory simp: clearMemory_def storeWord_def invalidateTLB_ASID_def 
    ignore: filterM)
 

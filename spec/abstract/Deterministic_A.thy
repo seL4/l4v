@@ -426,9 +426,6 @@ definition retype_region_ext :: "obj_ref list \<Rightarrow> apiobject_type \<Rig
                                      modify (\<lambda>s. s\<lparr>ekheap := ekh'\<rparr>)
                                   od"
 
-definition recycle_cap_ext where
-  "recycle_cap_ext ptr \<equiv> do cdom \<leftarrow> gets cur_domain; ethread_set (K (default_etcb\<lparr>tcb_domain := cdom\<rparr>)) ptr od"
-
 definition cap_swap_ext where
 "cap_swap_ext \<equiv> (\<lambda> slot1 slot2 slot1_op slot2_op.
       do

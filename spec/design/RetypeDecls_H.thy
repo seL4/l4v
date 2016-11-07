@@ -27,10 +27,7 @@ consts'
 finaliseCap :: "capability \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> (capability * irq option) kernel"
 
 consts'
-recycleCap :: "bool \<Rightarrow> capability \<Rightarrow> capability kernel"
-
-consts'
-hasRecycleRights :: "capability \<Rightarrow> bool"
+hasCancelSendRights :: "capability \<Rightarrow> bool"
 
 consts'
 sameRegionAs :: "capability \<Rightarrow> capability \<Rightarrow> bool"

@@ -19,7 +19,7 @@ datatype cdl_cnode_invocation =
   | DeleteCall cdl_cap_ref
   | RotateCall cdl_cap cdl_cap cdl_cap_ref cdl_cap_ref cdl_cap_ref
   | SaveCall cdl_cap_ref
-  | RecycleCall cdl_cap_ref
+  | CancelBadgedSendsCall cdl_cap
 
 datatype cdl_untyped_invocation =
     Retype cdl_cap_ref

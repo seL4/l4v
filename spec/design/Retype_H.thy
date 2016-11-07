@@ -22,8 +22,8 @@ begin
 
 context Arch begin
 requalify_consts
-  deriveCap finaliseCap recycleCap
-  hasRecycleRights sameRegionAs isPhysicalCap
+  deriveCap finaliseCap 
+  hasCancelSendRights sameRegionAs isPhysicalCap
   sameObjectAs updateCapData maskCapRights
   createObject capUntypedPtr capUntypedSize
   performInvocation decodeInvocation
@@ -31,8 +31,8 @@ requalify_consts
 context begin global_naming global
 
 requalify_consts
-  RetypeDecls_H.deriveCap RetypeDecls_H.finaliseCap RetypeDecls_H.recycleCap
-  RetypeDecls_H.hasRecycleRights RetypeDecls_H.sameRegionAs RetypeDecls_H.isPhysicalCap
+  RetypeDecls_H.deriveCap RetypeDecls_H.finaliseCap 
+  RetypeDecls_H.hasCancelSendRights RetypeDecls_H.sameRegionAs RetypeDecls_H.isPhysicalCap
   RetypeDecls_H.sameObjectAs RetypeDecls_H.updateCapData RetypeDecls_H.maskCapRights
   RetypeDecls_H.createObject RetypeDecls_H.capUntypedPtr RetypeDecls_H.capUntypedSize
   RetypeDecls_H.performInvocation RetypeDecls_H.decodeInvocation
@@ -116,61 +116,10 @@ defs finaliseCap_def:
   else   return (NullCap, Nothing)
   )"
 
-defs recycleCap_def:
-"recycleCap is_final x1 \<equiv> (let cap = x1 in
-  if isNullCap cap
-  then   haskell_fail []
-  else if isDomainCap cap
-  then   return DomainCap
-  else if isZombie cap
-  then let ptr = capZombiePtr cap; tp = capZombieType cap;
-  n = capZombieNumber cap
-  in   (
-    (case tp of
-          ZombieTCB \<Rightarrow>   (do
-                tcbPtr \<leftarrow> return ( (PPtr \<circ> fromPPtr) ptr);
-                tcb \<leftarrow> threadGet id tcbPtr;
-                flip haskell_assert []
-                    $ tcbState tcb = Inactive \<and> isNothing (tcbBoundNotification tcb);
-                flip haskell_assert []
-                    $ Not (tcbQueued tcb);
-                curdom \<leftarrow> curDomain;
-                threadSet (\<lambda> tcb.
-                    makeObject \<lparr> tcbCTable := tcbCTable tcb,
-                                 tcbVTable := tcbVTable tcb,
-                                 tcbReply := tcbReply tcb,
-                                 tcbCaller := tcbCaller tcb,
-                                 tcbDomain := curdom,
-                                 tcbIPCBufferFrame := tcbIPCBufferFrame tcb \<rparr>)
-                    tcbPtr;
-                return $ ThreadCap tcbPtr
-          od)
-        | ZombieCNode sz \<Rightarrow>   return $ CNodeCap ptr sz 0 0
-        )
-  )
-  else if isEndpointCap cap
-  then let ep = capEPPtr cap; b = capEPBadge cap
-  in   (do
-    when (b \<noteq> 0) $ cancelBadgedSends ep b;
-    return cap
-  od)
-  else if isArchObjectCap cap
-  then let cap = capCap cap
-  in  
-    liftM ArchObjectCap $ Arch.recycleCap is_final cap
-  else   return cap
-  )"
-
-defs hasRecycleRights_def:
-"hasRecycleRights x0\<equiv> (case x0 of
-    NullCap \<Rightarrow>    False
-  | DomainCap \<Rightarrow>    False
-  | (EndpointCap _ _ True True True) \<Rightarrow>    True
-  | (EndpointCap _ _ _ _ _) \<Rightarrow>    False
-  | (NotificationCap _ _ True True) \<Rightarrow>    True
-  | (NotificationCap _ _ _ _) \<Rightarrow>    False
-  | (ArchObjectCap cap) \<Rightarrow>    Arch.hasRecycleRights cap
-  | _ \<Rightarrow>    True
+defs hasCancelSendRights_def:
+"hasCancelSendRights x0\<equiv> (case x0 of
+    (EndpointCap _ _ True True True) \<Rightarrow>    True
+  | _ \<Rightarrow>    False
   )"
 
 defs sameRegionAs_def:

@@ -308,22 +308,13 @@ lemma cap_revoke_irq_masks':
 
 lemmas cap_revoke_irq_masks = use_spec(2)[OF cap_revoke_irq_masks']
 
-crunch irq_masks[wp]: recycle_cap "\<lambda>s. P (irq_masks_of_state s)"
+crunch irq_masks[wp]: cancel_badged_sends "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps dmo_wp no_irq hoare_unless_wp simp: filterM_mapM crunch_simps no_irq_clearMemory no_irq_invalidateTLB_ASID
    ignore: filterM)
 
 lemma finalise_slot_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace> finalise_slot p e \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"     
   apply(simp add: finalise_slot_def | wp rec_del_irq_masks)+
-  done
-
-lemma cap_recycle_irq_masks:
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace> cap_recycle blah \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"     
-  apply(simp add: cap_recycle_def)
-  apply(wp hoare_unless_wp  finalise_slot_irq_masks[where st=st] | simp add: conj_comms)+
-  apply(rule hoare_pre(2)[OF hoare_vcg_conj_liftE1])
-  apply(rule validE_validE_R[OF hoare_post_impErr, OF cap_revoke_domain_sep_inv], simp+)
-  apply(wp cap_revoke_irq_masks, auto)
   done
 
 lemma invoke_cnode_irq_masks:
@@ -335,8 +326,7 @@ lemma invoke_cnode_irq_masks:
   apply(case_tac ci)
         apply(wp cap_insert_irq_masks cap_move_irq_masks cap_revoke_irq_masks[where st=st] cap_delete_irq_masks[where st=st] | simp split del: split_if)+
     apply(rule hoare_pre)
-     apply(wp hoare_vcg_all_lift cap_recycle_irq_masks | simp | wpc | wp_once hoare_drop_imps)+
-  by auto
+     by(wp hoare_vcg_all_lift  | simp | wpc | wp_once hoare_drop_imps | rule hoare_pre)+
 
 fun irq_of_handler_inv where
   "irq_of_handler_inv (ACKIrq irq) = irq" |

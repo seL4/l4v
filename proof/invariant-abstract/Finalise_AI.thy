@@ -1193,27 +1193,7 @@ lemma gbn_wp:
 locale Finalise_AI_4 = Finalise_AI_3 a b _ c
   for a :: "('a :: state_ext) itself"
   and b :: "('b :: state_ext) itself"
-  and c :: "'c itself" +
-  assumes cap_recycle_replaceable:
-    "\<And>cap slot.
-      \<lbrace>invs and cte_wp_at (op = cap) slot and zombies_final
-       and valid_objs and K (cap \<noteq> NullCap)
-       and (\<lambda>s. is_final = is_final_cap' cap s)\<rbrace>
-         recycle_cap is_final cap
-      \<lbrace>\<lambda>rv s. replaceable_or_arch_update s slot rv cap \<and> rv \<noteq> NullCap\<rbrace>"
-  assumes recycle_cap_caps_of_state[wp]:
-    "\<And> P a b.
-      \<lbrace>\<lambda>(s :: 'a state). P (caps_of_state s)\<rbrace>
-        recycle_cap a b
-      \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  (* assumes recycle_cap_cte_cap_to[wp]:
-  "\<And> P p a b.
-    \<lbrace>ex_cte_cap_wp_to P p :: 'a state \<Rightarrow> bool\<rbrace>
-      recycle_cap a b
-    \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>" *)
-
-lemmas (in Finalise_AI_4) recycle_cap_cte_wp_at[wp] =
-  hoare_cte_wp_caps_of_state_lift [OF recycle_cap_caps_of_state]
+  and c :: "'c itself" 
 
 value Finalise_AI_4
 
@@ -1221,28 +1201,8 @@ locale Finalise_AI_5 = Finalise_AI_4 _ a b c
   for a :: "('a :: state_ext) itself"
   and b :: "('b :: state_ext) itself"
   and c :: "'c itself" +
-  assumes recycle_cap_cte_cap_to[wp]:
-  "\<And> P p a b.
-    \<lbrace>ex_cte_cap_wp_to P p :: 'a state \<Rightarrow> bool\<rbrace>
-      recycle_cap a b
-    \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
-  assumes recycle_cap_valid_cap:
-    "\<And> c a b.
-      \<lbrace>\<lambda>(s :: 'a state). s \<turnstile> c\<rbrace>
-        recycle_cap a b
-      \<lbrace>\<lambda>rv s. s \<turnstile> c\<rbrace>"
   assumes clearMemory_invs[wp]:
     "\<And> w sz. \<lbrace>invs\<rbrace> do_machine_op (clearMemory w sz) \<lbrace>\<lambda>_. invs :: 'a state \<Rightarrow> bool\<rbrace>"
-  assumes arch_recycle_cap_invs:
-    "\<And> cap slot.
-      \<lbrace>invs and cte_wp_at (op = (ArchObjectCap cap)) slot\<rbrace>
-         arch_recycle_cap is_final cap
-      \<lbrace>\<lambda>rv. invs :: 'a state \<Rightarrow> bool\<rbrace>"
-  assumes recycle_cap_invs:
-    "\<And> cap slot.
-      \<lbrace>cte_wp_at (op = cap) slot and invs\<rbrace>
-         recycle_cap is_final cap
-      \<lbrace>\<lambda>rv. invs :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes valid_idle_has_null_cap:
     "\<And> cap (s :: 'a state) v.
       \<lbrakk> if_unsafe_then_cap s; valid_global_refs s; valid_idle s; valid_irq_node s\<rbrakk>
@@ -1252,17 +1212,6 @@ locale Finalise_AI_5 = Finalise_AI_4 _ a b c
     "\<And> (s :: 'a state)  ptr ptr' zbits n.
       \<lbrakk> caps_of_state s ptr = Some (Zombie ptr' zbits n); invs s \<rbrakk>
          \<Longrightarrow> fst ptr \<noteq> idle_thread s \<and> ptr' \<noteq> idle_thread s"
-  assumes arch_recycle_cap_valid[wp]:
-    "\<And> arch_cap.
-      \<lbrace>valid_cap (ArchObjectCap arch_cap) :: 'a state \<Rightarrow> bool\<rbrace>
-         arch_recycle_cap is_final arch_cap
-      \<lbrace>valid_cap \<circ> ArchObjectCap\<rbrace>"
-  assumes recycle_cap_valid[wp]:
-    "\<And> cap.
-      \<lbrace>valid_cap cap and (valid_objs :: 'a state \<Rightarrow> bool) \<rbrace>
-        recycle_cap is_final cap
-      \<lbrace>valid_cap\<rbrace>"
-
 
 lemma valid_irq_node_arch [iff]:
   "valid_irq_node (arch_state_update f s) = valid_irq_node s"
@@ -1319,21 +1268,6 @@ lemma dxo_noop: "do_extended_op f = (return () :: (unit,unit) s_monad)"
   apply force
   done
 
-lemma (in Finalise_AI_5) cap_recycle_cte_replaceable:
-  "\<lbrace>cte_wp_at (op = cap) slot and zombies_final
-    and valid_objs and K (cap \<noteq> cap.NullCap)
-    and invs
-    and (\<lambda>s. is_final = is_final_cap' cap s)\<rbrace>
-     recycle_cap is_final cap
-   \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>cap. replaceable_or_arch_update s slot rv cap) slot s\<rbrace>"
-  apply (rule hoare_chain)
-    apply (rule hoare_vcg_conj_lift)
-     apply (rule cap_recycle_replaceable)
-    apply (rule recycle_cap_cte_wp_at)
-   apply fastforce
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  done
-
 (*FIXME: move *)
 lemma corres_option_split:
   "\<lbrakk>v = v'; corres_underlying sr nf nf' r P P' a c; (\<And>x. v = Some x \<Longrightarrow> corres_underlying sr nf nf' r (Q x) (Q' x) (b x) (d x))\<rbrakk>
@@ -1369,13 +1303,6 @@ lemma is_cap_tableE:
   "\<lbrakk> is_cap_table sz ko; \<And>cs. \<lbrakk> ko = kernel_object.CNode sz cs; well_formed_cnode_n sz cs\<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   unfolding is_cap_table_def
   by (auto split: Structures_A.kernel_object.split_asm)
-
-lemma recycle_cap_Null[wp]: "\<lbrace>\<top>\<rbrace> recycle_cap is_final cap \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap\<rbrace>"
-  apply (simp add: recycle_cap_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_post_taut hoare_drop_imps | simp add: o_def | wpc)+
-  apply fastforce
-  done
 
 lemma cap_table_at_length:
   "\<lbrakk> cap_table_at bits oref s; valid_objs s \<rbrakk>

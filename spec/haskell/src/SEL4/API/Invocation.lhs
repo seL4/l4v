@@ -100,7 +100,7 @@ The following data type defines the set of possible CNode invocation operations.
 >         | Move {
 >             moveCap :: Capability,
 >             sourceSlot, targetSlot :: PPtr CTE }
->         | Recycle { targetSlot :: PPtr CTE }
+>         | CancelBadgedSends { epCap :: Capability }
 >         | SaveCaller {
 >             targetSlot :: PPtr CTE }
 >         | Delete { targetSlot :: PPtr CTE }

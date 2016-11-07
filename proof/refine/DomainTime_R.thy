@@ -23,14 +23,6 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 crunch domain_list_inv[wp]: do_user_op "\<lambda>s. P (domain_list s)"
   (wp: select_wp)
 
-(* FIXME MOVE to wherever arch_recycleCap_improve_cases* first appears *)
-lemma arch_recycleCap_improve_cases_if[simp]:
-   "(if isPageCap cap then A else if isPageTableCap cap then B else if isPageDirectoryCap cap
-        then C else if isASIDControlCap cap then D else if isASIDPoolCap cap then E else F)
-     = (if isPageCap cap then A else if isPageTableCap cap then B else if isPageDirectoryCap cap
-        then C else if isASIDControlCap cap then D else E)"
-  by (simp add: arch_recycleCap_improve_cases')
-
 (* abstract and haskell have identical domain list fields *)
 abbreviation
   valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool"
@@ -81,9 +73,9 @@ crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
  ignore: getObject setObject forM ignoreFailure
      wp: getObject_inv loadObject_default_inv crunch_wps)
 
-crunch ksDomSchedule_inv[wp]: recycleCap "\<lambda>s. P (ksDomSchedule s)"
+crunch ksDomSchedule_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomSchedule s)"
   (ignore: filterM setObject getObject
-     simp: filterM_mapM crunch_simps arch_recycleCap_improve_cases'
+     simp: filterM_mapM crunch_simps
        wp: crunch_wps hoare_unless_wp)
 
 crunch ksDomSchedule_inv[wp]: createNewObjects "\<lambda>s. P (ksDomSchedule s)"
@@ -161,7 +153,7 @@ crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
  ignore: getObject setObject forM ignoreFailure
      wp: setObject_ksPSpace_only getObject_inv loadObject_default_inv crunch_wps)
 
-crunch ksDomainTime_inv[wp]: recycleCap "\<lambda>s. P (ksDomainTime s)"
+crunch ksDomainTime_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv hoare_unless_wp
    ignore: setObject getObject filterM
@@ -192,9 +184,9 @@ crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
  ignore: getObject setObject forM ignoreFailure
      wp: getObject_inv loadObject_default_inv crunch_wps)
 
-crunch ksDomainTime_inv[wp]: recycleCap "\<lambda>s. P (ksDomainTime s)"
+crunch ksDomainTime_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomainTime s)"
   (ignore: filterM setObject getObject
-     simp: filterM_mapM crunch_simps arch_recycleCap_improve_cases'
+     simp: filterM_mapM crunch_simps 
        wp: crunch_wps)
 
 crunch ksDomainTime_inv[wp]: createNewObjects "\<lambda>s. P (ksDomainTime s)"

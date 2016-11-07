@@ -994,7 +994,7 @@ end
 crunch_ignore (add:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action attempt_switch_to ethread_set
   reschedule_required set_thread_state_ext switch_if_required_to next_domain
-  set_domain recycle_cap_ext
+  set_domain
   attempt_switch_to timer_tick set_priority retype_region_ext)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -1023,7 +1023,7 @@ lemma cap_revoke_cur_thread[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>
   apply (wp preemption_point_inv|simp)+
   done
 
-crunch cur_thread[wp]: cap_recycle "\<lambda>s. P (cur_thread s)" (wp: crunch_wps mapM_wp mapM_x_wp dxo_wp_weak simp: filterM_mapM unless_def ignore: without_preemption filterM)
+crunch cur_thread[wp]: cancel_badged_sends "\<lambda>s. P (cur_thread s)" (wp: crunch_wps mapM_wp mapM_x_wp dxo_wp_weak simp: filterM_mapM unless_def ignore: without_preemption filterM)
 
 lemma invoke_cnode_cur_thread[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
@@ -1050,7 +1050,7 @@ crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread 
 (wp: OR_choiceE_weak_wp crunch_wps simp: crunch_simps ignore: do_extended_op OR_choiceE)
 
 (* following idle_thread and cur_domain proofs clagged from infoflow/PasUpdates.thy *)  
-crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cap_recycle "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
+crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
  
 lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   apply (rule cap_revoke_preservation2)
@@ -1067,8 +1067,8 @@ lemma invoke_cnode_idle_thread[wp]: "\<lbrace>\<lambda>s::det_state. P (idle_thr
 crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer ackInterrupt getFAR getDFSR getIFSR getActiveIRQ)
 
 
-crunch cur_domain[wp]:  transfer_caps_loop, ethread_set, thread_set_priority, set_priority, set_domain, invoke_domain, cap_move_ext, recycle_cap_ext,timer_tick,
-   cap_move,cap_recycle, attempt_switch_to, switch_if_required_to
+crunch cur_domain[wp]:  transfer_caps_loop, ethread_set, thread_set_priority, set_priority, set_domain, invoke_domain, cap_move_ext, timer_tick,
+   cap_move,cancel_badged_sends, attempt_switch_to, switch_if_required_to
 
  "\<lambda>s. P (cur_domain s)" (wp: transfer_caps_loop_pres crunch_wps simp: crunch_simps filterM_mapM unless_def ignore: without_preemption filterM const_on_failure )
 

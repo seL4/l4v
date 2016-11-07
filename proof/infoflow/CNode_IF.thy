@@ -480,18 +480,22 @@ done
 
 lemma aag_cap_auth_recycle_EndpointCap:"pas_cap_cur_auth aag (EndpointCap word1 word2 f) \<Longrightarrow>
   pas_refined aag s \<Longrightarrow>
-  has_recycle_rights (EndpointCap word1 word2 f) \<Longrightarrow>
- is_subject aag word1"
+  has_cancel_send_rights (EndpointCap word1 word2 f) \<Longrightarrow>
+  is_subject aag word1"
   unfolding aag_cap_auth_def
-  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   pas_refined_all_auth_is_owns is_page_cap_def has_recycle_rights_def cap_rights_to_auth_def all_rights_def)
-done
+  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   
+                   pas_refined_all_auth_is_owns is_page_cap_def 
+                   has_cancel_send_rights_def cap_rights_to_auth_def 
+                   all_rights_def)
+  done
 
 lemma aag_cap_auth_Zombie:"pas_cap_cur_auth aag (Zombie word x y) \<Longrightarrow>
   pas_refined aag s \<Longrightarrow>
  is_subject aag word"
   unfolding aag_cap_auth_def
-  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   pas_refined_all_auth_is_owns is_page_cap_def has_recycle_rights_def cap_rights_to_auth_def)
-done
+  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   
+        pas_refined_all_auth_is_owns is_page_cap_def cap_rights_to_auth_def)
+  done
 
 lemmas aag_cap_auth_subject = aag_cap_auth_PageTableCap 
                               aag_cap_auth_PageDirectory 

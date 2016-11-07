@@ -1770,70 +1770,6 @@ lemma pt_cap_aligned:
           dest!: cap_aligned_valid[OF valid_capsD, unfolded cap_aligned_def,
                                     THEN conjunct1])
 
-lemma arch_recycle_cap_reads_respects:
-  "reads_respects aag l (pas_refined aag and invs and
-        cte_wp_at (op = (ArchObjectCap cap)) slot and
-        K (pas_cap_cur_auth aag (ArchObjectCap cap) \<and>
-        (is_pg_cap (ArchObjectCap cap) \<longrightarrow> has_recycle_rights (ArchObjectCap cap))) )
-     (arch_recycle_cap is_final cap)"
-  unfolding arch_recycle_cap_def
-  apply (cases slot)
-  apply (rule gen_asm_ev)
-  apply (unfold is_pg_cap_def)
-  apply (case_tac cap, simp_all split del: split_if)
-  apply (subst gets_apply)
-  by (
-         wp static_imp_wp modify_arch_state_reads_respects
-            liftE_wp assert_wp
-            arm_asid_table_update_reads_respects
-            set_asid_pool_reads_respects
-            delete_asid_pool_reads_respects
-            gets_apply_ev
-            arch_finalise_cap_reads_respects
-            dmo_clearMemory_reads_respects
-            dmo_cleanCacheRange_PoU_reads_respects
-            mapM_x_swp_store_pte_reads_respects'
-            mapM_x_swp_store_pte_pas_refined_simple
-            mapM_x_swp_store_pte_invs'
-            invalidate_tlb_by_asid_reads_respects
-            page_table_mapped_reads_respects
-            page_table_mapped_inv
-            mapM_x_swp_store_pde_reads_respects'
-            mapM_x_swp_store_pde_pas_refined_simple
-            mapM_x_swp_store_pde_invs_unmap
-            find_pd_for_asid_reads_respects
-            store_pde_invs_unmap
-            mapM_x_wp' 
-            hoare_unless_wp
-    | wpc
-    | simp add: when_def invs_valid_objs
-                invs_psp_aligned pte_ref_def
-                invs_arch_objs
-                invs_valid_global_refs
-                invs_valid_ko_at_arm
-                pde_ref_def
-                pde_ref2_def
-                unless_def
-    | intro impI conjI allI cte_wp_at_pt_exists_cap
-            cte_wp_at_page_directory_not_in_kernel_mappings
-            cte_wp_at_page_directory_not_in_globals
-            pd_shifting_kernel_mapping_slots
-    | elim conjE
-    | rule requiv_arm_asid_table_asid_high_bits_of_asid_eq'
-    | (rule aag_cap_auth_subject, assumption, assumption)
-    | (simp add: cte_wp_at_caps_of_state
-            split del: split_if,
-       subst word_aligned_pt_slots[OF pt_cap_aligned
-                                        [OF _ valid_objs_caps
-                                                [OF invs_valid_objs]]],
-       fastforce+)
-    | wp_once hoare_drop_imps
-    | wp_once hoare_vcg_all_lift
-    | wp_once mapM_x_wp'[where f="swp store_pte InvalidPTE"]
-    | wp_once mapM_x_wp'[where f="swp store_pde InvalidPDE"]
-    | clarify del: notI split del: split_if
-    )+
-
 section "globals_equiv"
 
 lemma maskInterrupt_no_mem:
@@ -2088,43 +2024,6 @@ lemma mapM_x_swp_store_kernel_base_globals_equiv:
                    pde_ref_def
   )+
 done
-
-lemma arch_recycle_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and cte_wp_at (op = (ArchObjectCap arch_cap)) slot and invs\<rbrace>
-    arch_recycle_cap is_final arch_cap
-   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding arch_recycle_cap_def
-  apply (simp | wpc 
-    | wp modify_wp set_asid_pool_globals_equiv invs_valid_ko_at_arm
-         arch_finalise_cap_globals_equiv'
-         dmo_clearMemory_globals_equiv
-         dmo_cleanCacheRange_PoU_globals_equiv
-         page_table_mapped_inv
-         mapM_x_swp_store_pte_invs'
-         mapM_x_swp_store_pte_globals_equiv
-         hoare_unless_wp
-         hoare_drop_imps
-    | clarsimp simp: valid_pspace_def pbfs_less_wb page_caps_do_not_overlap_arm_globals_frame
-                     cte_wp_at_page_cap_aligned invs_valid_objs invs_valid_global_refs
-                     invs_arch_state invs_distinct
-              split: arch_cap.splits 
-    | intro impI conjI allI)+
-   apply (rule_tac Q="\<lambda>r s. globals_equiv st s \<and> invs s" in hoare_strengthen_post)
-    apply (wp mapM_x_swp_store_kernel_base_globals_equiv )
-    apply clarsimp
-    apply assumption
-   apply simp
-  apply (wp arch_finalise_cap_globals_equiv'
-            dmo_cleanCacheRange_PoU_globals_equiv
-            static_imp_wp
-         | wpc | simp)+
-    apply (rule_tac Q="\<lambda>r s. globals_equiv st s \<and> invs s" in hoare_strengthen_post)
-     apply (wp mapM_x_swp_store_kernel_base_globals_equiv)
-    apply clarsimp
-   apply (rule_tac Q="\<lambda>r s. globals_equiv st s \<and> invs s" in hoare_strengthen_post)
-    apply (wp mapM_x_swp_store_kernel_base_globals_equiv)
-    apply auto
-  done
 
 end
 

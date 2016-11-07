@@ -4772,11 +4772,11 @@ crunch pred_tcb_at'[wp]: switchIfRequiredTo, completeSignal "pred_tcb_at' proj P
 
 lemma ri_makes_runnable_simple':
   "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t') and K (P = runnable' \<or> P = simple')\<rbrace>
-     receiveIPC t epCap isBlocking
+     receiveIPC t cap isBlocking
    \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (simp add: receiveIPC_def)
-  apply (case_tac epCap, simp_all add: isEndpointCap_def)
+  apply (case_tac cap, simp_all add: isEndpointCap_def)
   apply (rule hoare_seq_ext [OF _ get_ep_inv'])
   apply (rule hoare_seq_ext [OF _ gbn_sp'])
   apply wp

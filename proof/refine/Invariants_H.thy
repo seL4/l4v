@@ -18,16 +18,16 @@ begin
 
 context Arch begin
 lemmas [crunch_def] =
-  deriveCap_def finaliseCap_def recycleCap_def
-  hasRecycleRights_def sameRegionAs_def isPhysicalCap_def
+  deriveCap_def finaliseCap_def
+  hasCancelSendRights_def sameRegionAs_def isPhysicalCap_def
   sameObjectAs_def updateCapData_def maskCapRights_def
   createObject_def capUntypedPtr_def capUntypedSize_def
   performInvocation_def decodeInvocation_def
 
 context begin global_naming global
 requalify_facts
-  Retype_H.deriveCap_def Retype_H.finaliseCap_def Retype_H.recycleCap_def
-  Retype_H.hasRecycleRights_def Retype_H.sameRegionAs_def Retype_H.isPhysicalCap_def
+  Retype_H.deriveCap_def Retype_H.finaliseCap_def
+  Retype_H.hasCancelSendRights_def Retype_H.sameRegionAs_def Retype_H.isPhysicalCap_def
   Retype_H.sameObjectAs_def Retype_H.updateCapData_def Retype_H.maskCapRights_def
   Retype_H.createObject_def Retype_H.capUntypedPtr_def Retype_H.capUntypedSize_def
   Retype_H.performInvocation_def Retype_H.decodeInvocation_def

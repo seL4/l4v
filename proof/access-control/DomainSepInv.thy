@@ -647,27 +647,6 @@ lemma thread_set_tcb_registers_caps_merge_default_tcb_domain_sep_inv[wp]:
   apply(wp domain_sep_inv_triv)
   done
 
-lemma arch_recycle_cap_domain_sep_inv_cap[wp]:
-  "\<lbrace>\<lambda>s. domain_sep_inv_cap irqs (ArchObjectCap arch_cap)\<rbrace>
-   arch_recycle_cap is_final arch_cap
-   \<lbrace>(\<lambda>rv s. domain_sep_inv_cap irqs rv) \<circ> ArchObjectCap\<rbrace>"
-  apply(simp add: arch_recycle_cap_def split del: split_if)
-  apply(rule hoare_pre)
-   apply(wp | wpc | simp split del: split_if)+
-  apply(auto simp: domain_sep_inv_cap_def)
-  done
-
-lemma recycle_cap_domain_sep_inv_cap[wp]:
-  shows
-  "\<lbrace>\<lambda>s. domain_sep_inv_cap irqs cap\<rbrace>
-   recycle_cap is_final cap
-   \<lbrace>\<lambda>rv s. domain_sep_inv_cap irqs rv\<rbrace>"
-  apply(simp add: recycle_cap_def)
-  apply(rule hoare_pre)
-   apply(wp | wpc | simp | wp_once hoare_drop_imps)+
-  apply(auto simp: domain_sep_inv_cap_def)
-  done
-
 lemma cancel_badged_sends_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
    cancel_badged_sends epptr badge
@@ -677,28 +656,7 @@ lemma cancel_badged_sends_domain_sep_inv[wp]:
    apply(wp dxo_wp_weak mapM_wp | wpc | simp add: filterM_mapM | rule subset_refl | wp_once hoare_drop_imps)+
    done
 
-crunch domain_sep_inv[wp]: arch_recycle_cap "domain_sep_inv irqs st"
-  (wp: crunch_wps hoare_unless_wp)
-
-lemma recycle_cap_domain_sep_inv[wp]:
-  "\<lbrace>domain_sep_inv irqs st\<rbrace>
-   recycle_cap is_final cap
-   \<lbrace>\<lambda>rv. domain_sep_inv irqs st\<rbrace>"
-  apply(simp add: recycle_cap_def)
-  apply(rule hoare_pre)
-   apply(wp dxo_wp_weak | wpc | simp | wp_once hoare_drop_imps)+
-   done
-
 crunch domain_sep_inv[wp]: finalise_slot "domain_sep_inv irqs st"
-
-lemma cap_recycle_domain_sep_inv[wp]:
-  "\<lbrace>domain_sep_inv irqs st\<rbrace> cap_recycle blah \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(simp add: cap_recycle_def)
-  apply(wp hoare_unless_wp set_cap_domain_sep_inv
-           get_cap_domain_sep_inv_cap[where st=st]
-       | simp add: crunch_simps | wp_once hoare_drop_imps)+
-  done
-
 
 lemma invoke_cnode_domain_sep_inv:
   "\<lbrace> domain_sep_inv irqs st and valid_cnode_inv ci\<rbrace>
@@ -710,7 +668,7 @@ lemma invoke_cnode_domain_sep_inv:
     apply(rule hoare_pre)
      apply(wp cap_move_domain_sep_inv cap_move_cte_wp_at_other get_cap_wp | simp | blast dest: cte_wp_at_weak_derived_domain_sep_inv_cap | wpc)+
    apply(fastforce dest:  cte_wp_at_weak_derived_ReplyCap)
-  apply(wp | simp)+
+  apply(wp | simp | wpc | rule hoare_pre)+
   done
 
 lemma create_cap_domain_sep_inv[wp]:
@@ -841,7 +799,7 @@ crunch domain_sep_inv[wp]: set_mrs "domain_sep_inv irqs st"
 
 crunch domain_sep_inv[wp]: send_signal "domain_sep_inv irqs st" (wp: dxo_wp_weak ignore:  switch_if_required_to)
 
-crunch domain_sep_inv[wp]: copy_mrs, set_message_info "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: copy_mrs, set_message_info, invalidate_tlb_by_asid "domain_sep_inv irqs st"
   (wp: crunch_wps)
 
 lemma perform_page_invocation_domain_sep_inv:
@@ -852,7 +810,6 @@ lemma perform_page_invocation_domain_sep_inv:
    apply(wp mapM_wp[OF _ subset_refl] set_cap_domain_sep_inv
             mapM_x_wp[OF _ subset_refl]
             perform_page_invocation_domain_sep_inv_get_cap_helper static_imp_wp
-
         | simp add: perform_page_invocation_def o_def | wpc)+
   apply(clarsimp simp: valid_page_inv_def)
   apply(case_tac xa, simp_all add: domain_sep_inv_cap_def is_pg_cap_def)

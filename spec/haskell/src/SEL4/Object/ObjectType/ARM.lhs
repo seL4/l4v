@@ -17,7 +17,6 @@ This module contains operations on machine-specific object types for the ARM.
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.ARM
 > import SEL4.Model
-> import SEL4.Model.StateData.ARM
 > import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.ARM as ArchInv
@@ -25,7 +24,6 @@ This module contains operations on machine-specific object types for the ARM.
 > import SEL4.Kernel.VSpace.ARM
 
 > import Data.Bits
-> import Data.Array
 
 \end{impdetails}
 
@@ -104,76 +102,6 @@ Deletion of any mapped frame capability requires the page table slot to be locat
 All other capabilities need no finalisation action.
 
 > finaliseCap _ _ = return NullCap
-
-\subsection{Recycling Capabilities}
-
-> resetMemMapping :: ArchCapability -> ArchCapability
-> resetMemMapping (PageCap dev p rts sz _) = PageCap dev p rts sz Nothing
-> resetMemMapping (PageTableCap ptr _) = PageTableCap ptr Nothing
-> resetMemMapping (PageDirectoryCap ptr _) = PageDirectoryCap ptr Nothing
-> resetMemMapping cap = cap
-
-> recycleCap :: Bool -> ArchCapability -> Kernel ArchCapability
-> recycleCap is_final (cap@PageCap { capVPIsDevice = isDevice }) = do
->       unless isDevice $ doMachineOp $ clearMemory (capVPBasePtr cap)
->           (1 `shiftL` (pageBitsForSize $ capVPSize cap))
->       finaliseCap cap is_final
->       return $ resetMemMapping cap
->
-> recycleCap is_final (cap@PageTableCap { capPTBasePtr = ptr }) = do
->     let pteBits = objBits InvalidPTE
->     let slots = [ptr, ptr + bit pteBits .. ptr + bit ptBits - 1]
->     mapM_ (flip storePTE InvalidPTE) slots
->     doMachineOp $
->         cleanCacheRange_PoU (VPtr $ fromPPtr ptr)
->                             (VPtr $ fromPPtr ptr + (1 `shiftL` ptBits) - 1)
->                             (addrFromPPtr ptr)
->     case capPTMappedAddress cap of
->         Nothing -> return ()
->         Just (a, v) -> do
->             mapped <- pageTableMapped a v ptr
->             when (mapped /= Nothing) $ invalidateTLBByASID a
->     finaliseCap cap is_final
->     return (if is_final then resetMemMapping cap else cap)
-
-> recycleCap is_final (cap@PageDirectoryCap { capPDBasePtr = ptr }) = do
->     let pdeBits = objBits InvalidPDE
->     let kBaseEntry = fromVPtr kernelBase
->                         `shiftR` pageBitsForSize ARMSection
->     let indices = [0 .. kBaseEntry - 1]
->     let offsets = map (PPtr . flip shiftL pdeBits) indices
->     let slots = map (+ptr) offsets
->     mapM_ (flip storePDE InvalidPDE) slots
->     doMachineOp $
->         cleanCacheRange_PoU (VPtr $ fromPPtr ptr)
->                             (VPtr $ fromPPtr ptr + (1 `shiftL` pdBits) - 1)
->                             (addrFromPPtr ptr)
->     case capPDMappedASID cap of
->         Nothing -> return ()
->         Just a -> do 
->             ignoreFailure $ (do
->                 pd' <- findPDForASID a
->                 withoutFailure $ when (ptr == pd') $ invalidateTLBByASID a)
->     finaliseCap cap is_final
->     return (if is_final then resetMemMapping cap else cap)  
-
-> recycleCap _ ASIDControlCap = return ASIDControlCap
-> recycleCap _ (cap@ASIDPoolCap { capASIDBase = base, capASIDPool = ptr }) = do
->     asidTable <- gets (armKSASIDTable . ksArchState)
->     when (asidTable!(asidHighBitsOf base) == Just ptr) $ do
->         deleteASIDPool base ptr
->         setObject ptr (makeObject :: ASIDPool)
->         asidTable <- gets (armKSASIDTable . ksArchState)
->         let asidTable' = asidTable//[(asidHighBitsOf base, Just ptr)]
->         modify (\s -> s {
->             ksArchState = (ksArchState s) { armKSASIDTable = asidTable' }})
->     return cap
- 
- 
-> hasRecycleRights :: ArchCapability -> Bool
-
-> hasRecycleRights (PageCap { capVPRights = rights }) = rights == VMReadWrite
-> hasRecycleRights _ = True
 
 
 \subsection{Identifying Capabilities}

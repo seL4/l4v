@@ -253,24 +253,6 @@ qed
 lemmas cteRevoke_empty_fail[intro!, wp, simp] =
        cteRevoke_spec_empty_fail[THEN use_spec_empty_fail]
 
-lemma arch_recycleCap_improve_cases2:
-   "(if isPageCap cap then P
-    else if isPageTableCap cap then Q
-    else if isPageDirectoryCap cap then R
-    else if isASIDControlCap cap then S
-    else if isASIDPoolCap cap then T
-    else undefined)
-    =
-   (if isPageCap cap then P
-    else if isPageTableCap cap then Q
-    else if isPageDirectoryCap cap then R
-    else if isASIDControlCap cap then S
-    else T)"
-  by (simp add: arch_recycleCap_improve_cases)
-
-crunch (empty_fail) empty_fail: recycleCap
-(wp: empty_fail_catch simp: Let_def arch_recycleCap_improve_cases2)
-
 lemma Syscall_H_syscall_empty_fail[intro!, wp, simp]:
   "\<lbrakk>empty_fail a; \<And>x. empty_fail (b x); \<And>x. empty_fail (c x);
     \<And>x. empty_fail (d x); \<And>x. empty_fail (e x)\<rbrakk>

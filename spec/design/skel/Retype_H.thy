@@ -20,8 +20,8 @@ begin
 
 context Arch begin
 requalify_consts
-  deriveCap finaliseCap recycleCap
-  hasRecycleRights sameRegionAs isPhysicalCap
+  deriveCap finaliseCap 
+  hasCancelSendRights sameRegionAs isPhysicalCap
   sameObjectAs updateCapData maskCapRights
   createObject capUntypedPtr capUntypedSize
   performInvocation decodeInvocation
@@ -29,8 +29,8 @@ requalify_consts
 context begin global_naming global
 
 requalify_consts
-  RetypeDecls_H.deriveCap RetypeDecls_H.finaliseCap RetypeDecls_H.recycleCap
-  RetypeDecls_H.hasRecycleRights RetypeDecls_H.sameRegionAs RetypeDecls_H.isPhysicalCap
+  RetypeDecls_H.deriveCap RetypeDecls_H.finaliseCap 
+  RetypeDecls_H.hasCancelSendRights RetypeDecls_H.sameRegionAs RetypeDecls_H.isPhysicalCap
   RetypeDecls_H.sameObjectAs RetypeDecls_H.updateCapData RetypeDecls_H.maskCapRights
   RetypeDecls_H.createObject RetypeDecls_H.capUntypedPtr RetypeDecls_H.capUntypedSize
   RetypeDecls_H.performInvocation RetypeDecls_H.decodeInvocation

@@ -42,7 +42,7 @@ datatype invocation_label =
   | TCBUnbindNotification
   | CNodeRevoke
   | CNodeDelete
-  | CNodeRecycle
+  | CNodeCancelBadgedSends
   | CNodeCopy
   | CNodeMint
   | CNodeMove
@@ -78,7 +78,7 @@ definition
       TCBUnbindNotification,
       CNodeRevoke,
       CNodeDelete,
-      CNodeRecycle,
+      CNodeCancelBadgedSends,
       CNodeCopy,
       CNodeMint,
       CNodeMove,

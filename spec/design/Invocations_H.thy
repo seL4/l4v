@@ -388,9 +388,14 @@ datatype cnode_invocation =
   | Rotate capability capability machine_word machine_word machine_word
   | Revoke machine_word
   | Move capability machine_word machine_word
-  | Recycle machine_word
+  | CancelBadgedSends capability
   | SaveCaller machine_word
   | Delete machine_word
+
+primrec
+  epCap :: "cnode_invocation \<Rightarrow> capability"
+where
+  "epCap (CancelBadgedSends v0) = v0"
 
 primrec
   targetSlot :: "cnode_invocation \<Rightarrow> machine_word"
@@ -399,7 +404,6 @@ where
 | "targetSlot (Rotate v0 v1 v2 v3 v4) = v4"
 | "targetSlot (SaveCaller v0) = v0"
 | "targetSlot (Move v0 v1 v2) = v2"
-| "targetSlot (Recycle v0) = v0"
 | "targetSlot (Revoke v0) = v0"
 | "targetSlot (Delete v0) = v0"
 
@@ -436,13 +440,17 @@ where
   "moveCap (Move v0 v1 v2) = v0"
 
 primrec
+  epCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
+where
+  "epCap_update f (CancelBadgedSends v0) = CancelBadgedSends (f v0)"
+
+primrec
   targetSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> cnode_invocation \<Rightarrow> cnode_invocation"
 where
   "targetSlot_update f (Insert v0 v1 v2) = Insert v0 v1 (f v2)"
 | "targetSlot_update f (Rotate v0 v1 v2 v3 v4) = Rotate v0 v1 v2 v3 (f v4)"
 | "targetSlot_update f (SaveCaller v0) = SaveCaller (f v0)"
 | "targetSlot_update f (Move v0 v1 v2) = Move v0 v1 (f v2)"
-| "targetSlot_update f (Recycle v0) = Recycle (f v0)"
 | "targetSlot_update f (Revoke v0) = Revoke (f v0)"
 | "targetSlot_update f (Delete v0) = Delete (f v0)"
 
@@ -499,9 +507,9 @@ where
   "Move_ \<lparr> moveCap= v0, sourceSlot= v1, targetSlot= v2 \<rparr> == Move v0 v1 v2"
 
 abbreviation (input)
-  Recycle_trans :: "(machine_word) \<Rightarrow> cnode_invocation" ("Recycle'_ \<lparr> targetSlot= _ \<rparr>")
+  CancelBadgedSends_trans :: "(capability) \<Rightarrow> cnode_invocation" ("CancelBadgedSends'_ \<lparr> epCap= _ \<rparr>")
 where
-  "Recycle_ \<lparr> targetSlot= v0 \<rparr> == Recycle v0"
+  "CancelBadgedSends_ \<lparr> epCap= v0 \<rparr> == CancelBadgedSends v0"
 
 abbreviation (input)
   SaveCaller_trans :: "(machine_word) \<Rightarrow> cnode_invocation" ("SaveCaller'_ \<lparr> targetSlot= _ \<rparr>")
@@ -542,10 +550,10 @@ where
   | _ \<Rightarrow> False"
 
 definition
-  isRecycle :: "cnode_invocation \<Rightarrow> bool"
+  isCancelBadgedSends :: "cnode_invocation \<Rightarrow> bool"
 where
- "isRecycle v \<equiv> case v of
-    Recycle v0 \<Rightarrow> True
+ "isCancelBadgedSends v \<equiv> case v of
+    CancelBadgedSends v0 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition

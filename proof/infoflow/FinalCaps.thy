@@ -1852,56 +1852,9 @@ lemma thread_set_tcb_registers_caps_merge_default_tcb_silc_inv[wp]:
    \<lbrace>\<lambda>xa. silc_inv aag st\<rbrace>"
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def tcb_registers_caps_merge_def)
 
-crunch silc_inv[wp]: recycle_cap "silc_inv aag st"
+crunch silc_inv[wp]: cancel_badged_sends "silc_inv aag st"
   (wp: crunch_wps hoare_unless_wp simp: crunch_simps ignore: filterM set_object thread_set simp: filterM_mapM)
 
-lemma slots_holding_overlapping_caps_arch_reset_mem_mappings[simp]:
-  "FinalCaps.slots_holding_overlapping_caps
-                       (ArchObjectCap (arch_reset_mem_mapping arch_cap)) s =
-
-   FinalCaps.slots_holding_overlapping_caps
-                       (ArchObjectCap arch_cap) s"
-  apply(case_tac arch_cap, simp_all add: slots_holding_overlapping_caps_def)
-  done
-
-lemma recycle_cap_ret_is_silc:
-  "\<lbrace>silc_inv aag st and cte_wp_at (op = cap) slot\<rbrace>
-   recycle_cap is_final' cap 
-   \<lbrace>\<lambda>cap' s.
-           (\<not> cap_points_to_label aag cap' (pasObjectAbs aag (fst slot)) \<longrightarrow>
-            (\<exists>lslot.
-                lslot \<in> FinalCaps.slots_holding_overlapping_caps cap' s \<and>
-                pasObjectAbs aag (fst lslot) = SilcLabel))\<rbrace>"
-  apply(rule hoare_strengthen_post)
-   apply(rule hoare_pre)
-    apply(rule hoare_conj)
-     apply(rule hoare_conj)
-      apply(rule recycle_cap_cte_wp_at)
-     apply(rule recycle_cap_cases)
-    apply(rule recycle_cap_silc_inv[where aag=aag and st=st])
-   apply fastforce
-  apply clarsimp
-  apply(drule silc_invD[where st=st])
-    apply assumption
-   apply(simp add: cap_points_to_label_def intra_label_cap_def | safe | fast)+
-           apply(case_tac arch_cap, fastforce+)[1]
-          apply(clarsimp simp: is_zombie_def split: cap.splits)
-          apply(case_tac r, simp_all add: is_thread_cap.simps)[1]
-          apply fastforce
-         apply(clarsimp simp: is_zombie_def split: cap.splits)
-         apply(case_tac r, simp_all)[1]
-         apply fastforce
-        apply(case_tac arch_cap, fastforce+)[1]
-       apply((case_tac r, simp_all)+)[2]
-     apply fastforce
-    apply fastforce
-   apply(clarsimp simp: is_zombie_def split: cap.splits)
-   apply(case_tac r, simp_all add: is_thread_cap.simps)[1]
-   apply(fastforce simp: slots_holding_overlapping_caps_def)
-  apply(clarsimp simp: is_zombie_def split: cap.splits)
-  apply(case_tac r, simp_all add: is_thread_cap.simps)[1]
-  apply(fastforce simp: slots_holding_overlapping_caps_def)
-  done
 
 lemma finalise_slot_silc_inv:
   "\<lbrace> silc_inv aag st and pas_refined aag and K (is_subject aag (fst slot))\<rbrace>
@@ -1913,25 +1866,6 @@ lemma finalise_slot_silc_inv:
    apply(rule rec_del_silc_inv)
   apply simp
   done
-
-lemma cap_recycle_silc_inv:
-  "\<lbrace> silc_inv aag st and einvs and simple_sched_action and pas_refined aag and K (is_subject aag (fst slot)) \<rbrace>
-    cap_recycle slot
-   \<lbrace> \<lambda>_. silc_inv aag st \<rbrace>"
-  unfolding cap_recycle_def
-  apply (wp hoare_unless_wp set_cap_silc_inv recycle_cap_ret_is_silc[where st=st] get_cap_wp | simp)+
-    apply(wp hoare_drop_imps hoare_vcg_all_lift finalise_slot_silc_inv)[1]
-   apply(wp hoare_unless_wp set_cap_silc_inv recycle_cap_ret_is_silc[where st=st] get_cap_wp | simp)+
-   apply(wp hoare_drop_imps hoare_vcg_all_lift finalise_slot_silc_inv)[1]
-  apply (clarsimp simp: conj_comms cong: conj_cong)
-  apply(rule hoare_pre)
-   apply(rule hoare_vcg_conj_liftE1)
-    apply (wp | simp)+
-   apply(subst conj_commute, rule hoare_vcg_conj_liftE1)
-    apply (wp cap_revoke_silc_inv)
-  apply (clarsimp simp: silc_inv_def)
-  done
-
 
 lemma invoke_cnode_silc_inv:
   "\<lbrace> silc_inv aag st and einvs and simple_sched_action and pas_refined aag and valid_cnode_inv i and authorised_cnode_inv aag i and is_subject aag \<circ> cur_thread \<rbrace>
@@ -1953,8 +1887,7 @@ lemma invoke_cnode_silc_inv:
    apply(wp cap_move_silc_inv get_cap_wp | wpc | simp)+
    apply(clarsimp simp: silc_inv_def authorised_cnode_inv_def)
    apply(erule cte_wp_at_weak_derived_ReplyCap)
-  apply(wp cap_recycle_silc_inv | simp)+
-  apply(fastforce simp: authorised_cnode_inv_def)
+  apply(wp cancel_badged_sends_silc_inv | simp | wpc | rule hoare_pre)+
   done
 
 lemma set_cap_default_cap_silc_inv:
@@ -2360,7 +2293,7 @@ lemma set_mrs_silc_inv[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch silc_inv[wp]: update_waiting_ntfn, set_message_info "silc_inv aag st"
+crunch silc_inv[wp]: update_waiting_ntfn, set_message_info, invalidate_tlb_by_asid "silc_inv aag st"
 
 lemma send_signal_silc_inv[wp]: 
   "\<lbrace>silc_inv aag st\<rbrace> send_signal param_a param_b \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"

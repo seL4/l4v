@@ -735,89 +735,6 @@ crunch pas_refined[wp]: invalidate_tlb_by_asid "pas_refined aag"
 (* FIXME: CLAG *)
 lemmas dmo_valid_cap[wp] = valid_cap_typ [OF do_machine_op_typ_at]
 
-lemma arch_recycle_cap_respects:
-  notes split_if [split del]
-  shows "\<lbrace>integrity aag X st and pas_refined aag
-           and invs and cte_wp_at (op = (cap.ArchObjectCap cap)) slot
-           and K (pas_cap_cur_auth aag (cap.ArchObjectCap cap)
-                    \<and> (is_pg_cap (cap.ArchObjectCap cap)
-                          \<longrightarrow> has_recycle_rights (cap.ArchObjectCap cap)))\<rbrace>
-       arch_recycle_cap is_final cap \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: arch_recycle_cap_def)
-  apply (rule hoare_pre)
-   apply (wpc, simp)
-   apply (rule_tac P="cap_aligned (cap.ArchObjectCap cap)" in hoare_gen_asm)
-   apply (wp set_asid_pool_integrity_autarch
-             store_pte_respects store_pde_respects
-             copy_global_mappings_integrity dmo_clearMemory_respects'
-             mapM_x_and_const_wp[OF store_pte_respects]
-             mapM_x_and_const_wp[OF store_pde_respects]
-             mapM_x_and_const_wp[OF store_pte_pas_refined]
-             mapM_x_and_const_wp[OF store_pde_pas_refined]
-             mapM_x_wp' [OF store_pte_valid_cap]
-             mapM_x_wp' [OF store_pde_valid_cap]
-             mapM_x_swp_store_pde_invs_unmap [unfolded swp_def]
-             mapM_x_swp_store_pte_invs [unfolded swp_def]
-             invalidate_tlb_by_asid_valid_cap
-             page_table_mapped_inv
-             hoare_vcg_all_lift hoare_vcg_const_imp_lift
-             clearMemory_invs
-             | wpc | simp add: swp_def cap_aligned_def if_apply_def2
-             | wp_once hoare_drop_imps hoare_unless_wp
-             | elim conjE
-             | (erule is_aligned_weaken, simp add: pd_bits_def pageBits_def))+
-  apply (clarsimp simp: conj_comms cases_simp_options valid_cap_def cap_aligned_def)
-  apply (frule (1) cte_wp_valid_cap [OF _ invs_valid_objs])
-  apply (simp add: cap_auth_conferred_def is_page_cap_def aag_cap_auth_def
-                   pas_refined_all_auth_is_owns valid_cap_simps
-                   cap_aligned_def is_cap_simps valid_cap_def
-            split: arch_cap.split_asm)
-     apply (fastforce simp: cap_links_asid_slot_def label_owns_asid_slot_def intro: pas_refined_Control_into_is_subject_asid)
-    subgoal by (fastforce simp: has_recycle_rights_def arch_has_recycle_rights_def vspace_cap_rights_to_auth_def pageBitsForSize_def split: vmpage_size.split)
-   apply (rename_tac word option)
-   apply (subgoal_tac
-     "(\<forall>v\<in>List.set [word , word + 4 .e. word + 2 ^ pt_bits - 1]. is_subject aag (v && ~~ mask pt_bits)) \<and>
-           (\<exists>a b. cte_wp_at
-                   (\<lambda>c. (\<exists>p asid. c = cap.ArchObjectCap (arch_cap.PageTableCap p asid)) \<and>
-                        (\<lambda>x. x && ~~ mask pt_bits) ` List.set [word , word + 4 .e. word + 2 ^ pt_bits - 1] \<subseteq> Structures_A.obj_refs c)
-                   (a, b) s)")
-    apply (clarsimp simp: pte_ref_simps split: option.splits)
-   apply (intro conjI)
-    apply clarsimp
-    apply (drule subsetD[OF upto_enum_step_subset])
-    apply (subst(asm) mask_in_range[symmetric])
-     apply (simp add: pt_bits_def pageBits_def)+
-     -- "clag from Finalise_R.arch_recycle_cap_corres"
-   apply (cases slot, simp)
-   apply (intro exI, erule cte_wp_at_weakenE)
-   apply (clarsimp simp: is_cap_simps word_shift_by_2 upto_enum_step_def split: split_if_asm)
-   apply (rule conjunct2[OF is_aligned_add_helper[OF _ shiftl_less_t2n]],
-     simp_all add: pt_bits_def pageBits_def )[1]
-   apply unat_arith
-  apply (rename_tac word option)
-  apply (subgoal_tac
-    "(\<forall>sl\<le>(kernel_base >> 20) - 1. (sl << 2) + word && ~~ mask pd_bits \<notin> global_refs s) \<and>
-     (\<forall>v\<le>(kernel_base >> 20) - 1. is_subject aag ((v << 2) + word && ~~ mask pd_bits)) \<and>
-     (\<forall>sl\<le>(kernel_base >> 20) - 1. ucast ((sl << 2) + word && mask pd_bits >> 2) \<notin> kernel_mapping_slots)")
-   apply (clarsimp simp: pde_ref_simps valid_cap_def split: option.splits)
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (intro conjI allI impI)
-    apply (rule pd_shifting_global_refs, simp_all add: pd_bits_def pageBits_def)[1]
-    apply clarsimp
-    apply (drule valid_global_refsD2, fastforce)
-    apply (clarsimp simp: cap_range_def)
-   apply (subst add.commute, subst is_aligned_add_helper, simp add: pd_bits_def)
-     apply (simp add: pageBits_def)
-    apply (rule shiftl_less_t2n)
-     apply (simp add: kernel_base_def)
-     apply (simp add: pd_bits_def pageBits_def)
-     apply unat_arith
-    apply simp
-    apply (simp add: pd_bits_def pageBits_def)
-   apply simp
-  apply (rule pd_shifting_kernel_mapping_slots, simp_all add: pd_bits_def pageBits_def)
-  done
-
 lemma integrity_eupdate_autarch:
   "\<lbrakk> integrity aag X st s; is_subject aag ptr \<rbrakk> \<Longrightarrow> integrity aag X st (s\<lparr>ekheap := ekheap s(ptr \<mapsto> obj)\<rparr>)"
   unfolding integrity_subjects_def by auto
@@ -829,24 +746,6 @@ lemma set_eobject_integrity_autarch:
   apply (simp add: set_eobject_def)
   apply wp
   apply (rule integrity_eupdate_autarch, simp_all)
-  done
-
-crunch integrity_autarch: recycle_cap_ext "integrity aag X st"
-
-lemma recycle_cap_respects_pre:
-  notes split_if [split del]
-  shows "\<lbrace>integrity aag X st and pas_refined aag
-             and K (pas_cap_cur_auth aag cap \<and> (is_pg_cap cap \<longrightarrow> has_recycle_rights cap))
-             and cte_wp_at (op = cap) slot and invs\<rbrace>
-       recycle_cap is_final cap \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: recycle_cap_def)
-  apply (rule hoare_pre)
-  apply (wp set_object_integrity_autarch arch_recycle_cap_respects gbn_wp
-            ethread_set_integrity_autarch recycle_cap_ext_integrity_autarch
-             | wpc | simp add: thread_set_def  get_thread_state_def thread_get_def)+
-  apply clarsimp
-  apply (auto simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def
-                    pas_refined_all_auth_is_owns split: split_if)
   done
 
 crunch pas_refined[wp]: cancel_badged_sends "pas_refined aag"
@@ -907,57 +806,6 @@ lemma set_asid_pool_ko_at[wp]:
   apply (simp add: set_asid_pool_def set_object_def)
   apply wp
   apply (simp add: obj_at_def hoare_post_taut)
-  done
-
-lemma arch_recycle_cap_pas_refined:
-  notes split_if [split del]
-  shows "\<lbrace>pas_refined aag and K (pas_cap_cur_auth aag (cap.ArchObjectCap cap))
-             and invs and cte_wp_at (op = (cap.ArchObjectCap cap)) slot\<rbrace>
-     arch_recycle_cap is_final cap \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (simp add: arch_recycle_cap_def)
-  apply (rule hoare_pre)
-   apply (wp copy_global_mappings_pas_refined2
-             mapM_x_swp_store_pde_invs_unmap[unfolded swp_def]
-             mapM_x_and_const_wp[OF store_pte_pas_refined]
-             mapM_x_and_const_wp[OF store_pde_pas_refined]
-             hoare_vcg_if_lift_ER hoare_unless_wp
-             | wpc
-             | simp add: fun_upd_def[symmetric] cases_simp_options
-                         pte_ref_simps pde_ref_simps
-                         cap_aligned_def swp_def
-             | strengthen pas_refined_set_asid_table_empty_strg)+
-  apply (auto simp: cap_auth_conferred_def is_page_cap_def aag_cap_auth_def
-    pas_refined_all_auth_is_owns split: split_if | auto intro: pas_refined_Control_into_is_subject_asid simp: cap_links_asid_slot_def label_owns_asid_slot_def)+
-  done
-
-lemma recycle_cap_ext_pas_refined:
-  "\<lbrace>pas_refined aag and (pas_cur_domain aag and K (is_subject aag ptr))\<rbrace>
-     recycle_cap_ext ptr
-   \<lbrace>\<lambda>xb. tcb_domain_map_wellformed aag\<rbrace>"
-  apply (simp add: recycle_cap_ext_def ethread_set_def set_eobject_def)
-  apply wp
-  apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def get_etcb_def default_etcb_def)
-  apply (erule domains_of_state_aux.cases)
-  apply (auto intro: domtcbs split: split_if_asm)
-  done
-
-lemma recycle_cap_pas_refined_pre:
-  "\<lbrace>pas_refined aag and pas_cur_domain aag and K (pas_cap_cur_auth aag cap)
-             and invs and cte_wp_at (op = cap) slot\<rbrace>
-       recycle_cap is_final cap
-   \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (simp add: recycle_cap_def)
-  apply (rule hoare_pre)
-apply (wpc 
-       | wp recycle_cap_ext_extended.pas_refined_tcb_domain_map_wellformed' gbn_wp
-            recycle_cap_ext_pas_refined thread_set_pas_refined_triv_idleT[where P=inactive and Q="op = None"]
-       | rule ball_tcb_cap_casesI
-       | clarsimp | simp add: default_tcb_def tcb_registers_caps_merge_def)+
-     apply (rename_tac word word3)
-     apply (rule_tac P="pas_refined aag and pas_cur_domain aag and K (is_subject aag word)" in hoare_strengthen_post[OF gts_sp])
-     apply (clarsimp simp: pred_tcb_def2)
-    apply (wp arch_recycle_cap_pas_refined[where slot=slot] | simp)+
-  apply (auto simp: aag_cap_auth_def cap_auth_conferred_def dest: aag_Control_into_owns)
   done
 
 (* The contents of the delete_access_control locale *)
@@ -1139,10 +987,10 @@ next
     done
 qed
 
-lemma nullcap_not_pg_cap : "is_pg_cap NullCap \<longrightarrow> has_recycle_rights NullCap" by (clarsimp simp: is_pg_cap_def)
-lemma zombie_not_pg_cap : "is_pg_cap (Zombie word x y) \<longrightarrow> has_recycle_rights (Zombie word x y)" by (clarsimp simp: is_pg_cap_def)
+lemma nullcap_not_pg_cap : "is_pg_cap NullCap \<longrightarrow> has_cancel_send_rights NullCap" by (clarsimp simp: is_pg_cap_def)
+lemma zombie_not_pg_cap : "is_pg_cap (Zombie word x y) \<longrightarrow> has_cancel_send_rights (Zombie word x y)" by (clarsimp simp: is_pg_cap_def)
 
-lemmas rec_del_has_recycle_rights' = rec_del_preserves_cte_zombie_null[where P="\<lambda>cap. is_pg_cap cap \<longrightarrow> has_recycle_rights cap", OF nullcap_not_pg_cap zombie_not_pg_cap]
+lemmas rec_del_has_cancel_send_rights' = rec_del_preserves_cte_zombie_null[where P="\<lambda>cap. is_pg_cap cap \<longrightarrow> has_cancel_send_rights cap", OF nullcap_not_pg_cap zombie_not_pg_cap]
 
 lemma rec_del_preserves_cte_zombie_null_insts:
   assumes P_Null: "P (NullCap)"
@@ -1156,7 +1004,7 @@ lemma rec_del_preserves_cte_zombie_null_insts:
    )+
 done
 
-lemmas rec_del_has_recycle_rights_insts = rec_del_preserves_cte_zombie_null_insts[where P="\<lambda>cap. is_pg_cap cap \<longrightarrow> has_recycle_rights cap", OF nullcap_not_pg_cap zombie_not_pg_cap]
+lemmas rec_del_has_cancel_send_rights_insts = rec_del_preserves_cte_zombie_null_insts[where P="\<lambda>cap. is_pg_cap cap \<longrightarrow> has_cancel_send_rights cap", OF nullcap_not_pg_cap zombie_not_pg_cap]
 
 lemma cap_revoke_preserves_cte_zombie_null:
   fixes p
@@ -1175,33 +1023,10 @@ proof (induct rule: cap_revoke.induct)
     done
 qed
 
-lemmas cap_revoke_has_recycle_rights' = cap_revoke_preserves_cte_zombie_null[where Q="\<lambda>cap. is_pg_cap cap \<longrightarrow> has_recycle_rights cap", OF nullcap_not_pg_cap zombie_not_pg_cap]
+lemmas cap_revoke_has_cancel_send_rights' = cap_revoke_preserves_cte_zombie_null[where Q="\<lambda>cap. is_pg_cap cap \<longrightarrow> has_cancel_send_rights cap", OF nullcap_not_pg_cap zombie_not_pg_cap]
 
-lemmas cap_revoke_has_recycle_rights
-    = cap_revoke_has_recycle_rights'[THEN use_spec(2), folded validE_R_def]
-
-lemma cap_recycle_respects[wp]:
-  "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action and real_cte_at slot and cte_wp_at has_recycle_rights slot
-              and K (is_subject aag (fst slot))\<rbrace>
-       cap_recycle slot \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (simp add: cap_recycle_def unless_def finalise_slot_def)
-  apply (rule hoare_pre)
-   apply (wp recycle_cap_respects_pre set_cap_integrity_autarch rec_del_respects
-             get_cap_auth_wp
-        | simp del: rec_del.simps)+
-    apply (rule_tac Q'="\<lambda>_. integrity aag X st and pas_refined aag and einvs
-                           and cte_wp_at (\<lambda>cap. is_pg_cap cap \<longrightarrow> has_recycle_rights cap) slot"
-                in hoare_post_imp_R)
-     apply (wp rec_del_respects rec_del_invs rec_del_has_recycle_rights_insts preemption_point_inv' | simp)+
-    apply (clarsimp simp: cte_wp_at_caps_of_state)
-    apply (auto elim: caps_of_state_valid)[1]
-   apply (simp add: conj_comms)
-   apply (wp cap_revoke_respects cap_revoke_pas_refined cap_revoke_invs
-             cap_revoke_has_recycle_rights
-               | strengthen real_cte_emptyable_strg | simp)+
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  done
+lemmas cap_revoke_has_cancel_send_rights
+    = cap_revoke_has_cancel_send_rights'[THEN use_spec(2), folded validE_R_def]
 
 lemma invoke_cnode_respects:
   "\<lbrace>integrity aag X st and authorised_cnode_inv aag ci
@@ -1213,53 +1038,14 @@ lemma invoke_cnode_respects:
             split: Invocations_A.cnode_invocation.split,
          safe)
   apply (wp get_cap_wp cap_insert_integrity_autarch
-            cap_revoke_respects cap_delete_respects cap_recycle_respects
+            cap_revoke_respects cap_delete_respects 
             | wpc | simp add: real_cte_emptyable_strg
-            | clarsimp simp: cte_wp_at_caps_of_state
+            | clarsimp simp: cte_wp_at_caps_of_state invs_valid_objs invs_sym_refs
                              cnode_inv_auth_derivations_def
-            | drule(2) auth_derived_caps_of_state_impls)+
+            | drule(2) auth_derived_caps_of_state_impls
+            | rule hoare_pre)+
+  apply (auto simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def)
   done
-
-lemma recycle_cap_cap_links:
-  "\<lbrace>\<lambda>s. cap_links_asid_slot aag slot cap\<rbrace>
-       recycle_cap is_final cap \<lbrace>\<lambda>rv s. cap_links_asid_slot aag slot rv\<rbrace>"
-  apply (simp add: recycle_cap_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps
-            | wpc | simp add: o_def arch_recycle_cap_def
-                         del: hoare_post_taut hoare_True_E_R split del: split_if)+
-  apply (auto simp: cap_links_asid_slot_def)
-  done
-
-lemma recycle_cap_cap_auth:
-  "\<lbrace>\<lambda>s. aag_cap_auth aag L cap\<rbrace> recycle_cap is_final cap \<lbrace>\<lambda>rv s. aag_cap_auth aag L rv\<rbrace>"
-  apply (simp add: recycle_cap_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps
-            | wpc | simp add: o_def arch_recycle_cap_def
-                         del: hoare_post_taut hoare_True_E_R split del: split_if)+
-  apply (auto simp add: cap_auth_conferred_def cap_links_asid_slot_def cap_links_irq_def aag_cap_auth_def is_page_cap_def split: split_if_asm)
-  done
-
-lemma cap_recycle_pas_refined:
-  "\<lbrace>pas_refined aag and pas_cur_domain aag and pas_cur_domain aag and einvs and simple_sched_action and real_cte_at slot
-         and K (is_subject aag (fst slot))\<rbrace> cap_recycle slot \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (simp add: cap_recycle_def unless_def)
-  apply (wp recycle_cap_pas_refined_pre[where slot=slot] recycle_cap_cap_links
-            recycle_cap_cap_auth get_cap_auth_wp [where aag = aag]
-       | simp)+
-   apply (rule hoare_post_impErr,
-          rule_tac Q="pas_refined aag and pas_cur_domain aag and invs" in valid_validE)
-     apply (simp only: finalise_slot_def)
-     apply (wp rec_del_respects rec_del_invs)
-    apply (simp add: cte_wp_at_caps_of_state)
-   apply simp
-  apply (simp add: integrity_def)
-  apply (rule hoare_pre)
-   apply (wp cap_revoke_pas_refined cap_revoke_invs
-              | strengthen real_cte_emptyable_strg | simp)+
-   done
 
 lemma invoke_cnode_pas_refined:
   "\<lbrace>pas_refined aag and pas_cur_domain aag and einvs and simple_sched_action and valid_cnode_inv ci and (\<lambda>s. is_subject aag (cur_thread s))
@@ -1269,7 +1055,7 @@ lemma invoke_cnode_pas_refined:
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
    apply (wp cap_insert_pas_refined cap_delete_pas_refined cap_revoke_pas_refined
-             get_cap_wp cap_recycle_pas_refined
+             get_cap_wp 
              | wpc
              | simp split del: split_if)+
   apply (cases ci, simp_all add: authorised_cnode_inv_def

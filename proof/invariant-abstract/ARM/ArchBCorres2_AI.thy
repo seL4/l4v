@@ -18,7 +18,7 @@ context Arch begin global_naming ARM
 named_theorems BCorres2_AI_assms
 
 crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: invoke_cnode truncate_state
-  (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set recycle_cap_ext)
+  (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set )
 
 crunch (bcorres)bcorres[wp]: create_cap,init_arch_objects,retype_region,delete_objects truncate_state
   (ignore: freeMemory clearMemory retype_region_ext)

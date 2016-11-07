@@ -21,7 +21,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread s)"
 (wp: OR_choiceE_weak_wp crunch_wps simp: crunch_simps ignore: do_extended_op OR_choiceE)
   
-crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cap_recycle "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
+crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
  
 lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   apply (rule cap_revoke_preservation2)
@@ -46,7 +46,7 @@ lemma preemption_point_domain_fields[wp]:
   apply(simp add: preemption_point_def | wp OR_choiceE_weak_wp modify_wp | wpc | simp add: reset_work_units_def update_work_units_def)+
   done
 
-crunch domain_fields[wp]: retype_region_ext,create_cap_ext,cap_insert_ext,ethread_set,recycle_cap_ext,cap_move_ext,empty_slot_ext,cap_swap_ext,set_thread_state_ext,tcb_sched_action,reschedule_required,cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cap_recycle,cap_insert "domain_fields P" (wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
+crunch domain_fields[wp]: retype_region_ext,create_cap_ext,cap_insert_ext,ethread_set,cap_move_ext,empty_slot_ext,cap_swap_ext,set_thread_state_ext,tcb_sched_action,reschedule_required,cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends,cap_insert "domain_fields P" (wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
 
 lemma cap_revoke_domain_fields[wp]:"\<lbrace>domain_fields P\<rbrace> cap_revoke a \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
   apply (rule cap_revoke_preservation2)
@@ -66,8 +66,8 @@ crunch domain_fields[wp]: set_domain,set_priority,switch_if_required_to,set_extr
  simp: crunch_simps check_cap_at_def filterM_mapM unless_def detype_def detype_ext_def mapM_x_defsym ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer ackInterrupt getFAR getDFSR getIFSR getActiveIRQ const_on_failure freeMemory)
 
 
-crunch cur_domain[wp]:  transfer_caps_loop, ethread_set, thread_set_priority, set_priority, set_domain, invoke_domain, cap_move_ext, recycle_cap_ext,timer_tick,
-   cap_move,cap_recycle, attempt_switch_to, switch_if_required_to
+crunch cur_domain[wp]:  transfer_caps_loop, ethread_set, thread_set_priority, set_priority, set_domain, invoke_domain, cap_move_ext,timer_tick,
+   cap_move,cancel_badged_sends, attempt_switch_to, switch_if_required_to
 
  "\<lambda>s. P (cur_domain s)" (wp: transfer_caps_loop_pres crunch_wps simp: crunch_simps filterM_mapM unless_def ignore: without_preemption filterM const_on_failure )
 

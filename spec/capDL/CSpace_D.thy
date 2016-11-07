@@ -508,74 +508,7 @@ where
 | "reset_mem_mapping (PageDirectoryCap ptr b ma) = PageDirectoryCap ptr b None"
 | "reset_mem_mapping cap = cap"
 
-definition
-  recycle_cap :: "bool \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap k_monad"
-where
-  "recycle_cap is_final cap \<equiv>
-  case cap of
-    NullCap \<Rightarrow> fail
-  | ZombieCap ptr \<Rightarrow> do
-      obj \<leftarrow> get_object ptr;
-      case obj of
-          Tcb tcb \<Rightarrow> do merge_with_dft_tcb ptr;
-                       cur_domain \<leftarrow> gets cdl_current_domain;
-                       update_thread ptr (\<lambda>t. t\<lparr>cdl_tcb_domain := cur_domain\<rparr>);
-                       return $ TcbCap ptr
-                    od
-        | CNode sz \<Rightarrow> return $ CNodeCap ptr 0 0 (cdl_cnode_size_bits sz)
-        | _ \<Rightarrow> fail
-    od
-  | EndpointCap ep b _ \<Rightarrow>
-    do
-      when (b \<noteq> 0) $ cancel_badged_sends ep b;
-      return cap
-    od
-  | PageTableCap ptr _ _ \<Rightarrow>
-    do
-      clear_object_caps ptr;
-      finalise_cap cap is_final;
-      return $ if is_final then reset_mem_mapping cap else cap
-    od
-  | PageDirectoryCap ptr _ _ \<Rightarrow>
-    do
-      clear_object_caps ptr;
-      finalise_cap cap is_final;
-      return $ if is_final then reset_mem_mapping cap else cap
-    od
-  | FrameCap _ ptr _ _ _ _ \<Rightarrow>
-    do
-      corrupt_frame ptr;
-      finalise_cap cap is_final;
-      return $ reset_mem_mapping cap
-    od
-  | AsidPoolCap ptr base \<Rightarrow>
-    do
-      delete_asid_pool base ptr;
-      clear_object_caps ptr;
-      asid_table \<leftarrow> gets cdl_asid_table;
-      asid_table' \<leftarrow> return $ asid_table (base \<mapsto> AsidPoolCap ptr 0);
-      modify (\<lambda>s. s \<lparr>cdl_asid_table := asid_table'\<rparr>);
-      return cap
-    od \<sqinter> return cap
-  | _ \<Rightarrow> return cap"
-
-definition
-  recycle_cap_ref :: "cdl_cap_ref \<Rightarrow> unit preempt_monad"
-where
- "recycle_cap_ref slot \<equiv> doE
-    revoke_cap slot;
-    finalise_slot slot;
-    liftE $ do
-      cap \<leftarrow> get_cap slot;
-      unless (cap = NullCap) $ do
-          is_final \<leftarrow> is_final_cap cap;
-          cap' \<leftarrow> recycle_cap is_final cap;
-          set_cap slot cap'
-      od
-    od
-  odE"
-
-
+ 
 (*
  * Walk a user's CSpace to convert a user's CPTR into a cap slot.
  *)

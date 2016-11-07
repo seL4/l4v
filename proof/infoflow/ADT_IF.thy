@@ -2929,20 +2929,6 @@ lemma finalise_slot_irq_state_inv:
   apply(simp add: finalise_slot_def | wp rec_del_irq_state_inv[folded validE_R_def])+
   by blast
 
-lemma cap_recycle_irq_state_inv:
-  "\<lbrace>irq_state_inv st and domain_sep_inv False sta and K (irq_is_recurring irq st)\<rbrace> 
-   cap_recycle blah \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>,\<lbrace>\<lambda>_. irq_state_next st\<rbrace>"     
-  apply(simp add: cap_recycle_def)
-  apply(rule hoare_pre)
-
-   apply(wp hoare_unless_wp  finalise_slot_irq_state_inv[where st=st and irq=irq] 
-            cap_revoke_irq_state_inv[folded validE_R_def] 
-        | simp add: conj_comms |  wp_once irq_state_inv_triv)+
-  apply(rule validE_validE_R[OF hoare_post_impErr, OF cap_revoke_domain_sep_inv], simp+)
-  apply(auto)
-  done
-
-
 
 lemma invoke_cnode_irq_state_inv:
   "\<lbrace>irq_state_inv st and domain_sep_inv False sta and
@@ -2953,7 +2939,7 @@ lemma invoke_cnode_irq_state_inv:
   apply(simp add: invoke_cnode_def)
   apply(rule hoare_pre)
    apply wpc
-         apply((wp cap_revoke_irq_state_inv' cap_delete_irq_state_inv hoare_vcg_all_lift cap_recycle_irq_state_inv | wpc | simp add: cap_move_def split del: split_if | wp_once irq_state_inv_triv | wp_once hoare_drop_imps)+)[7]
+         apply((wp cap_revoke_irq_state_inv' cap_delete_irq_state_inv hoare_vcg_all_lift | wpc | simp add: cap_move_def split del: split_if | wp_once irq_state_inv_triv | wp_once hoare_drop_imps)+)[7]
   apply fastforce
   done
 

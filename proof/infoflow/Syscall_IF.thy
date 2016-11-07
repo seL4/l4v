@@ -59,65 +59,17 @@ lemma thread_set_globals_equiv':
   apply(fastforce simp: valid_ko_at_arm_def obj_at_def get_tcb_def)+
   done
 
-lemma recycle_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and cte_wp_at (op = cap) slot and invs\<rbrace> recycle_cap is_final cap \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  proof -
-  have no_zombie_cap_to_idle: "\<And>word a b slot s. invs s \<Longrightarrow> \<not> cte_wp_at (op = (Zombie (idle_thread s) a b)) slot s"
-    apply (fastforce simp: invs_def
-                          valid_state_def valid_refs_def cte_wp_at_def
-                          cap_range_def
-                           valid_global_refs_def global_refs_def)
-  done
-  show ?thesis
-  unfolding recycle_cap_def
-  apply (induct cap)
-  apply simp_all
-  apply (wp cancel_badged_sends_globals_equiv
-            thread_set_globals_equiv' dxo_wp_weak
-            arch_recycle_cap_globals_equiv
-       | wpc
-       | clarsimp simp add: invs_valid_ko_at_arm recycle_cap_ext_def no_zombie_cap_to_idle split: option.splits
-       | intro impI conjI allI
-       | rule hoare_drop_imps)+
-
- apply blast
-done
-qed
-
-lemma recycle_cap_valid_global_objs:
-  "\<lbrace>invs and cte_wp_at (op = cap) slot\<rbrace> recycle_cap is_final cap \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
-  apply(rule hoare_pre)
-   apply(rule hoare_strengthen_post[OF recycle_cap_invs])
-   apply(simp add: invs_valid_global_objs)
-  apply blast
-  done
-
-lemma cap_recycle_globals_equiv:
-  "\<lbrace>invs and globals_equiv st and real_cte_at slot\<rbrace> cap_recycle slot \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding cap_recycle_def
-  apply (rule hoare_pre)
-   apply (wp set_cap_globals_equiv recycle_cap_globals_equiv recycle_cap_valid_global_objs get_cap_wp
-         | simp add: unless_def finalise_slot_def split_def split del: split_if)+
-     apply(rule hoare_post_impErr[OF valid_validE[where Q="invs and globals_equiv st"]])
-       apply(wp rec_del_invs rec_del_globals_equiv | simp)+
-      apply fastforce
-     apply simp
-    apply (wp set_cap_globals_equiv recycle_cap_globals_equiv recycle_cap_valid_global_objs get_cap_wp | simp add: unless_def finalise_slot_def split_def split del: split_if)+
-    apply(rule hoare_post_impErr[OF valid_validE[where Q="invs and globals_equiv st"]])
-      apply(wp rec_del_invs rec_del_globals_equiv | simp)+
-     apply fastforce
-    apply simp
-   apply (wp cap_revoke_invs cap_revoke_globals_equiv | strengthen real_cte_emptyable_strg | simp)+
-done
-
 lemma invoke_cnode_globals_equiv:
   "\<lbrace>globals_equiv st and invs and valid_cnode_inv cinv\<rbrace> invoke_cnode cinv \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding invoke_cnode_def without_preemption_def fun_app_def
   apply(rule hoare_pre)
    apply(wp | wpc)+
-          apply(wp cap_insert_globals_equiv cap_move_globals_equiv cap_revoke_globals_equiv cap_delete_globals_equiv cap_swap_globals_equiv hoare_vcg_all_lift cap_recycle_globals_equiv | wpc | wp_once hoare_drop_imps | simp add: invs_valid_global_objs)+
+          apply(wp cap_insert_globals_equiv cap_move_globals_equiv cap_revoke_globals_equiv 
+                   cap_delete_globals_equiv cap_swap_globals_equiv hoare_vcg_all_lift
+                   cancel_badged_sends_globals_equiv
+                    | wpc | wp_once hoare_drop_imps | simp add: invs_valid_global_objs)+
   apply (case_tac cinv)
-  apply (clarsimp | strengthen real_cte_emptyable_strg)+
+  apply (clarsimp simp: invs_valid_ko_at_arm | strengthen real_cte_emptyable_strg)+
 done
 
 (* The contents of the delete_confidentiality locale *)
@@ -210,43 +162,16 @@ qed
 
 lemmas cap_revoke_reads_respects_f = use_spec_ev[OF cap_revoke_spec_reads_respects_f]
 
-lemma recycle_cap_reads_respects:
-  notes gts_st_tcb_at[wp del]
-  shows
-  "reads_respects aag l (pas_refined aag and invs and
-     cte_wp_at (op = cap) slot and is_subject aag \<circ> cur_thread and
-     K (is_ep_cap cap \<or> is_pg_cap cap \<longrightarrow> has_recycle_rights cap) and
-     K (pas_cap_cur_auth aag cap))
-     (recycle_cap is_final cap)"
-  apply (rule gen_asm_ev)+
-  apply (simp add: recycle_cap_def)
-  apply (wp cancel_badged_sends_reads_respects thread_set_reads_respects
-            get_thread_state_rev ethread_set_reads_respects
-            get_bound_notification_reads_respects'
-    | simp add: when_def invs_valid_objs invs_sym_refs split: option.splits cap.splits
-    | elim conjE
-    | intro conjI impI allI
-    | (drule (2) aag_cap_auth_subject, simp add: pas_refined_refl)
-    | simp add: recycle_cap_ext_def requiv_cur_domain_eq
-    | (rule hoare_post_subst[where B="\<lambda>_. \<top>"], fastforce simp: fun_eq_iff)
-    )+
+lemma cancel_badged_sends_reads_respects_f:
+  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs
+                           and is_subject aag \<circ> cur_thread and
+                           K (is_subject aag ptr)) 
+   (cancel_badged_sends ptr badge)"
   apply (rule equiv_valid_guard_imp)
-   apply (wp arch_recycle_cap_reads_respects)
-  apply clarsimp
-  apply assumption
-  done
-
-lemma recycle_cap_reads_respects_f:
-  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and
-     cte_wp_at (op = cap) slot and is_subject aag \<circ> cur_thread and
-     K (is_ep_cap cap \<or> is_pg_cap cap \<longrightarrow> has_recycle_rights cap) and
-     K (pas_cap_cur_auth aag cap))
-     (recycle_cap is_final cap)"
-  apply(rule equiv_valid_guard_imp)
-   apply(rule reads_respects_f)
-    apply(rule recycle_cap_reads_respects)
-   apply(wp recycle_cap_silc_inv | simp | elim conjE, assumption)+
-   apply blast
+   apply (rule reads_respects_f)
+    apply (rule cancel_badged_sends_reads_respects)
+   apply (wp cancel_badged_sends_silc_inv[where st=st] | simp | elim conjE, assumption)+
+  apply (simp add: invs_valid_objs invs_sym_refs)
   done
 
 lemma rec_del_subject_cur_thread:
@@ -265,47 +190,6 @@ lemma cap_revoke_only_timer_irq_inv:
    apply (wp only_timer_irq_pres cap_revoke_irq_masks | force simp: only_timer_irq_inv_def)+
    done
 
-lemma cap_recycle_reads_respects_f:
-  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs
-                       and simple_sched_action
-                       and is_subject aag \<circ> cur_thread
-                       and cte_wp_at has_recycle_rights slot
-                       and real_cte_at slot and pas_refined aag
-                       and K (is_subject aag (fst slot)))
-    (cap_recycle slot)"
-  unfolding cap_recycle_def finalise_slot_def
-  apply (rule gen_asm_ev)
-  apply (wp set_cap_reads_respects_f[where aag=aag and slot=slot and st=st]
-            recycle_cap_reads_respects_f[where aag=aag and slot=slot]
-            is_final_cap_reads_respects[where aag=aag and slot=slot]
-            get_cap_auth_wp recycle_cap_ret_is_silc[where aag=aag, simplified]
-    | simp add: unless_def when_def
-    | drule sym, simp
-    | rule reads_respects_f[OF get_cap_rev, where Q="\<top>", simplified, OF get_cap_silc_inv, where aag=aag])+
-      apply (wp rec_del_reads_respects_f)
-     apply (rule_tac Q'="\<lambda>_. pas_refined aag and einvs and silc_inv aag st and is_subject aag \<circ> cur_thread and
-                          cte_wp_at (\<lambda>cap. is_pg_cap cap \<or> is_ep_cap cap \<longrightarrow> has_recycle_rights cap) slot" in hoare_post_imp_R)
-      apply (wp rec_del_respects rec_del_subject_cur_thread
-                rec_del_invs validE_validE_R'[OF rec_del_silc_inv]
-                rec_del_preserves_cte_zombie_null_insts[where P="(\<lambda>cap. is_pg_cap cap \<or> is_ep_cap cap \<longrightarrow> has_recycle_rights cap)"]
-                preemption_point_inv'
-           | simp | fastforce simp: is_pg_cap_def)+
-     apply (auto intro: caps_of_state_cteD dest: cte_wp_at_eqD2[OF caps_of_state_cteD])[1]
-    apply (simp
-         | elim conjE
-         | wp cap_revoke_reads_respects_f
-              cap_revoke_only_timer_irq_inv[where st=st' and irq=irq]
-              cap_revoke_pas_refined cap_revoke_invs validE_validE_R'[OF cap_revoke_silc_inv]
-              cap_revoke_preserves_cte_zombie_null[where Q="(\<lambda>cap. is_pg_cap cap \<or> is_ep_cap cap \<longrightarrow> has_recycle_rights cap)", THEN use_spec(2), folded validE_R_def, simplified]
-         | simp only: split_def 
-         | intro conjI impI
-         | simp
-         | strengthen real_cte_emptyable_strg | fastforce simp: is_pg_cap_def)+
-  apply (rule cte_wp_at_weakenE)
-   apply simp+
-  done
-
-
 lemma invoke_cnode_reads_respects_f:
   "reads_respects_f aag l
   (silc_inv aag st and only_timer_irq_inv irq st' and pas_refined aag and einvs
@@ -321,11 +205,14 @@ lemma invoke_cnode_reads_respects_f:
             cap_revoke_reads_respects_f cap_delete_reads_respects_f
             reads_respects_f[OF cap_swap_reads_respects] cap_swap_silc_inv
             cap_move_cte_wp_at_other reads_respects_f[OF get_cap_rev] get_cap_auth_wp
-            cap_recycle_reads_respects_f
-       | simp split del: split_if
+            cancel_badged_sends_reads_respects_f
+       | simp add:when_def split del: split_if
        | elim conjE, assumption)+
   apply (clarsimp simp: cnode_inv_auth_derivations_def authorised_cnode_inv_def)
-  apply (auto intro: real_cte_emptyable_strg[rule_format] simp: silc_inv_def reads_equiv_f_def requiv_cur_thread_eq cte_wp_at_weak_derived_ReplyCap caps_of_state_cteD)
+  apply (auto intro: real_cte_emptyable_strg[rule_format] 
+               simp: silc_inv_def reads_equiv_f_def requiv_cur_thread_eq 
+                     aag_cap_auth_recycle_EndpointCap
+                     cte_wp_at_weak_derived_ReplyCap caps_of_state_cteD)
   done
 
 lemma cap_swap_reads_respects_g:

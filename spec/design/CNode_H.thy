@@ -67,9 +67,6 @@ consts'
 cteDeleteOne :: "machine_word \<Rightarrow> unit kernel"
 
 consts'
-cteRecycle :: "machine_word \<Rightarrow> unit kernel_p"
-
-consts'
 createNewObjects :: "object_type \<Rightarrow> machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> unit kernel"
 
 consts'
@@ -221,10 +218,10 @@ defs decodeCNodeInvocation_def:
             ensureEmptySlot destSlot;
             returnOk $ SaveCaller destSlot
         odE)
-        | (_, CNodeRecycle, _, _) \<Rightarrow>   (doE
+        | (_, CNodeCancelBadgedSends, _, _) \<Rightarrow>   (doE
             cte \<leftarrow> withoutFailure $ getCTE destSlot;
-            unlessE (hasRecycleRights $ cteCap cte) $ throw IllegalOperation;
-            returnOk $ Recycle destSlot
+            unlessE (hasCancelSendRights $ cteCap cte) $ throw IllegalOperation;
+            returnOk $ CancelBadgedSends $ cteCap cte
         odE)
         | (_, CNodeRotate, pivotNewData#pivotIndex#pivotDepth#srcNewData#srcIndex#srcDepth#_, pivotRootCap#srcRootCap#_) \<Rightarrow>   (doE
             srcSlot \<leftarrow> lookupSourceSlot srcRootCap
@@ -262,7 +259,9 @@ defs invokeCNode_def:
 "invokeCNode x0\<equiv> (case x0 of
     (Revoke destSlot) \<Rightarrow>    cteRevoke destSlot
   | (Delete destSlot) \<Rightarrow>    cteDelete destSlot True
-  | (Recycle destSlot) \<Rightarrow>    cteRecycle destSlot
+  | (CancelBadgedSends (EndpointCap ptr b _ _ _)) \<Rightarrow>   
+    withoutPreemption $ unless (b = 0) $ cancelBadgedSends ptr b
+  | (CancelBadgedSends _) \<Rightarrow>    haskell_fail []
   | (Insert cap srcSlot destSlot) \<Rightarrow>   
     withoutPreemption $ cteInsert cap srcSlot destSlot
   | (Move cap srcSlot destSlot) \<Rightarrow>   
@@ -457,20 +456,6 @@ defs reduceZombie_def:
   odE)
   else   haskell_fail []
   )"
-
-defs cteRecycle_def:
-"cteRecycle slot\<equiv> (doE
-    cteRevoke slot;
-    finaliseSlot slot True;
-    withoutPreemption $ (do
-        cte \<leftarrow> getCTE slot;
-        unless (isNullCap $ cteCap cte) $ (do
-            is_final \<leftarrow> isFinalCapability cte;
-            cap \<leftarrow> recycleCap is_final $ cteCap cte;
-            updateCap slot cap
-        od)
-    od)
-odE)"
 
 defs createNewObjects_def:
 "createNewObjects newType srcSlot destSlots regionBase userSizeBits isDevice\<equiv> (do

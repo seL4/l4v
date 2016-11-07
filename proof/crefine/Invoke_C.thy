@@ -255,21 +255,39 @@ done
 
 (************************************************************************)
 (*                                                                      *)
-(* invokeCNodeRecycle_ccorres ********************************************)
+(* invokeCNodeCancelBadgedSends_ccorres *********************************)
 (*                                                                      *)
 (************************************************************************)
 
-lemma invokeCNodeRecycle_ccorres:
+lemma invokeCNodeCancelBadgedSends_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and sch_act_simple) (UNIV \<inter> {s. destSlot_' s = cte_Ptr destSlot}) []
-     (invokeCNode (Recycle destSlot)) 
-     (Call invokeCNodeRecycle_'proc)"
-  apply (cinit lift: destSlot_' simp del: return_bind cong:call_ignore_cong)
-   apply (rule ccorres_trim_returnE, simp, simp)
-   apply (rule ccorres_callE)
-       apply (rule cteRecycle_ccorres[simplified])
-      apply (simp add: from_bool_def true_def)+
-done
+     (invs' and sch_act_simple and valid_cap' cap and K (isEndpointCap cap)) (UNIV \<inter> {s. ccap_relation cap (cap_' s)}) []
+     (invokeCNode (CancelBadgedSends cap)) 
+     (Call invokeCNodeCancelBadgedSends_'proc)"
+  apply (simp)
+  apply (rule ccorres_gen_asm)
+  apply (clarsimp simp: isCap_simps)
+  apply (cinit lift: cap_' simp del: return_bind cong:call_ignore_cong)
+   apply (frule cap_get_tag_isCap_unfolded_H_cap)
+   apply (simp add: cap_get_tag_EndpointCap del: Collect_const)
+   apply csymbr
+   apply (simp add: unless_def liftE_def when_def Collect_True del: Collect_const)
+   apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
+       apply (rule_tac R=\<top> in ccorres_cond2)
+         apply (clarsimp simp: cap_get_tag_isCap[symmetric] simp del: Collect_const dest!: cap_get_tag_to_H)
+        apply (rule ccorres_rhs_assoc | csymbr)+
+        apply (ctac add: cancelBadgedSends_ccorres)
+       apply (rule ccorres_return_Skip)
+      apply ceqv
+     apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
+     apply (rule allI, rule conseqPre,vcg)
+     apply clarsimp
+     apply (simp add: return_def)
+    apply wp
+   apply (simp add: guard_is_UNIV_def)
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (clarsimp simp: valid_cap_simps' cap_get_tag_EndpointCap)
+  done
 
 
 
@@ -520,7 +538,7 @@ lemma label_in_CNodeInv_ranges:
 
 lemma cnode_invok_case_cleanup2:
   "i \<in> set [CNodeCopy .e. CNodeMutate] \<Longrightarrow>
-     (case i of CNodeRevoke \<Rightarrow> P | CNodeDelete \<Rightarrow> Q | CNodeRecycle \<Rightarrow> R
+     (case i of CNodeRevoke \<Rightarrow> P | CNodeDelete \<Rightarrow> Q | CNodeCancelBadgedSends \<Rightarrow> R
               | CNodeRotate \<Rightarrow> S | CNodeSaveCaller \<Rightarrow> T | _ \<Rightarrow> U) = U"
   apply (rule cnode_invok_case_cleanup)
   apply (simp add: upto_enum_def fromEnum_def toEnum_def
@@ -528,81 +546,22 @@ lemma cnode_invok_case_cleanup2:
   apply auto
   done
 
-lemma Arch_hasRecycleRights_spec:
-  "\<forall>cap. \<Gamma> \<turnstile> \<lbrace> ccap_relation (ArchObjectCap cap) \<acute>cap \<rbrace> 
-             Call Arch_hasRecycleRights_'proc 
-             \<lbrace> \<acute>ret__unsigned_long = from_bool (Arch.hasRecycleRights cap) \<rbrace>"
-  apply vcg
-  apply clarsimp
-  apply (rule conjI)
-   apply clarsimp
-   apply (frule cap_get_tag_PageCap_frame [THEN iffD1], assumption)
-   apply clarsimp
-   apply (drule ccap_relation_PageCap_generics)
-   apply (auto simp: ARM_H.hasRecycleRights_def 
-                         vmrights_to_H_def true_def false_def 
-                         vmrights_defs
-                   dest: less_4_cases
-                   split: if_splits)[1]
-  apply (rule conjI)
-   apply clarsimp
-   apply (frule cap_get_tag_PageCap_small_frame [THEN iffD1], assumption)
-   apply clarsimp
-   apply (drule ccap_relation_PageCap_generics)
-   apply (auto simp: ARM_H.hasRecycleRights_def 
-                         vmrights_to_H_def true_def false_def 
-                         vmrights_defs
-                   dest: less_4_cases
-                   split: if_splits)[1]
-  apply (case_tac cap,
-         auto simp: ARM_H.hasRecycleRights_def
-              dest: ccap_relation_frame_tags)[1]
-  done
-
-lemma hasRecycleRights_spec:
+lemma hasCancelSendRights_spec:
   "\<forall>cap. \<Gamma> \<turnstile> \<lbrace> ccap_relation cap \<acute>cap \<rbrace> 
-             Call hasRecycleRights_'proc 
-             \<lbrace> \<acute>ret__unsigned_long = from_bool (hasRecycleRights cap) \<rbrace>"
+             Call hasCancelSendRights_'proc 
+             \<lbrace> \<acute>ret__unsigned_long = from_bool (hasCancelSendRights cap) \<rbrace>"
   apply vcg
   apply (clarsimp simp: if_1_0_0)
   apply (rule conjI)
-   -- "DomainCap"
-   apply clarsimp
-   apply (drule (1) cap_get_tag_to_H)
-   apply (clarsimp simp: hasRecycleRights_def)
-  apply (rule conjI)
-   -- "NullCap"
-   apply clarsimp
-   apply (drule cap_get_tag_to_H, simp)
-   apply (clarsimp simp: hasRecycleRights_def)
-  apply (rule impI)
-  apply (rule conjI)
-   -- "EP"
    apply clarsimp 
    apply (drule sym, drule (1) cap_get_tag_to_H)
-   apply (clarsimp simp: hasRecycleRights_def to_bool_def 
+   apply (clarsimp simp: hasCancelSendRights_def to_bool_def 
                          true_def false_def 
                    split: split_if bool.splits)
   apply (rule impI)
-  apply (rule conjI)
-   -- "NTFN"
-   apply clarsimp 
-   apply (drule sym, drule (1) cap_get_tag_to_H)
-   apply (clarsimp simp: hasRecycleRights_def to_bool_def 
-                         true_def false_def 
-                   split: split_if bool.splits)
-  apply (rule impI)
-  apply (rule conjI)
-   -- "Arch"
-   apply (clarsimp simp: from_bool_neq_0)
-   apply (frule (1) cap_get_tag_isCap_ArchObject2_worker [rotated])
-    apply (rule refl)
-   apply (clarsimp simp: isCap_simps hasRecycleRights_def)
-   apply fastforce
-  -- "rest"
   apply (case_tac cap,
          auto simp: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs  
-                     from_bool_def false_def true_def hasRecycleRights_def
+                     from_bool_def false_def true_def hasCancelSendRights_def
               dest: cap_get_tag_isArchCap_unfolded_H_cap
               split: capability.splits bool.splits)[1]
   done
@@ -620,6 +579,11 @@ lemma ctes_of_valid_strengthen:
   apply fastforce
   done
 
+(* FIXME move: *)
+lemma hoare_vcg_imp_lift_R:
+  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, -; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, - \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, -"
+  by (auto simp add: valid_def validE_R_def validE_def split_def split: sum.splits)
+  
 lemma decodeCNodeInvocation_ccorres:
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
@@ -1121,38 +1085,46 @@ lemma decodeCNodeInvocation_ccorres:
             apply (rule ccorres_rhs_assoc)+
             apply (simp only: liftE_bindE)
             apply (rule ccorres_pre_getCTE)
+            apply csymbr
             apply (rule ccorres_move_c_guard_cte)
-            apply (rule ccorres_symb_exec_r) 
-              apply (rule_tac xf'=ret__unsigned_long_' in ccorres_abstract, ceqv)
-              apply (rule_tac P="rv' = from_bool (hasRecycleRights (cteCap rva))"
-                          in ccorres_gen_asm2)
-              apply (simp del: Collect_const) 
-              apply (rule ccorres_Cond_rhs_Seq)               
-               apply (simp add: unlessE_def whenE_def injection_handler_throwError
-                                dc_def[symmetric] from_bool_0) 
-               apply (rule syscall_error_throwError_ccorres_n)
-               apply (simp add: syscall_error_to_H_cases)
-              apply (simp add: unlessE_def whenE_def injection_handler_returnOk 
-                               from_bool_neq_0
-                          del: Collect_const)
-              apply (simp add: unlessE_def injection_handler_returnOk
-                               ccorres_invocationCatch_Inr
-                               performInvocation_def bindE_assoc)
-              apply (ctac add: setThreadState_ccorres)
-                apply (ctac(no_vcg) add: invokeCNodeRecycle_ccorres)
-                  apply (rule ccorres_alternative2)
-                  apply (rule ccorres_return_CE, simp+)[1]
-                 apply (rule ccorres_return_C_errorE, simp+)[1]
-                apply (wp sts_invs_minor')
-              apply (simp add: Collect_const_mem)
-              apply (vcg exspec=setThreadState_modifies)
-             apply (simp add: Collect_const_mem)
-             apply vcg
-            apply (rule conseqPre, vcg, clarsimp)
-            apply fastforce
-           apply (vcg exspec=setThreadState_modifies 
-                      exspec=invokeCNodeRecycle_modifies 
-                      exspec=hasRecycleRights_modifies)
+            apply (rule ccorres_symb_exec_r)
+              apply (rule_tac xf'=destCap_' in ccorres_abstract, ceqv)
+              apply (rule_tac P="ccap_relation (cteCap rva) rv'" in ccorres_gen_asm2)
+              apply (rule ccorres_symb_exec_r)
+                apply (rule_tac xf'=ret__unsigned_long_' in ccorres_abstract, ceqv)
+                apply (rule_tac P="rv'a = from_bool (hasCancelSendRights (cteCap rva))"
+                               in ccorres_gen_asm2)
+                apply (simp del: Collect_const)
+                apply (rule ccorres_Cond_rhs_Seq)
+                 apply (simp add: unlessE_def whenE_def injection_handler_throwError
+                                  dc_def[symmetric] from_bool_0)
+                 apply (rule syscall_error_throwError_ccorres_n)
+                 apply (simp add: syscall_error_to_H_cases)
+                apply (simp add: unlessE_def whenE_def injection_handler_returnOk
+                                 from_bool_neq_0
+                            del: Collect_const)
+                apply (simp add: unlessE_def injection_handler_returnOk
+                                 ccorres_invocationCatch_Inr
+                                 performInvocation_def bindE_assoc)
+                apply (ctac add: setThreadState_ccorres)
+                  apply (ctac(no_vcg) add: invokeCNodeCancelBadgedSends_ccorres)
+                    apply (rule ccorres_alternative2)
+                    apply (rule ccorres_return_CE, simp+)[1]
+                   apply (rule ccorres_return_C_errorE, simp+)[1]
+                  apply (wp sts_invs_minor')
+                apply (simp add: Collect_const_mem)
+                apply (vcg exspec=setThreadState_modifies)
+               apply (simp add: Collect_const_mem)
+               apply vcg
+              apply (rule conseqPre, vcg, clarsimp)
+              apply fastforce
+             apply (vcg)
+            apply (simp del: Collect_const)
+            apply (rule conseqPre, vcg)
+            apply (simp del: Collect_const)
+           apply (vcg exspec=setThreadState_modifies
+                      exspec=invokeCNodeCancelBadgedSends_modifies
+                      exspec=hasCancelSendRights_modifies)
           apply (simp del: Collect_const)
           apply (rule ccorres_Cond_rhs_Seq)
            apply (simp del: Collect_const)
@@ -1411,8 +1383,11 @@ lemma decodeCNodeInvocation_ccorres:
           apply (rule ccorres_return_C_errorE, simp+)[1]
          apply vcg
         apply simp
-        apply (wp injection_wp_E[OF refl] hoare_vcg_const_imp_lift_R
-                  hoare_vcg_all_lift_R lsfco_cte_at' static_imp_wp | wp_once hoare_drop_imps)+
+        apply (wp injection_wp_E[OF refl] hoare_vcg_const_imp_lift_R 
+                  hoare_vcg_all_lift_R lsfco_cte_at' static_imp_wp  
+                | simp add: hasCancelSendRights_not_Null ctes_of_valid_strengthen 
+                      cong: conj_cong
+                | wp_once hoare_drop_imps)+
        apply (simp add: all_ex_eq_helper)
        apply (vcg exspec=lookupTargetSlot_modifies)
       apply simp
@@ -1445,13 +1420,13 @@ lemma decodeCNodeInvocation_ccorres:
             | clarsimp simp: rightsFromWord_wordFromRights
                              ccte_relation_def c_valid_cte_def
                              cl_valid_cte_def c_valid_cap_def
-                             map_option_Some_eq2 neq_Nil_conv
-                             ccap_relation_def numeral_eqs
+                             map_option_Some_eq2 neq_Nil_conv ccap_relation_def
+                             numeral_eqs hasCancelSendRights_not_Null
                              ccap_relation_NullCap_iff[symmetric]
                              if_1_0_0 interpret_excaps_test_null
                              mdbRevocable_CL_cte_to_H false_def true_def
-            | clarsimp simp: typ_heap_simps'
-            | frule length_ineq_not_Nil)+)  
+            | clarsimp simp: typ_heap_simps' 
+            | frule length_ineq_not_Nil)+)
   done
 
 end

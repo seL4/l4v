@@ -40,7 +40,7 @@ datatype cnode_invocation =
   | DeleteCall cslot_ptr
   | RotateCall cap cap cslot_ptr cslot_ptr cslot_ptr
   | SaveCall cslot_ptr
-  | RecycleCall cslot_ptr 
+  | CancelBadgedSendsCall cap
 
 datatype untyped_invocation =
     Retype cslot_ptr bool obj_ref obj_ref apiobject_type nat "cslot_ptr list" bool

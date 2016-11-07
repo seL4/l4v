@@ -2044,10 +2044,6 @@ lemma thread_set_state_eq_valid_sched:
   apply (wp thread_set_state_eq_valid_queues thread_set_state_eq_valid_blocked thread_set_state_eq_valid_sched_action thread_set_state_eq_ct_in_cur_domain | simp)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-crunch valid_sched[wp]: arch_recycle_cap valid_sched (wp: crunch_wps simp: unless_def)
-end
-
 crunch exst[wp]: thread_set "\<lambda>s. P (exst s)"
 
 lemma ethread_set_not_switch_switch_in_cur_domain:
@@ -2099,37 +2095,6 @@ lemma thread_set_st_tcb_at:
   \<Longrightarrow> \<lbrace>\<top>\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. st_tcb_at P tptr\<rbrace>"
   apply (simp add: thread_set_def set_object_def, wp)
   apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
-  done
-
-lemma recycle_cap_ext_valid_sched[wp]:
-  "\<lbrace>valid_sched and valid_idle and st_tcb_at inactive t\<rbrace> recycle_cap_ext t \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-apply (simp add: recycle_cap_ext_def)
-apply (wp ethread_set_inactive_valid_sched)
-done
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-lemma recycle_cap_valid_sched[wp]:
-  "\<lbrace>valid_sched and valid_idle\<rbrace> recycle_cap is_final cap \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  apply (rule hoare_pre)
-   apply (simp add: recycle_cap_def)
-   apply (simp add: tcb_registers_caps_merge_def default_tcb_def
-         | wp thread_set_state_eq_valid_sched gts_wp
-         | wpc)+
-        apply (simp add: recycle_cap_def tcb_registers_caps_merge_def default_tcb_def
-        | wp thread_set_state_eq_valid_sched gts_wp ethread_set_inactive_valid_sched
-             thread_set_not_idle_valid_idle thread_set_st_tcb_at gbn_wp | wpc)+
-  apply (force simp: valid_idle_def pred_tcb_at_def obj_at_def valid_etcbs_def is_etcb_at_def)
-  done
-end
-
-lemma cap_recycle_valid_sched[wp]:
-  "\<lbrace>valid_sched and invs and simple_sched_action and real_cte_at slot\<rbrace> cap_recycle slot \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  apply (rule hoare_pre)
-  apply (simp add: cap_recycle_def unless_def finalise_slot_def | wp)+
-     apply (rule_tac Q="\<lambda>_. invs and valid_sched" in hoare_strengthen_post)
-      apply (wp rec_del_invs | simp add: invs_valid_idle)+
-   apply (wp cap_revoke_invs | strengthen real_cte_emptyable_strg)+
-  apply clarsimp
   done
 
 crunch valid_sched[wp]: cap_move valid_sched

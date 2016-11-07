@@ -17,14 +17,10 @@ imports Invocations_D CSpace_D
 begin
 
 definition
-  has_recycle_rights :: "cdl_cap \<Rightarrow> bool" where
-  "has_recycle_rights cap \<equiv> case cap of
-     NullCap \<Rightarrow> False
-   | EndpointCap _ _ R \<Rightarrow> R = UNIV
-   | NotificationCap _ _ R \<Rightarrow> {Read,Write} \<subseteq> R
-   | FrameCap _ _ R _ _ _ \<Rightarrow> {Read,Write} \<subseteq> R
-   | DomainCap \<Rightarrow> False
-   | _ \<Rightarrow> True"
+  has_cancel_send_rights :: "cdl_cap \<Rightarrow> bool" where
+  "has_cancel_send_rights cap \<equiv> case cap of
+   EndpointCap _ _ R \<Rightarrow> R = UNIV
+   | _ \<Rightarrow> False"
 
 definition
   decode_cnode_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
@@ -116,12 +112,12 @@ where
          odE
 
      (* Recycle the target cap. *)
-     | CNodeRecycleIntent index depth \<Rightarrow>
+     | CNodeCancelBadgedSendsIntent index depth \<Rightarrow>
          doE
            target_slot \<leftarrow> lookup_slot_for_cnode_op target index (unat depth);
            cap \<leftarrow> liftE $ get_cap target_slot;
-           unlessE (has_recycle_rights cap) throw;
-           returnOk $ RecycleCall target_slot
+           unlessE (has_cancel_send_rights cap) throw;
+           returnOk $ CancelBadgedSendsCall cap
          odE
 
      (* Atomically move several caps. *)
@@ -202,8 +198,8 @@ where
         od
 
     (* Reset an object into its original state. *)
-    | RecycleCall target \<Rightarrow>
-          recycle_cap_ref target
+    | CancelBadgedSendsCall (EndpointCap ep b _) \<Rightarrow> liftE $ when (b \<noteq> 0) $ cancel_badged_sends ep b
+    | CancelBadgedSendsCall _ \<Rightarrow> fail
   "
 
 end

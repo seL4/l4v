@@ -113,26 +113,10 @@ lemma cap_revoke_domain_list_inv[wp]:
   by (rule cap_revoke_preservation2)
      (wp preemption_point_inv'|simp)+
 
-crunch domain_list_inv[wp]: recycle_cap_ext "\<lambda>s. P (domain_list s)"
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunch domain_list_inv[wp]: arch_recycle_cap "\<lambda>s. P (domain_list s)"
-  (ignore: filterM clearMemory recycle_cap_ext
-     simp: filterM_mapM crunch_simps
-       wp: crunch_wps hoare_unless_wp)
-
-end
-
-crunch domain_list_inv[wp]: recycle_cap "\<lambda>s. P (domain_list s)"
-  (ignore: filterM clearMemory recycle_cap_ext
+crunch domain_list_inv[wp]: cancel_badged_sends "\<lambda>s. P (domain_list s)"
+  (ignore: filterM clearMemory
      simp: filterM_mapM crunch_simps
        wp: crunch_wps)
-
-crunch domain_list_inv[wp]: cap_recycle "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps preemption_point_inv'
-   simp: crunch_simps filterM_mapM unless_def
-   ignore: without_preemption filterM recycle_cap_ext)
 
 lemma invoke_cnode_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s :: det_ext state. P (domain_list s)\<rbrace>
@@ -276,26 +260,11 @@ lemma cap_revoke_domain_time_inv[wp]:
   apply (wp preemption_point_inv'|simp)+
   done
 
-crunch domain_time_inv[wp]: recycle_cap_ext "\<lambda>s. P (domain_time s)"
-
-context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunch domain_time_inv[wp]: arch_recycle_cap "\<lambda>s. P (domain_time s)"
-  (ignore: filterM clearMemory recycle_cap_ext
-     simp: filterM_mapM crunch_simps
-       wp: crunch_wps hoare_unless_wp)
-
-end
-
-crunch domain_time_inv[wp]: recycle_cap "\<lambda>s. P (domain_time s)"
-  (ignore: filterM clearMemory recycle_cap_ext
+crunch domain_time_inv[wp]: cancel_badged_sends "\<lambda>s. P (domain_time s)"
+  (ignore: filterM clearMemory 
      simp: filterM_mapM crunch_simps
        wp: crunch_wps)
-
-crunch domain_time_inv[wp]: cap_recycle "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps preemption_point_inv'
-   simp: crunch_simps filterM_mapM unless_def
-   ignore: without_preemption filterM recycle_cap_ext)
+  
 
 lemma invoke_cnode_domain_time_inv[wp]:
   "\<lbrace>\<lambda>s :: det_ext state. P (domain_time s)\<rbrace>

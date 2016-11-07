@@ -312,9 +312,9 @@ definition
     | CNodeDelete \<Rightarrow>
           map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeDeleteIntent args)
-    | CNodeRecycle \<Rightarrow>
+    | CNodeCancelBadgedSends \<Rightarrow>
           map_option CNodeIntent
-                   (transform_cnode_index_and_depth CNodeRecycleIntent args)
+                   (transform_cnode_index_and_depth CNodeCancelBadgedSendsIntent args)
     | CNodeCopy \<Rightarrow>
           map_option CNodeIntent
                    (transform_intent_cnode_copy args)
@@ -396,7 +396,7 @@ lemma transform_tcb_intent_invocation:
     label \<noteq> UntypedRetype \<and>
     label \<noteq> CNodeRevoke \<and>
     label \<noteq> CNodeDelete \<and>
-    label \<noteq> CNodeRecycle \<and>
+    label \<noteq> CNodeCancelBadgedSends \<and>
     label \<noteq> CNodeCopy \<and>
     label \<noteq> CNodeMint \<and>
     label \<noteq> CNodeMove \<and>
@@ -479,7 +479,7 @@ lemma transform_intent_isnot_CNodeIntent:
       "(\<not> (\<exists> ui. Some (CNodeIntent ui) = transform_intent label args))
        = ((label = CNodeRevoke \<longrightarrow> length args < 2) \<and>
           (label = CNodeDelete \<longrightarrow> length args < 2) \<and>
-          (label = CNodeRecycle \<longrightarrow> length args < 2) \<and>
+          (label = CNodeCancelBadgedSends \<longrightarrow> length args < 2) \<and>
           (label = CNodeCopy \<longrightarrow> length args < 5) \<and>
           (label = CNodeMint \<longrightarrow> length args < 6) \<and>
           (label = CNodeMove \<longrightarrow> length args < 4) \<and>

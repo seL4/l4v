@@ -2002,55 +2002,6 @@ crunch pspace_aligned'[wp]:
 
 thm vs_valid_duplicates'_def
 
-lemma recycleCap_valid_duplicates'[wp]:
-  "\<lbrace>\<lambda>s. valid_objs' s \<and> pspace_aligned' s \<and> vs_valid_duplicates' (ksPSpace s) 
-    \<and> valid_cap' cte s \<and> pspace_aligned' s\<rbrace>
-   recycleCap is_final cte
-  \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (case_tac cte)
-  apply (simp_all add: isCap_simps recycleCap_def)
-           apply (wp|simp|wpc)+
-       apply (rule hoare_pre)
-        apply (wp hoare_drop_imp|simp|wpc)+
-      apply (rename_tac arch_capability)
-      apply (case_tac arch_capability)
-          apply (simp add: ARM_H.recycleCap_def Let_def isCap_simps
-                split del: split_if | wp hoare_drop_imps hoare_vcg_all_lift hoare_unless_wp  | wpc | fastforce)+
-         apply (rename_tac word option)
-         apply (rule_tac Q = "\<lambda>r s. valid_objs' s \<and>
-           pspace_aligned' s \<and>
-           vs_valid_duplicates' (ksPSpace s) \<and>
-           s \<turnstile>' capability.ArchObjectCap (arch_capability.PageTableCap word option)"
-           in hoare_post_imp)
-         apply (clarsimp simp:conj_comms)
-         apply (rule hoare_vcg_conj_lift[OF mapM_x_wp'])
-          apply (simp add:valid_pte'_def|wp)+
-         apply (rule hoare_vcg_conj_lift[OF mapM_x_wp'])
-          apply (simp add:valid_pte'_def|wp)+
-         apply (wp mapM_x_storePTE_invalid_whole)
-          apply (wp mapM_x_wp'|simp)+
-         apply fastforce
-        apply (simp add: ARM_H.recycleCap_def Let_def isCap_simps
-              split del: split_if | wp hoare_drop_imps hoare_vcg_all_lift | wpc)+
-        apply (rename_tac word option)
-        apply (clarsimp simp:conj_comms)
-        apply (rule_tac Q = "\<lambda>r s. valid_objs' s \<and>
-          pspace_aligned' s \<and>
-          vs_valid_duplicates' (ksPSpace s) \<and>
-          s \<turnstile>' capability.ArchObjectCap (arch_capability.PageDirectoryCap word option)"
-           in hoare_post_imp)
-         apply (clarsimp simp:conj_comms)
-        apply (rule hoare_pre)
-         apply (rule hoare_vcg_conj_lift[OF mapM_x_wp'])
-          apply (simp add:valid_pte'_def|wp)+
-         apply (rule hoare_vcg_conj_lift[OF mapM_x_wp'])
-          apply (simp add:valid_pte'_def|wp)+
-         apply (wp mapM_x_storePDE_update_invalid)
-         apply (wp mapM_x_wp' | simp)+
-        apply fastforce
-     apply (simp|wp)+
-  done
-
 crunch valid_duplicates'[wp]:
   isFinalCapability "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def 
@@ -2094,24 +2045,7 @@ lemma invokeCNode_valid_duplicates'[wp]:
       apply (simp add:invs_valid_objs' invs_pspace_aligned')
      apply (clarsimp simp add:invokeCNode_def | wp | intro conjI)+
     apply (rule hoare_pre)
-    apply (simp add:cteRecycle_def)
-    apply (wp hoare_unless_wp isFinalCapability_inv)
-      apply (rule hoare_post_imp
-        [where Q ="\<lambda>r s. valid_cap' (cteCap r) s 
-          \<and> vs_valid_duplicates' (ksPSpace s) \<and> valid_objs' s 
-          \<and> pspace_aligned' s"])
-       apply simp
-      apply (wp getCTE_valid_cap)
-      apply (clarsimp simp:conj_comms)
-      apply (rule hoare_post_impErr[OF valid_validE])
-        apply (rule finaliseSlot_valid_duplicates')
-       apply (simp add:invs_pspace_aligned' invs_valid_objs')
-      apply simp
-     apply (rule hoare_post_impErr[OF valid_validE])
-       apply (rule cteRevoke_valid_duplicates')
-      apply simp
-     apply simp
-    apply (simp add:invs_valid_objs' invs_pspace_aligned')
+    apply (wp hoare_unless_wp | wpc | simp)+
    apply (simp add:invokeCNode_def)
    apply (wp getSlotCap_inv hoare_drop_imp
      |simp add:locateSlot_conv getThreadCallerSlot_def

@@ -1686,45 +1686,6 @@ lemma cancelBadgedSends_no_orphans [wp]:
 
 crunch no_orphans [wp]: invalidateTLBByASID "no_orphans"
 
-lemma arch_recycleCap_no_orphans:
-  "\<lbrace> \<lambda>s. cte_wp_at' (\<lambda>cte. cteCap cte = ArchObjectCap cap) slot s
-         \<and> invs' s \<and> no_orphans s \<rbrace>
-   Arch.recycleCap is_final cap
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (simp add: ARM_H.recycleCap_def
-              split del: split_if)
-  apply (rule hoare_pre)
-   apply (wp mapM_x_wp' static_imp_wp hoare_unless_wp | wpc | clarsimp simp: Let_def split del: split_if)+
-      apply (rule_tac Q="\<lambda>rv s. no_orphans s" in hoare_post_imp)
-       apply (clarsimp simp: no_orphans_def all_queued_tcb_ptrs_def
-                             all_active_tcb_ptrs_def is_active_tcb_ptr_def)
-      apply (wp undefined_valid | clarsimp)+
-  done
-
-lemma recycleCap_no_orphans:
-  "\<lbrace> \<lambda>s. cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s \<and> no_orphans s \<and> invs' s \<rbrace>
-   recycleCap is_final cap
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (simp add: recycleCap_def Let_def
-              cong: if_cong split del: split_if)
-  apply (rule hoare_pre)
-   apply (wp threadSet_no_orphans hoare_drop_imps arch_recycleCap_no_orphans[where slot=slot] | wpc
-             | clarsimp simp: is_active_thread_state_def makeObject_tcb isRunning_def isRestart_def)+
-  apply (auto simp: isCap_simps)
-  done
-
-lemma cteRecycle_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<rbrace>
-   cteRecycle ptr
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding cteRecycle_def
-  apply (rule hoare_pre)
-   apply (wp weak_if_wp recycleCap_no_orphans[where slot=ptr] isFinalCapability_inv
-             finaliseSlot_invs hoare_drop_imps getCTE_wp'
-             | clarsimp simp: unless_def cte_wp_at_ctes_of)+
-   apply (wp cteRevoke_sch_act_simple cteRevoke_invs' | clarsimp)+
-  done
-
 crunch no_orphans [wp]: handleFaultReply "no_orphans"
 
 crunch valid_queues' [wp]: handleFaultReply "valid_queues'"
@@ -1891,7 +1852,8 @@ lemma invokeCNode_no_orphans [wp]:
    \<lbrace> \<lambda>rv. no_orphans \<rbrace>"
   unfolding invokeCNode_def
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps | wpc | clarsimp split del: split_if)+
+   apply (wp hoare_drop_imps hoare_unless_wp | wpc | clarsimp split del: split_if)+
+  apply (simp add: invs_valid_queues')
   done
 
 lemma invokeIRQControl_no_orphans [wp]:

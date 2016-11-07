@@ -32,8 +32,6 @@ requalify_consts
   arch_is_physical
   arch_same_region_as
   same_aobject_as
-  arch_has_recycle_rights
-  arch_recycle_cap
 
   msg_max_length
   cap_transfer_data_size
@@ -798,7 +796,11 @@ definition
   od"
 
 
-section {* Recycling capabilities *}
+definition
+  has_cancel_send_rights :: "cap \<Rightarrow> bool" where
+  "has_cancel_send_rights cap \<equiv> case cap of
+   EndpointCap _ _ R \<Rightarrow> R = all_rights
+   | _ \<Rightarrow> False"
 
 text {* Overwrite the capabilities stored in a TCB while preserving the register
 set and other fields. *}
@@ -811,61 +813,6 @@ where
            tcb_reply := tcb_reply captcb,
            tcb_caller := tcb_caller captcb,
            tcb_ipcframe := tcb_ipcframe captcb \<rparr>"
-
-text {* Restore a finalised capability to its original form and also restore
-some aspects of the associated object to their original state. *}
-definition
-  recycle_cap :: "bool \<Rightarrow> cap \<Rightarrow> (cap,'z::state_ext) s_monad" where
-  "recycle_cap is_final cap \<equiv>
-  case cap of
-    NullCap \<Rightarrow> fail
-  | DomainCap \<Rightarrow> return cap
-  | Zombie ptr tp n \<Rightarrow>
-    (case tp of
-          None \<Rightarrow> do
-            st \<leftarrow> get_thread_state ptr;
-            ntfn \<leftarrow> get_bound_notification ptr;
-            assert (st = Inactive \<and> ntfn = None);
-            thread_set (tcb_registers_caps_merge default_tcb) ptr;
-            do_extended_op (recycle_cap_ext ptr);
-            return $ ThreadCap ptr
-          od
-        | Some sz \<Rightarrow> return $ CNodeCap ptr sz [])
-  | EndpointCap ep b _ \<Rightarrow>
-    do
-      when (b \<noteq> 0) $ cancel_badged_sends ep b;
-      return cap
-    od
-  | ArchObjectCap c \<Rightarrow> liftM ArchObjectCap $ arch_recycle_cap is_final c
-  | _ \<Rightarrow> return cap"
-
-text {* Recycle the capability stored in a slot, including finalising it as
-though it were to be deleted and then restoring it to its original state. *}
-definition
-  cap_recycle :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad" where
-  "cap_recycle slot \<equiv> doE
-    cap_revoke slot;
-    finalise_slot slot True;
-    without_preemption $ do
-        cap \<leftarrow> get_cap slot;
-        unless (cap = NullCap) $ do
-            is_final' \<leftarrow> is_final_cap cap;
-            cap' \<leftarrow> recycle_cap is_final' cap;
-            set_cap cap' slot
-        od
-    od
-  odE"
-
-text {* Only caps with sufficient rights can be recycled. *}
-definition
-  has_recycle_rights :: "cap \<Rightarrow> bool" where
-  "has_recycle_rights cap \<equiv> case cap of
-     NullCap \<Rightarrow> False
-   | DomainCap \<Rightarrow> False
-   | EndpointCap _ _ R \<Rightarrow> R = all_rights
-   | NotificationCap _ _ R \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
-   | ArchObjectCap ac \<Rightarrow> arch_has_recycle_rights ac
-   | _ \<Rightarrow> True"
 
 section {* Invoking CNode capabilities *}
 
@@ -901,7 +848,9 @@ definition
           NullCap \<Rightarrow> return ()
         | ReplyCap _ False \<Rightarrow> cap_move cap src_slot slot
         | _ \<Rightarrow> fail) od
-  | RecycleCall slot \<Rightarrow> cap_recycle slot"
+  | CancelBadgedSendsCall (EndpointCap ep b R) \<Rightarrow> 
+    without_preemption $ when (b \<noteq> 0) $ cancel_badged_sends ep b
+  | CancelBadgedSendsCall _ \<Rightarrow> fail"
 
 
 section "Cap classification used to define invariants"

@@ -1187,31 +1187,6 @@ lemma without_preemption_idle:
   \<Longrightarrow> \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> without_preemption g \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
   by (clarsimp simp:without_preemption_def liftE_def | wp)+
 
-lemma cap_recycle_idle:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> cap_recycle pa \<lbrace>\<lambda>r s. P (idle_thread (s :: det_ext state))\<rbrace>"
-  apply (simp add:cap_recycle_def unless_def)
-      apply (wp)
-       apply (case_tac cap)
-        apply (wp|clarsimp simp:recycle_cap_def)+
-   apply (rule hoare_pre)
-    apply (wpc|wp|clarsimp)+
-    apply (rule hoare_drop_imp)
-    apply (wp|clarsimp)+
-    apply (simp add:recycle_cap_def arch_recycle_cap_def split del: split_if)
-      apply wp
-      apply (rule hoare_pre)
-      apply (wpc|wp|clarsimp)+
-        apply (rule_tac Q = "\<lambda>rv s. P (idle_thread s)" in hoare_strengthen_post)
-      apply (wp mapM_x_wp hoare_unless_wp | clarsimp | wpc)+
-    apply assumption
-    apply (wpc | wp mapM_x_wp' | clarsimp)+
-    apply (simp add:validE_def finalise_slot_def)
-    apply (rule rec_del_preservation)
-    apply (wp | simp)+
-  apply (rule cap_revoke_preservation)
-  apply (wp | simp)+
-done
-
 lemma invoke_cnode_idle:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_cnode pa \<lbrace>\<lambda>r s. P (idle_thread (s :: det_ext state))\<rbrace>"
   apply (case_tac pa)
@@ -1225,8 +1200,8 @@ lemma invoke_cnode_idle:
      apply wp
     apply clarsimp+
   apply (clarsimp simp:invoke_cnode_def)
-  apply (wp cap_recycle_idle)
-done
+  apply (wp | wpc | simp | rule hoare_pre)+
+  done
 
 crunch idle[wp] : arch_perform_invocation "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps Retype_A.detype_def ignore:clearMemory)
@@ -1298,9 +1273,6 @@ lemma set_thread_state_ct_active:
   apply (wp dxo_wp_weak
        | clarsimp simp: set_object_def trans_state_def ct_in_state_def st_tcb_at_def obj_at_def)+
   done
-
-crunch valid_etcbs[wp]: cap_recycle valid_etcbs
-(simp: unless_def ignore: without_preemption)
 
 lemma invoke_cnode_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> invoke_cnode ci \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"

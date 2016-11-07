@@ -58,8 +58,8 @@ where
 | "valid_cnode_inv (SaveCall ptr) =
    (ex_cte_cap_wp_to is_cnode_cap ptr and
     cte_wp_at (\<lambda>c. c = NullCap) ptr and real_cte_at ptr)"
-| "valid_cnode_inv (RecycleCall ptr) =
-   (cte_wp_at (\<lambda>c. c \<noteq> NullCap) ptr and real_cte_at ptr)"
+| "valid_cnode_inv (CancelBadgedSendsCall cap) =
+   (valid_cap cap and K (has_cancel_send_rights cap))"
 
 
 primrec
@@ -247,7 +247,7 @@ lemma decode_cnode_cases2:
                       invocation_type label \<in> set [CNodeCopy .e. CNodeMutate];
                       invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
                       invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
-                      CNodeRecycle, CNodeRotate, CNodeSaveCaller} \<rbrakk> \<Longrightarrow> P"
+                      CNodeCancelBadgedSends, CNodeRotate, CNodeSaveCaller} \<rbrakk> \<Longrightarrow> P"
   assumes rvk: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
                           invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
                           invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
@@ -263,7 +263,7 @@ lemma decode_cnode_cases2:
   assumes rcy: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
                           invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
                           invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
-                          invocation_type label = CNodeRecycle \<rbrakk> \<Longrightarrow> P"
+                          invocation_type label = CNodeCancelBadgedSends \<rbrakk> \<Longrightarrow> P"
   assumes rot: "\<And>index bits pivot_new_data pivot_index pivot_depth src_new_data
                   src_index src_depth args' pivot_root_cap src_root_cap exs'.
                      \<lbrakk> args = index # bits # pivot_new_data # pivot_index # pivot_depth
@@ -278,7 +278,7 @@ lemma decode_cnode_cases2:
                              invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller] \<and>
                              (invocation_type label \<in> set [CNodeCopy .e. CNodeMutate]
                                         \<and> invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
-                                             CNodeRecycle, CNodeRotate, CNodeSaveCaller}
+                                             CNodeCancelBadgedSends, CNodeRotate, CNodeSaveCaller}
                                         \<and> (case (args', exs) of (src_index # src_depth # args'',
                                                     src_root_cap # exs') \<Rightarrow> False | _ \<Rightarrow> True) \<or>
                               invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate] \<and>
@@ -290,7 +290,7 @@ lemma decode_cnode_cases2:
   shows "P"
 proof -
   have simps: "[CNodeRevoke .e. CNodeSaveCaller]
-                     = [CNodeRevoke, CNodeDelete, CNodeRecycle, CNodeCopy, CNodeMint,
+                     = [CNodeRevoke, CNodeDelete, CNodeCancelBadgedSends, CNodeCopy, CNodeMint,
                         CNodeMove, CNodeMutate, CNodeRotate, CNodeSaveCaller]"
               "[CNodeCopy .e. CNodeMutate] = [CNodeCopy, CNodeMint,
                         CNodeMove, CNodeMutate]"
@@ -427,9 +427,9 @@ lemma cap_derive_not_null_helper2:
   apply simp
   done
 
-lemma has_recycle_rights_not_Null:
-  "has_recycle_rights cap \<Longrightarrow> cap \<noteq> cap.NullCap"
-  by (clarsimp simp: has_recycle_rights_def)
+lemma has_cancel_send_rights_ep_cap:
+  "has_cancel_send_rights cap \<Longrightarrow> is_ep_cap cap"
+  by (clarsimp simp: has_cancel_send_rights_def split: cap.splits)
 
 
 lemma is_untyped_update_cap_data[intro]:
@@ -512,14 +512,15 @@ lemma decode_cnode_inv_wf[wp]:
                 | simp add: split_beta
                 | wp_once hoare_drop_imps)+
      apply clarsimp
-    -- "Recycle"
+    -- "CancelBadgedSends"
     apply (simp add: decode_cnode_invocation_def
                      unlessE_def whenE_def
                split del: split_if)
-    apply (wp get_cap_wp | simp add: split_beta)+
-    apply (simp add: cte_wp_at_caps_of_state has_recycle_rights_not_Null)
-    apply (rule hoare_pre, wp hoare_vcg_all_lift_R hoare_drop_imps)
-    apply clarsimp
+    apply (wp get_cap_wp hoare_vcg_all_lift | simp add: )+
+    apply (fold validE_R_def)
+    apply (rule_tac Q'="\<lambda>rv. invs and cte_wp_at (\<lambda>_. True) rv" in hoare_post_imp_R)
+     apply (rule hoare_pre, wp lsfco_cte_at)
+     apply (clarsimp simp: cte_wp_valid_cap invs_valid_objs has_cancel_send_rights_ep_cap)+
    -- "Rotate"
    apply (simp add: decode_cnode_invocation_def split_def
                     whenE_def unlessE_def)
@@ -3096,16 +3097,16 @@ lemma cap_revoke_mdb_stuff3:
   apply simp
   done
 
+crunch typ_at[wp]: cancel_badged_sends "\<lambda>s. P (typ_at T p s)"
+  (wp: crunch_wps simp: crunch_simps filterM_mapM unless_def
+   ignore: without_preemption filterM set_object clearMemory)
 
 locale CNodeInv_AI_4 = CNodeInv_AI_3 state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +
-  assumes cap_recycle_typ_at [wp]:
-    "\<And>P T p c. \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> cap_recycle c \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   assumes finalise_slot_typ_at [wp]:
     "\<And>P T p. \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> finalise_slot a b \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   assumes weak_derived_appropriate:
     "\<And>cap cap'. weak_derived cap cap' \<Longrightarrow> appropriate_cte_cap cap = appropriate_cte_cap cap'"
-
 
 context CNodeInv_AI_4 begin
 
@@ -3114,7 +3115,7 @@ lemma inv_cnode_typ_at:
   apply (case_tac ci, simp_all add: invoke_cnode_def split del: split_if)
         apply (wp cap_insert_typ_at cap_move_typ_at cap_swap_typ_at hoare_drop_imps
                   cap_delete_typ_at cap_revoke_typ_at hoare_vcg_all_lift | wpc | 
-               simp | rule conjI impI)+     
+               simp | rule conjI impI | rule hoare_pre)+
   done
 
 lemma invoke_cnode_tcb[wp]:
@@ -3437,28 +3438,19 @@ locale CNodeInv_AI_5 = CNodeInv_AI_4 state_ext_t
             and K (\<not> is_master_reply_cap cap)\<rbrace>
         cap_move cap ptr ptr'
       \<lbrace>\<lambda>rv. invs::'state_ext state \<Rightarrow> bool\<rbrace>"
-  assumes recycle_cap_appropriateness:
-    "\<And>cap is_final.
-      \<lbrace>valid_cap cap :: 'state_ext state \<Rightarrow> bool\<rbrace>
-        recycle_cap is_final cap
-      \<lbrace>\<lambda>rv s. appropriate_cte_cap rv = appropriate_cte_cap cap\<rbrace>"
-
 
 lemma cte_wp_at_use2:
   "\<lbrakk>cte_wp_at P p s; cte_wp_at P' p s; \<And>c. \<lbrakk>cte_wp_at (op = c) p s; P c; P' c\<rbrakk> \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by (auto simp: cte_wp_at_caps_of_state)
 
-
 lemma cte_wp_at_use3:
   "\<lbrakk>cte_wp_at P p s; cte_wp_at P' p s; cte_wp_at P'' p s; \<And>c. \<lbrakk>cte_wp_at (op = c) p s; P c; P' c; P'' c\<rbrakk> \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by (auto simp: cte_wp_at_caps_of_state)
-
 
 lemma cap_move_valid_cap[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap'\<rbrace> cap_move cap p p' \<lbrace>\<lambda>_ s. s \<turnstile> cap'\<rbrace>"
   unfolding cap_move_def
   by (wp set_cdt_valid_cap | simp)+
-
 
 lemma weak_derived_cte_refs_abs:
   "weak_derived c c' \<Longrightarrow> cte_refs c' = cte_refs c"
@@ -3466,7 +3458,6 @@ lemma weak_derived_cte_refs_abs:
   apply (auto simp: same_object_as_def is_cap_simps bits_of_def
              split: split_if_asm cap.splits)
   done
-
 
 lemma cap_move_ex_cap_cte:
   "\<lbrace>ex_cte_cap_wp_to P ptr and 
@@ -3490,7 +3481,6 @@ lemma cap_move_ex_cap_cte:
   apply clarsimp
   done
 
-
 lemma cap_move_src_slot_Null:
   "\<lbrace>cte_at src and K(src \<noteq> dest)\<rbrace> cap_move cap src dest \<lbrace>\<lambda>_ s. cte_wp_at (op = cap.NullCap) src s\<rbrace>"
   unfolding cap_move_def
@@ -3504,20 +3494,7 @@ lemmas (in CNodeInv_AI_5) cap_revoke_cap_table[wp]
 
 lemmas appropriate_cte_cap_simps = appropriate_cte_cap_def [split_simps cap.split]
 
-
 context CNodeInv_AI_5 begin
-
-lemma recycle_cap_appropriate_cap_to[wp]:
-  "\<And>cap p is_final.
-    \<lbrace>ex_cte_cap_wp_to (appropriate_cte_cap cap) p and valid_cap cap :: 'state_ext state \<Rightarrow> bool\<rbrace>
-      recycle_cap is_final cap
-    \<lbrace>\<lambda>rv. ex_cte_cap_wp_to (appropriate_cte_cap rv) p\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (subst pred_conj_def, rule hoare_vcg_conj_lift)
-    apply (rule recycle_cap_cte_cap_to)
-   apply (rule recycle_cap_appropriateness)
-  apply clarsimp
-  done
 
 crunch inv [wp]: is_final_cap "P"
 
@@ -3526,30 +3503,7 @@ lemma is_final_cap_is_final[wp]:
   unfolding is_final_cap_def 
   by wp simp
 
-
-lemma cap_recycle_invs:
-  fixes p shows
-  "\<lbrace>invs and (cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) p) and real_cte_at p\<rbrace> 
-     cap_recycle p
-   \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (simp add: cap_recycle_def unless_def)
-  apply (wp replace_cap_invs_arch_update recycle_cap_invs[where slot=p]
-            cap_recycle_cte_replaceable)
-    apply (rule hoare_strengthen_post, rule get_cap_sp[where P=invs])
-    apply (clarsimp simp: cte_wp_at_caps_of_state)
-    apply (frule caps_of_state_valid_cap, clarsimp+)
-    apply (frule if_unsafe_then_capD[OF caps_of_state_cteD], clarsimp+)
-    apply auto[1]
-   apply (simp add: finalise_slot_def)
-   apply (wp rec_del_invs)
-  apply simp
-  apply (rule hoare_pre)
-   apply (wp cap_revoke_invs | strengthen real_cte_emptyable_strg)+
-  apply simp
-  done
-
 end
-
 
 lemma real_cte_not_reply_masterD:
   "\<And>P ptr.
@@ -3659,12 +3613,11 @@ lemma invoke_cnode_invs[wp]:
    apply (clarsimp simp: real_cte_tcb_valid cte_wp_at_caps_of_state
                          is_cap_simps ex_cte_cap_to_cnode_always_appropriate_strg)
   apply simp
-  apply (wp cap_recycle_invs)
-  apply simp
+  apply (rule hoare_pre)
+   apply (wp | wpc | simp)+
   done
 
 end
-
 
 crunch pred_tcb_at[wp]: cap_move "pred_tcb_at proj P t"
 
@@ -3704,7 +3657,5 @@ lemmas corres_underlying_lift_ex2' = corres_underlying_lift_ex2 [where Q = \<top
 lemma real_cte_halted_if_tcb[simp]:
   "real_cte_at (a, b) s \<Longrightarrow> halted_if_tcb a s"
   by (clarsimp simp: halted_if_tcb_def obj_at_def is_cap_table is_tcb)
-
-
 
 end

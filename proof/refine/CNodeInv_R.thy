@@ -47,8 +47,8 @@ where
     (\<lambda>s. ex_cte_cap_to' pivot s \<and> ex_cte_cap_to' dest s))"
 | "valid_cnode_inv' (SaveCaller slot) =
    (ex_cte_cap_to' slot and cte_wp_at' (\<lambda>c. cteCap c = NullCap) slot)"
-| "valid_cnode_inv' (Recycle slot) =
-   (cte_wp_at' (\<lambda>cte. cteCap cte \<noteq> NullCap) slot and real_cte_at' slot)"
+| "valid_cnode_inv' (CancelBadgedSends cap) =
+   (valid_cap' cap and K (hasCancelSendRights cap))"
 
 lemma rightsFromWord_correspondence:
   "rightsFromWord w = rights_mask_map (data_to_rights w)"
@@ -87,7 +87,7 @@ where
    cap_relation sc sc' \<and> cap_relation pc pc' \<and>
    x = Rotate sc' pc' (cte_map src) (cte_map pvt) (cte_map dst))"
 | "cnodeinv_relation (SaveCall p) x = (x = SaveCaller (cte_map p))"
-| "cnodeinv_relation (RecycleCall p) x = (x = Recycle (cte_map p))"
+| "cnodeinv_relation (CancelBadgedSendsCall c) x = (\<exists>c'. cap_relation c c' \<and> x = CancelBadgedSends c')"
 
 
 lemma cap_relation_NullCap:
@@ -159,18 +159,17 @@ lemma get_cap_corres':
   by (simp add: get_cap_corres)
 
 lemma cnode_invok_case_cleanup:
-  "i \<notin> {CNodeRevoke, CNodeDelete, CNodeRecycle, CNodeRotate, CNodeSaveCaller}
-        \<Longrightarrow> (case i of CNodeRevoke \<Rightarrow> P | CNodeDelete \<Rightarrow> Q | CNodeRecycle \<Rightarrow> R
+  "i \<notin> {CNodeRevoke, CNodeDelete, CNodeCancelBadgedSends, CNodeRotate, CNodeSaveCaller}
+        \<Longrightarrow> (case i of CNodeRevoke \<Rightarrow> P | CNodeDelete \<Rightarrow> Q | CNodeCancelBadgedSends \<Rightarrow> R
                  | CNodeRotate \<Rightarrow> S | CNodeSaveCaller \<Rightarrow> T
                  | _ \<Rightarrow> U) = U"
   by (simp split: invocation_label.split)
 
-lemma reycleRightsEq:
-  "cap_relation cap cap' \<Longrightarrow> hasRecycleRights cap' = has_recycle_rights cap"
-  by (auto simp: hasRecycleRights_def has_recycle_rights_def all_rights_def
-                    arch_has_recycle_rights_def
-                    ARM_H.hasRecycleRights_def vmrights_map_def
-                  split: cap.splits arch_cap.splits bool.splits if_splits |
+lemma cancelSendRightsEq:
+  "cap_relation cap cap' \<Longrightarrow> hasCancelSendRights cap' = has_cancel_send_rights cap"
+  by (auto simp: hasCancelSendRights_def has_cancel_send_rights_def all_rights_def
+                 vmrights_map_def
+                  split: cap.splits bool.splits if_splits |
          case_tac x)+
 
 lemma dec_cnode_inv_corres:
@@ -274,7 +273,7 @@ lemma dec_cnode_inv_corres:
         apply (wp hoare_drop_imps)
       apply (auto elim!: valid_cnode_capI)[1]
      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-    -- "Recycle"
+    -- "CancelBadgedSends"
     apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def 
                      isCap_simps Let_def unlessE_whenE del: ser_def split del: split_if)
     apply (rule corres_guard_imp)
@@ -284,7 +283,7 @@ lemma dec_cnode_inv_corres:
              apply (rule corres_split_norE)
                 apply (rule corres_trivial)
                 apply (clarsimp simp add: returnOk_def)
-               apply (simp add: reycleRightsEq)
+               apply (simp add: cancelSendRightsEq)
                apply (rule corres_trivial, auto simp add: whenE_def returnOk_def)[1]
               apply (wp get_cap_wp getCTE_wp | simp only: whenE_def | clarsimp)+
       apply (rule hoare_trivE_R[where P="\<top>"])
@@ -448,9 +447,9 @@ lemma deriveCap_Null_helper:
   apply simp
   done
 
-lemma hasRecycleRights_not_Null:
-  "hasRecycleRights cap \<Longrightarrow> cap \<noteq> NullCap"
-  by (clarsimp simp: hasRecycleRights_def)
+lemma hasCancelSendRights_not_Null:
+  "hasCancelSendRights cap \<Longrightarrow> isEndpointCap cap"
+  by (clarsimp simp: hasCancelSendRights_def isCap_simps split: capability.splits)
 
 declare split_if [split del]
 declare updateCapData_Zombie' [simp]
@@ -533,14 +532,16 @@ lemma decodeCNodeInv_wf[wp]:
                       unlessE_whenE)
      apply (rule hoare_pre)
       apply (wp lsfco_cte_at' | simp | wp_once hoare_drop_imps)+
-    -- "Recycle"
+    -- "CancelBadgedSends"
     apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                      unlessE_whenE)
     apply (rule hoare_pre)
      apply (wp whenE_throwError_wp getCTE_wp | simp)+
-     apply (simp add: cte_wp_at_ctes_of imp_ex hasRecycleRights_not_Null)
-     apply (wp hoare_vcg_all_lift_R hoare_drop_imps)
-    apply clarsimp
+     apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> cte_wp_at' (\<lambda>_. True) rv s" in hoare_post_imp_R)
+      apply (wp lsfco_cte_at')
+     apply (simp add: cte_wp_at_ctes_of imp_ex hasCancelSendRights_not_Null)
+     apply (clarsimp simp: ctes_of_valid' invs_valid_objs')
+    apply (simp add: invs_valid_objs')
    -- "Rotate"
    apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                     unlessE_def)
@@ -8298,12 +8299,6 @@ lemma arch_recycleCap_improve_cases': "\<lbrakk>\<not> isPageCap param_b; \<not>
   apply simp+
   done
 
-
-crunch st_tcb_at'[wp]: "Arch.recycleCap" "st_tcb_at' P t"
-  (ignore: getObject setObject
-       wp: crunch_wps undefined_valid
-     simp: crunch_simps arch_recycleCap_improve_cases' unless_def)
-
 lemma threadSet_st_tcb_at2:
   assumes x: "\<forall>tcb. P (tcbState tcb) \<longrightarrow> P (tcbState (f tcb))"
   shows      "\<lbrace>st_tcb_at' P t\<rbrace> threadSet f t' \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
@@ -8313,6 +8308,19 @@ lemma threadSet_st_tcb_at2:
   apply (clarsimp simp: obj_at'_def x)
   done
 
+crunch st_tcb_at_simplish[wp]: "cancelBadgedSends" "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
+  (ignore: getObject setObject filterM 
+       wp: crunch_wps threadSet_st_tcb_at2
+     simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
+  
+lemma cancelBadgedSends_st_tcb_at':
+  assumes x: "\<And>st. simple' st \<Longrightarrow> P st"
+  shows      "\<lbrace>st_tcb_at' P t\<rbrace> cancelBadgedSends a b \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
+  apply (rule hoare_chain)
+    apply (rule cancelBadgedSends_st_tcb_at_simplish[where P=P and t=t])
+   apply (auto simp: x elim!: pred_tcb'_weakenE)
+  done
+  
 lemmas cteRevoke_st_tcb_at'
     = cteRevoke_preservation [OF cteDelete_st_tcb_at']
 lemmas cteRevoke_st_tcb_at_simplish
@@ -8328,20 +8336,6 @@ lemmas finaliseSlot_st_tcb_at_simplish
     = finaliseSlot_st_tcb_at'[where P="\<lambda>st. Q st \<or> simple' st",
                               simplified] for Q
 
-crunch st_tcb_at_simplish: cteRecycle
-            "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
-  (ignore: getObject setObject filterM cteDelete
-       wp: crunch_wps threadSet_st_tcb_at2
-     simp: crunch_simps unless_def filterM_mapM makeObject_tcb)
-
-lemma cteRecycle_st_tcb_at':
-  assumes x: "\<And>st. simple' st \<Longrightarrow> P st"
-  shows      "\<lbrace>st_tcb_at' P t\<rbrace> cteRecycle ptr \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (rule hoare_chain)
-    apply (rule cteRecycle_st_tcb_at_simplish[where P=P and t=t])
-   apply (auto simp: x elim!: pred_tcb'_weakenE)
-  done
-
 lemma invokeCNode_st_tcb_at':
   "\<lbrace>invs' and st_tcb_at' P t
          and K (\<forall>st. simple' st \<longrightarrow> P st)\<rbrace>
@@ -8353,8 +8347,8 @@ lemma invokeCNode_st_tcb_at':
                    Invocations_H.cnode_invocation.case_cong)
   apply (rule hoare_pre)
    apply (wp cteRevoke_st_tcb_at' cteDelete_st_tcb_at'
-             cteRecycle_st_tcb_at'
-               | clarsimp split del: split_if | wpcw | erule disjE)+
+             cancelBadgedSends_st_tcb_at'
+               | clarsimp simp: unless_def split del: split_if | wpcw | erule disjE)+
   done
 
 lemma updateCap_valid_objs [wp]:
@@ -9268,7 +9262,6 @@ lemma cap_update_corres':
      \<Longrightarrow> corres dc
           (\<lambda>s. invs s
               \<and> (cte_wp_at (op = cap) slot s 
-                  \<or> cte_wp_at (\<lambda>c. \<exists>acap. c = cap.ArchObjectCap acap \<and> cap = cap.ArchObjectCap (arch_reset_mem_mapping acap)) slot s
                   \<or> cte_wp_at (\<lambda>c. (is_zombie cap \<or> is_cnode_cap cap \<or> is_thread_cap cap)
                                  \<and> (is_zombie c \<or> is_cnode_cap c \<or> is_thread_cap c)
                                  \<and> is_final_cap' c s \<and> obj_ref_of c = obj_ref_of cap
@@ -9279,10 +9272,6 @@ lemma cap_update_corres':
   apply (rule corres_disj_abs)
    apply (rule corres_guard_imp, erule corres_null_cap_update)
     apply simp+
-  apply (rule corres_disj_abs)
-   apply (rule corres_guard_imp, erule updateCap_same_master)
-    apply (fastforce simp: cte_wp_at_caps_of_state reset_mem_mapping_master is_cap_simps)
-   apply fastforce
   apply (rule corres_guard_imp)
     apply (rule_tac F="is_zombie cap \<or> is_cnode_cap cap \<or> is_thread_cap cap"
                 in corres_gen_asm)
@@ -9300,79 +9289,6 @@ lemma isFinal3:
    apply (wp isFinal[where x=sl])
    apply simp
   apply (simp add: hoare_post_taut)
-  done
-
-lemma cap_recycle_corres:
-  "corres (intr \<oplus> dc)
-          (einvs and simple_sched_action and cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) x and real_cte_at x)
-          (invs' and sch_act_simple
-                 and cte_wp_at' (\<lambda>cte. cteCap cte \<noteq> capability.NullCap) (cte_map x))
-    (cap_recycle x) (cteRecycle (cte_map x))"
-  apply (simp add: cap_recycle_def cteRecycle_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_norE [OF _ cap_revoke_corres])
-      apply (rule corres_splitEE [OF _ finalise_slot_corres])
-        apply (simp add: unless_def)
-        apply (rule corres_split [OF _ get_cap_corres])
-          apply (rule corres_when)
-           apply fastforce
-          apply simp
-          apply (rule_tac F="cap \<noteq> cap.NullCap" in corres_gen_asm)
-          apply (rule corres_split [OF _ final_cap_corres])
-            apply (rule corres_split [OF _ recycle_cap_corres[where slot=x]],
-                   simp_all add: dc_def[symmetric])[1]
-              apply (erule cap_update_corres')
-             apply (rule hoare_strengthen_post)
-              apply (rule_tac Q'="\<lambda>rv s. invs s \<and> valid_sched s \<and> cte_wp_at (op = cap) x s"
-                                in hoare_vcg_conj_lift)
-               apply (rule recycle_cap_cases)
-              apply (wp recycle_cap_invs[where slot=x])
-             apply (clarsimp simp: cte_wp_at_caps_of_state del: disjCI) 
-             apply (elim disjE)
-               apply simp
-              apply simp
-             apply (subst disj_assoc [symmetric], rule disjCI2, clarsimp)
-             apply (frule zombies_finalD [OF caps_of_state_cteD], clarsimp+)
-             apply (clarsimp simp: cte_wp_at_caps_of_state)
-            apply (rule_tac Q = "\<lambda>rv s. invs' s \<and> cte_at' (cte_map x) s" in hoare_post_imp)
-             apply fastforce
-            apply (wp recycleCap_invs [where slot="cte_map x"] isFinal3
-                      get_cap_wp getCTE_wp isFinalCapability_inv static_imp_wp)
-       apply (rule_tac Q'="\<lambda>rv s. cte_wp_at (replaceable s x cap.NullCap) x s
-                                   \<and> invs s \<and> valid_sched s" in hoare_post_imp_R)
-        apply (unfold validE_R_def)
-        apply (rule_tac Q="\<lambda>rv s. Q rv s \<and> invs s \<and> valid_sched s" for Q
-               in hoare_post_impErr)
-          apply (rule_tac Q="P' and valid_sched and simple_sched_action" for P' in hoare_weaken_preE)
-           apply (rule hoare_validE_conj, rule hoare_weaken_preE, rule use_spec)
-             apply (unfold finalise_slot_def, rule rec_del_invs')[1]
-            apply force
-           apply (simp add: finalise_slot_def)
-           apply (rule_tac Q="\<lambda>_ s. invs s \<and> valid_sched s" in hoare_post_impErr)
-             apply (rule valid_validE)
-             apply (rule hoare_conjI)
-              apply (rule hoare_pre)
-               apply (rule rec_del_invs)
-              apply simp
-             apply (wp rec_del_valid_sched)
-             apply simp+
-       apply (clarsimp simp: cte_wp_at_caps_of_state)
-       apply (frule caps_of_state_valid_cap, clarsimp+)
-       apply (rule conjI)
-        apply assumption
-       apply clarsimp
-      apply (fold validE_R_def, rule_tac Q'="\<lambda>rv. invs' and sch_act_simple"
-                                      in hoare_post_imp_R)
-       apply (wp finaliseSlot_invs finaliseSlot_sch_act_simple)
-      apply (clarsimp)
-      apply safe[1]
-      apply (clarsimp simp: cte_wp_at_ctes_of)
-      apply (frule ctes_of_valid', clarsimp+)
-     apply (wp cap_revoke_invs valid_cte_at_typ [OF cap_revoke_typ_at]
-                   | strengthen real_cte_emptyable_strg | simp)+
-    apply (wp cteRevoke_invs' typ_at_lifts [OF cteRevoke_typ_at']
-              cteRevoke_sch_act_simple)
-   apply (auto elim!: cte_wp_at_weakenE cte_wp_at_weakenE')
   done
 
 declare corres_False' [simp]
@@ -9495,74 +9411,22 @@ lemma inv_cnode_corres:
    apply (rule conjI, fastforce)
    apply (rule conjI, fastforce)
    apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
-  apply (rule corres_guard_imp)
-    apply (rule cap_recycle_corres)
-   apply simp
-  apply simp
+  apply clarsimp
+  apply (case_tac "has_cancel_send_rights x7", 
+                frule has_cancel_send_rights_ep_cap, 
+                simp add: is_cap_simps)
+   apply (clarsimp simp: when_def unless_def isCap_simps)
+   apply (rule corres_guard_imp)
+     apply (rule cancel_badged_sends_corres)
+    apply (simp add: valid_cap_def)
+   apply (simp add: valid_cap'_def)
+  apply (clarsimp)
   done
 
 lemma cte_wp_at_weak_sym:
   "cte_wp_at' (\<lambda>c. weak_derived' cap (cteCap c)) x s \<Longrightarrow> cte_wp_at' (\<lambda>c. weak_derived' (cteCap c) cap) x s"
   apply (erule cte_wp_at_weakenE')
   apply (erule weak_derived_sym')
-  done
-
-lemma validCap_resetMemMapping:
-  "s \<turnstile>' capability.ArchObjectCap acap \<Longrightarrow> s \<turnstile>' capability.ArchObjectCap (resetMemMapping acap)"
-  unfolding valid_cap'_def resetMemMapping_def capAligned_def
-  by (clarsimp split: capability.split_asm arch_capability.split_asm)
-
-lemmas arch_recycleCap_improve_cases'' = arch_recycleCap_improve_cases'[simplified isCap_simps]
-
-lemma arch_recycleCap_valid[wp]:
-  "\<lbrace>valid_cap' (ArchObjectCap cap) and valid_objs'\<rbrace>
-     Arch.recycleCap is_final cap
-   \<lbrace>valid_cap' \<circ> capability.ArchObjectCap\<rbrace>"
-  apply (simp add: ARM_H.recycleCap_def Let_def unless_def
-                   arch_recycleCap_improve_cases
-                   doMachineOp_bind doMachineOp_return
-               split del: split_if
-               cong: if_cong)
-  apply (rule hoare_pre)
-   apply (wp mapM_x_wp' hoare_drop_imps undefined_valid
-             | wpc | simp split del: split_if
-             | rule typ_at_lifts)+
-  apply (auto elim: validCap_resetMemMapping simp: isCap_simps arch_recycleCap_improve_cases'')
-  done
-
-lemma recycleCap_valid[wp]:
-  "\<lbrace>valid_cap' cap and valid_objs'\<rbrace> recycleCap is_final cap \<lbrace>valid_cap'\<rbrace>"
-  apply (simp add: Retype_H.recycleCap_def Let_def curDomain_def
-             cong: zombie_type.case_cong split del: split_if cong: if_cong)
-  apply (rule hoare_pre)
-   apply (wp typ_at_lifts [OF cancelBadgedSends_typ_at']
-              | wpc | wp_once hoare_drop_imps)+
-  apply (auto simp: isCap_simps valid_cap'_def capAligned_def objBits_simps)
-  done
-
-
-crunch cte_wp_at'[wp]: recycleCap "cte_wp_at' P p"
-  (ignore: filterM setObject getObject
-     simp: filterM_mapM crunch_simps arch_recycleCap_improve_cases' unless_def
-       wp: crunch_wps)
-
-lemma recycleCap_cases:
-  "\<lbrace>\<top>\<rbrace>
-    recycleCap is_final cap
-   \<lbrace>\<lambda>rv s. rv = cap \<or> (\<exists>acap. cap = ArchObjectCap acap \<and> rv = ArchObjectCap (resetMemMapping acap)) \<or> (isZombie cap \<and> capBits rv = capBits cap
-                                    \<and> (case capZombieType cap of
-                                          ZombieTCB \<Rightarrow> isThreadCap rv
-                                        | ZombieCNode n \<Rightarrow> isCNodeCap rv)
-                                    \<and> capUntypedPtr rv = capUntypedPtr cap)\<rbrace>"
-  apply (simp add: recycleCap_def Let_def ARM_H.recycleCap_def
-                   arch_recycleCap_improve_cases
-                      split del: split_if cong: if_cong)
-  apply (rule hoare_pre)
-   apply (wp hoare_vcg_const_imp_lift undefined_valid | wpc
-             | simp add: o_def doMachineOp_bind
-                         doMachineOp_return split del: split_if
-             | wp_once hoare_drop_imps)+
-  apply (auto simp: objBits_simps isCap_simps arch_recycleCap_improve_cases'')
   done
 
 lemma updateCap_noop_irq_handlers:
@@ -9612,70 +9476,6 @@ lemmas make_zombie_or_noop_or_arch_invs
    hoare_vcg_disj_lift [OF make_zombie_invs' arch_update_updateCap_invs],
    simplified]
 
-lemma is_arch_update_resetMem:
-  "cteCap cte = capability.ArchObjectCap acap \<Longrightarrow>
-  is_arch_update' (capability.ArchObjectCap (resetMemMapping acap)) cte"
-  unfolding is_arch_update'_def resetMemMapping_def
-  by (cases acap, simp_all add: isCap_simps)
-
-lemma cteRecycle_invs[wp]:
-  "\<lbrace>invs' and sch_act_simple
-          and cte_wp_at' (\<lambda>cte. cteCap cte \<noteq> NullCap) p
-         and real_cte_at' p\<rbrace> 
-     cteRecycle p
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: cteRecycle_def unless_def)
-  apply (wp make_zombie_or_noop_or_arch_invs recycleCap_invs[where slot=p])
-     apply (rule hoare_strengthen_post)
-      apply (rule hoare_vcg_conj_lift)
-       apply (rule recycleCap_cases)
-      apply (rule hoare_vcg_conj_lift)
-       apply (rule recycleCap_valid)
-      apply (rule hoare_vcg_conj_lift)
-       apply (rule_tac P="op = cte" and p=p in recycleCap_cte_wp_at')
-      apply (rule recycleCap_invs[where slot=p])
-     apply (clarsimp simp: cte_wp_at_ctes_of del: disjCI)
-     apply (frule ctes_of_valid', clarsimp)
-     apply (elim disjE)
-       apply clarsimp
-      apply (clarsimp simp: is_arch_update_resetMem)
-     apply (rule disjI2, rule disjI1)
-     apply (clarsimp simp: isCap_simps objBits_simps
-                           final_matters'_def isFinal_def
-                           sameObjectAs_def3 valid_cap'_def
-                           capAligned_def
-                    split: zombie_type.split_asm)
-      apply (drule unat_mono)
-      apply (simp add: unat_of_nat)
-      apply (drule(1) order_less_le_trans)
-      apply (frule tcb_cap_cases_lt)
-      apply clarsimp
-      apply (drule tcb_cases_related)
-      apply (clarsimp simp: cte_map_def)
-      apply (subst(asm) word_unat.Rep_inverse'
-                          [OF unat_of_bl_nat_to_cref, symmetric])
-        apply simp
-       apply (simp add: word_bits_conv)
-      apply clarsimp
-     apply (erule notE, rule imageI)
-     apply simp
-     apply (erule order_less_le_trans)
-     apply (simp add: word_le_nat_alt)
-     apply (erule order_trans[rotated])
-     apply (simp add: unat_of_nat)
-    apply (wp getCTE_wp' finaliseSlot_invs isFinalCapability_inv)
-   apply (rule_tac Q'="\<lambda>rv. invs' and sch_act_simple" in hoare_post_imp_R)
-    apply (wp finaliseSlot_invs finaliseSlot_sch_act_simple)
-   apply (clarsimp simp: cte_wp_at_ctes_of)
-   apply auto[1]
-  apply simp
-  apply (rule_tac Q="\<lambda>rv. invs' and sch_act_simple"
-              and E="\<lambda>rv. invs' and sch_act_simple"
-               in hoare_post_impErr)
-    apply (rule valid_validE)
-    apply (wp cteRevoke_invs' cteRevoke_sch_act_simple | simp)+
-  done
-
 lemma invokeCNode_invs' [wp]:
   "\<lbrace>invs' and sch_act_simple and valid_cnode_inv' cinv\<rbrace>
     invokeCNode cinv \<lbrace>\<lambda>y. invs'\<rbrace>"
@@ -9709,8 +9509,7 @@ lemma invokeCNode_invs' [wp]:
    apply (fastforce simp: isCap_simps weak_derived'_def)
   apply (rule hoare_pre)
    apply simp
-   apply wp
-  apply clarsimp
+   apply (wp | wpc | simp add: unless_def)+
   done
 
 declare withoutPreemption_lift [wp]
@@ -9829,7 +9628,7 @@ lemma inv_cnode_IRQInactive:
              cteRevoke_irq_states' cteDelete_IRQInactive 
              hoare_whenE_wp
            | wpc 
-           | simp add: cteRecycle_def split_def)+
+           | simp add:  split_def)+
   done
 
 end
