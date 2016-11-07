@@ -19,6 +19,12 @@ requalify_facts
 
 end
 
+(*FIXME: Move or remove *)
+
+method spec for x :: "_ :: type" = (erule allE[of _ x])
+method bspec for x :: "_ :: type" = (erule ballE[of _ _ x])
+method prove for x :: "prop" = (rule revcut_rl[of "PROP x"])
+
 lemmas aobj_ref_arch_cap_simps[simp] = aobj_ref_arch_cap
 
 lemma detype_arch_state :
@@ -81,5 +87,59 @@ lemma select_ext_wp[wp]:"\<lbrace>\<lambda>s. a s \<in> S \<longrightarrow> Q (a
 
 (* FIXME: move *)
 lemmas mapM_UNIV_wp = mapM_wp[where S="UNIV", simplified]
+
+lemmas word_simps =
+  word_size word_ops_nth_size nth_ucast nth_shiftr nth_shiftl
+
+lemma mask_split_aligned:
+  assumes len: "m \<le> a + len_of TYPE('a)"
+  assumes align: "is_aligned p a"
+  shows "(p && ~~ mask m) + (ucast ((ucast (p && mask m >> a))::'a::len word) << a) = p"
+  apply (insert align[simplified is_aligned_nth])
+  apply (subst word_plus_and_or_coroll; rule word_eqI; clarsimp simp: word_simps)
+  apply (rule iffI)
+   apply (erule disjE; clarsimp)
+  apply (case_tac "n < m"; case_tac "n < a")
+  using len by auto
+
+lemma mask_split_aligned_neg:
+  fixes x :: "'a::len word"
+  fixes p :: "'b::len word"
+  assumes len: "a + len_of TYPE('a) \<le> len_of TYPE('b)"
+               "m = a + len_of TYPE('a)"
+  assumes x: "x \<noteq> ucast (p && mask m >> a)"
+  shows "(p && ~~ mask m) + (ucast x << a) = p \<Longrightarrow> False"
+  apply (subst (asm) word_plus_and_or_coroll)
+   apply (clarsimp simp: word_simps bang_eq)
+  subgoal for n
+    apply (drule test_bit_size)
+    apply (clarsimp simp: word_simps)
+    using len by arith
+  apply (insert x)
+  apply (erule notE)
+  apply (rule word_eqI)
+  subgoal for n
+    using len
+    apply (clarsimp simp: word_simps bang_eq)
+    apply (spec "n + a")
+    by (clarsimp simp: word_ops_nth_size word_size)
+  done
+
+lemma mask_alignment_ugliness:
+  "\<lbrakk> x \<noteq> x + z && ~~ mask m;
+     is_aligned (x + z && ~~ mask m) m;
+     is_aligned x m;
+     \<forall>n \<ge> m. \<not>z !! n\<rbrakk>
+  \<Longrightarrow> False"
+  apply (erule notE)
+  apply (rule word_eqI)
+  apply (clarsimp simp: is_aligned_nth word_ops_nth_size word_size)
+  apply (subst word_plus_and_or_coroll)
+   apply (rule word_eqI)
+   apply (clarsimp simp: word_size)
+   subgoal for \<dots> na
+    apply (spec na)+
+    by simp
+  by auto
 
 end
