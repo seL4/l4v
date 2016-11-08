@@ -423,9 +423,17 @@ lemma semantic_equiv_Seq_assoc:
   apply (rule exec_assoc)
   done
 
+lemma semantic_equiv_seq_assoc_eq:
+  "semantic_equiv Gamma s s' (a ;; (b ;; c)) d
+     = semantic_equiv Gamma s s' (a ;; b ;; c) d"
+  "semantic_equiv Gamma s s' d (a ;; (b ;; c))
+     = semantic_equiv Gamma s s' d (a ;; b ;; c)"
+  by (metis semantic_equiv_trans semantic_equiv_Seq_assoc
+            semantic_equiv_Seq_assoc[THEN semantic_equiv_sym[THEN iffD1]])+
+
 lemma semantic_equiv_Cond:
-  assumes  sel: "\<And>s s'. semantic_equiv Gamma s s' l l'" 
-  and      ser: "\<And>s s'. semantic_equiv Gamma s s' r r'" 
+  assumes  sel: "semantic_equiv Gamma s s' l l'" 
+  and      ser: "semantic_equiv Gamma s s' r r'" 
   shows   "semantic_equiv Gamma s s' (Cond P l r) (Cond P l' r')" 
   using sel ser
   by (auto elim!: exec_Normal_elim_cases simp: semantic_equiv_def2 intro: exec.intros)
@@ -438,6 +446,29 @@ lemma semantic_equiv_Cond_False:
   "semantic_equiv G s s' (Cond {} c c') c'"
   by (auto elim!: exec_Normal_elim_cases simp: semantic_equiv_def2 intro: exec.intros)
 
+lemma semantic_equiv_Cond_cases:
+  "semantic_equiv G s s' a (Cond P c d)
+    = semantic_equiv G s s' a (if s \<in> P then c else d)"
+  "semantic_equiv G s s' (Cond P c d) e
+    = semantic_equiv G s s' (if s \<in> P then c else d) e"
+  by (auto simp: semantic_equiv_def2 elim!: exec_Normal_elim_cases intro: exec.intros)
+
+lemma semantic_equiv_cond_seq2:
+  "semantic_equiv G s s' (e;; Cond Q (c;;d) (c';;d)) (e;; Cond Q c c';; d)"
+  apply (simp add: semantic_equiv_seq_assoc_eq[symmetric])
+  apply (rule semantic_equiv_Seq_cong, rule semantic_equiv_refl)
+  by (auto simp: semantic_equiv_def2 elim!: exec_Normal_elim_cases intro: exec.intros)
+
+lemmas ccorres_cond_seq2 = ccorres_semantic_equiv[OF semantic_equiv_cond_seq2]
+
+lemma semantic_equiv_cond_seq2_seq:
+  "semantic_equiv G s s' (ci;; Cond Q (c;;ce) (c';;ce);; d) (ci;; Cond Q c c';; ce;; d)"
+  apply (simp add: semantic_equiv_seq_assoc_eq[symmetric])
+  apply (rule semantic_equiv_Seq_cong, rule semantic_equiv_refl)
+  apply (simp add: semantic_equiv_seq_assoc_eq)
+  by (auto simp: semantic_equiv_def2 elim!: exec_Normal_elim_cases intro: exec.intros)
+
+lemmas ccorres_cond_seq2_seq = ccorres_semantic_equiv[OF semantic_equiv_cond_seq2_seq]
 
 definition
   "push_in_stmt G stmt c c' \<equiv> (\<forall>s s'. semantic_equiv G s s' (c ;; stmt) c')"
