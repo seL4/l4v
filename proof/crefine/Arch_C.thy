@@ -3788,26 +3788,6 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
      | rule word_of_nat_less,simp add: pbfs_less)+
 
-lemma ccorres_symb_exec_r_known_rv:
-  "\<lbrakk>  \<And>s. \<Gamma>\<turnstile> (R' \<inter> {s'. R s \<and> (s, s') \<in> sr}) m ({s'. (s, s') \<in> sr} \<inter> {s. xf' s = val});
-        \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' y (y' rv');
-        \<And>rv'. rv' = val \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P Q' hs a (y' rv');
-        \<Gamma> \<turnstile>\<^bsub>/bF\<^esub> P' m {s. s \<in> Q'}\<rbrakk>
-       \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) (P' \<inter> R') hs a (m;;y)"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_add_return,
-          rule_tac r'="\<lambda>rv rv'. rv' = val" and xf'=xf'
-                in ccorres_split_nothrow)
-       apply (rule_tac P'=R' in ccorres_from_vcg[where P=R])
-       apply (clarsimp simp add: return_def Int_def conj_comms)
-      apply assumption
-     apply fastforce
-    apply wp
-   apply (erule HoarePartial.conseq_under_new_pre)
-    apply fastforce
-  apply simp
-  done
-
 lemma cond_throw_whenE:
    "(if P then f else throwError e) =   (whenE (\<not> P) (throwError e) >>=E (\<lambda>_. f))"
    by (auto split: if_splits 
