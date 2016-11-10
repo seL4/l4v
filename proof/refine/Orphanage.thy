@@ -1286,7 +1286,7 @@ lemma deleteObjects_no_orphans [wp]:
                         all_queued_tcb_ptrs_def is_active_tcb_ptr_def
                         ksMachineState_ksPSpace_upd_comm)
   apply (drule_tac x=tcb_ptr in spec)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at_delete'[unfolded field_simps]
+  apply (clarsimp simp: pred_tcb_at'_def obj_at_delete'[simplified field_simps]
                   cong: if_cong)
   done
 

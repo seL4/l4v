@@ -2003,7 +2003,7 @@ lemma final_cap_unchanged:
   done
 
 
-lemmas set_cap_cte_wp_at_cases = set_cap_cte_wp_at[unfolded if_bool_eq_conj pred_conj_def conj_comms]
+lemmas set_cap_cte_wp_at_cases = set_cap_cte_wp_at[simplified if_bool_eq_conj pred_conj_def conj_comms]
 
 
 lemma cyclic_zombieD[dest!]:

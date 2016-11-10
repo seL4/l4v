@@ -2378,7 +2378,7 @@ lemma valid_queues_non_empty:
 lemma lookupBitmapPriority_Max_eqI:
   "\<lbrakk> valid_bitmapQ s ; bitmapQ_no_L1_orphans s ; ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrakk>
    \<Longrightarrow> lookupBitmapPriority d s = (Max {prio. ksReadyQueues s (d, prio) \<noteq> []})"
-  apply (rule Max_eqI[unfolded eq_commute]; simp)
+  apply (rule Max_eqI[simplified eq_commute]; simp)
    apply (fastforce simp: bitmapL1_highest_lookup valid_bitmapQ_bitmapQ_simp)
   apply (metis valid_bitmapQ_bitmapQ_simp bitmapQ_from_bitmap_lookup)
   done

@@ -1557,7 +1557,7 @@ lemma array_update_split:
   apply (clarsimp simp: heap_update_def[abs_def])
   apply (subst coerce_heap_update_to_heap_updates[unfolded foldl_conv_fold,
            where chunk = "size_of TYPE('a)" and m = "CARD('b)"])
-    apply (rule size_of_array[unfolded mult.commute])
+    apply (rule size_of_array[simplified mult.commute])
    apply simp
 
   (* remove false dependency *)

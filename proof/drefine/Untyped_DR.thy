@@ -466,7 +466,7 @@ lemma distinct_retype_addrs:
     range_cover ptr sz (obj_bits_api type us) n\<rbrakk>
     \<Longrightarrow> distinct (retype_addrs ptr type n us)"
   apply (clarsimp simp:retype_addrs_def distinct_map ptr_add_def inj_on_def)
-  apply (simp only: shiftl_t2n[symmetric,unfolded field_simps,simplified])
+  apply (simp only: shiftl_t2n[symmetric, simplified field_simps, simplified])
   apply (drule shiftl_inj_if)
     apply (rule shiftl_shiftr_id)
      apply (simp add:range_cover_def)

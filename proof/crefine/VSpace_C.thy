@@ -1135,7 +1135,7 @@ lemma flushSpace_ccorres:
        apply clarsimp
       apply clarsimp
       apply (rule ccorres_call, 
-             rule invalidateTLB_ASID_ccorres [unfolded dc_def xfdc_def],
+             rule invalidateTLB_ASID_ccorres [simplified dc_def xfdc_def],
              simp+)[1]
      apply vcg
     apply wp
