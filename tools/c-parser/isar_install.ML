@@ -158,7 +158,7 @@ fun define_function_names fninfo thy = let
         Local_Theory.define ((b, NoSyn),
                              ((Thm.def_binding b, []), mk_int_numeral n))
                             lthy
-    val lthy' = Local_Theory.restore lthy
+    val lthy' = Local_Theory.reset lthy
     val morph  = Proof_Context.export_morphism lthy lthy'
     val th'     = Morphism.thm morph th
 
@@ -188,7 +188,7 @@ end
 
 fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy = let
   open ProgramAnalysis Absyn
-  val lthy = Named_Target.init globloc thy
+  val lthy = Named_Target.init NONE globloc thy
   val globinits = let
     val inittab = get_globinits cse
     fun foldthis (gnm : MString.t, gty) defs = let

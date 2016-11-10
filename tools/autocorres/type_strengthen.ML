@@ -549,7 +549,7 @@ let
           (head, count) :: (count_dups (next, 1) rest)
   val tabulated = count_dups ("__fake__", 0) (sort_strings results) |> tl
   val data = map (fn (a,b) =>
-      ("  " ^ a ^ ": " ^ (PolyML.makestring b) ^ "\n")
+      ("  " ^ a ^ ": " ^ (@{make_string} b) ^ "\n")
       ) tabulated
     |> String.concat
 in

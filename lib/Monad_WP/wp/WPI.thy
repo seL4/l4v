@@ -44,7 +44,7 @@ begin
 text \<open>The ML version of repeat_new is slightly faster than the Eisbach one.\<close>
 
 method_setup repeat_new =
- \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
+ \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
      fun tac i st' =
        Goal.restrict i 1 st'

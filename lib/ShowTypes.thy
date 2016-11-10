@@ -93,7 +93,7 @@ Outer_Syntax.command @{command_keyword term_show_types}
 
 Outer_Syntax.command @{command_keyword thm_show_types}
   "thm_show_types THM1 THM2 ... -> show theorems with type annotations"
-  (Parse.xthms1 >> (fn ts =>
+  (Parse.thms1 >> (fn ts =>
     Toplevel.keep (fn state =>
       let val ctxt = Toplevel.context_of state in
         Attrib.eval_thms ctxt ts

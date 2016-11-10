@@ -226,7 +226,7 @@ fun monad_convert_tac (ctxt : Proof.context) (monad_name : string) (do_opt : boo
 val _ = Context.>> (Context.map_theory
           (Method.setup (Binding.name "monad_convert")
             (* Based on subgoal_tac parser *)
-            (Args.goal_spec -- Scan.lift (Parse.name -- Args.name_inner_syntax) >>
+            (Args.goal_spec -- Scan.lift (Parse.name -- Args.embedded_inner_syntax) >>
             (fn (quant, (monad_name, term_str)) => fn ctxt =>
                 SIMPLE_METHOD'' quant (handle_invalid_subgoals (
                     monad_convert_tac ctxt monad_name true term_str))))

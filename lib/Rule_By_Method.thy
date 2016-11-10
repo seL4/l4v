@@ -208,17 +208,17 @@ fun position (scan : 'a context_parser) : (('a * Position.T) context_parser) = (
   let
     val (((context',x),tr_toks),toks') = Scan.trace (Scan.pass context (Scan.state -- scan)) toks;
     val pos = Token.range_of tr_toks;
-  in ((x,Position.set_range pos),(context',toks')) end)
+  in ((x,Position.range_position pos),(context',toks')) end)
 
 val parse_flags = Args.mode "schematic" -- Args.mode "raw_prop" >> (fn (b,b') => {vars = b, prop = b'})
 
 (*TODO: Method_Closure.parse_method should do this already *)
 
-val parse_method = Method_Closure.method_text o apfst (Config.put_generic Method.old_section_parser true)
+val parse_method = Method.text_closure o apfst (Config.put_generic Method.old_section_parser true)
 
 fun tac m ctxt =
   Method.NO_CONTEXT_TACTIC ctxt
-    (Method_Closure.method_evaluate m ctxt []);
+    (Method.evaluate_runtime m ctxt []);
 
 val (rule_prems_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags => 
   position (Scan.repeat1 

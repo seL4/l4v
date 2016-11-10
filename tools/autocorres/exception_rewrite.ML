@@ -173,7 +173,7 @@ fun throws_exception' term =
           | (_, _, _) =>
               UnknownExc)
 
-    | x => (warning ("throws_exception: Unknown term: " ^ (PolyML.makestring x)); UnknownExc)
+    | x => (warning ("throws_exception: Unknown term: " ^ (@{make_string} x)); UnknownExc)
 val throws_exception = Term_Ord.term_cache (fn x => throws_exception' (anon x))
 
 

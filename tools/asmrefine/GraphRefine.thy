@@ -1720,7 +1720,7 @@ val store_word32s_equality_simproc =
     Simplifier.make_simproc
       (Proof_Context.init_global @{theory})
       "store_word32s_equality_simproc"
-      {lhss = lhss, proc = proc, identifier = []}
+      {lhss = lhss, proc = proc}
   end
 
 *}
@@ -2300,7 +2300,7 @@ ML {*
 fun define_graph_fun_short funs s
     = ParseGraph.define_graph_fun funs (Long_Name.base_name s ^ "_graph")
         (Binding.name (Long_Name.base_name s ^ "_graph_fun")) s
-        #> Local_Theory.restore
+        #> Local_Theory.reset
 *}
 
 end

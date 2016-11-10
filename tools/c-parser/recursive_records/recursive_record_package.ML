@@ -58,7 +58,7 @@ fun define_accessor arg (({fldname, fldty}, result), thy) = let
   val (_, thy) =
     BNF_LFP_Compat.primrec_global
          [(bnm fldname, NONE, NoSyn)]
-         [((bnm (fldname ^ "_def"), []), defn)] thy
+         [(((bnm (fldname ^ "_def"), []), defn), [], [])] thy
 in
   thy
 end
@@ -78,7 +78,7 @@ fun define_updator arg (i, {fldname, fldty}) thy = let
   val (_, thy) =
     BNF_LFP_Compat.primrec_global
          [(bnm upd_name, NONE, NoSyn)]
-         [((bnm (upd_name ^ "_def"), []), defn)] thy
+         [(((bnm (upd_name ^ "_def"), []), defn), [], [])] thy
 in
   thy
 end

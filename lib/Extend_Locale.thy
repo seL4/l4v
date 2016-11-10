@@ -74,7 +74,7 @@ val _ =
 
         val lthy'' = lthy'
           |> Local_Theory.exit_global
-          |> Named_Target.init next_locale_name
+          |> Named_Target.init NONE next_locale_name
 
       in lthy'' end)
       )));

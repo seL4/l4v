@@ -64,7 +64,7 @@ val type_alias = syntax_alias Sign.type_alias Proof_Context.type_alias;
 in
 
 fun gen_requalify get_proper_nm parse_nm check_nm alias = 
-  (Parse.opt_target  --  Scan.repeat1 (Parse.position (Scan.ahead parse_nm -- Parse.xname)) 
+  (Parse.opt_target  --  Scan.repeat1 (Parse.position (Scan.ahead parse_nm -- Parse.name))
     >> (fn (target,bs) =>
       Toplevel.local_theory NONE target (fn lthy =>
       let
@@ -102,7 +102,7 @@ val _ =
 
 val _ =
   Outer_Syntax.command @{command_keyword requalify_facts} "alias fact with current naming"
-    (gen_requalify get_fact_nm Parse.xthm check_fact fact_alias)
+    (gen_requalify get_fact_nm Parse.thm check_fact fact_alias)
 
 val _ =
   Outer_Syntax.command @{command_keyword global_naming} "change global naming of context block"

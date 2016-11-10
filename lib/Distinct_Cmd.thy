@@ -45,7 +45,7 @@ fun process_binding lthy binding =
 
 (* Parse the parameters to "distinct". *)
 val distinct_parser =
-  (Scan.optional (Parse_Spec.opt_thm_name ":") Attrib.empty_binding
+  (Scan.optional (Parse_Spec.opt_thm_name ":") Binding.empty_atts
          -- Scan.repeat1 Parse.term)
 
 (* Generate a prop of the form "a ~= b". *)

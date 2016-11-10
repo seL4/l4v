@@ -33,7 +33,6 @@ fun mk_meta_eq_safe t = mk_meta_eq t
 
 val unfold_bodies = Simplifier.make_simproc @{context} "unfold constants named *_body"
   {lhss = [@{term "v"}],
-   identifier = [],
    proc= fn _ =>
   (fn ctxt => (fn t => case head_of (Thm.term_of t) of
     Const (s, _) => if String.isSuffix "_body" s

@@ -22,9 +22,9 @@ struct
  *)
 exception InvalidInput of string;
 fun invalid_typ s (t : typ) =
-    raise InvalidInput ("Expected " ^ s ^ ", but got '" ^ (PolyML.makestring t) ^ "'")
+    raise InvalidInput ("Expected " ^ s ^ ", but got '" ^ (@{make_string} t) ^ "'")
 fun invalid_term s (t : term) =
-    raise InvalidInput ("Expected " ^ s ^ ", but got '" ^ (PolyML.makestring t) ^ "'")
+    raise InvalidInput ("Expected " ^ s ^ ", but got '" ^ (@{make_string} t) ^ "'")
 fun invalid_input s t =
     raise InvalidInput ("Expected " ^ s ^ ", but got '" ^ t ^ "'")
 
@@ -51,17 +51,17 @@ fun ctail_of ct = Drule.strip_comb ct |> snd |> hd
 fun cterm_nth_arg ct n =
   (Drule.strip_comb ct |> snd |> (fn x => nth x n))
   handle Subscript =>
-    raise CTERM ("Argument " ^ (PolyML.makestring n) ^ " doesn't exist", [ct])
+    raise CTERM ("Argument " ^ (@{make_string} n) ^ " doesn't exist", [ct])
 fun term_nth_arg t n =
   (Term.strip_comb t |> snd |> (fn x => nth x n))
   handle Subscript =>
-    raise TERM ("Argument " ^ (PolyML.makestring n) ^ " doesn't exist", [t])
+    raise TERM ("Argument " ^ (@{make_string} n) ^ " doesn't exist", [t])
 
 (* Convert a term into a string. *)
 fun term_to_string ctxt t =
   Syntax.check_term ctxt t
   |> Thm.cterm_of ctxt
-  |> PolyML.makestring
+  |> @{make_string}
 
 (* Warning with 'autocorres' prefix. *)
 fun ac_warning str = warning ("autocorres: " ^ str)
@@ -97,8 +97,8 @@ fun accumulate f acc xs = let
 (* Define a constant "name" of type "term" into the local theory "lthy". *)
 fun define_const name term lthy =
   let
-    val ((_, (_, thm)), lthy) = Local_Theory.define ((Binding.name name, NoSyn), (Attrib.empty_binding, term)) lthy
-    val lthy' = Local_Theory.restore lthy
+    val ((_, (_, thm)), lthy) = Local_Theory.define ((Binding.name name, NoSyn), (Binding.empty_atts, term)) lthy
+    val lthy' = Local_Theory.reset lthy
     val thm' = Morphism.thm (Local_Theory.target_morphism lthy) thm
   in
     (thm', lthy')
@@ -120,11 +120,11 @@ fun define_const_args name hidden term args lthy =
 
     (* Define the constant. *)
     val ((_, (_, thm)), lthy) =
-        Specification.definition ((SOME (maybe_hide (Binding.name name), NONE, NoSyn)),
-            (Attrib.empty_binding, new_term)) lthy
+        Specification.definition (SOME (maybe_hide (Binding.name name), NONE, NoSyn))
+            [] [] (Binding.empty_atts, new_term) lthy
 
     (* Integrate into the current locale. *)
-    val lthy' = Local_Theory.restore lthy
+    val lthy' = Local_Theory.reset lthy
     val thm' = Morphism.thm (Local_Theory.target_morphism lthy) thm
   in
     (Thm.prop_of thm' |> lhs_of |> Term.head_of, thm', lthy')
@@ -139,7 +139,7 @@ fun define_lemmas name thm_list lthy =
      * definitions from taking O(n^2) time (where "n" is the number of
      * definitions previously made).
      *)
-    val lthy' = Local_Theory.restore lthy
+    val lthy' = Local_Theory.reset lthy
     val thms' = map (Morphism.thm (Local_Theory.target_morphism lthy)) thms
   in
     (thms', lthy')
@@ -149,7 +149,7 @@ fun define_lemmas name thm_list lthy =
 fun define_lemma name thm lthy =
   let
     val (thms, lthy) = define_lemmas name [thm] lthy
-    val lthy = Local_Theory.restore lthy
+    val lthy = Local_Theory.reset lthy
   in
     (hd thms, lthy)
   end
@@ -540,10 +540,10 @@ let
     (* Define the function. *)
     val ctxt' = Function.add_function
       function_bindings
-      (map (fn x => (Attrib.empty_binding, x)) function_bodies)
+      (map (fn x => ((Binding.empty_atts, x), [], [])) function_bodies)
       Function_Common.default_config pat_completeness_auto lthy
       |> snd
-      |> Local_Theory.restore
+      |> Local_Theory.reset
       |> prove_termination
       |> snd
 
@@ -1004,7 +1004,7 @@ fun solved_tac thm =
 fun mk_simproc' ctxt (name : string, pats : string list, proc : Proof.context -> cterm -> thm option) = let
   in Simplifier.make_simproc ctxt name
        {lhss = map (Proof_Context.read_term_pattern ctxt) pats,
-        proc = K proc, identifier = []} end
+        proc = K proc} end
 
 (* Get named_theorems in reverse order. We use this for translation rulesets
  * so that user-added rules can override the built-in ones. *)

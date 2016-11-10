@@ -95,7 +95,7 @@ fun term_pattern_antiquote ctxt s =
 end;
 val _ = Context.>> (Context.map_theory (
     ML_Antiquotation.inline @{binding "term_pat"}
-      ((Args.context -- Scan.lift Args.name_inner_syntax)
+      ((Args.context -- Scan.lift Args.embedded_inner_syntax)
          >> uncurry Term_Pattern_Antiquote.term_pattern_antiquote)))
 *}
 
@@ -103,7 +103,7 @@ text \<open>
   Example: evaluate arithmetic expressions in ML.
 \<close>
 ML_val {*
-fun eval_num @{term_pat "numeral ?n"} = HOLogic.dest_num n
+fun eval_num @{term_pat "numeral ?n"} = HOLogic.dest_numeral n
   | eval_num @{term_pat "Suc ?n"} = eval_num n + 1
   | eval_num @{term_pat "0"} = 0
   | eval_num @{term_pat "1"} = 1
