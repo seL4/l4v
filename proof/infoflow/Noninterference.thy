@@ -3433,25 +3433,39 @@ lemma kernel_entry_if_reads_respects_scheduler:
   done
 
 lemma interrupt_step:
-      assumes interrupt: "\<And>r. (r,internal_state_if s') \<in> fst (kernel_entry_if Interrupt (user_context_of s) (internal_state_if s)) \<Longrightarrow> sys_mode_of s = KernelEntry Interrupt \<Longrightarrow>  (sys_mode_of s' = KernelSchedule True) \<Longrightarrow> snd r = user_context_of s \<Longrightarrow> snd r = user_context_of s'  \<Longrightarrow> cur_domain (internal_state_if s') = cur_domain (internal_state_if s) \<Longrightarrow> P"
-      assumes preemption: "\<And>r. (r,internal_state_if s') \<in> fst (handle_preemption_if (user_context_of s) (internal_state_if s))  \<Longrightarrow> sys_mode_of s = KernelPreempted \<Longrightarrow> sys_mode_of s' = KernelSchedule True \<Longrightarrow> r = user_context_of s \<Longrightarrow> r = user_context_of s' \<Longrightarrow> cur_domain (internal_state_if s') = cur_domain (internal_state_if s) \<Longrightarrow> P"
+      assumes interrupt:
+        "\<And>r. (r,internal_state_if s') \<in> fst (kernel_entry_if Interrupt (user_context_of s) (internal_state_if s))
+               \<Longrightarrow> sys_mode_of s = KernelEntry Interrupt \<Longrightarrow> (sys_mode_of s' = KernelSchedule True)
+               \<Longrightarrow> snd r = user_context_of s \<Longrightarrow> snd r = user_context_of s'
+               \<Longrightarrow> cur_domain (internal_state_if s') = cur_domain (internal_state_if s) \<Longrightarrow> P"
+      assumes preemption:
+        "\<And>r. (r,internal_state_if s') \<in> fst (handle_preemption_if (user_context_of s) (internal_state_if s))
+               \<Longrightarrow> sys_mode_of s = KernelPreempted \<Longrightarrow> sys_mode_of s' = KernelSchedule True
+               \<Longrightarrow> r = user_context_of s \<Longrightarrow> r = user_context_of s'
+               \<Longrightarrow> cur_domain (internal_state_if s') = cur_domain (internal_state_if s) \<Longrightarrow> P"
       shows "interrupted_modes (sys_mode_of s) \<Longrightarrow> (s,s') \<in> data_type.Step (ADT_A_if utf) () \<Longrightarrow> P"
   apply (insert interrupt preemption)
   apply atomize
   apply(case_tac s, clarsimp)
   apply(rename_tac uc i_s mode)
-  apply(case_tac mode)
-       apply (simp_all add: system.Step_def execution_def steps_def ADT_A_if_def global_automaton_if_def kernel_call_A_if_def kernel_handle_preemption_if_def del: notI| safe del: notI |clarsimp del: notI)+
-           apply ((drule kernel_entry_if_was_not_Interrupt,clarsimp split: sum.splits)+)[4]
-       apply (frule use_valid[OF _ kernel_entry_context],simp+)
-      apply (frule use_valid[OF _ kernel_entry_context],simp+)
-     apply (frule_tac P1="\<lambda>x. x = cur_domain i_s" in use_valid[OF _ kernel_entry_if_cur_domain],simp+)
-    apply (frule use_valid[OF _ handle_preemption_context],simp+)
-   apply (frule use_valid[OF _ handle_preemption_context],simp+)
-  apply (frule_tac P1="\<lambda>x. x = cur_domain i_s" in use_valid[OF _ handle_preemption_if_cur_domain],simp+)
+  apply(case_tac mode ; clarsimp)
+   subgoal for uc i_s
+     apply (clarsimp simp: system.Step_def execution_def steps_def ADT_A_if_def
+                            global_automaton_if_def kernel_call_A_if_def
+                            kernel_handle_preemption_if_def del: notI)
+     apply (frule use_valid[OF _ kernel_entry_context] ; clarsimp)
+     apply (frule_tac P1="\<lambda>x. x = cur_domain i_s" in use_valid[OF _ kernel_entry_if_cur_domain]
+            ; clarsimp)
+     done
+  subgoal for uc i_s
+    apply (clarsimp simp: system.Step_def execution_def steps_def ADT_A_if_def
+                           global_automaton_if_def kernel_call_A_if_def
+                           kernel_handle_preemption_if_def del: notI)
+    apply (frule use_valid[OF _ handle_preemption_context] ; clarsimp)
+    apply (frule_tac P1="\<lambda>x. x = cur_domain i_s" in use_valid[OF _ handle_preemption_if_cur_domain]
+           ; clarsimp)
+    done
   done
-
-
 
 lemma irq_masks_constant': "\<lbrakk>system.reachable (ADT_A_if utf) s0 s1;
        i_s1 = internal_state_if s1\<rbrakk> \<Longrightarrow>

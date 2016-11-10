@@ -9,14 +9,8 @@
  *)
 
 theory DetSchedSchedule_AI
-imports "$L4V_ARCH/ArchDetSchedAux_AI"
+imports DetSchedDomainTime_AI
 begin
-
-lemma ethread_get_wp[wp]: "\<lbrace>\<lambda>s. etcb_at (\<lambda>t. P (f t) s) ptr s\<rbrace> ethread_get f ptr \<lbrace>P\<rbrace>"
-  apply (simp add: ethread_get_def)
-  apply wp
-  apply (clarsimp simp add: get_etcb_def etcb_at'_def is_etcb_at'_def)
-  done
 
 lemma set_tcb_queue_wp[wp]: "\<lbrace>\<lambda>s. P (ready_queues_update (\<lambda>_ t' p. if t' = t \<and> p = prio then queue else ready_queues s t' p) s)\<rbrace> set_tcb_queue t prio queue \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: set_tcb_queue_def)
@@ -2919,7 +2913,7 @@ lemma valid_sched_ct_not_queued:
   by (fastforce simp: valid_sched_def ct_not_in_q_def)
 
 lemma handle_reply_valid_sched:
-  "\<lbrace>valid_sched and invs\<rbrace> handle_reply \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  "\<lbrace>valid_sched and ct_active and invs\<rbrace> handle_reply \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: handle_reply_def)
   apply (wp get_cap_wp | wpc | clarsimp)+
   apply (auto simp: invs_valid_objs idle_not_reply_cap invs_valid_idle invs_valid_reply_caps)
@@ -3040,9 +3034,21 @@ crunch scheduler_act_sane[wp]: handle_reply "scheduler_act_sane"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+lemma hvmf_st_tcb_at[wp]:
+  "\<lbrace>st_tcb_at P t' \<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at P t' \<rbrace>"
+  by (cases w, simp_all) ((wp | simp)+)
+
+lemma handle_vm_fault_st_tcb_cur_thread[wp]:
+  "\<lbrace> \<lambda>s. st_tcb_at P (cur_thread s) s \<rbrace> handle_vm_fault t f \<lbrace>\<lambda>_ s. st_tcb_at P (cur_thread s) s \<rbrace>"
+  apply (fold ct_in_state_def)
+  apply (rule ct_in_state_thread_state_lift)
+   apply (cases f)
+    apply (wp|simp)+
+  done
+
 lemma handle_event_valid_sched:
-  "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and
-    (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+  "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
+      and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
    handle_event e
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (cases e, simp_all)
@@ -3051,10 +3057,11 @@ lemma handle_event_valid_sched:
             apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_recv_valid_sched'
               handle_reply_valid_sched 
               | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
-       apply (wp handle_fault_valid_sched hvmf_active hoare_drop_imps
-                 handle_recv_valid_sched' handle_reply_valid_sched | wpc |
-              clarsimp simp: ct_in_state_def valid_sched_ct_not_queued valid_fault_def
-                                valid_sched_ct_not_queued)+
+       apply (wp handle_fault_valid_sched hvmf_active hoare_drop_imps hoare_vcg_disj_lift
+                 handle_recv_valid_sched' handle_reply_valid_sched |
+              wpc |
+              clarsimp simp: ct_in_state_def valid_sched_ct_not_queued |
+              fastforce simp: valid_fault_def)+
   done
 
 crunch valid_list[wp]: activate_thread valid_list
@@ -3076,7 +3083,7 @@ lemma call_kernel_valid_list[wp]: "\<lbrace>valid_list\<rbrace> call_kernel e \<
   done
 
 lemma call_kernel_valid_sched:
-  "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
+  "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_active or ct_idle)
       and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      call_kernel e
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"

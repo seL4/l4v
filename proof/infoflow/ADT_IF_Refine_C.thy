@@ -783,10 +783,12 @@ definition ADT_C_if where
                               (kernel_call_C_if fp) handle_preemption_C_if
                               schedule_C_if kernel_exit_C_if)\<rparr>"
 
-lemma full_invs_all_invs[simp]: "((tc,s),KernelEntry e) \<in> full_invs_if' \<Longrightarrow> all_invs' e s"
+lemma full_invs_all_invs[simp]:
+  "((tc,s),KernelEntry e) \<in> full_invs_if' \<Longrightarrow> all_invs' e s"
   apply (clarsimp simp: full_invs_if'_def all_invs'_def ex_abs_def)
-  apply (fastforce simp: ct_running_related schedaction_related)
-  done
+  apply (rule_tac x=sa in exI)
+  by (auto simp: ct_running_related ct_idle_related schedaction_related
+                 domain_time_rel_eq domain_list_rel_eq)
 
 lemma obs_cpspace_user_data_relation:
   "\<lbrakk>pspace_aligned' bd;pspace_distinct' bd;
@@ -885,6 +887,8 @@ lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine c
     apply (simp add: ct_running'_C)
    apply wp
   apply (clarsimp simp: full_invs_if'_def)
+  apply (clarsimp)
+  apply (drule use_valid[OF _ kernelEntry_if_no_preempt]; simp)
   done
 
 (*fw_sim lemmas as theorems and refinement as corollaries with sim_imp_refines?*)

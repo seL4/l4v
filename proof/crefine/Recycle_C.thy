@@ -835,6 +835,7 @@ lemma arch_recycleCap_ccorres:
                     isArchPageCap_ArchObjectCap
                cong: call_ignore_cong)
    apply (rule ccorres_if_lhs)
+    -- PageCap
     apply (simp add: ccorres_cond_iffs Collect_True)
     apply (rule ccorres_rhs_assoc)+
     apply (rule ccorres_symb_exec_r)
@@ -856,6 +857,7 @@ lemma arch_recycleCap_ccorres:
      apply vcg
     apply (rule conseqPre, vcg, clarsimp)
    apply (rule ccorres_if_lhs)
+    -- PageTableCap
     apply (simp add: ccorres_cond_iffs Collect_True Collect_False Let_def
                 cong: call_ignore_cong)
     apply (rule ccorres_rhs_assoc)+
@@ -899,6 +901,7 @@ lemma arch_recycleCap_ccorres:
     apply (clarsimp simp: word_neq_0_conv resetMemMapping_def
                           ccap_relation_def map_option_Some_eq2)
    apply (rule ccorres_if_lhs)
+    -- PageDirectoryCap
     apply (simp add: ccorres_cond_iffs Collect_True Collect_False
                      Let_def ARMSectionBits_def)
     apply (rule ccorres_rhs_assoc)+
@@ -1005,16 +1008,21 @@ lemma arch_recycleCap_ccorres:
                           to_bool_def true_def false_def
                    elim!: ccap_relationE split: split_if_asm)
     apply (simp add: word_neq_0_conv)
+   apply simp
    apply (rule ccorres_if_lhs)
+    -- ASIDControlCap
     apply (simp add: ccorres_cond_iffs Collect_True Collect_False
-                     Let_def
-                del: Collect_const)
+                     Let_def)
     apply (rule ccorres_split_throws, rule ccorres_return_C, simp+)
     apply vcg
-   apply (rule ccorres_if_lhs)
-    apply (simp add: ccorres_cond_iffs Collect_True Collect_False
-                     Let_def
-                del: Collect_const)
+
+   apply (subgoal_tac "isASIDPoolCap cp") prefer 2
+    apply (case_tac cp; fastforce simp add: isCap_simps)
+
+   apply (simp add: ccorres_cond_iffs Collect_True Collect_False
+                    Let_def
+               del: Collect_const)
+
     apply (rule ccorres_rhs_assoc)+
     apply (csymbr, csymbr, csymbr)
     apply (rule ccorres_Guard_Seq)+
@@ -1130,8 +1138,6 @@ lemma arch_recycleCap_ccorres:
       apply vcg
      apply wp
     apply (simp add: guard_is_UNIV_def)
-   apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-   apply (cases cp, simp_all add: isCap_simps)[1]
   apply (clarsimp simp: word_sle_def word_sless_def
                         asidLowBits_handy_convs
                         cap_get_tag_isCap_ArchObject)

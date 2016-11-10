@@ -501,42 +501,22 @@ lemma tcb_sched_action_transform_inv: "\<lbrace>\<lambda>ps. transform ps = cs\<
   apply (wp | simp)+
   done
 
+lemma set_scheduler_action_transform_inv:
+  "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_scheduler_action act \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
+  by (clarsimp simp: set_scheduler_action_def)
+
 lemma possible_switch_to_dcorres:
   "dcorres dc P P' (return ()) (possible_switch_to t on_same_prio)"
- apply (clarsimp simp: possible_switch_to_def)
-  apply (rule dcorres_symb_exec_r)
-    apply (rule dcorres_symb_exec_r)
-      apply (rule dcorres_symb_exec_r)
-        apply (rule dcorres_symb_exec_r)
-         apply (rule dcorres_symb_exec_r)
-            apply (rule dcorres_symb_exec_r)
-              apply (case_tac "rvc = rva", simp_all)
-              apply (case_tac "on_same_prio", simp_all)
-            apply (rule conjI)
-             apply (clarsimp, rule set_scheduler_action_dcorres)
-            apply (rule conjI)
-            apply (clarsimp, rule dcorres_symb_exec_r)
-              apply (case_tac "rve", simp_all)
- 
-             apply (fold dc_def, rule reschedule_required_dcorres)
-            apply (wp hoare_TrueI tcb_sched_action_transform_inv)
-            apply (clarsimp, rule dcorres_symb_exec_r)
-              apply (case_tac "rve", simp_all)
-             apply (fold dc_def, rule reschedule_required_dcorres)
-            apply (wp hoare_TrueI tcb_sched_action_transform_inv)
-           apply (rule conjI)
-           apply (clarsimp, rule set_scheduler_action_dcorres)
-           apply (rule conjI)
-           apply (clarsimp, rule dcorres_symb_exec_r)
-           apply (case_tac "rve", simp_all)
-           apply (fold dc_def, rule reschedule_required_dcorres)
-           apply (wp hoare_TrueI tcb_sched_action_transform_inv)
-           apply (clarsimp, rule dcorres_symb_exec_r)
-           apply (case_tac "rve", simp_all)
-           apply (fold dc_def, rule reschedule_required_dcorres)
-           apply (wp hoare_TrueI tcb_sched_action_transform_inv)
-          apply (rule tcb_sched_action_dcorres)
-  apply (wp | simp)+
+  apply (clarsimp simp: possible_switch_to_def)
+  apply (rule dcorres_symb_exec_r)+
+              apply (rule corres_guard1_imp, rule corres_if_rhs)
+                apply (rule tcb_sched_action_dcorres[THEN corres_trivial])
+               apply (rule dcorres_symb_exec_r)+
+                     apply (fastforce intro!: reschedule_required_dcorres[THEN corres_trivial]
+                                      split: Deterministic_A.scheduler_action.splits )
+  (* 19 subgoals *)
+  apply (wp set_scheduler_action_transform_inv tcb_sched_action_transform_inv
+         | fastforce | rule hoare_pre)+
   done
 
 lemma switch_if_required_to_dcorres:

@@ -38,4 +38,12 @@ axiomatization where
   ckernel_init_ctr:
   "((tc,s),x) \<in> Init_H \<Longrightarrow> ct_running' s"
 
+axiomatization where
+  ckernel_init_domain_time:
+  "((tc,s),x) \<in> Init_H \<Longrightarrow> ksDomainTime s \<noteq> 0"
+
+axiomatization where
+  ckernel_init_domain_list:
+  "((tc,s),x) \<in> Init_H \<Longrightarrow> length (ksDomSchedule s) > 0 \<and> (\<forall>(d,time) \<in> set (ksDomSchedule s). time > 0)"
+
 end

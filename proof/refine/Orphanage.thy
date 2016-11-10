@@ -1699,9 +1699,6 @@ lemma arch_recycleCap_no_orphans:
        apply (clarsimp simp: no_orphans_def all_queued_tcb_ptrs_def
                              all_active_tcb_ptrs_def is_active_tcb_ptr_def)
       apply (wp undefined_valid | clarsimp)+
-  apply (drule cte_wp_at_valid_objs_valid_cap', clarsimp+)
-  apply (clarsimp simp: valid_cap'_def isCap_simps simp del: not_ex
-                  split: arch_capability.splits)
   done
 
 lemma recycleCap_no_orphans:

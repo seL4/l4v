@@ -701,9 +701,11 @@ definition
   where
   "global_automaton_if get_active_irqf do_user_opf kernel_callf 
                        preemptionf schedulef kernel_exitf \<equiv>
-  (* Kernel entry with preemption during event handling *)
+  (* Kernel entry with preemption during event handling
+     NOTE: kernel cannot be preempted while servicing an interrupt *)
      { ( (s, KernelEntry e),
-         (s', KernelPreempted) ) |s s' e. (s, True, s') \<in> kernel_callf e } \<union>
+         (s', KernelPreempted) ) |s s' e. (s, True, s') \<in> kernel_callf e \<and>
+                                          e \<noteq> Interrupt} \<union>
   (* kernel entry without preemption during event handling *)
      { ( (s, KernelEntry e),
          (s', KernelSchedule (e = Interrupt)) ) |s s' e. (s, False, s') \<in> kernel_callf e } \<union>
@@ -1062,11 +1064,14 @@ lemma kernel_entry_if_guarded_pas_domain:
   done
 
 lemma kernel_entry_if_valid_sched:
-  "\<lbrace>valid_sched and invs and
+  "\<lbrace>valid_sched and invs and (ct_active or ct_idle) and
     (\<lambda>s. (e \<noteq> Interrupt \<longrightarrow> ct_active s) \<and> scheduler_action s = resume_cur_thread)\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply(simp add: kernel_entry_if_def tcb_cap_cases_def | wp static_imp_wp handle_event_valid_sched thread_set_invs_trivial thread_set_not_state_valid_sched)+
+  apply(simp add: kernel_entry_if_def tcb_cap_cases_def
+        | wp static_imp_wp handle_event_valid_sched thread_set_invs_trivial
+             thread_set_not_state_valid_sched hoare_vcg_disj_lift
+             thread_set_no_change_tcb_state ct_in_state_thread_state_lift)+
   apply(clarsimp)
   done
 
@@ -1376,23 +1381,30 @@ lemma valid_device_abs_state_eq:
 
 
 
+
 (*Weakened invs_if to properties only necessary for refinement*)
 definition full_invs_if :: "observable_if set" where
-  "full_invs_if \<equiv> {s. einvs (internal_state_if s) \<and>         
-                (case (snd s) of (KernelEntry e) \<Rightarrow>
-                     (e \<noteq> Interrupt \<longrightarrow> ct_running (internal_state_if s)) \<and>
-                     (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
-                      
-                     scheduler_action (internal_state_if s) = resume_cur_thread
-                              | KernelExit \<Rightarrow>
-                     (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
-                     scheduler_action (internal_state_if s) = resume_cur_thread                                          | InUserMode \<Rightarrow> 
-                     ct_running (internal_state_if s) \<and> 
-                     scheduler_action (internal_state_if s) = resume_cur_thread
-                              | InIdleMode \<Rightarrow> 
-                     ct_idle (internal_state_if s) \<and>
-                     scheduler_action (internal_state_if s) = resume_cur_thread
-                              | _ \<Rightarrow> True) }"
+  "full_invs_if \<equiv>
+    {s. einvs (internal_state_if s) \<and>
+        (snd s \<noteq> KernelSchedule True \<longrightarrow> domain_time (internal_state_if s) > 0) \<and>
+        (domain_time (internal_state_if s) = 0
+           \<longrightarrow> scheduler_action (internal_state_if s) = choose_new_thread) \<and>
+        valid_domain_list (internal_state_if s) \<and>
+        (case (snd s)
+          of (KernelEntry e) \<Rightarrow>
+                (e \<noteq> Interrupt \<longrightarrow> ct_running (internal_state_if s))
+                \<and> (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s))
+                \<and> scheduler_action (internal_state_if s) = resume_cur_thread
+           | KernelExit \<Rightarrow>
+                (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s))
+                \<and> scheduler_action (internal_state_if s) = resume_cur_thread
+           | InUserMode \<Rightarrow>
+                ct_running (internal_state_if s)
+                \<and> scheduler_action (internal_state_if s) = resume_cur_thread
+           | InIdleMode \<Rightarrow>
+                ct_idle (internal_state_if s)
+                \<and> scheduler_action (internal_state_if s) = resume_cur_thread
+           | _ \<Rightarrow> True) }"
 
 end
 
@@ -1500,16 +1512,6 @@ lemma ct_active_not_idle: "ct_active s \<Longrightarrow> invs s \<Longrightarrow
   apply (clarsimp simp add: ct_in_state_def valid_state_def valid_idle_def
                    pred_tcb_at_def obj_at_def invs_def)
   done
-
-(* it makes life easier to assume that all domain slies in the domain list are non-zero.
-   this means that when we switch to a new domain, the new domain_time is nonzero at least
-   until we get the first timer interrupt. this allows us to assume that we won't switch
-   partitions until at least after the first timer tick. *)
-definition valid_domain_list_2 where
-  "valid_domain_list_2 dl \<equiv> length dl > 0 \<and> (\<forall>(d,n) \<in> set dl. n > (0::word32))"
-
-abbreviation valid_domain_list where
-  "valid_domain_list s \<equiv> valid_domain_list_2 (domain_list s)"
 
 definition cur_context where "cur_context s = tcb_context (the (get_tcb (cur_thread s) s))"
 
@@ -1681,6 +1683,7 @@ lemma schedule_if_domain_time_nonzero':
    schedule_if tc
    \<lbrace>(\<lambda>_ s. domain_time s > 0)\<rbrace>"
   apply(simp add: schedule_if_def schedule_def)
+  apply (rule hoare_pre)
   apply (wp next_domain_domain_time_nonzero
         | wpc | simp add: crunch_simps guarded_switch_to_def switch_to_thread_def 
                               choose_thread_def switch_to_idle_thread_def
@@ -1688,11 +1691,9 @@ lemma schedule_if_domain_time_nonzero':
        apply(wp hoare_drop_imps)
         apply(simp add: choose_thread_def switch_to_idle_thread_def arch_switch_to_idle_thread_def guarded_switch_to_def switch_to_thread_def | wp)+
           apply(wp hoare_drop_imps)
+       apply clarsimp
        apply(wp next_domain_domain_time_nonzero)
-       apply simp
-     apply(wp_once hoare_drop_imps)
-     apply (wp)
-   apply clarsimp
+       apply (clarsimp simp: if_apply_def2)
   apply(wp gts_wp)
   apply (auto)
   done
@@ -2064,26 +2065,30 @@ definition cur_thread_context_of :: "observable_if \<Rightarrow> user_context" w
          | _ \<Rightarrow> cur_context (internal_state_if s)"
 
 definition invs_if :: "observable_if \<Rightarrow> bool" where
-  "invs_if s \<equiv> Invs (internal_state_if s) \<and>
-               det_inv (sys_mode_of s) (cur_thread_context_of s) (internal_state_if s) \<and>
-                (snd s \<noteq> KernelSchedule True \<longrightarrow> domain_time (internal_state_if s) > 0) \<and>
-                (domain_time (internal_state_if s) = 0 \<longrightarrow> scheduler_action (internal_state_if s) = choose_new_thread) \<and> (snd s \<noteq> KernelExit \<longrightarrow> (ct_idle (internal_state_if s) \<longrightarrow> 
-                            user_context_of s = idle_context (internal_state_if s))) \<and>
-                (case (snd s) of (KernelEntry e) \<Rightarrow>
+  "invs_if s \<equiv>
+    Invs (internal_state_if s) \<and>
+    det_inv (sys_mode_of s) (cur_thread_context_of s) (internal_state_if s) \<and>
+    (snd s \<noteq> KernelSchedule True \<longrightarrow> domain_time (internal_state_if s) > 0) \<and>
+    (domain_time (internal_state_if s) = 0
+       \<longrightarrow> scheduler_action (internal_state_if s) = choose_new_thread) \<and>
+    (snd s \<noteq> KernelExit
+       \<longrightarrow> (ct_idle (internal_state_if s)
+             \<longrightarrow> user_context_of s = idle_context (internal_state_if s))) \<and>
+    (case (snd s)
+      of KernelEntry e \<Rightarrow>
                      (e \<noteq> Interrupt \<longrightarrow> ct_running (internal_state_if s)) \<and>
                      (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
-                      
                      scheduler_action (internal_state_if s) = resume_cur_thread
-                              | KernelExit \<Rightarrow>
+        | KernelExit \<Rightarrow>
                      (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
-                     scheduler_action (internal_state_if s) = resume_cur_thread                                          | InUserMode \<Rightarrow> 
-                     ct_running (internal_state_if s) \<and> 
                      scheduler_action (internal_state_if s) = resume_cur_thread
-                              | InIdleMode \<Rightarrow> 
+        | InUserMode \<Rightarrow>
+                     ct_running (internal_state_if s) \<and>
+                     scheduler_action (internal_state_if s) = resume_cur_thread
+        | InIdleMode \<Rightarrow>
                      ct_idle (internal_state_if s) \<and>
                      scheduler_action (internal_state_if s) = resume_cur_thread
-                              | _ \<Rightarrow> True)"
-                       
+        | _ \<Rightarrow> True)"
 
 lemma invs_if_s0[simp]:
   "invs_if s0"
@@ -2307,6 +2312,7 @@ lemma invs_if_Step_ADT_A_if:
                      ct_idle_lift
                  | clarsimp intro: guarded_pas_is_subject_current_aag
                  | wp kernel_entry_if_domain_fields)+
+          apply (rule conjI, fastforce intro!: active_from_running)
           apply (simp add: schact_is_rct_def)
           apply (rule guarded_pas_is_subject_current_aag,assumption+)
          apply (simp_all only: silc_inv_cur pas_refined_cur guarded_pas_domain_cur)
@@ -2456,8 +2462,7 @@ lemma execution_restrict:
   done
 
 lemma invs_if_full_invs_if: "invs_if s \<Longrightarrow> s \<in> full_invs_if"
-  apply (clarsimp simp add: full_invs_if_def invs_if_def Invs_def)
-  done
+  by (clarsimp simp add: full_invs_if_def invs_if_def Invs_def)
 
 lemma ADT_A_if_Step_system:
   "Step_system (ADT_A_if utf) s0"
@@ -3397,12 +3402,16 @@ lemma ADT_A_if_Step_measure_if'':
   "\<lbrakk>(s,s') \<in> data_type.Step (ADT_A_if utf) x; invs_if s;
    measuref_if y s > 0\<rbrakk>
        \<Longrightarrow> measuref_if y s' < measuref_if y s \<and> 
-          (\<not> interrupted_modes (snd s) \<longrightarrow> interrupted_modes (snd s') \<longrightarrow> irq_state_of_state (internal_state_if s') = next_irq_state_of_state (internal_state_if s))"
+          (\<not> interrupted_modes (snd s) \<longrightarrow> interrupted_modes (snd s')
+            \<longrightarrow> irq_state_of_state (internal_state_if s') = next_irq_state_of_state (internal_state_if s))"
   apply(frule invs_if_irq_is_recurring)
   apply(case_tac s, clarsimp)
   apply(rename_tac uc i_s mode)
   apply(case_tac mode)
-       apply(simp_all add: rah_simp system.Step_def execution_def steps_def ADT_A_if_def global_automaton_if_def check_active_irq_A_if_def do_user_op_A_if_def check_active_irq_if_def in_monad measuref_if_def | safe | split if_splits)+
+       apply(simp_all add: rah_simp system.Step_def execution_def steps_def ADT_A_if_def
+                           global_automaton_if_def check_active_irq_A_if_def do_user_op_A_if_def
+                           check_active_irq_if_def in_monad measuref_if_def
+             | safe | split if_splits)+
                          apply(frule getActiveIRQ_None)
                          apply(erule use_valid[OF _ do_user_op_if_irq_measure_if])
                          apply(erule use_valid[OF _ dmo_getActiveIRQ_wp])
@@ -3439,13 +3448,15 @@ lemma ADT_A_if_Step_measure_if'':
                  apply(simp add: next_irq_state_Suc recurring_next_irq_state_dom)
                  apply(fastforce dest: next_irq_state_less)
                 apply(clarsimp split: if_splits)
-               apply(clarsimp split: if_splits)
-               apply(clarsimp simp: kernel_call_A_if_def kernel_entry_if_def in_monad)
-              apply (clarsimp simp: kernel_call_A_if_def)
-              apply (case_tac r,simp)
+                
+               apply(clarsimp simp: kernel_call_A_if_def in_monad)
+               apply (case_tac r ; simp)
                apply (rule kernel_entry_if_next_irq_state_of_state_next,assumption+)
-                  apply((simp add: invs_if_def Invs_def only_timer_irq_inv_def | elim conjE | assumption)+)[5]
-             apply(clarsimp split: if_splits)
+                  prefer 4
+                  apply fastforce
+                 apply((simp add: invs_if_def Invs_def only_timer_irq_inv_def | elim conjE | assumption)+)[3]
+              apply(clarsimp split: if_splits)
+
             apply(rule Suc_le_lessD)           
             apply simp
             apply(simp add: kernel_call_A_if_def)

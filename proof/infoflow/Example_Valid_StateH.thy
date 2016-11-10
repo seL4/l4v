@@ -2798,6 +2798,9 @@ end
 axiomatization newKSDomSchedInst where
   newKSDomSched: "newKSDomSchedule = [(0,0xA), (1, 0xA)]"
 
+axiomatization newKSDomainTimeInst where
+  newKSDomainTime: "newKSDomainTime = 5"
+
 (* kernel_data_refs is an undefined constant at the moment, and therefore
    cannot be referred to in valid_global_refs' and pspace_domain_valid.
    We use an axiomatization for the moment. *)
@@ -3373,26 +3376,26 @@ lemma step_restrict_s0:
    apply (drule ct_idle_related[OF s0_srel])
    apply simp
   apply (clarsimp simp: full_invs_if'_def s0H_invs)
-  apply (intro conjI)
-     apply (simp only: ex_abs_def)
-     apply (rule_tac x="s0_internal" in exI)
-     apply (simp only: einvs_s0 s0_srel)
-    apply (clarsimp simp: vs_valid_duplicates'_def split: option.splits)
-    apply (frule kh0H_SomeD)
-    apply (elim disjE, simp_all add: vs_ptr_align_def kh0H_all_obj_def')[1]
-           apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
+  apply (rule conjI)
+   apply (simp only: ex_abs_def)
+   apply (rule_tac x="s0_internal" in exI)
+   apply (simp only: einvs_s0 s0_srel)
+  apply (simp add: s0H_internal_def valid_domain_list'_def)
+  apply (rule conjI)
+   apply (clarsimp simp: vs_valid_duplicates'_def split: option.splits)
+   apply (frule kh0H_SomeD)
+   apply (elim disjE, simp_all add: vs_ptr_align_def kh0H_all_obj_def')[1]
           apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
          apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
-        apply (clarsimp split: split_if_asm)
-       apply (clarsimp simp: High_pd'H_def split: split_if_asm)
-      apply (clarsimp simp: Low_pd'H_def split: split_if_asm)
-     apply (clarsimp simp: High_pt'H_def split: split_if_asm)
-    apply (clarsimp simp: Low_pt'H_def split: split_if_asm)
-   apply (rule disjI1)
-   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned Low_tcbH_def)
-   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
-  apply (simp add: s0H_internal_def)
+        apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
+       apply (clarsimp split: split_if_asm)
+      apply (clarsimp simp: High_pd'H_def split: split_if_asm)
+     apply (clarsimp simp: Low_pd'H_def split: split_if_asm)
+    apply (clarsimp simp: High_pt'H_def split: split_if_asm)
+   apply (clarsimp simp: Low_pt'H_def split: split_if_asm)
+  apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned Low_tcbH_def)
+  apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
+  apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
   done
 
 lemma Sys1_valid_initial_state_noenabled:

@@ -25,13 +25,15 @@ text {*
 lemma valid_etcbs_sched: "valid_sched s \<longrightarrow> valid_etcbs s" by fastforce
 
 lemma handle_event_invs_and_valid_sched:
-  "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace> Syscall_A.handle_event e
+  "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
+      and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace> Syscall_A.handle_event e
   \<lbrace>\<lambda>rv. invs and valid_sched\<rbrace>"
   by (wp he_invs handle_event_valid_sched, simp)
 
 lemma dcorres_call_kernel:
   "dcorres dc \<top>
-          (invs and valid_sched and valid_pdpt_objs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
+          (invs and valid_sched and valid_pdpt_objs
+             and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
              and  (\<lambda>s. scheduler_action s = resume_cur_thread))
           (Syscall_D.call_kernel e) (Syscall_A.call_kernel e)"
   apply (simp_all add: Syscall_D.call_kernel_def Syscall_A.call_kernel_def)
@@ -53,18 +55,15 @@ lemma dcorres_call_kernel:
          apply ((wp | simp)+)[3]
       apply (rule hoare_post_imp_dc2E, rule handle_event_invs_and_valid_sched)
       apply (clarsimp simp: invs_def valid_state_def)
-     apply (wp hoare_vcg_if_lift2 hoare_drop_imp he_invs
-            | strengthen valid_etcbs_sched valid_idle_invs_strg
-            | simp add: conj_comms cong: conj_cong)+
+     apply (simp add: conj_comms if_apply_def2
+            | wp | strengthen valid_etcbs_sched valid_idle_invs_strg)+
     apply (rule valid_validE2)
       apply (rule hoare_vcg_conj_lift)
        apply (rule he_invs)
       apply (rule handle_event_valid_sched)
-     apply fastforce
-    apply fastforce
-   apply fastforce
-  apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def valid_sched_def)
-  done
+     apply (fastforce intro: active_from_running)+
+
+done
 
 end
 

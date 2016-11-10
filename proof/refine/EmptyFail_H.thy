@@ -315,10 +315,10 @@ crunch (empty_fail) empty_fail: callKernel
 (wp: empty_fail_catch simp: const_def Let_def ignore: cacheRangeOp)
 
 lemma call_kernel_serial:
-  " \<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
+  " \<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
               (\<lambda>s. scheduler_action s = resume_cur_thread)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
-            (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
+            (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
               (\<lambda>s. vs_valid_duplicates' (ksPSpace s))) s' \<rbrakk>
     \<Longrightarrow> fst (call_kernel event s) \<noteq> {}"

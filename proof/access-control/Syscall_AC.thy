@@ -1095,8 +1095,9 @@ lemma call_kernel_integrity':
   fixes st
   defines "X \<equiv> ptr_range (arm_globals_frame (arch_state st)) 2"
   shows "st \<turnstile> \<lbrace>einvs and pas_refined aag and is_subject aag \<circ> cur_thread and schact_is_rct and guarded_pas_domain aag 
-                    and domain_sep_inv (pasMaySendIrqs aag) st' 
-                    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag)\<rbrace>
+                    and domain_sep_inv (pasMaySendIrqs aag) st'
+                    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and (ct_active or ct_idle)
+                    and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag)\<rbrace>
                call_kernel ev
              \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: call_kernel_def getActiveIRQ_def X_def)
@@ -1120,7 +1121,9 @@ lemma call_kernel_integrity':
 
 
 lemma call_kernel_integrity:
-  "\<lbrace>pas_refined pas and einvs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and domain_sep_inv (pasMaySendIrqs pas) st'
+  "\<lbrace>pas_refined pas and einvs
+    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and (ct_active or ct_idle)
+    and domain_sep_inv (pasMaySendIrqs pas) st'
     and schact_is_rct and guarded_pas_domain pas
     and is_subject pas o cur_thread and K (pasMayActivate pas \<and> pasMayEditReadyQueues pas) and (\<lambda>s. s = st)\<rbrace> 
    call_kernel ev
@@ -1134,7 +1137,9 @@ lemma call_kernel_integrity:
 
 
 lemma call_kernel_pas_refined:
-  "\<lbrace>einvs and pas_refined aag and is_subject aag \<circ> cur_thread and guarded_pas_domain aag and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and schact_is_rct and pas_cur_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'\<rbrace>
+  "\<lbrace>einvs and pas_refined aag and is_subject aag \<circ> cur_thread and guarded_pas_domain aag
+    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and (ct_active or ct_idle)
+    and schact_is_rct and pas_cur_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'\<rbrace>
   call_kernel ev
   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: call_kernel_def getActiveIRQ_def)
