@@ -25,7 +25,7 @@ if [ $? != 0 ]; then
 fi
 
 # Whitelist: bare names are ok for Isabelle theory imports
-BUILTINS='-i Pure -i List -i HOL -i Main -i GCD'
+BUILTINS='-i Pure -i List -i HOL -i Main -i Complex_Main -i GCD'
 # Exclude design skeleton, which is stashed in inner directories
 EXCLUDE_THYS='design/(m-)?skel'
 
