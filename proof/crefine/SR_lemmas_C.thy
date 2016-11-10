@@ -356,9 +356,9 @@ lemma updateObject_cte_tcb:
   done
 
 definition
-  tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> word32 \<times> word32 \<times> (MachineTypes.register \<Rightarrow> word32) \<times> bool \<times> word8 \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> word32 option"
+  tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> word32 \<times> word32 \<times> arch_tcb \<times> bool \<times> word8 \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> word32 option"
   where
-  "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbContext t, tcbQueued t,
+  "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbArch t, tcbQueued t,
                             tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
@@ -1750,7 +1750,7 @@ lemma ctcb_ptr_to_ctcb_ptr [simp]:
 declare ucast_id [simp]
 
 definition 
-  cap_rights_from_word_canon :: "word32 \<Rightarrow> cap_rights_CL"
+  cap_rights_from_word_canon :: "word32 \<Rightarrow> seL4_CapRights_CL"
   where
   "cap_rights_from_word_canon wd \<equiv> 
     \<lparr> capAllowGrant_CL = from_bool (wd !! 2),
@@ -1758,7 +1758,7 @@ definition
       capAllowWrite_CL = from_bool (wd !! 0)\<rparr>"
 
 definition 
-  cap_rights_from_word :: "word32 \<Rightarrow> cap_rights_CL"
+  cap_rights_from_word :: "word32 \<Rightarrow> seL4_CapRights_CL"
   where
   "cap_rights_from_word wd \<equiv> SOME cr. 
    to_bool (capAllowGrant_CL cr) = wd !! 2 \<and>

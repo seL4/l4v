@@ -43,7 +43,7 @@ lemma coerce_memset_to_heap_update_user_data:
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps 
-                   user_context_C_tag_def thread_state_C_tag_def fault_C_tag_def
+                   user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
                    lookup_fault_C_tag_def update_ti_t_ptr_0s
                    ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td 
                    ti_typ_combine_empty_ti ti_typ_combine_td       
@@ -394,7 +394,7 @@ lemma coerce_memset_to_heap_update_asidpool:
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps 
-                   user_context_C_tag_def thread_state_C_tag_def fault_C_tag_def
+                   user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
                    lookup_fault_C_tag_def update_ti_t_ptr_0s
                    ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td 
                    ti_typ_combine_empty_ti ti_typ_combine_td       
@@ -1236,7 +1236,7 @@ lemma coerce_memset_to_heap_update:
              (tcb_C (arch_tcb_C (user_context_C (FCP (\<lambda>x. 0))))
                     (thread_state_C (FCP (\<lambda>x. 0)))
                     (NULL)
-                    (fault_C (FCP (\<lambda>x. 0)))
+                    (seL4_Fault_C (FCP (\<lambda>x. 0)))
                     (lookup_fault_C (FCP (\<lambda>x. 0)))
                       0 0 0 0 0 0 NULL NULL NULL NULL)"
   apply (intro ext, simp add: heap_update_def)
@@ -1245,7 +1245,7 @@ lemma coerce_memset_to_heap_update:
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps 
-                   user_context_C_tag_def thread_state_C_tag_def fault_C_tag_def
+                   user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
                    lookup_fault_C_tag_def update_ti_t_ptr_0s arch_tcb_C_tag_def
                    ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td 
                    ti_typ_combine_empty_ti ti_typ_combine_td       

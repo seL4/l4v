@@ -605,17 +605,17 @@ abbreviation
 
 
 lemma rightsFromWord_spec:
-  shows "\<forall>s. \<Gamma> \<turnstile> {s} \<acute>ret__struct_cap_rights_C :== PROC rightsFromWord(\<acute>w) 
-  \<lbrace>cap_rights_lift \<acute>ret__struct_cap_rights_C = cap_rights_from_word_canon \<^bsup>s\<^esup>w \<rbrace>"
+  shows "\<forall>s. \<Gamma> \<turnstile> {s} \<acute>ret__struct_seL4_CapRights_C :== PROC rightsFromWord(\<acute>w)
+  \<lbrace>seL4_CapRights_lift \<acute>ret__struct_seL4_CapRights_C = cap_rights_from_word_canon \<^bsup>s\<^esup>w \<rbrace>"
   apply vcg
-  apply (simp add: cap_rights_lift_def nth_shiftr mask_shift_simps nth_shiftr
+  apply (simp add: seL4_CapRights_lift_def nth_shiftr mask_shift_simps nth_shiftr
     cap_rights_from_word_canon_def from_bool_def word_and_1 eval_nat_numeral
     word_sless_def word_sle_def)  
   done
 
 
 abbreviation
-  "lookupSlot_rel' \<equiv> \<lambda>(cte, rm) (cte', rm'). cte' = Ptr cte \<and> rm = cap_rights_to_H (cap_rights_lift rm')"
+  "lookupSlot_rel' \<equiv> \<lambda>(cte, rm) (cte', rm'). cte' = Ptr cte \<and> rm = cap_rights_to_H (seL4_CapRights_lift rm')"
 
 (* MOVE *)
 lemma cap_rights_to_H_from_word_canon [simp]:

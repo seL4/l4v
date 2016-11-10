@@ -123,7 +123,7 @@ lemma handleUnknownSyscall_ccorres:
   apply (clarsimp simp: ct_in_state'_def)
   apply (frule st_tcb_idle'[rotated])
    apply (erule invs_valid_idle')
-  apply (clarsimp simp: cfault_rel_def fault_unknown_syscall_lift is_cap_fault_def)
+  apply (clarsimp simp: cfault_rel_def seL4_Fault_UnknownSyscall_lift is_cap_fault_def)
   done
 
 lemma handleVMFaultEvent_ccorres:
@@ -210,7 +210,7 @@ lemma handleUserLevelFault_ccorres:
   apply (frule st_tcb_idle'[rotated])
    apply (erule invs_valid_idle')
    apply simp
-  apply (clarsimp simp: cfault_rel_def fault_user_exception_lift)
+  apply (clarsimp simp: cfault_rel_def seL4_Fault_UserException_lift)
   apply (simp add: is_cap_fault_def)
   done
 
@@ -552,8 +552,8 @@ lemma ccorres_add_gets:
 lemma ccorres_get_registers:
   "\<lbrakk> \<And>cptr msgInfo. ccorres dc xfdc
      ((\<lambda>s. P s \<and> Q s \<and>
-           obj_at' (\<lambda>tcb. tcbContext tcb ARM_H.capRegister = cptr
-                      \<and> tcbContext tcb ARM_H.msgInfoRegister = msgInfo)
+           obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb ARM_H.capRegister = cptr
+                      \<and>   (atcbContextGet o tcbArch) tcb ARM_H.msgInfoRegister = msgInfo)
              (ksCurThread s) s) and R)
      (UNIV \<inter> \<lbrace>\<acute>cptr = cptr\<rbrace> \<inter> \<lbrace>\<acute>msgInfo = msgInfo\<rbrace>) [] m c \<rbrakk>
       \<Longrightarrow>
@@ -566,14 +566,15 @@ lemma ccorres_get_registers:
   apply (rule ccorres_assume_pre)
   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
   apply (drule obj_at_ko_at', clarsimp)
-  apply (erule_tac x="tcbContext ko ARM_H.capRegister" in meta_allE)
-  apply (erule_tac x="tcbContext ko ARM_H.msgInfoRegister" in meta_allE)
+  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_H.capRegister" in meta_allE)
+  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_H.msgInfoRegister" in meta_allE)
   apply (erule ccorres_guard_imp2)
   apply (clarsimp simp: rf_sr_ksCurThread)
   apply (drule(1) obj_at_cslift_tcb, clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                         ARM_H.msgInfoRegister_def ARM_H.capRegister_def
                         ARM.msgInfoRegister_def ARM.capRegister_def
+                        carch_tcb_relation_def
                         "StrictC'_register_defs")
   done
 
@@ -618,12 +619,13 @@ lemma callKernel_withFastpath_corres_C:
 
 lemma threadSet_all_invs_triv':
   "\<lbrace>all_invs' e and (\<lambda>s. t = ksCurThread s)\<rbrace>
-  threadSet (tcbContext_update f) t \<lbrace>\<lambda>_. all_invs' e\<rbrace>"
+  threadSet (\<lambda>tcb. tcbArch_update (\<lambda>_. atcbContextSet f (tcbArch tcb)) tcb) t \<lbrace>\<lambda>_. all_invs' e\<rbrace>"
   unfolding all_invs'_def
   apply (rule hoare_pre)
    apply (rule wp_from_corres_unit)
-     apply (rule threadset_corresT [where f="tcb_context_update f"])
-        apply (simp add: tcb_relation_def)
+     apply (rule threadset_corresT [where f="tcb_arch_update (arch_tcb_context_set f)"])
+        apply (simp add: tcb_relation_def arch_tcb_context_set_def
+                         atcbContextSet_def arch_tcb_relation_def)
        apply (simp add: tcb_cap_cases_def)
       apply (simp add: tcb_cte_cases_def)
      apply (simp add: exst_same_def)
@@ -642,7 +644,7 @@ lemma threadSet_all_invs_triv':
 lemma getContext_corres:
   "t' = tcb_ptr_to_ctcb_ptr t \<Longrightarrow> 
   corres_underlying rf_sr False True (op =) (tcb_at' t) \<top> 
-                    (threadGet tcbContext t) (gets (getContext_C t'))"
+                    (threadGet (atcbContextGet o tcbArch) t) (gets (getContext_C t'))"
   apply (clarsimp simp: corres_underlying_def simpler_gets_def)
   apply (drule obj_at_ko_at')
   apply clarsimp
@@ -654,7 +656,7 @@ lemma getContext_corres:
   apply (clarsimp simp: getContext_C_def)
   apply (drule cmap_relation_ko_atD [rotated])
    apply fastforce
-  apply (clarsimp simp: typ_heap_simps ctcb_relation_def from_user_context_C)
+  apply (clarsimp simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def from_user_context_C)
   done
 
 lemma callKernel_cur:

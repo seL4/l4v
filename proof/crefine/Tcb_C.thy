@@ -172,9 +172,9 @@ lemma getObject_state:
 
 
 lemma threadGet_state:
-  "\<lbrakk> (uc, s') \<in> fst (threadGet tcbContext t' s); ko_at' ko t s \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> (uc, s') \<in> fst (threadGet (atcbContextGet o tcbArch) t' s); ko_at' ko t s \<rbrakk> \<Longrightarrow>
    (uc, s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>) \<in> 
-  fst (threadGet tcbContext t' (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
+  fst (threadGet (atcbContextGet o tcbArch) t' (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
   apply (clarsimp simp: threadGet_def liftM_def in_monad)
   apply (drule (1) getObject_state [where st=st])   
   apply (rule exI)
@@ -1229,10 +1229,10 @@ lemma getObject_context:
   done
 
 lemma threadGet_context:
-  "\<lbrakk> (uc, s') \<in> fst (threadGet tcbContext (ksCurThread s) s); ko_at' ko t s;
+  "\<lbrakk> (uc, s') \<in> fst (threadGet (atcbContextGet o tcbArch) (ksCurThread s) s); ko_at' ko t s;
       t \<noteq> ksCurThread s \<rbrakk> \<Longrightarrow>
-   (uc, s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>) \<in> 
-  fst (threadGet tcbContext (ksCurThread s) (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>))"
+   (uc, s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>) \<in>
+  fst (threadGet (atcbContextGet o tcbArch) (ksCurThread s) (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>))"
   apply (clarsimp simp: threadGet_def liftM_def in_monad) 
   apply (drule (1) getObject_context [where st=st])   
   apply (rule exI)
@@ -1244,8 +1244,8 @@ done
 lemma asUser_context:
   "\<lbrakk>(x,s) \<in> fst (asUser (ksCurThread s) f s); ko_at' ko t s; \<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace> ; 
     t \<noteq> ksCurThread s\<rbrakk> \<Longrightarrow>
-  (x,s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>) \<in> 
-  fst (asUser (ksCurThread s) f (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>))"
+  (x,s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>) \<in>
+  fst (asUser (ksCurThread s) f (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>))"
   apply (clarsimp simp: asUser_def in_monad select_f_def)
   apply (frule use_valid, rule threadGet_inv [where P="op = s"], rule refl)
   apply (frule use_valid, assumption, rule refl)
@@ -1316,7 +1316,7 @@ lemma getMRs_rel_context:
   "\<lbrakk>getMRs_rel args buffer s; 
     (cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer) s;
     ko_at' ko t s ; t \<noteq> ksCurThread s\<rbrakk> \<Longrightarrow>
-  getMRs_rel args buffer (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>)"
+  getMRs_rel args buffer (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>)"
   apply (clarsimp simp: getMRs_rel_def)
   apply (rule exI, erule conjI)
   apply (subst (asm) det_wp_use, rule det_wp_getMRs)
@@ -1677,7 +1677,7 @@ shows
                                = min (unat n) (unat n_frameRegisters + unat n_gpRegisters)"
                                 in ccorres_gen_asm)
                     apply (rule ccorres_split_nothrow_novcg)
-                        apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
+                        apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
                                                      (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                               = reply) target s"
                                    in ccorres_mapM_x_while)
@@ -1744,7 +1744,7 @@ shows
                           apply (rule ccorres_Cond_rhs)
                            apply (simp del: Collect_const)
                            apply (rule ccorres_rel_imp,
-                                  rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
+                                  rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
                                                       (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                                = reply) target s
                                                  \<and> valid_ipc_buffer_ptr' (the rva) s
@@ -1858,7 +1858,7 @@ shows
                             apply (simp add: drop_zip del: Collect_const)
                             apply (rule ccorres_Cond_rhs)
                              apply (simp del: Collect_const)
-                             apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
+                             apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
                                                        (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                                 = reply) target s
                                                   \<and> valid_ipc_buffer_ptr' (the rva) s \<and> valid_pspace' s"
@@ -2007,8 +2007,8 @@ shows
                apply wp
              apply (simp cong: rev_conj_cong)
              apply wp
-            apply (wp asUser_inv mapM_wp' getRegister_inv
-                      asUser_get_registers static_imp_wp)
+             apply (wp asUser_inv mapM_wp' getRegister_inv
+                      asUser_get_registers[simplified] static_imp_wp)
             apply (rule hoare_strengthen_post, rule asUser_get_registers)
             apply (clarsimp simp: obj_at'_def genericTake_def
                                   frame_gp_registers_convs)

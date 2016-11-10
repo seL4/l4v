@@ -472,8 +472,8 @@ lemma mask_32_id [simp]:
 
 lemma handleVMFault_ccorres:
   "ccorres ((\<lambda>a ex v. ex = scast EXCEPTION_FAULT \<and> (\<exists>vf.
-                      a = VMFault (fault_vm_fault_CL.address_CL vf) [instructionFault_CL vf, FSR_CL vf] \<and>
-                      errfault v = Some (Fault_vm_fault vf))) \<currency>
+                      a = ArchFault (VMFault (seL4_Fault_VMFault_CL.address_CL vf) [instructionFault_CL vf, FSR_CL vf]) \<and>
+                      errfault v = Some (SeL4_Fault_VMFault vf))) \<currency>
            (\<lambda>_. \<bottom>))
            (liftxf errstate id (K ()) ret__unsigned_long_')
            \<top>
@@ -497,7 +497,7 @@ lemma handleVMFault_ccorres:
       apply vcg
      apply (clarsimp simp: errstate_def)
      apply (clarsimp simp: EXCEPTION_FAULT_def EXCEPTION_NONE_def)
-     apply (simp add: fault_vm_fault_lift false_def)
+     apply (simp add: seL4_Fault_VMFault_lift false_def)
     apply wp
    apply (simp add: vm_fault_type_from_H_def Kernel_C.ARMDataAbort_def Kernel_C.ARMPrefetchAbort_def)
    apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff)
@@ -512,7 +512,7 @@ lemma handleVMFault_ccorres:
       apply vcg
      apply (clarsimp simp: errstate_def)
      apply (clarsimp simp: EXCEPTION_FAULT_def EXCEPTION_NONE_def)
-     apply (simp add: fault_vm_fault_lift true_def mask_def)
+     apply (simp add: seL4_Fault_VMFault_lift true_def mask_def)
     apply wp
   apply simp
   done
@@ -1845,7 +1845,7 @@ lemma setRegister_ccorres:
    apply (rule ccorres_pre_threadGet)
    apply (rule ccorres_Guard)
    apply (simp add: setRegister_def simpler_modify_def exec_select_f_singleton)
-   apply (rule_tac P="\<lambda>tcb. tcbContext tcb = rv"
+   apply (rule_tac P="\<lambda>tcb. (atcbContextGet o tcbArch) tcb = rv"
                 in threadSet_ccorres_lemma2 [unfolded dc_def])
     apply vcg
    apply (clarsimp simp: setRegister_def HaskellLib_H.runState_def
@@ -1859,7 +1859,9 @@ lemma setRegister_ccorres:
                (simp add: typ_heap_simps')+)
     apply (rule ball_tcb_cte_casesI, simp+)
    apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
-                  split: split_if)
+                         atcbContextSet_def atcbContextGet_def
+                         carch_tcb_relation_def
+                   split: split_if)
   apply (clarsimp simp: Collect_const_mem register_from_H_sless
                         register_from_H_less)
   apply (auto intro: typ_heap_simps elim: obj_at'_weakenE)

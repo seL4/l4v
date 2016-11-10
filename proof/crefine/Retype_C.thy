@@ -3548,9 +3548,9 @@ proof -
                 (thread_state_C.words_C (tcbState_C undefined)))
           (tcbState_C undefined),
        tcbFault_C :=
-         fault_C.words_C_update
+         seL4_Fault_C.words_C_update
           (\<lambda>_. foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<2]
-                (fault_C.words_C (tcbFault_C undefined)))
+                (seL4_Fault_C.words_C (tcbFault_C undefined)))
           (tcbFault_C undefined),
        tcbLookupFailure_C :=
          lookup_fault_C.words_C_update
@@ -3569,7 +3569,7 @@ proof -
       final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)(* takes ages *)
     apply (simp add: update_ti_adjust_ti update_ti_t_word32_0s 
       typ_info_simps 
-      user_context_C_tag_def thread_state_C_tag_def fault_C_tag_def
+      user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
       lookup_fault_C_tag_def update_ti_t_ptr_0s arch_tcb_C_tag_def
       ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td 
       ti_typ_combine_empty_ti ti_typ_combine_td       
@@ -3586,14 +3586,14 @@ proof -
     apply (intro conjI)
     apply (simp add: cthread_state_relation_def thread_state_lift_def 
       eval_nat_numeral ThreadState_Inactive_def)
-    apply (simp add: ccontext_relation_def newContext_def2)
+    apply (simp add: ccontext_relation_def newContext_def2 carch_tcb_relation_def)
     apply rule
-    apply (case_tac r, simp_all add: "StrictC'_register_defs" eval_nat_numeral)[1] -- "takes ages"
-    apply (simp add: thread_state_lift_def eval_nat_numeral)
+    apply (case_tac r, simp_all add: "StrictC'_register_defs" eval_nat_numeral atcbContext_def newArchTCB_def newContext_def initContext_def)[1] -- "takes ages"
+    apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def)+
     apply (simp add: timeSlice_def) 
-    apply (simp add: cfault_rel_def fault_lift_def fault_get_tag_def Let_def 
+    apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
       lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
-      eval_nat_numeral fault_null_fault_def option_to_ptr_def option_to_0_def
+      eval_nat_numeral seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
       split: split_if)+
     done
   

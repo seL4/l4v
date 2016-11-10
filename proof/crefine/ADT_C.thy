@@ -75,7 +75,7 @@ lemma Basic_sem_eq:
 lemma setArchTCB_C_corres:
   "\<lbrakk> ccontext_relation tc (tcbContext_C tc'); t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
   corres_underlying rf_sr nf nf' dc (tcb_at' t) \<top>
-    (threadSet (\<lambda>tcb. tcb \<lparr> tcbContext := tc \<rparr>) t) (setArchTCB_C tc' t')"
+    (threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb)\<rparr>) t) (setArchTCB_C tc' t')"
   apply (simp add: setArchTCB_C_def exec_C_def Basic_sem_eq corres_underlying_def)
   apply clarsimp
   apply (simp add: threadSet_def bind_assoc split_def exec_gets)
@@ -111,7 +111,7 @@ lemma setArchTCB_C_corres:
    apply (rule ext, simp split: split_if)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
-    apply (simp add: ctcb_relation_def)
+    apply (simp add: ctcb_relation_def carch_tcb_relation_def)
    apply assumption
   apply simp
   done
@@ -294,14 +294,16 @@ where
   "cirqstate_to_H w \<equiv>
    if w = scast Kernel_C.IRQSignal then irqstate.IRQSignal
    else if w = scast Kernel_C.IRQTimer then irqstate.IRQTimer
-   else irqstate.IRQInactive"
+   else if w = scast Kernel_C.IRQInactive then irqstate.IRQInactive
+   else irqstate.IRQReserved"
 
 lemma cirqstate_cancel:
   "cirqstate_to_H \<circ> irqstate_to_C = id"
   apply (rule ext)
   apply (case_tac x)
   apply (auto simp: cirqstate_to_H_def Kernel_C.IRQInactive_def
-                    Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def)
+                    Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
+                    Kernel_C.IRQReserved_def)
   done
 
 definition
@@ -812,6 +814,13 @@ lemma ccontext_relation_imp_eq:
   "ccontext_relation f x \<Longrightarrow> ccontext_relation g x \<Longrightarrow> f=g"
   by (rule ext) (simp add: ccontext_relation_def)
 
+lemma carch_tcb_relation_imp_eq:
+  "carch_tcb_relation f x \<Longrightarrow> carch_tcb_relation g x \<Longrightarrow> f = g"
+  apply (cases f)
+  apply (cases g)
+  apply (simp add: carch_tcb_relation_def ccontext_relation_imp_eq atcbContextGet_def)
+  done
+
 (* FIXME: move *)
 lemma ran_tcb_cte_cases:
   "ran tcb_cte_cases =
@@ -915,7 +924,7 @@ lemma map_to_ctes_tcb_ctes:
 lemma cfault_rel_imp_eq:
   "cfault_rel x a b \<Longrightarrow> cfault_rel y a b \<Longrightarrow> x=y"
   by (clarsimp simp: cfault_rel_def is_cap_fault_def
-              split: split_if_asm fault_CL.splits)
+              split: split_if_asm seL4_Fault_CL.splits)
 
 lemma cthread_state_rel_imp_eq:
   "cthread_state_relation x z \<Longrightarrow> cthread_state_relation y z \<Longrightarrow> x=y"
@@ -962,7 +971,7 @@ lemma cpspace_tcb_relation_unique:
    apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x100)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
    apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
-   apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq
+   apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq carch_tcb_relation_imp_eq
                      ccontext_relation_imp_eq up_ucast_inj_eq)
   done
 

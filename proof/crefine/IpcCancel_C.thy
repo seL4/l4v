@@ -2875,7 +2875,7 @@ lemma cancelIPC_ccorres_reply_helper:
               cteDeleteOne callerCap
            od)
       od)
-   (\<acute>ret__struct_fault_C :== CALL fault_null_fault_new();;
+   (\<acute>ret__struct_fault_C :== CALL seL4_Fault_NullFault_new();;
      Guard C_Guard {s. s \<Turnstile>\<^sub>c tptr_' s}
        (Basic (\<lambda>s. s \<lparr>        (\<acute>t_hrs :== (hrs_mem_update (heap_update
            (Ptr &(\<acute>tptr\<rightarrow>[''tcbFault_C''])) \<acute>ret__struct_fault_C)));;
@@ -2905,7 +2905,7 @@ lemma cancelIPC_ccorres_reply_helper:
       apply (clarsimp simp: typ_heap_simps)
       apply (erule(2) rf_sr_tcb_update_no_queue, simp_all add: typ_heap_simps)[1]
        apply (rule ball_tcb_cte_casesI, simp_all)[1]
-      apply (clarsimp simp: ctcb_relation_def fault_lift_null_fault
+      apply (clarsimp simp: ctcb_relation_def seL4_Fault_lift_NullFault
                             cfault_rel_def cthread_state_relation_def)
       apply (case_tac "tcbState tcb", simp_all add: is_cap_fault_def)[1]
      apply ctac
@@ -3026,7 +3026,7 @@ lemma cancelIPC_ccorres1:
                apply (erule(1) rf_sr_tcb_update_no_queue2,
                  (simp add: typ_heap_simps')+)[1]
                 apply (rule ball_tcb_cte_casesI, simp_all)[1]
-               apply (clarsimp simp: ctcb_relation_def fault_lift_null_fault
+               apply (clarsimp simp: ctcb_relation_def seL4_Fault_lift_NullFault
                                      cfault_rel_def cthread_state_relation_def)
                apply (case_tac "tcbState tcb", simp_all add: is_cap_fault_def)[1]
               apply ceqv

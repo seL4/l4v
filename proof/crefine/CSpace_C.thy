@@ -59,7 +59,7 @@ lemma maskVMRights_spec:
            \<lbrace> \<acute>vm_rights && mask 2 = \<acute>vm_rights \<rbrace>)
   Call maskVMRights_'proc
   \<lbrace> vmrights_to_H \<acute>ret__unsigned_long = 
-    maskVMRights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) (cap_rights_to_H (cap_rights_lift \<^bsup>s\<^esup>cap_rights_mask)) \<and>
+    maskVMRights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) (cap_rights_to_H (seL4_CapRights_lift \<^bsup>s\<^esup>cap_rights_mask)) \<and>
     \<acute>ret__unsigned_long && mask 2 = \<acute>ret__unsigned_long \<rbrace>"
   apply vcg
   apply clarsimp
@@ -72,7 +72,7 @@ lemma maskVMRights_spec:
   apply clarsimp
   apply (subgoal_tac "vm_rights = 0 \<or> vm_rights = 1 \<or> vm_rights = 2 \<or> vm_rights = 3")
    apply (auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
-                     cap_rights_to_H_def cap_rights_lift_def
+                     cap_rights_to_H_def seL4_CapRights_lift_def
                      to_bool_def mask_def
                    split: bool.splits)[1]
   apply (subst(asm) mask_eq_iff_w2p)
@@ -172,14 +172,14 @@ lemma to_bool_mask_to_bool_bf:
   done
 
 lemma to_bool_cap_rights_bf:
-  "to_bool (capAllowRead_CL (cap_rights_lift R)) = 
-   to_bool_bf (capAllowRead_CL (cap_rights_lift R))"
-  "to_bool (capAllowWrite_CL (cap_rights_lift R)) = 
-   to_bool_bf (capAllowWrite_CL (cap_rights_lift R))"
-  "to_bool (capAllowGrant_CL (cap_rights_lift R)) = 
-   to_bool_bf (capAllowGrant_CL (cap_rights_lift R))"
+  "to_bool (capAllowRead_CL (seL4_CapRights_lift R)) =
+   to_bool_bf (capAllowRead_CL (seL4_CapRights_lift R))"
+  "to_bool (capAllowWrite_CL (seL4_CapRights_lift R)) =
+   to_bool_bf (capAllowWrite_CL (seL4_CapRights_lift R))"
+  "to_bool (capAllowGrant_CL (seL4_CapRights_lift R)) =
+   to_bool_bf (capAllowGrant_CL (seL4_CapRights_lift R))"
   by (subst to_bool_bf_to_bool_mask, 
-      simp add: cap_rights_lift_def mask_def word_bw_assocs, simp)+
+      simp add: seL4_CapRights_lift_def mask_def word_bw_assocs, simp)+
 
 lemma to_bool_ntfn_cap_bf:
   "cap_lift c = Some (Cap_notification_cap cap) \<Longrightarrow> 
@@ -2261,7 +2261,8 @@ show ?thesis
   apply (simp add: from_bool_def)
   apply (cases irqState, simp_all)
   apply (simp add: Kernel_C.IRQSignal_def Kernel_C.IRQInactive_def) 
-  apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)  
+  apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)
+  apply (simp add: Kernel_C.IRQInactive_def Kernel_C.IRQReserved_def)
   done
 qed
 

@@ -9,7 +9,11 @@
  *)
 
 theory Ipc_C
-imports Finalise_C CSpace_All SyscallArgs_C
+imports
+  Finalise_C
+  CSpace_All
+  SyscallArgs_C
+  IsolatedThreadAction
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -190,7 +194,12 @@ definition
     | None \<Rightarrow> undefined"
 
 definition
-  "thread_replace \<equiv> \<lambda>upd t nv s. 
+  "thread_fetch_option \<equiv> \<lambda>ext t s. case (ksPSpace s t) of
+      Some (KOTCB tcb) \<Rightarrow> ext tcb
+    | None \<Rightarrow> None"
+
+definition
+  "thread_replace \<equiv> \<lambda>upd t nv s.
       let obj = case (ksPSpace s t) of
                    Some (KOTCB tcb) \<Rightarrow> Some (KOTCB (upd (\<lambda>_. nv) tcb))
                  | obj \<Rightarrow> obj
@@ -414,10 +423,11 @@ end
 context kernel_m begin
 
 (*FIXME: arch_split: C kernel names hidden by Haskell names *)
-abbreviation "syscallMessageC \<equiv> kernel_all_substitute.syscallMessage"
-lemmas syscallMessageC_def = kernel_all_substitute.syscallMessage_def
-abbreviation "exceptionMessageC \<equiv> kernel_all_substitute.exceptionMessage"
-lemmas exceptionMessageC_def = kernel_all_substitute.exceptionMessage_def
+(*FIXME: fupdate simplification issues for 2D arrays *)
+abbreviation "syscallMessageC \<equiv>  kernel_all_global_addresses.fault_messages.[unat MessageID_Syscall]"
+lemmas syscallMessageC_def = kernel_all_substitute.fault_messages_def
+abbreviation "exceptionMessageC \<equiv> kernel_all_substitute.fault_messages.[unat MessageID_Exception]"
+lemmas exceptionMessageC_def = kernel_all_substitute.fault_messages_def
 
 lemma syscallMessage_ccorres:
   "n < unat n_syscallMessage
@@ -425,10 +435,11 @@ lemma syscallMessage_ccorres:
            = index syscallMessageC n"
   apply (simp add: ARM_H.syscallMessage_def syscallMessageC_def
                    ARM.syscallMessage_def
+                   MessageID_Exception_def MessageID_Syscall_def
                    n_syscallMessage_def msgRegisters_unfold)
   apply (simp add: upto_enum_def fromEnum_def enum_register)
   apply (simp add: toEnum_def enum_register)
-  apply (clarsimp simp: fupdate_def
+  apply (clarsimp simp: fupdate_def Kernel_C.CPSR_def
               | drule nat_less_cases' | erule disjE)+
   done
 
@@ -437,77 +448,55 @@ end
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
+  "handleArchFaultReply' f sender receiver tag \<equiv> do
+     label \<leftarrow> return $ msgLabel tag;
+     mlen \<leftarrow> return $ msgLength tag;
+     case f of
+       VMFault _ _ \<Rightarrow> do
+         sendBuf \<leftarrow> lookupIPCBuffer False sender;
+         stateAssert (tcb_at' sender) [];
+         case sendBuf of
+           None \<Rightarrow> return ()
+         | Some bufferPtr \<Rightarrow> do
+             mapM loadWordUser
+               (map (\<lambda>i. bufferPtr + PPtr (i * 4))
+                    [(scast n_msgRegisters :: word32) + 1.e. msgMaxLength]);
+             return ()
+           od;
+         return True
+       od
+    od"
+
+definition
   "handleFaultReply' f sender receiver \<equiv> do
      tag \<leftarrow> getMessageInfo sender;
      label \<leftarrow> return $ msgLabel tag;
      mlen \<leftarrow> return $ msgLength tag;
      case f of
-       CapFault _ _ _ \<Rightarrow> do
-         sendBuf \<leftarrow> lookupIPCBuffer False sender;
-         stateAssert (tcb_at' sender) [];
-         case sendBuf of
-           None \<Rightarrow> return ()
-         | Some bufferPtr \<Rightarrow> do
-             mapM loadWordUser
-               (map (\<lambda>i. bufferPtr + PPtr (i * 4))
-                    [(scast n_msgRegisters :: word32) + 1.e. msgMaxLength]);
-             return ()
-           od;
-         return True
-       od
-     | VMFault _ _ \<Rightarrow> do
-         sendBuf \<leftarrow> lookupIPCBuffer False sender;
-         stateAssert (tcb_at' sender) [];
-         case sendBuf of
-           None \<Rightarrow> return ()
-         | Some bufferPtr \<Rightarrow> do
-             mapM loadWordUser
-               (map (\<lambda>i. bufferPtr + PPtr (i * 4))
-                    [(scast n_msgRegisters :: word32) + 1.e. msgMaxLength]);
-             return ()
-           od;
-         return True
-       od
+       CapFault _ _ _ \<Rightarrow> return True
+     | ArchFault af \<Rightarrow> handleArchFaultReply' af sender receiver tag
      | UnknownSyscallException _ \<Rightarrow> do
-         sendBuf \<leftarrow> lookupIPCBuffer False sender;
          regs \<leftarrow> return $ take (unat mlen) syscallMessage;
-         stateAssert (tcb_at' sender) [];
          zipWithM_x (\<lambda>rs rd. do
            v \<leftarrow> asUser sender $ getRegister rs;
            asUser receiver $ setRegister rd $ sanitiseRegister rd v
          od) msgRegisters regs;
-         stateAssert (tcb_at' receiver) [];
+         sendBuf \<leftarrow> lookupIPCBuffer False sender;
          case sendBuf of
            None \<Rightarrow> return ()
-         | Some bufferPtr \<Rightarrow> do
+         | Some bufferPtr \<Rightarrow>
              zipWithM_x (\<lambda>i rd. do
                v \<leftarrow> loadWordUser (bufferPtr + PPtr (i * 4));
                asUser receiver $ setRegister rd $ sanitiseRegister rd v
              od) [(scast n_msgRegisters :: word32) + 1.e. scast n_syscallMessage] (drop (unat (scast n_msgRegisters :: word32)) regs);
-             mapM loadWordUser
-               (map (\<lambda>i. bufferPtr + PPtr (i * 4))
-                    [(scast n_msgRegisters :: word32) + 1 + of_nat (length (drop (unat (scast n_msgRegisters :: word32)) regs)).e.  msgMaxLength]);
-             return ()
-           od;
          return (label = 0)
        od
      | UserException _ _ \<Rightarrow> do
-         sendBuf \<leftarrow> lookupIPCBuffer False sender;
          regs \<leftarrow> return $ take (unat mlen) exceptionMessage;
-         stateAssert (tcb_at' sender) [];
          zipWithM_x (\<lambda>rs rd. do
            v \<leftarrow> asUser sender $ getRegister rs;
            asUser receiver $ setRegister rd $ sanitiseRegister rd v
          od) msgRegisters regs;
-         stateAssert (tcb_at' receiver) [];
-         case sendBuf of
-           None \<Rightarrow> return ()
-         | Some bufferPtr \<Rightarrow> do
-             mapM loadWordUser
-               (map (\<lambda>i. bufferPtr + PPtr (i * 4))
-                    [(scast n_msgRegisters :: word32) + 1.e. msgMaxLength]);
-             return ()
-           od;
          return (label = 0)
        od
   od"
@@ -538,153 +527,231 @@ lemmas syscallMessage_unfold
          unfolded fromEnum_def enum_register, simplified,
          unfolded toEnum_def enum_register, simplified]
 
-lemma handleFaultReply':
+lemma handleArchFaultReply':
   notes option.case_cong_weak [cong] wordSize_def'[simp]
-  assumes neq: "r \<noteq> s"
-  shows "do 
-    tag \<leftarrow> getMessageInfo s;
+  shows "(do
     sb \<leftarrow> lookupIPCBuffer False s;
     msg \<leftarrow> getMRs s sb tag;
-    handleFaultReply f r (msgLabel tag) msg
-  od = handleFaultReply' f s r"
-  apply (rule ext)
-  apply (unfold handleFaultReply'_def getMRs_def msgMaxLength_def
+    handleArchFaultReply f r (msgLabel tag) msg
+  od) x' = handleArchFaultReply' f s r tag x'"
+  apply (unfold handleArchFaultReply'_def getMRs_def msgMaxLength_def
                 bit_def msgLengthBits_def msgRegisters_unfold
                 fromIntegral_simp1 fromIntegral_simp2
                 shiftL_word)
   apply (simp add: bind_assoc)
-  apply (rule bind_apply_cong [OF refl], rename_tac tag s')
   apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
                         asUser_return submonad_asUser.fn_stateAssert)
   apply (case_tac f)
-     apply (clarsimp simp: handleFaultReply_def zipWithM_x_mapM_x
-                           zip_Cons ARM_H.exceptionMessage_def
-                           ARM.exceptionMessage_def
-                           mapM_x_Cons mapM_x_Nil)
-     apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
-     apply (case_tac sb)
-      apply (case_tac "msgLength tag < scast n_msgRegisters")
-       apply (fastforce simp: bind_assoc asUser_bind_distrib
-                             zip_Cons mapM_x_Cons mapM_x_Nil
-                             asUser_comm [OF neq] asUser_getRegister_discarded
-                             submonad_asUser.fn_stateAssert asUser_return
-                             bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                             ARM_H.sanitiseRegister_def
-                             ARM.sanitiseRegister_def
-                             n_msgRegisters_def
-                       dest: word_less_cases)
-      apply (clarsimp simp: bind_assoc asUser_bind_distrib
-                            zip_Cons mapM_x_Cons mapM_x_Nil
-                            asUser_comm [OF neq] asUser_getRegister_discarded
-                            submonad_asUser.fn_stateAssert asUser_return
-                            bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                            word_less_nat_alt ARM_H.sanitiseRegister_def
-                            ARM.sanitiseRegister_def
-                            n_msgRegisters_def)
-     apply (case_tac "msgLength tag < scast n_msgRegisters")
-      apply (fastforce simp: asUser_bind_distrib
-                            zip_Cons word_le_make_less mapM_x_Cons mapM_x_Nil
-                            asUser_comm [OF neq] asUser_getRegister_discarded
-                            submonad_asUser.fn_stateAssert asUser_return
-                            bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                            bind_assoc ARM_H.sanitiseRegister_def
-                            ARM.sanitiseRegister_def
-                            bind_comm_mapM_comm [OF asUser_loadWordUser_comm]
-                            word_size stateAssert_mapM_loadWordUser_comm
-                            n_msgRegisters_def
-                      dest: word_less_cases)
-     apply (clarsimp simp: asUser_bind_distrib
-                            zip_Cons word_le_make_less mapM_x_Cons mapM_x_Nil
-                            asUser_comm [OF neq] asUser_getRegister_discarded
-                            submonad_asUser.fn_stateAssert asUser_return
-                            bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                            bind_assoc ARM_H.sanitiseRegister_def
-                            ARM.sanitiseRegister_def
-                            bind_comm_mapM_comm [OF asUser_loadWordUser_comm]
-                            word_size stateAssert_mapM_loadWordUser_comm
-                            word_less_nat_alt n_msgRegisters_def)
-    apply (clarsimp simp: handleFaultReply_def asUser_getRegister_discarded
+  apply (clarsimp simp: handleArchFaultReply_def asUser_getRegister_discarded
                           bind_subst_lift [OF stateAssert_stateAssert]
                           pred_conj_def)
-    apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
-    apply (case_tac sb, simp_all add: word_size n_msgRegisters_def)[1]
-   apply (clarsimp simp: handleFaultReply_def asUser_getRegister_discarded
-                         bind_subst_lift [OF stateAssert_stateAssert]
-                         pred_conj_def)
-   apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
-   apply (case_tac sb, simp_all add: word_size n_msgRegisters_def)[1]
-  apply (clarsimp simp: handleFaultReply_def zipWithM_x_mapM_x
-                        zip_Cons syscallMessage_unfold
-                        msgRegisters_unfold upto_enum_word
-                        mapM_x_Cons mapM_x_Nil)
   apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
-  apply (case_tac sb)
-   apply (case_tac "msgLength tag < scast n_msgRegisters")
-    apply (fastforce simp: bind_assoc asUser_bind_distrib
-                          zip_Cons mapM_x_Cons mapM_x_Nil
-                          asUser_comm [OF neq] asUser_getRegister_discarded
-                          submonad_asUser.fn_stateAssert asUser_return
-                          bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                          ARM_H.sanitiseRegister_def
-                          ARM.sanitiseRegister_def
-                          n_msgRegisters_def
-                    dest: word_less_cases)
-   apply (clarsimp simp: bind_assoc asUser_bind_distrib
-                         zip_Cons mapM_x_Cons mapM_x_Nil
-                         asUser_comm [OF neq] asUser_getRegister_discarded
-                         submonad_asUser.fn_stateAssert asUser_return
-                         bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                         word_less_nat_alt ARM_H.sanitiseRegister_def
-                         ARM.sanitiseRegister_def take_Cons
-                  split: nat.split)
-  apply (case_tac "msgLength tag < scast n_msgRegisters")
-   apply (fastforce simp: asUser_bind_distrib zipWithM_x_mapM_x
-                         zip_Cons word_le_make_less mapM_x_Cons mapM_x_Nil
-                         asUser_comm [OF neq] asUser_getRegister_discarded
-                         submonad_asUser.fn_stateAssert asUser_return
-                         bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                         bind_assoc ARM_H.sanitiseRegister_def
-                         ARM.sanitiseRegister_def
-                         bind_comm_mapM_comm [OF asUser_loadWordUser_comm]
-                         word_size stateAssert_mapM_loadWordUser_comm
-                         n_msgRegisters_def
-                   dest: word_less_cases)
-  apply (simp add: n_msgRegisters_def word_le_nat_alt
-                   linorder_not_less)
-  apply (clarsimp | frule neq0_conv[THEN iffD2, THEN not0_implies_Suc,
-                                    OF order_less_le_trans, rotated])+
-  apply (subgoal_tac "\<forall>n :: word32. n \<le> scast n_syscallMessage \<longrightarrow> [n .e. msgMaxLength]
-                           = [n .e. scast n_syscallMessage]
-                               @ [scast n_syscallMessage + 1 .e. msgMaxLength]")
-   apply (simp only: upto_enum_word[where y="scast n_syscallMessage :: word32"]
-                     upto_enum_word[where y="scast n_syscallMessage + 1 :: word32"])
-   apply (clarsimp simp: bind_assoc asUser_bind_distrib
-                         mapM_x_Cons mapM_x_Nil
-                         asUser_comm [OF neq] asUser_getRegister_discarded
-                         submonad_asUser.fn_stateAssert
-                         bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
-                         word_less_nat_alt ARM_H.sanitiseRegister_def
-                         ARM.sanitiseRegister_def
-                         split_def n_msgRegisters_def msgMaxLength_def
-                         word_size msgLengthBits_def n_syscallMessage_def
-              split del: split_if cong: if_weak_cong)
-   apply (simp add: zipWithM_x_mapM_x mapM_x_Nil
-                    stateAssert_mapM_loadWordUser_comm
-                    asUser_loadWordUser_comm word_size
-                    bind_comm_mapM_comm [OF asUser_loadWordUser_comm]
-                    asUser_return submonad_asUser.fn_stateAssert
-                    mapM_x_Cons bind_assoc
-                    mapM_Cons mapM_Nil asUser_bind_distrib
-                    take_Cons
-             split: nat.split cong: if_weak_cong)
-  apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps)
-  apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: word32))"
-             and k="Suc msgMaxLength" in upt_add_eq_append')
-    apply simp
-   apply (simp add: n_syscallMessage_def msgMaxLength_unfold)
-  apply (simp add: n_syscallMessage_def msgMaxLength_def
-                   msgLengthBits_def shiftL_nat
-              del: upt.simps upt_rec_numeral)
+  apply (rule bind_apply_cong [OF refl], rename_tac rv r'')
+  apply (case_tac sb, simp_all add: word_size n_msgRegisters_def)[1]
+  done
+
+lemmas lookup_uset_getreg_swap = bind_inv_inv_comm[OF lookupIPCBuffer_inv'
+                                 user_getreg_inv'
+                                 empty_fail_lookupIPCBuffer
+                                 empty_fail_asUser[OF getRegister_empty_fail]]
+
+end
+
+lemma mapM_x_zip_take_Cons_append:
+  "n = 0 \<longrightarrow> zs = []
+  \<Longrightarrow> mapM_x f (zip (x # xs) (take n (y # ys) @ zs))
+      = do
+        when (n > 0) (f (x, y));
+        mapM_x f (zip xs (take (n - 1) ys @ zs))
+      od"
+  by (cases n, simp_all add: mapM_x_Cons)
+
+lemma monadic_rewrite_do_flip:
+  "monadic_rewrite E F P (do a \<leftarrow> f; b \<leftarrow> g; return (a, b) od)
+    (do b \<leftarrow> g; a \<leftarrow> f; return (a, b) od)
+    \<Longrightarrow> monadic_rewrite E F P (do a \<leftarrow> f; b \<leftarrow> g; h a b od)
+    (do b \<leftarrow> g; a \<leftarrow> f; h a b od)"
+  apply (drule_tac h="\<lambda>(a, b). h a b" in monadic_rewrite_bind_head)
+  apply (simp add: bind_assoc)
+  done
+
+lemma monadic_rewrite_inst: "monadic_rewrite F E P f g \<Longrightarrow> monadic_rewrite F E P f g"
+  by simp
+
+context kernel_m begin interpretation Arch .
+
+lemma lookupIPCBuffer_isolatable:
+  "thread_actions_isolatable idx (lookupIPCBuffer w t)"
+  apply (simp add: lookupIPCBuffer_def)
+  apply (rule thread_actions_isolatable_bind)
+  apply (clarsimp simp: put_tcb_state_regs_tcb_def threadGet_isolatable
+                        getThreadBufferSlot_def locateSlot_conv getSlotCap_def
+                  split: tcb_state_regs.split)+
+   apply (rule thread_actions_isolatable_bind)
+    apply (clarsimp simp: thread_actions_isolatable_return
+                          getCTE_isolatable
+                          assert_isolatable
+                   split: capability.split arch_capability.split bool.split)+
+    apply (rule thread_actions_isolatable_if)
+    apply (rule thread_actions_isolatable_bind)
+      apply (simp add: assert_isolatable thread_actions_isolatable_return | wp)+
+  done
+
+lemma handleFaultReply':
+  notes option.case_cong_weak [cong] wordSize_def'[simp] take_append[simp del]
+  assumes neq: "s \<noteq> r"
+  shows "monadic_rewrite True False (tcb_at' s and tcb_at' r) (do
+    tag \<leftarrow> getMessageInfo s;
+    sb \<leftarrow> lookupIPCBuffer False s;
+    msg \<leftarrow> getMRs s sb tag;
+    handleFaultReply f r (msgLabel tag) msg
+  od) (handleFaultReply' f s r)"
+  apply (unfold handleFaultReply'_def getMRs_def msgMaxLength_def
+                bit_def msgLengthBits_def msgRegisters_unfold
+                fromIntegral_simp1 fromIntegral_simp2
+                shiftL_word)
+  apply (simp add: bind_assoc del: take_append)
+  apply (rule monadic_rewrite_bind_tail)
+   apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
+                         asUser_return submonad_asUser.fn_stateAssert
+                   del: take_append)
+   apply (case_tac f, simp_all add: handleFaultReply_def zipWithM_x_mapM_x zip_take
+                               del: take_append)
+   (* UserException *)
+      apply (clarsimp simp: handleFaultReply_def zipWithM_x_mapM_x
+                            zip_Cons ARM_H.exceptionMessage_def
+                            ARM.exceptionMessage_def
+                            mapM_x_Cons mapM_x_Nil)
+      apply (rule monadic_rewrite_symb_exec_l, wp)
+       apply (rule_tac P="tcb_at' s and tcb_at' r" in monadic_rewrite_inst)
+       apply (case_tac rv; (case_tac "msgLength tag < scast n_msgRegisters",
+               (erule disjE[OF word_less_cases],
+                 ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
+                                  mapM_x_Cons mapM_x_Nil bind_assoc
+                                  asUser_getRegister_discarded
+                                  asUser_comm[OF neq]
+                                  bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                                  word_le_nat_alt[of 4, simplified linorder_not_less[symmetric, of 4]]
+                                  asUser_return submonad_asUser.fn_stateAssert
+                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                        monadic_rewrite_symb_exec_l[OF stateAssert_inv]
+                        monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
+                 | wp asUser_tcb_at' lookupIPCBuffer_inv')+)+))
+      apply wp
+     (* capFault *)
+     apply (rule monadic_rewrite_symb_exec_l, wp empty_fail_asUser)+
+          apply(case_tac rv)
+          apply (clarsimp
+                | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                       monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
+                | wp mapM_x_mapM_valid[OF mapM_x_wp'[OF loadWordUser_inv]]
+                     empty_fail_loadWordUser)+
+    (* UnknownSyscallExceptio *)
+    apply (simp add: zip_append2 mapM_x_append asUser_bind_distrib split_def
+                      bind_assoc)
+    apply (rule monadic_rewrite_imp)
+     apply (rule monadic_rewrite_trans[rotated])
+      apply (rule monadic_rewrite_do_flip)
+      apply (rule_tac P="inj (case_bool s r)" in monadic_rewrite_gen_asm)
+      apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
+        apply (rule monadic_rewrite_weaken[where F=False and E=True], simp)
+        apply (rule isolate_thread_actions_rewrite_bind
+                    bool.simps setRegister_simple
+                    zipWithM_setRegister_simple
+                    thread_actions_isolatable_bind lookupIPCBuffer_isolatable
+                    lookupIPCBuffer_isolatable[THEN thread_actions_isolatableD]
+                    copy_registers_isolate_general thread_actions_isolatable_return
+                    thread_actions_isolatable_return[THEN thread_actions_isolatableD]
+              | assumption
+              | wp assert_inv)+
+      apply (rule monadic_rewrite_isolate_final[where P="\<top>"])
+        apply simp+
+     (* swap ends *)
+     apply (clarsimp simp: handleFaultReply_def zipWithM_x_mapM_x
+                            zip_Cons syscallMessage_unfold
+                            n_syscallMessage_def
+                            upto_enum_word mapM_x_Cons mapM_x_Nil)
+     apply (rule monadic_rewrite_bind_tail)
+      apply (case_tac sb)
+       apply (case_tac "msgLength tag < scast n_msgRegisters")
+        apply (erule disjE[OF word_less_cases],
+                 ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
+                                  mapM_x_Cons mapM_x_Nil bind_assoc
+                                  asUser_getRegister_discarded
+                                  asUser_comm[OF neq] take_zip
+                                  word_le_nat_alt[of 4, simplified linorder_not_less[symmetric, of 4]]
+                                  asUser_return submonad_asUser.fn_stateAssert
+                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                        monadic_rewrite_symb_exec_l[OF stateAssert_inv]
+                 | wp asUser_tcb_at')+)+
+      apply (case_tac "msgLength tag < scast n_msgRegisters")
+       apply (erule disjE[OF word_less_cases],
+                 ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
+                                  mapM_x_Cons mapM_x_Nil bind_assoc
+                                  zipWithM_x_Nil
+                                  asUser_getRegister_discarded
+                                  asUser_comm[OF neq] take_zip
+                                  bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                                  asUser_return submonad_asUser.fn_stateAssert
+                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                        monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
+                        monadic_rewrite_symb_exec_l[OF stateAssert_inv]
+                 | wp asUser_tcb_at')+)+
+      apply (simp add: n_msgRegisters_def word_le_nat_alt n_syscallMessage_def
+                       linorder_not_less syscallMessage_unfold)
+      apply (clarsimp | frule neq0_conv[THEN iffD2, THEN not0_implies_Suc,
+                                        OF order_less_le_trans, rotated])+
+      apply (subgoal_tac "\<forall>n :: word32. n \<le> scast n_syscallMessage \<longrightarrow> [n .e. msgMaxLength]
+                                = [n .e. scast n_syscallMessage]
+                                    @ [scast n_syscallMessage + 1 .e. msgMaxLength]")
+       apply (simp only: upto_enum_word[where y="scast n_syscallMessage :: word32"]
+                         upto_enum_word[where y="scast n_syscallMessage + 1 :: word32"])
+       apply (clarsimp simp: bind_assoc asUser_bind_distrib
+                             mapM_x_Cons mapM_x_Nil
+                             asUser_comm [OF neq] asUser_getRegister_discarded
+                             submonad_asUser.fn_stateAssert take_zip
+                             bind_subst_lift [OF submonad_asUser.stateAssert_fn]
+                             word_less_nat_alt ARM_H.sanitiseRegister_def
+                             split_def n_msgRegisters_def msgMaxLength_def
+                             bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                             word_size msgLengthBits_def n_syscallMessage_def
+                       split del: split_if cong: if_weak_cong)
+       apply (rule monadic_rewrite_bind_tail)+
+               apply (subst (2) upto_enum_word)
+               apply (case_tac "ma < unat n_syscallMessage - 4")
+                apply (erule disjE[OF nat_less_cases'],
+                       ( clarsimp simp: n_syscallMessage_def bind_assoc asUser_bind_distrib
+                                        mapM_x_Cons mapM_x_Nil zipWithM_x_mapM_x mapM_Cons
+                                        bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                                        asUser_loadWordUser_comm loadWordUser_discarded asUser_return
+                                        zip_take_triv2 msgMaxLength_def
+                                  cong: if_weak_cong
+                       | rule monadic_rewrite_bind_tail
+                              monadic_rewrite_refl
+                              monadic_rewrite_symb_exec_l[OF stateAssert_inv]
+                              monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
+                       | wp empty_fail_loadWordUser)+)+
+      apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
+      apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: word32))"
+                                and k="Suc msgMaxLength" in upt_add_eq_append')
+        apply (simp add: n_syscallMessage_def)
+       apply (simp add: n_syscallMessage_def msgMaxLength_unfold)
+      apply (simp add: n_syscallMessage_def msgMaxLength_def
+                       msgLengthBits_def shiftL_nat
+                  del: upt.simps upt_rec_numeral)
+      apply (simp add: upto_enum_word cong: if_weak_cong)
+     apply wp
+    (* ArchFault *)
+    apply (simp add: neq inj_case_bool split: bool.split)
+   apply (rule monadic_rewrite_imp)
+    apply (rule monadic_rewrite_is_refl)
+    apply (rule ext)
+    apply (unfold handleArchFaultReply'[symmetric] getMRs_def msgMaxLength_def
+                  bit_def msgLengthBits_def msgRegisters_unfold
+                  fromIntegral_simp1 fromIntegral_simp2 shiftL_word)
+    apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
+                          asUser_return submonad_asUser.fn_stateAssert bit_def)
+   apply wp
   done
 
 end
@@ -994,6 +1061,7 @@ end
 context kernel_m begin
 
 lemma setMRs_lookup_failure_ccorres:
+  shows
   "ccorres (\<lambda>r r'. r \<noteq> [] \<and> last r = unat (r' && mask msgLengthBits))
            ret__unsigned_'
      (valid_pspace'
@@ -1021,6 +1089,7 @@ lemma setMRs_lookup_failure_ccorres:
       apply (rule ccorres_guard_imp2)
        apply csymbr
        apply (ctac add: setMR_ccorres)
+         apply (ccorres_rewrite)
          apply (simp add: ccorres_cond_iffs)
          apply (rule ccorres_return_C, simp+)[1]
         apply wp
@@ -1032,6 +1101,7 @@ lemma setMRs_lookup_failure_ccorres:
       apply csymbr
       apply (ctac add: setMR_ccorres)
         apply (simp add: ccorres_cond_iffs)
+        apply (ccorres_rewrite)
         apply (rule ccorres_rhs_assoc)+
         apply csymbr
         apply (ctac add: setMR_ccorres)
@@ -1050,6 +1120,7 @@ lemma setMRs_lookup_failure_ccorres:
      apply csymbr
      apply (ctac add: setMR_ccorres)
        apply (simp add: ccorres_cond_iffs)
+       apply (ccorres_rewrite)
        apply (rule ccorres_rhs_assoc)+
        apply csymbr
        apply (ctac add: setMR_ccorres_dc)
@@ -1073,6 +1144,7 @@ lemma setMRs_lookup_failure_ccorres:
     apply csymbr
     apply (ctac add: setMR_ccorres)
       apply (simp add: ccorres_cond_iffs)
+     apply (ccorres_rewrite)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
       apply (ctac add: setMR_ccorres_dc)
@@ -1358,6 +1430,16 @@ lemma asUser_tcbFault_obj_at:
   apply simp
   done
 
+lemma asUser_atcbContext_obj_at:
+  "t \<noteq> t' \<Longrightarrow>
+    \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
+      asUser t' m
+    \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  apply (simp add: asUser_def split_def atcbContextGet_def atcbContextSet_def)
+  apply (wp threadGet_wp)
+  apply simp
+  done
+
 lemma asUser_tcbFault_inv:
   "\<lbrace>\<lambda>s. \<exists>t. ko_at' t p' s \<and> tcbFault t = f\<rbrace> asUser p m
    \<lbrace>\<lambda>rv s. \<exists>t. ko_at' t p' s \<and> tcbFault t = f\<rbrace>"
@@ -1365,6 +1447,16 @@ lemma asUser_tcbFault_inv:
                in hoare_strengthen_post)
    apply (wp asUser_tcbFault_obj_at)
    apply (clarsimp simp: obj_at'_def)+
+  done
+
+lemma setMR_atcbContext_obj_at:
+  "t \<noteq> t' \<Longrightarrow>
+    \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
+      setMR t' b r v
+    \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
+  apply (simp add: setMR_def split del: split_if)
+  apply (rule hoare_pre)
+   apply (wp asUser_atcbContext_obj_at[simplified] | simp | wpc)+
   done
 
 lemma setMR_tcbFault_obj_at:
@@ -1413,10 +1505,10 @@ lemma ccorres_add_getRegister:
   done
 
 lemma user_getreg_rv:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbContext tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadGet_wp)
-  apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad)
+  apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
   done
 
 lemma exceptionMessage_ccorres:
@@ -1424,7 +1516,7 @@ lemma exceptionMessage_ccorres:
       \<Longrightarrow> register_from_H (ARM_H.exceptionMessage ! n)
              = index exceptionMessageC n"
   apply (simp add: exceptionMessageC_def ARM_H.exceptionMessage_def
-                   ARM.exceptionMessage_def)
+                   ARM.exceptionMessage_def MessageID_Exception_def)
   apply (simp add: Arrays.update_def n_exceptionMessage_def fcp_beta nth_Cons'
                    fupdate_def
             split: split_if)
@@ -1437,6 +1529,313 @@ lemma asUser_obj_at_elsewhere:
   apply (wp threadGet_wp)
   apply clarsimp
   done
+
+lemma exceptionMessage_length_aux :
+  "\<And>n. n < length ARM_H.exceptionMessage \<Longrightarrow> n < unat n_exceptionMessage"
+  by (simp add: ARM.exceptionMessage_def ARM_H.exceptionMessage_def n_exceptionMessage_def)
+
+lemma copyMRsFault_ccorres_exception:
+  "ccorres dc xfdc
+           (valid_pspace'
+             and obj_at' (\<lambda>tcb. map (atcbContext (tcbArch tcb)) ARM_H.exceptionMessage = msg) sender
+             and K (length msg = 3)
+             and K (recvBuffer \<noteq> Some 0)
+             and K (sender \<noteq> receiver))
+           (UNIV \<inter> \<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr sender\<rbrace>
+                 \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr receiver\<rbrace>
+                 \<inter> \<lbrace>\<acute>receiveIPCBuffer = Ptr (option_to_0 recvBuffer)\<rbrace>
+                 \<inter> \<lbrace> \<acute>length___unsigned_long = 3 \<rbrace>
+                 \<inter> \<lbrace> \<acute>id___anonymous_enum = MessageID_Exception \<rbrace>)
+           hs
+           (mapM_x (\<lambda>(x, y). setMR receiver recvBuffer x y) (zip [0..<120] msg))
+           (Call copyMRsFault_'proc)"
+  apply (unfold K_def)
+  apply (intro ccorres_gen_asm)
+  apply (cinit' lift: sender_' receiver_' receiveIPCBuffer_'
+                     length___unsigned_long_' id___anonymous_enum_'
+                simp: whileAnno_def)
+   apply (simp only: mapM_x_append[where xs="take (unat n_msgRegisters) (zip as bs)"
+                                         and ys="drop (unat n_msgRegisters) (zip as bs)"
+                                         for as bs, simplified] bind_assoc)
+   apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
+
+       apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map ((atcbContext o tcbArch) tcb) ARM_H.exceptionMessage = msg) sender"
+                     in ccorres_mapM_x_while)
+           apply (clarsimp simp: n_msgRegisters_def)
+           apply (rule ccorres_guard_imp2)
+            apply (rule_tac t=sender and r="ARM_H.exceptionMessage ! n"
+                            in ccorres_add_getRegister)
+            apply (ctac(no_vcg))
+             apply (rule_tac P="\<lambda>s. rv = msg ! n" in ccorres_cross_over_guard)
+             apply (simp add: setMR_def length_msgRegisters n_msgRegisters_def
+                                    liftM_def[symmetric])
+             apply ctac
+            apply (wp user_getreg_rv)
+           apply (clarsimp simp: msgRegisters_ccorres n_msgRegisters_def
+                                 syscallMessage_ccorres n_syscallMessage_def
+                                 obj_at'_def projectKOs
+                                 atcbContextGet_def unat_of_nat32[unfolded word_bits_def])
+           apply (clarsimp simp: exceptionMessage_ccorres[simplified,symmetric,OF exceptionMessage_length_aux])
+           apply (clarsimp simp: word_of_nat_less MessageID_Exception_def)
+          apply (clarsimp simp: n_msgRegisters_def foo)
+         apply (rule allI, rule conseqPre, vcg exspec=setRegister_modifies exspec=getRegister_modifies)
+         apply simp
+        apply (simp add: setMR_def split del: split_if)
+        apply (rule hoare_pre)
+         apply (wp asUser_obj_at_elsewhere | wpc)+
+        apply simp
+       apply (simp add: word_bits_def)
+      apply ceqv
+     apply (rule ccorres_Cond_rhs)
+      apply (simp del: Collect_const)
+      apply (simp add: n_msgRegisters_def mapM_x_Nil)
+      apply (subst ccorres_expand_while_iff[symmetric])
+      apply (rule ccorres_cond_false)
+      apply (rule ccorres_return_Skip')
+     apply (simp add: n_msgRegisters_def mapM_x_Nil)
+     apply (rule ccorres_return_Skip')
+    apply wp
+    apply (simp add: guard_is_UNIV_def)
+    apply (clarsimp)
+    done
+
+lemma mapM_cong: "\<lbrakk> \<forall>x. elem x xs \<longrightarrow> f x = g x \<rbrakk> \<Longrightarrow> mapM_x f xs =  mapM_x g xs"
+  by (induction xs, (simp add: mapM_x_Nil mapM_x_Cons)+)
+
+lemma copyMRsFault_ccorres_syscall:
+  "ccorres dc xfdc
+           (valid_pspace'
+             and obj_at' (\<lambda>tcb. map (atcbContext (tcbArch tcb)) ARM_H.syscallMessage = msg) sender
+             and (case recvBuffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)
+             and K (length msg = 12)
+             and K (recvBuffer \<noteq> Some 0)
+             and K (sender \<noteq> receiver))
+           (UNIV \<inter> \<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr sender\<rbrace>
+                 \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr receiver\<rbrace>
+                 \<inter> \<lbrace>\<acute>receiveIPCBuffer = Ptr (option_to_0 recvBuffer)\<rbrace>
+                 \<inter> \<lbrace>\<acute>length___unsigned_long = 12 \<rbrace>
+                 \<inter> \<lbrace> \<acute>id___anonymous_enum = MessageID_Syscall \<rbrace>)
+           hs
+           (mapM_x (\<lambda>(x, y). setMR receiver recvBuffer x y) (zip [0..<120] msg))
+           (Call copyMRsFault_'proc)"
+proof -
+  (* auxiliary lemmas *)
+  have option_to_0_imp : "\<lbrakk> option_to_0 recvBuffer= 0 ; recvBuffer \<noteq> Some 0 \<rbrakk> \<Longrightarrow> recvBuffer = None"
+    by (simp add: option_to_0_def; cases recvBuffer; simp+)
+  have drop_n: "\<And>n m. drop n [0..<m] = [n..<m]"
+    by simp
+  have less_than_4: "\<And>x y n m. elem (x, y) (zip [n..<120] m) \<Longrightarrow> \<not> x < n "
+    by (simp | erule in_set_zipE)+
+  have msg_aux: "\<forall>p. elem p (zip [4..<120] (drop 4 msg))
+                    \<longrightarrow> (\<lambda>(x1,y1). setMR receiver None x1 y1) p = (\<lambda>_ . return (length msgRegisters)) p"
+    by (fastforce simp add: numeral_eqs setMR_def less_than_4 n_msgRegisters_def length_msgRegisters)
+  have mapM_x_return_gen: "\<And>v w xs. mapM_x (\<lambda>_. return v) xs = return w" (* FIXME mapM_x_return *)
+    by (induct_tac xs; simp add: mapM_x_Nil mapM_x_Cons)
+  show ?thesis
+  apply (unfold K_def)
+  apply (intro ccorres_gen_asm)
+  apply (cinit' lift: sender_' receiver_' receiveIPCBuffer_'
+                     length___unsigned_long_' id___anonymous_enum_'
+                simp: whileAnno_def)
+   apply (simp only: mapM_x_append[where xs="take (unat n_msgRegisters) (zip as bs)"
+                                         and ys="drop (unat n_msgRegisters) (zip as bs)"
+                                         for as bs, simplified] bind_assoc)
+   apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
+       apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map ((atcbContext o tcbArch) tcb) ARM_H.syscallMessage = msg) sender"
+                     in ccorres_mapM_x_while)
+           apply (clarsimp simp: n_msgRegisters_def)
+           apply (rule ccorres_guard_imp2)
+            apply (rule_tac t=sender and r="ARM_H.syscallMessage ! n"
+                            in ccorres_add_getRegister)
+            apply (ctac(no_vcg))
+             apply (rule_tac P="\<lambda>s. rv = msg ! n" in ccorres_cross_over_guard)
+             apply (simp add: setMR_def length_msgRegisters n_msgRegisters_def
+                                    liftM_def[symmetric])
+             apply ctac
+            apply (wp user_getreg_rv)
+           apply (clarsimp simp: msgRegisters_ccorres n_msgRegisters_def
+                                 syscallMessage_ccorres n_syscallMessage_def
+                                 obj_at'_def projectKOs
+                                 atcbContextGet_def unat_of_nat32[unfolded word_bits_def])
+           apply (clarsimp simp: word_of_nat_less MessageID_Syscall_def)
+          apply (simp add: n_msgRegisters_def)
+         apply (rule allI, rule conseqPre, vcg exspec=setRegister_modifies exspec=getRegister_modifies)
+         apply simp
+        apply (simp add: setMR_def split del: split_if)
+        apply (rule hoare_pre)
+         apply (wp asUser_obj_at_elsewhere | wpc)+
+        apply simp
+       apply (simp add: word_bits_def)
+      apply ceqv
+     apply (rule ccorres_Cond_rhs)
+      apply (simp del: Collect_const)
+      apply (rule ccorres_rel_imp[where r = "\<lambda>rv rv'. True", simplified])
+      apply (rule_tac F="\<lambda>_. obj_at' (\<lambda>tcb. map ((atcbContext o tcbArch) tcb) ARM_H.syscallMessage = msg)
+                                       sender and valid_pspace'
+                                       and (case recvBuffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)"
+                           in ccorres_mapM_x_while'[where i="unat n_msgRegisters"])
+          apply (clarsimp simp: setMR_def n_msgRegisters_def length_msgRegisters
+                                          option_to_0_def liftM_def[symmetric]
+                                   split: option.split_asm)
+          apply (rule ccorres_guard_imp2)
+          apply (rule_tac t=sender and r="ARM_H.syscallMessage ! (n + unat n_msgRegisters)"
+                                   in ccorres_add_getRegister)
+          apply (ctac(no_vcg))
+           apply (rule_tac P="\<lambda>s. rv = msg ! (n + unat n_msgRegisters)"
+                           in ccorres_cross_over_guard)
+           apply (rule ccorres_move_array_assertion_ipc_buffer
+                 | (rule ccorres_flip_Guard, rule ccorres_move_array_assertion_ipc_buffer))+
+           apply (simp add: storeWordUser_def)
+           apply (rule ccorres_pre_stateAssert)
+           apply (ctac add: storeWord_ccorres[unfolded fun_app_def])
+          apply (simp add: pred_conj_def)
+          apply (wp user_getreg_rv)
+         apply (clarsimp simp: n_syscallMessage_def n_msgRegisters_def
+                               syscallMessage_ccorres msgRegisters_ccorres
+                               unat_add_lem[THEN iffD1] unat_of_nat32
+                               word_bits_def word_size_def)
+         apply (simp only:field_simps imp_ex imp_conjL)
+         apply (clarsimp simp: pointerInUserData_c_guard obj_at'_def
+                               pointerInUserData_h_t_valid
+                               atcbContextGet_def
+                               projectKOs objBits_simps word_less_nat_alt
+                               unat_add_lem[THEN iffD1] unat_of_nat)
+         apply (clarsimp simp: pointerInUserData_h_t_valid rf_sr_def
+                               MessageID_Syscall_def
+                               msg_align_bits valid_ipc_buffer_ptr'_def)
+         apply (erule aligned_add_aligned)
+          apply (rule aligned_add_aligned[where n=2])
+            apply (simp add: is_aligned_def)
+           apply (rule is_aligned_mult_triv2 [where n=2, simplified])
+           apply (simp add: wb_gt_2)+
+         apply (simp add: n_msgRegisters_def)
+        apply (vcg exspec=getRegister_modifies)
+        apply simp
+       apply (simp add: setMR_def n_msgRegisters_def length_msgRegisters)
+       apply (rule hoare_pre)
+        apply (wp hoare_case_option_wp | wpc)+
+       apply clarsimp
+      apply (simp add: n_msgRegisters_def word_bits_def)
+     apply (simp add: n_msgRegisters_def)
+     apply (frule (1) option_to_0_imp)
+     apply (subst drop_zip)
+     apply (subst drop_n)
+     apply (clarsimp simp:  n_msgRegisters_def numeral_eqs
+                            mapM_cong[OF msg_aux, simplified numeral_eqs]
+                            mapM_x_return_gen)
+     apply (subst mapM_x_return_gen[where w2="()"])
+     apply (rule ccorres_return_Skip[simplified dc_def])
+    apply (clarsimp)
+    apply (rule hoare_impI)
+    apply (wp mapM_x_wp_inv setMR_atcbContext_obj_at[simplified atcbContextGet_def, simplified]
+              | clarsimp
+              | wpc)+
+    apply (cases recvBuffer; simp add: option_to_0_def )
+    apply wp
+   apply (clarsimp simp: guard_is_UNIV_def n_msgRegisters_def msgLengthBits_def
+                         mask_def)+
+  done
+  qed
+
+lemma Arch_setMRs_fault_ccorres:
+  "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_long_'
+           (valid_pspace' and obj_at' (\<lambda>tcb. tcbFault tcb = Some ft) sender
+                          and K (ft = ArchFault aft)
+                          and (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)
+                          and K (buffer \<noteq> Some 0)
+                          and K (sender \<noteq> receiver))
+           (UNIV \<inter> \<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr sender\<rbrace>
+                 \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr receiver\<rbrace>
+                 \<inter> \<lbrace>\<acute>faultType = fault_to_fault_tag ft \<rbrace>
+                 \<inter> \<lbrace>\<acute>receiveIPCBuffer = Ptr (option_to_0 buffer)\<rbrace>) hs
+    (makeArchFaultMessage aft sender >>= (\<lambda>ms. setMRs receiver buffer (snd ms)))
+    (Call Arch_setMRs_fault_'proc)"
+proof -
+  let ?obj_at_ft = "obj_at' (\<lambda>tcb. tcbFault tcb = Some ft) sender"
+  note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
+          [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
+  show ?thesis
+    apply (unfold K_def)
+    using [[goals_limit = 1]]
+    apply (intro ccorres_gen_asm)
+    apply (cinit' lift: sender_' receiver_' faultType_' receiveIPCBuffer_')
+     apply (simp only: makeArchFaultMessage_def setMRs_to_setMR
+                 del:  Collect_const split del: split_if)
+     apply (rule_tac P="ft = ArchFault aft" in ccorres_gen_asm)
+     apply wpc
+     apply (rename_tac list)
+     apply (rule_tac P="zip [Suc (Suc 0) ..< msgMaxLength] list = [(2, hd list), (3, hd (tl list))]"
+                     in ccorres_gen_asm)
+     apply (simp add: Collect_True Collect_False ccorres_cond_iffs
+                      zip_upt_Cons msgMaxLength_unfold
+                      zipWithM_mapM mapM_Cons bind_assoc
+                      seL4_Fault_tag_defs
+                 del: Collect_const)
+     apply (rule ccorres_rhs_assoc)+
+     apply simp
+     apply (rule ccorres_rhs_assoc)+
+     apply (ctac (no_vcg))
+      apply (rule ccorres_stateAssert)
+      apply (ctac(no_vcg) add: setMR_ccorres_dc)
+       apply (rule ccorres_move_c_guard_tcb)
+       apply (rule_tac val="vmFaultAddress aft" in symb_exec_r_fault)
+          apply (rule conseqPre, vcg, clarsimp)
+          apply (drule(1) obj_at_cslift_tcb)
+          apply (clarsimp simp: ctcb_relation_def typ_heap_simps
+                                   cfault_rel_def seL4_Fault_lift_def
+                                   seL4_Fault_VMFault_lift_def Let_def
+                            split: split_if_asm)
+        apply ceqv
+       apply (ctac(no_vcg) add: setMR_ccorres_dc)
+        apply (rule_tac val="hd (vmFaultArchData aft)" in symb_exec_r_fault)
+           apply (rule conseqPre, vcg, clarsimp)
+           apply (drule(1) obj_at_cslift_tcb)
+           apply (clarsimp simp: typ_heap_simps')
+           apply (clarsimp simp: ctcb_relation_def
+                                     cfault_rel_def seL4_Fault_lift_def
+                                     seL4_Fault_VMFault_lift_def Let_def
+                              split: split_if_asm)
+          apply ceqv
+         apply (ctac(no_vcg) add: setMR_ccorres_dc)
+          apply (rule_tac val="vmFaultArchData aft ! 1" in symb_exec_r_fault)
+              apply (rule conseqPre, vcg, clarsimp)
+              apply (drule(1) obj_at_cslift_tcb)
+              apply (clarsimp simp: typ_heap_simps')
+              apply (clarsimp simp: ctcb_relation_def
+                                    cfault_rel_def seL4_Fault_lift_def
+                                    seL4_Fault_VMFault_lift_def Let_def
+                             split: split_if_asm)
+             apply ceqv
+            apply (ctac(no_vcg) add: setMR_ccorres)
+            apply (simp add: mapM_Nil)
+             apply (rule ccorres_return_C, simp+)[1]
+            apply wp
+           apply (clarsimp simp: option_to_ptr_def)
+           apply (subgoal_tac "case list of [a, b] \<Rightarrow> True | _ \<Rightarrow> True")
+            apply (simp add: zip_upt_Cons guard_is_UNIVI seL4_VMFault_FSR_def split: list.split_asm)
+           apply (simp split: list.split)
+          apply (wp setMR_tcbFault_obj_at asUser_inv[OF getRestartPC_inv]
+                       hoare_case_option_wp
+                     | simp add: option_to_ptr_def guard_is_UNIVI
+                                 seL4_VMFault_PrefetchFault_def
+                                 seL4_VMFault_Addr_def
+                                 seL4_VMFault_IP_def
+                                 msgMaxLength_def
+                            del: Collect_const split del: split_if)+
+    apply clarsimp
+    apply (drule(1) obj_at_cslift_tcb[where thread=sender])
+    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
+    apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def
+                        Let_def zip_upt_Cons
+                  split: split_if_asm)
+  done
+qed
+
+lemmas seL4_Faults = seL4_Fault_UserException_def
+                     seL4_Fault_UnknownSyscall_def
+                     seL4_Fault_CapFault_def
+
+lemmas seL4_Arch_Faults =  seL4_Fault_VMFault_def
 
 lemma setMRs_fault_ccorres [corres]:
   "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_long_'
@@ -1454,7 +1853,6 @@ proof -
   let ?obj_at_ft = "obj_at' (\<lambda>tcb. tcbFault tcb = Some ft) sender"
   note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
           [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
-
   show ?thesis
     apply (unfold K_def)
     apply (intro ccorres_gen_asm)
@@ -1465,11 +1863,12 @@ proof -
         apply (vcg, clarsimp)
         apply (drule(1) obj_at_cslift_tcb)
         apply (clarsimp simp: ctcb_relation_def typ_heap_simps'
-                              cfault_rel_def fault_lift_def Let_def
+                              cfault_rel_def seL4_Fault_lift_def Let_def
                        split: split_if_asm)
        apply ceqv
+      (* UserException *)
       apply wpc
-         apply (simp add: bind_assoc fault_tag_defs ccorres_cond_iffs
+         apply (simp add: bind_assoc seL4_Fault_tag_defs ccorres_cond_iffs
                           Collect_True Collect_False
                           zipWithM_mapM zip_append2 mapM_append
                      del: Collect_const split del: split_if)
@@ -1481,45 +1880,16 @@ proof -
                              zip_upt_Cons mapM_Nil mapM_Cons bind_assoc
                              mapM_discarded
                         del: Collect_const upt.simps upt_rec_numeral
-                           split del: split_if)
+                        split del: split_if)
             apply (rule ccorres_rhs_assoc)+
-            apply csymbr
-            apply (simp del: Collect_const split del: split_if)
-            apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow)
-                apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map (tcbContext tcb) ARM_H.exceptionMessage = msg) sender"
-                            in ccorres_mapM_x_while)
-                    apply (clarsimp simp: setMR_def msgRegisters_unfold liftM_def[symmetric]
-                               split del: split_if)
-                    apply (rule ccorres_guard_imp2)
-                     apply (rule_tac t=sender and r="ARM_H.exceptionMessage ! n"
-                               in ccorres_add_getRegister)
-                     apply ctac
-                       apply (rule_tac P="\<lambda>s. rv = msg ! n" in ccorres_cross_over_guard)
-                       apply ctac
-                      apply (wp user_getreg_rv)
-                     apply simp
-                     apply (vcg exspec=getRegister_modifies)
-                    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
-                                          exceptionMessage_ccorres n_exceptionMessage_def
-                                          unat_of_nat32[unfolded word_bits_def])
-                    apply (simp add: msgRegisters_ccorres[symmetric] n_msgRegisters_def
-                                     msgRegisters_unfold word_of_nat_less)
-                   apply simp
-                  apply (rule allI, rule conseqPre)
-                  apply (vcg exspec=setRegister_modifies exspec=getRegister_modifies)
-                  apply clarsimp
-                 apply (simp add: setMR_def split del: split_if)
-                 apply (rule hoare_pre)
-                  apply (wp asUser_obj_at_elsewhere | wpc | simp)+
-                apply (simp add: word_bits_def)
-               apply ceqv
+            apply (ctac add: copyMRsFault_ccorres_exception)
               apply (rule ccorres_move_c_guard_tcb)
               apply (rule_tac val="userExceptionNumber ft" in symb_exec_r_fault)
                  apply (vcg, clarsimp)
                  apply (drule(1) obj_at_cslift_tcb)
                  apply (clarsimp simp: ctcb_relation_def typ_heap_simps
-                                       cfault_rel_def fault_lift_def
-                                       fault_user_exception_lift_def Let_def
+                                       cfault_rel_def seL4_Fault_lift_def
+                                       seL4_Fault_UserException_lift_def Let_def
                                 split: split_if_asm)
                 apply ceqv
                apply (ctac add: setMR_ccorres_dc)
@@ -1528,8 +1898,8 @@ proof -
                     apply (vcg, clarsimp)
                     apply (drule(1) obj_at_cslift_tcb)
                     apply (clarsimp simp: ctcb_relation_def typ_heap_simps
-                                          cfault_rel_def fault_lift_def
-                                          fault_user_exception_lift_def Let_def
+                                          cfault_rel_def seL4_Fault_lift_def
+                                          seL4_Fault_UserException_lift_def Let_def
                                    split: split_if_asm)
                    apply ceqv
                   apply (ctac add: setMR_ccorres)
@@ -1547,116 +1917,66 @@ proof -
              apply (wp mapM_x_wp' setMR_tcbFault_obj_at
                        hoare_case_option_wp
                          | simp)+
-            apply (fold whileAnno_def[where I=UNIV and V=undefined])
-            apply (vcg exspec=getRegister_modifies exspect=setRegister_modifies)
-             apply simp
-            apply simp
+            apply (vcg exspec=copyMRsFault_modifies exspect=setRegister_modifies)
            apply (wp asUser_inv mapM_wp' getRegister_inv)
           apply simp
-          apply (wp asUser_inv mapM_wp' getRegister_inv hoare_drop_imps
-                    asUser_get_registers asUser_const_rv)
+          apply (wp asUser_inv mapM_wp' getRegister_inv hoare_drop_imps asUser_const_rv
+                    asUser_get_registers[simplified atcbContextGet_def comp_def])
          apply simp
-        apply (rename_tac list)
-        apply (rule_tac P="zip [Suc (Suc 0) ..< msgMaxLength] list = [(2, hd list), (3, hd (tl list))]"
-                   in ccorres_gen_asm)
-        apply (simp add: bind_assoc fault_tag_defs ccorres_cond_iffs
-                         Collect_True Collect_False zipWithM_mapM
+         (* CapFault *)
+        apply (simp add: Collect_True Collect_False ccorres_cond_iffs
                          zip_upt_Cons msgMaxLength_unfold
-                         mapM_Cons mapM_Nil
+                         zipWithM_mapM mapM_Cons bind_assoc
                     del: Collect_const)
-        apply (rule ccorres_rhs_assoc)+
-        apply simp
         apply (rule ccorres_rhs_assoc)+
         apply (ctac(no_vcg))
          apply (rule ccorres_stateAssert)
          apply (ctac(no_vcg) add: setMR_ccorres_dc)
-          apply (rule ccorres_move_c_guard_tcb)
-          apply (rule_tac val="vmFaultAddress ft" in symb_exec_r_fault)
+          apply (rule_tac val="capFaultAddress ft" in symb_exec_r_fault)
              apply (rule conseqPre, vcg, clarsimp)
              apply (drule(1) obj_at_cslift_tcb)
-             apply (clarsimp simp: ctcb_relation_def typ_heap_simps
-                                   cfault_rel_def fault_lift_def
-                                   fault_vm_fault_lift_def Let_def
+             apply (clarsimp simp: typ_heap_simps' ctcb_relation_def
+                                   cfault_rel_def seL4_Fault_lift_def Let_def
+                                   seL4_Fault_CapFault_lift_def
                             split: split_if_asm)
             apply ceqv
            apply (ctac(no_vcg) add: setMR_ccorres_dc)
-            apply (rule_tac val="hd (vmFaultArchData ft)" in symb_exec_r_fault)
+            apply (rule_tac val="from_bool (capFaultInReceivePhase ft)" in symb_exec_r_fault)
                apply (rule conseqPre, vcg, clarsimp)
                apply (drule(1) obj_at_cslift_tcb)
-               apply (clarsimp simp: typ_heap_simps')
-               apply (clarsimp simp: ctcb_relation_def
-                                     cfault_rel_def fault_lift_def
-                                     fault_vm_fault_lift_def Let_def
+               apply (clarsimp simp: typ_heap_simps' ctcb_relation_def
+                                     cfault_rel_def seL4_Fault_lift_def Let_def
+                                     seL4_Fault_CapFault_lift_def
+                                     from_bool_to_bool_and_1 word_size
                               split: split_if_asm)
               apply ceqv
              apply (ctac(no_vcg) add: setMR_ccorres_dc)
-              apply (rule_tac val="vmFaultArchData ft ! 1" in symb_exec_r_fault)
-                 apply (rule conseqPre, vcg, clarsimp)
-                 apply (drule(1) obj_at_cslift_tcb)
-                 apply (clarsimp simp: typ_heap_simps')
-                 apply (clarsimp simp: ctcb_relation_def
-                                       cfault_rel_def fault_lift_def
-                                       fault_vm_fault_lift_def Let_def
-                                split: split_if_asm)
-                apply ceqv
-               apply (ctac(no_vcg) add: setMR_ccorres)
-                apply (rule ccorres_return_C, simp+)[1]
-               apply wp
-              apply (clarsimp simp: option_to_ptr_def)
-              apply (subgoal_tac "case list of [a, b] \<Rightarrow> True | _ \<Rightarrow> True")
-               apply (simp add: zip_upt_Cons guard_is_UNIVI split: list.split_asm)
-              apply (simp split: list.split)
-             apply (wp setMR_tcbFault_obj_at asUser_inv[OF getRestartPC_inv]
-                       hoare_case_option_wp
-                     | simp add: option_to_ptr_def guard_is_UNIVI
-                            del: Collect_const split del: split_if)+
-       apply (simp add: Collect_True Collect_False ccorres_cond_iffs
-                        zip_upt_Cons msgMaxLength_unfold
-                        zipWithM_mapM mapM_Cons bind_assoc
-                   del: Collect_const)
-       apply (rule ccorres_rhs_assoc)+
-       apply (ctac(no_vcg))
-        apply (rule ccorres_stateAssert)
-        apply (ctac(no_vcg) add: setMR_ccorres_dc)
-         apply (rule_tac val="capFaultAddress ft" in symb_exec_r_fault)
-            apply (rule conseqPre, vcg, clarsimp)
+              apply (rule ccorres_move_c_guard_tcb)
+              apply (rule_tac P="obj_at' (\<lambda>tcb. tcbFault tcb = Some ft) sender"
+                           in ccorres_cross_over_guard)
+              apply (ctac(no_vcg) add: setMRs_lookup_failure_ccorres[unfolded msgMaxLength_unfold])
+               apply simp
+               apply (rule ccorres_return_C, simp+)[1]
+              apply (wp setMR_tcbFault_obj_at hoare_case_option_wp)
+            apply (clarsimp simp: option_to_ptr_def Collect_const_mem guard_is_UNIV_def)
+            apply (rule conjI)
+             apply (simp add: seL4_CapFault_InRecvPhase_def)
+            apply (rule conjI)
+             apply (simp add: from_bool_def split: bool.split)
+            apply clarsimp
             apply (drule(1) obj_at_cslift_tcb)
             apply (clarsimp simp: typ_heap_simps' ctcb_relation_def
-                                  cfault_rel_def fault_lift_def Let_def
-                                  fault_cap_fault_lift_def
+                                  cfault_rel_def seL4_Fault_lift_def Let_def
+                                  seL4_Fault_CapFault_lift_def is_cap_fault_def
+                                  seL4_CapFault_LookupFailureType_def
                            split: split_if_asm)
-           apply ceqv
-          apply (ctac(no_vcg) add: setMR_ccorres_dc)
-           apply (rule_tac val="from_bool (capFaultInReceivePhase ft)" in symb_exec_r_fault)
-              apply (rule conseqPre, vcg, clarsimp)
-              apply (drule(1) obj_at_cslift_tcb)
-              apply (clarsimp simp: typ_heap_simps' ctcb_relation_def
-                                    cfault_rel_def fault_lift_def Let_def
-                                    fault_cap_fault_lift_def
-                                    from_bool_to_bool_and_1 word_size
-                             split: split_if_asm)
-             apply ceqv
-            apply (ctac(no_vcg) add: setMR_ccorres_dc)
-             apply (rule ccorres_move_c_guard_tcb)
-             apply (rule_tac P="obj_at' (\<lambda>tcb. tcbFault tcb = Some ft) sender"
-                          in ccorres_cross_over_guard)
-             apply (ctac(no_vcg) add: setMRs_lookup_failure_ccorres[unfolded msgMaxLength_unfold])
-              apply simp
-              apply (rule ccorres_return_C, simp+)[1]
-             apply (wp setMR_tcbFault_obj_at hoare_case_option_wp)
-           apply (clarsimp simp: option_to_ptr_def Collect_const_mem guard_is_UNIV_def)
-           apply (rule conjI)
-            apply (simp add: from_bool_def split: bool.split)
-           apply clarsimp
-           apply (drule(1) obj_at_cslift_tcb)
-           apply (clarsimp simp: typ_heap_simps' ctcb_relation_def
-                                 cfault_rel_def fault_lift_def Let_def
-                                 fault_cap_fault_lift_def is_cap_fault_def
-                          split: split_if_asm)
-          apply (wp setMR_tcbFault_obj_at hoare_case_option_wp
-                    asUser_inv[OF getRestartPC_inv]
-                    | (rule guard_is_UNIVI, clarsimp simp: option_to_ptr_def))+
-      apply (simp add: fault_tag_defs Collect_True Collect_False
+           apply (wp setMR_tcbFault_obj_at hoare_case_option_wp
+                     asUser_inv[OF getRestartPC_inv]
+                     | (rule guard_is_UNIVI, clarsimp simp: option_to_ptr_def
+                                                            seL4_CapFault_Addr_def))+
+      (* UnknowSyscall *)
+      apply (rename_tac syscall_number)
+      apply (simp add: seL4_Fault_tag_defs Collect_True Collect_False
                        ccorres_cond_iffs zipWithM_mapM mapM_append
                        zip_append2 bind_assoc
                   del: Collect_const)
@@ -1666,172 +1986,90 @@ proof -
          apply (simp add: msgMaxLength_unfold n_syscallMessage_def zip_upt_Cons
                           mapM_Cons mapM_Nil mapM_discarded
                      del: Collect_const upt_rec_numeral)
-         apply (simp only: mapM_x_append[where xs="take (unat n_msgRegisters) (zip as bs)"
-                                         and ys="drop (unat n_msgRegisters) (zip as bs)"
-                                         for as bs, simplified] bind_assoc)
          apply (rule ccorres_rhs_assoc)+
-         apply csymbr
-         apply (simp del: Collect_const)
-         apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
-             apply (simp only: whileAnno_def)
-             apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map (tcbContext tcb) ARM_H.syscallMessage = msg) sender"
-                          in ccorres_mapM_x_while)
-                 apply (clarsimp simp: n_msgRegisters_def)
-                 apply (rule ccorres_guard_imp2)
-                  apply (rule_tac t=sender and r="ARM_H.syscallMessage ! n"
-                            in ccorres_add_getRegister)
-                  apply (ctac(no_vcg))
-                   apply (rule_tac P="\<lambda>s. rv = msg ! n" in ccorres_cross_over_guard)
-                   apply (simp add: setMR_def length_msgRegisters n_msgRegisters_def
-                                    liftM_def[symmetric])
-                   apply ctac
-                  apply (wp user_getreg_rv)
-                 apply (clarsimp simp: msgRegisters_ccorres n_msgRegisters_def
-                                       syscallMessage_ccorres n_syscallMessage_def
-                                       unat_of_nat32[unfolded word_bits_def])
-                 apply (clarsimp simp: obj_at'_def projectKOs word_of_nat_less)
-                apply (simp add: n_msgRegisters_def)
-               apply (rule allI, rule conseqPre, vcg exspec=setRegister_modifies exspec=getRegister_modifies)
-               apply simp
-              apply (simp add: setMR_def split del: split_if)
-              apply (rule hoare_pre)
-               apply (wp asUser_obj_at_elsewhere | wpc)+
-              apply simp
-             apply (simp add: word_bits_def)
-            apply ceqv
-           apply (rule ccorres_Cond_rhs)
-            apply (rule ccorres_rhs_assoc)+
+         apply (ctac add: copyMRsFault_ccorres_syscall)
+           apply (rule ccorres_move_c_guard_tcb)
+           apply (rule_tac val="syscall_number" in symb_exec_r_fault)
+              apply (vcg, clarsimp)
+              apply (drule(1) obj_at_cslift_tcb)
+              apply (clarsimp simp: ctcb_relation_def typ_heap_simps'
+                                    cfault_rel_def seL4_Fault_lift_def Let_def
+                                    seL4_Fault_UnknownSyscall_def
+                                    seL4_Fault_UnknownSyscall_lift_def
+                              split: split_if_asm)
+             apply ceqv
+            apply (ctac add: setMR_ccorres)
+              apply (rule ccorres_return_C, simp+)[1]
+             apply wp
             apply (simp del: Collect_const)
-            apply (rule ccorres_split_nothrow_novcg)
-                apply (simp only: whileAnno_def)
-                apply (rule_tac F="\<lambda>_. obj_at' (\<lambda>tcb. map (tcbContext tcb) ARM_H.syscallMessage = msg)
-                                       sender and valid_pspace'
-                                       and (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)"
-                           in ccorres_mapM_x_while'[where i="unat n_msgRegisters"])
-                    apply (clarsimp simp: setMR_def n_msgRegisters_def length_msgRegisters
-                                          option_to_0_def liftM_def[symmetric]
-                                   split: option.split_asm)
-                    apply (rule ccorres_guard_imp2)
-                     apply (rule_tac t=sender and r="ARM_H.syscallMessage ! (n + unat n_msgRegisters)"
-                                  in ccorres_add_getRegister)
-                     apply (ctac(no_vcg))
-                      apply (rule_tac P="\<lambda>s. rv = msg ! (n + unat n_msgRegisters)"
-                                   in ccorres_cross_over_guard)
-                      apply (rule ccorres_move_array_assertion_ipc_buffer
-                          | (rule ccorres_flip_Guard, rule ccorres_move_array_assertion_ipc_buffer))+
-                      apply (simp add: storeWordUser_def)
-                      apply (rule ccorres_pre_stateAssert)
-                      apply (ctac add: storeWord_ccorres[unfolded fun_app_def])
-                     apply (simp add: pred_conj_def)
-                     apply (wp user_getreg_rv)
-                    apply (clarsimp simp: n_syscallMessage_def n_msgRegisters_def
-                                          syscallMessage_ccorres msgRegisters_ccorres
-                                          unat_add_lem[THEN iffD1] unat_of_nat32
-                                          word_bits_def word_size_def)
-                    apply (simp only:field_simps imp_ex imp_conjL)
-                    apply (clarsimp simp: pointerInUserData_c_guard obj_at'_def
-                                          pointerInUserData_h_t_valid
-                                          projectKOs objBits_simps word_less_nat_alt
-                                          unat_add_lem[THEN iffD1] unat_of_nat)
-                    apply (clarsimp simp: pointerInUserData_h_t_valid rf_sr_def
-                                          msg_align_bits valid_ipc_buffer_ptr'_def)
-                    apply (erule aligned_add_aligned)
-                      apply (rule aligned_add_aligned[where n=2])
-                        apply (simp add: is_aligned_def)
-                       apply (rule is_aligned_mult_triv2 [where n=2, simplified])
-                       apply (simp add: wb_gt_2)+
-                   apply (simp add: n_msgRegisters_def)
-                  apply (vcg exspec=getRegister_modifies)
-                  apply simp
-                 apply (simp add: setMR_def n_msgRegisters_def length_msgRegisters)
-                 apply (rule hoare_pre)
-                  apply (wp hoare_case_option_wp | wpc)+
-                 apply clarsimp
-                apply (simp add: n_msgRegisters_def word_bits_def)
-               apply ceqv
-              apply (rule_tac val="unknownSyscallNumber ft" in symb_exec_r_fault)
-                 apply (rule conseqPre, vcg, clarsimp)
-                 apply (drule(1) obj_at_cslift_tcb)
-                 apply (clarsimp simp: typ_heap_simps' ctcb_relation_def
-                                       cfault_rel_def fault_lift_def Let_def
-                                       fault_unknown_syscall_lift_def
-                                split: split_if_asm)
-                apply ceqv
-               apply (simp add: setMR_def msgRegisters_unfold del: Collect_const)
-               apply wpc
-                apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp add: option_to_0_def)
-               apply (simp add: bind_assoc storeWordUser_def del: Collect_const)
-               apply (rule ccorres_pre_stateAssert)
-               apply (rule ccorres_split_nothrow_novcg)
-                   apply (rule ccorres_move_array_assertion_ipc_buffer
-                           | (rule ccorres_flip_Guard, rule ccorres_move_array_assertion_ipc_buffer))+
-                   apply (ctac(no_vcg) add: storeWord_ccorres[unfolded fun_app_def])
-                  apply ceqv
-                 apply ((rule ccorres_return_C ccorres_Guard | simp)+)[1]
-                apply wp
-               apply (simp add: msgLengthBits_def mask_def guard_is_UNIV_def)
-              apply (clarsimp simp: guard_is_UNIV_def option_to_0_def n_msgRegisters_def
-                                    word_size_def msg_align_bits)
-              apply (auto simp add: pointerInUserData_c_guard
-                                    pointerInUserData_h_t_valid rf_sr_def)[1]
-             apply simp
-             apply (rule_tac Q="\<lambda>rv. valid_pspace'
-                   and (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)
-                   and ?obj_at_ft" in hoare_post_imp)
-              apply (clarsimp simp: word_size_def option_to_0_def
-                                    pointerInUserData_def valid_ipc_buffer_ptr'_def)
-              apply (erule aligned_add_aligned)
-                apply (simp add: is_aligned_def)
-                apply simp+
-             apply (simp add: split_def)
-             apply (wp mapM_x_wp' setMR_tcbFault_obj_at hoare_case_option_wp | simp)+
-            apply (simp add: guard_is_UNIV_def)
-           apply (subgoal_tac "buffer = None")
-            apply (simp add: mapM_discarded[symmetric])
-            apply (rule_tac P="\<lambda>a. ccorres r xf Pre Pre' hs (a >>= b) c" for r xf Pre Pre' hs b c in subst)
-             apply (rule mapM_length_cong[OF refl])
-             apply (clarsimp simp: setMR_def length_msgRegisters n_msgRegisters_def
-                                   set_zip)
-             apply (rule refl)
-            apply (simp add: mapM_return setMR_def msgRegisters_unfold)
-            apply (rule ccorres_return_C, simp+)[1]
-           apply (simp add: option_to_0_def split: option.split_asm)
-          apply simp
-          apply (wp hoare_drop_imps)
-          apply (rule mapM_x_wp')
-          apply (clarsimp simp: setMR_def split del: split_if)
-          apply (rule hoare_pre)
-           apply (wp asUser_obj_at_elsewhere hoare_case_option_wp | wpc)+
-          apply clarsimp
-         apply (clarsimp simp: guard_is_UNIV_def n_msgRegisters_def msgLengthBits_def
-                               mask_def)
-        apply (wp asUser_inv mapM_wp' getRegister_inv hoare_case_option_wp)
+            apply (vcg exspec=setMR_modifies)
+           apply (clarsimp simp: option_to_ptr_def guard_is_UNIVI)
+          apply (wp setMR_tcbFault_obj_at mapM_x_wp_inv hoare_case_option_wp
+                | clarsimp
+                | wpc)+
+         apply (vcg exspec=copyMRsFault_modifies)
+        apply (wp asUser_inv mapM_wp' getRegister_inv)
        apply simp
-       apply (wp hoare_drop_imps asUser_get_registers
-                 asUser_inv mapM_wp' getRegister_inv
-                 asUser_const_rv)
-      apply simp
-     apply (rule guard_is_UNIVI, clarsimp simp: option_to_ptr_def)
-    apply (clarsimp simp: msgMaxLength_unfold length_syscallMessage
+       apply (wp asUser_inv mapM_wp' getRegister_inv hoare_drop_imps asUser_const_rv
+                 asUser_get_registers[simplified atcbContextGet_def comp_def])
+       apply simp
+      (* ArchFault *)
+      apply (rule ccorres_cond_false)
+      apply (rule ccorres_cond_false)
+      apply (rule ccorres_cond_false)
+      apply (simp add: Collect_True Collect_False ccorres_cond_iffs
+                         zip_upt_Cons
+                         mapM_Cons bind_assoc
+                         seL4_Fault_tag_defs
+                    del: Collect_const)
+      apply (rule ccorres_rhs_assoc)+
+      apply (rule ccorres_move_c_guard_tcb)
+      apply (rule_tac val="fault_to_fault_tag ft" in symb_exec_r_fault)
+        apply (vcg, clarsimp)
+        apply (drule(1) obj_at_cslift_tcb)
+        apply (clarsimp simp: ctcb_relation_def typ_heap_simps'
+                              cfault_rel_def seL4_Fault_lift_def Let_def
+                              seL4_Fault_UnknownSyscall_def
+                              seL4_Fault_UnknownSyscall_lift_def
+                        split: split_if_asm)
+       apply ceqv
+      apply (rule ccorres_add_return2)
+      apply (ctac add: Arch_setMRs_fault_ccorres[simplified setMRs_to_setMR last.simps K_bind_def])
+        apply (ctac add: ccorres_return_C)
+       apply wp
+      apply (vcg exspec=Arch_setMRs_fault_modifies)
+     apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
+     apply (rule  fault_to_fault_tag.simps(2)[symmetric])
+     (* done *)
+     apply (rule guard_is_UNIVI, clarsimp simp: option_to_ptr_def seL4_CapFault_IP_def)
+     apply (case_tac x)
+     apply (simp add: seL4_Faults seL4_Arch_Faults)
+     apply (clarsimp simp: msgMaxLength_unfold length_syscallMessage
                           ARM_H.exceptionMessage_def
                           ARM.exceptionMessage_def
-                          n_exceptionMessage_def)
+                          n_exceptionMessage_def
+                          n_syscallMessage_def)
     apply (drule(1) obj_at_cslift_tcb[where thread=sender])
     apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
     apply (clarsimp simp: msgFromLookupFailure_def split: lookup_failure.split)
-    apply (clarsimp simp: ctcb_relation_def cfault_rel_def fault_lift_def
-                          Let_def zip_upt_Cons
-                   split: split_if_asm)
-    done
+  done
 qed
+
+
+definition
+  makeArchFaultMessage2 :: "arch_fault \<Rightarrow> 32 word"
+where
+  "makeArchFaultMessage2 \<equiv> \<lambda>aft. case aft of VMFault _ _ \<Rightarrow> 5"
 
 lemma makeFaultMessage2:
   "makeFaultMessage ft thread
     = (do x \<leftarrow> makeFaultMessage ft thread;
        return (case ft of CapFault _ _ _ \<Rightarrow> 1
-                   | VMFault _ _ \<Rightarrow> 2 | UnknownSyscallException _ \<Rightarrow> 3
-                   | UserException _ _ \<Rightarrow> 4, snd x) od)"
-  by (simp add: makeFaultMessage_def split: fault.split)
+                   | UnknownSyscallException _ \<Rightarrow> 2
+                   | UserException _ _ \<Rightarrow> 3
+                   | ArchFault aft \<Rightarrow> makeArchFaultMessage2 aft, snd x) od)"
+  by (simp add: makeFaultMessage_def makeArchFaultMessage2_def makeArchFaultMessage_def
+           split: fault.split arch_fault.split)
 
 lemma doFaultTransfer_ccorres [corres]:
   "ccorres dc xfdc (valid_pspace' and tcb_at' sender and tcb_at' receiver
@@ -1847,6 +2085,7 @@ lemma doFaultTransfer_ccorres [corres]:
   apply (intro ccorres_gen_asm)
   apply (simp add: doFaultTransfer_def)
   apply (subst makeFaultMessage2)
+  apply (simp only: makeArchFaultMessage2_def)
   apply (cinit' lift: sender_' receiver_' receiverIPCBuffer_' badge_')
    apply (rule ccorres_pre_threadGet)
    apply (rename_tac ft)
@@ -1857,15 +2096,15 @@ lemma doFaultTransfer_ccorres [corres]:
    apply (ctac(no_vcg) add: setMRs_fault_ccorres)
     apply (rule_tac R="obj_at' (\<lambda>tcb. tcbFault tcb = ft) sender"
               and val="case (the ft) of CapFault _ _ _ \<Rightarrow> 1
-                  | VMFault _ _ \<Rightarrow> 2 | UnknownSyscallException _ \<Rightarrow> 3
-                  | UserException _ _ \<Rightarrow> 4"
+                  | ArchFault (VMFault _ _) \<Rightarrow> 5 | UnknownSyscallException _ \<Rightarrow> 2
+                  | UserException _ _ \<Rightarrow> 3"
               in ccorres_symb_exec_r_known_rv_UNIV
                    [where xf'=ret__unsigned_' and R'=UNIV])
        apply (rule conseqPre, vcg, clarsimp)
        apply (drule(1) obj_at_cslift_tcb)
        apply (clarsimp simp: typ_heap_simps' ctcb_relation_def
-                             cfault_rel_def fault_lift_def Let_def
-                             fault_tag_defs
+                             cfault_rel_def seL4_Fault_lift_def Let_def
+                             seL4_Fault_tag_defs
                       split: split_if_asm)
       apply ceqv
      apply csymbr
@@ -1876,7 +2115,7 @@ lemma doFaultTransfer_ccorres [corres]:
                       Kernel_C.badgeRegister_def "StrictC'_register_defs")
     apply (clarsimp simp: message_info_to_H_def guard_is_UNIVI
                           mask_def msgLengthBits_def
-                   split: fault.split)
+                   split: fault.split arch_fault.split)
    apply wp
     apply (simp add: setMRs_to_setMR zipWithM_mapM split_def)
     apply (wp mapM_wp' setMR_tcbFault_obj_at | simp)+
@@ -3107,7 +3346,7 @@ proof -
                        apply (frule lookup_failure_rel_fault_lift, assumption)
                        apply (clarsimp simp: cfault_rel2_def)
                        apply (clarsimp simp: cfault_rel_def)
-                       apply (simp add: fault_cap_fault_lift)
+                       apply (simp add: seL4_Fault_CapFault_lift)
                        apply (clarsimp simp: is_cap_fault_def to_bool_def false_def)
                       apply wp
                       apply (rule hoare_post_imp_R, rule lsft_real_cte)
@@ -3379,7 +3618,10 @@ lemma replyFromKernel_error_ccorres [corres]:
 
 lemma fault_to_fault_tag_nonzero:
   "fault_to_fault_tag f \<noteq> 0"
-  by (case_tac f, simp_all add: fault_tag_defs)
+  apply (case_tac f; simp add: seL4_Fault_tag_defs)
+  apply (rename_tac af)
+  apply (case_tac af; simp add: seL4_Fault_tag_defs)
+  done
 
 lemma doIPCTransfer_ccorres [corres]:
   "ccorres dc xfdc
@@ -3401,18 +3643,18 @@ lemma doIPCTransfer_ccorres [corres]:
     apply (rule ccorres_pre_threadGet)
     apply (rename_tac fault)
     apply (rule ccorres_move_c_guard_tcb)
-    apply (rule_tac val="case_option (scast fault_null_fault) fault_to_fault_tag fault"
+    apply (rule_tac val="case_option (scast seL4_Fault_NullFault) fault_to_fault_tag fault"
                 and xf'=ret__unsigned_'
                 and R="\<lambda>s. \<exists>t. ko_at' t sender s \<and> tcbFault t = fault"
                  in ccorres_symb_exec_r_known_rv_UNIV [where R'=UNIV])
        apply (vcg, clarsimp)
        apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
        apply (fastforce simp: ctcb_relation_def typ_heap_simps
-                             cfault_rel_def fault_lift_def Let_def
+                             cfault_rel_def seL4_Fault_lift_def Let_def
                       split: split_if_asm option.split)
       apply ceqv
      apply wpc
-      apply (clarsimp simp: fault_null_fault_def ccorres_cond_univ_iff)
+      apply (clarsimp simp: seL4_Fault_NullFault_def ccorres_cond_univ_iff)
       apply (rule_tac xf'="ptr_coerce \<circ> sendBuffer___ptr_to_void_'"
                    in ccorres_split_nothrow_call_novcg)
             apply (rule lookupIPCBuffer_ccorres)
@@ -3421,7 +3663,7 @@ lemma doIPCTransfer_ccorres [corres]:
        apply (fold dc_def)[1]
        apply ctac
       apply (wp lookupIPCBuffer_not_Some_0 lookupIPCBuffer_aligned)
-     apply (clarsimp simp: fault_null_fault_def ccorres_cond_iffs
+     apply (clarsimp simp: seL4_Fault_NullFault_def ccorres_cond_iffs
                            fault_to_fault_tag_nonzero)
      apply (fold dc_def)[1]
      apply ctac
@@ -3439,21 +3681,362 @@ lemma doIPCTransfer_ccorres [corres]:
 
 lemma fault_case_absorb_bind:
   "(do x \<leftarrow> f; case_fault (p x) (q x) (r x) (s x) ft od)
-    = case_fault (\<lambda>a b. f >>= (\<lambda>x. p x a b)) (\<lambda>a b. f >>= (\<lambda>x. q x a b))
-          (\<lambda>a b c. f >>= (\<lambda>x. r x a b c)) (\<lambda>a. f >>= (\<lambda>x. s x a)) ft"
+    = case_fault (\<lambda>a b. f >>= (\<lambda>x. p x a b)) (\<lambda>a b c. f >>= (\<lambda>x. q x a b c))
+          (\<lambda>a. f >>= (\<lambda>x. r x a)) (\<lambda>a. f >>= (\<lambda>x. s x a)) ft"
   by (simp split: fault.split)
 
 lemma length_exceptionMessage:
   "length ARM_H.exceptionMessage = unat n_exceptionMessage"
   by (simp add: ARM_H.exceptionMessage_def ARM.exceptionMessage_def n_exceptionMessage_def)
 
-declare[[goals_limit = 1]]
+lemma copyMRsFaultReply_ccorres_exception:
+  "ccorres dc xfdc
+           (valid_pspace' and tcb_at' s
+                          and obj_at' (\<lambda>t. tcbFault t = Some f) r
+                          and K (r \<noteq> s)
+                          and K (len \<le> unat n_exceptionMessage))
+           (UNIV \<inter> \<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr s\<rbrace>
+                 \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr r\<rbrace>
+                 \<inter> \<lbrace>\<acute>id___anonymous_enum = MessageID_Exception \<rbrace>
+                 \<inter> \<lbrace>\<acute>length___unsigned_long = of_nat len \<rbrace>) hs
+           (zipWithM_x (\<lambda>rs rd. do v \<leftarrow> asUser s (getRegister rs);
+                                        asUser r (setRegister rd (ARM_H.sanitiseRegister rd v))
+                                        od)
+               ARM_H.msgRegisters (take len ARM_H.exceptionMessage))
+           (Call copyMRsFaultReply_'proc)"
+proof -
+  show ?thesis
+    apply (unfold K_def, rule ccorres_gen_asm)
+    apply (cinit' lift: sender_' receiver_'
+                        id___anonymous_enum_'
+                        length___unsigned_long_'
+                  simp: whileAnno_def)
+     apply (rule ccorres_rhs_assoc2)
+     apply (simp add: MessageID_Exception_def)
+     apply ccorres_rewrite
+     apply (subst bind_return_unit)
+     apply (rule ccorres_split_nothrow_novcg)
+         apply (rule ccorres_zipWithM_x_while)
+             apply clarsimp
+             apply (intro ccorres_rhs_assoc)
+             apply (rule ccorres_symb_exec_r)
+               apply ctac
+                 apply (rule ccorres_symb_exec_r)
+                   apply ctac
+                  apply vcg
+                 apply (rule conseqPre, vcg)
+                 apply fastforce
+                apply wp
+               apply vcg
+              apply vcg
+              apply (rule conjI, simp add: ARM_H.exceptionMessage_def
+                                           ARM.exceptionMessage_def word_of_nat_less)
+              apply (simp add: msgRegisters_ccorres n_msgRegisters_def length_msgRegisters
+                               unat_of_nat exceptionMessage_ccorres[symmetric,simplified MessageID_Exception_def,simplified]
+                               n_exceptionMessage_def length_exceptionMessage)
+              apply (simp add: word_less_nat_alt unat_of_nat)
+             apply (rule conseqPre, vcg)
+             apply (clarsimp simp: word_of_nat_less ARM_H.exceptionMessage_def
+                                   ARM.exceptionMessage_def)
+            apply (simp add: min_def length_msgRegisters)
+            apply (clarsimp simp: min_def n_exceptionMessage_def
+                                  ARM_H.exceptionMessage_def
+                                  ARM.exceptionMessage_def
+                                  length_msgRegisters n_msgRegisters_def
+                                  message_info_to_H_def word_of_nat_less
+                            split: split_if)
+            apply (fastforce dest!: le_antisym)
+           apply clarsimp
+           apply (vcg spec=TrueI)
+           apply clarsimp
+          apply wp
+          apply simp
+         apply (clarsimp simp: ARM_H.exceptionMessage_def
+                               ARM.exceptionMessage_def
+                               word_bits_def)
+         apply unat_arith
+        apply ceqv
+       apply (simp add: length_exceptionMessage
+                        length_msgRegisters
+                        n_exceptionMessage_def
+                        msgMaxLength_def
+                        n_msgRegisters_def
+                        of_nat_less_iff)
+       apply ccorres_rewrite
+       apply (rule ccorres_return_Skip[simplified dc_def])
+      apply (wp mapM_wp')
+     apply clarsimp+
+     apply (clarsimp simp: guard_is_UNIV_def message_info_to_H_def
+                           Collect_const_mem
+                     split: split_if)
+    apply simp
+    done
+qed
+
+lemma valid_drop_case: "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. P' rv s\<rbrace> \<rbrakk>
+                       \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. case rv of None \<Rightarrow> True | Some x \<Rightarrow> P' rv s\<rbrace>"
+   apply (simp only: valid_def Ball_def split: prod.split)
+     apply (rule allI impI)+
+     apply (case_tac x1)
+     apply simp+
+  done
+
+lemma copyMRsFaultReply_ccorres_syscall:
+  fixes word_size :: "'a::len"
+  shows "ccorres dc xfdc
+           (valid_pspace' and tcb_at' s
+                          and obj_at' (\<lambda>t. tcbFault t = Some f) r
+                          and K (r \<noteq> s)
+                          and K (len \<le> unat n_syscallMessage))
+           (UNIV \<inter> \<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr s\<rbrace>
+                 \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr r\<rbrace>
+                 \<inter> \<lbrace>\<acute>id___anonymous_enum = MessageID_Syscall \<rbrace>
+                 \<inter> \<lbrace>\<acute>length___unsigned_long = of_nat len \<rbrace>) hs
+           (do a \<leftarrow> zipWithM_x (\<lambda>rs rd. do v \<leftarrow> asUser s (getRegister rs);
+                                           asUser r (setRegister rd (ARM_H.sanitiseRegister rd v))
+                                        od)
+               ARM_H.msgRegisters (take len ARM_H.syscallMessage);
+               sendBuf \<leftarrow> lookupIPCBuffer False s;
+               case sendBuf of None \<Rightarrow> return ()
+                            | Some bufferPtr \<Rightarrow>
+                                   zipWithM_x (\<lambda>i rd. do v \<leftarrow> loadWordUser (bufferPtr + i * 4);
+                                                         asUser r (setRegister rd (ARM_H.sanitiseRegister rd v))
+                                                      od)
+                                      [scast n_msgRegisters + 1.e.scast n_syscallMessage]
+                                      (drop (unat (scast n_msgRegisters :: word32))
+                                            (take len  ARM_H.syscallMessage))
+            od)
+           (Call copyMRsFaultReply_'proc)"
+  proof -
+  let ?obj_at_ft = "obj_at' (\<lambda>tcb. tcbFault tcb = Some f) s"
+  note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
+          [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
+  show ?thesis
+    apply (unfold K_def, rule ccorres_gen_asm)
+    apply (cinit' lift: sender_' receiver_'
+                        id___anonymous_enum_'
+                        length___unsigned_long_'
+                  simp: whileAnno_def)
+     apply (rule ccorres_rhs_assoc2)
+     apply (simp add: MessageID_Syscall_def)
+     apply ccorres_rewrite
+     apply (rule ccorres_split_nothrow_novcg)
+         apply (rule ccorres_zipWithM_x_while)
+             apply clarsimp
+             apply (intro ccorres_rhs_assoc)
+             apply (rule ccorres_symb_exec_r)
+               apply ctac
+                 apply (rule ccorres_symb_exec_r)
+                   apply ctac
+                  apply vcg
+                 apply (rule conseqPre, vcg)
+                 apply fastforce
+                apply wp
+               apply vcg
+              apply vcg
+              apply (rule conjI, simp add: ARM_H.syscallMessage_def
+                                           ARM.syscallMessage_def word_of_nat_less
+                                           unat_of_nat msgRegisters_ccorres n_msgRegisters_def
+                                           length_msgRegisters)
+              apply (simp add: msgRegisters_ccorres n_msgRegisters_def length_msgRegisters unat_of_nat
+                               syscallMessage_ccorres[symmetric,simplified MessageID_Syscall_def,simplified]
+                               n_syscallMessage_def length_syscallMessage)
+              apply (simp add: word_less_nat_alt unat_of_nat)
+             apply (rule conseqPre, vcg)
+             apply (clarsimp simp: word_of_nat_less syscallMessage_unfold length_msgRegisters
+                                   n_syscallMessage_def n_msgRegisters_def)
+            apply (simp add: min_def length_msgRegisters)
+            apply (clarsimp simp:   min_def n_syscallMessage_def
+                                    length_msgRegisters n_msgRegisters_def
+                                    length_syscallMessage
+                                    message_info_to_H_def word_of_nat_less
+                            split: split_if)
+            apply (simp add: word_less_nat_alt unat_of_nat not_le)
+           apply clarsimp
+           apply (vcg spec=TrueI)
+           apply clarsimp
+          apply wp
+          apply simp
+         apply (clarsimp simp: length_syscallMessage
+                               length_msgRegisters
+                               n_msgRegisters_def n_syscallMessage_def
+                               word_bits_def min_def
+                         split: split_if)
+        apply ceqv
+       apply (rule_tac P'="if 4 < len then _ else _" in ccorres_inst)
+       apply (cases "4 < len")
+        apply (clarsimp simp: unat_ucast_less_no_overflow n_syscallMessage_def
+                              length_syscallMessage msgRegisters_unfold
+                              word_of_nat_less unat_of_nat unat_less_helper)
+        apply ccorres_rewrite
+        apply (ctac(no_vcg))
+         apply (rename_tac sb sb')
+         apply wpc
+          apply (simp add: option_to_0_def ccorres_cond_iffs option_to_ptr_def)
+          apply (rule ccorres_return_Skip')
+         apply (rule_tac P="sb \<noteq> Some 0" in ccorres_gen_asm)
+         apply (rule_tac P="case_option True (\<lambda>x. is_aligned x msg_align_bits) sb"
+                         in ccorres_gen_asm)
+         apply (simp add: option_to_0_def option_to_ptr_def)
+         apply (subgoal_tac "sb'\<noteq> NULL") prefer 2
+          apply clarsimp
+         apply (simp add: ccorres_cond_iffs)
+         apply (subst ccorres_seq_skip' [symmetric])
+         apply (rule_tac r'="\<lambda>rv rv'. rv' = of_nat (unat  n_msgRegisters) + _" in ccorres_rel_imp)
+          apply (drule_tac s="sb" in sym)
+          apply (simp only: zipWithM_x_mapM_x)
+          apply ccorres_rewrite
+          apply (rule_tac F="\<lambda>_. valid_pspace' and (case sb of None \<Rightarrow> \<top>
+                                                             | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)"
+                          in ccorres_mapM_x_while')
+              apply clarsimp
+              apply (rule ccorres_guard_imp2)
+               apply (rule ccorres_pre_loadWordUser)
+               apply (intro ccorres_rhs_assoc)
+               apply (rule ccorres_symb_exec_r)
+                 apply (rule ccorres_move_array_assertion_ipc_buffer
+                             ccorres_Guard_Seq[where S="{s. h_t_valid (htd s) c_guard (ptr s)}" for ptr htd])+
+                 apply (rule ccorres_symb_exec_r)
+                   apply (rule ccorres_symb_exec_r)
+                     apply ctac
+                    apply vcg
+                   apply (rule conseqPre, vcg)
+                   apply fastforce
+                  apply vcg
+                 apply (rule conseqPre, vcg)
+                 apply clarsimp
+                apply vcg
+               apply (rule conseqPre, vcg)
+               apply clarsimp
+              apply clarsimp
+              apply (subst aligned_add_aligned, assumption)
+                apply (rule is_aligned_mult_triv2[where n=2, simplified])
+               apply (simp add: msg_align_bits)
+              apply (simp add: of_nat_unat[simplified comp_def])
+              apply (simp only: n_msgRegisters_def)
+              apply (clarsimp simp: n_syscallMessage_def n_msgRegisters_def
+                                    word_unat.Rep_inverse[of "scast _ :: 'a word"]
+                                    msgRegisters_ccorres[symmetric]
+                                    length_msgRegisters[symmetric]
+                                    syscallMessage_ccorres[symmetric]
+                                    length_msgRegisters length_syscallMessage
+                                    syscallMessage_ccorres[symmetric, simplified MessageID_Syscall_def, simplified]
+                                    unat_of_nat32 word_bits_def
+                                    MessageID_Syscall_def
+                                    min_def message_info_to_H_def
+                                    upto_enum_def typ_heap_simps'
+                                    unat_add_lem[THEN iffD1]
+                                    msg_align_bits
+                                    simp del: upt_rec_numeral,
+                     simp_all add: word_less_nat_alt unat_add_lem[THEN iffD1] unat_of_nat)[1]
+             apply (clarsimp simp: n_syscallMessage_def n_msgRegisters_def
+                                   msgRegisters_ccorres
+                                   syscallMessage_ccorres
+                                   length_syscallMessage length_msgRegisters
+                                   message_info_to_H_def min_def
+                             split: split_if)
+             apply (fastforce dest!: le_antisym)
+            apply (vcg spec=TrueI)
+            apply clarsimp
+           apply (simp add: split_def)
+           apply (wp hoare_case_option_wp)
+           apply (fastforce elim: aligned_add_aligned
+                            intro: is_aligned_mult_triv2 [where n=2,
+                                   simplified]
+                            simp: word_bits_def msg_align_bits)
+          apply (clarsimp simp: msgRegisters_unfold
+                                n_msgRegisters_def
+                                word_bits_def not_less)
+         apply (simp add: n_syscallMessage_def)
+        apply simp
+        apply (subst option.split[symmetric,where P=id, simplified])
+        apply (rule valid_drop_case)
+        apply (wp lookupIPCBuffer_aligned[simplified K_def] lookupIPCBuffer_not_Some_0[simplified K_def])
+       apply (simp add: length_syscallMessage
+                        length_msgRegisters
+                        n_syscallMessage_def
+                        msgMaxLength_def
+                        n_msgRegisters_def
+                        of_nat_less_iff)
+       apply (rule_tac P'="{s. i_' s = of_nat len}" in ccorres_inst)
+       apply ccorres_rewrite
+       apply (rule ccorres_guard_imp)
+         apply (rule ccorres_symb_exec_l)
+            apply (case_tac rv ; clarsimp)
+             apply (rule ccorres_return_Skip[simplified dc_def])+
+           apply (wp mapM_x_wp_inv user_getreg_inv'
+                 | clarsimp simp: zipWithM_x_mapM_x split: prod.split)+
+     apply (cases  "4 < len")
+      apply (clarsimp simp: guard_is_UNIV_def
+                            msgRegisters_unfold
+                            syscallMessage_unfold
+                            n_syscallMessage_def
+                            n_msgRegisters_def)+
+  done
+qed
+
+lemma handleArchFaultReply_corres:
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+           (valid_pspace' and tcb_at' sender
+                          and tcb_at' receiver
+                          and K (f = ArchFault af)
+                          and K (sender \<noteq> receiver))
+           (UNIV \<inter> \<lbrace> \<acute>faultType = fault_to_fault_tag f \<rbrace>
+           \<inter> \<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr sender\<rbrace>
+           \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr receiver\<rbrace>)
+           hs
+           (handleArchFaultReply' af sender receiver msg)
+           (Call Arch_handleFaultReply_'proc)"
+  apply (unfold K_def)
+  apply (rule ccorres_gen_asm)+
+  apply (cinit lift: faultType_' sender_' receiver_')
+   apply (clarsimp simp: bind_assoc seL4_Fault_tag_defs ccorres_cond_iffs
+                   split del: split_if split: arch_fault.split)
+   apply (rule ccorres_symb_exec_l)
+      apply (rule ccorres_stateAssert)
+      apply wpc
+       apply (clarsimp simp: ccorres_cond_iffs)
+       apply (rule ccorres_return_C)
+         apply simp+
+      apply (rule ccorres_symb_exec_l)
+         apply (ctac add: ccorres_return_C)
+        apply (wp mapM_wp' empty_fail_loadWordUser | clarsimp simp: to_bool_def true_def)+
+  done
+
+(* MOVE *)
+lemma monadic_rewrite_ccorres_assemble_nodrop:
+  assumes cc: "ccorres_underlying sr G r xf ar axf (P and Q) P' hs f c"
+  assumes mr: "monadic_rewrite True False Q g f"
+  shows       "ccorres_underlying sr G r xf ar axf (P and Q) P' hs g c"
+proof -
+  have snd: "\<And>s. \<lbrakk> Q s; \<not> snd (g s) \<rbrakk> \<Longrightarrow> \<not> snd (f s)"
+    using mr
+    by (simp add: monadic_rewrite_def)
+
+  have fst: "\<And>s v. \<lbrakk> Q s; \<not> snd (g s); v \<in> fst (f s) \<rbrakk> \<Longrightarrow> v \<in> fst (g s)"
+    using mr
+    by (auto simp add: monadic_rewrite_def)
+
+  show ?thesis
+    apply (rule ccorresI')
+    apply (erule ccorresE[OF cc], (simp add: snd)+)
+    apply clarsimp
+    apply (rule rev_bexI[OF fst], assumption+)
+    apply simp
+    done
+qed
+
+schematic_goal arch_fault_to_fault_tag_range:
+  "arch_fault_to_fault_tag x \<in> ?X"
+  by (case_tac x, fastforce simp: seL4_Fault_VMFault_def)
+
 lemma handleFaultReply_ccorres [corres]:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-           (valid_pspace' and tcb_at' s and
-            obj_at' (\<lambda>t. tcbFault t = Some f) r and K (r \<noteq> s))
+           (valid_pspace' and obj_at' (\<lambda>t. tcbFault t = Some f) r
+                          and (tcb_at' s and tcb_at' r)
+                          and K (r \<noteq> s))
            (UNIV  \<inter> \<lbrace>cfault_rel (Some f)
-                      (fault_lift (h_val (hrs_mem \<acute>t_hrs)
+                      (seL4_Fault_lift (h_val (hrs_mem \<acute>t_hrs)
                          (Ptr &(tcb_ptr_to_ctcb_ptr r\<rightarrow>[''tcbFault_C'']))))
                       (lookup_fault_lift (h_val (hrs_mem \<acute>t_hrs)
                          (Ptr &(tcb_ptr_to_ctcb_ptr r\<rightarrow>[''tcbLookupFailure_C'']))))\<rbrace>
@@ -3466,7 +4049,7 @@ lemma handleFaultReply_ccorres [corres]:
               handleFaultReply f r (msgLabel tag) msg
             od) (Call handleFaultReply_'proc)"
   apply (unfold K_def, rule ccorres_gen_asm)
-  apply (subst handleFaultReply', assumption)
+  apply (rule monadic_rewrite_ccorres_assemble_nodrop[OF _ handleFaultReply',rotated], simp)
   apply (cinit lift: sender_' receiver_' simp: whileAnno_def)
    apply (clarsimp simp del: dc_simp)
    apply (ctac(c_lines 2) add: getMessageInfo_ccorres')
@@ -3478,256 +4061,98 @@ lemma handleFaultReply_ccorres [corres]:
        apply (rule_tac val="fault_to_fault_tag f"
                    and xf'=ret__unsigned_'
                    and R="\<lambda>s. \<exists>t. ko_at' t r s \<and> tcbFault t = Some f"
-                   and R'="\<lbrace>cfault_rel (Some f) (fault_lift \<acute>fault)
+                   and R'="\<lbrace>cfault_rel (Some f) (seL4_Fault_lift \<acute>fault)
                         (lookup_fault_lift (h_val (hrs_mem \<acute>t_hrs)
                            (Ptr &(tcb_ptr_to_ctcb_ptr r\<rightarrow>[''tcbLookupFailure_C'']))))\<rbrace>"
-                    in ccorres_symb_exec_r_known_rv_UNIV)
+                    in ccorres_symb_exec_r_known_rv)
           apply (rule conseqPre, vcg, clarsimp)
           apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
           apply (clarsimp simp: ctcb_relation_def typ_heap_simps
-                                cfault_rel_def fault_lift_def Let_def
+                                cfault_rel_def seL4_Fault_lift_def Let_def
                          split: split_if_asm)
          apply ceqv
         apply (simp add: handleFaultReply_def fault_case_absorb_bind
                     del: Collect_const split del: split_if)
         apply wpc
+           (* UserException *)
            apply (rename_tac number code)
-           apply (clarsimp simp: bind_assoc fault_tag_defs ccorres_cond_iffs
-                      split del: split_if)
-           apply (rule ccorres_rhs_assoc)+
-           apply csymbr
-           apply csymbr
-           apply csymbr
-           apply (rule ccorres_symb_exec_l)
-              apply (rule ccorres_stateAssert)
-              apply (rule ccorres_rhs_assoc2)
-              apply (rule ccorres_split_nothrow_novcg)
-                  apply (rule ccorres_zipWithM_x_while)
-                      apply clarsimp
-                      apply (intro ccorres_rhs_assoc)
-                      apply (rule ccorres_symb_exec_r)
-                        apply ctac
-                          apply (rule ccorres_symb_exec_r)
-                            apply ctac
-                           apply vcg
-                          apply (rule conseqPre, vcg)
-                          apply fastforce
-                         apply wp
-                        apply vcg
-                       apply vcg
-                       apply (rule conjI, simp add: ARM_H.exceptionMessage_def
-                                    ARM.exceptionMessage_def word_of_nat_less)
-                       apply (thin_tac "n < unat n'" for n')
-                       apply (simp add: msgRegisters_ccorres n_msgRegisters_def length_msgRegisters
-                                        unat_of_nat exceptionMessage_ccorres[symmetric]
-                                        n_exceptionMessage_def length_exceptionMessage)
-                       apply (simp add: word_less_nat_alt unat_of_nat)
-                      apply (rule conseqPre, vcg)
-                      apply (clarsimp simp: word_of_nat_less ARM_H.exceptionMessage_def
-                                            ARM.exceptionMessage_def)
-                     apply (clarsimp simp: min_def n_exceptionMessage_def
-                                           ARM_H.exceptionMessage_def
-                                           ARM.exceptionMessage_def
-                                           length_msgRegisters n_msgRegisters_def
-                                           message_info_to_H_def
-                                    split: split_if)
-                     apply unat_arith
-                    apply clarsimp
-                    apply (vcg spec=TrueI)
-                    apply clarsimp
-                   apply wp
-                   apply simp
-                  apply (clarsimp simp: ARM_H.exceptionMessage_def
-                                        ARM.exceptionMessage_def
-                                        word_bits_def)
-                  apply unat_arith
-                 apply ceqv
-                apply (rule ccorres_stateAssert)
-                apply wpc
-                 apply (simp only: return_bind)
-                 apply (ctac add: ccorres_return_C)
-                apply (rule ccorres_symb_exec_l)
-                   apply (ctac add: ccorres_return_C)
-                  apply (wp mapM_wp')
-                apply clarsimp+
-               apply (wp hoare_drop_imps)
-              apply (clarsimp simp: guard_is_UNIV_def message_info_to_H_def
-                                    Collect_const_mem
-                             split: split_if)
-             apply (wp hoare_drop_imps hoare_vcg_all_lift)
-          apply (clarsimp simp: bind_assoc fault_tag_defs ccorres_cond_iffs
-                     split del: split_if)
-          apply (rule ccorres_symb_exec_l)
-             apply (rule ccorres_stateAssert)
-             apply wpc
-              apply clarsimp
-              apply (ctac add: ccorres_return_C)
-             apply (rule ccorres_symb_exec_l)
-                apply (ctac add: ccorres_return_C)
-               apply (wp mapM_wp')
-             apply clarsimp+
-            apply (wp hoare_drop_imps hoare_vcg_all_lift)
-         apply (clarsimp simp: bind_assoc fault_tag_defs ccorres_cond_iffs
-                    split del: split_if)
-         apply (rule ccorres_symb_exec_l)
-            apply (rule ccorres_stateAssert)
-            apply wpc
-             apply clarsimp
-             apply (ctac add: ccorres_return_C)
-            apply (rule ccorres_symb_exec_l)
-               apply (ctac add: ccorres_return_C)
-              apply (wp mapM_wp')
-            apply clarsimp+
-           apply (wp hoare_drop_imps hoare_vcg_all_lift)
-        apply (rename_tac number)
-        apply (clarsimp simp: bind_assoc fault_tag_defs ccorres_cond_iffs
-                   split del: split_if)
-        apply (rule ccorres_rhs_assoc)+
-        apply csymbr
-        apply csymbr
-        apply csymbr
-        apply csymbr
-        apply (ctac(no_vcg))
-         apply (rename_tac sb sb')
-         apply (rule ccorres_stateAssert)
-         apply (rule ccorres_rhs_assoc2)
-         apply (rule ccorres_split_nothrow_novcg)
-             apply (rule ccorres_zipWithM_x_while)
-                 apply clarsimp
-                 apply (intro ccorres_rhs_assoc)
-                 apply (rule ccorres_symb_exec_r)
-                   apply ctac
-                     apply (rule ccorres_symb_exec_r)
-                       apply ctac
-                      apply vcg
-                     apply (rule conseqPre, vcg)
-                     apply fastforce
-                    apply wp
-                   apply vcg
-                  apply vcg 
-                  apply (simp add: length_syscallMessage length_msgRegisters)
-                  apply (simp add: msgRegisters_ccorres syscallMessage_ccorres [symmetric]
-                                   n_msgRegisters_def unat_of_nat32 word_bits_def
-                                   word_of_nat_less n_syscallMessage_def)
-                 apply (rule conseqPre, vcg)
-                 apply (clarsimp simp: word_of_nat_less length_msgRegisters
-                                       n_msgRegisters_def)
-                apply (simp add: length_msgRegisters length_syscallMessage
-                                 n_msgRegisters_def n_syscallMessage_def
-                                 min_def message_info_to_H_def word_of_nat_less
-                          split: split_if)
-                apply unat_arith
-               apply clarsimp
-               apply (vcg spec=TrueI)
-               apply clarsimp
-              apply wp
-              apply simp
-             apply (clarsimp simp: msgRegisters_unfold word_bits_def)
-             apply unat_arith
-            apply ceqv
-           apply (rule ccorres_stateAssert)
-           apply (rule ccorres_split_nothrow_novcg)
-               apply wpc
-                apply (simp add: option_to_0_def ccorres_cond_iffs option_to_ptr_def)
-                apply (rule ccorres_return_Skip)
-               apply (rule_tac P="sb \<noteq> Some 0" in ccorres_gen_asm)
-               apply (rule_tac P="case_option True (\<lambda>x. is_aligned x msg_align_bits) sb"
-                            in ccorres_gen_asm)
-               apply (simp add: option_to_0_def option_to_ptr_def)
-               apply (subgoal_tac "sb'\<noteq> NULL") prefer 2
-                apply clarsimp
-               apply (simp add: ccorres_cond_iffs)
-               apply (subst ccorres_seq_skip' [symmetric])
-               apply (rule ccorres_split_nothrow_novcg)
-                   apply (drule_tac s="sb" in sym)
-                   apply (simp only: zipWithM_x_mapM_x)
-                   apply (rule_tac F="\<lambda>_. valid_pspace' and (case sb of None \<Rightarrow> \<top>
-                            | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)"
-                          in ccorres_mapM_x_while')
-                       apply clarsimp
-                       apply (rule ccorres_guard_imp2)
-                        apply (rule ccorres_pre_loadWordUser)
-                        apply (intro ccorres_rhs_assoc)
-                        apply (rule ccorres_symb_exec_r)
-                          apply (rule ccorres_move_array_assertion_ipc_buffer
-                                      ccorres_Guard_Seq[where S="{s. h_t_valid (htd s) c_guard (ptr s)}" for ptr htd]
-                                      )+
-                          apply (rule ccorres_symb_exec_r)
-                            apply (rule ccorres_symb_exec_r)
-                              apply ctac
-                             apply vcg
-                            apply (rule conseqPre, vcg)
-                            apply fastforce
-                           apply vcg
-                          apply (rule conseqPre, vcg)
-                          apply clarsimp
-                         apply vcg
-                        apply (rule conseqPre, vcg)
-                        apply clarsimp
-                       apply clarsimp
-                       apply (subst aligned_add_aligned, assumption)
-                         apply (rule is_aligned_mult_triv2[where n=2, simplified])
-                        apply (simp add: msg_align_bits)
-                       apply (clarsimp simp: n_syscallMessage_def n_msgRegisters_def
-                                             msgRegisters_ccorres[symmetric]
-                                             syscallMessage_ccorres[symmetric]
-                                             length_msgRegisters length_syscallMessage
-                                             unat_of_nat32 word_bits_def
-                                             min_def message_info_to_H_def
-                                             upto_enum_def typ_heap_simps'
-                                             unat_add_lem[THEN iffD1]
-                                             msg_align_bits
-                                      split: split_if_asm
-                                   simp del: upt_rec_numeral,
-                              simp_all add: word_less_nat_alt unat_add_lem[THEN iffD1] unat_of_nat)[1]
-                      apply (clarsimp simp: n_syscallMessage_def n_msgRegisters_def
-                                            msgRegisters_ccorres
-                                            syscallMessage_ccorres
-                                            length_syscallMessage length_msgRegisters
-                                            message_info_to_H_def min_def
-                                     split: split_if)
-                      apply (elim disjE,unat_arith+)[1]
-                     apply (vcg spec=TrueI)
-                     apply clarsimp
-                    apply (simp add: split_def)
-                    apply (wp hoare_case_option_wp)
-                    apply (fastforce elim: aligned_add_aligned
-                                   intro: is_aligned_mult_triv2 [where n=2,
-                                                                 simplified]
-                                    simp: word_bits_def msg_align_bits)
-                   apply (clarsimp simp: msgRegisters_unfold word_bits_def)
-                   apply (simp add: n_syscallMessage_def)
-                  apply ceqv
-                 apply (rule ccorres_symb_exec_l)
-                    apply (fold dc_def)[1]
-                    apply (rule ccorres_return_Skip)
-                   apply (wp mapM_wp')
-                 apply clarsimp
-                apply wp
-               apply (clarsimp simp: guard_is_UNIV_def)
-              apply ceqv
+           apply (clarsimp simp: bind_assoc seL4_Fault_tag_defs ccorres_cond_iffs
+                           split del: split_if)
+           apply (subst take_min_len[symmetric,where n="unat (msgLength _)"])
+           apply (ctac add: copyMRsFaultReply_ccorres_exception)
              apply (ctac add: ccorres_return_C)
             apply wp
-           apply (clarsimp simp: guard_is_UNIV_def message_info_to_H_def
-                          split: split_if)
-          apply clarsimp
-          apply (rule_tac Q="\<lambda>rv. valid_pspace' and
-                                  (case_option \<top> valid_ipc_buffer_ptr' sb)"
-                       in hoare_post_imp)
-           apply (clarsimp simp: upto_enum_word valid_ipc_buffer_ptr'_def simp del: upt.simps)
-          apply (simp add: zipWithM_x_mapM_x)
-          apply (wp mapM_x_wp hoare_case_option_wp | simp add: split_def)+
-          apply (rule subset_refl)
-         apply (clarsimp simp: guard_is_UNIV_def)
-        apply (wp lookupIPCBuffer_not_Some_0 lookupIPCBuffer_aligned
-                  | wp_once hoare_drop_imps)+
-       apply (clarsimp simp: guard_is_UNIV_def to_bool_def true_def false_def)
+           apply (vcg exspec=copyMRsFaultReply_modifies)
+          (* CapFault *)
+          apply (clarsimp simp: bind_assoc seL4_Fault_tag_defs ccorres_cond_iffs
+                          split del: split_if)
+          apply (ctac add: ccorres_return_C)
+         (* UnknowSyscall *)
+         apply (rename_tac number)
+         apply (clarsimp simp: seL4_Fault_tag_defs ccorres_cond_iffs
+                         split del: split_if)
+         apply (subst take_min_len[symmetric,where n="unat (msgLength _)"])
+         apply (subst take_min_len[symmetric,where n="unat (msgLength _)"])
+         apply (fold bind_assoc)
+         apply (ctac add: copyMRsFaultReply_ccorres_syscall[simplified bind_assoc[symmetric]])
+           apply (ctac add: ccorres_return_C)
+          apply wp
+         apply (vcg exspec=copyMRsFaultReply_modifies)
+        (* ArchFault *)
+        apply (rule ccorres_cond_false)
+        apply (rule ccorres_cond_false)
+        apply (rule ccorres_cond_false)
+        apply (clarsimp simp: ccorres_cond_iffs
+                        split del: split_if)
+        apply (rule ccorres_rhs_assoc)
+        (* apply (rule_tac P="\<lambda>s. \<exists>t. ko_at' t r s" in ccorres_cross_over_guard) *)
+        apply (rule_tac val="fault_to_fault_tag f"
+                   and xf'=ret__unsigned_'
+                   and R="\<lambda>s. \<exists>t. ko_at' t r s \<and> tcbFault t = Some f"
+                   and R'="\<lbrace>cfault_rel (Some f) (seL4_Fault_lift \<acute>fault)
+                        (lookup_fault_lift (h_val (hrs_mem \<acute>t_hrs)
+                           (Ptr &(tcb_ptr_to_ctcb_ptr r\<rightarrow>[''tcbLookupFailure_C'']))))\<rbrace>"
+                    in ccorres_symb_exec_r_known_rv_UNIV)
+           apply (rule conseqPre, vcg, clarsimp)
+           apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
+           apply (clarsimp simp: ctcb_relation_def typ_heap_simps
+                                 cfault_rel_def seL4_Fault_lift_def Let_def
+                           split: split_if_asm)
+          apply ceqv
+         apply (rule ccorres_add_return2)
+         apply (ctac add: handleArchFaultReply_corres)
+           apply (rule ccorres_return_C)
+             apply simp+
+          apply wp
+         apply (vcg exspec=Arch_handleFaultReply_modifies)
+        apply (clarsimp simp: guard_is_UNIV_def)
+        apply (subst fault_to_fault_tag.simps(2))
+        apply (clarsimp split: split_if)
+        apply simp+
+       (* Done *)
+       apply clarsimp
+       apply vcg
       apply vcg
-     apply (rule conseqPre, vcg)
      apply clarsimp
+     apply vcg_step
+     apply (clarsimp simp: n_exceptionMessage_def n_syscallMessage_def
+                           message_info_to_H_def to_bool_def scast_def
+                           length_exceptionMessage length_syscallMessage
+                           min_def word_less_nat_alt true_def
+                           guard_is_UNIV_def seL4_Faults seL4_Arch_Faults
+                       split: split_if)
+    apply (simp add: length_exceptionMessage length_syscallMessage)
     apply wp
-   apply vcg
-  apply (clarsimp simp: obj_at'_def n_msgRegisters_def)
+   apply clarsimp
+   apply (vcg exspec=getRegister_modifies)
+  apply (clarsimp simp: n_exceptionMessage_def n_syscallMessage_def
+                        message_info_to_H_def to_bool_def scast_def
+                        length_exceptionMessage length_syscallMessage
+                        min_def word_less_nat_alt true_def
+                        obj_at'_def
+                 split: split_if)
+  using arch_fault_to_fault_tag_range
+  apply (fastforce simp: seL4_Faults seL4_Arch_Faults)
   done
 
 (* FIXME: move *)
@@ -3931,14 +4356,14 @@ proof -
    apply (rule ccorres_pre_threadGet)
    apply (rename_tac fault)
    apply (rule ccorres_move_c_guard_tcb)
-   apply (rule_tac val="case_option (scast fault_null_fault) fault_to_fault_tag fault"
+   apply (rule_tac val="case_option (scast seL4_Fault_NullFault) fault_to_fault_tag fault"
                and xf'=ret__unsigned_'
                and R="\<lambda>s. \<exists>t. ko_at' t receiver s \<and> tcbFault t = fault"
                 in ccorres_symb_exec_r_known_rv_UNIV [where R'=UNIV])
       apply (vcg, clarsimp)
       apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
       apply (fastforce simp: ctcb_relation_def typ_heap_simps
-                            cfault_rel_def fault_lift_def Let_def
+                            cfault_rel_def seL4_Fault_lift_def Let_def
                      split: split_if_asm option.split)
      apply ceqv
     apply wpc
@@ -3964,7 +4389,7 @@ proof -
                        invs_valid_queues_strg)
      apply (simp add: cap_reply_cap_def)
      apply (wp doIPCTransfer_reply_or_replyslot)
-    apply (clarsimp simp: fault_null_fault_def ccorres_cond_iffs
+    apply (clarsimp simp: seL4_Fault_NullFault_def ccorres_cond_iffs
                           fault_to_fault_tag_nonzero
                split del: split_if)
     apply (rule ccorres_rhs_assoc)+
@@ -3989,7 +4414,7 @@ proof -
                       (simp add: typ_heap_simps')+, simp_all?)[1]
                 apply (rule ball_tcb_cte_casesI, simp+)
                apply (clarsimp simp: ctcb_relation_def
-                                     fault_lift_null_fault
+                                     seL4_Fault_lift_NullFault
                                      cfault_rel_def is_cap_fault_def
                                      cthread_state_relation_def)
                apply (case_tac "tcbState tcb", simp_all add: is_cap_fault_def)[1]
@@ -4746,8 +5171,8 @@ lemma sendIPC_ccorres [corres]:
              apply (rule ccorres_symb_exec_r)
                apply (rule ccorres_cond_false_seq)
                apply (intro ccorres_rhs_assoc)
-               apply (rule ccorres_move_c_guard_tcb [simplified]) 
-               apply (rule_tac val="case_option (scast fault_null_fault)
+               apply (rule ccorres_move_c_guard_tcb [simplified])
+               apply (rule_tac val="case_option (scast seL4_Fault_NullFault)
                                                 fault_to_fault_tag fault"
                            and xf'=ret__unsigned_'
                            and R="\<lambda>s. \<exists>t. ko_at' t thread s \<and> tcbFault t = fault"
@@ -4755,7 +5180,7 @@ lemma sendIPC_ccorres [corres]:
                   apply (rule conseqPre, vcg, clarsimp)
                   apply (erule(1) cmap_relation_ko_atE[OF cmap_relation_tcb])
                   apply (fastforce simp: ctcb_relation_def typ_heap_simps
-                                         cfault_rel_def fault_lift_def Let_def
+                                         cfault_rel_def seL4_Fault_lift_def Let_def
                                   split: split_if_asm option.split)
                  apply ceqv
                 apply wpc
@@ -4777,7 +5202,7 @@ lemma sendIPC_ccorres [corres]:
                   apply (ctac add: setThreadState_ccorres)
                  apply vcg
                 apply (rule conseqPre, vcg, clarsimp)
-               apply (clarsimp simp: fault_to_fault_tag_nonzero fault_null_fault_def
+               apply (clarsimp simp: fault_to_fault_tag_nonzero seL4_Fault_NullFault_def
                                      guard_is_UNIV_def ThreadState_Inactive_def)
               apply vcg
              apply (rule conseqPre, vcg, clarsimp)
@@ -5548,7 +5973,7 @@ lemma receiveIPC_ccorres [corres]:
                    apply (rule ccorres_cond_false_seq)
                    apply (intro ccorres_rhs_assoc)
                    apply (rule ccorres_move_c_guard_tcb [simplified])
-                   apply (rule_tac val="case_option (scast fault_null_fault)
+                   apply (rule_tac val="case_option (scast seL4_Fault_NullFault)
                                                     fault_to_fault_tag fault"
                                and xf'=ret__unsigned_'
                                and R="\<lambda>s. \<exists>t. ko_at' t sender s \<and> tcbFault t = fault"
@@ -5556,7 +5981,7 @@ lemma receiveIPC_ccorres [corres]:
                       apply (rule conseqPre, vcg, clarsimp)
                       apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
                       apply (auto simp: ctcb_relation_def typ_heap_simps
-                                            cfault_rel_def fault_lift_def Let_def
+                                            cfault_rel_def seL4_Fault_lift_def Let_def
                                      split: split_if_asm option.split)[1]
                      apply ceqv
                     apply wpc
@@ -5580,7 +6005,7 @@ lemma receiveIPC_ccorres [corres]:
                       apply ctac
                      apply vcg
                     apply (rule conseqPre, vcg, clarsimp)
-                   apply (clarsimp simp: fault_to_fault_tag_nonzero fault_null_fault_def
+                   apply (clarsimp simp: fault_to_fault_tag_nonzero seL4_Fault_NullFault_def
                                          guard_is_UNIV_def ThreadState_Inactive_def
                                          mask_def ThreadState_Running_def)
                   apply vcg
