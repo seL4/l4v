@@ -112,7 +112,9 @@ lemmas register_overlap_check = msg_info_badge_register_no_overlap
                                 badge_cap_register_overlap
 
 lemma transform_full_intent_cong:
-  "\<lbrakk>ms = ms'; ptr = ptr'; tcb_context tcb = tcb_context tcb'; tcb_ipc_buffer tcb = tcb_ipc_buffer tcb'; tcb_ipcframe tcb = tcb_ipcframe tcb'\<rbrakk>
+  "\<lbrakk>ms = ms'; ptr = ptr';
+    arch_tcb_context_get (tcb_arch tcb) = arch_tcb_context_get (tcb_arch tcb');
+    tcb_ipc_buffer tcb = tcb_ipc_buffer tcb'; tcb_ipcframe tcb = tcb_ipcframe tcb'\<rbrakk>
   \<Longrightarrow> transform_full_intent ms ptr tcb = transform_full_intent ms' ptr' tcb'"
   by (simp add: transform_full_intent_def get_tcb_message_info_def get_tcb_mrs_def Suc_le_eq get_ipc_buffer_words_def)
 

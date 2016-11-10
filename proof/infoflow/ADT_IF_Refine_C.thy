@@ -77,14 +77,14 @@ definition handleSyscall_C_body_if
 definition handleUnknownSyscall_C_body_if
   where
   "handleUnknownSyscall_C_body_if w \<equiv>
-    (\<acute>current_fault :== CALL fault_unknown_syscall_new(w);;
+    (\<acute>current_fault :== CALL seL4_Fault_UnknownSyscall_new(w);;
       (CALL handleFault(\<acute>ksCurThread);;
          \<acute>ret__unsigned_long :== scast EXCEPTION_NONE))"
 
 definition handleUserLevelFault_C_body_if
   where
   "handleUserLevelFault_C_body_if w1 w2 \<equiv>
-    (\<acute>current_fault :== CALL fault_user_exception_new(w1,w2);;
+    (\<acute>current_fault :== CALL seL4_Fault_UserException_new(w1,w2);;
       (CALL handleFault(\<acute>ksCurThread);;
          \<acute>ret__unsigned_long :== scast EXCEPTION_NONE))"
 
@@ -289,7 +289,7 @@ lemma handleEvent_ccorres:
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ isReply_def
-                    cfault_rel_def fault_unknown_syscall_lift fault_user_exception_lift
+                    cfault_rel_def seL4_Fault_UnknownSyscall_lift seL4_Fault_UserException_lift
                     is_cap_fault_def
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread')
@@ -307,6 +307,7 @@ lemma kernelEntry_corres_C:
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)  
       apply (rule corres_split)
          prefer 2
+         apply (subst archTcbUpdate_aux2[symmetric])
          apply (rule setArchTCB_C_corres, simp, rule ccontext_rel_to_C)
          apply simp
         apply (rule corres_split[OF _ ccorres_corres_u_xf, simplified bind_assoc])
@@ -323,6 +324,7 @@ lemma kernelEntry_corres_C:
           apply (clarsimp simp: prod_lift_def split: split_if)
          apply wp
        apply (rule hoare_strengthen_post)
+        apply (subst archTcbUpdate_aux2[symmetric])
         apply (rule threadSet_all_invs_triv'[where e=e])
        apply (clarsimp simp: all_invs'_def)
        apply force

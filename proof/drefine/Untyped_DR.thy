@@ -410,12 +410,13 @@ lemma transform_empty_cnode:
 lemma transform_default_tcb:
   "transform_tcb ms x default_tcb (default_etcb\<lparr>tcb_domain := domain\<rparr>)
         = Tcb (Types_D.default_tcb domain)"
-  apply (simp add: transform_tcb_def default_tcb_def Types_D.default_tcb_def)
+  apply (simp add: transform_tcb_def default_tcb_def Types_D.default_tcb_def default_arch_tcb_def)
   apply (simp add: transform_full_intent_def Let_def new_context_def
                    cap_register_def ARM.capRegister_def
                    get_tcb_mrs_def
                    Suc_le_eq get_tcb_message_info_def msg_info_register_def
                    ARM.msgInfoRegister_def data_to_message_info_def
+                   arch_tcb_context_get_def
                    get_ipc_buffer_words_def)
   apply (simp add: transform_intent_def invocation_type_def fromEnum_def
                    enum_invocation_label toEnum_def)

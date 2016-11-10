@@ -832,7 +832,7 @@ lemma handle_fault_corres:
 
 lemma get_tcb_mrs_wp:
   "\<lbrace>ko_at (TCB obj) thread and K_bind (evalMonad (lookup_ipc_buffer False thread) sa = Some (op_buf)) and op = sa\<rbrace>
-    get_mrs thread (op_buf) (data_to_message_info (tcb_context obj msg_info_register))
+    get_mrs thread (op_buf) (data_to_message_info (arch_tcb_context_get (tcb_arch obj) msg_info_register))
             \<lbrace>\<lambda>rv s. rv = get_tcb_mrs (machine_state sa) obj\<rbrace>"
   apply (case_tac op_buf)
     apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def)
@@ -1006,7 +1006,7 @@ lemma weak_det_spec_get_mrs:
   done
 
 lemma lookup_cap_and_slot_inv:
-  "\<lbrace>P\<rbrace> CSpace_A.lookup_cap_and_slot t (to_bl (tcb_context obj'a cap_register)) \<lbrace>\<lambda>x. P\<rbrace>, \<lbrace>\<lambda>ft s. True\<rbrace>"
+  "\<lbrace>P\<rbrace> CSpace_A.lookup_cap_and_slot t (to_bl (arch_tcb_context_get (tcb_arch obj'a) cap_register)) \<lbrace>\<lambda>x. P\<rbrace>, \<lbrace>\<lambda>ft s. True\<rbrace>"
   apply (simp add:CSpace_A.lookup_cap_and_slot_def)
   apply (wp | clarsimp simp:liftE_bindE)+
   apply (simp add:validE_def)
@@ -1030,9 +1030,9 @@ lemma decode_invocation_corres':
           (cdl_intent_op (transform_full_intent (machine_state s) (cur_thread s) ctcb)))
      rv)
      ((\<lambda>(slot, cap, extracaps, buffer).
-          do args \<leftarrow> get_mrs (cur_thread s) buffer (data_to_message_info (tcb_context ctcb msg_info_register));
-          Decode_A.decode_invocation (mi_label (data_to_message_info (tcb_context ctcb msg_info_register))) args
-          (to_bl (tcb_context ctcb cap_register)) slot cap extracaps
+          do args \<leftarrow> get_mrs (cur_thread s) buffer (data_to_message_info (arch_tcb_context_get (tcb_arch ctcb) msg_info_register));
+          Decode_A.decode_invocation (mi_label (data_to_message_info (arch_tcb_context_get (tcb_arch ctcb) msg_info_register))) args
+          (to_bl (arch_tcb_context_get (tcb_arch ctcb) cap_register)) slot cap extracaps
          od)
      rv')"
   apply (rule dcorres_expand_pfx)
@@ -1590,18 +1590,7 @@ lemma handle_vm_fault_wp:
       apply (assumption)
      apply (clarsimp simp:valid_def simpler_modify_def return_def bind_def)
     apply wp
-   apply (clarsimp simp: gets_def get_def bind_def return_def)
-   apply (clarsimp simp: as_user_def getRestartPC_def set_object_def get_def put_def bind_assoc)
-   apply wp
-     apply (case_tac x)
-     apply (clarsimp simp:bind_def return_def)
-     apply (rule_tac P="P and ko_at (TCB tcb) thread and (\<lambda>s. (tcb\<lparr>tcb_context := snd(aa,ba)\<rparr>) = tcb)" in  hoare_post_imp)
-      apply (assumption)
-     apply (clarsimp simp:obj_at_def valid_def simpler_modify_def return_def bind_def)
-    apply wp
-   apply (clarsimp simp:getRegister_def gets_def alternative_def select_def bind_def get_def return_def obj_at_def)
-   apply (simp add:get_tcb_SomeD)
-  apply simp
+  apply (clarsimp simp: gets_def get_def bind_def return_def)
   done
 
 lemma get_active_irq_corres:

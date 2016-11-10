@@ -747,7 +747,7 @@ where
 
 | tro_tcb_send: "\<lbrakk> ko  = Some (TCB tcb);
                    ko' = Some (TCB tcb'); 
-                   \<exists>ctxt'. tcb' = tcb \<lparr>tcb_context := ctxt', tcb_state := Structures_A.Running,
+                   \<exists>ctxt'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb), tcb_state := Structures_A.Running,
                      tcb_bound_notification := ntfn'\<rparr>;
                    tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
                    direct_send subjects aag ep tcb \<or> indirect_send subjects aag ep recv tcb \<rbrakk>
@@ -764,10 +764,13 @@ where
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_restart: "\<lbrakk> ko  = Some (TCB tcb);
                       ko' = Some (TCB tcb');
-                      tcb' = tcb\<lparr>tcb_context := tcb_context tcb', tcb_state := tcb_state tcb', tcb_bound_notification := ntfn'\<rparr>;
-                      (tcb_state tcb' = Structures_A.Restart \<and> tcb_context tcb' = tcb_context tcb) \<or>                      
+                      tcb' = tcb\<lparr> tcb_arch := arch_tcb_context_set (arch_tcb_context_get (tcb_arch tcb')) (tcb_arch tcb)
+                                , tcb_state := tcb_state tcb', tcb_bound_notification := ntfn'\<rparr>;
+                      (tcb_state tcb' = Structures_A.Restart \<and> arch_tcb_context_get (tcb_arch tcb') = arch_tcb_context_get (tcb_arch tcb)) \<or>
                       (* to handle activation *)
-                      (tcb_state tcb' = Structures_A.Running \<and> tcb_context tcb' = (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction));
+                      (tcb_state tcb' = Structures_A.Running \<and>
+                       arch_tcb_context_get (tcb_arch tcb')
+                         = (arch_tcb_context_get (tcb_arch tcb))(LR_svc := arch_tcb_context_get (tcb_arch tcb) FaultInstruction));
                       tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
                       blocked_on ep (tcb_state tcb);
                       aag_subjects_have_auth_to subjects aag Reset ep \<rbrakk>
@@ -784,9 +787,8 @@ where
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_activate: "\<lbrakk> ko  = Some (TCB tcb);
                        ko' = Some (TCB tcb');
-                       tcb' = tcb \<lparr>tcb_context := (tcb_context tcb)
-                                                         (LR_svc := tcb_context tcb FaultInstruction),
-                                          tcb_state := Structures_A.Running, tcb_bound_notification := ntfn'\<rparr>;
+                       tcb' = tcb \<lparr> tcb_arch := arch_tcb_context_set ((arch_tcb_context_get (tcb_arch tcb))(LR_svc := (arch_tcb_context_get (tcb_arch tcb)) FaultInstruction)) (tcb_arch tcb)
+                                  , tcb_state := Structures_A.Running, tcb_bound_notification := ntfn'\<rparr>;
                        tcb_state tcb = Structures_A.Restart;
                        (* to handle unbind *)
                        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;

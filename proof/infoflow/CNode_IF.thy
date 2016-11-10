@@ -313,7 +313,11 @@ lemma tcb_at_def2: "tcb_at ptr s = (\<exists>tcb. kheap s ptr = Some (TCB tcb))"
   done
 
 lemma set_object_globals_equiv:
-  "\<lbrace> globals_equiv s and (\<lambda> s. ptr \<noteq> arm_global_pd (arch_state s)) and (\<lambda>t. ptr = idle_thread t \<longrightarrow> (\<forall>tcb. kheap t (idle_thread t) = Some (TCB tcb) \<longrightarrow> (\<exists>tcb'. obj = (TCB tcb') \<and> tcb_context tcb = tcb_context tcb')) \<and> (\<forall>tcb'. obj = (TCB tcb') \<longrightarrow> tcb_at (idle_thread t) t)) \<rbrace> 
+  "\<lbrace> globals_equiv s and (\<lambda> s. ptr \<noteq> arm_global_pd (arch_state s))
+    and (\<lambda>t. ptr = idle_thread t \<longrightarrow>
+                (\<forall>tcb. kheap t (idle_thread t) = Some (TCB tcb) \<longrightarrow> (\<exists>tcb'. obj = (TCB tcb')
+             \<and> arch_tcb_context_get (tcb_arch tcb) = arch_tcb_context_get (tcb_arch tcb')))
+             \<and> (\<forall>tcb'. obj = (TCB tcb') \<longrightarrow> tcb_at (idle_thread t) t)) \<rbrace>
    set_object ptr obj
    \<lbrace> \<lambda>_. globals_equiv s \<rbrace>"
   unfolding set_object_def
@@ -685,9 +689,11 @@ lemma only_timer_irqs:
   interrupt_states s irq = IRQTimer"
   apply(clarsimp simp: is_irq_at_def irq_at_def Let_def split: split_if_asm)
   apply(case_tac "interrupt_states s (irq_oracle n)")
-    apply(blast elim: valid_irq_statesE)
-   apply(fastforce simp: domain_sep_inv_def)
-  by assumption
+     apply(blast elim: valid_irq_statesE)
+    apply(fastforce simp: domain_sep_inv_def)
+   apply assumption
+  apply(fastforce simp: domain_sep_inv_def)
+  done
 
 lemma dmo_getActiveIRQ_only_timer:
   "\<lbrace>domain_sep_inv False st and valid_irq_states\<rbrace> 

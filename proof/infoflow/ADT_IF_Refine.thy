@@ -20,7 +20,7 @@ definition
 where
   "kernelEntry_if e tc \<equiv> do
     t \<leftarrow> getCurThread;
-    threadSet (tcbContext_update  (\<lambda>_. tc)) t;
+    threadSet (tcbArch_update (atcbContextSet tc)) t;
     r \<leftarrow> handleEvent e;
     return (r,tc)
   od"
@@ -43,7 +43,10 @@ lemma kernel_entry_if_corres:
          prefer 2
          apply simp
          apply (rule threadset_corresT)
-            apply (simp add: tcb_relation_def)
+            apply (simp add: tcb_relation_def
+                             arch_tcb_relation_def
+                             arch_tcb_context_set_def
+                             atcbContextSet_def)
            apply (clarsimp simp: tcb_cap_cases_def)
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
@@ -790,7 +793,7 @@ definition
   where
   "kernelExit_if tc \<equiv> do
     t' \<leftarrow> getCurThread;
-    threadGet tcbContext t'
+    threadGet (atcbContextGet o tcbArch) t'
   od"
 
 crunch (empty_fail) empty_fail: kernelExit_if
@@ -804,7 +807,8 @@ lemma kernel_exit_if_corres:
     apply (rule corres_split[where r'="op ="])
        apply simp
        apply (rule threadget_corres)
-       apply (clarsimp simp: tcb_relation_def)
+       apply (clarsimp simp: tcb_relation_def arch_tcb_relation_def
+                             arch_tcb_context_get_def atcbContextGet_def)
       apply (rule gct_corres)
      apply wp
    apply clarsimp+

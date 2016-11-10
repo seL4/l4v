@@ -314,8 +314,29 @@ lemma handle_interrupt_corres:
     apply (rule irq_node_image_not_idle,simp_all add:valid_state_def)
    apply (simp add:invs_def valid_state_def)
   apply (clarsimp simp:Interrupt_D.handle_interrupt_def gets_def)
+  apply (rule conjI; rule impI)
+   apply (rule dcorres_absorb_get_l)+
+   apply (clarsimp simp:CSpace_D.get_irq_slot_def)
+   apply (subgoal_tac "caps_of_state s'b (interrupt_irq_node s'b x,[])\<noteq> None")
+    apply (drule irq_state_IRQSignal_NullCap)
+         apply ((simp add:invs_def valid_state_def)+)
+    apply (frule caps_of_state_transform_opt_cap)
+      apply clarsimp
+     apply clarsimp
+     apply (drule(1) irq_node_image_not_idle[where y = x])
+     apply (clarsimp simp:not_idle_thread_def)
+    apply (clarsimp simp:transform_cslot_ptr_def)
+    apply (subgoal_tac "cdl_irq_node (transform s'b) x = (interrupt_irq_node s'b x)")
+     apply clarsimp
+     apply (rule corres_guard_imp,rule corres_dummy_return_pl)
+       apply (simp add: bind_assoc)
+       apply (rule dcorres_rhs_noop_above[OF timer_tick_dcorres])
+       apply (rule dcorres_symb_exec_r[OF dcorres_machine_op_noop])
+       apply (wp dmo_dwp hoare_TrueI| simp)+
+   apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot)+
+   apply (simp add:cte_wp_at_caps_of_state)
   apply (rule dcorres_absorb_get_l)+
-  apply (clarsimp simp:CSpace_D.get_irq_slot_def)
+  apply (clarsimp simp:CSpace_D.get_irq_slot_def handle_reserved_irq_def)
   apply (subgoal_tac "caps_of_state s'b (interrupt_irq_node s'b x,[])\<noteq> None")
    apply (drule irq_state_IRQSignal_NullCap)
         apply ((simp add:invs_def valid_state_def)+)
@@ -327,12 +348,10 @@ lemma handle_interrupt_corres:
    apply (clarsimp simp:transform_cslot_ptr_def)
    apply (subgoal_tac "cdl_irq_node (transform s'b) x = (interrupt_irq_node s'b x)")
     apply clarsimp
-    apply (rule corres_guard_imp,rule corres_dummy_return_pl)
-      apply (simp add: bind_assoc)
-      apply (rule dcorres_rhs_noop_above[OF timer_tick_dcorres])
-      apply (rule dcorres_symb_exec_r[OF dcorres_machine_op_noop])
-      apply (wp dmo_dwp hoare_TrueI| simp)+
-  apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot)+
+    apply (rule corres_guard_imp)
+      apply (rule dcorres_machine_op_noop)
+      apply wp
+   apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot)+
   apply (simp add:cte_wp_at_caps_of_state)
   done
 

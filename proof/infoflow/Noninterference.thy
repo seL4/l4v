@@ -327,7 +327,7 @@ lemma invs_irq_state_independent:
 
 lemma thread_set_tcb_context_update_ct_active[wp]:
   "\<lbrace>\<lambda>s. P (ct_active s)\<rbrace>
-   thread_set (tcb_context_update f) t 
+   thread_set (tcb_arch_update (arch_tcb_context_set f)) t
    \<lbrace>\<lambda>rv s. P (ct_active s)\<rbrace>"
   apply(simp add: thread_set_def ct_in_state_def | wp set_object_wp)+
   apply(clarsimp simp: st_tcb_at_def obj_at_def get_tcb_def split: option.splits kernel_object.splits)
@@ -359,8 +359,8 @@ lemma integrity_update_reference_state:
 
 lemma thread_set_tcb_context_update_wp:
   "\<lbrace>\<lambda>s. P (s\<lparr>kheap := kheap s(t \<mapsto>
-                     TCB (the (get_tcb t s)\<lparr>tcb_context := tc\<rparr>))\<rparr>)\<rbrace>
-       thread_set (tcb_context_update (\<lambda>_. tc)) t 
+                     TCB (tcb_arch_update (arch_tcb_context_set tc) (the (get_tcb t s))))\<rparr>)\<rbrace>
+       thread_set (tcb_arch_update (arch_tcb_context_set tc)) t
        \<lbrace>\<lambda>_. P\<rbrace>"
   apply(simp add: thread_set_def)
   apply (wp set_object_wp)
@@ -380,12 +380,15 @@ lemma kernel_entry_if_integrity:
   unfolding kernel_entry_if_def
   apply wp
     apply(rule valid_validE)
-    apply(rule_tac Q="\<lambda>_ s. integrity aag X (st\<lparr>kheap := (kheap st)(cur_thread st \<mapsto> TCB ((the (get_tcb (cur_thread st) st))\<lparr>tcb_context := tc\<rparr>))\<rparr>) s \<and> is_subject aag (cur_thread s) \<and> cur_thread s = cur_thread st" in hoare_strengthen_post)
+    apply(rule_tac Q="\<lambda>_ s. integrity aag X (st\<lparr>kheap := (kheap st)(cur_thread st \<mapsto> TCB (tcb_arch_update (arch_tcb_context_set tc) (the (get_tcb (cur_thread st) st))))\<rparr>) s
+                            \<and> is_subject aag (cur_thread s)
+                            \<and> cur_thread s = cur_thread st"
+                   in hoare_strengthen_post)
      apply(wp handle_event_integrity handle_event_cur_thread | simp)+
     apply(fastforce intro: integrity_update_reference_state)
    apply(wp thread_set_integrity_autarch thread_set_pas_refined 
            guarded_pas_domain_lift thread_set_invs_trivial thread_set_not_state_valid_sched
-          | simp add: tcb_cap_cases_def schact_is_rct_def)+
+          | simp add: tcb_cap_cases_def schact_is_rct_def arch_tcb_update_aux2)+
    apply(wp_once prop_of_two_valid[where f="ct_active" and g="cur_thread"])
      apply (wp | simp)+
    apply(wp thread_set_tcb_context_update_wp)
@@ -2691,7 +2694,7 @@ lemma kernel_schedule_if_confidentiality':
 
 lemma thread_set_tcb_context_update_runnable_globals_equiv:
   "\<lbrace>globals_equiv st and st_tcb_at runnable t and invs\<rbrace>
-   thread_set (tcb_context_update (\<lambda>_. uc)) t
+   thread_set (tcb_arch_update (arch_tcb_context_set uc)) t
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply(rule hoare_pre)
   apply(rule thread_set_context_globals_equiv)
@@ -2701,7 +2704,7 @@ lemma thread_set_tcb_context_update_runnable_globals_equiv:
   done
 
 lemma thread_set_tcb_context_update_reads_respects_g:
-  "reads_respects_g aag l (st_tcb_at runnable t and invs) (thread_set (tcb_context_update (\<lambda>_. uc)) t)"
+  "reads_respects_g aag l (st_tcb_at runnable t and invs) (thread_set (tcb_arch_update (arch_tcb_context_set uc)) t)"
   apply(rule equiv_valid_guard_imp)
    apply(rule reads_respects_g)
     apply(rule thread_set_reads_respects)
@@ -2712,7 +2715,7 @@ lemma thread_set_tcb_context_update_reads_respects_g:
 
 lemma thread_set_tcb_context_update_silc_inv:
   "\<lbrace>silc_inv aag st\<rbrace> 
-   thread_set (tcb_context_update f) t
+   thread_set (tcb_arch_update (arch_tcb_context_set f)) t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply(rule thread_set_silc_inv_trivial)
   apply(simp add: tcb_cap_cases_def)
@@ -2721,9 +2724,24 @@ lemma thread_set_tcb_context_update_silc_inv:
 lemmas thread_set_tcb_context_update_reads_respects_f_g = reads_respects_f_g'[where Q="\<top>", simplified, OF thread_set_tcb_context_update_reads_respects_g, OF thread_set_tcb_context_update_silc_inv]
 
 lemma kernel_entry_if_reads_respects_f_g:
-  "reads_respects_f_g aag l (ct_active and silc_inv aag st and einvs and only_timer_irq_inv irq st' and schact_is_rct and pas_refined aag and pas_cur_domain aag and guarded_pas_domain aag and K (ev \<noteq> Interrupt \<and> \<not> pasMaySendIrqs aag)) (kernel_entry_if ev tc)"
+  "reads_respects_f_g aag l (ct_active and silc_inv aag st
+                                       and einvs
+                                       and only_timer_irq_inv irq st'
+                                       and schact_is_rct
+                                       and pas_refined aag
+                                       and pas_cur_domain aag
+                                       and guarded_pas_domain aag
+                                       and K (ev \<noteq> Interrupt \<and> \<not> pasMaySendIrqs aag))
+                            (kernel_entry_if ev tc)"
   apply(simp add: kernel_entry_if_def)
-  apply (wp handle_event_reads_respects_f_g thread_set_tcb_context_update_reads_respects_f_g thread_set_tcb_context_update_silc_inv only_timer_irq_inv_pres[where P="\<top>" and Q="\<top>"] thread_set_invs_trivial thread_set_not_state_valid_sched thread_set_pas_refined | simp add: tcb_cap_cases_def)+
+  apply (wp handle_event_reads_respects_f_g
+            thread_set_tcb_context_update_reads_respects_f_g
+            thread_set_tcb_context_update_silc_inv
+            only_timer_irq_inv_pres[where P="\<top>" and Q="\<top>"]
+            thread_set_invs_trivial
+            thread_set_not_state_valid_sched
+            thread_set_pas_refined
+        | simp add: tcb_cap_cases_def arch_tcb_update_aux2)+
   apply(elim conjE)
   apply(frule (1) ct_active_cur_thread_not_idle_thread[OF invs_valid_idle])
   apply(clarsimp simp:  ct_in_state_def runnable_eq_active)
@@ -2799,7 +2817,7 @@ lemma kernel_call_A_if_confidentiality':
 lemma thread_get_tcb_context_reads_respects_g_helper:
   "equiv_valid_rv_inv (reads_equiv_g aag)
      (affects_equiv aag l)
-     (\<lambda>rv rv'. tcb_context rv = tcb_context rv')
+     (\<lambda>rv rv'. arch_tcb_context_get (tcb_arch rv) = arch_tcb_context_get (tcb_arch rv'))
      (\<lambda>s. t = idle_thread s \<or> is_subject aag t)
      (gets (get_tcb t) >>= assert_opt)"
   apply(clarsimp simp: equiv_valid_2_def in_monad)
@@ -2815,10 +2833,12 @@ lemma thread_get_tcb_context_reads_respects_g_helper:
 
 lemma thread_get_tcb_context_reads_respects_g:
   "reads_respects_g aag l
-          (\<lambda>s. t = idle_thread s \<or> is_subject aag t) (thread_get tcb_context t)"
+          (\<lambda>s. t = idle_thread s \<or> is_subject aag t) (thread_get (arch_tcb_context_get o tcb_arch) t)"
   apply(simp add: thread_get_def gets_the_def)
   apply(simp add: equiv_valid_def2)
-  apply(rule_tac W="\<lambda> rv rv'. tcb_context rv = tcb_context rv'" and Q="\<top>\<top>" in equiv_valid_rv_bind)
+  apply(rule_tac W="\<lambda> rv rv'. arch_tcb_context_get (tcb_arch rv) = arch_tcb_context_get (tcb_arch rv')"
+             and Q="\<top>\<top>"
+             in equiv_valid_rv_bind)
     apply(rule thread_get_tcb_context_reads_respects_g_helper)
    apply(rule return_ev2, simp)
   apply(rule hoare_post_taut)
@@ -3294,6 +3314,22 @@ lemma getActiveIRQ_ret_no_dmo[wp]: "\<lbrace>\<lambda>_. True\<rbrace> getActive
 lemma try_some_magic: "(\<forall>x. y = Some x \<longrightarrow> P x) = ((\<exists>x. y = Some x) \<longrightarrow> P (the y))"
 by auto
   
+lemma thread_set_as_user2:
+  "thread_set (tcb_arch_update (arch_tcb_context_set uc)) t
+    = as_user t (modify (\<lambda>_. uc))"
+proof -
+  have P: "\<And>f. det (modify f)"
+    by (simp add: modify_def)
+  thus ?thesis
+    apply (simp add: as_user_def P thread_set_def)
+    apply (clarsimp simp add: select_f_def
+                              simpler_modify_def
+                              bind_def image_def
+                              arch_tcb_update_aux3)
+    done
+qed
+
+
 lemma preemption_interrupt_scheduler_invisible: 
     "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l) (scheduler_affects_equiv aag l) (\<lambda>r r'. r = uc \<and> snd r' = uc')  
       (einvs and pas_refined aag and guarded_pas_domain aag and domain_sep_inv False st and silc_inv aag st' and (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s) and (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s)
@@ -3317,12 +3353,15 @@ lemma preemption_interrupt_scheduler_invisible:
                      apply (wp handle_interrupt_reads_respects_scheduler[where st=st] | simp)+
                 apply (rule equiv_valid_2)
                 apply (rule dmo_getActive_IRQ_reads_respect_scheduler)
-               apply (wp dmo_getActiveIRQ_return_axiom[simplified try_some_magic] | simp  add: imp_conjR | elim conjE | intro conjI | wp_once hoare_drop_imps)+
-           apply (subst thread_set_as_user)
+               apply (wp dmo_getActiveIRQ_return_axiom[simplified try_some_magic]
+                     | simp  add: imp_conjR arch_tcb_update_aux2
+                     | elim conjE
+                     | intro conjI
+                     | wp_once hoare_drop_imps)+
+           apply (subst thread_set_as_user2)
            apply (wp guarded_pas_domain_lift)
-          apply ((simp | wp | force)+)[7]
-   apply (fastforce simp: silc_inv_not_cur_thread
-                         cur_thread_idle guarded_pas_domain_def)+
+          apply ((simp add:  arch_tcb_update_aux2 | wp | force)+)[7]
+   apply (fastforce simp: silc_inv_not_cur_thread cur_thread_idle guarded_pas_domain_def)+
   done
  
 
@@ -3363,11 +3402,15 @@ lemma kernel_entry_scheduler_equiv_2:
       apply (rule equiv_valid_2_bind_pre[where R'="op ="])
            apply (rule equiv_valid_2)
            apply simp
-           apply (wp del: no_irq add: handle_interrupt_reads_respects_scheduler[where st=st] 
-                     dmo_getActive_IRQ_reads_respect_scheduler  | wpc | simp add: imp_conjR all_conj_distrib | wp_once hoare_drop_imps)+
+           apply (wp del: no_irq add: handle_interrupt_reads_respects_scheduler[where st=st]
+                     dmo_getActive_IRQ_reads_respect_scheduler
+                 | wpc
+                 | simp add: imp_conjR all_conj_distrib  arch_tcb_update_aux2
+                 | wp_once hoare_drop_imps)+
            apply (rule context_update_cur_thread_snippit)
          apply (wp thread_set_invs_trivial guarded_pas_domain_lift
-                   thread_set_pas_refined thread_set_not_state_valid_sched | simp add: tcb_cap_cases_def)+
+                   thread_set_pas_refined thread_set_not_state_valid_sched
+               | simp add: tcb_cap_cases_def arch_tcb_update_aux2)+
    apply (fastforce simp: silc_inv_not_cur_thread cur_thread_idle)+
   done
 
@@ -3384,11 +3427,14 @@ lemma kernel_entry_if_reads_respects_scheduler:
       apply (rule reads_respects_scheduler_cases')
          prefer 3
          apply (rule reads_respects_scheduler_unobservable'')
-           apply ((wp thread_set_scheduler_equiv | simp | elim conjE)+)[3]
-        apply ((wp | simp | elim conjE)+)[2]
+           apply (( wp thread_set_scheduler_equiv
+                  | simp add:  arch_tcb_update_aux2
+                  | elim conjE)+)[3]
+        apply ((wp | simp add:  arch_tcb_update_aux2 | elim conjE)+)[2]
       apply (clarsimp simp: guarded_pas_domain_def)
-     apply ((wp thread_set_invs_trivial guarded_pas_domain_lift hoare_vcg_all_lift
-               thread_set_pas_refined thread_set_not_state_valid_sched | simp add: tcb_cap_cases_def)+)
+     apply (( wp thread_set_invs_trivial guarded_pas_domain_lift hoare_vcg_all_lift
+                  thread_set_pas_refined thread_set_not_state_valid_sched
+            | simp add: tcb_cap_cases_def  arch_tcb_update_aux2)+)
   apply (clarsimp simp: cur_thread_idle cur_thread_not_SilcLabel)
   apply force
   done

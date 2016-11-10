@@ -1078,8 +1078,9 @@ done
 lemma transform_default_tcb:
   "transform_tcb ms y Structures_A.default_tcb Deterministic_A.default_etcb = cdl_default_tcb"
   apply (clarsimp simp:Structures_A.default_tcb_def tcb_registers_caps_merge_def
-    transform_tcb_def infer_tcb_pending_op_def new_context_def)
-  apply (clarsimp simp:get_tcb_message_info_def transform_full_intent_def get_tcb_mrs_def Let_def neq_CPSR)
+    transform_tcb_def infer_tcb_pending_op_def new_context_def default_arch_tcb_def)
+  apply (clarsimp simp:get_tcb_message_info_def arch_tcb_context_get_def
+                       transform_full_intent_def get_tcb_mrs_def Let_def neq_CPSR )
   apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_splits)
   apply (simp add:transform_intent_invalid_invocation)
   apply (simp add:get_ipc_buffer_words_def cdl_default_tcb_def guess_error_def 

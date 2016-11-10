@@ -767,8 +767,6 @@ lemma invoke_tcb_corres_copy_regs:
                    apply (simp add:setNextPC_def set_register_rewrite)
                    apply (rule Intent_DR.set_register_corres[unfolded dc_def], simp)
                   apply (wp | clarsimp simp:getRestartPC_def)+
-                 apply (wp as_user_inv)
-                apply simp
                apply (rule invoke_tcb_corres_copy_regs_loop, simp)
              apply (wp mapM_x_wp [where S=UNIV])
              apply simp
@@ -957,10 +955,10 @@ lemma dcorres_tcb_empty_slot:
 crunch valid_etcbs[wp]: cap_delete "valid_etcbs"
 
 lemma dcorres_idempotent_as_user_strong:
-  assumes prem: "\<And>tcb r ms ref etcb P.
-                 \<lbrace> \<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context:=cxt\<rparr>) etcb)\<rbrace>
+  assumes prem: "\<And>tcb ms ref etcb P.
+                 \<lbrace> \<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_arch:=arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>) etcb)\<rbrace>
                  x
-                 \<lbrace> \<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context:=cxt\<rparr>) etcb)\<rbrace>"
+                 \<lbrace> \<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_arch:=arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>) etcb)\<rbrace>"
   shows "dcorres dc \<top> (tcb_at u) (return q) (as_user u x)"
   apply (clarsimp simp: as_user_def)
   apply (clarsimp simp: corres_underlying_def bind_def split_def set_object_def return_def get_def put_def
@@ -987,8 +985,8 @@ lemma TPIDRURW_notin_msg_registers[simp]:
   done
 
 lemma transform_full_intent_update_tpidrurw[simp]:
-  "transform_full_intent ms ref (tcb\<lparr>tcb_context := s(TPIDRURW := a)\<rparr>)
-   = transform_full_intent ms ref (tcb\<lparr>tcb_context := s\<rparr>)"
+  "transform_full_intent ms ref (tcb\<lparr>tcb_arch := arch_tcb_context_set (s(TPIDRURW := a)) (tcb_arch tcb)\<rparr>)
+   = transform_full_intent ms ref (tcb\<lparr>tcb_arch := arch_tcb_context_set s (tcb_arch tcb)\<rparr>)"
    apply (clarsimp simp: transform_full_intent_def cap_register_def ARM.capRegister_def)
    by (fastforce simp: get_tcb_message_info_def msg_info_register_def ARM.msgInfoRegister_def
                        get_tcb_mrs_def get_ipc_buffer_words_def Suc_le_eq Let_def)
@@ -1004,8 +1002,9 @@ lemma as_user_valid_irq_node[wp]:
   done
 
 lemma set_register_TPIDRURW_tcb_abstract_inv[wp]:
-  "\<lbrace>\<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context := cxt\<rparr>) etcb)\<rbrace> set_register TPIDRURW a
-  \<lbrace>\<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context := cxt\<rparr>) etcb)\<rbrace>"
+  "\<lbrace>\<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>) etcb)\<rbrace>
+     set_register TPIDRURW a
+   \<lbrace>\<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>) etcb)\<rbrace>"
   by (simp add: set_register_def simpler_modify_def valid_def transform_tcb_def)
 
 lemma dcorres_tcb_update_ipc_buffer:

@@ -179,7 +179,7 @@ lemma caps_of_object_update_boundntfn [simp]:
   done
 
 lemma caps_of_object_update_context [simp]:
-  "(\<lambda>n. map_option (\<lambda>(f, _). f (tcb_context_update stf tcb)) (tcb_cap_cases n)) =
+  "(\<lambda>n. map_option (\<lambda>(f, _). f (tcb_arch_update (tcb_context_update stf) tcb)) (tcb_cap_cases n)) =
    (\<lambda>n. map_option (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
   apply (rule ext)
   apply (simp add: tcb_cap_cases_def split: split_if)
@@ -230,7 +230,7 @@ lemma update_tcb_cxt_eq_dupdate_tcb_intent:
     cdl_objects (transform b) y = Some (Tcb t);
     kheap b y = Some (TCB obj);
     \<exists>etcb'. ekheap b y = Some etcb';
-    obj' = obj\<lparr>tcb_context:=cxt\<rparr>;
+    obj' = tcb_arch_update (arch_tcb_context_set cxt) obj;
     not_idle_thread y b;
     intent = transform_full_intent (machine_state (update_kheap ((kheap b)(y\<mapsto>(TCB obj'))) b)) y obj'
    \<rbrakk>
@@ -313,12 +313,12 @@ lemma set_cxt_none_det_intent_corres:
   "\<lbrakk>kheap s' y = Some (TCB obj'); ekheap s' y \<noteq> None;  valid_idle s';not_idle_thread y s'\<rbrakk>
          \<Longrightarrow> dcorres dc (op = (transform s')) (op = s')
              (corrupt_tcb_intent y)
-             (KHeap_A.set_object y (TCB (obj'\<lparr>tcb_context := cxt\<rparr>)))"
+             (KHeap_A.set_object y (TCB (tcb_arch_update (arch_tcb_context_set cxt) obj')))"
   apply (clarsimp simp:bind_assoc opt_object_def corrupt_tcb_intent_def get_thread_def gets_def gets_the_def)
   apply (rule corres_guard_imp)
     apply (rule_tac P="op=(transform s')" and Q="op=s'"
-       and x="transform_full_intent (machine_state (update_kheap ((kheap s')(y\<mapsto>(TCB (obj'\<lparr>tcb_context:=cxt\<rparr>)))) s'))
-       y (obj'\<lparr>tcb_context:=cxt\<rparr>)"
+       and x="transform_full_intent (machine_state (update_kheap ((kheap s')(y\<mapsto>(TCB (tcb_arch_update (arch_tcb_context_set cxt) obj')))) s'))
+       y (tcb_arch_update (arch_tcb_context_set cxt) obj')"
        in select_pick_corres)
     apply (clarsimp simp:update_thread_def get_object_def
        gets_the_def gets_def bind_assoc)
@@ -346,7 +346,7 @@ lemma set_message_info_corres:
   apply (clarsimp simp:get_tcb_def opt_object_def split:option.splits Structures_A.kernel_object.splits)
   apply (subst modify_def[unfolded bind_def]|clarsimp simp:get_def put_def)+
   apply (frule_tac ptr=y and tcb=obj' in valid_etcbs_tcb_etcb, clarsimp, clarsimp)
-  apply (clarsimp simp:select_f_def bind_def)
+  apply (clarsimp simp:select_f_def bind_def arch_tcb_update_aux3)
   apply (rule corres_guard_imp)
   apply (erule set_cxt_none_det_intent_corres)
    apply (clarsimp simp :opt_object_def valid_def get_tcb_def lift_simp not_idle_thread_def transform_tcb_def
@@ -358,7 +358,8 @@ lemma corrupt_tcb_intent_as_user_corres:
       (as_user y t)"
   apply (clarsimp simp:as_user_def)
   apply (rule dcorres_absorb_gets_the)
-  apply (clarsimp simp:get_tcb_def opt_object_def split:option.splits Structures_A.kernel_object.splits)
+  apply (clarsimp simp:get_tcb_def opt_object_def arch_tcb_update_aux3
+                  split:option.splits Structures_A.kernel_object.splits)
   apply (rule corres_symb_exec_r)
     apply clarsimp
     apply (rule corres_dummy_return_l)
@@ -375,7 +376,7 @@ done
 lemma set_register_corres:
   "dcorres dc \<top> (valid_idle and not_idle_thread y and valid_etcbs) (corrupt_tcb_intent y)
       (as_user y (set_register r v))"
-  apply (clarsimp simp:as_user_def set_register_def)
+  apply (clarsimp simp:as_user_def set_register_def arch_tcb_update_aux3)
   apply (rule dcorres_absorb_gets_the)
   apply (clarsimp simp:get_tcb_def opt_object_def split:option.splits Structures_A.kernel_object.splits)
   apply (subst modify_def[unfolded bind_def]|clarsimp simp:get_def put_def)+
@@ -454,7 +455,7 @@ done
 
 lemma set_mrs_corres_no_recv_buffer:
   "dcorres dc \<top> (valid_idle and not_idle_thread y and valid_etcbs) (corrupt_tcb_intent y) (set_mrs y None msg)"
-  apply (clarsimp simp:set_mrs_def get_thread_def)
+  apply (clarsimp simp:set_mrs_def get_thread_def arch_tcb_update_aux3)
   apply (rule dcorres_absorb_gets_the, clarsimp)
   apply (drule(1) valid_etcbs_get_tcb_get_etcb)
   apply (rule corres_dummy_return_l)
@@ -1096,7 +1097,7 @@ done
 
 lemma get_tcb_mrs_wp:
   "\<lbrace>op = sa and ko_at (TCB obj) thread and K_bind (evalMonad (lookup_ipc_buffer False thread) sa = Some (op_buf))\<rbrace>
-    get_mrs thread (op_buf) (data_to_message_info (tcb_context obj msg_info_register))
+    get_mrs thread (op_buf) (data_to_message_info (arch_tcb_context_get (tcb_arch obj) msg_info_register))
             \<lbrace>\<lambda>rv s. rv = get_tcb_mrs (machine_state sa) obj\<rbrace>"
   apply (case_tac op_buf)
     apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def)
@@ -1655,7 +1656,7 @@ lemma select_f_store_word:
 
 lemma select_f_get_register:
   "(as_user thread (get_register register)) =
-    (do tcb\<leftarrow>gets_the (get_tcb thread);return (tcb_context tcb register) od)"
+    (do tcb\<leftarrow>gets_the (get_tcb thread);return (arch_tcb_context_get (tcb_arch tcb) register) od)"
   apply (simp add: assert_opt_def as_user_def set_object_def gets_the_def
                    put_def select_f_def get_register_def gets_def get_def return_def bind_def)
   apply (rule ext)
@@ -1925,21 +1926,26 @@ lemma ex_cte_cap_wp_to_not_idle:
   done
 
 lemma pspace_aligned_set_cxt_mrs[wp]:
-  "\<lbrace>ko_at (TCB tcb) thread and pspace_aligned\<rbrace> KHeap_A.set_object thread (TCB (tcb\<lparr>tcb_context := t \<rparr>))\<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
+  "\<lbrace>ko_at (TCB tcb) thread and pspace_aligned\<rbrace>
+     KHeap_A.set_object thread (TCB (tcb_arch_update (arch_tcb_context_set t) tcb))
+   \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
   apply (wp set_object_aligned)
   apply (clarsimp simp:obj_at_def)
   done
 
 lemma pspace_distinct_set_cxt_mrs[wp]:
-  "\<lbrace>ko_at (TCB tcb) thread and pspace_distinct\<rbrace> KHeap_A.set_object thread (TCB (tcb\<lparr>tcb_context := t \<rparr>))
-  \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
+  "\<lbrace>ko_at (TCB tcb) thread and pspace_distinct\<rbrace>
+     KHeap_A.set_object thread (TCB (tcb_arch_update (arch_tcb_context_set t) tcb))
+   \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
   apply (wp set_object_distinct)
   apply (clarsimp simp:obj_at_def)
   done
 
 
 lemma valid_objs_set_cxt_mrs[wp]:
-  "\<lbrace>ko_at (TCB tcb) thread and valid_objs\<rbrace> KHeap_A.set_object thread (TCB (tcb\<lparr>tcb_context := t \<rparr>))\<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  "\<lbrace>ko_at (TCB tcb) thread and valid_objs\<rbrace>
+     KHeap_A.set_object thread (TCB (tcb_arch_update (arch_tcb_context_set t) tcb))
+   \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (wp set_object_valid_objs)
   apply (clarsimp simp:obj_at_def)
   apply (clarsimp simp:valid_objs_def)
@@ -1953,12 +1959,16 @@ lemma valid_objs_set_cxt_mrs[wp]:
   done
 
 lemma ipc_frame_set_cxt_mrs[wp]:
-  "\<lbrace>ko_at (TCB tcb) thread and ipc_frame_wp_at P a\<rbrace> KHeap_A.set_object thread (TCB (tcb\<lparr>tcb_context := t \<rparr>))\<lbrace>\<lambda>rv. ipc_frame_wp_at P a\<rbrace>"
+  "\<lbrace>ko_at (TCB tcb) thread and ipc_frame_wp_at P a\<rbrace>
+     KHeap_A.set_object thread (TCB (tcb_arch_update (arch_tcb_context_set t) tcb))
+   \<lbrace>\<lambda>rv. ipc_frame_wp_at P a\<rbrace>"
   by (clarsimp simp: KHeap_A.set_object_def get_def put_def bind_def valid_def
                        return_def obj_at_def ipc_frame_wp_at_def)
 
 lemma ipc_buffer_set_cxt_mrs[wp]:
-  "\<lbrace>ko_at (TCB tcb) thread and ipc_buffer_wp_at P a\<rbrace> KHeap_A.set_object thread (TCB (tcb\<lparr>tcb_context := t \<rparr>))\<lbrace>\<lambda>rv. ipc_buffer_wp_at P a\<rbrace>"
+  "\<lbrace>ko_at (TCB tcb) thread and ipc_buffer_wp_at P a\<rbrace>
+     KHeap_A.set_object thread (TCB (tcb_arch_update (arch_tcb_context_set t) tcb))
+   \<lbrace>\<lambda>rv. ipc_buffer_wp_at P a\<rbrace>"
   by (clarsimp simp: KHeap_A.set_object_def get_def put_def bind_def valid_def
                        return_def obj_at_def ipc_buffer_wp_at_def)
 
@@ -1978,7 +1988,7 @@ lemma set_mrs_corres:
      and ipc_frame_ptr_at buf y and ipc_frame_sz_at sz y and ipc_buffer_wp_at bptr y and valid_etcbs)
    (do corrupt_tcb_intent y;corrupt_frame buf od)
              (set_mrs y (Some (buf + (bptr && mask (pageBitsForSize sz)))) b)"
-  apply (simp add:set_mrs_def del:upt.simps)
+  apply (simp add:set_mrs_def arch_tcb_update_aux3 del:upt.simps)
   apply (rule dcorres_absorb_gets_the)
   apply (rule corres_guard_imp)
     apply (rule corres_split [where r'=dc])
@@ -2000,7 +2010,9 @@ lemma set_mrs_corres:
 
 lemma set_registers_ipc_frame_ptr_at[wp]:
   "\<lbrace>ipc_frame_wp_at buf y\<rbrace>as_user thread (set_register r rv) \<lbrace>%x. ipc_frame_wp_at buf y\<rbrace>"
-  apply (clarsimp simp:as_user_def select_f_def set_register_def simpler_modify_def)
+  apply (clarsimp simp: as_user_def select_f_def
+                        arch_tcb_update_aux3
+                        set_register_def simpler_modify_def)
   apply wp
     apply clarsimp
     apply wp
@@ -2012,7 +2024,11 @@ lemma set_registers_ipc_frame_ptr_at[wp]:
 
 lemma set_registers_ipc_buffer_ptr_at[wp]:
   "\<lbrace>ipc_buffer_wp_at buf y\<rbrace>as_user thread (set_register r rv) \<lbrace>%x. ipc_buffer_wp_at buf y\<rbrace>"
-  apply (clarsimp simp:as_user_def select_f_def set_register_def simpler_modify_def)
+  apply (clarsimp simp: as_user_def
+                        select_f_def
+                        set_register_def
+                        arch_tcb_update_aux3
+                        simpler_modify_def)
   apply wp
     apply clarsimp
     apply wp

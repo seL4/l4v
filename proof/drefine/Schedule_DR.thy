@@ -549,10 +549,12 @@ lemma schedule_dcorres:
  * tcb context of a thread does affect the state translation to capDL
  *)
 lemma get_tcb_message_info_nextPC [simp]:
-  "get_tcb_message_info (tcb\<lparr>tcb_context := (tcb_context tcb)(LR_svc := pc)\<rparr>) =
+  "get_tcb_message_info (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(LR_svc := pc))) tcb) =
    get_tcb_message_info tcb"
   by (simp add: get_tcb_message_info_def
-                msg_info_register_def ARM.msgInfoRegister_def)
+                arch_tcb_context_get_def
+                msg_info_register_def
+                ARM.msgInfoRegister_def)
 
 lemma map_msg_registers_nextPC [simp]:
   "map ((tcb_context tcb)(LR_svc := pc)) msg_registers =
@@ -561,20 +563,21 @@ lemma map_msg_registers_nextPC [simp]:
                 upto_enum_red fromEnum_def toEnum_def enum_register)
 
 lemma get_ipc_buffer_words_nextPC [simp]:
-  "get_ipc_buffer_words m (tcb\<lparr>tcb_context := (tcb_context tcb)(LR_svc := pc)\<rparr>) =
+  "get_ipc_buffer_words m (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(LR_svc := pc))) tcb) =
    get_ipc_buffer_words m tcb"
   by (rule ext) (simp add: get_ipc_buffer_words_def)
 
 lemma get_tcb_mrs_nextPC [simp]:
-  "get_tcb_mrs m (tcb\<lparr>tcb_context := (tcb_context tcb)(LR_svc := pc)\<rparr>) =
+  "get_tcb_mrs m (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(LR_svc := pc))) tcb) =
    get_tcb_mrs m tcb"
-  by (simp add: get_tcb_mrs_def Let_def)
+  by (simp add: get_tcb_mrs_def Let_def arch_tcb_context_get_def)
 
 lemma transform_tcb_LR_svc:
-  "transform_tcb m t (tcb\<lparr>tcb_context := (tcb_context tcb)(LR_svc := pc)\<rparr>)
+  "transform_tcb m t (tcb_arch_update (tcb_context_update (\<lambda>ctx. ctx(LR_svc := pc))) tcb)
   = transform_tcb m t tcb"
   by (auto simp add: transform_tcb_def transform_full_intent_def Let_def
-                     cap_register_def ARM.capRegister_def)
+                     cap_register_def ARM.capRegister_def
+                     arch_tcb_context_get_def)
 
 (*
  * setNextPC in the tcb context is not observable on the capDL level.
@@ -587,9 +590,11 @@ lemma as_user_setNextPC_corres:
                    select_f_def return_def in_monad
                    set_object_def
                   split: option.splits Structures_A.kernel_object.splits)
+  apply (subst tcb_context_update_aux)
   apply (simp add: transform_def transform_current_thread_def)
   apply (clarsimp simp: transform_objects_update_kheap_same_caps
-                        transform_tcb_LR_svc transform_objects_update_same)
+                        transform_tcb_LR_svc transform_objects_update_same
+                        arch_tcb_update_aux3)
   done
 
 crunch transform_inv[wp]: set_thread_state_ext "\<lambda>s. transform s = cs"
@@ -654,7 +659,6 @@ lemma activate_thread_corres:
              apply (rule set_thread_state_corres[unfolded tcb_pending_op_slot_def])
             apply simp
             apply (wp dcorres_to_wp[OF as_user_setNextPC_corres,simplified])
-         apply (wp getRestartPC_inv as_user_inv)
        apply (simp add:invs_mdb pred_tcb_at_def obj_at_def invs_valid_idle
          generates_pending_def not_idle_thread_def)
       apply (clarsimp simp:infer_tcb_pending_op_def arch_activate_idle_thread_def

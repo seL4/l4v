@@ -502,7 +502,7 @@ definition idle_equiv :: "('z :: state_ext) state \<Rightarrow> ('z :: state_ext
 "idle_equiv s s' \<equiv> idle_thread s = idle_thread s' \<and>
                   (\<forall>tcb tcb'. kheap s (idle_thread s) = Some (TCB tcb) \<longrightarrow>
                   kheap s' (idle_thread s) = Some (TCB tcb') \<longrightarrow>
-                  tcb_context tcb = tcb_context tcb') \<and> 
+                  arch_tcb_context_get (tcb_arch  tcb) = arch_tcb_context_get (tcb_arch tcb')) \<and>
                   (tcb_at (idle_thread s) s \<longleftrightarrow> tcb_at (idle_thread s) s')"
 
 lemma idle_equiv_refl: "idle_equiv s s"
@@ -1233,7 +1233,7 @@ lemma as_user_rev:
   apply (wp set_object_rev select_f_ev)
   apply (rule conjI, fastforce)
   apply (clarsimp split: option.split_asm kernel_object.split_asm simp: get_tcb_def)
-  apply (drule state_unchanged[rotated])
+  apply (drule state_unchanged[rotated,symmetric])
    apply simp_all
   done
 

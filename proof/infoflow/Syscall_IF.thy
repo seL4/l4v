@@ -37,7 +37,8 @@ lemma cap_revoke_globals_equiv:
    apply(wp cap_revoke_preservation_desc_of cap_delete_globals_equiv preemption_point_inv | auto simp: emptyable_def dest: reply_slot_not_descendant)+
   done
 
-lemma tcb_context_merge[simp]: "tcb_context (tcb_registers_caps_merge tcb tcb') = tcb_context tcb"
+lemma tcb_context_merge[simp]: "arch_tcb_context_get (tcb_arch (tcb_registers_caps_merge tcb tcb'))
+                              = arch_tcb_context_get (tcb_arch tcb)"
   apply (simp add: tcb_registers_caps_merge_def)
   done
 
@@ -796,7 +797,7 @@ lemma handle_interrupt_globals_equiv:
   "\<lbrace>globals_equiv (st :: det_ext state) and invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   unfolding handle_interrupt_def
   apply (rule hoare_if)
-  apply (wp dmo_maskInterrupt_globals_equiv 
+  apply (wp dmo_maskInterrupt_globals_equiv
             dmo_return_globals_equiv
             send_signal_globals_equiv
             dmo_ackInterrupt
@@ -805,9 +806,14 @@ lemma handle_interrupt_globals_equiv:
             dxo_wp_weak
             Retype_IF.dmo_mol_globals_equiv
             NonDetMonadLemmaBucket.no_fail_bind
-            NonDetMonadLemmaBucket.bind_known_operation_eq  
+            NonDetMonadLemmaBucket.bind_known_operation_eq
             Retype_IF.dmo_mol_globals_equiv
-    | wpc  | simp add: dmo_bind_valid ackInterrupt_def resetTimer_def invs_imps invs_valid_idle)+
+        | wpc
+        | simp add: dmo_bind_valid
+                    ackInterrupt_def
+                    resetTimer_def
+                    handle_reserved_irq_def
+                    invs_imps invs_valid_idle)+
   
   done
 

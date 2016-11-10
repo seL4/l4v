@@ -85,7 +85,7 @@ lemma handle_reply_cur_thread_idle_thread:
                    apply (case_tac xf)
                    apply (simp | wp set_thread_state_cur_thread_idle_thread
                                     thread_set_cur_thread_idle_thread)+
-                 apply ((wps | wp handle_fault_reply_it)+)[1]
+                 apply ((wps | wp)+)[1]
                 apply wp
              apply ((wps | wp cap_delete_one_it)+)[1]
             apply (rule hoare_drop_imp | rule hoare_conjI | rule hoare_allI | wp)+
@@ -1094,7 +1094,7 @@ lemma evalMonad_mapM:
 
 lemma evalMonad_get_extra_cptrs:
   "\<lbrakk>evalMonad (lookup_ipc_buffer False thread) s = Some (Some buf);get_tcb thread s = Some tcb;
-    (evalMonad (Ipc_A.get_extra_cptrs (Some buf) (data_to_message_info (tcb_context tcb msg_info_register))) s) = Some a
+    (evalMonad (Ipc_A.get_extra_cptrs (Some buf) (data_to_message_info (arch_tcb_context_get (tcb_arch tcb) msg_info_register))) s) = Some a
     \<rbrakk>
   \<Longrightarrow> a = (map (to_bl) (cdl_intent_extras $ transform_full_intent (machine_state s) thread tcb))"
   apply (clarsimp simp:get_extra_cptrs_def)
@@ -1740,10 +1740,10 @@ lemma dcorres_lookup_extra_caps:
      \<top> (op = s)
      (Endpoint_D.lookup_extra_caps thread
                                    (cdl_intent_extras (transform_full_intent (machine_state s) thread t)))
-     (Ipc_A.lookup_extra_caps thread buffer (data_to_message_info (tcb_context t msg_info_register)))"
+     (Ipc_A.lookup_extra_caps thread buffer (data_to_message_info (arch_tcb_context_get (tcb_arch t) msg_info_register)))"
   apply (clarsimp simp:lookup_extra_caps_def liftE_bindE Endpoint_D.lookup_extra_caps_def)
   apply (rule corres_symb_exec_r)
-    apply (rule_tac F = "evalMonad (get_extra_cptrs buffer (data_to_message_info (tcb_context t msg_info_register))) s = Some rv"
+    apply (rule_tac F = "evalMonad (get_extra_cptrs buffer (data_to_message_info (arch_tcb_context_get (tcb_arch t) msg_info_register))) s = Some rv"
       in corres_gen_asm2)
   apply (rule corres_mapME[where S = "{(x,y). x = of_bl y \<and> length y = word_bits}"])
     prefer 3
@@ -1799,7 +1799,7 @@ lemma dcorres_copy_mrs':
     and valid_idle and not_idle_thread thread and not_idle_thread recv and tcb_at recv
     and valid_objs and pspace_aligned and pspace_distinct and valid_etcbs)
     (corrupt_ipc_buffer recv in_receive)
-    (copy_mrs send rva recv rv (mi_length (data_to_message_info (tcb_context tcb msg_info_register))))"
+    (copy_mrs send rva recv rv (mi_length (data_to_message_info (arch_tcb_context_get (tcb_arch tcb) msg_info_register))))"
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:corrupt_ipc_buffer_def)
     apply (case_tac rv)
@@ -1961,8 +1961,9 @@ shows "\<lbrace>\<lambda>s. evalMonad (lookup_ipc_buffer in_receive x) s = Some 
 done
 
 lemma ipc_buffer_wp_at_copy_mrs[wp]:
-  "\<lbrace>ipc_buffer_wp_at buf t \<rbrace> copy_mrs send rva recv rv (mi_length (data_to_message_info (tcb_context obj' msg_info_register)))
-            \<lbrace>\<lambda>r. ipc_buffer_wp_at buf t\<rbrace>"
+  "\<lbrace>ipc_buffer_wp_at buf t \<rbrace>
+     copy_mrs send rva recv rv (mi_length (data_to_message_info (arch_tcb_context_get (tcb_arch obj') msg_info_register)))
+   \<lbrace>\<lambda>r. ipc_buffer_wp_at buf t\<rbrace>"
   unfolding copy_mrs_def
   apply (wp|wpc)+
     apply (wp mapM_wp)
@@ -2028,7 +2029,7 @@ lemma corres_complete_ipc_transfer:
                        unfolding K_bind_def
                       apply (rule corrupt_tcb_intent_as_user_corres)
                       apply (wp evalMonad_lookup_ipc_buffer_wp' hoare_vcg_ball_lift copy_mrs_valid_irq_node
-                        | simp add:not_idle_thread_def split_def)+
+                            | simp add:not_idle_thread_def split_def)+
                apply fastforce
               apply (clarsimp simp:transform_cap_list_def)
              apply wp[1]
@@ -2095,6 +2096,19 @@ lemma corres_complete_ipc_transfer:
       empty_when_fail_lookup_ipc_buffer weak_det_spec_lookup_ipc_buffer | frule(1) valid_etcbs_get_tcb_get_etcb)+
 done
 
+lemma dcorres_handle_arch_fault_reply:
+  "dcorres dc \<top> (tcb_at y and valid_idle and not_idle_thread y and  valid_etcbs)
+   (corrupt_tcb_intent y)
+   (handle_arch_fault_reply a y mi mrs)"
+   apply (cases a)
+   apply (clarsimp simp: handle_arch_fault_reply_def)
+   apply (rule corres_guard_imp)
+     apply (rule corres_corrupt_tcb_intent_return)
+    apply assumption
+   apply (erule pred_andE | rule pred_andI | assumption)+
+   done
+
+
 lemma dcorres_handle_fault_reply:
   "dcorres dc \<top> (tcb_at y and valid_idle and not_idle_thread y and  valid_etcbs)
    (corrupt_tcb_intent y)
@@ -2110,7 +2124,8 @@ lemma dcorres_handle_fault_reply:
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
         apply (wp|clarsimp)+
-done
+  apply (rule dcorres_handle_arch_fault_reply)
+  done
 
 lemma alternative_distrib2:
   "(do x \<leftarrow> a;  (b x \<sqinter> c x) od) = ((do x\<leftarrow>a; b x od) \<sqinter> (do x\<leftarrow>a; c x od)) "

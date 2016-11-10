@@ -35,6 +35,7 @@ definition domain_sep_inv where
     (irqs \<or> (\<forall> irq slot. \<not> cte_wp_at (op = IRQControlCap) slot s
       \<and> \<not> cte_wp_at (op = (IRQHandlerCap irq)) slot s
       \<and> interrupt_states s irq \<noteq> IRQSignal
+      \<and> interrupt_states s irq \<noteq> IRQReserved
       \<and> interrupt_states s = interrupt_states st))"
 
 definition domain_sep_inv_cap where
@@ -66,6 +67,7 @@ lemma domain_sep_inv_def2:
                             \<and> \<not> cte_wp_at (op = (IRQHandlerCap irq)) slot s)) \<and>
     (irqs \<or> (\<forall> irq.
         interrupt_states s irq \<noteq> IRQSignal
+        \<and> interrupt_states s irq \<noteq> IRQReserved
         \<and> interrupt_states s = interrupt_states st)))"
   apply(fastforce simp: domain_sep_inv_def)
   done
@@ -88,7 +90,9 @@ lemma domain_sep_inv_wp:
   apply(rule disjI2)
   apply simp
   apply(intro allI conjI)
-   apply(erule_tac P1="\<lambda>x. x irq \<noteq> IRQSignal" in use_valid[OF _ irq_pres], assumption)
+    apply(erule_tac P1="\<lambda>x. x irq \<noteq> IRQSignal" in use_valid[OF _ irq_pres], assumption)
+    apply blast
+   apply(erule use_valid[OF _ irq_pres], assumption)
    apply blast
   apply(erule use_valid[OF _ irq_pres], assumption)
   apply blast
@@ -750,7 +754,7 @@ lemma perform_page_invocation_domain_sep_inv_get_cap_helper:
 
 lemma set_object_tcb_context_update_neg_cte_wp_at:
   "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
-   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
+   set_object ptr (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set X (arch_tcb tcb)\<rparr>))
    \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
   apply(wp set_object_wp)
   apply clarsimp
@@ -780,7 +784,7 @@ crunch domain_sep_inv[wp]: as_user "domain_sep_inv irqs st"
 
 lemma set_object_tcb_context_update_domain_sep_inv:
   "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
-   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
+   set_object ptr (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set X (tcb_arch tcb)\<rparr>))
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(rule hoare_pre)
    apply(rule domain_sep_inv_wp)

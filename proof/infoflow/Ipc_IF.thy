@@ -1584,7 +1584,15 @@ lemma getRegister_det:
 lemma make_fault_msg_reads_respects:
   "reads_respects aag l (K (aag_can_read_or_affect aag l sender)) (make_fault_msg rva sender)"
   apply(case_tac rva)
-     apply (wp as_user_reads_respects | simp split del: split_if add: getRestartPC_det getRegister_det | rule det_mapM | rule subset_refl)+
+     apply (wp as_user_reads_respects
+           | simp split del: split_if
+                  add: getRestartPC_det getRegister_det
+           | rule det_mapM
+           | rule subset_refl)+
+  apply (case_tac x4)
+  apply (wp as_user_reads_respects
+        | simp split del: split_if
+               add: getRestartPC_det getRegister_det)+
   done
 
 lemma set_mrs_returns_a_constant:
@@ -1983,10 +1991,18 @@ lemma handle_fault_reads_respects:
 
 subsection "Replies"
 
+lemma handle_arch_fault_reply_reads_respects:
+  "reads_respects aag l (K (is_subject aag thread)) (handle_arch_fault_reply afault thread x y)"
+  by (simp add: handle_arch_fault_reply_def, wp)
+
 lemma handle_fault_reply_reads_respects:
   "reads_respects aag l (K (is_subject aag thread)) (handle_fault_reply fault thread x y)"
   apply(case_tac fault)
-     apply(wp as_user_reads_respects det_zipWithM_x set_register_det | simp add: reads_lrefl)+
+     apply (wp as_user_reads_respects
+               det_zipWithM_x
+               set_register_det
+               handle_arch_fault_reply_reads_respects[simplified K_def]
+          | simp add: reads_lrefl)+
   done
 
 lemma lookup_ipc_buffer_has_read_auth':
@@ -2503,7 +2519,7 @@ lemma handle_fault_reply_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> handle_fault_reply fault thread x y
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply(case_tac fault)
-     apply(wp as_user_globals_equiv | simp)+
+     apply(wp as_user_globals_equiv | simp add: handle_arch_fault_reply_def)+
      done
 
 crunch valid_global_objs: handle_fault_reply "valid_global_objs"

@@ -2065,9 +2065,12 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler: "reads_respects_scheduler aag l
   apply (simp add: scheduler_equiv_def)
    done
 
-definition idle_context where "idle_context s = tcb_context (the (get_tcb (idle_thread s) s))"
+definition idle_context where "idle_context s = arch_tcb_context_get (tcb_arch (the (get_tcb (idle_thread s) s)))"
 
-lemma thread_set_context_globals_equiv: "\<lbrace>(\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s) and invs and globals_equiv st\<rbrace> thread_set (tcb_context_update (\<lambda>_. tc)) t \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
+lemma thread_set_context_globals_equiv:
+  "\<lbrace>(\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s) and invs and globals_equiv st\<rbrace>
+     thread_set (tcb_arch_update (arch_tcb_context_set tc)) t
+   \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
   apply (clarsimp simp: thread_set_def set_object_def)
   apply wp
   apply clarsimp
@@ -2078,9 +2081,10 @@ lemma thread_set_context_globals_equiv: "\<lbrace>(\<lambda>s. t = idle_thread s
   apply clarsimp
   done
 
-lemma thread_set_scheduler_equiv[wp]: "\<lbrace>(invs and K(pasObjectAbs aag t \<noteq> SilcLabel)  and (\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s)) and scheduler_equiv aag st\<rbrace>
-       thread_set (tcb_context_update (\<lambda>_. tc)) t 
-       \<lbrace>\<lambda>r. scheduler_equiv aag st\<rbrace>"
+lemma thread_set_scheduler_equiv[wp]:
+  "\<lbrace>(invs and K(pasObjectAbs aag t \<noteq> SilcLabel)  and (\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s)) and scheduler_equiv aag st\<rbrace>
+     thread_set (tcb_arch_update (arch_tcb_context_set tc)) t
+   \<lbrace>\<lambda>r. scheduler_equiv aag st\<rbrace>"
   apply (rule scheduler_equiv_lift')
        apply (rule globals_equiv_scheduler_inv')  
        apply (wp thread_set_context_globals_equiv | clarsimp intro!: invs_valid_ko_at_arm)+
@@ -2089,8 +2093,13 @@ lemma thread_set_scheduler_equiv[wp]: "\<lbrace>(invs and K(pasObjectAbs aag t \
   apply (clarsimp simp: get_tcb_def equiv_for_def split: kernel_object.splits option.splits)
   done
 
-lemma thread_set_scheduler_affects_equiv[wp]: "\<lbrace>(\<lambda>s. x \<noteq> idle_thread s \<longrightarrow> pasObjectAbs aag x \<notin> reads_scheduler aag l) and (\<lambda>s. x = idle_thread s \<longrightarrow> tc = idle_context s) and scheduler_affects_equiv aag l st\<rbrace> thread_set (tcb_context_update (\<lambda>_. tc)) x 
-           \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
+lemma arch_tcb_update_aux: "(tcb_arch_update f t) = tcb_arch_update (\<lambda>_. f (tcb_arch t)) t"
+  by simp
+
+lemma thread_set_scheduler_affects_equiv[wp]:
+  "\<lbrace>(\<lambda>s. x \<noteq> idle_thread s \<longrightarrow> pasObjectAbs aag x \<notin> reads_scheduler aag l) and (\<lambda>s. x = idle_thread s \<longrightarrow> tc = idle_context s) and scheduler_affects_equiv aag l st\<rbrace>
+     thread_set (tcb_arch_update (arch_tcb_context_set tc)) x
+   \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
   apply (simp add: thread_set_def)
   apply (wp set_object_wp)
   apply (intro impI conjI)
@@ -2102,7 +2111,9 @@ lemma thread_set_scheduler_affects_equiv[wp]: "\<lbrace>(\<lambda>s. x \<noteq> 
    apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: idle_context_def get_tcb_def
                   split: option.splits kernel_object.splits)
-  apply (subgoal_tac "s = (s\<lparr>kheap := kheap s(idle_thread s \<mapsto> TCB y)\<rparr>)",simp)
+  apply (subst arch_tcb_update_aux)
+  apply simp
+  apply (subgoal_tac "s = (s\<lparr>kheap := kheap s(idle_thread s \<mapsto> TCB y)\<rparr>)", simp)
   apply (rule state.equality)
             apply (rule ext)
             apply simp+
@@ -2283,7 +2294,11 @@ lemma bind_return_ign: "\<lbrace>P\<rbrace> (f >>= (\<lambda>_. return x)) \<lbr
   done
 
 
-lemma thread_set_reads_respect_scheduler[wp]: "reads_respects_scheduler aag l (invs and K(pasObjectAbs aag t \<noteq> SilcLabel) and (\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s) and guarded_pas_domain aag) (thread_set (tcb_context_update (\<lambda>_. tc)) t)"
+lemma thread_set_reads_respect_scheduler[wp]:
+  "reads_respects_scheduler aag l (invs and K(pasObjectAbs aag t \<noteq> SilcLabel)
+                                        and (\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s)
+                                        and guarded_pas_domain aag)
+                                  (thread_set (tcb_arch_update (arch_tcb_context_set tc)) t)"
   apply (rule reads_respects_scheduler_cases[where P'=\<top>])
   prefer 3
   apply (rule reads_respects_scheduler_unobservable'')
@@ -2315,8 +2330,8 @@ lemma cur_thread_idle: "invs s \<Longrightarrow> ct_idle s = (cur_thread s = idl
 
 lemma context_update_cur_thread_snippit_unobservable: "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l)
      (scheduler_affects_equiv aag l) op = (invs and silc_inv aag st and guarded_pas_domain aag and (\<lambda>s. \<not> is_domain aag l s) and (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s)) (invs and silc_inv aag st and guarded_pas_domain aag and (\<lambda>s. \<not> is_domain aag l s) and (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s))
-     (gets cur_thread >>= thread_set (tcb_context_update (\<lambda>_. uc)))
-     (gets cur_thread >>= thread_set (tcb_context_update (\<lambda>_. uc')))"
+     (gets cur_thread >>= thread_set (tcb_arch_update (arch_tcb_context_set uc)))
+     (gets cur_thread >>= thread_set (tcb_arch_update (arch_tcb_context_set uc')))"
   apply (rule equiv_valid_2_guard_imp)
     apply (simp add: op_eq_unit_dc)
     apply (rule equiv_valid_2_unobservable)
@@ -2331,7 +2346,7 @@ lemma context_update_cur_thread_snippit_cur_domain: "reads_respects_scheduler aa
         silc_inv aag st s \<and>
         (ct_idle s \<longrightarrow> uc = idle_context s) \<and>
         guarded_pas_domain aag s)
-     (gets cur_thread >>= thread_set (tcb_context_update (\<lambda>_. uc)))"
+     (gets cur_thread >>= thread_set (tcb_arch_update (arch_tcb_context_set uc)))"
   apply wp
   apply (clarsimp simp: cur_thread_idle silc_inv_not_cur_thread del: notI)
   done
@@ -2340,8 +2355,8 @@ lemma context_update_cur_thread_snippit_cur_domain: "reads_respects_scheduler aa
   case splitting rule*)
 lemma context_update_cur_thread_snippit: "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l)
      (scheduler_affects_equiv aag l) op = (invs and silc_inv aag st and guarded_pas_domain aag and (\<lambda>s. is_domain aag l s \<longrightarrow> uc = uc') and (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s)) (invs and silc_inv aag st and guarded_pas_domain aag and (\<lambda>s. is_domain aag l s \<longrightarrow> uc = uc') and (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s))
-     (gets cur_thread >>= thread_set (tcb_context_update (\<lambda>_. uc)))
-     (gets cur_thread >>= thread_set (tcb_context_update (\<lambda>_. uc')))"
+     (gets cur_thread >>= thread_set (tcb_arch_update (arch_tcb_context_set uc)))
+     (gets cur_thread >>= thread_set (tcb_arch_update (arch_tcb_context_set uc')))"
   apply (insert context_update_cur_thread_snippit_cur_domain[where aag=aag and l=l and uc=uc and st=st])
   apply (insert context_update_cur_thread_snippit_unobservable[where aag=aag and l=l and uc=uc and uc'=uc' and st=st])
   apply (clarsimp simp: equiv_valid_2_def equiv_valid_def2)

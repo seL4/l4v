@@ -313,10 +313,10 @@ where
      tcb_state              = Running, 
      tcb_fault_handler      = undefined, 
      tcb_ipc_buffer         = undefined,
-     tcb_context            = undefined,
      tcb_fault              = undefined, 
      tcb_bound_notification = None,
-     tcb_mcpriority         = undefined \<rparr>"
+     tcb_mcpriority         = undefined,
+     tcb_arch               = \<lparr>tcb_context = undefined\<rparr> \<rparr>"
 
 
 text {* T1's tcb *}
@@ -334,10 +334,10 @@ where
      tcb_state              = BlockedOnReceive 9,
      tcb_fault_handler      = undefined, 
      tcb_ipc_buffer         = undefined,
-     tcb_context            = undefined,
      tcb_fault              = undefined,
      tcb_bound_notification = None,
-     tcb_mcpriority         = undefined \<rparr>"
+     tcb_mcpriority         = undefined,
+     tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 definition
  "obj1_10 \<equiv> CNode 10 (Map.empty([] \<mapsto> cap.NullCap))"
@@ -851,10 +851,10 @@ where
      tcb_state              = Running, 
      tcb_fault_handler      = undefined, 
      tcb_ipc_buffer         = undefined,
-     tcb_context            = undefined,
      tcb_fault              = undefined,
      tcb_bound_notification = None,
-     tcb_mcpriority         = undefined \<rparr>"
+     tcb_mcpriority         = undefined,
+     tcb_arch          = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
 text {* T1's tcb *}
@@ -872,10 +872,10 @@ where
      tcb_state              = BlockedOnReceive 9,
      tcb_fault_handler      = undefined, 
      tcb_ipc_buffer         = undefined,
-     tcb_context            = undefined,
      tcb_fault              = undefined,
      tcb_bound_notification = None,
-     tcb_mcpriority         = undefined \<rparr>"
+     tcb_mcpriority         = undefined,
+     tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.
 but Tom says it only matters if the sender can grant - which is not the case of the UT1 - I think *)

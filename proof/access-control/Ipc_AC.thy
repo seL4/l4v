@@ -308,7 +308,7 @@ lemma send_upd_ctxintegrity:
   "\<lbrakk> direct_send {pasSubject aag} aag ep tcb \<or> indirect_send {pasSubject aag} aag ep recv tcb;
      integrity aag X st s; st_tcb_at (op = Structures_A.thread_state.Running) thread s;
      get_tcb thread st = Some tcb; get_tcb thread s = Some tcb' \<rbrakk>
-     \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(thread \<mapsto> TCB (tcb'\<lparr>tcb_context := c'\<rparr>))\<rparr>)"
+     \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(thread \<mapsto> TCB (tcb'\<lparr>tcb_arch := arch_tcb_context_set c' (tcb_arch tcb')\<rparr>))\<rparr>)"
   apply (clarsimp simp: integrity_def tcb_states_of_state_preserved st_tcb_def2)  
   apply (drule get_tcb_SomeD)+
   apply (drule spec[where x=thread], simp)
@@ -316,8 +316,8 @@ lemma send_upd_ctxintegrity:
    apply (rule tro_lrefl, simp)
   apply (rule_tac ntfn'="tcb_bound_notification tcb'" in tro_tcb_send[OF refl refl], simp_all)
    apply (rule_tac x = "c'" in exI)
-   apply (erule integrity_obj.cases, auto)[1]
-  apply (erule integrity_obj.cases, auto simp: tcb_bound_notification_reset_integrity_def)[1]
+   apply (erule integrity_obj.cases; auto simp: arch_tcb_context_set_def)
+  apply (erule integrity_obj.cases; auto simp: tcb_bound_notification_reset_integrity_def)
   done
 
 lemma set_mrs_respects_in_signalling':
@@ -342,7 +342,7 @@ lemma set_mrs_respects_in_signalling':
   apply (rule impI)
   apply (subgoal_tac "\<forall>c'. integrity aag X st
           (s\<lparr>kheap := kheap s(thread \<mapsto>
-               TCB ((the (get_tcb thread s))\<lparr>tcb_context := c'\<rparr>))\<rparr>)")
+               TCB ((the (get_tcb thread s))\<lparr>tcb_arch :=  arch_tcb_context_set c' (tcb_arch (the (get_tcb thread s))) \<rparr>))\<rparr>)")
    apply (clarsimp simp: fun_upd_def st_tcb_at_nostate_upd [unfolded fun_upd_def])
   apply (rule allI)
   apply clarsimp
@@ -363,8 +363,8 @@ lemma as_user_set_register_respects:
   apply (cases "is_subject aag thread")
    apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
   apply (clarsimp simp: st_tcb_def2)
-  apply (rule send_upd_ctxintegrity [OF disjI1, unfolded fun_upd_def],
-         auto simp: direct_send_def st_tcb_def2)
+  apply (rule send_upd_ctxintegrity [OF disjI1, unfolded fun_upd_def])
+  apply (auto simp: direct_send_def st_tcb_def2)
   done
 
 lemma lookup_ipc_buffer_ptr_range:
@@ -403,8 +403,9 @@ lemma set_thread_state_respects_in_signalling:
   apply (clarsimp simp: integrity_def st_tcb_def2)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (rule_tac ntfn'="tcb_bound_notification y" and ep=ntfnptr in tro_tcb_send [OF refl refl], simp_all)
-   apply (rule_tac x = "tcb_context y" in exI, 
-           auto simp: tcb_bound_notification_reset_integrity_def indirect_send_def direct_send_def)
+   apply (rule_tac x = "arch_tcb_context_get (tcb_arch y)" in exI,
+           auto simp: tcb_bound_notification_reset_integrity_def
+                      indirect_send_def direct_send_def)
   done
 
 lemma set_notification_obj_at:
@@ -514,7 +515,7 @@ lemma cancel_ipc_receive_blocked_respects:
      apply simp
     apply (rename_tac word careful tcb your dogs finaly one)
     apply (rule_tac ntfn'= "tcb_bound_notification tcb" and ep="ntfnptr" and recv=word in tro_tcb_send, simp+)
-      apply (rule_tac x="tcb_context tcb" in exI, simp)
+      apply (rule_tac x="arch_tcb_context_get (tcb_arch tcb)" in exI, simp)
      apply (simp add: tcb_bound_notification_reset_integrity_def )
     apply (rule disjI2)
     apply (clarsimp simp:  indirect_send_def pred_tcb_at_def obj_at_def)
@@ -1477,14 +1478,15 @@ where
 | tii_context: "\<lbrakk> ko  = Some (TCB tcb);
                   ko' = Some (TCB tcb');
                   receive_blocked_on epptr (tcb_state tcb);
-                  \<exists>ctxt'. tcb' = tcb \<lparr>tcb_context := ctxt'\<rparr>;
+                  \<exists>ctxt'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb)\<rparr>;
                   aag_has_auth_to aag SyncSend epptr;
                   tst = TRContext \<rbrakk>
         \<Longrightarrow> tcb_in_ipc aag tst l' epptr ko ko'"
 | tii_final: "\<lbrakk> ko  = Some (TCB tcb);
                 ko' = Some (TCB tcb');
                 receive_blocked_on epptr (tcb_state tcb);
-                \<exists>ctxt'. tcb' = tcb \<lparr>tcb_context := ctxt', tcb_state := Structures_A.Running\<rparr>;
+                \<exists>ctxt'. tcb' = tcb \<lparr> tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb)
+                                   , tcb_state := Structures_A.Running\<rparr>;
                 aag_has_auth_to aag SyncSend epptr;
                 tst = TRFinal \<rbrakk>
          \<Longrightarrow> tcb_in_ipc aag tst l' epptr ko ko'"
@@ -1503,8 +1505,11 @@ where
    \<and> (tcb_in_ipc aag tst (pasObjectAbs aag thread) epptr (kheap st thread) (kheap s thread)))"
 
 lemma tcb_context_no_change:
-  "\<exists>ctxt. tcb = tcb\<lparr> tcb_context := ctxt\<rparr>"
-  by (cases tcb) auto
+  "\<exists>ctxt. tcb = tcb\<lparr> tcb_arch :=  arch_tcb_context_set ctxt (tcb_arch tcb)\<rparr>"
+  apply (cases tcb, clarsimp)
+  apply (case_tac tcb_arch)
+  apply (auto simp: arch_tcb_context_set_def)
+  done
 
 lemma auth_ipc_buffers_mem_Write:
   "\<lbrakk> x \<in> auth_ipc_buffers s thread; pas_refined aag s; valid_objs s; is_subject aag thread \<rbrakk>
@@ -1551,7 +1556,7 @@ lemma integrity_tcb_in_ipc_final:
 
 lemma update_tcb_context_in_ipc:
   "\<lbrakk> integrity_tcb_in_ipc aag X thread epptr TRContext st s;
-     get_tcb thread s = Some tcb; \<exists>ctxt'. tcb' = tcb \<lparr> tcb_context := ctxt' \<rparr> \<rbrakk>
+     get_tcb thread s = Some tcb; \<exists>ctxt'. tcb' = tcb \<lparr> tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb)\<rparr>\<rbrakk>
      \<Longrightarrow> integrity_tcb_in_ipc aag X thread epptr TRContext st (s \<lparr> kheap := (kheap s)(thread \<mapsto> TCB tcb') \<rparr>)"
   unfolding integrity_tcb_in_ipc_def
   apply (elim conjE)
@@ -1562,7 +1567,7 @@ lemma update_tcb_context_in_ipc:
   apply clarsimp
   apply (erule tcb_in_ipc.cases, simp_all)
    apply (auto intro!: tii_context[OF refl refl] tii_lrefl[OF refl]  tcb_context_no_change
-                dest!: get_tcb_SomeD)
+                dest!: get_tcb_SomeD simp: arch_tcb_context_set_def)
   done
 
 lemma update_tcb_state_in_ipc:
@@ -2258,7 +2263,7 @@ lemma handle_fault_reply_respects:
      handle_fault_reply fault thread x y
     \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (cases fault, simp_all)
-  apply (wp as_user_integrity_autarch | simp)+
+  apply (wp as_user_integrity_autarch | simp add: handle_arch_fault_reply_def)+
   done
 
 lemma tcb_st_to_auth_Restart_Inactive [simp]:

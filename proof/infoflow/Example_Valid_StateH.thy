@@ -236,11 +236,10 @@ where
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
      (* tcbBoundNotification        = *) None
-     (* tcbContext         = *) undefined"
+     (* tcbContext         = *) (ArchThread undefined)"
    
 
 text {* High's tcb *}
-
 definition
   High_tcbH :: Structures_H.tcb
 where
@@ -261,7 +260,7 @@ where
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
      (* tcbBoundNotification        = *) None
-     (* tcbContext         = *) undefined"
+     (* tcbContext         = *) (ArchThread undefined)"
 
    
 text {* idle's tcb *}
@@ -285,7 +284,7 @@ where
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
      (* tcbBoundNotification        = *) None
-     (* tcbContext         = *) empty_context"
+     (* tcbContext         = *) (ArchThread empty_context)"
 
 definition
   irq_cte :: "Structures_H.cte"
@@ -3198,9 +3197,9 @@ lemma s0_pspace_rel:
                apply (clarsimp simp: kh0H_obj_def split del: split_if)
                apply (cut_tac x=ya in pd_offs_in_range(3))
                apply (clarsimp simp: pd_offs_range_def pde_relation_def pde_relation_aligned_def)
-              apply (clarsimp simp: kh0H_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def)
-             apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def the_nat_to_bl_simps)
-            apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def the_nat_to_bl_simps)
+              apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def
+                                    tcb_relation_def arch_tcb_relation_def fault_rel_optionation_def
+                                    word_bits_def the_nat_to_bl_simps)+
            apply (clarsimp simp: kh0H_obj_def High_pt_def High_pt'H_def High_pt'_def split del: split_if)
            apply (cut_tac x=ya in pt_offs_in_range(2))
            apply (clarsimp simp: pt_offs_range_def pte_relation_def pte_relation_aligned_def pte_relation'_def)
@@ -3341,14 +3340,7 @@ lemma s0_srel: "(s0_internal, s0H_internal) \<in> state_relation"
                       clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)+)[5]
            apply (clarsimp simp: s0_internal_def s0H_internal_def arch_state_relation_def arch_state0_def arch_state0H_def)
           apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def interrupt_state_relation_def irq_state_relation_def)
-         apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-        apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-       apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-      apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-     apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-    apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-   apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-  apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
+         apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)+
   done
 
 definition

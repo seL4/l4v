@@ -1500,7 +1500,8 @@ crunch globals_equiv: cancel_badged_sends "globals_equiv s"
  (wp: filterM_preserved dxo_wp_weak ignore: reschedule_required tcb_sched_action)
 
 lemma thread_set_globals_equiv:
-  "(\<And>tcb. tcb_context (f tcb) = tcb_context tcb ) \<Longrightarrow> \<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  "(\<And>tcb. arch_tcb_context_get (tcb_arch (f tcb)) = arch_tcb_context_get (tcb_arch tcb))
+     \<Longrightarrow> \<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding thread_set_def
   apply(wp set_object_globals_equiv)
   apply simp

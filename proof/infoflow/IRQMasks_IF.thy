@@ -97,7 +97,11 @@ lemma handle_interrupt_irq_masks:
   apply (rule hoare_pre)
    apply (rule hoare_if)
     apply simp
-   apply(wp dmo_wp | simp add: ackInterrupt_def maskInterrupt_def when_def split del: split_if | wpc | simp add: get_irq_state_def | wp_once hoare_drop_imp)+
+   apply( wp dmo_wp
+        | simp add: ackInterrupt_def maskInterrupt_def when_def split del: split_if
+        | wpc
+        | simp add: get_irq_state_def handle_reserved_irq_def
+        | wp_once hoare_drop_imp)+
   apply (fastforce simp: domain_sep_inv_def)
   done
 

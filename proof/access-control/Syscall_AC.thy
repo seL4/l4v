@@ -478,7 +478,7 @@ lemma handle_interrupt_pas_refined:
   apply (rule conjI; rule impI;rule hoare_pre)
   apply (wp send_signal_pas_refined get_cap_wp
        | wpc
-       | simp add: get_irq_slot_def get_irq_state_def)+
+       | simp add: get_irq_slot_def get_irq_state_def handle_reserved_irq_def)+
   done
 
 lemma dec_domain_time_integrity[wp]:
@@ -508,7 +508,7 @@ lemma handle_interrupt_integrity_autarch:
   apply (simp add: handle_interrupt_def  cong: irq_state.case_cong maskInterrupt_def ackInterrupt_def resetTimer_def )
   apply (rule conjI; rule impI; rule hoare_pre)
   apply (wp_once send_signal_respects get_cap_auth_wp [where aag = aag] dmo_mol_respects
-       | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def
+       | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def handle_reserved_irq_def
        | wp dmo_no_mem_respects
        | wpc)+
   apply (fastforce simp: is_cap_simps aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
@@ -533,7 +533,7 @@ lemma handle_interrupt_integrity:
   apply (rule conjI; rule impI; rule hoare_pre)
   apply (wp_once send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
        | wpc
-       | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def)+
+       | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def handle_reserved_irq_def)+
   apply clarsimp
   apply (rule conjI, fastforce)+ -- "valid_objs etc."
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -660,9 +660,11 @@ lemma handle_event_integrity:
 lemma integrity_restart_context:
   "\<lbrakk> integrity aag X st s; pasMayActivate aag;
        st_tcb_at (op = Structures_A.Restart) thread s; \<not> is_subject aag thread \<rbrakk>
-   \<Longrightarrow> \<exists>tcb tcb'. get_tcb thread st = Some tcb \<and> get_tcb thread s = Some tcb' \<and> (tcb_context tcb' = tcb_context tcb \<or>
-                  tcb_context tcb' = (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction)
-                  \<or> tcb_context tcb' = (tcb_context tcb)(TPIDRURW := tcb_ipc_buffer tcb))"
+   \<Longrightarrow> \<exists>tcb tcb'. get_tcb thread st = Some tcb \<and>
+                  get_tcb thread s = Some tcb' \<and>
+                  (arch_tcb_context_get (tcb_arch tcb') = arch_tcb_context_get (tcb_arch tcb) \<or>
+                  arch_tcb_context_get (tcb_arch tcb') =
+                    (arch_tcb_context_get (tcb_arch tcb))(TPIDRURW := (arch_tcb_context_get (tcb_arch tcb)) FaultInstruction))"
   apply (clarsimp simp: integrity_def)
   apply (drule_tac x = thread in spec)
   apply (erule integrity_obj.cases, auto simp add: tcb_states_of_state_def get_tcb_def st_tcb_def2)
@@ -670,7 +672,7 @@ lemma integrity_restart_context:
 
 definition
   "consistent_tpidrurw_at \<equiv>
-    obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_context tcb TPIDRURW = tcb_ipc_buffer tcb)"
+    obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> arch_tcb_context_get (tcb_arch tcb) TPIDRURW = tcb_ipc_buffer tcb)"
 
 lemma set_thread_state_restart_to_running_respects:
   "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Restart) thread
@@ -726,7 +728,7 @@ lemma activate_thread_pas_refined:
              | wpc | simp del: hoare_post_taut)+
   done
 
-definition "current_ipc_buffer_register s \<equiv> tcb_context (the (get_tcb (cur_thread s) s)) TPIDRURW"
+definition "current_ipc_buffer_register s \<equiv> arch_tcb_context_get (tcb_arch (the (get_tcb (cur_thread s) s))) TPIDRURW"
 
 lemma integrity_exclusive_state [iff]:
   "integrity aag X st (s\<lparr>machine_state := machine_state s \<lparr>exclusive_state := es \<rparr>\<rparr>)
@@ -791,22 +793,6 @@ lemma tcb_sched_action_dequeue_integrity_pasMayEditReadyQueues:
   apply wp
   apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def tcb_domain_map_wellformed_aux_def etcb_at_def get_etcb_def
                   split: option.splits)
-  done
-
-lemma send_upd_ctxintegrity:
-  "\<lbrakk> direct_send {pasSubject aag} aag ep tcb \<or> indirect_send {pasSubject aag} aag ep recv tcb;
-     integrity aag X st s; st_tcb_at (op = Structures_A.thread_state.Running) thread s;
-     get_tcb thread st = Some tcb; get_tcb thread s = Some tcb' \<rbrakk>
-     \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(thread \<mapsto> TCB (tcb'\<lparr>tcb_context := c'\<rparr>))\<rparr>)"
-  apply (clarsimp simp: integrity_def tcb_states_of_state_preserved st_tcb_def2)
-  apply (drule get_tcb_SomeD)+
-  apply (drule spec[where x=thread], simp)
-  apply (cases "is_subject aag thread")
-   apply (rule tro_lrefl, simp)
-  apply (rule_tac ntfn'="tcb_bound_notification tcb'" in tro_tcb_send[OF refl refl], simp_all)
-   apply (rule_tac x = "c'" in exI)
-   apply (erule integrity_obj.cases, auto)[1]
-  apply (erule integrity_obj.cases, auto simp: tcb_bound_notification_reset_integrity_def)[1]
   done
 
 lemma as_user_set_register_respects_indirect:
@@ -1037,7 +1023,9 @@ lemma handle_interrupt_arch_state [wp]:
   apply (rule hoare_if)
   apply (rule hoare_pre)
   apply clarsimp
-  apply (wp get_cap_inv dxo_wp_weak send_signal_arch_state | wpc | simp add: get_irq_state_def)+
+  apply (wp get_cap_inv dxo_wp_weak send_signal_arch_state
+        | wpc
+        | simp add: get_irq_state_def handle_reserved_irq_def)+
   done
 
 lemmas sequence_x_mapM_x = mapM_x_def [symmetric]
@@ -1087,7 +1075,8 @@ lemma set_notification_current_ipc_buffer_register[wp]:
 crunch current_ipc_buffer_register [wp]: "set_cap" "\<lambda>s. P (current_ipc_buffer_register s)"
 
 lemma update_tcb_current_ipc_buffer_register:
-  "\<lbrakk>get_tcb t s = Some tcb; P (current_ipc_buffer_register s);tcb_context tcb TPIDRURW = tcb_context tcb' TPIDRURW\<rbrakk>
+  "\<lbrakk>get_tcb t s = Some tcb; P (current_ipc_buffer_register s);
+    arch_tcb_context_get (tcb_arch tcb) TPIDRURW = arch_tcb_context_get (tcb_arch tcb') TPIDRURW\<rbrakk>
        \<Longrightarrow> P (current_ipc_buffer_register (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb')\<rparr>))"
   apply (erule arg_cong[where f = P,THEN iffD1,rotated])
   apply (simp add: current_ipc_buffer_register_def get_tcb_def)
@@ -1209,7 +1198,7 @@ lemma current_ipc_buffer_register_weak_intro:
   shows "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s) \<and> cur_tcb s \<and> Q s \<rbrace> f  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
   apply (clarsimp simp: valid_def current_ipc_buffer_register_def)
   apply (drule use_valid)
-    apply (rule_tac P = "\<lambda>ko. case ko of TCB t \<Rightarrow> P (tcb_context t TPIDRURW) | _ \<Rightarrow> False" in valid)
+    apply (rule_tac P = "\<lambda>ko. case ko of TCB t \<Rightarrow> P (arch_tcb_context_get (tcb_arch t) TPIDRURW) | _ \<Rightarrow> False" in valid)
    apply (clarsimp simp: cur_tcb_def tcb_at_def)
   apply (clarsimp simp: obj_at_def)
   apply (clarsimp split: kernel_object.split_asm)
@@ -1329,12 +1318,14 @@ lemma transfer_caps_loop_current_ipc_buffer_register:
 crunch current_ipc_buffer_register [wp]: transfer_caps "\<lambda>s. P (current_ipc_buffer_register s)"
 
 lemma set_tcb_context_current_ipc_buffer_register:
-  "\<lbrace>\<lambda>s. (f = cur_thread s \<longrightarrow> (P (cxt TPIDRURW) = P (tcb_context tcb TPIDRURW) \<and> obj_at (\<lambda>obj. obj = TCB tcb) f s)) \<and> P (current_ipc_buffer_register s)\<rbrace>
-    set_object f (TCB (tcb\<lparr>tcb_context := cxt\<rparr>)) \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
+  "\<lbrace>\<lambda>s. (f = cur_thread s \<longrightarrow> (P (cxt TPIDRURW) = P (arch_tcb_context_get (tcb_arch tcb) TPIDRURW) \<and>
+        obj_at (\<lambda>obj. obj = TCB tcb) f s)) \<and> P (current_ipc_buffer_register s)\<rbrace>
+     set_object f (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>))
+   \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
   by (auto simp: current_ipc_buffer_register_def get_tcb_def set_object_def get_def put_def bind_def valid_def return_def obj_at_def)
 
 lemma as_user_current_ipc_buffer_register[wp]:
-  assumes uc: "\<And>uc P. \<lbrace>\<lambda>s. P (s TPIDRURW)\<rbrace> a \<lbrace>\<lambda>r s. P (s TPIDRURW)\<rbrace>"
+  assumes uc: "\<And>P. \<lbrace>\<lambda>s. P (s TPIDRURW)\<rbrace> a \<lbrace>\<lambda>r s. P (s TPIDRURW)\<rbrace>"
   shows "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> as_user f a
   \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
   apply (simp add: as_user_def)
@@ -1394,7 +1385,7 @@ lemma set_mrs_current_ipc_buffer_register:
   done
 
 lemma thread_set_current_ipc_buffer_register:
-  assumes tpidrurw_inv: "\<And>y. P (tcb_context (r y) TPIDRURW) = P (tcb_context y TPIDRURW)"
+  assumes tpidrurw_inv: "\<And>y. P (arch_tcb_context_get (tcb_arch (r y)) TPIDRURW) = P (arch_tcb_context_get (tcb_arch y) TPIDRURW)"
   shows "\<lbrace>(\<lambda>s. P (current_ipc_buffer_register s))\<rbrace> thread_set r ptr \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
   apply (simp add:thread_set_def)
   apply (wp set_object_wp)

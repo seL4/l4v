@@ -683,7 +683,7 @@ lemma get_ipc_buffer_words_caps_cong:
   done
 
 lemma transform_full_intent_caps_cong:
-  "\<lbrakk> tcb_context tcb = tcb_context tcb';
+  "\<lbrakk> arch_tcb_context_get (tcb_arch tcb) = arch_tcb_context_get (tcb_arch tcb');
      tcb_ipc_buffer tcb = tcb_ipc_buffer tcb';
      is_pg_cap (tcb_ipcframe tcb) = is_pg_cap (tcb_ipcframe tcb');
      \<lbrakk> is_pg_cap (tcb_ipcframe tcb); is_pg_cap (tcb_ipcframe tcb') \<rbrakk>
@@ -698,7 +698,7 @@ lemma transform_full_intent_caps_cong:
   done
 
 lemma transform_full_intent_caps_cong_weak:
-  "\<lbrakk> tcb_context tcb = tcb_context tcb';
+  "\<lbrakk> arch_tcb_context_get (tcb_arch tcb) = arch_tcb_context_get (tcb_arch tcb');
      tcb_ipc_buffer tcb = tcb_ipc_buffer tcb';
      tcb_ipcframe tcb = tcb_ipcframe tcb' \<rbrakk> \<Longrightarrow>
   transform_full_intent ms p tcb = transform_full_intent ms p tcb'"

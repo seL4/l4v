@@ -586,10 +586,10 @@ where
      tcb_state         = Running, 
      tcb_fault_handler = replicate word_bits False, 
      tcb_ipc_buffer    = 0,
-     tcb_context       = undefined,
      tcb_fault         = None,
      tcb_bound_notification     = None,
-     tcb_mcpriority    = Low_mcp \<rparr>"
+     tcb_mcpriority    = Low_mcp,
+     tcb_arch = \<lparr> tcb_context = undefined \<rparr>\<rparr>"
 
 definition
   Low_etcb :: etcb
@@ -615,10 +615,10 @@ where
      tcb_state         = BlockedOnNotification ntfn_ptr,
      tcb_fault_handler = replicate word_bits False, 
      tcb_ipc_buffer    = 0,
-     tcb_context       = undefined,
      tcb_fault         = None,
      tcb_bound_notification     = None,
-     tcb_mcpriority    = High_mcp \<rparr>"
+     tcb_mcpriority    = High_mcp,
+     tcb_arch = \<lparr> tcb_context = undefined \<rparr>\<rparr>"
 
 definition
   High_etcb :: etcb
@@ -643,10 +643,10 @@ where
      tcb_state         = IdleThreadState,
      tcb_fault_handler = replicate word_bits False, 
      tcb_ipc_buffer    = 0,
-     tcb_context       = empty_context,
      tcb_fault         = None,
      tcb_bound_notification     = None,
-     tcb_mcpriority    = default_priority \<rparr>"
+     tcb_mcpriority    = default_priority,
+     tcb_arch = \<lparr> tcb_context = empty_context \<rparr>\<rparr>"
 
 
 definition
