@@ -10,9 +10,9 @@
 
 theory SimplRewrite
 imports
-  "~~/src/HOL/Eisbach/Eisbach"
   "CTranslationNICTA"
   "SplitRule"
+  "~~/src/HOL/Eisbach/Eisbach"
 begin
 
 primrec

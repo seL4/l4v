@@ -17,9 +17,8 @@ chapter "Abstract Separation Algebra"
 
 theory Separation_Algebra
 imports
-  Main
-  "~~/src/Tools/Adhoc_Overloading"
   Arbitrary_Comm_Monoid
+  "~~/src/Tools/Adhoc_Overloading"
 begin
 
 text {* This theory is the main abstract separation algebra development *}
