@@ -394,7 +394,7 @@ lemma ccorres_split_nothrow_call_novcg:
 definition
   errstate :: "cstate \<Rightarrow> errtype"
 where
-  "errstate s \<equiv> \<lparr> errfault = fault_lift (current_fault_' (globals s)),
+  "errstate s \<equiv> \<lparr> errfault = seL4_Fault_lift (current_fault_' (globals s)),
                   errlookup_fault = lookup_fault_lift (current_lookup_fault_' (globals s)),
                   errsyscall = current_syscall_error_' (globals s) \<rparr>"
 

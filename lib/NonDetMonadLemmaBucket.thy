@@ -14,6 +14,7 @@ imports
   "MonadEq"
   "Monad_WP/WhileLoopRulesCompleteness"
   Distinct_Prop
+  "~~/src/HOL/Word_Miscellaneous"
 begin
 setup \<open>AutoLevity_Base.add_attribute_test "wp" WeakestPre.is_wp_rule\<close>
 
@@ -998,7 +999,7 @@ lemma alternative_liftE_returnOk:
   "(liftE m \<sqinter> returnOk v) = liftE (m \<sqinter> return v)"
   by (simp add: liftE_def alternative_def returnOk_def bind_def return_def)
 
-lemma bind_inv_inv_comm:
+lemma bind_inv_inv_comm_weak:
   "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace>; \<And>s. \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>_. op = s\<rbrace>;
      empty_fail f; empty_fail g \<rbrakk> \<Longrightarrow>
    do x \<leftarrow> f; y \<leftarrow> g; n od = do y \<leftarrow> g; x \<leftarrow> f; n od"
@@ -1063,6 +1064,36 @@ lemma mapM_liftM_const:
 lemma empty_failD2:
   "\<lbrakk> empty_fail f; \<not> snd (f s) \<rbrakk> \<Longrightarrow> \<exists>v. v \<in> fst (f s)"
   by (fastforce simp add: empty_fail_def)
+
+lemma empty_failD3:
+  "\<lbrakk> empty_fail f; \<not> snd (f s) \<rbrakk> \<Longrightarrow> fst (f s) \<noteq> {}"
+  by (drule(1) empty_failD2, clarsimp)
+
+lemma bind_inv_inv_comm:
+  "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>; \<And>P. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>_. P\<rbrace>;
+     empty_fail f; empty_fail g \<rbrakk> \<Longrightarrow>
+   do x \<leftarrow> f; y \<leftarrow> g; n x y od = do y \<leftarrow> g; x \<leftarrow> f; n x y od"
+  apply (rule ext)
+  apply (rename_tac s)
+  apply (rule_tac s="(do (x, y) \<leftarrow> do x \<leftarrow> f; y \<leftarrow> (\<lambda>_. g s) ; (\<lambda>_. return (x, y) s) od;
+        n x y od) s" in trans)
+   apply (simp add: bind_assoc)
+   apply (intro bind_apply_cong, simp_all)[1]
+    apply (metis in_inv_by_hoareD)
+   apply (simp add: return_def bind_def)
+   apply (metis in_inv_by_hoareD)
+  apply (rule_tac s="(do (x, y) \<leftarrow> do y \<leftarrow> g; x \<leftarrow> (\<lambda>_. f s) ; (\<lambda>_. return (x, y) s) od;
+        n x y od) s" in trans[rotated])
+   apply (simp add: bind_assoc)
+   apply (intro bind_apply_cong, simp_all)[1]
+    apply (metis in_inv_by_hoareD)
+   apply (simp add: return_def bind_def)
+   apply (metis in_inv_by_hoareD)
+  apply (rule bind_apply_cong, simp_all)
+  apply (clarsimp simp: bind_def split_def image_def return_def)
+  apply auto
+  apply (auto elim!: nonemptyE | drule(1) empty_failD3)+
+  done
 
 lemma throwErrorE_E [wp]:
   "\<lbrace>Q e\<rbrace> throwError e -, \<lbrace>Q\<rbrace>"
