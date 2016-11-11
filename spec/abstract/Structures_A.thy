@@ -440,9 +440,7 @@ definition
 primrec
   obj_bits :: "kernel_object \<Rightarrow> nat"
 where
-  "obj_bits (CNode sz cs) = (if well_formed_cnode_n sz cs
-                            then cte_level_bits + sz
-                            else cte_level_bits)"
+  "obj_bits (CNode sz cs) = cte_level_bits + sz"
 | "obj_bits (TCB t) = 9"
 | "obj_bits (Endpoint ep) = 4"
 | "obj_bits (Notification ntfn) = 4"

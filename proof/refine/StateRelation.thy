@@ -306,7 +306,7 @@ lemma obj_relation_cuts_def3:
                             ` (UNIV :: 12 word set)
    | AArch (AUserData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
    | AArch (ADeviceData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserDataDevice ) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
-   | AGarbage \<Rightarrow> {(x, \<bottom>\<bottom>)}
+   | AGarbage _ \<Rightarrow> {(x, \<bottom>\<bottom>)}
    | _ \<Rightarrow> {(x, other_obj_relation)})"
   apply (simp add: obj_relation_cuts_def2 a_type_def
             split: Structures_A.kernel_object.split
@@ -322,7 +322,7 @@ definition
    | AArch APageDirectory \<Rightarrow> False
    | AArch (AUserData _)   \<Rightarrow> False
    | AArch (ADeviceData _)   \<Rightarrow> False
-   | AGarbage \<Rightarrow> False
+   | AGarbage _ \<Rightarrow> False
    | _ \<Rightarrow> True"
 
 lemma is_other_obj_relation_type_CapTable:

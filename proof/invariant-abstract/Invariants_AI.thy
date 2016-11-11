@@ -924,7 +924,7 @@ where
 definition
   "obj_bits_type T \<equiv> case T of
     ACapTable n \<Rightarrow> 4 + n
-  | AGarbage \<Rightarrow> 4
+  | AGarbage n \<Rightarrow> n
   | ATCB \<Rightarrow> obj_bits (TCB undefined)
   | AEndpoint \<Rightarrow> obj_bits (Endpoint undefined)
   | ANTFN \<Rightarrow> obj_bits (Notification undefined)
@@ -2335,13 +2335,11 @@ lemma typ_at_eq_kheap_obj:
   "typ_at ANTFN p s \<longleftrightarrow> (\<exists>ntfn. kheap s p = Some (Notification ntfn))"
   "typ_at (ACapTable n) p s \<longleftrightarrow>
    (\<exists>cs. kheap s p = Some (CNode n cs) \<and> well_formed_cnode_n n cs)"
-  "typ_at AGarbage p s \<longleftrightarrow>
-   (\<exists>n cs. kheap s p = Some (CNode n cs) \<and> \<not> well_formed_cnode_n n cs)"
-  apply (auto simp add: obj_at_def  a_type_def)
-  apply (case_tac ko, simp_all add: wf_unique
-                    split: split_if_asm kernel_object.splits )
-done
-
+  "typ_at (AGarbage n) p s \<longleftrightarrow>
+   (\<exists>cs. n \<ge> cte_level_bits \<and> kheap s p = Some (CNode (n - cte_level_bits) cs) \<and> \<not> well_formed_cnode_n (n - cte_level_bits) cs)"
+  by ((clarsimp simp add: obj_at_def a_type_def; rule iffI; clarsimp),
+      case_tac ko; fastforce simp: wf_unique
+                             split: split_if_asm kernel_object.splits )+
 
 lemma a_type_ACapTableE:
   "\<lbrakk>a_type ko = ACapTable n;
@@ -2350,10 +2348,10 @@ lemma a_type_ACapTableE:
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
   
 lemma a_type_AGarbageE:
-  "\<lbrakk>a_type ko = AGarbage;
-    (!!n cs. \<lbrakk>ko = CNode n cs; \<not> well_formed_cnode_n n cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
+  "\<lbrakk>a_type ko = AGarbage n;
+    (!!cs. \<lbrakk>n \<ge> cte_level_bits; ko = CNode (n - cte_level_bits) cs; \<not>well_formed_cnode_n (n - cte_level_bits) cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
-  by (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+  by (case_tac ko, simp_all add: a_type_simps split: split_if_asm, fastforce)
 
 lemma a_type_ATCBE:
   "\<lbrakk>a_type ko = ATCB; (!!tcb. ko = TCB tcb \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"

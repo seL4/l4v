@@ -78,7 +78,6 @@ lemma cnode_cap_bits_range:
   apply (clarsimp simp: obj_bits.simps ex_with_length add.commute 
                         cte_level_bits_def 
                   split: split_if_asm)
-  apply (clarsimp simp: well_formed_cnode_n_def length_set_helper)
   done
 
 
