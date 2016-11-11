@@ -702,7 +702,6 @@ lemma unat_of_nat_shift:
      apply (rule less_le_trans[OF range_cover_n_less(2)])
      apply clarsimp
     apply (erule diff_le_mono2)
-  using assms
   apply (simp add:range_cover_def)+
  done
 

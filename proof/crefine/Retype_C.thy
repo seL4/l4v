@@ -7004,7 +7004,6 @@ lemma createObject_untypedRange:
 
 lemma createObject_capRange:
 shows "\<lbrace>P\<rbrace>createObject ty ptr us dev \<lbrace>\<lambda>m s. capRange m = {ptr.. ptr + 2 ^ (APIType_capBits ty us) - 1}\<rbrace>"
-  using assms
   apply (simp add:createObject_def)
   apply (case_tac "ty")
     apply (simp_all add:toAPIType_def ARM_H.toAPIType_def)

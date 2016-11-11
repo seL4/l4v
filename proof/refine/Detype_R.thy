@@ -3940,7 +3940,7 @@ proof -
                           atLeastatMost_subset_iff atLeastLessThan_iff
                           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   assume "gz = (objBitsKO val) + us"
-  thus ?thesis using assms
+  thus ?thesis
     apply -
     apply (rule hoare_gen_asm)
     apply (clarsimp simp:createObjects'_def split_def new_cap_addrs_fold')

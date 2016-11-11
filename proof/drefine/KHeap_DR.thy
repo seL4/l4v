@@ -1868,7 +1868,6 @@ lemma set_list_modify_corres_helper:
   proof (induct update_list)
     case Nil
     show ?case
-      using assms
       apply (clarsimp simp:tcb_filter_modify_def)
       apply (clarsimp simp: return_def simpler_modify_def mapM_x_def sequence_x_def corres_underlying_def)
      done
@@ -3277,7 +3276,6 @@ shows "\<lbrakk>length cref \<le> n ; length cref \<le> 32; cap = transform_cap 
 proof (induct n arbitrary: cref cap' cap)
   case 0
   show ?case
-    using assms
     apply clarify
     apply (case_tac "\<not> is_cnode_cap cap'")
      apply (subst cdl_resolve_address_bits_error_branch1,simp)

@@ -486,8 +486,7 @@ lemma kernelEntry_invs':
 
 lemma absKState_correct':
   "\<lbrakk>einvs s; invs' s'; (s,s') \<in> state_relation\<rbrakk>
-   \<Longrightarrow> absKState s' = abs_state s" 
-  using assms
+   \<Longrightarrow> absKState s' = abs_state s"
   apply (intro state.equality, simp_all add: absKState_def abs_state_def)
            apply (rule absHeap_correct)
                apply (clarsimp simp: valid_state_def valid_pspace_def)+

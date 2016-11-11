@@ -6910,7 +6910,7 @@ lemmas p_next_eq_src = mdb_ptr_src.p_next_eq
 
 lemma next_m_n:
   shows "m \<turnstile> p \<leadsto> p' = n \<turnstile> s_d_swp p \<leadsto> s_d_swp p'"
-  using assms src dest
+  using src dest
   apply (simp add: n_def n'_def modify_map_mdb_cap const_def)
   apply (simp add: s_d_swap_def)
   apply (rule conjI, clarsimp)

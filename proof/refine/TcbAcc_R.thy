@@ -2543,7 +2543,7 @@ apply (simp add: tcb_in_cur_domain'_def)
 apply (rule hoare_assume_pre)
 apply simp
 apply (rule_tac f="ksCurDomain" in hoare_lift_Pf)
-apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | simp add: assms)+
+apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | simp)+
 done
 
 lemma threadSet_sch_act_wf:
