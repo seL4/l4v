@@ -646,7 +646,6 @@ lemma is_fake_vm_cap_cap_type:
 lemma well_formed_irq_node_in_irq_nodes:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_irq_node obj\<rbrakk>
   \<Longrightarrow> obj_id \<in> irq_nodes spec"
-  find_theorems irq_nodes
   oops
 
 term real_object_at

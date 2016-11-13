@@ -2916,7 +2916,7 @@ lemma set_mcpriority_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace> set_mcpriority t mcp \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding set_mcpriority_def
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
-find_theorems thread_set silc_inv
+
 crunch silc_inv[wp]: bind_notification "silc_inv aag st"
 
 lemma invoke_tcb_silc_inv:

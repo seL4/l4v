@@ -47,7 +47,6 @@ lemma lifted_b_wp [wp]:
   apply (auto simp: simple_lift_c_guard lift_global_heap_def field_simps)
   done
 
-find_theorems heap_w32
 lemma unlifted_b_wp [wp]:
     "\<lbrace> \<lambda>s. heap_ptr_valid (hrs_htd (t_hrs_' s)) p
            \<and> (\<forall>t. lift_global_heap t = lift_global_heap s \<longrightarrow> P (h_val (hrs_mem (t_hrs_' t)) p * 3) t) \<rbrace>
