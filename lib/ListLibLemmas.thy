@@ -243,7 +243,8 @@ lemma distinct_inj_middle: "distinct list \<Longrightarrow> list = (xa @ x # xb)
   done
  
 
-lemma after_can_split_distinct: "distinct list \<Longrightarrow> after_in_list list x = Some y \<Longrightarrow> \<exists>!ys xs. list = xs @ (x # y # ys)"
+lemma after_can_split_distinct:
+  "distinct list \<Longrightarrow> after_in_list list x = Some y \<Longrightarrow> \<exists>!ys. \<exists>!xs. list = xs @ (x # y # ys)"
   apply (frule after_can_split)
   apply (elim exE)
   apply (rule ex1I)
