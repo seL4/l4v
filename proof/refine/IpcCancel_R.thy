@@ -1339,8 +1339,8 @@ definition
 
 lemma removeFromBitmap_conceal_valid_inQ_queues[wp]:
   "\<lbrace> valid_inQ_queues \<rbrace> removeFromBitmap_conceal d p q t \<lbrace> \<lambda>_. valid_inQ_queues \<rbrace>"
-  unfolding bitmap_fun_defs valid_inQ_queues_def removeFromBitmap_conceal_def
-  by wp clarsimp
+  unfolding valid_inQ_queues_def removeFromBitmap_conceal_def
+  by (wp|clarsimp simp: bitmap_fun_defs)+
 
 lemma tcbSchedDequeue_valid_inQ_queues[wp]:
   "\<lbrace>valid_inQ_queues\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"

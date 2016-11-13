@@ -31,7 +31,7 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 
 \begin{impdetails}
 
-> import SEL4.Config (numDomains,numPriorities)
+> import SEL4.Config (numDomains)
 > import SEL4.API.Types
 > import {-# SOURCE #-} SEL4.Model.PSpace
 > import SEL4.Object.Structures
@@ -113,6 +113,8 @@ The top-level kernel state structure is called "KernelState". It contains:
 Note that this definition of "KernelState" assumes a single processor. The behaviour of the kernel on multi-processor systems is not specified by this document.
 
 Note that the priority bitmap is split up into two levels. In order to check to see whether a priority has a runnable thread on a 32-bit system with a maximum priority of 255, we use the high 3 bits of the priority as an index into the level 1 bitmap. If the bit at that index is set, we use those same three bits to obtain a word from the level 2 bitmap. We then use the remaining 5 bits to index into that word. If the bit is set, the queue for that priority is non-empty.
+
+Note also that due the common case being scheduling high-priority threads, the level 2 bitmap array is reversed to improve cache locality.
 
 \subsubsection{Monads}
 
@@ -232,7 +234,7 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         ksReadyQueuesL1Bitmap = funPartialArray (const 0) (0, fromIntegral numDomains),
 >         ksReadyQueuesL2Bitmap =
 >             funPartialArray (const 0)
->                 ((0, 0), (fromIntegral numDomains, numPriorities `div` wordBits + 1)),
+>                 ((0, 0), (fromIntegral numDomains, l2BitmapSize)),
 >         ksCurThread = error "No initial thread",
 >         ksIdleThread = error "Idle thread has not been created",
 >         ksSchedulerAction = error "scheduler action has not been set",

@@ -44,15 +44,16 @@ definition
     newVTable \<leftarrow> liftE $ getThreadVSpaceRoot dest >>= getCTE;
     unlessE (isValidVTableRoot $ cteCap newVTable) $ throwError ();
     pd \<leftarrow> returnOk $ capPDBasePtr $ capCap $ cteCap newVTable;
+    curDom \<leftarrow> liftE $ curDomain;
     curPrio \<leftarrow> liftE $ threadGet tcbPriority curThread;
     destPrio \<leftarrow> liftE $ threadGet tcbPriority dest;
-    destFault \<leftarrow>
-    unlessE (destPrio \<ge> curPrio) $ throwError ();
+    l1 \<leftarrow> liftE $ getReadyQueuesL1Bitmap curDom;
+    highestPrio \<leftarrow> liftE $ getHighestPrio curDom;
+    unlessE (destPrio \<ge> curPrio \<or> l1 = 0 \<or> highestPrio \<le> destPrio) $ throwError ();
     unlessE (capEPCanGrant epCap) $ throwError ();
     asidMap \<leftarrow> liftE $ gets $ armKSASIDMap o ksArchState;
     unlessE (\<exists>v. {hwasid. (hwasid, pd) \<in> ran asidMap} = {v})
         $ throwError ();
-    curDom \<leftarrow> liftE $ curDomain;
     destDom \<leftarrow> liftE $ threadGet tcbDomain dest;
     unlessE (destDom = curDom) $ throwError ();
 
@@ -97,7 +98,7 @@ definition
     ctab \<leftarrow> liftE $ getThreadCSpaceRoot curThread >>= getCTE;
     epCap \<leftarrow> unifyFailure (doE t \<leftarrow> resolveAddressBits (cteCap ctab) cptr (size cptr);
          liftE (getSlotCap (fst t)) odE);
-    
+
     unlessE (isEndpointCap epCap \<and> capEPCanReceive epCap)
        $ throwError ();
 
@@ -120,14 +121,17 @@ definition
     unlessE (callerFault = None) $ throwError ();
     newVTable \<leftarrow> liftE $ getThreadVSpaceRoot caller >>= getCTE;
     unlessE (isValidVTableRoot $ cteCap newVTable) $ throwError ();
-    pd \<leftarrow> returnOk $ capPDBasePtr $ capCap $ cteCap newVTable;
-    curPrio \<leftarrow> liftE $ threadGet tcbPriority curThread;
+
+    curDom \<leftarrow> liftE $ curDomain;
+    l1 \<leftarrow> liftE $ getReadyQueuesL1Bitmap curDom;
     callerPrio \<leftarrow> liftE $ threadGet tcbPriority caller;
-    unlessE (callerPrio \<ge> curPrio) $ throwError ();
+    highestPrio \<leftarrow> liftE $ getHighestPrio curDom;
+    unlessE (l1 = 0 \<or> highestPrio \<le> callerPrio) $ throwError ();
+
+    pd \<leftarrow> returnOk $ capPDBasePtr $ capCap $ cteCap newVTable;
     asidMap \<leftarrow> liftE $ gets $ armKSASIDMap o ksArchState;
     unlessE (\<exists>v. {hwasid. (hwasid, pd) \<in> ran asidMap} = {v})
         $ throwError ();
-    curDom \<leftarrow> liftE $ curDomain;
     callerDom \<leftarrow> liftE $ threadGet tcbDomain caller;
     unlessE (callerDom = curDom) $ throwError ();
 
@@ -175,12 +179,7 @@ lemma getEndpoint_obj_at':
   apply (clarsimp simp: obj_at'_def projectKOs)
   done
 
-lemma setEndpoint_obj_at_tcb':
-  "\<lbrace>obj_at' (P :: tcb \<Rightarrow> bool) p\<rbrace> setEndpoint p' val \<lbrace>\<lambda>rv. obj_at' P p\<rbrace>"
-  apply (simp add: setEndpoint_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
+lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
 lemma tcbSchedEnqueue_obj_at_unchangedT:
   assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
@@ -1659,7 +1658,7 @@ lemma fastpath_dequeue_ccorres:
        (ptr_basic_update (\<lambda>s. tcb_Ptr_Ptr &(h_val (hrs_mem (t_hrs_' (globals s)))
                                 (tcb_Ptr_Ptr &(dest1\<rightarrow>[''tcbEPNext_C'']))\<rightarrow>[''tcbEPPrev_C''])) (\<lambda>_. NULL))))
       ELSE
-        CALL endpoint_ptr_mset_epQueue_tail_state(ep_ptr1,scast 0,scast EPState_Idle)
+        CALL endpoint_ptr_mset_epQueue_tail_state(ep_ptr1,0,scast EPState_Idle)
       FI))"
   unfolding setEndpoint_def
   apply (rule setObject_ccorres_helper[rotated])
@@ -2173,24 +2172,6 @@ lemma ccorres_flip_Guard2:
   apply (fastforce intro: exec.Guard exec.GuardFault exec_handlers.intros exec.Seq)
   done
 
-lemma ccorres_abstract_ksCurThread:
-  assumes ceqv: "\<And>rv' t t'. ceqv \<Gamma> (\<lambda>s. ksCurThread_' (globals s)) rv' t t' d (d' rv')"
-  and       cc: "\<And>ct. ccorres_underlying rf_sr \<Gamma> r xf arrel axf (G ct) (G' ct) hs a (d' (tcb_ptr_to_ctcb_ptr ct))"
-  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf (\<lambda>s. G (ksCurThread s) s)
-            {s. s \<in> G' (ctcb_ptr_to_tcb_ptr (ksCurThread_' (globals s)))} hs a d"
-  apply (rule ccorres_guard_imp)
-    prefer 2
-    apply assumption
-   apply (rule ccorres_abstract[OF ceqv, where G'="\<lambda>ct. \<lbrace>ct = \<acute>ksCurThread\<rbrace> \<inter> G' (ctcb_ptr_to_tcb_ptr ct)"])
-   apply (subgoal_tac "\<exists>t. rv' = tcb_ptr_to_ctcb_ptr t")
-    apply clarsimp
-    apply (rule ccorres_guard_imp2)
-     apply (rule cc)
-    apply (clarsimp simp: rf_sr_ksCurThread)
-   apply (metis tcb_ptr_to_tcb_ptr)
-  apply simp
-  done
-
 lemmas cte_C_numeral_fold = cte_C_size[THEN meta_eq_to_obj_eq,
     THEN arg_cong[where f="of_nat :: _ \<Rightarrow> word32"], simplified, symmetric]
 
@@ -2475,29 +2456,117 @@ lemma fastpath_call_ccorres:
              apply (rule stored_hw_asid_get_ccorres_split[where P=\<top>], ceqv)
              apply (rule ccorres_abstract_ksCurThread, ceqv)
              apply (rename_tac ksCurThread_x)
-             apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
+using [[goals_limit=1]]
+             apply (simp add: maxDom_def del: Collect_const)
+             apply (ctac add: getCurDomain_ccorres_dom_')
+               apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
+              apply (rename_tac curDom curDom')
+              apply (rule_tac P="curDom \<le> maxDomain" in ccorres_gen_asm)
+              apply (simp add: prio_and_dom_limit_helpers del: Collect_const)
+
              apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet])
               apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet])
                apply (rename_tac curPrio destPrio)
-               apply (rule ccorres_seq_cond_raise[THEN iffD2])
-               apply (rule_tac R="obj_at' (op = curPrio \<circ> tcbPriority) curThread
+
+         apply (rule ccorres_rhs_assoc2)
+
+              apply (rule ccorres_pre_getReadyQueuesL1Bitmap)
+              apply (rename_tac l1)
+thm ccorres_split_nothrow
+              apply (rule_tac xf'=ret__int_' and r'="\<lambda>hPrio rv.
+                  rv = from_bool (\<not> (curPrio \<le> destPrio \<or> l1 = 0 \<or> hPrio \<le> destPrio))"
+                in ccorres_split_nothrow)
+
+apply (rule_tac xf'=ret__int_'
+         and val="from_bool (destPrio < curPrio)" and
+R="obj_at' (op = curPrio \<circ> tcbPriority) curThread
                                    and obj_at' (op = destPrio \<circ> tcbPriority)
                                              (hd (epQueue send_ep))
                                    and (\<lambda>s. ksCurThread s = curThread)
                                    and (\<lambda>s. ksCurThread s = ksCurThread_x)"
-                              in ccorres_cond2')
-                 apply clarsimp
+ and R'=UNIV
+ in ccorres_symb_exec_r_known_rv)
+apply vcg
+apply clarsimp
                  apply (drule(1) obj_at_cslift_tcb)+
                  apply (clarsimp simp: typ_heap_simps' rf_sr_ksCurThread)
                  apply (simp add: ctcb_relation_unat_tcbPriority_C
                                   word_less_nat_alt linorder_not_le)
-                apply simp
-                apply (rule ccorres_split_throws)
-                 apply (fold dc_def)[1]
-                 apply (rule ccorres_call_hSkip)
-                   apply (rule slowpath_ccorres, simp+)
-                apply (vcg exspec=slowpath_noreturn_spec)
-               apply (simp del: Collect_const cong: call_ignore_cong)
+                 apply (clarsimp simp add: from_bool_def split: bool.split)
+apply ceqv
+
+               apply (simp add: if_1_0_0 ccap_relation_ep_helpers from_bool_0 word_le_not_less
+                           del: Collect_const cong: call_ignore_cong)
+
+             apply (rule ccorres_Cond_rhs)
+              apply (simp add: bindE_assoc del: Collect_const)
+              apply (rule ccorres_Guard_Seq)
+
+
+apply (rule_tac xf'=ret__int_'
+         and val="from_bool (l1 \<noteq> 0)" and
+R="\<lambda>s. l1 = ksReadyQueuesL1Bitmap s curDom"
+and  R'="UNIV"
+ in ccorres_symb_exec_r_known_rv)
+apply vcg
+apply (clarsimp simp: from_bool_def rf_sr_ksReadyQueuesL1Bitmap_simp word_le_not_less[symmetric] split: bool.split)
+apply (rule conjI)
+ apply (clarsimp simp: from_bool_def split: bool.split)
+ apply (subst rf_sr_ksReadyQueuesL1Bitmap_simp, assumption, assumption, simp)
+apply (clarsimp simp: from_bool_def split: bool.split)
+ apply (subst rf_sr_ksReadyQueuesL1Bitmap_simp, assumption, assumption, simp)
+apply ceqv
+
+apply (simp add: bindE_assoc from_bool_0 del: Collect_const)
+
+             apply (rule ccorres_Cond_rhs)
+              apply (simp add: bindE_assoc catch_liftE_bindE del: Collect_const)
+
+     apply (rule ccorres_add_return2)
+     apply (ctac add: getHighestPrio_ccorres[simplified getHighestPrio_def'])
+               apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
+     apply (rule_tac P="obj_at' (op = destPrio \<circ> tcbPriority)
+                                             (hd (epQueue send_ep))" and P'=UNIV in ccorres_from_vcg)
+       apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: return_def)
+                 apply (drule(1) obj_at_cslift_tcb)+
+                 apply (clarsimp simp: typ_heap_simps' rf_sr_ksCurThread)
+                 apply (simp add: ctcb_relation_unat_tcbPriority_C
+                                  word_less_nat_alt)
+                 apply (metis from_bool_eq_if)
+               apply wp
+              apply simp
+              apply (vcg exspec=getHighestPrio_modifies)
+             apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0}" in ccorres_from_vcg)
+             apply (clarsimp simp: getHighestPrio_def' simpler_gets_def)
+             apply (rule conseqPre, vcg)
+            apply clarsimp
+           apply simp
+           apply vcg
+             apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0}" in ccorres_from_vcg)
+             apply (clarsimp simp: getHighestPrio_def' simpler_gets_def)
+             apply (rule conseqPre, vcg)
+            apply clarsimp
+           apply simp
+           apply vcg
+          apply ceqv
+
+              apply (simp add: bindE_assoc from_bool_0 catch_throwError del: Collect_const)
+
+             apply (rule ccorres_Cond_rhs_Seq)
+
+              apply (simp add: bindE_assoc from_bool_0 catch_throwError del: Collect_const)
+
+
+
+              apply (rule ccorres_split_throws)
+               apply (fold dc_def)[1]
+               apply (rule ccorres_call_hSkip)
+                 apply (rule slowpath_ccorres, simp+)
+              apply (vcg exspec=slowpath_noreturn_spec)
+             apply (simp del: Collect_const add: from_bool_0 cong: call_ignore_cong)
+
+
                apply csymbr+
                apply (simp add: if_1_0_0 ccap_relation_ep_helpers from_bool_0
                            del: Collect_const cong: call_ignore_cong)
@@ -2527,11 +2596,8 @@ lemma fastpath_call_ccorres:
                                    to_bool_def
                               del: Collect_const cong: call_ignore_cong)
                   apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
-                  apply (rule ccorres_symb_exec_l3[OF _ curDomain_inv _])
-                    prefer 3
-                    apply (simp only: curDomain_def, rule empty_fail_gets)
                    apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet])
-                    apply (rename_tac curDom destDom)
+                    apply (rename_tac destDom)
 
                     apply (rule ccorres_seq_cond_raise[THEN iffD2])
                     apply (rule_tac R="obj_at' (op = destDom \<circ> tcbDomain)
@@ -2553,7 +2619,7 @@ lemma fastpath_call_ccorres:
 
                     apply (rule ccorres_rhs_assoc2)
                     apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)
-                        apply (simp only: ucast_id tl_drop_1 One_nat_def)
+                        apply (simp only: ucast_id tl_drop_1 One_nat_def scast_0)
                         apply (rule fastpath_dequeue_ccorres)
                         apply simp
                        apply ceqv
@@ -2667,7 +2733,6 @@ lemma fastpath_call_ccorres:
                                 apply (simp add: updateMDB_def
                                   del: Collect_const cong: call_ignore_cong)
                                 apply (rule ccorres_split_nothrow_dc)
-                                   apply simp
                                    apply (ctac add: fastpath_copy_mrs_ccorres[unfolded forM_x_def])
                                   apply (rule ccorres_move_c_guard_tcb)
                                   apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
@@ -2762,21 +2827,33 @@ lemma fastpath_call_ccorres:
 
                    apply simp
                    apply (rule threadGet_wp)
-                  apply simp
+using [[goals_limit=3]]
+                  apply (simp add: getHighestPrio_def')
                   apply wp[1]
-
-                 apply simp
+                  apply (simp add: getHighestPrio_def')
                  apply wp[1]
-                apply simp
+
+                 apply (simp del: Collect_const)
+                 apply (vcg exspec=getHighestPrio_modifies)
+                apply (simp add: getHighestPrio_def')
+
               apply (rule threadGet_wp)
              apply simp
              apply (rule threadGet_wp)
             apply (simp del: Collect_const)
+                apply wp[1]
+apply clarsimp
+
+  apply vcg
+            apply clarsimp
             apply (vcg exspec=cap_page_directory_cap_get_capPDBasePtr_spec2)
+           apply clarsimp
            apply (rule conseqPre,
                   vcg exspec=cap_page_directory_cap_get_capPDBasePtr_spec2,
                   clarsimp)
-          apply simp
+
+                apply wp[1]
+               apply (simp del: Collect_const)
           apply (rule getEndpoint_wp)
          apply (simp del: Collect_const)
          apply (vcg exspec=endpoint_ptr_get_epQueue_head_modifies
@@ -2831,13 +2908,18 @@ lemma fastpath_call_ccorres:
                          ARM_H.isValidVTableRoot_def cte_wp_at_ctes_of
                          capAligned_def objBits_simps)
    apply (simp cong: conj_cong)
+   apply (clarsimp simp add: invs_ksCurDomain_maxDomain')
+   apply (rule conjI, fastforce dest!: invs_queues simp: valid_queues_def)
+   apply (simp only: imp_disjL[symmetric])
+   apply (clarsimp simp del: imp_disjL)
    apply (frule invs_mdb', clarsimp simp: valid_mdb'_def valid_mdb_ctes_def)
    apply (case_tac xb, clarsimp, drule(1) nullcapsD')
    apply (clarsimp simp: pde_stored_asid_def to_bool_def
                          length_msgRegisters word_le_nat_alt[symmetric])
    apply (frule tcb_aligned'[OF obj_at_tcbs_of[THEN iffD2], OF exI, simplified])
    apply clarsimp
-   apply (safe del: notI)[1]
+   apply_trace (safe del: notI disjE)[1]
+using [[goals_limit=10]]
      apply (rule not_sym, clarsimp)
      apply (drule aligned_sub_aligned[where x="x + 0x10" and y=x for x])
        apply (erule tcbs_of_aligned')
@@ -3233,33 +3315,81 @@ lemma fastpath_reply_recv_ccorres:
                              rule ccorres_move_array_assertion_pd)
                           |  rule ccorres_flip_Guard2, rule ccorres_Guard_True_Seq)+
                    apply (rule stored_hw_asid_get_ccorres_split[where P=\<top>], ceqv)
-                   apply (rule ccorres_abstract_ksCurThread, ceqv)
-                   apply (rename_tac ksCurThread_x)
-                   apply (rule_tac P="ksCurThread_y = ksCurThread_x" in ccorres_gen_asm)
-                   apply (rule ccorres_move_c_guard_tcb
-                               ccorres_move_const_guard)+
+
+using [[goals_limit=1]]
+             apply (simp add: maxDom_def del: Collect_const)
+             apply (ctac add: getCurDomain_ccorres_dom_')
+               apply (rename_tac curDom curDom')
+              apply (rule_tac P="curDom \<le> maxDomain" in ccorres_gen_asm)
+              apply (simp add: prio_and_dom_limit_helpers del: Collect_const)
+              apply (rule ccorres_move_const_guard)+
+              apply (rule ccorres_pre_getReadyQueuesL1Bitmap)
+              apply (rename_tac l1)
+
                    apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet])
-                    apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet])
-                     apply (rename_tac curPrio destPrio)
-                     apply (rule ccorres_seq_cond_raise[THEN iffD2])
-                     apply (rule_tac R="obj_at' (op = curPrio \<circ> tcbPriority) curThread
-                                         and obj_at' (op = destPrio \<circ> tcbPriority)
-                                                   (capTCBPtr (cteCap caller_cap))
-                                       and (\<lambda>s. ksCurThread s = curThread)
-                                       and (\<lambda>s. ksCurThread s = ksCurThread_x)"
-                                    in ccorres_cond2')
-                       apply clarsimp
-                       apply (drule(1) obj_at_cslift_tcb)+
-                       apply (clarsimp simp: typ_heap_simps' rf_sr_ksCurThread)
-                       apply (simp add: ctcb_relation_unat_tcbPriority_C
-                                        word_less_nat_alt linorder_not_le)
-                      apply simp
-                      apply (rule ccorres_split_throws)
-                       apply (fold dc_def)[1]
-                       apply (rule ccorres_call_hSkip)
-                         apply (rule slowpath_ccorres, simp+)
-                      apply (vcg exspec=slowpath_noreturn_spec)
-                     apply (simp del: Collect_const cong: call_ignore_cong)
+                   apply (rename_tac destPrio)
+
+         apply (rule ccorres_rhs_assoc2)
+
+              apply (rule_tac xf'=ret__int_' and r'="\<lambda>hPrio rv.
+                  rv = from_bool (\<not> (l1 = 0 \<or> hPrio \<le> destPrio))"
+                in ccorres_split_nothrow)
+
+apply (rule_tac xf'=ret__int_'
+         and val="from_bool (l1 \<noteq> 0)" and
+R="\<lambda>s. l1 = ksReadyQueuesL1Bitmap s curDom"
+and  R'="UNIV"
+ in ccorres_symb_exec_r_known_rv)
+apply vcg
+apply (clarsimp simp: from_bool_def rf_sr_ksReadyQueuesL1Bitmap_simp word_le_not_less[symmetric] split: bool.split)
+apply (rule conjI)
+ apply (clarsimp simp: from_bool_def split: bool.split)
+ apply (subst rf_sr_ksReadyQueuesL1Bitmap_simp, assumption, assumption, simp)
+apply (clarsimp simp: from_bool_def split: bool.split)
+ apply (subst rf_sr_ksReadyQueuesL1Bitmap_simp, assumption, assumption, simp)
+apply ceqv
+
+apply (simp add: from_bool_0 del: Collect_const)
+
+             apply (rule ccorres_Cond_rhs)
+              apply (simp add: bindE_assoc catch_liftE_bindE del: Collect_const)
+
+     apply (rule ccorres_add_return2)
+     apply (ctac add: getHighestPrio_ccorres[simplified getHighestPrio_def'])
+               apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
+     apply (rule_tac P="obj_at' (op = destPrio \<circ> tcbPriority)
+                                             (capTCBPtr (cteCap caller_cap))" and P'=UNIV in ccorres_from_vcg)
+       apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: return_def)
+                 apply (drule(1) obj_at_cslift_tcb)+
+                 apply (clarsimp simp: typ_heap_simps' rf_sr_ksCurThread)
+                 apply (simp add: ctcb_relation_unat_tcbPriority_C
+                                  linorder_class.not_le word_le_nat_alt word_less_nat_alt)
+                 apply (metis from_bool_eq_if)
+               apply wp
+              apply simp
+              apply (vcg exspec=getHighestPrio_modifies)
+             apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0}" in ccorres_from_vcg)
+             apply (clarsimp simp: getHighestPrio_def' simpler_gets_def)
+             apply (rule conseqPre, vcg)
+            apply clarsimp
+           apply simp
+           apply vcg
+           apply ceqv
+
+              apply (simp add: bindE_assoc from_bool_0 catch_throwError del: Collect_const)
+
+             apply (rule ccorres_Cond_rhs_Seq)
+
+              apply (simp add: bindE_assoc from_bool_0 catch_throwError del: Collect_const)
+
+              apply (rule ccorres_split_throws)
+               apply (fold dc_def)[1]
+               apply (rule ccorres_call_hSkip)
+                 apply (rule slowpath_ccorres, simp+)
+              apply (vcg exspec=slowpath_noreturn_spec)
+             apply (simp del: Collect_const add: from_bool_0 cong: call_ignore_cong)
+
                      apply csymbr+
                      apply (rule ccorres_symb_exec_l3[OF _ gets_inv _ empty_fail_gets])
                       apply (rename_tac asidMap)
@@ -3278,11 +3408,8 @@ lemma fastpath_reply_recv_ccorres:
                                   del: Collect_const cong: call_ignore_cong)
 
                   apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
-                  apply (rule ccorres_symb_exec_l3[OF _ curDomain_inv _])
-                    prefer 3
-                    apply (simp only: curDomain_def, rule empty_fail_gets)
                    apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet])
-                    apply (rename_tac curDom destDom)
+                    apply (rename_tac destDom)
 
                     apply (rule ccorres_seq_cond_raise[THEN iffD2])
                     apply (rule_tac R="obj_at' (op = destDom \<circ> tcbDomain)
@@ -3305,7 +3432,6 @@ lemma fastpath_reply_recv_ccorres:
                     apply (simp add: pde_stored_asid_def asid_map_pd_to_hwasids_def
                                      to_bool_def
                                 del: Collect_const cong: call_ignore_cong)
-                       apply simp
 
                     apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)
                         apply (rule_tac P="capAligned (theRight luRet)" in ccorres_gen_asm)
@@ -3346,8 +3472,8 @@ lemma fastpath_reply_recv_ccorres:
                         apply (rule_tac r'="\<lambda>rv rv'. rv' = mdbPrev (cteMDBNode rv)"
                                     and xf'=ret__unsigned_' in ccorres_split_nothrow)
                             apply (rule_tac P="tcb_at' curThread
-                                            and K (curThread = ksCurThread_x)
-                                            and (\<lambda>s. ksCurThread s = ksCurThread_x)"
+                                            and K (curThread = ksCurThread_y)
+                                            and (\<lambda>s. ksCurThread s = ksCurThread_y)"
                                          in getCTE_ccorres_helper[where P'=UNIV])
                             apply (rule conseqPre, vcg)
                             apply (clarsimp simp: typ_heap_simps' cte_level_bits_def
@@ -3379,7 +3505,7 @@ lemma fastpath_reply_recv_ccorres:
                             apply (rule ccorres_split_nothrow_dc)
                                apply (rule_tac P="cte_at' (curThread + (tcbCallerSlot << cte_level_bits))
                                                      and tcb_at' curThread
-                                                     and K (curThread = ksCurThread_x)"
+                                                     and K (curThread = ksCurThread_y)"
                                           in ccorres_from_vcg[where P'=UNIV])
                                apply (rule allI, rule conseqPre, vcg)
                                apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -3479,12 +3605,17 @@ lemma fastpath_reply_recv_ccorres:
                     apply simp
                     apply wp[1]
 
-                   apply simp
-                   apply wp
+                 apply (simp del: Collect_const)
+                 apply wp[1]
+                 apply (vcg exspec=getHighestPrio_modifies)
+
                   apply (simp cong: if_cong)
                   apply (rule threadGet_wp)
                  apply (simp cong: if_cong)
-                 apply (rule threadGet_wp)
+                 apply wp[1]
+apply simp
+apply vcg
+
                 apply (simp add: syscall_from_H_def del: Collect_const)
                 apply (vcg exspec=cap_page_directory_cap_get_capPDBasePtr_spec2)
                apply (rule conseqPre,
@@ -3523,6 +3654,17 @@ lemma fastpath_reply_recv_ccorres:
      apply (rule user_getreg_wp)
     apply (rule conjI)
    apply (clarsimp simp: ct_in_state'_def obj_at_tcbs_of word_sle_def)
+
+   apply (clarsimp simp add: invs_ksCurDomain_maxDomain')
+   apply (rule conjI, fastforce)
+
+   apply (frule invs_queues)
+   apply (simp add: valid_queues_def)
+
+   apply (simp only: imp_disjL[symmetric])
+   apply (clarsimp simp del: imp_disjL)
+   supply imp_disjL[simp del]
+
      apply (frule tcbs_of_aligned')
       apply (simp add:invs_pspace_aligned')
      apply (frule tcbs_of_cte_wp_at_caller)
@@ -3558,10 +3700,11 @@ lemma fastpath_reply_recv_ccorres:
                            pde_stored_asid_def to_bool_def
                            valid_mdb'_def valid_tcb_state'_def
                            word_le_nat_alt[symmetric] length_msgRegisters)
-     apply (frule ko_at_valid_ep', clarsimp)
-     apply (safe del: notI)[1]
+using [[goals_limit=10]]
+     apply (frule ko_at_valid_ep', fastforce)
+     apply (safe del: notI disjE)[1]
        apply (simp add: isSendEP_def valid_ep'_def tcb_at_invs'
-                 split: Structures_H.endpoint.split_asm)       
+                 split: Structures_H.endpoint.split_asm)
        apply (rule subst[OF epQueue.simps(1)],
               erule st_tcb_at_not_in_ep_queue[where P="op = Running", rotated],
               clarsimp+)
@@ -3585,7 +3728,7 @@ lemma fastpath_reply_recv_ccorres:
                           isRight_case_sum typ_heap_simps'
                         pdBits_def pageBits_def
                           cap_get_tag_isCap mi_from_H_def)
-    apply (auto simp: isCap_simps capAligned_def objBits_simps ccap_relation_pd_helper
+    apply (fastforce simp: isCap_simps capAligned_def objBits_simps ccap_relation_pd_helper
                       cap_get_tag_isCap_ArchObject2
                dest!: ptr_val_tcb_ptr_mask2[unfolded mask_def] isValidVTableRootD)
   done
@@ -4403,11 +4546,20 @@ lemma setupCallerCap_rewrite:
   apply fastforce
   done
 
+(* FIXME add the eta-expansion in MonadicRewrite.thy *)
+lemma monadic_rewrite_symb_exec_l':
+  "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> m \<lbrace>\<lambda>r. P\<rbrace>; empty_fail m;
+     \<not> F \<longrightarrow> no_fail P' m; 
+     \<And>rv. monadic_rewrite F E (Q rv) (x rv) y;
+     \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
+      \<Longrightarrow> monadic_rewrite F E (P and P') (m >>= (\<lambda>rv. x rv)) y"
+  by (rule monadic_rewrite_symb_exec_l')
+
 lemma attemptSwitchTo_rewrite:
   "monadic_rewrite True True
           (\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = curPrio) thread s
               \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = destPrio \<and> tcbDomain tcb = destDom) t s
-              \<and> destPrio \<ge> curPrio
+              \<and> (destPrio \<ge> curPrio \<or> ksReadyQueuesL1Bitmap s curDom = 0 \<or> lookupBitmapPriority curDom s \<le> destPrio)
               \<and> ksSchedulerAction s = ResumeCurrentThread
               \<and> ksCurThread s = thread
               \<and> ksCurDomain s = curDom
@@ -4418,26 +4570,33 @@ lemma attemptSwitchTo_rewrite:
    apply (rule monadic_rewrite_trans)
     apply (rule monadic_rewrite_bind_tail)
      apply (rule monadic_rewrite_bind_tail)
-      apply (rule monadic_rewrite_bind_tail)
-       apply (rule monadic_rewrite_bind_tail)
-        apply (rule monadic_rewrite_bind_tail)
+      apply (rule monadic_rewrite_symb_exec_l'[OF threadGet_inv empty_fail_threadGet,
+        where P'=\<top>], simp)
+       apply (rule monadic_rewrite_symb_exec_l'[OF threadGet_inv empty_fail_threadGet,
+         where P'=\<top>], simp)
+        apply (rule monadic_rewrite_symb_exec_l'[OF threadGet_inv empty_fail_threadGet,
+          where P'=\<top>], simp)
          apply (rule monadic_rewrite_bind_tail)
-          apply (rule_tac P="curPrio \<le> targetPrio \<and> action = ResumeCurrentThread
-                                \<and> targetDom = curDom"
+          apply (rule_tac P="targetDom = curDom"
                     in monadic_rewrite_gen_asm)
-          apply (simp add: eq_commute le_less[symmetric])
-          apply (rule monadic_rewrite_refl)
-         apply (wp threadGet_wp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_symb_exec2,
-            wp empty_fail_threadGet | simp add: getSchedulerAction_def curDomain_def)+
-     apply (rule monadic_rewrite_refl)
-    apply wp
-   apply (rule monadic_rewrite_symb_exec2, simp_all add: getCurThread_def)
-   apply (rule monadic_rewrite_refl)
+          apply simp
+          apply (rule monadic_rewrite_bind_tail)
+           apply (rule monadic_rewrite_bind_tail)
+            apply (rename_tac highestPrio)
+            apply (rule_tac P="(curPrio < targetPrio \<or> targetPrio = curPrio \<or> l1 = 0 \<or>
+                                  highestPrio \<le> targetPrio) \<and> action = ResumeCurrentThread"
+                      in monadic_rewrite_gen_asm)
+            apply simp
+            apply (rule monadic_rewrite_refl)
+           apply (wp threadGet_wp|simp add: bitmap_fun_defs)+
+   apply (simp add: getCurThread_def curDomain_def gets_bind_ign getSchedulerAction_def)
+           apply (rule monadic_rewrite_refl)
+apply clarsimp
   apply (auto simp: obj_at'_def)
+(* FIXME RAF INDENT *)
   done
+
+thm possibleSwitchTo_body_def
 
 lemma oblivious_getObject_ksPSpace_default:
   "\<lbrakk> \<forall>s. ksPSpace (f s) = ksPSpace s;
@@ -4535,9 +4694,41 @@ lemma schedule_rewrite:
   apply (clarsimp simp: st_tcb_at'_def pred_neg_def o_def obj_at'_def ct_in_state'_def)
   done
 
+lemma chooseThread_rewrite_known_order:
+  "monadic_rewrite True True
+          (\<lambda>s. ksReadyQueuesL1Bitmap s (ksCurDomain s) \<noteq> 0
+             \<and> take 1 (ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s))
+               = [t])
+            (chooseThread) (switchToThread t)"
+  apply (simp add: chooseThread_def)
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans)
+    apply (rule monadic_rewrite_bind_tail)
+     apply (rule monadic_rewrite_bind_tail)
+      apply (rule_tac P="l1 \<noteq> 0" in monadic_rewrite_gen_asm)
+      apply simp
+      apply (rule monadic_rewrite_bind_tail)
+       apply (rule monadic_rewrite_bind_tail)
+        apply (rule_tac P="hd queue = t" in monadic_rewrite_gen_asm)
+        apply simp
+        apply (rule monadic_rewrite_trans)
+         apply (rule monadic_rewrite_bind_tail)
+          apply (rule monadic_rewrite_assert)
+          apply (rule monadic_rewrite_refl)
+         apply wp
+        apply (rule monadic_rewrite_symb_exec2, wp empty_fail_isRunnable)
+        apply (rule monadic_rewrite_refl)
+       apply (wp | simp add: getHighestPrio_def' getReadyQueuesL1Bitmap_def)+
+   apply (simp add: numDomains_def gets_bind_ign getQueue_def curDomain_def)
+   apply (rule monadic_rewrite_refl)
+  apply (clarsimp simp: numDomains_def)
+  apply (case_tac "(ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s))", simp_all)
+  done
+
 lemma schedule_rewrite_ct_not_runnable':
   "monadic_rewrite True True
-            (\<lambda>s. ksSchedulerAction s = SwitchToThread t \<and> ct_in_state' (Not \<circ> runnable') s)
+            (\<lambda>s. ksDomainTime s \<noteq> 0 \<and> (ksSchedulerAction s = SwitchToThread t)
+              \<and> ct_in_state' (Not \<circ> runnable') s)
             (schedule)
             (do setSchedulerAction ResumeCurrentThread; switchToThread t od)"
   apply (simp add: schedule_def)
@@ -5180,10 +5371,63 @@ lemma foldr_copy_register_tsrs:
 
 lemmas cteInsert_obj_at'_not_queued =  cteInsert_obj_at'_queued[of "\<lambda>a. \<not> a"]
 
+crunch ksDomainTime_inv[wp]: cteInsert,setThreadState,asUser "\<lambda>s. P (ksDomainTime s)"
+  (wp: hoare_drop_imps)
+
+crunch ksReadyQueues_inv[wp]: cteInsert "\<lambda>s. P (ksReadyQueues s)"
+  (wp: hoare_drop_imps)
+
+crunch ksReadyQueuesL1Bitmap_inv[wp]: cteInsert,threadSet,asUser,emptySlot "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  (wp: hoare_drop_imps)
+crunch ksReadyQueuesL2Bitmap_inv[wp]: cteInsert,threadSet,asUser,emptySlot "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  (wp: hoare_drop_imps)
+
+crunch ksDomainTime_inv[wp]: setEndpoint "\<lambda>s. P (ksDomainTime s)"
+  (wp: setObject_ksPSpace_only updateObject_default_inv ignore: setObject)
+crunch ksReadyQueuesL1Bitmap_inv[wp]: setEndpoint "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  (wp: setObject_ksPSpace_only updateObject_default_inv ignore: setObject)
+crunch ksReadyQueuesL2Bitmap_inv[wp]: setEndpoint "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  (wp: setObject_ksPSpace_only updateObject_default_inv ignore: setObject)
+
+lemma cteInsert_lookupBitmapPriority_inv:
+  "\<lbrace> \<lambda>s. P (lookupBitmapPriority t s) \<rbrace> cteInsert x y z \<lbrace>\<lambda>_ s. P (lookupBitmapPriority t s)\<rbrace>"
+  unfolding lookupBitmapPriority_def
+  apply (rule hoare_pre, wps)
+  apply (wp)
+  apply simp
+  done (* CLEANUP *)
+
+lemma threadSet_lookupBitmapPriority_inv:
+  "\<lbrace> \<lambda>s. P (lookupBitmapPriority d s) \<rbrace> threadSet F t
+   \<lbrace>\<lambda>rv s. P (lookupBitmapPriority d s) \<rbrace>"
+   apply (simp add: lookupBitmapPriority_def)
+   apply (rule hoare_pre, wps)
+   apply (wp)
+   apply simp
+   done
+
+lemma lookupBitmapPriority_lift:
+  assumes l1: "\<And>P1. \<lbrace>\<lambda>s. P1 (ksReadyQueuesL1Bitmap s) \<rbrace> f \<lbrace>\<lambda>rv s. P1 (ksReadyQueuesL1Bitmap s) \<rbrace>"
+  assumes l2: "\<And>P2. \<lbrace>\<lambda>s. P2 (ksReadyQueuesL2Bitmap s) \<rbrace> f \<lbrace>\<lambda>rv s. P2 (ksReadyQueuesL2Bitmap s) \<rbrace>"
+  shows "\<lbrace>\<lambda>s. P (lookupBitmapPriority d s) \<rbrace> f \<lbrace>\<lambda>rv s. P (lookupBitmapPriority d s) \<rbrace>"
+  apply (simp add: lookupBitmapPriority_def)
+  apply (rule hoare_pre, wps l1 l2)
+  apply (wp)
+  apply simp
+  done
+
+lemma setThreadState_runnable_bitmap_inv:
+  "runnable' ts \<Longrightarrow>
+    \<lbrace> \<lambda>s. P (ksReadyQueuesL1Bitmap s) \<rbrace> setThreadState ts t \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s) \<rbrace>"
+  "runnable' ts \<Longrightarrow>
+    \<lbrace> \<lambda>s. Q (ksReadyQueuesL2Bitmap s) \<rbrace> setThreadState ts t \<lbrace>\<lambda>rv s. Q (ksReadyQueuesL2Bitmap s) \<rbrace>"
+   by (simp_all add: setThreadState_runnable_simp, wp)
+
 lemma fastpath_callKernel_SysCall_corres:
   "monadic_rewrite True False
          (invs' and ct_in_state' (op = Running)
-                and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+                and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
+                and (\<lambda>s. ksDomainTime s \<noteq> 0))
      (callKernel (SyscallEvent SysCall)) (fastpaths SysCall)"
   apply (rule monadic_rewrite_introduce_alternative)
    apply (simp add: callKernel_def)
@@ -5250,26 +5494,40 @@ lemma fastpath_callKernel_SysCall_corres:
             apply (rename_tac "pdCapCTE")
             apply (rule monadic_rewrite_if_rhs[rotated])
              apply (rule monadic_rewrite_alternative_l)
-            apply (rule monadic_rewrite_symb_exec_r [OF threadGet_inv no_fail_threadGet])+
-              apply (rename_tac "curPrio" "destPrio")
-              apply (rule monadic_rewrite_if_rhs[rotated])
-               apply (rule monadic_rewrite_alternative_l)
-              apply (rule monadic_rewrite_if_rhs[rotated])
-               apply (rule monadic_rewrite_alternative_l)
-              apply (simp add: isRight_case_sum)
-               apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
-                apply (rule monadic_rewrite_if_rhs[rotated])
-                 apply (rule monadic_rewrite_alternative_l)
+
                 apply (rule monadic_rewrite_symb_exec_r[OF curDomain_inv],
                         simp only: curDomain_def, rule non_fail_gets)
                  apply (rename_tac "curDom")
+
+            apply (rule monadic_rewrite_symb_exec_r [OF threadGet_inv no_fail_threadGet])+
+              apply (rename_tac "curPrio" "destPrio")
+
+apply (simp add: getReadyQueuesL1Bitmap_def)
+               apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
+               apply (rename_tac l1)
+apply (simp)
+               apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
+               apply (rename_tac highestPrio)
+           apply (rule monadic_rewrite_if_rhs[rotated])
+            apply (rule monadic_rewrite_alternative_l)
+
+                apply (rule monadic_rewrite_if_rhs[rotated])
+                 apply (rule monadic_rewrite_alternative_l)
+
+              apply (simp add: isRight_case_sum)
+               apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
+                apply (rename_tac asidMap) (* FIXME RAF how to keep names from bind? *) 
+                apply (rule monadic_rewrite_if_rhs[rotated])
+                 apply (rule monadic_rewrite_alternative_l)
                  apply (rule monadic_rewrite_symb_exec_r[OF threadGet_inv no_fail_threadGet])
                   apply (rename_tac "destDom")
-                  apply (rule monadic_rewrite_if_rhs[rotated])
-                   apply (rule monadic_rewrite_alternative_l)
+                apply (rule monadic_rewrite_if_rhs[rotated])
+                 apply (rule monadic_rewrite_alternative_l)
+
                   apply (rule monadic_rewrite_trans,
                          rule monadic_rewrite_pick_alternative_1)
                   apply (rule monadic_rewrite_symb_exec_l[OF get_mrs_inv' empty_fail_getMRs])
+                   (* now committed to fastpath *)
                    apply (rule monadic_rewrite_trans)
                     apply (rule_tac F=True and E=True in monadic_rewrite_weaken)
                     apply simp
@@ -5320,6 +5578,13 @@ lemma fastpath_callKernel_SysCall_corres:
                          apply (simp add: getThreadCallerSlot_def getThreadReplySlot_def
                                           locateSlot_conv ct_in_state'_def cur_tcb'_def)
                        apply ((wp assert_inv threadSet_pred_tcb_at_state cteInsert_obj_at'_not_queued | wps)+)[1]
+(*
+                       apply ((wp assert_inv threadSet_pred_tcb_at_state
+                                   cteInsert_obj_at'_not_queued
+                                   hoare_vcg_disj_lift
+                               | wps cteInsert_lookupBitmapPriority_inv)+)
+                        apply simp
+*)
                         apply (simp add: setSchedulerAction_def)
                         apply wp[1]
                        apply (simp cong: if_cong conj_cong add: if_bool_simps)
@@ -5330,7 +5595,11 @@ lemma fastpath_callKernel_SysCall_corres:
                                  sts_st_tcb_at'_cases
                                  setThreadState_no_sch_change
                                  setEndpoint_obj_at_tcb'
-                                    | simp add: setMessageInfo_def)+)
+                                 lookupBitmapPriority_lift
+                                 setThreadState_runnable_bitmap_inv
+                                 threadSet_lookupBitmapPriority_inv
+                                    | simp add: setMessageInfo_def
+                                    | wp_once hoare_vcg_disj_lift)+)
                    apply (simp add: setThreadState_runnable_simp
                                     getThreadCallerSlot_def getThreadReplySlot_def
                                     locateSlot_conv bind_assoc)
@@ -5394,17 +5663,36 @@ lemma fastpath_callKernel_SysCall_corres:
                         n_msgRegisters_def order_less_imp_le
                         ep_q_refs_of'_def st_tcb_at_refs_of_rev'
                   cong: if_cong)
-  apply (rename_tac blockedThread ys tcba tcbb v tcbc)
+  apply (rename_tac blockedThread ys tcba tcbb)
   apply (frule invs_mdb')
   apply (thin_tac "Ball S P" for S P)+
+  supply imp_disjL[simp del]
+  apply (subst imp_disjL[symmetric])
+
+  (* clean up broken up disj implication and excessive references to same tcbs *)
   apply (clarsimp simp: invs'_def valid_state'_def)
-  apply (frule_tac t="blockedThread" in valid_queues_not_runnable_not_queued)
-    apply (simp)
-   apply (clarsimp simp: st_tcb_at'_def obj_at'_def objBits_simps projectKOs
-                        valid_mdb'_def valid_mdb_ctes_def inj_case_bool
-                 split: bool.split)+
-  apply (simp(no_asm) add: eq_commute)
-  apply (clarsimp simp: sch_act_simple_def)
+  apply (frule_tac p="ksCurThread s" and k=tcba and k'=tcb in ko_at_obj_congD', assumption)
+  apply clarsimp
+  apply (subst imp_disjL[symmetric], intro impI allI)
+  apply clarsimp
+  apply (rename_tac b_tcb' b_tcb v)
+  apply (frule_tac p="blockedThread" and k=b_tcb' and k'=b_tcb in ko_at_obj_congD', assumption)
+  apply clarsimp
+
+  apply (subgoal_tac "ksCurThread s \<noteq> blockedThread")
+   prefer 2
+   apply (simp add: st_tcb_at'_def)
+   apply clarsimp
+   apply (drule_tac t="ksCurThread s" and st'=Running in st_tcb_at'_eqD[simplified st_tcb_at'_def])
+    apply (fastforce elim: obj_at'_weakenE)
+   apply simp
+
+  apply (frule_tac t="blockedThread" in valid_queues_not_runnable_not_queued, assumption)
+   subgoal by (fastforce simp: st_tcb_at'_def elim: obj_at'_weakenE)
+
+  apply (clarsimp simp: st_tcb_at'_def obj_at'_def objBits_simps projectKOs
+                       valid_mdb'_def valid_mdb_ctes_def inj_case_bool
+                split: bool.split)+
   done
 
 lemmas fastpath_call_ccorres_callKernel
@@ -5750,18 +6038,62 @@ lemma tcb_at_cte_at_offset:
   done
 
 lemma attemptSwitchTo_rewrite2:
+  shows
   "monadic_rewrite True True
-      (\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = curPrio) ct s
+      (\<lambda>s. obj_at' \<top> ct s
              \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = destPrio \<and> tcbDomain tcb = destDom) t s
-             \<and> curPrio \<le> destPrio \<and> ct = ksCurThread s
+             \<and> (ksReadyQueuesL1Bitmap s curDom = 0 \<or> lookupBitmapPriority curDom s \<le> destPrio)
+             \<and> ct = ksCurThread s
              \<and> ksSchedulerAction s = ResumeCurrentThread
              \<and> curDom = ksCurDomain s \<and> destDom = curDom)
       (attemptSwitchTo t) (setSchedulerAction (SwitchToThread t))"
-  apply (rule monadic_rewrite_imp,
-        rule attemptSwitchTo_rewrite[where thread=ct and curPrio=curPrio and destPrio=destPrio
-                                              and curDom=curDom and destDom=destDom])
-  apply clarsimp
+proof -
+  (* FIXME RAF what I really want to do is add a gets and a threadGet on the right, symbolically
+     execute them, show they are irrelevant and non-failing, and use the curPrio I get out of it
+     to instantiate attemptSwitchTo_rewrite instead of this copy-pasta festival
+  have add_curPrio:
+       "monadic_rewrite True True cur_tcb'
+          (attemptSwitchTo t)
+          (do curThread \<leftarrow> getCurThread;
+              curPrio \<leftarrow> threadGet tcbPriority curThread;
+              attemptSwitchTo t
+           od)"
+   apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans)
+   ? ? ? *)
+
+  show ?thesis
+  apply (simp add: attemptSwitchTo_def possibleSwitchTo_def)
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans)
+    apply (rule monadic_rewrite_bind_tail)
+     apply (rule monadic_rewrite_bind_tail)
+      apply (rule monadic_rewrite_symb_exec_l'[OF threadGet_inv empty_fail_threadGet,
+        where P'=\<top>], simp)
+       apply (rule monadic_rewrite_symb_exec_l'[OF threadGet_inv empty_fail_threadGet,
+         where P'=\<top>], simp)
+        apply (rule monadic_rewrite_symb_exec_l'[OF threadGet_inv empty_fail_threadGet,
+          where P'=\<top>], simp)
+         apply (rule monadic_rewrite_bind_tail)
+          apply (rule_tac P="targetDom = curDom"
+                    in monadic_rewrite_gen_asm)
+          apply simp
+          apply (rule monadic_rewrite_bind_tail)
+           apply (rule monadic_rewrite_bind_tail)
+            apply (rename_tac highestPrio)
+            apply (rule_tac P="(l1 = 0 \<or>
+                                  highestPrio \<le> targetPrio) \<and> action = ResumeCurrentThread"
+                      in monadic_rewrite_gen_asm)
+            apply simp
+            apply (rule monadic_rewrite_refl)
+           apply (wp threadGet_wp|simp add: bitmap_fun_defs)+
+   apply (simp add: getCurThread_def curDomain_def gets_bind_ign getSchedulerAction_def)
+           apply (rule monadic_rewrite_refl)
+apply clarsimp
+  apply (auto simp: obj_at'_def)
+(* FIXME RAF INDENT *)
   done
+qed
 
 lemma emptySlot_cte_wp_at_cteCap:
   "\<lbrace>\<lambda>s. (p = p' \<longrightarrow> P NullCap) \<and> (p \<noteq> p' \<longrightarrow> cte_wp_at' (\<lambda>cte. P (cteCap cte)) p s)\<rbrace>
@@ -6189,16 +6521,30 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
               apply (rename_tac vTableCTE)
               apply (rule monadic_rewrite_if_rhs[rotated])
                apply (rule monadic_rewrite_alternative_l)
-              apply (rule monadic_rewrite_symb_exec_r, wp)+
-                apply (rename_tac curPrio callerPrio)
-                apply (rule monadic_rewrite_if_rhs[rotated])
-                 apply (rule monadic_rewrite_alternative_l)
-                apply (rule monadic_rewrite_symb_exec_r, wp)
-                 apply (rule monadic_rewrite_if_rhs[rotated])
-                  apply (rule monadic_rewrite_alternative_l)
-                 apply (rule monadic_rewrite_symb_exec_r[OF curDomain_inv],
-                                 simp only: curDomain_def, rule non_fail_gets)
-                  apply (rename_tac "curDom")
+
+
+                apply (rule monadic_rewrite_symb_exec_r[OF curDomain_inv],
+                        simp only: curDomain_def, rule non_fail_gets)
+                 apply (rename_tac "curDom")
+
+apply (simp add: getReadyQueuesL1Bitmap_def)
+               apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
+               apply (rename_tac l1)
+              apply (rule monadic_rewrite_symb_exec_r, wp)
+                apply (rename_tac callerPrio)
+               apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
+               apply (rename_tac highestPrio)
+
+              apply (rule monadic_rewrite_if_rhs[rotated])
+               apply (rule monadic_rewrite_alternative_l)
+
+              apply (rule monadic_rewrite_symb_exec_r, wp)
+                apply (rename_tac asidMap)
+
+              apply (rule monadic_rewrite_if_rhs[rotated])
+               apply (rule monadic_rewrite_alternative_l)
+
+
                   apply (rule monadic_rewrite_symb_exec_r[OF threadGet_inv no_fail_threadGet])
                    apply (rename_tac "callerDom")
                    apply (rule monadic_rewrite_if_rhs[rotated])
@@ -6213,7 +6559,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                      apply simp
                      apply (((rule monadic_rewrite_weaken2,
                              (rule_tac msgInfo=msgInfo in doIPCTransfer_simple_rewrite
-                           | rule_tac curPrio=curPrio and destPrio=callerPrio
+                           | rule_tac destPrio=callerPrio
                                             and curDom=curDom and destDom=callerDom
                                             and ct=thread in attemptSwitchTo_rewrite2))
                            | rule cteDeleteOne_replycap_rewrite
@@ -6222,7 +6568,11 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                 setThreadState_obj_at_unchanged
                                 asUser_obj_at_unchanged
                                 hoare_strengthen_post[OF _ obj_at_conj'[simplified atomize_conjL], rotated]
-                           | simp add: setMessageInfo_def setThreadState_runnable_simp)+)[1]
+                                 lookupBitmapPriority_lift
+                                 setThreadState_runnable_bitmap_inv
+                                 threadSet_lookupBitmapPriority_inv
+                           | simp add: setMessageInfo_def setThreadState_runnable_simp
+                           | wp_once hoare_vcg_disj_lift)+)[1]
                     apply (simp add: setMessageInfo_def)
                     apply (rule monadic_rewrite_bind_tail)
                      apply (rule_tac rv=thread in monadic_rewrite_symb_exec_l_known,
@@ -6391,6 +6741,13 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                         n_msgRegisters_def order_less_imp_le
                         tcb_at_invs' invs_mdb'
                  split: bool.split)
+  apply (subst imp_disjL[symmetric], intro allI impI)
+  apply (clarsimp simp: inj_case_bool cte_wp_at_ctes_of
+                        length_msgRegisters
+                        n_msgRegisters_def order_less_imp_le
+                        tcb_at_invs' invs_mdb'
+                 split: bool.split)
+
   apply (clarsimp simp: obj_at_tcbs_of tcbSlots
                         cte_level_bits_def)
   apply (frule(1) st_tcb_at_is_Reply_imp_not_tcbQueued)

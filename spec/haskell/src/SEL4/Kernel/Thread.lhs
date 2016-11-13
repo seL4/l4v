@@ -327,10 +327,13 @@ Threads are scheduled using a simple multiple-priority round robin algorithm.
 It checks the priority bitmaps to find the highest priority with a non-empty
 queue. It selects the first thread in that queue and makes it the current
 thread.
+
 Note that the ready queues are a separate structure in the kernel
 model. In a real implementation, to avoid requiring
 dynamically-allocated kernel memory, these queues would be linked
 lists using the TCBs themselves as nodes.
+
+Note also that the level 2 bitmap array is stored in reverse in order to get better cache locality for the more common case of higher priority threads.
 
 > countLeadingZeros :: (Bits b, FiniteBits b) => b -> Int
 > countLeadingZeros w =
@@ -339,16 +342,25 @@ lists using the TCBs themselves as nodes.
 > wordLog2 :: (Bits b, FiniteBits b) => b -> Int
 > wordLog2 w = finiteBitSize w - 1 - countLeadingZeros w
 
+> invertL1Index :: Int -> Int
+> invertL1Index i = l2BitmapSize - 1 - i
+
+> getHighestPrio :: Domain -> Kernel (Priority)
+> getHighestPrio d = do
+>     l1 <- getReadyQueuesL1Bitmap d
+>     let l1index = wordLog2 l1
+>     let l1indexInverted = invertL1Index l1index
+>     l2 <- getReadyQueuesL2Bitmap d l1indexInverted
+>     let l2index = wordLog2 l2
+>     return $ l1IndexToPrio l1index .|. fromIntegral l2index
+
 > chooseThread :: Kernel ()
 > chooseThread = do
 >     curdom <- if numDomains > 1 then curDomain else return 0
 >     l1 <- getReadyQueuesL1Bitmap curdom
 >     if l1 /= 0
 >         then do
->             let l1index = wordLog2 l1
->             l2 <- getReadyQueuesL2Bitmap curdom l1index
->             let l2index = wordLog2 l2
->             let prio = l1IndexToPrio l1index .|. fromIntegral l2index
+>             prio <- getHighestPrio curdom
 >             queue <- getQueue curdom prio
 >             let thread = head queue
 >             runnable <- isRunnable thread
@@ -425,7 +437,7 @@ Finally, if the thread is the current one, we run the scheduler to choose a new 
 A successful IPC transfer will normally wake a thread other than the current thread. This function conditionally switches to the woken thread; it enqueues the thread if unable to switch to it.
 
 > possibleSwitchTo :: PPtr TCB -> Bool -> Kernel ()
-> possibleSwitchTo target onSamePriority = do
+> possibleSwitchTo target curThreadWillBlock = do
 >     curThread <- getCurThread
 >     curDom <- curDomain
 >     curPrio <- threadGet tcbPriority curThread
@@ -435,8 +447,12 @@ A successful IPC transfer will normally wake a thread other than the current thr
 >     if (targetDom /= curDom)
 >         then tcbSchedEnqueue target
 >         else do
+>             l1 <- getReadyQueuesL1Bitmap curDom
+>             highestPrio <- getHighestPrio curDom
 >             if ((targetPrio > curPrio
->                  || (targetPrio == curPrio && onSamePriority))
+>                 || (curThreadWillBlock
+>                     && (targetPrio == curPrio
+>                         || l1 == 0 || targetPrio >= highestPrio)))
 >                 && action == ResumeCurrentThread)
 >                 then setSchedulerAction $ SwitchToThread target
 >                 else tcbSchedEnqueue target
@@ -528,19 +544,23 @@ The following two functions place a thread at the beginning or end of its priori
 > addToBitmap :: Domain -> Priority -> Kernel ()
 > addToBitmap tdom prio = do
 >     let l1index = prioToL1Index prio
+>     let l1indexInverted = invertL1Index l1index
 >     let l2bit = fromIntegral ((fromIntegral prio .&. mask wordRadix)::Word)
 >     modifyReadyQueuesL1Bitmap tdom $ \w -> w .|. bit l1index
->     modifyReadyQueuesL2Bitmap tdom l1index
+>     modifyReadyQueuesL2Bitmap tdom l1indexInverted
 >         (\w -> w .|. bit l2bit)
 
 > removeFromBitmap :: Domain -> Priority -> Kernel ()
 > removeFromBitmap tdom prio = do
 >     let l1index = prioToL1Index prio
+>     let l1indexInverted = invertL1Index l1index
 >     let l2bit = fromIntegral((fromIntegral prio .&. mask wordRadix)::Word)
->     modifyReadyQueuesL2Bitmap tdom l1index $ \w -> w .&. (complement $ bit l2bit)
->     l2 <- getReadyQueuesL2Bitmap tdom l1index
+>     modifyReadyQueuesL2Bitmap tdom l1indexInverted $
+>         (\w -> w .&. (complement $ bit l2bit))
+>     l2 <- getReadyQueuesL2Bitmap tdom l1indexInverted
 >     when (l2 == 0) $
->         modifyReadyQueuesL1Bitmap tdom $ \w -> w .&. (complement $ bit l1index)
+>         modifyReadyQueuesL1Bitmap tdom $
+>             (\w -> w .&. (complement $ bit l1index))
 
 > tcbSchedEnqueue :: PPtr TCB -> Kernel ()
 > tcbSchedEnqueue thread = do

@@ -1018,111 +1018,106 @@ lemma arch_recycleCap_ccorres:
 
    apply (subgoal_tac "isASIDPoolCap cp") prefer 2
     apply (case_tac cp; fastforce simp add: isCap_simps)
-
    apply (simp add: ccorres_cond_iffs Collect_True Collect_False
                     Let_def
                del: Collect_const)
 
-    apply (rule ccorres_rhs_assoc)+
-    apply (csymbr, csymbr, csymbr)
-    apply (rule ccorres_Guard_Seq)+
-    apply (rule ccorres_symb_exec_l
-                 [OF _ gets_inv gets_wp empty_fail_gets])
-    apply (rule ccorres_split_nothrow_novcg_dc)
-       apply (simp add: when_def del: Collect_const)
-       apply (rule_tac R="\<lambda>s. rv = armKSASIDTable (ksArchState s)
-                               \<and> capASIDPool cp \<noteq> 0"
-                   in ccorres_cond2)
-         apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric])
-         apply (clarsimp simp: cap_to_H_def cap_lift_asid_pool_cap
-                               cap_asid_pool_cap_lift_def
+   apply (rule ccorres_rhs_assoc)+
+   apply (csymbr, csymbr, csymbr)
+   apply (rule ccorres_Guard_Seq)+
+   apply (rule ccorres_symb_exec_l[OF _ gets_inv gets_wp empty_fail_gets])
+   apply (rule ccorres_split_nothrow_novcg_dc)
+      apply (simp add: when_def del: Collect_const)
+      apply (rule_tac R="\<lambda>s. rv = armKSASIDTable (ksArchState s)
+                              \<and> capASIDPool cp \<noteq> 0"
+                  in ccorres_cond2)
+        apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric])
+        apply (clarsimp simp: cap_to_H_def cap_lift_asid_pool_cap
+                              cap_asid_pool_cap_lift_def
                         elim!: ccap_relationE)
-         apply (subst ucast_asid_high_bits_is_shift)
-          apply (simp add: mask_def asid_bits_def)
-          apply (rule word_and_le1)
-         apply (subst rf_sr_armKSASIDTable, assumption)
-          apply (simp add: asid_high_bits_word_bits)
-          apply (rule shiftr_less_t2n)
-          apply (rule order_le_less_trans [OF _ and_mask_less_size])
-           apply (simp add: asid_low_bits_def asid_high_bits_def mask_def)
-           apply (rule order_refl)
-          apply (simp add: asid_low_bits_def asid_high_bits_def word_size)
-         apply (simp add: option_to_ptr_def option_to_0_def
-                   split: option.split)
-        apply (rule ccorres_rhs_assoc)+
-        apply (ctac(no_vcg) add: deleteASIDPool_ccorres)
-         apply (rule ccorres_split_nothrow_novcg_dc)
-            apply (rule_tac P="valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
-                          and no_0_obj'"
-                       in ccorres_from_vcg[where P'=UNIV])
-            apply (rule allI, rule conseqPre, vcg)
-            apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
-                                  asidLowBits_handy_convs word_sle_def
-                                  word_sless_def)
-            apply (clarsimp simp: ccap_relation_def cap_asid_pool_cap_lift
-                                  cap_to_H_def valid_cap'_def capAligned_def
-                                  typ_at_to_obj_at_arches)
-            apply (subst ghost_assertion_size_logic[unfolded o_def, rotated],
-              assumption)
-             apply (erule order_trans[rotated])
-             apply (simp add: asid_low_bits_def)
-            apply (drule obj_at_ko_at', clarsimp)
-            apply (rule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation],
-                    assumption)
-             apply (erule ko_at_projectKO_opt)
-            apply (frule h_t_valid_clift)
-            apply (subst h_t_valid_dom_s, assumption, simp)
-             apply (simp add: asid_low_bits_def)
-            apply simp
-            apply (rule conjI, clarsimp)
-            apply (rule conjI, erule is_aligned_no_wrap')
-             apply (clarsimp simp: asid_low_bits_def)
-            apply (rule conjI)
-             apply (erule is_aligned_weaken)
-             apply (clarsimp simp: asid_low_bits_def)
-            apply (rule conjI)
-             apply (clarsimp simp: is_aligned_def asid_low_bits_def)
-            apply (clarsimp simp: typ_at_to_obj_at_arches)
-            apply (rule rev_bexI, rule setObject_eq[where P=\<top>],
-                   (simp add: objBits_simps archObjSize_def pageBits_def)+)
-             apply (simp add: obj_at'_weakenE[OF _ TrueI])
-            apply (simp only: replicateHider_def[symmetric])
-            apply (clarsimp simp: asid_low_bits_def)
-            apply (subst coerce_memset_to_heap_update_asidpool)
-            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                  cpspace_relation_def typ_heap_simps
-                                  update_asidpool_map_tos
-                                  update_asidpool_map_to_asidpools)
-            apply (rule conjI)
-             apply (erule cmap_relation_updI, simp_all)[1]
-             apply (simp add: makeObject_asidpool casid_pool_relation_def)
-             apply (clarsimp simp: array_relation_def
-                                   option_to_ptr_def option_to_0_def)
-             apply (subst fcp_beta)
-              apply (simp add: asid_low_bits_def, unat_arith)
-             apply simp
-            subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
-                             typ_heap_simps)
-           apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+        apply (subst ucast_asid_high_bits_is_shift)
+         apply (simp add: mask_def asid_bits_def)
+         apply (rule word_and_le1)
+        apply (subst rf_sr_armKSASIDTable, assumption)
+         apply (simp add: asid_high_bits_word_bits)
+         apply (rule shiftr_less_t2n)
+         apply (rule order_le_less_trans [OF _ and_mask_less_size])
+          apply (simp add: asid_low_bits_def asid_high_bits_def mask_def)
+          apply (rule order_refl)
+         apply (simp add: asid_low_bits_def asid_high_bits_def word_size)
+        apply (simp add: option_to_ptr_def option_to_0_def
+                    split: option.split)
+       apply (rule ccorres_rhs_assoc)+
+       apply (ctac(no_vcg) add: deleteASIDPool_ccorres)
+        apply (rule ccorres_split_nothrow_novcg_dc)
+           apply (rule_tac P="valid_cap' (ArchObjectCap cp)
+                               and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
+                               and no_0_obj'"
+                    in ccorres_from_vcg[where P'=UNIV])
            apply (rule allI, rule conseqPre, vcg)
-           apply (clarsimp simp: word_sle_def word_sless_def
-                                 asidLowBits_handy_convs
-                                 exec_gets simpler_modify_def
-                       simp del: rf_sr_upd_safe)
-           apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
-           apply (clarsimp simp: cap_lift_asid_pool_cap cap_to_H_def
-                                 cap_asid_pool_cap_lift_def
-                          elim!: ccap_relationE
-                       simp del: rf_sr_upd_safe)
-           apply (clarsimp simp: rf_sr_def cstate_relation_def
+           apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
+                                 asidLowBits_handy_convs word_sle_def
+                                 word_sless_def)
+           apply (clarsimp simp: ccap_relation_def cap_asid_pool_cap_lift
+                                 cap_to_H_def valid_cap'_def capAligned_def
+                                 typ_at_to_obj_at_arches)
+           apply (subst ghost_assertion_size_logic[unfolded o_def, rotated], assumption)
+            apply (erule order_trans[rotated])
+            apply (simp add: asid_low_bits_def)
+           apply (drule obj_at_ko_at', clarsimp)
+           apply (rule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation], assumption)
+            apply (erule ko_at_projectKO_opt)
+           apply (frule h_t_valid_clift)
+           apply (subst h_t_valid_dom_s, assumption, simp)
+            apply (simp add: asid_low_bits_def)
+           apply simp
+           apply (rule conjI, clarsimp)
+           apply (rule conjI, erule is_aligned_no_wrap')
+            apply (clarsimp simp: asid_low_bits_def)
+           apply (rule conjI)
+            apply (erule is_aligned_weaken)
+            apply (clarsimp simp: asid_low_bits_def)
+           apply (rule conjI)
+            apply (clarsimp simp: is_aligned_def asid_low_bits_def)
+           apply (clarsimp simp: typ_at_to_obj_at_arches)
+           apply (rule rev_bexI, rule setObject_eq[where P=\<top>],
+                   (simp add: objBits_simps archObjSize_def pageBits_def)+)
+            apply (simp add: obj_at'_weakenE[OF _ TrueI])
+           apply (simp only: replicateHider_def[symmetric])
+           apply (clarsimp simp: asid_low_bits_def)
+           apply (subst coerce_memset_to_heap_update_asidpool)
+           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                                 cpspace_relation_def typ_heap_simps
+                                 update_asidpool_map_tos
+                                 update_asidpool_map_to_asidpools)
+           apply (rule conjI)
+            apply (erule cmap_relation_updI, simp_all)[1]
+            apply (simp add: makeObject_asidpool casid_pool_relation_def)
+            apply (clarsimp simp: array_relation_def option_to_ptr_def option_to_0_def)
+            apply (subst fcp_beta)
+             apply (simp add: asid_low_bits_def, unat_arith)
+            apply simp
+           subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
+                                  typ_heap_simps)
+          apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+          apply (rule allI, rule conseqPre, vcg)
+          apply (clarsimp simp: word_sle_def word_sless_def
+                                asidLowBits_handy_convs
+                                exec_gets simpler_modify_def
+                          simp del: rf_sr_upd_safe)
+          apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
+          apply (clarsimp simp: cap_lift_asid_pool_cap cap_to_H_def
+                                cap_asid_pool_cap_lift_def
+                         elim!: ccap_relationE
+                      simp del: rf_sr_upd_safe)
+          apply (clarsimp simp: rf_sr_def cstate_relation_def
                                  Let_def carch_state_relation_def carch_globals_def
                                  cmachine_state_relation_def
                                  h_t_valid_clift_Some_iff
                                  asid_shiftr_low_bits_less[unfolded mask_def asid_bits_def]
                                  word_and_le1)
-           apply (subst ucast_asid_high_bits_is_shift)
-            apply (simp add: mask_def asid_bits_def
-                             word_and_le1)
+          apply (subst ucast_asid_high_bits_is_shift)
+           apply (simp add: mask_def asid_bits_def word_and_le1)
            apply (erule array_relation_update[unfolded fun_upd_def])
              subgoal by simp
             subgoal by (simp add: option_to_ptr_def option_to_0_def)
@@ -1186,6 +1181,7 @@ lemma arch_recycleCap_ccorres:
                   elim!: ccap_relationE cong: conj_cong)
    apply (simp add: page_table_at'_def, drule spec[where x=0], clarsimp)
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply clarsimp
   apply (frule invs_arch_state')
   apply (clarsimp simp: capAligned_def pdBits_def pageBits_def)
   apply (frule is_aligned_addrFromPPtr_n, simp)
@@ -1369,13 +1365,6 @@ lemma tcbSchedEnqueue_ep_at:
   apply (simp add: tcbSchedEnqueue_def unless_def null_def)
   apply (wp threadGet_wp, clarsimp, wp)
   apply (clarsimp split: split_if, wp)
-  done
-
-lemma ctcb_relation_unat_tcbPriority_C:
-  "ctcb_relation tcb tcb' \<Longrightarrow> unat (tcbPriority_C tcb') = unat (tcbPriority tcb)"
-  apply (clarsimp simp: ctcb_relation_def)
-  apply (rule trans, rule arg_cong[where f=unat], erule sym)
-  apply (simp(no_asm))
   done
 
 lemma ccorres_duplicate_guard:

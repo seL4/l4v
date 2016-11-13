@@ -1169,7 +1169,7 @@ lemma handleReply_ccorres:
 
   apply clarsimp
   apply (intro allI conjI impI,
-        simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)
+        simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs invs_ksCurDomain_maxDomain')
        apply (rule tcb_aligned', rule tcb_at_invs', simp)
       apply (auto simp: cte_wp_at_ctes_of valid_cap'_def
                      dest!: ctes_of_valid')[1]

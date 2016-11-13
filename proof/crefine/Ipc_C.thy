@@ -3903,10 +3903,12 @@ lemma doIPCTransfer_reply_or_replyslot:
   apply simp
   done
 
+crunch ksCurDomain[wp]: handleFaultReply "\<lambda>s. P (ksCurDomain s)"
+
 lemma doReplyTransfer_ccorres [corres]:
   "ccorres dc xfdc
     (invs' and st_tcb_at' (Not \<circ> isReply) sender
-        and tcb_at' receiver and sch_act_simple
+        and tcb_at' receiver and sch_act_simple and (\<lambda>s. ksCurDomain s \<le> maxDomain)
         and ((Not o real_cte_at' slot) or cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte)) slot)
         and cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap \<or> isReplyCap (cteCap cte))
          slot)
@@ -4008,7 +4010,7 @@ proof -
            apply (clarsimp simp: guard_is_UNIV_def ThreadState_Restart_def
                                  ThreadState_Inactive_def mask_def to_bool_def)
           apply (rule_tac Q="\<lambda>rv. valid_queues and tcb_at' receiver and valid_queues' and
-                                valid_objs' and sch_act_simple and
+                                valid_objs' and sch_act_simple and (\<lambda>s. ksCurDomain s \<le> maxDomain) and
                                 (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
            apply (clarsimp simp: inQ_def weak_sch_act_wf_def)
           apply (wp threadSet_valid_queues threadSet_sch_act handleFaultReply_sch_act_wf) 
@@ -4798,6 +4800,7 @@ lemma sendIPC_ccorres [corres]:
                             and valid_mdb' and tcb_at' dest and cur_tcb'
                             and tcb_at' thread and K (dest \<noteq> thread)
                             and sch_act_not thread and K (epptr \<noteq> 0)
+                            and (\<lambda>s. ksCurDomain s \<le> maxDomain)
                             and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
                                 (\<forall>d p. thread \<notin> set (ksReadyQueues s (d, p))))"
                      in hoare_post_imp)
@@ -5589,6 +5592,7 @@ lemma receiveIPC_ccorres [corres]:
            apply (rule_tac Q="\<lambda>rv. valid_queues and valid_pspace' and valid_objs'
                                    and st_tcb_at' (op = sendState) sender
                                    and tcb_at' thread and sch_act_not sender
+                                   and (\<lambda>s. ksCurDomain s \<le> maxDomain)
                                    and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
                                     (\<forall>d p. sender \<notin> set (ksReadyQueues s (d, p))))"
                             in hoare_post_imp)
@@ -5602,8 +5606,9 @@ lemma receiveIPC_ccorres [corres]:
                             and cur_tcb' and tcb_at' sender and tcb_at' thread
                             and sch_act_not sender and K (thread \<noteq> sender)
                             and ep_at' (capEPPtr cap)
-                                and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
-                                    (\<forall>d p. sender \<notin> set (ksReadyQueues s (d, p))))"
+                            and (\<lambda>s. ksCurDomain s \<le> maxDomain)
+                            and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
+                                     (\<forall>d p. sender \<notin> set (ksReadyQueues s (d, p))))"
                          in hoare_post_imp)
              subgoal by (auto, auto simp: st_tcb_at'_def obj_at'_def)
         apply (wp hoare_vcg_all_lift set_ep_valid_objs')

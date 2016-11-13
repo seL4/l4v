@@ -66,6 +66,12 @@ consts'
 wordLog2 :: "('b :: {HS_bit, finiteBit}) \<Rightarrow> nat"
 
 consts'
+invertL1Index :: "nat \<Rightarrow> nat"
+
+consts'
+getHighestPrio :: "domain \<Rightarrow> (priority) kernel"
+
+consts'
 chooseThread :: "unit kernel"
 
 consts'

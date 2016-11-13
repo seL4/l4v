@@ -440,4 +440,9 @@ lemma list_ran_prop:"map_of (map (\<lambda>x. (f x, g x)) xs) i = Some t \<Longr
 lemma in_set_enumerate_eq2:"(a, b) \<in> set (enumerate n xs) \<Longrightarrow> (b = xs ! (a - n))"
   by (simp add: in_set_enumerate_eq)
 
+lemma nat_divide_less_eq:
+  fixes b :: nat
+  shows "0 < c \<Longrightarrow> (b div c < a) = (b < a * c)"
+  using td_gal_lt by blast
+
 end

@@ -2059,7 +2059,7 @@ lemma possibleSwitchTo_invs'[wp]:
   "\<lbrace>invs' and st_tcb_at' runnable' t
           and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)\<rbrace>
    possibleSwitchTo t b \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
   apply (wp static_imp_wp ssa_invs' threadGet_wp | wpc | simp)+
   apply (auto simp: obj_at'_def tcb_in_cur_domain'_def)
   done
@@ -2568,7 +2568,8 @@ lemma attemptSwitchTo_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
       attemptSwitchTo t \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add: attemptSwitchTo_def possibleSwitchTo_def
-                   setSchedulerAction_def threadGet_def curDomain_def)
+                   setSchedulerAction_def threadGet_def curDomain_def
+                   bitmap_fun_defs)
   apply (wp rescheduleRequired_weak_sch_act_wf
             weak_sch_act_wf_lift_linear[where f="tcbSchedEnqueue t"]
             getObject_tcb_wp static_imp_wp
@@ -2978,7 +2979,7 @@ lemma possibleSwitchTo_sch_act[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
      possibleSwitchTo t b
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
   apply (wp static_imp_wp threadSet_sch_act setQueue_sch_act threadGet_wp
        | simp add: unless_def | wpc)+
   apply (auto simp: obj_at'_def projectKOs tcb_in_cur_domain'_def)
@@ -2991,7 +2992,7 @@ lemma possibleSwitchTo_valid_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues and valid_objs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and st_tcb_at' runnable' t\<rbrace>
    possibleSwitchTo t b
    \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
   apply (wp hoare_drop_imps | wpc | simp)+
   apply (auto simp: valid_tcb'_def weak_sch_act_wf_def
               dest: pred_tcb_at'
@@ -3007,7 +3008,7 @@ lemma possibleSwitchTo_ksQ':
   "\<lbrace>(\<lambda>s. t' \<notin> set (ksReadyQueues s p) \<and> sch_act_not t' s) and K(t' \<noteq> t)\<rbrace>
      possibleSwitchTo t same
    \<lbrace>\<lambda>_ s. t' \<notin> set (ksReadyQueues s p)\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
   apply (wp static_imp_wp rescheduleRequired_ksQ' tcbSchedEnqueue_ksQ threadGet_wp
          | wpc
          | simp split del: split_if)+
@@ -3024,7 +3025,7 @@ lemma possibleSwitchTo_valid_queues'[wp]:
                   and st_tcb_at' runnable' t\<rbrace>
    possibleSwitchTo t b
    \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
   apply (wp static_imp_wp threadGet_wp | wpc | simp)+
   apply (auto simp: obj_at'_def)
   done
@@ -3041,7 +3042,7 @@ lemma possibleSwitchTo_iflive[wp]:
            and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)\<rbrace>
      possibleSwitchTo t b
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
   apply (wp | wpc | simp)+
       apply (simp only: imp_conv_disj, wp hoare_vcg_all_lift hoare_vcg_disj_lift)
     apply (wp threadGet_wp)
@@ -3795,7 +3796,8 @@ lemma possibleSwitchTo_weak_sch_act[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s \<and> tcb_in_cur_domain' t s\<rbrace>
       possibleSwitchTo t b
    \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def
+                   bitmap_fun_defs)
   apply (wp static_imp_wp rescheduleRequired_weak_sch_act_wf threadGet_wp | wpc)+
   apply (clarsimp simp: obj_at'_def projectKOs weak_sch_act_wf_def
                         objBits_simps ps_clear_def)
@@ -4428,7 +4430,8 @@ lemma setupCaller_pred_tcb_recv':
 
 lemma possibleSwitchTo_sch_act_not:
   "\<lbrace>sch_act_not t' and K (t \<noteq> t')\<rbrace> possibleSwitchTo t b \<lbrace>\<lambda>rv. sch_act_not t'\<rbrace>"
-  apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def
+                   bitmap_fun_defs)
   apply (wp hoare_drop_imps | wpc | simp)+
   done
 
