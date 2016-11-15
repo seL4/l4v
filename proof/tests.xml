@@ -44,7 +44,8 @@
     <sequence depends="AInvs">
         <test name="Access">make Access</test>
         <test name="InfoFlow" cpu-timeout="7200">make InfoFlow</test>
-        <test name="InfoFlowC" depends="CRefine" cpu-timeout="14400">make InfoFlowC</test>
+        <test name="InfoFlowCBase" depends="CRefine" cpu-timeout="14400"> make InfoFlowCBase</test>
+        <test name="InfoFlowC" cpu-timeout="7200">make InfoFlowC</test>
     </sequence>
 
     <!-- Access Control and capDL -->
