@@ -15,7 +15,7 @@ test:
 all: images test
 report-regression:
 	@echo Refine Access CBaseRefine CRefine \
-	      DRefine InfoFlow InfoFlowC DPolicy \
+	      DRefine InfoFlow InfoFlowCBase InfoFlowC DPolicy \
 		  DSpecProofs SepTacticsExamples Bisim
 
 #
@@ -32,7 +32,7 @@ HEAPS += CKernel CSpec CBaseRefine CRefine
 HEAPS += DBaseRefine DRefine DPolicy SepDSpec DSpecProofs
 
 # Security Proofs
-HEAPS += Access InfoFlow InfoFlowC
+HEAPS += Access InfoFlow InfoFlowCBase InfoFlowC
 
 # Binary Verification
 HEAPS += SimplExportAndRefine
