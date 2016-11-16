@@ -1,30 +1,89 @@
-Built from git repo at /home/rafalk/repos/invert-fastpath/l4v/spec/haskell by rafalk
+Built from git repo at /home/tsewell/dev/verification2/l4v/spec/haskell by tsewell
 
 Generated from changeset:
-0743585 SELFOUR-242: REBASE: FOLD
+68714cd CRefine proof for preemptible retype.
 
 
 Warning - uncomitted changes used:
-M  ../../proof/crefine/ADT_C.thy
-UU ../../proof/crefine/Fastpath_C.thy
-M  ../../proof/crefine/Finalise_C.thy
-UU ../../proof/crefine/IpcCancel_C.thy
-M  ../../proof/crefine/Ipc_C.thy
-UU ../../proof/crefine/Recycle_C.thy
-UU ../../proof/crefine/Schedule_C.thy
-M  ../../proof/crefine/StateRelation_C.thy
-M  ../../proof/crefine/Syscall_C.thy
-M  ../../proof/invariant-abstract/DetSchedSchedule_AI.thy
-M  ../../proof/refine/Invariants_H.thy
-M  ../../proof/refine/IpcCancel_R.thy
-M  ../../proof/refine/Ipc_R.thy
-M  ../../proof/refine/Orphanage.thy
-M  ../../proof/refine/Schedule_R.thy
-M  ../../proof/refine/Syscall_R.thy
-M  ../../proof/refine/TcbAcc_R.thy
-M  ../abstract/Deterministic_A.thy
+ M ../../proof/crefine/Arch_C.thy
+ M ../../proof/crefine/Invoke_C.thy
+ M ../../proof/crefine/IpcCancel_C.thy
+ M ../../proof/crefine/Retype_C.thy
+ M ../../proof/crefine/StoreWord_C.thy
+ M ../../proof/drefine/Untyped_DR.thy
+ M ../../proof/refine/ADT_H.thy
+ M ../../proof/refine/CNodeInv_R.thy
+ M ../../proof/refine/Orphanage.thy
+ M ../capDL/Untyped_D.thy
  M ../design/Structures_H.thy
- M ../design/ThreadDecls_H.thy
- M ../design/Thread_H.thy
+ M ../design/skel/Structures_H.thy
  M ../design/version
- M src/SEL4/Kernel/Thread.lhs
+ M src/SEL4/Object/Structures.lhs
+?? ../../Test.thy
+?? ../../camkes/glue-proofs/umm_types.txt
+?? ../../lib/Test.thy
+?? ../../lib/clib/Corres_C.thy.orig
+?? ../../lib/foo.c
+?? ../../patch
+?? ../../proof/Ctac.thy
+?? ../../proof/Old_Arch.thy
+?? ../../proof/Old_Retype_C.thy
+?? ../../proof/Old_Retype_R.thy
+?? ../../proof/Old_Untyped_AI.thy
+?? ../../proof/Test.thy
+?? ../../proof/access-control/Arch_AC.thy.orig
+?? ../../proof/access-control/DomainSepInv.thy.orig
+?? ../../proof/access-control/Retype_AC.thy.orig
+?? ../../proof/access-control/Syscall_AC.thy.orig
+?? ../../proof/asmrefine/CFunDump.txt
+?? ../../proof/crefine/ADT_C.thy.orig
+?? ../../proof/crefine/Arch_C.thy.orig
+?? ../../proof/crefine/CSpace_C.thy.orig
+?? ../../proof/crefine/Invoke_C.thy.orig
+?? ../../proof/crefine/Recycle_C.thy.orig
+?? ../../proof/crefine/Retype_C.thy.orig
+?? ../../proof/crefine/StateRelation_C.thy.orig
+?? ../../proof/crefine/Tcb_C.thy.orig
+?? ../../proof/crefine/Test.thy
+?? ../../proof/drefine/Arch_DR.thy.orig
+?? ../../proof/drefine/Untyped_DR.thy.orig
+?? ../../proof/foo
+?? ../../proof/infoflow/Arch_IF.thy.orig
+?? ../../proof/infoflow/FinalCaps.thy.orig
+?? ../../proof/infoflow/IRQMasks_IF.thy.orig
+?? ../../proof/infoflow/Retype_IF.thy.orig
+?? ../../proof/invariant-abstract/ARM/ArchVSpaceEntries_AI.thy.orig
+?? ../../proof/invariant-abstract/DetSchedAux_AI.thy.orig
+?? ../../proof/invariant-abstract/Untyped_AI.thy.orig
+?? ../../proof/lhs_pars.py
+?? ../../proof/refine/Arch_R.thy.orig
+?? ../../proof/refine/CNodeInv_R.thy.orig
+?? ../../proof/refine/Invariants_H.thy.orig
+?? ../../proof/refine/IpcCancel_R.thy.orig
+?? ../../proof/refine/Ipc_R.thy.orig
+?? ../../proof/refine/Orphanage.thy.orig
+?? ../../proof/refine/Untyped_R.thy.orig
+?? ../../proof/switch_glob.c
+?? ../../proof/switch_glob.thy
+?? ../../proof/untyped.c
+?? ../abstract/Retype_A.thy.orig
+?? ../capDL/Untyped_D.thy.orig
+?? ../cspec/c/foo.c
+?? ../cspec/c/foo.s
+?? ../design/CNode_H.thy.orig
+?? ../design/Untyped_H.thy.orig
+?? ../design/version.orig
+?? ../design1/
+?? ../foo.c
+?? src/SEL4/Kernel/Init.lhs.orig
+?? src/SEL4/Kernel/Init.lhs.rej
+?? src/SEL4/Kernel/VSpace/ARM.lhs.orig
+?? src/SEL4/Object/ObjectType/ARM.lhs.rej
+?? src/SEL4/Object/Structures.lhs.orig
+?? src/SEL4/Object/Untyped.lhs.orig
+?? src/SEL4/Object/Untyped.lhs.rej
+?? ../patch
+?? ../../tools/autocorres/doc/quickstart/umm_types.txt
+?? ../../tools/autocorres/tests/umm_types.txt
+?? ../../tools/haskell-translator/caseconvs.orig
+?? ../../use-this-isabelle

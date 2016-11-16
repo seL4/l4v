@@ -2115,9 +2115,7 @@ crunch sane [wp]: transferCaps "sch_act_sane"
 
 lemma possibleSwitchTo_sane:
   "\<lbrace>\<lambda>s. sch_act_sane s \<and> t \<noteq> ksCurThread s\<rbrace> possibleSwitchTo t b \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
-  apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def
-                   bitmap_fun_defs
-              cong: if_cong)
+  apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def cong: if_cong)
   apply (wp hoare_drop_imps | wpc)+
   apply (simp add: sch_act_sane_def)
   done

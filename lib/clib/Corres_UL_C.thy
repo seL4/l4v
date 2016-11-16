@@ -1646,11 +1646,4 @@ lemma ccorres_name_pre:
    apply simp
    done
 
-(* using subst bind_assoc[symmetric] works, but causes flex-flex pairs in ccorres proofs
-   using simp won't create flex-flex pairs, but will rearrange everything *)
-lemma ccorres_lhs_assoc:
-  assumes cc: "ccorres_underlying sr E r xf arrel axf G G' hs (m >>= f >>= g) c"
-  shows "ccorres_underlying sr E r xf arrel axf G G' hs (do x \<leftarrow> m; f x >>= g od) c"
-  using cc by (simp add: bind_assoc)
-
 end

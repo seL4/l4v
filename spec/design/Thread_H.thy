@@ -173,26 +173,16 @@ defs countLeadingZeros_def:
 defs wordLog2_def:
 "wordLog2 w \<equiv> finiteBitSize w - 1 - countLeadingZeros w"
 
-defs invertL1Index_def:
-"invertL1Index i \<equiv> l2BitmapSize - 1 - i"
-
-defs getHighestPrio_def:
-"getHighestPrio d\<equiv> (do
-    l1 \<leftarrow> getReadyQueuesL1Bitmap d;
-    l1index \<leftarrow> return ( wordLog2 l1);
-    l1indexInverted \<leftarrow> return ( invertL1Index l1index);
-    l2 \<leftarrow> getReadyQueuesL2Bitmap d l1indexInverted;
-    l2index \<leftarrow> return ( wordLog2 l2);
-    return $ l1IndexToPrio l1index || fromIntegral l2index
-od)"
-
 defs chooseThread_def:
 "chooseThread\<equiv> (do
     curdom \<leftarrow> if numDomains > 1 then curDomain else return 0;
     l1 \<leftarrow> getReadyQueuesL1Bitmap curdom;
     if l1 \<noteq> 0
         then (do
-            prio \<leftarrow> getHighestPrio curdom;
+            l1index \<leftarrow> return ( wordLog2 l1);
+            l2 \<leftarrow> getReadyQueuesL2Bitmap curdom l1index;
+            l2index \<leftarrow> return ( wordLog2 l2);
+            prio \<leftarrow> return ( l1IndexToPrio l1index || fromIntegral l2index);
             queue \<leftarrow> getQueue curdom prio;
             thread \<leftarrow> return ( head queue);
             runnable \<leftarrow> isRunnable thread;
@@ -243,7 +233,7 @@ defs setPriority_def:
 od)"
 
 defs possibleSwitchTo_def:
-"possibleSwitchTo target curThreadWillBlock\<equiv> (do
+"possibleSwitchTo target onSamePriority\<equiv> (do
     curThread \<leftarrow> getCurThread;
     curDom \<leftarrow> curDomain;
     curPrio \<leftarrow> threadGet tcbPriority curThread;
@@ -253,12 +243,8 @@ defs possibleSwitchTo_def:
     if (targetDom \<noteq> curDom)
         then tcbSchedEnqueue target
         else (do
-            l1 \<leftarrow> getReadyQueuesL1Bitmap curDom;
-            highestPrio \<leftarrow> getHighestPrio curDom;
             if ((targetPrio > curPrio
-                \<or> (curThreadWillBlock
-                    \<and> (targetPrio = curPrio
-                        \<or> l1 = 0 \<or> targetPrio \<ge> highestPrio)))
+                 \<or> (targetPrio = curPrio \<and> onSamePriority))
                 \<and> action = ResumeCurrentThread)
                 then setSchedulerAction $ SwitchToThread target
                 else tcbSchedEnqueue target;
@@ -335,24 +321,20 @@ od)"
 defs addToBitmap_def:
 "addToBitmap tdom prio\<equiv> (do
     l1index \<leftarrow> return ( prioToL1Index prio);
-    l1indexInverted \<leftarrow> return ( invertL1Index l1index);
     l2bit \<leftarrow> return ( fromIntegral ((fromIntegral prio && mask wordRadix)::machine_word));
     modifyReadyQueuesL1Bitmap tdom (\<lambda> w. w || bit l1index);
-    modifyReadyQueuesL2Bitmap tdom l1indexInverted
+    modifyReadyQueuesL2Bitmap tdom l1index
         (\<lambda> w. w || bit l2bit)
 od)"
 
 defs removeFromBitmap_def:
 "removeFromBitmap tdom prio\<equiv> (do
     l1index \<leftarrow> return ( prioToL1Index prio);
-    l1indexInverted \<leftarrow> return ( invertL1Index l1index);
     l2bit \<leftarrow> return ( fromIntegral((fromIntegral prio && mask wordRadix)::machine_word));
-    modifyReadyQueuesL2Bitmap tdom l1indexInverted $
-        (\<lambda> w. w && (complement $ bit l2bit));
-    l2 \<leftarrow> getReadyQueuesL2Bitmap tdom l1indexInverted;
+    modifyReadyQueuesL2Bitmap tdom l1index (\<lambda> w. w && (complement $ bit l2bit));
+    l2 \<leftarrow> getReadyQueuesL2Bitmap tdom l1index;
     when (l2 = 0) $
-        modifyReadyQueuesL1Bitmap tdom $
-            (\<lambda> w. w && (complement $ bit l1index))
+        modifyReadyQueuesL1Bitmap tdom (\<lambda> w. w && (complement $ bit l1index))
 od)"
 
 defs tcbSchedEnqueue_def:

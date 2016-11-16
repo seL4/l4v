@@ -772,6 +772,7 @@ lemma chooseThread_no_orphans [wp]:
     apply (wp assert_inv ThreadDecls_H_switchToThread_no_orphans)
     apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
                           valid_queues_def st_tcb_at'_def)
+    apply (fold lookupBitmapPriority_def)
     apply (fastforce dest!: lookupBitmapPriority_obj_at' elim: obj_at'_weaken
                      simp: all_active_tcb_ptrs_def)
    apply (simp add: bitmap_fun_defs | wp)+
@@ -905,7 +906,7 @@ lemma possibleSwitchTo_almost_no_orphans [wp]:
   "\<lbrace> \<lambda>s. almost_no_orphans target s \<and> valid_queues' s \<and> st_tcb_at' runnable' target s \<rbrace>
    possibleSwitchTo target onSamePriority
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding possibleSwitchTo_def bitmap_fun_defs
+  unfolding possibleSwitchTo_def
   apply (wp tcbSchedEnqueue_almost_no_orphans ssa_almost_no_orphans static_imp_wp | wpc | clarsimp)+
     apply (wp hoare_drop_imps | clarsimp)+
   done

@@ -321,7 +321,7 @@ definition reschedule_required :: "unit det_ext_monad" where
 
 definition
   possible_switch_to :: "obj_ref \<Rightarrow> bool \<Rightarrow> unit det_ext_monad" where
-  "possible_switch_to target cur_thread_will_block \<equiv> do
+  "possible_switch_to target on_same_prio \<equiv> do
      cur \<leftarrow> gets cur_thread;
      cur_dom \<leftarrow> gets cur_domain;
      cur_prio \<leftarrow> ethread_get tcb_priority cur;
@@ -330,12 +330,7 @@ definition
      action \<leftarrow> gets scheduler_action;
      if (target_dom \<noteq> cur_dom) then tcb_sched_action tcb_sched_enqueue target
      else do
-       no_sched_targets \<leftarrow> gets (\<lambda>s. \<forall>prio. ready_queues s cur_dom prio = []);
-       highest_prio \<leftarrow> gets (\<lambda>s. Max {prio. ready_queues s cur_dom prio \<noteq> []});
-       if ((target_prio > cur_prio
-              \<or> (cur_thread_will_block
-                 \<and> (target_prio = cur_prio \<or>
-                    no_sched_targets \<or> target_prio \<ge> highest_prio)))
+       if ((target_prio > cur_prio \<or> (target_prio = cur_prio \<and> on_same_prio))
               \<and> action = resume_cur_thread) then set_scheduler_action $ switch_thread target
          else tcb_sched_action tcb_sched_enqueue target;
        case action of switch_thread _ \<Rightarrow> reschedule_required | _ \<Rightarrow> return ()

@@ -2191,9 +2191,6 @@ consts'
 maxDomain :: "priority"
 
 consts'
-l2BitmapSize :: "nat"
-
-consts'
 nullMDBNode :: "mdbnode"
 
 consts'
@@ -2270,9 +2267,6 @@ defs maxPriority_def:
 
 defs maxDomain_def:
 "maxDomain\<equiv> fromIntegral (numDomains - 1)"
-
-defs l2BitmapSize_def:
-"l2BitmapSize\<equiv> (numPriorities + wordBits - 1) div wordBits"
 
 defs nullMDBNode_def:
 "nullMDBNode \<equiv> MDB_ \<lparr>

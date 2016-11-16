@@ -304,11 +304,6 @@ The maximum domain is derived from the configuration parameter "numDomains"
 > maxDomain :: Priority
 > maxDomain = fromIntegral (numDomains - 1)
 
-The size of the level 2 bitmap array in each domain.
-
-> l2BitmapSize :: Int
-> l2BitmapSize = (numPriorities + wordBits - 1) `div` wordBits
-
 \subsection{Other Types}
 
 \subsubsection{Mapping Database Node}

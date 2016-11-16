@@ -858,12 +858,10 @@ where
 
 definition
   (* for given domain and priority, the scheduler bitmap indicates a thread is in the queue *)
-  (* second level of the bitmap is stored in reverse for better cache locality in common case *)
   bitmapQ :: "domain \<Rightarrow> priority \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "bitmapQ d p s \<equiv> ksReadyQueuesL1Bitmap s d !! prioToL1Index p
-                     \<and> ksReadyQueuesL2Bitmap s (d, invertL1Index (prioToL1Index p))
-                         !! unat (p && mask wordRadix)"
+                     \<and> ksReadyQueuesL2Bitmap s (d, prioToL1Index p) !! unat (p && mask wordRadix)"
 
 definition
   valid_queues_no_bitmap :: "kernel_state \<Rightarrow> bool"
@@ -880,8 +878,7 @@ definition
   bitmapQ_no_L2_orphans :: "kernel_state \<Rightarrow> bool"
 where
   "bitmapQ_no_L2_orphans \<equiv> \<lambda>s.
-    \<forall>d i j. ksReadyQueuesL2Bitmap s (d, invertL1Index i) !! j \<and> i < l2BitmapSize
-            \<longrightarrow> (ksReadyQueuesL1Bitmap s d !! i)"
+    \<forall>d i j. ksReadyQueuesL2Bitmap s (d, i) !! j \<longrightarrow> (ksReadyQueuesL1Bitmap s d !! i)"
 
 definition
   (* If the scheduler finds a set bit in L1 of the bitmap, it must find some bit set in L2
@@ -893,8 +890,8 @@ definition
   bitmapQ_no_L1_orphans :: "kernel_state \<Rightarrow> bool"
 where
   "bitmapQ_no_L1_orphans \<equiv> \<lambda>s.
-    \<forall>d i. ksReadyQueuesL1Bitmap s d !! i \<longrightarrow> ksReadyQueuesL2Bitmap s (d, invertL1Index i) \<noteq> 0 \<and>
-                                             i < l2BitmapSize"
+    \<forall>d i. ksReadyQueuesL1Bitmap s d !! i \<longrightarrow> ksReadyQueuesL2Bitmap s (d, i) \<noteq> 0 \<and>
+                                             i < numPriorities div wordBits"
 
 definition
   valid_bitmapQ :: "kernel_state \<Rightarrow> bool"

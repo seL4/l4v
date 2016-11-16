@@ -1985,13 +1985,6 @@ lemma finish_ceqv_Seq_Skip_cases:
   "(y = Skip \<and> (x ;; y) = z \<or> (x ;; y) = (x ;; y))"
   by simp_all
 
-lemma semantic_equiv_IF_True:
-  "semantic_equiv G s s'  (IF True THEN c ELSE c' FI) c"
-  apply (simp add: semantic_equiv_seq_assoc_eq[symmetric])
-  by (auto simp: semantic_equiv_def2 elim!: exec_Normal_elim_cases intro: exec.intros)
-
-lemmas ccorres_IF_True = ccorres_semantic_equiv[OF semantic_equiv_IF_True]
-
 ML {*
 fun tac ctxt =
   resolve_tac ctxt [@{thm ccorres_abstract[where xf'="\<lambda>s. ()"]}] 1
