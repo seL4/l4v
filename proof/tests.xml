@@ -20,7 +20,7 @@
 
 <testsuite cpu-timeout="3600" depends="isabelle">
     <!-- Refine -->
-    <sequence depends="ASpec ExecSpec">
+    <sequence depends="ASpec">
         <test name="AInvs" cpu-timeout="7200">make AInvs</test>
         <test name="BaseRefine">make BaseRefine</test>
         <test name="Refine" cpu-timeout="14400">make Refine</test>
@@ -35,7 +35,7 @@
     </sequence>
 
     <!-- DSpec / DRefine -->
-    <sequence depends="DSpec Refine">
+    <sequence depends="Refine">
         <test name="DBaseRefine">make DBaseRefine</test>
         <test name="DRefine" cpu-timeout="7200">make DRefine</test>
     </sequence>
@@ -49,12 +49,12 @@
     </sequence>
 
     <!-- Access Control and capDL -->
-    <sequence depends="DRefine Access">
+    <sequence depends="DRefine">
         <test name="DPolicy">make DPolicy</test>
     </sequence>
 
     <!-- Bisim -->
-    <sequence depends="ASepSpec AInvs">
+    <sequence depends="AInvs">
         <test name="Bisim">make Bisim</test>
     </sequence>
 
