@@ -256,7 +256,7 @@ lemma size_empty_typ_info [simp]:
   by (simp add: empty_typ_info_def)
 
 lemma list_size_char:
-  "size_list size_char xs = length xs"
+  "size_list (\<lambda>c. 0) xs = length xs"
   by (induct xs) auto
 
 lemma size_ti_extend_ti [simp]:

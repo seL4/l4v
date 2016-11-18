@@ -633,72 +633,19 @@ fun metis_insert_tac ctxt rules =
  * Decoding and parsing Isabelle terms into ML terms.
  *)
 
-(* Decode a Nibble. *)
-fun decode_isa_nibble t =
-  case t of
-    (Const (@{const_name "Nibble0"}, _)) => 0
-  | (Const (@{const_name "Nibble1"}, _)) => 1
-  | (Const (@{const_name "Nibble2"}, _)) => 2
-  | (Const (@{const_name "Nibble3"}, _)) => 3
-  | (Const (@{const_name "Nibble4"}, _)) => 4
-  | (Const (@{const_name "Nibble5"}, _)) => 5
-  | (Const (@{const_name "Nibble6"}, _)) => 6
-  | (Const (@{const_name "Nibble7"}, _)) => 7
-  | (Const (@{const_name "Nibble8"}, _)) => 8
-  | (Const (@{const_name "Nibble9"}, _)) => 9
-  | (Const (@{const_name "NibbleA"}, _)) => 10
-  | (Const (@{const_name "NibbleB"}, _)) => 11
-  | (Const (@{const_name "NibbleC"}, _)) => 12
-  | (Const (@{const_name "NibbleD"}, _)) => 13
-  | (Const (@{const_name "NibbleE"}, _)) => 14
-  | (Const (@{const_name "NibbleF"}, _)) => 15
-  | _ => invalid_term "Nibble constant" t
-
-(* Encode a nibble. *)
-fun encode_isa_nibble t =
-  case t of
-    0  => @{term "Nibble0"}
-  | 1  => @{term "Nibble1"}
-  | 2  => @{term "Nibble2"}
-  | 3  => @{term "Nibble3"}
-  | 4  => @{term "Nibble4"}
-  | 5  => @{term "Nibble5"}
-  | 6  => @{term "Nibble6"}
-  | 7  => @{term "Nibble7"}
-  | 8  => @{term "Nibble8"}
-  | 9  => @{term "Nibble9"}
-  | 10 => @{term "NibbleA"}
-  | 11 => @{term "NibbleB"}
-  | 12 => @{term "NibbleC"}
-  | 13 => @{term "NibbleD"}
-  | 14 => @{term "NibbleE"}
-  | 15 => @{term "NibbleF"}
-  | _ => invalid_input "Number from 1--15" (PolyML.makestring t)
-
 (* Decode a list. *)
 fun decode_isa_list t =
-  case t of
-    (Const (@{const_name "list.Cons"}, _) $ x $ xs) => (x :: decode_isa_list xs)
-  | (Const (@{const_name "list.Nil"}, _)) => []
-  | _ => invalid_term "isabelle list" t
+  HOLogic.dest_list t handle TERM _ => invalid_term "isabelle list" t
 
 (* Encode a list. *)
-fun encode_isa_list T [] =
-      (@{mk_term "[] :: ?'a list" ('a)} T)
-  | encode_isa_list T (x::xs) =
-      (@{mk_term "?x # ?xs" (x, xs)} (x, encode_isa_list T xs))
+fun encode_isa_list T xs = HOLogic.mk_list T xs
 
 (* Decode a chracter. *)
 fun decode_isa_char t =
-  case t of
-    (Const (@{const_name "char.Char"}, _) $ a $ b) =>
-      Char.chr (decode_isa_nibble a * 16 + decode_isa_nibble b)
-  | _ => invalid_term "isabelle char" t
+  Char.chr (HOLogic.dest_char t) handle TERM _ => invalid_term "isabelle char" t
 
 (* Encode a character. *)
-fun encode_isa_char t =
-  @{mk_term "Char ?a ?b" (a, b)} (
-    encode_isa_nibble (Char.ord t div 16), encode_isa_nibble (Char.ord t mod 16))
+fun encode_isa_char t = HOLogic.mk_char (Char.ord t)
 
 (* Decode a string. *)
 fun decode_isa_string t =

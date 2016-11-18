@@ -564,6 +564,11 @@ lemma td_set_wf_size_desc [rule_format]:
   "(\<forall>s m n. wf_size_desc_pair x \<longrightarrow> ((s::'a typ_desc),m) \<in> td_set_pair x n \<longrightarrow> wf_size_desc s)"
   by (induct t and st and ts and x, auto) force
 
+definition
+  size_char :: "char \<Rightarrow> nat"
+where
+  "size_char \<equiv> \<lambda>c. 0"
+
 lemma td_set_size_lte':
   "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set t m \<longrightarrow> size s = size t \<and> s=t \<and> k=m \<or> size s < size t)"
   "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_struct st m \<longrightarrow> size s < size st)"
@@ -588,7 +593,7 @@ lemma td_aggregate_not_in_td_set_list [simp]:
   "\<not> (TypDesc (TypAggregate xs) tn,k) \<in> td_set_list xs m"
 apply clarsimp
 apply(drule td_set_list_size_lte)
-apply simp
+apply(simp add: size_char_def)
 done
 
 lemma sub_size_td:
