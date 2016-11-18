@@ -267,11 +267,10 @@ lemma set_cap_valid_arch_caps:
                      \<and> (cap_asid cap = None \<or> cap_asid cap' = None)) ptr' s \<longrightarrow> ptr' = ptr))\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  apply (simp add: valid_arch_caps_def pred_conj_def)
-  apply (wp set_cap_valid_vs_lookup set_cap_valid_table_caps
-            set_cap_unique_table_caps set_cap_unique_table_refs; simp)
-  apply clarsimp
-  sorry
+  by (simp add: valid_arch_caps_def pred_conj_def;
+      wp set_cap_valid_vs_lookup set_cap_valid_table_caps
+         set_cap_unique_table_caps set_cap_unique_table_refs;
+      clarsimp simp: cte_wp_at_def)
 
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at (op = cap) ptr s; valid_table_caps s;
