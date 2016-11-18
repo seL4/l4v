@@ -314,20 +314,13 @@ next
   { fix a :: "('a \<times> 'b)['n::finite]" and i
     have "\<lbrakk>set_array a \<subseteq> {(x, y). R x y}; i < CARD('n)\<rbrakk> \<Longrightarrow> R (fst (a.[i])) (snd (a.[i]))"
       by (meson Collect_case_prodD in_set_array_index_conv subset_iff)
-  } note conv1 = this
-  { fix a :: "'a['n::finite]" and b :: "'b['n]"
-    let ?z = "zip_array a b"
-    let ?A = "ARRAY i. fst (?z.[i])"
-    let ?B = "ARRAY i. snd (?z.[i])"
-    assume "\<forall>i<CARD('n). R (a.[i]) (b.[i])"
-    hence "a = ?A \<and> b = ?B \<and> set_array ?z \<subseteq> {(x, y). R x y}"
-      by (clarsimp simp: zip_array_index)
-  } note conv2 = this
+  } note conv = this
   show "rel_array R =
-         (BNF_Def.Grp {x. set_array x \<subseteq> {(x, y). R x y}} (map_array fst))\<inverse>\<inverse> OO 
-          BNF_Def.Grp {x. set_array x \<subseteq> {(x, y). R x y}} (map_array snd)"
-    unfolding Grp_def fun_eq_iff relcompp.simps conversep.simps
-    by (auto simp: rel_array_def map_array_def BNF_Def.Grp_def conv1 dest: conv2)
+         (\<lambda>x y. \<exists>z. set_array z \<subseteq> {(x, y). R x y} \<and> map_array fst z = x \<and> map_array snd z = y)"
+    unfolding rel_array_def
+    apply (intro ext iffI)
+     apply (rule_tac x="zip_array a b" in exI)
+    by (auto intro!: array_ext simp: conv map_array_index zip_array_index)
 next
   fix x :: "'a['n::finite]"
   let ?U = "UNIV :: 'n set"
