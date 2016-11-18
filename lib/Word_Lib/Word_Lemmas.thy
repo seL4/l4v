@@ -5335,6 +5335,8 @@ lemma NOT_mask_shifted_lenword:
   apply (simp add: word_size nth_shiftl nth_shiftr)
   by auto
 
+(* Comparisons between different word sizes. *)
+
 lemma eq_ucast_ucast_eq:
   fixes x :: "'a::len word"
     and y :: "'b::len word"
@@ -5376,5 +5378,21 @@ lemma ucast_le_ucast:
    apply(rule less_le_trans[OF unat_lt2p], simp)
   apply simp
   done
+
+(* High bits w.r.t. mask operations. *)
+
+lemma and_neg_mask_eq_iff_not_mask_le:
+  "w && ~~ mask n = ~~ mask n \<longleftrightarrow> ~~ mask n \<le> w"
+  by (metis (full_types) dual_order.antisym neg_mask_mono_le word_and_le1 word_and_le2
+                         word_bool_alg.conj_absorb)
+
+lemma le_mask_high_bits:
+  shows "w \<le> mask n \<longleftrightarrow> (\<forall> i \<in> {n ..< size w}. \<not> w !! i)"
+  by (auto simp: word_size and_mask_eq_iff_le_mask[symmetric] word_eq_iff)
+
+lemma neg_mask_le_high_bits:
+  shows "~~ mask n \<le> w \<longleftrightarrow> (\<forall> i \<in> {n ..< size w}. w !! i)"
+  by (auto simp: word_size and_neg_mask_eq_iff_not_mask_le[symmetric]
+                 word_eq_iff neg_mask_bang)
 
 end
