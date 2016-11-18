@@ -64,6 +64,7 @@ theorem spec_refine:
                           THEN_ALL_NEW simp_tac @{simpset}
                           THEN_ALL_NEW K no_tac))  *})
   *)
+  apply (rule bij_id[simplified id_def])+
   done (* Woo! *)
 
 end

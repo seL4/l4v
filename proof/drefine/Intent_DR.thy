@@ -901,7 +901,6 @@ shows "evalMonad (f) (machine_state sa) =
     apply (clarsimp simp:image_def)
     apply (rule iffI)
       apply clarsimp
-      apply (rule_tac x = "(a,b)" in bexI)
     using assms
     apply (clarsimp simp:empty_when_fail_def weak_det_spec_def no_fail_def)
     apply (drule_tac x = "machine_state sa" in spec)

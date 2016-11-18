@@ -40,8 +40,7 @@ lemma exec_transformed_valid_def:
   apply (erule allE, erule (1) impE)
   apply (case_tac "M s")
   apply (erule_tac allE, erule impE)
-  apply (auto intro!: exI)
-  done
+   by (auto intro!: exI) fastforce
 
 lemma exec_transformed_wp [wp]:
     "\<lbrace> \<lambda>s. \<exists>s'. (s', s) \<in> sr \<and> P s' \<rbrace> M \<lbrace> \<lambda>r s. \<forall>s'. (s', s) \<in> sr \<longrightarrow> Q r s' \<rbrace> \<Longrightarrow> \<lbrace> P \<rbrace> exec_transformed sr M \<lbrace> Q \<rbrace>"
