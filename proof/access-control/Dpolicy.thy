@@ -243,11 +243,11 @@ lemma transform_cslot_pre_onto:
   "snd ptr < 2 ^ word_bits \<Longrightarrow> \<exists>ptr'. ptr = transform_cslot_ptr ptr'"
   apply (rule_tac x="transform_cslot_ptr_rev ptr" in exI)
   apply (case_tac ptr)
-  apply (clarsimp simp:transform_cslot_ptr_def transform_cslot_ptr_rev_def)
-  apply (clarsimp simp:nat_to_bl_def bin_bl_bin' bintrunc_mod2p)
+  apply (clarsimp simp: transform_cslot_ptr_def transform_cslot_ptr_rev_def)
+  apply (clarsimp simp: nat_to_bl_def bin_bl_bin' bintrunc_mod2p)
   apply (subst int_mod_eq')
     apply (clarsimp simp: not_le_imp_less)
-   apply (drule iffD2[OF zless_int])
+   apply (drule iffD2[OF of_nat_less_iff[where 'a=int]])
    apply (clarsimp)
   apply simp
   done

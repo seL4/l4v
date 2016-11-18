@@ -337,7 +337,7 @@ lemma nat_to_bl_eq:
   apply (clarsimp simp: zmod_eq_dvd_iff)
   apply (subst split_div_mod [where k=2])
   apply clarsimp
-  apply (metis int_numeral mod_2_not_eq_zero_eq_one_nat of_nat_1 of_nat_eq_iff zmod_int)
+  apply (metis of_nat_numeral mod_2_not_eq_zero_eq_one_nat of_nat_1 of_nat_eq_iff zmod_int)
   done
 
 lemma nat_to_bl_mod_n_eq [simp]:

@@ -292,7 +292,7 @@ lemma abstract_val_ucast:
      apply simp
     apply clarsimp
    apply clarsimp
-   apply (metis int_numeral nat_numeral nat_power_eq zero_zle_int)
+   apply (metis of_nat_numeral nat_numeral nat_power_eq of_nat_0_le_iff)
   apply (clarsimp simp: uint_up_ucast is_up)
   done
 

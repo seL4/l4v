@@ -16,7 +16,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma nat_bl_to_bin_surj:
   "\<exists>bl. n = nat (bl_to_bin bl)"
-  using n_less_equal_power_2[where n=n, folded zless_int, simplified]
+  using n_less_equal_power_2[where n=n, folded of_nat_less_iff, simplified]
   apply (rule_tac x="bin_to_bl n (int n)" in exI)
   apply (simp only: bin_bl_bin bintrunc_mod2p)
   apply (simp add: int_mod_eq')

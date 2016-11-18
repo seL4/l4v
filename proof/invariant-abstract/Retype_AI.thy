@@ -518,8 +518,8 @@ lemma word_plus_mono_right_split:
     apply (simp add:no_olen_add )
     apply (rule less_le_trans)
     apply (simp add:uint_nat)
-    apply (subst zadd_int)
-    apply (drule iffD2[OF zless_int])
+    apply (subst of_nat_add[symmetric])
+    apply (drule iffD2[OF of_nat_less_iff])
     apply simp
     apply (rule less_imp_le)
     apply (rule less_le_trans[where y = "2^len_of TYPE('a)"] )
