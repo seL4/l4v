@@ -82,4 +82,7 @@ lemma select_ext_wp[wp]:"\<lbrace>\<lambda>s. a s \<in> S \<longrightarrow> Q (a
 (* FIXME: move *)
 lemmas mapM_UNIV_wp = mapM_wp[where S="UNIV", simplified]
 
+(* FIXME: move *)
+lemma bexEI: "\<lbrakk>\<exists>x\<in>S. Q x; \<And>x. \<lbrakk>x \<in> S; Q x\<rbrakk> \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> \<exists>x\<in>S. P x" by blast
+
 end

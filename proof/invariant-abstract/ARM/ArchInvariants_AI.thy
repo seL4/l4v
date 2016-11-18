@@ -1421,9 +1421,6 @@ lemma vs_lookup_pdI:
   apply (simp add: pde_ref_def ptrFormPAddr_addFromPPtr)
   done
 
-(* FIXME: move *)
-lemma bexEI: "\<lbrakk>\<exists>x\<in>S. Q x; \<And>x. \<lbrakk>x \<in> S; Q x\<rbrakk> \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> \<exists>x\<in>S. P x" by blast
-
 lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unrhd> p) s"
   apply (clarsimp simp: vs_lookup_pages_def vs_lookup_def Image_def
                  elim!: bexEI)
