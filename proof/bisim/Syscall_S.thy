@@ -199,7 +199,7 @@ lemma not_empty_returnOk [wp]:
 
 lemma not_empty_if [wp_split]:
   "\<lbrakk> not_empty Pt m; not_empty Pf m' \<rbrakk> \<Longrightarrow> not_empty (\<lambda>s. (b \<longrightarrow> Pt s) \<and> ( \<not> b \<longrightarrow> Pf s)) (if b then m else m')"
-  by (clarsimp split: split_if)
+  by clarsimp
 
 lemma not_empty_lsft:
   shows "not_empty (tcb_at t and valid_objs and separate_state) (lookup_slot_for_thread t cptr)"
