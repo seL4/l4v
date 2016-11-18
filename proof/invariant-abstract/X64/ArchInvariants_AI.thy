@@ -841,7 +841,6 @@ where
                              \<and> (\<exists>t attr R. m 0x1FF = PageDirectoryPDPTE t attr R 
                                  (* \<and> t \<in> set (x64_global_pds (arch_state s))*))"
 
-(* FIXME x64: needs some element of tracing down global tables *)
 definition
   valid_global_objs :: "'z::state_ext state \<Rightarrow> bool"
 where
