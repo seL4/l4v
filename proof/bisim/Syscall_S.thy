@@ -516,18 +516,14 @@ lemma separate_cap_NullCap [simp]: "separate_cap NullCap" by (simp add: separate
 
 lemma set_cap_NullCap_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> set_cap NullCap cptr \<lbrace>\<lambda>_. separate_state\<rbrace>"
-  unfolding separate_state_def[abs_def] separate_tcb_def separate_cnode_cap_def
-  apply (simp add: separate_state_def[abs_def] tcb_at_typ)
+  unfolding separate_state_def separate_tcb_def separate_cnode_cap_def
+  apply (simp add: tcb_at_typ)
   apply (rule hoare_pre)
    apply wps
    apply (wp set_cap_typ_at hoare_vcg_all_lift)
-  apply (subst separate_cnode_cap_def)
-  apply (clarsimp simp: separate_cap_def) 
+  apply (clarsimp simp: separate_cap_def)
   apply (drule spec, drule (1) mp)
-  apply (clarsimp cong: option.case_cong cap.case_cong split: option.split_asm)
-  apply (erule separate_cnode_capE)
-   apply (simp add: separate_cnode_cap_def)
-  apply (clarsimp simp add: separate_cnode_cap_def split: option.splits)
+  apply (clarsimp split: cap.splits option.splits)
   done
 
 lemma separate_state_pres:
