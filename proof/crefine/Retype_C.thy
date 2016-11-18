@@ -654,20 +654,21 @@ lemma valid_call_Spec_eq_subset:
 "\<Gamma>' procname = Some (Spec R)
 \<Longrightarrow> (\<forall>x. \<Gamma>'\<Turnstile>\<^bsub>/NF\<^esub> (P x) Call procname (Q x),(A x))
   = ((\<forall>x. P x \<subseteq> fst ` R) \<and> (R \<subseteq> (\<Inter>x. (- P x) \<times> UNIV \<union> UNIV \<times> Q x)))"
-apply (safe, simp_all)
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (rule ccontr)
-apply (elim allE, subst(asm) imageI, assumption)
-apply (drule mp, erule exec.Call, rule exec.SpecStuck)
-apply (auto simp: image_def)[2]
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (elim allE, drule mp, erule exec.Call, erule exec.Spec)
-apply auto[1]
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (erule exec_Normal_elim_cases, simp_all)
-apply (erule exec_Normal_elim_cases, auto simp: image_def,
-  (fastforce+)?)
-done
+  apply (safe, simp_all)
+    apply (clarsimp simp: HoarePartialDef.valid_def)
+    apply (rule ccontr)
+    apply (elim allE, subst(asm) imageI, assumption)
+    apply (drule mp, erule exec.Call, rule exec.SpecStuck)
+     apply (auto simp: image_def)[2]
+   apply (clarsimp simp: HoarePartialDef.valid_def)
+   apply (elim allE, drule mp, erule exec.Call, erule exec.Spec)
+   apply auto[1]
+  apply (clarsimp simp: HoarePartialDef.valid_def)
+  apply (erule exec_Normal_elim_cases, simp_all)
+  apply (erule exec_Normal_elim_cases, auto simp: image_def)
+   apply fastforce
+  apply (thin_tac "R \<subseteq> _", fastforce)
+  done
 
 lemma field_of_t_refl:
   "field_of_t p p' = (p = p')"

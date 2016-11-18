@@ -405,7 +405,7 @@ lemma execute_not_empty:
   "execute ops s \<noteq> {}"
   apply (induct ops)
    apply (simp)
-  apply (simp add: step_def, fast)
+  apply (simp add: step_def del: if_image_distrib, fast)
   done
 
 lemma execute_append [intro]:

@@ -787,8 +787,7 @@ proof -
     apply clarsimp+
    apply (rule less_le_trans[OF unat_of_bl_length])
    apply (simp add:mult.commute diff_mult_distrib[symmetric])
-  apply (clarsimp simp: retype_addrs_def new_cap_addrs_def image_def
-        cte_map_def amp)
+  apply (clarsimp simp: retype_addrs_def new_cap_addrs_def image_def cte_map_def amp simp del: Union_iff)
   apply (rule exI)
   apply (rule conjI)
    apply (rule_tac x = "unat (((of_nat xa)::word32) >> (obj_bits_api ty us - objBitsKO ko))"  in bexI)

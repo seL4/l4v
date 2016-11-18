@@ -66,6 +66,11 @@ lemma case_prod_apply_cong[fundef_cong]:
   "\<lbrakk> f (fst p) (snd p) s = f' (fst p') (snd p') s' \<rbrakk> \<Longrightarrow> case_prod f p s = case_prod f' p' s'"
   by (simp add: split_def)
 
+lemma prod_injects:
+  "(x,y) = p \<Longrightarrow> x = fst p \<and> y = snd p"
+  "p = (x,y) \<Longrightarrow> x = fst p \<and> y = snd p"
+  by auto
+
 definition
   pred_conj :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" (infixl "and" 35)
 where
@@ -813,7 +818,7 @@ lemma UN_nth_mem:
 
 lemma Union_equal:
   "f ` A = f ` B \<Longrightarrow> (\<Union>x \<in> A. f x) = (\<Union>x \<in> B. f x)"
-  by (subst Union_image_eq [symmetric]) simp
+  by blast
 
 lemma UN_Diff_disjoint:
   "i < length xs \<Longrightarrow> (A - (\<Union>x\<in>set xs. f x)) \<inter> f (xs ! i) = {}"

@@ -70,8 +70,9 @@ proof -
     hence allj: "\<forall>j\<in>set(to_bl w). \<not> j"
       using takeWhile_take_has_property[where n="length (to_bl w)" and xs="to_bl w" and P=Not]
       by simp
-    hence "to_bl w = replicate (length (to_bl w)) False"
-      by - (blast intro: list_of_false)
+    have "to_bl w = replicate (length (to_bl w)) False"
+      apply (rule list_of_false)
+      using allj by auto
     hence "w = 0"
      apply simp
      apply (subst (asm) to_bl_0[symmetric])

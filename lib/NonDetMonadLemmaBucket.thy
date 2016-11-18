@@ -1076,22 +1076,21 @@ lemma bind_inv_inv_comm:
   apply (rule ext)
   apply (rename_tac s)
   apply (rule_tac s="(do (x, y) \<leftarrow> do x \<leftarrow> f; y \<leftarrow> (\<lambda>_. g s) ; (\<lambda>_. return (x, y) s) od;
-        n x y od) s" in trans)
+                         n x y od) s" in trans)
    apply (simp add: bind_assoc)
    apply (intro bind_apply_cong, simp_all)[1]
     apply (metis in_inv_by_hoareD)
    apply (simp add: return_def bind_def)
    apply (metis in_inv_by_hoareD)
   apply (rule_tac s="(do (x, y) \<leftarrow> do y \<leftarrow> g; x \<leftarrow> (\<lambda>_. f s) ; (\<lambda>_. return (x, y) s) od;
-        n x y od) s" in trans[rotated])
+                      n x y od) s" in trans[rotated])
    apply (simp add: bind_assoc)
    apply (intro bind_apply_cong, simp_all)[1]
     apply (metis in_inv_by_hoareD)
    apply (simp add: return_def bind_def)
    apply (metis in_inv_by_hoareD)
   apply (rule bind_apply_cong, simp_all)
-  apply (clarsimp simp: bind_def split_def image_def return_def)
-  apply auto
+  apply (clarsimp simp: bind_def split_def return_def)
   apply (auto elim!: nonemptyE | drule(1) empty_failD3)+
   done
 

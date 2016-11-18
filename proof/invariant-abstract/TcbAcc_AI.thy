@@ -66,7 +66,7 @@ lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
   apply (simp add: get_def the_run_state_def set_object_def
                    put_def bind_def return_def)
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: map_upd_triv select_f_def SUP_def image_def)
+  apply (clarsimp simp: map_upd_triv select_f_def image_def)
   done
 
 
