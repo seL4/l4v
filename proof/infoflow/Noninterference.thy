@@ -36,7 +36,7 @@ definition sameFor_subject :: "'a subject_label auth_graph \<Rightarrow> 'a subj
 where
   "sameFor_subject g ab irqab asidab domainab l \<equiv> 
     {(os,os')|os os' s s' . s = internal_state_if os \<and> s' = internal_state_if os' \<and>
-             states_equiv_for (\<lambda>x. ab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. irqab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. asidab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. domainab x \<in> subjectReads g (OrdinaryLabel l)) s s' \<and> 
+             states_equiv_for (\<lambda>x. ab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. irqab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. asidab x \<in> subjectReads g (OrdinaryLabel l)) (\<lambda>x. domainab x \<in> subjectReads g (OrdinaryLabel l)) s s' \<and>
              ((domainab (cur_domain s) \<in> subjectReads g (OrdinaryLabel l) \<or> domainab (cur_domain s') \<in> subjectReads g (OrdinaryLabel l)) \<longrightarrow>
               (cur_domain s = cur_domain s' \<and> globals_equiv s s' \<and> scheduler_action s = scheduler_action s' \<and> work_units_completed s = work_units_completed s' \<and> irq_state (machine_state s) = irq_state (machine_state s') \<and>
               (user_modes (sys_mode_of os) \<longrightarrow> 
@@ -1181,7 +1181,7 @@ lemma partitionIntegrity_subjectAffects_asid:
 lemma sameFor_subject_def2:
   "sameFor_subject g ab irqab asidab domainab l =
     {(os,os')|os os' s s'. s = internal_state_if os \<and> s' = internal_state_if os' \<and>
-              (\<forall> d \<in> subjectReads g (OrdinaryLabel l). states_equiv_for (\<lambda>x. ab x = d) (\<lambda>x. irqab x  = d) (\<lambda>x. asidab x = d) (\<lambda>x. domainab x = d) s s') \<and> 
+              (\<forall> d \<in> subjectReads g (OrdinaryLabel l). states_equiv_for (\<lambda>x. ab x = d) (\<lambda>x. irqab x  = d) (\<lambda>x. asidab x = d) (\<lambda>x. domainab x = d) s s') \<and>
              ((domainab (cur_domain s) \<in> subjectReads g (OrdinaryLabel l) \<or> 
                domainab (cur_domain s') \<in> subjectReads g (OrdinaryLabel l)) \<longrightarrow>
               (cur_domain s = cur_domain s' \<and> globals_equiv s s' \<and> scheduler_action s = scheduler_action s' \<and> work_units_completed s = work_units_completed s' \<and> irq_state (machine_state s) = irq_state (machine_state s') \<and>
@@ -1424,7 +1424,7 @@ lemma pasDomainAbs_not_SilcLabel[simp]:
 lemma uwr_partition_if:
   "\<lbrakk>(os,os') \<in> uwr (Partition (partition_if os));
     s = internal_state_if os; s' = internal_state_if os'\<rbrakk> \<Longrightarrow>
-             states_equiv_for (\<lambda>x. pasObjectAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasIRQAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasASIDAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasDomainAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) s s' \<and> 
+             states_equiv_for (\<lambda>x. pasObjectAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasIRQAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasASIDAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) (\<lambda>x. pasDomainAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))) s s' \<and>
               ((cur_thread s = cur_thread s' \<and> cur_domain s = cur_domain s') \<and> globals_equiv s s' \<and> scheduler_action s = scheduler_action s' \<and> work_units_completed s = work_units_completed s' \<and> irq_state (machine_state s) = irq_state (machine_state s') \<and>
               (user_modes (sys_mode_of os) \<longrightarrow> user_context_of os = user_context_of os') \<and>
               sys_mode_of os = sys_mode_of os' \<and>

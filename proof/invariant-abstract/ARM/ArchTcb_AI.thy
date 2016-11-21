@@ -210,7 +210,7 @@ lemma as_user_ipc_tcb_cap_valid4[wp]:
                  dest!: get_tcb_SomeD)
   apply (clarsimp simp: get_tcb_def)
   done
-  
+
 lemma tc_invs[Tcb_AI_asms]: 
   "\<lbrace>invs and tcb_at a
        and (case_option \<top> (valid_cap o fst) e)

@@ -5192,13 +5192,11 @@ lemma monadic_rewrite_add_lookup_both_sides:
     apply (rule monadic_rewrite_refl, wp)
     apply (simp; erule monadic_rewrite_trans[rotated])
 
-apply (rule 
- monadic_rewrite_transverse[OF _ monadic_rewrite_refl])
-        apply (rule monadic_rewrite_symb_exec_l'[where m=lu], wp inv ef nf impI)
-apply (rule monadic_rewrite_refl)
-apply wp
-apply simp
-done
+  apply (rule monadic_rewrite_transverse[OF _ monadic_rewrite_refl])
+      apply (rule monadic_rewrite_symb_exec_l'[where m=lu], wp inv ef nf impI)
+  apply (rule monadic_rewrite_refl, wp)
+  apply simp
+  done
 
 lemmas cteInsert_obj_at'_not_queued =  cteInsert_obj_at'_queued[of "\<lambda>a. \<not> a"]
 
@@ -5213,7 +5211,7 @@ lemma monadic_rewrite_exists_v:
   done
 
 lemma monadic_rewrite_threadGet_tcbIPCBuffer:
-"monadic_rewrite E F (obj_at' (%tcb. tcbIPCBuffer tcb = v) t)
+  "monadic_rewrite E F (obj_at' (%tcb. tcbIPCBuffer tcb = v) t)
     (threadGet tcbIPCBuffer t) (return v)"
   apply (rule monadic_rewrite_imp)
    apply (rule monadic_rewrite_trans[rotated])
@@ -5242,7 +5240,7 @@ lemma fastpath_callKernel_SysCall_corres:
                 and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
      (callKernel (SyscallEvent SysCall)) (fastpaths SysCall)"
   apply (rule monadic_rewrite_introduce_alternative)
-   apply (simp add: callKernel_def )
+   apply (simp add: callKernel_def)
   apply (rule monadic_rewrite_imp)
    apply (simp add: handleEvent_def handleCall_def
                     handleInvocation_def liftE_bindE_handle
@@ -5398,13 +5396,13 @@ lemma fastpath_callKernel_SysCall_corres:
                   apply (rename_tac ipcBuffer)
 
                   apply (simp add: ARM_H.switchToThread_def bind_assoc)
-                  apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse]) 
+                  apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
 
-                    apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                    apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
                     apply (wp mapM_x_wp' getObject_inv | wpc | simp add:
                          | wp_once hoare_drop_imps )+
 
-                   apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                   apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
                               apply (wp mapM_x_wp' getObject_inv | wpc | simp add:
                                    | wp_once hoare_drop_imps )+
 
@@ -5414,9 +5412,9 @@ lemma fastpath_callKernel_SysCall_corres:
                     apply (rule monadic_rewrite_weaken[where F=False and E=True], simp)
                     apply (rule isolate_thread_actions_rewrite_bind
                                   fastpath_isolate_rewrites fastpath_isolatables
-                                  bool.simps setRegister_simple 
+                                  bool.simps setRegister_simple
                                   setVMRoot_isolatable[THEN thread_actions_isolatableD] setVMRoot_isolatable
-                                  doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable 
+                                  doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable
                                   zipWithM_setRegister_simple
                                   thread_actions_isolatable_bind
                               | assumption
@@ -6204,7 +6202,7 @@ crunch obj_at'_tcbIPCBuffer[wp]: asUser "obj_at' (\<lambda>tcb. P (tcbIPCBuffer 
   (wp: crunch_wps)
 
 crunch obj_at'_tcbIPCBuffer[wp]: handleFault "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: crunch_wps constOnFailure_wp tcbSchedEnqueue_tcbIPCBuffer threadSet_obj_at'_really_strongest 
+  (wp: crunch_wps constOnFailure_wp tcbSchedEnqueue_tcbIPCBuffer threadSet_obj_at'_really_strongest
     simp: zipWithM_x_mapM ignore: sequenceE mapME getObject setObject)
 
 lemma fastpath_callKernel_SysReplyRecv_corres:
@@ -6319,13 +6317,13 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                     apply (rename_tac ipcBuffer)
 
                     apply (simp add: ARM_H.switchToThread_def bind_assoc)
-                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse]) 
+                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
 
-                      apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                      apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
                       apply (wp mapM_x_wp' getObject_inv | wpc | simp add:
                         | wp_once hoare_drop_imps )+
 
-                      apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                      apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
                       apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv getCTE_obj_at'_tcbIPCBuffer mapM_x_wp' getObject_inv | wpc | simp add:
                         | wp_once hoare_drop_imps )+
 
@@ -6414,13 +6412,13 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                         apply (wp getCTE_wp' gts_imp')
 
                     apply (simp add: ARM_H.switchToThread_def bind_assoc)
-                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse]) 
+                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
 
-                      apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                      apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
                       apply (wp mapM_x_wp' handleFault_obj_at'_tcbIPCBuffer getObject_inv | wpc | simp add:
                         | wp_once hoare_drop_imps )+
 
-                      apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+ 
+                      apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
                       apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv getCTE_obj_at'_tcbIPCBuffer mapM_x_wp' getObject_inv | wpc | simp add:
                         | wp_once hoare_drop_imps )+
 
@@ -6442,7 +6440,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                   thread_actions_isolatableD[OF setCTE_isolatable]
                                   setCTE_isolatable
                                   setVMRoot_isolatable[THEN thread_actions_isolatableD] setVMRoot_isolatable
-                                  doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable 
+                                  doMachineOp_isolatable[THEN thread_actions_isolatableD] doMachineOp_isolatable
                            | assumption
                            | wp assert_inv)+
                     apply (simp only: )

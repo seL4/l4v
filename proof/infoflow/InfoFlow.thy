@@ -279,7 +279,7 @@ lemma equiv_asids_triv:
 
 definition states_equiv_for :: "(word32 \<Rightarrow> bool) \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarrow> (asid \<Rightarrow> bool) \<Rightarrow> (domain \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool"
 where
-"states_equiv_for P Q R S s s' \<equiv> 
+"states_equiv_for P Q R S s s' \<equiv>
    equiv_for P kheap s s' \<and>
    equiv_machine_state P (machine_state s) (machine_state s') \<and>
    equiv_for (P \<circ> fst) cdt s s' \<and>
@@ -326,7 +326,7 @@ lemma states_equiv_for_non_asid_pool_kheap_update:
   done
 
 lemma states_equiv_for_identical_kheap_updates:
-  "\<lbrakk>states_equiv_for P Q R S s s'; 
+  "\<lbrakk>states_equiv_for P Q R S s s';
     identical_kheap_updates s s' kh kh'\<rbrakk> \<Longrightarrow>
    states_equiv_for P Q R S (s\<lparr> kheap := kh \<rparr>) (s'\<lparr> kheap := kh' \<rparr>)"
   apply(clarsimp simp: states_equiv_for_def)
@@ -410,8 +410,8 @@ lemma states_equiv_forE_kheap:
   by(auto simp: states_equiv_for_def elim: equiv_forE)
 
 lemma states_equiv_forE_mem:
-  "\<lbrakk>states_equiv_for P Q R S s s'; 
-  (\<And> x. \<lbrakk>P x\<rbrakk> 
+  "\<lbrakk>states_equiv_for P Q R S s s';
+  (\<And> x. \<lbrakk>P x\<rbrakk>
   \<Longrightarrow> (underlying_memory (machine_state s)) x = (underlying_memory (machine_state s')) x
   \<and> (device_state (machine_state s)) x = (device_state (machine_state s')) x) \<Longrightarrow> Z\<rbrakk> \<Longrightarrow> Z"
   apply (clarsimp simp: states_equiv_for_def elim: equiv_forE)
@@ -1311,8 +1311,8 @@ lemma do_machine_op_spec_reads_respects':
      equiv_machine_state (aag_can_read aag or aag_can_affect aag l) rv rv'
      \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="op = st" and P'="\<top>" in equiv_valid_2_bind)
        apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r'
-         \<and> equiv_machine_state (aag_can_read aag)  ms' ms'' 
-         \<and> equiv_machine_state (aag_can_affect aag l)  ms' ms'' 
+         \<and> equiv_machine_state (aag_can_read aag)  ms' ms''
+         \<and> equiv_machine_state (aag_can_affect aag l)  ms' ms''
          \<and> equiv_irq_state ms' ms''" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
             apply(clarsimp simp: modify_def get_def put_def bind_def return_def equiv_valid_2_def)
             apply(fastforce intro: reads_equiv_machine_state_update affects_equiv_machine_state_update)
@@ -1361,7 +1361,7 @@ lemma do_machine_op_spec_rev:
   unfolding do_machine_op_def spec_equiv_valid_def
   apply(rule equiv_valid_2_guard_imp)
    apply(rule_tac  R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag) rv rv' \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s \<and> r = machine_state s" and Q'="\<lambda>r s. r = machine_state s" and P="op = st" and P'="\<top>" in equiv_valid_2_bind)
-       apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag) ms' ms''" 
+       apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag) ms' ms''"
                   and Q="\<lambda> (r,ms') s. ms' = rv \<and> rv = machine_state s \<and> st = s" 
                   and Q'="\<lambda> (r,ms') s. ms' = rv' \<and> rv' = machine_state s" 
                   and P="\<lambda> s. st = s \<and> rv = machine_state s" and P'="\<lambda> s. rv' = machine_state s"

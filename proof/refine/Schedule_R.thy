@@ -233,7 +233,7 @@ lemma arch_switch_thread_corres:
    apply clarsimp
    apply (erule st_tcb_at_tcb_at)
   apply (clarsimp simp: valid_pspace'_def)
-done
+  done
 
 lemma tcbSchedAppend_corres:
   notes trans_state_update'[symmetric, simp del]
@@ -280,7 +280,7 @@ lemma tcbSchedAppend_corres:
                  apply (wp getQueue_corres getObject_tcb_wp  | simp add: etcb_relation_def threadGet_def)+
   apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def 
                          projectKO_eq project_inject)
-done
+  done
 
 
 crunch valid_pspace'[wp]: tcbSchedEnqueue valid_pspace'
@@ -1253,8 +1253,7 @@ lemma clearExMonitor_invs'[wp]:
                         in_monad select_f_def)
   done
 
-
-lemma Arch_switchToThread_invs[wp]:  (* **** *)
+lemma Arch_switchToThread_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: ARM_H.switchToThread_def)
   apply (wp; auto)
@@ -1325,8 +1324,6 @@ lemma clearExMonitor_invs_no_cicd'[wp]:
                         in_monad select_f_def)
   done
 
-(**)
-
 crunch valid_arch_state'[wp]: asUser "valid_arch_state'"
 (wp: crunch_wps simp: crunch_simps)
 
@@ -1340,8 +1337,8 @@ crunch valid_queues'[wp]: asUser "valid_queues'"
 (wp: crunch_wps simp: crunch_simps)
 
 
-lemma asUser_valid_irq_node'[wp]: 
-  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace> asUser t (setRegister f r) 
+lemma asUser_valid_irq_node'[wp]:
+  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace> asUser t (setRegister f r)
           \<lbrace>\<lambda>_ s. valid_irq_node' (irq_node' s) s\<rbrace>"
   apply (rule_tac valid_irq_node_lift)
    apply (simp add: asUser_def)
@@ -1354,15 +1351,15 @@ lemma asUser_valid_irq_node'[wp]:
 crunch irq_masked'_helper: asUser "\<lambda>s. P (intStateIRQTable (ksInterruptState s))"
 (wp: crunch_wps simp: crunch_simps)
 
-lemma asUser_irq_masked'[wp]: 
-  "\<lbrace>irqs_masked'\<rbrace> asUser t (setRegister f r) 
+lemma asUser_irq_masked'[wp]:
+  "\<lbrace>irqs_masked'\<rbrace> asUser t (setRegister f r)
           \<lbrace>\<lambda>_ . irqs_masked'\<rbrace>"
   apply (rule irqs_masked_lift)
   apply (rule asUser_irq_masked'_helper)
   done
 
-lemma asUser_ct_not_inQ[wp]: 
-  "\<lbrace>ct_not_inQ\<rbrace> asUser t (setRegister f r) 
+lemma asUser_ct_not_inQ[wp]:
+  "\<lbrace>ct_not_inQ\<rbrace> asUser t (setRegister f r)
           \<lbrace>\<lambda>_ . ct_not_inQ\<rbrace>"
   apply (clarsimp simp: submonad_asUser.fn_is_sm submonad_fn_def)
   apply (rule hoare_seq_ext)+
@@ -1373,7 +1370,7 @@ lemma asUser_ct_not_inQ[wp]:
    defer
    apply (rule select_f_inv)
    apply (case_tac x; simp)
-  apply (clarsimp simp: projectKOs asUser_replace_def obj_at'_def fun_upd_def 
+  apply (clarsimp simp: projectKOs asUser_replace_def obj_at'_def fun_upd_def
           split: option.split kernel_object.split)
   apply (clarsimp simp: ct_not_inQ_def obj_at'_def projectKOs objBitsKO_def  ps_clear_def dom_def)
   apply (rule conjI; clarsimp; blast)

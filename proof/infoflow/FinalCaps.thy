@@ -1310,6 +1310,7 @@ lemma finalise_cap_silc_inv:
    apply(wp | simp split del: split_if)+
   done
 
+
 lemma validE_validE_R':
   "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>,\<lbrace> R \<rbrace> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>,-"
   apply(rule validE_validE_R)

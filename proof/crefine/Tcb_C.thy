@@ -710,7 +710,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                 apply (rule_tac P="is_aligned (fst (the buf)) msg_align_bits"
                                in hoare_gen_asm)
                apply (wp threadSet_ipcbuffer_trivial static_imp_wp | simp )+
-             apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem 
+             apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
                                    option_to_0_def ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def
                             split: option.split_asm)
             apply simp
@@ -2753,7 +2753,7 @@ lemma mcpriority_tcb_at'_prio_bounded':
 
 lemmas mcpriority_tcb_at'_prio_bounded
   = mcpriority_tcb_at'_prio_bounded'[simplified priorityBits_def]
-  
+
 lemma decodeTCBConfigure_ccorres:
   notes tl_drop_1[simp] scast_mask_8 [simp]
   shows

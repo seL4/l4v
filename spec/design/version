@@ -1,80 +1,8 @@
 Built from git repo at /Users/xgao/verification/l4v/spec/haskell by xgao
 
 Generated from changeset:
-f8f88c6 SELFOUR-553: Change Spec according to C code and fix ASpec and AInvs
+fdb52c7 SELFOUR-553: rebase and regenerate haskell spec
 
 
 Warning - uncomitted changes used:
-M  ../../proof/access-control/Access.thy
-M  ../../proof/access-control/Arch_AC.thy
-M  ../../proof/access-control/ExampleSystem.thy
-UU ../../proof/access-control/Syscall_AC.thy
-M  ../../proof/access-control/Tcb_AC.thy
-M  ../../proof/crefine/ADT_C.thy
-M  ../../proof/crefine/CLevityCatch.thy
-M  ../../proof/crefine/Fastpath_C.thy
-UU ../../proof/crefine/Recycle_C.thy
-M  ../../proof/crefine/Refine_C.thy
-M  ../../proof/crefine/Retype_C.thy
-M  ../../proof/crefine/Schedule_C.thy
-M  ../../proof/crefine/StateRelation_C.thy
-M  ../../proof/crefine/SyscallArgs_C.thy
-M  ../../proof/crefine/TcbAcc_C.thy
-M  ../../proof/crefine/Tcb_C.thy
-M  ../../proof/crefine/VSpace_C.thy
-M  ../../proof/drefine/Schedule_DR.thy
-M  ../../proof/drefine/Tcb_DR.thy
-M  ../../proof/infoflow/ADT_IF.thy
-M  ../../proof/infoflow/ADT_IF_Refine.thy
-M  ../../proof/infoflow/Arch_IF.thy
-M  ../../proof/infoflow/CNode_IF.thy
-M  ../../proof/infoflow/Example_Valid_State.thy
-M  ../../proof/infoflow/Example_Valid_StateH.thy
-M  ../../proof/infoflow/FinalCaps.thy
-UU ../../proof/infoflow/Finalise_IF.thy
-M  ../../proof/infoflow/InfoFlow.thy
-M  ../../proof/infoflow/Ipc_IF.thy
-M  ../../proof/infoflow/Noninterference.thy
-M  ../../proof/infoflow/Retype_IF.thy
-M  ../../proof/infoflow/Scheduler_IF.thy
-M  ../../proof/infoflow/Syscall_IF.thy
-M  ../../proof/infoflow/Tcb_IF.thy
-M  ../../proof/infoflow/UserOp_IF.thy
-M  ../../proof/invariant-abstract/AInvs.thy
-M  ../../proof/invariant-abstract/ARM/ArchAcc_AI.thy
-M  ../../proof/invariant-abstract/ARM/ArchEmptyFail_AI.thy
-M  ../../proof/invariant-abstract/ARM/ArchInvariants_AI.thy
-M  ../../proof/invariant-abstract/ARM/ArchSchedule_AI.thy
-M  ../../proof/invariant-abstract/ARM/ArchTcb_AI.thy
-M  ../../proof/invariant-abstract/ARM/ArchVSpaceEntries_AI.thy
-M  ../../proof/invariant-abstract/DetSchedSchedule_AI.thy
-M  ../../proof/invariant-abstract/EmptyFail_AI.thy
-M  ../../proof/invariant-abstract/Invariants_AI.thy
-UU ../../proof/refine/Finalise_R.thy
-M  ../../proof/refine/Ipc_R.thy
-M  ../../proof/refine/Refine.thy
-M  ../../proof/refine/Schedule_R.thy
-M  ../../proof/refine/Tcb_R.thy
-M  ../../proof/refine/VSpace_R.thy
-D  ../abstract/ARM/ArchHook_A.thy
-M  ../abstract/ARM/Arch_A.thy
-M  ../abstract/Syscall_A.thy
-M  ../abstract/Tcb_A.thy
-M  ../design/API_H.thy
-M  ../design/ARM/ArchThread_H.thy
-M  ../design/ARM/State_H.thy
-M  ../design/Syscall_H.thy
-M  ../design/TCB_H.thy
-M  ../design/skel/API_H.thy
-D  ../design/skel/ARM/ArchHook_H.thy
-M  ../design/skel/Syscall_H.thy
-M  ../design/skel/TCB_H.thy
-UU ../design/version
-M  src/SEL4.lhs
-M  src/SEL4/API/Syscall.lhs
-D  src/SEL4/API/Syscall/ARM.lhs
-M  src/SEL4/Kernel/Thread/ARM.lhs
-M  src/SEL4/Machine/RegisterSet.lhs
-M  src/SEL4/Machine/RegisterSet/ARM.lhs
-M  src/SEL4/Object/TCB.lhs
-M  ../machine/ARM/MachineTypes.thy
+ M ../design/version

@@ -583,7 +583,7 @@ context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 lemma as_user_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
-by (fastforce simp: valid_etcbs_def st_tcb_at_kh_split_if dest: get_tcb_st_tcb_at)
+  by (fastforce simp: valid_etcbs_def st_tcb_at_kh_split_if dest: get_tcb_st_tcb_at)
 
 lemma as_user_valid_queues[wp]: "\<lbrace>valid_queues\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
@@ -593,17 +593,17 @@ lemma as_user_valid_queues[wp]: "\<lbrace>valid_queues\<rbrace> as_user ptr s \<
   apply clarsimp
   apply (drule (1) bspec, clarsimp simp: st_tcb_def2)
   apply (drule get_tcb_SomeD, auto)
-done
+  done
 
 lemma as_user_weak_valid_sched_action[wp]: "\<lbrace>weak_valid_sched_action\<rbrace> as_user ptr s \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
   apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_split_if st_tcb_at_def obj_at_def)
-by (drule get_tcb_SomeD, auto)
+  by (drule get_tcb_SomeD, auto)
 
 lemma as_user_is_activatable[wp]: "\<lbrace>is_activatable t\<rbrace> as_user ptr s \<lbrace>\<lambda>_. is_activatable t\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
   apply (clarsimp simp: is_activatable_def st_tcb_at_kh_split_if st_tcb_at_def obj_at_def)
-by (drule get_tcb_SomeD, auto)
+  by (drule get_tcb_SomeD, auto)
 
 lemma as_user_valid_sched_action[wp]: "\<lbrace>valid_sched_action\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
@@ -613,19 +613,19 @@ lemma as_user_valid_sched_action[wp]: "\<lbrace>valid_sched_action\<rbrace> as_u
    apply (drule get_tcb_SomeD, clarsimp)
   apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_def obj_at_def st_tcb_at_kh_split_if)
   apply (drule get_tcb_SomeD, clarsimp)
-done
+  done
 
 lemma as_user_ct_in_cur_domain[wp]: "\<lbrace>ct_in_cur_domain\<rbrace> as_user ptr s \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
-by (simp add: as_user_def set_object_def | wpc | wp)+
+  by (simp add: as_user_def set_object_def | wpc | wp)+
 
 lemma as_user_valid_idle_etcb[wp]: "\<lbrace>valid_idle_etcb\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_idle_etcb\<rbrace>"
-by (simp add: as_user_def set_object_def | wpc | wp)+
+  by (simp add: as_user_def set_object_def | wpc | wp)+
 
 lemma as_user_valid_blocked[wp]: "\<lbrace>valid_blocked\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
   apply (clarsimp simp: valid_blocked_def st_tcb_at_kh_split_if st_tcb_at_def obj_at_def)
   apply (drule_tac x=ptr in spec)
-by (drule get_tcb_SomeD, auto)
+  by (drule get_tcb_SomeD, auto)
 
 crunch valid_etcbs[wp]: switch_to_idle_thread, switch_to_thread valid_etcbs
   (simp: whenE_def ignore: clearExMonitor)
@@ -700,7 +700,7 @@ crunch is_activatable[wp]: arch_switch_to_thread "is_activatable t"
 
 crunch valid_sched_action[wp]: arch_switch_to_thread valid_sched_action
   (simp: whenE_def ignore: clearExMonitor)
-  
+
 lemma as_user_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> as_user tptr f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: as_user_def set_object_def)
@@ -731,7 +731,7 @@ lemma switch_to_thread_ct_not_queued[wp]:
     apply (rule assert_inv)
    prefer 2
    apply (rule arch_switch_to_thread_valid_queues)
-  apply (simp add: tcb_sched_action_def 
+  apply (simp add: tcb_sched_action_def
                    tcb_sched_dequeue_def | wp)+
   apply (clarsimp simp add: valid_queues_def etcb_at_def not_queued_def
                        split: option.splits)
@@ -853,7 +853,7 @@ end
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma as_user_valid_blocked[wp]:
-  "\<lbrace>valid_blocked and ct_in_q\<rbrace> as_user tp S \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>" 
+  "\<lbrace>valid_blocked and ct_in_q\<rbrace> as_user tp S \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
   apply (clarsimp simp: valid_blocked_def st_tcb_at_kh_split_if st_tcb_at_def obj_at_def)
   apply (drule_tac x=tp in spec)
@@ -863,15 +863,15 @@ lemma as_user_valid_blocked[wp]:
 done
 
 lemma set_vm_root_valid_blocked[wp]:
-  "\<lbrace>valid_blocked and ct_in_q\<rbrace> set_vm_root p \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>" 
+  "\<lbrace>valid_blocked and ct_in_q\<rbrace> set_vm_root p \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
 by (wp | wpc | auto)+
 
 lemma do_machine_op_valid_blocked[wp]:
-  "\<lbrace>valid_blocked and ct_in_q\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>" 
+  "\<lbrace>valid_blocked and ct_in_q\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
 by (wp | wpc | auto)+
 
 lemma arch_switch_to_thread_valid_blocked[wp]:
-  "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>" 
+  "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
   apply (rule hoare_seq_ext)+
    apply (rule do_machine_op_valid_blocked)
@@ -879,7 +879,7 @@ lemma arch_switch_to_thread_valid_blocked[wp]:
 done
 
 lemma switch_to_thread_valid_blocked[wp]:
-  "\<lbrace>valid_blocked and ct_in_q\<rbrace> switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked\<rbrace>"          
+  "\<lbrace>valid_blocked and ct_in_q\<rbrace> switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: switch_to_thread_def)
   apply (wp|wpc)+
      prefer 4

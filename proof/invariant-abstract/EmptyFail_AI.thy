@@ -460,12 +460,12 @@ locale EmptyFail_AI_call_kernel_unit
   = EmptyFail_AI_schedule_unit
   + EmptyFail_AI_call_kernel "TYPE(unit)"
 
-
 context EmptyFail_AI_call_kernel_unit begin
 
 lemma call_kernel_empty_fail': "empty_fail (call_kernel a :: (unit,unit) s_monad)"
   apply (simp add: call_kernel_def)
-  by (wp|simp)+
+  apply (wp | simp)+
+  done
 
 end
 

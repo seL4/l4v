@@ -334,7 +334,7 @@ lemma no_cap_to_idle_thread: "invs s \<Longrightarrow> \<not> ex_nonz_cap_to (id
   apply clarsimp
   done
 
-crunch idle_thread_inv [wp]: set_mcpriority "\<lambda>s. P (idle_thread s)" 
+crunch idle_thread_inv [wp]: set_mcpriority "\<lambda>s. P (idle_thread s)"
   (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation)
 
 
@@ -400,14 +400,14 @@ shows "
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
               apply (unfold option_update_thread_def)
-      apply (wp itr_wps thread_set_P thread_set_P' 
+      apply (wp itr_wps thread_set_P thread_set_P'
               | simp add: emptyable_def | wpc)+ (*slow*)
   apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
                         is_cap_simps is_valid_vtable_root_def
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         tcb_at_st_tcb_at[symmetric] invs_valid_objs
                         cap_asid_def vs_cap_ref_def
-                        clas_no_asid cli_no_irqs no_cap_to_idle_thread 
+                        clas_no_asid cli_no_irqs no_cap_to_idle_thread
                  split: option.split_asm
        | rule conjI)+ (* also slow *)
 done
@@ -440,13 +440,13 @@ lemma invoke_tcb_NotificationControl_globals_equiv:
 crunch globals_equiv: set_mcpriority "globals_equiv st"
 
 lemma invoke_tcb_globals_equiv:
-  "\<lbrace> invs and globals_equiv st and Tcb_AI.tcb_inv_wf ti \<rbrace>
+  "\<lbrace> invs and globals_equiv st and Tcb_AI.tcb_inv_wf ti\<rbrace>
    invoke_tcb ti
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply(case_tac ti)
        prefer 4
        apply (simp del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps)
-       apply (wp_trace invoke_tcb_thread_preservation cap_delete_globals_equiv
+       apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
                  cap_insert_globals_equiv'' thread_set_globals_equiv 
                  set_mcpriority_globals_equiv
               | clarsimp simp add: invs_valid_ko_at_arm split del: split_if)+
@@ -728,8 +728,8 @@ lemma invoke_tcb_reads_respects_f:
         | simp add: tcb_cap_cases_def | wpc)+
   apply (clarsimp simp: authorised_tcb_inv_def authorised_tcb_inv_extra_def emptyable_def)
   by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
-                     set_register_det 
-                   | intro impI 
+                     set_register_det
+                   | intro impI
                    | rule conjI)+
   (*Extra slow*)
 

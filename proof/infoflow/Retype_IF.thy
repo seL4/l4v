@@ -514,7 +514,7 @@ lemma dmo_freeMemory_globals_equiv:
   done
 
 lemma dmo_freeMemory_reads_respects_g:
-  "reads_respects_g aag l (\<lambda> s. is_aligned ptr bits \<and> 2 \<le> bits \<and> bits < word_bits) 
+  "reads_respects_g aag l (\<lambda> s. is_aligned ptr bits \<and> 2 \<le> bits \<and> bits < word_bits)
   (do_machine_op (freeMemory ptr bits))"
   apply(rule equiv_valid_guard_imp)
    apply(rule reads_respects_g)
@@ -587,7 +587,7 @@ lemma init_arch_objects_globals_equiv:
   apply(wpc | wp mapM_x_wp[OF dmo_cleanCacheRange_PoU_globals_equiv subset_refl])+
   apply(rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda> s. arm_global_pd (arch_state s) \<notin> set refs)" in hoare_strengthen_post)
       apply(wp mapM_x_wp[OF _ subset_refl] copy_global_mappings_globals_equiv
-               copy_global_mappings_arm_global_pd 
+               copy_global_mappings_arm_global_pd
                dmo_cleanCacheRange_PoU_globals_equiv
             | simp add: obj_bits_api_def default_arch_object_def
                         pd_bits_def pageBits_def | blast)+
@@ -818,7 +818,7 @@ lemma a_type_small_pageD:
   "a_type ko = AArch (AUserData ARMSmallPage) \<Longrightarrow> 
   ko = ArchObj (DataPage False ARMSmallPage)"
   apply (clarsimp simp: a_type_def
-                 split: Structures_A.kernel_object.splits 
+                 split: Structures_A.kernel_object.splits
                         arch_kernel_obj.splits split_if_asm)
   done
 

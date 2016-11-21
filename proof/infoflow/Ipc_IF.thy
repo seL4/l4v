@@ -101,7 +101,7 @@ lemma storeWord_equiv_but_for_labels:
            apply (simp add: states_equiv_for_def)
           apply (rule conjI)
            apply(rule equiv_forI)
-           apply clarsimp      
+           apply clarsimp
            apply(drule_tac f=underlying_memory in equiv_forD,fastforce)
            apply(fastforce intro: is_aligned_no_wrap' word_plus_mono_right simp: is_aligned_mask for_each_byte_of_word_def)
            apply(rule equiv_forI)
@@ -1365,7 +1365,7 @@ lemma get_cap_ret_is_subject':
 
 
 lemma get_receive_slots_rev:
-  "reads_equiv_valid_inv A aag (pas_refined aag and (K (is_subject aag thread \<and> 
+  "reads_equiv_valid_inv A aag (pas_refined aag and (K (is_subject aag thread \<and>
          ipc_buffer_has_read_auth aag (pasSubject aag) buf)))
    (get_receive_slots thread buf)"
   apply(case_tac buf)
@@ -1379,7 +1379,7 @@ lemma get_receive_slots_rev:
 
 lemma transfer_caps_reads_respects:
   "reads_respects aag l (pas_refined aag
-     and K (is_subject aag receiver \<and> 
+     and K (is_subject aag receiver \<and>
         ipc_buffer_has_read_auth aag (pasSubject aag) receive_buffer \<and> 
         (\<forall>cap\<in>set caps.
             is_subject aag (fst (snd cap)) \<and> pas_cap_cur_auth aag (fst cap)))) 
@@ -1482,7 +1482,7 @@ lemma copy_mrs_reads_respects:
            as_user_reads_respects 
        | wpc 
        | simp add: set_register_det get_register_det split del: split_if)+
-  apply clarsimp 
+  apply clarsimp
   apply(rename_tac n')
   apply(subgoal_tac " ptr_range (x + of_nat n' * of_nat word_size) 2
           \<subseteq> ptr_range x msg_align_bits")
@@ -1668,7 +1668,7 @@ lemma ptr_in_obj_range:
   apply (rule is_aligned_no_overflow')
   apply (erule(1) pspace_alignedD)
   done
-  
+
 lemma do_ipc_transfer_reads_respects:
   "reads_respects aag l (valid_objs and valid_global_refs and pspace_distinct and pspace_aligned
                          and valid_arch_state and pas_refined aag and

@@ -957,9 +957,9 @@ lemma dcorres_tcb_empty_slot:
 crunch valid_etcbs[wp]: cap_delete "valid_etcbs"
 
 lemma dcorres_idempotent_as_user_strong:
-  assumes prem: "\<And>tcb r ms ref etcb P. 
+  assumes prem: "\<And>tcb r ms ref etcb P.
                  \<lbrace> \<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context:=cxt\<rparr>) etcb)\<rbrace>
-                 x 
+                 x
                  \<lbrace> \<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context:=cxt\<rparr>) etcb)\<rbrace>"
   shows "dcorres dc \<top> (tcb_at u) (return q) (as_user u x)"
   apply (clarsimp simp: as_user_def)
@@ -995,16 +995,16 @@ lemma transform_full_intent_update_tpidrurw[simp]:
 
 lemma as_user_valid_irq_node[wp]:
   "\<lbrace>valid_irq_node\<rbrace>
-    as_user y (set_register a v) 
+    as_user y (set_register a v)
   \<lbrace>\<lambda>rv. valid_irq_node\<rbrace>"
   apply (simp add: valid_irq_node_def cap_table_at_typ)
   apply (rule hoare_pre)
   apply (wp hoare_vcg_all_lift | wps )+
   apply auto
   done
-  
+
 lemma set_register_TPIDRURW_tcb_abstract_inv[wp]:
-  "\<lbrace>\<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context := cxt\<rparr>) etcb)\<rbrace> set_register TPIDRURW a 
+  "\<lbrace>\<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context := cxt\<rparr>) etcb)\<rbrace> set_register TPIDRURW a
   \<lbrace>\<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_context := cxt\<rparr>) etcb)\<rbrace>"
   by (simp add: set_register_def simpler_modify_def valid_def transform_tcb_def)
 

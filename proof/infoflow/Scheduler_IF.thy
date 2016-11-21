@@ -313,7 +313,7 @@ lemma globals_equiv_scheduler_cur_thread_update[simp]: "globals_equiv_scheduler 
 lemma globals_equiv_scheduler_trans_state_update[simp]: "globals_equiv_scheduler st (trans_state f s) = globals_equiv_scheduler st s"
   by (simp add: globals_equiv_scheduler_def idle_equiv_def)
 
-lemma states_equiv_for_cur_thread_update[simp]: "states_equiv_for P Q R S s (s'\<lparr>cur_thread := x\<rparr>) = states_equiv_for P Q R S s s'" 
+lemma states_equiv_for_cur_thread_update[simp]: "states_equiv_for P Q R S s (s'\<lparr>cur_thread := x\<rparr>) = states_equiv_for P Q R S s s'"
   apply (simp add: states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
   done
 
@@ -499,7 +499,7 @@ where
 definition midstrength_scheduler_affects_equiv :: "'a subject_label PAS  \<Rightarrow> ('a subject_label) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool"
 where
 "midstrength_scheduler_affects_equiv aag l s s' \<equiv> 
-  (states_equiv_for (\<lambda>x. pasObjectAbs aag x \<in> reads_scheduler aag l) (\<lambda>x. pasIRQAbs aag x \<in> reads_scheduler aag l) (\<lambda>x. pasASIDAbs aag x \<in> reads_scheduler aag l) (\<lambda>x. pasDomainAbs aag x \<in> reads_scheduler aag l)  s s') \<and> 
+  (states_equiv_for (\<lambda>x. pasObjectAbs aag x \<in> reads_scheduler aag l) (\<lambda>x. pasIRQAbs aag x \<in> reads_scheduler aag l) (\<lambda>x. pasASIDAbs aag x \<in> reads_scheduler aag l) (\<lambda>x. pasDomainAbs aag x \<in> reads_scheduler aag l)  s s') \<and>
   ((pasDomainAbs aag (cur_domain s) \<in> reads_scheduler aag l \<or>
     pasDomainAbs aag (cur_domain s')\<in> reads_scheduler aag l) \<longrightarrow>
     work_units_completed s = work_units_completed s')"
@@ -540,14 +540,14 @@ lemma store_cur_thread_midstrength_reads_respects: "equiv_valid (scheduler_equiv
    done
 
 lemma globals_frame_equiv_as_states_equiv: "scheduler_globals_frame_equiv st s =
-         (states_equiv_for (\<lambda>x. x \<in> scheduler_affects_globals_frame s) \<bottom> \<bottom> \<bottom> 
+         (states_equiv_for (\<lambda>x. x \<in> scheduler_affects_globals_frame s) \<bottom> \<bottom> \<bottom>
   (s\<lparr>machine_state := machine_state st, arch_state := arch_state st\<rparr>) s)"
   by (clarsimp simp add: states_equiv_for_def equiv_for_def
                          scheduler_globals_frame_equiv_def
                          equiv_asids_def)
 
 lemma silc_dom_equiv_as_states_equiv: "silc_dom_equiv aag st s =
-         (states_equiv_for (\<lambda>x. pasObjectAbs aag x = SilcLabel) \<bottom> \<bottom> \<bottom> 
+         (states_equiv_for (\<lambda>x. pasObjectAbs aag x = SilcLabel) \<bottom> \<bottom> \<bottom>
   (s\<lparr>kheap := kheap st\<rparr>) s)"
   apply (clarsimp simp add: states_equiv_for_def equiv_for_def
                             silc_dom_equiv_def
@@ -846,7 +846,7 @@ lemma arch_switch_to_thread_globals_equiv_scheduler':
     apply (wp set_vm_root_globals_equiv)
     apply clarsimp+
   done
-  
+
 lemma arch_switch_to_thread_reads_respects_scheduler[wp]: "reads_respects_scheduler aag l ((\<lambda>s. pasObjectAbs aag t = pasDomainAbs aag (cur_domain s)) and invs) (arch_switch_to_thread t)"
   apply (rule reads_respects_scheduler_cases)
      apply (simp add: arch_switch_to_thread_def)
