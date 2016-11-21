@@ -220,3 +220,9 @@ Create an architecture-specific object.
 > capUntypedSize (ASIDPoolCap {}) = 1 `shiftL` (asidLowBits + 2)
 
 
+No arch-specific thread deletion operations needed on ARM platform.
+
+> prepareThreadDelete :: PPtr TCB -> Kernel ()
+> prepareThreadDelete _ = return ()
+
+
