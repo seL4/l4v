@@ -30,6 +30,7 @@ This module contains operations on machine-specific object types for the ARM.
 > import SEL4.Object.Structures
 > import SEL4.Kernel.VSpace.ARM_HYP
 > import SEL4.Object.VCPU.ARM_HYP
+> import {-# SOURCE #-} SEL4.Object.TCB
 
 > import Data.Bits
 > import Data.Array
@@ -399,5 +400,19 @@ Create an architecture-specific object.
 #ifdef CONFIG_ARM_SMMU
 > capUntypedSize (IOSpaceCap {}) = 0 -- invalid, use C default FIXME ARMHYP
 > capUntypedSize (IOPageTableCap {}) = bit ioptBits
+#endif
+
+
+A function called from finaliseCap in ObjectType.lhs to prepare a tcb for deletion:
+
+> prepareThreadDelete :: PPtr TCB -> Kernel ()
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> prepareThreadDelete thread = do
+>     tcbVCPU <- archThreadGet atcbVCPUPtr thread
+>     case tcbVCPU of
+>       Just ptr -> dissociateVCPUTCB ptr thread
+>       _ -> return ()
+#else
+> prepareThreadDelete _ = return ()
 #endif
 

@@ -18,7 +18,7 @@ hypervisor extensions on ARM.
 
 \end{impdetails}
 
-> module SEL4.Object.VCPU.ARM_HYP(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch) where
+> module SEL4.Object.VCPU.ARM_HYP(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB) where
 
 \begin{impdetails}
 
