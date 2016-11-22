@@ -13,6 +13,7 @@ BOOT_MODULES = Kernel/CSpace Kernel/Thread Kernel/FaultHandler \
     Object/ObjectType Object/Endpoint Object/Interrupt
 
 BOOT_FILES=$(BOOT_MODULES:%=src/SEL4/%.lhs-boot)
+CUSTOM_BOOT_FILES = src/SEL4/Object/Structures.lhs-boot
 
 # We use the cabal executable that we installed via stack,
 # and use the PATH from `stack exec` to find it.
@@ -21,32 +22,33 @@ BOOT_FILES=$(BOOT_MODULES:%=src/SEL4/%.lhs-boot)
 # GHC_PACKAGE_PATH first.
 CABAL=stack exec -- ./stack-path cabal
 
-#all: build-arm pdf FIXME original
+# these warnings are useless during large Haskell updates
+GHC_DEV_OPTS=--ghc-options="-fno-warn-unused-matches -fno-warn-unused-imports"
+
 all: build-arm-hyp-nosmmu
+# original value: build-arm pdf
 
-build-arm: .stack-work $(BOOT_FILES)
+sandbox:
 	$(CABAL) sandbox init
 	$(CABAL) install --dependencies-only
+
+build-arm: .stack-work sandbox $(BOOT_FILES)
 	$(CABAL) configure --configure-option="arm-kzm" \
-	    --flags="ArchArm"
-	$(CABAL) build
+	    --flags="ArchArm" \
+	    --builddir="dist/arm"
+	$(CABAL) build --builddir="dist/arm"
 
-# FIXME XXX these warnings are useless during large Haskell updates
-GHC_FIXME_OPTS=--ghc-options="-fno-warn-unused-matches -fno-warn-unused-imports"
-
-build-arm-hyp: .stack_work $(BOOT_FILES)
-	$(CABAL) sandbox init
-	$(CABAL) install --dependencies-only
+build-arm-hyp: .stack_work sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
 	$(CABAL) configure --configure-option="arm-tk1" \
-	    --flags="ArchArmHyp -FFI" $(GHC_FIXME_OPTS)
-	$(CABAL) build
+	    --flags="ArchArmHyp -FFI" $(GHC_DEV_OPTS) \
+	    --builddir="dist/arm-hyp"
+	$(CABAL) build --builddir="dist/arm-hyp"
 
-build-arm-hyp-nosmmu: .stack_work $(BOOT_FILES) src/SEL4/Object/Structures.lhs-boot
-	$(CABAL) sandbox init
-	$(CABAL) install --dependencies-only
+build-arm-hyp-nosmmu: .stack_work sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
 	$(CABAL) configure --configure-option="arm-tk1-nosmmu" \
-	    --flags="ArchArmHyp -FFI" $(GHC_FIXME_OPTS)
-	$(CABAL) build
+	    --flags="ArchArmHyp -FFI" $(GHC_DEV_OPTS) \
+	    --builddir="dist/arm-hyp-nosmmu"
+	$(CABAL) build --builddir="dist/arm-hyp-nosmmu"
 
 pdf:
 	cd doc && make
@@ -62,9 +64,8 @@ pdf:
 	stack --install-ghc build cabal-install
 	$(CABAL) update
 
-src/SEL4/Object/Structures.lhs-boot:
-	# never run mkhsboot for hand-crafted lhs-boot files
-	touch $@
+$(CUSTOM_BOOT_FILES):
+	echo "never run mkhsboot for hand-crafted lhs-boot files"
 
 %.lhs-boot: %.lhs mkhsboot.pl
 	perl mkhsboot.pl -l < $< > $@
@@ -76,4 +77,4 @@ clean:
 realclean:
 	rm -rf $(BOOT_FILES) dist .stack-work .cabal-sandbox cabal.sandbox.config
 
-.PHONY: all build build-arm-hyp pdf clean realclean
+.PHONY: all build build-arm-hyp pdf clean sandbox realclean
