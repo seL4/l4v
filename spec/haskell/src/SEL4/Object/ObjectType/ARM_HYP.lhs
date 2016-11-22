@@ -114,7 +114,7 @@ Deletion of any mapped frame capability requires the page table slot to be locat
 > finaliseCap (cap@PageCap { capVPMappedAddress = Just (a, v),
 >                        capVPSize = s, capVPBasePtr = ptr }) _ =
 #ifdef CONFIG_ARM_SMMU
->     if capVPisIOSpaceCap cap
+>     if capVPisIOSpace cap
 >       then error "FIXME ARMHYP TODO IO"
 >       else
 #endif
