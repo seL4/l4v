@@ -32,6 +32,7 @@ requalify_consts
   arch_is_physical
   arch_same_region_as
   same_aobject_as
+  prepare_thread_delete
   msg_max_length
   cap_transfer_data_size
   msg_max_extra_caps
@@ -456,6 +457,7 @@ where
       do
          when final $ unbind_notification r;
          when final $ suspend r;
+         when final $ prepare_thread_delete r;
          return (if final then (Zombie r None 5) else NullCap, None)
       od"
 | "finalise_cap DomainCap                final = return (NullCap, None)"
