@@ -15,7 +15,7 @@ Accessor functions for architecture specific parts of the specification.
 chapter "Accessing the ARM VSpace"
 
 theory ArchVSpaceAcc_A
-imports "ArchKHeap_A"
+imports "../KHeap_A"
 begin
 
 context Arch begin global_naming ARM_A
@@ -31,7 +31,7 @@ section "Encodings"
 
 text {* The high bits of a virtual ASID. *}
 definition
-  asid_high_bits_of :: "asid \<Rightarrow> word8" where
+  asid_high_bits_of :: "asid \<Rightarrow> 6 word" where
   "asid_high_bits_of asid \<equiv> ucast (asid >> asid_low_bits)"
 
 
@@ -155,12 +155,14 @@ text {* The kernel window is mapped into every virtual address space from the
 create the kernel window into a new page directory object. *}
 definition
 copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"copy_global_mappings new_pd \<equiv> do
+"copy_global_mappings new_pd \<equiv> return ()"
+(*do
     global_pt \<leftarrow> gets (arm_global_pt \<circ> arch_state);
     pd_size \<leftarrow> return (1 << pd_bits);
     offset \<leftarrow> return (pd_size - (1 << pde_bits));
     store_pde (new_pd + offset) (PageTablePDE (addrFromPPtr global_pt))
-od"
+od*)
+
 
 text {* Walk the page directories and tables in software. *}
 

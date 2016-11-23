@@ -15,7 +15,7 @@ Entry point for architecture dependent definitions.
 chapter "Toplevel ARM Definitions"
 
 theory Arch_A
-imports "ArchTcbAcc_A" "VCPU_A"
+imports "../TcbAcc_A" "VCPU_A"
 begin
 
 
@@ -35,9 +35,6 @@ definition
   arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_switch_to_thread t \<equiv> do
      set_vm_root t;
-     globals \<leftarrow> gets (arm_globals_frame \<circ> arch_state);
-     buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer t;
-     do_machine_op $ storeWord globals buffer_ptr;
      do_machine_op $ clearExMonitor
    od"
 
@@ -46,10 +43,7 @@ text {* The idle thread does not need to be handled specially on ARM. *}
     specificially to ease infoflow reasoning VER-207 *)
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
-   "arch_switch_to_idle_thread \<equiv> do
-      globals \<leftarrow> gets (arm_globals_frame \<circ> arch_state);
-      do_machine_op $ storeWord globals 0
-    od"
+   "arch_switch_to_idle_thread \<equiv> return ()"
 
 definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
@@ -65,7 +59,7 @@ perform_asid_control_invocation :: "asid_control_invocation \<Rightarrow> (unit,
     delete_objects frame page_bits;
     pcap \<leftarrow> get_cap parent;
     set_cap (max_free_index_update pcap) parent;
-    retype_region frame 1 0 (ArchObject ASIDPoolObj);
+    retype_region frame 1 0 (ArchObject ASIDPoolObj) False;
     cap_insert (ArchObjectCap $ ASIDPoolCap frame base) parent slot;
     assert (base && mask asid_low_bits = 0);
     asid_table \<leftarrow> gets (arm_asid_table \<circ> arch_state);
@@ -169,7 +163,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
   od
 | PageUnmap cap ct_slot \<Rightarrow>
     (case cap of
-      PageCap p R vp_size vp_mapped_addr \<Rightarrow> do
+      PageCap dev p R vp_size vp_mapped_addr \<Rightarrow> do
         case vp_mapped_addr of
             Some (asid, vaddr) \<Rightarrow> unmap_page vp_size asid vaddr p
           | None \<Rightarrow> return ();

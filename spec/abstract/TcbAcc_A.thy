@@ -22,7 +22,6 @@ context begin interpretation Arch .
 
 requalify_consts
   in_user_frame
-  as_user
 
 end
 

@@ -50,7 +50,6 @@ definition
 
 definition
   "init_arch_state \<equiv> \<lparr>
-    arm_globals_frame = init_globals_frame,
     arm_asid_table = empty,
     arm_hwasid_table = empty,
     arm_next_asid = 0,
@@ -83,9 +82,10 @@ definition
     tcb_ipc_buffer = 0,
     tcb_fault = None,
     tcb_bound_notification = None,
+    tcb_mcpriority = minBound,
     tcb_arch = init_arch_tcb
   \<rparr>,
-  init_globals_frame \<mapsto> ArchObj (DataPage ARMSmallPage),
+  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage),
   init_global_pt \<mapsto> ArchObj (PageDirectory global_pd)
   )"
 

@@ -141,7 +141,7 @@ lookup_ipc_buffer :: "bool \<Rightarrow> word32 \<Rightarrow> (word32 option,'z:
     buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 4);
     buffer_cap \<leftarrow> get_cap buffer_frame_slot;
     (case buffer_cap of
-      ArchObjectCap (PageCap p R vms _) \<Rightarrow>
+      ArchObjectCap (PageCap _ p R vms _) \<Rightarrow>
         if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
         then return $ Some $ p + (buffer_ptr && mask (pageBitsForSize vms))
         else return None
@@ -480,7 +480,7 @@ where
          vcpu_disable None;
          modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (vr, False) \<rparr>\<rparr>)
          od
-    | None \<Rightarrow> return ()
+    | _ \<Rightarrow> return ()
   od"
 
 definition
@@ -753,7 +753,7 @@ where
    | PageTableCap _ None \<Rightarrow> throwError IllegalOperation
    | PageDirectoryCap _ (Some x) \<Rightarrow> returnOk c
    | PageDirectoryCap _ None \<Rightarrow> throwError IllegalOperation
-   | PageCap r R pgs x \<Rightarrow> returnOk (PageCap r R pgs None)
+   | PageCap dev r R pgs x \<Rightarrow> returnOk (PageCap dev r R pgs None)
    | ASIDControlCap \<Rightarrow> returnOk c
    | ASIDPoolCap _ _ \<Rightarrow> returnOk c
    | VCPUCap _ \<Rightarrow> returnOk c"
@@ -783,7 +783,7 @@ where
     unmap_page_table a v ptr;
     return NullCap
   od
-  | (PageCap ptr _ s (Some (a, v)), _) \<Rightarrow> do
+  | (PageCap _ ptr _ s (Some (a, v)), _) \<Rightarrow> do
      unmap_page s a v ptr;
      return NullCap
   od
@@ -803,74 +803,6 @@ where
  | None \<Rightarrow> return ()
  od"
 
-
-text {* Remove record of mappings to a page cap, page table cap or page directory cap *}
-
-fun
-  arch_reset_mem_mapping :: "arch_cap \<Rightarrow> arch_cap"
-where
-  "arch_reset_mem_mapping (PageCap p rts sz mp) = PageCap p rts sz None"
-| "arch_reset_mem_mapping (PageTableCap ptr mp) = PageTableCap ptr None"
-| "arch_reset_mem_mapping (PageDirectoryCap ptr ma) = PageDirectoryCap ptr None"
-| "arch_reset_mem_mapping cap = cap"
-
-text {* Actions that must be taken to recycle ARM-specific capabilities. *}
-definition
-  arch_recycle_cap :: "bool \<Rightarrow> arch_cap \<Rightarrow> (arch_cap,'z::state_ext) s_monad"
-where
-  "arch_recycle_cap is_final cap \<equiv> case cap of
-    PageCap p _ sz _ \<Rightarrow> do
-      do_machine_op $ clearMemory p (2 ^ (pageBitsForSize sz));
-      arch_finalise_cap cap is_final;
-      return $ arch_reset_mem_mapping cap
-    od
-  | PageTableCap ptr mp \<Rightarrow> do
-      pte_bits \<leftarrow> return 2;
-      slots \<leftarrow> return [ptr, ptr + (1 << pte_bits) .e. ptr + (1 << pt_bits) - 1];
-      mapM_x (swp store_pte InvalidPTE) slots;
-      do_machine_op $ cleanCacheRange_PoU ptr (ptr + (1 << pt_bits) - 1)
-                                          (addrFromPPtr ptr);
-      case mp of None \<Rightarrow> return ()
-       | Some (a, v) \<Rightarrow> do
-          pdOpt \<leftarrow> page_table_mapped a v ptr;
-          when (pdOpt \<noteq> None) $ invalidate_tlb_by_asid a
-          od;
-      arch_finalise_cap cap is_final;
-      return (if is_final then arch_reset_mem_mapping cap else cap)
-    od
-  | PageDirectoryCap ptr ma \<Rightarrow> do
-      pde_bits \<leftarrow> return 2;
-      indices \<leftarrow> return [0 .e. (kernel_base >> pageBitsForSize ARMSection) - 1];
-      offsets \<leftarrow> return (map (swp (op <<) pde_bits) indices);
-      slots \<leftarrow> return (map (\<lambda>x. x + ptr) offsets);
-      mapM_x (swp store_pde InvalidPDE) slots;
-      do_machine_op $ cleanCacheRange_PoU ptr (ptr + (1 << pd_bits) - 1)
-                                          (addrFromPPtr ptr);
-      case ma of None \<Rightarrow> return ()
-               | Some a \<Rightarrow> doE
-                            pd' \<leftarrow> find_pd_for_asid a;
-                            liftE $ when (pd' = ptr) $ invalidate_tlb_by_asid a
-                           odE <catch> K (return ());
-      arch_finalise_cap cap is_final;
-      return (if is_final then arch_reset_mem_mapping cap else cap)
-    od
-  | ASIDControlCap \<Rightarrow> return ASIDControlCap
-  | ASIDPoolCap ptr base \<Rightarrow> do
-      asid_table \<leftarrow> gets (arm_asid_table \<circ> arch_state);
-      when (asid_table (asid_high_bits_of base) = Some ptr) $ do
-          delete_asid_pool base ptr;
-          set_asid_pool ptr empty;
-          asid_table \<leftarrow> gets (arm_asid_table \<circ> arch_state);
-          asid_table' \<leftarrow> return (asid_table (asid_high_bits_of base \<mapsto> ptr));
-          modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_asid_table := asid_table' \<rparr>\<rparr>)
-      od;
-      return cap
-    od
-  | VCPUCap vcpu_ref \<Rightarrow> do
-      vcpu_finalise vcpu_ref;
-      set_vcpu vcpu_ref default_vcpu;
-      return cap
-    od" (* FIXME ARMHYP: when do we dissociate? *)
 
 text {* A thread's virtual address space capability must be to a page directory
 to be valid on the ARM architecture. *}
@@ -919,7 +851,7 @@ qed
 definition
 check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) se_monad" where
 "check_valid_ipc_buffer vptr c \<equiv> case c of
-  (ArchObjectCap (PageCap _ _ magnitude _)) \<Rightarrow> doE
+  (ArchObjectCap (PageCap False _ _ _ _)) \<Rightarrow> doE
     whenE (\<not> is_aligned vptr msg_align_bits) $ throwError AlignmentError;
     returnOk ()
   odE
@@ -944,7 +876,7 @@ attribs_from_word :: "word32 \<Rightarrow> vm_attributes" where
 text {* Update the mapping data saved in a page or page table capability. *}
 definition
   update_map_data :: "arch_cap \<Rightarrow> (word32 \<times> word32) option \<Rightarrow> arch_cap" where
-  "update_map_data cap m \<equiv> case cap of PageCap p R sz _ \<Rightarrow> PageCap p R sz m
+  "update_map_data cap m \<equiv> case cap of PageCap dev p R sz _ \<Rightarrow> PageCap dev p R sz m
                                      | PageTableCap p _ \<Rightarrow> PageTableCap p m"
 
 text {* Get information about the frame of a given virtual address *}
@@ -976,7 +908,7 @@ definition
   in_user_frame :: "word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "in_user_frame p s \<equiv>
    \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) =
-        Some (ArchObj (DataPage sz))"
+        Some (ArchObj (DataPage False sz))"
 
 end
 

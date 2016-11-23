@@ -44,7 +44,7 @@ along with capabilities for page directories, page tables, and page mappings. *}
 datatype arch_cap =
    ASIDPoolCap obj_ref asid
  | ASIDControlCap
- | PageCap obj_ref cap_rights vmpage_size "(asid * vspace_ref) option"
+ | PageCap bool obj_ref cap_rights vmpage_size "(asid * vspace_ref) option"
  | PageTableCap obj_ref "(asid * vspace_ref) option"
  | PageDirectoryCap obj_ref "asid option"
  | VCPUCap obj_ref
@@ -58,17 +58,17 @@ arch_cap.induct[where arch_cap=x and P="\<lambda>x'. x = x' \<longrightarrow> P 
 
 definition
   is_page_cap :: "arch_cap \<Rightarrow> bool" where
-  "is_page_cap c \<equiv> \<exists>x0 x1 x2 x3. c = PageCap x0 x1 x2 x3"
+  "is_page_cap c \<equiv> \<exists>x0 x1 x2 x3 x4. c = PageCap x0 x1 x2 x3 x4"
 
 definition
   asid_high_bits :: nat where
-  "asid_high_bits \<equiv> 7"
+  "asid_high_bits \<equiv> 6"
 definition
   asid_low_bits :: nat where
   "asid_low_bits \<equiv> 10 :: nat"
 definition
   asid_bits :: nat where
-  "asid_bits \<equiv> 18 :: nat"
+  "asid_bits \<equiv> 16 :: nat"
 
 section {* Architecture-specific objects *}
 
@@ -207,10 +207,20 @@ primrec
 where
   "arch_obj_size (ASIDPoolCap p as) = pageBits"
 | "arch_obj_size ASIDControlCap = 0"
-| "arch_obj_size (PageCap x rs sz as4) = pageBitsForSize sz"
+| "arch_obj_size (PageCap dev x rs sz as4) = pageBitsForSize sz"
 | "arch_obj_size (PageDirectoryCap x as2) = pd_bits"
 | "arch_obj_size (PageTableCap x as3) = pt_bits"
 | "arch_obj_size (VCPUCap _) = vcpu_bits"
+
+primrec
+  arch_cap_is_device :: "arch_cap \<Rightarrow> bool"
+  where
+    "arch_cap_is_device (PageCap dev x rs sz as4) = dev"
+    | "arch_cap_is_device ASIDControlCap = False"
+    | "arch_cap_is_device (ASIDPoolCap p as) = False"
+    | "arch_cap_is_device (PageTableCap x as3) = False"
+    | "arch_cap_is_device (PageDirectoryCap x as2) = False"
+    | "arch_cap_is_device (VCPUCap _) = False"
 
 primrec
   arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat"
@@ -226,7 +236,7 @@ primrec
 where
   "aobj_ref (ASIDPoolCap p as) = Some p"
 | "aobj_ref ASIDControlCap = None"
-| "aobj_ref (PageCap x rs sz as4) = Some x"
+| "aobj_ref (PageCap dev x rs sz as4) = Some x"
 | "aobj_ref (PageDirectoryCap x as2) = Some x"
 | "aobj_ref (PageTableCap x as3) = Some x"
 | "aobj_ref (VCPUCap x) = Some x"
@@ -234,12 +244,12 @@ where
 primrec (nonexhaustive)
   acap_rights :: "arch_cap \<Rightarrow> cap_rights"
 where
- "acap_rights (PageCap x rs sz as) = rs"
+ "acap_rights (PageCap dev x rs sz as) = rs"
 
 definition
   acap_rights_update :: "cap_rights \<Rightarrow> arch_cap \<Rightarrow> arch_cap" where
  "acap_rights_update rs ac \<equiv> case ac of
-    PageCap x rs' sz as \<Rightarrow> PageCap x (validate_vm_rights rs) sz as
+    PageCap dev x rs' sz as \<Rightarrow> PageCap dev x (validate_vm_rights rs) sz as
   | _                   \<Rightarrow> ac"
 
 section {* Architecture-specific object types and default objects *}
@@ -256,24 +266,33 @@ datatype
   | VCPUObj
 
 definition
-  arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> arch_cap" where
- "arch_default_cap tp r n \<equiv> case tp of
-  SmallPageObj \<Rightarrow> PageCap r vm_read_write ARMSmallPage None
-  | LargePageObj \<Rightarrow> PageCap r vm_read_write ARMLargePage None
-  | SectionObj \<Rightarrow> PageCap r vm_read_write ARMSection None
-  | SuperSectionObj \<Rightarrow> PageCap r vm_read_write ARMSuperSection None
+  arch_is_frame_type :: "aobject_type \<Rightarrow> bool"
+  where
+    "arch_is_frame_type aobj \<equiv> case aobj of
+         SmallPageObj \<Rightarrow> True
+       | LargePageObj \<Rightarrow> True
+       | SectionObj \<Rightarrow> True
+       | SuperSectionObj \<Rightarrow> True
+       | _ \<Rightarrow> False"
+
+definition  arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_cap" where
+ "arch_default_cap tp r n dev \<equiv> case tp of
+  SmallPageObj \<Rightarrow> PageCap dev r vm_read_write ARMSmallPage None
+  | LargePageObj \<Rightarrow> PageCap dev r vm_read_write ARMLargePage None
+  | SectionObj \<Rightarrow> PageCap dev r vm_read_write ARMSection None
+  | SuperSectionObj \<Rightarrow> PageCap dev r vm_read_write ARMSuperSection None
   | PageTableObj \<Rightarrow> PageTableCap r None
   | PageDirectoryObj \<Rightarrow> PageDirectoryCap r None
   | VCPUObj \<Rightarrow> VCPUCap r
   | ASIDPoolObj \<Rightarrow> ASIDPoolCap r 0" (* unused *)
 
 definition
-  default_arch_object :: "aobject_type \<Rightarrow> nat \<Rightarrow> arch_kernel_obj" where
- "default_arch_object tp n \<equiv> case tp of
-    SmallPageObj \<Rightarrow> DataPage ARMSmallPage
-  | LargePageObj \<Rightarrow> DataPage ARMLargePage
-  | SectionObj \<Rightarrow> DataPage ARMSection
-  | SuperSectionObj \<Rightarrow> DataPage ARMSuperSection
+  default_arch_object :: "aobject_type \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> arch_kernel_obj" where
+ "default_arch_object tp dev n \<equiv> case tp of
+    SmallPageObj \<Rightarrow> DataPage dev ARMSmallPage
+  | LargePageObj \<Rightarrow> DataPage dev ARMLargePage
+  | SectionObj \<Rightarrow> DataPage dev ARMSection
+  | SuperSectionObj \<Rightarrow> DataPage dev ARMSuperSection
   | PageTableObj \<Rightarrow> PageTable (\<lambda>x. InvalidPTE)
   | PageDirectoryObj \<Rightarrow> PageDirectory (\<lambda>x. InvalidPDE)
   | VCPUObj \<Rightarrow> VCPU default_vcpu
@@ -309,8 +328,7 @@ qualify ARM_A (in Arch)
 text {* arch\_state *}
 
 record arch_state =
-  arm_globals_frame :: obj_ref
-  arm_asid_table    :: "word8 \<rightharpoonup> obj_ref"
+  arm_asid_table    :: "6 word \<rightharpoonup> obj_ref"
   arm_hwasid_table  :: "ARM_A.hw_asid \<rightharpoonup> ARM_A.asid"
   arm_next_asid     :: ARM_A.hw_asid
   arm_asid_map      :: "ARM_A.asid \<rightharpoonup> (ARM_A.hw_asid \<times> obj_ref)"
@@ -330,14 +348,16 @@ datatype aa_type =
   | APageTable
   | APageDirectory
   | AVCPU
-  | AIntData vmpage_size
+  | AUserData vmpage_size
+  | ADeviceData vmpage_size
+
 
 definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type"
 where
  "aa_type ao \<equiv> (case ao of
            PageTable pt             \<Rightarrow> APageTable
          | PageDirectory pd         \<Rightarrow> APageDirectory
-         | DataPage sz              \<Rightarrow> AIntData sz
+         | DataPage dev sz          \<Rightarrow> if dev then ADeviceData sz else AUserData sz
          | ASIDPool f               \<Rightarrow> AASIDPool
          | VCPU v                   \<Rightarrow> AVCPU)"
 
@@ -355,6 +375,7 @@ record arch_tcb =
 
 end_qualify
 
+
 context Arch begin global_naming ARM_A
 
 definition
@@ -363,6 +384,16 @@ definition
       tcb_context    = new_context,
       tcb_vcpu       = None \<rparr>"
 
+text {* accesors for @{text "tcb_context"} inside @{text "arch_tcb"} *}
+definition
+  arch_tcb_context_set :: "user_context \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+  where
+    "arch_tcb_context_set uc a_tcb \<equiv> a_tcb \<lparr> tcb_context := uc \<rparr>"
+
+definition
+  arch_tcb_context_get :: "arch_tcb \<Rightarrow> user_context"
+  where
+    "arch_tcb_context_get a_tcb \<equiv> tcb_context a_tcb"
 
 end
 

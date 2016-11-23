@@ -15,7 +15,9 @@ Functions to access kernel memory.
 chapter {* VCPU *}
 
 theory VCPU_A
-imports "../Structures_A" ArchTcbAcc_A
+imports
+  "../Structures_A"
+  "../TcbAcc_A"
   "../InvocationLabels_A"
 begin
 

@@ -31,7 +31,7 @@ contained in the region of the first one. *}
 fun
   arch_same_region_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
 where
-  "arch_same_region_as (PageCap r R s x) (PageCap r' R' s' x') =
+  "arch_same_region_as (PageCap dev r R s x) (PageCap dev' r' R' s' x') =
    (let
      topA = r + (1 << pageBitsForSize s) - 1;
      topB = r' + (1 << pageBitsForSize s') - 1
@@ -49,20 +49,13 @@ definition
   same_aobject_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool" where
  "same_aobject_as cp cp' \<equiv>
    (case (cp, cp') of
-      (PageCap ref _ pgsz _,PageCap ref' _ pgsz' _)
-          \<Rightarrow> (ref, pgsz) = (ref', pgsz')
+      (PageCap dev ref _ pgsz _,PageCap dev' ref' _ pgsz' _)
+          \<Rightarrow> (dev, ref, pgsz) = (dev', ref', pgsz')
               \<and> ref \<le> ref + 2 ^ pageBitsForSize pgsz - 1
     | _ \<Rightarrow> arch_same_region_as cp cp')"
 
 (* Proofs don't want to see this definition *)
 declare same_aobject_as_def[simp]
-
-text {* Only caps with sufficient rights can be recycled. *}
-definition
-  arch_has_recycle_rights :: "arch_cap \<Rightarrow> bool" where
-  "arch_has_recycle_rights cap \<equiv> case cap of
-     PageCap _ R _ _ \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
-   | _ \<Rightarrow> True"
 
 end
 end
