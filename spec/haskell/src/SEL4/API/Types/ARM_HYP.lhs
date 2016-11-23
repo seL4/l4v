@@ -104,3 +104,11 @@ I/O MMU additions add IO page table objects. Note that there is only one IO page
 #endif
 > getObjectSize (APIObjectType apiObjectType) size = apiGetObjectSize apiObjectType size
 
+
+> isFrameType :: ObjectType -> Bool
+> isFrameType SmallPageObject = True
+> isFrameType LargePageObject = True
+> isFrameType SectionObject = True
+> isFrameType SuperSectionObject = True
+> isFrameType _ = False
+

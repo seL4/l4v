@@ -153,12 +153,7 @@ FIXME ARMHYP also this is BOOT CODE, adding to confusion
 With hypervisor extensions, kernel and user MMUs are completely independent. However, we still need to share the globals page.
 
 > copyGlobalMappings :: PPtr PDE -> Kernel ()
-> copyGlobalMappings newPD = do
->     globalPT <- gets (armUSGlobalPT . ksArchState)
->     let pde = PageTablePDE (addrFromPPtr globalPT)
->     let pdSize = bit (pdBits)
->     let offset = pdSize - bit pdeBits
->     storePDE (newPD + offset) pde
+> copyGlobalMappings newPD = return ()
 
 \subsection{Creating and Updating Mappings}
 
@@ -166,10 +161,10 @@ When a frame is being mapped, or an existing mapping updated, the following func
 
 > largePagePTEOffsets :: [PPtr PTE]
 > largePagePTEOffsets = [0, PPtr pts .. PPtr (15 `shiftL` pteBits)]
->     where pts = fromIntegral pteBits
+>     where pts = bit pteBits
 > superSectionPDEOffsets :: [PPtr PDE]
 > superSectionPDEOffsets = [0, PPtr pds .. PPtr (15 `shiftL` pdeBits)]
->     where pds = fromIntegral pdeBits
+>     where pds = bit pdeBits
 
 > createMappingEntries :: PAddr -> VPtr ->
 >     VMPageSize -> VMRights -> VMAttributes -> PPtr PDE ->
@@ -262,12 +257,11 @@ When the kernel tries to access a thread's IPC buffer, this function is called t
 >     bufferFrameSlot <- getThreadBufferSlot thread
 >     bufferCap <- getSlotCap bufferFrameSlot
 >     case bufferCap of
->         ArchObjectCap (frame@PageCap {}) -> do
->             let rights = capVPRights frame
->             let pBits = pageBitsForSize $ capVPSize frame
+>         ArchObjectCap (PageCap {capVPIsDevice = False, capVPBasePtr = baseptr, capVPRights = rights, capVPSize = sz}) -> do
+>             let pBits = pageBitsForSize sz
 >             if (rights == VMReadWrite || not isReceiver && rights == VMReadOnly)
 >               then do
->                  let ptr = capVPBasePtr frame +
+>                  let ptr = baseptr +
 >                            PPtr (fromVPtr bufferPtr .&. mask pBits)
 >                  assert (ptr /= 0)
 >                             "IPC buffer pointer must be non-null"
@@ -585,7 +579,7 @@ The IPC buffer frame must be an ARM frame capability, and the buffer must be ali
 Note that implementations with separate high and low memory regions may also wish to limit valid IPC buffer frames to low memory, so the kernel can access them without extra mappings. This function may also be used to enforce cache colouring restrictions.
 
 > checkValidIPCBuffer :: VPtr -> Capability -> KernelF SyscallError ()
-> checkValidIPCBuffer vptr (ArchObjectCap (PageCap {})) = do
+> checkValidIPCBuffer vptr (ArchObjectCap (PageCap {capVPIsDevice = False})) = do
 >     when (vptr .&. mask msgAlignBits /= 0) $ throw AlignmentError
 >     return ()
 > checkValidIPCBuffer _ _ = throw IllegalOperation
@@ -982,7 +976,7 @@ The ASID control capability refers to the top level of a global two-level table 
 >             let base = (fst $ head free) `shiftL` asidLowBits
 >             let pool = makeObject :: ASIDPool
 >             frame <- case untyped of
->                 UntypedCap {} | capBlockSize untyped == objBits pool -> do
+>                 UntypedCap {capIsDevice = False} | capBlockSize untyped == objBits pool -> do
 >                     ensureNoChildren parentSlot
 >                     return $ capPtr untyped
 >                 _ -> throw $ InvalidCapability 1
@@ -1210,7 +1204,7 @@ the PT/PD is consistent.
 > performASIDControlInvocation (MakePool frame slot parent base) = do
 >     deleteObjects frame pageBits
 >     pcap <- getSlotCap parent
->     updateCap parent (pcap {capFreeIndex = maxFreeIndex (capBlockSize pcap) })
+>     updateFreeIndex parent (maxFreeIndex (capBlockSize pcap))
 >     placeNewObject frame (makeObject :: ASIDPool) 0
 >     let poolPtr = PPtr $ fromPPtr frame
 >     cteInsert (ArchObjectCap $ ASIDPoolCap poolPtr base) parent slot

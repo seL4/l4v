@@ -42,6 +42,7 @@ There are six ARM-specific capability types: the global ASID control capability,
 >         capASIDBase :: ASID }
 >     | ASIDControlCap
 >     | PageCap {
+>         capVPIsDevice :: Bool,
 >         capVPBasePtr :: PPtr Word,
 >         capVPRights :: VMRights,
 >         capVPSize :: VMPageSize,
@@ -122,6 +123,12 @@ present on all platforms is stored here.
 #endif
 >     }
 
+> atcbContextSet :: UserContext -> ArchTCB -> ArchTCB
+> atcbContextSet uc at = at { atcbContext = uc }
+>
+> atcbContextGet :: ArchTCB -> UserContext
+> atcbContextGet = atcbContext
+
 \subsection{ASID Pools}
 
 An ASID pool is an array of pointers to page directories. This is used to implement virtual ASIDs on ARM; it is not accessed by the hardware.
@@ -140,9 +147,9 @@ FIXME ARMHYP after device untyped patch this will be 6 and 7 respectively
 
 > asidHighBits :: Int
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> asidHighBits = 7 -- isIOSpace takes away one bit
+> asidHighBits = 6 -- isIOSpace takes away one bit
 #else
-> asidHighBits = 8
+> asidHighBits = 7
 #endif
 
 > asidLowBits :: Int

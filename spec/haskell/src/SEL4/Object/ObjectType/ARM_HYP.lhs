@@ -23,7 +23,6 @@ This module contains operations on machine-specific object types for the ARM.
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.ARM_HYP
 > import SEL4.Model
-> import SEL4.Model.StateData.ARM_HYP
 > import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.ARM_HYP as ArchInv
@@ -33,7 +32,6 @@ This module contains operations on machine-specific object types for the ARM.
 > import {-# SOURCE #-} SEL4.Object.TCB
 
 > import Data.Bits
-> import Data.Array
 
 \end{impdetails}
 
@@ -137,93 +135,6 @@ All other capabilities need no finalisation action.
 
 > finaliseCap _ _ = return NullCap
 
-\subsection{Recycling Capabilities}
-
-> resetMemMapping :: ArchCapability -> ArchCapability
-#ifdef CONFIG_ARM_SMMU
-> resetMemMapping (PageCap p rts sz io _) = PageCap p rts sz io Nothing
-#else
-> resetMemMapping (PageCap p rts sz _) = PageCap p rts sz Nothing
-#endif
-> resetMemMapping (PageTableCap ptr _) = PageTableCap ptr Nothing
-> resetMemMapping (PageDirectoryCap ptr _) = PageDirectoryCap ptr Nothing
-#ifdef CONFIG_ARM_SMMU
-> resetMemMapping (IOPageTableCap ptr _) = IOPageTableCap ptr Nothing
-#endif
-> resetMemMapping cap = cap
-
-> recycleCap :: Bool -> ArchCapability -> Kernel ArchCapability
-> recycleCap is_final (cap@PageCap {}) = do
->       doMachineOp $ clearMemory (capVPBasePtr cap)
->           (1 `shiftL` (pageBitsForSize $ capVPSize cap))
->       finaliseCap cap is_final
->       return $ resetMemMapping cap
->
-> recycleCap is_final (cap@PageTableCap { capPTBasePtr = ptr }) = do
->     let slots = [ptr, ptr + bit pteBits .. ptr + bit ptBits - 1]
->     mapM_ (flip storePTE InvalidPTE) slots
->     doMachineOp $
->         cleanCacheRange_PoU (VPtr $ fromPPtr ptr)
->                             (VPtr $ fromPPtr ptr + (1 `shiftL` ptBits) - 1)
->                             (addrFromPPtr ptr)
->     case capPTMappedAddress cap of
->         Nothing -> return ()
->         Just (a, v) -> do
->             mapped <- pageTableMapped a v ptr
->             when (mapped /= Nothing) $ invalidateTLBByASID a
->     finaliseCap cap is_final
->     return (if is_final then resetMemMapping cap else cap)
-
-> recycleCap is_final (cap@PageDirectoryCap { capPDBasePtr = ptr }) = do
->     let pdeBits = objBits InvalidPDE
->     let kBaseEntry = fromVPtr kernelBase
->                         `shiftR` pageBitsForSize ARMSection
->     let indices = [0 .. kBaseEntry - 1]
->     let offsets = map (PPtr . flip shiftL pdeBits) indices
->     let slots = map (+ptr) offsets
->     mapM_ (flip storePDE InvalidPDE) slots
->     doMachineOp $
->         cleanCacheRange_PoU (VPtr $ fromPPtr ptr)
->                             (VPtr $ fromPPtr ptr + (1 `shiftL` pdBits) - 1)
->                             (addrFromPPtr ptr)
->     case capPDMappedASID cap of
->         Nothing -> return ()
->         Just a -> do
->             ignoreFailure $ (do
->                 pd' <- findPDForASID a
->                 withoutFailure $ when (ptr == pd') $ invalidateTLBByASID a)
->     finaliseCap cap is_final
->     return (if is_final then resetMemMapping cap else cap)
-
-> recycleCap _ ASIDControlCap = return ASIDControlCap
-> recycleCap _ (cap@ASIDPoolCap { capASIDBase = base, capASIDPool = ptr }) = do
->     asidTable <- gets (armKSASIDTable . ksArchState)
->     when (asidTable!(asidHighBitsOf base) == Just ptr) $ do
->         deleteASIDPool base ptr
->         setObject ptr (makeObject :: ASIDPool)
->         asidTable <- gets (armKSASIDTable . ksArchState)
->         let asidTable' = asidTable//[(asidHighBitsOf base, Just ptr)]
->         modify (\s -> s {
->             ksArchState = (ksArchState s) { armKSASIDTable = asidTable' }})
->     return cap
-
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> recycleCap _ (cap@VCPUCap { capVCPUPtr = vcpu }) = do
->     vcpuFinalise vcpu
->     setObject vcpu (makeObject :: VCPU)
->     return cap
-#endif
-
-#ifdef CONFIG_ARM_SMMU
-> recycleCap _ (IOSpaceCap {}) = error "FIXME ARMHYP TODO IOSpace"
-> recycleCap _ (IOPageTableCap {}) = error "FIXME ARMHYP TODO IOSpace"
-#endif
-
-> hasRecycleRights :: ArchCapability -> Bool
-
-> hasRecycleRights (PageCap { capVPRights = rights }) = rights == VMReadWrite
-> hasRecycleRights _ = True
-
 
 \subsection{Identifying Capabilities}
 
@@ -267,57 +178,52 @@ All other capabilities need no finalisation action.
 
 Creates a page-sized object that consists of plain words observable to the user.
 
-> createPageObject ptr numPages = do
->     addrs <- placeNewObject ptr UserData numPages
->     doMachineOp $ initMemory (PPtr $ fromPPtr ptr) (1 `shiftL` (pageBits + numPages) )
->     return addrs
+> placeNewDataObject :: PPtr () -> Int -> Bool -> Kernel ()
+> placeNewDataObject regionBase sz isDevice = if isDevice
+>     then placeNewObject regionBase UserDataDevice sz
+>     else placeNewObject regionBase UserData sz
 
 Create an architecture-specific object.
 
-> createObject :: ObjectType -> PPtr () -> Int -> Kernel ArchCapability
-> createObject t regionBase _ =
+> createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
+> createObject t regionBase _ isDevice =
 >     let funupd = (\f x v y -> if y == x then v else f y) in
 >     let pointerCast = PPtr . fromPPtr in
 #ifndef CONFIG_ARM_SMMU
->     let mkPageCap = \sz -> PageCap (pointerCast regionBase) VMReadWrite sz Nothing
+>     let mkPageCap = \sz -> PageCap isDevice (pointerCast regionBase) VMReadWrite sz Nothing
 #else
->     let mkPageCap = \sz -> PageCap (pointerCast regionBase) VMReadWrite sz False Nothing
+>     let mkPageCap = \sz -> PageCap isDevice (pointerCast regionBase) VMReadWrite sz False Nothing
 #endif
 >     in case t of
 >         Arch.Types.APIObjectType _ ->
 >             fail "Arch.createObject got an API type"
 >         Arch.Types.SmallPageObject -> do
->             createPageObject regionBase 0
+>             placeNewDataObject regionBase 0 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSmallPage)})
 >             return $! mkPageCap ARMSmallPage
 >         Arch.Types.LargePageObject -> do
->             createPageObject regionBase 4
+>             placeNewDataObject regionBase 4 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMLargePage)})
 >             return $! mkPageCap ARMLargePage
 >         Arch.Types.SectionObject -> do
->             createPageObject regionBase 8
+>             placeNewDataObject regionBase 8 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSection)})
 >             return $! mkPageCap ARMSection
 >         Arch.Types.SuperSectionObject -> do
->             createPageObject regionBase 12
+>             placeNewDataObject regionBase 12 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSuperSection)})
 >             return $! mkPageCap ARMSuperSection
 >         Arch.Types.PageTableObject -> do
 >             let ptSize = ptBits - objBits (makeObject :: PTE)
->             let regionSize = (1 `shiftL` ptBits)
 >             placeNewObject regionBase (makeObject :: PTE) ptSize
->             doMachineOp $
->                 cleanCacheRange_PoU (VPtr $ fromPPtr regionBase)
->                       (VPtr $ fromPPtr regionBase + regionSize - 1)
->                       (addrFromPPtr regionBase)
 >             return $! PageTableCap (pointerCast regionBase) Nothing
 >         Arch.Types.PageDirectoryObject -> do
 >             let pdSize = pdBits - objBits (makeObject :: PDE)

@@ -41,10 +41,10 @@ in handleVMFault?
 >     upc <- withoutFailure $ doMachineOp (addressTranslateS1CPR pc)
 >     let faddr = (upc .&. complement (mask pageBits)) .|.
 >                 (VPtr pc .&. mask pageBits)
->     return (4, fromVPtr faddr:fromVPtr vptr:archData)
+>     return (5, fromVPtr faddr:fromVPtr vptr:archData)
 #endif
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> makeArchFaultMessage (VCPUFault hsr) thread = return (5, [hsr])
+> makeArchFaultMessage (VCPUFault hsr) thread = return (7, [hsr])
 > makeArchFaultMessage (VGICMaintenance archData) thread = do
 >     return (6, archData) -- FIXME ARMHYP check vgic index here?
 #endif

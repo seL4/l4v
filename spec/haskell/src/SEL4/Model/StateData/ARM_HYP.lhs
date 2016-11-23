@@ -58,7 +58,6 @@ armKSKernelVSpace is ghost state.
 FIXME ARMHYP missing IO ASID to PD map for SMMU
 
 > data KernelState = ARMKernelState {
->     armKSGlobalsFrame :: PPtr Word,
 >     armKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
 >     armKSHWASIDTable :: Array HardwareASID (Maybe ASID),
 >     armKSNextASID :: HardwareASID,
@@ -89,7 +88,6 @@ FIXME ARMHYP missing IO ASID to PD map for SMMU
 >             [globalPTs, globalPTs + bit pageBits .. globalPTsTop - 1] ++
 >             [globalPD, globalPD + bit pageBits .. globalPDTop - 1]
 >         state = ARMKernelState {
->             armKSGlobalsFrame = ptrFromPAddr globalsFrame,
 >             armKSASIDTable = funPartialArray (const Nothing) (0, (1 `shiftL` asidHighBits) - 1),
 >             armKSHWASIDTable = funArray (const Nothing),
 >             armKSNextASID = minBound,
@@ -117,7 +115,6 @@ FIXME ARMHYP ok, someone needs to explain how this actually works before it gets
 >         globalsFrameTop = globalsFrame + bit pageBits
 >         frames = error "FIXME ARMHYP TODO"
 >         state = ARMKernelState {
->             armKSGlobalsFrame = ptrFromPAddr globalsFrame,
 >             armKSASIDTable = funPartialArray (const Nothing) (0, (1 `shiftL` asidHighBits) - 1),
 >             armKSHWASIDTable = funArray (const Nothing),
 >             armKSNextASID = minBound,
