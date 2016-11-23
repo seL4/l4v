@@ -43,7 +43,7 @@ lemma upto_enum_inc_1:
   apply (subgoal_tac "unat (1 +a) = 1 + unat a")
     apply simp
    apply (subst unat_plus_simple[THEN iffD1])
-   apply (rule word_plus_mono_right2[where b = "2^32 - 2"])
+   apply (rule word_plus_mono_right2[where b = "2^word_bits - 2"])
     apply (simp add:word_bits_def minus_one_norm)+
     apply unat_arith
    apply simp
@@ -498,7 +498,7 @@ lemma word_plus_mono_right_split:
    apply (auto simp:unat_plus_if_size word_size word_bits_def not_less)
   done
 
-lemmas word32_plus_mono_right_split = word_plus_mono_right_split[where 'a=32, folded word_bits_def]
+lemmas machine_word_plus_mono_right_split = word_plus_mono_right_split[where 'a=machine_word_len, folded word_bits_def]
 
 
 (* range_cover locale:
@@ -835,7 +835,7 @@ proof -
       proof (rule base_member_set)
         from vp show "is_aligned x (obj_bits ko)" using ps'
           by (auto elim!: valid_pspaceE pspace_alignedE)
-        show "obj_bits ko < len_of TYPE(32)"
+        show "obj_bits ko < len_of TYPE(machine_word_len)"
           by (rule valid_pspace_obj_sizes [OF _ ranI, unfolded word_bits_def]) fact+
       qed
       
@@ -1202,7 +1202,7 @@ lemma retype_region_global_refs_disjoint:
    apply (rule subsetI, simp only: mask_in_range[symmetric])
    apply (clarsimp simp: ptr_add_def)
    apply (intro conjI)
-     apply (rule word32_plus_mono_right_split[where sz = sz])
+     apply (rule machine_word_plus_mono_right_split[where sz = sz])
        apply (erule(1) range_cover.range_cover_compare)
      apply (simp add:range_cover_def word_bits_def)
     apply (subst p_assoc_help)
@@ -1279,7 +1279,7 @@ crunch cap_refs_in_kernel_window[wp]: do_machine_op "cap_refs_in_kernel_window"
 locale Retype_AI_post_retype_invs =
   fixes state_ext_t :: "'state_ext::state_ext itself"
     and post_retype_invs_check :: "apiobject_type \<Rightarrow> bool"
-    and post_retype_invs :: "apiobject_type \<Rightarrow> word32 list \<Rightarrow> 'state_ext state \<Rightarrow> bool"
+    and post_retype_invs :: "apiobject_type \<Rightarrow> machine_word list \<Rightarrow> 'state_ext state \<Rightarrow> bool"
   assumes post_retype_invs_def':
     "post_retype_invs tp refs \<equiv>
       if post_retype_invs_check tp
@@ -1313,13 +1313,13 @@ lemma honestly_16_10:
 
 
 definition
-  caps_no_overlap :: "word32 \<Rightarrow> nat \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  caps_no_overlap :: "machine_word \<Rightarrow> nat \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
  "caps_no_overlap ptr sz s \<equiv> \<forall>cap \<in> ran (caps_of_state s).
                untyped_range cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<noteq> {}
                \<longrightarrow> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<subseteq> untyped_range cap"
 
-definition caps_overlap_reserved :: "word32 set \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool"
+definition caps_overlap_reserved :: "machine_word set \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool"
 where
  "caps_overlap_reserved S (s :: ('z::state_ext) state) \<equiv> \<forall>cap \<in> ran (caps_of_state s).
   (is_untyped_cap cap \<longrightarrow> usable_untyped_range cap \<inter> S = {})"
@@ -1669,11 +1669,11 @@ lemma retype_addrs_obj_range_subset_strong:
       and  not_0:"n\<noteq> 0"
       and  tyunt:"ty\<noteq> Untyped"
     note n_less = range_cover.range_cover_n_less[OF cover]
-    have unat_of_nat_m1: "unat (of_nat n - (1::word32)) < n"
+    have unat_of_nat_m1: "unat (of_nat n - (1::machine_word)) < n"
       using not_0 n_less
        by (simp add:unat_of_nat_minus_1)
     have decomp:"of_nat n * 2 ^ obj_bits_api ty us = of_nat (n - 1) * 2 ^ (obj_bits (default_object ty dev us))
-      + (2 :: word32) ^ obj_bits (default_object ty dev us)"
+      + (2 :: machine_word) ^ obj_bits (default_object ty dev us)"
       apply (simp add:distrib_right[where b = "1::'a::len word",simplified,symmetric])
       using not_0 n_less
       apply (simp add: unat_of_nat_minus_1 obj_bits_api_def3 tyunt cong: obj_bits_cong)
@@ -1703,8 +1703,8 @@ lemma retype_addrs_obj_range_subset_strong:
           apply (simp add:unat_of_nat_m1 less_imp_le)
          using cover
          apply (simp add:range_cover_def word_bits_def)
-        apply (rule word32_plus_mono_right_split[where sz = sz])
-        using range_cover.range_cover_compare[OF cover,where p = "unat (of_nat n - (1::word32))"]
+        apply (rule machine_word_plus_mono_right_split[where sz = sz])
+        using range_cover.range_cover_compare[OF cover,where p = "unat (of_nat n - (1::machine_word))"]
         apply (clarsimp simp:unat_of_nat_m1)
        using cover
        apply (simp add:range_cover_def word_bits_def)
@@ -1797,7 +1797,7 @@ lemma usable_range_subseteq:
 lemma usable_range_emptyD:
   "\<lbrakk>cap_aligned cap;is_untyped_cap cap ;usable_untyped_range cap = {}\<rbrakk> \<Longrightarrow> 2 ^ cap_bits cap \<le> free_index_of cap"
   apply (clarsimp simp:is_cap_simps not_le free_index_of_def cap_aligned_def split:if_splits)
-  apply (drule(1) of_nat_less_pow_32)
+  apply (drule(1) of_nat_power [where 'a=machine_word_len, folded word_bits_def])
   apply (drule word_plus_mono_right[OF _ is_aligned_no_overflow[unfolded p_assoc_help],rotated])
    apply simp
   apply (simp add:p_assoc_help)
@@ -2221,7 +2221,7 @@ lemma p_in_obj_range:
   apply (drule valid_obj_sizes, erule ranI)
   apply (simp add: obj_range_def add_diff_eq[symmetric])
   apply (erule is_aligned_no_wrap')
-  apply (erule word_power_less_1[where 'a=32, folded word_bits_def])
+  apply (erule word_power_less_1[where 'a=machine_word_len, folded word_bits_def])
   done
 
 lemma p_in_obj_range_internal:
@@ -2285,8 +2285,8 @@ locale retype_region_proofs_invs
   + Retype_AI_post_retype_invs "TYPE('state_ext)" post_retype_invs_check post_retype_invs
   for s :: "'state_ext :: state_ext state"
   and ty us ptr sz n ps s' dev post_retype_invs_check
-  and post_retype_invs :: "apiobject_type \<Rightarrow> word32 list \<Rightarrow> 'state_ext state \<Rightarrow> bool" +
-  fixes region_in_kernel_window :: "word32 set \<Rightarrow> 'state_ext state \<Rightarrow> bool"
+  and post_retype_invs :: "apiobject_type \<Rightarrow> machine_word list \<Rightarrow> 'state_ext state \<Rightarrow> bool" +
+  fixes region_in_kernel_window :: "machine_word set \<Rightarrow> 'state_ext state \<Rightarrow> bool"
   assumes valid_global_refs: "valid_global_refs s \<Longrightarrow> valid_global_refs s'"
   assumes valid_arch_state: "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
   assumes valid_arch_objs': "valid_arch_objs s \<Longrightarrow> valid_arch_objs s'"
@@ -2339,11 +2339,11 @@ locale Retype_AI
   + Retype_AI_dmo_eq_kernel_restricted state_ext_t machine_op_t
   for state_ext_t :: "'state_ext::state_ext itself"
   and post_retype_invs_check
-  and post_retype_invs :: "apiobject_type \<Rightarrow> word32 list \<Rightarrow> 'state_ext state \<Rightarrow> bool"
+  and post_retype_invs :: "apiobject_type \<Rightarrow> machine_word list \<Rightarrow> 'state_ext state \<Rightarrow> bool"
   and no_gs_types
   and machine_op_t :: "'machine_op_t itself" +
   fixes state_ext'_t :: "'state_ext'::state_ext itself"
-  fixes region_in_kernel_window :: "word32 set \<Rightarrow> 'state_ext state \<Rightarrow> bool"
+  fixes region_in_kernel_window :: "machine_word set \<Rightarrow> 'state_ext state \<Rightarrow> bool"
   assumes invs_post_retype_invs:
     "\<And>(s::'state_ext state) ty refs. invs s \<Longrightarrow> post_retype_invs ty refs s"
   assumes equal_kernel_mappings_trans_state[simp]:
