@@ -493,12 +493,12 @@ lemma copy_global_equal_kernel_mappings_restricted:
   done
 
 lemma store_pde_valid_global_pd_mappings[wp]:
-  "\<lbrace>valid_global_objs and valid_global_pd_mappings
+  "\<lbrace>valid_global_objs and valid_global_vspace_mappings
           and (\<lambda>s. p && ~~ mask pd_bits \<notin> global_refs s)\<rbrace>
      store_pde p pde
-   \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
+   \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: store_pde_def set_pd_def)
-  apply (wp set_object_global_pd_mappings get_object_wp)
+  apply (wp set_object_global_vspace_mappings get_object_wp)
   apply simp
   done
 
@@ -1063,7 +1063,7 @@ lemma valid_asid_map:
   "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
   apply (clarsimp simp: valid_asid_map_def)
   apply (drule bspec, blast)
-  apply (clarsimp simp: pd_at_asid_def)
+  apply (clarsimp simp: vspace_at_asid_def)
   apply (drule vs_lookup_2ConsD)
   apply clarsimp
   apply (erule vs_lookup_atE)
@@ -1093,10 +1093,10 @@ lemma equal_kernel_mappings:
                    aobject_type.split)
   done
 
-lemma valid_global_pd_mappings:
-  "valid_global_pd_mappings s
-         \<Longrightarrow> valid_global_pd_mappings s'"
-  apply (erule valid_global_pd_mappings_pres)
+lemma valid_global_vspace_mappings:
+  "valid_global_vspace_mappings s
+         \<Longrightarrow> valid_global_vspace_mappings s'"
+  apply (erule valid_global_vspace_mappings_pres)
      apply (simp | erule obj_at_pres)+
   done
 
@@ -1139,7 +1139,7 @@ lemma post_retype_invs:
                      valid_mdb_rep2 mdb_and_revokable
                      valid_pspace cur_tcb only_idle
                      valid_kernel_mappings valid_asid_map
-                     valid_global_pd_mappings valid_ioc vms
+                     valid_global_vspace_mappings valid_ioc vms
                      pspace_in_kernel_window
                      cap_refs_in_kernel_window valid_irq_states)
 

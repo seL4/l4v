@@ -416,7 +416,7 @@ proof -
   apply (clarsimp simp: valid_asid_map_def arch_state_det)
   apply (drule bspec)
   apply (blast)
-  apply (clarsimp simp: pd_at_asid_def vs_lookup)
+  apply (clarsimp simp: vspace_at_asid_def vs_lookup)
   done
   qed
 
@@ -432,14 +432,14 @@ lemma equal_kernel_mappings_detype[detype_invs_proofs]:
   qed
 
 lemma valid_global_mappings_detype[detype_invs_proofs]:
-  "valid_global_pd_mappings (detype (untyped_range cap) s)"
+  "valid_global_vspace_mappings (detype (untyped_range cap) s)"
 proof -
-  have "valid_global_pd_mappings s"
+  have "valid_global_vspace_mappings s"
     using invs by (simp add: invs_def valid_state_def)
   thus ?thesis
   using valid_global_refsD [OF globals cap] valid_global_objs
   apply -
-  apply (erule valid_global_pd_mappings_pres, simp_all)
+  apply (erule valid_global_vspace_mappings_pres, simp_all)
    apply (simp add: cap_range_def global_refs_def arch_state_det)+
   done
 qed

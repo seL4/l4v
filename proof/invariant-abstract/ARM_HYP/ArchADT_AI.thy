@@ -48,17 +48,17 @@ where
      (case tcb_vtable tcb of
         ArchObjectCap (PageDirectoryCap pd_ref (Some asid))
           \<Rightarrow> (case arm_asid_table astate (asid_high_bits_of asid) of
-                None \<Rightarrow> arm_global_pt astate
+                None \<Rightarrow> arm_global_pd astate
               | Some p \<Rightarrow> (case khp p of
                             Some (ArchObj ako) \<Rightarrow>
                                if (VSRef (asid && mask asid_low_bits)
                                          (Some AASIDPool), pd_ref)
                                   \<in> vs_refs_arch ako
                                  then pd_ref
-                               else arm_global_pt astate
-                             | _ \<Rightarrow> arm_global_pt astate))
-      | _ \<Rightarrow>  arm_global_pt astate)
-   | _ \<Rightarrow>  arm_global_pt astate" (* ARM_HYP *)
+                               else arm_global_pd astate
+                             | _ \<Rightarrow> arm_global_pd astate))
+      | _ \<Rightarrow>  arm_global_pd astate)
+   | _ \<Rightarrow>  arm_global_pd astate"
 
 
 lemma VSRef_AASIDPool_in_vs_refs:
@@ -91,9 +91,9 @@ lemma get_pd_of_thread_def2:
                         khp p = Some (ArchObj (ASIDPool apool)) \<and>
                         apool (ucast (asid && mask asid_low_bits)) = Some pd_ref)
                     then pd_ref
-                    else arm_global_pt astate
-           | _ \<Rightarrow>  arm_global_pt astate)
-        | _ \<Rightarrow>  arm_global_pt astate"
+                    else arm_global_pd astate
+           | _ \<Rightarrow>  arm_global_pd astate)
+        | _ \<Rightarrow>  arm_global_pd astate"
   apply (rule eq_reflection)
   apply (clarsimp simp: get_pd_of_thread_def
                  split: kernel_object.splits option.splits)
@@ -114,9 +114,9 @@ lemma get_pd_of_thread_vs_lookup:
         (case tcb_vtable tcb of
            ArchObjectCap (PageDirectoryCap pd_ref (Some asid)) \<Rightarrow>
              if (the (vs_cap_ref (tcb_vtable tcb)) \<rhd> pd_ref) s then pd_ref
-             else arm_global_pt (arch_state s)
-         | _ \<Rightarrow> arm_global_pt (arch_state s))
-    | _ \<Rightarrow> arm_global_pt (arch_state s))"
+             else arm_global_pd (arch_state s)
+         | _ \<Rightarrow> arm_global_pd (arch_state s))
+    | _ \<Rightarrow> arm_global_pd (arch_state s))"
   apply (clarsimp simp: get_pd_of_thread_def split: option.splits)
   apply (case_tac "the (kheap s tcb_ref)", simp_all, clarsimp)
   apply (rename_tac tcb)
@@ -155,7 +155,7 @@ end
 (* NOTE: This statement would clearly be nicer for a partial function
          but later on, we really want the function to be total. *)
 lemma get_pd_of_thread_eq:
-  "pd_ref \<noteq> arm_global_pt (arch_state s) \<Longrightarrow>
+  "pd_ref \<noteq> arm_global_pd (arch_state s) \<Longrightarrow>
    get_pd_of_thread (kheap s) (arch_state s) tcb_ref = pd_ref \<longleftrightarrow>
    (\<exists>tcb. kheap s tcb_ref = Some (TCB tcb) \<and>
           (\<exists>asid. tcb_vtable tcb =

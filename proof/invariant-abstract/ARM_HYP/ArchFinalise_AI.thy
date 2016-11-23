@@ -1792,7 +1792,7 @@ lemma set_asid_pool_empty_valid_asid_map:
                  arm_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: valid_asid_map_def pd_at_asid_def
+  apply (clarsimp simp: valid_asid_map_def vspace_at_asid_def
                  dest!: graph_ofD
                  split: Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm)

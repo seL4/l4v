@@ -31,7 +31,7 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
    apply wp
   apply simp
   done
-
+(*
 global_naming ARM (*FIXME: arch_split*)
 lemma set_vm_root_kheap_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace> set_vm_root a
@@ -46,7 +46,7 @@ lemma set_vm_root_kheap_arch_state[wp]:
      apply (wp | simp add: returnOk_def validE_E_def validE_def)+
     apply (wp | simp add: throwError_def validE_R_def validE_def)+
 done
-
+*)
 lemma clearExMonitor_invs [wp]:
   "\<lbrace>invs\<rbrace> do_machine_op clearExMonitor \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wp dmo_invs)
@@ -60,13 +60,6 @@ lemma arch_stt_invs [wp,Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
   apply wp
-  apply (simp add: in_user_frame_def obj_at_def)
-  apply (wp hoare_vcg_ex_lift)
-  apply (rule_tac x=ARMSmallPage in exI)
-  apply (clarsimp simp add: invs_def valid_state_def valid_arch_state_def
-           valid_pspace_def pspace_aligned_def obj_at_def dom_def)
-  apply (drule spec, erule impE, fastforce)
-  apply (clarsimp simp: is_aligned_neg_mask_eq a_type_simps)
   done
 
 lemma arch_stt_tcb [wp,Schedule_AI_asms]:
@@ -85,15 +78,8 @@ lemma stit_invs [wp,Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
   apply wp
-    apply (rule invs_upd_cur_valid)
-     apply wp
-  apply (clarsimp simp: invs_def valid_state_def valid_idle_def pred_tcb_at_tcb_at)
-  apply (clarsimp simp: in_user_frame_def valid_arch_state_def)
-  apply (rule_tac x=ARMSmallPage in exI)
-  apply (clarsimp simp: obj_at_def)
-  apply (drule_tac addr="arm_globals_frame (arch_state s)" in valid_pspace_aligned, simp)
-  apply (drule is_aligned_neg_mask_eq, simp add: a_type_def)
-  done
+by (clarsimp simp: invs_def valid_state_def valid_idle_def cur_tcb_def
+              pred_tcb_at_def valid_machine_state_def obj_at_def is_tcb_def)
 
 lemma stit_activatable[Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
