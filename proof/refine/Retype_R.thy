@@ -778,8 +778,8 @@ proof -
   show ?thesis
   apply (rule set_eqI)
   apply (rule iffI)
-   apply (clarsimp simp:amp retype_addrs_def new_cap_addrs_def image_def) 
-   apply (rule_tac x = "(xb * 2^length y) + unat (of_bl y::word32)" in bexI)
+   apply (clarsimp simp:amp retype_addrs_def new_cap_addrs_def image_def)
+   apply (rule_tac x = "(xc * 2^length y) + unat (of_bl y::word32)" in bexI)
     apply (clarsimp simp:ptr_add_def cte_map_def tyct usszv shiftl_t2n
       ctoko obj_bits_api_def cte_level_bits_def slot_bits_def power_add)+
    apply (rule iffD1[OF less_diff_iff])

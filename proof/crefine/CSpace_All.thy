@@ -264,7 +264,7 @@ lemma lookupSlotForCNodeOp_ccorres':
   -- "last subgoal"
   apply (clarsimp simp: if_1_0_0  to_bool_def true_def word_size
                         fromIntegral_def integral_inv)
-  apply (case_tac "cap_get_tag roota = scast cap_cnode_cap") 
+  apply (case_tac "cap_get_tag root = scast cap_cnode_cap")
    prefer 2 apply clarsimp
   apply (clarsimp simp: unat_of_nat32 word_sle_def)
   apply (simp add: Collect_const_mem lookup_failure_rel_fault_lift)
