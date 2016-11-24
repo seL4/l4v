@@ -674,7 +674,7 @@ where
 
 lemma irq_node_offs_min:
   "init_irq_node_ptr \<le> init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits)"
-  apply (rule_tac sz=28 in word32_plus_mono_right_split)
+  apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
    apply (simp add: unat_word_ariths mask_def shiftl_t2n s0_ptr_defs cte_level_bits_def)
    apply (cut_tac x=irq and 'a=32 in ucast_less)
     apply simp
@@ -1303,7 +1303,7 @@ lemma pspace_distinct_s0:
        apply (simp add: word_less_nat_alt)
       apply (simp add: mult.commute)
       apply (drule_tac y="0x10" and x="0xE0007FFF" in word_plus_mono_right)
-       apply (rule_tac sz=28 in word32_plus_mono_right_split)
+       apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
         apply (simp add: unat_word_ariths mask_def)
         apply (cut_tac x=irqa and 'a=32 in ucast_less)
          apply simp
@@ -1317,14 +1317,14 @@ lemma pspace_distinct_s0:
                  and c="0xE0007FFF + (ucast irqa << 4)" and d="ucast irqa << 4" in word_sub_mono)
        apply simp
       apply simp
-      apply (rule_tac sz=28 in word32_plus_mono_right_split)
+      apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
        apply (simp add: unat_word_ariths mask_def shiftl_t2n)
        apply (cut_tac x=irqa and 'a=32 in ucast_less)
         apply simp
        apply (simp add: word_less_nat_alt)
       apply (simp add: word_bits_def)
      apply simp
-     apply (rule_tac sz=28 in word32_plus_mono_right_split)
+     apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
       apply (simp add: unat_word_ariths mask_def shiftl_t2n)
       apply (cut_tac x=irqa and 'a=32 in ucast_less)
        apply simp
@@ -1349,7 +1349,7 @@ lemma pspace_distinct_s0:
        apply (simp add: word_less_nat_alt)
       apply (simp add: mult.commute)
       apply (drule_tac y="0x10" and x="0xE0007FFF" in word_plus_mono_right)
-       apply (rule_tac sz=28 in word32_plus_mono_right_split)
+       apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
         apply (simp add: unat_word_ariths mask_def)
         apply (cut_tac x=irq and 'a=32 in ucast_less)
          apply simp
@@ -1363,14 +1363,14 @@ lemma pspace_distinct_s0:
                  and c="0xE0007FFF + (ucast irq << 4)" and d="ucast irq << 4" in word_sub_mono)
        apply simp
       apply simp
-      apply (rule_tac sz=28 in word32_plus_mono_right_split)
+      apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
        apply (simp add: unat_word_ariths mask_def shiftl_t2n)
        apply (cut_tac x=irq and 'a=32 in ucast_less)
         apply simp
        apply (simp add: word_less_nat_alt)
       apply (simp add: word_bits_def)
      apply simp
-     apply (rule_tac sz=28 in word32_plus_mono_right_split)
+     apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
       apply (simp add: unat_word_ariths mask_def shiftl_t2n)
       apply (cut_tac x=irq and 'a=32 in ucast_less)
        apply simp

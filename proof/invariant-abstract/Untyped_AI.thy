@@ -2395,7 +2395,7 @@ lemma ps_no_overlap[simp]: "ptr && ~~ mask sz \<noteq> ptr \<Longrightarrow> psp
         < ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us"
       apply (rule minus_one_helper,simp)
       apply (rule neq_0_no_wrap)
-      apply (rule word32_plus_mono_right_split)
+      apply (rule machine_word_plus_mono_right_split)
       apply (simp add: shiftl_t2n range_cover_unat[OF cover] field_simps)
       apply (simp add: range_cover.sz[where 'a=32, folded word_bits_def, OF cover])+
       done
@@ -3432,7 +3432,7 @@ lemma (in invoke_untyp_invs_retype_assms)  idx_compare''[simp]:
         < ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us"
       apply (rule minus_one_helper,simp)
       apply (rule neq_0_no_wrap)
-      apply (rule word32_plus_mono_right_split)
+      apply (rule machine_word_plus_mono_right_split)
       apply (simp add: shiftl_t2n range_cover_unat[OF cover] field_simps)
       apply (simp add: range_cover.sz
         [where 'a=32, folded word_bits_def, OF cover])+
@@ -3446,7 +3446,7 @@ lemma (in invoke_untyp_invs_retype_assms) idx_compare'''[simp]:
       apply (rule minus_one_helper,simp)
       apply (simp add: is_aligned_neg_mask_eq'[symmetric])
       apply (rule neq_0_no_wrap)
-      apply (rule word32_plus_mono_right_split[where sz = sz])
+      apply (rule machine_word_plus_mono_right_split[where sz = sz])
        apply (simp add: is_aligned_mask)+
       apply (simp add: range_cover.sz[where 'a=32, folded word_bits_def, OF cover])+
       done

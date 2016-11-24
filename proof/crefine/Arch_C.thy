@@ -3387,7 +3387,7 @@ proof -
   show "w \<le> w + (end - start)"
     using assms
     apply -
-    apply (rule word32_plus_mono_right_split, rule c)
+    apply (rule machine_word_plus_mono_right_split, rule c)
     apply (simp add:pbfs_less_wb')
     done
 

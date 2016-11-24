@@ -3220,7 +3220,7 @@ lemma createNewCaps_range_helper2:
     apply (fastforce simp:range_cover_def)
    apply simp
   apply (rule range_subsetI)
-   apply (rule word32_plus_mono_right_split[OF range_cover.range_cover_compare])
+   apply (rule machine_word_plus_mono_right_split[OF range_cover.range_cover_compare])
      apply (assumption)+
    apply (simp add:range_cover_def word_bits_def)
   apply (frule range_cover_cell_subset)
@@ -4467,7 +4467,7 @@ abbreviation(input)
         < ptr + of_nat (length slots) * 2 ^ APIType_capBits tp us"
       apply (rule minus_one_helper,simp)
       apply (rule neq_0_no_wrap)
-      apply (rule word32_plus_mono_right_split)
+      apply (rule machine_word_plus_mono_right_split)
       apply (simp add: shiftl_t2n range_cover_unat[OF cover] field_simps)
       apply (simp add: range_cover.sz(1)
         [where 'a=32, folded word_bits_def, OF cover])+
@@ -4928,7 +4928,7 @@ lemma inv_untyped_corres':
         < ptr + of_nat (length slots) * 2 ^ obj_bits_api (APIType_map2 (Inr ao')) us"
       apply (rule minus_one_helper,simp)
       apply (rule neq_0_no_wrap)
-      apply (rule word32_plus_mono_right_split)
+      apply (rule machine_word_plus_mono_right_split)
       apply (simp add:shiftl_t2n range_cover_unat[OF cover] field_simps)
       apply (simp add:range_cover.sz[where 'a=32, folded word_bits_def, OF cover])+
       done
@@ -4943,7 +4943,7 @@ lemma inv_untyped_corres':
       apply (rule minus_one_helper,simp)
       apply (simp add:is_aligned_neg_mask_eq'[symmetric])
       apply (rule neq_0_no_wrap)
-      apply (rule word32_plus_mono_right_split[where sz = sz])
+      apply (rule machine_word_plus_mono_right_split[where sz = sz])
        apply (simp add:is_aligned_mask)+
       apply (simp add:range_cover.sz[where 'a=32, folded word_bits_def, OF cover])+
       done

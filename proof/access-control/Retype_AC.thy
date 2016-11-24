@@ -1183,7 +1183,7 @@ lemma usable_range_disjoint:
         < ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us"
       apply (rule minus_one_helper,simp)
       apply (rule neq_0_no_wrap)
-      apply (rule word32_plus_mono_right_split)
+      apply (rule machine_word_plus_mono_right_split)
       apply (simp add:shiftl_t2n range_cover_unat[OF cover] field_simps)
       apply (simp add:range_cover.sz[where 'a=32, folded word_bits_def, OF cover])+
       done

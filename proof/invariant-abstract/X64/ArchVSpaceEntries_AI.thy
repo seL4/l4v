@@ -901,7 +901,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
         < ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us"
       apply (rule minus_one_helper,simp)
       apply (rule neq_0_no_wrap)
-      apply (rule word32_plus_mono_right_split)
+      apply (rule machine_word_plus_mono_right_split)
       apply (simp add:shiftl_t2n range_cover_unat[OF cover] field_simps)
       apply (simp add:range_cover.sz[OF cover])+
       done
@@ -916,7 +916,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
       apply (rule minus_one_helper,simp)
       apply (simp add:is_aligned_neg_mask_eq'[symmetric])
       apply (rule neq_0_no_wrap)
-      apply (rule word32_plus_mono_right_split[where sz = sz])
+      apply (rule machine_word_plus_mono_right_split[where sz = sz])
        apply (simp add:is_aligned_mask)+
       done
 
