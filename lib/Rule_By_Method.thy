@@ -110,7 +110,7 @@ fun with_rule_prems enabled parse =
 fun get_rule_prems ctxt = 
   let
     val (thms,b) = Data.get ctxt
-  in if (not b) then raise THM ("Rule premises not accessible here.",0,[]) else thms end 
+  in if (not b) then [] else thms end
 
 
 fun zip_subgoal assume tac (ctxt,st : thm) = if Thm.nprems_of st = 0 then Seq.single (ctxt,st) else
