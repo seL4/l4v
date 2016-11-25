@@ -148,11 +148,6 @@ datatype arch_kernel_obj =
  | IOContextTable "16 word \<Rightarrow> iocte"
  | IOPageTable "16 word \<Rightarrow> iopte" *)
 
-
-definition
-  word_size_bits :: nat where
-  "word_size_bits \<equiv> 3"
-
 definition table_size :: nat where
   "table_size = ptTranslationBits + word_size_bits"
 

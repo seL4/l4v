@@ -23,6 +23,18 @@ begin
 
 context Arch begin global_naming X64
 
+section "Machine Words"
+
+type_synonym machine_word = "word64"
+
+type_synonym machine_word_len = 64
+
+definition
+  word_size_bits :: "'a :: numeral"
+where
+  "word_size_bits \<equiv> 3"
+ 
+
 text {*
   An implementation of the machine's types, defining register set 
   and some observable machine state.
@@ -60,7 +72,6 @@ datatype register =
   | RSP
   | SS
 
-type_synonym machine_word = "word64"
 
 datatype gdtslot =
     GDT_NULL
@@ -88,7 +99,7 @@ sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_w
 
 (*<*)
 
-type_synonym machine_word_len = 64
+
 
 end
 
