@@ -1166,10 +1166,6 @@ lemma pre_helper2:
 
 lemmas ucast_ucast_mask_8 = ucast_ucast_mask[where 'a=8, simplified, symmetric]
 
-
-lemma subset_eq_notI: "\<lbrakk>a\<in> B;a\<notin> C\<rbrakk> \<Longrightarrow> \<not> B \<subseteq> C" by auto
-
-
 lemma pspace_no_overlap_obj_range:
   "\<lbrakk> pspace_no_overlap ptr sz s; kheap s p = Some obj; S \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<rbrakk>
      \<Longrightarrow> obj_range p obj \<inter> S = {}"
@@ -1178,12 +1174,6 @@ lemma pspace_no_overlap_obj_range:
   apply (simp add: obj_range_def field_simps)
   apply fastforce
   done
-
-
-lemma commute_grab_asm:
-  "(F \<Longrightarrow> monad_commute P f g) \<Longrightarrow> (monad_commute (P and (K F)) f g)"
-  by (clarsimp simp: monad_commute_def)
-
 
 lemma pspace_no_overlapD3:
   "\<lbrakk>pspace_no_overlap ptr sz s;kheap s p = Some obj;is_aligned ptr sz\<rbrakk>
@@ -1204,68 +1194,6 @@ lemma range_cover_plus_us:
   "range_cover ptr sz (m + us) (Suc 0) \<Longrightarrow> range_cover ptr sz m (2^us)"
   apply (erule range_cover_rel)
    apply simp+
-  done
-
-lemma commute_name_pre_state:
-assumes "\<And>s. P s \<Longrightarrow> monad_commute (op = s) f g"
-shows "monad_commute P f g"
-  using assms
-  by (clarsimp simp:monad_commute_def)
-
-lemma commute_rewrite:
-assumes rewrite: "\<And>s. Q s \<Longrightarrow> f s = t s"
-  and   hold  : "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>x. Q\<rbrace>"
- shows  "monad_commute R t g \<Longrightarrow> monad_commute (P and Q and R) f g"
-   apply (clarsimp simp:monad_commute_def bind_def split_def return_def)
-   apply (drule_tac x = s in spec)
-   apply (clarsimp simp:rewrite[symmetric])
-    apply (intro conjI)
-     apply (rule set_eqI)
-     apply (rule iffI)
-      apply clarsimp
-      apply (rule bexI[rotated],assumption)
-      apply (subst rewrite)
-      apply (rule use_valid[OF _ hold])
-     apply simp+
-    apply (erule bexI[rotated],simp)
-   apply clarsimp
-   apply (rule bexI[rotated],assumption)
-   apply (subst rewrite[symmetric])
-    apply (rule use_valid[OF _ hold])
-   apply simp+
-   apply (erule bexI[rotated],simp)
-  apply (intro iffI)
-   apply clarsimp
-   apply (rule bexI[rotated],assumption)
-   apply simp
-   apply (subst rewrite)
-    apply (erule(1) use_valid[OF _ hold])
-   apply simp
-  apply (clarsimp)
-  apply (drule bspec,assumption)
-  apply clarsimp
-  apply (metis rewrite use_valid[OF _ hold])
-  done
-
-lemma mapM_x_commute:
-assumes commute:
-  "\<And>r. monad_commute (P r) a (b r)"
-and   single:
-  "\<And>r x. \<lbrace>P r and K (f r \<noteq> f x) and P x\<rbrace> b x \<lbrace>\<lambda>v. P r \<rbrace>"
-shows
-  "monad_commute (\<lambda>s. (distinct (map f list)) \<and> (\<forall>r\<in> set list. P r s)) a (mapM_x b list)"
-  apply (induct list)
-   apply (clarsimp simp:mapM_x_Nil return_def bind_def monad_commute_def)
-  apply (clarsimp simp:mapM_x_Cons)
-  apply (rule monad_commute_guard_imp)
-   apply (rule monad_commute_split)
-     apply assumption
-    apply (rule monad_commute_guard_imp[OF commute])
-   apply assumption
-   apply (wp hoare_vcg_ball_lift)
-   apply (rule single)
-  apply (clarsimp simp: image_def)
-  apply auto
   done
 
 lemma mask_sub: "n \<le> m \<Longrightarrow> mask m - mask n = mask m && ~~ mask n"
@@ -1345,29 +1273,6 @@ lemma range_cover_tail_mask:
    apply (simp add:word_arith_nat_Suc shiftl_t2n power_add[symmetric] field_simps)
   apply simp
   done
-
-
-lemma monad_eq_split2: 
-assumes eq: " g' s = g s"
-assumes tail:"\<And>r s. Q r s \<Longrightarrow> f r s = f' r s"
-and hoare:   "\<lbrace>P\<rbrace>g\<lbrace>\<lambda>r s. Q r s\<rbrace>" "P s"
-shows "(g>>=f) s = (g'>>= f') s"
-proof -
-have pre: "\<And>aa bb. \<lbrakk>(aa, bb) \<in> fst (g s)\<rbrakk> \<Longrightarrow> Q aa bb"
-  using hoare by (auto simp: valid_def)
-show ?thesis
-  apply (simp add:bind_def eq split_def image_def)
-  apply (rule conjI)
-   apply (rule set_eqI)
-   apply (clarsimp simp:Union_eq)
-   apply (metis pre surjective_pairing tail)
-  apply (metis pre surjective_pairing tail)
-  done
-qed
-
-lemma monad_eq_split_tail:
-  "\<lbrakk>f = g;a s = b s\<rbrakk> \<Longrightarrow> (a >>= f) s = ((b >>= g) s)"
-  by (simp add:bind_def)
 
 
 lemma shift_distinct_helper:
