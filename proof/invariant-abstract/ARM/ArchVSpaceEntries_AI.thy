@@ -965,7 +965,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
       using cover
       apply (clarsimp simp:delete_objects_def freeMemory_def word_size_def)
       apply (subgoal_tac "is_aligned (ptr &&~~ mask sz) sz")
-       apply (subst mapM_storeWord_clear_um)
+       apply (subst mapM_storeWord_clear_um[simplified word_size_def word_size_bits_def])
           apply (simp)
          apply simp
         apply (simp add:less_imp_le)

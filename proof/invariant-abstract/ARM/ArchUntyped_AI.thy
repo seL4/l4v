@@ -331,7 +331,7 @@ lemma delete_objects_rewrite[Untyped_AI_assms]:
     od"
   apply (clarsimp simp:delete_objects_def freeMemory_def word_size_def)
   apply (subgoal_tac "is_aligned (ptr &&~~ mask sz) sz")
-  apply (subst mapM_storeWord_clear_um)
+  apply (subst mapM_storeWord_clear_um[simplified word_size_def word_size_bits_def])
   apply (simp)
   apply simp
   apply (simp add:range_cover_def)
