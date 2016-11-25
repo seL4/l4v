@@ -2895,20 +2895,6 @@ lemma unmap_page_table_unmapped2:
   apply wp
   done
 
-lemma cacheRangeOp_lift[wp]:
-  assumes o: "\<And>a b. \<lbrace>P\<rbrace> oper a b \<lbrace>\<lambda>_. P\<rbrace>"
-  shows "\<lbrace>P\<rbrace> cacheRangeOp oper x y z \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (clarsimp simp: cacheRangeOp_def lineStart_def cacheLineBits_def cacheLine_def)
-  apply (rule hoare_pre)
-  apply (wp mapM_x_wp_inv o)
-   apply (case_tac x, simp, wp o, simp)
-  done
-
-lemma cleanCacheRange_PoU_underlying_memory[wp]:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> cleanCacheRange_PoU a b c \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (clarsimp simp: cleanCacheRange_PoU_def, wp)
-
-
 lemma unmap_page_table_unmapped3:
   "\<lbrace>pspace_aligned and valid_arch_objs and page_table_at pt and
       K (ref = [VSRef (vaddr >> 20) (Some APageDirectory),
@@ -2967,19 +2953,6 @@ lemma empty_table_pt_capI:
     apply (drule spec)+
     apply (erule impE, simp add: is_cap_simps)+
     by assumption
-
-crunch underlying_memory[wp]: cleanCacheRange_PoC, cleanL2Range, invalidateL2Range, invalidateByVA, 
-                              cleanInvalidateL2Range, cleanInvalByVA, invalidateCacheRange_I, 
-                              branchFlushRange, ackInterrupt
-                           "\<lambda>m'. underlying_memory m' p = um"
-  (wp: cacheRangeOp_lift simp: cache_machine_op_defs machine_op_lift_def machine_rest_lift_def split_def
-   ignore: ignore_failure)
-
-crunch underlying_memory[wp]: cleanCacheRange_RAM, invalidateCacheRange_RAM, 
-                              cleanInvalidateCacheRange_RAM, do_flush
-                "\<lambda>m'. underlying_memory m' p = um"
-  (wp: cacheRangeOp_lift simp: crunch_simps)
-
 
 lemma no_irq_do_flush:
   "no_irq (do_flush a b c d)"
@@ -3135,8 +3108,10 @@ lemma perform_page_table_invocation_invs[wp]:
     apply (simp add: pt_bits_def pageBits_def)+
   done
 
+
 crunch cte_wp_at [wp]: unmap_page "\<lambda>s. P (cte_wp_at P' p s)"
   (wp: crunch_wps simp: crunch_simps)
+
 
 crunch typ_at [wp]: unmap_page "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps)
