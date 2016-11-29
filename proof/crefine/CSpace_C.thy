@@ -2332,6 +2332,12 @@ lemma region_is_bytes_subset:
     \<Longrightarrow> region_is_bytes' ptr' sz' htd"
   by (auto simp: region_is_bytes'_def)
 
+lemma region_actually_is_bytes_subset:
+  "region_actually_is_bytes' ptr sz htd
+    \<Longrightarrow> {ptr' ..+ sz'} \<subseteq> {ptr ..+ sz}
+    \<Longrightarrow> region_actually_is_bytes' ptr' sz' htd"
+  by (auto simp: region_actually_is_bytes'_def)
+
 lemma intvl_both_le:
   "\<lbrakk> a \<le> x; unat x + y \<le> unat a + b \<rbrakk>
     \<Longrightarrow>  {x ..+ y} \<le> {a ..+ b}"
@@ -2420,7 +2426,7 @@ lemma ctes_of_untyped_zero_rf_sr_case:
       untyped_ranges_zero' s \<rbrakk>
     \<Longrightarrow> case untypedZeroRange (cteCap cte)
                of None \<Rightarrow> True
-    | Some (start, end) \<Rightarrow> region_is_zero_bytes start (unat ((end + 1) - start)) s'"
+    | Some (start, end) \<Rightarrow> region_actually_is_zero_bytes start (unat ((end + 1) - start)) s'"
   by (simp split: option.split add: ctes_of_untyped_zero_rf_sr)
 
 lemma gsUntypedZeroRanges_update_helper:
@@ -2449,7 +2455,7 @@ lemma updateTrackedFreeIndex_noop_ccorres:
               \<and> idx \<le> 2 ^ capBlockSize cap
               \<and> (capFreeIndex cap \<le> idx \<or> cap' = cap)) o cteCap) slot
           and valid_objs' and untyped_ranges_zero')
-      {s. \<not> capIsDevice cap' \<longrightarrow> region_is_zero_bytes (capPtr cap' + of_nat idx) (capFreeIndex cap' - idx) s} hs
+      {s. \<not> capIsDevice cap' \<longrightarrow> region_actually_is_zero_bytes (capPtr cap' + of_nat idx) (capFreeIndex cap' - idx) s} hs
       (updateTrackedFreeIndex slot idx) Skip"
   (is "ccorres dc xfdc ?P ?P' _ _ _")
   apply (simp add: updateTrackedFreeIndex_def getSlotCap_def)
@@ -2478,16 +2484,16 @@ lemma updateTrackedFreeIndex_noop_ccorres:
      apply clarsimp
      apply (thin_tac "\<not> capIsDevice cap' \<longrightarrow> P" for P)
      apply (clarsimp split: option.split_asm)
-     apply (subst region_is_bytes_subset, simp+)
+     apply (subst region_actually_is_bytes_subset, simp+)
      apply (subst heap_list_is_zero_mono2, simp+)
     apply (frule untypedZeroRange_idx_backward_helper[where idx=idx],
       simp+)
     apply (clarsimp simp: isCap_simps valid_cap_simps')
     apply (clarsimp split: option.split_asm)
      apply (clarsimp dest!: untypedZeroRange_not_device)
-     apply (subst region_is_bytes_subset, simp+)
+     apply (subst region_actually_is_bytes_subset, simp+)
      apply (subst heap_list_is_zero_mono2, simp+)
-    apply (simp add: region_is_bytes'_def heap_list_zero_Ball_intvl)
+    apply (simp add: region_actually_is_bytes'_def heap_list_zero_Ball_intvl)
     apply (clarsimp dest!: untypedZeroRange_not_device)
     apply blast
    apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -2503,7 +2509,7 @@ lemma updateTrackedFreeIndex_forward_noop_ccorres:
   apply (rule ccorres_name_pre)
    apply (rule ccorres_guard_imp2,
      rule_tac cap'="cteCap (the (ctes_of s slot))" in updateTrackedFreeIndex_noop_ccorres)
-  apply (clarsimp simp: cte_wp_at_ctes_of region_is_bytes'_def)
+  apply (clarsimp simp: cte_wp_at_ctes_of region_actually_is_bytes'_def)
   done
 
 lemma clearUntypedFreeIndex_noop_ccorres:

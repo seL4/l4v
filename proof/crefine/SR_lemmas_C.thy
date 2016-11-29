@@ -1686,6 +1686,12 @@ lemma region_is_bytes_disjoint:
   apply (simp add: cleared[unfolded region_is_bytes'_def] not_byte size_of_def)
   done
 
+lemma region_actually_is_bytes:
+  "region_actually_is_bytes' ptr len htd
+    \<Longrightarrow> region_is_bytes' ptr len htd"
+  by (simp add: region_is_bytes'_def region_actually_is_bytes'_def
+         split: split_if)
+
 lemma zero_ranges_are_zero_update[simp]:
   "h_t_valid (hrs_htd hrs) c_guard (ptr :: 'a ptr)
     \<Longrightarrow> typ_uinfo_t TYPE('a :: wf_type) \<noteq> typ_uinfo_t TYPE(word8)
@@ -1693,6 +1699,7 @@ lemma zero_ranges_are_zero_update[simp]:
         = zero_ranges_are_zero rs hrs"
   apply (clarsimp simp: zero_ranges_are_zero_def hrs_mem_update
         intro!: ball_cong[OF refl] conj_cong[OF refl])
+  apply (drule region_actually_is_bytes)
   apply (drule(2) region_is_bytes_disjoint)
   apply (simp add: heap_update_def heap_list_update_disjoint_same Int_commute)
   done
@@ -2228,7 +2235,7 @@ lemma page_table_at_rf_sr:
 
 lemma gsUntypedZeroRanges_rf_sr:
   "\<lbrakk> (start, end) \<in> gsUntypedZeroRanges s; (s, s') \<in> rf_sr \<rbrakk>
-    \<Longrightarrow> region_is_zero_bytes start (unat ((end + 1) - start)) s'"
+    \<Longrightarrow> region_actually_is_zero_bytes start (unat ((end + 1) - start)) s'"
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                         zero_ranges_are_zero_def)
   apply (drule(1) bspec)
@@ -2239,7 +2246,7 @@ lemma ctes_of_untyped_zero_rf_sr:
   "\<lbrakk> ctes_of s p = Some cte; (s, s') \<in> rf_sr;
       untyped_ranges_zero' s;
       untypedZeroRange (cteCap cte) = Some (start, end) \<rbrakk>
-    \<Longrightarrow> region_is_zero_bytes start (unat ((end + 1) - start)) s'"
+    \<Longrightarrow> region_actually_is_zero_bytes start (unat ((end + 1) - start)) s'"
   apply (erule gsUntypedZeroRanges_rf_sr[rotated])
   apply (clarsimp simp: untyped_ranges_zero_inv_def)
   apply (rule_tac a=p in ranI)

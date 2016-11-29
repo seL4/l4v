@@ -74,6 +74,12 @@ assumes cleanByVA_PoU_ccorres:
            (doMachineOp (cleanByVA_PoU w1 w2))
            (Call cleanByVA_PoU_'proc)"
 
+assumes cleanByVA_PoU_preserves_kernel_bytes:
+ "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanByVA_PoU_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+             \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x = hrs_mem (t_hrs_' (globals s)) x)}"
+
 assumes invalidateByVA_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>vaddr = w1\<rbrace> \<inter> \<lbrace>\<acute>paddr = w2\<rbrace>) []
            (doMachineOp (invalidateByVA w1 w2))

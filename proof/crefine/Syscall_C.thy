@@ -1363,11 +1363,13 @@ lemma handleRecv_ccorres:
 
           apply (simp add: liftE_bind)
           apply (ctac)
+            apply (rule_tac P="\<lambda>s. ksCurThread s = rv" in ccorres_cross_over_guard)
             apply (ctac add: receiveIPC_ccorres[unfolded dc_def])
 
            apply (wp deleteCallerCap_ksQ_ct' hoare_vcg_all_lift)
-          apply clarsimp
-          apply (vcg exspec=deleteCallerCap_modifies)
+          apply (rule conseqPost[where Q'=UNIV and A'="{}"], vcg exspec=deleteCallerCap_modifies)
+           apply (clarsimp dest!: rf_sr_ksCurThread)
+          apply simp
          apply clarsimp
          apply (vcg exspec=handleFault_modifies)
 
@@ -1499,6 +1501,7 @@ lemma handleRecv_ccorres:
      apply (vcg exspec=isBlocked_modifies exspec=lookupCap_modifies)
 
     apply wp
+   apply clarsimp
    apply vcg
   
   apply (clarsimp simp add: sch_act_sane_def)

@@ -1497,11 +1497,11 @@ lemma region_is_bytes_typ_region_bytes:
   apply (simp add: subsetD split: split_if_asm)
   done
 
-lemma region_is_bytes_retyp_disjoint:
+lemma region_actually_is_bytes_retyp_disjoint:
   "{ptr ..+ sz} \<inter> {ptr_val (p :: 'a ptr)..+n * size_of TYPE('a :: mem_type)} = {}
-    \<Longrightarrow> region_is_bytes' ptr sz htd
-    \<Longrightarrow> region_is_bytes' ptr sz (ptr_retyps_gen n p arr htd)"
-  apply (clarsimp simp: region_is_bytes'_def del: impI)
+    \<Longrightarrow> region_actually_is_bytes' ptr sz htd
+    \<Longrightarrow> region_actually_is_bytes' ptr sz (ptr_retyps_gen n p arr htd)"
+  apply (clarsimp simp: region_actually_is_bytes'_def del: impI)
   apply (subst ptr_retyps_gen_out)
    apply blast
   apply simp
@@ -1524,7 +1524,7 @@ lemma zero_ranges_ptr_retyps:
   apply (clarsimp simp: zero_ranges_are_zero_def untyped_ranges_zero_inv_def
                         hrs_htd_update)
   apply (drule(1) bspec, clarsimp)
-  apply (rule region_is_bytes_retyp_disjoint, simp_all)
+  apply (rule region_actually_is_bytes_retyp_disjoint, simp_all)
   apply (clarsimp simp: map_comp_Some_iff cteCaps_of_def
                  elim!: ranE)
   apply (frule(1) ctes_of_valid')
@@ -2638,6 +2638,7 @@ definition
 where
   "byte_regions_unmodified hrs hrs' \<equiv> \<forall>x. (\<forall>n td b. snd (hrs_htd hrs x) n = Some (td, b)
         \<longrightarrow> td = typ_uinfo_t TYPE (word8))
+    \<longrightarrow> snd (hrs_htd hrs x) 0 \<noteq> None
     \<longrightarrow> hrs_mem hrs' x = hrs_mem hrs x"
 
 abbreviation
@@ -2736,7 +2737,7 @@ lemma mdb_node_ptr_set_mdbNext_preserves_bytes:
 lemma updateNewFreeIndex_noop_ccorres:
   "ccorres dc xfdc (valid_objs' and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot)
       {s. (case untypedZeroRange cap of None \<Rightarrow> True
-          | Some (a, b) \<Rightarrow> region_is_zero_bytes a (unat ((b + 1) - a)) s)} hs
+          | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) s)} hs
       (updateNewFreeIndex slot) Skip"
   (is "ccorres _ _ ?P ?P' hs _ _")
   apply (simp add: updateNewFreeIndex_def getSlotCap_def)
@@ -2765,19 +2766,19 @@ lemma updateNewFreeIndex_noop_ccorres:
 
 lemma byte_regions_unmodified_region_is_bytes:
   "byte_regions_unmodified hrs hrs'
-    \<Longrightarrow> region_is_bytes' y n (hrs_htd hrs)
+    \<Longrightarrow> region_actually_is_bytes' y n (hrs_htd hrs)
     \<Longrightarrow> x \<in> {y ..+ n}
     \<Longrightarrow> hrs_mem hrs' x = hrs_mem hrs x"
-  apply (clarsimp simp: byte_regions_unmodified_def)
+  apply (clarsimp simp: byte_regions_unmodified_def imp_conjL[symmetric])
   apply (drule spec, erule mp)
-  apply (clarsimp simp: region_is_bytes'_def)
-  apply metis
+  apply (clarsimp simp: region_actually_is_bytes'_def)
+  apply (drule(1) bspec, simp split: split_if_asm)
   done
 
 lemma insertNewCap_ccorres1:
   "ccorres dc xfdc (pspace_aligned' and valid_mdb' and valid_objs' and valid_cap' cap)
      ({s. (case untypedZeroRange cap of None \<Rightarrow> True
-          | Some (a, b) \<Rightarrow> region_is_zero_bytes a (unat ((b + 1) - a)) s)}
+          | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) s)}
        \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. parent_' s = Ptr parent}
        \<inter> {s. slot_' s = Ptr slot}) []
      (insertNewCap parent slot cap) 
@@ -2813,7 +2814,7 @@ lemma insertNewCap_ccorres1:
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of is_aligned_3_next)
   apply (clarsimp split: option.split)
-  apply (intro allI conjI impI; simp; clarsimp)
+  apply (intro allI conjI impI; simp; clarsimp simp: region_actually_is_bytes)
    apply (erule trans[OF heap_list_h_eq2, rotated])
    apply (rule byte_regions_unmodified_region_is_bytes)
       apply (erule byte_regions_unmodified_trans[rotated]
@@ -4693,34 +4694,18 @@ lemma rf_sr_htd_safe:
   "(s, s') \<in> rf_sr \<Longrightarrow> htd_safe domain (hrs_htd (t_hrs_' (globals s')))"
   by (simp add: rf_sr_def cstate_relation_def Let_def)
 
-definition
-  "region_actually_is_bytes ptr len s
-    = (\<forall>x \<in> {ptr ..+ len}. hrs_htd (t_hrs_' (globals s)) x
-        = (True, [0 \<mapsto> (typ_uinfo_t TYPE(8 word), True)]))"
-
-abbreviation
-  "region_actually_is_zero_bytes ptr len s
-    \<equiv> region_actually_is_bytes ptr len s
-        \<and> heap_list_is_zero (hrs_mem (t_hrs_' (globals s))) ptr len"
-
 lemma region_actually_is_bytes_dom_s:
-  "region_actually_is_bytes ptr len s
+  "region_actually_is_bytes' ptr len htd
     \<Longrightarrow> S \<subseteq> {ptr ..+ len}
-    \<Longrightarrow> S \<times> {SIndexVal, SIndexTyp 0} \<subseteq> dom_s (hrs_htd (t_hrs_' (globals s)))"
-  apply (clarsimp simp: region_actually_is_bytes_def dom_s_def)
+    \<Longrightarrow> S \<times> {SIndexVal, SIndexTyp 0} \<subseteq> dom_s htd"
+  apply (clarsimp simp: region_actually_is_bytes'_def dom_s_def)
   apply fastforce
   done
 
-lemma region_actually_is_bytes:
-  "region_actually_is_bytes ptr len s
-    \<Longrightarrow> region_is_bytes ptr len s"
-  by (simp add: region_is_bytes'_def region_actually_is_bytes_def
-         split: split_if)
-
 lemma typ_region_bytes_actually_is_bytes:
-  "hrs_htd (t_hrs_' (globals s)) = typ_region_bytes ptr bits htd
-    \<Longrightarrow> region_actually_is_bytes ptr (2 ^ bits) s"
-  by (clarsimp simp: region_actually_is_bytes_def typ_region_bytes_def)
+  "htd = typ_region_bytes ptr bits htd'
+    \<Longrightarrow> region_actually_is_bytes' ptr (2 ^ bits) htd"
+  by (clarsimp simp: region_actually_is_bytes'_def typ_region_bytes_def)
 
 (* FIXME: need a way to avoid overruling the parser on this, it's ugly *)
 lemma memzero_modifies:
@@ -7622,6 +7607,16 @@ lemma copyGlobalMappings_preserves_bytes:
     (simp_all add: h_t_valid_field)+)
   done
 
+lemma cleanByVA_PoU_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanByVA_PoU_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost,
+    rule cleanByVA_PoU_preserves_kernel_bytes[rule_format])
+   apply simp_all
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
 lemma cleanCacheRange_PoU_preserves_bytes:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_PoU_'proc
       {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
@@ -7631,7 +7626,7 @@ lemma cleanCacheRange_PoU_preserves_bytes:
   apply (subst whileAnno_def[symmetric, where V=undefined
        and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
          \<and> byte_regions_unmodified' s t}" for s])
-  apply (rule conseqPre, vcg)
+  apply (rule conseqPre, vcg exspec=cleanByVA_PoU_preserves_bytes)
   apply (safe intro!: byte_regions_unmodified_hrs_mem_update
     elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
     (simp_all add: h_t_valid_field)+)
@@ -7661,8 +7656,9 @@ lemma Arch_createObject_preserves_bytes:
   apply (safe intro!: ptr_retyp_d ptr_retyps_out)
   apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
     split: object_type.split_asm ArchTypes_H.apiobject_type.split_asm)
-  apply (rule byte_regions_unmodified_flip,
-    simp add: hrs_htd_update hrs_htd_update_canon)
+   apply (rule byte_regions_unmodified_flip, simp)
+  apply (rule byte_regions_unmodified_trans[rotated],
+    assumption, simp_all add: hrs_htd_update_canon hrs_htd_update)
   done
 
 lemma ptr_arr_retyps_eq_outside_dom:
@@ -7670,8 +7666,6 @@ lemma ptr_arr_retyps_eq_outside_dom:
     \<Longrightarrow> ptr_arr_retyps n p htd x = htd x"
   by (simp add: ptr_arr_retyps_def htd_update_list_same2)
 
-text {* NOTE: FIXME: need a way to show that
-  createObject will preserve a zero heap list. *}
 lemma createObject_preserves_bytes:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call createObject_'proc
       {t. \<forall>nt. t_' s = object_type_from_H nt
@@ -7758,12 +7752,12 @@ lemma offset_intvl_first_chunk_subsets_unat:
   apply (simp add: word_le_nat_alt word_less_nat_alt unat_of_nat)
   done
 
-lemma retype_offs_region_is_zero_bytes:
+lemma retype_offs_region_actually_is_zero_bytes:
   "\<lbrakk> ctes_of s p = Some cte; (s, s') \<in> rf_sr; untyped_ranges_zero' s;
       cteCap cte = UntypedCap False (ptr &&~~ mask sz) sz idx;
       idx \<le> unat (ptr && mask sz);
       range_cover ptr sz (getObjectSize newType userSize) num_ret \<rbrakk>
-    \<Longrightarrow> region_is_zero_bytes ptr
+    \<Longrightarrow> region_actually_is_zero_bytes ptr
             (num_ret * 2 ^ APIType_capBits newType userSize) s'"
   using word_unat_mask_lt[where w=ptr and m=sz]
   apply -
@@ -7772,7 +7766,7 @@ lemma retype_offs_region_is_zero_bytes:
    apply (simp add: untypedZeroRange_def max_free_index_def word_size)
   apply clarify
   apply (strengthen heap_list_is_zero_mono2[mk_strg I E]
-      region_is_bytes_subset[mk_strg I E])
+      region_actually_is_bytes_subset[mk_strg I E])
   apply (simp add: getFreeRef_def word_size)
   apply (rule intvl_both_le)
    apply (rule order_trans, rule word_plus_mono_right, erule word_of_nat_le)
@@ -7815,7 +7809,7 @@ lemma insertNewCap_ccorres:
           and valid_objs' and valid_cap' cap)
      ({s. cap_get_tag (cap_' s) = scast cap_untyped_cap
          \<longrightarrow> (case untypedZeroRange (cap_to_H (the (cap_lift (cap_' s)))) of None \<Rightarrow> True
-          | Some (a, b) \<Rightarrow> region_is_zero_bytes a (unat ((b + 1) - a)) s)}
+          | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) s)}
        \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. parent_' s = Ptr parent}
        \<inter> {s. slot_' s = Ptr slot}) []
      (insertNewCap parent slot cap) 
@@ -7826,18 +7820,19 @@ lemma insertNewCap_ccorres:
   apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
   apply (simp add: untypedZeroRange_def Let_def)
   done
-
+find_theorems untypedZeroRange
+term zero_ranges_are_zero
 lemma createObject_untyped_region_is_zero_bytes:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s. let tp = (object_type_to_H (t_' s));
           sz = APIType_capBits tp (unat (userSize_' s))
       in (\<not> to_bool (deviceMemory_' s)
-              \<longrightarrow> region_is_zero_bytes (ptr_val (regionBase_' s)) (2 ^ sz) s)
+              \<longrightarrow> region_actually_is_zero_bytes (ptr_val (regionBase_' s)) (2 ^ sz) s)
           \<and> is_aligned (ptr_val (regionBase_' s)) sz
           \<and> sz < 32 \<and> (tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> sz \<ge> 4)}
       Call createObject_'proc
    {t. cap_get_tag (ret__struct_cap_C_' t) = scast cap_untyped_cap
          \<longrightarrow> (case untypedZeroRange (cap_to_H (the (cap_lift (ret__struct_cap_C_' t)))) of None \<Rightarrow> True
-          | Some (a, b) \<Rightarrow> region_is_zero_bytes a (unat ((b + 1) - a)) t)}"
+          | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) t)}"
   apply (rule allI, rule conseqPre, vcg exspec=copyGlobalMappings_modifies
       exspec=Arch_initContext_modifies
       exspec=cleanCacheRange_PoU_modifies)
@@ -7885,7 +7880,7 @@ shows  "ccorres dc xfdc
                                            isFrameType newType)
                     \<and> (unat num = length destSlots)
                     )))
-    ({s. (\<not> isdev \<longrightarrow> region_is_zero_bytes ptr
+    ({s. (\<not> isdev \<longrightarrow> region_actually_is_zero_bytes ptr
             (length destSlots * 2 ^ APIType_capBits newType userSize) s)}
            \<inter> {s. t_' s = object_type_from_H newType}
            \<inter> {s. parent_' s = cte_Ptr srcSlot}
@@ -7925,7 +7920,7 @@ shows  "ccorres dc xfdc
      apply simp
      apply (clarsimp simp: whileAnno_def)
      apply (rule ccorres_rel_imp)
-      apply (rule_tac Q="{s. \<not> isdev \<longrightarrow> region_is_zero_bytes
+      apply (rule_tac Q="{s. \<not> isdev \<longrightarrow> region_actually_is_zero_bytes
             (ptr + (i_' s << APIType_capBits newType userSize))
             (unat (num - i_' s) * 2 ^ APIType_capBits newType userSize) s}"
             in ccorres_zipWithM_x_while_genQ[where j=1, OF _ _ _ _ _ i_xf_for_sequence, simplified])
@@ -8051,21 +8046,17 @@ shows  "ccorres dc xfdc
               apply (simp add: unat_eq_def)
              apply (drule range_cover_sz')
              apply (simp add: unat_eq_def word_less_nat_alt)
-            apply clarsimp
-            apply (erule heap_list_is_zero_mono)
-            apply (subgoal_tac "unat (num - of_nat n) \<noteq> 0")
-             apply simp
-            apply (simp only: unat_eq_0, clarsimp simp: unat_of_nat)
-           apply (simp add: hrs_htd_update typ_region_bytes_actually_is_bytes)
+            apply (simp add: hrs_htd_update typ_region_bytes_actually_is_bytes)
+           apply clarsimp
+           apply (erule heap_list_is_zero_mono)
+           apply (subgoal_tac "unat (num - of_nat n) \<noteq> 0")
+            apply simp
+           apply (simp only: unat_eq_0, clarsimp simp: unat_of_nat)
           apply (frule range_cover_sz')
           apply (clarsimp simp: Let_def hrs_htd_update
                                 APIType_capBits_def[where ty="APIObjectType ArchTypes_H.apiobject_type.Untyped"])
           apply (subst is_aligned_add, erule range_cover.aligned)
            apply (simp add: is_aligned_shiftl)+
-          apply clarsimp
-          apply (rule region_is_bytes_typ_region_bytes)
-          apply simp
-         apply clarsimp
          apply (subst range_cover.unat_of_nat_n)
           apply (erule range_cover_le)
           subgoal by simp
@@ -8083,7 +8074,7 @@ shows  "ccorres dc xfdc
         apply clarsimp
         apply (rule context_conjI)
          apply (simp add: hrs_htd_update)
-         apply (simp add: region_is_bytes'_def, rule ballI)
+         apply (simp add: region_actually_is_bytes'_def, rule ballI)
          apply (drule bspec, erule(1) subsetD)
          apply (drule(1) orthD2)
          apply (simp add: Ball_def unat_eq_def typ_bytes_region_out)

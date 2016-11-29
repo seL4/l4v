@@ -1618,7 +1618,7 @@ lemma zero_ranges_are_zero_typ_region_bytes:
     \<Longrightarrow> zero_ranges_are_zero rs (hrs_htd_update (typ_region_bytes ptr bits) hrs)"
   apply (clarsimp simp: zero_ranges_are_zero_def)
   apply (drule(1) bspec)
-  apply (clarsimp simp: region_is_bytes'_def typ_region_bytes_def hrs_htd_update)
+  apply (clarsimp simp: region_actually_is_bytes'_def typ_region_bytes_def hrs_htd_update)
   done
 
 lemma deleteObjects_ccorres':

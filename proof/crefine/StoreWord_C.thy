@@ -641,6 +641,7 @@ proof (intro allI impI)
     apply (clarsimp simp: zero_ranges_are_zero_def hrs_mem_update base_def
                           heap_update_def
           intro!: ball_cong[OF refl] conj_cong[OF refl])
+    apply (drule region_actually_is_bytes)
     apply (frule(1) region_is_bytes_disjoint[rotated 2, OF h_t_valid_clift])
      apply simp
     apply (subst heap_list_update_disjoint_same, simp_all)
@@ -949,6 +950,7 @@ proof (intro allI impI)
     apply (clarsimp simp: zero_ranges_are_zero_def hrs_mem_update base_def
                           heap_update_def
           intro!: ball_cong[OF refl] conj_cong[OF refl])
+    apply (drule region_actually_is_bytes)
     apply (frule(1) region_is_bytes_disjoint[rotated 2, OF h_t_valid_clift])
      apply simp
     apply (subst heap_list_update_disjoint_same, simp_all)

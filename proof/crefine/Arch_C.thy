@@ -564,7 +564,7 @@ shows
    apply simp+
   apply (clarsimp simp:typ_heap_simps' region_is_bytes'_def[where sz=0])
   apply (frule ccte_relation_ccap_relation)
-  apply (clarsimp simp: cap_get_tag_isCap)
+  apply (clarsimp simp: cap_get_tag_isCap hrs_htd_update)
   apply (clarsimp simp: hrs_htd_update_def split_def 
                          pageBits_def 
                    split: split_if)
@@ -575,18 +575,17 @@ shows
     apply (simp add: ghost_assertion_data_get_gs_clear_region[unfolded o_def])
    apply (drule valid_global_refsD_with_objSize, clarsimp)+
    apply (clarsimp simp: isCap_simps dest!: ccte_relation_ccap_relation)
-  apply (cut_tac ptr=frame and bits=12 and s="globals_update (t_hrs_'_update (hrs_htd_update
-               (typ_region_bytes frame 12))) s'" in typ_region_bytes_actually_is_bytes)
+  apply (cut_tac ptr=frame and bits=12
+    and htd="typ_region_bytes frame 12 (hrs_htd (t_hrs_' (globals s')))" in typ_region_bytes_actually_is_bytes)
    apply (simp add: hrs_htd_update)
-  apply clarsimp
+  apply (clarsimp simp: region_actually_is_bytes'_def[where len=0])
   apply (intro conjI)
        apply (clarsimp elim!:is_aligned_weaken)
       apply (simp add:is_aligned_def)
-     apply (erule is_aligned_no_wrap',simp)
-    apply (drule region_actually_is_bytes_dom_s[OF _ order_refl])
-    apply (simp add: hrs_htd_update_def split_def)
-   apply (clarsimp simp: region_actually_is_bytes_def hrs_htd_update)
-   apply (simp add: hrs_htd_def hrs_htd_update_def split_def)
+     apply (simp add: hrs_htd_def)
+    apply (erule is_aligned_no_wrap',simp)
+   apply (drule region_actually_is_bytes_dom_s[OF _ order_refl])
+   apply (simp add: hrs_htd_def split_def)
   apply (clarsimp simp: ccap_relation_def)
   apply (clarsimp simp: cap_asid_pool_cap_lift)
   apply (clarsimp simp: cap_to_H_def)

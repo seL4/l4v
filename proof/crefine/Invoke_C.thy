@@ -1942,6 +1942,21 @@ lemma eq_UntypedCap_helper:
     \<Longrightarrow> cap = UntypedCap dev ptr sz idx"
   by (clarsimp simp: isCap_simps)
 
+lemma byte_regions_unmodified_actually_heap_list:
+  "byte_regions_unmodified hrs hrs'
+    \<Longrightarrow> region_actually_is_bytes' p' n' htd
+    \<Longrightarrow> htd = (hrs_htd hrs)
+    \<Longrightarrow> heap_list (hrs_mem hrs) n p = v
+    \<Longrightarrow> {p ..+ n} \<subseteq> {p' ..+ n'}
+    \<Longrightarrow> heap_list (hrs_mem hrs') n p = v"
+  apply (erule trans[rotated], rule heap_list_h_eq2)
+  apply (simp add: byte_regions_unmodified_def region_actually_is_bytes_def)
+  apply (drule_tac x=x in spec)
+  apply (drule_tac x=x in bspec)
+   apply blast
+  apply (clarsimp split: split_if_asm)
+  done
+
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
   shows
@@ -2021,7 +2036,7 @@ lemma resetUntypedCap_ccorres:
           apply (simp add: guard_is_UNIV_def)
          apply wp
         apply simp
-        apply (vcg exspec=cleanCacheRange_PoU_modifies)
+        apply (vcg exspec=cleanCacheRange_PoU_preserves_bytes)
        apply (rule_tac P="reset_chunk_bits \<le> capBlockSize (cteCap cte)
              \<and> of_nat (capFreeIndex (cteCap cte)) - 1
                  < (2 ^ capBlockSize (cteCap cte) :: addr)"
@@ -2115,7 +2130,7 @@ lemma resetUntypedCap_ccorres:
                 apply (simp add: guard_is_UNIV_def)
                apply (wp hoare_vcg_ex_lift doMachineOp_psp_no_overlap)
               apply clarsimp
-              apply (vcg exspec=cleanCacheRange_PoU_modifies)
+              apply (vcg exspec=cleanCacheRange_PoU_preserves_bytes)
              apply clarify
              apply (rule conjI)
               apply (clarsimp simp: invs_valid_objs' cte_wp_at_ctes_of
@@ -2158,21 +2173,26 @@ lemma resetUntypedCap_ccorres:
                                is_aligned_mult_triv2[THEN is_aligned_weaken]
                                region_actually_is_bytes_subset_t_hrs[mk_strg I E]
                            | simp)+
-             apply (clarsimp simp: capAligned_def
+             apply (clarsimp simp: capAligned_def imp_conjL
                                    aligned_offset_non_zero
                                    is_aligned_add_multI conj_comms
                                    is_aligned_mask_out_add_eq_sub[OF is_aligned_weaken])
-             apply (strengthen region_is_bytes_subset[OF region_actually_is_bytes, mk_strg I E]
+             apply (strengthen region_actually_is_bytes_subset[mk_strg I E]
                     heap_list_is_zero_mono[OF heap_list_update_eq]
                     order_trans [OF intvl_start_le
                           aligned_intvl_offset_subset[where sz'=reset_chunk_bits]]
-                | simp add: is_aligned_mult_triv2)+
+                    byte_regions_unmodified_actually_heap_list[mk_strg I E E]
+                | simp add: is_aligned_mult_triv2 hrs_mem_update)+
              apply (simp add: unat_sub word_le_nat_alt unat_sub[OF word_and_le2]
                               mask_out_sub_mask word_and_le2
                               unat_of_nat32[OF order_le_less_trans, rotated,
                                 OF power_strict_increasing])
              apply (case_tac idx')
               (* must be contradictory *)
+              apply clarsimp
+              apply (simp add: is_aligned_def addr_card_def card_word
+                               reset_chunk_bits_def)
+              apply clarsimp
               apply (simp add: is_aligned_def addr_card_def card_word
                                reset_chunk_bits_def)
              apply (simp add: unat_of_nat32[OF order_le_less_trans, rotated,
@@ -2181,9 +2201,9 @@ lemma resetUntypedCap_ccorres:
                               unat_mod unat_of_nat mod_mod_cancel)
              apply (strengthen nat_le_Suc_less_imp[OF mod_less_divisor, THEN order_trans])
              apply (simp add: is_aligned_def addr_card_def card_word)
+             apply clarsimp
 
-            apply clarsimp
-            apply (rule conseqPre, vcg exspec=cleanCacheRange_PoU_modifies
+            apply (rule conseqPre, vcg exspec=cleanCacheRange_PoU_preserves_bytes
               exspec=preemptionPoint_modifies)
             apply (clarsimp simp: in_set_conv_nth isCap_simps
                                   length_upto_enum_step upto_enum_step_nth
@@ -2318,7 +2338,10 @@ lemma resetUntypedCap_ccorres:
                     region_is_bytes_typ_region_bytes
                     intvl_start_le is_aligned_power2
                     heap_list_is_zero_mono[OF heap_list_update_eq]
-    | simp add: unat_of_nat)+
+                    byte_regions_unmodified_actually_heap_list[OF _ _ refl, mk_strg I E]
+                    typ_region_bytes_actually_is_bytes[OF refl]
+                    region_actually_is_bytes_subset[OF typ_region_bytes_actually_is_bytes[OF refl]]
+    | simp add: unat_of_nat imp_conjL hrs_mem_update hrs_htd_update)+
   apply (clarsimp simp: order_trans[OF power_increasing[where a=2]]
                         addr_card_def card_word
                         is_aligned_weaken from_bool_0)
@@ -2331,7 +2354,7 @@ lemma ccorres_cross_retype_zero_bytes_over_guard:
         ((\<lambda>s. invs' s
       \<and> cte_wp_at' (\<lambda>cte. \<exists>idx. cteCap cte = UntypedCap dev (ptr && ~~ mask sz) sz idx
           \<and> idx \<le> unat (ptr && mask sz)) p s) and P')
-      {s'. (\<not> dev \<longrightarrow> region_is_zero_bytes ptr
+      {s'. (\<not> dev \<longrightarrow> region_actually_is_zero_bytes ptr
             (num_ret * 2 ^ APIType_capBits newType userSize) s')
          \<and> (\<exists>cte cte' idx. cslift s' (cte_Ptr p) = Some cte'
                  \<and> ccte_relation cte cte' \<and> cteCap cte = UntypedCap dev (ptr && ~~ mask sz) sz idx)
@@ -2342,7 +2365,7 @@ lemma ccorres_cross_retype_zero_bytes_over_guard:
   apply (frule(2) rf_sr_cte_relation)
   apply (case_tac dev)
    apply fastforce
-  apply (frule(1) retype_offs_region_is_zero_bytes, (simp | clarsimp)+)
+  apply (frule(1) retype_offs_region_actually_is_zero_bytes, (simp | clarsimp)+)
   apply fastforce
   done
 
@@ -2637,13 +2660,15 @@ lemma invokeUntyped_Retype_ccorres:
         apply (clarsimp simp: ccHoarePost_def hrs_mem_update
                               object_type_from_H_bound
                               typ_heap_simps' word_sle_def
-                              word_of_nat_less zero_bytes_heap_update)
+                              word_of_nat_less zero_bytes_heap_update
+                              region_actually_is_bytes)
         apply (frule ccte_relation_ccap_relation)
         apply (cut_tac vui)
         apply (clarsimp simp: cap_get_tag_isCap getFreeIndex_def
                               cte_wp_at_ctes_of shiftL_nat
                        split: split_if)
         apply (simp add: mask_out_sub_mask field_simps region_is_bytes'_def)
+        apply (clarsimp elim!: region_actually_is_bytes_subset)
        apply (rule order_refl)
 
       apply (cut_tac misc us_misc' proofs us_misc bits_low

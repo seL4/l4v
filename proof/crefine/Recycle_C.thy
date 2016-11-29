@@ -1289,7 +1289,7 @@ lemma updateFreeIndex_ccorres:
            and untyped_ranges_zero'
            and (\<lambda>_. is_aligned (of_nat idx' :: word32) 4 \<and> idx' \<le> 2 ^ (capBlockSize cap')))
            {s. \<not> capIsDevice cap'
-               \<longrightarrow> region_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
+               \<longrightarrow> region_actually_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
            (updateFreeIndex srcSlot idx') c"
   (is "_ \<Longrightarrow> ccorres dc xfdc (valid_objs' and ?cte_wp_at' and _ and _) ?P' hs ?a c")
   apply (rule ccorres_gen_asm)
