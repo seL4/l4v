@@ -22,7 +22,7 @@ definition
   authorised_invocation :: "'a PAS \<Rightarrow> Invocations_A.invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
  "authorised_invocation aag i \<equiv> \<lambda>s. case i of
-     Invocations_A.InvokeUntyped i' \<Rightarrow> valid_untyped_inv i' s \<and> (authorised_untyped_inv aag i' \<and> authorised_untyped_inv_state aag i' s) \<and> ct_active s
+     Invocations_A.InvokeUntyped i' \<Rightarrow> valid_untyped_inv i' s \<and> (authorised_untyped_inv aag i') \<and> ct_active s
    | Invocations_A.InvokeEndpoint epptr badge can_grant \<Rightarrow>
                \<exists>ep. ko_at (Endpoint ep) epptr s \<and>
                     (can_grant \<longrightarrow>  (\<forall>r \<in> ep_q_refs_of ep. snd r = EPRecv \<longrightarrow> is_subject aag (fst r)) \<and> aag_has_auth_to aag Grant epptr)
@@ -150,8 +150,7 @@ lemma decode_invocation_authorised:
    \<lbrace>\<lambda>rv. authorised_invocation aag rv\<rbrace>, -"
   unfolding decode_invocation_def
   apply (rule hoare_pre)
-  apply (wp decode_untyped_invocation_authorised[THEN hoare_conjunct1_R]
-    decode_untyped_invocation_authorised[THEN hoare_conjunct2_R]
+  apply (wp decode_untyped_invocation_authorised
     decode_cnode_invocation_auth_derived
     decode_cnode_inv_authorised
     decode_tcb_invocation_authorised decode_tcb_inv_wf
@@ -194,23 +193,6 @@ lemma in_extended: "(u,a) \<in> fst (do_extended_op f s) \<Longrightarrow> \<exi
    apply force
    done
  
-lemma set_thread_state_authorised_untyped_inv_state:
-  "\<lbrace>valid_objs and authorised_untyped_inv_state aag ui\<rbrace>
-    set_thread_state t ts
-   \<lbrace>\<lambda>_. authorised_untyped_inv_state aag ui\<rbrace>"
-  unfolding set_thread_state_def 
-  apply(clarsimp simp:  authorised_untyped_inv_state_def split: untyped_invocation.splits simp: valid_def)
-  apply(subgoal_tac "cte_wp_at (op = cap) (a, b) s", fastforce)
-  apply(clarsimp simp: set_object_def gets_the_def bind_def in_monad dest!: in_extended)
-  apply(subgoal_tac "obj_at (same_caps (TCB (ab\<lparr>tcb_state := ts\<rparr>))) t s")
-   apply(drule_tac P="op = cap" and p="(a,b)" in cte_wp_at_after_update)
-   apply(clarsimp simp: fun_upd_def)
-  apply(clarsimp simp: get_tcb_def split: option.splits kernel_object.splits)
-  apply(clarsimp simp: obj_at_def)
-  apply(clarsimp simp: tcb_cap_cases_def)
-  apply auto
-  done
-
 lemma set_thread_state_authorised[wp]:
   "\<lbrace>authorised_invocation aag i and (\<lambda>s. thread = cur_thread s) and valid_objs\<rbrace>
      set_thread_state thread Structures_A.thread_state.Restart
@@ -219,7 +201,6 @@ lemma set_thread_state_authorised[wp]:
            apply (simp_all add: authorised_invocation_def)
           apply (wp sts_valid_untyped_inv ct_in_state_set
                     hoare_vcg_ex_lift sts_obj_at_impossible
-                    set_thread_state_authorised_untyped_inv_state
                   | simp)+
       apply (rename_tac tcb_invocation)
       apply (case_tac tcb_invocation, simp_all)
@@ -497,7 +478,7 @@ lemma handle_interrupt_pas_refined:
   apply (rule conjI; rule impI;rule hoare_pre)
   apply (wp send_signal_pas_refined get_cap_wp
        | wpc
-       | simp add: get_irq_slot_def get_irq_state_def)+
+       | simp add: get_irq_slot_def get_irq_state_def handle_reserved_irq_def)+
   done
 
 lemma dec_domain_time_integrity[wp]:
@@ -527,7 +508,7 @@ lemma handle_interrupt_integrity_autarch:
   apply (simp add: handle_interrupt_def  cong: irq_state.case_cong maskInterrupt_def ackInterrupt_def resetTimer_def )
   apply (rule conjI; rule impI; rule hoare_pre)
   apply (wp_once send_signal_respects get_cap_auth_wp [where aag = aag] dmo_mol_respects
-       | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def
+       | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def handle_reserved_irq_def
        | wp dmo_no_mem_respects
        | wpc)+
   apply (fastforce simp: is_cap_simps aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
@@ -552,7 +533,7 @@ lemma handle_interrupt_integrity:
   apply (rule conjI; rule impI; rule hoare_pre)
   apply (wp_once send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
        | wpc
-       | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def)+
+       | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def handle_reserved_irq_def)+
   apply clarsimp
   apply (rule conjI, fastforce)+ -- "valid_objs etc."
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -679,12 +660,19 @@ lemma handle_event_integrity:
 lemma integrity_restart_context:
   "\<lbrakk> integrity aag X st s; pasMayActivate aag;
        st_tcb_at (op = Structures_A.Restart) thread s; \<not> is_subject aag thread \<rbrakk>
-   \<Longrightarrow> \<exists>tcb tcb'. get_tcb thread st = Some tcb \<and> get_tcb thread s = Some tcb' \<and> (tcb_context tcb' = tcb_context tcb \<or>
-                  tcb_context tcb' = (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction))"
+   \<Longrightarrow> \<exists>tcb tcb'. get_tcb thread st = Some tcb \<and>
+                  get_tcb thread s = Some tcb' \<and>
+                  (arch_tcb_context_get (tcb_arch tcb') = arch_tcb_context_get (tcb_arch tcb) \<or>
+                  arch_tcb_context_get (tcb_arch tcb') =
+                    (arch_tcb_context_get (tcb_arch tcb))(TPIDRURW := (arch_tcb_context_get (tcb_arch tcb)) FaultInstruction))"
   apply (clarsimp simp: integrity_def)
   apply (drule_tac x = thread in spec)
   apply (erule integrity_obj.cases, auto simp add: tcb_states_of_state_def get_tcb_def st_tcb_def2)
   done
+
+definition
+  "consistent_tpidrurw_at \<equiv>
+    obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> arch_tcb_context_get (tcb_arch tcb) TPIDRURW = tcb_ipc_buffer tcb)"
 
 lemma set_thread_state_restart_to_running_respects:
   "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Restart) thread
@@ -704,8 +692,8 @@ lemma set_thread_state_restart_to_running_respects:
   apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (rule_tac ntfn'="tcb_bound_notification ya" in tro_tcb_activate [OF refl refl])
-  apply clarsimp
-  apply (simp add: tcb_bound_notification_reset_integrity_def)+
+  apply (clarsimp simp: obj_at_def)
+    apply (simp add: tcb_bound_notification_reset_integrity_def)+
   done
 
 lemma activate_thread_respects:
@@ -740,22 +728,7 @@ lemma activate_thread_pas_refined:
              | wpc | simp del: hoare_post_taut)+
   done
 
-lemma dmo_storeWord_respects_globals:
-  "\<lbrace>integrity aag X st and K (ptr_range w 2 \<subseteq> X) \<rbrace>
-    do_machine_op (storeWord w v)
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (rule hoare_pre)
-  apply (simp add: storeWord_def)
-  apply (wp dmo_wp)
-  apply clarsimp
-  apply (simp add: integrity_def split del: split_if)
-  apply (clarsimp split del: split_if)
-  apply (case_tac "x \<in> ptr_range w 2")
-   apply (rule trm_globals)
-   apply fastforce
-  apply (auto simp: is_aligned_mask [symmetric] intro!: trm_lrefl ptr_range_memI ptr_range_add_memI)   
-  done
+definition "current_ipc_buffer_register s \<equiv> arch_tcb_context_get (tcb_arch (the (get_tcb (cur_thread s) s))) TPIDRURW"
 
 lemma integrity_exclusive_state [iff]:
   "integrity aag X st (s\<lparr>machine_state := machine_state s \<lparr>exclusive_state := es \<rparr>\<rparr>)
@@ -775,7 +748,41 @@ lemma integrity_cur_thread [iff]:
   "integrity aag X st (s\<lparr>cur_thread := v\<rparr>) = integrity aag X st s"
   unfolding integrity_def by simp
 
-crunch arm_globals_frame [wp]: set_vm_root "\<lambda>s. P (arm_globals_frame (arch_state s))"
+lemma current_ipc_buffer_register_cong[cong]:
+  "\<lbrakk>cur_thread s = cur_thread s'; kheap s = kheap s'\<rbrakk>
+    \<Longrightarrow> current_ipc_buffer_register s = current_ipc_buffer_register s'"
+  by (simp add:current_ipc_buffer_register_def get_tcb_def)
+
+
+crunch current_ipc_buffer_register [wp]: store_hw_asid "\<lambda>s. P (current_ipc_buffer_register s)"
+   (simp: crunch_simps current_ipc_buffer_register_def get_tcb_def)
+
+crunch current_ipc_buffer_register [wp]: invalidate_hw_asid_entry "\<lambda>s. P (current_ipc_buffer_register s)"
+   (simp: crunch_simps current_ipc_buffer_register_def get_tcb_def)
+
+crunch current_ipc_buffer_register [wp]: invalidate_asid "\<lambda>s. P (current_ipc_buffer_register s)"
+   (simp: crunch_simps current_ipc_buffer_register_def get_tcb_def)
+
+crunch current_ipc_buffer_register [wp]: do_machine_op "\<lambda>s. P (current_ipc_buffer_register s)"
+   (simp: crunch_simps current_ipc_buffer_register_def get_tcb_def)
+
+crunch current_ipc_buffer_register [wp]: find_free_hw_asid "\<lambda>s. P (current_ipc_buffer_register s)"
+   (simp: crunch_simps  get_tcb_def )
+
+crunch current_ipc_buffer_register [wp]: load_hw_asid "\<lambda>s. P (current_ipc_buffer_register s)"
+   (simp: crunch_simps current_ipc_buffer_register_def get_tcb_def)
+
+crunch current_ipc_buffer_register [wp]: get_hw_asid "\<lambda>s. P (current_ipc_buffer_register s)"
+   (simp: crunch_simps)
+
+crunch current_ipc_buffer_register [wp]: arm_context_switch "\<lambda>s. P (current_ipc_buffer_register s)"
+   (simp: crunch_simps)
+
+crunch current_ipc_buffer_register [wp]: set_vm_root "\<lambda>s. P (current_ipc_buffer_register s)"
+   (simp: crunch_simps)
+
+
+crunch current_ipc_buffer_register [wp]: next_domain "\<lambda>s. P (current_ipc_buffer_register s)"
    (simp: crunch_simps)
 
 lemma tcb_sched_action_dequeue_integrity_pasMayEditReadyQueues:
@@ -788,47 +795,88 @@ lemma tcb_sched_action_dequeue_integrity_pasMayEditReadyQueues:
                   split: option.splits)
   done
 
+lemma as_user_set_register_respects_indirect:
+  "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
+    K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at receive_blocked thread st
+           \<and> bound_tcb_at (op = (Some ntfnptr)) thread st)
+        \<and> (aag_has_auth_to aag Notify ntfnptr)) \<rbrace>
+   as_user thread (set_register r v)
+   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  apply (simp add: as_user_def split_def set_object_def)
+  apply wp
+  apply (clarsimp simp: in_monad set_register_def)
+  apply (cases "is_subject aag thread")
+   apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
+  apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
+  apply (simp split: thread_state.split_asm)
+  apply (rule send_upd_ctxintegrity [OF disjI2, unfolded fun_upd_def],
+         auto simp: st_tcb_def2 indirect_send_def pred_tcb_def2)
+  done
+
 lemma switch_to_thread_respects_pasMayEditReadyQueues:
   notes tcb_sched_action_dequeue_integrity[wp del]
   shows
-  "\<lbrace>integrity aag X st and pas_refined aag and K (pasMayEditReadyQueues aag) and
-     (\<lambda>s. ptr_range (arm_globals_frame (arch_state s)) 2 \<subseteq> X) \<rbrace>
+  "\<lbrace>integrity aag X st and pas_refined aag
+    and K (pasMayEditReadyQueues aag)\<rbrace>
   switch_to_thread t
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   unfolding switch_to_thread_def arch_switch_to_thread_def
   apply (simp add: spec_valid_def)
-  apply (wp dmo_storeWord_respects_globals tcb_sched_action_dequeue_integrity_pasMayEditReadyQueues | simp add: clearExMonitor_def)+
+  apply (wp tcb_sched_action_dequeue_integrity_pasMayEditReadyQueues
+                | simp add: clearExMonitor_def)+
   done
 
 lemma switch_to_thread_respects:
-  "\<lbrace>integrity aag X st and pas_refined aag and K (is_subject aag t) and
-     (\<lambda>s. ptr_range (arm_globals_frame (arch_state s)) 2 \<subseteq> X) \<rbrace>
+  "\<lbrace>integrity aag X st and pas_refined aag
+    and K (is_subject aag t) \<rbrace>
   switch_to_thread t
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   unfolding switch_to_thread_def arch_switch_to_thread_def
   apply (simp add: spec_valid_def)
-  apply (wp dmo_storeWord_respects_globals | simp add: clearExMonitor_def)+
+  apply (wp | simp add: clearExMonitor_def)+
   done
 
 lemma switch_to_idle_thread_respects:
-  "\<lbrace>integrity aag X st and (\<lambda>s. ptr_range (arm_globals_frame (arch_state s)) 2 \<subseteq> X)\<rbrace>
+  "\<lbrace>integrity aag X st\<rbrace>
     switch_to_idle_thread
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   unfolding switch_to_idle_thread_def arch_switch_to_idle_thread_def
-  by (wp dmo_storeWord_respects_globals | simp)+
+  by (wp | simp)+
+
+lemma max_non_empty_queue_is_subject:
+  "\<lbrakk>tcb_domain_map_wellformed aag s;
+    st_tcb_at (op = sta) (hd (max_non_empty_queue (ready_queues s (cur_domain s)))) s;
+    pas_cur_domain aag s; valid_queues s;ready_queues s (cur_domain s) prio \<noteq> [];
+    runnable sta\<rbrakk>
+   \<Longrightarrow> is_subject aag (hd (max_non_empty_queue (ready_queues s (cur_domain s))))"
+  apply (clarsimp simp: tcb_domain_map_wellformed_aux_def)
+  apply (erule_tac x="(hd (max_non_empty_queue (ready_queues s (cur_domain s))), cur_domain s)" in ballE)
+   apply simp
+  apply (clarsimp simp: valid_queues_def is_etcb_at_def)
+  apply (erule_tac x="cur_domain s" in allE)
+  apply (erule_tac x="Max {prio. ready_queues s (cur_domain s) prio \<noteq> []}" in allE)
+  apply clarsimp
+  apply (erule_tac x="hd (max_non_empty_queue (ready_queues s (cur_domain s)))" in ballE)
+   apply (clarsimp)
+   apply (erule notE, rule domtcbs)
+    apply force
+   apply (simp add: etcb_at_def)
+  apply (simp add: max_non_empty_queue_def)
+  apply (erule_tac P="hd A \<in> B" for A B in notE)
+  apply (rule Max_prop)
+   apply force+
+  done
 
 lemma choose_thread_respects_pasMayEditReadyQueues:
-  "\<lbrace>integrity aag X st and pas_refined aag and einvs and valid_queues and
-     (\<lambda>s. ptr_range (arm_globals_frame (arch_state s)) 2 \<subseteq> X) and K (pasMayEditReadyQueues aag) \<rbrace>
+  "\<lbrace>integrity aag X st and pas_refined aag and einvs and valid_queues and K (pasMayEditReadyQueues aag ) \<rbrace>
   choose_thread
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: choose_thread_def guarded_switch_to_def | wp switch_to_thread_respects_pasMayEditReadyQueues switch_to_idle_thread_respects gts_wp)+
-  done
+  by (simp add: choose_thread_def guarded_switch_to_def
+      | wp switch_to_thread_respects_pasMayEditReadyQueues switch_to_idle_thread_respects gts_wp)+
 
 text {* integrity for @{const choose_thread} without @{const pasMayEditReadyQueues} *}
 lemma choose_thread_respects:
-  "\<lbrace>integrity aag X st and pas_refined aag and pas_cur_domain aag and einvs and valid_queues and
-     (\<lambda>s. ptr_range (arm_globals_frame (arch_state s)) 2 \<subseteq> X) \<rbrace>
+  "\<lbrace>integrity aag X st and pas_refined aag and pas_cur_domain aag and einvs and valid_queues\<rbrace>
    choose_thread
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: choose_thread_def guarded_switch_to_def | wp switch_to_thread_respects switch_to_idle_thread_respects gts_wp)+
@@ -849,6 +897,16 @@ lemma choose_thread_respects:
   apply (erule_tac P="hd A \<in> B" for A B in notE)
   apply (rule Max_prop)
    apply force+
+  done
+
+lemma guarded_switch_to_respects:
+  "\<lbrace> integrity aag X st
+     and pas_refined aag and (\<lambda>s. is_subject aag x)\<rbrace>
+   guarded_switch_to x
+   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+   apply (simp add: guarded_switch_to_def)
+   apply (simp add: choose_thread_def guarded_switch_to_def
+               | wp switch_to_thread_respects switch_to_idle_thread_respects gts_wp)+
    done
 
 lemma next_domain_integrity [wp]:
@@ -880,10 +938,12 @@ lemma next_domain_valid_sched:
   apply (simp add:valid_blocked_2_def)
   done
 
+crunch current_ipc_buffer_register [wp]: tcb_sched_action "\<lambda>s. P (current_ipc_buffer_register s)"
+   (wp: crunch_wps without_preemption_wp simp: crunch_simps current_ipc_buffer_register_def get_tcb_def)
 
 lemma schedule_integrity:
   "\<lbrace>einvs and integrity aag X st and pas_refined aag and pas_cur_domain aag
-          and (\<lambda>s. ptr_range (arm_globals_frame (arch_state s)) 2 \<subseteq> X \<and> domain_time s \<noteq> 0) \<rbrace>
+          and (\<lambda>s. domain_time s \<noteq> 0) \<rbrace>
       schedule
     \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
    apply (simp add: schedule_def)
@@ -894,7 +954,10 @@ lemma schedule_integrity:
     | simp add: allActiveTCBs_def
     | rule hoare_pre_cont)+
   apply (intro allI conjI impI)
-          apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_2_def switch_in_cur_domain_2_def in_cur_domain_2_def valid_etcbs_def invs_def valid_etcbs_def etcb_at_def st_tcb_at_def obj_at_def is_etcb_at_def split: option.splits)
+          apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_2_def
+                                switch_in_cur_domain_2_def in_cur_domain_2_def valid_etcbs_def invs_def
+                                valid_etcbs_def etcb_at_def st_tcb_at_def obj_at_def is_etcb_at_def
+                         split: option.splits)
            apply force
           apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
           apply (drule_tac x="(x, cur_domain s)" in bspec)
@@ -913,20 +976,16 @@ lemma schedule_integrity:
 
 lemma schedule_integrity_pasMayEditReadyQueues:
   "\<lbrace>einvs and integrity aag X st and pas_refined aag and guarded_pas_domain aag
-          and (\<lambda>s. ptr_range (arm_globals_frame (arch_state s)) 2 \<subseteq> X)
           and K (pasMayEditReadyQueues aag) \<rbrace>
      schedule
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: schedule_def)
   apply (rule hoare_pre)
-
   apply (wp guarded_switch_to_lift switch_to_thread_respects_pasMayEditReadyQueues choose_thread_respects_pasMayEditReadyQueues
             next_domain_valid_sched next_domain_valid_queues gts_wp hoare_drop_imps
         | wpc | simp)+
- 
   apply (auto simp: obj_at_def st_tcb_at_def not_cur_thread_2_def valid_sched_def)
   done
-
 
 lemma pas_refined_cur_thread [iff]:
   "pas_refined aag (s\<lparr>cur_thread := v\<rparr>) = pas_refined aag s"
@@ -964,43 +1023,269 @@ lemma handle_interrupt_arch_state [wp]:
   apply (rule hoare_if)
   apply (rule hoare_pre)
   apply clarsimp
-  apply (wp get_cap_inv dxo_wp_weak send_signal_arch_state | wpc | simp add: get_irq_state_def)+
+  apply (wp get_cap_inv dxo_wp_weak send_signal_arch_state
+        | wpc
+        | simp add: get_irq_state_def handle_reserved_irq_def)+
   done
 
 lemmas sequence_x_mapM_x = mapM_x_def [symmetric]
 
-crunch arm_globals_frame [wp]: invoke_untyped "\<lambda>s. P (arm_globals_frame (arch_state s))"
+crunch arch_state [wp]: invoke_untyped "\<lambda>s. P (arch_state s)"
    (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch hoare_unless_wp
+        preemption_point_inv mapME_x_inv_wp
      simp: crunch_simps sequence_x_mapM_x
      ignore: do_machine_op freeMemory clearMemory)
 
-crunch arm_globals_frame [wp]: cap_delete_one "\<lambda>s. P (arm_globals_frame (arch_state s))"
-   (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch
-     hoare_unless_wp dxo_wp_weak
-     simp: crunch_simps sequence_x_mapM_x
-     ignore: do_machine_op clearMemory empty_slot_ext tcb_sched_action reschedule_required) 
+lemma set_cap_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_cap ptr c \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (cases c)
+  apply (clarsimp simp: set_cap_def get_object_def set_object_def valid_def put_def
+                        gets_def assert_def bind_def get_def return_def fail_def
+                 split: option.splits kernel_object.splits)
+  apply (auto simp: current_ipc_buffer_register_def get_tcb_def)
+  done
 
-crunch arm_globals_frame [wp]: finalise_cap "\<lambda>s. P (arm_globals_frame (arch_state s))"
+crunch current_ipc_buffer_register [wp]: "set_thread_state_ext" "\<lambda>s. P (current_ipc_buffer_register s)"
+
+lemma set_thread_state_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_thread_state t b  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: set_thread_state_def)
+  apply (wp dxo_wp_weak)
+    apply (simp add: trans_state_def)
+   apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
+                         gets_def assert_def bind_def get_def return_def fail_def
+                  split: option.splits kernel_object.splits)
+   apply simp
+  apply wp
+  apply (auto simp: current_ipc_buffer_register_def get_tcb_def)
+  done
+
+lemma set_notification_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_notification t b  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: set_notification_def)
+  apply (wp dxo_wp_weak)
+   apply (clarsimp simp: get_object_def set_object_def valid_def put_def
+                         gets_def assert_def bind_def get_def return_def fail_def
+                  split: option.splits kernel_object.splits)
+   apply simp
+  apply (wp get_object_wp)+
+  apply (auto simp: current_ipc_buffer_register_def obj_at_def get_tcb_def split: kernel_object.split_asm)
+  done
+
+crunch current_ipc_buffer_register [wp]: "set_cap" "\<lambda>s. P (current_ipc_buffer_register s)"
+
+lemma update_tcb_current_ipc_buffer_register:
+  "\<lbrakk>get_tcb t s = Some tcb; P (current_ipc_buffer_register s);
+    arch_tcb_context_get (tcb_arch tcb) TPIDRURW = arch_tcb_context_get (tcb_arch tcb') TPIDRURW\<rbrakk>
+       \<Longrightarrow> P (current_ipc_buffer_register (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb')\<rparr>))"
+  apply (erule arg_cong[where f = P,THEN iffD1,rotated])
+  apply (simp add: current_ipc_buffer_register_def get_tcb_def)
+  done
+
+lemma unbind_maybe_notification_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> unbind_maybe_notification t  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: unbind_maybe_notification_def  )
+  apply (wp dxo_wp_weak | wpc)+
+     apply (simp add: trans_state_def set_bound_notification_def)
+     apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
+                           gets_def assert_def bind_def get_def return_def fail_def gets_the_def
+                           assert_opt_def
+                    split: option.splits kernel_object.splits)
+     apply (erule update_tcb_current_ipc_buffer_register)
+      apply assumption
+     apply simp
+    apply (wp get_object_wp | simp add: get_notification_def | wpc)+
+  done
+
+lemma set_endpoint_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_endpoint t ep  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: set_endpoint_def  )
+  apply (wp dxo_wp_weak | wpc)+
+     apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
+                           gets_def assert_def bind_def get_def return_def fail_def gets_the_def
+                           assert_opt_def
+                    split: option.splits kernel_object.splits)
+     apply simp
+    apply (wp get_object_wp | simp add: get_notification_def | wpc)+
+  apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
+  done
+
+lemma set_bounded_notification_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_bound_notification t ep  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: set_bound_notification_def  )
+  apply (wp dxo_wp_weak | wpc)+
+     apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
+                           gets_def assert_def bind_def get_def return_def fail_def gets_the_def
+                           assert_opt_def
+                    split: option.splits kernel_object.splits)
+     apply simp
+    apply (wp get_object_wp | simp add: get_notification_def | wpc)+
+  apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
+  done
+
+lemma set_pd_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_pd ptr pd \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: set_pd_def  )
+  apply (wp | wpc)+
+     apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
+                           gets_def assert_def bind_def get_def return_def fail_def gets_the_def
+                           assert_opt_def
+                    split: option.splits kernel_object.splits)
+     apply simp
+    apply (wp get_object_wp | simp add: get_notification_def | wpc)+
+  apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
+  done
+
+lemma set_pt_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_pt ptr pt \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: set_pt_def  )
+  apply (wp | wpc)+
+     apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
+                           gets_def assert_def bind_def get_def return_def fail_def gets_the_def
+                           assert_opt_def
+                    split: option.splits kernel_object.splits)
+     apply simp
+    apply (wp get_object_wp | simp add: get_notification_def | wpc)+
+  apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
+  done
+
+crunch current_ipc_buffer_register [wp]: cap_delete_one "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch
+       hoare_unless_wp dxo_wp_weak
+   simp: crunch_simps mapM_x_wp
+   ignore: do_machine_op clearMemory empty_slot_ext tcb_sched_action reschedule_required)
+
+lemma dxo_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> do_extended_op eop  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  by (simp | wp dxo_wp_weak)+
+
+lemma dxo_current_ipc_buffer_register_kheap_upd:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register (s\<lparr>kheap:=kh\<rparr>))\<rbrace> do_extended_op eop  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register (s\<lparr>kheap:=kh\<rparr>))\<rbrace>"
+  apply (simp | wp dxo_wp_weak)+
+  apply (rule arg_cong[where f = P])
+  apply (simp add: trans_state_def current_ipc_buffer_register_def get_tcb_def)
+  done
+
+crunch current_ipc_buffer_register [wp]: "deleting_irq_handler" "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps mapM_x_wp)
+
+(* FIXME: Crunch fails for the following simple valid rules *)
+lemma cap_swap_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> cap_swap a b c d  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  by (simp add: cap_swap_def | wp)+
+
+crunch current_ipc_buffer_register [wp]: "cap_swap_for_delete" "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: dxo_wp_weak dxo_current_ipc_buffer_register)
+
+crunch current_ipc_buffer_register [wp]: "set_bound_notification" "\<lambda>s. P (current_ipc_buffer_register s)"
+
+(* FIXME: Crunch fails for the following simple valid rules *)
+lemma create_cap_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> create_cap a b c d e  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (rule hoare_pre)
+  by (simp add: create_cap_def | wp | wpc)+
+
+crunch current_ipc_buffer_register [wp]: store_pde "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps)
+
+crunch current_ipc_buffer_register [wp]: init_arch_objects "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps without_preemption_wp hoare_unless_wp
+   simp: crunch_simps
+   ignore: do_machine_op clearMemory freeMemory)
+
+lemma current_ipc_buffer_register_weak_intro:
+  assumes valid: "\<And>P. \<lbrace>\<lambda>s. obj_at P (cur_thread s) s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. obj_at P (cur_thread s) s\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s) \<and> cur_tcb s \<and> Q s \<rbrace> f  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: valid_def current_ipc_buffer_register_def)
+  apply (drule use_valid)
+    apply (rule_tac P = "\<lambda>ko. case ko of TCB t \<Rightarrow> P (arch_tcb_context_get (tcb_arch t) TPIDRURW) | _ \<Rightarrow> False" in valid)
+   apply (clarsimp simp: cur_tcb_def tcb_at_def)
+  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp split: kernel_object.split_asm)
+  apply (clarsimp simp: get_tcb_def)
+  done
+
+
+(* FIXME: Crunch fails for the following simple valid rules *)
+lemma retype_region_current_ipc_buffer_register:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s) \<and> pspace_no_overlap (up_aligned_area ptr sz) s
+    \<and> valid_pspace s \<and> cur_tcb s \<and> range_cover ptr sz (obj_bits_api ty us) n\<rbrace>
+    retype_region ptr n us ty dev \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (rule hoare_pre)
+   apply (wp current_ipc_buffer_register_weak_intro)
+   apply (rule  hoare_pre)
+    apply wps
+    apply (wp Retype_AI.retype_region_obj_at_other2)
+   apply (erule conjE, erule conjI, assumption)
+  apply clarsimp
+  apply (drule(2) pspace_no_overlap_into_Int_none)
+  apply (fastforce simp: cur_tcb_def obj_at_def)
+  done
+
+lemma cancel_signal_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> cancel_signal a b \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: cancel_signal_def get_notification_def)
+  apply (wp | wpc)+
+  apply (clarsimp simp:  get_object_def set_object_def valid_def put_def
+                        gets_def assert_def bind_def get_def return_def fail_def gets_the_def
+                        assert_opt_def
+                 split: option.splits kernel_object.splits)
+  done
+
+crunch current_ipc_buffer_register [wp]: blocked_cancel_ipc "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps)
+
+lemma reply_cancel_ipc_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> reply_cancel_ipc a \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: reply_cancel_ipc_def)
+  apply (wp select_wp| wpc)+
+  apply (rule_tac Q = "\<lambda>r s. P (current_ipc_buffer_register s)" in hoare_post_imp)
+   apply simp
+  apply (clarsimp simp: get_object_def set_object_def valid_def put_def
+                        gets_def assert_def bind_def get_def return_def
+                        fail_def gets_the_def
+                        thread_set_def assert_opt_def get_tcb_def
+                 split: option.splits kernel_object.splits)
+  apply (clarsimp simp: current_ipc_buffer_register_def get_tcb_def)
+  done
+
+lemma set_asid_pool_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_asid_pool a b \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: set_asid_pool_def)
+  apply (rule_tac Q = "\<lambda>r s. P (current_ipc_buffer_register s)" in hoare_post_imp)
+   apply simp
+  apply (clarsimp simp: get_object_def set_object_def valid_def put_def
+                        gets_def assert_def bind_def get_def return_def
+                        fail_def gets_the_def
+                        thread_set_def assert_opt_def get_tcb_def
+                 split: option.splits kernel_object.splits)
+  apply (clarsimp simp: current_ipc_buffer_register_def get_tcb_def)
+  done
+
+crunch current_ipc_buffer_register [wp]: finalise_cap "\<lambda>s. P (current_ipc_buffer_register s)"
    (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch
-     hoare_unless_wp select_wp dxo_wp_weak
-     simp: crunch_simps sequence_x_mapM_x
-     ignore: do_machine_op clearMemory empty_slot_ext tcb_sched_action reschedule_required) 
+        hoare_unless_wp select_wp
+    simp: crunch_simps
+    ignore: do_machine_op clearMemory empty_slot_ext reschedule_required
+            tcb_sched_action)
+
 
 abbreviation (input)
   "invariant m P \<equiv> \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>"
 
-lemma rec_del_arm_globals_frame [wp]:
-  "invariant (rec_del call) (\<lambda>s. P (arm_globals_frame (arch_state s)))"
+lemma rec_del_current_ipc_buffer_register [wp]:
+  "invariant (rec_del call) (\<lambda>s. P (current_ipc_buffer_register s))"
   apply (rule rec_del_preservation)
+  apply wp
   apply (wp preemption_point_inv)
    apply simp+
   done
 
-crunch arm_globals_frame [wp]: cap_delete "\<lambda>s. P (arm_globals_frame (arch_state s))"
+crunch current_ipc_buffer_register [wp]: cap_delete "\<lambda>s. P (current_ipc_buffer_register s)"
    (wp: crunch_wps simp: crunch_simps)
   
-lemma cap_revoke_arm_globals_frame [wp]:
-  "invariant (cap_revoke slot) (\<lambda>s. P (arm_globals_frame (arch_state s)))"
+lemma cap_revoke_current_ipc_buffer_register [wp]:
+  "invariant (cap_revoke slot) (\<lambda>s. P (current_ipc_buffer_register s))"
   apply (rule validE_valid)
   apply (rule cap_revoke_preservation)
   apply (wp preemption_point_inv)
@@ -1012,17 +1297,243 @@ end
 crunch_ignore (add:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action attempt_switch_to ethread_set
   reschedule_required set_thread_state_ext switch_if_required_to next_domain
-  set_domain recycle_cap_ext
+  set_domain
   attempt_switch_to timer_tick set_priority retype_region_ext)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch arm_globals_frame [wp]: handle_event "\<lambda>s. P (arm_globals_frame (arch_state s))"
-   (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch select_wp
-     check_cap_inv filterM_preserved hoare_unless_wp dxo_wp_weak
-     simp: crunch_simps ignore: do_machine_op clearMemory 
-     getActiveIRQ getFAR getIFSR getDFSR 
-     )
+crunch current_ipc_buffer_register [wp]: cap_insert "\<lambda>s. P (current_ipc_buffer_register s)"
+   (wp: crunch_wps simp: crunch_simps)
+
+crunch current_ipc_buffer_register [wp]: cap_move "\<lambda>s. P (current_ipc_buffer_register s)"
+   (wp: crunch_wps simp: crunch_simps)
+
+crunch current_ipc_buffer_register [wp]: set_extra_badge "\<lambda>s. P (current_ipc_buffer_register s)"
+   (wp: crunch_wps simp: crunch_simps)
+
+lemma transfer_caps_loop_current_ipc_buffer_register:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> transfer_caps_loop ep buffer n caps slots mi \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  by (wp transfer_caps_loop_pres)
+
+crunch current_ipc_buffer_register [wp]: transfer_caps "\<lambda>s. P (current_ipc_buffer_register s)"
+
+lemma set_tcb_context_current_ipc_buffer_register:
+  "\<lbrace>\<lambda>s. (f = cur_thread s \<longrightarrow> (P (cxt TPIDRURW) = P (arch_tcb_context_get (tcb_arch tcb) TPIDRURW) \<and>
+        obj_at (\<lambda>obj. obj = TCB tcb) f s)) \<and> P (current_ipc_buffer_register s)\<rbrace>
+     set_object f (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>))
+   \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
+  by (auto simp: current_ipc_buffer_register_def get_tcb_def set_object_def get_def put_def bind_def valid_def return_def obj_at_def)
+
+lemma as_user_current_ipc_buffer_register[wp]:
+  assumes uc: "\<And>P. \<lbrace>\<lambda>s. P (s TPIDRURW)\<rbrace> a \<lbrace>\<lambda>r s. P (s TPIDRURW)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> as_user f a
+  \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (simp add: as_user_def)
+  apply (wp select_f_wp set_tcb_context_current_ipc_buffer_register | wpc | simp)+
+  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (simp add: obj_at_def get_tcb_def)
+  apply (drule use_valid[OF _ uc])
+   apply (clarsimp simp: current_ipc_buffer_register_def get_tcb_def)
+   apply assumption
+  apply (clarsimp simp: current_ipc_buffer_register_def get_tcb_def)
+  done
+
+lemma set_register_tpidrurw_inv[wp]:
+  "r \<noteq> TPIDRURW \<Longrightarrow> \<lbrace>\<lambda>s. P (s TPIDRURW)\<rbrace> set_register r v\<lbrace>\<lambda>r s. P (s TPIDRURW)\<rbrace>"
+  by (simp add: set_register_def simpler_modify_def valid_def)
+
+crunch tpidrurw_inv [wp]: get_register "\<lambda>s. P (s TPIDRURW)"
+
+crunch current_ipc_buffer_register [wp]: handle_interrupt "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps simp: badge_register_def badgeRegister_def )
+
+lemma TPIDRURW_notin_msg_registers[simp]:
+ "TPIDRURW \<notin> set (take r msgRegisters)"
+ "TPIDRURW \<notin> set syscallMessage"
+ "TPIDRURW \<notin> set exceptionMessage"
+ "TPIDRURW \<notin> set gpRegisters"
+ "TPIDRURW \<notin> set frameRegisters"
+  apply (auto simp: msgRegisters_def frameRegisters_def gpRegisters_def
+                    syscallMessage_def exceptionMessage_def)
+  apply (rule ccontr)
+  apply clarsimp
+  apply (drule in_set_takeD)
+  apply (simp_all add: upto_enum_red image_def)
+  apply (auto simp add: toEnum_eq_to_fromEnum_eq fromEnum_def enum_register maxBound_def
+              dest!: toEnum_eq_to_fromEnum_eq[THEN iffD1,rotated,OF sym])
+  done
+
+lemma setRegister_is_set_register:
+  "setRegister = set_register"
+  by (rule ext, auto simp: setRegister_def set_register_def)
+
+lemma zet_zip_contrapos:
+  "fst t \<notin> set xs  \<Longrightarrow> t \<notin> set (zip xs ys)"
+  apply (rule ccontr)
+  apply (simp add: set_zip_helper)
+  done
+
+lemma set_mrs_current_ipc_buffer_register:
+  "\<lbrace>(\<lambda>s. P (current_ipc_buffer_register s))\<rbrace> set_mrs a b c \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (simp add: set_mrs_def msg_registers_def)
+  apply (subst zipWithM_x_mapM_x)
+  apply (rule hoare_pre)
+  apply (wp mapM_x_wp[where S = UNIV] | wpc | simp)+
+      apply (rule hoare_pre)
+       apply (wp set_object_wp | wpc | simp)+
+  apply (auto simp: current_ipc_buffer_register_def get_tcb_def)
+  done
+
+lemma thread_set_current_ipc_buffer_register:
+  assumes tpidrurw_inv: "\<And>y. P (arch_tcb_context_get (tcb_arch (r y)) TPIDRURW) = P (arch_tcb_context_get (tcb_arch y) TPIDRURW)"
+  shows "\<lbrace>(\<lambda>s. P (current_ipc_buffer_register s))\<rbrace> thread_set r ptr \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (simp add:thread_set_def)
+  apply (wp set_object_wp)
+  apply (auto simp: current_ipc_buffer_register_def get_tcb_def tpidrurw_inv)
+  done
+
+lemma checked_cap_current_ipc_buffer_register_inv:
+  "\<lbrace>(\<lambda>s. P (current_ipc_buffer_register s))\<rbrace>
+    check_cap_at a b (check_cap_at c d (cap_insert a b e))
+   \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
+   by (simp add:check_cap_at_def | wp hoare_vcg_if_lift2 hoare_drop_imps)+
+
+lemma [simp]:
+  "badge_register \<noteq> TPIDRURW" "msg_info_register \<noteq> TPIDRURW"
+  by (auto simp add:badgeRegister_def badge_register_def msg_info_register_def msgInfoRegister_def)
+
+crunch current_ipc_buffer_register [wp]: setup_caller_cap "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps simp: crunch_simps )
+
+crunch current_ipc_buffer_register [wp]: set_message_info "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps simp: crunch_simps )
+
+crunch current_ipc_buffer_register [wp]: do_ipc_transfer "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps simp: crunch_simps msg_registers_def)
+
+crunch current_ipc_buffer_register [wp]: send_ipc "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps simp: crunch_simps )
+
+crunch current_ipc_buffer_register [wp]: send_fault_ipc "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps thread_set_current_ipc_buffer_register simp: crunch_simps ignore: thread_set )
+
+crunch current_ipc_buffer_register [wp]: handle_fault "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps simp: crunch_simps )
+
+crunch current_ipc_buffer_register [wp]: reply_from_kernel "\<lambda>s. P (current_ipc_buffer_register s)"
+  (wp: crunch_wps simp: crunch_simps )
+
+crunch current_ipc_buffer_register [wp]: do_reply_transfer "\<lambda>s. P (current_ipc_buffer_register s)"
+  ( wp: crunch_wps thread_set_current_ipc_buffer_register simp: crunch_simps zet_zip_contrapos
+    ignore: do_extended_op attempt_switch_to thread_set
+            tcb_fault_update)
+
+crunch current_ipc_buffer_register [wp]: invoke_domain "\<lambda>s. P (current_ipc_buffer_register s)"
+  ( wp: crunch_wps simp: crunch_simps ignore: do_extended_op check_cap_at)
+
+crunch current_ipc_buffer_register [wp]: cancel_badged_sends "\<lambda>s. P (current_ipc_buffer_register s)"
+  ( wp: crunch_wps filterM_preserved simp: crunch_simps ignore: do_extended_op)
+
+crunch current_ipc_buffer_register [wp]: finalise_slot "\<lambda>s. P (current_ipc_buffer_register s)"
+  ( wp: crunch_wps filterM_preserved hoare_unless_wp simp: crunch_simps ignore: do_extended_op)
+
+lemma ct_active_update[simp]:
+  "ct_active (s\<lparr>cdt := b\<rparr>) = ct_active s"
+  "ct_active (s\<lparr>is_original_cap := ic\<rparr>) = ct_active s"
+  "ct_active (s\<lparr>interrupt_states := st\<rparr>) = ct_active s"
+  "ct_active (s\<lparr>arch_state := as\<rparr>) = ct_active s"
+  by (auto simp: st_tcb_at_def ct_in_state_def)
+
+lemma set_cap_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+    set_cap ptr c
+   \<lbrace>\<lambda>_. ct_active \<rbrace>"
+  apply (rule hoare_pre)
+  apply (wp select_wp sts_st_tcb_at_cases thread_set_no_change_tcb_state
+          | simp add: crunch_simps ct_in_state_def | wps)+
+  done
+
+lemma do_extended_op_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+    do_extended_op ch
+   \<lbrace>\<lambda>_. ct_active \<rbrace>"
+  apply (rule hoare_pre)
+  apply (wp | simp add: crunch_simps ct_in_state_def do_extended_op_def | wps)+
+  apply (auto simp: st_tcb_at_def obj_at_def)
+  done
+
+crunch ct_active [wp]: set_original "ct_active"
+  ( wp: crunch_wps
+    simp: crunch_simps ct_in_state_def)
+
+crunch ct_active [wp]: set_cdt "ct_active"
+  ( wp: crunch_wps
+    simp: crunch_simps ct_in_state_def)
+
+lemma cap_swap_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+    cap_swap a b c d
+   \<lbrace>\<lambda>_. ct_active \<rbrace>"
+  by (wp | simp add: cap_swap_def | wps)+
+
+lemma set_ep_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+    set_endpoint a b
+   \<lbrace>\<lambda>_. ct_active \<rbrace>"
+  apply (wp set_object_wp get_object_wp| simp add: set_endpoint_def)+
+  apply (auto simp: ct_in_state_def st_tcb_at_def obj_at_def)
+  done
+
+lemma unbind_maybe_notification_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+    unbind_maybe_notification ptr
+   \<lbrace>\<lambda>_. ct_active \<rbrace>"
+  apply (rule hoare_pre)
+  apply (wp | wps | simp add: unbind_maybe_notification_def ct_in_state_def | wpc)+
+  done
+
+lemma unbind_notification_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+    unbind_notification ptr
+   \<lbrace>\<lambda>_. ct_active \<rbrace>"
+  apply (rule hoare_pre)
+  apply (wp | wps | simp add: unbind_notification_def ct_in_state_def | wpc)+
+  done
+
+lemma sts_Restart_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace> set_thread_state xa Restart \<lbrace>\<lambda>xb. ct_active\<rbrace>"
+  apply (wp set_object_wp | simp add: set_thread_state_def)+
+  apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def)
+  done
+
+lemma cancel_all_ipc_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+    cancel_all_ipc ptr
+   \<lbrace>\<lambda>_. ct_active \<rbrace>"
+  apply (rule hoare_pre)
+   apply (wp mapM_x_wp | wps | simp add: cancel_all_ipc_def | wpc)+
+       apply force
+      apply (wp mapM_x_wp)
+      apply force
+     apply (wp hoare_drop_imps hoare_vcg_conj_lift hoare_vcg_all_lift)
+  apply simp
+  done
+
+crunch ct_active [wp]: cap_swap_for_delete "ct_active"
+  ( wp: crunch_wps filterM_preserved hoare_unless_wp
+    simp: crunch_simps ignore: do_extended_op)
+
+crunch ct_active [wp]: empty_slot "ct_active"
+  ( wp: crunch_wps filterM_preserved hoare_unless_wp
+    simp: crunch_simps ignore: do_extended_op)
+
+lemma thread_set_non_current_current_ipc_buffer_register:
+  "\<lbrace>\<lambda>s. ptr \<noteq> cur_thread s \<and> P (current_ipc_buffer_register s)\<rbrace>
+    thread_set f ptr
+   \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s) \<rbrace>"
+  apply (simp add: thread_set_def | wp set_object_wp)+
+  apply (auto simp: get_tcb_def current_ipc_buffer_register_def)
+  done
 
 crunch cur_thread[wp]: cap_swap_for_delete,finalise_cap "\<lambda>s. P (cur_thread s)" (wp: select_wp dxo_wp_weak crunch_wps simp: crunch_simps ) 
 
@@ -1041,7 +1552,7 @@ lemma cap_revoke_cur_thread[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>
   apply (wp preemption_point_inv|simp)+
   done
 
-crunch cur_thread[wp]: cap_recycle "\<lambda>s. P (cur_thread s)" (wp: crunch_wps mapM_wp mapM_x_wp dxo_wp_weak simp: filterM_mapM unless_def ignore: without_preemption filterM)
+crunch cur_thread[wp]: cancel_badged_sends "\<lambda>s. P (cur_thread s)" (wp: crunch_wps mapM_wp mapM_x_wp dxo_wp_weak simp: filterM_mapM unless_def ignore: without_preemption filterM)
 
 lemma invoke_cnode_cur_thread[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
@@ -1049,7 +1560,10 @@ lemma invoke_cnode_cur_thread[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrac
   apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: split_if)+
   done
 
-crunch cur_thread[wp]: handle_event "\<lambda>s. P (cur_thread s)" (wp: syscall_valid select_wp crunch_wps check_cap_inv cap_revoke_preservation dxo_wp_weak simp: crunch_simps filterM_mapM unless_def ignore: without_preemption check_cap_at filterM getActiveIRQ resetTimer ackInterrupt)
+crunch cur_thread[wp]: handle_event "\<lambda>s. P (cur_thread s)"
+  ( wp: syscall_valid select_wp crunch_wps check_cap_inv cap_revoke_preservation dxo_wp_weak
+    simp: crunch_simps filterM_mapM unless_def
+    ignore: without_preemption check_cap_at filterM getActiveIRQ resetTimer ackInterrupt )
 
 crunch pas_cur_domain[wp]: attempt_switch_to "pas_cur_domain pas"
 
@@ -1063,37 +1577,49 @@ crunch pas_cur_domain[wp]: switch_if_required_to "pas_cur_domain pas"
 
 crunch pas_cur_domain[wp]: handle_interrupt "pas_cur_domain pas"
 
+lemma dxo_idle_thread[wp]:
+  "\<lbrace>\<lambda>s. P (idle_thread s) \<rbrace> do_extended_op f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+  by (clarsimp simp: valid_def dest!: in_dxo_idle_threadD)
 
-crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread s)"
-(wp: OR_choiceE_weak_wp crunch_wps simp: crunch_simps ignore: do_extended_op OR_choiceE)
+crunch idle_thread[wp]: throwError "\<lambda>s. P (idle_thread s)"
+
+lemma preemption_point_idle_thread[wp]:
+  "\<lbrace>\<lambda>s. P (idle_thread s) \<rbrace> preemption_point \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+  apply (clarsimp simp: preemption_point_def)
+  by (wp OR_choiceE_weak_wp | wpc | simp)+
 
 (* following idle_thread and cur_domain proofs clagged from infoflow/PasUpdates.thy *)  
-crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cap_recycle "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
+crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends
+  "\<lambda>s. P (idle_thread s)"
+  ( wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak
+    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
+    ignore: without_preemption filterM rec_del check_cap_at cap_revoke )
  
-lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
+lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   apply (rule cap_revoke_preservation2)
    apply wp
   done
 
-
-lemma invoke_cnode_idle_thread[wp]: "\<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
+lemma invoke_cnode_idle_thread[wp]: "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-   apply (wp | wpc | clarsimp simp: without_preemption_def crunch_simps | intro impI conjI | wp_once hoare_drop_imps hoare_vcg_all_lift)+
+    apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: split_if)+
   done
 
-crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer ackInterrupt getFAR getDFSR getIFSR getActiveIRQ)
+crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)"
+  ( wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation dxo_wp_weak
+    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
+    ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer
+            ackInterrupt getFAR getDFSR getIFSR getActiveIRQ )
 
-
-crunch cur_domain[wp]:  transfer_caps_loop, ethread_set, thread_set_priority, set_priority, set_domain, invoke_domain, cap_move_ext, recycle_cap_ext,timer_tick,
-   cap_move,cap_recycle, attempt_switch_to, switch_if_required_to
-
+crunch cur_domain[wp]:  transfer_caps_loop, ethread_set, thread_set_priority, set_priority, set_domain, invoke_domain, cap_move_ext, timer_tick,
+   cap_move, cancel_badged_sends, attempt_switch_to, switch_if_required_to
  "\<lambda>s. P (cur_domain s)" (wp: transfer_caps_loop_pres crunch_wps simp: crunch_simps filterM_mapM unless_def ignore: without_preemption filterM const_on_failure )
 
 lemma invoke_cnode_cur_domain[wp]: "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_domain s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-  apply (wp | wpc | clarsimp | intro impI conjI | wp_once crunch_wps hoare_vcg_all_lift )+
+   apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: split_if)+
   done
 
 crunch cur_domain[wp]: handle_event "\<lambda>s. P (cur_domain s)" (wp: syscall_valid select_wp crunch_wps check_cap_inv cap_revoke_preservation simp: crunch_simps filterM_mapM unless_def ignore: without_preemption check_cap_at filterM  getActiveIRQ resetTimer ackInterrupt const_on_failure getFAR getDFSR getIFSR)
@@ -1101,49 +1627,50 @@ crunch cur_domain[wp]: handle_event "\<lambda>s. P (cur_domain s)" (wp: syscall_
 
 lemma handle_event_guarded_pas_domain[wp]:  
   "\<lbrace>guarded_pas_domain aag\<rbrace> handle_event e \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
-  apply(wp guarded_pas_domain_lift)
-  done
+  by (wp guarded_pas_domain_lift)
 
 lemma handle_interrupt_guarded_pas_domain[wp]:
   "\<lbrace>guarded_pas_domain aag\<rbrace> handle_interrupt blah \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
-  apply(wp guarded_pas_domain_lift)
-  done
+  by (wp guarded_pas_domain_lift)
+
+lemma current_ipc_buffer_register_irq_state_update: "current_ipc_buffer_register (s\<lparr>machine_state := machine_state s \<lparr>irq_state := Suc (irq_state (machine_state s))\<rparr>\<rparr>) = current_ipc_buffer_register s"
+by (clarsimp simp: current_ipc_buffer_register_def get_tcb_def)
 
 lemma call_kernel_integrity':
-  fixes st
-  defines "X \<equiv> ptr_range (arm_globals_frame (arch_state st)) 2"
-  shows "st \<turnstile> \<lbrace>einvs and pas_refined aag and is_subject aag \<circ> cur_thread and schact_is_rct and guarded_pas_domain aag 
-                    and domain_sep_inv (pasMaySendIrqs aag) st' 
-                    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag)\<rbrace>
+  "st \<turnstile> \<lbrace>einvs and pas_refined aag and is_subject aag \<circ> cur_thread and schact_is_rct and guarded_pas_domain aag
+                    and domain_sep_inv (pasMaySendIrqs aag) st'
+                    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and (ct_active or ct_idle)
+                    and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag)\<rbrace>
                call_kernel ev
              \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: call_kernel_def getActiveIRQ_def X_def)
+  apply (simp add: call_kernel_def getActiveIRQ_def )
   apply (simp add: spec_valid_def)
   apply (wp activate_thread_respects schedule_integrity_pasMayEditReadyQueues
-            handle_interrupt_integrity
-            dmo_wp alternative_wp select_wp handle_interrupt_pas_refined | simp)+
+            handle_interrupt_integrity handle_interrupt_current_ipc_buffer_register
+            dmo_wp alternative_wp select_wp handle_interrupt_pas_refined
+         | simp add: current_ipc_buffer_register_irq_state_update)+
   apply (rule hoare_post_impErr,
          rule_tac Q = "integrity aag X st and pas_refined aag and einvs and guarded_pas_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'
                         and is_subject aag \<circ> cur_thread
-                        and (\<lambda>s. arm_globals_frame (arch_state s)
-                               = arm_globals_frame (arch_state st))
                         and (\<lambda>_. pasMayActivate aag \<and> pasMayEditReadyQueues aag)" in valid_validE)
     apply (rule hoare_pre)
-     apply (wp handle_event_integrity he_invs handle_event_pas_refined
-               handle_event_domain_sep_inv handle_event_valid_sched | simp)+
-      
-    apply (fastforce simp: X_def domain_sep_inv_def)+
-  apply(fastforce simp: domain_sep_inv_def X_def guarded_pas_domain_def)
+     apply ((wp handle_event_integrity he_invs handle_event_pas_refined
+               handle_event_cur_thread handle_event_cur_domain
+               handle_event_domain_sep_inv handle_event_valid_sched | simp)+)[1]
+      apply (fastforce simp:  domain_sep_inv_def)+
+  apply(fastforce simp: domain_sep_inv_def guarded_pas_domain_def)
   done
 
 
 lemma call_kernel_integrity:
-  "\<lbrace>pas_refined pas and einvs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and domain_sep_inv (pasMaySendIrqs pas) st'
+  "\<lbrace>pas_refined pas and einvs
+    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and (ct_active or ct_idle)
+    and domain_sep_inv (pasMaySendIrqs pas) st'
     and schact_is_rct and guarded_pas_domain pas
     and is_subject pas o cur_thread and K (pasMayActivate pas \<and> pasMayEditReadyQueues pas) and (\<lambda>s. s = st)\<rbrace> 
    call_kernel ev
-   \<lbrace>\<lambda>_. integrity pas (ptr_range (arm_globals_frame (arch_state st)) 2) st\<rbrace>"
-  using call_kernel_integrity' [of st pas st' ev]
+   \<lbrace>\<lambda>_. integrity pas X st\<rbrace>"
+  using call_kernel_integrity' [of st pas st' ev X]
   apply (simp add: spec_valid_def)
   apply (erule hoare_chain)
    apply clarsimp
@@ -1152,7 +1679,9 @@ lemma call_kernel_integrity:
 
 
 lemma call_kernel_pas_refined:
-  "\<lbrace>einvs and pas_refined aag and is_subject aag \<circ> cur_thread and guarded_pas_domain aag and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and schact_is_rct and pas_cur_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'\<rbrace>
+  "\<lbrace>einvs and pas_refined aag and is_subject aag \<circ> cur_thread and guarded_pas_domain aag
+    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and (ct_active or ct_idle)
+    and schact_is_rct and pas_cur_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'\<rbrace>
   call_kernel ev
   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: call_kernel_def getActiveIRQ_def)

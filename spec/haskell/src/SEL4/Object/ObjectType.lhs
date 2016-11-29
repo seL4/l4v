@@ -41,7 +41,6 @@ We use the C preprocessor to select a target architecture.
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 
 > import Data.Bits
-> import Data.Maybe
 
 \end{impdetails}
 
@@ -153,78 +152,14 @@ For any other capability, no special action is required.
 
 > finaliseCap _ _ _ = return (NullCap, Nothing)
 
-\subsection{Recycling Capabilities}
-\label{sec:object.objecttype.recycle}
-
-When an object is recycled, its final capability will be finalised (see above) to clean up any in-kernel references to the object. Then, the object and capability must both be returned to their initial states. The "recycleCap" operation, given a capability to a finalised object, re-initialises the object and returns a capability to it.
-
-> recycleCap :: Bool -> Capability -> Kernel Capability
-
-Null and Domain capabilities can't be reconstructed.
-
-> recycleCap _ NullCap = fail "recycleCap: can't reconstruct Null"
-> recycleCap _ DomainCap = return DomainCap
-
-Zombie capabilities must be transformed back into their original types. Also, TCBs must be returned to their initial states, to remove any register values from the old thread. The TCB cap slots have already been cleared, and will not be recleared at this stage.
-
-> recycleCap _ (Zombie { capZombiePtr = ptr, capZombieType = tp }) = do
->     case tp of
->         ZombieTCB -> do
->                 let tcbPtr = (PPtr . fromPPtr) ptr
->                 tcb <- threadGet id tcbPtr
->                 flip assert "Zombie cap should point at inactive thread."
->                     $ tcbState tcb == Inactive && isNothing (tcbBoundNotification tcb)
->                 flip assert "Zombie cap should not point at queued thread."
->                     $ not (tcbQueued tcb)
->                 curdom <- curDomain
->                 threadSet (\tcb ->
->                     makeObject { tcbCTable = tcbCTable tcb,
->                                  tcbVTable = tcbVTable tcb,
->                                  tcbReply = tcbReply tcb,
->                                  tcbCaller = tcbCaller tcb,
->                                  tcbDomain = curdom,
->                                  tcbIPCBufferFrame = tcbIPCBufferFrame tcb })
->                     tcbPtr
->                 return $ ThreadCap tcbPtr
->         ZombieCNode sz -> return $ CNodeCap ptr sz 0 0
-
-Recycling a badged synchronous endpoint capability will abort all messages sent to the endpoint with that badge. Note that receive attempts are not aborted (as they are not marked with badges). Also, the aborted messages include those that were sent by any other capability with the same badge --- including those which were separately minted, and therefore are not deleted when the recycled capability is revoked.
-
-Note that if the badge is 0, then this was the original endpoint capability, and all of the messages on it have been cancelled already.
-
-> recycleCap _ (cap@EndpointCap { capEPPtr = ep, capEPBadge = b }) = do
->     when (b /= 0) $ cancelBadgedSends ep b
->     return cap
-
-Architecture-specific capabilities are handled in the target module.
-
-> recycleCap is_final (ArchObjectCap cap) =
->     liftM ArchObjectCap $ Arch.recycleCap is_final cap
-
-Any "CNode" or "TCB" capability which is encountered here is one that is not converted into a "Zombie" by "finaliseCap". This is because it was not final to begin with, which in turn is because the original exists elsewhere. The right thing to do in this case is nothing.
-
-All other object types are left in their initial states by "finaliseCap", and their capabilities can be returned unchanged.
-
-> recycleCap _ cap = return cap
 
 
-To prevent privilege escalation, the capability must have sufficient access
-rights if it is to be recycled. Endpoint and Thread caps need to have full
-rights.
 
-> hasRecycleRights :: Capability -> Bool
-
-> hasRecycleRights NullCap = False
-> hasRecycleRights DomainCap = False
-> hasRecycleRights (EndpointCap { capEPCanSend = True, 
+> hasCancelSendRights :: Capability -> Bool
+> hasCancelSendRights (EndpointCap { capEPCanSend = True, 
 >                                 capEPCanReceive = True, 
 >                                 capEPCanGrant = True }) = True
-> hasRecycleRights (EndpointCap {}) = False
-> hasRecycleRights (NotificationCap { capNtfnCanSend = True, 
->                                      capNtfnCanReceive = True }) = True
-> hasRecycleRights (NotificationCap {}) = False
-> hasRecycleRights (ArchObjectCap cap) = Arch.hasRecycleRights cap
-> hasRecycleRights _ = True
+> hasCancelSendRights _ = False
 
 \subsection{Comparing Capabilities}
 
@@ -470,7 +405,7 @@ This function just dispatches invocations to the type-specific invocation functi
 > performInvocation :: Bool -> Bool -> Invocation -> KernelP [Word]
 > 
 > performInvocation _ _ (InvokeUntyped invok) = do
->     withoutPreemption $ invokeUntyped invok
+>     invokeUntyped invok
 >     return $! []
 > 
 > performInvocation block call (InvokeEndpoint ep badge canGrant) =

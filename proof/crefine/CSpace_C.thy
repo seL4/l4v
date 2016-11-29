@@ -59,7 +59,7 @@ lemma maskVMRights_spec:
            \<lbrace> \<acute>vm_rights && mask 2 = \<acute>vm_rights \<rbrace>)
   Call maskVMRights_'proc
   \<lbrace> vmrights_to_H \<acute>ret__unsigned_long = 
-    maskVMRights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) (cap_rights_to_H (cap_rights_lift \<^bsup>s\<^esup>cap_rights_mask)) \<and>
+    maskVMRights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) (cap_rights_to_H (seL4_CapRights_lift \<^bsup>s\<^esup>cap_rights_mask)) \<and>
     \<acute>ret__unsigned_long && mask 2 = \<acute>ret__unsigned_long \<rbrace>"
   apply vcg
   apply clarsimp
@@ -72,7 +72,7 @@ lemma maskVMRights_spec:
   apply clarsimp
   apply (subgoal_tac "vm_rights = 0 \<or> vm_rights = 1 \<or> vm_rights = 2 \<or> vm_rights = 3")
    apply (auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
-                     cap_rights_to_H_def cap_rights_lift_def
+                     cap_rights_to_H_def seL4_CapRights_lift_def
                      to_bool_def mask_def
                    split: bool.splits)[1]
   apply (subst(asm) mask_eq_iff_w2p)
@@ -172,14 +172,14 @@ lemma to_bool_mask_to_bool_bf:
   done
 
 lemma to_bool_cap_rights_bf:
-  "to_bool (capAllowRead_CL (cap_rights_lift R)) = 
-   to_bool_bf (capAllowRead_CL (cap_rights_lift R))"
-  "to_bool (capAllowWrite_CL (cap_rights_lift R)) = 
-   to_bool_bf (capAllowWrite_CL (cap_rights_lift R))"
-  "to_bool (capAllowGrant_CL (cap_rights_lift R)) = 
-   to_bool_bf (capAllowGrant_CL (cap_rights_lift R))"
+  "to_bool (capAllowRead_CL (seL4_CapRights_lift R)) =
+   to_bool_bf (capAllowRead_CL (seL4_CapRights_lift R))"
+  "to_bool (capAllowWrite_CL (seL4_CapRights_lift R)) =
+   to_bool_bf (capAllowWrite_CL (seL4_CapRights_lift R))"
+  "to_bool (capAllowGrant_CL (seL4_CapRights_lift R)) =
+   to_bool_bf (capAllowGrant_CL (seL4_CapRights_lift R))"
   by (subst to_bool_bf_to_bool_mask, 
-      simp add: cap_rights_lift_def mask_def word_bw_assocs, simp)+
+      simp add: seL4_CapRights_lift_def mask_def word_bw_assocs, simp)+
 
 lemma to_bool_ntfn_cap_bf:
   "cap_lift c = Some (Cap_notification_cap cap) \<Longrightarrow> 
@@ -638,7 +638,8 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
     apply (erule bexI [rotated])
     apply (clarsimp simp add: rf_sr_def cstate_relation_def 
       Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_user_data_def
-     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
+     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
+     typ_heap_simps')
     apply (rule conjI)
      apply (erule (2) cspace_cte_relation_upd_mdbI)
      apply (simp add: cmdbnode_relation_def)
@@ -685,7 +686,8 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
    apply (erule bexI [rotated])
    apply (clarsimp simp add: rf_sr_def cstate_relation_def 
      Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_user_data_def
-     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
+     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
+     typ_heap_simps')
    apply (rule conjI)   
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)   
@@ -693,7 +695,7 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
     subgoal for _ s' by (cases "v_' s' = 0"; simp)
    apply (erule_tac t = s'a in ssubst)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-     h_t_valid_clift_Some_iff)
+                    h_t_valid_clift_Some_iff typ_heap_simps')
 
    apply (erule (1) setCTE_tcb_case)
    apply clarsimp
@@ -1935,48 +1937,6 @@ done
 (************************************************************************)
 
 
-(*-------------------------------------------------------------------------------------*)
-(* redefining Haskell definition of emptySlot so that it corresponds to the C code ----*)
-(*-------------------------------------------------------------------------------------*)
-
-lemma emptySlot_def:
-  "emptySlot slot irq = (do
-    newCTE \<leftarrow> getCTE slot;
-    (if ((cteCap newCTE) \<noteq> NullCap)
-      then (do
-
-            mdbNode \<leftarrow> return ( cteMDBNode newCTE);
-            prev \<leftarrow> return ( mdbPrev mdbNode);
-            next \<leftarrow> return ( mdbNext mdbNode);
-            updateMDB prev (\<lambda> mdb. mdb \<lparr> mdbNext := next \<rparr>);
-            updateMDB next (\<lambda> mdb. mdb \<lparr>
-                    mdbPrev := prev,
-                    mdbFirstBadged :=
-                        mdbFirstBadged mdb \<or> mdbFirstBadged mdbNode \<rparr>);
-            updateCap slot NullCap;
-            updateMDB slot (const nullMDBNode);
-            (case irq of
-                  Some irq \<Rightarrow>   deletedIRQHandler irq
-                | None \<Rightarrow>   return ()
-                )
-        od)
-     else  return ()
-        )
-  od)"
-  apply (simp add: emptySlot_def)
-  apply (rule bind_eqI)
-  apply (rule ext) 
-  apply (case_tac "cteCap newCTE") 
-  apply (simp_all add:  bind_assoc)
-  done
-
-
-
-
-
-
-
-
 declare split_if [split del]
 
 
@@ -2070,6 +2030,7 @@ lemma emptySlot_helper:
       apply (erule_tac t = s' in ssubst)
       apply (simp add: carch_state_relation_def cmachine_state_relation_def h_t_valid_clift_Some_iff
                        cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
+                       typ_heap_simps'
                   cong: lifth_update)
       apply (erule (1) setCTE_tcb_case)
    
@@ -2100,6 +2061,7 @@ lemma emptySlot_helper:
     apply (simp add: carch_state_relation_def cmachine_state_relation_def 
                      h_t_valid_clift_Some_iff
                      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
+                     typ_heap_simps'
                 cong: lifth_update)
     apply (erule (1) setCTE_tcb_case)
  
@@ -2124,7 +2086,7 @@ lemma emptySlot_helper:
    apply (rule ccorres_return_Skip)
    apply simp
   apply (clarsimp simp: cmdbnode_relation_def)
-done  
+done
 
 
 
@@ -2299,7 +2261,8 @@ show ?thesis
   apply (simp add: from_bool_def)
   apply (cases irqState, simp_all)
   apply (simp add: Kernel_C.IRQSignal_def Kernel_C.IRQInactive_def) 
-  apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)  
+  apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)
+  apply (simp add: Kernel_C.IRQInactive_def Kernel_C.IRQReserved_def)
   done
 qed
 
@@ -2358,78 +2321,256 @@ ML_command {*show_abbrevs true*}
 ML_command {*show_abbrevs false*}
 
 *)
+lemmas ccorres_split_noop_lhs
+  = ccorres_split_nothrow[where c=Skip, OF _ ceqv_refl _ _ hoarep.Skip,
+    simplified ccorres_seq_skip]
 
+(* FIXME: to SR_Lemmas *)
+lemma region_is_bytes_subset:
+  "region_is_bytes' ptr sz htd
+    \<Longrightarrow> {ptr' ..+ sz'} \<subseteq> {ptr ..+ sz}
+    \<Longrightarrow> region_is_bytes' ptr' sz' htd"
+  by (auto simp: region_is_bytes'_def)
+
+lemma intvl_both_le:
+  "\<lbrakk> a \<le> x; unat x + y \<le> unat a + b \<rbrakk>
+    \<Longrightarrow>  {x ..+ y} \<le> {a ..+ b}"
+  apply (rule order_trans[OF _ intvl_sub_offset[where x="x - a"]])
+   apply (simp, rule order_refl)
+  apply unat_arith
+  done
+
+lemma untypedZeroRange_idx_forward_helper:
+  "isUntypedCap cap
+    \<Longrightarrow> capFreeIndex cap \<le> idx
+    \<Longrightarrow> idx \<le> 2 ^ capBlockSize cap
+    \<Longrightarrow> valid_cap' cap s
+    \<Longrightarrow> (case (untypedZeroRange cap, untypedZeroRange (capFreeIndex_update (\<lambda>_. idx) cap))
+       of (Some (a, b), Some (a', b')) \<Rightarrow> {a' ..+ unat (b' + 1 - a')} \<subseteq> {a ..+ unat (b + 1 - a)}
+        | _ \<Rightarrow> True)"
+  apply (clarsimp split: option.split)
+  apply (clarsimp simp: untypedZeroRange_def max_free_index_def Let_def
+                        isCap_simps valid_cap_simps' capAligned_def
+                 split: split_if_asm)
+  apply (erule subsetD[rotated], rule intvl_both_le)
+   apply (clarsimp simp: getFreeRef_def)
+   apply (rule word_plus_mono_right)
+    apply (rule PackedTypes.of_nat_mono_maybe_le)
+     apply (erule order_le_less_trans, rule power_strict_increasing, simp_all)
+   apply (erule is_aligned_no_wrap')
+   apply (rule word_of_nat_less, simp)
+  apply (simp add: getFreeRef_def)
+  apply (simp add: unat_plus_simple[THEN iffD1, OF is_aligned_no_wrap']
+                   word_of_nat_less)
+  apply (simp add: word_of_nat_le unat_sub
+                   order_le_less_trans[OF _ power_strict_increasing]
+                   unat_of_nat_eq[where 'a=32, folded word_bits_def])
+  done
+
+lemma intvl_close_Un:
+  "y = x + of_nat n
+    \<Longrightarrow> ({x ..+ n} \<union> {y ..+ m}) = {x ..+ n + m}"
+  apply ((simp add: intvl_def, safe, simp_all,
+    simp_all only: of_nat_add[symmetric]); (rule exI, strengthen refl))
+  apply simp_all
+  apply (rule ccontr)
+  apply (drule_tac x="k - n" in spec)
+  apply simp
+  done
+
+lemma untypedZeroRange_idx_backward_helper:
+  "isUntypedCap cap
+    \<Longrightarrow> idx \<le> capFreeIndex cap
+    \<Longrightarrow> idx \<le> 2 ^ capBlockSize cap
+    \<Longrightarrow> valid_cap' cap s
+    \<Longrightarrow> (case untypedZeroRange (capFreeIndex_update (\<lambda>_. idx) cap)
+       of None \<Rightarrow> True | Some (a', b') \<Rightarrow>
+        {a' ..+ unat (b' + 1 - a')} \<subseteq> {capPtr cap + of_nat idx ..+ (capFreeIndex cap - idx)}
+            \<union> (case untypedZeroRange cap
+               of Some (a, b) \<Rightarrow> {a ..+ unat (b + 1 - a)}
+                | None \<Rightarrow> {})
+  )"
+  apply (clarsimp split: option.split, intro impI conjI allI)
+   apply (rule intvl_both_le; clarsimp simp: untypedZeroRange_def
+                         max_free_index_def Let_def
+                         isCap_simps valid_cap_simps' capAligned_def
+                  split: split_if_asm)
+    apply (clarsimp simp: getFreeRef_def)
+   apply (clarsimp simp: getFreeRef_def)
+   apply (simp add: word_of_nat_le unat_sub
+                    order_le_less_trans[OF _ power_strict_increasing]
+                    unat_of_nat_eq[where 'a=32, folded word_bits_def])
+  apply (subst intvl_close_Un)
+   apply (clarsimp simp: untypedZeroRange_def
+                         max_free_index_def Let_def
+                         getFreeRef_def
+                  split: split_if_asm)
+  apply (clarsimp simp: untypedZeroRange_def
+                        max_free_index_def Let_def
+                        getFreeRef_def isCap_simps valid_cap_simps'
+                 split: split_if_asm)
+  apply (simp add: word_of_nat_le unat_sub capAligned_def
+                   order_le_less_trans[OF _ power_strict_increasing]
+                   order_le_less_trans[where x=idx]
+                   unat_of_nat_eq[where 'a=32, folded word_bits_def])
+  done
+
+lemma ctes_of_untyped_zero_rf_sr_case:
+  "\<lbrakk> ctes_of s p = Some cte; (s, s') \<in> rf_sr;
+      untyped_ranges_zero' s \<rbrakk>
+    \<Longrightarrow> case untypedZeroRange (cteCap cte)
+               of None \<Rightarrow> True
+    | Some (start, end) \<Rightarrow> region_is_zero_bytes start (unat ((end + 1) - start)) s'"
+  by (simp split: option.split add: ctes_of_untyped_zero_rf_sr)
+
+lemma gsUntypedZeroRanges_update_helper:
+  "(\<sigma>, s) \<in> rf_sr
+    \<Longrightarrow> (zero_ranges_are_zero (gsUntypedZeroRanges \<sigma>) (t_hrs_' (globals s))
+            \<longrightarrow> zero_ranges_are_zero (f (gsUntypedZeroRanges \<sigma>)) (t_hrs_' (globals s)))
+    \<Longrightarrow> (gsUntypedZeroRanges_update f \<sigma>, s) \<in> rf_sr"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+
+lemma heap_list_zero_Ball_intvl:
+  "heap_list_is_zero hmem ptr n = (\<forall>x \<in> {ptr ..+ n}. hmem x = 0)"
+  apply safe
+   apply (erule heap_list_h_eq_better)
+   apply (simp add: heap_list_rpbs)
+  apply (rule trans[OF heap_list_h_eq2 heap_list_rpbs])
+  apply simp
+  done
+
+lemma untypedZeroRange_not_device:
+  "untypedZeroRange cap = Some r
+    \<Longrightarrow> \<not> capIsDevice cap"
+  by (clarsimp simp: untypedZeroRange_def)
+
+lemma updateTrackedFreeIndex_noop_ccorres:
+  "ccorres dc xfdc (cte_wp_at' ((\<lambda>cap. isUntypedCap cap
+              \<and> idx \<le> 2 ^ capBlockSize cap
+              \<and> (capFreeIndex cap \<le> idx \<or> cap' = cap)) o cteCap) slot
+          and valid_objs' and untyped_ranges_zero')
+      {s. \<not> capIsDevice cap' \<longrightarrow> region_is_zero_bytes (capPtr cap' + of_nat idx) (capFreeIndex cap' - idx) s} hs
+      (updateTrackedFreeIndex slot idx) Skip"
+  (is "ccorres dc xfdc ?P ?P' _ _ _")
+  apply (simp add: updateTrackedFreeIndex_def getSlotCap_def)
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_pre_getCTE[where P="\<lambda>rv.
+        cte_wp_at' (op = rv) slot and ?P" and P'="K ?P'"])
+    apply (rule ccorres_from_vcg)
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: cte_wp_at_ctes_of)
+    apply (frule(1) ctes_of_valid')
+    apply (frule(2) ctes_of_untyped_zero_rf_sr_case)
+    apply (clarsimp simp: simpler_modify_def bind_def cte_wp_at_ctes_of)
+    apply (erule gsUntypedZeroRanges_update_helper)
+    apply (clarsimp simp: zero_ranges_are_zero_def
+                   split: split_if)
+    apply (case_tac "(a, b) \<in> gsUntypedZeroRanges \<sigma>")
+     apply (drule(1) bspec, simp)
+    apply (erule disjE_L)
+     apply (frule(3) untypedZeroRange_idx_forward_helper)
+     apply (clarsimp simp: isCap_simps valid_cap_simps')
+     apply (case_tac "untypedZeroRange (cteCap cte)")
+      apply (clarsimp simp: untypedZeroRange_def
+                       valid_cap_simps'
+                       max_free_index_def Let_def
+                     split: split_if_asm)
+     apply clarsimp
+     apply (thin_tac "\<not> capIsDevice cap' \<longrightarrow> P" for P)
+     apply (clarsimp split: option.split_asm)
+     apply (subst region_is_bytes_subset, simp+)
+     apply (subst heap_list_is_zero_mono2, simp+)
+    apply (frule untypedZeroRange_idx_backward_helper[where idx=idx],
+      simp+)
+    apply (clarsimp simp: isCap_simps valid_cap_simps')
+    apply (clarsimp split: option.split_asm)
+     apply (clarsimp dest!: untypedZeroRange_not_device)
+     apply (subst region_is_bytes_subset, simp+)
+     apply (subst heap_list_is_zero_mono2, simp+)
+    apply (simp add: region_is_bytes'_def heap_list_zero_Ball_intvl)
+    apply (clarsimp dest!: untypedZeroRange_not_device)
+    apply blast
+   apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply clarsimp
+  done
+
+lemma updateTrackedFreeIndex_forward_noop_ccorres:
+  "ccorres dc xfdc (cte_wp_at' ((\<lambda>cap. isUntypedCap cap
+              \<and> capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap) o cteCap) slot
+          and valid_objs' and untyped_ranges_zero') UNIV hs
+      (updateTrackedFreeIndex slot idx) Skip"
+  (is "ccorres dc xfdc ?P UNIV _ _ _")
+  apply (rule ccorres_name_pre)
+   apply (rule ccorres_guard_imp2,
+     rule_tac cap'="cteCap (the (ctes_of s slot))" in updateTrackedFreeIndex_noop_ccorres)
+  apply (clarsimp simp: cte_wp_at_ctes_of region_is_bytes'_def)
+  done
+
+lemma clearUntypedFreeIndex_noop_ccorres:
+  "ccorres dc xfdc (valid_objs' and untyped_ranges_zero') UNIV hs
+      (clearUntypedFreeIndex p) Skip"
+  apply (simp add: clearUntypedFreeIndex_def getSlotCap_def)
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_pre_getCTE[where P="\<lambda>rv. cte_wp_at' (op = rv) p
+        and valid_objs' and untyped_ranges_zero'" and P'="K UNIV"])
+    apply (case_tac "cteCap cte", simp_all add: ccorres_guard_imp[OF ccorres_return_Skip])[1]
+    apply (rule ccorres_guard_imp, rule updateTrackedFreeIndex_forward_noop_ccorres)
+     apply (clarsimp simp: cte_wp_at_ctes_of max_free_index_def)
+     apply (frule(1) Finalise_R.ctes_of_valid')
+     apply (clarsimp simp: valid_cap_simps')
+    apply simp
+   apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply simp
+  done
 
 lemma emptySlot_ccorres:
   "ccorres dc xfdc 
-          (valid_mdb' and pspace_aligned')
+          (valid_mdb' and valid_objs' and pspace_aligned'
+                      and untyped_ranges_zero')
           (UNIV \<inter> {s. slot_' s = Ptr slot} 
                 \<inter> {s. irq_opt_relation irq (irq_' s)}  )
           []
           (emptySlot slot irq)
           (Call emptySlot_'proc)"
-  apply (cinit lift: slot_' irq_'  simp del: return_bind)
+  apply (cinit lift: slot_' irq_' simp: case_Null_If)
 
-  -- "***Main goal***"  
-   apply (unfold emptySlot_def) -- "unfolding the new definition"
+  -- "--- handle the clearUntypedFreeIndex"
+   apply (rule ccorres_split_noop_lhs, rule clearUntypedFreeIndex_noop_ccorres)
 
   -- "--- instruction: newCTE \<leftarrow> getCTE slot;                 ---"
-   apply (rule ccorres_pre_getCTE) 
+    apply (rule ccorres_pre_getCTE) 
   -- "--- instruction: CALL on C side"
-(*   apply (rule ccorres_Guard_Seq) *)
-   apply (rule ccorres_move_c_guard_cte)
-   apply csymbr 
+    apply (rule ccorres_move_c_guard_cte)
+    apply csymbr
+    apply (rule ccorres_abstract_cleanup)
+    apply (rename_tac cap_tag)
+    apply (rule_tac P="(cap_tag = scast cap_null_cap)
+          = (cteCap newCTE = NullCap)" in ccorres_gen_asm2)
+    apply (simp del: Collect_const)
 
-  -- "--- instruction: if-then-else / IF-THEN-ELSE "
-   apply (rule ccorres_guard_imp2) 
-   
-   -- "*** Main Goal ***"
-    apply (rule ccorres_cond2)
+   -- "--- instruction: if-then-else / IF-THEN-ELSE "
+    apply (rule ccorres_cond2'[where R=\<top>])
 
     -- "*** link between abstract and concrete conditionals ***"
-
-      apply clarsimp
-      apply (subgoal_tac "\<exists> cap'. ret__unsigned = cap_get_tag cap'  
-                          \<and> ccap_relation (cteCap rv) cap'   ")
-       apply (insert not_NullCap_eq_not_cap_null_cap)[1]
-       subgoal by (clarsimp)
-      apply assumption
-(*      apply clarsimp
-      apply (subgoal_tac "\<exists> cap'. ret__unsigned_long = cap_get_tag cap'  
-                          \<and> ccap_relation (cteCap newCTE) cap'   ")
-       prefer 2 apply assumption
-      apply clarsimp
-      apply (simp add: not_NullCap_eq_not_cap_null_cap)*)
+      apply (clarsimp split: split_if)
 
     -- "*** proof for the 'else' branch (return () and SKIP) ***"
      prefer 2
-     apply (ctac add: ccorres_return_Skip)
+     apply (ctac add: ccorres_return_Skip[unfolded dc_def])
 
     -- "*** proof for the 'then' branch ***"
 
-    -- "---instructions: multiple undefined on C side"
+    -- "---instructions: multiple on C side, including mdbNode fetch"
     apply (rule ccorres_rhs_assoc)+   
               -- "we have to do it here because the first assoc did not apply inside the then block"
-    apply csymbr
-    apply csymbr
-    apply csymbr
+    apply (rule ccorres_move_c_guard_cte | csymbr)+
+    apply (rule ccorres_symb_exec_r)
+      apply (rule_tac xf'="mdbNode_'" in ccorres_abstract, ceqv)
+      apply (rename_tac "cmdbNode")
+      apply (rule_tac P="cmdbnode_relation (cteMDBNode newCTE) cmdbNode"
+        in ccorres_gen_asm2)
+      apply csymbr+
 
-    -- "--- instruction :  mdbNode \<leftarrow> return (cteMDBNode rv)"
-    apply ctac
-    -- "*** Main goal ***"
-      -- "--- instruction: CALL on C side"
-      apply csymbr
-
-      -- "--- instruction:  prev \<leftarrow> return (mdbPrev mdbNode);      ---"
-      -- "---               next \<leftarrow> return (mdbNext mdbNode);      ---"
-      apply (simp del: Collect_const)  -- "to simplify the returns and replace them in the rest\<dots>"
-
-      -- "--- instruction: assignements on C side"
-      apply csymbr
-      apply (erule_tac t = ret__unsigned in ssubst)
-      apply csymbr
-      apply (erule_tac t = ret__unsigned in ssubst)
-      apply csymbr
       -- "--- instruction: updateMDB (mdbPrev rva) (mdbNext_update \<dots>) but with Ptr\<dots>\<noteq> NULL on C side"
       apply (simp only:Ptr_not_null_pointer_not_zero) --"replaces Ptr p \<noteq> NULL with p\<noteq>0"
 
@@ -2439,7 +2580,7 @@ lemma emptySlot_ccorres:
             -- "here ctac alone does not apply because the subgoal generated 
                 by the rule are not solvable by simp"
             -- "so we have to use (no_simp) (or apply (rule ccorres_split_nothrow))"
-          apply (simp add: cmdbnode_relation_def) 
+          apply (simp add: cmdbnode_relation_def)
          apply assumption
       -- "*** Main goal ***"
       -- "--- instruction: updateMDB (mdbNext rva)
@@ -2476,61 +2617,32 @@ lemma emptySlot_ccorres:
         -- "C       pre/post for the two nested updates "
         apply (simp add: Collect_const_mem ccap_relation_NullCap_iff)
       -- "Haskell pre/post for  (updateMDB (mdbPrev rva) (mdbNext_update (\<lambda>_. mdbNext rva)))"
-       apply wp
+       apply (simp, wp)
       -- "C       pre/post for  (updateMDB (mdbPrev rva) (mdbNext_update (\<lambda>_. mdbNext rva)))"
       apply simp+
-    -- "Haskell pre/post for  mdbNode \<leftarrow> return (cteMDBNode rv)"
-
-       apply wp
-    -- "C       pre/post for  mdbNode \<leftarrow> return (cteMDBNode rv)"
-      apply vcg
-
-
-   -- "*************************************************************"
-   -- "*** generalised precondition for ccorres_cond application ***"
-   -- "*************************************************************"
-
--- "from here, really big goals"
-
-   apply (clarsimp simp: typ_heap_simps Collect_const_mem split del: split_if)
-   
-   -- "instantiating the Haskell precondition that has been generalised"
-   apply (subgoal_tac "ctes_of s slot = Some rv \<and> (cte_at' slot and valid_mdb' and pspace_aligned') s")
-    prefer 2
-    apply assumption
-   apply clarsimp
-
-   -- "instantiating the C precondition that has been generalised"
-   apply (subgoal_tac "s' \<in> UNIV")
-    prefer 2
-    apply assumption
-
-   -- "generating cslift"
-   apply (frule (1) rf_sr_ctes_of_clift)
-   apply (clarsimp simp: typ_heap_simps)
-
-   -- "generating the hypotheses regarding validity, c_guard and cslift for Prev and Next"   
-   apply (intro conjI)
-     apply (rule_tac x="cte_C.cap_C cte'" in exI)
-     apply (drule (2) rf_sr_cte_relation) 
-     apply (drule ccte_relation_ccap_relation, simp)
-    apply (frule (2) is_aligned_3_next)
-    apply (frule (2) is_aligned_3_prev)
+     apply vcg
+    apply (rule conseqPre, vcg)
     apply clarsimp
-    prefer 2
-    apply (clarsimp, rule refl)
    apply simp
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-done
+   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
 
+  -- "final precondition proof"
+  apply (clarsimp simp: typ_heap_simps Collect_const_mem
+                        cte_wp_at_ctes_of
+             split del: split_if)
 
+  apply (rule conjI)
+   -- "Haskell side"
+   apply (simp add: is_aligned_3_prev is_aligned_3_next)
 
-
-
-
-
-
-
+  -- "C side"
+  apply (clarsimp simp: map_comp_Some_iff typ_heap_simps)
+  apply (subst cap_get_tag_isCap)
+   apply (rule ccte_relation_ccap_relation)
+   apply (simp add: ccte_relation_def c_valid_cte_def
+                    cl_valid_cte_def c_valid_cap_def)
+  apply simp
+  done
 
 
 (************************************************************************)

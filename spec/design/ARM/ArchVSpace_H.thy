@@ -17,6 +17,7 @@
 theory ArchVSpace_H
 imports
   "../CNode_H"
+  "../Untyped_H"
   "../KI_Decls_H"
   ArchVSpaceDecls_H
 begin
@@ -68,7 +69,6 @@ defs mapKernelWindow_def:
     deleteObjects (PPtr $ fromPPtr $ head globalPTs) ptBits;
     placeNewObject (PPtr $ fromPPtr $ head globalPTs) (makeObject ::pte) ptSize;
     storePDE slot pde;
-    mapGlobalsFrame;
     kernelDevices \<leftarrow> doMachineOp getKernelDevices;
     mapM_x mapKernelDevice kernelDevices
 od)"
@@ -320,24 +320,6 @@ defs createFramesOfRegion_def:
     noInitFailure $ modify (\<lambda> s. s \<lparr> initBootInfo := bootInfo' \<rparr>)
 odE)"
 
-defs mapGlobalsFrame_def:
-"mapGlobalsFrame\<equiv> (do
-    globalsFrame \<leftarrow> gets $ armKSGlobalsFrame \<circ> ksArchState;
-    mapKernelFrame (addrFromPPtr globalsFrame) globalsBase VMReadOnly $
-        VMAttributes True True True;
-    writeIdleCode
-od)"
-
-defs writeIdleCode_def:
-"writeIdleCode\<equiv> (do
-    globalsFrame \<leftarrow> gets $ armKSGlobalsFrame \<circ> ksArchState;
-    offset \<leftarrow> return ( fromVPtr $ idleThreadStart - globalsBase);
-    doMachineOp $ mapM_x
-        (split  storeWord
-        )
-        (zipE2 (globalsFrame + PPtr offset) ( globalsFrame + PPtr offset + 4) (idleThreadCode))
-od)"
-
 defs mapKernelFrame_def:
 "mapKernelFrame paddr vaddr vmrights attributes\<equiv> (do
     idx \<leftarrow> return ( fromVPtr $ ( (vaddr && (mask $ pageBitsForSize ARMSection))
@@ -584,12 +566,12 @@ defs handleVMFault_def:
     ARMDataAbort \<Rightarrow>    (doE
     addr \<leftarrow> withoutFailure $ doMachineOp getFAR;
     fault \<leftarrow> withoutFailure $ doMachineOp getDFSR;
-    throw $ VMFault addr [0, fault && mask 14]
+    throw $ ArchFault $ VMFault addr [0, fault && mask 14]
     odE)
   | ARMPrefetchAbort \<Rightarrow>    (doE
     pc \<leftarrow> withoutFailure $ asUser thread $ getRestartPC;
     fault \<leftarrow> withoutFailure $ doMachineOp getIFSR;
-    throw $ VMFault (VPtr pc) [1, fault && mask 14]
+    throw $ ArchFault $ VMFault (VPtr pc) [1, fault && mask 14]
   odE)
   )"
 
@@ -1396,7 +1378,7 @@ defs performASIDControlInvocation_def:
     (MakePool frame slot parent base) \<Rightarrow>    (do
     deleteObjects frame pageBits;
     pcap \<leftarrow> getSlotCap parent;
-    updateCap parent (pcap \<lparr>capFreeIndex := maxFreeIndex (capBlockSize pcap) \<rparr>);
+    updateFreeIndex parent (maxFreeIndex (capBlockSize pcap));
     placeNewObject frame (makeObject ::asidpool) 0;
     poolPtr \<leftarrow> return ( PPtr $ fromPPtr frame);
     cteInsert (ArchObjectCap $ ASIDPoolCap poolPtr base) parent slot;

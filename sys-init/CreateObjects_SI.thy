@@ -21,69 +21,68 @@ begin
  * that it doesn't delete anything from the CDT.         *
  *********************************************************)
 
-lemma seL4_Untyped_Retype_cdt_inc':
-  "untyped_cptr < 2 ^ si_cnode_size
-   \<Longrightarrow>
-   \<lbrace>\<lambda>s.
-    \<guillemotleft> si_tcb_id \<mapsto>f Tcb tcb \<and>*
-    si_cnode_id \<mapsto>f CNode (empty_cnode si_cnode_size) \<and>*
-    (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range \<and>*
-    (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap \<and>*
-    (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>*
-     sep_true \<guillemotright> s \<and>
-     cdl_cdt (kernel_state s) child = Some parent \<rbrace>
-     seL4_Untyped_Retype untyped_cptr type object_size
-                         seL4_CapInitThreadCNode node_index 0 free_cptr 1
-   \<lbrace>\<lambda>rv s. cdl_cdt (kernel_state s) child = Some parent\<rbrace>"
-  apply (wp seL4_Untyped_Retype_cdt_inc [where root_size=si_cnode_size and
-                                               root_cnode_cap=si_cnode_cap],
-        (simp|clarsimp simp: guard_equal_si_cnode_cap offset_slot_si_cnode_size')+)
-  done
-
 lemma seL4_Untyped_Retype_has_children_wp:
-  "untyped_cptr < 2 ^ si_cnode_size
+  "\<lbrakk>untyped_cptr < 2 ^ si_cnode_size; ncptr < 2 ^ si_cnode_size\<rbrakk>
    \<Longrightarrow>
-  \<lbrace>\<lambda>s.
-   \<guillemotleft>si_tcb_id \<mapsto>f Tcb tcb \<and>*
-    si_cnode_id \<mapsto>f CNode (empty_cnode si_cnode_size) \<and>*
-    (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range \<and>*
-    (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap \<and>*
-    (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>*
-    sep_true \<guillemotright> s \<and>
+  \<lbrace>\<lambda>s. (nt\<noteq> UntypedType \<and> default_object nt (unat ts) minBound = Some obj
+    \<and> free_range\<subseteq> tot_free_range) \<and>
+    \<guillemotleft>si_tcb_id \<mapsto>f (Tcb tcb)
+    \<and>* (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
+    \<and>* (cap_object si_cnode_cap \<mapsto>f CNode (empty_cnode si_cnode_size))
+    \<and>* (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range
+    \<and>* (si_cnode_id, unat ncptr ) \<mapsto>c NullCap
+    \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
+    \<and>* (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap
+    \<and>* (cap_object si_cnode_cap, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap
+    \<and>* R\<guillemotright> s \<and>
+    (\<not> has_children (si_cnode_id,unat untyped_cptr) (kernel_state s) \<longrightarrow> obj_range = free_range) \<and>
     has_children parent (kernel_state s)\<rbrace>
-     seL4_Untyped_Retype untyped_cptr type object_size
-                         seL4_CapInitThreadCNode node_index 0 free_cptr 1
+    seL4_Untyped_Retype untyped_cptr nt ts
+                         seL4_CapInitThreadCNode node_index 0 ncptr 1
   \<lbrace>\<lambda>rv s. has_children parent (kernel_state s)\<rbrace>"
   apply (clarsimp simp: has_children_def is_cdt_parent_def)
   apply (subst ex_conj_increase)+
   apply (rule hoare_ex_wp)+
   apply (rule hoare_chain)
-    apply (erule seL4_Untyped_Retype_cdt_inc' [where parent=parent])
-   apply fast
-  apply fast
+    apply (rule seL4_Untyped_Retype_inc_no_preempt
+                [where root_size=si_cnode_size and root_cnode_cap=si_cnode_cap and obj = obj
+                    and ncptr = ncptr and free_range = free_range and tot_free_range = tot_free_range
+                    and obj_range = obj_range])
+   apply ((intro conjI impI | simp
+      | clarsimp simp: guard_equal_si_cnode_cap offset_slot_si_cnode_size' )+)
+    apply (clarsimp simp: has_children_def is_cdt_parent_def)
+   apply fastforce
+  apply simp
   done
 
 lemma seL4_Untyped_Retype_list_all_has_children_index_wp:
-  "untyped_cptr < 2 ^ si_cnode_size
+  "\<lbrakk>untyped_cptr < 2 ^ si_cnode_size; ncptr < 2 ^ si_cnode_size\<rbrakk>
    \<Longrightarrow>
-  \<lbrace>\<lambda>s.
-   \<guillemotleft>si_tcb_id \<mapsto>f Tcb tcb \<and>*
-    si_cnode_id \<mapsto>f CNode (empty_cnode si_cnode_size) \<and>*
-    (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range \<and>*
-    (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap \<and>*
-    (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>*
-    sep_true\<guillemotright> s \<and>
+  \<lbrace>\<lambda>s. (nt\<noteq> UntypedType \<and> default_object nt (unat object_size) minBound = Some obj
+    \<and> free_range\<subseteq> tot_free_range) \<and>
+    \<guillemotleft>si_tcb_id \<mapsto>f (Tcb tcb)
+    \<and>* (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
+    \<and>* (cap_object si_cnode_cap \<mapsto>f CNode (empty_cnode si_cnode_size))
+    \<and>* (si_cnode_id, unat untyped_cptr) \<mapsto>c UntypedCap dev obj_range free_range
+    \<and>* (si_cnode_id, unat ncptr ) \<mapsto>c NullCap
+    \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
+    \<and>* (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cnode_cap
+    \<and>* (cap_object si_cnode_cap, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap
+    \<and>* R\<guillemotright> s \<and>
+    (\<not> has_children (si_cnode_id,unat untyped_cptr) (kernel_state s) \<longrightarrow> obj_range = free_range) \<and>
     list_all (\<lambda>index. has_children (cnode_id, untyped_slots!index) (kernel_state s)) indices\<rbrace>
-     seL4_Untyped_Retype untyped_cptr type object_size
-                         seL4_CapInitThreadCNode node_index 0 free_cptr 1
+     seL4_Untyped_Retype untyped_cptr nt object_size
+                         seL4_CapInitThreadCNode node_index 0 ncptr 1
    \<lbrace>\<lambda>rv s. list_all (\<lambda>index. has_children (cnode_id, untyped_slots!index) (kernel_state s)) indices\<rbrace>"
   apply (case_tac "indices=[]", simp_all)
    apply (rule hoare_TrueI)
   apply (clarsimp simp: Ball_set_list_all[symmetric])
-  apply (subst Ball_conj_increase, simp)
+  apply (subst Ball_conj_increase, simp)+
   apply (rule hoare_vcg_ball_lift)
-  apply (rule seL4_Untyped_Retype_has_children_wp, simp)
-  done
+  apply (rule hoare_pre)
+   apply (rule seL4_Untyped_Retype_has_children_wp[where free_range = free_range
+                and obj_range = obj_range and tot_free_range = tot_free_range])
+    by auto
 
 
 lemma seL4_Untyped_Retype_sep_cdt_inc:
@@ -130,7 +129,7 @@ lemma seL4_Untyped_Retype_sep_cdt_inc:
   \<and> (\<not>has_children (si_cnode_id,unat untyped_cptr) (kernel_state s) \<longrightarrow> obj_range = free_range)) \<and>
     list_all (\<lambda>index. has_children (si_cnode_id, untyped_slots!index) (kernel_state s)) indices  \<rbrace>"
   apply (rule hoare_chain)
-    apply (rule hoare_conj_lift_inv, rule seL4_Untyped_Retype_sep [where
+    apply (rule hoare_vcg_conj_lift, rule seL4_Untyped_Retype_sep [where
                 root_cnode=si_cnode_id and
                 root_cnode_cap=si_cnode_cap and
                 root_size=si_cnode_size and
@@ -149,10 +148,8 @@ lemma seL4_Untyped_Retype_sep_cdt_inc:
               obj_range=obj_range and
               free_range=free_range], simp)
     apply clarsimp
-    apply sep_solve
    apply clarsimp
-   apply sep_solve
-  apply clarsimp
+   apply auto
   done
 
 (*****************************************************

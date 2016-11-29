@@ -53,7 +53,7 @@ lemma handleInterruptEntry_ccorres:
       by simp
   show ?thesis
   apply (cinit')
-   apply (simp add: callKernel_def handleEvent_def minus_one_norm )
+   apply (simp add: callKernel_def handleEvent_def minus_one_norm)
    apply (simp add: liftE_bind bind_assoc)
     apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
     apply (rule ccorres_Guard_Seq)?
@@ -106,7 +106,7 @@ lemma handleUnknownSyscall_ccorres:
        apply (rule ccorres_add_return2)
        apply (ctac (no_vcg) add: activateThread_ccorres)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-        apply (rule allI, rule conseqPre, vcg)
+         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: return_def)
        apply (wp schedule_sch_act_wf schedule_invs'
               | strengthen invs_queues_imp invs_valid_objs_strengthen)+
@@ -123,7 +123,7 @@ lemma handleUnknownSyscall_ccorres:
   apply (clarsimp simp: ct_in_state'_def)
   apply (frule st_tcb_idle'[rotated])
    apply (erule invs_valid_idle')
-  apply (clarsimp simp: cfault_rel_def fault_unknown_syscall_lift is_cap_fault_def)
+  apply (clarsimp simp: cfault_rel_def seL4_Fault_UnknownSyscall_lift is_cap_fault_def)
   done
 
 lemma handleVMFaultEvent_ccorres:
@@ -169,10 +169,10 @@ lemma handleVMFaultEvent_ccorres:
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: simple_sane_strg[unfolded sch_act_sane_not])
-  apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
+  by (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread')
-  done
+
 
 lemma handleUserLevelFault_ccorres:
   "ccorres dc xfdc 
@@ -210,7 +210,7 @@ lemma handleUserLevelFault_ccorres:
   apply (frule st_tcb_idle'[rotated])
    apply (erule invs_valid_idle')
    apply simp
-  apply (clarsimp simp: cfault_rel_def fault_user_exception_lift)
+  apply (clarsimp simp: cfault_rel_def seL4_Fault_UserException_lift)
   apply (simp add: is_cap_fault_def)
   done
 
@@ -485,11 +485,11 @@ lemma ccorres_corres_u_xf:
 definition
   "all_invs' e \<equiv> \<lambda>s'. \<exists>s :: det_state.
     (s,s') \<in> state_relation \<and>
-    (einvs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
-      scheduler_action s = resume_cur_thread) \<and>
+    (einvs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and> (ct_running s \<or> ct_idle s) \<and>
+      scheduler_action s = resume_cur_thread \<and> domain_time s \<noteq> 0) \<and>
     (invs' s' \<and> vs_valid_duplicates' (ksPSpace s') \<and>
-      (e \<noteq> Interrupt \<longrightarrow> ct_running' s') \<and>
-      ksSchedulerAction s' = ResumeCurrentThread)"
+      (e \<noteq> Interrupt \<longrightarrow> ct_running' s') \<and> (ct_running' s' \<or> ct_idle' s') \<and>
+      ksSchedulerAction s' = ResumeCurrentThread  \<and> ksDomainTime s' \<noteq> 0)"
 
 lemma no_fail_callKernel:
   "no_fail (all_invs' e) (callKernel e)"
@@ -552,8 +552,8 @@ lemma ccorres_add_gets:
 lemma ccorres_get_registers:
   "\<lbrakk> \<And>cptr msgInfo. ccorres dc xfdc
      ((\<lambda>s. P s \<and> Q s \<and>
-           obj_at' (\<lambda>tcb. tcbContext tcb ARM_H.capRegister = cptr
-                      \<and> tcbContext tcb ARM_H.msgInfoRegister = msgInfo)
+           obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb ARM_H.capRegister = cptr
+                      \<and>   (atcbContextGet o tcbArch) tcb ARM_H.msgInfoRegister = msgInfo)
              (ksCurThread s) s) and R)
      (UNIV \<inter> \<lbrace>\<acute>cptr = cptr\<rbrace> \<inter> \<lbrace>\<acute>msgInfo = msgInfo\<rbrace>) [] m c \<rbrakk>
       \<Longrightarrow>
@@ -566,16 +566,24 @@ lemma ccorres_get_registers:
   apply (rule ccorres_assume_pre)
   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
   apply (drule obj_at_ko_at', clarsimp)
-  apply (erule_tac x="tcbContext ko ARM_H.capRegister" in meta_allE)
-  apply (erule_tac x="tcbContext ko ARM_H.msgInfoRegister" in meta_allE)
+  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_H.capRegister" in meta_allE)
+  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_H.msgInfoRegister" in meta_allE)
   apply (erule ccorres_guard_imp2)
   apply (clarsimp simp: rf_sr_ksCurThread)
   apply (drule(1) obj_at_cslift_tcb, clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                         ARM_H.msgInfoRegister_def ARM_H.capRegister_def
                         ARM.msgInfoRegister_def ARM.capRegister_def
+                        carch_tcb_relation_def
                         "StrictC'_register_defs")
   done
+
+(* FIXME: move *)
+lemma st_tcb_at'_opeq_simp:
+  "st_tcb_at' (op = Structures_H.thread_state.Running) (ksCurThread s) s
+    = st_tcb_at' (\<lambda>st. st = Structures_H.thread_state.Running) (ksCurThread s) s"
+  by (fastforce simp add: st_tcb_at'_def obj_at'_def)
+
 
 lemma callKernel_withFastpath_corres_C:
   "corres_underlying rf_sr False True dc
@@ -603,24 +611,30 @@ lemma callKernel_withFastpath_corres_C:
   apply (clarsimp simp: all_invs'_def rf_sr_ksCurThread)
   apply (frule(1) obj_at_cslift_tcb[OF tcb_at_invs'])
   apply (clarsimp simp: typ_heap_simps' ct_in_state'_def
-                        "StrictC'_register_defs" word_sle_def word_sless_def)
+                        "StrictC'_register_defs" word_sle_def word_sless_def
+                        st_tcb_at'_opeq_simp)
+  apply (rule conjI, fastforce simp: st_tcb_at'_def)
   apply (auto elim!: pred_tcb'_weakenE cnode_caps_gsCNodes_from_sr[rotated])
   done
 
 lemma threadSet_all_invs_triv':
   "\<lbrace>all_invs' e and (\<lambda>s. t = ksCurThread s)\<rbrace>
-  threadSet (tcbContext_update f) t \<lbrace>\<lambda>_. all_invs' e\<rbrace>"
+  threadSet (\<lambda>tcb. tcbArch_update (\<lambda>_. atcbContextSet f (tcbArch tcb)) tcb) t \<lbrace>\<lambda>_. all_invs' e\<rbrace>"
   unfolding all_invs'_def
   apply (rule hoare_pre)
    apply (rule wp_from_corres_unit)
-     apply (rule threadset_corresT [where f="tcb_context_update f"])
-        apply (simp add: tcb_relation_def)
+     apply (rule threadset_corresT [where f="tcb_arch_update (arch_tcb_context_set f)"])
+        apply (simp add: tcb_relation_def arch_tcb_context_set_def
+                         atcbContextSet_def arch_tcb_relation_def)
        apply (simp add: tcb_cap_cases_def)
       apply (simp add: tcb_cte_cases_def)
      apply (simp add: exst_same_def)
     apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
               threadSet_invs_trivial threadSet_ct_running' static_imp_wp
-           | simp add: tcb_cap_cases_def)+
+              thread_set_ct_idle
+           | simp add: tcb_cap_cases_def
+           | rule threadSet_ct_in_state'
+           | wp_once hoare_vcg_disj_lift)+
   apply clarsimp
   apply (rule exI, rule conjI, assumption)
   apply (clarsimp simp: invs_def invs'_def cur_tcb_def cur_tcb'_def)
@@ -630,7 +644,7 @@ lemma threadSet_all_invs_triv':
 lemma getContext_corres:
   "t' = tcb_ptr_to_ctcb_ptr t \<Longrightarrow> 
   corres_underlying rf_sr False True (op =) (tcb_at' t) \<top> 
-                    (threadGet tcbContext t) (gets (getContext_C t'))"
+                    (threadGet (atcbContextGet o tcbArch) t) (gets (getContext_C t'))"
   apply (clarsimp simp: corres_underlying_def simpler_gets_def)
   apply (drule obj_at_ko_at')
   apply clarsimp
@@ -642,7 +656,7 @@ lemma getContext_corres:
   apply (clarsimp simp: getContext_C_def)
   apply (drule cmap_relation_ko_atD [rotated])
    apply fastforce
-  apply (clarsimp simp: typ_heap_simps ctcb_relation_def from_user_context_C)
+  apply (clarsimp simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def from_user_context_C)
   done
 
 lemma callKernel_cur:
@@ -935,28 +949,6 @@ lemma do_user_op_corres_C:
    apply clarsimp
   done
 
-lemma checkActiveIRQ_ex_abs_einvs:
-  "\<lbrace>invs' and ex_abs einvs and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and (ct_running' or ct_idle')
-    and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
-   checkActiveIRQ
-   \<lbrace>\<lambda>_. ex_abs einvs\<rbrace>"  
-  apply (rule hoare_name_pre_state)
-  apply (simp add: ex_abs_def)
-  apply (rule_tac Q="\<lambda>r' s'. \<exists>r s. (s, s') \<in> state_relation \<and> einvs s \<and> dc r r'" in hoare_post_imp)
-   apply simp
-  apply (rule hoare_pre)
-  apply (rule valid_corres_combined[where Q'="\<lambda>x y. True", simplified, where rr=dc and sr=state_relation and f="check_active_irq"])
-  apply (rule hoare_post_imp[OF _ check_active_irq_invs], clarsimp)
-  apply (rule corres_rel_imp)
-  apply (rule corres_guard_imp[OF check_active_irq_corres])
-  apply (force simp: sched_act_rct_related)
-  apply simp
-  apply (simp add: hoare_TrueI)+
-  apply clarsimp
-  apply (rule_tac x=sb in exI)
-  apply (fastforce simp: ct_running_related ct_idle_related sched_act_rct_related)
-  done
-
 lemma check_active_irq_corres_C:
   "corres_underlying rf_sr False True (op =)
              (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ex_abs valid_state) \<top>
@@ -985,6 +977,7 @@ lemma refinement2_both:
   "\<lparr> Init = Init_C, Fin = Fin_C,
      Step = (\<lambda>u. global_automaton check_active_irq_C (do_user_op_C uop) (kernel_call_C fp)) \<rparr>
    \<sqsubseteq> ADT_H uop"
+  supply word_neq_0_conv[simp]
   apply (rule sim_imp_refines)
   apply (rule L_invariantI [where I\<^sub>c=UNIV and r="lift_state_relation rf_sr"])
     apply (rule full_invs_both)
@@ -1021,8 +1014,7 @@ lemma refinement2_both:
           simp add: sch_act_simple_def)
     apply (fastforce simp: ct_running'_C)
     apply (clarsimp simp: full_invs_def full_invs'_def all_invs'_def)
-   apply (rule_tac x=bf in exI)
-   apply simp
+   apply fastforce
 
   apply (erule_tac P="a \<and> b \<and> c \<and> d \<and> e" for a b c d e in disjE)
    apply (clarsimp simp add: do_user_op_C_def do_user_op_H_def monad_to_transition_def)

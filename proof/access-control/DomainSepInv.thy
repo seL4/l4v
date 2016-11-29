@@ -35,6 +35,7 @@ definition domain_sep_inv where
     (irqs \<or> (\<forall> irq slot. \<not> cte_wp_at (op = IRQControlCap) slot s
       \<and> \<not> cte_wp_at (op = (IRQHandlerCap irq)) slot s
       \<and> interrupt_states s irq \<noteq> IRQSignal
+      \<and> interrupt_states s irq \<noteq> IRQReserved
       \<and> interrupt_states s = interrupt_states st))"
 
 definition domain_sep_inv_cap where
@@ -66,6 +67,7 @@ lemma domain_sep_inv_def2:
                             \<and> \<not> cte_wp_at (op = (IRQHandlerCap irq)) slot s)) \<and>
     (irqs \<or> (\<forall> irq.
         interrupt_states s irq \<noteq> IRQSignal
+        \<and> interrupt_states s irq \<noteq> IRQReserved
         \<and> interrupt_states s = interrupt_states st)))"
   apply(fastforce simp: domain_sep_inv_def)
   done
@@ -88,7 +90,9 @@ lemma domain_sep_inv_wp:
   apply(rule disjI2)
   apply simp
   apply(intro allI conjI)
-   apply(erule_tac P1="\<lambda>x. x irq \<noteq> IRQSignal" in use_valid[OF _ irq_pres], assumption)
+    apply(erule_tac P1="\<lambda>x. x irq \<noteq> IRQSignal" in use_valid[OF _ irq_pres], assumption)
+    apply blast
+   apply(erule use_valid[OF _ irq_pres], assumption)
    apply blast
   apply(erule use_valid[OF _ irq_pres], assumption)
   apply blast
@@ -647,27 +651,6 @@ lemma thread_set_tcb_registers_caps_merge_default_tcb_domain_sep_inv[wp]:
   apply(wp domain_sep_inv_triv)
   done
 
-lemma arch_recycle_cap_domain_sep_inv_cap[wp]:
-  "\<lbrace>\<lambda>s. domain_sep_inv_cap irqs (ArchObjectCap arch_cap)\<rbrace>
-   arch_recycle_cap is_final arch_cap
-   \<lbrace>(\<lambda>rv s. domain_sep_inv_cap irqs rv) \<circ> ArchObjectCap\<rbrace>"
-  apply(simp add: arch_recycle_cap_def split del: split_if)
-  apply(rule hoare_pre)
-   apply(wp | wpc | simp split del: split_if)+
-  apply(auto simp: domain_sep_inv_cap_def)
-  done
-
-lemma recycle_cap_domain_sep_inv_cap[wp]:
-  shows
-  "\<lbrace>\<lambda>s. domain_sep_inv_cap irqs cap\<rbrace>
-   recycle_cap is_final cap
-   \<lbrace>\<lambda>rv s. domain_sep_inv_cap irqs rv\<rbrace>"
-  apply(simp add: recycle_cap_def)
-  apply(rule hoare_pre)
-   apply(wp | wpc | simp | wp_once hoare_drop_imps)+
-  apply(auto simp: domain_sep_inv_cap_def)
-  done
-
 lemma cancel_badged_sends_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
    cancel_badged_sends epptr badge
@@ -677,28 +660,7 @@ lemma cancel_badged_sends_domain_sep_inv[wp]:
    apply(wp dxo_wp_weak mapM_wp | wpc | simp add: filterM_mapM | rule subset_refl | wp_once hoare_drop_imps)+
    done
 
-crunch domain_sep_inv[wp]: arch_recycle_cap "domain_sep_inv irqs st"
-  (wp: crunch_wps hoare_unless_wp)
-
-lemma recycle_cap_domain_sep_inv[wp]:
-  "\<lbrace>domain_sep_inv irqs st\<rbrace>
-   recycle_cap is_final cap
-   \<lbrace>\<lambda>rv. domain_sep_inv irqs st\<rbrace>"
-  apply(simp add: recycle_cap_def)
-  apply(rule hoare_pre)
-   apply(wp dxo_wp_weak | wpc | simp | wp_once hoare_drop_imps)+
-   done
-
 crunch domain_sep_inv[wp]: finalise_slot "domain_sep_inv irqs st"
-
-lemma cap_recycle_domain_sep_inv[wp]:
-  "\<lbrace>domain_sep_inv irqs st\<rbrace> cap_recycle blah \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(simp add: cap_recycle_def)
-  apply(wp hoare_unless_wp set_cap_domain_sep_inv
-           get_cap_domain_sep_inv_cap[where st=st]
-       | simp add: crunch_simps | wp_once hoare_drop_imps)+
-  done
-
 
 lemma invoke_cnode_domain_sep_inv:
   "\<lbrace> domain_sep_inv irqs st and valid_cnode_inv ci\<rbrace>
@@ -710,7 +672,7 @@ lemma invoke_cnode_domain_sep_inv:
     apply(rule hoare_pre)
      apply(wp cap_move_domain_sep_inv cap_move_cte_wp_at_other get_cap_wp | simp | blast dest: cte_wp_at_weak_derived_domain_sep_inv_cap | wpc)+
    apply(fastforce dest:  cte_wp_at_weak_derived_ReplyCap)
-  apply(wp | simp)+
+  apply(wp | simp | wpc | rule hoare_pre)+
   done
 
 lemma create_cap_domain_sep_inv[wp]:
@@ -776,8 +738,8 @@ lemma domain_sep_inv_cap_UntypedCap[simp]:
 
 crunch domain_sep_inv[wp]: invoke_untyped "domain_sep_inv irqs st"
   (ignore: freeMemory retype_region wp: crunch_wps domain_sep_inv_detype_lift
-   get_cap_wp hoare_unless_wp
-   simp: crunch_simps mapM_x_def_bak)
+   get_cap_wp mapME_x_inv_wp
+   simp: crunch_simps mapM_x_def_bak unless_def)
 
 lemma perform_page_invocation_domain_sep_inv_get_cap_helper:
   "\<lbrace>\<top>\<rbrace>
@@ -792,7 +754,7 @@ lemma perform_page_invocation_domain_sep_inv_get_cap_helper:
 
 lemma set_object_tcb_context_update_neg_cte_wp_at:
   "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
-   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
+   set_object ptr (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set X (arch_tcb tcb)\<rparr>))
    \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
   apply(wp set_object_wp)
   apply clarsimp
@@ -822,7 +784,7 @@ crunch domain_sep_inv[wp]: as_user "domain_sep_inv irqs st"
 
 lemma set_object_tcb_context_update_domain_sep_inv:
   "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
-   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
+   set_object ptr (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set X (tcb_arch tcb)\<rparr>))
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(rule hoare_pre)
    apply(rule domain_sep_inv_wp)
@@ -841,7 +803,7 @@ crunch domain_sep_inv[wp]: set_mrs "domain_sep_inv irqs st"
 
 crunch domain_sep_inv[wp]: send_signal "domain_sep_inv irqs st" (wp: dxo_wp_weak ignore:  switch_if_required_to)
 
-crunch domain_sep_inv[wp]: copy_mrs, set_message_info "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: copy_mrs, set_message_info, invalidate_tlb_by_asid "domain_sep_inv irqs st"
   (wp: crunch_wps)
 
 lemma perform_page_invocation_domain_sep_inv:
@@ -852,7 +814,6 @@ lemma perform_page_invocation_domain_sep_inv:
    apply(wp mapM_wp[OF _ subset_refl] set_cap_domain_sep_inv
             mapM_x_wp[OF _ subset_refl]
             perform_page_invocation_domain_sep_inv_get_cap_helper static_imp_wp
-
         | simp add: perform_page_invocation_def o_def | wpc)+
   apply(clarsimp simp: valid_page_inv_def)
   apply(case_tac xa, simp_all add: domain_sep_inv_cap_def is_pg_cap_def)

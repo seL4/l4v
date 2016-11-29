@@ -701,9 +701,11 @@ definition
   where
   "global_automaton_if get_active_irqf do_user_opf kernel_callf 
                        preemptionf schedulef kernel_exitf \<equiv>
-  (* Kernel entry with preemption during event handling *)
+  (* Kernel entry with preemption during event handling
+     NOTE: kernel cannot be preempted while servicing an interrupt *)
      { ( (s, KernelEntry e),
-         (s', KernelPreempted) ) |s s' e. (s, True, s') \<in> kernel_callf e } \<union>
+         (s', KernelPreempted) ) |s s' e. (s, True, s') \<in> kernel_callf e \<and>
+                                          e \<noteq> Interrupt} \<union>
   (* kernel entry without preemption during event handling *)
      { ( (s, KernelEntry e),
          (s', KernelSchedule (e = Interrupt)) ) |s s' e. (s, False, s') \<in> kernel_callf e } \<union>
@@ -872,7 +874,7 @@ definition
   where
   "kernel_entry_if e tc \<equiv> do
     t \<leftarrow> gets cur_thread;
-    thread_set (\<lambda>tcb. tcb \<lparr> tcb_context := tc \<rparr>) t;
+    thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_context_set tc (tcb_arch tcb)\<rparr>) t;
     r \<leftarrow> handle_event e;
     return (r,tc)
   od"
@@ -883,7 +885,7 @@ crunch cur_thread [wp]: kernel_entry_if "\<lambda>s. P (cur_thread s)"
 
 lemma thread_set_tcb_context_update_ct_active[wp]:
   "\<lbrace>ct_active\<rbrace>
-   thread_set (tcb_context_update f) t 
+   thread_set (tcb_arch_update (arch_tcb_context_set f)) t
    \<lbrace>\<lambda>rv. ct_active\<rbrace>"
   apply(simp add: thread_set_def ct_in_state_def | wp set_object_wp)+
   apply(clarsimp simp: st_tcb_at_def obj_at_def get_tcb_def)
@@ -891,7 +893,7 @@ lemma thread_set_tcb_context_update_ct_active[wp]:
 
 lemma thread_set_tcb_context_update_not_ct_active[wp]:
   "\<lbrace>\<lambda>s. \<not> ct_active s\<rbrace>
-   thread_set (tcb_context_update f) t 
+   thread_set (tcb_arch_update (arch_tcb_context_set f)) t
    \<lbrace>\<lambda>r s. \<not> ct_active s\<rbrace>"
   apply(simp add: thread_set_def ct_in_state_def | wp set_object_wp)+
   apply(clarsimp simp: st_tcb_at_def obj_at_def get_tcb_def split: kernel_object.splits option.splits)
@@ -923,12 +925,12 @@ lemma thread_set_silc_inv_trivial:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-
 lemma kernel_entry_if_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply(simp add: kernel_entry_if_def tcb_cap_cases_def | wp static_imp_wp thread_set_invs_trivial)+
+  apply( simp add: kernel_entry_if_def tcb_cap_cases_def arch_tcb_update_aux2
+       | wp static_imp_wp thread_set_invs_trivial)+
   done
 
 lemma idle_equiv_as_globals_equiv: "arm_global_pd (arch_state s) \<noteq> idle_thread s \<Longrightarrow> idle_equiv st s =
@@ -983,8 +985,11 @@ lemma kernel_entry_if_globals_equiv:
     kernel_entry_if e tc
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (simp add: kernel_entry_if_def)
-  apply (wp static_imp_wp handle_event_globals_equiv thread_set_invs_trivial
-            thread_set_context_globals_equiv | simp add: tcb_cap_cases_def)+
+  apply (wp static_imp_wp
+            handle_event_globals_equiv
+            thread_set_invs_trivial
+            thread_set_context_globals_equiv
+        | simp add: tcb_cap_cases_def arch_tcb_update_aux2)+
   apply (clarsimp simp: cur_thread_idle)
   done
 
@@ -1002,7 +1007,7 @@ lemma kernel_entry_if_idle_equiv:
 
 lemma thread_set_tcb_context_update_neg_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>  
-   thread_set (tcb_context_update blah) param_a 
+   thread_set (tcb_arch_update (arcb_tcb_context_set blah)) param_a
    \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
   apply(simp add: thread_set_def)
   apply(wp set_object_wp get_object_wp | simp)+
@@ -1021,7 +1026,7 @@ lemma thread_set_tcb_context_update_neg_cte_wp_at[wp]:
 
 lemma thread_set_tcb_context_update_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
-   thread_set (tcb_context_update f) t 
+   thread_set (tcb_arch_update (arch_tcb_context_set f)) t
    \<lbrace>\<lambda>rv. domain_sep_inv irqs st\<rbrace>"
   apply(wp domain_sep_inv_triv)
   done
@@ -1032,7 +1037,10 @@ lemma kernel_entry_silc_inv[wp]: "\<lbrace>silc_inv aag st and einvs and simple_
   (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s)) and
   domain_sep_inv (pasMaySendIrqs aag) st'\<rbrace>
   kernel_entry_if ev tc \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  apply (simp add: kernel_entry_if_def tcb_cap_cases_def | wp static_imp_wp handle_event_silc_inv thread_set_silc_inv_trivial thread_set_invs_trivial thread_set_not_state_valid_sched thread_set_pas_refined | rule hoare_vcg_conj_lift hoare_convert_imp)+
+  apply (simp add: kernel_entry_if_def tcb_cap_cases_def arch_tcb_update_aux2
+        | wp static_imp_wp handle_event_silc_inv thread_set_silc_inv_trivial
+             thread_set_invs_trivial thread_set_not_state_valid_sched thread_set_pas_refined
+        | rule hoare_vcg_conj_lift hoare_convert_imp)+
   apply force
   done
 
@@ -1042,7 +1050,10 @@ lemma kernel_entry_pas_refined[wp]: "\<lbrace>pas_refined aag and guarded_pas_do
   (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s)) and
   (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
   kernel_entry_if ev tc \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (simp add: kernel_entry_if_def tcb_cap_cases_def schact_is_rct_def | wp static_imp_wp handle_event_pas_refined thread_set_pas_refined guarded_pas_domain_lift thread_set_invs_trivial thread_set_not_state_valid_sched)+
+  apply (simp add: kernel_entry_if_def tcb_cap_cases_def schact_is_rct_def arch_tcb_update_aux2
+        | wp static_imp_wp handle_event_pas_refined
+             thread_set_pas_refined guarded_pas_domain_lift
+             thread_set_invs_trivial thread_set_not_state_valid_sched)+
   apply force
   done
 
@@ -1050,7 +1061,10 @@ lemma kernel_entry_if_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(simp add: kernel_entry_if_def | wp static_imp_wp handle_event_domain_sep_inv thread_set_invs_trivial thread_set_not_state_valid_sched | simp add: tcb_cap_cases_def)+
+  apply( simp add: kernel_entry_if_def arch_tcb_update_aux2
+       | wp static_imp_wp handle_event_domain_sep_inv
+            thread_set_invs_trivial thread_set_not_state_valid_sched
+       | simp add: tcb_cap_cases_def)+
   done
 
 lemma kernel_entry_if_guarded_pas_domain:
@@ -1062,11 +1076,14 @@ lemma kernel_entry_if_guarded_pas_domain:
   done
 
 lemma kernel_entry_if_valid_sched:
-  "\<lbrace>valid_sched and invs and
+  "\<lbrace>valid_sched and invs and (ct_active or ct_idle) and
     (\<lambda>s. (e \<noteq> Interrupt \<longrightarrow> ct_active s) \<and> scheduler_action s = resume_cur_thread)\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply(simp add: kernel_entry_if_def tcb_cap_cases_def | wp static_imp_wp handle_event_valid_sched thread_set_invs_trivial thread_set_not_state_valid_sched)+
+  apply(simp add: kernel_entry_if_def tcb_cap_cases_def arch_tcb_update_aux2
+        | wp static_imp_wp handle_event_valid_sched thread_set_invs_trivial
+             thread_set_not_state_valid_sched hoare_vcg_disj_lift
+             thread_set_no_change_tcb_state ct_in_state_thread_state_lift)+
   apply(clarsimp)
   done
 
@@ -1074,7 +1091,8 @@ lemma kernel_entry_if_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and invs\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  apply(simp add: kernel_entry_if_def tcb_cap_cases_def | wp handle_event_irq_masks thread_set_invs_trivial)+
+  apply( simp add: kernel_entry_if_def tcb_cap_cases_def arch_tcb_update_aux2
+       | wp handle_event_irq_masks thread_set_invs_trivial)+
   by fastforce
   
 crunch valid_list[wp]: kernel_entry_if "valid_list"
@@ -1327,7 +1345,7 @@ definition
   where
   "kernel_exit_if tc \<equiv> do
     t' \<leftarrow> gets cur_thread;
-    thread_get tcb_context t'
+    thread_get (arch_tcb_context_get o tcb_arch) t'
   od"
 
 crunch inv[wp]: kernel_exit_if "P"
@@ -1376,23 +1394,30 @@ lemma valid_device_abs_state_eq:
 
 
 
+
 (*Weakened invs_if to properties only necessary for refinement*)
 definition full_invs_if :: "observable_if set" where
-  "full_invs_if \<equiv> {s. einvs (internal_state_if s) \<and>         
-                (case (snd s) of (KernelEntry e) \<Rightarrow>
-                     (e \<noteq> Interrupt \<longrightarrow> ct_running (internal_state_if s)) \<and>
-                     (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
-                      
-                     scheduler_action (internal_state_if s) = resume_cur_thread
-                              | KernelExit \<Rightarrow>
-                     (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
-                     scheduler_action (internal_state_if s) = resume_cur_thread                                          | InUserMode \<Rightarrow> 
-                     ct_running (internal_state_if s) \<and> 
-                     scheduler_action (internal_state_if s) = resume_cur_thread
-                              | InIdleMode \<Rightarrow> 
-                     ct_idle (internal_state_if s) \<and>
-                     scheduler_action (internal_state_if s) = resume_cur_thread
-                              | _ \<Rightarrow> True) }"
+  "full_invs_if \<equiv>
+    {s. einvs (internal_state_if s) \<and>
+        (snd s \<noteq> KernelSchedule True \<longrightarrow> domain_time (internal_state_if s) > 0) \<and>
+        (domain_time (internal_state_if s) = 0
+           \<longrightarrow> scheduler_action (internal_state_if s) = choose_new_thread) \<and>
+        valid_domain_list (internal_state_if s) \<and>
+        (case (snd s)
+          of (KernelEntry e) \<Rightarrow>
+                (e \<noteq> Interrupt \<longrightarrow> ct_running (internal_state_if s))
+                \<and> (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s))
+                \<and> scheduler_action (internal_state_if s) = resume_cur_thread
+           | KernelExit \<Rightarrow>
+                (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s))
+                \<and> scheduler_action (internal_state_if s) = resume_cur_thread
+           | InUserMode \<Rightarrow>
+                ct_running (internal_state_if s)
+                \<and> scheduler_action (internal_state_if s) = resume_cur_thread
+           | InIdleMode \<Rightarrow>
+                ct_idle (internal_state_if s)
+                \<and> scheduler_action (internal_state_if s) = resume_cur_thread
+           | _ \<Rightarrow> True) }"
 
 end
 
@@ -1501,17 +1526,7 @@ lemma ct_active_not_idle: "ct_active s \<Longrightarrow> invs s \<Longrightarrow
                    pred_tcb_at_def obj_at_def invs_def)
   done
 
-(* it makes life easier to assume that all domain slies in the domain list are non-zero.
-   this means that when we switch to a new domain, the new domain_time is nonzero at least
-   until we get the first timer interrupt. this allows us to assume that we won't switch
-   partitions until at least after the first timer tick. *)
-definition valid_domain_list_2 where
-  "valid_domain_list_2 dl \<equiv> length dl > 0 \<and> (\<forall>(d,n) \<in> set dl. n > (0::word32))"
-
-abbreviation valid_domain_list where
-  "valid_domain_list s \<equiv> valid_domain_list_2 (domain_list s)"
-
-definition cur_context where "cur_context s = tcb_context (the (get_tcb (cur_thread s) s))"
+definition cur_context where "cur_context s = arch_tcb_context_get (tcb_arch (the (get_tcb (cur_thread s) s)))"
 
 end
 
@@ -1681,6 +1696,7 @@ lemma schedule_if_domain_time_nonzero':
    schedule_if tc
    \<lbrace>(\<lambda>_ s. domain_time s > 0)\<rbrace>"
   apply(simp add: schedule_if_def schedule_def)
+  apply (rule hoare_pre)
   apply (wp next_domain_domain_time_nonzero
         | wpc | simp add: crunch_simps guarded_switch_to_def switch_to_thread_def 
                               choose_thread_def switch_to_idle_thread_def
@@ -1688,11 +1704,9 @@ lemma schedule_if_domain_time_nonzero':
        apply(wp hoare_drop_imps)
         apply(simp add: choose_thread_def switch_to_idle_thread_def arch_switch_to_idle_thread_def guarded_switch_to_def switch_to_thread_def | wp)+
           apply(wp hoare_drop_imps)
-       apply(wp next_domain_domain_time_nonzero)
        apply simp
-     apply(wp_once hoare_drop_imps)
-     apply (wp)
-   apply clarsimp
+       apply(wp next_domain_domain_time_nonzero)
+       apply (clarsimp simp: if_apply_def2)
   apply(wp gts_wp)
   apply (auto)
   done
@@ -1758,7 +1772,9 @@ lemma handle_interrupt_domain_time_sched_action:
   apply (rule hoare_pre)
   apply (wp)
    apply(case_tac "st \<noteq> IRQTimer")
-    apply((wp hoare_vcg_imp_lift' | simp | wpc)+)[1]
+    apply(( wp hoare_vcg_imp_lift'
+          | simp add: handle_reserved_irq_def
+          | wpc)+)[1]
    apply((wp timer_tick_domain_time_sched_action | simp)+)[1]
   apply(wp| simp add: get_irq_state_def)+
   done
@@ -1855,149 +1871,9 @@ lemma not_in_global_refs_vs_lookup:
   apply blast
   done
 
-
-(* this proof could be made a lot shorter by excluding all of
-   the cases where the lookup yields anything other than a 
-   small page, since the invariants tell us that the 
-   arm_globals_frame is only a small page *)
-lemma get_page_info_arm_globals_frame:
-  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) (get_pd_of_thread (kheap s) (arch_state s) t) p = Some (base, sz, attr, r);
-    get_pd_of_thread (kheap s) (arch_state s) t \<noteq> arm_global_pd (arch_state s);
-    valid_arch_state s; valid_arch_objs s; valid_global_vspace_mappings s; 
-    equal_kernel_mappings s; valid_vs_lookup s; valid_global_objs s;
-    valid_global_refs s;
-    base = addrFromPPtr (arm_globals_frame (arch_state s))\<rbrakk> \<Longrightarrow> r = {}"
-  apply(case_tac "p \<in> kernel_mappings")
-   apply(blast dest: some_get_page_info_kmapsD)
-  apply(clarsimp simp: get_pd_of_thread_def split: option.splits kernel_object.splits cap.splits arch_cap.splits if_splits)
-  apply(clarsimp simp: get_page_info_def split: option.splits pde.splits)
-    apply(clarsimp simp: get_pt_info_def split: option.splits pte.splits)
-     apply(clarsimp simp: vs_refs_def split: kernel_object.splits arch_kernel_obj.splits)
-     apply(clarsimp simp: get_pd_entry_def split: option.splits arch_kernel_obj.splits)
-     apply(clarsimp simp: get_pt_entry_def split: option.splits arch_kernel_obj.splits)
-     apply(drule_tac d=" (ucast ((p >> 12) && mask 8))" in vs_lookup_pages_ptI)
-            apply(simp)
-           apply(simp add: graph_of_def)
-          apply(fastforce simp: get_arch_obj_def split: option.splits kernel_object.splits)
-         prefer 2
-         apply fastforce
-        apply(simp add: kernel_mappings_kernel_mapping_slots)
-       apply(fastforce simp: get_arch_obj_def split: option.splits kernel_object.splits)
-      apply(fastforce simp: pte_ref_pages_def split: pte.splits)
-     apply(drule not_in_global_refs_vs_lookup[rotated], simp+)
-      apply blast
-     apply(simp add: global_refs_def)
-    apply(clarsimp simp: vs_refs_def split: kernel_object.splits arch_kernel_obj.splits)
-    apply(clarsimp simp: get_pd_entry_def split: option.splits arch_kernel_obj.splits)
-    apply(clarsimp simp: get_pt_entry_def split: option.splits arch_kernel_obj.splits)
-    apply(drule_tac d=" (ucast ((p >> 12) && mask 8))" in vs_lookup_pages_ptI)
-           apply(simp)
-          apply(simp add: graph_of_def)
-         apply(fastforce simp: get_arch_obj_def split: option.splits kernel_object.splits)
-        prefer 2
-        apply fastforce
-       apply(simp add: kernel_mappings_kernel_mapping_slots)
-      apply(fastforce simp: get_arch_obj_def split: option.splits kernel_object.splits)
-     apply(fastforce simp: pte_ref_pages_def split: pte.splits)
-    apply(drule not_in_global_refs_vs_lookup[rotated], simp+)
-     apply blast
-    apply(simp add: global_refs_def)
-   apply(clarsimp simp: vs_refs_def split: kernel_object.splits arch_kernel_obj.splits)
-   apply(clarsimp simp: get_pd_entry_def split: option.splits arch_kernel_obj.splits)
-   apply(drule_tac c="ucast (p >> 20)" in vs_lookup_pages_pdI)
-        apply(simp)
-       apply(simp add: graph_of_def)
-      apply(fastforce simp: get_arch_obj_def split: option.splits kernel_object.splits)
-     apply(simp add: kernel_mappings_kernel_mapping_slots)     
-    apply(fastforce simp: pde_ref_pages_def split: pde.splits)
-    apply(drule not_in_global_refs_vs_lookup[rotated], simp+)
-     apply blast
-    apply(simp add: global_refs_def)
-  apply(clarsimp simp: vs_refs_def split: kernel_object.splits arch_kernel_obj.splits)
-  apply(clarsimp simp: get_pd_entry_def split: option.splits arch_kernel_obj.splits)
-  apply(drule_tac c="ucast (p >> 20)" in vs_lookup_pages_pdI)
-       apply(simp)
-      apply(simp add: graph_of_def)
-     apply(fastforce simp: get_arch_obj_def split: option.splits kernel_object.splits)
-    apply(simp add: kernel_mappings_kernel_mapping_slots)     
-   apply(fastforce simp: pde_ref_pages_def split: pde.splits)
-  apply(drule not_in_global_refs_vs_lookup[rotated], simp+)
-   apply blast
-  apply(simp add: global_refs_def)
-  done
-
 lemma ptrFromPAddr_add_helper:
   "ptrFromPAddr (a + b) = ptrFromPAddr a + b"
   apply(simp add: ptrFromPAddr_def)
-  done
-
-lemma get_page_info_is_arm_globals_frame:
-  notes [simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-  shows
-  "\<lbrakk>x \<in> range_of_arm_globals_frame s; invs s;
-        get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
-         (get_pd_of_thread (kheap s) (arch_state s) t) x' =
-        Some (base, psz, attr, r);
-        base + (x' && mask psz) = addrFromPPtr x;
-        get_pd_of_thread (kheap s) (arch_state s) t \<noteq> arm_global_pd (arch_state s);
-        x' \<notin> kernel_mappings\<rbrakk> \<Longrightarrow>
-       ptrFromPAddr base = (arm_globals_frame (arch_state s))"
-  apply(frule some_get_page_info_umapsD)
-        (* following two lines clagged from ADT_AC.ptr_offset_in_ptr_range *)
-        apply (clarsimp simp: get_pd_of_thread_reachable invs_arch_objs
-                              invs_psp_aligned invs_valid_asid_table invs_valid_objs)+
-  apply(rename_tac sz)
-  apply(subgoal_tac "typ_at (AArch (AUserData ARMSmallPage)) (arm_globals_frame (arch_state s)) s")
-   apply(clarsimp simp: obj_at_def)  
-   prefer 2
-   apply(fastforce dest: invs_arch_state simp: valid_arch_state_def)
-  apply(frule invs_distinct)
-  apply(clarsimp simp: pspace_distinct_def)
-  apply(drule_tac x="ptrFromPAddr base" in spec, drule_tac x="arm_globals_frame (arch_state s)" in spec)
-  apply simp
-  apply(case_tac "ptrFromPAddr base = arm_globals_frame (arch_state s)")
-   apply assumption
-  apply(frule ptr_offset_in_ptr_range)
-     apply (simp+)
-  apply(simp add: ptr_range_def ups_of_heap_typ_at[symmetric] ups_of_heap_def
-           split: option.split_asm kernel_object.split_asm arch_kernel_obj.split_asm)
-  apply(subgoal_tac "ptrFromPAddr base + (x' && mask (pageBitsForSize sz)) \<in> {arm_globals_frame
-            (arch_state s)..arm_globals_frame (arch_state s) + 0xFFF}")
-   apply(simp only: p_assoc_help)
-   apply fastforce
-  apply(drule_tac y="addrFromPPtr x" and f=ptrFromPAddr in arg_cong)
-  apply(simp only: ptrFromPAddr_add_helper)
-  apply(simp add: add.commute)
-  done
-  
-  
-lemma empty_rights_in_arm_globals_frame:
-  "\<lbrakk>x \<in> range_of_arm_globals_frame s; invs s;
-        ptable_lift t s x' = Some (addrFromPPtr x)\<rbrakk> \<Longrightarrow>
-        ptable_rights t s x' = {}"
-  apply(clarsimp simp: ptable_lift_def split: option.splits)
-  apply(clarsimp simp: ptable_rights_def)
-  apply(case_tac "get_pd_of_thread (kheap s) (arch_state s) t = arm_global_pd (arch_state s)")
-   apply simp
-   apply(frule get_page_info_gpd_kmaps[rotated, rotated])
-     apply(erule invs_valid_global_objs)
-    apply(erule invs_arch_state)
-   apply(drule (1) some_get_page_info_kmapsD)
-     apply(erule invs_valid_global_pd_mappings)
-    apply(erule invs_equal_kernel_mappings)
-   apply blast
-  apply(case_tac "x' \<in> kernel_mappings")
-   apply(drule (1) some_get_page_info_kmapsD)
-     apply(erule invs_valid_global_pd_mappings)
-    apply(erule invs_equal_kernel_mappings)
-   apply blast
-  apply(rule get_page_info_arm_globals_frame)
-           apply (simp add: invs_arch_state invs_arch_objs invs_valid_global_pd_mappings 
-                            invs_equal_kernel_mappings invs_valid_vs_lookup invs_valid_global_objs
-                            invs_valid_global_refs)+
-  apply(drule get_page_info_is_arm_globals_frame, simp+)[1]
-  apply(fastforce dest: arg_cong[where f=addrFromPPtr])
   done
 
 lemma dmo_user_memory_update_idle_equiv:
@@ -2064,26 +1940,30 @@ definition cur_thread_context_of :: "observable_if \<Rightarrow> user_context" w
          | _ \<Rightarrow> cur_context (internal_state_if s)"
 
 definition invs_if :: "observable_if \<Rightarrow> bool" where
-  "invs_if s \<equiv> Invs (internal_state_if s) \<and>
-               det_inv (sys_mode_of s) (cur_thread_context_of s) (internal_state_if s) \<and>
-                (snd s \<noteq> KernelSchedule True \<longrightarrow> domain_time (internal_state_if s) > 0) \<and>
-                (domain_time (internal_state_if s) = 0 \<longrightarrow> scheduler_action (internal_state_if s) = choose_new_thread) \<and> (snd s \<noteq> KernelExit \<longrightarrow> (ct_idle (internal_state_if s) \<longrightarrow> 
-                            user_context_of s = idle_context (internal_state_if s))) \<and>
-                (case (snd s) of (KernelEntry e) \<Rightarrow>
+  "invs_if s \<equiv>
+    Invs (internal_state_if s) \<and>
+    det_inv (sys_mode_of s) (cur_thread_context_of s) (internal_state_if s) \<and>
+    (snd s \<noteq> KernelSchedule True \<longrightarrow> domain_time (internal_state_if s) > 0) \<and>
+    (domain_time (internal_state_if s) = 0
+       \<longrightarrow> scheduler_action (internal_state_if s) = choose_new_thread) \<and>
+    (snd s \<noteq> KernelExit
+       \<longrightarrow> (ct_idle (internal_state_if s)
+             \<longrightarrow> user_context_of s = idle_context (internal_state_if s))) \<and>
+    (case (snd s)
+      of KernelEntry e \<Rightarrow>
                      (e \<noteq> Interrupt \<longrightarrow> ct_running (internal_state_if s)) \<and>
                      (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
-                      
                      scheduler_action (internal_state_if s) = resume_cur_thread
-                              | KernelExit \<Rightarrow>
+        | KernelExit \<Rightarrow>
                      (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
-                     scheduler_action (internal_state_if s) = resume_cur_thread                                          | InUserMode \<Rightarrow> 
-                     ct_running (internal_state_if s) \<and> 
                      scheduler_action (internal_state_if s) = resume_cur_thread
-                              | InIdleMode \<Rightarrow> 
+        | InUserMode \<Rightarrow>
+                     ct_running (internal_state_if s) \<and>
+                     scheduler_action (internal_state_if s) = resume_cur_thread
+        | InIdleMode \<Rightarrow>
                      ct_idle (internal_state_if s) \<and>
                      scheduler_action (internal_state_if s) = resume_cur_thread
-                              | _ \<Rightarrow> True)"
-                       
+        | _ \<Rightarrow> True)"
 
 lemma invs_if_s0[simp]:
   "invs_if s0"
@@ -2220,7 +2100,8 @@ lemma kernel_entry_if_valid_pdpt_objs[wp]:
   apply (case_tac "e = Interrupt")
    apply (simp add: kernel_entry_if_def)
    apply (wp|wpc|simp)+
-  apply (simp add: kernel_entry_if_def tcb_cap_cases_def | wp static_imp_wp thread_set_invs_trivial)+
+  apply (simp add: kernel_entry_if_def tcb_cap_cases_def arch_tcb_update_aux2
+        | wp static_imp_wp thread_set_invs_trivial)+
   done
 
 lemma kernel_entry_if_det_inv':
@@ -2307,6 +2188,7 @@ lemma invs_if_Step_ADT_A_if:
                      ct_idle_lift
                  | clarsimp intro: guarded_pas_is_subject_current_aag
                  | wp kernel_entry_if_domain_fields)+
+          apply (rule conjI, fastforce intro!: active_from_running)
           apply (simp add: schact_is_rct_def)
           apply (rule guarded_pas_is_subject_current_aag,assumption+)
          apply (simp_all only: silc_inv_cur pas_refined_cur guarded_pas_domain_cur)
@@ -2456,8 +2338,7 @@ lemma execution_restrict:
   done
 
 lemma invs_if_full_invs_if: "invs_if s \<Longrightarrow> s \<in> full_invs_if"
-  apply (clarsimp simp add: full_invs_if_def invs_if_def Invs_def)
-  done
+  by (clarsimp simp add: full_invs_if_def invs_if_def Invs_def)
 
 lemma ADT_A_if_Step_system:
   "Step_system (ADT_A_if utf) s0"
@@ -2924,20 +2805,6 @@ lemma finalise_slot_irq_state_inv:
   apply(simp add: finalise_slot_def | wp rec_del_irq_state_inv[folded validE_R_def])+
   by blast
 
-lemma cap_recycle_irq_state_inv:
-  "\<lbrace>irq_state_inv st and domain_sep_inv False sta and K (irq_is_recurring irq st)\<rbrace> 
-   cap_recycle blah \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>,\<lbrace>\<lambda>_. irq_state_next st\<rbrace>"     
-  apply(simp add: cap_recycle_def)
-  apply(rule hoare_pre)
-
-   apply(wp hoare_unless_wp  finalise_slot_irq_state_inv[where st=st and irq=irq] 
-            cap_revoke_irq_state_inv[folded validE_R_def] 
-        | simp add: conj_comms |  wp_once irq_state_inv_triv)+
-  apply(rule validE_validE_R[OF hoare_post_impErr, OF cap_revoke_domain_sep_inv], simp+)
-  apply(auto)
-  done
-
-
 
 lemma invoke_cnode_irq_state_inv:
   "\<lbrace>irq_state_inv st and domain_sep_inv False sta and
@@ -2948,7 +2815,7 @@ lemma invoke_cnode_irq_state_inv:
   apply(simp add: invoke_cnode_def)
   apply(rule hoare_pre)
    apply wpc
-         apply((wp cap_revoke_irq_state_inv' cap_delete_irq_state_inv hoare_vcg_all_lift cap_recycle_irq_state_inv | wpc | simp add: cap_move_def split del: split_if | wp_once irq_state_inv_triv | wp_once hoare_drop_imps)+)[7]
+         apply((wp cap_revoke_irq_state_inv' cap_delete_irq_state_inv hoare_vcg_all_lift | wpc | simp add: cap_move_def split del: split_if | wp_once irq_state_inv_triv | wp_once hoare_drop_imps)+)[7]
   apply fastforce
   done
 
@@ -3047,6 +2914,35 @@ lemma irq_state_inv_trivE':
   apply simp
   done
 
+crunch irq_state_of_state[wp]: init_arch_objects "\<lambda>s. P (irq_state_of_state s)"
+  (wp: crunch_wps dmo_wp ignore: do_machine_op)
+
+lemma reset_untyped_cap_irq_state_inv:
+  "\<lbrace>irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
+      reset_untyped_cap slot \<lbrace>\<lambda>y. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>y. irq_state_next st\<rbrace>"
+  apply (cases "irq_is_recurring irq st", simp_all)
+  apply (simp add: reset_untyped_cap_def)
+  apply (rule hoare_pre)
+   apply (wp no_irq_clearMemory mapME_x_wp'
+             hoare_vcg_const_imp_lift
+             preemption_point_irq_state_inv'[where irq=irq]
+             get_cap_wp
+     | rule irq_state_inv_triv
+     | simp add: unless_def
+     | wp_once dmo_wp)+
+  done
+
+lemma invoke_untyped_irq_state_inv:
+  "\<lbrace>irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
+    invoke_untyped ui \<lbrace>\<lambda>y. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>y. irq_state_next st\<rbrace>"
+  apply (cases ui, simp add: invoke_untyped_def mapM_x_def[symmetric])
+  apply (rule hoare_pre)
+   apply (wp mapM_x_wp' hoare_whenE_wp
+             reset_untyped_cap_irq_state_inv[where irq=irq]
+     | rule irq_state_inv_triv
+     | simp)+
+  done
+
 lemma perform_invocation_irq_state_inv:
    "\<lbrace>irq_state_inv st and
       (\<lambda>s. \<forall>blah.
@@ -3060,7 +2956,7 @@ lemma perform_invocation_irq_state_inv:
    perform_invocation x y oper \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply(case_tac oper)
           apply(simp | wp)+
-          apply((wp irq_state_inv_triv | simp)+)[4]
+          apply((wp invoke_untyped_irq_state_inv[where irq=irq] irq_state_inv_triv | simp)+)[4]
       apply((wp invoke_tcb_irq_state_inv invoke_cnode_irq_state_inv[simplified validE_R_def] | simp add: invoke_domain_def |blast)+)[5]
       apply (rule hoare_validE_cases)
     apply(rule hoare_post_impErr[OF valid_validE])
@@ -3174,7 +3070,8 @@ lemma kernel_entry_if_next_irq_state_of_state:
    apply (rule validE_validE_R')
     apply(wp handle_event_irq_state_inv[where sta=st and irq=irq] | simp)+
    apply(clarsimp simp: irq_state_inv_def)
-  apply(erule_tac f="thread_set (tcb_context_update (\<lambda>_. uc)) t" in use_valid)
+  apply (simp add: arch_tcb_update_aux2)
+  apply(erule_tac f="thread_set (tcb_arch_update (arch_tcb_context_set uc)) t" in use_valid)
    apply(wp irq_measure_if_inv'[where Q="\<top>"] irq_state_inv_triv thread_set_invs_trivial irq_is_recurring_triv[where Q="\<top>"] | simp add: tcb_cap_cases_def)+
   apply(erule use_valid)
    apply (wp | simp )+
@@ -3191,7 +3088,8 @@ lemma kernel_entry_if_next_irq_state_of_state_next:
      apply (rule handle_event_irq_state_inv[where sta=st and irq=irq and st=i_s])
      apply simp+
    apply (simp add: irq_state_next_def)
-  apply(erule_tac f="thread_set (tcb_context_update (\<lambda>_. uc)) t" in use_valid)
+  apply (simp add: arch_tcb_update_aux2)
+  apply(erule_tac f="thread_set (tcb_arch_update (arch_tcb_context_set uc)) t" in use_valid)
    apply(wp irq_measure_if_inv'[where Q="\<top>"] irq_state_inv_triv thread_set_invs_trivial irq_is_recurring_triv[where Q="\<top>"] | simp add: tcb_cap_cases_def)+
   apply(erule use_valid)
    apply (wp | simp )+
@@ -3208,7 +3106,8 @@ lemma kernel_entry_if_irq_measure:
    apply(wp handle_event_irq_state_inv[where sta=st and irq=irq] | simp)+
    apply(subst irq_state_inv_irq_is_recurring, (elim conjE, assumption))
    apply simp
-  apply(erule_tac f="thread_set (tcb_context_update (\<lambda>_. uc)) t" in use_valid)
+  apply (simp add: arch_tcb_update_aux2)
+  apply(erule_tac f="thread_set (tcb_arch_update (arch_tcb_context_set uc)) t" in use_valid)
    apply(wp irq_measure_if_inv'[where Q="\<top>"] irq_state_inv_triv thread_set_invs_trivial irq_is_recurring_triv[where Q="\<top>"] | simp add: tcb_cap_cases_def)+
   apply(erule use_valid)
    apply (wp | simp )+
@@ -3368,12 +3267,16 @@ lemma ADT_A_if_Step_measure_if'':
   "\<lbrakk>(s,s') \<in> data_type.Step (ADT_A_if utf) x; invs_if s;
    measuref_if y s > 0\<rbrakk>
        \<Longrightarrow> measuref_if y s' < measuref_if y s \<and> 
-          (\<not> interrupted_modes (snd s) \<longrightarrow> interrupted_modes (snd s') \<longrightarrow> irq_state_of_state (internal_state_if s') = next_irq_state_of_state (internal_state_if s))"
+          (\<not> interrupted_modes (snd s) \<longrightarrow> interrupted_modes (snd s')
+            \<longrightarrow> irq_state_of_state (internal_state_if s') = next_irq_state_of_state (internal_state_if s))"
   apply(frule invs_if_irq_is_recurring)
   apply(case_tac s, clarsimp)
   apply(rename_tac uc i_s mode)
   apply(case_tac mode)
-       apply(simp_all add: rah_simp system.Step_def execution_def steps_def ADT_A_if_def global_automaton_if_def check_active_irq_A_if_def do_user_op_A_if_def check_active_irq_if_def in_monad measuref_if_def | safe | split if_splits)+
+       apply(simp_all add: rah_simp system.Step_def execution_def steps_def ADT_A_if_def
+                           global_automaton_if_def check_active_irq_A_if_def do_user_op_A_if_def
+                           check_active_irq_if_def in_monad measuref_if_def
+             | safe | split if_splits)+
                          apply(frule getActiveIRQ_None)
                          apply(erule use_valid[OF _ do_user_op_if_irq_measure_if])
                          apply(erule use_valid[OF _ dmo_getActiveIRQ_wp])
@@ -3410,13 +3313,15 @@ lemma ADT_A_if_Step_measure_if'':
                  apply(simp add: next_irq_state_Suc recurring_next_irq_state_dom)
                  apply(fastforce dest: next_irq_state_less)
                 apply(clarsimp split: if_splits)
-               apply(clarsimp split: if_splits)
-               apply(clarsimp simp: kernel_call_A_if_def kernel_entry_if_def in_monad)
-              apply (clarsimp simp: kernel_call_A_if_def)
-              apply (case_tac r,simp)
+                
+               apply(clarsimp simp: kernel_call_A_if_def in_monad)
+               apply (case_tac r ; simp)
                apply (rule kernel_entry_if_next_irq_state_of_state_next,assumption+)
-                  apply((simp add: invs_if_def Invs_def only_timer_irq_inv_def | elim conjE | assumption)+)[5]
-             apply(clarsimp split: if_splits)
+                  prefer 4
+                  apply fastforce
+                 apply((simp add: invs_if_def Invs_def only_timer_irq_inv_def | elim conjE | assumption)+)[3]
+              apply(clarsimp split: if_splits)
+
             apply(rule Suc_le_lessD)           
             apply simp
             apply(simp add: kernel_call_A_if_def)

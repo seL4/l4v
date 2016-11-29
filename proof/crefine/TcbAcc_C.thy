@@ -80,11 +80,11 @@ lemma threadGet_obj_at2:
   done
   
 lemma register_from_H_less:
-  "register_from_H hr < 18"
+  "register_from_H hr < 19"
   by (cases hr, simp_all add: "StrictC'_register_defs")
 
 lemma register_from_H_sless:
-  "register_from_H hr <s 18"
+  "register_from_H hr <s 19"
   by (cases hr, simp_all add: "StrictC'_register_defs" word_sless_def word_sle_def)
 
 lemma register_from_H_0_sle[simp]:
@@ -98,7 +98,7 @@ lemma getRegister_ccorres [corres]:
              (asUser thread (getRegister reg)) (Call getRegister_'proc)"  
   apply (unfold asUser_def)
   apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l [where Q="\<lambda>u. obj_at' (\<lambda>t. tcbContext t = u) thread" and
+    apply (rule ccorres_symb_exec_l [where Q="\<lambda>u. obj_at' (\<lambda>t. (atcbContextGet o tcbArch) t = u) thread" and
       Q'="\<lambda>rv. {s. thread_' s = tcb_ptr_to_ctcb_ptr thread} \<inter> {s. reg_' s = register_from_H reg}"])
        apply (rule ccorres_from_vcg)
        apply (rule allI, rule conseqPre)
@@ -107,13 +107,13 @@ lemma getRegister_ccorres [corres]:
        apply (drule (1) obj_at_cslift_tcb)
        apply (clarsimp simp: typ_heap_simps register_from_H_less register_from_H_sless)
        apply (clarsimp simp: getRegister_def typ_heap_simps)
-       apply (rule_tac x = "(tcbContext ko reg, \<sigma>)" in bexI [rotated])
+       apply (rule_tac x = "((atcbContextGet o tcbArch) ko reg, \<sigma>)" in bexI [rotated])
         apply (simp add: in_monad' asUser_def select_f_def split_def)
         apply (subst arg_cong2 [where f = "op \<in>"])
           defer
           apply (rule refl)
          apply (erule threadSet_eq)
-        apply (clarsimp simp: ctcb_relation_def ccontext_relation_def)
+        apply (clarsimp simp: ctcb_relation_def ccontext_relation_def carch_tcb_relation_def)
        apply (wp threadGet_obj_at2)
    apply simp
   apply simp

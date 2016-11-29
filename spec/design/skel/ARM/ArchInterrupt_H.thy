@@ -13,7 +13,7 @@ imports "../RetypeDecls_H" "../CNode_H" "../InterruptDecls_H" ArchInterruptDecls
 begin
 context Arch begin global_naming ARM_H
 
-#INCLUDE_HASKELL SEL4/Object/Interrupt/ARM.lhs CONTEXT ARM_H bodies_only ArchInv=ArchRetypeDecls_H
+#INCLUDE_HASKELL SEL4/Object/Interrupt/ARM.lhs Arch= CONTEXT ARM_H bodies_only ArchInv=ArchRetypeDecls_H
 
 end
 end

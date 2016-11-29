@@ -24,6 +24,8 @@ requalify_consts
   checkIRQ
   decodeIRQControlInvocation
   performIRQControl
+  initInterruptController
+  handleReservedIRQ
 
 context begin global_naming global
 requalify_consts

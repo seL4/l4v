@@ -631,15 +631,6 @@ consts'
 finaliseCap :: "arch_capability \<Rightarrow> bool \<Rightarrow> capability kernel"
 
 consts'
-resetMemMapping :: "arch_capability \<Rightarrow> arch_capability"
-
-consts'
-recycleCap :: "bool \<Rightarrow> arch_capability \<Rightarrow> arch_capability kernel"
-
-consts'
-hasRecycleRights :: "arch_capability \<Rightarrow> bool"
-
-consts'
 sameRegionAs :: "arch_capability \<Rightarrow> arch_capability \<Rightarrow> bool"
 
 consts'
@@ -647,6 +638,9 @@ isPhysicalCap :: "arch_capability \<Rightarrow> bool"
 
 consts'
 sameObjectAs :: "arch_capability \<Rightarrow> arch_capability \<Rightarrow> bool"
+
+consts'
+placeNewDataObject :: "machine_word \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> unit kernel"
 
 consts'
 createObject :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_capability kernel"

@@ -1166,22 +1166,9 @@ lemma pre_helper2:
 lemmas ucast_ucast_mask_8 = ucast_ucast_mask[where 'a=8, simplified, symmetric]
 
 lemma pspace_no_overlap_obj_range:
-  "\<lbrakk> pspace_no_overlap ptr sz s; kheap s p = Some obj; S \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<rbrakk>
+  "\<lbrakk> pspace_no_overlap S s; kheap s p = Some obj \<rbrakk>
      \<Longrightarrow> obj_range p obj \<inter> S = {}"
-  apply (simp add: pspace_no_overlap_def)
-  apply (elim allE, drule(1) mp)
-  apply (simp add: obj_range_def field_simps)
-  apply fastforce
-  done
-
-lemma pspace_no_overlapD3:
-  "\<lbrakk>pspace_no_overlap ptr sz s;kheap s p = Some obj;is_aligned ptr sz\<rbrakk>
-  \<Longrightarrow> obj_range p obj \<inter> {ptr..ptr + 2 ^ sz - 1} = {}"
-  apply (unfold pspace_no_overlap_def)
-  apply (drule spec)+
-  apply (erule(1) impE)
-  apply (simp only:is_aligned_neg_mask_eq obj_range_def p_assoc_help)
-  done
+  by (auto simp add: pspace_no_overlap_def obj_range_def field_simps)
 
 (* FIXME: generalised version of Arch_AI.range_cover_full *)
 lemma range_cover_full:

@@ -166,88 +166,11 @@ lemma clearMemory_vms:
   apply (simp add: word_rsplit_0)
   done
 
-lemma create_word_objects_vms[wp]:
-  "\<lbrace>valid_machine_state\<rbrace>
-   create_word_objects ptr bits sz dev
-   \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  apply (clarsimp simp: create_word_objects_def
-    reserve_region_def mapM_x_mapM do_machine_op_return_foo)
-  apply (rule hoare_pre)
-  apply (wp hoare_unless_wp)
-  apply (subst dom_mapM)
-    apply ((simp add: clearMemory_def
-      | wp empty_fail_cleanCacheRange_PoU ef_storeWord
-      empty_fail_mapM_x empty_fail_bind)+)[1]
-   apply (wp mapM_wp')
-  apply (clarsimp simp: create_word_objects_def reserve_region_def
-    clearMemory_vms
-    do_machine_op_def split_def | wp)+
-  done
-
-lemma create_word_objects_valid_irq_states[wp]:
-  "\<lbrace>valid_irq_states\<rbrace>
-   create_word_objects ptr bits sz dev
-   \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
-  apply (clarsimp simp: create_word_objects_def
-    reserve_region_def mapM_x_mapM do_machine_op_return_foo)
-  apply (rule hoare_pre)
-  apply (wp hoare_unless_wp)
-  apply (subst dom_mapM)
-    apply ((simp add: clearMemory_def
-      | wp empty_fail_cleanCacheRange_PoU ef_storeWord
-      empty_fail_mapM_x empty_fail_bind)+)[1]
-   apply (wp mapM_wp' hoare_unless_wp | simp add: do_machine_op_def | wpc)+
-   apply clarsimp
-   apply (erule use_valid)
-   apply (simp add: valid_irq_states_def | wp no_irq_clearMemory no_irq)+
-  done
-
 crunch device_state_inv[wp]: clearMemory "\<lambda>ms. P (device_state ms)"
   (wp: mapM_x_wp)
 
 crunch pspace_respects_device_region[wp]: reserve_region pspace_respects_device_region
 crunch cap_refs_respects_device_region[wp]: reserve_region cap_refs_respects_device_region
-
-lemma create_word_objects_pspace_respects_device[wp]:
-  "\<lbrace>pspace_respects_device_region\<rbrace> create_word_objects ptr bits sz dev \<lbrace>\<lambda>_. pspace_respects_device_region\<rbrace>"
-  apply (clarsimp simp add: create_word_objects_def when_def)
-   apply (rule hoare_pre,wp pspace_respects_device_region_dmo hoare_unless_wp mapM_x_wp)
-     apply fastforce
-    apply simp
-   apply wp
-  apply simp
-  done
-
-lemma create_word_objects_cap_refs_respects_device[wp]:
-  "\<lbrace>cap_refs_respects_device_region\<rbrace> create_word_objects ptr bits sz dev \<lbrace>\<lambda>_. cap_refs_respects_device_region\<rbrace>"
-  apply (clarsimp simp add: create_word_objects_def unless_def when_def)
-  apply (intro conjI impI)
-   apply (rule hoare_pre,wp cap_refs_respects_device_region_dmo)
-   apply (rule hoare_pre,wp mapM_x_wp)
-      apply fastforce
-     apply simp
-    apply wp
-   apply simp
-  apply wp
-  done
-
-lemma create_word_objects_invs[wp]:
-  "\<lbrace>invs\<rbrace> create_word_objects ptr bits sz dev\<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: invs_def valid_state_def)
-  apply (rule hoare_pre)
-   apply (rule hoare_strengthen_post)
-    apply (rule hoare_vcg_conj_lift[OF create_word_objects_vms])
-    apply (rule hoare_vcg_conj_lift[OF create_word_objects_valid_irq_states])
-    apply (rule hoare_vcg_conj_lift[OF create_word_objects_pspace_respects_device])
-    apply (rule hoare_vcg_conj_lift[OF create_word_objects_cap_refs_respects_device])
-    prefer 2
-    apply clarsimp
-    apply assumption
-   apply (clarsimp simp: create_word_objects_def reserve_region_def
-                        split_def do_machine_op_def unless_def)
-   apply wp
-  apply (clarsimp simp add: invs_def cur_tcb_def valid_state_def)
-  done
 
 crunch invs [wp]: reserve_region "invs"
 
@@ -686,14 +609,13 @@ lemma dmo_mapM_x_ccr_invs[wp]:
    apply (wp mapM_wp' | clarsimp)+
   done
 
-
 lemma init_arch_objects_invs_from_restricted:
   "\<lbrace>post_retype_invs new_type refs
          and (\<lambda>s. global_refs s \<inter> set refs = {})
          and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
-     init_arch_objects new_type ptr bits obj_sz refs dev
+     init_arch_objects new_type ptr bits obj_sz refs
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: init_arch_objects_def)
+  apply (simp add: init_arch_objects_def split del: split_if)
   apply (rule hoare_pre)
    apply (wp mapM_copy_global_invs_mappings_restricted
              hoare_vcg_const_Ball_lift
@@ -758,7 +680,7 @@ lemma valid_untyped_helper [Retype_AI_assms]:
   and     tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
   and   cover  : "range_cover ptr sz (obj_bits_api ty us) n"
   and   range  : "is_untyped_cap c \<Longrightarrow> usable_untyped_range c \<inter> {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} = {}"
-  and     pn   : "pspace_no_overlap ptr sz s"
+  and     pn   : "pspace_no_overlap_range_cover ptr sz s"
   and     cn   : "caps_no_overlap ptr sz s"
   and     vp   : "valid_pspace s"
   shows "valid_cap c
@@ -1377,7 +1299,7 @@ global_interpretation Retype_AI?: Retype_AI
 context Arch begin global_naming ARM
 
 lemma retype_region_plain_invs:
-  "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap ptr sz
+  "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap_range_cover ptr sz
       and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
       and region_in_kernel_window {ptr .. (ptr &&~~ mask sz) + 2 ^ sz - 1}
       and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
@@ -1409,13 +1331,86 @@ lemma clearMemory_um_eq_0:
   apply (fastforce simp: ignore_failure_def split: split_if_asm)
   done
 
-
 lemma cleanCacheRange_PoU_um_inv[wp]:
   "\<lbrace>\<lambda>m. P (underlying_memory m)\<rbrace>
     cleanCacheRange_PoU ptr w p
    \<lbrace>\<lambda>_ m. P (underlying_memory m)\<rbrace>"
   by (simp add: cleanCacheRange_PoU_def cleanByVA_PoU_def machine_op_lift_def machine_rest_lift_def
                 split_def | wp)+
+
+lemma invs_irq_state_independent:
+  "invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
+   = invs s"
+  by (clarsimp simp: irq_state_independent_A_def invs_def 
+      valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
+      only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
+      valid_reply_masters_def valid_global_refs_def valid_arch_state_def
+      valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
+      valid_arch_objs_def valid_arch_caps_def valid_global_objs_def
+      valid_kernel_mappings_def equal_kernel_mappings_def
+      valid_asid_map_def vspace_at_asid_def
+      pspace_in_kernel_window_def cap_refs_in_kernel_window_def
+      cur_tcb_def sym_refs_def state_refs_of_def  
+      swp_def valid_irq_states_def)
+
+crunch irq_masks_inv[wp]: cleanByVA_PoU, storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
+  (ignore: cacheRangeOp wp: crunch_wps)
+
+crunch underlying_mem_0[wp]: cleanByVA_PoU, clearMemory
+    "\<lambda>s. underlying_memory s p = 0"
+  (ignore: cacheRangeOp wp: crunch_wps storeWord_um_eq_0)
+
+lemma clearMemory_invs:
+  "\<lbrace>invs\<rbrace> do_machine_op (clearMemory w sz) \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (wp dmo_invs1)
+  apply clarsimp
+  apply (intro conjI impI allI)
+   apply (clarsimp simp: invs_def valid_state_def)
+   apply (erule_tac p=p in valid_machine_stateE)
+   apply (clarsimp simp: use_valid[OF _ clearMemory_underlying_mem_0])
+  apply (clarsimp simp: use_valid[OF _ clearMemory_irq_masks_inv[where P="op = v" for v], OF _ refl])
+  done
+
+lemma caps_region_kernel_window_imp:
+  "caps_of_state s p = Some cap
+    \<Longrightarrow> cap_refs_in_kernel_window s
+    \<Longrightarrow> S \<subseteq> cap_range cap
+    \<Longrightarrow> region_in_kernel_window S s"
+  apply (simp add: region_in_kernel_window_def)
+  apply (drule(1) cap_refs_in_kernel_windowD)
+  apply blast
+  done
+
+crunch irq_node[wp]: init_arch_objects "\<lambda>s. P (interrupt_irq_node s)"
+  (wp: crunch_wps)
+
+lemma init_arch_objects_excap:
+  "\<lbrace>ex_cte_cap_wp_to P p\<rbrace>
+      init_arch_objects tp ptr bits us refs
+   \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to P p s\<rbrace>"
+  by (wp ex_cte_cap_to_pres)
+
+crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
+  (wp: crunch_wps)
+
 end
+
+lemmas clearMemory_invs[wp] = ARM.clearMemory_invs
+
+lemmas invs_irq_state_independent[intro!, simp]
+    = ARM.invs_irq_state_independent
+
+lemmas init_arch_objects_invs_from_restricted
+    = ARM.init_arch_objects_invs_from_restricted
+
+lemmas caps_region_kernel_window_imp
+    = ARM.caps_region_kernel_window_imp
+
+lemmas init_arch_objects_wps
+    = ARM.init_arch_objects_cte_wp_at
+      ARM.init_arch_objects_valid_cap
+      ARM.init_arch_objects_cap_table
+      ARM.init_arch_objects_excap
+      ARM.init_arch_objects_st_tcb_at
 
 end

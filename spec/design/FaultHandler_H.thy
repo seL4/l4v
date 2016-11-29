@@ -14,6 +14,7 @@ chapter "Fault Handlers"
 
 theory FaultHandler_H
 imports FaultHandlerDecls_H TCB_H
+  "./$L4V_ARCH/ArchFaultHandler_H"
 begin
 
 context begin interpretation Arch .
@@ -22,6 +23,8 @@ requalify_consts
   fromVPtr
   exceptionMessage
   debugPrint
+  makeArchFaultMessage
+  handleArchFaultReply
 end
 
 
@@ -71,24 +74,20 @@ defs makeFaultMessage_def:
     return (1,
         pc#fromCPtr cptr#fromIntegral (fromEnum rp)#msgFromLookupFailure lf)
     od)
-  | (VMFault vptr archData) \<Rightarrow>    (do
-    pc \<leftarrow> asUser thread getRestartPC;
-    return (2, pc#fromVPtr vptr#archData)
-  od)
   | (UnknownSyscallException n) \<Rightarrow>    (do
     msg \<leftarrow> asUser thread $ mapM getRegister syscallMessage;
-    return (3, msg @ [n])
+    return (2, msg @ [n])
   od)
   | (UserException exception code) \<Rightarrow>    (do
     msg \<leftarrow> asUser thread $ mapM getRegister exceptionMessage;
-    return (4, msg @ [exception, code])
+    return (3, msg @ [exception, code])
   od)
+  | (ArchFault af) \<Rightarrow>    makeArchFaultMessage af thread
   )"
 
 defs handleFaultReply_def:
 "handleFaultReply x0 thread label msg\<equiv> (case x0 of
     (CapFault _ _ _) \<Rightarrow>    return True
-  | (VMFault _ _) \<Rightarrow>    return True
   | (UnknownSyscallException _) \<Rightarrow>    (do
     asUser thread $ zipWithM_x
         (\<lambda> r v. setRegister r $ sanitiseRegister r v)
@@ -101,6 +100,8 @@ defs handleFaultReply_def:
         exceptionMessage msg;
     return (label = 0)
   od)
+  | (ArchFault af) \<Rightarrow>   
+    handleArchFaultReply af thread label msg
   )"
 
 

@@ -194,11 +194,6 @@ lemma move_cap_wp2:
   apply (sep_solve)
   done
 
-thm get_cap_rv'
-
-
-
-
 lemma swap_cap_wp2:
   "\<lbrace><dest \<mapsto>c cap \<and>*  src \<mapsto>c cap' \<and>* R>\<rbrace>
     swap_cap cap' src cap dest
@@ -239,10 +234,6 @@ lemma sep_drule_example2:
   by (metis sep_map_S_decomp sep_map_o_decomp)
 
 (* sep_curry *)
-
-thm sep_curry[no_vars]
-thm sep_drule_example2[no_vars]
-
 
 lemma sep_drule_example_lemma:
   "\<lbrakk>(H \<and>* Z \<and>* J \<and>* L \<and>* Y \<and>* ptr \<mapsto>f obj \<and>* A \<and>* B \<and>*

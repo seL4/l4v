@@ -58,6 +58,7 @@ datatype register =
   | LR_svc
   | FaultInstruction
   | CPSR
+  | TPIDRURW
 
 consts'
 initContext :: "(register * machine_word) list"
@@ -101,7 +102,8 @@ definition
       LR,
       LR_svc,
       FaultInstruction,
-      CPSR
+      CPSR,
+      TPIDRURW
     ]"
 
 
@@ -156,6 +158,9 @@ definition
 
 definition
 "gpRegisters \<equiv> [R2, R3, R4, R5, R6, R7, LR]"
+
+definition
+"tpidrurwRegister \<equiv> TPIDRURW"
 
 definition
 "exceptionMessage \<equiv> [FaultInstruction, SP, CPSR]"

@@ -46,7 +46,7 @@ where
          s \<leftarrow> liftE $ get;
          has_kids \<leftarrow> returnOk $ has_children untyped_ref s;
 
-         returnOk $ Retype  untyped_ref type (unat size_bits) slots has_kids (unat node_window)
+         returnOk $ Retype untyped_ref type (unat size_bits) slots has_kids (unat node_window)
        odE \<sqinter> throw"
 
 (* Zero out a set of addresses. *)
@@ -132,20 +132,36 @@ where
 primrec (nonexhaustive)
   untyped_is_device :: "cdl_cap \<Rightarrow> bool"
 where
-  "untyped_is_device (UntypedCap d _ _) = d"
+    "untyped_is_device (UntypedCap d _ _) = d"
 
 definition
-  invoke_untyped :: "cdl_untyped_invocation \<Rightarrow> unit k_monad"
+  reset_untyped_cap :: "cdl_cap_ref \<Rightarrow> unit preempt_monad"
+where
+  "reset_untyped_cap cref \<equiv> doE
+    cap \<leftarrow> liftE $ get_cap cref;
+    whenE (available_range cap \<noteq> cap_objects cap) $ doE
+      liftE $ modify (detype (cap_objects cap));
+      new_rans \<leftarrow> liftE $ select {xs. (\<forall>S \<in> set xs.
+              S \<subseteq> cap_objects cap \<and> available_range cap \<subset> S)
+          \<and> xs \<noteq> [] \<and> List.last xs = cap_objects cap};
+      mapME_x (\<lambda>r. doE
+        liftE $ set_cap cref $ set_available_range cap r;
+        returnOk () \<sqinter> throw
+      odE) new_rans
+    odE
+  odE"
+
+definition
+  invoke_untyped :: "cdl_untyped_invocation \<Rightarrow> unit preempt_monad"
 where
   "invoke_untyped params \<equiv> case params of
      Retype untyped_ref new_type type_size target_slots has_kids num_objects \<Rightarrow>
-       do
+   doE
+     unlessE has_kids $ reset_untyped_cap untyped_ref;
+       liftE $ do
          untyped_cap \<leftarrow> get_cap untyped_ref;
 
-         (* If the untyped hasn't already been typed into something we reuse our names. *)
-         unless has_kids $ modify (detype (cap_objects untyped_cap));
-
-         new_range \<leftarrow> return $ if has_kids then (available_range untyped_cap) else (cap_objects untyped_cap);
+         new_range \<leftarrow> return $ available_range untyped_cap;
          new_obj_refs \<leftarrow> generate_object_ids num_objects new_type new_range;
 
          update_available_range new_range (map (\<lambda>s. pick s) new_obj_refs) untyped_ref untyped_cap;
@@ -159,7 +175,8 @@ where
          (* Ideally, we should return back to the user how many
           * objects were created. *)
 
-
          return ()
-       od"
+       od
+    odE"
+
 end

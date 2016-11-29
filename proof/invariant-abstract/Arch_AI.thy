@@ -180,7 +180,7 @@ lemma max_index_upd_caps_overlap_reserved:
 
 lemma max_index_upd_invs_simple:
   "\<lbrace>\<lambda>s. descendants_range_in (untyped_range cap) cref s \<and>
-         pspace_no_overlap (obj_ref_of cap) (cap_bits cap) s \<and>
+         pspace_no_overlap_range_cover (obj_ref_of cap) (cap_bits cap) s \<and>
          invs s \<and> cte_wp_at (op = cap) cref s \<and>  is_untyped_cap cap\<rbrace>
    set_cap  (max_free_index_update cap) cref \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_name_pre_state)
@@ -191,7 +191,7 @@ lemma max_index_upd_invs_simple:
 
 
 lemma sts_pspace_no_overlap [wp]:
-  "\<lbrace>pspace_no_overlap w b\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. pspace_no_overlap w b\<rbrace>"
+  "\<lbrace>pspace_no_overlap S\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. pspace_no_overlap S\<rbrace>"
   by (wp pspace_no_overlap_typ_at_lift)
 
 lemma diminished_cte_wp_at_valid_cap:

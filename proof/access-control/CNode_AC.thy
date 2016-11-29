@@ -138,9 +138,8 @@ where
   | RotateCall s_cap p_cap src pivot dest \<Rightarrow> pasObjectAbs aag ` {fst src, fst pivot, fst dest} \<subseteq> {pasSubject aag}
   | SaveCall ptr \<Rightarrow> is_subject aag (fst ptr)
   | DeleteCall ptr \<Rightarrow> is_subject aag (fst ptr)
-  | RecycleCall ptr \<Rightarrow> is_subject aag (fst ptr)
-  | RevokeCall ptr \<Rightarrow> is_subject aag (fst ptr))
-     and (case ci of RecycleCall ptr \<Rightarrow> cte_wp_at has_recycle_rights ptr | _ \<Rightarrow> \<top>)"
+  | CancelBadgedSendsCall cap \<Rightarrow> pas_cap_cur_auth aag cap
+  | RevokeCall ptr \<Rightarrow> is_subject aag (fst ptr))"
 
 declare resolve_address_bits'.simps[simp del]
 
@@ -199,6 +198,20 @@ lemma get_cap_prop_imp:
   apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
+  
+lemma get_cap_prop_imp2:
+  "\<lbrace>cte_wp_at (\<lambda>cap. P cap) slot\<rbrace> get_cap slot \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  apply (rule hoare_pre)
+   apply (wp get_cap_wp)
+  apply (clarsimp simp: cte_wp_at_def)
+  done
+  
+lemma get_cap_cur_auth:
+  "\<lbrace>pas_refined aag and cte_wp_at (\<lambda>_. True) slot and K (is_subject aag (fst slot))\<rbrace> get_cap slot \<lbrace>\<lambda>rv s. pas_cap_cur_auth aag rv\<rbrace>"
+  apply (rule hoare_pre)
+   apply (wp get_cap_wp)
+  apply (clarsimp simp: cte_wp_at_caps_of_state cap_cur_auth_caps_of_state)
+  done
 
 lemma decode_cnode_inv_authorised:
   "\<lbrace>pas_refined aag and invs and valid_cap cap and K (\<forall>c \<in> {cap} \<union> set excaps. pas_cap_cur_auth aag c)\<rbrace>
@@ -208,10 +221,10 @@ lemma decode_cnode_inv_authorised:
                  cong: if_cong Invocations_A.cnode_invocation.case_cong split del: split_if)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
-             get_cap_prop_imp[where Q=has_recycle_rights] lsfco_cte_at
-        | simp only: simp_thms if_simps fst_conv snd_conv Invocations_A.cnode_invocation.simps
+              lsfco_cte_at 
+        | simp only: simp_thms if_simps fst_conv snd_conv Invocations_A.cnode_invocation.simps K_def
         | wpc
-        | wp_once hoare_drop_imps)+
+        | wp_once get_cap_cur_auth)+
   apply clarsimp
   apply (frule is_cnode_into_is_subject [rotated], fastforce)
   apply simp

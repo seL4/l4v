@@ -13,20 +13,21 @@ imports
   LevityCatch
   "../invariant-abstract/Deterministic_AI"
   "../invariant-abstract/AInvs"
+  "../../lib/AddUpdSimps"
 begin
 
 context Arch begin
 lemmas [crunch_def] =
-  deriveCap_def finaliseCap_def recycleCap_def
-  hasRecycleRights_def sameRegionAs_def isPhysicalCap_def
+  deriveCap_def finaliseCap_def
+  hasCancelSendRights_def sameRegionAs_def isPhysicalCap_def
   sameObjectAs_def updateCapData_def maskCapRights_def
   createObject_def capUntypedPtr_def capUntypedSize_def
   performInvocation_def decodeInvocation_def
 
 context begin global_naming global
 requalify_facts
-  Retype_H.deriveCap_def Retype_H.finaliseCap_def Retype_H.recycleCap_def
-  Retype_H.hasRecycleRights_def Retype_H.sameRegionAs_def Retype_H.isPhysicalCap_def
+  Retype_H.deriveCap_def Retype_H.finaliseCap_def
+  Retype_H.hasCancelSendRights_def Retype_H.sameRegionAs_def Retype_H.isPhysicalCap_def
   Retype_H.sameObjectAs_def Retype_H.updateCapData_def Retype_H.maskCapRights_def
   Retype_H.createObject_def Retype_H.capUntypedPtr_def Retype_H.capUntypedSize_def
   Retype_H.performInvocation_def Retype_H.decodeInvocation_def
@@ -630,14 +631,11 @@ definition
      capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
      mdbFirstBadged node')"
 
-function (sequential)
+fun (sequential)
   untypedRange :: "capability \<Rightarrow> word32 set"
 where
    "untypedRange (UntypedCap d p n f) = {p .. p + 2 ^ n - 1}"
 |  "untypedRange c = {}"
-  by pat_completeness auto
-
-termination by lexicographic_order
 
 primrec
   acapClass :: "arch_capability \<Rightarrow> capclass"
@@ -996,7 +994,7 @@ definition
   global_refs' :: "kernel_state \<Rightarrow> obj_ref set"
 where
   "global_refs' \<equiv> \<lambda>s.
-  {ksIdleThread s, armKSGlobalsFrame (ksArchState s)} \<union>
+  {ksIdleThread s} \<union>
    page_directory_refs' (armKSGlobalPD (ksArchState s)) \<union>
    (\<Union>pt \<in> set (armKSGlobalPTs (ksArchState s)). page_table_refs' pt) \<union>
    range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"
@@ -1040,7 +1038,6 @@ definition
   valid_arch_state' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_arch_state' \<equiv> \<lambda>s.
-  typ_at' UserDataT (armKSGlobalsFrame (ksArchState s)) s \<and>
   valid_asid_table' (armKSASIDTable (ksArchState s)) s \<and>
   page_directory_at' (armKSGlobalPD (ksArchState s)) s \<and>
   valid_global_pts' (armKSGlobalPTs (ksArchState s)) s \<and>
@@ -1111,6 +1108,14 @@ definition
   "valid_machine_state' \<equiv>
    \<lambda>s. \<forall>p. pointerInUserData p s \<or> pointerInDeviceData p s \<or> underlying_memory (ksMachineState s) p = 0"
 
+definition
+  "untyped_ranges_zero_inv cps urs \<equiv>
+    urs = ran (untypedZeroRange \<circ>\<^sub>m cps)"
+
+abbreviation
+  "untyped_ranges_zero' s \<equiv> untyped_ranges_zero_inv (cteCaps_of s)
+      (gsUntypedZeroRanges s)"
+
 (* FIXME: this really should be a definition like the above. *)
 (* The schedule is invariant. *)
 abbreviation
@@ -1138,7 +1143,8 @@ where
                       \<and> valid_pde_mappings' s
                       \<and> pspace_domain_valid s
                       \<and> ksCurDomain s \<le> maxDomain
-                      \<and> valid_dom_schedule' s"
+                      \<and> valid_dom_schedule' s
+                      \<and> untyped_ranges_zero' s"
 
 definition
   "cur_tcb' s \<equiv> tcb_at' (ksCurThread s) s"
@@ -1205,7 +1211,7 @@ abbreviation(input)
            \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s \<and> valid_pde_mappings' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
-           \<and> valid_dom_schedule' s"
+           \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
 abbreviation(input)
  "all_invs_but_ct_not_inQ'
@@ -1218,7 +1224,7 @@ abbreviation(input)
            \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s \<and> valid_pde_mappings' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
-           \<and> valid_dom_schedule' s"
+           \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
 lemma all_invs_but_sym_refs_not_ct_inQ_check':
   "(all_invs_but_sym_refs_ct_not_inQ' and sym_refs \<circ> state_refs_of' and ct_not_inQ) = invs'"
@@ -1239,7 +1245,7 @@ definition
            \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_not_inQ s \<and> valid_pde_mappings' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
-           \<and> valid_dom_schedule' s"
+           \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
 lemmas invs_no_cicd'_def = all_invs_but_ct_idle_or_in_cur_domain'_def
 
@@ -3114,6 +3120,10 @@ interpretation ksDomainTime:
   P_Arch_Idle_Int_Cur_update_eq "ksDomainTime_update f"
   by unfold_locales auto
 
+interpretation gsUntypedZeroRanges:
+  P_Arch_Idle_Int_Cur_update_eq "gsUntypedZeroRanges_update f"
+  by unfold_locales auto
+
 lemma ko_wp_at_norm:
   "ko_wp_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> ko_wp_at' (op = ko) p s"
   by (auto simp add: ko_wp_at'_def)
@@ -3591,15 +3601,35 @@ context begin
 private definition
   "ko_at'_defn v \<equiv> ko_at' v"
 
-private lemma ko_at_defn_unique:
+private lemma ko_at_defn_rewr:
   "ko_at'_defn ko p s \<Longrightarrow> (obj_at' P p s = P ko)"
   unfolding ko_at'_defn_def
   by (auto simp: obj_at'_def)
 
+private lemma ko_at_defn_uniqueD:
+  "ko_at'_defn ko p s \<Longrightarrow> ko_at'_defn ko' p s \<Longrightarrow> ko' = ko"
+  unfolding ko_at'_defn_def
+  by (auto simp: obj_at'_def)
+
+private lemma ko_at_defn_pred_tcb_at':
+  "ko_at'_defn ko p s \<Longrightarrow> (pred_tcb_at' proj P p s = P (proj (tcb_to_itcb' ko)))"
+  by (auto simp: pred_tcb_at'_def ko_at_defn_rewr)
+
+private lemma ko_at_defn_ko_wp_at':
+  "ko_at'_defn ko p s \<Longrightarrow> (ko_wp_at' P p s = P (injectKO ko))"
+  by (clarsimp simp: ko_at'_defn_def obj_at'_real_def
+                     ko_wp_at'_def project_inject)
+
 method normalise_obj_at' =
   (clarsimp?, elim obj_at_ko_at'[folded ko_at'_defn_def, elim_format],
-   clarsimp simp: ko_at_defn_unique, clarsimp simp: ko_at'_defn_def)
+   clarsimp simp: ko_at_defn_rewr ko_at_defn_pred_tcb_at' ko_at_defn_ko_wp_at',
+   ((drule(1) ko_at_defn_uniqueD)+)?,
+   clarsimp simp: ko_at'_defn_def)
 
 end
 
+add_upd_simps "invs' (gsUntypedZeroRanges_update f s)
+    \<and> valid_queues (gsUntypedZeroRanges_update f s)"
+  (obj_at'_real_def)
+declare upd_simps[simp]
 end

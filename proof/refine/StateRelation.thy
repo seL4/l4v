@@ -32,12 +32,17 @@ where
   | ExceptionTypes_A.GuardMismatch n g      \<Rightarrow> Fault_H.GuardMismatch n (of_bl g) (length g)"
 
 primrec
+  arch_fault_map :: "Machine_A.ARM_A.arch_fault \<Rightarrow> ArchFault_H.ARM_H.arch_fault"
+where
+ "arch_fault_map (Machine_A.ARM_A.VMFault ptr msg) = ArchFault_H.ARM_H.VMFault ptr msg"
+
+primrec
   fault_map :: "ExceptionTypes_A.fault \<Rightarrow> Fault_H.fault"
 where
   "fault_map (ExceptionTypes_A.CapFault ref bool failure) =
    Fault_H.CapFault ref bool (lookup_failure_map failure)"
-| "fault_map (ExceptionTypes_A.VMFault  ptr bool) =
-   Fault_H.VMFault  ptr bool"
+| "fault_map (ExceptionTypes_A.ArchFault  arch_fault) =
+   Fault_H.ArchFault  (arch_fault_map arch_fault)"
 | "fault_map (ExceptionTypes_A.UnknownSyscallException n) =
    Fault_H.UnknownSyscallException n"
 | "fault_map (ExceptionTypes_A.UserException x y) =
@@ -167,12 +172,18 @@ where
      = (ts' = Structures_H.BlockedOnNotification oref)"
 
 definition
+  arch_tcb_relation :: "Structures_A.arch_tcb \<Rightarrow> Structures_H.arch_tcb \<Rightarrow> bool"
+where
+ "arch_tcb_relation \<equiv> \<lambda>atcb atcb'.
+   tcb_context atcb = atcbContext atcb'"
+
+definition
   tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
 where
  "tcb_relation \<equiv> \<lambda>tcb tcb'.
     tcb_fault_handler tcb = to_bl (tcbFaultHandler tcb')
   \<and> tcb_ipc_buffer tcb = tcbIPCBuffer tcb'
-  \<and> tcb_context tcb = tcbContext tcb'
+  \<and> arch_tcb_relation (tcb_arch tcb) (tcbArch tcb')
   \<and> thread_state_relation (tcb_state tcb) (tcbState tcb')
   \<and> fault_rel_optionation (tcb_fault tcb) (tcbFault tcb')
   \<and> cap_relation (tcb_ctable tcb) (cteCap (tcbCTable tcb'))
@@ -306,7 +317,7 @@ lemma obj_relation_cuts_def3:
                             ` (UNIV :: 12 word set)
    | AArch (AUserData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
    | AArch (ADeviceData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserDataDevice ) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
-   | AGarbage \<Rightarrow> {(x, \<bottom>\<bottom>)}
+   | AGarbage _ \<Rightarrow> {(x, \<bottom>\<bottom>)}
    | _ \<Rightarrow> {(x, other_obj_relation)})"
   apply (simp add: obj_relation_cuts_def2 a_type_def
             split: Structures_A.kernel_object.split
@@ -322,7 +333,7 @@ definition
    | AArch APageDirectory \<Rightarrow> False
    | AArch (AUserData _)   \<Rightarrow> False
    | AArch (ADeviceData _)   \<Rightarrow> False
-   | AGarbage \<Rightarrow> False
+   | AGarbage _ \<Rightarrow> False
    | _ \<Rightarrow> True"
 
 lemma is_other_obj_relation_type_CapTable:
@@ -433,8 +444,7 @@ definition
   arch_state_relation :: "(arch_state \<times> ARM_H.kernel_state) set"
 where
   "arch_state_relation \<equiv> {(s, s') .
-         arm_globals_frame s = armKSGlobalsFrame s'
-       \<and> arm_asid_table s = armKSASIDTable s' o ucast
+         arm_asid_table s = armKSASIDTable s' o ucast
        \<and> arm_global_pd s = armKSGlobalPD s'
        \<and> arm_hwasid_table s = armKSHWASIDTable s'
        \<and> arm_global_pts s = armKSGlobalPTs s'

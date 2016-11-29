@@ -261,15 +261,9 @@ lemma seL4_Page_Table_Map:
        apply (wp lookup_cap_and_slot_rvu[where r = root_size
         and cap' = "PageTableCap ptr Real None"])[1]
       apply (erule_tac Q="cdl_current_domain sa = minBound" in conjE, assumption)
-     apply (rule hoare_pre)
       apply (wp lookup_cap_and_slot_rvu[where r = root_size
        and cap' = "PageTableCap ptr Real None"])[1]
      apply clarsimp
-     apply (rule conjI)
-      apply (clarsimp simp:reset_cap_asid_def ep_related_cap_def
-        split:cdl_cap.splits)
-     apply assumption
-    apply clarsimp
     apply (wp update_thread_intent_update hoare_vcg_all_lift
       hoare_vcg_imp_lift)
    apply clarsimp
@@ -404,15 +398,9 @@ lemma seL4_Section_Map_wp:
        apply (wp lookup_cap_and_slot_rvu[where r = root_size
         and cap' = "FrameCap dev frame_ptr rights n Real None"])[1]
       apply (erule_tac Q="cdl_current_domain sa = minBound" in conjE, assumption)
-     apply (rule hoare_pre)
       apply (wp lookup_cap_and_slot_rvu[where r = root_size
        and cap' = "FrameCap dev frame_ptr rights n Real None"])[1]
      apply clarsimp
-     apply (rule conjI)
-      apply (clarsimp simp:reset_cap_asid_def ep_related_cap_def
-        split:cdl_cap.splits)
-     apply assumption
-    apply clarsimp
     apply (wp update_thread_intent_update hoare_vcg_all_lift
       hoare_vcg_imp_lift)
    apply clarsimp
@@ -551,15 +539,6 @@ lemma seL4_Page_Map_wp:
        apply (wp lookup_cap_and_slot_rvu[where r = root_size
         and cap' = "FrameCap dev frame_ptr rights n Real None"])[1]
       apply (erule_tac Q="cdl_current_domain sa = minBound" in conjE, assumption)
-     apply (rule hoare_pre)
-      apply (wp lookup_cap_and_slot_rvu[where r = root_size
-       and cap' = "FrameCap dev frame_ptr rights n Real None"])[1]
-     apply clarsimp
-     apply (rule conjI)
-      apply (clarsimp simp:reset_cap_asid_def ep_related_cap_def
-        split:cdl_cap.splits)
-     apply assumption
-    apply clarsimp
     apply (wp update_thread_intent_update hoare_vcg_all_lift
       hoare_vcg_imp_lift)
    apply clarsimp
@@ -731,22 +710,13 @@ lemma seL4_ASIDPool_Assign_wp:
          apply (rule lookup_cap_and_slot_rvu[where r = root_size
            and cap' = "AsidPoolCap p base"])
         apply (erule_tac Q="cdl_current_domain s = minBound" in conjE, assumption)
-       apply clarsimp
-       apply (rule hoare_pre)
-        apply (wp lookup_cap_and_slot_rvu[where r = root_size
-          and cap' = "AsidPoolCap p base"])[1]
-       apply clarsimp
-       apply (rule conjI)
-        apply (clarsimp simp:reset_cap_asid_def ep_related_cap_def
-          split:cdl_cap.splits)
-       apply assumption
+    apply clarsimp
     apply (wp update_thread_intent_update hoare_vcg_all_lift
       hoare_vcg_imp_lift)
+   apply clarsimp defer
    apply clarsimp
-   defer
-  apply clarsimp
-  using misc sz
-  apply (intro conjI impI allI, simp_all add: reset_cap_asid_simps2)
+   using misc sz
+   apply (intro conjI impI allI, simp_all add: reset_cap_asid_simps2)
         apply sep_solve
        apply sep_solve
       apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def sep_conj_assoc)
@@ -754,8 +724,7 @@ lemma seL4_ASIDPool_Assign_wp:
      apply (clarsimp dest!:reset_cap_asid_simps2 simp: ep_related_cap_def)
     apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def sep_conj_assoc)
     apply (sep_solve)
-    apply (sep_solve)
-    apply (simp)
+   apply (sep_solve)
   apply clarsimp
   apply (drule_tac x = "AsidPoolCap p base" in spec)
    apply clarsimp

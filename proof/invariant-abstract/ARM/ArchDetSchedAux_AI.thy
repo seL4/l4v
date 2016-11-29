@@ -21,6 +21,44 @@ crunch ct[wp]: init_arch_objects "\<lambda>s. P (cur_thread s)" (wp: crunch_wps 
 crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at Q t" (wp: mapM_x_wp' hoare_unless_wp)
 crunch valid_etcbs[wp, DetSchedAux_AI_assms]: init_arch_objects valid_etcbs (wp: valid_etcbs_lift)
 
+crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
+  (wp: crunch_wps dxo_wp_weak preemption_point_inv mapME_x_inv_wp
+    simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym unless_def
+    ignore: freeMemory ignore: retype_region_ext)
+crunch ready_queues[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (ready_queues s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
+    simp: detype_def detype_ext_def whenE_def unless_def
+          wrap_ext_det_ext_ext_def mapM_x_defsym 
+  ignore: freeMemory)
+crunch scheduler_action[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (scheduler_action s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
+      simp: detype_def detype_ext_def whenE_def unless_def
+            wrap_ext_det_ext_ext_def mapM_x_defsym
+    ignore: freeMemory)
+crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_domain s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
+      simp: detype_def detype_ext_def whenE_def unless_def
+            wrap_ext_det_ext_ext_def mapM_x_defsym
+    ignore: freeMemory)
+crunch idle_thread[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (idle_thread s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv dxo_wp_weak
+      simp: detype_def detype_ext_def whenE_def unless_def
+            wrap_ext_det_ext_ext_def mapM_x_defsym
+    ignore: freeMemory retype_region_ext)
+
+crunch inv[wp]: get_tcb_queue, ethread_get "\<lambda>s. P s"
+
+lemma tcb_sched_action_valid_idle_etcb:
+  "\<lbrace>valid_idle_etcb\<rbrace>
+     tcb_sched_action foo thread
+   \<lbrace>\<lambda>_. valid_idle_etcb\<rbrace>"
+  apply (rule valid_idle_etcb_lift)
+  apply (simp add: tcb_sched_action_def set_tcb_queue_def)
+  apply (wp | simp)+
+  done
+
+crunch ekheap[wp]: do_machine_op "\<lambda>s. P (ekheap s)"
+
 lemma delete_objects_etcb_at[wp, DetSchedAux_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. etcb_at P t s\<rbrace> delete_objects a b \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
   apply (simp add: delete_objects_def)
@@ -28,15 +66,28 @@ lemma delete_objects_etcb_at[wp, DetSchedAux_AI_assms]:
   apply (simp add: detype_def detype_ext_def wrap_ext_det_ext_ext_def etcb_at_def|wp)+
   done
 
+crunch etcb_at[wp]: reset_untyped_cap "etcb_at P t"
+  (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps
+    simp: unless_def)
+
+crunch valid_etcbs[wp]: reset_untyped_cap "valid_etcbs"
+  (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps
+    simp: unless_def)
+
 lemma invoke_untyped_etcb_at [DetSchedAux_AI_assms]:
-  "\<lbrace>(\<lambda>s :: det_ext state. etcb_at P t s) and valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
+  "\<lbrace>(\<lambda>s :: det_ext state. etcb_at P t s) and valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   apply (cases ui)
-  apply (simp add: mapM_x_def[symmetric])
-  apply wp
-       apply (wp retype_region_etcb_at mapM_x_wp'  create_cap_no_pred_tcb_at 
-                 hoare_convert_imp typ_at_pred_tcb_at_lift )
-  apply simp
+  apply (simp add: mapM_x_def[symmetric] invoke_untyped_def whenE_def
+           split del: split_if)
+  apply (rule hoare_pre)
+   apply (wp retype_region_etcb_at mapM_x_wp'
+             create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift
+             hoare_convert_imp[OF create_cap_no_pred_tcb_at]
+             hoare_convert_imp[OF _ init_arch_objects_exst]
+      | simp
+      | (wp_once hoare_drop_impE_E))+
   done
+
 
 crunch valid_blocked[wp, DetSchedAux_AI_assms]: init_arch_objects valid_blocked
   (wp: valid_blocked_lift set_cap_typ_at)
@@ -118,6 +169,9 @@ crunch valid_sched_action[wp]: init_arch_objects valid_sched_action (wp: valid_s
 crunch valid_sched[wp]: init_arch_objects valid_sched (wp: valid_sched_lift)
 
 end
+
+lemmas tcb_sched_action_valid_idle_etcb
+    = ARM.tcb_sched_action_valid_idle_etcb
 
 global_interpretation DetSchedAux_AI_det_ext?: DetSchedAux_AI_det_ext
   proof goal_cases

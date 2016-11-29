@@ -1653,5 +1653,39 @@ lemma loadWordUser_inv :
   unfolding loadWordUser_def 
   by (wp dmo_inv' loadWord_inv stateAssert_wp | simp)+
 
+lemma clearMemory_vms':
+  "valid_machine_state' s \<Longrightarrow>
+   \<forall>x\<in>fst (clearMemory ptr bits (ksMachineState s)).
+      valid_machine_state' (s\<lparr>ksMachineState := snd x\<rparr>)"
+  apply (clarsimp simp: valid_machine_state'_def
+                        disj_commute[of "pointerInUserData p s" for p s])
+  apply (drule_tac x=p in spec, simp)
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = 0"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P], simp_all)
+  apply (rule clearMemory_um_eq_0)
+  done
+
+lemma ct_not_inQ_ksMachineState_update[simp]:
+  "ct_not_inQ (s\<lparr>ksMachineState := v\<rparr>) = ct_not_inQ s"
+  by (simp add: ct_not_inQ_def)
+
+lemma ct_in_current_domain_ksMachineState_update[simp]:
+  "ct_idle_or_in_cur_domain' (s\<lparr>ksMachineState := v\<rparr>) = ct_idle_or_in_cur_domain' s"
+  by (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+
+lemma dmo_clearMemory_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (clearMemory w sz) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (simp add: doMachineOp_def split_def)
+  apply wp
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (rule conjI)
+   apply (simp add: valid_irq_masks'_def, elim allEI, clarsimp)
+   apply (drule use_valid)
+     apply (rule no_irq_clearMemory[simplified no_irq_def, rule_format])
+    apply simp_all
+  apply (drule clearMemory_vms')
+  apply fastforce
+  done
+
 end
 end

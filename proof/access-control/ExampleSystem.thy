@@ -313,10 +313,10 @@ where
      tcb_state              = Running, 
      tcb_fault_handler      = undefined, 
      tcb_ipc_buffer         = undefined,
-     tcb_context            = undefined,
      tcb_fault              = undefined, 
      tcb_bound_notification = None,
-     tcb_mcpriority         = undefined \<rparr>"
+     tcb_mcpriority         = undefined,
+     tcb_arch               = \<lparr>tcb_context = undefined\<rparr> \<rparr>"
 
 
 text {* T1's tcb *}
@@ -334,10 +334,10 @@ where
      tcb_state              = BlockedOnReceive 9,
      tcb_fault_handler      = undefined, 
      tcb_ipc_buffer         = undefined,
-     tcb_context            = undefined,
      tcb_fault              = undefined,
      tcb_bound_notification = None,
-     tcb_mcpriority         = undefined \<rparr>"
+     tcb_mcpriority         = undefined,
+     tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 definition
  "obj1_10 \<equiv> CNode 10 (Map.empty([] \<mapsto> cap.NullCap))"
@@ -388,7 +388,6 @@ where
     interrupt_irq_node = (\<lambda>_. 10),
     interrupt_states = undefined,
     arch_state = \<lparr> 
-        arm_globals_frame = undefined,
         arm_asid_table = (\<lambda> x. None),
         arm_hwasid_table = undefined,
         arm_next_asid = undefined,
@@ -852,10 +851,10 @@ where
      tcb_state              = Running, 
      tcb_fault_handler      = undefined, 
      tcb_ipc_buffer         = undefined,
-     tcb_context            = undefined,
      tcb_fault              = undefined,
      tcb_bound_notification = None,
-     tcb_mcpriority         = undefined \<rparr>"
+     tcb_mcpriority         = undefined,
+     tcb_arch          = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
 text {* T1's tcb *}
@@ -873,10 +872,10 @@ where
      tcb_state              = BlockedOnReceive 9,
      tcb_fault_handler      = undefined, 
      tcb_ipc_buffer         = undefined,
-     tcb_context            = undefined,
      tcb_fault              = undefined,
      tcb_bound_notification = None,
-     tcb_mcpriority         = undefined \<rparr>"
+     tcb_mcpriority         = undefined,
+     tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.
 but Tom says it only matters if the sender can grant - which is not the case of the UT1 - I think *)
@@ -912,7 +911,6 @@ where
     interrupt_irq_node = (\<lambda>_. 9001),
     interrupt_states = undefined,
     arch_state = \<lparr> 
-        arm_globals_frame = undefined,
         arm_asid_table = (\<lambda> x. None),
         arm_hwasid_table = undefined,
         arm_next_asid = undefined,

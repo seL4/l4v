@@ -236,11 +236,10 @@ where
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
      (* tcbBoundNotification        = *) None
-     (* tcbContext         = *) undefined"
+     (* tcbContext         = *) (ArchThread undefined)"
    
 
 text {* High's tcb *}
-
 definition
   High_tcbH :: Structures_H.tcb
 where
@@ -261,7 +260,7 @@ where
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
      (* tcbBoundNotification        = *) None
-     (* tcbContext         = *) undefined"
+     (* tcbContext         = *) (ArchThread undefined)"
 
    
 text {* idle's tcb *}
@@ -285,7 +284,7 @@ where
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
      (* tcbBoundNotification        = *) None
-     (* tcbContext         = *) empty_context"
+     (* tcbContext         = *) (ArchThread empty_context)"
 
 definition
   irq_cte :: "Structures_H.cte"
@@ -1084,7 +1083,6 @@ lemma kh0H_SomeD:
 
 definition arch_state0H :: Arch.kernel_state where
   "arch_state0H \<equiv> ARMKernelState
-             (* armKSGlobalsFrame = *) init_globals_frame
              (* armKSASIDTable    = *) Map.empty
              (* armKSHWASIDTable  = *) Map.empty
              (* armKSNextASID     = *) 0
@@ -1107,6 +1105,7 @@ where
           High_cnode_ptr \<mapsto> 10,
           Silc_cnode_ptr \<mapsto> 10,
           irq_cnode_ptr  \<mapsto> 0),
+    gsUntypedZeroRanges = ran (map_comp untypedZeroRange (option_map cteCap o map_to_ctes kh0H)),
     gsMaxObjectSize = card (UNIV :: word32 set),
     ksDomScheduleIdx = 0,
     ksDomSchedule = [(0 ,10), (1, 10)],
@@ -1546,6 +1545,11 @@ lemma map_to_ctes_kh0H:
           clarsimp simp: option_update_range_def kh0H_dom_distinct[THEN set_mem_neq] not_in_range_cte_None,
           ((clarsimp simp: kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None irq_node_offs_in_range |
           clarsimp simp: kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1])+
+
+lemma option_update_range_map_comp:
+  "option_update_range m m' = map_add m' m"
+  by (simp add: fun_eq_iff option_update_range_def map_comp_def map_add_def
+         split: option.split)
 
 lemma tcb_offs_in_rangeI:
   "\<lbrakk>ptr \<le> ptr + x; ptr + x \<le> ptr + 2 ^ 9 - 1\<rbrakk> \<Longrightarrow> ptr + x \<in> tcb_offs_range ptr"
@@ -2792,6 +2796,9 @@ end
 axiomatization newKSDomSchedInst where
   newKSDomSched: "newKSDomSchedule = [(0,0xA), (1, 0xA)]"
 
+axiomatization newKSDomainTimeInst where
+  newKSDomainTime: "newKSDomainTime = 5"
+
 (* kernel_data_refs is an undefined constant at the moment, and therefore
    cannot be referred to in valid_global_refs' and pspace_domain_valid.
    We use an axiomatization for the moment. *)
@@ -2924,12 +2931,8 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: valid_arch_state'_def)
    apply (intro conjI)
-        apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
         apply (clarsimp simp: s0H_internal_def arch_state0H_def objBitsKO_def pageBits_def)
-        apply (rule conjI)
          apply (clarsimp simp: s0_ptr_defs is_aligned_def)
-        apply (rule pspace_distinctD'')
-         apply (simp add: objBitsKO_def pageBits_def)
         apply (cut_tac s0H_pspace_distinct')[1]
         apply (simp add: s0H_internal_def arch_state0H_def)
        apply (clarsimp simp: valid_asid_table'_def s0H_internal_def arch_state0H_def)
@@ -3034,16 +3037,11 @@ lemma s0H_invs:
    apply (clarsimp split: split_if_asm)
   apply (rule conjI)
    apply (clarsimp simp: kdr_pspace_domain_valid) (* use axiomatization for now *)
-  apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def)
-  apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def)
-  apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def maxDomain_def numDomains_def dschDomain_def dschLength_def)
-  apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def newKernelState_def newKSDomSched)
-  apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def newKernelState_def newKSDomSched)
+  (* unfold s0H_internal for remaining goals *)
+  apply (clarsimp simp: s0H_internal_def cteCaps_of_def
+                        untyped_ranges_zero_inv_def
+                        maxDomain_def numDomains_def dschDomain_def dschLength_def)
+  apply (clarsimp simp: newKernelState_def newKSDomSched)
   apply (clarsimp simp: cur_tcb'_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
@@ -3199,9 +3197,9 @@ lemma s0_pspace_rel:
                apply (clarsimp simp: kh0H_obj_def split del: split_if)
                apply (cut_tac x=ya in pd_offs_in_range(3))
                apply (clarsimp simp: pd_offs_range_def pde_relation_def pde_relation_aligned_def)
-              apply (clarsimp simp: kh0H_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def)
-             apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def the_nat_to_bl_simps)
-            apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def the_nat_to_bl_simps)
+              apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def
+                                    tcb_relation_def arch_tcb_relation_def fault_rel_optionation_def
+                                    word_bits_def the_nat_to_bl_simps)+
            apply (clarsimp simp: kh0H_obj_def High_pt_def High_pt'H_def High_pt'_def split del: split_if)
            apply (cut_tac x=ya in pt_offs_in_range(2))
            apply (clarsimp simp: pt_offs_range_def pte_relation_def pte_relation_aligned_def pte_relation'_def)
@@ -3342,14 +3340,7 @@ lemma s0_srel: "(s0_internal, s0H_internal) \<in> state_relation"
                       clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)+)[5]
            apply (clarsimp simp: s0_internal_def s0H_internal_def arch_state_relation_def arch_state0_def arch_state0H_def)
           apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def interrupt_state_relation_def irq_state_relation_def)
-         apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-        apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-       apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-      apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-     apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-    apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-   apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
-  apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
+         apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)+
   done
 
 definition
@@ -3372,26 +3363,26 @@ lemma step_restrict_s0:
    apply (drule ct_idle_related[OF s0_srel])
    apply simp
   apply (clarsimp simp: full_invs_if'_def s0H_invs)
-  apply (intro conjI)
-     apply (simp only: ex_abs_def)
-     apply (rule_tac x="s0_internal" in exI)
-     apply (simp only: einvs_s0 s0_srel)
-    apply (clarsimp simp: vs_valid_duplicates'_def split: option.splits)
-    apply (frule kh0H_SomeD)
-    apply (elim disjE, simp_all add: vs_ptr_align_def kh0H_all_obj_def')[1]
-           apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
+  apply (rule conjI)
+   apply (simp only: ex_abs_def)
+   apply (rule_tac x="s0_internal" in exI)
+   apply (simp only: einvs_s0 s0_srel)
+  apply (simp add: s0H_internal_def valid_domain_list'_def)
+  apply (rule conjI)
+   apply (clarsimp simp: vs_valid_duplicates'_def split: option.splits)
+   apply (frule kh0H_SomeD)
+   apply (elim disjE, simp_all add: vs_ptr_align_def kh0H_all_obj_def')[1]
           apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
          apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
-        apply (clarsimp split: split_if_asm)
-       apply (clarsimp simp: High_pd'H_def split: split_if_asm)
-      apply (clarsimp simp: Low_pd'H_def split: split_if_asm)
-     apply (clarsimp simp: High_pt'H_def split: split_if_asm)
-    apply (clarsimp simp: Low_pt'H_def split: split_if_asm)
-   apply (rule disjI1)
-   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned Low_tcbH_def)
-   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
-  apply (simp add: s0H_internal_def)
+        apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
+       apply (clarsimp split: split_if_asm)
+      apply (clarsimp simp: High_pd'H_def split: split_if_asm)
+     apply (clarsimp simp: Low_pd'H_def split: split_if_asm)
+    apply (clarsimp simp: High_pt'H_def split: split_if_asm)
+   apply (clarsimp simp: Low_pt'H_def split: split_if_asm)
+  apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned Low_tcbH_def)
+  apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
+  apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
   done
 
 lemma Sys1_valid_initial_state_noenabled:

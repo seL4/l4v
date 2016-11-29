@@ -48,7 +48,7 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | TCBUnbindNotification
 >         | CNodeRevoke
 >         | CNodeDelete
->         | CNodeRecycle
+>         | CNodeCancelBadgedSends
 >         | CNodeCopy
 >         | CNodeMint
 >         | CNodeMove
@@ -85,7 +85,7 @@ The following type enumerates all the kinds of invocations that clients can requ
 >          TCBUnbindNotification -> 13
 >          CNodeRevoke -> 14
 >          CNodeDelete -> 15
->          CNodeRecycle -> 16
+>          CNodeCancelBadgedSends -> 16
 >          CNodeCopy -> 17
 >          CNodeMint -> 18
 >          CNodeMove -> 19
@@ -116,7 +116,7 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | n == 13 = TCBUnbindNotification
 >         | n == 14 = CNodeRevoke
 >         | n == 15 = CNodeDelete
->         | n == 16 = CNodeRecycle
+>         | n == 16 = CNodeCancelBadgedSends
 >         | n == 17 = CNodeCopy
 >         | n == 18 = CNodeMint
 >         | n == 19 = CNodeMove

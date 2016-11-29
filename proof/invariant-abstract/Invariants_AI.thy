@@ -241,9 +241,9 @@ definition
   "obj_range p obj \<equiv> {p .. p + 2^obj_bits obj - 1}"
 
 definition
-  "pspace_no_overlap ptr bits \<equiv>
+  "pspace_no_overlap S \<equiv>
            \<lambda>s. \<forall>x ko. kheap s x = Some ko \<longrightarrow>
-                {x .. x + (2 ^ obj_bits ko - 1)} \<inter> {ptr .. (ptr &&~~ mask bits)  + (2 ^  bits - 1)} = {}"
+                {x .. x + (2 ^ obj_bits ko - 1)} \<inter> S = {}"
 
 definition
   "valid_untyped c \<equiv> \<lambda>s.
@@ -924,7 +924,7 @@ where
 definition
   "obj_bits_type T \<equiv> case T of
     ACapTable n \<Rightarrow> 4 + n
-  | AGarbage \<Rightarrow> 4
+  | AGarbage n \<Rightarrow> n
   | ATCB \<Rightarrow> obj_bits (TCB undefined)
   | AEndpoint \<Rightarrow> obj_bits (Endpoint undefined)
   | ANTFN \<Rightarrow> obj_bits (Notification undefined)
@@ -1713,6 +1713,13 @@ lemma cte_wp_caps_of_lift:
   apply (simp add: cte_wp_at_caps_of_state)
   done
 
+lemma ex_cte_cap_to_pres:
+  assumes x: "\<And>P p. \<lbrace>cte_wp_at P p\<rbrace> f \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
+  assumes irq: "\<And>P. \<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> f \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)\<rbrace>"
+  shows      "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> f \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
+  by (simp add: ex_cte_cap_wp_to_def,
+      wp hoare_vcg_ex_lift hoare_use_eq[where f=interrupt_irq_node, OF irq, OF x])
+
 lemma valid_mdb_eqI:
   assumes "valid_mdb s"
   assumes c: "\<And>p P. cte_wp_at P p s = cte_wp_at P p s'"
@@ -2328,13 +2335,11 @@ lemma typ_at_eq_kheap_obj:
   "typ_at ANTFN p s \<longleftrightarrow> (\<exists>ntfn. kheap s p = Some (Notification ntfn))"
   "typ_at (ACapTable n) p s \<longleftrightarrow>
    (\<exists>cs. kheap s p = Some (CNode n cs) \<and> well_formed_cnode_n n cs)"
-  "typ_at AGarbage p s \<longleftrightarrow>
-   (\<exists>n cs. kheap s p = Some (CNode n cs) \<and> \<not> well_formed_cnode_n n cs)"
-  apply (auto simp add: obj_at_def  a_type_def)
-  apply (case_tac ko, simp_all add: wf_unique
-                    split: split_if_asm kernel_object.splits )
-done
-
+  "typ_at (AGarbage n) p s \<longleftrightarrow>
+   (\<exists>cs. n \<ge> cte_level_bits \<and> kheap s p = Some (CNode (n - cte_level_bits) cs) \<and> \<not> well_formed_cnode_n (n - cte_level_bits) cs)"
+  by ((clarsimp simp add: obj_at_def a_type_def; rule iffI; clarsimp),
+      case_tac ko; fastforce simp: wf_unique
+                             split: split_if_asm kernel_object.splits )+
 
 lemma a_type_ACapTableE:
   "\<lbrakk>a_type ko = ACapTable n;
@@ -2343,10 +2348,10 @@ lemma a_type_ACapTableE:
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
   
 lemma a_type_AGarbageE:
-  "\<lbrakk>a_type ko = AGarbage;
-    (!!n cs. \<lbrakk>ko = CNode n cs; \<not> well_formed_cnode_n n cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
+  "\<lbrakk>a_type ko = AGarbage n;
+    (!!cs. \<lbrakk>n \<ge> cte_level_bits; ko = CNode (n - cte_level_bits) cs; \<not>well_formed_cnode_n (n - cte_level_bits) cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
-  by (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+  by (case_tac ko, simp_all add: a_type_simps split: split_if_asm, fastforce)
 
 lemma a_type_ATCBE:
   "\<lbrakk>a_type ko = ATCB; (!!tcb. ko = TCB tcb \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"

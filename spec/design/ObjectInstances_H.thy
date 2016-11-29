@@ -413,7 +413,7 @@ definition
         tcbFaultHandler= CPtr 0,
         tcbIPCBuffer= VPtr 0,
         tcbBoundNotification= Nothing,
-        tcbContext= newContext \<rparr>"
+        tcbArch= newArchTCB \<rparr>"
 
 definition
   loadObject_tcb[simp]:

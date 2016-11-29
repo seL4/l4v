@@ -20,13 +20,14 @@ creating the "Capability" objects used at higher levels of the kernel.
 >         getSlotCap, locateSlotTCB, locateSlotCNode, locateSlotCap,
 >         locateSlotBasic, getReceiveSlots, getCTE, setupReplyMaster,
 >         insertInitCap, decodeCNodeInvocation, invokeCNode,
->         updateCap, isFinalCapability, createNewObjects
+>         updateCap, isFinalCapability, createNewObjects,
+>         updateFreeIndex
 >     ) where
 
 \begin{impdetails}
 
 > {-# BOOT-IMPORTS: SEL4.Machine SEL4.API.Types SEL4.API.Failures SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-> {-# BOOT-EXPORTS: ensureNoChildren getSlotCap locateSlotTCB locateSlotCNode locateSlotCap locateSlotBasic ensureEmptySlot insertInitCap cteInsert cteDelete cteDeleteOne decodeCNodeInvocation invokeCNode getCTE updateCap isFinalCapability createNewObjects #-}
+> {-# BOOT-EXPORTS: ensureNoChildren getSlotCap locateSlotTCB locateSlotCNode locateSlotCap locateSlotBasic ensureEmptySlot insertInitCap cteInsert cteDelete cteDeleteOne decodeCNodeInvocation invokeCNode getCTE updateCap isFinalCapability createNewObjects updateFreeIndex #-}
 
 > import SEL4.API.Types
 > import SEL4.API.Failures
@@ -38,10 +39,12 @@ creating the "Capability" objects used at higher levels of the kernel.
 > import SEL4.Object.Interrupt
 > import SEL4.Object.Instances()
 > import SEL4.Object.ObjectType
+> import SEL4.Object.Endpoint(cancelBadgedSends)
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 
 > import Data.Bits
+> import qualified Data.Set
 
 \end{impdetails}
 
@@ -119,7 +122,7 @@ The rights and capability data word are applied to the source capability to crea
 >             return $!
 >                 (if isMove then Move else Insert) newCap srcSlot destSlot
 
-The "Revoke", "Delete", "SaveCaller" and "Recycle" operations have no additional arguments. The "SaveCaller" call requires the target slot to be empty.
+The "Revoke", "Delete", "SaveCaller" and "CancelBadgedSends" operations have no additional arguments. The "SaveCaller" call requires the target slot to be empty.
 
 >         (_, CNodeRevoke, _, _) -> return $ Revoke destSlot
 >         (_, CNodeDelete, _, _) -> return $ Delete destSlot
@@ -127,12 +130,12 @@ The "Revoke", "Delete", "SaveCaller" and "Recycle" operations have no additional
 >             ensureEmptySlot destSlot
 >             return $ SaveCaller destSlot
 
-For "Recycle", the slot must contain a valid capability. 
+For "CancelBadgedSends", the slot must contain a valid Endpoint capability. 
 
->         (_, CNodeRecycle, _, _) -> do
+>         (_, CNodeCancelBadgedSends, _, _) -> do
 >             cte <- withoutFailure $ getCTE destSlot
->             unless (hasRecycleRights $ cteCap cte) $ throw IllegalOperation
->             return $ Recycle destSlot
+>             unless (hasCancelSendRights $ cteCap cte) $ throw IllegalOperation
+>             return $ CancelBadgedSends $ cteCap cte
 
 The "Rotate" operation atomically moves two capabilities.
 
@@ -198,8 +201,10 @@ The function "invokeCNode" dispatches an invocation to one of the handlers defin
 >
 > invokeCNode (Delete destSlot) = cteDelete destSlot True
 > 
-> invokeCNode (Recycle destSlot) = cteRecycle destSlot
-> 
+> invokeCNode (CancelBadgedSends (EndpointCap { capEPPtr = ptr, capEPBadge = b})) = 
+>     withoutPreemption $ unless (b == 0) $ cancelBadgedSends ptr b
+> invokeCNode (CancelBadgedSends _) = fail "should never happen"
+
 > invokeCNode (Insert cap srcSlot destSlot) =
 >     withoutPreemption $ cteInsert cap srcSlot destSlot
 >     
@@ -391,6 +396,7 @@ the bitmask bit that will allow the reissue of an IRQHandlerCap to this IRQ.
 
 > emptySlot :: PPtr CTE -> Maybe IRQ -> Kernel ()
 > emptySlot slot irq = do
+>     clearUntypedFreeIndex slot
 >     newCTE <- getCTE slot
 >     let mdbNode = cteMDBNode newCTE
 >     let prev = mdbPrev mdbNode
@@ -526,30 +532,6 @@ In some cases we call for the deletion of a capability which we know can be dele
 >             "cteDeleteOne: cap should be removable"
 >         emptySlot slot Nothing
 
-\subsection{Recycling Objects}
-
-Objects can only be created by invoking "Retype" with an \emph{empty} untyped memory region. It is therefore impractical to recycle a kernel object by deleting it and creating a new object in its place, if it was originally created as part of a larger pool of objects --- the entire pool must be destroyed and re-created at the same time. The "Recycle" operation is used instead; it returns a single kernel object to its original state.
-
-> cteRecycle :: PPtr CTE -> KernelP ()
-> cteRecycle slot = do
-
-We begin by revoking the capability. This ensures that no other copy of the capability exists.
-
->     cteRevoke slot
-
-Call "finaliseSlot". This will clean up the object, assuming that the "cteRevoke" removed every other capability pointing to it.
-
->     finaliseSlot slot True
-
-Finally, reconstruct the capability and the object in their initial states. The appropriate actions depend on the capability type, and are implemented in "recycleCap" --- see \autoref{sec:object.objecttype.recycle}. Note that there is a rare situation, unlikely in practice, in which the capability will have been deleted by "finaliseSlot". In this case, the calling thread has just been suspended, cannot be restarted, and is the only thread that can reach this slot; so we can safely leave the slot empty.
-
->     withoutPreemption $ do
->         cte <- getCTE slot
->         unless (isNullCap $ cteCap cte) $ do
->             is_final <- isFinalCapability cte
->             cap <- recycleCap is_final $ cteCap cte
->             updateCap slot cap
-
 \subsection{Object Creation}
 
 Create a set of new capabilities (and possibly the objects backing them) and
@@ -580,6 +562,7 @@ The following function inserts a new revocable cap as a child of another.
 >     setCTE slot $ CTE cap (MDB next parent True True)
 >     updateMDB next   $ (\m -> m { mdbPrev = slot })
 >     updateMDB parent $ (\m -> m { mdbNext = slot })
+>     updateNewFreeIndex slot
 
 The following function is used by the bootstrap code to create the initial set of capabilities.
 
@@ -613,6 +596,43 @@ This function is used in the assertion above; it returns "True" if no reply capa
 
 > noReplyCapsFor :: PPtr TCB -> KernelState -> Bool
 > noReplyCapsFor _ _ = True
+
+These functions concern the free indices of untyped caps. For verification reasons we also track the free ranges in a ghost variable, which must be updated appropriately when untyped caps might be changed.
+
+> updateTrackedFreeIndex :: PPtr CTE -> Int -> Kernel ()
+> updateTrackedFreeIndex slot idx = do
+>     cap <- getSlotCap slot
+>     modify (\ks -> ks {gsUntypedZeroRanges =
+>         case untypedZeroRange cap of
+>             Nothing -> gsUntypedZeroRanges ks
+>             Just r -> Data.Set.delete r (gsUntypedZeroRanges ks)
+>         })
+>     modify (\ks -> ks {gsUntypedZeroRanges =
+>         case untypedZeroRange (cap {capFreeIndex = idx}) of
+>             Nothing -> gsUntypedZeroRanges ks
+>             Just r -> Data.Set.insert r (gsUntypedZeroRanges ks)
+>         })
+
+> updateFreeIndex :: PPtr CTE -> Int -> Kernel ()
+> updateFreeIndex slot idx = do
+>     updateTrackedFreeIndex slot idx
+>     cap <- getSlotCap slot
+>     updateCap slot (cap {capFreeIndex = idx})
+
+> clearUntypedFreeIndex :: PPtr CTE -> Kernel ()
+> clearUntypedFreeIndex slot = do
+>     cap <- getSlotCap slot
+>     case cap of
+>         UntypedCap {} -> updateTrackedFreeIndex slot
+>             (maxFreeIndex (capBlockSize cap))
+>         _ -> return ()
+
+> updateNewFreeIndex :: PPtr CTE -> Kernel ()
+> updateNewFreeIndex slot = do
+>     cap <- getSlotCap slot
+>     case cap of
+>         UntypedCap {} -> updateTrackedFreeIndex slot (capFreeIndex cap)
+>         _ -> return ()
 
 \subsection{MDB Operations}
 \label{sec:object.cnode.mdb}

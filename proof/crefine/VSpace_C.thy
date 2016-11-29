@@ -472,8 +472,8 @@ lemma mask_32_id [simp]:
 
 lemma handleVMFault_ccorres:
   "ccorres ((\<lambda>a ex v. ex = scast EXCEPTION_FAULT \<and> (\<exists>vf.
-                      a = VMFault (fault_vm_fault_CL.address_CL vf) [instructionFault_CL vf, FSR_CL vf] \<and>
-                      errfault v = Some (Fault_vm_fault vf))) \<currency>
+                      a = ArchFault (VMFault (seL4_Fault_VMFault_CL.address_CL vf) [instructionFault_CL vf, FSR_CL vf]) \<and>
+                      errfault v = Some (SeL4_Fault_VMFault vf))) \<currency>
            (\<lambda>_. \<bottom>))
            (liftxf errstate id (K ()) ret__unsigned_long_')
            \<top>
@@ -497,7 +497,7 @@ lemma handleVMFault_ccorres:
       apply vcg
      apply (clarsimp simp: errstate_def)
      apply (clarsimp simp: EXCEPTION_FAULT_def EXCEPTION_NONE_def)
-     apply (simp add: fault_vm_fault_lift false_def)
+     apply (simp add: seL4_Fault_VMFault_lift false_def)
     apply wp
    apply (simp add: vm_fault_type_from_H_def Kernel_C.ARMDataAbort_def Kernel_C.ARMPrefetchAbort_def)
    apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff)
@@ -512,7 +512,7 @@ lemma handleVMFault_ccorres:
       apply vcg
      apply (clarsimp simp: errstate_def)
      apply (clarsimp simp: EXCEPTION_FAULT_def EXCEPTION_NONE_def)
-     apply (simp add: fault_vm_fault_lift true_def mask_def)
+     apply (simp add: seL4_Fault_VMFault_lift true_def mask_def)
     apply wp
   apply simp
   done
@@ -712,8 +712,8 @@ lemma generic_frame_cap_ptr_set_capFMappedAddress_spec:
        {t. (\<exists>cte' cap'. 
            generic_frame_cap_set_capFMappedAddress_CL (cap_lift (the (cslift s \<^bsup>s\<^esup>cap_ptr))) \<^bsup>s\<^esup>asid \<^bsup>s\<^esup>addr = Some cap' \<and>
            cte_lift cte' = option_map (cap_CL_update (K cap')) (cte_lift (the (cslift s cte_slot))) \<and>
-           cslift t = cslift s(cte_slot \<mapsto> cte')) \<and> cslift_all_but_cte_C t s
-                \<and> (hrs_htd \<^bsup>t\<^esup>t_hrs) = (hrs_htd \<^bsup>s\<^esup>t_hrs)}"
+           t_hrs_' (globals t) = hrs_mem_update (heap_update cte_slot cte')
+               (t_hrs_' (globals s)))}"
   apply vcg 
   apply (clarsimp simp: typ_heap_simps)
   apply (subgoal_tac "cap_lift ret__struct_cap_C \<noteq> None")
@@ -721,9 +721,8 @@ lemma generic_frame_cap_ptr_set_capFMappedAddress_spec:
    apply (clarsimp simp: generic_frame_cap_set_capFMappedAddress_CL_def split: cap_CL.splits)
   apply (clarsimp simp: clift_ptr_safe2 typ_heap_simps)
   apply (rule_tac x="cte_C.cap_C_update (\<lambda>_. ret__struct_cap_C) y" in exI)
-  apply simp
   apply (case_tac y)
-  apply (clarsimp simp: cte_lift_def)
+  apply (clarsimp simp: cte_lift_def typ_heap_simps')
   done
 
 lemma lookupPDSlot_spec:
@@ -1503,8 +1502,6 @@ lemma setVMRoot_ccorres:
       apply (simp add: cap_case_isPageDirectoryCap cong: if_cong)
       apply (simp add: throwError_def catch_def)
       apply (rule ccorres_rhs_assoc)+
-      apply simp
-      apply (rule ccorres_rhs_assoc)+
       apply (rule ccorres_h_t_valid_armKSGlobalPD)
       apply csymbr
       apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState[unfolded comp_def])
@@ -1537,8 +1534,6 @@ lemma setVMRoot_ccorres:
          apply (rule ccorres_stateAssert)
          apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState[unfolded o_def])
          apply (rule ccorres_rhs_assoc)+
-         apply simp
-         apply (rule ccorres_rhs_assoc)+
          apply (rule ccorres_h_t_valid_armKSGlobalPD)
          apply csymbr
          apply (rule ccorres_add_return2)
@@ -1558,8 +1553,6 @@ lemma setVMRoot_ccorres:
        apply (rule ccorres_stateAssert)
        apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState[unfolded o_def])
-       apply simp
-       apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_h_t_valid_armKSGlobalPD)
        apply csymbr
        apply (rule ccorres_add_return2)
@@ -1827,7 +1820,7 @@ lemma length_of_msgRegisters:
 
 (* FIXME: move *)
 lemma register_from_H_bound[simp]:
-  "unat (register_from_H v) < 18"
+  "unat (register_from_H v) < 19"
   by (cases v, simp_all add: "StrictC'_register_defs")
 
 (* FIXME: move *)
@@ -1852,7 +1845,7 @@ lemma setRegister_ccorres:
    apply (rule ccorres_pre_threadGet)
    apply (rule ccorres_Guard)
    apply (simp add: setRegister_def simpler_modify_def exec_select_f_singleton)
-   apply (rule_tac P="\<lambda>tcb. tcbContext tcb = rv"
+   apply (rule_tac P="\<lambda>tcb. (atcbContextGet o tcbArch) tcb = rv"
                 in threadSet_ccorres_lemma2 [unfolded dc_def])
     apply vcg
    apply (clarsimp simp: setRegister_def HaskellLib_H.runState_def
@@ -1866,7 +1859,9 @@ lemma setRegister_ccorres:
                (simp add: typ_heap_simps')+)
     apply (rule ball_tcb_cte_casesI, simp+)
    apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
-                  split: split_if)
+                         atcbContextSet_def atcbContextGet_def
+                         carch_tcb_relation_def
+                   split: split_if)
   apply (clarsimp simp: Collect_const_mem register_from_H_sless
                         register_from_H_less)
   apply (auto intro: typ_heap_simps elim: obj_at'_weakenE)
@@ -1902,7 +1897,7 @@ lemma wordFromMessageInfo_ccorres [corres]:
 
 (* FIXME move *)
 lemma unat_register_from_H_range:
-  "unat (register_from_H r) < 18"
+  "unat (register_from_H r) < 19"
   by (case_tac r, simp_all add: C_register_defs)
 
 (* FIXME move *)

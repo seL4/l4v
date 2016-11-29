@@ -550,12 +550,14 @@ lemma thread_bound_ntfns_transform_rev:
   apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
   apply (frule_tac sl=b in opt_cap_tcb, assumption, simp)
   apply (clarsimp split:split_if_asm)    
-    apply (case_tac "tcb"; simp add:is_thread_state_cap_def is_bound_ntfn_cap_def split:split_if_asm)
-    apply (rename_tac arch_cap)
-    apply (case_tac "arch_cap", simp_all split:split_if_asm)
-   apply (clarsimp simp: infer_tcb_pending_op_def split: Structures_A.thread_state.splits)
-    apply (case_tac "tcb_bound_notification tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def 
-                                             infer_tcb_bound_notification_def split: option.splits)
+   apply (case_tac "tcb"; simp add:is_thread_state_cap_def is_bound_ntfn_cap_def split:split_if_asm)
+   apply (rename_tac arch_cap)
+   apply (case_tac "arch_cap", simp_all split:split_if_asm)
+  apply (clarsimp simp: infer_tcb_pending_op_def split: Structures_A.thread_state.splits)
+  apply (case_tac "tcb_bound_notification tcb",
+         auto simp: infer_tcb_pending_op_def cdl_cap_auth_conferred_def
+                    infer_tcb_bound_notification_def
+              split: option.splits)
   done
 
 lemma idle_thread_null_cap:

@@ -923,10 +923,9 @@ declare cap_revoke.simps[simp del]
 
 context Arch begin global_naming ARM
 
-crunch typ_at[wp, CNodeInv_AI_assms]: cap_recycle "\<lambda>s. P (typ_at T p s)"
+crunch typ_at[wp, CNodeInv_AI_assms]: finalise_slot "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps filterM_mapM unless_def
    ignore: without_preemption filterM set_object clearMemory)
-
 
 lemma weak_derived_appropriate [CNodeInv_AI_assms]:
   "weak_derived cap cap' \<Longrightarrow> appropriate_cte_cap cap = appropriate_cte_cap cap'"
@@ -1010,25 +1009,7 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
 
-
-lemma recycle_cap_appropriateness [CNodeInv_AI_assms]:
-  "\<lbrace>valid_cap cap\<rbrace> recycle_cap is_final cap \<lbrace>\<lambda>rv s. appropriate_cte_cap rv = appropriate_cte_cap cap\<rbrace>"
-  apply (simp add: recycle_cap_def)
-  apply (rule hoare_pre)
-   apply (wp thread_get_wp gts_wp | wpc | simp add: get_bound_notification_def)+
-   apply (simp add: arch_recycle_cap_def o_def split del: split_if)   
-   apply (wp | wpc | simp add: | wp_once hoare_drop_imps)+
-  apply (auto simp: appropriate_cte_cap_def fun_eq_iff valid_cap_def tcb_at_st_tcb_at pred_tcb_at_def)
-  done
-
-
-lemma reset_mem_mapping_master:
-  "cap_master_cap (ArchObjectCap (arch_reset_mem_mapping arch_cap)) = cap_master_cap (ArchObjectCap arch_cap)"
-  unfolding cap_master_cap_def
-  by (cases arch_cap, simp_all)
-
 end
-
 
 global_interpretation CNodeInv_AI_5?: CNodeInv_AI_5
   proof goal_cases

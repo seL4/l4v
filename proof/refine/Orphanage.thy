@@ -1135,16 +1135,6 @@ lemma createObjects_no_orphans [wp]:
   apply simp
   done
 
-lemma createWordObjects_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. no_orphans s \<and> pspace_aligned' s \<and> pspace_distinct' s 
-   \<and> pspace_no_overlap' ptr sz s \<and> n \<noteq> 0 \<and> range_cover ptr sz (pageBits + us) n\<rbrace>
-   createWordObjects ptr n us d
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding createWordObjects_def
-  apply (wp hoare_unless_wp | clarsimp simp: projectKO_opt_tcb split del: split_if)+
-  apply (intro conjI | simp add: objBits_simps)+
-  done
-
 lemma copyGlobalMappings_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    copyGlobalMappings newPD
@@ -1156,6 +1146,7 @@ lemma copyGlobalMappings_no_orphans [wp]:
 lemma no_orphans_update_simps[simp]:
   "no_orphans (gsCNodes_update f s) = no_orphans s"
   "no_orphans (gsUserPages_update g s) = no_orphans s"
+  "no_orphans (gsUntypedZeroRanges_update h s) = no_orphans s"
   by (simp_all add: no_orphans_def all_active_tcb_ptrs_def
                     is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
 
@@ -1178,7 +1169,10 @@ lemma createNewCaps_no_orphans:
             apply (wp mapM_x_wp' threadSet_no_orphans
                    | clarsimp simp: is_active_thread_state_def makeObject_tcb
                                     projectKO_opt_tcb isRunning_def isRestart_def
-                                    APIType_capBits_def objBits_simps Arch_createNewCaps_def
+                                    APIType_capBits_def Arch_createNewCaps_def
+                                    objBits_if_dev
+                          split del: split_if
+                   | simp add: objBits_simps
                    | fastforce simp:pageBits_def archObjSize_def ptBits_def pdBits_def)+
   done
 
@@ -1192,7 +1186,7 @@ lemma createObject_no_orphans:
         apply (simp_all add: createObject_def ARM_H.createObject_def split del: split_if)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
-            apply (simp_all add: ARM_H.createObject_def createPageObject_def placeNewObject_def2
+            apply (simp_all add: ARM_H.createObject_def placeNewObject_def2
               toAPIType_def split del: split_if)+
             apply (wp threadSet_no_orphans | clarsimp)+
            apply ((wp createObjects'_wp_subst
@@ -1222,7 +1216,7 @@ lemma createObject_no_orphans:
                  split: option.splits split del: split_if)+)[1]
        apply ((wp createObjects'_wp_subst hoare_if
                 createObjects_no_orphans[where sz = sz] | 
-        clarsimp simp: placeNewObject_def2
+        clarsimp simp: placeNewObject_def2 placeNewDataObject_def
                        projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
                        is_active_thread_state_def makeObject_tcb pageBits_def unless_def
                        projectKO_opt_tcb isRunning_def isRestart_def
@@ -1244,7 +1238,7 @@ lemma createObject_no_orphans:
               split: option.splits))+
   done
 
-lemma createNewObjects_no_orphans :
+lemma createNewObjects_no_orphans:
   "\<lbrace>\<lambda>s. no_orphans s \<and> invs' s \<and> pspace_no_overlap' ptr sz s
          \<and> (\<forall>slot\<in>set slots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
          \<and> cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d (ptr && ~~ mask sz) sz idx) cref s
@@ -1296,134 +1290,49 @@ lemma deleteObjects_no_orphans [wp]:
                   cong: if_cong)
   done
 
-lemma invokeUntyped_no_orphans' [wp]:
-  "ui = Retype cref ptr_base ptr tp us slots d \<Longrightarrow>
-   \<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_untyped_inv' ui s \<and> ct_active' s \<rbrace>
-   invokeUntyped ui 
-   \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
-  apply (rule hoare_name_pre_state)
-  apply clarsimp
-  apply (subgoal_tac "invokeUntyped_proofs s cref ptr tp us slots sz idx d")
-  prefer 2
-   apply (simp add:invokeUntyped_proofs_def)
-  proof -
-    fix s sz idx d
-    assume no_orph: "no_orphans s"
-    assume misc : " (tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> 0 < us)"
-                  " tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29"
-                  " sch_act_simple s " "ct_active' s"
-    assume ivk_pf: "invokeUntyped_proofs s cref ptr tp us slots sz idx d"
-    note blah[simp del] = 
-          atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex usableUntypedRange.simps
-
-    have capBits_low_bound[simp]:
-      "4 \<le> APIType_capBits tp us"
-       using misc
-       apply (case_tac tp)
-       apply (simp_all add:APIType_capBits_def objBits_simps ArchTypes_H.apiobject_type.splits)
-       done
-
-    have us_align[simp]:"is_aligned (of_nat (length slots) * 2 ^ APIType_capBits tp us) 4"
-      apply (rule is_aligned_weaken)
-       apply (subst mult.commute)
-       apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n])
-      apply simp
-      done
-
-  show "\<lbrace>op = s\<rbrace> invokeUntyped (Invocations_H.untyped_invocation.Retype cref (ptr && ~~ mask sz) ptr tp us slots d) 
-          \<lbrace>\<lambda>reply. no_orphans\<rbrace>"
-  apply (simp add: invokeUntyped_def insertNewCaps_def
-                   split_def bind_assoc zipWithM_x_mapM
-              cong: capability.case_cong)
-  apply (case_tac "ptr && ~~ mask sz \<noteq> ptr")
-   apply (rule hoare_pre)
-    apply (wp createNewObjects_no_orphans[where sz = sz] getSlotCap_wp 
-              updateFreeIndex_invs' updateFreeIndex_pspace_no_overlap'
-              hoare_vcg_ball_lift updateCap_weak_cte_wp_at
-              updateFreeIndex_caps_no_overlap''
-              updateFreeIndex_caps_overlap_reserved' | clarsimp)+
-   apply (intro exI)
-   apply (rule conjI)
-    apply (rule invokeUntyped_proofs.cte_wp_at'[OF ivk_pf])
-   using ivk_pf
-   apply (clarsimp simp:conj_comms invs_valid_pspace'
-          invokeUntyped_proofs_def no_orph misc)
-   apply (simp add:getFreeIndex_def add_minus_neg_mask field_simps shiftL_nat
-                   invokeUntyped_proofs.ps_no_overlap'[OF ivk_pf]
-                   invokeUntyped_proofs.not_0_ptr[OF ivk_pf]
-                   invokeUntyped_proofs.usableRange_disjoint[OF ivk_pf]
-                   invokeUntyped_proofs.descendants_range[OF ivk_pf]
-                   invokeUntyped_proofs.slots_invD[OF ivk_pf]
-                   invokeUntyped_proofs.caps_no_overlap'[OF ivk_pf])
-   apply (intro conjI)
-       apply (simp add: range_cover_unat range_cover.unat_of_nat_shift field_simps)
-      apply (rule aligned_add_aligned[OF aligned_after_mask])
-        apply (erule range_cover.aligned)
-       apply simp
-      apply simp
-     apply (simp add: range_cover_unat range_cover.unat_of_nat_shift field_simps)
-     apply (drule range_cover.range_cover_compare_bound)
-     apply simp
-    apply simp+
-   apply (rule subset_trans[OF invokeUntyped_proofs.subset_stuff[OF ivk_pf]])
-   apply (clarsimp simp:blah word_and_le2)
-  using ivk_pf
-  apply clarsimp
-  apply (wp createNewObjects_no_orphans[where sz = sz] getSlotCap_wp
-              updateFreeIndex_invs_simple' updateFreeIndex_pspace_no_overlap'
-              hoare_vcg_ball_lift updateCap_weak_cte_wp_at
-              updateFreeIndex_caps_no_overlap''
-              updateFreeIndex_caps_overlap_reserved' | clarsimp)+
-   apply (strengthen invs_pspace_aligned' invs_valid_pspace'
-          invs_pspace_distinct' invs_arch_state invs_psp_aligned)
-   apply (clarsimp simp:conj_comms invokeUntyped_proofs.slots_invD[OF ivk_pf])
-   apply (rule_tac P = "cap = capability.UntypedCap d (ptr && ~~ mask sz) sz idx" 
-       in hoare_gen_asm)
-   apply (clarsimp simp:misc)
-   apply (wp deleteObjects_invs'[where idx = idx and p = "cref" and d=d] 
-     deleteObjects_caps_no_overlap''[where idx = idx and slot = "cref" and d=d] 
-     deleteObject_no_overlap[where idx = idx and d=d]
-     deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz and d=d]
-     deleteObjects_caps_overlap_reserved'[where idx = idx and slot = "cref" and d=d] 
-     deleteObjects_descendants[where idx = idx and p = "cref" and d=d]
-     hoare_vcg_ball_lift hoare_drop_imp hoare_vcg_ex_lift 
-     deleteObjects_st_tcb_at'[where p = cref and d=d]
-     deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz and d=d]
-     deleteObjects_ct_active'[where idx = idx and cref = cref and d=d])
-   apply (clarsimp simp: conj_comms)
-   apply (wp getSlotCap_wp)
-   using invokeUntyped_proofs.usableRange_disjoint[OF ivk_pf]
-     invokeUntyped_proofs.descendants_range[OF ivk_pf]
-     invokeUntyped_proofs.slots_invD[OF ivk_pf]
-     invokeUntyped_proofs.vc'[OF ivk_pf]
-     invokeUntyped_proofs.cref_inv[OF ivk_pf]
-  apply (clarsimp simp:invs_valid_pspace' invokeUntyped_proofs_def
-                        is_aligned_neg_mask_eq' range_cover.aligned
-                        no_orph getFreeIndex_def misc range_cover.sz )
-  apply (simp add: getFreeIndex_def add_minus_neg_mask field_simps shiftL_nat
-                    invokeUntyped_proofs.not_0_ptr[OF ivk_pf]
-                    descendants_range'_def2 shiftL_nat
-                    range_cover_unat range_cover.unat_of_nat_shift
-                    invokeUntyped_proofs.caps_no_overlap'[OF ivk_pf]
-                    is_aligned_mask[unfolded is_aligned_neg_mask_eq']
-                    invs_pspace_distinct')
-  apply (intro conjI)
-      apply (simp add: range_cover_def word_bits_def)
-     apply simp
-    apply (simp add:is_aligned_mask[symmetric])
-   apply (drule range_cover.range_cover_compare_bound)
-   apply (simp add:is_aligned_mask[unfolded is_aligned_neg_mask_eq'])
-  apply (rule subset_trans[OF invokeUntyped_proofs.subset_stuff[OF ivk_pf]])
-  apply (simp add:is_aligned_mask[unfolded is_aligned_neg_mask_eq',symmetric])
+lemma no_orphans_ksWorkUnits [simp]:
+   "no_orphans (ksWorkUnitsCompleted_update f s) = no_orphans s"
+  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  apply auto
   done
-qed
+
+lemma no_orphans_irq_state_independent[intro!, simp]:
+  "no_orphans (s \<lparr>ksMachineState := ksMachineState s \<lparr> irq_state := f (irq_state (ksMachineState s)) \<rparr> \<rparr>)
+   = no_orphans s"
+  by (simp add: no_orphans_def all_active_tcb_ptrs_def 
+                all_queued_tcb_ptrs_def is_active_tcb_ptr_def)
+
+add_upd_simps "no_orphans (gsUntypedZeroRanges_update f s)"
+declare upd_simps[simp]
+
+crunch no_orphans[wp]: updateFreeIndex "no_orphans"
+
+lemma resetUntypedCap_no_orphans [wp]:
+  "\<lbrace> (\<lambda>s. no_orphans s \<and> pspace_distinct' s \<and> valid_objs' s)
+      and cte_wp_at' (isUntypedCap o cteCap) slot\<rbrace>
+    resetUntypedCap slot
+  \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+  apply (simp add: resetUntypedCap_def)
+  apply (rule hoare_pre)
+   apply (wp mapME_x_inv_wp preemptionPoint_inv getSlotCap_wp hoare_drop_imps
+     | simp add: unless_def split del: split_if)+
+  apply (clarsimp simp: cte_wp_at_ctes_of split del: split_if)
+  apply (frule(1) cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD])
+  apply (clarsimp simp: isCap_simps valid_cap_simps' capAligned_def)
+  done
 
 lemma invokeUntyped_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_untyped_inv' ui s \<and> ct_active' s \<rbrace>
-     invokeUntyped ui
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  by (cases ui, erule invokeUntyped_no_orphans')
+   invokeUntyped ui 
+   \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
+  apply (rule hoare_pre, rule hoare_strengthen_post)
+    apply (rule invokeUntyped_invs''[where Q=no_orphans])
+       apply (wp createNewCaps_no_orphans)
+      apply (clarsimp simp: valid_pspace'_def)
+      apply (intro conjI, simp_all)[1]
+     apply (wp | simp)+
+  apply (cases ui, auto simp: cte_wp_at_ctes_of)[1]
+  done
 
 lemma setInterruptState_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -1568,7 +1477,9 @@ lemma handleInterrupt_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding handleInterrupt_def
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv | wpc | clarsimp simp: invs'_def valid_state'_def)+
+   apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv
+         | wpc | clarsimp simp: invs'_def valid_state'_def
+                                handleReservedIRQ_def)+
   done
 
 lemma suspend_no_orphans [wp]:
@@ -1714,12 +1625,6 @@ lemma finaliseCap_no_orphans [wp]:
   apply (auto simp: valid_cap'_def dest!: isCapDs)
   done
 
-lemma no_orphans_ksWorkUnits [simp]:
-   "no_orphans (ksWorkUnitsCompleted_update f s) = no_orphans s"
-  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
-  apply auto
-  done
-
 crunch no_orphans [wp]: cteSwap "no_orphans"
 
 crunch no_orphans [wp]: capSwapForDelete "no_orphans"
@@ -1760,12 +1665,6 @@ lemma cteDelete_no_orphans [wp]:
 crunch no_orphans [wp]: cteMove "no_orphans"
 (wp: crunch_wps)
 
-lemma no_orphans_irq_state_independent[intro!, simp]:
-  "no_orphans (s \<lparr>ksMachineState := ksMachineState s \<lparr> irq_state := f (irq_state (ksMachineState s)) \<rparr> \<rparr>)
-   = no_orphans s"
-  by (simp add: no_orphans_def all_active_tcb_ptrs_def 
-                all_queued_tcb_ptrs_def is_active_tcb_ptr_def)
-
 lemma cteRevoke_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<rbrace>
    cteRevoke ptr
@@ -1788,48 +1687,6 @@ lemma cancelBadgedSends_no_orphans [wp]:
   done
 
 crunch no_orphans [wp]: invalidateTLBByASID "no_orphans"
-
-lemma arch_recycleCap_no_orphans:
-  "\<lbrace> \<lambda>s. cte_wp_at' (\<lambda>cte. cteCap cte = ArchObjectCap cap) slot s
-         \<and> invs' s \<and> no_orphans s \<rbrace>
-   Arch.recycleCap is_final cap
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (simp add: ARM_H.recycleCap_def
-              split del: split_if)
-  apply (rule hoare_pre)
-   apply (wp mapM_x_wp' static_imp_wp hoare_unless_wp | wpc | clarsimp simp: Let_def split del: split_if)+
-      apply (rule_tac Q="\<lambda>rv s. no_orphans s" in hoare_post_imp)
-       apply (clarsimp simp: no_orphans_def all_queued_tcb_ptrs_def
-                             all_active_tcb_ptrs_def is_active_tcb_ptr_def)
-      apply (wp undefined_valid | clarsimp)+
-  apply (drule cte_wp_at_valid_objs_valid_cap', clarsimp+)
-  apply (clarsimp simp: valid_cap'_def isCap_simps simp del: not_ex
-                  split: arch_capability.splits)
-  done
-
-lemma recycleCap_no_orphans:
-  "\<lbrace> \<lambda>s. cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s \<and> no_orphans s \<and> invs' s \<rbrace>
-   recycleCap is_final cap
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (simp add: recycleCap_def Let_def
-              cong: if_cong split del: split_if)
-  apply (rule hoare_pre)
-   apply (wp threadSet_no_orphans hoare_drop_imps arch_recycleCap_no_orphans[where slot=slot] | wpc
-             | clarsimp simp: is_active_thread_state_def makeObject_tcb isRunning_def isRestart_def)+
-  apply (auto simp: isCap_simps)
-  done
-
-lemma cteRecycle_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<rbrace>
-   cteRecycle ptr
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding cteRecycle_def
-  apply (rule hoare_pre)
-   apply (wp weak_if_wp recycleCap_no_orphans[where slot=ptr] isFinalCapability_inv
-             finaliseSlot_invs hoare_drop_imps getCTE_wp'
-             | clarsimp simp: unless_def cte_wp_at_ctes_of)+
-   apply (wp cteRevoke_sch_act_simple cteRevoke_invs' | clarsimp)+
-  done
 
 crunch no_orphans [wp]: handleFaultReply "no_orphans"
 
@@ -1997,7 +1854,8 @@ lemma invokeCNode_no_orphans [wp]:
    \<lbrace> \<lambda>rv. no_orphans \<rbrace>"
   unfolding invokeCNode_def
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps | wpc | clarsimp split del: split_if)+
+   apply (wp hoare_drop_imps hoare_unless_wp | wpc | clarsimp split del: split_if)+
+  apply (simp add: invs_valid_queues')
   done
 
 lemma invokeIRQControl_no_orphans [wp]:

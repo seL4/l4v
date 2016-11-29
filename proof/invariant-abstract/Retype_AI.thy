@@ -130,6 +130,42 @@ lemma aligned_ranges_subset_or_disjoint:
   apply arith
   done
 
+lemma aligned_range_offset_subset:
+  assumes al: "is_aligned (ptr :: 'a :: len word) sz" and al': "is_aligned x sz'"
+  and     szv: "sz' \<le> sz" and xsz: "x < 2 ^ sz"
+  shows       "{ptr + x .. (ptr + x) + 2 ^ sz' - 1} \<subseteq> {ptr .. ptr + 2 ^ sz - 1}"
+  using al
+proof (rule is_aligned_get_word_bits)
+  assume p0: "ptr = 0" and szv': "len_of TYPE ('a) \<le> sz"
+  hence "(2 :: 'a word) ^ sz = 0" by simp
+
+  thus ?thesis using p0
+    apply -
+    apply (erule ssubst)
+    apply simp
+    done
+next
+  assume szv': "sz < len_of TYPE('a)"
+
+  hence blah: "2 ^ (sz - sz') < (2 :: nat) ^ len_of TYPE('a)"
+    using szv
+    apply -
+    apply (rule power_strict_increasing, simp+)
+    done
+  show ?thesis using szv szv'
+    apply (intro range_subsetI)
+     apply (rule is_aligned_no_wrap' [OF al xsz])
+    apply (simp only: add_diff_eq[symmetric])
+    apply (subst add.assoc, rule word_plus_mono_right)
+    apply (subst iffD1 [OF le_m1_iff_lt])
+    apply (simp add: p2_gt_0 word_bits_conv)
+    apply (rule is_aligned_add_less_t2n[OF al' _ szv xsz])
+    apply simp
+    apply (simp add: field_simps szv al is_aligned_no_overflow)
+    done
+qed
+
+
 lemma aligned_diff:
   "\<lbrakk>is_aligned (dest :: 'a :: len word) bits; is_aligned (ptr :: 'a :: len word) sz; bits \<le> sz; sz < len_of TYPE('a);
     dest < ptr\<rbrakk>
@@ -275,7 +311,7 @@ lemma retype_addrs_aligned:
 
 
 lemma (in pspace_update_eq) pspace_no_overlap_update [simp]:
-  "pspace_no_overlap ptr bits (f s) = pspace_no_overlap ptr bits s"
+  "pspace_no_overlap S (f s) = pspace_no_overlap S s"
   by (simp add: pspace_no_overlap_def pspace)
 
 
@@ -644,8 +680,8 @@ done
 
 
 lemma pspace_no_overlapE:
-  "\<lbrakk> pspace_no_overlap ptr sz s; kheap s x = Some ko;
-  {x..x + (2 ^ obj_bits ko - 1)} \<inter> {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} = {} \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk> pspace_no_overlap S s; kheap s x = Some ko;
+  {x..x + (2 ^ obj_bits ko - 1)} \<inter> S = {} \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   unfolding pspace_no_overlap_def by auto
 
 
@@ -659,9 +695,12 @@ proof (simp, rule is_aligned_no_wrap')
     by (simp add: word_less_nat_alt word_neq_0_conv unat_minus_one)
 qed fact+
 
+abbreviation(input)
+  "pspace_no_overlap_range_cover ptr bits
+    \<equiv> pspace_no_overlap {ptr .. (ptr && ~~ mask bits) + (2 ^ bits - 1)}"
 
 lemma pspace_no_overlap_into_Int_none:
-  assumes ps: "pspace_no_overlap ptr sz s"
+  assumes ps: "pspace_no_overlap_range_cover ptr sz s"
   and     vp: "valid_pspace s"
   and  cover: "range_cover ptr sz (obj_bits_api ty us) n"
   shows   "set (retype_addrs ptr ty n us) \<inter> dom (kheap s) = {}"
@@ -692,7 +731,7 @@ qed
 
 
 lemma pspace_no_overlapD1:
-  "\<lbrakk> pspace_no_overlap ptr sz s; kheap s x = Some ko;
+  "\<lbrakk> pspace_no_overlap_range_cover ptr sz s; kheap s x = Some ko;
   range_cover ptr sz (obj_bits_api ty us) n; 
   valid_pspace s\<rbrakk> \<Longrightarrow>
   x \<notin> set (retype_addrs ptr ty n us)"
@@ -704,7 +743,7 @@ lemma pspace_no_overlapD1:
 
 
 lemma pspace_no_overlapD2:
-  "\<lbrakk> pspace_no_overlap ptr sz s; x \<in> set (retype_addrs ptr ty n us);
+  "\<lbrakk> pspace_no_overlap_range_cover ptr sz s; x \<in> set (retype_addrs ptr ty n us);
   range_cover ptr sz (obj_bits_api ty us) n;
    valid_pspace s \<rbrakk> \<Longrightarrow> x \<notin> dom (kheap s)"
   apply (drule(2) pspace_no_overlap_into_Int_none)
@@ -714,7 +753,7 @@ done
 
 
 lemma pspace_no_overlapC:
-  "\<lbrakk> pspace_no_overlap ptr sz s; x \<in> set (retype_addrs ptr ty n us); kheap s x = Some ko;
+  "\<lbrakk> pspace_no_overlap_range_cover ptr sz s; x \<in> set (retype_addrs ptr ty n us); kheap s x = Some ko;
   range_cover ptr sz (obj_bits_api ty us) n;valid_pspace s \<rbrakk> \<Longrightarrow> P"
   by (auto dest: pspace_no_overlapD1)
 
@@ -1176,15 +1215,15 @@ lemma non_disjoing_subset: "\<lbrakk>A \<subseteq> B; A \<inter> C \<noteq> {}\<
 
 
 lemma pspace_no_overlap_same_type:
-  "\<lbrakk>pspace_no_overlap ptr sz s; ko_at k p s; a_type ko = a_type k\<rbrakk>
-    \<Longrightarrow> pspace_no_overlap ptr sz (kheap_update (\<lambda>_. (kheap s(p \<mapsto> ko))) s)"
+  "\<lbrakk>pspace_no_overlap S s; ko_at k p s; a_type ko = a_type k\<rbrakk>
+    \<Longrightarrow> pspace_no_overlap S (kheap_update (\<lambda>_. (kheap s(p \<mapsto> ko))) s)"
   unfolding pspace_no_overlap_def
   by (clarsimp simp: obj_at_def obj_bits_T)
 
 
 lemma set_object_no_overlap:
-  "\<lbrace>pspace_no_overlap ptr sz and obj_at (\<lambda>k. a_type ko = a_type k) p\<rbrace>
-  set_object p ko \<lbrace>\<lambda>r. pspace_no_overlap ptr sz\<rbrace>"
+  "\<lbrace>pspace_no_overlap S and obj_at (\<lambda>k. a_type ko = a_type k) p\<rbrace>
+  set_object p ko \<lbrace>\<lambda>r. pspace_no_overlap S\<rbrace>"
   unfolding set_object_def
   apply simp
   apply wp
@@ -1193,10 +1232,9 @@ lemma set_object_no_overlap:
   apply (rule pspace_no_overlap_same_type)
   apply auto
   done
-  
 
 lemma set_cap_no_overlap:
-  "\<lbrace>pspace_no_overlap ptr sz\<rbrace> set_cap cap cte \<lbrace>\<lambda>r. pspace_no_overlap ptr sz\<rbrace>"
+  "\<lbrace>pspace_no_overlap S\<rbrace> set_cap cap cte \<lbrace>\<lambda>r. pspace_no_overlap S\<rbrace>"
   unfolding set_cap_def
   apply (simp add: split_beta)
   apply (wp set_object_no_overlap)
@@ -1350,17 +1388,17 @@ lemma retype_region_revokable[wp]:
 
 
 lemma pspace_no_overlap_obj_not_in_range:
-  "\<lbrakk> pspace_no_overlap ptr sz s; obj_at P ptr' s;
+  "\<lbrakk> pspace_no_overlap S s; obj_at P ptr' s;
        pspace_aligned s; valid_objs s \<rbrakk>
-     \<Longrightarrow> ptr' \<notin> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}"
+     \<Longrightarrow> ptr' \<notin> S"
   apply (clarsimp simp add: pspace_no_overlap_def obj_at_def)
   apply (elim allE, drule(1) mp)
   apply (simp add: field_simps)
+  apply (drule_tac x=ptr' in eqset_imp_iff)
   apply (erule pspace_alignedE, erule domI)
   apply (drule valid_obj_sizes, erule ranI)
   apply (clarsimp simp: add_diff_eq[symmetric])
   apply (simp add: is_aligned_no_wrap')
-  apply (auto simp: order_trans [OF _ is_aligned_no_overflow] field_simps)
   done
 
 
@@ -1412,7 +1450,7 @@ lemma retype_region_obj_at_other2:
 
 
 lemma retype_region_obj_at_other3:
-  "\<lbrace>\<lambda>s. pspace_no_overlap ptr sz s \<and> obj_at P p s \<and> range_cover ptr sz (obj_bits_api ty us) n
+  "\<lbrace>\<lambda>s. pspace_no_overlap_range_cover ptr sz s \<and> obj_at P p s \<and> range_cover ptr sz (obj_bits_api ty us) n
            \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
      retype_region ptr n us ty dev
    \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
@@ -1425,16 +1463,15 @@ lemma retype_region_obj_at_other3:
    apply (simp add: field_simps)
 done
 
-
 lemma retype_region_st_tcb_at:
-  "\<lbrace>\<lambda>(s::'state_ext::state_ext state). pspace_no_overlap ptr' sz s \<and> pred_tcb_at proj P t s \<and> range_cover ptr' sz (obj_bits_api ty us) n
+  "\<lbrace>\<lambda>(s::'state_ext::state_ext state). pspace_no_overlap_range_cover ptr' sz s \<and> pred_tcb_at proj P t s \<and> range_cover ptr' sz (obj_bits_api ty us) n
           \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
      retype_region ptr' n us ty dev \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   by (simp add: retype_region_obj_at_other3 pred_tcb_at_def)
 
 
 lemma retype_region_cur_tcb[wp]:
-  "\<lbrace>pspace_no_overlap ptr sz and cur_tcb and K (range_cover ptr sz (obj_bits_api ty us) n)
+  "\<lbrace>pspace_no_overlap_range_cover ptr sz and cur_tcb and K (range_cover ptr sz (obj_bits_api ty us) n)
      and K (is_aligned ptr sz \<and> sz < word_bits)
      and valid_objs and pspace_aligned\<rbrace>
      retype_region ptr n us ty dev
@@ -1570,7 +1607,7 @@ lemma retype_addrs_mem_subset_ptr_bits:
   by (simp add: obj_bits_dev_irr tynunt obj_range_def field_simps)
 
 lemma pspace_no_overlap_retype_addrs_empty:
-  assumes nptr: "pspace_no_overlap ptr sz s"
+  assumes nptr: "pspace_no_overlap_range_cover ptr sz s"
   and xv: "x \<in> set (retype_addrs ptr ty n us)"  
   and yv: "y \<notin> set (retype_addrs ptr ty n us)"
   and kov: "kheap s y = Some ko"  
@@ -1654,7 +1691,7 @@ locale Retype_AI_valid_untyped_helper =
         range_cover ptr sz (obj_bits_api ty us) n;
         is_untyped_cap c \<Longrightarrow>
           usable_untyped_range c \<inter> {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} = {};
-        pspace_no_overlap ptr sz s;
+        pspace_no_overlap_range_cover ptr sz s;
         caps_no_overlap ptr sz s;
         valid_pspace s \<rbrakk>
       \<Longrightarrow> valid_cap c
@@ -1672,7 +1709,7 @@ lemma cap_refs_respects_device_region_cap_range:
   apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def)
   apply fastforce
   done
-  
+
 
 locale retype_region_proofs =
   fixes s :: "'state_ext :: state_ext state"
@@ -1682,7 +1719,7 @@ locale retype_region_proofs =
       and   res: "caps_overlap_reserved {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} s"
       and tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
       and  tyct: "ty = CapTableObject \<Longrightarrow> us < word_bits - cte_level_bits \<and> 0 < us"
-      and  orth: "pspace_no_overlap ptr sz s"
+      and   orth: "pspace_no_overlap_range_cover ptr sz s"
       and  mem :  "caps_no_overlap ptr sz s"
       and cover: "range_cover ptr sz (obj_bits_api ty us) n"
       and dev: "\<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s"
@@ -2152,7 +2189,7 @@ lemma use_retype_region_proofs':
          \<And>s. P s \<longrightarrow> Q (retype_addrs ptr ty n us) s \<rbrakk> \<Longrightarrow>
     \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n 
         \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s
-        \<and> caps_no_overlap ptr sz s \<and> pspace_no_overlap ptr sz s
+        \<and> caps_no_overlap ptr sz s \<and> pspace_no_overlap_range_cover ptr sz s
         \<and> (\<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
         \<and> P s\<rbrace> retype_region ptr n us ty dev \<lbrace>Q\<rbrace>"
   apply (simp add: retype_region_def split del: split_if)
@@ -2227,7 +2264,7 @@ lemma retype_region_valid_cap:
   "\<lbrakk>ty = Structures_A.apiobject_type.CapTableObject \<Longrightarrow> 0 < us\<rbrakk>
    \<Longrightarrow> \<lbrace>(\<lambda>s::'state_ext state. valid_pspace s \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s \<and>
            valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n \<and>
-           caps_no_overlap ptr sz s \<and> pspace_no_overlap ptr sz s  \<and>
+           caps_no_overlap ptr sz s \<and> pspace_no_overlap_range_cover ptr sz s  \<and>
            (\<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) \<and>
            s \<turnstile> cap) and K (untyped_range cap \<inter> {ptr..(ptr &&~~ mask sz) + 2 ^ sz - 1} = {})\<rbrace>
         retype_region ptr n us ty dev
@@ -2303,7 +2340,7 @@ lemma post_retype_invs_trans_state[simp]:
 
 
 lemma retype_region_post_retype_invs:
-  "\<lbrace>(invs::'state_ext state \<Rightarrow> bool) and caps_no_overlap ptr sz and pspace_no_overlap ptr sz
+  "\<lbrace>(invs::'state_ext state \<Rightarrow> bool) and caps_no_overlap ptr sz and pspace_no_overlap_range_cover ptr sz
       and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
       and region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
       and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
@@ -2332,7 +2369,7 @@ lemma cte_wp_at_trans_state[simp]: "cte_wp_at P ptr (kheap_update f (trans_state
 
 lemma retype_region_cte_at_other:
   assumes cover: "range_cover ptr' sz (obj_bits_api ty us) n"
-  shows "\<lbrace>\<lambda>s. pspace_no_overlap ptr' sz s \<and> cte_wp_at P ptr s \<and> valid_pspace s\<rbrace> 
+  shows "\<lbrace>\<lambda>s. pspace_no_overlap_range_cover ptr' sz s \<and> cte_wp_at P ptr s \<and> valid_pspace s\<rbrace> 
   retype_region ptr' n us ty dev \<lbrace>\<lambda>r. cte_wp_at P ptr\<rbrace>"
   unfolding retype_region_def 
   apply (simp only: foldr_upd_app_if fun_app_def K_bind_def)
@@ -2348,7 +2385,7 @@ done
 
 
 lemma retype_cte_wp_at:
-  "\<lbrace>\<lambda>s. cte_wp_at P ptr s \<and> pspace_no_overlap ptr' sz s \<and> 
+  "\<lbrace>\<lambda>s. cte_wp_at P ptr s \<and> pspace_no_overlap_range_cover ptr' sz s \<and> 
        valid_pspace s \<and> range_cover ptr' sz (obj_bits_api ty us) n\<rbrace> 
   retype_region ptr' n us ty dev
   \<lbrace>\<lambda>r. cte_wp_at P ptr\<rbrace>"
@@ -2361,8 +2398,8 @@ lemma retype_cte_wp_at:
 
 
 lemma pspace_no_overlap_typ_at_def:
-  "pspace_no_overlap ptr bits = 
-  (\<lambda>s. \<forall>T x. typ_at T x s \<longrightarrow> {x..x + (2 ^ obj_bits_type T - 1)} \<inter> {ptr..(ptr && ~~ mask bits) + (2 ^ bits - 1)} = {})"
+  "pspace_no_overlap S = 
+  (\<lambda>s. \<forall>T x. typ_at T x s \<longrightarrow> {x..x + (2 ^ obj_bits_type T - 1)} \<inter> S = {})"
   apply (simp add: pspace_no_overlap_def obj_at_def)
   apply (rule ext)
   apply (auto simp: obj_bits_T)
@@ -2371,7 +2408,7 @@ lemma pspace_no_overlap_typ_at_def:
 
 lemma pspace_no_overlap_typ_at_lift:
   assumes f: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  shows "\<lbrace>pspace_no_overlap w b\<rbrace> f \<lbrace>\<lambda>rv. pspace_no_overlap w b\<rbrace>"
+  shows "\<lbrace>pspace_no_overlap S\<rbrace> f \<lbrace>\<lambda>rv. pspace_no_overlap S\<rbrace>"
   apply (clarsimp simp: pspace_no_overlap_typ_at_def)
   apply (wp hoare_vcg_all_lift f)
   done
@@ -2420,4 +2457,24 @@ lemma no_cap_to_obj_with_diff_ref_more_update[simp]:
   by (simp add: no_cap_to_obj_with_diff_ref_def)
 
 end
+
+(* FIXME: irq_state stuff moved from CNodeInv_AI, not clear it makes sense here. *)
+
+lemma cte_wp_at_irq_state_independent[intro!, simp]:
+  "is_final_cap' x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
+   = is_final_cap' x s"
+  by (simp add: is_final_cap'_def)
+
+
+lemma zombies_final_irq_state_independent[intro!, simp]:
+  "zombies_final (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
+   = zombies_final s"
+  by (simp add: zombies_final_def)
+
+
+lemma ex_cte_cap_wp_to_irq_state_independent[intro!, simp]:
+  "ex_cte_cap_wp_to x y (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
+   = ex_cte_cap_wp_to x y s"
+  by (simp add: ex_cte_cap_wp_to_def)
+
 end

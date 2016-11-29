@@ -92,8 +92,9 @@ datatype arch_invocation
      | InvokeASIDControl asid_control_invocation
      | InvokeASIDPool asid_pool_invocation
 
-datatype arch_copy_register_sets =
-    ArchDefaultExtraRegisters
+datatype arch_copy_register_sets = ARMNoExtraRegisters
+
+definition "ArchDefaultExtraRegisters \<equiv> ARMNoExtraRegisters"
 
 -- "There are no additional interrupt control operations on ARM."
 typedecl arch_irq_control_invocation

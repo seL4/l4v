@@ -250,6 +250,7 @@ lemma
    apply simp
    apply (erule_tac x=y in allE)
    apply clarsimp
+   apply (rule_tac x=pte' in exI)
    apply (simp add: absPageTable_def  split: option.splits ARM_H.pte.splits)
    apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
               vm_kernel_only_def vm_read_only_def vm_read_write_def
@@ -257,7 +258,7 @@ lemma
    using pte_rights
    apply -[1]
    apply (erule_tac x="x + (ucast y << 2)" in allE)+
-   subgoal by fastforce -- "NOTE: takes quite a while."
+   subgoal by fastforce
   apply (clarsimp split: split_if_asm)
   using pdes
   apply (erule_tac x=x in allE)
@@ -412,22 +413,40 @@ lemma LookupFailureMap_lookup_failure_map:
                split: ExceptionTypes_A.lookup_failure.splits)
 
 primrec
+  ArchFaultMap :: "Fault_H.arch_fault \<Rightarrow> ExceptionTypes_A.arch_fault"
+where
+  "ArchFaultMap (ArchFault_H.ARM_H.arch_fault.VMFault p m) = Machine_A.ARM_A.arch_fault.VMFault p m"
+
+
+primrec
   FaultMap :: "Fault_H.fault \<Rightarrow> ExceptionTypes_A.fault"
 where
   "FaultMap (Fault_H.fault.CapFault ref b failure) =
      ExceptionTypes_A.fault.CapFault ref b (LookupFailureMap failure)"
-| "FaultMap (Fault_H.fault.VMFault ptr bool) =
-     ExceptionTypes_A.fault.VMFault ptr bool"
+| "FaultMap (Fault_H.fault.ArchFault fault) =
+     ExceptionTypes_A.fault.ArchFault (ArchFaultMap fault)"
 | "FaultMap (Fault_H.fault.UnknownSyscallException n) =
      ExceptionTypes_A.fault.UnknownSyscallException n"
 | "FaultMap (Fault_H.fault.UserException x y) =
      ExceptionTypes_A.fault.UserException x y"
 
+lemma ArchFaultMap_arch_fault_map: "ArchFaultMap (arch_fault_map f) = f"
+  by (cases f, simp add: ArchFaultMap_def arch_fault_map_def)
+
 lemma FaultMap_fault_map[simp]:
   "valid_fault ft \<Longrightarrow> FaultMap (fault_map ft) = ft"
   apply (case_tac ft, simp_all)
-  apply (simp add: valid_fault_def LookupFailureMap_lookup_failure_map)
+   apply (simp add: valid_fault_def LookupFailureMap_lookup_failure_map)
+  apply (rule ArchFaultMap_arch_fault_map)
   done
+
+definition
+  "ArchTcbMap atcb \<equiv>
+    \<lparr> tcb_context =  atcbContext atcb \<rparr>"
+
+lemma arch_tcb_relation_imp_ArchTcnMap:
+  "\<lbrakk> arch_tcb_relation atcb atcb'\<rbrakk> \<Longrightarrow> ArchTcbMap atcb' = atcb"
+  by (clarsimp simp: arch_tcb_relation_def ArchTcbMap_def)
 
 definition
   "TcbMap tcb \<equiv>
@@ -439,10 +458,10 @@ definition
       tcb_state = ThStateMap (tcbState tcb),
       tcb_fault_handler = to_bl (tcbFaultHandler tcb),
       tcb_ipc_buffer = tcbIPCBuffer tcb,
-      tcb_context = tcbContext tcb,
       tcb_fault = map_option FaultMap (tcbFault tcb),
       tcb_bound_notification = tcbBoundNotification tcb,
-      tcb_mcpriority = tcbMCP tcb\<rparr>"
+      tcb_mcpriority = tcbMCP tcb,
+      tcb_arch = ArchTcbMap (tcbArch tcb)\<rparr>"
 
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.
@@ -741,7 +760,8 @@ proof -
        using valid_objs[simplified valid_objs_def Ball_def dom_def fun_app_def]
        apply (erule_tac x=y in allE)
        apply (clarsimp simp add: cap_relation_imp_CapabilityMap valid_obj_def
-                  valid_tcb_def ran_tcb_cap_cases valid_cap_def2)
+                                 valid_tcb_def ran_tcb_cap_cases valid_cap_def2
+                                 arch_tcb_relation_imp_ArchTcnMap)
       apply (simp add: absCNode_def cte_map_def)
       apply (erule pspace_dom_relatedE[OF _ pspace_relation])
       apply (case_tac ko, simp_all add: other_obj_relation_def
@@ -1786,13 +1806,15 @@ definition
   "irq_state_map s \<equiv> case s of
      irq_state.IRQInactive \<Rightarrow> irqstate.IRQInactive
    | irq_state.IRQSignal \<Rightarrow> irqstate.IRQSignal
-   | irq_state.IRQTimer \<Rightarrow> irqstate.IRQTimer"
+   | irq_state.IRQTimer \<Rightarrow> irqstate.IRQTimer
+   | irq_state.IRQReserved \<Rightarrow> irqstate.IRQReserved"
 
 definition
   "IRQStateMap s \<equiv> case s of
      irqstate.IRQInactive \<Rightarrow> irq_state.IRQInactive
    | irqstate.IRQSignal \<Rightarrow> irq_state.IRQSignal
-   | irqstate.IRQTimer \<Rightarrow> irq_state.IRQTimer"
+   | irqstate.IRQTimer \<Rightarrow> irq_state.IRQTimer
+   | irqstate.IRQReserved \<Rightarrow> irq_state.IRQReserved"
 
 lemma irq_state_map_inv:
   "irq_state_map (IRQStateMap s) = s"
@@ -1827,8 +1849,8 @@ done
 
 definition
   "absArchState s' \<equiv>
-   case s' of ARMKernelState gframe at hwat anext am gpd gpts kvspace \<Rightarrow>
-     \<lparr>arm_globals_frame = gframe, arm_asid_table = at \<circ> ucast,
+   case s' of ARMKernelState at hwat anext am gpd gpts kvspace \<Rightarrow>
+     \<lparr>arm_asid_table = at \<circ> ucast,
       arm_hwasid_table = hwat, arm_next_asid = anext,
       arm_asid_map = am, arm_global_pd = gpd, arm_global_pts = gpts,
       arm_kernel_vspace = kvspace\<rparr>"
@@ -1955,10 +1977,10 @@ definition
 definition
   "kernelEntry e tc \<equiv> do
     t \<leftarrow> getCurThread; 
-    threadSet (\<lambda>tcb. tcb \<lparr> tcbContext := tc \<rparr>) t;
+    threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb) \<rparr>) t;
     callKernel e;
     t' \<leftarrow> getCurThread;
-    threadGet tcbContext t'
+    threadGet (atcbContextGet o tcbArch) t'
   od"
 
 definition

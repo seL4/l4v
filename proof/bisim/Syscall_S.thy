@@ -709,7 +709,6 @@ lemma handle_event_bisim:
   apply (wp separate_state_pres)
   apply (rule hoare_pre, wps, wp, simp)
   apply wp
-  apply (rule hoare_pre, wps, wp, simp)
   apply simp
 
   apply wp
@@ -785,7 +784,7 @@ lemma handle_interrupt_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. separate_state\<rbrace>"
   unfolding handle_interrupt_def
   apply (rule hoare_pre)
-  apply (wp | wpc | wps | simp | strengthen imp_consequent)+
+  apply (wp | wpc | wps | simp add: handle_reserved_irq_def | strengthen imp_consequent)+
   done
 
 lemma decode_invocation_separate_state [wp]:

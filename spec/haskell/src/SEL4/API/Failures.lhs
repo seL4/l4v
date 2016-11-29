@@ -10,6 +10,12 @@
 
 This module specifies the mechanisms used by the seL4 kernel to handle failures in kernel operations that must be communicated somehow to user-level code.
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP #-}
+
+\end{impdetails}
+
 > module SEL4.API.Failures where
 
 \begin{impdetails}
@@ -18,6 +24,8 @@ This module specifies the mechanisms used by the seL4 kernel to handle failures 
 > import SEL4.API.Types
 
 \end{impdetails}
+
+> import SEL4.API.Failures.TARGET
 
 \subsection{Types}
 
@@ -31,15 +39,13 @@ The procedure for handling faults is defined in \autoref{sec:kernel.faulthandler
 >         = UserException {
 >             userExceptionNumber :: Word,
 >             userExceptionErrorCode :: Word }
->         | VMFault {
->             vmFaultAddress :: VPtr,
->             vmFaultArchData :: [Word] }
 >         | CapFault {
 >             capFaultAddress :: CPtr,
 >             capFaultInReceivePhase :: Bool,
 >             capFaultFailure :: LookupFailure }
 >         | UnknownSyscallException {
 >             unknownSyscallNumber :: Word }
+>         | ArchFault { archFault :: ArchFault }
 >         deriving Show
 
 \subsection{Kernel Init Failure}
@@ -124,7 +130,7 @@ There is a similar function used for the "Fault" type; it is defined in \autoref
 >
 > msgFromSyscallError (FailedLookup s lf) =
 >     (6, (fromIntegral $ fromEnum s):(msgFromLookupFailure lf))
->     
+>
 > msgFromSyscallError TruncatedMessage = (7, [])
 >
 > msgFromSyscallError DeleteFirst = (8, [])

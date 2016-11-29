@@ -477,8 +477,7 @@ context EmptyFail_AI_call_kernel_det begin
 
 lemma call_kernel_empty_fail: "empty_fail (call_kernel a :: (unit,det_ext) s_monad)"
   apply (simp add: call_kernel_def)
-  apply (wp | simp)+
-  done
+  by (wp|simp)+
 
 end
 

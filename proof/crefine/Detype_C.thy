@@ -1137,24 +1137,6 @@ lemma tcb_ptr_to_ctcb_ptr_comp:
   apply (simp add: tcb_ptr_to_ctcb_ptr_def)
   done
 
-lemma ccorres_assume_pre:
-  assumes "\<And>s. P s \<Longrightarrow> ccorres r xf (P and (\<lambda>s'. s' = s)) P' hs H C"
-  shows "ccorres r xf P P' hs H C"
-  apply (clarsimp simp: ccorres_underlying_def)
-  apply (frule assms)
-  apply (simp add: ccorres_underlying_def)
-  apply blast
-  done
-
-lemma ccorres_name_pre:
-  "(\<And>s. P s \<Longrightarrow> ccorresG rf_sr \<Gamma> r xf (\<lambda>s'. s' = s) P' hs H C) \<Longrightarrow> ccorresG rf_sr \<Gamma> r xf P P' hs H C"
-   apply (rule ccorres_assume_pre)
-   apply (rule ccorres_guard_imp)
-     apply fastforce
-    apply simp 
-   apply simp
-   done
-
 lemma tcb_ptr_to_ctcb_ptr_to_Ptr:
   "tcb_ptr_to_ctcb_ptr ` {p..+b} = Ptr ` {p + ctcb_offset..+b}"
   apply (simp add:  tcb_ptr_to_ctcb_ptr_comp image_comp [symmetric])
@@ -1631,6 +1613,14 @@ lemma cvariable_array_map_relation_detype:
   apply (simp add: h_t_array_valid_typ_region_bytes)
   done
 
+lemma zero_ranges_are_zero_typ_region_bytes:
+  "zero_ranges_are_zero rs hrs
+    \<Longrightarrow> zero_ranges_are_zero rs (hrs_htd_update (typ_region_bytes ptr bits) hrs)"
+  apply (clarsimp simp: zero_ranges_are_zero_def)
+  apply (drule(1) bspec)
+  apply (clarsimp simp: region_is_bytes'_def typ_region_bytes_def hrs_htd_update)
+  done
+
 lemma deleteObjects_ccorres':
   notes if_cong[cong]
   shows
@@ -2091,7 +2081,8 @@ proof -
     by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                        psu_restrict cpspace_relation_def
                        carch_state_relation_def cmachine_state_relation_def
-                       hrs_htd_update htd_safe_typ_region_bytes)
+                       hrs_htd_update htd_safe_typ_region_bytes
+                       zero_ranges_are_zero_typ_region_bytes)
 qed
 
 abbreviation (input)

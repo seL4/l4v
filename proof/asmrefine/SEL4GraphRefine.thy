@@ -65,9 +65,13 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
   "snd (snd ((if P then f else g) gs)) = (if P then snd (snd (f gs)) else snd (snd (g gs)))"
   by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
-ML {* val nm = "Kernel_C.memcpy" *}
+ML {* val nm = "Kernel_C.invert_l1index" *}
 
 (*
+
+(* If test_all_graph_refine_proofs_parallel fails, debug it by uncommenting this comment block
+   and setting "nm" to the failed C function. *)
+
 local_setup {*  define_graph_fun_short funs nm *}
 
 ML {*
@@ -85,8 +89,6 @@ schematic_goal "PROP ?P"
   apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
   apply (tactic {* ALLGOALS (TRY o ProveSimplToGraphGoals.graph_refine_proof_full_goal_tac
         (csenv ()) @{context}) *})
-  done
-
 *)
 
 ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel

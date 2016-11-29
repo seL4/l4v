@@ -49,6 +49,16 @@ except ImportError:
           "to install.", file=sys.stderr)
     sys.exit(1)
 
+# The psutil.Process.cpu_times() API changed at version 4.1.0.
+# Earlier versions give the user and system times for the queried
+# process only. Later versions return two additional tuple members
+# for the total user and system times of its child processes.
+# For compatibility with both versions, we ignore the additional
+# values.
+def cpu_time_of(process):
+    cpu_times = process.cpu_times()
+    return cpu_times[0] + cpu_times[1]
+
 class Poller(threading.Thread):
     '''Subclass of threading.Thread that monitors CPU usage of another process.
        Use run() to start the process.
@@ -80,13 +90,13 @@ class Poller(threading.Thread):
             try:
                 if self.proc is None:
                     self.proc = psutil.Process(self.pid)
-                total += sum(self.proc.cpu_times())
+                total += cpu_time_of(self.proc)
 
                 # Fetch children's usage.
                 new_current_children = {}
                 for c in self.proc.children(recursive=True):
                     try:
-                        t = sum(c.cpu_times())
+                        t = cpu_time_of(c)
                         new_current_children[(c.pid, c.create_time())] = t
                         total += t
                     except psutil.NoSuchProcess:

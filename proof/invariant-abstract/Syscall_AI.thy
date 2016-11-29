@@ -8,8 +8,8 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
-Refinement for handleEvent and syscalls
+(*
+Invariant preservation for all syscalls.
 *)
 
 theory Syscall_AI
@@ -133,16 +133,61 @@ lemma simple_from_running:
   by (fastforce simp: ct_in_state_def
                elim!: pred_tcb_weakenE)
 
+locale Systemcall_AI_Pre =
+  fixes proj:: "itcb \<Rightarrow> 'a"
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  assumes handle_arch_fault_reply_pred_tcb_at[wp]:
+    "\<And> P t f obj d dl.
+      \<lbrace> pred_tcb_at proj P t :: 'state_ext state \<Rightarrow> _\<rbrace>
+        handle_arch_fault_reply f obj d dl
+      \<lbrace> \<lambda>_ . pred_tcb_at proj P t \<rbrace>"
+  assumes handle_arch_fault_reply_invs[wp]:
+    "\<And> f obj d dl.
+      \<lbrace> invs :: 'state_ext state \<Rightarrow> _ \<rbrace> handle_arch_fault_reply f obj d dl \<lbrace> \<lambda>_ . invs \<rbrace>"
+  assumes handle_arch_fault_reply_cap_to[wp]:
+    "\<And> f obj d dl c.
+      \<lbrace> ex_nonz_cap_to c :: 'state_ext state \<Rightarrow> _ \<rbrace>
+        handle_arch_fault_reply f obj d dl
+      \<lbrace> \<lambda>_ . ex_nonz_cap_to c \<rbrace>"
+  assumes handle_arch_fault_reply_it[wp]:
+    "\<And> P f obj d dl.
+      \<lbrace> \<lambda>s :: 'state_ext state. P (idle_thread s) \<rbrace>
+        handle_arch_fault_reply f obj d dl
+      \<lbrace> \<lambda>_ s. P (idle_thread s) \<rbrace>"
+  assumes handle_arch_fault_reply_caps[wp]:
+    "\<And> P f obj d dl.
+      \<lbrace> \<lambda>s  :: 'state_ext state . P (caps_of_state s) \<rbrace>
+        handle_arch_fault_reply f obj d dl
+      \<lbrace> \<lambda>_ s. P (caps_of_state s) \<rbrace>"
+  assumes handle_arch_fault_reply_cte_wp_at[wp]:
+     "\<And> P P' p x4 t d dl.
+       \<lbrace>\<lambda>s ::'state_ext state . P (cte_wp_at P' p s)\<rbrace>
+         handle_arch_fault_reply x4 t d dl
+       \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
+  assumes handle_arch_fault_reply_cur_thread[wp]:
+    "\<And> P  x4 t d dl.
+       \<lbrace>\<lambda>s ::'state_ext state . P (cur_thread s)\<rbrace>
+         handle_arch_fault_reply x4 t d dl
+       \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  assumes handle_arch_fault_st_tcb_at_simple[wp]:
+    "\<And> x4 t' t d dl.
+       \<lbrace>st_tcb_at simple t' :: 'state_ext state \<Rightarrow> _\<rbrace>
+         handle_arch_fault_reply x4 t d dl
+       \<lbrace>\<lambda>_ .st_tcb_at simple t'\<rbrace>"
+  assumes handle_arch_fault_valid_objs[wp]:
+    "\<And> x4 t d dl.
+       \<lbrace> valid_objs :: 'state_ext state \<Rightarrow> _\<rbrace>
+         handle_arch_fault_reply x4 t d dl
+       \<lbrace>\<lambda>_ .valid_objs\<rbrace>"
+begin
 
-crunch pred_tcb_at[wp]: handle_fault_reply "pred_tcb_at proj P t"
-crunch invs[wp]: handle_fault_reply "invs"
-crunch cap_to[wp]: handle_fault_reply "ex_nonz_cap_to c"
-crunch it[wp]: handle_fault_reply "\<lambda>s. P (idle_thread s)"
-crunch caps[wp]: handle_fault_reply "\<lambda>s. P (caps_of_state s)"
-crunch cap_to[wp]: handle_fault_reply "ex_nonz_cap_to c"
-crunch it[wp]: handle_fault_reply "\<lambda>s. P (idle_thread s)"
-crunch caps[wp]: handle_fault_reply "\<lambda>s. P (caps_of_state s)"
+crunch pred_tcb_at[wp]: handle_fault_reply "pred_tcb_at proj (P :: 'a \<Rightarrow> _) t :: 'state_ext state \<Rightarrow> _"
+crunch invs[wp]: handle_fault_reply "invs :: 'state_ext state \<Rightarrow> _"
+crunch cap_to[wp]: handle_fault_reply "ex_nonz_cap_to c :: 'state_ext state \<Rightarrow> _"
+crunch it[wp]: handle_fault_reply "\<lambda>s :: 'state_ext state. P (idle_thread s) "
+crunch caps[wp]: handle_fault_reply "\<lambda>s :: 'state_ext state. P (caps_of_state s)"
 
+end
 
 lemma st_tcb_at_eq:
   "\<lbrakk> st_tcb_at (\<lambda>s. s = st) t s; st_tcb_at (\<lambda>s. s = st') t s \<rbrakk> \<Longrightarrow> st = st'"
@@ -206,19 +251,21 @@ lemma set_object_cte_wp_at2:
   done
 
 
-lemma handle_fault_reply_cte_wp_at:
-  "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace> handle_fault_reply f t d dl \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
+lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
+  "\<lbrace>\<lambda>s :: 'state_ext state. P (cte_wp_at P' p s)\<rbrace>
+     handle_fault_reply f t d dl
+   \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
   proof -
     have SC:
       "\<And>p' s tcb nc. get_tcb p' s = Some tcb
-       \<Longrightarrow> obj_at (same_caps (TCB (tcb \<lparr>tcb_context := nc\<rparr>))) p' s"
+       \<Longrightarrow> obj_at (same_caps (TCB (tcb \<lparr>tcb_arch := arch_tcb_context_set nc (tcb_arch tcb)\<rparr>))) p' s"
       apply (drule get_tcb_ko_at [THEN iffD1])
       apply (erule ko_at_weakenE)
       apply (clarsimp simp add: tcb_cap_cases_def)
       done
     have NC:
       "\<And>p' s tcb P nc. get_tcb p' s = Some tcb
-      \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := kheap s(p' \<mapsto> TCB (tcb\<lparr>tcb_context := nc\<rparr>))\<rparr>)
+      \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := kheap s(p' \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set nc (tcb_arch tcb)\<rparr>))\<rparr>)
           = cte_wp_at P p s"
       apply (drule_tac nc=nc in SC)
       apply (drule_tac P=P and p=p in cte_wp_at_after_update)
@@ -236,23 +283,27 @@ lemma handle_fault_reply_cte_wp_at:
       apply (clarsimp simp add: as_user_def)
       apply (wp set_object_cte_wp_at2 | simp add: split_def)+
       apply (clarsimp simp add: NC)
+      apply simp
+      apply wp
       done
   qed
 
 
-lemma handle_fault_reply_has_no_reply_cap:
-  "\<lbrace>\<lambda>s. \<not>has_reply_cap t s\<rbrace> handle_fault_reply f t d dl \<lbrace>\<lambda>_ s. \<not>has_reply_cap t s\<rbrace>"
+lemma (in Systemcall_AI_Pre) handle_fault_reply_has_no_reply_cap:
+  "\<lbrace>\<lambda>s :: 'state_ext state. \<not>has_reply_cap t s\<rbrace> handle_fault_reply f t d dl \<lbrace>\<lambda>_ s. \<not>has_reply_cap t s\<rbrace>"
   apply (clarsimp simp add: has_reply_cap_def)
   apply (wp hoare_allI handle_fault_reply_cte_wp_at)
   apply (clarsimp)
   done
 
+locale Systemcall_AI_Pre2 = Systemcall_AI_Pre itcb_state state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself"
 
-lemma do_reply_invs[wp]:
+lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
   "\<lbrace>tcb_at t and tcb_at t' and cte_wp_at (op = (cap.ReplyCap t False)) slot and
     invs\<rbrace>
      do_reply_transfer t' t slot
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+   \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp | wpc |simp)+
         apply (wp sts_invs_minor)
@@ -308,7 +359,7 @@ lemma do_reply_invs[wp]:
           apply (clarsimp simp add: invs_def valid_state_def valid_idle_def)
           apply (drule st_tcb_at_eq, erule pred_tcb_weaken_strongerE, simp)
           apply clarsimp
-         apply (wp handle_fault_reply_has_no_reply_cap)
+         apply_trace (wp handle_fault_reply_has_no_reply_cap)
      apply (rule_tac Q = "\<lambda>_. st_tcb_at awaiting_reply t and invs and
                          (\<lambda>s. \<not>has_reply_cap t s)" in hoare_strengthen_post[rotated])
       apply (clarsimp)
@@ -338,9 +389,9 @@ lemma do_reply_invs[wp]:
 lemmas si_invs[wp] = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI hoare_TrueI,simplified]
 
 
-lemma pinv_invs[wp]:
+lemma (in Systemcall_AI_Pre2) pinv_invs[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i\<rbrace>
-    perform_invocation blocking call i \<lbrace>\<lambda>rv. invs\<rbrace>"
+    perform_invocation blocking call i \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (case_tac i, simp_all)
        apply (wp tcbinv_invs send_signal_interrupt_states invoke_domain_invs
          | clarsimp simp:ct_in_state_def
@@ -355,8 +406,9 @@ crunch typ_at[wp]: do_reply_transfer "\<lambda>s. P (typ_at T p s)"
 crunch typ_at[wp]: invoke_irq_handler "\<lambda>s. P (typ_at T p s)"
 
 
-locale Syscall_AI =
-  fixes state_ext_t :: "'state_ext::state_ext itself"
+locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
+                  + Systemcall_AI_Pre2 state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself" +
   assumes invoke_irq_control_typ_at[wp]:
     "\<And>P T p irq_inv.
       \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> invoke_irq_control irq_inv \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
@@ -1137,8 +1189,8 @@ lemma tcb_caller_cap:
    cte_wp_at (is_reply_cap or op = cap.NullCap) (t, tcb_cnode_index 3) s"
   by (fastforce intro: tcb_cap_wp_at split: Structures_A.thread_state.split_asm)
 
-lemma hr_invs[wp]:
-  "\<lbrace>invs\<rbrace> handle_reply \<lbrace>\<lambda>rv. invs\<rbrace>"
+lemma (in Syscall_AI) hr_invs[wp]:
+  "\<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace> handle_reply \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: handle_reply_def)
   apply (rule hoare_seq_ext [OF _ gets_sp])
   apply (rule hoare_seq_ext [OF _ get_cap_sp])
@@ -1154,7 +1206,7 @@ lemma hr_invs[wp]:
 
 crunch cur_thread[wp]: set_extra_badge "\<lambda>s. P (cur_thread s)"
 
-crunch cur_thread[wp]: handle_reply "\<lambda>s. P (cur_thread s)"
+crunch (in Syscall_AI) cur_thread[wp]: handle_reply "\<lambda>s :: 'state_ext state. P (cur_thread s)"
   (wp: crunch_wps transfer_caps_loop_pres
         simp: unless_def crunch_simps
       ignore: transfer_caps_loop)
@@ -1166,19 +1218,19 @@ lemma simple_if_Restart_Inactive:
   "simple (if P then Structures_A.Restart else Structures_A.Inactive)"
   by simp
 
-crunch st_tcb_at_simple[wp]: handle_reply "st_tcb_at simple t'"
+crunch (in Syscall_AI) st_tcb_at_simple[wp]: handle_reply "st_tcb_at simple t' :: 'state_ext state \<Rightarrow> _"
   (wp: hoare_post_taut crunch_wps sts_st_tcb_at_cases
        thread_set_no_change_tcb_state
      ignore: set_thread_state simp: simple_if_Restart_Inactive)
 
 
-lemmas hr_ct_in_state_simple[wp]
+lemmas (in Syscall_AI) hr_ct_in_state_simple[wp]
     = ct_in_state_thread_state_lift [OF handle_reply_cur_thread
                                        handle_reply_st_tcb_at_simple]
 
-crunch nonz_cap_to[wp]: handle_fault_reply "ex_nonz_cap_to p"
+crunch (in Syscall_AI) nonz_cap_to[wp]: handle_fault_reply "ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> _"
 
-crunch vo[wp]: handle_fault_reply "valid_objs"
+crunch (in Syscall_AI) vo[wp]: handle_fault_reply "valid_objs :: 'state_ext state \<Rightarrow> _"
 
 lemmas handle_fault_reply_typ_ats[wp] =
     abs_typ_at_lifts [OF handle_fault_reply_typ_at]
@@ -1193,8 +1245,10 @@ lemma drop_when_dxo_wp: "(\<And>f s. P (trans_state f s) = P s ) \<Longrightarro
   apply (wp | simp)+
   done
 
+context Syscall_AI begin
+
 lemma do_reply_transfer_nonz_cap:
-  "\<lbrace>\<lambda>s. ex_nonz_cap_to p s \<and> valid_objs s \<and> tcb_at p s \<and> valid_mdb s
+  "\<lbrace>\<lambda>s :: 'state_ext state. ex_nonz_cap_to p s \<and> valid_objs s \<and> tcb_at p s \<and> valid_mdb s
             \<and> tcb_at receiver s\<rbrace>
      do_reply_transfer sender receiver slot
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
@@ -1219,7 +1273,7 @@ lemma do_reply_transfer_nonz_cap:
   done
 
 lemma handle_reply_nonz_cap:
-  "\<lbrace>\<lambda>s. ex_nonz_cap_to p s \<and> valid_objs s \<and> valid_mdb s \<and> tcb_at p s\<rbrace>
+  "\<lbrace>\<lambda>s :: 'state_ext state. ex_nonz_cap_to p s \<and> valid_objs s \<and> valid_mdb s \<and> tcb_at p s\<rbrace>
      handle_reply
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   apply (simp add: handle_reply_def)
@@ -1233,7 +1287,7 @@ lemma handle_reply_nonz_cap:
 lemma handle_reply_nonz_cap_to_ct:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s \<and> valid_objs s \<and> valid_mdb s \<and> tcb_at (cur_thread s) s\<rbrace>
      handle_reply
-   \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
+   \<lbrace>\<lambda>rv s :: 'state_ext state. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. \<exists>ct. (ct = cur_thread s) \<and> ex_nonz_cap_to ct s"
                in hoare_post_imp)
    apply simp
@@ -1246,7 +1300,7 @@ lemma do_reply_transfer_st_tcb_at_active:
   "\<lbrace>valid_objs and st_tcb_at active t and st_tcb_at awaiting_reply t' and
     cte_wp_at (op = (cap.ReplyCap t' False)) sl\<rbrace>
     do_reply_transfer t t' sl
-   \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
+   \<lbrace>\<lambda>rv. st_tcb_at active t :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp drop_when_dxo_wp sts_st_tcb_at' sts_st_tcb_at_neq cap_delete_one_reply_st_tcb_at
             hoare_drop_imps thread_set_no_change_tcb_state
@@ -1256,16 +1310,12 @@ lemma do_reply_transfer_st_tcb_at_active:
   apply (fastforce simp add: st_tcb_def2)
   done
 
-context Syscall_AI begin
-
 lemma hc_invs[wp]:
   "\<lbrace>invs and ct_active\<rbrace> handle_call \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   by (simp add: handle_call_def) wp
 
-end
-
 lemma hr_ct_active[wp]:
-  "\<lbrace>invs and ct_active\<rbrace> handle_reply \<lbrace>\<lambda>rv. ct_active\<rbrace>"
+  "\<lbrace>invs and ct_active\<rbrace> handle_reply \<lbrace>\<lambda>rv. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: handle_reply_def)
   apply (rule hoare_seq_ext)
    apply (rule ct_in_state_decomp)
@@ -1277,6 +1327,7 @@ lemma hr_ct_active[wp]:
                   elim: valid_reply_caps_of_stateD)
   done
 
+end
 (* FIXME: move *) (* FIXME: should we add this to the simpset? *)
 lemma select_insert:
   "select (insert x X) = (return x \<sqinter> select X)"

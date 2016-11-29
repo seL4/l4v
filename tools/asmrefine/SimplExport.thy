@@ -60,6 +60,8 @@ val ops = Symtab.make [
     (@{const_name "HOL.eq"}, ("Equals", false)),
     (@{const_name "less"}, ("Less", false)),
     (@{const_name "less_eq"}, ("LessEquals", false)),
+    (@{const_name "ptr_less"}, ("Less", false)),
+    (@{const_name "ptr_le"}, ("LessEquals", false)),
     (@{const_name "word_sless"}, ("SignedLess", false)),
     (@{const_name "word_sle"}, ("SignedLessEquals", false)),
     (@{const_name "Not"}, ("Not", true)),

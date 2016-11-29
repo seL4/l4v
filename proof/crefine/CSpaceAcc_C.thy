@@ -191,8 +191,8 @@ lemmas ccorres_getSlotCap_cte_at = ccorres_guard_from_wp [OF getSlotCap_pre_cte_
   ccorres_guard_from_wp_bind [OF getSlotCap_pre_cte_at empty_fail_getSlotCap]
 
 lemma wordFromRights_spec:
-  defines "crl s \<equiv> (cap_rights_lift \<^bsup>s\<^esup>cap_rights)"
-  shows "\<forall>s. \<Gamma> \<turnstile> {s} \<acute>ret__unsigned_long :== PROC wordFromRights(\<acute>cap_rights) 
+  defines "crl s \<equiv> (seL4_CapRights_lift \<^bsup>s\<^esup>seL4_CapRights)"
+  shows "\<forall>s. \<Gamma> \<turnstile> {s} \<acute>ret__unsigned_long :== PROC wordFromRights(\<acute>seL4_CapRights)
   \<lbrace> \<acute>ret__unsigned_long  =
         ((capAllowGrant_CL (crl s) << 2) 
      || (capAllowRead_CL (crl s) << 1)
@@ -200,7 +200,7 @@ lemma wordFromRights_spec:
   unfolding crl_def
   apply vcg
   apply (simp add: word_sle_def word_sless_def)
-  apply (simp add: cap_rights_lift_def shiftr_over_and_dist)
+  apply (simp add: seL4_CapRights_lift_def shiftr_over_and_dist)
   apply (simp add: mask_shift_simps)
   apply (simp add: word_ao_dist2[symmetric])
   done
@@ -211,7 +211,7 @@ lemma errlookup_fault_errstate [simp]:
   by simp
 
 lemma errfault_errstate [simp]:
-  "errfault (errstate s) = fault_lift (current_fault_' (globals s))"  
+  "errfault (errstate s) = seL4_Fault_lift (current_fault_' (globals s))"
   unfolding errstate_def
   by simp
 

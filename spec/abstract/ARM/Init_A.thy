@@ -34,6 +34,8 @@ definition
   init_irq_node_ptr :: word32 where
   "init_irq_node_ptr = kernel_base + 0x8000"
 
+(* FIXME: It is easy to remove a memory slot here, but once if we want to reserve other slots of memory, we have to do the proof of disjoint for example state again. 
+   Comment is left here so that next time we need 4k memory, we don't need to fix example state and can simply change its name. *)
 definition
   init_globals_frame :: word32 where
   "init_globals_frame = kernel_base + 0x5000"
@@ -44,7 +46,6 @@ definition
 
 definition
   "init_arch_state \<equiv> \<lparr>
-    arm_globals_frame = init_globals_frame,
     arm_asid_table = empty,
     arm_hwasid_table = empty,
     arm_next_asid = 0,
@@ -56,10 +57,6 @@ definition
       then ArmVSpaceKernelWindow 
       else ArmVSpaceInvalidRegion
   \<rparr>"
-
-definition
-  empty_context :: user_context where
-  "empty_context \<equiv> \<lambda>_. 0"
 
 definition
   [simp]:
@@ -78,12 +75,12 @@ definition
     tcb_state = IdleThreadState,
     tcb_fault_handler = replicate word_bits False,
     tcb_ipc_buffer = 0,
-    tcb_context = empty_context,
     tcb_fault = None,
     tcb_bound_notification = None,
-    tcb_mcpriority = minBound
+    tcb_mcpriority = minBound,
+    tcb_arch = init_arch_tcb
   \<rparr>, 
-  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage),
+  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), (* FIXME: same reason as why we kept the definition of init_globals_frame *)
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd)
   )"
 

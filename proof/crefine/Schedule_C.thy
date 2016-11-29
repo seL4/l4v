@@ -126,30 +126,6 @@ end
 context kernel_m begin
 
 (* FIXME: MOVE to CSpaceAcc_C *)
-lemma ccorres_pre_gets_armKSGlobalsFrame_ksArchState:
-  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
-  shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ARM_H.armKSGlobalsFrame (ksArchState s) = rv  \<longrightarrow> P rv s))
-                  {s. \<forall>rv. symbol_table ''armKSGlobalsFrame'' = rv \<longrightarrow> s \<in> P' rv }
-                          hs (gets (ARM_H.armKSGlobalsFrame \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule gets_sp)
-     apply (clarsimp simp: empty_fail_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
-                        carch_globals_def Let_def)
-  done
-
-(* FIXME: MOVE to CSpaceAcc_C *)
 lemma rf_sr_ksDomainTime:
   "(s, s') \<in> rf_sr \<Longrightarrow> ksDomainTime_' (globals s') = ksDomainTime s"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
@@ -179,68 +155,11 @@ lemma ccorres_pre_getDomainTime:
   apply (clarsimp simp: rf_sr_ksDomainTime)
   done
 
-lemma user_word_at_armKSGlobalsFrame:
-  "\<lbrakk> valid_pspace' s; valid_arch_state' s \<rbrakk>
-   \<Longrightarrow> \<exists>w. user_word_at w (ARM_H.armKSGlobalsFrame (ksArchState s)) s"
-  apply (simp add: user_word_at_def)
-  apply (simp add: pointerInUserData_def)
-  apply (clarsimp simp: valid_pspace'_def)
-  apply (clarsimp simp: valid_arch_state'_def)
-  apply (subgoal_tac "is_aligned (ARM_H.armKSGlobalsFrame (ksArchState s)) pageBits")
-   apply simp
-   apply (erule is_aligned_weaken)
-   apply (simp add: pageBits_def)
-  apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
-  apply (drule (1) pspace_alignedD')+
-  apply (case_tac ko, simp_all)[1]
-  apply (simp add: objBitsKO_def)
-  done
-
-lemma h_t_valid_armKSGlobalsFrame:
-  "\<lbrakk>valid_arch_state' s; (s, s') \<in> rf_sr \<rbrakk>
-       \<Longrightarrow> s' \<Turnstile>\<^sub>c (Ptr :: (32 word \<Rightarrow> user_data_C ptr)) (symbol_table ''armKSGlobalsFrame'')"
-  apply (clarsimp simp: valid_arch_state'_def)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
-  apply (clarsimp simp: cmap_relation_def)
-  apply (subgoal_tac "symbol_table ''armKSGlobalsFrame'' \<in> 
-    dom (heap_to_user_data (ksPSpace s) (underlying_memory (ksMachineState s)))")
-  prefer 2
-    apply (clarsimp simp:obj_at'_def typ_at'_def ko_wp_at'_def
-      carch_state_relation_def carch_globals_def)
-   apply (simp add: heap_to_user_data_def map_comp_def)
-   apply (case_tac ko,simp_all add:projectKO_opt_user_data)[1]
-  apply (erule domE)
-  apply (drule_tac x = " (Ptr :: (32 word \<Rightarrow> user_data_C ptr))
-    (symbol_table ''armKSGlobalsFrame'')" in  eqset_imp_iff)
-  apply (clarsimp simp add: image_def dom_def)
-  apply (erule h_t_valid_clift)
-  done
-
-lemma c_guard_abs_word32_armKSGlobalsFrame:
-  "\<lbrakk>valid_arch_state' s; (s, s') \<in> rf_sr\<rbrakk>
-  \<Longrightarrow> s' \<Turnstile>\<^sub>c (Ptr :: word32 \<Rightarrow> (word32[1024]) ptr) (symbol_table ''armKSGlobalsFrame'')"
-  apply (frule(1) h_t_valid_armKSGlobalsFrame)
-  apply (drule h_t_valid_field[where f="[''words_C'']"], simp, simp)
-  apply (simp add: field_lvalue_def field_lookup_offset_eq)
-  done
-
 lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc (valid_pspace' and valid_arch_state') UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: ARM_H.switchToIdleThread_def)
-   apply (rule ccorres_pre_gets_armKSGlobalsFrame_ksArchState)
-   apply (rule ccorres_Guard)
-   apply (simp add: storeWordUser_def)
-   apply (rule ccorres_symb_exec_l'[OF _ stateAssert_inv stateAssert_sp empty_fail_stateAssert])
-   apply (rule ccorres_Guard)
-   apply (rule storeWord_ccorres[unfolded fun_app_def])
-  apply clarsimp
-  apply (frule user_word_at_armKSGlobalsFrame, simp)
-  apply (clarsimp simp: valid_pspace'_def is_aligned_globals_2)
-  apply (drule (1) user_word_at_cross_over, rule refl)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                        carch_state_relation_def carch_globals_def c_guard_abs_word32_armKSGlobalsFrame)
-  done
+  by (rule ccorres_return_Skip, clarsimp)
 
 (* FIXME: move *)
 lemma empty_fail_getIdleThread [simp,intro!]:
@@ -275,44 +194,15 @@ lemma Arch_switchToThread_ccorres:
    apply (unfold ARM_H.switchToThread_def)[1]
    apply (ctac (no_vcg) add: setVMRoot_ccorres)
     apply (simp (no_asm) del: Collect_const)
-    apply (rule_tac Q="\<lambda>globals s. globals = ARM_H.armKSGlobalsFrame (ksArchState s) \<and> 
-                       all_invs_but_ct_idle_or_in_cur_domain' s" in ccorres_symb_exec_l) 
-       apply (rule_tac Q="\<lambda>ib s. (\<exists>tcb. ko_at' tcb t s \<and> ib = tcbIPCBuffer tcb) \<and> 
-                                 rva = ARM_H.armKSGlobalsFrame (ksArchState s) \<and> 
-                                 all_invs_but_ct_idle_or_in_cur_domain' s" in ccorres_symb_exec_l)
-          apply (unfold storeWordUser_def)[1]
-          apply (simp (no_asm) only: K_bind_def bind_assoc) 
-          apply (rule_tac A'=UNIV in ccorres_guard_imp2)
-           apply (rule ccorres_stateAssert)
-           apply (rule ccorres_Guard_Seq)+
-           apply (fold dc_def)[1]
-           apply (ctac(no_vcg) add: storeWord_ccorres)
-             apply (ctac add: clearExMonitor_ccorres)
-            apply wp
-           apply simp
-          apply clarsimp
-          apply (rule conjI)
-           apply (clarsimp simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_pspace'_def)
-           apply (clarsimp simp: valid_arch_state'_def typ_at'_def ko_wp_at'_def)
-           apply (drule (1) pspace_alignedD')+
-           apply (case_tac ko, simp_all)[1]
-           apply (simp add: objBitsKO_def pageBits_def)
-           apply (erule is_aligned_weaken)
-           apply simp
-          apply (clarsimp split: split_if)
-          apply (drule (1) obj_at_cslift_tcb)
-          apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
-          apply (frule user_word_at_armKSGlobalsFrame)
-           apply (simp add: invs_arch_state')
-          apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
-          apply (drule (1) user_word_at_cross_over, rule refl)
-          apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                carch_state_relation_def carch_globals_def c_guard_abs_word32_armKSGlobalsFrame)
-         apply wp
-        apply (wp threadGet_wp)
-        apply fastforce
-       apply (simp|wp setVMRoot_invs_no_cicd')+
-   done
+    apply (rule_tac A'=UNIV in ccorres_guard_imp2)
+     apply (fold dc_def)[1]
+     apply (ctac add: clearExMonitor_ccorres)
+    apply clarsimp
+   apply wp
+  apply clarsimp
+  apply (drule (1) obj_at_cslift_tcb)
+  apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
+  done
 
 
 (* FIXME: move *)
@@ -818,11 +708,7 @@ proof -
      apply (frule_tac t=t in valid_queues_no_bitmap_objD)
       apply (blast intro: cons_set_intro)
      apply (simp add: lookupBitmapPriority_def)
-     apply normalise_obj_at'
-     apply (rule valid_queues_queued_runnable[simplified valid_queues_def])
-       apply simp
-      apply (simp add: invs_no_cicd'_def)
-     apply (clarsimp simp add: inQ_def obj_at'_def)
+     apply (clarsimp simp: obj_at'_def st_tcb_at'_def)
 
     apply (fold lookupBitmapPriority_def)
     apply (drule invs_no_cicd'_queues)

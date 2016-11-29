@@ -426,9 +426,6 @@ definition retype_region_ext :: "obj_ref list \<Rightarrow> apiobject_type \<Rig
                                      modify (\<lambda>s. s\<lparr>ekheap := ekh'\<rparr>)
                                   od"
 
-definition recycle_cap_ext where
-  "recycle_cap_ext ptr \<equiv> do cdom \<leftarrow> gets cur_domain; ethread_set (K (default_etcb\<lparr>tcb_domain := cdom\<rparr>)) ptr od"
-
 definition cap_swap_ext where
 "cap_swap_ext \<equiv> (\<lambda> slot1 slot2 slot1_op slot2_op.
       do
@@ -573,7 +570,7 @@ definition "ext_init_det_ext_ext \<equiv>
      \<lparr>work_units_completed_internal = 0,
       scheduler_action_internal = resume_cur_thread,
       ekheap_internal = Map.empty (idle_thread_ptr \<mapsto> default_etcb),
-      domain_list_internal = [],
+      domain_list_internal = [(0,15)],
       domain_index_internal = 0,
       cur_domain_internal = 0,
       domain_time_internal = 15,

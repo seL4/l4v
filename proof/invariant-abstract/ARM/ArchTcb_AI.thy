@@ -195,6 +195,21 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
               | rule obj_ref_none_no_asid)+
   done
 
+lemma as_user_valid_cap[wp]:
+  "\<lbrace>valid_cap c\<rbrace> as_user a b \<lbrace>\<lambda>rv. valid_cap c\<rbrace>"
+  by (wp valid_cap_typ)
+
+lemma as_user_ipc_tcb_cap_valid4[wp]:
+  "\<lbrace>\<lambda>s. tcb_cap_valid cap (t, tcb_cnode_index 4) s\<rbrace>
+    as_user a b
+   \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
+  apply (simp add: as_user_def set_object_def)
+  apply (wp | wpc | simp)+
+  apply (clarsimp simp: tcb_cap_valid_def obj_at_def
+                        pred_tcb_at_def is_tcb
+                 dest!: get_tcb_SomeD)
+  apply (clarsimp simp: get_tcb_def)
+  done
 
 lemma tc_invs[Tcb_AI_asms]: 
   "\<lbrace>invs and tcb_at a

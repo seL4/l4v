@@ -54,9 +54,12 @@ lemma red_univ_get_wp[simp]:
 lemma thread_get_inv [wp]: "\<lbrace>P\<rbrace> thread_get f t \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: thread_get_def | wp)+
 
+locale TcbAcc_AI_arch_tcb_context_set_eq =
+  assumes arch_tcb_context_set_eq[simp]:
+    "\<And> t. arch_tcb_context_set (arch_tcb_context_get t) t = t"
 
-lemma thread_get_as_user:
-  "thread_get tcb_context t = as_user t get"
+lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
+  "thread_get (arch_tcb_context_get o tcb_arch) t = as_user t get"
   apply (simp add: thread_get_def as_user_def)
   apply (rule bind_cong [OF refl])
   apply (clarsimp simp: gets_the_member)
@@ -68,7 +71,7 @@ lemma thread_get_as_user:
 
 
 lemma thread_set_as_user:
-  "thread_set (\<lambda>tcb. tcb \<lparr> tcb_context := f (tcb_context tcb) \<rparr>) t
+  "thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_context_set (f $ arch_tcb_context_get (tcb_arch tcb)) (tcb_arch tcb) \<rparr>) t
     = as_user t (modify f)"
 proof -
   have P: "\<And>f. det (modify f)"
@@ -511,7 +514,7 @@ lemma thread_set_cte_wp_at_trivial:
   by (auto simp: cte_wp_at_caps_of_state
           intro: thread_set_caps_of_state_trivial [OF x])
 
-lemma as_user_inv:
+lemma (in TcbAcc_AI_arch_tcb_context_set_eq) as_user_inv:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"
   shows      "\<lbrace>P\<rbrace> as_user t f \<lbrace>\<lambda>x. P\<rbrace>"
   proof -
@@ -553,7 +556,7 @@ lemma det_query_twice:
   done
 
 
-lemma user_getreg_inv[wp]:
+lemma (in TcbAcc_AI_arch_tcb_context_set_eq) user_getreg_inv[wp]:
   "\<lbrace>P\<rbrace> as_user t (get_register r) \<lbrace>\<lambda>x. P\<rbrace>"
   apply (rule as_user_inv)
   apply (simp add: get_register_def)
@@ -563,8 +566,8 @@ lemma as_user_wp_thread_set_helper:
   assumes x: "
          \<lbrace>P\<rbrace> do
                 tcb \<leftarrow> gets_the (get_tcb t);
-                p \<leftarrow> select_f (m (tcb_context tcb));
-                thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := snd p\<rparr>) t
+                p \<leftarrow> select_f (m (arch_tcb_context_get (tcb_arch tcb)));
+                thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>) t
          od \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows "\<lbrace>P\<rbrace> as_user t m \<lbrace>\<lambda>rv. Q\<rbrace>"
 proof -
@@ -575,13 +578,13 @@ proof -
     done
   have Q: "do
              tcb \<leftarrow> gets_the (get_tcb t);
-             p \<leftarrow> select_f (m (tcb_context tcb));
-             thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := snd p\<rparr>) t
+             p \<leftarrow> select_f (m (arch_tcb_context_get (tcb_arch tcb)));
+             thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>) t
            od
          = do
              tcb \<leftarrow> gets_the (get_tcb t);
-             p \<leftarrow> select_f (m (tcb_context tcb));
-             set_object t (TCB (tcb \<lparr>tcb_context := snd p \<rparr>))
+             p \<leftarrow> select_f (m (arch_tcb_context_get (tcb_arch tcb)));
+             set_object t (TCB (tcb \<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>))
            od"
     apply (simp add: thread_set_def)
     apply (rule ext)
@@ -1825,12 +1828,17 @@ lemmas set_mrs_redux =
    set_mrs_def bind_assoc[symmetric]
    thread_set_def[simplified, symmetric]
 
+locale TcbAcc_AI_arch_tcb_context_get_eq =
+    assumes arch_tcb_context_get_eq[simp]:
+      "\<And> t uc. arch_tcb_context_get (arch_tcb_context_set uc t) = uc"
 
 locale TcbAcc_AI
   = TcbAcc_AI_storeWord_invs state_ext_t
   + TcbAcc_AI_valid_ipc_buffer_cap_0
   + TcbAcc_AI_get_cap_valid_ipc state_ext_t
   + TcbAcc_AI_st_tcb_at_cap_wp_at state_ext_t
+  + TcbAcc_AI_arch_tcb_context_set_eq
+  + TcbAcc_AI_arch_tcb_context_get_eq
   for state_ext_t :: "'state_ext::state_ext itself"
 
 
@@ -1861,7 +1869,7 @@ end
 
 
 lemma set_mrs_thread_set_dmo:
-  assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := c tcb\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
+  assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch :=arch_tcb_context_set (c tcb) (tcb_arch tcb)\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
   assumes dmo: "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows "\<lbrace>P\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (simp add: set_mrs_redux)

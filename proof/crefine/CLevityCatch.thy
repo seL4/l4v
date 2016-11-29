@@ -57,7 +57,7 @@ lemmas C_register_defs =
   Kernel_C.R4_def Kernel_C.R5_def Kernel_C.R6_def Kernel_C.R7_def
   Kernel_C.R8_def Kernel_C.R9_def Kernel_C.R10_def Kernel_C.R11_def
   Kernel_C.R12_def Kernel_C.SP_def Kernel_C.LR_def Kernel_C.LR_svc_def
-  Kernel_C.CPSR_def Kernel_C.FaultInstruction_def
+  Kernel_C.CPSR_def Kernel_C.TPIDRURW_def Kernel_C.FaultInstruction_def
 
 (* Levity: moved from Retype_C (20090419 09:44:41) *)  
 lemma no_overlap_new_cap_addrs_disjoint:
@@ -126,7 +126,7 @@ lemma asUser_mapM_x:
 lemma asUser_get_registers:
   "\<lbrace>tcb_at' target\<rbrace>
      asUser target (mapM getRegister xs)
-   \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. map (tcbContext tcb) xs = rv) target s\<rbrace>"
+   \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) xs = rv) target s\<rbrace>"
   apply (induct xs)
    apply (simp add: mapM_empty asUser_return)
    apply wp

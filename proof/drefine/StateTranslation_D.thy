@@ -312,9 +312,9 @@ definition
     | CNodeDelete \<Rightarrow>
           map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeDeleteIntent args)
-    | CNodeRecycle \<Rightarrow>
+    | CNodeCancelBadgedSends \<Rightarrow>
           map_option CNodeIntent
-                   (transform_cnode_index_and_depth CNodeRecycleIntent args)
+                   (transform_cnode_index_and_depth CNodeCancelBadgedSendsIntent args)
     | CNodeCopy \<Rightarrow>
           map_option CNodeIntent
                    (transform_intent_cnode_copy args)
@@ -396,7 +396,7 @@ lemma transform_tcb_intent_invocation:
     label \<noteq> UntypedRetype \<and>
     label \<noteq> CNodeRevoke \<and>
     label \<noteq> CNodeDelete \<and>
-    label \<noteq> CNodeRecycle \<and>
+    label \<noteq> CNodeCancelBadgedSends \<and>
     label \<noteq> CNodeCopy \<and>
     label \<noteq> CNodeMint \<and>
     label \<noteq> CNodeMove \<and>
@@ -479,7 +479,7 @@ lemma transform_intent_isnot_CNodeIntent:
       "(\<not> (\<exists> ui. Some (CNodeIntent ui) = transform_intent label args))
        = ((label = CNodeRevoke \<longrightarrow> length args < 2) \<and>
           (label = CNodeDelete \<longrightarrow> length args < 2) \<and>
-          (label = CNodeRecycle \<longrightarrow> length args < 2) \<and>
+          (label = CNodeCancelBadgedSends \<longrightarrow> length args < 2) \<and>
           (label = CNodeCopy \<longrightarrow> length args < 5) \<and>
           (label = CNodeMint \<longrightarrow> length args < 6) \<and>
           (label = CNodeMove \<longrightarrow> length args < 4) \<and>
@@ -738,7 +738,7 @@ where
 definition
   get_tcb_message_info :: "tcb \<Rightarrow> Structures_A.message_info"
 where
-  "get_tcb_message_info t \<equiv> data_to_message_info ((tcb_context t) msg_info_register)"
+  "get_tcb_message_info t \<equiv> data_to_message_info ((arch_tcb_context_get (tcb_arch t)) msg_info_register)"
 
 definition
   get_tcb_mrs :: "machine_state \<Rightarrow> tcb \<Rightarrow> word32 list"
@@ -746,7 +746,7 @@ where
   "get_tcb_mrs ms tcb \<equiv>
     let
       info = get_tcb_message_info tcb;
-      cpu_mrs = map (tcb_context tcb) msg_registers;
+      cpu_mrs = map (arch_tcb_context_get (tcb_arch tcb)) msg_registers;
       mem_mrs = get_ipc_buffer_words ms tcb [length msg_registers + 1 ..< Suc msg_max_length]
     in
       (take (unat (mi_length info)) (cpu_mrs @ mem_mrs))"
@@ -765,7 +765,7 @@ where
                      (invocation_type (mi_label mi))
                      (get_tcb_mrs ms tcb)),
     cdl_intent_error = guess_error (mi_label mi),
-    cdl_intent_cap = tcb_context tcb cap_register,
+    cdl_intent_cap = arch_tcb_context_get (tcb_arch tcb) cap_register,
     cdl_intent_extras = get_ipc_buffer_words ms tcb [buffer_cptr_index ..< buffer_cptr_index + (unat (mi_extra_caps mi))],
     cdl_intent_recv_slot = case (get_ipc_buffer_words ms tcb [offset ..< offset + 3]) of
                                 [root, index, depth] \<Rightarrow> Some (root, index, unat depth)

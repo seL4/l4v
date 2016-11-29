@@ -22,7 +22,6 @@ lemmas store_pde_typ_ats[wp] = store_pde_typ_ats abs_atyp_at_lifts[OF store_pde_
 
 end
 
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch_ignore (add: throw_on_false)
@@ -532,7 +531,7 @@ lemma hv_corres:
           apply (rule corres_machine_op [where r="op ="])
           apply (rule corres_Id, rule refl, simp)
           apply (rule no_fail_getDFSR)
-         apply (rule corres_trivial, simp)
+         apply (rule corres_trivial, simp add: arch_fault_map_def)
         apply wp
     apply simp+
   apply (rule corres_guard_imp)
@@ -549,7 +548,7 @@ lemma hv_corres:
          apply (rule corres_machine_op [where r="op ="])
          apply (rule corres_Id, rule refl, simp) 
          apply (rule no_fail_getIFSR)
-        apply (rule corres_trivial, simp)
+        apply (rule corres_trivial, simp add: arch_fault_map_def)
        apply wp
    apply simp+
   done
@@ -3119,16 +3118,13 @@ lemma setObject_pde_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pde::pde) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
-crunch ksDomScheduleIdx[wp]: storePDE "\<lambda>s. P (ksDomScheduleIdx s)"
+crunch ksDomScheduleIdx[wp]: storePTE, storePDE "\<lambda>s. P (ksDomScheduleIdx s)"
 (ignore: getObject setObject) 
 
-crunch ksDomScheduleIdx[wp]: storePTE "\<lambda>s. P (ksDomScheduleIdx s)"
-(ignore: getObject setObject) 
-
-crunch gsMaxObjectSize[wp]: storePTE "\<lambda>s. P (gsMaxObjectSize s)"
+crunch gsMaxObjectSize[wp]: storePTE, storePDE "\<lambda>s. P (gsMaxObjectSize s)"
 (ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
 
-crunch gsMaxObjectSize[wp]: storePDE "\<lambda>s. P (gsMaxObjectSize s)"
+crunch gsUntypedZeroRanges[wp]: storePTE, storePDE "\<lambda>s. P (gsUntypedZeroRanges s)"
 (ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma storePDE_invs[wp]:
@@ -3139,9 +3135,11 @@ lemma storePDE_invs[wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift'  
-             irqs_masked_lift
+             irqs_masked_lift 
              valid_arch_state_lift' valid_irq_node_lift 
-             cur_tcb_lift valid_irq_handlers_lift'')
+             cur_tcb_lift valid_irq_handlers_lift''
+             untyped_ranges_zero_lift
+           | simp add: cteCaps_of_def o_def)+
   apply clarsimp
   done
 
@@ -3316,7 +3314,9 @@ lemma storePTE_invs [wp]:
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift 
-             cur_tcb_lift valid_irq_handlers_lift'')
+             cur_tcb_lift valid_irq_handlers_lift''
+             untyped_ranges_zero_lift
+           | simp add: cteCaps_of_def o_def)+
   apply clarsimp
   done
 
@@ -3491,9 +3491,11 @@ lemma setASIDPool_invs [wp]:
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift 
              cur_tcb_lift valid_irq_handlers_lift''
+             untyped_ranges_zero_lift
              updateObject_default_inv
-           | rule setObject_ksPSpace_only | simp)+
-  apply (clarsimp simp add: setObject_def)
+           | simp add: cteCaps_of_def
+           | rule setObject_ksPSpace_only)+
+  apply (clarsimp simp add: setObject_def o_def)
   done
 
 crunch cte_wp_at'[wp]: unmapPageTable "\<lambda>s. P (cte_wp_at' P' p s)"
@@ -3772,4 +3774,8 @@ lemma diminished_isPDCap:
   by (blast dest: diminished_capMaster capMaster_isPDCap)
 
 end
+
+lemma cteCaps_of_ctes_of_lift:
+  "(\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s) \<rbrace> f \<lbrace>\<lambda>_ s. P (cteCaps_of s)\<rbrace>"
+  unfolding cteCaps_of_def .
 end

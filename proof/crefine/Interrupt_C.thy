@@ -511,6 +511,7 @@ lemma decodeIRQControlInvocation_ccorres:
                apply (simp add: injection_liftE)
                apply (simp add: liftE_bindE bind_assoc del: Collect_const)
                apply (ctac add: isIRQActive_ccorres)
+                 apply (ccorres_rewrite)
                  apply (simp add: from_bool_0 del: Collect_const)
                  apply (rule ccorres_Cond_rhs_Seq)
                   apply (simp add: throwError_bind invocationCatch_def whenE_def

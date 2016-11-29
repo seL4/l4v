@@ -42,9 +42,10 @@ session BaseRefine = AInvs +
     "refine/Include"
 
 session AInvs = ASpec +
+  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
+    "invariant-abstract/AInvs"
   theories
     "invariant-abstract/AInvs"
-    "invariant-abstract/EmptyFail_AI"
     "invariant-abstract/KernelInit_AI"
     "invariant-abstract/DetSchedSchedule_AI"
 
@@ -103,7 +104,13 @@ session InfoFlow in "infoflow" = Access +
     "ExampleSystemPolicyFlows"
     "Example_Valid_State"
 
-session InfoFlowC = CRefine +
+session InfoFlowCBase = CRefine +
+  theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
+    "infoflow/Include_IF_C"
+  theories
+    "infoflow/Include_IF_C"
+
+session InfoFlowC = InfoFlowCBase +
   theories
     "infoflow/Noninterference_Refinement"
     "infoflow/Example_Valid_StateH"

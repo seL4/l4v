@@ -71,6 +71,22 @@ where
    od"
 
 definition
+  arch_thread_get :: "(arch_tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
+where
+  "arch_thread_get f tptr \<equiv> do
+     tcb \<leftarrow> gets_the $ get_tcb tptr;
+     return $ f (tcb_arch tcb)
+   od"
+
+definition
+  arch_thread_set :: "(arch_tcb \<Rightarrow> arch_tcb) \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "arch_thread_set f tptr \<equiv> do
+     tcb \<leftarrow> gets_the $ get_tcb tptr;
+     set_object tptr $ TCB $ tcb \<lparr> tcb_arch := f (tcb_arch tcb) \<rparr>
+   od"
+
+definition
   get_thread_state :: "obj_ref \<Rightarrow> (thread_state,'z::state_ext) s_monad" 
 where
   "get_thread_state ref \<equiv> thread_get tcb_state ref"
@@ -188,9 +204,9 @@ definition
 where
   "as_user tptr f \<equiv> do
     tcb \<leftarrow> gets_the $ get_tcb tptr;
-    uc \<leftarrow> return $ tcb_context tcb;
+    uc \<leftarrow> return $ arch_tcb_context_get (tcb_arch tcb);
     (a, uc') \<leftarrow> select_f $ f uc;
-    new_tcb \<leftarrow> return $ tcb \<lparr> tcb_context := uc' \<rparr>;
+    new_tcb \<leftarrow> return $ tcb \<lparr> tcb_arch := arch_tcb_context_set uc' (tcb_arch tcb)\<rparr>;
     set_object tptr (TCB new_tcb);
     return a
   od"

@@ -45,14 +45,6 @@ createNewCaps :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rig
 consts
 Arch_createNewCaps :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_capability list kernel"
 thm injectKO_defs
-definition
-"createWordObjects ptr numObjects gs dev\<equiv> (do
-    gbits \<leftarrow> return (pageBits + gs);
-    addrs \<leftarrow> createObjects ptr numObjects (if dev then KOUserDataDevice else KOUserData) gs;
-    unless dev $ doMachineOp $ mapM_x (\<lambda>x. clearMemory (PPtr $ fromPPtr x) ((1::nat) `~shiftL~` gbits)) addrs;
-    return addrs
-od)"
-
 defs insertNewCaps_def:
 "insertNewCaps newType srcSlot destSlots regionBase magnitudeBits dev \<equiv> (do
     caps \<leftarrow> createNewCaps newType regionBase (length destSlots) magnitudeBits dev ;
@@ -61,12 +53,13 @@ od)"
 
 defs (in Arch) Arch_createNewCaps_def:
 "Arch_createNewCaps t regionBase numObjects arg4 dev \<equiv>
-    let pointerCast = PPtr \<circ> fromPPtr
+    let pointerCast = PPtr \<circ> fromPPtr;
+      Data = (if dev then KOUserDataDevice else KOUserData)
     in (case t of 
         APIObjectType v5 \<Rightarrow> 
             haskell_fail []
         | SmallPageObject \<Rightarrow>  (do
-            addrs \<leftarrow> createWordObjects regionBase numObjects 0 dev;
+            addrs \<leftarrow> createObjects regionBase numObjects Data 0;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMSmallPage
               else gsUserPages ks addr)\<rparr>);
@@ -74,7 +67,7 @@ defs (in Arch) Arch_createNewCaps_def:
                     ARMSmallPage Nothing) addrs
         od)
         | LargePageObject \<Rightarrow>  (do
-            addrs \<leftarrow> createWordObjects regionBase numObjects 4 dev;
+            addrs \<leftarrow> createObjects regionBase numObjects Data 4;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMLargePage
               else gsUserPages ks addr)\<rparr>);
@@ -82,7 +75,7 @@ defs (in Arch) Arch_createNewCaps_def:
                     ARMLargePage Nothing) addrs
         od)
         | SectionObject \<Rightarrow>  (do
-            addrs \<leftarrow> createWordObjects regionBase numObjects 8 dev;
+            addrs \<leftarrow> createObjects regionBase numObjects Data 8;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMSection
               else gsUserPages ks addr)\<rparr>);
@@ -90,7 +83,7 @@ defs (in Arch) Arch_createNewCaps_def:
                     ARMSection Nothing) addrs
         od)
         | SuperSectionObject \<Rightarrow>  (do
-            addrs \<leftarrow> createWordObjects regionBase numObjects 12 dev;
+            addrs \<leftarrow> createObjects regionBase numObjects Data 12;
             modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> addr.
               if addr `~elem~` map fromPPtr addrs then Just ARMSuperSection
               else gsUserPages ks addr)\<rparr>);
@@ -102,9 +95,6 @@ defs (in Arch) Arch_createNewCaps_def:
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::pte)) ptSize;
             objSize \<leftarrow> return (((1::nat) `~shiftL~` ptBits));
             pts \<leftarrow> return ( map pointerCast addrs);
-            doMachineOp $ mapM_x (flip clearMemoryVM ptBits) pts;
-            doMachineOp $ mapM_x (\<lambda>x. cleanCacheRange_PoU x (x + (fromIntegral objSize) - 1)
-                                                          (addrFromPPtr x)) pts;
             return $ map (\<lambda> pt. PageTableCap pt Nothing) pts
         od)
         | PageDirectoryObject \<Rightarrow>  (do
@@ -112,7 +102,6 @@ defs (in Arch) Arch_createNewCaps_def:
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::pde)) pdSize;
             objSize \<leftarrow> return ( ((1::nat) `~shiftL~` pdBits));
             pds \<leftarrow> return ( map pointerCast addrs);
-            doMachineOp $ mapM_x (flip clearMemoryVM pdBits) pds;
             mapM_x copyGlobalMappings pds;
             doMachineOp $ mapM_x (\<lambda>x. cleanCacheRange_PoU x (x + (fromIntegral objSize) - 1)
                                                           (addrFromPPtr x)) pds;

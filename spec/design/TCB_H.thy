@@ -34,6 +34,8 @@ requalify_consts
   performTransfer
   msgInfoRegister
   msgRegisters
+  tpidrurwRegister
+  fromVPtr
 end
 
 defs decodeTCBInvocation_def:
@@ -322,6 +324,7 @@ defs invokeTCB_def:
                 cteDelete bufferSlot True;
                 withoutPreemption $ threadSet
                     (\<lambda> t. t \<lparr>tcbIPCBuffer := ptr\<rparr>) target;
+                withoutPreemption $ asUser target $ setRegister tpidrurwRegister $ fromVPtr ptr;
                 withoutPreemption $ (case frame of
                       Some (newCap, srcSlot) \<Rightarrow>  
                         checkCapAt newCap srcSlot
@@ -585,12 +588,11 @@ defs threadSet_def:
 od)"
 
 
-
 defs asUser_def:
 "asUser tptr f\<equiv> (do
-        uc \<leftarrow> threadGet tcbContext tptr;
+        uc \<leftarrow> threadGet  (atcbContextGet o tcbArch) tptr;
         (a, uc') \<leftarrow> select_f (f uc);
-        threadSet (\<lambda> tcb. tcb \<lparr> tcbContext := uc' \<rparr>) tptr;
+        threadSet (\<lambda> tcb. tcb \<lparr> tcbArch := atcbContextSet uc' (tcbArch tcb)\<rparr>) tptr;
         return a
 od)"
 

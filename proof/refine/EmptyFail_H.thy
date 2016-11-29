@@ -253,24 +253,6 @@ qed
 lemmas cteRevoke_empty_fail[intro!, wp, simp] =
        cteRevoke_spec_empty_fail[THEN use_spec_empty_fail]
 
-lemma arch_recycleCap_improve_cases2:
-   "(if isPageCap cap then P
-    else if isPageTableCap cap then Q
-    else if isPageDirectoryCap cap then R
-    else if isASIDControlCap cap then S
-    else if isASIDPoolCap cap then T
-    else undefined)
-    =
-   (if isPageCap cap then P
-    else if isPageTableCap cap then Q
-    else if isPageDirectoryCap cap then R
-    else if isASIDControlCap cap then S
-    else T)"
-  by (simp add: arch_recycleCap_improve_cases)
-
-crunch (empty_fail) empty_fail: recycleCap
-(wp: empty_fail_catch simp: Let_def arch_recycleCap_improve_cases2)
-
 lemma Syscall_H_syscall_empty_fail[intro!, wp, simp]:
   "\<lbrakk>empty_fail a; \<And>x. empty_fail (b x); \<And>x. empty_fail (c x);
     \<And>x. empty_fail (d x); \<And>x. empty_fail (e x)\<rbrakk>
@@ -315,10 +297,10 @@ crunch (empty_fail) empty_fail: callKernel
 (wp: empty_fail_catch simp: const_def Let_def ignore: cacheRangeOp)
 
 lemma call_kernel_serial:
-  " \<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
+  " \<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
               (\<lambda>s. scheduler_action s = resume_cur_thread)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
-            (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
+            (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
               (\<lambda>s. vs_valid_duplicates' (ksPSpace s))) s' \<rbrakk>
     \<Longrightarrow> fst (call_kernel event s) \<noteq> {}"

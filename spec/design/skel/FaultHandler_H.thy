@@ -12,6 +12,7 @@ chapter "Fault Handlers"
 
 theory FaultHandler_H
 imports FaultHandlerDecls_H TCB_H
+  "./$L4V_ARCH/ArchFaultHandler_H"
 begin
 
 context begin interpretation Arch .
@@ -20,6 +21,8 @@ requalify_consts
   fromVPtr
   exceptionMessage
   debugPrint
+  makeArchFaultMessage
+  handleArchFaultReply
 end
 
 #INCLUDE_HASKELL_PREPARSE SEL4/API/Failures.lhs

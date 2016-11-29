@@ -168,13 +168,13 @@ where
 "handle_vm_fault thread ARMDataAbort = doE
     addr \<leftarrow> liftE $ do_machine_op getFAR;
     fault \<leftarrow> liftE $ do_machine_op getDFSR;
-    throwError $ VMFault addr [0, fault && mask 14]
+    throwError $ ArchFault $ VMFault addr [0, fault && mask 14]
 odE"
 |
 "handle_vm_fault thread ARMPrefetchAbort = doE
     pc \<leftarrow> liftE $ as_user thread $ getRestartPC;
     fault \<leftarrow> liftE $ do_machine_op getIFSR;
-    throwError $ VMFault pc [1, fault && mask 14]
+    throwError $ ArchFault $ VMFault pc [1, fault && mask 14]
 odE"
 
 text {* Load the optional hardware ASID currently associated with this virtual
@@ -580,69 +580,6 @@ where
      return NullCap
   od
   | _ \<Rightarrow> return NullCap"
-
-text {* Remove record of mappings to a page cap, page table cap or page directory cap *}
-
-fun
-  arch_reset_mem_mapping :: "arch_cap \<Rightarrow> arch_cap"
-where
-  "arch_reset_mem_mapping (PageCap dev p rts sz mp) = PageCap dev p rts sz None"
-| "arch_reset_mem_mapping (PageTableCap ptr mp) = PageTableCap ptr None"
-| "arch_reset_mem_mapping (PageDirectoryCap ptr ma) = PageDirectoryCap ptr None"
-| "arch_reset_mem_mapping cap = cap"
-
-text {* Actions that must be taken to recycle ARM-specific capabilities. *}
-definition
-  arch_recycle_cap :: "bool \<Rightarrow> arch_cap \<Rightarrow> (arch_cap,'z::state_ext) s_monad"
-where
-  "arch_recycle_cap is_final cap \<equiv> case cap of
-    PageCap dev p _ sz _ \<Rightarrow> do
-      unless dev $ do_machine_op $ clearMemory p (2 ^ (pageBitsForSize sz));
-      arch_finalise_cap cap is_final;
-      return $ arch_reset_mem_mapping cap
-    od
-  | PageTableCap ptr mp \<Rightarrow> do
-      pte_bits \<leftarrow> return 2;
-      slots \<leftarrow> return [ptr, ptr + (1 << pte_bits) .e. ptr + (1 << pt_bits) - 1];
-      mapM_x (swp store_pte InvalidPTE) slots;
-      do_machine_op $ cleanCacheRange_PoU ptr (ptr + (1 << pt_bits) - 1)
-                                          (addrFromPPtr ptr);
-      case mp of None \<Rightarrow> return ()
-       | Some (a, v) \<Rightarrow> do
-          pdOpt \<leftarrow> page_table_mapped a v ptr;
-          when (pdOpt \<noteq> None) $ invalidate_tlb_by_asid a
-          od;
-      arch_finalise_cap cap is_final;
-      return (if is_final then arch_reset_mem_mapping cap else cap)
-    od
-  | PageDirectoryCap ptr ma \<Rightarrow> do
-      pde_bits \<leftarrow> return 2;
-      indices \<leftarrow> return [0 .e. (kernel_base >> pageBitsForSize ARMSection) - 1];
-      offsets \<leftarrow> return (map (swp (op <<) pde_bits) indices);
-      slots \<leftarrow> return (map (\<lambda>x. x + ptr) offsets);
-      mapM_x (swp store_pde InvalidPDE) slots;
-      do_machine_op $ cleanCacheRange_PoU ptr (ptr + (1 << pd_bits) - 1)
-                                          (addrFromPPtr ptr);
-      case ma of None \<Rightarrow> return ()
-               | Some a \<Rightarrow> doE
-                            pd' \<leftarrow> find_pd_for_asid a;
-                            liftE $ when (pd' = ptr) $ invalidate_tlb_by_asid a
-                           odE <catch> K (return ());
-      arch_finalise_cap cap is_final;
-      return (if is_final then arch_reset_mem_mapping cap else cap)
-    od
-  | ASIDControlCap \<Rightarrow> return ASIDControlCap
-  | ASIDPoolCap ptr base \<Rightarrow> do
-      asid_table \<leftarrow> gets (arm_asid_table \<circ> arch_state);
-      when (asid_table (asid_high_bits_of base) = Some ptr) $ do
-          delete_asid_pool base ptr;
-          set_asid_pool ptr empty;
-          asid_table \<leftarrow> gets (arm_asid_table \<circ> arch_state);
-          asid_table' \<leftarrow> return (asid_table (asid_high_bits_of base \<mapsto> ptr));
-          modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_asid_table := asid_table' \<rparr>\<rparr>)
-      od;
-      return cap
-    od"
 
 text {* A thread's virtual address space capability must be to a page directory
 to be valid on the ARM architecture. *}

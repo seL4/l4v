@@ -181,10 +181,6 @@ lemma monadic_rewrite_drop_modify:
   "monadic_rewrite F E (\<lambda>s. f s = s) (modify f >>= v) (v ())"
   by (simp add: monadic_rewrite_def bind_def simpler_modify_def)
 
-lemma empty_failD3:
-  "\<lbrakk> empty_fail f; \<not> snd (f s) \<rbrakk> \<Longrightarrow> fst (f s) \<noteq> {}"
-  by (drule(1) empty_failD2, clarsimp)
-
 lemma monadic_rewrite_symb_exec_r:
   "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; no_fail P' m;
      \<And>rv. monadic_rewrite F False (Q rv) x (y rv);

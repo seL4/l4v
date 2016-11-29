@@ -435,8 +435,9 @@ lemma threadSet_tcbDomain_update_invs':
                threadSet_valid_dom_schedule'
                threadSet_tcbDomain_update_sch_act_wf
                threadSet_tcbDomain_update_ct_idle_or_in_cur_domain'
-             | clarsimp simp: tcb_cte_cases_def)+
-  apply (auto simp: inQ_def obj_at'_def)
+               untyped_ranges_zero_lift
+             | clarsimp simp: tcb_cte_cases_def cteCaps_of_def)+
+  apply (auto simp: inQ_def obj_at'_def o_def)
   done
 
 lemma set_domain_setDomain_corres:
@@ -497,15 +498,16 @@ lemma pinv_corres:
      (perform_invocation block call i) (performInvocation block call i')"
   apply (simp add: performInvocation_def)
   apply (case_tac i)
-          apply (clarsimp simp: o_def liftE_bindE)
+           apply (clarsimp simp: o_def liftE_bindE)
+           apply (rule corres_guard_imp)
+             apply (rule corres_split_norE[OF corres_returnOkTT])
+                apply simp
+               apply (rule corres_rel_imp, rule inv_untyped_corres)
+                apply simp
+               apply (case_tac x, simp_all)[1]
+              apply wp
+            apply simp+
           apply (rule corres_guard_imp)
-            apply (rule corres_split[OF corres_returnOkTT])
-               apply simp
-              apply (erule corres_guard_imp [OF inv_untyped_corres])
-               apply assumption+
-             apply wp
-          apply simp+
-         apply (rule corres_guard_imp)
            apply (rule corres_split [OF _ gct_corres])
              apply simp
              apply (rule corres_split [OF _ send_ipc_corres])
@@ -793,7 +795,8 @@ lemma handleFaultReply_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> handleFaultReply x t label msg \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: handleFaultReply_def)
   apply (case_tac x, simp_all)
-     apply (wp | simp)+
+     apply (wp | clarsimp simp: handleArchFaultReply_def
+                          split: arch_fault.split)+
   done 
 
 crunch sch_act_simple[wp]: handleFaultReply sch_act_simple
@@ -1056,9 +1059,10 @@ abbreviation (input) "all_invs_but_sch_extra \<equiv>
     irqs_masked' s \<and>
     valid_machine_state' s \<and> 
     cur_tcb' s \<and>
+    untyped_ranges_zero' s \<and>
     valid_queues' s \<and>
     valid_pde_mappings' s \<and> pspace_domain_valid s \<and>
-    ksCurDomain s \<le> maxDomain \<and> valid_dom_schedule' s \<and> 
+    ksCurDomain s \<le> maxDomain \<and> valid_dom_schedule' s \<and>
     (\<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s)"
 
 
@@ -1102,13 +1106,12 @@ lemma threadSet_all_invs_but_sch_extra:
      threadSet_tcbDomain_update_ct_idle_or_in_cur_domain'
      threadSet_valid_queues
      threadSet_valid_dom_schedule'
-     
      threadSet_iflive'T
      threadSet_ifunsafe'T
-     
-     | simp add:tcb_cte_cases_def)+
+     untyped_ranges_zero_lift
+     | simp add:tcb_cte_cases_def cteCaps_of_def o_def)+
    apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift threadSet_pred_tcb_no_state | simp)+
-  apply (clarsimp simp:sch_act_simple_def)
+  apply (clarsimp simp:sch_act_simple_def o_def cteCaps_of_def)
   apply (intro conjI)
    apply fastforce+
   done
@@ -2443,7 +2446,7 @@ lemma retype_pi_IRQInactive:
   apply (rule hoare_pre)
    apply (wpc | 
           wp inv_tcb_IRQInactive inv_cnode_IRQInactive inv_irq_IRQInactive 
-             inv_arch_IRQInactive |
+             inv_untyped_IRQInactive inv_arch_IRQInactive |
           simp)+
   done
 

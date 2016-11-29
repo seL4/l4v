@@ -552,13 +552,6 @@ lemma set_mrs_pas_refined[wp]:
 
 crunch integrity_autarch: set_message_info "integrity aag X st"
 
-lemma storeWord_respects:
-  "\<lbrace>\<lambda>ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>) \<and> (\<forall>p' \<in> ptr_range p 2. aag_has_auth_to aag Write p')\<rbrace> storeWord p v \<lbrace>\<lambda>a b. integrity aag X st (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  unfolding storeWord_def
-  apply wp
-  apply (auto simp: integrity_def is_aligned_mask [symmetric] intro!: trm_write ptr_range_memI ptr_range_add_memI)
-  done
-
 lemma dmo_storeWord_respects_Write:
   "\<lbrace>integrity aag X st and K (\<forall>p' \<in> ptr_range p 2. aag_has_auth_to aag Write p')\<rbrace> 
   do_machine_op (storeWord p v)
@@ -822,19 +815,11 @@ lemma delete_objects_def2:
   by (rule eq_reflection)
      (simp add: delete_objects_def dmo_detype_comm[OF empty_fail_freeMemory])
 
-lemma delete_objects_pas_refined[wp]:
-  "\<lbrace>pas_refined aag\<rbrace> delete_objects ptr bits \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (rule hoare_pre)
-  apply (simp add: delete_objects_def2)
-  apply wp
-  apply (erule pas_refined_detype)
-  done
-
 lemma delete_objects_pspace_no_overlap:
   "\<lbrace> pspace_aligned and valid_objs and
      (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap dev ptr sz idx)) slot s)\<rbrace>
     delete_objects ptr sz
-   \<lbrace>\<lambda>rv. pspace_no_overlap ptr sz\<rbrace>"
+   \<lbrace>\<lambda>rv. pspace_no_overlap_range_cover ptr sz\<rbrace>"
   unfolding delete_objects_def do_machine_op_def
   apply(wp | simp add: split_def detype_msu_comm)+
   apply(clarsimp)
@@ -844,7 +829,7 @@ lemma delete_objects_pspace_no_overlap:
 
 
 lemma delete_objects_invs_ex:
-  "\<lbrace>(\<lambda>s. \<exists>slot f.
+  "\<lbrace>(\<lambda>s. \<exists>slot dev f.
          cte_wp_at (op = (UntypedCap dev ptr bits f)) slot s \<and>
          descendants_range (UntypedCap dev ptr bits f) slot s) and
    invs and
@@ -855,8 +840,6 @@ lemma delete_objects_invs_ex:
   apply wp
   apply auto
   done
-
-
 
 lemma perform_asid_control_invocation_pas_refined [wp]:
   notes delete_objects_invs[wp del]
@@ -882,7 +865,7 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
                      (\<forall> x\<in>ptr_range word1 pageBits. is_subject aag x) \<and>
                      pas_refined aag s \<and>
                      pas_cur_domain aag s \<and>
-                     pspace_no_overlap word1 pageBits s \<and>
+                     pspace_no_overlap_range_cover word1 pageBits s \<and>
                      invs s \<and>
                  descendants_range_in
                   {word1..(word1 && ~~ mask pageBits) + 2 ^ pageBits - 1} prod2
@@ -895,8 +878,11 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
            is_subject aag word1 \<and>
            (\<forall>x. asid_high_bits_of x = asid_high_bits_of word2 \<longrightarrow>
                 is_subject_asid aag x)" in hoare_strengthen_post)
-    apply (wp delete_objects_pspace_no_overlap  hoare_vcg_ex_lift
-           delete_objects_descendants_range_in delete_objects_invs_ex 
+    apply (simp add: page_bits_def)
+    apply (wp add: delete_objects_pspace_no_overlap hoare_vcg_ex_lift
+           delete_objects_descendants_range_in delete_objects_invs_ex
+           delete_objects_pas_refined
+            del: Untyped_AI.delete_objects_pspace_no_overlap
           | simp add: page_bits_def)+
    apply clarsimp
    apply (frule untyped_cap_aligned, simp add: invs_valid_objs)
@@ -912,14 +898,12 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
       apply(rule refl)
      apply(rule subset_refl)
     apply(simp add: page_bits_def)
-   apply(clarsimp simp: ptr_range_def invs_psp_aligned invs_valid_objs)
-   apply(rule conjI, fastforce)
-   apply(rule conjI)
-    apply(fastforce simp: descendants_range_def2 elim!: empty_descendants_range_in)
-   apply(rule conjI)
-    apply fastforce
-   apply(rule conjI)
-    apply(fastforce simp: descendants_range_def2 elim!: empty_descendants_range_in)
+   apply(clarsimp simp: ptr_range_def invs_psp_aligned invs_valid_objs
+                        descendants_range_def2 empty_descendants_range_in
+                        is_aligned_neg_mask_eq page_bits_def)
+   apply ((strengthen refl | simp)+)?
+   apply (rule conjI, fastforce)
+   apply (rule conjI, fastforce intro: empty_descendants_range_in)
    apply(rule conjI)
     apply(clarsimp simp: range_cover_def obj_bits_api_def default_arch_object_def)
     apply(subst is_aligned_neg_mask_eq[THEN sym], assumption)

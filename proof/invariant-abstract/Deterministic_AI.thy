@@ -16,7 +16,6 @@ context begin interpretation Arch .
 requalify_facts
   update_work_units_empty_fail
   reset_work_units_empty_fail
-  recycle_cap_ext_empty_fail
   get_cap_kheap
   set_domain_empty_fail
   thread_set_domain_empty_fail
@@ -25,7 +24,6 @@ end
 lemmas [wp] =
   update_work_units_empty_fail
   reset_work_units_empty_fail
-  recycle_cap_ext_empty_fail
   get_cap_kheap
   set_domain_empty_fail
   thread_set_domain_empty_fail
@@ -3981,22 +3979,11 @@ global_interpretation ethread_set_extended: is_extended "ethread_set a b"
   apply wp
   done
 
-crunch valid_list[wp]: recycle_cap_ext "valid_list"
+crunch valid_list[wp]: cancel_badged_sends valid_list
+  (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM unless_def
+   ignore: without_preemption filterM )
 
-crunch all_but_exst[wp]: recycle_cap_ext "all_but_exst P"
-
-global_interpretation recycle_cap_ext_extended: is_extended "recycle_cap_ext a"
-  apply (unfold_locales)
-  apply wp
-  done
-
-
-locale Deterministic_AI_2 = Deterministic_AI_1 +
-  assumes cap_recycle_valid_list[wp]:
-    "\<And>param_a. \<lbrace>valid_list\<rbrace> cap_recycle param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
-
-
-context Deterministic_AI_2 begin
+context Deterministic_AI_1 begin
 
 lemma invoke_cnode_valid_list[wp]: "\<lbrace>valid_list\<rbrace>
            invoke_cnode ci
@@ -4107,7 +4094,7 @@ global_interpretation timer_tick_extended: is_extended "timer_tick"
   done
 
 
-locale Deterministic_AI_3 = Deterministic_AI_2 +
+locale Deterministic_AI_2 = Deterministic_AI_1 +
   assumes handle_interrupt_valid_list[wp]:
     "\<And>irq. \<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
   assumes handle_call_valid_list[wp]:
@@ -4126,7 +4113,7 @@ locale Deterministic_AI_3 = Deterministic_AI_2 +
     "\<lbrace>valid_list\<rbrace> handle_yield \<lbrace>\<lambda>_. valid_list\<rbrace>"
 
 
-context Deterministic_AI_3 begin
+context Deterministic_AI_2 begin
 
 lemma handle_event_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace>

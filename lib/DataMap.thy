@@ -50,4 +50,13 @@ where
        None   \<Rightarrow> None
      | Some y \<Rightarrow> if f x y then Some y else None"
 
+abbreviation(input)
+  "data_set_empty \<equiv> {}"
+
+abbreviation(input)
+  "data_set_insert \<equiv> insert"
+
+abbreviation(input)
+  "data_set_delete x S \<equiv> S - {x}"
+
 end

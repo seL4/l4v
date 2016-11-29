@@ -394,7 +394,7 @@ lemma ccorres_split_nothrow_call_novcg:
 definition
   errstate :: "cstate \<Rightarrow> errtype"
 where
-  "errstate s \<equiv> \<lparr> errfault = fault_lift (current_fault_' (globals s)),
+  "errstate s \<equiv> \<lparr> errfault = seL4_Fault_lift (current_fault_' (globals s)),
                   errlookup_fault = lookup_fault_lift (current_lookup_fault_' (globals s)),
                   errsyscall = current_syscall_error_' (globals s) \<rparr>"
 
@@ -757,12 +757,12 @@ lemma ccorres_sequence_while_genQ:
                             (F (n * j)) ({s. xf s = of_nat (i + n * j) \<and> r' ys (xf' s)} \<inter> Q) hs
                             (xs ! n) body"
   and      pn: "\<And>n. P n = (n < of_nat (i + length xs * j))"
-  and   bodyi: "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body ({t. xf t = xf s} \<inter> Q)"
+  and   bodyi: "\<forall>s. xf s < of_nat (i + length xs * j)
+      \<longrightarrow> \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body {t. xf t = xf s \<and> xf_update (\<lambda>x. xf t + of_nat j) t \<in> Q}"
   and      hi: "\<And>n. Suc n < length xs \<Longrightarrow> \<lbrace> F (n * j) \<rbrace> (xs ! n) \<lbrace>\<lambda>_. F (Suc n * j)\<rbrace>"
   and     lxs: "i + length xs * j< 2 ^ len_of TYPE('c)"
   and      xf: "\<forall>s f. xf (xf_update f s) = f (xf s) \<and> globals (xf_update f s) = globals s"
   and     xf': "\<forall>s f. xf' (xf_update f s) = (xf' s)"
-  and     xfQ: "\<forall>s f. s \<in> Q \<longrightarrow> xf_update f s \<in> Q"
   and       j: "j > 0"
   shows  "ccorres (\<lambda>rv (i', rv'). r' rv rv' \<and> i' = of_nat (i + length xs * of_nat j))
                   (\<lambda>s. (xf s, xf' s))
@@ -771,7 +771,7 @@ lemma ccorres_sequence_while_genQ:
                   (While {s. P (xf s)}
                      (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s)))"
   (is "ccorres ?r' ?xf' ?G (?G' \<inter> _) hs (sequence xs) ?body")
-  apply (rule ccorres_sequence_while_genQ' [OF one pn bodyi hi lxs xf xf' xfQ])
+  apply (rule ccorres_sequence_while_genQ' [OF one pn bodyi hi lxs xf xf'])
      apply simp
     apply simp
    apply (clarsimp simp: rf_sr_def xf)
@@ -808,11 +808,12 @@ lemma ccorres_sequence_while_gen':
 lemma ccorres_sequence_x_while_genQ':
   fixes xf :: "globals myvars \<Rightarrow> ('c :: len) word"
   shows
-  "\<lbrakk>\<And>n ys. n < length xs \<Longrightarrow> ccorres dc xfdc (F (n * j)) ({s. xf s = of_nat (i + n * j)} \<inter> Q) hs (xs ! n) body;
-    \<And>n. P n = (n < of_nat (i + length xs * j)); \<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body ({t. xf t = xf s} \<inter> Q);
+  "\<lbrakk>\<And>n. n < length xs \<Longrightarrow> ccorres dc xfdc (F (n * j)) ({s. xf s = of_nat (i + n * j)} \<inter> Q) hs (xs ! n) body;
+    \<And>n. P n = (n < of_nat (i + length xs * j));
+    \<forall>s. xf s < of_nat (i + length xs * j)
+        \<longrightarrow> \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body {t. xf t = xf s \<and> xf_update (\<lambda>x. xf t + of_nat j) t \<in> Q};
     \<And>n. Suc n < length xs \<Longrightarrow> \<lbrace>F (n * j)\<rbrace> xs ! n \<lbrace>\<lambda>_. F (Suc n * j)\<rbrace>; i + length xs * j < 2 ^ len_of TYPE('c);
-    \<forall>s f. xf (xf_update f s) = f (xf s) \<and> globals (xf_update f s) = globals s \<and>  
-          (s \<in> Q \<longrightarrow> xf_update f s \<in> Q); j > 0 \<rbrakk>
+    \<forall>s f. xf (xf_update f s) = f (xf s) \<and> globals (xf_update f s) = globals s; j > 0 \<rbrakk>
     \<Longrightarrow> ccorres (\<lambda>rv i'. i' = of_nat (i + length xs * of_nat j)) xf (\<lambda>s. P 0 \<longrightarrow> F 0 s) ({s. xf s = of_nat i} \<inter> Q) hs
        (NonDetMonad.sequence_x xs)
        (While {s. P (xf s)} (body;;
@@ -856,13 +857,14 @@ lemma ccorres_sequence_x_while_genQ:
   fixes xf :: "globals myvars \<Rightarrow> ('c :: len) word"
   assumes one: "\<forall>n < length xs. ccorres dc xfdc (F (n * j) ) ({s. xf s = of_nat n * of_nat j} \<inter> Q) hs (xs ! n) body"
   and      pn: "\<And>n. P n = (n < of_nat (length xs * j))"
-  and   bodyi: "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body ({t. xf t = xf s} \<inter> Q)"
+  and   bodyi: "\<forall>s. xf s < of_nat (length xs * j)
+    \<longrightarrow> \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body {t. xf t = xf s \<and> xf_update (\<lambda>x. xf t + of_nat j) t \<in> Q}"
   and      hi: "\<And>n. Suc n < length xs \<Longrightarrow> \<lbrace> F (n * j) \<rbrace> (xs ! n) \<lbrace>\<lambda>_. F (Suc n * j)\<rbrace>"
   and     lxs: "length xs * j < 2 ^ len_of TYPE('c)"
   and      xf: "\<forall>s f. xf (xf_update f s) = f (xf s) \<and> globals (xf_update f s) = globals s"
-  and     xf': "\<forall>s f. s \<in> Q \<longrightarrow> xf_update f s \<in> Q"
   and       j: "0 < j"
-  shows  "ccorres (\<lambda>rv rv'. rv' = of_nat (length xs) * of_nat j) xf (\<lambda>s. P 0 \<longrightarrow> F 0 s) Q hs
+  shows  "ccorres (\<lambda>rv rv'. rv' = of_nat (length xs) * of_nat j) xf (\<lambda>s. P 0 \<longrightarrow> F 0 s)
+                  {s. xf_update (\<lambda>_. 0) s \<in> Q} hs
                   (sequence_x xs)
                   (Basic (\<lambda>s. xf_update (\<lambda>_. 0) s);;
           (While {s. P (xf s)}
@@ -870,9 +872,9 @@ lemma ccorres_sequence_x_while_genQ:
   apply (rule ccorres_symb_exec_r)
     apply (rule ccorres_sequence_x_while_genQ' [where i=0 and xf_update=xf_update and Q=Q, simplified])
     apply (simp add: assms hi[simplified])+
-   apply vcg
-   apply (clarsimp simp add: xf xf')
-  apply vcg
+   apply (rule conseqPre, vcg)
+   apply (clarsimp simp add: xf)
+  apply (rule conseqPre, vcg)
   apply (simp add: xf rf_sr_def)
   done
 
@@ -935,13 +937,14 @@ lemma ccorres_mapM_x_while_genQ:
   fixes xf :: "globals myvars \<Rightarrow> ('c :: len) word"
   assumes rl: "\<forall>n. n < length xs \<longrightarrow> ccorres dc xfdc (F (n * j)) ({s. xf s = of_nat n * of_nat j} \<inter> Q) hs (f (xs ! n)) body"
   and  guard: "\<And>n. P n = (n < of_nat (length xs * j))"
-  and  bodyi: "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body ({s'. xf s' = xf s} \<inter> Q)"
+  and  bodyi: "\<forall>s. xf s < of_nat (length xs * j)
+    \<longrightarrow> \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body {t. xf t = xf s \<and> xf_update (\<lambda>x. xf t + of_nat j) t \<in> Q}"
   and  hi: "\<And>n. Suc n < length xs \<Longrightarrow> \<lbrace>F (n * j)\<rbrace> f (xs ! n) \<lbrace>\<lambda>_. F (Suc n * j)\<rbrace>"
   and  wb: "length xs * j < 2 ^ len_of TYPE('c)"
   and  xf: "\<forall>s f. xf (xf_update f s) = f (xf s) \<and> globals (xf_update f s) = globals s"
-  and xf': "\<forall>s f. s \<in> Q \<longrightarrow> xf_update f s \<in> Q"
   and   j: "0 < j"
-  shows  "ccorres (\<lambda>rv rv'. rv' = of_nat (length xs) * of_nat j) xf (\<lambda>s. P 0 \<longrightarrow> F (0 :: nat) s) Q hs
+  shows  "ccorres (\<lambda>rv rv'. rv' = of_nat (length xs) * of_nat j) xf (\<lambda>s. P 0 \<longrightarrow> F (0 :: nat) s)
+                  {s. xf_update (\<lambda>_. 0) s \<in> Q} hs
                   (mapM_x f xs)
                   (Basic (\<lambda>s. xf_update (\<lambda>_. 0) s);;
           (While {s. P (xf s)}
@@ -982,34 +985,36 @@ lemmas ccorres_mapM_x_while'
     = ccorres_mapM_x_while_gen' [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
                                  where j=1, simplified]
 
-lemma ccorres_zipWithM_x_while_gen:
+lemma ccorres_zipWithM_x_while_genQ:
   fixes xf :: "globals myvars \<Rightarrow> ('c :: len) word"
-  assumes rl: "\<forall>n. n < length xs \<and> n < length ys \<longrightarrow> ccorres dc xfdc (F (n * j)) {s. xf s = of_nat n * of_nat j} hs (f (xs ! n) (ys ! n)) body"
+  assumes rl: "\<forall>n. n < length xs \<and> n < length ys \<longrightarrow> ccorres dc xfdc (F (n * j)) ({s. xf s = of_nat n * of_nat j} \<inter> Q)
+      hs (f (xs ! n) (ys ! n)) body"
   and  guard: "\<And>n. P n = (n < of_nat (min (length xs) (length ys)) * of_nat j)"
-  and  bodyi: "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} body {s'. xf s' = xf s}"
+  and  bodyi: "\<forall>s. xf s < of_nat (min (length xs) (length ys)) * of_nat j
+    \<longrightarrow> \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> ({s} \<inter> Q) body {t. xf t = xf s \<and> xf_update (\<lambda>x. xf t + of_nat j) t \<in> Q}"
   and  hi: "\<And>n. Suc n < length xs \<and> Suc n < length ys \<Longrightarrow> \<lbrace>F (n * j)\<rbrace> f (xs ! n) (ys ! n) \<lbrace>\<lambda>_. F (Suc n * j)\<rbrace>"
   and  wb: "min (length xs) (length ys) * j < 2 ^ len_of TYPE('c)"
   and  xf: "\<forall>s f. xf (xf_update f s) = f (xf s) \<and> globals (xf_update f s) = globals s"
   and   j: "0 < j"
   shows  "ccorres (\<lambda>rv rv'. rv' = of_nat (min (length xs) (length ys) * j)) xf
-                  (F (0 :: nat)) UNIV hs   
+                  (F (0 :: nat)) {s. xf_update (\<lambda>_. 0) s \<in> Q} hs
                   (zipWithM_x f xs ys)
                   (Basic (\<lambda>s. xf_update (\<lambda>_. 0) s);;
           (While {s. P (xf s)}
               (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s))))"
   unfolding zipWithM_x_def
-  apply (rule ccorres_rel_imp [OF ccorres_sequence_x_while_gen[OF _ _ _ _ _ xf]])
-        apply (simp add: zipWith_nth)
-        apply (rule rl)
-       apply simp
-       apply (rule guard)
-      apply (rule bodyi)
-     apply (simp add: zipWith_nth hi[simplified])
-    apply simp
-    apply (rule wb)
-   apply (rule j)
-  apply simp
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_rel_imp [OF ccorres_sequence_x_while_genQ[where F=F, OF _ _ _ _ _ xf j]],
+      simp_all add: length_zipWith)
+      apply (simp add: length_zipWith zipWith_nth)
+      apply (rule rl)
+     apply (rule guard)
+    apply (rule bodyi)
+   apply (simp add: zipWith_nth hi[simplified])
+  apply (rule wb)
   done
+
+lemmas ccorres_zipWithM_x_while_gen = ccorres_zipWithM_x_while_genQ[where Q=UNIV, simplified]
 
 lemmas ccorres_zipWithM_x_while
     = ccorres_zipWithM_x_while_gen[OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,

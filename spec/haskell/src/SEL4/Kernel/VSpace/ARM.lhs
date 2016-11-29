@@ -16,6 +16,7 @@ This module defines the handling of the ARM hardware-defined page tables.
 
 > import SEL4.API.Types
 > import SEL4.API.Failures
+> import SEL4.API.Failures.ARM
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.ARM
 > import SEL4.Model
@@ -113,7 +114,6 @@ However we assume that the result of getMemoryRegions is actually [0,1<<24] and 
 >     placeNewObject (PPtr $ fromPPtr $ head globalPTs) (makeObject :: PTE) ptSize
 >     storePDE slot pde
 
->     mapGlobalsFrame
 >     kernelDevices <- doMachineOp getKernelDevices
 >     mapM_ mapKernelDevice kernelDevices
 
@@ -361,27 +361,6 @@ Function "createBIFrame" will create the biframe cap for the initial thread
 >     bootInfo <- noInitFailure $ gets initBootInfo
 >     let bootInfo' = bootInfo { bifUIFrameCaps = [curSlotPos .. slotPosAfter - 1] }
 >     noInitFailure $ modify (\s -> s { initBootInfo = bootInfo' })
-
-
-Function "mapGlobalsFrame" inserts an entry into the global PD for the globals frame.
-
-> mapGlobalsFrame :: Kernel ()
-> mapGlobalsFrame = do
->     globalsFrame <- gets $ armKSGlobalsFrame . ksArchState
->     mapKernelFrame (addrFromPPtr globalsFrame) globalsBase VMReadOnly $
->         VMAttributes True True True
-
-we also need to put the code of idlethread into memory
-
->     writeIdleCode
-
-> writeIdleCode :: Kernel ()
-> writeIdleCode = do
->     globalsFrame <- gets $ armKSGlobalsFrame . ksArchState
->     let offset = fromVPtr $ idleThreadStart - globalsBase
->     doMachineOp $ zipWithM_ storeWord
->         [globalsFrame + PPtr offset, globalsFrame + PPtr offset + 4 ..]
->         idleThreadCode
 
 
 The "mapKernelFrame" helper function is used when mapping the globals frame, kernel IO devices, and the trap frame. We simply store pte into our globalPT 
@@ -649,12 +628,12 @@ If the kernel receives a VM fault from the CPU, it must determine the address an
 > handleVMFault _ ARMDataAbort = do
 >     addr <- withoutFailure $ doMachineOp getFAR
 >     fault <- withoutFailure $ doMachineOp getDFSR
->     throw $ VMFault addr [0, fault .&. mask 14]
+>     throw $ ArchFault $ VMFault addr [0, fault .&. mask 14]
 >
 > handleVMFault thread ARMPrefetchAbort = do
 >     pc <- withoutFailure $ asUser thread $ getRestartPC
 >     fault <- withoutFailure $ doMachineOp getIFSR
->     throw $ VMFault (VPtr pc) [1, fault .&. mask 14]
+>     throw $ ArchFault $ VMFault (VPtr pc) [1, fault .&. mask 14]
 
 \subsection{Unmapping and Deletion}
 
@@ -1447,7 +1426,7 @@ the PT/PD is consistent.
 > performASIDControlInvocation (MakePool frame slot parent base) = do
 >     deleteObjects frame pageBits
 >     pcap <- getSlotCap parent
->     updateCap parent (pcap {capFreeIndex = maxFreeIndex (capBlockSize pcap) })
+>     updateFreeIndex parent (maxFreeIndex (capBlockSize pcap))
 >     placeNewObject frame (makeObject :: ASIDPool) 0
 >     let poolPtr = PPtr $ fromPPtr frame
 >     cteInsert (ArchObjectCap $ ASIDPoolCap poolPtr base) parent slot

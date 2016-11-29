@@ -116,8 +116,7 @@ begin
 definition 
   "carch_globals s \<equiv> 
   (armKSGlobalPD s = symbol_table ''armKSGlobalPD'') \<and>
-  (armKSGlobalPTs s  = [symbol_table ''armKSGlobalPT'']) \<and>
-  (armKSGlobalsFrame s = symbol_table ''armKSGlobalsFrame'')"
+  (armKSGlobalPTs s  = [symbol_table ''armKSGlobalPT''])"
 
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
@@ -234,6 +233,7 @@ fun
   | "register_from_H ARM.LR = scast Kernel_C.LR"
   | "register_from_H ARM.LR_svc = scast Kernel_C.LR_svc"
   | "register_from_H ARM.CPSR = scast Kernel_C.CPSR" 
+  | "register_from_H ARM.TPIDRURW = scast Kernel_C.TPIDRURW"
   | "register_from_H ARM.FaultInstruction = scast Kernel_C.FaultInstruction"
 
 definition
@@ -243,7 +243,7 @@ where
 
 primrec
   cthread_state_relation_lifted :: "Structures_H.thread_state \<Rightarrow> 
-   (thread_state_CL \<times> fault_CL option) \<Rightarrow> bool"
+   (thread_state_CL \<times> seL4_Fault_CL option) \<Rightarrow> bool"
 where
   "cthread_state_relation_lifted (Structures_H.Running) ts'
      = (tsType_CL (fst ts') = scast ThreadState_Running)"
@@ -271,17 +271,17 @@ where
 
 definition
   cthread_state_relation :: "Structures_H.thread_state \<Rightarrow> 
-  (thread_state_C \<times> fault_C) \<Rightarrow> bool"
+  (thread_state_C \<times> seL4_Fault_C) \<Rightarrow> bool"
 where
   "cthread_state_relation \<equiv> \<lambda>a (cs, cf).
-  cthread_state_relation_lifted a (thread_state_lift cs, fault_lift cf)"
+  cthread_state_relation_lifted a (thread_state_lift cs, seL4_Fault_lift cf)"
 
 definition "is_cap_fault cf \<equiv>
-  (case cf of (Fault_cap_fault _) \<Rightarrow> True
+  (case cf of (SeL4_Fault_CapFault _) \<Rightarrow> True
   | _ \<Rightarrow> False)"
 
-lemma is_cap_fault_simp: "is_cap_fault cf = (\<exists> x. cf=Fault_cap_fault x)"
-  by (simp add: is_cap_fault_def split:fault_CL.splits)
+lemma is_cap_fault_simp: "is_cap_fault cf = (\<exists> x. cf=SeL4_Fault_CapFault x)"
+  by (simp add: is_cap_fault_def split:seL4_Fault_CL.splits)
 
 
 definition
@@ -306,24 +306,30 @@ fun
                         (MissingCapability (unat (lookup_fault_missing_capability_CL.bitsLeft_CL lf)))"
 
 fun 
-  fault_to_H :: "fault_CL \<Rightarrow> lookup_fault_CL \<Rightarrow> fault option"
+  fault_to_H :: "seL4_Fault_CL \<Rightarrow> lookup_fault_CL \<Rightarrow> fault option"
 where
-  "fault_to_H Fault_null_fault lf = None" 
-  | "fault_to_H (Fault_cap_fault cf) lf 
-           = Some (CapFault (fault_cap_fault_CL.address_CL cf) (to_bool (inReceivePhase_CL cf)) (lookup_fault_to_H lf))"
-  | "fault_to_H (Fault_vm_fault vf) lf 
-           = Some (VMFault (fault_vm_fault_CL.address_CL vf) [instructionFault_CL vf, FSR_CL vf])"
-  | "fault_to_H (Fault_unknown_syscall us) lf 
+  "fault_to_H SeL4_Fault_NullFault lf = None"
+  | "fault_to_H (SeL4_Fault_CapFault cf) lf
+           = Some (CapFault (seL4_Fault_CapFault_CL.address_CL cf) (to_bool (inReceivePhase_CL cf)) (lookup_fault_to_H lf))"
+  | "fault_to_H (SeL4_Fault_VMFault vf) lf
+           = Some (ArchFault (VMFault (seL4_Fault_VMFault_CL.address_CL vf) [instructionFault_CL vf, FSR_CL vf]))"
+  | "fault_to_H (SeL4_Fault_UnknownSyscall us) lf
            = Some (UnknownSyscallException (syscallNumber_CL us))"
-  | "fault_to_H (Fault_user_exception ue) lf 
+  | "fault_to_H (SeL4_Fault_UserException ue) lf
           = Some (UserException (number_CL ue) (code_CL ue))"
 
 definition
-  cfault_rel :: "Fault_H.fault option \<Rightarrow> fault_CL option \<Rightarrow> lookup_fault_CL option \<Rightarrow> bool"
+  cfault_rel :: "Fault_H.fault option \<Rightarrow> seL4_Fault_CL option \<Rightarrow> lookup_fault_CL option \<Rightarrow> bool"
 where
   "cfault_rel af cf lf \<equiv> \<exists>cf'. cf = Some cf' \<and> 
          (if (is_cap_fault cf') then (\<exists>lf'. lf = Some lf' \<and> fault_to_H cf' lf' = af)
            else (fault_to_H cf' undefined = af))"
+
+definition
+  carch_tcb_relation :: "Structures_H.arch_tcb \<Rightarrow> arch_tcb_C \<Rightarrow> bool"
+where
+  "carch_tcb_relation aarch_tcb carch_tcb \<equiv>
+    ccontext_relation (atcbContextGet aarch_tcb) (tcbContext_C carch_tcb)"
 
 definition
   ctcb_relation :: "Structures_H.tcb \<Rightarrow> tcb_C \<Rightarrow> bool"
@@ -332,13 +338,13 @@ where
        tcbFaultHandler atcb = tcbFaultHandler_C ctcb 
      \<and> cthread_state_relation (tcbState atcb) (tcbState_C ctcb, tcbFault_C ctcb)
      \<and> tcbIPCBuffer atcb    = tcbIPCBuffer_C ctcb
-     \<and> ccontext_relation (tcbContext atcb) (tcbContext_C (tcbArch_C ctcb))
+     \<and> carch_tcb_relation (tcbArch atcb) (tcbArch_C ctcb)
      \<and> tcbQueued atcb       = to_bool (tcbQueued_CL (thread_state_lift (tcbState_C ctcb)))
      \<and> ucast (tcbDomain atcb) = tcbDomain_C ctcb
      \<and> ucast (tcbPriority atcb) = tcbPriority_C ctcb
      \<and> ucast (tcbMCP atcb) = tcbMCP_C ctcb
      \<and> tcbTimeSlice atcb    = unat (tcbTimeSlice_C ctcb)
-     \<and> cfault_rel (tcbFault atcb) (fault_lift (tcbFault_C ctcb))
+     \<and> cfault_rel (tcbFault atcb) (seL4_Fault_lift (tcbFault_C ctcb))
                   (lookup_fault_lift (tcbLookupFailure_C ctcb))
      \<and> option_to_ptr (tcbBoundNotification atcb) = tcbBoundNotification_C ctcb"
 
@@ -614,7 +620,7 @@ fun
   "irqstate_to_C IRQInactive = scast Kernel_C.IRQInactive"
   | "irqstate_to_C IRQSignal = scast Kernel_C.IRQSignal"
   | "irqstate_to_C IRQTimer = scast Kernel_C.IRQTimer"
-
+  | "irqstate_to_C irqstate.IRQReserved = scast Kernel_C.IRQReserved"
 
 definition
   cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (word32[160]) \<Rightarrow> bool"
@@ -672,6 +678,31 @@ where
 
 end
 
+definition
+   region_is_bytes' :: "word32 \<Rightarrow> nat \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
+where
+  "region_is_bytes' ptr sz htd \<equiv> \<forall>z\<in>{ptr ..+ sz}. \<forall> td. td \<noteq> typ_uinfo_t TYPE (word8) \<longrightarrow>
+    (\<forall>n b. snd (htd z) n \<noteq> Some (td, b))"
+
+abbreviation
+  region_is_bytes :: "word32 \<Rightarrow> nat \<Rightarrow> globals myvars \<Rightarrow> bool"
+where
+  "region_is_bytes ptr sz s \<equiv> region_is_bytes' ptr sz (hrs_htd (t_hrs_' (globals s)))"
+
+abbreviation(input)
+  "heap_list_is_zero hp ptr n \<equiv> heap_list hp n ptr = replicate n 0"
+
+abbreviation
+  "region_is_zero_bytes ptr n x \<equiv> region_is_bytes ptr n x
+      \<and> heap_list_is_zero (hrs_mem (t_hrs_' (globals x))) ptr n"
+
+definition
+  zero_ranges_are_zero
+where
+  "zero_ranges_are_zero rs hrs
+    = (\<forall>(start, end) \<in> rs. region_is_bytes' start (unat ((end + 1) - start)) (hrs_htd hrs)
+        \<and> heap_list_is_zero (hrs_mem hrs) start (unat ((end + 1) - start)))"
+
 definition (in state_rel)
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -682,6 +713,7 @@ where
        cready_queues_relation (clift cheap)
                              (ksReadyQueues_' cstate)
                              (ksReadyQueues astate) \<and>
+       zero_ranges_are_zero (gsUntypedZeroRanges astate) cheap \<and>
        cbitmap_L1_relation (ksReadyQueuesL1Bitmap_' cstate) (ksReadyQueuesL1Bitmap astate) \<and>
        cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' cstate) (ksReadyQueuesL2Bitmap astate) \<and>
        ksCurThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksCurThread astate)) \<and>
@@ -720,19 +752,27 @@ where
 lemma ccap_relation_c_valid_cap: "ccap_relation  c c' \<Longrightarrow> c_valid_cap c'"
   by (simp add: ccap_relation_def)
 
+context begin interpretation Arch .
+fun
+  arch_fault_to_fault_tag :: "arch_fault \<Rightarrow> word32"
+  where
+  "arch_fault_to_fault_tag (VMFault a b) = scast seL4_Fault_VMFault"
+end
+
+
 fun
   fault_to_fault_tag :: "fault \<Rightarrow> word32"
-  where
-  "fault_to_fault_tag (CapFault a b c) = scast fault_cap_fault"
-  | "fault_to_fault_tag (VMFault a b)  = scast fault_vm_fault"
-  | "fault_to_fault_tag (UnknownSyscallException a) = scast fault_unknown_syscall"
-  | "fault_to_fault_tag (UserException a b) = scast fault_user_exception"
+where
+  "  fault_to_fault_tag (CapFault a b c) = scast seL4_Fault_CapFault"
+  | "fault_to_fault_tag (ArchFault f)    = arch_fault_to_fault_tag f"
+  | "fault_to_fault_tag (UnknownSyscallException a) = scast seL4_Fault_UnknownSyscall"
+  | "fault_to_fault_tag (UserException a b) = scast seL4_Fault_UserException"
 
 
 (* Return relations *)
 
 record errtype =
-  errfault :: "fault_CL option"
+  errfault :: "seL4_Fault_CL option"
   errlookup_fault :: "lookup_fault_CL option"
   errsyscall :: syscall_error_C
 
@@ -817,7 +857,7 @@ definition
                                   (to_bool (capAllowGrant_CL rs))"
 
 definition
-  "ccap_rights_relation cr cr' \<equiv> cr = cap_rights_to_H (cap_rights_lift cr')"
+  "ccap_rights_relation cr cr' \<equiv> cr = cap_rights_to_H (seL4_CapRights_lift cr')"
 
 lemma (in kernel) syscall_error_to_H_cases_rev:
   "\<And>n. syscall_error_to_H e lf = Some (InvalidArgument n) \<Longrightarrow>

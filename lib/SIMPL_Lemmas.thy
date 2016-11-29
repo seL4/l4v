@@ -227,7 +227,8 @@ lemma Guard_Seq_semantic_equiv:
 
 lemma exec_Seq_cong:
   "\<lbrakk> \<And>s''. \<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> s'' = \<Gamma> \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> s'';
-     \<And>s''. \<Gamma> \<turnstile> \<langle>b, Normal s''\<rangle> \<Rightarrow> s' = \<Gamma> \<turnstile> \<langle>d, Normal s''\<rangle> \<Rightarrow> s' \<rbrakk>
+     \<And>s''. \<Gamma> \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> Normal s''
+         \<Longrightarrow> \<Gamma> \<turnstile> \<langle>b, Normal s''\<rangle> \<Rightarrow> s' = \<Gamma> \<turnstile> \<langle>d, Normal s''\<rangle> \<Rightarrow> s' \<rbrakk>
        \<Longrightarrow> \<Gamma> \<turnstile> \<langle>a ;; b, Normal s\<rangle> \<Rightarrow> s' = \<Gamma> \<turnstile> \<langle>c ;; d, Normal s\<rangle> \<Rightarrow> s'"
   apply (rule iffI)
    apply (erule exec_Normal_elim_cases)

@@ -15,14 +15,14 @@ Formalisation of interrupt handling.
 chapter "Interrupts"
 
 theory Interrupt_A
-imports Ipc_A
+imports "./$L4V_ARCH/ArchInterrupt_A"
 begin
 
 context begin interpretation Arch .
 
 requalify_consts
   arch_invoke_irq_control
-
+  handle_reserved_irq
 end
   
   
@@ -109,7 +109,8 @@ definition
        do_extended_op timer_tick;
        do_machine_op resetTimer
      od
-   | IRQInactive \<Rightarrow> fail (* not meant to be able to get IRQs from inactive lines *);
+   | IRQInactive \<Rightarrow> fail (* not meant to be able to get IRQs from inactive lines *)
+   | IRQReserved \<Rightarrow> handle_reserved_irq irq;
    do_machine_op $ ackInterrupt irq
    od"
 

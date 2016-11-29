@@ -29,24 +29,17 @@ global_interpretation Deterministic_AI_1?: Deterministic_AI_1
 
 context Arch begin global_naming ARM
 
-crunch valid_list[wp, Deterministic_AI_assms]: cap_recycle valid_list
+crunch valid_list[wp]: invalidate_tlb_by_asid valid_list
   (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM unless_def
-   ignore: without_preemption filterM recycle_cap_ext)
+   ignore: without_preemption filterM )
+
 
 crunch valid_list[wp]: invoke_untyped valid_list
-  (wp: crunch_wps hoare_unless_wp simp: mapM_x_def_bak)
+  (wp: crunch_wps preemption_point_inv' hoare_unless_wp mapME_x_wp'
+    simp: mapM_x_def_bak crunch_simps
+    ignore: Deterministic_A.OR_choiceE)
 
 crunch valid_list[wp]: invoke_irq_control valid_list
-
-end
-
-global_interpretation Deterministic_AI_2?: Deterministic_AI_2
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
-  qed
-
-context Arch begin global_naming ARM
 
 lemma perform_page_table_invocation_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> perform_page_table_invocation a \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -81,13 +74,15 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding handle_interrupt_def ackInterrupt_def
   apply (rule hoare_pre)
-   by (wp get_cap_wp  do_machine_op_valid_list | wpc | simp add: get_irq_slot_def | wp_once hoare_drop_imps)+
+   by (wp get_cap_wp  do_machine_op_valid_list
+       | wpc | simp add: get_irq_slot_def handle_reserved_irq_def
+       | wp_once hoare_drop_imps)+
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
 
 end
 
-global_interpretation Deterministic_AI_3?: Deterministic_AI_3
+global_interpretation Deterministic_AI_2?: Deterministic_AI_2
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)

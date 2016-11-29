@@ -72,96 +72,6 @@ defs finaliseCap_def:
   | (_, _) \<Rightarrow>    return NullCap
   )"
 
-defs resetMemMapping_def:
-"resetMemMapping x0\<equiv> (case x0 of
-    (PageCap dev p rts sz _) \<Rightarrow>    PageCap dev p rts sz Nothing
-  | (PageTableCap ptr _) \<Rightarrow>    PageTableCap ptr Nothing
-  | (PageDirectoryCap ptr _) \<Rightarrow>    PageDirectoryCap ptr Nothing
-  | cap \<Rightarrow>    cap
-  )"
-
-defs recycleCap_def:
-"recycleCap is_final x1 \<equiv> (let cap = x1 in
-  if isPageCap cap
-  then let isDevice = capVPIsDevice cap
-  in   (do
-      unless isDevice $ doMachineOp $ clearMemory (capVPBasePtr cap)
-          (1 `~shiftL~` (pageBitsForSize $ capVPSize cap));
-      finaliseCap cap is_final;
-      return $ resetMemMapping cap
-  od)
-  else if isPageTableCap cap
-  then let ptr = capPTBasePtr cap
-  in   (do
-    pteBits \<leftarrow> return ( objBits InvalidPTE);
-    slots \<leftarrow> return ( [ptr, ptr + bit pteBits  .e.  ptr + bit ptBits - 1]);
-    mapM_x (flip storePTE InvalidPTE) slots;
-    doMachineOp $
-        cleanCacheRange_PoU (VPtr $ fromPPtr ptr)
-                            (VPtr $ fromPPtr ptr + (1 `~shiftL~` ptBits) - 1)
-                            (addrFromPPtr ptr);
-    (case capPTMappedAddress cap of
-          None \<Rightarrow>   return ()
-        | Some (a, v) \<Rightarrow>   (do
-            mapped \<leftarrow> pageTableMapped a v ptr;
-            when (mapped \<noteq> Nothing) $ invalidateTLBByASID a
-        od)
-        );
-    finaliseCap cap is_final;
-    return (if is_final then resetMemMapping cap else cap)
-  od)
-  else if isPageDirectoryCap cap
-  then let ptr = capPDBasePtr cap
-  in   (do
-    pdeBits \<leftarrow> return ( objBits InvalidPDE);
-    kBaseEntry \<leftarrow> return ( fromVPtr kernelBase
-                        `~shiftR~` pageBitsForSize ARMSection);
-    indices \<leftarrow> return ( [0  .e.  kBaseEntry - 1]);
-    offsets \<leftarrow> return ( map (PPtr \<circ> flip shiftL pdeBits) indices);
-    slots \<leftarrow> return ( map (\<lambda> x. x + ptr) offsets);
-    mapM_x (flip storePDE InvalidPDE) slots;
-    doMachineOp $
-        cleanCacheRange_PoU (VPtr $ fromPPtr ptr)
-                            (VPtr $ fromPPtr ptr + (1 `~shiftL~` pdBits) - 1)
-                            (addrFromPPtr ptr);
-    (case capPDMappedASID cap of
-          None \<Rightarrow>   return ()
-        | Some a \<Rightarrow>   (
-            ignoreFailure $ ((doE
-                pd' \<leftarrow> findPDForASID a;
-                withoutFailure $ when (ptr = pd') $ invalidateTLBByASID a
-            odE)
-                                                                          )
-        )
-        );
-    finaliseCap cap is_final;
-    return (if is_final then resetMemMapping cap else cap)
-  od)
-  else if isASIDControlCap cap
-  then   return ASIDControlCap
-  else if isASIDPoolCap cap
-  then let base = capASIDBase cap; ptr = capASIDPool cap
-  in   (do
-    asidTable \<leftarrow> gets (armKSASIDTable \<circ> ksArchState);
-    when (asidTable (asidHighBitsOf base) = Just ptr) $ (do
-        deleteASIDPool base ptr;
-        setObject ptr (makeObject ::asidpool);
-        asidTable \<leftarrow> gets (armKSASIDTable \<circ> ksArchState);
-        asidTable' \<leftarrow> return ( asidTable aLU [(asidHighBitsOf base, Just ptr)]);
-        modify (\<lambda> s. s \<lparr>
-            ksArchState := (ksArchState s) \<lparr> armKSASIDTable := asidTable' \<rparr>\<rparr>)
-    od);
-    return cap
-  od)
-  else undefined
-  )"
-
-defs hasRecycleRights_def:
-"hasRecycleRights x0\<equiv> (case x0 of
-    (PageCap _ _ rights _ _) \<Rightarrow>    rights = VMReadWrite
-  | _ \<Rightarrow>    True
-  )"
-
 defs sameRegionAs_def:
 "sameRegionAs x0 x1\<equiv> (let (a, b) = (x0, x1) in
   if isPageCap a \<and> isPageCap b
@@ -205,17 +115,10 @@ defs sameObjectAs_def:
   else   sameRegionAs a b
   )"
 
-definition
-"createPageObject ptr numPages isDevice \<equiv>
-    if isDevice then (do
-      addrs \<leftarrow> placeNewObject ptr UserDataDevice numPages;
-      return addrs
-    od)
-    else (do
-      addrs \<leftarrow> placeNewObject ptr UserData numPages;
-      doMachineOp $ initMemory (PPtr $ fromPPtr ptr) (1 `~shiftL~` (pageBits + numPages) );
-      return addrs
-    od)"
+defs placeNewDataObject_def:
+"placeNewDataObject regionBase sz isDevice \<equiv> if isDevice
+    then placeNewObject regionBase UserDataDevice sz
+    else placeNewObject regionBase UserData sz"
 
 defs createObject_def:
 "createObject t regionBase arg3 isDevice \<equiv>
@@ -225,7 +128,7 @@ defs createObject_def:
         APIObjectType v2 \<Rightarrow> 
             haskell_fail []
         | SmallPageObject \<Rightarrow>  (do
-            createPageObject regionBase 0 isDevice;
+            placeNewDataObject regionBase 0 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSmallPage)\<rparr>);
@@ -233,7 +136,7 @@ defs createObject_def:
                   VMReadWrite ARMSmallPage Nothing
         od)
         | LargePageObject \<Rightarrow>  (do
-            createPageObject regionBase 4 isDevice;
+            placeNewDataObject regionBase 4 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMLargePage)\<rparr>);
@@ -241,7 +144,7 @@ defs createObject_def:
                   VMReadWrite ARMLargePage Nothing
         od)
         | SectionObject \<Rightarrow>  (do
-            createPageObject regionBase 8 isDevice;
+            placeNewDataObject regionBase 8 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSection)\<rparr>);
@@ -249,7 +152,7 @@ defs createObject_def:
                   VMReadWrite ARMSection Nothing
         od)
         | SuperSectionObject \<Rightarrow>  (do
-            createPageObject regionBase 12 isDevice;
+            placeNewDataObject regionBase 12 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSuperSection)\<rparr>);
@@ -258,12 +161,7 @@ defs createObject_def:
         od)
         | PageTableObject \<Rightarrow>  (do
             ptSize \<leftarrow> return ( ptBits - objBits (makeObject ::pte));
-            regionSize \<leftarrow> return ( (1 `~shiftL~` ptBits));
             placeNewObject regionBase (makeObject ::pte) ptSize;
-            doMachineOp $
-                cleanCacheRange_PoU (VPtr $ fromPPtr regionBase)
-                      (VPtr $ fromPPtr regionBase + regionSize - 1)
-                      (addrFromPPtr regionBase);
             return $ PageTableCap (pointerCast regionBase) Nothing
         od)
         | PageDirectoryObject \<Rightarrow>  (do

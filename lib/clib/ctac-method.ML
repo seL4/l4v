@@ -123,6 +123,10 @@ val ctac_post_del = Thm.declaration_attribute
                     (fn thm =>
                         (ctac_post.map (Thm.del_thm thm)));
 
+val ceqv_simpl_sequence_pair = Attrib.config_bool
+    @{binding ceqv_simpl_sequence} (K false)
+fun ceqv_simpl_seq ctxt = Config.get ctxt (fst ceqv_simpl_sequence_pair)
+
 val setup =
   Attrib.setup @{binding "corres"} (Attrib.add_del ctac_add ctac_del)
     "correspondence rules"
@@ -131,7 +135,8 @@ val setup =
     "correspondence preprocessing rules"
   #> Attrib.setup @{binding "corres_post"}
     (Attrib.add_del ctac_post_add ctac_post_del)
-    "correspondence postprocessing rules";
+    "correspondence postprocessing rules"
+  #> snd ceqv_simpl_sequence_pair;
 
 (* tacticals *)
 
@@ -327,13 +332,19 @@ val ceqv_xpres_eq_If_rules = @{thms ceqv_xpres_eq_If_rules};
 
 val apply_ceqv_xpres_rules_trace = ref @{term True};
 
-fun apply_ceqv_xpres_rules ctxt _ n = DETERM
-  (resolve_tac ctxt ceqv_xpres_rules n
+fun apply_ceqv_xpres_rules1 ctxt rules _ n = DETERM
+  (resolve_tac ctxt rules n
      ORELSE (SUBGOAL (fn (t, n) =>
           (warning ("apply_ceqv_xpres_rules: no rule applied"
                      ^ " - see CtacImpl.apply_ceqv_xpres_rules_trace");
              apply_ceqv_xpres_rules_trace := t;
              resolve_tac ctxt [ceqv_xpres_FalseI] n)) n));
+
+fun apply_ceqv_xpres_rules ctxt = let
+    val seq = ceqv_simpl_seq ctxt
+    val ex_rules = if seq then [@{thm ceqv_xpres_While_simpl_sequence}]
+        else []
+  in apply_ceqv_xpres_rules1 ctxt (ex_rules @ ceqv_xpres_rules) end
 
 fun addcongs thms ss = foldl (uncurry Simplifier.add_cong) ss thms
 fun delsplits thms ss = foldl (uncurry Splitter.del_split) ss thms

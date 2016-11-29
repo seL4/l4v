@@ -207,7 +207,16 @@ locale Ipc_AI =
       \<lbrace>valid_global_objs :: 'state_ext state \<Rightarrow> bool\<rbrace>
         setup_caller_cap send recv
       \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-
+  assumes handle_arch_fault_reply_typ_at[wp]:
+    "\<And> P T p x4 t label msg.
+      \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
+        handle_arch_fault_reply x4 t label msg
+      \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  assumes do_fault_transfer_cte_wp_at[wp]:
+  "\<And> P p x t label msg.
+      \<lbrace>cte_wp_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>
+        do_fault_transfer x t label msg
+      \<lbrace> \<lambda>rv. cte_wp_at P p \<rbrace>"
 
 context Ipc_AI begin
 
@@ -1432,7 +1441,7 @@ lemma valid_recv_ep_tcb:
 
 
 lemma copy_mrs_thread_set_dmo:
-  assumes ts: "\<And>c. \<lbrace>Q\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := c tcb\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
+  assumes ts: "\<And>c. \<lbrace>Q\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set (c tcb) (tcb_arch tcb)\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
   assumes dmo: "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>rv. Q\<rbrace>"
                "\<And>x. \<lbrace>Q\<rbrace> do_machine_op (loadWord x) \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows "\<lbrace>Q\<rbrace> copy_mrs s sb r rb n \<lbrace>\<lambda>rv. Q\<rbrace>"
@@ -1730,10 +1739,10 @@ lemma as_user_machine_state[wp]:
 lemma set_mrs_def2:
   "set_mrs thread buf msgs \<equiv>
    do thread_set
-        (\<lambda>tcb. tcb\<lparr>tcb_context := 
-                     \<lambda>reg. if reg \<in> set (take (length msgs) msg_registers)
+        (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set
+                     (\<lambda>reg. if reg \<in> set (take (length msgs) msg_registers)
                            then msgs ! the_index msg_registers reg
-                           else tcb_context tcb reg\<rparr>)
+                           else (arch_tcb_context_get o tcb_arch) tcb reg) (tcb_arch tcb)\<rparr>)
         thread;
       remaining_msgs \<leftarrow> return (drop (length msg_registers) msgs);
       case buf of
@@ -1798,16 +1807,18 @@ lemma dit_cte_at [wp]:
 
 end
 
-lemma handle_fault_reply_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> handle_fault_reply ft t label msg \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+lemma (in Ipc_AI) handle_fault_reply_typ_at[wp]:
+  "\<lbrace>\<lambda>s :: 'state_ext state. P (typ_at T p s)\<rbrace> handle_fault_reply ft t label msg \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   by(cases ft, simp_all, wp)
 
-lemma handle_fault_reply_tcb[wp]:
-  "\<lbrace>tcb_at t'\<rbrace> handle_fault_reply ft t label msg \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
+lemma (in Ipc_AI) handle_fault_reply_tcb[wp]:
+  "\<lbrace>tcb_at t' :: 'state_ext state \<Rightarrow> bool\<rbrace>
+     handle_fault_reply ft t label msg
+   \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (simp add: tcb_at_typ, wp)
 
-lemma handle_fault_reply_cte[wp]:
-  "\<lbrace>cte_at t'\<rbrace> handle_fault_reply ft t label msg \<lbrace>\<lambda>rv. cte_at t'\<rbrace>"
+lemma (in Ipc_AI) handle_fault_reply_cte[wp]:
+  "\<lbrace>cte_at t' :: 'state_ext state \<Rightarrow> bool\<rbrace> handle_fault_reply ft t label msg \<lbrace>\<lambda>rv. cte_at t'\<rbrace>"
   by (wp valid_cte_at_typ)
 
 lemma valid_reply_caps_awaiting_reply:
@@ -1819,8 +1830,6 @@ lemma valid_reply_caps_awaiting_reply:
   done
 
 lemmas cap_insert_typ_ats [wp] = abs_typ_at_lifts [OF cap_insert_typ_at]
-
-crunch cte_wp_at[wp]: do_fault_transfer "cte_wp_at P p"
 
 context Ipc_AI begin
 
@@ -2465,7 +2474,7 @@ crunch cap_refs_in_kernel_window[wp]: do_ipc_transfer "cap_refs_in_kernel_window
   (wp: crunch_wps hoare_vcg_const_Ball_lift ball_tcb_cap_casesI
      simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
 
-crunch cap_refs_respects_device_region[wp]: do_fault_transfer "cap_refs_respects_device_region"
+crunch cap_refs_respects_device_region[wp]: do_fault_transfer "cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift 
     VSpace_AI.cap_refs_respects_device_region_dmo ball_tcb_cap_casesI
     const_on_failure_wp simp: crunch_simps zipWithM_x_mapM ball_conj_distrib)
@@ -2685,7 +2694,7 @@ crunch interrupt_states[wp]: set_mrs "\<lambda>s. P (interrupt_states s)"
 
 lemma tcb_cap_cases_tcb_context:
   "\<forall>(getF, v)\<in>ran tcb_cap_cases.
-         getF (tcb_context_update F tcb) = getF tcb"
+         getF (tcb_arch_update (arch_tcb_context_set F) tcb) = getF tcb"
   by (rule ball_tcb_cap_casesI, simp+)
 
 crunch valid_arch_caps[wp]: set_message_info "valid_arch_caps"

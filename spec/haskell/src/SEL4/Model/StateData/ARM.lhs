@@ -43,7 +43,6 @@ There are three ARM-specific global data elements:
 \end{itemize}
 
 > data KernelState = ARMKernelState {
->     armKSGlobalsFrame :: PPtr Word,
 >     armKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
 >     armKSHWASIDTable :: Array HardwareASID (Maybe ASID),
 >     armKSNextASID :: HardwareASID,
@@ -66,7 +65,6 @@ There are three ARM-specific global data elements:
 >             [globalPTs, globalPTs + bit pageBits .. globalPTsTop - 1] ++
 >             [globalPD, globalPD + bit pageBits .. globalPDTop - 1]
 >         state = ARMKernelState {
->             armKSGlobalsFrame = ptrFromPAddr globalsFrame,
 >             armKSASIDTable = funPartialArray (const Nothing) (0, (1 `shiftL` asidHighBits) - 1),
 >             armKSHWASIDTable = funArray (const Nothing),
 >             armKSNextASID = minBound,

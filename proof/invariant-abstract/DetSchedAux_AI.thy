@@ -149,9 +149,9 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
         invoke_untyped ui
       \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
   assumes init_arch_objects_valid_etcbs[wp]:
-    "\<And>t r n sz refs dev. \<lbrace>valid_etcbs\<rbrace> init_arch_objects t r n sz refs dev\<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
+    "\<And>t r n sz refs. \<lbrace>valid_etcbs\<rbrace> init_arch_objects t r n sz refs \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   assumes init_arch_objects_valid_blocked[wp]:
-    "\<And>t r n sz refs dev. \<lbrace>valid_blocked\<rbrace> init_arch_objects t r n sz refs dev \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
+    "\<And>t r n sz refs. \<lbrace>valid_blocked\<rbrace> init_arch_objects t r n sz refs \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   assumes invoke_untyped_cur_domain[wp]:
     "\<And>P i. \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
   assumes invoke_untyped_ready_queues[wp]:
@@ -169,15 +169,13 @@ lemma delete_objects_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> delete_obje
   apply (simp add: valid_etcbs_def st_tcb_at_kh_def obj_at_kh_def obj_at_def is_etcb_at_def)
   done
 
+lemmas mapM_x_defsym = mapM_x_def[symmetric]
 
 context DetSchedAux_AI_det_ext begin
 
-lemma invoke_untyped_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>_.valid_etcbs\<rbrace>"
-  apply (cases ui)
-  apply (simp add: mapM_x_def[symmetric])
-  apply (wp mapM_x_wp')
-  apply simp
-  done
+crunch valid_etcbs[wp]: invoke_untyped "valid_etcbs"
+  (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps whenE_inv
+     simp: mapM_x_defsym crunch_simps unless_def)
 
 end
 
@@ -220,12 +218,9 @@ lemma delete_objects_valid_blocked[wp]: "\<lbrace>valid_blocked\<rbrace> delete_
 
 context DetSchedAux_AI_det_ext begin
 
-lemma invoke_untyped_valid_blocked[wp]: "\<lbrace>valid_blocked\<rbrace> invoke_untyped ui \<lbrace>\<lambda>_.valid_blocked\<rbrace>"
-  apply (cases ui)
-  apply (simp add: mapM_x_def[symmetric])
-  apply (wp mapM_x_wp')
-  apply simp
-  done
+crunch valid_blocked[wp]: invoke_untyped "valid_blocked"
+  (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps whenE_inv
+     simp: mapM_x_defsym crunch_simps unless_def)
 
 end
 
@@ -322,15 +317,12 @@ lemma valid_sched_tcb_state_preservation:
   apply(fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
-lemmas mapM_x_defsym = mapM_x_def[symmetric]
-
 lemma valid_idle_etcb_lift:
   assumes "\<And>P t. \<lbrace>\<lambda>s. etcb_at P t s\<rbrace> f \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
   shows "\<lbrace>valid_idle_etcb\<rbrace> f \<lbrace>\<lambda>r. valid_idle_etcb\<rbrace>"
   apply(simp add: valid_idle_etcb_def)
   apply(wp assms)
   done
-
 
 context DetSchedAux_AI_det_ext begin
 
@@ -339,12 +331,13 @@ lemma invoke_untyped_valid_sched:
      invoke_untyped ui
    \<lbrace> \<lambda>_ . valid_sched \<rbrace>"
   apply (rule hoare_pre)
-   apply (rule_tac I="invs and valid_untyped_inv ui and ct_active" in valid_sched_tcb_state_preservation)
+   apply (rule_tac I="invs and valid_untyped_inv ui and ct_active"
+     in valid_sched_tcb_state_preservation)
           apply (wp invoke_untyped_st_tcb_at)
           apply simp
          apply (wp invoke_untyped_etcb_at)
-    apply (rule hoare_strengthen_post)
-     apply (wp invoke_untyp_invs, simp add: invs_def valid_state_def)
+    apply (rule hoare_post_impErr, rule hoare_pre, rule invoke_untyp_invs,
+        simp_all add: invs_valid_idle)[1]
    apply (rule_tac f="\<lambda>s. P (scheduler_action s)" in hoare_lift_Pf)
     apply (rule_tac f="\<lambda>s. x (ready_queues s)" in hoare_lift_Pf)
      apply wp
@@ -352,12 +345,9 @@ lemma invoke_untyped_valid_sched:
   done
 
 end
+lemmas hoare_imp_lift_something = hoare_convert_imp
 
 
-lemma hoare_imp_lift_something: "\<lbrakk>\<lbrace>\<lambda>s. \<not> P s \<rbrace> f \<lbrace>\<lambda>r s. \<not> P s\<rbrace>;\<lbrace>Q\<rbrace> f \<lbrace>\<lambda>_.Q\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P s \<longrightarrow> Q s\<rbrace> f \<lbrace>\<lambda>r s. P s \<longrightarrow> Q s\<rbrace>"
-  apply (clarsimp simp add: valid_def)
-  apply force
-  done
 
 crunch valid_queues[wp]: create_cap,cap_insert valid_queues
   (wp: valid_queues_lift)

@@ -639,7 +639,6 @@ definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_state \<equiv> \<lambda>s.
-  typ_at (AArch (AUserData ARMSmallPage)) (arm_globals_frame (arch_state s)) s \<and>
   valid_asid_table (arm_asid_table (arch_state s)) s \<and>
   page_directory_at (arm_global_pd (arch_state s)) s \<and>
   valid_global_pts s \<and>
@@ -725,7 +724,7 @@ definition
   global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set"
 where
   "global_refs \<equiv> \<lambda>s.
-  {idle_thread s, arm_globals_frame (arch_state s), arm_global_pd (arch_state s)} \<union>
+  {idle_thread s, arm_global_pd (arch_state s)} \<union>
    range (interrupt_irq_node s) \<union>
    set (arm_global_pts (arch_state s))"
 
@@ -2121,7 +2120,6 @@ lemma valid_arch_obj_default':
   "valid_arch_obj (default_arch_object aobject_type dev us) s"
   unfolding default_arch_object_def
   by (cases aobject_type; simp)
-
 
 end
 end

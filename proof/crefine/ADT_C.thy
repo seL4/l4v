@@ -75,7 +75,7 @@ lemma Basic_sem_eq:
 lemma setArchTCB_C_corres:
   "\<lbrakk> ccontext_relation tc (tcbContext_C tc'); t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
   corres_underlying rf_sr nf nf' dc (tcb_at' t) \<top>
-    (threadSet (\<lambda>tcb. tcb \<lparr> tcbContext := tc \<rparr>) t) (setArchTCB_C tc' t')"
+    (threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb)\<rparr>) t) (setArchTCB_C tc' t')"
   apply (simp add: setArchTCB_C_def exec_C_def Basic_sem_eq corres_underlying_def)
   apply clarsimp
   apply (simp add: threadSet_def bind_assoc split_def exec_gets)
@@ -111,7 +111,7 @@ lemma setArchTCB_C_corres:
    apply (rule ext, simp split: split_if)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
-    apply (simp add: ctcb_relation_def)
+    apply (simp add: ctcb_relation_def carch_tcb_relation_def)
    apply assumption
   apply simp
   done
@@ -294,14 +294,16 @@ where
   "cirqstate_to_H w \<equiv>
    if w = scast Kernel_C.IRQSignal then irqstate.IRQSignal
    else if w = scast Kernel_C.IRQTimer then irqstate.IRQTimer
-   else irqstate.IRQInactive"
+   else if w = scast Kernel_C.IRQInactive then irqstate.IRQInactive
+   else irqstate.IRQReserved"
 
 lemma cirqstate_cancel:
   "cirqstate_to_H \<circ> irqstate_to_C = id"
   apply (rule ext)
   apply (case_tac x)
   apply (auto simp: cirqstate_to_H_def Kernel_C.IRQInactive_def
-                    Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def)
+                    Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
+                    Kernel_C.IRQReserved_def)
   done
 
 definition
@@ -667,7 +669,6 @@ lemma (in kernel_m)
 definition (in state_rel)
   "carch_state_to_H cstate \<equiv>
    ARMKernelState
-     (symbol_table ''armKSGlobalsFrame'')
      (array_map_conv (\<lambda>x. if x=NULL then None else Some (ptr_val x))
                      (2^asid_high_bits - 1) (armKSASIDTable_' cstate))
      (array_map_conv (\<lambda>x. if x=0 then None else Some x) 0xFF
@@ -693,7 +694,7 @@ lemma (in kernel_m)  carch_state_to_H_correct:
                    [symbol_table ''armKSGlobalPT'']"
   shows           "carch_state_to_H cstate = ksArchState astate"
   apply (case_tac "ksArchState astate", simp)
-  apply (rename_tac v0 v1 v2 v3 v4 v5 v6 v7)
+  apply (rename_tac v1 v2 v3 v4 v5 v6 v7)
   using gpts rel[simplified carch_state_relation_def carch_globals_def]
   apply (clarsimp simp: carch_state_to_H_def
                         casid_map_to_H_correct[OF valid rel])
@@ -813,6 +814,13 @@ lemma ccontext_relation_imp_eq:
   "ccontext_relation f x \<Longrightarrow> ccontext_relation g x \<Longrightarrow> f=g"
   by (rule ext) (simp add: ccontext_relation_def)
 
+lemma carch_tcb_relation_imp_eq:
+  "carch_tcb_relation f x \<Longrightarrow> carch_tcb_relation g x \<Longrightarrow> f = g"
+  apply (cases f)
+  apply (cases g)
+  apply (simp add: carch_tcb_relation_def ccontext_relation_imp_eq atcbContextGet_def)
+  done
+
 (* FIXME: move *)
 lemma ran_tcb_cte_cases:
   "ran tcb_cte_cases =
@@ -916,7 +924,7 @@ lemma map_to_ctes_tcb_ctes:
 lemma cfault_rel_imp_eq:
   "cfault_rel x a b \<Longrightarrow> cfault_rel y a b \<Longrightarrow> x=y"
   by (clarsimp simp: cfault_rel_def is_cap_fault_def
-              split: split_if_asm fault_CL.splits)
+              split: split_if_asm seL4_Fault_CL.splits)
 
 lemma cthread_state_rel_imp_eq:
   "cthread_state_relation x z \<Longrightarrow> cthread_state_relation y z \<Longrightarrow> x=y"
@@ -963,7 +971,7 @@ lemma cpspace_tcb_relation_unique:
    apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x100)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
    apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
-   apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq
+   apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq carch_tcb_relation_imp_eq
                      ccontext_relation_imp_eq up_ucast_inj_eq)
   done
 
@@ -1440,12 +1448,45 @@ lemma cbitmap_L2_to_H_correct:
    apply clarsimp
    done
 
+definition
+  mk_gsUntypedZeroRanges
+where
+  "mk_gsUntypedZeroRanges s
+      = ran (untypedZeroRange \<circ>\<^sub>m (option_map cteCap o map_to_ctes (cstate_to_pspace_H s)))"
+
+lemma cpspace_user_data_relation_user_mem'[simp]:
+  "\<lbrakk>pspace_aligned' as;pspace_distinct' as\<rbrakk> \<Longrightarrow> cpspace_user_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
+  = cpspace_user_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
+  by (simp add: cmap_relation_def)
+
+lemma cpspace_device_data_relation_user_mem'[simp]:
+  "cpspace_device_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
+  = cpspace_device_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
+  apply (clarsimp simp: cmap_relation_def cuser_user_data_device_relation_def heap_to_device_data_def)
+  apply (rule_tac arg_cong[where  f = "%x. x = y" for y])
+  by auto
+
+lemma (in kernel)  mk_gsUntypedZeroRanges_correct:
+  assumes valid: "valid_state' as"
+  assumes cstate_rel: "cstate_relation as cs"
+  shows "mk_gsUntypedZeroRanges cs = gsUntypedZeroRanges as"
+  using assms
+  apply (clarsimp simp: valid_state'_def untyped_ranges_zero_inv_def
+                        mk_gsUntypedZeroRanges_def cteCaps_of_def)
+  apply (subst cstate_to_pspace_H_correct[where c=cs], simp_all)
+  apply (clarsimp simp: cstate_relation_def Let_def)
+  apply (subst cstate_to_machine_H_correct, assumption, simp_all)
+   apply (clarsimp simp: cpspace_relation_def)+
+  apply (clarsimp simp: observable_memory_def valid_pspace'_def)
+  done
+
 definition (in state_rel)
   cstate_to_H :: "globals \<Rightarrow> kernel_state"
 where
   "cstate_to_H s \<equiv>
    \<lparr>ksPSpace = cstate_to_pspace_H s,
     gsUserPages = fst (ghost'state_' s), gsCNodes = fst (snd (ghost'state_' s)),
+    gsUntypedZeroRanges = mk_gsUntypedZeroRanges s,
     gsMaxObjectSize = (let v = unat (gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' s))
         in if v = 0 then card (UNIV :: word32 set) else v),
     ksDomScheduleIdx = unat (ksDomScheduleIdx_' s),
@@ -1468,36 +1509,25 @@ where
 lemma trivial_eq_conj: "B = C \<Longrightarrow> (A \<and> B) = (A \<and> C)"
   by simp
 
-lemma cpspace_user_data_relation_user_mem'[simp]:
-  "\<lbrakk>pspace_aligned' as;pspace_distinct' as\<rbrakk> \<Longrightarrow> cpspace_user_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
-  = cpspace_user_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
-  by (simp add: cmap_relation_def)
-
-lemma cpspace_device_data_relation_user_mem'[simp]:
-  "cpspace_device_data_relation (ksPSpace as) (option_to_0 \<circ> user_mem' as) (t_hrs_' cs)
-  = cpspace_device_data_relation (ksPSpace as)  (underlying_memory (ksMachineState as)) (t_hrs_' cs)"
-  apply (clarsimp simp: cmap_relation_def cuser_user_data_device_relation_def heap_to_device_data_def)
-  apply (rule_tac arg_cong[where  f = "%x. x = y" for y])
-  by auto
-
-
 lemma (in kernel_m) cstate_to_H_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
   shows "cstate_to_H cs = as \<lparr>ksMachineState:=  observable_memory (ksMachineState as) (user_mem' as)\<rparr>"
   apply (subgoal_tac "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)")
    apply (rule kernel_state.equality, simp_all add: cstate_to_H_def)
-                   apply (rule cstate_to_pspace_H_correct)
-                    using valid
-                    apply (simp add: valid_state'_def)
-                   using cstate_rel valid
-                   apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def 
-                     observable_memory_def valid_state'_def
-                  valid_pspace'_def)
+                      apply (rule cstate_to_pspace_H_correct)
+                     using valid
+                     apply (simp add: valid_state'_def)
+                    using cstate_rel valid
+                    apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def 
+                      observable_memory_def valid_state'_def
+                      valid_pspace'_def)
+                   using cstate_rel
+                   apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def prod_eq_iff)
                   using cstate_rel
-                  apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def prod_eq_iff)
-                 using cstate_rel
-                 apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def prod_eq_iff)
+                  apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def prod_eq_iff)
+                 using valid cstate_rel
+                 apply (rule mk_gsUntypedZeroRanges_correct)
                 using cstate_rel 
                 apply (fastforce simp: cstate_relation_def cpspace_relation_def 
                   Let_def ghost_size_rel_def unat_eq_0

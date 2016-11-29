@@ -313,7 +313,11 @@ lemma tcb_at_def2: "tcb_at ptr s = (\<exists>tcb. kheap s ptr = Some (TCB tcb))"
   done
 
 lemma set_object_globals_equiv:
-  "\<lbrace> globals_equiv s and (\<lambda> s. ptr \<noteq> arm_global_pd (arch_state s)) and (\<lambda>t. ptr = idle_thread t \<longrightarrow> (\<forall>tcb. kheap t (idle_thread t) = Some (TCB tcb) \<longrightarrow> (\<exists>tcb'. obj = (TCB tcb') \<and> tcb_context tcb = tcb_context tcb')) \<and> (\<forall>tcb'. obj = (TCB tcb') \<longrightarrow> tcb_at (idle_thread t) t)) \<rbrace> 
+  "\<lbrace> globals_equiv s and (\<lambda> s. ptr \<noteq> arm_global_pd (arch_state s))
+    and (\<lambda>t. ptr = idle_thread t \<longrightarrow>
+                (\<forall>tcb. kheap t (idle_thread t) = Some (TCB tcb) \<longrightarrow> (\<exists>tcb'. obj = (TCB tcb')
+             \<and> arch_tcb_context_get (tcb_arch tcb) = arch_tcb_context_get (tcb_arch tcb')))
+             \<and> (\<forall>tcb'. obj = (TCB tcb') \<longrightarrow> tcb_at (idle_thread t) t)) \<rbrace>
    set_object ptr obj
    \<lbrace> \<lambda>_. globals_equiv s \<rbrace>"
   unfolding set_object_def
@@ -480,18 +484,22 @@ done
 
 lemma aag_cap_auth_recycle_EndpointCap:"pas_cap_cur_auth aag (EndpointCap word1 word2 f) \<Longrightarrow>
   pas_refined aag s \<Longrightarrow>
-  has_recycle_rights (EndpointCap word1 word2 f) \<Longrightarrow>
- is_subject aag word1"
+  has_cancel_send_rights (EndpointCap word1 word2 f) \<Longrightarrow>
+  is_subject aag word1"
   unfolding aag_cap_auth_def
-  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   pas_refined_all_auth_is_owns is_page_cap_def has_recycle_rights_def cap_rights_to_auth_def all_rights_def)
-done
+  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   
+                   pas_refined_all_auth_is_owns is_page_cap_def 
+                   has_cancel_send_rights_def cap_rights_to_auth_def 
+                   all_rights_def)
+  done
 
 lemma aag_cap_auth_Zombie:"pas_cap_cur_auth aag (Zombie word x y) \<Longrightarrow>
   pas_refined aag s \<Longrightarrow>
  is_subject aag word"
   unfolding aag_cap_auth_def
-  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   pas_refined_all_auth_is_owns is_page_cap_def has_recycle_rights_def cap_rights_to_auth_def)
-done
+  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   
+        pas_refined_all_auth_is_owns is_page_cap_def cap_rights_to_auth_def)
+  done
 
 lemmas aag_cap_auth_subject = aag_cap_auth_PageTableCap 
                               aag_cap_auth_PageDirectory 
@@ -681,9 +689,11 @@ lemma only_timer_irqs:
   interrupt_states s irq = IRQTimer"
   apply(clarsimp simp: is_irq_at_def irq_at_def Let_def split: split_if_asm)
   apply(case_tac "interrupt_states s (irq_oracle n)")
-    apply(blast elim: valid_irq_statesE)
-   apply(fastforce simp: domain_sep_inv_def)
-  by assumption
+     apply(blast elim: valid_irq_statesE)
+    apply(fastforce simp: domain_sep_inv_def)
+   apply assumption
+  apply(fastforce simp: domain_sep_inv_def)
+  done
 
 lemma dmo_getActiveIRQ_only_timer:
   "\<lbrace>domain_sep_inv False st and valid_irq_states\<rbrace> 
@@ -786,17 +796,17 @@ lemma only_timer_irq_inv_domain_sep_inv[intro]:
 (* FIXME: repalce Infoflow.do_machine_op_spec_reads_respects' with this *)
 lemma do_machine_op_spec_reads_respects':
   assumes equiv_dmo:
-   "equiv_valid_inv (equiv_machine_state (aag_can_read aag) (range_of_arm_globals_frame st) And equiv_irq_state)  (equiv_machine_state (aag_can_affect aag l) (range_of_arm_globals_frame st)) Q f"
+   "equiv_valid_inv (equiv_machine_state (aag_can_read aag) And equiv_irq_state)  (equiv_machine_state (aag_can_affect aag l)) Q f"
   assumes guard:
     "\<And> s. P s \<Longrightarrow> Q (machine_state s)"
   shows
   "spec_reads_respects st aag l P (do_machine_op f)"
   unfolding do_machine_op_def spec_equiv_valid_def
   apply(rule equiv_valid_2_guard_imp)
-   apply(rule_tac  R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag or aag_can_affect aag l) (range_of_arm_globals_frame st) rv rv' \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s \<and> Q r" and Q'="\<lambda> r s. Q r" and P="op = st" and P'="\<top>" in equiv_valid_2_bind)
+   apply(rule_tac  R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag or aag_can_affect aag l) rv rv' \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s \<and> Q r" and Q'="\<lambda> r s. Q r" and P="op = st" and P'="\<top>" in equiv_valid_2_bind)
        apply(rule gen_asm_ev2_l[simplified K_def pred_conj_def])
        apply(rule gen_asm_ev2_r')
-       apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag) (range_of_arm_globals_frame st) ms' ms'' \<and> equiv_machine_state (aag_can_affect aag l) (range_of_arm_globals_frame st) ms' ms'' \<and> equiv_irq_state ms' ms''" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
+       apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag)  ms' ms'' \<and> equiv_machine_state (aag_can_affect aag l) ms' ms'' \<and> equiv_irq_state ms' ms''" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
             apply(clarsimp simp: modify_def get_def put_def bind_def return_def equiv_valid_2_def)
             apply(fastforce intro: reads_equiv_machine_state_update affects_equiv_machine_state_update)
             apply(insert equiv_dmo)[1]
@@ -845,12 +855,11 @@ lemma gets_irq_masks_equiv_valid:
 lemma irq_state_increment_reads_respects_memory:
   "equiv_valid_inv
           (equiv_machine_state (\<lambda>x. aag_can_read_label aag (pasObjectAbs aag x))
-            (range_of_arm_globals_frame st) And
+            And
            equiv_irq_state)
           (equiv_for
             (\<lambda>x. aag_can_affect_label aag l \<and>
-                 pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l \<and>
-                 x \<notin> range_of_arm_globals_frame st)
+                 pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l)
             underlying_memory)  \<top> (modify (\<lambda>s. s\<lparr>irq_state := Suc (irq_state s)\<rparr>))"
   apply(simp add: equiv_valid_def2)
   apply(rule modify_ev2)
@@ -860,12 +869,11 @@ lemma irq_state_increment_reads_respects_memory:
 lemma irq_state_increment_reads_respects_device:
   "equiv_valid_inv
           (equiv_machine_state (\<lambda>x. aag_can_read_label aag (pasObjectAbs aag x))
-            (range_of_arm_globals_frame st) And
+            And
            equiv_irq_state)
           (equiv_for
             (\<lambda>x. aag_can_affect_label aag l \<and>
-                 pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l \<and>
-                 x \<notin> range_of_arm_globals_frame st)
+                 pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l)
             device_state)  \<top> (modify (\<lambda>s. s\<lparr>irq_state := Suc (irq_state s)\<rparr>))"
   apply(simp add: equiv_valid_def2)
   apply(rule modify_ev2)

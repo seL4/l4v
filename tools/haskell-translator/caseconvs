@@ -1618,6 +1618,11 @@ case \x of cap@(IOPageTableCap {}) -> _ ->  ---X>
 
 case \x of (ArchInvocationLabel X64PageMapIO, rw:ioaddr:_, (iospaceCap,_):_) -> (ArchInvocationLabel X64PageMapIO, _, _) -> (ArchInvocationLabel X64PageUnmap, _, _) -> _ ->  ---X>
 
+case \x of (cap@UntypedCap {}) -> _ ->  ---> let cap = \x in
+  if isUntypedCap cap
+  then ->1
+  else ->2
+
 case \x of cap@(PageCap {}) -> _ ->  ---X>
 
 case \x of (PageMap asid cap ctSlot entries) -> (PageRemap entries) -> (PageUnmap cap ctSlot) -> (PageIOMap cap cptr vtdpte slot) -> (PageIOUnmap (ArchObjectCap cap@PageCap {}) ctSlot) -> (PageIOUnmap _ _) -> (PageGetAddr ptr) ->  ---X>

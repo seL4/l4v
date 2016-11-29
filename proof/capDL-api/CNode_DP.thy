@@ -150,123 +150,110 @@ lemma seL4_CNode_Mint_sep:
   apply (rename_tac cdl_tcb)
   apply (rule hoare_pre)
    apply (rule call_kernel_with_intent_allow_error_helper[where check=True,simplified,rotated -1])
-                apply assumption
-               apply fastforce
-              apply (clarsimp simp:sep_conj_assoc)
-              apply (rule hoare_post_imp[OF _
-              set_cap_wp])
-              apply (sep_select 5,assumption)
-             apply wp[1]
-            apply (rule_tac P = "root_tcb_id \<mapsto>f Tcb cdl_tcb \<and>*
-           (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
-           cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
-           dest_id \<mapsto>f CNode (empty_cnode dest_size) \<and>*
-           (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
-           (cnode_id, offset dest_root root_size) \<mapsto>c dest_root_cap \<and>*
-           (cnode_id, offset src_root root_size) \<mapsto>c cnode_cap' \<and>*
-           (cnode_id, offset src_index root_size) \<mapsto>c src_cap \<and>*
-           (dest_id, offset dest_index dest_size) \<mapsto>c NullCap \<and>* R"
-           in mark_tcb_intent_error_sep_inv)
-           apply wp[1]
-          apply (rule corrupt_ipc_buffer_sep_inv)
-         apply (rule_tac P = "(\<exists>cap''. reset_cap_asid cap'' = reset_cap_asid cap' \<and>
-         iv = InvokeCNode (InsertCall (derived_cap cap'')
-         (cap_object cnode_cap, offset src_index root_size)
-         (cap_object dest_root_cap,offset dest_index dest_size)))"
-         in hoare_gen_asmEx)
-         apply (elim conjE exE)
-         apply simp
-         apply (rule no_exception_conj')
-          apply (wp cnode_insert_cap_cdl_current_thread)[1]
-         apply (rule no_exception_conj')
-          apply (wp)[1]
-         apply (rule hoare_post_impErr)
-           apply (rule_tac R = "(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* R" for R
-           in invoke_cnode_insert_cap')
-           apply simp
-          apply (rule conjI[rotated])
-           apply (rule sep_any_imp_c'_conj[where cap = RestartCap])
-           apply (frule sep_map_c_asid_reset[where ptr = "(cap_object dest_root_cap, offset dest_index dest_size)"
-           ,OF reset_cap_asid_derived])
-           apply simp
-           apply (sep_solve)
-          apply sep_solve
-         apply (assumption)
-        apply (rule_tac Q = "\<lambda>r. (\<lambda>s. cdl_current_thread s = Some root_tcb_id \<and>
-         cdl_current_domain s = minBound) and
-         < (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* Q > and
-         K (\<exists>cap''. reset_cap_asid cap'' = reset_cap_asid cap' \<and> iv = InvokeCNode
-         (InsertCall (derived_cap cap'') (cap_object cnode_cap, offset src_index root_size)
-         (cap_object dest_root_cap, offset dest_index dest_size)))" for Q
-         in hoare_strengthen_post[rotated])
-         apply (clarsimp simp:cap_of_insert_call_def)
-         apply (rule conjI)
-          apply (sep_select 2,assumption)
-         apply (rule conjI)
-          apply (drule reset_cap_asid_cap_type)
-          apply (simp)
-         apply (rule_tac x = cap'' in exI)
-         apply (simp add:reset_cap_asid_derived)
-        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)[1]
-       apply (rule_tac P = "is_cnode_cap (fst (c,ref))" in hoare_gen_asmEx)
-       apply (clarsimp simp: decode_invocation_simps split_def)
-       apply (rule liftME_wp)
-       apply (rule decode_cnode_mint_rvu)
-      apply (simp add:lookup_extra_caps_def mapME_def sequenceE_def get_index_def)
-      apply (rule wp_no_exception_seq)
-       apply wp[1]
-      apply clarsimp
-      apply (rule lookup_cap_and_slot_rvu[where r = root_size and
-     cap = cnode_cap and cap'=cnode_cap'])
-     apply (rule hoare_pre)
-      apply (rule lookup_cap_and_slot_rvu[where r = root_size and
-     cap = cnode_cap and cap' = dest_root_cap])
-     defer
-     apply (rule validE_validE_R)
-     apply (rule hoare_pre)
-      apply (rule lookup_cap_and_slot_rvu[where r = root_size and
-     cap = cnode_cap])
-     apply (clarsimp simp:get_index_def)
-     defer
-     apply (clarsimp simp:Let_def)
-     apply (wp hoare_vcg_ball_lift
-    sep_inv_to_all_scheduable_tcbs[OF update_thread_intent_update]
-    hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
-    is_cnode_cap_guard_equal update_thread_intent_update update_thread_cnode_at |
-    clarsimp)+
-    apply (intro conjI impI)
-     apply (sep_solve)
-    apply sep_solve
-   apply (clarsimp simp:conj_comms cnode_non_ep)
-   apply (thin_tac "(P \<and>* Q) (sep_state_projection sa)" for P Q)
-   apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
-   apply (intro conjI impI allI, simp_all)
-                    apply (clarsimp simp:sep_conj_assoc)
-                    apply sep_solve
-                   apply (frule reset_cap_asid_cnode_cap)
-                    apply clarsimp
-                   apply (simp add: cnode_cap_non_ep_related get_index_def)[1]
-                  apply (clarsimp simp:sep_conj_assoc)
-                  apply sep_solve
-                 apply (clarsimp dest!: reset_cap_asid_cnode_cap)
-                apply sep_solve
-               apply clarsimp+
-             apply (fastforce cong: cap_type_bad_cong dest!: reset_cap_asid_cnode_cap)+
-       apply (drule(1) reset_cap_asid_cnode_cap | simp)+
-       apply (clarsimp simp:sep_conj_assoc)
-       apply sep_solve
-      apply (clarsimp dest!:reset_cap_asid_cnode_cap)
+               apply assumption
+              apply fastforce
+             apply (clarsimp simp:sep_conj_assoc)
+             apply (rule hoare_post_imp[OF _
+             set_cap_wp])
+             apply (sep_select 5,assumption)
+            apply wp[1]
+           apply (rule_tac P = "root_tcb_id \<mapsto>f Tcb cdl_tcb \<and>*
+                      (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
+                      cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
+                      dest_id \<mapsto>f CNode (empty_cnode dest_size) \<and>*
+                      (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
+                      (cnode_id, offset dest_root root_size) \<mapsto>c dest_root_cap \<and>*
+                      (cnode_id, offset src_root root_size) \<mapsto>c cnode_cap' \<and>*
+                      (cnode_id, offset src_index root_size) \<mapsto>c src_cap \<and>*
+                      (dest_id, offset dest_index dest_size) \<mapsto>c NullCap \<and>* R"
+                      in mark_tcb_intent_error_sep_inv)
+          apply wp[1]
+         apply (rule corrupt_ipc_buffer_sep_inv)
+        apply (rule_tac P = "(\<exists>cap''. reset_cap_asid cap'' = reset_cap_asid cap' \<and>
+                          iv = InvokeCNode (InsertCall (derived_cap cap'')
+                               (cap_object cnode_cap, offset src_index root_size)
+                               (cap_object dest_root_cap,offset dest_index dest_size)))"
+        in hoare_gen_asmEx)
+        apply (elim conjE exE)
+        apply simp
+        apply (rule false_e_explode)
+        apply (rule no_exception_conj')
+         apply (wp cnode_insert_cap_cdl_current_thread)[1]
+        apply (rule no_exception_conj')
+         apply (wp)[1]
+        apply (rule hoare_post_impErr)
+          apply (rule_tac R = "(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* R" for R
+          in invoke_cnode_insert_cap')
+          apply simp
+         apply (rule conjI[rotated])
+          apply (rule sep_any_imp_c'_conj[where cap = RestartCap])
+          apply (frule sep_map_c_asid_reset[where ptr = "(cap_object dest_root_cap, offset dest_index dest_size)"
+          ,OF reset_cap_asid_derived])
+          apply simp
+          apply (sep_solve)
+         apply sep_solve
+        apply (assumption)
+       apply (rule_tac Q = "\<lambda>r. (\<lambda>s. cdl_current_thread s = Some root_tcb_id \<and>
+                cdl_current_domain s = minBound) and
+                < (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* Q > and
+                K (\<exists>cap''. reset_cap_asid cap'' = reset_cap_asid cap' \<and> iv = InvokeCNode
+                (InsertCall (derived_cap cap'') (cap_object cnode_cap, offset src_index root_size)
+                (cap_object dest_root_cap, offset dest_index dest_size)))" for Q
+                in hoare_strengthen_post[rotated])
+        apply (clarsimp simp:cap_of_insert_call_def)
+        apply (rule conjI)
+         apply (sep_select 2,assumption)
+        apply (rule conjI)
+         apply (drule reset_cap_asid_cap_type)
+         apply (simp)
+        apply (rule_tac x = cap'' in exI)
+        apply (simp add:reset_cap_asid_derived)
+       apply (wp set_cap_wp set_cap_all_scheduable_tcbs)[1]
+      apply (rule_tac P = "is_cnode_cap (fst (c,ref))" in hoare_gen_asmEx)
+      apply (clarsimp simp: decode_invocation_simps split_def)
+      apply (rule liftME_wp)
+      apply (rule decode_cnode_mint_rvu)
+     apply (simp add:lookup_extra_caps_def mapME_def sequenceE_def get_index_def)
+     apply (rule wp_no_exception_seq)
+      apply wp[1]
+     apply clarsimp
+     apply (rule lookup_cap_and_slot_rvu[where r = root_size and
+    cap = cnode_cap and cap'=cnode_cap'])
+    apply (rule hoare_pre)
+     apply (rule lookup_cap_and_slot_rvu[where r = root_size and
+    cap = cnode_cap and cap' = dest_root_cap])
+    defer
+    apply (clarsimp simp:Let_def)
+    apply (wp hoare_vcg_ball_lift
+              sep_inv_to_all_scheduable_tcbs[OF update_thread_intent_update]
+              hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
+              is_cnode_cap_guard_equal update_thread_intent_update update_thread_cnode_at
+            | clarsimp)+
+   apply (intro conjI impI)
+    apply (sep_solve)
+   apply sep_solve
+  apply (clarsimp simp:conj_comms cnode_non_ep)
+  apply (thin_tac "(P \<and>* Q) (sep_state_projection sa)" for P Q)
+  apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
+  apply (intro conjI impI allI, simp_all)
+                   apply (clarsimp simp:sep_conj_assoc)
+                   apply sep_solve
+                  apply (frule reset_cap_asid_cnode_cap)
+                   apply clarsimp
+                  apply (simp add: cnode_cap_non_ep_related get_index_def)[1]
+                 apply (clarsimp simp:sep_conj_assoc)
+                 apply sep_solve
+                apply (clarsimp dest!: reset_cap_asid_cnode_cap)
+               apply sep_solve
+              apply clarsimp+
+            apply (fastforce cong: cap_type_bad_cong dest!: reset_cap_asid_cnode_cap)+
+      apply (drule(1) reset_cap_asid_cnode_cap | simp)+
+      apply (clarsimp simp:sep_conj_assoc)
+      apply sep_solve
      apply (clarsimp dest!:reset_cap_asid_cnode_cap)
-    apply (metis reset_cap_asid_update_cap_data reset_cap_asid_update_cap_rights)
-   apply (sep_solve)
-  apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def cnode_cap_non_ep_related)
-  apply (rule conjI)
-   apply clarsimp
-   apply (drule(1) reset_cap_asid_cnode_cap)
-   apply (simp add:cnode_non_ep)
-  apply (clarsimp simp:sep_conj_assoc)
-  apply (thin_tac "<P \<and>* Q \<and>* sep_true> sa" for P Q)
-  apply sep_solve
+    apply (clarsimp dest!:reset_cap_asid_cnode_cap)
+   apply (metis reset_cap_asid_update_cap_data reset_cap_asid_update_cap_rights)
+  apply (sep_solve)
   done
 
 lemma seL4_CNode_Mutate_sep:
@@ -354,6 +341,7 @@ lemma seL4_CNode_Mutate_sep:
            (cap_object dest_root_cap, offset dest_index dest_size))"
            in hoare_gen_asmEx)
          apply clarsimp
+         apply (rule false_e_explode)
          apply (rule no_exception_conj')
           apply (wp cnode_move_cap_cdl_current_thread)[1]
          apply (rule no_exception_conj')
@@ -514,6 +502,7 @@ lemma seL4_CNode_Move_sep:
                                                     (cap_object dest_root_cap, offset dest_index dest_size))"
            in hoare_gen_asmEx)
          apply clarsimp
+         apply (rule false_e_explode)
          apply (rule no_exception_conj')
           apply (wp cnode_move_cap_cdl_current_thread)[1]
          apply (rule no_exception_conj')
@@ -668,6 +657,7 @@ lemma seL4_CNode_Copy_sep:
            in hoare_gen_asmEx)
          apply (elim conjE exE)
          apply simp
+         apply (rule false_e_explode)
          apply (rule no_exception_conj')
           apply (wp cnode_insert_cap_cdl_current_thread)[1]
          apply (rule no_exception_conj')
@@ -723,11 +713,6 @@ lemma seL4_CNode_Copy_sep:
      apply (rule hoare_pre)
       apply (rule lookup_cap_and_slot_rvu[where r = root_size])
      defer
-    apply (rule validE_validE_R)
-    apply (rule hoare_pre)
-     apply (rule lookup_cap_and_slot_rvu[where r = root_size] )
-    apply (clarsimp simp:get_index_def)
-   defer
    apply (clarsimp simp:Let_def)
    apply (wp hoare_vcg_ball_lift sep_inv_to_all_scheduable_tcbs[OF update_thread_intent_update]
      hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift is_cnode_cap_guard_equal
@@ -742,29 +727,19 @@ lemma seL4_CNode_Copy_sep:
    apply (intro conjI,simp+)
    apply sep_solve
   apply (intro conjI impI ballI allI, simp_all)
-           apply (frule reset_cap_asid_cnode_cap)
-            apply clarsimp
-           apply (simp add: cnode_cap_non_ep_related get_index_def)[1]
-          apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def sep_conj_assoc)
-          apply sep_solve
-         apply (fastforce dest!: reset_cap_asid_cnode_cap)+
-      apply sep_solve
-     apply (drule(1) reset_cap_asid_cnode_cap | simp)+
-     apply (clarsimp simp:sep_conj_assoc)
+          apply (frule reset_cap_asid_cnode_cap)
+           apply clarsimp
+          apply (simp add: cnode_cap_non_ep_related get_index_def)[1]
+         apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def sep_conj_assoc)
+         apply sep_solve
+        apply (fastforce dest!: reset_cap_asid_cnode_cap)+
      apply sep_solve
-    apply (clarsimp dest!:reset_cap_asid_cnode_cap)
+    apply (drule(1) reset_cap_asid_cnode_cap | simp)+
+    apply (clarsimp simp:sep_conj_assoc)
+    apply sep_solve
    apply (clarsimp dest!:reset_cap_asid_cnode_cap)
-   apply sep_solve
-  apply (clarsimp simp:user_pointer_at_def
-          Let_def word_bits_def cnode_cap_non_ep_related)
-  apply (intro conjI allI impI)
-  prefer 5
-      apply sep_solve
-     apply (drule(1) reset_cap_asid_cnode_cap)
-     apply (simp add:cnode_non_ep)
-    apply simp
-   apply simp
-  apply simp
+  apply (clarsimp dest!:reset_cap_asid_cnode_cap)
+  apply sep_solve
   done
 
 end

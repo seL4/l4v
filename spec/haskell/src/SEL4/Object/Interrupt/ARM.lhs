@@ -33,3 +33,9 @@ Apparently ARM does not have any.
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
 
+> handleReservedIRQ :: IRQ -> Kernel ()
+> handleReservedIRQ _ = return () -- handleReservedIRQ does nothing on ARM
+
+> initInterruptController :: Kernel ()
+> initInterruptController = return ()
+

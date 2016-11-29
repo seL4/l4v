@@ -30,6 +30,7 @@ requalify_types
   vm_rights
   arch_kernel_obj
   arch_state
+  arch_tcb
 
 requalify_consts
   acap_rights
@@ -40,6 +41,10 @@ requalify_consts
   asid_high_bits
   asid_low_bits
   arch_is_frame_type
+  default_arch_tcb
+  arch_tcb_context_get
+  arch_tcb_context_set
+
 end
 
 text {*
@@ -372,10 +377,10 @@ record tcb =
  tcb_state         :: thread_state
  tcb_fault_handler :: cap_ref
  tcb_ipc_buffer    :: vspace_ref
- tcb_context       :: user_context
  tcb_fault         :: "fault option"
  tcb_bound_notification     :: "obj_ref option"
  tcb_mcpriority    :: priority
+ tcb_arch          :: arch_tcb
 
 
 text {* Determines whether a thread in a given state may be scheduled. *}
@@ -403,10 +408,10 @@ definition
       tcb_state    = Inactive,
       tcb_fault_handler = to_bl (0::machine_word),
       tcb_ipc_buffer = 0,
-      tcb_context    = new_context,
       tcb_fault      = None, 
       tcb_bound_notification  = None,
-      tcb_mcpriority = minBound\<rparr>"
+      tcb_mcpriority = minBound,
+      tcb_arch       = default_arch_tcb\<rparr>"
 
 text {*
 All kernel objects are CNodes, TCBs, Endpoints, Notifications or architecture
@@ -440,9 +445,7 @@ definition
 primrec
   obj_bits :: "kernel_object \<Rightarrow> nat"
 where
-  "obj_bits (CNode sz cs) = (if well_formed_cnode_n sz cs
-                            then cte_level_bits + sz
-                            else cte_level_bits)"
+  "obj_bits (CNode sz cs) = cte_level_bits + sz"
 | "obj_bits (TCB t) = 9"
 | "obj_bits (Endpoint ep) = 4"
 | "obj_bits (Notification ntfn) = 4"
@@ -481,6 +484,7 @@ datatype irq_state =
    IRQInactive
  | IRQSignal
  | IRQTimer
+ | IRQReserved
 
 text {* The kernel state includes a heap, a capability derivation tree
 (CDT), a bitmap used to determine if a capability is the original

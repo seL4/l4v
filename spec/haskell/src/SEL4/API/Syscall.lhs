@@ -34,7 +34,6 @@ modules.
 > import SEL4.Machine
 > import Data.Bits
 
-
 \end{impdetails}
 
 \subsection{Types}

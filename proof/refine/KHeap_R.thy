@@ -2082,6 +2082,10 @@ lemma set_ntfn_valid_arch' [wp]:
 lemmas valid_irq_node_lift =
     hoare_use_eq_irq_node' [OF _ typ_at_lift_valid_irq_node']
 
+lemmas untyped_ranges_zero_lift
+    = hoare_use_eq[where f="gsUntypedZeroRanges"
+        and Q="\<lambda>v s. untyped_ranges_zero_inv (f s) v" for f]
+
 lemma valid_irq_states_lift':
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (intStateIRQTable (ksInterruptState s))\<rbrace> f \<lbrace>\<lambda>rv s. P (intStateIRQTable (ksInterruptState s))\<rbrace>"
   assumes y: "\<And>P. \<lbrace>\<lambda>s. P (irq_masks (ksMachineState s))\<rbrace> f \<lbrace>\<lambda>rv s. P (irq_masks (ksMachineState s))\<rbrace>"
@@ -2193,6 +2197,9 @@ lemma setNotification_ct_idle_or_in_cur_domain'[wp]:
            | clarsimp simp: updateObject_default_def in_monad setNotification_def)+
   done
 
+crunch gsUntypedZeroRanges[wp]: setNotification "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: setObject_ksPSpace_only updateObject_default_inv ignore: setObject)
+
 lemma set_ntfn_minor_invs':
   "\<lbrace>invs' and obj_at' (\<lambda>ntfn. ntfn_q_refs_of' (ntfnObj ntfn) = ntfn_q_refs_of' (ntfnObj val)
                            \<and> ntfn_bound_refs' (ntfnBoundTCB ntfn) = ntfn_bound_refs' (ntfnBoundTCB val))
@@ -2202,8 +2209,9 @@ lemma set_ntfn_minor_invs':
          and (\<lambda>s. ptr \<noteq> ksIdleThread s) \<rbrace>
      setNotification ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (clarsimp simp add: invs'_def valid_state'_def)
-  apply (wp irqs_masked_lift valid_irq_node_lift , simp_all)
+  apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def)
+  apply (wp irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift,
+    simp_all add: o_def)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
                   dest!: obj_at_state_refs_ofD')+

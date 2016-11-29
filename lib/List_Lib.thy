@@ -40,4 +40,22 @@ fun after_in_list :: "'a list \<Rightarrow> 'a \<Rightarrow> 'a option" where
   "after_in_list [x] a = None" |
   "after_in_list (x # y # xs) a = (if a = x then Some y else after_in_list (y # xs) a)"
 
+lemma zip_take1:
+  "zip (take n xs) ys = take n (zip xs ys)"
+  apply (induct xs arbitrary: n ys)
+  apply simp_all
+  apply (case_tac n, simp_all)
+  apply (case_tac ys, simp_all)
+  done
+
+lemma zip_take2:
+  "zip xs (take n ys) = take n (zip xs ys)"
+  apply (induct xs arbitrary: n ys)
+  apply simp_all
+  apply (case_tac n, simp_all)
+  apply (case_tac ys, simp_all)
+  done
+
+lemmas zip_take = zip_take1 zip_take2
+
 end

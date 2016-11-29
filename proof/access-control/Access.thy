@@ -747,7 +747,7 @@ where
 
 | tro_tcb_send: "\<lbrakk> ko  = Some (TCB tcb);
                    ko' = Some (TCB tcb'); 
-                   \<exists>ctxt'. tcb' = tcb \<lparr>tcb_context := ctxt', tcb_state := Structures_A.Running,
+                   \<exists>ctxt'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb), tcb_state := Structures_A.Running,
                      tcb_bound_notification := ntfn'\<rparr>;
                    tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
                    direct_send subjects aag ep tcb \<or> indirect_send subjects aag ep recv tcb \<rbrakk>
@@ -764,10 +764,13 @@ where
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_restart: "\<lbrakk> ko  = Some (TCB tcb);
                       ko' = Some (TCB tcb');
-                      tcb' = tcb\<lparr>tcb_context := tcb_context tcb', tcb_state := tcb_state tcb', tcb_bound_notification := ntfn'\<rparr>;
-                      (tcb_state tcb' = Structures_A.Restart \<and> tcb_context tcb' = tcb_context tcb) \<or>                      
+                      tcb' = tcb\<lparr> tcb_arch := arch_tcb_context_set (arch_tcb_context_get (tcb_arch tcb')) (tcb_arch tcb)
+                                , tcb_state := tcb_state tcb', tcb_bound_notification := ntfn'\<rparr>;
+                      (tcb_state tcb' = Structures_A.Restart \<and> arch_tcb_context_get (tcb_arch tcb') = arch_tcb_context_get (tcb_arch tcb)) \<or>
                       (* to handle activation *)
-                      (tcb_state tcb' = Structures_A.Running \<and> tcb_context tcb' = (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction));
+                      (tcb_state tcb' = Structures_A.Running \<and>
+                       arch_tcb_context_get (tcb_arch tcb')
+                         = (arch_tcb_context_get (tcb_arch tcb))(LR_svc := arch_tcb_context_get (tcb_arch tcb) FaultInstruction));
                       tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
                       blocked_on ep (tcb_state tcb);
                       aag_subjects_have_auth_to subjects aag Reset ep \<rbrakk>
@@ -784,7 +787,8 @@ where
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_activate: "\<lbrakk> ko  = Some (TCB tcb);
                        ko' = Some (TCB tcb');
-                       tcb' = tcb \<lparr>tcb_context := (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction), tcb_state := Structures_A.Running, tcb_bound_notification := ntfn'\<rparr>;
+                       tcb' = tcb \<lparr> tcb_arch := arch_tcb_context_set ((arch_tcb_context_get (tcb_arch tcb))(LR_svc := (arch_tcb_context_get (tcb_arch tcb)) FaultInstruction)) (tcb_arch tcb)
+                                  , tcb_state := Structures_A.Running, tcb_bound_notification := ntfn'\<rparr>;
                        tcb_state tcb = Structures_A.Restart;
                        (* to handle unbind *)
                        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
@@ -1573,14 +1577,14 @@ apply (blast dest: state_irqs_to_policy_aux.intros)
 done
 
 (* MOVE *)
-lemma cap_cur_auth_caps_of_state:
-  "\<lbrakk> caps_of_state s p = Some cap; pas_refined aag s; is_subject aag (fst p) \<rbrakk>
-  \<Longrightarrow> pas_cap_cur_auth aag cap"
+lemma cap_auth_caps_of_state:
+  "\<lbrakk> caps_of_state s p = Some cap; pas_refined aag s \<rbrakk>
+  \<Longrightarrow> aag_cap_auth aag (pasObjectAbs aag (fst p)) cap"
   unfolding aag_cap_auth_def
   apply (intro conjI)
     apply clarsimp
     apply (drule (2) sta_caps)
-    apply (drule (1) auth_graph_map_memI [where x = "pasSubject aag", OF _ sym refl])
+    apply (drule_tac f="pasObjectAbs aag" in auth_graph_map_memI[OF _ refl refl])
     apply (fastforce simp: pas_refined_def)
    apply clarsimp
    apply (drule (2) sta_untyped [THEN pas_refined_mem] )
@@ -1591,41 +1595,12 @@ lemma cap_cur_auth_caps_of_state:
   apply simp
   done
 
-lemma new_range_subset':
-  assumes al: "is_aligned (ptr :: 'a :: len word) sz" and al': "is_aligned x sz'"
-  and     szv: "sz' \<le> sz" and xsz: "x < 2 ^ sz"
-  shows       "{ptr + x .. (ptr + x) + 2 ^ sz' - 1} \<subseteq> {ptr .. ptr + 2 ^ sz - 1}"
-  using al
-proof (rule is_aligned_get_word_bits)
-  assume p0: "ptr = 0" and szv': "len_of TYPE ('a) \<le> sz"
-  hence "(2 :: 'a word) ^ sz = 0" by simp
+lemma cap_cur_auth_caps_of_state:
+  "\<lbrakk> caps_of_state s p = Some cap; pas_refined aag s; is_subject aag (fst p) \<rbrakk>
+  \<Longrightarrow> pas_cap_cur_auth aag cap"
+  by (metis cap_auth_caps_of_state)
 
-  thus ?thesis using p0
-    apply -
-    apply (erule ssubst)
-    apply simp
-    done
-next
-  assume szv': "sz < len_of TYPE('a)"
-
-  hence blah: "2 ^ (sz - sz') < (2 :: nat) ^ len_of TYPE('a)"
-    using szv
-    apply -
-    apply (rule power_strict_increasing, simp+)
-    done
-  show ?thesis using szv szv'
-    apply (intro range_subsetI)
-     apply (rule is_aligned_no_wrap' [OF al xsz])
-    apply (simp only: add_diff_eq[symmetric])
-    apply (subst add.assoc, rule word_plus_mono_right)
-    apply (subst iffD1 [OF le_m1_iff_lt])
-    apply (simp add: p2_gt_0 word_bits_conv)
-    apply (rule is_aligned_add_less_t2n[OF al' _ szv xsz])
-    apply simp
-    apply (simp add: field_simps szv al is_aligned_no_overflow)
-    done
-qed
-
+lemmas new_range_subset' = aligned_range_offset_subset
 lemmas ptr_range_subset = new_range_subset' [folded ptr_range_def]
 
 lemma pbfs_less_wb:

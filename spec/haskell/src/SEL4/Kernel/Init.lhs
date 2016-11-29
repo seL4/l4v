@@ -25,6 +25,7 @@ This module contains functions that create a new kernel state and set up the add
 > import SEL4.API.Failures
 > import SEL4.Model
 > import SEL4.Object
+> import SEL4.Object.Structures
 > import SEL4.Machine
 > import SEL4.Kernel.Thread
 > import SEL4.Kernel.VSpace
@@ -369,11 +370,12 @@ Specific allocRegion for convenience, since most allocations are frame-sized.
 >                                bifUntypedObjSizeBits = untypedObjs' ++ [sizeBits],
 >                                bifUntypedObjIsDeviceList = untypedDevices ++ [isDevice] }
 >     noInitFailure $ modify (\st -> st { initBootInfo = bootInfo' })
+>     let size = fromIntegral sizeBits
 >     provideCap rootCNodeCap $ UntypedCap {
 >                                   capIsDevice = isDevice,
 >                                   capPtr = ptrFromPAddr pptr,
->                                   capBlockSize = fromIntegral sizeBits,
->                                   capFreeIndex = 0 }
+>                                   capBlockSize = size,
+>                                   capFreeIndex = maxFreeIndex size }
  
 \subsection{Helper Functions}
 

@@ -1,5 +1,32 @@
-Built from git repo at /home/matthewb/verification/patch/l4v/spec/haskell by matthewb
+Built from git repo at /home/agomezl/NICTA/verification/l4v/spec/haskell by agomezl
 
 Generated from changeset:
-1c569f1 SELFOUR-276: reworked haskell
+55a331c ExecSpec: Changes to the haskell to better reflect ASpec
 
+
+Warning - uncomitted changes used:
+M  ../design/skel/TCBDecls_H.thy
+ M ../design/version
+?? ../../.tramp_history
+?? ../../diff_sel4
+?? ../../kernel_all_1.txt
+?? ../../kernel_all_2.txt
+?? ../../olf_kernel_all.c_pp
+?? ../../proof/access-control/Syscall_AC.thy.bkp
+?? ../../proof/crefine/.Fastpath_C.thy.marks
+?? ../../proof/crefine/.Ipc_C.thy.marks
+?? ../../proof/crefine/.IsolatedThreadAction.thy.marks
+?? ../../proof/crefine/Fastpath_C2.thy
+?? ../../proof/crefine/IsolatedThreadAction.thy.bkp
+?? ../../proof/drefine/Tcb_DR.thy.bkp
+?? ../../proof/infoflow/ADT_IF_Refine.thy.bkp
+?? ../../proof/infoflow/ADT_IF_Refine_C.thy.bkp
+?? ../../proof/infoflow/Example_Valid_StateH.thy.bkp
+?? ../../proof/invariant-abstract/DetSchedDomainTime_AI.thy.bkp
+?? ../../proof/refine/DomainTime_R.thy.bkp
+?? ../cspec/c/32/
+?? ../design/skel/ARM/ArchFault_H.thy.bkp
+?? ../../test-images/
+?? ../../tools/c-parser/testfiles/test_foo.c
+?? ../../tools/c-parser/testfiles/test_foo.thy
+?? ../../tws_rm.sh

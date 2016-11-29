@@ -639,8 +639,8 @@ lemma msgRegisters_ccorres:
 
 lemma asUser_cur_obj_at':
   assumes f: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
-  shows "\<lbrace>\<lambda>s. obj_at' (\<lambda>tcb. P (tcbContext tcb)) (ksCurThread s) s \<and> t = ksCurThread s\<rbrace> 
-          asUser t f \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. Q rv (tcbContext tcb)) (ksCurThread s) s\<rbrace>"
+  shows "\<lbrace>\<lambda>s. obj_at' (\<lambda>tcb. P (atcbContextGet (tcbArch tcb))) (ksCurThread s) s \<and> t = ksCurThread s\<rbrace>
+          asUser t f \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. Q rv (atcbContextGet (tcbArch tcb))) (ksCurThread s) s\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp)
     apply (rule hoare_lift_Pf2 [where f=ksCurThread])
@@ -678,7 +678,7 @@ lemma asUser_const_rv:
 lemma getMRs_tcbContext:
   "\<lbrace>\<lambda>s. n < unat n_msgRegisters \<and> n < unat (msgLength info) \<and> thread = ksCurThread s \<and> cur_tcb' s\<rbrace>
   getMRs thread buffer info 
-  \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. tcbContext tcb (ARM_H.msgRegisters ! n) = rv ! n) (ksCurThread s) s\<rbrace>"
+  \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. atcbContextGet (tcbArch tcb) (ARM_H.msgRegisters ! n) = rv ! n) (ksCurThread s) s\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
   apply (thin_tac "thread = t" for t)
@@ -1177,13 +1177,13 @@ lemma getMRs_length:
   done
 
 lemma index_msgRegisters_less':
-  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x12"
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x13"
   by (simp add: msgRegistersC_def fupdate_def Arrays.update_def
                 fcp_beta "StrictC'_register_defs")
 
 lemma index_msgRegisters_less:
-  "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x12"
-  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x12"
+  "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x13"
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x13"
   using index_msgRegisters_less'
   by (simp_all add: word_sless_msb_less)
 
@@ -1276,7 +1276,7 @@ lemma getSyscallArg_ccorres_foo:
      apply (simp add: word_less_nat_alt split: split_if)
     apply (rule ccorres_add_return2)
     apply (rule ccorres_symb_exec_l)
-       apply (rule_tac P="\<lambda>s. n < unat (scast n_msgRegisters :: word32) \<and> obj_at' (\<lambda>tcb. tcbContext tcb (ARM_H.msgRegisters!n) = x!n) (ksCurThread s) s" 
+       apply (rule_tac P="\<lambda>s. n < unat (scast n_msgRegisters :: word32) \<and> obj_at' (\<lambda>tcb. atcbContextGet (tcbArch tcb) (ARM_H.msgRegisters!n) = x!n) (ksCurThread s) s"
                    and P' = UNIV 
          in ccorres_from_vcg_split_throws)
         apply vcg
@@ -1285,7 +1285,9 @@ lemma getSyscallArg_ccorres_foo:
        apply (clarsimp simp: rf_sr_ksCurThread)
        apply (drule (1) obj_at_cslift_tcb)
        apply (clarsimp simp: typ_heap_simps' msgRegisters_scast)
-       apply (clarsimp simp: ctcb_relation_def ccontext_relation_def msgRegisters_ccorres)
+       apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
+                             msgRegisters_ccorres atcbContextGet_def
+                             carch_tcb_relation_def)
        apply (subst (asm) msgRegisters_ccorres)
         apply (clarsimp simp: n_msgRegisters_def)
        apply (simp add: n_msgRegisters_def word_less_nat_alt)

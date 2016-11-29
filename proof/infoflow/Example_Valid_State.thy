@@ -586,10 +586,10 @@ where
      tcb_state         = Running, 
      tcb_fault_handler = replicate word_bits False, 
      tcb_ipc_buffer    = 0,
-     tcb_context       = undefined,
      tcb_fault         = None,
      tcb_bound_notification     = None,
-     tcb_mcpriority    = Low_mcp \<rparr>"
+     tcb_mcpriority    = Low_mcp,
+     tcb_arch = \<lparr> tcb_context = undefined \<rparr>\<rparr>"
 
 definition
   Low_etcb :: etcb
@@ -615,10 +615,10 @@ where
      tcb_state         = BlockedOnNotification ntfn_ptr,
      tcb_fault_handler = replicate word_bits False, 
      tcb_ipc_buffer    = 0,
-     tcb_context       = undefined,
      tcb_fault         = None,
      tcb_bound_notification     = None,
-     tcb_mcpriority    = High_mcp \<rparr>"
+     tcb_mcpriority    = High_mcp,
+     tcb_arch = \<lparr> tcb_context = undefined \<rparr>\<rparr>"
 
 definition
   High_etcb :: etcb
@@ -643,10 +643,10 @@ where
      tcb_state         = IdleThreadState,
      tcb_fault_handler = replicate word_bits False, 
      tcb_ipc_buffer    = 0,
-     tcb_context       = empty_context,
      tcb_fault         = None,
      tcb_bound_notification     = None,
-     tcb_mcpriority    = default_priority \<rparr>"
+     tcb_mcpriority    = default_priority,
+     tcb_arch = \<lparr> tcb_context = empty_context \<rparr>\<rparr>"
 
 
 definition
@@ -837,7 +837,7 @@ definition machine_state0 :: "machine_state" where
                      machine_state_rest = undefined \<rparr>"
 
 definition arch_state0 :: "arch_state" where
-  "arch_state0 \<equiv> \<lparr>arm_globals_frame = init_globals_frame, arm_asid_table = Map.empty,
+  "arch_state0 \<equiv> \<lparr>arm_asid_table = Map.empty,
                   arm_hwasid_table = Map.empty, arm_next_asid = 0, arm_asid_map = Map.empty,
                   arm_global_pd = init_global_pd, arm_global_pts = [],
                   arm_kernel_vspace =

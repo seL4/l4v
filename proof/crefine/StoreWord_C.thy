@@ -624,6 +624,30 @@ proof (intro allI impI)
     apply (simp add: typ_heap_simps clift_heap_update_same)
     done
 
+  have subset: "{ptr..+ 2 ^ 2} \<subseteq> {ptr && ~~ mask pageBits ..+ 2 ^ pageBits}"
+    apply (simp only: upto_intvl_eq al is_aligned_neg_mask2)
+    apply (cut_tac ptr="ptr && ~~ mask pageBits" and x="ptr && mask pageBits"
+      in aligned_range_offset_subset, rule is_aligned_neg_mask2)
+       apply (rule is_aligned_andI1[OF al])
+      apply (simp add: pageBits_def)
+     apply (rule and_mask_less', simp add: pageBits_def)
+     apply (erule order_trans[rotated])
+    apply (simp add: mask_out_sub_mask)
+    done
+
+  hence zr: "\<And>rs. zero_ranges_are_zero rs (hrs_mem_update (heap_update ?ptr w) (t_hrs_' (globals s)))
+        = zero_ranges_are_zero rs (t_hrs_' (globals s))"
+    using page
+    apply (clarsimp simp: zero_ranges_are_zero_def hrs_mem_update base_def
+                          heap_update_def
+          intro!: ball_cong[OF refl] conj_cong[OF refl])
+    apply (frule(1) region_is_bytes_disjoint[rotated 2, OF h_t_valid_clift])
+     apply simp
+    apply (subst heap_list_update_disjoint_same, simp_all)
+    apply ((subst Int_commute)?, erule disjoint_subset2[rotated])
+    apply (simp add: pageBits_def)
+    done
+
   have cmap_relation_heap_cong:
     "\<And>as cs cs' f rel. \<lbrakk> cmap_relation as cs f rel; cs = cs' \<rbrakk> \<Longrightarrow> cmap_relation as cs' f rel"
     by simp
@@ -664,7 +688,7 @@ proof (intro allI impI)
   thus ?thesis using rf
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
     apply (simp add: carch_state_relation_def cmachine_state_relation_def carch_globals_def)
-    apply (simp add: rl' tag_disj_via_td_name)    
+    apply (simp add: rl' tag_disj_via_td_name zr)    
     done
 qed
 
@@ -908,6 +932,30 @@ proof (intro allI impI)
     apply (simp add: typ_heap_simps clift_heap_update_same)
     done
 
+  have subset: "{ptr..+ 2 ^ 2} \<subseteq> {ptr && ~~ mask pageBits ..+ 2 ^ pageBits}"
+    apply (simp only: upto_intvl_eq al is_aligned_neg_mask2)
+    apply (cut_tac ptr="ptr && ~~ mask pageBits" and x="ptr && mask pageBits"
+      in aligned_range_offset_subset, rule is_aligned_neg_mask2)
+       apply (rule is_aligned_andI1[OF al])
+      apply (simp add: pageBits_def)
+     apply (rule and_mask_less', simp add: pageBits_def)
+     apply (erule order_trans[rotated])
+    apply (simp add: mask_out_sub_mask)
+    done
+
+  hence zr: "\<And>rs. zero_ranges_are_zero rs (hrs_mem_update (heap_update ?ptr w) (t_hrs_' (globals s)))
+        = zero_ranges_are_zero rs (t_hrs_' (globals s))"
+    using page
+    apply (clarsimp simp: zero_ranges_are_zero_def hrs_mem_update base_def
+                          heap_update_def
+          intro!: ball_cong[OF refl] conj_cong[OF refl])
+    apply (frule(1) region_is_bytes_disjoint[rotated 2, OF h_t_valid_clift])
+     apply simp
+    apply (subst heap_list_update_disjoint_same, simp_all)
+    apply ((subst Int_commute)?, erule disjoint_subset2[rotated])
+    apply (simp add: pageBits_def)
+    done
+
   have cmap_relation_heap_cong:
     "\<And>as cs cs' f rel. \<lbrakk> cmap_relation as cs f rel; cs = cs' \<rbrakk> \<Longrightarrow> cmap_relation as cs' f rel"
     by simp
@@ -948,7 +996,7 @@ proof (intro allI impI)
   thus ?thesis using rf
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
     apply (simp add: carch_state_relation_def cmachine_state_relation_def carch_globals_def)
-    apply (simp add: rl' tag_disj_via_td_name)    
+    apply (simp add: rl' tag_disj_via_td_name zr)
     done
 qed
 

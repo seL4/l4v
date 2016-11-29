@@ -87,8 +87,8 @@ datatype cdl_cnode_intent =
  |  CNodeDeleteIntent word32 word32
     (* SaveCaller: (target), index, depth *)
  |  CNodeSaveCallerIntent word32 word32
-    (* Recycle: (target), index, depth *)
- |  CNodeRecycleIntent word32 word32
+    (* CancelBadgedSends: (target), index, depth *)
+ |  CNodeCancelBadgedSendsIntent word32 word32
     (* Rotate: (target), dest_index, dest_depth, (pivot_root), pivot_index, pivot_depth, pivot_badge, (src_root), src_index, src_depth, src_badge *)
  |  CNodeRotateIntent word32 word32 word32 word32 cdl_raw_capdata word32 word32 cdl_raw_capdata
 
@@ -119,7 +119,7 @@ datatype cdl_tcb_intent =
  |  TcbUnbindNTFNIntent
 
 datatype cdl_untyped_intent =
-    (* Retype: (target), type, size_bits, (root), node_index, node_depth, node_offset, node_window, has_children *)
+    (* Retype: (target), (do_reset), type, size_bits, (root), node_index, node_depth, node_offset, node_window, has_children *)
     UntypedRetypeIntent cdl_object_type word32 word32 word32 word32 word32
 
 datatype cdl_irq_handler_intent =

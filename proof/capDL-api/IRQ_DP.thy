@@ -204,18 +204,6 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
         apply (rule returnOk_wp)
        apply (rule lookup_extra_caps_once_wp[where cap'=root_cap and r=root_size, simplified user_pointer_at_def])
       apply (rule lookup_cap_and_slot_rvu[where cap'=c_cap and r=root_size, simplified user_pointer_at_def])
-     apply (unfold validE_R_def)
-     apply (rule hoare_weaken_preE)
-      apply (rule lookup_cap_and_slot_rvu[where cap'=c_cap and r=root_size, simplified user_pointer_at_def])
-     apply (intro impI conjI allI)
-      apply (erule conjE allE impE)+
-       apply (fastforce)
-      apply (erule conjE allE impE)+
-       apply (fastforce)
-      apply (clarsimp simp: not_ep_related_reset_cap_asid)
-     apply (erule conjE allE impE)+
-      apply (fastforce)
-     apply (sep_solve)
     apply (wp  hoare_vcg_imp_lift hoare_vcg_all_lift
           update_thread_intent_update)
    apply (clarsimp)
@@ -364,10 +352,6 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
         apply (rule returnOk_wp)
        apply (rule lookup_extra_caps_once_wp[where cap'=endpoint_cap and r=root_size])
       apply (rule lookup_cap_and_slot_rvu[where cap'=irq_cap and r=root_size])
-     apply (unfold validE_R_def)
-     apply (rule hoare_weaken_preE)
-      apply (rule lookup_cap_and_slot_rvu)
-     defer
      apply (wp hoare_vcg_ball_lift hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift update_thread_intent_update)
     apply (clarsimp)
     apply (rule conjI)
@@ -411,26 +395,7 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
       apply sep_solve
      apply (clarsimp simp: unify)
      apply sep_solve
-    apply (erule conjE allE impE)+
-     apply (fastforce)
-    apply (clarsimp)
-    apply (erule conjE allE impE)+
-     apply (fastforce)
-    apply (erule conjE allE impE)+
-    apply (clarsimp)
-    apply (frule reset_cap_asid_ep_related_cap)
-    apply (fastforce)
-   apply (erule conjE allE impE)+
-    apply (fastforce)
-   apply (erule conjE allE impE)+
-    apply (fastforce)
-   apply (clarsimp simp: user_pointer_at_def Let_unfold sep_conj_assoc unify)
-   apply (intro conjI impI)
-      apply (fastforce)
-     apply (clarsimp)+
-   apply (sep_solve)
-  apply (clarsimp simp: not_memory_reset)
-  apply (clarsimp simp: reset_cap_asid_def split:cdl_cap.splits)
+  apply (clarsimp dest!: reset_cap_asid_simps2)
 done
 
 

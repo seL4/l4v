@@ -477,7 +477,7 @@ lemma retype_region_no_cap_to_obj:
   "\<lbrace>valid_pspace and valid_mdb
              and caps_overlap_reserved {ptr..ptr + 2 ^ obj_bits_api ty us - 1}
              and caps_no_overlap ptr sz
-             and pspace_no_overlap ptr sz
+             and pspace_no_overlap_range_cover ptr sz
              and no_cap_to_obj_with_diff_ref cap S
              and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
              and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
@@ -706,7 +706,8 @@ lemma perform_asid_control_invocation_st_tcb_at:
   done
 
 lemma set_cap_idx_up_aligned_area:
-  "\<lbrace>K (pcap = UntypedCap dev ptr pageBits idx) and cte_wp_at (op = pcap) slot and valid_objs\<rbrace> set_cap (max_free_index_update pcap) slot
+  "\<lbrace>K (\<exists>idx. pcap = UntypedCap dev ptr pageBits idx) and cte_wp_at (op = pcap) slot
+      and valid_objs\<rbrace> set_cap (max_free_index_update pcap) slot
   \<lbrace>\<lambda>rv s. (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr pageBits \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)\<rbrace>"
   apply (rule hoare_pre)
   apply (wp hoare_vcg_ex_lift set_cap_cte_wp_at)
@@ -717,18 +718,17 @@ lemma set_cap_idx_up_aligned_area:
                         p_assoc_help valid_cap_def valid_untyped_def cap_aligned_def)
   done
 
-primrec  get_untyped_cap_idx :: "cap \<Rightarrow> nat"
+primrec(nonexhaustive)  get_untyped_cap_idx :: "cap \<Rightarrow> nat"
 where "get_untyped_cap_idx (UntypedCap dev ref sz idx) = idx"
-
 
 lemma aci_invs':
   assumes Q_ignores_arch[simp]: "\<And>f s. Q (arch_state_update f s) = Q s"
   assumes Q_ignore_machine_state[simp]: "\<And>f s. Q (machine_state_update f s) = Q s"
   assumes Q_detype[simp]: "\<And>f s. Q (detype f s) = Q s"
-  assumes cap_insert_Q: "\<And>cap src dest. \<lbrace>Q and invs and K (src \<noteq> dest)\<rbrace>
+  assumes cap_insert_Q: "\<And>cap src dest. \<lbrace>Q and invs and K (src \<noteq> dest)\<rbrace> 
                             cap_insert cap src dest
                            \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes retype_region_Q[wp]:"\<And>a b c d dev. \<lbrace>Q\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes retype_region_Q[wp]:"\<And>a b c d e. \<lbrace>Q\<rbrace> retype_region a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes set_cap_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_cap a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
   "\<lbrace>invs and Q and ct_active and valid_aci aci\<rbrace> perform_asid_control_invocation aci \<lbrace>\<lambda>y s. invs s \<and> Q s\<rbrace>"
@@ -745,12 +745,12 @@ lemma aci_invs':
          ko_at (ArchObj (ASIDPool Map.empty)) ap and
          (\<lambda>s. ap \<notin> ran (arm_asid_table (arch_state s)) \<and>
          arm_asid_table (arch_state s) (asid_high_bits_of asid) = None))\<rbrace>
-         cap_insert cap src dest
+         cap_insert cap src dest 
         \<lbrace>\<lambda>rv s.
            invs
              (s\<lparr>arch_state := arch_state s
                  \<lparr>arm_asid_table := (arm_asid_table \<circ> arch_state) s
-                    (asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>) \<and>
+                    (asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>) \<and> 
            Q
              (s\<lparr>arch_state := arch_state s
                  \<lparr>arm_asid_table := (arm_asid_table \<circ> arch_state) s
@@ -762,7 +762,7 @@ lemma aci_invs':
         apply (auto simp: cte_wp_at_caps_of_state)
         done
   show ?thesis
-  apply (clarsimp simp: perform_asid_control_invocation_def valid_aci_def
+  apply (clarsimp simp: perform_asid_control_invocation_def valid_aci_def 
     split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
   apply (rule hoare_pre)
@@ -779,26 +779,31 @@ lemma aci_invs':
               retype_region_obj_at_other3[where P="is_cap_table n" and sz = pageBits for n]
               retype_region_ex_cte_cap_to[where sz = pageBits]
               retype_region_ap[simplified]
-              retype_region_ap'[simplified]
+              retype_region_ap'[simplified] 
               retype_region_no_cap_to_obj[where sz = pageBits,simplified]
-               | simp)+
+               | simp del: split_paired_Ex)+
     apply (strengthen invs_valid_objs invs_psp_aligned
-           invs_mdb invs_valid_pspace)
-    apply (clarsimp simp: valid_aci_def is_aligned_mask [symmetric] region_in_kernel_window_def
-                       valid_cap_def cap_aligned_def cte_wp_at_eq_to_op_eq
-                  cong: conj_cong)
+           invs_mdb invs_valid_pspace
+           exI[where x="case aci of MakePool frame slot parent base \<Rightarrow> parent"]
+           exI[where x="case aci of MakePool frame slot parent base \<Rightarrow> parent",
+             simplified]
+           caps_region_kernel_window_imp[where
+             p = "case aci of MakePool frame slot parent base \<Rightarrow> parent"]
+           invs_cap_refs_in_kernel_window)+
     apply (wp set_cap_caps_no_overlap set_cap_no_overlap get_cap_wp
       max_index_upd_caps_overlap_reserved max_index_upd_invs_simple
       set_cap_cte_cap_wp_to set_cap_cte_wp_at max_index_upd_no_cap_to
-      set_cap_idx_up_aligned_area[where dev = False,simplified]
-      )
+      | simp split del: split_if | wp_once hoare_vcg_ex_lift)+
     apply (rule_tac P = "is_aligned word1 page_bits" in hoare_gen_asm)
     apply (subst delete_objects_rewrite)
        apply (simp add:page_bits_def pageBits_def)
       apply (simp add:page_bits_def pageBits_def word_bits_def)
      apply (simp add:is_aligned_neg_mask_eq)
     apply wp
-  apply (clarsimp simp: cte_wp_at_caps_of_state if_option_Some)
+  apply (clarsimp simp: cte_wp_at_caps_of_state if_option_Some
+                        Word_Miscellaneous.if_bool_simps
+             split del: split_if)
+  apply (strengthen refl)
   apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
     in detype_invariants[rotated 3],clarsimp+)
     apply (simp add:cte_wp_at_caps_of_state)+
@@ -811,69 +816,56 @@ lemma aci_invs':
    apply clarsimp
   apply (frule_tac p = "(aa,ba)" in cte_wp_valid_cap)
    apply fastforce
+  apply (clarsimp simp: detype_clear_um_independent obj_bits_api_def arch_kobj_size_def
+   default_arch_object_def conj_comms)
   apply (rule conjI)
    apply (clarsimp simp:valid_cap_simps cap_aligned_def page_bits_def not_le)
-  apply (clarsimp simp:detype_clear_um_independent obj_bits_api_def arch_kobj_size_def
-   default_arch_object_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (frule valid_cap_aligned)
-   apply (clarsimp simp:cap_aligned_def)
-   apply (frule intvl_range_conv[where bits = pageBits])
-    apply (simp add:pageBits_def word_bits_def)
-   apply (frule_tac ptr = word1 and sz = pageBits and idx1 = idx in
-     caps_no_overlap_detype[OF descendants_range_caps_no_overlapI])
-      apply (simp add:is_aligned_neg_mask_eq)
-     apply (simp add:empty_descendants_range_in)
-   apply (frule pspace_no_overlap_detype)
-     apply (simp add:invs_psp_aligned invs_valid_objs)+
-   apply (clarsimp simp:is_aligned_neg_mask_eq page_bits_def)
-   apply (frule(1) ex_cte_cap_protects)
-       apply (simp add:empty_descendants_range_in)
-      apply fastforce
-     apply (rule subset_refl)
-    apply fastforce
-   apply clarsimp
-   apply (intro conjI impI,
+  apply clarsimp
+  apply (simp add:empty_descendants_range_in)
+  apply (frule valid_cap_aligned)
+  apply (clarsimp simp: cap_aligned_def is_aligned_neg_mask_eq)
+  apply (subst caps_no_overlap_detype[OF descendants_range_caps_no_overlapI],
+    assumption, simp add: is_aligned_neg_mask_eq,
+    simp add: empty_descendants_range_in)
+  apply (frule pspace_no_overlap_detype, clarify+)
+  apply (frule intvl_range_conv[where bits = pageBits])
+   apply (simp add:pageBits_def word_bits_def)
+  apply (simp add:is_aligned_neg_mask_eq)
+  apply (clarsimp simp:is_aligned_neg_mask_eq page_bits_def)
+  apply (frule(1) ex_cte_cap_protects)
+      apply (simp add:empty_descendants_range_in)
+     apply fastforce
+    apply (rule subset_refl)
+   apply fastforce
+  apply (clarsimp simp: field_simps)
+  apply (intro conjI impI,
      simp_all add:free_index_of_def valid_cap_simps valid_untyped_def 
      empty_descendants_range_in range_cover_full clear_um_def max_free_index_def,
      (clarsimp simp:valid_untyped_def valid_cap_simps)+)[1]
-             apply (drule_tac p = "(aa,ba)" in cap_refs_in_kernel_windowD2)
-              apply fastforce
-             apply (clarsimp simp:region_in_kernel_window_def valid_cap_def
-                   cap_aligned_def is_aligned_neg_mask_eq)
-            apply clarsimp
-            apply (rule get_untyped_cap_idx.simps[symmetric])
-            apply (clarsimp dest!: invs_valid_objs)
-           apply (clarsimp simp:obj_bits_api_def page_bits_def
-                  default_arch_object_def arch_kobj_size_def)+
-       apply (erule(1) cap_to_protected)
-       apply (simp add:empty_descendants_range_in descendants_range_def2)+
-      apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def)
-      apply (thin_tac "cte_wp_at (op = cap.NullCap) p s" for p s)
-      apply (subst(asm) eq_commute,
-          erule(1) untyped_children_in_mdbE[where cap="cap.UntypedCap False p bits idx" for p bits idx,
-                                         simplified, rotated])
-        apply (simp add: is_aligned_no_overflow)
-       apply simp
-      apply clarsimp
-     apply clarsimp
-    apply clarsimp
-    apply simp
-   apply (thin_tac "invs s")
+
+    apply (erule(1) cap_to_protected)
+    apply (simp add:empty_descendants_range_in descendants_range_def2)+
+
    apply clarsimp
-   apply (drule invs_arch_state)
+   apply (drule invs_arch_state)+
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
-   apply (drule (1) bspec)
+   apply (drule (1) bspec)+
    apply clarsimp
    apply (erule notE, erule is_aligned_no_overflow)
-  apply (clarsimp simp:valid_cap_simps cap_aligned_def page_bits_def)
+
+  apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def)
+  apply (thin_tac "cte_wp_at (op = cap.NullCap) p s" for p s)
+  apply (subst(asm) eq_commute,
+         erule(1) untyped_children_in_mdbE[where cap="cap.UntypedCap dev p bits idx" for dev p bits idx,
+                                         simplified, rotated])
+    apply (simp add: is_aligned_no_overflow)
+   apply simp
+  apply clarsimp
   done
+
 qed
 
-
 lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
-
 
 lemma invoke_arch_invs[wp]:
   "\<lbrace>invs and ct_active and valid_arch_inv ai\<rbrace>
@@ -883,7 +875,6 @@ lemma invoke_arch_invs[wp]:
   apply (wp|simp)+
   done
 
-
 lemma sts_empty_pde [wp]:
   "\<lbrace>empty_pde_at p\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. empty_pde_at p\<rbrace>"
   apply (simp add: empty_pde_at_def)
@@ -891,7 +882,6 @@ lemma sts_empty_pde [wp]:
    apply (wp hoare_vcg_ex_lift set_thread_state_ko)
   apply (clarsimp simp: is_tcb_def)
   done
-
 
 lemma sts_pd_at_asid [wp]:
   "\<lbrace>vspace_at_asid asid pd\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. vspace_at_asid asid pd\<rbrace>"

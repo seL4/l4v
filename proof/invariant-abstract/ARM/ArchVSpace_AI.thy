@@ -584,18 +584,19 @@ lemma clean_D_PoU_underlying_memory[wp]:
   by (clarsimp simp: clean_D_PoU_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
 
-crunch device_state_inv[wp]: invalidate_I_PoU "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: clean_D_PoU "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: cleanCaches_PoU "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
+  "\<lambda>ms. P (device_state ms)"
+crunch underlying_memory_inv[wp]: dsb, invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
+  "\<lambda>ms. P (underlying_memory ms)"
+
+crunch underlying_memory_inv_eq[wp]: cleanCaches_PoU "\<lambda>ms. (underlying_memory ms) = v"
 
 lemma dmo_cleanCaches_PoU_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op cleanCaches_PoU \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
+  apply clarsimp
   apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-          in use_valid)
-     apply ((clarsimp simp: cleanCaches_PoU_def machine_op_lift_def
-                           machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule (1) use_valid[OF _ cleanCaches_PoU_irq_masks])
+   apply (simp add: use_valid[OF _ cleanCaches_PoU_underlying_memory_inv_eq])
+  apply(erule(1) use_valid[OF _ cleanCaches_PoU_irq_masks])
   done
 
 lemma flush_space_invs[wp]: "\<lbrace>invs\<rbrace> flush_space asid \<lbrace>\<lambda>_. invs\<rbrace>"

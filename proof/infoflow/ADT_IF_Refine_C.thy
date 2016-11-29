@@ -77,14 +77,14 @@ definition handleSyscall_C_body_if
 definition handleUnknownSyscall_C_body_if
   where
   "handleUnknownSyscall_C_body_if w \<equiv>
-    (\<acute>current_fault :== CALL fault_unknown_syscall_new(w);;
+    (\<acute>current_fault :== CALL seL4_Fault_UnknownSyscall_new(w);;
       (CALL handleFault(\<acute>ksCurThread);;
          \<acute>ret__unsigned_long :== scast EXCEPTION_NONE))"
 
 definition handleUserLevelFault_C_body_if
   where
   "handleUserLevelFault_C_body_if w1 w2 \<equiv>
-    (\<acute>current_fault :== CALL fault_user_exception_new(w1,w2);;
+    (\<acute>current_fault :== CALL seL4_Fault_UserException_new(w1,w2);;
       (CALL handleFault(\<acute>ksCurThread);;
          \<acute>ret__unsigned_long :== scast EXCEPTION_NONE))"
 
@@ -289,7 +289,7 @@ lemma handleEvent_ccorres:
     apply wp
    apply (simp add: guard_is_UNIV_def)
   apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ isReply_def
-                    cfault_rel_def fault_unknown_syscall_lift fault_user_exception_lift
+                    cfault_rel_def seL4_Fault_UnknownSyscall_lift seL4_Fault_UserException_lift
                     is_cap_fault_def
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread')
@@ -307,6 +307,7 @@ lemma kernelEntry_corres_C:
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)  
       apply (rule corres_split)
          prefer 2
+         apply (subst archTcbUpdate_aux2[symmetric])
          apply (rule setArchTCB_C_corres, simp, rule ccontext_rel_to_C)
          apply simp
         apply (rule corres_split[OF _ ccorres_corres_u_xf, simplified bind_assoc])
@@ -323,6 +324,7 @@ lemma kernelEntry_corres_C:
           apply (clarsimp simp: prod_lift_def split: split_if)
          apply wp
        apply (rule hoare_strengthen_post)
+        apply (subst archTcbUpdate_aux2[symmetric])
         apply (rule threadSet_all_invs_triv'[where e=e])
        apply (clarsimp simp: all_invs'_def)
        apply force
@@ -783,10 +785,12 @@ definition ADT_C_if where
                               (kernel_call_C_if fp) handle_preemption_C_if
                               schedule_C_if kernel_exit_C_if)\<rparr>"
 
-lemma full_invs_all_invs[simp]: "((tc,s),KernelEntry e) \<in> full_invs_if' \<Longrightarrow> all_invs' e s"
+lemma full_invs_all_invs[simp]:
+  "((tc,s),KernelEntry e) \<in> full_invs_if' \<Longrightarrow> all_invs' e s"
   apply (clarsimp simp: full_invs_if'_def all_invs'_def ex_abs_def)
-  apply (fastforce simp: ct_running_related schedaction_related)
-  done
+  apply (rule_tac x=sa in exI)
+  by (auto simp: ct_running_related ct_idle_related schedaction_related
+                 domain_time_rel_eq domain_list_rel_eq)
 
 lemma obs_cpspace_user_data_relation:
   "\<lbrakk>pspace_aligned' bd;pspace_distinct' bd;
@@ -885,6 +889,8 @@ lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine c
     apply (simp add: ct_running'_C)
    apply wp
   apply (clarsimp simp: full_invs_if'_def)
+  apply (clarsimp)
+  apply (drule use_valid[OF _ kernelEntry_if_no_preempt]; simp)
   done
 
 (*fw_sim lemmas as theorems and refinement as corollaries with sim_imp_refines?*)

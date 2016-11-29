@@ -100,7 +100,7 @@ The following data type defines the set of possible CNode invocation operations.
 >         | Move {
 >             moveCap :: Capability,
 >             sourceSlot, targetSlot :: PPtr CTE }
->         | Recycle { targetSlot :: PPtr CTE }
+>         | CancelBadgedSends { epCap :: Capability }
 >         | SaveCaller {
 >             targetSlot :: PPtr CTE }
 >         | Delete { targetSlot :: PPtr CTE }
@@ -113,6 +113,7 @@ The following data type defines the parameters expected for invocations of Untyp
 > data UntypedInvocation
 >         = Retype {
 >             retypeSource :: PPtr CTE,
+>             retypeResetUntyped :: Bool,
 >             retypeRegionBase :: PPtr (),
 >             retypeFreeRegionBase :: PPtr (),
 >             retypeNewType :: ObjectType,

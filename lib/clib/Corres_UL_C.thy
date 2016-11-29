@@ -1454,6 +1454,35 @@ lemma ccorres_master_splitE:
   apply (rule hoare[unfolded ccHoarePost_def])
   done
 
+lemma ccorres_symb_exec_r_rv_abstract:
+  "\<lbrakk>  \<And>s. \<Gamma>\<turnstile> (R' \<inter> {s'. R s \<and> (s, s') \<in> sr}) c ({s'. (s, s') \<in> sr} \<inter> {s. F (xf' s)});
+        \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' y (y' rv');
+        \<And>rv'. F rv' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P (Q rv') hs a (y' rv');
+        \<Gamma> \<turnstile>\<^bsub>/Ft\<^esub> P' c {s. \<forall>rv. F (xf' s) \<longrightarrow> s \<in> Q (xf' s)} \<rbrakk>
+       \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) (P' \<inter> R') hs a (c;;y)"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_add_return,
+          rule_tac r'="\<lambda>rv rv'. F rv'" and xf'=xf'
+                in ccorres_split_nothrow)
+       apply (rule_tac P'=R' in ccorres_from_vcg[where P=R])
+       apply (clarsimp simp add: return_def Int_def conj_comms)
+      apply assumption
+     apply fastforce
+    apply wp
+   apply simp
+  apply simp
+  done
+
+lemma ccorres_symb_exec_r_known_rv:
+  "\<lbrakk>  \<And>s. \<Gamma>\<turnstile> (R' \<inter> {s'. R s \<and> (s, s') \<in> sr}) c ({s'. (s, s') \<in> sr} \<inter> {s. xf' s = val});
+        \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' y (y' rv');
+        ccorres_underlying sr \<Gamma> r xf arrel axf P Q hs a (y' val);
+        \<Gamma> \<turnstile>\<^bsub>/Ft\<^esub> P' c {s. \<forall>rv. (xf' s) = val \<longrightarrow> s \<in> Q} \<rbrakk>
+       \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) (P' \<inter> R') hs a (c;;y)"
+  by (rule_tac F="\<lambda>rv'. rv' = val" and xf'=xf'
+          in ccorres_symb_exec_r_rv_abstract,
+       simp_all)
+
 lemma ccorres_symb_exec_r_abstract_UNIV:
   "\<lbrakk>  \<And>s. \<Gamma>\<turnstile> (R' \<inter> {s'. R s \<and> (s, s') \<in> sr}) m ({s'. (s, s') \<in> sr} \<inter> {s. F (xf' s)});
         \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' y (y' rv');
@@ -1597,5 +1626,24 @@ lemma ccorres_cond_seq:
    apply assumption
   apply assumption
   done
+
+lemma ccorres_assume_pre:
+  assumes "\<And>s. P s \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf r' xf' (P and (\<lambda>s'. s' = s)) P' hs H C"
+  shows "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H C"
+  apply (clarsimp simp: ccorres_underlying_def)
+  apply (frule assms)
+  apply (simp add: ccorres_underlying_def)
+  apply blast
+  done
+
+lemma ccorres_name_pre:
+  "(\<And>s. P s \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf r' xf' (\<lambda>s'. s' = s) P' hs H C)
+    \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf r' xf'  P P' hs H C"
+   apply (rule ccorres_assume_pre)
+   apply (rule ccorres_guard_imp)
+     apply fastforce
+    apply simp
+   apply simp
+   done
 
 end
