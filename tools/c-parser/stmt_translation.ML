@@ -128,7 +128,7 @@ fun bilist2stmts [] = []
   | bilist2stmts (BI_Stmt st :: rest) = st :: bilist2stmts rest
   | bilist2stmts (BI_Decl _ :: rest) = bilist2stmts rest
 
-fun calc_asm_spec styargs statety globty thy vol spec lval rvals = let
+fun calc_asm_params styargs statety globty thy = let
   open CalculateState
   val gs = get_standard_globals statety globty thy
   val ((ghost_acc, _), _) = #ghost gs
@@ -139,7 +139,19 @@ fun calc_asm_spec styargs statety globty thy vol spec lval rvals = let
         @{term "hrs_htd"} $ (hp_acc $ Bound 0)))
   val msT = range_type (fastype_of ms_acc)
 in
+  (msT, gdata_acc)
+end
+
+fun calc_asm_spec styargs statety globty thy vol spec lval rvals = let
+  val (msT, gdata_acc) = calc_asm_params styargs statety globty thy
+in
   mk_asm_spec styargs msT gdata_acc vol spec lval rvals
+end
+
+fun calc_asm_semantics_ok_to_ignore styargs statety globty thy vol spec = let
+  val (msT, _) = calc_asm_params styargs statety globty thy
+in
+  mk_asm_ok_to_ignore msT vol spec
 end
 
 fun stmt_term (ctxt : Proof.context)
@@ -642,8 +654,12 @@ in
       noparse (calc_asm_spec styargs statetype globty sg
             (#volatilep st) nm ret args)
     end handle Fail str => let
+      val nm = #head (#asmblock st)
+      val ok = calc_asm_semantics_ok_to_ignore styargs statetype globty sg
+            (#volatilep st) nm
       val err = unspecified_syntax_error2 str
-      val guard = mk_collect_t statetype $ mk_abs (svar, err)
+      val guard = mk_collect_t statetype
+            $ mk_abs (svar, HOLogic.mk_disj (ok, err))
     in noparse (mk_guard guard unspecified_syntax_error1 emptystmt) end)
   | _ => error ("Can not yet handle "^stmt_type stmt^" statement forms")
 end

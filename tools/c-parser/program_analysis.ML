@@ -1574,19 +1574,24 @@ end
 fun split_asm_stmt (AsmStmt dets) = let
   open Feedback
   val rets = #mod1 (#asmblock dets)
-  fun str_so NONE = "NONE" | str_so (SOME s) = "SOME " ^ s
+  fun str_so NONE = "NONE" | str_so (SOME s) = "SOME (" ^ s ^ ")"
+  fun str_trio (so, s, _) = "(" ^ str_so so ^ ", " ^ s ^ ")"
   val _ = List.app (K () o (fn (so, s, ex) =>
     (so = NONE andalso (s = "=r" orelse s = "=&r"))
     orelse raise Fail ("Can not handle asm lval specifier: "
-            ^ str_so so ^ ", '" ^ s ^ "'"))) rets
+            ^ str_trio (so, s, ex)))) rets
+  fun str_trios [] = ""
+    | str_trios [tr] = str_trio tr
+    | str_trios (tr :: trs) = str_trio tr ^ ", " ^ str_trios trs
   val _ = K () (length rets <= 1
-    orelse raise Fail "Can not handle asm stmt with multiple rets.")
+    orelse raise Fail ("Can not handle multiple asm lval specifiers: ["
+            ^ str_trios rets ^ "]"))
   val ret = case rets of [] => NONE | [(_, _, r)] => SOME r
     | _ => NONE
   val args = #mod2 (#asmblock dets)
   val _ = List.app (K () o (fn (so, s, ex) => (so = NONE andalso s = "r")
-    orelse raise Fail ("Can not handle asm val specifier: "
-            ^ str_so so ^ ", '" ^ s ^ "'"))) args
+    orelse raise Fail ("Can not handle asm rval specifier: "
+            ^ str_trio (so, s, ex)))) args
   val args = map #3 args
 in
   (#head (#asmblock dets), #volatilep dets, ret, args)

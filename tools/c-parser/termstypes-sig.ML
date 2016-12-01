@@ -88,6 +88,7 @@ sig
 
   val mk_asm_spec : typ list -> typ -> term -> bool -> string
     -> term -> term list -> term
+  val mk_asm_ok_to_ignore : typ -> bool -> string -> term
 
   datatype 'varinfo termbuilder =
            TB of {var_updator : bool -> 'varinfo -> term -> term -> term,

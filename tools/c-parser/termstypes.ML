@@ -254,6 +254,13 @@ fun mk_asm_spec styargs msT ghost_acc vol nm lhs_update args = let
   val rel = list_comb (Const (@{const_name "CProof.asm_spec"}, typ), all_args)
 in mk_Spec (styargs, rel) end
 
+fun mk_asm_ok_to_ignore msT vol nm = let
+  val all_args = [Logic.mk_type msT, mk_bool_term vol, HOLogic.mk_string nm]
+  val const_typ = map fastype_of all_args ---> @{typ bool}
+in list_comb (Const (@{const_name asm_semantics_ok_to_ignore}, const_typ),
+  all_args)
+end
+
 datatype 'varinfo termbuilder =
          TB of {var_updator : bool -> 'varinfo -> term -> term -> term,
                 var_accessor : 'varinfo -> term -> term,

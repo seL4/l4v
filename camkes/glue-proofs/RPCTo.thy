@@ -76,6 +76,8 @@ locale RPCTo_glue = RPCTo +
     \<lbrace>P19'\<rbrace>!"
   assumes RPCTo_increment_64_wp: "\<lbrace>\<lambda>s21'. \<forall>r22'. P23'
     r22' s21'\<rbrace> RPCTo_increment_64' x24' \<lbrace>P23'\<rbrace>!"
+  assumes swi_safe_to_ignore[simplified, simp]:
+    "asm_semantics_ok_to_ignore TYPE(nat) true (''swi '' @ x)"
 begin
 
 definition

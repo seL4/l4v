@@ -498,4 +498,10 @@ lemmas asm_store_eq_helper
       arg_cong2[where f="op =" and c="asm_store f v s"]
   for f v s
 
+definition
+  asm_semantics_ok_to_ignore :: "'a itself \<Rightarrow> bool \<Rightarrow> string \<Rightarrow> bool"
+where
+  "asm_semantics_ok_to_ignore ti volatile specifier
+    = (\<forall>xs gl. snd ` asm_semantics specifier xs (gl :: (heap_mem \<times> 'a)) = {gl})"
+
 end
