@@ -658,7 +658,7 @@ requalify_consts post_retype_invs_check
 end
 
 definition
-  post_retype_invs :: "apiobject_type \<Rightarrow> word32 list \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  post_retype_invs :: "apiobject_type \<Rightarrow> machine_word list \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
     "post_retype_invs tp refs \<equiv>
       if post_retype_invs_check tp
