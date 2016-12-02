@@ -583,7 +583,7 @@ requalify_consts post_retype_invs_check
 end
 
 definition
-  post_retype_invs :: "apiobject_type \<Rightarrow> word32 list \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  post_retype_invs :: "apiobject_type \<Rightarrow> machine_word list \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
     "post_retype_invs tp refs \<equiv>
       if post_retype_invs_check tp
@@ -952,10 +952,10 @@ lemma unique_table_refs_null:
 
 
 definition
-  region_in_kernel_window :: "word32 set \<Rightarrow> 'z state \<Rightarrow> bool"
+  region_in_kernel_window :: "machine_word set \<Rightarrow> 'z state \<Rightarrow> bool"
 where 
  "region_in_kernel_window S \<equiv>
-     \<lambda>s. \<forall>x \<in> S. arm_kernel_vspace (arch_state s) x = ArmVSpaceKernelWindow"
+     \<lambda>s. \<forall>x \<in> S. x64_kernel_vspace (arch_state s) x = X64VSpaceKernelWindow"
 
 end
 
