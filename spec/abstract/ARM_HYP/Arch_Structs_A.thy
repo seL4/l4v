@@ -304,6 +304,7 @@ datatype aa_type =
     AASIDPool
   | APageTable
   | APageDirectory
+  | AVCPU
   | AIntData vmpage_size
 
 definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type"
@@ -312,7 +313,8 @@ where
            PageTable pt             \<Rightarrow> APageTable
          | PageDirectory pd         \<Rightarrow> APageDirectory
          | DataPage sz              \<Rightarrow> AIntData sz
-         | ASIDPool f               \<Rightarrow> AASIDPool)"
+         | ASIDPool f               \<Rightarrow> AASIDPool
+         | VCPU v                   \<Rightarrow> AVCPU)"
 
 end
 
