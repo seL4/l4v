@@ -170,8 +170,8 @@ text {* The following function takes a page-directory reference as well as
 definition
 lookup_pd_slot :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> word32" where
 "lookup_pd_slot pd vptr \<equiv>
-    let pd_index = vptr >> 20
-    in pd + (pd_index << 2)"
+    let pd_index = vptr >> (pageBits + pt_bits - pte_bits)
+    in pd + (pd_index << pde_bits)"
 
 text {* The following function takes a page-directory reference as well as
   a virtual address and then computes a pointer to the PTE in kernel memory.
@@ -185,8 +185,8 @@ lookup_pt_slot :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> (word32,'z::sta
     (case pde of
           PageTablePDE ptab \<Rightarrow>   (doE
             pt \<leftarrow> returnOk (ptrFromPAddr ptab);
-            pt_index \<leftarrow> returnOk ((vptr >> 12) && 0xff);
-            pt_slot \<leftarrow> returnOk (pt + (pt_index << 2));
+            pt_index \<leftarrow> returnOk ((vptr >> pageBits) && mask (pt_bits - pte_bits));
+            pt_slot \<leftarrow> returnOk (pt + (pt_index << pte_bits));
             returnOk pt_slot
           odE)
         | _ \<Rightarrow> throwError $ MissingCapability 20)

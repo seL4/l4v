@@ -116,6 +116,9 @@ where (* FIXME check consistency with Haskell *)
     | _ \<Rightarrow> throwError TruncatedMessage
     else throwError IllegalOperation"
 
+definition
+  isIOSpaceFrame :: "arch_cap \<Rightarrow> bool"
+  where "isIOSpaceFrame c \<equiv> False"
 
 definition
   decode_mmu_invocation ::
@@ -171,9 +174,9 @@ case cap of
             whenE (vaddr \<ge> kernel_base) $ throwError $ InvalidArgument 0;
             pd' \<leftarrow> lookup_error_on_failure False $ find_pd_for_asid asid;
             whenE (pd' \<noteq> pd) $ throwError $ InvalidCapability 1;
-            pd_index \<leftarrow> returnOk (shiftr vaddr 20);
-            vaddr' \<leftarrow> returnOk (vaddr && ~~ mask 20);
-            pd_slot \<leftarrow> returnOk (pd + (pd_index << 2));
+            pd_index \<leftarrow> returnOk (shiftr vaddr (pageBits + pt_bits - pte_bits));
+            vaddr' \<leftarrow> returnOk (vaddr && ~~ mask (pageBits + pt_bits - pte_bits));
+            pd_slot \<leftarrow> returnOk (pd + (pd_index << pde_bits));
             oldpde \<leftarrow> liftE $ get_master_pde pd_slot;
             unlessE (oldpde = InvalidPDE) $ throwError DeleteFirst;
             pde \<leftarrow> returnOk (PageTablePDE (addrFromPPtr p));
@@ -225,6 +228,7 @@ case cap of
                   attr = args ! 1;
                   pd_cap = fst (extra_caps ! 0)
          in doE
+            whenE (isIOSpaceFrame cap) $ throwError IllegalOperation;
             (pd,asid) \<leftarrow> (case pd_cap of
                             ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow>
                               returnOk (pd,asid)
@@ -275,7 +279,7 @@ case cap of
              root = fst (extra_caps ! 1)
          in doE
             asid_table \<leftarrow> liftE $ gets (arm_asid_table \<circ> arch_state);
-            free_set \<leftarrow> returnOk (- dom asid_table \<inter> {x. x \<le> 2 ^ asid_high_bits - 1});
+            free_set \<leftarrow> returnOk (- dom asid_table \<inter> {x. x \<le> (1 << asid_high_bits) - 1});
             whenE (free_set = {}) $ throwError DeleteFirst;
             free \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_select asid_table) free_set;
             base \<leftarrow> returnOk (ucast free << asid_low_bits);
@@ -307,14 +311,15 @@ case cap of
             whenE (p \<noteq> the pool_ptr) $ throwError $ InvalidCapability 0;
             pool \<leftarrow> liftE $ get_asid_pool p;
             free_set \<leftarrow> returnOk
-                   (- dom pool \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + base \<noteq> 0});
+                   (- dom pool \<inter> {x. x \<le> (1 << asid_low_bits) - 1 \<and> ucast x + base \<noteq> 0});
             whenE (free_set = {}) $ throwError DeleteFirst;
             offset \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_pool_select pool base) free_set;
             returnOk $ InvokeASIDPool $ Assign (ucast offset + base) p pd_cap_slot
           odE
         | _ \<Rightarrow>  throwError $ InvalidCapability 1
   else  throwError TruncatedMessage
-  else  throwError IllegalOperation"
+  else  throwError IllegalOperation
+| VCPUCap p \<Rightarrow> fail (* not an MMU invocation *)"
 
 definition
   arch_decode_invocation ::

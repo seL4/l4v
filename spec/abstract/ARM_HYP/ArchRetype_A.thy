@@ -18,7 +18,6 @@ theory ArchRetype_A
 imports
   ArchVSpaceAcc_A
   ArchInvocation_A
-  VCPU_A
 begin
 
 context Arch begin global_naming ARM_A

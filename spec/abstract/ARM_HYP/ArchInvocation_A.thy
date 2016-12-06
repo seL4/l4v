@@ -100,8 +100,10 @@ datatype arch_invocation
      | InvokeASIDPool asid_pool_invocation
      | InvokeVCPU vcpu_invocation
 
-datatype arch_copy_register_sets =
-    ArchDefaultExtraRegisters
+(* The ARM platform currently does not define any additional register sets for
+the "CopyRegisters" operation. This may be changed in future to support a floating point unit. *)
+
+datatype arch_copy_register_sets = ARMNoExtraRegisters
 
 -- "There are no additional interrupt control operations on ARM."
 typedecl arch_irq_control_invocation

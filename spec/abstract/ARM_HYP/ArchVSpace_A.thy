@@ -23,6 +23,19 @@ context Arch begin global_naming ARM_A
 text {* Save the set of entries that would be inserted into a page table or
 page directory to map various different sizes of frame at a given virtual
 address. *}
+
+definition largePagePTE_offsets :: "obj_ref list"
+  where
+  "largePagePTE_offsets \<equiv>
+    let pts = of_nat pte_bits
+    in [0, pts  .e.  (15 << pte_bits)]"
+
+definition superSectionPDE_offsets :: "obj_ref list"
+  where
+  "superSectionPDE_offsets \<equiv>
+    let pts = of_nat pde_bits
+    in [0, pts  .e.  (15 << pde_bits)]"
+
 fun create_mapping_entries ::
   "paddr \<Rightarrow> vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vm_rights \<Rightarrow> vm_attributes \<Rightarrow> word32 \<Rightarrow>
   ((pte * word32 list) + (pde * word32 list),'z::state_ext) se_monad"
@@ -30,27 +43,28 @@ where
   "create_mapping_entries base vptr ARMSmallPage vm_rights attrib pd =
   doE
     p \<leftarrow> lookup_error_on_failure False $ lookup_pt_slot pd vptr;
-    returnOk $ Inl (SmallPagePTE base (attrib - {Global, ParityEnabled})
+    returnOk $ Inl (SmallPagePTE base (attrib - {ParityEnabled})
                                  vm_rights, [p])
   odE"
 
 | "create_mapping_entries base vptr ARMLargePage vm_rights attrib pd =
   doE
     p \<leftarrow> lookup_error_on_failure False $ lookup_pt_slot pd vptr;
-    returnOk $ Inl (LargePagePTE base (attrib - {Global, ParityEnabled})
-                                 vm_rights, [p, p + 4  .e.  p + 60])
+    returnOk $ Inl (LargePagePTE base (attrib - {ParityEnabled})
+                                 vm_rights, map (\<lambda>x. x + p) largePagePTE_offsets)
   odE"
 
 | "create_mapping_entries base vptr ARMSection vm_rights attrib pd =
   doE
     p \<leftarrow> returnOk (lookup_pd_slot pd vptr);
-    returnOk $ Inr (SectionPDE base (attrib - {Global}) vm_rights, [p])
+    returnOk $ Inr (SectionPDE base (attrib - {ParityEnabled}) vm_rights, [p])
   odE"
 
 | "create_mapping_entries base vptr ARMSuperSection vm_rights attrib pd =
   doE
     p \<leftarrow> returnOk (lookup_pd_slot pd vptr);
-    returnOk $ Inr (SuperSectionPDE base (attrib - {Global}) vm_rights, [p, p + 4  .e.  p + 60])
+    returnOk $ Inr (SuperSectionPDE base (attrib - {ParityEnabled})
+        vm_rights, map (\<lambda>x. x + p) superSectionPDE_offsets)
   odE"
 
 definition get_master_pde :: "word32 \<Rightarrow> (pde,'z::state_ext)s_monad"
@@ -166,15 +180,21 @@ fun
 handle_vm_fault :: "word32 \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
 where
 "handle_vm_fault thread ARMDataAbort = doE
-    addr \<leftarrow> liftE $ do_machine_op getFAR;
-    fault \<leftarrow> liftE $ do_machine_op getDFSR;
-    throwError $ VMFault addr [0, fault && mask 14]
+    addr \<leftarrow> liftE $ do_machine_op getHDFAR;
+    uaddr \<leftarrow> liftE $ do_machine_op (addressTranslateS1CPR addr);
+    fault \<leftarrow> liftE $ do_machine_op getHSR;
+    let faddr = (uaddr && complement (mask pageBits)) || (addr && mask pageBits)
+    in
+    throwError $ ArchFault $ VMFault faddr [0, fault && 0x3ffffff]
 odE"
 |
 "handle_vm_fault thread ARMPrefetchAbort = doE
     pc \<leftarrow> liftE $ as_user thread $ getRestartPC;
-    fault \<leftarrow> liftE $ do_machine_op getIFSR;
-    throwError $ VMFault pc [1, fault && mask 14]
+    upc \<leftarrow> liftE $ do_machine_op (addressTranslateS1CPR pc);
+    fault \<leftarrow> liftE $ do_machine_op getHSR;
+    let faddr = (upc && complement (mask pageBits)) || (pc && mask pageBits)
+    in
+    throwError $ ArchFault $ VMFault faddr [1, fault && 0x3ffffff]
 odE"
 
 text {* Load the optional hardware ASID currently associated with this virtual
@@ -287,10 +307,8 @@ od"
 
 
 abbreviation
-  "arm_context_switch_hwasid pd hwasid \<equiv> do
-              setCurrentPD $ addrFromPPtr pd;
-              setHardwareASID hwasid
-          od"
+  "arm_context_switch_hwasid pd hwasid \<equiv>
+              writeContextIDAndPD hwasid (addrFromPPtr pd)"
 
 definition
   arm_context_switch :: "word32 \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -474,10 +492,10 @@ check_mapping_pptr :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> (obj_ref 
 
 
 definition
-  "last_byte_pte x \<equiv> let pte_bits = 2 in x + ((1 << pte_bits) - 1)"
+  "last_byte_pte x \<equiv> x + ((1 << pte_bits) - 1)"
 
 definition
-  "last_byte_pde x \<equiv> let pde_bits = 2 in x + ((1 << pde_bits) - 1)"
+  "last_byte_pde x \<equiv> x + ((1 << pde_bits) - 1)"
 
 text {* Unmap a mapped page if the given mapping details are still current. *}
 definition
@@ -500,7 +518,7 @@ unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightar
                 check_mapping_pptr pptr pgsz (Inl p);
             liftE $ do
                 assert $ p && mask 6 = 0;
-                slots \<leftarrow> return (map (\<lambda>x. x + p) [0, 4  .e.  60]);
+                slots \<leftarrow> return (map (\<lambda>x. x + p) largePagePTE_offsets);
                 mapM (swp store_pte InvalidPTE) slots;
                 do_machine_op $ cleanCacheRange_PoU (hd slots) (last_byte_pte (last slots))
                                                     (addrFromPPtr (hd slots))

@@ -37,7 +37,7 @@ section {* Architecture-specific virtual memory *}
 text {* An ASID is simply a word. *}
 type_synonym asid = "word32"
 
-datatype vm_attribute = ParityEnabled | PageCacheable | Global | XNever
+datatype vm_attribute = ParityEnabled | PageCacheable | XNever
 type_synonym vm_attributes = "vm_attribute set"
 
 section {* Architecture-specific capabilities *}
