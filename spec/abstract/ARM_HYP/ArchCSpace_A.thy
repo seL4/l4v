@@ -40,6 +40,7 @@ where
 | "arch_same_region_as (PageDirectoryCap r x) (PageDirectoryCap r' x') = (r' = r)"
 | "arch_same_region_as ASIDControlCap ASIDControlCap = True"
 | "arch_same_region_as (ASIDPoolCap r a) (ASIDPoolCap r' a') = (r' = r)"
+| "arch_same_region_as (VCPUCap r) (VCPUCap r') = (r' = r)"
 | "arch_same_region_as _ _ = False"
 
 

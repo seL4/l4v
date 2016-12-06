@@ -85,12 +85,20 @@ datatype page_invocation
      | PageGetAddr
          (page_get_paddr: obj_ref)
 
+datatype vcpu_invocation =
+       VCPUSetTCB obj_ref (*vcpu*) obj_ref (*tcb*)
+       (*FIXME ARMHYP: canonise canonical types for VCPUInjectIRQ *)
+     | VCPUInjectIRQ obj_ref "8 word"(*index*) "8 word"(*group*) "8 word"(*priority*) "16 word"(*virq*)
+     | VCPUReadRegister obj_ref hyper_reg
+     | VCPUWriteRegister obj_ref hyper_reg machine_word
+
 datatype arch_invocation
      = InvokePageTable page_table_invocation
      | InvokePageDirectory page_directory_invocation
      | InvokePage page_invocation
      | InvokeASIDControl asid_control_invocation
      | InvokeASIDPool asid_pool_invocation
+     | InvokeVCPU vcpu_invocation
 
 datatype arch_copy_register_sets =
     ArchDefaultExtraRegisters

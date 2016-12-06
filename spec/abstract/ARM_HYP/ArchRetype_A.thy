@@ -61,6 +61,13 @@ where
     od
   | _ \<Rightarrow> return ()"
 
+definition
+  empty_context :: user_context where
+  "empty_context \<equiv> \<lambda>_. 0"
+
+definition init_arch_tcb :: arch_tcb where
+  "init_arch_tcb \<equiv> \<lparr> tcb_context = empty_context, tcb_vcpu = None \<rparr>"
+
 end
 
 end

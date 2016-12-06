@@ -15,7 +15,7 @@ Accessor functions for architecture specific parts of the specification.
 chapter "Accessing the ARM VSpace"
 
 theory ArchVSpaceAcc_A
-imports "../KHeap_A"
+imports "ArchKHeap_A"
 begin
 
 context Arch begin global_naming ARM_A
@@ -54,6 +54,24 @@ definition
     assert (case v of ArchObj (arch_kernel_obj.ASIDPool p) \<Rightarrow> True | _ \<Rightarrow> False);
     set_object ptr (ArchObj (arch_kernel_obj.ASIDPool pool))
   od"
+
+definition
+  get_vcpu :: "obj_ref \<Rightarrow> (obj_ref option \<times> hyper_reg_context,'z::state_ext) s_monad" where
+  "get_vcpu ptr \<equiv> do
+     kobj \<leftarrow> get_object ptr;
+     (case kobj of ArchObj (VCPU t r) \<Rightarrow> return (t,r)
+                 | _ \<Rightarrow> fail)
+   od"
+
+definition
+  set_vcpu :: "obj_ref \<Rightarrow> (obj_ref option \<times> hyper_reg_context) \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_vcpu ptr vcpu \<equiv> do
+     (t,r) \<leftarrow> return vcpu;
+     kobj \<leftarrow> get_object ptr;
+     assert (case kobj of ArchObj (VCPU _ _) \<Rightarrow> True | _ \<Rightarrow> False);
+     set_object ptr (ArchObj (VCPU t r))
+   od"
 
 definition
   get_pd :: "obj_ref \<Rightarrow> (12 word \<Rightarrow> pde,'z::state_ext) s_monad" where
@@ -169,7 +187,7 @@ lookup_pt_slot :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> (word32,'z::sta
     pd_slot \<leftarrow> returnOk (lookup_pd_slot pd vptr);
     pde \<leftarrow> liftE $ get_pde pd_slot;
     (case pde of
-          PageTablePDE ptab _ _ \<Rightarrow>   (doE
+          PageTablePDE ptab \<Rightarrow>   (doE
             pt \<leftarrow> returnOk (ptrFromPAddr ptab);
             pt_index \<leftarrow> returnOk ((vptr >> 12) && 0xff);
             pt_slot \<leftarrow> returnOk (pt + (pt_index << 2));
