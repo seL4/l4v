@@ -24,6 +24,9 @@ ML \<open>fun method_evaluate text ctxt facts =
 ML \<open>fun do_markup range m = Output.report [Markup.markup (Markup.properties (Position.properties_of_range range) m) ""];
 \<close>
 
+ML \<open>fun do_markup_pos pos m = Output.report [Markup.markup (Markup.properties (Position.properties_of pos) m) ""];
+\<close>
+
 method_setup markup =
  \<open>Scan.state :|-- (fn st => Scan.lift (Scan.trace (Scan.pass st Method_Closure.method_text))) >>
    (fn (text, toks) => fn _ => fn facts =>
@@ -36,9 +39,9 @@ method_setup markup =
 
      fun traceify seq = Seq.make (fn () =>
       let
-        val _ = do_markup range Markup.running;
+         val _ = do_markup range Markup.running;
         val r = Seq.pull seq;
-        val _ = do_markup range Markup.finished;
+         val _ = do_markup range Markup.finished;
       in Option.map (apsnd traceify) r end)
 
    in traceify o tac end)\<close>
@@ -77,14 +80,14 @@ ML \<open>type debug_state =
    break_state : (Proof.context * thm) option, (* latest breakpoint *)
    restart : (unit -> unit) * int, (* restart function (how many previous results to keep), restart requested *)
    final : final_state option, (* final result, maybe error *)
-   trans_id : int, (* some attempt at synchronization *)
+   trans_id : int, (* increment on every restart *)
    ignore_breaks: bool}
 
 val init_state =
   ({results = [],
     prev_results = [],
     next_state = NONE, break_state = NONE,
-    final = NONE, ignore_breaks = false, restart = (K (), 0), trans_id = ~1} : debug_state)
+    final = NONE, ignore_breaks = false, restart = (K (), 0), trans_id = 0} : debug_state)
 
 fun map_next_state f ({results, next_state, break_state, final, ignore_breaks, prev_results, restart, trans_id} : debug_state) =
   ({results = results, next_state = f next_state, break_state = break_state, final = final, prev_results = prev_results,
@@ -128,36 +131,42 @@ fun add_result pre post = map_results (cons {pre_state = pre, post_state = post}
 \<close>
 
 ML \<open>
-fun guarded_access (id,trans_id) f =
+fun guarded_access id f =
+  let
+    val trans_id = #trans_id (Synchronized.value id);
+  in
   Synchronized.guarded_access id
     (fn (e : debug_state) =>
-     if trans_id = ~1 orelse #trans_id e = trans_id then
+     if (#trans_id e) = trans_id then
        (case f e of
           NONE => NONE
          | SOME (e', g) => SOME (e', g e))
-     else NONE)
+     else (error ("Stale transaction. Expected " ^ @{make_string} trans_id ^ " but found " ^ @{make_string} (#trans_id e))))
+   end
 
-fun guarded_read (id,trans_id) f =
+fun guarded_read id f =
+  let
+    val trans_id = #trans_id (Synchronized.value id);
+  in
   Synchronized.guarded_access id
     (fn (e : debug_state) =>
-     if trans_id = ~1 orelse #trans_id e = trans_id then
+     if (#trans_id e) = trans_id  then
       (case f e of
           NONE => NONE
          | SOME e' => SOME (e', e))
-     else NONE)
+     else (error ("Stale transaction. Expected " ^ @{make_string} trans_id ^ " but found " ^ @{make_string} (#trans_id e))))
+   end
 
 (* Immediate return if there are previous results available or we are ignoring breakpoints *)
 
-fun pop_state_no_block id pre = guarded_access (id,~1) (fn e =>
-  if is_restarting e then NONE else
+fun pop_state_no_block id pre = guarded_access id (fn e =>
   if is_finished e then error "Attempted to pop state from finished proof" else
   if (#ignore_breaks e) then SOME (SOME pre, add_result pre pre) else
   case #prev_results e of
      [] => SOME (NONE, I)
    | (st :: sts) => SOME (SOME st, add_result pre st o map_prev_results (fn _ => sts)))
 
-fun pop_next_state id pre = guarded_access (id,~1) (fn e =>
-  if is_restarting e then NONE else
+fun pop_next_state id pre = guarded_access id (fn e =>
   if is_finished e then error "Attempted to pop state from finished proof" else
   if not (null (#prev_results e)) then error "Attempted to pop state when previous results exist" else
     if (#ignore_breaks e) then SOME (pre, add_result pre pre) else
@@ -166,39 +175,53 @@ fun pop_next_state id pre = guarded_access (id,~1) (fn e =>
           | SOME st => SOME (st, add_result pre st)))
 
 fun set_next_state id st = guarded_access id (fn e =>
-  if is_restarting e then NONE else
   if is_none (#next_state e) andalso is_some (#break_state e) then
     SOME ((), map_next_state (fn _ => SOME st) o map_break_state (fn _ => NONE))
   else error ("Attempted to set next state in inconsistent state" ^ (@{make_string} e)))
 
 fun set_break_state id st = guarded_access id (fn e =>
-  if is_restarting e then NONE else
   if is_none (#next_state e) andalso is_none (#break_state e) then
     SOME ((), map_break_state (fn _ => SOME st))
   else error ("Attempted to set break state in inconsistent state" ^ (@{make_string} e)))
 
 fun pop_state id pre =
-  case pop_state_no_block id pre of SOME st => st | NONE => (set_break_state (id,~1) pre; pop_next_state id pre)
+  case pop_state_no_block id pre of SOME st => st
+  | NONE =>
+  let
+    val _ = set_break_state id pre; (* wait for continue *)
+  in pop_next_state id pre end
 
 (* block until a breakpoint is hit or method finishes *)
 fun wait_break_state id = guarded_read id
   (fn e =>
-    if is_restarting e then NONE else
     case (#final e) of SOME st => SOME (st, true) | NONE =>
     case (#break_state e) of SOME st => SOME (RESULT st, false)
     | NONE => NONE);
 
+fun debug_print (id : debug_state Synchronized.var) =
+  (@{print} (Synchronized.value id));
+
 (* Trigger a restart if an existing nth entry differs from the given one *)
 fun maybe_restart id n st =
 let
-  val _ = guarded_access id (fn e =>
-    if is_some (#next_state e) then NONE
-    else if is_restarting e then NONE (* TODO, what to do if we're already restarting? *)
+  val gen = guarded_read id (fn e => SOME (#trans_id e));
+
+  val did_restart = guarded_access id (fn e =>
+    if is_some (#next_state e) then NONE else
+    if not (null (#prev_results e)) then NONE else
+    if is_restarting e then NONE (* TODO, what to do if we're already restarting? *)
     else if length (#results e) > n then
-     (if st_eq (#post_state (nth (rev (#results e)) n)) st then SOME ((), I)
-     else SOME ((), map_restart (apsnd (fn _ => n))))
-    else SOME ((), I))
-  val _ = guarded_read id (fn e => if is_restarting e then NONE else SOME ());
+     (if st_eq (#post_state (nth (rev (#results e)) n)) st then SOME (false, I)
+     else SOME (true, map_restart (apsnd (fn _ => n))))
+    else SOME (false, I))
+
+  val _ = debug_print id;
+  val _ = @{print} n
+
+  val _ = Synchronized.guarded_access id
+    (fn e => if is_restarting e then NONE else
+             if not did_restart orelse gen + 1 = #trans_id e then SOME ((),e) else
+             (error ("Stale transaction. Expected " ^ @{make_string} (gen + 1) ^ " but found " ^ @{make_string} (#trans_id e))));
 in () end;
 
 fun peek_head_result id = guarded_read id (fn e => case #results e of [] => NONE | (x :: _) => SOME x)
@@ -206,28 +229,17 @@ fun peek_head_result id = guarded_read id (fn e => case #results e of [] => NONE
 fun peek_all_results id = guarded_read id (fn e => SOME (#results e));
 fun peek_prev_results id = guarded_read id (fn e => SOME (#prev_results e));
 
-fun push_result id st = guarded_access id
-  (fn e => if is_restarting e then NONE else SOME ((),map_results (cons st)));
-
-
 fun peek_final_result id =
   guarded_read id (fn e => #final e)
 
-fun debug_print (id : debug_state Synchronized.var, trans_id) =
-  (@{print} (Synchronized.value id, trans_id));
-
 fun poke_error (RESULT st) = st
   | poke_error (ERR e) = error (e ())
-
-fun new_transaction_id id = guarded_access (id,~1)
-  (fn _ => let val trans_id = serial () in SOME (trans_id, map_trans_id (fn _ => trans_id)) end);
 
 \<close>
 
 ML \<open>
 fun nth_pre_result id i = guarded_read id
   (fn e =>
-    if is_restarting e then NONE else
     if length (#results e) > i then SOME (RESULT (#pre_state (nth (rev (#results e)) i)), false) else
            if length (#results e) = i then
             (case #break_state e of SOME st => SOME (RESULT st, false) | NONE => NONE) else
@@ -239,7 +251,7 @@ fun tap_prf f st = Seq.pull (Proof.apply (Method.Basic (fn _ => fn _ => fn x =>
       ((f x : unit); Seq.make_results (Seq.single x))), Position.no_range) st)
 
 fun set_finished_result id st =
-  guarded_access (id,~1) (fn _ => SOME ((), map_final (K (SOME st))));
+  guarded_access id (fn _ => SOME ((), map_final (K (SOME st))));
 
 fun is_finished_result id = guarded_read id (fn e => SOME (is_finished e));
 
@@ -298,24 +310,25 @@ fun map_state f state =
 
 ML \<open>
 
-fun do_apply pos ident rng m =
+fun do_apply ident pos rng m =
 let
   val _ = Method.report m;
 
 in
  (fn st =>
   let
+
      val _ = if get_continuation (#context (Proof.simple_goal st)) > ~1 then
       error "Cannot use apply_debug while debugging" else ();
 
-     val _ = do_markup rng Markup.finished;
-     val _ = do_markup rng Markup.finished;
      val st = Proof.map_context (set_debug_ident ident o set_continuation ~1) st;
 
-     fun do_fork b () = Future.fork (fn () =>
+     fun do_cancel thread = (Future.cancel thread; Future.join_result thread; ());
+
+     fun do_fork () = Future.fork (fn () =>
        let
 
-        fun error_finish e = tap_prf (fn _ => set_finished_result ident (ERR e)) st;
+        fun error_finish e = tap_prf (fn _ => set_finished_result ident (ERR e)) st
 
         val _ = case (Seq.pull (Proof.apply m st))
           of SOME (Seq.Result st', _) =>
@@ -323,12 +336,11 @@ in
            | SOME (Seq.Error e, _) => (error_finish e)
            | NONE => (error_finish (fn _ => "No results"))
 
-        val _ = if b then do_markup rng Markup.running else ();
-
        in () end)
 
       val _ = Execution.fork {name = "apply_debug_main", pos = pos, pri = ~1} (fn () =>
       let
+
         fun restart_state gls e = e
           |> map_prev_results (fn _ => map #post_state (take gls (rev (#results e))))
           |> map_results (fn _ => [])
@@ -337,6 +349,9 @@ in
           |> map_restart (fn _ => (K (), gls))
           |> map_break_state (fn _ => NONE)
           |> map_next_state (fn _ => NONE)
+          |> map_trans_id (fn i => i + 1);
+
+
 
         fun main_loop () =
           let
@@ -344,41 +359,50 @@ in
               if is_restarting e andalso is_none next_state then
               SOME (fst restart, restart_state (snd restart) e) else NONE);
             val _ = f ();
-            val thread = do_fork false ();
-            val _ = Synchronized.change ident (map_restart (fn _ => (fn () => Future.cancel thread, ~1)))
+            val thread = do_fork ();
+            val _ = Synchronized.change ident (map_restart (fn _ => (fn () => do_cancel thread, ~1)))
           in main_loop () end
       in main_loop () end)
 
-     val thread = do_fork true ();
-     val _ = Synchronized.change ident (map_restart (fn _ => (fn () => Future.cancel thread, ~1)));
+     val _ = do_markup rng Markup.finished;
+     val _ = do_markup rng Markup.finished;
+     val _ = do_markup rng Markup.joined;
+
+     val thread = do_fork ();
+     val _ = Synchronized.change ident (map_restart (fn _ => (fn () => do_cancel thread, ~1)));
 
      fun do_peek () =
      let
-       val trans_id = new_transaction_id ident;
-       val (r,b) = wait_break_state (ident,trans_id);
+       val (r,b) = wait_break_state ident;
        val st' = poke_error r;
        val _ = if b then Output.writeln "Final result" else ();
 
      in st' |> apfst (set_continuation 0) end
 
+   val _ = @{print} rng
+
    in map_state (fn _ =>
     let val r = do_peek ()
-    val _ = do_markup rng Markup.running in r end) st
+      val _ = do_markup rng Markup.running;
+      in r end) st
    end)
 end
 
 val _ =
   Outer_Syntax.command @{command_keyword apply_debug} "initial goal refinement step (unstructured)"
-    (Method.parse >> (fn (m',rng) =>
+    (Method.parse >> (fn (m',rng) => fn trans =>
       let
           val m'' = add_debug m'
           val m = (m'',rng)
+
+          val pos' = Toplevel.pos_of trans;
           val pos = Position.thread_data ();
+
           val ident = Synchronized.var "debug_state" init_state;
 
-          val x = do_apply pos ident rng m;
+          val x = do_apply ident pos rng m;
 
-         in Toplevel.proofs x end));
+         in Toplevel.proofs x trans end));
 \<close>
 
 ML \<open>
@@ -388,9 +412,7 @@ val _ =
     (map_state (fn (ctxt,_) =>
       let
         val _ = if get_continuation ctxt < 0 then error "Cannot finish in a non-debug state" else ();
-        val id' = get_debug_ident ctxt;
-        val id = (id', new_transaction_id id');
-        val f = get_finish id;
+        val f = get_finish (get_debug_ident ctxt);
       in f |> poke_error |> apfst (set_continuation ~1) end))))
 \<close>
 
@@ -404,17 +426,12 @@ val _ =
           val _ = if i < 1 then error "Must continue a non-zero amount" else ();
           val _ = if get_continuation ctxt < 0 then error "Cannot continue in a non-debug state" else ();
 
-          val id' = get_debug_ident ctxt;
-          val id = (id', new_transaction_id id');
+          val id = get_debug_ident ctxt;
 
-          val _ = debug_print id;
           val start_cont = get_continuation ctxt; (* how many breakpoints so far *)
-          val _ = @{print} ("start_cont",start_cont);
           val _ = maybe_restart id start_cont (ctxt,thm); (* possibly restart if the thread has made too much progress *)
-          val _ = @{print} "finished restart"
           val _ = nth_pre_result id start_cont; (* block until we've hit the start of this continuation *)
-          val _ = @{print} "got up to speed";
-          val _ = debug_print id;
+
           val cont = start_cont + i; (* final number of breakpoints hit *)
 
           val ex_results = peek_all_results id |> rev;
@@ -449,6 +466,8 @@ lemma foo: "A \<and> B"
   ML \<open>Proof_Context.update_cases_legacy\<close>
   oops
 
+ML \<open>Proof_Node.current\<close>
+
 lemma
   assumes BA: "B \<Longrightarrow> A"
   assumes CB: "C \<Longrightarrow> B"
@@ -458,13 +477,12 @@ lemma
   assumes EF: "E \<Longrightarrow> F"
   shows
   "A"
-  apply_debug (rule BA, break, rule CB, break, rule DC, break, rule ED, break, rule FE)
+  apply_debug (sleep 1,rule BA, break, sleep 1, rule CB, break, rule DC, break, rule ED, break, rule EF)
     continue
     continue
     continue
       apply (rule FE)
-      apply -
-      apply (rule EF)
+      apply (sleep 1)
     continue
     continue
     oops
