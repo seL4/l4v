@@ -1753,6 +1753,13 @@ case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Type
 case \x of ArchInv.InvokeVCPU iv -> _ ->  ---> let inv = \x
      in case inv of ArchInv.InvokeVCPU iv \<Rightarrow> ->1 | _ \<Rightarrow> ->2
 
+case \x of ((mr0:mr1:_), cap@(VCPUCap {})) -> (_, _) ->  ---> let (ls, cap) = \x in
+   if isVCPUCap cap \<and> length ls > 1
+   then let mr0 = ls !! 0; mr1 = ls !! 1
+       in ->1
+   else ->2
+
+
 case \x of cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}) -> ASIDControlCap -> cap@(ASIDPoolCap {}) -> (VCPUCap {}) ->  ---> let cap = \x in
     if isPageDirectoryCap cap
     then ->1
