@@ -393,6 +393,20 @@ in
   app (print_lines o lines_serial o serial_defn) ast
 end
 
+fun unhandled_asm cse ast = let
+  open Absyn
+  fun warn_asm asm = K () (ProgramAnalysis.split_asm_stmt asm)
+    handle Fail s => print s
+  fun warn_stmt s = case snode s of
+      (AsmStmt asm) => warn_asm (AsmStmt asm)
+    | _ => app warn_stmt (sub_stmts s)
+  fun warn_bi (BI_Stmt s) = warn_stmt s
+    | warn_bi _ = ()
+  fun warn_defn (FnDefn (_,_,_,body))
+    = app warn_bi (node body)
+    | warn_defn _ = ()
+in app warn_defn ast end
+
 val analyses = ref ([] : (ProgramAnalysis.csenv -> Absyn.ext_decl list -> unit) list)
 val includes = ref ([] : string list)
 val error_lookahead = ref 15
@@ -456,7 +470,8 @@ in
    cse_analysis "unannotated_protoes" print_unannotated_protoes,
    cse_analysis "uncalledfns" print_uncalledfns,
    cse_analysis "unmodifiedglobs" print_unmodified_globals,
-   ast_analysis "ast" print_ast
+   ast_analysis "ast" print_ast,
+   ast_analysis "unhandled_asm" unhandled_asm
   ]
 end
 

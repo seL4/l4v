@@ -126,6 +126,8 @@ sig
   val is_extern : storage_class list -> bool
   val is_static : storage_class list -> bool
 
+  val sub_stmts : statement -> statement list
+
 end
 
 structure StmtDecl : STMT_DECL =
@@ -233,6 +235,20 @@ fun stmt_type s =
     | AsmStmt _ => "AsmStmt"
     | LocalInit _ => "LocalInit"
     | _ => "[whoa!  Unknown stmt type]"
+
+fun map_concat f ss = map f ss |> List.concat
+
+fun sub_stmts s =
+    case snode s of
+      Block bis => map_concat bi_stmts bis
+    | While (_, _, s) => [s]
+    | Trap (_, s) => [s]
+    | IfStmt (_, l, r) => [l, r]
+    | Switch (_, sws) => map_concat (map_concat bi_stmts o snd) sws
+    | Spec (_, ss, _) => ss
+    | _ => []
+and bi_stmts (BI_Stmt s) = sub_stmts s
+  | bi_stmts _ = []
 
 fun stmt_fail (Stmt w, msg) =
     Fail (Region.toString (Region.Wrap.region w) ^ ": " ^ msg)
