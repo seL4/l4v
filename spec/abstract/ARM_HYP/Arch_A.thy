@@ -226,7 +226,7 @@ definition
         | InvokePage oper \<Rightarrow> do perform_page_invocation oper; return [] od
         | InvokeASIDControl oper \<Rightarrow> do perform_asid_control_invocation oper; return [] od
         | InvokeASIDPool oper \<Rightarrow> do perform_asid_pool_invocation oper; return [] od
-        | InvokeVCPU oper \<Rightarrow> perform_vcpu_invocation oper"
+        | InvokeVCPU oper \<Rightarrow> do perform_vcpu_invocation oper; return [] od"
 
 end
 

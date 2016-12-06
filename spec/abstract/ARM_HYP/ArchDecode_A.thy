@@ -17,7 +17,6 @@ chapter "Decoding Architecture-specific System Calls"
 theory ArchDecode_A
 imports
   "../Interrupt_A"
-  "../InvocationLabels_A"
 begin
 context Arch begin global_naming ARM_A
 
@@ -59,62 +58,8 @@ definition
 where
   "page_base vaddr vmsize \<equiv> vaddr && ~~ mask (pageBitsForSize vmsize)"
 
-definition max_hyper_reg :: machine_word where
-  "max_hyper_reg \<equiv> of_nat (fromEnum (maxBound::hyper_reg))"
 
-
-(** decode invocations **)
-(* FIXME ARMHYP break this up and refactor *)
-
-definition decode_vcpu_invocation :: "obj_ref \<Rightarrow> data \<Rightarrow> data list \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
-   (arch_invocation,'z::state_ext) se_monad"
-where (* FIXME check consistency with Haskell *)
-  "decode_vcpu_invocation vcpu_ref label args extra_caps \<equiv>
-    if invocation_type label = ArchInvocationLabel ARMVCPUSetTCB then
-      if length extra_caps > 0 then
-      let (tcb_cap, _) = extra_caps ! 0 in
-      case tcb_cap of
-        ThreadCap tcb_ref \<Rightarrow> doE
-          (* FIXME ARMHYP: unnecessary check now that associate/dissociate are unified? *)
-          (tcb_opt, _) \<leftarrow> liftE $ get_vcpu vcpu_ref;
-          whenE (tcb_opt \<noteq> None) $ throwError DeleteFirst;
-          vcpu_opt \<leftarrow> liftE $ thread_get (tcb_vcpu o tcb_arch) tcb_ref;
-          whenE (vcpu_opt \<noteq> None) $ throwError DeleteFirst;
-          returnOk $ InvokeVCPU $ VCPUSetTCB vcpu_ref tcb_ref
-        odE
-      | _ \<Rightarrow> throwError $ InvalidCapability 1
-      else throwError TruncatedMessage
-    else if invocation_type label = ArchInvocationLabel ARMVCPUInjectIRQ then
-      case args of
-        mr0 # mr1 # _ \<Rightarrow> doE
-          vid \<leftarrow> returnOk $ mr0 && 0xffff;
-          priority \<leftarrow> returnOk $ (mr0 >> 16) && 0xff;
-          group \<leftarrow> returnOk $ (mr0 >> 24) && 0xff;
-          index \<leftarrow> returnOk $ mr1 && 0xff;
-          range_check vid 0 (1 << 10 - 1);
-          range_check priority 0 31;
-          range_check group 0 1;
-          (* FIXME ARMHYP: range_check index 0 (VGIC_VTR_NLISTREGS(gic_vcpu_ctrl->vtr) - 1); *)
-          (* FIXME ARMHYP: (vcpu->vgic.lr[index] & VGIC_IRQ_MASK) == VGIC_IRQ_ACTIVE) \<Rightarrow> DeleteFirst; *)
-          (* FIXME ARMHYP: ucast much?! *)
-          returnOk $ InvokeVCPU $ VCPUInjectIRQ vcpu_ref (ucast index) (ucast group) (ucast priority) (ucast vid)
-        odE
-      | _ \<Rightarrow> throwError TruncatedMessage
-    else if invocation_type label = ArchInvocationLabel ARMVCPUReadReg then
-    case args of
-      reg # _ \<Rightarrow> doE
-        whenE (reg > max_hyper_reg) $ throwError $ RangeError 0 max_hyper_reg;
-        returnOk $ InvokeVCPU $ VCPUReadRegister vcpu_ref (toEnum (unat reg))
-      odE
-    | _ \<Rightarrow> throwError TruncatedMessage
-    else if invocation_type label = ArchInvocationLabel ARMVCPUWriteReg then
-    case args of
-      reg # val # _ \<Rightarrow> doE
-        whenE (reg > max_hyper_reg) $ throwError $ RangeError 0 max_hyper_reg;
-        returnOk $ InvokeVCPU $ VCPUWriteRegister vcpu_ref (toEnum (unat reg)) val
-      odE
-    | _ \<Rightarrow> throwError TruncatedMessage
-    else throwError IllegalOperation"
+(* decode mmu invocations *)
 
 definition
   isIOSpaceFrame :: "arch_cap \<Rightarrow> bool"
@@ -321,13 +266,15 @@ case cap of
   else  throwError IllegalOperation
 | VCPUCap p \<Rightarrow> fail (* not an MMU invocation *)"
 
+(* arch decode invocations *)
+
 definition
   arch_decode_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
    (arch_invocation,'z::state_ext) se_monad"
 where
   "arch_decode_invocation label args x_slot cte cap extra_caps \<equiv> case cap of
- VCPUCap vcpu_ref \<Rightarrow> decode_vcpu_invocation vcpu_ref label args extra_caps
+ VCPUCap _ \<Rightarrow> decode_vcpu_invocation label args cap extra_caps
 (* arm-hyp: add cases for iommu *)
 | _ \<Rightarrow> decode_mmu_invocation label args x_slot cte cap extra_caps"
 
