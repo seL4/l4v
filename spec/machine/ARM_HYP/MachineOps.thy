@@ -282,7 +282,6 @@ definition
 where "initIRQController \<equiv> machine_op_lift initIRQController_impl"
 
 
-
 consts'
   writeContextID_impl :: "unit machine_rest_monad"
 definition
@@ -486,7 +485,176 @@ definition
  "freeMemory ptr bits \<equiv>
   mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
 
+section "ARMHYP specific definitions"
 
+consts'
+  writeContextIDAndPD_impl :: "hardware_asid \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+  writeContextIDAndPD :: "hardware_asid \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+where "writeContextIDAndPD a b \<equiv> machine_op_lift (writeContextIDAndPD_impl a b)"
+
+consts'
+  HSR_val :: "machine_state \<Rightarrow> machine_word"
+  HDFAR_val :: "machine_state \<Rightarrow> machine_word"
+  SCTLR_val :: "machine_state \<Rightarrow> machine_word"
+  ACTLR_val :: "machine_state \<Rightarrow> machine_word"
+
+definition
+  getHSR :: "machine_word machine_monad"
+where "getHSR \<equiv> gets HSR_val" (* ARMHYP machine callback *)
+
+definition
+  getHDFAR :: "machine_word machine_monad"
+where "getHDFAR \<equiv> gets HDFAR_val" (* ARMHYP machine callback *)
+
+consts'
+  setHCR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+  setHCR :: "machine_word \<Rightarrow> unit machine_monad"
+where
+  "setHCR w \<equiv> machine_op_lift (setHCR_impl w)"
+
+consts'
+  addressTranslateS1CPR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  addressTranslateS1CPR_val :: "machine_state \<Rightarrow> machine_word"
+definition
+  addressTranslateS1CPR :: "machine_word \<Rightarrow> machine_word machine_monad"
+where
+  "addressTranslateS1CPR w \<equiv> do
+    machine_op_lift (addressTranslateS1CPR_impl w);
+    gets addressTranslateS1CPR_val
+  od"
+
+consts'
+  getSCTLR_impl :: "machine_word machine_rest_monad"
+definition
+  getSCTLR :: "machine_word machine_monad"
+where "getSCTLR \<equiv> gets SCTLR_val"
+
+consts'
+setSCTLR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+setSCTLR :: "machine_word \<Rightarrow> unit machine_monad"
+where
+"setSCTLR w \<equiv> machine_op_lift (setSCTLR_impl w)"
+
+consts'
+  getACTLR_impl :: "machine_word machine_rest_monad"
+definition
+  getACTLR :: "machine_word machine_monad"
+where
+  "getACTLR \<equiv> gets ACTLR_val"
+
+consts'
+setACTLR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+setACTLR :: "machine_word \<Rightarrow> unit machine_monad"
+where
+"setACTLR w \<equiv> machine_op_lift (setACTLR_impl w)"
+
+definition
+vgic_irq_active :: "machine_word"
+where
+"vgic_irq_active \<equiv> 2 << 28"
+
+definition
+vgic_irq_mask :: "machine_word"
+where
+"vgic_irq_mask \<equiv> 3 << 28"
+
+consts' (* ARMHYP is this okay? *)
+get_gic_vcpu_ctrl_hcr_impl :: "machine_word machine_rest_monad"
+gic_vcpu_ctrl_hcr_val :: "machine_state \<Rightarrow> machine_word"
+definition
+get_gic_vcpu_ctrl_hcr :: "machine_word machine_monad"
+where
+"get_gic_vcpu_ctrl_hcr \<equiv> gets gic_vcpu_ctrl_hcr_val"
+
+consts'
+set_gic_vcpu_ctrl_hcr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+set_gic_vcpu_ctrl_hcr :: "machine_word \<Rightarrow> unit machine_monad"
+where
+"set_gic_vcpu_ctrl_hcr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_hcr_impl w)"
+
+consts'
+get_gic_vcpu_ctrl_vmcr_impl :: "machine_word machine_rest_monad"
+gic_vcpu_ctrl_vmcr_val :: "machine_state \<Rightarrow> machine_word"
+definition
+get_gic_vcpu_ctrl_vmcr :: "machine_word machine_monad"
+where
+"get_gic_vcpu_ctrl_vmcr \<equiv> gets gic_vcpu_ctrl_vmcr_val"
+
+consts'
+set_gic_vcpu_ctrl_vmcr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+set_gic_vcpu_ctrl_vmcr :: "machine_word \<Rightarrow> unit machine_monad"
+where
+"set_gic_vcpu_ctrl_vmcr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_vmcr_impl w)"
+
+consts'
+get_gic_vcpu_ctrl_apr_impl :: "machine_word machine_rest_monad"
+gic_vcpu_ctrl_apr_val :: "machine_state \<Rightarrow> machine_word"
+definition
+get_gic_vcpu_ctrl_apr :: "machine_word machine_monad"
+where
+"get_gic_vcpu_ctrl_apr \<equiv> gets gic_vcpu_ctrl_apr_val"
+
+consts'
+set_gic_vcpu_ctrl_apr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+set_gic_vcpu_ctrl_apr :: "machine_word \<Rightarrow> unit machine_monad"
+where
+"set_gic_vcpu_ctrl_apr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_apr_impl w)"
+
+consts'
+get_gic_vcpu_ctrl_vtr_impl :: "machine_word machine_rest_monad"
+gic_vcpu_ctrl_vtr_val :: "machine_state \<Rightarrow> machine_word"
+definition
+get_gic_vcpu_ctrl_vtr :: "machine_word machine_monad"
+where
+"get_gic_vcpu_ctrl_vtr \<equiv> gets gic_vcpu_ctrl_vtr_val"
+
+consts'
+set_gic_vcpu_ctrl_vtr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+set_gic_vcpu_ctrl_vtr :: "machine_word \<Rightarrow> unit machine_monad"
+where
+"set_gic_vcpu_ctrl_vtr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_vtr_impl w)"
+
+consts'
+get_gic_vcpu_ctrl_eisr1_impl :: "machine_word machine_rest_monad"
+gic_vcpu_ctrl_eisr1_val :: "machine_state \<Rightarrow> machine_word"
+definition
+get_gic_vcpu_eisr1_vtr :: "machine_word machine_monad"
+where
+"get_gic_vcpu_eisr1_vtr \<equiv> gets gic_vcpu_ctrl_eisr1_val"
+
+consts'
+get_gic_vcpu_ctrl_misr_impl :: "machine_word machine_rest_monad"
+gic_vcpu_ctrl_misr_val :: "machine_state \<Rightarrow> machine_word"
+definition
+get_gic_vcpu_ctrl_misr :: "machine_word machine_monad"
+where
+"get_gic_vcpu_ctrl_misr \<equiv> gets gic_vcpu_ctrl_misr_val"
+
+consts'
+get_gic_vcpu_ctrl_lr_impl :: "nat \<Rightarrow> unit machine_rest_monad"
+gic_vcpu_ctrl_lr_val :: "machine_state \<Rightarrow> machine_word"
+definition
+get_gic_vcpu_ctrl_lr :: "nat \<Rightarrow> machine_word machine_monad"
+where
+"get_gic_vcpu_ctrl_lr n \<equiv> do
+    machine_op_lift (get_gic_vcpu_ctrl_lr_impl n);
+    gets gic_vcpu_ctrl_lr_val
+  od"
+
+consts'
+set_gic_vcpu_ctrl_lr_impl :: "nat \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+set_gic_vcpu_ctrl_lr :: "nat \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+where
+"set_gic_vcpu_ctrl_lr n w  \<equiv> machine_op_lift (set_gic_vcpu_ctrl_lr_impl n w)"
 
 
 section "User Monad"
