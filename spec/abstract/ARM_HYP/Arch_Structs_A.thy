@@ -101,7 +101,7 @@ datatype pte =
  | LargePagePTE obj_ref vm_attributes cap_rights
  | SmallPagePTE obj_ref vm_attributes cap_rights
 
-type_synonym hyper_reg_context = "32 word"
+type_synonym hyper_reg_context = machine_word
 
 
 text {*With hypervisor extensions enabled, page table and page directory entries occupy
@@ -130,7 +130,7 @@ definition
 
 text {*  vcpu *}
 
-type_synonym virq = "word32"
+type_synonym virq = machine_word
 
 definition gicVCPUMaxNumLR :: int where "gicVCPUMaxNumLR \<equiv> 64"
 
@@ -139,16 +139,16 @@ end
 qualify ARM_A (in Arch)
 
 record  GICVCPUInterface =
-  vgicHCR  :: word32
-  vgicVMCR :: word32
-  vgicAPR  :: word32
+  vgicHCR  :: machine_word
+  vgicVMCR :: machine_word
+  vgicAPR  :: machine_word
   vgicLR   :: "nat \<rightharpoonup> ARM_A.virq"
 
 
 record vcpu =
   vcpu_tcb   :: "obj_ref option"
-  vcpu_sctlr :: word32
-  vcpu_actlr :: word32
+  vcpu_sctlr :: machine_word
+  vcpu_actlr :: machine_word
   vcpu_VGIC  :: GICVCPUInterface
 
 end_qualify
@@ -156,21 +156,29 @@ end_qualify
 
 context Arch begin global_naming ARM_A
 
+(* ARMHYP *)
+definition "hcrVCPU \<equiv> 0x87039 :: machine_word"        (* HCR_VCPU *)
+definition "hcrNative \<equiv> 0xfe8703b :: machine_word"    (* HCR_NATIVE *)
+definition  "vgicHCREN \<equiv> 0x1 :: machine_word"         (* VGIC_HCR_EN *)
+definition  "sctlrDefault \<equiv> 0xc5187c :: machine_word" (* SCTLR_DEFAULT *)
+definition  "actlrDefault \<equiv> 0x40 :: machine_word"     (* ACTLR_DEFAULT *)
+
+
 definition
   default_gic_vcpu_interface :: GICVCPUInterface
 where
   "default_gic_vcpu_interface \<equiv> \<lparr>
-      vgicHCR  = 0,
+      vgicHCR  = vgicHCREN,
       vgicVMCR = 0,
       vgicAPR  = 0,
-      vgicLR   = Map.empty \<rparr>"
+      vgicLR   = Map.empty \<rparr>" (* FIXME vgicLR *)
 
 definition
   default_vcpu :: vcpu where
   "default_vcpu \<equiv> \<lparr>
       vcpu_tcb    = None,
-      vcpu_sctlr  = 0,
-      vcpu_actlr  = 0,
+      vcpu_sctlr  = sctlrDefault,
+      vcpu_actlr  = actlrDefault,
       vcpu_VGIC   = default_gic_vcpu_interface \<rparr>"
 
 
@@ -276,10 +284,6 @@ type_synonym hw_asid = word8
 type_synonym arm_vspace_region_uses = "vspace_ref \<Rightarrow> arm_vspace_region_use"
 
 
-definition new_vcpu :: vcpu where
-  "new_vcpu \<equiv> undefined"
-
-
 section {* Architecture-specific state *}
 
 text {* The architecture-specific state for the ARM model
@@ -311,7 +315,7 @@ record arch_state =
   arm_next_asid     :: ARM_A.hw_asid
   arm_asid_map      :: "ARM_A.asid \<rightharpoonup> (ARM_A.hw_asid \<times> obj_ref)"
   arm_global_pt     :: obj_ref
-  arm_current_vcpu    :: obj_ref
+  arm_current_vcpu    :: "(obj_ref \<times> bool) option"
   arm_gicvcpu_numlistregs :: nat
   arm_kernel_vspace :: ARM_A.arm_vspace_region_uses
 

@@ -318,6 +318,193 @@ where
       do_machine_op $ arm_context_switch_hwasid pd hwasid
     od"
 
+
+text {* VCPU objects can be associated with and dissociated from TCBs. *}
+text {*It is not possible to dissociate a VCPU and a TCB by using SetTCB.
+Final outcome has to be an associated TCB and VCPU.
+The only way to get lasting dissociation is to delete the TCB or the VCPU. *}
+(* ARMHYP: maybe these vcpu related definitions can go into a separate file? *)
+
+definition dissociate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where "dissociate_vcpu_tcb t vr \<equiv> do
+  t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
+  v \<leftarrow> get_vcpu vr;
+  when (t_vcpu \<noteq> Some vr \<or> vcpu_tcb v \<noteq> Some t) $ fail; (* TCB and VCPU not associated *)
+  set_vcpu vr (v\<lparr> vcpu_tcb := None \<rparr>);
+  arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t
+od"
+
+definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where "associate_vcpu_tcb t vr \<equiv> do
+  t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
+  case t_vcpu of
+    Some p \<Rightarrow> dissociate_vcpu_tcb t p
+  | _ \<Rightarrow> return ();
+  v \<leftarrow> get_vcpu vr;
+  case vcpu_tcb v of
+    Some p \<Rightarrow> dissociate_vcpu_tcb p vr
+  | _ \<Rightarrow> return ();
+  arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := Some vr \<rparr>) t;
+  set_vcpu vr (v\<lparr> vcpu_tcb := Some t \<rparr>)
+  od"
+
+
+definition vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "vcpu_disable vo \<equiv> do
+    do_machine_op dsb;
+    (case vo of
+      Some vr \<Rightarrow> do
+        vcpu \<leftarrow> get_vcpu vr;
+        hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
+        sctlr \<leftarrow> do_machine_op getSCTLR;
+        set_vcpu vr  (vcpu\<lparr> vcpu_sctlr := sctlr, vcpu_VGIC := (vcpu_VGIC vcpu)\<lparr> vgicHCR := hcr \<rparr>\<rparr>)
+      od
+    | _ \<Rightarrow> return ());
+    do_machine_op $ do
+        set_gic_vcpu_ctrl_hcr 0; (* turn VGIC off *)
+        isb;
+        setSCTLR sctlrDefault; (* turn SI MMU off *)
+        setHCR hcrNative;
+        isb
+      od
+    od"
+
+definition vcpu_enable :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "vcpu_enable vr \<equiv> do
+     vcpu \<leftarrow> get_vcpu vr;
+     do_machine_op $ do
+        setSCTLR (vcpu_sctlr vcpu);
+        setHCR hcrVCPU;
+        isb;
+        set_gic_vcpu_ctrl_hcr (vgicHCR $ vcpu_VGIC vcpu)
+     od
+  od"
+
+definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "vcpu_save vb \<equiv> case vb of
+   Some (vr, active) \<Rightarrow>
+     do
+       do_machine_op dsb;
+       vcpu \<leftarrow> get_vcpu vr;
+       (* disabled vcpu already had SCTLR and HCR stored *)
+       (hcr, sctlr) \<leftarrow> (if active
+                        then do
+                                 sctlr \<leftarrow> do_machine_op getSCTLR;
+                                 hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
+                                 return (sctlr, hcr)
+                            od
+                        else return (vcpu_sctlr vcpu, vgicHCR $ vcpu_VGIC vcpu));
+       actlr \<leftarrow> do_machine_op getACTLR;
+       vmcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_vmcr;
+       apr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_apr;
+       num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs \<circ> arch_state);
+       gicIndices \<leftarrow> return (map nat [0..(int num_list_regs)-1]);
+       lr_vals \<leftarrow> do_machine_op $ mapM get_gic_vcpu_ctrl_lr gicIndices;
+       pairs \<leftarrow> return (zip gicIndices lr_vals);
+       vcpuLR \<leftarrow> return (foldl (\<lambda>f p. fun_upd f (fst p) (Some (snd p))) (vgicLR $ vcpu_VGIC vcpu) pairs);
+       set_vcpu vr (vcpu \<lparr>vcpu_sctlr := sctlr,
+                          vcpu_actlr := actlr,
+                          vcpu_VGIC  := (vcpu_VGIC vcpu) \<lparr> vgicHCR := hcr,
+                                                           vgicVMCR := vmcr,
+                                                           vgicAPR := apr,
+                                                           vgicLR := vcpuLR \<rparr> \<rparr>);
+       do_machine_op isb
+     od
+ | _ \<Rightarrow> fail (* vcpu_save: no VCPU to save *)
+"
+
+definition vcpu_restore :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "vcpu_restore vr \<equiv> do
+     do_machine_op $ set_gic_vcpu_ctrl_hcr 0;   (* turn off VGIC *)
+     do_machine_op $ isb;
+     vcpu \<leftarrow> get_vcpu vr;   (* restore GIC VCPU control state *)
+     vgic \<leftarrow> return (vcpu_VGIC vcpu);
+     do_machine_op $ do
+         set_gic_vcpu_ctrl_vmcr (vgicVMCR vgic);
+         set_gic_vcpu_ctrl_apr (vgicAPR vgic);
+         mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (nat (fst p)) (the (snd p))) (map (%i. (i, (vgicLR vgic) (nat i))) [0 ..  gicVCPUMaxNumLR-1]);
+         setACTLR (vcpu_actlr vcpu)
+     od;
+     vcpu_enable vr
+  od"
+
+
+definition vcpu_switch :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "vcpu_switch v \<equiv> case v of
+   None \<Rightarrow> do
+     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+     (case cur_v of
+        None \<Rightarrow> return () (* both null, current cannot be active *)
+      | Some (vr, active) \<Rightarrow> do (* switch to thread without vcpu *)
+          when active $ do   (* save state if not saved already *)
+            vcpu_disable (Some vr);
+            modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (vr, False) \<rparr>\<rparr>)
+          od;
+          return ()
+        od)
+     od
+ | Some new \<Rightarrow> do
+     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+     (case cur_v of
+        None \<Rightarrow> do (* switch to the new vcpu with no current one *)
+          vcpu_restore new;
+          modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
+        od
+      | Some (vr, active) \<Rightarrow> (* switch from an existing vcpu *)
+          (if vr \<noteq> new
+          then do (* different vcpu *)
+            vcpu_save cur_v;
+            vcpu_restore new;
+            modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
+          od
+          else (* same vcpu *)
+            when (\<not> active) $ do
+              do_machine_op isb;
+              vcpu_enable new;
+              modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, False) \<rparr>\<rparr>)
+            od))
+   od"
+
+definition vcpu_invalidate_active :: "(unit,'z::state_ext) s_monad"
+where
+  "vcpu_invalidate_active \<equiv> do
+    cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+    case cur_v of
+      Some (vr, True) \<Rightarrow>
+         do
+         vcpu_disable None;
+         modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (vr, False) \<rparr>\<rparr>)
+         od
+    | None \<Rightarrow> return ()
+  od"
+
+definition
+  "vcpu_clean_invalidate_active \<equiv> do
+    cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+    vcpu_save cur_v;
+    vcpu_invalidate_active
+  od"
+
+definition vcpu_finalise :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "vcpu_finalise vr \<equiv> do
+    v \<leftarrow> get_vcpu vr;
+    case vcpu_tcb v of
+      Some t \<Rightarrow> dissociate_vcpu_tcb t vr
+    | None \<Rightarrow> return ();
+    cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+    case cur_v of
+      Some (vr, _) \<Rightarrow> vcpu_invalidate_active
+    | None \<Rightarrow> return ()
+   od"
+
+(* end of vcpu related definitions *)
+
 text {* Switch into the address space of a given thread or the global address
 space if none is correctly configured. *}
 definition
@@ -329,7 +516,11 @@ definition
        ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow> doE
            pd' \<leftarrow> find_pd_for_asid asid;
            whenE (pd \<noteq> pd') $ throwError InvalidRoot;
-           liftE $ arm_context_switch pd asid
+           liftE $ do
+                    arm_context_switch pd asid;
+                    t' \<leftarrow> gets_the $ get_tcb tcb;
+                    vcpu_switch $ tcb_vcpu $ tcb_arch t'
+                   od
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do_machine_op $ setCurrentPD $ addrFromPPtr 0)
@@ -375,6 +566,7 @@ delete_asid :: "asid \<Rightarrow> word32 \<Rightarrow> (unit,'z::state_ext) s_m
             od
     od)
 od"
+
 
 text {* Switch to a particular address space in order to perform a flush
 operation. *}
@@ -572,45 +764,8 @@ definition
 where
   "arch_update_cap_data data c \<equiv> ArchObjectCap c"
 
-text {* Dissociate a VCPU from a TCB *}
-definition
-  dissociate_vcpu :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "dissociate_vcpu vcpu_ref \<equiv> do
-    v \<leftarrow> get_vcpu vcpu_ref;
-    case vcpu_tcb v of
-      None \<Rightarrow> return ()
-    | Some tcb \<Rightarrow> do
-        thread_set (\<lambda>t. t \<lparr> tcb_arch := (tcb_arch t)\<lparr> tcb_vcpu := None \<rparr> \<rparr>) tcb;
-        set_vcpu vcpu_ref (v\<lparr> vcpu_tcb := None \<rparr>)
-      od
-  od"
 
-text {* Dissociate a TCB from a VCPU *}
-definition
-  dissociate_tcb :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "dissociate_tcb tcb_ref \<equiv> do
-    vcpu_opt \<leftarrow> thread_get (tcb_vcpu o tcb_arch) tcb_ref;
-    case vcpu_opt of
-      None \<Rightarrow> return ()
-    | Some vcpu \<Rightarrow> dissociate_vcpu vcpu
-  od"
-
-text {* Associate a VCPU with a TCB *}
-definition
-  associate :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "associate vcpu_ref tcb_ref \<equiv> do
-    vcpu_opt \<leftarrow> thread_get (tcb_vcpu o tcb_arch) tcb_ref;
-    when (vcpu_opt \<noteq> None) (dissociate_tcb tcb_ref);
-    v \<leftarrow> get_vcpu vcpu_ref;
-    when (vcpu_tcb v \<noteq> None) (dissociate_tcb tcb_ref);
-    set_vcpu vcpu_ref (v\<lparr> vcpu_tcb :=  Some tcb_ref \<rparr>);
-    thread_set (tcb_arch_update $ tcb_vcpu_update $ K $ Some vcpu_ref) tcb_ref
-  od"
-
-text {* Actions that must be taken on finalisation of ARM-specific
+text {* Actions that must be taken on finalisation of AR\_MHYP-specific
 capabilities. *}
 definition
   arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap,'z::state_ext) s_monad"
@@ -633,10 +788,21 @@ where
      return NullCap
   od
   | (VCPUCap vcpu_ref, True) \<Rightarrow> do
-     dissociate_vcpu vcpu_ref;
+     vcpu_finalise vcpu_ref;
      return NullCap
   od
   | _ \<Rightarrow> return NullCap"
+
+definition
+  prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "prepare_thread_delete p \<equiv> do
+   t_vcpu \<leftarrow> arch_thread_get tcb_vcpu p;
+   case t_vcpu of
+   Some v \<Rightarrow> dissociate_vcpu_tcb v p
+ | None \<Rightarrow> return ()
+ od"
+
 
 text {* Remove record of mappings to a page cap, page table cap or page directory cap *}
 
@@ -700,7 +866,11 @@ where
       od;
       return cap
     od
-  | VCPUCap vcpu_ref \<Rightarrow> return cap" (* FIXME ARMHYP: when do we dissociate? *)
+  | VCPUCap vcpu_ref \<Rightarrow> do
+      vcpu_finalise vcpu_ref;
+      set_vcpu vcpu_ref default_vcpu;
+      return cap
+    od" (* FIXME ARMHYP: when do we dissociate? *)
 
 text {* A thread's virtual address space capability must be to a page directory
 to be valid on the ARM architecture. *}
