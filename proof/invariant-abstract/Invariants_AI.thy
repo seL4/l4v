@@ -41,6 +41,7 @@ requalify_consts
   valid_kernel_mappings
   equal_kernel_mappings
   valid_global_vspace_mappings
+  valid_global_pt_mappings
   pspace_in_kernel_window
 
   ASIDPoolObj
@@ -881,6 +882,7 @@ where
                   and equal_kernel_mappings
                   and valid_asid_map
                   and valid_global_vspace_mappings
+                  and valid_global_pd_mappings
                   and pspace_in_kernel_window
                   and cap_refs_in_kernel_window
                   and pspace_respects_device_region
@@ -961,6 +963,7 @@ abbreviation(input)
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings
        and equal_kernel_mappings and valid_asid_map
        and valid_global_vspace_mappings
+       and valid_global_pd_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
        and cur_tcb"
@@ -2546,6 +2549,10 @@ lemma valid_global_objs_update [iff]:
 lemma valid_global_vspace_mappings_update [iff]:
   "valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
   by (simp add: valid_global_vspace_mappings_def
+
+lemma valid_global_pd_mappings_update [iff]: (* ARM_HYP *)
+  "valid_global_pt_mappings r (f s) = valid_global_pt_mappings r s"
+  by (simp add: valid_global_pt_mappings_def
                 arch)
 
 lemma pspace_in_kernel_window_update [iff]:
