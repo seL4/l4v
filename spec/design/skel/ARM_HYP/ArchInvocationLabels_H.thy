@@ -15,13 +15,13 @@ imports
     "../../../lib/Word_Lib/Enumeration"
     "../../machine/Setup_Locale"
 begin
-context Arch begin global_naming ARM_H
+context Arch begin global_naming ARM_HYP_H
 
 text {*
   An enumeration of arch-specific system call labels.
 *}
 
-#INCLUDE_HASKELL SEL4/API/InvocationLabels/ARM.lhs CONTEXT ARM_H ONLY ArchInvocationLabel
+#INCLUDE_HASKELL SEL4/API/InvocationLabels/ARM_HYP.lhs CONTEXT ARM_HYP_H ONLY ArchInvocationLabel
 
 end
 
@@ -29,9 +29,9 @@ context begin interpretation Arch .
 requalify_types arch_invocation_label
 end
 
-context Arch begin global_naming ARM_H
+context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/API/InvocationLabels/ARM.lhs CONTEXT ARM_H instanceproofs ONLY ArchInvocationLabel
+#INCLUDE_HASKELL SEL4/API/InvocationLabels/ARM_HYP.lhs CONTEXT ARM_HYP_H instanceproofs ONLY ArchInvocationLabel
 
 end
 end

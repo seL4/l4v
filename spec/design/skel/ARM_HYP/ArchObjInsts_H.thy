@@ -20,9 +20,9 @@ imports
   "../PSpaceStorable_H"
   "../ObjectInstances_H"
 begin
-qualify ARM_H (in Arch)
+qualify ARM_HYP_H (in Arch)
 
-instantiation ARM_H.pde :: pre_storable
+instantiation ARM_HYP_H.pde :: pre_storable
 begin
 interpretation Arch .
 
@@ -45,7 +45,7 @@ instance
 
 end
 
-instantiation ARM_H.pte :: pre_storable
+instantiation ARM_HYP_H.pte :: pre_storable
 begin
 interpretation Arch .
 
@@ -69,7 +69,7 @@ instance
 end
 
 
-instantiation ARM_H.asidpool :: pre_storable
+instantiation ARM_HYP_H.asidpool :: pre_storable
 begin
 interpretation Arch .
 
@@ -103,15 +103,15 @@ lemmas (in Arch) [simp] =
 
 -- --------------------------------------
 
-#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM.lhs
-#INCLUDE_HASKELL_PREPARSE SEL4/Machine/Hardware/ARM.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM_HYP.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/Machine/Hardware/ARM_HYP.lhs
 
 
-instantiation ARM_H.pde :: pspace_storable
+instantiation ARM_HYP_H.pde :: pspace_storable
 begin
 interpretation Arch .
 
-#INCLUDE_HASKELL SEL4/Object/Instances/ARM.lhs instanceproofs bodies_only ONLY PDE
+#INCLUDE_HASKELL SEL4/Object/Instances/ARM_HYP.lhs instanceproofs bodies_only ONLY PDE
 
 instance
   apply (intro_classes)
@@ -122,11 +122,11 @@ instance
 
 end
 
-instantiation ARM_H.pte :: pspace_storable
+instantiation ARM_HYP_H.pte :: pspace_storable
 begin
 interpretation Arch .
 
-#INCLUDE_HASKELL SEL4/Object/Instances/ARM.lhs instanceproofs bodies_only ONLY PTE
+#INCLUDE_HASKELL SEL4/Object/Instances/ARM_HYP.lhs instanceproofs bodies_only ONLY PTE
 
 instance
   apply (intro_classes)
@@ -139,7 +139,7 @@ end
 
 (* This is hard coded since using funArray in haskell for 2^32 bound is risky *)
 
-instantiation ARM_H.asidpool :: pspace_storable
+instantiation ARM_HYP_H.asidpool :: pspace_storable
 begin
 interpretation Arch .
 

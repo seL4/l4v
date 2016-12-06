@@ -14,11 +14,11 @@ theory Platform
 imports
   "../../../lib/Defs"
   "../../../lib/Lib"
-  "../../../lib/$L4V_ARCH/WordSetup"
+  "../../../lib/ARM_HYP/WordSetup"
   "../Setup_Locale"
 begin
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 text {*
   This theory lists platform-specific types and basic constants, in particular

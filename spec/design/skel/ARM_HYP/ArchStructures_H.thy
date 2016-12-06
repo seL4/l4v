@@ -14,11 +14,11 @@ imports
   "../Types_H"
   Hardware_H
 begin
-context Arch begin global_naming ARM_H
+context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_H decls_only
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_H instanceproofs
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_H bodies_only
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM_HYP.lhs CONTEXT ARM_HYP_H decls_only
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM_HYP.lhs CONTEXT ARM_HYP_H instanceproofs
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM_HYP.lhs CONTEXT ARM_HYP_H bodies_only
 
 datatype arch_kernel_object_type =
     PDET

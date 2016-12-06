@@ -23,16 +23,16 @@ begin
 
 #INCLUDE_HASKELL SEL4/API/Types/Universal.lhs all_bits
 
-context Arch begin global_naming ARM_H
+context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/API/Types/ARM.lhs CONTEXT ARM_H
+#INCLUDE_HASKELL SEL4/API/Types/ARM_HYP.lhs CONTEXT ARM_HYP_H
 
 end
 
 text {* object\_type instance proofs *}
 
-qualify ARM_H (in Arch)
-instantiation ARM_H.object_type :: enum
+qualify ARM_HYP_H (in Arch)
+instantiation ARM_HYP_H.object_type :: enum
 begin
 interpretation Arch .
 definition
@@ -63,7 +63,7 @@ definition
 end
 
 
-instantiation ARM_H.object_type :: enum_alt
+instantiation ARM_HYP_H.object_type :: enum_alt
 begin
 interpretation Arch .
 definition
@@ -72,7 +72,7 @@ definition
 instance ..
 end
 
-instantiation ARM_H.object_type :: enumeration_both
+instantiation ARM_HYP_H.object_type :: enumeration_both
 begin
 interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_object_type)

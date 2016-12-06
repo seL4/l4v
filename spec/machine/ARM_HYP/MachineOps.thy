@@ -32,7 +32,7 @@ text {*
   All this is done only to avoid a large number of axioms (2 for each operation).
 *}
 
-context Arch begin global_naming ARM
+context Arch begin global_naming ARM_HYP
 
 section "The Operations"
 
@@ -514,7 +514,7 @@ definition
 end
 
 translations
-  (type) "'a ARM.user_monad" <= (type) "(ARM.register \<Rightarrow> ARM.machine_word, 'a) nondet_monad"
+  (type) "'a ARM_HYP.user_monad" <= (type) "(ARM_HYP.register \<Rightarrow> ARM_HYP.machine_word, 'a) nondet_monad"
 
 
 end

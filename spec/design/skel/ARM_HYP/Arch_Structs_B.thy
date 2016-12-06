@@ -13,11 +13,11 @@
 chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
-imports "~~/src/HOL/Main" "../../../spec/machine/Setup_Locale"
+imports "~~/src/HOL/Main" "../../machine/Setup_Locale"
 begin
-context Arch begin global_naming ARM_H
+context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Model/StateData/ARM.lhs CONTEXT ARM_H ONLY ArmVSpaceRegionUse
+#INCLUDE_HASKELL SEL4/Model/StateData/ARM_HYP.lhs CONTEXT ARM_HYP_H ONLY ArmVSpaceRegionUse
 
 end
 end
