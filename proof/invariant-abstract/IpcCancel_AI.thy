@@ -820,7 +820,7 @@ lemma suspend_unlive:
   done
 
 
-definition bound_refs_of_tcb :: "'a state \<Rightarrow> 32 word \<Rightarrow> (32 word \<times> reftype) set" 
+definition bound_refs_of_tcb :: "'a state \<Rightarrow> machine_word \<Rightarrow> (machine_word \<times> reftype) set" 
 where
   "bound_refs_of_tcb s t \<equiv> case kheap s t of
                               Some (TCB tcb) \<Rightarrow> tcb_bound_refs (tcb_bound_notification tcb)
