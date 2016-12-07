@@ -27,21 +27,100 @@ ML \<open>fun do_markup range m = Output.report [Markup.markup (Markup.propertie
 ML \<open>fun do_markup_pos pos m = Output.report [Markup.markup (Markup.properties (Position.properties_of pos) m) ""];
 \<close>
 
+ML \<open>
+type markup_queue = { cur : Position.range option, next : Position.range option, clear_cur : bool }
+
+fun map_cur f ({cur, next, clear_cur} : markup_queue) =
+  ({cur = f cur, next = next, clear_cur = clear_cur} : markup_queue)
+
+fun map_next f ({cur, next, clear_cur} : markup_queue) =
+  ({cur = cur, next = f next, clear_cur = clear_cur} : markup_queue)
+
+fun map_clear_cur f ({cur, next, clear_cur} : markup_queue) =
+  ({cur = cur, next = next, clear_cur = f clear_cur} : markup_queue)
+
+type markup_state =
+  { running : markup_queue,
+    hilight : markup_queue
+  }
+
+fun map_running f ({running, hilight} : markup_state) =
+  {running = f running, hilight = hilight}
+
+fun map_hilight f ({running, hilight} : markup_state) =
+  {running = running, hilight = f hilight}
+
+structure Markup_Data = Proof_Data
+(
+  type T = markup_state Synchronized.var option
+  fun init _ : T = NONE
+);
+
+val init_queue = ({cur = NONE, next = NONE, clear_cur = false}: markup_queue)
+val init_markup_state = ({running = init_queue, hilight = init_queue} : markup_state)
+
+fun set_markup_state id = Markup_Data.put (SOME id);
+fun get_markup_id ctxt = Markup_Data.get ctxt;
+
+fun swap_markup queue startm endm =
+let
+  fun clear_cur () =
+    (case #cur queue of SOME crng =>
+        do_markup crng endm
+      | NONE => ())
+in
+  case #next queue of SOME rng =>
+    (clear_cur (); do_markup rng startm; SOME ((map_cur (K (SOME rng)) o map_next (K NONE)) queue))
+   | NONE => if #clear_cur queue then (clear_cur (); SOME ((map_cur (K NONE) o map_clear_cur (K false)) queue))
+             else NONE
+end
+
+fun markup_worker (id : markup_state Synchronized.var) =
+let
+  fun main_loop () =
+    let val _ = Synchronized.guarded_access id (fn e =>
+    case swap_markup (#running e) Markup.running Markup.finished of
+      SOME queue' => SOME ((),map_running (fn _ => queue') e)
+    | NONE => case swap_markup (#hilight e) Markup.forked Markup.joined of
+        SOME queue' => SOME ((), map_hilight (fn _ => queue') e)
+       | NONE => NONE)
+     in main_loop () end
+in main_loop () end
+
+fun set_running (SOME id) rng =
+  let
+    val _ =
+       Synchronized.guarded_access id (fn e =>
+         if is_some (#next (#running e)) orelse (#clear_cur (#running e)) then NONE
+         else (SOME ((),(map_running (map_next (fn _ => SOME rng)) e))))
+    val _ = Synchronized.guarded_access id (fn e => if is_some (#next (#running e)) then NONE else SOME ((),e))
+  in () end
+ | set_running NONE _ = ()
+
+fun clear_running (SOME id) =
+  Synchronized.guarded_access id (fn e =>
+  if (#clear_cur (#running e)) then NONE
+  else (SOME ((),(map_running (map_clear_cur (fn _ => true)) e))))
+ | clear_running NONE = ()
+\<close>
+
+
 method_setup markup =
  \<open>Scan.state :|-- (fn st => Scan.lift (Scan.trace (Scan.pass st Method_Closure.method_text))) >>
-   (fn (text, toks) => fn _ => fn facts =>
+   (fn (text, toks) => fn ctxt => fn facts =>
    let
      val range = case (Token.get_value (hd toks)) of
      SOME (Token.Source src) => Token.range_of src
      | _ => Position.no_range
+     val markup_id = get_markup_id ctxt;
 
      fun tac (ctxt,thm) = Method_Closure.method_evaluate text ctxt facts (ctxt,thm)
 
      fun traceify seq = Seq.make (fn () =>
       let
-        (* val _ = do_markup range Markup.running; *)
+        val _ = set_running markup_id range;
         val r = Seq.pull seq;
-        (* val _ = do_markup range Markup.finished; *)
+        val _ = clear_running markup_id;
       in Option.map (apsnd traceify) r end)
 
    in traceify o tac end)\<close>
@@ -250,17 +329,20 @@ ML \<open>
 fun nth_pre_result id i = guarded_read id
   (fn e =>
     if length (#results e) > i then SOME (RESULT (#pre_state (nth (rev (#results e)) i)), false) else
-           if length (#results e) = i then
-            (case #break_state e of SOME st => SOME (RESULT st, false) | NONE => NONE) else
-            (case #final e of SOME st => SOME (st, true) | NONE => NONE))
+    if not (null (#prev_results e)) then NONE else
+      (if length (#results e) = i then
+         (case #break_state e of SOME st => SOME (RESULT st, false) | NONE => NONE) else
+         (case #final e of SOME st => SOME (st, true) | NONE => NONE)))
 \<close>
 
 ML \<open>
-fun tap_prf f st = Seq.pull (Proof.apply (Method.Basic (fn _ => fn _ => fn x =>
-      ((f x : unit); Seq.make_results (Seq.single x))), Position.no_range) st)
+fun tap_prf f st = (Seq.pull (Proof.apply (Method.Basic (fn _ => fn _ => fn x =>
+      ((f x : unit); Seq.make_results (Seq.single x))), Position.no_range) st);())
 
-fun set_finished_result id st =
-  guarded_access id (fn _ => SOME ((), map_final (K (SOME st))));
+fun set_finished_result id trans_id st =
+  guarded_access id (fn e =>
+  (assert_trans_id trans_id e;
+   SOME ((), map_final (K (SOME st)))));
 
 fun is_finished_result id = guarded_read id (fn e => SOME (is_finished e));
 
@@ -315,6 +397,11 @@ fun map_state f state =
             Seq.make_results (Seq.single (f st))),
           Position.no_range) state)
      in r end;
+
+fun get_state state =
+let
+  val {context,goal} = Proof.simple_goal state;
+in (context,goal) end
 \<close>
 
 
@@ -325,47 +412,59 @@ let
   val _ = Method.report m;
 
 in
- (fn st => map_state (fn _ =>
+ (fn st => map_state (fn (ctxt,_) =>
   let
      val ident = Synchronized.var "debug_state" init_state;
-     val _ = if get_continuation (#context (Proof.simple_goal st)) > ~1 then
+     val markup_id = Synchronized.var "markup_state" init_markup_state;
+     val _ = if get_continuation ctxt > ~1 then
       error "Cannot use apply_debug while debugging" else ();
 
-     val st = Proof.map_context (set_debug_ident ident o set_continuation ~1) st;
+     val st = Proof.map_context (set_markup_state markup_id o set_debug_ident ident o set_continuation ~1) st;
 
      fun do_cancel thread = (Future.cancel thread; Future.join_result thread; ());
 
-     fun do_fork () = Future.fork (fn () =>
+     fun do_fork trans_id = Future.fork (fn () =>
        let
 
-        fun error_finish e = tap_prf (fn _ => set_finished_result ident (ERR e)) st
+        val r = case Exn.interruptible_capture (fn st => (case (Seq.pull o Proof.apply m) st
+          of (SOME (Seq.Result st', _)) => RESULT (get_state st')
+           | (SOME (Seq.Error e, _)) => ERR e
+           | _ => ERR (fn _ => "No results"))) st
+           of Exn.Res (RESULT r) => RESULT r
+             | Exn.Res (ERR e) => ERR e
+            | Exn.Exn e => ERR (fn _ => Runtime.exn_message e)
+        val _ = set_finished_result ident trans_id r;
 
-        val _ = case (Seq.pull (Proof.apply m st))
-          of SOME (Seq.Result st', _) =>
-              (tap_prf (fn r => set_finished_result ident (RESULT r)) st')
-           | SOME (Seq.Error e, _) => (error_finish e)
-           | NONE => (error_finish (fn _ => "No results"))
+        val _ = clear_running (SOME markup_id);
 
        in () end)
 
 
 
-     val thread = do_fork ();
+     val thread = do_fork 0;
      val _ = Synchronized.change ident (map_restart (fn _ => (fn () => do_cancel thread, ~1)));
 
      val _ = do_markup rng Markup.finished;
+     val _ = Future.fork (fn () => markup_worker markup_id ());
 
      val st' =
      let
        val (r,b) = wait_break_state ident 0;
-       val st' = poke_error r;
-       val _ = if b then Output.writeln "Final result" else ();
 
-     in st' |> apfst (set_continuation 0) end
+       val st' = case r of ERR e =>
+          (do_markup rng Markup.running; error (e ()))
+        | RESULT st' => st'
+
+       val st'' = if b then (Output.writeln "Final Result."; st' |> apfst (set_continuation ~1))
+                     else st' |> apfst (set_continuation 0)
+
+     in st''  end
 
      val _ = do_markup rng Markup.joined;
 
-     val _ = Execution.fork {name = "apply_debug_main", pos = pos, pri = ~1} (fn () =>
+     val _ = if get_continuation (fst st') < 0 then
+      (do_markup rng Markup.running;do_markup rng Markup.forked; Future.fork (fn () => ())) else
+      Execution.fork {name = "apply_debug_main", pos = pos, pri = ~1} (fn () =>
       let
 
         fun restart_state gls e = e
@@ -380,11 +479,12 @@ in
 
         fun main_loop () =
           let
-            val f = Synchronized.guarded_access ident (fn e as {restart,next_state,...} =>
+            val (f,trans_id) = Synchronized.guarded_access ident (fn e as {restart,next_state,...} =>
               if is_restarting e andalso is_none next_state then
-              SOME (fst restart, restart_state (snd restart) e) else NONE);
+              SOME ((fst restart, #trans_id e), restart_state (snd restart) e) else NONE);
             val _ = f ();
-            val thread = do_fork ();
+            val _ = clear_running (SOME markup_id);
+            val thread = do_fork (trans_id + 1);
             val _ = Synchronized.change ident (map_restart (fn _ => (fn () => do_cancel thread, ~1)))
           in main_loop () end
       in main_loop () end)
@@ -445,9 +545,7 @@ val _ =
           fun tick_up n st = if n = cont then (st,false) else
             let
               val _ = set_next_state id trans_id st;
-
               val (n_r, b) = wait_break_state id trans_id;
-
               val results = peek_all_results id;
               val _ = if length results = n + 1 then () else
                 error ("Unexpected number of results. Expected: " ^ @{make_string } (n + 1)^ " but got " ^ @{make_string } (length results))
@@ -461,7 +559,8 @@ val _ =
               wait_break_state id trans_id |> apfst poke_error
             else if length ex_results = start_cont then
               tick_up (length ex_results) (ctxt, thm)
-            else error "Unexpected number of existing results"
+            else (debug_print id; @{print} ("start_cont",start_cont); @{print} ("trans_id",trans_id);
+              error "Unexpected number of existing results")
 
           val st'' = if b then (Output.writeln "Final Result."; st' |> apfst (set_continuation ~1))
                      else st' |> apfst (set_continuation cont)
@@ -481,7 +580,22 @@ lemma
   assumes EF: "E \<Longrightarrow> F"
   shows
   "A"
-  apply_debug (sleep 2, rule BA, break, sleep 1, rule CB, break, rule DC, sleep 1, break, rule ED, sleep 1, break, rule EF)
+  (*
+  apply_debug (sleep 1, break, rule BA, sleep 1, break, rule AB, sleep n)
+  continue
+  continue
+
+  apply_debug (break, tactic \<open>fn st => raise TERM ("foo",[@{term True}])\<close>)
+    continue *)
+  apply_debug (sleep 1, rule BA, break, sleep 1,rule BA, rule CB, break, rule DC, sleep 1, break, rule ED, sleep 1, break, rule EF)
+    apply (rule AB)
+    continue
+    continue
+    continue
+    continue
+  oops
+  (*
+  apply_debug (sleep 1, rule BA, break, sleep 1,rule BA, rule CB, break, rule DC, sleep 1, break, rule ED, sleep 1, break, rule EF)
   continue
   continue
     apply (rule ED)
