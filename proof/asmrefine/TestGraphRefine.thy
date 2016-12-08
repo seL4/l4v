@@ -63,38 +63,12 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
   "snd (snd ((if P then f else g) gs)) = (if P then snd (snd (f gs)) else snd (snd (g gs)))"
   by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
-ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_after
-    funs (csenv ()) @{context} NONE  *}
+(* ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_after
+    funs (csenv ()) @{context} NONE  *} *)
 
-ML {* val nm = "Kernel_C.dmb" *}
+ML {* val nm = "Kernel_C.idle_thread" *}
 
 local_setup {* define_graph_fun_short funs nm *}
-
-schematic_goal "\<And>Q. simpl_to_graph \<Gamma> GG ''Kernel_C.dmb'' (NextNode 2)
-                                           (add_cont
-                                             (Spec (asm_spec (\<lambda>s. t_hrs_' (globals s))
-                                                     (\<lambda>u. globals_update (t_hrs_'_update u))
-                                                     (\<lambda>s. phantom_machine_state_' (globals s))
-                                                     (\<lambda>u. globals_update (phantom_machine_state_'_update u))
-                                                     True ''dmb'' (\<lambda>x s. s) (\<lambda>s. [])))
-                                             [Inr SKIP])
-                                           0 [Q] UNIV simpl_invariant ?eqs
-                                           (\<lambda>s s'. var_acc ''Mem'' s =
-                                                   VarMem (hrs_mem (t_hrs_' (gswap (globals s')))) \<and>
-                                                   var_acc ''HTD'' s =
-                                                   VarHTD (hrs_htd (t_hrs_' (globals s'))) \<and>
-                                                   var_acc ''PMS'' s =
-                                                   VarMS (encode_machine_state
-    (phantom_machine_state_' (globals s'))) \<and>
-                                                   var_acc ''GhostAssertions'' s =
-                                                   VarWordArray64_32
-                                                    ((snd \<circ> snd \<circ> ghost'state_') (globals s')) \<and>
-                                                   [] = []) "
-  apply (rule simpl_to_graph_call_asm_fun[OF refl])
-  apply (tactic {* SimplToGraphProof.inst_graph_tac @{context} 1 *})
-  apply (tactic {* SimplToGraphProof.apply_asm_refines_ex_tac funs @{context} 1 *})
-  using asm_semantics_respects [[show_types]]
-  apply (rule asm_semantics_respects)
 
 ML {*
 val hints = SimplToGraphProof.mk_hints funs @{context} nm
@@ -104,6 +78,8 @@ ML {*
 val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
     @{context}
 *}
+
+declare [[show_types]]
 
 ML {*
 ProveSimplToGraphGoals.simpl_to_graph_thm funs (csenv ()) @{context} nm;
@@ -116,39 +92,15 @@ val full_tac = ProveSimplToGraphGoals.graph_refine_proof_full_tac
     (csenv ())
 val full_goal_tac = ProveSimplToGraphGoals.graph_refine_proof_full_goal_tac
     (csenv ())
+val debug_tac = ProveSimplToGraphGoals.debug_tac
+    (csenv ())
 *}
 
 schematic_goal "PROP ?P"
   apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
   
-  apply (tactic {* ALLGOALS (fn i => fn t => 
-    let val res = try ((full_goal_tac @{context} THEN_ALL_NEW K no_tac) i #> Seq.hd) t
-    in case res of NONE => Seq.single t | SOME r => Seq.single r
-    end) *})
-
-
-
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 0) *})
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 1) *})
-
-  apply (simp_all only: globals_swap_twice[OF globals_list_distinct])
-
-
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 2) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 3) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 4) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 5) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 6) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 7) *})
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 8) *})
-  
+  apply (tactic {* ALLGOALS (debug_tac @{context}) *})
+  oops
 
 end
 

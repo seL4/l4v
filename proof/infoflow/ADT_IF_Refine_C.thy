@@ -273,6 +273,7 @@ lemma handleEvent_ccorres:
           apply clarsimp
          apply clarsimp
          apply (rule ccorres_cond_univ)
+         apply (rule_tac P="\<lambda>s. thread = ksCurThread s" in ccorres_cross_over_guard)
          apply (rule_tac xf'=xfdc in ccorres_call)
             apply (ctac (no_vcg) add: handleFault_ccorres)
            apply simp
@@ -292,7 +293,7 @@ lemma handleEvent_ccorres:
                     cfault_rel_def seL4_Fault_UnknownSyscall_lift seL4_Fault_UserException_lift
                     is_cap_fault_def
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
-              dest: st_tcb_at_idle_thread')
+              dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
   done
 
 lemma kernelEntry_corres_C:

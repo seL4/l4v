@@ -829,9 +829,12 @@ lemma simpl_to_graph_done:
                         eq_impl_def trace_end_match_def)
   done
 
-lemma simpl_to_graph_done2:
-  "simpl_to_graph SGamma GGamma gf Ret (add_cont com.Skip []) n Q P I eqs eqs"
-  by (auto intro: simpl_to_graph_done simp: eq_impl_def)
+lemma eq_impl_refl:
+  "eq_impl nn eqs eqs P"
+  by (simp add: eq_impl_def)
+
+lemmas simpl_to_graph_done2 = simpl_to_graph_done[OF eq_impl_refl]
+lemmas simpl_to_graph_creturn_void2 = simpl_to_graph_creturn_void[where nn=Ret, OF eq_impl_refl]
 
 lemma simpl_to_graph_noop_Basic:
   "\<lbrakk> GGamma gf = Some gfc; function_graph gfc m = Some (node.Basic nn upds);
@@ -937,8 +940,9 @@ lemma graph_fun_refines_from_simpl_to_graph:
     \<And>Q. simpl_to_graph SGamma GGamma fname (NextNode (entry_point gf)) (add_cont com []) 0
         [Q] UNIV I eqs
         (\<lambda>s s'. map (\<lambda>i. var_acc i s) (function_outputs gf) = map (\<lambda>i. i s') outs);
-        \<forall>gst sst. map (\<lambda>i. var_acc i gst) (function_inputs gf) = map (\<lambda>i. i sst) ins
-            \<longrightarrow> eqs gst sst;
+        eq_impl (NextNode (entry_point gf))
+          (\<lambda>gst sst. map (\<lambda>i. var_acc i gst) (function_inputs gf) = map (\<lambda>i. i sst) ins)
+          eqs I;
         distinct (function_inputs gf); length ins = length (function_inputs gf);
         length outs = length (function_outputs gf) \<rbrakk>
     \<Longrightarrow> graph_fun_refines SGamma GGamma I ins proc outs fname"
@@ -951,8 +955,9 @@ lemma graph_fun_refines_from_simpl_to_graph:
    apply (rule conjI, assumption)
    apply (simp add: suffix_tuple_closure_inter_def exec_trace_def)
    apply (rule conjI)
-    apply (erule allE, erule allE, erule mp)
-    apply (simp add: fetch_returned exec_trace_inputs_def acc_vars_def)
+    apply (erule eq_implD)
+     apply (simp add: fetch_returned exec_trace_inputs_def acc_vars_def)
+    apply simp
    apply (simp add: add_cont_Nil nat_trace_rel_def)
   apply (clarsimp simp: trace_end_match_def dest!: fun_cong[where x=0])
   apply (subgoal_tac "\<forall>st. trace_end tr'' = Some st
@@ -2061,7 +2066,8 @@ fun simpl_to_graph_cache_tac funs hints cache nm ctxt =
             handle TERM _ => no_tac),
         resolve_tac ctxt @{thms simpl_to_graph_done2
             simpl_to_graph_Skip_immediate[where nn=Ret]
-            simpl_to_graph_Throw_immediate[where nn=Ret]},
+            simpl_to_graph_Throw_immediate[where nn=Ret]
+            simpl_to_graph_creturn_void2},
         eq_impl_assume_tac ctxt
     ]
 
@@ -2143,7 +2149,7 @@ fun trace_fail_tac2 _ = K no_tac
 
 fun simpl_to_graph_tac funs hints nm ctxt = let
     val cache = ref (Termtab.empty)
-  in REPEAT_ALL_NEW (DETERM o (full_simp_tac (simpl_ss ctxt) THEN'
+  in REPEAT_ALL_NEW (DETERM o (full_simp_tac (simpl_ss ctxt) THEN_ALL_NEW
     SUBGOAL (fn (t, i) => fn thm =>
       ((simpl_to_graph_cache_tac funs hints cache nm ctxt
     ORELSE' (eresolve0_tac [@{thm use_simpl_to_graph_While_assum}]

@@ -145,6 +145,7 @@ lemma handleVMFaultEvent_ccorres:
           apply clarsimp
          apply clarsimp
          apply (rule ccorres_cond_univ)
+         apply (rule_tac P="\<lambda>s. ksCurThread s = rv" in ccorres_cross_over_guard)
          apply (rule_tac xf'=xfdc in ccorres_call)
             apply (ctac (no_vcg) add: handleFault_ccorres)
            apply simp
@@ -171,7 +172,7 @@ lemma handleVMFaultEvent_ccorres:
   apply (clarsimp simp: simple_sane_strg[unfolded sch_act_sane_not])
   by (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
-              dest: st_tcb_at_idle_thread')
+              dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
 
 
 lemma handleUserLevelFault_ccorres:

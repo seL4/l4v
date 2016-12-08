@@ -411,7 +411,14 @@ fun res_from_ctxt tac_name thm_name ctxt thm = let
 
 val except_tac = SimplToGraphProof.except_tac
 
+fun warn_schem_tac msg ctxt tac = SUBGOAL (fn (t, i) => let
+    val _ = if null (Term.add_var_names t []) then ()
+      else warning ("schematic in goal: " ^ msg ^ ": "
+        ^ Pretty.string_of (Syntax.pretty_term ctxt t))
+  in tac i end)
+
 fun prove_ptr_safe reason ctxt = DETERM o
+    warn_schem_tac "prove_ptr_safe" ctxt
     (TRY o REPEAT_ALL_NEW (eqsubst_either_wrap_tac ctxt
                 @{thms array_ptr_index_coerce}
             )
@@ -459,7 +466,7 @@ fun get_globals_rewrites ctxt = let
         handle ERROR _ => raise THM
             ("run add_globals_swap_rewrites on ctxt", 1, [])
 
-fun add_symbols (Free (_, T) $ s) xs = (case try HOLogic.dest_string s
+fun add_symbols (Free (_, _) $ s) xs = (case try HOLogic.dest_string s
         of SOME str => str :: xs | _ => xs)
   | add_symbols (f $ x) xs = add_symbols f (add_symbols x xs)
   | add_symbols (Abs (_, _, t)) xs = add_symbols t xs
@@ -478,8 +485,10 @@ fun get_expand_const_globals ctxt goal = let
         #> Proof_Context.get_thm ctxt) cgs_unfold
   in cgs_unfold_defs end
 
-fun normalise_mem_accs ctxt = DETERM o let
+fun normalise_mem_accs reason ctxt = DETERM o let
     val gr = get_globals_rewrites ctxt
+    val msg' = "normalise_mem_accs: " ^ reason
+    fun msg str = msg' ^ ": " ^ str
     val init_simps = @{thms hrs_mem_update
                        heap_access_Array_element'
                        o_def fupdate_def
@@ -489,9 +498,10 @@ fun normalise_mem_accs ctxt = DETERM o let
     val h_val = get_disjoint_h_val_globals_swap ctxt
     val disjoint_h_val_tac
     = (eqsubst_asm_wrap_tac ctxt [h_val] ORELSE' eqsubst_wrap_tac ctxt [h_val])
-         THEN' (assume_tac ctxt ORELSE' except_tac ctxt "normalise_mem_accs: couldn't atac")
+         THEN' (assume_tac ctxt ORELSE' except_tac ctxt (msg "couldn't atac"))
   in
     asm_full_simp_tac (ctxt addsimps init_simps addsimps [h_val])
+    THEN_ALL_NEW warn_schem_tac msg' ctxt (K all_tac)
     THEN_ALL_NEW
         (TRY o REPEAT_ALL_NEW ((eqsubst_asm_wrap_tac ctxt
                     @{thms heap_access_Array_element'}
@@ -503,9 +513,9 @@ fun normalise_mem_accs ctxt = DETERM o let
         SUBGOAL (fn (t, i) => case
             Envir.beta_eta_contract (Logic.strip_assums_concl t)
           of @{term Trueprop} $ (Const (@{const_name h_t_valid}, _) $ _ $ _ $ _)
-              => prove_ptr_safe "normalise_mem_accs" ctxt i
+              => prove_ptr_safe msg' ctxt i
             | @{term Trueprop} $ (Const (@{const_name ptr_safe}, _) $ _ $ _)
-              => prove_ptr_safe "normalise_mem_accs" ctxt i
+              => prove_ptr_safe msg' ctxt i
             | _ => all_tac)
     THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_ptr h_val_word32 h_val_word8
         h_val_sword32 h_val_sword8})
@@ -540,6 +550,7 @@ fun prove_mem_equality ctxt = DETERM o let
             THEN' prove_heap_update_id ctxt)
 
   in simp_tac init_simpset
+    THEN_ALL_NEW warn_schem_tac "prove_mem_equality: before subst" ctxt (K all_tac)
     THEN_ALL_NEW (TRY o REPEAT_ALL_NEW ((eqsubst_wrap_tac ctxt
             @{thms heap_access_Array_element' heap_update_Array_update})
         THEN_ALL_NEW simp_tac init_simpset))
@@ -552,7 +563,7 @@ fun prove_mem_equality ctxt = DETERM o let
         else all_tac)
     (* need to normalise_mem_accs first as it operates on typed pointer ops
        and won't function after we unpack them *)
-    THEN_ALL_NEW normalise_mem_accs ctxt
+    THEN_ALL_NEW normalise_mem_accs "prove_mem_equality" ctxt
     THEN_ALL_NEW simp_tac unpack_simpset
     THEN_ALL_NEW simp_tac (ctxt addsimps @{thms store_word32s_equality_fold
         store_word32s_equality_final add.commute mult.commute add_mult_comms ucast_id})
@@ -604,39 +615,41 @@ fun heap_upd_kind (Const (@{const_name heap_update}, _) $ _ $ _ $ _)
   end
   | heap_upd_kind t = raise TERM ("heap_upd_kind: unknown", [t])
 
-fun decompose_mem_goals trace ctxt = SUBGOAL (fn (t, i) =>
-  case Envir.beta_eta_contract (Logic.strip_assums_concl t) of
+fun decompose_mem_goals trace ctxt = warn_schem_tac "decompose_mem_goals" ctxt
+  (SUBGOAL (fn (t, i) =>
+  (case Envir.beta_eta_contract (Logic.strip_assums_concl t) of
     @{term Trueprop} $ (Const (@{const_name const_globals_in_memory}, _) $ _ $ _ $ _)
         => let val thm = res_from_ctxt "decompose_mem_goals"
                         "globals_list_distinct" ctxt
                         @{thm const_globals_in_memory_heap_updateE}
         in (eresolve_tac ctxt [thm] THEN' assume_tac ctxt THEN' prove_ptr_safe "const_globals" ctxt)
             ORELSE' except_tac ctxt "decompose_mem_goals: const globals"
-        end i
+        end
     | @{term Trueprop} $ (Const (@{const_name pglobal_valid}, _) $ _ $ _ $ _)
         => asm_simp_tac (ctxt addsimps @{thms pglobal_valid_def}
-            addsimps #3 (get_globals_rewrites ctxt)) i
+            addsimps #3 (get_globals_rewrites ctxt))
     | @{term Trueprop} $ (@{term "op = :: heap_mem \<Rightarrow> _"} $ x $ y) => let
         val query = (heap_upd_kind x, heap_upd_kind y)
         val _ = if trace then writeln ("decompose_mem_goals: " ^ @{make_string} query)
             else ()
       in case (heap_upd_kind x, heap_upd_kind y) of
-          ("HeapUpd", "HeapUpd") => prove_mem_equality ctxt i
+          ("HeapUpd", "HeapUpd") => prove_mem_equality ctxt
         | ("HeapUpdWithSwap", "HeapUpd")
-            => clean_heap_upd_swap ctxt i THEN prove_mem_equality ctxt i
+            => clean_heap_upd_swap ctxt THEN' prove_mem_equality ctxt
         | ("HeapUpd", "HeapUpdWithSwap") =>
-            resolve_tac ctxt [@{thm sym}] i
-              THEN clean_heap_upd_swap ctxt i THEN prove_mem_equality ctxt i
-        | ("HeapUpd", "GlobalUpd") => prove_global_equality ctxt i
-        | ("GlobalUpd", "HeapUpd") => prove_global_equality ctxt i
+            resolve_tac ctxt [@{thm sym}]
+              THEN' clean_heap_upd_swap ctxt THEN' prove_mem_equality ctxt
+        | ("HeapUpd", "GlobalUpd") => prove_global_equality ctxt
+        | ("GlobalUpd", "HeapUpd") => prove_global_equality ctxt
         | ("HTDUpdateWithSwap", _)
-            => clean_htd_upd_swap ctxt i
+            => clean_htd_upd_swap ctxt
         | (_, "HTDUpdateWithSwap")
-            => resolve_tac ctxt [@{thm sym}] i THEN clean_htd_upd_swap ctxt i
+            => resolve_tac ctxt [@{thm sym}] THEN' clean_htd_upd_swap ctxt
         | _ => raise TERM ("decompose_mem_goals: mixed up "
             ^ heap_upd_kind x ^ "," ^ heap_upd_kind y, [x, y])
-      end
-    | _ => all_tac)
+      end THEN_ALL_NEW warn_schem_tac "decompose_mem_goals: after"
+        ctxt (K all_tac)
+    | _ => K all_tac) i))
 
 fun unat_mono_tac ctxt = resolve_tac ctxt @{thms unat_mono_intro}
     THEN' ((((TRY o REPEAT_ALL_NEW (resolve_tac ctxt @{thms unat_mono_thms}))
@@ -645,11 +658,10 @@ fun unat_mono_tac ctxt = resolve_tac ctxt @{thms unat_mono_intro}
         ORELSE' except_tac ctxt "unat_mono_tac: couldn't get started")
     THEN' (asm_full_simp_tac (ctxt addsimps @{thms
             word_sless_to_less word_sle_to_le
-            extra_sle_sless_unfolds
         })
         THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps @{thms
             word_less_nat_alt word_le_nat_alt
-            unat_ucast_if_up extra_sle_sless_unfolds
+            unat_ucast_if_up
         })
         THEN_ALL_NEW except_tac ctxt "unat_mono_tac: unsolved")
 
@@ -657,8 +669,7 @@ fun dest_ptr_add_assertion ctxt = SUBGOAL (fn (t, i) =>
     if Term.exists_Const (fn (s, _) => s = @{const_name parray_valid}) t
         then (full_simp_tac (ctxt addsimps @{thms ptr_add_assertion'
             typ_uinfo_t_diff_from_typ_name parray_valid_def
-            ptr_add_assertion_unfold_numeral
-            extra_sle_sless_unfolds})
+            ptr_add_assertion_unfold_numeral})
           THEN_ALL_NEW TRY o REPEAT_ALL_NEW (dresolve_tac ctxt
             @{thms ptr_add_assertion_uintD[rule_format]
                    ptr_add_assertion_sintD[rule_format]})
@@ -728,6 +739,8 @@ fun graph_refine_proof_tacs csenv ctxt = let
             "and adjust ptr_add_assertion facts",
             "also work on some asm_semantics problems"],
         (TRY o safe_goal_tac ctxt)
+            THEN_ALL_NEW (TRY o DETERM o resolve_tac ctxt @{thms TrueI})
+            THEN_ALL_NEW warn_schem_tac "step 3" ctxt (K all_tac)
             THEN_ALL_NEW (TRY o DETERM
                 o REPEAT_ALL_NEW (dresolve_tac ctxt [@{thm h_t_valid_orig_and_ptr_safe}]))
             THEN_ALL_NEW (TRY o DETERM o (eresolve_tac ctxt [@{thm asm_semantics_protects_globs_revD[rule_format]}]
@@ -738,7 +751,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
         decompose_mem_goals false ctxt
           THEN_ALL_NEW dest_ptr_add_assertion ctxt),
         (["step 5: normalise memory reads"],
-        normalise_mem_accs ctxt),
+        normalise_mem_accs "step 5" ctxt),
         (["step 6: explicitly apply some inequalities"],
         TRY o DETERM o REPEAT_ALL_NEW
             (eqsubst_either_wrap_tac ctxt @{thms word32_truncate_noop})),
@@ -750,7 +763,6 @@ fun graph_refine_proof_tacs csenv ctxt = let
                         word_sle_def[THEN iffD2] word_sless_alt[THEN iffD2]
                         drop_sign_isomorphism max_word_minus
                         ptr_equalities_to_ptr_val
-                        extra_sle_sless_unfolds
                         word_neq_0_conv_neg_conv
                         ucast_nat_def of_int_sint_scast
                         ptr_val_inj[symmetric]
