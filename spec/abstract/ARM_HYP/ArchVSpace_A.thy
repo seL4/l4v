@@ -466,7 +466,7 @@ where
             when (\<not> active) $ do
               do_machine_op isb;
               vcpu_enable new;
-              modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, False) \<rparr>\<rparr>)
+              modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
             od))
    od"
 
