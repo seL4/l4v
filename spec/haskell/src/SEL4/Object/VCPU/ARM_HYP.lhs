@@ -373,11 +373,11 @@ For initialisation, see makeVCPUObject.
 >                     vcpuSave hsCurVCPU
 >                     vcpuRestore new
 >                     modifyArchState (\s -> s { armHSCurVCPU = Just (new, True) })
->                 else do -- same VCPU
+>                 else do -- same VCPU: switch to active
 >                     when (not active) $ do
 >                         doMachineOp isb
 >                         vcpuEnable new
->                         modifyArchState (\s -> s { armHSCurVCPU = Just (new, False) })
+>                         modifyArchState (\s -> s { armHSCurVCPU = Just (new, True) })
 
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
