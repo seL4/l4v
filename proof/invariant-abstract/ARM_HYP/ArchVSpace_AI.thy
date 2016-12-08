@@ -3705,21 +3705,59 @@ crunch device_state_inv[wp]: do_flush "\<lambda>ms. P (device_state ms)"
 
 crunch device_state_inv[wp]: storeWord "\<lambda>ms. P (device_state ms)"
 
+crunch device_state_inv[wp]: writeContextIDAndPD "\<lambda>ms. P (device_state ms)"
+
+crunch device_state_inv[wp]: addressTranslateS1CPR "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: getSCTLR,get_gic_vcpu_ctrl_hcr,set_gic_vcpu_ctrl_hcr "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: setSCTLR,setHCR,getSCTLR,setACTLR,getACTLR,get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]:
+  get_gic_vcpu_ctrl_hcr,set_gic_vcpu_ctrl_hcr,dsb,isb "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]:
+  get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr,get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr
+   "\<lambda>ms. P (device_state ms)"
+
 crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps)
 
-crunch pspace_respects_device_region[wp]: arm_context_switch "pspace_respects_device_region"
-  (simp: crunch_simps wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
 
-crunch pspace_respects_device_region[wp]: vcpu_disable "pspace_respects_device_region"
-  (simp: crunch_simps wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
+crunch pspace_respects_device_region[wp]: vcpu_enable "pspace_respects_device_region"
+  (wp: crunch_wps pspace_respects_device_region_dmo simp: crunch_simps)
 
-crunch pspace_respects_device_region[wp]: vcpu_switch "pspace_respects_device_region"
-  (simp: crunch_simps wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
+lemma set_vcpu_pspace_respects_device_region:
+  "\<lbrace>pspace_respects_device_region\<rbrace>
+      set_vcpu p v
+        \<lbrace>\<lambda>_. pspace_respects_device_region\<rbrace>"
+  apply (rule hoare_assume_pre)
+  apply (clarsimp simp add: set_vcpu_def)
+  apply (wp|wpc)+
+    prefer 3
+    apply (rule get_object_sp)
+   prefer 2
+   apply (rule assert_sp)
+  apply (simp add: set_object_def valid_def split_def pspace_respects_device_region_def
+                   obj_at_def fun_upd_def
+              split: kernel_object.splits arch_kernel_obj.splits)
+  apply (clarsimp simp add: in_get in_bind in_put)
+  apply (frule_tac k="ArchObj (VCPU v)" in user_mem_obj_upd_dom, simp add: a_type_def)
+  apply (drule_tac k="ArchObj (VCPU v)" in  device_mem_obj_upd_dom, simp add: a_type_def)
+  apply clarsimp
+  done
+
+lemma respects_device_region_vcpu_helper: "\<And>x2 b.
+       \<lbrace>pspace_respects_device_region\<rbrace>
+       when (\<not> b)
+        (do a \<leftarrow> do_machine_op isb;
+            a \<leftarrow> vcpu_enable x2;
+            modify
+             (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := Some (x2, True)\<rparr>\<rparr>)
+         od)
+       \<lbrace>\<lambda>_ .pspace_respects_device_region \<rbrace> "
+  apply (case_tac b; simp)
+  apply (wp pspace_respects_device_region_dmo | simp add:)+
+done
 
 crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
-  (simp: crunch_simps wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
-
+  (simp: crunch_simps respects_device_region_vcpu_helper wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
 
 
 (* FIXME move to WordLemma *)
@@ -4309,8 +4347,77 @@ lemma store_pte_unmap_page: (* ARMHYP write with xxx_bits? *)
                  split: split_if_asm  pde.splits pte.splits if_splits)
  done
 
-crunch pd_at: flush_page "\<lambda>s. P (ko_at (ArchObj (PageDirectory pd)) x s)"
+(* move? *)
+lemmas arm_hyp_machine_ops[simp] =
+  getSCTLR_def get_gic_vcpu_ctrl_hcr_def
+  set_gic_vcpu_ctrl_hcr_def
+  writeContextIDAndPD_def addressTranslateS1CPR_def
+  setSCTLR_def setHCR_def getSCTLR_def setACTLR_def getACTLR_def
+  get_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_vmcr_def
+  get_gic_vcpu_ctrl_apr_def set_gic_vcpu_ctrl_apr_def
+  get_gic_vcpu_ctrl_lr_def set_gic_vcpu_ctrl_lr_def
+  get_gic_vcpu_ctrl_hcr_def set_gic_vcpu_ctrl_hcr_def
+  dsb_def
+
+(* move? *)
+crunch obj_at[wp]: get_vcpu,vcpu_enable,vcpu_restore "\<lambda>s. P (obj_at Q x s)"
   (wp: crunch_wps simp: crunch_simps)
+
+
+lemma ko_at_vcpu_helper: "\<And>ao x2 b.
+       \<lbrace>\<lambda>a. P (ko_at (ArchObj ao) x a)\<rbrace>
+       when (\<not> b)
+        (do a \<leftarrow> do_machine_op isb;
+            a \<leftarrow> vcpu_enable x2;
+            modify
+             (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := Some (x2, True)\<rparr>\<rparr>)
+         od)
+       \<lbrace>\<lambda>_ s. P (ko_at (ArchObj ao) x s)\<rbrace> "
+  apply (case_tac b; simp)
+  apply (wp do_machine_op_obj_at | simp add:)+
+done
+
+lemma set_vcpu_pd_at: (* generalise? this holds except when the ko is a vcpu *)
+  "\<lbrace>\<lambda>s. P (ko_at (ArchObj (PageDirectory pd)) x s)\<rbrace>
+      set_vcpu p v
+        \<lbrace>\<lambda>_ s. P (ko_at (ArchObj (PageDirectory pd)) x s)\<rbrace>"
+  apply (rule hoare_assume_pre)
+  apply (clarsimp simp add: set_vcpu_def)
+  apply (wp|wpc)+
+    prefer 3
+    apply (rule get_object_sp)
+   prefer 2
+   apply (rule assert_sp)
+  apply (simp add: set_object_def valid_def split_def
+              split: kernel_object.splits arch_kernel_obj.splits)
+  apply (clarsimp simp add: in_get in_bind in_put obj_at_def)
+  done
+
+crunch pd_at: vcpu_switch "\<lambda>s. P (ko_at (ArchObj (PageDirectory pd)) x s)"
+  (wp: crunch_wps simp: ko_at_vcpu_helper crunch_simps)
+
+crunch pd_at: flush_page "\<lambda>s. P (ko_at (ArchObj (PageDirectory pd)) x s)"
+  (wp: crunch_wps ko_at_vcpu_helper simp: crunch_simps)
+
+lemma set_vcpu_pt_at: (* generalise? this holds if the ko is not a vcpu *)
+  "\<lbrace>\<lambda>s. P (ko_at (ArchObj (PageTable pt)) x s)\<rbrace>
+      set_vcpu p v
+        \<lbrace>\<lambda>_ s. P (ko_at (ArchObj (PageTable pt)) x s)\<rbrace>"
+  apply (rule hoare_assume_pre)
+  apply (clarsimp simp add: set_vcpu_def obj_at_def)
+  apply (wp|wpc)+
+    prefer 3
+    apply (rule get_object_sp)
+   prefer 2
+   apply (rule assert_sp)
+  apply (simp add: set_object_def valid_def split_def
+              split: kernel_object.splits arch_kernel_obj.splits)
+  apply (clarsimp simp add: in_get in_bind fun_upd_def in_put obj_at_def)
+  done
+
+
+crunch pt_at: vcpu_switch "\<lambda>s. P (ko_at (ArchObj (PageTable pt)) x s)"
+  (wp: crunch_wps simp: ko_at_vcpu_helper crunch_simps)
 
 crunch pt_at: flush_page "\<lambda>s. P (ko_at (ArchObj (PageTable pt)) x s)"
   (wp: crunch_wps simp: crunch_simps)
