@@ -15,19 +15,20 @@ theory Apply_Debug
     "continue" :: prf_script % "proof" and  "finish" :: prf_script % "proof"
 begin
 
-
-ML \<open>fun method_evaluate text ctxt facts =
-  Method.NO_CONTEXT_TACTIC ctxt
-    (Method_Closure.method_evaluate text ctxt facts)\<close>
-
-
-ML \<open>fun do_markup range m = Output.report [Markup.markup (Markup.properties (Position.properties_of_range range) m) ""];
-\<close>
-
-ML \<open>fun do_markup_pos pos m = Output.report [Markup.markup (Markup.properties (Position.properties_of pos) m) ""];
-\<close>
-
 ML \<open>
+signature APPLY_DEBUG =
+sig
+val break : Method.method;
+val apply_debug : Method.text_range -> Proof.state -> Proof.state;
+val continue : int -> Proof.state -> Proof.state;
+val finish : Proof.state -> Proof.state;
+
+end
+
+structure Apply_Debug : APPLY_DEBUG =
+struct
+fun do_markup range m = Output.report [Markup.markup (Markup.properties (Position.properties_of_range range) m) ""];
+
 type markup_queue = { cur : Position.range option, next : Position.range option, clear_cur : bool }
 
 fun map_cur f ({cur, next, clear_cur} : markup_queue) =
@@ -52,17 +53,22 @@ fun map_hilight f ({running, hilight} : markup_state) =
 
 structure Markup_Data = Proof_Data
 (
-  type T = markup_state Synchronized.var option
-  fun init _ : T = NONE
+  type T = markup_state Synchronized.var option *
+    Position.range option (* latest method location *)
+  fun init _ : T = (NONE, NONE)
 );
 
 val init_queue = ({cur = NONE, next = NONE, clear_cur = false}: markup_queue)
 val init_markup_state = ({running = init_queue, hilight = init_queue} : markup_state)
 
-fun set_markup_state id = Markup_Data.put (SOME id);
-fun get_markup_id ctxt = Markup_Data.get ctxt;
+fun set_markup_state id = Markup_Data.map (apfst (K (SOME id)));
+fun get_markup_id ctxt = fst (Markup_Data.get ctxt);
+
+fun set_latest_range range = Markup_Data.map (apsnd (K (SOME range)));
+fun get_latest_range ctxt = snd (Markup_Data.get ctxt);
 
 fun swap_markup queue startm endm =
+if is_some (#next queue) andalso #next queue = #cur queue then SOME (map_next (K NONE) queue) else
 let
   fun clear_cur () =
     (case #cur queue of SOME crng =>
@@ -87,26 +93,32 @@ let
      in main_loop () end
 in main_loop () end
 
-fun set_running (SOME id) rng =
+fun set_gen get set (SOME id) rng =
   let
     val _ =
        Synchronized.guarded_access id (fn e =>
-         if is_some (#next (#running e)) orelse (#clear_cur (#running e)) then NONE
-         else (SOME ((),(map_running (map_next (fn _ => SOME rng)) e))))
-    val _ = Synchronized.guarded_access id (fn e => if is_some (#next (#running e)) then NONE else SOME ((),e))
+         if is_some (#next (get e)) orelse (#clear_cur (get e)) then NONE
+         else (SOME ((),(set (map_next (fn _ => SOME rng)) e))))
+    val _ = Synchronized.guarded_access id (fn e => if is_some (#next (get e)) then NONE else SOME ((),e))
   in () end
- | set_running NONE _ = ()
+ | set_gen _ _ NONE _ = ()
 
-fun clear_running (SOME id) =
+
+fun clear_gen get set (SOME id) =
   Synchronized.guarded_access id (fn e =>
-  if (#clear_cur (#running e)) then NONE
-  else (SOME ((),(map_running (map_clear_cur (fn _ => true)) e))))
- | clear_running NONE = ()
-\<close>
+  if (#clear_cur (get e)) then NONE
+  else (SOME ((),(set (map_clear_cur (fn _ => true)) e))))
+ | clear_gen _ _ NONE = ()
 
+val set_running = set_gen #running map_running
+val clear_running = clear_gen #running map_running
 
-method_setup markup =
- \<open>Scan.state :|-- (fn st => Scan.lift (Scan.trace (Scan.pass st Method_Closure.method_text))) >>
+val set_hilight = set_gen #hilight map_hilight
+val clear_hilight = clear_gen #hilight map_hilight
+
+val _ = Context.>>
+  (Context.map_theory (Method.setup @{binding "markup"}
+  (Scan.state :|-- (fn st => Scan.lift (Scan.trace (Scan.pass st Method_Closure.method_text))) >>
    (fn (text, toks) => fn ctxt => fn facts =>
    let
      val range = case (Token.get_value (hd toks)) of
@@ -114,7 +126,10 @@ method_setup markup =
      | _ => Position.no_range
      val markup_id = get_markup_id ctxt;
 
-     fun tac (ctxt,thm) = Method_Closure.method_evaluate text ctxt facts (ctxt,thm)
+     fun tac (ctxt,thm) =
+      let val ctxt' = set_latest_range range ctxt in
+        Method_Closure.method_evaluate text ctxt' facts (ctxt',thm)
+      end
 
      fun traceify seq = Seq.make (fn () =>
       let
@@ -123,36 +138,31 @@ method_setup markup =
         val _ = clear_running markup_id;
       in Option.map (apsnd traceify) r end)
 
-   in traceify o tac end)\<close>
+   in traceify o tac end)) ""))
 
-
-ML \<open>fun wrap_src src =
+fun wrap_src src =
   let
     val pos = Token.range_of src |> Position.set_range;
     val tok = Token.make_string ("", pos);
     val tok' = Token.assign (SOME (Token.Source src)) tok;
   in Token.closure tok' end
 
-\<close>
 
-ML \<open>
 fun add_debug (Method.Source src) =
       (Method.Source (Token.make_src ("Apply_Debug.markup", Position.none) [wrap_src src]))
   | add_debug (Method.Combinator (x,y,txts)) = (Method.Combinator (x,y, map add_debug txts))
   | add_debug x = x
-\<close>
 
-ML \<open>fun st_eq (ctxt : Proof.context,st) (ctxt',st') =
-  pointer_eq (ctxt,ctxt') andalso Thm.eq_thm (st,st')\<close>
+fun st_eq (ctxt : Proof.context,st) (ctxt',st') =
+  pointer_eq (ctxt,ctxt') andalso Thm.eq_thm (st,st')
 
-ML \<open>type result =
+type result =
   { pre_state : (Proof.context * thm),
     post_state : (Proof.context * thm) }
-\<close>
 
-ML \<open>datatype final_state = RESULT of (Proof.context * thm) | ERR of (unit -> string)\<close>
+datatype final_state = RESULT of (Proof.context * thm) | ERR of (unit -> string)
 
-ML \<open>type debug_state =
+type debug_state =
   {results : result list, (* this execution, in order of appearance *)
    prev_results : (Proof.context * thm) list, (* continuations needed to get thread back to some state*)
    next_state : (Proof.context * thm) option, (* proof thread blocks waiting for this *)
@@ -207,9 +217,6 @@ val drop_states = map_break_state (K NONE) o map_next_state (K NONE);
 
 fun add_result pre post = map_results (cons {pre_state = pre, post_state = post}) o drop_states;
 
-\<close>
-
-ML \<open>
 fun get_trans_id (id : debug_state Synchronized.var) = #trans_id (Synchronized.value id);
 
 fun stale_transaction_err trans_id trans_id' =
@@ -312,10 +319,8 @@ let
              stale_transaction_err (gen + 1) (#trans_id e));
 in trans_id end;
 
-fun peek_head_result id = guarded_read id (fn e => case #results e of [] => NONE | (x :: _) => SOME x)
 
 fun peek_all_results id = guarded_read id (fn e => SOME (#results e));
-fun peek_prev_results id = guarded_read id (fn e => SOME (#prev_results e));
 
 fun peek_final_result id =
   guarded_read id (fn e => #final e)
@@ -323,9 +328,6 @@ fun peek_final_result id =
 fun poke_error (RESULT st) = st
   | poke_error (ERR e) = error (e ())
 
-\<close>
-
-ML \<open>
 fun nth_pre_result id i = guarded_read id
   (fn e =>
     if length (#results e) > i then SOME (RESULT (#pre_state (nth (rev (#results e)) i)), false) else
@@ -333,11 +335,6 @@ fun nth_pre_result id i = guarded_read id
       (if length (#results e) = i then
          (case #break_state e of SOME st => SOME (RESULT st, false) | NONE => NONE) else
          (case #final e of SOME st => SOME (st, true) | NONE => NONE)))
-\<close>
-
-ML \<open>
-fun tap_prf f st = (Seq.pull (Proof.apply (Method.Basic (fn _ => fn _ => fn x =>
-      ((f x : unit); Seq.make_results (Seq.single x))), Position.no_range) st);())
 
 fun set_finished_result id trans_id st =
   guarded_access id (fn e =>
@@ -354,9 +351,6 @@ if is_finished_result id then peek_final_result id else
 
   in peek_final_result id end
 
-\<close>
-
-ML \<open>
 structure Debug_Data = Proof_Data
 (
   type T = debug_state Synchronized.var option  (* execution id *) *
@@ -366,8 +360,9 @@ structure Debug_Data = Proof_Data
 
 fun set_debug_ident ident = Debug_Data.map  (apfst (fn _ => SOME ident))
 val get_debug_ident = the o fst o Debug_Data.get
+
 val is_debug_ctxt = is_some o fst o Debug_Data.get;
-val clear_debug = Debug_Data.map (apfst (fn _ => NONE));
+val clear_debug = Debug_Data.map (apfst (fn _ => NONE) o apsnd (fn _ => ~1));
 
 
 val get_continuation = snd o Debug_Data.get;
@@ -375,21 +370,19 @@ val get_continuation = snd o Debug_Data.get;
 (* Maintain pointer equality if possible *)
 fun set_continuation i ctxt = if get_continuation ctxt = i then ctxt else
   Debug_Data.map (apsnd (fn _ => i)) ctxt;
-\<close>
 
-method_setup break = \<open>Scan.succeed (fn ctxt => fn facts => fn st =>
+val break = (fn _ => fn (st as (ctxt,_)) =>
   let
     val id = get_debug_ident ctxt;
-
-    val pos = Position.thread_data ();
 
     val st' = Seq.make (fn () =>
      SOME (pop_state id st,Seq.empty))
 
-  in Seq.make_results st' end)
-\<close>
+  in Seq.make_results st' end) : Method.method
 
-ML \<open>
+val _ = Context.>> (Context.map_theory (Method.setup @{binding break}
+  (Scan.succeed (fn _ => break)) ""))
+
 fun map_state f state =
      let
       val (r,_) = Seq.first_result "map_state" (Proof.apply
@@ -402,10 +395,12 @@ fun get_state state =
 let
   val {context,goal} = Proof.simple_goal state;
 in (context,goal) end
-\<close>
 
+val last_click = Unsynchronized.ref (NONE : Position.range option)
 
-ML \<open>
+val _ = Context.>> (Context.map_theory (Sign.print_translation
+ [(@{const_syntax Trueprop}, fn ctxt => (last_click := get_latest_range ctxt; (fn [x] => x)))]))
+
 
 fun do_apply pos rng m =
 let
@@ -416,7 +411,7 @@ in
   let
      val ident = Synchronized.var "debug_state" init_state;
      val markup_id = Synchronized.var "markup_state" init_markup_state;
-     val _ = if get_continuation ctxt > ~1 then
+     val _ = if is_debug_ctxt ctxt then
       error "Cannot use apply_debug while debugging" else ();
 
      val st = Proof.map_context (set_markup_state markup_id o set_debug_ident ident o set_continuation ~1) st;
@@ -446,6 +441,18 @@ in
 
      val _ = do_markup rng Markup.finished;
      val _ = Future.fork (fn () => markup_worker markup_id ());
+     val _ = Future.fork (fn () =>
+       let
+        fun do_hilight_work () =
+          let
+            val _ =
+              case !last_click of NONE => clear_hilight (SOME markup_id)
+                | SOME rng => set_hilight (SOME markup_id) rng;
+            val _ = OS.Process.sleep (seconds 0.1)
+          in do_hilight_work () end
+        in do_hilight_work () end)
+
+
 
      val st' =
      let
@@ -455,7 +462,7 @@ in
           (do_markup rng Markup.running; error (e ()))
         | RESULT st' => st'
 
-       val st'' = if b then (Output.writeln "Final Result."; st' |> apfst (set_continuation ~1))
+       val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
                      else st' |> apfst (set_continuation 0)
 
      in st''  end
@@ -492,80 +499,78 @@ in
    in st' end) st)
 end
 
+fun apply_debug (m', rng) =
+  let
+      val m'' = add_debug m'
+      val m = (m'',rng)
+      val pos = Position.thread_data ();
+     in do_apply pos rng m end;
+
 val _ =
   Outer_Syntax.command @{command_keyword apply_debug} "initial goal refinement step (unstructured)"
-    (Method.parse >> (fn (m',rng) => fn trans =>
-      let
-          val m'' = add_debug m'
-          val m = (m'',rng)
+    (Method.parse >> (fn txt => Toplevel.proof (apply_debug txt)));
 
-          val pos' = Toplevel.pos_of trans;
-          val pos = Position.thread_data ();
-
-          val x = do_apply pos rng m;
-
-         in Toplevel.proof x trans end));
-\<close>
-
-ML \<open>
-val _ =
-  Outer_Syntax.command @{command_keyword finish} "finish debugging"
-  (Scan.succeed (Toplevel.proof
-    (map_state (fn (ctxt,_) =>
+val finish = map_state (fn (ctxt,_) =>
       let
         val _ = if get_continuation ctxt < 0 then error "Cannot finish in a non-debug state" else ();
         val f = get_finish (get_debug_ident ctxt);
-      in f |> poke_error |> apfst (set_continuation ~1) end))))
-\<close>
+      in f |> poke_error |> apfst clear_debug end)
 
-ML \<open>
+val _ =
+  Outer_Syntax.command @{command_keyword finish} "finish debugging"
+  (Scan.succeed (Toplevel.proof finish))
+
+fun continue i =
+(map_state (fn (ctxt,thm) =>
+      let
+        val _ = if i < 1 then error "Must continue a non-zero amount" else ();
+        val _ = if get_continuation ctxt < 0 then error "Cannot continue in a non-debug state" else ();
+
+        val id = get_debug_ident ctxt;
+
+        val start_cont = get_continuation ctxt; (* how many breakpoints so far *)
+        val trans_id = maybe_restart id start_cont (ctxt,thm);
+          (* possibly restart if the thread has made too much progress.
+             trans_id is the current number of restarts, used to avoid manipulating
+             stale states *)
+
+        val _ = nth_pre_result id start_cont; (* block until we've hit the start of this continuation *)
+
+        val cont = start_cont + i; (* final number of breakpoints hit *)
+
+        val ex_results = peek_all_results id |> rev;
+
+        fun tick_up n st = if n = cont then (st,false) else
+          let
+            val _ = set_next_state id trans_id st;
+            val (n_r, b) = wait_break_state id trans_id;
+            val results = peek_all_results id;
+            val _ = if length results = n + 1 then () else
+              error ("Unexpected number of results. Expected: " ^ @{make_string } (n + 1)^ " but got " ^ @{make_string } (length results))
+            val st' = poke_error n_r;
+          in if b then ((st',b)) else tick_up (n + 1) st' end
+
+        val (st',b) =
+          if length ex_results > cont then
+            (#pre_state (nth ex_results cont), false)
+          else if length ex_results = cont then
+            wait_break_state id trans_id |> apfst poke_error
+          else if length ex_results = start_cont then
+            tick_up (length ex_results) (ctxt, thm)
+          else (debug_print id; @{print} ("start_cont",start_cont); @{print} ("trans_id",trans_id);
+            error "Unexpected number of existing results")
+
+        val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
+                   else st' |> apfst (set_continuation cont)
+
+      in st'' end))
+
 val _ =
   Outer_Syntax.command @{command_keyword continue} "step to next breakpoint"
   (Scan.optional Parse.int 1 >> (fn i =>
-    (Toplevel.proof
-      (map_state (fn (ctxt,thm) =>
-        let
-          val _ = if i < 1 then error "Must continue a non-zero amount" else ();
-          val _ = if get_continuation ctxt < 0 then error "Cannot continue in a non-debug state" else ();
+    (Toplevel.proof (continue i))))
 
-          val id = get_debug_ident ctxt;
-
-          val start_cont = get_continuation ctxt; (* how many breakpoints so far *)
-          val trans_id = maybe_restart id start_cont (ctxt,thm);
-            (* possibly restart if the thread has made too much progress.
-               trans_id is the current number of restarts, used to avoid manipulating
-               stale states *)
-
-          val _ = nth_pre_result id start_cont; (* block until we've hit the start of this continuation *)
-
-          val cont = start_cont + i; (* final number of breakpoints hit *)
-
-          val ex_results = peek_all_results id |> rev;
-
-          fun tick_up n st = if n = cont then (st,false) else
-            let
-              val _ = set_next_state id trans_id st;
-              val (n_r, b) = wait_break_state id trans_id;
-              val results = peek_all_results id;
-              val _ = if length results = n + 1 then () else
-                error ("Unexpected number of results. Expected: " ^ @{make_string } (n + 1)^ " but got " ^ @{make_string } (length results))
-              val st' = poke_error n_r;
-            in if b then ((st',b)) else tick_up (n + 1) st' end
-
-          val (st',b) =
-            if length ex_results > cont then
-              (#pre_state (nth ex_results cont), false)
-            else if length ex_results = cont then
-              wait_break_state id trans_id |> apfst poke_error
-            else if length ex_results = start_cont then
-              tick_up (length ex_results) (ctxt, thm)
-            else (debug_print id; @{print} ("start_cont",start_cont); @{print} ("trans_id",trans_id);
-              error "Unexpected number of existing results")
-
-          val st'' = if b then (Output.writeln "Final Result."; st' |> apfst (set_continuation ~1))
-                     else st' |> apfst (set_continuation cont)
-
-        in st'' end)))))
+end
 \<close>
 
 lemma
@@ -590,7 +595,12 @@ lemma
   apply_debug (sleep 1, rule BA, break, sleep 1,rule BA, rule CB, break, rule DC, sleep 1, break, rule ED, sleep 1, break, rule EF)
     apply (rule AB)
     continue
+      apply -
+      apply -
+
     continue
+      apply -
+      apply -
     continue
     continue
   oops
