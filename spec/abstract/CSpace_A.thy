@@ -39,6 +39,8 @@ requalify_consts
   msg_max_extra_caps
   msg_align_bits
   update_cnode_cap_data
+  cnode_padding_bits
+  cnode_guard_size_bits
 
 end
 

@@ -40,6 +40,7 @@ requalify_consts
   asid_high_bits
   asid_low_bits
   arch_is_frame_type
+  badge_bits
 end
 
 text {*
@@ -221,13 +222,6 @@ definition
      \<Rightarrow> NotificationCap oref badge (cr' - {AllowGrant})
    | ArchObjectCap acap \<Rightarrow> ArchObjectCap (acap_rights_update cr' acap)
    | _ \<Rightarrow> cap"
-
-text {* For implementation reasons not all bits of the badge word can be used. *}
-definition
-  badge_bits :: nat where
-  "badge_bits \<equiv> 28"
-
-declare badge_bits_def [simp]
 
 definition
   badge_update :: "badge \<Rightarrow> cap \<Rightarrow> cap" where

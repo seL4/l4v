@@ -46,11 +46,11 @@ lemma update_cap_data_closedform:
          simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
                         is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
                         cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
-                        simp_thms cap_rights.simps Let_def split_def
+                        simp_thms cap_rights.simps Let_def split_def badge_bits_def
                         the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
                         arch_update_cap_data_def
                   cong: if_cong)
-  apply auto
+  apply (auto simp: word_bits_def cnode_padding_bits_def cnode_guard_size_bits_def)
   done
 
 lemma cap_asid_PageCap_None [simp]:
