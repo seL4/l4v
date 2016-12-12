@@ -21,12 +21,12 @@ lemma (* obj_at_not_live_valid_arch_cap_strg *) [Finalise_AI_asms]:
         \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"
   by (clarsimp simp: valid_cap_def obj_at_def
                      a_type_arch_live
-              split: arch_cap.split_asm)
+              split: arch_cap.split_asm split_if_asm)
 
 global_naming X64
 
 lemma valid_global_refs_asid_table_udapte [iff]:
-  "valid_global_refs (s\<lparr>arch_state := arm_asid_table_update f (arch_state s)\<rparr>) =
+  "valid_global_refs (s\<lparr>arch_state := x64_asid_table_update f (arch_state s)\<rparr>) =
   valid_global_refs s"
   by (simp add: valid_global_refs_def global_refs_def)
 
@@ -43,8 +43,10 @@ lemma reachable_pg_cap_update[simp]:
   by (simp add:reachable_pg_cap_def vs_lookup_pages_def
     vs_lookup_pages1_def obj_at_def)
 
+(* FIXME x64: this needs stuff about equality between vs_lookup and vs_lookup_pages
+              for PageMapL4, PDPTs *)
 lemma vs_lookup_pages_eq:
-  "\<lbrakk>valid_arch_objs s; valid_asid_table (arm_asid_table (arch_state s)) s;
+  "\<lbrakk>valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s;
     valid_cap cap s; table_cap_ref cap = Some vref; oref \<in> obj_refs cap\<rbrakk>
    \<Longrightarrow> (vref \<unrhd> oref) s = (vref \<rhd> oref) s"
   apply (clarsimp simp: table_cap_ref_def
@@ -54,10 +56,10 @@ lemma vs_lookup_pages_eq:
   apply (rule iffI[rotated, OF vs_lookup_pages_vs_lookupI], assumption)
   apply (simp add: valid_cap_def)
   apply (erule vs_lookup_vs_lookup_pagesI', clarsimp+)
-  done
+  sorry
 
 lemma nat_to_cref_unat_of_bl':
-  "\<lbrakk> length xs < 32; n = length xs \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> length xs < word_bits; n = length xs \<rbrakk> \<Longrightarrow>
    nat_to_cref n (unat (of_bl xs :: machine_word)) = xs"
   apply (simp add: nat_to_cref_def word_bits_def)
   apply (rule nth_equalityI)
@@ -72,11 +74,13 @@ lemma nat_to_cref_unat_of_bl':
 
 lemmas nat_to_cref_unat_of_bl = nat_to_cref_unat_of_bl' [OF _ refl]
 
-lemma invs_arm_asid_table_unmap:
+(* FIXME x64: this needs reevaluation - do we need the "asid_map" premise?
+              note delete_asid_pool for arm and x64 differ a lot *)
+lemma invs_x64_asid_table_unmap:
   "invs s \<and> is_aligned base asid_low_bits \<and> base \<le> mask asid_bits
-       \<and> (\<forall>x\<in>set [0.e.2 ^ asid_low_bits - 1]. arm_asid_map (arch_state s) (base + x) = None)
-       \<and> tab = arm_asid_table (arch_state s)
-     \<longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
+       \<and> (\<forall>x\<in>set [0.e.2 ^ asid_low_bits - 1]. x64_asid_map (arch_state s) (base + x) = None)
+       \<and> tab = x64_asid_table (arch_state s)
+     \<longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
   apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
   apply (strengthen valid_asid_map_unmap valid_arch_objs_unmap_strg
                     valid_vs_lookup_unmap_strg valid_arch_state_unmap_strg)
@@ -90,33 +94,25 @@ lemma delete_asid_pool_invs[wp]:
      delete_asid_pool base pptr
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: delete_asid_pool_def)
-  apply wp
-  apply (strengthen invs_arm_asid_table_unmap)
-  apply simp
-  apply (rule hoare_vcg_conj_lift,
-           (rule mapM_invalidate[where ptr=pptr])?,
-           ((wp mapM_wp' | simp add: if_apply_def2)+)[1])+
-    apply wp
-  apply (clarsimp simp: is_aligned_mask[symmetric])
-  apply (rule conjI)
-   apply (rule vs_lookupI)
-    apply (erule vs_asid_refsI)
-   apply simp
+  apply_trace wp
+  apply (clarsimp simp: if_apply_def2 invs_x64_asid_table_unmap[rule_format])
+  thm invs_x64_asid_table_unmap[rule_format, simplified]
+  apply (rule invs_x64_asid_table_unmap[rule_format])
   apply clarsimp
-  done
+  sorry
 
 lemma delete_asid_invs[wp]:
   "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace>
      delete_asid asid pd
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: delete_asid_def cong: option.case_cong)
-  apply (wp set_asid_pool_invs_unmap | wpc)+
-     apply (simp add: invalidate_asid_entry_def invalidate_asid_def invalidate_hw_asid_entry_def)
+  apply_trace (wp set_asid_pool_invs_unmap hoare_vcg_all_lift dmo_wp | wpc | simp | wp_once )+
+     apply (simp add:)
      apply (wp load_hw_asid_wp)
     apply (simp add: flush_space_def)
     apply (wp load_hw_asid_wp|wpc)+
   apply (clarsimp simp del: fun_upd_apply)
-  apply (subgoal_tac "valid_asid_table (arm_asid_table (arch_state s)) s")
+  apply (subgoal_tac "valid_asid_table (x64_asid_table (arch_state s)) s")
    prefer 2
    apply fastforce
   apply (clarsimp simp: valid_asid_table_def)
@@ -433,7 +429,7 @@ lemma arch_finalise_cap_replaceable[wp]:
     "\<lbrace>\<lambda>s. s \<turnstile> cap.ArchObjectCap cap \<and>
           x = is_final_cap' (cap.ArchObjectCap cap) s \<and>
           pspace_aligned s \<and> valid_arch_objs s \<and> valid_objs s \<and>
-          valid_asid_table (arm_asid_table (arch_state s)) s\<rbrace>
+          valid_asid_table (x64_asid_table (arch_state s)) s\<rbrace>
      arch_finalise_cap cap x
    \<lbrace>\<lambda>rv s. replaceable s sl rv (cap.ArchObjectCap cap)\<rbrace>"
   apply (simp add: arch_finalise_cap_def)
@@ -589,7 +585,7 @@ context Arch begin global_naming X64
 
 lemma fast_finalise_replaceable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
-     \<and> cte_wp_at (op = cap) sl s \<and> valid_asid_table (arm_asid_table (arch_state s)) s
+     \<and> cte_wp_at (op = cap) sl s \<and> valid_asid_table (x64_asid_table (arch_state s)) s
      \<and> valid_mdb s \<and> valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace>
      fast_finalise cap x
    \<lbrace>\<lambda>rv s. cte_wp_at (replaceable s sl cap.NullCap) sl s\<rbrace>"
@@ -1200,7 +1196,7 @@ lemma replaceable_reset_pd_strg:
 
 lemma arch_finalise_case_no_lookup:
   "\<lbrace>pspace_aligned and valid_arch_objs and valid_objs and
-    valid_cap (cap.ArchObjectCap acap) and (\<lambda>s. valid_asid_table (arm_asid_table (arch_state s)) s)
+    valid_cap (cap.ArchObjectCap acap) and (\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s)
     and K (aobj_ref acap = Some w \<and> is_final)\<rbrace>
   arch_finalise_cap acap is_final
   \<lbrace>\<lambda>rv s. (\<forall>vs. vs_cap_ref (cap.ArchObjectCap acap) = Some vs \<longrightarrow> \<not> (vs \<unrhd> w) s)\<rbrace>"
@@ -1274,7 +1270,7 @@ crunch valid_cap: invalidate_tlb_by_asid "valid_cap cap"
 crunch inv: page_table_mapped "P"
 crunch valid_objs[wp]: invalidate_tlb_by_asid "valid_objs"
 crunch valid_asid_table[wp]: do_machine_op
-  "\<lambda>s. valid_asid_table (arm_asid_table (arch_state s)) s"
+  "\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s"
 
 lemma mapM_x_swp_store_invalid_pte_invs:
   "\<lbrace>invs and (\<lambda>s. \<exists>slot. cte_wp_at
@@ -1639,8 +1635,8 @@ lemma set_asid_pool_obj_at_ptr:
 
 lemma valid_arch_state_table_strg:
   "valid_arch_state s \<and> asid_pool_at p s \<and>
-   Some p \<notin> arm_asid_table (arch_state s) ` (dom (arm_asid_table (arch_state s)) - {x}) \<longrightarrow>
-   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>)"
+   Some p \<notin> x64_asid_table (arch_state s) ` (dom (x64_asid_table (arch_state s)) - {x}) \<longrightarrow>
+   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_arch_state_def valid_asid_table_def ran_def)
   apply (rule conjI, fastforce)
   apply (erule inj_on_fun_upd_strongerI)
@@ -1648,15 +1644,15 @@ lemma valid_arch_state_table_strg:
   done
 
 lemma valid_table_caps_table [simp]:
-  "valid_table_caps (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table'\<rparr>\<rparr>) = valid_table_caps s"
+  "valid_table_caps (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table'\<rparr>\<rparr>) = valid_table_caps s"
   by (simp add: valid_table_caps_def)
 
 lemma valid_global_objs_table [simp]:
-  "valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table'\<rparr>\<rparr>) = valid_global_objs s"
+  "valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table'\<rparr>\<rparr>) = valid_global_objs s"
   by (simp add: valid_global_objs_def)
 
 lemma valid_kernel_mappings [iff]:
-  "valid_kernel_mappings (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table'\<rparr>\<rparr>) = valid_kernel_mappings s"
+  "valid_kernel_mappings (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table'\<rparr>\<rparr>) = valid_kernel_mappings s"
   by (simp add: valid_kernel_mappings_def)
 
 lemma vs_asid_refs_updateD:
@@ -1674,7 +1670,7 @@ lemma vs_lookup1_arch [simp]:
 lemma vs_lookup_empty_table:
   "(rs \<rhd> q)
   (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool empty)),
-     arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
+     arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
    (rs \<rhd> q) s \<or> (rs = [VSRef (ucast x) None] \<and> q = p)"
   apply (erule vs_lookupE)
   apply clarsimp
@@ -1707,7 +1703,7 @@ lemma vs_lookup_empty_table:
 lemma vs_lookup_pages_empty_table:
   "(rs \<unrhd> q)
   (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool empty)),
-     arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
+     arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
    (rs \<unrhd> q) s \<or> (rs = [VSRef (ucast x) None] \<and> q = p)"
   apply (subst (asm) vs_lookup_pages_def)
   apply (clarsimp simp: Image_def)
@@ -1741,8 +1737,8 @@ lemma set_asid_pool_empty_table_objs:
   "\<lbrace>valid_arch_objs and asid_pool_at p\<rbrace>
   set_asid_pool p empty
    \<lbrace>\<lambda>rv s. valid_arch_objs
-             (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
-                arm_asid_table (arch_state s)(asid_high_bits_of word2 \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+             (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
+                x64_asid_table (arch_state s)(asid_high_bits_of word2 \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_arch_objs_def
@@ -1766,8 +1762,8 @@ lemma set_asid_pool_empty_table_lookup:
     (\<lambda>s. \<exists>p'. caps_of_state s p' = Some (ArchObjectCap (ASIDPoolCap p base)))\<rbrace>
   set_asid_pool p empty
    \<lbrace>\<lambda>rv s. valid_vs_lookup
-             (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
-                arm_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+             (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
+                x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vs_lookup_def
@@ -1788,8 +1784,8 @@ lemma set_asid_pool_empty_valid_asid_map:
        \<and> (\<forall>asid'. \<not> ([VSRef asid' None] \<rhd> p) s)
        \<and> (\<forall>p'. \<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p') s)\<rbrace>
        set_asid_pool p empty
-   \<lbrace>\<lambda>rv s. valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
-                 arm_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+   \<lbrace>\<lambda>rv s. valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
+                 x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: valid_asid_map_def vspace_at_asid_def
@@ -1820,8 +1816,8 @@ lemma set_asid_pool_invs_table:
        \<and> (\<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p) s)
        \<and> (\<forall>p'. \<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p') s)\<rbrace>
        set_asid_pool p empty
-  \<lbrace>\<lambda>x s. invs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
-                 arm_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+  \<lbrace>\<lambda>x s. invs (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
+                 x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def)
   apply (rule hoare_pre)
    apply (wp valid_irq_node_typ set_asid_pool_typ_at
@@ -1857,7 +1853,7 @@ lemma delete_asid_pool_unmapped2:
    apply (wp delete_asid_pool_unmapped)
   apply (simp add: delete_asid_pool_def)
   apply wp
-     apply (rule_tac Q="\<lambda>rv s. ?Q s \<and> asid_table = arm_asid_table (arch_state s)"
+     apply (rule_tac Q="\<lambda>rv s. ?Q s \<and> asid_table = x64_asid_table (arch_state s)"
                 in hoare_post_imp)
       apply (clarsimp simp: fun_upd_def[symmetric])
       apply (drule vs_lookup_clear_asid_table[rule_format])

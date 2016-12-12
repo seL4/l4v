@@ -20,35 +20,42 @@ lemma update_cap_data_closedform:
   "update_cap_data pres w cap =
    (case cap of
      EndpointCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (EndpointCap r (w && mask 28) rights) else NullCap
+       if badge = 0 \<and> \<not> pres then (EndpointCap r (w && mask badge_bits) rights) else NullCap
    | NotificationCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (NotificationCap r (w && mask 28) rights) else NullCap
+       if badge = 0 \<and> \<not> pres then (NotificationCap r (w && mask badge_bits) rights) else NullCap
    | CNodeCap r bits guard \<Rightarrow>
-       if word_bits < unat ((w >> 3) && mask 5) + bits
+       if word_bits < unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits) + bits
        then NullCap
-       else CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> 3) && mask 5)) (to_bl g'')) ((w >> 8) && mask 18))
+       else CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits)) (to_bl g'')) ((w >> 8) && mask 18))
    | ThreadCap r \<Rightarrow> ThreadCap r
    | DomainCap \<Rightarrow> DomainCap
-   | UntypedCap p n idx \<Rightarrow> UntypedCap p n idx
+   | UntypedCap d p n idx \<Rightarrow> UntypedCap d p n idx
    | NullCap \<Rightarrow> NullCap
    | ReplyCap t m \<Rightarrow> ReplyCap t m
    | IRQControlCap \<Rightarrow> IRQControlCap
    | IRQHandlerCap irq \<Rightarrow> IRQHandlerCap irq
    | Zombie r b n \<Rightarrow> Zombie r b n
-   | ArchObjectCap cap \<Rightarrow> ArchObjectCap cap)"
+   | ArchObjectCap cap \<Rightarrow> 
+       let fst = ucast w;
+           lst = ucast (w >> 16)
+       in case cap of IOPortCap old_fst old_lst \<Rightarrow> 
+              if (fst \<le> lst \<and> fst \<ge> old_fst \<and> lst \<le> old_lst)
+              then ArchObjectCap (IOPortCap fst lst)
+              else NullCap
+           | _ \<Rightarrow> ArchObjectCap cap)"
   apply (cases cap,
          simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
                         is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
                         cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
                         simp_thms cap_rights.simps Let_def split_def
                         the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
-                        arch_update_cap_data_def
+                        arch_update_cap_data_def cnode_padding_bits_def cnode_guard_size_bits_def
                   cong: if_cong)
-  apply auto
+  apply (auto simp: cnode_padding_bits_def cnode_guard_size_bits_def)
   done
 
 lemma cap_asid_PageCap_None [simp]:
-  "cap_asid (ArchObjectCap (PageCap r R pgsz None)) = None"
+  "cap_asid (ArchObjectCap (PageCap d r R typ pgsz None)) = None"
   by (simp add: cap_asid_def)
 
 lemma arch_derive_cap_is_derived:
@@ -190,7 +197,7 @@ lemma obj_refs_remove_rights[simp, Ipc_AI_assms]:
 lemma storeWord_um_inv:
   "\<lbrace>\<lambda>s. underlying_memory s = um\<rbrace>
    storeWord a v
-   \<lbrace>\<lambda>_ s. is_aligned a 2 \<and> x \<in> {a,a+1,a+2,a+3} \<or> underlying_memory s x = um x\<rbrace>"
+   \<lbrace>\<lambda>_ s. is_aligned a 3 \<and> x \<in> {a,a+1,a+2,a+3,a+4,a+5,a+6,a+7} \<or> underlying_memory s x = um x\<rbrace>"
   apply (simp add: storeWord_def is_aligned_mask)
   apply wp
   apply simp
@@ -200,17 +207,17 @@ lemma store_word_offs_vms[wp, Ipc_AI_assms]:
   "\<lbrace>valid_machine_state\<rbrace> store_word_offs ptr offs v \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
 proof -
   have aligned_offset_ignore:
-    "\<And>(l::word32) (p::word32) sz. l<4 \<Longrightarrow> p && mask 2 = 0 \<Longrightarrow>
+    "\<And>(l::machine_word) (p::machine_word) sz. l<word_size \<Longrightarrow> p && mask word_size_bits = 0 \<Longrightarrow>
        p+l && ~~ mask (pageBitsForSize sz) = p && ~~ mask (pageBitsForSize sz)"
   proof -
     fix l p sz
-    assume al: "(p::word32) && mask 2 = 0"
-    assume "(l::word32) < 4" hence less: "l<2^2" by simp
-    have le: "2 \<le> pageBitsForSize sz" by (case_tac sz, simp_all)
+    assume al: "(p::machine_word) && mask word_size_bits = 0"
+    assume "(l::machine_word) < word_size" hence less: "l<2^word_size_bits" by (simp add: word_size_bits_def word_size_def)
+    have le: "word_size_bits \<le> pageBitsForSize sz" by (case_tac sz, simp_all add: bit_simps)
     show "?thesis l p sz"
       by (rule is_aligned_add_helper[simplified is_aligned_mask,
           THEN conjunct2, THEN mask_out_first_mask_some,
-          where n=2, OF al less le])
+          where n=word_size_bits, OF al less le])
   qed
 
   show ?thesis
@@ -227,23 +234,23 @@ proof -
     apply (erule disjE, simp)
     apply (simp add: in_user_frame_def word_size_def)
     apply (erule exEI)
-    apply (subgoal_tac "(ptr + of_nat offs * 4) && ~~ mask (pageBitsForSize x) =
-                        p && ~~ mask (pageBitsForSize x)", simp)
-    apply (simp only: is_aligned_mask[of _ 2])
-    apply (elim disjE, simp_all)
-    apply (rule aligned_offset_ignore[symmetric], simp+)+
+    apply (subgoal_tac "(ptr + of_nat offs * word_size) && ~~ mask (pageBitsForSize x) =
+                        p && ~~ mask (pageBitsForSize x)", simp add: word_size_def)
+    apply (simp only: is_aligned_mask[of _ word_size_bits, simplified word_size_bits_def])
+    apply (elim disjE, simp_all add: word_size_def)
+    apply (rule aligned_offset_ignore[symmetric, simplified word_size_bits_def word_size_def], simp+)+
     done
 qed
 
 lemma is_zombie_update_cap_data[simp, Ipc_AI_assms]:
   "is_zombie (update_cap_data P data cap) = is_zombie cap"
-  by (simp add: update_cap_data_closedform is_zombie_def
-         split: cap.splits)
+  by (clarsimp simp: update_cap_data_closedform is_zombie_def Let_def
+         split: cap.splits arch_cap.splits)
 
 lemma valid_msg_length_strengthen [Ipc_AI_assms]:
   "valid_message_info mi \<longrightarrow> unat (mi_length mi) \<le> msg_max_length"
   apply (clarsimp simp: valid_message_info_def)
-  apply (subgoal_tac "unat (mi_length mi) \<le> unat (of_nat msg_max_length :: word32)")
+  apply (subgoal_tac "unat (mi_length mi) \<le> unat (of_nat msg_max_length :: machine_word)")
    apply (clarsimp simp: unat_of_nat msg_max_length_def)
   apply (clarsimp simp: un_ui_le word_le_def)
   done
@@ -271,18 +278,22 @@ lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_assms]:
    \<lbrace>case_option (\<lambda>_. True) in_user_frame\<rbrace>"
   apply (simp add: lookup_ipc_buffer_def)
   apply (wp get_cap_wp thread_get_wp | wpc | simp)+
-  apply (clarsimp simp add: obj_at_def is_tcb)
-  apply (subgoal_tac "in_user_frame (xa + (tcb_ipc_buffer tcb &&
-                                           mask (pageBitsForSize xc))) s", simp)
-  apply (drule (1) cte_wp_valid_cap)
+  apply (clarsimp simp add: obj_at_def is_tcb split: split_if_asm)
+  apply (rename_tac dev p R tp sz m)
+  apply (subgoal_tac "in_user_frame (p + (tcb_ipc_buffer tcb &&
+                                           mask (pageBitsForSize sz))) s", simp)
+  apply (frule (1) cte_wp_valid_cap)
   apply (clarsimp simp add: valid_cap_def cap_aligned_def in_user_frame_def)
   apply (thin_tac "case_option a b c" for a b c)
-  apply (rule_tac x=xc in exI)
-  apply (subgoal_tac "(xa + (tcb_ipc_buffer tcb && mask (pageBitsForSize xc)) &&
-            ~~ mask (pageBitsForSize xc)) = xa", simp)
-  apply (rule is_aligned_add_helper[THEN conjunct2], assumption)
-  apply (rule and_mask_less')
-  apply (case_tac xc, simp_all)
+  apply (rule_tac x=sz in exI)
+  apply (subst is_aligned_add_helper[THEN conjunct2])
+   apply simp
+  apply (simp add: and_mask_less' word_bits_def)
+  apply (clarsimp simp: caps_of_state_cteD'[where P="\<lambda>x. True", simplified, symmetric])
+  apply (drule (1) CSpace_AI.tcb_cap_slot_regular)
+   apply simp
+  apply (simp add: is_nondevice_page_cap_def case_bool_If
+            split: if_splits)
   done
 
 lemma transfer_caps_loop_cte_wp_at:
@@ -302,13 +313,12 @@ lemma transfer_caps_loop_cte_wp_at:
         | assumption | simp split del: split_if)+
       apply (wp hoare_vcg_conj_lift cap_insert_weak_cte_wp_at2)
        apply (erule imp)
-      apply (wp hoare_vcg_ball_lift            
+      by (wp hoare_vcg_ball_lift            
              | clarsimp simp: is_cap_simps split del:split_if
              | unfold derive_cap_def arch_derive_cap_def
              | wpc 
              | rule conjI
              | case_tac slots)+
-  done
 
 lemma transfer_caps_tcb_caps:
   fixes P t ref mi caps ep receiver recv_buf
